@@ -5006,6 +5006,7 @@ export type CycleAffaire = {
   compromis_id: string | null
   compromis_state: string | null
   vente_id: string | null
+  affaires_detail_json: string | null
 }
 export async function loadRegisterCycleAffaires(hektorAnnonceId: number | string): Promise<CycleAffaire[]> {
   if (!hasSupabaseEnv || !supabase) return []
@@ -5013,7 +5014,7 @@ export async function loadRegisterCycleAffaires(hektorAnnonceId: number | string
   if (!/^\d+$/.test(cleanId)) return []
   const { data, error } = await supabase
     .from('app_registre_mandats_current')
-    .select('numero_mandat,statut_annonce,mandat_date_fin,mandat_date_cloture,offre_id,offre_state,compromis_id,compromis_state,vente_id')
+    .select('numero_mandat,statut_annonce,mandat_date_fin,mandat_date_cloture,offre_id,offre_state,compromis_id,compromis_state,vente_id,affaires_detail_json')
     .eq('hektor_annonce_id', Number(cleanId))
     .not('numero_mandat', 'is', null)
   if (error || !data) return []

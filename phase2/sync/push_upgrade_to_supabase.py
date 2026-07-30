@@ -271,6 +271,7 @@ MANDAT_REGISTER_NULLABLE_KEYS = (
     "register_history_json",
     "register_avenants_json",
     "register_detail_payload_json",
+    "affaires_detail_json",
 )
 
 ARCHIVE_INDEX_NULLABLE_KEYS = (
@@ -683,6 +684,7 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
             "register_history_json": normalized.get("register_history_json"),
             "register_avenants_json": normalized.get("register_avenants_json"),
             "register_detail_payload_json": normalized.get("register_detail_payload_json"),
+            "affaires_detail_json": normalized.get("affaires_detail_json"),
         }
         current_row["search_text"] = build_search_text(current_row)
         current_row["source_hash"] = stable_hash(current_row)

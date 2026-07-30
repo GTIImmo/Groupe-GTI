@@ -670,6 +670,7 @@ GROUP BY s.hektor_annonce_id
 SQL_MANDAT_AFFAIRES = """
 WITH offre_ranked AS (
     SELECT hektor_annonce_id, hektor_mandat_id, hektor_offre_id, offre_state,
+        raw_montant, offre_event_date, hektor_acquereur_id, acquereur_json,
         ROW_NUMBER() OVER (
             PARTITION BY hektor_annonce_id, hektor_mandat_id
             ORDER BY CASE offre_state WHEN 'accepted' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
@@ -680,6 +681,8 @@ WITH offre_ranked AS (
 ),
 compromis_ranked AS (
     SELECT hektor_annonce_id, hektor_mandat_id, hektor_compromis_id, compromis_state,
+        date_start, date_signature_acte, sequestre, prix_net_vendeur, prix_publique,
+        mandants_json, acquereurs_json,
         ROW_NUMBER() OVER (
             PARTITION BY hektor_annonce_id, hektor_mandat_id
             ORDER BY CASE compromis_state WHEN 'active' THEN 0 WHEN 'cancelled' THEN 1 ELSE 2 END,
@@ -690,6 +693,7 @@ compromis_ranked AS (
 ),
 vente_ranked AS (
     SELECT hektor_annonce_id, hektor_mandat_id, hektor_vente_id, date_vente,
+        prix, honoraires, commission_agence, mandants_json, acquereurs_json, notaires_json,
         ROW_NUMBER() OVER (
             PARTITION BY hektor_annonce_id, hektor_mandat_id
             ORDER BY COALESCE(date_vente, synced_at) DESC
@@ -705,17 +709,80 @@ keys AS (
 SELECT
     k.hektor_annonce_id,
     k.hektor_mandat_id,
-    o.hektor_offre_id AS offre_id,
-    o.offre_state AS offre_state,
-    c.hektor_compromis_id AS compromis_id,
-    c.compromis_state AS compromis_state,
-    v.hektor_vente_id AS vente_id,
-    v.date_vente AS vente_date
+    o.hektor_offre_id AS offre_id, o.offre_state AS offre_state,
+    o.raw_montant AS offre_montant, o.offre_event_date AS offre_date,
+    o.acquereur_json AS offre_acquereur_json,
+    c.hektor_compromis_id AS compromis_id, c.compromis_state AS compromis_state,
+    c.date_start AS compromis_date_start, c.date_signature_acte AS compromis_date_acte,
+    c.sequestre AS compromis_sequestre, c.prix_net_vendeur AS compromis_prix_net,
+    c.prix_publique AS compromis_prix_public,
+    c.mandants_json AS compromis_mandants_json, c.acquereurs_json AS compromis_acquereurs_json,
+    v.hektor_vente_id AS vente_id, v.date_vente AS vente_date,
+    v.prix AS vente_prix, v.honoraires AS vente_honoraires, v.commission_agence AS vente_commission,
+    v.mandants_json AS vente_mandants_json, v.acquereurs_json AS vente_acquereurs_json,
+    v.notaires_json AS vente_notaires_json
 FROM keys k
 LEFT JOIN offre_ranked o ON o.hektor_annonce_id = k.hektor_annonce_id AND o.hektor_mandat_id = k.hektor_mandat_id AND o.rn = 1
 LEFT JOIN compromis_ranked c ON c.hektor_annonce_id = k.hektor_annonce_id AND c.hektor_mandat_id = k.hektor_mandat_id AND c.rn = 1
 LEFT JOIN vente_ranked v ON v.hektor_annonce_id = k.hektor_annonce_id AND v.hektor_mandat_id = k.hektor_mandat_id AND v.rn = 1
 """
+
+
+def _compact_party(obj: object) -> dict[str, object] | None:
+    """Contact compact d'une partie d'affaire (embarque en local, pas de jointure Supabase)."""
+    if isinstance(obj, str):
+        obj = safe_json_loads(obj, None)
+    if isinstance(obj, list):
+        obj = obj[0] if obj else None
+    if not isinstance(obj, dict):
+        return None
+    coord = obj.get("coordonnees") if isinstance(obj.get("coordonnees"), (dict, list)) else None
+    party = {
+        "id": normalize_text(obj.get("id")) or None,
+        "civilite": normalize_text(obj.get("civilite")) or None,
+        "nom": normalize_text(obj.get("nom")) or None,
+        "prenom": normalize_text(obj.get("prenom")) or None,
+        "coordonnees": coord,
+    }
+    return party if (party["id"] or party["nom"]) else None
+
+
+def build_affaire_detail_for_cycle(row: dict[str, object]) -> dict[str, object] | None:
+    """Detail complet de l'affaire d'un cycle (financiers + parties), pour la rubrique
+    Affaires/Contacts du cockpit re-scopee par cycle. Tout vient des tables locales."""
+    detail: dict[str, object] = {}
+    if normalize_text(row.get("offre_id")):
+        detail["offre"] = {
+            "id": normalize_text(row.get("offre_id")) or None,
+            "state": normalize_text(row.get("offre_state")) or None,
+            "montant": normalize_text(row.get("offre_montant")) or None,
+            "date": normalize_text(row.get("offre_date")) or None,
+            "acquereur": _compact_party(row.get("offre_acquereur_json")),
+        }
+    if normalize_text(row.get("compromis_id")):
+        detail["compromis"] = {
+            "id": normalize_text(row.get("compromis_id")) or None,
+            "state": normalize_text(row.get("compromis_state")) or None,
+            "date_start": normalize_text(row.get("compromis_date_start")) or None,
+            "date_acte": normalize_text(row.get("compromis_date_acte")) or None,
+            "sequestre": normalize_text(row.get("compromis_sequestre")) or None,
+            "prix_net": normalize_text(row.get("compromis_prix_net")) or None,
+            "prix_public": normalize_text(row.get("compromis_prix_public")) or None,
+            "acquereur": _compact_party(row.get("compromis_acquereurs_json")),
+            "mandant": _compact_party(row.get("compromis_mandants_json")),
+        }
+    if normalize_text(row.get("vente_id")):
+        detail["vente"] = {
+            "id": normalize_text(row.get("vente_id")) or None,
+            "date": normalize_text(row.get("vente_date")) or None,
+            "prix": normalize_text(row.get("vente_prix")) or None,
+            "honoraires": normalize_text(row.get("vente_honoraires")) or None,
+            "commission": normalize_text(row.get("vente_commission")) or None,
+            "acquereur": _compact_party(row.get("vente_acquereurs_json")),
+            "mandant": _compact_party(row.get("vente_mandants_json")),
+            "notaire": _compact_party(row.get("vente_notaires_json")),
+        }
+    return detail or None
 
 
 def fetch_rows(con: sqlite3.Connection, sql: str, params: tuple[object, ...] = ()) -> list[dict[str, object]]:
@@ -1537,6 +1604,10 @@ def build_mandat_register_rows(
                 "compromis_id": cycle_affaire.get("compromis_id"),
                 "compromis_state": cycle_affaire.get("compromis_state"),
                 "vente_id": cycle_affaire.get("vente_id"),
+                "affaires_detail_json": (
+                    json.dumps(build_affaire_detail_for_cycle(cycle_affaire), ensure_ascii=True, separators=(",", ":"))
+                    if build_affaire_detail_for_cycle(cycle_affaire) else None
+                ),
                 "source_updated_at": source_updated_at,
                 "register_source_kind": "historique" if status in {"Vendu", "Clos"} or not detail_available else "actif",
                 "register_detail_available": 1 if detail_available else 0,

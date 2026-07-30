@@ -390,6 +390,7 @@ export type MandatRecord = {
   register_history_json?: string | null
   register_avenants_json?: string | null
   register_detail_payload_json?: string | null
+  affaires_detail_json?: string | null
   has_local_detail?: boolean | number | string | null
   local_detail_updated_at?: string | null
   has_detail_cache?: boolean | number | string | null
