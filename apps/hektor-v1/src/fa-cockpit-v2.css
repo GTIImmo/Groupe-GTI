@@ -1016,14 +1016,17 @@
 
 /* ── Accordéon « Le Bien » : 12 sections = cartes repliables (repliées par défaut) ─────────────
    Scopé sur .fa-ck-lb-acc pour NE PAS toucher les autres blocs qui partagent .fa-ck-lb-secwrap. */
-.fa-ck-lb-acc { display: block; background: #fff; border: 1px solid #ece8df; border-radius: 13px; margin: 7px 0; overflow: hidden; transition: border-color .2s, box-shadow .2s, transform .2s; }
-.fa-ck-lb-acc + .fa-ck-lb-acc { margin-top: 0; }
-.fa-ck-lb-acc:hover { border-color: #ddd6c8; box-shadow: 0 8px 20px -14px rgba(40,30,20,.28); }
-.fa-ck-lb-acc.open { box-shadow: 0 12px 28px -16px rgba(40,30,20,.32); }
+/* Liste groupée : un seul cadre arrondi ; les sections dedans = lignes (filet fin) → titres SERRÉS
+   quand replié (aucun espace entre eux). Barre d'accent colorée au survol/ouverture = le punch visuel. */
+.fa-ck-lb-accgroup { margin: 8px 0; border: 1px solid #e7e2d7; border-radius: 15px; overflow: hidden; background: #fff; box-shadow: 0 14px 36px -26px rgba(40,30,20,.42); }
+.fa-ck-lb-acc { display: block; position: relative; background: #fff; border: 0; border-top: 1px solid #f1ede4; overflow: hidden; transition: background .2s; }
+.fa-ck-lb-acc:first-child { border-top: 0; }
+.fa-ck-lb-acc::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--sc); transform: scaleY(0); transition: transform .3s cubic-bezier(.34,1.4,.5,1); }
+.fa-ck-lb-acc:hover::before, .fa-ck-lb-acc.open::before { transform: scaleY(1); }
+.fa-ck-lb-acc:hover { background: #faf7f0; }
+.fa-ck-lb-acc.open { background: var(--sbg); }
 .fa-ck-lb-acc .fa-ck-pub-sec { margin: 0; }
-.fa-ck-lb-sectrig { display: flex; align-items: center; gap: 11px; width: 100%; margin: 0; padding: 12px 14px; background: transparent; border: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; transition: background .18s; }
-.fa-ck-lb-sectrig:hover { background: #faf7f1; }
-.fa-ck-lb-acc.open .fa-ck-lb-sectrig { background: var(--sbg); }
+.fa-ck-lb-sectrig { display: flex; align-items: center; gap: 11px; width: 100%; margin: 0; padding: 10px 15px; background: transparent; border: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; }
 .fa-ck-lb-sectrig:focus-visible { outline: 2px solid var(--sc); outline-offset: -2px; }
 .fa-ck-lb-sectxt { min-width: 0; }
 .fa-ck-lb-sectrig .fa-ck-pub-ic { transition: transform .32s cubic-bezier(.34,1.56,.64,1), box-shadow .25s; }

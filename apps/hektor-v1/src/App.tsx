@@ -23588,7 +23588,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   onSave={onFieldSave}
                 />
               </div>
-              {/* Sections DOMAINE du v21, éditables EN PLACE (chaque champ = vrai champ wizard Hektor) */}
+              {/* Sections DOMAINE du v21, éditables EN PLACE (chaque champ = vrai champ wizard Hektor).
+                  Liste groupée (un seul conteneur, filets entre les titres) → titres collés quand replié. */}
+              <div className="fa-ck-lb-accgroup">
               {CK_LB_SECTIONS.filter((sec) => {
                 if (!sec.condField) return true
                 const v = String(edited[sec.condField] ?? wizFieldValue(sec.condField) ?? '').trim()
@@ -23650,6 +23652,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 )
               })}
+              </div>
               {/* Composition des pièces — pièce à pièce, comme dans Hektor (régression corrigée :
                   cet éditeur n'existait que dans l'ancienne modale « Modifier l'annonce »). */}
               {!isLightweightDetail ? (
