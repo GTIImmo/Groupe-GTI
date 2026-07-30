@@ -1339,7 +1339,8 @@ const draftAnnonceWizardGroups: DraftAnnonceWizardGroup[] = [
       wf('adresse', 'Adresse privée (rue)'),
       wf('villeprivee', 'Commune privée'),
       wf('codeprive', 'Code postal privé'),
-      wf('ADRESSE_COMPL', "Complément d'adresse"),
+      // Pas de « Complément d'adresse » : Hektor compose l'adresse privée = rue de la localité + ADRESSE_COMPL ;
+      // la rue suffit (elle pilote la localité). Retiré du modal de saisie (manuel + revue OCR partagent ce groupe).
       wf('immeuble', 'Immeuble'),
       wf('TRANSPORT', 'Transport'),
       wf('PROXIMITE', 'Proximite'),
@@ -1849,7 +1850,7 @@ const draftAnnonceAdvancedVisibleFieldsByProfile: Record<HektorPropertyProfileKi
 
 const draftAnnonceWizardCommonFieldsByStep: Record<number, readonly string[]> = {
   1: ['prix', 'PRIXNETVENDEUR', 'NO_DOSSIER', 'dateenr'],
-  3: ['adresse', 'villeprivee', 'codeprive', 'codepublique', 'villepublique', 'ADRESSE_COMPL', 'TRANSPORT', 'PROXIMITE', 'ENVIRONNEMENT', 'latitude', 'longitude'],
+  3: ['adresse', 'villeprivee', 'codeprive', 'codepublique', 'villepublique', 'TRANSPORT', 'PROXIMITE', 'ENVIRONNEMENT', 'latitude', 'longitude'],
   6: [
     'PRIXNETVENDEUR',
     'prix',
@@ -3591,7 +3592,7 @@ function resolveDisplayAddress(
     return v != null && typeof v !== 'object' && String(v).trim() ? String(v).trim() : ''
   }
   // Adresse PRIVÉE (réelle) en priorité (nouvelles clés) puis publique puis brut.
-  const rue = fromOverlay('adresse') || fromOverlay('ADRESSE_COMPL') || firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail)
+  const rue = fromOverlay('adresse') || firstNonEmpty(detail.adresse_privee_listing, detail.adresse_detail)
   const cp = fromOverlay('codeprive') || fromOverlay('codepublique') || firstNonEmpty(detail.code_postal_prive_detail, detail.code_postal_public_listing, detail.code_postal, fallbackCp)
   const ville = fromOverlay('villeprivee') || fromOverlay('villepublique') || firstNonEmpty(detail.ville_privee_detail, detail.ville_publique_listing, fallbackVille)
   return [rue, cp, ville].filter(Boolean).join(', ')

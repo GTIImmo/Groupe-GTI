@@ -161,7 +161,7 @@ export const mockDetailPayloads: Record<number, Record<string, unknown>> = {
       // Diffusion
       diffusable: 'Oui', titre: 'Grand T3 secteur Bellevue avec garage', NO_DOSSIER: 'VA1926', dateenr: '11/06/2026',
       // Localisation & secteur
-      codepublique: '42000', villepublique: 'Saint-Etienne', ADRESSE_COMPL: '18 rue de la Bellevue', TRANSPORT: 'Tram T1 · 300 m', PROXIMITE: 'Commerces, écoles, parc', ENVIRONNEMENT: 'Quartier résidentiel calme', latitude: '45.4397', longitude: '4.3872',
+      codepublique: '42000', villepublique: 'Saint-Etienne', adresse: '18 rue de la Bellevue', villeprivee: 'Saint-Etienne', codeprive: '42000', TRANSPORT: 'Tram T1 · 300 m', PROXIMITE: 'Commerces, écoles, parc', ENVIRONNEMENT: 'Quartier résidentiel calme', latitude: '45.4397', longitude: '4.3872',
     },
     notes_json: JSON.stringify([
       { type: 'Note interne', date: '2026-06-12', content: 'Vendeurs disponibles pour les visites en semaine après 17 h. Prévoir un bon de visite systématique.' },

@@ -7132,10 +7132,12 @@ async function buildWizardStep4Body(idannWizard, meta, html, payload) {
   setWizardDefault(body, "fromWizardSecteur", "1");
   const postalCode = payloadTextValue(payload, ["postal_code", "postalCode", "code_postal", "codepublique"]);
   const city = payloadTextValue(payload, ["city", "ville", "villepublique"]);
-  const address = payloadTextValue(payload, ["address", "adresse", "private_address", "adresse_privee"]);
   if (postalCode) body.set("codepublique", postalCode);
   if (city) body.set("villepublique", city);
-  if (address) body.set("ADRESSE_COMPL", address);
+  // La rue privée NE va PLUS dans ADRESSE_COMPL (= complément ; sinon doublon « rue rue » : Hektor compose
+  // l'adresse privée = rue de la localité + ADRESSE_COMPL). La rue est posée sur la LOCALITÉ privée par la
+  // passe post-création (applyCreatedAnnonceInitialFields → compose BAN), exactement comme à la modification.
+  // → création manuelle ET OCR alignées sur la modification.
   const locality = await resolveHektorPublicLocality(postalCode, city);
   if (locality) {
     if (locality.code && !postalCode) body.set("codepublique", locality.code);
@@ -8201,6 +8203,7 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
   // ComposedLocalite.id = idville + lat/lng → on grave idville/latitude/longitude dans le MEF secteur.
   // Best-effort : on n'appelle le compose que si l'adresse change, et jamais on ne bloque le reste.
   const addressChanged = cleanFields.address != null || cleanFields.private_city != null || cleanFields.private_postal != null;
+  let composedOk = false;
   if (addressChanged) {
     try {
       const privAddrParts = [
@@ -8217,6 +8220,7 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
         const idLocalite = await fetchHektorSecteurLocaliteId(annonceId);
         if (idLocalite) {
           const composed = await updateHektorLocaliteByFeature(idLocalite, feature);
+          composedOk = !!composed;
           await logJob(job.id, "hektor_annonce_update", "running", "Localite privee mise a jour (BAN)", {
             hektor_annonce_id: String(annonceId),
             id_localite: String(idLocalite),
@@ -8235,6 +8239,12 @@ async function applyHektorAnnonceFieldUpdates(job, annonceId, fields, options = 
         error: error && error.message ? error.message : String(error),
       });
     }
+  }
+  // La rue vit désormais dans la localité (compose réussi) et l'app n'envoie plus de complément → on VIDE
+  // ADRESSE_COMPL : supprime le doublon « rue rue » (wizard création legacy) et nettoie les annonces déjà
+  // polluées à leur prochaine édition. Gardé sur compose OK pour ne jamais perdre l'adresse si le compose rate.
+  if (addressChanged && composedOk && !(cleanFields.address_complement != null && String(cleanFields.address_complement).trim())) {
+    secteur.address_complement = fieldSpec("", ["ADRESSE_COMPL"]);
   }
   await pushHektorGroupUpdate(results, job, annonceId, "secteur", "ihmChargeGroupe_Secteur", secteur, options);
 
