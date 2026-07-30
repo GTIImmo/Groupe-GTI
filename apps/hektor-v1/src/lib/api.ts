@@ -79,16 +79,18 @@ function applyMandateLifecycleFilter<T extends Pick<MandatRecord, 'statut_annonc
 // Statut PROPRE au mandat (distinct de l'etat de l'annonce) : Clos (date de cloture,
 // ou statut clos/vendu) -> Echu (date de fin depassee) -> Actif. Meme derivation que le
 // front (mandatStatutForRegister dans App.tsx) pour coherence colonne <-> filtre <-> stats.
-export type MandatStatutValue = 'Actif' | 'Clos' | 'Échu'
-export function mandatStatutForRegisterRow(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture'>): MandatStatutValue {
-  const cloture = (item.mandat_date_cloture ?? '').trim()
+export type MandatStatutValue = 'Actif' | 'Vendu' | 'Clos' | 'Échu'
+export function mandatStatutForRegisterRow(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture' | 'vente_id'>): MandatStatutValue {
   const status = normalizeMandateStatusValue(item.statut_annonce)
-  if (cloture || status.includes('clos') || status.includes('clotur') || status.includes('vendu') || status.includes('vente')) return 'Clos'
+  // Vente PAR cycle (Lot B) : vente_id est desormais l'affaire du cycle, pas un scalaire annonce.
+  if (item.vente_id || status.includes('vendu') || status.includes('vente')) return 'Vendu'
+  const cloture = (item.mandat_date_cloture ?? '').trim()
+  if (cloture || status.includes('clos') || status.includes('clotur')) return 'Clos'
   if (!isMandateEndDateStillValid(item.mandat_date_fin)) return 'Échu'
   return 'Actif'
 }
 
-function applyMandatStatutFilter<T extends Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture'>>(rows: T[], filters: AppFilters) {
+function applyMandatStatutFilter<T extends Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture' | 'vente_id'>>(rows: T[], filters: AppFilters) {
   const wanted = normalizeFilterValue(filters.mandatStatut)
   if (!wanted) return rows
   return rows.filter((item) => mandatStatutForRegisterRow(item) === wanted)

@@ -6949,16 +6949,21 @@ function mandateLifecycleRowClass(item: Pick<MandatRecord, 'statut_annonce' | 'm
 // Statut PROPRE au mandat (distinct de la colonne "État" qui reflète l'annonce).
 // Priorite : Clos (date de cloture posee, ou statut clos/vendu) -> Echu (date de fin depassee) -> Actif.
 // Robuste avant que le Lot A ne peuple `mandat_date_cloture` : on reconnait aussi les statuts clos/vendu.
-type MandatStatutValue = 'Actif' | 'Clos' | 'Échu'
-function mandatStatutForRegister(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture'>): MandatStatutValue {
-  const cloture = (item.mandat_date_cloture ?? '').trim()
+type MandatStatutValue = 'Actif' | 'Vendu' | 'Clos' | 'Échu'
+function mandatStatutForRegister(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture' | 'vente_id'>): MandatStatutValue {
   const status = normalizeMandateLifecycleStatus(item.statut_annonce)
-  if (cloture || status.includes('clos') || status.includes('clotur') || status.includes('vendu') || status.includes('vente')) return 'Clos'
+  // Vente PAR cycle (Lot B) : vente_id = affaire du cycle, plus un scalaire annonce écrasé.
+  if (item.vente_id || status.includes('vendu') || status.includes('vente')) return 'Vendu'
+  const cloture = (item.mandat_date_cloture ?? '').trim()
+  if (cloture || status.includes('clos') || status.includes('clotur')) return 'Clos'
   if (!isMandateEndDateStillValid(item.mandat_date_fin)) return 'Échu'
   return 'Actif'
 }
 function mandatStatutToneClass(value: MandatStatutValue) {
-  return value === 'Clos' ? 'reg-mstatut-clos' : value === 'Échu' ? 'reg-mstatut-echu' : 'reg-mstatut-actif'
+  return value === 'Vendu' ? 'reg-mstatut-vendu'
+    : value === 'Clos' ? 'reg-mstatut-clos'
+    : value === 'Échu' ? 'reg-mstatut-echu'
+    : 'reg-mstatut-actif'
 }
 
 function hasCancelledMandateExposureAnomaly(mandat: Pick<MandatRecord, 'diffusable' | 'nb_portails_actifs' | 'statut_annonce' | 'mandat_date_fin'>) {
@@ -18686,6 +18691,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   onChange={(value) => updateFilter('mandatStatut', value)}
                   options={[
                     { value: 'Actif', label: 'Actif' },
+                    { value: 'Vendu', label: 'Vendu' },
                     { value: 'Clos', label: 'Clos' },
                     { value: 'Échu', label: 'Échu' },
                   ]}
