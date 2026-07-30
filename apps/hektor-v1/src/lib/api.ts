@@ -4993,6 +4993,33 @@ export async function loadMandatRegisterPage({
   }
 }
 
+// Lot B3.2 : affaire (offre/compromis/vente) PAR cycle d'une annonce, depuis le registre
+// (grain (annonce, numero_mandat) rempli par B1). Sert à re-scoper la rubrique Affaires et le
+// badge du sélecteur de cycle du cockpit, que le detail du dossier actif ne couvre pas.
+export type CycleAffaire = {
+  numero_mandat: string | null
+  statut_annonce: string | null
+  mandat_date_fin: string | null
+  mandat_date_cloture: string | null
+  offre_id: string | null
+  offre_state: string | null
+  compromis_id: string | null
+  compromis_state: string | null
+  vente_id: string | null
+}
+export async function loadRegisterCycleAffaires(hektorAnnonceId: number | string): Promise<CycleAffaire[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const cleanId = String(hektorAnnonceId ?? '').trim()
+  if (!/^\d+$/.test(cleanId)) return []
+  const { data, error } = await supabase
+    .from('app_registre_mandats_current')
+    .select('numero_mandat,statut_annonce,mandat_date_fin,mandat_date_cloture,offre_id,offre_state,compromis_id,compromis_state,vente_id')
+    .eq('hektor_annonce_id', Number(cleanId))
+    .not('numero_mandat', 'is', null)
+  if (error || !data) return []
+  return data as CycleAffaire[]
+}
+
 export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {
   if (!hasSupabaseEnv || !supabase) {
     const rows = applyMandatStatutFilter(applyMandateLifecycleFilter(

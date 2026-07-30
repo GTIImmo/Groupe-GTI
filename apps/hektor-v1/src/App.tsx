@@ -64,6 +64,8 @@ import {
   verifyPriceDropOnHektor,
   loadConsoleDocuments,
   loadCockpitActivite,
+  loadRegisterCycleAffaires,
+  type CycleAffaire,
   type CockpitActiviteRow,
   loadConsolePhotos,
   createPrepareConsoleDocumentJob,
@@ -22190,6 +22192,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Fil d'activité RÉEL (RPC app_cockpit_activite) : agrège les événements du dossier.
   // Remplace le fallback pauvre quand il n'y a pas de mock activite_json.
   const [ckActi, setCkActi] = useState<CockpitActiviteRow[]>([])
+  // Lot B3.2 : affaire (offre/compromis/vente) PAR cycle, depuis le registre, clé = numero_mandat.
+  const [ckCycleAff, setCkCycleAff] = useState<Record<string, CycleAffaire>>({})
   // Nombre d'acquéreurs rapprochés (moteur de scoring, RPC app_get_rapprochements_for_dossier).
   // Source AUTORITATIVE identique au listing Mandats : le rail « Rapprochement » doit porter ce
   // compteur (la maquette v26 affiche « N acquéreur » dans le foot de la rubrique).
@@ -22239,6 +22243,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     void loadCockpitActivite(id, 200)
       .then((rows) => { if (!cancelled) setCkActi(rows) })
       .catch(() => { if (!cancelled) setCkActi([]) })
+    return () => { cancelled = true }
+  }, [dossier?.app_dossier_id])
+  useEffect(() => {
+    const aid = dossier?.hektor_annonce_id
+    if (!aid) { setCkCycleAff({}); return }
+    let cancelled = false
+    void loadRegisterCycleAffaires(aid)
+      .then((rows) => {
+        if (cancelled) return
+        const map: Record<string, CycleAffaire> = {}
+        for (const r of rows) { const n = String(r.numero_mandat ?? '').trim(); if (n) map[n] = r }
+        setCkCycleAff(map)
+      })
+      .catch(() => { if (!cancelled) setCkCycleAff({}) })
     return () => { cancelled = true }
   }, [dossier?.app_dossier_id])
   useEffect(() => {
@@ -22346,11 +22364,19 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     if (Number.isNaN(t)) return true
     return t >= ckSelWindow.startMs && (ckSelWindow.endMs === Number.POSITIVE_INFINITY || t < ckSelWindow.endMs)
   }
-  // Pastille d'issue d'un cycle (sans la vente, non dispo au cockpit avant B3.2) : Clos → Échu → Actif.
-  const ckCycleBadge = (c: { cloture: string; fin: string }): { label: string; tone: 'actif' | 'clos' | 'echu' } => {
+  // Pastille d'issue d'un cycle : Vendu (affaire vente du cycle, B3.2) → Clos → Échu → Actif.
+  const ckCycleBadge = (c: { numero: string; cloture: string; fin: string }): { label: string; tone: 'actif' | 'vendu' | 'clos' | 'echu' } => {
+    if (ckCycleAff[c.numero]?.vente_id) return { label: 'Vendu', tone: 'vendu' }
     if (c.cloture) return { label: 'Clos', tone: 'clos' }
     if (c.fin && Date.parse(c.fin) < Date.now()) return { label: 'Échu', tone: 'echu' }
     return { label: 'Actif', tone: 'actif' }
+  }
+  // Résumé de l'affaire d'un cycle (issue B1, sans financiers par cycle).
+  const ckCycleAffaireLabel = (aff: CycleAffaire): string => {
+    if (aff.vente_id) return 'Vendu'
+    if (aff.compromis_id) return `Compromis${aff.compromis_state ? ` · ${aff.compromis_state}` : ''}`
+    if (aff.offre_id) return `Offre${aff.offre_state ? ` · ${aff.offre_state}` : ''}`
+    return 'Aucune affaire enregistrée sur ce cycle'
   }
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
@@ -24347,6 +24373,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             </div>
           ) : activeTab === 'affaires' ? (
             <div className="fa-ck-rub">
+              {ckSelectedNumero !== 'ALL' && ckSelectedNumero !== ckCurrentNumero && ckCycleAff[ckSelectedNumero] ? (
+                <div className="fa-ck-cycaff">
+                  <span className="fa-ck-cycaff-l">Cycle · Mandat n° {ckSelectedNumero}</span>
+                  <span className="fa-ck-cycaff-v">{ckCycleAffaireLabel(ckCycleAff[ckSelectedNumero])}</span>
+                  <span className="fa-ck-cycaff-note">Le détail financier ci-dessous concerne le mandat courant.</span>
+                </div>
+              ) : null}
               {(() => {
                 // Priorité au mock riche (démo) ; sinon on DÉRIVE des vrais champs de transaction
                 // (offre/compromis/vente) → l'Affaires marche en prod, plus de fallback vide.
