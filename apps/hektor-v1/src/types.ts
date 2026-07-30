@@ -362,6 +362,7 @@ export type MandatRecord = {
   mandat_type_source?: string | null
   mandat_date_debut?: string | null
   mandat_date_fin?: string | null
+  mandat_date_cloture?: string | null
   mandat_montant?: number | string | null
   mandants_texte?: string | null
   price_change_event_count?: number | null

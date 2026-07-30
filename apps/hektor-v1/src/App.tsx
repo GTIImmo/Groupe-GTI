@@ -6945,6 +6945,21 @@ function mandateLifecycleRowClass(item: Pick<MandatRecord, 'statut_annonce' | 'm
   return mandateLifecycleState(item) === 'En cours' ? 'register-row-state-current' : 'register-row-state-cancelled'
 }
 
+// Statut PROPRE au mandat (distinct de la colonne "État" qui reflète l'annonce).
+// Priorite : Clos (date de cloture posee, ou statut clos/vendu) -> Echu (date de fin depassee) -> Actif.
+// Robuste avant que le Lot A ne peuple `mandat_date_cloture` : on reconnait aussi les statuts clos/vendu.
+type MandatStatutValue = 'Actif' | 'Clos' | 'Échu'
+function mandatStatutForRegister(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture'>): MandatStatutValue {
+  const cloture = (item.mandat_date_cloture ?? '').trim()
+  const status = normalizeMandateLifecycleStatus(item.statut_annonce)
+  if (cloture || status.includes('clos') || status.includes('clotur') || status.includes('vendu') || status.includes('vente')) return 'Clos'
+  if (!isMandateEndDateStillValid(item.mandat_date_fin)) return 'Échu'
+  return 'Actif'
+}
+function mandatStatutToneClass(value: MandatStatutValue) {
+  return value === 'Clos' ? 'reg-mstatut-clos' : value === 'Échu' ? 'reg-mstatut-echu' : 'reg-mstatut-actif'
+}
+
 function hasCancelledMandateExposureAnomaly(mandat: Pick<MandatRecord, 'diffusable' | 'nb_portails_actifs' | 'statut_annonce' | 'mandat_date_fin'>) {
   return mandateLifecycleState(mandat) === 'Annulé' && (((mandat.diffusable ?? '0') === '1') || Boolean(mandat.nb_portails_actifs))
 }
@@ -20398,6 +20413,7 @@ function MandatRegisterScreen(props: {
                 <thead>
                   <tr>
                     <th className="register-col-mandat">N° de mandat</th>
+                    <th className="register-col-mstatut">Statut du mandat</th>
                     <th className="register-col-etat">État</th>
                     <th className="register-col-date">Date de début</th>
                     <th className="register-col-date">Date de fin</th>
@@ -20438,6 +20454,9 @@ function MandatRegisterScreen(props: {
                             {(item.register_version_count ?? 1) > 1 ? <StatusPill value={`+${item.register_version_count} versions`} /> : null}
                             {(item.register_embedded_avenant_count ?? 0) > 0 ? <StatusPill value={`+${item.register_embedded_avenant_count} avenant${(item.register_embedded_avenant_count ?? 0) > 1 ? 's' : ''}`} /> : null}
                           </div>
+                        </td>
+                        <td className="register-col-mstatut">
+                          <span className={`reg-mstatut ${mandatStatutToneClass(mandatStatutForRegister(item))}`}>{mandatStatutForRegister(item)}</span>
                         </td>
                         <td className="register-col-etat">
                           <div className="reg-etat">
@@ -22149,7 +22168,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const pOffre = hasOffreAchatEnCours(props.detail)
   const pOffreRefusee = hasOffreAchatRefusee(props.detail)
   const pCompromis = hasCompromisEnCours(props.detail)
-  const pVendu = /vendu|vente|clos/i.test(String(dossier.statut_annonce ?? ''))
+  // Issue de CYCLE (arbitrage clôture Lot A / vision par cycle Lot B) : une annonce peut
+  // enchaîner plusieurs cycles de mandat, donc le statut annonce (scalaire écrasé) ne suffit
+  // pas. On distingue deux fins de cycle : VENDU (vente réelle) vs CLOS (mandat clôturé).
+  // NB (Lot B) : le « vendu par cycle » complet viendra des affaires rattachées au mandat ;
+  // ici on couvre le cycle COURANT (statut annonce + date de clôture du mandat courant).
+  const pVendu = /vendu|vente/i.test(String(dossier.statut_annonce ?? ''))
+  const pClotureMandat = String((props.detail as Record<string, unknown>)['mandat_date_cloture'] ?? '').trim()
+  const pClos = !pVendu && (Boolean(pClotureMandat) || /clos|clotur/i.test(String(dossier.statut_annonce ?? '')))
   const detailStr = (k: string) => { const v = (props.detail as Record<string, unknown>)[k]; return v == null ? '' : String(v) }
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
   const pDiffused = pMandatNum && pMandatOk && (Number(dossier.nb_portails_actifs) || 0) > 0
@@ -22234,6 +22260,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // (date d'envoi présente). date_avis est déjà lu pour la timeline.
   const avisEnvoye = Boolean(detailStr('date_avis').trim())
   const ckStage = pVendu ? 'vendu'
+    : pClos ? 'clos'
     : estArchive ? 'archive'
     : pCompromis ? 'compromis'
     : pOffre ? 'offre'
@@ -22310,6 +22337,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       roban: 'Dossier terminé — lecture seule. Aucune action commerciale ni démarche.',
       desc: 'Vente finalisée — dossier terminé.',
       btns: [{ label: 'Bilan de vente', rubKey: 'reporting' }, { label: "Voir l'affaire", rubKey: 'affaires' }] },
+    // Cycle de mandat clôturé SANS vente (non-renouvelé / annulation / autre). Distinct de « Vendu ».
+    // `ro` mais le déclencheur de statut reste visible (cf. condition `ckStage !== 'archive'`) → réouverture possible.
+    clos: { label: 'Mandat clos', led: '#8a6ad0', ro: true,
+      roban: 'Mandat clos — lecture seule. Réactivez le mandat pour reprendre la commercialisation.',
+      desc: 'Cycle de mandat clôturé (sans vente).',
+      btns: [{ label: "Voir l'historique", rubKey: 'historique' }, { label: 'Voir le mandat', rubKey: 'mandat' }] },
     archive: { label: 'Archivée', led: '#8a807a', ro: true,
       roban: 'Annonce archivée — lecture seule. Désarchivez-la pour pouvoir l’éditer.',
       desc: "Annonce archivée — plus de diffusion ni d'action commerciale.",
@@ -22370,7 +22403,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const appts = parseAppointmentRequests(props.detail)
   // Rail construit EXACTEMENT comme le v26 : featList = Le Bien + [feat de phase] + Rendez-vous + Contact,
   // chaque item « en avant » portant une pastille de statut (foot) ; puis « Autres rubriques » repliées.
-  const ckPhase = pVendu ? 'ven' : (pOffre || pCompromis) ? 'tra' : (pMandatNum && pMandatOk) ? 'dif' : pMandatNum ? 'man' : 'est'
+  const ckPhase = (pVendu || pClos) ? 'ven' : (pOffre || pCompromis) ? 'tra' : (pMandatNum && pMandatOk) ? 'dif' : pMandatNum ? 'man' : 'est'
   type CkFoot = [tone: 'ok' | 'alert' | 'neutral' | 'wait', label: string]
   const docFoot: CkFoot = ['alert', 'À préparer']
   const rdvFoot: CkFoot = appts.length > 0 ? ['ok', `${appts.length} demande${appts.length > 1 ? 's' : ''}`] : ['neutral', 'Visites · demandes']
@@ -22484,7 +22517,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     // Demande de baisse de prix (= validation de l'avenant) en cours côté direction.
     const baisseEnCours = (props.requestHistoryPriceDrop ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
     const mv3Mode = !pMandatNum ? 'none'
-      : (mandatEchu || pVendu || estArchive) ? 'echu'
+      : (mandatEchu || pVendu || pClos || estArchive) ? 'echu'
       : !pMandatOk ? (mandatSig === 'to_send' ? 'edite' : mandatSig === 'pending' ? 'envoye' : mandatSig === 'signed' ? (validationEnCours ? 'attente' : 'valider') : 'editer')
       // Avenant en cours : le mandat reste VALIDÉ (cycle du haut), l'avenant déroule SON propre cycle.
       : avenantEnCours ? (avenantSig === 'to_send' ? 'av_edite' : avenantSig === 'pending' ? 'av_envoye' : (baisseEnCours ? 'av_attente' : 'av_signe'))
@@ -22512,7 +22545,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const STAT: Record<string, [string, string]> = {
       none: ['Sans mandat', 'none'], editer: ['À éditer', 'wait'], edite: ['Édité · à envoyer', 'wait'],
       envoye: ['En signature', 'wait'], valider: ['Signé · à valider', 'wait'], attente: ['En validation', 'wait'],
-      valide: ['Validé', 'ok'], echu: [mandatEchu ? 'Échu' : pVendu ? 'Vendu' : 'Clôturé', 'none'],
+      valide: ['Validé', 'ok'], echu: [pClos ? 'Clos' : pVendu ? 'Vendu' : mandatEchu ? 'Échu' : 'Clôturé', 'none'],
       av_edite: ['Validé', 'ok'], av_envoye: ['Validé', 'ok'], av_signe: ['Validé', 'ok'], av_attente: ['Validé', 'ok'],
     }
     const [statLabel, statCls] = STAT[mv3Mode] ?? STAT.valide
@@ -23361,7 +23394,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </span>
                 </button>
               ) : null}
-              {props.onChangeAnnonceStatus && !isLightweightDetail && !ckStageDef.ro ? (
+              {/* Vendu/Clos = état terminal `ro`, MAIS on garde le déclencheur de statut visible
+                  pour permettre de faire évoluer / rouvrir le mandat (arbitrage clôture Lot A).
+                  Seule l'archive reste sans ce bloc (elle a son propre flux « Désarchiver »). */}
+              {props.onChangeAnnonceStatus && !isLightweightDetail && ckStage !== 'archive' ? (
                 <button type="button" className="fa-ck-tl-status" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
                   {/* Audit visuel §13 : pastille de couleur de l'état, qui manquait. */}
                   <span className="fa-ck-tl-cur"><span className="fa-ck-tl-cur-pd" style={{ background: statusLed }} aria-hidden="true" />{situationLabel}</span>
@@ -29739,6 +29775,7 @@ function MobileRegisterCards(props: {
             <div><span className="mobile-mini-label">Fin</span><strong>{formatDate(item.mandat_date_fin)}</strong></div>
           </div>
           <div className="mobile-status-row">
+            <span className={`reg-mstatut ${mandatStatutToneClass(mandatStatutForRegister(item))}`}>{mandatStatutForRegister(item)}</span>
             <StatusPill value={item.statut_annonce} />
             <StatusPill value={mandateRegisterDiffusableLabel(item.diffusable)} />
           </div>

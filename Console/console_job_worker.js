@@ -8748,26 +8748,176 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   };
 }
 
-async function submitHektorClosedStatus(job, annonceId, config, payload) {
-  const body = new URLSearchParams({
-    mode: "annonce-SuiviVente-saveMandatClos",
+// --- Cloture de mandat (Lot A) : endpoint reel `popins-StatutBien` / `context=validerClos` ---
+// Remplace l'ancien `annonce-SuiviVente-saveMandatClos` (obsolete, jamais fonctionnel).
+// Format capture en direct : GET xmlrpc.php mode=popins-StatutBien-statutBienDispatcher&context=validerClos
+//   &idAnnonce=<id>&params[etat]=<choiceBags>&params[raison]=<sous-motif>&params[idMandat]=<id interne>...
+// La cloture est IRREVERSIBLE cote Hektor -> on refuse de deviner le mandat cible.
+
+const HEKTOR_CLOSURE_ETATS = new Set(["choiceNonRenouv", "choiceVendu", "choiceAutre"]);
+const HEKTOR_CLOSURE_RAISONS = {
+  choiceNonRenouv: new Set(["concurence", "vendre_seule", "noReason"]),
+  choiceVendu: new Set(["agence", "confrere", "proprietaire"]),
+  choiceAutre: new Set(["autre"]),
+};
+
+function normalizeHektorClosureMotif(payload) {
+  const rawEtat = String(payload.close_etat || payload.etat || payload.close_state || "").trim();
+  const etatAliases = {
+    non_renouvele: "choiceNonRenouv", "non-renouvele": "choiceNonRenouv", nonrenouvele: "choiceNonRenouv",
+    choicenonrenouv: "choiceNonRenouv", vendu: "choiceVendu", choicevendu: "choiceVendu",
+    autre: "choiceAutre", choiceautre: "choiceAutre",
+  };
+  const etatKey = etatAliases[rawEtat.toLowerCase()] || rawEtat;
+  const etat = HEKTOR_CLOSURE_ETATS.has(etatKey) ? etatKey : "choiceAutre";
+  let raison = String(payload.close_raison || payload.raison || payload.close_sub_reason || "").trim();
+  if (!HEKTOR_CLOSURE_RAISONS[etat].has(raison)) {
+    raison = etat === "choiceAutre" ? "autre" : etat === "choiceVendu" ? "agence" : "noReason";
+  }
+  const autre = String(payload.close_reason || payload.autre || payload.autreTxt || payload.reason || "").trim();
+  return { etat, raison, autre };
+}
+
+function parseHektorMandatSelectOptions(html) {
+  const source = String(html || "");
+  const selMatch = source.match(/<select\b[^>]*(?:id|name)=["']id_mandat["'][\s\S]*?<\/select>/i);
+  const scope = selMatch ? selMatch[0] : source;
+  const options = [];
+  const optRe = /<option\b([^>]*)>([\s\S]*?)<\/option>/gi;
+  let m;
+  while ((m = optRe.exec(scope))) {
+    const attrs = m[1] || "";
+    const value = String(htmlAttrValue(attrs, "value") || "").trim();
+    if (!value) continue;
+    const text = stripHtml(m[2] || "").replace(/\s+/g, " ").trim();
+    const numMatch = text.match(/Mandat\s*n[°\s]*0*([0-9]+)/i);
+    options.push({
+      value,
+      dataType: String(htmlAttrValue(attrs, "data") || "").trim(),
+      selected: /\bselected\b/i.test(attrs),
+      text,
+      numero: numMatch ? numMatch[1] : "",
+    });
+  }
+  return options;
+}
+
+async function fetchHektorClosureContext(job, annonceId) {
+  const res = await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+    mode: "popins-StatutBien-statutBienDispatcher",
+    context: "clos",
     idAnnonce: annonceId,
-    state: String(payload.close_state || payload.state || "autre"),
-    reason: String(payload.close_reason || payload.reason || "Cloture demandee depuis l app").trim(),
-    idConfrere: String(payload.confrere_id || payload.idConfrere || "").trim(),
-    prix: cleanMoneyValue(payload.close_price || payload.price || ""),
-  });
-  await hektorFetch(XMLRPC_URL, {
-    method: "POST",
-    body,
+    idMandat: "",
+  }).toString()}`, {
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
       Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      Accept: "application/json, text/javascript, */*; q=0.01",
     },
     timeoutMs: 60000,
   });
+  let html = String(res.text || "");
+  let json = null;
+  try { json = parseHektorJson(res.text, "cloture init"); } catch { json = null; }
+  if (json) {
+    html = String(json.html || (json.data && (json.data.html || json.data.defaultTemplate || json.data.template)) || html);
+  }
+  return { html, options: parseHektorMandatSelectOptions(html) };
+}
+
+function resolveHektorClosureMandat(options, payload) {
+  const wantId = String(payload.id_mandat || payload.idMandat || payload.mandat_source_id || "").trim();
+  const wantNumero = String(payload.numero_mandat || payload.numeroMandat || "").trim().replace(/^0+/, "");
+  if (wantId) {
+    const byId = options.find((o) => o.value === wantId);
+    return byId || { value: wantId, dataType: String(payload.type_mandat || payload.typeMandat || "").trim(), selected: false, text: "", numero: wantNumero };
+  }
+  if (wantNumero) {
+    const byNum = options.find((o) => o.numero && o.numero === wantNumero);
+    if (byNum) return byNum;
+  }
+  // Cloture irreversible : on n'improvise pas si la cible est ambigue.
+  throw new Error(
+    `Impossible de cibler le mandat a clore (id_mandat/numero_mandat requis dans le payload). Options Hektor: ${
+      options.map((o) => `${o.numero || "?"}=${o.value}`).join(", ") || "aucune"}`,
+  );
+}
+
+async function submitHektorMandatClosure(job, annonceId, payload, targetMandat) {
+  const motif = normalizeHektorClosureMotif(payload);
+  const prix = cleanMoneyValue(
+    payload.close_price || payload.prix
+    || (motif.raison === "proprietaire" ? payload.propPrice : payload.confrerePrice)
+    || "",
+  );
+  const query = new URLSearchParams();
+  query.set("mode", "popins-StatutBien-statutBienDispatcher");
+  query.set("context", "validerClos");
+  query.set("idAnnonce", annonceId);
+  query.set("params[id_annonce]", annonceId);
+  query.set("params[prix]", prix);
+  query.set("params[confrere]", String(payload.confrere || payload.confrereTxt || "").trim());
+  query.set("params[etat]", motif.etat);
+  query.set("params[raison]", motif.raison);
+  query.set("params[autre]", motif.autre);
+  query.set("params[idMandat]", String(targetMandat.value || "").trim());
+  query.set("params[typeMandat]", String(payload.type_mandat || payload.typeMandat || targetMandat.dataType || "").trim());
+  query.set("params[id_confrere]", String(payload.confrere_id || payload.idConfrere || payload.confrereId || "").trim());
+  query.set("params[id]", String(payload.reporting_id || payload.reportingId || "").trim());
+
+  const res = await hektorFetch(`${XMLRPC_URL}?${query.toString()}`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      Accept: "application/json, text/javascript, */*; q=0.01",
+    },
+    timeoutMs: 60000,
+  });
+  let json = null;
+  try { json = parseHektorJson(res.text, "validerClos"); } catch { json = null; }
+  const refused = json && json.error === true && !json.returnValue;
+  await logJob(job.id, "hektor_mandat_cloture", refused ? "error" : "done",
+    refused ? "Hektor a refuse la cloture du mandat" : "Cloture du mandat envoyee a Hektor", {
+      hektor_annonce_id: annonceId,
+      id_mandat: targetMandat.value,
+      mandat_numero: targetMandat.numero || null,
+      etat: motif.etat,
+      raison: motif.raison,
+    });
+  if (refused) {
+    throw new Error(`Hektor refuse la cloture du mandat: ${stripHtml((json && json.html) || res.text).slice(0, 400)}`);
+  }
+  return { id_mandat: targetMandat.value, mandat_numero: targetMandat.numero || null, etat: motif.etat, raison: motif.raison };
+}
+
+function hektorSaleWantsMandatClosure(payload) {
+  return payload.close_mandat_on_sale === true
+    || payload.close_mandat_on_sale === "1"
+    || payload.close_mandat === true
+    || payload.close_mandat === "1";
+}
+
+// Chemin "Vendu" : ferme le mandat (etat=vendu) SANS repasser l'annonce en "Clos"
+// (l'annonce reste au statut Vendu pose par la transaction createVente).
+async function closeHektorMandatAfterSale(job, annonceId, payload) {
+  const ctx = await fetchHektorClosureContext(job, annonceId);
+  const targetMandat = resolveHektorClosureMandat(ctx.options, payload);
+  return submitHektorMandatClosure(job, annonceId, {
+    ...payload,
+    close_etat: "choiceVendu",
+    close_raison: HEKTOR_CLOSURE_RAISONS.choiceVendu.has(String(payload.close_raison || "")) ? payload.close_raison : "agence",
+  }, targetMandat);
+}
+
+async function submitHektorClosedStatus(job, annonceId, config, payload) {
+  const ctx = await fetchHektorClosureContext(job, annonceId);
+  const targetMandat = resolveHektorClosureMandat(ctx.options, payload);
+  const closure = await submitHektorMandatClosure(job, annonceId, payload, targetMandat);
+  // Flip statut annonce : Mandat clos (6) + diffusion coupee (config.diffusable="0"),
+  // sans archivage -> equivaut au bouton Hektor "Enregistrer & laisser actif".
   await setHektorAnnonceStatusValue(job, annonceId, config, "closed_form");
-  return { closed_reason: body.get("reason"), closed_state: body.get("state") };
+  return {
+    closure,
+    mandat_options: ctx.options.map((o) => ({ value: o.value, numero: o.numero, selected: o.selected })),
+  };
 }
 
 async function handleChangeHektorAnnonceStatus(job) {
@@ -8800,12 +8950,20 @@ async function handleChangeHektorAnnonceStatus(job) {
   });
   const before = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_status_verify_before");
   let transactionResult = null;
+  let mandatClosureResult = null;
   try {
-    transactionResult = config.transactionMode
-      ? await submitHektorTransactionStatus(job, annonceId, target, config, payload)
-      : target === "closed"
-        ? await submitHektorClosedStatus(job, annonceId, config, payload)
-        : await setHektorAnnonceStatusValue(job, annonceId, config, "direct_status");
+    if (config.transactionMode) {
+      transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
+      // Chemin "Vendu" : sur demande explicite du front, on clot aussi le mandat courant
+      // (motif vendu). L'annonce reste au statut Vendu pose par la transaction.
+      if (target === "sold" && hektorSaleWantsMandatClosure(payload)) {
+        mandatClosureResult = await closeHektorMandatAfterSale(job, annonceId, payload);
+      }
+    } else if (target === "closed") {
+      transactionResult = await submitHektorClosedStatus(job, annonceId, config, payload);
+    } else {
+      transactionResult = await setHektorAnnonceStatusValue(job, annonceId, config, "direct_status");
+    }
   } finally {
     if (config.transactionMode) {
       await returnAdminHektorSessionBestEffort(job, "change_status_return_admin");
@@ -8838,6 +8996,7 @@ async function handleChangeHektorAnnonceStatus(job) {
       isArchived: after.property.isArchived === true,
     } : null,
     transaction: transactionResult || null,
+    mandat_closure: mandatClosureResult || null,
     sync_job: syncJob,
   };
 }

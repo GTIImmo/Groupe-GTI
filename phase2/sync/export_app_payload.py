@@ -1450,6 +1450,7 @@ def build_mandat_register_rows(
                 "mandat_type_source": normalize_text(current_version.get("type")) or None,
                 "mandat_date_debut": normalize_text(current_version.get("debut")) or None,
                 "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
+                "mandat_date_cloture": normalize_text(current_version.get("cloture") or current_version.get("dateCloture") or current_version.get("date_cloture")) or None,
                 "mandat_montant": normalize_text(current_version.get("montant")) or None,
                 "mandants_texte": normalize_text(current_version.get("mandants")) or None,
                 "mandat_note": normalize_text(current_version.get("note")) or None,
