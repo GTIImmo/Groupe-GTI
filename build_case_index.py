@@ -155,7 +155,10 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
     SELECT
         ids.hektor_annonce_id,
         a.no_dossier,
-        a.no_mandat,
+        -- Cle de cycle du registre : NO_MANDAT de l'annonce Hektor est en retard sur le mandat
+        -- le plus recent ; on prefere le numero du cycle courant pour que le registre range la
+        -- donnee vivante sous le bon numero (mono-mandat : mf.numero == a.no_mandat => no-op).
+        COALESCE(NULLIF(mf.numero, ''), a.no_mandat) AS no_mandat,
         a.hektor_agence_id,
         a.hektor_negociateur_id,
         n.nom,
@@ -195,7 +198,13 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
             THEN 'transaction_commerce'
             ELSE NULL
         END AS case_kind,
-        COALESCE(
+        -- Cycle courant : l'identite du mandat suit le CYCLE le plus recent (mf), identifie
+        -- par son NUMERO (pas par l'id interne, que Hektor recycle). On ne bascule que sur un
+        -- vrai re-mandatement (numero de l'affaire different du numero courant) ; sinon on garde
+        -- l'expression baseline a l'identique => mono-mandat et doublons d'id sont inchanges.
+        CASE WHEN mf.numero IS NOT NULL AND md.numero IS NOT NULL AND md.numero <> mf.numero
+             THEN mf.hektor_mandat_id
+             ELSE COALESCE(
             NULLIF(md.hektor_mandat_id, ''),
             NULLIF(md.hektor_mandat_id, '0'),
             mf.hektor_mandat_id,
@@ -205,39 +214,49 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
             NULLIF(o.hektor_mandat_id, '0'),
             NULLIF(v.hektor_mandat_id, ''),
             NULLIF(v.hektor_mandat_id, '0')
-        ) AS mandat_id,
-        COALESCE(
+        ) END AS mandat_id,
+        CASE WHEN mf.numero IS NOT NULL AND md.numero IS NOT NULL AND md.numero <> mf.numero
+             THEN mf.type
+             ELSE COALESCE(
             md.type,
             mf.type,
             json_extract(c.raw_json, '$.mandat.type'),
             json_extract(o.raw_json, '$.mandat.type'),
             json_extract(v.raw_json, '$.mandat.type')
-        ) AS mandat_type,
-        COALESCE(
+        ) END AS mandat_type,
+        CASE WHEN mf.numero IS NOT NULL AND md.numero IS NOT NULL AND md.numero <> mf.numero
+             THEN mf.date_debut
+             ELSE COALESCE(
             md.date_debut,
             mf.date_debut,
             json_extract(c.raw_json, '$.mandat.debut'),
             json_extract(o.raw_json, '$.mandat.debut'),
             json_extract(v.raw_json, '$.mandat.debut')
-        ) AS mandat_date_debut,
-        COALESCE(
+        ) END AS mandat_date_debut,
+        CASE WHEN mf.numero IS NOT NULL AND md.numero IS NOT NULL AND md.numero <> mf.numero
+             THEN mf.date_fin
+             ELSE COALESCE(
             md.date_fin,
             mf.date_fin,
             json_extract(c.raw_json, '$.mandat.fin'),
             json_extract(o.raw_json, '$.mandat.fin'),
             json_extract(v.raw_json, '$.mandat.fin')
-        ) AS mandat_date_fin,
-        COALESCE(
+        ) END AS mandat_date_fin,
+        CASE WHEN mf.numero IS NOT NULL AND md.numero IS NOT NULL AND md.numero <> mf.numero
+             THEN mf.date_cloture
+             ELSE COALESCE(
             md.date_cloture,
             mf.date_cloture,
             json_extract(c.raw_json, '$.mandat.cloture'),
             json_extract(o.raw_json, '$.mandat.cloture'),
             json_extract(v.raw_json, '$.mandat.cloture')
-        ) AS mandat_date_cloture,
-        o.hektor_offre_id,
-        c.hektor_compromis_id,
-        v.hektor_vente_id,
-        v.date_vente,
+        ) END AS mandat_date_cloture,
+        -- Affaire scopee au cycle courant : on ne retire l'offre / le compromis / la vente que
+        -- si SON mandat (mo/mc/mv) porte un NUMERO different du numero courant (ancien cycle).
+        CASE WHEN mf.numero IS NOT NULL AND mo.numero IS NOT NULL AND mo.numero <> mf.numero THEN NULL ELSE o.hektor_offre_id END AS hektor_offre_id,
+        CASE WHEN mf.numero IS NOT NULL AND mc.numero IS NOT NULL AND mc.numero <> mf.numero THEN NULL ELSE c.hektor_compromis_id END AS hektor_compromis_id,
+        CASE WHEN mf.numero IS NOT NULL AND mv.numero IS NOT NULL AND mv.numero <> mf.numero THEN NULL ELSE v.hektor_vente_id END AS hektor_vente_id,
+        CASE WHEN mf.numero IS NOT NULL AND mv.numero IS NOT NULL AND mv.numero <> mf.numero THEN NULL ELSE v.date_vente END AS date_vente,
         ?
     FROM annonce_ids ids
     LEFT JOIN annonce_ranked a ON a.hektor_annonce_id = ids.hektor_annonce_id AND a.rn = 1
@@ -258,6 +277,18 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
         -- Un identifiant de mandat n'est unique qu'au sein d'une annonce : sans cette
         -- condition, la jointure pourrait ramener le mandat d'une autre annonce.
         AND CAST(md.hektor_annonce_id AS TEXT) = CAST(ids.hektor_annonce_id AS TEXT)
+    -- Mandat propre a chaque affaire (offre/compromis/vente) pour lire SON numero de cycle.
+    -- Qualifie par l'annonce (meme regle de cle que md), car l'id de mandat n'est unique
+    -- qu'au sein d'une annonce.
+    LEFT JOIN hektor_mandat mo
+        ON mo.hektor_mandat_id = COALESCE(NULLIF(o.hektor_mandat_id, ''), NULLIF(o.hektor_mandat_id, '0'))
+        AND CAST(mo.hektor_annonce_id AS TEXT) = CAST(ids.hektor_annonce_id AS TEXT)
+    LEFT JOIN hektor_mandat mc
+        ON mc.hektor_mandat_id = COALESCE(NULLIF(c.hektor_mandat_id, ''), NULLIF(c.hektor_mandat_id, '0'))
+        AND CAST(mc.hektor_annonce_id AS TEXT) = CAST(ids.hektor_annonce_id AS TEXT)
+    LEFT JOIN hektor_mandat mv
+        ON mv.hektor_mandat_id = COALESCE(NULLIF(v.hektor_mandat_id, ''), NULLIF(v.hektor_mandat_id, '0'))
+        AND CAST(mv.hektor_annonce_id AS TEXT) = CAST(ids.hektor_annonce_id AS TEXT)
     LEFT JOIN mandat_ranked mf
         ON (
             mf.hektor_annonce_id = ids.hektor_annonce_id
