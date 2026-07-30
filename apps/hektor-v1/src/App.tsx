@@ -24433,6 +24433,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-rub fa-ck-contact">
               <div className="fa-ck-ct-toolbar">
                 <span className="fa-ck-ct-strip">Source <b>API AnnonceById</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
+                {ckSelectedNumero !== 'ALL' && ckSelectedNumero !== ckCurrentNumero ? (
+                  <span style={{ fontSize: 11.5, color: 'rgba(34,35,35,.5)', marginLeft: 8 }}>Contacts actuels — non historisés par cycle</span>
+                ) : null}
               </div>
               <div className="fa-ck-ct-sec"><span className="l">Mandants / Propriétaires</span><span className="bar" /></div>
               {isLightweightDetail
