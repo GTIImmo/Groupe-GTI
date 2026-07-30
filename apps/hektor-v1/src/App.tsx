@@ -14483,8 +14483,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           setCancellationCheckPrompt({
             kind: 'confirmed',
             title: 'Finaliser l annulation ?',
-            message: 'Demande d annulation acceptee. Voulez vous decocher Valide et Diffuse sur l annonce ?',
-            detail: 'Oui lance le decochement Hektor. Non accepte la demande sans automatisme Hektor.',
+            message: 'Demande d annulation acceptee. Voulez-vous CLOTURER le mandat sur Hektor (statut Clos, diffusion coupee) ?',
+            detail: 'Oui : cloture le mandat sur Hektor (+ decochage Valide/Diffuse). Non : accepte la demande sans action Hektor.',
             hektorAnnonceId: currentRequest.hektor_annonce_id,
             pendingAction: { ...input, cancellationChecked: true },
           })
@@ -14541,6 +14541,32 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           } catch (error) {
             const hektorError = error instanceof Error ? error.message : 'Decochement Hektor impossible'
             acceptanceInfoMessage = `Demande d annulation de mandat acceptee, mais Valide/Diffuse n ont pas pu etre decoches : ${hektorError}`
+          }
+          // A5 : l'acceptation d'une annulation CLÔTURE reellement le mandat sur Hektor
+          // (statut Clos + diffusion coupee via le worker), au-dela du seul decochage.
+          try {
+            const closeSrc = currentMandat ?? selectedDossier
+            const closeJob = await createChangeHektorAnnonceStatusJob({
+              dossier: {
+                app_dossier_id: currentRequest.app_dossier_id,
+                hektor_annonce_id: Number(currentRequest.hektor_annonce_id),
+                numero_dossier: closeSrc?.numero_dossier ?? null,
+                titre_bien: closeSrc?.titre_bien ?? '',
+                prix: closeSrc?.prix ?? null,
+                numero_mandat: closeSrc?.numero_mandat ?? null,
+                negociateur_email: closeSrc?.negociateur_email ?? null,
+              },
+              targetStatus: 'closed',
+              closeEtat: 'choiceAutre',
+              closeRaison: 'autre',
+              closeReason: `Annulation de mandat acceptee${input.response ? ` - ${input.response}` : ''}`.slice(0, 240),
+              priority: 7,
+            })
+            rememberHektorActionJob(closeJob)
+            acceptanceInfoMessage = `${acceptanceInfoMessage ?? 'Demande d annulation de mandat acceptee.'} Cloture du mandat demandee a Hektor.`
+          } catch (error) {
+            const closeError = error instanceof Error ? error.message : 'cloture Hektor impossible'
+            acceptanceInfoMessage = `${acceptanceInfoMessage ?? 'Demande d annulation de mandat acceptee.'} Mais la cloture du mandat n a pas pu etre lancee : ${closeError}`
           }
         } else if (input.status === 'accepted') {
           acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Aucun automatisme Hektor n a ete lance.'
