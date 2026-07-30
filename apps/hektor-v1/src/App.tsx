@@ -22342,9 +22342,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Chronologie du mandat, calculée avec la MÊME règle que le détail mandat du registre.
   const mandatDateDebut = firstNonEmpty(currentMandatFromJson?.debut, dossierRec['mandat_date_debut'] == null ? '' : String(dossierRec['mandat_date_debut']).trim())
   const ckMandatTiming = computeMandatTiming(mandatDateDebut, mandatDateFin)
-  // Lot B3 : liste des cycles de mandat (depuis mandats_json) + fenêtre temporelle de chacun,
-  // pour re-scoper activité/visites par cycle. Fenêtre = [début, min(clôture, fin, début du cycle
-  // suivant)] ; le cycle courant reste ouvert (fin = +∞).
+  // Lot B3 (point 1) : cycles de mandat + fenêtre CONTIGUË de chacun. Frontière entre deux cycles
+  // = la CLÔTURE de l'ancien (sinon son échéance) : toute activité APRÈS la clôture bascule sur le
+  // cycle suivant. Pas de trou → une activité appartient toujours à un cycle. Dernier cycle ouvert.
   const ckCycles = (() => {
     const raw = parseJson<Array<{ numero?: string; debut?: string; fin?: string; cloture?: string }>>(props.detail?.mandats_json ?? '', [])
     const seen = new Set<string>()
@@ -22356,25 +22356,37 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         cloture: String(m?.cloture ?? '').trim(),
       }))
       .filter((m) => Boolean(m.numero) && !seen.has(m.numero) && Boolean(seen.add(m.numero)))
-    uniq.sort((a, b) => (a.debut || '').localeCompare(b.debut || ''))
-    return uniq.map((m, i) => {
-      const startMs = m.debut ? Date.parse(m.debut) : Number.NEGATIVE_INFINITY
-      const ends = [m.cloture, m.fin, uniq[i + 1]?.debut]
-        .map((d) => (d ? Date.parse(d) : NaN))
-        .filter((n) => !Number.isNaN(n))
-      const endMs = ends.length ? Math.min(...ends) : Number.POSITIVE_INFINITY
-      return { ...m, startMs, endMs, isCurrent: m.numero === String(dossier.numero_mandat ?? '').trim() }
+    const cur = String(dossier.numero_mandat ?? '').trim()
+    // Borne de FIN d'un cycle = sa clôture (prioritaire) sinon son échéance ; sinon ouvert (+∞).
+    const withEnd = uniq.map((m) => {
+      const endStr = m.cloture || m.fin
+      const parsed = endStr ? Date.parse(endStr) : NaN
+      return { ...m, endMs: Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed }
+    })
+    // Partition contiguë : chaque cycle démarre à la borne de fin du précédent ; le plus récent
+    // reste ouvert (+∞) pour capter le présent/futur.
+    withEnd.sort((a, b) => a.endMs - b.endMs)
+    let prevEnd = Number.NEGATIVE_INFINITY
+    return withEnd.map((m, i) => {
+      const startMs = prevEnd
+      const endMs = i === withEnd.length - 1 ? Number.POSITIVE_INFINITY : m.endMs
+      prevEnd = endMs
+      return { numero: m.numero, debut: m.debut, fin: m.fin, cloture: m.cloture, startMs, endMs, isCurrent: m.numero === cur }
     })
   })()
   const ckCurrentNumero = String(dossier.numero_mandat ?? '').trim()
   const ckSelectedNumero = ckCycleSel ?? ckCurrentNumero
   const ckSelWindow = ckSelectedNumero === 'ALL' ? null : (ckCycles.find((c) => c.numero === ckSelectedNumero) ?? null)
+  // Appartenance : fenêtre (startMs, endMs] — début exclusif, fin (clôture) INCLUSIVE, donc une
+  // activité datée APRÈS la clôture tombe dans le cycle suivant.
   const eventInSelectedCycle = (at?: string | null) => {
     if (!ckSelWindow) return true
     if (!at) return false
     const t = Date.parse(at)
     if (Number.isNaN(t)) return true
-    return t >= ckSelWindow.startMs && (ckSelWindow.endMs === Number.POSITIVE_INFINITY || t < ckSelWindow.endMs)
+    const afterStart = ckSelWindow.startMs === Number.NEGATIVE_INFINITY || t > ckSelWindow.startMs
+    const beforeEnd = ckSelWindow.endMs === Number.POSITIVE_INFINITY || t <= ckSelWindow.endMs
+    return afterStart && beforeEnd
   }
   // Pastille d'issue d'un cycle : Vendu (affaire vente du cycle, B3.2) → Clos → Échu → Actif.
   const ckCycleBadge = (c: { numero: string; cloture: string; fin: string }): { label: string; tone: 'actif' | 'vendu' | 'clos' | 'echu' } => {
