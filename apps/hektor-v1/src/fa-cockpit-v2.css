@@ -1063,8 +1063,8 @@
 /* ── Bloc « Composition des pièces » dans le cockpit — re-skin cohérent (carte + accent violet
    composition + zone « Ajouter une pièce » mise en avant). Scopé sous .fa-ck-lb-pieces pour NE PAS
    toucher le wizard de création qui partage .hektor-composition-*. ─────────────────────────── */
-.fa-ck-lb-pieces { display: block; background: #fff; border: 1px solid #ece8df; border-radius: 13px; margin: 7px 0; padding: 14px; }
-.fa-ck-lb-pieces:hover { border-color: #e0d3f4; box-shadow: 0 10px 24px -18px rgba(40, 30, 20, .3); }
+.fa-ck-lb-pieces { display: block; }
+.fa-ck-lb-pieces .hektor-composition-title { display: none !important; }
 .fa-ck-lb-pieces .hektor-composition-editor { gap: 13px !important; }
 .fa-ck-lb-pieces .hektor-composition-title { display: flex !important; flex-direction: column; gap: 1px; }
 .fa-ck-lb-pieces .hektor-composition-title span { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #7a4bb0; }

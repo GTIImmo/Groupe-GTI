@@ -23677,26 +23677,62 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 )
               })}
+              {/* Composition des pièces = avant-dernier item de la liste groupée (accordéon, violet). */}
+              {!isLightweightDetail ? (() => {
+                const open = ckOpenSecs.has('pieces')
+                return (
+                  <div className={`fa-ck-lb-acc${open ? ' open' : ''}`} style={{ ['--sc']: '#7a4bb0', ['--sbg']: '#f1eafc' } as CSSProperties}>
+                    <button type="button" className="fa-ck-pub-sec fa-ck-lb-sectrig" aria-expanded={open} onClick={() => toggleCkSec('pieces')}>
+                      <span className="fa-ck-pub-ic" style={{ background: '#f1eafc', color: '#7a4bb0' }} aria-hidden="true"><CkIcon path="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z" /></span>
+                      <div className="fa-ck-lb-sectxt"><div className="fa-ck-pub-t">Composition des pièces</div><div className="fa-ck-pub-s">Pièce par pièce · comme dans Hektor</div></div>
+                      {ckPieces.filter((p) => !p.deleted).length > 0 ? <span className="fa-ck-lb-cnt" style={{ color: '#7a4bb0', background: '#f1eafc' }}>{ckPieces.filter((p) => !p.deleted).length}</span> : null}
+                      <span className="fa-ck-lb-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M6 9l6 6 6-6" /></svg></span>
+                    </button>
+                    {open ? (
+                      <div className="fa-ck-lb-secbody fa-ck-lb-pieces">
+                        <HektorCompositionPiecesEditor
+                          kicker="Composition"
+                          title="Composition des pièces"
+                          subtitle="Ajoute ou corrige les pièces une par une, comme dans Hektor. Enregistre en bas de page."
+                          pieces={ckPieces}
+                          draft={ckPieceDraft}
+                          disabled={saving}
+                          onDraftChange={(key, value) => setCkPieceDraft((prev) => ({ ...prev, [key]: value, typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : prev.typeLabel }))}
+                          onAddDraft={ckAddPieceDraft}
+                          onPieceChange={ckUpdatePiece}
+                          onRemovePiece={ckRemovePiece}
+                          onRestorePiece={ckRestorePiece}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })() : null}
+              {/* Notes internes = dernier item de la liste groupée (accordéon, ambre). */}
+              {props.notes.length > 0 ? (() => {
+                const open = ckOpenSecs.has('notes')
+                return (
+                  <div className={`fa-ck-lb-acc${open ? ' open' : ''}`} style={{ ['--sc']: '#b07d1c', ['--sbg']: '#f7eed9' } as CSSProperties}>
+                    <button type="button" className="fa-ck-pub-sec fa-ck-lb-sectrig" aria-expanded={open} onClick={() => toggleCkSec('notes')}>
+                      <span className="fa-ck-pub-ic" style={{ background: '#f7eed9', color: '#b07d1c' }} aria-hidden="true"><CkIcon path="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></span>
+                      <div className="fa-ck-lb-sectxt"><div className="fa-ck-pub-t">Notes internes</div><div className="fa-ck-pub-s">Commentaires agence — non publiés</div></div>
+                      <span className="fa-ck-lb-cnt" style={{ color: '#b07d1c', background: '#f7eed9' }}>{props.notes.length}</span>
+                      <span className="fa-ck-lb-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M6 9l6 6 6-6" /></svg></span>
+                    </button>
+                    {open ? (
+                      <div className="fa-ck-lb-secbody">
+                        {props.notes.map((n) => (
+                          <div key={n.id} className="fa-ck-lb-note">
+                            <span className="fa-ck-lb-note-av" aria-hidden="true">FG</span>
+                            <div><div className="fa-ck-lb-note-m">{[n.title, n.date ? formatDate(n.date) : ''].filter(Boolean).join(' · ')}</div><div className="fa-ck-lb-note-t">{n.content}</div></div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })() : null}
               </div>
-              {/* Composition des pièces — pièce à pièce, comme dans Hektor (régression corrigée :
-                  cet éditeur n'existait que dans l'ancienne modale « Modifier l'annonce »). */}
-              {!isLightweightDetail ? (
-                <div className="fa-ck-lb-secwrap fa-ck-lb-pieces">
-                  <HektorCompositionPiecesEditor
-                    kicker="Composition"
-                    title="Composition des pièces"
-                    subtitle="Ajoute ou corrige les pièces une par une, comme dans Hektor. Enregistre en bas de page."
-                    pieces={ckPieces}
-                    draft={ckPieceDraft}
-                    disabled={saving}
-                    onDraftChange={(key, value) => setCkPieceDraft((prev) => ({ ...prev, [key]: value, typeLabel: key === 'idTypePiece' ? hektorCompositionPieceTypeLabel(value) : prev.typeLabel }))}
-                    onAddDraft={ckAddPieceDraft}
-                    onPieceChange={ckUpdatePiece}
-                    onRemovePiece={ckRemovePiece}
-                    onRestorePiece={ckRestorePiece}
-                  />
-                </div>
-              ) : null}
               {/* Diagnostics & énergie : échelles DPE / GES (façon v21) */}
               {(() => {
                 const conso = Number(detailStr('dpe_conso') || detailStr('dpe_cons'))
@@ -23718,20 +23754,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </>
                 ) : null
               })()}
-              {/* Notes internes (façon v21) */}
-              {props.notes.length > 0 ? (
-                <>
-                  <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic gray" aria-hidden="true"><CkIcon path={CK_ICON.historique} /></span><div><div className="fa-ck-pub-t">Notes internes</div><div className="fa-ck-pub-s">Commentaires agence — non publiés</div></div></div>
-                  <div className="fa-ck-pub-card">
-                    {props.notes.map((n) => (
-                      <div key={n.id} className="fa-ck-lb-note">
-                        <span className="fa-ck-lb-note-av" aria-hidden="true">FG</span>
-                        <div><div className="fa-ck-lb-note-m">{[n.title, n.date ? formatDate(n.date) : ''].filter(Boolean).join(' · ')}</div><div className="fa-ck-lb-note-t">{n.content}</div></div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : null}
             </div>
           ) : activeTab === 'medias' ? (
             /* « Médias & pièces » — rubrique + page (choix de Frédéric plutôt qu'un tiroir
