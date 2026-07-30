@@ -663,6 +663,61 @@ GROUP BY s.hektor_annonce_id
 """
 
 
+# Lot B (vision par cycle) : meilleure affaire (offre/compromis/vente) PAR (annonce, mandat).
+# Les affaires portent deja leur hektor_mandat_id ; ici on les groupe par cycle au lieu de
+# n'en garder qu'une par annonce (comme build_case_index). Cle fiable = (annonce, mandat) car
+# Hektor recycle ses ids de mandat entre annonces.
+SQL_MANDAT_AFFAIRES = """
+WITH offre_ranked AS (
+    SELECT hektor_annonce_id, hektor_mandat_id, hektor_offre_id, offre_state,
+        ROW_NUMBER() OVER (
+            PARTITION BY hektor_annonce_id, hektor_mandat_id
+            ORDER BY CASE offre_state WHEN 'accepted' THEN 0 WHEN 'proposed' THEN 1 ELSE 2 END,
+                     COALESCE(offre_event_date, raw_date, synced_at) DESC
+        ) AS rn
+    FROM hektor.hektor_offre
+    WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+),
+compromis_ranked AS (
+    SELECT hektor_annonce_id, hektor_mandat_id, hektor_compromis_id, compromis_state,
+        ROW_NUMBER() OVER (
+            PARTITION BY hektor_annonce_id, hektor_mandat_id
+            ORDER BY CASE compromis_state WHEN 'active' THEN 0 WHEN 'cancelled' THEN 1 ELSE 2 END,
+                     COALESCE(date_start, synced_at) DESC
+        ) AS rn
+    FROM hektor.hektor_compromis
+    WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+),
+vente_ranked AS (
+    SELECT hektor_annonce_id, hektor_mandat_id, hektor_vente_id, date_vente,
+        ROW_NUMBER() OVER (
+            PARTITION BY hektor_annonce_id, hektor_mandat_id
+            ORDER BY COALESCE(date_vente, synced_at) DESC
+        ) AS rn
+    FROM hektor.hektor_vente
+    WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+),
+keys AS (
+    SELECT hektor_annonce_id, hektor_mandat_id FROM offre_ranked WHERE rn = 1
+    UNION SELECT hektor_annonce_id, hektor_mandat_id FROM compromis_ranked WHERE rn = 1
+    UNION SELECT hektor_annonce_id, hektor_mandat_id FROM vente_ranked WHERE rn = 1
+)
+SELECT
+    k.hektor_annonce_id,
+    k.hektor_mandat_id,
+    o.hektor_offre_id AS offre_id,
+    o.offre_state AS offre_state,
+    c.hektor_compromis_id AS compromis_id,
+    c.compromis_state AS compromis_state,
+    v.hektor_vente_id AS vente_id,
+    v.date_vente AS vente_date
+FROM keys k
+LEFT JOIN offre_ranked o ON o.hektor_annonce_id = k.hektor_annonce_id AND o.hektor_mandat_id = k.hektor_mandat_id AND o.rn = 1
+LEFT JOIN compromis_ranked c ON c.hektor_annonce_id = k.hektor_annonce_id AND c.hektor_mandat_id = k.hektor_mandat_id AND c.rn = 1
+LEFT JOIN vente_ranked v ON v.hektor_annonce_id = k.hektor_annonce_id AND v.hektor_mandat_id = k.hektor_mandat_id AND v.rn = 1
+"""
+
+
 def fetch_rows(con: sqlite3.Connection, sql: str, params: tuple[object, ...] = ()) -> list[dict[str, object]]:
     cursor = con.execute(sql, params)
     rows = cursor.fetchall()
@@ -1320,6 +1375,14 @@ def build_mandat_register_rows(
         for row in fetch_rows(con, build_limited_sql(SQL_REGISTER_BROADCAST_AGG, None))
     }
 
+    # Lot B : affaire (offre/compromis/vente) PAR cycle, clé (annonce, hektor_mandat_id).
+    affaires_by_mandat: dict[tuple[str, str], dict[str, object]] = {}
+    for row in fetch_rows(con, SQL_MANDAT_AFFAIRES):
+        a_id = normalize_text(row.get("hektor_annonce_id"))
+        m_id = normalize_text(row.get("hektor_mandat_id"))
+        if a_id and m_id:
+            affaires_by_mandat[(a_id, m_id)] = row
+
     register_rows: list[dict[str, object]] = []
     if dossier_ids is not None and target_annonce_ids:
         placeholders = ",".join("?" for _ in target_annonce_ids)
@@ -1400,6 +1463,13 @@ def build_mandat_register_rows(
             current_version = versions_sorted[0]
             active_exact = active_by_key.get((annonce_id, numero))
             source_row = active_exact or active_any
+            # Lot B : affaire PROPRE à ce cycle (via l'id hektor du mandat courant du numéro).
+            # Repli sur l'affaire aplatie du dossier actif SEULEMENT si ce cycle est l'actif
+            # (pour un cycle passé, source_row = active_any porterait l'affaire du cycle courant).
+            cycle_affaire = affaires_by_mandat.get((annonce_id, normalize_text(current_version.get("id"))))
+            if not cycle_affaire and active_exact is not None:
+                cycle_affaire = active_exact
+            cycle_affaire = cycle_affaire or {}
             detail_available = source_row is not None and source_row.get("app_dossier_id") is not None
             synthetic_app_dossier_id = int(source_row.get("app_dossier_id")) if detail_available else synthetic_register_app_dossier_id(annonce_id, numero)
             embedded_avenants = normalize_embedded_avenants(versions_sorted)
@@ -1461,12 +1531,12 @@ def build_mandat_register_rows(
                 "price_change_last_detected_at": price_change_summary.get("price_change_last_detected_at"),
                 "price_change_last_source_updated_at": price_change_summary.get("price_change_last_source_updated_at"),
                 "priority": source_row.get("priority") if source_row else None,
-                "offre_id": source_row.get("offre_id") if source_row else None,
-                "offre_state": source_row.get("offre_state") if source_row else None,
-                "offre_last_proposition_type": source_row.get("offre_last_proposition_type") if source_row else None,
-                "compromis_id": source_row.get("compromis_id") if source_row else None,
-                "compromis_state": source_row.get("compromis_state") if source_row else None,
-                "vente_id": source_row.get("vente_id") if source_row else None,
+                "offre_id": cycle_affaire.get("offre_id"),
+                "offre_state": cycle_affaire.get("offre_state"),
+                "offre_last_proposition_type": (active_exact.get("offre_last_proposition_type") if active_exact is not None else None),
+                "compromis_id": cycle_affaire.get("compromis_id"),
+                "compromis_state": cycle_affaire.get("compromis_state"),
+                "vente_id": cycle_affaire.get("vente_id"),
                 "source_updated_at": source_updated_at,
                 "register_source_kind": "historique" if status in {"Vendu", "Clos"} or not detail_available else "actif",
                 "register_detail_available": 1 if detail_available else 0,
