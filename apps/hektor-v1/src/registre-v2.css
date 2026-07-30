@@ -116,7 +116,7 @@
   overflow-x:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;
 }
 .app-screen-registre .registre-nb .register-table{
-  min-width:980px;width:100%;border-collapse:collapse;position:relative;z-index:1;background:transparent;table-layout:fixed;
+  min-width:1084px;width:100%;border-collapse:collapse;position:relative;z-index:1;background:transparent;table-layout:fixed;
 }
 .app-screen-registre .registre-nb .register-table th{
   font-size:10px !important;font-weight:800 !important;letter-spacing:.08em;text-transform:uppercase;
@@ -148,7 +148,7 @@
 /* Largeurs de colonnes (table-layout:fixed — la colonne Mandant(s) absorbe le
    reste ; calées pour tenir dans la page sans défilement horizontal). */
 .app-screen-registre .registre-nb .register-col-mandat{width:120px;}
-.app-screen-registre .registre-nb .register-col-mstatut{width:104px;}
+.app-screen-registre .registre-nb .register-col-mstatut{width:96px;}
 .app-screen-registre .registre-nb .register-col-etat{width:152px;}
 .app-screen-registre .registre-nb .register-col-date{width:96px;}
 .app-screen-registre .registre-nb .register-col-amount{width:130px;}

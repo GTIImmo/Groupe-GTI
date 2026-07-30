@@ -684,6 +684,7 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
             "register_avenants_json": normalized.get("register_avenants_json"),
             "register_detail_payload_json": normalized.get("register_detail_payload_json"),
         }
+        current_row["search_text"] = build_search_text(current_row)
         current_row["source_hash"] = stable_hash(current_row)
         current_rows.append(current_row)
     return current_rows
