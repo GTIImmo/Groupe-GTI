@@ -681,18 +681,24 @@
 .fa-ck-stpill.err { background: #fbecec; color: #a33; }
 
 /* --- Le Bien : galerie mosaïque + bande stats (façon v21) --- */
-.fa-ck-lb-gallery { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-auto-rows: 145px; gap: 9px; }
+.fa-ck-lb-gallery { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-auto-rows: 150px; gap: 8px; }
 .fa-ck-lb-gallery.n1 { grid-template-columns: 1fr; }
-.fa-ck-lb-gallery.n2 { grid-template-columns: 1fr 1fr; grid-auto-rows: 200px; }
-.fa-ck-gimg { position: relative; border-radius: 16px; overflow: hidden; background: #efe7dd; cursor: pointer; border: 0; padding: 0; }
+.fa-ck-lb-gallery.n2 { grid-template-columns: 1fr 1fr; grid-auto-rows: 210px; }
+.fa-ck-gimg { position: relative; border-radius: 15px; overflow: hidden; background: #efe7dd; cursor: pointer; border: 0; padding: 0; box-shadow: 0 3px 10px -5px rgba(24, 18, 14, .28); transition: transform .28s cubic-bezier(.22, 1, .36, 1), box-shadow .28s; }
+.fa-ck-gimg:hover { transform: translateY(-3px); box-shadow: 0 20px 34px -18px rgba(24, 18, 14, .5); z-index: 3; }
 .fa-ck-gimg.hero { grid-row: span 2; }
 .fa-ck-lb-gallery.n1 .fa-ck-gimg.hero, .fa-ck-lb-gallery.n2 .fa-ck-gimg.hero { grid-row: auto; }
-.fa-ck-gimg img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s cubic-bezier(.22, 1, .36, 1); }
-.fa-ck-gimg:hover img { transform: scale(1.06); }
-.fa-ck-gimg.hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 14, 10, .15), transparent 30%, transparent 60%, rgba(20, 14, 10, .35)); z-index: 1; }
-.fa-ck-gpill { position: absolute; right: 12px; bottom: 12px; z-index: 2; font-size: 12px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .42); border: 1px solid rgba(255, 255, 255, .28); padding: 8px 14px; border-radius: 99px; display: inline-flex; gap: 7px; align-items: center; }
+.fa-ck-gimg img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .7s cubic-bezier(.22, 1, .36, 1); }
+.fa-ck-gimg:hover img { transform: scale(1.09); }
+.fa-ck-gimg::before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(20, 14, 10, .06), transparent 38%, transparent 55%, rgba(20, 14, 10, .44)); opacity: .9; transition: opacity .3s; }
+.fa-ck-gimg:hover::before { opacity: 1; }
+.fa-ck-gimg::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inset 0 0 0 0 var(--fa-brand); transition: box-shadow .25s; pointer-events: none; }
+.fa-ck-gimg:hover::after { box-shadow: inset 0 0 0 2.5px var(--fa-brand); }
+.fa-ck-gpill { position: absolute; right: 12px; bottom: 12px; z-index: 3; font-size: 12px; font-weight: 700; color: #fff; background: rgba(20, 14, 10, .38); -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px); border: 1px solid rgba(255, 255, 255, .32); padding: 8px 14px; border-radius: 99px; display: inline-flex; gap: 7px; align-items: center; box-shadow: 0 4px 14px -6px rgba(0, 0, 0, .5); transition: transform .22s cubic-bezier(.34, 1.56, .64, 1), background .22s; }
+.fa-ck-gimg:hover .fa-ck-gpill { transform: translateY(-3px) scale(1.03); background: var(--fa-brand); border-color: rgba(255, 255, 255, .5); }
 .fa-ck-gpill svg { width: 14px; height: 14px; }
-.fa-ck-gmore { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20, 14, 10, .35), rgba(20, 14, 10, .55)); color: #fff; font-size: 19px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.fa-ck-gmore { position: absolute; inset: 0; z-index: 3; background: rgba(20, 14, 10, .48); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); color: #fff; font-size: 23px; font-weight: 800; letter-spacing: .01em; display: flex; align-items: center; justify-content: center; transition: background .25s; }
+.fa-ck-gimg:hover .fa-ck-gmore { background: rgba(20, 14, 10, .62); }
 .fa-ck-lb-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
 .fa-ck-lb-stat { background: #fff; border: 1px solid var(--fa-line); border-radius: 15px; padding: 13px 14px; transition: .18s; }
 .fa-ck-lb-stat:hover { transform: translateY(-2px); box-shadow: 0 14px 26px -18px rgba(24, 18, 14, .3); }
@@ -756,11 +762,12 @@
 .fa-ck-lb-parcelle-lbl { font-weight: 700; color: #6b776b; text-transform: uppercase; letter-spacing: .04em; font-size: 11px; }
 .fa-ck-lb-parcelle-val { font-weight: 700; color: #374437; }
 .fa-ck-lb-parcelle-msg { color: var(--fa-brand); font-weight: 600; }
-.fa-ck-lb-note { display: flex; gap: 12px; padding: 13px 0; border-top: 1px solid var(--fa-line-soft); }
-.fa-ck-lb-note:first-child { border-top: 0; padding-top: 2px; }
-.fa-ck-lb-note-av { width: 34px; height: 34px; border-radius: 10px; background: #f7eed9; color: #b07d1c; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }
-.fa-ck-lb-note-m { font-size: 11.5px; font-weight: 700; color: var(--fa-muted); margin-bottom: 3px; }
-.fa-ck-lb-note-t { font-size: 13.5px; color: var(--fa-ink-soft, #544b45); line-height: 1.5; }
+.fa-ck-lb-note { display: flex; gap: 12px; padding: 12px 13px; border: 1px solid var(--fa-line); border-radius: 13px; background: #fff; margin-top: 8px; transition: border-color .18s, box-shadow .18s, transform .18s; }
+.fa-ck-lb-note:first-child { margin-top: 0; }
+.fa-ck-lb-note:hover { border-color: #e6d8ae; box-shadow: 0 10px 22px -16px rgba(24, 18, 14, .35); transform: translateY(-1px); }
+.fa-ck-lb-note-av { width: 36px; height: 36px; border-radius: 11px; background: linear-gradient(150deg, #f9f1dd, #f1e2bd); color: #a5720f; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; box-shadow: 0 4px 10px -6px rgba(165, 114, 15, .5); }
+.fa-ck-lb-note-m { font-size: 11px; font-weight: 700; color: var(--fa-muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .03em; }
+.fa-ck-lb-note-t { font-size: 13.5px; color: var(--fa-ink-soft, #544b45); line-height: 1.55; }
 
 /* Contact v34 : section Diagnostics & syndic (intervenants) */
 .fa-ck-ct-sec .k { font-size: 9.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--fa-faint, #a89e95); flex: none; }
@@ -1009,7 +1016,8 @@
 
 /* ── Accordéon « Le Bien » : 12 sections = cartes repliables (repliées par défaut) ─────────────
    Scopé sur .fa-ck-lb-acc pour NE PAS toucher les autres blocs qui partagent .fa-ck-lb-secwrap. */
-.fa-ck-lb-acc { display: block; background: #fff; border: 1px solid #ece8df; border-radius: 14px; margin: 10px 0; overflow: hidden; transition: border-color .2s, box-shadow .2s, transform .2s; }
+.fa-ck-lb-acc { display: block; background: #fff; border: 1px solid #ece8df; border-radius: 13px; margin: 7px 0; overflow: hidden; transition: border-color .2s, box-shadow .2s, transform .2s; }
+.fa-ck-lb-acc + .fa-ck-lb-acc { margin-top: 0; }
 .fa-ck-lb-acc:hover { border-color: #ddd6c8; box-shadow: 0 8px 20px -14px rgba(40,30,20,.28); }
 .fa-ck-lb-acc.open { box-shadow: 0 12px 28px -16px rgba(40,30,20,.32); }
 .fa-ck-lb-acc .fa-ck-pub-sec { margin: 0; }
