@@ -21,6 +21,7 @@ export type AppFilters = {
   mandatNumber: string
   mandantName: string
   mandateState: string
+  mandatStatut: string
   commercial: string
   agency: string
   archive: string
@@ -73,6 +74,24 @@ function applyMandateLifecycleFilter<T extends Pick<MandatRecord, 'statut_annonc
   const wantedState = normalizeFilterValue(filters.mandateState)
   if (!wantedState) return rows
   return rows.filter((item) => mandateLifecycleState(item) === wantedState)
+}
+
+// Statut PROPRE au mandat (distinct de l'etat de l'annonce) : Clos (date de cloture,
+// ou statut clos/vendu) -> Echu (date de fin depassee) -> Actif. Meme derivation que le
+// front (mandatStatutForRegister dans App.tsx) pour coherence colonne <-> filtre <-> stats.
+export type MandatStatutValue = 'Actif' | 'Clos' | 'Échu'
+export function mandatStatutForRegisterRow(item: Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture'>): MandatStatutValue {
+  const cloture = (item.mandat_date_cloture ?? '').trim()
+  const status = normalizeMandateStatusValue(item.statut_annonce)
+  if (cloture || status.includes('clos') || status.includes('clotur') || status.includes('vendu') || status.includes('vente')) return 'Clos'
+  if (!isMandateEndDateStillValid(item.mandat_date_fin)) return 'Échu'
+  return 'Actif'
+}
+
+function applyMandatStatutFilter<T extends Pick<MandatRecord, 'statut_annonce' | 'mandat_date_fin' | 'mandat_date_cloture'>>(rows: T[], filters: AppFilters) {
+  const wanted = normalizeFilterValue(filters.mandatStatut)
+  if (!wanted) return rows
+  return rows.filter((item) => mandatStatutForRegisterRow(item) === wanted)
 }
 
 export type PageResult<T> = {
@@ -4870,7 +4889,8 @@ export async function loadMandatRegisterPage({
 }): Promise<PageResult<MandatRecord>> {
   if (!hasSupabaseEnv || !supabase) {
     const rows = sortMandatRegisterRows(
-      applyMandateLifecycleFilter(
+      applyMandatStatutFilter(
+        applyMandateLifecycleFilter(
         (applyLocalDossierFilters(
           withRegisterRowId(filterByNegotiatorEmail(mockMandats, scope))
             .filter((item) => Boolean((item.numero_mandat ?? '').trim()))
@@ -4888,13 +4908,19 @@ export async function loadMandatRegisterPage({
         ) as unknown as MandatRecord[]),
         filters,
       ),
+        filters,
+      ),
     )
     return paginate(rows, page, pageSize)
   }
 
   const requestScopedIds = await resolveRequestScopedDossierIds(filters, scope)
   const mandateState = normalizeFilterValue(filters.mandateState)
-  if (mandateState) {
+  const mandatStatut = normalizeFilterValue(filters.mandatStatut)
+  // Filtres DERIVES (calcules cote client) : etat de l'annonce (En cours/Annule) et
+  // statut du mandat (Actif/Clos/Echu). Ni l'un ni l'autre n'est une colonne simple,
+  // donc on batch-fetch puis on filtre + pagine cote client.
+  if (mandateState || mandatStatut) {
     const batchSize = 1000
     let batchFrom = 0
     const rows: MandatRecord[] = []
@@ -4928,7 +4954,7 @@ export async function loadMandatRegisterPage({
       batchFrom += batchSize
     }
 
-    return paginate(sortMandatRegisterRows(applyMandateLifecycleFilter(rows, filters)), page, pageSize)
+    return paginate(sortMandatRegisterRows(applyMandatStatutFilter(applyMandateLifecycleFilter(rows, filters), filters)), page, pageSize)
   }
 
   const from = (page - 1) * pageSize
@@ -4967,7 +4993,7 @@ export async function loadMandatRegisterPage({
 
 export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {
   if (!hasSupabaseEnv || !supabase) {
-    const rows = applyMandateLifecycleFilter(
+    const rows = applyMandatStatutFilter(applyMandateLifecycleFilter(
       applyLocalDossierFilters(
         withRegisterRowId(filterByNegotiatorEmail(mockMandats, scope)).map((item) => ({
           ...item,
@@ -4982,7 +5008,7 @@ export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataS
         filters,
       ) as unknown as MandatRecord[],
       filters,
-    )
+    ), filters)
     return {
       total: rows.length,
       withoutMandat: rows.filter((item) => !(item.numero_mandat ?? '').trim()).length,
@@ -5017,7 +5043,7 @@ export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataS
       applyNegotiatorScopeToQuery(
         supabase
           .from('app_registre_mandats_current')
-          .select('register_row_id,app_dossier_id,numero_mandat,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error,statut_annonce,mandat_date_fin')
+          .select('register_row_id,app_dossier_id,numero_mandat,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error,statut_annonce,mandat_date_fin,mandat_date_cloture')
           .order('register_row_id', { ascending: true })
           .range(from, from + batchSize - 1),
         scope,
@@ -5026,7 +5052,7 @@ export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataS
     )
 
     if (error || !data) throw new Error(error?.message ?? 'Unable to load register stats')
-    rows.push(...applyMandateLifecycleFilter(withRegisterRowId(data as MandatRecord[]), filters))
+    rows.push(...applyMandatStatutFilter(applyMandateLifecycleFilter(withRegisterRowId(data as MandatRecord[]), filters), filters))
     if (data.length < batchSize) break
     from += batchSize
   }

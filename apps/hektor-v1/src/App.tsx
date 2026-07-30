@@ -6147,6 +6147,7 @@ const emptyFilters: AppFilters = {
   mandatNumber: '',
   mandantName: '',
   mandateState: allFilterValue,
+  mandatStatut: allFilterValue,
   commercial: allFilterValue,
   agency: allFilterValue,
   archive: allFilterValue,
@@ -11144,7 +11145,8 @@ function activeFilterEntries(filters: AppFilters) {
     filters.query.trim() ? ['Recherche', filters.query.trim()] : null,
     filters.mandatNumber.trim() ? ['N° mandat', filters.mandatNumber.trim()] : null,
     filters.mandantName.trim() ? ['Mandant', filters.mandantName.trim()] : null,
-    filters.mandateState !== allFilterValue ? ['État mandat', filters.mandateState] : null,
+    filters.mandateState !== allFilterValue ? ["État de l'annonce", filters.mandateState] : null,
+    filters.mandatStatut !== allFilterValue ? ['Statut du mandat', filters.mandatStatut] : null,
     filters.commercial !== allFilterValue ? ['Negociateur', filters.commercial === withoutCommercialFilterValue ? 'Sans' : filters.commercial] : null,
     filters.agency !== allFilterValue ? ['Agence', filters.agency] : null,
     filters.archive === activeArchiveFilterValue ? ['Archive', 'Actives'] : null,
@@ -18592,12 +18594,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
                 <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect
-                  label="Etat du mandat"
+                  label="État de l'annonce"
                   value={filters.mandateState}
                   onChange={(value) => updateFilter('mandateState', value)}
                   options={[
                     { value: 'En cours', label: 'En cours' },
                     { value: 'Annulé', label: 'Annulé' },
+                  ]}
+                />
+                <FilterSelect
+                  label="Statut du mandat"
+                  value={filters.mandatStatut}
+                  onChange={(value) => updateFilter('mandatStatut', value)}
+                  options={[
+                    { value: 'Actif', label: 'Actif' },
+                    { value: 'Clos', label: 'Clos' },
+                    { value: 'Échu', label: 'Échu' },
                   ]}
                 />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
