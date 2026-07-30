@@ -699,11 +699,14 @@
 .fa-ck-gpill svg { width: 14px; height: 14px; }
 .fa-ck-gmore { position: absolute; inset: 0; z-index: 3; background: rgba(20, 14, 10, .48); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); color: #fff; font-size: 23px; font-weight: 800; letter-spacing: .01em; display: flex; align-items: center; justify-content: center; transition: background .25s; }
 .fa-ck-gimg:hover .fa-ck-gmore { background: rgba(20, 14, 10, .62); }
-.fa-ck-lb-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.fa-ck-lb-stat { background: #fff; border: 1px solid var(--fa-line); border-radius: 15px; padding: 13px 14px; transition: .18s; }
-.fa-ck-lb-stat:hover { transform: translateY(-2px); box-shadow: 0 14px 26px -18px rgba(24, 18, 14, .3); }
-.fa-ck-lb-stat .sl { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); }
-.fa-ck-lb-stat .sv { font-size: 16px; font-weight: 800; color: var(--fa-ink); margin-top: 2px; }
+/* Résumé du bien = PANNEAU connecté (une seule surface, cellules séparées par un filet), PAS des
+   boutons (ni bordure par cellule, ni survol qui soulève). Valeurs en Fraunces pour un rendu éditorial. */
+.fa-ck-lb-stats { display: flex; flex-wrap: wrap; background: #faf7f1; border: 1px solid var(--fa-line); border-radius: 14px; padding: 2px 2px; }
+.fa-ck-lb-stat { flex: 1 1 108px; background: transparent; border: 0; border-radius: 0; padding: 9px 15px; position: relative; transition: none; }
+.fa-ck-lb-stat + .fa-ck-lb-stat::before { content: ''; position: absolute; left: 0; top: 9px; bottom: 9px; width: 1px; background: var(--fa-line); }
+.fa-ck-lb-stat:hover { transform: none; box-shadow: none; }
+.fa-ck-lb-stat .sl { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); text-transform: uppercase; letter-spacing: .03em; }
+.fa-ck-lb-stat .sv { font-family: 'Fraunces', 'Spectral', serif; font-size: 18px; font-weight: 600; color: var(--fa-ink); margin-top: 2px; }
 .fa-ck-lb-manage-h { font-family: 'Fraunces', 'Spectral', serif; font-size: 15px; font-weight: 600; color: var(--fa-ink); margin-bottom: 10px; }
 
 /* Publicité v36 : cases passerelles + grille retour d'application */
@@ -999,15 +1002,17 @@
 .fa-ck-rp.warn { color: #9a5b05; background: #fdf4e2; border: 1px solid #ecd9b0; }
 
 /* Le Bien v21 : raccourcis médias */
-.fa-ck-mshorts { display: flex; gap: 9px; flex-wrap: wrap; }
-.fa-ck-msc { flex: 1; min-width: 150px; display: flex; align-items: center; gap: 11px; background: #fff; border: 1px solid var(--fa-line); border-radius: 14px; padding: 11px 14px; cursor: pointer; font: inherit; text-align: left; transition: .16s; position: relative; }
-.fa-ck-msc:hover { border-color: var(--fa-brand); transform: translateY(-2px); box-shadow: 0 14px 26px -18px rgba(24, 18, 14, .3); }
-.fa-ck-msc .mci { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex: none; } .fa-ck-msc .mci svg { width: 17px; height: 17px; }
+.fa-ck-mshorts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
+.fa-ck-msc { flex: 1; min-width: 138px; display: flex; align-items: center; gap: 9px; background: #fff; border: 1px solid var(--fa-line); border-radius: 12px; padding: 7px 11px; cursor: pointer; font: inherit; text-align: left; transition: border-color .18s, box-shadow .18s, transform .18s; position: relative; }
+.fa-ck-msc:hover { border-color: var(--fa-brand); transform: translateY(-2px); box-shadow: 0 12px 22px -16px rgba(24, 18, 14, .3); }
+.fa-ck-msc .mci { width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex: none; transition: transform .34s cubic-bezier(.34, 1.56, .64, 1); } .fa-ck-msc .mci svg { width: 16px; height: 16px; }
+.fa-ck-msc:hover .mci { transform: rotate(-9deg) scale(1.13); }
+.fa-ck-msc:active .mci { transform: scale(.94); }
 .fa-ck-msc.p .mci { background: linear-gradient(150deg, #fdeaf2, #f7dce8); color: var(--fa-brand-ink); }
 .fa-ck-msc.d .mci { background: linear-gradient(150deg, #e9eefb, #dbe4f7); color: #3a5a8a; }
 .fa-ck-msc.v .mci { background: linear-gradient(150deg, #e6f3ec, #d7ecdf); color: #2f8a5b; }
-.fa-ck-msc .mct { font-size: 13.5px; font-weight: 700; color: var(--fa-ink); } .fa-ck-msc .mcs { font-size: 11.5px; color: var(--fa-muted); }
-.fa-ck-msc .mca { margin-left: auto; font-size: 9px; font-weight: 800; color: #9a5b05; background: #fbefd8; border: 1px solid #f0dcae; border-radius: 99px; padding: 2px 8px; flex: none; }
+.fa-ck-msc .mct { font-size: 12.5px; font-weight: 700; color: var(--fa-ink); line-height: 1.15; } .fa-ck-msc .mcs { font-size: 10.5px; color: var(--fa-muted); }
+.fa-ck-msc .mca { margin-left: auto; font-size: 8.5px; font-weight: 800; color: #9a5b05; background: #fbefd8; border: 1px solid #f0dcae; border-radius: 99px; padding: 2px 7px; flex: none; }
 
 /* Le Bien v21 : sections domaine (feature cards) */
 .fa-ck-lb-secwrap { display: contents; }
@@ -1086,7 +1091,8 @@
 .fa-ck-lb-pen { width: 13px; height: 13px; color: var(--c, var(--fa-brand)); opacity: 0; flex: none; margin-left: 4px; transition: opacity .14s; }
 .fa-ck-lb-feat.editable:hover .fa-ck-lb-pen { opacity: 1; }
 
-.fa-ck-lb-stat.editable { cursor: pointer; }
+.fa-ck-lb-stat.editable { cursor: pointer; background: #fff; border: 1px solid var(--fa-line); border-radius: 12px; transition: border-color .16s, box-shadow .16s; }
+.fa-ck-lb-stat.editable::before { display: none; }
 .fa-ck-lb-stat.editable:hover { border-color: var(--fa-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fa-brand) 12%, transparent); }
 
 /* Contact : bouton « Modifier contacts » (ouvre le MÊME modal que la fiche en ligne) */
