@@ -708,27 +708,9 @@
 .fa-ck-lb-stat .sl { font-size: 10.5px; font-weight: 700; color: var(--fa-muted); text-transform: uppercase; letter-spacing: .03em; }
 .fa-ck-lb-stat .sv { font-family: 'Fraunces', 'Spectral', serif; font-size: 18px; font-weight: 600; color: var(--fa-ink); margin-top: 2px; }
 
-/* Bloc HÉRO : un seul cadre premium — photos (gauche) + colonne droite (3 boutons médias, puis résumé). */
-.fa-ck-lb-hero { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(238px, 1fr); gap: 13px; align-items: start; background: #fff; border: 1px solid var(--fa-line); border-radius: 18px; padding: 13px; box-shadow: 0 18px 46px -30px rgba(40, 30, 20, .42); }
-.fa-ck-lb-hero.nomedia { grid-template-columns: 1fr; }
-.fa-ck-lb-hero-media { min-width: 0; }
-.fa-ck-lb-hero-media .fa-ck-lb-gallery, .fa-ck-lb-hero-media .fa-ck-lb-gallery.n2 { grid-auto-rows: 128px; }
-.fa-ck-lb-hero-side { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
-.fa-ck-lb-hero-side .fa-ck-mshorts { flex-direction: column; gap: 8px; margin-top: 0; }
-.fa-ck-lb-hero-side .fa-ck-msc { flex: none; width: 100%; }
-@media (max-width: 760px) { .fa-ck-lb-hero { grid-template-columns: 1fr; } .fa-ck-lb-hero-side .fa-ck-mshorts { flex-direction: row; } }
-
-/* Résumé : BEAU + LISIBLE, pas cliquable. Icônes PLATES décoratives (fond teinté doux, aucun carré
-   blanc en relief, aucune animation) → ne ressemble plus à des boutons. */
-.fa-ck-lb-summary { background: #faf7f1; border: 1px solid var(--fa-line); border-radius: 14px; padding: 11px 13px; }
-.fa-ck-lb-summary-illus { display: none; }
-.fa-ck-lb-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px 12px; }
-.fa-ck-lb-sumstat { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.fa-ck-lb-sumico { width: 27px; height: 27px; border-radius: 8px; background: var(--fa-brand-soft, #f9e7ef); display: flex; align-items: center; justify-content: center; flex: none; color: var(--fa-brand); }
-.fa-ck-lb-sumico svg { width: 15px; height: 15px; }
-.fa-ck-lb-sumtx { min-width: 0; }
-.fa-ck-lb-sumstat .sl { font-size: 9.5px; font-weight: 700; color: var(--fa-muted); text-transform: uppercase; letter-spacing: .03em; }
-.fa-ck-lb-sumstat .sv { font-family: 'Fraunces', 'Spectral', serif; font-size: 16px; font-weight: 600; color: var(--fa-ink); line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Repasse : galerie photos → raccourcis médias → accordéon. Un peu d'air sous les boutons médias
+   avant la liste groupée (le bloc résumé a été retiré). */
+.fa-ck-lebien .fa-ck-mshorts { margin-bottom: 4px; }
 .fa-ck-lb-manage-h { font-family: 'Fraunces', 'Spectral', serif; font-size: 15px; font-weight: 600; color: var(--fa-ink); margin-bottom: 10px; }
 
 /* Publicité v36 : cases passerelles + grille retour d'application */

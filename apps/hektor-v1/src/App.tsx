@@ -23516,10 +23516,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {/* Bandeau conflit/partiel Hektor (retour du worker). Édition = en place, champ par champ. */}
               {!isLightweightDetail ? <AnnonceEditStatusBanner dossier={dossier} /> : null}
               {!isLightweightDetail ? <p className="fa-ck-lb-edithint">Clique un champ pour le modifier en place, puis <b>Enregistrer</b> (une vague vers Hektor).</p> : null}
-              {/* Bloc HÉRO : photos (gauche) + colonne droite (3 boutons médias, puis résumé). */}
-              <div className={`fa-ck-lb-hero${props.images.length > 0 ? '' : ' nomedia'}`}>
+              {/* Galerie mosaïque (façon v21) construite depuis les vraies photos */}
               {props.images.length > 0 ? (
-                <div className="fa-ck-lb-hero-media"><div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
+                <div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
                   {props.images.slice(0, 5).map((img, i) => {
                     const isLastMore = i === 4 && props.images.length > 5
                     return (
@@ -23535,9 +23534,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       </button>
                     )
                   })}
-                </div></div>
+                </div>
               ) : null}
-              <div className="fa-ck-lb-hero-side">
               {/* Raccourcis médias : les 3 ouvrent « Médias & pièces » sur le bon onglet (compte via ckDocs). */}
               <div className="fa-ck-mshorts">
                 <button type="button" className="fa-ck-msc p" onClick={() => goMedia('photos')}>
@@ -23553,37 +23551,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <span className="mci" aria-hidden="true"><CkIcon path={CK_ICON.synthese} /></span>
                   <div><div className="mct">Visite virtuelle</div><div className="mcs">{ckMatterportCount > 0 ? `${ckMatterportCount} visite${ckMatterportCount > 1 ? 's' : ''} liée${ckMatterportCount > 1 ? 's' : ''}` : 'Matterport 3D · ajouter'}</div></div>
                 </button>
-              </div>
-              {/* Bande de statistiques clés (façon v21) */}
-              {(() => {
-                const expo = (() => { const f = CK_WIZARD_FIELD_BY_NAME['EXPOSITION']; const raw = wizFieldValue('EXPOSITION'); return raw && f?.options ? (f.options.find((o) => o.value === raw)?.label ?? raw) : raw })()
-                const lbStats = [
-                  { l: 'Surface', v: wizFieldValue('surfappart'), u: 'm²', ico: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
-                  { l: 'Terrain', v: wizFieldValue('surfterrain'), u: 'm²', ico: 'M12 3 3 20h18zM12 3v17' },
-                  { l: 'Pièces', v: wizFieldValue('nbpieces'), u: '', ico: 'M3 21V9l9-6 9 6v12M3 21h18M9 21v-6h6v6' },
-                  { l: 'Chambres', v: wizFieldValue('NB_CHAMBRES'), u: '', ico: 'M2 11V7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4M2 11h20v7M4 18v2M20 18v2M6 11V9h5v2' },
-                  { l: "Salles d'eau", v: wizFieldValue('NB_SE'), u: '', ico: 'M12 2s6 6.5 6 10.5a6 6 0 0 1-12 0C6 8.5 12 2 12 2z' },
-                  { l: 'Exposition', v: expo, u: '', ico: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2' },
-                ].filter((s) => s.v && s.v.trim() && s.v.trim() !== '0')
-                return lbStats.length > 0 ? (
-                  <div className="fa-ck-lb-summary">
-                    <svg className="fa-ck-lb-summary-illus" viewBox="0 0 240 160" fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
-                      <path d="M18 92 120 18 222 92" />
-                      <path d="M40 150V80M200 80v70M40 150h160" />
-                      <path d="M96 150v-42h48v42M108 66h24v22h-24z" />
-                    </svg>
-                    <div className="fa-ck-lb-summary-grid">
-                      {lbStats.map((s) => (
-                        <div key={s.l} className="fa-ck-lb-sumstat">
-                          <span className="fa-ck-lb-sumico" aria-hidden="true"><CkIcon path={s.ico} /></span>
-                          <div className="fa-ck-lb-sumtx"><div className="sl">{s.l}</div><div className="sv">{s.v}{s.u ? ` ${s.u}` : ''}</div></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null
-              })()}
-              </div>
               </div>
               {/* L'annonce : titre + descriptif, éditables en place (champs Hektor `titre`
                   et `corps` = le texte principal). Remontés ici depuis « Diffusion » pour
