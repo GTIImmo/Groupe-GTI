@@ -870,6 +870,7 @@ def build_affaires_dossiers(rows: list[dict[str, object]]) -> list[dict[str, obj
         # dossier au bon cycle sur les rares annonces multi-mandats.
         if mid and mid != "0" and kind in ("compromis", "vente"):
             d["_mandats"].add(mid)  # type: ignore[union-attr]
+        dropped = bool(r.get("_dropped"))
         leg: dict[str, object] = {
             "montant": normalize_text(r.get("montant")) or None,
             "date": normalize_text(r.get("dt")) or None,
@@ -878,8 +879,17 @@ def build_affaires_dossiers(rows: list[dict[str, object]]) -> list[dict[str, obj
         if kind == "compromis":
             leg["date_acte"] = normalize_text(r.get("date_acte")) or None
             leg["sequestre"] = normalize_text(r.get("sequestre")) or None
+        if dropped:
+            # B+ : affaire conservee par le ledger mais plus dans Hektor.
+            leg["dropped"] = True
+            leg["dropped_since"] = normalize_text(r.get("_last_seen")) or None
         existing = d.get(kind)
-        if existing is None or _leg_rank(kind, leg) < _leg_rank(kind, existing):  # type: ignore[arg-type]
+        # Priorite a la version PRESENTE (Hektor live) sur une version disparue (ledger) ; a defaut,
+        # l'occurrence la plus avancee.
+        old_dropped = bool(existing.get("dropped")) if isinstance(existing, dict) else False
+        if existing is None or (old_dropped and not dropped) or (
+            old_dropped == dropped and _leg_rank(kind, leg) < _leg_rank(kind, existing)  # type: ignore[arg-type]
+        ):
             d[kind] = leg
     dossiers: list[dict[str, object]] = []
     for d in by_acq.values():
@@ -1605,6 +1615,27 @@ def build_mandat_register_rows(
         a_id = normalize_text(row.get("hektor_annonce_id"))
         if a_id:
             affaires_by_annonce.setdefault(a_id, []).append(row)
+
+    # B+ : filet ledger — on ajoute les affaires DISPARUES de Hektor (present_in_hektor=0), conservees
+    # dans le ledger app-owned. Les affaires PRESENTES viennent de Hektor live ci-dessus (autorite) ;
+    # ici uniquement les disparues, marquees _dropped pour l'affichage ("plus dans Hektor depuis ...").
+    # Strategie "Hektor d'abord, ledger en filet" : aucune dependance de fraicheur pour les presentes.
+    try:
+        ledger_dropped = fetch_rows(con, """
+            SELECT hektor_annonce_id, hektor_mandat_id, kind, hektor_affaire_id AS id, state,
+                   hektor_acquereur_id AS acq_id, acquereur_json AS acq_json, montant,
+                   date AS dt, date_acte, sequestre, last_seen_at
+            FROM app_affaire_ledger WHERE present_in_hektor = 0
+        """)
+    except sqlite3.OperationalError:
+        ledger_dropped = []  # ledger pas encore cree (env sans backfill)
+    for row in ledger_dropped:
+        a_id = normalize_text(row.get("hektor_annonce_id"))
+        if not a_id:
+            continue
+        row["_dropped"] = True
+        row["_last_seen"] = normalize_text(row.get("last_seen_at")) or None
+        affaires_by_annonce.setdefault(a_id, []).append(row)
 
     # dossiers par cycle (annonce, numero) + repli agrege par annonce (mono-cycle / numero absent)
     dossiers_by_cycle: dict[tuple[str, str], list[dict[str, object]]] = {}

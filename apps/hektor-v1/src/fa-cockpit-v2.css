@@ -2563,6 +2563,9 @@
 .fa-ck-aband-leg.ko .fa-ck-aband-leg-h { color: #b3402f; }
 .fa-ck-aband-leg-facts { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: 12.5px; color: #3a352d; font-variant-numeric: tabular-nums; }
 .fa-ck-aband-leg-fact b { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #b0a898; margin-right: 3px; }
+/* B+ : etape conservee par le ledger app-owned mais absente de Hektor. */
+.fa-ck-aband-leg-drop { margin-left: 7px; font-size: 10px; font-weight: 700; letter-spacing: .01em; color: #9a7b12; background: #fbf1d4; border: 1px solid #ecd9a1; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.fa-ck-aband-leg.dropped .fa-ck-aband-leg-dot { border-color: #c9a53a; border-style: dashed; }
 .fa-ck-aband-coord { display: flex; flex-wrap: wrap; gap: 5px 16px; margin-top: 10px; padding-left: 47px; }
 .fa-ck-aband-coord a { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #6b6660; text-decoration: none; }
 .fa-ck-aband-coord a:hover { color: #b3402f; }

@@ -22122,9 +22122,9 @@ type CkAffaireDetail = {
     etat?: string | null
     etat_label?: string | null
     courante?: boolean
-    offre?: { montant?: string | null; date?: string | null; state?: string | null } | null
-    compromis?: { montant?: string | null; date?: string | null; state?: string | null; date_acte?: string | null; sequestre?: string | null } | null
-    vente?: { montant?: string | null; date?: string | null; state?: string | null } | null
+    offre?: { montant?: string | null; date?: string | null; state?: string | null; dropped?: boolean; dropped_since?: string | null } | null
+    compromis?: { montant?: string | null; date?: string | null; state?: string | null; date_acte?: string | null; sequestre?: string | null; dropped?: boolean; dropped_since?: string | null } | null
+    vente?: { montant?: string | null; date?: string | null; state?: string | null; dropped?: boolean; dropped_since?: string | null } | null
   }> | null
 }
 type CkAffaireDossier = NonNullable<CkAffaireDetail['dossiers']>[number]
@@ -22242,13 +22242,13 @@ function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDos
           // pour que la trace de l'offre reste visible même quand le compromis a été annulé.
           const offreLabel = (s?: string | null) => { const x = String(s ?? '').toLowerCase(); return x === 'accepted' || x === 'acceptee' ? 'acceptée' : x === 'refused' || x === 'refusee' ? 'refusée' : 'proposée' }
           const comproLabel = (s?: string | null) => { const x = String(s ?? '').toLowerCase(); return x === 'cancelled' || x === 'annule' ? 'annulé' : 'signé' }
-          type Leg = { key: string; head: string; ko: boolean; facts: Array<[string, string]> }
+          type Leg = { key: string; head: string; ko: boolean; facts: Array<[string, string]>; dropped?: boolean; droppedSince?: string | null }
           const legs: Leg[] = []
           if (d.offre) {
             const f: Array<[string, string]> = []
             if (money(d.offre.montant)) f.push(['Montant', money(d.offre.montant)])
             if (d.offre.date) f.push(['Le', formatDate(d.offre.date)])
-            legs.push({ key: 'offre', head: `Offre ${offreLabel(d.offre.state)}`, ko: offreLabel(d.offre.state) === 'refusée', facts: f })
+            legs.push({ key: 'offre', head: `Offre ${offreLabel(d.offre.state)}`, ko: offreLabel(d.offre.state) === 'refusée', facts: f, dropped: d.offre.dropped, droppedSince: d.offre.dropped_since })
           }
           if (d.compromis) {
             const f: Array<[string, string]> = []
@@ -22256,13 +22256,13 @@ function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDos
             if (d.compromis.date) f.push(['Signé le', formatDate(d.compromis.date)])
             if (d.compromis.date_acte) f.push(['Acte prévu', formatDate(d.compromis.date_acte)])
             if (money(d.compromis.sequestre)) f.push(['Séquestre', money(d.compromis.sequestre)])
-            legs.push({ key: 'compromis', head: `Compromis ${comproLabel(d.compromis.state)}`, ko: comproLabel(d.compromis.state) === 'annulé', facts: f })
+            legs.push({ key: 'compromis', head: `Compromis ${comproLabel(d.compromis.state)}`, ko: comproLabel(d.compromis.state) === 'annulé', facts: f, dropped: d.compromis.dropped, droppedSince: d.compromis.dropped_since })
           }
           if (d.vente) {
             const f: Array<[string, string]> = []
             if (money(d.vente.montant)) f.push(['Montant', money(d.vente.montant)])
             if (d.vente.date) f.push(['Le', formatDate(d.vente.date)])
-            legs.push({ key: 'vente', head: 'Vente', ko: false, facts: f })
+            legs.push({ key: 'vente', head: 'Vente', ko: false, facts: f, dropped: d.vente.dropped, droppedSince: d.vente.dropped_since })
           }
           return (
             <div key={i} className={`fa-ck-aband-card ${tone}`}>
@@ -22277,10 +22277,10 @@ function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDos
               {legs.length ? (
                 <div className="fa-ck-aband-chain">
                   {legs.map((leg) => (
-                    <div key={leg.key} className={`fa-ck-aband-leg ${leg.ko ? 'ko' : 'ok'}`}>
+                    <div key={leg.key} className={`fa-ck-aband-leg ${leg.ko ? 'ko' : 'ok'}${leg.dropped ? ' dropped' : ''}`}>
                       <span className="fa-ck-aband-leg-dot" />
                       <div className="fa-ck-aband-leg-body">
-                        <span className="fa-ck-aband-leg-h">{leg.head}</span>
+                        <span className="fa-ck-aband-leg-h">{leg.head}{leg.dropped ? <span className="fa-ck-aband-leg-drop" title={leg.droppedSince ? `Vu pour la dernière fois dans Hektor le ${formatDate(leg.droppedSince)}` : undefined}>· plus dans Hektor{leg.droppedSince ? ` depuis ${formatDate(leg.droppedSince)}` : ''}</span> : null}</span>
                         {leg.facts.length ? (
                           <span className="fa-ck-aband-leg-facts">
                             {leg.facts.map(([k, v]) => <span key={k} className="fa-ck-aband-leg-fact"><b>{k}</b> {v}</span>)}
