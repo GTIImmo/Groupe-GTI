@@ -23264,32 +23264,131 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           </>
         ) : null}
         {mv3HistSel ? (() => {
+          // Fiche du cycle (maquette validée) : remplace la grille de champs pauvre. Branchée aux
+          // données PAR CYCLE déjà en place — mandat (h), affaire (blob affaires_detail_json via
+          // ckCycleAff), parties cliquables (onOpenContact) et activité filtrée sur la fenêtre du cycle.
           const h = mv3HistSel
-          const fields: Array<[string, string]> = ([
-            ['Numéro', h.num], ['Type', h.type], ['Enregistrement', h.dateenr], ['Début', h.debut],
-            ['Échéance', h.fin], ['Clôture', h.cloture], ['Montant', h.montant], ['Mandants', h.mandants],
-            ['Versions', h.versions > 1 ? `${h.versions} versions` : '1 version'], ['Note', h.note],
-          ] as Array<[string, string]>).filter((e) => e[1])
+          const MONTHS_FR = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+          const fmtLong = (iso?: string | null) => { const s = String(iso ?? '').trim(); if (!s) return ''; const t = Date.parse(s); if (Number.isNaN(t)) return safeText(s); const d = new Date(t); return `${d.getDate()} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}` }
+          const fmtShort = (iso?: string | null) => { const s = String(iso ?? '').trim(); if (!s) return ''; const t = Date.parse(s); if (Number.isNaN(t)) return ''; const d = new Date(t); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}` }
+          const money = (v?: string | null) => { const n = Number(String(v ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) && n !== 0 ? formatPrice(n) : '' }
+          const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '—'
+          const cycWin = ckCycles.find((c) => c.numero === h.num) ?? null
+          const badge = ckCycleBadge({ numero: h.num, cloture: h.cloture, fin: h.fin })
+          const affRow = ckCycleAff[h.num]
+          const detail = (() => { const raw = affRow?.affaires_detail_json; return raw ? parseJson<CkAffaireDetail | null>(raw, null) : null })()
+          const off = detail?.offre, com = detail?.compromis, ven = detail?.vente
+          const inWin = (at?: string | null) => { if (!cycWin || !at) return false; const t = Date.parse(at); if (Number.isNaN(t)) return false; const a = cycWin.startMs === Number.NEGATIVE_INFINITY || t > cycWin.startMs; const b = cycWin.endMs === Number.POSITIVE_INFINITY || t <= cycWin.endMs; return a && b }
+          const cycActi = ckActi.filter((e) => inWin(e.at))
+          const steps: Array<{ key: string; lb: string; icon: string; done: boolean; dt: string }> = [
+            { key: 'mandat', lb: 'Mandat', icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 4h11l5 5v11H4z"/><path d="M8 13h8M8 17h5"/></svg>', done: true, dt: fmtShort(h.debut) },
+            { key: 'diff', lb: 'Diffusion', icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 11a8 8 0 0 1 8-8"/><path d="M4 15a4 4 0 0 1 4 4"/><circle cx="5" cy="19" r="1.4"/></svg>', done: true, dt: '' },
+            { key: 'offre', lb: 'Offre', icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 8h13l3 4-3 4H4z"/><path d="M8 12h4"/></svg>', done: Boolean(off || affRow?.offre_id), dt: fmtShort(off?.date) },
+            { key: 'compromis', lb: 'Compromis', icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M3 12l4-4 5 3 4-4 5 5"/><path d="M3 17h18"/></svg>', done: Boolean(com || affRow?.compromis_id), dt: fmtShort(com?.date_start) },
+            { key: 'vente', lb: 'Vente', icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 11l8-6 8 6"/><path d="M6 10v9h12v-9"/><path d="M9.5 14.5l2 2 3-3.5"/></svg>', done: Boolean(ven || affRow?.vente_id), dt: fmtShort(ven?.date) },
+          ]
+          const metrics: Array<{ l: string; v: string; hero?: boolean }> = []
+          const prixTop = money(ven?.prix) || money(com?.prix_public) || money(off?.montant)
+          if (prixTop) metrics.push({ l: ven ? 'Prix de vente' : com ? 'Prix' : 'Montant offre', v: prixTop, hero: true })
+          if (money(ven?.honoraires)) metrics.push({ l: 'Honoraires', v: money(ven?.honoraires) })
+          if (money(com?.prix_net)) metrics.push({ l: 'Net vendeur', v: money(com?.prix_net) })
+          if (money(com?.sequestre)) metrics.push({ l: 'Séquestre', v: money(com?.sequestre) })
+          const acteDate = fmtShort(com?.date_acte) || (ven ? fmtShort(ven?.date) : '')
+          if (acteDate) metrics.push({ l: "Date d'acte", v: acteDate })
+          if (off?.state && !com && !ven) metrics.push({ l: 'Statut offre', v: safeText(off.state) })
+          const partyList: Array<{ p: CkAffaireParty; role: string; kind: 'sell' | 'buy' | 'not' }> = []
+          const pushParty = (p: CkAffaireParty | null | undefined, role: string, kind: 'sell' | 'buy' | 'not') => { if (p && ckPartyName(p)) partyList.push({ p, role, kind }) }
+          pushParty(ven?.mandant ?? com?.mandant, 'Mandant · vendeur', 'sell')
+          pushParty(ven?.acquereur ?? com?.acquereur ?? off?.acquereur, 'Acquéreur', 'buy')
+          pushParty(ven?.notaire, 'Notaire', 'not')
           return (
-            <div className="mv3-modal-ov" role="presentation" onClick={() => setMv3HistSel(null)}>
-              <div className="mv3-modal" role="dialog" aria-modal="true" aria-label={`Mandat n° ${h.num}`} onClick={(e) => e.stopPropagation()}>
-                <div className="mv3-modal-h">
-                  <span className="mv3-mh-badge">N° {h.num}</span>
-                  {h.type ? <span className="mv3-mh-type">{h.type}</span> : null}
-                  <button type="button" className="mv3-modal-x" aria-label="Fermer" onClick={() => setMv3HistSel(null)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6 6 18M6 6l12 12" /></svg></button>
-                </div>
-                <div className="mv3-modal-b">
-                  <div className="mv3-modal-grid">
-                    {fields.map(([k, v]) => <div className={`mv3-mfield${k === 'Montant' ? ' hl' : ''}`} key={k}><span className="k">{k}</span><span className="v">{v}</span></div>)}
+            <div className="fcyc-ov" role="presentation" onClick={() => setMv3HistSel(null)}>
+              <div className="fcyc-modal" role="dialog" aria-modal="true" aria-label={`Mandat n° ${h.num}`} onClick={(e) => e.stopPropagation()}>
+                <button type="button" className="fcyc-x" aria-label="Fermer" onClick={() => setMv3HistSel(null)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6 6 18M6 6l12 12" /></svg></button>
+                <div className="fcyc">
+                  <div className="fcyc-top">
+                    <div>
+                      <div className="fcyc-eyebrow"><span className="dot" /> Historique · cycle de mandat</div>
+                      <h1 className="fcyc-h1">Mandat n° {h.num}</h1>
+                      <div className="fcyc-sub">
+                        {h.type ? <span>{h.type}</span> : null}
+                        {h.type && (h.debut || h.fin || h.cloture) ? <span className="sep" /> : null}
+                        {(h.debut || h.fin || h.cloture) ? <span>{fmtLong(h.debut)}{(h.cloture || h.fin) ? ` → ${fmtLong(h.cloture || h.fin)}` : ''}</span> : null}
+                      </div>
+                    </div>
+                    <div className="fcyc-chips">
+                      <span className={`fcyc-issue tone-${badge.tone}`}>{badge.label}</span>
+                      <span className="fcyc-ro"><svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg> Lecture seule</span>
+                    </div>
                   </div>
-                  {h.avenants.length ? (
-                    <div className="mv3-modal-av">
-                      <div className="mv3-modal-avh">Avenants ({h.avenants.length})</div>
-                      {h.avenants.map((a, j) => (
-                        <div className="mv3-mh-av" key={`mv3mav-${j}`}><span className="avd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="m5 12 5 5 9-9" /></svg></span>Avenant {[safeText(a.numero), safeText(a.date), safeText(a.detail)].filter(Boolean).join(' · ') || '—'}</div>
+
+                  <div className="fcyc-flow">
+                    <div className="fcyc-flow-h">Parcours du cycle</div>
+                    <div className="fcyc-steps">
+                      {steps.map((s) => (
+                        <div key={s.key} className={`fcyc-step${s.done ? ' done' : ''}`}>
+                          <span className="bar" />
+                          <span className="fcyc-node" dangerouslySetInnerHTML={{ __html: s.icon }} />
+                          <span className="lb">{s.lb}</span>
+                          {s.dt ? <span className="dt">{s.dt}</span> : null}
+                        </div>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="fcyc-body">
+                    <div className="fcyc-panel">
+                      <div className="fcyc-sec"><span className="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18" /><path d="M17 6H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6" /></svg></span>L'affaire</div>
+                      {metrics.length ? (
+                        <div className="fcyc-metrics">
+                          {metrics.map((m) => <div key={m.l} className={`fcyc-metric${m.hero ? ' hero' : ''}`}><div className="l">{m.l}</div><div className="v">{m.v}</div></div>)}
+                        </div>
+                      ) : <p className="fcyc-empty">Aucune affaire enregistrée sur ce cycle.</p>}
+                      {partyList.length ? (
+                        <>
+                          <div className="fcyc-sec fcyc-parties-h"><span className="ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" /><path d="M5 20a7 7 0 0 1 14 0" /></svg></span>Les parties</div>
+                          {partyList.map((it, j) => {
+                            const name = ckPartyName(it.p)
+                            const cid = it.p.id ? String(it.p.id) : ''
+                            return (
+                              <div key={`${cid}-${j}`} className={`fcyc-party ${it.kind}`}>
+                                <span className="fcyc-av">{initials(name)}</span>
+                                <div className="fcyc-who"><div className="n">{name}</div><div className="r">{it.role}</div></div>
+                                {cid && props.onOpenContact ? <button type="button" className="fcyc-link" onClick={() => props.onOpenContact?.(cid)}>Voir la fiche <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h13M13 6l6 6-6 6" /></svg></button> : null}
+                              </div>
+                            )
+                          })}
+                        </>
+                      ) : null}
+                    </div>
+
+                    <div className="fcyc-panel">
+                      <div className="fcyc-sec"><span className="ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3 2" /></svg></span>Activité de la période</div>
+                      {cycActi.length ? (
+                        <div className="fcyc-feed">
+                          {cycActi.map((e, i) => {
+                            const km = CK_ACTI_KMAP[e.kind] ?? CK_ACTI_KMAP.email
+                            return (
+                              <button key={i} type="button" className="fcyc-ev" onClick={() => { setMv3HistSel(null); goRub(km.rub) }} title={`Ouvrir ${CK_RUB_MAP[km.rub]?.label ?? ''}`}>
+                                <span className="fcyc-ic"><CkIcon path={CK_ICON[km.ic] ?? CK_ICON.mail} /></span>
+                                <div className="txt"><div className="l"><b>{e.lead}</b>{e.rest ? <> — {e.rest}</> : null}</div><div className="d">{fmtLong(e.at) || (e.at ? relTime(e.at) : '')}</div></div>
+                                <span className="chev"><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" /></svg></span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ) : <p className="fcyc-empty">Aucune activité rattachée à ce cycle.</p>}
+                    </div>
+                  </div>
+
+                  {h.avenants.length ? (
+                    <div className="fcyc-avenants">
+                      <span className="fcyc-av-h">Avenants ({h.avenants.length})</span>
+                      {h.avenants.map((a, j) => <span className="fcyc-av-row" key={`fcyc-av-${j}`}>Avenant {[safeText(a.numero), safeText(a.date), safeText(a.detail)].filter(Boolean).join(' · ') || '—'}</span>)}
+                    </div>
                   ) : null}
+
+                  <p className="fcyc-note">Vue historique du cycle — données figées à la clôture du mandat. Le bien et sa diffusion reflètent l'état actuel dans le cockpit.</p>
                 </div>
               </div>
             </div>
