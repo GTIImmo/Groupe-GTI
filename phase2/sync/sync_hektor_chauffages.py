@@ -280,18 +280,33 @@ def load_json_from_stdout(stdout: str) -> dict[str, Any]:
 def run_login_refresh(node_exe: str, storage_state: Path, timeout_seconds: int) -> None:
     env = dict(os.environ)
     env["CONSOLE_STORAGE_STATE_PATH"] = str(storage_state)
-    completed = subprocess.run(
-        [node_exe, str(DEFAULT_LOGIN_SCRIPT)],
-        cwd=str(ROOT / "Console"),
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=timeout_seconds,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError((completed.stderr or completed.stdout or "Echec refresh session Hektor").strip()[-3000:])
+    attempts = max(1, int(os.environ.get("HEKTOR_LOGIN_ATTEMPTS", "3")))
+    last_err = "Echec refresh session Hektor"
+    for attempt in range(1, attempts + 1):
+        try:
+            completed = subprocess.run(
+                [node_exe, str(DEFAULT_LOGIN_SCRIPT)],
+                cwd=str(ROOT / "Console"),
+                env=env,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired:
+            last_err = f"Login Hektor timeout apres {timeout_seconds}s"
+            if attempt < attempts:
+                time.sleep(3)
+                continue
+            raise RuntimeError(last_err)
+        if completed.returncode == 0:
+            return
+        last_err = (completed.stderr or completed.stdout or "Echec refresh session Hektor").strip()[-3000:]
+        if attempt < attempts:
+            time.sleep(3)
+            continue
+        raise RuntimeError(last_err)
 
 
 def run_node_batch(

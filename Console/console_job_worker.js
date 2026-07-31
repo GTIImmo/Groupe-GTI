@@ -300,10 +300,25 @@ async function refreshHektorSession(reason = "scheduled") {
   const loginScript = path.resolve(__dirname, "playwright_login.js");
   hektorLoginPromise = (async () => {
     console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", reason }));
-    await runNodeScript(loginScript, [], {
-      timeoutMs: NODE_SCRIPT_TIMEOUT_MS,
-      env: { CONSOLE_STORAGE_STATE_PATH: STORAGE_STATE_PATH },
-    });
+    const maxLoginAttempts = Math.max(1, Number(process.env.HEKTOR_LOGIN_ATTEMPTS || 3));
+    let loginErr = null;
+    for (let loginAttempt = 1; loginAttempt <= maxLoginAttempts; loginAttempt++) {
+      try {
+        await runNodeScript(loginScript, [], {
+          timeoutMs: NODE_SCRIPT_TIMEOUT_MS,
+          env: { CONSOLE_STORAGE_STATE_PATH: STORAGE_STATE_PATH },
+        });
+        loginErr = null;
+        break;
+      } catch (err) {
+        loginErr = err;
+        if (loginAttempt < maxLoginAttempts) {
+          console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", status: "retry", attempt: loginAttempt, reason }));
+          await new Promise((r) => setTimeout(r, 3000));
+        }
+      }
+    }
+    if (loginErr) throw loginErr;
     lastHektorLoginAt = Date.now();
     console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", status: "done", reason }));
   })();

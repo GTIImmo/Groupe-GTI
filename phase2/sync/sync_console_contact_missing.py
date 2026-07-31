@@ -262,9 +262,21 @@ class Supabase:
 def run_login_refresh(node_exe: str, storage_state: Path, timeout_seconds: int) -> None:
     env = dict(os.environ)
     env["CONSOLE_STORAGE_STATE_PATH"] = str(storage_state)
-    subprocess.run([node_exe, str(DEFAULT_LOGIN_SCRIPT)], cwd=str(ROOT / "Console"), env=env,
-                   capture_output=True, text=True, encoding="utf-8", errors="replace",
-                   timeout=max(60, timeout_seconds * 3))
+    attempts = max(1, int(os.environ.get("HEKTOR_LOGIN_ATTEMPTS", "3")))
+    for attempt in range(1, attempts + 1):
+        try:
+            completed = subprocess.run([node_exe, str(DEFAULT_LOGIN_SCRIPT)], cwd=str(ROOT / "Console"), env=env,
+                                       capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                       timeout=max(60, timeout_seconds * 3))
+        except subprocess.TimeoutExpired:
+            if attempt < attempts:
+                time.sleep(3)
+                continue
+            return
+        if completed.returncode == 0:
+            return
+        if attempt < attempts:
+            time.sleep(3)
 
 
 def run_node_batch(args: argparse.Namespace, contact_ids: list[str]) -> dict[str, Any]:
