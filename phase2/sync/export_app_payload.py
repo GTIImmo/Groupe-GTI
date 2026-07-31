@@ -794,21 +794,21 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS 
        raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt,
        NULL AS date_acte, NULL AS sequestre
 FROM hektor.hektor_offre
-WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
        compromis_state, NULL, acquereurs_json,
        COALESCE(prix_publique, prix_net_vendeur), COALESCE(date_start, synced_at),
        date_signature_acte, sequestre
 FROM hektor.hektor_compromis
-WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
        NULL, NULL, acquereurs_json,
        prix, COALESCE(date_vente, synced_at),
        NULL, NULL
 FROM hektor.hektor_vente
-WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+WHERE hektor_annonce_id IS NOT NULL
 """
 
 _DOSSIER_STATE_RANK = {"vendu": 0, "compromis": 1, "offre_acceptee": 2, "offre_en_cours": 3, "compromis_annule": 4, "offre_refusee": 5}
@@ -832,45 +832,89 @@ def _dossier_state(kind: str, state: object) -> str:
     return "offre_en_cours"
 
 
+# Au sein d'un type d'affaire, on garde l'occurrence la PLUS AVANCEE (offre acceptee > proposee >
+# refusee ; compromis actif > annule). Rang bas = a garder.
+_OFFRE_LEG_RANK = {"accepted": 0, "acceptee": 0, "proposed": 1, "en_cours": 1, "": 2, "refused": 3, "refusee": 3}
+_COMPROMIS_LEG_RANK = {"active": 0, "": 1, "cancelled": 2, "annule": 2}
+
+
+def _leg_rank(kind: str, leg: dict[str, object]) -> int:
+    s = normalize_text(leg.get("state")).lower()
+    if kind == "offre":
+        return _OFFRE_LEG_RANK.get(s, 2)
+    if kind == "compromis":
+        return _COMPROMIS_LEG_RANK.get(s, 1)
+    return 0
+
+
 def build_affaires_dossiers(rows: list[dict[str, object]]) -> list[dict[str, object]]:
-    """Un DOSSIER par acquereur (regroupe toutes ses affaires du cycle), avec son MEILLEUR etat
-    et le marqueur courante/abandonnee. Une offre refusee / un compromis annule => abandonne."""
+    """Un DOSSIER par acquereur du cycle, portant la CHAINE COMPLETE de ses affaires
+    (offre + compromis + vente), classe par l'etape la PLUS AVANCEE atteinte. Ainsi la trace
+    de l'offre n'est jamais perdue quand le compromis est annule.
+    Une offre refusee (sans suite) ou un compromis annule (etape la plus avancee) => abandonne."""
     by_acq: dict[str, dict[str, object]] = {}
     for r in rows:
         kind = normalize_text(r.get("kind"))
-        dstate = _dossier_state(kind, r.get("state"))
+        if kind not in ("offre", "compromis", "vente"):
+            continue
         party = _compact_party(r.get("acq_json"))
         acq_id = normalize_text(r.get("acq_id")) or (normalize_text(party.get("id")) if party else "")
         if not acq_id and not party:
             continue
         key = acq_id or f"{kind}:{normalize_text(r.get('id'))}"
-        rank = _DOSSIER_STATE_RANK[dstate]
-        cur = by_acq.get(key)
-        if cur is None or rank < int(cur["_rank"]):
-            by_acq[key] = {
-                "_rank": rank,
-                "acquereur": party,
-                "kind": kind,
-                "etat": dstate,
-                "etat_label": _DOSSIER_STATE_LABEL[dstate],
-                "courante": dstate in _DOSSIER_LIVE,
-                "montant": normalize_text(r.get("montant")) or None,
-                "date": normalize_text(r.get("dt")) or None,
-                "date_acte": normalize_text(r.get("date_acte")) or None,
-                "sequestre": normalize_text(r.get("sequestre")) or None,
-            }
-    dossiers = sorted(by_acq.values(), key=lambda d: (0 if d["courante"] else 1, int(d["_rank"])))
+        d = by_acq.setdefault(key, {"acquereur": party, "offre": None, "compromis": None, "vente": None, "_mandats": set()})
+        if party and not d.get("acquereur"):
+            d["acquereur"] = party
+        mid = normalize_text(r.get("hektor_mandat_id"))
+        # seuls compromis/vente portent un mandat fiable (offres ~98% a 0) : sert a affecter le
+        # dossier au bon cycle sur les rares annonces multi-mandats.
+        if mid and mid != "0" and kind in ("compromis", "vente"):
+            d["_mandats"].add(mid)  # type: ignore[union-attr]
+        leg: dict[str, object] = {
+            "montant": normalize_text(r.get("montant")) or None,
+            "date": normalize_text(r.get("dt")) or None,
+            "state": normalize_text(r.get("state")) or None,
+        }
+        if kind == "compromis":
+            leg["date_acte"] = normalize_text(r.get("date_acte")) or None
+            leg["sequestre"] = normalize_text(r.get("sequestre")) or None
+        existing = d.get(kind)
+        if existing is None or _leg_rank(kind, leg) < _leg_rank(kind, existing):  # type: ignore[arg-type]
+            d[kind] = leg
+    dossiers: list[dict[str, object]] = []
+    for d in by_acq.values():
+        offre, compromis, vente = d.get("offre"), d.get("compromis"), d.get("vente")
+        if not (offre or compromis or vente):
+            continue
+        if vente:
+            etat = "vendu"
+        elif compromis:
+            etat = "compromis_annule" if normalize_text(compromis.get("state")).lower() in ("cancelled", "annule") else "compromis"  # type: ignore[union-attr]
+        else:
+            s = normalize_text(offre.get("state")).lower()  # type: ignore[union-attr]
+            etat = "offre_acceptee" if s in ("accepted", "acceptee") else ("offre_refusee" if s in ("refused", "refusee") else "offre_en_cours")
+        dossiers.append({
+            "acquereur": d.get("acquereur"),
+            "etat": etat,
+            "etat_label": _DOSSIER_STATE_LABEL[etat],
+            "courante": etat in _DOSSIER_LIVE,
+            "offre": offre,
+            "compromis": compromis,
+            "vente": vente,
+            "_rank": _DOSSIER_STATE_RANK[etat],
+            "_mandats": d.get("_mandats") or set(),
+        })
+    dossiers.sort(key=lambda d: (0 if d["courante"] else 1, int(d["_rank"])))
     for d in dossiers:
         d.pop("_rank", None)
     return dossiers
 
 
-def build_cycle_affaire_blob(row: dict[str, object] | None, all_rows: list[dict[str, object]]) -> str | None:
+def build_cycle_affaire_blob(row: dict[str, object] | None, dossiers: list[dict[str, object]]) -> str | None:
     """Blob affaires_detail_json enrichi : detail de l'affaire courante (rn=1) + liste des dossiers
-    par acquereur (courant + abandonnes). Un seul blob, pas de nouvelle colonne."""
+    par acquereur (courant + abandonnes, deja construits/affectes au cycle). Un seul blob."""
     detail = build_affaire_detail_for_cycle(row) if row else None
     detail = dict(detail) if detail else {}
-    dossiers = build_affaires_dossiers(all_rows)
     if dossiers:
         detail["dossiers"] = dossiers
     return json.dumps(detail, ensure_ascii=True, separators=(",", ":")) if detail else None
@@ -1540,13 +1584,41 @@ def build_mandat_register_rows(
         m_id = normalize_text(row.get("hektor_mandat_id"))
         if a_id and m_id:
             affaires_by_mandat[(a_id, m_id)] = row
-    # Toutes les affaires (sans rn=1) pour lister les dossiers par acquereur (courant + abandonnes).
-    affaires_all_by_mandat: dict[tuple[str, str], list[dict[str, object]]] = {}
-    for row in fetch_rows(con, SQL_MANDAT_AFFAIRES_ALL):
+    # Dossiers par acquereur : les OFFRES ne portent quasi jamais de mandat (98% a 0), donc le lien
+    # offre<->compromis se fait par (annonce, id acquereur), pas par le mandat. On regroupe donc TOUTES
+    # les affaires (offres incluses) par annonce, on batit un dossier par acquereur (chaine complete),
+    # puis on affecte chaque dossier a un cycle. Les annonces a affaires sont quasi toutes mono-cycle
+    # (8/10462 multi) : pour celles-la on affecte via le mandat du compromis/vente -> numero.
+    mandat_numero: dict[tuple[str, str], str] = {}
+    annonce_numeros: dict[str, set[str]] = {}
+    for row in fetch_rows(con, "SELECT hektor_annonce_id, hektor_mandat_id, numero FROM hektor.hektor_mandat"):
         a_id = normalize_text(row.get("hektor_annonce_id"))
         m_id = normalize_text(row.get("hektor_mandat_id"))
-        if a_id and m_id:
-            affaires_all_by_mandat.setdefault((a_id, m_id), []).append(row)
+        num = normalize_text(row.get("numero"))
+        if a_id and m_id and num:
+            mandat_numero[(a_id, m_id)] = num
+        if a_id and num:
+            annonce_numeros.setdefault(a_id, set()).add(num)
+
+    affaires_by_annonce: dict[str, list[dict[str, object]]] = {}
+    for row in fetch_rows(con, SQL_MANDAT_AFFAIRES_ALL):
+        a_id = normalize_text(row.get("hektor_annonce_id"))
+        if a_id:
+            affaires_by_annonce.setdefault(a_id, []).append(row)
+
+    # dossiers par cycle (annonce, numero) + repli agrege par annonce (mono-cycle / numero absent)
+    dossiers_by_cycle: dict[tuple[str, str], list[dict[str, object]]] = {}
+    dossiers_by_annonce: dict[str, list[dict[str, object]]] = {}
+    for a_id, rows in affaires_by_annonce.items():
+        dossiers = build_affaires_dossiers(rows)
+        nums = annonce_numeros.get(a_id) or set()
+        for d in dossiers:
+            mids = d.pop("_mandats", None) or set()
+            targets = {mandat_numero[(a_id, m)] for m in mids if (a_id, m) in mandat_numero}
+            targets = (targets & nums) or nums  # cycles resolus, sinon tous les cycles de l'annonce
+            for num in targets:
+                dossiers_by_cycle.setdefault((a_id, num), []).append(d)
+        dossiers_by_annonce[a_id] = list(dossiers)  # _mandats deja retire ci-dessus
 
     register_rows: list[dict[str, object]] = []
     if dossier_ids is not None and target_annonce_ids:
@@ -1704,7 +1776,8 @@ def build_mandat_register_rows(
                 "vente_id": cycle_affaire.get("vente_id"),
                 "affaires_detail_json": build_cycle_affaire_blob(
                     cycle_affaire,
-                    affaires_all_by_mandat.get((annonce_id, normalize_text(current_version.get("id"))), []),
+                    dossiers_by_cycle.get((annonce_id, numero))
+                    or dossiers_by_annonce.get(annonce_id, []),
                 ),
                 "source_updated_at": source_updated_at,
                 "register_source_kind": "historique" if status in {"Vendu", "Clos"} or not detail_available else "actif",

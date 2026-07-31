@@ -204,6 +204,42 @@ def age_minutes(dt: datetime | None) -> float | None:
     return max(0.0, (utc_now() - dt).total_seconds() / 60.0)
 
 
+def cron_expected_interval_minutes(schedule: str | None) -> float:
+    """Intervalle minimal estime (minutes) entre deux runs d'un cron 5-champs.
+
+    Permet un seuil de fraicheur adapte a la frequence : un job quotidien
+    (0 6 * * *) ne doit pas etre signale 'en retard' apres quelques heures.
+    """
+    parts = (schedule or "").split()
+    if len(parts) < 5:
+        return 60.0
+    minute, hour, dom, _month, dow = parts[:5]
+
+    def step(field: str) -> float | None:
+        if field.startswith("*/"):
+            try:
+                return float(int(field[2:]))
+            except ValueError:
+                return None
+        return None
+
+    if minute == "*":
+        return 1.0
+    s = step(minute)
+    if s:
+        return s
+    # minute fixe -> cadence donnee par l'heure
+    if hour == "*":
+        return 60.0
+    s = step(hour)
+    if s:
+        return s * 60.0
+    # minute + heure fixes -> quotidien (ou moins frequent)
+    if dom == "*" and dow == "*":
+        return 1440.0
+    return 1440.0 * 7
+
+
 def file_mtime(path: Path) -> datetime | None:
     try:
         return datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
@@ -1006,7 +1042,7 @@ class Monitor:
             )
             return
         rows = rows or []
-        stale_limit = float(self.args.cron_stale_minutes)
+        margin = float(self.args.cron_stale_minutes)
         problems: list[dict[str, Any]] = []
         for row in rows:
             if row.get("active") is False:
@@ -1014,6 +1050,8 @@ class Monitor:
             jobname = row.get("jobname") or "?"
             last_status = row.get("last_status")
             age = age_minutes(parse_iso(row.get("last_run")))
+            # Seuil adapte a la frequence du job : intervalle attendu + marge.
+            stale_limit = cron_expected_interval_minutes(row.get("schedule")) + margin
             if last_status == "failed":
                 problems.append({"job": jobname, "reason": "dernier run en echec"})
             elif age is not None and age > stale_limit:

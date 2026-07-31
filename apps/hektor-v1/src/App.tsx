@@ -22009,16 +22009,29 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
       </div>
       <div className="fa-ck-tl-rev">Réversibilité : une offre peut être refusée, un compromis annulé — la vente est définitive.</div>
 
-      <div className="fa-ck-ct-sec"><span className="l">Transactions détaillées</span><span className="bar" /><span className="k">Synchronisé depuis Hektor</span></div>
-      <CkTxCard num="01" kind="offre" title={o ? `Offre d'achat — ${o.montant ?? ''}` : "Offre d'achat"} sub={o ? `${o.etat ?? ''} · ${o.date ?? ''} · ${o.acqNom ?? ''}` : 'Aucune offre enregistrée'} pill={o ? (o.etat ?? 'Offre') : 'À venir'} pillTone={o ? 'on' : 'wait'} open={Boolean(o)} rows={o ? [
-        ["Montant de l'offre", o.montant ?? '—'], ['Prix net vendeur', o.net ?? '—'], ["Date de l'offre", o.date ?? '—'], ['Validité', o.validite ?? '—'], ['État', o.etat ?? '—'], ['Statut source Hektor', o.raw ?? '—'], ['Acquéreur', [o.acqNom, o.acqTel, o.acqMail].filter(Boolean).join(' · '), true],
-      ] : []} />
-      <CkTxCard num="02" kind="compromis" title="Compromis de vente" sub={c ? `Acte le ${c.dateActe ?? '—'} · séquestre ${c.sequestre ?? '—'}` : "À venir · après acceptation de l'offre"} pill={c ? (tl.compromis === 'done' ? 'Signé' : 'En cours') : 'À venir'} pillTone={c ? (tl.compromis === 'done' ? 'done' : 'on') : 'wait'} open={Boolean(c) && tl.compromis !== 'done'} rows={c ? [
-        ['Prix de vente', c.prix ?? '—'], ['Prix net vendeur', c.net ?? '—'], ['Date compromis', c.dateStart ?? '—'], ['Date acte prévue', c.dateActe ?? '—'], ['Rétractation SRU', c.retract ?? '—'], ['Séquestre', c.sequestre ?? '—'],
-      ] : []} />
-      <CkTxCard num="03" kind="vente" title="Vente — acte authentique" sub={v ? `Vendu le ${v.date ?? ''} · ${v.prix ?? ''}` : 'À venir · acte définitif'} pill={v ? 'Vendu' : 'À venir'} pillTone={v ? 'done' : 'wait'} open={Boolean(v)} rows={v ? [
-        ['Prix de vente', v.prix ?? '—'], ['Date de vente', v.date ?? '—'], ['Honoraires', v.honoraires ?? '—'], ['Commission agence', v.commission ?? '—'], ['Notaires', v.notaires ?? '—', true],
-      ] : []} />
+      {/* Transactions détaillées : on ne montre QUE les blocs renseignés (Partie 1). Pas d'affaire
+          courante (ni offre ni compromis ni vente) => la section entière disparaît ; les dossiers
+          abandonnés restent visibles dans leur propre bloc plus bas. */}
+      {(o || c || v) ? (
+        <>
+          <div className="fa-ck-ct-sec"><span className="l">Transactions détaillées</span><span className="bar" /><span className="k">Synchronisé depuis Hektor</span></div>
+          {o ? (
+            <CkTxCard num="01" kind="offre" title={`Offre d'achat — ${o.montant ?? ''}`} sub={`${o.etat ?? ''} · ${o.date ?? ''} · ${o.acqNom ?? ''}`} pill={o.etat ?? 'Offre'} pillTone="on" open rows={[
+              ["Montant de l'offre", o.montant ?? '—'], ['Prix net vendeur', o.net ?? '—'], ["Date de l'offre", o.date ?? '—'], ['Validité', o.validite ?? '—'], ['État', o.etat ?? '—'], ['Statut source Hektor', o.raw ?? '—'], ['Acquéreur', [o.acqNom, o.acqTel, o.acqMail].filter(Boolean).join(' · '), true],
+            ]} />
+          ) : null}
+          {c ? (
+            <CkTxCard num="02" kind="compromis" title="Compromis de vente" sub={`Acte le ${c.dateActe ?? '—'} · séquestre ${c.sequestre ?? '—'}`} pill={tl.compromis === 'done' ? 'Signé' : 'En cours'} pillTone={tl.compromis === 'done' ? 'done' : 'on'} open={tl.compromis !== 'done'} rows={[
+              ['Prix de vente', c.prix ?? '—'], ['Prix net vendeur', c.net ?? '—'], ['Date compromis', c.dateStart ?? '—'], ['Date acte prévue', c.dateActe ?? '—'], ['Rétractation SRU', c.retract ?? '—'], ['Séquestre', c.sequestre ?? '—'],
+            ]} />
+          ) : null}
+          {v ? (
+            <CkTxCard num="03" kind="vente" title="Vente — acte authentique" sub={`Vendu le ${v.date ?? ''} · ${v.prix ?? ''}`} pill="Vendu" pillTone="done" open rows={[
+              ['Prix de vente', v.prix ?? '—'], ['Date de vente', v.date ?? '—'], ['Honoraires', v.honoraires ?? '—'], ['Commission agence', v.commission ?? '—'], ['Notaires', v.notaires ?? '—', true],
+            ]} />
+          ) : null}
+        </>
+      ) : null}
 
       {/* « Parties à l'affaire » déplacé hors de CkAffaires : rendu par le bloc premium unique
           `.fa-ck-affp` (parties cliquables via id + coordonnées), pour ne pas dupliquer. */}
@@ -22102,7 +22115,17 @@ type CkAffaireDetail = {
   compromis?: { state?: string | null; date_start?: string | null; date_acte?: string | null; sequestre?: string | null; prix_net?: string | null; prix_public?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null } | null
   vente?: { date?: string | null; prix?: string | null; honoraires?: string | null; commission?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null; notaire?: CkAffaireParty | null } | null
   // Dossiers par acquéreur (courant + abandonnés) — produit par build_affaires_dossiers (pipeline).
-  dossiers?: Array<{ acquereur?: CkAffaireParty | null; kind?: string | null; etat?: string | null; etat_label?: string | null; courante?: boolean; montant?: string | null; date?: string | null; date_acte?: string | null; sequestre?: string | null }> | null
+  // Chaque dossier porte la CHAINE COMPLETE de ses affaires (offre + compromis + vente) : la trace
+  // de l'offre reste visible même quand le compromis est annulé.
+  dossiers?: Array<{
+    acquereur?: CkAffaireParty | null
+    etat?: string | null
+    etat_label?: string | null
+    courante?: boolean
+    offre?: { montant?: string | null; date?: string | null; state?: string | null } | null
+    compromis?: { montant?: string | null; date?: string | null; state?: string | null; date_acte?: string | null; sequestre?: string | null } | null
+    vente?: { montant?: string | null; date?: string | null; state?: string | null } | null
+  }> | null
 }
 type CkAffaireDossier = NonNullable<CkAffaireDetail['dossiers']>[number]
 function ckPartyName(p?: CkAffaireParty | null): string {
@@ -22215,11 +22238,32 @@ function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDos
           const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '?'
           const coord = ckAffPartyCoord(d.acquereur)
           const tone = d.etat === 'compromis_annule' ? 'com' : 'off'
-          const facts: Array<[string, string]> = []
-          if (money(d.montant)) facts.push(['Montant', money(d.montant)])
-          if (d.date) facts.push([d.kind === 'compromis' ? 'Compromis le' : 'Offre le', formatDate(d.date)])
-          if (d.date_acte) facts.push(['Acte prévu', formatDate(d.date_acte)])
-          if (money(d.sequestre)) facts.push(['Séquestre', money(d.sequestre)])
+          // Chronologie complète du dossier : chaque étape franchie (offre → compromis → vente),
+          // pour que la trace de l'offre reste visible même quand le compromis a été annulé.
+          const offreLabel = (s?: string | null) => { const x = String(s ?? '').toLowerCase(); return x === 'accepted' || x === 'acceptee' ? 'acceptée' : x === 'refused' || x === 'refusee' ? 'refusée' : 'proposée' }
+          const comproLabel = (s?: string | null) => { const x = String(s ?? '').toLowerCase(); return x === 'cancelled' || x === 'annule' ? 'annulé' : 'signé' }
+          type Leg = { key: string; head: string; ko: boolean; facts: Array<[string, string]> }
+          const legs: Leg[] = []
+          if (d.offre) {
+            const f: Array<[string, string]> = []
+            if (money(d.offre.montant)) f.push(['Montant', money(d.offre.montant)])
+            if (d.offre.date) f.push(['Le', formatDate(d.offre.date)])
+            legs.push({ key: 'offre', head: `Offre ${offreLabel(d.offre.state)}`, ko: offreLabel(d.offre.state) === 'refusée', facts: f })
+          }
+          if (d.compromis) {
+            const f: Array<[string, string]> = []
+            if (money(d.compromis.montant)) f.push(['Montant', money(d.compromis.montant)])
+            if (d.compromis.date) f.push(['Signé le', formatDate(d.compromis.date)])
+            if (d.compromis.date_acte) f.push(['Acte prévu', formatDate(d.compromis.date_acte)])
+            if (money(d.compromis.sequestre)) f.push(['Séquestre', money(d.compromis.sequestre)])
+            legs.push({ key: 'compromis', head: `Compromis ${comproLabel(d.compromis.state)}`, ko: comproLabel(d.compromis.state) === 'annulé', facts: f })
+          }
+          if (d.vente) {
+            const f: Array<[string, string]> = []
+            if (money(d.vente.montant)) f.push(['Montant', money(d.vente.montant)])
+            if (d.vente.date) f.push(['Le', formatDate(d.vente.date)])
+            legs.push({ key: 'vente', head: 'Vente', ko: false, facts: f })
+          }
           return (
             <div key={i} className={`fa-ck-aband-card ${tone}`}>
               <div className="fa-ck-aband-top">
@@ -22230,9 +22274,21 @@ function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDos
                 </div>
                 {cid && onOpenContact ? <button type="button" className="fa-ck-aband-lnk" onClick={() => onOpenContact(cid)}>Voir la fiche<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="M5 12h13M13 6l6 6-6 6" /></svg></button> : null}
               </div>
-              {facts.length ? (
-                <div className="fa-ck-aband-facts">
-                  {facts.map(([k, v]) => <div key={k} className="fa-ck-aband-fact"><span className="k">{k}</span><span className="v">{v}</span></div>)}
+              {legs.length ? (
+                <div className="fa-ck-aband-chain">
+                  {legs.map((leg) => (
+                    <div key={leg.key} className={`fa-ck-aband-leg ${leg.ko ? 'ko' : 'ok'}`}>
+                      <span className="fa-ck-aband-leg-dot" />
+                      <div className="fa-ck-aband-leg-body">
+                        <span className="fa-ck-aband-leg-h">{leg.head}</span>
+                        {leg.facts.length ? (
+                          <span className="fa-ck-aband-leg-facts">
+                            {leg.facts.map(([k, v]) => <span key={k} className="fa-ck-aband-leg-fact"><b>{k}</b> {v}</span>)}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
               {(coord.tel || coord.email) ? (
