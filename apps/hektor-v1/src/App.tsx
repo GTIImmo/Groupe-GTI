@@ -22020,13 +22020,8 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
         ['Prix de vente', v.prix ?? '—'], ['Date de vente', v.date ?? '—'], ['Honoraires', v.honoraires ?? '—'], ['Commission agence', v.commission ?? '—'], ['Notaires', v.notaires ?? '—', true],
       ] : []} />
 
-      <div className="fa-ck-ct-sec"><span className="l">Parties à l'affaire</span><span className="bar" /></div>
-      <div className="fa-ck-parties">
-        <CkParty role="Acquéreur" p={affaire.parties?.acq} />
-        <CkParty role="Notaire acquéreur" p={affaire.parties?.notAcq} />
-        <CkParty role="Notaire vendeur" p={affaire.parties?.notVend} />
-        <CkParty role="Mandants / vendeurs" p={affaire.parties?.vendeur} />
-      </div>
+      {/* « Parties à l'affaire » déplacé hors de CkAffaires : rendu par le bloc premium unique
+          `.fa-ck-affp` (parties cliquables via id + coordonnées), pour ne pas dupliquer. */}
 
       {affaire.honoraires ? (
         <>
@@ -22111,6 +22106,42 @@ function ckPartyName(p?: CkAffaireParty | null): string {
   if (!p) return ''
   return [p.civilite, p.prenom, p.nom].map((x) => (x ?? '').trim()).filter(Boolean).join(' ').trim()
 }
+// Coordonnées (email / téléphone) d'une partie d'affaire — le blob les embarque dans `coordonnees`.
+function ckAffPartyCoord(p?: CkAffaireParty | null): { email?: string; tel?: string } {
+  const c = p?.coordonnees
+  if (!c || typeof c !== 'object') return {}
+  const o = c as Record<string, unknown>
+  const pick = (...keys: string[]) => { for (const k of keys) { const v = String(o[k] ?? '').trim(); if (v) return v } return undefined }
+  return { email: pick('email', 'mail', 'courriel'), tel: pick('tel', 'telephone', 'portable', 'mobile', 'gsm') }
+}
+// Illustration animée du bloc « Contacts de l'affaire » : deux parties (acheteur/vendeur) reliées
+// par le contrat scellé au centre. Chaîne statique injectée (aucune entrée utilisateur). Les classes
+// portent l'animation (CSS scopé .fa-ck-affp-illus dans fa-cockpit-v2.css).
+const CK_AFFP_ILLUS = `<svg viewBox="0 0 104 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="affpBuy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d21a72"/><stop offset="1" stop-color="#8c0044"/></linearGradient>
+    <linearGradient id="affpSell" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a5bc0"/><stop offset="1" stop-color="#553285"/></linearGradient>
+    <linearGradient id="affpHdr" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c5005f"/><stop offset="1" stop-color="#7a4bb0"/></linearGradient>
+  </defs>
+  <ellipse cx="52" cy="58" rx="40" ry="4" fill="#00000010"/>
+  <path class="affp-link" d="M27 33 H45 M59 33 H77" stroke="#c5005f" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="3 5" opacity=".55"/>
+  <g class="affp-doc">
+    <rect x="40" y="15" width="24" height="30" rx="3.5" fill="#fffdf9" stroke="#e9e1d3" stroke-width="1.6"/>
+    <path d="M40 18.5a3.5 3.5 0 0 1 3.5-3.5h17a3.5 3.5 0 0 1 3.5 3.5V22H40z" fill="url(#affpHdr)"/>
+    <path d="M45 29h14M45 33h10" stroke="#e6ddcc" stroke-width="1.7" stroke-linecap="round"/>
+    <g class="affp-seal"><circle cx="52" cy="40" r="6.4" fill="#1f7a4a"/><path d="M49.2 40l2 2 3.6-4" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></g>
+  </g>
+  <g class="affp-a1">
+    <circle cx="16" cy="33" r="12.5" fill="url(#affpBuy)"/>
+    <circle cx="16" cy="29" r="4.2" fill="#fff"/><path d="M8 42.5a8 8 0 0 1 16 0z" fill="#fff"/>
+  </g>
+  <g class="affp-a2">
+    <circle cx="88" cy="33" r="12.5" fill="url(#affpSell)"/>
+    <circle cx="88" cy="29" r="4.2" fill="#fff"/><path d="M80 42.5a8 8 0 0 1 16 0z" fill="#fff"/>
+  </g>
+  <circle class="affp-spark" cx="30" cy="14" r="2.2" fill="#e6a417"/>
+  <path class="affp-spark2" d="M92 12 l1.4 3.4 3.4 1.4 -3.4 1.4 -1.4 3.4 -1.4 -3.4 -3.4 -1.4 3.4 -1.4z" fill="#2f9e9e"/>
+</svg>`
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
 // DossierDetailLayoutBase reste 100 % intacte. Rendu uniquement si le flag est ON.
@@ -22420,9 +22451,29 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const raw = ckCycleAff[ckSelectedNumero]?.affaires_detail_json
     return raw ? parseJson<CkAffaireDetail | null>(raw, null) : null
   })()
-  const ckSelAffMandant = ckSelAffDetail?.vente?.mandant ?? ckSelAffDetail?.compromis?.mandant ?? null
-  const ckSelAffAcquereur = ckSelAffDetail?.vente?.acquereur ?? ckSelAffDetail?.compromis?.acquereur ?? ckSelAffDetail?.offre?.acquereur ?? null
-  const ckSelAffNotaire = ckSelAffDetail?.vente?.notaire ?? null
+  // Cartes de parties (acquéreur / mandant / notaire) avec CONTEXTE d'affaire + coordonnées.
+  // Acquéreur : prio vente > compromis > offre. Mandant : de l'affaire (compromis/vente) sinon
+  // repli sur le propriétaire du bien (contacts de l'annonce) — une offre seule n'a pas de vendeur.
+  const ckAffPartyCards: Array<{ party: CkAffaireParty; role: string; ctx: string; kind: 'buy' | 'sell' | 'not' }> = (() => {
+    const d = ckSelAffDetail
+    const cards: Array<{ party: CkAffaireParty; role: string; ctx: string; kind: 'buy' | 'sell' | 'not' }> = []
+    const eur = (x?: string | null) => { const n = Number(String(x ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) && n !== 0 ? formatPrice(n) : '' }
+    let acq: CkAffaireParty | null = null, acqCtx = ''
+    if (d?.vente?.acquereur) { acq = d.vente.acquereur; acqCtx = ['Vente', eur(d.vente.prix)].filter(Boolean).join(' · ') }
+    else if (d?.compromis?.acquereur) { acq = d.compromis.acquereur; acqCtx = ['Compromis', d.compromis.state ?? '', eur(d.compromis.prix_public)].filter(Boolean).join(' · ') }
+    else if (d?.offre?.acquereur) { acq = d.offre.acquereur; acqCtx = ['Offre', d.offre.state ?? '', eur(d.offre.montant)].filter(Boolean).join(' · ') }
+    if (acq && ckPartyName(acq)) cards.push({ party: acq, role: 'Acquéreur', ctx: acqCtx, kind: 'buy' })
+    let man: CkAffaireParty | null = d?.vente?.mandant ?? d?.compromis?.mandant ?? null
+    let manCtx = 'Vendeur'
+    if (!man && props.contacts[0]) {
+      const c0 = props.contacts[0]
+      man = { id: c0.sourceId ?? null, civilite: c0.civility ?? null, nom: (c0.lastName ?? c0.name) ?? null, prenom: c0.firstName ?? null, coordonnees: { email: c0.email, tel: c0.phone } }
+      manCtx = 'Propriétaire du bien'
+    }
+    if (man && ckPartyName(man)) cards.push({ party: man, role: 'Mandant · vendeur', ctx: manCtx, kind: 'sell' })
+    if (d?.vente?.notaire?.id) cards.push({ party: d.vente.notaire, role: 'Notaire', ctx: 'Vente', kind: 'not' })
+    return cards
+  })()
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
@@ -23309,7 +23360,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           if (off?.state && !com && !ven) metrics.push({ l: 'Statut offre', v: safeText(off.state) })
           const partyList: Array<{ p: CkAffaireParty; role: string; kind: 'sell' | 'buy' | 'not' }> = []
           const pushParty = (p: CkAffaireParty | null | undefined, role: string, kind: 'sell' | 'buy' | 'not') => { if (p && ckPartyName(p)) partyList.push({ p, role, kind }) }
-          pushParty(ven?.mandant ?? com?.mandant, 'Mandant · vendeur', 'sell')
+          // Une offre seule n'enregistre pas le vendeur : à défaut de mandant dans l'affaire
+          // (compromis/vente), on affiche celui du mandat lui-même (texte, non cliquable).
+          const fcMandant = ven?.mandant ?? com?.mandant ?? (h.mandants ? ({ nom: h.mandants } as CkAffaireParty) : null)
+          pushParty(fcMandant, 'Mandant · vendeur', 'sell')
           pushParty(ven?.acquereur ?? com?.acquereur ?? off?.acquereur, 'Acquéreur', 'buy')
           pushParty(ven?.notaire, 'Notaire', 'not')
           return (
@@ -24553,7 +24607,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     ? { n: c0.name || `${c0.civility ?? ''} ${c0.firstName ?? ''} ${c0.lastName ?? ''}`.trim(), s: `Vendeur · mandant${c0.sourceId ? ` · Contact ${c0.sourceId}` : ''}`, tel: c0.phone ?? undefined, mail: c0.email ?? undefined }
                     : null
                   const net = money('prix_net_vendeur') || nz('PRIXNETVENDEUR')
-                  const acqNom = nz('offre_acquereur_nom')
+                  // #2 : l'acquéreur du bloc offre vient du blob (nom + coordonnées, avec id), pas
+                  // du seul champ plat offre_acquereur_nom (souvent vide sur le cycle courant).
+                  const blobOff = ckSelAffDetail?.offre
+                  const blobAcqCoord = ckAffPartyCoord(blobOff?.acquereur)
+                  const acqNom = ckPartyName(blobOff?.acquereur) || nz('offre_acquereur_nom')
                   const hasC = pCompromis || pVendu
                   const hasO = pOffre || hasC
                   const honFai = money('vente_honoraires') || nz('honoraires_resume', 'honoraires_ttc')
@@ -24571,7 +24629,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       compromis: pVendu ? 'done' : pCompromis ? 'active' : 'pending',
                       vente: pVendu ? 'done' : 'pending',
                     },
-                    offre: hasO ? { montant: money('offre_montant') || formatPrice(dossier.prix), net, date: dateOf('offre_event_date'), validite: '', etat: pOffre && !hasC ? 'Proposition' : 'Acceptée', raw: nz('offre_raw_status', 'offre_state') || 'Synchronisé depuis Hektor', acqNom, acqTel: '', acqMail: '' } : null,
+                    offre: hasO ? { montant: money('offre_montant') || formatPrice(dossier.prix), net, date: dateOf('offre_event_date'), validite: '', etat: pOffre && !hasC ? 'Proposition' : 'Acceptée', raw: nz('offre_raw_status', 'offre_state') || 'Synchronisé depuis Hektor', acqNom, acqTel: blobAcqCoord.tel ?? '', acqMail: blobAcqCoord.email ?? '' } : null,
                     compromis: hasC ? { prix: money('vente_prix') || formatPrice(dossier.prix), net, dateStart: dateOf('compromis_date_start'), dateActe: dateOf('date_signature_acte'), retract: '', sequestre: money('compromis_sequestre') } : null,
                     vente: pVendu ? { date: dateOf('vente_date'), prix: money('vente_prix') || formatPrice(dossier.prix), honoraires: money('vente_honoraires'), commission: money('vente_commission_agence'), notaires: '' } : null,
                     parties: { acq: acqNom ? { n: acqNom, s: 'Acquéreur' } : null, notAcq: null, notVend: null, vendeur },
@@ -24586,30 +24644,41 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Propositions acquéreurs</div>
               <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
               </>)}
-              {(ckSelAffMandant || ckSelAffAcquereur || (ckSelAffNotaire && ckSelAffNotaire.id)) ? (
-                <div className="fa-ck-cycparties" style={{ marginTop: 16 }}>
-                  <div className="fa-ck-cycparties-h">Contacts de l'affaire{ckSelectedNumero !== ckCurrentNumero ? ` · Mandat n° ${ckSelectedNumero}` : ''}</div>
-                  {ckSelAffMandant ? (
-                    <div className="fa-ck-cycparty">
-                      <span className="r">Mandant / vendeur</span>
-                      <span className="n">{ckPartyName(ckSelAffMandant) || '—'}</span>
-                      {ckSelAffMandant.id ? <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckSelAffMandant.id))}>Voir la fiche</button> : null}
+              {ckAffPartyCards.length ? (
+                <div className="fa-ck-affp">
+                  <div className="fa-ck-affp-head">
+                    <span className="fa-ck-affp-illus" dangerouslySetInnerHTML={{ __html: CK_AFFP_ILLUS }} />
+                    <div className="fa-ck-affp-hx">
+                      <div className="fa-ck-affp-t">Parties à l'affaire</div>
+                      <div className="fa-ck-affp-s">Acquéreur, mandant{ckSelectedNumero !== ckCurrentNumero ? ` · mandat n° ${ckSelectedNumero}` : ''} — fiche contact en un clic</div>
                     </div>
-                  ) : null}
-                  {ckSelAffAcquereur ? (
-                    <div className="fa-ck-cycparty">
-                      <span className="r">Acquéreur</span>
-                      <span className="n">{ckPartyName(ckSelAffAcquereur) || '—'}</span>
-                      {ckSelAffAcquereur.id ? <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckSelAffAcquereur.id))}>Voir la fiche</button> : null}
-                    </div>
-                  ) : null}
-                  {ckSelAffNotaire && ckSelAffNotaire.id ? (
-                    <div className="fa-ck-cycparty">
-                      <span className="r">Notaire</span>
-                      <span className="n">{ckPartyName(ckSelAffNotaire) || '—'}</span>
-                      <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckSelAffNotaire?.id))}>Voir la fiche</button>
-                    </div>
-                  ) : null}
+                  </div>
+                  <div className="fa-ck-affp-grid">
+                    {ckAffPartyCards.map((pc, i) => {
+                      const name = ckPartyName(pc.party) || '—'
+                      const coord = ckAffPartyCoord(pc.party)
+                      const cid = pc.party.id ? String(pc.party.id) : ''
+                      const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '?'
+                      return (
+                        <div key={i} className={`fa-ck-affp-card ${pc.kind}`} style={{ animationDelay: `${0.1 + i * 0.09}s` }}>
+                          <span className="fa-ck-affp-av">{initials}</span>
+                          <div className="fa-ck-affp-b">
+                            <div className="fa-ck-affp-role">{pc.role}{pc.ctx ? <span className="ctx"> · {pc.ctx}</span> : null}</div>
+                            <div className="fa-ck-affp-name">{name}</div>
+                            {(coord.email || coord.tel) ? (
+                              <div className="fa-ck-affp-coord">
+                                {coord.email ? <a href={`mailto:${coord.email}`} title={coord.email}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg><span>{coord.email}</span></a> : null}
+                                {coord.tel ? <a href={`tel:${coord.tel}`} title={coord.tel}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L20 18v4a2 2 0 0 1-2 2A16 16 0 0 1 2 8a2 2 0 0 1 2-2z" /></svg><span>{coord.tel}</span></a> : null}
+                              </div>
+                            ) : null}
+                            {cid && props.onOpenContact ? (
+                              <button type="button" className="fa-ck-affp-cta" onClick={() => props.onOpenContact?.(cid)}>Voir la fiche<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="M5 12h13M13 6l6 6-6 6" /></svg></button>
+                            ) : <span className="fa-ck-affp-noid">Fiche non liée</span>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               ) : null}
             </div>

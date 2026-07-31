@@ -2466,3 +2466,63 @@
 @keyframes fcycrise { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
 @media (max-width: 760px) { .fcyc-body { grid-template-columns: 1fr; } .fcyc-h1 { font-size: 28px; } }
 @media (prefers-reduced-motion: reduce) { .fcyc * { animation: none !important; } .fcyc-ev { opacity: 1 !important; } }
+
+/* ── Contacts de l'affaire (rubrique Affaires) — bloc premium + illustration animée ── */
+.fa-ck-affp { margin-top: 18px; border: 1px solid #ece3d3; border-radius: 18px; overflow: hidden;
+  background: radial-gradient(120% 150% at 94% -25%, #fdf0f6 0%, rgba(253,240,246,0) 55%), linear-gradient(180deg, #fffdf9 0%, #fbf7ee 100%);
+  box-shadow: 0 1px 2px rgba(60,40,10,.04), 0 12px 34px rgba(120,20,70,.06); }
+.fa-ck-affp-head { display: flex; align-items: center; gap: 16px; padding: 15px 20px; border-bottom: 1px solid #f1e9da; }
+.fa-ck-affp-illus { flex: none; width: 92px; height: 58px; }
+.fa-ck-affp-illus svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.fa-ck-affp-hx { min-width: 0; }
+.fa-ck-affp-t { font-family: 'Fraunces','Spectral',Georgia,serif; font-weight: 600; font-size: 17.5px; color: #232221; letter-spacing: -.01em; }
+.fa-ck-affp-s { font-size: 12px; color: #98918a; margin-top: 2px; }
+.fa-ck-affp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); gap: 12px; padding: 16px 20px 20px; }
+.fa-ck-affp-card { position: relative; display: flex; align-items: flex-start; gap: 13px; padding: 14px 15px 14px 17px; border-radius: 15px; background: #fff; border: 1px solid #efe7d8;
+  box-shadow: 0 1px 2px rgba(60,40,10,.03); opacity: 0; transform: translateY(10px); animation: affpRise .55s cubic-bezier(.2,.8,.3,1) forwards;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; overflow: hidden; }
+.fa-ck-affp-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(120,20,70,.13); border-color: #f4c9dd; }
+.fa-ck-affp-card::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; }
+.fa-ck-affp-card.buy::before { background: linear-gradient(180deg, #d21a72, #8c0044); }
+.fa-ck-affp-card.sell::before { background: linear-gradient(180deg, #8a5bc0, #553285); }
+.fa-ck-affp-card.not::before { background: linear-gradient(180deg, #b9ad98, #8a7f6b); }
+.fa-ck-affp-av { flex: none; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; letter-spacing: .02em; }
+.fa-ck-affp-card.buy .fa-ck-affp-av { background: linear-gradient(135deg, #d21a72, #8c0044); box-shadow: 0 5px 13px rgba(140,0,68,.24); }
+.fa-ck-affp-card.sell .fa-ck-affp-av { background: linear-gradient(135deg, #8a5bc0, #553285); box-shadow: 0 5px 13px rgba(85,50,133,.24); }
+.fa-ck-affp-card.not .fa-ck-affp-av { background: linear-gradient(135deg, #b9ad98, #8a7f6b); }
+.fa-ck-affp-b { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fa-ck-affp-role { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: #b3134f; }
+.fa-ck-affp-card.sell .fa-ck-affp-role { color: #6b45a0; }
+.fa-ck-affp-card.not .fa-ck-affp-role { color: #8a7f6b; }
+.fa-ck-affp-role .ctx { color: #ada596; font-weight: 700; }
+.fa-ck-affp-name { font-family: 'Fraunces','Spectral',Georgia,serif; font-weight: 600; font-size: 16px; color: #232221; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-ck-affp-coord { display: flex; flex-direction: column; gap: 3px; margin-top: 7px; }
+.fa-ck-affp-coord a { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #6b6660; text-decoration: none; max-width: 100%; }
+.fa-ck-affp-coord a:hover { color: #b3134f; }
+.fa-ck-affp-coord a svg { width: 13px; height: 13px; flex: none; stroke: #c4ac97; fill: none; }
+.fa-ck-affp-coord a:hover svg { stroke: #c5005f; }
+.fa-ck-affp-coord a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-ck-affp-cta { align-self: flex-start; margin-top: 11px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: #c5005f; background: #fdf0f6; border: 1px solid #f4c9dd; border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: background .16s ease, color .16s ease, gap .16s ease, border-color .16s ease; }
+.fa-ck-affp-cta:hover { background: #c5005f; color: #fff; border-color: #c5005f; gap: 8px; }
+.fa-ck-affp-cta svg { width: 13px; height: 13px; transition: transform .16s ease; }
+.fa-ck-affp-cta:hover svg { transform: translateX(2px); }
+.fa-ck-affp-noid { align-self: flex-start; margin-top: 11px; font-size: 11px; color: #b0a898; font-style: italic; }
+/* illustration : flottement des parties, contrat scellé, lien pointillé animé, étincelles */
+.fa-ck-affp-illus .affp-a1, .fa-ck-affp-illus .affp-a2, .fa-ck-affp-illus .affp-doc,
+.fa-ck-affp-illus .affp-seal, .fa-ck-affp-illus .affp-spark, .fa-ck-affp-illus .affp-spark2 { transform-box: fill-box; transform-origin: center; }
+.fa-ck-affp-illus .affp-a1 { animation: affpFloat 3.4s ease-in-out infinite; }
+.fa-ck-affp-illus .affp-a2 { animation: affpFloat 3.4s ease-in-out infinite; animation-delay: 1.7s; }
+.fa-ck-affp-illus .affp-doc { animation: affpFloat 4s ease-in-out infinite; animation-delay: .5s; }
+.fa-ck-affp-illus .affp-seal { animation: affpSeal 2.6s ease-in-out infinite; }
+.fa-ck-affp-illus .affp-link { animation: affpDash 1.1s linear infinite; }
+.fa-ck-affp-illus .affp-spark { animation: affpTwinkle 2.8s ease-in-out infinite; }
+.fa-ck-affp-illus .affp-spark2 { animation: affpTwinkle 2.8s ease-in-out infinite; animation-delay: 1.2s; }
+@keyframes affpRise { to { opacity: 1; transform: translateY(0); } }
+@keyframes affpFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+@keyframes affpSeal { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+@keyframes affpDash { to { stroke-dashoffset: -16; } }
+@keyframes affpTwinkle { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) {
+  .fa-ck-affp-card { animation: none; opacity: 1; transform: none; }
+  .fa-ck-affp-illus * { animation: none !important; }
+}
