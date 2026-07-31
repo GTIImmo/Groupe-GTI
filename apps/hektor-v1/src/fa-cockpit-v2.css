@@ -2529,21 +2529,37 @@
 
 /* ── Dossiers abandonnés (offres refusées / compromis annulés) — acquéreur écarté, cliquable ── */
 .fa-ck-aband { margin-top: 18px; border: 1px dashed #e4d9c8; border-radius: 15px; background: #faf6ee; padding: 13px 15px; }
-.fa-ck-aband-h { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #8a7f6b; margin-bottom: 10px; }
-.fa-ck-aband-h svg { width: 15px; height: 15px; stroke: #b08968; fill: none; }
-.fa-ck-aband-n { margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #ece0cd; color: #7a6a52; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
-.fa-ck-aband-list { display: flex; flex-direction: column; gap: 8px; }
-.fa-ck-aband-row { display: flex; align-items: center; gap: 11px; padding: 9px 11px; background: #fff; border: 1px solid #efe7d8; border-radius: 12px; transition: border-color .16s ease, box-shadow .16s ease; }
-.fa-ck-aband-row:hover { border-color: #e6d2bf; box-shadow: 0 4px 12px rgba(60,40,10,.06); }
-.fa-ck-aband-av { flex: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: #7a6a52; background: #f1e8da; border: 1px solid #e6dcc9; }
-.fa-ck-aband-b { flex: 1; min-width: 0; }
-.fa-ck-aband-nm { font-size: 13.5px; font-weight: 700; color: #3a352d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fa-ck-aband-mt { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; font-size: 11.5px; color: #9a917f; font-variant-numeric: tabular-nums; }
+.fa-ck-aband-h { display: flex; align-items: center; gap: 11px; margin-bottom: 13px; }
+.fa-ck-aband-emb { flex: none; width: 34px; height: 34px; filter: drop-shadow(0 4px 9px rgba(138,106,58,.28)); }
+.fa-ck-aband-emb svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.fa-ck-aband-emb .fce-stamp { transform-box: fill-box; transform-origin: center; animation: fcAbStamp 2.8s ease-in-out infinite; }
+.fa-ck-aband-t { font-family: 'Fraunces','Spectral',Georgia,serif; font-weight: 600; font-size: 16px; color: #6b5d43; letter-spacing: -.01em; }
+.fa-ck-aband-n { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 9px; background: #ece0cd; color: #7a6a52; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+@keyframes fcAbStamp { 0%,100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.08) rotate(-4deg); } }
+.fa-ck-aband-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(262px, 1fr)); gap: 10px; }
+.fa-ck-aband-card { position: relative; padding: 13px 14px 13px 16px; background: #fff; border: 1px solid #efe7d8; border-radius: 14px; overflow: hidden; transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+.fa-ck-aband-card:hover { border-color: #e6d2bf; box-shadow: 0 9px 22px rgba(60,40,10,.09); transform: translateY(-2px); }
+.fa-ck-aband-card::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; }
+.fa-ck-aband-card.off::before { background: linear-gradient(180deg, #d8604a, #b3402f); }
+.fa-ck-aband-card.com::before { background: linear-gradient(180deg, #d0a24e, #96690f); }
+.fa-ck-aband-top { display: flex; align-items: center; gap: 11px; }
+.fa-ck-aband-av { flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12.5px; color: #7a6a52; background: #f1e8da; border: 1px solid #e6dcc9; }
+.fa-ck-aband-hd { flex: 1; min-width: 0; }
+.fa-ck-aband-nm { font-size: 14px; font-weight: 700; color: #3a352d; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-ck-aband-facts { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 11px; padding-left: 47px; }
+.fa-ck-aband-fact { display: flex; flex-direction: column; }
+.fa-ck-aband-fact .k { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #b0a898; }
+.fa-ck-aband-fact .v { font-size: 13px; font-weight: 700; color: #3a352d; font-variant-numeric: tabular-nums; }
+.fa-ck-aband-coord { display: flex; flex-wrap: wrap; gap: 5px 16px; margin-top: 10px; padding-left: 47px; }
+.fa-ck-aband-coord a { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #6b6660; text-decoration: none; }
+.fa-ck-aband-coord a:hover { color: #b3402f; }
+.fa-ck-aband-coord a svg { width: 13px; height: 13px; stroke: #c0a58f; fill: none; flex: none; }
 .fa-ck-aband-badge { font-size: 10.5px; font-weight: 800; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; }
 .fa-ck-aband-badge.off { background: #fbe9e7; color: #b3402f; }
 .fa-ck-aband-badge.com { background: #f7ecd6; color: #96690f; }
-.fa-ck-aband-lnk { flex: none; font-size: 11.5px; font-weight: 700; color: #8c0044; background: none; border: 1px solid #f0d6e2; border-radius: 999px; padding: 4px 11px; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+.fa-ck-aband-lnk { flex: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: #8c0044; background: none; border: 1px solid #f0d6e2; border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
 .fa-ck-aband-lnk:hover { background: #c5005f; color: #fff; border-color: #c5005f; }
+.fa-ck-aband-lnk svg { width: 13px; height: 13px; }
 
 /* ── Fiche du cycle — BLOC MANDAT HÉRO + fonds multi-couleurs + illustrations sur mesure ── */
 .fcyc { padding: 28px 30px 30px; position: relative;
@@ -2611,3 +2627,13 @@
   .fcyc-emblem *, .fcyc-emb * { animation: none !important; }
   .fcyc-hero-card, .fcyc-flow, .fcyc-body, .fcyc-avenants, .fcyc-note { animation: none !important; opacity: 1 !important; transform: none !important; }
 }
+
+/* ── Fiche du cycle — repasse expert : micro-interactions + rythme ── */
+.fcyc-party { transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.fcyc-party:hover { border-color: var(--mag-100); box-shadow: 0 6px 16px rgba(197,0,95,.08); transform: translateY(-1px); }
+.fcyc-metric { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.fcyc-metric:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(60,40,10,.08); border-color: var(--mag-100); }
+.fcyc-ev { border-radius: 10px; transition: background .16s ease; }
+.fcyc-ev:hover { background: rgba(197,0,95,.045); }
+.fcyc-body { gap: 20px; }
+@media (prefers-reduced-motion: reduce) { .fa-ck-aband-emb .fce-stamp { animation: none !important; } }

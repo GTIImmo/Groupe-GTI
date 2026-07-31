@@ -791,19 +791,22 @@ def build_affaire_detail_for_cycle(row: dict[str, object]) -> dict[str, object] 
 SQL_MANDAT_AFFAIRES_ALL = """
 SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS id,
        offre_state AS state, hektor_acquereur_id AS acq_id, acquereur_json AS acq_json,
-       raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt
+       raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt,
+       NULL AS date_acte, NULL AS sequestre
 FROM hektor.hektor_offre
 WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
        compromis_state, NULL, acquereurs_json,
-       COALESCE(prix_publique, prix_net_vendeur), COALESCE(date_start, synced_at)
+       COALESCE(prix_publique, prix_net_vendeur), COALESCE(date_start, synced_at),
+       date_signature_acte, sequestre
 FROM hektor.hektor_compromis
 WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
        NULL, NULL, acquereurs_json,
-       prix, COALESCE(date_vente, synced_at)
+       prix, COALESCE(date_vente, synced_at),
+       NULL, NULL
 FROM hektor.hektor_vente
 WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
 """
@@ -847,11 +850,14 @@ def build_affaires_dossiers(rows: list[dict[str, object]]) -> list[dict[str, obj
             by_acq[key] = {
                 "_rank": rank,
                 "acquereur": party,
+                "kind": kind,
                 "etat": dstate,
                 "etat_label": _DOSSIER_STATE_LABEL[dstate],
                 "courante": dstate in _DOSSIER_LIVE,
                 "montant": normalize_text(r.get("montant")) or None,
                 "date": normalize_text(r.get("dt")) or None,
+                "date_acte": normalize_text(r.get("date_acte")) or None,
+                "sequestre": normalize_text(r.get("sequestre")) or None,
             }
     dossiers = sorted(by_acq.values(), key=lambda d: (0 if d["courante"] else 1, int(d["_rank"])))
     for d in dossiers:

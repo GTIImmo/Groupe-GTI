@@ -22102,7 +22102,7 @@ type CkAffaireDetail = {
   compromis?: { state?: string | null; date_start?: string | null; date_acte?: string | null; sequestre?: string | null; prix_net?: string | null; prix_public?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null } | null
   vente?: { date?: string | null; prix?: string | null; honoraires?: string | null; commission?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null; notaire?: CkAffaireParty | null } | null
   // Dossiers par acquéreur (courant + abandonnés) — produit par build_affaires_dossiers (pipeline).
-  dossiers?: Array<{ acquereur?: CkAffaireParty | null; etat?: string | null; etat_label?: string | null; courante?: boolean; montant?: string | null; date?: string | null }> | null
+  dossiers?: Array<{ acquereur?: CkAffaireParty | null; kind?: string | null; etat?: string | null; etat_label?: string | null; courante?: boolean; montant?: string | null; date?: string | null; date_acte?: string | null; sequestre?: string | null }> | null
 }
 type CkAffaireDossier = NonNullable<CkAffaireDetail['dossiers']>[number]
 function ckPartyName(p?: CkAffaireParty | null): string {
@@ -22183,6 +22183,13 @@ const CK_FCYC_EMB_ACTIVITE = `<svg viewBox="0 0 40 40" fill="none" xmlns="http:/
   <path d="M8 21h4.4l2.2-6.6 4 13 2.4-8 1.6 3.6H32" stroke="#ffffff" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   <circle class="fce-dot" cx="31.5" cy="21" r="2.5" fill="#ffffff"/>
 </svg>`
+const CK_FCYC_EMB_ABANDON = `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="fcexG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c99a5a"/><stop offset="1" stop-color="#8a6a3a"/></linearGradient></defs>
+  <rect x="2" y="2" width="36" height="36" rx="12" fill="url(#fcexG)"/>
+  <rect x="10" y="9" width="15" height="20" rx="2" fill="#ffffff" fill-opacity="0.92"/>
+  <path d="M13 14h9M13 17.5h6M13 21h7" stroke="#8a6a3a" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.45"/>
+  <g class="fce-stamp"><circle cx="26.5" cy="26.5" r="7.4" fill="#c0392b"/><path d="M23.6 23.6l5.8 5.8M29.4 23.6l-5.8 5.8" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></g>
+</svg>`
 // Motif de fonds (filigrane) : le parcours du mandat en trait, très faible opacité (via CSS).
 const CK_FCYC_BG = `<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <circle cx="100" cy="100" r="86" stroke="#c5005f" stroke-width="2.5" stroke-dasharray="4 11"/>
@@ -22191,6 +22198,56 @@ const CK_FCYC_BG = `<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.
   <path d="M110 64v14h14" stroke="#8c0044" stroke-width="2.5"/>
   <path d="M88 92h24M88 103h18M88 114h20" stroke="#8c0044" stroke-width="2.5" stroke-linecap="round"/>
 </svg>`
+
+// Bloc « Affaires abandonnées » : une CARTE détaillée par dossier abandonné (offre refusée /
+// compromis annulé) — état, montant, dates (offre/compromis + acte prévu), séquestre, et l'acquéreur
+// écarté (avatar, nom cliquable, coordonnées). Réutilisé par la rubrique Affaires ET la Fiche du cycle.
+function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDossier[]; onOpenContact?: (contactId: string) => void }) {
+  if (!dossiers.length) return null
+  const money = (v?: string | null) => { const n = Number(String(v ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) && n > 0 ? formatPrice(n) : '' }
+  return (
+    <div className="fa-ck-aband">
+      <div className="fa-ck-aband-h"><span className="fa-ck-aband-emb" dangerouslySetInnerHTML={{ __html: CK_FCYC_EMB_ABANDON }} /><span className="fa-ck-aband-t">Affaires abandonnées</span><span className="fa-ck-aband-n">{dossiers.length}</span></div>
+      <div className="fa-ck-aband-list">
+        {dossiers.map((d, i) => {
+          const name = ckPartyName(d.acquereur) || '—'
+          const cid = d.acquereur?.id ? String(d.acquereur.id) : ''
+          const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '?'
+          const coord = ckAffPartyCoord(d.acquereur)
+          const tone = d.etat === 'compromis_annule' ? 'com' : 'off'
+          const facts: Array<[string, string]> = []
+          if (money(d.montant)) facts.push(['Montant', money(d.montant)])
+          if (d.date) facts.push([d.kind === 'compromis' ? 'Compromis le' : 'Offre le', formatDate(d.date)])
+          if (d.date_acte) facts.push(['Acte prévu', formatDate(d.date_acte)])
+          if (money(d.sequestre)) facts.push(['Séquestre', money(d.sequestre)])
+          return (
+            <div key={i} className={`fa-ck-aband-card ${tone}`}>
+              <div className="fa-ck-aband-top">
+                <span className="fa-ck-aband-av">{initials}</span>
+                <div className="fa-ck-aband-hd">
+                  <span className={`fa-ck-aband-badge ${tone}`}>{d.etat_label || 'Abandonné'}</span>
+                  <div className="fa-ck-aband-nm">{name}</div>
+                </div>
+                {cid && onOpenContact ? <button type="button" className="fa-ck-aband-lnk" onClick={() => onOpenContact(cid)}>Voir la fiche<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="M5 12h13M13 6l6 6-6 6" /></svg></button> : null}
+              </div>
+              {facts.length ? (
+                <div className="fa-ck-aband-facts">
+                  {facts.map(([k, v]) => <div key={k} className="fa-ck-aband-fact"><span className="k">{k}</span><span className="v">{v}</span></div>)}
+                </div>
+              ) : null}
+              {(coord.tel || coord.email) ? (
+                <div className="fa-ck-aband-coord">
+                  {coord.tel ? <a href={`tel:${coord.tel}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L20 18v4a2 2 0 0 1-2 2A16 16 0 0 1 2 8a2 2 0 0 1 2-2z" /></svg><span>{coord.tel}</span></a> : null}
+                  {coord.email ? <a href={`mailto:${coord.email}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg><span>{coord.email}</span></a> : null}
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
 // DossierDetailLayoutBase reste 100 % intacte. Rendu uniquement si le flag est ON.
@@ -22507,13 +22564,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const d = ckSelAffDetail
     const cards: Array<{ party: CkAffaireParty; role: string; ctx: string; kind: 'buy' | 'sell' | 'not' }> = []
     const eur = (x?: string | null) => { const n = Number(String(x ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) && n !== 0 ? formatPrice(n) : '' }
+    // Acquéreur COURANT : uniquement depuis une affaire VIVANTE (vente = définitif, compromis non
+    // annulé, offre non refusée). Un compromis annulé / une offre refusée n'est PAS une partie
+    // courante — il part dans le bloc « Dossiers abandonnés ».
     let acq: CkAffaireParty | null = null, acqCtx = ''
+    const cState = String(d?.compromis?.state ?? '').toLowerCase()
+    const oState = String(d?.offre?.state ?? '').toLowerCase()
     if (d?.vente?.acquereur) { acq = d.vente.acquereur; acqCtx = ['Vente', eur(d.vente.prix)].filter(Boolean).join(' · ') }
-    else if (d?.compromis?.acquereur) { acq = d.compromis.acquereur; acqCtx = ['Compromis', d.compromis.state ?? '', eur(d.compromis.prix_public)].filter(Boolean).join(' · ') }
-    else if (d?.offre?.acquereur) { acq = d.offre.acquereur; acqCtx = ['Offre', d.offre.state ?? '', eur(d.offre.montant)].filter(Boolean).join(' · ') }
+    else if (d?.compromis?.acquereur && cState !== 'cancelled') { acq = d.compromis.acquereur; acqCtx = ['Compromis', eur(d.compromis.prix_public)].filter(Boolean).join(' · ') }
+    else if (d?.offre?.acquereur && oState !== 'refused') { acq = d.offre.acquereur; acqCtx = ['Offre', d.offre.state ?? '', eur(d.offre.montant)].filter(Boolean).join(' · ') }
     if (acq && ckPartyName(acq)) cards.push({ party: acq, role: 'Acquéreur', ctx: acqCtx, kind: 'buy' })
     let man: CkAffaireParty | null = d?.vente?.mandant ?? d?.compromis?.mandant ?? null
-    let manCtx = 'Vendeur'
+    let manCtx = ''
     if (!man && props.contacts[0]) {
       const c0 = props.contacts[0]
       man = { id: c0.sourceId ?? null, civilite: c0.civility ?? null, nom: (c0.lastName ?? c0.name) ?? null, prenom: c0.firstName ?? null, coordonnees: { email: c0.email, tel: c0.phone } }
@@ -23487,31 +23549,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                           })}
                         </>
                       ) : null}
-                      {fcAbandon.length ? (
-                        <div className="fa-ck-aband" style={{ marginTop: 18 }}>
-                          <div className="fa-ck-aband-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M6 6l12 12M18 6 6 18" /></svg>Dossiers abandonnés<span className="fa-ck-aband-n">{fcAbandon.length}</span></div>
-                          <div className="fa-ck-aband-list">
-                            {fcAbandon.map((d, i) => {
-                              const nm = ckPartyName(d.acquereur) || '—'
-                              const cid = d.acquereur?.id ? String(d.acquereur.id) : ''
-                              const ini = nm.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '?'
-                              const n = Number(String(d.montant ?? '').replace(/[^\d.-]/g, ''))
-                              const mt = Number.isFinite(n) && n > 0 ? formatPrice(n) : ''
-                              const tone = d.etat === 'compromis_annule' ? 'com' : 'off'
-                              return (
-                                <div key={i} className="fa-ck-aband-row">
-                                  <span className="fa-ck-aband-av">{ini}</span>
-                                  <div className="fa-ck-aband-b">
-                                    <div className="fa-ck-aband-nm">{nm}</div>
-                                    <div className="fa-ck-aband-mt"><span className={`fa-ck-aband-badge ${tone}`}>{d.etat_label || 'Abandonné'}</span>{mt ? <span>{mt}</span> : null}{d.date ? <span>{fmtLong(d.date)}</span> : null}</div>
-                                  </div>
-                                  {cid && props.onOpenContact ? <button type="button" className="fa-ck-aband-lnk" onClick={() => props.onOpenContact?.(cid)}>Voir la fiche</button> : null}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ) : null}
+                      <CkAbandonDossiers dossiers={fcAbandon} onOpenContact={props.onOpenContact} />
                     </div>
 
                     <div className="fcyc-panel">
@@ -24768,31 +24806,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 </div>
               ) : null}
-              {ckAbandonDossiers.length ? (
-                <div className="fa-ck-aband">
-                  <div className="fa-ck-aband-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M6 6l12 12M18 6 6 18" /></svg>Dossiers abandonnés<span className="fa-ck-aband-n">{ckAbandonDossiers.length}</span></div>
-                  <div className="fa-ck-aband-list">
-                    {ckAbandonDossiers.map((d, i) => {
-                      const name = ckPartyName(d.acquereur) || '—'
-                      const cid = d.acquereur?.id ? String(d.acquereur.id) : ''
-                      const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '?'
-                      const n = Number(String(d.montant ?? '').replace(/[^\d.-]/g, ''))
-                      const mt = Number.isFinite(n) && n > 0 ? formatPrice(n) : ''
-                      const tone = d.etat === 'compromis_annule' ? 'com' : 'off'
-                      return (
-                        <div key={i} className="fa-ck-aband-row">
-                          <span className="fa-ck-aband-av">{initials}</span>
-                          <div className="fa-ck-aband-b">
-                            <div className="fa-ck-aband-nm">{name}</div>
-                            <div className="fa-ck-aband-mt"><span className={`fa-ck-aband-badge ${tone}`}>{d.etat_label || 'Abandonné'}</span>{mt ? <span>{mt}</span> : null}{d.date ? <span>{formatDate(d.date)}</span> : null}</div>
-                          </div>
-                          {cid && props.onOpenContact ? <button type="button" className="fa-ck-aband-lnk" onClick={() => props.onOpenContact?.(cid)}>Fiche</button> : null}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : null}
+              <CkAbandonDossiers dossiers={ckAbandonDossiers} onOpenContact={props.onOpenContact} />
             </div>
           ) : activeTab === 'contact' ? (
             <div className="fa-ck-rub fa-ck-contact">
