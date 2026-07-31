@@ -22412,6 +22412,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Parties du cycle passé (fiche via id contact) : mandant + acquéreur, prio vente > compromis > offre.
   const ckCycleMandant = ckCycleDetail?.vente?.mandant ?? ckCycleDetail?.compromis?.mandant ?? null
   const ckCycleAcquereur = ckCycleDetail?.vente?.acquereur ?? ckCycleDetail?.compromis?.acquereur ?? ckCycleDetail?.offre?.acquereur ?? null
+  // Parties de l'affaire du cycle SÉLECTIONNÉ (courant OU passé), portées par le blob (avec id
+  // contact). Corrige la régression V2 : la rubrique Affaires du cycle courant n'exposait plus
+  // les liens acquéreur/mandant (CkAffaires dérive de champs plats SANS id) — or le blob les a.
+  const ckSelAffDetail: CkAffaireDetail | null = (() => {
+    if (ckSelectedNumero === 'ALL') return null
+    const raw = ckCycleAff[ckSelectedNumero]?.affaires_detail_json
+    return raw ? parseJson<CkAffaireDetail | null>(raw, null) : null
+  })()
+  const ckSelAffMandant = ckSelAffDetail?.vente?.mandant ?? ckSelAffDetail?.compromis?.mandant ?? null
+  const ckSelAffAcquereur = ckSelAffDetail?.vente?.acquereur ?? ckSelAffDetail?.compromis?.acquereur ?? ckSelAffDetail?.offre?.acquereur ?? null
+  const ckSelAffNotaire = ckSelAffDetail?.vente?.notaire ?? null
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
@@ -24575,6 +24586,32 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Propositions acquéreurs</div>
               <DossierPropositionsSection dossier={dossier} onOpenContact={props.onOpenContact} />
               </>)}
+              {(ckSelAffMandant || ckSelAffAcquereur || (ckSelAffNotaire && ckSelAffNotaire.id)) ? (
+                <div className="fa-ck-cycparties" style={{ marginTop: 16 }}>
+                  <div className="fa-ck-cycparties-h">Contacts de l'affaire{ckSelectedNumero !== ckCurrentNumero ? ` · Mandat n° ${ckSelectedNumero}` : ''}</div>
+                  {ckSelAffMandant ? (
+                    <div className="fa-ck-cycparty">
+                      <span className="r">Mandant / vendeur</span>
+                      <span className="n">{ckPartyName(ckSelAffMandant) || '—'}</span>
+                      {ckSelAffMandant.id ? <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckSelAffMandant.id))}>Voir la fiche</button> : null}
+                    </div>
+                  ) : null}
+                  {ckSelAffAcquereur ? (
+                    <div className="fa-ck-cycparty">
+                      <span className="r">Acquéreur</span>
+                      <span className="n">{ckPartyName(ckSelAffAcquereur) || '—'}</span>
+                      {ckSelAffAcquereur.id ? <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckSelAffAcquereur.id))}>Voir la fiche</button> : null}
+                    </div>
+                  ) : null}
+                  {ckSelAffNotaire && ckSelAffNotaire.id ? (
+                    <div className="fa-ck-cycparty">
+                      <span className="r">Notaire</span>
+                      <span className="n">{ckPartyName(ckSelAffNotaire) || '—'}</span>
+                      <button type="button" className="fa-ck-cycparty-lnk" onClick={() => props.onOpenContact?.(String(ckSelAffNotaire?.id))}>Voir la fiche</button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : activeTab === 'contact' ? (
             <div className="fa-ck-rub fa-ck-contact">
