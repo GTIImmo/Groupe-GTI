@@ -86,9 +86,10 @@ async function main() {
   ensureDir(STORAGE_STATE_PATH);
   fs.mkdirSync(DEBUG_DIR, { recursive: true });
 
+  const MATTERPORT_HEADLESS = !/^(0|false|no|non)$/i.test(process.env.MATTERPORT_HEADLESS || "");
   const browser = await chromium.launch(browserLaunchOptions({
-    headless: false,
-    slowMo: 40,
+    headless: MATTERPORT_HEADLESS,
+    slowMo: MATTERPORT_HEADLESS ? 0 : 40,
   }));
 
   const context = await browser.newContext({

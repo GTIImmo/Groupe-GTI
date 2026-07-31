@@ -7,7 +7,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "..", "matterport", ".e
 
 const STORAGE_STATE_PATH = process.env.MATTERPORT_STORAGE_STATE_PATH || path.resolve(__dirname, "matterport_storage_state.json");
 const MODELS_URL = process.env.MATTERPORT_MODELS_URL || "https://my.matterport.com/models";
-const HEADLESS = /^(1|true|yes|oui)$/i.test(process.env.MATTERPORT_HEADLESS || "");
+const HEADLESS = !/^(0|false|no|non)$/i.test(process.env.MATTERPORT_HEADLESS || "");
 const EXPORT_ROOT = path.resolve(__dirname, "exports", `matterport_action_${new Date().toISOString().replace(/[:.]/g, "-")}`);
 
 const args = process.argv.slice(2);

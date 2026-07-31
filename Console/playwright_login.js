@@ -275,7 +275,8 @@ async function gotoWithRetry(page, url, opts = {}) {
   const gqlHeadersOut = path.resolve(BASE_DIR, "debug_graphql_headers.json");
   const tabsDumpPath  = path.resolve(BASE_DIR, "debug_tabs_urls.json");
 
-  const browser = await chromium.launch(browserLaunchOptions({ headless: false, slowMo: 40 }));
+  const CONSOLE_HEKTOR_HEADLESS = String(process.env.CONSOLE_HEKTOR_HEADLESS || "true").toLowerCase() !== "false";
+  const browser = await chromium.launch(browserLaunchOptions({ headless: CONSOLE_HEKTOR_HEADLESS, slowMo: CONSOLE_HEKTOR_HEADLESS ? 0 : 40 }));
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -370,9 +371,7 @@ async function gotoWithRetry(page, url, opts = {}) {
     const adminCard = dialog.locator(':has-text("ADMIN")').first();
     await adminCard.waitFor({ state: "visible", timeout: 30000 });
 
-    const adminAccessBtn = adminCard.locator(
-      'button:has-text("J’y accède"), button:has-text("J\'y accède")'
-    ).first();
+    const adminAccessBtn = dialog.getByRole('button', { name: /accède|accede/i }).first();
     await adminAccessBtn.waitFor({ state: "visible", timeout: 30000 });
 
     // Popup may open
