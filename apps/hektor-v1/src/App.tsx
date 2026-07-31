@@ -20697,10 +20697,50 @@ function MandatRegisterScreen(props: {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>
                       {String(selectedDetailPayload.adresse_detail ?? selectedDetail.adresse_detail ?? selectedDetail.adresse_privee_listing ?? selectedDetail.ville ?? '-')}
                     </div>
-                    <div className="md-price">
-                      <span className="amount">{formatPrice(selectedDetail.prix)}</span>
-                      {mandateRegisterObjectLabel(selectedDetail) !== '-' ? <span className="tag">{mandateRegisterObjectLabel(selectedDetail)}</span> : null}
-                    </div>
+                    {(() => {
+                      // Type de mandat color-codé (3 valeurs réelles : SIMPLE / EXCLUSIF / ACCORD,
+                      // + repli neutre pour les mandats sans type). €/m² calculé comme le cockpit
+                      // (prix / surface habitable) dès que la fiche complète est chargée.
+                      const typeRaw = mandateRegisterObjectLabel(selectedDetail)
+                      const typeInline = mandateRegisterTypeInlineLabel(selectedDetail)
+                      const typeKey = /exclus/i.test(typeRaw) ? 'exclusif' : /accord/i.test(typeRaw) ? 'accord' : /simple/i.test(typeRaw) ? 'simple' : 'neutral'
+                      const surf = Number((editorFullDetail as { surface_habitable_detail?: string | number; surface?: string | number } | null)?.surface_habitable_detail ?? (editorFullDetail as { surface?: string | number } | null)?.surface)
+                      const prix = Number(selectedDetail.prix)
+                      const prixM2 = surf > 0 && prix > 0 ? Math.round(prix / surf) : null
+                      return (
+                        <div className="md-price">
+                          <svg className="md-price-fig" viewBox="0 0 50 56" fill="none" aria-hidden="true">
+                            <defs>
+                              <linearGradient id="md-price-tg" x1="8" y1="10" x2="42" y2="52" gradientUnits="userSpaceOnUse">
+                                <stop offset="0" stopColor="#d12a73" /><stop offset=".5" stopColor="#c2125f" /><stop offset="1" stopColor="#9d0f4e" />
+                              </linearGradient>
+                              <linearGradient id="md-price-cord" x1="25" y1="0" x2="25" y2="14" gradientUnits="userSpaceOnUse">
+                                <stop offset="0" stopColor="#c9b48a" /><stop offset="1" stopColor="#a8814a" />
+                              </linearGradient>
+                              <clipPath id="md-price-clip"><path d="M25 8 L41 20 V44 Q41 50 35 50 H15 Q9 50 9 44 V20 Z" /></clipPath>
+                            </defs>
+                            <path d="M25 3 C25 9 25 9 25 13" stroke="url(#md-price-cord)" strokeWidth="2.2" strokeLinecap="round" />
+                            <circle cx="25" cy="3.2" r="1.7" fill="#a8814a" />
+                            <g className="md-tag-swing">
+                              <path d="M25 8 L41 20 V44 Q41 50 35 50 H15 Q9 50 9 44 V20 Z" fill="url(#md-price-tg)" />
+                              <path d="M25 8 L41 20 V44 Q41 50 35 50 H15 Q9 50 9 44 V20 Z" fill="none" stroke="#7d0c3d" strokeWidth="1" strokeOpacity=".4" />
+                              <g clipPath="url(#md-price-clip)">
+                                <rect className="md-tag-sheen" x="-6" y="4" width="12" height="52" fill="#ffffff" opacity=".28" transform="skewX(-22)" />
+                              </g>
+                              <circle cx="25" cy="17.5" r="3.4" fill="#fbe4ef" stroke="#f2c98f" strokeWidth="1.3" />
+                              <text x="25" y="40" textAnchor="middle" fontFamily="Spectral, serif" fontWeight="700" fontSize="19" fill="#fff">€</text>
+                            </g>
+                          </svg>
+                          <div className="md-price-main">
+                            <span className={`md-mtype is-${typeKey}`}><span className="dt" />{typeInline ? `Mandat ${typeInline}` : 'Mandat'}</span>
+                            <div className="md-priceline">
+                              <span className="amount">{formatPrice(selectedDetail.prix)}</span>
+                              {prixM2 ? <span className="md-pm2"><b>{prixM2.toLocaleString('fr-FR')}</b> €/m²</span> : null}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
                     <div className="md-rblock">
                       <div className="md-rblock-h"><span className="md-rlabel">Négociateur</span></div>
                       <div className="md-resp">
