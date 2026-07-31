@@ -22316,7 +22316,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Colonne de gauche repliable (façon maquette v26 + side-rail du listing) : préférence persistée.
   // Colonne de gauche repliable — 100 % manuelle, toujours ouverte au chargement
   // (pas de masque automatique ni de mémorisation qui la garderait repliée).
-  const [railCollapsed, setRailCollapsed] = useState(false)
   const [actiFilter, setActiFilter] = useState<'tout' | 'acq' | 'mandant'>('tout')
   // Lot B3 : cycle de mandat sélectionné pour re-scoper l'activité/visites.
   // null = cycle courant (défaut) ; 'ALL' = tous les cycles ; sinon un numero_mandat.
@@ -22896,7 +22895,6 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // « Média et Documents » va TOUJOURS dans « Autres rubriques », quel que soit l'état de
   // l'annonce (choix de Frédéric) — plus jamais « en avant ». Dédupliqué + documents exclu.
   const autreList = ['medias', ...PH.autre].filter((k, i, arr) => k !== 'documents' && arr.indexOf(k) === i)
-  const horsPerimetre = Math.max(0, 11 - (featList.length + autreList.length))
   const CK_RUB_MAP: Record<string, (typeof CK_RUBRIQUES)[number]> = Object.fromEntries(CK_RUBRIQUES.map((r) => [r.key, r]))
   // Navigation rubrique partagée : le rail, le bloc « Prochaine action » ET le fil
   // d'activité doivent ouvrir une rubrique de la même façon (Rapprochement = overlay).
@@ -23786,11 +23784,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   return (
     <>
     <section className="fa-cockpit-v2 fa-ck-shell" data-detail-variant={detailVariant}>
-      <div className={`fa-ck-body${railCollapsed ? ' is-rail-min' : ''}`}>
+      <div className="fa-ck-body">
         <div className="fa-ck-leftcol">
-          <button type="button" className="fa-ck-rail-toggle" onClick={() => setRailCollapsed((v) => !v)} title={railCollapsed ? 'Déplier le panneau' : 'Réduire le panneau'} aria-label={railCollapsed ? 'Déplier le panneau' : 'Réduire le panneau'}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 4v16" /><path d="m16 8-4 4 4 4" /></svg>
-          </button>
           <button
             type="button"
             className={`fa-ck-rail-brand${activeTab !== 'synthese' ? ' is-inrub' : ''}`}
@@ -23846,11 +23841,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <span>{liveAddress}</span>
             </div>
             <div className="fa-ck-hero-price">
-              <div className="fa-ck-hero-pl">Prix</div>
               <div className="fa-ck-hero-pv">{formatPrice(dossier.prix)}{prixM2 ? <em>{prixM2.toLocaleString('fr-FR')} €/m²</em> : null}</div>
             </div>
           </div>
-        <div className="fa-ck-rnav-h"><span className="fa-ck-rnav-t">Rubriques</span><span className="fa-ck-rnav-c">{featList.length} en avant · {horsPerimetre} hors périmètre</span></div>
         {ckWatch.length > 0 ? (
           <div className="fa-ck-watch">
             {ckWatch.map((w) => (

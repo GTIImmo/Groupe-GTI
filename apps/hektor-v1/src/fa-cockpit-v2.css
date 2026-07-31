@@ -150,7 +150,10 @@
   grid-template-columns: 300px minmax(0, 1fr);
   align-items: stretch;
 }
-.fa-ck-leftcol { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 22px; border-right: 1px solid var(--fa-line-soft); background: linear-gradient(180deg, rgba(255, 253, 250, .7), transparent 40%); }
+/* Colonne gauche FIXE : elle reste visible pendant que le contenu défile (position: sticky
+   dans la grille, scroll interne si son contenu dépasse la hauteur d'écran). Repli en colonne
+   statique sous 1180px (la grille passe alors sur une seule colonne). */
+.fa-ck-leftcol { display: flex; flex-direction: column; gap: 14px; padding: 16px 18px 22px; border-right: 1px solid var(--fa-line-soft); background: linear-gradient(180deg, rgba(255, 253, 250, .7), transparent 40%); position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; overscroll-behavior: contain; }
 
 /* Hero — porté du v26 (photo + badges + titre + adresse + prix). */
 .fa-ck-hero-photo { position: relative; height: 186px; border-radius: 16px; overflow: hidden; background: #efe7dd; box-shadow: 0 1px 2px rgba(32, 24, 18, .06), 0 18px 34px -18px rgba(32, 24, 18, .34); }
@@ -175,13 +178,13 @@
 .fa-ck-hero-title { font-family: 'Fraunces', 'Spectral', serif; font-size: 19px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; margin-top: 15px; color: var(--fa-ink); }
 .fa-ck-hero-addr { margin-top: 8px; color: var(--fa-muted); font-size: 13px; display: flex; align-items: flex-start; gap: 7px; font-weight: 500; }
 .fa-ck-hero-addr svg { width: 14px; height: 14px; flex: none; margin-top: 1px; color: #a89e95; }
-.fa-ck-hero-price { position: relative; overflow: hidden; margin-top: 12px; padding: 10px 15px; background: linear-gradient(135deg, #fff, #fdf1f5); border: 1px solid #f1d8e4; border-radius: 15px; box-shadow: 0 14px 30px -22px rgba(194, 18, 95, .5); }
-.fa-ck-hero-price::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(var(--fa-brand), var(--fa-gold)); }
-.fa-ck-hero-pl { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #b57fa0; }
-.fa-ck-hero-pv { font-family: 'Fraunces', 'Spectral', serif; font-size: 28px; font-weight: 600; color: var(--fa-brand); line-height: 1.05; margin-top: 2px; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 10px; }
-/* Audit visuel §17 : le badge €/m² doit garder son liseré DORÉ (il fait écho au liseré
-   brand→or juste à sa gauche) ; il était retombé sur un gris. */
-.fa-ck-hero-pv em { font-family: 'Hanken Grotesk', system-ui, sans-serif; font-style: normal; font-size: 12px; font-weight: 700; color: var(--fa-gold); background: var(--fa-gold-soft); border: 1px solid var(--fa-gold-line); padding: 4px 9px; border-radius: 8px; }
+/* Bloc prix v2 — compact & premium : plus de libellé « Prix », carte resserrée, la valeur
+   à gauche et le badge €/m² poussé à droite (space-between). Fin liseré brand→or + lueur douce. */
+.fa-ck-hero-price { position: relative; overflow: hidden; margin-top: 14px; padding: 9px 13px 9px 16px; background: radial-gradient(120% 150% at 0% 0%, rgba(194, 18, 95, .07), transparent 58%), linear-gradient(135deg, #fffdfe, #fdf1f6); border: 1px solid #f0d6e2; border-radius: 14px; box-shadow: 0 1px 2px rgba(32, 24, 18, .04), 0 12px 26px -22px rgba(194, 18, 95, .6); }
+.fa-ck-hero-price::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 99px 99px 0; background: linear-gradient(var(--fa-brand), var(--fa-gold)); }
+.fa-ck-hero-pv { font-family: 'Fraunces', 'Spectral', serif; font-size: 25px; font-weight: 600; color: var(--fa-brand); line-height: 1; margin: 0; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+/* Audit visuel §17 : le badge €/m² garde son liseré DORÉ (il fait écho au liseré brand→or). */
+.fa-ck-hero-pv em { flex: none; font-family: 'Hanken Grotesk', system-ui, sans-serif; font-style: normal; font-size: 11px; font-weight: 700; color: var(--fa-gold); background: var(--fa-gold-soft); border: 1px solid var(--fa-gold-line); padding: 4px 8px; border-radius: 8px; white-space: nowrap; }
 
 /* Rail — porté de la maquette v26 (.rn) : tuile d'icône pleine couleur + nom + sous-titre + chevron. */
 .fa-ck-rnav-h { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 11px; padding: 0 2px; }
@@ -549,6 +552,8 @@
   .fa-ck-body { grid-template-columns: 1fr; }
   .fa-ck-rail { flex-direction: row; flex-wrap: wrap; }
   .fa-ck-rn { width: auto; }
+  /* En une seule colonne, la colonne gauche ne doit plus être collée ni bornée en hauteur. */
+  .fa-ck-leftcol { position: static; max-height: none; overflow: visible; }
 }
 
 /* ============================================================
