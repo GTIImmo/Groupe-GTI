@@ -22101,7 +22101,10 @@ type CkAffaireDetail = {
   offre?: { state?: string | null; montant?: string | null; date?: string | null; acquereur?: CkAffaireParty | null } | null
   compromis?: { state?: string | null; date_start?: string | null; date_acte?: string | null; sequestre?: string | null; prix_net?: string | null; prix_public?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null } | null
   vente?: { date?: string | null; prix?: string | null; honoraires?: string | null; commission?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null; notaire?: CkAffaireParty | null } | null
+  // Dossiers par acquéreur (courant + abandonnés) — produit par build_affaires_dossiers (pipeline).
+  dossiers?: Array<{ acquereur?: CkAffaireParty | null; etat?: string | null; etat_label?: string | null; courante?: boolean; montant?: string | null; date?: string | null }> | null
 }
+type CkAffaireDossier = NonNullable<CkAffaireDetail['dossiers']>[number]
 function ckPartyName(p?: CkAffaireParty | null): string {
   if (!p) return ''
   return [p.civilite, p.prenom, p.nom].map((x) => (x ?? '').trim()).filter(Boolean).join(' ').trim()
@@ -22141,6 +22144,52 @@ const CK_AFFP_ILLUS = `<svg viewBox="0 0 104 64" fill="none" xmlns="http://www.w
   </g>
   <circle class="affp-spark" cx="30" cy="14" r="2.2" fill="#e6a417"/>
   <path class="affp-spark2" d="M92 12 l1.4 3.4 3.4 1.4 -3.4 1.4 -1.4 3.4 -1.4 -3.4 -3.4 -1.4 3.4 -1.4z" fill="#2f9e9e"/>
+</svg>`
+// Emblème-sceau de la Fiche du cycle : disque « cachet de mandat » (document validé) cerclé d'une
+// orbite jalonnée offre → compromis → vente. Intégration compacte, pas un bandeau. Classes = anim CSS.
+const CK_FCYC_ILLUS = `<svg viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="fceG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d21a72"/><stop offset="1" stop-color="#7a2f8f"/></linearGradient></defs>
+  <circle class="fce-ring" cx="42" cy="42" r="39" fill="none" stroke="#e9d3e2" stroke-width="2" stroke-dasharray="3 7"/>
+  <circle class="fce-ms fce-ms1" cx="42" cy="3" r="3.2" fill="#c5005f"/>
+  <circle class="fce-ms fce-ms2" cx="75" cy="60" r="3.2" fill="#7a4bb0"/>
+  <circle class="fce-ms fce-ms3" cx="9" cy="60" r="3.2" fill="#1f7a4a"/>
+  <circle cx="42" cy="42" r="29" fill="url(#fceG)"/>
+  <circle cx="42" cy="42" r="29" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.4"/>
+  <g class="fce-doc">
+    <rect x="32" y="29" width="20" height="26" rx="2.5" fill="#ffffff"/>
+    <path d="M46 29v6h6" fill="none" stroke="#c5005f" stroke-width="1.3"/>
+    <path d="M36 40h12M36 44h9" stroke="#e39dbf" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M37 48.5l2.4 2.4 5-5.4" stroke="#1f7a4a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>`
+// Illustrations sur mesure PAR RUBRIQUE de la Fiche du cycle (tuiles dégradées + scène + accent animé).
+// Palette de l'app : magenta, violet, teal/vert, or/ambre. Classes = animations CSS (.fcyc-emb).
+const CK_FCYC_EMB_AFFAIRE = `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="fceaG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d21a72"/><stop offset="1" stop-color="#8c0044"/></linearGradient></defs>
+  <rect x="2" y="2" width="36" height="36" rx="12" fill="url(#fceaG)"/>
+  <rect x="9" y="9" width="14" height="19" rx="2.5" fill="#ffffff" fill-opacity="0.95"/>
+  <path d="M12.5 14h7M12.5 17.5h5" stroke="#c5005f" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.5"/>
+  <g class="fce-coin"><circle cx="26" cy="24" r="6.6" fill="#f2c15f"/><path d="M27.8 21.6a3.1 3.1 0 1 0 0 4.8" stroke="#8c0044" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M23.7 23h3.6M23.7 24.6h3.2" stroke="#8c0044" stroke-width="1.4" stroke-linecap="round"/></g>
+</svg>`
+const CK_FCYC_EMB_PARTIES = `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="fcepG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8a5bc0"/><stop offset="1" stop-color="#553285"/></linearGradient></defs>
+  <rect x="2" y="2" width="36" height="36" rx="12" fill="url(#fcepG)"/>
+  <circle class="fce-p2" cx="26" cy="17.5" r="3.4" fill="#ffffff" fill-opacity="0.78"/><path class="fce-p2" d="M20.5 29a5.5 5.5 0 0 1 11 0z" fill="#ffffff" fill-opacity="0.78"/>
+  <circle class="fce-p1" cx="15" cy="15.5" r="4.3" fill="#ffffff"/><path class="fce-p1" d="M8.3 29a6.7 6.7 0 0 1 13.4 0z" fill="#ffffff"/>
+</svg>`
+const CK_FCYC_EMB_ACTIVITE = `<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><linearGradient id="fcecG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2fa39a"/><stop offset="1" stop-color="#1f7a4a"/></linearGradient></defs>
+  <rect x="2" y="2" width="36" height="36" rx="12" fill="url(#fcecG)"/>
+  <path d="M8 21h4.4l2.2-6.6 4 13 2.4-8 1.6 3.6H32" stroke="#ffffff" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle class="fce-dot" cx="31.5" cy="21" r="2.5" fill="#ffffff"/>
+</svg>`
+// Motif de fonds (filigrane) : le parcours du mandat en trait, très faible opacité (via CSS).
+const CK_FCYC_BG = `<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <circle cx="100" cy="100" r="86" stroke="#c5005f" stroke-width="2.5" stroke-dasharray="4 11"/>
+  <circle cx="100" cy="14" r="5" fill="#c5005f"/><circle cx="174" cy="143" r="5" fill="#7a4bb0"/><circle cx="26" cy="143" r="5" fill="#1f7a4a"/>
+  <rect x="78" y="64" width="44" height="62" rx="6" stroke="#8c0044" stroke-width="2.5"/>
+  <path d="M110 64v14h14" stroke="#8c0044" stroke-width="2.5"/>
+  <path d="M88 92h24M88 103h18M88 114h20" stroke="#8c0044" stroke-width="2.5" stroke-linecap="round"/>
 </svg>`
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
@@ -22474,6 +22523,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     if (d?.vente?.notaire?.id) cards.push({ party: d.vente.notaire, role: 'Notaire', ctx: 'Vente', kind: 'not' })
     return cards
   })()
+  // Dossiers ABANDONNÉS du cycle (offre refusée / compromis annulé) — acquéreur écarté, cliquable.
+  const ckAbandonDossiers: CkAffaireDossier[] = (ckSelAffDetail?.dossiers ?? []).filter((d) => d && d.courante === false && ckPartyName(d.acquereur))
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
@@ -22688,8 +22739,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // convergent désormais vers UNE page, sur le bon onglet — au lieu de partir à trois endroits.
   const goMedia = (tab: 'photos' | 'docs' | 'visite') => { setCkMediaTab(tab); setActiveTab('medias') }
   const CK_PHASE: Record<string, { feat: Array<[string, CkFoot]>; autre: string[] }> = {
-    est: { feat: [['estimation', ['ok', 'Avis en cours']], ['mandat', ['neutral', 'À créer']]], autre: ['documents', 'historique', 'reporting'] },
-    man: { feat: [['mandat', ['alert', 'Mandat en cours']], ['documents', docFoot]], autre: ['estimation', 'historique', 'reporting'] },
+    est: { feat: [['estimation', ['ok', 'Avis en cours']], ['mandat', ['neutral', 'À créer']]], autre: ['affaires', 'documents', 'historique', 'reporting'] },
+    man: { feat: [['mandat', ['alert', 'Mandat en cours']], ['documents', docFoot]], autre: ['affaires', 'estimation', 'historique', 'reporting'] },
     dif: { feat: [['publicite', pubFoot], ['rapprochement', acqFoot], ['documents', docFoot]], autre: ['mandat', 'estimation', 'affaires', 'historique', 'reporting'] },
     tra: { feat: [['affaires', ['alert', 'Offre / compromis']]], autre: ['documents', 'publicite', 'rapprochement', 'mandat', 'historique', 'reporting'] },
     ven: { feat: [['affaires', ['neutral', `Vendu · ${formatPrice(dossier.prix)}`]], ['reporting', ['neutral', 'Bilan de vente']]], autre: ['documents', 'mandat', 'historique'] },
@@ -23361,27 +23412,38 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           const partyList: Array<{ p: CkAffaireParty; role: string; kind: 'sell' | 'buy' | 'not' }> = []
           const pushParty = (p: CkAffaireParty | null | undefined, role: string, kind: 'sell' | 'buy' | 'not') => { if (p && ckPartyName(p)) partyList.push({ p, role, kind }) }
           // Une offre seule n'enregistre pas le vendeur : à défaut de mandant dans l'affaire
-          // (compromis/vente), on affiche celui du mandat lui-même (texte, non cliquable).
-          const fcMandant = ven?.mandant ?? com?.mandant ?? (h.mandants ? ({ nom: h.mandants } as CkAffaireParty) : null)
+          // (compromis/vente), on prend le PROPRIÉTAIRE du bien (contacts de l'annonce, avec id →
+          // fiche cliquable) ; en dernier recours, le texte du mandat (non cliquable).
+          const fcOwner = props.contacts[0]
+          const fcMandant: CkAffaireParty | null = ven?.mandant ?? com?.mandant
+            ?? (fcOwner ? { id: fcOwner.sourceId ?? null, civilite: fcOwner.civility ?? null, nom: (fcOwner.lastName ?? fcOwner.name) ?? null, prenom: fcOwner.firstName ?? null, coordonnees: { email: fcOwner.email, tel: fcOwner.phone } }
+            : (h.mandants ? { nom: h.mandants } : null))
           pushParty(fcMandant, 'Mandant · vendeur', 'sell')
           pushParty(ven?.acquereur ?? com?.acquereur ?? off?.acquereur, 'Acquéreur', 'buy')
           pushParty(ven?.notaire, 'Notaire', 'not')
+          const fcAbandon: CkAffaireDossier[] = (detail?.dossiers ?? []).filter((d) => d && d.courante === false && ckPartyName(d.acquereur))
           return (
             <div className="fcyc-ov" role="presentation" onClick={() => setMv3HistSel(null)}>
               <div className="fcyc-modal" role="dialog" aria-modal="true" aria-label={`Mandat n° ${h.num}`} onClick={(e) => e.stopPropagation()}>
                 <button type="button" className="fcyc-x" aria-label="Fermer" onClick={() => setMv3HistSel(null)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M18 6 6 18M6 6l12 12" /></svg></button>
                 <div className="fcyc">
-                  <div className="fcyc-top">
-                    <div>
+                  <span className="fcyc-bg" aria-hidden="true" dangerouslySetInnerHTML={{ __html: CK_FCYC_BG }} />
+                  <div className="fcyc-hero-card">
+                    <span className="fcyc-emblem" dangerouslySetInnerHTML={{ __html: CK_FCYC_ILLUS }} />
+                    <div className="fcyc-id">
                       <div className="fcyc-eyebrow"><span className="dot" /> Historique · cycle de mandat</div>
                       <h1 className="fcyc-h1">Mandat n° {h.num}</h1>
-                      <div className="fcyc-sub">
-                        {h.type ? <span>{h.type}</span> : null}
-                        {h.type && (h.debut || h.fin || h.cloture) ? <span className="sep" /> : null}
-                        {(h.debut || h.fin || h.cloture) ? <span>{fmtLong(h.debut)}{(h.cloture || h.fin) ? ` → ${fmtLong(h.cloture || h.fin)}` : ''}</span> : null}
-                      </div>
+                      {h.type ? <div className="fcyc-typeline">{h.type}</div> : null}
+                      {(h.debut || h.fin || h.cloture) ? (
+                        <div className="fcyc-period">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><rect x="4" y="5" width="16" height="16" rx="2" /><path d="M4 9h16M8 3v4M16 3v4" /></svg>
+                          <span className="dd">{fmtLong(h.debut) || '—'}</span>
+                          <svg className="ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+                          <span className="dd">{fmtLong(h.cloture || h.fin) || 'en cours'}</span>
+                        </div>
+                      ) : null}
                     </div>
-                    <div className="fcyc-chips">
+                    <div className="fcyc-hero-chips">
                       <span className={`fcyc-issue tone-${badge.tone}`}>{badge.label}</span>
                       <span className="fcyc-ro"><svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg> Lecture seule</span>
                     </div>
@@ -23403,7 +23465,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
 
                   <div className="fcyc-body">
                     <div className="fcyc-panel">
-                      <div className="fcyc-sec"><span className="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18" /><path d="M17 6H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6" /></svg></span>L'affaire</div>
+                      <div className="fcyc-sec"><span className="fcyc-emb" dangerouslySetInnerHTML={{ __html: CK_FCYC_EMB_AFFAIRE }} />L'affaire</div>
                       {metrics.length ? (
                         <div className="fcyc-metrics">
                           {metrics.map((m) => <div key={m.l} className={`fcyc-metric${m.hero ? ' hero' : ''}`}><div className="l">{m.l}</div><div className="v">{m.v}</div></div>)}
@@ -23411,7 +23473,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       ) : <p className="fcyc-empty">Aucune affaire enregistrée sur ce cycle.</p>}
                       {partyList.length ? (
                         <>
-                          <div className="fcyc-sec fcyc-parties-h"><span className="ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" /><path d="M5 20a7 7 0 0 1 14 0" /></svg></span>Les parties</div>
+                          <div className="fcyc-sec fcyc-parties-h"><span className="fcyc-emb" dangerouslySetInnerHTML={{ __html: CK_FCYC_EMB_PARTIES }} />Les parties</div>
                           {partyList.map((it, j) => {
                             const name = ckPartyName(it.p)
                             const cid = it.p.id ? String(it.p.id) : ''
@@ -23425,10 +23487,35 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                           })}
                         </>
                       ) : null}
+                      {fcAbandon.length ? (
+                        <div className="fa-ck-aband" style={{ marginTop: 18 }}>
+                          <div className="fa-ck-aband-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M6 6l12 12M18 6 6 18" /></svg>Dossiers abandonnés<span className="fa-ck-aband-n">{fcAbandon.length}</span></div>
+                          <div className="fa-ck-aband-list">
+                            {fcAbandon.map((d, i) => {
+                              const nm = ckPartyName(d.acquereur) || '—'
+                              const cid = d.acquereur?.id ? String(d.acquereur.id) : ''
+                              const ini = nm.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '?'
+                              const n = Number(String(d.montant ?? '').replace(/[^\d.-]/g, ''))
+                              const mt = Number.isFinite(n) && n > 0 ? formatPrice(n) : ''
+                              const tone = d.etat === 'compromis_annule' ? 'com' : 'off'
+                              return (
+                                <div key={i} className="fa-ck-aband-row">
+                                  <span className="fa-ck-aband-av">{ini}</span>
+                                  <div className="fa-ck-aband-b">
+                                    <div className="fa-ck-aband-nm">{nm}</div>
+                                    <div className="fa-ck-aband-mt"><span className={`fa-ck-aband-badge ${tone}`}>{d.etat_label || 'Abandonné'}</span>{mt ? <span>{mt}</span> : null}{d.date ? <span>{fmtLong(d.date)}</span> : null}</div>
+                                  </div>
+                                  {cid && props.onOpenContact ? <button type="button" className="fa-ck-aband-lnk" onClick={() => props.onOpenContact?.(cid)}>Voir la fiche</button> : null}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="fcyc-panel">
-                      <div className="fcyc-sec"><span className="ic"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3 2" /></svg></span>Activité de la période</div>
+                      <div className="fcyc-sec"><span className="fcyc-emb" dangerouslySetInnerHTML={{ __html: CK_FCYC_EMB_ACTIVITE }} />Activité de la période</div>
                       {cycActi.length ? (
                         <div className="fcyc-feed">
                           {cycActi.map((e, i) => {
@@ -24675,6 +24762,31 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                               <button type="button" className="fa-ck-affp-cta" onClick={() => props.onOpenContact?.(cid)}>Voir la fiche<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path d="M5 12h13M13 6l6 6-6 6" /></svg></button>
                             ) : <span className="fa-ck-affp-noid">Fiche non liée</span>}
                           </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
+              {ckAbandonDossiers.length ? (
+                <div className="fa-ck-aband">
+                  <div className="fa-ck-aband-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M6 6l12 12M18 6 6 18" /></svg>Dossiers abandonnés<span className="fa-ck-aband-n">{ckAbandonDossiers.length}</span></div>
+                  <div className="fa-ck-aband-list">
+                    {ckAbandonDossiers.map((d, i) => {
+                      const name = ckPartyName(d.acquereur) || '—'
+                      const cid = d.acquereur?.id ? String(d.acquereur.id) : ''
+                      const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => (w[0] ?? '').toUpperCase()).join('') || '?'
+                      const n = Number(String(d.montant ?? '').replace(/[^\d.-]/g, ''))
+                      const mt = Number.isFinite(n) && n > 0 ? formatPrice(n) : ''
+                      const tone = d.etat === 'compromis_annule' ? 'com' : 'off'
+                      return (
+                        <div key={i} className="fa-ck-aband-row">
+                          <span className="fa-ck-aband-av">{initials}</span>
+                          <div className="fa-ck-aband-b">
+                            <div className="fa-ck-aband-nm">{name}</div>
+                            <div className="fa-ck-aband-mt"><span className={`fa-ck-aband-badge ${tone}`}>{d.etat_label || 'Abandonné'}</span>{mt ? <span>{mt}</span> : null}{d.date ? <span>{formatDate(d.date)}</span> : null}</div>
+                          </div>
+                          {cid && props.onOpenContact ? <button type="button" className="fa-ck-aband-lnk" onClick={() => props.onOpenContact?.(cid)}>Fiche</button> : null}
                         </div>
                       )
                     })}

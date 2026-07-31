@@ -785,6 +785,91 @@ def build_affaire_detail_for_cycle(row: dict[str, object]) -> dict[str, object] 
     return detail or None
 
 
+# Toutes les affaires d'un cycle SANS collapse rn=1 : sert a lister les DOSSIERS par acquereur
+# (affaire courante vs dossiers abandonnes). Etat offre = offre_state (derive du dernier evenement
+# de propositions_json par normalize_source) ; compromis = compromis_state ; vente = definitif.
+SQL_MANDAT_AFFAIRES_ALL = """
+SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS id,
+       offre_state AS state, hektor_acquereur_id AS acq_id, acquereur_json AS acq_json,
+       raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt
+FROM hektor.hektor_offre
+WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+UNION ALL
+SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
+       compromis_state, NULL, acquereurs_json,
+       COALESCE(prix_publique, prix_net_vendeur), COALESCE(date_start, synced_at)
+FROM hektor.hektor_compromis
+WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+UNION ALL
+SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
+       NULL, NULL, acquereurs_json,
+       prix, COALESCE(date_vente, synced_at)
+FROM hektor.hektor_vente
+WHERE hektor_annonce_id IS NOT NULL AND COALESCE(NULLIF(hektor_mandat_id, ''), '0') <> '0'
+"""
+
+_DOSSIER_STATE_RANK = {"vendu": 0, "compromis": 1, "offre_acceptee": 2, "offre_en_cours": 3, "compromis_annule": 4, "offre_refusee": 5}
+_DOSSIER_STATE_LABEL = {
+    "vendu": "Vendu", "compromis": "Compromis", "offre_acceptee": "Offre acceptée",
+    "offre_en_cours": "Offre en cours", "compromis_annule": "Compromis annulé", "offre_refusee": "Offre refusée",
+}
+_DOSSIER_LIVE = {"vendu", "compromis", "offre_acceptee", "offre_en_cours"}
+
+
+def _dossier_state(kind: str, state: object) -> str:
+    s = normalize_text(state).lower()
+    if kind == "vente":
+        return "vendu"
+    if kind == "compromis":
+        return "compromis_annule" if s == "cancelled" else "compromis"
+    if s == "accepted":
+        return "offre_acceptee"
+    if s == "refused":
+        return "offre_refusee"
+    return "offre_en_cours"
+
+
+def build_affaires_dossiers(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Un DOSSIER par acquereur (regroupe toutes ses affaires du cycle), avec son MEILLEUR etat
+    et le marqueur courante/abandonnee. Une offre refusee / un compromis annule => abandonne."""
+    by_acq: dict[str, dict[str, object]] = {}
+    for r in rows:
+        kind = normalize_text(r.get("kind"))
+        dstate = _dossier_state(kind, r.get("state"))
+        party = _compact_party(r.get("acq_json"))
+        acq_id = normalize_text(r.get("acq_id")) or (normalize_text(party.get("id")) if party else "")
+        if not acq_id and not party:
+            continue
+        key = acq_id or f"{kind}:{normalize_text(r.get('id'))}"
+        rank = _DOSSIER_STATE_RANK[dstate]
+        cur = by_acq.get(key)
+        if cur is None or rank < int(cur["_rank"]):
+            by_acq[key] = {
+                "_rank": rank,
+                "acquereur": party,
+                "etat": dstate,
+                "etat_label": _DOSSIER_STATE_LABEL[dstate],
+                "courante": dstate in _DOSSIER_LIVE,
+                "montant": normalize_text(r.get("montant")) or None,
+                "date": normalize_text(r.get("dt")) or None,
+            }
+    dossiers = sorted(by_acq.values(), key=lambda d: (0 if d["courante"] else 1, int(d["_rank"])))
+    for d in dossiers:
+        d.pop("_rank", None)
+    return dossiers
+
+
+def build_cycle_affaire_blob(row: dict[str, object] | None, all_rows: list[dict[str, object]]) -> str | None:
+    """Blob affaires_detail_json enrichi : detail de l'affaire courante (rn=1) + liste des dossiers
+    par acquereur (courant + abandonnes). Un seul blob, pas de nouvelle colonne."""
+    detail = build_affaire_detail_for_cycle(row) if row else None
+    detail = dict(detail) if detail else {}
+    dossiers = build_affaires_dossiers(all_rows)
+    if dossiers:
+        detail["dossiers"] = dossiers
+    return json.dumps(detail, ensure_ascii=True, separators=(",", ":")) if detail else None
+
+
 def fetch_rows(con: sqlite3.Connection, sql: str, params: tuple[object, ...] = ()) -> list[dict[str, object]]:
     cursor = con.execute(sql, params)
     rows = cursor.fetchall()
@@ -1449,6 +1534,13 @@ def build_mandat_register_rows(
         m_id = normalize_text(row.get("hektor_mandat_id"))
         if a_id and m_id:
             affaires_by_mandat[(a_id, m_id)] = row
+    # Toutes les affaires (sans rn=1) pour lister les dossiers par acquereur (courant + abandonnes).
+    affaires_all_by_mandat: dict[tuple[str, str], list[dict[str, object]]] = {}
+    for row in fetch_rows(con, SQL_MANDAT_AFFAIRES_ALL):
+        a_id = normalize_text(row.get("hektor_annonce_id"))
+        m_id = normalize_text(row.get("hektor_mandat_id"))
+        if a_id and m_id:
+            affaires_all_by_mandat.setdefault((a_id, m_id), []).append(row)
 
     register_rows: list[dict[str, object]] = []
     if dossier_ids is not None and target_annonce_ids:
@@ -1604,9 +1696,9 @@ def build_mandat_register_rows(
                 "compromis_id": cycle_affaire.get("compromis_id"),
                 "compromis_state": cycle_affaire.get("compromis_state"),
                 "vente_id": cycle_affaire.get("vente_id"),
-                "affaires_detail_json": (
-                    json.dumps(build_affaire_detail_for_cycle(cycle_affaire), ensure_ascii=True, separators=(",", ":"))
-                    if build_affaire_detail_for_cycle(cycle_affaire) else None
+                "affaires_detail_json": build_cycle_affaire_blob(
+                    cycle_affaire,
+                    affaires_all_by_mandat.get((annonce_id, normalize_text(current_version.get("id"))), []),
                 ),
                 "source_updated_at": source_updated_at,
                 "register_source_kind": "historique" if status in {"Vendu", "Clos"} or not detail_available else "actif",

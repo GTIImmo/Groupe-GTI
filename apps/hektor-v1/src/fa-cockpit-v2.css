@@ -2526,3 +2526,88 @@
   .fa-ck-affp-card { animation: none; opacity: 1; transform: none; }
   .fa-ck-affp-illus * { animation: none !important; }
 }
+
+/* ── Dossiers abandonnés (offres refusées / compromis annulés) — acquéreur écarté, cliquable ── */
+.fa-ck-aband { margin-top: 18px; border: 1px dashed #e4d9c8; border-radius: 15px; background: #faf6ee; padding: 13px 15px; }
+.fa-ck-aband-h { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #8a7f6b; margin-bottom: 10px; }
+.fa-ck-aband-h svg { width: 15px; height: 15px; stroke: #b08968; fill: none; }
+.fa-ck-aband-n { margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #ece0cd; color: #7a6a52; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.fa-ck-aband-list { display: flex; flex-direction: column; gap: 8px; }
+.fa-ck-aband-row { display: flex; align-items: center; gap: 11px; padding: 9px 11px; background: #fff; border: 1px solid #efe7d8; border-radius: 12px; transition: border-color .16s ease, box-shadow .16s ease; }
+.fa-ck-aband-row:hover { border-color: #e6d2bf; box-shadow: 0 4px 12px rgba(60,40,10,.06); }
+.fa-ck-aband-av { flex: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: #7a6a52; background: #f1e8da; border: 1px solid #e6dcc9; }
+.fa-ck-aband-b { flex: 1; min-width: 0; }
+.fa-ck-aband-nm { font-size: 13.5px; font-weight: 700; color: #3a352d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-ck-aband-mt { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; font-size: 11.5px; color: #9a917f; font-variant-numeric: tabular-nums; }
+.fa-ck-aband-badge { font-size: 10.5px; font-weight: 800; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; }
+.fa-ck-aband-badge.off { background: #fbe9e7; color: #b3402f; }
+.fa-ck-aband-badge.com { background: #f7ecd6; color: #96690f; }
+.fa-ck-aband-lnk { flex: none; font-size: 11.5px; font-weight: 700; color: #8c0044; background: none; border: 1px solid #f0d6e2; border-radius: 999px; padding: 4px 11px; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+.fa-ck-aband-lnk:hover { background: #c5005f; color: #fff; border-color: #c5005f; }
+
+/* ── Fiche du cycle — BLOC MANDAT HÉRO + fonds multi-couleurs + illustrations sur mesure ── */
+.fcyc { padding: 28px 30px 30px; position: relative;
+  background:
+    radial-gradient(760px 400px at 94% -10%, rgba(197,0,95,.11), transparent 58%),
+    radial-gradient(700px 440px at -10% 112%, rgba(122,75,176,.11), transparent 58%),
+    radial-gradient(520px 320px at 112% 62%, rgba(47,158,158,.07), transparent 60%),
+    linear-gradient(180deg, #fdfaf3, #f8f2e7); }
+.fcyc-bg { position: absolute; right: -26px; bottom: -34px; width: 330px; height: 330px; opacity: .05; pointer-events: none; z-index: 0; }
+.fcyc-bg svg { width: 100%; height: 100%; display: block; }
+.fcyc-hero-card, .fcyc-flow, .fcyc-body, .fcyc-avenants, .fcyc-note { position: relative; z-index: 1; }
+.fcyc-hero-card { position: relative; display: flex; align-items: center; gap: 20px; padding: 22px 24px 22px 26px; border-radius: 18px; overflow: hidden; margin-bottom: 22px;
+  background: linear-gradient(180deg, #ffffff, #fffaf3); border: 1px solid #efe2d0; box-shadow: 0 2px 3px rgba(60,40,10,.04), 0 18px 42px rgba(120,20,70,.08); }
+.fcyc-hero-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: linear-gradient(180deg, #c5005f, #7a4bb0); }
+.fcyc-emblem { flex: none; width: 88px; height: 88px; }
+.fcyc-emblem svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.fcyc-emblem .fce-doc, .fcyc-emblem .fce-ms { transform-box: fill-box; transform-origin: center; }
+.fcyc-emblem .fce-ring { animation: fcOrbit 3.6s linear infinite; }
+.fcyc-emblem .fce-doc { animation: fcHFloat 4s ease-in-out infinite; }
+.fcyc-emblem .fce-ms1 { animation: fcHMs 2.4s ease-in-out infinite; }
+.fcyc-emblem .fce-ms2 { animation: fcHMs 2.4s ease-in-out infinite; animation-delay: .5s; }
+.fcyc-emblem .fce-ms3 { animation: fcHMs 2.4s ease-in-out infinite; animation-delay: 1s; }
+.fcyc-id { flex: 1; min-width: 0; }
+.fcyc-id .fcyc-eyebrow { font-size: 10.5px; }
+.fcyc-id .fcyc-h1 { margin-top: 5px; font-size: 33px; line-height: 1; }
+.fcyc-typeline { margin-top: 7px; font-size: 14.5px; font-weight: 700; color: var(--ink-2); }
+.fcyc-period { margin-top: 13px; display: inline-flex; align-items: center; gap: 10px; padding: 9px 15px; border-radius: 12px;
+  background: #fbf2e6; border: 1px solid #ecdac2; }
+.fcyc-period svg { width: 16px; height: 16px; stroke: var(--mag); fill: none; flex: none; }
+.fcyc-period svg.ar { width: 15px; height: 15px; stroke: var(--ink-3); }
+.fcyc-period .dd { font-size: 15px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fcyc-hero-chips { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; align-self: flex-start; }
+.fcyc-hero-card .fcyc-issue { font-size: 13px; padding: 8px 16px; }
+@media (max-width: 640px) { .fcyc-hero-card { flex-wrap: wrap; } .fcyc-hero-chips { flex-direction: row; align-self: auto; width: 100%; } .fcyc-period { flex-wrap: wrap; } }
+/* Emblèmes de rubrique SUR MESURE (une illustration animée par section) */
+.fcyc-sec { font-size: 18.5px; gap: 11px; }
+.fcyc-emb { flex: none; width: 40px; height: 40px; margin-right: 1px; filter: drop-shadow(0 4px 10px rgba(120,20,70,.18)); }
+.fcyc-emb svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.fcyc-emb .fce-coin, .fcyc-emb .fce-dot, .fcyc-emb .fce-p1, .fcyc-emb .fce-p2 { transform-box: fill-box; transform-origin: center; }
+.fcyc-emb .fce-coin { animation: fcHFloat 3.2s ease-in-out infinite; }
+.fcyc-emb .fce-dot { animation: fcHMs 2s ease-in-out infinite; }
+.fcyc-emb .fce-p1 { animation: fcHFloat 3.6s ease-in-out infinite; }
+.fcyc-emb .fce-p2 { animation: fcHFloat 3.6s ease-in-out infinite; animation-delay: .6s; }
+/* Parcours affirmé */
+.fcyc-node { width: 42px; height: 42px; }
+.fcyc-node svg { width: 20px; height: 20px; }
+.fcyc-step .bar { top: 20px; }
+.fcyc-step.done .fcyc-node { box-shadow: 0 5px 15px rgba(197,0,95,.32), 0 0 0 4px rgba(197,0,95,.08); }
+.fcyc-step .lb { font-size: 13px; }
+.fcyc-flow::before { width: 5px; }
+.fcyc-panel { box-shadow: 0 1px 2px rgba(60,40,10,.04), 0 16px 38px rgba(120,20,70,.06); padding: 22px 24px; }
+.fcyc-metric.hero .v { font-size: 32px; }
+/* Apparition orchestrée */
+.fcyc-hero-card, .fcyc-flow, .fcyc-body, .fcyc-avenants, .fcyc-note { opacity: 0; animation: fcycReveal .6s cubic-bezier(.2,.8,.3,1) forwards; }
+.fcyc-flow { animation-delay: .08s; }
+.fcyc-body { animation-delay: .18s; }
+.fcyc-avenants { animation-delay: .28s; }
+.fcyc-note { animation-delay: .34s; }
+@keyframes fcOrbit { to { stroke-dashoffset: -18; } }
+@keyframes fcHFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+@keyframes fcHMs { 0%,100% { opacity: .5; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.22); } }
+@keyframes fcHalo { 0%,100% { opacity: .85; transform: scale(1); } 50% { opacity: 0; transform: scale(1.18); } }
+@keyframes fcycReveal { from { opacity: 0; transform: translateY(13px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .fcyc-emblem *, .fcyc-emb * { animation: none !important; }
+  .fcyc-hero-card, .fcyc-flow, .fcyc-body, .fcyc-avenants, .fcyc-note { animation: none !important; opacity: 1 !important; transform: none !important; }
+}
