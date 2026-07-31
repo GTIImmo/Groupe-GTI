@@ -408,6 +408,16 @@ if (-not $AllowStaleSupabaseDeletes) {
 }
 Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -WorkerKey "supabase.push_upgrade"
 
+# Niveau B : ledger d'affaires app-owned (offre/compromis/vente). UPSERT sur l'id stable
+# (changements d'etat refletes) mais JAMAIS supprime : si Hektor retire une affaire on la conserve
+# (present_in_hektor=false). Rend la donnee affaire independante de Hektor. Lit le miroir Hektor
+# rafraichi par normalize_source ci-dessus, pousse vers Supabase.
+Invoke-Step -Label "phase2 affaire ledger refresh+push" -Arguments @(
+    "phase2\sync\affaire_ledger.py",
+    "--refresh",
+    "--push"
+) -WorkerKey "supabase.affaire_ledger"
+
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
     "phase2\sync\push_hektor_directory_to_supabase.py"
 ) -WorkerKey "supabase.push_hektor_directory"
