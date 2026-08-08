@@ -12328,6 +12328,11 @@ export default function App() {
   }, [session, dataFilters, dataScope, screen, contactPage, contactDirectLookupId, dataReloadKey])
 
   // Chargement autonome de la fiche contact affichée en pop-up par-dessus une annonce.
+  // Dépend de dataReloadKey (comme la source « listing », effet selectedContact) pour que
+  // l'édition optimiste d'un contact ouvert PAR-DESSUS une annonce se reflète tout de suite :
+  // sinon cet effet ne fire qu'à l'ouverture et la fiche garde l'ancienne valeur. Le garde-fou
+  // `if (!id) return` couvre le cas « pas de fiche ouverte » ; on ne remet PAS annonceContact à
+  // null pendant le refetch -> pas de clignotement.
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     const id = String(annonceContactId ?? '').trim()
@@ -12342,7 +12347,7 @@ export default function App() {
       })
       .catch((error) => { if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement de la fiche contact') })
     return () => { cancelled = true }
-  }, [annonceContactId, session])
+  }, [annonceContactId, session, dataReloadKey])
 
   // Reset IMMÉDIAT au changement de contact : sans ça, les recherches/relations du contact
   // précédent restaient affichées pendant le chargement du nouveau (et persistaient si le
