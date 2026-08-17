@@ -74,6 +74,15 @@ const SYNC_LIGHT_JOB_TYPES = new Set([
 const SYNC_FULL_JOB_TYPES = new Set([
   "archive_cloud_documents",
 ]);
+// Jobs de pure LECTURE : autorises sur une annonce ARCHIVEE (cf. loadDossier).
+// Ils ne modifient rien dans Hektor -- ils rapatrient des fichiers vers le serveur.
+// Toute action d'ecriture reste refusee sur un bien archive ("desarchivez avant").
+const READ_ONLY_ARCHIVE_JOB_TYPES = new Set([
+  "sync_console_documents",
+  "sync_hektor_photos",
+  "prepare_archived_annonce_detail",
+  "prepare_historical_annonce_detail",
+]);
 const ALL_JOB_TYPES_BY_KIND = {
   actions: ACTION_JOB_TYPES,
   documents: DOCUMENT_JOB_TYPES,
@@ -609,6 +618,17 @@ function shouldKeepCloud(dossier) {
 
 function localDocumentDir(hektorAnnonceId, documentId) {
   return path.join(LOCAL_ARCHIVE_ROOT, "annonces", safeFilename(hektorAnnonceId, "annonce"), "documents", safeFilename(documentId, "document"));
+}
+
+// Photos : meme arborescence que les documents, branche "photos".
+// Chantier d'independance 2026-08-17 -- le serveur porte TOUTES les photos
+// (tous index confondus), le cloud n'en garde qu'une copie pour les biens vivants.
+function localPhotoDir(hektorAnnonceId, photoId) {
+  return path.join(LOCAL_ARCHIVE_ROOT, "annonces", safeFilename(hektorAnnonceId, "annonce"), "photos", safeFilename(photoId, "photo"));
+}
+
+function localPhotoPath(hektorAnnonceId, photoId, filename) {
+  return path.join(localPhotoDir(hektorAnnonceId, photoId), safeFilename(filename, "photo.jpg"));
 }
 
 function localDocumentPath(hektorAnnonceId, documentId, filename) {
@@ -1343,6 +1363,19 @@ async function loadDossier(job) {
   else archiveParams.set("hektor_annonce_id", `eq.${job.hektor_annonce_id}`);
   const archiveRows = await supabaseRequest(`app_archive_annonce_index_current?${archiveParams.toString()}`, { method: "GET" });
   if (Array.isArray(archiveRows) && archiveRows.length) {
+    // Une annonce archivee ne doit pas etre MODIFIEE dans Hektor -> le refus reste la regle.
+    // Mais RECUPERER ses fichiers est une LECTURE : sans cette distinction, les documents et
+    // photos de 34 444 annonces archivees resteraient chez Hektor et seraient perdus a la
+    // coupure (chantier d'independance, 2026-08-17). On laisse donc passer les seuls jobs
+    // de lecture, en conservant le blocage pour tout le reste.
+    if (READ_ONLY_ARCHIVE_JOB_TYPES.has(job.job_type)) {
+      const row = archiveRows[0];
+      return {
+        ...row,
+        app_dossier_id: Number(row.app_archive_id),
+        archive: row.archive || "1",
+      };
+    }
     throw new Error(`Annonce archivee: ${job.app_dossier_id || job.hektor_annonce_id}. Desarchivez avant d'executer cette action Hektor.`);
   }
 
@@ -3525,6 +3558,82 @@ async function persistConsoleDocumentFile(dossier, document, options = {}) {
   };
 }
 
+// --- PHOTOS : rapatriement du binaire (chantier d'independance, 2026-08-17) ---
+// Les URLs photos pointent le CDN public de Hektor (staticlbi) : elles repondent
+// SANS authentification (verifie sur 300 URLs, 0 echec). On n'a donc pas besoin
+// de la session Playwright ici, contrairement aux documents.
+async function fetchPublicBinary(url, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "GTI-ConsoleWorker/1.0", Accept: "image/*,*/*" },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status} sur ${url}`);
+    const arrayBuffer = await response.arrayBuffer();
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      mimeType: response.headers.get("content-type") || "application/octet-stream",
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Miroir de persistConsoleDocumentFile pour les photos.
+// Principe (decision Frederic) : le serveur porte TOUT sans condition ; le cloud
+// n'a qu'une copie pour les biens vivants (shouldKeepCloud) + l'index.
+async function persistConsolePhotoFile(dossier, photo, options = {}) {
+  const sourceUrl = cleanString(photo.url_hd) || cleanString(photo.url_preview);
+  if (!sourceUrl) return { photo_id: photo.id, skipped: "url_absente" };
+
+  const fallbackName = `${photo.hektor_photo_id || photo.id}.jpg`;
+  const filename = safeFilename(photo.filename, fallbackName);
+  const storageFilename = storageSafeFilename(photo.filename, fallbackName);
+  const metadata = photo.metadata_json || {};
+  const localPath = metadata.local_archive_path || localPhotoPath(photo.hektor_annonce_id, photo.id, filename);
+
+  // Deja sur le serveur et de meme taille -> on ne retelecharge pas.
+  // (Rend le rattrapage massif rejouable sans cout : 318 000 photos.)
+  if (isReadableFile(localPath) && Number(photo.file_size) > 0) {
+    if (fs.statSync(localPath).size === Number(photo.file_size)) {
+      return { photo_id: photo.id, skipped: "inchangee", bytes: Number(photo.file_size) };
+    }
+  }
+
+  const file = await fetchPublicBinary(sourceUrl);
+  writeLocalArchiveFile(localPath, file.buffer); // serveur : systematique
+  const mimeType = normalizeMimeType(file.mimeType, filename);
+  const digest = sha256Buffer(file.buffer);
+  const cloudWanted = Boolean(options.cloud);
+  const storagePath = photo.storage_path
+    || `annonces/${photo.hektor_annonce_id}/photos/${photo.id}/${storageFilename}`;
+
+  if (cloudWanted) await uploadStorageObject(storagePath, file.buffer, mimeType);
+
+  await supabaseRequest(`app_console_photo?id=eq.${encodeURIComponent(photo.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      storage_bucket: cloudWanted ? STORAGE_BUCKET : photo.storage_bucket,
+      storage_path: cloudWanted ? storagePath : photo.storage_path,
+      storage_status: cloudWanted ? "cloud_available" : "local_only",
+      file_size: file.buffer.length,
+      sha256: digest,
+      metadata_json: {
+        ...metadata,
+        ...localArchiveMetadata(localPath),
+        source_url: sourceUrl,
+        mime_type: mimeType,
+      },
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  return { photo_id: photo.id, local_path: localPath, bytes: file.buffer.length, cloud: cloudWanted };
+}
+
 async function persistProvidedDocumentFile(document, buffer, mimeType, options = {}) {
   const metadata = document.metadata_json || {};
   const filename = safeFilename(document.document_name, `${document.id}.bin`);
@@ -4012,11 +4121,20 @@ async function handleSyncHektorPhotos(job) {
   const rows = await upsertConsolePhotos(dossier, entries);
   const visibleCount = rows.filter((row) => row.visible).length;
   const hiddenCount = rows.length - visibleCount;
-  await logJob(job.id, "hektor_photos", "done", "Photos Console indexees", {
+
+  // Rapatriement des binaires (2026-08-17). L'indexation ci-dessus ne stocke que
+  // des URLs du CDN Hektor ; sans ce bloc les photos disparaissent a la coupure.
+  const stored = await downloadConsolePhotoFiles(job, dossier);
+
+  await logJob(job.id, "hektor_photos", "done", "Photos Console indexees et rapatriees", {
     hektor_annonce_id: dossier.hektor_annonce_id,
     total: rows.length,
     visible: visibleCount,
     hidden: hiddenCount,
+    telechargees: stored.downloaded,
+    inchangees: stored.unchanged,
+    echecs: stored.failed,
+    octets: stored.bytes,
   });
   return {
     status: "photos_synced",
@@ -4024,7 +4142,53 @@ async function handleSyncHektorPhotos(job) {
     total: rows.length,
     visible: visibleCount,
     hidden: hiddenCount,
+    photos_downloaded: stored.downloaded,
+    photos_unchanged: stored.unchanged,
+    photos_failed: stored.failed,
+    photos_bytes: stored.bytes,
   };
+}
+
+// Telecharge les binaires des photos d'une annonce.
+// IMPORTANT : try/catch PAR PHOTO. La boucle equivalente des documents
+// (persist des documents, plus haut) n'en a pas : la premiere erreur y avorte
+// tout le lot et laisse le reste en references vides. On ne reproduit pas ce
+// defaut ici -- une photo en echec n'empeche pas les suivantes.
+async function downloadConsolePhotoFiles(job, dossier) {
+  const cloud = shouldKeepCloud(dossier);
+  const params = new URLSearchParams({
+    select: "id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,storage_bucket,storage_path,file_size,metadata_json",
+    hektor_annonce_id: `eq.${dossier.hektor_annonce_id}`,
+    order: "sort_order.asc",
+  });
+  const photos = await supabaseRequest(`app_console_photo?${params.toString()}`, { method: "GET" });
+  const list = Array.isArray(photos) ? photos : [];
+
+  let downloaded = 0;
+  let unchanged = 0;
+  let failed = 0;
+  let bytes = 0;
+  const failures = [];
+
+  for (const photo of list) {
+    try {
+      const result = await persistConsolePhotoFile(dossier, photo, { cloud });
+      if (result.skipped === "inchangee") unchanged += 1;
+      else if (result.skipped) failed += 1;
+      else { downloaded += 1; bytes += result.bytes || 0; }
+    } catch (error) {
+      failed += 1;
+      failures.push({ photo_id: photo.id, error: (error && error.message) || String(error) });
+    }
+  }
+
+  if (failures.length) {
+    await logJob(job.id, "hektor_photos", "warning", `${failures.length} photo(s) non rapatriee(s)`, {
+      hektor_annonce_id: dossier.hektor_annonce_id,
+      failures: failures.slice(0, 10),
+    });
+  }
+  return { downloaded, unchanged, failed, bytes };
 }
 
 async function loadConsoleDocumentById(documentId) {

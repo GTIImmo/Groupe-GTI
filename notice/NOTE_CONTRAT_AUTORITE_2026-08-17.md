@@ -174,3 +174,88 @@ est une supposition.
 
 **Leçon de méthode** : ne pas déduire la nature d'une donnée de son nom. Inventorier le contenu
 avant d'écrire une règle d'autorité dessus.
+
+---
+
+## 10. ✅ BLOCAGE LEVÉ — volet BLOB réécrit clé par clé (2026-08-17)
+
+Le §9 invalidait la règle « le blob appartient à l'app ». L'inventaire des 130 clés
+(`NOTE_AUDIT_MAITRE_2026-08-17.md` §1) permet de la remplacer par une règle **par clé**.
+Les 4 arbitrages du §8 sont appliqués.
+
+### 🟢 APP — l'import ne les réécrit plus après le seed
+
+**Textes et descriptif plat**
+`texte_principal_titre`, `texte_principal_html`, `corps_listing_html`, `textes_json`, `nb_textes`
+
+**Dimensions et composition**
+`surface`, `surface_habitable_detail`, `surface_terrain_detail`, `nb_pieces`, `nb_chambres`,
+`etage_detail`, `terrasse_detail`, `garage_box_detail`, `ascenseur_detail`, `copropriete_detail`,
+`pieces_json`
+
+**Adresse et géolocalisation**
+`adresse_detail`, `adresse_privee_listing`, `ville_privee_detail`, `code_postal_prive_detail`,
+`ville_publique_detail`, `ville_publique_listing`, `code_postal_detail`, `code_postal_public_listing`,
+`code_postal`, `latitude_detail`, `longitude_detail`, `localite_json`
+
+**Les 9 blobs de groupe** (ils portent ~150 champs du wizard — c'est le gros du volume)
+`ag_interieur_json`, `ag_exterieur_json`, `terrain_json`, `equipements_json`,
+`diagnostiques_json`, `copropriete_json`, `mandat_infofi_json`, `mandat_mandatdispo_json`,
+`organiser_visite_json`
+
+**Statut et mandat** *(arbitrages n°1 et n°3)*
+`detail_statut_name`, `mandat_type`, `mandat_date_debut`, `mandat_date_fin`, `mandat_montant`,
+`date_enregistrement_annonce`
+
+### 🔵 HEKTOR — doivent continuer à se rafraîchir
+
+**Diffusion** `diffusable`, `valide`, `nb_portails_actifs`, `has_diffusion_error`, `portails_resume`
+
+**Offres** `offre_id`, `offre_state`, `offre_raw_status`, `offre_event_date`, `offre_montant`,
+`offre_acquereur_nom`, `offre_acquereur_portable`, `offre_acquereur_email`, `offre_last_proposition_type`
+
+**Compromis** `compromis_id`, `compromis_state`, `compromis_date_start`, `compromis_date_end`,
+`date_signature_acte`, `compromis_part_admin`, `compromis_sequestre`, `compromis_acquereurs_resume`,
+`prix_publique`, `prix_net_vendeur` ⚠️ *(ces 2 dernières viennent du COMPROMIS — cf. bug §11)*
+
+**Ventes** `vente_id`, `vente_date`, `vente_prix`, `vente_honoraires`, `vente_part_admin`,
+`vente_commission_agence`, `vente_acquereurs_resume`, `vente_notaires_resume`, `etat_transaction`
+
+**Mandat (partie Hektor)** `mandats_json`, `mandat_source_id`, `mandat_numero_reference`,
+`mandat_numero_source`, `mandat_date_cloture`, `mandat_date_enregistrement`, `mandat_note`,
+`mandants_texte`
+
+**Notes Hektor** `notes_json`, `note_hektor_principale`, `nb_notes_hektor`
+
+**Propriétaires** `proprietaires_json`, `proprietaires_resume`, `proprietaires_contacts`, `nb_proprietaires`
+
+**Photos** *(arbitrage n°4 — jusqu'à C9)* `images_json`, `images_preview_json`, `nb_images`, `photo_url_listing`
+
+**Scrapes Console** `console_missing_fields_json/_status/_extracted_at`, `secteur_console_json`,
+`diagnostics_contacts_console_json`, `honoraires_detail_console_json`, `location_rendement_console_json`,
+`pieces_detail_console_json`, `chauffage_console_json/_status/_extracted_at`,
+`dpe_image_url`, `ges_image_url`, `dpe_image_urls_json`
+
+**Référentiel** `agence_nom`, `honoraires_json`, `honoraires_resume`, `zones_json`
+
+### ⚪ SYSTÈME — hors arbitrage
+`detail_raw_json`, `annonce_list_raw_json`, `date_maj`, les 7 `price_change_*`,
+`responsable_affichage`, `responsable_type`, `internal_status`, `next_action`,
+`date_entree_file`, `date_derniere_action`, `motif_blocage`, `is_blocked`, `is_followup_needed`,
+`particularites_json`, `app_optimistic_overlay`
+
+### Règle d'implémentation
+Le blob est un **TEXT JSON**, pas une colonne : on ne peut pas « retirer une colonne ».
+⇒ **Fusion par clé** (option (a)) : à la reconstruction, relire le blob existant et
+**réinjecter les clés 🟢** par-dessus la version Hektor, en laissant les 🔵 et ⚪ être écrasées.
+C'est l'inverse exact de l'option (b) initialement — et fausse — retenue.
+
+### ⚠️ Trois pièges à respecter
+1. `particularites_json` est classé ⚪ **parce que sa saisie est aujourd'hui jetée** par le worker (bug §11). Il devra passer 🟢 une fois le bug corrigé.
+2. `detail_raw_json` et `annonce_list_raw_json` **ré-embarquent tout l'état vivant** : ils restent système, jamais figés.
+3. Le seed initial reste obligatoire : un champ 🟢 n'est écrit que si la ligne est **nouvelle**.
+
+## 11. Bugs à corriger séparément (chantier parallèle)
+- `prix_publique` / `prix_net_vendeur` : remplis depuis le **compromis** mais lus comme prix d'annonce → NULL sans compromis, faux avec. Le vrai prix est dans `mandat_infofi_json`.
+- `Particularites` : champ du wizard absent de tous les groupes de push worker → **saisie silencieusement perdue**.
+- `images_json` tronqué à 5 alors que `nb_images` compte le total.

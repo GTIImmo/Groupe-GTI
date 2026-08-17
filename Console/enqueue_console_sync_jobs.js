@@ -10,6 +10,9 @@ const DAILY_STATUSES = ["Actif", "Sous offre", "Sous compromis", "Estimation"];
 function parseArgs(argv) {
   const args = {
     scope: "daily-cloud",
+    // Le meme mecanisme sert aux documents et aux photos : seul le type de job change.
+    // sync_console_documents = pieces (diagnostics, mandats...) ; sync_hektor_photos = reportage.
+    jobType: "sync_console_documents",
     batchSize: 100,
     limit: 0,
     priority: 100,
@@ -30,14 +33,21 @@ function parseArgs(argv) {
     } else if (arg === "--priority" && next) {
       args.priority = Number(next);
       index += 1;
+    } else if (arg === "--job-type" && next) {
+      args.jobType = next;
+      index += 1;
     } else if (arg === "--dry-run") {
       args.dryRun = true;
     } else {
       throw new Error(`Argument inconnu: ${arg}`);
     }
   }
-  if (!["daily-cloud", "all-local"].includes(args.scope)) {
-    throw new Error("--scope doit valoir daily-cloud ou all-local");
+  const scopes = Object.keys(INDEX_SOURCES);
+  if (!scopes.includes(args.scope)) {
+    throw new Error(`--scope doit valoir : ${scopes.join(", ")}`);
+  }
+  if (!["sync_console_documents", "sync_hektor_photos"].includes(args.jobType)) {
+    throw new Error("--job-type doit valoir sync_console_documents ou sync_hektor_photos");
   }
   return args;
 }
@@ -74,25 +84,39 @@ async function supabaseRequest(pathname, options = {}) {
   return payload;
 }
 
+// Les annonces ne vivent pas toutes dans app_dossier_current : ce sont QUATRE index
+// distincts (chantier d'independance 2026-08-17). Chacun a sa table et sa cle technique,
+// mais tous portent hektor_annonce_id -- c'est lui qui permet au worker de retrouver le bien.
+// Sans cette table de correspondance, l'enfilement ne couvre que les 13 214 actives et
+// laisse 43 649 annonces sans documents ni photos.
+const INDEX_SOURCES = {
+  "daily-cloud": { table: "app_dossier_current", idColumn: "app_dossier_id", dailyFilter: true },
+  "all-local": { table: "app_dossier_current", idColumn: "app_dossier_id", dailyFilter: false },
+  archive: { table: "app_archive_annonce_index_current", idColumn: "app_archive_id", dailyFilter: false },
+  historical: { table: "app_historical_annonce_index_current", idColumn: "app_historical_id", dailyFilter: false },
+  brouillon: { table: "app_brouillon_annonce_index_current", idColumn: "app_brouillon_id", dailyFilter: false },
+};
+
 function buildDossierPath(args, offset) {
+  const source = INDEX_SOURCES[args.scope];
   const params = new URLSearchParams({
-    select: "app_dossier_id,hektor_annonce_id,archive,statut_annonce",
-    order: "app_dossier_id.asc",
+    select: `${source.idColumn},hektor_annonce_id`,
+    order: `${source.idColumn}.asc`,
     limit: String(args.batchSize),
     offset: String(offset),
   });
-  if (args.scope === "daily-cloud") {
+  if (source.dailyFilter) {
     params.set("archive", "eq.0");
     params.set("statut_annonce", `in.(${DAILY_STATUSES.map((status) => `"${status}"`).join(",")})`);
   }
-  return `app_dossier_current?${params.toString()}`;
+  return `${source.table}?${params.toString()}`;
 }
 
-async function loadPendingJobs(hektorAnnonceIds) {
+async function loadPendingJobs(hektorAnnonceIds, jobType = "sync_console_documents") {
   if (!hektorAnnonceIds.length) return new Set();
   const params = new URLSearchParams({
     select: "hektor_annonce_id",
-    job_type: "eq.sync_console_documents",
+    job_type: `eq.${jobType}`,
     status: "in.(pending,running)",
     hektor_annonce_id: `in.(${hektorAnnonceIds.map((id) => `"${id}"`).join(",")})`,
   });
@@ -101,13 +125,17 @@ async function loadPendingJobs(hektorAnnonceIds) {
 }
 
 async function enqueueBatch(dossiers, args) {
-  const pending = await loadPendingJobs(dossiers.map((dossier) => String(dossier.hektor_annonce_id)));
+  // La cle technique change selon l'index (app_dossier_id / app_archive_id /
+  // app_historical_id / app_brouillon_id) : on la normalise ici. Le worker sait
+  // retrouver le bien dans les trois index a partir de cette valeur (loadDossier).
+  const idColumn = INDEX_SOURCES[args.scope].idColumn;
+  const pending = await loadPendingJobs(dossiers.map((dossier) => String(dossier.hektor_annonce_id)), args.jobType);
   const jobs = dossiers
-    .filter((dossier) => dossier.app_dossier_id != null && dossier.hektor_annonce_id != null)
+    .filter((dossier) => dossier[idColumn] != null && dossier.hektor_annonce_id != null)
     .filter((dossier) => !pending.has(String(dossier.hektor_annonce_id)))
     .map((dossier) => ({
-      job_type: "sync_console_documents",
-      app_dossier_id: Number(dossier.app_dossier_id),
+      job_type: args.jobType,
+      app_dossier_id: Number(dossier[idColumn]),
       hektor_annonce_id: String(dossier.hektor_annonce_id),
       payload_json: { scope: args.scope },
       status: "pending",
