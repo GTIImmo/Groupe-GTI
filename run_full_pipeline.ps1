@@ -463,12 +463,21 @@ if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
     Write-RunLog "DONE  enqueue console documents ($scope)"
 }
 
-Invoke-Step -Label "phase2 sync Matterport links to supabase" -Arguments @(
+# Matterport = etape non critique (SaaS externe). Un plantage cote Matterport (ex. 500
+# GraphQL transitoire) ne doit PAS tuer le pipeline ni bloquer le heartbeat pipeline.full.
+# -> 2 essais, non bloquant (pas de -FailOnError) : sur echec final, ecrit un heartbeat
+# error sur matterport.sync_models (criticality medium -> warning visible dans l'ecran
+# Sante, sans email/WhatsApp) + une ligne WARN dans le log. Le run global se poursuit.
+$matterportOk = $false
+Invoke-OptionalStepWithRetry -Label "phase2 sync Matterport links to supabase" -Arguments @(
     "phase2\sync\sync_matterport_models.py",
     "--max-models", "0",
     "--supabase-upsert",
     "--supabase-push-mode", $MatterportPushMode
-) -WorkerKey "matterport.sync_models"
+) -MaxAttempts 2 -RetryDelaySeconds 60 -Succeeded ([ref]$matterportOk) -WorkerKey "matterport.sync_models"
+if (-not $matterportOk) {
+    Write-RunLog "WARN  Matterport non synchronise cette nuit (echec non bloquant) - pipeline poursuivi ; voir heartbeat matterport.sync_models"
+}
 
 Invoke-Step -Label "backfill appointment public links" -Arguments @(
     "backend\scripts\backfill_appointment_public_links.py",
