@@ -847,6 +847,113 @@ function extractDocumentEntries(html, source, visibility) {
   });
 }
 
+// --- DOCUMENTS "MODELO" : blocs ImmoSign + "Mes documents" (Lot 1, 2026-08-18) ---
+// La page Documents d'une annonce a 4 sections ; extractDocumentEntries ci-dessus ne
+// reconnait que force_transfert(...), present UNIQUEMENT dans "Depot de documents".
+// Les deux sections "Documents ImmoSign" (list_ImmoSign) et "Mes documents" (list_Hektor)
+// n'ont AUCUN lien de fichier : leur PDF est genere a la demande par une route xmlrpc.
+// Elles n'etaient donc jamais indexees. On les lit ici, sur le MEME html
+// (mode=chargeannonce_Documents) : aucun appel Hektor supplementaire.
+// NB : ces routes repondent en contexte root admin (verifie) ; seul l'AFFICHAGE de
+// l'empreinte de signature (docBtnSign_) est masque hors contexte negociateur -> c'est
+// le sujet du Lot 2, volontairement hors perimetre ici.
+const MODELO_SECTIONS = [
+  {
+    kind: "immosign",
+    source: "hektor_console_immosign",
+    listMarker: "list_ImmoSign",
+    titleMatch: /immosign/i,
+    keyPrefix: "immosign-doc",
+    printUrl: (docId) => `${XMLRPC_URL}?mode=ImmoSign-Documents-printImmoSignDocument&id=${encodeURIComponent(docId)}&retrieve=1`,
+  },
+  {
+    kind: "hektor",
+    source: "hektor_console_modele",
+    listMarker: "list_Hektor",
+    titleMatch: /^mes\s+documents$/i,
+    keyPrefix: "hektor-doc",
+    printUrl: (docId) => `${XMLRPC_URL}?mode=templateDocument-createPdfFileDocType&idDoc=${encodeURIComponent(docId)}`,
+  },
+];
+
+function modeloSectionCell(rowHtml, cssClass) {
+  const escaped = String(cssClass).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = String(rowHtml || "").match(new RegExp(`<div[^>]*class="[^"]*${escaped}[^"]*"[^>]*>([\\s\\S]*?)</div>`, "i"));
+  return match ? stripHtml(match[1]) : "";
+}
+
+// Identifie la section a partir du selecteur de tri (sortDocs(this,'list_ImmoSign',...))
+// puis, a defaut, du titre <h2>. Les deux marqueurs sont presents dans les deux contextes.
+function modeloSectionFor(sectionHtml) {
+  const title = stripHtml((String(sectionHtml).match(/<h2[^>]*class="titreSectionDocs"[^>]*>([\s\S]*?)<\/h2>/i) || [, ""])[1]);
+  for (const section of MODELO_SECTIONS) {
+    if (sectionHtml.includes(section.listMarker)) return section;
+  }
+  for (const section of MODELO_SECTIONS) {
+    if (section.titleMatch.test(title)) return section;
+  }
+  return null;
+}
+
+// Un document ImmoSign porte une procedure de signature (id present sous plusieurs formes
+// selon l'etat : telechargement, preuves, relance, annulation, bouton ceremonie).
+function modeloProcedureId(rowHtml) {
+  const match = String(rowHtml || "").match(/downloadProcedureFiles\(\s*['"]?(\d+)/i)
+    || String(rowHtml || "").match(/downloadProofs\(\s*['"]?(\d+)/i)
+    || String(rowHtml || "").match(/reminderProcedureSignatories\(\s*['"]?(\d+)/i)
+    || String(rowHtml || "").match(/cancelProcedure\(\s*['"]?(\d+)/i)
+    || String(rowHtml || "").match(/docBtnPrintCeremony_(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
+function extractModeloDocumentEntries(html) {
+  const entries = [];
+  const sections = String(html || "").split('<div class="sectionDocsContainer');
+  for (const sectionHtml of sections.slice(1)) {
+    const section = modeloSectionFor(sectionHtml);
+    if (!section) continue;
+    // Les lignes sont <div class="tbodyContentAction" id="modeloDocLine{docId}">.
+    // Un bloc signature (visuelSignature_main_container) peut suivre en frere : on decoupe
+    // sur l'id, ce qui garde chaque ligne avec son propre bloc et rien de la suivante.
+    const parts = sectionHtml.split(/id="modeloDocLine(\d+)"/);
+    for (let index = 1; index < parts.length; index += 2) {
+      const docId = String(parts[index] || "").trim();
+      const rowHtml = String(parts[index + 1] || "");
+      if (!docId) continue;
+      const label = modeloSectionCell(rowHtml, "bxld7") || `Document ${docId}`;
+      const contact = modeloSectionCell(rowHtml, "listContact");
+      const dates = [...rowHtml.matchAll(/<div[^>]*class="[^"]*bxld3[^"]*"[^>]*>\s*(\d{2}\/\d{2}\/\d{4})\s*<\/div>/gi)].map((m) => m[1]);
+      const procedureId = section.kind === "immosign" ? modeloProcedureId(rowHtml) : null;
+      entries.push({
+        hektor_document_id: `${section.keyPrefix}-${docId}`,
+        document_name: safeFilename(label, `Document ${docId}`),
+        document_type: "document",
+        visibility: "private",
+        source: section.source,
+        console_url: section.printUrl(docId),
+        technical_name: `${section.keyPrefix}-${docId}.pdf`,
+        transfer_name: "",
+        hektor_uploaded_document_id: null,
+        signature: null,
+        modelo: {
+          kind: section.kind,
+          hektor_doc_id: docId,
+          procedure_id: procedureId,
+          contact: contact || null,
+          created_on: dates[0] || null,
+          updated_on: dates[1] || dates[0] || null,
+        },
+      });
+    }
+  }
+  const seen = new Set();
+  return entries.filter((entry) => {
+    if (seen.has(entry.hektor_document_id)) return false;
+    seen.add(entry.hektor_document_id);
+    return true;
+  });
+}
+
 function htmlAttrValue(html, attrName) {
   const escaped = String(attrName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`\\b${escaped}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, "i");
@@ -3316,6 +3423,11 @@ async function fetchConsoleDocumentEntries(hektorAnnonceId) {
   for (const endpoint of endpoints) {
     const result = await hektorFetch(endpoint.url);
     entries.push(...extractDocumentEntries(result.text, endpoint.source, endpoint.visibility));
+    // Le 1er endpoint (chargeannonce_Documents) porte AUSSI les sections ImmoSign et
+    // "Mes documents" : on les lit sur la reponse deja recuperee, sans appel de plus.
+    if (endpoint.source === "hektor_console") {
+      entries.push(...extractModeloDocumentEntries(result.text));
+    }
   }
   return entries;
 }
@@ -3434,9 +3546,31 @@ async function loadExistingDocuments(hektorAnnonceId) {
   };
 }
 
+// Un mandat ImmoSign SIGNE peut deja avoir une ligne creee par reconcileSignatureStates
+// (source hektor_immosign_signed, cle immosign-signed-{docId}-{type}). L'indexation modelo
+// du Lot 1 pointe le MEME document sous une autre cle : sans cela on creerait un doublon.
+// On adopte donc la ligne existante (on garde sa cle et sa source, donc le Lot 2 intact)
+// et on se contente de l'enrichir (nom lisible, console_url, metadonnees modelo).
+function adoptExistingImmoSignRows(entries, existingRows) {
+  const signedByDocId = new Map();
+  for (const row of Array.isArray(existingRows) ? existingRows : []) {
+    if (String(row.source || "") !== "hektor_immosign_signed") continue;
+    const hektorDocId = row.metadata_json && row.metadata_json.signature && row.metadata_json.signature.hektor_doc_id;
+    if (hektorDocId) signedByDocId.set(String(hektorDocId), row);
+  }
+  if (!signedByDocId.size) return entries;
+  return entries.map((entry) => {
+    if (!entry.modelo || entry.modelo.kind !== "immosign") return entry;
+    const row = signedByDocId.get(String(entry.modelo.hektor_doc_id));
+    if (!row) return entry;
+    return { ...entry, hektor_document_id: row.hektor_document_id, source: row.source };
+  });
+}
+
 async function upsertConsoleDocuments(dossier, entries) {
-  const selectedEntries = dedupeDocumentEntries(entries);
-  const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
+  const existingForAdoption = await loadExistingDocuments(String(dossier.hektor_annonce_id));
+  const selectedEntries = dedupeDocumentEntries(adoptExistingImmoSignRows(entries, existingForAdoption.rows));
+  const existing = existingForAdoption;
   const now = new Date().toISOString();
   const selectedKeys = new Set(selectedEntries.map((entry) => `${entry.hektor_document_id}:${entry.source}`));
   const rows = selectedEntries.map((entry) => {
@@ -3465,6 +3599,13 @@ async function upsertConsoleDocuments(dossier, entries) {
         technical_name: entry.technical_name,
         transfer_name: entry.transfer_name,
         hektor_uploaded_document_id: entry.hektor_uploaded_document_id,
+        // Documents ImmoSign / "Mes documents" (Lot 1) : le PDF est genere a la demande,
+        // archive_filename donne un nom de fichier stable (le libelle n'a pas d'extension)
+        // et modelo.updated_on sert de declencheur de re-telechargement.
+        ...(entry.modelo ? {
+          modelo: entry.modelo,
+          archive_filename: storageSafeFilename(`${entry.document_name} - ${entry.modelo.hektor_doc_id}.pdf`, `${entry.hektor_document_id}.pdf`),
+        } : {}),
         // Preserve la date d'envoi/signature deja constatee (sent_at / signed_at).
         // Hektor n'expose pas ces dates -> entry.signature ne les porte pas ; les ecraser
         // effacait sent_at et re-datait "Mandat envoye en signature" a chaque sync
@@ -3501,16 +3642,73 @@ async function upsertConsoleDocuments(dossier, entries) {
   return rows;
 }
 
+// Telechargement d'un PDF modelo (ImmoSign / "Mes documents"), genere a la demande.
+// Renvoie null si Hektor n'a pas su le produire apres N essais : l'appelant decide alors
+// (garder l'archive precedente, ou laisser le prochain run reessayer). Ne leve pas.
+async function fetchModeloDocumentPdf(consoleUrl, documentId, attempts = 3) {
+  if (!consoleUrl) throw new Error(`URL Console absente pour document ${documentId}`);
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const file = await hektorFetch(consoleUrl, { headers: { Accept: "*/*" } });
+      if (file && file.buffer && file.buffer.length > 4 && file.buffer.subarray(0, 4).toString("latin1") === "%PDF") return file;
+    } catch (error) {
+      // La session expiree doit remonter (le worker sait relogger et rejouer le job).
+      if (isHektorSessionExpiredError(error)) throw error;
+    }
+    if (attempt < attempts) await sleep(1500 * attempt);
+  }
+  return null;
+}
+
 async function persistConsoleDocumentFile(dossier, document, options = {}) {
   const metadata = document.metadata_json || {};
   const consoleUrl = metadata.console_url;
-  const filename = safeFilename(document.document_name, `${document.id}.bin`);
-  const storageFilename = storageSafeFilename(document.document_name, `${document.id}.bin`);
+  // archive_filename : documents ImmoSign / "Mes documents" (Lot 1). Leur libelle Hektor
+  // n'a pas d'extension ("Mandat (Avec saisie du numero) (Vente)") et peut se repeter sur
+  // une meme annonce -> nom de fichier explicite, suffixe par l'id Hektor du document.
+  const filename = safeFilename(metadata.archive_filename || document.document_name, `${document.id}.bin`);
+  const storageFilename = storageSafeFilename(metadata.archive_filename || document.document_name, `${document.id}.bin`);
   const localPath = metadata.local_archive_path || localDocumentPath(document.hektor_annonce_id, document.id, filename);
+  // Le PDF d'un document modelo est REGENERE a chaque appel : on ne le reprend du cache
+  // local que si Hektor n'a pas touche au document depuis la derniere archive
+  // (colonne "MIS A JOUR LE" de la ligne). Les documents deposes gardent le cache pur.
+  // GARDE-FOU (Lot 1) : une ligne qui porte deja un signed_document est le MANDAT SIGNE
+  // rapatrie par reconcileSignatureStates. Sa colonne storage_path pointe volontairement
+  // le PDF signe (requis par la policy storage 'hektor_console_documents_read_scope').
+  // L'indexation modelo pointe le MEME document, mais son PDF "courant" n'est PAS signe :
+  // le persister ecraserait le signe. On ne touche donc jamais au binaire de ces lignes
+  // (leurs ZIP compagnons, eux, restent recuperes par persistImmoSignCompanionFiles).
+  if (metadata.modelo && metadata.signed_document) {
+    return {
+      document_id: document.id,
+      local_path: metadata.local_archive_path || (metadata.signed_document && metadata.signed_document.local_archive_path) || null,
+      storage_path: document.storage_path,
+      cloud_available: document.storage_status === "cloud_available",
+      bytes: Number(document.file_size) || 0,
+      sha256: document.sha256 || null,
+      skipped: "signe_preserve",
+    };
+  }
+  const modeloUpdatedOn = metadata.modelo ? (metadata.modelo.updated_on || null) : null;
+  const modeloStale = Boolean(metadata.modelo) && String(metadata.archived_updated_on || "") !== String(modeloUpdatedOn || "");
   let file;
 
-  if (isReadableFile(localPath)) {
+  if (isReadableFile(localPath) && !modeloStale) {
     file = readLocalArchiveFile(localPath, document.mime_type);
+  } else if (metadata.modelo) {
+    // Documents modelo : le PDF est GENERE a la demande, et le generateur Hektor est
+    // instable (HTTP 500 "Erreur lors de la generation du document en PDF" sur ~1 appel
+    // sur 18, sans motif ; le meme id repasse au coup suivant). On reessaie, on refuse
+    // tout corps qui n'est pas un vrai PDF, et on n'archive JAMAIS un fichier douteux.
+    file = await fetchModeloDocumentPdf(consoleUrl, document.id);
+    if (!file) {
+      // Echec definitif : on garde la version deja archivee si on en a une, sinon on
+      // laisse la ligne sans binaire -> le prochain run reessaiera (pas de blocage).
+      if (!isReadableFile(localPath)) throw new Error(`MODELO_PDF_INDISPONIBLE document ${document.id}`);
+      file = readLocalArchiveFile(localPath, document.mime_type);
+    } else {
+      writeLocalArchiveFile(localPath, file.buffer);
+    }
   } else {
     if (!consoleUrl) throw new Error(`URL Console absente pour document ${document.id}`);
     file = await hektorFetch(consoleUrl, { headers: { Accept: "*/*" } });
@@ -3530,6 +3728,7 @@ async function persistConsoleDocumentFile(dossier, document, options = {}) {
   const nextMetadata = {
     ...metadata,
     ...localArchiveMetadata(localPath),
+    ...(metadata.modelo ? { archived_updated_on: modeloUpdatedOn } : {}),
   };
 
   await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(document.id)}`, {
@@ -3556,6 +3755,77 @@ async function persistConsoleDocumentFile(dossier, document, options = {}) {
     bytes: file.buffer.length,
     sha256: digest,
   };
+}
+
+// --- ImmoSign : les 2 ZIP compagnons du document (Lot 1, 2026-08-18) ---
+// Un document ImmoSign lie a une procedure porte 3 fichiers, tous archives :
+//   1. le PDF courant           -> persistConsoleDocumentFile (storage_path, affichable)
+//   2. le ZIP de la procedure   -> ImmoSign-downloadProcedureZip  (contient le PDF signe)
+//   3. le ZIP des preuves       -> ImmoSign-downloadProofsByProcedure
+// Les deux ZIP sont archives BRUTS (demande Frederic) a cote du principal, et references
+// dans metadata_json.immosign_files. Ils sont IMMUABLES une fois la procedure creee :
+// on ne les retelecharge donc jamais si la copie locale est deja la.
+// Best-effort : un echec ici ne doit jamais faire tomber la sync documents.
+async function persistImmoSignCompanionFiles(dossier, document, options = {}) {
+  const metadata = document.metadata_json || {};
+  const modelo = metadata.modelo;
+  if (!modelo || modelo.kind !== "immosign" || !modelo.procedure_id) return null;
+  const procId = modelo.procedure_id;
+  const cloudWanted = Boolean(options.cloud);
+  const targets = [
+    { key: "procedure_zip", filename: `procedure-${procId}.zip`, url: `${XMLRPC_URL}?mode=ImmoSign-downloadProcedureZip&procedureId=${encodeURIComponent(procId)}` },
+    { key: "proofs_zip", filename: `preuves-${procId}.zip`, url: `${XMLRPC_URL}?mode=ImmoSign-downloadProofsByProcedure&procedureId=${encodeURIComponent(procId)}` },
+  ];
+  const stored = { ...(metadata.immosign_files || {}) };
+  let changed = false;
+
+  for (const target of targets) {
+    const localPath = localDocumentPath(document.hektor_annonce_id, document.id, `immosign/${target.filename}`);
+    const already = stored[target.key];
+    if (already && already.local_archive_path && isReadableFile(already.local_archive_path)) continue;
+
+    let buffer;
+    if (isReadableFile(localPath)) {
+      buffer = readLocalArchiveFile(localPath, "application/zip").buffer;
+    } else {
+      const res = await hektorFetch(target.url, { headers: { Accept: "*/*" } });
+      buffer = res.buffer;
+      // Hektor renvoie une page HTML (et non un ZIP) quand la procedure n'a pas encore
+      // de fichier a livrer : on ne stocke rien plutot qu'un faux ZIP.
+      if (!buffer || buffer.length < 4 || buffer.readUInt32LE(0) !== 0x04034b50) continue;
+      writeLocalArchiveFile(localPath, buffer);
+    }
+
+    const storagePath = `annonces/${document.hektor_annonce_id}/documents/${document.id}/immosign/${target.filename}`;
+    if (cloudWanted) await uploadStorageObject(storagePath, buffer, "application/zip");
+    stored[target.key] = {
+      filename: target.filename,
+      procedure_id: procId,
+      size: buffer.length,
+      sha256: sha256Buffer(buffer),
+      mime_type: "application/zip",
+      local_archive_path: localPath,
+      storage_bucket: cloudWanted ? STORAGE_BUCKET : null,
+      storage_path: cloudWanted ? storagePath : null,
+      downloaded_at: new Date().toISOString(),
+    };
+    changed = true;
+  }
+
+  if (!changed) return null;
+  // Relit la ligne pour fusionner sur le metadata le plus recent (persistConsoleDocumentFile
+  // vient de la patcher juste avant).
+  const fresh = await loadConsoleDocumentById(document.id).catch(() => null);
+  const md = (fresh && fresh.metadata_json) || metadata || {};
+  await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(document.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      metadata_json: { ...md, immosign_files: stored },
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return stored;
 }
 
 // --- PHOTOS : rapatriement du binaire (chantier d'independance, 2026-08-17) ---
@@ -3944,6 +4214,11 @@ async function pruneDeletedDocuments(job, dossier, entries) {
     if (r.metadata_json && r.metadata_json.signed_document) continue; // archive signee conservee
     if (!/^hektor_console/.test(src)) continue;                      // ne purge que les docs indexes Hektor
     if (presentHashes.has(r.hektor_document_id)) continue;           // doc encore present (force_transfert)
+    // Documents modelo (ImmoSign / "Mes documents") : ils n'ont pas de force_transfert.
+    // On teste leur presence REELLE sur le html qu'on vient de relire (id=modeloDocLine{docId}),
+    // pour ne jamais les purger sur un simple echec de parsing de section.
+    const modeloDocId = r.metadata_json && r.metadata_json.modelo && r.metadata_json.modelo.hektor_doc_id;
+    if (modeloDocId && chargeHtml.includes(`id="modeloDocLine${modeloDocId}"`)) continue;
     const hid = r.metadata_json && r.metadata_json.signature && r.metadata_json.signature.hektor_doc_id;
     if (hid && empreinteIds.has(String(hid))) continue;             // encore une empreinte (signe/en attente/annule)
     toDelete.push(r.id);
@@ -4060,10 +4335,40 @@ async function handleSyncConsoleDocuments(job) {
   const cloud = shouldKeepCloud(dossier);
   let localStored = 0;
   let cloudStored = 0;
+  let immosignCompanions = 0;
+  let modeloSkipped = 0;
   for (const row of rows) {
-    const result = await persistConsoleDocumentFile(dossier, row, { cloud });
+    const isModelo = Boolean(row.metadata_json && row.metadata_json.modelo);
+    let result;
+    try {
+      result = await persistConsoleDocumentFile(dossier, row, { cloud });
+    } catch (error) {
+      // Documents modelo uniquement : le generateur PDF Hektor est instable. Un echec
+      // sur UN document ne doit pas priver l'annonce de tous les autres -> on saute et
+      // le prochain run reessaiera. Les documents deposes gardent la remontee d'erreur.
+      if (!isModelo) throw error;
+      modeloSkipped += 1;
+      await logJob(job.id, "hektor", "running", "PDF modelo indisponible, reessai au prochain run", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        document_id: row.id,
+        document_name: row.document_name,
+        error: error && error.message ? error.message : String(error),
+      });
+      continue;
+    }
     localStored += result.local_path ? 1 : 0;
     cloudStored += result.cloud_available && cloud ? 1 : 0;
+    // ImmoSign (Lot 1) : les 2 ZIP compagnons (procedure signee + preuves).
+    // BEST-EFFORT : un echec ne doit pas faire tomber la sync du reste des documents.
+    try {
+      if (await persistImmoSignCompanionFiles(dossier, row, { cloud })) immosignCompanions += 1;
+    } catch (error) {
+      await logJob(job.id, "immosign", "running", "Recup fichiers ImmoSign compagnons echouee", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        document_id: row.id,
+        error: error && error.message ? error.message : String(error),
+      });
+    }
   }
   // Réconcilie l'état signature (incl. signés qui perdent leur force_transfert) + récupère le PDF signé.
   // BEST-EFFORT : ne doit JAMAIS faire échouer la sync documents (donc le run quotidien). Try/catch.
@@ -4090,6 +4395,8 @@ async function handleSyncConsoleDocuments(job) {
     indexed: rows.length,
     local_stored: localStored,
     cloud_stored: cloudStored,
+    immosign_companions: immosignCompanions,
+    modelo_skipped: modeloSkipped,
     signed_fetched: signedFetched,
     pruned,
     cloud_policy: cloud ? "daily_cloud_scope" : "local_archive_only",
@@ -12549,4 +12856,4 @@ if (require.main === module) {
 }
 
 // Export pour tests/outils (n'affecte pas le service : lancé via `node console_job_worker.js`).
-module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml };
+module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries };
