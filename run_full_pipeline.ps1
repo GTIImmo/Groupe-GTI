@@ -327,7 +327,28 @@ if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt 0) {
     if ($HektorChauffageRefreshSession) {
         $hektorChauffageArgs += "--refresh-session-on-expired"
     }
-    Invoke-Step -Label "hektor chauffage delta" -Arguments $hektorChauffageArgs
+    # 2026-08-19 : etape rendue NON BLOQUANTE (meme patron que Matterport plus bas).
+    # POURQUOI. Le 19/08, ce scrape a echoue apres la panne de l'API Hektor de 03h00 --
+    # sa session Playwright etait morte. Comme il etait appele par Invoke-Step (bloquant),
+    # son `throw` a tue le run a l'etape 13 sur 23 : le ledger d'affaires, LES TROIS
+    # PUBLICATIONS VERS SUPABASE, Matterport, les liens RDV et l'export vitrine n'ont
+    # jamais tourne. L'app est restee sur les donnees de la veille, et il a fallu
+    # rattraper la publication a la main.
+    # Le chauffage est une etape de CONFORT : 50 fiches par nuit, avec un rattrapage
+    # automatique a 30 jours. Elle ne doit pas pouvoir bloquer la publication -- exactement
+    # le raisonnement deja applique a Matterport (cf. plus bas).
+    # -> 2 essais, non bloquant : sur echec final, une ligne WARN dans le log et le run
+    # se poursuit. Le rattrapage a 30 jours reprendra les fiches manquees.
+    # PAS de -WorkerKey : aucune cle chauffage n'existe dans app_worker_registry, et un
+    # heartbeat sur une cle absente ecrit dans le vide (PATCH ...?worker_key=eq.X renvoie
+    # 2xx avec 0 ligne modifiee). A ajouter au registre pour rendre l'echec visible dans
+    # l'ecran Sante.
+    $chauffageOk = $false
+    Invoke-OptionalStepWithRetry -Label "hektor chauffage delta" -Arguments $hektorChauffageArgs `
+        -MaxAttempts 2 -RetryDelaySeconds 60 -Succeeded ([ref]$chauffageOk)
+    if (-not $chauffageOk) {
+        Write-RunLog "WARN  hektor chauffage delta non execute cette nuit (echec non bloquant) - pipeline poursuivi ; rattrapage automatique a 30 jours"
+    }
 }
 else {
     Write-RunLog "SKIP hektor chauffage delta"
