@@ -954,6 +954,55 @@ function extractModeloDocumentEntries(html) {
   });
 }
 
+// --- EMPREINTE DU CONTENU DOCUMENTAIRE (2026-08-19) ---
+// Sert a repondre a UNE question : "le contenu documentaire de cette annonce a-t-il bouge ?".
+// Hektor ne datant pas les sous-entites (source_updated_at de l'annonce ne bouge PAS a l'ajout
+// d'un document : 91% des documents sont plus recents que la MAJ declaree de leur annonce),
+// c'est le seul signal fiable. Meme remede que le trou des recherches acquereur.
+//
+// CE QU'ELLE CONTIENT — strictement le CONTENU :
+//   - noms techniques des fichiers deposes      -> ajout / retrait / remplacement
+//   - identifiants des lignes modelo            -> nouveau mandat, nouveau bon de visite
+//   - identifiants de procedure                 -> APPARITION d'un cycle de signature
+//
+// CE QU'ELLE NE CONTIENT PAS, ET POURQUOI :
+//   - les marqueurs d'ETAT de signature (boutons relance/annuler/ceremonie, compteur x/y) :
+//     le suivi signature couvre deja ces transitions via sa propre regle ; les inclure ferait
+//     resynchroniser TOUS les documents de l'annonce a chaque signature intermediaire.
+//   - docBtnSign_ : visible uniquement en contexte negociateur. Une seule lecture faite dans un
+//     contexte derive invaliderait l'empreinte de tout le parc d'un coup.
+//   - le html brut : stable aujourd'hui (2 lectures = octet pour octet), mais une retouche
+//     cosmetique de Hektor invaliderait 56 867 empreintes. L'extraction ciblee y est insensible.
+function documentContentFingerprint(html) {
+  const source = String(html || "");
+  const depots = [...source.matchAll(/force_transfert\('[^']*\/([^'\/]+)'/g)].map((m) => m[1]);
+  const modelo = [...source.matchAll(/id="modeloDocLine(\d+)"/g)].map((m) => m[1]);
+  const procedures = [...source.matchAll(/(?:downloadProcedureFiles|downloadProofs|cancelProcedure|reminderProcedureSignatories)\(\s*['"]?(\d+)/g)].map((m) => m[1]);
+  const payload = JSON.stringify({
+    depots: [...new Set(depots)].sort(),
+    modelo: [...new Set(modelo)].sort(),
+    procedures: [...new Set(procedures)].sort(),
+  });
+  return crypto.createHash("sha1").update(payload).digest("hex").slice(0, 16);
+}
+
+// Ecriture best-effort : l'empreinte est un accelerateur, jamais une source de verite.
+// Un echec ne doit pas faire tomber la sync documents (au pire l'annonce sera resynchronisee).
+async function saveDocumentContentFingerprint(hektorAnnonceId, fingerprint) {
+  if (!hektorAnnonceId || !fingerprint) return;
+  const now = new Date().toISOString();
+  await supabaseRequest("app_console_document_fingerprint?on_conflict=hektor_annonce_id", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: JSON.stringify([{
+      hektor_annonce_id: String(hektorAnnonceId),
+      fingerprint,
+      checked_at: now,
+      synced_at: now,
+    }]),
+  });
+}
+
 function htmlAttrValue(html, attrName) {
   const escaped = String(attrName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`\\b${escaped}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, "i");
@@ -3400,7 +3449,7 @@ function isHektorLoginPage(text) {
   );
 }
 
-async function fetchConsoleDocumentEntries(hektorAnnonceId) {
+async function fetchConsoleDocumentEntries(hektorAnnonceId, out = null) {
   const id = encodeURIComponent(String(hektorAnnonceId));
   const endpoints = [
     {
@@ -3427,6 +3476,9 @@ async function fetchConsoleDocumentEntries(hektorAnnonceId) {
     // "Mes documents" : on les lit sur la reponse deja recuperee, sans appel de plus.
     if (endpoint.source === "hektor_console") {
       entries.push(...extractModeloDocumentEntries(result.text));
+      // Empreinte de contenu documentaire (out-parametre optionnel) : calculee sur le html
+      // deja en main, sert au futur run de detection. Aucun cout, aucun appel de plus.
+      if (out && typeof out === "object") out.fingerprint = documentContentFingerprint(result.text);
     }
   }
   return entries;
@@ -4111,28 +4163,39 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
   if (!dossier || !dossier.hektor_annonce_id) return 0;
   const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
   // GARDE-FOU : ne lit Hektor QUE s'il y a un mandat a traiter. Sinon on sort sans aucun appel Hektor.
+  // GARDE-FOU — REGLE "PROCEDURE EN COURS" (2026-08-19, spec Frederic).
+  // Un document n'est suivi en signature que s'il y a REELLEMENT quelque chose a suivre.
+  // Le suivi n'est pas une liste figee : un document ENTRE quand une procedure apparait
+  // (decouverte par le suivi documentaire, qui enregistre procedure_id) et SORT quand elle
+  // aboutit. Aucune table intermediaire : la regle ci-dessous suffit a le determiner.
+  //
+  // Remplace l'ancien critere base sur 'to_send'. Celui-ci signifiait "PDF signable", pas
+  // "envoye en signature" : n'importe quelle CNI deposee l'ouvrait, d'ou 2 104 annonces
+  // interrogees a chaque passage contre 242 avec la regle ci-dessous (mesure du 19/08/2026).
+  //
+  // Les deux familles sont couvertes : bloc ImmoSign (modelo.procedure_id) ET document depose
+  // envoye en signature (signature.procedure_id) — c'est le chemin du mandat PDF de l'app.
   const hasWork = existing.rows.some((r) => {
-    const sig = r.metadata_json && r.metadata_json.signature;
-    // AMORCE (2026-08-19) : un document ImmoSign indexe en root admin (Lot 1) arrive ici avec
-    // signature=null, car l'empreinte n'est lisible qu'en contexte negociateur. L'ancien gate se
-    // refermait donc dessus et l'etat n'etait JAMAIS lu : impossible d'apprendre qu'il y avait
-    // quelque chose a lire.
-    // On n'ouvre QUE sur les documents portant une procedure_id, c'est-a-dire reellement envoyes
-    // en signature. C'est la stricte intention du garde-fou ("un mandat a traiter") : un document
-    // ImmoSign jamais envoye n'a rien a lire, et comme il n'acquerra jamais de statut il
-    // maintiendrait le gate ouvert A VIE (mesure du 19/08/2026 : 120 documents sur 86 annonces).
-    // Une fois le statut ecrit, les regles ci-dessous reprennent seules la main.
-    const modelo = r.metadata_json && r.metadata_json.modelo;
-    if (modelo && modelo.kind === "immosign" && modelo.procedure_id && !(sig && sig.status)) return true;
-    if (!sig) return false;
-    if (sig.status === "pending") return true;
-    if (gateMode === "all" && sig.status === "to_send") return true;
-    // Voie manuscrite (Lot 7) : un mandat signe A LA MAIN (source 'manuscrite') n'a pas de
-    // procedure ImmoSign a rapatrier -> ne PAS declencher de lecture Hektor pour recuperer un
-    // signed_document qui n'existera jamais. On ne garde le gate 'signed' que pour les signatures
-    // electroniques (dont le PDF signe est a telecharger).
-    if (gateMode === "all" && sig.status === "signed" && sig.source !== "manuscrite" && !(r.metadata_json && r.metadata_json.signed_document)) return true;
-    return false;
+    const md = r.metadata_json || {};
+    const sig = md.signature || null;
+    const statut = (sig && sig.status) || "";
+
+    // Voie manuscrite (Lot 7) : signe A LA MAIN, aucune procedure a rapatrier. Exclu d'office,
+    // sinon il maintiendrait le garde-fou ouvert a vie sur son annonce.
+    if (sig && sig.source === "manuscrite") return false;
+
+    // Etats terminaux : plus rien a lire chez Hektor.
+    if (statut === "cancelled") return false;
+    if (statut === "signed" && md.signed_document) return false;
+
+    // Une procedure doit exister. Sans elle, le document est au mieux "signable" : rien a suivre.
+    const procedure = (md.modelo && md.modelo.procedure_id) || (sig && sig.procedure_id) || null;
+    if (!procedure) return false;
+
+    if (gateMode === "all") return true;
+    // Read-through (ouverture d'une fiche) : on garde le perimetre resserre d'origine —
+    // uniquement les signatures en cours, ou d'etat encore inconnu (donc potentiellement en cours).
+    return statut === "pending" || statut === "";
   });
   if (!hasWork) return 0;
 
@@ -4385,8 +4448,9 @@ async function handleSyncConsoleDocuments(job) {
   const dossier = await loadDossier(job);
   await logJob(job.id, "hektor", "running", "Lecture documents Console", { hektor_annonce_id: dossier.hektor_annonce_id });
   let entries;
+  const lecture = {};
   try {
-    entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+    entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id, lecture);
   } catch (error) {
     if (!isHektorForbiddenError(error)) throw error;
     // 403 = bien dans un contexte negociateur que la session de base ne voit pas
@@ -4397,7 +4461,7 @@ async function handleSyncConsoleDocuments(job) {
       error: error.message || String(error),
     });
     await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true, forceRemoteSwitch: true });
-    entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+    entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id, lecture);
   }
   const rows = await upsertConsoleDocuments(dossier, entries);
   const cloud = shouldKeepCloud(dossier);
@@ -4459,11 +4523,34 @@ async function handleSyncConsoleDocuments(job) {
       error: error && error.message ? error.message : String(error),
     });
   }
+  // Empreinte du contenu documentaire : ecrite APRES la synchro, et UNIQUEMENT si celle-ci a ete
+  // COMPLETE. Un PDF modelo saute (generateur Hektor en erreur) laisse l'annonce sans empreinte :
+  // le run de detection la considerera comme "a traiter" et reessaiera. Poser l'empreinte ici
+  // reviendrait a graver "etat traite" alors qu'un document manque, et plus rien ne reviendrait
+  // dessus. Regle jumelle cote detection : PAS d'empreinte = annonce a synchroniser.
+  // (Les echecs durs, eux, levent une exception : le return n'est jamais atteint, donc rien n'est
+  // ecrit — meme protection.)
+  try {
+    if (modeloSkipped === 0) {
+      await saveDocumentContentFingerprint(dossier.hektor_annonce_id, lecture.fingerprint);
+    } else {
+      await logJob(job.id, "hektor", "running", "Empreinte non posee : synchro incomplete", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        modelo_skipped: modeloSkipped,
+      });
+    }
+  } catch (error) {
+    await logJob(job.id, "hektor", "running", "Ecriture empreinte documentaire ignoree (best-effort)", {
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      error: error && error.message ? error.message : String(error),
+    });
+  }
   return {
     indexed: rows.length,
     local_stored: localStored,
     cloud_stored: cloudStored,
     immosign_companions: immosignCompanions,
+    fingerprint: lecture.fingerprint || null,
     modelo_skipped: modeloSkipped,
     signed_fetched: signedFetched,
     pruned,
