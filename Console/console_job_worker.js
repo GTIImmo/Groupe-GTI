@@ -4091,6 +4091,21 @@ async function upsertSyntheticSignedRow(dossier, sig) {
 // gateMode: "pending" = ne s'active QUE si un mandat est EN ATTENTE (read-through a l'ouverture) ;
 //           "all"     = aussi "a envoyer" + "signe pas encore recupere" (run quotidien, filet de securite
 //                       qui rattrape le cas a_envoyer->signe le meme jour, le signe perdant son force_transfert).
+// Remet la session en administrateur apres une lecture d'empreintes en contexte negociateur.
+// BEST-EFFORT : un echec de retour ne doit pas faire tomber la sync documents ; la session
+// resterait alors en contexte negociateur, c'est-a-dire exactement l'etat qui avait cours
+// avant ce correctif (donc jamais pire qu'avant).
+async function restoreAdminAfterSignatureRead(job, logCat, dossier) {
+  try {
+    await ensureAdminHektorSession(job, "retour_admin_apres_lecture_signature", { requireRootAdmin: true });
+  } catch (error) {
+    await logJob(job.id, logCat, "running", "Retour session admin apres lecture signature echoue", {
+      hektor_annonce_id: dossier && dossier.hektor_annonce_id ? String(dossier.hektor_annonce_id) : null,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
+
 async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMode = "all") {
   let signedFetched = 0;
   if (!dossier || !dossier.hektor_annonce_id) return 0;
@@ -4098,6 +4113,17 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
   // GARDE-FOU : ne lit Hektor QUE s'il y a un mandat a traiter. Sinon on sort sans aucun appel Hektor.
   const hasWork = existing.rows.some((r) => {
     const sig = r.metadata_json && r.metadata_json.signature;
+    // AMORCE (2026-08-19) : un document ImmoSign indexe en root admin (Lot 1) arrive ici avec
+    // signature=null, car l'empreinte n'est lisible qu'en contexte negociateur. L'ancien gate se
+    // refermait donc dessus et l'etat n'etait JAMAIS lu : impossible d'apprendre qu'il y avait
+    // quelque chose a lire.
+    // On n'ouvre QUE sur les documents portant une procedure_id, c'est-a-dire reellement envoyes
+    // en signature. C'est la stricte intention du garde-fou ("un mandat a traiter") : un document
+    // ImmoSign jamais envoye n'a rien a lire, et comme il n'acquerra jamais de statut il
+    // maintiendrait le gate ouvert A VIE (mesure du 19/08/2026 : 120 documents sur 86 annonces).
+    // Une fois le statut ecrit, les regles ci-dessous reprennent seules la main.
+    const modelo = r.metadata_json && r.metadata_json.modelo;
+    if (modelo && modelo.kind === "immosign" && modelo.procedure_id && !(sig && sig.status)) return true;
     if (!sig) return false;
     if (sig.status === "pending") return true;
     if (gateMode === "all" && sig.status === "to_send") return true;
@@ -4109,6 +4135,33 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
     return false;
   });
   if (!hasWork) return 0;
+
+  // CONTEXTE NEGOCIATEUR (2026-08-19) — indispensable et jusqu'ici involontaire.
+  // Hektor ne rend l'empreinte de signature (docBtnSign_ / is__successed / editProcedure) QUE
+  // dans le contexte du negociateur du bien ; en root admin (idUser 4) elle est masquee, donc
+  // buildSignatureMapFromHtml ressort vide et cette fonction ne fait rien.
+  // Jusqu'ici elle ne reussissait que par EFFET DE BORD : upload_document_to_hektor et
+  // sync_hektor_photos basculent la session en contexte negociateur sans jamais la restaurer,
+  // et les syncs documents qui suivaient heritaient de ce contexte (verifie sur le 17/08/2026 :
+  // les 36 mandats rapatries l'ont tous ete dans ces fenetres). On rend la bascule EXPLICITE,
+  // puis on restaure la session admin pour que l'etat ne derive plus d'un job a l'autre.
+  // required:false -> si aucun negociateur n'est resolu, on lit dans la session courante
+  // (comportement d'avant) plutot que de faire echouer la sync documents.
+  let contextSwitched = false;
+  try {
+    const switched = await ensureHektorExecutionContext(job, dossier, {}, {
+      preferDossierOwner: true,
+      preferRequester: false,
+      required: false,
+    });
+    contextSwitched = Boolean(switched);
+  } catch (error) {
+    await logJob(job.id, logCat, "running", "Bascule contexte negociateur impossible, lecture en session courante", {
+      hektor_annonce_id: String(dossier.hektor_annonce_id),
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+
   let chargeHtml;
   try {
     chargeHtml = (await hektorFetch(`${XMLRPC_URL}?mode=chargeannonce_Documents&id=${encodeURIComponent(String(dossier.hektor_annonce_id))}&lang=fr`)).text;
@@ -4117,14 +4170,28 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
       hektor_annonce_id: String(dossier.hektor_annonce_id),
       error: error && error.message ? error.message : String(error),
     });
+    if (contextSwitched) await restoreAdminAfterSignatureRead(job, logCat, dossier);
     return 0;
   }
   const sigMap = buildSignatureMapFromHtml(chargeHtml);
-  if (!sigMap.size) return 0;
+  if (!sigMap.size) {
+    if (contextSwitched) await restoreAdminAfterSignatureRead(job, logCat, dossier);
+    return 0;
+  }
   const byDocId = new Map();
   for (const r of existing.rows) {
     const hid = r.metadata_json && r.metadata_json.signature && r.metadata_json.signature.hektor_doc_id;
     if (hid) byDocId.set(String(hid), r);
+  }
+  // Les lignes du bloc ImmoSign indexees par le Lot 1 portent l'id Hektor du document dans
+  // metadata_json.modelo.hektor_doc_id, PAS dans signature.hektor_doc_id (qui est vide tant
+  // qu'aucun etat n'a ete lu). Sans cette seconde passe, elles ne sont pas reconnues comme
+  // "ligne suivie" et l'etat signe part creer une ligne synthetique -> DOUBLON.
+  // La passe signature ci-dessus reste prioritaire : on ne complete que les ids absents.
+  for (const r of existing.rows) {
+    const modelo = r.metadata_json && r.metadata_json.modelo;
+    if (!modelo || modelo.kind !== "immosign" || !modelo.hektor_doc_id) continue;
+    if (!byDocId.has(String(modelo.hektor_doc_id))) byDocId.set(String(modelo.hektor_doc_id), r);
   }
   const usedCandidateIds = new Set();
   for (const sig of sigMap.values()) {
@@ -4189,6 +4256,7 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
       }
     }
   }
+  if (contextSwitched) await restoreAdminAfterSignatureRead(job, logCat, dossier);
   return signedFetched;
 }
 
