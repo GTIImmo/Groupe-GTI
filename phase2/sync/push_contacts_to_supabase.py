@@ -518,6 +518,32 @@ def delete_contacts_except_dirty(
     return client.delete_rows_by_filter("app_contact_current", "hektor_contact_id", safe_contact_ids, batch_size)
 
 
+def fetch_remote_rows_for_contacts(
+    client: "SupabaseRestClient",
+    table: str,
+    key_col: str,
+    contact_ids: list[str],
+    extra_cols: tuple[str, ...] = (),
+) -> list[dict[str, Any]]:
+    """Lignes actuellement presentes dans Supabase pour ces contacts (push CIBLE).
+
+    Sert au correctif 2026-08-18 : au lieu de supprimer en bloc AVANT de reposer, on
+    repose d'abord puis on ne supprime QUE les cles qui n'ont pas ete reposees (donc
+    reellement disparues de Hektor). Lecture par tranches de 100 contacts pour borner
+    la taille de l'URL et de la reponse.
+    """
+    cols = ",".join(dict.fromkeys((key_col, "hektor_contact_id", *extra_cols)))
+    out: list[dict[str, Any]] = []
+    for batch in chunked([str(value) for value in contact_ids], 100):
+        encoded = ",".join(urllib.parse.quote(value, safe="") for value in batch)
+        path = f"{table}?select={cols}&hektor_contact_id=in.({encoded})"
+        rows = client.request(method="GET", path=path) or []
+        for row in rows:
+            if isinstance(row, dict):
+                out.append(row)
+    return out
+
+
 def main() -> int:
     args = parse_args()
     contact_ids = explicit_contact_ids(args.contact_id)
@@ -660,44 +686,95 @@ def main() -> int:
                 if table != "app_contact_current":
                     continue
                 for row in rows:
-                    prev = app_owned.get(str(row.get("hektor_contact_id")))
-                    if not prev:
-                        continue
-                    for field, value in prev.items():
-                        if value is not None and value != "":
-                            row[field] = value
-    if contact_ids:
-        # app_contact_current = 1 ligne par contact (PK hektor_contact_id), reinseree en
-        # upsert merge-duplicates -> elle se remplace EN PLACE. NE PAS la supprimer quand on
-        # s'apprete a la reposer, sinon fenetre transitoire ou le contact disparait du listing
-        # + sa fiche se ferme (meme bug que l'annonce). On ne supprime QUE les contacts absents
-        # de la repose (reellement retires/ineligibles), et jamais les dirty (deja exclus de loaded).
-        present_contact_ids = {
-            str(row.get("hektor_contact_id"))
-            for table, rows in loaded if table == "app_contact_current"
-            for row in rows
-        }
-        for table in ["app_contact_current", "app_contact_relation_current", "app_contact_search_current"]:
-            if table == "app_contact_search_current" and dirty_search_pairs:
-                deleted_results[table] = delete_searches_except_dirty(client, contact_ids, dirty_search_pairs)
-            elif table == "app_contact_current":
-                to_delete = [
-                    cid for cid in contact_ids
-                    if str(cid) not in present_contact_ids and str(cid) not in dirty_contact_ids
-                ]
-                if to_delete:
-                    deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", to_delete, args.batch_size)
-            else:
-                deleted_results[table] = client.delete_rows_by_filter(table, "hektor_contact_id", contact_ids, args.batch_size)
-    else:
+                    # Correctif 2026-08-18. PostgREST exige que TOUTES les lignes d'un meme
+                    # envoi portent exactement les memes cles, sinon il refuse le lot entier
+                    # (PGRST102 "All object keys must match"). L'ancienne version n'ajoutait
+                    # ces 3 champs qu'aux contacts qui en portaient une valeur -> lot
+                    # heterogene des qu'un seul des 285 contacts concernes s'y trouvait ->
+                    # POST refuse APRES le DELETE -> recherches supprimees et jamais reposees.
+                    # Degat mesure : 4 lots sur 13 en echec chaque nuit depuis le 01/08,
+                    # 1104 recherches actives absentes de Supabase (27,9%) et 13384
+                    # rapprochements orphelins. On ecrit donc les 3 champs sur TOUTES les
+                    # lignes, a vide quand la valeur n'existe pas.
+                    # /!\ Le garde-fou `if app_owned:` ci-dessus reste INDISPENSABLE : si la
+                    # relecture Supabase echoue, on ne touche a rien (sans lui, on ecrirait
+                    # des vides partout et on effacerait les valeurs des 285 contacts).
+                    prev = app_owned.get(str(row.get("hektor_contact_id"))) or {}
+                    for field in APP_OWNED_CONTACT_FIELDS:
+                        value = prev.get(field)
+                        row[field] = value if value not in (None, "") else None
+    # Branche BULK (run de nuit) : inchangee. Elle ne supprime que les lignes disparues de
+    # la couche locale (stale), calculees a partir de l'etat de push -> pas de "vidage".
+    if not contact_ids:
         for table, stale_row_keys in stale_by_table.items():
             column = key_column(table)
             if column is None:
                 continue
             deleted_results[table] = client.delete_rows_by_key(table, column, stale_row_keys, args.batch_size)
             deleted_state[table] = stale_row_keys
+
+    # Correctif 2026-08-18 (filet) : on REPOSE D'ABORD, on supprime ENSUITE.
+    # Avant, la branche ciblee supprimait en bloc puis reposait : si la repose echouait
+    # (cf. PGRST102), les lignes restaient supprimees. Desormais un echec de repose ne
+    # detruit plus rien -- au pire Supabase garde l'etat precedent.
     for table, rows in loaded:
         results[table] = client.upsert_rows(table, rows, args.batch_size)
+
+    if contact_ids:
+        # app_contact_current = 1 ligne par contact (PK hektor_contact_id), reinseree en
+        # upsert merge-duplicates -> elle se remplace EN PLACE. On ne supprime QUE les contacts
+        # absents de la repose (reellement retires/ineligibles), et jamais les dirty
+        # (deja exclus de loaded).
+        present_contact_ids = {
+            str(row.get("hektor_contact_id"))
+            for table, rows in loaded if table == "app_contact_current"
+            for row in rows
+        }
+        to_delete = [
+            cid for cid in contact_ids
+            if str(cid) not in present_contact_ids and str(cid) not in dirty_contact_ids
+        ]
+        if to_delete:
+            deleted_results["app_contact_current"] = client.delete_rows_by_filter(
+                "app_contact_current", "hektor_contact_id", to_delete, args.batch_size
+            )
+
+        # Relations et recherches : au lieu de supprimer toutes les lignes de ces contacts,
+        # on ne supprime que les cles PRESENTES dans Supabase et ABSENTES de la repose --
+        # c'est-a-dire celles reellement disparues de Hektor.
+        # /!\ Les recherches "dirty" (editees dans l'app, en attente de push) sont volontairement
+        # exclues de `loaded` : il faut donc les proteger explicitement, sinon ce calcul les
+        # considererait comme disparues et les supprimerait.
+        for table in ("app_contact_relation_current", "app_contact_search_current"):
+            col = key_column(table)
+            if col is None:
+                continue
+            is_search = table == "app_contact_search_current"
+            reposed = {
+                str(row.get(col))
+                for loaded_table, rows in loaded if loaded_table == table
+                for row in rows
+                if row.get(col) is not None
+            }
+            remote_rows = fetch_remote_rows_for_contacts(
+                client, table, col, contact_ids,
+                extra_cols=("search_index",) if is_search else (),
+            )
+            stale_keys: list[str] = []
+            for row in remote_rows:
+                key = str(row.get(col) or "")
+                if not key or key in reposed:
+                    continue
+                if is_search and dirty_search_pairs:
+                    try:
+                        pair = (str(row.get("hektor_contact_id")), int(row.get("search_index")))
+                    except (TypeError, ValueError):
+                        pair = None
+                    if pair is not None and pair in dirty_search_pairs:
+                        continue
+                stale_keys.append(key)
+            if stale_keys:
+                deleted_results[table] = client.delete_rows_by_key(table, col, stale_keys, args.batch_size)
     if contact_stats is not None:
         results[CONTACT_STATS_TABLE] = client.upsert_rows(CONTACT_STATS_TABLE, [contact_stats], 1)
     if deleted_state:
