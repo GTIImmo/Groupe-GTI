@@ -9,15 +9,27 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 $stamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $log = Join-Path $logDir "recherches_actives_$stamp.log"
 Start-Transcript -Path $log -Append | Out-Null
+$runFailed = $false
 try {
     Write-Output "=== Recherches actives demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
     & $py (Join-Path $root "phase2\sync\sync_active_searches.py")
-    Write-Output "=== Recherches actives termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $LASTEXITCODE) ==="
+    $code = $LASTEXITCODE
+    Write-Output "=== Recherches actives termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $code) ==="
+    if ($code -ne 0) { $runFailed = $true }
 } catch {
     Write-Output "=== ERREUR recherches actives : $_ ==="
+    $runFailed = $true
 } finally {
     Stop-Transcript | Out-Null
     Get-ChildItem $logDir -Filter "recherches_actives_*.log" -ErrorAction SilentlyContinue |
         Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } |
         Remove-Item -Force -ErrorAction SilentlyContinue
 }
+
+# Correctif 2026-08-19 : PROPAGER l'echec au Planificateur de taches.
+# sync_active_searches.py rend 1 des qu'un lot echoue, mais ce code n'etait
+# qu'affiche : le script sortait en 0, Windows enregistrait un succes, et la sonde
+# concluait "0 en anomalie". C'est CE mecanisme qui a cache pendant 18 jours
+# (01/08 -> 19/08) l'echec de 4 lots sur 13 chaque nuit, et avec lui la perte de
+# 1104 recherches actives sur 3952 (27,9%) et 13384 rapprochements orphelins.
+if ($runFailed) { exit 1 }
