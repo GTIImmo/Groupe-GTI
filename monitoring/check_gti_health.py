@@ -80,6 +80,8 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         # par jour (13 205 -> 13 217). Le seuil de 2 % (~265 lignes) est donc 20x le bruit
         # normal, et bien en dessous de l'incident (+357). growth_abs=150 en second garde-fou.
         "key": "data.actives_croissance",
+        # CRITICAL : une anomalie de perimetre fausse tout ce que voit le negociateur.
+        "severity": "critical",
         "label": "Annonces actives (croissance anormale)",
         "table": "app_dossier_current",
         "params": {"archive": "eq.0"},
@@ -150,6 +152,8 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     # donc check_console_jobs ne les voit PAS -> ces sentinelles comblent le trou.
     {
         "key": "data.annonce_conflit",
+        # CRITICAL : une edition bloquee = du travail negociateur perdu en silence.
+        "severity": "critical",
         "label": "Editions annonce bloquees (conflit Hektor)",
         "table": "app_annonce_pending",
         "params": {"conflict": "eq.true"},
@@ -158,6 +162,8 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     },
     {
         "key": "data.annonce_partielle",
+        # CRITICAL : un champ ignore au push = divergence app/Hektor invisible.
+        "severity": "critical",
         "label": "Editions annonce incompletes (champ ignore)",
         "table": "app_annonce_pending",
         "params": {"partial": "eq.true"},
@@ -166,6 +172,8 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     },
     {
         "key": "data.annonce_push_bloque",
+        # CRITICAL : 5 echecs -> conflict -> suppression a 24 h = la saisie disparait.
+        "severity": "critical",
         "label": "Push annonce en echec repete",
         "table": "app_annonce_pending",
         "params": {"push_attempts": "gte.3"},
@@ -880,10 +888,18 @@ class Monitor:
     def _evaluate_sentinel(self, sentinel: dict[str, Any], count: int) -> tuple[str, str, dict[str, Any]]:
         label = sentinel["label"]
         rule = sentinel["rule"]
+        # 2026-08-19 : la severite est desormais REGLABLE par sentinelle (defaut "warning",
+        # comportement historique inchange). Avant, toute anomalie "absolute" ou "growth"
+        # renvoyait "warning" EN DUR -- or l'alerte (email) ne part que sur une bascule vers
+        # "critical" (cf. newly_critical dans run()). Les sentinelles qui detectent une PERTE
+        # DE TRAVAIL UTILISATEUR ne pouvaient donc structurellement jamais alerter : elles
+        # s'affichaient dans l'ecran Sante et rien de plus. Constate le 19/08 -- les trois
+        # sentinelles d'edition d'annonce sont bien placees, il ne leur manquait que ca.
+        breach = str(sentinel.get("severity", "warning"))
         if rule == "absolute":
             max_v = int(sentinel["max"])
             if count > max_v:
-                return "warning", f"{label}: {count} (seuil {max_v})", {"rule": rule, "threshold": max_v}
+                return breach, f"{label}: {count} (seuil {max_v})", {"rule": rule, "threshold": max_v}
             return "ok", f"{label}: {count} (seuil {max_v})", {"rule": rule, "threshold": max_v}
         previous = self._previous_sentinel_count(sentinel["key"])
         if previous is None:
@@ -892,7 +908,7 @@ class Monitor:
             growth_pct = float(sentinel.get("growth_pct", 15))
             growth_abs = int(sentinel.get("growth_abs", 0))
             if count > previous * (1 + growth_pct / 100) and (count - previous) >= growth_abs:
-                return "warning", f"{label}: {count} (etait {previous}, +{count - previous})", {"rule": rule, "previous": previous, "growth_pct": growth_pct}
+                return breach, f"{label}: {count} (etait {previous}, +{count - previous})", {"rule": rule, "previous": previous, "growth_pct": growth_pct}
             return "ok", f"{label}: {count} (prec. {previous})", {"rule": rule, "previous": previous}
         if rule == "drop":
             drop_pct = float(sentinel.get("drop_pct", 12))
@@ -900,7 +916,7 @@ class Monitor:
             if count < floor:
                 return "critical", f"{label}: {count} sous le plancher {floor}", {"rule": rule, "previous": previous, "floor": floor}
             if count < previous * (1 - drop_pct / 100):
-                return "warning", f"{label}: chute {previous} -> {count}", {"rule": rule, "previous": previous, "drop_pct": drop_pct}
+                return breach, f"{label}: chute {previous} -> {count}", {"rule": rule, "previous": previous, "drop_pct": drop_pct}
             return "ok", f"{label}: {count} (prec. {previous})", {"rule": rule, "previous": previous}
         return "ok", f"{label}: {count}", {"rule": rule}
 
