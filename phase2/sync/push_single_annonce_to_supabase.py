@@ -340,12 +340,68 @@ def diffusion_lock_expired(pending: dict[str, Any]) -> bool:
         return True
 
 
+# Tables Supabase clees sur app_dossier_id qui portent des donnees PROPRES a l'app
+# (Hektor ne les connait pas). Quand une annonce change d'identifiant local, elles
+# doivent SUIVRE : on re-pointe, on ne supprime jamais.
+#
+# Ne sont PAS dans cette liste, volontairement :
+#  - les tables entierement reecrites par l'envoi depuis le serveur local
+#    (app_dossier_current, app_dossier_detail_current, app_work_item_current,
+#     app_mandat_broadcast_current, app_contact_relation_current) : elles suivent seules ;
+#  - app_rapprochement : supprimee puis RECALCULEE plus bas.
+#
+# Audit du 19/08/2026 : la liste s'arretait a 5 tables sur 32. Consequence mesuree,
+# 600 annonces abimees depuis juin, dont 9 avis de valeur detaches de leur bien.
+# Les 3 tables sans filet (aucune colonne hektor_annonce_id pour les retrouver ensuite)
+# sont marquees SANS FILET : les oublier perd le lien definitivement.
+REPOINT_TABLES = (
+    "app_mandat_register_current",
+    "app_email_envoi_bien",
+    "app_bien_acquereur_statut",
+    "app_proposition",
+    "app_relance_rapprochement",
+    "app_notification",             # SANS FILET
+    "app_email_event",              # SANS FILET
+    "app_console_document",
+    "app_console_photo",
+    "app_appointment_public_link",
+    "app_appointment_request",
+    "app_dossier_estimation",
+    "app_dossier_cadastre",
+    "app_diffusion_request",
+    "app_diffusion_target",
+    "app_google_calendar_event_link",
+    "app_espace_message",
+    "app_espace_visite_request",
+    "app_agent_run",
+)
+
+# Historiques volumineux, valeur d'usage faible mais recalculables/journaux.
+# app_rapprochement_score_history est SANS FILET et pese 448 586 lignes.
+# Passer ce drapeau a False les abandonne au lieu de les deplacer -- decision
+# d'exploitation, a assumer par ecrit si elle change.
+REPOINT_HISTORIQUE_ENABLED = True
+REPOINT_TABLES_HISTORIQUE = (
+    "app_rapprochement_score_history",   # SANS FILET
+    "app_console_job",
+)
+
+
 def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: str, keep_app_dossier_id: int) -> int:
     """Durcissement anti-fantome : si la MEME annonce a d'autres app_dossier dans
     Supabase (l'id de dossier a change suite a une re-indexation), supprime ces
     doublons. Cible UNIQUEMENT l'annonce traitee (par hektor_annonce_id) -> sur.
-    Le registre eventuellement sous le fantome est re-pointe vers le bon dossier
-    (on ne perd jamais une ligne de journal)."""
+
+    Ordre imperatif :
+      1. RE-POINTER vers le bon dossier tout ce qui appartient a l'app
+         (REPOINT_TABLES) -- on ne perd jamais une ligne ;
+      2. supprimer les lignes fantomes des tables reecrites depuis le local ;
+      3. supprimer puis RECALCULER les rapprochements sous le bon dossier.
+
+    L'etape 1 doit couvrir TOUTES les tables app clees sur app_dossier_id : trois
+    d'entre elles (app_notification, app_email_event,
+    app_rapprochement_score_history) ne portent pas hektor_annonce_id, donc une
+    ligne oubliee n'est plus rattachable a quoi que ce soit."""
     rows = client._request(
         method="GET",
         path="app_dossier_current",
@@ -360,35 +416,29 @@ def reconcile_annonce_dossiers(client: SupabaseRestClient, hektor_annonce_id: st
     ]
     if not ghost_ids:
         return 0
+    failures: list[str] = []
+    tables = list(REPOINT_TABLES)
+    if REPOINT_HISTORIQUE_ENABLED:
+        tables += list(REPOINT_TABLES_HISTORIQUE)
     for gid in ghost_ids:
-        client._request(
-            method="PATCH",
-            path="app_mandat_register_current",
-            query={"app_dossier_id": f"eq.{gid}"},
-            payload={"app_dossier_id": int(keep_app_dossier_id)},
-        )
-        # Retours acquereur (coeur/pouce/motif) et statut de proposition : on RE-POINTE
-        # l'ancien app_dossier_id vers le bon (jamais supprimer). Sans ca, apres une
-        # re-indexation (nouvel id local), le retour du client et l'etat "propose/refuse"
-        # restaient colles au fantome -> l'annonce disparaissant du rapprochement, le
-        # retour devenait orphelin et invisible. Ces 2 tables n'etaient pas couvertes.
-        for feedback_table in (
-            "app_email_envoi_bien",
-            "app_bien_acquereur_statut",
-            "app_proposition",
-            "app_relance_rapprochement",
-        ):
+        for table in tables:
             try:
                 client._request(
                     method="PATCH",
-                    path=feedback_table,
+                    path=table,
                     query={"app_dossier_id": f"eq.{gid}"},
                     payload={"app_dossier_id": int(keep_app_dossier_id)},
                 )
-            except Exception:
-                # Best-effort : un conflit d'unicite (une ligne existe deja sous le bon
-                # id) ne doit jamais casser la reconciliation.
-                pass
+            except Exception as exc:
+                # Un conflit d'unicite (une ligne existe deja sous le bon id) ne doit
+                # jamais casser la reconciliation. Mais il n'est plus avale en silence :
+                # une passe de masse doit etre auditable ligne par ligne.
+                failures.append(f"{table}#{gid}: {exc}")
+    if failures:
+        print(
+            f"WARN reconcile_annonce_dossiers: {len(failures)} re-pointage(s) en echec "
+            f"-> {failures[:5]}"
+        )
     for table in (
         "app_mandat_broadcast_current",
         "app_work_item_current",
