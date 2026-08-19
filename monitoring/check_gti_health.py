@@ -41,6 +41,11 @@ WORKER_STALE_POLICY: dict[str, int | None] = {
 # Criticite des taches planifiees Windows surveillees (defaut = warning).
 TASK_CRITICALITY: dict[str, str] = {
     "GTI Quotidien": "critical",
+    # 2026-08-19 : la sauvegarde est le dernier filet du projet. Un seul volume C: porte le
+    # code, les bases sources ET les sauvegardes ; l'agent OVH couvre la perte du support,
+    # pas l'erreur logique. Si le niveau 1 (tables critiques, dont phase2.app_dossier) cesse
+    # de tourner, plus rien ne protege le mapping d'identite -> "critical", pas "warning".
+    "GTI Sauvegarde": "critical",
 }
 
 # Codes LastTaskResult consideres comme sains : succes / en cours / jamais lance.
@@ -1494,7 +1499,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--worker-stale-default-minutes", type=int, default=28 * 60)
     parser.add_argument(
         "--scheduled-tasks",
-        default="GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,GTI Relances Email",
+        # 2026-08-19 : ajout de "GTI Sauvegarde". Elle n'etait surveillee par personne alors
+        # qu'elle protege phase2.app_dossier -- le mapping d'identite dont la perte orpheline
+        # 43 objets sans qu'aucune erreur ne remonte. Elle peut desormais signaler son echec
+        # (propagation du code de sortie, commit a5e6292 + 981c686) : encore fallait-il que
+        # quelqu'un le lise.
+        default="GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,GTI Relances Email,GTI Sauvegarde",
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
