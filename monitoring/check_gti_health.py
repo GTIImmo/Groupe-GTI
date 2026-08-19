@@ -69,6 +69,25 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "min_floor": 500,
     },
     {
+        # 2026-08-19 : garde-fou sur la CROISSANCE du perimetre actif. Le 19/08, une reprise
+        # manuelle des etapes de publication a fait entrer 357 BROUILLONS dans le perimetre
+        # actif (13 220 -> 13 577) : l'exclusion des isDraft depend d'une variable
+        # d'environnement (APP_BROUILLON_BUCKET_ENABLED, posee par run_full_pipeline.ps1:191)
+        # qui n'avait pas ete reproduite. Aucune erreur, aucun avertissement -- juste 357
+        # brouillons presentes comme des annonces actives.
+        # data.actives_total ne surveille que la CHUTE : le sens inverse n'etait pas couvert.
+        # Calibrage : la variation reelle mesuree sur 11 jours (08/08 -> 18/08) est de +/-12
+        # par jour (13 205 -> 13 217). Le seuil de 2 % (~265 lignes) est donc 20x le bruit
+        # normal, et bien en dessous de l'incident (+357). growth_abs=150 en second garde-fou.
+        "key": "data.actives_croissance",
+        "label": "Annonces actives (croissance anormale)",
+        "table": "app_dossier_current",
+        "params": {"archive": "eq.0"},
+        "rule": "growth",
+        "growth_pct": 2,
+        "growth_abs": 150,
+    },
+    {
         "key": "data.actives_sans_nego",
         "label": "Annonces actives sans negociateur",
         "table": "app_dossier_current",
