@@ -19,28 +19,67 @@ def ensure_schema(con: sqlite3.Connection) -> None:
     con.commit()
 
 
+def ensure_app_dossier_absence_column(con: sqlite3.Connection) -> None:
+    """Ajoute absent_depuis si elle manque (bases anterieures au 19/08/2026)."""
+    columns = {row[1] for row in con.execute("PRAGMA table_info(app_dossier)")}
+    if "absent_depuis" not in columns:
+        con.execute("ALTER TABLE app_dossier ADD COLUMN absent_depuis TEXT")
+        con.commit()
+
+
 def reconcile_app_dossier(con: sqlite3.Connection) -> None:
+    """REGLE ABSOLUE : un dossier ne perd JAMAIS son identifiant.
+
+    app_dossier.id est un INTEGER PRIMARY KEY AUTOINCREMENT : supprimer une ligne
+    puis la recreer lui attribue un identifiant NEUF. Or 32 tables Supabase et
+    10 vues sont clees sur cet identifiant, SANS une seule cle etrangere pour
+    signaler la casse.
+
+    Le 05/06/2026 entre 13h39 et 14h, la suppression des "orphelins" a renumerote
+    55 426 dossiers en une heure. Supabase porte encore l'ancienne serie sur
+    12 428 lignes. La suppression a ete desactivee le 06/06 (commit 26515f9) a
+    titre provisoire ; le 19/08/2026 la regle est rendue definitive.
+
+    Sortir du perimetre actif ne veut pas dire disparaitre :
+    on MARQUE l'absence (absent_depuis), on ne supprime pas. Le retour dans le
+    perimetre efface la marque, et le dossier retrouve son identifiant d'origine.
+    """
+    ensure_app_dossier_absence_column(con)
     con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
     try:
-        orphan_ids = [
-            row[0]
-            for row in con.execute(
-                """
-                SELECT d.id
-                FROM app_dossier d
-                LEFT JOIN hektor.case_dossier_source src
-                    ON src.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
-                   AND src.annonce_source_status = 'present'
-                WHERE src.hektor_annonce_id IS NULL
-                """
-            ).fetchall()
-        ]
-        if not orphan_ids:
-            return
-
+        absents_sql = """
+            SELECT d.id
+            FROM app_dossier d
+            LEFT JOIN hektor.case_dossier_source src
+                ON src.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
+               AND src.annonce_source_status = 'present'
+            WHERE src.hektor_annonce_id IS NULL
+        """
+        marques = con.execute(
+            f"""
+            UPDATE app_dossier
+               SET absent_depuis = datetime('now')
+             WHERE absent_depuis IS NULL
+               AND id IN ({absents_sql})
+            """
+        ).rowcount
+        revenus = con.execute(
+            f"""
+            UPDATE app_dossier
+               SET absent_depuis = NULL
+             WHERE absent_depuis IS NOT NULL
+               AND id NOT IN ({absents_sql})
+            """
+        ).rowcount
+        con.commit()
+        total = con.execute(
+            "SELECT COUNT(*) FROM app_dossier WHERE absent_depuis IS NOT NULL"
+        ).fetchone()[0]
         print(
-            "WARNING bootstrap skipped orphan app_dossier cleanup: "
-            f"{len(orphan_ids)} row(s) would have been removed"
+            "INFO bootstrap app_dossier: "
+            f"{marques} sortie(s) marquee(s), {revenus} retour(s), "
+            f"{total} dossier(s) hors perimetre au total "
+            "- aucune suppression (regle du 19/08/2026)"
         )
         return
     finally:

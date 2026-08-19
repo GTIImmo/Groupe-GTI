@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS app_dossier (
     commercial_nom TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Sortie du perimetre actif : on MARQUE, on ne supprime jamais (regle du 19/08/2026,
+    -- cf. reconcile_app_dossier dans bootstrap_phase2.py). NULL = present.
+    absent_depuis TEXT,
     UNIQUE(hektor_annonce_id)
 );
 
