@@ -26,7 +26,8 @@ CONTRAINTE DISQUE (demande Frederic)
 Ne pas saturer le serveur. D'ou la strategie etagee :
   niveau 1 (quotidien)     : tables critiques uniquement -> quelques dizaines de Mo
   niveau 2 (hebdomadaire)  : instantane compacte de phase2.sqlite (porte l'identite)
-  niveau 3 (hebdomadaire)  : archive documents locaux (58 Mo)
+  niveau 3 (hebdomadaire)  : archive documents locaux -- DESACTIVE le 2026-08-18,
+                             couvert par OVH Backup Agent (voir DOCUMENTS_ARCHIVE_ENABLED)
   niveau 4 (sur demande)   : instantane complet de hektor.sqlite (3,9 Go) -- --full
 Retention glissante sur chaque niveau, purge automatique.
 
@@ -58,6 +59,21 @@ HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 DOCUMENTS_DIR = Path(os.environ.get("CONSOLE_LOCAL_ARCHIVE_ROOT", r"C:\Hektor\HektorConsoleDocuments"))
 BACKUP_ROOT = Path(os.environ.get("GTI_BACKUP_ROOT", r"C:\Hektor\Backups"))
+
+# --- Niveau 3 (archive zip des documents) : DESACTIVE le 2026-08-18 ---------------------
+# POURQUOI. L'agent OVH Backup Agent (Veeam) a ete installe le 18/08 a 17:08. Il sauvegarde
+# desormais l'INTEGRALITE du volume C: vers un vault de Roubaix -- le serveur etant a
+# Gravelines -- avec 14 jours d'immuabilite. Les 32,5 Go de documents sont donc deja hors
+# site, et l'archive zip n'en etait qu'une SECONDE copie SUR LE MEME DISQUE que la source :
+# elle ne couvrait ni la panne disque, ni l'incendie, ni le rancongiciel.
+# Son cout, en revanche, etait reel : les PDF ne se compressent qu'a 6,3 % (mesure), donc
+# ~30 Go par passe, 20 min de passe synchrone, et 4 copies coexistantes en retention 28 j
+# = ~122 Go -- desormais re-sauvegardees et facturees par Veeam (0,007 EUR HT/Go/mois).
+# A la cible de ~155 Go de documents (rattrapage des 318 000 photos), ce serait ~580 Go.
+# Les niveaux 1 (quotidien) et 2 (instantane phase2) ne sont PAS touches.
+# Etude complete : notice/NOTE_PLAN_SAUVEGARDE_2026-08-18.md section 1.2.
+# POUR REACTIVER : definir GTI_BACKUP_DOCUMENTS=1 dans l'environnement.
+DOCUMENTS_ARCHIVE_ENABLED = os.environ.get("GTI_BACKUP_DOCUMENTS", "0") == "1"
 
 # --- Niveau 1 : les tables dont la perte est irreversible ou tres couteuse ---------------
 # (source_key, table) ; l'ordre n'a pas d'importance.
@@ -229,7 +245,16 @@ def snapshot_database(source_path: Path, label: str, stamp: str, dry_run: bool) 
 
 def backup_documents(stamp: str, dry_run: bool) -> Path | None:
     """Niveau 3 : archive de l'arborescence documents locale (PDF signes / estimations
-    en 'local_only' n'ont AUCUNE source amont -> irrecuperables sans cette copie)."""
+    en 'local_only' n'ont AUCUNE source amont -> irrecuperables sans cette copie).
+
+    DESACTIVE depuis le 2026-08-18 : cette source amont existe maintenant (OVH Backup
+    Agent / Veeam, vault de Roubaix). Voir DOCUMENTS_ARCHIVE_ENABLED en tete de fichier.
+    """
+    if not DOCUMENTS_ARCHIVE_ENABLED:
+        log("Niveau 3 - archive documents DESACTIVEE (couverte par OVH Backup Agent depuis le 2026-08-18)")
+        log("  reactiver avec GTI_BACKUP_DOCUMENTS=1 -- cf. notice/NOTE_PLAN_SAUVEGARDE_2026-08-18.md")
+        return None
+
     if not DOCUMENTS_DIR.exists():
         log(f"Documents : repertoire absent ({DOCUMENTS_DIR}), ignore")
         return None
