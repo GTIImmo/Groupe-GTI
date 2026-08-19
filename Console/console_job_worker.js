@@ -13011,4 +13011,4 @@ if (require.main === module) {
 }
 
 // Export pour tests/outils (n'affecte pas le service : lancé via `node console_job_worker.js`).
-module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries };
+module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries, documentContentFingerprint };
