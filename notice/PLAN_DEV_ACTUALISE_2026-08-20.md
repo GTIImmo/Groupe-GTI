@@ -40,17 +40,31 @@ personne le voie. *Ce qui est utilisé est ce qui est vérifié.*
 | — | *Annonces* | *341 394* | *3 sur 56, dont 2 `null`* | *fait le 19/08* |
 | **2** | **Contacts** | ≈ 186 500 | **3 réels**, ≈ 10 fonctions à relire | **le plus élevé** |
 
-> **Pourquoi les contacts sont les plus risqués** : ils n'ont qu'une seule colonne, donc le code
-> n'a jamais eu à choisir. Il écrit `hektor_contact_id: cleanContactId` où `cleanContactId` vaut
-> `input.contactId` — aujourd'hui les deux sont identiques, **après la bascule ils ne le seraient
-> plus**. Les annonces, elles, ont deux colonnes depuis mars : le code a toujours dû choisir.
+> **Pourquoi les contacts sont les plus risqués** : ils n'ont qu'une seule colonne, donc **aucune
+> couche n'a jamais eu a faire la distinction**. Mesure du 20/08 :
+>
+> | | Front | Fonctions de la base | Worker |
+> |---|---|---|---|
+> | Annonces | 53 explicites / 56 | explicites | lit un champ nomme |
+> | **Contacts** | **3 ambigus**, ~10 fonctions | **6 fonctions ambigues** | lit un champ nomme |
+> | Transactions | 12 / 12 explicites | jamais envoyees | ne les connait pas |
+>
+> Les six fonctions concernees : `app_console_create_update_contact_job`,
+> `..._delete_contact_job`, `..._contact_search_job`, `..._update_contact_search_job`,
+> `..._delete_contact_search_job`, `..._update_mandant_contact_job` — toutes ecrivent
+> `hektor_contact_id` a partir de `target_contact_id`.
 
 ### La méthode, par objet — jamais deux à la fois
 
 ```
-   0. (contacts seulement) renommer ce qui est ambigu :
-      input.contactId -> input.hektorContactId la ou le champ part vers Hektor.
-      Aucun effet fonctionnel, verifie par la compilation.
+   0. AUDIT COMPLET DES POINTS D'APPEL, sur les TROIS couches -- prealable absolu.
+      Partout ou un identifiant part vers un worker, il doit etre lu dans la
+      colonne NOMMEE, jamais dans "la cle".
+        a) le front        : modales, api.ts, App.tsx
+        b) les fonctions de la base : les 14 app_console_create_*_job
+        c) le worker       : il lit deja un champ nomme -> a confirmer, pas a modifier
+      Puis renommer ce qui est ambigu : input.contactId -> input.hektorContactId.
+      Aucun effet fonctionnel aujourd'hui, verifie par la compilation.
    1. ajouter la case (Supabase + local, parent et tables enfants)
    2. renumeroter le stock  : table de correspondance conservee, essai a blanc
                               qui annule tout, transaction unique, verification chiffree
