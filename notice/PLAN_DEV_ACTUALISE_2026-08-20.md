@@ -199,7 +199,9 @@ les cas où le repli `list[0]` tombe juste.
 
 | | Quoi | Pourquoi maintenant |
 |---|---|---|
-| **1.1** | **Un échec de worker prévient l'utilisateur et le monitoring** | **indispensable** : un envoi raté laisse une annonce en ligne au mauvais prix |
+| **R1** | **Rebrancher ce qui est irremplaçable** — propositions, relances, retours acquéreur, envois, notifications — par *(contact + search_index)* | **URGENT** : une proposition sur deux a déjà perdu son lien, et rien ne peut la reconstruire |
+| **R2** | **Nettoyer le recalculable** — 1 373 rapprochements + 11 966 lignes d'historique | sans risque, **mais seulement après R1** |
+| **1.1** | ~~Un échec de worker prévient l'utilisateur et le monitoring~~ **FAIT le 20/08** (`48e475a`) | **indispensable** : un envoi raté laisse une annonce en ligne au mauvais prix |
 | **1.2** | **Les recherches acquéreur sont enregistrées** dans l'app | seul endroit où une saisie se perd |
 | **1.3** | Le numéro Hektor d'**annonce** a le droit d'être vide | ouvre la création app-first d'annonce |
 | **1.4** | **Identité des transactions** — ajouter la case, renuméroter ≈ 29 100 lignes, **puis la case Hektor a le droit d'être vide** | **le plus sûr des trois** : 0 point d'appel ambigu. Débloque la modale de statut, qui crée offres, compromis et ventes |
@@ -252,6 +254,30 @@ les cas où le repli `list[0]` tombe juste.
   édition — **1 270 rapprochements déjà orphelins**. C'est la seule clé structurellement fausse.
 - **3.9** — **Ménage** : `app_contact_override` (vide, non écrite), `app_console_create_update_contact_job`
   (remplacée par l'optimiste), tables `_v1` vides
+
+---
+
+## CHANTIER 3bis — Les recherches deviennent tiennes
+
+**Quatre portes à fermer** — et c'est l'étape qui rend le problème de clé **sans objet** :
+
+| | Porte | Fréquence |
+|---|---|---|
+| 1 | Run dédié `sync_active_searches` | 03:00 |
+| 2 | Run quotidien — `push_contacts` **supprime puis réécrit** | 05:30 |
+| 3 | **Read-through** — le MÊME code, avec `--contact-id` | à chaque ouverture de fiche |
+| 4 | Les 3 travaux sortants `*_hektor_contact_search` | à l'édition |
+
+**Deux préalables obligatoires :**
+
+| | |
+|---|---|
+| **R3** | **Corriger le modèle « au moins »** — la modale n'expose que des minimums, le worker sait envoyer 20 critères. Aujourd'hui le run de nuit rattrape ; après la coupure, ce qui n'est pas stocké est **perdu** |
+| **R4** | **Mesurer** combien de recherches Hektor portent des critères invisibles dans la modale |
+
+> **Une fois les quatre portes fermées, plus personne ne recalcule le hachage : la clé cesse de
+> bouger toute seule.** Le défaut identifié trois fois depuis juin disparaît **sans avoir été
+> corrigé** — c'est la solution la plus économique du dossier.
 
 ---
 
