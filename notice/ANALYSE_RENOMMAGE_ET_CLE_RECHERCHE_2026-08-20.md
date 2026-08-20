@@ -169,6 +169,33 @@ subissent, elles ne la fabriquent pas : elles suivent les rapprochements.
 
 ---
 
+## 2.6 Le fond : il y a **deja** deux haches sur chaque recherche
+
+Verifie dans `app_contact_supabase_push_state` (base locale) :
+
+| Table | Nom de la ligne (`row_key`) | Empreinte (`payload_hash`) |
+|---|---|---|
+| `app_contact_current` | `100030` -- **un numero** | `03dd0f0f5e96...` |
+| `app_contact_search_current` | `001697ad4134b105219d5549` -- **un hache** | `742548023fb0...` |
+
+**L'empreinte de contenu est deja calculee et stockee pour les 3 962 recherches.**
+Elle n'est jamais consultee : la boucle de detection
+(`push_contacts_to_supabase.py:206-211`) fait
+
+```python
+known_hashes.get( row_key(row) ) != stable_payload_hash(row)
+```
+
+et pour une recherche, `row_key` **est** le hache du contenu. Quand le contenu change, le nom
+change avec lui : `known_hashes.get(nouveau_nom)` renvoie `None`, il n'y a rien a comparer,
+la ligne est traitee comme neuve -- et l'ancienne comme disparue, donc supprimee.
+
+> Le chantier ne consiste donc pas a **ajouter** un mecanisme, mais a **debloquer** celui qui
+> est deja la : remplacer le nom par un numero, et laisser l'empreinte faire son travail --
+> exactement ce que fait deja `app_contact_current`, dans la meme boucle, depuis toujours.
+
+---
+
 # Ce que je retiens
 
 | | Verdict |
