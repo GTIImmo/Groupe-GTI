@@ -16,6 +16,51 @@ identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (2
 
 ---
 
+## LES TÂCHES, DANS L'ORDRE
+
+*Vue opérationnelle. Le détail, les mesures et les pièges sont dans les chantiers plus bas.*
+
+| | Tâche | |
+|---|---|---|
+| ✅ | Avertissement d'échec des workers | `48e475a` |
+| **1** | **Rebrancher l'irremplaçable** — propositions, relances, retours acquéreur, envois, notifications, par *(contact + search_index)* | ⚠️ avant tout nettoyage |
+| **2** | **Nettoyer le recalculable** — 1 373 rapprochements + 11 966 lignes d'historique | après le 1 |
+| **3** | Le numéro Hektor d'**annonce** a le droit d'être vide | |
+| **4** | **Identité des transactions** — 29 100 lignes | 0 point d'appel ambigu |
+| **5** | **Identité des contacts** — 186 500 lignes | après relecture des points ambigus |
+| **6** | Écrire la règle de comparaison — les 3 cas d'écart | |
+| **7** | La tolérance de comparaison | |
+| **8** | Brancher la comparaison **au retour du worker** | |
+| **9** | Même règle sur l'import de nuit | |
+| **10** | **Le calque disparaît** | |
+| **11** | La barrière — un travail sans numéro Hektor attend | |
+| **12** | Les 3 recherches *(ajouter / modifier / supprimer)* | |
+| **13** | **Statut + affaire** *(offre, compromis, vente)* | le geste le plus riche |
+| **14** | Archiver / désarchiver / supprimer | |
+| **15** | Créer un contact, créer un mandant, rattacher | |
+| **16** | **Affectation du négociateur** | **en dernier** — impersonation |
+| **17** | Clé propre du **registre des affaires** | |
+| **18** | Fiabiliser le mandat des transactions | ne plus le deviner dans le HTML |
+| **19** | Ménage des tables mortes | |
+| **20** | **Corriger le modèle « au moins »** de la modale recherche | |
+| **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
+| **22** | **Fermer les 4 portes des recherches** | ⇒ la clé cesse de bouger |
+| **23** | La création d'**annonce** écrit la vraie fiche | |
+| **24** | La création de **contact** et de **mandant** | |
+| **25** | La modale d'ajout écrit ses **trois objets d'un coup** | |
+| **26** | Les workers deviennent invisibles | une fois l'avertissement éprouvé |
+| **27** | **Rapatrier les documents** — 40 493 | ⚠️ **irréversible** |
+| **28** | **Rapatrier les photos** — 1 397 | ⚠️ **irréversible** |
+| **29** | **Sortie des portails** + reprise des 350 annonces en ligne | délai non maîtrisé |
+| **30** | **Yousign** | |
+| **31** | **Registre de mandats en propre** | |
+| **32** | Le distributeur démarre à 100 000 | jour J |
+| **33** | Le serveur remplit **les deux cases** | jour J |
+| **34** | Le numéro est **imposé**, pas laissé au compteur | jour J |
+| **35** | On éteint l'aspirateur — pipeline, workers, Playwright, file | jour J |
+
+---
+
 ## LE CHANTIER D'IDENTITÉ — trois objets, un seul dessin
 
 **Le dessin, valable pour les trois :**
