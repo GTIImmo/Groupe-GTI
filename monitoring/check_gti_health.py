@@ -132,6 +132,27 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "growth_pct": 15,
         "growth_abs": 500,
     },
+    # --- Chantier identite / recherches (20/08/2026) ---------------------------
+    # Ce que le balayage nocturne app_sweep_search_orphans() ne sait PAS reparer :
+    # un orphelin dont le contact a PLUSIEURS recherches vivantes -> on ne sait pas
+    # laquelle choisir, donc on laisse. Une seule ligne = un cas nouveau a regarder.
+    {
+        "key": "data.recherche_orphelin_bloque",
+        "label": "Orphelins de recherche non rattachables",
+        "table": "app_search_orphans_non_rattachables",
+        "rule": "absolute",
+        "max": 0,
+    },
+    # Le numero Hektor d'une annonce est devenu facultatif le 20/08 (creation app-first).
+    # Mais RIEN ne doit encore en produire avant la tache 22 du plan : une fiche sans
+    # numero aujourd'hui = un bug qui inserait en silence.
+    {
+        "key": "data.annonce_sans_numero_hektor",
+        "label": "Fiches sans numero Hektor",
+        "table": "app_annonces_sans_numero_hektor",
+        "rule": "absolute",
+        "max": 0,
+    },
     {
         "key": "data.notif_orphelines",
         "label": "Notifications sans destinataire",
