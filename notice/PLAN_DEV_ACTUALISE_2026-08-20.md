@@ -16,6 +16,31 @@ identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (2
 
 ---
 
+## ⛔ AVANT DE COMMENCER UN CHANTIER — à relire, sans exception
+
+**Cette liste existe parce que le 20/08 j'ai oublié trois fois un point déjà documenté.**
+Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
+
+| | À relire | Pourquoi |
+|---|---|---|
+| **1** | **Ce document en entier** — pas seulement la tâche visée | les pièges sont dans les sections voisines |
+| **2** | Les **notes citées** par le chantier concerné | elles contiennent les décisions déjà prises |
+| **3** | `ls notice/*.md` **et la racine**, par mot-clé | ~158 notes ; celles qui comptent ne sont pas toujours dans `notice/` |
+| **4** | **L'historique git** : `git log --all --diff-filter=D -- 'notice/*'` | 12 notes supprimées le 19/08 portent encore de la doctrine active |
+| **5** | La **mémoire projet** de l'assistant | la réponse y était déjà, deux fois, le 20/08 |
+
+**Trois questions à se poser avant d'affirmer qu'une chose est cassée :**
+
+1. **Est-ce documenté ?** Dans ce projet, ce qui ressemble à une négligence est presque toujours
+   une décision écrite quelque part.
+2. **Est-ce mesuré ?** Une détection `ILIKE` mal écrite m'a fait affirmer l'inverse de la vérité
+   sur `app_edit_search_optimistic`. **Mesurer, puis conclure.**
+3. **Qu'est-ce que j'oublie ?** Lister les cas voisins : si on traite « la recherche modifiée »,
+   a-t-on traité « la recherche supprimée » ? Si on traite les annonces, et les contacts ?
+   les affaires ? les recherches ?
+
+---
+
 ## LES TÂCHES, DANS L'ORDRE
 
 *Vue opérationnelle. Le détail, les mesures et les pièges sont dans les chantiers plus bas.*
@@ -23,8 +48,11 @@ identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (2
 | | Tâche | |
 |---|---|---|
 | ✅ | Avertissement d'échec des workers | `48e475a` |
-| **1** | **Rebrancher l'irremplaçable** — propositions, relances, retours acquéreur, envois, notifications, par *(contact + search_index)* | ⚠️ avant tout nettoyage |
-| **2** | **Nettoyer le recalculable** — 1 373 rapprochements + 11 966 lignes d'historique | après le 1 |
+| **1** | **Rattacher l'irremplaçable** — propositions, relances, retours acquéreur, envois — à la recherche vivante du contact | 15 lignes, **0 ambiguïté** |
+| **1bis** | *(cas des recherches SUPPRIMÉES chez Hektor : 31 clés, 681 rapprochements — **rien d'irremplaçable dessous**, donc rien à rattacher)* | traité par la tâche 2 |
+| **2** | **Supprimer le recalculable** — 1 373 rapprochements + 11 966 lignes d'historique, **les deux cas confondus** | après le 1 |
+| **2bis** | **Poser le balayage nocturne** — la même réparation, chaque nuit | sinon la fuite reprend dès le lendemain |
+| **2ter** | **Sentinelle** sur les orphelins NON rattachables *(contact à plusieurs recherches)* | attendu 0 |
 | **3** | Le numéro Hektor d'**annonce** a le droit d'être vide | |
 | **4** | **Identité des transactions** — 29 100 lignes | 0 point d'appel ambigu |
 | **5** | **Identité des contacts** — 186 500 lignes | après relecture des points ambigus |
@@ -42,7 +70,8 @@ identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (2
 | **17** | Clé propre du **registre des affaires** | |
 | **18** | Fiabiliser le mandat des transactions | ne plus le deviner dans le HTML |
 | **19** | Ménage des tables mortes | |
-| **20** | **Corriger le modèle « au moins »** de la modale recherche | |
+| **19bis** | **BASCULE DES NÉGOCIATEURS SUR L'APP** | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
+| **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
 | **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
 | **22** | **Fermer les 4 portes des recherches** | ⇒ la clé cesse de bouger |
 | **23** | La création d'**annonce** écrit la vraie fiche | |
