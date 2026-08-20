@@ -55,7 +55,9 @@ personne le voie. *Ce qui est utilisé est ce qui est vérifié.*
    2. renumeroter le stock  : table de correspondance conservee, essai a blanc
                               qui annule tout, transaction unique, verification chiffree
    3. basculer la cle DANS LA FOULEE : les jointures lisent la nouvelle case,
-                              et la case Hektor a le droit d'etre vide
+      ET LA CASE HEKTOR DEVIENT FACULTATIVE -> c'est CE geste qui autorise
+      la creation depuis l'app. Il est impossible avant l'etape 3, puisque
+      la case Hektor est encore la cle.
    4. poser la sentinelle   : doublons = 0, orphelins = 0, ecart local/Supabase = 0
    5. le worker NE CHANGE PAS : il lit toujours le champ nomme hektor_*_id
 ```
@@ -91,8 +93,8 @@ avec un mauvais numéro : il ne part pas du tout.
 | **1.1** | **Un échec de worker prévient l'utilisateur et le monitoring** | **indispensable** : un envoi raté laisse une annonce en ligne au mauvais prix |
 | **1.2** | **Les recherches acquéreur sont enregistrées** dans l'app | seul endroit où une saisie se perd |
 | **1.3** | Le numéro Hektor d'**annonce** a le droit d'être vide | ouvre la création app-first d'annonce |
-| **1.4** | **Identité des transactions** — ajouter la case, renuméroter ≈ 29 100 lignes | **le plus sûr des trois** : 0 point d'appel ambigu. Débloque la modale de statut, qui crée offres, compromis et ventes |
-| **1.5** | **Identité des contacts** — renommage préalable, puis ajouter la case et renuméroter ≈ 186 500 lignes | débloque la modale d'ajout : contact + recherche + mandant écrits d'un coup. **Demande une demi-journée de relecture avant** |
+| **1.4** | **Identité des transactions** — ajouter la case, renuméroter ≈ 29 100 lignes, **puis la case Hektor a le droit d'être vide** | **le plus sûr des trois** : 0 point d'appel ambigu. Débloque la modale de statut, qui crée offres, compromis et ventes |
+| **1.5** | **Identité des contacts** — renommage préalable, ajouter la case, renuméroter ≈ 186 500 lignes, **puis la case Hektor a le droit d'être vide** | débloque la modale d'ajout : contact + recherche + mandant écrits d'un coup. **Demande une demi-journée de relecture avant** |
 | **1.6** | ~~Reprendre `numero_dossier`~~ **-> reporte au jour J** : comprendre la règle de numérotation Hektor et la continuer | référence métier lisible dans 11 tables — **personne ne la fabrique après la coupure** |
 | **1.7** | ~~Annuaire négociateurs~~ **-> reporte au jour J** : le worker a besoin de l'`idUser` Hektor pour s'impersonner — 40 + 19, présents dans 14 tables | l'affectation doit survivre sans Hektor |
 
