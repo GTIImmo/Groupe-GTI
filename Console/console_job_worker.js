@@ -2296,7 +2296,45 @@ function hektorGraphQLAuthorizationHeader() {
   }
 }
 
+// --- FREIN DE DEBIT VERS HEKTOR (2026-08-20) ---
+// Le 19 et le 20/08, notre IP a ete BLOQUEE par le pare-feu de Ma Boite Immo : plus aucune
+// reponse TCP (ni refus ni 403, juste des paquets perdus), sur tout le cluster — l'admin ET
+// le site vitrine que nous n'interrogeons jamais. Verifie : le meme serveur repond depuis une
+// autre IP, le CDN du meme fournisseur repond depuis la notre. Premier blocage : 2 h 28
+// (02:06 -> 04:34), duree typique d'un bannissement temporaire, qui a aussi fait echouer la
+// tache "Recherches Actives" de 03:00.
+// Cause : le rattrapage enchainait ~3 requetes par annonce a 1,3 s l'annonce, soit 2 a 3
+// requetes/seconde pendant des heures.
+// Ce frein impose un intervalle MINIMUM entre deux appels Hektor, quel que soit le job. Le
+// worker traitant un job a la fois, une simple porte temporelle suffit.
+const HEKTOR_MIN_REQUEST_INTERVAL_MS = Number(process.env.CONSOLE_HEKTOR_MIN_REQUEST_INTERVAL_MS || 1000);
+// Apres un 503 ou un timeout, on souffle plus longtemps : c'est le signal que le serveur
+// commence a nous ecarter. Mieux vaut ralentir tout de suite que se faire bloquer 2 h 28.
+const HEKTOR_BACKOFF_AFTER_REJECT_MS = Number(process.env.CONSOLE_HEKTOR_BACKOFF_AFTER_REJECT_MS || 15000);
+let hektorLastRequestAt = 0;
+let hektorBackoffUntil = 0;
+
+async function hektorThrottle() {
+  const now = Date.now();
+  const attendreBackoff = Math.max(0, hektorBackoffUntil - now);
+  const attendreIntervalle = Math.max(0, hektorLastRequestAt + HEKTOR_MIN_REQUEST_INTERVAL_MS - now);
+  const attente = Math.max(attendreBackoff, attendreIntervalle);
+  if (attente > 0) await sleep(attente);
+  hektorLastRequestAt = Date.now();
+}
+
+function hektorNoteReject(reason) {
+  hektorBackoffUntil = Date.now() + HEKTOR_BACKOFF_AFTER_REJECT_MS;
+  console.log(JSON.stringify({
+    worker: WORKER_ID,
+    step: "hektor_backoff",
+    reason,
+    pause_ms: HEKTOR_BACKOFF_AFTER_REJECT_MS,
+  }));
+}
+
 async function hektorFetch(url, options = {}) {
+  await hektorThrottle();
   const timeoutMs = Number(options.timeoutMs || 45000);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -2314,6 +2352,8 @@ async function hektorFetch(url, options = {}) {
     });
     const buffer = Buffer.from(await response.arrayBuffer());
     const text = buffer.toString("utf-8");
+    // 429/503 = le serveur nous ecarte. On souffle avant l'appel suivant.
+    if (response.status === 429 || response.status === 503) hektorNoteReject(`http_${response.status}`);
     if (!response.ok) throw new Error(`Hektor ${response.status} on ${url}: ${text.slice(0, 300)}`);
     if (isHektorLoginPage(text) && !url.includes("upload_uploadeddoc.php")) {
       throw new Error("Session Hektor expiree ou invalide");
@@ -2325,8 +2365,14 @@ async function hektorFetch(url, options = {}) {
       mimeType: response.headers.get("content-type") || "application/octet-stream",
     };
   } catch (error) {
-    if (error && error.name === "AbortError") throw new Error(`Hektor timeout ${timeoutMs}ms on ${url}`);
+    if (error && error.name === "AbortError") { hektorNoteReject("timeout"); throw new Error(`Hektor timeout ${timeoutMs}ms on ${url}`); }
     const message = error && error.message ? error.message : String(error);
+    // Connexion qui n'aboutit pas = signature d'un blocage reseau (bannissement IP constate
+    // les 19 et 20/08). On souffle avant de reessayer, sinon chaque tentative le prolonge.
+    if (/UND_ERR_CONNECT_TIMEOUT|ECONNREFUSED|ECONNRESET|EAI_AGAIN/i.test(message)
+        || (error && error.cause && /UND_ERR_CONNECT_TIMEOUT|ECONNREFUSED|ECONNRESET/i.test(String(error.cause.code || "")))) {
+      hektorNoteReject("connexion_refusee");
+    }
     if (/^(Hektor \d+ on |Session Hektor|Session console)/i.test(message)) throw error;
     const cause = error && error.cause ? error.cause : null;
     const details = [
