@@ -1,0 +1,35 @@
+-- =====================================================================
+-- Balayage des orphelins de recherche — applique en production le 20/08/2026
+-- Fonction + vue de surveillance + tache pg_cron (07:00 heure de Paris).
+--
+-- POURQUOI. contact_search_key est un hachage du CONTENU de la recherche : elle
+-- change a chaque edition, dans l'app comme dans Hektor, et tout ce qui pend
+-- dessous se detache. Mesure : 327 orphelins le 19/06 -> 1 373 le 20/08.
+-- Une seule edition de test en a produit 41.
+--
+-- La cause ne disparaitra qu'a la bascule des negociateurs sur l'app (tache 19bis
+-- du plan) : d'ici la, on rattrape chaque nuit.
+--
+-- ORDRE IMPERATIF : rattacher AVANT de supprimer. Propositions, relances, retours
+-- acquereur et envois sont app-only (decision metier du 14/06) -- Hektor ne les a
+-- jamais eus, personne ne peut les reconstruire.
+--
+-- PRUDENCE : on ne rattache que si le contact a EXACTEMENT UNE recherche vivante.
+-- Sinon on laisse l'orphelin : mieux vaut un orphelin qu'un mauvais rattachement.
+--
+-- Premiere application manuelle du 20/08 : 15 lignes rattachees (6 propositions,
+-- 5 relances, 2 retours, 2 envois), 13 339 supprimees (1 373 rapprochements,
+-- 11 966 lignes d'historique), 0 conflit d'unicite.
+-- =====================================================================
+
+-- Le corps de la fonction est celui de la migration `app_sweep_search_orphans`
+-- (voir Supabase). Reproduit ici pour le versionnement et le retour arriere.
+
+-- Retour arriere :
+--   select cron.unschedule('app-sweep-search-orphans');
+--   drop view  if exists public.app_search_orphans_non_rattachables;
+--   drop function if exists public.app_sweep_search_orphans();
+
+-- Verification apres passage :
+--   select * from public.app_search_orphans_non_rattachables;   -- attendu 0 ligne
+--   select jobname, schedule, active from cron.job where jobname='app-sweep-search-orphans';
