@@ -39,6 +39,7 @@ personne le voie. *Ce qui est utilisé est ce qui est vérifié.*
 | **1** | **Transactions** | ≈ 29 100 | **0 sur 12** — jamais envoyés au worker | **le plus faible** |
 | — | *Annonces* | *341 394* | *3 sur 56, dont 2 `null`* | *fait le 19/08* |
 | **2** | **Contacts** | ≈ 186 500 | **3 réels**, ≈ 10 fonctions à relire | **le plus élevé** |
+| **3** | **Recherches** *(3 961)* | ≈ 1 300 rapprochements à rebrancher | clé = **hachage du contenu**, elle bouge seule | **cas à part — voir le dossier ci-dessous** |
 
 > **Pourquoi les contacts sont les plus risqués** : ils n'ont qu'une seule colonne, donc **aucune
 > couche n'a jamais eu a faire la distinction**. Mesure du 20/08 :
@@ -83,6 +84,53 @@ worker aboutit et que Hektor a bien reçu. Dix annonces avaient servi de test le
 **Garde-fou pendant la transition** : la RPC de création de travail **refuse** de créer un travail
 Hektor si la case Hektor est vide — elle le met en attente. Un travail ne peut donc pas partir
 avec un mauvais numéro : il ne part pas du tout.
+
+---
+
+## LE DOSSIER RECHERCHES — enquête du 20/08, à lire avant d'y toucher
+
+**Trois facettes distinctes**, identifiées par `RAPPORT_ANALYSE_SYNC_HEKTOR_SUPABASE_2026-06-19.md` :
+
+| | Facette | État |
+|---|---|---|
+| **A** | **Clé instable** — `contact_search_key` hache le **contenu éditable** | ❌ jamais corrigée |
+| **B** | **Écrasement** — l'édition renvoie TOUTE la recherche depuis une copie peut-être périmée | ❌ jamais corrigée |
+| **C** | **Angle mort `date_maj`** — éditer une recherche dans Hektor ne bump pas la date du contact | ✅ **corrigée le 20/06** |
+
+**C a été corrigée par un run dédié** : `scheduled/run_recherches_actives.ps1` ->
+`sync_active_searches.py`, **03:00 chaque nuit**, ~3 590 contacts, sans filtre `date_maj`.
+
+> **Le noeud : la correction de C amplifie A.**
+> Avant le 20/06, une édition faite dans Hektor était invisible -> la clé ne bougeait pas.
+> Depuis, elle est détectée -> **la clé bouge** -> l'historique se détache.
+> **Orphelins : 327 le 19/06 -> 1 332 le 20/08. Multiplié par quatre en deux mois.**
+
+**Ce n'est PAS voulu — vérifié le 20/08 :**
+
+- **6 clés du projet sur 7 hachent une identité** (relation, registre, contact, dossier, doublons).
+  La recherche est **la seule** à hacher du contenu.
+- **Deux consommateurs s'en protègent déjà en production** : `app_email_envoi.search_index`
+  (migration du 17/06 : *« la contact_search_key change à l'édition »*) et
+  `espace_client._load_search_for_envoi` (3 niveaux, *« on ne s'y fie qu'en tout dernier recours »*).
+  **Le contrat de fait est déjà : ne pas se fier à cette clé.**
+- **Personne ne dépend de son instabilité.** Le rapprochement est le seul à ne pas se protéger.
+
+**Pourquoi ça n'a jamais été corrigé** : le correctif proposé en juin était `hash(contact_id, index)`.
+Il est **mauvais** — l'`index` est la **position**, qui bouge à chaque suppression et n'est pas
+alignée entre l'API et le grattage Console. **La bonne réponse est un identifiant propre à l'app.**
+
+**Gravité** : le moteur de rapprochement est **app-only par décision métier**
+(`NOTE_MOTEUR_RAPPROCHEMENT_ACQUEREUR_2026-06-14.md`). Ce qui se détache — propositions, retours
+acquéreur, relances, emails — **n'existe nulle part ailleurs**. Hektor ne peut rien reconstruire.
+
+**Vérifié en direct le 20/08**, contact 604020 : édition à 14:36 -> clé inchangée, 41
+rapprochements recalculés ; retour de Hektor à 14:48:07 -> **nouvelle clé**, les 41 deviennent
+orphelins. Et **aucune des 4 fonctions** qui suppriment des rapprochements ne nettoie par absence.
+
+**Ordre recommandé** : le ménage des orphelins d'abord (une requête + un cron, règle le symptôme),
+la clé propre ensuite (avec le chantier d'identité), l'écrasement (B) quand on touchera au chemin
+d'écriture. **Ne pas ajouter de garde-fou sur la suppression** — décision Frédéric du 18/08 : il
+ferait échouer les cas où le repli `list[0]` tombe juste.
 
 ---
 
