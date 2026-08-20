@@ -820,6 +820,17 @@ function extractDocumentEntries(html, source, visibility) {
       if (/\.(pdf|jpe?g|png|docx?|xlsx?|csv|txt)$/i.test(text)) labels.push(text);
     }
 
+    // LIEN ORPHELIN (2026-08-20) : Hektor produit parfois un force_transfert dont le nom
+    // technique est VIDE et dont l'URL s'arrete au dossier — ex :
+    //   force_transfert('.../documents/biens/23225/?flag=...', '', 'diags3.zip')
+    // Ce n'est pas un defaut de parsing : Hektor a perdu la reference du fichier, et suivre
+    // ce lien renvoie 403. Le document est irrecuperable, y compris depuis leur propre
+    // interface. On l'ignore donc completement.
+    // ENJEU : sans ce filtre, l'annonce echoue, ne recoit pas d'empreinte, revient en tete du
+    // lot suivant et rejoue le meme 403 — soit ~1 300 403 identiques sur 19 lots depuis la
+    // meme IP. C'est un declencheur classique de bannissement, au meme titre que le debit
+    // (notre IP a ete bannie les 19 et 20/08). Cf. rattrapage-documents-bannissement-ip.
+    if (!args[1] && /\/documents\/biens\/\d+\/(\?|$)/.test(url)) continue;
     const technicalName = args[1] || path.basename(new URL(url).pathname);
     const transferName = args[2] || "";
     const crmLabel = labels[labels.length - 1] || transferName || technicalName;
@@ -2311,8 +2322,18 @@ const HEKTOR_MIN_REQUEST_INTERVAL_MS = Number(process.env.CONSOLE_HEKTOR_MIN_REQ
 // Apres un 503 ou un timeout, on souffle plus longtemps : c'est le signal que le serveur
 // commence a nous ecarter. Mieux vaut ralentir tout de suite que se faire bloquer 2 h 28.
 const HEKTOR_BACKOFF_AFTER_REJECT_MS = Number(process.env.CONSOLE_HEKTOR_BACKOFF_AFTER_REJECT_MS || 15000);
+// RESPIRATION : le debit instantane ne suffit pas. Le blocage du 19/08 est survenu apres
+// QUATRE HEURES de flux ininterrompu a ~1,5 req/s, sans la moindre erreur — les compteurs de
+// pare-feu travaillent sur des fenetres glissantes (minute, heure), donc c'est la DUREE
+// d'exposition qui a franchi le seuil, pas le debit lui-meme.
+// Tous les autres traitements du projet respirent deja : sync_contact_details et console
+// missing fields marquent 60 s entre chaque lot. Le rattrapage documents etait le seul a
+// tourner sans jamais s'arreter. On aligne.
+const HEKTOR_PAUSE_EVERY_N_REQUESTS = Number(process.env.CONSOLE_HEKTOR_PAUSE_EVERY_N_REQUESTS || 300);
+const HEKTOR_LONG_PAUSE_MS = Number(process.env.CONSOLE_HEKTOR_LONG_PAUSE_MS || 60000);
 let hektorLastRequestAt = 0;
 let hektorBackoffUntil = 0;
+let hektorRequestCount = 0;
 
 async function hektorThrottle() {
   const now = Date.now();
@@ -2320,6 +2341,17 @@ async function hektorThrottle() {
   const attendreIntervalle = Math.max(0, hektorLastRequestAt + HEKTOR_MIN_REQUEST_INTERVAL_MS - now);
   const attente = Math.max(attendreBackoff, attendreIntervalle);
   if (attente > 0) await sleep(attente);
+
+  hektorRequestCount += 1;
+  if (HEKTOR_PAUSE_EVERY_N_REQUESTS > 0 && hektorRequestCount % HEKTOR_PAUSE_EVERY_N_REQUESTS === 0) {
+    console.log(JSON.stringify({
+      worker: WORKER_ID,
+      step: "hektor_respiration",
+      requetes: hektorRequestCount,
+      pause_ms: HEKTOR_LONG_PAUSE_MS,
+    }));
+    await sleep(HEKTOR_LONG_PAUSE_MS);
+  }
   hektorLastRequestAt = Date.now();
 }
 
