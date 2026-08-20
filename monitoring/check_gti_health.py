@@ -143,6 +143,16 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 0,
     },
+    # Meme regle pour les affaires (offre / compromis / vente) : leur numero Hektor est
+    # devenu facultatif le 20/08, mais la saisie directe dans l'app est la tache 13.
+    # D'ici la, une affaire sans numero Hektor = quelque chose qui ecrit en silence.
+    {
+        "key": "data.affaire_sans_numero_hektor",
+        "label": "Affaires sans numero Hektor",
+        "table": "app_affaires_sans_numero_hektor",
+        "rule": "absolute",
+        "max": 0,
+    },
     # Le numero Hektor d'une annonce est devenu facultatif le 20/08 (creation app-first).
     # Mais RIEN ne doit encore en produire avant la tache 22 du plan : une fiche sans
     # numero aujourd'hui = un bug qui inserait en silence.
