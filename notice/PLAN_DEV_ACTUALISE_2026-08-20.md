@@ -127,10 +127,57 @@ acquéreur, relances, emails — **n'existe nulle part ailleurs**. Hektor ne peu
 rapprochements recalculés ; retour de Hektor à 14:48:07 -> **nouvelle clé**, les 41 deviennent
 orphelins. Et **aucune des 4 fonctions** qui suppriment des rapprochements ne nettoie par absence.
 
-**Ordre recommandé** : le ménage des orphelins d'abord (une requête + un cron, règle le symptôme),
-la clé propre ensuite (avec le chantier d'identité), l'écrasement (B) quand on touchera au chemin
-d'écriture. **Ne pas ajouter de garde-fou sur la suppression** — décision Frédéric du 18/08 : il
-ferait échouer les cas où le repli `list[0]` tombe juste.
+### Ce qui pend sous la clé — mesuré le 20/08, SEPT tables
+
+| Table | Total | Orphelins | Recalculable ? |
+|---|---|---|---|
+| Historique de score | 450 046 | **11 966** | ✅ oui |
+| Rapprochements | 47 547 | **1 373** | ✅ oui |
+| **Notifications** | 843 | **13** | ❌ **non** |
+| **Propositions** | 11 | **6 — 55 %** | ❌ **non** |
+| **Relances** | 10 | **5 — 50 %** | ❌ **non** |
+| **Envois d'email** | 82 | **2** | ❌ **non** |
+| **Retours acquéreur** | 7 | **2 — 29 %** | ❌ **non** |
+
+> ⛔ **NE PAS « nettoyer les orphelins » d'un bloc.** Plus de la moitié des propositions et des
+> relances sont détachées : ce sont des traces d'actions réelles, **app-only**, que Hektor n'a
+> jamais eues. Les supprimer les détruirait définitivement.
+
+**Deux gestes distincts, dans cet ordre :**
+
+1. **REBRANCHER l'irremplaçable** — propositions, relances, retours acquéreur, envois,
+   notifications — par *(contact + search_index)*, **exactement comme le fait déjà
+   `espace_client._load_search_for_envoi`**. ~28 lignes aujourd'hui, mais 50 % des propositions.
+2. **NETTOYER le recalculable** — rapprochements et historique de score, 13 339 lignes, sans risque.
+3. **CLÉ PROPRE**, pour que ça ne recommence pas.
+
+**Rebrancher AVANT de nettoyer.** Dans l'autre sens, on détruit ce qu'on voulait sauver.
+
+> **L'espace client ne changera pas de comportement** : il ne s'appuie déjà plus sur la clé
+> (résolution à 3 niveaux). C'est le seul consommateur déjà immunisé.
+
+### Les recherches deviennent-elles indépendantes en coupant le run de 03:00 ?
+
+**Presque — il y a TROIS portes entrantes, pas une :**
+
+| | Porte | Fréquence |
+|---|---|---|
+| **1** | Run dédié `sync_active_searches` | 03:00 |
+| **2** | Run quotidien — `push_contacts_to_supabase` **supprime puis réécrit** les recherches d'un contact | 05:30 |
+| **3** | **Read-through** — `refresh_console_contact_data` appelle le **même code** avec `--contact-id` | à chaque ouverture de fiche |
+
+**Et une porte sortante** : les 3 travaux `*_hektor_contact_search`.
+
+Couper les quatre rend les recherches entièrement app-owned — **et la clé cesse alors de bouger
+toute seule, donc le problème A disparaît sans être corrigé**. Mais il faut d'abord :
+
+- **corriger le modèle « au moins »** : la modale n'expose que des minimums, le worker sait envoyer
+  20 critères. Ce que l'app ne sait pas exprimer sera perdu (cf. mémoire projet) ;
+- **mesurer combien de recherches Hektor portent des critères invisibles dans l'app** ;
+- **rebrancher l'irremplaçable** (point 1 ci-dessus) avant de couper quoi que ce soit.
+
+**Ne pas ajouter de garde-fou sur la suppression** — décision Frédéric du 18/08 : il ferait échouer
+les cas où le repli `list[0]` tombe juste.
 
 ---
 
