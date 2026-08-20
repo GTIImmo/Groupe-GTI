@@ -54,7 +54,7 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **2bis** | **Poser le balayage nocturne** — la même réparation, chaque nuit | sinon la fuite reprend dès le lendemain |
 | **2ter** | **Sentinelle** sur les orphelins NON rattachables *(contact à plusieurs recherches)* | attendu 0 |
 | **3** | Le numéro Hektor d'**annonce** a le droit d'être vide | |
-| **4** | **Identité des transactions** — 29 100 lignes | 0 point d'appel ambigu |
+| **4** | ~~**Identité des transactions**~~ **FAIT le 20/08** — 28 980 affaires numérotées par l'app, clé basculée, numéros Hektor facultatifs, sentinelle posée | 0 point d'appel ambigu, **confirmé par lecture** : le worker envoie `idOffre=""` — il ne sait que créer |
 | **5** | **Identité des contacts** — 186 500 lignes | après relecture des points ambigus |
 | **6** | Écrire la règle de comparaison — les 3 cas d'écart | |
 | **7** | La tolérance de comparaison | |
@@ -278,7 +278,7 @@ les cas où le repli `list[0]` tombe juste.
 | **1.1** | ~~Un échec de worker prévient l'utilisateur et le monitoring~~ **FAIT le 20/08** (`48e475a`) | **indispensable** : un envoi raté laisse une annonce en ligne au mauvais prix |
 | **1.2** | **Les recherches acquéreur sont enregistrées** dans l'app | seul endroit où une saisie se perd |
 | **1.3** | Le numéro Hektor d'**annonce** a le droit d'être vide | ouvre la création app-first d'annonce |
-| **1.4** | **Identité des transactions** — ajouter la case, renuméroter ≈ 29 100 lignes, **puis la case Hektor a le droit d'être vide** | **le plus sûr des trois** : 0 point d'appel ambigu. Débloque la modale de statut, qui crée offres, compromis et ventes |
+| **1.4** | ~~**Identité des transactions**~~ **FAIT le 20/08** — 28 980 affaires renumérotées, `app_affaire_id` + `app_dossier_id` posés, clé basculée sur le numéro de l'app, triplet Hektor gardé en clé de réconciliation partielle | **le plus sûr des trois**, vérifié : 0 point d'appel ambigu. ⚠️ **`hektor_affaire_id` n'est unique que dans son type** — 7 541 numéros portés par deux types, 0 partageant l'annonce : Hektor tient trois compteurs qui se télescopent. Le numéro de l'app est **une seule série** pour les trois. Débloque la modale de statut (tâche 13) |
 | **1.5** | **Identité des contacts** — renommage préalable, ajouter la case, renuméroter ≈ 186 500 lignes, **puis la case Hektor a le droit d'être vide** | débloque la modale d'ajout : contact + recherche + mandant écrits d'un coup. **Demande une demi-journée de relecture avant** |
 | **1.6** | ~~Reprendre `numero_dossier`~~ **-> reporte au jour J** : comprendre la règle de numérotation Hektor et la continuer | référence métier lisible dans 11 tables — **personne ne la fabrique après la coupure** |
 | **1.7** | ~~Annuaire négociateurs~~ **-> reporte au jour J** : le worker a besoin de l'`idUser` Hektor pour s'impersonner — 40 + 19, présents dans 14 tables | l'affectation doit survivre sans Hektor |
