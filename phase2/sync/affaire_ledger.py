@@ -37,11 +37,21 @@ import os  # noqa: E402
 
 LEDGER_TABLE = "app_affaire_ledger"
 
+# Identite (20/08/2026) : l'affaire porte d'abord le numero de l'app.
+#   app_affaire_id -- UNE serie pour les trois types. Hektor, lui, tient trois compteurs
+#     separes dont les numeros se telescopent : 7 541 numeros sont portes par deux types
+#     differents, sur des annonces et des acquereurs differents. Le numero de Hektor n'est
+#     donc unique QUE dans son type -- d'ou l'index unique sur le triplet, et pas sur l'id.
+#   app_dossier_id -- le numero d'annonce de l'app, a cote de celui de Hektor.
+# Les deux colonnes Hektor deviennent facultatives : une affaire saisie dans l'app existe
+# avant que Hektor ne la numerote, et parfois sans que Hektor la numerote jamais.
 DDL_SQLITE = f"""
 CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
-    hektor_annonce_id   INTEGER NOT NULL,
+    app_affaire_id      INTEGER PRIMARY KEY,
+    app_dossier_id      INTEGER,
+    hektor_annonce_id   INTEGER,
     kind                TEXT NOT NULL,
-    hektor_affaire_id   TEXT NOT NULL,
+    hektor_affaire_id   TEXT,
     hektor_mandat_id    TEXT,
     numero_mandat       TEXT,
     hektor_acquereur_id TEXT,
@@ -54,10 +64,16 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     payload_json        TEXT,
     first_seen_at       TEXT,
     last_seen_at        TEXT,
-    present_in_hektor   INTEGER NOT NULL DEFAULT 1,
-    PRIMARY KEY (hektor_annonce_id, kind, hektor_affaire_id)
+    present_in_hektor   INTEGER NOT NULL DEFAULT 1
 );
+-- Cle de reconciliation : c'est par ce triplet qu'on reconnait, au retour de Hektor, une
+-- affaire deja connue. Partiel, car une affaire nee dans l'app n'a pas encore de numero
+-- Hektor et ne doit pas entrer en collision avec les autres.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_affaire_ledger_hektor
+    ON {LEDGER_TABLE}(hektor_annonce_id, kind, hektor_affaire_id)
+    WHERE hektor_affaire_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_affaire_ledger_annonce ON {LEDGER_TABLE}(hektor_annonce_id);
+CREATE INDEX IF NOT EXISTS idx_affaire_ledger_dossier ON {LEDGER_TABLE}(app_dossier_id);
 CREATE INDEX IF NOT EXISTS idx_affaire_ledger_acq ON {LEDGER_TABLE}(hektor_acquereur_id);
 """
 
@@ -114,6 +130,16 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     for row in con.execute(f"SELECT hektor_annonce_id, kind, hektor_affaire_id, first_seen_at FROM {LEDGER_TABLE}"):
         existing_first[(str(row[0]), str(row[1]), str(row[2]))] = row[3] or run_ts
 
+    # Le numero d'affaire est distribue ici, par le serveur local, comme app_dossier.id.
+    # On ne renumerote JAMAIS une ligne connue : l'ON CONFLICT ci-dessous laisse
+    # app_affaire_id intact. Seules les affaires nouvelles prennent un numero.
+    next_affaire_id = (con.execute(f"SELECT COALESCE(MAX(app_affaire_id), 0) FROM {LEDGER_TABLE}").fetchone()[0]) + 1
+    dossier_par_annonce: dict[str, int] = {
+        str(a): int(i) for i, a in con.execute(
+            "SELECT id, hektor_annonce_id FROM app_dossier WHERE hektor_annonce_id IS NOT NULL"
+        )
+    }
+
     seen = 0
     inserted = 0
     for r in con.execute(LEDGER_SQL):
@@ -128,15 +154,24 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         numero = mnum.get((annonce, mid), "") if mid and mid != "0" else ""
         key = (annonce, kind, affaire_id)
         first_seen = existing_first.get(key, run_ts)
-        if key not in existing_first:
+        nouvelle = key not in existing_first
+        if nouvelle:
             inserted += 1
+        # Numero propose : ignore par SQLite si la ligne existe deja (DO UPDATE ne le touche pas).
+        # On n'avance le compteur que pour une affaire reellement nouvelle.
+        propose = next_affaire_id
+        if nouvelle:
+            next_affaire_id += 1
         con.execute(
             f"""
-            INSERT INTO {LEDGER_TABLE}(hektor_annonce_id, kind, hektor_affaire_id, hektor_mandat_id,
+            INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
+                hektor_annonce_id, kind, hektor_affaire_id, hektor_mandat_id,
                 numero_mandat, hektor_acquereur_id, acquereur_json, state, montant, date, date_acte,
                 sequestre, payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id) DO UPDATE SET
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
+              WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
+                app_dossier_id=excluded.app_dossier_id,
                 hektor_mandat_id=excluded.hektor_mandat_id,
                 numero_mandat=excluded.numero_mandat,
                 hektor_acquereur_id=excluded.hektor_acquereur_id,
@@ -147,6 +182,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 last_seen_at=excluded.last_seen_at, present_in_hektor=1
             """,
             (
+                propose, dossier_par_annonce.get(annonce),
                 int(annonce), kind, affaire_id, mid or None, numero or None, acq_id or None,
                 json.dumps(party, ensure_ascii=True, separators=(",", ":")) if party else None,
                 normalize_text(r["state"]) or None, normalize_text(r["montant"]) or None,
