@@ -11550,6 +11550,109 @@ async function fetchLocalContactSearchSnapshot(job, contactId, searchIndex) {
   }
 }
 
+// --- Avertissement d'echec d'un travail demande par l'utilisateur -------------
+// Jusqu'au 20/08/2026, un travail qui echouait ne laissait qu'une ligne "error" en
+// base : la vignette de suivi le montrait tant que l'ecran restait ouvert, puis plus
+// rien. Mesure sur 90 jours : 103 echecs d'action utilisateur, aucun avertissement
+// durable. Consequence directe cote metier -- tant que la diffusion passe par Hektor,
+// un envoi rate laisse une annonce EN LIGNE au mauvais prix.
+//
+// On ne notifie QUE ce que l'utilisateur a demande lui-meme. Les rapatriements
+// (sync_console_documents : 37 000 travaux/mois) ne concernent personne : les
+// inclure noierait le signal.
+const JOB_TYPES_A_NOTIFIER = new Set([
+  "create_hektor_draft_annonce", "create_hektor_contact", "create_hektor_mandant_contact",
+  "update_hektor_mandant_contact", "link_hektor_mandant", "delete_hektor_contact",
+  "update_hektor_annonce_fields", "update_hektor_contact",
+  "add_hektor_contact_search", "update_hektor_contact_search", "delete_hektor_contact_search",
+  "change_hektor_annonce_status", "archive_hektor_annonce", "restore_hektor_annonce",
+  "delete_hektor_annonce", "assign_hektor_annonce_negotiator",
+  "create_hektor_mandat_auto_number",
+  "upload_document_to_hektor", "delete_document_from_hektor", "upload_hektor_photo",
+  "generate_mandat_document", "generate_estimation_pdf", "generate_cadastre_document",
+  "relance_signature", "cancel_signature_procedure",
+]);
+
+const JOB_LIBELLES = {
+  create_hektor_draft_annonce: "La creation de l'annonce",
+  create_hektor_contact: "La creation du contact",
+  create_hektor_mandant_contact: "La creation du mandant",
+  update_hektor_mandant_contact: "La modification du mandant",
+  link_hektor_mandant: "Le rattachement du mandant",
+  delete_hektor_contact: "La suppression du contact",
+  update_hektor_annonce_fields: "La modification de l'annonce",
+  update_hektor_contact: "La modification du contact",
+  add_hektor_contact_search: "L'ajout de la recherche",
+  update_hektor_contact_search: "La modification de la recherche",
+  delete_hektor_contact_search: "La suppression de la recherche",
+  change_hektor_annonce_status: "Le changement de statut",
+  archive_hektor_annonce: "L'archivage de l'annonce",
+  restore_hektor_annonce: "Le desarchivage de l'annonce",
+  delete_hektor_annonce: "La suppression de l'annonce",
+  assign_hektor_annonce_negotiator: "L'affectation du negociateur",
+  create_hektor_mandat_auto_number: "La generation du numero de mandat",
+  upload_document_to_hektor: "L'envoi du document",
+  delete_document_from_hektor: "La suppression du document",
+  upload_hektor_photo: "L'envoi de la photo",
+  generate_mandat_document: "La generation du mandat",
+  generate_estimation_pdf: "La generation de l'avis de valeur",
+  generate_cadastre_document: "La generation du plan cadastral",
+  relance_signature: "La relance de signature",
+  cancel_signature_procedure: "L'annulation de signature",
+};
+
+// Chaine de resolution du destinataire, mesuree le 20/08 sur 103 echecs :
+//   charge du travail 34 -> negociateur du dossier 51 -> repli 21.
+async function resolveJobFailureRecipient(job, payload) {
+  const direct = cleanString(
+    payload.negociateur_email || payload.hektor_user_email || payload.target_hektor_user_email,
+  );
+  if (direct && direct.includes("@")) return direct;
+  const dossierId = job.app_dossier_id;
+  const annonceId = job.hektor_annonce_id;
+  if (dossierId != null || annonceId) {
+    try {
+      const params = new URLSearchParams({ select: "negociateur_email", limit: "1" });
+      if (dossierId != null) params.set("app_dossier_id", `eq.${dossierId}`);
+      else params.set("hektor_annonce_id", `eq.${annonceId}`);
+      const rows = await supabaseRequest(`app_dossier_current?${params.toString()}`, { method: "GET" });
+      const email = Array.isArray(rows) && rows.length ? cleanString(rows[0].negociateur_email) : "";
+      if (email && email.includes("@")) return email;
+    } catch (_) {
+      // best-effort : l'absence de destinataire ne doit jamais masquer l'echec initial
+    }
+  }
+  return cleanString(process.env.CONSOLE_JOB_FAILURE_FALLBACK_EMAIL) || null;
+}
+
+async function notifyJobFailureBestEffort(job, errorMessage) {
+  try {
+    if (!job || !JOB_TYPES_A_NOTIFIER.has(job.job_type)) return;
+    const payload = safeJsonParse(job.payload_json) || {};
+    const email = await resolveJobFailureRecipient(job, payload);
+    if (!email) return;
+    const libelle = JOB_LIBELLES[job.job_type] || "L'action demandee";
+    const repere = cleanString(payload.numero_dossier || payload.titre_bien || job.hektor_annonce_id || "");
+    const motif = cleanString(errorMessage).slice(0, 300);
+    await supabaseRequest("app_notification", {
+      method: "POST",
+      prefer: "return=minimal,resolution=ignore-duplicates",
+      body: JSON.stringify([{
+        negociateur_email: email,
+        type: "job_echec",
+        title: `${libelle} n'a pas abouti`,
+        body: repere
+          ? `${libelle} sur ${repere} n'a pas pu etre transmise a Hektor. Motif : ${motif}`
+          : `${libelle} n'a pas pu etre transmise a Hektor. Motif : ${motif}`,
+        app_dossier_id: job.app_dossier_id ?? null,
+        payload: { source: "job_failure", job_id: job.id, job_type: job.job_type, error: motif },
+      }]),
+    });
+  } catch (_) {
+    // best-effort : ne doit jamais faire echouer le traitement du job
+  }
+}
+
 async function notifyNegoSearchConflict(job, contactId, payload, opts = {}) {
   try {
     const negoEmail = cleanString(opts.negoEmail || payload.contact_negociateur_email || payload.hektor_user_email || payload.target_hektor_user_email);
@@ -13035,6 +13138,7 @@ async function processOnce() {
     const message = error && error.message ? error.message : String(error);
     await logJob(job.id, "finish", "error", message, null);
     await finishJob(job.id, "error", null, message);
+    await notifyJobFailureBestEffort(job, message);
     await writeWorkerHeartbeat("error", { durationMs: Date.now() - startedAt, error: message });
   }
 
