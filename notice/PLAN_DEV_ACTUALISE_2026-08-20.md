@@ -48,14 +48,19 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | | Tâche | |
 |---|---|---|
 | ✅ | Avertissement d'échec des workers | `48e475a` |
-| **1** | **Rattacher l'irremplaçable** — propositions, relances, retours acquéreur, envois — à la recherche vivante du contact | 15 lignes, **0 ambiguïté** |
+| ✅ **1** | ~~**Rattacher l'irremplaçable**~~ **FAIT** — 15 lignes déplacées, 0 perdue — propositions, relances, retours acquéreur, envois — à la recherche vivante du contact | 15 lignes, **0 ambiguïté** |
 | **1bis** | *(cas des recherches SUPPRIMÉES chez Hektor : 31 clés, 681 rapprochements — **rien d'irremplaçable dessous**, donc rien à rattacher)* | traité par la tâche 2 |
-| **2** | **Supprimer le recalculable** — 1 373 rapprochements + 11 966 lignes d'historique, **les deux cas confondus** | après le 1 |
-| **2bis** | **Poser le balayage nocturne** — la même réparation, chaque nuit | sinon la fuite reprend dès le lendemain |
-| **2ter** | **Sentinelle** sur les orphelins NON rattachables *(contact à plusieurs recherches)* | attendu 0 |
-| **3** | Le numéro Hektor d'**annonce** a le droit d'être vide | |
-| **4** | ~~**Identité des transactions**~~ **FAIT le 20/08** — 28 980 affaires numérotées par l'app, clé basculée, numéros Hektor facultatifs, sentinelle posée | 0 point d'appel ambigu, **confirmé par lecture** : le worker envoie `idOffre=""` — il ne sait que créer |
-| **5** | **Identité des contacts** — 186 500 lignes | après relecture des points ambigus |
+| ✅ **2** | ~~**Supprimer le recalculable**~~ **FAIT** — 13 339 lignes — 1 373 rapprochements + 11 966 lignes d'historique, **les deux cas confondus** | après le 1 |
+| ✅ **2bis** | ~~**Poser le balayage nocturne**~~ **FAIT** — `app_sweep_search_orphans`, 07:00 — la même réparation, chaque nuit | sinon la fuite reprend dès le lendemain |
+| ✅ **2ter** | ~~**Sentinelle**~~ **FAIT** — sur les orphelins NON rattachables *(contact à plusieurs recherches)* | attendu 0 |
+| ✅ **3** | ~~Le numéro Hektor d'**annonce** a le droit d'être vide~~ **FAIT** — + sa sentinelle | |
+| ✅ **4** | ~~**Identité des transactions**~~ **FAIT le 20/08** — 28 980 affaires numérotées par l'app, clé basculée, numéros Hektor facultatifs, sentinelle posée | 0 point d'appel ambigu, **confirmé par lecture** : le worker envoie `idOffre=""` — il ne sait que créer |
+| **4bis** | **MESURER** : quand une recherche change chez Hektor, est-elle **supprimée** ou **archivée** ? | ⚠️ **la mesure qui décide de la forme du 4ter** — l'archivage ne décale pas le rang, la suppression si |
+| **4ter** | **Un numéro propre pour la recherche**, posé **en doublure** — l'étiquette actuelle continue de commander | *idée de Frédéric, 20/08.* **Additif, ne casse rien.** Un seul endroit fabrique l'étiquette : `build_contacts_layer.py:827` |
+| **4quater** | **Observer** la doublure — sentinelle : le numéro reste-t-il collé à la bonne recherche ? | **des semaines**, pas des jours. Vérifier AVANT de basculer |
+| **4quinquies** | **Basculer** sur le numéro, l'étiquette devient un vestige | ⇒ la ligne est **mise à jour sur place** au lieu d'être détruite et recréée |
+| **5** | **Identité des contacts** — 186 500 lignes, ≈ 530 points de code | **après 4quinquies**, sinon les 3 961 étiquettes changent d'un coup. **Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche**, pas avant *(voir 5a rayée)* |
+| ~~5a~~ | ~~Renommer seul les 11 paramètres ambigus~~ **RAYÉE le 20/08** | **pas sans risque** : Postgres refuse le rename (DROP+CREATE), l'appel se fait par NOM, et la compilation ne voit rien. Coût = déploiement coordonné sur 3 machines ; gain = lisibilité seule |
 | **6** | Écrire la règle de comparaison — les 3 cas d'écart | |
 | **7** | La tolérance de comparaison | |
 | **8** | Brancher la comparaison **au retour du worker** | |
@@ -73,7 +78,7 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **19bis** | **BASCULE DES NÉGOCIATEURS SUR L'APP** | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
 | **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
-| **22** | **Fermer les 4 portes des recherches** | ⇒ la clé cesse de bouger |
+| **22** | **Fermer les 4 portes des recherches** | ⇒ plus personne ne recalcule. **Complète 4ter, ne le remplace pas** : 4ter ne dépend PAS de la bascule des négociateurs |
 | **23** | La création d'**annonce** écrit la vraie fiche | |
 | **24** | La création de **contact** et de **mandant** | |
 | **25** | La modale d'ajout écrit ses **trois objets d'un coup** | |
@@ -87,6 +92,52 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **33** | Le serveur remplit **les deux cases** | jour J |
 | **34** | Le numéro est **imposé**, pas laissé au compteur | jour J |
 | **35** | On éteint l'aspirateur — pipeline, workers, Playwright, file | jour J |
+
+---
+
+## LE BLOC RECHERCHES — ce que les audits du 20/08 au soir ont changé
+
+**Trois choses que je croyais et qui sont fausses**, vérifiées dans le code, pas déduites :
+
+| Ce qui était écrit | Ce que la lecture montre |
+|---|---|
+| L'étiquette sert à détecter qu'une recherche a changé chez Hektor | **Non.** La détection vient de la **redemande de la fiche** (run 03:00, sans filtre de date) et de la comparaison de contenu `stable_payload_hash`. L'étiquette n'est que le **nom de rangement** de la ligne |
+| Il faut reprendre ≈ 493 000 lignes | **Non.** **Un seul endroit fabrique l'étiquette** : `build_contacts_layer.py:827` |
+| Le renommage seul est sans risque | **Non.** Postgres refuse le rename, l'appel se fait par NOM, la compilation ne voit rien |
+
+**La preuve que le numéro suffit est dans le projet lui-même.** Dans le *même* script d'envoi,
+deux tables voisines :
+
+| Table | Rangée sous | Quand Hektor modifie |
+|---|---|---|
+| `app_contact_current` | `hektor_contact_id` — **un numéro** | ligne **mise à jour sur place** ✅ |
+| `app_contact_search_current` | l'étiquette — **un haché de contenu** | ligne **supprimée puis recréée** ❌ |
+
+Les modifications de contact faites dans Hektor remontent parfaitement. **Le mécanisme
+fonctionne déjà avec un numéro stable — il n'est pas appliqué aux recherches, voilà tout.**
+
+**La méthode retenue est celle de Frédéric (20/08) : la doublure.**
+
+```
+   poser le numero A COTE, sans rien lui confier
+        -> l'etiquette continue de commander, rien ne casse
+   observer pendant des semaines : tombe-t-il toujours juste ?
+        -> une sentinelle repond, pas une supposition
+   basculer seulement une fois qu'il a fait ses preuves
+```
+
+> C'est l'inverse de ce que j'avais proposé — basculer puis vérifier. **Et c'est ce qu'on
+> aurait dû faire pour les annonces** : `app_dossier_id` a dérivé de mars à juin sans que
+> personne le voie, précisément parce que personne ne l'observait.
+
+**Ce qui reste à mesurer avant d'écrire (tâche 4bis)** : au retour de nuit, la ligne se
+retrouve par `(contact + rang)`. Le rang ne bouge **que si Hektor supprime** une recherche —
+l'archivage la laisse à sa place. Mesuré le 20/08 : **9 recherches actives seulement** sont
+précédées d'une archivée, et les rangs sont **identiques** entre le local et Supabase
+(3 759 / 191 / 11). Reste à savoir si Hektor supprime, et à quelle fréquence.
+
+*(Si la mesure est mauvaise : capturer l'`idCritere` de Hektor, que la console expose déjà —
+`console_job_worker.js:11405`. Ce n'est PAS un préalable acquis, c'est un recours.)*
 
 ---
 
