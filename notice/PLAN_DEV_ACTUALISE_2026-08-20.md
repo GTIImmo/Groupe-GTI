@@ -116,6 +116,46 @@ deux tables voisines :
 Les modifications de contact faites dans Hektor remontent parfaitement. **Le mécanisme
 fonctionne déjà avec un numéro stable — il n'est pas appliqué aux recherches, voilà tout.**
 
+### Le fond, formule par Frederic le 20/08 au soir : **il y a DEJA deux haches**
+
+Preuve dans `phase2.sqlite`, table `app_contact_supabase_push_state` :
+
+```
+   UNE RECHERCHE
+   nom de la ligne : 001697ad4134b105219d5549       <- un hache (la cle)
+   empreinte       : 742548023fb03575338def20...    <- un AUTRE hache
+
+   UN CONTACT
+   nom de la ligne : 100030                         <- un NUMERO
+   empreinte       : 03dd0f0f5e96c4c031bec5b88...   <- un hache
+```
+
+**L'empreinte de contenu existe deja sur les 3 962 recherches.** Elle est calculee et
+stockee a chaque run. **Et elle n'est jamais consultee** : le nom ayant change en meme temps
+que le contenu, la ligne d'avant est introuvable et l'empreinte connue reste rangee sous un
+nom mort.
+
+> **Deux haches sur chaque recherche. Le premier fait mal le travail du second.
+> Le second, qui le ferait bien, n'est jamais lu.**
+
+**Ce que le chantier fait, exactement :**
+
+```
+   AVANT   nom : 001697ad4134b105219d5549     empreinte : 742548...
+   APRES   nom : 412                          empreinte : 742548...
+                  ^                                        ^
+             on remplace CA                      on ne touche pas a CA
+```
+
+Le run de nuit retrouve alors la ligne d'avant, compare les deux empreintes, voit que le
+contenu a bouge, **et met a jour au lieu de detruire**.
+
+> **On ne construit rien. On enleve un doublon qui bloque un mecanisme deja present.**
+
+Le detail de la boucle : `push_contacts_to_supabase.py:206-211`
+`known_hashes.get(row_key(row)) != stable_payload_hash(row)` -- le nom sert a retrouver ce
+qu'on savait, l'empreinte sert a comparer. Deux metiers, une seule ligne de code.
+
 **La méthode retenue est celle de Frédéric (20/08) : la doublure.**
 
 ```
