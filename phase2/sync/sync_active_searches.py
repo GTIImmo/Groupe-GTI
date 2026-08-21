@@ -26,6 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
+HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 PYTHON = sys.executable
 
 
@@ -37,6 +38,40 @@ def active_search_contact_ids(db_path: Path) -> list[str]:
         rows = conn.execute(
             "SELECT DISTINCT hektor_contact_id FROM app_contact_search_current "
             "WHERE is_active = 1 AND (archive IS NULL OR archive = 0) "
+            "ORDER BY CAST(hektor_contact_id AS INTEGER)"
+        ).fetchall()
+    finally:
+        conn.close()
+    out: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        cid = str(row["hektor_contact_id"] or "").strip()
+        if cid.isdigit() and cid not in seen:
+            seen.add(cid)
+            out.append(cid)
+    return out
+
+
+def acquereur_contact_ids(hektor_db: Path) -> list[str]:
+    """IDs des contacts NON archives portant la typologie Hektor « acquereur ».
+
+    Perimetre du RATTRAPAGE (21/08/2026). Le run quotidien ne relit que les contacts
+    dont l'app connait deja une recherche active (~3 800) : un contact qui gagne sa
+    PREMIERE recherche n'y entre jamais, et creer une recherche ne bouge pas la
+    date_maj du contact -- il reste donc invisible indefiniment. La typologie, elle,
+    est dans le listing (rafraichi chaque nuit) et ENVELOPPE les recherches : sonde du
+    21/08 sur 249 fiches lues en direct, aucune recherche connue hors de cette
+    typologie. Relire tous les acquereurs ferme le trou.
+
+    Sonde du 21/08 : 1 fiche sur 249 portait une recherche que l'app ignorait,
+    soit ~270 recherches invisibles sur 67 483 contacts.
+    """
+    conn = sqlite3.connect(f"file:{hektor_db}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            "SELECT hektor_contact_id FROM hektor_contact "
+            "WHERE archive = '0' AND typologie_json LIKE '%acqu%' "
             "ORDER BY CAST(hektor_contact_id AS INTEGER)"
         ).fetchall()
     finally:
@@ -86,14 +121,31 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=300, help="Contacts par lot (defaut 300).")
     parser.add_argument("--limit", type=int, default=0, help="Nombre max de contacts a traiter. 0 = tous.")
     parser.add_argument("--phase2-db", type=Path, default=PHASE2_DB)
+    parser.add_argument("--hektor-db", type=Path, default=HEKTOR_DB)
+    parser.add_argument(
+        "--scope", choices=("actives", "acquereurs"), default="actives",
+        help="actives = contacts a recherche active connue (defaut, run de 03:00). "
+             "acquereurs = TOUS les contacts de typologie acquereur (rattrapage).",
+    )
+    parser.add_argument(
+        "--pause-between-batches", type=float, default=0.0,
+        help="Pause en secondes entre deux lots. 0 = aucune (defaut). Mettre 20 sur un "
+             "rattrapage long : tenir 6 appels/s pendant des heures est la forme qui a "
+             "fait bannir notre IP au rattrapage des documents.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Affiche le volume sans fetch.")
     args = parser.parse_args()
 
-    ids = active_search_contact_ids(args.phase2_db)
+    if args.scope == "acquereurs":
+        ids = acquereur_contact_ids(args.hektor_db)
+        libelle = "acquereurs (typologie Hektor)"
+    else:
+        ids = active_search_contact_ids(args.phase2_db)
+        libelle = "contacts a recherche active"
     if args.limit and args.limit > 0:
         ids = ids[: args.limit]
     total = len(ids)
-    print(f"[recherches-actives] {total} contacts a recherche active")
+    print(f"[recherches-actives] {total} {libelle}")
     if args.dry_run:
         print("[recherches-actives] dry-run : aucun fetch")
         return 0
@@ -114,6 +166,8 @@ def main() -> int:
             print(f"[recherches-actives] LOT EN ECHEC (contacts {i}-{i + len(batch)}): {exc} -- on continue")
         done += len(batch)
         print(f"[recherches-actives] {done}/{total} ({round(time.time() - start)}s)")
+        if args.pause_between_batches > 0 and done < total:
+            time.sleep(args.pause_between_batches)
     if failed_batches:
         print(f"[recherches-actives] TERMINE AVEC {failed_batches} lot(s) en echec sur {((total - 1) // max(args.batch_size, 1)) + 1} -- {done} contacts traites en {round(time.time() - start)}s")
         return 1  # code non nul -> la tache planifiee signale l'echec partiel

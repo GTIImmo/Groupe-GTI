@@ -81,6 +81,8 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **17** | Clé propre du **registre des affaires** | |
 | **18** | Fiabiliser le mandat des transactions | ne plus le deviner dans le HTML |
 | **19** | Ménage des tables mortes | |
+| ✅ **19-R1** | ~~**RATTRAPAGE DES ACQUÉREURS — passe de fond**~~ **lancé le 21/08** — `scheduled/run_rattrapage_acquereurs.ps1`, 71 337 fiches, ≈ 4 h 35 | ferme le trou des **nouvelles** recherches, accumulé depuis mai. Voir *Le trou des NOUVELLES recherches* |
+| ⏳ **19-R2** | **RATTRAPAGE — LA VEILLE DE LA BASCULE** — **relancer la même commande** la veille du jour où les négociateurs passent sur l'app | ⚠️ **à ne pas oublier : c'est la DERNIÈRE occasion.** Après la bascule, plus personne ne crée de recherche dans Hektor — ce qui n'aura pas été rapatrié ce jour-là ne le sera jamais |
 | **19bis** | **BASCULE DES NÉGOCIATEURS SUR L'APP** | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
 | **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
@@ -486,6 +488,47 @@ toute seule, donc le problème A disparaît sans être corrigé**. Mais il faut 
 
 **Ne pas ajouter de garde-fou sur la suppression** — décision Frédéric du 18/08 : il ferait échouer
 les cas où le repli `list[0]` tombe juste.
+
+### Le trou des NOUVELLES recherches — mesuré le 21/08
+
+Les trois portes ci-dessus font entrer les **modifications**. Aucune ne fait entrer une
+**première** recherche :
+
+```
+   les recherches ne sont PAS dans le listing -- uniquement dans ContactById
+   creer une recherche ne bouge PAS la date_maj du contact
+   le run de 03:00 ne relit que les contacts dont l'app connait deja une recherche active
+   -> un contact qui gagne sa PREMIERE recherche n'entre dans aucun run. Jamais.
+```
+
+**Combien ?** Sonde du 21/08, **249 fiches tirées au hasard et lues en direct** chez Hektor parmi
+les 67 483 contacts de typologie « acquéreur » sans recherche connue : **1 seule** portait une
+recherche que l'app ignorait. Soit **≈ 270 recherches invisibles**, pas 67 000. *L'image de l'app
+est juste à 99,6 %.*
+
+**Ce que la sonde a écarté** : la typologie « acquéreur » **enveloppe** les recherches (aucune
+recherche connue hors d'elle) mais elle est posée à la main sur des contacts qui n'ont jamais
+rempli de critères, et elle ne bouge pas quand une recherche est créée. **Inutilisable comme
+signal.** Il faut relire les fiches.
+
+**Le remède** — `sync_active_searches.py --scope acquereurs`, c'est-à-dire *le run de 03:00 avec
+une autre liste d'entrée* : mêmes quatre étapes, mêmes drapeaux, seule la sélection change
+(`acquereur_contact_ids`). 71 337 fiches, **≈ 4 h 35**.
+
+> ⚠️ **La pause de 20 s entre les lots ne doit pas être retirée.** Le run de 03:00 tient
+> 6 appels/s pendant 10 minutes ; ici il faudrait les tenir 3 h. C'est exactement la forme qui a
+> fait **bannir notre IP** au rattrapage des documents. Avec la pause : 4,2 appels/s en moyenne.
+
+**Ce n'est pas un stock, c'est un débit.** La passe du 21/08 remet le compteur à zéro ; le débit,
+lui, continue tant que les négociateurs saisissent dans Hektor. D'où **deux** passes, et pas une :
+
+| | Quand | Pourquoi |
+|---|---|---|
+| **19-R1** | **21/08** — faite | solde les ~270 accumulées depuis mai |
+| **19-R2** | **la veille de la bascule (19bis)** | ⚠️ **dernière occasion.** Tout ce qui aura été saisi dans Hektor entre les deux passes n'existe que là |
+
+Entre les deux, si le délai s'allonge, relancer la même commande de temps en temps — elle est
+idempotente et reprenable (chaque lot est indépendant, un lot en échec n'arrête pas le run).
 
 ---
 
