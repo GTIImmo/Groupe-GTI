@@ -87,3 +87,51 @@ create or replace view public.app_recherches_numero_en_double as
 -- Rien ne depend de cette colonne : la supprimer des deux cotes suffit, et
 -- `app_search_registry` peut rester (elle ne gene personne). C'est tout l'interet
 -- d'une doublure.
+
+
+-- =====================================================================
+-- SUITE du 2026-08-21 : LE NOM EST FIGE  (tache 4quinquies)
+-- Changement 100% LOCAL -- rien a appliquer sur Supabase.
+--
+-- LE GESTE. `build_contacts_layer.py:828` calcule toujours
+--     search_key = stable_hash({contact, rang, CONTENU})[:24]
+-- mais ce nom ne sert plus QUE pour une recherche jamais vue. Des que la paire
+-- (contact, rang) est connue, `assign_search_ids` rend a la ligne le nom qu'elle
+-- portait deja, enregistre dans `app_search_registry.contact_search_key`.
+--
+-- POURQUOI CA MARCHE. Il y a DEJA deux haches sur chaque recherche : le nom de la
+-- ligne (row_key) et l'empreinte du contenu (stable_payload_hash). Le second etait
+-- calcule, stocke... et jamais lu, parce qu'on le cherchait sous un nom qui venait
+-- de changer avec le contenu. Figer le nom est precisement ce qui lui rend son
+-- travail : meme row_key + empreinte differente = MISE A JOUR, au lieu de
+-- destruction/recreation.
+--
+-- ⚠ L'EMPREINTE N'EST PAS TOUCHEE. Elle continue de changer a chaque modification :
+-- c'est elle qui detecte. C'etait la condition posee par Frederic.
+--
+-- LE CAS DES DEUX RECHERCHES ACTIVES. Chaque rang a SON nom dans le registre :
+-- modifier la recherche du rang 1 ne touche pas celle du rang 0, et son nom ne bouge
+-- pas -- donc ses rapprochements, propositions et relances restent attaches. Les
+-- 185 contacts a plusieurs recherches actives cessent d'etre un probleme : le
+-- balayage ne savait pas les traiter faute de savoir OU rattacher, il n'y a
+-- desormais plus rien a rattacher.
+--
+-- CE QUI RESTE INCHANGE : l'envoi DEPUIS l'app vers Hektor ne vise toujours que la
+-- premiere recherche (trou n.3, decision de Frederic du 18/08, dormant -- 24
+-- modifications depuis juin, toutes au rang 0). Figer le nom n'y touche pas.
+--
+-- SURETE, etablie par ETUDE_ORIGINE_CLE_RECHERCHE_2026-08-21.md : un SEUL endroit
+-- fabrique un nom de recherche ; partout ailleurs il est compare ou transporte,
+-- jamais refabrique. Aucun code ne peut donc recalculer un nom et ne plus rien
+-- trouver.
+--
+-- VERIFIE le 21/08 :
+--   registre : 76 841 paires, 76 841 noms figes, 0 doublon
+--   0 ligne dont le nom differe du registre
+--   preuve directe : une SENTINELLE ecrite dans le registre est reprise par la ligne
+--   apres reconstruction (le registre l'emporte sur le hache recalcule), puis le nom
+--   d'origine est restaure a l'identique. Test 100% local, rien pousse vers Supabase.
+--
+-- RETOUR ARRIERE : vider `app_search_registry.contact_search_key`. Le nom redevient
+-- alors le hache recalcule, comme avant.
+-- =====================================================================
