@@ -132,6 +132,24 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "growth_pct": 15,
         "growth_abs": 500,
     },
+    # Le numero de recherche, pose EN DOUBLURE le 21/08 : il n'est encore la cle de rien,
+    # contact_search_key commande toujours. Ces deux sentinelles SONT l'observation --
+    # c'est elles qui diront, dans quelques semaines, si le numero merite qu'on lui
+    # confie la cle. Une ligne ici = la doublure a decroche.
+    {
+        "key": "data.recherche_sans_numero",
+        "label": "Recherches sans numero app",
+        "table": "app_recherches_sans_numero",
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
+        "key": "data.recherche_numero_double",
+        "label": "Numeros de recherche en double",
+        "table": "app_recherches_numero_en_double",
+        "rule": "absolute",
+        "max": 0,
+    },
     # Depuis le 21/08, Supabase conserve les recherches ARCHIVEES au lieu de les
     # supprimer -- sinon tout ce qui pointait sur leur cle devenait orphelin. Le moteur
     # de rapprochement a donc recu un verrou : il ne score que les actives. Cette
