@@ -56,6 +56,9 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | ✅ **3** | ~~Le numéro Hektor d'**annonce** a le droit d'être vide~~ **FAIT** — + sa sentinelle | |
 | ✅ **4** | ~~**Identité des transactions**~~ **FAIT le 20/08** — 28 980 affaires numérotées par l'app, clé basculée, numéros Hektor facultatifs, sentinelle posée | 0 point d'appel ambigu, **confirmé par lecture** : le worker envoie `idOffre=""` — il ne sait que créer |
 | ✅ **4bis** | ~~MESURER : supprimée ou archivée ?~~ **RÉPONDU le 21/08 — ARCHIVÉE, toujours.** **Hektor ne sait pas supprimer une recherche** : même le bouton « Supprimer » de l'app appelle `archiveHektorContactSearch` → `modifDateArchiveCritere`, qui pose une *date d'archivage* (`console_job_worker.js:11878-11890`, `:11918`) | ⇒ **le rang ne glisse jamais. `(contact + rang)` est STABLE.** Les « 184 contacts à risque » n'existent pas |
+| ✅ **4bis-A** | ~~**Les recherches archivées ne sont plus supprimées de Supabase**~~ **FAIT le 21/08** — 6 777 récupérées | **C'ÉTAIT LA FUITE.** Hektor archive au lieu d'effacer ; Supabase supprimait ⇒ clé morte ⇒ orphelins. Règle *delete-never*, comme le registre d'affaires |
+| ✅ **4bis-B** | ~~**Le verrou du moteur de rapprochement**~~ **FAIT le 21/08** — il ne score que les actives | **posé AVANT les données** : sans lui, 6 777 clients qui ne cherchent plus auraient reçu des propositions. Sentinelle seuil 0 |
+| ✅ **2quater** | ~~**Le balayage tient un carnet**~~ **FAIT le 21/08** — `app_sweep_search_orphans_log` | une réparation qui ne dit pas ce qu'elle répare ne se surveille pas. **Vérifié après un run complet : 0 réparation** |
 | ✅ **4ter** | ~~Un numéro propre pour la recherche, en doublure~~ **FAIT le 21/08** — `app_search_id` + registre local `app_search_registry` (table à part, car le run complet **vide** la couche des recherches) ; 76 839 numérotées, 10 744 poussées, 0 doublon | **précédé le même jour par** : les recherches archivées ne sont plus supprimées de Supabase *(la vraie source des orphelins)*, + verrou du moteur de rapprochement |
 | ▶ **4quater** | **Observer** la doublure — **en cours depuis le 21/08** : sentinelles `data.recherche_sans_numero` et `data.recherche_numero_double`, seuil 0, + le carnet du balayage `app_sweep_search_orphans_log` | **des semaines**, pas des jours. C'est leur **silence** qui autorise la bascule |
 | **4quinquies** | **Basculer** sur le numéro, l'étiquette devient un vestige | ⇒ la ligne est **mise à jour sur place** au lieu d'être détruite et recréée |
@@ -83,7 +86,7 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **24** | La création de **contact** et de **mandant** | |
 | **25** | La modale d'ajout écrit ses **trois objets d'un coup** | |
 | **26** | Les workers deviennent invisibles | une fois l'avertissement éprouvé |
-| **26bis** | **Le serveur local reçoit ses PROPRES tables d'annonces** — *(tranché par Frédéric le 21/08, option ②)* | ⚠️ **à faire TANT QUE Hektor vit**, c'est le miroir qui les alimente. Voir l'encadré ci-dessous |
+| **26bis** | **UNE SEULE BASE VIVANTE : le serveur reçoit ses PROPRES tables d'annonces** — 56 888 fiches, **≈ 1 Go** *(mesuré ; 739 Go libres)*. Le miroir devient un carton d'archives que plus rien n'utilise | *(tranché 21/08, option ②)* **3 gestes** : ① créer+remplir · ② l'envoi Supabase lit LA BASE · ③ les archives lisent LA BASE. ⚠️ **① et ② peuvent commencer tôt** ; **③ EXIGE le contrat d'autorité (6-9)** — sinon la base locale oublie les saisies de l'app. Voir l'encadré |
 | **27** | **Rapatrier les documents** — 40 493 | ⚠️ **irréversible** |
 | **28** | **Rapatrier les photos** — 1 397 | ⚠️ **irréversible** |
 | **29** | **Sortie des portails** + reprise des 350 annonces en ligne | délai non maîtrisé |
@@ -162,8 +165,51 @@ contacts et les recherches. Supabase garde son role : le sous-ensemble utile, en
 
 **Consequence de calendrier, non negociable** : le remplissage initial doit se faire **pendant
 que Hektor vit encore**, puisque c'est le miroir qui alimente. Apres la coupure il serait trop
-tard. -> tache **26bis**, dans la meme famille que le rapatriement des documents et des photos :
-*sortir de chez Hektor tout ce qui doit survivre*.
+tard. -> tache **26bis**.
+
+### Les trois gestes, et ce qui les separe
+
+```
+   (1)  CREER + REMPLIR    les tables d'annonces dans phase2.sqlite, depuis le miroir
+   (2)  OBSERVER           personne ne les lit encore
+   ---------------------------------------------------------------------
+   (3)  BASCULER           l'envoi vers Supabase lit LA BASE, plus le miroir
+                           la consultation des archives lit LA BASE, plus le miroir
+```
+
+**(1) et (2) peuvent commencer tot** : additifs, rien ne depend d'eux, on jette si c'est faux.
+
+### (3) EXIGE le contrat d'autorite -- trouve par Frederic le 21/08
+
+L'app n'ecrit QUE dans Supabase (aucune porte d'entree vers le serveur, et il ne faut pas en
+creer). Donc une table locale alimentee seulement par le miroir **apprendrait les modifications
+uniquement par Hektor** -- et seulement si Hektor les a recues. **Une saisie en conflit, ou dont
+l'envoi a echoue, n'arriverait JAMAIS dans la base locale.**
+
+Le serveur doit donc **venir lire dans Supabase ce que l'app a ecrit**. Ce mecanisme existe deja,
+pour trois champs de contact : `fetch_app_owned_contact_fields` relit dans Supabase ce que Hektor
+ne connait pas, et le reinjecte. **Meme geste, a etendre.**
+
+```
+   la nuit :
+        ce que dit HEKTOR (le miroir)  +  ce que dit L'APP (relu dans Supabase)
+              -> arbitre selon le CONTRAT D'AUTORITE du 17/08
+              -> ecrit dans LA BASE LOCALE
+              -> envoye vers Supabase
+```
+
+> **La table locale devient l'endroit ou l'arbitrage a lieu.** Aujourd'hui il n'y a pas d'endroit :
+> c'est pour cela que Hektor gagne par defaut -- il est seul dans la piece.
+
+**Consequence sur l'ordre** : les taches **6-9** et **26bis** ne sont plus independantes.
+`26bis sans le contrat` = une base qui oublie les saisies.
+`le contrat sans 26bis` = un arbitrage sans endroit ou se faire.
+
+### Ce que 26bis debloque en plus
+
+Apres la coupure, une annonce **creee dans l'app** puis archivee n'aura jamais existe dans le
+miroir : son detail ne serait nulle part. La consultation des archives doit donc changer de
+source -- et 26bis est ce qui le permet.
 
 ---
 
