@@ -83,7 +83,7 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **19** | Ménage des tables mortes | |
 | ⏳ **19-R1** | **RATTRAPAGE DES ACQUÉREURS — passe de fond** — outil prêt le 21/08 (`scheduled/run_rattrapage_acquereurs.ps1`, 71 337 fiches, ≈ 4 h 35), **lancé à la main**. À cocher une fois le journal terminé sur `termine OK` | ferme le trou des **nouvelles** recherches, accumulé depuis mai. Voir *Le trou des NOUVELLES recherches* |
 | ⏳ **19-R2** | **RATTRAPAGE — LA VEILLE DE LA BASCULE** — **relancer la même commande** la veille du jour où les négociateurs passent sur l'app | ⚠️ **à ne pas oublier : c'est la DERNIÈRE occasion.** Après la bascule, plus personne ne crée de recherche dans Hektor — ce qui n'aura pas été rapatrié ce jour-là ne le sera jamais |
-| ⏳ **4sexies** | **SENTINELLE « une recherche ne disparaît jamais »** — le nombre de recherches d'un contact ne peut que croître *(4bis : Hektor n'efface jamais)*. Une **diminution** est donc impossible, et c'est le signal exact d'un glissement de rang. Seuil 0 | **manque au dispositif de 4quinquies.** Plus sûr que d'observer les 9 contacts mêlant archivée et active. **Pas codée — en attente du go** |
+| ✅ **4sexies** | ~~**SENTINELLE « une recherche ne disparaît jamais »**~~ **FAITE le 21/08** — `app_search_count_high_water` + vue `app_recherches_disparues` + cron 06:00 UTC + sonde `data.recherche_disparue`, seuil 0. 9 609 repères posés | **entendue sonner** : repère du contact 100060 monté d'un cran → 1 ligne *(jamais_vu 2, aujourd'hui 1)*, restauré → 0. Ferme le risque de position introduit par 4quinquies |
 | **19bis** | **BASCULE DES NÉGOCIATEURS SUR L'APP** | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
 | **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
@@ -361,6 +361,8 @@ preuve.** À dire ainsi, et pas autrement.
 
 **D'où la tâche 4sexies**, qui remplace l'observation par un fait vérifiable : *le nombre de
 recherches d'un contact ne peut que croître.* Toute diminution signale un glissement.
+
+**Posée le 21/08** — `patch_sentinelle_recherche_disparue_2026-08-21.sql`. Le repère ne redescend jamais *(`greatest`)* : sinon le relevé du lendemain effacerait l'anomalie de la veille. **Vérifiée en la faisant sonner**, pas seulement en la voyant à 0.
 
 ---
 

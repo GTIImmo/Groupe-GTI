@@ -150,6 +150,33 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 0,
     },
+    # Sentinelle 4sexies (21/08/2026) -- « une recherche ne disparait jamais ».
+    #
+    # Depuis que le nom de la recherche est FIGE, il ne designe plus un CONTENU mais une
+    # POSITION : « la recherche de rang N du contact C ». Si un rang glissait, chaque nom
+    # se recollerait sur la MAUVAISE recherche -- plus rare que l'orphelinage, mais SANS
+    # BRUIT, donc plus grave : le balayage compte les orphelins, rien ne compte les
+    # mauvaises attaches.
+    #
+    # Ce qui rend la chose visible : Hektor ne sait pas SUPPRIMER une recherche, il pose
+    # une date d'archivage (tache 4bis), et les trois chemins de push conservent les
+    # archivees depuis le 21/08. Le nombre de recherches d'un contact ne peut donc que
+    # CROITRE. Une diminution est impossible par construction -- c'est exactement le
+    # signal d'un glissement.
+    #
+    # Le repere (app_search_count_high_water) ne redescend jamais : la sentinelle ne peut
+    # pas ravaler sa propre alerte au releve suivant (cron 06:00 UTC).
+    #
+    # Verifiee en direct le 21/08 : repere monte d'un cran sur le contact 100060 ->
+    # la vue rend 1 ligne (jamais_vu 2, aujourd_hui 1, manquantes 1) ; repere restaure
+    # -> 0. Une sentinelle qu'on n'a pas entendue sonner ne surveille rien.
+    {
+        "key": "data.recherche_disparue",
+        "label": "Recherches disparues (rang qui glisse)",
+        "table": "app_recherches_disparues",
+        "rule": "absolute",
+        "max": 0,
+    },
     # Depuis le 21/08, Supabase conserve les recherches ARCHIVEES au lieu de les
     # supprimer -- sinon tout ce qui pointait sur leur cle devenait orphelin. Le moteur
     # de rapprochement a donc recu un verrou : il ne score que les actives. Cette

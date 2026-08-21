@@ -1,0 +1,63 @@
+-- =====================================================================
+-- Sentinelle « une recherche ne disparait jamais »  (tache 4sexies)
+-- Date : 2026-08-21
+-- Appliquee en prod via la migration `sentinelle_recherche_ne_disparait_jamais`
+--
+-- D'OU ELLE VIENT. Objection de Frederic : « es-tu sur que 22 est declassee ? ».
+-- Verification faite, deux choses distinctes :
+--
+--   CE QUI TIENT   un SEUL endroit du projet fabrique un nom de recherche
+--                  (build_contacts_layer.py:828), et le registre lui reprend la
+--                  main (:1235). Ni le front, ni le worker, ni aucune fonction
+--                  Postgres n'en fabrique. Personne ne peut donc recalculer un nom.
+--
+--   CE QUI MANQUAIT  figer le nom ne supprime pas le risque, il le DEPLACE :
+--
+--      AVANT  le nom designait UN CONTENU  -> le contenu change, la ligne s'orpheline
+--      APRES  le nom designe UNE POSITION  -> la position glisse, le nom se recolle
+--                                             sur la MAUVAISE recherche, SANS BRUIT
+--
+--   Le second est plus rare mais plus grave : le balayage compte les orphelins,
+--   rien ne comptait les mauvaises attaches.
+--
+-- CE QUI AVAIT ETE MESURE, et pourquoi ca ne suffisait pas. Sur l'ordre dans lequel
+-- Hektor rend les recherches : 9 contacts seulement melent archivee(s) et active(s)
+-- -- 8 avec toutes les archivees AVANT les actives (ajout en fin de liste), 0
+-- l'inverse, 1 entrelacee (ce que produit justement un ajout en fin quand on archive
+-- apres coup). Zero contre-exemple, mais 9 contacts ne prouvent rien.
+--
+-- LE FAIT SUR LEQUEL ELLE S'APPUIE. Tache 4bis : Hektor ne sait pas SUPPRIMER une
+-- recherche -- meme le bouton « Supprimer » de l'app appelle archiveHektorContactSearch
+-- -> modifDateArchiveCritere, qui pose une date (console_job_worker.js:11878-11890).
+-- Et depuis le 21/08 les TROIS chemins de push conservent les archivees :
+--   run_quotidien.ps1:22 (-IncludeArchivedContactSearches, verifie)
+--   sync_active_searches.py:113
+--   refresh_contact_inproc.py:51
+-- Donc le nombre de recherches d'un contact NE PEUT QUE CROITRE. Toute diminution est
+-- impossible par construction : c'est exactement le signal d'un glissement de rang.
+--
+-- LE REPERE NE REDESCEND JAMAIS (greatest). Sinon le releve du lendemain effacerait
+-- l'anomalie signalee la veille -- une sentinelle qui ravale sa propre alerte.
+--
+-- PERIMETRE. On ne regarde que les contacts encore presents dans app_contact_current :
+-- un contact sorti du perimetre du push est un autre sujet, pas un glissement.
+--
+-- VERIFIEE EN DIRECT le 21/08 -- et c'est le point de methode : une sentinelle qu'on
+-- n'a pas entendue sonner ne surveille rien.
+--   repere du contact 100060 monte d'un cran  -> la vue rend 1 ligne
+--                                                (jamais_vu 2, aujourd_hui 1, manquantes 1)
+--   repere restaure                           -> 0
+-- Etat initial : 9 609 reperes poses, 10 746 recherches, sentinelle a 0.
+--
+-- CRON : app-search-count-high-water, 0 6 * * * UTC = 08:00 Paris, apres le run de
+-- 05:30 et apres le balayage des orphelins (0 5 UTC).
+-- SONDE : data.recherche_disparue dans monitoring/check_gti_health.py, seuil 0.
+--
+-- --- Retour arriere ---------------------------------------------------
+--   select cron.unschedule('app-search-count-high-water');
+--   drop view public.app_recherches_disparues;
+--   drop function public.app_refresh_search_count_high_water();
+--   drop table public.app_search_count_high_water;
+--   + retirer la sonde data.recherche_disparue.
+-- Rien ne depend de ces objets : ils n'observent que.
+-- =====================================================================
