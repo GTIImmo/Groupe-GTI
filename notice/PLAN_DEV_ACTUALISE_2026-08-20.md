@@ -81,7 +81,7 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **17** | Clé propre du **registre des affaires** | |
 | **18** | Fiabiliser le mandat des transactions | ne plus le deviner dans le HTML |
 | **19** | Ménage des tables mortes | |
-| ✅ **19-R1** | ~~**RATTRAPAGE DES ACQUÉREURS — passe de fond**~~ **lancé le 21/08** — `scheduled/run_rattrapage_acquereurs.ps1`, 71 337 fiches, ≈ 4 h 35 | ferme le trou des **nouvelles** recherches, accumulé depuis mai. Voir *Le trou des NOUVELLES recherches* |
+| ⏳ **19-R1** | **RATTRAPAGE DES ACQUÉREURS — passe de fond** — outil prêt le 21/08 (`scheduled/run_rattrapage_acquereurs.ps1`, 71 337 fiches, ≈ 4 h 35), **lancé à la main**. À cocher une fois le journal terminé sur `termine OK` | ferme le trou des **nouvelles** recherches, accumulé depuis mai. Voir *Le trou des NOUVELLES recherches* |
 | ⏳ **19-R2** | **RATTRAPAGE — LA VEILLE DE LA BASCULE** — **relancer la même commande** la veille du jour où les négociateurs passent sur l'app | ⚠️ **à ne pas oublier : c'est la DERNIÈRE occasion.** Après la bascule, plus personne ne crée de recherche dans Hektor — ce qui n'aura pas été rapatrié ce jour-là ne le sera jamais |
 | **19bis** | **BASCULE DES NÉGOCIATEURS SUR L'APP** | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
@@ -524,7 +524,7 @@ lui, continue tant que les négociateurs saisissent dans Hektor. D'où **deux** 
 
 | | Quand | Pourquoi |
 |---|---|---|
-| **19-R1** | **21/08** — faite | solde les ~270 accumulées depuis mai |
+| **19-R1** | **21/08** — lancée à la main | solde les ~270 accumulées depuis mai |
 | **19-R2** | **la veille de la bascule (19bis)** | ⚠️ **dernière occasion.** Tout ce qui aura été saisi dans Hektor entre les deux passes n'existe que là |
 
 Entre les deux, si le délai s'allonge, relancer la même commande de temps en temps — elle est
