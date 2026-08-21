@@ -43,64 +43,168 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 
 ## LES TÂCHES, DANS L'ORDRE
 
-*Vue opérationnelle. Le détail, les mesures et les pièges sont dans les chantiers plus bas.*
+*Ordre **validé par Frédéric le 21/08/2026**, après l'audit de la data locale
+(`notice/AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21.md`). Il remplace la liste plate précédente.*
+
+### ⛔ LA MÉTHODE — arrêtée le 21/08, sans exception
+
+Avant **chaque étape** et **avant tout code**, quatre phrases :
+
+```
+   ce que ca fait  ·  ce que ca touche  ·  comment on revient en arriere  ·  comment on verifie
+```
+
+Frédéric valide, **puis** on code. Jamais l'inverse. *« Je ne veux pas d'ambiguïté. »*
+
+### LE BUT, redit par Frédéric le 21/08
+
+> *« Je veux que mon app et mon serveur fonctionnent comme une vraie solution métier, sauf que
+> dans un premier temps les données rafraîchies proviennent d'une API avec Hektor, et que chaque
+> modification doit lui être envoyée pour qu'il reste à jour — mandat, pub, etc. »*
+
+C'est le chantier 3, mot pour mot : **écrire chez soi d'abord, envoyer ensuite, confirmer au
+retour.** Deux précisions à ne jamais perdre de vue :
+
+- **Les recherches sont la seule exception** — décision de Frédéric du 20/08 : elles ne remontent
+  plus à Hektor, parce que la modale n'exprime que 7 critères sur 12 et que les renvoyer les
+  appauvrit. *Décision prise, geste pas encore fait.*
+- **On lit par une API, on n'écrit PAS par une API.** L'écriture passe par un robot qui remplit le
+  formulaire web avec les cookies d'un négociateur. C'est la vraie fragilité de « Hektor reste à
+  jour », et elle disparaîtra avec Hektor — elle ne se corrigera pas.
+
+---
+
+### ✅ CE QUI EST FAIT
 
 | | Tâche | |
 |---|---|---|
 | ✅ | Avertissement d'échec des workers | `48e475a` |
-| ✅ **1** | ~~**Rattacher l'irremplaçable**~~ **FAIT** — 15 lignes déplacées, 0 perdue — propositions, relances, retours acquéreur, envois — à la recherche vivante du contact | 15 lignes, **0 ambiguïté** |
-| **1bis** | *(cas des recherches SUPPRIMÉES chez Hektor : 31 clés, 681 rapprochements — **rien d'irremplaçable dessous**, donc rien à rattacher)* | traité par la tâche 2 |
-| ✅ **2** | ~~**Supprimer le recalculable**~~ **FAIT** — 13 339 lignes — 1 373 rapprochements + 11 966 lignes d'historique, **les deux cas confondus** | après le 1 |
-| ✅ **2bis** | ~~**Poser le balayage nocturne**~~ **FAIT** — `app_sweep_search_orphans`, 07:00 — la même réparation, chaque nuit | sinon la fuite reprend dès le lendemain |
-| ✅ **2ter** | ~~**Sentinelle**~~ **FAIT** — sur les orphelins NON rattachables *(contact à plusieurs recherches)* | attendu 0 |
-| ✅ **3** | ~~Le numéro Hektor d'**annonce** a le droit d'être vide~~ **FAIT** — + sa sentinelle | |
-| ✅ **4** | ~~**Identité des transactions**~~ **FAIT le 20/08** — 28 980 affaires numérotées par l'app, clé basculée, numéros Hektor facultatifs, sentinelle posée | 0 point d'appel ambigu, **confirmé par lecture** : le worker envoie `idOffre=""` — il ne sait que créer |
-| ✅ **4bis** | ~~MESURER : supprimée ou archivée ?~~ **RÉPONDU le 21/08 — ARCHIVÉE, toujours.** **Hektor ne sait pas supprimer une recherche** : même le bouton « Supprimer » de l'app appelle `archiveHektorContactSearch` → `modifDateArchiveCritere`, qui pose une *date d'archivage* (`console_job_worker.js:11878-11890`, `:11918`) | ⇒ **le rang ne glisse jamais. `(contact + rang)` est STABLE.** Les « 184 contacts à risque » n'existent pas |
-| ✅ **4bis-A** | ~~**Les recherches archivées ne sont plus supprimées de Supabase**~~ **FAIT le 21/08** — 6 777 récupérées | **C'ÉTAIT LA FUITE.** Hektor archive au lieu d'effacer ; Supabase supprimait ⇒ clé morte ⇒ orphelins. Règle *delete-never*, comme le registre d'affaires |
-| ✅ **4bis-B** | ~~**Le verrou du moteur de rapprochement**~~ **FAIT le 21/08** — il ne score que les actives | **posé AVANT les données** : sans lui, 6 777 clients qui ne cherchent plus auraient reçu des propositions. Sentinelle seuil 0 |
-| ✅ **2quater** | ~~**Le balayage tient un carnet**~~ **FAIT le 21/08** — `app_sweep_search_orphans_log` | une réparation qui ne dit pas ce qu'elle répare ne se surveille pas. **Vérifié après un run complet : 0 réparation** |
-| ✅ **4ter** | ~~Un numéro propre pour la recherche, en doublure~~ **FAIT le 21/08** — `app_search_id` + registre local `app_search_registry` (table à part, car le run complet **vide** la couche des recherches) ; 76 839 numérotées, 10 744 poussées, 0 doublon | **précédé le même jour par** : les recherches archivées ne sont plus supprimées de Supabase *(la vraie source des orphelins)*, + verrou du moteur de rapprochement |
-| ✅ **4quater** | **Observer** la doublure — **close le 21/08** — l'observation n'était plus nécessaire : le seul cas pouvant mettre le numéro en défaut a été provoqué et vérifié en direct : sentinelles `data.recherche_sans_numero` et `data.recherche_numero_double`, seuil 0, + le carnet du balayage `app_sweep_search_orphans_log` | **des semaines**, pas des jours. C'est leur **silence** qui autorise la bascule |
-| ✅ **4quinquies** | ~~**FIGER le nom de la recherche**~~ **FAIT le 21/08** — 76 841 noms figés dans `app_search_registry`, 0 doublon, 0 ligne divergente | **L'empreinte n'est PAS touchée.** Prouvé : une sentinelle écrite dans le registre est reprise par la ligne après reconstruction, puis restaurée. ⇒ **les 185 contacts à plusieurs recherches actives cessent d'être un problème** — plus rien ne se détache, donc plus rien à rattacher. Le balayage reste en filet |
-| **26bis-①** | **Créer + remplir les tables d'annonces sur le serveur** — 56 888 fiches, **≈ 1 Go** *(mesuré ; 739 Go libres)* | **additif, jetable, personne ne les lit.** Remonté ici le 21/08 : ce n'est PAS irréversible *(contrairement aux documents et photos)*, et l'observation doit commencer tôt |
-| **26bis-②** | **Observer** — la base locale dit-elle la même chose que Supabase ? | **après la bascule du numéro de recherche**, pour ne pas avoir deux doublures à surveiller en même temps |
-| **5** | **Identité des contacts** — 186 500 lignes, ≈ 530 points de code | **après 4quinquies — PRÉALABLE DUR** : renuméroter les contacts changerait les 3 961 noms d'un coup, et le balayage serait débordé, sinon les 3 961 étiquettes changent d'un coup. **Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche**, pas avant *(voir 5a rayée)* |
-| ~~5a~~ | ~~Renommer seul les 11 paramètres ambigus~~ **RAYÉE le 20/08** | **pas sans risque** : Postgres refuse le rename (DROP+CREATE), l'appel se fait par NOM, et la compilation ne voit rien. Coût = déploiement coordonné sur 3 machines ; gain = lisibilité seule |
-| **6** | Écrire la règle de comparaison — les 3 cas d'écart | |
-| **7** | La tolérance de comparaison | |
-| **8** | Brancher la comparaison **au retour du worker** | |
-| **9** | Même règle sur l'import de nuit | |
-| **26bis-③** | **Basculer** — l'envoi vers Supabase ET la consultation des archives lisent **la base locale**, plus le miroir | ⚠️ **collée au contrat, et pas par hasard** : c'est LÀ que l'arbitrage Hektor/app trouve un endroit où s'écrire. Le serveur vient lire dans Supabase ce que l'app a saisi *(comme `fetch_app_owned_contact_fields` le fait déjà pour 3 champs)*. ⇒ le miroir sort du chemin critique |
-| **10** | **Le calque disparaît** | |
-| **11** | La barrière — un travail sans numéro Hektor attend | |
-| **12** | Les 3 recherches *(ajouter / modifier / supprimer)* | |
-| **13** | **Statut + affaire** *(offre, compromis, vente)* | le geste le plus riche |
-| **14** | Archiver / désarchiver / supprimer | |
-| **15** | Créer un contact, créer un mandant, rattacher | |
-| **16** | **Affectation du négociateur** | **en dernier** — impersonation |
-| **17** | Clé propre du **registre des affaires** | |
-| **18** | Fiabiliser le mandat des transactions | ne plus le deviner dans le HTML |
-| **19** | Ménage des tables mortes | |
-| ⏳ **19-R1** | **RATTRAPAGE DES ACQUÉREURS — passe de fond** — outil prêt le 21/08 (`scheduled/run_rattrapage_acquereurs.ps1`, 71 337 fiches, ≈ 4 h 35), **lancé à la main**. À cocher une fois le journal terminé sur `termine OK` | ferme le trou des **nouvelles** recherches, accumulé depuis mai. Voir *Le trou des NOUVELLES recherches* |
-| ⏳ **19-R2** | **RATTRAPAGE — LA VEILLE DE LA BASCULE** — **relancer la même commande** la veille du jour où les négociateurs passent sur l'app | ⚠️ **à ne pas oublier : c'est la DERNIÈRE occasion.** Après la bascule, plus personne ne crée de recherche dans Hektor — ce qui n'aura pas été rapatrié ce jour-là ne le sera jamais |
-| ✅ **4sexies** | ~~**SENTINELLE « une recherche ne disparaît jamais »**~~ **FAITE le 21/08** — `app_search_count_high_water` + vue `app_recherches_disparues` + cron 06:00 UTC + sonde `data.recherche_disparue`, seuil 0. 9 609 repères posés | **entendue sonner** : repère du contact 100060 monté d'un cran → 1 ligne *(jamais_vu 2, aujourd'hui 1)*, restauré → 0. Ferme le risque de position introduit par 4quinquies |
-| **19bis** | **BASCULE DES NÉGOCIATEURS SUR L'APP** | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
-| **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
-| **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
-| **22** | **Fermer les 4 portes des recherches** | **RÉTRÉCIE, pas déclassée** *(corrigé le 21/08 sur objection de Frédéric)*. Elle perd son rôle d'origine — empêcher qu'on **recalcule** le nom : vérifié, un seul fabricant dans tout le projet (`build_contacts_layer.py:828`) et le registre lui reprend la main (`:1235`) ; ni le front, ni le worker, ni aucun SQL n'en fabrique. Elle garde **deux** rôles : l'**autonomie**, et la **dérive de position** — ce dernier *introduit par 4quinquies lui-même*. Voir *Le nom figé épingle une POSITION* |
-| **23** | La création d'**annonce** écrit la vraie fiche | **après 26bis-③** — sinon une annonce créée dans l'app n'existerait que dans Supabase, et le serveur ne l'apprendrait que si Hektor la confirme. *Creuser le trou pendant qu'on le rebouche* |
-| **24** | La création de **contact** et de **mandant** | |
-| **25** | La modale d'ajout écrit ses **trois objets d'un coup** | |
-| **26** | Les workers deviennent invisibles | une fois l'avertissement éprouvé |
-| **27** | **Rapatrier les documents** — 40 493 | ⚠️ **irréversible** |
-| **28** | **Rapatrier les photos** — 1 397 | ⚠️ **irréversible** |
-| **29** | **Sortie des portails** + reprise des 350 annonces en ligne | délai non maîtrisé |
-| **30** | **Yousign** | |
-| **31** | **Registre de mandats en propre** | |
-| **32** | Le distributeur démarre à 100 000 | jour J |
-| **33** | Le serveur remplit **les deux cases** | jour J |
-| **34** | Le numéro est **imposé**, pas laissé au compteur | jour J |
-| **35** | On éteint l'aspirateur — pipeline, workers, Playwright, file | jour J |
+| ✅ **1** | ~~**Rattacher l'irremplaçable**~~ — 15 lignes déplacées, 0 perdue — propositions, relances, retours acquéreur, envois | 15 lignes, **0 ambiguïté** |
+| **1bis** | *(cas des recherches SUPPRIMÉES chez Hektor : 31 clés, 681 rapprochements — **rien d'irremplaçable dessous**)* | traité par la tâche 2 |
+| ✅ **2** | ~~**Supprimer le recalculable**~~ — 13 339 lignes — 1 373 rapprochements + 11 966 lignes d'historique | après le 1 |
+| ✅ **2bis** | ~~**Poser le balayage nocturne**~~ — `app_sweep_search_orphans`, 07:00 | sinon la fuite reprend dès le lendemain |
+| ✅ **2ter** | ~~**Sentinelle**~~ sur les orphelins NON rattachables | attendu 0 |
+| ✅ **2quater** | ~~**Le balayage tient un carnet**~~ — `app_sweep_search_orphans_log` | une réparation qui ne dit pas ce qu'elle répare ne se surveille pas |
+| ✅ **3** | ~~Le numéro Hektor d'**annonce** a le droit d'être vide~~ + sa sentinelle | |
+| ✅ **4** | ~~**Identité des transactions**~~ **20/08** — 28 980 affaires numérotées par l'app, clé basculée | **confirmé par lecture** : le worker envoie `idOffre=""` — il ne sait que créer |
+| ✅ **4bis** | ~~MESURER : supprimée ou archivée ?~~ **ARCHIVÉE, toujours.** Hektor ne sait pas supprimer une recherche (`console_job_worker.js:11878-11890`) | ⇒ **le rang ne glisse jamais.** Les « 184 contacts à risque » n'existent pas |
+| ✅ **4bis-A** | ~~**Les recherches archivées ne sont plus supprimées de Supabase**~~ — 6 777 récupérées | **C'ÉTAIT LA FUITE.** Règle *delete-never* |
+| ✅ **4bis-B** | ~~**Le verrou du moteur de rapprochement**~~ — il ne score que les actives | **posé AVANT les données** |
+| ✅ **4ter** | ~~Un numéro propre pour la recherche, en doublure~~ — `app_search_id` + `app_search_registry` | table à part, car le run complet **vide** la couche |
+| ✅ **4quater** | ~~**Observer** la doublure~~ — **close le 21/08** | le cas limite a été provoqué et vérifié en direct |
+| ✅ **4quinquies** | ~~**FIGER le nom de la recherche**~~ — 76 841 noms figés, 0 doublon | **L'empreinte n'est PAS touchée** — c'était la condition posée |
+| ✅ **4sexies** | ~~**SENTINELLE « une recherche ne disparaît jamais »**~~ **21/08** — `app_search_count_high_water` + cron + sonde, seuil 0 | **entendue sonner**, puis restaurée. Ferme le risque de position introduit par 4quinquies |
+
+---
+
+### BLOC 0 — PROTÉGER L'EXISTANT · *cette semaine, quelques heures*
+
+| | Tâche | Pourquoi maintenant |
+|---|---|---|
+| ⏳ **0.1** | **Mettre `app_search_registry` et `app_affaire_ledger` dans la sauvegarde de nuit** (`backup_critical.py:80`) | **elles n'y sont pas.** Jusqu'à **7 jours d'exposition** sur les deux tables qui détiennent le plus. Trou A de l'audit |
+| ⏳ **0.2** | **Écrire la règle : le miroir ne se supprime JAMAIS** | 464 952 réponses = ton archive Hektor définitive. Après la coupure il gèle, il ne disparaît pas |
+| ⏳ **0.3** | **Finir 19-R1** — le rattrapage acquéreurs, ≈ 4 h 35 | à cocher quand le journal rend `termine OK` |
+
+---
+
+### BLOC A — OUVRIR LES DOSSIERS LONGS · *cette semaine, en parallèle de tout le reste*
+
+> **La correction d'ordonnancement la plus importante du plan.** Ces deux dossiers étaient rangés
+> en 29 et 30, à la toute fin. Or leur délai **ne dépend pas de nous**. Les commencer après vingt
+> tâches techniques, c'est ajouter leur durée *après* tout le reste. Ouverts maintenant, ils se
+> déroulent pendant qu'on code.
+
+| | Tâche | |
+|---|---|---|
+| ⏳ **A.1** | **Portails** — engager la sortie en nom propre, et la reprise des ~350 annonces en ligne *(ex-29)* | délai non maîtrisé. La partie commerciale peut démarrer tout de suite ; le flux de diffusion se construit en parallèle |
+| ⏳ **A.2** | **Signature** — ton propre contrat *(ex-30, Yousign)* | ImmoSign appartient à l'abonnement Hektor : le jeton est lu dans une iframe. À la coupure, la signature s'arrête |
+| ⏳ **A.3** | **Registre de mandats en propre** *(ex-31)* | obligation légale ; aujourd'hui adossé à Hektor |
+
+**Tant que A.1 et A.2 ne sont pas faits, on ne peut pas couper** — même si toutes les données
+étaient déjà chez toi.
+
+---
+
+### BLOC B — LE SERVEUR APPREND DE L'APP · *le morceau qui manquait*
+
+> **Ce bloc n'existait pas dans le plan.** L'audit du 21/08 a montré que **rien ne remonte
+> jamais** de Supabase vers le serveur : sur les 11 scripts qui touchent les deux, aucun n'écrit
+> une valeur venue de Supabase dans une table locale. Le plan supposait cette moitié acquise.
+
+| | Tâche | Risque |
+|---|---|---|
+| ⏳ **B.1** | **La descente de ce que Hektor ignore** — ≈ 1 020 000 lignes : rapprochements *(505 647)*, documents *(58 389)*, registre de mandats *(23 824)*, DVF et communes *(125 240)*, journaux, estimations, notifications. Tables locales neuves, **jamais reconstruites** | **nul** — Hektor n'a aucun avis dessus, personne ne les lit encore |
+| ⏳ **B.2** | **La descente des 3 fiches** — annonce, contact, recherche — dans une table « ce que l'app détient », **à côté** de la table dérivée. **Aucun arbitrage** | faible — c'est une doublure |
+| ⏳ **B.3** | **Le déclencheur** — le worker appelle la descente pour la fiche qu'il vient de traiter *(idée de Frédéric, 21/08)* | faible |
+| ⏳ **B.4** | **La sentinelle** — le serveur dit-il la même chose que Supabase ? *(ex-26bis-②)* | nul |
+
+**B.1 rend un service double** : ce million de lignes n'a aujourd'hui **aucune sauvegarde
+locale**. Le faire descendre le fait entrer dans la sauvegarde de nuit.
+
+**Pourquoi la descente et pas la double écriture** *(question de Frédéric, tranchée le 21/08)* :
+une double livraison ne couvre que ce qui passe par un worker — **5 % des lignes** — elle exige
+que chaque fonction future **pense** à s'y brancher, et elle place le risque **dans le chemin
+d'écriture du négociateur**. La descente couvre tout, ne demande rien à l'app, et si elle échoue
+personne n'est bloqué. Et surtout : après la coupure, l'app écrira toujours dans Supabase — **le
+serveur devra de toute façon apprendre de Supabase.** La descente n'est pas une rustine, c'est la
+moitié manquante de l'architecture finale.
+
+---
+
+### BLOC C — L'APP DEVIENT L'AUTEUR · *le cœur, chantiers 2 et 3*
+
+| | Tâche | |
+|---|---|---|
+| ⏳ **C.1** | **La règle de comparaison** — les 3 cas d'écart, la tolérance, au retour du worker, puis sur l'import de nuit *(ex-6,7,8,9)* | **le garde-fou existe déjà** ; la règle **inverse le verdict**. C'est une modification, pas une construction |
+| ⏳ **C.2** | **Identité des contacts** *(ex-5)* — 186 500 lignes, ≈ 530 points de code | **long : à démarrer tôt**, il bloque C.4. Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche *(voir 5a rayée)*. **Demande une demi-journée de relecture avant** |
+| ~~5a~~ | ~~Renommer seul les 11 paramètres ambigus~~ **RAYÉE le 20/08** | Postgres refuse le rename, l'appel se fait par NOM, la compilation ne voit rien |
+| ⏳ **C.3** | **L'exception recherches, en entier** — fermer la porte sortante · marquer ce que l'app détient · **et faire descendre ces recherches-là** *(ex-12, ex-22)* | la porte **entrante** reste ouverte jusqu'à la coupure. Vérifié le 21/08 : **0 en attente, 0 en conflit** — rien n'est en vol |
+| ⏳ **C.4** | **Les autres workers** — statut + affaire *(le plus riche)* · archiver/désarchiver/supprimer · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* *(ex-13→16)* | |
+| ⏳ **C.5** | Clé propre du **registre des affaires** · fiabiliser le **mandat des transactions** *(ex-17,18)* | ne plus le deviner dans le HTML |
+| ⏳ **C.6** | **26bis** — la table « ce que l'app détient » pour l'annonce + les **36 champs** calculés à l'export *(ex-26bis-①)* | **diagnostic corrigé le 21/08** : le serveur détient DÉJÀ les annonces |
+| ⏳ **C.7** | **Basculer** — l'envoi vers Supabase et la consultation des archives lisent **la base locale**, plus le miroir *(ex-26bis-③)* | ⚠️ **collée à C.1** : c'est là que l'arbitrage trouve un endroit où s'écrire |
+| ⏳ **C.8** | Le **calque** disparaît · la **barrière** *(un travail sans numéro Hektor attend)* *(ex-10,11)* | |
+| ⏳ **C.9** | La **création** part de l'app — annonce, contact, mandant, puis la modale qui écrit ses trois objets d'un coup *(ex-23,24,25)* | **après C.7** — sinon une annonce créée dans l'app n'existerait que dans Supabase. *Creuser le trou pendant qu'on le rebouche* |
+| ⏳ **C.10** | **Corriger le modèle « au moins »** de la modale recherche · **mesurer** les critères Hektor invisibles *(ex-20,21)* | après la bascule des négociateurs |
+| ⏳ **C.11** | Ménage des tables mortes *(ex-19)* | |
+
+---
+
+### BLOC D — RAPATRIER LES FICHIERS · *irréversible*
+
+| | Tâche | |
+|---|---|---|
+| ⏳ **D.1** | **Documents** — 40 493 | ⚠️ avec le frein anti-bannissement, et **sans JAMAIS rejouer les annonces déjà en échec** |
+| ⏳ **D.2** | **Photos** — 1 397 | ⚠️ |
+
+---
+
+### BLOC E — COUPER
+
+| | Tâche | |
+|---|---|---|
+| ⏳ **E.1** | **19-R2 — RATTRAPAGE, LA VEILLE DE LA BASCULE** | ⚠️ **dernière occasion.** Après, plus personne ne crée de recherche dans Hektor |
+| ⏳ **E.2** | **BASCULE DES NÉGOCIATEURS SUR L'APP** *(ex-19bis)* | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
+| ⏳ **E.3** | Les workers deviennent invisibles *(ex-26)* | une fois l'avertissement éprouvé |
+| ⏳ **E.4** | Le jour J — le distributeur démarre à 100 000 · le serveur remplit **les deux cases** · le numéro est **imposé** · on éteint l'aspirateur *(ex-32→35)* | |
+
+---
+
+### CE QU'IL NE FAUT PAS OUBLIER
+
+*Liste tenue à jour. Ce qui n'est dans aucun bloc et qui se perdrait autrement.*
+
+- **Les 4 services Windows et les 33 workers** : ils deviennent inutiles au jour J. Décider quand
+  on les éteint, et dans quel ordre.
+- **Le monitoring doit survivre à la coupure** — 20 sentinelles, dont plusieurs interrogent des
+  objets liés à Hektor. À relire une par une avant E.4.
+- **Deux alertes ouvertes** : `data.notif_orphelines` 57 *(seuil 20)*, `data.notif_non_lues` 851
+  *(seuil 300)*.
+- **Une recherche de test** sur le contact 603953 *(Maison · Firminy · 180 000 €)*, que ni l'app
+  ni l'interface Hektor n'ont laissé retirer — l'agence du contact est 12, pas 1.
+- **L'espace client tourne sur Render** : vérifier qu'il ne dépend de rien de Hektor.
+- **Le premier remplissage de C.6** doit se faire **pendant que Hektor vit** : c'est le miroir qui
+  alimente.
 
 ---
 
@@ -135,6 +239,26 @@ vivants -- une regle en bloc les aurait geles.
 ---
 
 ## LE TROU DE STOCKAGE DES ANNONCES — decouvert et tranche le 21/08
+
+> ### ⚠ DIAGNOSTIC CORRIGÉ LE 21/08 AU SOIR — lire ceci d'abord
+>
+> **Tout ce qui suit reposait sur une affirmation fausse.** L'audit de la data locale
+> () a ouvert la base au lieu de lire le nom
+> des fichiers :
+>
+> 
+>
+>  n'est pas une vue : c'est un  suivi d'un .
+> **Le serveur détient déjà les annonces**, et il les gardera après la coupure — le miroir gèle,
+> il ne disparaît pas.
+>
+> **Le vrai problème n'est donc pas la conservation, c'est l'écriture** : la table étant jetée et
+> refaite chaque nuit, une valeur écrite par l'app n'y survivrait pas jusqu'à 05:30. Il faut une
+> table à côté, jamais reconstruite — patron . **C'est la tâche C.6, et elle
+> est beaucoup plus petite que ce que décrit la suite de cette section.**
+>
+> La suite est conservée telle quelle : elle porte des mesures justes (le partage 59/134, le
+> calendrier, les trois gestes) et le raisonnement qui a mené à l'erreur.
 
 **Constat, mesure a l'appui.** Cote annonces, le serveur local **ne detient pas les donnees** :
 
