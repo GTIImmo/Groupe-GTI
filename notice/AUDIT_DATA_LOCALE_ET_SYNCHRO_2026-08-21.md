@@ -154,6 +154,87 @@ et il se refait en 37 secondes. C'est :
 
 ---
 
+---
+
+# CORRECTION ET COMPTE RENDU D'INCIDENT — nuit du 21 au 22/08
+
+## 1. Les chiffres de cet audit sont des ESTIMATIONS, pas des comptages
+
+Tous les nombres de lignes ci-dessus viennent de `pg_stat_user_tables.n_live_tup`. **Ce n'est pas
+un comptage** : c'est une estimation tenue par Postgres, qui derive entre deux passages de
+menage (autovacuum). Sur une table sans cesse reconstruite, la derive est forte.
+
+```
+   app_rapprochement    estimation pg_stat   66 833
+                        comptage reel        46 848      -> 30 % d'ecart
+```
+
+**Le chiffre juste est 46 848.** Aucune donnee n'a ete perdue : j'avais compare une estimation
+a un comptage et conclu a une disparition.
+
+Le total « ~1 020 000 lignes » est donc lui aussi approximatif. **Le seul comptage reel dont on
+dispose** vient de la premiere passe complete de la descente : **1 323 943 lignes sur 109 tables
+et vues** -- vues comprises, donc avec des doublons (une vue recompte les lignes de sa table).
+
+> **Regle a retenir** : pour un chiffre qui va dans une note ou une decision, faire un
+> `COUNT(*)`. `pg_stat` sert a classer par ordre de grandeur, pas a conclure.
+
+## 2. Incident — la base de production est tombee
+
+**Cause : moi.** J'ai lance la descente complete **deux fois en une heure** -- environ 2 800
+requetes, dont plusieurs centaines de Mo de JSON (`app_dossier_detail_current` : 249 Mo pour
+13 212 lignes, ~19 ko par ligne). Aucun frein entre les requetes.
+
+**Effet** : toute l'API de donnees a repondu **HTTP 522** pendant environ vingt minutes. L'app
+etait inutilisable. Il etait un peu apres minuit, donc personne ne travaillait dessus.
+
+**Ce n'etait PAS un bannissement**, et la distinction compte :
+
+| | |
+|---|---|
+| 429 / 403 | on t'a freine ou ferme la porte |
+| **522** | **Cloudflare a transmis, la base n'a jamais repondu** |
+
+Preuve que l'acces n'etait pas en cause : au meme moment, avec les memes identifiants et depuis
+la meme machine, l'**API de gestion** repondait normalement (`ACTIVE_HEALTHY`). Seule la base
+etait muette.
+
+**Retablissement seul, sans intervention.** Les compteurs `pg_stat` remis a zero et
+`last_autovacuum` nul montrent que **le moteur a redemarre** : c'est ce qui l'a liberee.
+
+**Aucune donnee perdue** -- et c'est structurel, pas de la chance : le script de descente ne sait
+que LIRE. Sa classe `SupabaseReader` n'a qu'une methode `get` ; ni POST, ni DELETE, ni PATCH.
+Verifie apres coup : annonces 13 212, contacts 57 519, recherches 10 746, affaires 28 981 --
+tous inchanges.
+
+## 3. Etat reel de la descente : INCOMPLETE
+
+```
+   46 tables completes      585 708 lignes
+   64 tables A REFAIRE      leur copie locale n'existe plus
+```
+
+**Pourquoi les 64 ont disparu, alors que la premiere passe les avait descendues.** Le correctif
+pose en cours de soiree -- « une copie ratee ne laisse jamais de table partielle derriere elle »
+-- supprime la table quand la copie echoue. Il est juste en soi : une copie tronquee qui se fait
+passer pour de la donnee est pire que rien. **Mais il detruit aussi la BONNE copie precedente.**
+
+> **Correctif a poser avant de relancer** : copier dans une table temporaire, puis renommer.
+> Une passe ratee laisse alors intacte la copie de la veille.
+
+## 4. Les trois freins a poser avant toute reprise
+
+| | |
+|---|---|
+| **Copier puis renommer** | une passe ratee ne detruit plus la copie precedente |
+| **Un frein entre les requetes**, et les tables lourdes par petits paquets | c'est le debit soutenu qui a fait tomber l'instance |
+| **La nuit, une seule passe** | jamais deux d'affilee, jamais pendant une session de travail |
+
+C'est la meme lecon que le rattrapage des documents, qui avait fait bannir notre IP chez Hektor.
+Je ne l'avais pas transposee a Supabase.
+
+---
+
 *Sources : inventaire direct des trois supports le 21/08/2026 ; 603 fichiers de code analysés ;
 `logs/scheduled/quotidien_2026-08-21_10-35-51.log` ; `phase2/sync/backup_critical.py:80-98` ;
 `phase2/sync/push_contacts_to_supabase.py:464-490` ; `phase2/pipeline/view_generale.py:34,469`.*

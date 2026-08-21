@@ -133,7 +133,8 @@ retour.** Deux précisions à ne jamais perdre de vue :
 
 | | Tâche | Risque |
 |---|---|---|
-| ⏳ **B.1** | **La descente de ce que Hektor ignore** — ≈ 1 020 000 lignes : rapprochements *(505 647)*, documents *(58 389)*, registre de mandats *(23 824)*, DVF et communes *(125 240)*, journaux, estimations, notifications. Tables locales neuves, **jamais reconstruites** | **nul** — Hektor n'a aucun avis dessus, personne ne les lit encore |
+| ⚠ **B.1** | **La descente de ce que Hektor ignore** — ≈ 1 020 000 lignes : rapprochements *(505 647)*, documents *(58 389)*, registre de mandats *(23 824)*, DVF et communes *(125 240)*, journaux, estimations, notifications. Tables locales neuves, **jamais reconstruites** | **nul** — Hektor n'a aucun avis dessus, personne ne les lit encore |
+| | **ÉTAT au 22/08 : COMMENCÉE, INCOMPLÈTE** — 46 tables descendues (585 708 lignes), **64 à refaire**. La deuxième passe a fait tomber Supabase (HTTP 522, ~20 min, nuit, aucune donnée perdue). Trois freins à poser avant de relancer : **copier puis renommer** (sinon une passe ratée détruit la copie précédente), un frein entre les requêtes, et une seule passe, la nuit | voir le compte rendu d'incident dans `AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21.md` |
 | ⏳ **B.2** | **La descente des 3 fiches** — annonce, contact, recherche — dans une table « ce que l'app détient », **à côté** de la table dérivée. **Aucun arbitrage** | faible — c'est une doublure |
 | ⏳ **B.3** | **Le déclencheur** — le worker appelle la descente pour la fiche qu'il vient de traiter *(idée de Frédéric, 21/08)* | faible |
 | ⏳ **B.4** | **La sentinelle** — le serveur dit-il la même chose que Supabase ? *(ex-26bis-②)* | nul |
