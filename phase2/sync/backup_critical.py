@@ -85,6 +85,18 @@ CRITICAL_TABLES: dict[str, list[str]] = {
         "app_diffusion_agency_target",     # routage portail par agence
         "app_diffusion_refusal_reason",    # catalogue des motifs de refus
         "app_contact_audit_run",           # historique des audits qualite contact
+        # Ajoutees le 2026-08-21 (tache 0.1), apres l'audit de la data locale
+        # (notice/AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21.md, trou A). Ce sont les deux
+        # seules autres tables locales qui DETIENNENT quelque chose : tout le reste est
+        # reconstruit chaque nuit depuis le miroir. Elles n'etaient couvertes que par
+        # l'instantane hebdomadaire -> jusqu'a 7 jours d'exposition.
+        "app_search_registry",             # 76 841 NOMS FIGES de recherche. Meme classe de
+                                           # sinistre que app_dossier : les perdre fait
+                                           # recalculer tous les haches, donc orpheline tout
+                                           # ce qui pend dessous -- propositions, relances,
+                                           # retours acquereur, rapprochements.
+        "app_affaire_ledger",              # 28 981 app_affaire_id : la serie d'identite des
+                                           # transactions (offre / compromis / vente).
     ],
     "hektor": [
         "sync_meta",                       # 4 curseurs delta : sans eux, re-pull complet
