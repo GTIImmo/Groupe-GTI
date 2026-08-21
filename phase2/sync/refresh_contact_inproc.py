@@ -42,10 +42,13 @@ def _steps(contact_id: str):
         ("build", "phase2/contacts/build_contacts_layer.py", [
             "--contact-id", contact_id, "--no-reports",
         ]),
+        # --include-archived-searches (21/08/2026) : meme raison que dans le run de 03:00.
+        # Sans elle, ouvrir une fiche contact suffirait a resupprimer ses recherches
+        # archivees de Supabase, et a reorpheliner ce qui pointait dessus.
         ("push", "phase2/sync/push_contacts_to_supabase.py", [
             "--contact-id", contact_id,
             "--push-mode", "full", "--contacts-scope", "active_or_eligible",
-            "--skip-stats",
+            "--skip-stats", "--include-archived-searches",
         ]),
     ]
 

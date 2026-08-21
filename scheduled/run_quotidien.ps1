@@ -3,6 +3,12 @@
 #   run_full_pipeline.ps1 -PushContactsToSupabase -ContactsEligibleOnly
 # (annonces + mandats + contacts eligibles + chauffage + Matterport + Android ;
 #  photos/documents Console NON traites = opt-in non activé).
+#
+# -IncludeArchivedContactSearches (21/08/2026) : on cesse de supprimer de Supabase une
+# recherche que Hektor vient d'archiver. Sa ligne disparaissait, et tout ce qui pointait
+# sur sa cle -- propositions, relances, retours acquereur, rapprochements -- devenait
+# orphelin. Desormais elle reste, marquee inactive. Le moteur de rapprochement ne la
+# calcule plus (verrou pose le meme jour) et le front ne la liste plus.
 $ErrorActionPreference = "Continue"
 $root = "C:\Hektor\Projet"
 $logDir = Join-Path $root "logs\scheduled"
@@ -13,7 +19,7 @@ Start-Transcript -Path $log -Append | Out-Null
 $runFailed = $false
 try {
     Write-Output "=== Run quotidien demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes
+    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes -IncludeArchivedContactSearches
     Write-Output "=== Run quotidien termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $LASTEXITCODE) ==="
 } catch {
     Write-Output "=== ERREUR run quotidien : $_ ==="

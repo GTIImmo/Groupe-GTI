@@ -69,9 +69,13 @@ def process_batch(ids: list[str]) -> None:
     # 2) normalize -> 3) build couche contacts -> 4) push (saute les dirty via C)
     run_step(["normalize_source.py", "--contact-id", csv])
     run_step(["phase2/contacts/build_contacts_layer.py", "--contact-id", csv, "--no-reports"])
+    # --include-archived-searches (21/08/2026) : SANS cette option, ce run considererait
+    # les recherches archivees deja poussees comme "disparues" et les supprimerait de
+    # Supabase -- defaisant chaque nuit ce que le run de 05:30 vient d'ecrire.
     run_step([
         "phase2/sync/push_contacts_to_supabase.py", "--contact-id", csv,
         "--push-mode", "full", "--contacts-scope", "active_or_eligible", "--skip-stats",
+        "--include-archived-searches",
     ])
 
 
