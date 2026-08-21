@@ -556,7 +556,18 @@ def main() -> int:
     else:
         contact_where = ""
     relation_where = "" if args.include_archived_relations else "WHERE is_active_annonce = 1"
-    search_where = "" if args.include_archived_searches else "WHERE is_active = 1"
+    # Le perimetre des recherches suit celui des CONTACTS (21/08/2026). Sans cela,
+    # --include-archived-searches poussait les 72 869 recherches locales, dont 66 095
+    # portees par des contacts absents de Supabase -- un perimetre que rien ne justifie
+    # (constate en direct le 21/08 : 76 839 lignes au lieu des 10 744 voulues).
+    # Le filtre actif/archive reste independant : c'est l'option qui le decide.
+    search_scope = "" if args.include_archived_searches else "is_active = 1"
+    search_where = scoped_where(
+        f"WHERE {search_scope}" if search_scope else "",
+        "hektor_contact_id IN (SELECT hektor_contact_id FROM app_contact_current"
+        + (f" {contact_where}" if contact_where else "")
+        + ")",
+    )
     stats_contact_where = contact_where
     if contact_ids:
         contact_id_where = sqlite_text_in("hektor_contact_id", contact_ids)
