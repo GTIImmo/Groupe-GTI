@@ -302,6 +302,7 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
 
         CREATE TABLE IF NOT EXISTS app_contact_search_current (
             contact_search_key TEXT PRIMARY KEY,
+            app_search_id INTEGER,
             hektor_contact_id TEXT NOT NULL,
             search_index INTEGER NOT NULL,
             archive INTEGER NOT NULL DEFAULT 0,
@@ -1157,6 +1158,82 @@ def replace_table_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str
     conn.commit()
 
 
+SEARCH_REGISTRY_DDL = """
+CREATE TABLE IF NOT EXISTS app_search_registry (
+    app_search_id     INTEGER PRIMARY KEY,
+    hektor_contact_id TEXT NOT NULL,
+    search_index      INTEGER NOT NULL,
+    first_seen_at     TEXT,
+    last_seen_at      TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_search_registry_pair
+    ON app_search_registry(hektor_contact_id, search_index);
+"""
+
+
+def assign_search_ids(
+    conn: sqlite3.Connection,
+    search_rows: list[dict[str, Any]],
+    refreshed_at: str,
+) -> dict[str, int]:
+    """Redonne a chaque recherche le numero qu'elle portait deja, ou lui en attribue un.
+
+    Le nom d'une recherche (`contact_search_key`) est le hache de son CONTENU : il change
+    des que le contenu change, et la ligne est alors detruite puis recreee -- emportant
+    tout ce qui pendait dessous. Le numero, lui, est attache a la PAIRE (contact, rang),
+    qui ne bouge pas : Hektor n'efface jamais une recherche, il pose une date d'archivage,
+    donc le rang ne glisse pas.
+
+    Le registre est une table A PART, jamais videe. La couche des recherches, elle, est
+    reconstruite entierement a chaque run complet : un numero range la-dedans ne
+    survivrait pas.
+
+    EN DOUBLURE (21/08/2026) : ce numero n'est encore la cle de rien. On l'observe.
+    """
+    conn.executescript(SEARCH_REGISTRY_DDL)
+    if not search_rows:
+        return {"reprises": 0, "attribues": 0}
+
+    ids = sorted({str(row["hektor_contact_id"]) for row in search_rows})
+    known: dict[tuple[str, int], int] = {}
+    for start in range(0, len(ids), 400):
+        chunk = ids[start:start + 400]
+        placeholders = ",".join("?" for _ in chunk)
+        for cid, idx, sid in conn.execute(
+            f"SELECT hektor_contact_id, search_index, app_search_id FROM app_search_registry "
+            f"WHERE hektor_contact_id IN ({placeholders})",
+            tuple(chunk),
+        ):
+            known[(str(cid), int(idx))] = int(sid)
+
+    next_id = int(conn.execute("SELECT COALESCE(MAX(app_search_id), 0) FROM app_search_registry").fetchone()[0]) + 1
+    nouveaux: list[tuple[Any, ...]] = []
+    reprises = 0
+    for row in search_rows:
+        pair = (str(row["hektor_contact_id"]), int(row["search_index"]))
+        sid = known.get(pair)
+        if sid is None:
+            sid = next_id
+            next_id += 1
+            known[pair] = sid
+            nouveaux.append((sid, pair[0], pair[1], refreshed_at, refreshed_at))
+        else:
+            reprises += 1
+        row["app_search_id"] = sid
+
+    if nouveaux:
+        conn.executemany(
+            "INSERT INTO app_search_registry(app_search_id, hektor_contact_id, search_index, "
+            "first_seen_at, last_seen_at) VALUES (?, ?, ?, ?, ?)",
+            nouveaux,
+        )
+    conn.executemany(
+        "UPDATE app_search_registry SET last_seen_at = ? WHERE hektor_contact_id = ? AND search_index = ?",
+        [(refreshed_at, pair[0], pair[1]) for pair in known],
+    )
+    return {"reprises": reprises, "attribues": len(nouveaux)}
+
+
 def insert_table_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str, Any]], refreshed_at: str) -> None:
     if not rows:
         return
@@ -1330,6 +1407,7 @@ def refresh_contact_slice(
             phase2_conn.execute("DELETE FROM app_contact_relation_current WHERE hektor_contact_id = ?", (contact_id,))
             phase2_conn.execute("DELETE FROM app_contact_search_current WHERE hektor_contact_id = ?", (contact_id,))
 
+        assign_search_ids(phase2_conn, search_rows, refreshed_at)
         insert_table_rows(phase2_conn, "app_contact_current", contact_rows, refreshed_at)
         insert_table_rows(phase2_conn, "app_contact_relation_current", relation_flat_rows, refreshed_at)
         insert_table_rows(phase2_conn, "app_contact_search_current", search_rows, refreshed_at)
@@ -1409,6 +1487,7 @@ def build_contacts_layer(
         relation_flat_rows = [row for rows in relation_rows.values() for row in rows]
         refreshed_at = now_utc_iso()
 
+        assign_search_ids(phase2_conn, search_rows, refreshed_at)
         replace_table_rows(phase2_conn, "app_contact_current", contact_rows, refreshed_at)
         replace_table_rows(phase2_conn, "app_contact_relation_current", relation_flat_rows, refreshed_at)
         replace_table_rows(phase2_conn, "app_contact_search_current", search_rows, refreshed_at)
