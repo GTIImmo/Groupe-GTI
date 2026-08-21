@@ -55,7 +55,7 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | ✅ **2ter** | ~~**Sentinelle**~~ **FAIT** — sur les orphelins NON rattachables *(contact à plusieurs recherches)* | attendu 0 |
 | ✅ **3** | ~~Le numéro Hektor d'**annonce** a le droit d'être vide~~ **FAIT** — + sa sentinelle | |
 | ✅ **4** | ~~**Identité des transactions**~~ **FAIT le 20/08** — 28 980 affaires numérotées par l'app, clé basculée, numéros Hektor facultatifs, sentinelle posée | 0 point d'appel ambigu, **confirmé par lecture** : le worker envoie `idOffre=""` — il ne sait que créer |
-| **4bis** | **MESURER** : quand une recherche change chez Hektor, est-elle **supprimée** ou **archivée** ? | ⚠️ **la mesure qui décide de la forme du 4ter** — l'archivage ne décale pas le rang, la suppression si |
+| ✅ **4bis** | ~~MESURER : supprimée ou archivée ?~~ **RÉPONDU le 21/08 — ARCHIVÉE, toujours.** **Hektor ne sait pas supprimer une recherche** : même le bouton « Supprimer » de l'app appelle `archiveHektorContactSearch` → `modifDateArchiveCritere`, qui pose une *date d'archivage* (`console_job_worker.js:11878-11890`, `:11918`) | ⇒ **le rang ne glisse jamais. `(contact + rang)` est STABLE.** Les « 184 contacts à risque » n'existent pas |
 | **4ter** | **Un numéro propre pour la recherche**, posé **en doublure** — l'étiquette actuelle continue de commander | *idée de Frédéric, 20/08.* **Additif, ne casse rien.** Un seul endroit fabrique l'étiquette : `build_contacts_layer.py:827` |
 | **4quater** | **Observer** la doublure — sentinelle : le numéro reste-t-il collé à la bonne recherche ? | **des semaines**, pas des jours. Vérifier AVANT de basculer |
 | **4quinquies** | **Basculer** sur le numéro, l'étiquette devient un vestige | ⇒ la ligne est **mise à jour sur place** au lieu d'être détruite et recréée |
@@ -170,14 +170,23 @@ qu'on savait, l'empreinte sert a comparer. Deux metiers, une seule ligne de code
 > aurait dû faire pour les annonces** : `app_dossier_id` a dérivé de mars à juin sans que
 > personne le voie, précisément parce que personne ne l'observait.
 
-**Ce qui reste à mesurer avant d'écrire (tâche 4bis)** : au retour de nuit, la ligne se
-retrouve par `(contact + rang)`. Le rang ne bouge **que si Hektor supprime** une recherche —
-l'archivage la laisse à sa place. Mesuré le 20/08 : **9 recherches actives seulement** sont
-précédées d'une archivée, et les rangs sont **identiques** entre le local et Supabase
-(3 759 / 191 / 11). Reste à savoir si Hektor supprime, et à quelle fréquence.
+**Tâche 4bis — RÉPONDUE le 21/08.** **Hektor ne sait pas supprimer une recherche.**
+Le worker, même pour un « Supprimer » demandé depuis l'app, appelle
+`archiveHektorContactSearch` → `mode=contacts-contactProfile-modifDateArchiveCritere` avec une
+`dateArchive` : il **pose une date**, il n'efface rien (`console_job_worker.js:11878-11890`, `:11918`).
 
-*(Si la mesure est mauvaise : capturer l'`idCritere` de Hektor, que la console expose déjà —
-`console_job_worker.js:11405`. Ce n'est PAS un préalable acquis, c'est un recours.)*
+> **Donc le rang ne glisse jamais, et `(contact + rang)` est une poignée stable.**
+> Confirmé par les données : 72 872 archivées en local occupant des rangs jusqu'à 15, et
+> seulement **9** recherches actives précédées d'une archivée. Capturer l'`idCritere` n'est
+> plus un préalable — ça reste un confort.
+
+⚠️ **Mais l'archivage détache quand même**, pour une raison de **périmètre**, pas de rang :
+le local garde les archivées, **Supabase ne garde que les actives**. Une recherche archivée
+disparaît donc de Supabase, et ce qui pointait sur sa clé devient orphelin. C'est ce rythme
+que mesure le carnet du balayage (`app_sweep_search_orphans_log`, posé le 21/08).
+
+*(Correction : les « 31 recherches supprimées chez Hektor » notées le 20/08 étaient selon toute
+vraisemblance des recherches **archivées**.)*
 
 ---
 
