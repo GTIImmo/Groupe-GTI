@@ -62,3 +62,37 @@ create policy app_sweep_log_select on public.app_sweep_search_orphans_log
 -- L'ecriture est dans la transaction du balayage : si elle echouait, tout serait
 -- annule. D'ou le `on conflict do nothing`, seul cas realiste (deux passages dans
 -- la meme microseconde).
+
+
+-- =====================================================================
+-- COMPLEMENT du 2026-08-21 : le balayage prefere la recherche ACTIVE
+-- Applique via la migration `sweep_search_orphans_prefere_active`
+--
+-- POURQUOI. La cible etait choisie par « ce contact n'a qu'UNE ligne », en comptant
+-- TOUTES les lignes. Depuis que les recherches archivees sont conservees (meme jour,
+-- patch_recherches_archivees_conservees), un contact avec 1 active + 1 archivee compte
+-- pour 2 et sort de la portee du balayage.
+--
+-- AMPLEUR REELLE : 9 contacts. (J'avais annonce 728 : chiffre FAUX, obtenu en comparant
+-- deux perimetres differents -- avant, les contacts a archivees seules n'etaient pas dans
+-- la table du tout, donc ni couverts ni « hors de portee ».)
+--
+-- LE VRAI DANGER n'etait pas ces 9 contacts mais un elargissement naif : `min()` prend le
+-- plus petit nom dans l'ordre ALPHABETIQUE. En comptant simplement plus large, le balayage
+-- aurait pu rattacher l'historique commercial a la recherche ARCHIVEE. D'ou une regle de
+-- PRIORITE, et pas seulement un filtre elargi.
+--
+-- LA REGLE :
+--   1. une seule recherche ACTIVE          -> c'est elle
+--   2. sinon, une seule recherche en tout  -> c'est elle
+--   3. sinon                                -> on ne touche a rien
+--
+-- Le reste de la fonction est INCHANGE : memes rattachements, memes suppressions, meme
+-- garde-fou d'unicite sur app_bien_acquereur_statut.
+--
+-- VERIFIE le 21/08 :
+--   couverture      8 696 -> 8 705   (3 590 par la regle 1, 5 115 par la regle 2)
+--   ambigus laisses   913 ->   904   (185 a plusieurs actives, 719 a plusieurs archivees)
+--   cibles pointant sur une archivee alors qu'une active existe : 0
+--   passage a blanc sur parc propre : 0 rattachement, 0 suppression
+-- =====================================================================
