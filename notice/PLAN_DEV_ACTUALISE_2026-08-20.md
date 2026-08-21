@@ -62,12 +62,15 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | ✅ **4ter** | ~~Un numéro propre pour la recherche, en doublure~~ **FAIT le 21/08** — `app_search_id` + registre local `app_search_registry` (table à part, car le run complet **vide** la couche des recherches) ; 76 839 numérotées, 10 744 poussées, 0 doublon | **précédé le même jour par** : les recherches archivées ne sont plus supprimées de Supabase *(la vraie source des orphelins)*, + verrou du moteur de rapprochement |
 | ▶ **4quater** | **Observer** la doublure — **en cours depuis le 21/08** : sentinelles `data.recherche_sans_numero` et `data.recherche_numero_double`, seuil 0, + le carnet du balayage `app_sweep_search_orphans_log` | **des semaines**, pas des jours. C'est leur **silence** qui autorise la bascule |
 | **4quinquies** | **Basculer** sur le numéro, l'étiquette devient un vestige | ⇒ la ligne est **mise à jour sur place** au lieu d'être détruite et recréée |
+| **26bis-①** | **Créer + remplir les tables d'annonces sur le serveur** — 56 888 fiches, **≈ 1 Go** *(mesuré ; 739 Go libres)* | **additif, jetable, personne ne les lit.** Remonté ici le 21/08 : ce n'est PAS irréversible *(contrairement aux documents et photos)*, et l'observation doit commencer tôt |
+| **26bis-②** | **Observer** — la base locale dit-elle la même chose que Supabase ? | **après la bascule du numéro de recherche**, pour ne pas avoir deux doublures à surveiller en même temps |
 | **5** | **Identité des contacts** — 186 500 lignes, ≈ 530 points de code | **après 4quinquies**, sinon les 3 961 étiquettes changent d'un coup. **Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche**, pas avant *(voir 5a rayée)* |
 | ~~5a~~ | ~~Renommer seul les 11 paramètres ambigus~~ **RAYÉE le 20/08** | **pas sans risque** : Postgres refuse le rename (DROP+CREATE), l'appel se fait par NOM, et la compilation ne voit rien. Coût = déploiement coordonné sur 3 machines ; gain = lisibilité seule |
 | **6** | Écrire la règle de comparaison — les 3 cas d'écart | |
 | **7** | La tolérance de comparaison | |
 | **8** | Brancher la comparaison **au retour du worker** | |
 | **9** | Même règle sur l'import de nuit | |
+| **26bis-③** | **Basculer** — l'envoi vers Supabase ET la consultation des archives lisent **la base locale**, plus le miroir | ⚠️ **collée au contrat, et pas par hasard** : c'est LÀ que l'arbitrage Hektor/app trouve un endroit où s'écrire. Le serveur vient lire dans Supabase ce que l'app a saisi *(comme `fetch_app_owned_contact_fields` le fait déjà pour 3 champs)*. ⇒ le miroir sort du chemin critique |
 | **10** | **Le calque disparaît** | |
 | **11** | La barrière — un travail sans numéro Hektor attend | |
 | **12** | Les 3 recherches *(ajouter / modifier / supprimer)* | |
@@ -82,11 +85,10 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
 | **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
 | **22** | **Fermer les 4 portes des recherches** | ⇒ plus personne ne recalcule. **Complète 4ter, ne le remplace pas** : 4ter ne dépend PAS de la bascule des négociateurs |
-| **23** | La création d'**annonce** écrit la vraie fiche | |
+| **23** | La création d'**annonce** écrit la vraie fiche | **après 26bis-③** — sinon une annonce créée dans l'app n'existerait que dans Supabase, et le serveur ne l'apprendrait que si Hektor la confirme. *Creuser le trou pendant qu'on le rebouche* |
 | **24** | La création de **contact** et de **mandant** | |
 | **25** | La modale d'ajout écrit ses **trois objets d'un coup** | |
 | **26** | Les workers deviennent invisibles | une fois l'avertissement éprouvé |
-| **26bis** | **UNE SEULE BASE VIVANTE : le serveur reçoit ses PROPRES tables d'annonces** — 56 888 fiches, **≈ 1 Go** *(mesuré ; 739 Go libres)*. Le miroir devient un carton d'archives que plus rien n'utilise | *(tranché 21/08, option ②)* **3 gestes** : ① créer+remplir · ② l'envoi Supabase lit LA BASE · ③ les archives lisent LA BASE. ⚠️ **① et ② peuvent commencer tôt** ; **③ EXIGE le contrat d'autorité (6-9)** — sinon la base locale oublie les saisies de l'app. Voir l'encadré |
 | **27** | **Rapatrier les documents** — 40 493 | ⚠️ **irréversible** |
 | **28** | **Rapatrier les photos** — 1 397 | ⚠️ **irréversible** |
 | **29** | **Sortie des portails** + reprise des 350 annonces en ligne | délai non maîtrisé |
@@ -167,17 +169,31 @@ contacts et les recherches. Supabase garde son role : le sous-ensemble utile, en
 que Hektor vit encore**, puisque c'est le miroir qui alimente. Apres la coupure il serait trop
 tard. -> tache **26bis**.
 
-### Les trois gestes, et ce qui les separe
+### Les trois gestes, et OU ils sont dans la liste
 
 ```
-   (1)  CREER + REMPLIR    les tables d'annonces dans phase2.sqlite, depuis le miroir
-   (2)  OBSERVER           personne ne les lit encore
-   ---------------------------------------------------------------------
-   (3)  BASCULER           l'envoi vers Supabase lit LA BASE, plus le miroir
-                           la consultation des archives lit LA BASE, plus le miroir
+   26bis-(1)  CREER + REMPLIR   juste apres la bascule du numero de recherche
+   26bis-(2)  OBSERVER          en parallele, personne ne lit
+   ------------------------------------------------------------------
+   26bis-(3)  BASCULER          juste apres la tache 9 -- COLLEE au contrat d'autorite
 ```
 
-**(1) et (2) peuvent commencer tot** : additifs, rien ne depend d'eux, on jette si c'est faux.
+**Pourquoi ce n'est plus a la fin (corrige le 21/08).** Je l'avais rangee avec le rapatriement
+des documents et des photos, dans la famille « sortir de chez Hektor avant la coupure ».
+**Fausse ressemblance** :
+
+- **Ce n'est PAS irreversible.** Documents et photos, oui. Une table locale, on la jette.
+- **Elle demande une longue observation.** La poser tard, c'est repousser la coupure d'autant.
+- **(3) va avec 6-9.** Les laisser a vingt taches d'ecart, c'est se condamner a faire l'un sans
+  l'autre : le contrat aurait un arbitrage sans endroit ou l'ecrire.
+- **Et surtout** : la creation app-first (23-25) ecrit dans Supabase. Sans 26bis, une annonce
+  creee dans l'app n'existe QUE la, et le serveur ne l'apprend que si Hektor la confirme.
+  **Ce serait creuser le trou pendant qu'on le rebouche.**
+
+**Une seule reserve, assumee** : (2) attend la bascule du numero de recherche, pour ne pas avoir
+deux doublures a surveiller en meme temps. C'est une affaire de jours. Six chiffres a lire chaque
+matin au lieu de trois, ca cesse d'etre une surveillance et ca devient une corvee -- et une
+sentinelle qu'on ne lit plus ne protege de rien.
 
 ### (3) EXIGE le contrat d'autorite -- trouve par Frederic le 21/08
 
