@@ -14,6 +14,10 @@
 # rattrapage des documents — ne pas retirer cette pause.
 #
 # REPRENABLE : chaque lot est independant, un lot en echec n'arrete pas le run.
+# COUPE-CIRCUIT : mais 3 lots consecutifs en echec = signature d'un bannissement d'IP
+# ou d'une session Hektor morte -> le run s'abandonne (exit 2) au lieu de marteler une
+# porte fermee pendant des heures. Dans ce cas, verifier depuis une AUTRE IP avant de
+# relancer -- ne jamais rejouer aveuglement.
 $ErrorActionPreference = "Continue"
 $root = "C:\Hektor\Projet"
 $py = Join-Path $root ".venv\Scripts\python.exe"
@@ -29,6 +33,9 @@ try {
         --scope acquereurs --pause-between-batches 20
     $code = $LASTEXITCODE
     Write-Output "=== Rattrapage acquereurs termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $code) ==="
+    if ($code -eq 2) {
+        Write-Output "=== COUPE-CIRCUIT : run ABANDONNE sur lots consecutifs en echec. Verifier depuis une AUTRE IP (bannissement ?) avant de relancer. ==="
+    }
     if ($code -ne 0) { $runFailed = $true }
 } catch {
     Write-Output "=== ERREUR rattrapage acquereurs : $_ ==="

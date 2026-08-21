@@ -133,6 +133,12 @@ def main() -> int:
              "rattrapage long : tenir 6 appels/s pendant des heures est la forme qui a "
              "fait bannir notre IP au rattrapage des documents.",
     )
+    parser.add_argument(
+        "--max-consecutive-failed-batches", type=int, default=3,
+        help="Coupe-circuit : abandonne le run apres N lots consecutifs en echec "
+             "(defaut 3, 0 = desactive). Sans lui, un bannissement d'IP au lot 12 "
+             "laisse le run taper 226 lots de plus sur une porte fermee.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Affiche le volume sans fetch.")
     args = parser.parse_args()
 
@@ -155,19 +161,40 @@ def main() -> int:
     start = time.time()
     done = 0
     failed_batches = 0
+    consecutive_failed = 0
+    aborted = False
     for i in range(0, total, max(args.batch_size, 1)):
         batch = ids[i : i + max(args.batch_size, 1)]
         # Robustesse : un lot en échec (hoquet Hektor/réseau) ne doit PAS arrêter
         # tout le run — on log et on continue avec les lots suivants.
         try:
             process_batch(batch)
+            consecutive_failed = 0
         except Exception as exc:  # noqa: BLE001
             failed_batches += 1
+            consecutive_failed += 1
             print(f"[recherches-actives] LOT EN ECHEC (contacts {i}-{i + len(batch)}): {exc} -- on continue")
         done += len(batch)
         print(f"[recherches-actives] {done}/{total} ({round(time.time() - start)}s)")
+        # Coupe-circuit (21/08/2026). Des lots qui echouent EN CHAINE ne sont plus un
+        # hoquet : c'est la signature d'un bannissement d'IP ou d'une session Hektor
+        # morte. Continuer, c'est marteler une porte fermee pendant des heures --
+        # exactement ce qui a aggrave le rattrapage des documents. On sort ici : le run
+        # est reprenable, et il faut verifier depuis une AUTRE IP avant de conclure a
+        # une panne Hektor.
+        if args.max_consecutive_failed_batches > 0 and consecutive_failed >= args.max_consecutive_failed_batches:
+            aborted = True
+            print(
+                f"[recherches-actives] COUPE-CIRCUIT : {consecutive_failed} lots consecutifs en echec"
+                f" -- run ABANDONNE a {done}/{total} ({round(time.time() - start)}s)."
+                " Suspecter un bannissement d'IP ou une session Hektor morte ; verifier depuis"
+                " une autre IP avant de relancer."
+            )
+            break
         if args.pause_between_batches > 0 and done < total:
             time.sleep(args.pause_between_batches)
+    if aborted:
+        return 2  # 2 = abandon coupe-circuit (a distinguer de 1 = echecs partiels)
     if failed_batches:
         print(f"[recherches-actives] TERMINE AVEC {failed_batches} lot(s) en echec sur {((total - 1) // max(args.batch_size, 1)) + 1} -- {done} contacts traites en {round(time.time() - start)}s")
         return 1  # code non nul -> la tache planifiee signale l'echec partiel
