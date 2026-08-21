@@ -65,3 +65,4 @@ Console/logs/
 .DS_Store
 Thumbs.db
 ~$*
+pull_from_supabase.lock

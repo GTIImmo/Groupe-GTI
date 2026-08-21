@@ -48,10 +48,24 @@ demande « les 1 000 lignes qui suivent la derniere valeur lue ». Avec un OFFSE
 app_dossier_match_attrs tombait en 'statement timeout' des la 6e page : Postgres
 recalculait la vue entiere a chaque fois. Par cle, elle passe en 34 s.
 
+LES TROIS FREINS, poses le 22/08 apres l'incident (voir le compte rendu dans la note
+d'audit). Ils ne sont pas cosmetiques : chacun repare une facon precise de perdre.
+
+  1. COPIER PUIS RENOMMER. La copie remplit <table>__tmp ; l'ancienne n'est remplacee
+     qu'une fois la neuve VERIFIEE COMPLETE (comptage cote Supabase avant la bascule).
+     Une passe ratee -- panne, ou reponse tronquee prise pour une fin de table -- laisse
+     donc la copie de la veille intacte. Le serveur ne peut JAMAIS finir avec moins
+     qu'avant. Sans ce frein, la 2e passe du 21/08 a detruit 64 bonnes copies.
+  2. UN FREIN ENTRE LES REQUETES (PAUSE_PAGE, PAUSE_TABLE) et les tables triees de la
+     plus legere a la plus lourde. C'est le debit soutenu -- 2 800 requetes sans pause --
+     qui a sature l'instance Supabase jusqu'a son redemarrage.
+  3. UN VERROU. Deux descentes simultanees sont la cause DIRECTE de l'incident : j'en ai
+     relance une alors que la premiere finissait. Le fichier temoin rend la faute
+     impossible ; le --dry-run, lui, reste libre.
+
 LIMITE RESIDUELLE : quand PostgREST ne declare pas de cle primaire (cas des vues), on
 parcourt sur la premiere colonne. Si elle porte des doublons ou des valeurs nulles, des
-lignes peuvent etre sautees. Le CONTROLE DE COMPTES en fin de run compare chaque table au
-compte Supabase et affiche l'ecart -- c'est dit, pas taise.
+lignes peuvent etre sautees -- mais le comptage avant bascule refuse alors la copie.
 
 USAGE
 -----
@@ -78,6 +92,9 @@ PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 DEFAULT_ENV_FILES = (ROOT / ".env", ROOT / "apps" / "hektor-v1" / ".env")
 STATE_TABLE = "sb_pull_state"
 PAGE_SIZE = 1000
+PAUSE_PAGE = 0.3        # secondes entre deux pages
+PAUSE_TABLE = 2.0       # secondes entre deux tables
+VERROU = "pull_from_supabase.lock"
 
 
 def load_env_file(path: Path) -> None:
@@ -226,8 +243,15 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
     """Recopie une table. Renvoie (lignes ecrites, appels API)."""
     quoted = ", ".join('"%s"' % c.replace('"', '""') for c in columns)
     placeholders = ", ".join("?" for _ in columns)
-    conn.execute('DROP TABLE IF EXISTS "%s"' % table)
-    conn.execute('CREATE TABLE "%s" (%s)' % (table, quoted))
+    # COPIER PUIS RENOMMER -- correctif du 22/08, apres l'incident de la nuit.
+    # L'ancienne version faisait DROP puis CREATE : l'ancienne copie mourait AVANT que la
+    # neuve existe. Quand la 2e passe a echoue sur 64 tables, elle a donc detruit les
+    # BONNES copies que la 1re passe avait faites. On remplit desormais une table
+    # temporaire, et on ne remplace l'ancienne qu'une fois la copie complete. Une passe
+    # ratee laisse la copie de la veille intacte.
+    tmp = table + "__tmp"
+    conn.execute('DROP TABLE IF EXISTS "%s"' % tmp)
+    conn.execute('CREATE TABLE "%s" (%s)' % (tmp, quoted))
     # ENREGISTRER AVANT DE COPIER -- correctif du 21/08, apres l'echec de
     # app_dossier_match_attrs au premier run. Sans cette ligne, une copie interrompue
     # laissait une table PARTIELLE absente de sb_pull_state : au run suivant elle passait
@@ -267,7 +291,7 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
         if not rows:
             break
         conn.executemany(
-            'INSERT INTO "%s" (%s) VALUES (%s)' % (table, quoted, placeholders),
+            'INSERT INTO "%s" (%s) VALUES (%s)' % (tmp, quoted, placeholders),
             [tuple(encode(row.get(c)) for c in columns) for row in rows],
         )
         total += len(rows)
@@ -280,6 +304,26 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
         borne = suivante
         if len(rows) < taille:
             break
+        # FREIN -- correctif du 22/08. C'est le debit soutenu (2 800 requetes sans pause)
+        # qui a sature l'instance jusqu'au redemarrage. Sur ~1 400 pages, 0,3 s ajoutent
+        # ~7 minutes a la descente. C'est le prix a payer, et il est petit.
+        time.sleep(PAUSE_PAGE)
+
+    # VERIFIER AVANT DE REMPLACER -- correctif du 22/08, trouve par le test.
+    # La boucle s'arrete des qu'une page rend moins de lignes qu'on en a demande. C'est
+    # normalement la fin de la table... mais une reponse tronquee produit le meme signal.
+    # Sans ce controle, une copie incomplete remplacait la bonne, sans un bruit. On compte
+    # donc chez Supabase AVANT la bascule : si la neuve n'est pas entiere, on la refuse et
+    # l'ancienne reste. Le serveur ne peut jamais se retrouver avec MOINS qu'avant.
+    distant = reader.count(table)
+    if distant is not None and distant != total:
+        raise RuntimeError(
+            f"copie incomplete : {total} lignes lues, {distant} attendues cote Supabase "
+            "-- l'ancienne copie est conservee")
+
+    # LA BASCULE : l'ancienne n'est remplacee qu'ICI, copie verifiee complete.
+    conn.execute('DROP TABLE IF EXISTS "%s"' % table)
+    conn.execute('ALTER TABLE "%s" RENAME TO "%s"' % (tmp, table))
     conn.execute(
         f"UPDATE {STATE_TABLE} SET lignes=?, derniere_descente=?, dernier_echec=NULL "
         "WHERE table_name=?",
@@ -297,7 +341,10 @@ def marquer_echec(conn: sqlite3.Connection, table: str, message: str) -> None:
     d'etre confondue avec une table native et protegee a jamais.
     """
     try:
-        conn.execute('DROP TABLE IF EXISTS "%s"' % table)
+        # On ne supprime QUE la table temporaire : la copie precedente, elle, est
+        # conservee. C'est tout l'objet du correctif du 22/08 -- une passe ratee ne doit
+        # jamais laisser le serveur avec moins qu'avant.
+        conn.execute('DROP TABLE IF EXISTS "%s"' % (table + "__tmp"))
     except Exception:                                              # noqa: BLE001
         pass
     conn.execute(
@@ -305,6 +352,39 @@ def marquer_echec(conn: sqlite3.Connection, table: str, message: str) -> None:
         (message[:500], table),
     )
     conn.commit()
+
+
+class DescenteDejaEnCours(RuntimeError):
+    """Levee quand une descente tourne deja. Traitee a part pour sortir proprement."""
+
+
+class VerrouUnique:
+    """Une seule descente a la fois -- correctif du 22/08.
+
+    C'est la cause DIRECTE de l'incident : j'ai relance une descente complete alors que la
+    premiere finissait a peine. Deux passes simultanees, ~2 800 requetes, et l'instance
+    Supabase a cede jusqu'au redemarrage. Un fichier temoin suffit a rendre la faute
+    impossible.
+    """
+
+    def __init__(self, chemin: Path) -> None:
+        self.chemin = chemin
+
+    def __enter__(self) -> "VerrouUnique":
+        if self.chemin.exists():
+            age = time.time() - self.chemin.stat().st_mtime
+            raise DescenteDejaEnCours(
+                f"une descente tourne deja (verrou pose il y a {int(age)}s : {self.chemin}). "
+                "Si c'est un residu d'un run interrompu, supprimer le fichier a la main."
+            )
+        self.chemin.write_text(str(os.getpid()), encoding="utf-8")
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        try:
+            self.chemin.unlink()
+        except OSError:
+            pass
 
 
 def main() -> int:
@@ -352,35 +432,51 @@ def main() -> int:
         print("\n[dry-run] rien n'a ete ecrit")
         return 0
 
-    stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
-    debut = time.time()
-    lignes_totales = 0
-    appels_totaux = 0
-    echecs: list[tuple[str, str]] = []
-    for index, nom in enumerate(cibles, start=1):
-        try:
-            colonnes, cle = schema[nom]
-            lignes, appels = copy_table(conn, reader, nom, colonnes, cle, stamp)
-            lignes_totales += lignes
-            appels_totaux += appels
-            print(f"  [{index:>3}/{len(cibles)}] {nom:<46} {lignes:>8} lignes")
-        except Exception as exc:                                   # noqa: BLE001
-            # Une table en echec ne doit pas arreter la descente : on note et on continue.
-            # marquer_echec supprime la copie partielle -- voir le correctif du 21/08.
-            marquer_echec(conn, nom, str(exc))
-            echecs.append((nom, str(exc)[:200]))
-            print(f"  [{index:>3}/{len(cibles)}] {nom:<46}    ECHEC : {str(exc)[:120]}")
+    # LE VERROU englobe TOUT le travail : acquis ici, relache quoi qu'il arrive.
+    with VerrouUnique(ROOT / VERROU):
+        # LES PLUS LEGERES D'ABORD -- correctif du 22/08. Les tables lourdes sont celles qui
+        # font ceder l'instance ; en les passant en dernier, tout le reste est deja a l'abri
+        # quand on les aborde. Le poids est estime par le nombre de colonnes a defaut de mieux,
+        # et par le compte deja connu quand on l'a.
+        connus = {r[0]: (r[1] or 0) for r in conn.execute(
+            f"SELECT table_name, lignes FROM {STATE_TABLE}")}
+        cibles.sort(key=lambda n: (connus.get(n, 0) * len(schema[n][0]), n))
 
-    duree = round(time.time() - debut)
-    print(f"\n{lignes_totales} lignes descendues dans {len(cibles) - len(echecs)} tables "
-          f"en {duree}s ({appels_totaux} appels API)")
-    if echecs:
-        print(f"{len(echecs)} table(s) en echec :")
-        for nom, err in echecs:
-            print(f"   {nom} : {err}")
-    conn.close()
-    return 1 if echecs else 0
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+        debut = time.time()
+        lignes_totales = 0
+        appels_totaux = 0
+        echecs: list[tuple[str, str]] = []
+        for index, nom in enumerate(cibles, start=1):
+            try:
+                colonnes, cle = schema[nom]
+                lignes, appels = copy_table(conn, reader, nom, colonnes, cle, stamp)
+                lignes_totales += lignes
+                appels_totaux += appels
+                print(f"  [{index:>3}/{len(cibles)}] {nom:<46} {lignes:>8} lignes")
+            except Exception as exc:                                   # noqa: BLE001
+                # Une table en echec ne doit pas arreter la descente : on note et on continue.
+                # marquer_echec supprime la copie partielle -- voir le correctif du 21/08.
+                marquer_echec(conn, nom, str(exc))
+                echecs.append((nom, str(exc)[:200]))
+                print(f"  [{index:>3}/{len(cibles)}] {nom:<46}    ECHEC : {str(exc)[:120]}")
+            time.sleep(PAUSE_TABLE)
 
+        duree = round(time.time() - debut)
+        print(f"\n{lignes_totales} lignes descendues dans {len(cibles) - len(echecs)} tables "
+              f"en {duree}s ({appels_totaux} appels API)")
+        if echecs:
+            print(f"{len(echecs)} table(s) en echec :")
+            for nom, err in echecs:
+                print(f"   {nom} : {err}")
+        conn.close()
+        return 1 if echecs else 0
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except DescenteDejaEnCours as exc:
+        # Sortie propre plutot qu'une trace : ce script est fait pour tourner en tache
+        # planifiee, et un chevauchement n'est pas un bogue -- c'est le garde-fou qui joue.
+        print(f"ARRET : {exc}")
+        raise SystemExit(2) from None
