@@ -243,19 +243,24 @@ vivants -- une regle en bloc les aurait geles.
 > ### ⚠ DIAGNOSTIC CORRIGÉ LE 21/08 AU SOIR — lire ceci d'abord
 >
 > **Tout ce qui suit reposait sur une affirmation fausse.** L'audit de la data locale
-> () a ouvert la base au lieu de lire le nom
-> des fichiers :
+> (`notice/AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21.md`) a ouvert la base au lieu de lire le
+> nom des fichiers :
 >
-> 
+> ```
+>    ce que cette section affirme   « le serveur ne detient pas les annonces »
+>    ce que la base contient        app_view_generale : 56 890 lignes, 130 COLONNES
+>                                   refaite chaque nuit en 37 SECONDES
+>                                   132 des 168 champs sont deja des colonnes locales
+> ```
 >
->  n'est pas une vue : c'est un  suivi d'un .
-> **Le serveur détient déjà les annonces**, et il les gardera après la coupure — le miroir gèle,
-> il ne disparaît pas.
+> `view_generale.py` n'est pas une vue : c'est un `DROP TABLE` suivi d'un
+> `CREATE TABLE AS`. **Le serveur détient déjà les annonces**, et il les gardera après la
+> coupure — le miroir gèle, il ne disparaît pas.
 >
 > **Le vrai problème n'est donc pas la conservation, c'est l'écriture** : la table étant jetée et
 > refaite chaque nuit, une valeur écrite par l'app n'y survivrait pas jusqu'à 05:30. Il faut une
-> table à côté, jamais reconstruite — patron . **C'est la tâche C.6, et elle
-> est beaucoup plus petite que ce que décrit la suite de cette section.**
+> table à côté, jamais reconstruite — patron `app_search_registry`. **C'est la tâche C.6, et
+> elle est beaucoup plus petite que ce que décrit la suite de cette section.**
 >
 > La suite est conservée telle quelle : elle porte des mesures justes (le partage 59/134, le
 > calendrier, les trois gestes) et le raisonnement qui a mené à l'erreur.
