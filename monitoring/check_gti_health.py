@@ -132,6 +132,18 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "growth_pct": 15,
         "growth_abs": 500,
     },
+    # Depuis le 21/08, Supabase conserve les recherches ARCHIVEES au lieu de les
+    # supprimer -- sinon tout ce qui pointait sur leur cle devenait orphelin. Le moteur
+    # de rapprochement a donc recu un verrou : il ne score que les actives. Cette
+    # sentinelle surveille ce verrou. Une seule ligne ici = un client qui ne cherche
+    # plus et a qui on s'apprete a proposer des biens.
+    {
+        "key": "data.rapprochement_sur_archivee",
+        "label": "Rapprochements sur recherche archivee",
+        "table": "app_rapprochements_sur_recherche_archivee",
+        "rule": "absolute",
+        "max": 0,
+    },
     # --- Chantier identite / recherches (20/08/2026) ---------------------------
     # Ce que le balayage nocturne app_sweep_search_orphans() ne sait PAS reparer :
     # un orphelin dont le contact a PLUSIEURS recherches vivantes -> on ne sait pas
