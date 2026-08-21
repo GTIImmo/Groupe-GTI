@@ -83,6 +83,7 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **24** | La création de **contact** et de **mandant** | |
 | **25** | La modale d'ajout écrit ses **trois objets d'un coup** | |
 | **26** | Les workers deviennent invisibles | une fois l'avertissement éprouvé |
+| **26bis** | **Le serveur local reçoit ses PROPRES tables d'annonces** — *(tranché par Frédéric le 21/08, option ②)* | ⚠️ **à faire TANT QUE Hektor vit**, c'est le miroir qui les alimente. Voir l'encadré ci-dessous |
 | **27** | **Rapatrier les documents** — 40 493 | ⚠️ **irréversible** |
 | **28** | **Rapatrier les photos** — 1 397 | ⚠️ **irréversible** |
 | **29** | **Sortie des portails** + reprise des 350 annonces en ligne | délai non maîtrisé |
@@ -92,6 +93,77 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **33** | Le serveur remplit **les deux cases** | jour J |
 | **34** | Le numéro est **imposé**, pas laissé au compteur | jour J |
 | **35** | On éteint l'aspirateur — pipeline, workers, Playwright, file | jour J |
+
+---
+
+## LE BLOB DE DETAIL — faux obstacle, leve le 21/08
+
+Le contrat d'autorite du 17/08 reclamait *« un inventaire exhaustif des ~130 cles du blob avant
+d'ecrire quoi que ce soit dessus »*. **Cet inventaire est sans objet** : la question n'etait pas
+« que contient le blob » mais « qui l'ecrit ».
+
+**Une seule fonction ecrit dans le blob** : `app_edit_annonce_optimistic`. Et elle n'y touche
+que **7 cles** :
+
+```
+   surface . nb_pieces . nb_chambres . surface_terrain_detail
+   latitude_detail . longitude_detail . garage_box_detail
+```
+
+Elle range en plus ce que le negociateur vient de saisir dans un **compartiment dedie**,
+`app_optimistic_overlay`. **Le paquet a deja un tiroir reserve a l'app.**
+
+Les 127 autres cles sont une photocopie de Hektor : l'app les lit, les affiche, s'en sert pour
+le rapprochement -- elle n'en ecrit aucune.
+
+> **Ce qui reste a faire est minuscule** : proteger ces 7 cles de la reecriture de nuit, avec le
+> mecanisme qui existe deja (celui qui protege naissance / lieu / situation matrimoniale cote
+> contact). Ce n'est pas un chantier a part : ca rentre dans « Hektor confirme, il n'ecrase plus ».
+
+**Ce qui reste valide de la mise en garde du 17/08** : ne PAS declarer « tout le descriptif est a
+l'app ». Le blob transporte de la diffusion, des affaires, des mandats et des photos bien
+vivants -- une regle en bloc les aurait geles.
+
+---
+
+## LE TROU DE STOCKAGE DES ANNONCES — decouvert et tranche le 21/08
+
+**Constat, mesure a l'appui.** Cote annonces, le serveur local **ne detient pas les donnees** :
+
+```
+   app_dossier  (local)  =  10 colonnes seulement
+      id . hektor_annonce_id . hektor_mandat_id . numero_dossier
+      numero_mandat . commercial_id . commercial_nom . dates . absent_depuis
+```
+
+Le contenu vit **uniquement dans le miroir de Hektor** (`data/hektor.sqlite`, 34 tables,
+464 952 reponses API brutes). `view_generale.py` recompose a la volee **une ligne a plat
+d'environ 200 champs**, qui part ensuite vers Supabase, coupee en deux :
+
+| | |
+|---|---|
+| **59 champs** | colonnes de `app_dossier_current` -- chercher, filtrer, trier |
+| **134 champs** | le paquet `app_dossier_detail_current` -- afficher |
+
+Le partage est decide par deux listes explicites dans le code. **Rien n'est opaque** : les
+134 cles sont nommees et calculees une par une. *(C'est pourquoi l'« inventaire des 130 cles »
+reclame par le contrat d'autorite du 17/08 est sans objet -- voir plus bas.)*
+
+> **Le probleme** : le jour ou Hektor s'eteint, le miroir cesse d'etre alimente. Or c'est lui
+> qui fabrique la ligne a plat. **Le serveur local n'aurait plus de quoi la recalculer.**
+
+*(Le contact et la recherche n'ont PAS ce trou : le local a ses propres tables --
+355 641 contacts, 76 839 recherches.)*
+
+### La decision (Frederic, 21/08) : option ②
+
+**Le serveur local recoit ses propres tables d'annonces** et reste le maitre, comme pour les
+contacts et les recherches. Supabase garde son role : le sous-ensemble utile, en ligne.
+
+**Consequence de calendrier, non negociable** : le remplissage initial doit se faire **pendant
+que Hektor vit encore**, puisque c'est le miroir qui alimente. Apres la coupure il serait trop
+tard. -> tache **26bis**, dans la meme famille que le rapatriement des documents et des photos :
+*sortir de chez Hektor tout ce qui doit survivre*.
 
 ---
 
