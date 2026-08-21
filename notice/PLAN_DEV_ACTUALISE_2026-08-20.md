@@ -83,10 +83,11 @@ Un plan ne protège de rien s'il n'est pas relu avant chaque geste.
 | **19** | Ménage des tables mortes | |
 | ⏳ **19-R1** | **RATTRAPAGE DES ACQUÉREURS — passe de fond** — outil prêt le 21/08 (`scheduled/run_rattrapage_acquereurs.ps1`, 71 337 fiches, ≈ 4 h 35), **lancé à la main**. À cocher une fois le journal terminé sur `termine OK` | ferme le trou des **nouvelles** recherches, accumulé depuis mai. Voir *Le trou des NOUVELLES recherches* |
 | ⏳ **19-R2** | **RATTRAPAGE — LA VEILLE DE LA BASCULE** — **relancer la même commande** la veille du jour où les négociateurs passent sur l'app | ⚠️ **à ne pas oublier : c'est la DERNIÈRE occasion.** Après la bascule, plus personne ne crée de recherche dans Hektor — ce qui n'aura pas été rapatrié ce jour-là ne le sera jamais |
+| ⏳ **4sexies** | **SENTINELLE « une recherche ne disparaît jamais »** — le nombre de recherches d'un contact ne peut que croître *(4bis : Hektor n'efface jamais)*. Une **diminution** est donc impossible, et c'est le signal exact d'un glissement de rang. Seuil 0 | **manque au dispositif de 4quinquies.** Plus sûr que d'observer les 9 contacts mêlant archivée et active. **Pas codée — en attente du go** |
 | **19bis** | **BASCULE DES NÉGOCIATEURS SUR L'APP** | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | **20** | **Corriger le modèle « au moins »** de la modale recherche | après la bascule |
 | **21** | **Mesurer** les critères Hektor invisibles dans l'app | |
-| **22** | **Fermer les 4 portes des recherches** | **DÉCLASSÉE le 21/08** : elle servait à empêcher qu'on recalcule le nom. Une fois le nom figé (4quinquies), plus personne ne le recalcule — les portes peuvent rester ouvertes. Reste utile pour l'autonomie, plus pour la stabilité |
+| **22** | **Fermer les 4 portes des recherches** | **RÉTRÉCIE, pas déclassée** *(corrigé le 21/08 sur objection de Frédéric)*. Elle perd son rôle d'origine — empêcher qu'on **recalcule** le nom : vérifié, un seul fabricant dans tout le projet (`build_contacts_layer.py:828`) et le registre lui reprend la main (`:1235`) ; ni le front, ni le worker, ni aucun SQL n'en fabrique. Elle garde **deux** rôles : l'**autonomie**, et la **dérive de position** — ce dernier *introduit par 4quinquies lui-même*. Voir *Le nom figé épingle une POSITION* |
 | **23** | La création d'**annonce** écrit la vraie fiche | **après 26bis-③** — sinon une annonce créée dans l'app n'existerait que dans Supabase, et le serveur ne l'apprendrait que si Hektor la confirme. *Creuser le trou pendant qu'on le rebouche* |
 | **24** | La création de **contact** et de **mandant** | |
 | **25** | La modale d'ajout écrit ses **trois objets d'un coup** | |
@@ -323,6 +324,43 @@ que mesure le carnet du balayage (`app_sweep_search_orphans_log`, posé le 21/08
 
 *(Correction : les « 31 recherches supprimées chez Hektor » notées le 20/08 étaient selon toute
 vraisemblance des recherches **archivées**.)*
+
+### Le nom figé épingle une POSITION — conséquence relevée le 21/08
+
+Objection de Frédéric sur « la tâche 22 est déclassée ». **Elle portait juste.**
+
+Ce qui a été vérifié et tient : **un seul endroit du projet fabrique un nom de recherche**,
+`build_contacts_layer.py:828`, et le registre lui reprend la main à la ligne 1235. Le front, le
+worker et les fonctions Postgres n'en fabriquent aucun *(vérifié le 21/08)*. Donc oui : plus
+personne ne peut recalculer un nom et ne plus rien retrouver.
+
+**Mais figer le nom déplace le risque, il ne le supprime pas :**
+
+```
+   AVANT   le nom designait UN CONTENU   -> le contenu change, le nom change, la ligne s'orpheline
+   APRES   le nom designe UNE POSITION   -> la position glisse, le nom se recolle sur la MAUVAISE
+                                            recherche -- et SANS BRUIT
+```
+
+Le second est plus rare mais **plus grave** : l'orphelinage se voit *(le balayage le compte)*, la
+mauvaise attache ne se voit pas. Et ce sont précisément les **4 portes** qui relisent les rangs
+chez Hektor. **La tâche 22 reprend donc un rôle de stabilité — un autre que celui qu'elle perd.**
+
+**Ce qui a été mesuré**, sur l'ordre dans lequel Hektor rend les recherches :
+
+```
+   9 contacts seulement melent archivee(s) et active(s)
+      8  toutes les archivees AVANT les actives   -> ajout en FIN de liste
+      0  toutes les archivees APRES les actives   -> insertion en tete
+      1  entrelacee  (archivee / active / archivee)
+```
+
+L'entrelacée n'est pas un contre-exemple : c'est exactement ce que produit un ajout en fin de
+liste quand on archive après coup. **Zéro contre-exemple — mais 9 contacts, ce n'est pas une
+preuve.** À dire ainsi, et pas autrement.
+
+**D'où la tâche 4sexies**, qui remplace l'observation par un fait vérifiable : *le nombre de
+recherches d'un contact ne peut que croître.* Toute diminution signale un glissement.
 
 ---
 
