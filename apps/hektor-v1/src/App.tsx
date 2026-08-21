@@ -35526,7 +35526,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const selectedRoles = contactJsonList(props.contact.relation_roles_json)
   const selectedActiveSearches = props.searches.filter((search) => contactBool(search.is_active))
   const selectedArchivedSearches = props.searches.filter((search) => !contactBool(search.is_active))
-  const orderedSearches = [...selectedActiveSearches, ...selectedArchivedSearches]
+  // Les recherches archivées sont désormais conservées côté base (elles ne sont plus
+  // supprimées quand Hektor les archive, sinon tout ce qui pointait dessus devenait
+  // orphelin). Mais elles n'ont rien à faire dans la liste : on ne montre que les
+  // vivantes. Le compteur « Recherches archivées » plus bas dit qu'elles existent.
+  const orderedSearches = selectedActiveSearches
   const roleLabels = selectedRoles.map((role) => contactDirectoryRoleLabel(role))
   const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
   const contactFullName = `${props.contact.civilite ? `${props.contact.civilite} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
