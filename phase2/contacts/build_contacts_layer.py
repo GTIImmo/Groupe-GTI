@@ -1160,11 +1160,12 @@ def replace_table_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str
 
 SEARCH_REGISTRY_DDL = """
 CREATE TABLE IF NOT EXISTS app_search_registry (
-    app_search_id     INTEGER PRIMARY KEY,
-    hektor_contact_id TEXT NOT NULL,
-    search_index      INTEGER NOT NULL,
-    first_seen_at     TEXT,
-    last_seen_at      TEXT
+    app_search_id      INTEGER PRIMARY KEY,
+    hektor_contact_id  TEXT NOT NULL,
+    search_index       INTEGER NOT NULL,
+    contact_search_key TEXT,
+    first_seen_at      TEXT,
+    last_seen_at       TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_search_registry_pair
     ON app_search_registry(hektor_contact_id, search_index);
@@ -1195,43 +1196,72 @@ def assign_search_ids(
         return {"reprises": 0, "attribues": 0}
 
     ids = sorted({str(row["hektor_contact_id"]) for row in search_rows})
-    known: dict[tuple[str, int], int] = {}
+    known: dict[tuple[str, int], tuple[int, str | None]] = {}
     for start in range(0, len(ids), 400):
         chunk = ids[start:start + 400]
         placeholders = ",".join("?" for _ in chunk)
-        for cid, idx, sid in conn.execute(
-            f"SELECT hektor_contact_id, search_index, app_search_id FROM app_search_registry "
-            f"WHERE hektor_contact_id IN ({placeholders})",
+        for cid, idx, sid, key in conn.execute(
+            f"SELECT hektor_contact_id, search_index, app_search_id, contact_search_key "
+            f"FROM app_search_registry WHERE hektor_contact_id IN ({placeholders})",
             tuple(chunk),
         ):
-            known[(str(cid), int(idx))] = int(sid)
+            known[(str(cid), int(idx))] = (int(sid), key)
 
     next_id = int(conn.execute("SELECT COALESCE(MAX(app_search_id), 0) FROM app_search_registry").fetchone()[0]) + 1
     nouveaux: list[tuple[Any, ...]] = []
+    noms_a_poser: list[tuple[Any, ...]] = []
     reprises = 0
+    noms_figes = 0
     for row in search_rows:
         pair = (str(row["hektor_contact_id"]), int(row["search_index"]))
-        sid = known.get(pair)
-        if sid is None:
+        connu = known.get(pair)
+        if connu is None:
             sid = next_id
             next_id += 1
-            known[pair] = sid
-            nouveaux.append((sid, pair[0], pair[1], refreshed_at, refreshed_at))
+            # Recherche jamais vue : on garde le nom qui vient d'etre calcule, et on le FIGE.
+            known[pair] = (sid, str(row["contact_search_key"]))
+            nouveaux.append((sid, pair[0], pair[1], str(row["contact_search_key"]), refreshed_at, refreshed_at))
         else:
+            sid, nom_fige = connu
             reprises += 1
+            if nom_fige:
+                # LE GESTE : on rend a la recherche le nom qu'elle portait deja, au lieu du
+                # nom qui vient d'etre recalcule a partir de son contenu. Le contenu peut
+                # changer autant qu'il veut -- la ligne garde son identite, et l'empreinte
+                # (stable_payload_hash) fait enfin son travail : mise a jour au lieu de
+                # destruction/recreation.
+                if nom_fige != row["contact_search_key"]:
+                    noms_figes += 1
+                row["contact_search_key"] = nom_fige
+            else:
+                # Paire connue mais sans nom enregistre (registre pose avant ce correctif) :
+                # on adopte le nom courant comme nom definitif.
+                known[pair] = (sid, str(row["contact_search_key"]))
+                noms_a_poser.append((str(row["contact_search_key"]), pair[0], pair[1]))
         row["app_search_id"] = sid
 
     if nouveaux:
         conn.executemany(
             "INSERT INTO app_search_registry(app_search_id, hektor_contact_id, search_index, "
-            "first_seen_at, last_seen_at) VALUES (?, ?, ?, ?, ?)",
+            "contact_search_key, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)",
             nouveaux,
+        )
+    if noms_a_poser:
+        conn.executemany(
+            "UPDATE app_search_registry SET contact_search_key = ? "
+            "WHERE hektor_contact_id = ? AND search_index = ?",
+            noms_a_poser,
         )
     conn.executemany(
         "UPDATE app_search_registry SET last_seen_at = ? WHERE hektor_contact_id = ? AND search_index = ?",
         [(refreshed_at, pair[0], pair[1]) for pair in known],
     )
-    return {"reprises": reprises, "attribues": len(nouveaux)}
+    return {
+        "reprises": reprises,
+        "attribues": len(nouveaux),
+        "noms_rendus": noms_figes,
+        "noms_adoptes": len(noms_a_poser),
+    }
 
 
 def insert_table_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str, Any]], refreshed_at: str) -> None:
