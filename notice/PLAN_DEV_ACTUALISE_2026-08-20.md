@@ -858,12 +858,28 @@ idempotente et reprenable (chaque lot est indépendant, un lot en échec n'arrê
 
 ---
 
-## LES QUATRE RÈGLES
+## LES CINQ RÈGLES
 
 1. **Un numéro ne se perd jamais.** *(fait)*
 2. **Hektor confirme, il n'écrase pas.**
 3. **Une action a toujours une fin visible** — surtout quand elle rate.
 4. **Tant que la diffusion passe par Hektor, Hektor doit rester à jour.**
+5. **Le miroir se met à jour, il ne se remplace pas.** *(posée le 21/08, tâche 0.2)*
+
+### La règle 5, en clair
+
+`data/hektor.sqlite` — 3,89 Go, 464 952 réponses — est **l'archive de tout ce que Hektor a
+jamais dit**. C'est encore lui qui fabrique chaque nuit les 56 890 annonces et les 355 641
+contacts, en 37 secondes.
+
+| | |
+|---|---|
+| **Les mises à jour n'ont pas besoin de suppression** | elles écrasent **en place** : `INSERT ... ON CONFLICT(endpoint_name, object_type, object_id_key, page_key) DO UPDATE SET`. Le miroir grossit et se corrige, il ne se vide jamais pour se remplir |
+| **Les suppressions CIBLÉES restent permises** | une annonce (`delete_local_annonce.py`), un contact (`delete_local_contact.py`), les mandats d'une annonce reversés en entier à chaque run (`normalize_source.py`, `refresh_single_annonce.py`), une page de listing réécrite (`sync_raw.py`) |
+| **Ce qui est INTERDIT** | supprimer le fichier, le déplacer, vider une table en masse, ou « faire de la place » sur les 3,89 Go |
+| **Après la coupure il gèle — il ne devient pas inutile** | il reste la source des annonces jusqu'à C.7, et l'archive ensuite |
+
+> C'est une règle de **conservation**, pas de gel. Elle n'empêche rien de ce qui tourne.
 
 ---
 

@@ -1,5 +1,23 @@
 """Sauvegarde des donnees LOCALES irremplacables (chantier Phase 0.1).
 
+REGLE 5 -- LE MIROIR SE MET A JOUR, IL NE SE REMPLACE PAS  (posee le 2026-08-21)
+--------------------------------------------------------------------------------
+data/hektor.sqlite (3,89 Go, 464 952 reponses) est l'archive de TOUT ce que Hektor a
+jamais dit. C'est encore lui qui fabrique chaque nuit les 56 890 annonces et les
+355 641 contacts -- en 37 secondes (app_view_generale, build_contacts_layer).
+
+  - une mise a jour n'a JAMAIS besoin d'une suppression : elle ecrase en place
+    (INSERT ... ON CONFLICT(...) DO UPDATE SET). Le miroir grossit et se corrige,
+    il ne se vide jamais pour se remplir ;
+  - les suppressions CIBLEES restent permises : une annonce, un contact, les mandats
+    d'une annonce reverses a chaque run, une page de listing reecrite ;
+  - INTERDIT : supprimer le fichier, le deplacer, vider une table en masse, ou
+    « faire de la place » sur les 3,89 Go ;
+  - apres la coupure il GELE, il ne devient pas inutile : il reste la source des
+    annonces, puis l'archive.
+
+C'est une regle de CONSERVATION, pas de gel. Elle n'empeche rien de ce qui tourne.
+
 POURQUOI
 --------
 L'audit du 2026-08-17 (notice/NOTE_AUDIT_MAITRE_2026-08-17.md, section 5) a montre que
