@@ -63,9 +63,18 @@ d'audit). Ils ne sont pas cosmetiques : chacun repare une facon precise de perdr
      relance une alors que la premiere finissait. Le fichier temoin rend la faute
      impossible ; le --dry-run, lui, reste libre.
 
-LIMITE RESIDUELLE : quand PostgREST ne declare pas de cle primaire (cas des vues), on
-parcourt sur la premiere colonne. Si elle porte des doublons ou des valeurs nulles, des
-lignes peuvent etre sautees -- mais le comptage avant bascule refuse alors la copie.
+LE CAS DES VUES SANS CLE PRIMAIRE, resolu le 22/08. Postgres n'en declare aucune, donc
+on parcourt sur la premiere colonne -- qui peut se repeter. Sur
+app_mandat_broadcast_current (1 528 lignes pour 343 dossiers, jusqu'a 10 lignes par
+dossier, une par portail), la frontiere d'une page tombait au milieu d'un dossier et
+« apres ce dossier » sautait ses lignes restantes : 1 524 lues au lieu de 1 528.
+Le comptage avant bascule l'a refusee, puis une RELECTURE PAR RANG, triee sur TOUTES les
+colonnes (ordre total, donc aucune egalite possible), la rend complete. Reservee au petit
+volume : l'offset coute cher en profondeur sur une vue calculee.
+
+⚠ PostgREST PLAFONNE toute reponse a 1 000 lignes, quel que soit le `limit` demande --
+verifie le 22/08 : une demande de 1 528 lignes en a rendu 1 000. Ne jamais compter sur une
+lecture « en un seul morceau ».
 
 USAGE
 -----
@@ -95,6 +104,7 @@ PAGE_SIZE = 1000
 PAUSE_PAGE = 0.3        # secondes entre deux pages
 PAUSE_TABLE = 2.0       # secondes entre deux tables
 VERROU = "pull_from_supabase.lock"
+RELECTURE_ENTIERE_MAX = 5000   # au-dela, on ne redemande pas une table en un seul bloc
 
 
 def load_env_file(path: Path) -> None:
@@ -189,6 +199,21 @@ class SupabaseReader:
             if total.isdigit():
                 return int(total)
         return None
+
+    def page_par_rang(self, table: str, colonnes: list[str], rang: int,
+                      size: int) -> list[dict[str, Any]]:
+        """Pagination par RANG, avec un ordre TOTAL (toutes les colonnes).
+
+        Sert de rattrapage quand le parcours par valeur a saute des lignes -- cas d'une
+        vue sans cle primaire dont la premiere colonne se repete. Trier sur toutes les
+        colonnes rend l'ordre total : deux lignes ne peuvent plus etre a egalite, donc
+        « les 1 000 suivantes » ne peut plus rien omettre.
+        """
+        ordre = ",".join(urllib.parse.quote(c) + ".asc" for c in colonnes)
+        path = (f"{urllib.parse.quote(table)}?select=*&order={ordre}"
+                f"&limit={size}&offset={rang}")
+        rows = self.get(path)
+        return rows if isinstance(rows, list) else []
 
     def page_apres(self, table: str, cle: str, borne: Any, size: int) -> list[dict[str, Any]]:
         """Pagination PAR CLE, pas par OFFSET.
@@ -316,7 +341,51 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
     # donc chez Supabase AVANT la bascule : si la neuve n'est pas entiere, on la refuse et
     # l'ancienne reste. Le serveur ne peut jamais se retrouver avec MOINS qu'avant.
     distant = reader.count(table)
+
+    # LE RATTRAPAGE PAR RANG -- correctif du 22/08, cas vu en vrai sur
+    # app_mandat_broadcast_current (1 524 lues / 1 528 attendues).
+    #
+    # POURQUOI il manquait 4 lignes. Le parcours avance en demandant « les lignes APRES la
+    # derniere valeur lue ». Sur une vraie table on avance sur la CLE PRIMAIRE, unique par
+    # ligne : « apres la ligne 4521 » ne peut rien sauter. Mais une VUE n'a pas de cle
+    # primaire -- Postgres n'en declare aucune -- et on se rabat sur la premiere colonne.
+    # Ici c'est app_dossier_id, qui se REPETE : 1 528 lignes pour 343 dossiers, jusqu'a 10
+    # lignes pour un seul (une par portail de diffusion). Quand la frontiere d'une page
+    # tombe au milieu d'un dossier, « apres ce dossier » saute ses lignes restantes.
+    #
+    # LE REMEDE. On relit la table par RANG (offset) et non par valeur, en triant sur
+    # TOUTES ses colonnes : l'ordre devient total, donc « les 1 000 suivantes » ne peut
+    # plus rien sauter, meme quand la premiere colonne se repete.
+    #
+    # ⚠ Ce qu'il ne faut PAS tenter : redemander la table entiere d'un coup. PostgREST
+    # plafonne toute reponse a 1 000 lignes quel que soit le `limit` -- verifie le 22/08 :
+    # une demande de 1 528 lignes en a rendu 1 000. La pagination est obligatoire.
+    #
+    # Reserve au petit volume : l'offset coute cher en profondeur sur une vue calculee
+    # (c'est ce qui faisait tomber app_dossier_match_attrs en 'statement timeout').
+    if distant is not None and distant != total and distant <= RELECTURE_ENTIERE_MAX:
+        print(f"        {table} : {total}/{distant} -- relecture par rang (ordre total)")
+        conn.execute('DELETE FROM "%s"' % tmp)
+        total = 0
+        rang = 0
+        while rang < distant:
+            rows = reader.page_par_rang(table, columns, rang, PAGE_SIZE)
+            appels += 1
+            if not rows:
+                break
+            conn.executemany(
+                'INSERT INTO "%s" (%s) VALUES (%s)' % (tmp, quoted, placeholders),
+                [tuple(encode(row.get(c)) for c in columns) for row in rows],
+            )
+            total += len(rows)
+            rang += len(rows)
+            time.sleep(PAUSE_PAGE)
+
     if distant is not None and distant != total:
+        # Au-dela de RELECTURE_ENTIERE_MAX, une vue sans cle primaire dont la premiere
+        # colonne se repete n'est pas copiable telle quelle. Aucune ne l'est aujourd'hui ;
+        # le jour ou ca arrive, cette erreur le dira au lieu de laisser passer une copie
+        # amputee.
         raise RuntimeError(
             f"copie incomplete : {total} lignes lues, {distant} attendues cote Supabase "
             "-- l'ancienne copie est conservee")
