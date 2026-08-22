@@ -173,12 +173,26 @@ def ceder_au_verrou(attente_max: float) -> float:
     return cede
 
 
+def conseil_reprise(dernier_id_sur: str) -> str:
+    """Le conseil de reprise, par IDENTIFIANT et jamais par position."""
+    if not dernier_id_sur:
+        return "Reprise : aucun lot complet, tout reprendre depuis le debut."
+    return f"Reprise : --start-after-id {dernier_id_sur}"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run recherches actives : refresh Hektor des contacts a recherche active, sans filtre date_maj."
     )
     parser.add_argument("--batch-size", type=int, default=300, help="Contacts par lot (defaut 300).")
     parser.add_argument("--limit", type=int, default=0, help="Nombre max de contacts a traiter. 0 = tous.")
+    parser.add_argument(
+        "--start-after-id", type=int, default=0,
+        help="REPRISE RECOMMANDEE : ne traite que les contacts dont l'id est STRICTEMENT "
+             "superieur a N. Un identifiant ne bouge pas, contrairement a une position : "
+             "la liste des acquereurs a perdu 67 entrees en 5 h le 22/08. Prendre l'id du "
+             "dernier contact reellement reconstruit et pousse, que le run affiche en sortant.",
+    )
     parser.add_argument(
         "--start-at", type=int, default=0,
         help="Reprise : ignore les N premiers contacts de la liste (ordre stable, id croissant). "
@@ -220,6 +234,13 @@ def main() -> int:
         ids = active_search_contact_ids(args.phase2_db)
         libelle = "contacts a recherche active"
     population = len(ids)
+    if args.start_after_id and args.start_after_id > 0:
+        avant = len(ids)
+        ids = [c for c in ids if int(c) > args.start_after_id]
+        print(
+            f"[recherches-actives] reprise apres l'id {args.start_after_id} : "
+            f"{avant - len(ids)} contacts deja faits ecartes, {len(ids)} restants"
+        )
     skipped = 0
     if args.start_at and args.start_at > 0:
         # L'ordre de la liste est stable (id croissant), donc un index vaut reprise.
@@ -228,11 +249,13 @@ def main() -> int:
     if args.limit and args.limit > 0:
         ids = ids[: args.limit]
     total = len(ids)
-    if skipped or total != population:
+    if skipped:
         print(
             f"[recherches-actives] {population} {libelle} au total -- {skipped} ignore(s) "
             f"(--start-at {args.start_at}), {total} a traiter"
         )
+    elif total != population:
+        print(f"[recherches-actives] {population} {libelle} au total, {total} a traiter")
     else:
         print(f"[recherches-actives] {total} {libelle}")
     if args.dry_run:
@@ -246,6 +269,12 @@ def main() -> int:
     failed_batches = 0
     consecutive_failed = 0
     cede_total = 0.0
+    # Point de reprise SUR : le dernier id d'un lot reussi tant qu'AUCUN lot n'a echoue
+    # avant lui. Des le premier echec on cesse de l'avancer, sinon on annoncerait une
+    # reprise qui enjambe le lot mort -- le defaut du compteur `done`, qui additionne les
+    # lots reussis ET rates (900 contacts perdus le 22/08 au matin, 967 l'apres-midi).
+    dernier_id_sur = ""
+    echec_rencontre = False
     etapes_en_echec: list[str] = []
     aborted = False
     for i in range(0, total, max(args.batch_size, 1)):
@@ -258,9 +287,12 @@ def main() -> int:
             process_batch(batch)
             consecutive_failed = 0
             etapes_en_echec = []
+            if not echec_rencontre:
+                dernier_id_sur = batch[-1]
         except Exception as exc:  # noqa: BLE001
             failed_batches += 1
             consecutive_failed += 1
+            echec_rencontre = True
             etapes_en_echec.append(getattr(exc, "script", "?"))
             print(f"[recherches-actives] LOT EN ECHEC (contacts {i}-{i + len(batch)}): {exc} -- on continue")
         done += len(batch)
@@ -299,7 +331,7 @@ def main() -> int:
             print(
                 f"[recherches-actives] COUPE-CIRCUIT : {consecutive_failed} lots consecutifs en echec"
                 f" -- run ABANDONNE a {done}/{total} ({round(time.time() - start)}s). {cause}"
-                f" Reprise : --start-at {skipped + done}"
+                f" {conseil_reprise(dernier_id_sur)}"
             )
             break
         if args.pause_between_batches > 0 and done < total:
@@ -309,7 +341,11 @@ def main() -> int:
     if aborted:
         return 2  # 2 = abandon coupe-circuit (a distinguer de 1 = echecs partiels)
     if failed_batches:
-        print(f"[recherches-actives] TERMINE AVEC {failed_batches} lot(s) en echec sur {((total - 1) // max(args.batch_size, 1)) + 1} -- {done} contacts traites en {round(time.time() - start)}s")
+        print(
+            f"[recherches-actives] TERMINE AVEC {failed_batches} lot(s) en echec sur "
+            f"{((total - 1) // max(args.batch_size, 1)) + 1} -- {done} contacts traites en "
+            f"{round(time.time() - start)}s. {conseil_reprise(dernier_id_sur)}"
+        )
         return 1  # code non nul -> la tache planifiee signale l'echec partiel
     print(f"[recherches-actives] termine OK : {done} contacts en {round(time.time() - start)}s")
     return 0
