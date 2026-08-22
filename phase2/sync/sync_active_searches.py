@@ -28,6 +28,14 @@ ROOT = Path(__file__).resolve().parents[2]
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 PYTHON = sys.executable
+# Verrou des traitements lourds phase2, pose par pull_from_supabase (descente) ET par
+# comparer_doublures (releve) depuis le 22/08. On le LIT entre deux lots pour ceder la
+# place ; on ne le POSE jamais : la descente est planifiee et quotidienne, un rattrapage
+# de 5 h qui la ferait sauter serait pire que le mal.
+VERROU_LOURD = ROOT / "pull_from_supabase.lock"
+# L'etape 1 le relache avant que l'etape 2 le reprenne : sans marge, on se faufilerait
+# dans cet interstice pour repartir juste avant les CREATE INDEX du releve.
+VERROU_MARGE_S = 5.0
 
 
 def active_search_contact_ids(db_path: Path) -> list[str]:
@@ -86,10 +94,28 @@ def acquereur_contact_ids(hektor_db: Path) -> list[str]:
     return out
 
 
+class EchecEtape(RuntimeError):
+    """Echec d'une des 4 etapes d'un lot, en gardant LAQUELLE.
+
+    Sans ca, le coupe-circuit ne pouvait qu'accuser Hektor : le 22/08 il a annonce un
+    bannissement d'IP alors que les fetchs passaient tous (success=300 errors=0) et que
+    la panne etait un « database is locked » local.
+    """
+
+    def __init__(self, script: str, code: int, commande: str) -> None:
+        super().__init__(f"Echec etape: {commande} (code {code})")
+        self.script = script
+
+
+def etape_est_reseau(script: str) -> bool:
+    """Seul sync_contact_details parle a Hektor ; les 3 autres etapes sont locales."""
+    return script.replace("\\", "/").endswith("sync_contact_details.py")
+
+
 def run_step(args: list[str]) -> None:
     result = subprocess.run([PYTHON, *args], cwd=str(ROOT))
     if result.returncode != 0:
-        raise RuntimeError(f"Echec etape: {' '.join(args)} (code {result.returncode})")
+        raise EchecEtape(args[0], result.returncode, " ".join(args))
 
 
 def process_batch(ids: list[str]) -> None:
@@ -112,6 +138,39 @@ def process_batch(ids: list[str]) -> None:
         "--push-mode", "full", "--contacts-scope", "active_or_eligible", "--skip-stats",
         "--include-archived-searches",
     ])
+
+
+def ceder_au_verrou(attente_max: float) -> float:
+    """Attend que le verrou des traitements lourds retombe. Retourne les secondes cedees.
+
+    Un arret force ne relache PAS le fichier temoin (l'autre session l'a verifie), donc on
+    ne peut pas attendre indefiniment : passe le plafond, on repart en le disant. Ce n'est
+    plus fatal depuis que les connexions phase2 portent busy_timeout=30000.
+    """
+    if not VERROU_LOURD.exists():
+        return 0.0
+    debut = time.time()
+    try:
+        age = int(time.time() - VERROU_LOURD.stat().st_mtime)
+    except OSError:
+        age = -1
+    print(
+        f"[recherches-actives] VERROU : un traitement lourd tient {VERROU_LOURD.name}"
+        f" (pose il y a {age}s) -- on cede la place et on attend"
+    )
+    while VERROU_LOURD.exists():
+        if time.time() - debut >= attente_max:
+            print(
+                f"[recherches-actives] VERROU : toujours la apres {int(attente_max)}s"
+                " -- verrou probablement residuel (un arret force ne le relache pas)."
+                " On repart quand meme."
+            )
+            return time.time() - debut
+        time.sleep(5.0)
+    time.sleep(VERROU_MARGE_S)  # l'etape 2 reprend le verrou juste apres l'etape 1
+    cede = time.time() - debut
+    print(f"[recherches-actives] VERROU : relache, on reprend apres {int(cede)}s cedees")
+    return cede
 
 
 def main() -> int:
@@ -144,6 +203,12 @@ def main() -> int:
         help="Coupe-circuit : abandonne le run apres N lots consecutifs en echec "
              "(defaut 3, 0 = desactive). Sans lui, un bannissement d'IP au lot 12 "
              "laisse le run taper 226 lots de plus sur une porte fermee.",
+    )
+    parser.add_argument(
+        "--attente-verrou-max", type=float, default=1800.0,
+        help="Plafond d'attente quand un traitement lourd (descente, releve des doublures) "
+             "tient pull_from_supabase.lock. Au-dela on repart quand meme : un arret force "
+             "ne relache pas le verrou. 0 = ne jamais ceder.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Affiche le volume sans fetch.")
     args = parser.parse_args()
@@ -180,17 +245,23 @@ def main() -> int:
     done = 0
     failed_batches = 0
     consecutive_failed = 0
+    cede_total = 0.0
+    etapes_en_echec: list[str] = []
     aborted = False
     for i in range(0, total, max(args.batch_size, 1)):
         batch = ids[i : i + max(args.batch_size, 1)]
+        if args.attente_verrou_max > 0:
+            cede_total += ceder_au_verrou(args.attente_verrou_max)
         # Robustesse : un lot en échec (hoquet Hektor/réseau) ne doit PAS arrêter
         # tout le run — on log et on continue avec les lots suivants.
         try:
             process_batch(batch)
             consecutive_failed = 0
+            etapes_en_echec = []
         except Exception as exc:  # noqa: BLE001
             failed_batches += 1
             consecutive_failed += 1
+            etapes_en_echec.append(getattr(exc, "script", "?"))
             print(f"[recherches-actives] LOT EN ECHEC (contacts {i}-{i + len(batch)}): {exc} -- on continue")
         done += len(batch)
         print(f"[recherches-actives] {done}/{total} ({round(time.time() - start)}s)")
@@ -202,15 +273,39 @@ def main() -> int:
         # une panne Hektor.
         if args.max_consecutive_failed_batches > 0 and consecutive_failed >= args.max_consecutive_failed_batches:
             aborted = True
+            # Nommer le vrai coupable. Le 22/08 ce message accusait un bannissement d'IP
+            # alors que Hektor repondait parfaitement et que la panne etait un verrou
+            # SQLite local : chercher au mauvais endroit coute plus cher que l'arret.
+            reseau = [e for e in etapes_en_echec if etape_est_reseau(e)]
+            locales = [e for e in etapes_en_echec if not etape_est_reseau(e)]
+            if reseau and not locales:
+                cause = (
+                    "Echec RESEAU (sync_contact_details) : Hektor n'a pas repondu."
+                    " Suspecter un bannissement d'IP ou une session morte ; verifier depuis"
+                    " une AUTRE IP avant de relancer."
+                )
+            elif locales and not reseau:
+                noms = ", ".join(sorted({Path(e).name for e in locales}))
+                cause = (
+                    f"Echec LOCAL a l'etape {noms} : les fetchs Hektor sont passes, ce n'est"
+                    " PAS un bannissement. Lire la trace ci-dessus (verrou SQLite tenu par un"
+                    " autre traitement, disque, schema) ; inutile de changer d'IP."
+                )
+            else:
+                cause = (
+                    "Echecs MIXTES reseau et local : lire les traces ci-dessus avant de"
+                    " conclure, les deux causes sont presentes."
+                )
             print(
                 f"[recherches-actives] COUPE-CIRCUIT : {consecutive_failed} lots consecutifs en echec"
-                f" -- run ABANDONNE a {done}/{total} ({round(time.time() - start)}s)."
-                " Suspecter un bannissement d'IP ou une session Hektor morte ; verifier depuis"
-                " une autre IP avant de relancer."
+                f" -- run ABANDONNE a {done}/{total} ({round(time.time() - start)}s). {cause}"
+                f" Reprise : --start-at {skipped + done}"
             )
             break
         if args.pause_between_batches > 0 and done < total:
             time.sleep(args.pause_between_batches)
+    if cede_total > 0:
+        print(f"[recherches-actives] {int(cede_total)}s cedees au total a un traitement lourd")
     if aborted:
         return 2  # 2 = abandon coupe-circuit (a distinguer de 1 = echecs partiels)
     if failed_batches:
