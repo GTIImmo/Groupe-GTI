@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import socket
+import sqlite3
 import subprocess
 import sys
 import time
@@ -714,6 +715,7 @@ class Monitor:
             ("console_jobs", self.check_console_jobs),
             ("backend_health", self.check_backend_health),
             ("sqlite_files", self.check_sqlite_files),
+            ("doublures", self.check_doublures),
             ("local_logs", self.check_local_logs),
             ("playwright_sessions", self.check_playwright_sessions),
             ("document_storage", self.check_document_storage),
@@ -1438,6 +1440,95 @@ class Monitor:
             f"Backend health unreachable after {attempts} attempt(s): {last_error}",
             {"url": url, "attempts": attempts, "error": last_error},
         )
+
+    def check_doublures(self) -> None:
+        """Sonde 21 (tache B.4, 22/08/2026) -- LOCALE, la seule du fichier.
+
+        Depuis B.2, chaque fiche existe en deux exemplaires sur le serveur : la table
+        native (version Hektor, refaite chaque nuit) et sa doublure __sb (version de l'app,
+        descendue de Supabase). Personne ne tranche entre les deux -- l'arbitrage est le
+        chantier C. En attendant il faut REGARDER, et c'est ce que fait le journal
+        app_doublure_journal, rempli par phase2/checks/comparer_doublures.py.
+
+        POURQUOI PAS UN SEUIL SUR L'ECART GLOBAL. Il sonnerait toujours, pour rien :
+        Supabase ne porte qu'un sous-ensemble (57 519 contacts sur 355 668) et
+        app_diffusion_request__sb porte 9 lignes face a un natif vide. Ces ecarts sont
+        legitimes. Une sentinelle qui sonne toujours ne protege de rien.
+
+        L'ALARME EST DONC ETROITE : les recherches presentes DES DEUX COTES dont les
+        criteres different -- prix, surface, pieces, chambres. Une seule ligne ici = un
+        negociateur a affine une recherche que Hektor n'a jamais recue. Mesure le 22/08 :
+        0 sur 10 750.
+
+        Elle surveille AUSSI la fraicheur du releve : un journal qui ne se remplit plus ne
+        surveille plus rien, et c'est le genre de panne qu'on ne voit pas.
+        """
+        db = self.root / "phase2" / "phase2.sqlite"
+        if not db.exists():
+            self.add("data.doublure_journal", "data_quality", "doublure", "presence", "warning",
+                     "Base phase2 introuvable pour le releve des doublures", {"path": str(db)})
+            return
+        try:
+            conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+        except sqlite3.Error as exc:
+            self.add("data.doublure_journal", "data_quality", "doublure", "connexion", "warning",
+                     f"Base phase2 illisible : {exc}", {})
+            return
+        try:
+            if not conn.execute(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='app_doublure_journal'"
+            ).fetchone()[0]:
+                self.add("data.doublure_journal", "data_quality", "doublure", "presence", "warning",
+                         "Journal des doublures absent (comparer_doublures.py jamais lance)", {})
+                return
+            dernier = conn.execute(
+                "SELECT max(releve_le) FROM app_doublure_journal").fetchone()[0]
+            lignes = conn.execute(
+                "SELECT count(*) FROM app_doublure_journal WHERE releve_le = ?",
+                (dernier,)).fetchone()[0]
+            app_seule = conn.execute(
+                "SELECT sum(app_seule) FROM app_doublure_journal WHERE releve_le = ?",
+                (dernier,)).fetchone()[0] or 0
+            # L'alarme : les criteres qui different sur une recherche connue des deux cotes.
+            divergentes = None
+            if conn.execute(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' "
+                "AND name='app_contact_search_current__sb'").fetchone()[0]:
+                divergentes = conn.execute(
+                    'SELECT count(*) FROM "app_contact_search_current__sb" s '
+                    'JOIN app_contact_search_current h '
+                    '  ON h.hektor_contact_id = s.hektor_contact_id '
+                    ' AND h.search_index = s.search_index '
+                    "WHERE COALESCE(h.prix_min,'') <> COALESCE(s.prix_min,'') "
+                    "   OR COALESCE(h.prix_max,'') <> COALESCE(s.prix_max,'') "
+                    "   OR COALESCE(h.surface_min,'') <> COALESCE(s.surface_min,'') "
+                    "   OR COALESCE(h.pieces_min,'') <> COALESCE(s.pieces_min,'') "
+                    "   OR COALESCE(h.chambre_min,'') <> COALESCE(s.chambre_min,'')"
+                ).fetchone()[0]
+        finally:
+            conn.close()
+
+        detail = {"dernier_releve": dernier, "doublures": lignes,
+                  "lignes_app_seule": app_seule, "recherches_divergentes": divergentes}
+        aujourdhui = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if dernier != aujourdhui:
+            self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "warning",
+                     f"Releve des doublures pas fait aujourd'hui (dernier : {dernier})", detail)
+        else:
+            self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "ok",
+                     f"Releve des doublures a jour : {lignes} doublures, "
+                     f"{app_seule} ligne(s) connues de l'app seule", detail)
+
+        if divergentes is None:
+            self.add("data.recherche_divergente", "data_quality", "doublure", "absolute", "warning",
+                     "Doublure des recherches absente : divergence non mesurable", detail)
+        elif divergentes > 0:
+            self.add("data.recherche_divergente", "data_quality", "doublure", "absolute", "critical",
+                     f"Recherches dont les criteres different app/Hektor : {divergentes} (seuil 0)",
+                     detail)
+        else:
+            self.add("data.recherche_divergente", "data_quality", "doublure", "absolute", "ok",
+                     "Recherches dont les criteres different app/Hektor: 0 (seuil 0)", detail)
 
     def check_sqlite_files(self) -> None:
         sqlite_specs = [
