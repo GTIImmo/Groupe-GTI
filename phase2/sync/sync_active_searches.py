@@ -120,6 +120,12 @@ def main() -> int:
     )
     parser.add_argument("--batch-size", type=int, default=300, help="Contacts par lot (defaut 300).")
     parser.add_argument("--limit", type=int, default=0, help="Nombre max de contacts a traiter. 0 = tous.")
+    parser.add_argument(
+        "--start-at", type=int, default=0,
+        help="Reprise : ignore les N premiers contacts de la liste (ordre stable, id croissant). "
+             "0 = depuis le debut. Sert a relancer un rattrapage interrompu sans refaire "
+             "ce qui est deja passe.",
+    )
     parser.add_argument("--phase2-db", type=Path, default=PHASE2_DB)
     parser.add_argument("--hektor-db", type=Path, default=HEKTOR_DB)
     parser.add_argument(
@@ -148,10 +154,22 @@ def main() -> int:
     else:
         ids = active_search_contact_ids(args.phase2_db)
         libelle = "contacts a recherche active"
+    population = len(ids)
+    skipped = 0
+    if args.start_at and args.start_at > 0:
+        # L'ordre de la liste est stable (id croissant), donc un index vaut reprise.
+        skipped = min(args.start_at, population)
+        ids = ids[skipped:]
     if args.limit and args.limit > 0:
         ids = ids[: args.limit]
     total = len(ids)
-    print(f"[recherches-actives] {total} {libelle}")
+    if skipped or total != population:
+        print(
+            f"[recherches-actives] {population} {libelle} au total -- {skipped} ignore(s) "
+            f"(--start-at {args.start_at}), {total} a traiter"
+        )
+    else:
+        print(f"[recherches-actives] {total} {libelle}")
     if args.dry_run:
         print("[recherches-actives] dry-run : aucun fetch")
         return 0

@@ -191,8 +191,20 @@ def ensure_push_state(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def _connect(db_path: Path) -> sqlite3.Connection:
+    """Connexion phase2 avec busy_timeout 30 s (22/08/2026).
+
+    mark_pushed_rows / mark_deleted_rows ECRIVENT dans phase2.sqlite : sans ce reglage
+    elles abandonnent au bout des 5 s par defaut des qu'une autre tache (Descente,
+    quotidien) tient le verrou d'ecriture.
+    """
+    conn = sqlite3.connect(db_path, timeout=30)
+    conn.execute("PRAGMA busy_timeout=30000")
+    return conn
+
+
 def filter_changed_rows(db_path: Path, loaded: list[tuple[str, list[dict[str, Any]]]]) -> list[tuple[str, list[dict[str, Any]]]]:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         ensure_push_state(conn)
@@ -215,7 +227,7 @@ def filter_changed_rows(db_path: Path, loaded: list[tuple[str, list[dict[str, An
 
 
 def find_stale_row_keys(db_path: Path, loaded: list[tuple[str, list[dict[str, Any]]]]) -> dict[str, list[str]]:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         ensure_push_state(conn)
@@ -235,7 +247,7 @@ def find_stale_row_keys(db_path: Path, loaded: list[tuple[str, list[dict[str, An
 
 
 def mark_pushed_rows(db_path: Path, loaded: list[tuple[str, list[dict[str, Any]]]]) -> None:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     try:
         ensure_push_state(conn)
         pushed_at = now_utc_iso()
@@ -256,7 +268,7 @@ def mark_pushed_rows(db_path: Path, loaded: list[tuple[str, list[dict[str, Any]]
 
 
 def mark_deleted_rows(db_path: Path, stale_by_table: dict[str, list[str]]) -> None:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     try:
         ensure_push_state(conn)
         for table, row_keys in stale_by_table.items():
@@ -336,7 +348,7 @@ class SupabaseRestClient:
 
 
 def load_rows(db_path: Path, table: str, normalizer, where: str = "") -> list[dict[str, Any]]:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         return [normalizer(row) for row in conn.execute(f"SELECT * FROM {table} {where}").fetchall()]
@@ -356,7 +368,7 @@ def scoped_where(base_where: str, extra_condition: str | None = None) -> str:
 
 
 def build_contact_stats_row(db_path: Path, scope: str, contact_where: str) -> dict[str, Any]:
-    conn = sqlite3.connect(db_path)
+    conn = _connect(db_path)
     try:
         def count(extra_condition: str | None = None) -> int:
             where = scoped_where(contact_where, extra_condition)
@@ -596,7 +608,7 @@ def main() -> int:
     stale_by_table = {} if contact_ids else find_stale_row_keys(args.phase2_db, loaded)
 
     if args.reset_push_state:
-        conn = sqlite3.connect(args.phase2_db)
+        conn = _connect(args.phase2_db)
         try:
             ensure_push_state(conn)
             conn.execute(f"DELETE FROM {PUSH_STATE_TABLE}")

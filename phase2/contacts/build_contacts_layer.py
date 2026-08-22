@@ -228,8 +228,13 @@ def contact_from_row(row: sqlite3.Row) -> ContactRow:
 
 def connect(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    # busy_timeout 30 s (22/08/2026). phase2.sqlite a plusieurs ecrivains : le rattrapage
+    # acquereurs a ete tue par « database is locked » parce que la Descente (07:30,
+    # pull_from_supabase) ecrivait au meme moment et que le defaut de sqlite3 est 5 s.
+    # Meme reglage que hektor_pipeline.common.connect_db, qui lui a tenu.
+    conn = sqlite3.connect(path, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 
