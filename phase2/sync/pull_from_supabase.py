@@ -38,6 +38,19 @@ CE QU'IL NE FAIT PAS
 --------------------
 Personne ne lit ces tables. Aucun script existant ne les connait. Le pipeline de nuit,
 les workers, le push et les sentinelles sont inchanges. Retour arriere = DROP TABLE.
+Verifie le 22/08 : 0 script du projet lit une table descendue, 0 script du run de nuit y
+ecrit, et aucun autre fichier ne connait le suffixe __sb.
+
+⚠ LE PIEGE A CONNAITRE, pour plus tard
+--------------------------------------
+TOUTE table listee dans sb_pull_state est une COPIE, refaite a chaque descente. Si un
+script du projet se met un jour a ecrire dans l'une d'elles -- disons app_notification --
+son travail sera EFFACE a la descente suivante, sans un bruit : la table est reconstruite
+depuis Supabase.
+
+Regle : ne jamais ecrire dans une table de sb_pull_state. Pour poser une donnee locale a
+cote d'une copie, creer une table A PART -- c'est le patron app_search_registry, pose le
+21/08 pour exactement cette raison (le run complet vidait la couche des recherches).
 
 TYPES : les colonnes sont declarees SANS type (affinite BLOB), donc SQLite garde les
 valeurs telles qu'elles arrivent -- entier, reel, texte. Les objets et tableaux JSON sont
@@ -263,9 +276,13 @@ def encode(value: Any) -> Any:
     return value
 
 
-def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
-               columns: list[str], cle: str, stamp: str) -> tuple[int, int]:
-    """Recopie une table. Renvoie (lignes ecrites, appels API)."""
+def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
+               table: str, columns: list[str], cle: str, stamp: str) -> tuple[int, int]:
+    """Recopie une table. Renvoie (lignes ecrites, appels API).
+
+    `distant` = le nom chez Supabase, celui qu'on interroge.
+    `table`   = le nom en local, qui porte le suffixe __sb quand le nom est deja pris.
+    """
     quoted = ", ".join('"%s"' % c.replace('"', '""') for c in columns)
     placeholders = ", ".join("?" for _ in columns)
     # COPIER PUIS RENOMMER -- correctif du 22/08, apres l'incident de la nuit.
@@ -304,14 +321,14 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
         # descend donc plus lentement, mais elle descend.
         while True:
             try:
-                rows = reader.page_apres(table, cle, borne, taille)
+                rows = reader.page_apres(distant, cle, borne, taille)
                 break
             except RuntimeError as exc:
                 lourd = any(m in str(exc) for m in ("522", "504", "57014", "timeout", "reseau"))
                 if not lourd or taille <= 25:
                     raise
                 taille = max(25, taille // 4)
-                print(f"        {table} : reponse trop lourde, paquet ramene a {taille}")
+                print(f"        {distant} : reponse trop lourde, paquet ramene a {taille}")
         appels += 1
         if not rows:
             break
@@ -340,7 +357,7 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
     # Sans ce controle, une copie incomplete remplacait la bonne, sans un bruit. On compte
     # donc chez Supabase AVANT la bascule : si la neuve n'est pas entiere, on la refuse et
     # l'ancienne reste. Le serveur ne peut jamais se retrouver avec MOINS qu'avant.
-    distant = reader.count(table)
+    attendu = reader.count(distant)
 
     # LE RATTRAPAGE PAR RANG -- correctif du 22/08, cas vu en vrai sur
     # app_mandat_broadcast_current (1 524 lues / 1 528 attendues).
@@ -363,13 +380,13 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
     #
     # Reserve au petit volume : l'offset coute cher en profondeur sur une vue calculee
     # (c'est ce qui faisait tomber app_dossier_match_attrs en 'statement timeout').
-    if distant is not None and distant != total and distant <= RELECTURE_ENTIERE_MAX:
-        print(f"        {table} : {total}/{distant} -- relecture par rang (ordre total)")
+    if attendu is not None and attendu != total and attendu <= RELECTURE_ENTIERE_MAX:
+        print(f"        {distant} : {total}/{attendu} -- relecture par rang (ordre total)")
         conn.execute('DELETE FROM "%s"' % tmp)
         total = 0
         rang = 0
-        while rang < distant:
-            rows = reader.page_par_rang(table, columns, rang, PAGE_SIZE)
+        while rang < attendu:
+            rows = reader.page_par_rang(distant, columns, rang, PAGE_SIZE)
             appels += 1
             if not rows:
                 break
@@ -381,13 +398,13 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, table: str,
             rang += len(rows)
             time.sleep(PAUSE_PAGE)
 
-    if distant is not None and distant != total:
+    if attendu is not None and attendu != total:
         # Au-dela de RELECTURE_ENTIERE_MAX, une vue sans cle primaire dont la premiere
         # colonne se repete n'est pas copiable telle quelle. Aucune ne l'est aujourd'hui ;
         # le jour ou ca arrive, cette erreur le dira au lieu de laisser passer une copie
         # amputee.
         raise RuntimeError(
-            f"copie incomplete : {total} lignes lues, {distant} attendues cote Supabase "
+            f"copie incomplete : {total} lignes lues, {attendu} attendues cote Supabase "
             "-- l'ancienne copie est conservee")
 
     # LA BASCULE : l'ancienne n'est remplacee qu'ICI, copie verifiee complete.
@@ -481,21 +498,39 @@ def main() -> int:
     deja_descendues = descendues(conn)
     natives = local_tables(conn) - deja_descendues - {STATE_TABLE}
 
-    cibles: list[str] = []
-    bloquees: list[str] = []
+    # LA REGLE, revue le 22/08 (tache B.2). L'ancienne disait : « le nom existe deja en
+    # local -> on ne touche pas ». Elle protegeait bien, mais elle laissait dehors des
+    # donnees qui n'existaient NULLE PART ailleurs : app_diffusion_request (9 demandes) et
+    # app_diffusion_request_event (29) sont creees par le front, dans Supabase, et la table
+    # locale du meme nom est une coquille VIDE creee par le schema. Le garde-fou les prenait
+    # pour des tables natives et les excluait.
+    #
+    # La regle n'a donc plus d'exception : QUAND UN NOM SE HEURTE, ON DESCEND SOUS <nom>__sb.
+    #   - rien n'est jamais ecrase : aucune table locale n'est touchee, quel que soit son
+    #     contenu ;
+    #   - rien n'est jamais oublie : pas de liste a tenir, donc aucune table ne passe au
+    #     travers ;
+    #   - aucun jugement a porter sur « qui est le maitre » -- je me suis trompe deux fois
+    #     sur dix en essayant (app_diffusion_request et son _event).
+    #
+    # cibles = [(nom chez Supabase, nom en local)]
+    cibles: list[tuple[str, str]] = []
+    doublures: list[tuple[str, str]] = []
     for nom in sorted(schema):
         if args.table and nom not in args.table:
             continue
         if nom in natives:
-            bloquees.append(nom)      # LE GARDE-FOU : on n'ecrase jamais une table native
+            cibles.append((nom, nom + "__sb"))
+            doublures.append((nom, nom + "__sb"))
         else:
-            cibles.append(nom)
+            cibles.append((nom, nom))
 
     print(f"Supabase expose {len(schema)} tables/vues")
-    print(f"  bloquees (existent deja en local, natives) : {len(bloquees)}")
-    for nom in bloquees:
-        print(f"     - {nom}")
     print(f"  a descendre : {len(cibles)}")
+    if doublures:
+        print(f"  dont {len(doublures)} sous un nom de doublure (le nom local est pris) :")
+        for distant, local in doublures:
+            print(f"     - {distant}  ->  {local}")
 
     if args.dry_run:
         print("\n[dry-run] rien n'a ete ecrit")
@@ -509,26 +544,26 @@ def main() -> int:
         # et par le compte deja connu quand on l'a.
         connus = {r[0]: (r[1] or 0) for r in conn.execute(
             f"SELECT table_name, lignes FROM {STATE_TABLE}")}
-        cibles.sort(key=lambda n: (connus.get(n, 0) * len(schema[n][0]), n))
+        cibles.sort(key=lambda c: (connus.get(c[1], 0) * len(schema[c[0]][0]), c[0]))
 
         stamp = time.strftime("%Y-%m-%dT%H:%M:%S")
         debut = time.time()
         lignes_totales = 0
         appels_totaux = 0
         echecs: list[tuple[str, str]] = []
-        for index, nom in enumerate(cibles, start=1):
+        for index, (distant, local) in enumerate(cibles, start=1):
             try:
-                colonnes, cle = schema[nom]
-                lignes, appels = copy_table(conn, reader, nom, colonnes, cle, stamp)
+                colonnes, cle = schema[distant]
+                lignes, appels = copy_table(conn, reader, distant, local, colonnes, cle, stamp)
                 lignes_totales += lignes
                 appels_totaux += appels
-                print(f"  [{index:>3}/{len(cibles)}] {nom:<46} {lignes:>8} lignes")
+                print(f"  [{index:>3}/{len(cibles)}] {local:<46} {lignes:>8} lignes")
             except Exception as exc:                                   # noqa: BLE001
                 # Une table en echec ne doit pas arreter la descente : on note et on continue.
                 # marquer_echec supprime la copie partielle -- voir le correctif du 21/08.
-                marquer_echec(conn, nom, str(exc))
-                echecs.append((nom, str(exc)[:200]))
-                print(f"  [{index:>3}/{len(cibles)}] {nom:<46}    ECHEC : {str(exc)[:120]}")
+                marquer_echec(conn, local, str(exc))
+                echecs.append((local, str(exc)[:200]))
+                print(f"  [{index:>3}/{len(cibles)}] {local:<46}    ECHEC : {str(exc)[:120]}")
             time.sleep(PAUSE_TABLE)
 
         duree = round(time.time() - debut)
