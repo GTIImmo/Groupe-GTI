@@ -133,14 +133,22 @@ retour.** Deux précisions à ne jamais perdre de vue :
 
 | | Tâche | Risque |
 |---|---|---|
-| ⚠ **B.1** | **La descente de ce que Hektor ignore** — ≈ 1 020 000 lignes : rapprochements *(505 647)*, documents *(58 389)*, registre de mandats *(23 824)*, DVF et communes *(125 240)*, journaux, estimations, notifications. Tables locales neuves, **jamais reconstruites** | **nul** — Hektor n'a aucun avis dessus, personne ne les lit encore |
-| | **ÉTAT au 22/08 : COMMENCÉE, INCOMPLÈTE** — 46 tables descendues (585 708 lignes), **64 à refaire**. La deuxième passe a fait tomber Supabase (HTTP 522, ~20 min, nuit, aucune donnée perdue). Trois freins à poser avant de relancer : **copier puis renommer** (sinon une passe ratée détruit la copie précédente), un frein entre les requêtes, et une seule passe, la nuit | voir le compte rendu d'incident dans `AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21.md` |
+| ✅ **B.1** | ~~**La descente de ce que Hektor ignore**~~ **FAITE le 22/08** — `phase2/sync/pull_from_supabase.py` — **110 tables, 1 337 162 lignes**, 0 en échec. La base locale passe de 2,26 à 3,76 Go | **le serveur apprend de Supabase pour la première fois.** Rapprochements, documents, registre de mandats, DVF, estimations, notifications : tout cela n'existait qu'en ligne, sans aucune copie ni sauvegarde |
+| | **Ce qui a été construit** — découverte des tables par la spec OpenAPI *(aucune liste à tenir, donc rien à oublier)* · garde-fou : le script refuse d'écrire dans une table qu'il n'a pas créée *(les 10 exclues sont les bonnes)* · `SupabaseReader` n'a qu'une méthode `get` : **il ne peut pas écrire en ligne** | |
+| | **Les trois freins**, posés après l'incident — **copier puis renommer** avec comptage avant bascule · **frein** entre les requêtes et tables triées légère→lourde · **verrou** contre deux descentes simultanées | ils ont servi dès le premier run réel : une copie amputée de 4 lignes a été **refusée** avant de remplacer la bonne |
+| | ⚠ **INCIDENT du 21 au 22/08** — deux descentes lancées en une heure, ~2 800 requêtes sans frein : l'API de données a rendu HTTP 522 pendant ~20 min et l'instance a redémarré. Nuit, personne au travail, **aucune donnée perdue**. Compte rendu complet dans `AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21.md` | la même leçon que le rattrapage des documents chez Hektor, que je n'avais pas transposée |
 | ⏳ **B.2** | **La descente des 3 fiches** — annonce, contact, recherche — dans une table « ce que l'app détient », **à côté** de la table dérivée. **Aucun arbitrage** | faible — c'est une doublure |
 | ⏳ **B.3** | **Le déclencheur** — le worker appelle la descente pour la fiche qu'il vient de traiter *(idée de Frédéric, 21/08)* | faible |
 | ⏳ **B.4** | **La sentinelle** — le serveur dit-il la même chose que Supabase ? *(ex-26bis-②)* | nul |
 
-**B.1 rend un service double** : ce million de lignes n'a aujourd'hui **aucune sauvegarde
-locale**. Le faire descendre le fait entrer dans la sauvegarde de nuit.
+**B.1 a rendu un service double.** Ce million de lignes n'avait **aucune copie ni sauvegarde
+hors de Supabase**. Il est desormais dans `phase2.sqlite`, donc couvert par l'instantane
+**hebdomadaire** (niveau 2 de `backup_critical.py`).
+
+> **A trancher plus tard** : `phase2.sqlite` passe de 2,26 a **3,76 Go**, donc l'instantane
+> hebdomadaire grossit d'autant. Et le rafraichissement des vues du run de 05:30 est passe de
+> **37 a 56 secondes** -- mesure sur le run du 22/08. Modeste, mais reel : a surveiller si la
+> base continue de grandir.
 
 **Pourquoi la descente et pas la double écriture** *(question de Frédéric, tranchée le 21/08)* :
 une double livraison ne couvre que ce qui passe par un worker — **5 % des lignes** — elle exige
