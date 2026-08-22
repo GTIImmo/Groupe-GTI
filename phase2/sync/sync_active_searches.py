@@ -347,7 +347,20 @@ def main() -> int:
             f"{round(time.time() - start)}s. {conseil_reprise(dernier_id_sur)}"
         )
         return 1  # code non nul -> la tache planifiee signale l'echec partiel
-    print(f"[recherches-actives] termine OK : {done} contacts en {round(time.time() - start)}s")
+    # Afficher le point de reprise MEME quand tout s'est bien passe : la passe complete se
+    # fait desormais en sessions courtes (--limit), pour rester loin du volume qui a fait
+    # bannir notre IP le 22/08 (25 800 fiches en 1 h 47). Sans cette ligne il faudrait
+    # repecher l'identifiant dans le journal a chaque session.
+    fin_de_liste = not (args.limit and args.limit > 0 and total >= args.limit)
+    suite = (
+        "liste terminee, rien ne reste apres cet id."
+        if fin_de_liste
+        else f"session suivante : --start-after-id {dernier_id_sur}"
+    )
+    print(
+        f"[recherches-actives] termine OK : {done} contacts en {round(time.time() - start)}s"
+        f" -- dernier id traite {dernier_id_sur or '(aucun)'} ; {suite}"
+    )
     return 0
 
 
