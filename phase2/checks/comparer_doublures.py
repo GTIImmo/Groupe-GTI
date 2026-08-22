@@ -44,6 +44,20 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+# LE MEME VERROU QUE LA DESCENTE -- ajoute le 22/08, sur une remarque juste de l'autre
+# session : pull_from_supabase.lock ne couvrait que l'etape 1 du lanceur. Or c'est CE
+# script qui ecrit le plus fort (il pose une vingtaine d'index, dont un sur les 355 668
+# lignes de app_contact_current), et il tournait hors verrou. C'est lui, avec la descente,
+# qui a fait echouer le rattrapage acquereurs du 22/08 sur « database is locked ».
+# On importe le meme fichier temoin : un tiers qui regarde le verrou voit donc les DEUX
+# etapes, pas seulement la premiere.
+from phase2.sync.pull_from_supabase import (  # noqa: E402
+    VERROU, DescenteDejaEnCours, VerrouUnique,
+)
+
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 JOURNAL = "app_doublure_journal"
 
@@ -155,10 +169,24 @@ def recherches_divergentes(conn: sqlite3.Connection) -> int | None:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Compare chaque doublure a sa table native et tient le journal (B.4).")
-    parser.add_argument("--dry-run", action="store_true", help="Affiche sans rien ecrire.")
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="N'ecrit pas le JOURNAL -- mais pose quand meme les index, donc il ecrit "
+             "dans la base. C'est pourquoi il prend le verrou lui aussi.")
     parser.add_argument("--phase2-db", type=Path, default=PHASE2_DB)
     args = parser.parse_args()
 
+    # Le verrou est pris AVANT d'ouvrir la base : c'est la pose des index qui ecrit le
+    # plus fort, et elle a lieu des la premiere comparaison.
+    verrou = VerrouUnique(ROOT / VERROU)
+    verrou.__enter__()
+    try:
+        return _relever(args)
+    finally:
+        verrou.__exit__()
+
+
+def _relever(args) -> int:
     conn = sqlite3.connect(str(args.phase2_db))
     conn.execute(JOURNAL_DDL)
     conn.commit()
@@ -201,4 +229,10 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except DescenteDejaEnCours as exc:
+        # Ce n'est pas un bogue : c'est le garde-fou qui joue. La descente ou un autre
+        # releve tourne deja ; on repassera.
+        print(f"ARRET : {exc}")
+        raise SystemExit(2) from None

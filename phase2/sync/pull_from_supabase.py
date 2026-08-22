@@ -72,9 +72,15 @@ d'audit). Ils ne sont pas cosmetiques : chacun repare une facon precise de perdr
   2. UN FREIN ENTRE LES REQUETES (PAUSE_PAGE, PAUSE_TABLE) et les tables triees de la
      plus legere a la plus lourde. C'est le debit soutenu -- 2 800 requetes sans pause --
      qui a sature l'instance Supabase jusqu'a son redemarrage.
-  3. UN VERROU. Deux descentes simultanees sont la cause DIRECTE de l'incident : j'en ai
-     relance une alors que la premiere finissait. Le fichier temoin rend la faute
-     impossible ; le --dry-run, lui, reste libre.
+  3. UN VERROU, PARTAGE. Deux descentes simultanees sont la cause DIRECTE de l'incident
+     du 21/08 : j'en ai relance une alors que la premiere finissait. Le fichier temoin
+     rend la faute impossible ; le --dry-run de CE script reste libre (il ne lit rien).
+     Etendu le 22/08 au releve des doublures (phase2/checks/comparer_doublures.py), sur
+     une remarque juste de l'autre session : le verrou ne couvrait que l'etape 1 du
+     lanceur, alors que c'est le releve qui ecrit le plus fort -- il pose une vingtaine
+     d'index, dont un sur les 355 668 lignes de app_contact_current. C'est lui, avec la
+     descente, qui a tue le rattrapage acquereurs du 22/08 sur « database is locked ».
+     Un tiers qui regarde le verrou voit donc desormais les DEUX etapes.
 
 LE CAS DES VUES SANS CLE PRIMAIRE, resolu le 22/08. Postgres n'en declare aucune, donc
 on parcourt sur la premiere colonne -- qui peut se repeter. Sur
@@ -441,7 +447,8 @@ def marquer_echec(conn: sqlite3.Connection, table: str, message: str) -> None:
 
 
 class DescenteDejaEnCours(RuntimeError):
-    """Levee quand une descente tourne deja. Traitee a part pour sortir proprement."""
+    """Levee quand un traitement lourd tient deja le verrou. Traitee a part pour sortir
+    proprement (code 2), sans trace d'erreur : un chevauchement n'est pas un bogue."""
 
 
 class VerrouUnique:
@@ -459,9 +466,16 @@ class VerrouUnique:
     def __enter__(self) -> "VerrouUnique":
         if self.chemin.exists():
             age = time.time() - self.chemin.stat().st_mtime
+            # Le message ne nomme PAS le coupable : le verrou est partage entre la
+            # descente et le releve des doublures, et dire « une descente tourne » quand
+            # c'est le releve enverrait sur une fausse piste. C'est la faute qu'on vient de
+            # constater sur le message du coupe-circuit du rattrapage, qui accusait le
+            # reseau alors que la cause etait locale.
             raise DescenteDejaEnCours(
-                f"une descente tourne deja (verrou pose il y a {int(age)}s : {self.chemin}). "
-                "Si c'est un residu d'un run interrompu, supprimer le fichier a la main."
+                f"un traitement lourd tient deja le verrou (descente ou releve des "
+                f"doublures), pose il y a {int(age)}s : {self.chemin}. Si c'est un residu "
+                "d'un run interrompu -- un arret force ne le relache pas -- supprimer le "
+                "fichier a la main."
             )
         self.chemin.write_text(str(os.getpid()), encoding="utf-8")
         return self

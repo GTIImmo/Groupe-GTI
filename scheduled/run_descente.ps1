@@ -15,6 +15,13 @@
 # La seconde n'a de sens qu'apres la premiere : elle mesure ce que la descente vient de
 # poser. Si la descente echoue, on releve quand meme -- la photo dira alors qu'elle date.
 #
+# LE VERROU COUVRE LES DEUX ETAPES (corrige le 22/08). Chacune le prend a son tour :
+# l'etape 1 le pose puis le relache, l'etape 2 le reprend. Un tiers qui le regarde -- le
+# rattrapage acquereurs, par exemple -- voit donc toute la duree du traitement, et pas
+# seulement la descente. C'etait le defaut releve par l'autre session : le releve des
+# doublures, qui pose une vingtaine d'index dont un sur 355 668 lignes, tournait hors
+# verrou et a fait echouer le rattrapage du 22/08 sur « database is locked ».
+#
 # ⚠ LA DESCENTE EST LA PLUS LOURDE DE TOUTES LES TACHES qui parlent a Supabase. C'est elle
 # qui a sature l'instance jusqu'au redemarrage dans la nuit du 21 au 22/08 -- deux passes
 # lancees en une heure, ~2 800 requetes sans frein. Elle porte desormais trois freins
