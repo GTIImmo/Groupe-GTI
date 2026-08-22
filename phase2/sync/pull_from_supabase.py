@@ -463,9 +463,57 @@ class VerrouUnique:
     def __init__(self, chemin: Path) -> None:
         self.chemin = chemin
 
+    @staticmethod
+    def _processus_vivant(pid: int) -> bool:
+        """Le processus qui a pose le verrou tourne-t-il encore ?
+
+        ⚠ PAS os.kill(pid, 0) : sous Windows, Python traduit os.kill en TerminateProcess.
+        Cet appel, qui ne fait que « demander » sous Unix, TUERAIT le processus ici.
+        On passe donc par OpenProcess, qui ne fait qu'ouvrir une poignee en lecture.
+
+        Reserve connue : Windows recycle les numeros de processus. Un verrou tres ancien
+        dont le numero aurait ete reattribue serait cru vivant. C'est pour ca que le
+        message affiche l'age du verrou -- s'il a des heures, c'est louche.
+        """
+        import ctypes
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        STILL_ACTIVE = 259
+        k32 = ctypes.windll.kernel32
+        poignee = k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not poignee:
+            return False
+        try:
+            code = ctypes.c_ulong()
+            if k32.GetExitCodeProcess(poignee, ctypes.byref(code)):
+                return code.value == STILL_ACTIVE
+            return True
+        finally:
+            k32.CloseHandle(poignee)
+
     def __enter__(self) -> "VerrouUnique":
         if self.chemin.exists():
             age = time.time() - self.chemin.stat().st_mtime
+            # LE VERROU SE VALIDE LUI-MEME (22/08). Il portait deja le numero du processus
+            # qui l'avait pose -- on l'ecrivait sans jamais le relire. Deux accidents du
+            # 22/08 ont montre qu'il fallait s'en servir :
+            #   - j'ai RETIRE A LA MAIN un verrou que je croyais orphelin, alors que la
+            #     descente tournait encore (Stop-ScheduledTask tue le PowerShell parent,
+            #     pas le python enfant, qui devient orphelin et va au bout). J'ai donc
+            #     desarme le garde-fou pendant qu'il protegeait un run vivant ;
+            #   - et un arret force laisse un verrou mort qui bloque tout le monde, ce
+            #     contre quoi l'autre session a du poser un plafond d'attente de 30 min.
+            # En relisant le numero, les deux cas se referment : on ne peut plus retirer un
+            # verrou vivant, et un verrou mort est repris tout seul.
+            try:
+                pid = int((self.chemin.read_text(encoding="utf-8") or "0").strip())
+            except (OSError, ValueError):
+                pid = 0
+            if pid and not self._processus_vivant(pid):
+                print(f"        verrou ORPHELIN (processus {pid} disparu, pose il y a "
+                      f"{int(age)}s) -- il est repris")
+                self.chemin.unlink(missing_ok=True)
+                self.chemin.write_text(str(os.getpid()), encoding="utf-8")
+                return self          # <- et on CONTINUE : c'est tout l'objet du correctif
             # Le message ne nomme PAS le coupable : le verrou est partage entre la
             # descente et le releve des doublures, et dire « une descente tourne » quand
             # c'est le releve enverrait sur une fausse piste. C'est la faute qu'on vient de
@@ -473,9 +521,10 @@ class VerrouUnique:
             # reseau alors que la cause etait locale.
             raise DescenteDejaEnCours(
                 f"un traitement lourd tient deja le verrou (descente ou releve des "
-                f"doublures), pose il y a {int(age)}s : {self.chemin}. Si c'est un residu "
-                "d'un run interrompu -- un arret force ne le relache pas -- supprimer le "
-                "fichier a la main."
+                f"doublures) -- processus {pid or '?'} VIVANT, verrou pose il y a "
+                f"{int(age)}s : {self.chemin}. NE PAS supprimer ce fichier : le travail "
+                "qu'il protege tourne encore. Un verrou dont le processus a disparu est "
+                "repris tout seul au run suivant."
             )
         self.chemin.write_text(str(os.getpid()), encoding="utf-8")
         return self
