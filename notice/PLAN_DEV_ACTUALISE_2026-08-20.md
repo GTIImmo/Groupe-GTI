@@ -142,8 +142,11 @@ retour.** Deux précisions à ne jamais perdre de vue :
 | | ⚠ **Ce que cette vérification a trouvé** — `app_diffusion_request` (**9**) et `app_diffusion_request_event` (**29**) sont créées par le **front seul** ; la table locale du même nom est une **coquille vide**. Mon garde-fou les prenait pour des tables natives et les laissait **sans aucune copie locale**. Et `app_diffusion_target` (42 local / 13 en ligne) est **deux vies parallèles** : le local écrit par un script **manuel**, absent du run de nuit ; l'en-ligne par le front | |
 | | **L'annonce était déjà faite par B.1** — `app_dossier_current` et `app_dossier_detail_current` n'entraient pas en collision de nom, donc elles étaient déjà descendues, à côté de `app_view_generale`. B.2 se réduisait au contact | |
 | | **Vérifié en 14 contrôles** — intégrité SQLite · les 14 tables natives **inchangées à la ligne près** · 0 résidu · 0 copie en cours · 0 script du projet ne lit ou n'écrit une table descendue · reconstruction d'un contact en 5 s · sauvegarde et 20 sentinelles inchangées · **et le CONTENU comparé valeur par valeur** : 225 + 550 valeurs relues chez Supabase, **0 écart** | les comptes ne prouvent pas le contenu |
-| ⏳ **B.3** | **Le déclencheur** — le worker appelle la descente pour la fiche qu'il vient de traiter *(idée de Frédéric, 21/08)* | faible |
-| ⏳ **B.4** | **La sentinelle** — le serveur dit-il la même chose que Supabase ? *(ex-26bis-②)* | nul |
+| ⏳ **B.3** | **Le déclencheur** — le worker appelle la descente pour la fiche qu'il vient de traiter *(idée de Frédéric, 21/08)* | **en attente de ce que dira le journal.** La doublure ne se rafraîchit qu'à la descente : une modification faite à 9 h n'apparaît qu'à 7 h 30 le lendemain. Suffisant pour **observer**, pas pour **arbitrer**. Si la colonne « app seule » reste plate pendant trois semaines, B.3 est inutile ; si elle grimpe, il se justifie **avec un chiffre** |
+| ✅ **B.4** | ~~**Le serveur dit-il la même chose que Supabase ?**~~ **FAITE le 22/08** — `phase2/checks/comparer_doublures.py` + `app_doublure_journal` + **2 sondes** (`data.doublure_journal`, `data.recherche_divergente`) | **un journal, pas une alarme globale.** Un seuil sur « les deux diffèrent » sonnerait toujours pour rien : Supabase ne porte qu'un sous-ensemble. Une sentinelle qui sonne toujours ne protège de rien |
+| | **Premier relevé** — `app_affaire_ledger__sb` 28 981 d'accord, **0 écart** · `app_diffusion_target__sb` **6 / 36 / 7** *(les deux vies parallèles, enfin chiffrées)* · **45 lignes** connues de l'app SEULE | |
+| | **L'alarme est étroite et elle a du sens** — les recherches présentes **des deux côtés** dont les critères diffèrent. Une seule ligne = un négociateur a affiné une recherche que Hektor n'a jamais reçue. **0 sur 10 762** | **entendue sonner** : `prix_max` modifié dans la doublure → CRITICAL 1 ; restauré → OK 0 |
+| ✅ **B.5** | ~~**La tâche planifiée**~~ **FAITE le 22/08** — `GTI Descente`, **07:30**, descente puis relevé. S4U, limite 2 h, rattrapage si manquée | après le run de 05:30 *(qui pousse la journée)* et après la sauvegarde de 07:00 *(qui fait l'instantané)*. **Les 6 tâches GTI sont désormais en S4U** : elles tournent sans session ouverte |
 
 **B.1 a rendu un service double.** Ce million de lignes n'avait **aucune copie ni sauvegarde
 hors de Supabase**. Il est desormais dans `phase2.sqlite`, donc couvert par l'instantane
@@ -153,6 +156,27 @@ hors de Supabase**. Il est desormais dans `phase2.sqlite`, donc couvert par l'in
 > hebdomadaire grossit d'autant. Et le rafraichissement des vues du run de 05:30 est passe de
 > **37 a 56 secondes** -- mesure sur le run du 22/08. Modeste, mais reel : a surveiller si la
 > base continue de grandir.
+
+### Les trois incidents du 21-22/08, et le garde-fou que chacun a produit
+
+Aucune donnée perdue dans les trois cas. Mais chacun a révélé un manque, et c'est ce qui rend
+le bloc B solide aujourd'hui — pas la relecture du code.
+
+| Incident | Cause | Ce qu'il a produit |
+|---|---|---|
+| **Supabase saturée jusqu'au redémarrage** | 2 descentes lancées en 1 h, ~2 800 requêtes sans frein | le **frein** entre requêtes, les tables **légères d'abord**, et le **verrou** |
+| **Le rattrapage de l'autre session tué** à 7 500 | mes écritures concurrentes dans `phase2.sqlite` — les `CREATE INDEX` du relevé, hors verrou | `busy_timeout` **30 s** *(autre session)* + le **verrou étendu aux deux étapes** |
+| **Un verrou désarmé sur un run vivant** | `Stop-ScheduledTask` tue le PowerShell parent, **pas le python enfant** : il devient orphelin et va au bout. J'ai retiré un verrou qui protégeait un run en cours | le verrou **vérifie que son processus est vivant** *(OpenProcess, jamais `os.kill` sous Windows — il tuerait le processus)* |
+
+**Trois défauts trouvés en testant, pas en relisant** : la copie tronquée prise pour une fin de
+table *(elle remplaçait la bonne, en silence)*, le `--dry-run` du relevé qui écrivait quand même
+*(il pose les index)*, et la comparaison sans index qui tournait **dix minutes** au lieu de 26 s.
+
+> **Deux leçons de méthode, valables au-delà de ce bloc :**
+> **① Arrêter la tâche planifiée n'arrête pas le travail.** Pour couper, il faut tuer le python.
+> **② Un message d'erreur qui accuse le mauvais coupable coûte une heure.** Le coupe-circuit
+> criait « bannissement d'IP » sur une panne locale ; mon verrou disait « une descente tourne »
+> quand c'était le relevé. Les deux sont corrigés.
 
 **Pourquoi la descente et pas la double écriture** *(question de Frédéric, tranchée le 21/08)* :
 une double livraison ne couvre que ce qui passe par un worker — **5 % des lignes** — elle exige
