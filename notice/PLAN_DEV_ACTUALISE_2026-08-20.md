@@ -56,6 +56,58 @@ Avant **chaque étape** et **avant tout code**, quatre phrases :
 
 Frédéric valide, **puis** on code. Jamais l'inverse. *« Je ne veux pas d'ambiguïté. »*
 
+### 📍 LE TABLEAU DE BORD — posé le 22/08 après l'audit
+
+*Le plan disait QUOI faire, jamais COMBIEN DE TEMPS ni QUI BLOQUE QUI.*
+
+#### Le chemin critique — et il n'est pas technique
+
+```
+   A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
+   semaines a mois, ne depend pas de moi, A ZERO
+
+   C.2a -> C.2b -> C.4              4 a 6 semaines de travail effectif
+   (le plus long cote technique)
+```
+
+> **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
+> Tes annonces passent par **son** abonnement portails, tes mandats se signent avec **son**
+> contrat. Chaque semaine de retard sur A s'ajoute **intégralement** à la date de coupure.
+
+#### Ce qui peut avancer SANS Hektor
+
+| | Tâche | Durée |
+|---|---|---|
+| **0.4 → 0.7** | Les quatre gestes de sécurité du bloc 0 | **1 h** |
+| **D.1a** | Mesurer le vrai périmètre du rapatriement des documents | **1 h** |
+| **C.2a** | Identité des contacts — **la relecture**, pas le code | **une demi-journée** |
+| **C.6** | La table « ce que l'app détient » pour l'annonce | **1 à 2 jours** |
+
+#### Ce qui exige Hektor vivant
+
+| | Tâche | Durée | Sur quoi repose l'estimation |
+|---|---|---|---|
+| **C.1** | La règle de comparaison | **3 à 5 j** | le garde-fou existe ; c'est le verdict qu'on inverse |
+| **C.3** | L'exception recherches | **1 à 2 j** | la doublure existe déjà |
+| **C.2b** | Identité des contacts — le code | **1 à 2 sem.** | 186 500 lignes, ~530 points de code. **La plus grosse** |
+| **C.4** | Les workers, un par un | **2 à 3 sem.** | 35 types de travaux |
+| **C.7** | Le serveur lit sa base | **2 à 3 j** | collée à C.1 |
+| **C.9** | La création part de l'app | **1 à 2 sem.** | après C.7 |
+
+> ⚠ **Ces durées sont des FOURCHETTES, et c'est volontaire.** Trois fois cette semaine j'ai
+> donné un chiffre précis là où la donnée ne portait qu'un ordre de grandeur — « ~270
+> recherches invisibles » *(réalité : environ 5)*, « 20 000 rapprochements disparus »
+> *(réalité : zéro — j'avais comparé une estimation à un comptage)*, « ~2,7 Go » *(réalité :
+> 4,32)*. **Un chiffre qui entre dans une décision se mesure, il ne s'estime pas.**
+
+#### Une dette signalée, pas mise au plan
+
+`App.tsx` fait **37 204 lignes** — les trois quarts du front dans un seul fichier. Ça marche,
+et le découper serait un chantier sans valeur métier. Mais **C.9 va beaucoup y toucher**, et
+c'est le genre de dette qui se paie au pire moment. À savoir, pas à traiter maintenant.
+
+---
+
 ### LE BUT, redit par Frédéric le 21/08
 
 > *« Je veux que mon app et mon serveur fonctionnent comme une vraie solution métier, sauf que
@@ -101,9 +153,13 @@ retour.** Deux précisions à ne jamais perdre de vue :
 
 | | Tâche | Pourquoi maintenant |
 |---|---|---|
-| ⏳ **0.1** | **Mettre `app_search_registry` et `app_affaire_ledger` dans la sauvegarde de nuit** (`backup_critical.py:80`) | **elles n'y sont pas.** Jusqu'à **7 jours d'exposition** sur les deux tables qui détiennent le plus. Trou A de l'audit |
-| ⏳ **0.2** | **Écrire la règle : le miroir ne se supprime JAMAIS** | 464 952 réponses = ton archive Hektor définitive. Après la coupure il gèle, il ne disparaît pas |
+| ✅ **0.1** | ~~**Mettre `app_search_registry` et `app_affaire_ledger` dans la sauvegarde de nuit**~~ **FAITE le 22/08** | vérifié **en décompressant l'archive**, pas en lisant ce que le script affiche : 76 841 et 28 981 lignes dedans |
+| ✅ **0.2** | ~~**Écrire la règle : le miroir ne se supprime jamais**~~ **FAITE le 22/08** — règle 5 du plan + en tête de `backup_critical.py` | formulation corrigée sur objection de Frédéric : **une mise à jour n'a jamais besoin d'une suppression**, elle écrase en place |
 | ⏳ **0.3** | **Finir 19-R1** — le rattrapage acquéreurs, ≈ 4 h 35 | à cocher quand le journal rend `termine OK` |
+| ⚠ **0.4** | **FERMER L'ACCÈS PUBLIC À `app_dossiers_current`** — la vue est lisible **avec la clé publique du front**, celle qui est dans le JavaScript et que n'importe qui peut lire. **13 210 annonces, 54 colonnes**, dont **10 510 adresses privées**, **12 488 noms de mandants**, 13 098 villes privées, 9 025 e-mails de négociateurs | **vérifié en vrai le 22/08**, pas déduit d'un avertissement : lecture réussie avec la clé anonyme. `app_contact_current` est correctement refusée (401) — c'est **cette vue-là** qui est ouverte. Remède : retirer le droit à `anon`, garder `authenticated` *(le front lit après connexion)*. **À vérifier sur l'app juste après** |
+| ⚠ **0.5** | **Fermer les 5 vues de surveillance et `app_search_count_high_water`** — lisibles par `anon` elles aussi. **Aucune n'est utilisée par l'app** *(vérifié)* : retirer `anon` **et** `authenticated`, garder `service_role` | ce sont **mes** tables et vues, posées les 20 et 21/08 sans politique. Le trou est de moi |
+| ⏳ **0.6** | **Supprimer `tmp_etape12_avant`** — table temporaire d'une migration, vide, et lisible par `anon` | ménage |
+| ⏳ **0.7** | **Auditer les 164 fonctions `SECURITY DEFINER` appelables par `anon` et `authenticated`** | **non mesuré.** Beaucoup sont sans doute légitimes *(les RPC que le front appelle)*, mais aucune n'a jamais été revue. À auditer, pas à corriger en bloc |
 
 ---
 
@@ -211,7 +267,8 @@ moitié manquante de l'architecture finale.
 
 | | Tâche | |
 |---|---|---|
-| ⏳ **D.1** | **Documents** — 40 493 | ⚠️ avec le frein anti-bannissement, et **sans JAMAIS rejouer les annonces déjà en échec** |
+| ⏳ **D.1a** | **MESURER d'abord** — combien de `cloud_available` n'ont pas de fichier local ? | **1 heure.** L'audit du 22/08 a montré que la tâche est bien plus petite qu'annoncée |
+| ⏳ **D.1** | **Documents** — ~~40 493~~ **à redimensionner** : 44 512 indexés, dont **22 491 déjà `local_only`** et 22 021 `cloud_available` ; et **46 359 fichiers, 65,6 Go déjà sur le disque** — donc une part du cloud est déjà là | ⚠ avec le frein anti-bannissement, et **sans JAMAIS rejouer les annonces déjà en échec** |
 | ⏳ **D.2** | **Photos** — 1 397 | ⚠️ |
 
 ---
