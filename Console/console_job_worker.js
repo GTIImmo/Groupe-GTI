@@ -173,6 +173,30 @@ mutation ToggleCrmBirthdayConfiguration($enabled: Boolean!, $prospect: Int) {
 let hektorLoginPromise = null;
 let lastHektorLoginAt = fs.existsSync(STORAGE_STATE_PATH) ? fs.statSync(STORAGE_STATE_PATH).mtimeMs : 0;
 let lastHektorActivityAt = Date.now();  // derniere activite Hektor (job ou keep-alive) -> pilote le keep-alive
+// --- RECUL PROGRESSIF SUR LES RECONNEXIONS (2026-08-23) ---
+// Le frein de debit du 20/08 protege hektorFetch, mais PAS le login : celui-ci part dans un
+// processus Playwright separe, hors de hektorThrottle. Quand Hektor devient injoignable, le
+// keep-alive de 7 min echoue, declenche une reconnexion complete, qui reessaie 3 fois a 3 s
+// -- et rien ne memorise l'echec, donc le cycle suivant recommence a zero.
+// Mesure du 23/08 : ~72 connexions/jour en regime normal, 509 le jour du blocage, pour ZERO
+// job en file. Les quatre services multiplient encore par quatre. L'acces ne pouvait pas se
+// retablir : nos propres tentatives maintenaient la sanction.
+let hektorLoginFailStreak = 0;
+let hektorLoginCooldownUntil = 0;
+const HEKTOR_LOGIN_COOLDOWN_BASE_MS = Number(process.env.CONSOLE_HEKTOR_LOGIN_COOLDOWN_BASE_MS || 60000);
+const HEKTOR_LOGIN_COOLDOWN_MAX_MS = Number(process.env.CONSOLE_HEKTOR_LOGIN_COOLDOWN_MAX_MS || 3600000);
+
+class HektorLoginCooldownError extends Error {
+  constructor(restantMs) {
+    super(`Reconnexion Hektor en recul : ${Math.ceil(restantMs / 1000)}s restantes`);
+    this.name = "HektorLoginCooldownError";
+    this.cooldown = true;
+  }
+}
+
+function hektorLoginEnRecul() {
+  return Date.now() < hektorLoginCooldownUntil;
+}
 
 function requireEnv(name, value) {
   if (!value) throw new Error(`Missing environment variable: ${name}`);
@@ -306,10 +330,20 @@ function withTimeout(promise, timeoutMs, label) {
 
 async function refreshHektorSession(reason = "scheduled") {
   if (hektorLoginPromise) return hektorLoginPromise;
+  if (hektorLoginEnRecul()) {
+    // On ne retente pas : c'est exactement ce qui entretenait le blocage.
+    throw new HektorLoginCooldownError(hektorLoginCooldownUntil - Date.now());
+  }
   const loginScript = path.resolve(__dirname, "playwright_login.js");
   hektorLoginPromise = (async () => {
     console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", reason }));
-    const maxLoginAttempts = Math.max(1, Number(process.env.HEKTOR_LOGIN_ATTEMPTS || 3));
+    // Trois tentatives quand tout va bien : un hoquet passager merite d'etre retente.
+    // UNE SEULE des qu'on sort d'un echec : Hektor est deja connu injoignable, insister
+    // n'apporte rien et c'est ce qui nourrissait le blocage. En regime coupe, on passe
+    // ainsi de 137 tentatives/heure a 4 pour les quatre services.
+    const maxLoginAttempts = hektorLoginFailStreak > 0
+      ? 1
+      : Math.max(1, Number(process.env.HEKTOR_LOGIN_ATTEMPTS || 3));
     let loginErr = null;
     for (let loginAttempt = 1; loginAttempt <= maxLoginAttempts; loginAttempt++) {
       try {
@@ -322,12 +356,29 @@ async function refreshHektorSession(reason = "scheduled") {
       } catch (err) {
         loginErr = err;
         if (loginAttempt < maxLoginAttempts) {
-          console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", status: "retry", attempt: loginAttempt, reason }));
-          await new Promise((r) => setTimeout(r, 3000));
+          // Delai CROISSANT : 3 s, 9 s, 27 s... au lieu de 3 s fixes.
+          const attente = 3000 * Math.pow(3, loginAttempt - 1);
+          console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", status: "retry", attempt: loginAttempt, reason, attente_ms: attente }));
+          await new Promise((r) => setTimeout(r, attente));
         }
       }
     }
-    if (loginErr) throw loginErr;
+    if (loginErr) {
+      // Toutes les tentatives ont echoue : on se met en recul, de plus en plus longtemps.
+      hektorLoginFailStreak += 1;
+      const recul = Math.min(
+        HEKTOR_LOGIN_COOLDOWN_MAX_MS,
+        HEKTOR_LOGIN_COOLDOWN_BASE_MS * Math.pow(2, hektorLoginFailStreak - 1),
+      );
+      hektorLoginCooldownUntil = Date.now() + recul;
+      console.log(JSON.stringify({
+        worker: WORKER_ID, step: "hektor_login", status: "cooldown",
+        echecs_consecutifs: hektorLoginFailStreak, recul_ms: recul, reason,
+      }));
+      throw loginErr;
+    }
+    hektorLoginFailStreak = 0;
+    hektorLoginCooldownUntil = 0;
     lastHektorLoginAt = Date.now();
     console.log(JSON.stringify({ worker: WORKER_ID, step: "hektor_login", status: "done", reason }));
   })();
@@ -341,6 +392,7 @@ async function refreshHektorSession(reason = "scheduled") {
 async function refreshHektorSessionIfDue() {
   if (!ENABLE_HEKTOR_ACTIONS) return;
   if (HEKTOR_SESSION_REFRESH_MS <= 0) return;
+  if (hektorLoginEnRecul()) return;
   const stateMtime = fs.existsSync(STORAGE_STATE_PATH) ? fs.statSync(STORAGE_STATE_PATH).mtimeMs : 0;
   lastHektorLoginAt = Math.max(lastHektorLoginAt, stateMtime);
   if (Date.now() - lastHektorLoginAt >= HEKTOR_SESSION_REFRESH_MS) {
@@ -354,6 +406,8 @@ async function refreshHektorSessionIfDue() {
 async function keepHektorSessionWarmIfDue() {
   if (!ENABLE_HEKTOR_ACTIONS) return;
   if (HEKTOR_KEEPALIVE_MS <= 0) return;
+  // Maintenir chaude une session morte n'a aucun sens, et c'est ce qui generait le flux.
+  if (hektorLoginEnRecul()) return;
   if (Date.now() - lastHektorActivityAt < HEKTOR_KEEPALIVE_MS) return;
   try {
     await fetchLatestHektorProperties(1, false);  // lecture legere -> rafraichit le TTL sans re-login

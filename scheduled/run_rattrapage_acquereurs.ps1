@@ -25,7 +25,7 @@
 # Et TOUS les echecs tombaient sur /Api/OAuth/Authenticate/, jamais sur ContactById. Ce
 # n'etait ni le volume ni la vitesse : c'etait la redemande de jeton en rafale.
 #
-# PLAFOND. --limit 5000 : une session ne depasse jamais 5 000 fiches. C'est le VOLUME qui
+# VAGUE. --limit 2000 : une session ne depasse jamais 5 000 fiches. C'est le VOLUME qui
 # a fait couper l'acces le 22/08 (25 800 fiches en 1 h 47), pas la vitesse -- le run de
 # nuit tire depuis un mois a 9 appels/s sans etre inquiete, mais sur 3 778 fiches.
 # Une session dure ~33 min ; il en faut une dizaine pour finir les 45 500 restantes.
@@ -54,7 +54,7 @@ Start-Transcript -Path $log -Append | Out-Null
 $runFailed = $false
 try {
     Write-Output "=== Rattrapage acquereurs demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    $argsPy = @("--scope", "acquereurs", "--limit", "5000")
+    $argsPy = @("--scope", "acquereurs", "--limit", "2000")
     if ($StartAfterId -gt 0) { $argsPy += @("--start-after-id", [string]$StartAfterId) }
     Write-Output "--- parametres : $($argsPy -join ' ') ---"
     & $py (Join-Path $root "phase2\sync\sync_active_searches.py") @argsPy

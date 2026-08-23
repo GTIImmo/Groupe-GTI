@@ -12,11 +12,12 @@ Start-Transcript -Path $log -Append | Out-Null
 $runFailed = $false
 try {
     Write-Output "=== Recherches actives demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    # --request-delay-seconds 0.1 (23/08/2026) : sans lui, ce run tirait ses lots de 300
-    # a 5,6-9,4 appels/s (mesure en base le 22/08), la moyenne de 3-6 affichee au journal
-    # etant diluee par les etapes locales. Meme profil que le run quotidien desormais.
-    # Coute ~6 min sur un run de 14 : termine toujours tres avant le quotidien de 05:30.
-    & $py (Join-Path $root "phase2\sync\sync_active_searches.py") --request-delay-seconds 0.1
+    # Aucun reglage de cadence ici : le script porte desormais les valeurs de la methode de
+    # reference (lots de 100, 0,5 s entre fiches, 60 s entre lots) -- voir
+    # notice/NOTE_EXTRACTION_CHAUFFAGE_HEKTOR_2026-06-09.md. Ce run passe donc de ~21 min a
+    # ~1 h 10 pour ses 3 800 fiches : il demarre a 03:00 et finit tres avant le quotidien
+    # de 05:30. Et il ne fait plus qu'UNE authentification au lieu de 13.
+    & $py (Join-Path $root "phase2\sync\sync_active_searches.py")
     $code = $LASTEXITCODE
     Write-Output "=== Recherches actives termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $code) ==="
     if ($code -ne 0) { $runFailed = $true }

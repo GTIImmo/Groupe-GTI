@@ -18,9 +18,11 @@ reprenable (chaque lot est indépendant). À planifier 1×/jour (tâche planifi�
 from __future__ import annotations
 
 import argparse
+import os
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -138,8 +140,25 @@ def fetch_all(ids: list[str], *, request_delay_seconds: float,
     eu d'incident en quatre mois : gros lots, vraie pause entre eux, delai court entre
     deux fiches.
     """
+    # Les IDs passent par un FICHIER, pas par la ligne de commande : a 5 000 contacts le
+    # CSV depasse les 32 767 caracteres de Windows et le processus ne demarre pas du tout
+    # (WinError 206, constate le 23/08). Le fichier leve toute limite de taille de session.
+    with tempfile.NamedTemporaryFile("w", suffix=".ids", delete=False, encoding="utf-8") as fh:
+        fh.write(",".join(ids))
+        liste = fh.name
+    try:
+        _fetch_step(liste, request_delay_seconds, batch_size, batch_pause_seconds)
+    finally:
+        try:
+            os.unlink(liste)
+        except OSError:
+            pass
+
+
+def _fetch_step(liste: str, request_delay_seconds: float,
+                batch_size: int, batch_pause_seconds: float) -> None:
     run_step([
-        "phase2/sync/sync_contact_details.py", "--contact-id", ",".join(ids),
+        "phase2/sync/sync_contact_details.py", "--contact-id-file", liste,
         "--skip-listing-refresh", "--limit", "0",
         "--request-delay-seconds", str(request_delay_seconds),
         "--batch-size", str(batch_size),
@@ -241,15 +260,22 @@ def main() -> int:
              "(defaut 3, 0 = desactive). Sans lui, un bannissement d'IP au lot 12 "
              "laisse le run taper 226 lots de plus sur une porte fermee.",
     )
+    # Valeurs de la METHODE DE REFERENCE, documentee dans
+    # notice/NOTE_EXTRACTION_CHAUFFAGE_HEKTOR_2026-06-09.md et reprise telle quelle par
+    # scheduled/backfill_contact_missing.ps1 : 2 000 par vague, 100 par lot, 0,5 s entre
+    # deux fiches, 60 s entre deux lots, 300 s entre deux vagues. C'est le seul regime dont
+    # on ait la preuve ecrite qu'il a fait passer des dizaines de milliers d'elements sans
+    # jamais rien declencher -- la note l'estime a ~24 h pour 50 000.
+    # Ce qui compte n'est pas la vitesse instantanee mais le TAUX D'OCCUPATION : des lots de
+    # 100 suivis de 60 s de pause ne sollicitent Hektor que 45 % du temps ; des lots de
+    # 1 000, 83 %. Les compteurs de pare-feu travaillent sur des fenetres glissantes.
     parser.add_argument(
-        "--fetch-batch-size", type=int, default=1000,
-        help="Taille des lots DANS la lecture Hektor (defaut 1000, comme le run quotidien).",
+        "--fetch-batch-size", type=int, default=100,
+        help="Taille des lots DANS la lecture Hektor (defaut 100, methode de reference).",
     )
     parser.add_argument(
         "--fetch-batch-pause-seconds", type=float, default=60.0,
-        help="Pause entre deux lots de lecture (defaut 60 s, comme le run quotidien). "
-             "Le rattrapage la mettait a 0 : c'est la seule pause que le quotidien "
-             "s'impose et qu'il etait le seul a respecter.",
+        help="Pause entre deux lots de lecture (defaut 60 s, methode de reference).",
     )
     parser.add_argument(
         "--batches-per-wave", type=int, default=0,
@@ -258,10 +284,9 @@ def main() -> int:
              "chaque lot). Une vague de 4 lots = 1 200 fiches, puis une vraie respiration.",
     )
     parser.add_argument(
-        "--request-delay-seconds", type=float, default=0.1,
-        help="Delai entre deux fiches DANS un lot (defaut 0,1 s, comme le run quotidien). "
-             "0 = pleine vitesse, ce qui produit des pointes a ~9 appels/s : c'est le "
-             "profil qu'on cherche justement a aplatir.",
+        "--request-delay-seconds", type=float, default=0.5,
+        help="Delai entre deux fiches DANS un lot (defaut 0,5 s, methode de reference). "
+             "0 = pleine vitesse, ce qui produit des pointes a ~9 appels/s.",
     )
     parser.add_argument(
         "--attente-verrou-max", type=float, default=1800.0,

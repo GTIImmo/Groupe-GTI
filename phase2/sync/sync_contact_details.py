@@ -69,6 +69,15 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="ID contact Hektor a rafraichir explicitement. Peut etre repete. Court-circuite la selection globale.",
     )
+    parser.add_argument(
+        "--contact-id-file",
+        type=Path,
+        default=None,
+        help="Fichier contenant les IDs a rafraichir (un par ligne ou separes par des "
+             "virgules). Meme effet que --contact-id, sans la limite de 32 767 caracteres "
+             "de la ligne de commande Windows -- au-dela de ~4 000 IDs, le processus ne "
+             "demarre meme pas (WinError 206).",
+    )
     parser.add_argument("--missing-only", action="store_true", help="Compatibilite: comportement par defaut, ne prend que les contacts sans detail local.")
     parser.add_argument("--changed-only", action="store_true", help="Rejouer les details absents ou dont date_maj est plus recente que le dernier detail local.")
     parser.add_argument("--retry-404", action="store_true", help="Retenter les contacts dont ContactById a deja repondu 404. Par defaut ils sont exclus de la reprise.")
@@ -651,7 +660,10 @@ def main() -> int:
         before = count_contact_rows(conn, args.contact_scope)
         missing_only = resolve_missing_only(args)
         selection_mode = selection_mode_label(args, missing_only)
-        target_contact_ids = explicit_contact_ids(args.contact_id)
+        depuis_fichier: list[str] = []
+        if args.contact_id_file:
+            depuis_fichier = [args.contact_id_file.read_text(encoding="utf-8")]
+        target_contact_ids = explicit_contact_ids(list(args.contact_id) + depuis_fichier)
         if target_contact_ids:
             for contact_id in target_contact_ids:
                 upsert_contact_state(
