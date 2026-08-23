@@ -2383,8 +2383,19 @@ const HEKTOR_BACKOFF_AFTER_REJECT_MS = Number(process.env.CONSOLE_HEKTOR_BACKOFF
 // Tous les autres traitements du projet respirent deja : sync_contact_details et console
 // missing fields marquent 60 s entre chaque lot. Le rattrapage documents etait le seul a
 // tourner sans jamais s'arreter. On aligne.
-const HEKTOR_PAUSE_EVERY_N_REQUESTS = Number(process.env.CONSOLE_HEKTOR_PAUSE_EVERY_N_REQUESTS || 300);
+// AJUSTE LE 23/08/2026 : 300 -> 100. A 1 s par requete, une respiration tous les 300 appels
+// laissait des salves de CINQ MINUTES en continu, soit 83 % du temps a solliciter Hektor.
+// La methode de reference (notice/NOTE_EXTRACTION_CHAUFFAGE_HEKTOR_2026-06-09.md) travaille
+// par lots de 100 suivis de 60 s, soit 45 %. Le frein du 20/08 avait corrige le DEBIT ; il
+// restait la DUREE D'EXPOSITION, qui est precisement ce que son propre en-tete designait
+// comme la cause du blocage du 19/08.
+const HEKTOR_PAUSE_EVERY_N_REQUESTS = Number(process.env.CONSOLE_HEKTOR_PAUSE_EVERY_N_REQUESTS || 100);
 const HEKTOR_LONG_PAUSE_MS = Number(process.env.CONSOLE_HEKTOR_LONG_PAUSE_MS || 60000);
+// PAUSE DE VAGUE (23/08/2026) : elle n'existait pas. Le worker vidait la file en continu --
+// un rattrapage de 12 000 annonces, c'est ~36 000 requetes, soit une douzaine d'heures de
+// flux quasi ininterrompu. La methode de reference s'arrete 300 s toutes les 2 000.
+const HEKTOR_WAVE_EVERY_N_REQUESTS = Number(process.env.CONSOLE_HEKTOR_WAVE_EVERY_N_REQUESTS || 2000);
+const HEKTOR_WAVE_PAUSE_MS = Number(process.env.CONSOLE_HEKTOR_WAVE_PAUSE_MS || 300000);
 let hektorLastRequestAt = 0;
 let hektorBackoffUntil = 0;
 let hektorRequestCount = 0;
@@ -2397,7 +2408,17 @@ async function hektorThrottle() {
   if (attente > 0) await sleep(attente);
 
   hektorRequestCount += 1;
-  if (HEKTOR_PAUSE_EVERY_N_REQUESTS > 0 && hektorRequestCount % HEKTOR_PAUSE_EVERY_N_REQUESTS === 0) {
+  // La vague prime sur la respiration : 2 000 etant un multiple de 100, les deux tomberaient
+  // ensemble et on dormirait 6 minutes d'affilee sans raison.
+  if (HEKTOR_WAVE_EVERY_N_REQUESTS > 0 && hektorRequestCount % HEKTOR_WAVE_EVERY_N_REQUESTS === 0) {
+    console.log(JSON.stringify({
+      worker: WORKER_ID,
+      step: "hektor_fin_de_vague",
+      requetes: hektorRequestCount,
+      pause_ms: HEKTOR_WAVE_PAUSE_MS,
+    }));
+    await sleep(HEKTOR_WAVE_PAUSE_MS);
+  } else if (HEKTOR_PAUSE_EVERY_N_REQUESTS > 0 && hektorRequestCount % HEKTOR_PAUSE_EVERY_N_REQUESTS === 0) {
     console.log(JSON.stringify({
       worker: WORKER_ID,
       step: "hektor_respiration",
