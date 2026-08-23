@@ -12,7 +12,11 @@ Start-Transcript -Path $log -Append | Out-Null
 $runFailed = $false
 try {
     Write-Output "=== Recherches actives demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    & $py (Join-Path $root "phase2\sync\sync_active_searches.py")
+    # --request-delay-seconds 0.1 (23/08/2026) : sans lui, ce run tirait ses lots de 300
+    # a 5,6-9,4 appels/s (mesure en base le 22/08), la moyenne de 3-6 affichee au journal
+    # etant diluee par les etapes locales. Meme profil que le run quotidien desormais.
+    # Coute ~6 min sur un run de 14 : termine toujours tres avant le quotidien de 05:30.
+    & $py (Join-Path $root "phase2\sync\sync_active_searches.py") --request-delay-seconds 0.1
     $code = $LASTEXITCODE
     Write-Output "=== Recherches actives termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $code) ==="
     if ($code -ne 0) { $runFailed = $true }

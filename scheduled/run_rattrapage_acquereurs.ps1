@@ -8,16 +8,30 @@
 # invisible indefiniment. Sonde du 21/08/2026, 249 fiches lues en direct : 1 portait
 # une recherche que l'app ignorait -> environ 270 recherches invisibles.
 #
-# CADENCE. --pause-between-batches 20 : 300 fiches d'affilee (~50 s, exactement la
-# rafale d'une nuit normale) puis 20 s de repos. 4,2 appels/s en moyenne au lieu de 6.
-# Tenir 6 appels/s pendant des heures est la forme qui a fait bannir notre IP au
-# rattrapage des documents — ne pas retirer cette pause.
+# CADENCE (revue le 23/08/2026). La pause de 20 s entre lots est REMPLACEE par un delai
+# de 0,1 s entre chaque fiche. Elle ne corrigeait que la moyenne : le lot partait quand
+# meme a pleine vitesse, 5,6 a 9,4 appels/s mesures cote base. Ce sont les pointes qui se
+# voient, pas les moyennes. A 0,1 s le profil devient un filet regulier a ~2,5 appels/s --
+# exactement celui du run quotidien, qui n'a jamais rien declenche.
+#
+# PLAFOND. --limit 5000 : une session ne depasse jamais 5 000 fiches. C'est le VOLUME qui
+# a fait couper l'acces le 22/08 (25 800 fiches en 1 h 47), pas la vitesse -- le run de
+# nuit tire depuis un mois a 9 appels/s sans etre inquiete, mais sur 3 778 fiches.
+# Une session dure ~33 min ; il en faut une dizaine pour finir les 45 500 restantes.
+#
+# REPRISE. -StartAfterId <id> reprend apres cet identifiant. TOUJOURS par identifiant,
+# jamais par position : la liste bouge (71 341 -> 71 272 en une journee) et le compteur
+# du script additionne les lots reussis ET rates. Le run affiche l'id a utiliser quand
+# il se termine. Sans le parametre, il repart du debut.
 #
 # REPRENABLE : chaque lot est independant, un lot en echec n'arrete pas le run.
 # COUPE-CIRCUIT : mais 3 lots consecutifs en echec = signature d'un bannissement d'IP
 # ou d'une session Hektor morte -> le run s'abandonne (exit 2) au lieu de marteler une
 # porte fermee pendant des heures. Dans ce cas, verifier depuis une AUTRE IP avant de
 # relancer -- ne jamais rejouer aveuglement.
+param(
+    [long]$StartAfterId = 0
+)
 $ErrorActionPreference = "Continue"
 $root = "C:\Hektor\Projet"
 $py = Join-Path $root ".venv\Scripts\python.exe"
@@ -29,8 +43,10 @@ Start-Transcript -Path $log -Append | Out-Null
 $runFailed = $false
 try {
     Write-Output "=== Rattrapage acquereurs demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    & $py (Join-Path $root "phase2\sync\sync_active_searches.py") `
-        --scope acquereurs --pause-between-batches 20
+    $argsPy = @("--scope", "acquereurs", "--request-delay-seconds", "0.1", "--limit", "5000")
+    if ($StartAfterId -gt 0) { $argsPy += @("--start-after-id", [string]$StartAfterId) }
+    Write-Output "--- parametres : $($argsPy -join ' ') ---"
+    & $py (Join-Path $root "phase2\sync\sync_active_searches.py") @argsPy
     $code = $LASTEXITCODE
     Write-Output "=== Rattrapage acquereurs termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $code) ==="
     if ($code -eq 2) {

@@ -118,12 +118,18 @@ def run_step(args: list[str]) -> None:
         raise EchecEtape(args[0], result.returncode, " ".join(args))
 
 
-def process_batch(ids: list[str]) -> None:
+def process_batch(ids: list[str], request_delay_seconds: float = 0.1) -> None:
     csv = ",".join(ids)
     # 1) fetch ContactById (sans date_maj : --contact-id court-circuite la sélection)
+    # request-delay-seconds (23/08/2026) : etait cable a 0, ce qui tirait les 300 fiches
+    # d'un lot a pleine vitesse -- 5,6 a 9,4 appels/s mesures cote base, alors que le
+    # journal n'affichait qu'une moyenne de 3 a 6 (les etapes locales entre deux lots
+    # diluent les pointes). Un delai de 0,1 s aplatit le profil a ~2,5 appels/s, celui
+    # du run quotidien, qui n'a jamais rien declenche.
     run_step([
         "phase2/sync/sync_contact_details.py", "--contact-id", csv,
-        "--skip-listing-refresh", "--limit", "0", "--request-delay-seconds", "0",
+        "--skip-listing-refresh", "--limit", "0",
+        "--request-delay-seconds", str(request_delay_seconds),
         "--batch-size", str(len(ids)), "--batch-pause-seconds", "0",
         "--max-consecutive-hard-errors", "3", "--no-normalize",
     ])
@@ -219,6 +225,12 @@ def main() -> int:
              "laisse le run taper 226 lots de plus sur une porte fermee.",
     )
     parser.add_argument(
+        "--request-delay-seconds", type=float, default=0.1,
+        help="Delai entre deux fiches DANS un lot (defaut 0,1 s, comme le run quotidien). "
+             "0 = pleine vitesse, ce qui produit des pointes a ~9 appels/s : c'est le "
+             "profil qu'on cherche justement a aplatir.",
+    )
+    parser.add_argument(
         "--attente-verrou-max", type=float, default=1800.0,
         help="Plafond d'attente quand un traitement lourd (descente, releve des doublures) "
              "tient pull_from_supabase.lock. Au-dela on repart quand meme : un arret force "
@@ -284,7 +296,7 @@ def main() -> int:
         # Robustesse : un lot en échec (hoquet Hektor/réseau) ne doit PAS arrêter
         # tout le run — on log et on continue avec les lots suivants.
         try:
-            process_batch(batch)
+            process_batch(batch, args.request_delay_seconds)
             consecutive_failed = 0
             etapes_en_echec = []
             if not echec_rencontre:
