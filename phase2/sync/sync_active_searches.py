@@ -118,22 +118,39 @@ def run_step(args: list[str]) -> None:
         raise EchecEtape(args[0], result.returncode, " ".join(args))
 
 
-def process_batch(ids: list[str], request_delay_seconds: float = 0.1) -> None:
-    csv = ",".join(ids)
-    # 1) fetch ContactById (sans date_maj : --contact-id court-circuite la sélection)
-    # request-delay-seconds (23/08/2026) : etait cable a 0, ce qui tirait les 300 fiches
-    # d'un lot a pleine vitesse -- 5,6 a 9,4 appels/s mesures cote base, alors que le
-    # journal n'affichait qu'une moyenne de 3 a 6 (les etapes locales entre deux lots
-    # diluent les pointes). Un delai de 0,1 s aplatit le profil a ~2,5 appels/s, celui
-    # du run quotidien, qui n'a jamais rien declenche.
+def fetch_all(ids: list[str], *, request_delay_seconds: float,
+              batch_size: int, batch_pause_seconds: float) -> None:
+    """LA lecture Hektor : UN seul processus pour toute la session, donc UNE authentification.
+
+    C'est le correctif du 23/08/2026, et c'est le vrai. Jusqu'ici, sync_contact_details
+    etait relance a chaque lot de 300 : chaque processus refaisait
+    /Api/OAuth/Authenticate/ puis /Api/OAuth/Sso/ de zero. Mesure en base :
+
+        30/05  ->   1 processus pour 43 842 fiches   (43 842 fiches / authentification)
+        22/08  ->  88 processus pour 23 059 fiches   (   262 fiches / authentification)
+
+    90 fois plus de demandes de jeton pour moitie moins de donnees. Et TOUS nos echecs
+    tombaient sur /Api/OAuth/Authenticate/, jamais sur ContactById : ce n'est pas la
+    lecture qui etait bridee, c'est la redemande de jeton en rafale -- le motif qu'une
+    protection lit comme une attaque sur les identifiants.
+
+    Les valeurs par defaut reprennent celles du run quotidien, seul run a n'avoir jamais
+    eu d'incident en quatre mois : gros lots, vraie pause entre eux, delai court entre
+    deux fiches.
+    """
     run_step([
-        "phase2/sync/sync_contact_details.py", "--contact-id", csv,
+        "phase2/sync/sync_contact_details.py", "--contact-id", ",".join(ids),
         "--skip-listing-refresh", "--limit", "0",
         "--request-delay-seconds", str(request_delay_seconds),
-        "--batch-size", str(len(ids)), "--batch-pause-seconds", "0",
+        "--batch-size", str(batch_size),
+        "--batch-pause-seconds", str(batch_pause_seconds),
         "--max-consecutive-hard-errors", "3", "--no-normalize",
     ])
-    # 2) normalize -> 3) build couche contacts -> 4) push (saute les dirty via C)
+
+
+def process_local(ids: list[str]) -> None:
+    """Etapes 2 a 4 : normalize -> couche contacts -> push. AUCUN appel a Hektor."""
+    csv = ",".join(ids)
     run_step(["normalize_source.py", "--contact-id", csv])
     run_step(["phase2/contacts/build_contacts_layer.py", "--contact-id", csv, "--no-reports"])
     # --include-archived-searches (21/08/2026) : SANS cette option, ce run considererait
@@ -225,6 +242,22 @@ def main() -> int:
              "laisse le run taper 226 lots de plus sur une porte fermee.",
     )
     parser.add_argument(
+        "--fetch-batch-size", type=int, default=1000,
+        help="Taille des lots DANS la lecture Hektor (defaut 1000, comme le run quotidien).",
+    )
+    parser.add_argument(
+        "--fetch-batch-pause-seconds", type=float, default=60.0,
+        help="Pause entre deux lots de lecture (defaut 60 s, comme le run quotidien). "
+             "Le rattrapage la mettait a 0 : c'est la seule pause que le quotidien "
+             "s'impose et qu'il etait le seul a respecter.",
+    )
+    parser.add_argument(
+        "--batches-per-wave", type=int, default=0,
+        help="Travailler par VAGUES de N lots, avec --pause-between-batches entre deux "
+             "vagues au lieu d'entre chaque lot. 0 = comportement historique (pause apres "
+             "chaque lot). Une vague de 4 lots = 1 200 fiches, puis une vraie respiration.",
+    )
+    parser.add_argument(
         "--request-delay-seconds", type=float, default=0.1,
         help="Delai entre deux fiches DANS un lot (defaut 0,1 s, comme le run quotidien). "
              "0 = pleine vitesse, ce qui produit des pointes a ~9 appels/s : c'est le "
@@ -289,14 +322,29 @@ def main() -> int:
     echec_rencontre = False
     etapes_en_echec: list[str] = []
     aborted = False
+    # LECTURE : un seul processus, une seule authentification, pour toute la session.
+    if args.attente_verrou_max > 0:
+        cede_total += ceder_au_verrou(args.attente_verrou_max)
+    print(
+        f"[recherches-actives] lecture Hektor : {total} fiches en UNE session "
+        f"(lots de {args.fetch_batch_size}, pause {int(args.fetch_batch_pause_seconds)}s, "
+        f"delai {args.request_delay_seconds}s) -- 1 authentification"
+    )
+    try:
+        fetch_all(ids, request_delay_seconds=args.request_delay_seconds,
+                  batch_size=args.fetch_batch_size,
+                  batch_pause_seconds=args.fetch_batch_pause_seconds)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[recherches-actives] LECTURE HEKTOR EN ECHEC : {exc}")
+        print(f"[recherches-actives] {conseil_reprise('')}")
+        return 2
+    print(f"[recherches-actives] lecture terminee ({round(time.time() - start)}s) -- etapes locales")
+
     for i in range(0, total, max(args.batch_size, 1)):
         batch = ids[i : i + max(args.batch_size, 1)]
-        if args.attente_verrou_max > 0:
-            cede_total += ceder_au_verrou(args.attente_verrou_max)
-        # Robustesse : un lot en échec (hoquet Hektor/réseau) ne doit PAS arrêter
-        # tout le run — on log et on continue avec les lots suivants.
+        # Robustesse : une tranche locale en echec ne doit PAS arreter tout le run.
         try:
-            process_batch(batch, args.request_delay_seconds)
+            process_local(batch)
             consecutive_failed = 0
             etapes_en_echec = []
             if not echec_rencontre:
@@ -346,7 +394,18 @@ def main() -> int:
                 f" {conseil_reprise(dernier_id_sur)}"
             )
             break
-        if args.pause_between_batches > 0 and done < total:
+        # Pause de fin de VAGUE (23/08/2026). Le delai par fiche aplatit le profil DANS un
+        # lot, mais ne cree aucune respiration : le run enchainait 17 lots sans jamais
+        # s'arreter. Une vague de N lots suivie d'une vraie pause donne au compteur
+        # glissant d'en face le temps de redescendre.
+        no_lot = i // max(args.batch_size, 1) + 1
+        fin_de_vague = args.batches_per_wave <= 0 or no_lot % args.batches_per_wave == 0
+        if args.pause_between_batches > 0 and fin_de_vague and done < total:
+            if args.batches_per_wave > 0:
+                print(
+                    f"[recherches-actives] fin de vague ({args.batches_per_wave} lots) "
+                    f"-- pause de {int(args.pause_between_batches)}s"
+                )
             time.sleep(args.pause_between_batches)
     if cede_total > 0:
         print(f"[recherches-actives] {int(cede_total)}s cedees au total a un traitement lourd")

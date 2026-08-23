@@ -14,6 +14,17 @@
 # voient, pas les moyennes. A 0,1 s le profil devient un filet regulier a ~2,5 appels/s --
 # exactement celui du run quotidien, qui n'a jamais rien declenche.
 #
+# CADENCE : plus rien a preciser ici. La lecture Hektor se fait en UN seul processus, avec
+# les defauts alignes sur le run quotidien (lots de 1 000, pause de 60 s, delai de 0,1 s) --
+# le seul des trois runs a n'avoir jamais eu d'incident en quatre mois.
+#
+# CE QUI CASSAIT VRAIMENT (mesure le 23/08). Le rattrapage relancait sync_contact_details a
+# chaque lot de 300, donc une authentification complete toutes les deux minutes :
+#     30/05  ->   1 processus pour 43 842 fiches
+#     22/08  ->  88 processus pour 23 059 fiches
+# Et TOUS les echecs tombaient sur /Api/OAuth/Authenticate/, jamais sur ContactById. Ce
+# n'etait ni le volume ni la vitesse : c'etait la redemande de jeton en rafale.
+#
 # PLAFOND. --limit 5000 : une session ne depasse jamais 5 000 fiches. C'est le VOLUME qui
 # a fait couper l'acces le 22/08 (25 800 fiches en 1 h 47), pas la vitesse -- le run de
 # nuit tire depuis un mois a 9 appels/s sans etre inquiete, mais sur 3 778 fiches.
@@ -43,7 +54,7 @@ Start-Transcript -Path $log -Append | Out-Null
 $runFailed = $false
 try {
     Write-Output "=== Rattrapage acquereurs demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    $argsPy = @("--scope", "acquereurs", "--request-delay-seconds", "0.1", "--limit", "5000")
+    $argsPy = @("--scope", "acquereurs", "--limit", "5000")
     if ($StartAfterId -gt 0) { $argsPy += @("--start-after-id", [string]$StartAfterId) }
     Write-Output "--- parametres : $($argsPy -join ' ') ---"
     & $py (Join-Path $root "phase2\sync\sync_active_searches.py") @argsPy
