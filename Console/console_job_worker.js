@@ -3,7 +3,7 @@ const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
 const zlib = require("zlib");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const { chromium } = require("playwright");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
@@ -9238,6 +9238,20 @@ async function handleUpdateHektorAnnonceFields(job) {
   };
 }
 
+// VERROU (corrige le 23/08/2026) -- Windows RECYCLE les numeros de processus.
+// Le verrou du worker documents pointait sur le pid 6328, repris entre-temps par NisSrv
+// (Defender). isProcessAlive repondait "vivant", donc CHAQUE nouvelle instance sortait
+// aussitot : le worker documents est reste mort 19 heures sans que rien ne le signale --
+// le service Windows affichait toujours "Running".
+// Trois verifications au lieu d'une : le processus existe, c'est bien un node, et le verrou
+// a ete rafraichi recemment. La troisieme est la seule qui couvre AUSSI un worker fige,
+// qui garderait sinon le verrou indefiniment.
+const WORKER_LOCK_HEARTBEAT_MS = Number(process.env.CONSOLE_WORKER_LOCK_HEARTBEAT_MS || 60000);
+// 10 min : large devant le battement de 60 s, y compris pendant une pause de vague (300 s),
+// et devant une operation synchrone longue qui figerait brievement la boucle d'evenements.
+// Trop court, deux workers tourneraient ensemble et DOUBLERAIENT la charge vers Hektor.
+const WORKER_LOCK_STALE_MS = Number(process.env.CONSOLE_WORKER_LOCK_STALE_MS || 600000);
+
 function isProcessAlive(pid) {
   const numericPid = Number(pid);
   if (!Number.isFinite(numericPid) || numericPid <= 0) return false;
@@ -9247,6 +9261,36 @@ function isProcessAlive(pid) {
   } catch (error) {
     return error && error.code === "EPERM";
   }
+}
+
+// tasklist plutot que Get-CimInstance : ~40 ms contre ~900 ms. Appele uniquement quand un
+// verrou existe deja, jamais sur le chemin normal.
+function processImageName(pid) {
+  try {
+    const out = execFileSync("tasklist", ["/FI", `PID eq ${Number(pid)}`, "/FO", "CSV", "/NH"], {
+      encoding: "utf8",
+      timeout: 5000,
+      windowsHide: true,
+    });
+    const match = out.match(/^"([^"]+)"/m);
+    return match ? match[1].toLowerCase() : null;
+  } catch (_) {
+    // tasklist absent (autre systeme) : on ne bloque pas sur ce critere.
+    return null;
+  }
+}
+
+function lockLooksAlive(existing, lockPath) {
+  if (!existing || !isProcessAlive(existing.pid)) return false;
+  const image = processImageName(existing.pid);
+  if (image && !image.startsWith("node")) return false;
+  try {
+    if (Date.now() - fs.statSync(lockPath).mtimeMs > WORKER_LOCK_STALE_MS) return false;
+  } catch (_) {
+    // Verrou illisible : on ne le considere pas vivant.
+    return false;
+  }
+  return true;
 }
 
 function acquireWorkerLock() {
@@ -9266,7 +9310,7 @@ function acquireWorkerLock() {
     } catch (_) {
       existing = null;
     }
-    if (existing && isProcessAlive(existing.pid)) {
+    if (lockLooksAlive(existing, WORKER_LOCK_PATH)) {
       console.log(JSON.stringify({
         worker: WORKER_ID,
         step: "worker_lock",
@@ -9283,12 +9327,31 @@ function acquireWorkerLock() {
       worker: WORKER_ID,
       workerKind: WORKER_KIND,
       startedAt: new Date().toISOString(),
-      replacedStaleLock: existing,
+      // Reference PLATE : imbriquer le verrou precedent le faisait grossir a chaque
+      // remplacement -- celui des documents pesait 21 Ko de verrous empiles.
+      replacedStaleLock: existing
+        ? { pid: existing.pid || null, worker: existing.worker || null, startedAt: existing.startedAt || null }
+        : null,
     }), { flag: "wx" });
   }
 
+  // BATTEMENT : le verrou est retouche regulierement tant que ce worker vit. C'est lui qui
+  // rend detectable un worker fige OU tue sans nettoyage -- sans battement, la date du
+  // fichier resterait celle du demarrage et ne dirait plus rien de l'etat du processus.
+  // unref() : ce minuteur ne doit jamais, a lui seul, empecher le worker de se terminer.
+  const heartbeat = setInterval(() => {
+    try {
+      const now = new Date();
+      fs.utimesSync(WORKER_LOCK_PATH, now, now);
+    } catch (_) {
+      // Verrou disparu ou disque occupe : sans consequence, on retentera au battement suivant.
+    }
+  }, WORKER_LOCK_HEARTBEAT_MS);
+  if (typeof heartbeat.unref === "function") heartbeat.unref();
+
   const release = () => {
     try {
+      clearInterval(heartbeat);
       const current = JSON.parse(fs.readFileSync(WORKER_LOCK_PATH, "utf8"));
       if (Number(current.pid) === process.pid) {
         fs.rmSync(WORKER_LOCK_PATH, { force: true });
