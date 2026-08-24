@@ -67,7 +67,8 @@ Ce qui suit répare la cause, pas le symptôme.*
 | `METHODE_DE_TRAVAIL_2026-08-20` | **le contrat de travail** : lire, mesurer, expliquer, faire valider, prouver | **avant chaque tâche** |
 | `A1_CHAMPS_PROPRIETE_APP_2026-08-19` | **189 champs** que l'app possède · la règle « l'import n'a pas le droit de réécrire » · le mécanisme « c'est une soustraction » · **3 arbitrages en attente** | **C.4** |
 | `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20` | les 4 familles · **16 workers** sont le gisement réel · **7 sur 34 marchent déjà sans Hektor** · **3 seulement** dépendent vraiment de lui | **C.4** |
-| `AUDIT_IDENTITE_CONTACTS_2026-08-20` | ~530 points de code · 11 fonctions ambiguës · le préalable oublié | **C.2** |
+| `AUDIT_IDENTITE_CONTACTS_2026-08-20` | l'état des lieux du 20/08 · **son verrou est levé**, voir la relecture ci-dessous | **C.2** |
+| `RELECTURE_IDENTITE_CONTACTS_2026-08-24` | **C.2a, fait** · 4 tables portent 95 % · 3 fonctions à basculer, pas 11 · `hektor_contact_id` **est la clé primaire** | **C.2b, C.9** |
 | `AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21` | le sens unique · le régime de chaque table · les 3 trous | **B, C.6, C.7** |
 | `AUDIT_ET_PLAN_REALISTE_2026-08-22` | l'état mesuré des 5 supports · les durées | **le calendrier** |
 | `AUDIT_SESSION_ET_PLAN_2026-08-24` | cet audit · la duplication · l'ordre corrigé | |
@@ -180,7 +181,7 @@ protège le moins.)*
 |---|---|---|
 | **0.4 → 0.7** | Les quatre gestes de sécurité du bloc 0 | **1 h** |
 | **D.1a** | Mesurer le vrai périmètre du rapatriement des documents | **1 h** |
-| **C.2a** | Identité des contacts — **la relecture**, pas le code | **une demi-journée** |
+| ✅ **C.2a** | Identité des contacts — la relecture | **FAIT le 24/08** |
 | **C.6** | La table « ce que l'app détient » pour l'annonce | **1 à 2 jours** |
 
 #### Ce qui exige Hektor vivant
@@ -189,7 +190,7 @@ protège le moins.)*
 |---|---|---|---|
 | **C.1** | La règle de comparaison | **3 à 5 j** | le garde-fou existe ; c'est le verdict qu'on inverse |
 | **C.3** | L'exception recherches | **1 à 2 j** | la doublure existe déjà |
-| **C.2b** | Identité des contacts — le code | **1 à 2 sem.** | 186 500 lignes, ~530 points de code. **La plus grosse** |
+| **C.2b** | Identité des contacts — le code | **3 à 5 j** *(revu par C.2a)* | 4 tables, 3 fonctions. **Sans le changement de clé primaire**, qui est un second chantier |
 | **C.4** | Les workers, un par un | **2 à 3 sem.** | 35 types de travaux |
 | **C.7** | Le serveur lit sa base | **2 à 3 j** | collée à C.1 |
 | **C.9** | La création part de l'app | **1 à 2 sem.** | après C.7 |
@@ -362,7 +363,7 @@ moitié manquante de l'architecture finale.
 | | **L'alarme a été adaptée en même temps** — les recherches du registre sortent de `data.recherche_divergente` | sans quoi elle passerait en CRITICAL dès le premier affinage, **alors que la divergence est désormais voulue**. Une sentinelle qui sonne quand tout va bien cesse d'être lue |
 | ⚠ | **Ce que ça change pour tes clients** — un acquéreur qui affine sa recherche dans son espace croira peut-être que son négociateur la verra dans Hektor. **Ce n'est plus le cas** | 28 envois en 90 jours : l'effet est nul aujourd'hui, il compte pour l'étape 2 |
 | ⏳ **C.1'** | **« UNE SAISIE NE SE PERD JAMAIS »** — *remplace l'ancienne C.1* | **2 à 3 j** | voir ci-dessous |
-| ⏳ **C.2a** | **Identité des contacts — la relecture**, pas le code | **une demi-journée** | 186 500 lignes, ~530 points de code. Une heure de lecture économise une semaine |
+| ✅ **C.2a** | **Identité des contacts — la relecture** — `RELECTURE_IDENTITE_CONTACTS_2026-08-24` | **FAIT le 24/08** | **Le verrou du 20/08 est levé** : un seul fabricant de nom de recherche, local, et il consulte le registre — **0 fonction Supabase sur 27 n'en fabrique**. Ajouter une colonne ne peut plus déplacer une clé. Et le périmètre est plus petit qu'annoncé : **4 tables sur 18 portent 95 % des 202 404 lignes**, 6 sont vides |
 
 #### C.1' — la règle qui remplace l'arbitrage
 
@@ -383,7 +384,8 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 
 | | Tâche | Durée |
 |---|---|---|
-| ⏳ **C.2b** | **Identité des contacts — le code** *(ex-5)*. Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche | **1 à 2 sem.** — la plus grosse |
+| ⏳ **C.2b** | **Identité des contacts — le code** *(ex-5)*. Ajouter `app_contact_id` aux **4 tables qui portent 95 %** *(relation 77 393 · contact 57 553 · rapprochement 46 864 · recherche 10 785)* + les 6 tables vides, le remplir, **le laisser vivre à côté sans rien basculer** — méthode de la doublure. Les **3** fonctions de la famille B *(`app_edit_contact_optimistic`, `app_edit_search_optimistic`, `app_espace_edit_search_optimistic`)* ne bougent qu'après observation ; les **8** de la famille A gardent le numéro Hektor à jamais | **3 à 5 j** |
+| | ⚠ **À NE PAS y attacher** : `hektor_contact_id` **est la clé primaire** de `app_contact_current`. La changer est un chantier à part — et **0 contrainte de clé étrangère** ne protège les 17 tables qui la pointent par convention | |
 | ⏳ **C.6** | **Le domicile de l'annonce** — la table « ce que l'app détient » + les 36 champs calculés à l'export *(ex-26bis-①)* | **1 à 2 j** |
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
@@ -391,6 +393,7 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ⏳ **C.7** | **Le serveur lit sa base**, plus le miroir *(ex-26bis-③)* | **2 à 3 j** |
 | ⏳ **C.8** | Le **calque** disparaît · la **barrière** *(un travail sans numéro Hektor attend)* *(ex-10,11)* | |
 | ⏳ **C.9** | La **création** part de l'app *(ex-23,24,25)* | **1 à 2 sem.** — après C.7 |
+| | ⚠ **La question laissée ouverte par C.2a se pose ICI** : un contact né dans l'app n'a **pas de numéro Hektor**, or le registre des noms de recherche est indexé sur `(hektor_contact_id, search_index)`. À trancher dans C.9, **pas** le jour de la coupure | |
 | ⏳ **C.11** | Ménage des tables mortes *(ex-19)* | |
 
 #### SUPPRIMÉ le 24/08 — rendu sans objet par l'étape 2
