@@ -56,6 +56,76 @@ Avant **chaque étape** et **avant tout code**, quatre phrases :
 
 Frédéric valide, **puis** on code. Jamais l'inverse. *« Je ne veux pas d'ambiguïté. »*
 
+### 🗝 LES TROIS ÉTAPES — posées par Frédéric le 24/08
+
+*Ce n'est pas un détail d'organisation : **c'est ce qui décide de la moitié du travail
+technique**. Le plan précédent supposait que l'app et Hektor seraient utilisés en même temps.
+Ils ne le seront pas.*
+
+```
+   ETAPE 1  (aujourd'hui)   tout se fait dans HEKTOR
+                            les negociateurs n'ont pas acces a l'app, sauf Frederic
+
+   ETAPE 2                  les negociateurs utilisent L'APP
+                            et il leur est INTERDIT d'ouvrir Hektor en meme temps
+
+   ETAPE 3                  la coupure
+```
+
+#### Ce que l'étape 2 supprime
+
+Il y a **trois** façons pour l'app et Hektor de diverger :
+
+| | | À l'étape 2 |
+|---|---|---|
+| **①** | l'envoi n'est jamais parti | **reste** |
+| **②** | l'envoi a raté *(Hektor injoignable, session morte, refus)* | **reste** |
+| **③** | quelqu'un a modifié dans Hektor entre-temps | **disparaît** |
+
+**Le cas ③ disparaît, et avec lui tout l'arbitrage** — la règle de priorité, la tolérance de
+comparaison, la notification de conflit. C'était la moitié de l'ancienne tâche C.1.
+
+Mieux : si personne ne touche à Hektor, le run de nuit ne rapporte plus *les modifications de
+quelqu'un d'autre*. Il rapporte **ce que l'app vient d'y écrire**. Le va-et-vient devient une
+**confirmation**, plus une compétition.
+
+#### Ce qu'elle ne supprime PAS — et c'est le vrai danger
+
+```
+   l'envoi echoue  ->  la protection tombe  ->  le run de nuit ECRASE la saisie
+```
+
+**Démontré sur le contact 602197, le 24/08.** Un négociateur affine une recherche à 120 000 €.
+L'envoi est bloqué. Le travail est marqué `done`. La ligne de protection disparaît. Le run
+suivant rapporte la valeur de Hektor. **Les trois supports disent aujourd'hui `prix_min = 0` —
+la saisie n'existe nulle part.** Et personne n'a rien modifié dans Hektor.
+
+> ⚠ **La doublure ne protège pas de ça.** Elle copie ce que Supabase contient. Si Supabase est
+> écrasé, elle copie l'écrasement. Elle donne au serveur une **copie fidèle**, pas une
+> **mémoire**.
+
+#### Les trois garde-fous d'aujourd'hui ne se ressemblent pas
+
+*Relevé dans `console_job_worker.js` le 24/08 — ils ont été écrits à des moments différents.*
+
+| | **Recherche** | **Contact** | **Annonce** |
+|---|---|---|---|
+| Compare | **le contenu** *(empreinte villes/types/critères)* | une **date** | une **date** |
+| Relit avant | **oui**, read-through complet | non | non |
+| Si la relecture échoue | **bloque** | **écrit quand même** | **écrit quand même** |
+| Prévient le négociateur | **oui** | **oui** | **non** |
+| Sans photo | aucun garde-fou | aucun garde-fou | aucun garde-fou |
+| Après blocage | `done` · **jamais repris** | `done` · **jamais repris** | `done` · **jamais repris** |
+
+**Les trois savent détecter. Aucun ne sait retenir.** C'est le seul défaut qui compte, et c'est
+le seul que l'étape 2 ne corrige pas.
+
+*(Le « best-effort » du contact et de l'annonce mérite d'être nommé : ligne 11421,
+« si la relecture API échoue, on écrit ». Le moment où l'on est le moins sûr est celui où l'on
+protège le moins.)*
+
+---
+
 ### 📍 LE TABLEAU DE BORD — posé le 22/08 après l'audit
 
 *Le plan disait QUOI faire, jamais COMBIEN DE TEMPS ni QUI BLOQUE QUI.*
@@ -66,7 +136,8 @@ Frédéric valide, **puis** on code. Jamais l'inverse. *« Je ne veux pas d'ambi
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   C.2a -> C.2b -> C.4              4 a 6 semaines de travail effectif
+   C.0 -> C.3 -> C.1'               AVANT l'etape 2 -- 4 a 6 jours
+   C.2a -> C.2b -> C.4              4 a 6 semaines, PENDANT l'etape 2
    (le plus long cote technique)
 ```
 
@@ -74,7 +145,11 @@ Frédéric valide, **puis** on code. Jamais l'inverse. *« Je ne veux pas d'ambi
 > Tes annonces passent par **son** abonnement portails, tes mandats se signent avec **son**
 > contrat. Chaque semaine de retard sur A s'ajoute **intégralement** à la date de coupure.
 
-#### Ce qui peut avancer SANS Hektor
+> **Corrigé le 24/08** : la colonne « sans Hektor » était une contrainte de la panne du 22,
+> pas une règle. Hektor répond en 0,23 s. Ce qui commande désormais l'ordre, c'est **avant** ou
+> **pendant** l'étape 2 — voir la section des trois étapes.
+
+#### Ce qui peut avancer SANS Hektor *(section de la panne du 22/08, conservée pour mémoire)*
 
 | | Tâche | Durée |
 |---|---|---|
@@ -246,22 +321,56 @@ moitié manquante de l'architecture finale.
 
 ---
 
-### BLOC C — L'APP DEVIENT L'AUTEUR · *le cœur, chantiers 2 et 3*
+### BLOC C — L'APP DEVIENT L'AUTEUR · *réduit le 24/08 par la stratégie en trois étapes*
 
-| | Tâche | |
+> **Quatre morceaux ont été supprimés** et le plus gros divisé par deux. Ce n'est pas un
+> renoncement : l'interdiction d'ouvrir Hektor à l'étape 2 les rend **sans objet**.
+
+#### À FAIRE AVANT L'ÉTAPE 2 — *pendant que les négociateurs sont encore dans Hektor*
+
+| | Tâche | Durée | Pourquoi maintenant |
+|---|---|---|---|
+| ⏳ **C.0** | **AUDIT : que ne peut-on PAS faire dans l'app ?** Croiser les 35 types de travaux avec ce qu'un négociateur fait dans une journée | **une demi-journée** | **C'est ce qui décide de la date de l'étape 2.** S'il leur manque un geste quotidien, ils rouvriront Hektor en cachette et la règle tombe |
+| ⏳ **C.3** | **Fermer la porte sortante des recherches** — marquer ce que l'app détient, faire descendre ces recherches-là *(ex-12, ex-22)* | **1 à 2 j** | **supprime d'un coup toute la famille 602197.** La modale n'exprime que 7 critères sur 12 : tant qu'on envoie, ça se reproduira. **La moitié est déjà faite** — la doublure existe |
+| ⏳ **C.1'** | **« UNE SAISIE NE SE PERD JAMAIS »** — *remplace l'ancienne C.1* | **2 à 3 j** | voir ci-dessous |
+| ⏳ **C.2a** | **Identité des contacts — la relecture**, pas le code | **une demi-journée** | 186 500 lignes, ~530 points de code. Une heure de lecture économise une semaine |
+
+#### C.1' — la règle qui remplace l'arbitrage
+
+Trois gestes, et **aucun n'est de l'arbitrage** :
+
+| | |
+|---|---|
+| **a** | Une saisie dont l'envoi a échoué **n'est jamais écrasée** par le run. Aujourd'hui la protection est une ligne **temporaire** qui disparaît ; elle doit devenir **durable** |
+| **b** | L'échec est **visible**. Aujourd'hui le travail est marqué `done` et personne ne sait |
+| **c** | Et il **se reprend**. Aujourd'hui il ne repart jamais |
+
+> C'est le patron qui a déjà marché **trois fois** dans ce projet : `app_dossier` qui marque
+> `absent_depuis` au lieu de supprimer, `app_affaire_ledger` en *delete-never*,
+> `app_search_registry` qui survit à la reconstruction.
+> **Ne jamais laisser le passager effacer le durable.**
+
+#### PENDANT L'ÉTAPE 2 — *les négociateurs dans l'app, Hektor interdit*
+
+| | Tâche | Durée |
 |---|---|---|
-| ⏳ **C.1** | **La règle de comparaison** — les 3 cas d'écart, la tolérance, au retour du worker, puis sur l'import de nuit *(ex-6,7,8,9)* | **le garde-fou existe déjà** ; la règle **inverse le verdict**. C'est une modification, pas une construction |
-| ⏳ **C.2** | **Identité des contacts** *(ex-5)* — 186 500 lignes, ≈ 530 points de code | **long : à démarrer tôt**, il bloque C.4. Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche *(voir 5a rayée)*. **Demande une demi-journée de relecture avant** |
-| ~~5a~~ | ~~Renommer seul les 11 paramètres ambigus~~ **RAYÉE le 20/08** | Postgres refuse le rename, l'appel se fait par NOM, la compilation ne voit rien |
-| ⏳ **C.3** | **L'exception recherches, en entier** — fermer la porte sortante · marquer ce que l'app détient · **et faire descendre ces recherches-là** *(ex-12, ex-22)* | la porte **entrante** reste ouverte jusqu'à la coupure. Vérifié le 21/08 : **0 en attente, 0 en conflit** — rien n'est en vol |
-| ⏳ **C.4** | **Les autres workers** — statut + affaire *(le plus riche)* · archiver/désarchiver/supprimer · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* *(ex-13→16)* | |
+| ⏳ **C.2b** | **Identité des contacts — le code** *(ex-5)*. Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche | **1 à 2 sem.** — la plus grosse |
+| ⏳ **C.6** | **Le domicile de l'annonce** — la table « ce que l'app détient » + les 36 champs calculés à l'export *(ex-26bis-①)* | **1 à 2 j** |
+| ⏳ **C.4** | **Les workers, un par un** — statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **2 à 3 sem.** |
 | ⏳ **C.5** | Clé propre du **registre des affaires** · fiabiliser le **mandat des transactions** *(ex-17,18)* | ne plus le deviner dans le HTML |
-| ⏳ **C.6** | **26bis** — la table « ce que l'app détient » pour l'annonce + les **36 champs** calculés à l'export *(ex-26bis-①)* | **diagnostic corrigé le 21/08** : le serveur détient DÉJÀ les annonces |
-| ⏳ **C.7** | **Basculer** — l'envoi vers Supabase et la consultation des archives lisent **la base locale**, plus le miroir *(ex-26bis-③)* | ⚠️ **collée à C.1** : c'est là que l'arbitrage trouve un endroit où s'écrire |
+| ⏳ **C.7** | **Le serveur lit sa base**, plus le miroir *(ex-26bis-③)* | **2 à 3 j** |
 | ⏳ **C.8** | Le **calque** disparaît · la **barrière** *(un travail sans numéro Hektor attend)* *(ex-10,11)* | |
-| ⏳ **C.9** | La **création** part de l'app — annonce, contact, mandant, puis la modale qui écrit ses trois objets d'un coup *(ex-23,24,25)* | **après C.7** — sinon une annonce créée dans l'app n'existerait que dans Supabase. *Creuser le trou pendant qu'on le rebouche* |
-| ⏳ **C.10** | **Corriger le modèle « au moins »** de la modale recherche · **mesurer** les critères Hektor invisibles *(ex-20,21)* | après la bascule des négociateurs |
+| ⏳ **C.9** | La **création** part de l'app *(ex-23,24,25)* | **1 à 2 sem.** — après C.7 |
 | ⏳ **C.11** | Ménage des tables mortes *(ex-19)* | |
+
+#### SUPPRIMÉ le 24/08 — rendu sans objet par l'étape 2
+
+| | | |
+|---|---|---|
+| ~~**C.1**~~ | ~~la règle d'arbitrage, ses 3 cas d'écart, sa tolérance de comparaison~~ | le cas ③ disparaît |
+| ~~**la notification de conflit**~~ | ~~unifier les 3 objets~~ | il n'y aura plus de conflit à notifier |
+| ~~**C.10**~~ | ~~corriger le modèle « au moins » de la modale recherche~~ | **une fois la porte fermée (C.3), l'app n'a plus à exprimer ce que Hektor comprend** |
+| ~~**5a**~~ | ~~renommer seul les 11 paramètres ambigus~~ | **RAYÉE le 20/08** — Postgres refuse le rename, l'appel se fait par NOM |
 
 ---
 
