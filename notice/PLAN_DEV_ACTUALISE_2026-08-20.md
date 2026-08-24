@@ -163,9 +163,11 @@ protège le moins.)*
    semaines a mois, ne depend pas de moi, A ZERO
 
    C.3 [FAIT] -> C.1'               AVANT l'etape 2 -- 2 a 3 jours
-        C.1' est BLOQUE sur les 3 arbitrages de la note A1, depuis le 19/08
-        (ATTENTION : la note s'appelle A2, mais A.2 dans CE plan = ton
-         contrat de signature. Deux choses differentes. Ici c'est C.1'.)
+        C.1' n'est BLOQUEE PAR RIEN. Ses trois gestes -- protection
+        durable, echec visible, reprise -- ne demandent aucun arbitrage.
+        Les 3 arbitrages de la note A1 se repondent en C.4, decision de
+        Frederic du 24/08. (La note s'appelle A2 ; A.2 dans CE plan = ton
+        contrat de signature. Deux choses differentes.)
    C.2a [FAIT] -> C.2b -> C.4       PENDANT l'etape 2
    (E.0 -- l'audit des impossibilites -- a ete DEPLACE avant la coupure)
 ```
