@@ -146,6 +146,7 @@ import {
   loadDossierPropositions,
   type DossierPropositionRow,
   loadAnnonceEditStatus,
+  resolveAnnoncePending,
   type AnnonceEditStatus,
   loadRapprochementCounts,
   type RapprochementCount,
@@ -28616,6 +28617,9 @@ function DossierPropositionsSection({ dossier, onOpenContact }: { dossier: Dossi
 // Lit app_annonce_pending via le RPC app_annonce_edit_status. Rien affiché si tout est OK.
 function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
   const [status, setStatus] = useState<AnnonceEditStatus | null>(null)
+  // C.1' 24/08 : le bandeau ne se contente plus d'informer, il permet de CLORE.
+  const [resolving, setResolving] = useState(false)
+  const [resolveError, setResolveError] = useState<string | null>(null)
   const dossierId = dossier?.app_dossier_id ?? null
   useEffect(() => {
     if (dossierId == null) { setStatus(null); return }
@@ -28626,13 +28630,44 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
     return () => { cancelled = true }
   }, [dossierId])
 
+  const resoudre = async (mode: 'refait' | 'abandon') => {
+    if (dossierId == null || resolving) return
+    setResolving(true)
+    setResolveError(null)
+    try {
+      await resolveAnnoncePending(dossierId, mode)
+      setStatus(null)
+    } catch (err) {
+      setResolveError(err instanceof Error ? err.message : String(err))
+      setResolving(false)
+    }
+  }
+
   if (!status || !status.pending) return null
 
   const base = { padding: '10px 14px', borderRadius: 8, fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' } as const
   if (status.conflict) {
+    // C.1' 24/08 -- DEUX CAUSES, deux messages. `conflict` ne veut pas dire une seule
+    // chose : soit le garde-fou a bloque parce que le bien a bouge dans Hektor, soit
+    // les 5 tentatives d'envoi ont echoue. A l'etape 2, quand plus personne n'ouvrira
+    // Hektor, la premiere cause disparaitra mais PAS la seconde -- l'ancien texte
+    // unique aurait alors annonce une modification Hektor qui n'a jamais eu lieu.
+    const envoiImpossible = (status.push_attempts ?? 0) >= 5
+    const bouton = { padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: resolving ? 'default' : 'pointer', border: '1px solid #B3564C', background: '#fff', color: '#7A241C' } as const
+    const boutonEfface = { ...bouton, border: '1px solid #D8B4AF', color: '#8A4A42' } as const
     return (
       <div role="status" style={{ ...base, background: '#FDECEA', border: '1px solid #E5A29B', color: '#7A241C' }}>
-        <strong>Modification non enregistrée.</strong> Le bien a été modifié dans Hektor depuis votre édition : vos changements n'ont pas été appliqués. Rouvrez la fiche et refaites la modification.
+        {envoiImpossible ? (
+          <><strong>Modification non transmise.</strong> Après 5 tentatives, elle n'a pas pu être envoyée à Hektor.</>
+        ) : (
+          <><strong>Modification non enregistrée.</strong> Le bien a été modifié dans Hektor depuis votre édition : vos changements n'ont pas été appliqués. Rouvrez la fiche et refaites la modification.</>
+        )}{' '}
+        <strong>Votre saisie est conservée</strong> et ne sera pas écrasée tant que vous n'aurez pas tranché.
+        <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button type="button" style={bouton} disabled={resolving} onClick={() => { void resoudre('refait') }}>J'ai refait</button>
+          <button type="button" style={boutonEfface} disabled={resolving} onClick={() => { void resoudre('abandon') }}>Abandonner cette saisie</button>
+          {resolveError ? <span style={{ fontSize: 13 }}>{resolveError}</span> : null}
+        </div>
       </div>
     )
   }

@@ -2878,6 +2878,22 @@ export async function loadAnnonceEditStatus(appDossierId: number): Promise<Annon
   return (data ?? null) as AnnonceEditStatus | null
 }
 
+// C.1' 24/08 -- la SORTIE de conflit. La purge automatique des 24 h a ete retiree cote
+// base : une saisie bloquee reste desormais indefiniment, et seul un geste humain la
+// clot. Sans cet appel, le bandeau ne partirait jamais et la sonde resterait rouge.
+// 'refait'  : le negociateur a refait la modification, l'ancienne saisie est caduque.
+// 'abandon' : il renonce.
+// Dans les deux cas la ligne quitte la file, mais son contenu est archive dans
+// app_pending_resolution -- une saisie ne disparait jamais sans trace.
+export async function resolveAnnoncePending(appDossierId: number, mode: 'refait' | 'abandon'): Promise<void> {
+  if (!hasSupabaseEnv || !supabase || appDossierId == null) return
+  const { error } = await supabase.rpc('app_annonce_pending_resolve', {
+    target_dossier_id: appDossierId,
+    mode,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to resolve annonce pending')
+}
+
 export async function setBienStatut(contactSearchKey: string, appDossierId: number, status: string, reason?: string | null, nego?: string | null): Promise<void> {
   if (!hasSupabaseEnv || !supabase) return
   const { error } = await supabase.rpc('app_set_bien_statut', {

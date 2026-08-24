@@ -71,3 +71,27 @@
 -- RETOUR ARRIERE : remettre la ligne de purge dans les trois fonctions. La table de
 -- trace et le RPC peuvent rester sans effet de bord.
 -- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- VERIFICATION DU CHEMIN NOMINAL -- faite apres coup, le 24/08
+--
+-- Le controle d'acces refuse le role de service (`forbidden_annonce_resolve`) : c'est
+-- le garde-fou qui fonctionne, mais il empeche de tester depuis une console SQL. Le
+-- test a donc ete fait en simulant un auth.uid() d'admin (set_config sur
+-- request.jwt.claims, portee transaction), en UNE seule instruction -- ligne d'essai
+-- creee et retiree dans le meme souffle, pour ne pas laisser un bandeau s'afficher
+-- sur une vraie fiche.
+--
+--   mode invalide            -> refuse (22023)            OK
+--   dossier inexistant       -> refuse (22023)            OK
+--   appelant sans droit      -> refuse (42501)            OK
+--   push_attempts = 5, abandon
+--       -> resolved=true, cause='envoi_impossible'        OK
+--       -> ligne d'attente supprimee                      OK
+--       -> trace ecrite, LA SAISIE ARCHIVEE dedans        OK  (push_fields relu)
+--       -> push_attempts conserve dans la trace           OK
+--   push_attempts = 2, refait
+--       -> cause='modifie_dans_hektor', mode='refait'     OK
+--
+-- Etat final apres les deux essais : 0 ligne en attente, 0 trace. Rien laisse derriere.
+-- ---------------------------------------------------------------------
