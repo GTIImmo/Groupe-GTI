@@ -1,6 +1,8 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**14 faites · 21 restantes · 4 supprimées**
+**14 faites · 22 restantes · 4 supprimées**
+
+*(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
 > Remplace la feuille du 24/08 au matin, qui disait deux choses fausses :
 > *« C.1' bloquée sur tes 3 arbitrages »* (elle ne l'était pas) et
