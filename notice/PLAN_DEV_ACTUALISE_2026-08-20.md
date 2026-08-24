@@ -162,12 +162,12 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   C.3 [FAIT] -> C.1'               AVANT l'etape 2 -- 2 a 3 jours
-        C.1' n'est BLOQUEE PAR RIEN. Ses trois gestes -- protection
-        durable, echec visible, reprise -- ne demandent aucun arbitrage.
-        Les 3 arbitrages de la note A1 se repondent en C.4, decision de
-        Frederic du 24/08. (La note s'appelle A2 ; A.2 dans CE plan = ton
-        contrat de signature. Deux choses differentes.)
+   C.3 [FAIT] -> C.1' [FAIT]        AVANT l'etape 2 : PLUS RIEN N'ATTEND
+        Le bloc technique d'avant-bascule est termine. Ce qui reste avant
+        l'etape 2 n'est plus du code : c'est E.2, une decision d'organisation.
+        (Les 3 arbitrages de la note A1 se repondent en C.4, decision de
+         Frederic du 24/08. La note s'appelle A2 ; A.2 dans CE plan = ton
+         contrat de signature. Deux choses differentes.)
    C.2a [FAIT] -> C.2b -> C.4       PENDANT l'etape 2
    (E.0 -- l'audit des impossibilites -- a ete DEPLACE avant la coupure)
 ```
@@ -367,8 +367,19 @@ moitié manquante de l'architecture finale.
 | ✅ **C.3** | ~~**Fermer la porte sortante des recherches**~~ **FAIT le 24/08** — `push_search` devient `null` dans les **deux** fonctions d'édition *(négociateur **et** espace client)*. La ligne d'attente devient un **registre** : elle survit, elle protège, elle ne part jamais | **le mécanisme le prévoyait déjà** — la boucle d'enfilage exige `push_search is not null`, et aucune suppression n'atteint une telle ligne. Pas de table neuve, pas de cron touché. **Vérifié** : survit à 2 passages, 0 travail créé |
 | | **L'alarme a été adaptée en même temps** — les recherches du registre sortent de `data.recherche_divergente` | sans quoi elle passerait en CRITICAL dès le premier affinage, **alors que la divergence est désormais voulue**. Une sentinelle qui sonne quand tout va bien cesse d'être lue |
 | ⚠ | **Ce que ça change pour tes clients** — un acquéreur qui affine sa recherche dans son espace croira peut-être que son négociateur la verra dans Hektor. **Ce n'est plus le cas** | 28 envois en 90 jours : l'effet est nul aujourd'hui, il compte pour l'étape 2 |
-| ⏳ **C.1'** | **« UNE SAISIE NE SE PERD JAMAIS »** — *remplace l'ancienne C.1* | **2 à 3 j** | voir ci-dessous |
+| ✅ **C.1'** | ~~**« UNE SAISIE NE SE PERD JAMAIS »**~~ **FAIT le 24/08** — la purge des 24 h retirée des 3 fonctions · la sortie de conflit *(`app_pending_resolution` + `app_annonce_pending_resolve`)* · les 3 marqueurs du worker cessent d'avaler leur échec · 4 sondes ajoutées · le bandeau distingue les deux causes et permet de clore | **FAIT** | **Deux des trois gestes existaient déjà** — la saisie était gardée, et la reprise était écrite *(5 tentatives, délai croissant)*. Le défaut réel tenait en **une ligne** : la purge des 24 h. **L'avertissement avait une durée de vie d'un jour**, et n'était visible que de qui rouvrait cette fiche précise |
 | ✅ **C.2a** | **Identité des contacts — la relecture** — `RELECTURE_IDENTITE_CONTACTS_2026-08-24` | **FAIT le 24/08** | **Le verrou du 20/08 est levé** : un seul fabricant de nom de recherche, local, et il consulte le registre — **0 fonction Supabase sur 27 n'en fabrique**. Ajouter une colonne ne peut plus déplacer une clé. Et le périmètre est plus petit qu'annoncé : **4 tables sur 18 portent 95 % des 202 404 lignes**, 6 sont vides |
+
+> ⚠ **Ce que ça change pour la surveillance** : la sonde ne mesure plus une perte déjà
+> consommée, mais **du travail en attente de décision**. Elle reste rouge tant qu'un humain
+> n'a pas tranché — c'est voulu, c'est l'objet même de la tâche.
+>
+> ℹ **Reste ouvert, volontairement** : la sortie de conflit n'existe que pour les
+> **annonces** *(bandeau + `app_annonce_pending_resolve`)*. Contact et recherche sont
+> **protégés et surveillés** — purge retirée, marqueur corrigé, sondes posées — mais leur
+> sortie se fera **en C.2b et C.3-suite**, quand on touchera à ces écrans. En attendant,
+> une ligne bloquée sur ces deux objets **s'accumule et se voit dans le monitoring**, sans
+> geste possible depuis l'app.
 
 #### C.1' — la règle qui remplace l'arbitrage
 
