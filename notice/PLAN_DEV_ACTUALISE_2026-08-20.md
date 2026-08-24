@@ -159,7 +159,9 @@ retour.** Deux précisions à ne jamais perdre de vue :
 | ✅ **0.4** | ~~**Fermer l'accès public à `app_dossiers_current`**~~ **FAIT le 24/08** — 13 210 annonces, 10 510 adresses privées et 12 488 noms de mandants cessent d'être lisibles avec la clé publique | **c'était pire que la lecture** : `anon` avait aussi INSERT, UPDATE, DELETE et TRUNCATE. `revoke all`, pas `revoke select`. Vérifié : HTTP 401 |
 | ✅ **0.5** | ~~**Fermer les 5 vues de surveillance et `app_search_count_high_water`**~~ **FAIT le 24/08** — `anon` **et** `authenticated` retirés, RLS activée sur la table | n'importe qui pouvait **effacer** cette table : aucune RLS et TRUNCATE accordé. Le trou était de moi |
 | ✅ **0.6** | ~~**Supprimer `tmp_etape12_avant`**~~ **FAIT le 24/08** | |
-| ⏳ **0.7** | **Auditer les 164 fonctions `SECURITY DEFINER` appelables par `anon` et `authenticated`** | **non mesuré.** Beaucoup sont sans doute légitimes *(les RPC que le front appelle)*, mais aucune n'a jamais été revue. **C'est le dernier morceau du même sujet** — à auditer, pas à corriger en bloc |
+| ✅ **0.7** | ~~**Auditer les fonctions appelables sans être connecté**~~ **FAIT le 24/08** — **85 SECURITY DEFINER, 81 ouvertes à la clé publique. 33 vérifient leur appelant, 48 non** | **la bonne nouvelle** : les 33 qui vérifient sont exactement celles qui font des dégâts — **toutes** les `app_console_create_*_job` *(supprimer une annonce, un contact, une recherche)*. Un visiteur ne pouvait pas déclencher de suppression |
+| | **12 fonctions de maintenance fermées** — balayages, recalculs, mises en file, alertes, `claim_next_job` | un visiteur pouvait appeler `app_bulk_recompute_chunk` en boucle et **charger l'instance à volonté** — ce qui l'a fait redémarrer le 21/08, mais involontairement. Vérifié : 401 à la clé publique, le worker passe toujours, **0 échec cron**, 21 sondes OK |
+| ⚠ | **DETTE ASSUMÉE** — 36 fonctions sans contrôle interne restent appelables sans être connecté | ce sont surtout des **lectures** que le front appelle. Les caractériser demande de lire 36 corps de fonction. **Connu, pas ignoré** |
 
 ---
 
