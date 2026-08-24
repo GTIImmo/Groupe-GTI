@@ -162,9 +162,10 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   C.0 -> C.3 -> C.1'               AVANT l'etape 2 -- 4 a 6 jours
-   C.2a -> C.2b -> C.4              4 a 6 semaines, PENDANT l'etape 2
-   (le plus long cote technique)
+   C.3 [FAIT] -> A2 (ex-C.1')       AVANT l'etape 2
+        A2 est BLOQUE sur les 3 arbitrages de A1, depuis le 19/08
+   C.2a [FAIT] -> C.2b -> C.4       PENDANT l'etape 2
+   (E.0 -- l'audit des impossibilites -- a ete DEPLACE avant la coupure)
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -393,7 +394,7 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ⏳ **C.7** | **Le serveur lit sa base**, plus le miroir *(ex-26bis-③)* | **2 à 3 j** |
 | ⏳ **C.8** | Le **calque** disparaît · la **barrière** *(un travail sans numéro Hektor attend)* *(ex-10,11)* | |
 | ⏳ **C.9** | La **création** part de l'app *(ex-23,24,25)* | **1 à 2 sem.** — après C.7 |
-| | ⚠ **La question laissée ouverte par C.2a se pose ICI** : un contact né dans l'app n'a **pas de numéro Hektor**, or le registre des noms de recherche est indexé sur `(hektor_contact_id, search_index)`. À trancher dans C.9, **pas** le jour de la coupure | |
+| | ℹ *Le patron « naître sans numéro Hektor » est **déjà dans le schéma** — `app_dossier.id` autoincrement + `hektor_annonce_id` **nullable** + UNIQUE. Il n'a jamais servi (0 ligne sur 56 894) : la création optimiste est derrière un drapeau éteint. C'est ici qu'il s'exerce pour la première fois* | |
 | ⏳ **C.11** | Ménage des tables mortes *(ex-19)* | |
 
 #### SUPPRIMÉ le 24/08 — rendu sans objet par l'étape 2

@@ -122,16 +122,44 @@ Deux constats qui encadrent cette difficulté :
 
 ---
 
-## 6. Ce qui reste ouvert — et qui n'appartient pas à C.2b
+## 6. Le contact né dans l'app — le patron existe déjà, il n'a jamais servi
 
-**Un contact né dans l'app, après la coupure, n'a pas de numéro Hektor.** Or le registre des
-noms de recherche est indexé sur `(hektor_contact_id, search_index)`.
+*Rectification de ma première rédaction, qui présentait ça comme une question ouverte à
+trancher dans C.9. C'en est une, mais beaucoup plus étroite — et Frédéric a raison de dire que
+c'était prévu dès le départ.*
 
-Ce n'est **pas** un obstacle à C.2b — qui n'ajoute qu'une colonne à des contacts qui ont tous
-leur numéro Hektor. C'est une question de **C.9** *(la création part de l'app)*, et elle doit y
-être nommée explicitement, faute de quoi elle sera découverte le jour de la coupure.
+**Pour les annonces, naître sans numéro Hektor est déjà dans le schéma :**
 
----
+```
+   app_dossier
+       id                   INTEGER PRIMARY KEY AUTOINCREMENT   <- serie propre
+       hektor_annonce_id    INTEGER                             <- NULLABLE
+       UNIQUE(hektor_annonce_id)
+```
+
+Une annonce créée dans l'app reçoit son numéro **tout de suite** ; la case Hektor reste vide
+jusqu'à ce que le worker rapporte le sien. C'est le patron complet, et il est écrit.
+
+**Mais il n'a jamais servi** : `0 ligne sur 56 894` sans numéro Hektor — la création optimiste
+est derrière un drapeau éteint. Le patron est **préparé, pas éprouvé**.
+
+**Et le registre des recherches a déjà sa série propre, lui aussi :**
+
+```
+   app_search_registry
+       app_search_id        INTEGER PRIMARY KEY      1..76 880, tous distincts
+       hektor_contact_id    TEXT NOT NULL            <-- LE SEUL MOT QUI MANQUE
+       search_index         INTEGER NOT NULL
+```
+
+**Il ne manque donc pas un plan : il manque une colonne et un mot.** `NOT NULL` interdit
+aujourd'hui une ligne dont le contact n'aurait pas de numéro Hektor, et il n'existe **aucune**
+colonne `app_contact_id` à laquelle s'adosser — mesuré : aucune, nulle part.
+
+> **Ce n'est donc pas une question pour C.9. C'est une conséquence directe de C.2b.**
+> Dès que `app_contact_id` existe, le registre reçoit sa seconde colonne et `hektor_contact_id`
+> devient nullable — **exactement la forme de `app_dossier`, un cran plus bas**.
+> C.9 n'aura plus qu'à s'en servir, et sera le premier à l'éprouver pour de bon.
 
 ## 7. Recommandation sur la forme de C.2b
 
@@ -141,6 +169,7 @@ leur numéro Hektor. C'est une question de **C.9** *(la création part de l'app)
 | **Ne pas faire** | changer la clé primaire de `app_contact_current` dans le même geste. C'est un second chantier, et il n'a pas à être simultané |
 | **Les 6 tables vides** | y ajouter la colonne coûte zéro et évite d'y revenir |
 | **Les 3 fonctions de la famille B** | ne les toucher qu'**après** que la colonne soit remplie et observée |
+| **Et le registre** | lui ajouter `app_contact_id`, puis relacher son `NOT NULL` — **dans C.2b**, pas plus tard |
 | **Durée revue** | la note disait « 1 à 2 semaines ». Avec le verrou levé, 4 tables au lieu de 18 et 3 fonctions au lieu de 11 : **3 à 5 jours** semble juste — à condition de ne pas y attacher le changement de clé primaire |
 
 ---
