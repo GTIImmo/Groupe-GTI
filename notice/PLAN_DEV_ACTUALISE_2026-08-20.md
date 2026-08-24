@@ -82,6 +82,83 @@ Ce qui suit répare la cause, pas le symptôme.*
 
 ---
 
+### 🛤 LES TROIS PISTES — posées par Frédéric le 24/08 au soir
+
+*Ce qui suit **affine** la section des trois étapes ci-dessous. Les étapes racontaient l'histoire ;
+elles laissaient croire que le code attendait une décision d'organisation. **C'est faux.** Trois
+choses avancent indépendamment, et il ne faut jamais les confondre :*
+
+```
+   PISTE 1 -- LE CODE EST PRET       C.2b C.12 C.6 C.5 C.7 C.8 C.9 C.4 C.11
+                                     puis E.0 : que ne sait pas faire l'app ?
+                                     -> se construit MAINTENANT, dormant
+                                     -> ne depend de PERSONNE
+
+   PISTE 2 -- LES GENS BOUGENT       quand ils veulent, un par un
+                                     jamais les deux systemes pour LA MEME personne
+                                     -> depend de Frederic seul
+
+   PISTE 3 -- ON COUPE LES WORKERS   quand A.1 / A.2 / A.3 sont faits
+                                     -> depend de contrats exterieurs
+```
+
+#### Ce que ça change, concrètement
+
+**On construit tout, dormant, et le jour J n'est plus qu'un paramétrage.** C'est le patron déjà
+utilisé quatre fois ici — `VITE_APP_COCKPIT_V2_ENABLED`, `VITE_APP_CONTACT_V2_ENABLED`,
+`VITE_APP_MANDAT_V3_ENABLED`, `APP_BROUILLON_BUCKET_ENABLED` — et c'est la méthode de la
+doublure, qui a marché trois fois : `app_dossier`, `app_affaire_ledger`, `app_search_registry`.
+
+> ⚠ **La condition, mesurée le 24/08** : ces quatre drapeaux ont été posés les 17/07, 23/07,
+> 26/07 et 22/06 — **aucun n'a jamais été allumé en production**. 29 à 38 jours de sommeil.
+> **Construire dormant est facile ; c'est l'allumage qui ne se fait pas.**
+>
+> Et le journal des doublures dit `app seule = 45`, **plat trois jours sur trois** — parce que
+> personne n'utilise l'app. **Tout ce qu'on sait de « l'app comme auteur » est mesuré sur une app
+> que personne n'exerce.** L'antidote est de Frédéric : **il passe sur l'app pendant qu'eux restent
+> dans Hektor**. Ça rend les mesures vraies, et ça éprouve C.1' avec son seul travail en jeu.
+
+#### Le modèle, dans les mots de Frédéric — et ce qui existe en face
+
+```
+        L'APP ecrit
+             |
+             +--> Supabase --(la DESCENTE)--> LE SERVEUR      [FAIT le 22/08, B.1]
+             |
+             +--> worker --------------------> HEKTOR
+
+        HEKTOR --(import de nuit)--> LE MIROIR --> LE SERVEUR  [depuis toujours]
+```
+
+> *« Le miroir de Hektor devient une **source d'information** ».* C'est le nom exact de **C.7**.
+> Aujourd'hui le miroir n'est pas *une* source, il est **la** source — le serveur se reconstruit
+> depuis lui chaque nuit. C.7 le fait passer de **vérité** à **témoignage**.
+
+**Les deux sortes d'écart ont déjà chacune leur instrument :**
+
+| L'écart | Ce que c'est | L'instrument | Depuis |
+|---|---|---|---|
+| **conflit de worker** | l'envoi vers Hektor a été bloqué ou a échoué | `app_*_pending.conflict` · 8 sondes · bandeau + boutons | **24/08** *(C.1')* |
+| **conflit de miroir** | le miroir dit autre chose que ce que l'app détient | les 10 doublures + le journal de 07:30 | **22/08** *(B.2/B.4)* |
+
+> **Mais détecter n'est pas résoudre.** Les doublures voient l'écart, elles ne le tranchent pas —
+> et chaque nuit le serveur se reconstruit depuis le miroir, donc **Hektor regagne par défaut**.
+> Pas parce qu'on l'a décidé : **parce qu'il est seul dans la pièce**. C.7 est l'endroit où
+> l'écart se résout ; C.6 fournit le *quoi* à réconcilier.
+
+#### La réserve sur « pas les deux en même temps »
+
+Ça se lit **par personne**, pas par système. Si l'un passe sur l'app pendant que l'autre reste
+dans Hektor, **les deux systèmes sont vivants** à l'échelle de l'agence. Ce qui rend ça tenable,
+c'est que les dossiers sont en **portefeuilles** *(mesuré le 24/08 : Sylvie 2 181 · Marion 1 878 ·
+Groupe GTI 1 702 · Nicolas 1 522 · Christèle 1 330 · Arnaud 1 122…)*.
+
+Le risque ne porte donc pas sur le volume : il porte sur les **dossiers partagés** — un acquéreur
+suivi par deux négociateurs, un mandat en co-listing. **C'est exactement ce que le journal des
+doublures verra chaque matin.**
+
+---
+
 ### 🗝 LES TROIS ÉTAPES — posées par Frédéric le 24/08
 
 *Ce n'est pas un détail d'organisation : **c'est ce qui décide de la moitié du travail
@@ -162,14 +239,14 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   C.3 [FAIT] -> C.1' [FAIT]        AVANT l'etape 2 : PLUS RIEN N'ATTEND
-        Le bloc technique d'avant-bascule est termine. Ce qui reste avant
-        l'etape 2 n'est plus du code : c'est E.2, une decision d'organisation.
-        (Les 3 arbitrages de la note A1 se repondent en C.4, decision de
-         Frederic du 24/08. La note s'appelle A2 ; A.2 dans CE plan = ton
-         contrat de signature. Deux choses differentes.)
-   C.2a [FAIT] -> C.2b -> C.4       PENDANT l'etape 2
-   (E.0 -- l'audit des impossibilites -- a ete DEPLACE avant la coupure)
+   PISTE 1, le code       C.2b -> C.12 -> C.6 -> C.5 -> C.7 -> C.8 -> C.9
+                          -> C.4 -> C.11 -> E.0        4 a 6 semaines
+                          SE CONSTRUIT MAINTENANT, dormant. N'attend personne.
+
+   PISTE 2, les gens      quand ils veulent, un par un.   Frederic seul.
+   PISTE 3, la coupure    quand A.1/A.2/A.3 sont faits.   A ZERO.
+
+   Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5 | C.1' C.2a C.3
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -396,7 +473,10 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 > `app_search_registry` qui survit à la reconstruction.
 > **Ne jamais laisser le passager effacer le durable.**
 
-#### PENDANT L'ÉTAPE 2 — *les négociateurs dans l'app, Hektor interdit*
+#### À CONSTRUIRE MAINTENANT, DORMANT — *(ex-« pendant l'étape 2 », corrigé le 24/08)*
+
+*Aucune de ces tâches n'attend que les négociateurs bougent. Chacune se construit et se livre
+**éteinte** ; seul son **interrupteur** attend — voir le tableau plus bas.*
 
 | | Tâche | Durée |
 |---|---|---|
@@ -414,6 +494,50 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ⏳ **C.9** | La **création** part de l'app *(ex-23,24,25)* | **1 à 2 sem.** — après C.7 |
 | | ℹ *Le patron « naître sans numéro Hektor » est **déjà dans le schéma** — `app_dossier.id` autoincrement + `hektor_annonce_id` **nullable** + UNIQUE. Il n'a jamais servi (0 ligne sur 56 894) : la création optimiste est derrière un drapeau éteint. C'est ici qu'il s'exerce pour la première fois* | |
 | ⏳ **C.11** | Ménage des tables mortes *(ex-19)* | |
+| ⏳ **E.0** | **AUDIT : que ne peut-on PAS faire dans l'app ?** Croiser les types de travaux avec ce qu'un négociateur fait dans sa journée | **½ j** — **en FIN de construction** *(déplacée ici le 24/08)*. Elle était avant la coupure ; elle doit venir **avant que les gens bougent**, et elle se nourrit de ce que Frédéric aura vécu en utilisant l'app lui-même |
+
+
+#### 🔌 LES INTERRUPTEURS — « construit » ne veut jamais dire « actif »
+
+| Tâche | Constructible maintenant | Ce qui attend |
+|---|---|---|
+| **C.2b** · **C.5** · **C.11** · **C.12** | oui, entièrement | **rien** — additif |
+| **C.6** | oui, en doublure | qui **lit** la table |
+| **C.8** | oui | le calque, côté front |
+| **C.9** | oui, derrière drapeau | le drapeau |
+| **C.7** | oui, **contrat vide** | ⬇ **la liste des champs app** |
+| **C.4** | oui, worker par worker | ⬇ **la liste des champs app** *(les 3 arbitrages)* |
+
+**Il n'y a donc qu'UN interrupteur de fond, et deux tâches le partagent.**
+
+#### 🗝 LA LISTE DES CHAMPS APP — le seul vrai interrupteur
+
+*Elle existe déjà. Elle fait trois lignes. Elle marche.*
+
+```
+   phase2/sync/push_contacts_to_supabase.py:476
+   APP_OWNED_CONTACT_FIELDS = ("birth_date", "birth_place", "marital_status")
+```
+
+Le commentaire du code dit pourquoi ce sont ceux-là : *« Hektor ne les renvoie **jamais**, seule
+l'app les écrit »*. **Il n'y a rien à arbitrer : Hektor n'a rien à dire.**
+
+**À quoi elle sert.** Aujourd'hui, tout ce que l'app écrit doit faire l'aller-retour par Hektor
+pour survivre — `app → worker → Hektor → import de nuit → retour`. Si un maillon casse, l'import
+ramène la valeur de Hektor et **la saisie est remplacée**. La liste, c'est ce qui permet à une
+valeur de **survivre sans l'aller-retour**.
+
+| | Hektor connaît le champ ? | Faut-il décider ? |
+|---|---|---|
+| **les 3 qui marchent déjà** | **non** | non — personne à contredire |
+| **les 189 de la carte A1** | **oui** | **oui, pour 3 d'entre eux** |
+| **côté ANNONCE** | — | ⚠ **aucune liste n'existe** *(vérifié le 24/08)* |
+
+> ❗ **Le point qui change la nature des 3 arbitrages.** Le jour de la coupure, Hektor n'existe
+> plus : **il n'y a plus rien à arbitrer, l'app gagne tout.** Donc `statut_annonce`,
+> `negociateur_email` et les champs de mandat ne sont **pas** trois décisions de fond sur le
+> métier. Ce sont **trois réglages de transition**, réversibles, qui ne valent que pendant la
+> cohabitation — et qu'on peut laisser à « Hektor gagne » aussi longtemps qu'on veut.
 
 #### SUPPRIMÉ le 24/08 — rendu sans objet par l'étape 2
 
@@ -440,7 +564,7 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 
 | | Tâche | |
 |---|---|---|
-| ⏳ **E.0** | **AUDIT : que ne peut-on PAS faire dans l'app ?** Croiser les types de travaux avec ce qu'un négociateur fait dans une journée | **une demi-journée** — *déplacé ici le 24/08 sur décision de Frédéric*. Il était posé avant l'étape 2 ; il se fera **avant la coupure**. À ce moment-là la question n'est plus « quand basculer » mais « que reste-t-il d'impossible sans Hektor » |
+| | → **E.0 est passée en PISTE 1** *(24/08)* — si l'on construit tout maintenant, il faut savoir **maintenant** ce que l'app ne sait pas faire, sinon on bâtit six semaines et on découvre le trou à la fin | |
 | ⏳ **E.1** | **19-R2 — RATTRAPAGE, LA VEILLE DE LA BASCULE** | ⚠️ **dernière occasion.** Après, plus personne ne crée de recherche dans Hektor |
 | ⏳ **E.2** | **BASCULE DES NÉGOCIATEURS SUR L'APP** *(ex-19bis)* | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | ⏳ **E.3** | Les workers deviennent invisibles *(ex-26)* | une fois l'avertissement éprouvé |
