@@ -358,7 +358,9 @@ moitié manquante de l'architecture finale.
 
 | | Tâche | Durée | Pourquoi maintenant |
 |---|---|---|---|
-| ⏳ **C.3** | **Fermer la porte sortante des recherches** — marquer ce que l'app détient, faire descendre ces recherches-là *(ex-12, ex-22)* | **1 à 2 j** | **supprime d'un coup toute la famille 602197.** La modale n'exprime que 7 critères sur 12 : tant qu'on envoie, ça se reproduira. **La moitié est déjà faite** — la doublure existe |
+| ✅ **C.3** | ~~**Fermer la porte sortante des recherches**~~ **FAIT le 24/08** — `push_search` devient `null` dans les **deux** fonctions d'édition *(négociateur **et** espace client)*. La ligne d'attente devient un **registre** : elle survit, elle protège, elle ne part jamais | **le mécanisme le prévoyait déjà** — la boucle d'enfilage exige `push_search is not null`, et aucune suppression n'atteint une telle ligne. Pas de table neuve, pas de cron touché. **Vérifié** : survit à 2 passages, 0 travail créé |
+| | **L'alarme a été adaptée en même temps** — les recherches du registre sortent de `data.recherche_divergente` | sans quoi elle passerait en CRITICAL dès le premier affinage, **alors que la divergence est désormais voulue**. Une sentinelle qui sonne quand tout va bien cesse d'être lue |
+| ⚠ | **Ce que ça change pour tes clients** — un acquéreur qui affine sa recherche dans son espace croira peut-être que son négociateur la verra dans Hektor. **Ce n'est plus le cas** | 28 envois en 90 jours : l'effet est nul aujourd'hui, il compte pour l'étape 2 |
 | ⏳ **C.1'** | **« UNE SAISIE NE SE PERD JAMAIS »** — *remplace l'ancienne C.1* | **2 à 3 j** | voir ci-dessous |
 | ⏳ **C.2a** | **Identité des contacts — la relecture**, pas le code | **une demi-journée** | 186 500 lignes, ~530 points de code. Une heure de lecture économise une semaine |
 

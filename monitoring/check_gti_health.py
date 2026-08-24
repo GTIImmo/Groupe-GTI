@@ -1494,16 +1494,42 @@ class Monitor:
             if conn.execute(
                 "SELECT count(*) FROM sqlite_master WHERE type='table' "
                 "AND name='app_contact_search_current__sb'").fetchone()[0]:
+                # C.3 (24/08) : les recherches PROPRIETE DE L'APP sortent de l'alarme.
+                # Depuis C.3 une recherche affinee dans l'app ne remonte plus a Hektor : sa
+                # divergence est VOULUE, pas subie. La laisser dans l'alarme ferait sonner
+                # une sentinelle alors que tout fonctionne -- et une sentinelle qui sonne
+                # quand tout va bien, on cesse de la lire (cf. les 855 notifications non
+                # lues). On les compte a part, dans app_doublure_journal.
+                #
+                # Le registre, c'est app_search_pending : depuis C.3 une ligne y reste
+                # indefiniment (push_search vide -> jamais enfilee, jamais supprimee).
+                # Le registre est descendu localement par la Descente de 07:30, DANS LE
+                # MEME instantane que la doublure : la ligne de registre et la valeur
+                # divergente arrivent donc ensemble. Pas de fausse alerte transitoire.
+                a_le_registre = conn.execute(
+                    "SELECT count(*) FROM sqlite_master WHERE type='table' "
+                    "AND name='app_search_pending'").fetchone()[0] > 0
+                possedees = [
+                    (str(r[0]), int(r[1] or 0)) for r in conn.execute(
+                        "SELECT hektor_contact_id, search_index FROM app_search_pending")
+                ] if a_le_registre else []
+                exclusion = ""
+                if possedees:
+                    paires = ",".join(
+                        "('%s',%d)" % (c.replace("'", "''"), i) for c, i in possedees)
+                    exclusion = (" AND (s.hektor_contact_id, s.search_index) NOT IN (%s)"
+                                 % paires)
                 divergentes = conn.execute(
                     'SELECT count(*) FROM "app_contact_search_current__sb" s '
                     'JOIN app_contact_search_current h '
                     '  ON h.hektor_contact_id = s.hektor_contact_id '
                     ' AND h.search_index = s.search_index '
-                    "WHERE COALESCE(h.prix_min,'') <> COALESCE(s.prix_min,'') "
+                    "WHERE (COALESCE(h.prix_min,'') <> COALESCE(s.prix_min,'') "
                     "   OR COALESCE(h.prix_max,'') <> COALESCE(s.prix_max,'') "
                     "   OR COALESCE(h.surface_min,'') <> COALESCE(s.surface_min,'') "
                     "   OR COALESCE(h.pieces_min,'') <> COALESCE(s.pieces_min,'') "
-                    "   OR COALESCE(h.chambre_min,'') <> COALESCE(s.chambre_min,'')"
+                    "   OR COALESCE(h.chambre_min,'') <> COALESCE(s.chambre_min,''))"
+                    + exclusion
                 ).fetchone()[0]
         finally:
             conn.close()
