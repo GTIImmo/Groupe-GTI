@@ -374,12 +374,10 @@ moitié manquante de l'architecture finale.
 > consommée, mais **du travail en attente de décision**. Elle reste rouge tant qu'un humain
 > n'a pas tranché — c'est voulu, c'est l'objet même de la tâche.
 >
-> ℹ **Reste ouvert, volontairement** : la sortie de conflit n'existe que pour les
-> **annonces** *(bandeau + `app_annonce_pending_resolve`)*. Contact et recherche sont
-> **protégés et surveillés** — purge retirée, marqueur corrigé, sondes posées — mais leur
-> sortie se fera **en C.2b et C.3-suite**, quand on touchera à ces écrans. En attendant,
-> une ligne bloquée sur ces deux objets **s'accumule et se voit dans le monitoring**, sans
-> geste possible depuis l'app.
+> ℹ **Reste ouvert, et ça porte un numéro : C.12.** La sortie de conflit n'existe que pour
+> les **annonces**. Contact et recherche sont protégés et surveillés, mais sans bouton.
+> *Écrit ici en commentaire le 24/08, ça se serait perdu — Frédéric l'a relevé le jour même :
+> une chose qui n'est pas une TÂCHE n'existe pas.*
 
 #### C.1' — la règle qui remplace l'arbitrage
 
@@ -402,6 +400,8 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 |---|---|---|
 | ⏳ **C.2b** | **Identité des contacts — le code** *(ex-5)*. Ajouter `app_contact_id` aux **4 tables qui portent 95 %** *(relation 77 393 · contact 57 553 · rapprochement 46 864 · recherche 10 785)* + les 6 tables vides, le remplir, **le laisser vivre à côté sans rien basculer** — méthode de la doublure. Les **3** fonctions de la famille B *(`app_edit_contact_optimistic`, `app_edit_search_optimistic`, `app_espace_edit_search_optimistic`)* ne bougent qu'après observation ; les **8** de la famille A gardent le numéro Hektor à jamais | **3 à 5 j** |
 | | ⚠ **À NE PAS y attacher** : `hektor_contact_id` **est la clé primaire** de `app_contact_current`. La changer est un chantier à part — et **0 contrainte de clé étrangère** ne protège les 17 tables qui la pointent par convention | |
+| ⏳ **C.12** | **LA SORTIE DE CONFLIT POUR CONTACT ET RECHERCHE** — *le reste de C.1', repéré par Frédéric le 24/08*. C.1' n'a livré le bouton que pour les **annonces** (`app_annonce_pending_resolve` + bandeau). Contact et recherche sont **protégés** (purge retirée, marqueur corrigé) et **surveillés** (4 sondes), mais **sans geste possible depuis l'app** | **1 à 2 j** |
+| | ⚠ **En attendant, une saisie bloquée sur ces deux objets s'accumule sans pouvoir être classée.** Elle n'est pas perdue — c'est tout l'objet de C.1' — mais la sonde restera rouge jusqu'à ce que quelqu'un intervienne en base. **Se fait avec C.2b** (même objet, mêmes écrans) : le RPC existe, il s'agit de le décliner deux fois et d'accrocher le bandeau | |
 | ⏳ **C.6** | **Le domicile de l'annonce** — la table « ce que l'app détient » + les 36 champs calculés à l'export *(ex-26bis-①)* | **1 à 2 j** |
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
