@@ -162,8 +162,10 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   C.3 [FAIT] -> A2 (ex-C.1')       AVANT l'etape 2
-        A2 est BLOQUE sur les 3 arbitrages de A1, depuis le 19/08
+   C.3 [FAIT] -> C.1'               AVANT l'etape 2 -- 2 a 3 jours
+        C.1' est BLOQUE sur les 3 arbitrages de la note A1, depuis le 19/08
+        (ATTENTION : la note s'appelle A2, mais A.2 dans CE plan = ton
+         contrat de signature. Deux choses differentes. Ici c'est C.1'.)
    C.2a [FAIT] -> C.2b -> C.4       PENDANT l'etape 2
    (E.0 -- l'audit des impossibilites -- a ete DEPLACE avant la coupure)
 ```
