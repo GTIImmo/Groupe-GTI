@@ -1,0 +1,73 @@
+-- =====================================================================
+-- Tache C.1' -- « UNE SAISIE NE SE PERD JAMAIS »
+-- Date : 2026-08-24
+-- Migrations : `c1_prime_une_saisie_bloquee_ne_se_perd_plus`
+--              `c1_prime_sortie_de_conflit_et_trace`
+--
+-- CE QUI EXISTAIT DEJA, et qui est bon -- mesure faite avant d'ecrire quoi que ce soit :
+--   * la table d'attente garde LA SAISIE elle-meme (base_snapshot + push_fields),
+--     pas seulement un drapeau ;
+--   * la REPRISE est deja ecrite, et plus finement que je ne l'aurais faite :
+--         travail disparu, OU en erreur, OU fige depuis 30 min
+--            -> on relache, push_after = now + 5 x (tentatives+1) min, tentatives++
+--            -> jusqu'a 5, puis conflict = true
+--     Le geste (c) du plan -- « et il se reprend » -- N'ETAIT PAS A CONSTRUIRE.
+--   * un bandeau existe deja sur la fiche du bien (AnnonceEditStatusBanner, via le
+--     RPC app_annonce_edit_status, qui renvoie DEJA push_attempts) ;
+--   * trois sondes existent deja, en CRITICAL, sur app_annonce_pending.
+--
+-- LE DEFAUT REEL etait donc plus etroit, et il tenait en une ligne :
+--
+--     delete from public.app_XXX_pending
+--      where conflict = true and updated_at < now() - interval '24 hours';
+--
+-- Elle effacait la ligne ET la saisie. 0.8 (ce matin) avait fait passer la perte de
+-- « dans la minute » a « dans la journee ». Ce n'etait pas « jamais ».
+-- Autrement dit : L'AVERTISSEMENT AVAIT UNE DUREE DE VIE DE 24 HEURES, et il n'etait
+-- visible que de quelqu'un qui rouvrait cette fiche precise. Personne ne rouvre ->
+-- personne ne sait -> il n'y a plus rien a refaire.
+--
+-- GESTE 1 -- la purge des 24 h est RETIREE des trois fonctions de mise en file.
+--            Motif verifie et non devine : la migration leve une exception s'il manque,
+--            s'il apparait plusieurs fois, si le remplacement ne change rien, ou si le
+--            compte n'est pas exactement 3.
+--            VERIFIE APRES : purge absente des 3, et le reste intact -- la protection
+--            de 0.8 (`p.conflict = false`), la reprise (`push_attempts + 1`) et
+--            l'enfilage sont tous encore la.
+--
+-- GESTE 2 -- LA SORTIE DE CONFLIT. Retirer la purge sans donner de sortie remplacerait
+--            une perte silencieuse par une pile qui ne se vide jamais, et une sonde
+--            rouge pour toujours -- « une sentinelle qui sonne quand tout va bien cesse
+--            d'etre lue ». Donc :
+--              * app_pending_resolution : la TRACE de ce qu'un humain ecarte. Une saisie
+--                ne disparait jamais en silence, meme quand c'est un humain qui l'ecarte.
+--                RLS activee, AUCUNE policy -> service_role et SECURITY DEFINER seuls.
+--              * app_annonce_pending_resolve(dossier, mode) avec mode = refait | abandon.
+--                Meme controle d'acces que la lecture du statut (app_console_can_request_job).
+--                Elle deduit la CAUSE : push_attempts >= 5 -> 'envoi_impossible',
+--                sinon 'modifie_dans_hektor'.
+--            DROITS : EXECUTE retire a PUBLIC **d'abord** -- Postgres l'accorde par
+--            defaut, et sans ce retrait la restriction ne restreint rien (lecon de 0.7).
+--            VERIFIE : PUBLIC non / anon non / authenticated oui / service_role oui.
+--
+-- HORS SQL, dans le meme lot :
+--   * console_job_worker.js -- les TROIS marqueurs de conflit avalaient leur echec
+--     (`catch (_) { /* best-effort */ }`). Si le marquage ratait, la ligne repartait
+--     dans le circuit normal et se faisait supprimer : la saisie etait perdue sans
+--     trace. Ils laissent desormais remonter -> le travail finit en "error" (seul un
+--     throw y mene : logJob n'ecrit que le journal, c'est finishJob qui fixe le statut)
+--     -> la reprise le rejoue 5 fois -> au bout des 5, la SQL pose elle-meme le conflit.
+--     LE CHEMIN D'ECHEC CONVERGE VERS LA PROTECTION.
+--   * check_gti_health.py -- 4 sondes ajoutees. Les trois existantes ne couvraient QUE
+--     les annonces : un contact ou une recherche bloque ne remontait nulle part.
+--     (`partial` n'existe pas sur ces deux tables -> pas de sonde equivalente.)
+--     Les lignes de REGISTRE posees par C.3 ont conflict=false et push_attempts=0 :
+--     elles ne sont PAS comptees. VERIFIE : 8 sondes de saisie, toutes vertes.
+--
+-- CE QUE LA SONDE MESURE MAINTENANT : du travail EN ATTENTE DE DECISION, et non plus
+-- une perte deja consommee. Elle reste rouge tant qu'un humain n'a pas tranche. C'est
+-- voulu -- c'est meme tout l'objet de la tache.
+--
+-- RETOUR ARRIERE : remettre la ligne de purge dans les trois fonctions. La table de
+-- trace et le RPC peuvent rester sans effet de bord.
+-- =====================================================================

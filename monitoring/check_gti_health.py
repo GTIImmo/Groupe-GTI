@@ -261,10 +261,55 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     },
     {
         "key": "data.annonce_push_bloque",
-        # CRITICAL : 5 echecs -> conflict -> suppression a 24 h = la saisie disparait.
+        # C.1' 24/08 : la purge des 24 h est RETIREE -- la saisie ne disparait plus.
+        # Cette sonde reste rouge tant qu'un humain n'a pas tranche (bandeau sur la
+        # fiche -> app_annonce_pending_resolve). C'est voulu : elle mesure desormais
+        # du travail EN ATTENTE DE DECISION, plus une perte deja consommee.
         "severity": "critical",
         "label": "Push annonce en echec repete",
         "table": "app_annonce_pending",
+        "params": {"push_attempts": "gte.3"},
+        "rule": "absolute",
+        "max": 0,
+    },
+    # C.1' 24/08 -- les memes sentinelles pour les DEUX AUTRES objets. Elles n'existaient
+    # que pour les annonces : un contact ou une recherche bloque ne remontait nulle part.
+    # (`partial` n'existe pas sur ces deux tables -> pas de sonde equivalente.)
+    {
+        "key": "data.contact_conflit",
+        "severity": "critical",
+        "label": "Editions contact bloquees (conflit Hektor)",
+        "table": "app_contact_pending",
+        "params": {"conflict": "eq.true"},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
+        "key": "data.contact_push_bloque",
+        "severity": "critical",
+        "label": "Push contact en echec repete",
+        "table": "app_contact_pending",
+        "params": {"push_attempts": "gte.3"},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
+        "key": "data.recherche_conflit",
+        # Les lignes de REGISTRE posees par C.3 (push_search vide) vivent ici pour
+        # toujours : elles ont conflict=false et push_attempts=0, donc elles ne sont
+        # PAS comptees. La sonde ne voit que de vraies saisies bloquees.
+        "severity": "critical",
+        "label": "Editions recherche bloquees (conflit Hektor)",
+        "table": "app_search_pending",
+        "params": {"conflict": "eq.true"},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
+        "key": "data.recherche_push_bloque",
+        "severity": "critical",
+        "label": "Push recherche en echec repete",
+        "table": "app_search_pending",
         "params": {"push_attempts": "gte.3"},
         "rule": "absolute",
         "max": 0,

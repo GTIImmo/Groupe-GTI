@@ -11829,7 +11829,15 @@ async function markSearchPendingConflict(contactId, searchIndex) {
       `app_search_pending?hektor_contact_id=eq.${encodeURIComponent(String(contactId))}&search_index=eq.${Number(searchIndex)}`,
       { method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
-  } catch (_) { /* best-effort */ }
+  } catch (err) {
+    // C.1' 24/08 : ON N'AVALE PLUS CET ECHEC. Si la protection n'est pas posee,
+    // la ligne d'attente repart dans le circuit normal et se fait supprimer a la
+    // mise en file suivante -- la saisie du negociateur est perdue en silence.
+    // En laissant remonter, le travail finit en "error" (finishJob), et la reprise
+    // deja en place le rejoue 5 fois ; au bout des 5, la SQL pose elle-meme le
+    // conflit. Le chemin d'echec converge donc vers la protection.
+    throw new Error(`marquage du conflit impossible (recherche) : ${err && err.message ? err.message : err}`);
+  }
 }
 
 // Tier 2 (annonces) : nettoyage du pending annonce après push réussi, ou marquage conflit.
@@ -11848,7 +11856,15 @@ async function markAnnoncePendingConflict(appDossierId) {
       `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
       { method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
-  } catch (_) { /* best-effort */ }
+  } catch (err) {
+    // C.1' 24/08 : ON N'AVALE PLUS CET ECHEC. Si la protection n'est pas posee,
+    // la ligne d'attente repart dans le circuit normal et se fait supprimer a la
+    // mise en file suivante -- la saisie du negociateur est perdue en silence.
+    // En laissant remonter, le travail finit en "error" (finishJob), et la reprise
+    // deja en place le rejoue 5 fois ; au bout des 5, la SQL pose elle-meme le
+    // conflit. Le chemin d'echec converge donc vers la protection.
+    throw new Error(`marquage du conflit impossible (annonce) : ${err && err.message ? err.message : err}`);
+  }
 }
 // Tier 2 : le push a ignore au moins un champ (ex. <select> non resolu). On NE supprime
 // PAS le pending -> on le marque `partial` avec la liste des champs jetes. Le monitoring
@@ -11886,7 +11902,15 @@ async function markContactPendingConflict(contactId) {
       `app_contact_pending?hektor_contact_id=eq.${encodeURIComponent(id)}`,
       { method: "PATCH", prefer: "return=minimal",
         body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
-  } catch (_) { /* best-effort */ }
+  } catch (err) {
+    // C.1' 24/08 : ON N'AVALE PLUS CET ECHEC. Si la protection n'est pas posee,
+    // la ligne d'attente repart dans le circuit normal et se fait supprimer a la
+    // mise en file suivante -- la saisie du negociateur est perdue en silence.
+    // En laissant remonter, le travail finit en "error" (finishJob), et la reprise
+    // deja en place le rejoue 5 fois ; au bout des 5, la SQL pose elle-meme le
+    // conflit. Le chemin d'echec converge donc vers la protection.
+    throw new Error(`marquage du conflit impossible (contact) : ${err && err.message ? err.message : err}`);
+  }
 }
 // Notif négo en cas de conflit contact (miroir notifyNegoSearchConflict).
 async function notifyNegoContactConflict(job, contactId, payload) {
