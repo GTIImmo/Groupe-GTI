@@ -297,7 +297,14 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "key": "data.recherche_conflit",
         # Les lignes de REGISTRE posees par C.3 (push_search vide) vivent ici pour
         # toujours : elles ont conflict=false et push_attempts=0, donc elles ne sont
-        # PAS comptees. La sonde ne voit que de vraies saisies bloquees.
+        # PAS comptees.
+        # ET DEPUIS C.3, CETTE SONDE NE SURVEILLE PLUS UN RISQUE : elle TEMOIGNE que la
+        # porte reste fermee. La chaine est verifiee de bout en bout -- push_search est
+        # ecrit a null, l'enfilage exige "push_search is not null" donc aucun travail
+        # n'est cree, la montee en conflit exige un push_job_id donc il n'est jamais
+        # pose, et le worker ne marque que si from_pending. Seules deux fonctions
+        # ecrivent dans app_search_pending, toutes deux fermees par C.3.
+        # SI ELLE SONNE UN JOUR, c'est que quelqu'un a rouvert C.3.
         "severity": "critical",
         "label": "Editions recherche bloquees (conflit Hektor)",
         "table": "app_search_pending",

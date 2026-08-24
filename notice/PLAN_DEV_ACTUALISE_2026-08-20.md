@@ -374,10 +374,12 @@ moitié manquante de l'architecture finale.
 > consommée, mais **du travail en attente de décision**. Elle reste rouge tant qu'un humain
 > n'a pas tranché — c'est voulu, c'est l'objet même de la tâche.
 >
-> ℹ **Reste ouvert, et ça porte un numéro : C.12.** La sortie de conflit n'existe que pour
-> les **annonces**. Contact et recherche sont protégés et surveillés, mais sans bouton.
-> *Écrit ici en commentaire le 24/08, ça se serait perdu — Frédéric l'a relevé le jour même :
-> une chose qui n'est pas une TÂCHE n'existe pas.*
+> ℹ **Reste ouvert, et ça porte un numéro : C.12** — **les contacts seulement**. Les
+> recherches n'en ont pas besoin : **C.3 a fermé la porte**, elles ne peuvent plus produire
+> de conflit *(vérifié)*. Les annonces ont leur bouton depuis C.1'.
+> *Écrit d'abord ici en simple commentaire, ça se serait perdu — et j'avais dit « contact ET
+> recherche ». Frédéric a relevé les deux le jour même : une chose qui n'est pas une TÂCHE
+> n'existe pas, et un périmètre qu'on n'a pas mesuré est toujours trop large.*
 
 #### C.1' — la règle qui remplace l'arbitrage
 
@@ -400,8 +402,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 |---|---|---|
 | ⏳ **C.2b** | **Identité des contacts — le code** *(ex-5)*. Ajouter `app_contact_id` aux **4 tables qui portent 95 %** *(relation 77 393 · contact 57 553 · rapprochement 46 864 · recherche 10 785)* + les 6 tables vides, le remplir, **le laisser vivre à côté sans rien basculer** — méthode de la doublure. Les **3** fonctions de la famille B *(`app_edit_contact_optimistic`, `app_edit_search_optimistic`, `app_espace_edit_search_optimistic`)* ne bougent qu'après observation ; les **8** de la famille A gardent le numéro Hektor à jamais | **3 à 5 j** |
 | | ⚠ **À NE PAS y attacher** : `hektor_contact_id` **est la clé primaire** de `app_contact_current`. La changer est un chantier à part — et **0 contrainte de clé étrangère** ne protège les 17 tables qui la pointent par convention | |
-| ⏳ **C.12** | **LA SORTIE DE CONFLIT POUR CONTACT ET RECHERCHE** — *le reste de C.1', repéré par Frédéric le 24/08*. C.1' n'a livré le bouton que pour les **annonces** (`app_annonce_pending_resolve` + bandeau). Contact et recherche sont **protégés** (purge retirée, marqueur corrigé) et **surveillés** (4 sondes), mais **sans geste possible depuis l'app** | **1 à 2 j** |
-| | ⚠ **En attendant, une saisie bloquée sur ces deux objets s'accumule sans pouvoir être classée.** Elle n'est pas perdue — c'est tout l'objet de C.1' — mais la sonde restera rouge jusqu'à ce que quelqu'un intervienne en base. **Se fait avec C.2b** (même objet, mêmes écrans) : le RPC existe, il s'agit de le décliner deux fois et d'accrocher le bandeau | |
+| ⏳ **C.12** | **LA SORTIE DE CONFLIT — POUR LES CONTACTS SEULEMENT** *(le reste de C.1')*. C.1' a livré le bouton pour les **annonces**. Les **contacts** sont protégés et surveillés, mais **sans geste possible depuis l'app** | **1 j** |
+| | ✅ **Les recherches n'en ont PAS besoin** — *relevé par Frédéric le 24/08, vérifié de bout en bout*. **C.3 a fermé la porte** : `push_search` est écrit à `null`, l'enfilage exige `push_search is not null` → **aucun travail créé** ; la montée en conflit exige un `push_job_id` → **jamais posé** ; et le worker ne marque que si `from_pending`. **Seules deux fonctions écrivent dans `app_search_pending`, toutes deux fermées par C.3.** Une recherche ne peut plus produire de conflit | |
+| | ⚠ **Les deux sondes recherche restent, et changent de rôle** : elles ne surveillent plus un risque, elles **témoignent que la porte reste fermée**. Si `data.recherche_conflit` sonne un jour, c'est que quelqu'un a réouvert C.3 | |
 | ⏳ **C.6** | **Le domicile de l'annonce** — la table « ce que l'app détient » + les 36 champs calculés à l'export *(ex-26bis-①)* | **1 à 2 j** |
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
