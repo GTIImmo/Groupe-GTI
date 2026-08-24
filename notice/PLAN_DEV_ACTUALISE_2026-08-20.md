@@ -358,7 +358,6 @@ moitié manquante de l'architecture finale.
 
 | | Tâche | Durée | Pourquoi maintenant |
 |---|---|---|---|
-| ⏳ **C.0** | **AUDIT : que ne peut-on PAS faire dans l'app ?** Croiser les 35 types de travaux avec ce qu'un négociateur fait dans une journée | **une demi-journée** | **C'est ce qui décide de la date de l'étape 2.** S'il leur manque un geste quotidien, ils rouvriront Hektor en cachette et la règle tombe |
 | ⏳ **C.3** | **Fermer la porte sortante des recherches** — marquer ce que l'app détient, faire descendre ces recherches-là *(ex-12, ex-22)* | **1 à 2 j** | **supprime d'un coup toute la famille 602197.** La modale n'exprime que 7 critères sur 12 : tant qu'on envoie, ça se reproduira. **La moitié est déjà faite** — la doublure existe |
 | ⏳ **C.1'** | **« UNE SAISIE NE SE PERD JAMAIS »** — *remplace l'ancienne C.1* | **2 à 3 j** | voir ci-dessous |
 | ⏳ **C.2a** | **Identité des contacts — la relecture**, pas le code | **une demi-journée** | 186 500 lignes, ~530 points de code. Une heure de lecture économise une semaine |
@@ -417,6 +416,7 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 
 | | Tâche | |
 |---|---|---|
+| ⏳ **E.0** | **AUDIT : que ne peut-on PAS faire dans l'app ?** Croiser les types de travaux avec ce qu'un négociateur fait dans une journée | **une demi-journée** — *déplacé ici le 24/08 sur décision de Frédéric*. Il était posé avant l'étape 2 ; il se fera **avant la coupure**. À ce moment-là la question n'est plus « quand basculer » mais « que reste-t-il d'impossible sans Hektor » |
 | ⏳ **E.1** | **19-R2 — RATTRAPAGE, LA VEILLE DE LA BASCULE** | ⚠️ **dernière occasion.** Après, plus personne ne crée de recherche dans Hektor |
 | ⏳ **E.2** | **BASCULE DES NÉGOCIATEURS SUR L'APP** *(ex-19bis)* | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | ⏳ **E.3** | Les workers deviennent invisibles *(ex-26)* | une fois l'avertissement éprouvé |
