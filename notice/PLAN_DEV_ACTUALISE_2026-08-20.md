@@ -56,6 +56,31 @@ Avant **chaque étape** et **avant tout code**, quatre phrases :
 
 Frédéric valide, **puis** on code. Jamais l'inverse. *« Je ne veux pas d'ambiguïté. »*
 
+### 📚 LES NOTES QUI FONT AUTORITÉ — rattachées le 24/08
+
+*L'audit du 24/08 a trouvé que **19 des 21 notes les plus récentes n'étaient citées nulle part
+dans ce plan**. C'est ce qui m'a fait réinventer, cinq jours plus tard, un travail déjà fait.
+Ce qui suit répare la cause, pas le symptôme.*
+
+| Note | Ce qu'elle tranche | Lue par |
+|---|---|---|
+| `METHODE_DE_TRAVAIL_2026-08-20` | **le contrat de travail** : lire, mesurer, expliquer, faire valider, prouver | **avant chaque tâche** |
+| `A1_CHAMPS_PROPRIETE_APP_2026-08-19` | **189 champs** que l'app possède · la règle « l'import n'a pas le droit de réécrire » · le mécanisme « c'est une soustraction » · **3 arbitrages en attente** | **C.4** |
+| `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20` | les 4 familles · **16 workers** sont le gisement réel · **7 sur 34 marchent déjà sans Hektor** · **3 seulement** dépendent vraiment de lui | **C.4** |
+| `AUDIT_IDENTITE_CONTACTS_2026-08-20` | ~530 points de code · 11 fonctions ambiguës · le préalable oublié | **C.2** |
+| `AUDIT_DATA_LOCALE_ET_SYNCHRO_2026-08-21` | le sens unique · le régime de chaque table · les 3 trous | **B, C.6, C.7** |
+| `AUDIT_ET_PLAN_REALISTE_2026-08-22` | l'état mesuré des 5 supports · les durées | **le calendrier** |
+| `AUDIT_SESSION_ET_PLAN_2026-08-24` | cet audit · la duplication · l'ordre corrigé | |
+| `ETUDE_HISTORIQUE_RECHERCHES_ACQUEREUR_2026-08-21` | pourquoi les recherches sont autonomes depuis le 19/06 | **C.3** |
+| `ETUDE_ORIGINE_CLE_RECHERCHE_2026-08-21` | un seul fabricant de nom · la doublure | *fait* |
+| `VISION_GLOBALE_DEV_INDEPENDANCE_2026-08-18` | la vision d'ensemble | |
+| `NOTE_PLAN_SAUVEGARDE_2026-08-18` | les 4 niveaux · pourquoi le niveau 3 est désactivé | **0.1, D** |
+
+> **Règle** : une tâche qui cite une note **la lit avant de commencer**. Une note qui n'est
+> citée nulle part est une note perdue.
+
+---
+
 ### 🗝 LES TROIS ÉTAPES — posées par Frédéric le 24/08
 
 *Ce n'est pas un détail d'organisation : **c'est ce qui décide de la moitié du travail
@@ -237,6 +262,7 @@ retour.** Deux précisions à ne jamais perdre de vue :
 | ✅ **0.7** | ~~**Auditer les fonctions appelables sans être connecté**~~ **FAIT le 24/08** — **85 SECURITY DEFINER, 81 ouvertes à la clé publique. 33 vérifient leur appelant, 48 non** | **la bonne nouvelle** : les 33 qui vérifient sont exactement celles qui font des dégâts — **toutes** les `app_console_create_*_job` *(supprimer une annonce, un contact, une recherche)*. Un visiteur ne pouvait pas déclencher de suppression |
 | | **12 fonctions de maintenance fermées** — balayages, recalculs, mises en file, alertes, `claim_next_job` | un visiteur pouvait appeler `app_bulk_recompute_chunk` en boucle et **charger l'instance à volonté** — ce qui l'a fait redémarrer le 21/08, mais involontairement. Vérifié : 401 à la clé publique, le worker passe toujours, **0 échec cron**, 21 sondes OK |
 | ⚠ | **DETTE ASSUMÉE** — 36 fonctions sans contrôle interne restent appelables sans être connecté | ce sont surtout des **lectures** que le front appelle. Les caractériser demande de lire 36 corps de fonction. **Connu, pas ignoré** |
+| ⚠ **0.8** | **LE CORRECTIF D'UNE LIGNE** — la suppression des lignes d'attente ne filtre pas le conflit : `delete from app_annonce_pending ... where j.status = 'done'`. Or **un blocage anti-écrasement marque le travail `done`** → la protection disparaît dans la minute | **c'est la cause exacte de 602197.** Et la règle prévue pour ça existe juste en dessous — `delete ... where conflict = true and updated_at < now() - interval '24 hours'` — **elle ne sert jamais**, la ligne est déjà partie. Ajouter `and p.conflict = false` à la première suppression rétablit une protection **déjà écrite** |
 
 ---
 
@@ -356,7 +382,8 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 |---|---|---|
 | ⏳ **C.2b** | **Identité des contacts — le code** *(ex-5)*. Le renommage `target_contact_id` → `hektor_contact_id` se fait DANS cette tâche | **1 à 2 sem.** — la plus grosse |
 | ⏳ **C.6** | **Le domicile de l'annonce** — la table « ce que l'app détient » + les 36 champs calculés à l'export *(ex-26bis-①)* | **1 à 2 j** |
-| ⏳ **C.4** | **Les workers, un par un** — statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **2 à 3 sem.** |
+| ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
+| | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
 | ⏳ **C.5** | Clé propre du **registre des affaires** · fiabiliser le **mandat des transactions** *(ex-17,18)* | ne plus le deviner dans le HTML |
 | ⏳ **C.7** | **Le serveur lit sa base**, plus le miroir *(ex-26bis-③)* | **2 à 3 j** |
 | ⏳ **C.8** | Le **calque** disparaît · la **barrière** *(un travail sans numéro Hektor attend)* *(ex-10,11)* | |
