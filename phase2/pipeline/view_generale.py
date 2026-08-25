@@ -149,8 +149,35 @@ detail_enrich AS (
                 LIMIT 12
             ) j
         ) AS images_preview_json,
-        json_extract(det.textes_json, '$[0].titre') AS texte_principal_titre,
-        json_extract(det.textes_json, '$[0].text') AS texte_principal_html,
+        -- C.14 25/08 : LE TITRE FRANCAIS, PAS LE PREMIER VENU.
+        -- Avant : json_extract(det.textes_json, '$[0].titre') -- il prenait le PREMIER
+        -- element du tableau, quelle que soit sa langue. Trouve par le test en direct du
+        -- 25/08 sur l'annonce 62774, dont Hektor range les textes ainsi :
+        --     [0] lang=en  (sans titre)   <- c'est celui-la qui etait lu
+        --     [1] lang=fr  titre="TEST C4 du 25-08 Villa Bellecour"
+        -- Le titre saisi dans l'app etait donc invisible, alors que Hektor l'avait bien
+        -- enregistre.
+        -- PORTEE REELLE, mesuree : 3 annonces actives sur 13 209. Le defaut ne se voit que
+        -- si le titre du LISTING (ann.titre) est vide, car il passe en premier dans le
+        -- COALESCE de titre_bien. Petit, mais faux.
+        -- On garde le repli sur $[0] : une annonce sans entree francaise doit continuer a
+        -- rendre ce qu'elle a.
+        COALESCE(
+            (SELECT json_extract(j.value, '$.titre')
+               FROM json_each(det.textes_json) j
+              WHERE lower(COALESCE(json_extract(j.value, '$.lang'), '')) = 'fr'
+                AND COALESCE(TRIM(json_extract(j.value, '$.titre')), '') <> ''
+              LIMIT 1),
+            json_extract(det.textes_json, '$[0].titre')
+        ) AS texte_principal_titre,
+        COALESCE(
+            (SELECT json_extract(j.value, '$.text')
+               FROM json_each(det.textes_json) j
+              WHERE lower(COALESCE(json_extract(j.value, '$.lang'), '')) = 'fr'
+                AND COALESCE(TRIM(json_extract(j.value, '$.text')), '') <> ''
+              LIMIT 1),
+            json_extract(det.textes_json, '$[0].text')
+        ) AS texte_principal_html,
         json_extract(det.raw_json, '$.ag_interieur.props.nbpieces.value') AS nb_pieces,
         json_extract(det.raw_json, '$.ag_interieur.props.NB_CHAMBRES.value') AS nb_chambres,
         json_extract(det.raw_json, '$.ag_interieur.props.surfappart.value') AS surface_habitable_detail,

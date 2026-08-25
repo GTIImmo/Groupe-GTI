@@ -2454,6 +2454,27 @@ const draftAnnonceStepMeta: Record<DraftAnnonceStepKey, { label: string; title: 
   },
 }
 
+// C.14 25/08 — LIRE LE CALQUE POUR UN CHAMP DE PREMIER NIVEAU.
+//
+// Le calque (app_optimistic_overlay) porte ce que l'app vient d'ecrire, avant que Hektor
+// ait confirme. Les RUBRIQUES le consultaient deja ; l'EN-TETE du cockpit, non -- il lisait
+// dossier.titre_bien en direct. Resultat, constate par le test en direct du 25/08 :
+// nouveau titre dans la rubrique, ancien titre dans l'en-tete, le fil d'Ariane et le
+// bandeau. LA FICHE SE CONTREDISAIT ELLE-MEME.
+//
+// Ce n'etait pas une regression : le cockpit V2 est arrive apres (17/07) et son en-tete a
+// ete ecrit en lisant la donnee, comme le faisait l'ancienne fiche. Le chantier
+// « overlay-first » avait ete branche ecran par ecran, et celui-la avait ete oublie.
+function optimisticOverlayValue(detail: DossierDetailPayload, key: string): string | null {
+  const raw = (detail as { app_optimistic_overlay?: unknown }).app_optimistic_overlay
+  if (!raw) return null
+  const overlay = typeof raw === 'object'
+    ? (raw as Record<string, unknown>)
+    : parseJson<Record<string, unknown>>(raw as string, {})
+  const value = overlay?.[key]
+  return value != null && String(value).trim() !== '' ? String(value) : null
+}
+
 function rawDetailProp(detail: DossierDetailPayload, group: string, key: string) {
   // Tier 2 — calque optimiste : si le champ vient d'être édité (RPC), on affiche
   // sa valeur tout de suite, sans attendre le worker. Le read-through reconstruira
@@ -22524,7 +22545,9 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
   const currentTab = CK_RUBRIQUES.find((r) => r.key === activeTab) ?? CK_RUBRIQUES[0]
   const heroPhoto = props.images[0]?.url ?? dossier.photo_url_listing ?? null
-  const heroTitle = dossier.titre_bien || props.address || dossier.numero_dossier || 'Annonce'
+  // C.14 : le calque d'abord, comme dans les rubriques.
+  const heroTitle = optimisticOverlayValue(props.detail, 'titre')
+    || dossier.titre_bien || props.address || dossier.numero_dossier || 'Annonce'
   const prixM2 = (() => {
     const s = Number((props.detail as { surface_habitable_detail?: string | number }).surface_habitable_detail)
     const p = Number(dossier.prix)
@@ -23950,7 +23973,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <button type="button" className="fa-ck-wbc-seg" onClick={props.onBack} title="Retour aux annonces">Annonces</button>
               <span className="fa-ck-wbc-sep" aria-hidden="true">›</span>
               <button type="button" className="fa-ck-wbc-seg fa-ck-wbc-doss" onClick={() => setActiveTab('synthese')} title="Cockpit du dossier">
-                {dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}{dossier.titre_bien ? ` · ${dossier.titre_bien}` : ''}
+                {/* C.14 : le fil d'ariane lit le calque, comme l'en-tete juste au-dessus. */}
+                {dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}{heroTitle && heroTitle !== 'Annonce' ? ` · ${heroTitle}` : ''}
               </button>
               {activeTab !== 'synthese' ? (
                 <span className="fa-ck-wbc-tail" style={{ ['--c']: currentTab.color } as CSSProperties}>
