@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**18 faites · 18 restantes · 4 supprimées** · *C.2b, C.12, C.6 et C.7 faites le 25/08*
+**19 faites · 17 restantes · 4 supprimées** · *C.2b, C.12, C.6, C.7 et C.5 faites le 25/08*
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
@@ -143,9 +143,22 @@ archiver/désarchiver, créer contact et mandant, **affectation du négociateur 
 
 **Interrupteur : la même liste de champs** — c'est ici que se répondent les 3 réglages.
 
-## 8 · C.5 — registre d'affaires et mandat des transactions · *indépendante*
+## 8 · C.5 — registre d'affaires et mandat des transactions · ✅ **FAIT le 25/08**
 
-Clé propre du registre d'affaires ; cesser de deviner le mandat **dans le HTML de Hektor**.
+**La moitié était déjà faite** : `app_affaire_ledger` porte sa propre clé depuis le
+20/08. Vérifié avant de refaire.
+
+Restait le mandat des transactions. Le worker le lisait dans le **HTML de Hektor** ;
+il le résout maintenant depuis le **numéro que l'app envoie déjà**.
+
+> ❗ **L'ordre de priorité était faux** — le HTML passait **avant** le choix explicite de
+> l'app. Même quand l'app disait quel mandat, Hektor gagnait.
+>
+> ℹ **23 768 annonces ont un seul mandat, 24 en ont deux** — c'est là que deviner est faux,
+> sur des opérations irréversibles. Et sur les **23 816 couples**, **zéro est ambigu** :
+> la résolution aboutit à 100 %.
+>
+> ⚠ **Redemarrage des 4 services worker nécessaire** pour que ça prenne effet.
 
 ## 9 · C.11 — ménage des tables mortes
 
