@@ -1,0 +1,85 @@
+-- =====================================================================
+-- Tache C.2b -- L'IDENTITE DES CONTACTS
+-- Date : 2026-08-25
+-- Migrations : `c2b_ajouter_app_contact_id_aux_tables_contact`
+--              `c2b_fonction_de_recopie_du_numero_de_contact`
+--
+-- CE QUE C.2a AVAIT ETABLI, et qui commande la forme de ce chantier :
+--   * il n'existait AUCUN app_contact_id nulle part -- le contact n'etait identifie
+--     que par le numero de Hektor ;
+--   * pire : hektor_contact_id EST LA CLE PRIMAIRE de app_contact_current. Pour les
+--     annonces, app_dossier_id existait deja a cote ; ici, rien ;
+--   * 0 contrainte de cle etrangere ne protege les 18 tables qui pointent le contact.
+--     Elles le font PAR CONVENTION SEULE ;
+--   * et le verrou du 20/08 etait leve : le nom de recherche est fige, un seul
+--     fabricant, local -- ajouter une colonne ne peut plus deplacer une cle.
+--
+-- LE GESTE, en trois lots. AUCUNE valeur existante n'est modifiee : on AJOUTE.
+--
+-- LOT 1 -- LA SERIE NAIT LOCALEMENT (phase2/identite/registre_contacts.py)
+--   Table app_contact, patron d'app_dossier a l'identique :
+--       app_contact_id     INTEGER PRIMARY KEY AUTOINCREMENT
+--       hektor_contact_id  TEXT NULLABLE       <- vide si le contact nait dans l'app
+--       absent_depuis      TEXT                <- on ne supprime JAMAIS
+--       UNIQUE(hektor_contact_id)
+--   355 687 numeros, serie 1..355 687, tous distincts, 0 contact sans numero.
+--   Le script REFUSE d'ecrire si la source a un numero vide ou en double : on ne
+--   batit pas une identite sur des donnees douteuses.
+--   Mise sous sauvegarde critique dans le meme lot -- la perdre orphelinerait
+--   202 404 lignes que rien ne protege.
+--
+-- LOT 2 -- SUPABASE RECOIT LA SERIE, IL NE LA FABRIQUE PAS
+--   Regle etablie le 19/08 apres la divergence des numeros d'annonce : UNE SEULE
+--   SERIE. Deux series independantes divergeraient.
+--   (a) colonne app_contact_id ajoutee sur les 19 tables portant hektor_contact_id
+--       (18 + app_pending_resolution, creee la veille par C.1'). Nullable, sans
+--       defaut -> ajout instantane, aucune reecriture de table.
+--       4 index, sur les seules tables ou le volume le justifie.
+--   (b) app_contact_id_backfill(payload jsonb) recopie le mapping.
+--       POURQUOI UNE FONCTION ET PAS UN UPSERT PostgREST : un upsert INSERERAIT une
+--       ligne fantome pour tout identifiant que Supabase ne connait pas. Le local a
+--       355 687 contacts, Supabase 57 553 -- le cas est MAJORITAIRE. Cette fonction
+--       n'a aucun chemin d'insertion, et elle est idempotente.
+--       EXECUTE retire a PUBLIC d'abord (lecon 0.7), puis a anon et authenticated ;
+--       accorde au seul service_role.
+--   (c) 57 553 transmis par lots de 2 000 avec une pause -- la descente du 22/08
+--       avait sature Supabase au point qu'il fallait le redemarrer.
+--   (d) les 17 autres tables remplies PAR JOINTURE DANS POSTGRES, une requete
+--       chacune, aucun va-et-vient : 144 985 lignes.
+--
+-- LOT 3 -- ON OBSERVE, ON NE BASCULE RIEN
+--   Sonde data.contact_sans_numero, seuil 150 et non 0 : les contacts crees dans la
+--   journee arrivent dans Supabase AVANT d'entrer dans la base locale (qui se refait
+--   la nuit). Un seuil a 0 sonnerait chaque jour pour un decalage normal.
+--   Ce qu'elle detecte vraiment : que le registre ou sa recopie ont cesse de tourner.
+--
+-- CE QUE LE CHANTIER A REVELE, et qui n'etait pas au plan :
+--   LE REGISTRE DOIT SE MAINTENIR, PAS SEULEMENT SE CREER. Le jour meme de sa
+--   creation, 15 contacts crees la veille etaient deja dans Supabase et pas encore
+--   en local. Le script est donc devenu incremental (neufs / revenus / disparus) et
+--   il est branche dans le run de nuit, juste apres build_contacts_layer qui
+--   fabrique sa source. La recopie vers Supabase suit le push contacts.
+--
+-- VERIFIE, sur la base reelle :
+--   57 542 / 57 557 fiches contact portent leur numero ; les 15 restantes sont les
+--       creations de la veille, elles entreront cette nuit.
+--   144 985 lignes remplies sur les 4 grosses tables + les petites.
+--   0 INCOHERENCE : aucune ligne ne porte un numero different de celui de sa fiche
+--       contact, sur les quatre tables controlees.
+--   0 numero ne sert a deux contacts differents.
+--   135 lignes restent sans numero parce que leur contact est NEUF (se resout cette
+--       nuit) et 35 sont de vrais ORPHELINS, tous dans app_search_count_high_water :
+--       des compteurs qui pointent un contact qui n'existe plus. C'est exactement ce
+--       que C.2a annoncait -- sans cle etrangere, les orphelins existent sans que
+--       rien ne le signale. Table de compteurs : signale, pas corrige.
+--
+-- CE QUE CE CHANTIER NE FAIT PAS, ET C'EST VOULU :
+--   * la cle primaire de app_contact_current N'EST PAS TOUCHEE. Second chantier.
+--   * PERSONNE NE LIT ENCORE app_contact_id. C'est une doublure : on observe avant
+--     de commuter, comme pour app_dossier, app_affaire_ledger et app_search_registry.
+--
+-- RETOUR ARRIERE : alter table ... drop column app_contact_id (x19) ;
+--                  drop function app_contact_id_backfill ;
+--                  DROP TABLE app_contact (local).
+--                  Aucune valeur existante n'a ete modifiee.
+-- =====================================================================

@@ -321,6 +321,22 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 0,
     },
+    # C.2b 25/08 -- le numero de contact propre a l'app.
+    # PAS a zero, et c'est voulu : les contacts crees dans la journee arrivent dans
+    # Supabase AVANT d'entrer dans la base locale (qui se refait la nuit). Le 25/08 il y
+    # en avait 15. Un seuil a 0 sonnerait chaque jour pour un decalage normal -- et une
+    # sentinelle qui sonne quand tout va bien cesse d'etre lue.
+    # CE QU'ELLE DETECTE VRAIMENT : que le registre ou sa recopie ont cesse de tourner.
+    # Au-dela de 150, ce n'est plus le decalage d'une journee.
+    {
+        "key": "data.contact_sans_numero",
+        "severity": "warning",
+        "label": "Contacts sans numero app (registre C.2b)",
+        "table": "app_contact_current",
+        "params": {"app_contact_id": "is.null"},
+        "rule": "absolute",
+        "max": 150,
+    },
 ]
 
 # Surfaces publiques a sonder depuis l'exterieur (up-check HTTP simple).

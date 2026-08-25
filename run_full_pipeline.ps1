@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$PushAndroidFront,
     [switch]$SkipAndroid,
     [switch]$SkipContactDetails,
@@ -296,6 +296,15 @@ Invoke-Step -Label "phase2 build contacts layer" -Arguments @(
     "--no-reports"
 ) -WorkerKey "phase2.contacts_layer"
 
+# C.2b 25/08 -- le registre d'identite des contacts (app_contact).
+# ICI et pas ailleurs : il se nourrit de app_contact_current, que l'etape juste au-dessus
+# vient de reconstruire. Un registre qui ne se maintient pas rote des le lendemain --
+# constate le jour meme de sa creation : 15 contacts crees la veille etaient deja dans
+# Supabase et pas encore en local. Idempotent : sans nouveaute il affiche 0/0/0.
+Invoke-Step -Label "phase2 registre identite contacts" -Arguments @(
+    "phase2\identite\registre_contacts.py"
+) -WorkerKey "phase2.registre_contacts"
+
 Invoke-Step -Label "phase2 quality checks" -Arguments @(
     "phase2\checks\run_quality_checks.py"
 ) -WorkerKey "phase2.quality_checks"
@@ -459,6 +468,13 @@ if ($PushContactsToSupabase) {
         $contactsPushArgs += "--include-archived-searches"
     }
     Invoke-Step -Label "phase2 push contacts to supabase" -Arguments $contactsPushArgs -WorkerKey "supabase.push_contacts"
+
+    # C.2b 25/08 -- Supabase RECOIT la serie, il ne la fabrique jamais (regle du 19/08,
+    # etablie apres la divergence des numeros d'annonce). Apres le push contacts, donc :
+    # les fiches neuves sont arrivees, on peut leur poser leur numero.
+    Invoke-Step -Label "phase2 pousser numeros de contact" -Arguments @(
+        "phase2\identite\pousser_numeros_contact.py"
+    ) -WorkerKey "supabase.push_contact_ids"
 }
 else {
     Write-RunLog "SKIP phase2 push contacts to supabase"
