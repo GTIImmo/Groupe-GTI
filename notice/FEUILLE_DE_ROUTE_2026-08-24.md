@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**19 faites · 17 restantes · 4 supprimées** · *C.2b, C.12, C.6, C.7 et C.5 faites le 25/08*
+**19 faites · 18 restantes · 4 supprimées** · *C.2b, C.12, C.6, C.7 et C.5 faites le 25/08 · **C.13 ajoutée** (chantier orphelin retrouvé)*
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
@@ -160,9 +160,23 @@ il le résout maintenant depuis le **numéro que l'app envoie déjà**.
 >
 > ⚠ **Redemarrage des 4 services worker nécessaire** pour que ça prenne effet.
 
-## 9 · C.11 — ménage des tables mortes
+## 9 · C.13 — la **clôture de mandat** dans l'app
 
-## 10 · E.0 — **que ne peut-on PAS faire dans l'app ?** · **½ j**
+*Cadrage **déjà validé le 30/07**, dev non commencé.* `PLAN_DEV_MANDAT_CLOTURE.md`
+
+**Ce chantier n'était cité nulle part dans le plan** — trouvé le 25/08 en cherchant autre
+chose. Déclencheurs, motifs Hektor et arbitrages sont verrouillés depuis un mois.
+
+**Bonne nouvelle** : le formulaire Hektor cible le mandat par son **ID interne**, et on a
+prouvé le 25/08 que `mandat_source_id` **est** cet identifiant — 23 814 / 23 814.
+Ton registre peut donc remplacer la liste de Hektor le jour où elle disparaît.
+
+> ℹ **Échu ≠ clos** : un mandat échu reste « en cours », seule une alerte part. D'où
+> **22 749 échus non clos et 85 clos** — c'est la règle, pas un défaut.
+
+## 10 · C.11 — ménage des tables mortes
+
+## 11 · E.0 — **que ne peut-on PAS faire dans l'app ?** · **½ j**
 
 Croiser ce qu'un négociateur fait dans sa journée avec ce que l'app sait faire.
 **En fin de piste**, parce qu'elle se nourrit de ton usage réel.

@@ -9756,6 +9756,68 @@ function resolveHektorClosureMandat(options, payload) {
   );
 }
 
+// C.5-bis 25/08 -- LA CLOTURE CESSE DE DEPENDRE DU LIBELLE DE HEKTOR.
+//
+// LE DEFAUT. resolveHektorClosureMandat retrouve le mandat par son numero en lisant le
+// TEXTE des options du formulaire :
+//     const numMatch = text.match(/Mandat\s*n[deg\s]*0*([0-9]+)/i)
+// Si Hektor change le libelle -- « Mandat 17925 » sans le « n° », un suffixe, autre chose --
+// le numero extrait devient vide, la correspondance echoue, et la cloture REFUSE de
+// s'executer. Le ciblage repose donc sur une formulation d'interface, pas sur une donnee.
+//
+// LE REGISTRE SAIT LE FAIRE, ET C'EST PROUVE. Mesure du 25/08 :
+// app_mandat_register_current.mandat_source_id EST hektor_mandat_id -- 23 814 / 23 814,
+// numero concordant a 100 %. Et le plan de cloture le dit lui-meme : « id_mandat (SELECT)
+// cible le mandat via son ID INTERNE (ex. 9887/553), PAS le numero ».
+//
+// CE QU'ON NE FAIT SURTOUT PAS. La cloture est IRREVERSIBLE cote Hektor : reactiver
+// l'annonce ne dec-lot pas le mandat. On n'utilise donc JAMAIS le registre pour viser un
+// mandat que Hektor n'offre PAS dans sa liste -- on leve, en nommant les deux versions.
+// Le registre sert a RETROUVER l'option, jamais a s'en passer.
+//
+// ON N'INTERROGE QUE PAR LE COUPLE (annonce, numero) : 342 identifiants de mandat sont
+// partages entre annonces differentes -- Hektor reutilise les numeros bas.
+async function resoudreMandatAClore(job, annonceId, options, payload) {
+  try {
+    return resolveHektorClosureMandat(options, payload);
+  } catch (err) {
+    const brut = String(payload.numero_mandat || payload.numeroMandat || "").trim();
+    const numero = brut.replace(/^0+/, "");
+    if (!numero) throw err;
+
+    let rows = null;
+    for (const candidat of [numero, brut].filter((v, i, a) => v && a.indexOf(v) === i)) {
+      try {
+        rows = await supabaseRequest(
+          `app_mandat_register_current?select=mandat_source_id` +
+          `&hektor_annonce_id=eq.${encodeURIComponent(String(annonceId))}` +
+          `&numero_mandat=eq.${encodeURIComponent(candidat)}&limit=2`);
+      } catch (_) { rows = null; }
+      if (Array.isArray(rows) && rows.length === 1) break;
+      rows = null;
+    }
+    // Ambigu ou introuvable : on rend l'erreur d'origine, qui explique deja le probleme.
+    if (!Array.isArray(rows) || rows.length !== 1 || !rows[0] || !rows[0].mandat_source_id) throw err;
+
+    const id = String(rows[0].mandat_source_id);
+    const option = options.find((o) => o.value === id);
+    if (!option) {
+      throw new Error(
+        `Mandat n${String.fromCharCode(176)} ${numero} resolu en id ${id} par le registre, ` +
+        `mais Hektor ne le propose PAS dans sa liste (${
+          options.map((o) => `${o.numero || "?"}=${o.value}`).join(", ") || "aucune option"
+        }). Cloture IRREVERSIBLE : on n'insiste pas.`);
+    }
+    await logJob(job.id, "cloture_mandat", "done",
+      "Mandat a clore retrouve par le REGISTRE : le libelle Hektor n'a pas permis de le cibler", {
+        hektor_annonce_id: annonceId,
+        numero_mandat: brut,
+        mandat_source_id: id,
+      });
+    return option;
+  }
+}
+
 async function submitHektorMandatClosure(job, annonceId, payload, targetMandat) {
   const motif = normalizeHektorClosureMotif(payload);
   const prix = cleanMoneyValue(
@@ -9813,7 +9875,7 @@ function hektorSaleWantsMandatClosure(payload) {
 // (l'annonce reste au statut Vendu pose par la transaction createVente).
 async function closeHektorMandatAfterSale(job, annonceId, payload) {
   const ctx = await fetchHektorClosureContext(job, annonceId);
-  const targetMandat = resolveHektorClosureMandat(ctx.options, payload);
+  const targetMandat = await resoudreMandatAClore(job, annonceId, ctx.options, payload);
   return submitHektorMandatClosure(job, annonceId, {
     ...payload,
     close_etat: "choiceVendu",
@@ -9823,7 +9885,7 @@ async function closeHektorMandatAfterSale(job, annonceId, payload) {
 
 async function submitHektorClosedStatus(job, annonceId, config, payload) {
   const ctx = await fetchHektorClosureContext(job, annonceId);
-  const targetMandat = resolveHektorClosureMandat(ctx.options, payload);
+  const targetMandat = await resoudreMandatAClore(job, annonceId, ctx.options, payload);
   const closure = await submitHektorMandatClosure(job, annonceId, payload, targetMandat);
   // Flip statut annonce : Mandat clos (6) + diffusion coupee (config.diffusable="0"),
   // sans archivage -> equivaut au bouton Hektor "Enregistrer & laisser actif".
