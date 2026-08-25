@@ -241,8 +241,8 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   PISTE 1, le code       C.2b C.5 C.6 C.7 C.12 [FAITS] -> C.8 -> C.9
-                          -> C.4 -> C.11 -> E.0
+   PISTE 1, le code       C.2b C.5 C.6 C.7 C.12 [FAITS] -> C.4 -> C.9 -> C.13
+                          -> C.11 -> E.0 [FAIT le 25/08]
                                                      4 a 6 semaines
                           SE CONSTRUIT MAINTENANT, dormant. N'attend personne.
 
@@ -500,7 +500,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ✅ **C.5** | ~~**Registre d'affaires et mandat des transactions**~~ **FAIT le 25/08** — le worker résout le mandat depuis le **numéro que l'app envoie déjà**, l'ordre de priorité est corrigé, et **le repli est journalisé** | **FAIT** | **La moitié était déjà faite** : `app_affaire_ledger` porte `app_affaire_id` et `app_dossier_id` depuis le 20/08. Vérifié **avant** de refaire |
 | | ❗ **L'ordre de priorité était faux** : `payload.mandat || HTML || selectedMandat`. **Le HTML de Hektor passait avant le choix explicite de l'app** — donc même quand l'app disait quel mandat, Hektor gagnait | |
 | | ℹ **Mesuré** : sur 12 travaux depuis le 21/05, l'app n'a **jamais** fourni le mandat — mais elle envoie `numero_mandat` à chaque fois. Et sur les **23 816 couples** (annonce, numéro), **zéro est ambigu** : la résolution aboutit à 100 %. *23 768 annonces ont un seul mandat, **24 en ont deux** — c'est là que deviner est faux, sur des opérations irréversibles* | |
-| ⏳ **C.8** | Le **calque** disparaît · la **barrière** *(un travail sans numéro Hektor attend)* *(ex-10,11)* | |
+| ❌ **C.8** | ~~Le **calque** disparaît · la **barrière**~~ **DISSOUTE le 25/08, après mesure** — ses deux moitiés n'étaient pas des tâches | |
+| | **2.5, le calque** : `app_edit_annonce_optimistic` **écrit déjà dans la fiche** (`app_dossier_current` + son détail) et garde une photo d'avant dans la file. Le « calque » n'est pas un objet à supprimer : c'est le **statut provisoire** de ce que l'app écrit. Il cesse d'être provisoire **quand le contrat de C.7 cesse d'être vide** — **c'est une bascule d'interrupteur, pas un développement**. Et le faire maintenant, contrat vide, retirerait l'affichage instantané **sans** donner l'autorité à l'app : une régression | |
+| | **2.6, la barrière** : **aucun travail n'échoue faute de numéro Hektor** — 456 travaux sans numéro, **0 en erreur**, et ce sont des travaux qui n'en ont pas besoin *(363 rafraîchissements de contact, 26 créations de brouillon)*. Le cas naît avec **C.9** : la barrière y est **fondue** | |
 | ⏳ **C.9** | La **création** part de l'app *(ex-23,24,25)* | **1 à 2 sem.** — après C.7 |
 | | ℹ *Le patron « naître sans numéro Hektor » est **déjà dans le schéma** — `app_dossier.id` autoincrement + `hektor_annonce_id` **nullable** + UNIQUE. Il n'a jamais servi (0 ligne sur 56 894) : la création optimiste est derrière un drapeau éteint. C'est ici qu'il s'exerce pour la première fois* | |
 | ⏳ **C.13** | **LA CLÔTURE DE MANDAT DANS L'APP** — *cadrage **déjà validé** le 30/07, dev non commencé* · `PLAN_DEV_MANDAT_CLOTURE.md` · drapeau `VITE_APP_MANDAT_CLOTURE_ENABLED` (éteint) | **à chiffrer** |
