@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**16 faites · 20 restantes · 4 supprimées** · *C.2b et C.12 faites le 25/08*
+**17 faites · 19 restantes · 4 supprimées** · *C.2b, C.12 et C.6 faites le 25/08*
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
@@ -77,16 +77,21 @@ posé dans **les deux versions** de la fiche contact.
 > sur la ligne d'attente, que seule une ligne déjà rattrapée porte. Elle le résout
 > désormais à la source.
 
-## 3 · C.6 — le domicile de l'annonce · **1 à 2 j**
+## 3 · C.6 — le domicile de l'annonce · ✅ **FAIT le 25/08**
 
-**Ce que ça fait.** La base locale ne contient de l'annonce que **10 colonnes d'identité** ; tout
-le contenu vit dans le miroir. On crée les tables propres de l'annonce, plus les 36 champs
-calculés à l'export.
+Table `app_annonce_champ_app`, clé/valeur, **jamais reconstruite**. Branchée en 3/3 de
+la descente, sous sauvegarde critique.
 
-**Pourquoi.** Sans ça, il n'y a **rien à réconcilier** à l'étape 4. Et le jour de la coupure, le
-miroir disparaît — le contenu des annonces avec lui.
+**Pourquoi elle existe** : `view_generale.py` fait `DROP TABLE` puis `CREATE TABLE AS`
+chaque nuit. Une valeur écrite par l'app **ne survivrait pas à 05:30**. Cette table est le
+seul endroit où elle survit.
 
-**Interrupteur :** qui **lit** la table. On l'écrit ; personne ne la lit encore.
+**Mesuré : 0 divergence sur ~581 000 comparaisons** — l'app ne détient rien sur les annonces
+aujourd'hui, ce qui est cohérent avec le fait que personne ne s'en sert.
+
+> ⚠ **Quatre faux écarts ont dû être éliminés avant d'y arriver** — et c'est l'essentiel du
+> travail : `NULL` contre `0.0` **(7 143 !)**, entier `0` contre texte `'0'` **(23)**, la date
+> sentinelle `0000-00-00`, et **un jour de décalage entre les deux photos (89)**.
 
 ## 4 · C.7 — le miroir devient un **témoignage** · **2 à 3 j**
 

@@ -239,8 +239,8 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   PISTE 1, le code       C.2b [FAIT] -> C.12 [FAIT] -> C.6 -> C.5 -> C.7 -> C.8
-                          -> C.9 -> C.4 -> C.11 -> E.0
+   PISTE 1, le code       C.2b [FAIT] -> C.12 [FAIT] -> C.6 [FAIT] -> C.5 -> C.7
+                          -> C.8 -> C.9 -> C.4 -> C.11 -> E.0
                                                      4 a 6 semaines
                           SE CONSTRUIT MAINTENANT, dormant. N'attend personne.
 
@@ -248,7 +248,7 @@ protège le moins.)*
    PISTE 3, la coupure    quand A.1/A.2/A.3 sont faits.   A ZERO.
 
    Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5
-                    C.1' C.2a C.2b C.3 C.12
+                    C.1' C.2a C.2b C.3 C.6 C.12
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -488,7 +488,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ✅ **C.12** | ~~**La sortie de conflit — contacts**~~ **FAIT le 25/08** — `app_contact_edit_status` + `app_contact_pending_resolve` · bandeau à deux causes posé dans **les DEUX versions** de la fiche | **FAIT** | Un défaut trouvé **par l'essai, avant mise en service** : la trace lisait le numéro sur la ligne d'attente, que seule une ligne déjà rattrapée porte. Elle le résout désormais **à la source** |
 | | ✅ **Les recherches n'en ont PAS besoin** — *vu par Frédéric, vérifié de bout en bout*. C.3 a fermé la porte : aucun travail créé, aucun `push_job_id`, donc **aucun conflit possible**. Le bouton aurait été mort-né | |
 | | ℹ **Nom du paramètre** : `target_hektor_contact_id`, pas `target_contact_id`. Le renommage des 11 fonctions ambiguës reste **rayé**, mais pour des fonctions **neuves** le nom clair ne coûte rien. *On arrête d'en créer des ambiguës* | |
-| ⏳ **C.6** | **Le domicile de l'annonce** — la table « ce que l'app détient » + les 36 champs calculés à l'export *(ex-26bis-①)* | **1 à 2 j** |
+| ✅ **C.6** | ~~**Le domicile de l'annonce**~~ **FAIT le 25/08** — table `app_annonce_champ_app`, clé/valeur, **jamais reconstruite** · branchée en 3/3 de la descente · sous sauvegarde critique | **FAIT** | Le plan annonçait *36 champs calculés à l'export* : c'est **13**, presque tous techniques. Et le paquet de détail est un blob de 134 clés dont **l'app n'en écrit que 7** |
+| | ❗ **Le vrai problème n'était pas la conservation mais l'ÉCRITURE** : `view_generale.py` fait `DROP TABLE` puis `CREATE TABLE AS` — une valeur écrite par l'app **ne survivrait pas à 05:30**. Cette table est le seul endroit où elle survit | |
+| | ℹ **Résultat mesuré : 0 divergence sur ~581 000 comparaisons.** Mais **quatre faux écarts** ont dû être éliminés d'abord — `NULL` vs `0.0` *(7 143 !)*, entier `0` vs texte `'0'` *(23, piège GLOB)*, la date sentinelle `0000-00-00`, et **un jour de décalage** *(89)*. C'est ce dernier qui dicte le placement : les deux côtés doivent être de la même heure | |
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
 | ⏳ **C.5** | Clé propre du **registre des affaires** · fiabiliser le **mandat des transactions** *(ex-17,18)* | ne plus le deviner dans le HTML |
