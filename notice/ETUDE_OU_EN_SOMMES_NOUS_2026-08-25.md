@@ -104,7 +104,7 @@ Et il faut d'abord dire ce qui **marche**, parce que c'est beaucoup.
 **Ce n'est pas une maquette.** Le chemin app → worker → Hektor fonctionne, et il n'a jamais
 échoué.
 
-## Ce qui manque VRAIMENT — les quatre points
+## Ce qui manque vraiment — et **un des quatre points était une erreur de ma part**
 
 ### ① Il n'y a que 5 comptes actifs, dont **2 commerciaux**
 
@@ -164,7 +164,7 @@ La bascule n'est pas une perte, c'est un échange.
 
 ```
    1. TOUT DANS HEKTOR (aujourd'hui)        -> fonctionne, 0 sonde critique
-   2. TOUT DANS L'APP                        -> 4 manques, dont 1 seul est du code
+   2. TOUT DANS L'APP                        -> 3 manques, AUCUN n'est du code
    3. LA COUPURE                             -> portails + signature, a zero
 ```
 
@@ -173,9 +173,11 @@ La bascule n'est pas une perte, c'est un échange.
 | | | Qui |
 |---|---|---|
 | **1** | **Créer les comptes** des négociateurs | toi, une heure |
-| **2** | **Ouvrir le changement de statut aux négociateurs** *(offre, compromis, vente)* | moi — c'est **C.4** |
-| **3** | **Éprouver la création de mandat** deux ou trois fois de plus | toi + moi |
-| **4** | **T'en servir toi-même une semaine** avant de leur ouvrir | toi |
+| **2** | **Éprouver la création de mandat** deux ou trois fois de plus | toi + moi |
+| **3** | **T'en servir toi-même une semaine** avant de leur ouvrir | toi |
+
+*(Le point que j'avais mis en 2 — « ouvrir le changement de statut aux négociateurs » —
+**n'existe pas** : c'est une règle de validation voulue. Voir ② ci-dessus.)*
 
 Le point **4** n'est pas une formalité : *tout ce qu'on sait de « l'app comme auteur » est
 mesuré sur une app que personne n'exerce.* Le journal des doublures est plat à 45 depuis
