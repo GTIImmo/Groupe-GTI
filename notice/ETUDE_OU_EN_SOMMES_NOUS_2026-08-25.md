@@ -80,7 +80,7 @@ l'app aurait à absorber, et il ne change pas selon l'endroit où on saisit.
 
 # QUESTION 2 — tout le monde bascule sur l'app demain
 
-## La réponse : **presque, mais pas demain.** Quatre choses manquent.
+## La réponse : **presque, mais pas demain.** Trois choses manquent — *et aucune n'est du code*
 
 Et il faut d'abord dire ce qui **marche**, parce que c'est beaucoup.
 
@@ -117,16 +117,28 @@ Tes portefeuilles montrent **une douzaine de négociateurs** *(Sylvie 2 181 anno
 1 878, Nicolas 1 522, Christèle 1 330, Arnaud 1 122, Nadège, Stéphanie, Tatiana, Mélanie,
 Aline…)*. **Il manque une dizaine de comptes.**
 
-### ② Le cœur du métier est **réservé aux admins**
+### ② ~~Le cœur du métier est réservé aux admins~~ — **JE ME SUIS TROMPÉ**
 
-```jsx
-   onChangeAnnonceStatus = {isAdmin ? … : undefined}    // offre, compromis, vente
-   onArchiveAnnonce      = {isAdmin ? … : undefined}
-   onDeleteAnnonce       = {isAdmin ? … : undefined}
+*Corrigé par Frédéric le 25/08, quelques heures après avoir écrit cette étude.*
+
+J'avais fait du bridage admin *(passer une offre, un compromis, une vente)* **le manque qui
+sépare de l'étape 2**. C'est faux : **ce bridage est VOULU.**
+
+Le négociateur **ne décide pas seul** — il fait une **demande de validation** à l'admin. C'est
+un contrôle métier, pas une limite technique. Et le circuit existe, il est éprouvé :
+
+```
+   demande_diffusion  ·  demande_baisse_prix  ·  demande_annulation_mandat
+   9 demandes  ->  8 acceptees et traitees  ·  1 en attente
 ```
 
-**Un négociateur ne peut pas passer une offre, un compromis ou une vente depuis l'app.**
-C'est le geste le plus important de son métier, et il n'y a pas accès. *(C'est la tâche C.4.)*
+Trois profils sont déjà distingués dans l'app : **admin**, **commercial**, **administratif**.
+
+> **Leçon** : j'ai lu une **règle métier** comme une **lacune**, parce que je regardais le code
+> sans connaître l'intention. La question « pourquoi est-ce fermé ? » aurait dû précéder la
+> conclusion « il manque quelque chose ».
+
+*(La révision des droits est notée comme **F.1**, après la coupure.)*
 
 ### ③ La création de mandat n'a été éprouvée **qu'une fois**
 
@@ -175,5 +187,8 @@ trois jours pour cette raison.
 **54 737 travaux sans une seule erreur**, et le volume réel à absorber — 15 à 30 annonces et
 autant de contacts par jour — est **dix fois inférieur** à ce que le worker traite déjà.
 
-**Ce qui n'est pas prêt, ce n'est pas la plomberie. C'est la couverture fonctionnelle d'un
-seul geste** — passer une offre, un compromis, une vente — **et les comptes.**
+**Ce qui n'est pas prêt, ce n'est pas la plomberie — et ce n'est pas non plus la couverture
+fonctionnelle**, contrairement à ce que j'avais conclu. **Ce sont les comptes, et l'usage.**
+
+Une dizaine de comptes à créer, la création de mandat à éprouver deux ou trois fois, et une
+semaine d'usage réel par Frédéric. **Aucun de ces trois points n'est du développement.**

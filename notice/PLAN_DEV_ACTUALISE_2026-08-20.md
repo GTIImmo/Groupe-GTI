@@ -497,6 +497,7 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
 | | ❗ **LE MANDAT D'UNE TRANSACTION** *(enquête du 25/08, `NOTE_CHAINE_DES_MANDATS_2026-08-25`)*. **a)** Quand le négociateur changera un statut **depuis l'app**, celle-ci doit **transmettre le numéro de mandat de la fiche** — pas laisser le worker chercher. La résolution existe déjà côté worker *(C.5)* ; il suffit que le formulaire l'envoie. *La modale actuelle est **réservée aux admins** : `isAdmin ? openStatusChangeModal : undefined`* | |
 | | ⚠ **b)** **Si un négociateur crée un nouveau mandat et que la fiche Hektor ne bascule pas tout de suite**, le numéro de la fiche pointerait encore l'**ancien**. Ce n'est pas théorique : le même défaut a été corrigé le 28/07 sur les dates *(VA6482 — numéro neuf + date de fin échue → annonce bloquée en « échu »)* | |
+| | ℹ **C.4 n'est PAS l'ouverture des droits** *(corrigé le 25/08)*. Elle rend l'app capable de faire ces gestes **sans Hektor** — c'est un chantier de **coupure**, pas de permission. Les droits sont un sujet à part : **bloc F** | |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
 | ✅ **C.5** | ~~**Registre d'affaires et mandat des transactions**~~ **FAIT le 25/08** — le worker résout le mandat depuis le **numéro que l'app envoie déjà**, l'ordre de priorité est corrigé, et **le repli est journalisé** | **FAIT** | **La moitié était déjà faite** : `app_affaire_ledger` porte `app_affaire_id` et `app_dossier_id` depuis le 20/08. Vérifié **avant** de refaire |
 | | ❗ **L'ordre de priorité était faux** : `payload.mandat || HTML || selectedMandat`. **Le HTML de Hektor passait avant le choix explicite de l'app** — donc même quand l'app disait quel mandat, Hektor gagnait | |
@@ -512,7 +513,8 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | ℹ **Rappel de l'arbitrage** : un mandat **échu reste « en cours »**, il n'est PAS clos automatiquement — seule une **alerte négo** part. C'est pourquoi **22 749 mandats sont échus et non clos, et 85 seulement portent une date de clôture** : ce n'est pas un défaut, c'est la règle | |
 | ⏳ **C.11** | Ménage des tables mortes *(ex-19)* | |
 | ✅ **E.0** | ~~**AUDIT : que ne peut-on PAS faire dans l'app ?**~~ **FAIT le 25/08** — `ETUDE_OU_EN_SOMMES_NOUS_2026-08-25` | **FAIT** | **31 types de travaux éprouvés, 0 erreur sur 54 737.** Quatre manques, et **un seul est du code** |
-| | ❗ **Le cœur du métier est réservé aux admins** — passer une offre, un compromis, une vente : `isAdmin ? … : undefined`. **C'est ce qui sépare de l'étape 2**, et c'est C.4 | |
+| | ❌ **CONCLUSION CORRIGÉE LE 25/08 PAR FRÉDÉRIC.** J'avais écrit que le bridage admin *(passer une offre, un compromis, une vente)* était le manque qui sépare de l'étape 2. **C'est FAUX : ce bridage est VOULU.** Le négociateur ne décide pas seul — il fait une **demande de validation** à l'admin. Le circuit existe et il est éprouvé : `demande_diffusion` · `demande_baisse_prix` · `demande_annulation_mandat`, **9 demandes, 8 acceptées et traitées** | |
+| | ✅ **Ce qui reste avant l'étape 2 n'est donc PAS du code** : créer la dizaine de comptes manquants *(5 actifs, dont 2 commerciaux)*, éprouver la création de mandat, et **s'en servir soi-même une semaine** | |
 | | ℹ Et trois manques qui **ne sont pas du code** : **5 comptes actifs** dont 2 commerciaux pour une douzaine de négociateurs · la création de mandat **éprouvée une seule fois** · et l'usage réel par Frédéric, sans lequel tout est mesuré sur une app que personne n'exerce | |
 
 
@@ -588,6 +590,16 @@ valeur de **survivre sans l'aller-retour**.
 | ⏳ **E.2** | **BASCULE DES NÉGOCIATEURS SUR L'APP** *(ex-19bis)* | **décision d'organisation** — c'est elle qui débloque tout le bloc recherches |
 | ⏳ **E.3** | Les workers deviennent invisibles *(ex-26)* | une fois l'avertissement éprouvé |
 | ⏳ **E.4** | Le jour J — le distributeur démarre à 100 000 · le serveur remplit **les deux cases** · le numéro est **imposé** · on éteint l'aspirateur *(ex-32→35)* | |
+
+---
+
+### BLOC F — APRÈS LA COUPURE · *rien d'urgent, mais à ne pas perdre*
+
+| | Tâche | |
+|---|---|---|
+| ⏳ **F.1** | **UTILISATEURS, RÔLES ET DROITS** — revoir qui peut faire quoi | *après la coupure, décision de Frédéric le 25/08* |
+| | **Aujourd'hui le modèle est délibérément serré** : trois profils *(admin, commercial, administratif)*, et le négociateur **demande** au lieu de décider — baisse de prix, diffusion, annulation de mandat. **C'est un contrôle voulu, pas une limite technique** | |
+| | Ce qu'il faudra reprendre alors : le périmètre de chaque rôle, ce qui reste soumis à validation, et ce qui peut s'ouvrir | |
 
 ---
 
