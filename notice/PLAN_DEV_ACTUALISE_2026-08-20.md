@@ -239,8 +239,8 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   PISTE 1, le code       C.2b [FAIT] -> C.12 [FAIT] -> C.6 [FAIT] -> C.5 -> C.7
-                          -> C.8 -> C.9 -> C.4 -> C.11 -> E.0
+   PISTE 1, le code       C.2b C.12 C.6 C.7 [FAITS] -> C.5 -> C.8 -> C.9
+                          -> C.4 -> C.11 -> E.0
                                                      4 a 6 semaines
                           SE CONSTRUIT MAINTENANT, dormant. N'attend personne.
 
@@ -248,7 +248,7 @@ protège le moins.)*
    PISTE 3, la coupure    quand A.1/A.2/A.3 sont faits.   A ZERO.
 
    Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5
-                    C.1' C.2a C.2b C.3 C.6 C.12
+                    C.1' C.2a C.2b C.3 C.6 C.7 C.12
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -494,7 +494,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
 | ⏳ **C.5** | Clé propre du **registre des affaires** · fiabiliser le **mandat des transactions** *(ex-17,18)* | ne plus le deviner dans le HTML |
-| ⏳ **C.7** | **Le serveur lit sa base**, plus le miroir *(ex-26bis-③)* | **2 à 3 j** |
+| ✅ **C.7** | ~~**Le serveur lit sa base**~~ **FAIT le 25/08** — `contrat_autorite.py` *(LA constante unique, ce que A1 exigeait)* + `appliquer_contrat.py`, branché **après `refresh_views` et AVANT le push**. `push_upgrade_to_supabase` *(1 566 lignes)* **n'est pas touché** | **FAIT** | Le miroir passe de **vérité** à **témoignage**. Livré **contrat vide** — comportement identique à aujourd'hui |
+| | ❗ **Deux défauts réels trouvés par l'essai** — et c'est pourquoi je l'ai essayé au lieu de le livrer dormant. **PostgREST plafonne toute réponse à 1 000 lignes** : le contrat aurait été appliqué à 1 000 annonces sur 13 209, **en silence**. Et `app_view_generale` **n'a aucun index sur `app_dossier_id`** : le premier essai a tourné **plus de dix minutes** sans finir — corrigé en **3,4 secondes** | |
+| | ✅ **La duplication interdite par A1 est supprimée** : les deux copies de la liste contact lisent désormais le contrat. *« Surtout pas trois copies »* | |
 | ⏳ **C.8** | Le **calque** disparaît · la **barrière** *(un travail sans numéro Hektor attend)* *(ex-10,11)* | |
 | ⏳ **C.9** | La **création** part de l'app *(ex-23,24,25)* | **1 à 2 sem.** — après C.7 |
 | | ℹ *Le patron « naître sans numéro Hektor » est **déjà dans le schéma** — `app_dossier.id` autoincrement + `hektor_annonce_id` **nullable** + UNIQUE. Il n'a jamais servi (0 ligne sur 56 894) : la création optimiste est derrière un drapeau éteint. C'est ici qu'il s'exerce pour la première fois* | |

@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**17 faites · 19 restantes · 4 supprimées** · *C.2b, C.12 et C.6 faites le 25/08*
+**18 faites · 18 restantes · 4 supprimées** · *C.2b, C.12, C.6 et C.7 faites le 25/08*
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
@@ -93,21 +93,28 @@ aujourd'hui, ce qui est cohérent avec le fait que personne ne s'en sert.
 > travail : `NULL` contre `0.0` **(7 143 !)**, entier `0` contre texte `'0'` **(23)**, la date
 > sentinelle `0000-00-00`, et **un jour de décalage entre les deux photos (89)**.
 
-## 4 · C.7 — le miroir devient un **témoignage** · **2 à 3 j**
-
-**Ce que ça fait.** Ta phrase : *« le miroir de Hektor devient une source d'information »*.
+## 4 · C.7 — le miroir devient un **témoignage** · ✅ **FAIT le 25/08**
 
 ```
    ce que dit le MIROIR  +  ce que dit L'APP (relu dans Supabase)
-        -> on tranche  ->  on ecrit dans la base locale  ->  Supabase
+        -> on tranche  ->  on ecrit dans LA BASE LOCALE  ->  le push suit
 ```
 
-**Pourquoi c'est le cœur.** Détecter un écart ne le résout pas : chaque nuit le serveur se
-reconstruit depuis le miroir, donc **Hektor regagne par défaut — pas par décision, parce qu'il
-est seul dans la pièce.** C.7 crée la pièce où l'arbitrage a lieu.
+Deux fichiers : `contrat_autorite.py` — **LA constante unique**, ce que A1 exigeait —
+et `appliquer_contrat.py`, branché juste après la reconstruction de la table et
+**avant le push**. Le push lui-même *(1 566 lignes)* **n'est pas touché**.
 
-**Interrupteur : la liste des champs app.** Livrée **vide** = « Hektor gagne partout » =
-**comportement identique à aujourd'hui**.
+**Livré contrat vide** — « Hektor gagne partout », comportement identique à aujourd'hui.
+
+> ❗ **Deux défauts réels trouvés en l'essayant** — et c'est pourquoi je l'ai essayé au lieu
+> de le livrer dormant :
+> **PostgREST plafonne toute réponse à 1 000 lignes** — le contrat aurait été appliqué à
+> 1 000 annonces sur 13 209, **en silence** ;
+> et `app_view_generale` **n'a aucun index sur `app_dossier_id`** — le premier essai a
+> tourné **plus de dix minutes** sans finir. Corrigé : **3,4 secondes**.
+>
+> ✅ **Essai complet puis retour à vide** : 13 209 valeurs relues et reposées, empreinte
+> de la colonne **identique avant et après**.
 
 ## 5 · C.8 — le calque disparaît · la barrière
 
