@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**19 faites · 18 restantes · 4 supprimées** · *C.2b, C.12, C.6, C.7 et C.5 faites le 25/08 · **C.13 ajoutée** (chantier orphelin retrouvé)*
+**21 faites · 16 restantes · 5 supprimées** · *le 25/08 : C.2b, C.12, C.6, C.7, C.5 et **E.0** faites · **C.8 dissoute** · **C.13 ajoutée***
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 

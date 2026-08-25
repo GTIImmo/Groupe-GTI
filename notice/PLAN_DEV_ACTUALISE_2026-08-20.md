@@ -68,6 +68,7 @@ Ce qui suit répare la cause, pas le symptôme.*
 | `A1_CHAMPS_PROPRIETE_APP_2026-08-19` | **189 champs** que l'app possède · la règle « l'import n'a pas le droit de réécrire » · le mécanisme « c'est une soustraction » · **3 arbitrages en attente** | **C.4** |
 | `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20` | les 4 familles · **16 workers** sont le gisement réel · **7 sur 34 marchent déjà sans Hektor** · **3 seulement** dépendent vraiment de lui | **C.4** |
 | `PLAN_DEV_MANDAT_CLOTURE.md` | **cadrage validé le 30/07, dev non commencé** · les déclencheurs · les motifs Hektor · la clôture cible par **ID interne** · « échu ≠ clos » | **C.13** |
+| `ETUDE_OU_EN_SOMMES_NOUS_2026-08-25` | **E.0** · les deux circuits chronométrés · ce que l'app sait déjà écrire dans Hektor · les 4 manques | **E.0, C.4** |
 | `NOTE_CHAINE_DES_MANDATS_2026-08-25` | la chaîne des mandats de bout en bout · `mandat_source_id` **est** `hektor_mandat_id` · pourquoi le registre se défie de `hektor_mandat` · **342 identifiants partagés entre annonces** → toujours interroger par le **couple** | **C.4, C.5** |
 | `AUDIT_IDENTITE_CONTACTS_2026-08-20` | l'état des lieux du 20/08 · **son verrou est levé**, voir la relecture ci-dessous | **C.2** |
 | `RELECTURE_IDENTITE_CONTACTS_2026-08-24` | **C.2a, fait** · 4 tables portent 95 % · 3 fonctions à basculer, pas 11 · `hektor_contact_id` **est la clé primaire** | **C.2b, C.9** |
@@ -510,7 +511,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | ✅ **Sa source est désormais prouvée** : le formulaire Hektor cible le mandat par son **ID INTERNE**, et la mesure du 25/08 établit que `mandat_source_id` **EST** `hektor_mandat_id` — **23 814 / 23 814**. Le registre peut donc remplacer la liste déroulante de Hektor le jour où elle disparaît | |
 | | ℹ **Rappel de l'arbitrage** : un mandat **échu reste « en cours »**, il n'est PAS clos automatiquement — seule une **alerte négo** part. C'est pourquoi **22 749 mandats sont échus et non clos, et 85 seulement portent une date de clôture** : ce n'est pas un défaut, c'est la règle | |
 | ⏳ **C.11** | Ménage des tables mortes *(ex-19)* | |
-| ⏳ **E.0** | **AUDIT : que ne peut-on PAS faire dans l'app ?** Croiser les types de travaux avec ce qu'un négociateur fait dans sa journée | **½ j** — **en FIN de construction** *(déplacée ici le 24/08)*. Elle était avant la coupure ; elle doit venir **avant que les gens bougent**, et elle se nourrit de ce que Frédéric aura vécu en utilisant l'app lui-même |
+| ✅ **E.0** | ~~**AUDIT : que ne peut-on PAS faire dans l'app ?**~~ **FAIT le 25/08** — `ETUDE_OU_EN_SOMMES_NOUS_2026-08-25` | **FAIT** | **31 types de travaux éprouvés, 0 erreur sur 54 737.** Quatre manques, et **un seul est du code** |
+| | ❗ **Le cœur du métier est réservé aux admins** — passer une offre, un compromis, une vente : `isAdmin ? … : undefined`. **C'est ce qui sépare de l'étape 2**, et c'est C.4 | |
+| | ℹ Et trois manques qui **ne sont pas du code** : **5 comptes actifs** dont 2 commerciaux pour une douzaine de négociateurs · la création de mandat **éprouvée une seule fois** · et l'usage réel par Frédéric, sans lequel tout est mesuré sur une app que personne n'exerce | |
 
 
 #### 🔌 LES INTERRUPTEURS — « construit » ne veut jamais dire « actif »
