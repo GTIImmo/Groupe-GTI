@@ -115,6 +115,15 @@ CRITICAL_TABLES: dict[str, list[str]] = {
                                            # retours acquereur, rapprochements.
         "app_affaire_ledger",              # 28 981 app_affaire_id : la serie d'identite des
                                            # transactions (offre / compromis / vente).
+        # Ajoutee le 2026-08-25 (tache C.2b, lot 1).
+        "app_contact",                     # 355 687 app_contact_id : la serie d'identite des
+                                           # CONTACTS, batie sur le patron d'app_dossier
+                                           # (numero propre + case Hektor nullable + jamais
+                                           # de suppression). Meme classe de sinistre : la
+                                           # perdre orphelinerait 202 404 lignes reparties
+                                           # sur 18 tables, et aucune contrainte de cle
+                                           # etrangere ne les protege -- elles pointent le
+                                           # contact PAR CONVENTION SEULE.
     ],
     "hektor": [
         "sync_meta",                       # 4 curseurs delta : sans eux, re-pull complet
