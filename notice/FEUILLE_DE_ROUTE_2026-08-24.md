@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**15 faites · 21 restantes · 4 supprimées** · *C.2b faite le 25/08*
+**16 faites · 20 restantes · 4 supprimées** · *C.2b et C.12 faites le 25/08*
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
@@ -62,18 +62,20 @@ colonne — c'est une doublure.
 > ℹ **35 orphelins** trouvés au passage dans `app_search_count_high_water` — signalés,
 > pas corrigés.
 
-## 2 · C.12 — la sortie de conflit pour les **contacts** · **1 j**
+## 2 · C.12 — la sortie de conflit pour les **contacts** · ✅ **FAIT le 25/08**
 
-**Ce que ça fait.** Décliner pour les contacts le bandeau et les deux boutons — *« J'ai refait »*
-/ *« Abandonner »* — que C.1' a livrés pour les annonces.
+`app_contact_edit_status` + `app_contact_pending_resolve`, et le bandeau à deux causes
+posé dans **les deux versions** de la fiche contact.
 
-**Pourquoi.** Les contacts sont déjà protégés et surveillés, mais **personne ne peut classer une
-saisie bloquée** : la sonde resterait rouge jusqu'à une intervention en base.
+**Vérifié** : les deux causes, les deux modes, les refus, l'archivage de la saisie.
+État final 0/0 — rien laissé derrière.
 
-**Les recherches n'en ont pas besoin** — C.3 a fermé la porte, elles ne peuvent plus produire de
-conflit *(vérifié de bout en bout)*.
-
-**Interrupteur :** *aucun*.
+> ✅ **Les recherches n'en avaient pas besoin** — tu l'avais vu, et c'est vérifié :
+> C.3 a fermé leur porte, elles ne peuvent plus produire de conflit.
+>
+> ⚠ **Un défaut trouvé par l'essai, avant mise en service** : la trace lisait le numéro
+> sur la ligne d'attente, que seule une ligne déjà rattrapée porte. Elle le résout
+> désormais à la source.
 
 ## 3 · C.6 — le domicile de l'annonce · **1 à 2 j**
 

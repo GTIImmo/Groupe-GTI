@@ -239,15 +239,16 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   PISTE 1, le code       C.2b [FAIT] -> C.12 -> C.6 -> C.5 -> C.7 -> C.8 -> C.9
-                          -> C.4 -> C.11 -> E.0        4 a 6 semaines
+   PISTE 1, le code       C.2b [FAIT] -> C.12 [FAIT] -> C.6 -> C.5 -> C.7 -> C.8
+                          -> C.9 -> C.4 -> C.11 -> E.0
+                                                     4 a 6 semaines
                           SE CONSTRUIT MAINTENANT, dormant. N'attend personne.
 
    PISTE 2, les gens      quand ils veulent, un par un.   Frederic seul.
    PISTE 3, la coupure    quand A.1/A.2/A.3 sont faits.   A ZERO.
 
    Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5
-                    C.1' C.2a C.2b C.3
+                    C.1' C.2a C.2b C.3 C.12
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -484,9 +485,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ✅ **C.2b** | ~~**Identité des contacts — le code**~~ **FAIT le 25/08** — `app_contact` locale (355 687 numéros, patron d'`app_dossier`) · `app_contact_id` sur **19 tables** Supabase · **144 985 lignes remplies** · sonde · branché dans le run de nuit | **FAIT** | **0 incohérence** : aucune ligne ne porte un numéro différent de sa fiche contact, et **0 numéro ne sert à deux contacts**. La clé primaire n'est **pas** touchée, et **personne ne lit encore la colonne** — c'est une doublure |
 | | ⚠ **Ce que le chantier a révélé, absent du plan** : *le registre doit se **maintenir**, pas seulement se créer*. Le jour même, **15 contacts créés la veille** étaient déjà dans Supabase et pas encore en local. Le script est devenu incrémental et tourne chaque nuit | |
 | | ℹ **35 vrais orphelins** trouvés dans `app_search_count_high_water` — des compteurs qui pointent un contact qui n'existe plus. **Exactement ce que C.2a annonçait** : sans clé étrangère, les orphelins existent sans que rien ne le signale. *Signalé, pas corrigé* | |
-| ⏳ **C.12** | **LA SORTIE DE CONFLIT — POUR LES CONTACTS SEULEMENT** *(le reste de C.1')*. C.1' a livré le bouton pour les **annonces**. Les **contacts** sont protégés et surveillés, mais **sans geste possible depuis l'app** | **1 j** |
-| | ✅ **Les recherches n'en ont PAS besoin** — *relevé par Frédéric le 24/08, vérifié de bout en bout*. **C.3 a fermé la porte** : `push_search` est écrit à `null`, l'enfilage exige `push_search is not null` → **aucun travail créé** ; la montée en conflit exige un `push_job_id` → **jamais posé** ; et le worker ne marque que si `from_pending`. **Seules deux fonctions écrivent dans `app_search_pending`, toutes deux fermées par C.3.** Une recherche ne peut plus produire de conflit | |
-| | ⚠ **Les deux sondes recherche restent, et changent de rôle** : elles ne surveillent plus un risque, elles **témoignent que la porte reste fermée**. Si `data.recherche_conflit` sonne un jour, c'est que quelqu'un a réouvert C.3 | |
+| ✅ **C.12** | ~~**La sortie de conflit — contacts**~~ **FAIT le 25/08** — `app_contact_edit_status` + `app_contact_pending_resolve` · bandeau à deux causes posé dans **les DEUX versions** de la fiche | **FAIT** | Un défaut trouvé **par l'essai, avant mise en service** : la trace lisait le numéro sur la ligne d'attente, que seule une ligne déjà rattrapée porte. Elle le résout désormais **à la source** |
+| | ✅ **Les recherches n'en ont PAS besoin** — *vu par Frédéric, vérifié de bout en bout*. C.3 a fermé la porte : aucun travail créé, aucun `push_job_id`, donc **aucun conflit possible**. Le bouton aurait été mort-né | |
+| | ℹ **Nom du paramètre** : `target_hektor_contact_id`, pas `target_contact_id`. Le renommage des 11 fonctions ambiguës reste **rayé**, mais pour des fonctions **neuves** le nom clair ne coûte rien. *On arrête d'en créer des ambiguës* | |
 | ⏳ **C.6** | **Le domicile de l'annonce** — la table « ce que l'app détient » + les 36 champs calculés à l'export *(ex-26bis-①)* | **1 à 2 j** |
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
