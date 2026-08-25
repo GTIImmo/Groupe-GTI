@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**14 faites · 22 restantes · 4 supprimées**
+**15 faites · 21 restantes · 4 supprimées** · *C.2b faite le 25/08*
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
@@ -46,18 +46,21 @@
 
 # 🛤 PISTE 1 — LE CODE · **se construit maintenant, dormant · n'attend personne**
 
-## 1 · C.2b — l'identité des contacts · **3 à 5 j**
+## 1 · C.2b — l'identité des contacts · ✅ **FAIT le 25/08**
 
-**Ce que ça fait.** Un contact n'a aujourd'hui **aucun numéro à toi** : il n'est identifié que par
-celui de Hektor, qui est même la clé primaire. On ajoute `app_contact_id` aux **4 tables qui
-portent 95 % des lignes** — relations 77 393 · contacts 57 553 · rapprochements 46 864 ·
-recherches 10 785 — plus les 6 tables vides. On la remplit. **On ne bascule rien.**
+`app_contact` locale : **355 687 numéros**, patron d'`app_dossier` à l'identique.
+`app_contact_id` posée sur **19 tables** Supabase, **144 985 lignes remplies**.
 
-**Pourquoi.** À la coupure, un contact créé dans l'app n'aura pas de numéro Hektor. Sans numéro
-à lui, il n'a pas d'identité du tout.
+**Vérifié** : 0 incohérence entre les tables, 0 numéro pour deux contacts.
+**Non fait, et voulu** : la clé primaire n'est pas touchée, et personne ne lit encore la
+colonne — c'est une doublure.
 
-**Interrupteur :** *aucun* — purement additif.
-**À ne pas y attacher :** le changement de clé primaire. Second chantier.
+> ⚠ **Le chantier a révélé ce que le plan n'avait pas vu** : le registre doit se
+> **maintenir**. Le jour même, 15 contacts créés la veille étaient déjà dans Supabase et
+> pas encore en local. Il tourne désormais chaque nuit.
+>
+> ℹ **35 orphelins** trouvés au passage dans `app_search_count_high_water` — signalés,
+> pas corrigés.
 
 ## 2 · C.12 — la sortie de conflit pour les **contacts** · **1 j**
 

@@ -239,14 +239,15 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   PISTE 1, le code       C.2b -> C.12 -> C.6 -> C.5 -> C.7 -> C.8 -> C.9
+   PISTE 1, le code       C.2b [FAIT] -> C.12 -> C.6 -> C.5 -> C.7 -> C.8 -> C.9
                           -> C.4 -> C.11 -> E.0        4 a 6 semaines
                           SE CONSTRUIT MAINTENANT, dormant. N'attend personne.
 
    PISTE 2, les gens      quand ils veulent, un par un.   Frederic seul.
    PISTE 3, la coupure    quand A.1/A.2/A.3 sont faits.   A ZERO.
 
-   Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5 | C.1' C.2a C.3
+   Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5
+                    C.1' C.2a C.2b C.3
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -480,8 +481,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 
 | | Tâche | Durée |
 |---|---|---|
-| ⏳ **C.2b** | **Identité des contacts — le code** *(ex-5)*. Ajouter `app_contact_id` aux **4 tables qui portent 95 %** *(relation 77 393 · contact 57 553 · rapprochement 46 864 · recherche 10 785)* + les 6 tables vides, le remplir, **le laisser vivre à côté sans rien basculer** — méthode de la doublure. Les **3** fonctions de la famille B *(`app_edit_contact_optimistic`, `app_edit_search_optimistic`, `app_espace_edit_search_optimistic`)* ne bougent qu'après observation ; les **8** de la famille A gardent le numéro Hektor à jamais | **3 à 5 j** |
-| | ⚠ **À NE PAS y attacher** : `hektor_contact_id` **est la clé primaire** de `app_contact_current`. La changer est un chantier à part — et **0 contrainte de clé étrangère** ne protège les 17 tables qui la pointent par convention | |
+| ✅ **C.2b** | ~~**Identité des contacts — le code**~~ **FAIT le 25/08** — `app_contact` locale (355 687 numéros, patron d'`app_dossier`) · `app_contact_id` sur **19 tables** Supabase · **144 985 lignes remplies** · sonde · branché dans le run de nuit | **FAIT** | **0 incohérence** : aucune ligne ne porte un numéro différent de sa fiche contact, et **0 numéro ne sert à deux contacts**. La clé primaire n'est **pas** touchée, et **personne ne lit encore la colonne** — c'est une doublure |
+| | ⚠ **Ce que le chantier a révélé, absent du plan** : *le registre doit se **maintenir**, pas seulement se créer*. Le jour même, **15 contacts créés la veille** étaient déjà dans Supabase et pas encore en local. Le script est devenu incrémental et tourne chaque nuit | |
+| | ℹ **35 vrais orphelins** trouvés dans `app_search_count_high_water` — des compteurs qui pointent un contact qui n'existe plus. **Exactement ce que C.2a annonçait** : sans clé étrangère, les orphelins existent sans que rien ne le signale. *Signalé, pas corrigé* | |
 | ⏳ **C.12** | **LA SORTIE DE CONFLIT — POUR LES CONTACTS SEULEMENT** *(le reste de C.1')*. C.1' a livré le bouton pour les **annonces**. Les **contacts** sont protégés et surveillés, mais **sans geste possible depuis l'app** | **1 j** |
 | | ✅ **Les recherches n'en ont PAS besoin** — *relevé par Frédéric le 24/08, vérifié de bout en bout*. **C.3 a fermé la porte** : `push_search` est écrit à `null`, l'enfilage exige `push_search is not null` → **aucun travail créé** ; la montée en conflit exige un `push_job_id` → **jamais posé** ; et le worker ne marque que si `from_pending`. **Seules deux fonctions écrivent dans `app_search_pending`, toutes deux fermées par C.3.** Une recherche ne peut plus produire de conflit | |
 | | ⚠ **Les deux sondes recherche restent, et changent de rôle** : elles ne surveillent plus un risque, elles **témoignent que la porte reste fermée**. Si `data.recherche_conflit` sonne un jour, c'est que quelqu'un a réouvert C.3 | |
