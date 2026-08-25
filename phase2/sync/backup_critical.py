@@ -116,6 +116,12 @@ CRITICAL_TABLES: dict[str, list[str]] = {
         "app_affaire_ledger",              # 28 981 app_affaire_id : la serie d'identite des
                                            # transactions (offre / compromis / vente).
         # Ajoutee le 2026-08-25 (tache C.2b, lot 1).
+        # Ajoutee le 2026-08-25 (tache C.6).
+        "app_annonce_champ_app",           # ce que l'APP detient sur les annonces, champ par
+                                           # champ. app_view_generale est DETRUITE et refaite
+                                           # chaque nuit (DROP + CREATE TABLE AS) : cette
+                                           # table-ci est le seul endroit ou une valeur ecrite
+                                           # par l'app survit a 05:30.
         "app_contact",                     # 355 687 app_contact_id : la serie d'identite des
                                            # CONTACTS, batie sur le patron d'app_dossier
                                            # (numero propre + case Hektor nullable + jamais

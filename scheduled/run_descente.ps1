@@ -1,4 +1,4 @@
-# Tache planifiee : LA DESCENTE (07:30) -- Supabase vers le serveur (blocs B.1, B.2, B.4).
+﻿# Tache planifiee : LA DESCENTE (07:30) -- Supabase vers le serveur (blocs B.1, B.2, B.4).
 #
 # POURQUOI 07:30, et pas ailleurs.
 #   03:00  recherches actives
@@ -9,9 +9,10 @@
 # APRES la sauvegarde -- sinon elle ecrirait dans phase2.sqlite pendant qu'on en fait un
 # instantane.
 #
-# DEUX ETAPES, dans cet ordre :
+# TROIS ETAPES, dans cet ordre :
 #   1. pull_from_supabase.py    refait les 120 copies locales (dont les 10 doublures __sb)
 #   2. comparer_doublures.py    compte les ecarts et ecrit la photo du jour dans le journal
+#   3. magasin_annonce_app.py   note, champ par champ, ce que l'app detient sur les annonces
 # La seconde n'a de sens qu'apres la premiere : elle mesure ce que la descente vient de
 # poser. Si la descente echoue, on releve quand meme -- la photo dira alors qu'elle date.
 #
@@ -39,7 +40,7 @@ $runFailed = $false
 try {
     Write-Output "=== Descente demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
 
-    Write-Output "--- 1/2 descente Supabase -> serveur ---"
+    Write-Output "--- 1/3 descente Supabase -> serveur ---"
     & $py (Join-Path $root "phase2\sync\pull_from_supabase.py")
     $codeDescente = $LASTEXITCODE
     Write-Output "--- descente terminee (exit $codeDescente) ---"
@@ -47,11 +48,23 @@ try {
 
     # Le releve tourne MEME si la descente a echoue : mieux vaut une photo qui dit
     # « les doublures datent d'hier » qu'aucune photo du tout.
-    Write-Output "--- 2/2 releve des doublures ---"
+    Write-Output "--- 2/3 releve des doublures ---"
     & $py (Join-Path $root "phase2\checks\comparer_doublures.py")
     $codeReleve = $LASTEXITCODE
     Write-Output "--- releve termine (exit $codeReleve) ---"
     if ($codeReleve -ne 0) { $runFailed = $true }
+
+    # C.6 25/08 -- le magasin de ce que l'app detient sur les annonces.
+    # ICI, en troisieme, et pas dans le run de nuit : il compare app_dossier_current
+    # (que la descente vient de rafraichir) a app_view_generale (que le run de 05:30
+    # vient de refaire). Il lui faut LES DEUX cotes frais. Le lancer ailleurs
+    # comparerait une photo du jour a une photo de la veille -- mesure le 25/08 :
+    # 89 faux ecarts, contre 0 une fois les deux cotes a la meme heure.
+    Write-Output "--- 3/3 magasin des champs app (annonces) ---"
+    & $py (Join-Path $root "phase2\identite\magasin_annonce_app.py")
+    $codeMagasin = $LASTEXITCODE
+    Write-Output "--- magasin termine (exit $codeMagasin) ---"
+    if ($codeMagasin -ne 0) { $runFailed = $true }
 
     Write-Output "=== Descente terminee $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
 } catch {
