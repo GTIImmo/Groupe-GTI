@@ -134,6 +134,51 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     # On ne renumerote JAMAIS une ligne connue : l'ON CONFLICT ci-dessous laisse
     # app_affaire_id intact. Seules les affaires nouvelles prennent un numero.
     next_affaire_id = (con.execute(f"SELECT COALESCE(MAX(app_affaire_id), 0) FROM {LEDGER_TABLE}").fetchone()[0]) + 1
+
+    # ------------------------------------------------------------------ C.4 25/08
+    # LES AFFAIRES NEES DANS L'APP, A ADOPTER PLUTOT QU'A DUPLIQUER.
+    #
+    # Depuis C.4, une offre / un compromis / une vente peut naitre DANS L'APP : elle prend
+    # un numero de la plage reservee (>= 1 000 000), sa case Hektor reste VIDE, et
+    # present_in_hektor vaut false. Elle vit d'abord dans Supabase seulement.
+    #
+    # Quand Hektor l'enregistre enfin, ce run la voit arriver comme une affaire NEUVE. Sans
+    # la regle ci-dessous, il lui donnerait un SECOND numero -- et la meme vente
+    # existerait deux fois dans ton registre.
+    #
+    # LA CLE D'ADOPTION EST (annonce, type, ACQUEREUR), et pas le mandat : 98 % des offres
+    # n'ont pas de mandat, et c'est deja ainsi que les offres, compromis et ventes sont
+    # chaines dans ce projet.
+    #
+    # ON N'ADOPTE QUE SI C'EST SUR : il faut un acquereur, et une seule candidate. En cas
+    # d'ambiguite on laisse le numero neuf partir -- deux lignes visibles valent mieux
+    # qu'une fusion silencieuse sur une vente.
+    #
+    # La source est la DOUBLURE descendue chaque matin (app_affaire_ledger__sb) : la table
+    # locale, elle, ne connait pas encore ces affaires.
+    adoptables: dict[tuple[str, str, str], int] = {}
+    ambigus: set[tuple[str, str, str]] = set()
+    try:
+        for a_id, a_kind, a_acq, a_num in con.execute(
+            """SELECT hektor_annonce_id, kind, hektor_acquereur_id, app_affaire_id
+                 FROM app_affaire_ledger__sb
+                WHERE (hektor_affaire_id IS NULL OR TRIM(CAST(hektor_affaire_id AS TEXT)) = '')
+                  AND CAST(present_in_hektor AS TEXT) IN ('0', 'false', 'False')
+                  AND hektor_acquereur_id IS NOT NULL
+                  AND TRIM(CAST(hektor_acquereur_id AS TEXT)) <> ''"""
+        ):
+            cle = (str(a_id), str(a_kind), str(a_acq))
+            if cle in adoptables:
+                ambigus.add(cle)          # deux candidates : on n'adopte plus
+            else:
+                adoptables[cle] = int(a_num)
+        for cle in ambigus:
+            adoptables.pop(cle, None)
+    except sqlite3.OperationalError:
+        # La doublure n'existe pas encore (descente jamais lancee) : rien a adopter.
+        adoptables = {}
+    adoptees = 0
+
     dossier_par_annonce: dict[str, int] = {
         str(a): int(i) for i, a in con.execute(
             "SELECT id, hektor_annonce_id FROM app_dossier WHERE hektor_annonce_id IS NOT NULL"
@@ -161,7 +206,14 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         # On n'avance le compteur que pour une affaire reellement nouvelle.
         propose = next_affaire_id
         if nouvelle:
-            next_affaire_id += 1
+            # C.4 : si l'app a deja cree cette affaire, on REPREND son numero au lieu
+            # d'en distribuer un neuf. Une adoption ne sert qu'une fois.
+            adopte = adoptables.pop((annonce, kind, acq_id), None) if acq_id else None
+            if adopte is not None:
+                propose = adopte
+                adoptees += 1
+            else:
+                next_affaire_id += 1
         con.execute(
             f"""
             INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
@@ -193,6 +245,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         )
         seen += 1
 
+    if adoptees:
+        print(f"[affaire_ledger] {adoptees} affaire(s) nee(s) dans l'app ADOPTEE(S) "
+              f"au lieu d'etre dupliquee(s)")
     absent = 0
     if full:
         cur = con.execute(f"UPDATE {LEDGER_TABLE} SET present_in_hektor=0 WHERE last_seen_at <> ?", (run_ts,))

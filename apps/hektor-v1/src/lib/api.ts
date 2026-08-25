@@ -8130,7 +8130,7 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
-  const userId = await requireSupabaseUserId()
+  await requireSupabaseUserId()   // controle de session conserve ; l'auteur est desormais pris par le RPC (auth.uid())
   const payload = {
     numero_dossier: input.dossier.numero_dossier ?? null,
     numero_mandat: input.dossier.numero_mandat ?? null,
@@ -8157,19 +8157,33 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     close_mandat_on_sale: input.closeMandatOnSale ? true : null,
     close_price: input.closePrice?.trim() || null,
   }
+  // C.4 25/08 -- L'AFFAIRE NAIT DANS L'APP, PUIS LE TRAVAIL PART CHEZ HEKTOR.
+  //
+  // Avant, on inserait directement le travail : l'affaire (offre / compromis / vente)
+  // n'existait chez nous que le LENDEMAIN, quand le run de nuit la relisait chez Hektor.
+  // Mesure du 25/08 : sur les 28 981 lignes du registre d'affaires, ZERO avait ete ecrite
+  // par l'app.
+  //
+  // Le RPC fait les deux ecritures DANS LA MEME TRANSACTION -- l'affaire avec son propre
+  // numero (plage reservee >= 1 000 000, case Hektor vide), puis le travail qui EMPORTE ce
+  // numero. C'est lui qui permettra a la reconciliation de retrouver l'affaire au retour,
+  // au lieu d'en creer une seconde.
+  //
+  // Le controle d'acces ne change pas : le RPC exige toujours le role admin.
+  const { data: created, error: rpcError } = await supabase.rpc('app_change_annonce_status_optimistic', {
+    target_dossier_id: input.dossier.app_dossier_id,
+    target_status: input.targetStatus,
+    job_payload: payload,
+    job_priority: input.priority ?? 7,
+  })
+  if (rpcError || !created) throwConsoleAdminJobError(rpcError, 'Unable to create Hektor status job')
+  const jobId = (created as { job_id?: string }).job_id
   const { data, error } = await supabase
     .from('app_console_job')
-    .insert({
-      job_type: 'change_hektor_annonce_status',
-      app_dossier_id: input.dossier.app_dossier_id,
-      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
-      payload_json: payload,
-      priority: input.priority ?? 7,
-      requested_by: userId,
-    })
     .select('*')
+    .eq('id', jobId as string)
     .single()
-  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor status job')
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to read the created Hektor status job')
   return data as ConsoleJob
 }
 

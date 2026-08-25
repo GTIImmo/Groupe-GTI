@@ -1,0 +1,78 @@
+-- =====================================================================
+-- Tache C.4 -- LOT 1 : une affaire peut NAITRE DANS L'APP
+-- Date : 2026-08-25
+-- Migrations : `c4_lot1_affaire_nee_dans_l_app`  ·  `c4_lot1_rpc_statut_optimiste`
+--
+-- L'ETUDE DES WORKERS (20/08) donne l'ordre : recherches -> statut/affaire -> archiver /
+-- restaurer / supprimer -> mandant -> affectation EN DERNIER. Elle dit aussi du statut
+-- qu'il est « le plus riche : statut ET affaire ET liaisons contact. Il faut le traiter
+-- comme une CREATION D'AFFAIRE, pas comme un statut. » C'est ce lot.
+--
+-- SIX DE SES HUIT PREALABLES ETAIENT DEJA FAITS -- les recherches (C.3), l'alerte d'echec
+-- (C.1'), le numero Hektor nullable (C.2b), l'arbitrage (C.7), la cle du registre
+-- d'affaires (20/08) et le mandat des transactions (C.5, ce matin).
+--
+-- LE CONSTAT QUI JUSTIFIE LE LOT. Sur les 28 981 lignes du registre d'affaires, **ZERO**
+-- avait ete ecrite par l'app : c'est Hektor qui decidait de l'existence des affaires, et
+-- elles n'arrivaient chez nous que le lendemain matin.
+--
+-- LE PRINCIPE, pose par Frederic : « il faudra bien etre autonome sur les identifiants
+-- comme pour les autres, annonces et contacts ». Les trois objets prennent la meme forme :
+--     annonce   app_dossier.id  + hektor_annonce_id NULLABLE
+--     contact   app_contact_id  + hektor_contact_id NULLABLE
+--     affaire   app_affaire_id  + hektor_affaire_id NULLABLE   <- ce lot
+--
+-- ------------------------------------------------------------------ LE PIEGE DES DEUX
+-- Le numero d'affaire est distribue par le SERVEUR LOCAL, en MAX(app_affaire_id)+1
+-- (affaire_ledger.py:136). Si l'app en distribue aussi, les deux series se percutent.
+-- ON RESERVE DONC UNE PLAGE : app_affaire_id_app_seq demarre a 1 000 000, la serie locale
+-- est a 28 981. C'est l'idee deja retenue pour le jour J des annonces (« le distributeur
+-- demarre a 100 000 »).
+-- Et la descente n'ecrit PAS dans la table native (elle remplit app_affaire_ledger__sb) :
+-- le MAX local ne peut donc pas sauter dans la plage de l'app.
+--
+-- ------------------------------------------------------------------ CE QUI REND CA SUR
+--   * l'index unique du triplet Hektor est PARTIEL (WHERE hektor_affaire_id IS NOT NULL) :
+--     une affaire sans identifiant Hektor ne collisionne avec rien ;
+--   * le registre est DELETE-NEVER : le run de nuit ne supprimera pas une affaire que
+--     Hektor ne connait pas encore -- il la marquera present_in_hektor = false, ce qui est
+--     EXACT ;
+--   * les deux ecritures (affaire + travail) sont dans la MEME TRANSACTION : jamais
+--     d'affaire sans travail, ni de travail sans affaire ;
+--   * le controle d'acces NE CHANGE PAS -- admin seulement. C'est une regle metier voulue :
+--     le negociateur ne decide pas seul, il fait une demande de validation.
+--
+-- ------------------------------------------------------------------ LA RECONCILIATION
+-- Quand Hektor enregistre enfin l'affaire, le run la voit arriver comme NEUVE. Sans regle,
+-- il lui donnerait un SECOND numero et la meme vente existerait deux fois.
+-- affaire_ledger.py ADOPTE desormais l'affaire nee dans l'app au lieu de la dupliquer.
+--
+--   LA CLE D'ADOPTION EST (annonce, type, ACQUEREUR), pas le mandat : 98 % des offres n'ont
+--   pas de mandat, et c'est deja ainsi que offres, compromis et ventes sont chaines ici.
+--
+--   ON N'ADOPTE QUE SI C'EST SUR : il faut un acquereur, et une seule candidate. En cas
+--   d'ambiguite le numero neuf part quand meme -- DEUX LIGNES VISIBLES VALENT MIEUX QU'UNE
+--   FUSION SILENCIEUSE SUR UNE VENTE.
+--
+--   La source est la doublure descendue chaque matin (app_affaire_ledger__sb) : la table
+--   locale ne connait pas encore ces affaires.
+--
+-- ------------------------------------------------------------------ VERIFIE
+--   RPC, essai controle en simulant un auth.uid() d'admin :
+--     offre      -> numero >= 1 000 000, kind='offre', present_in_hektor=false,
+--                   case Hektor VIDE, acquereur repris, et LE TRAVAIL PORTE LE NUMERO   OK
+--     'closed'   -> AUCUNE affaire creee, seulement le travail                           OK
+--     etat final : 0 affaire d'essai, 0 travail d'essai                                  OK
+--   Adoption, sur six cas fabriques : adoptable · booleen en texte · deja liee a Hektor ·
+--     sans acquereur · deja presente · doublon ambigu -> resultat CONFORME               OK
+--   affaire_ledger.py --refresh : 28 981 vues, 0 inseree, 0 marquee absente, 4 s -> pas
+--     de regression                                                                      OK
+--   npm run build                                                                        OK
+--
+-- NON VERIFIE, ET ASSUME : le chemin de bout en bout. Il cree une offre ou un compromis
+-- REEL dans Hektor ; je ne fabrique pas une transaction sur un vrai bien pour essayer.
+-- L'adoption, elle, ne se verra qu'au premier run suivant une affaire nee dans l'app.
+--
+-- RETOUR ARRIERE : le front revient a l'insertion directe ; drop du RPC et de la sequence ;
+-- retrait du bloc d'adoption. Aucune donnee existante n'a ete modifiee.
+-- =====================================================================
