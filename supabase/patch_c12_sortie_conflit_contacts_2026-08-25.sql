@@ -1,0 +1,66 @@
+-- =====================================================================
+-- Tache C.12 -- LA SORTIE DE CONFLIT POUR LES CONTACTS
+-- Date : 2026-08-25
+-- Migrations : `c12_sortie_de_conflit_pour_les_contacts`
+--              `c12_la_trace_resout_le_numero_a_la_source`
+--
+-- POURQUOI CETTE TACHE EXISTE. C.1' (24/08) a retire la purge des 24 h sur LES TROIS
+-- objets -- une saisie bloquee n'est plus jamais effacee. Mais elle n'a livre le GESTE
+-- HUMAIN que pour les annonces. Les contacts etaient donc proteges et surveilles, sans
+-- sortie : une saisie bloquee s'y accumulait et la sonde serait restee rouge jusqu'a une
+-- intervention en base. Releve par Frederic le 24/08 au soir, sur la feuille imprimee.
+--
+-- LES RECHERCHES N'EN ONT PAS BESOIN -- verifie de bout en bout, et c'est Frederic qui
+-- l'a vu ("on a deja passe le cap sur les recherches non ?") :
+--     C.3 ecrit push_search a null (les DEUX seules fonctions qui ecrivent dans
+--     app_search_pending sont fermees)
+--       -> l'enfilage exige "push_search is not null"  -> AUCUN travail cree
+--       -> la montee en conflit exige un push_job_id    -> JAMAIS pose
+--       -> le worker ne marque que si from_pending      -> jamais appele
+--     Une recherche ne PEUT PLUS produire de conflit. Le bouton serait mort-ne.
+--
+-- CE QUI EST POSE :
+--   app_contact_edit_status(target_hektor_contact_id)      -> lit l'etat
+--   app_contact_pending_resolve(target_hektor_contact_id, mode)  -> en sort
+--   mode = 'refait' | 'abandon' ; la saisie est archivee dans app_pending_resolution
+--   AVANT de vider la file -- une saisie ne disparait jamais sans trace, meme quand
+--   c'est un humain qui l'ecarte.
+--   Controle d'acces : app_console_can_request_contact_job('update_hektor_contact', id),
+--   celui qu'emploient deja app_edit_contact_optimistic et les fonctions de travail.
+--   EXECUTE retire a PUBLIC d'abord (lecon 0.7), puis a anon ; accorde a authenticated.
+--
+-- NOM DU PARAMETRE : `target_hektor_contact_id`, et NON `target_contact_id`.
+-- L'audit du 20/08 a trouve 11 fonctions au parametre ambigu, et le renommage (5a) a ete
+-- RAYE : Postgres refuse le rename, et l'appel se fait par NOM (PostgREST) donc un
+-- DROP+CREATE casserait silencieusement les appelants. Mais pour des fonctions NEUVES,
+-- que personne n'appelle encore, le nom clair ne coute rien. ON ARRETE D'EN CREER DES
+-- AMBIGUES. C'est aussi le nom qu'emploie deja app_console_can_request_contact_job.
+--
+-- UN DEFAUT TROUVE PAR L'ESSAI, avant toute mise en service : la trace lisait
+-- app_contact_id sur la LIGNE D'ATTENTE. Or cette colonne n'a ete remplie qu'une fois,
+-- par le rattrapage de C.2b, sur les lignes qui existaient ce jour-la. Une ligne
+-- d'attente NEUVE ne la porte pas -- la trace serait partie sans le seul identifiant qui
+-- survivra a la coupure. Corrige : on resout le numero A LA SOURCE
+-- (app_contact_current), la ligne d'attente ne servant que de repli.
+--
+-- VERIFIE, sur la base reelle, en simulant un auth.uid() d'admin et en une seule
+-- instruction pour ne pas laisser un bandeau s'afficher sur une vraie fiche :
+--   etat sans rien en attente        -> pending = false                 OK
+--   push_attempts = 5, abandon       -> cause 'envoi_impossible'        OK
+--                                    -> ligne d'attente supprimee       OK
+--                                    -> trace ecrite, objet='contact'   OK
+--                                    -> LE NUMERO app_contact_id present OK
+--                                    -> la saisie archivee (relue)      OK
+--   push_attempts = 2, refait        -> cause 'modifie_dans_hektor'     OK
+--   mode invalide / identifiant vide -> refuses (22023)                 OK
+--   Etat final : 0 ligne en attente, 0 trace. Rien laisse derriere.
+--
+-- COTE FICHE : le bandeau est pose dans LES DEUX versions de la fiche contact --
+-- ContactDetailPopupBase (celle qui est en ligne) ET ContactDetailPopupV2 (drapeau
+-- eteint). V2 n'habille pas Base, c'est une implementation separee : ne poser que dans
+-- l'une aurait fait une version sans avertissement le jour du basculement de drapeau.
+-- Il distingue les deux causes, comme cote annonce : a l'etape 2, "modifie dans Hektor"
+-- disparaitra mais "l'envoi a echoue" restera.
+--
+-- RETOUR ARRIERE : drop des deux fonctions, retrait du composant. Rien d'autre n'a change.
+-- =====================================================================

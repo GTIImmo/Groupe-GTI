@@ -2863,6 +2863,38 @@ export async function loadDossierPropositions(appDossierId: number): Promise<Dos
 /** État d'écriture de la dernière édition optimiste d'un bien.
  *  `conflict` = bloqué (bien modifié dans Hektor depuis l'édition, rien écrit).
  *  `partial`  = enregistré partiellement (au moins un champ ignoré au push). */
+// C.12 25/08 -- le pendant CONTACT de app_annonce_edit_status / _pending_resolve.
+// C.1' (24/08) a retire la purge des 24 h sur LES TROIS objets : une saisie bloquee
+// n'est plus jamais effacee. Mais elle n'a livre le geste humain que pour les annonces.
+// Sans ces deux appels, une saisie contact bloquee s'accumule et la sonde reste rouge.
+// Les recherches n'en ont pas besoin : C.3 a ferme leur porte, elles ne peuvent plus
+// produire de conflit.
+export type ContactEditStatus = {
+  pending: boolean
+  conflict?: boolean
+  push_attempts?: number
+  dirty_at?: string | null
+  push_after?: string | null
+}
+
+export async function loadContactEditStatus(hektorContactId: string): Promise<ContactEditStatus | null> {
+  if (!hasSupabaseEnv || !supabase || !hektorContactId) return null
+  const { data, error } = await supabase.rpc('app_contact_edit_status', {
+    target_hektor_contact_id: hektorContactId,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to load contact edit status')
+  return (data ?? null) as ContactEditStatus | null
+}
+
+export async function resolveContactPending(hektorContactId: string, mode: 'refait' | 'abandon'): Promise<void> {
+  if (!hasSupabaseEnv || !supabase || !hektorContactId) return
+  const { error } = await supabase.rpc('app_contact_pending_resolve', {
+    target_hektor_contact_id: hektorContactId,
+    mode,
+  })
+  if (error) throw new Error(error.message ?? 'Unable to resolve contact pending')
+}
+
 export type AnnonceEditSkippedField = { field: string; reason?: string | null; value?: unknown }
 export type AnnonceEditStatus = {
   pending: boolean

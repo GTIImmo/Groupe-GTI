@@ -146,8 +146,11 @@ import {
   loadDossierPropositions,
   type DossierPropositionRow,
   loadAnnonceEditStatus,
+  loadContactEditStatus,
   resolveAnnoncePending,
+  resolveContactPending,
   type AnnonceEditStatus,
+  type ContactEditStatus,
   loadRapprochementCounts,
   type RapprochementCount,
   hasOffreAchatEnCours,
@@ -28612,6 +28615,64 @@ function DossierPropositionsSection({ dossier, onOpenContact }: { dossier: Dossi
   )
 }
 
+// C.12 25/08 — le même bandeau, pour les CONTACTS. C.1' avait retiré la purge des 24 h
+// sur les trois objets, mais n'avait livré le geste humain que pour les annonces : une
+// saisie contact bloquée restait, sans que personne puisse la classer.
+// (Les recherches n'en ont pas besoin : C.3 a fermé leur porte, elles ne peuvent plus
+// produire de conflit — vérifié de bout en bout le 24/08.)
+function ContactEditStatusBanner({ hektorContactId }: { hektorContactId: string | null }) {
+  const [status, setStatus] = useState<ContactEditStatus | null>(null)
+  const [resolving, setResolving] = useState(false)
+  const [resolveError, setResolveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!hektorContactId) { setStatus(null); return }
+    let cancelled = false
+    loadContactEditStatus(hektorContactId)
+      .then((s) => { if (!cancelled) setStatus(s) })
+      .catch(() => { if (!cancelled) setStatus(null) })
+    return () => { cancelled = true }
+  }, [hektorContactId])
+
+  const resoudre = async (mode: 'refait' | 'abandon') => {
+    if (!hektorContactId || resolving) return
+    setResolving(true)
+    setResolveError(null)
+    try {
+      await resolveContactPending(hektorContactId, mode)
+      setStatus(null)
+    } catch (err) {
+      setResolveError(err instanceof Error ? err.message : String(err))
+      setResolving(false)
+    }
+  }
+
+  if (!status || !status.pending || !status.conflict) return null
+
+  // DEUX CAUSES, deux messages — comme pour l'annonce. À l'étape 2, quand plus personne
+  // n'ouvrira Hektor, la première disparaîtra mais PAS la seconde.
+  const envoiImpossible = (status.push_attempts ?? 0) >= 5
+  const base = { padding: '10px 14px', borderRadius: 8, fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' } as const
+  const bouton = { padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: resolving ? 'default' : 'pointer', border: '1px solid #B3564C', background: '#fff', color: '#7A241C' } as const
+  const boutonEfface = { ...bouton, border: '1px solid #D8B4AF', color: '#8A4A42' } as const
+
+  return (
+    <div role="status" style={{ ...base, background: '#FDECEA', border: '1px solid #E5A29B', color: '#7A241C' }}>
+      {envoiImpossible ? (
+        <><strong>Modification non transmise.</strong> Après 5 tentatives, elle n'a pas pu être envoyée à Hektor.</>
+      ) : (
+        <><strong>Modification non enregistrée.</strong> Ce contact a été modifié dans Hektor depuis votre édition : vos changements n'ont pas été appliqués. Rouvrez la fiche et refaites la modification.</>
+      )}{' '}
+      <strong>Votre saisie est conservée</strong> et ne sera pas écrasée tant que vous n'aurez pas tranché.
+      <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button type="button" style={bouton} disabled={resolving} onClick={() => { void resoudre('refait') }}>J'ai refait</button>
+        <button type="button" style={boutonEfface} disabled={resolving} onClick={() => { void resoudre('abandon') }}>Abandonner cette saisie</button>
+        {resolveError ? <span style={{ fontSize: 13 }}>{resolveError}</span> : null}
+      </div>
+    </div>
+  )
+}
+
 // Tier 2 — fidélité optimiste : bandeau d'alerte quand la dernière édition d'un bien
 // n'a PAS été fidèlement enregistrée dans Hektor (conflit = rien écrit, partiel = champ ignoré).
 // Lit app_annonce_pending via le RPC app_annonce_edit_status. Rien affiché si tout est OK.
@@ -34994,6 +35055,10 @@ function ContactDetailPopupBase(props: {
             </div>
           </header>
 
+          <div style={{ padding: '0 16px' }}>
+            <ContactEditStatusBanner hektorContactId={props.contact.hektor_contact_id} />
+          </div>
+
           <div className="workspace">
 
             <aside className="rail" data-screen-label="Volet identité">
@@ -36104,6 +36169,9 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     <div className={`fa-contact-v2 ${typeClass}`} id="fa-cx-root" data-screen-label="Fiche contact V2">
       <div className="fa-cx-overlay" onClick={props.onClose}>
         <div className="fa-cx-panel" onClick={(event) => event.stopPropagation()}>
+          <div style={{ padding: '12px 16px 0' }}>
+            <ContactEditStatusBanner hektorContactId={props.contact.hektor_contact_id} />
+          </div>
           <div className="fa-cx-body">
             <aside className="fa-cx-rail" data-screen-label="Volet identité">
               <button className="fa-cx-back" type="button" onClick={props.onClose}>
