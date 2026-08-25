@@ -123,8 +123,14 @@ et c'est le bon.
 En revanche, **jamais deux fois le même identifiant sur la même annonce : 0 cas.**
 
 > **Règle** : toujours interroger par le **couple (annonce, numéro)**, jamais par l'identifiant
-> seul. C'est ce que fait `resoudreMandatDepuisNumero` (C.5), et c'est pourquoi elle aboutit à
+> seul. C'est ce que fait `resoudreMandatAClore` (repli de clôture), et c'est pourquoi elle aboutit à
 > **100 % sur les 23 816 couples**.
+>
+> ⚠ **Corrigé le 25/08 au soir.** Cette même résolution avait été posée sur les **transactions**
+> par C.5 le matin : **annulée le jour même**. Sur le formulaire d'offre, Hektor n'attend pas un
+> numéro mais un couple **`<id>-<FAMILLE>`** — `648-PROTEXA` ou `9887-HEKTOR` — et une valeur
+> amputée est **ignorée sans erreur** : l'offre part alors sans mandat *(constaté sur l'offre
+> 33026)*. Le worker **recopie de nouveau la valeur de Hektor telle quelle**.
 
 ---
 

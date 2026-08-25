@@ -242,7 +242,8 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   PISTE 1, le code       C.2b C.5 C.6 C.7 C.12 [FAITS] -> C.4 -> C.9 -> C.13
+   PISTE 1, le code       C.2b C.6 C.7 C.12 [FAITS] -> C.4 -> C.9 -> C.13
+                          (C.5 ANNULEE le 25/08 au soir : retour arriere)
                           -> C.11 -> E.0 [FAIT le 25/08]
                                                      4 a 6 semaines
                           SE CONSTRUIT MAINTENANT, dormant. N'attend personne.
@@ -251,7 +252,7 @@ protège le moins.)*
    PISTE 3, la coupure    quand A.1/A.2/A.3 sont faits.   A ZERO.
 
    Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5
-                    C.1' C.2a C.2b C.3 C.5 C.6 C.7 C.12
+                    C.1' C.2a C.2b C.3 C.6 C.7 C.12
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -495,13 +496,15 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | ❗ **Le vrai problème n'était pas la conservation mais l'ÉCRITURE** : `view_generale.py` fait `DROP TABLE` puis `CREATE TABLE AS` — une valeur écrite par l'app **ne survivrait pas à 05:30**. Cette table est le seul endroit où elle survit | |
 | | ℹ **Résultat mesuré : 0 divergence sur ~581 000 comparaisons.** Mais **quatre faux écarts** ont dû être éliminés d'abord — `NULL` vs `0.0` *(7 143 !)*, entier `0` vs texte `'0'` *(23, piège GLOB)*, la date sentinelle `0000-00-00`, et **un jour de décalage** *(89)*. C'est ce dernier qui dicte le placement : les deux côtés doivent être de la même heure | |
 | ⏳ **C.4** | **Les workers — 16, et non 35** *(mesuré : `ETUDE_WORKERS_EXISTANT_ET_FAISABILITE_2026-08-20`)*. Familles B1+B2. Statut + affaire *(le plus riche)* · archiver/désarchiver · créer contact et mandant · **affectation du négociateur EN DERNIER** *(impersonation)* | **7 sur 34 marchent déjà sans Hektor.** Et **3 seulement** en dépendent vraiment — numéro de mandat, relance et annulation de signature — soit **exactement A.1 et A.2** |
-| | ❗ **LE MANDAT D'UNE TRANSACTION** *(enquête du 25/08, `NOTE_CHAINE_DES_MANDATS_2026-08-25`)*. **a)** Quand le négociateur changera un statut **depuis l'app**, celle-ci doit **transmettre le numéro de mandat de la fiche** — pas laisser le worker chercher. La résolution existe déjà côté worker *(C.5)* ; il suffit que le formulaire l'envoie. *La modale actuelle est **réservée aux admins** : `isAdmin ? openStatusChangeModal : undefined`* | |
+| | ❗ **LE MANDAT D'UNE TRANSACTION** *(enquête du 25/08, `NOTE_CHAINE_DES_MANDATS_2026-08-25`)*. **a)** Quand le négociateur changera un statut **depuis l'app**, celle-ci doit **transmettre le numéro de mandat de la fiche** — pas laisser le worker chercher. ⚠ **Et la valeur doit être ENTIÈRE** : Hektor attend `<id>-<FAMILLE>` *(`648-PROTEXA`)*, jamais le numéro seul — c'est ce qui a fait annuler C.5. Tant que Hektor vit, **le worker recopie sa valeur** ; le formulaire n'a rien à envoyer. *La modale actuelle est **réservée aux admins** : `isAdmin ? openStatusChangeModal : undefined`* | |
 | | ⚠ **b)** **Si un négociateur crée un nouveau mandat et que la fiche Hektor ne bascule pas tout de suite**, le numéro de la fiche pointerait encore l'**ancien**. Ce n'est pas théorique : le même défaut a été corrigé le 28/07 sur les dates *(VA6482 — numéro neuf + date de fin échue → annonce bloquée en « échu »)* | |
 | | ℹ **C.4 n'est PAS l'ouverture des droits** *(corrigé le 25/08)*. Elle rend l'app capable de faire ces gestes **sans Hektor** — c'est un chantier de **coupure**, pas de permission. Les droits sont un sujet à part : **bloc F** | |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
-| ✅ **C.5** | ~~**Registre d'affaires et mandat des transactions**~~ **FAIT le 25/08** — le worker résout le mandat depuis le **numéro que l'app envoie déjà**, l'ordre de priorité est corrigé, et **le repli est journalisé** | **FAIT** | **La moitié était déjà faite** : `app_affaire_ledger` porte `app_affaire_id` et `app_dossier_id` depuis le 20/08. Vérifié **avant** de refaire |
-| | ❗ **L'ordre de priorité était faux** : `payload.mandat || HTML || selectedMandat`. **Le HTML de Hektor passait avant le choix explicite de l'app** — donc même quand l'app disait quel mandat, Hektor gagnait | |
-| | ℹ **Mesuré** : sur 12 travaux depuis le 21/05, l'app n'a **jamais** fourni le mandat — mais elle envoie `numero_mandat` à chaque fois. Et sur les **23 816 couples** (annonce, numéro), **zéro est ambigu** : la résolution aboutit à 100 %. *23 768 annonces ont un seul mandat, **24 en ont deux** — c'est là que deviner est faux, sur des opérations irréversibles* | |
+| ❌ **C.5** | ~~Registre d'affaires et mandat des transactions~~ — **ANNULÉE le 25/08 au soir, le jour même.** Le worker **recopie de nouveau** la valeur de Hektor. *Le registre d'affaires, lui, reste acquis (tâche 4 du 20/08).* | **RETOUR ARRIÈRE** | **La moitié était déjà faite** : `app_affaire_ledger` porte `app_affaire_id` et `app_dossier_id` depuis le 20/08. Vérifié **avant** de refaire |
+| | ❗ **POURQUOI ELLE A ÉTÉ ANNULÉE.** Hektor n'identifie pas un mandat par un nombre : son formulaire attend **`<id>-<FAMILLE>`** — `648-PROTEXA`, `9887-HEKTOR` — parce qu'il tient **deux registres parallèles**. C.5 envoyait `648` : aucune option ne correspond, Hektor range « mandat non renseigné », **sans erreur**. Constaté en vraie grandeur : l'offre **33026** est chez Hektor **sans mandat**, alors que toutes les offres créées depuis septembre 2025 en portent un | |
+| | ℹ **Ce qui marchait avant, et pourquoi.** Le worker **recopiait** la valeur de Hektor, lue dans l'`<input>` caché `selectedMandatId`. *(Le plan et l'audit du 20/08 nommaient `id_mandat` : c'est un `<select>`, que `htmlInputValue` ne sait pas lire. Le constat de fond — « le worker dépend du HTML » — était juste ; le champ nommé, non.)* | |
+| | ✅ **POURQUOI LE RETOUR ARRIÈRE PLUTÔT QU'UN CORRECTIF** *(arbitrage de Frédéric, 25/08)*. **① Ce worker meurt avec Hektor** — le rendre autonome de Hektor est sans objet. **② Le gain de C.5 était nul, et c'est mesuré** : Hektor pré-sélectionne le mandat courant, et la fiche de l'app désigne le même courant **24 fois sur 24**. **③ Règle du plan** : les workers sont **maintenus, pas refondus** | |
+| | 🔎 **Ce qui reste acquis** : la valeur composite, les **deux familles** de registre *(`SIMPLE`/`EXCLUSIF`/`ACCORD` → HEKTOR ; libellé français → PROTEXA, vérifié 10/10)*, et le **livrable A0** de la clôture, jamais produit en juillet. Versé dans **C.13** | |
 | ❌ **C.8** | ~~Le **calque** disparaît · la **barrière**~~ **DISSOUTE le 25/08, après mesure** — ses deux moitiés n'étaient pas des tâches | |
 | | **2.5, le calque** : `app_edit_annonce_optimistic` **écrit déjà dans la fiche** (`app_dossier_current` + son détail) et garde une photo d'avant dans la file. Le « calque » n'est pas un objet à supprimer : c'est le **statut provisoire** de ce que l'app écrit. Il cesse d'être provisoire **quand le contrat de C.7 cesse d'être vide** — **c'est une bascule d'interrupteur, pas un développement**. Et le faire maintenant, contrat vide, retirerait l'affichage instantané **sans** donner l'autorité à l'app : une régression | |
 | | **2.6, la barrière** : **aucun travail n'échoue faute de numéro Hektor** — 456 travaux sans numéro, **0 en erreur**, et ce sont des travaux qui n'en ont pas besoin *(363 rafraîchissements de contact, 26 créations de brouillon)*. Le cas naît avec **C.9** : la barrière y est **fondue** | |
@@ -525,7 +528,7 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 
 | Tâche | Constructible maintenant | Ce qui attend |
 |---|---|---|
-| **C.2b** · **C.5** · **C.11** · **C.12** | oui, entièrement | **rien** — additif |
+| **C.2b** · **C.11** · **C.12** | oui, entièrement | **rien** — additif |
 | **C.6** | oui, en doublure | qui **lit** la table |
 | **C.8** | oui | le calque, côté front |
 | **C.9** | oui, derrière drapeau | le drapeau |

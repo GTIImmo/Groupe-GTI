@@ -1,6 +1,6 @@
 # FEUILLE DE ROUTE — 24/08/2026, au soir
 
-**20 faites · 17 restantes · 5 supprimées** · *F.1 ajoutée le 25/08 : les droits, après la coupure* · *le 25/08 : C.2b, C.12, C.6, C.7, C.5 et **E.0** faites · **C.8 dissoute** · **C.13 ajoutée***
+**19 faites · 17 restantes · 5 supprimées · 1 annulée** · *F.1 ajoutée le 25/08 : les droits, après la coupure* · *le 25/08 : C.2b, C.12, C.6, C.7 et **E.0** faites · **C.8 dissoute** · **C.13 ajoutée** · **C.5 ANNULÉE le soir même** — retour arrière, le worker recopie de nouveau la valeur de Hektor*
 
 *(la feuille du matin annonçait 21 restantes : le compte était faux d'une unité, recompté tâche par tâche le 24/08 au soir)*
 
@@ -143,7 +143,12 @@ archiver/désarchiver, créer contact et mandant, **affectation du négociateur 
 
 **Interrupteur : la même liste de champs** — c'est ici que se répondent les 3 réglages.
 
-## 8 · C.5 — registre d'affaires et mandat des transactions · ✅ **FAIT le 25/08**
+## 8 · C.5 — mandat des transactions · ❌ **ANNULÉE le 25/08 au soir**
+
+> **Retour arrière le jour même.** Hektor attend `<id>-<FAMILLE>` — `648-PROTEXA` — et non le
+> numéro seul. Une valeur amputée est **ignorée sans erreur** : l'offre 33026 est partie **sans
+> mandat**. Le worker **recopie de nouveau** la valeur que Hektor lui tend, comme depuis le 21/05.
+> *Le registre d'affaires, lui, reste acquis (tâche 4 du 20/08).*
 
 **La moitié était déjà faite** : `app_affaire_ledger` porte sa propre clé depuis le
 20/08. Vérifié avant de refaire.

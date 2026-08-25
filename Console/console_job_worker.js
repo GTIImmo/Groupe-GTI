@@ -9466,50 +9466,23 @@ async function setHektorAnnonceStatusValue(job, annonceId, config, reason) {
   });
 }
 
-// C.5 25/08 -- LE MANDAT D'UNE TRANSACTION VIENT DE L'APP, PLUS DU HTML DE HEKTOR.
-//
-// MESURE DU 25/08, sur les 12 travaux de ce type depuis le 21/05 : l'app n'a JAMAIS
-// fourni selected_mandat ni mandat. Mais elle envoie `numero_mandat` a chaque fois.
-// Le worker lisait donc id_mandat dans le formulaire Hektor et ignorait ce que l'app
-// disait -- alors qu'elle le disait.
-//
-// POURQUOI CA COMPTE MALGRE LE FAIBLE VOLUME : 23 768 annonces n'ont qu'UN seul mandat
-// (deviner y est sans risque), mais 24 en ont DEUX -- et c'est exactement la que
-// deviner est faux. Surtout, LE JOUR DE LA COUPURE IL N'Y AURA PLUS DE HTML A LIRE :
-// il faut que l'app fasse foi des maintenant.
-//
-// ON N'ACCEPTE LA RESOLUTION QUE SI ELLE EST CERTAINE : une seule ligne doit
-// correspondre au couple (annonce, numero de mandat). En cas d'ambiguite on ne devine
-// pas -- on laisse le repli jouer, et il sera journalise.
-async function resoudreMandatDepuisNumero(payload, annonceId) {
-  const deja = String(payload.mandat || payload.selected_mandat || payload.selectedMandat || "").trim();
-  if (deja) return "app";
-  const numero = String(payload.numero_mandat || payload.numeroMandat || "").trim();
-  if (!numero) return null;
-  try {
-    const rows = await supabaseRequest(
-      `app_mandat_register_current?select=mandat_source_id` +
-      `&hektor_annonce_id=eq.${encodeURIComponent(String(annonceId))}` +
-      `&numero_mandat=eq.${encodeURIComponent(numero)}&limit=2`);
-    if (Array.isArray(rows) && rows.length === 1 && rows[0] && rows[0].mandat_source_id) {
-      payload.selected_mandat = String(rows[0].mandat_source_id);
-      return "numero_mandat";
-    }
-  } catch (_) { /* on laisse le repli HTML jouer : il sera journalise */ }
-  return null;
-}
-
 function normalizeStatusTransactionPayload(payload, config, initHtml) {
   const amount = cleanMoneyValue(payload.amount || payload.montant_offre || payload.montant || payload.price, htmlInputValue(initHtml, "montant_offre") || htmlInputValue(initHtml, "montantOffre"));
   const salePrice = cleanMoneyValue(payload.sale_price || payload.prix_de_vente || payload.prixDeVente || payload.price, htmlInputValue(initHtml, "offre_prixDeVente") || htmlInputValue(initHtml, "prixDeVente") || amount);
   const date = normalizeStatusFrenchDate(payload.transaction_date || payload.date || payload.date_offre || payload.date_compromis || payload.date_vente);
   const validity = String(payload.validity_days || payload.nb_jours_validite || payload.nbJoursValidite || htmlInputValue(initHtml, "availability") || "10").trim();
   const selectedMandat = String(payload.selected_mandat || payload.selectedMandat || htmlInputValue(initHtml, "selectedMandatId") || "").trim();
-  // C.5 25/08 : L'ORDRE EST CORRIGE. Le HTML de Hektor passait AVANT le choix
-  // explicite de l'app -- donc meme quand l'app disait quel mandat, Hektor gagnait.
-  const mandatHtml = htmlInputValue(initHtml, "id_mandat");
-  const mandat = String(payload.mandat || selectedMandat || mandatHtml || "").trim();
-  const mandatDevine = Boolean(!payload.mandat && !selectedMandat && mandatHtml);
+  // 25/08 -- RETOUR A L'ORDRE D'ORIGINE, apres l'echec de C.5.
+  //
+  // Le worker RECOPIE la valeur que Hektor lui tend ; il ne la reconstruit pas. C'est
+  // `selectedMandatId` qui la porte -- un <input> cache valant `648-PROTEXA` -- et non
+  // `id_mandat`, qui est un <select> que htmlInputValue ne sait pas lire (il ne matche
+  // que les balises <input>) et qui rend donc toujours vide. Le troisieme terme est
+  // celui qui sert, et c'est lui qui faisait marcher ce chemin depuis le 21/05.
+  //
+  // NE PAS y remettre le numero seul de l'app : Hektor attend <id>-<FAMILLE>, et une
+  // valeur amputee est ignoree SANS ERREUR -- l'offre part alors sans mandat.
+  const mandat = String(payload.mandat || htmlInputValue(initHtml, "id_mandat") || selectedMandat || "").trim();
   const negotiator = String(payload.instigateur || payload.negociateur_id || htmlInputValue(initHtml, "negociateurSelect") || "").trim();
   const agency = String(payload.agence_reseau_selected || payload.agenceReseauSelected || "").trim();
   const buyer = String(payload.acquereur_id || payload.buyer_contact_id || payload.id_acquereur || "").trim();
@@ -9525,7 +9498,6 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
     validity,
     selectedMandat,
     mandat,
-    mandatDevine,
     negotiator,
     agency,
     buyer,
@@ -9561,26 +9533,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     (initJson.data && (initJson.data.defaultTemplate || initJson.data.html || initJson.data.template)) ||
     ""
   );
-  // C.5 25/08 : on donne sa chance a l'app AVANT de regarder le HTML.
-  const origineMandat = await resoudreMandatDepuisNumero(payload, annonceId);
   const tx = normalizeStatusTransactionPayload(payload, config, initHtml);
-  if (tx.mandatDevine) {
-    // ON NE DEVINE PLUS EN SILENCE. Cette ligne est la mesure qui dira quand l'app
-    // fournit enfin toujours le mandat -- et donc quand le repli pourra disparaitre.
-    await logJob(job.id, "status_transaction", "warning",
-      "Mandat DEVINE dans le HTML de Hektor : l'app ne l'a pas fourni", {
-        hektor_annonce_id: annonceId,
-        numero_mandat: payload.numero_mandat || null,
-        mandat_retenu: tx.mandat || null,
-      });
-  } else if (origineMandat === "numero_mandat") {
-    await logJob(job.id, "status_transaction", "done",
-      "Mandat resolu depuis le numero fourni par l'app", {
-        hektor_annonce_id: annonceId,
-        numero_mandat: payload.numero_mandat || null,
-        mandat_retenu: tx.mandat || null,
-      });
-  }
   const body = new URLSearchParams();
   body.set("mode", config.transactionMode);
   body.set("idAnnonce", annonceId);

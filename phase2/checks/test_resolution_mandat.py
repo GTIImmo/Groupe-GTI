@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Essaie la resolution du mandat EXACTEMENT comme le worker la fait.
+"""Essaie la resolution du mandat par le REGISTRE, comme le worker la fait.
+
+25/08 -- PORTEE CORRIGEE. Ce test a ete ecrit pour C.5, qui resolvait ainsi le mandat des
+TRANSACTIONS. C.5 a ete annulee le jour meme : Hektor n'attend pas un numero seul mais un
+couple <id>-<FAMILLE>, et le worker recopie desormais a nouveau sa valeur telle quelle.
+La requete testee ici reste VIVANTE, mais sur un autre chemin : `resoudreMandatAClore`
+(cloture), ou elle sert de second recours quand le libelle de Hektor ne permet pas de
+cibler le mandat. Le test garde donc tout son sens -- il ne couvre plus les transactions.
 
 Le worker interroge Supabase avec :
     app_mandat_register_current?select=mandat_source_id
