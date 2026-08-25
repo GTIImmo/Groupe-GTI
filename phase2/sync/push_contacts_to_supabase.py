@@ -473,7 +473,11 @@ def fetch_dirty_contact_ids(client: "SupabaseRestClient", contact_ids: list[str]
     }
 
 
-APP_OWNED_CONTACT_FIELDS = ("birth_date", "birth_place", "marital_status")
+# A1 (19/08) exige UNE SEULE CONSTANTE, lue partout -- « surtout pas trois copies ».
+# Cette liste existait a l'identique dans deux fichiers ; elle vit desormais dans
+# phase2/identite/contrat_autorite.py. Le nom local est conserve pour ne rien casser.
+sys.path.insert(0, str(ROOT / "phase2" / "identite"))
+from contrat_autorite import CHAMPS_APP_CONTACT as APP_OWNED_CONTACT_FIELDS  # noqa: E402
 
 
 def fetch_app_owned_contact_fields(client: "SupabaseRestClient", contact_ids: list[str] | None) -> dict[str, dict[str, Any]]:

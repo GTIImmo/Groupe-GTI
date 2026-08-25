@@ -39,7 +39,11 @@ DEFAULT_NODE_SCRIPT = ROOT / "Console" / "extract_hektor_contact_missing.js"
 DEFAULT_LOGIN_SCRIPT = ROOT / "Console" / "playwright_login.js"
 DEFAULT_STORAGE_STATE = ROOT / "Console" / "sessions" / "storage_state_admin.json"
 ENV_FILES = (ROOT / ".env", ROOT / "Console" / ".env", ROOT / "apps" / "hektor-v1" / ".env")
-APP_OWNED_FIELDS = ("birth_date", "birth_place", "marital_status")
+# A1 (19/08) exige UNE SEULE CONSTANTE, lue partout -- « surtout pas trois copies ».
+# Cette liste existait a l'identique dans deux fichiers ; elle vit desormais dans
+# phase2/identite/contrat_autorite.py. Le nom local est conserve pour ne rien casser.
+sys.path.insert(0, str(ROOT / "phase2" / "identite"))
+from contrat_autorite import CHAMPS_APP_CONTACT as APP_OWNED_FIELDS  # noqa: E402
 ELIGIBLE_SCOPE_WHERE = "COALESCE(supabase_sync_eligible, 0) = 1"
 ALL_SCOPE_WHERE = "NULLIF(TRIM(hektor_contact_id), '') IS NOT NULL"
 

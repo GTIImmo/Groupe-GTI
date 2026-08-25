@@ -291,6 +291,19 @@ Invoke-Step -Label "phase2 refresh views" -Arguments @(
     "phase2\refresh_views.py"
 ) -WorkerKey "phase2.refresh_views"
 
+# C.7 25/08 -- L'ENDROIT OU L'ECART SE RESOUT.
+# ICI, et l'ordre n'est pas negociable : l'etape juste au-dessus vient de DETRUIRE et
+# de refaire app_view_generale depuis le miroir -- donc Hektor vient de regagner sur
+# tout. C'est maintenant, et seulement maintenant, qu'on relit dans Supabase ce que
+# l'app detient et qu'on le repose. Et c'est AVANT le push, qui enverra la table deja
+# arbitree : le push lui-meme ne change pas d'un iota.
+# AUJOURD'HUI ELLE NE FAIT RIEN : le contrat d'annonce est vide, donc « Hektor gagne
+# partout », donc comportement identique. La machinerie existe ; l'interrupteur est
+# dans phase2/identite/contrat_autorite.py.
+Invoke-Step -Label "phase2 appliquer le contrat d autorite" -Arguments @(
+    "phase2\identite\appliquer_contrat.py"
+) -WorkerKey "phase2.contrat_autorite"
+
 Invoke-Step -Label "phase2 build contacts layer" -Arguments @(
     "phase2\contacts\build_contacts_layer.py",
     "--no-reports"
