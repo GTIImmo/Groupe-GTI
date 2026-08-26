@@ -495,12 +495,53 @@ def delete_raw_object_rows(conn, *, endpoint_names: Iterable[str], object_ids: I
     conn.commit()
 
 
+PURGE_LOG_TABLE = "sync_annonce_scope_purge_log"
+
+
+def journalise_purge_scope(conn, stale_ids: list[str]) -> None:
+    """C.15 (1) 26/08 -- ON TRACE AVANT D'EFFACER. Ne change AUCUN comportement.
+
+    POURQUOI. reconcile_active_annonce_scope supprime l'etat, les liens contacts et le
+    detail brut de toute annonce que le listing actif ne rend plus. Elle renvoyait deja la
+    liste de ce qu'elle effacait -- ET L'APPELANT L'IGNORAIT. Aucun journal, aucun compteur :
+    personne ne pouvait dire combien d'annonces disparaissaient chaque nuit, ni lesquelles.
+
+    C'est ce silence qui a laisse vivre le defaut trouve le 26/08 : les annonces 62815, 62825
+    et 62855 ont ete effacees parce que Hektor ne les listait pas (le run ne passe pas le
+    parametre `offre`), alors que AnnonceById les rend sans difficulte.
+
+    ON N'AGIT PAS ENCORE. Cette etape ne fait qu'ECLAIRER : on veut d'abord connaitre le
+    volume reel avant de decider de verifier chaque disparition par un appel a Hektor.
+    Sans ce chiffre, tout correctif serait pose a l'aveugle.
+    """
+    conn.execute(
+        f"""CREATE TABLE IF NOT EXISTS {PURGE_LOG_TABLE} (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                hektor_annonce_id TEXT NOT NULL,
+                purge_le          TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )"""
+    )
+    conn.executemany(
+        f"INSERT INTO {PURGE_LOG_TABLE}(hektor_annonce_id) VALUES (?)",
+        [(annonce_id,) for annonce_id in stale_ids],
+    )
+
+
 def reconcile_active_annonce_scope(conn, active_annonce_ids: set[str]) -> set[str]:
     rows = conn.execute("SELECT hektor_annonce_id FROM sync_annonce_state WHERE listing_variant = 'active'").fetchall()
     known_ids = {str(row["hektor_annonce_id"]).strip() for row in rows if str(row["hektor_annonce_id"] or "").strip()}
     stale_ids = sorted(known_ids - active_annonce_ids)
     if not stale_ids:
+        print("[reconcile] 0 annonce sortie du listing actif -- rien a purger")
         return set()
+
+    # LA TRACE, avant la suppression : si l'ecriture du journal echoue, on ne supprime pas.
+    journalise_purge_scope(conn, stale_ids)
+    apercu = ", ".join(stale_ids[:30])
+    suite = " ..." if len(stale_ids) > 30 else ""
+    print(f"[reconcile] {len(stale_ids)} annonce(s) sortie(s) du listing actif -> purge de leur etat, "
+          f"de leurs liens contacts et de leur detail brut")
+    print(f"[reconcile]   ids : {apercu}{suite}")
 
     delete_rows_by_ids(conn, table="sync_annonce_state", column="hektor_annonce_id", ids=stale_ids)
     delete_rows_by_ids(conn, table="sync_annonce_contact_link", column="hektor_annonce_id", ids=stale_ids)
