@@ -123,6 +123,57 @@ mandat** ; offre 33027 *(après)* → **mandat 648**. Même annonce, même acqu�
 
 # 🛤 PISTE 1 — LE CODE · *se construit maintenant, dormant · n'attend personne*
 
+## 🔴 C.15 — LE RUN NE VOIT QU'UN TYPE D'OFFRE SUR SIX · **LE PLUS GROS TROU CONNU**
+
+*Trouvé le 26/08, parce que Frédéric a refusé deux fois ma conclusion.*
+
+`sync_raw.py` appelle `ListAnnonces` **sans le paramètre `offre`**. Sans lui, Hektor ne rend
+**que les ventes**.
+
+| type d'offre | actives | archivées | total |
+|---|---|---|---|
+| **`0` vente** — tout ce que le run voit | 22 424 | 34 487 | **56 911** |
+| `2` location | 621 | 2 248 | 2 869 |
+| `10` vente immo pro | 251 | 782 | 1 033 |
+| `11` location immo pro | 54 | 208 | 262 |
+| `6` neuf · `8` saisonnier | 1 | 0 | 1 |
+| **INVISIBLES** | **927** | **3 238** | **4 165** |
+
+**Mesuré par trois chemins indépendants qui donnent le même chiffre** : GraphQL 61 076 − REST
+56 911 · la somme des totaux par type · et `offre_type = 0` sur **les 56 910 lignes du miroir,
+sans exception**.
+
+### La décision (Frédéric, 26/08)
+
+```
+   LE SERVEUR          tous les types          61 076   (+4 165)  -> il devient le maitre
+   SUPABASE / FRONT    offre 0 + 10 + 6        57 945   (+1 034)
+   au serveur seul     location 2 + 11 + 8      3 131   -> n'apparait PAS dans l'app
+```
+
+### ⚠ Le piège à ne pas rater
+
+`reconcile_active_annonce_scope` calcule `known_ids − active_annonce_ids` et **supprime** la
+différence — état, liens contacts, détail brut. **Si le balayage couvre les six types mais que la
+réconciliation compare à un seul, elle effacera les 4 165 à chaque run.** Elle doit être scopée
+par type d'offre.
+
+### Ce que ça explique
+
+Les trois annonces que Frédéric m'a fait chercher — **62815, 62823, 62825** — sont des **ventes
+immo pro**. Elles ne sont pas « tombées » du miroir : elles n'auraient jamais dû y entrer, et n'y
+sont entrées que par le canal brouillon, avant d'être effacées par cette même réconciliation.
+
+### À VÉRIFIER AVANT DE CODER
+
+- le volume de détails à rapatrier au premier run *(+927 `AnnonceById`)* et le **frein de débit** —
+  notre IP a déjà été bannie une fois ;
+- l'effet sur `app_view_generale`, le registre, les rapprochements et les statistiques, **tous
+  calculés jusqu'ici sur un parc amputé** ;
+- le sort d'un contact rattaché à une location, absente de Supabase.
+
+---
+
 ## ⚡ 26bis — DONNER UN CORPS À L'ANNONCE · **LA PLUS URGENTE**
 
 > **Elle était décrite dans le plan depuis le 21/08 mais n'avait AUCUN numéro de tâche.**
