@@ -520,6 +520,15 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | `6` neuf · `8` saisonnier | 1 · 0 · 1 |
 | | **INVISIBLES** | **927 · 3 238 · 4 165** |
 | | ✅ **DÉCISION DE FRÉDÉRIC, 26/08** : le **SERVEUR** reçoit **tous** les types *(61 076)* — il devient réellement le maître. **SUPABASE, LE FRONT ET LES WORKERS** ne reçoivent que **`0` + `10` + `6`** *(57 945, soit +1 034)*. Les locations *(3 131)* restent au serveur et **n'apparaissent pas dans l'app** | |
+| | ❗ **ET LES QUATRE INDEX SUPABASE — point relevé par Frédéric, 26/08.** Ce n'est pas « un seau » : les quatre index sont **tous dérivés de `app_view_generale`**, donc **ajouter les types au serveur les ferait partir automatiquement vers Supabase**, locations comprises | |
+| | | **la carte du routage** |
+| | `app_dossier_current` *(actives)* — `ANNONCES_SCOPE_WHERE` | `archive='0'` ET statut ∈ (`Actif`, `Sous offre`, `Sous compromis`, `Estimation`) |
+| | `app_archive_annonce_index_current` | `archive='1'` |
+| | `app_historical_annonce_index_current` | `archive='0'` ET statut ∈ (`Vendu`, `Clos`) |
+| | `app_brouillon_annonce_index_current` | `archive='0'` ET id ∈ brouillons *(`hektor_annonce_draft_state`)* |
+| | ✅ **LA COLONNE EXISTE DÉJÀ** : `app_view_generale.offre_type` vient de `ann.offre_type` *(`view_generale.py:273`)* et vaut **`0` sur les 56 910 lignes**. Le filtre `offre_type IN ('0','10','6')` peut donc être posé **sans rien ajouter à la vue** | |
+| | 🔑 **D'OÙ L'ORDRE À RESPECTER, ET IL EST GRATUIT** : poser le filtre **AVANT** d'ouvrir le run. Aujourd'hui `offre_type` vaut 0 partout, donc **le filtre est totalement inerte** — il ne change pas une ligne. Une fois posé, on ouvre le robinet : **il n'existe alors aucun instant où une location peut fuir vers Supabase**. Faire l'inverse, c'est publier 3 131 locations puis courir après | |
+| | ⚠ `ANNONCES_SCOPE_WHERE` sert **aussi aux compteurs** *(total_dossiers, total_sans_mandat, total_bloques, total_valides_diffusion…)* : le filtre s'y applique donc d'un seul geste, mais il faut vérifier que c'est bien voulu partout | |
 | | ⚠ **PIÈGE À NE PAS RATER** : `reconcile_active_annonce_scope` calcule `known_ids − active_annonce_ids` et **SUPPRIME** la différence *(état, liens contacts, détail brut)*. Si le balayage couvre les six types mais que la réconciliation compare à un seul, **elle effacera les 4 165 à chaque run**. La réconciliation doit être **scopée par type d'offre** | |
 | | ℹ **Ce que ça explique** : les 3 annonces cherchées par Frédéric *(62815, 62823, 62825)* sont des **ventes immo pro**. Elles ne sont pas « tombées » du miroir — elles n'auraient jamais dû y entrer, et n'y sont entrées que par le canal brouillon avant d'être effacées par cette même réconciliation | |
 | | ⚠ **À VÉRIFIER AVANT DE CODER** : le volume de détails à rapatrier au premier run *(+927 `AnnonceById` actives)* et le **frein de débit** *(notre IP a déjà été bannie une fois)* · l'effet sur `app_view_generale`, le registre, les rapprochements et les statistiques, **tous calculés jusqu'ici sur un parc amputé** · le sort d'un contact rattaché à une location, absente de Supabase | |

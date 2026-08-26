@@ -151,6 +151,27 @@ sans exception**.
    au serveur seul     location 2 + 11 + 8      3 131   -> n'apparait PAS dans l'app
 ```
 
+### ⚠ Et les quatre index Supabase — *point relevé par Frédéric*
+
+Ce n'est pas « un seau » : **les quatre index sont tous dérivés de `app_view_generale`**. Ajouter
+les types au serveur les ferait donc partir vers Supabase **automatiquement**, locations comprises.
+
+| index | condition |
+|---|---|
+| `app_dossier_current` *(actives)* | `archive='0'` ET statut ∈ (`Actif`, `Sous offre`, `Sous compromis`, `Estimation`) |
+| `app_archive_annonce_index_current` | `archive='1'` |
+| `app_historical_annonce_index_current` | `archive='0'` ET statut ∈ (`Vendu`, `Clos`) |
+| `app_brouillon_annonce_index_current` | `archive='0'` ET id ∈ brouillons |
+
+**La colonne existe déjà** : `app_view_generale.offre_type` vaut `0` sur les 56 910 lignes.
+
+> 🔑 **L'ordre à respecter, et il est gratuit.** Poser le filtre `offre_type IN ('0','10','6')`
+> **AVANT** d'ouvrir le run. Aujourd'hui il est **totalement inerte** — tout vaut 0. Une fois posé,
+> on ouvre le robinet, et **il n'existe aucun instant où une location peut fuir vers Supabase**.
+> L'inverse revient à publier 3 131 locations puis à courir après.
+
+---
+
 ### ⚠ Le piège à ne pas rater
 
 `reconcile_active_annonce_scope` calcule `known_ids − active_annonce_ids` et **supprime** la
