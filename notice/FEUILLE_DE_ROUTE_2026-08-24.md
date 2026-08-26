@@ -147,15 +147,46 @@ la remet à plus tard.**
 > QUE là**, et le serveur ne l'apprend que si Hektor la confirme. Ce serait creuser le trou pendant
 > qu'on le rebouche. »*
 
-### ❗ Le lien bien ↔ mandant en fait partie — *trouvé le 26/08*
+### ❌ Un constat que j'ai retiré le jour même — il était faux
 
-Le couple *(annonce, contact)* vit dans **`sync_annonce_contact_link` — 48 291 lignes, dans le
-MIROIR seulement**. Absent du serveur, absent de Supabase, absent du paquet de détail. La fiche
-affiche « 2 mandants » **en interrogeant Hektor en direct** *(« Source API AnnonceById »)*. Le
-contact sait qu'il est rattaché à **un** bien — **pas auquel**.
+J'avais écrit que le lien bien ↔ mandant n'existait que dans le miroir. **Faux.** Il vit dans
+`app_contact_relation_current` — **165 474 lignes sur le serveur, 77 376 dans Supabase** — avec
+`hektor_annonce_id`, `app_dossier_id`, le rôle et le numéro de mandat.
 
-> Le jour où Hektor se tait, **l'app ne saurait plus dire qui sont les mandants d'un bien.**
-> C'est l'illustration la plus concrète de 26bis.
+> **L'erreur de méthode** : j'ai conclu à une absence après trois recherches par nom, au lieu de
+> faire l'inventaire des tables. **Une recherche qui échoue ne prouve pas une absence.**
+
+### ✅ Ce que l'inventaire a établi — le trou est plus précis
+
+| table | comment elle est écrite | possédée ? |
+|---|---|---|
+| `app_contact` *(identité)* | `CREATE IF NOT EXISTS` + upsert | ✅ |
+| `app_contact_current` *(corps, 34 col)* | idem | ✅ |
+| `app_contact_relation_current` *(liens)* | idem | ✅ |
+| `app_dossier` *(identité annonce)* | AUTOINCREMENT, persistante | ✅ |
+| **`app_view_generale` *(corps annonce, 130 col)*** | **`DROP` + `CREATE AS` chaque nuit** | ❌ |
+
+**Le contact possède tout. L'annonce possède son identité, pas son corps.**
+
+### ❌ Et cette phrase-là aussi était fausse — retirée le 26/08
+
+J'avais écrit que le `DROP` de 05:30 effacerait les 56 913 lignes. **Non.** Le miroir **gèle, il ne
+disparaît pas** — c'est écrit dans l'en-tête de C.6. Le fichier reste, la reconstruction reproduit
+le même contenu. **Les annonces existantes gardent leur corps.**
+
+### ✅ Le trou réel, enfin cerné
+
+Pour les annonces **existantes**, tout est déjà en place : le miroir gelé les redonne, et
+`appliquer_contrat.py` **ré-applique chaque nuit ce que l'app détient**, relu dans Supabase. Il ne
+manque que l'interrupteur.
+
+**Ce qui manque vraiment est ailleurs** : une annonce **née dans l'app** n'a aucune ligne dans le
+miroir → aucune dans `app_view_generale` → **le serveur ne la connaît pas du tout**. Et C.7 sait
+*mettre à jour* des lignes, pas en *créer*.
+
+> **26bis n'est donc pas « donner un corps à l'annonce »** — elle en a un — mais **« rendre le
+> serveur capable de tenir une annonce que le miroir ignore »**. Plus petit, plus net, et toujours
+> à faire avant C.9.
 
 **TESTS ET VÉRIFICATIONS**
 - comparer le corps local et la vue actuelle sur **tout le parc** — objectif **0 divergence**,
