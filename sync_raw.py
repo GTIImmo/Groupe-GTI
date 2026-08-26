@@ -527,9 +527,38 @@ def journalise_purge_scope(conn, stale_ids: list[str]) -> None:
     )
 
 
-def reconcile_active_annonce_scope(conn, active_annonce_ids: set[str]) -> set[str]:
+# Plancher de securite : si le listing rend moins que cette part de ce qu'on connait
+# deja, c'est un incident (Hektor qui bronche en cours de balayage), pas une disparition
+# massive. On ne supprime pas sur un balayage qu'on soupconne tronque.
+SEUIL_BALAYAGE_COMPLET = 0.5
+
+
+def reconcile_active_annonce_scope(conn, active_annonce_ids: set[str],
+                                   balayage_complet: bool = True) -> set[str]:
+    """Supprime l'etat, les liens contacts et le detail des annonces sorties du listing.
+
+    C.15 (1) 26/08 -- DEUX REFUS AJOUTES, et ils ne peuvent que supprimer MOINS.
+
+    LE DANGER QUI EXISTAIT. Avec --max-pages, le balayage s'arrete tot (ligne ~955) et
+    `active_annonce_ids` ne contient qu'une poignee d'annonces. La comparaison
+    `known_ids - active_annonce_ids` portait alors sur presque tout le parc : une commande
+    de test aurait efface l'etat, les liens contacts et le detail brut de ~22 300 annonces,
+    EN SILENCE. Rien ne l'empechait.
+
+    LE RUN DE NUIT NE PASSE JAMAIS --max-pages : son comportement est inchange.
+    """
     rows = conn.execute("SELECT hektor_annonce_id FROM sync_annonce_state WHERE listing_variant = 'active'").fetchall()
     known_ids = {str(row["hektor_annonce_id"]).strip() for row in rows if str(row["hektor_annonce_id"] or "").strip()}
+
+    if not balayage_complet:
+        print(f"[reconcile] REFUS : balayage PARTIEL (--max-pages) -- aucune suppression, "
+              f"{len(known_ids)} annonce(s) preservee(s)")
+        return set()
+    if known_ids and len(active_annonce_ids) < len(known_ids) * SEUIL_BALAYAGE_COMPLET:
+        print(f"[reconcile] REFUS : le listing n'a rendu que {len(active_annonce_ids)} annonce(s) "
+              f"pour {len(known_ids)} connue(s) -- balayage soupconne tronque, aucune suppression")
+        return set()
+
     stale_ids = sorted(known_ids - active_annonce_ids)
     if not stale_ids:
         print("[reconcile] 0 annonce sortie du listing actif -- rien a purger")
@@ -1461,7 +1490,9 @@ def main() -> int:
                 prune_raw_listing_pages(conn, endpoint_name=variant["base_endpoint_name"], max_page=last_page)
                 if max_seen_date:
                     set_meta_value(conn, f"annonce_cursor_{variant['scope']}", max_seen_date)
-            reconcile_active_annonce_scope(conn, active_annonce_ids)
+            # `args.max_pages == 0` signifie « pas de limite » : le balayage est complet.
+            reconcile_active_annonce_scope(conn, active_annonce_ids,
+                                           balayage_complet=(args.max_pages == 0))
             if args.force_annonce_detail_full:
                 detail_ids = sorted(active_annonce_ids)
             else:
