@@ -1,0 +1,47 @@
+{
+ "prise_le": "2026-08-26T12:33:18Z",
+ "mesures": {
+  "miroir.hektor_annonce": 56910,
+  "miroir.hektor_annonce_detail": 56863,
+  "miroir.hektor_mandat": 24130,
+  "miroir.hektor_offre": 10992,
+  "miroir.hektor_compromis": 10455,
+  "miroir.hektor_vente": 7537,
+  "miroir.hektor_contact": 355712,
+  "miroir.annonces_par_offre_type": {
+   "0": 56910
+  },
+  "serveur.app_dossier": 56913,
+  "serveur.app_view_generale": 56913,
+  "serveur.app_contact": 355712,
+  "serveur.app_affaire_ledger": 28984,
+  "serveur.app_search_registry": 76899,
+  "serveur.app_annonce_champ_app": 0,
+  "serveur.app_annonce_app_seule": 0,
+  "serveur.app_contact_relation_current": 165474,
+  "serveur.app_dossier_current": 13210,
+  "index.actives": 13575,
+  "index.archives": 34487,
+  "index.historiques": 8800,
+  "index.filtre_offre": "COALESCE(offre_type, '0') IN ('0', '10', '6')",
+  "registre.mandats": 23854,
+  "registre.sans_mandat": 33059,
+  "annonces.par_statut": {
+   "Clos": 33989,
+   "Estimation": 12718,
+   "Vendu": 9095,
+   "Actif": 923,
+   "Sous compromis": 94,
+   "(vide)": 53,
+   "Sous offre": 41
+  },
+  "supabase.app_dossier_current": 13210,
+  "supabase.app_archive_annonce_index_current": 34487,
+  "supabase.app_historical_annonce_index_current": 8800,
+  "supabase.app_brouillon_annonce_index_current": 412,
+  "supabase.app_mandat_register_current": 23817,
+  "supabase.app_contact_current": 57559,
+  "supabase.app_affaire_ledger": 28984,
+  "supabase.app_contact_relation_current": 77376
+ }
+}
