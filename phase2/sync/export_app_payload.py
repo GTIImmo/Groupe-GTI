@@ -46,9 +46,34 @@ CONSOLE_DETAIL_PAYLOAD_FIELDS = {
     "ges_image_url",
     "dpe_image_urls_json",
 }
+# C.15 26/08 -- QUELS TYPES D'OFFRE VONT VERS L'APP.
+#
+# Le run ne demandait a Hektor que les VENTES : ListAnnonces sans le parametre `offre` ne
+# rend que offre=0. Resultat mesure le 26/08 : 4 165 annonces -- toutes les locations, tout
+# l'immobilier professionnel, le neuf -- ne sont JAMAIS entrees dans le miroir.
+#
+# DECISION DE FREDERIC (26/08) : le SERVEUR recevra TOUS les types (il devient le maitre),
+# mais SUPABASE, LE FRONT ET LES WORKERS n'en recoivent que trois :
+#     0  vente              22 424 actives + 34 487 archivees
+#     10 vente immo pro        251 actives +    782 archivees
+#     6  neuf                    1 active
+# Les locations (2 et 11) et le saisonnier (8) restent au serveur : 3 131 annonces qui
+# n'apparaitront PAS dans l'app.
+#
+# POURQUOI CE FILTRE EST POSE AVANT D'OUVRIR LE ROBINET, et pourquoi c'est gratuit :
+# aujourd'hui `offre_type` vaut 0 sur les 56 910 lignes du miroir, donc CE FILTRE N'EXCLUT
+# RIEN. Il est totalement inerte. Une fois pose, on pourra ouvrir le run type par type sans
+# qu'il existe UN SEUL INSTANT ou une location puisse atteindre Supabase. L'ordre inverse
+# reviendrait a publier 3 131 locations dans l'app, puis a courir apres.
+#
+# COALESCE a '0' : trois annonces ont offre_type NULL (celles que Hektor ne rend plus, gardees
+# avec absent_depuis). Elles etaient incluses avant, elles le restent.
+FILTRE_OFFRE_APP = "COALESCE(offre_type, '0') IN ('0', '10', '6')"
+
 ANNONCES_SCOPE_WHERE = (
     "COALESCE(archive, '0') = '0' "
-    "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis', 'Estimation')"
+    "AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Actif', 'Sous offre', 'Sous compromis', 'Estimation') "
+    f"AND {FILTRE_OFFRE_APP}"
 )
 # "Estimation" ajoute le 21/07/2026. Le registre des mandats est un document legal :
 # tout mandat signe doit y figurer, quel que soit le statut commercial de l'annonce.
@@ -242,6 +267,7 @@ WITH archive_ranked AS (
            ) AS archive_rn
     FROM app_view_generale
     WHERE COALESCE(archive, '0') = '1'
+  AND __FILTRE_OFFRE_APP__
 )
 SELECT
     CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
@@ -314,6 +340,7 @@ SELECT
 FROM app_view_generale
 WHERE COALESCE(archive, '0') = '0'
   AND COALESCE(detail_statut_name, statut_annonce, '') IN ('Vendu', 'Clos')
+  AND __FILTRE_OFFRE_APP__
 ORDER BY
     COALESCE(date_maj, '') DESC,
     hektor_annonce_id DESC
@@ -371,10 +398,23 @@ SELECT
 FROM app_view_generale
 WHERE COALESCE(archive, '0') = '0'
   AND CAST(hektor_annonce_id AS INTEGER) IN (__BROUILLON_IDS__)
+  AND __FILTRE_OFFRE_APP__
 ORDER BY
     COALESCE(date_maj, '') DESC,
     hektor_annonce_id DESC
 """
+
+# C.15 26/08 -- LA REGLE EST ECRITE UNE FOIS, APPLIQUEE PARTOUT.
+# Les trois requetes ci-dessus portent le marqueur __FILTRE_OFFRE_APP__ ; on le remplace ici
+# par FILTRE_OFFRE_APP, defini en tete. Ainsi la liste des types qui vont vers l'app n'existe
+# qu'a UN endroit : la changer, c'est la changer partout.
+SQL_ARCHIVE_ANNONCE_INDEX_BASE = SQL_ARCHIVE_ANNONCE_INDEX_BASE.replace(
+    "__FILTRE_OFFRE_APP__", FILTRE_OFFRE_APP)
+SQL_HISTORICAL_ANNONCE_INDEX_BASE = SQL_HISTORICAL_ANNONCE_INDEX_BASE.replace(
+    "__FILTRE_OFFRE_APP__", FILTRE_OFFRE_APP)
+SQL_BROUILLON_ANNONCE_INDEX_BASE = SQL_BROUILLON_ANNONCE_INDEX_BASE.replace(
+    "__FILTRE_OFFRE_APP__", FILTRE_OFFRE_APP)
+
 
 
 DETAIL_PAYLOAD_FIELDS = {
