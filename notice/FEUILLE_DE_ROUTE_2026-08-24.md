@@ -123,6 +123,60 @@ mandat** ; offre 33027 *(après)* → **mandat 648**. Même annonce, même acqu�
 
 # 🛤 PISTE 1 — LE CODE · *se construit maintenant, dormant · n'attend personne*
 
+## ⚠ C.16 — LES CONTACTS NE SONT JAMAIS REBALAYÉS · **et 611 « contacts » n'existent pas**
+
+*Trouvé le 26/08, parce que Frédéric a demandé : « as-tu vérifié entièrement mon projet ? »*
+
+### Le run des contacts est en delta, pas en balayage
+
+Contrairement aux annonces *(balayage complet chaque nuit — 2 847 pages)*, **les contacts ne sont
+revus que s'ils ont bougé**. Le listing complet n'a pas été rebalayé **depuis mai** : 284 269
+contacts ont pour dernière vue `2026-05`.
+
+> **Si Hektor archive ou supprime un contact, nous ne l'apprenons pas.**
+
+### L'écart, et ce que l'essai a montré
+
+Hektor déclare **348 053** contacts · notre miroir en a **355 712** — **+7 659**.
+
+Échantillon stratifié de **300 contacts**, interrogés un par un :
+
+| strate | population | échantillon | existent | absents |
+|---|---|---|---|---|
+| actifs | 171 001 | 120 | **120** | **0** |
+| archivés | 184 100 | 120 | 117 | **3** *(2,5 % ≈ 4 600)* |
+| sans indicateur | 611 | 60 | 0 | **60** *(100 %)* |
+
+### 🔴 Les 611 ne sont pas des contacts supprimés — ce n'en ont jamais été
+
+```
+   hektor_contact_id  56974
+   nom / prenom       GRASSET / Damien
+   raw_json           {"id": "56974"}     <-- la charge ne contient QUE l'identifiant
+```
+
+Ce sont des **références orphelines** : une annonce, une offre ou un mandat de Hektor cite un
+identifiant de contact, nous en gardons le nom — et `ContactById` répond **404**. **C'est une
+incohérence dans les données de Hektor**, que le miroir a fidèlement recopiée.
+
+Ce n'est **pas** de la déduplication : sur 11 absents testés, **2 seulement** appartiennent à un
+groupe de doublons *(le parc en compte pourtant 37 144)*.
+
+### Écarté, avec preuve
+
+doublons d'identifiant *(355 712 = 355 712, en texte comme en entier)* · périmètre d'agence *(la
+somme par agence **égale exactement** le total)* · filtre `type` *(`type=0` rend le total ; les
+types se chevauchent — un contact peut être propriétaire **et** acquéreur)*.
+
+### ⚠ Une erreur à moi, corrigée
+
+J'avais expliqué les 7 659 par « des contacts supprimés que nous accumulons ». **Faux deux fois** :
+la règle « on ne supprime jamais » date du **22/08**, elle ne peut pas expliquer un écart
+antérieur ; et **les actifs ne montrent aucune suppression**. Frédéric a refusé l'explication, il
+avait raison.
+
+---
+
 ## 🔴 C.15 — LE RUN NE VOIT QU'UN TYPE D'OFFRE SUR SIX · **LE PLUS GROS TROU CONNU**
 
 *Trouvé le 26/08, parce que Frédéric a refusé deux fois ma conclusion.*
@@ -178,6 +232,22 @@ les types au serveur les ferait donc partir vers Supabase **automatiquement**, l
 différence — état, liens contacts, détail brut. **Si le balayage couvre les six types mais que la
 réconciliation compare à un seul, elle effacera les 4 165 à chaque run.** Elle doit être scopée
 par type d'offre.
+
+### ❗ Quatre autres écarts, relevés sur tous les endpoints du run
+
+| endpoint | Hektor | miroir | écart |
+|---|---|---|---|
+| **mandats** | 26 409 | 24 130 | **+2 279** |
+| **ventes** | 9 211 | 7 537 | **+1 674** |
+| offres | 11 108 | 10 992 | +116 |
+| compromis | 10 571 | 10 455 | +116 |
+| agences | 20 | 19 | +1 — *« Gestion site »* |
+
+**Hypothèse à remesurer APRÈS C.15** : ce sont vraisemblablement les mandats et les ventes des
+**4 165 annonces absentes** — le mandat arrive par le détail de l'annonce, donc une annonce absente
+emporte le sien. **Un mandat manquant sur un registre légal n'est pas une nuance d'affichage.**
+
+---
 
 ### ✅ La séquence, en quatre temps — *ne pas intervertir*
 
