@@ -179,6 +179,17 @@ différence — état, liens contacts, détail brut. **Si le balayage couvre les
 réconciliation compare à un seul, elle effacera les 4 165 à chaque run.** Elle doit être scopée
 par type d'offre.
 
+### ✅ La séquence, en quatre temps — *ne pas intervertir*
+
+| | | |
+|---|---|---|
+| **①** | **Scoper la réconciliation par type d'offre** | **le préalable absolu** — tant qu'elle compare six types à un seul balayage, elle **efface les 4 165 à chaque run** · *vérif : balayage partiel → **0 suppression*** |
+| **②** | **Poser le filtre `offre_type IN ('0','10','6')`** sur les 4 index **et** sur `ANNONCES_SCOPE_WHERE` | **gratuit** — inerte aujourd'hui · *vérif : les comptes Supabase doivent rester **identiques au caractère près*** |
+| **③** | **Mesurer l'aval AVANT d'ouvrir** — vues, registre, rapprochements, statistiques | **la photo d'avant** : tout a été calculé sur un parc amputé ; sans elle on ne distinguera pas un effet voulu d'une régression |
+| **④** | **Ouvrir un type à la fois** — `6` *(**1 seule annonce**, le canari)*, puis `10` *(1 033)*, puis `2` et `11` *(serveur seul)* | surveiller le **frein de débit** à chaque palier — l'IP a déjà été bannie une fois |
+
+---
+
 ### Ce que ça explique
 
 Les trois annonces que Frédéric m'a fait chercher — **62815, 62823, 62825** — sont des **ventes
