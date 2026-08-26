@@ -130,6 +130,14 @@ CRITICAL_TABLES: dict[str, list[str]] = {
                                            # sur 18 tables, et aucune contrainte de cle
                                            # etrangere ne les protege -- elles pointent le
                                            # contact PAR CONVENTION SEULE.
+        "app_annonce_app_seule",           # 26bis-(1) : les annonces que l'APP connait et que
+                                           # le miroir IGNORE. Elles n'existent nulle part
+                                           # ailleurs cote serveur -- app_view_generale est
+                                           # refaite depuis le miroir, qui ne les a pas. Vide
+                                           # aujourd'hui (0 annonce dans ce cas au 26/08) ;
+                                           # elle se remplira quand la creation partira de
+                                           # l'app (C.9). ACCUMULE et NE SE RECALCULE PAS :
+                                           # c'est exactement le critere de cette liste.
     ],
     "hektor": [
         "sync_meta",                       # 4 curseurs delta : sans eux, re-pull complet

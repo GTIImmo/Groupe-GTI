@@ -304,6 +304,20 @@ Invoke-Step -Label "phase2 appliquer le contrat d autorite" -Arguments @(
     "phase2\identite\appliquer_contrat.py"
 ) -WorkerKey "phase2.contrat_autorite"
 
+# 26bis-(1) 26/08 -- LES ANNONCES QUE L'APP CONNAIT ET QUE LE MIROIR IGNORE.
+# Le contrat ci-dessus sait METTRE A JOUR une ligne d'app_view_generale ; il ne sait pas
+# en CREER. Or une annonce NEE DANS L'APP n'a aucune ligne dans le miroir, donc aucune
+# dans la vue : le serveur ne la connait pas du tout. Cette etape la RECENSE, en relisant
+# Supabase en direct (la copie locale a 22 h de retard a 05:30 -- meme raison que C.7).
+# ON NE BRANCHE QUE --recenser, PAS --injecter. Poser ces lignes dans app_view_generale
+# changerait ce que le push envoie vers Supabase, avec 84 colonnes vides sur 130 : c'est
+# l'etape C, elle se decide plus tard, champ par champ. Ici on OBSERVE, personne ne lit.
+# AUJOURD'HUI : ZERO annonce dans ce cas (mesure du 26/08). L'etape est donc inerte.
+Invoke-Step -Label "phase2 annonces connues de l app seule" -Arguments @(
+    "phase2\identite\annonces_app_seule.py",
+    "--recenser"
+) -WorkerKey "phase2.annonces_app_seule"
+
 Invoke-Step -Label "phase2 build contacts layer" -Arguments @(
     "phase2\contacts\build_contacts_layer.py",
     "--no-reports"
