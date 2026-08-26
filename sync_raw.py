@@ -568,17 +568,39 @@ def reconcile_active_annonce_scope(conn, active_annonce_ids: set[str],
     journalise_purge_scope(conn, stale_ids)
     apercu = ", ".join(stale_ids[:30])
     suite = " ..." if len(stale_ids) > 30 else ""
-    print(f"[reconcile] {len(stale_ids)} annonce(s) sortie(s) du listing actif -> purge de leur etat, "
-          f"de leurs liens contacts et de leur detail brut")
+    print(f"[reconcile] {len(stale_ids)} annonce(s) sortie(s) du listing actif -> etat et liens "
+          f"contacts retires (reconstructibles) -- LEUR DETAIL BRUT EST CONSERVE")
     print(f"[reconcile]   ids : {apercu}{suite}")
 
+    # CE QUI EST RECONSTRUCTIBLE PEUT PARTIR. sync_annonce_state est refait a chaque
+    # balayage ; sync_annonce_contact_link est refait par normalize_source depuis les
+    # details. Les vider n'est pas une perte, c'est le fonctionnement voulu : le miroir
+    # reflete Hektor, il n'a pas a se souvenir de ce que Hektor a oublie.
     delete_rows_by_ids(conn, table="sync_annonce_state", column="hektor_annonce_id", ids=stale_ids)
     delete_rows_by_ids(conn, table="sync_annonce_contact_link", column="hektor_annonce_id", ids=stale_ids)
-    delete_raw_object_rows(
-        conn,
-        endpoint_names=("annonce_detail", "mandats_by_annonce"),
-        object_ids=stale_ids,
-    )
+
+    # C.15 (1)-b 26/08 -- ON N'EFFACE PLUS L'ARCHIVE.
+    #
+    # Ici on supprimait aussi les charges brutes `annonce_detail` et `mandats_by_annonce`.
+    # C'est la SEULE des trois suppressions qui soit IRREMPLACABLE : ces charges ne se
+    # reconstruisent pas, il faudrait les redemander a Hektor -- or une annonce sortie du
+    # listing ne peut plus etre redecouverte par le listing. Elle est perdue pour de bon.
+    #
+    # C'est exactement ce qui est arrive aux annonces 62815, 62825 et 62855 le 19/08 :
+    # Hektor ne les listait plus (il ne rend que les ventes, cf. C.15), leur detail a ete
+    # efface, et il n'est reste d'elles qu'une coquille « [Sans titre] » dans app_dossier.
+    # Avec leur detail archive, normalize_source aurait pu les reconstruire entierement.
+    #
+    # REGLE 5 DU PROJET, au pied de la lettre : data/hektor.sqlite est « l'archive de tout
+    # ce que Hektor a jamais dit ». Une archive ne se vide pas parce que la source a change
+    # d'avis. Les 465 155 charges pesent 3,89 Go ; les quelques dizaines qu'on garde ainsi
+    # par an ne changent rien -- la mesure du 26/08 donne ZERO disparition en 10 h 30.
+    #
+    # CE QUE CA NE CHANGE PAS : normalize_source retirera quand meme l'annonce de
+    # hektor_annonce et de hektor_annonce_detail, puisqu'elle n'est plus dans le scope du
+    # listing. Le miroir reste fidele a Hektor. Mais la MATIERE est conservee, donc le jour
+    # ou l'on comprend pourquoi une annonce est sortie -- comme aujourd'hui -- on peut la
+    # remettre sans rien redemander.
     return set(stale_ids)
 
 
