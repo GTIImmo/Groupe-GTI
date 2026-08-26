@@ -147,6 +147,16 @@ la remet à plus tard.**
 > QUE là**, et le serveur ne l'apprend que si Hektor la confirme. Ce serait creuser le trou pendant
 > qu'on le rebouche. »*
 
+### ❗ Le lien bien ↔ mandant en fait partie — *trouvé le 26/08*
+
+Le couple *(annonce, contact)* vit dans **`sync_annonce_contact_link` — 48 291 lignes, dans le
+MIROIR seulement**. Absent du serveur, absent de Supabase, absent du paquet de détail. La fiche
+affiche « 2 mandants » **en interrogeant Hektor en direct** *(« Source API AnnonceById »)*. Le
+contact sait qu'il est rattaché à **un** bien — **pas auquel**.
+
+> Le jour où Hektor se tait, **l'app ne saurait plus dire qui sont les mandants d'un bien.**
+> C'est l'illustration la plus concrète de 26bis.
+
 **TESTS ET VÉRIFICATIONS**
 - comparer le corps local et la vue actuelle sur **tout le parc** — objectif **0 divergence**,
   comme C.6 *(qui a exigé d'éliminer d'abord 4 faux écarts : `NULL` vs `0.0`, entier `0` vs texte
@@ -305,6 +315,24 @@ distribué par le script de nuit *(→ E.4)*.
 **CRITÈRE DE DÉCISION, déjà écrit** : si la colonne « app seule » du journal **reste plate 3
 semaines**, la tâche est inutile. Si elle grimpe, elle se justifie **avec un chiffre**.
 
+### ❗ Mais ce critère ne peut pas bouger — *corrigé le 26/08*
+
+La descente dit de quoi les **45** sont faits :
+
+```
+   app_diffusion_request        9
+   app_diffusion_request_event 29
+   app_diffusion_target         7
+   --------------------------------
+                               45   -> QUE des demandes de diffusion
+```
+
+**Les seuls objets que Hektor ne connaît pas.** Et les trois essais du 25/08 **ne l'ont pas bougée
+d'un point** — normal : tout est passé par Hektor et en est revenu.
+
+> **Attendre trois semaines ne prouverait rien.** Cette colonne ne montera qu'après **26bis et
+> C.9**. La décision sur B.3 dépend de 26bis, **pas du calendrier**.
+
 ---
 
 # ⚖ LES TROIS ARBITRAGES QUI T'APPARTIENNENT
@@ -456,6 +484,30 @@ n'avait été vu par la relecture de code.**
 ```
 
 **Résultat du 25/08 : les trois passent.** 12 s, 15 s, 13 s. Aucune erreur, aucun conflit.
+
+## ✅ La vérification du cycle complet — 26/08 au matin
+
+Neuf attendus **écrits la veille au soir, avant les runs**, pour ne pas pouvoir trouver le résultat
+normal quoi qu'il arrive.
+
+| | attendu | |
+|---|---|---|
+| 1 | l'offre 33027 porte toujours le mandat **648** | ✅ |
+| 2 | l'affaire 1000002 garde `numero_mandat = 18836` | ✅ |
+| 3 | aucun doublon — série locale à **28981** | ✅ |
+| 4 | les contacts créés reçoivent leur numéro app | ✅ **355711 · 355712** |
+| 5 | l'alerte « affaires sans numéro Hektor » retombe | ✅ *et doublure ledger **0/0*** |
+| 6 | l'adresse écrite depuis l'app survit au run | ✅ |
+| 7 | ~~le mandant dans `mandants_texte`~~ | ❌ **attendu mal écrit** *(voir 26bis)* |
+| 8 | le titre survit à la reconstruction de la vue | ✅ |
+| 9 | le magasin reste à **0** | ✅ *0 divergence sur 44 champs* |
+
+**Huit sur neuf — et le neuvième était une erreur d'attendu, pas un défaut.** Le retour arrière de
+C.5 **tient le cycle complet** : miroir, vues, registre, doublures, descente.
+
+> **La règle qui en sort** : écrire les attendus **avant** le run. C'est le seul moyen de ne pas
+> se convaincre après coup que le résultat est normal — le biais qui a fait valider C.5 le matin
+> du 25/08.
 
 ## Ce que ces essais ont coûté et rapporté
 
