@@ -617,6 +617,97 @@ Et c'est ce que fait Hektor lui-même, donc on reste cohérent avec lui jusqu'à
 
 **Retour arrière** : `SELECT corps FROM app_fonction_sauvegarde` puis l'exécuter.
 
+---
+
+## LOT E -- LE RELEVE HEKTOR (fait le 27/08 par Chrome, en lecture seule)
+
+Methode : session Chrome de Frederic, formulaire "ajouter un nouveau bien", lecture du DOM.
+PAS Playwright -- pour ne pas toucher aux 4 sessions dont dependent les runs de nuit.
+AUCUNE ecriture : prouve apres coup -- l'identifiant le plus haut chez Hektor datait de 11:35,
+cree par un negociateur avec un vrai titre ; rien n'est apparu pendant le releve.
+
+### 1. Les types d'offre -- liste faisant autorite
+
+```
+   VENTE      0 Classique  ·  10 Immobilier professionnel  ·  6 Programmes neufs
+   LOCATION   2 Classique  ·  11 Immobilier professionnel  ·  8 Location saisonniere
+```
+
+Un choix a DEUX niveaux : `<div id="venteOffre10" rel="10" onclick="setOffreDemWizard(this)">`.
+Nos cinq codes sont exactement ceux-la.
+
+### 2. LA DECOUVERTE -- le type de bien depend du type d'offre
+
+Selectionner "Immobilier professionnel" remplace ENTIEREMENT la liste :
+
+```
+   offre 0  CLASSIQUE           offre 10  IMMO PRO
+   1  = Maison                  1  = Fonds de commerce
+   2  = Appartement             2  = Cession de droit au bail
+   5  = Terrain                 5  = Murs commerciaux
+   15 = Garage                  15 = Terrains
+   17 = Chalet                  17 = Local professionnel
+   18 = Duplex                  18 = Murs et fonds de commerce
+                                10 = Bureaux · 13 = Entrepot · 14 = Local commercial
+                                16 = Local d'activite
+```
+
+> Le meme code veut dire deux choses. `idtype` seul n'a AUCUN sens : un libelle juste se lit
+> sur le COUPLE (offre_type, idtype). Aucune de nos tables ne le savait.
+
+### 3. La liste complete, vente classique (offre 0)
+
+```
+   LES MAISONS       11 Bastide · 28 Chateau · 30 Ferme · 1 Maison · 39 Maison de village
+                     10 Mas · 22 Propriete · 27 Rez de villa · 49 Viager maison · 25 Villa
+   LES APPARTEMENTS  2 Appartement · 18 Duplex · 31 Loft · 26 Rez de jardin · 4 Studio
+                     41 Triplex · 50 Viager appartement
+   LES TERRAINS      5 Terrain · 44 Terrain agricole · 45 Terrain de loisir · 43 Terrain a batir
+   LES AUTRES        20 Autre · 24 Cabanon · 29 Cave · 17 Chalet · 15 Garage · 21 Immeuble
+                     16 Parking · 7 Viager
+```
+
+("Mas" est bien dans "Les maisons" -- remarque de Frederic, verifiee : c'est l'idtype 10.
+C'est elle qui m'a fait parcourir TOUS les groupes au lieu d'un seul.)
+
+### CORRECTIF APPLIQUE -- une seule source de verite
+
+Le front portait DEUX tables qui se contredisaient. Mesure contre le releve :
+
+```
+   la table de CREATION   29 conformes /  0 ecart   <<< c'est EXACTEMENT la liste de Hektor
+   la table d'AFFICHAGE    7 conformes / 22 FAUX    <<< 15 erronees + 7 absentes
+```
+
+PORTEE : 2 590 annonces mal etiquetees, dont 1 043 ACTIVES.
+
+```
+   idtype 21   1 672 annonces (616 actives)   affichait "Mas"      ->  "Immeuble"
+   idtype 18     258 annonces  (93 actives)   affichait "Batiment" ->  "Duplex"
+   idtype 15     206 annonces  (67 actives)   affichait "Parking"  ->  "Garage"
+   idtype  4     174 annonces  (71 actives)   affichait "Bureau"   ->  "Studio"
+```
+
+Les titres le criaient depuis toujours : les 1 672 "Mas" s'appellent "IMMEUBLE 15 APPARTEMENTS",
+"Immeuble avec local commercial".
+
+On n'a pas corrige la table : on l'a SUPPRIMEE. Les libelles derivent desormais de
+draftAnnoncePropertyGroups. Une seule source, donc plus de contradiction possible.
+Verifie apres correctif : 29 conformes, 0 ecart.
+
+Deux types du parc absents du formulaire, CONSTATES dans Hektor et pas devines :
+38 = Maison de ville (l'annonce 61858 s'affiche "Maison de ville - 120 m2 - 6 pieces") et
+23 = Commerce. Et idtype 0 = les BROUILLONS -- 83 annonces sans titre ni ville.
+
+### CE QUI RESTE DU LOT E
+
+- le COUPLE (offre_type, idtype) pour les libelles -> lot D ;
+- UN DOUTE A LEVER avant le lot F : nos 160 annonces immo pro portent idtype 23 cote API, or
+  le formulaire ne propose aucun 23 en immo pro (murs commerciaux = 5). Le code de creation et
+  le code de lecture pourraient etre deux alphabets differents. Si oui, ecrire une annonce
+  immo pro demandera une table de traduction.
+
+
 
 
 

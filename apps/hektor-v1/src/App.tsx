@@ -8761,39 +8761,55 @@ function mandateRegisterDiffusableLabel(value: string | null | undefined) {
   return isDiffusableValue(value) ? 'Oui' : 'Non'
 }
 
-const hektorPropertyTypeLabels: Record<string, string> = {
-  '1': 'Maison',
-  '2': 'Appartement',
-  '3': 'Parking / Garage',
-  '4': 'Bureau',
-  '5': 'Terrain',
-  '6': 'Local',
-  '7': 'Immeuble',
-  '8': 'Divers',
-  '9': 'Programme neuf',
-  '10': 'Loft / Atelier',
-  '11': 'Boutique',
-  '12': 'Appartement meuble',
-  '13': 'Maison meublee',
-  '14': 'Garage',
-  '15': 'Parking',
-  '16': 'Local professionnel',
-  '17': 'Chalet',
-  '18': 'Batiment',
-  '19': 'Demeure',
-  '20': 'Propriete',
-  '21': 'Mas',
-  '22': 'Hotel particulier',
-  '23': 'Commerce',
-  '24': 'Immeuble',
-  '25': 'Villa',
-  '26': 'Studio',
-  '27': 'Duplex',
-  '28': 'Triplex',
-  '29': 'Atelier',
-  '30': 'Ferme',
-  '31': 'Loft',
+// C.15 lot E (27/08/2026) -- LES TYPES DE BIEN VIENNENT DESORMAIS D'UNE SEULE SOURCE.
+//
+// LE DEFAUT. Le front portait DEUX tables de types de bien qui se contredisaient :
+// celle-ci (l'affichage) et draftAnnoncePropertyGroups (la creation). Sur les 29 types
+// que Hektor propose, elles divergeaient sur 15 et il en manquait 7.
+//
+// RELEVE DANS HEKTOR LE 27/08 (session Chrome, formulaire "ajouter un nouveau bien",
+// div.type_box_group[rel] puis les [rel] de chaque type) :
+//     LES MAISONS       11 Bastide · 28 Chateau · 30 Ferme · 1 Maison · 39 Maison de village
+//                       10 Mas · 22 Propriete · 27 Rez de villa · 49 Viager maison · 25 Villa
+//     LES APPARTEMENTS  2 Appartement · 18 Duplex · 31 Loft · 26 Rez de jardin · 4 Studio
+//                       41 Triplex · 50 Viager appartement
+//     LES TERRAINS      5 Terrain · 44 Terrain agricole · 45 Terrain de loisir · 43 Terrain a batir
+//     LES AUTRES        20 Autre · 24 Cabanon · 29 Cave · 17 Chalet · 15 Garage · 21 Immeuble
+//                       16 Parking · 7 Viager
+//
+// VERDICT MESURE contre ce releve :
+//     la table de CREATION   29 conformes / 0 ecart    <- c'est EXACTEMENT la liste de Hektor
+//     la table d'AFFICHAGE    7 conformes / 22 FAUX
+//
+// Elle disait "Mas" pour l'idtype 21, ou Hektor met "Immeuble" ; "Studio" pour le 26, ou
+// Hektor met "Rez de jardin". Les titres des biens le confirmaient deja : 1 672 annonces
+// en idtype 21 s'appellent "IMMEUBLE 15 APPARTEMENTS", "Immeuble avec local commercial"...
+//
+// PORTEE : 2 590 annonces mal etiquetees, dont 1 043 ACTIVES.
+//
+// LE CORRECTIF. On ne corrige pas la table : on la SUPPRIME. Les libelles derivent
+// desormais de draftAnnoncePropertyGroups, verifiee conforme a Hektor. Une seule source,
+// donc plus de contradiction possible.
+//
+// ATTENTION -- ce qui reste a faire (lot D) : chez Hektor le meme code veut dire des choses
+// DIFFERENTES selon le type d'offre. En "Immobilier professionnel", 2 = "Cession de droit
+// au bail" et 5 = "Murs commerciaux", pas "Appartement" et "Terrain". Un libelle juste se
+// lit sur le COUPLE (offre_type, idtype). Cette table ne couvre que offre_type = 0.
+const hektorPropertyTypeLabelsHorsWizard: Record<string, string> = {
+  // Types presents dans le parc mais absents du formulaire de creation actuel.
+  // Constates dans Hektor le 27/08, pas devines :
+  '38': 'Maison de ville',  // l'annonce 61858 s'affiche "Maison de ville - 120 m2 - 6 pieces"
+  '23': 'Commerce',         // "Batiment a usage commercial", "Restaurant bar", "Murs Commerciaux"
 }
+
+const hektorPropertyTypeLabels: Record<string, string> = (() => {
+  const table: Record<string, string> = { ...hektorPropertyTypeLabelsHorsWizard }
+  for (const groupe of draftAnnoncePropertyGroups) {
+    for (const type of groupe.types) table[type.id] = type.label
+  }
+  return table
+})()
+
 
 function propertyTypeLabel(value?: string | null) {
   const normalized = safeText(value)
