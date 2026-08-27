@@ -424,19 +424,57 @@ miroir → aucune dans `app_view_generale` → **le serveur ne la connaît pas d
 
 ---
 
-## C.4 — LES WORKERS · **2 à 3 sem.** · *lot 1 fait*
+## C.4 — LES WORKERS · ✅ **TERMINÉ le 27/08** · *l'estimation « 2 à 3 sem. » tombe*
 
-L'étude du 20/08 donne l'ordre : **statut/affaire → archiver/désarchiver → contact et mandant →
+> 🔑 **CORRECTION DU PLAN, 27/08.** Trois des quatre lots étaient **déjà faits et éprouvés en
+> production** — le plan était en retard sur le code. Mesuré dans Supabase, **tous statuts
+> confondus**, pas seulement les réussites :
+>
+> ```
+>    travail                            TOTAL   done   error  conflict  pending
+>    archive_hektor_annonce                 3      3       0         0        0
+>    restore_hektor_annonce                11     11       0         0        0
+>    delete_hektor_annonce                113    113       0         0        0
+>    assign_hektor_annonce_negotiator      14     14       0         0        0
+>    ------------------------------------------------------------------------
+>    link_hektor_mandant                    0      0       0         0        0
+> ```
+>
+> **127 exécutions réussies, zéro échec depuis mai.** Et le compteur à **0** de
+> `link_hektor_mandant` est la preuve directe que le lot 3 était le seul trou réel : la fonction
+> n'avait **jamais été appelée une seule fois**.
+>
+> ⚠ **La leçon.** J'ai d'abord regardé la table locale `app_console_job` : elle ne contient que
+> les travaux **terminés** (54 798, tous `done`), donc elle ne pouvait rien prouver sur les
+> échecs. C'est Supabase qui porte la vérité. **Une table qui ne rend que des succès ne prouve
+> pas l'absence d'échec.**
+
+L'étude du 20/08 donnait l'ordre : **statut/affaire → archiver/désarchiver → contact et mandant →
 affectation du négociateur EN DERNIER** *(impersonation)*.
 
 | | état |
 |---|---|
 | ✅ **lot 1** | **l'affaire naît dans l'app** — séquence 1 000 000, adoption au retour. Prouvé 2× |
-| ⏳ **lot 2** | archiver / désarchiver / supprimer |
-| ⏳ **lot 3** | **le bouton qui manque** *(voir ci-dessous)* |
-| ⏳ **lot 4** | affectation du négociateur — **en dernier** |
+| ✅ **lot 2** | archiver / désarchiver / supprimer — **déjà en production**, 127 exécutions, 0 échec |
+| ✅ **lot 3** | **le bouton qui manquait** — posé le 27/08 *(voir ci-dessous)*, vérifié à l'écran |
+| ✅ **lot 4** | affectation du négociateur — **déjà en production**, 14 exécutions, 0 échec |
 
-### 🔧 CORRECTIF — « rattacher un mandant existant » : une fonction sans bouton
+### ✅ CORRECTIF FAIT (27/08) — « rattacher un mandant existant » : une fonction sans bouton
+
+> **Posé, construit, déployé, vérifié à l'écran dans Chrome.** Les deux onglets s'affichent, la
+> recherche répond *(testée sur un vrai contact : nom, téléphone, ville, négociateur)*, la
+> sélection surligne, le bouton **« Rattacher a cette annonce »** passe de gris à noir, Annuler
+> referme proprement, **aucune erreur en console**. 177 lignes ajoutées, **0 supprimée**, et
+> **aucun CSS nouveau** — les classes existantes sont réutilisées.
+>
+> **Rien de neuf n'a été écrit vers Hektor** : le worker `handleLinkHektorMandant` appelle
+> `linkHektorMandantContact()`, **exactement** la routine de « Créer et associer », éprouvée le
+> 25/08. Vérifié dans le code plutôt que supposé — c'est la leçon de C.5.
+>
+> ⏳ **Reste le test réel** : cliquer « Rattacher » sur un contact déjà présent → `AnnonceById`
+> doit montrer **2 mandants**, et **aucun doublon** créé.
+
+#### Le constat d'origine
 
 **Trouvé par l'essai du 25/08.** Sur 170 494 contacts, l'app ne sait **pas** rattacher un
 propriétaire déjà présent à un nouveau bien. Le seul chemin est *« Créer et associer »* — donc
