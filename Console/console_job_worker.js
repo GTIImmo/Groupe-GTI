@@ -3347,6 +3347,39 @@ async function runCreatedAnnonceImmediateSync(job, hektorAnnonceId, options = {}
     args: ["phase2/sync/refresh_single_annonce.py", "--id-annonce", id],
     timeoutMs: 120000,
   }));
+
+  // C.15 (28/08/2026) -- LE BLOC COMMERCIAL, TOUT DE SUITE.
+  //
+  // L'etape precedente rapatrie l'annonce par l'API REST de Hektor. Or cette API ne
+  // rend PAS le bloc d'immobilier professionnel : elle ecrase les huit sous-types
+  // derriere idtype 23. Sans ce qui suit, une annonce creee a 10 h afficherait
+  // "Commerce" jusqu'au run de la nuit, et un loyer saisi dans Hektor n'arriverait
+  // pas davantage.
+  //
+  // Ce script est CELUI DU RUN DE NUIT, en mode une seule annonce : memes 91
+  // colonnes, meme table, memes donnees. Pas un chemin parallele qui pourrait diverger.
+  //
+  // Il se garde lui-meme : hors immobilier professionnel il sort en 0,6 s SANS
+  // interroger Hektor, et il ne touche jamais au watermark du run de nuit.
+  //
+  // Place ICI, entre le miroir et la remontee, il sert les DEUX cas que traverse
+  // cette fonction : la creation d'une annonce, et l'ouverture d'une fiche.
+  //
+  // Best-effort : jamais bloquant. Une session expiree ne doit pas empecher une
+  // fiche de s'ouvrir -- la nuit rattrape.
+  try {
+    completed.push(await runImmediateAnnonceSyncStep(job, id, {
+      label: "immo_pro_bloc_commercial",
+      args: ["phase2/sync/sync_hektor_immo_pro.py", "--annonce-id", id],
+      timeoutMs: 60000,
+    }));
+  } catch (error) {
+    await logJob(job.id, "immo_pro_bloc_commercial", "error", "Bloc commercial ignore apres erreur", {
+      hektor_annonce_id: id,
+      error: error && error.message ? error.message : String(error),
+    });
+    completed.push({ step: "immo_pro_bloc_commercial", summary: { status: "error" } });
+  }
   // Read-through LÉGER (options.light) : on saute l'extraction Console (champs statiques
   // honoraires / copropriété / diagnostics détaillés). La vignette DPE/GES reste calculée
   // depuis l'API par le push (build_dpe_image_urls_from_api_detail). Gain : ~40s -> ~10-15s.

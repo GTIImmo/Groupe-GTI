@@ -451,6 +451,13 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--pause-every", type=int, default=50, help="pause longue toutes les N pages")
     ap.add_argument("--long-pause-seconds", type=float, default=60.0, help="duree de la pause longue")
     ap.add_argument("--dry-run", action="store_true", help="n'ecrit rien")
+    # C.15 (28/08) -- MODE UNE SEULE ANNONCE, pour le worker.
+    # Une annonce qui vient d'etre creee, ou dont le bloc commercial vient d'etre
+    # modifie dans Hektor, remonte en TETE de liste (le tri est par date de derniere
+    # modification). Deux pages suffisent donc a la trouver. Une annonce que personne
+    # n'a touchee depuis des semaines n'y sera pas -- et n'a rien de nouveau a donner.
+    ap.add_argument("--annonce-id", default=None,
+                    help="rattrape le bloc commercial d'UNE annonce, sans toucher au watermark")
     return ap.parse_args()
 
 
@@ -469,8 +476,98 @@ def should_full(con: sqlite3.Connection, args: argparse.Namespace, cle_full: str
     return datetime.now(timezone.utc) - quand > timedelta(days=args.backstop_days)
 
 
+def rattraper_une_annonce(args: argparse.Namespace) -> int:
+    """C.15 -- le bloc commercial d'UNE annonce, tout de suite.
+
+    APPELEE PAR LE WORKER, deux fois dans la vie d'une annonce :
+      - juste apres sa creation depuis l'app,
+      - a chaque ouverture de sa fiche (read-through).
+
+    POURQUOI ELLE EXISTE. L'API REST de Hektor ne rend pas le bloc commercial : elle
+    ecrase les huit sous-types derriere idtype 23. Sans ce rattrapage, une annonce
+    creee a 10 h afficherait "Commerce" jusqu'au run de la nuit suivante, et un loyer
+    saisi dans Hektor n'arriverait pas davantage.
+
+    TROIS GARDE-FOUS.
+      1. Si l'annonce n'est pas de l'immobilier professionnel, on sort AVANT toute
+         requete -- une vente ordinaire ne coute rien.
+      2. On ne touche NI au watermark NI au repere de balayage complet : le run de
+         nuit doit garder sa propre progression, sinon il sauterait des annonces.
+      3. Best-effort : on rend toujours 0. Une session expiree ou un Hektor lent ne
+         doit jamais empecher une fiche de s'ouvrir. La nuit rattrape.
+    """
+    annonce = str(args.annonce_id or "").strip()
+    if not annonce:
+        print("--annonce-id vide"); return 0
+
+    con = sqlite3.connect(HEKTOR_DB, timeout=60)
+    ensure_schema(con)
+    try:
+        ligne = con.execute(
+            "SELECT COALESCE(offre_type,''), COALESCE(archive,'0') FROM hektor_annonce "
+            "WHERE CAST(hektor_annonce_id AS TEXT) = ?", (annonce,)).fetchone()
+        if not ligne:
+            print(f"annonce {annonce} absente du miroir -- rien a faire")
+            return 0
+        offre, archive = ligne[0], str(ligne[1] or "0")
+        if offre not in ("10", "11"):
+            print(f"annonce {annonce} : offre {offre or '(vide)'} -- pas d'immo pro, aucune requete")
+            return 0
+
+        archivee = archive not in ("0", "")
+        pages_max = args.max_pages if args.max_pages else 2
+        portee = "archivees" if archivee else "actives"
+        print(f"annonce {annonce} : immo pro ({portee}), recherche sur {pages_max} page(s) au plus")
+
+        if not args.session.exists():
+            print(f"session introuvable ({args.session}) -- la nuit rattrapera"); return 0
+        cookies, token = load_session(args.session)
+        if not cookies:
+            print("session sans cookies valides -- la nuit rattrapera"); return 0
+
+        session = requests.Session()
+        page = 1
+        for tour in range(1, pages_max + 1):
+            listing, elapsed = graphql_page(
+                session, cookies, token, page, archivee, args.limit,
+                recul_ms=int(args.backoff_seconds * 1000),
+            )
+            props = listing.get("properties") or []
+            trouvee = next((x for x in props if str(x.get("id")) == annonce), None)
+            if trouvee is not None:
+                if args.dry_run:
+                    bloc = trouvee.get("commercial") or {}
+                    libelle = ((bloc.get("type") or {}).get("label")) or "(sans bloc)"
+                    print(f"   trouvee page {page} : {libelle}   (dry-run, rien ecrit)")
+                    return 0
+                verdict = upsert_commercial(con, trouvee, archivee, "cible", elapsed)
+                con.commit()
+                bloc = trouvee.get("commercial") or {}
+                libelle = ((bloc.get("type") or {}).get("label")) or "(sans bloc)"
+                print(f"   trouvee page {page} : {libelle}   [{verdict}]")
+                return 0
+            suivante = (listing.get("metadata") or {}).get("nextPage")
+            if suivante in (None, "", 0, "0") or tour >= pages_max:
+                break
+            page = int(suivante)
+            time.sleep(args.pause_seconds)
+
+        print(f"   absente des {pages_max} premieres pages -- non modifiee recemment, la nuit rattrapera")
+        return 0
+    except Exception as err:
+        # Best-effort : on ne fait jamais echouer l'ouverture d'une fiche.
+        print(f"rattrapage immo pro ignore apres erreur : {str(err)[:200]}")
+        return 0
+    finally:
+        con.close()
+
+
 def main() -> int:
     args = parse_args()
+    # C.15 : le mode cible ne partage RIEN avec la boucle de nuit -- ni watermark,
+    # ni repere de balayage complet. Les deux ne peuvent pas se gener.
+    if args.annonce_id:
+        return rattraper_une_annonce(args)
     if not args.session.exists():
         print(f"Session introuvable: {args.session}", file=sys.stderr)
         return 2
