@@ -12006,6 +12006,13 @@ export default function App() {
   const draftAnnonceTypeRules = draftAnnonceImmoPro
     ? draftAnnonceTypeProfileFromKind('other')
     : draftAnnonceTypeProfile(draftAnnonceTypeId)
+  // C.15 : LE libelle du type choisi, une seule fois. Le recapitulatif de la derniere
+  // etape lisait l'etiquette residentielle : il annoncait « Appartement » alors qu'on
+  // avait choisi « Entrepot ». Le paquet envoye etait juste, l'ecran mentait -- et
+  // c'est sur cet ecran que le negociateur decide de valider ou d'annuler.
+  const libelleTypeChoisi = draftAnnonceImmoPro
+    ? libelleSousTypeImmoPro(draftAnnonceTypeTransac)
+    : draftAnnoncePropertyTypeLabel(draftAnnonceTypeId)
   const draftAnnonceStepIndex = Math.max(0, draftAnnonceStepOrder.indexOf(draftAnnonceStep))
   const draftAnnonceStepProgress = ((draftAnnonceStepIndex + 1) / draftAnnonceStepOrder.length) * 100
   const draftAnnonceCurrentStep = draftAnnonceStepMeta[draftAnnonceStep]
@@ -14161,7 +14168,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         return bits.length ? `${label} (${bits.join(', ')})` : label
       })
     const data: Record<string, unknown> = {
-      type_bien: draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
+      type_bien: libelleTypeChoisi,
       ville: draftAnnonceCity.trim(),
       code_postal: draftAnnoncePostalCode.trim(),
       prix: draftAnnoncePrice.trim(),
@@ -14414,9 +14421,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         // C.15 : sur l'immo pro, Hektor attend idType = 23 et le sous-type dans un
         // champ separe. Hors immo pro, offreFamille vaut '0' et hektorTypeTransac
         // part a null -- aucun numero de la table commerce ne peut fuir vers une vente.
-        propertyType: draftAnnonceImmoPro
-          ? libelleSousTypeImmoPro(draftAnnonceTypeTransac)
-          : draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
+        propertyType: libelleTypeChoisi,
         propertyProfile: draftAnnonceTypeRules.kind,
         hektorIdType: draftAnnonceImmoPro ? IDTYPE_COMMERCE : draftAnnonceTypeId,
         offerType: 'sale',
@@ -17004,7 +17009,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <section className="draft-annonce-review-panel">
                       <div className="draft-annonce-review-lead">
                         <strong>{draftAnnonceTitle.trim() || 'Nouvelle annonce sans titre'}</strong>
-                        <span>{draftAnnoncePropertyTypeLabel(draftAnnonceTypeId)} - {draftAnnonceAgency.trim() || 'Agence a choisir'}</span>
+                        <span>{libelleTypeChoisi} - {draftAnnonceAgency.trim() || 'Agence a choisir'}</span>
                       </div>
                       <div className="draft-annonce-review-grid">
                         <article><span>Negociateur</span><strong>{selectedDraftNegotiator?.label || '-'}</strong></article>
