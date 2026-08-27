@@ -1852,6 +1852,49 @@ def configure_supabase(args: argparse.Namespace) -> SupabaseClient | None:
     return SupabaseClient(url, service_key, timeout_seconds=args.timeout_seconds)
 
 
+def dispatch_alerts(
+    alerter: "Alerter | None",
+    results: list[CheckResult],
+    previous_status: dict[str, Any],
+    previous_status_lu: bool,
+) -> None:
+    """C.17 -- Envoi de l'alerte, INDEPENDANT de l'ecriture Supabase.
+
+    Regle inchangee : on alerte sur BASCULE vers critical, pas a chaque run tant que le
+    probleme persiste -- sinon 12 messages par jour pour le meme incident.
+
+    Cas ajoute : quand l'etat precedent n'a PAS pu etre lu (Supabase injoignable), on ne
+    peut plus dedupliquer. On alerte alors sur les criticals presents, en le disant dans
+    le journal. Mieux vaut un doublon qu'un silence -- c'est le silence qui nous a coute
+    la matinee du 27/08.
+
+    Best-effort de bout en bout : cette fonction ne leve jamais.
+    """
+    if alerter is None:
+        return
+    try:
+        criticals = [r for r in results if r.status == "critical"]
+        if not previous_status_lu:
+            if criticals:
+                print(
+                    "[alert] etat precedent illisible (Supabase injoignable) : "
+                    "alerte envoyee sans deduplication",
+                    file=sys.stderr,
+                )
+                alerter.dispatch(criticals, kind="critical")
+            return
+        newly_critical = [
+            r for r in criticals if previous_status.get(r.status_key) != "critical"
+        ]
+        had_critical = any(state == "critical" for state in previous_status.values())
+        if newly_critical:
+            alerter.dispatch(newly_critical, kind="critical")
+        elif had_critical and not criticals:
+            alerter.dispatch([], kind="recovery")
+    except Exception as exc:  # best-effort : jamais bloquant
+        print(f"[alert] dispatch echoue: {exc}", file=sys.stderr)
+
+
 def write_results(
     supabase: SupabaseClient | None,
     results: list[CheckResult],
@@ -1861,17 +1904,33 @@ def write_results(
 ) -> tuple[bool, str | None]:
     if not supabase:
         return False, "Supabase writes skipped"
-    try:
-        # Etats precedents (avant upsert) pour dedupliquer les events : on n'insere un
-        # event que sur CHANGEMENT d'etat, pas a chaque run (fini les memes warnings 12x/jour).
-        previous_status: dict[str, Any] = {}
-        try:
-            prev_rows = supabase.get("app_monitor_status", {"select": "status_key,status", "limit": "2000"})
-            for prev_row in prev_rows or []:
-                previous_status[prev_row.get("status_key")] = prev_row.get("status")
-        except Exception:
-            previous_status = {}
 
+    # C.17 (27/08/2026) -- L'ALERTE NE DOIT PLUS DEPENDRE DE L'ECRITURE SUPABASE.
+    #
+    # Avant ce correctif, le bloc d'alerte etait DANS le meme try que les ecritures et
+    # APRES upsert_status(). Consequence : Supabase injoignable -> upsert_status leve ->
+    # le bloc d'alerte n'etait JAMAIS atteint -> on ressortait par le except sans avoir
+    # rien envoye. Le canal d'alerte etait donc muet exactement quand le reseau tombait,
+    # c'est-a-dire dans une des situations qu'il existe pour signaler.
+    #
+    # Observe les 25, 26 et 27/08/2026 : journaux de 0 octet, exit 1, aucune alerte. Le
+    # 27, le moniteur est passe 18 min apres l'echec du run de 05:30 et n'a rien dit.
+    #
+    # On lit donc l'etat precedent, on dispatche, PUIS on ecrit. Chaque etape dans son
+    # propre try : aucune ne peut plus faire taire les autres.
+    previous_status: dict[str, Any] = {}
+    previous_status_lu = False
+    try:
+        prev_rows = supabase.get("app_monitor_status", {"select": "status_key,status", "limit": "2000"})
+        for prev_row in prev_rows or []:
+            previous_status[prev_row.get("status_key")] = prev_row.get("status")
+        previous_status_lu = True
+    except Exception:
+        previous_status = {}
+
+    dispatch_alerts(alerter, results, previous_status, previous_status_lu)
+
+    try:
         supabase.upsert_status([result.status_row() for result in results])
 
         problem_states = {"warning", "critical", "unknown"}
@@ -1893,23 +1952,7 @@ def write_results(
             except Exception:
                 pass  # purge best-effort : ne doit pas faire echouer l'ecriture des statuts
 
-        # Alerte sortante : uniquement sur BASCULE vers critical (nouvelle cle critique),
-        # pas a chaque run tant que le probleme persiste. Best-effort : n'echoue jamais.
-        if alerter is not None:
-            try:
-                newly_critical = [
-                    result
-                    for result in results
-                    if result.status == "critical" and previous_status.get(result.status_key) != "critical"
-                ]
-                had_critical = any(state == "critical" for state in previous_status.values())
-                has_critical = any(result.status == "critical" for result in results)
-                if newly_critical:
-                    alerter.dispatch(newly_critical, kind="critical")
-                elif had_critical and not has_critical:
-                    alerter.dispatch([], kind="recovery")
-            except Exception:
-                pass  # alerting best-effort
+        # (l'alerte est desormais dispatchee AVANT les ecritures -- voir C.17 ci-dessus)
 
         return True, None
     except Exception as exc:
@@ -1943,49 +1986,67 @@ def main() -> int:
         return 0
     monitor = Monitor(args, supabase)
     results = monitor.run()
-    if args.dry_run:
-        wrote, write_error = False, None
-    else:
-        wrote, write_error = write_results(supabase, results, args.emit_ok_events, args.status_ttl_hours, alerter)
-    if args.dry_run:
-        results.append(
-            CheckResult(
-                status_key="monitor.supabase_write",
-                domain="system",
-                component="monitor",
-                check_name="supabase_write",
-                status="ok",
-                severity="info",
-                message="Dry-run mode: Supabase writes skipped intentionally",
-                details={"dry_run": True},
+
+    # C.17 -- LE PIEGE DU JOURNAL VIDE. Les 25, 26 et 27/08/2026, les passages tombant
+    # pendant une coupure reseau ont laisse un journal de 0 OCTET : le diagnostic etait
+    # calcule, mais il mourait avant d'etre imprime. Un moniteur qui ne sait rendre
+    # compte que quand tout va bien ne sert a rien.
+    #
+    # Desormais print_report() est dans un finally : quoi qu'il arrive en aval -- ecriture
+    # Supabase, alerte, purge -- le rapport atteint le disque.
+    try:
+        if args.dry_run:
+            wrote, write_error = False, None
+        else:
+            if not alerter.enabled:
+                print(
+                    "[monitor] ATTENTION : --no-alerts n'empeche PAS l'ecriture du statut. "
+                    "La bascule est donc CONSOMMEE et le prochain passage automatique ne "
+                    "vous alertera pas. Pour un simple controle, utiliser --dry-run.",
+                    file=sys.stderr,
+                )
+            wrote, write_error = write_results(supabase, results, args.emit_ok_events, args.status_ttl_hours, alerter)
+        if args.dry_run:
+            results.append(
+                CheckResult(
+                    status_key="monitor.supabase_write",
+                    domain="system",
+                    component="monitor",
+                    check_name="supabase_write",
+                    status="ok",
+                    severity="info",
+                    message="Dry-run mode: Supabase writes skipped intentionally",
+                    details={"dry_run": True},
+                )
             )
-        )
-    elif write_error:
-        results.append(
-            CheckResult(
-                status_key="monitor.supabase_write",
-                domain="system",
-                component="monitor",
-                check_name="supabase_write",
-                status="critical",
-                severity="critical",
-                message=f"Unable to write monitor results to Supabase: {write_error}",
-                details={"error": write_error},
+        elif write_error:
+            results.append(
+                CheckResult(
+                    status_key="monitor.supabase_write",
+                    domain="system",
+                    component="monitor",
+                    check_name="supabase_write",
+                    status="critical",
+                    severity="critical",
+                    message=f"Unable to write monitor results to Supabase: {write_error}",
+                    details={"error": write_error},
+                )
             )
-        )
-    elif wrote:
-        results.append(
-            CheckResult(
-                status_key="monitor.supabase_write",
-                domain="system",
-                component="monitor",
-                check_name="supabase_write",
-                status="ok",
-                severity="info",
-                message="Monitor results written to Supabase",
+        elif wrote:
+            results.append(
+                CheckResult(
+                    status_key="monitor.supabase_write",
+                    domain="system",
+                    component="monitor",
+                    check_name="supabase_write",
+                    status="ok",
+                    severity="info",
+                    message="Monitor results written to Supabase",
+                )
             )
-        )
-    print_report(results, args.json)
+    finally:
+        print_report(results, args.json)
+
     if args.strict_exit and any(result.status in {"critical", "unknown"} for result in results):
         return 2
     return 0
