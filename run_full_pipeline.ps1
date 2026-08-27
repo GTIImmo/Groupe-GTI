@@ -236,6 +236,32 @@ Invoke-OptionalStepWithRetry -Label "hektor drafts sweep (isDraft)" -Arguments @
     "phase2\sync\sync_hektor_drafts.py"
 )
 
+# C.15 27/08 -- LE BLOC COMMERCIAL de l'immobilier professionnel.
+#
+# POURQUOI CETTE ETAPE EXISTE. L'API REST ecrase les huit sous-types d'immo pro en un
+# seul code (idtype 23, "Commerce") : elle ne rend NI le sous-type, NI le bail, NI le
+# loyer, NI la taxe fonciere, NI le chiffre d'affaires. Sur les 1 034 annonces du parc,
+# elle disait donc la meme chose de tout -- d'un entrepot comme d'une pizzeria.
+# GraphQL, lui, rend le bloc complet. Releve dans la console le 27/08.
+#
+# MEME PATRON QUE LE VOISIN CI-DESSUS : GraphQL Console, lecture seule, ecriture dans le
+# miroir uniquement, non bloquant. Une session expiree ne doit jamais arreter le run.
+#
+# ELLE DOIT PASSER AVANT "phase2 refresh views" : c'est la vue qui joint la table.
+#
+# COUT : une requete rapporte 50 annonces -- 6 pages pour les actives, 16 pour les
+# archivees au premier passage, puis quasi rien en delta (la liste est triee LATEST,
+# on s'arrete des qu'une page entiere est sous le watermark). Le frein du projet est
+# dans le script : 2 s entre deux pages, 15 s de recul apres un echec, et ARRET
+# IMMEDIAT sur 403 -- c'est l'insistance qui avait aggrave le bannissement du 26/08.
+Invoke-OptionalStepWithRetry -Label "hektor immo pro (bloc commercial)" -Arguments @(
+    "phase2\sync\sync_hektor_immo_pro.py"
+)
+Invoke-OptionalStepWithRetry -Label "hektor immo pro archivees" -Arguments @(
+    "phase2\sync\sync_hektor_immo_pro.py",
+    "--archived"
+)
+
 if (-not $SkipContactDetails) {
     $contactDetailsOk = $false
     $contactDetailRequestDelayArg = $ContactDetailRequestDelaySeconds.ToString([System.Globalization.CultureInfo]::InvariantCulture)
