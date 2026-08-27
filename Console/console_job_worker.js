@@ -2113,18 +2113,30 @@ async function resolveAgencyContextForFallback(dossier, payload) {
   // depuis le négo PROPRIÉTAIRE via l'annuaire agence complet. includeInactive: true car le
   // négo est justement inactif/orphelin -> il faut quand même retrouver SON agence.
   const negotiatorId = (dossier && dossier.commercial_id)
-    || safePayload.hektor_negociateur_id || safePayload.target_hektor_negociateur_id || null;
+    // C.15 28/08 : meme cle oubliee ici que dans isOwnerNegotiatorActive.
+    || safePayload.hektor_negociateur_id || safePayload.hektor_negociator_form_id
+    || safePayload.target_hektor_negociateur_id || null;
   const agencyId = (dossier && dossier.hektor_agence_id)
     || safePayload.hektor_agence_id || safePayload.target_hektor_agence_id || null;
   const email = (dossier && dossier.negociateur_email)
     || safePayload.negociateur_email || safePayload.hektor_user_email || null;
+  // C.15 28/08 : l'agence DEMANDEE n'etait jamais consultee ici. Sans elle, une recherche
+  // par email rendait une agence au hasard parmi celles de la personne -- c'est ainsi
+  // qu'une annonce demandee a Firminy a ete creee a Saint-Etienne.
+  const agencyName = (dossier && dossier.agence_nom)
+    || safePayload.agence_nom || safePayload.requested_agence_nom || safePayload.target_agence_nom || null;
+  const userId = safePayload.hektor_user_id || safePayload.hektor_id_user || safePayload.target_hektor_user_id || null;
   const tryRows = (filters) =>
     loadHektorNegotiatorAgencyRows({ ...filters, includeInactive: true, limit: 10 }).catch(() => []);
   let rows = [];
   if (negotiatorId) rows = await tryRows({ negotiatorId });
+  // L'identifiant utilisateur est aussi sans ambiguite, et l'app l'envoie toujours.
+  if (!rows.length && userId) rows = await tryRows({ userId });
   if (!rows.length && agencyId) rows = await tryRows({ agencyId });
   if (!rows.length && email) rows = await tryRows({ email });
-  const row = (Array.isArray(rows) ? rows : []).find((r) => r && r.agence_id_user);
+  // On departage AVANT de prendre la premiere ligne venue : agence demandee, puis actif.
+  const candidates = (Array.isArray(rows) ? rows : []).filter((r) => r && r.agence_id_user);
+  const row = choisirLigneAnnuaire(candidates, agencyName);
   if (row && row.agence_id_user) {
     return {
       found: true,
@@ -2151,21 +2163,65 @@ async function resolveAgencyContextForFallback(dossier, payload) {
 // Source de vérité actif/inactif : app_hektor_negotiator_agency_directory.is_active
 // (annuaire COMPLET des négos). On NE s'appuie PLUS sur la présence dans app_user_directory
 // (table décimée, qui ne "marchait" que via le hack de fusion des actifs).
-async function loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId }) {
+// C.15 (28/08/2026) -- CHOISIR LA BONNE LIGNE QUAND L'EMAIL EN REND PLUSIEURS.
+//
+// 25 personnes de l'annuaire sont presentes dans PLUSIEURS agences et y partagent le
+// meme email -- accueil@ y figure onze fois. Prendre "la premiere ligne" revenait a
+// tirer au sort, et le sort tombait sur une identite INACTIVE.
+//
+// Ordre de preference : l'agence demandee, puis une identite active, puis la premiere.
+function choisirLigneAnnuaire(rows, agencyName) {
+  const liste = Array.isArray(rows) ? rows.filter(Boolean) : [];
+  if (!liste.length) return null;
+  const voulue = normalizeAgencyName(agencyName);
+  if (voulue) {
+    const exacte = liste.find((row) => normalizeAgencyName(row.agence_nom) === voulue);
+    if (exacte) return exacte;
+  }
+  return liste.find((row) => row.is_active === true) || liste[0];
+}
+
+// C.15 (28/08/2026) -- RETROUVER LE NEGOCIATEUR SANS SE TROMPER DE PERSONNE.
+//
+// CE QUI S'EST PASSE LE 27/08. L'annonce 62963 a ete creee pour Vincent-Lucas GONZALEZ,
+// agence Firminy. Il existe trois fois chez Hektor -- Firminy (actif), Saint-Etienne
+// (inactif), Monistrol (inactif) -- avec le MEME email. Cette fonction interrogeait
+// l'annuaire par email, une seule ligne, sans ordre : elle est tombee sur Saint-Etienne,
+// inactive. Le worker en a conclu "negociateur inactif", a bascule sur son repli
+// "ecriture via l'agence", et a resolu cette agence de la meme facon ambigue.
+// Resultat : annonce creee dans l'agence Saint-Etienne, avec le negociateur de Firminy.
+//
+// Ce defaut ne dependait NI du type de bien NI de l'immobilier professionnel : l'identite
+// se choisit trois secondes AVANT que le type soit prononce. Une maison creee pour l'une
+// de ces 25 personnes partait dans la mauvaise agence exactement pareil.
+//
+// LE REMEDE : interroger d'abord les identifiants qui ne trompent pas (id negociateur,
+// puis id utilisateur), et ne recourir a l'email qu'en dernier -- en choisissant alors
+// la ligne de l'agence demandee plutot qu'une au hasard.
+async function loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId, agencyName }) {
   const select = "hektor_negociateur_id,hektor_user_id,hektor_agence_id,agence_id_user,agence_nom,display_name,email,is_active,portable,telephone";
-  const tryQuery = async (column, value, op) => {
-    if (value == null || String(value).trim() === "") return null;
-    const params = new URLSearchParams({ select, limit: "1" });
+  const tryQuery = async (column, value, op, limit = 1) => {
+    if (value == null || String(value).trim() === "") return [];
+    const params = new URLSearchParams({ select, limit: String(limit) });
     params.set(column, op === "ilike" ? `ilike.${normalizeEmail(value)}` : `eq.${String(value).trim()}`);
     const rows = await supabaseRequest(
       `app_hektor_negotiator_agency_directory?${params.toString()}`,
       { method: "GET" }
     ).catch(() => null);
-    return Array.isArray(rows) && rows.length ? rows[0] : null;
+    return Array.isArray(rows) ? rows : [];
   };
-  return (await tryQuery("hektor_negociateur_id", negotiatorId, "eq"))
-    || (await tryQuery("email", email, "ilike"))
-    || (await tryQuery("hektor_user_id", userId, "eq"));
+
+  // 1. l'identifiant du negociateur : une seule personne possible
+  const parNegociateur = await tryQuery("hektor_negociateur_id", negotiatorId, "eq");
+  if (parNegociateur.length) return parNegociateur[0];
+
+  // 2. l'identifiant utilisateur : sans ambiguite lui aussi, et l'app l'envoie toujours.
+  //    Il passait APRES l'email : c'est ce qui laissait l'email decider.
+  const parUtilisateur = await tryQuery("hektor_user_id", userId, "eq");
+  if (parUtilisateur.length) return parUtilisateur[0];
+
+  // 3. l'email en dernier recours -- ambigu, donc on choisit au lieu de subir.
+  return choisirLigneAnnuaire(await tryQuery("email", email, "ilike", 10), agencyName);
 }
 
 // Normalise un nom d'agence pour comparaison tolérante (casse / accents / espaces).
@@ -2189,12 +2245,19 @@ async function isOwnerNegotiatorActive(dossier, payload) {
     || null;
   const negotiatorId = (dossier && dossier.commercial_id)
     || safePayload.hektor_negociateur_id
+    // C.15 28/08 : la fenetre de creation envoie hektor_negociator_form_id. Cette cle
+    // n'etait lue nulle part ici : l'identifiant sans ambiguite etait donc ignore, et
+    // le code retombait sur l'email -- partage par 25 personnes multi-agences.
+    || safePayload.hektor_negociator_form_id
     || safePayload.target_hektor_negociateur_id
     || null;
   const userId = safePayload.hektor_user_id || safePayload.hektor_id_user || safePayload.target_hektor_user_id || null;
+  // L'agence demandee, pour departager si l'email rend plusieurs lignes.
+  const agencyName = (dossier && dossier.agence_nom)
+    || safePayload.agence_nom || safePayload.requested_agence_nom || safePayload.target_agence_nom || null;
   // Aucun négo identifiable (null) -> traité comme inactif -> écriture via agence.
   if (!email && !negotiatorId && !userId) return false;
-  const row = await loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId }).catch(() => null);
+  const row = await loadAgencyDirectoryRowForOwner({ email, negotiatorId, userId, agencyName }).catch(() => null);
   if (!row || row.is_active !== true) return false;
   // Garde-fou cohérence d'agence (négos multi-agences) : le négo résolu peut être ACTIF mais
   // dans une AUTRE agence que le bien (ex. propriétaire à Saint-Étienne inactif, mais commercial_id
@@ -6300,7 +6363,9 @@ async function resolveEstimNegotiatorContact(payload, dossier, opts) {
     || safe.hektor_negociateur_id || (dossier && dossier.commercial_id));
   const userId = cleanString(nego.hektor_user_id || safe.hektor_user_id);
   if (!out.telephone || !out.email || !out.agence || !out.nom) {
-    const row = await loadAgencyDirectoryRowForOwner({ email: out.email, negotiatorId, userId }).catch(() => null);
+    // C.15 28/08 : l'agence connue departage les homonymes multi-agences ; a defaut,
+    // c'est l'identite ACTIVE qui l'emporte plutot qu'une ligne au hasard.
+    const row = await loadAgencyDirectoryRowForOwner({ email: out.email, negotiatorId, userId, agencyName: out.agence }).catch(() => null);
     if (row) {
       const port = cleanString(row.portable) || cleanString(row.telephone);
       if (!out.telephone && port && /\d{6,}/.test(port)) out.telephone = port;
