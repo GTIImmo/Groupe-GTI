@@ -551,6 +551,73 @@ s'applique pas »)* :
 > À la coupure, ce qui n'a pas été capturé est **perdu pour toujours**. Afficher, filtrer, écrire
 > attendront sans se dégrader ; **capturer, non.**
 
+### ✅ LOT B-1 — LE RAPPROCHEMENT FILTRE PAR TYPE D'OFFRE · *fait le 27/08*
+
+**Ce n'était pas qu'un garde-fou : c'était déjà faux.** La recherche porte sa propre colonne
+`offre`, et la mesure du 27/08 le montre :
+
+```
+   offre de la recherche       nb       dont ACTIVES
+   0   vente                10 504          4 011
+   2   location                246              1
+   10  vente immo pro           53             22   <<< 22 acquereurs cherchent du COMMERCIAL
+   11  location immo pro         7              0
+```
+
+**22 acquéreurs actifs cherchent de l'immobilier professionnel** et ne peuvent recevoir
+aujourd'hui que du résidentiel. Après ce correctif, ils recevront les 251 annonces qui les
+concernent.
+
+#### Deux fonctions, pas neuf — *le point de passage*
+
+```
+   app_dossier_match_payload   fabrique la fiche de l'annonce   -> porte desormais offre_type
+   app_match_score_v2          decide de "eligible"             -> refuse les types incompatibles
+```
+
+Vérifié : les **3** fonctions qui écrivent appellent `app_match_score_v2(to_jsonb(s), <payload>)`
+— donc `offre` arrive — et `app_process_rapprochement_dirty` délègue à
+`app_upsert_one_rapprochement`. **Les 4 écrivains sont couverts.**
+
+#### Le filet, avant de toucher au moteur
+
+Table `app_fonction_sauvegarde` : **Postgres a sauvegardé lui-même** le corps des deux fonctions
+*(1 251 et 9 368 caractères)*. **Aucune recopie manuelle, donc aucune erreur de recopie.** Et la
+modification de `app_match_score_v2` s'est faite **par remplacement côté serveur, avec assertions**
+— point d'ancrage absent → on lève, rien n'est modifié.
+
+`CREATE OR REPLACE`, jamais `DROP` : **les droits sont préservés** *(mémoire :
+renommer-parametre-rpc-supabase-piege)*.
+
+#### Vérifié — 5 contrôles, dont 3 témoins
+
+```
+   le garde-fou est pose                                    OK
+   la fiche porte offre_type                                OK
+   TEMOIN  meme type (0 vs 0)               -> eligible     OK
+   TEMOIN  types differents (0 vs 10)       -> REFUSE       OK
+   TEMOIN  commercial vs commercial (10/10) -> eligible     OK
+```
+
+**Non-régression sur 300 paires réelles : 298 scores identiques, 2 changements.**
+
+### 🔑 DÉCISION DU 27/08 — **types STRICTS, et pas familles compatibles**
+
+Les 2 changements étaient l'annonce **62483** *(appartement NEUF)* appariée à deux recherches
+de type **vente**, à **score 100**. J'avais proposé de regrouper `0` et `6` en une « famille
+résidentiel » pour ne pas les perdre. **Frédéric a tranché : types stricts.**
+
+**Et sa raison est meilleure que ma proposition** : le neuf n'est pas une vente ordinaire —
+VEFA, TVA, garanties, calendrier, mandat différent. Un acquéreur qui cherche de l'ancien ne veut
+pas forcément du sur plan ; s'il veut les deux, **le négociateur crée une seconde recherche**.
+Et c'est ce que fait Hektor lui-même, donc on reste cohérent avec lui jusqu'à la coupure.
+
+> **Conséquence assumée** : au prochain rafraîchissement, les 2 appariements de l'appartement de
+> Bourg-Argental disparaîtront. **C'est le comportement voulu, pas un incident.**
+
+**Retour arrière** : `SELECT corps FROM app_fonction_sauvegarde` puis l'exécuter.
+
+
 
 
 
