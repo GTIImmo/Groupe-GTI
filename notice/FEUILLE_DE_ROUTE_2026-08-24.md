@@ -437,6 +437,46 @@ variantes du type 10. **1 033 annonces**, dont 251 détails. Le palier **visible
 
 Chaque palier demande **un run** pour prendre effet.
 
+---
+
+### ✅ PALIER 2 — **CODÉ le 27/08**, pas encore passé dans un run
+
+```
+   sync_raw.py           3 variantes de plus :
+                           archived_neuf   archive=1 offre=6   details NON   <-- le filet
+                           active_pro      archive=0 offre=10  details OUI   <-- 251
+                           archived_pro    archive=1 offre=10  details NON   <-- 782
+   normalize_source.py   leurs 6 noms d'endpoint AJOUTES a ANNONCE_ENDPOINTS
+```
+
+**Banc de cohérence passé avant tout run** — et il vérifie désormais **la règle elle-même** :
+
+```
+   offre vente(defaut)  archive [0, 1]   OK -- les deux
+   offre 6              archive [0, 1]   OK -- les deux      <<< le trou du matin est referme
+   offre 10             archive [0, 1]   OK -- les deux
+   les 12 endpoints                      tous inscrits
+   les 2 variantes historiques           requete identique a l'octet pres
+```
+
+#### Les attendus, écrits AVANT le run
+
+```
+   miroir offre_type       0 : 56 911    6 : 1    10 : 1 033
+   miroir hektor_annonce   56 912  ->  57 945          (+1 033)
+   serveur app_view_generale                           (+1 033)
+   index archives          34 487  ->  35 269          (+782)
+   index actives           AU PLUS +251 -- les actives dont le statut sort du
+                           perimetre (Vendu, Clos) partiront dans l'index historique
+   Supabase                les 251 actives, etiquetees offre_type '10'
+   [reconcile]             TOUJOURS 0                  <<< LE SIGNAL D'ALARME
+   cout Hektor             251 details + les pages de listing, une seule fois
+```
+
+> ⚠ **Si `[reconcile]` supprime quoi que ce soit, on s'arrête avant le palier 3.**
+> ⚠ **Surveiller le frein de débit pendant le run : l'IP a déjà été bannie une fois.**
+
+
 
 
 ---

@@ -67,6 +67,62 @@ ANNONCE_VARIANTS = (
         "object_type": "annonce_active",
         "sync_details": True,
     },
+    # C.15 PALIER 2 (27/08) -- LE TROU QUE LE CANARI AVAIT LAISSE OUVERT.
+    #
+    # Le matin meme j'avais ajoute "neuf actif" SANS son pendant archive. Or
+    # prune_annonce_scope (normalize_source.py) supprime de hektor_annonce,
+    # hektor_annonce_detail, hektor_offre, hektor_compromis et hektor_vente TOUT ce qui
+    # n'apparait dans AUCUN listing ecoute. Si Hektor archivait l'annonce 62483, elle
+    # sortait de list_annonces_active_neuf, n'entrait dans aucun autre, et elle etait
+    # EFFACEE du miroir -- detail compris. Pour la vente ce risque n'a jamais existe :
+    # list_annonces_archived est la depuis toujours.
+    #
+    # REGLE, valable pour tout type ouvert desormais :
+    #     LES DEUX VARIANTES, ACTIVE ET ARCHIVEE, OU AUCUNE.
+    #
+    # 0 annonce a ce jour de ce cote : le cout est nul, c'est un filet.
+    {
+        "scope": "archived_neuf",
+        "archive": 1,
+        "offre": 6,
+        "base_endpoint_name": "list_annonces_archived_neuf",
+        "update_endpoint_name": "list_annonces_archived_neuf_update",
+        "object_type": "annonce_archived",
+        "sync_details": False,
+    },
+    # C.15 PALIER 2 -- LA VENTE IMMOBILIER PROFESSIONNEL (offre=10).
+    #
+    # Mesure chez Hektor le 27/08 a 08:40, temoin type 0 conforme au miroir :
+    #     actives 251   archivees 782   total 1 033
+    #
+    # C'est le premier palier VISIBLE dans l'app : le type 10 fait partie de la liste
+    # blanche de routage (FILTRE_OFFRE_APP = '0','10','6'), decidee le 26/08. Les 251
+    # actives sortiront donc dans la liste des annonces, et les 782 archivees dans
+    # l'index d'archive. Elles porteront leur etiquette : offre_type traverse jusqu'a
+    # Supabase depuis le 27/08.
+    #
+    # COUT : seules les actives telechargent un detail (sync_details), soit 251 appels
+    # AnnonceById une seule fois, plus les pages de listing. Les archivees n'en
+    # telechargent aucun -- meme regle que la variante "archived" historique.
+    # ATTENTION AU FREIN DE DEBIT : notre IP a deja ete bannie une fois.
+    {
+        "scope": "active_pro",
+        "archive": 0,
+        "offre": 10,
+        "base_endpoint_name": "list_annonces_active_pro",
+        "update_endpoint_name": "list_annonces_active_pro_update",
+        "object_type": "annonce_active",
+        "sync_details": True,
+    },
+    {
+        "scope": "archived_pro",
+        "archive": 1,
+        "offre": 10,
+        "base_endpoint_name": "list_annonces_archived_pro",
+        "update_endpoint_name": "list_annonces_archived_pro_update",
+        "object_type": "annonce_archived",
+        "sync_details": False,
+    },
 )
 
 CONTACT_VARIANTS = (

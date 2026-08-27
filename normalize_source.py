@@ -22,6 +22,17 @@ ANNONCE_ENDPOINTS = (
     # au meme run. Les deux ensemble, ou rien.
     "list_annonces_active_neuf",
     "list_annonces_active_neuf_update",
+    # C.15 PALIER 2 (27/08) -- couples aux variantes du meme nom dans sync_raw.py.
+    # archived_neuf referme le trou laisse le matin meme (une annonce de type 6 archivee
+    # par Hektor n'apparaissait plus dans aucun listing ecoute -> prune_annonce_scope
+    # l'effacait du miroir, detail compris). active_pro / archived_pro ouvrent la vente
+    # immobilier professionnel : 251 actives + 782 archivees.
+    "list_annonces_archived_neuf",
+    "list_annonces_archived_neuf_update",
+    "list_annonces_active_pro",
+    "list_annonces_active_pro_update",
+    "list_annonces_archived_pro",
+    "list_annonces_archived_pro_update",
 )
 CONTACT_ENDPOINTS = (
     "list_contacts",
