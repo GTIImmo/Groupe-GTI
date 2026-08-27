@@ -837,6 +837,41 @@ const draftAnnoncePropertyGroups: Array<{ id: DraftAnnoncePropertyGroupId; label
   },
 ]
 
+// C.15 (27/08/2026) -- LES SOUS-TYPES D'IMMOBILIER PROFESSIONNEL.
+//
+// Hektor met TOUJOURS idType = 23 ("Commerce") sur ces annonces et range le vrai
+// sous-type dans un second champ, type_transac. Liste relevee dans la console
+// (capture Console/exports/annonce_type_choices_...), pas devinee.
+//
+// CETTE TABLE N'EST PAS DANS draftAnnoncePropertyGroups, ET CE N'EST PAS UN OUBLI :
+// les deux numerotations se telescopent.
+//     idType 1  = Maison   |  type_transac 1  = Fonds de commerce
+//     idType 15 = Garage   |  type_transac 15 = Terrains
+//     idType 17 = Chalet   |  type_transac 17 = Local professionnel
+// Les melanger creerait une maison en croyant creer un fonds de commerce, sans la
+// moindre erreur. Les deux listes restent separees, et les deux etats aussi.
+const SOUS_TYPES_IMMO_PRO: Array<{ id: string; label: string }> = [
+  { id: '14', label: 'Local commercial' },
+  { id: '1', label: 'Fonds de commerce' },
+  { id: '16', label: "Local d'activite" },
+  { id: '17', label: 'Local professionnel' },
+  { id: '13', label: 'Entrepot' },
+  { id: '5', label: 'Murs commerciaux' },
+  { id: '18', label: 'Murs et fonds de commerce' },
+  { id: '10', label: 'Bureaux' },
+  { id: '2', label: 'Cession de droit au bail' },
+  { id: '15', label: 'Terrains' },
+]
+
+// Le type de bien que Hektor pose sur TOUTE annonce d'immobilier professionnel.
+const IDTYPE_COMMERCE = '23'
+// La famille d'offre Hektor pour une vente d'immobilier professionnel.
+const OFFRE_IMMO_PRO = '10'
+
+function libelleSousTypeImmoPro(id: string) {
+  return SOUS_TYPES_IMMO_PRO.find((item) => item.id === id)?.label ?? 'Local commercial'
+}
+
 const draftAnnoncePropertyTypes: DraftAnnoncePropertyTypeOption[] = draftAnnoncePropertyGroups.flatMap((group) => (
   group.types.map((type) => ({ ...type, group: group.id }))
 ))
@@ -11758,6 +11793,10 @@ export default function App() {
   const [draftAnnonceAgency, setDraftAnnonceAgency] = useState('')
   const [draftAnnonceNegotiatorId, setDraftAnnonceNegotiatorId] = useState('')
   const [draftAnnonceTypeId, setDraftAnnonceTypeId] = useState('2')
+  // C.15 : la famille d'offre ('0' vente ordinaire, '10' immo pro) et le sous-type
+  // commerce. Deux etats distincts de draftAnnonceTypeId : voir SOUS_TYPES_IMMO_PRO.
+  const [draftAnnonceOffreFamille, setDraftAnnonceOffreFamille] = useState('0')
+  const [draftAnnonceTypeTransac, setDraftAnnonceTypeTransac] = useState('14')
   const [draftAnnonceAddress, setDraftAnnonceAddress] = useState('')
   const [draftAnnoncePostalCode, setDraftAnnoncePostalCode] = useState('')
   const [draftAnnonceCity, setDraftAnnonceCity] = useState('')
@@ -11959,7 +11998,14 @@ export default function App() {
   }, [draftExistingMandantId, draftExistingMandantOptions])
   const draftAnnonceSelectedTypeGroup = draftAnnoncePropertyGroupForTypeId(draftAnnonceTypeId)
   const draftAnnonceSelectedTypeOptions = draftAnnonceTypeOptionsForGroup(draftAnnonceSelectedTypeGroup.id)
-  const draftAnnonceTypeRules = draftAnnonceTypeProfile(draftAnnonceTypeId)
+  // C.15 : sur un local professionnel, le formulaire residentiel n'a pas de sens
+  // (chambres, niveaux, jardin, exposition). Le profil « other » ne garde que la
+  // surface et le prix -- les caracteristiques professionnelles se saisissent
+  // ensuite dans la fiche.
+  const draftAnnonceImmoPro = draftAnnonceOffreFamille === OFFRE_IMMO_PRO
+  const draftAnnonceTypeRules = draftAnnonceImmoPro
+    ? draftAnnonceTypeProfileFromKind('other')
+    : draftAnnonceTypeProfile(draftAnnonceTypeId)
   const draftAnnonceStepIndex = Math.max(0, draftAnnonceStepOrder.indexOf(draftAnnonceStep))
   const draftAnnonceStepProgress = ((draftAnnonceStepIndex + 1) / draftAnnonceStepOrder.length) * 100
   const draftAnnonceCurrentStep = draftAnnonceStepMeta[draftAnnonceStep]
@@ -13647,6 +13693,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setDraftAnnonceAgency(selectedAgency)
     setDraftAnnonceNegotiatorId(profile?.role === 'commercial' ? (ownNegotiator?.idUser ?? '') : '')
     setDraftAnnonceTypeId('2')
+    setDraftAnnonceOffreFamille('0')
+    setDraftAnnonceTypeTransac('14')
     setDraftAnnonceTitle('')
     setDraftAnnonceAddress('')
     setDraftAnnoncePostalCode('')
@@ -13836,7 +13884,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setIfPresent(setDraftMandantCity, value('mandantCity'))
 
     const propertyTypeId = draftAnnoncePropertyTypeIdFromLabel(value('propertyType'))
-    if (propertyTypeId) setDraftAnnonceTypeId(propertyTypeId)
+    // Une fiche scannee est residentielle : on repasse explicitement en vente ordinaire.
+    if (propertyTypeId) { setDraftAnnonceTypeId(propertyTypeId); setDraftAnnonceOffreFamille('0') }
 
     const scannedAgency = value('agency')
     if (scannedAgency) {
@@ -14362,10 +14411,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         hektorUserLabel: selectedDraftNegotiator.label,
         hektorUserEmail: selectedDraftNegotiator.email,
         creationStatus: draftAnnonceCreationStatus,
-        propertyType: draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
+        // C.15 : sur l'immo pro, Hektor attend idType = 23 et le sous-type dans un
+        // champ separe. Hors immo pro, offreFamille vaut '0' et hektorTypeTransac
+        // part a null -- aucun numero de la table commerce ne peut fuir vers une vente.
+        propertyType: draftAnnonceImmoPro
+          ? libelleSousTypeImmoPro(draftAnnonceTypeTransac)
+          : draftAnnoncePropertyTypeLabel(draftAnnonceTypeId),
         propertyProfile: draftAnnonceTypeRules.kind,
-        hektorIdType: draftAnnonceTypeId,
+        hektorIdType: draftAnnonceImmoPro ? IDTYPE_COMMERCE : draftAnnonceTypeId,
         offerType: 'sale',
+        offreFamille: draftAnnonceImmoPro ? OFFRE_IMMO_PRO : '0',
+        hektorTypeTransac: draftAnnonceImmoPro ? draftAnnonceTypeTransac : null,
         address: draftAnnonceAddress,
         postalCode: draftAnnoncePostalCode,
         city: draftAnnonceCity,
@@ -16540,18 +16596,41 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         {draftAnnoncePropertyGroups.map((group) => (
                           <button
                             key={group.id}
-                            className={`draft-annonce-type-choice ${draftAnnonceSelectedTypeGroup.id === group.id ? 'is-selected' : ''}`}
+                            className={`draft-annonce-type-choice ${!draftAnnonceImmoPro && draftAnnonceSelectedTypeGroup.id === group.id ? 'is-selected' : ''}`}
                             type="button"
-                            onClick={() => setDraftAnnonceTypeId(group.types[0]?.id ?? '2')}
+                            onClick={() => { setDraftAnnonceOffreFamille('0'); setDraftAnnonceTypeId(group.types[0]?.id ?? '2') }}
                           >
                             <span aria-hidden="true">{group.label.replace(/^Les\s+/i, '').slice(0, 1)}</span>
                             <strong>{group.label}</strong>
                             <small>{group.hint}</small>
                           </button>
                         ))}
+                        {/* C.15 : cinquieme famille. Elle ne change pas draftAnnonceTypeId --
+                            c'est draftAnnonceTypeTransac qui portera le sous-type, dans sa
+                            propre numerotation. Voir SOUS_TYPES_IMMO_PRO. */}
+                        <button
+                          key="immo-pro"
+                          className={`draft-annonce-type-choice ${draftAnnonceImmoPro ? 'is-selected' : ''}`}
+                          type="button"
+                          onClick={() => setDraftAnnonceOffreFamille(OFFRE_IMMO_PRO)}
+                        >
+                          <span aria-hidden="true">P</span>
+                          <strong>L'immobilier professionnel</strong>
+                          <small>Commerce, bureaux, entrepot</small>
+                        </button>
                       </div>
                       <div className="draft-annonce-type-grid draft-annonce-subtype-grid" role="group" aria-label="Sous-type de bien">
-                        {draftAnnonceSelectedTypeOptions.map((item) => (
+                        {draftAnnonceImmoPro ? SOUS_TYPES_IMMO_PRO.map((item) => (
+                          <button
+                            key={`pro-${item.id}`}
+                            className={`draft-annonce-type-choice ${draftAnnonceTypeTransac === item.id ? 'is-selected' : ''}`}
+                            type="button"
+                            onClick={() => setDraftAnnonceTypeTransac(item.id)}
+                          >
+                            <span aria-hidden="true">{item.label.slice(0, 1)}</span>
+                            <strong>{item.label}</strong>
+                          </button>
+                        )) : draftAnnonceSelectedTypeOptions.map((item) => (
                           <button
                             key={item.id}
                             className={`draft-annonce-type-choice ${draftAnnonceTypeId === item.id ? 'is-selected' : ''}`}

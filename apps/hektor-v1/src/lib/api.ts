@@ -8326,6 +8326,20 @@ export type HektorDraftAnnonceJobInput = {
   propertyProfile?: string | null
   hektorIdType?: string | number | null
   offerType?: 'sale' | 'rental'
+  // C.15 -- L'IMMOBILIER PROFESSIONNEL SE CREE EN DEUX TEMPS.
+  //
+  // Hektor met TOUJOURS idType = 23 ("Commerce") sur ces annonces et range le vrai
+  // sous-type dans un second champ, type_transac. C'est pourquoi son API REST
+  // repondait "Commerce" pour un entrepot comme pour une pizzeria.
+  //
+  // ATTENTION -- DEUX NUMEROTATIONS DISTINCTES QUI SE TELESCOPENT :
+  //     idType 1  = Maison      |  typeTransac 1  = Fonds de commerce
+  //     idType 15 = Garage      |  typeTransac 15 = Terrains
+  //     idType 17 = Chalet      |  typeTransac 17 = Local professionnel
+  // Les confondre creerait une maison en croyant creer un fonds de commerce, sans
+  // la moindre erreur. D'ou deux champs nommes differemment, jamais interchangeables.
+  offreFamille?: string | null
+  hektorTypeTransac?: string | null
   address?: string | null
   postalCode?: string | null
   city?: string | null
@@ -8402,6 +8416,23 @@ function sanitizeForJsonb<T>(value: T): T {
   return value
 }
 
+// C.15 : les deux seules familles que l'app sait creer. Tout le reste retombe sur la
+// vente ordinaire -- on ne fabrique pas une location par accident.
+const FAMILLES_OFFRE_CREABLES = new Set(['0', '10'])
+
+function normaliserFamilleOffre(valeur: string | null | undefined) {
+  const texte = String(valeur ?? '').trim()
+  return FAMILLES_OFFRE_CREABLES.has(texte) ? texte : '0'
+}
+
+// Le sous-type commerce n'existe QUE pour l'immo pro. Hors de ce cas il part a null :
+// c'est ce qui empeche un numero de la table commerce d'etre lu comme un type de bien.
+function normaliserTypeTransac(famille: string | null | undefined, sousType: string | null | undefined) {
+  if (normaliserFamilleOffre(famille) !== '10') return null
+  const texte = String(sousType ?? '').trim()
+  return texte || null
+}
+
 export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobInput): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
@@ -8424,6 +8455,11 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
       property_profile: input.propertyProfile?.trim() || null,
       hektor_id_type: input.hektorIdType == null ? '2' : String(input.hektorIdType).trim() || '2',
       offer_type: input.offerType ?? 'sale',
+      // C.15 : la famille d'offre ('0' vente, '10' vente immo pro) et, pour l'immo pro
+      // SEULEMENT, le sous-type. Le garde-fou est ici : hors immo pro le champ part a
+      // null, donc aucun numero de la table commerce ne peut atteindre une vente.
+      offredem: normaliserFamilleOffre(input.offreFamille),
+      hektor_type_transac: normaliserTypeTransac(input.offreFamille, input.hektorTypeTransac),
       address: input.address?.trim() || null,
       postal_code: input.postalCode?.trim() || null,
       city: input.city?.trim() || null,

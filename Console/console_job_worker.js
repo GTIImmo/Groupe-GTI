@@ -3050,9 +3050,38 @@ async function createHektorAnnonceWithPlaywright(job, payload) {
   }
 }
 
+// C.15 (27/08/2026) -- CREER UNE ANNONCE D'IMMOBILIER PROFESSIONNEL.
+//
+// Hektor met TOUJOURS idType = 23 ("Commerce") sur ces annonces et range le vrai
+// sous-type dans un second champ, type_transac. C'est pourquoi son API REST
+// repondait "Commerce" aussi bien pour un entrepot que pour une pizzeria.
+//
+// DEUX NUMEROTATIONS DISTINCTES QUI SE TELESCOPENT :
+//     idType 1  = Maison   |  type_transac 1  = Fonds de commerce
+//     idType 15 = Garage   |  type_transac 15 = Terrains
+//     idType 17 = Chalet   |  type_transac 17 = Local professionnel
+// Envoyer l'un pour l'autre creerait une maison en croyant creer un fonds de
+// commerce, sans la moindre erreur. Le garde-fou est ci-dessous : hors immo pro,
+// type_transac n'est JAMAIS pose.
+const FAMILLES_IMMO_PRO = new Set(["10", "11"]);
+
+function typeTransacPourFamille(offredem, typeTransac) {
+  if (!FAMILLES_IMMO_PRO.has(String(offredem ?? ""))) return null;
+  const texte = String(typeTransac ?? "").trim();
+  return texte || null;
+}
+
+// Pose type_transac sur un corps de requete, si et seulement s'il a lieu d'y etre.
+function poserTypeTransac(body, meta) {
+  const valeur = typeTransacPourFamille(meta && meta.offredem, meta && meta.typeTransac);
+  if (valeur) body.set("type_transac", valeur);
+  return valeur;
+}
+
 async function createHektorAnnonceWithHttpDirect(job, payload) {
   const offredem = String(payload.offredem ?? payload.offer_demand ?? 0);
   const idType = String(payload.hektor_id_type ?? payload.idType ?? payload.id_type ?? 2);
+  const typeTransac = typeTransacPourFamille(offredem, payload.hektor_type_transac ?? payload.type_transac);
   const creationStatus = resolveHektorCreationStatus(payload);
   const statutAnnonce = creationStatus.statutAnnonce;
   const programmeNeuf = String(payload.programme_neuf ?? 0);
@@ -3070,17 +3099,20 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
   await logJob(job.id, "hektor_annonce_http", "running", "Creation annonce via commande HTML directe", {
     offredem,
     idType,
+    type_transac: typeTransac,
     statutAnnonce,
     status_label: creationStatus.label,
     programme_neuf: programmeNeuf,
   });
 
-  const createUrl = `${XMLRPC_URL}?${new URLSearchParams({
+  const createParams = new URLSearchParams({
     mode: "ajoutebien",
     offredem,
     idType,
     statutAnnonce,
-  }).toString()}`;
+  });
+  if (typeTransac) createParams.set("type_transac", typeTransac);
+  const createUrl = `${XMLRPC_URL}?${createParams.toString()}`;
   const createResponse = await hektorFetch(createUrl, {
     headers: { Referer: `${ADMIN_URL}?page=/mes-biens/ajouter-un-nouveau-bien` },
     timeoutMs: 60000,
@@ -3107,6 +3139,7 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
     idann: idannWizard,
     programme_neuf: programmeNeuf,
   });
+  if (typeTransac) wizardBody.set("type_transac", typeTransac);
   const wizardResponse = await fetchAfterAnnonceId(XMLRPC_URL, {
     method: "POST",
     body: wizardBody,
@@ -3127,7 +3160,7 @@ async function createHektorAnnonceWithHttpDirect(job, payload) {
     job,
     fetchAfterAnnonceId,
     idannWizard,
-    { offredem, idType, statutAnnonce, programmeNeuf },
+    { offredem, idType, statutAnnonce, programmeNeuf, typeTransac },
     payload,
     wizardResponse.text,
   );
@@ -7872,6 +7905,7 @@ function wizardStepBaseBody(idannWizard, step, meta, extractedValues = null) {
   body.set("mode", "annonce-createBien-Ajx_Bien_wizardStepNew");
   body.set("step", String(step));
   body.set("offredem", String(meta.offredem));
+  poserTypeTransac(body, meta);
   body.set("idann", String(idannWizard));
   body.set("programme_neuf", String(meta.programmeNeuf));
   body.set("isInterkabActive", "undefined");
@@ -8085,6 +8119,7 @@ async function fetchHektorWizardBienHtml(fetcher, idannWizard, meta) {
     idann: String(idannWizard),
     programme_neuf: String(meta.programmeNeuf),
   });
+  poserTypeTransac(wizardBody, meta);
   const response = await fetcher(XMLRPC_URL, {
     method: "POST",
     body: wizardBody,
