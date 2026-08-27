@@ -123,6 +123,56 @@ ANNONCE_VARIANTS = (
         "object_type": "annonce_archived",
         "sync_details": False,
     },
+    # C.15 LOT A (27/08) -- LES LOCATIONS. Elles restent AU SERVEUR SEUL : le filtre
+    # FILTRE_OFFRE_APP ('0','10','6') les retient, et cette exclusion est un etat FINI,
+    # pas un report -- decision du 26/08.
+    #
+    # Mesure chez Hektor le 27/08 a 08:40 :
+    #     location (2)              621 actives + 2 248 archivees = 2 869
+    #     location immo pro (11)      54 actives +   208 archivees =   262
+    #     saisonnier (8)               0 -- rien a ouvrir aujourd'hui
+    #
+    # POURQUOI LES CAPTURER SI ELLES NE S'AFFICHENT PAS : le miroir ne sait que ce qu'on
+    # lui a demande. A la coupure, ce qui n'a pas ete capture est perdu POUR TOUJOURS.
+    # Afficher, filtrer, ecrire attendront sans se degrader ; capturer, non.
+    #
+    # Et la regle du 27/08 s'applique : LES DEUX VARIANTES, ACTIVE ET ARCHIVEE, OU AUCUNE.
+    {
+        "scope": "active_loc",
+        "archive": 0,
+        "offre": 2,
+        "base_endpoint_name": "list_annonces_active_loc",
+        "update_endpoint_name": "list_annonces_active_loc_update",
+        "object_type": "annonce_active",
+        "sync_details": True,
+    },
+    {
+        "scope": "archived_loc",
+        "archive": 1,
+        "offre": 2,
+        "base_endpoint_name": "list_annonces_archived_loc",
+        "update_endpoint_name": "list_annonces_archived_loc_update",
+        "object_type": "annonce_archived",
+        "sync_details": False,
+    },
+    {
+        "scope": "active_loc_pro",
+        "archive": 0,
+        "offre": 11,
+        "base_endpoint_name": "list_annonces_active_loc_pro",
+        "update_endpoint_name": "list_annonces_active_loc_pro_update",
+        "object_type": "annonce_active",
+        "sync_details": True,
+    },
+    {
+        "scope": "archived_loc_pro",
+        "archive": 1,
+        "offre": 11,
+        "base_endpoint_name": "list_annonces_archived_loc_pro",
+        "update_endpoint_name": "list_annonces_archived_loc_pro_update",
+        "object_type": "annonce_archived",
+        "sync_details": False,
+    },
 )
 
 CONTACT_VARIANTS = (

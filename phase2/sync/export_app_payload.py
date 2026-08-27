@@ -68,7 +68,26 @@ CONSOLE_DETAIL_PAYLOAD_FIELDS = {
 #
 # COALESCE a '0' : trois annonces ont offre_type NULL (celles que Hektor ne rend plus, gardees
 # avec absent_depuis). Elles etaient incluses avant, elles le restent.
-FILTRE_OFFRE_APP = "COALESCE(offre_type, '0') IN ('0', '10', '6')"
+TYPES_OFFRE_APP = ("0", "10", "6")
+_LISTE_TYPES = ", ".join("'%s'" % code for code in TYPES_OFFRE_APP)
+
+FILTRE_OFFRE_APP = "COALESCE(offre_type, '0') IN (%s)" % _LISTE_TYPES
+
+
+def filtre_offre_app(alias: str) -> str:
+    """Le meme filtre, mais qualifie par un alias de table.
+
+    LOT A 27/08 -- LA FUITE DU REGISTRE. Le registre des mandats ne passe PAS par
+    ANNONCES_SCOPE_WHERE : il lit `hektor.hektor_annonce` en direct, filtre seulement sur
+    le statut. Sans cette fonction, les mandats des 3 131 locations remonteraient dans le
+    registre LEGAL affiche par l'app, alors meme que leurs annonces en sont exclues.
+
+    Trouve en verifiant la couverture du filtre, pas apres coup.
+
+    La liste des types reste a UN SEUL endroit (TYPES_OFFRE_APP) : ajouter un type a l'app
+    se fait la, et nulle part ailleurs.
+    """
+    return "COALESCE(%s.offre_type, '0') IN (%s)" % (alias, _LISTE_TYPES)
 
 ANNONCES_SCOPE_WHERE = (
     "COALESCE(archive, '0') = '0' "
@@ -663,6 +682,7 @@ ORDER BY d.app_dossier_id, s.passerelle_key, commercial_key
 """.replace("__ANNONCES_SCOPE_WHERE__", ANNONCES_SCOPE_WHERE)
 
 
+FILTRE_REGISTRE = filtre_offre_app("ann")
 SQL_REGISTER_RAW_BASE = f"""
 SELECT
     ann.hektor_annonce_id,
@@ -703,6 +723,10 @@ LEFT JOIN hektor.hektor_agence ag
 LEFT JOIN hektor.hektor_negociateur neg
     ON neg.hektor_negociateur_id = ann.hektor_negociateur_id
 WHERE COALESCE(det.statut_name, '') IN ({REGISTRE_SCOPE_SQL})
+  -- LOT A 27/08 : le registre lit hektor_annonce EN DIRECT, il ne passe pas par
+  -- ANNONCES_SCOPE_WHERE. Sans cette ligne, les mandats des locations remonteraient
+  -- dans le registre legal de l'app.
+  AND {FILTRE_REGISTRE}
 ORDER BY CAST(ann.hektor_annonce_id AS INTEGER), ann.no_mandat
 """
 

@@ -33,6 +33,18 @@ ANNONCE_ENDPOINTS = (
     "list_annonces_active_pro_update",
     "list_annonces_archived_pro",
     "list_annonces_archived_pro_update",
+    # C.15 LOT A (27/08) -- les locations (2) et locations immo pro (11). Serveur seul :
+    # le filtre FILTRE_OFFRE_APP les retient avant Supabase. Elles sont inscrites ICI parce
+    # que le perimetre du MIROIR est calcule a partir de cette liste : sans leurs noms,
+    # prune_annonce_scope les effacerait au meme run qui les fait entrer.
+    "list_annonces_active_loc",
+    "list_annonces_active_loc_update",
+    "list_annonces_archived_loc",
+    "list_annonces_archived_loc_update",
+    "list_annonces_active_loc_pro",
+    "list_annonces_active_loc_pro_update",
+    "list_annonces_archived_loc_pro",
+    "list_annonces_archived_loc_pro_update",
 )
 CONTACT_ENDPOINTS = (
     "list_contacts",

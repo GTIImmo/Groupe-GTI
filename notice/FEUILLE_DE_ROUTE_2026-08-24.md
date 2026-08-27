@@ -476,6 +476,82 @@ Chaque palier demande **un run** pour prendre effet.
 > ⚠ **Si `[reconcile]` supprime quoi que ce soit, on s'arrête avant le palier 3.**
 > ⚠ **Surveiller le frein de débit pendant le run : l'IP a déjà été bannie une fois.**
 
+---
+
+## 🔵 LE CHANTIER DES TYPES D'OFFRE — *plan complet, décidé le 27/08*
+
+**Frédéric a choisi de mener ce chantier JUSQU'AU BOUT avant de reprendre le dev global.**
+
+```
+   LOT A  capturer            1 j        <<< la seule partie qui a une date limite
+   LOT B  reparer             2 a 3 j        mesure par l'audit B2
+   LOT C  le run              1 h 30
+   LOT D  l'affichage         3 a 5 j
+   LOT E  le releve Hektor    2 a 3 j        la seule inconnue restante
+   LOT F  ecrire              1 sem.         revu A LA BAISSE apres l'audit
+   LOT G  prouver             1 j
+   ---------------------------------------------------------------
+                              3 a 4 SEMAINES
+```
+
+### 📋 AUDIT B2 — *ce qui suppose « vente »*, fait le 27/08
+
+| question | verdict |
+|---|---|
+| **Le rapprochement** | 🔴 **11 fonctions Supabase, AUCUNE ne connaît `offre_type`** · 9 lisent les annonces → **9 à corriger** · le correctif est **une condition** : `AND COALESCE(d.offre_type,'0') = '0'` · **½ à 1 j** |
+| **L'avis de valeur** | ✅ **rien à réparer** — `dvfTypeForBien` ne rend que `Maison\|Appartement\|null` ; des murs commerciaux rendent `null` → **pas de comparables**. Il **se tait au lieu de mentir** |
+| **Les mandats** | ✅ **déjà couvert** — « Vente de murs et fonds de commerce » et « Vente de fonds de commerce » sont **déjà** parmi les 12 sous-types de « Mandat de vente » |
+| **Le type de bien** | 🔴 **l'idtype 23 « Murs Commerciaux » est ABSENT** des 29 types connus du front · son repli est le groupe `[1]` = **« appartements »** → un local commercial serait présenté **avec ses chambres et ses salles de bain**. **Mesuré : 160 annonces sur 160 lues sont des idtype 23** — *un seul* type à déclarer, des deux côtés. **½ j** |
+| **La diffusion portails** | ⏳ rien dans notre code ne regarde le type ; la question est **côté Hektor** → se relève avec le lot E |
+| **Statistiques** | ✅ rien à faire — elles dérivent des mêmes tables, c'est voulu |
+
+> 🔑 **Pourquoi le lot F a été revu à la baisse** — trois choses que je croyais à construire **existent déjà** :
+> `offredem` est déjà un paramètre du worker *(défaut 0, il attend sa valeur)* · les **profils de bien**
+> sont un système complet, **côté worker ET côté front** · les sous-types de mandat couvrent le commerce.
+
+### ✅ LOT A — FAIT le 27/08
+
+**A1 · La fuite du registre, bouchée.** Le registre des mandats ne passe **pas** par
+`ANNONCES_SCOPE_WHERE` : il lit `hektor.hektor_annonce` **en direct**, filtré seulement sur le
+statut. Sans correctif, **les mandats des 3 131 locations seraient remontés dans le registre
+LÉGAL affiché par l'app**, alors que leurs annonces en sont exclues.
+
+**Une seule fuite, pas deux** : les affaires *(offre/compromis/vente)* ne servent qu'à **enrichir**
+des lignes de registre déjà filtrées — vérifié. Et `app_affaire_ledger` n'est **lu par aucun écran**
+en direct *(témoin posé)* : il peut continuer à tout accumuler, c'est son rôle.
+
+**La liste des types vit désormais à UN SEUL endroit** — `TYPES_OFFRE_APP` — avec une variante
+qualifiée `filtre_offre_app(alias)` pour les requêtes qui joignent par alias.
+
+**Prouvé inerte, avec DEUX témoins** *(sans eux, « écart 0 » pourrait vouloir dire « le filtre ne
+s'applique pas »)* :
+
+```
+   registre AVEC le filtre     56 862
+   registre SANS le filtre     56 862
+   ECART                            0     INERTE
+   TEMOIN 1  liste bidon ('999')    0     le filtre MORD bien
+   TEMOIN 2  ('6') seul             1     exactement 62483
+   les 3 index            13 575 / 34 487 / 8 802   inchanges
+```
+
+**A2 · Les locations capturées.** 4 variantes de plus *(types 2 et 11, les deux archives chacune)*.
+
+**Le périmètre est désormais complet :**
+
+```
+   5 types d'offre x 2 variantes = 10 variantes, 20 endpoints, tous inscrits
+   dans l'app     :  vente (0) · neuf (6) · vente immo pro (10)
+   serveur seul   :  location (2) · location immo pro (11)
+   cout 1er run   :  927 details supplementaires, une seule fois
+   regle verifiee :  chaque type a SES DEUX variantes
+```
+
+> **Pourquoi capturer ce qui ne s'affichera pas** : le miroir ne sait que ce qu'on lui a demandé.
+> À la coupure, ce qui n'a pas été capturé est **perdu pour toujours**. Afficher, filtrer, écrire
+> attendront sans se dégrader ; **capturer, non.**
+
+
 
 
 
