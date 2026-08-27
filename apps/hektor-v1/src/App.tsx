@@ -102,6 +102,7 @@ import {
   createDeleteHektorContactJob,
   createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
+  createLinkHektorMandantJob,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
   editAnnonceOptimistic,
@@ -3072,8 +3073,35 @@ function HektorMandantContactForm(props: {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // C.4 lot 3 (27/08/2026) -- RATTACHER UN MANDANT EXISTANT.
+  //
+  // Le trou trouve par l'essai du 25/08 : sur 170 494 contacts, le seul chemin pour poser
+  // un proprietaire sur un bien etait "Creer et associer" -- donc CREER UN DOUBLON a chaque
+  // fois qu'un mandant possede plusieurs biens.
+  //
+  // Rien de neuf n'est ecrit ici : createLinkHektorMandantJob existait deja, complet, SANS
+  // AUCUN APPELANT, et cote worker handleLinkHektorMandant appelle linkHektorMandantContact
+  // -- exactement la routine qu'utilise "Creer et associer", eprouvee le 25/08. On pose une
+  // porte sur du code deja valide, on n'ouvre pas un nouveau chemin d'ecriture vers Hektor.
+  //
+  // Le sélecteur de mandant existant existait aussi, mais UNIQUEMENT a la creation d'un bien
+  // (draftExistingMandant*, via initialMandantContactId) : jamais sur une annonce deja la.
+  // On reprend son idiome visuel a l'identique pour rester homogene.
+  const [mandantMode, setMandantMode] = useState<'create' | 'link'>('create')
+  const [linkSearch, setLinkSearch] = useState('')
+  const [linkOptions, setLinkOptions] = useState<MandantContactSearchOption[]>([])
+  const [linkSelected, setLinkSelected] = useState<MandantContactSearchOption | null>(null)
+  const [linkLoading, setLinkLoading] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+
   useEffect(() => {
     setOpen(Boolean(props.initialOpen))
+    setMandantMode('create')
+    setLinkSearch('')
+    setLinkOptions([])
+    setLinkSelected(null)
+    setLinkLoading(false)
+    setLinkError(null)
     setCivility('')
     setLastName('')
     setFirstName('')
@@ -3086,6 +3114,75 @@ function HektorMandantContactForm(props: {
     setError(null)
     setPending(false)
   }, [props.dossier.app_dossier_id, props.initialOpen])
+
+  // Meme idiome que le selecteur de la creation de bien : debounce 260 ms, 3 caracteres
+  // (1 seul si l'on tape un identifiant numerique), annulation propre au demontage.
+  useEffect(() => {
+    if (!open || mandantMode !== 'link') return
+    const terme = linkSearch.trim()
+    const longueurMini = /^\d+$/.test(terme) ? 1 : 3
+    if (terme.length < longueurMini) {
+      setLinkOptions([])
+      setLinkLoading(false)
+      return
+    }
+    let annule = false
+    setLinkLoading(true)
+    setLinkError(null)
+    const minuteur = window.setTimeout(() => {
+      searchMandantContactOptions({
+        search: terme,
+        scope: props.dossier.negociateur_email ? { negotiatorEmail: props.dossier.negociateur_email } : null,
+        limit: 12,
+      })
+        .then((rows) => { if (!annule) setLinkOptions(rows) })
+        .catch((rechercheError) => {
+          if (annule) return
+          setLinkOptions([])
+          setLinkError(rechercheError instanceof Error ? rechercheError.message : 'Recherche mandant impossible.')
+        })
+        .finally(() => { if (!annule) setLinkLoading(false) })
+    }, 260)
+    return () => {
+      annule = true
+      window.clearTimeout(minuteur)
+    }
+  }, [open, mandantMode, linkSearch, props.dossier.negociateur_email])
+
+  const handleLink = async () => {
+    setMessage(null)
+    setError(null)
+    setLinkError(null)
+    if (!linkSelected) {
+      setLinkError('Choisis un contact dans la liste avant de rattacher.')
+      return
+    }
+    // Meme garde que "Creer et associer" : sans negociateur Hektor, le worker ne saurait
+    // pas sous quelle identite ecrire.
+    if (!hasHektorNegotiator(props.dossier)) {
+      props.onMissingNegotiator?.(props.dossier)
+      return
+    }
+    setPending(true)
+    try {
+      const job = await createLinkHektorMandantJob({
+        dossier: props.dossier,
+        contactId: linkSelected.hektor_contact_id,
+        contactLabel: mandantContactOptionTitle(linkSelected),
+        priority: 18,
+      })
+      setLinkSearch('')
+      setLinkOptions([])
+      setLinkSelected(null)
+      props.onJobCreated?.(job)
+      setOpen(false)
+      setMandantMode('create')
+    } catch (rattachementError) {
+      setLinkError(rattachementError instanceof Error ? rattachementError.message : 'Rattachement du mandant impossible.')
+    } finally {
+      setPending(false)
+    }
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -3143,6 +3240,22 @@ function HektorMandantContactForm(props: {
         </button>
       ) : null}
       {open ? (
+        <div className="hektor-inline-actions hektor-mandant-mode-tabs">
+          <button
+            type="button"
+            className={mandantMode === 'create' ? '' : 'button-subtle'}
+            onClick={() => setMandantMode('create')}
+            disabled={pending}
+          >Creer un nouveau mandant</button>
+          <button
+            type="button"
+            className={mandantMode === 'link' ? '' : 'button-subtle'}
+            onClick={() => setMandantMode('link')}
+            disabled={pending}
+          >Rattacher un mandant existant</button>
+        </div>
+      ) : null}
+      {open && mandantMode === 'create' ? (
     <form className={`hektor-inline-form hektor-mandant-create-form ${props.compact ? 'is-compact' : ''}`} onSubmit={handleSubmit}>
       <div className="hektor-inline-form-head">
         <span className="hektor-inline-icon" aria-hidden="true">+</span>
@@ -3197,6 +3310,70 @@ function HektorMandantContactForm(props: {
         {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
       </div>
     </form>
+      ) : null}
+      {open && mandantMode === 'link' ? (
+        <div className={`hektor-inline-form hektor-mandant-link-form ${props.compact ? 'is-compact' : ''}`}>
+          <div className="hektor-inline-form-head">
+            <span className="hektor-inline-icon" aria-hidden="true">&#8594;</span>
+            <div>
+              <strong>Rattacher un mandant existant</strong>
+              <small>Le contact deja present dans l'annuaire est associe a cette annonce, sans doublon.</small>
+            </div>
+          </div>
+          <label className="filter-field">
+            <span>Rechercher un contact</span>
+            <input
+              value={linkSearch}
+              onChange={(event) => {
+                setLinkSearch(event.target.value)
+                setLinkSelected(null)
+              }}
+              placeholder="Nom, prenom, email, telephone ou identifiant Hektor"
+            />
+          </label>
+          <small>{linkLoading ? 'Recherche...' : 'La recherche se lance automatiquement des 3 caracteres (1 seul pour un identifiant).'}</small>
+          {linkError ? <p className="draft-mandant-error">{linkError}</p> : null}
+          <div className="contact-owner-result-list draft-mandant-result-list">
+            {linkOptions.length > 0 ? linkOptions.map((option) => {
+              const choisi = linkSelected?.hektor_contact_id === option.hektor_contact_id
+              return (
+                <button
+                  key={`link-mandant-contact-${option.hektor_contact_id}`}
+                  className={choisi ? 'is-selected' : ''}
+                  type="button"
+                  onClick={() => setLinkSelected(option)}
+                >
+                  <span>
+                    <strong>{mandantContactOptionTitle(option)}</strong>
+                    <small>{mandantContactOptionSubtitle(option) || 'Contact Hektor actif'}</small>
+                  </span>
+                  <em>{mandantContactOptionMeta(option) || `Contact ${option.hektor_contact_id}`}</em>
+                </button>
+              )
+            }) : (
+              <p>{linkLoading
+                ? 'Recherche en cours...'
+                : linkSearch.trim()
+                  ? 'Aucun contact trouve pour ce negociateur.'
+                  : 'Tape un nom, un email ou un identifiant pour lancer la recherche.'}</p>
+            )}
+          </div>
+          {linkSelected ? (
+            <div className="contact-owner-selected draft-mandant-selected">
+              <strong>Mandant selectionne</strong>
+              <span>{[
+                mandantContactOptionTitle(linkSelected),
+                mandantContactOptionSubtitle(linkSelected),
+              ].filter(Boolean).join(' - ')}</span>
+            </div>
+          ) : null}
+          <div className="hektor-inline-actions">
+            <button type="button" onClick={handleLink} disabled={pending || !linkSelected}>
+              {pending ? 'Envoi...' : 'Rattacher a cette annonce'}
+            </button>
+            <button className="button-subtle" type="button" onClick={() => setOpen(false)} disabled={pending}>Annuler</button>
+          </div>
+        </div>
       ) : null}
     </div>
   )
