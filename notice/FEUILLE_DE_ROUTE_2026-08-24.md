@@ -331,6 +331,113 @@ Le `scope` est propre *(`active_neuf`)*, donc son curseur `annonce_cursor_active
 **Le signal d'alarme est `[reconcile] 0`.** S'il supprime quoi que ce soit, le couplage a échoué et
 il faut arrêter avant le palier suivant *(`10`, 1 033 annonces)*.
 
+#### ✅ RÉSULTAT DU RUN — *27/08, 07:24 → 08:18, 54 min, 0 échec d'étape*
+
+**Tous les attendus tenus, au chiffre près.**
+
+```
+   miroir offre_type        0 : 56 911   6 : 1        attendu exactement cela
+   son detail brut          present
+   [reconcile]              0 suppression             LE SIGNAL D'ALARME EST PROPRE
+   serveur app_dossier      62483 present, statut Actif, archive 0
+   filtre de routage        retenue
+```
+
+Puis descente *(08:28 → 08:53, exit 0, ALARME recherches 0, magasin 0 divergence sur 44)* :
+
+```
+   Supabase app_dossier_current                1     ELLE EST LA
+   Supabase app_mandat_register_current        1     ELLE EST LA
+   archives / historiques / brouillons         0     elle n'y va pas -- correct
+```
+
+**Et à l'écran** *(vérifié dans Chrome)* : elle sort dans la liste des annonces actives
+*(APPARTEMENT BOURG ARGENTAL, 281 300 €, mandat n°18699, Stéphanie MARTINEZ)*, **sa fiche
+s'ouvre sans erreur** *(379 j de mandat restant, cycle Avis de valeur ✓ / Mandat ✓, 2 880 €/m²,
+photo présente)*, **aucune erreur en console**. Le compteur d'accueil est passé de
+**« Mandats actifs 693 » à « 694 »**.
+
+> 🔑 **Le mécanisme est prouvé de bout en bout : Hektor → miroir → serveur → Supabase → écran.**
+> On peut ouvrir les vrais volumes.
+
+---
+
+### ✅ PRÉALABLE POSÉ LE 27/08 — **la nature du bien arrive jusqu'à l'app**
+
+**Trouvé en vérifiant le canari** : `offre_type` **n'était pas** dans les 59 colonnes envoyées à
+Supabase. Il s'arrêtait au serveur. Conséquence si on ne faisait rien : les **251 biens
+d'immobilier professionnel actifs** du palier suivant seraient tombés dans la liste des actives
+**indiscernables des 22 424 maisons et appartements**.
+
+**Même raisonnement que le filtre de routage : on pose le contenant AVANT d'ouvrir le robinet.**
+
+| | |
+|---|---|
+| Supabase | `ADD COLUMN offre_type text` sur `app_dossier_current`, `app_archive_annonce_index_current`, `app_historical_annonce_index_current` — nullable, additif, réversible *(`DROP COLUMN`)* |
+| serveur | la colonne ajoutée aux **3 requêtes** d'export **et** aux **3 constructeurs** de lignes |
+| ⚠ piège évité | la paire `app_dossier_id`/`hektor_annonce_id` existe **aussi** dans `build_current_work_items` — ancre allongée jusqu'à `diffusable` pour ne pas le toucher. **Témoin vérifié : work_items intact** |
+| ⚠ vérifié | `build_search_text` utilise une **liste explicite de 8 champs** → `offre_type` **ne pollue pas** la recherche |
+| effet unique | l'ajout change l'empreinte → le push a **repoussé 34 487 archives et 8 802 historiques**, qui repartent donc **déjà étiquetées** |
+
+**Prouvé contre le vrai Supabase** *(push ciblé sur 62483, `exit 0`, 0 suppression)* :
+
+```
+   app_archive_index      offre_type '0'      34 487
+   app_historical_index   offre_type '0'       8 802
+   app_dossier_current    offre_type '6'           1     <<< le canari
+   app_dossier_current    (vide)              13 209     <<< push cible : se rempliront au prochain run
+```
+
+**L'affichage** *(badge « immo pro » + filtre)* est un chantier séparé, **volontairement pas fait
+ici** : d'abord la donnée, ensuite l'écran.
+
+---
+
+### 🔴 LE TROU QUE J'AI CRÉÉ LE 27/08 AU MATIN — *à refermer au palier 2*
+
+J'ai ajouté la variante **« neuf actif »** mais **pas** son pendant archivé. Or
+`prune_annonce_scope` supprime de `hektor_annonce`, `hektor_annonce_detail`, `hektor_offre`,
+`hektor_compromis` et `hektor_vente` **tout ce qui n'apparaît dans aucun listing écouté**.
+
+> **Si Hektor archive l'annonce 62483, elle sort de `list_annonces_active_neuf`, n'entre dans
+> aucun autre listing, et elle est EFFACÉE du miroir — détail compris.**
+
+Pour la vente ce risque n'existe pas : `list_annonces_archived` a toujours existé.
+
+> 🔑 **RÈGLE, à appliquer à chaque type ouvert : LES DEUX VARIANTES, ACTIVE ET ARCHIVÉE, OU
+> AUCUNE.** Formulée le 27/08 ; elle manquait le matin même.
+
+---
+
+### 📋 CE QUI RESTE — *mesuré chez Hektor le 27/08 à 08:40, témoin type 0 conforme au miroir*
+
+```
+   parc HEKTOR reel        61 076
+   notre miroir            56 912
+   ------------------------------
+   TOUJOURS DEHORS          4 164
+```
+
+| type | quoi | actives | archivées | total | destination |
+|---|---|---|---|---|---|
+| **10** | vente immo pro | 251 | 782 | **1 033** | serveur **+ Supabase + app** |
+| **2** | location | 621 | 2 248 | **2 869** | serveur **seul** |
+| **11** | location immo pro | 54 | 208 | **262** | serveur **seul** |
+| 8 | saisonnier | 0 | 0 | 0 | — |
+
+**Coût** : les listings archivés ne téléchargent **aucun** détail *(`sync_details=False`)*, donc le
+surcoût se limite aux actives — **926 appels supplémentaires, une seule fois**. Ensuite seuls les
+changements sont redemandés. ⚠ **Surveiller le frein de débit : l'IP a déjà été bannie une fois.**
+
+**PALIER 2** — refermer le trou *(« neuf archivé », 0 annonce, coût nul)* **+** les **deux**
+variantes du type 10. **1 033 annonces**, dont 251 détails. Le palier **visible dans l'app**.
+
+**PALIER 3** — les **deux** variantes des types 2 et 11. **3 131 annonces**, 675 détails.
+**Serveur seul** — le filtre de routage est posé et prouvé, rien n'apparaîtra dans l'app.
+
+Chaque palier demande **un run** pour prendre effet.
+
+
 
 ---
 

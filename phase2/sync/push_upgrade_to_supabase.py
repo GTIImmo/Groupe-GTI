@@ -503,6 +503,12 @@ def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, 
             "hektor_annonce_id": normalized["hektor_annonce_id"],
             "archive": normalized.get("archive"),
             "diffusable": normalized.get("diffusable"),
+            # C.15 27/08 : la NATURE de l'offre (0 vente, 6 neuf, 10 vente immo pro).
+            # Elle s'arretait au serveur. Au palier suivant, 251 biens d'immobilier
+            # professionnel entreront ici et seraient sinon indiscernables des ventes.
+            # Colonne posee dans Supabase AVANT ce push. Absente de build_search_text
+            # (liste explicite de 8 champs) -> elle ne pollue pas la recherche.
+            "offre_type": normalized.get("offre_type"),
             "adresse_privee_listing": normalized.get("adresse_privee_listing"),
             "adresse_detail": normalized.get("adresse_detail"),
             "code_postal": normalized.get("code_postal"),
@@ -702,6 +708,12 @@ def build_current_archive_index_rows(rows: list[dict[str, object]]) -> list[dict
         current_row = {
             "hektor_annonce_id": int(hektor_annonce_id),
             "app_archive_id": int(normalized.get("app_archive_id") or hektor_annonce_id),
+            # C.15 27/08 : la NATURE de l'offre (0 vente, 6 neuf, 10 vente immo pro).
+            # Elle s'arretait au serveur. Au palier suivant, 251 biens d'immobilier
+            # professionnel entreront ici et seraient sinon indiscernables des ventes.
+            # Colonne posee dans Supabase AVANT ce push. Absente de build_search_text
+            # (liste explicite de 8 champs) -> elle ne pollue pas la recherche.
+            "offre_type": normalized.get("offre_type"),
             "numero_dossier": normalized.get("numero_dossier"),
             "numero_mandat": normalized.get("numero_mandat"),
             "titre_bien": normalized.get("titre_bien") or "[Sans titre]",
@@ -748,6 +760,12 @@ def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[d
         current_row = {
             "hektor_annonce_id": int(hektor_annonce_id),
             "app_historical_id": int(normalized.get("app_historical_id") or hektor_annonce_id),
+            # C.15 27/08 : la NATURE de l'offre (0 vente, 6 neuf, 10 vente immo pro).
+            # Elle s'arretait au serveur. Au palier suivant, 251 biens d'immobilier
+            # professionnel entreront ici et seraient sinon indiscernables des ventes.
+            # Colonne posee dans Supabase AVANT ce push. Absente de build_search_text
+            # (liste explicite de 8 champs) -> elle ne pollue pas la recherche.
+            "offre_type": normalized.get("offre_type"),
             "numero_dossier": normalized.get("numero_dossier"),
             "numero_mandat": normalized.get("numero_mandat"),
             "titre_bien": normalized.get("titre_bien") or "[Sans titre]",

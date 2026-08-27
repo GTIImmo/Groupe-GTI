@@ -118,6 +118,11 @@ SQL_DOSSIERS_BASE = """
 SELECT
     app_dossier_id,
     hektor_annonce_id,
+    -- C.15 27/08 : la NATURE de l'offre arrive jusqu'a l'app (0 vente, 6 neuf,
+    -- 10 vente immo pro). Elle s'arretait au serveur ; au palier suivant, 251 biens
+    -- d'immobilier professionnel entreront ici et seraient sinon indiscernables des
+    -- 22 424 maisons et appartements. Colonne posee dans Supabase AVANT ce push.
+    offre_type,
     archive,
     numero_dossier,
     numero_mandat,
@@ -272,6 +277,11 @@ WITH archive_ranked AS (
 SELECT
     CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
     CAST(app_dossier_id AS INTEGER) AS app_archive_id,
+    -- C.15 27/08 : la NATURE de l'offre arrive jusqu'a l'app (0 vente, 6 neuf,
+    -- 10 vente immo pro). Elle s'arretait au serveur ; au palier suivant, 251 biens
+    -- d'immobilier professionnel entreront ici et seraient sinon indiscernables des
+    -- 22 424 maisons et appartements. Colonne posee dans Supabase AVANT ce push.
+    offre_type,
     numero_dossier,
     numero_mandat,
     titre_bien,
@@ -310,6 +320,11 @@ SQL_HISTORICAL_ANNONCE_INDEX_BASE = """
 SELECT
     CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
     CAST(app_dossier_id AS INTEGER) AS app_historical_id,
+    -- C.15 27/08 : la NATURE de l'offre arrive jusqu'a l'app (0 vente, 6 neuf,
+    -- 10 vente immo pro). Elle s'arretait au serveur ; au palier suivant, 251 biens
+    -- d'immobilier professionnel entreront ici et seraient sinon indiscernables des
+    -- 22 424 maisons et appartements. Colonne posee dans Supabase AVANT ce push.
+    offre_type,
     numero_dossier,
     numero_mandat,
     titre_bien,
