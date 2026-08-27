@@ -42,6 +42,31 @@ ANNONCE_VARIANTS = (
         "object_type": "annonce_archived",
         "sync_details": False,
     },
+    # C.15 (4) -- LE CANARI. Sans parametre "offre", ListAnnonces ne rend QUE la vente
+    # (offredem=0). Tout le reste -- location, immobilier professionnel, neuf -- n'est
+    # jamais entre chez nous : 4 165 annonces mesurees le 26/08/2026, dont l'annonce
+    # 62483 (Bourg-Argental, mandat 18699, diffusee depuis le 11/06) absente de
+    # raw_api_response, donc jamais demandee a Hektor.
+    #
+    # On ouvre d'abord le type 6 (le neuf) SEUL : il ne contient qu'UNE annonce dans
+    # tout le parc. Un canari -- cout d'une page, effet observable, rien d'irreversible.
+    #
+    # ATTENTION, DEUX REGLES :
+    #  - scope PROPRE ("active_neuf") -> son propre curseur annonce_cursor_active_neuf,
+    #    donc il ne perturbe pas la fenetre delta du scope "active".
+    #  - le nom d'endpoint ci-dessous DOIT etre inscrit dans ANNONCE_ENDPOINTS
+    #    (normalize_source.py). Sinon l'annonce entre par le balayage puis est
+    #    supprimee dans la foulee par prune_annonce_scope, qui calcule le perimetre
+    #    du miroir a partir de cette liste. Les deux ensemble, ou rien.
+    {
+        "scope": "active_neuf",
+        "archive": 0,
+        "offre": 6,
+        "base_endpoint_name": "list_annonces_active_neuf",
+        "update_endpoint_name": "list_annonces_active_neuf_update",
+        "object_type": "annonce_active",
+        "sync_details": True,
+    },
 )
 
 CONTACT_VARIANTS = (
@@ -951,6 +976,11 @@ def sync_annonce_listing_variant(
             "page": page,
             "version": settings.api_version,
         }
+        # Additif : les variantes historiques n'ont pas de cle "offre" -> params
+        # inchanges, requete identique a l'octet pres. Seule une variante qui la
+        # declare (C.15) restreint le listing a un type d'offre.
+        if variant.get("offre") is not None:
+            params["offre"] = variant["offre"]
         payload = client.get_json("/Api/Annonce/ListAnnonces/", params=params)
         upsert_raw_response(
             conn,

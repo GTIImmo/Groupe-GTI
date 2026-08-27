@@ -15,6 +15,13 @@ ANNONCE_ENDPOINTS = (
     "list_annonces_active_update",
     "list_annonces_archived",
     "list_annonces_archived_update",
+    # C.15 (4) -- couple a la variante "active_neuf" de sync_raw.py. Cette liste
+    # definit le perimetre du miroir : active_annonce_ids_from_raw() ne lit QUE ces
+    # endpoints, et prune_annonce_scope() supprime tout ce qui n'y figure pas. Une
+    # variante ajoutee dans sync_raw sans son nom ici entrerait puis serait effacee
+    # au meme run. Les deux ensemble, ou rien.
+    "list_annonces_active_neuf",
+    "list_annonces_active_neuf_update",
 )
 CONTACT_ENDPOINTS = (
     "list_contacts",

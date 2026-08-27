@@ -258,6 +258,80 @@ emporte le sien. **Un mandat manquant sur un registre légal n'est pas une nuanc
 | **③** | **Mesurer l'aval AVANT d'ouvrir** — vues, registre, rapprochements, statistiques | **la photo d'avant** : tout a été calculé sur un parc amputé ; sans elle on ne distinguera pas un effet voulu d'une régression |
 | **④** | **Ouvrir un type à la fois** — `6` *(**1 seule annonce**, le canari)*, puis `10` *(1 033)*, puis `2` et `11` *(serveur seul)* | surveiller le **frein de débit** à chaque palier — l'IP a déjà été bannie une fois |
 
+
+---
+
+### ✅ ④ — **LE CANARI EST POSÉ** *(27/08, code écrit — pas encore passé dans un run)*
+
+**Le canari a un nom.** Un seul appel `ListAnnonces(archive=0, offre=6)` :
+
+```
+   id            62483        APPARTEMENT BOURG ARGENTAL
+   prix          281 300 EUR  surface 97,69 m2   Bourg-Argental 42220
+   dossier       V550062483   mandat 18699
+   diffusable    1            <<< EN LIGNE sur les portails depuis le 11/06/2026
+   offredem      '6'
+```
+
+Une annonce **active, mandatée, diffusée depuis deux mois et demi**, et absente de tout :
+
+| | |
+|---|---|
+| `miroir.hektor_annonce` · `hektor_annonce_detail` · `hektor_mandat` | **0** *(témoin annonce 4 : 1)* |
+| `miroir.raw_api_response` | **0** — 🔑 **Hektor ne nous l'a jamais dite : nous ne l'avons jamais demandée** |
+| `serveur.app_dossier` · `app_view_generale` | **0** |
+| mandats orphelins dans le miroir | **0 sur 24 037** — le cas est pur, aucun résidu |
+
+**Le champ dans la RÉPONSE s'appelle `offredem` ; le paramètre de la REQUÊTE s'appelle `offre`.**
+*(`normalize_source.py:508` — `offre_type` vient de `item.get("offredem")`.)* C'est **le même piège
+qui a coûté la journée du 26/08**, et le troisième de la série *(`mandat`/`id_mandat`,
+`offredem`/`offre`)*. Vérifié en direct : `offredem = '6'` → le filtre de routage `IN ('0','10','6')`
+enverra bien 62483 vers Supabase.
+
+#### Les deux modifications, **couplées — ensemble ou rien**
+
+```
+   sync_raw.py           variante "active_neuf" : archive=0, offre=6, scope PROPRE
+                         + params["offre"] pose UNIQUEMENT si la variante le declare
+   normalize_source.py   les 2 noms d'endpoint AJOUTES a ANNONCE_ENDPOINTS
+```
+
+> 🔑 **Pourquoi couplées.** `active_annonce_ids_from_raw()` ne lit **que** les endpoints de
+> `ANNONCE_ENDPOINTS`, et `prune_annonce_scope()` supprime tout ce qui n'y figure pas. Une variante
+> ajoutée dans `sync_raw` **sans son nom là** ferait entrer l'annonce **puis l'effacerait au même
+> run**. C'est le piège du § précédent, sous une autre forme.
+
+Le `scope` est propre *(`active_neuf`)*, donc son curseur `annonce_cursor_active_neuf` est distinct :
+**la fenêtre delta du scope `active` n'est pas perturbée.**
+
+#### Non-régression vérifiée par banc *(avant tout run)*
+
+```
+   active     -> {archive:0, sort, way, page, version}              pas de cle "offre"  OK
+   archived   -> {archive:1, sort, way, page, version}              pas de cle "offre"  OK
+   active_neuf-> {archive:0, ..., offre:6}                                              OK
+   les 6 noms d'endpoint            inscrits dans ANNONCE_ENDPOINTS                     OK
+   load_annonce_ids_missing_detail_sync (filtre listing_variant='active')  CODE MORT, jamais appele
+```
+
+#### Les attendus, écrits AVANT le run — *la règle du 25/08*
+
+```
+   miroir.offre_type            0 : 56 911        6 : 1        <<< aujourd'hui 0 : 56 911 seul
+   miroir.hektor_annonce        56 911  ->  56 912
+   miroir.hektor_annonce_detail +1  (62483)
+   serveur.app_view_generale    +1
+   index.actives                +1   (62483 est active et diffusable)
+   les 3 autres index           0 ailleurs
+   Supabase app_dossier_current +1
+   [reconcile] supprimees       TOUJOURS 0        <<< le signal d'alarme
+   cout Hektor                  1 page + 1 detail
+```
+
+**Le signal d'alarme est `[reconcile] 0`.** S'il supprime quoi que ce soit, le couplage a échoué et
+il faut arrêter avant le palier suivant *(`10`, 1 033 annonces)*.
+
+
 ---
 
 ### Ce que ça explique
