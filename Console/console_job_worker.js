@@ -2622,11 +2622,29 @@ async function fetchHektorSecteurLocaliteId(annonceId) {
   }
 }
 
-async function fetchLatestHektorProperties(page = 1, archived = false) {
+// C.15 (27/08/2026) -- LA CONFIRMATION DOIT REGARDER LA BONNE LISTE.
+//
+// Apres avoir cree une annonce, le worker verifie qu'elle existe en relisant la liste
+// GraphQL. Cette liste etait figee sur offers=["SALE"] : une annonce d'immobilier
+// professionnel vit sous COMMERCIAL_SALE et n'y figurait donc JAMAIS.
+//
+// Constate en conditions reelles le 27/08 : l'annonce 62962 a bien ete creee, avec le
+// bon sous-type, et le job a quand meme fini en "error" -- apres six tentatives et
+// seize pages inutiles chez Hektor, ce que notre frein de debit n'aime pas.
+//
+// Une annonce creee mais declaree en echec, c'est le pire des deux mondes : elle
+// existe chez eux et pas chez nous.
+const FAMILLE_GRAPHQL_PAR_OFFRE = { "10": "COMMERCIAL_SALE", "11": "COMMERCIAL_RENTAL" };
+
+function familleGraphQLPourOffre(offredem) {
+  return FAMILLE_GRAPHQL_PAR_OFFRE[String(offredem ?? "")] || "SALE";
+}
+
+async function fetchLatestHektorProperties(page = 1, archived = false, famille = "SALE") {
   const payload = await hektorGraphQL({
     filters: {
       limit: 50,
-      offers: ["SALE"],
+      offers: [famille],
       status: "ALL",
       page,
       order: "LATEST",
@@ -2643,9 +2661,11 @@ async function fetchHektorPropertyById(hektorAnnonceId, options = {}) {
   const id = String(hektorAnnonceId || "").trim();
   if (!id) return null;
   const maxPages = Number(options.maxPages || 8);
+  // C.15 : par defaut "SALE" -- le comportement d'avant, a l'identique.
+  const famille = options.famille || "SALE";
   for (const archived of [false, true]) {
     for (let page = 1; page <= maxPages; page += 1) {
-      const properties = await fetchLatestHektorProperties(page, archived);
+      const properties = await fetchLatestHektorProperties(page, archived, famille);
       const found = properties.find((property) => String(property.id) === id);
       if (found) return { property: found, archived, page };
       if (properties.length < 50) break;
@@ -2708,10 +2728,12 @@ function hektorPropertyFromDetailKeyData(hektorAnnonceId, keyData, payload) {
 async function confirmCreatedHektorAnnonce(job, idannWizard, payload, beforeIds, startedAtMs) {
   const id = String(idannWizard || "").trim();
   if (!id) return null;
+  // C.15 : chercher l'annonce dans la famille ou elle a ete creee, pas ailleurs.
+  const famille = familleGraphQLPourOffre((payload && (payload.offredem ?? payload.offer_demand)) || "0");
 
   for (let attempt = 1; attempt <= 6; attempt += 1) {
     await sleep(attempt === 1 ? 1800 : 2500);
-    const latest = await fetchLatestHektorProperties(1, false);
+    const latest = await fetchLatestHektorProperties(1, false, famille);
     const candidates = latest
       .map((property) => ({ property, score: annonceCreationScore(property, beforeIds, startedAtMs) }))
       .filter((item) => item.score >= 0)
@@ -2726,7 +2748,7 @@ async function confirmCreatedHektorAnnonce(job, idannWizard, payload, beforeIds,
   }
 
   try {
-    const direct = await fetchHektorPropertyById(id, { maxPages: 8 });
+    const direct = await fetchHektorPropertyById(id, { maxPages: 8, famille });
     if (direct && direct.property) {
       await logJob(job.id, "hektor_annonce_confirm", "done", "Creation confirmee par recherche GraphQL directe", {
         hektor_annonce_id: id,
@@ -2754,7 +2776,7 @@ async function confirmCreatedHektorAnnonce(job, idannWizard, payload, beforeIds,
   }
 
   await ensureAdminHektorWriteSession(job, "create_annonce_confirm_admin_login");
-  const adminDirect = await fetchHektorPropertyById(id, { maxPages: 8 });
+  const adminDirect = await fetchHektorPropertyById(id, { maxPages: 8, famille });
   if (adminDirect && adminDirect.property) {
     await logJob(job.id, "hektor_annonce_confirm", "done", "Creation confirmee en session admin par ID Hektor", {
       hektor_annonce_id: id,
@@ -13039,7 +13061,10 @@ async function handleCreateHektorDraftAnnonce(job) {
     hektor_user_id: payload.hektor_user_id || null,
     hektor_user_label: payload.hektor_user_label || null,
   });
-  const before = await fetchLatestHektorProperties(1, false);
+  // C.15 : la photo d'AVANT doit etre prise dans la meme famille que la photo d'APRES,
+  // sinon la comparaison ne veut rien dire.
+  const familleCreation = familleGraphQLPourOffre(payload.offredem ?? payload.offer_demand);
+  const before = await fetchLatestHektorProperties(1, false, familleCreation);
   const beforeIds = new Set(before.map((property) => String(property.id)));
 
   // Chronometrage (Idee 0) : mesure le temps de chaque bloc pour savoir ou couper.
