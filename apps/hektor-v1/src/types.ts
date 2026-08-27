@@ -157,6 +157,26 @@ export type DossierDetailPayload = {
 export type Dossier = {
   app_dossier_id: number
   hektor_annonce_id: number
+  // La famille d'offre Hektor : '0' vente, '10' vente immo pro, '6' neuf.
+  // L'app ne detient que ces trois-la (les locations sont hors perimetre).
+  offre_type?: string | null
+  // C.15 27/08 -- LE BLOC COMMERCIAL (immobilier professionnel).
+  // L'API REST de Hektor ecrase les huit sous-types en un seul code (idtype 23,
+  // "Commerce") : elle disait la meme chose d'un entrepot et d'une pizzeria.
+  // Ces champs viennent de GraphQL et ne sont remplis QUE pour l'immo pro.
+  commerce_sous_type?: string | null
+  commerce_famille?: string | null
+  commerce_activite?: string | null
+  commerce_loyer?: string | null
+  commerce_charges?: string | null
+  commerce_taxe_fonciere?: string | null
+  commerce_bail_duree?: string | null
+  commerce_bail_echeance?: string | null
+  commerce_etat?: string | null
+  commerce_zone?: string | null
+  // Le bloc COMPLET, brut : CA et EBE sur trois exercices, lineaire de vitrine,
+  // hauteur sous plafond, quai de chargement, PMR, divisibilite.
+  commerce_json?: string | null
   photo_url_listing?: string | null
   images_preview_json?: string | null
   archive?: string | null
@@ -330,6 +350,8 @@ export type HektorAgencyOption = {
 
 export type MandatRecord = {
   register_row_id?: string | null
+  // C.15 : le vrai sous-type immo pro (Hektor renvoie "Commerce" pour les huit).
+  commerce_sous_type?: string | null
   app_dossier_id: number
   hektor_annonce_id: number
   photo_url_listing?: string | null

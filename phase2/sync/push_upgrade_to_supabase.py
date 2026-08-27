@@ -219,6 +219,8 @@ WORK_ITEM_NULLABLE_KEYS = (
 
 MANDAT_REGISTER_NULLABLE_KEYS = (
     "app_dossier_id",
+    "commerce_sous_type",
+    "offre_type",
     "photo_url_listing",
     "images_preview_json",
     "adresse_privee_listing",
@@ -667,6 +669,9 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
             "titre_bien": normalized.get("titre_bien"),
             "ville": normalized.get("ville"),
             "type_bien": normalized.get("type_bien"),
+            # C.15 : le vrai sous-type immo pro, absent de l'API REST de Hektor.
+            "commerce_sous_type": normalized.get("commerce_sous_type"),
+            "offre_type": normalized.get("offre_type"),
             "prix": normalize_numeric(normalized.get("prix")),
             "commercial_id": normalized.get("commercial_id"),
             "commercial_nom": normalized.get("commercial_nom"),

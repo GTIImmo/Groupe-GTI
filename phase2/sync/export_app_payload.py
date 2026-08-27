@@ -737,10 +737,15 @@ SELECT
     ag.nom AS agence_nom,
     neg.prenom AS negociateur_prenom,
     neg.nom AS negociateur_nom,
-    neg.email AS negociateur_email
+    neg.email AS negociateur_email,
+    -- C.15 27/08 : le registre affiche le type de bien. Hektor renvoie "Commerce"
+    -- pour les huit sous-types immo pro ; le vrai libelle vient de la console.
+    com.sous_type_label AS commerce_sous_type
 FROM hektor.hektor_annonce ann
 LEFT JOIN hektor.hektor_annonce_detail det
     ON det.hektor_annonce_id = ann.hektor_annonce_id
+LEFT JOIN hektor.hektor_annonce_commercial com
+    ON CAST(com.hektor_annonce_id AS TEXT) = CAST(ann.hektor_annonce_id AS TEXT)
 LEFT JOIN hektor.hektor_agence ag
     ON ag.hektor_agence_id = ann.hektor_agence_id
 LEFT JOIN hektor.hektor_negociateur neg
@@ -1877,6 +1882,10 @@ def build_mandat_register_rows(
                 "titre_bien": titre_bien,
                 "ville": (source_row.get("ville") if source_row else None) or normalize_text(raw.get("ville")) or None,
                 "type_bien": (source_row.get("type_bien") if source_row else None) or normalize_text(raw.get("idtype")) or None,
+                "commerce_sous_type": (source_row.get("commerce_sous_type") if source_row else None) or normalize_text(raw.get("commerce_sous_type")) or None,
+                # C.15 : la famille d'offre, pour que le registre sache distinguer
+                # une vente d'un local professionnel sans deviner d'apres le type.
+                "offre_type": (source_row.get("offre_type") if source_row else None) or normalize_text(raw.get("offre_type")) or None,
                 "prix": (source_row.get("prix") if source_row else None) or raw.get("prix"),
                 "commercial_id": (source_row.get("commercial_id") if source_row else None) or normalize_text(raw.get("hektor_negociateur_id")) or None,
                 "commercial_nom": commercial_nom,

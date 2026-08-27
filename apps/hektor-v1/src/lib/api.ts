@@ -42,6 +42,8 @@ export type AppFilters = {
   internalStatus: string
   contactRole: string
   contactSearchScope: string
+  // C.15 : la famille d'offre Hektor ('0' vente, '10' vente immo pro, '6' neuf).
+  offreType: string
 }
 
 function normalizeMandateStatusValue(value: string | null | undefined) {
@@ -1791,6 +1793,7 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   const priority = normalizeFilterValue(filters.priority)
   const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
   const mandantName = normalizeSearchTerm(filters.mandantName)
+  const offreType = normalizeFilterValue(filters.offreType)
 
   if (commercial) {
     if (commercial === withoutCommercialFilterValue) {
@@ -1801,6 +1804,9 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
     }
   }
   if (agency) query = query.eq('agence_nom', agency)
+  // C.15 : la famille d'offre. Volontairement absente du filtre des brouillons,
+  // dont l'index ne porte pas la colonne.
+  if (offreType) query = query.eq('offre_type', offreType)
   if (archive === activeArchiveFilterValue) query = query.eq('archive', '0')
   if (archive === archivedFilterValue) query = query.eq('archive', '1')
   if (detailAvailability === 'to_load') query = query.eq('app_dossier_id', -1)
@@ -2092,6 +2098,7 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   const diffusable = normalizeFilterValue(filters.diffusable)
   const mandatNumber = normalizeSearchTerm(filters.mandatNumber)
   const mandantName = normalizeSearchTerm(filters.mandantName)
+  const offreType = normalizeFilterValue(filters.offreType)
 
   if (commercial) {
     if (commercial === withoutCommercialFilterValue) {
@@ -2101,6 +2108,9 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
     }
   }
   if (agency) query = query.eq('agence_nom', agency)
+  // C.15 : la famille d'offre. Volontairement absente du filtre des brouillons,
+  // dont l'index ne porte pas la colonne.
+  if (offreType) query = query.eq('offre_type', offreType)
   if (mandat === withMandatFilterValue) query = query.not('numero_mandat', 'is', null).neq('numero_mandat', '')
   if (mandat === withoutMandatFilterValue) query = query.or('numero_mandat.is.null,numero_mandat.eq.')
   if (detailAvailability === 'available') query = query.eq('has_local_detail', true)
@@ -3685,8 +3695,8 @@ export async function loadDossiersPage({
   const requestScope = normalizeFilterValue(filters.requestScope)
   const requestType = normalizeFilterValue(filters.requestType)
   const canUseLightweightIndexes = !requestScope && !requestType && canUseLightweightAnnonceIndexesForFilters(filters)
-  const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
-  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
+  const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,commerce_sous_type,commerce_famille,commerce_activite'
+  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,commerce_sous_type,commerce_famille,commerce_activite'
   const brouillonIndexSelect = 'hektor_annonce_id,app_brouillon_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
   if (filters.archive === brouillonFilterValue) {
     if (!canUseLightweightIndexes) {
@@ -4054,7 +4064,7 @@ async function loadLightweightAnnonceDetailCache(
   const listing = (payload.listing && typeof payload.listing === 'object' ? payload.listing : {}) as Record<string, unknown>
   const payloadIndex = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
   let currentIndex: Record<string, unknown> = {}
-  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing`
+  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,commerce_sous_type,commerce_famille,commerce_activite`
   const { data: indexData, error: indexError } = await supabase
     .from(indexTable)
     .select(indexSelect)

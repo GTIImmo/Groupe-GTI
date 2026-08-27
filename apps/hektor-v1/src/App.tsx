@@ -5583,7 +5583,7 @@ function EstimationDocumentEditor(props: {
     const type = dvfTypeForBien(dossier.type_bien)  // Maison | Appartement | null (mappé depuis le code Hektor)
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMarcheMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
     if (!dept) { setMarcheMsg('Code postal du bien manquant.'); return }
-    if (!type) { setMarcheMsg(`Comparaison DVF non pertinente pour ce type de bien (${propertyTypeLabel(dossier.type_bien)}). La base DVF ne couvre que maisons et appartements.`); return }
+    if (!type) { setMarcheMsg(`Comparaison DVF non pertinente pour ce type de bien (${libelleTypeBien(dossier)}). La base DVF ne couvre que maisons et appartements.`); return }
     // Maisons : terrain de taille comparable, mais uniquement en LOCAL (≤2km) — la RPC v4 élargit
     // le temps (24→48 mois) AVANT la distance, et abandonne le terrain avant de s'éloigner
     // (pas de dérive vers le rural bon marché).
@@ -5708,7 +5708,7 @@ function EstimationDocumentEditor(props: {
     setMessage(null)
     try {
       const facts: Record<string, unknown> = {
-        type_bien: propertyTypeLabel(dossier.type_bien),
+        type_bien: libelleTypeBien(dossier),
         ville: props.detail.ville_publique_listing ?? '',
         prix: prix != null ? String(prix) : '',
         surface: props.detail.surface ?? props.detail.surface_habitable_detail ?? '',
@@ -6372,6 +6372,7 @@ const emptyFilters: AppFilters = {
   internalStatus: allFilterValue,
   contactRole: allFilterValue,
   contactSearchScope: allFilterValue,
+  offreType: allFilterValue,
 }
 
 function defaultFiltersForScreen(screen: Screen): AppFilters {
@@ -7332,11 +7333,11 @@ function mandateAnomalyLabels(mandat: Pick<MandatRecord, 'numero_mandat' | 'diff
   }
 }
 
-function projectIdentityLines(item: Pick<MandatRecord, 'numero_dossier' | 'numero_mandat' | 'type_bien' | 'ville'>) {
+function projectIdentityLines(item: Pick<MandatRecord, 'numero_dossier' | 'numero_mandat' | 'type_bien' | 'ville' | 'commerce_sous_type'>) {
   return {
     title: item.numero_dossier ?? '-',
     mandate: item.numero_mandat ? `Mandat ${item.numero_mandat}` : 'Sans mandat',
-    context: [propertyTypeLabel(item.type_bien), item.ville].filter((value) => value && value !== '-').join(' · ') || '-',
+    context: [libelleTypeBien(item), item.ville].filter((value) => value && value !== '-').join(' · ') || '-',
   }
 }
 
@@ -8634,7 +8635,7 @@ function mandateRegisterNatureLabel(item: MandatRecord) {
     .filter(Boolean)
     .filter((value, index, values) => values.indexOf(value) === index)
     .join(', ')
-  const type = propertyTypeLabel(item.type_bien)
+  const type = libelleTypeBien(item)
   return [type !== '-' ? type : '', address].filter(Boolean).join(' · ') || '-'
 }
 
@@ -8654,7 +8655,7 @@ function mandateRegisterNatureParts(item: MandatRecord) {
     .filter(Boolean)
     .filter((value, index, values) => values.indexOf(value) === index)
     .join(', ')
-  const type = propertyTypeLabel(item.type_bien)
+  const type = libelleTypeBien(item)
   return { type: type !== '-' ? type : '', address }
 }
 
@@ -8816,6 +8817,33 @@ function propertyTypeLabel(value?: string | null) {
   if (!normalized) return '-'
   if (/^\d+$/.test(normalized)) return hektorPropertyTypeLabels[normalized] ?? `Type ${normalized}`
   return normalized
+}
+
+// C.15 (27/08/2026) -- LE LIBELLE JUSTE, pour l'immobilier professionnel.
+//
+// L'API REST de Hektor ecrase les huit sous-types immo pro derriere un seul code
+// (idtype 23) : elle disait la meme chose d'un entrepot et d'une pizzeria. Le vrai
+// sous-type vient de la console (GraphQL) et vit dans commerce_sous_type -- rempli
+// pour l'immo pro, vide partout ailleurs.
+//
+// Regle : quand il est la, il est plus precis que le code Hektor, donc il gagne.
+// Tout le reste de l'app continue de passer par propertyTypeLabel sans changement.
+// C.15 : les trois familles d'offre que l'app detient. Les locations (2, 11) et le
+// saisonnier (8) restent hors perimetre -- ils ne descendent pas dans l'app.
+const FAMILLES_OFFRE: Array<{ value: string; label: string }> = [
+  { value: '0', label: 'Vente' },
+  { value: '10', label: 'Immobilier professionnel' },
+  { value: '6', label: 'Neuf' },
+]
+
+function libelleFamilleOffre(valeur: string) {
+  return FAMILLES_OFFRE.find((famille) => famille.value === valeur)?.label ?? valeur
+}
+
+function libelleTypeBien(item?: { type_bien?: string | null; commerce_sous_type?: string | null } | null) {
+  const sousType = safeText(item?.commerce_sous_type)
+  if (sousType) return sousType
+  return propertyTypeLabel(item?.type_bien)
 }
 
 // Traduit le type de bien Hektor (code numérique OU libellé) vers l'un des deux types
@@ -9175,6 +9203,98 @@ function consoleDetailFacts(value: string | null | undefined): ConsoleDetailLine
   return consoleDetailLines(value).filter((row) => row.value && row.value !== '-')
 }
 
+// C.15 (27/08/2026) -- LA RUBRIQUE « LOCAL PROFESSIONNEL ».
+//
+// Pourquoi elle n'est pas une grille figee. Sur les 1 034 annonces immo pro du parc,
+// mesure du 27/08 : le sous-type et l'activite sont presque toujours remplis, le loyer
+// une fois sur trois, la taxe fonciere une fois sur sept -- et le chiffre d'affaires,
+// l'EBE, la vitrine, le quai de chargement, l'isolation : JAMAIS. Une grille de 29
+// cases afficherait 22 tirets. On n'affiche donc que ce qui est reellement renseigne,
+// dans un ordre fixe. La rubrique s'etoffe d'elle-meme a mesure du remplissage.
+//
+// La source est commerce_json : le bloc brut rendu par la console Hektor (GraphQL),
+// que l'API REST n'expose pas. Les colonnes plates (commerce_loyer, etc.) en sont
+// extraites cote serveur ; ici on lit le bloc complet, plus riche.
+const CHAMPS_COMMERCE: Array<{ cle: string; label: string; format?: 'euros' | 'oui' | 'nombre' }> = [
+  { cle: 'activite', label: 'Activite' },
+  { cle: 'baseLeaseAmount', label: 'Loyer de base', format: 'euros' },
+  { cle: 'charges', label: 'Charges', format: 'euros' },
+  { cle: 'propertyTax', label: 'Taxe fonciere', format: 'euros' },
+  { cle: 'hasEntryFees', label: "Droit d'entree", format: 'oui' },
+  { cle: 'leaseDuration', label: 'Duree du bail' },
+  { cle: 'leaseExpirationDate', label: 'Echeance du bail' },
+  { cle: 'legalStatus', label: 'Statut juridique' },
+  { cle: 'zoneType', label: 'Type de zone' },
+  { cle: 'condition', label: 'Etat' },
+  { cle: 'roomCount', label: 'Nombre de pieces', format: 'nombre' },
+  { cle: 'exteriorParkingCount', label: 'Parkings exterieurs', format: 'nombre' },
+  { cle: 'interiorParkingCount', label: 'Parkings interieurs', format: 'nombre' },
+  { cle: 'annualRevenue1', label: "Chiffre d'affaires N", format: 'euros' },
+  { cle: 'annualRevenue2', label: "Chiffre d'affaires N-1", format: 'euros' },
+  { cle: 'annualRevenue3', label: "Chiffre d'affaires N-2", format: 'euros' },
+  { cle: 'ebe1', label: 'EBE N', format: 'euros' },
+  { cle: 'ebe2', label: 'EBE N-1', format: 'euros' },
+  { cle: 'ebe3', label: 'EBE N-2', format: 'euros' },
+  { cle: 'storefront', label: 'Vitrine' },
+  { cle: 'storefrontWidth', label: 'Lineaire de vitrine', format: 'nombre' },
+  { cle: 'ceilingHeight', label: 'Hauteur sous plafond', format: 'nombre' },
+  { cle: 'insulation', label: 'Isolation' },
+  { cle: 'hasDock', label: 'Quai de chargement', format: 'oui' },
+  { cle: 'hasCladdedDock', label: 'Quai couvert', format: 'oui' },
+  { cle: 'hasWaterConnection', label: 'Raccordement eau', format: 'oui' },
+  { cle: 'hasWheelchairAccess', label: 'Acces PMR', format: 'oui' },
+  { cle: 'hasDivisibleLand', label: 'Terrain divisible', format: 'oui' },
+]
+
+function commerceFacts(dossier: Dossier): ConsoleDetailLine[] {
+  const brut = safeText(dossier.commerce_json)
+  let bloc: Record<string, unknown> = {}
+  if (brut) {
+    try {
+      const parse = JSON.parse(brut)
+      if (parse && typeof parse === 'object' && !Array.isArray(parse)) bloc = parse as Record<string, unknown>
+    } catch {
+      bloc = {}
+    }
+  }
+
+  // L'activite principale vit dans un tableau ; a defaut, la colonne plate la porte.
+  const activites = Array.isArray(bloc.activities) ? (bloc.activities as Array<Record<string, unknown>>) : []
+  const principale = activites.find((item) => item && (item as { isMain?: unknown }).isMain) ?? activites[0]
+  const activiteLabel = safeText(
+    (principale?.activity as { label?: unknown } | undefined)?.label as string | undefined,
+  ) || safeText(dossier.commerce_activite)
+
+  const lignes: ConsoleDetailLine[] = []
+  for (const champ of CHAMPS_COMMERCE) {
+    const valeurBrute = champ.cle === 'activite' ? activiteLabel : bloc[champ.cle]
+    if (valeurBrute === null || valeurBrute === undefined) continue
+
+    let texte = ''
+    if (champ.format === 'oui') {
+      // Un booleen faux n'est pas une information : on ne l'affiche pas.
+      if (valeurBrute !== true && String(valeurBrute) !== 'true') continue
+      texte = 'Oui'
+    } else if (champ.format === 'euros' || champ.format === 'nombre') {
+      const nombre = Number(valeurBrute)
+      // 0 signifie « non renseigne » chez Hektor, pas « zero euro ».
+      if (!Number.isFinite(nombre) || nombre === 0) continue
+      texte = champ.format === 'euros' ? formatPrice(nombre) : String(nombre)
+    } else {
+      texte = safeText(typeof valeurBrute === 'string' ? valeurBrute : String(valeurBrute))
+      if (!texte || texte === '-' || texte === '0') continue
+    }
+    if (!texte || texte === '-') continue
+    lignes.push({ key: `commerce-${champ.cle}`, label: champ.label, value: texte })
+  }
+  return lignes
+}
+
+// Vrai quand l'annonce releve de l'immobilier professionnel (offre 10 chez Hektor).
+function estImmoPro(dossier: Dossier) {
+  return safeText(dossier.offre_type) === '10'
+}
+
 function hektorSelectOptionLabel(options: HektorSelectOption[], value: unknown) {
   const normalized = safeText(value)
   if (!normalized) return ''
@@ -9211,6 +9331,16 @@ function consoleHeatingFacts(source: string | null | undefined): ConsoleDetailLi
       }
     })
     .filter((row) => row.value)
+}
+
+// C.15 : sur une annonce d'immobilier professionnel, « Chambres » ou « Ascenseur »
+// vides ne veulent rien dire -- un entrepot n'a pas de chambres. On efface ces cartes
+// quand elles sont vides ET que le bien est un local professionnel. Les fiches
+// residentielles ne changent pas d'un pixel : masquer y reste a false.
+function InfoCardResidentielle({ label, value, masquer }: { label: string; value: unknown; masquer: boolean }) {
+  const texte = safeText(value == null ? '' : String(value))
+  if (masquer && (!texte || texte === '-')) return null
+  return <InfoCard label={label} value={(value as string | number | null | undefined) ?? '-'} />
 }
 
 function ConsoleInfoCards({ items }: { items: ConsoleDetailLine[] }) {
@@ -9657,7 +9787,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     const { lat, lon } = coords()
     const dept = String(dossier.code_postal || '').trim().slice(0, 2)
     const type = dvfTypeForBien(dossier.type_bien)
-    if (!type) { setDvfMsg(`Comparaison DVF non pertinente pour ce type de bien (${propertyTypeLabel(dossier.type_bien)}).`); return }
+    if (!type) { setDvfMsg(`Comparaison DVF non pertinente pour ce type de bien (${libelleTypeBien(dossier)}).`); return }
     const surface = Number(detail.surface_habitable_detail ?? detail.surface) || null
     const terrain = type === 'Maison' ? (Number(detail.surface_terrain_detail) || null) : null
     setDvfBusy(true); setDvfMsg('Calcul des comparables DVF…')
@@ -11430,6 +11560,7 @@ function activeFilterEntries(filters: AppFilters) {
     filters.contactSearchScope === activeContactSearchFilterValue ? ['Recherche contact', 'Active'] : null,
     filters.contactSearchScope === withContactSearchFilterValue ? ['Recherche contact', 'Avec recherche'] : null,
     filters.contactSearchScope === withoutContactSearchFilterValue ? ['Recherche contact', 'Sans recherche'] : null,
+    filters.offreType !== allFilterValue ? ["Type d'offre", libelleFamilleOffre(filters.offreType)] : null,
   ].filter(Boolean) as Array<[string, string]>
 }
 
@@ -18107,6 +18238,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="filter-grid">
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                {(screen as Screen) !== 'contacts' ? (
+                  <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
+                ) : null}
                 {screen === 'contacts' ? (
                   <>
                     <FilterSelect
@@ -18663,6 +18797,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                {(screen as Screen) !== 'contacts' ? (
+                  <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
+                ) : null}
                 <FilterSelect
                   label="Archive"
                   value={filters.archive}
@@ -18742,6 +18879,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                {(screen as Screen) !== 'contacts' ? (
+                  <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
+                ) : null}
                 <FilterSelect
                   label="Archive"
                   value={filters.archive}
@@ -18756,6 +18896,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                {(screen as Screen) !== 'contacts' ? (
+                  <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
+                ) : null}
                 <FilterSelect
                   label="Archive"
                   value={filters.archive}
@@ -18792,6 +18935,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                {(screen as Screen) !== 'contacts' ? (
+                  <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
+                ) : null}
                 <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect label="Validation" value={filters.validationDiffusion} onChange={(value) => updateFilter('validationDiffusion', value)} options={filterCatalog.validationDiffusions} />
                 <FilterSelect label="Type de demande" value={filters.requestType} onChange={(value) => updateFilter('requestType', value)} options={requestTypeOptions} />
@@ -18900,6 +19046,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </label>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                {(screen as Screen) !== 'contacts' ? (
+                  <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
+                ) : null}
                 <FilterSelect label="Statut phase 1" value={filters.statut} onChange={(value) => updateFilter('statut', value)} options={listingStatusOptions} />
                 <FilterSelect
                   label="État de l'annonce"
@@ -18986,6 +19135,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <>
                 <FilterSelect label="Negociateur" value={filters.commercial} onChange={(value) => updateFilter('commercial', value)} options={[{ value: withoutCommercialFilterValue, label: 'Sans' }, ...filterCatalog.commercials]} />
                 <FilterSelect label="Agence" value={filters.agency} onChange={(value) => updateFilter('agency', value)} options={filterCatalog.agencies} />
+                {(screen as Screen) !== 'contacts' ? (
+                  <FilterSelect label="Type d'offre" value={filters.offreType} onChange={(value) => updateFilter('offreType', value)} options={FAMILLES_OFFRE} />
+                ) : null}
                 <FilterSelect
                   label="Presence mandat"
                   value={filters.mandat}
@@ -20515,7 +20667,7 @@ function MandatsScreen(props: {
                           <td className="av-bien">
                             <b>{item.titre_bien}</b>
                             <div className="av-meta">
-                              <span className="av-type">{propertyTypeLabel(item.type_bien)}</span>
+                              <span className="av-type">{libelleTypeBien(item)}</span>
                               <span className="av-msep">·</span>
                               <span className="av-mnum">n°{item.numero_mandat ?? '—'}</span>
                               {item.ville ? <span className="av-ville">{item.ville}</span> : null}
@@ -20912,7 +21064,7 @@ function MandatRegisterScreen(props: {
                     <div className="md-hero-grad" />
                     <span className="md-hero-status"><span className="dot" />{selectedDetail.statut_annonce || 'Actif'}</span>
                     <span className="md-hero-ref">Réf. {selectedDetail.numero_dossier ?? '-'}</span>
-                    {propertyTypeLabel(selectedDetail.type_bien) !== '-' ? <span className="md-hero-type">{propertyTypeLabel(selectedDetail.type_bien)}</span> : null}
+                    {libelleTypeBien(selectedDetail) !== '-' ? <span className="md-hero-type">{libelleTypeBien(selectedDetail)}</span> : null}
                   </div>
                   <div className="md-rail-body">
                     <h1 className="md-r-title">{selectedDetail.titre_bien || `Bien ${selectedDetail.numero_mandat ?? ''}`}</h1>
@@ -25641,6 +25793,9 @@ function DossierDetailLayoutBase(props: {
     ...consoleDetailFacts(props.detail.honoraires_detail_console_json),
     ...consoleDetailFacts(props.detail.location_rendement_console_json),
   ]
+  // C.15 : le bloc immobilier professionnel, absent de l'API REST de Hektor.
+  const immoPro = estImmoPro(dossier)
+  const commerceCards = immoPro ? commerceFacts(dossier) : []
 
   useEffect(() => {
     setActiveDetailTab(detailVariant === 'mandat' ? 'mandate' : 'summary')
@@ -25820,7 +25975,7 @@ function DossierDetailLayoutBase(props: {
                     )}
                     <div className="ds-hero-main">
                       {!isEstimation ? <span className="ds-hero-kicker">{detailVariant === 'mandat' ? 'Dossier mandat' : detailVariant === 'suivi' ? 'Dossier suivi' : 'Dossier annonce'}</span> : null}
-                      <h2 className={`ds-hero-title ${isEstimation && !dossier.titre_bien ? 'fe-untitled' : ''}`}>{isEstimation && !dossier.titre_bien ? '[Sans titre]' : (propertyTypeLabel(dossier.type_bien) || dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`)}</h2>
+                      <h2 className={`ds-hero-title ${isEstimation && !dossier.titre_bien ? 'fe-untitled' : ''}`}>{isEstimation && !dossier.titre_bien ? '[Sans titre]' : (libelleTypeBien(dossier) || dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`)}</h2>
                       {props.address ? <p className="ds-hero-address">{props.address}</p> : null}
                       {!isEstimation ? (
                       <div className="ds-hero-pills">
@@ -26611,19 +26766,32 @@ function DossierDetailLayoutBase(props: {
               <section className="detail-section detail-features-section">
                 <div className="section-header"><DetailSectionTitle icon="summary" title="Caracteristiques du bien" /></div>
                 <div className="info-grid">
-                  <InfoCard label="Type" value={propertyTypeLabel(dossier.type_bien)} />
+                  <InfoCard label="Type" value={libelleTypeBien(dossier)} />
                   <InfoCard label="Surface habitable" value={props.detail.surface_habitable_detail ?? '-'} />
-                  <InfoCard label="Terrain" value={props.detail.surface_terrain_detail ?? '-'} />
-                  <InfoCard label="Pieces" value={props.detail.nb_pieces ?? '-'} />
-                  <InfoCard label="Chambres" value={props.detail.nb_chambres ?? '-'} />
-                  <InfoCard label="Etage" value={props.detail.etage_detail ?? '-'} />
-                  <InfoCard label="Terrasse" value={props.detail.terrasse_detail ?? '-'} />
-                  <InfoCard label="Garage / box" value={props.detail.garage_box_detail ?? '-'} />
-                  <InfoCard label="Ascenseur" value={props.detail.ascenseur_detail ?? '-'} />
+                  <InfoCardResidentielle label="Terrain" value={props.detail.surface_terrain_detail} masquer={immoPro} />
+                  <InfoCardResidentielle label="Pieces" value={props.detail.nb_pieces} masquer={immoPro} />
+                  <InfoCardResidentielle label="Chambres" value={props.detail.nb_chambres} masquer={immoPro} />
+                  <InfoCardResidentielle label="Etage" value={props.detail.etage_detail} masquer={immoPro} />
+                  <InfoCardResidentielle label="Terrasse" value={props.detail.terrasse_detail} masquer={immoPro} />
+                  <InfoCardResidentielle label="Garage / box" value={props.detail.garage_box_detail} masquer={immoPro} />
+                  <InfoCardResidentielle label="Ascenseur" value={props.detail.ascenseur_detail} masquer={immoPro} />
                   <ConsoleInfoCards items={secteurFacts} />
                   <ConsoleInfoCards items={chauffageFacts} />
                   <ConsoleInfoCards items={compositionFacts} />
                 </div>
+              </section>
+              ) : null}
+
+              {activeDetailTab === 'content' && immoPro ? (
+              <section className="detail-section detail-features-section">
+                <div className="section-header"><DetailSectionTitle icon="summary" title="Local professionnel" /></div>
+                {commerceCards.length ? (
+                  <div className="info-grid">
+                    <ConsoleInfoCards items={commerceCards} />
+                  </div>
+                ) : (
+                  <p className="detail-empty">Aucune caracteristique professionnelle renseignee dans Hektor.</p>
+                )}
               </section>
               ) : null}
 
@@ -30124,11 +30292,11 @@ function MobileDossierDetail(props: {
     ['Surface', props.detail.surface_habitable_detail ?? props.detail.surface ?? '-'],
     ['Pièces', props.detail.nb_pieces ?? '-'],
     ['Chambres', props.detail.nb_chambres ?? '-'],
-    ['Type', propertyTypeLabel(dossier.type_bien)],
+    ['Type', libelleTypeBien(dossier)],
     ['Référence', dossier.numero_dossier ?? '-'],
   ]
   const featureFacts = [
-    ['Type', propertyTypeLabel(dossier.type_bien)],
+    ['Type', libelleTypeBien(dossier)],
     ['Surface habitable', props.detail.surface_habitable_detail ?? '-'],
     ['Terrain', props.detail.surface_terrain_detail ?? '-'],
     ['Pieces', props.detail.nb_pieces ?? '-'],
@@ -30721,7 +30889,7 @@ function MobileMandatCards(props: {
               <div className="mobile-list-card-main">
                 <span className="mobile-card-meta">{item.numero_mandat ? `Mandat ${item.numero_mandat}` : item.numero_dossier ?? '-'}</span>
                 <strong>{item.titre_bien}</strong>
-                <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} · {item.ville ?? item.agence_nom ?? '-'}</span>
+                <span className="mobile-card-subline">{libelleTypeBien(item)} · {item.ville ?? item.agence_nom ?? '-'}</span>
               </div>
             </div>
             <div className="mobile-card-grid">
@@ -30829,7 +30997,7 @@ function MobileDossierCards(props: {
             <div className="mobile-list-card-main">
               <span className="mobile-card-meta">{item.numero_dossier ?? '-'}</span>
               <strong>{item.titre_bien}</strong>
-              <span className="mobile-card-subline">{propertyTypeLabel(item.type_bien)} · {item.ville ?? '-'}</span>
+              <span className="mobile-card-subline">{libelleTypeBien(item)} · {item.ville ?? '-'}</span>
             </div>
           </div>
           <div className="mobile-card-grid">
