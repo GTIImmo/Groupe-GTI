@@ -424,7 +424,7 @@ miroir → aucune dans `app_view_generale` → **le serveur ne la connaît pas d
 
 ---
 
-## C.4 — LES WORKERS · ✅ **TERMINÉ le 27/08** · *l'estimation « 2 à 3 sem. » tombe*
+## C.4 — LES WORKERS · 🟡 **TERMINÉ SAUF LA VENTE** · *corrigé le 27/08 après-midi*
 
 > 🔑 **CORRECTION DU PLAN, 27/08.** Trois des quatre lots étaient **déjà faits et éprouvés en
 > production** — le plan était en retard sur le code. Mesuré dans Supabase, **tous statuts
@@ -449,12 +449,71 @@ miroir → aucune dans `app_view_generale` → **le serveur ne la connaît pas d
 > échecs. C'est Supabase qui porte la vérité. **Une table qui ne rend que des succès ne prouve
 > pas l'absence d'échec.**
 
+### 🔴 CORRECTION DU MÊME JOUR — *ma conclusion « terminé » était fausse*
+
+**Frédéric a douté, et il avait raison.** Ce que j'avais manqué :
+
+**① J'ai conclu sur un indicateur qui n'est pas un historique.** `app_console_job.status` est un
+**état courant** : un travail qui échoue puis finit par passer redevient `done`, et son échec
+disparaît. Le vrai journal est **`app_console_job_log`** :
+
+```
+   app_console_job       54 806 travaux    dont error :  1     <<< invraisemblable
+   app_console_job_log  183 718 entrees    dont error : 41     <<< la verite
+```
+
+**② Sans témoin, je n'ai pas vu l'absurdité.** « 1 erreur sur 54 806 » aurait dû m'alerter
+immédiatement. C'est exactement la règle que je m'étais écrite et que je n'ai pas appliquée.
+
+**③ Deux des quatre lots avaient bien échoué :**
+
+```
+   assign_hektor_annonce_negotiator   3 echecs (22/05)   <<< lot 4
+   change_hektor_annonce_status       2 echecs (21/05)   <<< lot 1
+   archive / restore / delete         0 echec            <<< la, c'etait exact
+```
+
+Ils s'en sont remis *(état final `done`)*, mais « 127 exécutions, 0 échec » était **faux**.
+
+**④ Et surtout, ce que je n'avais pas cherché : le lot 1 appelle le code défectueux de C.13.**
+
+```js
+try {
+    transactionResult = await submitHektorTransactionStatus(...);      // LA VENTE PART CHEZ HEKTOR
+    if (target === "sold" && hektorSaleWantsMandatClosure(payload)) {
+        mandatClosureResult = await closeHektorMandatAfterSale(...);   // <<< echoue sur 91 %
+    }
+} finally {                                                            // <<< finally, PAS catch
+```
+
+`App.tsx:14576` envoie `closeMandatOnSale: statusChangeStatus === 'sold'` à **chaque** passage en
+Vendu. **Aucun drapeau ne protège ce chemin** — `VITE_APP_MANDAT_CLOTURE_ENABLED` n'existe **que
+dans les notes**, pas dans le code.
+
+> **Au premier « Vendu » depuis l'app** : la vente est enregistrée chez Hektor · la clôture lève ·
+> le `finally` sans `catch` fait tomber le travail · la resynchronisation ne tourne jamais.
+> **Hektor a la vente, l'app l'ignore.**
+
+**✅ Les deux points rassurants, vérifiés :**
+
+- **aucune clôture abusive n'est possible** — le payload du front porte `numero_mandat` mais **pas**
+  `id_mandat`, donc c'est la branche qui **REFUSE** qui joue, jamais celle qui fabrique une cible.
+  Sur une opération irréversible, c'est ce qui compte le plus ;
+- **le chemin n'a jamais été emprunté** : 14 changements de statut depuis mai, cibles `offer`,
+  `active`, `closed` — **`sold` jamais, pas une fois**, `close_mandat_on_sale` à `None` partout.
+  C'est ce qui explique la note *« 0 mandat clos en base »*.
+
+**➡ CONSÉQUENCE : C.13 remonte en tête.** Ce n'est pas un confort à faire un jour, c'est ce qui
+casse au premier « Vendu ».
+
+---
+
 L'étude du 20/08 donnait l'ordre : **statut/affaire → archiver/désarchiver → contact et mandant →
 affectation du négociateur EN DERNIER** *(impersonation)*.
 
 | | état |
 |---|---|
-| ✅ **lot 1** | **l'affaire naît dans l'app** — séquence 1 000 000, adoption au retour. Prouvé 2× |
+| 🟡 **lot 1** | **l'affaire naît dans l'app** — séquence 1 000 000, adoption au retour. Prouvé 2× · ⚠ **mais la branche « Vendu » n'a JAMAIS tourné** et dépend de **C.13** — voir ci-dessous |
 | ✅ **lot 2** | archiver / désarchiver / supprimer — **déjà en production**, 127 exécutions, 0 échec |
 | ✅ **lot 3** | **le bouton qui manquait** — posé le 27/08 *(voir ci-dessous)*, vérifié à l'écran |
 | ✅ **lot 4** | affectation du négociateur — **déjà en production**, 14 exécutions, 0 échec |
