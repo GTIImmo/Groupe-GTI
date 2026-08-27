@@ -298,6 +298,28 @@ def build_case_dossier_source(conn, hektor_annonce_ids: list[str] | None = None)
                 -- la colonne est NOT NULL DEFAULT ''.
                 COALESCE(mf.hektor_annonce_id, '') = ''
                 AND mf.numero = a.no_mandat
+                -- C.15 27/08 -- LE REPLI PASSE APRES LE RATTACHEMENT DIRECT.
+                --
+                -- rn = 1 garantit UN mandat direct par annonce ET UN orphelin par numero.
+                -- Mais rien n'empechait une annonce de matcher LES DEUX : sa ligne etait
+                -- alors produite deux fois -> "UNIQUE constraint failed:
+                -- case_dossier_source.hektor_annonce_id", et le run s'arretait net.
+                --
+                -- Defaut DORMANT jusqu'au 27/08 : les mandats de l'immobilier
+                -- professionnel etaient orphelins PARCE QUE leurs annonces n'entraient
+                -- jamais dans le miroir (C.15, le parametre `offre` manquant). En les
+                -- faisant entrer, on a donne au repli de quoi doubler.
+                --
+                -- Mesure du 27/08 : 94 mandats orphelins, 88 annonces a double candidat
+                -- -- 84 en offre_type 10, 4 en offre_type 2, ZERO en vente classique.
+                --
+                -- Le repli garde tout son sens : il rattache un mandat dont l'annonce est
+                -- inconnue. Il ne doit simplement pas s'appliquer quand l'annonce a deja
+                -- SON mandat.
+                AND NOT EXISTS (
+                    SELECT 1 FROM hektor_mandat md_direct
+                    WHERE md_direct.hektor_annonce_id = ids.hektor_annonce_id
+                )
             )
         )
        AND mf.rn = 1
