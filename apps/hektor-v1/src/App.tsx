@@ -26778,20 +26778,10 @@ function DossierDetailLayoutBase(props: {
                   <ConsoleInfoCards items={secteurFacts} />
                   <ConsoleInfoCards items={chauffageFacts} />
                   <ConsoleInfoCards items={compositionFacts} />
+                  {/* C.15 : le bloc immo pro rejoint la rubrique du bien plutot que d'en
+                      ouvrir une seconde -- une annonce n'a qu'une rubrique « bien ». */}
+                  <ConsoleInfoCards items={commerceCards} />
                 </div>
-              </section>
-              ) : null}
-
-              {activeDetailTab === 'content' && immoPro ? (
-              <section className="detail-section detail-features-section">
-                <div className="section-header"><DetailSectionTitle icon="summary" title="Local professionnel" /></div>
-                {commerceCards.length ? (
-                  <div className="info-grid">
-                    <ConsoleInfoCards items={commerceCards} />
-                  </div>
-                ) : (
-                  <p className="detail-empty">Aucune caracteristique professionnelle renseignee dans Hektor.</p>
-                )}
               </section>
               ) : null}
 
