@@ -509,6 +509,21 @@ def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, 
             # Colonne posee dans Supabase AVANT ce push. Absente de build_search_text
             # (liste explicite de 8 champs) -> elle ne pollue pas la recherche.
             "offre_type": normalized.get("offre_type"),
+            # C.15 27/08 : le bloc commercial (immobilier professionnel).
+            # NULL pour toute annonce non commerciale -- la table source ne
+            # contient que de l'immo pro. commerce_json porte le reste : CA et
+            # EBE sur trois exercices, vitrine, hauteur, quai, PMR, divisibilite.
+            "commerce_sous_type": normalized.get("commerce_sous_type"),
+            "commerce_famille": normalized.get("commerce_famille"),
+            "commerce_activite": normalized.get("commerce_activite"),
+            "commerce_loyer": normalized.get("commerce_loyer"),
+            "commerce_charges": normalized.get("commerce_charges"),
+            "commerce_taxe_fonciere": normalized.get("commerce_taxe_fonciere"),
+            "commerce_bail_duree": normalized.get("commerce_bail_duree"),
+            "commerce_bail_echeance": normalized.get("commerce_bail_echeance"),
+            "commerce_etat": normalized.get("commerce_etat"),
+            "commerce_zone": normalized.get("commerce_zone"),
+            "commerce_json": normalized.get("commerce_json"),
             "adresse_privee_listing": normalized.get("adresse_privee_listing"),
             "adresse_detail": normalized.get("adresse_detail"),
             "code_postal": normalized.get("code_postal"),
@@ -714,6 +729,10 @@ def build_current_archive_index_rows(rows: list[dict[str, object]]) -> list[dict
             # Colonne posee dans Supabase AVANT ce push. Absente de build_search_text
             # (liste explicite de 8 champs) -> elle ne pollue pas la recherche.
             "offre_type": normalized.get("offre_type"),
+            # C.15 27/08 : le sous-type commerce, pour le badge et le filtre.
+            "commerce_sous_type": normalized.get("commerce_sous_type"),
+            "commerce_famille": normalized.get("commerce_famille"),
+            "commerce_activite": normalized.get("commerce_activite"),
             "numero_dossier": normalized.get("numero_dossier"),
             "numero_mandat": normalized.get("numero_mandat"),
             "titre_bien": normalized.get("titre_bien") or "[Sans titre]",
@@ -766,6 +785,10 @@ def build_current_historical_index_rows(rows: list[dict[str, object]]) -> list[d
             # Colonne posee dans Supabase AVANT ce push. Absente de build_search_text
             # (liste explicite de 8 champs) -> elle ne pollue pas la recherche.
             "offre_type": normalized.get("offre_type"),
+            # C.15 27/08 : le sous-type commerce, pour le badge et le filtre.
+            "commerce_sous_type": normalized.get("commerce_sous_type"),
+            "commerce_famille": normalized.get("commerce_famille"),
+            "commerce_activite": normalized.get("commerce_activite"),
             "numero_dossier": normalized.get("numero_dossier"),
             "numero_mandat": normalized.get("numero_mandat"),
             "titre_bien": normalized.get("titre_bien") or "[Sans titre]",

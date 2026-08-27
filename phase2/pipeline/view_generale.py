@@ -367,6 +367,41 @@ SELECT
         FROM json_each(cmp.acquereurs_json) j
     ) AS compromis_acquereurs_resume,
     src.vente_id,
+    -- C.15 27/08 -- LE BLOC COMMERCIAL, que l'API REST ne rend pas.
+    -- Pour une annonce immo pro, AnnonceById ne donne que huit valeurs et ecrase
+    -- le sous-type en idtype 23 ("Commerce"). Le vrai detail vient de GraphQL
+    -- (phase2/sync/sync_hektor_immo_pro.py), et c'est lui qui distingue un fonds
+    -- de commerce d'un entrepot ou de murs commerciaux.
+    -- Ces colonnes sont NULL pour toute annonce non commerciale : la jointure est
+    -- un LEFT JOIN sur une table qui ne contient que de l'immo pro.
+    com.sous_type_id           AS commerce_sous_type_id,
+    com.sous_type_label        AS commerce_sous_type,
+    com.famille_id             AS commerce_famille,
+    com.activite_principale_label AS commerce_activite,
+    com.loyer_base             AS commerce_loyer,
+    com.charges                AS commerce_charges,
+    com.taxe_fonciere          AS commerce_taxe_fonciere,
+    com.bail_duree             AS commerce_bail_duree,
+    com.bail_echeance          AS commerce_bail_echeance,
+    com.droit_entree           AS commerce_droit_entree,
+    com.etat                   AS commerce_etat,
+    com.type_zone              AS commerce_zone,
+    com.statut_juridique       AS commerce_statut_juridique,
+    com.ca1 AS commerce_ca1, com.exercice1 AS commerce_exercice1,
+    com.ca2 AS commerce_ca2, com.exercice2 AS commerce_exercice2,
+    com.ca3 AS commerce_ca3, com.exercice3 AS commerce_exercice3,
+    com.ebe1 AS commerce_ebe1, com.ebe2 AS commerce_ebe2, com.ebe3 AS commerce_ebe3,
+    com.vitrine                AS commerce_vitrine,
+    com.vitrine_lineaire       AS commerce_vitrine_lineaire,
+    com.hauteur_plafond        AS commerce_hauteur_plafond,
+    com.quai                   AS commerce_quai,
+    com.quai_couvert           AS commerce_quai_couvert,
+    com.pmr                    AS commerce_pmr,
+    com.divisible              AS commerce_divisible,
+    com.nb_pieces              AS commerce_nb_pieces,
+    com.parkings_ext           AS commerce_parkings_ext,
+    com.parkings_int           AS commerce_parkings_int,
+    com.commercial_json        AS commerce_json,
     src.vente_date,
     v.prix AS vente_prix,
     v.honoraires AS vente_honoraires,
@@ -470,6 +505,8 @@ LEFT JOIN mandat_enrich m
 LEFT JOIN hektor.hektor_offre off ON off.hektor_offre_id = src.offre_id
 LEFT JOIN hektor.hektor_compromis cmp ON cmp.hektor_compromis_id = src.compromis_id
 LEFT JOIN hektor.hektor_vente v ON v.hektor_vente_id = src.vente_id
+LEFT JOIN hektor.hektor_annonce_commercial com
+    ON com.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
 LEFT JOIN detail_enrich det ON det.hektor_annonce_id = CAST(d.hektor_annonce_id AS TEXT)
 LEFT JOIN app_internal_status ist ON ist.app_dossier_id = d.id
 LEFT JOIN latest_note ln ON ln.app_dossier_id = d.id

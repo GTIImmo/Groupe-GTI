@@ -135,6 +135,21 @@ SELECT
 
 SQL_DOSSIERS_BASE = """
 SELECT
+    -- C.15 27/08 : LE BLOC COMMERCIAL. L'API REST ecrase les huit sous-types
+    -- d'immobilier professionnel en un seul code (idtype 23, "Commerce") ; le vrai
+    -- detail vient de GraphQL. Ces colonnes sont NULL pour toute annonce non
+    -- commerciale. Colonnes posees dans Supabase AVANT ce push.
+    commerce_sous_type,
+    commerce_famille,
+    commerce_activite,
+    commerce_loyer,
+    commerce_charges,
+    commerce_taxe_fonciere,
+    commerce_bail_duree,
+    commerce_bail_echeance,
+    commerce_etat,
+    commerce_zone,
+    commerce_json,
     app_dossier_id,
     hektor_annonce_id,
     -- C.15 27/08 : la NATURE de l'offre arrive jusqu'a l'app (0 vente, 6 neuf,
@@ -296,6 +311,10 @@ WITH archive_ranked AS (
 SELECT
     CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
     CAST(app_dossier_id AS INTEGER) AS app_archive_id,
+    -- C.15 27/08 : le sous-type commerce, pour l'index (badge et filtre).
+    commerce_sous_type,
+    commerce_famille,
+    commerce_activite,
     -- C.15 27/08 : la NATURE de l'offre arrive jusqu'a l'app (0 vente, 6 neuf,
     -- 10 vente immo pro). Elle s'arretait au serveur ; au palier suivant, 251 biens
     -- d'immobilier professionnel entreront ici et seraient sinon indiscernables des
@@ -339,6 +358,10 @@ SQL_HISTORICAL_ANNONCE_INDEX_BASE = """
 SELECT
     CAST(hektor_annonce_id AS INTEGER) AS hektor_annonce_id,
     CAST(app_dossier_id AS INTEGER) AS app_historical_id,
+    -- C.15 27/08 : le sous-type commerce, pour l'index (badge et filtre).
+    commerce_sous_type,
+    commerce_famille,
+    commerce_activite,
     -- C.15 27/08 : la NATURE de l'offre arrive jusqu'a l'app (0 vente, 6 neuf,
     -- 10 vente immo pro). Elle s'arretait au serveur ; au palier suivant, 251 biens
     -- d'immobilier professionnel entreront ici et seraient sinon indiscernables des

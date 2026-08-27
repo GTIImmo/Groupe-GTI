@@ -347,6 +347,30 @@ def init_db(conn: sqlite3.Connection) -> None:
             synced_at TEXT NOT NULL
         );
 
+        -- C.15 27/08 -- LE BLOC COMMERCIAL (immobilier professionnel).
+        -- Elle est declaree ICI, et pas seulement dans son extracteur, pour une
+        -- raison apprise le jour meme : view_generale la joint, et une table
+        -- absente aurait casse le run entier sur une machine neuve ou apres une
+        -- reconstruction. C'est exactement le scenario qui a arrete le run de
+        -- 15:03 (contrainte UNIQUE sur case_dossier_source).
+        -- Le detail des colonnes et leur remplissage : phase2/sync/sync_hektor_immo_pro.py
+        CREATE TABLE IF NOT EXISTS hektor_annonce_commercial (
+            hektor_annonce_id TEXT PRIMARY KEY,
+            sous_type_id TEXT, sous_type_label TEXT, famille_id TEXT,
+            activite_principale_id TEXT, activite_principale_label TEXT, activites_json TEXT,
+            loyer_base TEXT, charges TEXT, taxe_fonciere TEXT, droit_entree INTEGER,
+            bail_duree TEXT, bail_echeance TEXT,
+            statut_juridique TEXT, type_zone TEXT, etat TEXT,
+            ca1 TEXT, exercice1 TEXT, ca2 TEXT, exercice2 TEXT, ca3 TEXT, exercice3 TEXT,
+            ebe1 TEXT, annee_ebe1 TEXT, ebe2 TEXT, annee_ebe2 TEXT, ebe3 TEXT, annee_ebe3 TEXT,
+            vitrine INTEGER, vitrine_lineaire TEXT, hauteur_plafond TEXT, isolation TEXT,
+            quai INTEGER, quai_couvert INTEGER, pmr INTEGER, divisible INTEGER, eau INTEGER,
+            nb_pieces TEXT, parkings_ext TEXT, parkings_int TEXT,
+            commercial_json TEXT,
+            status TEXT, datemaj_hektor TEXT, created_at_hektor TEXT, archived INTEGER,
+            source TEXT, source_hash TEXT, elapsed_ms INTEGER, error TEXT, synced_at TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS hektor_annonce_detail (
             hektor_annonce_id TEXT PRIMARY KEY,
             statut_id TEXT,
