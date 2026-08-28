@@ -9550,20 +9550,42 @@ function acquireWorkerLock() {
 // LA VENTE n'a PAS d'etat chez Hektor (hektor_vente ne porte aucune colonne de statut) :
 // si une vente existe, on la reprend toujours. Creer une seconde vente sur un meme bien
 // serait bien pire qu'un doublon d'offre -- et une vente ne s'annule pas.
-const TRANSACTIONS_REVOLUES = {
-  offre: new Set(["refused", "refuse", "refusee"]),
+// L'OFFRE NE SE REPREND JAMAIS -- restreint le 28/08 apres mesure.
+//
+// Ma premiere version reprenait toute offre non refusee. C'ETAIT DANGEREUX :
+//
+//     934 annonces portent plusieurs offres
+//     ->  869 avec des acquereurs DIFFERENTS   <-- il FAUT creer
+//     ->   65 avec le meme acquereur
+//
+// Une offre "accepted" (9 926 en base) n'est pas revolue. Quand un SECOND acquereur
+// fait une offre, la reprendre ECRASERAIT celle du premier. Perte de donnee reelle,
+// bien pire que le doublon qu'on voulait eviter -- et plusieurs offres simultanees
+// sont le fonctionnement NORMAL du metier.
+//
+// L'app ne peut pas trancher : elle ne detient pas l'identifiant de l'acquereur de
+// l'offre existante (app_dossier_current ne porte que son nom). Sans ce moyen de
+// distinguer "je corrige la mienne" de "c'est un autre acheteur", ON NE REPREND PAS.
+//
+// Le doublon du 25/08 sur l'annonce 62774 reste donc possible. C'est assume : deux
+// offres du meme acquereur se corrigent a la main, une offre ecrasee ne se retrouve pas.
+const TRANSACTIONS_REPRISES = {
+  // genre -> etats qui INTERDISENT la reprise ; null = on ne reprend jamais
+  offre: null,
   compromis: new Set(["cancelled", "annule", "annulee"]),
   vente: new Set(),
 };
 
 function idTransactionAReprendre(payload, genre) {
+  const revolus = TRANSACTIONS_REPRISES[genre];
+  if (revolus === null || revolus === undefined) return "";   // l'offre passe ici
   const champId = { offre: "offre_id", compromis: "compromis_id", vente: "vente_id" }[genre];
   const champEtat = { offre: "offre_state", compromis: "compromis_state", vente: null }[genre];
   const id = String((payload && payload[champId]) || "").trim();
   if (!id || id === "0") return "";
-  if (!champEtat) return id;
+  if (!champEtat) return id;                                   // la vente n'a aucun etat
   const etat = String((payload && payload[champEtat]) || "").trim().toLowerCase();
-  return TRANSACTIONS_REVOLUES[genre].has(etat) ? "" : id;
+  return revolus.has(etat) ? "" : id;
 }
 
 const HEKTOR_STATUS_CONFIG = {
