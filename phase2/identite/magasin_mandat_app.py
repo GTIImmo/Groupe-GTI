@@ -139,6 +139,38 @@ def lire_registre_supabase(url: str, cle: str) -> list[dict]:
     return lignes
 
 
+def lire_magasin_supabase(url: str, cle: str) -> list[dict]:
+    """Ce que le WORKER a ecrit -- les clotures faites depuis l'app.
+
+    Source distincte du registre, et c'est deliberé : une annonce close SORT du
+    registre (642 des 1 105 mandats invisibles le sont pour cette raison), donc la
+    cloture ne pouvait pas s'y poser. La table app_mandat_champ_app, elle, n'est
+    jamais reconstruite -- c'est le patron app_dossier / app_affaire_ledger.
+
+    Sa cle est (annonce, NUMERO de mandat) : c'est ce que le worker detient au
+    moment du geste, le payload du front ne portant jamais l'identifiant Hektor.
+    """
+    lignes: list[dict] = []
+    depuis = 0
+    while True:
+        params = urllib.parse.urlencode({
+            "select": "hektor_annonce_id,numero_mandat,champ,valeur_app,origine,ecrit_le",
+            "order": "hektor_annonce_id",
+            "offset": str(depuis),
+            "limit": "1000",
+        })
+        requete = urllib.request.Request(
+            url + "/rest/v1/app_mandat_champ_app?" + params,
+            headers={"apikey": cle, "Authorization": "Bearer " + cle},
+        )
+        with urllib.request.urlopen(requete, timeout=60) as reponse:
+            paquet = json.loads(reponse.read().decode("utf-8"))
+        lignes.extend(paquet)
+        if len(paquet) < 1000:
+            return lignes
+        depuis += 1000
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -208,6 +240,64 @@ def main() -> int:
                  str(ligne.get("numero_mandat") or "") or None))
             ecrits += 1
 
+    # --- SECONDE SOURCE : CE QUE L'APP A ECRIT ELLE-MEME ---------------------
+    # Le registre ci-dessus dit ce que l'app AFFICHE ; celui-ci dit ce qu'elle a
+    # VOULU. Les deux sont necessaires : une annonce close ne figure plus dans le
+    # registre, donc sa cloture n'y serait jamais lue.
+    #
+    # Le worker ecrit un NUMERO de mandat ; le magasin travaille par identifiant.
+    # On construit donc l'index inverse -- et on REFUSE de trancher quand il est
+    # ambigu, plutot que de deviner (regle du projet : Hektor reutilise ses
+    # identifiants, 342 sont partages entre annonces).
+    par_numero: dict[tuple[str, str], str] = {}
+    ambigus: set[tuple[str, str]] = set()
+    for (a_id, m_id), ref in miroir.items():
+        num = str(ref.get("numero") or "").strip()
+        if not num:
+            continue
+        cle_num = (a_id, num)
+        if cle_num in par_numero and par_numero[cle_num] != m_id:
+            ambigus.add(cle_num)
+        par_numero[cle_num] = m_id
+
+    ecrits_app = non_resolus = 0
+    try:
+        saisies = lire_magasin_supabase(url, cle)
+    except Exception as err:  # une lecture ratee ne doit jamais valoir "rien a dire"
+        print("   magasin Supabase illisible (%s) -- on ne conclut rien" % str(err)[:70])
+        saisies = None
+
+    if saisies is not None:
+        print("app    : %d saisie(s) lue(s) dans app_mandat_champ_app" % len(saisies))
+        for ligne in saisies:
+            annonce = str(ligne.get("hektor_annonce_id") or "").strip()
+            numero = str(ligne.get("numero_mandat") or "").strip()
+            champ = str(ligne.get("champ") or "").strip()
+            v_app = norme(ligne.get("valeur_app"))
+            if not annonce or not numero or champ not in CHAMPS_SUIVIS or not v_app:
+                continue
+            cle_num = (annonce, numero)
+            mandat = par_numero.get(cle_num)
+            if mandat is None or cle_num in ambigus:
+                non_resolus += 1
+                continue
+            v_mir = norme((miroir.get((annonce, mandat)) or {}).get(champ))
+            if args.dry_run:
+                continue
+            conn.execute(
+                "INSERT INTO " + MAGASIN + " "
+                "(hektor_annonce_id, hektor_mandat_id, champ, valeur_app, "
+                " valeur_miroir, numero_mandat, origine, vu_le) "
+                "VALUES (?,?,?,?,?,?,'cloture_app',CURRENT_TIMESTAMP) "
+                "ON CONFLICT(hektor_annonce_id, hektor_mandat_id, champ) DO UPDATE SET "
+                "  valeur_app    = excluded.valeur_app, "
+                "  valeur_miroir = excluded.valeur_miroir, "
+                "  numero_mandat = excluded.numero_mandat, "
+                "  origine       = 'cloture_app', "
+                "  vu_le         = CURRENT_TIMESTAMP",
+                (annonce, mandat, champ, v_app, v_mir or None, numero))
+            ecrits_app += 1
+
     if not args.dry_run:
         conn.commit()
     total = conn.execute("SELECT COUNT(*) FROM " + MAGASIN).fetchone()[0]
@@ -218,6 +308,8 @@ def main() -> int:
     print("   ecarts notes                                 : %d" % len(ecarts))
     print("   lignes sans identifiant de mandat (ignorees) : %d" % sans_mandat)
     print("   mandats absents du miroir                    : %d" % absents_miroir)
+    print("   SAISIES DE L APP reprises                    : %d" % ecrits_app)
+    print("   saisies au numero de mandat introuvable      : %d" % non_resolus)
     for annonce, mandat, champ, v_app, v_mir in ecarts[:10]:
         print("      annonce %-8s mandat %-8s %s : app=%r miroir=%r"
               % (annonce, mandat, champ, v_app, v_mir))

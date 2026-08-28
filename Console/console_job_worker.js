@@ -10080,6 +10080,28 @@ const CLOTURE_MANDAT_CHEZ_HEKTOR =
 //
 // Best-effort : une cloture locale ratee ne doit JAMAIS faire tomber un changement
 // de statut deja enregistre chez Hektor. C'est la lecon du 28/08 au matin.
+// C.13 (28/08) -- LA CLOTURE DE MANDAT, CHEZ NOUS, POUR DE BON.
+//
+// PREMIERE VERSION, LE MATIN : elle modifiait app_mandat_register_current. Deux
+// defauts, tous deux mesures l'apres-midi meme :
+//
+//   1. LE REGISTRE EST FILTRE SUR LE STATUT DE L'ANNONCE. Une annonce qui passe a
+//      "Clos" ou "Vendu" en SORT -- la ligne disparait au moment precis ou l'on veut
+//      y poser la date. Annonce 62966 : 0 ligne. Et 642 des 1 105 mandats absents du
+//      registre le sont "parce qu'ils sont clos".
+//   2. LE REGISTRE EST VIDE PUIS REFAIT a chaque push (delete_all_rows).
+//
+// Et surtout : une modification PostgREST qui ne correspond a AUCUNE ligne renvoie
+// 200. Le travail annoncait donc "done", le journal disait "mandat cloture", et rien
+// n'etait ecrit. C'est ce silence-la que la verification ci-dessous supprime.
+//
+// DESORMAIS : on ecrit dans app_mandat_champ_app -- table A PART, jamais reconstruite,
+// le patron deja eprouve quatre fois ici (app_dossier, app_affaire_ledger,
+// app_search_registry, app_contact). Le magasin du serveur la lit chaque nuit AVANT
+// le push, et appliquer_contrat_mandat.py repose la valeur apres la reconstruction.
+//
+// Hektor n'est toujours PAS informe, et c'est voulu : il apprend la vente ou le
+// changement de statut, cela suffit.
 async function cloturerMandatLocalement(job, annonceId, payload, dateCloture) {
   const numero = String(payload.numero_mandat || payload.numeroMandat || "").trim();
   if (!numero) {
@@ -10090,22 +10112,60 @@ async function cloturerMandatLocalement(job, annonceId, payload, dateCloture) {
     return { status: "skipped", reason: "numero_mandat_absent" };
   }
   const date = String(dateCloture || "").trim() || new Date().toISOString().slice(0, 10);
+
   try {
-    // Le corps doit etre du TEXTE : supabaseRequest passe les options telles quelles
-    // a fetch. Un objet donne « Empty or invalid json » -- erreur commise et corrigee
-    // le 28/08, et c'est le best-effort qui l'a rendue visible sans rien casser.
-    await supabaseRequest(
-      `app_mandat_register_current?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`
-      + `&numero_mandat=eq.${encodeURIComponent(numero)}`,
-      { method: "PATCH", prefer: "return=minimal",
-        body: JSON.stringify({ mandat_date_cloture: date }) });
+    // L'ECRITURE QUI FAIT FOI. return=representation nous rend la ligne ecrite : c'est
+    // la seule facon de distinguer "ecrit" de "aucune ligne touchee". Le corps doit etre
+    // du TEXTE -- un objet donne "Empty or invalid json" (erreur du 28/08 au matin).
+    const ecrites = await supabaseRequest("app_mandat_champ_app", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=representation",
+      body: JSON.stringify([{
+        hektor_annonce_id: String(annonceId),
+        numero_mandat: numero,
+        champ: "mandat_date_cloture",
+        valeur_app: date,
+        origine: "cloture_app",
+        ecrit_par: payload.hektor_user_email || null,
+      }]),
+    });
+
+    // LA VERIFICATION. Sans elle, "done" ne veut rien dire.
+    if (!Array.isArray(ecrites) || ecrites.length === 0) {
+      throw new Error("aucune ligne ecrite dans app_mandat_champ_app");
+    }
+
+    // Confort d'affichage, SANS AUTORITE : le registre montre la date tout de suite,
+    // au lieu d'attendre le run de nuit. Il peut ne correspondre a aucune ligne -- une
+    // annonce close en sort -- et c'est sans consequence, la valeur qui fait foi est
+    // deja ecrite ci-dessus.
+    let registreTouche = 0;
+    try {
+      const majRegistre = await supabaseRequest(
+        `app_mandat_register_current?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`
+        + `&numero_mandat=eq.${encodeURIComponent(numero)}`,
+        { method: "PATCH", prefer: "return=representation",
+          body: JSON.stringify({ mandat_date_cloture: date }) });
+      registreTouche = Array.isArray(majRegistre) ? majRegistre.length : 0;
+    } catch (erreurRegistre) {
+      registreTouche = -1;
+    }
+
     await logJob(job.id, "cloture_mandat_locale", "done",
       "Mandat cloture DANS NOS DONNEES (Hektor n'en est pas informe, c'est voulu)", {
         hektor_annonce_id: annonceId,
         numero_mandat: numero,
         date_cloture: date,
+        magasin_lignes_ecrites: ecrites.length,
+        registre_lignes_rafraichies: registreTouche,
       });
-    return { status: "done", numero_mandat: numero, date_cloture: date };
+    return {
+      status: "done",
+      numero_mandat: numero,
+      date_cloture: date,
+      magasin_lignes_ecrites: ecrites.length,
+      registre_lignes_rafraichies: registreTouche,
+    };
   } catch (erreur) {
     const message = erreur && erreur.message ? erreur.message : String(erreur);
     await logJob(job.id, "cloture_mandat_locale", "error",
