@@ -8116,7 +8116,10 @@ export async function createArchiveHektorAnnonceJob(input: {
 export type HektorAnnonceStatusTarget = 'active' | 'offer' | 'compromise' | 'sold' | 'closed'
 
 export async function createChangeHektorAnnonceStatusJob(input: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email'>
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien' | 'prix' | 'numero_mandat' | 'negociateur_email'
+    // C.4 (28/08) : sans ces identifiants, le worker ne sait que CREER -- il a produit
+    // deux offres sur l'annonce 62774 le 25/08, meme acquereur (603800).
+    | 'offre_id' | 'offre_state' | 'compromis_id' | 'compromis_state' | 'vente_id'>
   targetStatus: HektorAnnonceStatusTarget
   amount?: string
   salePrice?: string
@@ -8144,6 +8147,14 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   const payload = {
     numero_dossier: input.dossier.numero_dossier ?? null,
     numero_mandat: input.dossier.numero_mandat ?? null,
+    // C.4 (28/08) -- MODIFIER PLUTOT QUE RECREER. Hektor distingue creation et
+    // modification par le seul identifiant ; le worker le reprend si la transaction
+    // est encore vivante, et repart de zero si elle est annulee ou refusee.
+    offre_id: input.dossier.offre_id ?? null,
+    offre_state: input.dossier.offre_state ?? null,
+    compromis_id: input.dossier.compromis_id ?? null,
+    compromis_state: input.dossier.compromis_state ?? null,
+    vente_id: input.dossier.vente_id ?? null,
     titre_bien: input.dossier.titre_bien ?? null,
     negociateur_email: input.dossier.negociateur_email ?? null,
     target_status: input.targetStatus,

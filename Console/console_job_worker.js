@@ -9526,6 +9526,46 @@ function acquireWorkerLock() {
   });
 }
 
+// C.4 (28/08/2026) -- MODIFIER PLUTOT QUE RECREER.
+//
+// Hektor distingue la creation de la modification par UN SEUL detail : l'identifiant.
+// Son propre JavaScript le dit sans ambiguite :
+//
+//     function upvalCompromis() {
+//       if ($j("#id_compromis").val() === '0') { ...creer... }
+//       else                                   { ...MODIFIER... }
+//     }
+//
+// Notre worker posait TOUJOURS l'identifiant vide. Il ne savait donc que creer.
+//
+// CE N'EST PAS THEORIQUE. Le 25/08, deux demandes "Offre" sur l'annonce 62774 ont
+// produit DEUX offres : 33026 et 33027, identifiants consecutifs, MEME acquereur
+// (603800). Le doublon est dans les donnees.
+//
+// LA REGLE, et elle epouse le metier : on ne reprend la transaction existante que
+// si elle est encore VIVANTE. Un compromis annule ou une offre refusee appartiennent
+// au passe -- le nouvel acquereur merite sa propre ligne. C'est le cas normal, mesure :
+// 561 des 578 annonces a plusieurs compromis sont exactement cette succession.
+//
+// LA VENTE n'a PAS d'etat chez Hektor (hektor_vente ne porte aucune colonne de statut) :
+// si une vente existe, on la reprend toujours. Creer une seconde vente sur un meme bien
+// serait bien pire qu'un doublon d'offre -- et une vente ne s'annule pas.
+const TRANSACTIONS_REVOLUES = {
+  offre: new Set(["refused", "refuse", "refusee"]),
+  compromis: new Set(["cancelled", "annule", "annulee"]),
+  vente: new Set(),
+};
+
+function idTransactionAReprendre(payload, genre) {
+  const champId = { offre: "offre_id", compromis: "compromis_id", vente: "vente_id" }[genre];
+  const champEtat = { offre: "offre_state", compromis: "compromis_state", vente: null }[genre];
+  const id = String((payload && payload[champId]) || "").trim();
+  if (!id || id === "0") return "";
+  if (!champEtat) return id;
+  const etat = String((payload && payload[champEtat]) || "").trim().toLowerCase();
+  return TRANSACTIONS_REVOLUES[genre].has(etat) ? "" : id;
+}
+
 const HEKTOR_STATUS_CONFIG = {
   active: { hektorValue: "2", label: "Actif", diffusable: "1" },
   offer: { hektorValue: "3", label: "Sous offre", transactionMode: "annonce-SuiviVente-offre-createOffre" },
@@ -9703,7 +9743,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   body.set("fromContact", "0");
 
   if (target === "offer") {
-    body.set("idOffre", "");
+    body.set("idOffre", idTransactionAReprendre(payload, "offre"));
     body.set("montantOffre", tx.amount);
     body.set("dateOffre", tx.date);
     body.set("nbJoursValidite", tx.validity);
@@ -9716,7 +9756,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     body.append("containerModule[]", "AnnoncesOffreMandat");
     body.set("containerName", "PopinOffre");
   } else if (target === "compromise") {
-    body.set("idCompromis", "");
+    body.set("idCompromis", idTransactionAReprendre(payload, "compromis"));
     body.set("dateCompromis", tx.date);
     body.set("dateSignatureActe", normalizeStatusFrenchDate(payload.signature_date || payload.date_signature_acte || payload.dateSignatureActe));
     body.set("nbJoursRetractation", String(payload.retraction_days || payload.nb_jours_retractation || "10"));
@@ -9731,7 +9771,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     body.append("containerModule[]", "AnnoncesCompromisMandat");
     body.set("containerName", "PopinCompromis");
   } else if (target === "sold") {
-    body.set("idVente", "");
+    body.set("idVente", idTransactionAReprendre(payload, "vente"));
     body.set("dateVente", tx.date);
     body.set("prixDeVente", tx.salePrice);
     body.set("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
