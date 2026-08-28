@@ -9712,6 +9712,22 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     init: "1",
   });
   if (target === "compromise" || target === "sold") initBody.set("initBasket", "true");
+
+  // C.4 (28/08) -- L'OUVERTURE DOIT PORTER LE MEME IDENTIFIANT QUE L'ENREGISTREMENT.
+  //
+  // Le formulaire rendu ici sert de REPLI a tout ce que l'utilisateur ne saisit pas :
+  //     sequestre      <- htmlInputValue(initHtml, "sequestre")      || "0"
+  //     prixNetVendeur <- htmlInputValue(initHtml, "prixNetVendeur") || ""
+  //
+  // Si l'on enregistre sur une transaction existante mais qu'on ouvre un formulaire
+  // VIERGE, ces replis valent zero ou vide : MODIFIER EFFACERAIT. Hektor lui-meme ne
+  // s'y trompe pas -- son JavaScript passe idCompromis a l'OUVERTURE :
+  //     popinPostInner({ mode: "...createCompromis", idCompromis: ..., initBasket: true })
+  const genreTransaction = { offer: "offre", compromise: "compromis", sold: "vente" }[target];
+  const idRepris = genreTransaction ? idTransactionAReprendre(payload, genreTransaction) : "";
+  if (idRepris) {
+    initBody.set({ offre: "idOffre", compromis: "idCompromis", vente: "idVente" }[genreTransaction], idRepris);
+  }
   const init = await hektorFetch(XMLRPC_URL, {
     method: "POST",
     body: initBody,
@@ -9743,7 +9759,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   body.set("fromContact", "0");
 
   if (target === "offer") {
-    body.set("idOffre", idTransactionAReprendre(payload, "offre"));
+    body.set("idOffre", idRepris);  // meme valeur qu'a l'ouverture, par construction
     body.set("montantOffre", tx.amount);
     body.set("dateOffre", tx.date);
     body.set("nbJoursValidite", tx.validity);
@@ -9756,7 +9772,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     body.append("containerModule[]", "AnnoncesOffreMandat");
     body.set("containerName", "PopinOffre");
   } else if (target === "compromise") {
-    body.set("idCompromis", idTransactionAReprendre(payload, "compromis"));
+    body.set("idCompromis", idRepris);  // meme valeur qu'a l'ouverture, par construction
     body.set("dateCompromis", tx.date);
     body.set("dateSignatureActe", normalizeStatusFrenchDate(payload.signature_date || payload.date_signature_acte || payload.dateSignatureActe));
     body.set("nbJoursRetractation", String(payload.retraction_days || payload.nb_jours_retractation || "10"));
@@ -9771,7 +9787,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     body.append("containerModule[]", "AnnoncesCompromisMandat");
     body.set("containerName", "PopinCompromis");
   } else if (target === "sold") {
-    body.set("idVente", idTransactionAReprendre(payload, "vente"));
+    body.set("idVente", idRepris);  // meme valeur qu'a l'ouverture, par construction
     body.set("dateVente", tx.date);
     body.set("prixDeVente", tx.salePrice);
     body.set("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
