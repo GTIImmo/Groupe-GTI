@@ -962,9 +962,24 @@ première** — en silence.
 
 ---
 
-## C.13 — LA CLÔTURE DE MANDAT DANS L'APP · *cadrage validé le 30/07, dev non commencé*
+## C.13 — LA CLÔTURE DE MANDAT DANS L'APP · *réécrite le 28/08*
 
-Drapeau `VITE_APP_MANDAT_CLOTURE_ENABLED` **éteint**.
+> 🔴 **CETTE SECTION ÉTAIT FAUSSE SUR DEUX POINTS, vérifiés le 28/08.**
+>
+> **① « dev non commencé »** — le commit `1b6ef04` du **30/07** a livré A1, A2, A3, A5 et
+> A7. Le cadrage a été écrit *dans le même commit que le code*, comme un plan, et jamais
+> relu ensuite.
+>
+> **② « drapeau `VITE_APP_MANDAT_CLOTURE_ENABLED` éteint »** — ce drapeau **n'existe nulle
+> part dans le code** ; le front n'en connaît que quatre. **Rien n'était éteint : ce chemin
+> est actif en production depuis le 30/07.**
+>
+> ➡ **L'état à jour est dans le plan maître**, section C.13 / C.13-a / C.13-b / C.13-c.
+> Ce qui suit reste utile comme relevé technique du formulaire de Hektor, mais **le
+> chantier a changé de nature le 28/08** : la clôture ne passe plus par Hektor, elle vit
+> dans le serveur et l'app. Le correctif du 500 sur la famille PROTEXA est **sans objet**.
+
+*Le relevé d'origine, conservé pour mémoire :*
 
 ### ⚠ Ce que l'enquête du 25/08 a ajouté au cadrage — À LIRE AVANT DE CODER
 

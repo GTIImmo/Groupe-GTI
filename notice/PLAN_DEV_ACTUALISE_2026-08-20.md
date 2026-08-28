@@ -3,6 +3,64 @@
 Remplace le plan du 18/08. Établi après quatre audits mesurés :
 identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (20/08).
 
+> **Dernière mise à jour : 28/08/2026.** Cinq changements — voir « CE QUI A BOUGÉ
+> LES 27-28/08 » juste en dessous.
+
+---
+
+## CE QUI A BOUGÉ LES 27-28/08
+
+*Cinq changements. Trois chantiers avancent, deux défauts inconnus ont été trouvés — et
+aucun des deux n'a été cherché : ils sont sortis d'une vérification.*
+
+| | |
+|---|---|
+| ✅ **C.15 — TERMINÉ** | les six types d'offre entrent *(miroir 61 091, serveur 61 092)* · l'immobilier professionnel est **lisible ET créable** · prouvé de bout en bout sur l'annonce 62964 |
+| ✅ **C.17-bis** | le moniteur ne meurt plus à l'instant où il a quelque chose à dire |
+| ✅ **C.13-a et C.13-b** | le mandat obtient son domicile, et le contrat d'autorité s'allume — **premier champ jamais inscrit** |
+| 🔴 **trouvé** | une annonce créée pour un négociateur multi-agences partait dans **la mauvaise agence** — 3 fois depuis juin, corrigé |
+| 🔴 **mesuré** | **23 715 mandats devraient porter une date de clôture. 94 la portent.** |
+
+#### ⚠ LE CHIFFRE QUI CHANGE LA LECTURE DE C.13
+
+```
+   mandats du parc                                    24 939
+   portant une date de cloture                            94    0,38 %
+   devant en porter une (annonce Vendue ou Close)     23 715
+   annonces etiquetees « Mandat clos », avec mandat       642
+             dont le mandat est vraiment clos               0
+```
+
+**Vendre un bien ne clôt jamais son mandat** : sur 6 719 annonces vendues portant un
+mandat, **deux** ont une date de clôture. Et le registre affiche pourtant « Clos »,
+parce qu'il se rabat sur le statut de l'annonce quand la date manque — ce qui arrive
+99,6 % du temps.
+
+> **C.13 n'est donc pas la réparation d'un défaut : c'est un geste qui n'a jamais été
+> outillé.** Les correctifs ne réparent aucune régression, ils rendent exécutable
+> quelque chose qui, à l'échelle du parc, n'a pratiquement jamais eu lieu.
+
+#### 🔑 LE VIRAGE DÉCIDÉ PAR FRÉDÉRIC LE 28/08
+
+> *« On peut créer le système de clôture du mandat uniquement dans l'environnement
+> serveur + app, sans tenir Hektor informé de la clôture — puisque s'il est informé du
+> changement de statut, cela suffit. »*
+
+Et c'est vérifié : **le changement de statut suffit déjà à obtenir l'effet métier chez
+Hektor** — statut 6 coupe la diffusion, statut 5 enregistre la vente. La clôture du
+mandat n'ajoute rien de son côté ; c'est une écriture dans **son** registre à lui.
+
+Ce que ça retire du plan :
+
+| | |
+|---|---|
+| ❌ | le correctif du 500 sur la famille PROTEXA *(cause jamais élucidée)* |
+| ❌ | le suivi du formulaire de clôture de Hektor, qui peut changer sans préavis |
+| ❌ | six appels HTTP et une opération **irréversible chez un tiers** à chaque clôture |
+
+Ce que ça coûte, et c'est le seul arbitrage : **tant que Hektor vit, les deux registres
+diront des choses différentes sur ce point.** Le tien dira clos, le sien dira ouvert.
+
 ---
 
 ## CE QUI EST FAIT
@@ -253,6 +311,7 @@ protège le moins.)*
 
    Fait a ce jour : 0.1 0.2 0.4 0.5 0.6 0.7 0.8 | B.1 B.2 B.4 B.5
                     C.1' C.2a C.2b C.3 C.6 C.7 C.12
+                    C.14 C.15 C.17 C.17bis C.13-a C.13-b   [27-28/08]
 ```
 
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas faits.**
@@ -518,7 +577,17 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | ℹ **Ce n'est pas de la déduplication** : sur 11 absents testés, **2 seulement** appartiennent à un groupe de doublons — alors que le parc en compte 37 144 groupes / 80 992 membres | |
 | | ✅ **Écarté avec preuve** : doublons d'identifiant *(355 712 lignes = 355 712 identifiants distincts, en texte comme en entier)* · périmètre d'agence *(la somme par agence égale exactement le total)* · filtre `type` *(`type=0` rend le total, et les types se chevauchent — un contact peut être propriétaire ET acquéreur)* | |
 | | ⚠ **CORRECTION D'UNE ERREUR À MOI** : j'avais expliqué les 7 659 par « des contacts supprimés que nous accumulons, faute de mécanisme de suppression ». **Faux sur deux points** — la règle « on ne supprime jamais » date du **22/08**, elle ne peut pas expliquer un écart antérieur ; et les actifs ne montrent **aucune** suppression. Frédéric a refusé cette explication, il avait raison | |
-| 🟡 **C.15** | **LE RUN NE VOIT QU'UN TYPE D'OFFRE SUR SIX — 4 165 ANNONCES N'ENTRENT JAMAIS** *(trouvé le 26/08)* · `sync_raw.py` appelle `ListAnnonces` **sans le paramètre `offre`**, et Hektor rend alors **uniquement les ventes** | 🔴 **LE PLUS GROS TROU CONNU** · **① ② ③ faits · ④ le canari POSÉ le 27/08** *(annonce **62483**, Bourg-Argental, diffusée depuis le 11/06, absente de `raw_api_response`)* — code écrit + banc de non-régression, **pas encore passé dans un run**. Détail, couplage et attendus : `FEUILLE_DE_ROUTE_2026-08-24.md` § ④ |
+| ✅ **C.15** | ~~**LE RUN NE VOYAIT QU'UN TYPE D'OFFRE SUR SIX — 4 165 ANNONCES N'ENTRENT JAMAIS** *(trouvé le 26/08)* · `sync_raw.py` appelle `ListAnnonces` **sans le paramètre `offre`**, et Hektor rend alors **uniquement les ventes** | 🔴 **LE PLUS GROS TROU CONNU** · **① ② ③ faits · ④ le canari POSÉ le 27/08** *(annonce **62483**, Bourg-Argental, diffusée depuis le 11/06, absente de `raw_api_response`)* — code écrit + banc de non-régression, **pas encore passé dans un run**. Détail, couplage et attendus : `FEUILLE_DE_ROUTE_2026-08-24.md` § ④ |
+| ✅ **C.17-bis** | **LE MONITEUR MOURAIT À L'INSTANT OÙ IL AVAIT QUELQUE CHOSE À DIRE** *(trouvé le 28/08)* · **CORRIGÉ** `9c8bdc7` | **FAIT** |
+| | Passages de 05:48 et 07:48 : journal de **164 octets** — l'en-tête seul, sans le pied — et code 1. Relancé à la main, le moniteur rend son rapport complet et juste. **La cause : deux choses inoffensives séparément.** `$ErrorActionPreference = "Stop"` en tête du wrapper *(d'origine)*, et la redirection `*>>` qui recopie **aussi** la sortie d'erreur de Python. Sous Windows PowerShell, recopier la sortie d'erreur d'un programme externe emballe **chaque ligne dans une erreur** ; avec « Stop » la première devient terminante. Le wrapper meurt donc en notant la phrase — **avant de l'avoir écrite** | |
+| | ⚠ **L'ironie, et le danger** : tant que tout va bien le moniteur ne dit rien, donc rien ne le tue et son rapport s'écrit *(01:49 et 03:49 : 55 Ko chacun)*. **Il ne se taisait QUE quand il avait quelque chose à dire** — mot pour mot la leçon de C.17, une seconde fois | |
+| | ✅ **Reproduit sur banc isolé** : ancien patron → en-tête seul, code 1 ; nouveau → journal complet, code **2** *(le vrai)* préservé. Et un défaut introduit la veille corrigé au passage : `*>>` écrit en UTF-16 alors que l'en-tête était en UTF-8 — journaux à deux encodages depuis le 27/08 | |
+| | ℹ **Ce défaut préexistait au correctif du 27/08.** Ce que celui-ci a apporté, c'est l'en-tête : avant, ces passages laissaient un fichier de **0 octet** et l'on ne pouvait pas distinguer « Python n'a jamais démarré » de « il est mort en route ». **C'est cet en-tête qui a permis de trouver la vraie cause le lendemain** | |
+| ✅ **C.18** | **UNE ANNONCE CRÉÉE POUR UN NÉGOCIATEUR MULTI-AGENCES PARTAIT DANS LA MAUVAISE AGENCE** *(trouvé le 28/08)* · **CORRIGÉ** `53f817c` | **FAIT** |
+| | Vincent-Lucas GONZALEZ existe **trois fois** chez Hektor — Firminy *(actif)*, Saint-Étienne et Monistrol *(inactifs)* — **avec le même email**. Avant d'écrire, le worker vérifie que le négociateur est actif : il interrogeait l'annuaire **par email, une seule ligne, sans ordre imposé**. Il tombait sur Saint-Étienne, inactive → « négociateur inactif » → repli « écriture via l'agence » → **qui résolvait l'agence de la même façon ambiguë** | |
+| | ❗ **Ce n'était pas théorique** : **3 annonces** créées depuis l'app sont parties à Saint-Étienne alors qu'on demandait Firminy — 30/06, 06/07 et 27/08. Témoin : les annonces du même négociateur **non créées par l'app** sont toutes à Firminy | |
+| | ⚠ **Et ce n'est pas un défaut de l'immobilier professionnel** : l'identité se choisit **trois secondes avant** que le type de bien soit prononcé *(journal : contexte agence à 22:15:13, `offredem`/`idType` à 22:15:16)*. **Une maison** créée pour l'une des **25 personnes multi-agences** partait pareil. Le défaut dormait parce que les créations depuis l'app sont rares et presque toutes faites pour des mono-agence | |
+| | ✅ **Deux causes exactes** : l'app envoie `hektor_negociator_form_id`, les deux fonctions du repli lisaient `hektor_negociateur_id` — **l'identifiant sans ambiguïté était ignoré** ; et `payload.agence_nom` n'était consulté **ni** par le test d'activité **ni** par le repli. Correctif : on interroge d'abord les identifiants qui ne trompent pas, l'email en dernier recours, et on **choisit** alors la ligne *(agence demandée, puis identité active)*. **10 cas sur 10**, et prouvé en conditions réelles : même paquet, 62963 → Saint-Étienne *(avant)*, 62964 → **Firminy** *(après)* | |
 | 🟢 **C.17** | **LE MONITORING EST AVEUGLE QUAND LE RÉSEAU TOMBE** *(trouvé le 27/08)* · `check_gti_health.py` sonde Vercel, la vitrine, le portail RDV et Supabase **avant** d'arriver à l'étape d'alerte. Réseau coupé → il meurt sur une sonde, journal de **0 octet**, `exit 1`, **aucun email, aucun WhatsApp**. Observé les 25, 26 et 27/08 — à chaque fenêtre de coupure. Le 27/08 il est passé à **05:48, 18 min après l'échec du run de 05:30**, et n'a rien dit. Relancé à la main le même matin il donne le bon diagnostic : `[CRITICAL] GTI Quotidien : dernier resultat 1`. **Il ne sait rapporter que quand tout va bien.** Correctif : envelopper chaque sonde réseau, et alerter **même en échec partiel** | 🟢 **CORRIGÉ le 27/08** · **① l'alerte est SORTIE du `try` d'écriture** — elle était *après* `upsert_status()` dans le même bloc : Supabase injoignable → `upsert` lève → le dispatch n'était **jamais atteint**. Désormais lue-dispatchée-**puis** écrite, chacune dans son `try`. Quand l'état précédent est illisible on alerte **sans déduplication**, en le disant *(mieux un doublon qu'un silence)* · **② `print_report` dans un `finally`** — le diagnostic atteint le disque quoi qu'il arrive en aval · **③ garde-fou `--no-alerts`** : il n'empêche **pas** l'écriture du statut, donc il **consomme la bascule** et fait taire le passage suivant — *(erreur commise le 27/08 au matin ; le bon drapeau est `--dry-run`)*. Un avertissement le dit maintenant · **④ en-tête + pied dans le wrapper** : ⚠ **la cause du journal de 0 octet n'est PAS élucidée** — le `main()` Python ne rend jamais 1, donc le processus était tué de l'extérieur ou ne démarrait pas. L'en-tête rendra les deux distinguables · **banc 4 cas sur 4** + essai réel *(1 897 lignes, code 0)* |
 | | ❗ **MESURÉ, PAR TROIS CHEMINS INDÉPENDANTS QUI DONNENT LE MÊME CHIFFRE** : *(a)* GraphQL 61 076 − REST 56 911 = **4 165** · *(b)* somme des totaux par type : 927 actives + 3 238 archivées = **4 165** · *(c)* `hektor_annonce.offre_type` vaut **0 sur les 56 910 lignes, sans exception** — aucune autre n'est jamais entrée | |
 | | | **actives · archivées · total** |
@@ -585,7 +654,22 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | ➡ **Donc 26bis n'est pas « donner un corps à l'annonce »** *(elle en a un)* **mais « rendre le serveur capable de tenir une annonce que le miroir ignore »**. C'est exactement ce que le plan disait depuis le 21/08 : *« sans 26bis, une annonce créée dans l'app n'existe QUE dans Supabase »*. Plus petit, plus net — et toujours à faire avant C.9 | |
 | ⏳ **C.9** | La **création** part de l'app *(ex-23,24,25)* | **1 à 2 sem.** — après C.7 |
 | | ℹ *Le patron « naître sans numéro Hektor » est **déjà dans le schéma** — `app_dossier.id` autoincrement + `hektor_annonce_id` **nullable** + UNIQUE. Il n'a jamais servi (0 ligne sur 56 894) : la création optimiste est derrière un drapeau éteint. C'est ici qu'il s'exerce pour la première fois* | |
-| ⏳ **C.13** | **LA CLÔTURE DE MANDAT DANS L'APP** — *cadrage **déjà validé** le 30/07, dev non commencé* · `PLAN_DEV_MANDAT_CLOTURE.md` · drapeau `VITE_APP_MANDAT_CLOTURE_ENABLED` (éteint) | **à chiffrer** |
+| 🟡 **C.13** | **LA CLÔTURE DE MANDAT DANS L'APP** — *réécrite le 28/08 : elle ne passe plus par Hektor* · `PLAN_DEV_MANDAT_CLOTURE.md` | **a et b FAITS · c en fin de plan** |
+| | ❌ **DEUX PHRASES DU CADRAGE SONT FAUSSES, vérifiées le 28/08.** Le document dit « dev non commencé, rien de codé » : or le commit `1b6ef04` du **30/07** a livré A1, A2, A3, A5 et A7 — le plan a été écrit *dans le même commit que le code*, puis jamais relu. Et le drapeau `VITE_APP_MANDAT_CLOTURE_ENABLED` **n'existe nulle part** : le front n'en connaît que quatre. **Ce chemin est donc ACTIF en production depuis le 30/07.** | |
+| | ℹ **La clôture a déjà tourné pour de vrai**, deux fois le 30/07 *(mandat 9887, trace dans le miroir : `date_cloture = 2026-07-30`)* — mais les deux fois sur l'annonce **24113**, l'une des rares à DEUX mandats. Le cas normal n'avait jamais été essayé, et le commit du 25/08 le disait : *« NON VÉRIFIÉ, assumé : une vraie clôture »* | |
+| | 🔴 **LE DÉFAUT, prouvé en lecture seule le 28/08** *(annonce 62933)* : sur une annonce à mandat unique Hektor ne rend **aucune `<option>`** — il propose la cible par un `<input type="hidden" id="selectedMandatId" value="646" data="protexaMandat">`. Le worker ne lisait que les `<option>` : il refusait donc de clôturer sur **7 668 des 7 760** annonces actives portant un mandat — **98,8 %** | |
+| ✅ | **Les quatre correctifs, faits le 28/08** *(`f1d2ac2`)* — ① le contexte lit aussi le champ caché · ② le mandat unique n'est accepté **que si** Hektor et le registre concordent *(divergence → refus : le 28/07, une fiche pointait encore l'ANCIEN mandat)* · ③ la vente survit à une clôture ratée *(elle était dans un `try…finally` **sans `catch`** : la vente partait chez Hektor et le job tombait après)* · ④ `selected_mandat` est enfin lu. **Et l'asymétrie est refermée** : la fonction *fabriquait* une cible que Hektor n'avait jamais proposée, sur une opération irréversible. **16 cas sur 16** | |
+| | ⚠ **Ce qui reste inexpliqué, et n'a plus à l'être** : l'enregistrement rend un **500** sur la famille PROTEXA *(le mandat 660 de l'annonce de test 62966)*. Quatre pistes éliminées avec preuve — l'appel « à froid » *(l'archivage fait pareil, 127 fois sans échec)*, le `reportingId` manquant *(absent des deux pages, Hektor l'enverrait vide aussi)*, un point d'entrée PROTEXA dédié *(aucun)*, la précédence de `typeMandat` *(la bonne valeur était partie)*. **Le virage du 28/08 rend ce correctif sans objet** | |
+| ✅ **C.13-a** | ~~**LE DOMICILE DU MANDAT**~~ **FAIT le 28/08** — `app_mandat_champ_app`, table à côté, jamais reconstruite. **La clé a été MESURÉE, pas choisie** : `(annonce, hektor_mandat_id)` est la seule unique — 24 939 sur 24 939, quand `(annonce, numéro)` collisionne 157 fois et le numéro seul 6 803 fois. Premier passage : **23 830 couples comparés, 0 mandat introuvable dans le miroir** | **FAIT** |
+| | ℹ **Pourquoi `app_annonce_champ_app` ne pouvait pas suffire** : il est clé par annonce, or une annonce porte plusieurs mandats dans sa vie *(24 939 mandats pour 24 657 annonces)*. Au grain de l'annonce, on ne saurait pas QUEL mandat est clos | |
+| ✅ **C.13-b** | ~~**LE CONTRAT S'ALLUME**~~ **FAIT le 28/08** — `CHAMPS_APP_MANDAT = ("mandat_date_cloture",)`. **C'est le premier champ jamais inscrit à ce contrat** : la liste était vide depuis l'origine, et c'était l'interrupteur du chantier | **FAIT** |
+| | 🔑 **Pourquoi ce champ d'abord.** La réserve du contrat — *« inscrire un champ ici le FIGERAIT sur une valeur périmée »* — ne s'y applique pas : Hektor ne porte une date de clôture que **94 fois sur 24 939 (0,4 %)**, quand il renseigne les dates, le montant et le type à ~100 %. C'est un champ que l'app **crée**, pas un champ qu'il entretient — et son rythme s'effondre : 24 clôtures en juin, 7 en août | |
+| | ⚠ **LA RÈGLE DIFFÈRE DE CELLE DES CONTACTS** *(arbitrage de Frédéric, 28/08)* : **l'app gagne quand elle a quelque chose à dire ; sinon on ne touche à rien.** Le contrat des contacts applique « l'app gagne » sans condition, et c'est sans danger — Hektor ne connaît pas ces champs. Ici il en connaît 94, et **le tout premier passage du magasin en a trouvé trois que Supabase ignore** *(30673/12264, 61513/74415, 61521/74417)*. Un « l'app gagne » aveugle les aurait **effacées dès la première nuit, en silence** | |
+| | ✅ **Éprouvé** : à vide *« aucune valeur détenue par l'app »* · avec un témoin factice *« 1 valeur à poser »*, les 3 clôtures de Hektor toujours écartées · témoin retiré, vue intacte. Les deux étapes tournent chaque nuit **après** la reconstruction de la vue, pour la même raison que le contrat d'annonce | |
+| | ℹ **Le dernier câblage reste à faire** : le constructeur du registre lit la clôture **uniquement** dans `mandats_json`. Tant que l'app n'en produit aucune, ça ne change rien — c'est le premier geste de **C.13-c** | |
+| ⏳ **C.13-c** | **LE RATTRAPAGE DES 23 715** — *reporté **EN FIN DE PLAN**, avec A.1/A.2/A.3 (décision de Frédéric, 28/08)* | **plus tard** |
+| | **Les trois règles, formulées par Frédéric** — `vente enregistrée → date de la vente` · `date butoir dépassée → date d'échéance` · `annulation acceptée → date saisie` · *le reste : à trancher*. **Aucune des trois dates ne vient de Hektor** : le ledger d'affaires porte 7 605 ventes, **100 % datées et 88,4 % rattachées à un mandat précis** ; `date_fin` est renseignée à 92,3 % ; les annulations acceptées sont dans `app_diffusion_request` | |
+| | ⚠ **Pourquoi en fin de plan et pas maintenant** : c'est une écriture de masse sur 23 715 lignes. Réversible puisque rien ne part chez Hektor, mais elle fixe le registre qui fera foi — elle se décide quand l'app est le maître, pas pendant la cohabitation | |
 | | ❗ **ENQUÊTE DU 25/08 — le cadrage était incomplet, et sa portée est de 91 %.** Le formulaire de clôture a **deux visages** : avec plusieurs mandats il affiche un `<select>` ; **avec un seul, AUCUNE option** — tout est dans un `<input>` caché `selectedMandatId` *(valeur **et** attribut `data`)*. Le worker ne sait lire que des `<option>` : il **refuse de clôturer** sur **694 annonces actives sur 759**. Et sur les **98 clôtures réelles du parc, 74 portent sur une annonce à mandat unique** | |
 | | ℹ **Pourquoi personne ne l'a vu** : tout le cadrage du 30/07 a été relevé sur **l'annonce 24113**, l'une des rares à deux mandats *(ses mandats 9887/553 sont les exemples du document)*. Et son sous-lot **A0** — *« verrouiller le format exact, en lecture seule, sans coder »* — **n'a jamais été produit** ; A1 a été codé le même jour | |
 | | ✅ **A0 EST FAIT (25/08)**, lu dans le JavaScript de Hektor : `mandatFrom = '#selectedMandatId'` **par défaut**, la liste ne prime que si elle existe ; `idMandat = .val()` · `typeMandat = .attr('data')` ∈ `mandat` \| `protexaMandat`. ⚠ **Faux ami** : `typeMandat` est la **famille de registre**, PAS le type juridique — et le code laisse `payload.type_mandat` passer **avant** Hektor : piège armé | |
@@ -687,6 +771,49 @@ valeur de **survivre sans l'aller-retour**.
 | ⏳ **F.1** | **UTILISATEURS, RÔLES ET DROITS** — revoir qui peut faire quoi | *après la coupure, décision de Frédéric le 25/08* |
 | | **Aujourd'hui le modèle est délibérément serré** : trois profils *(admin, commercial, administratif)*, et le négociateur **demande** au lieu de décider — baisse de prix, diffusion, annulation de mandat. **C'est un contrôle voulu, pas une limite technique** | |
 | | Ce qu'il faudra reprendre alors : le périmètre de chaque rôle, ce qui reste soumis à validation, et ce qui peut s'ouvrir | |
+
+---
+
+### 📒 LE REGISTRE DES MANDATS SERA-T-IL EXPLOITABLE APRÈS LA COUPURE ?
+
+*Question de Frédéric, 28/08. Mesurée sur les 26 729 lignes de registre.*
+
+**Oui — l'ossature est là, et rien n'en dépend de Hektor pour survivre.** Elle est déjà
+dans la base, clé par le couple (annonce, mandat), sous sauvegarde critique.
+
+```
+   Numero du mandat      100,0 %      Date de prise      92,3 %
+   Designation du bien   100,0 %      Date de fin        92,3 %
+   Prix                  100,0 %      Nom des mandants   92,1 %
+   Agence                100,0 %      Honoraires         91,5 %
+   Adresse                99,2 %      Type de mandat     87,8 %
+   Commune                98,4 %
+   ------------------------------------------------------------
+   Negociateur            42,9 %   <-- 3 318 lignes ACTIVES sans negociateur
+   Date de cloture         0,3 %   <-- C.13
+```
+
+**Trois trous, et un seul a une échéance :**
+
+| | après la coupure |
+|---|---|
+| **date de clôture** | ✅ se calcule chez toi — c'est C.13-c |
+| **négociateur** | ❌ **si la donnée est chez Hektor, elle part avec lui** |
+| **collisions de numéros** | ⚠️ se corrige chez toi, mais mieux vaut savoir avant |
+
+> ⚠ **Le trou du négociateur devrait donc passer AVANT la clôture dans l'ordre du
+> plan** : c'est le seul qui ne se rattrapera plus après. *Signalé, pas encore chiffré
+> — Frédéric a demandé de ne pas le creuser le 28/08.*
+
+**Sur les numéros** : 6 803 numéros servent à plusieurs mandats, mais un registre se
+tient **par agence**. Au bon grain : 4 090 doublons s'expliquent par des agences
+différentes, 39 par les **deux registres** de Hektor *(HEKTOR et PROTEXA, qui n'écrivent
+même pas les clôtures au même format — `2026-08-26 10:26:42` contre `2026-08-25`)*, et
+il reste **663 vraies collisions** — 3,7 %, surtout des reprises anciennes *(le n°10249
+sert dix fois, même agence, même jour de 2016, sur dix annonces consécutives)*.
+
+*Réserve : je peux dire ce que contiennent les données ; dire si elles satisfont aux
+exigences de forme de la loi Hoguet relève du notaire ou du juriste.*
 
 ---
 

@@ -1,7 +1,25 @@
 # PLAN_DEV — Lot A : principe de clôture de mandat
 
-> Statut : **cadrage validé, dev non commencé.** Rien de codé.
-> Flag global : `VITE_APP_MANDAT_CLOTURE_ENABLED` (OFF par défaut).
+> 🔴 **AVERTISSEMENT AJOUTÉ LE 28/08/2026 — LES DEUX LIGNES CI-DESSOUS SONT FAUSSES.**
+>
+> Elles ont été écrites comme un plan, **dans le même commit que le code qui les rendait
+> caduques** (`1b6ef04`, 30/07), et jamais relues. Résultat : pendant un mois, ce document
+> a fait croire que rien n'était livré et que tout dormait derrière un drapeau.
+>
+> **En réalité, au 30/07 :** A1 *(worker)*, A2 *(pipeline)*, A3 *(modale)*, A5
+> *(annulation)* et A7 *(registre)* étaient **codés et actifs en production**. Et le
+> drapeau `VITE_APP_MANDAT_CLOTURE_ENABLED` **n'existe nulle part dans le code** — le
+> front n'en connaît que quatre. **Rien n'était éteint.**
+>
+> ➡ **L'état à jour est dans `notice/PLAN_DEV_ACTUALISE_2026-08-20.md`**, sections C.13-a,
+> C.13-b et C.13-c. Le chantier a changé de nature le 28/08 : **la clôture ne passe plus
+> par Hektor**, elle vit dans le serveur et l'app.
+>
+> Ce document reste utile pour ce qu'il documente bien : **le relevé exact du formulaire
+> de Hektor**, motifs et sous-motifs compris. C'est à ce titre qu'il est conservé.
+
+> ~~Statut : **cadrage validé, dev non commencé.** Rien de codé.~~
+> ~~Flag global : `VITE_APP_MANDAT_CLOTURE_ENABLED` (OFF par défaut).~~
 > Contraintes : additif/chirurgical (la rubrique mandat actuelle continue de marcher) ; écritures Hektor testées par l'utilisateur (garde-fou harness) ; build `npm run build` ; staging fichier par fichier.
 
 ## Contexte mécanique (contrôlé en direct sur VA6482 / annonce 24113, 2026-07-30)
