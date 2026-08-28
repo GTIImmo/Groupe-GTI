@@ -10091,11 +10091,14 @@ async function cloturerMandatLocalement(job, annonceId, payload, dateCloture) {
   }
   const date = String(dateCloture || "").trim() || new Date().toISOString().slice(0, 10);
   try {
+    // Le corps doit etre du TEXTE : supabaseRequest passe les options telles quelles
+    // a fetch. Un objet donne « Empty or invalid json » -- erreur commise et corrigee
+    // le 28/08, et c'est le best-effort qui l'a rendue visible sans rien casser.
     await supabaseRequest(
       `app_mandat_register_current?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`
       + `&numero_mandat=eq.${encodeURIComponent(numero)}`,
-      { method: "PATCH", body: { mandat_date_cloture: date },
-        headers: { Prefer: "return=minimal" } });
+      { method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ mandat_date_cloture: date }) });
     await logJob(job.id, "cloture_mandat_locale", "done",
       "Mandat cloture DANS NOS DONNEES (Hektor n'en est pas informe, c'est voulu)", {
         hektor_annonce_id: annonceId,
