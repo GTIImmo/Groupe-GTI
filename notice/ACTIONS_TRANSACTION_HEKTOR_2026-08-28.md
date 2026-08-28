@@ -105,11 +105,59 @@ pas de nouveaux workers.
 
 ---
 
+## Le compromis, relevé en entier — et c'est plus simple que la clôture de mandat
+
+Second bien lu, **53372** *(compromis 50043 actif)*. La popin de clôture fait **1 819 caractères**
+et ne contient **aucun champ** : c'est une simple confirmation.
+
+> **« Annulation du compromis ! Êtes-vous sûr de vouloir annuler ce compromis ? »**
+
+```js
+annuleCompromis(idCompromis, fromContact)
+    -> mode  annonce-SuiviVente-clotureCompromis
+       parametres  idComp,  isCloture
+```
+
+**Ni motif, ni date, ni raison** — contrairement à la clôture de mandat qui en demande trois.
+Un seul appel suffit.
+
+Et `isCloture` distingue les **deux issues** du compromis, ce qui épouse le métier :
+
+| | |
+|---|---|
+| `clore_compromis_vente` | le compromis **aboutit** *(vers la vente)* |
+| `annuleCompromis` | le compromis **tombe** |
+
+## Modifier un compromis, en revanche, est hors de portée du worker
+
+```js
+launchPopinCompromis(idAnnonce, idCompromis)   // async, await import(... Modules/Compromis ...)
+                                               // init, goToStep, presentPopin
+```
+
+C'est un **module ES chargé dynamiquement**, pas un formulaire postable. Cela **explique enfin**
+pourquoi la lecture serveur du 28/08 rendait une coquille de « stepper » sans aucun champ, et
+pourquoi passer `idCompromis` au mode `createCompromis` ne chargeait rien.
+
+➡ **Annuler un compromis est simple. Le modifier ne l'est pas.** Ne pas confondre les deux.
+
 ## Ce qui reste à relever
 
-- le **formulaire de clôture de compromis** *(popin `popinClotureCompromis`)* — ses champs et ses
-  motifs, comme on l'a fait pour la clôture de mandat ;
-- le **compte** à utiliser : admin refusé pour saisir une offre, à confirmer pour refuser/accepter.
+- le **compte** à utiliser : l'admin est explicitement refusé pour *saisir* une offre. Les boutons
+  **refuser** et **accepter**, eux, **sont bien présents** sur la fiche en session admin — donc
+  l'interdiction semble porter sur la création seule. **À confirmer avant de coder.**
+
+## Récapitulatif — tout ce qui est désormais spécifié
+
+| Geste | Mode | Paramètres |
+|---|---|---|
+| refuser une offre | `annonce-SuiviVente-updateOffre` | `id`, `type='refus'` |
+| accepter une offre | `annonce-SuiviVente-updateOffre` | `id`, `type='accepte'` |
+| supprimer une offre | `deleteOffre` | l'identifiant |
+| **annuler un compromis** | `annonce-SuiviVente-clotureCompromis` | `idComp`, `isCloture` |
+| supprimer un compromis | `deleteCompromis` | l'identifiant |
+| supprimer une vente | `ventes-deleteVente` | l'identifiant |
+| *modifier un compromis* | *module ES `Modules/Compromis`* | **hors de portée du worker** |
 
 ---
 
