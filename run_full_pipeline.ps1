@@ -330,6 +330,28 @@ Invoke-Step -Label "phase2 appliquer le contrat d autorite" -Arguments @(
     "phase2\identite\appliquer_contrat.py"
 ) -WorkerKey "phase2.contrat_autorite"
 
+# C.13-a/b 28/08 -- LE MEME PRINCIPE, AU GRAIN DU MANDAT.
+# Une annonce porte plusieurs mandats dans sa vie : 24 939 mandats pour 24 657
+# annonces. Le contrat ci-dessus, cle par annonce, ne saurait pas designer QUEL
+# mandat est clos. D ou un magasin et un applicateur jumeaux, cles par le couple
+# (annonce, mandat) -- la seule combinaison unique, mesuree 24 939 sur 24 939.
+#
+# L ORDRE : le magasin OBSERVE (il compare Supabase au miroir), l applicateur POSE.
+# Les deux APRES la reconstruction de la vue, pour la meme raison que le contrat
+# d annonce : elle vient de rendre la main a Hektor sur tout.
+#
+# AUJOURD HUI L APPLICATEUR NE FAIT RIEN, et c est voulu : le magasin ne contient
+# que des observations ou l app est vide, et la regle « l app gagne quand elle a
+# quelque chose a dire » les ecarte toutes. Cette regle protege les 94 clotures que
+# Hektor porte encore -- un « l app gagne » aveugle les aurait effacees des la
+# premiere nuit, en silence.
+Invoke-OptionalStepWithRetry -Label "phase2 magasin des champs de mandat" -Arguments @(
+    "phase2\identite\magasin_mandat_app.py"
+)
+Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat de mandat" -Arguments @(
+    "phase2\identite\appliquer_contrat_mandat.py"
+)
+
 # 26bis-(1) 26/08 -- LES ANNONCES QUE L'APP CONNAIT ET QUE LE MIROIR IGNORE.
 # Le contrat ci-dessus sait METTRE A JOUR une ligne d'app_view_generale ; il ne sait pas
 # en CREER. Or une annonce NEE DANS L'APP n'a aucune ligne dans le miroir, donc aucune

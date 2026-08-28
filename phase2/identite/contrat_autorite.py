@@ -68,6 +68,49 @@ CHAMPS_APP_CONTACT: tuple[str, ...] = ("birth_date", "birth_place", "marital_sta
 CHAMPS_APP_ANNONCE: tuple[str, ...] = ()
 
 
+# ---------------------------------------------------------------- MANDATS
+# C.13-b (28/08/2026) -- LE PREMIER CHAMP JAMAIS INSCRIT A CE CONTRAT.
+#
+# POURQUOI CELUI-LA, ET PAS UN AUTRE. Mesure du 28/08 sur les 24 939 mandats :
+#
+#     date de cloture      94 valeurs chez Hektor    0,4 %   <-- ce champ
+#     date de fin      24 937                      100,0 %
+#     date de debut    24 937                      100,0 %
+#     montant          24 718                       99,1 %
+#     mandants         24 648                       98,8 %
+#     type             23 743                       95,2 %
+#
+# La reserve inscrite en tete de ce fichier -- « inscrire un champ ici le FIGERAIT
+# sur une valeur perimee » -- ne s'applique pas a la date de cloture : il n'y a
+# quasiment rien a figer, et le rythme s'effondre (24 clotures en juin, 7 en aout).
+# C'est un champ que l'app CREE, pas un champ que Hektor entretient.
+#
+# Les cinq autres suivront quand l'editeur de mandat de l'app sera le seul lieu de
+# saisie. La creation a deja migre -- depuis juin, 181 mandats neufs viennent de
+# l'app contre 1 de Hektor -- mais la MODIFICATION d'un mandat ancien (un avenant)
+# peut encore se faire chez lui, et nous n'avons pas d'historique pour la mesurer.
+CHAMPS_APP_MANDAT: tuple[str, ...] = ("mandat_date_cloture",)
+
+# ---------------------------------------------------------------- LA REGLE
+# « L'APP GAGNE QUAND ELLE A QUELQUE CHOSE A DIRE » -- arbitrage de Frederic, 28/08.
+#
+# Le contrat des CONTACTS applique « l'app gagne » sans condition, et c'est sans
+# danger : Hektor ne connait pas ces trois champs, il n'y a jamais rien a ecraser.
+#
+# Pour le mandat c'est FAUX, et ca s'est vu des le premier essai : le magasin a
+# trouve TROIS mandats que Hektor dit clos et que Supabase ignore encore
+# (30673/12264, 61513/74415, 61521/74417). Un « l'app gagne » aveugle aurait
+# efface ces trois vraies clotures des la premiere nuit -- en silence, puisque
+# c'est exactement ce que le contrat est cense faire.
+#
+#     l'app a une valeur   ->  elle gagne          (le but du chantier)
+#     l'app n'a rien       ->  on ne touche a rien (on ne detruit pas)
+#
+# Moins pur, et assume : c'est un reglage de TRANSITION. Le jour de la coupure,
+# Hektor n'aura plus rien a dire et l'app gagnera de fait.
+VIDE_NE_GAGNE_PAS: bool = True
+
+
 def contrat_vide() -> bool:
     """Vrai tant qu'aucun champ d'annonce n'appartient a l'app.
 
@@ -75,3 +118,8 @@ def contrat_vide() -> bool:
     normal » plutot qu'a passer en silence.
     """
     return not CHAMPS_APP_ANNONCE
+
+
+def contrat_mandat_vide() -> bool:
+    """Le pendant, pour les mandats. Voir CHAMPS_APP_MANDAT."""
+    return not CHAMPS_APP_MANDAT
