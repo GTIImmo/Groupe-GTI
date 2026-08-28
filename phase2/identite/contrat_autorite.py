@@ -108,6 +108,33 @@ CHAMPS_APP_MANDAT: tuple[str, ...] = ("mandat_date_cloture",)
 #
 # Moins pur, et assume : c'est un reglage de TRANSITION. Le jour de la coupure,
 # Hektor n'aura plus rien a dire et l'app gagnera de fait.
+# -----------------------------------------------------------------------------
+# LES AFFAIRES -- offres, compromis, ventes.  C.19, pose le 29/08/2026.
+#
+# LA DEMANDE DE FREDERIC, mot pour mot (28/08) :
+#   « tous les champs presents dans la modale changer statut doivent pouvoir etre
+#     modifies dans l'app puis le serveur SANS envoyer a Hektor -- sauf refuser /
+#     accepter pour l'offre, annuler pour le compromis, supprimer pour la vente. »
+#
+# Autrement dit : les VALEURS restent chez nous, seuls les CHANGEMENTS D'ETAT
+# partent. Et cela contourne un obstacle mesure le meme jour -- modifier un
+# compromis chez Hektor passe par un module ES impilotable depuis le worker.
+#
+# LA REGLE EST CELLE DU MANDAT, pas celle des contacts :
+#     l'app a une valeur  ->  elle gagne
+#     l'app n'a rien      ->  ON NE TOUCHE A RIEN
+# Parce que Hektor connait ces champs-la, lui. Un « l'app gagne » aveugle
+# effacerait un prix que Hektor detient et que l'app n'a jamais saisi.
+#
+# LE GRAIN est app_affaire_id -- l'identite posee le 20/08, UNE serie pour les
+# trois types. Voir phase2/identite/magasin_affaire_app.py.
+#
+# ON COMMENCE PAR QUATRE CHAMPS, ceux que le ledger porte deja en colonnes. Les
+# neuf autres de la modale (prix net vendeur, honoraires, commission, jours de
+# validite et de retractation, acquereur, notaire, mandat) vivent dans la vue ou
+# dans le paquet brut : ils s'ajouteront ici quand l'ecran saura les ecrire.
+CHAMPS_APP_AFFAIRE: tuple[str, ...] = ("montant", "date", "date_acte", "sequestre")
+
 VIDE_NE_GAGNE_PAS: bool = True
 
 
@@ -123,3 +150,8 @@ def contrat_vide() -> bool:
 def contrat_mandat_vide() -> bool:
     """Le pendant, pour les mandats. Voir CHAMPS_APP_MANDAT."""
     return not CHAMPS_APP_MANDAT
+
+
+def contrat_affaire_vide() -> bool:
+    """Le pendant, pour les affaires. Voir CHAMPS_APP_AFFAIRE."""
+    return not CHAMPS_APP_AFFAIRE
