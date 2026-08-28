@@ -9843,15 +9843,67 @@ async function fetchHektorClosureContext(job, annonceId) {
   if (json) {
     html = String(json.html || (json.data && (json.data.html || json.data.defaultTemplate || json.data.template)) || html);
   }
-  return { html, options: parseHektorMandatSelectOptions(html) };
+  return { html, options: parseHektorMandatSelectOptions(html), propose: parseHektorMandatCache(html) };
 }
 
-function resolveHektorClosureMandat(options, payload) {
-  const wantId = String(payload.id_mandat || payload.idMandat || payload.mandat_source_id || "").trim();
+// C.13 (28/08/2026) -- HEKTOR PROPOSE LE MANDAT DE DEUX FACONS, PAS D'UNE.
+//
+// Releve EN LECTURE SEULE le 28/08 sur l'annonce 62933 (un seul mandat) :
+//
+//     <select id_mandat>   >>> ABSENT
+//     <input type="hidden" id="selectedMandatId" value="646" data="protexaMandat">
+//
+// La valeur 646 est exactement l'identifiant du mandat dans notre miroir, et `data`
+// porte la famille de registre -- ce que le sous-lot A0 avait decode dans le
+// JavaScript de Hektor : `mandatFrom = '#selectedMandatId'` PAR DEFAUT, la liste ne
+// prime que si elle existe.
+//
+// MESURE : sur les annonces actives qui portent un mandat, 7 668 sur 7 760 -- 98,8 % --
+// n'en ont qu'UN SEUL. Le worker ne lisait que les <option> : il refusait donc de
+// cloturer sur 98,8 % du parc. Le cadrage du 30/07 ne l'avait pas vu parce qu'il a ete
+// releve sur l'annonce 24113, l'une des rares a DEUX mandats.
+//
+// ⚠ CECI NE CONTREDIT PAS LA REGLE DU 25/08 (« ne jamais viser un mandat que Hektor
+// n'offre PAS »). Ce champ cache EST l'offre de Hektor, dans sa seconde forme. On lit
+// son formulaire, on ne s'en passe pas.
+function parseHektorMandatCache(html) {
+  const source = String(html || "");
+  const champ = source.match(/<input\s[^>]*id=["\']selectedMandatId["\'][^>]*>/i);
+  if (!champ) return null;
+  const value = String(htmlAttrValue(champ[0], "value") || "").trim();
+  if (!value) return null;
+  return {
+    value,
+    dataType: String(htmlAttrValue(champ[0], "data") || "").trim(),
+    selected: true,
+    text: "",
+    numero: "",
+    source: "input_cache",
+  };
+}
+
+function resolveHektorClosureMandat(options, payload, propose) {
+  // C.13 28/08 : la fenetre « changer le statut » envoie le champ sous le nom
+  // `selected_mandat`. Il n'etait lu NULLE PART ici -- meme genre de decalage de nom
+  // que celui qui a fait creer une annonce dans la mauvaise agence le 27/08.
+  const wantId = String(
+    payload.id_mandat || payload.idMandat || payload.mandat_source_id
+    || payload.selected_mandat || payload.selectedMandat || "",
+  ).trim();
   const wantNumero = String(payload.numero_mandat || payload.numeroMandat || "").trim().replace(/^0+/, "");
   if (wantId) {
     const byId = options.find((o) => o.value === wantId);
-    return byId || { value: wantId, dataType: String(payload.type_mandat || payload.typeMandat || "").trim(), selected: false, text: "", numero: wantNumero };
+    if (byId) return byId;
+    // C.13 28/08 -- L'ASYMETRIE EST REFERMEE. Cette branche FABRIQUAIT une cible que
+    // Hektor n'avait jamais proposee, alors que la branche voisine, elle, refusait.
+    // Or la cloture est IRREVERSIBLE. On n'accepte desormais un identifiant fourni que
+    // si Hektor le propose -- par sa liste, ou par son champ cache.
+    if (propose && propose.value === wantId) return { ...propose, numero: wantNumero || propose.numero };
+    throw new Error(
+      `Le mandat ${wantId} a ete demande, mais Hektor ne le propose pas ` +
+      `(liste: ${options.map((o) => `${o.numero || "?"}=${o.value}`).join(", ") || "aucune"}` +
+      `${propose ? `, champ cache: ${propose.value}` : ", aucun champ cache"}). ` +
+      `Cloture IRREVERSIBLE : on refuse.`);
   }
   if (wantNumero) {
     const byNum = options.find((o) => o.numero && o.numero === wantNumero);
@@ -9885,9 +9937,11 @@ function resolveHektorClosureMandat(options, payload) {
 //
 // ON N'INTERROGE QUE PAR LE COUPLE (annonce, numero) : 342 identifiants de mandat sont
 // partages entre annonces differentes -- Hektor reutilise les numeros bas.
-async function resoudreMandatAClore(job, annonceId, options, payload) {
+async function resoudreMandatAClore(job, annonceId, ctx, payload) {
+  const options = (ctx && ctx.options) || [];
+  const propose = (ctx && ctx.propose) || null;
   try {
-    return resolveHektorClosureMandat(options, payload);
+    return resolveHektorClosureMandat(options, payload, propose);
   } catch (err) {
     const brut = String(payload.numero_mandat || payload.numeroMandat || "").trim();
     const numero = brut.replace(/^0+/, "");
@@ -9908,6 +9962,33 @@ async function resoudreMandatAClore(job, annonceId, options, payload) {
     if (!Array.isArray(rows) || rows.length !== 1 || !rows[0] || !rows[0].mandat_source_id) throw err;
 
     const id = String(rows[0].mandat_source_id);
+
+    // C.13 (28/08) -- LE CAS DU MANDAT UNIQUE : 98,8 % DU PARC.
+    //
+    // Hektor ne rend alors AUCUNE <option> ; il propose le mandat par son champ cache
+    // selectedMandatId. On accepte cette proposition, mais SEULEMENT si elle concorde
+    // avec ce que le registre dit du couple (annonce, numero de la fiche).
+    //
+    // POURQUOI CE CROISEMENT. Le 28/07, une fiche portait encore l'ANCIEN mandat alors
+    // qu'un neuf venait d'etre cree (incident VA6482). Sans ce controle, on cloturerait
+    // le mandat courant en croyant clore celui de la fiche -- et la cloture est
+    // IRREVERSIBLE cote Hektor. Divergence => on refuse, en nommant les deux valeurs.
+    if (!options.length && propose && propose.value) {
+      if (propose.value !== id) {
+        throw new Error(
+          `Cible ambigue : Hektor propose le mandat ${propose.value}, le registre donne ` +
+          `${id} pour le numero ${numero} de cette annonce. Cloture IRREVERSIBLE : on refuse.`);
+      }
+      await logJob(job.id, "cloture_mandat", "done",
+        "Mandat unique : cible lue dans le champ cache de Hektor, confirmee par le registre", {
+          hektor_annonce_id: annonceId,
+          numero_mandat: brut,
+          mandat_source_id: id,
+          data_type: propose.dataType || null,
+        });
+      return { ...propose, numero };
+    }
+
     const option = options.find((o) => o.value === id);
     if (!option) {
       throw new Error(
@@ -9983,7 +10064,7 @@ function hektorSaleWantsMandatClosure(payload) {
 // (l'annonce reste au statut Vendu pose par la transaction createVente).
 async function closeHektorMandatAfterSale(job, annonceId, payload) {
   const ctx = await fetchHektorClosureContext(job, annonceId);
-  const targetMandat = await resoudreMandatAClore(job, annonceId, ctx.options, payload);
+  const targetMandat = await resoudreMandatAClore(job, annonceId, ctx, payload);
   return submitHektorMandatClosure(job, annonceId, {
     ...payload,
     close_etat: "choiceVendu",
@@ -9993,7 +10074,7 @@ async function closeHektorMandatAfterSale(job, annonceId, payload) {
 
 async function submitHektorClosedStatus(job, annonceId, config, payload) {
   const ctx = await fetchHektorClosureContext(job, annonceId);
-  const targetMandat = await resoudreMandatAClore(job, annonceId, ctx.options, payload);
+  const targetMandat = await resoudreMandatAClore(job, annonceId, ctx, payload);
   const closure = await submitHektorMandatClosure(job, annonceId, payload, targetMandat);
   // Flip statut annonce : Mandat clos (6) + diffusion coupee (config.diffusable="0"),
   // sans archivage -> equivaut au bouton Hektor "Enregistrer & laisser actif".
@@ -10041,7 +10122,29 @@ async function handleChangeHektorAnnonceStatus(job) {
       // Chemin "Vendu" : sur demande explicite du front, on clot aussi le mandat courant
       // (motif vendu). L'annonce reste au statut Vendu pose par la transaction.
       if (target === "sold" && hektorSaleWantsMandatClosure(payload)) {
-        mandatClosureResult = await closeHektorMandatAfterSale(job, annonceId, payload);
+        // C.13 (28/08/2026) -- LA VENTE EST DEJA ENREGISTREE CHEZ HEKTOR.
+        //
+        // Cet appel etait dans un try...finally SANS catch : une cloture refusee faisait
+        // tomber tout le job APRES que la vente etait ecrite chez Hektor. Resultat : la
+        // vente existait chez eux, le job etait en erreur, et notre base n'en savait rien.
+        // C'est exactement le partage de cerveau que le projet cherche a eviter.
+        //
+        // Desormais la vente RESTE ACQUISE et l'echec de cloture devient visible et
+        // rejouable -- principe « une saisie ne se perd jamais » (C.1', 24/08). Le mandat
+        // reste ouvert : c'est un manque, pas une corruption, et il se rattrape a la main
+        // ou par un second job. L'inverse -- perdre la vente -- ne se rattrape pas.
+        try {
+          mandatClosureResult = await closeHektorMandatAfterSale(job, annonceId, payload);
+        } catch (erreurCloture) {
+          const message = erreurCloture && erreurCloture.message ? erreurCloture.message : String(erreurCloture);
+          mandatClosureResult = { status: "error", error: message };
+          await logJob(job.id, "hektor_mandat_cloture", "error",
+            "VENTE ENREGISTREE, MANDAT NON CLOTURE -- a clore a la main dans Hektor", {
+              hektor_annonce_id: annonceId,
+              numero_mandat: payload.numero_mandat || null,
+              error: message,
+            });
+        }
       }
     } else if (target === "closed") {
       transactionResult = await submitHektorClosedStatus(job, annonceId, config, payload);
