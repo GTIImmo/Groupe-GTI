@@ -9569,11 +9569,36 @@ function acquireWorkerLock() {
 //
 // Le doublon du 25/08 sur l'annonce 62774 reste donc possible. C'est assume : deux
 // offres du meme acquereur se corrigent a la main, une offre ecrasee ne se retrouve pas.
+// ⛔ 28/08 AU SOIR -- TOUT EST SUSPENDU, APRES UNE LECTURE QUI M'A DONNE TORT.
+//
+// Toute cette mecanique reposait sur une hypothese : passer l'identifiant fait
+// charger la transaction existante. LECTURE SEULE FAITE SUR HEKTOR, AVEC TEMOIN :
+//
+//     popin offre     avec id_offre=33026     208 506 caracteres
+//     popin offre     SANS identifiant        208 506 caracteres   IDENTIQUES
+//     popin compromis avec idCompromis=50043   85 915 caracteres
+//     popin compromis SANS identifiant         85 915 caracteres   IDENTIQUES
+//
+// Hektor IGNORE l'identifiant a l'ouverture -- octet pour octet. Le formulaire rendu
+// est donc TOUJOURS VIERGE, et c'est lui qui sert de repli :
+//     sequestre      <- htmlInputValue(initHtml, "sequestre")      || "0"
+//     prixNetVendeur <- htmlInputValue(initHtml, "prixNetVendeur") || ""
+//
+// Donc si l'enregistrement, lui, honorait l'identifiant, MODIFIER EFFACERAIT ces
+// champs. Je ne peux pas le verifier sans ecrire pour de vrai, et aucun de ces
+// chemins n'a jamais tourne : la prudence commande de ne rien reprendre.
+//
+// CE QUI RESTE ACQUIS, et qui servira : le formulaire d'offre porte bien un champ
+// `idOffre` (releve dans la capture), donc le mecanisme existe -- c'est la maniere
+// de faire CHARGER l'existant qui reste a trouver. Probablement un autre nom de
+// parametre, ou un appel distinct du stepper (le compromis est un formulaire par
+// etapes, `compromisStepper`, dont les champs arrivent par gabarits Mustache).
+//
+// POUR REPRENDRE : capture dans Console/exports/transaction_actions_* (et son temoin).
 const TRANSACTIONS_REPRISES = {
-  // genre -> etats qui INTERDISENT la reprise ; null = on ne reprend jamais
   offre: null,
-  compromis: new Set(["cancelled", "annule", "annulee"]),
-  vente: new Set(),
+  compromis: null,
+  vente: null,
 };
 
 function idTransactionAReprendre(payload, genre) {
