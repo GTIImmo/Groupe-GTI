@@ -38,17 +38,49 @@ $Entete = @(
     "script       : $ScriptPath",
     ""
 )
-Set-Content -Path $LogPath -Value $Entete -Encoding utf8
+# L'ENCODAGE DOIT ETRE CELUI DE LA REDIRECTION. `*>>` ecrit en UTF-16 sous Windows
+# PowerShell : un en-tete en UTF-8 donnait un journal a deux encodages depuis le
+# 27/08 -- lisible de justesse, mais bancal. On aligne les trois ecritures.
+Set-Content -Path $LogPath -Value $Entete -Encoding unicode
 
+# C.17-bis (28/08/2026) -- LE VEILLEUR NE DOIT PAS MOURIR EN PARLANT.
+#
+# CE QUI S'EST PASSE. Passages de 05:48 et 07:48 le 28/08 : journal de 164 octets --
+# l'en-tete seul, sans le pied -- et code de sortie 1. Relance a la main, le moniteur
+# rend pourtant son rapport complet et juste.
+#
+# LA CAUSE. Deux choses inoffensives separement, mortelles ensemble :
+#   1. $ErrorActionPreference = "Stop" en tete de ce fichier (d'origine) ;
+#   2. la redirection `*>>`, qui recopie AUSSI la sortie d'erreur de Python.
+# Sous Windows PowerShell, recopier la sortie d'erreur d'un programme externe emballe
+# CHAQUE LIGNE dans une erreur ; avec "Stop", la premiere devient terminante. Le script
+# meurt donc a l'instant ou le moniteur signale quelque chose -- AVANT d'avoir ecrit la
+# ligne qui l'explique, et avant le pied de page.
+#
+# L'IRONIE, ET LE DANGER. Tant que tout va bien le moniteur ne dit rien, donc rien ne le
+# tue et son rapport s'ecrit (01:49 et 03:49 : 55 Ko chacun). Il ne se taisait QUE quand
+# il avait quelque chose a dire. Une sentinelle qui ne sait rapporter que le beau temps
+# ne sert a rien -- c'est deja la lecon de C.17.
+#
+# LE REMEDE. On leve la consigne "arrete tout" AUTOUR DE CE SEUL GESTE, et on la remet
+# aussitot. Tout le reste du script garde sa prudence.
+$PrudenceHabituelle = $ErrorActionPreference
+$ExitCode = $null
 Push-Location $ProjectRoot
 try {
+    $ErrorActionPreference = "Continue"
     & $Python $ScriptPath --json *>> $LogPath
     $ExitCode = $LASTEXITCODE
 } finally {
+    $ErrorActionPreference = $PrudenceHabituelle
     Pop-Location
 }
 
-Add-Content -Path $LogPath -Encoding utf8 -Value @(
+# Python n'a pas rendu de code : il n'a pas demarre. On ne rend SURTOUT pas 0 --
+# un echec silencieux serait pire que l'echec bruyant qu'on vient de corriger.
+if ($null -eq $ExitCode) { $ExitCode = 1 }
+
+Add-Content -Path $LogPath -Encoding unicode -Value @(
     "",
     "=== fin $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') -- code de sortie $ExitCode ==="
 )
