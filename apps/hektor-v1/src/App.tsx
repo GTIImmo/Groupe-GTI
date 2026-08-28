@@ -157,6 +157,9 @@ import {
   hasOffreAchatEnCours,
   hasOffreAchatRefusee,
   hasCompromisEnCours,
+  loadAffairesForDossier,
+  editAffaireOptimistic,
+  type AffaireLedgerRow,
   setBienStatut,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
@@ -11844,6 +11847,10 @@ export default function App() {
   const [statusChangeValidityDays, setStatusChangeValidityDays] = useState('10')
   const [statusChangeRetractionDays, setStatusChangeRetractionDays] = useState('10')
   const [statusChangeSelectedMandat, setStatusChangeSelectedMandat] = useState('')
+  // C.19 : les affaires du bien, pour CORRIGER une transaction existante sans
+  // rien envoyer a Hektor. Chargees a l'ouverture de la modale.
+  const [statusChangeAffaires, setStatusChangeAffaires] = useState<AffaireLedgerRow[]>([])
+  const [statusChangeCorrectionPending, setStatusChangeCorrectionPending] = useState(false)
   const [statusChangeBuyerContactId, setStatusChangeBuyerContactId] = useState('')
   const [statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId] = useState('')
   const [statusChangeBuyerFees, setStatusChangeBuyerFees] = useState('')
@@ -14638,6 +14645,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             ? 'closed'
             : 'offer'
     const price = dossier.prix == null ? '' : String(dossier.prix)
+    // C.19 : on charge les transactions du bien pour pouvoir les corriger.
+    // Best-effort : si la lecture echoue, la modale garde son comportement d'avant.
+    setStatusChangeAffaires([])
+    if (dossier.app_dossier_id != null) {
+      loadAffairesForDossier(Number(dossier.app_dossier_id))
+        .then(setStatusChangeAffaires)
+        .catch(() => setStatusChangeAffaires([]))
+    }
     setStatusChangeTarget(dossier)
     setStatusChangeStatus(nextStatus)
     setStatusChangeAmount(price)
@@ -14730,6 +14745,86 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de créer la demande d’affectation négociateur.')
     } finally {
       setNegotiatorAssignPending(false)
+    }
+  }
+
+  // ─── C.19 — CORRIGER UNE TRANSACTION SANS RIEN ENVOYER À HEKTOR ───
+  //
+  // Demande de Frédéric (28/08) : « tous les champs de la modale doivent pouvoir se
+  // modifier dans l'app puis le serveur SANS envoyer à Hektor — sauf refuser/accepter
+  // pour l'offre, annuler pour le compromis, supprimer pour la vente ».
+  //
+  // La valeur se range chez nous ; le run de nuit la repose après avoir tout
+  // reconstruit depuis le miroir. Hektor n'en sait rien, et c'est voulu.
+  const AFFAIRE_PAR_STATUT: Partial<Record<HektorAnnonceStatusTarget, string>> = {
+    offer: 'offre', compromise: 'compromis', sold: 'vente',
+  }
+
+  /** La transaction du bien qui correspond au statut choisi, si elle existe. */
+  function affaireCourantePourStatut(): AffaireLedgerRow | null {
+    const genre = AFFAIRE_PAR_STATUT[statusChangeStatus]
+    if (!genre || !statusChangeTarget) return null
+    const cle = genre === 'offre' ? statusChangeTarget.offre_id
+      : genre === 'compromis' ? statusChangeTarget.compromis_id
+      : statusChangeTarget.vente_id
+    if (cle == null) return null
+    return statusChangeAffaires.find(
+      (a) => a.kind === genre && String(a.hektor_affaire_id ?? '') === String(cle),
+    ) ?? null
+  }
+
+  // La modale pre-remplit avec le prix du bien et la date DU JOUR : c'est juste
+  // pour CREER une transaction. Pour en CORRIGER une, il faut au contraire montrer
+  // ses valeurs REELLES -- sinon un clic sur « Corriger » ecraserait la vraie date
+  // par celle d'aujourd'hui, en silence. On repose donc les valeurs des que les
+  // affaires arrivent, et a chaque changement de statut choisi.
+  useEffect(() => {
+    const affaire = affaireCourantePourStatut()
+    if (!affaire) return
+    const texte = (v: unknown) => (v == null ? '' : String(v))
+    const date = texte(affaire.date).slice(0, 10)
+    const dateActe = texte(affaire.date_acte).slice(0, 10)
+    const montant = texte(affaire.montant)
+    if (montant) {
+      if (statusChangeStatus === 'sold') setStatusChangeSalePrice(montant)
+      else setStatusChangeAmount(montant)
+    }
+    if (date && date !== '0000-00-00') setStatusChangeDate(date)
+    if (dateActe && dateActe !== '0000-00-00') setStatusChangeSignatureDate(dateActe)
+    const sequestre = texte(affaire.sequestre)
+    if (sequestre && sequestre !== '0' && sequestre !== '0.00') setStatusChangeSequestration(sequestre)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus])
+
+  async function handleCorrigerAffaire() {
+    const affaire = affaireCourantePourStatut()
+    if (!affaire) return
+    setStatusChangeCorrectionPending(true)
+    setErrorMessage(null)
+    try {
+      // Le montant ne désigne pas la même chose selon le type : pour une vente
+      // c'est le prix de vente, pour une offre le montant proposé.
+      const montant = statusChangeStatus === 'sold'
+        ? (statusChangeSalePrice.trim() || statusChangeAmount.trim())
+        : statusChangeAmount.trim()
+      const retour = await editAffaireOptimistic(affaire.app_affaire_id, {
+        montant,
+        date: statusChangeDate.trim(),
+        date_acte: statusChangeSignatureDate.trim(),
+        sequestre: statusChangeSequestration.trim(),
+      })
+      setNoticeMessage(
+        `Correction enregistrée dans tes données (${retour.champs_retenus} champ(s)). Hektor n'en est pas informé.`,
+      )
+      if (statusChangeTarget?.app_dossier_id != null) {
+        loadAffairesForDossier(Number(statusChangeTarget.app_dossier_id))
+          .then(setStatusChangeAffaires)
+          .catch(() => undefined)
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible d enregistrer la correction')
+    } finally {
+      setStatusChangeCorrectionPending(false)
     }
   }
 
@@ -17380,9 +17475,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 ) : (
                   <p className="status-change-note">Le statut Actif est envoyé directement à Hektor puis la fiche est resynchronisée.</p>
                 )}
+                {affaireCourantePourStatut() ? (
+                  <p className="status-change-note">
+                    Ce bien porte déjà {statusChangeStatus === 'offer' ? 'une offre' : statusChangeStatus === 'compromise' ? 'un compromis' : 'une vente'}.
+                    Tu peux <strong>corriger ses montants et ses dates dans tes données</strong> sans rien envoyer à Hektor —
+                    la correction survit au run de nuit. Un champ laissé vide rend la main à Hektor.
+                  </p>
+                ) : null}
                 <div className="modal-actions">
-                  <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Annuler</button>
-                  <button className="ghost-button button-primary" type="submit" disabled={statusChangePending}>
+                  <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending || statusChangeCorrectionPending}>Annuler</button>
+                  {affaireCourantePourStatut() ? (
+                    <button
+                      className="ghost-button button-subtle"
+                      type="button"
+                      onClick={handleCorrigerAffaire}
+                      disabled={statusChangePending || statusChangeCorrectionPending}
+                    >
+                      {statusChangeCorrectionPending ? 'Enregistrement...' : 'Corriger sans envoyer à Hektor'}
+                    </button>
+                  ) : null}
+                  <button className="ghost-button button-primary" type="submit" disabled={statusChangePending || statusChangeCorrectionPending}>
                     {statusChangePending ? 'Envoi...' : `Envoyer vers ${hektorStatusTargetLabel(statusChangeStatus)}`}
                   </button>
                 </div>
