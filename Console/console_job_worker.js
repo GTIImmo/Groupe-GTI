@@ -10053,7 +10053,71 @@ async function submitHektorMandatClosure(job, annonceId, payload, targetMandat) 
   return { id_mandat: targetMandat.value, mandat_numero: targetMandat.numero || null, etat: motif.etat, raison: motif.raison };
 }
 
+// C.13 (28/08/2026) -- LA CLOTURE DE MANDAT NE PART PLUS CHEZ HEKTOR.
+//
+// LE RAISONNEMENT DE FREDERIC, ET IL EST VERIFIE : « si Hektor est informe du
+// changement de statut, cela suffit ». Statut 6 coupe sa diffusion, statut 5
+// enregistre sa vente -- la cloture du mandat n'ajoute RIEN de son cote, c'est une
+// ecriture dans SON registre a lui. Le notre devient le registre qui fait foi.
+//
+// CE QUE CA RETIRE : six appels HTTP, une operation IRREVERSIBLE chez un tiers, la
+// dependance a un formulaire web qui peut changer sans preavis, et le 500 sur la
+// famille PROTEXA dont la cause n'a jamais ete elucidee.
+//
+// CE QUE CA COUTE, ET C'EST ASSUME : tant que Hektor vit, son registre dira le
+// mandat ouvert quand le notre le dira clos.
+//
+// Le drapeau garde la porte ouverte : mettre CONSOLE_HEKTOR_CLOTURE_MANDAT=true
+// reactive l'ecriture chez Hektor, au cas par cas. Le code du 28/08 reste en place
+// et eprouve (16 cas sur 16) -- il n'est simplement plus appele.
+const CLOTURE_MANDAT_CHEZ_HEKTOR =
+  String(process.env.CONSOLE_HEKTOR_CLOTURE_MANDAT || "false").toLowerCase() === "true";
+
+// LA CLOTURE, CHEZ NOUS. On pose la date sur la ligne de registre du couple
+// (annonce, numero de mandat) -- la seule cle unique, mesuree 24 939 sur 24 939.
+// Le magasin (C.13-a) la relevera cette nuit et le contrat (C.13-b) la reposera
+// apres chaque reconstruction de la vue : elle ne se perdra plus.
+//
+// Best-effort : une cloture locale ratee ne doit JAMAIS faire tomber un changement
+// de statut deja enregistre chez Hektor. C'est la lecon du 28/08 au matin.
+async function cloturerMandatLocalement(job, annonceId, payload, dateCloture) {
+  const numero = String(payload.numero_mandat || payload.numeroMandat || "").trim();
+  if (!numero) {
+    await logJob(job.id, "cloture_mandat_locale", "error",
+      "Cloture locale impossible : aucun numero de mandat dans la demande", {
+        hektor_annonce_id: annonceId,
+      });
+    return { status: "skipped", reason: "numero_mandat_absent" };
+  }
+  const date = String(dateCloture || "").trim() || new Date().toISOString().slice(0, 10);
+  try {
+    await supabaseRequest(
+      `app_mandat_register_current?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`
+      + `&numero_mandat=eq.${encodeURIComponent(numero)}`,
+      { method: "PATCH", body: { mandat_date_cloture: date },
+        headers: { Prefer: "return=minimal" } });
+    await logJob(job.id, "cloture_mandat_locale", "done",
+      "Mandat cloture DANS NOS DONNEES (Hektor n'en est pas informe, c'est voulu)", {
+        hektor_annonce_id: annonceId,
+        numero_mandat: numero,
+        date_cloture: date,
+      });
+    return { status: "done", numero_mandat: numero, date_cloture: date };
+  } catch (erreur) {
+    const message = erreur && erreur.message ? erreur.message : String(erreur);
+    await logJob(job.id, "cloture_mandat_locale", "error",
+      "STATUT CHANGE, MAIS CLOTURE LOCALE NON ECRITE -- a reprendre", {
+        hektor_annonce_id: annonceId,
+        numero_mandat: numero,
+        error: message,
+      });
+    return { status: "error", error: message };
+  }
+}
+
 function hektorSaleWantsMandatClosure(payload) {
+  // C.13 28/08 : le drapeau commande. Sans lui, on n'ecrit plus chez Hektor.
+  if (!CLOTURE_MANDAT_CHEZ_HEKTOR) return false;
   return payload.close_mandat_on_sale === true
     || payload.close_mandat_on_sale === "1"
     || payload.close_mandat === true
@@ -10073,16 +10137,40 @@ async function closeHektorMandatAfterSale(job, annonceId, payload) {
 }
 
 async function submitHektorClosedStatus(job, annonceId, config, payload) {
-  const ctx = await fetchHektorClosureContext(job, annonceId);
-  const targetMandat = await resoudreMandatAClore(job, annonceId, ctx, payload);
-  const closure = await submitHektorMandatClosure(job, annonceId, payload, targetMandat);
-  // Flip statut annonce : Mandat clos (6) + diffusion coupee (config.diffusable="0"),
-  // sans archivage -> equivaut au bouton Hektor "Enregistrer & laisser actif".
+  // C.13 (28/08) -- L'ORDRE EST INVERSE, ET C'EST LE CORRECTIF.
+  //
+  // AVANT : cloture chez Hektor PUIS changement de statut. La cloture echouant sur
+  // 98,8 % du parc, LE STATUT NE CHANGEAIT PAS NON PLUS -- constate le 28/08 sur
+  // l'annonce 62966 : « Mandat clos » demande, l'annonce est restee « Actif ».
+  // Un geste qui marche etait pris en otage par un geste qui echoue.
+  //
+  // MAINTENANT : le statut d'abord, chez Hektor -- statut 6 + diffusion coupee, ce
+  // qui suffit a obtenir l'effet metier de son cote. Puis la cloture CHEZ NOUS.
   await setHektorAnnonceStatusValue(job, annonceId, config, "closed_form");
-  return {
-    closure,
-    mandat_options: ctx.options.map((o) => ({ value: o.value, numero: o.numero, selected: o.selected })),
-  };
+
+  const locale = await cloturerMandatLocalement(
+    job, annonceId, payload,
+    payload.close_date || payload.date_cloture || payload.transaction_date);
+
+  // La porte reste ouverte : avec CONSOLE_HEKTOR_CLOTURE_MANDAT=true, on informe
+  // aussi Hektor. Best-effort -- le statut est deja pose, rien ne doit le defaire.
+  let closure = { status: "skipped", reason: "cloture_locale_uniquement" };
+  if (CLOTURE_MANDAT_CHEZ_HEKTOR) {
+    try {
+      const ctx = await fetchHektorClosureContext(job, annonceId);
+      const targetMandat = await resoudreMandatAClore(job, annonceId, ctx, payload);
+      closure = await submitHektorMandatClosure(job, annonceId, payload, targetMandat);
+    } catch (erreur) {
+      const message = erreur && erreur.message ? erreur.message : String(erreur);
+      closure = { status: "error", error: message };
+      await logJob(job.id, "hektor_mandat_cloture", "error",
+        "STATUT CHANGE ET MANDAT CLOS CHEZ NOUS -- Hektor n'a pas pu etre informe", {
+          hektor_annonce_id: annonceId,
+          error: message,
+        });
+    }
+  }
+  return { closure, cloture_locale: locale };
 }
 
 async function handleChangeHektorAnnonceStatus(job) {
@@ -10121,6 +10209,12 @@ async function handleChangeHektorAnnonceStatus(job) {
       transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
       // Chemin "Vendu" : sur demande explicite du front, on clot aussi le mandat courant
       // (motif vendu). L'annonce reste au statut Vendu pose par la transaction.
+      // C.13 (28/08) : la vente est enregistree chez Hektor, on clot le mandat CHEZ NOUS.
+      if (target === "sold") {
+        mandatClosureResult = await cloturerMandatLocalement(
+          job, annonceId, payload,
+          payload.transaction_date || payload.sale_date || payload.date_vente);
+      }
       if (target === "sold" && hektorSaleWantsMandatClosure(payload)) {
         // C.13 (28/08/2026) -- LA VENTE EST DEJA ENREGISTREE CHEZ HEKTOR.
         //
