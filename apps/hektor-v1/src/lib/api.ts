@@ -1403,6 +1403,83 @@ export function hasCompromisEnCours(item: { compromis_id?: string | number | nul
   return item.compromis_id != null && (hasCompromisState ? !isCompromisCancelledState(item.compromis_state) : true)
 }
 
+// ─── C.19 — LES AFFAIRES D'UN BIEN, ET LEURS CHAMPS QUI NOUS APPARTIENNENT ───
+//
+// La fiche ne montre qu'UNE transaction par bien : celle que porte
+// app_dossier_current (offre_id / compromis_id / vente_id). C'est la bonne — la
+// plus récente, vérifié 909 fois sur 934 — mais les précédentes sont invisibles :
+// 1 086 offres et environ 628 compromis dans tout le parc.
+//
+// Le registre d'affaires, lui, les détient TOUTES : 29 293 lignes, soit exactement
+// 11 115 offres + 10 573 compromis + 7 605 ventes, chacune avec son acquéreur.
+// Il est déjà lisible par l'app (policy app_affaire_ledger_select_active_users).
+//
+// LES CORRECTIONS NE PARTENT JAMAIS CHEZ HEKTOR. Elles se rangent chez nous, et le
+// run de nuit les repose après avoir tout reconstruit. Hektor n'apprend que les
+// changements d'état — refuser/accepter une offre, annuler un compromis, supprimer
+// une vente — qui sont un chemin séparé.
+
+export type AffaireLedgerRow = {
+  app_affaire_id: number
+  app_dossier_id: number | null
+  hektor_annonce_id: string | number | null
+  kind: 'offre' | 'compromis' | 'vente' | string
+  hektor_affaire_id: string | number | null
+  numero_mandat: string | null
+  hektor_acquereur_id: string | number | null
+  acquereur_json: string | null
+  state: string | null
+  montant: string | number | null
+  date: string | null
+  date_acte: string | null
+  sequestre: string | number | null
+  present_in_hektor: boolean | null
+}
+
+const affaireLedgerSelect =
+  'app_affaire_id,app_dossier_id,hektor_annonce_id,kind,hektor_affaire_id,numero_mandat,' +
+  'hektor_acquereur_id,acquereur_json,state,montant,date,date_acte,sequestre,present_in_hektor'
+
+/** Toutes les affaires d'un bien — offres, compromis, ventes — la plus récente d'abord. */
+export async function loadAffairesForDossier(appDossierId: number): Promise<AffaireLedgerRow[]> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase
+    .from('app_affaire_ledger')
+    .select(affaireLedgerSelect)
+    .eq('app_dossier_id', appDossierId)
+    .order('date', { ascending: false })
+    .order('app_affaire_id', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as unknown as AffaireLedgerRow[]
+}
+
+/** Les champs qu'une correction peut porter. Miroir de CHAMPS_APP_AFFAIRE côté serveur. */
+export type AffaireEditableFields = Partial<{
+  montant: string
+  date: string
+  date_acte: string
+  sequestre: string
+}>
+
+/**
+ * Corrige une transaction CHEZ NOUS. Hektor n'en est pas informé, et c'est voulu.
+ * Une valeur vidée rend la main à Hektor (règle « l'app gagne seulement quand elle
+ * a quelque chose à dire »).
+ */
+export async function editAffaireOptimistic(
+  appAffaireId: number,
+  fields: AffaireEditableFields,
+): Promise<{ ok: boolean; champs_retenus: number; champs_ignores: number; hektor_informe: boolean }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_edit_affaire_optimistic', {
+    target_affaire_id: appAffaireId,
+    edit_fields: fields,
+  })
+  if (error) throw new Error(error.message)
+  return data as { ok: boolean; champs_retenus: number; champs_ignores: number; hektor_informe: boolean }
+}
+
 function hasCompromisAnnule(item: { compromis_id?: string | number | null; compromis_state?: string | null }) {
   const hasCompromisState = Object.prototype.hasOwnProperty.call(item, 'compromis_state')
   if (!hasCompromisState) return false
