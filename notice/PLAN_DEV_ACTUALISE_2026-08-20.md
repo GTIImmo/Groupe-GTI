@@ -20,6 +20,7 @@ aucun des deux n'a été cherché : ils sont sortis d'une vérification.*
 | ✅ **C.13-a et C.13-b** | le mandat obtient son domicile, et le contrat d'autorité s'allume — **premier champ jamais inscrit** |
 | 🔴 **trouvé** | une annonce créée pour un négociateur multi-agences partait dans **la mauvaise agence** — 3 fois depuis juin, corrigé |
 | 🔴 **mesuré** | **23 715 mandats devraient porter une date de clôture. 94 la portent.** |
+| 🏛 **ouvert** | **le registre des mandats n'est pas un registre, c'est une vue des annonces** — 1 105 mandats invisibles, dont 642 *parce qu'ils sont clos*. Nouveau chantier **A.3-technique**, 3 à 5 j, **à faire tant que Hektor vit** |
 
 #### ⚠ LE CHIFFRE QUI CHANGE LA LECTURE DE C.13
 
@@ -428,6 +429,7 @@ retour.** Deux précisions à ne jamais perdre de vue :
 | ⏳ **A.1** | **Portails** — engager la sortie en nom propre, et la reprise des ~350 annonces en ligne *(ex-29)* | délai non maîtrisé. La partie commerciale peut démarrer tout de suite ; le flux de diffusion se construit en parallèle |
 | ⏳ **A.2** | **Signature** — ton propre contrat *(ex-30, Yousign)* | ImmoSign appartient à l'abonnement Hektor : le jeton est lu dans une iframe. À la coupure, la signature s'arrête |
 | ⏳ **A.3** | **Registre de mandats en propre** *(ex-31)* | obligation légale ; aujourd'hui adossé à Hektor |
+| | 🏛 **SA MOITIÉ TECHNIQUE ENTRE DANS LE PLAN DE DEV — 28/08.** Le « registre » d'aujourd'hui est **une vue des annonces**, reconstruite chaque nuit et filtrée sur leur statut : **1 105 mandats n'y apparaissent pas**, dont **642 parce qu'ils sont clos**. Et il se reconstruit depuis le miroir — à la coupure il gèlerait, incapable d'accueillir un mandat neuf, alors que **181 des 182 mandats créés depuis juin viennent de l'app**. ➡ chiffrage, trois couches de numérotation et place dans l'ordre : section **A.3-TECHNIQUE** plus bas. **3 à 5 jours**, à faire **tant que Hektor vit** | |
 
 **Tant que A.1 et A.2 ne sont pas faits, on ne peut pas couper** — même si toutes les données
 étaient déjà chez toi.
@@ -801,9 +803,9 @@ dans la base, clé par le couple (annonce, mandat), sous sauvegarde critique.
 | **négociateur** | ❌ **si la donnée est chez Hektor, elle part avec lui** |
 | **collisions de numéros** | ⚠️ se corrige chez toi, mais mieux vaut savoir avant |
 
-> ⚠ **Le trou du négociateur devrait donc passer AVANT la clôture dans l'ordre du
-> plan** : c'est le seul qui ne se rattrapera plus après. *Signalé, pas encore chiffré
-> — Frédéric a demandé de ne pas le creuser le 28/08.*
+> ⚠ **Le trou du négociateur ne se rattrapera plus après la coupure** — c'est le seul
+> des trois dans ce cas. Mais **ce n'est PAS une priorité** *(décision de Frédéric,
+> 28/08)*. Signalé pour qu'il ne se perde pas, à traiter quand le reste sera fait.
 
 **Sur les numéros** : 6 803 numéros servent à plusieurs mandats, mais un registre se
 tient **par agence**. Au bon grain : 4 090 doublons s'expliquent par des agences
@@ -814,6 +816,134 @@ sert dix fois, même agence, même jour de 2016, sur dix annonces consécutives)
 
 *Réserve : je peux dire ce que contiennent les données ; dire si elles satisfont aux
 exigences de forme de la loi Hoguet relève du notaire ou du juriste.*
+
+---
+
+### 🏛 A.3-TECHNIQUE — LE REGISTRE DES MANDATS DEVIENT UN VRAI REGISTRE
+
+*Chantier ouvert le 28/08, par une question de Frédéric : « il faut créer dans l'app et
+le serveur un registre des mandats au lieu de réutiliser les données annonces ? »*
+**Oui — et c'est plus gros que la date de clôture.**
+
+#### Le constat
+
+**Ce qui s'appelle « registre des mandats » n'est pas un registre : c'est une vue des
+annonces.** Il est entièrement reconstruit chaque nuit depuis le miroir, puis **filtré sur
+le statut de l'annonce**. Ses lignes vont et viennent avec elle.
+
+Constaté en vraie grandeur le 28/08 : passer une annonce en « Clos » a **fait disparaître
+sa ligne de registre** — pas par erreur, par construction. Et à l'échelle du parc :
+
+```
+   mandats dans le miroir        24 939
+   publies au registre           23 834
+                                 ------
+   invisibles                     1 105
+        dont l'annonce est « Mandat clos »     642   <-- le mandat sort au moment ou il est clos
+        dont l'annonce est inconnue du serveur  94
+        dont l'annonce n'a plus de statut       88
+```
+
+> **Un registre qui perd ses mandats à leur clôture n'est pas un registre.**
+
+#### Pourquoi ce n'est pas optionnel
+
+Le registre se reconstruit **depuis le miroir de Hektor**. Le jour de la coupure, le miroir
+gèle : le registre gèlerait avec lui — il existerait encore, figé, mais **ne pourrait plus
+accueillir un seul mandat neuf**.
+
+Or les mandats naissent **déjà** dans l'app : depuis juin, **181 créés par l'app contre 1
+dans Hektor**. Ils transitent aujourd'hui par lui pour être enregistrés ; après la coupure,
+ce chemin n'existe plus.
+
+**Sans registre durable, on ne peut pas couper.**
+
+#### 🔑 LA PRÉCISION DE FRÉDÉRIC (28/08) — TROIS COUCHES DE NUMÉROTATION
+
+> *« Ce registre devrait se comporter un peu comme le ledger d'affaires, avec les numéros
+> de mandat historiques — numéro Hektor, numéro PROTEXA — et ensuite un nouveau système de
+> numérotation lié à un registre de mandat électronique. »*
+
+C'est le patron d'`app_affaire_ledger`, qui porte déjà `app_affaire_id` **et**
+`hektor_affaire_id`. Ici il en faut **trois**, et la raison est mesurée :
+
+```
+   numero HEKTOR    familles SIMPLE / EXCLUSIF / ACCORD
+   numero PROTEXA   libelles francais (« Mandat de vente… »)
+   numero APP       la serie a venir, liee au registre electronique
+```
+
+**Ce ne sont pas trois noms pour la même chose : ce sont deux registres réels, plus un
+troisième à naître.** Ils ne s'écrivent même pas pareil — une clôture PROTEXA est
+enregistrée `2026-08-26 10:26:42`, une clôture HEKTOR `2026-08-25`.
+
+Et c'est ce qui explique les collisions de numéros mesurées le 28/08 : sur 18 136 numéros,
+**4 090 sont partagés entre agences** *(normal — un registre se tient par agence)*, **39
+s'expliquent par les deux familles**, et il reste **663 vraies collisions**. Une table qui
+ne distingue pas la famille les rendrait indémêlables.
+
+> ⚠ **À retenir le jour où on ouvrira ce chantier** : chaque ligne doit porter **son
+> numéro ET son registre d'origine**. Un numéro seul ne désigne rien — c'est déjà pour
+> cette raison que le projet interroge les mandats par le **couple** (annonce, mandat).
+
+#### Le chiffrage
+
+**Ce qui existe déjà** — le miroir porte tout, et à des taux très élevés :
+
+```
+   identifiant  100,0 %    montant   99,1 %      date de cloture   0,4 %  <-- l'app le produira
+   numero       100,0 %    mandants  98,8 %
+   date debut   100,0 %    type      95,2 %
+   date fin     100,0 %    note      94,4 %
+```
+
+**Le remplissage initial est donc entièrement faisable — mais depuis le miroir, donc tant
+que Hektor vit.**
+
+**Ce qu'il faut construire** : une table `app_mandat` sur le modèle exact d'`app_dossier`,
+~16 colonnes *(les 10 du mandat + les trois numéros + `vu_le` / `absent_depuis`)*. Le
+registre publie 66 colonnes, mais **10 seulement concernent le mandat** — le reste est
+joint à l'affichage. On ne déplace pas le registre, on lui donne son noyau.
+
+| | |
+|---|---|
+| la table + son alimentation depuis le miroir *(patron déjà servi 4 fois)* | **1 à 2 j** |
+| le remplissage initial — 24 939 lignes, une passe | *compris* |
+| la sonde « un mandat ne disparaît jamais » | quelques heures |
+| **le registre lit la table au lieu de se reconstruire** | **2 à 3 j** — le morceau délicat |
+| la numérotation propre | **déjà prévue en E.4**, elle s'y branche |
+| **TOTAL** | **3 à 5 jours** |
+
+*Même ordre de grandeur que l'identité des contacts (3 à 5 j pour 355 687 lignes et 19
+tables) — ici c'est 24 939 lignes et une seule table.*
+
+⚠ **Un point à prévoir dès le départ** : **0,9 %** des annonces portent plusieurs versions
+sous un même numéro *(les avenants)*. Marginal, mais le rattraper après serait un second
+chantier.
+
+#### Où ça se place
+
+**Même contrainte que 26bis** : le remplissage vient du miroir, donc **Hektor doit vivre
+encore**. Ces deux tâches forment la famille « impossible si on la remet à plus tard ».
+
+Et elle bloque trois choses en aval : **C.13-c** *(le rattrapage écrirait sur du sable)*,
+**A.3** *(c'en est la moitié technique)*, et **la coupure elle-même**.
+
+> ➡ **`A.3` quitte la colonne « hors code ».** Sa moitié juridique reste chez le juriste ;
+> sa moitié technique entre dans le plan de dev, **juste après 26bis**.
+
+#### L'ordre révisé — 28/08
+
+```
+   1.  C.16                  les contacts jamais rebalayes
+   2.  26bis                 le corps de l'annonce            } meme contrainte :
+   3.  A.3-technique         LE REGISTRE DURABLE              } Hektor doit vivre
+   4.  C.9                   la creation part de l'app
+   5.  C.11 · C.14-bis · 0.3 le petit reste
+   6.  le negociateur        signale, PAS prioritaire (Frederic, 28/08)
+   7.  D.1a -> D.1 -> D.2    rapatrier les fichiers
+   8.  E.1 -> E.2 -> E.3 -> E.4  +  C.13-c
+```
 
 ---
 
