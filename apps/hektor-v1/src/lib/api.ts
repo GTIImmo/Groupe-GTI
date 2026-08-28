@@ -1459,6 +1459,12 @@ export type AffaireEditableFields = Partial<{
   date: string
   date_acte: string
   sequestre: string
+  prix_net_vendeur: string
+  prix_publique: string
+  honoraires: string
+  part_admin: string
+  commission_agence: string
+  numero_mandat: string
 }>
 
 /**

@@ -61,15 +61,37 @@ VUE = "app_view_generale"
 # Seule la transaction COURANTE de l'annonce est concernee : c'est la seule que
 # la vue porte. Les absents de cette carte ne vont que dans le ledger.
 CARTE_VUE = {
-    ("offre", "montant"):        "offre_montant",
-    ("offre", "date"):           "offre_event_date",
-    ("compromis", "montant"):    "prix_publique",
-    ("compromis", "date"):       "compromis_date_start",
-    ("compromis", "date_acte"):  "date_signature_acte",
-    ("compromis", "sequestre"):  "compromis_sequestre",
-    ("vente", "montant"):        "vente_prix",
-    ("vente", "date"):           "vente_date",
+    # --- l'offre ---
+    ("offre", "montant"):              "offre_montant",
+    ("offre", "date"):                 "offre_event_date",
+
+    # --- le compromis ---
+    ("compromis", "montant"):          "prix_publique",
+    ("compromis", "prix_publique"):    "prix_publique",
+    ("compromis", "prix_net_vendeur"): "prix_net_vendeur",
+    ("compromis", "date"):             "compromis_date_start",
+    ("compromis", "date_acte"):        "date_signature_acte",
+    ("compromis", "sequestre"):        "compromis_sequestre",
+    ("compromis", "part_admin"):       "compromis_part_admin",
+    ("compromis", "numero_mandat"):    "numero_mandat",
+
+    # --- la vente ---
+    ("vente", "montant"):              "vente_prix",
+    ("vente", "prix_publique"):        "prix_publique",
+    ("vente", "prix_net_vendeur"):     "prix_net_vendeur",
+    ("vente", "date"):                 "vente_date",
+    ("vente", "date_acte"):            "date_signature_acte",
+    ("vente", "honoraires"):           "vente_honoraires",
+    ("vente", "part_admin"):           "vente_part_admin",
+    ("vente", "commission_agence"):    "vente_commission_agence",
+    ("vente", "numero_mandat"):        "numero_mandat",
 }
+
+# CE QUI N'EST PAS DANS CETTE CARTE EST RANGE DANS LE MAGASIN ET ATTEND SA COLONNE.
+# Trois champs de la modale n'ont pas de colonne de la BONNE NATURE, et les y poser
+# rendrait la donnee fausse : jours_retractation (compromis_date_end est une date),
+# notaire_id (vente_notaires_resume est un resume de noms) et jours_validite (aucune
+# colonne). Mieux vaut un champ absent qu'un champ menteur.
 
 # La colonne de la vue qui porte l'identifiant Hektor de la transaction courante.
 COLONNE_ID = {"offre": "offre_id", "compromis": "compromis_id", "vente": "vente_id"}

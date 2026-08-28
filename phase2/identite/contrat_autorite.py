@@ -129,11 +129,22 @@ CHAMPS_APP_MANDAT: tuple[str, ...] = ("mandat_date_cloture",)
 # LE GRAIN est app_affaire_id -- l'identite posee le 20/08, UNE serie pour les
 # trois types. Voir phase2/identite/magasin_affaire_app.py.
 #
-# ON COMMENCE PAR QUATRE CHAMPS, ceux que le ledger porte deja en colonnes. Les
-# neuf autres de la modale (prix net vendeur, honoraires, commission, jours de
-# validite et de retractation, acquereur, notaire, mandat) vivent dans la vue ou
-# dans le paquet brut : ils s'ajouteront ici quand l'ecran saura les ecrire.
-CHAMPS_APP_AFFAIRE: tuple[str, ...] = ("montant", "date", "date_acte", "sequestre")
+# DIX CHAMPS, elargi le 29/08 -- et pas treize, deliberement.
+#
+# Trois champs de la modale n'ont PAS de colonne de la bonne nature, et les y
+# ranger rendrait la donnee FAUSSE :
+#     jours_retractation -> compromis_date_end       c'est une DATE, pas un nombre
+#     notaire_id         -> vente_notaires_resume    c'est un RESUME de noms
+#     jours_validite     -> aucune colonne nulle part
+# Ils attendront leur colonne. Mieux vaut un champ absent qu'un champ menteur.
+#
+# L'ACQUEREUR est ecarte pour une autre raison : changer qui achete n'est pas une
+# correction, c'est une autre affaire. Elle se cree, elle ne se rectifie pas.
+CHAMPS_APP_AFFAIRE: tuple[str, ...] = (
+    "montant", "date", "date_acte", "sequestre",
+    "prix_net_vendeur", "prix_publique", "honoraires", "part_admin",
+    "commission_agence", "numero_mandat",
+)
 
 VIDE_NE_GAGNE_PAS: bool = True
 

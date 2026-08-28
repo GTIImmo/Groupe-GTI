@@ -14812,6 +14812,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         date: statusChangeDate.trim(),
         date_acte: statusChangeSignatureDate.trim(),
         sequestre: statusChangeSequestration.trim(),
+        prix_net_vendeur: statusChangeNetSellerPrice.trim(),
+        prix_publique: statusChangeSalePrice.trim(),
+        honoraires: statusChangeBuyerFees.trim(),
+        numero_mandat: statusChangeSelectedMandat.trim(),
       })
       setNoticeMessage(
         `Correction enregistrée dans tes données (${retour.champs_retenus} champ(s)). Hektor n'en est pas informé.`,
