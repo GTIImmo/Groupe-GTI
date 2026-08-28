@@ -21,6 +21,7 @@ aucun des deux n'a été cherché : ils sont sortis d'une vérification.*
 | 🔴 **trouvé** | une annonce créée pour un négociateur multi-agences partait dans **la mauvaise agence** — 3 fois depuis juin, corrigé |
 | 🔴 **mesuré** | **23 715 mandats devraient porter une date de clôture. 94 la portent.** |
 | 🏛 **ouvert** | **le registre des mandats n'est pas un registre, c'est une vue des annonces** — 1 105 mandats invisibles, dont 642 *parce qu'ils sont clos*. Nouveau chantier **A.3-technique**, 3 à 5 j, **à faire tant que Hektor vit** |
+| ✅ **remesuré** | **C.16 était très surestimée** — pas 284 269 contacts, mais **825 fiches actives** qui n'existent plus chez Hektor *(sonde avec témoin : 0/12 contre 12/12)*. **1 à 2 j** au lieu de « à chiffrer » |
 
 #### ⚠ LE CHIFFRE QUI CHANGE LA LECTURE DE C.13
 
@@ -571,7 +572,13 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | ❌ **C.8** | ~~Le **calque** disparaît · la **barrière**~~ **DISSOUTE le 25/08, après mesure** — ses deux moitiés n'étaient pas des tâches | |
 | | **2.5, le calque** : `app_edit_annonce_optimistic` **écrit déjà dans la fiche** (`app_dossier_current` + son détail) et garde une photo d'avant dans la file. Le « calque » n'est pas un objet à supprimer : c'est le **statut provisoire** de ce que l'app écrit. Il cesse d'être provisoire **quand le contrat de C.7 cesse d'être vide** — **c'est une bascule d'interrupteur, pas un développement**. Et le faire maintenant, contrat vide, retirerait l'affichage instantané **sans** donner l'autorité à l'app : une régression | |
 | | **2.6, la barrière** : **aucun travail n'échoue faute de numéro Hektor** — 456 travaux sans numéro, **0 en erreur**, et ce sont des travaux qui n'en ont pas besoin *(363 rafraîchissements de contact, 26 créations de brouillon)*. Le cas naît avec **C.9** : la barrière y est **fondue** | |
-| ⏳ **C.16** | **LES CONTACTS NE SONT JAMAIS REBALAYÉS ENTIÈREMENT — et 611 « contacts » n'existent pas** *(trouvé le 26/08)* | ⚠ **à chiffrer** |
+| ⏳ **C.16** | ~~**LES CONTACTS NE SONT JAMAIS REBALAYÉS ENTIÈREMENT**~~ → **REMESURÉE LE 28/08 : 825 FICHES ACTIVES QUI N'EXISTENT PLUS** *(trouvé le 26/08, corrigé le 28/08)* | **1 à 2 j** |
+| | 🔴 **LE CHIFFRE DU PLAN ÉTAIT FAUX, SA CONCLUSION ÉTAIT JUSTE.** Il annonçait *« 284 269 contacts ont pour dernière vue 2026-05 »* : c'était une **confusion entre deux dates**. `synced_at` *(quand NOUS l'avons vu)* : **100 % en 2026**, dont 98,2 % en août. `date_maj` *(quand HEKTOR l'a modifié)* : 2025 pour 56 %, 2023 pour 22 % — et c'est normal, un contact ne change pas. **Le listing EST relu.** | |
+| | ✅ **LE PÉRIMÈTRE RÉEL, mesuré le 28/08** : miroir **355 756**, Hektor en déclarait **348 053** → écart **+7 703**. Non revus depuis mai : **6 279**, dont **5 454 archivés** et **825 ACTIFS**. Les **611 références orphelines** sont distinctes — **aucun recoupement** *(elles portent `archive` vide et un talon `raw_json`)* | |
+| | ✅ **SONDE DÉCISIVE, AVEC TÉMOIN** *(lecture seule, 12 par groupe, rythme du projet)* : **actifs non revus depuis mai → 0/12 existent encore** · **témoin, actifs revus en août → 12/12 existent**. Le défaut est donc réel, et **825 fiches s'affichent comme actives dans l'app alors que Hektor ne les connaît plus** | |
+| | ℹ **POURQUOI L'ESSAI DU 26/08 N'AVAIT RIEN VU** — et il n'était pas faux. Il échantillonnait **120 actifs au hasard** et concluait « 120/120 existent ». Or sur 171 046 actifs, les 825 fantômes font **0,5 %** : un échantillon de 120 avait une chance sur deux de n'en croiser aucun. **Il ne visait pas la bonne population** : il fallait interroger ceux que le listing ne rend PLUS, pas les actifs en général | |
+| | ➡ **CE QUE LA TÂCHE DEVIENT** : marquer disparues les 825 fiches actives *(jamais supprimer — règle du projet)*, traiter les 5 454 archivées de même, et poser le mécanisme qui **apprend qu'un contact a quitté le listing**. Ce dernier existe déjà pour les annonces — c'est `reconcile_annonce_scope`, tracé depuis le 26/08. **Le patron est là, il faut l'appliquer aux contacts** | |
+| | ⚠ **LEÇON DE MÉTHODE, deux fois le même jour.** ① Ma première lecture *(« seulement 6 278 remontent à mai »)* était fausse aussi : je lisais une tranche mensuelle là où la vue annuelle dit 100 % en 2026. ② Et ma première sonde lisait **la mauvaise clé** de la réponse Hektor *(`data` au lieu de `contact`)* : elle rendait « 0/12 existent » **dans les deux groupes**. **C'est le groupe témoin qui a montré que la sonde était cassée** — sans lui, j'annonçais 825 disparitions pour une faute de frappe | |
 | | ❗ **LE RUN DES CONTACTS EST EN DELTA, PAS EN BALAYAGE.** Contrairement aux annonces *(balayage complet chaque nuit, 2 847 pages)*, les contacts ne sont revus que s'ils ont bougé. **Le listing complet n'a pas été rebalayé depuis mai** : 284 269 contacts ont pour dernière vue `2026-05`. **Conséquence : si Hektor archive ou supprime un contact, nous ne l'apprenons pas** | |
 | | ℹ **L'écart mesuré** : Hektor déclare **348 053** contacts *(169 448 actifs + 178 605 archivés)*, notre miroir en a **355 712** — **+7 659** | |
 | | ✅ **ESSAI A (26/08), échantillon stratifié de 300 contacts interrogés un par un** : **actifs 120/120 existent — 0 supprimé** · **archivés 117/120, soit 2,5 % absents** *(≈ 4 600 sur 184 100)* · **sans indicateur d'archivage : 0/60, soit 100 % absents** | |
@@ -935,7 +942,7 @@ Et elle bloque trois choses en aval : **C.13-c** *(le rattrapage écrirait sur d
 #### L'ordre révisé — 28/08
 
 ```
-   1.  C.16                  les contacts jamais rebalayes
+   1.  C.16                  825 fiches actives qui n existent plus  (1 a 2 j)
    2.  26bis                 le corps de l'annonce            } meme contrainte :
    3.  A.3-technique         LE REGISTRE DURABLE              } Hektor doit vivre
    4.  C.9                   la creation part de l'app
