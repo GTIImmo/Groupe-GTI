@@ -352,24 +352,6 @@ Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat de mandat" -Arg
     "phase2\identite\appliquer_contrat_mandat.py"
 )
 
-# C.19 (29/08) -- LES CHAMPS D'AFFAIRE APPARTIENNENT A L'APP.
-# Meme mecanique que le mandat ci-dessus, au grain de la TRANSACTION. Un prix
-# corrige, une date rectifiee : ces valeurs restent chez nous et ne partent JAMAIS
-# chez Hektor -- lui n'apprend que les changements d'etat (refuser/accepter une
-# offre, annuler un compromis, supprimer une vente).
-# Le contrat pose a DEUX endroits, parce que les transactions vivent a deux endroits :
-# app_affaire_ledger (rafraichi depuis le miroir a chaque run, donc a repriser) et
-# app_view_generale (detruite et refaite, donc a reposer apres).
-# AUJOURD'HUI CES DEUX ETAPES SONT INERTES : le magasin est vide tant que l'ecran ne
-# sait pas ecrire (etape 3). Eprouvees de bout en bout le 29/08 sur une saisie
-# fabriquee -- ledger et vue passes a 199 000, puis tout remis en etat.
-Invoke-OptionalStepWithRetry -Label "phase2 magasin des champs d affaire" -Arguments @(
-    "phase2\identite\magasin_affaire_app.py"
-)
-Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat d affaire" -Arguments @(
-    "phase2\identite\appliquer_contrat_affaire.py"
-)
-
 # 26bis-(1) 26/08 -- LES ANNONCES QUE L'APP CONNAIT ET QUE LE MIROIR IGNORE.
 # Le contrat ci-dessus sait METTRE A JOUR une ligne d'app_view_generale ; il ne sait pas
 # en CREER. Or une annonce NEE DANS L'APP n'a aucune ligne dans le miroir, donc aucune
@@ -540,6 +522,21 @@ Invoke-Step -Label "phase2 affaire ledger refresh+push" -Arguments @(
     "--refresh",
     "--push"
 ) -WorkerKey "supabase.affaire_ledger"
+
+# C.19 (29/08) -- LES CHAMPS D'AFFAIRE APPARTIENNENT A L'APP.
+# PLACE ICI, ET PAS AILLEURS : affaire_ledger.py ci-dessus vient de relire le miroir
+# Hektor et de reposer SA valeur dans le ledger. Nos corrections doivent donc etre
+# reappliquees APRES lui -- et AVANT le push, pour que Supabase parte avec les bonnes.
+# Defaut trouve le 29/08 en preparant l'essai de la nuit : les deux etapes etaient
+# placees juste apres celles du mandat, donc AVANT le ledger, qui les effacait.
+# Un prix corrige, une date rectifiee : ces valeurs restent chez nous et ne partent
+# JAMAIS chez Hektor -- lui n'apprend que les changements d'etat.
+Invoke-OptionalStepWithRetry -Label "phase2 magasin des champs d affaire" -Arguments @(
+    "phase2\identite\magasin_affaire_app.py"
+)
+Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat d affaire" -Arguments @(
+    "phase2\identite\appliquer_contrat_affaire.py"
+)
 
 Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -WorkerKey "supabase.push_upgrade"
 

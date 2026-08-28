@@ -43,8 +43,12 @@ Hektor.
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import sqlite3
 import sys
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -97,6 +101,58 @@ CARTE_VUE = {
 COLONNE_ID = {"offre": "offre_id", "compromis": "compromis_id", "vente": "vente_id"}
 
 
+# Les colonnes du ledger que Supabase porte aussi -- les seules qu'on y repose.
+COLONNES_POUSSEES = ("montant", "date", "date_acte", "sequestre", "numero_mandat")
+
+
+def charger_env() -> tuple[str, str]:
+    """Le meme lecteur que les autres etapes du run."""
+    for fichier in (RACINE / ".env", RACINE / "apps" / "hektor-v1" / ".env"):
+        if not fichier.exists():
+            continue
+        for ligne in fichier.read_text(encoding="utf-8", errors="ignore").splitlines():
+            ligne = ligne.strip()
+            if not ligne or ligne.startswith("#") or "=" not in ligne:
+                continue
+            k, v = ligne.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
+    cle = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not cle:
+        raise RuntimeError("SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis")
+    return url.rstrip("/"), cle
+
+
+def reposer_dans_supabase(conn: sqlite3.Connection, affaires: set[int]) -> tuple[int, int]:
+    """affaire_ledger.py --push tourne JUSTE AVANT nous et envoie la valeur de Hektor.
+    Sans ce rattrapage, le serveur aurait la correction et Supabase non : l'app
+    afficherait l'ancienne valeur jusqu'au lendemain. Ecriture BORNEE aux affaires
+    que l'app a corrigees -- jamais un balayage."""
+    if not affaires:
+        return 0, 0
+    url, cle = charger_env()
+    reposees = echecs = 0
+    for aid in sorted(affaires):
+        ligne = conn.execute(
+            "SELECT %s FROM %s WHERE app_affaire_id = ?"
+            % (", ".join(COLONNES_POUSSEES), LEDGER), (aid,)).fetchone()
+        if ligne is None:
+            continue
+        corps = json.dumps({c: ligne[i] for i, c in enumerate(COLONNES_POUSSEES)}).encode()
+        requete = urllib.request.Request(
+            url + "/rest/v1/" + LEDGER + "?app_affaire_id=eq." + str(aid),
+            data=corps, method="PATCH",
+            headers={"apikey": cle, "Authorization": "Bearer " + cle,
+                     "Content-Type": "application/json", "Prefer": "return=minimal"})
+        try:
+            urllib.request.urlopen(requete, timeout=60).read()
+            reposees += 1
+        except Exception as err:
+            echecs += 1
+            print("   Supabase refuse l'affaire %s : %s" % (aid, str(err)[:70]))
+    return reposees, echecs
+
+
 def colonnes(conn: sqlite3.Connection, table: str) -> set[str]:
     return {r[1] for r in conn.execute('PRAGMA table_info("%s")' % table)}
 
@@ -105,6 +161,8 @@ def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dry-run", action="store_true", help="montre sans rien ecrire")
+    ap.add_argument("--sans-push", dest="sans_push", action="store_true",
+                    help="n applique qu en local, sans reposer dans Supabase")
     args = ap.parse_args()
 
     if contrat_affaire_vide():
@@ -145,6 +203,7 @@ def main() -> int:
             infos[int(aid)] = (annonce, kind, hid)
 
     pose_ledger = pose_vue = ignores = 0
+    corrigees: set[int] = set()
     for aid, champ, valeur in saisies:
         ref = infos.get(int(aid))
         if ref is None:
@@ -158,6 +217,7 @@ def main() -> int:
                          % (LEDGER, champ), (valeur, aid))
         if champ in champs_ledger:
             pose_ledger += 1
+            corrigees.add(int(aid))
 
         # 2. la vue, mais SEULEMENT si c'est la transaction courante de l'annonce
         colonne = CARTE_VUE.get((kind, champ))
@@ -173,10 +233,15 @@ def main() -> int:
 
     if not args.dry_run:
         conn.commit()
+
+    reposees = echecs = 0
+    if not args.dry_run and not args.sans_push:
+        reposees, echecs = reposer_dans_supabase(conn, corrigees)
     conn.close()
 
     print()
     print("   posees dans le ledger              : %d" % pose_ledger)
+    print("   reposees dans Supabase             : %d  (%d echec(s))" % (reposees, echecs))
     print("   posees dans la vue (courantes)     : %d" % pose_vue)
     print("   affaires inconnues du ledger       : %d" % ignores)
     if args.dry_run:
