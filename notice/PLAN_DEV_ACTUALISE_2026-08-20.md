@@ -1140,7 +1140,7 @@ C'est ce troisième temps qui émet l'appel.
 | geste | succès | échec |
 |---|---|---|
 | **offre** | `"1"` *(mesuré 3×)* | `"[]"` *(2 causes distinctes)* |
-| **compromis** | **4 caractères** *(valeur exacte non captée)* | **vide** |
+| **compromis** | **`true`** *(4 caractères, capté le 29/08 sur le compromis 50046)* | **vide** |
 | **vente** | **vide** | **vide** |
 
 ➡ **La vente est le seul geste dont la réponse ne dit RIEN.** Pour elle, seule la relecture de
@@ -1170,6 +1170,8 @@ volontairement large, et toute nouvelle formulation rencontrée doit y être ajo
 | **annuler un compromis** | l'annonce **reste** « Sous compromis » ; le compromis passe « Clôturé » |
 | **supprimer un compromis** | l'annonce **redescend seule** à « **Sous offre** » |
 | **supprimer une vente** | l'annonce **redescend seule** à l'étape **compromis**, et « BIEN VENDU » disparaît |
+| **créer une vente** | **ne clôture PAS le compromis** — 50046 est resté actif avec la vente 23289 en place |
+| **annuler le compromis** | **ne supprime PAS la vente** — 23289 a survécu à la clôture de 50046 |
 | **enregistrer une vente** | **deux issues au choix** : « laisser actif » ou « **archiver** » |
 | cliquer « SOUS COMPROMIS » dans la modale | change **le statut seul**, *sans créer de compromis* — sauf si l'annonce n'en a aucun, auquel cas l'assistant s'ouvre |
 
@@ -1192,7 +1194,14 @@ volontairement large, et toute nouvelle formulation rencontrée doit y être ajo
                                    « Enregistrer & archiver »
 ```
 
-Verbe de l'archivage relevé : **`annonce-panneauArchive`** *(POST)*.
+Verbe de l'archivage relevé : **`annonce-panneauArchive`** *(POST)*. Et le
+**désarchivage** est un simple `upval` — `mode=upval&id=<annonce>&champ=archive&val=0`, qui
+rend `"1"` au succès. **Notre worker `restore_hektor_annonce` l'utilise déjà**, et il a remis
+62774 en actif de bout en bout le 29/08 *(travail pris en 3 secondes, `archive=0` vérifié)*.
+
+⚠ **« Transformer en vente » n'ouvre PAS la popin d'archivage** — il va droit à l'assistant de
+vente. La popin d'archivage vient du clic sur le **statut VENDU**. Deux chemins distincts vers
+la même vente, et un seul demande l'archivage.
 
 **Trois conséquences mesurées sur l'annonce 62774 :**
 
@@ -1206,6 +1215,23 @@ Verbe de l'archivage relevé : **`annonce-panneauArchive`** *(POST)*.
 > l'écran enchaîne**. Notre branche « Vendu » doit donc porter **deux décisions**, pas une :
 > *crée-t-on la vente ?* et *archive-t-on l'annonce, et pour quelle raison ?*
 > Câbler l'un des deux en dur, c'est décider à la place du négociateur.
+
+### ⚠ DANGER MESURÉ — ré-enregistrer une vente existante peut la DÉTRUIRE
+
+Sur la vente **23288**, déjà enregistrée : rouvrir l'assistant *(« Modifier »)* et cliquer
+**« Enregistrer & laisser actif »** a fait **disparaître la vente**. Après coup : plus de bloc
+« Vente du bien », plus de « BIEN VENDU », et « Transformer en vente » reproposé.
+
+Le seul appel anormal du parcours est `ajoutebien` → *« Vous ne pouvez pas creer un bien »*.
+L'enregistrement semble **recréer** la vente ; la recréation est refusée pour l'admin ; il ne
+reste rien. *La causalité n'est pas prouvée, le résultat l'est.*
+
+➡ **Aucun de nos workers ne doit « modifier » une vente par ce chemin** tant que ce n'est pas
+éclairci. Et si l'app doit un jour corriger une vente, elle le fera **chez nous**
+*(`app_affaire_champ_app`)*, pas en rejouant l'assistant de Hektor.
+
+*Noté aussi : « laisser actif » **n'a pas désarchivé** le bien lors de cette modification. Les
+deux boutons pilotent l'archivage **à la création**, pas à la modification.*
 
 *⚠ Piège relevé au passage : `canCallMvcPopin` répond `{"result":false}` — c'est une **sonde de
 capacité**, pas un refus du geste. Le motif de refus du worker contient `"result":false` ; il
