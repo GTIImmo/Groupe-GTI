@@ -13651,7 +13651,22 @@ async function handleChangeHektorOffreStatus(job) {
  * plutot que de conclure a partir de rien -- meme regle que le magasin d'affaire.
  */
 async function compterDansFicheHektor(annonceId, motifs, timeoutMs = 60000) {
-  const url = `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`;
+  // ─── LA BONNE SOURCE, ET CE N'EST PAS LA PAGE ───
+  //
+  // Premiere version : on lisait `?page=/mes-biens/mon-bien&id=...`. Elle rend
+  // 208 274 caracteres et NE CONTIENT AUCUN des marqueurs -- le bloc suivi-vente
+  // est monte cote client. La relecture voyait donc toujours zero, et le premier
+  // travail passe en chaine (compromis 50047) a ete marque en ERREUR alors que
+  // l'annulation avait REUSSI et que Hektor avait repondu "true".
+  //
+  // Mesure du 29/08 sur la meme annonce :
+  //     ?page=/mes-biens/mon-bien       208 274 car  ->  0 marqueur
+  //     mode=chargeannonce_Accueil      217 397 car  ->  cloture:1 clore:1 supprimerVente:1
+  //
+  // A RETENIR : dans le navigateur le bloc EST la, parce que le JavaScript l'a
+  // mis. Le worker ne voit que ce que le serveur envoie. Un essai a la main ne
+  // pouvait pas reveler ce defaut -- seul le passage en chaine l'a fait.
+  const url = `${XMLRPC_URL}?mode=chargeannonce_Accueil&id=${encodeURIComponent(annonceId)}&lang=fr`;
   const reponse = await hektorFetch(url, { timeoutMs });
   const html = String(reponse.text || "");
   if (html.length < 2000) {
