@@ -10484,10 +10484,31 @@ async function handleChangeHektorAnnonceStatus(job) {
     ? String(etatApi.statut)
     : (after && after.property && after.property.status != null ? String(after.property.status) : null);
   const statutAttendu = String(config.hektorValue);
+
+  // ─── ON NE DURCIT QUE CE QU'ON A MESURE ───
+  //
+  // Pour « Actif » et « Mandat clos », le worker POSE la valeur lui-meme
+  // (setHektorAnnonceStatusValue) : ce que Hektor doit rendre est connu, et
+  // « Mandat clos » a ete mesure le 29/08 (statut id 6 = attendu 6). Un ecart est
+  // donc un vrai echec.
+  //
+  // Pour « Sous offre », « Sous compromis » et « Vendu », c'est HEKTOR qui decide
+  // du statut en creant la transaction. Je n'ai pas mesure ce qu'il pose. Durcir
+  // sans le savoir transformerait un travail REUSSI en echec -- exactement le
+  // piege de l'annonce 62962 consigne plus haut. On avertit, on ne condamne pas.
   if (statutLu !== null && statutLu !== statutAttendu) {
-    throw new Error(
-      `Statut non confirme pour l'annonce ${annonceId} : Hektor rend ${JSON.stringify(statutLu)}, ` +
-      `attendu ${JSON.stringify(statutAttendu)} (${config.label}).`);
+    if (config.transactionMode) {
+      await logJob(job.id, "hektor_status", "error",
+        `Statut different de la cible apres transaction : Hektor rend "${statutLu}", ` +
+        `cible "${statutAttendu}" (${config.label}). NON durci : la valeur posee par Hektor ` +
+        `apres une transaction n'a pas encore ete mesuree.`, {
+          hektor_annonce_id: annonceId, statut_hektor: statutLu, statut_cible: statutAttendu,
+        });
+    } else {
+      throw new Error(
+        `Statut non confirme pour l'annonce ${annonceId} : Hektor rend ${JSON.stringify(statutLu)}, ` +
+        `attendu ${JSON.stringify(statutAttendu)} (${config.label}).`);
+    }
   }
   if (statutLu === null) {
     await logJob(job.id, "hektor_status", "error",
@@ -13358,19 +13379,51 @@ async function handleDeleteHektorAnnonce(job) {
     app_dossier_id: appDossierId || null,
   });
   const before = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_delete_verify_before");
+  // ─── ON NE SUPPRIME PAS A L'AVEUGLE ───
+  //
+  // Deux trous fermes ici, trouves en relisant mon propre correctif.
+  //
+  // 1. La preuve « trouve === false » APRES ne prouvait rien si l'annonce n'avait
+  //    jamais existe : un identifiant errone passait pour une suppression reussie.
+  //    On exige donc qu'elle ait existe AVANT.
+  // 2. Si l'etat ne peut pas etre lu, on n'envoie PAS le geste. C'est le seul
+  //    worker vraiment irreversible : envoyer une suppression sans savoir sur quoi
+  //    elle porte est le risque qu'on ne prend pas.
+  const etatAvant = await lireEtatAnnonceViaApi(job, hektorAnnonceId, "hektor_annonce_delete_verify_before_api");
+  if (etatAvant._error) {
+    throw new Error(
+      `Suppression NON ENVOYEE pour l'annonce ${hektorAnnonceId} : son etat n'a pas pu etre lu ` +
+      `(${etatAvant._error}). On ne supprime pas ce qu'on ne voit pas.`);
+  }
+  // Deja absente chez eux : on n'envoie rien, mais on NE SORT PAS -- le menage
+  // local (documents, lignes Supabase, brouillon) doit se faire quand meme.
+  // Premiere version : je sortais ici, et je laissais nos lignes derriere.
+  const dejaAbsente = etatAvant.trouve !== true;
+  if (dejaAbsente) {
+    await logJob(job.id, "hektor_annonce_delete", "error",
+      "Suppression NON ENVOYEE : l'annonce n'existe deja plus chez Hektor. Le menage local se fait quand meme.", {
+        hektor_annonce_id: hektorAnnonceId,
+      });
+  }
+
   const deleteUrl = `${XMLRPC_URL}?mode=supprimeannonce&id=${encodeURIComponent(hektorAnnonceId)}&path=undefined`;
-  await hektorFetch(deleteUrl, {
-    headers: {
-      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(hektorAnnonceId)}`,
-    },
-  });
-  await sleep(2500);
-  const after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_delete_verify_after");
+  let after = null;
+  if (!dejaAbsente) {
+    await hektorFetch(deleteUrl, {
+      headers: {
+        Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(hektorAnnonceId)}`,
+      },
+    });
+    await sleep(2500);
+    after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_delete_verify_after");
+  }
   // ─── LA SUPPRESSION SE PROUVE PAR L'ABSENCE, PAS PAR UN DRAPEAU ───
   // Avant : on ne levait que si l'annonce etait retrouvee NON archivee. Une annonce
   // introuvable -- le cas le plus frequent quand la relecture rate -- passait pour
   // supprimee. Et le journal disait « envoyee et verifiee », ce qu'il ne savait pas.
-  const etatApres = await lireEtatAnnonceViaApi(job, hektorAnnonceId, "hektor_annonce_delete_verify_api");
+  const etatApres = dejaAbsente
+    ? { trouve: false }
+    : await lireEtatAnnonceViaApi(job, hektorAnnonceId, "hektor_annonce_delete_verify_api");
   if (etatApres._error || etatApres.trouve !== false) {
     throw new Error(
       `Suppression non confirmee pour l'annonce ${hektorAnnonceId} : ` +
@@ -13378,8 +13431,11 @@ async function handleDeleteHektorAnnonce(job) {
         ? `l'etat n'a pas pu etre relu (${etatApres._error})`
         : "l'annonce repond toujours a l'API"));
   }
-  await logJob(job.id, "hektor_annonce_delete", "done", "Suppression Hektor envoyee et verifiee", {
+  await logJob(job.id, "hektor_annonce_delete", "done",
+    dejaAbsente ? "Annonce deja absente chez Hektor -- menage local seul"
+                : "Suppression Hektor envoyee et VERIFIEE (existait avant, absente apres)", {
     hektor_annonce_id: hektorAnnonceId,
+    deja_absente: dejaAbsente,
     before_found: Boolean(before),
     after_found: Boolean(after),
     after_archived: after ? after.archived : null,
