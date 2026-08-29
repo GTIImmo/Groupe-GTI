@@ -47,6 +47,87 @@ mesure fausse.**
 
 ---
 
+## CE QUI A BOUGÉ LA NUIT DU 29 AU 30/08 — détecter, prouver, rattraper
+
+*Trois points de l'audit menés à leur terme. **Chaque défaut ci-dessous a été trouvé en
+éprouvant, aucun en relisant.** C'est le fait marquant de la nuit.*
+
+### ① Les deux gestes qui n'avaient jamais tourné
+
+`cancel_hektor_compromis` et `delete_hektor_vente` avaient **zéro travail à leur actif**. Le
+premier passage a immédiatement révélé un défaut **dans le correctif lui-même** : la relecture
+lisait le HTML de la fiche, où le bloc suivi-vente **n'est pas** — il est monté côté client.
+
+```
+   ?page=/mes-biens/mon-bien       208 274 car  ->  0 marqueur
+   mode=chargeannonce_Accueil      217 397 car  ->  cloture:1 clore:1 supprimerVente:1
+```
+
+> **Dans le navigateur le bloc EST là, parce que le JavaScript l'a mis. Le worker ne voit que
+> ce que le serveur envoie.** Aucun essai à la main ne pouvait révéler ce défaut.
+
+Corrigé, rejoué : les deux gestes passent, effets confirmés *(fiche pour le compromis, API 404
+pour la vente)*.
+
+### ② Six contrôles fermés — trois ne vérifiaient rien, quatre s'ouvraient
+
+| | avant | maintenant |
+|---|---|---|
+| `change_hektor_annonce_status` | relisait, **journalisait**, ne comparait jamais | compare le statut à la cible ✅ éprouvé |
+| `assign_hektor_annonce_negotiator` | `confirmed_negotiator_id` valait **toujours `null`** | compare `keyData.NEGOCIATEUR` ✅ éprouvé |
+| `archive` · `restore` | `if (after && …)` : relecture ratée = acquittement | exigent l'état ✅ éprouvés |
+| `delete_hektor_annonce` | testait un drapeau ; journal « vérifiée » sans le savoir | prouve par l'**absence** ✅ éprouvé |
+| `delete_hektor_contact` | partait **même quand `exists` valait `null`** | on ne supprime pas ce qu'on ne voit pas |
+
+*`relance_signature` écarté par Frédéric — « pas vraiment vérifiable ».*
+
+**La source qui a tout débloqué** : le worker n'a pas de JWT, mais le pont Python existait déjà
+*(`annonce_datemaj_from_api.py`, écrit pour le garde-fou anti-écrasement)*. Deux scripts frères
+posés : `annonce_etat_from_api.py` et `transaction_etat_from_api.py`. **Une requête, aucune
+famille, pas de pagination** — là où le listing GraphQL ne voyait que `SALE` sur 2 pages.
+
+### ③ La seconde relecture, demandée par Frédéric — trois durcissements de trop
+
+*« vérifie que tu ne risques pas d'endommager tes workers […] il faut vérifier deux fois »*
+
+| | |
+|---|---|
+| je durcissais **sur du non mesuré** | pour les statuts transactionnels, c'est **Hektor** qui décide : durcir aurait rejoué le piège de l'annonce 62962. Avertissement au lieu d'échec |
+| la suppression **se prouvait toute seule** | « absente après » ne prouve rien si elle n'a jamais existé. On exige qu'elle ait existé **avant** |
+| mon garde-fou **sautait le ménage local** | je sortais du handler en laissant nos lignes derrière |
+
+### ④ C.4-bis — le filet de rejeu, enfin
+
+**7 travaux en erreur, `attempt_count` à 1 partout, aucun jamais rejoué.** Le geste (c) de C.1',
+coché en août sur les seules éditions de champs.
+
+Il a d'abord fallu rendre les vérifications **absolues** : la mienne comparait un avant/après,
+et rejouée sur un compromis déjà annulé elle aurait déclaré en échec un geste **réussi**, à
+chaque tentative. *Le filet aurait fabriqué de faux échecs en série.*
+
+```
+   rejoue      9 gestes idempotents, attente 5/10/15/20 min
+   exclut      les CREATIONS et les DEPOTS -- rejouer une creation la DOUBLE
+   abandonne   a 5 tentatives, sans nouvel etat : attempt_count suffit
+   ne rejoue   pas au-dela de 24 h -- un filet rattrape un incident, il ne
+               ressuscite pas une decision oubliee
+   montre      app_console_action_abandonnees, avec le motif
+   tourne      app-action-retry-due, toutes les minutes (jobid 13)
+```
+
+**Éprouvé** : le filet a repris un travail bloqué depuis la veille et l'a mené à `done`.
+Premier rejeu automatique du projet.
+
+### Ce que la nuit enseigne, et qui vaut pour la suite du chantier
+
+> **Éprouver trouve ce que relire ne trouve pas.** Sept défauts cette nuit : le verbe du
+> compromis, quatre formulations de refus, la mauvaise source de relecture, le durcissement
+> prématuré, la suppression qui se prouvait seule, le contact supprimé à l'aveugle, le filet
+> qui aurait fabriqué de faux échecs. **Aucun n'est sorti d'une relecture** — tous d'un essai
+> ou d'une question de Frédéric.
+
+---
+
 ## 🔎 AUDIT DU 29/08 AU SOIR — les quatre choses qui bloquent
 
 *Demandé par Frédéric : « dis-moi clairement où on en est ». Tout ce qui suit est **mesuré le
