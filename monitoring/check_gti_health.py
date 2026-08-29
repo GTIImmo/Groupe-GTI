@@ -202,8 +202,12 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     # Meme regle pour les affaires (offre / compromis / vente) : leur numero Hektor est
-    # devenu facultatif le 20/08, mais la saisie directe dans l'app est la tache 13.
+    # devenu facultatif le 20/08, mais la saisie directe dans l'app est la tache 13 --
+    # RETROUVEE le 28/08 sous le nom C.19, apres avoir disparu du plan au renumerotage
+    # (le socle avait ete pose pour une tache qui n'existait plus).
     # D'ici la, une affaire sans numero Hektor = quelque chose qui ecrit en silence.
+    # NB : ce seuil de 0 devra etre revu quand C.19 etape 4 permettra a l'app de creer
+    # une transaction sans passer par Hektor -- ce jour-la, ces lignes seront normales.
     {
         "key": "data.affaire_sans_numero_hektor",
         "label": "Affaires sans numero Hektor",
