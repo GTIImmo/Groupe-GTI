@@ -554,3 +554,62 @@ l'incident du 27/08. Trois issues, désormais distinguées **et écrites** :
 [ ] seconde passe                    contacts, documents, photos, mandat auto, brouillon
 [ ] pousser les commits + deployer   le front reste fige au 28/08
 ```
+
+---
+
+# ✅ C.4-bis — LE FILET DE REJEU DES ACTIONS *(30/08)*
+
+*Le geste (c) de C.1', coché en août sur les seules éditions de champs, jamais posé sur les
+actions. Mesure qui l'a rouvert : **7 travaux en erreur, `attempt_count` à 1 partout, aucun
+jamais rejoué**.*
+
+## Ce qu'il a fallu faire AVANT — et ce n'était pas prévu
+
+Un filet qui rejoue exige des vérifications **absolues**. La mienne comparait la fiche avant et
+après : rejouée sur un compromis déjà annulé, elle aurait déclaré en échec un geste **réussi**,
+à chaque tentative, jusqu'à l'abandon. **Le filet aurait fabriqué de faux échecs en série.**
+
+```
+   /Api/Vente/CompromisById/  ->  status 1 = actif (9 206)   2 = annule (1 367)
+   /Api/Vente/VenteById/      ->  200 existe   404 supprimee
+```
+
+*La répartition recoupe exactement `active`/`cancelled` du registre d'affaires — les deux
+sources se confirment.* Éprouvé : annuler le compromis **50048 déjà annulé** rend `done` en 3 s.
+
+## Le filet
+
+| | |
+|---|---|
+| **rejoue** | 9 gestes idempotents à vérification absolue, attente 5/10/15/20 min |
+| **exclut** | les **créations** et les **dépôts** — rejouer une création la **double** ; et les `update_hektor_*`, déjà couverts par l'autre filet |
+| **abandonne** | à 5 tentatives — sans nouvel état : `attempt_count >= 5` suffit, le travail reste en `error`, visible |
+| **ne ressuscite pas** | au-delà de **24 h** : un statut décidé avant-hier ne doit pas écraser un état plus récent |
+| **montre** | `app_console_action_abandonnees`, avec le motif d'abandon |
+| **tourne** | `app-action-retry-due`, toutes les minutes *(jobid 13)* |
+
+## La limite de fraîcheur — trouvée en regardant avant de lancer
+
+Le filet allait rejouer un `change_hektor_annonce_status` du **28/08** tombé sur un « Hektor
+500 ». Deux jours après, l'intention n'est plus sûre. **Un filet rattrape un incident, il ne
+ressuscite pas une décision oubliée.**
+
+## Éprouvé pour de vrai
+
+```
+   retry:running   Rejeu automatique apres echec (tentative 2 sur 5)
+   claim:running   repris par le worker
+   ...error        « Le compromis 50047 n'existe plus du tout » -- dit, pas cache
+   finish:done     resolu
+```
+
+**Premier rejeu automatique du projet** — sur un travail bloqué depuis la veille par le défaut
+de relecture corrigé entre-temps.
+
+## Le trio est complet
+
+```
+   detecter   les 6 controles fermes + les 3 gestes de transaction
+   prouver    par une source absolue, la porte 2
+   rattraper  le filet, toutes les minutes
+```
