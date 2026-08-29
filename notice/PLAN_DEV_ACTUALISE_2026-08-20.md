@@ -1230,29 +1230,44 @@ reste rien.
 configuration — c'est Frédéric qui a poussé à le chercher, en soupçonnant un lien avec
 l'annulation du compromis :
 
-| vente | état du compromis | état de l'annonce | résultat |
-|---|---|---|---|
-| **23288** | **actif** | **ARCHIVÉE** *(archive=1)* | **détruite** |
-| **23289** | **clôturé** | **active** *(archive=0)* | **survit** |
+| vente | compromis | annonce avant | choix à l'enregistrement | résultat |
+|---|---|---|---|---|
+| **23288** | actif | **ARCHIVÉE** | « laisser actif » *(= désarchiver)* | **DÉTRUITE** |
+| **23289** | clôturé | active | « laisser actif » *(= ne rien changer)* | survit |
+| **23289** | clôturé | active | « archiver » | survit, et l'annonce passe archivée |
 
-> **Ce n'est donc pas le compromis — c'est l'ARCHIVAGE.** Modifier une vente portée par une
-> annonce **archivée**, en choisissant « laisser actif », la fait disparaître. Hektor tente
-> vraisemblablement de la sortir de l'archive par un **supprimer-puis-recréer**, et la
-> recréation échoue.
+> **Ce n'est donc ni le compromis, ni « l'enregistrement » en soi.** Enregistrer une vente
+> existante ne la détruit pas : elle a survécu deux fois sur trois. **Le seul cas destructeur
+> est celui où l'enregistrement doit DÉSARCHIVER l'annonce.**
 >
-> L'intuition de Frédéric était bonne sur le fond — *un état amont commande le sort de la
-> vente* — mais l'état en cause est l'archivage, pas le compromis. **Le compromis et la vente
-> sont indépendants** : annuler l'un ne touche pas l'autre, dans les deux sens.
+> Ce qui colle exactement au reste : sortir de l'archive impose un **supprimer-puis-recréer**,
+> et la recréation est refusée *(`ajoutebien`)*. La suppression, elle, passe. Il ne reste rien.
 
-*Un troisième essai (archiver, puis modifier) confirmerait la causalité. Il n'est pas
-nécessaire pour la règle de sûreté ci-dessous, qui vaut dans tous les cas.*
+*Frédéric a poussé deux fois sur ce point — d'abord en soupçonnant le compromis, puis en
+soupçonnant l'enregistrement lui-même. Les deux pistes étaient fausses, mais c'est en les
+éprouvant qu'on a isolé la vraie : le **sens** du changement d'archivage.*
+
+**Corrige au passage une affirmation fausse de cette note** : le choix agit bel et bien à la
+**modification** — « archiver » a archivé une annonce active. C'est le sens inverse, le
+désarchivage, qui casse.
+
+### La règle pratique
+
+```
+   modifier une vente sur une annonce ACTIVE      ->  sans danger
+   modifier une vente sur une annonce ARCHIVEE    ->  DANGER : desarchiver la detruit
+   desarchiver proprement                         ->  upval&champ=archive&val=0
+                                                      (notre worker restore_hektor_annonce)
+```
+
+➡ **Si l'app doit un jour toucher une vente archivée, elle désarchive d'abord par `upval`,
+puis modifie.** Jamais l'inverse, et jamais par l'assistant.
 
 ➡ **Aucun de nos workers ne doit « modifier » une vente par ce chemin** tant que ce n'est pas
 éclairci. Et si l'app doit un jour corriger une vente, elle le fera **chez nous**
 *(`app_affaire_champ_app`)*, pas en rejouant l'assistant de Hektor.
 
-*Noté aussi : « laisser actif » **n'a pas désarchivé** le bien lors de cette modification. Les
-deux boutons pilotent l'archivage **à la création**, pas à la modification.*
+
 
 *⚠ Piège relevé au passage : `canCallMvcPopin` répond `{"result":false}` — c'est une **sonde de
 capacité**, pas un refus du geste. Le motif de refus du worker contient `"result":false` ; il
