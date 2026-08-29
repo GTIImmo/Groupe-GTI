@@ -160,9 +160,8 @@ import {
   loadAffairesForDossier,
   editAffaireOptimistic,
   type AffaireLedgerRow,
-  createChangeOffreStatusJob,
-  createCancelCompromisJob,
-  createDeleteVenteJob,
+  gesteAffaireOptimistic,
+  type GesteAffaire,
   setBienStatut,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
@@ -14862,16 +14861,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeCorrectionPending(true)
     setErrorMessage(null)
     try {
-      const cible = { dossier: statusChangeTarget }
-      let job
-      if (geste === 'refus' || geste === 'accepte') {
-        job = await createChangeOffreStatusJob({ ...cible, hektorOffreId: identifiant, type: geste })
-      } else if (geste === 'annuler_compromis') {
-        job = await createCancelCompromisJob({ ...cible, hektorCompromisId: identifiant })
-      } else {
-        job = await createDeleteVenteJob({ ...cible, hektorVenteId: identifiant, confirmer: true })
+      // La RPC pose l'état chez nous TOUT DE SUITE et crée le travail dans la même
+      // transaction, avec l'état précédent : si Hektor refuse, le worker le remet.
+      const gestes: Record<string, GesteAffaire> = {
+        refus: 'refus', accepte: 'accepte',
+        annuler_compromis: 'annuler', supprimer_vente: 'supprimer',
       }
-      rememberHektorActionJob(job)
+      const retour = await gesteAffaireOptimistic(affaire.app_affaire_id, gestes[geste])
+      if (retour.deja_dans_cet_etat) {
+        setNoticeMessage("Cette transaction est déjà dans cet état — rien n'a été envoyé.")
+        setStatusChangeCorrectionPending(false)
+        return
+      }
       const libelles: Record<string, string> = {
         refus: "Refus de l'offre demandé",
         accepte: "Acceptation de l'offre demandée",

@@ -8160,111 +8160,46 @@ export async function createRestoreHektorAnnonceJob(input: {
 //     supprimerVente(id)                         ->  ventes-deleteVente
 
 /**
- * Refuser ou accepter une offre. Le geste le plus sûr des trois : une offre est une
- * conversation (11 061 propositions, 9 988 acceptations, 1 096 refus dans le parc) —
- * on lui AJOUTE un événement, on n'écrase rien. Un refus se rattrape par une
- * acceptation, la conversation continue.
- */
-export async function createChangeOffreStatusJob(input: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
-  hektorOffreId: string | number
-  type: 'refus' | 'accepte'
-  priority?: number
-}): Promise<ConsoleJob> {
-  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
-  const userId = await requireSupabaseUserId()
-  const { data, error } = await supabase
-    .from('app_console_job')
-    .insert({
-      job_type: 'change_hektor_offre_status',
-      app_dossier_id: input.dossier.app_dossier_id,
-      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
-      payload_json: {
-        numero_dossier: input.dossier.numero_dossier ?? null,
-        titre_bien: input.dossier.titre_bien ?? null,
-        hektor_offre_id: String(input.hektorOffreId),
-        type: input.type,
-      },
-      priority: input.priority ?? 7,
-      requested_by: userId,
-    })
-    .select('*')
-    .single()
-  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor offer status job')
-  return data as ConsoleJob
-}
-
-/**
- * Annuler un compromis. Chez Hektor c'est une simple confirmation — ni motif, ni date,
- * contrairement à la clôture d'un mandat qui en demande trois.
+ * Un geste d'état sur une transaction — refuser/accepter une offre, annuler un
+ * compromis, supprimer une vente.
  *
- * ⚠ IL N'Y A QU'UN SEUL GESTE. Une première version proposait un choix
- * « clôturer / annuler » : je l'avais INVENTÉ. La relecture du 29/08 montre que
- * `annuleCompromis` envoie toujours `isCloture: '1'`, et que la popin qui l'appelle
- * s'intitule « Annulation du compromis ». Le paramètre a donc disparu.
+ * ⚠ C'EST OPTIMISTE, comme le changement de statut (choix de Frédéric, 29/08).
+ * La RPC pose l'état CHEZ NOUS immédiatement et crée le travail dans la même
+ * transaction — en y glissant l'état précédent. Si Hektor refuse, le worker
+ * **remet cet état d'avant** et le dit dans le journal. Sans ce retour en arrière,
+ * l'app afficherait un état faux indéfiniment.
+ *
+ * La RPC refuse aussi les combinaisons absurdes : on ne refuse pas une vente, on
+ * ne supprime pas une offre. Le contrôle est côté serveur, pas dans l'écran.
  */
-export async function createCancelCompromisJob(input: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
-  hektorCompromisId: string | number
-  priority?: number
-}): Promise<ConsoleJob> {
-  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
-  const userId = await requireSupabaseUserId()
-  const { data, error } = await supabase
-    .from('app_console_job')
-    .insert({
-      job_type: 'cancel_hektor_compromis',
-      app_dossier_id: input.dossier.app_dossier_id,
-      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
-      payload_json: {
-        numero_dossier: input.dossier.numero_dossier ?? null,
-        titre_bien: input.dossier.titre_bien ?? null,
-        hektor_compromis_id: String(input.hektorCompromisId),
-      },
-      priority: input.priority ?? 7,
-      requested_by: userId,
-    })
-    .select('*')
-    .single()
-  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor compromis cancel job')
-  return data as ConsoleJob
+export type GesteAffaire = 'refus' | 'accepte' | 'annuler' | 'supprimer'
+
+export type GesteAffaireResultat = {
+  ok: boolean
+  job_id?: string
+  app_affaire_id?: number
+  kind?: string
+  etat_avant?: string | null
+  etat_apres?: string | null
+  job_type?: string
+  deja_dans_cet_etat?: boolean
+  state?: string | null
 }
 
-/**
- * Supprimer une vente. ⚠ DÉFINITIF. Une vente n'a AUCUN état chez Hektor — sa table ne
- * porte pas de colonne de statut, vérifié le 28/08 — elle n'est donc pas « annulée »,
- * elle DISPARAÎT. Rien ne la remet.
- * Le `confirmer` est exigé jusque dans le worker : sans lui, aucun appel ne part, même
- * si le travail a été créé par erreur.
- */
-export async function createDeleteVenteJob(input: {
-  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
-  hektorVenteId: string | number
-  confirmer: true
-  priority?: number
-}): Promise<ConsoleJob> {
+export async function gesteAffaireOptimistic(
+  appAffaireId: number,
+  geste: GesteAffaire,
+  priority = 7,
+): Promise<GesteAffaireResultat> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
-  if (input.confirmer !== true) throw new Error('Suppression de vente : confirmation explicite requise')
-  const userId = await requireSupabaseUserId()
-  const { data, error } = await supabase
-    .from('app_console_job')
-    .insert({
-      job_type: 'delete_hektor_vente',
-      app_dossier_id: input.dossier.app_dossier_id,
-      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
-      payload_json: {
-        numero_dossier: input.dossier.numero_dossier ?? null,
-        titre_bien: input.dossier.titre_bien ?? null,
-        hektor_vente_id: String(input.hektorVenteId),
-        confirmer: true,
-      },
-      priority: input.priority ?? 7,
-      requested_by: userId,
-    })
-    .select('*')
-    .single()
-  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor vente delete job')
-  return data as ConsoleJob
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_geste_affaire_optimistic', {
+    target_affaire_id: appAffaireId,
+    geste,
+    job_priority: priority,
+  })
+  if (error) throwConsoleAdminJobError(error, 'Unable to create Hektor transaction gesture job')
+  return data as GesteAffaireResultat
 }
 
 export type ArchiveHektorAnnonceMainChoice = 'choiceVendu' | 'choiceAutre'

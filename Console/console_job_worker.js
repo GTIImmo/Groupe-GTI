@@ -13488,39 +13488,48 @@ async function appelHektor(job, categorie, verbe, params, annonceId) {
 }
 
 
+
 /**
- * Pose l'etat d'une transaction DANS NOTRE REGISTRE, une fois Hektor d'accord.
+ * REMET L'ETAT D'AVANT quand Hektor a refuse le geste.
  *
- * Pourquoi c'est necessaire : la relecture ciblee ne rapatrie PAS les transactions
- * -- elles n'arrivent que par le run de nuit (endpoints de listing). Sans cela,
- * Hektor saurait et nous pas, pendant des heures.
+ * L'app pose l'etat avant que Hektor ait repondu -- c'est l'instantane voulu par
+ * Frederic, le meme patron que le changement de statut. La contrepartie est
+ * obligatoire : sans ce retour en arriere, un refus de Hektor laisserait l'app
+ * afficher un etat FAUX, indefiniment.
  *
- * Pourquoi c'est sur : on n'arrive ici que si l'appel a Hektor a REUSSI ; un refus
- * leve une erreur plus haut. Et le run de nuit repassera derriere pour confirmer.
- *
- * Best-effort : si Supabase refuse, le geste reste acquis chez Hektor et la nuit
- * rattrape. On le dit, on ne fait pas echouer le travail pour autant.
+ * L'etat precedent voyage dans le payload (etat_avant), pose par la RPC
+ * app_geste_affaire_optimistic dans la meme transaction que le travail. Un travail
+ * cree autrement n'en a pas : on ne restaure alors rien, et on le dit.
  */
-async function refleterEtatAffaire(job, categorie, filtre, etat) {
+async function restaurerEtatAffaire(job, categorie, payload) {
+  const affaireId = payload && payload.app_affaire_id;
+  if (!affaireId) {
+    await logJob(job.id, categorie, "error",
+      "Hektor a refuse. Rien a restaurer : ce travail ne portait pas d'etat precedent.", {});
+    return { status: "skipped", reason: "pas_d_etat_precedent" };
+  }
+  const corps = payload.geste === "supprimer"
+    ? { present_in_hektor: true }
+    : { state: payload.etat_avant === undefined ? null : payload.etat_avant };
   try {
-    const majes = await supabaseRequest(`app_affaire_ledger?${filtre}`, {
+    const majes = await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(affaireId)}`, {
       method: "PATCH",
       prefer: "return=representation",
-      body: JSON.stringify({ state: etat }),
+      body: JSON.stringify(corps),
     });
     const touchees = Array.isArray(majes) ? majes.length : 0;
     await logJob(job.id, categorie, touchees ? "done" : "error",
       touchees
-        ? `Etat « ${etat} » pose dans notre registre (${touchees} ligne)`
-        : `Aucune ligne de registre mise a jour -- la nuit rattrapera`,
-      { etat, lignes: touchees });
-    return touchees;
+        ? `Hektor a refuse : l'etat precedent (${payload.etat_avant ?? "vide"}) a ete remis dans l'app`
+        : "Hektor a refuse et AUCUNE ligne n'a pu etre remise -- l'app affiche un etat faux",
+      { app_affaire_id: affaireId, etat_avant: payload.etat_avant ?? null, lignes: touchees });
+    return { status: touchees ? "done" : "error", lignes: touchees };
   } catch (erreur) {
-    const message = erreur && erreur.message ? erreur.message : String(erreur);
     await logJob(job.id, categorie, "error",
-      "Geste acquis chez Hektor, mais notre registre n'a pas suivi -- la nuit rattrapera",
-      { etat, error: message });
-    return -1;
+      "Hektor a refuse et la remise en etat a echoue -- l'app affiche un etat faux, a corriger a la main",
+      { app_affaire_id: affaireId,
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { status: "error" };
   }
 }
 
@@ -13547,12 +13556,15 @@ async function handleChangeHektorOffreStatus(job) {
     type,
   });
   // GET : releve dans offre_bien_change_status (ajax type "GET").
-  const resultat = await appelHektor(job, "le changement d'etat de l'offre", "GET", params, annonceId);
-
-  // Hektor est d'accord : on pose l'etat chez nous SANS attendre la nuit.
-  const lignes = await refleterEtatAffaire(job, "hektor_offre_status",
-    `kind=eq.offre&hektor_affaire_id=eq.${encodeURIComponent(idOffre)}`,
-    type === "refus" ? "refused" : "accepted");
+  // L'etat est DEJA pose dans l'app (instantane). Si Hektor refuse, on le remet.
+  let resultat;
+  try {
+    resultat = await appelHektor(job, "le changement d'etat de l'offre", "GET", params, annonceId);
+  } catch (refus) {
+    await restaurerEtatAffaire(job, "hektor_offre_status", payload);
+    throw refus;
+  }
+  const lignes = payload.app_affaire_id ? 1 : 0;
 
   // Et la relecture, pour le reste de la fiche (statut, mandats, validation).
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
@@ -13592,10 +13604,14 @@ async function handleCancelHektorCompromis(job) {
     fromContact: "false",
   });
   // POST : annuleCompromis passe par popinPostInner.
-  const resultat = await appelHektor(job, "l'annulation du compromis", "POST", params, annonceId);
-
-  const lignes = await refleterEtatAffaire(job, "hektor_compromis_cloture",
-    `kind=eq.compromis&hektor_affaire_id=eq.${encodeURIComponent(idComp)}`, "cancelled");
+  let resultat;
+  try {
+    resultat = await appelHektor(job, "l'annulation du compromis", "POST", params, annonceId);
+  } catch (refus) {
+    await restaurerEtatAffaire(job, "hektor_compromis_cloture", payload);
+    throw refus;
+  }
+  const lignes = payload.app_affaire_id ? 1 : 0;
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "cancel_hektor_compromis",
@@ -13634,29 +13650,19 @@ async function handleDeleteHektorVente(job) {
 
   // GET, parametre `id` : releve tel quel dans supprimerVente (ajax type "GET").
   const params = new URLSearchParams({ mode: "ventes-deleteVente", id: idVente });
-  const resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId);
+  let resultat;
+  try {
+    resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId);
+  } catch (refus) {
+    await restaurerEtatAffaire(job, "hektor_vente_delete", payload);
+    throw refus;
+  }
 
   // LA VENTE DISPARAIT CHEZ HEKTOR, MAIS PAS CHEZ NOUS : le registre est
-  // « delete-never » par conception -- ce qu'il a vu, il le garde. On marque donc
-  // present_in_hektor a false, comme le fait le run de nuit quand Hektor retire une
-  // affaire. La trace reste, l'app sait qu'elle n'existe plus chez eux.
-  let lignes = 0;
-  try {
-    const majes = await supabaseRequest(
-      `app_affaire_ledger?kind=eq.vente&hektor_affaire_id=eq.${encodeURIComponent(idVente)}`,
-      { method: "PATCH", prefer: "return=representation",
-        body: JSON.stringify({ present_in_hektor: false }) });
-    lignes = Array.isArray(majes) ? majes.length : 0;
-    await logJob(job.id, "hektor_vente_delete", lignes ? "done" : "error",
-      lignes ? "Vente marquee absente de Hektor dans notre registre (trace conservee)"
-             : "Aucune ligne de registre marquee -- la nuit rattrapera",
-      { hektor_vente_id: idVente, lignes });
-  } catch (erreur) {
-    lignes = -1;
-    await logJob(job.id, "hektor_vente_delete", "error",
-      "Vente supprimee chez Hektor, mais notre registre n'a pas suivi -- la nuit rattrapera",
-      { hektor_vente_id: idVente, error: erreur && erreur.message ? erreur.message : String(erreur) });
-  }
+  // « delete-never » par conception -- ce qu'il a vu, il le garde. present_in_hektor
+  // a deja ete mis a false par la RPC, au moment du clic. La trace reste, et l'app
+  // sait qu'elle n'existe plus chez eux.
+  const lignes = payload.app_affaire_id ? 1 : 0;
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "delete_hektor_vente",
