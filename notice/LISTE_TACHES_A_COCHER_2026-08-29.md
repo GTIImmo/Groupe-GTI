@@ -263,3 +263,42 @@ ma premiere mesure le disait aveugle, elle etait fausse.*
 
 *Cette liste se tient à jour avec le plan. Une case ne se coche que sur une mesure, et la mesure
 est écrite à côté.*
+
+---
+
+# AJOUTS DU 29/08 — issus de l'essai reel sur Hektor
+
+*Trois taches nees d'un essai qui a trouve un verbe faux et deux faux succes.*
+
+| | tache | etat |
+|---|---|---|
+| **C.19-a** | verbe du compromis corrige *(`annonce-SuiviVente-cloture`)*, vocabulaire du refus elargi, arbitre par geste | ✅ **fait** — 6/6 appliques, syntaxe validee, regex eprouvee sur les 5 refus mesures |
+| **C.19-b** | eprouver l'annulation d'un compromis **ACTIF**, et la suppression d'une vente posee **sur** ce compromis actif | ⏳ **bloque** — le compte admin ne peut pas creer de compromis *(mode `ajoutebien` -> refus)*. **Demande un compte negociateur** |
+| **C.19-c** | **le choix « laisser actif » / « archiver » a l'enregistrement d'une vente** | 🔴 **A FAIRE — juge tres important par Frederic** |
+
+## Sur C.19-c, et pourquoi ca compte
+
+L'enregistrement d'une vente chez Hektor offre **deux boutons**, releves sur ecran le 29/08 :
+
+```
+   « Enregistrer & laisser actif »     ->  le bien reste dans Biens actuels, affiche BIEN VENDU
+   « Enregistrer & archiver »          ->  NON EPROUVE
+```
+
+Ce choix **agit sur le statut de l'annonce**, donc il ne peut pas rester implicite : c'est une
+decision metier que l'app doit porter, pas un defaut cable dans le worker.
+
+Il n'appartient **pas** aux trois gestes corriges ci-dessus — il appartient a la **branche
+« Vendu » de C.4**, celle qui cree la vente. A traiter avec elle, une fois la seconde issue
+eprouvee.
+
+## Une observation a verser au dossier de la modale de statut
+
+Cliquer « SOUS COMPROMIS » dans le statut du bien a change **le statut sans creer de
+compromis** — alors que le meme clic, sur un bien qui n'en avait aucun, avait ouvert
+l'assistant et cree le compromis 50044.
+
+➡ **Le statut de l'annonce et la transaction sont decouples chez Hektor.** La modale n'est pas
+un createur de transaction : elle en ouvre un *quand il n'y a rien*. C'est une reponse directe
+a la question posee le 29/08 *(« le statut change et une transaction se cree en fonction, c'est
+bien ca ? »)* : **non, pas toujours**.

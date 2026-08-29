@@ -121,12 +121,17 @@ annuleCompromis(idCompromis, fromContact)
 **Ni motif, ni date, ni raison** — contrairement à la clôture de mandat qui en demande trois.
 Un seul appel suffit.
 
-Et `isCloture` distingue les **deux issues** du compromis, ce qui épouse le métier :
+### ⚠ CORRECTION DU 29/08 — `isCloture` ne distingue rien
 
-| | |
-|---|---|
-| `clore_compromis_vente` | le compromis **aboutit** *(vers la vente)* |
-| `annuleCompromis` | le compromis **tombe** |
+*Cette note affirmait ici que `isCloture` séparait les deux issues du compromis —
+`clore_compromis_vente` (il aboutit) et `annuleCompromis` (il tombe). **C'est faux, et
+l'invention est de moi.** Relu dans `annuleCompromis` le 29/08 : la valeur est **toujours
+`'1'`**, y compris pour annuler. Hektor n'a **qu'un seul geste**, et la popin qui le
+déclenche s'intitule « Annulation du compromis ».*
+
+*Le worker porte la correction depuis (`console_job_worker.js:13617`), et envoie aussi
+`fromContact` — que la première version avait oublié. La note, elle, enseignait encore le
+contraire : c'est réparé ici.*
 
 ## Modifier un compromis, en revanche, est hors de portée du worker
 
@@ -164,3 +169,282 @@ pourquoi passer `idCompromis` au mode `createCompromis` ne chargeait rien.
 *Méthode : `mcp__claude-in-chrome`, lecture du DOM et des fonctions globales sur la fiche 62774.
 Aucun clic, aucune écriture. Voir aussi `Console/capture_transaction_actions.js` (lecture serveur)
 et ses captures `Console/exports/transaction_actions_*`.*
+
+---
+
+# CE QUE HEKTOR REPOND — mesure du 29/08
+
+*Question de Frederic : « je ne suis pas sur qu'Hektor, meme en cas de succes, nous envoie
+autre chose ». Question juste : le detecteur strict pose la veille generalisait **une seule**
+observation. Verifie dans le navigateur, sur les vrais appels.*
+
+## Le temoin qu'il fallait poser d'abord
+
+| appel | reponse |
+|---|---|
+| `mode` inexistant | **404**, corps vide |
+| `mode` vide | **404**, corps vide |
+| `annonce-SuiviVente-vente-deleteVente` | **404** — ce verbe **n'existe pas** |
+| `ventes-deleteVente` | **200** + vide — le verbe **existe bien** |
+
+> Sans ce temoin, un corps vide ne prouvait rien : il pouvait signaler un mode mal orthographie.
+> Il confirme au passage que **les trois verbes du worker sont les bons**.
+
+## L'offre — regle PROUVEE
+
+| appel | reponse |
+|---|---|
+| `accepte` sur 33026 (reelle) | `"1"` |
+| `refus` sur 33026 (reelle) | `"1"` |
+| `accepte` sur 33027 (reelle) | `"1"` |
+| **type invalide** | `"[]"` |
+| **offre inexistante** | `"[]"` |
+
+**Trois succes, et deux causes d'echec DIFFERENTES qui rendent toutes deux `"[]"`.** La regle
+`"1"` = succes tient ; ce n'est plus une extrapolation.
+
+## Le compromis et la vente — signature de succes INCONNUE
+
+| appel | reponse |
+|---|---|
+| `clotureCompromis`, `idComp` bidon | **200 + corps vide** |
+| `ventes-deleteVente`, `id` bidon | **200 + corps vide** |
+
+Ces deux verbes repondent **vide quand ils echouent**. Rien ne dit qu'ils ne repondent pas
+vide **quand ils reussissent** — aucun des deux n'a jamais ete execute pour de vrai.
+
+**Le risque, en clair** : si le succes est vide lui aussi, le detecteur strict prend une
+annulation REUSSIE pour un echec, **defait l'etat** et journalise une erreur.
+
+## Pourquoi ce risque reste borne — verifie, pas suppose
+
+Le geste ecrit `state` / `present_in_hektor` **directement sur `app_affaire_ledger`**
+*(definition de `app_geste_affaire_optimistic` lue sur le serveur)*. Or ce registre est
+reconstruit depuis Hektor a chaque run : `affaire_ledger.py:234` remet `present_in_hektor=1`
+sur conflit, et l'etat est reflete par l'upsert.
+
+> **Quelle que soit l'erreur — faux succes ou faux echec — la verite revient de Hektor au run
+> suivant.** Aucune divergence durable n'est possible. La difference est ailleurs : un faux
+> echec est **bruyant** (travail en erreur, visible) ; un faux succes est **muet**.
+
+## Une lecture d'appoint : cherchee, pas trouvee
+
+`compromis-getStepComrpomis` et `ventes-wizard-getStepVente` rendent le **meme formulaire
+vide** (15 201 caracteres) pour un identifiant reel comme pour un identifiant bidon. Ils ne
+discriminent pas. Il n'y a donc pas, cote console, de relecture simple qui prouverait l'effet.
+
+> **C'ETAIT DEJA SU, et c'est Frederic qui me l'a rappele.** L'essai avec temoin du 28/08
+> (en tete de cette note) avait etabli le meme fait : *« Hektor ignore l'identifiant a
+> l'ouverture, reponses identiques octet pour octet »*. J'ai re-mesure le 29/08 ce que la
+> note portait deja. **Cet essai n'etait pas un echec** : c'est lui qui a fait basculer vers
+> la lecture du DOM, donc vers les trois verbes.
+>
+> Ce qu'il ne pouvait PAS donner, en revanche : il portait sur l'**ouverture des
+> formulaires**, pas sur les **verbes d'action**. La signature de succes de
+> `clotureCompromis` et de `deleteVente` reste donc entiere.
+
+## Ce qui reste a faire
+
+Le worker journalise desormais `reponse_hektor`. **La premiere execution reelle de chaque
+geste livrera la signature manquante** — a condition de la lire. Une alternative plus sure
+serait un compromis d'essai cree puis annule, mais c'est un acte sur Hektor : au choix de
+Frederic.
+
+---
+
+# 🔴 L'ESSAI REEL DU 29/08 — le worker appelait le mauvais verbe
+
+*Fait dans la session Chrome de Frederic, sur le bac a sable **62774** (« TEST C4 du 25-08 Villa
+Bellecour », non diffusable, 0 portail). Un compromis d'essai cree, puis annule, en cliquant
+dans l'interface. Demande par Frederic : « il faut proceder a des tests comme pour l'offre ».*
+
+## Ce que l'interface fait vraiment
+
+Le parcours d'annulation a **trois** temps, et non un :
+
+```
+   1. bouton « Annuler »   ->  clore_compromis_vente('50044')
+   2. popin de confirmation « Annulation du compromis ! »   ->  Oui
+   3. SECOND formulaire « Annuler un compromis de vente »
+      (prix net vendeur, date, note)   ->  bouton « Cloturer »
+```
+
+Et l'appel emis au troisieme temps, **releve dans le reseau** :
+
+```
+   GET  xmlrpc.php?mode=annonce-SuiviVente-cloture&idCompromis=50044&notes=
+```
+
+## Or le worker envoyait ceci
+
+```
+   POST xmlrpc.php    mode=annonce-SuiviVente-clotureCompromis
+                      idComp=...  isCloture=1  fromContact=false
+```
+
+**Mauvais mode, mauvais nom de parametre, mauvaise methode.** Le geste n'aurait jamais rien
+annule. `clotureCompromis` existe bien (200, pas 404) — c'est vraisemblablement le chargeur de
+la popin, pas l'action.
+
+> **Pourquoi la lecture statique s'est trompee.** Le nom `annonce-SuiviVente-clotureCompromis`
+> avait ete lu **dans le JavaScript** de `annuleCompromis`. Il y figure. Mais ce n'est pas
+> celui que le navigateur emet au bout du parcours. **Lire le code ne remplace pas regarder
+> passer l'appel.** C'est la lecon de cet essai, et elle vaut pour les deux autres gestes.
+
+## Ce que l'essai confirme du correctif
+
+Le compromis est passe a **« Cloture le 29/08/2026 »** : l'annulation marche. Et surtout —
+avec l'ancien detecteur, le worker aurait appele un verbe sans effet, recu une reponse vide,
+et **declare le geste reussi**. Le detecteur strict, lui, aurait leve une erreur. *La regle
+« exiger la preuve du succes » a donc attrape une vraie panne, pas une panne imaginaire.*
+
+## Ce qui reste inconnu, et c'est genant
+
+| | |
+|---|---|
+| **echec** du vrai verbe *(id 99999999)* | **200 + corps vide** — mesure |
+| **succes** du vrai verbe | **non capte** : l'enregistreur reseau a ete pose trop tard |
+
+Si le succes est vide **lui aussi**, alors la reponse de ce verbe **ne porte aucune
+information**, et le detecteur strict rejetterait chaque annulation reussie. L'indice penche
+dans ce sens : apres l'appel, l'interface **recharge la fiche** (`chargeannonce_Accueil`) au
+lieu de lire une reponse.
+
+➡ **Conclusion de conception** : pour le compromis, il ne faut pas arbitrer sur la reponse
+mais **verifier l'effet** en relisant la fiche. Reste a eprouver de la meme facon le verbe reel
+de la **vente** — `ventes-deleteVente` n'a jamais ete vu passer, il vient lui aussi d'une
+lecture statique.
+
+## Trace laissee sur le bac a sable
+
+**Compromis 50044 sur l'annonce 62774, cloture.** A retirer avec le reste des traces d'essai
+en fin de chantier *(avec l'affaire 9 a 123 456 au lieu de 79 000)*.
+
+---
+
+# 🔴 SECOND VOLET — la vente, et DEUX TROUS dans le detecteur
+
+*Meme session, meme bac a sable 62774. Une vente d'essai creee par l'interface, enregistreur
+reseau arme cette fois. C'est lui qui a tout donne.*
+
+## Ce que Hektor repond quand il REFUSE
+
+L'enregistrement de la vente a produit, en HTTP **200** :
+
+```
+   "Vous ne pouvez pas creer un bien"      32 caracteres, repete 8 fois
+   {"result":false}                        16 caracteres
+```
+
+**Et AUCUN des deux n'est reconnu par mon detecteur.** Verifie en executant la regex elle-meme
+dans la page :
+
+| chaine | reconnue comme refus ? |
+|---|---|
+| `Vous ne pouvez pas creer un bien` | **NON** — la regex dit `ne peu[xt] pas`, pas `ne pouvez pas` |
+| `{"result":false}` | **NON** — la regex dit `"success":false`, pas `"result":false` |
+
+Les deux sont **non vides**, donc ils passent aussi la liste des reponses vides.
+➡ **Le worker les aurait comptes comme des SUCCES.** Deux faux succes, dans le detecteur cense
+les empecher.
+
+> **La lecon, et elle corrige la precedente.** J'avais durci la liste des reponses *vides*.
+> Le vrai danger etait ailleurs : Hektor refuse en **HTTP 200 avec une phrase en francais**.
+> C'est le **vocabulaire du refus** qu'il faut elargir, pas la liste des vides.
+
+## Ce que la vente a revele d'autre
+
+| | |
+|---|---|
+| la vente **a bien ete creee** *(id 23287)* | malgre les messages de refus, qui portaient sur autre chose |
+| l'enregistrement offre **deux issues** | « Enregistrer & laisser actif » ou « **Enregistrer & archiver** » — a retenir pour la branche « Vendu » de C.4 |
+| le bouton `supprimerVente(23287)` | **present en DOM mais masque (0x0)** pour le compte administrateur |
+
+Ce masquage est **le meme phenomene** que les blocs de signature invisibles en root admin
+*(idUser 4)*. Le chemin interface est donc ferme pour la suppression d'une vente.
+
+## Ce qui reste a eprouver
+
+- **la signature de succes** de `annonce-SuiviVente-cloture` *(compromis)* — l'echec vaut 200 +
+  vide ; le succes n'a pas ete capte ;
+- **le vrai verbe de la suppression d'une vente** : `ventes-deleteVente` n'a **jamais ete vu
+  passer**. Il vient de la meme lecture statique que le verbe errone du compromis — il faut le
+  tenir pour suspect tant qu'on ne l'a pas observe ;
+- **l'hypothese de Frederic** : supprimer la vente fait-il revivre le compromis ? Non tranchee.
+
+## Traces laissees sur le bac a sable 62774
+
+```
+   compromis 50044   cloture
+   vente     23287   active  ->  le bien porte « BIEN VENDU 151 000 EUR »
+```
+
+A retirer en fin de chantier, avec l'affaire 9 (123 456 au lieu de 79 000).
+
+---
+
+# ⚖️ LE VERDICT — mesure du succes obtenue, et elle invalide mon correctif
+
+*Frederic a ouvert lui-meme l'URL de suppression (le garde-fou de mon outil bloquait l'appel
+depuis ma session). Il rapporte : **page blanche**. Puis j'ai relu la fiche.*
+
+## La suppression a REUSSI, et elle a repondu VIDE
+
+```
+   GET  xmlrpc.php?mode=ventes-deleteVente&id=23287     ->  200, corps VIDE
+```
+
+Verifie sur la fiche apres coup :
+
+| | |
+|---|---|
+| `supprimerVente(23287)` | **disparu du DOM** — la vente n'existe plus |
+| « BIEN VENDU » | **absent** — le bien n'est plus vendu |
+| badge | revenu a **COMPROMIS** |
+
+**Le verbe `ventes-deleteVente` etait donc le bon** — contrairement a celui du compromis, qui
+lui etait faux. La lecture statique avait vu juste une fois sur deux ; raison de plus pour
+mesurer plutot que deduire.
+
+## Ce que ca prouve, et c'est l'inverse de ce que j'avais code
+
+```
+   echec (id 99999999)  ->  200 + VIDE
+   succes (id 23287)    ->  200 + VIDE
+```
+
+**Identiques.** La reponse de ce verbe **ne porte aucune information**.
+
+> Mon detecteur strict rejette toute reponse vide. Il aurait donc pris **chaque suppression
+> reussie** pour un echec, remis `present_in_hektor = true`, et journalise une erreur — alors
+> que la vente etait bel et bien detruite chez Hektor. **Le faux echec, systematique.**
+
+La question posee par Frederic — *« je ne suis pas sur qu'Hektor, meme en cas de succes, nous
+envoie autre chose »* — avait donc exactement raison, et pour le bon geste.
+
+## La regle qui en decoule, par famille de verbe
+
+| geste | arbitre |
+|---|---|
+| **offre** *(refus / accepte)* | **la reponse** : `"1"` = succes, `"[]"` = echec. Mesure 3 fois + 2 causes d'echec |
+| **compromis** *(annuler)* | **relire l'etat** — la reponse est vide a l'echec, et rien ne permet de croire qu'elle ne l'est pas au succes |
+| **vente** *(supprimer)* | **relire l'etat** — demontre ci-dessus |
+
+Et dans **tous** les cas, un refus explicite reste un echec : Hektor les rend en **HTTP 200
+avec une phrase en francais** *(`Vous ne pouvez pas creer un bien`, `{"result":false}`)*.
+
+## L'hypothese de Frederic — partiellement verifiee
+
+*« supprimer la vente ne va-t-il pas annuler le compromis en meme temps ? »*
+
+Le bien **retombe bien a l'etape compromis**. Mais le compromis 50044 reste **cloture** : la
+suppression de la vente ne le ressuscite pas. Reserve honnete : 50044 avait ete cloture
+**avant** la creation de la vente, donc l'essai ne dit pas ce qu'il adviendrait d'un compromis
+**actif** dont on supprimerait la vente. A eprouver si le cas compte.
+
+## Etat final du bac a sable 62774
+
+```
+   compromis 50044   cloture     (a retirer en fin de chantier)
+   vente     23287   SUPPRIMEE   (plus rien a nettoyer)
+```

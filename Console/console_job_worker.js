@@ -13461,7 +13461,7 @@ function normalizeArchiveReasonPayload(payload) {
  *     supprimerVente            ->  ajax type "GET"
  *     annuleCompromis           ->  popinPostInner, donc POST
  */
-async function appelHektor(job, categorie, verbe, params, annonceId) {
+async function appelHektor(job, categorie, verbe, params, annonceId, options = {}) {
   const enTetes = {
     Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId || "")}`,
     Accept: "application/json, text/javascript, */*; q=0.01",
@@ -13492,14 +13492,41 @@ async function appelHektor(job, categorie, verbe, params, annonceId) {
   //
   // Un refus explicite reste un echec -- y compris le message du compte
   // administrateur, dont on ignore encore s'il s'etend a ces gestes.
-  if (/ne peu[xt] pas|Credential Error|non autoris|"success"\s*:\s*false/i.test(texte)) {
+  // ─── LE VOCABULAIRE DU REFUS, elargi le 29/08 apres mesure ───
+  //
+  // Hektor refuse en HTTP 200, avec une PHRASE EN FRANCAIS. Deux formes relevees
+  // en direct pendant l'essai, et AUCUNE des deux n'etait reconnue :
+  //
+  //     « Vous ne pouvez pas creer un bien »   <- `ne peu[xt] pas` ne couvre pas `ne pouvez pas`
+  //     {"result":false}                       <- on ne regardait que `"success":false`
+  //
+  // Toutes deux sont NON VIDES : elles franchissaient donc aussi le controle des
+  // reponses vides, et le geste passait pour un SUCCES. Deux faux succes, dans le
+  // detecteur cense les empecher.
+  if (/ne peu[xt] pas|ne pouv(?:ez|ons) pas|Credential Error|non autoris|n'avez pas le droit|"(?:success|result)"\s*:\s*false/i
+        .test(texte)) {
     throw new Error(`Hektor refuse ${categorie} : ${stripHtml(texte).slice(0, 300)}`);
   }
   // Et une reponse VIDE en est un aussi. "[]" est la signature relevee de l'echec ;
   // "" et "0" sont retenus par prudence. Pour le compromis et la vente, dont la
   // signature de succes n'est pas encore connue -- aucun n'a jamais ete execute --
   // cela garantit qu'un geste sans effet ne passera pas pour un succes.
-  if (nu === "" || nu === "[]" || nu === "{}" || nu === "0" || nu === "null" || nu === "false") {
+  // ─── QUI ARBITRE LE SUCCES ? PAS LE MEME SELON LE GESTE ───
+  //
+  // options.arbitre === "relecture" : la reponse ne dit RIEN, c'est l'appelant qui
+  // verifiera l'effet en relisant la fiche. Demontre le 29/08 sur la vente :
+  //
+  //     ventes-deleteVente, id 99999999 (echec)   ->  200 + corps VIDE
+  //     ventes-deleteVente, id 23287    (SUCCES)  ->  200 + corps VIDE
+  //
+  // Identiques. Refuser le vide ici reviendrait a rejeter chaque suppression
+  // REUSSIE et a defaire un geste qui a marche -- exactement la divergence que ce
+  // projet combat, en sens inverse.
+  //
+  // Par defaut (l'offre), la reponse fait foi : "1" = succes, "[]" = echec,
+  // mesure trois fois et sur deux causes d'echec differentes.
+  if (options.arbitre !== "relecture" &&
+      (nu === "" || nu === "[]" || nu === "{}" || nu === "0" || nu === "null" || nu === "false")) {
     throw new Error(
       `Hektor n'a rien confirme pour ${categorie} : reponse ${JSON.stringify(nu)}. ` +
       `Le geste n'a probablement RIEN fait -- on ne le compte pas comme reussi.`);
@@ -13602,6 +13629,37 @@ async function handleChangeHektorOffreStatus(job) {
 }
 
 /** Annuler (ou cloturer) un compromis. Une simple confirmation chez Hektor : pas de motif. */
+/**
+ * RELIT LA FICHE CHEZ HEKTOR et compte les occurrences d'un motif.
+ *
+ * POURQUOI CE DETOUR. Pour le compromis et la vente, la reponse de Hektor est vide
+ * au succes COMME a l'echec (mesure le 29/08). Elle ne peut donc pas arbitrer. Le
+ * seul juge honnete est l'etat de la fiche apres coup.
+ *
+ * ET POURQUOI ON COMPTE AU LIEU DE TESTER LA PRESENCE. Apres l'annulation reelle du
+ * compromis 50044, le bouton `clore_compromis_vente('50044')` etait TOUJOURS dans la
+ * page -- c'est ce qui m'avait fait conclure a tort que le geste avait echoue. Un
+ * marqueur present ne prouve rien ; c'est sa VARIATION entre avant et apres qui parle.
+ *
+ * Une fiche trop courte n'est pas une fiche vide : c'est une lecture ratee. On leve,
+ * plutot que de conclure a partir de rien -- meme regle que le magasin d'affaire.
+ */
+async function compterDansFicheHektor(annonceId, motifs, timeoutMs = 60000) {
+  const url = `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`;
+  const reponse = await hektorFetch(url, { timeoutMs });
+  const html = String(reponse.text || "");
+  if (html.length < 2000) {
+    throw new Error(
+      `Relecture de la fiche ${annonceId} inexploitable (${html.length} caracteres) : ` +
+      `on ne peut pas conclure, donc on ne conclut pas.`);
+  }
+  const compte = {};
+  for (const [cle, motif] of Object.entries(motifs)) {
+    compte[cle] = html.split(motif).length - 1;
+  }
+  return compte;
+}
+
 async function handleCancelHektorCompromis(job) {
   const payload = safeJsonParse(job.payload_json);
   const idComp = String(payload.hektor_compromis_id || payload.id_compromis || "").trim();
@@ -13614,23 +13672,53 @@ async function handleCancelHektorCompromis(job) {
       hektor_annonce_id: annonceId || null, hektor_compromis_id: idComp,
     });
 
-  // isCloture VAUT TOUJOURS '1', y compris pour annuler -- releve tel quel dans
-  // annuleCompromis le 29/08. Une premiere version envoyait '0' pour « annuler »,
-  // sur une distinction cloturer/annuler que j'avais INVENTEE : Hektor n'a qu'un
-  // seul geste, et la popin qui le declenche s'intitule « Annulation du compromis ».
+  // ─── LE VERBE, CORRIGE LE 29/08 APRES L'AVOIR VU PASSER ───
+  //
+  // Le worker envoyait  POST annonce-SuiviVente-clotureCompromis (idComp, isCloture...).
+  // Ce nom avait ete lu DANS le JavaScript de `annuleCompromis`, ou il figure bien.
+  // Mais ce n'est PAS celui que le navigateur emet. Capte dans le reseau, en cliquant
+  // reellement sur « Annuler » pour le compromis 50044 :
+  //
+  //     GET  xmlrpc.php?mode=annonce-SuiviVente-cloture&idCompromis=50044&notes=
+  //
+  // Et le parcours a TROIS temps, pas un : bouton « Annuler » -> popin de confirmation
+  // -> un SECOND formulaire (prix net vendeur, date, note) -> « Cloturer ». C'est ce
+  // troisieme temps qui emet l'appel ci-dessus.
+  //
+  // Lire le code ne remplace pas regarder passer l'appel.
   const params = new URLSearchParams({
-    mode: "annonce-SuiviVente-clotureCompromis",
-    idComp,
-    isCloture: "1",
-    fromContact: "false",
+    mode: "annonce-SuiviVente-cloture",
+    idCompromis: idComp,
+    notes: String(payload.notes || ""),
   });
-  // POST : annuleCompromis passe par popinPostInner.
+
+  // On releve l'etat AVANT : la reponse ne dira rien, c'est la fiche qui jugera.
+  let avant = null;
+  try {
+    avant = await compterDansFicheHektor(annonceId, { clotures: "Compromis clôturé" });
+  } catch (_) { avant = null; }
+
   let resultat;
   try {
-    resultat = await appelHektor(job, "l'annulation du compromis", "POST", params, annonceId);
+    resultat = await appelHektor(job, "l'annulation du compromis", "GET", params, annonceId,
+                                 { arbitre: "relecture" });
   } catch (refus) {
     await restaurerEtatAffaire(job, "hektor_compromis_cloture", payload);
     throw refus;
+  }
+
+  // ─── LA PREUVE VIENT DE LA FICHE, PAS DE LA REPONSE ───
+  // On exige une cloture de PLUS qu'avant. Si on n'a pas pu lire l'etat d'avant, on
+  // exige au moins qu'il y en ait une : moins sur, mais ce sont les deux seules
+  // lectures honnetes possibles.
+  const apres = await compterDansFicheHektor(annonceId, { clotures: "Compromis clôturé" });
+  const aAgi = avant === null ? apres.clotures > 0 : apres.clotures > avant.clotures;
+  if (!aAgi) {
+    await restaurerEtatAffaire(job, "hektor_compromis_cloture", payload);
+    throw new Error(
+      `Le compromis ${idComp} n'est pas cloture apres l'appel ` +
+      `(clotures sur la fiche : ${avant === null ? "?" : avant.clotures} -> ${apres.clotures}). ` +
+      `Hektor a repondu ${JSON.stringify(resultat.brut)}, ce qui ne prouve rien pour ce verbe.`);
   }
   const lignes = payload.app_affaire_id ? 1 : 0;
 
@@ -13670,14 +13758,33 @@ async function handleDeleteHektorVente(job) {
       hektor_annonce_id: annonceId || null, hektor_vente_id: idVente,
     });
 
-  // GET, parametre `id` : releve tel quel dans supprimerVente (ajax type "GET").
+  // GET, parametre `id`. CE VERBE-LA ETAIT LE BON : eprouve le 29/08 sur la vente
+  // d'essai 23287, qui a bel et bien disparu de la fiche. La lecture statique du
+  // 28/08 avait vu juste pour la vente, et faux pour le compromis -- une fois sur deux.
   const params = new URLSearchParams({ mode: "ventes-deleteVente", id: idVente });
+
+  // La reponse ne dira rien : VIDE a l'echec (id 99999999) comme au succes (id 23287).
+  // C'est la disparition du bouton de suppression qui fait foi.
+  const motif = { bouton: `supprimerVente(${idVente})` };
+  let avant = null;
+  try { avant = await compterDansFicheHektor(annonceId, motif); } catch (_) { avant = null; }
+
   let resultat;
   try {
-    resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId);
+    resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId,
+                                 { arbitre: "relecture" });
   } catch (refus) {
     await restaurerEtatAffaire(job, "hektor_vente_delete", payload);
     throw refus;
+  }
+
+  const apres = await compterDansFicheHektor(annonceId, motif);
+  if (apres.bouton > 0) {
+    await restaurerEtatAffaire(job, "hektor_vente_delete", payload);
+    throw new Error(
+      `La vente ${idVente} figure TOUJOURS sur la fiche apres l'appel ` +
+      `(boutons : ${avant === null ? "?" : avant.bouton} -> ${apres.bouton}). ` +
+      `Hektor a repondu ${JSON.stringify(resultat.brut)}, ce qui ne prouve rien pour ce verbe.`);
   }
 
   // LA VENTE DISPARAIT CHEZ HEKTOR, MAIS PAS CHEZ NOUS : le registre est
