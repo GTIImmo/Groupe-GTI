@@ -53,6 +53,8 @@ declare
   n int := 0;
   r record;
   max_tentatives constant int := 5;
+  -- Au-dela de cette anciennete, on ne rejoue plus : voir la note en fin de fichier.
+  fraicheur constant interval := interval '24 hours';
   -- Uniquement les gestes IDEMPOTENTS dont l'effet se verifie de facon ABSOLUE.
   -- Toute addition a cette liste doit s'accompagner d'une verification absolue :
   -- sans elle, le rejeu transforme un succes en echec, ou double une creation.
@@ -75,6 +77,7 @@ begin
     where j.job_type = any (types_rejouables)
       and j.status = 'error'
       and coalesce(j.attempt_count, 0) between 1 and max_tentatives - 1
+      and j.requested_at > now() - fraicheur
       and j.updated_at < now() - make_interval(mins => 5 * coalesce(j.attempt_count, 1))
     order by j.updated_at
     limit 50
@@ -100,6 +103,7 @@ begin
     where j.job_type = any (types_rejouables)
       and j.status = 'running'
       and coalesce(j.attempt_count, 0) < max_tentatives
+      and j.requested_at > now() - fraicheur
       and coalesce(j.started_at, j.requested_at) < now() - interval '30 minutes'
     order by j.started_at
     limit 20
@@ -125,19 +129,26 @@ grant  execute on function public.app_console_action_enqueue_due_retries() to se
 -- ── LA SONDE : ce que le filet a renonce a reprendre ──
 -- Un travail abandonne ne doit pas disparaitre du regard. Cette vue le montre,
 -- avec ce qu'il portait, pour qu'un humain tranche.
-create or replace view public.app_console_action_abandonnees as
+drop view if exists public.app_console_action_abandonnees;
+
+create view public.app_console_action_abandonnees as
 select j.id,
        j.job_type,
        j.hektor_annonce_id,
        j.app_dossier_id,
        j.attempt_count,
+       case
+         when coalesce(j.attempt_count, 0) >= 5 then 'cinq tentatives epuisees'
+         else 'trop ancien pour etre rejoue (plus de 24 h)'
+       end as motif_abandon,
        j.error_message,
        j.requested_at,
        j.updated_at,
        j.payload_json
 from public.app_console_job j
 where j.status = 'error'
-  and coalesce(j.attempt_count, 0) >= 5
+  and (coalesce(j.attempt_count, 0) >= 5
+       or j.requested_at <= now() - interval '24 hours')
 order by j.updated_at desc;
 
 revoke all on public.app_console_action_abandonnees from public;
