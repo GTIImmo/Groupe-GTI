@@ -13837,6 +13837,35 @@ async function handleChangeHektorOffreStatus(job) {
  * Une fiche trop courte n'est pas une fiche vide : c'est une lecture ratee. On leve,
  * plutot que de conclure a partir de rien -- meme regle que le magasin d'affaire.
  */
+// ETAT ABSOLU d'un compromis ou d'une vente, par la porte 2.
+//
+// Absolu = independant de l'ordre des choses. C'est ce qui permet de REJOUER un
+// geste sans que la verification se retourne contre lui : un compromis annule
+// rend toujours status=2, une vente supprimee rend toujours 404.
+async function lireEtatTransactionViaApi(job, kind, id, step) {
+  const ident = String(id || "").trim();
+  if (!ident) return { _error: "identifiant vide" };
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/sync/transaction_etat_from_api.py", "--kind", kind, "--id", ident],
+      { timeoutMs: 30000, previewSize: 1000 });
+    const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const lu = safeJsonParse(derniere);
+    if (!lu || typeof lu !== "object") return { _error: "sortie illisible" };
+    return lu;
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    await logJob(job.id, step, "error", `Lecture de l'etat ${kind} (API) impossible`, {
+      identifiant: ident, error: message,
+    });
+    return { _error: message };
+  }
+}
+
+// ⚠ PLUS APPELEE depuis le 29/08 : les deux gestes qui s'en servaient jugent
+// desormais sur l'etat ABSOLU rendu par l'API (voir lireEtatTransactionViaApi).
+// Conservee parce qu'elle porte une mesure qui a coute cher a trouver -- la bonne
+// source du bloc transaction est `chargeannonce_Accueil`, PAS le HTML de la fiche.
 async function compterDansFicheHektor(annonceId, motifs, timeoutMs = 60000) {
   // ─── LA BONNE SOURCE, ET CE N'EST PAS LA PAGE ───
   //
@@ -13900,12 +13929,6 @@ async function handleCancelHektorCompromis(job) {
     notes: String(payload.notes || ""),
   });
 
-  // On releve l'etat AVANT : la reponse ne dira rien, c'est la fiche qui jugera.
-  let avant = null;
-  try {
-    avant = await compterDansFicheHektor(annonceId, { clotures: "Compromis clôturé" });
-  } catch (_) { avant = null; }
-
   let resultat;
   try {
     resultat = await appelHektor(job, "l'annulation du compromis", "GET", params, annonceId,
@@ -13915,18 +13938,37 @@ async function handleCancelHektorCompromis(job) {
     throw refus;
   }
 
-  // ─── LA PREUVE VIENT DE LA FICHE, PAS DE LA REPONSE ───
-  // On exige une cloture de PLUS qu'avant. Si on n'a pas pu lire l'etat d'avant, on
-  // exige au moins qu'il y en ait une : moins sur, mais ce sont les deux seules
-  // lectures honnetes possibles.
-  const apres = await compterDansFicheHektor(annonceId, { clotures: "Compromis clôturé" });
-  const aAgi = avant === null ? apres.clotures > 0 : apres.clotures > avant.clotures;
-  if (!aAgi) {
+  // ─── LA PREUVE, ABSOLUE ET REJOUABLE ───
+  //
+  // Premiere version : on comptait les « Compromis cloture » sur la fiche avant et
+  // apres, et on exigeait une de plus. Ca prouve le geste UNE fois -- mais rejoue
+  // sur un compromis deja annule, le compte ne bouge plus et le geste REUSSI
+  // passerait pour un echec a chaque tentative. Le filet de rejeu aurait fabrique
+  // des faux echecs en serie.
+  //
+  // L'etat par identifiant ne depend pas de l'ordre : status 2 = annule (mesure le
+  // 29/08 sur le miroir : 1 = actif 9 206, 2 = annule 1 367, exactement la
+  // repartition active/cancelled du registre).
+  const etatComp = await lireEtatTransactionViaApi(job, "compromis", idComp, "hektor_compromis_verify_api");
+  if (etatComp._error) {
     await restaurerEtatAffaire(job, "hektor_compromis_cloture", payload);
     throw new Error(
-      `Le compromis ${idComp} n'est pas cloture apres l'appel ` +
-      `(clotures sur la fiche : ${avant === null ? "?" : avant.clotures} -> ${apres.clotures}). ` +
-      `Hektor a repondu ${JSON.stringify(resultat.brut)}, ce qui ne prouve rien pour ce verbe.`);
+      `Annulation non confirmee pour le compromis ${idComp} : son etat n'a pas pu etre relu ` +
+      `(${etatComp._error}). Hektor avait repondu ${JSON.stringify(resultat.brut)}.`);
+  }
+  if (etatComp.trouve === false) {
+    // Il n'existe plus du tout : ce n'est pas ce qu'on visait, mais il n'est
+    // certainement plus actif. On l'accepte en le disant.
+    await logJob(job.id, "hektor_compromis_cloture", "error",
+      `Le compromis ${idComp} n'existe plus du tout chez Hektor (supprime, pas annule)`, {
+        hektor_compromis_id: idComp,
+      });
+  } else if (String(etatComp.status) !== "2") {
+    await restaurerEtatAffaire(job, "hektor_compromis_cloture", payload);
+    throw new Error(
+      `Le compromis ${idComp} n'est pas annule apres l'appel : Hektor rend status=` +
+      `${JSON.stringify(etatComp.status)}, attendu "2". Sa reponse etait ` +
+      `${JSON.stringify(resultat.brut)}, ce qui ne prouve rien pour ce verbe.`);
   }
   const lignes = payload.app_affaire_id ? 1 : 0;
 
@@ -13972,27 +14014,41 @@ async function handleDeleteHektorVente(job) {
   const params = new URLSearchParams({ mode: "ventes-deleteVente", id: idVente });
 
   // La reponse ne dira rien : VIDE a l'echec (id 99999999) comme au succes (id 23287).
-  // C'est la disparition du bouton de suppression qui fait foi.
-  const motif = { bouton: `supprimerVente(${idVente})` };
-  let avant = null;
-  try { avant = await compterDansFicheHektor(annonceId, motif); } catch (_) { avant = null; }
-
-  let resultat;
-  try {
-    resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId,
-                                 { arbitre: "relecture" });
-  } catch (refus) {
-    await restaurerEtatAffaire(job, "hektor_vente_delete", payload);
-    throw refus;
+  // On juge donc sur l'existence de la vente, lue par la porte 2 -- absolue, donc
+  // rejouable. Et comme pour l'annonce : on ne supprime pas ce qu'on ne voit pas.
+  const etatAvantVente = await lireEtatTransactionViaApi(job, "vente", idVente, "hektor_vente_verify_before_api");
+  if (etatAvantVente._error) {
+    throw new Error(
+      `Suppression NON ENVOYEE pour la vente ${idVente} : son etat n'a pas pu etre lu ` +
+      `(${etatAvantVente._error}). On ne supprime pas ce qu'on ne voit pas.`);
+  }
+  const venteDejaAbsente = etatAvantVente.trouve !== true;
+  if (venteDejaAbsente) {
+    await logJob(job.id, "hektor_vente_delete", "error",
+      `La vente ${idVente} n'existe deja plus chez Hektor : rien n'a ete envoye`, {
+        hektor_vente_id: idVente,
+      });
   }
 
-  const apres = await compterDansFicheHektor(annonceId, motif);
-  if (apres.bouton > 0) {
+  let resultat = { verbe: "GET", brut: "", ok: true };
+  if (!venteDejaAbsente) {
+    try {
+      resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId,
+                                   { arbitre: "relecture" });
+    } catch (refus) {
+      await restaurerEtatAffaire(job, "hektor_vente_delete", payload);
+      throw refus;
+    }
+  }
+
+  const etatApresVente = await lireEtatTransactionViaApi(job, "vente", idVente, "hektor_vente_verify_after_api");
+  if (etatApresVente._error || etatApresVente.trouve !== false) {
     await restaurerEtatAffaire(job, "hektor_vente_delete", payload);
     throw new Error(
-      `La vente ${idVente} figure TOUJOURS sur la fiche apres l'appel ` +
-      `(boutons : ${avant === null ? "?" : avant.bouton} -> ${apres.bouton}). ` +
-      `Hektor a repondu ${JSON.stringify(resultat.brut)}, ce qui ne prouve rien pour ce verbe.`);
+      `Suppression non confirmee pour la vente ${idVente} : ` +
+      (etatApresVente._error
+        ? `l'etat n'a pas pu etre relu (${etatApresVente._error})`
+        : "elle repond toujours a l'API"));
   }
 
   // LA VENTE DISPARAIT CHEZ HEKTOR, MAIS PAS CHEZ NOUS : le registre est
