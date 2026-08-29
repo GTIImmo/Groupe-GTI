@@ -13271,7 +13271,25 @@ async function handleDeleteHektorContact(job) {
   }
   let hektorDeleteSent = false;
 
-  if (before.exists !== false) {
+  // ─── ON NE SUPPRIME PAS UN CONTACT QU'ON N'A PAS PU VOIR ───
+  //
+  // Trouve en eprouvant : la condition etait `before.exists !== false`, donc la
+  // suppression partait AUSSI quand la relecture avait echoue (`exists: null`).
+  // Or c'est un geste irreversible. Meme regle que pour l'annonce : si on ne sait
+  // pas, on n'envoie pas -- et on le dit, au lieu de finir en « done » muet.
+  if (before.exists === null) {
+    throw new Error(
+      `Suppression NON ENVOYEE pour le contact ${contactId} : son existence n'a pas pu etre lue ` +
+      `(${before.error || "cause inconnue"}). On ne supprime pas ce qu'on ne voit pas.`);
+  }
+  if (before.exists === false) {
+    await logJob(job.id, "hektor_contact_delete", "error",
+      "Suppression NON ENVOYEE : le contact n'existe deja plus chez Hektor. Le menage local se fait quand meme.", {
+        hektor_contact_id: contactId,
+      });
+  }
+
+  if (before.exists === true) {
     const body = new URLSearchParams({
       mode: "contacts-contactProfile-deleteContact",
       id: contactId,
