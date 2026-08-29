@@ -355,3 +355,68 @@ premières. **`ventes-deleteVente` fonctionne**, et la destruction de 23288 éta
    5 workers convertis sur 16         inchange
    53 commits non pousses             origin/main au 28/08
 ```
+
+---
+
+# ✅ POINT 1 DE L'AUDIT — TERMINÉ le 29/08 au soir
+
+*« Faire passer un VRAI travail par le worker. » C'était la première tâche de l'ordre retenu,
+et elle a trouvé ce qu'aucun essai à la main n'aurait montré.*
+
+## Ce que le premier passage a révélé — un défaut dans mon propre correctif
+
+```
+   travail 1   cancel_hektor_compromis, compromis 50047
+               Hektor a repondu "true"          <- le jeton de SUCCES
+               clotures sur la fiche : 0 -> 0   <- ma relecture n'a RIEN vu
+               -> ERROR, alors que l'annulation avait REUSSI
+```
+
+**Cause** : le bloc suivi-vente n'est pas dans le HTML de la fiche, il est monté côté client.
+
+```
+   ?page=/mes-biens/mon-bien       208 274 car  ->  0 marqueur
+   mode=chargeannonce_Accueil      217 397 car  ->  cloture:1 clore:1 supprimerVente:1
+```
+
+> **L'enseignement, et il vaut pour tout le reste du chantier.** Dans le navigateur le bloc
+> **est** là — c'est le JavaScript qui l'a mis. Le worker ne voit que ce que le **serveur**
+> envoie. **Aucun essai à la main ne pouvait révéler ce défaut.** C'est exactement pourquoi ce
+> point passait avant tout le reste.
+
+Corrigé (`a4e7600`), workers redémarrés, essai rejoué.
+
+## Les deux handlers ont désormais tourné, et l'effet est vérifié
+
+| travail | résultat | preuve |
+|---|---|---|
+| `cancel_hektor_compromis` — compromis **50048** | ✅ **done** | `Compromis clôturé` sur la fiche |
+| `delete_hektor_vente` — vente **23289** | ✅ **done** | `/Api/Vente/VenteById/` → **404** |
+
+*La preuve de la vente vient de l'**API v2**, canal indépendant de la console — pas de la fiche,
+dont on sait maintenant qu'elle peut masquer.*
+
+## La vente ne disparaît que dans UN cas — mesuré quatre fois
+
+```
+   desarchivage par l'assistant de vente   ->  vente 23288 DETRUITE
+   desarchivage propre par upval (worker)  ->  vente 23289 intacte
+   suppression du compromis 50046          ->  vente 23289 intacte
+   suppression du compromis 50047          ->  vente 23289 intacte
+```
+
+## Ce qui reste du point 1
+
+```
+[ ] pousser les 53 commits      sinon le front reste fige au 28/08
+[ ] deployer le front           les 4 boutons existent dans le code, pas dans l'app
+```
+
+## État du bac à sable après l'essai
+
+```
+   annonce 62774     active (archive=0), statut Vendu
+   compromis 50048   cloture      <- a retirer
+   ventes            AUCUNE       23287, 23288, 23289 toutes supprimees et verifiees
+   affaire 9         123 456 au lieu de 79 000   <- a retirer en fin de chantier
+```
