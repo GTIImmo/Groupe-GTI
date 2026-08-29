@@ -495,3 +495,62 @@ Trois familles, trois remèdes :
 > Le HTML de la fiche ne contient pas le bloc transaction — c'est `chargeannonce_Accueil` qui
 > le porte. Un contrôle qui lit la mauvaise page ne vaut pas mieux qu'une absence de contrôle,
 > et il coûte plus cher : il rassure.
+
+---
+
+# C.4-bis-0 — LES SIX CONTRÔLES FERMÉS, ET DEUX ÉPROUVÉS
+
+*29/08 au soir. Frédéric a écarté `relance_signature` — « pas vraiment vérifiable » — donc six.*
+
+## La contrainte qui a décidé de la forme du correctif
+
+Elle était **écrite dans le code lui-même** *(`console_job_worker.js:2700`)* :
+
+> *« l'annonce 62962 a bien été créée, et le job a quand même fini en error — après six
+> tentatives et **seize pages inutiles** chez Hektor […] Une annonce créée mais déclarée en
+> échec, c'est le pire des deux mondes. »*
+
+Fermer les contrôles **sur la lecture GraphQL** aurait rejoué cet incident : elle ne cherche que
+la famille `SALE`, pagine jusqu'à 8 pages, et nous avons **deux bannissements d'IP** à
+l'historique. On a donc d'abord donné aux contrôles une **source exacte**.
+
+## La source : `phase2/sync/annonce_etat_from_api.py`
+
+Une seule requête par la porte 2, aucune famille, un 404 franc si l'annonce n'existe plus.
+
+```
+   id reel   ->  {"trouve": true, "archive": "0", "negociateur": "23", "agence": "12"}
+   id bidon  ->  {"trouve": false}
+```
+
+## Les six
+
+| handler | avant | maintenant |
+|---|---|---|
+| `archive_hektor_annonce` | passait si la relecture ratait | exige `archive="1"` — **✅ éprouvé, 38 s** |
+| `restore_hektor_annonce` | idem | exige `archive="0"` — **✅ éprouvé, 45 s** |
+| `delete_hektor_annonce` | testait un drapeau, journal « vérifiée » sans le savoir | **la suppression se prouve par l'absence** |
+| `delete_hektor_contact` | `exists: null` valait acquittement | exige la preuve de l'absence |
+| `change_hektor_annonce_status` | lisait, journalisait, **ne comparait jamais** | compare le statut à la cible |
+| `assign_hektor_annonce_negotiator` | `confirmed_negotiator_id` valait **toujours `null`** | compare `keyData.NEGOCIATEUR` |
+
+## La nuance sur le changement de statut
+
+C'est le worker le plus utilisé. On ne **lève pas** quand la relecture est muette — ce serait
+l'incident du 27/08. Trois issues, désormais distinguées **et écrites** :
+
+```
+   verifie: true    l'etat d'apres porte bien le statut vise
+   verifie: false   la relecture n'a rien rendu -- on ne sait pas, et on le DIT
+   echec            Hektor CONTREDIT la cible
+```
+
+*La différence avec avant : on ne prétend plus avoir vérifié.*
+
+## Reste
+
+```
+[ ] eprouver les 4 autres            delete annonce, delete contact, statut, negociateur
+[ ] seconde passe                    contacts, documents, photos, mandat auto, brouillon
+[ ] pousser les commits + deployer   le front reste fige au 28/08
+```
