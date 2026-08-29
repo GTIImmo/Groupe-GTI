@@ -8,6 +8,20 @@ identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (2
 
 ---
 
+## 📋 LA LISTE À COCHER — `LISTE_TACHES_A_COCHER_2026-08-29.md`
+
+> **Ce plan dit le POURQUOI. La liste dit le QUOI, item par item.**
+
+Posée le 29/08 sur ce constat de Frédéric : *« je ne comprends pas pourquoi la liste des tâches
+à exécuter n'est pas claire »*. La réponse était structurelle — **1 700 lignes, 0 case à cocher,
+0 nom de worker** alors que C.4 en couvre seize. Une ligne de synthèse comme *« C.4 — les
+workers, un par un »* ne permet pas de savoir qu'il en reste **onze**.
+
+C'est la même racine que les deux dérives trouvées par l'audit : **C.1' et C.4 ont pu être
+cochées parce que rien ne listait ce qu'elles contenaient.**
+
+---
+
 ## ⚖ LA RÈGLE DU « FAIT » — posée le 29/08 après l'audit
 
 > **Une tâche n'est cochée que si son ÉNONCÉ est couvert, et la mesure qui le prouve doit
