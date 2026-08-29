@@ -60,6 +60,13 @@ const ADMIN_JOB_TYPES = new Set([
   "restore_hektor_annonce",
   "change_hektor_annonce_status",
   "assign_hektor_annonce_negotiator",
+  // C.19 etape 4 (29/08) : les trois gestes d'etat sur les transactions. Ils vont
+  // ici, avec le changement de statut, parce qu'ils demandent la meme session admin
+  // et touchent les memes objets. Oublier cette liste = un travail qui reste en
+  // attente indefiniment, SANS erreur : aucun service ne le reclame.
+  "change_hektor_offre_status",
+  "cancel_hektor_compromis",
+  "delete_hektor_vente",
 ]);
 const MATTERPORT_JOB_TYPES = new Set([
   "matterport_online",
