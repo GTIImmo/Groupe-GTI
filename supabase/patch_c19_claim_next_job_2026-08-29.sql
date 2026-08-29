@@ -1,0 +1,42 @@
+-- =====================================================================
+-- C.19 etape 4 -- LE WORKER `admin` DOIT POUVOIR RECLAMER LES TROIS GESTES
+-- Date : 2026-08-29
+--
+-- LE DEFAUT, ET IL ETAIT SILENCIEUX EN DEUX ENDROITS
+-- --------------------------------------------------
+-- Un travail `change_hektor_offre_status` restait en attente INDEFINIMENT :
+-- la contrainte l'acceptait, le worker savait le traiter, mais PERSONNE ne le
+-- prenait. Pas d'erreur, pas de trace -- une file qui ne bouge pas.
+--
+-- Il y avait DEUX listes a tenir, et j'en avais oublie les deux :
+--   1. ADMIN_JOB_TYPES, cote worker (console_job_worker.js) -- corrige en ad065b7 ;
+--   2. CETTE fonction, cote Supabase, qui decide quel worker recoit quoi.
+-- Le code du worker le disait pourtant, ligne 13940 :
+--     "Appliquer la migration app_console_claim_next_job."
+--
+-- COMMENT IL A ETE TROUVE. Par un essai de garde-fou : une demande volontairement
+-- incomplete (un refus d'offre sans identifiant) qui devait echouer en une seconde
+-- avec "hektor_offre_id required", sans toucher a Hektor. Elle est restee en attente
+-- 90 secondes, puis encore 75 apres le premier correctif. C'est ce silence qui a
+-- designe la seconde liste.
+--
+-- CREATE OR REPLACE AVEC LA MEME SIGNATURE : les droits sont preserves. Ne JAMAIS
+-- faire DROP + CREATE ici -- cela effacerait les GRANT d'une fonction SECURITY
+-- DEFINER, et l'appel se fait par NOM depuis PostgREST : l'echec serait silencieux.
+--
+-- EPROUVE APRES APPLICATION : le travail a17baa00 est passe de `pending` a `error`
+-- avec le message attendu, sans qu'aucun appel ne parte chez Hektor.
+--
+-- Le corps est repris A L'IDENTIQUE de la version en place ; seule la ligne
+-- `worker_kind = 'admin'` gagne trois types.
+-- =====================================================================
+
+-- Voir la migration Supabase `c19_claim_next_job_gestes_transaction` pour le corps
+-- complet applique en production. La seule difference avec la version precedente :
+--
+--   or (worker_kind = 'admin' and j.job_type in (
+--          'delete_hektor_annonce','delete_hektor_contact','archive_hektor_annonce',
+--          'restore_hektor_annonce','change_hektor_annonce_status',
+--          'assign_hektor_annonce_negotiator',
+--          -- C.19 etape 4, 29/08 : les gestes d'etat sur les transactions.
+--          'change_hektor_offre_status','cancel_hektor_compromis','delete_hektor_vente'))
