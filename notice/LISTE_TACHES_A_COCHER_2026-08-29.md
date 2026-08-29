@@ -613,3 +613,102 @@ de relecture corrigé entre-temps.
    prouver    par une source absolue, la porte 2
    rattraper  le filet, toutes les minutes
 ```
+
+---
+
+# 🔄 ORDRE CORRIGÉ — arbitrage de Frédéric, 30/08
+
+*« demain matin on reprend à C.4 […] déplace C.16 […] ajoute le rattrapage photo, documents,
+et pense un run de rattrapage sur les recherches. »*
+
+**Ce qui change** : C.16 quitte la 3ᵉ place et rejoint un **bloc rattrapages** créé pour
+l'occasion. Les quatre tâches qui s'y trouvent ont la même nature — *aller rechercher ce qui
+manque, en masse, une bonne fois* — et le même risque : elles tapent fort chez Hektor.
+
+---
+
+## 1. C.4 — LES 11 WORKERS · *on reprend là demain matin* · 1 à 2 sem.
+
+```
+[ ] archiver / desarchiver / supprimer une annonce
+[ ] affecter le negociateur          [ ] lier un mandant
+[ ] supprimer un contact             [ ] creer un contact
+[ ] ajouter / supprimer une recherche
+[ ] creer un mandant                 [ ] mettre a jour un mandant
+[ ] LA BRANCHE « VENDU »             jamais executee depuis mai
+```
+
+*La lecture des handlers documents / photos / signature se replie ici.*
+
+## 2. C.19-c — le choix « actif / archivé » · 2 j
+
+## 3. C.9 + 26bis-③ — **la création part de l'app** · 1 à 2 sem. — *le vrai basculement*
+
+## 4. A.3-technique — le registre des mandats en propre · 3 à 5 j
+
+---
+
+## 5. 🔄 LES RATTRAPAGES — *bloc créé le 30/08*
+
+> **Pourquoi ensemble.** Quatre courses de fond, même nature, même danger : elles interrogent
+> Hektor en masse. **Le rattrapage des documents nous a déjà fait bannir l'IP** — débit trop
+> soutenu, 403 répétés. Aucune ne se lance sans frein, et **jamais deux en même temps**.
+
+```
+[ ] C.16   LES CONTACTS DISPARUS          descendu de la 3e place
+           825 fiches actives a marquer disparues -- jamais supprimer
+           5 454 archivees a traiter
+           poser le mecanisme « un contact a quitte le listing »
+
+[ ] D.1a   MESURER AVANT DE COURIR        1 h -- combien de fichiers au cloud
+           sans copie locale ? Le chiffre commande les deux suivants
+
+[ ] D.1    RATTRAPAGE DOCUMENTS           40 493 a redimensionner
+           ⚠ NE JAMAIS rejouer les annonces deja en echec
+           ⚠ verifier depuis une AUTRE IP avant de conclure a une panne Hektor
+
+[ ] D.2    RATTRAPAGE PHOTOS              1 397
+
+[ ] R.rech RATTRAPAGE DES RECHERCHES      ← demande de Frederic, 30/08
+           Une PREMIERE recherche n'entre dans aucun run : ni le listing ni le
+           delta de date_maj ne la voient. ~270 invisibles mesurees sur 249 fiches.
+           L'outil existe : run_rattrapage_acquereurs.ps1
+              71 337 fiches, 4 h 35, pause de 20 s OBLIGATOIRE
+           C'est le 19-R1 (tache 0.3), a finir. Et le 19-R2 la veille de la
+           bascule reste la DERNIERE OCCASION de rattraper.
+```
+
+---
+
+## 6. FIN DE PLAN
+
+```
+[ ] C.11    menage des tables mortes
+[ ] C.13-c  rattraper 23 715 dates de cloture
+[ ] B.3     le declencheur de descente
+[ ] E.2     bascule des negociateurs sur l'app
+[ ] E.3     les workers deviennent invisibles
+[ ] E.4     le jour J
+[ ] F.1     utilisateurs, roles et droits -- APRES la coupure
+```
+
+## 7. CE QUI NE DÉPEND PAS DU CODE — et commande la date
+
+```
+[ ] A.1  PORTAILS     sortie en nom propre + reprise des ~350 annonces en ligne
+[ ] A.2  SIGNATURE    contrat Yousign en propre
+[ ] A.3  REGISTRE     obligation legale, aujourd'hui adossee a Hektor
+```
+
+---
+
+## ✅ COCHÉ LE 30/08
+
+```
+[x] pousser les commits          2c5a074..9f79b4a, 55 commits partis
+[x] deployer le front            Vercel a redeploye -- confirme par Frederic
+                                 les 4 boutons de transaction sont en ligne
+[x] C.4-bis  le filet de rejeu   pose, eprouve, programme a la minute
+[x] C.4-bis-0  les 6 controles   fermes ; 5 eprouves en conditions reelles
+[x] C.19 point 1                 les 2 handlers eprouves par la chaine
+```
