@@ -1177,6 +1177,41 @@ volontairement large, et toute nouvelle formulation rencontrée doit y être ajo
 > commande pas la transaction.** La modale de statut n'est pas un créateur de transaction —
 > elle en ouvre un *quand il n'y a rien*.
 
+### Le choix « actif / archivé » — mécanisme complet *(mesuré, tâche C.19-c)*
+
+**Ce n'est pas une case à cocher : c'est un parcours, et il crée la vente.**
+
+```
+   « Transformer en vente »
+        -> popin ARCHIVAGE : « pour quelle raison ? »
+              [ LE BIEN EST VENDU ]        [ AUTRE ]
+        -> si VENDU, une sous-raison :  reseau / confrere / proprietaire
+        -> « Sauvegarder »   ->  l'annonce passe archive=1 IMMEDIATEMENT
+        -> PUIS l'assistant « Enregistrer une vente » s'ouvre
+        -> etape 4 : deux boutons  « Enregistrer & laisser actif »
+                                   « Enregistrer & archiver »
+```
+
+Verbe de l'archivage relevé : **`annonce-panneauArchive`** *(POST)*.
+
+**Trois conséquences mesurées sur l'annonce 62774 :**
+
+| | |
+|---|---|
+| après l'enregistrement | `archive=1`, `isArchive=1`, et « BIEN VENDU » affiché |
+| **le compromis n'est PAS clôturé** | 50046 est resté **actif** alors que la vente 23288 existait |
+| l'archivage est demandé **avant** la vente | on peut donc archiver puis abandonner la saisie de la vente — l'annonce reste archivée |
+
+> **Le point qui compte pour l'app** : l'archivage et la vente sont **deux gestes distincts que
+> l'écran enchaîne**. Notre branche « Vendu » doit donc porter **deux décisions**, pas une :
+> *crée-t-on la vente ?* et *archive-t-on l'annonce, et pour quelle raison ?*
+> Câbler l'un des deux en dur, c'est décider à la place du négociateur.
+
+*⚠ Piège relevé au passage : `canCallMvcPopin` répond `{"result":false}` — c'est une **sonde de
+capacité**, pas un refus du geste. Le motif de refus du worker contient `"result":false` ; il
+reste sûr **parce que le worker n'appelle jamais cette sonde**, mais la nuance est à garder en
+tête si on élargit le périmètre.*
+
 **Conséquence pour l'app.** Nos gestes ne doivent pas poser le statut de l'annonce à la main
 après coup : Hektor le recalcule. Poser les deux, c'est se préparer une divergence. Et le
 choix **actif / archivé** de la vente est une **décision métier** qui doit remonter jusqu'à
