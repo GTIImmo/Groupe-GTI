@@ -160,6 +160,9 @@ import {
   loadAffairesForDossier,
   editAffaireOptimistic,
   type AffaireLedgerRow,
+  createChangeOffreStatusJob,
+  createCancelCompromisJob,
+  createDeleteVenteJob,
   setBienStatut,
   findContactDuplicateCandidates,
   searchOwnerAnnonceOptions,
@@ -14832,6 +14835,58 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
+  // ─── C.19 ÉTAPE 4 — LES TROIS GESTES QUI PARTENT, EUX, CHEZ HEKTOR ───
+  //
+  // Tout le reste de cette modale reste chez nous. Ces trois-là changent un ÉTAT que
+  // seul Hektor peut acter, et que notre registre doit refléter.
+  async function handleGesteHektor(geste: 'refus' | 'accepte' | 'annuler_compromis' | 'supprimer_vente') {
+    const affaire = affaireCourantePourStatut()
+    if (!affaire || !statusChangeTarget) return
+    const identifiant = String(affaire.hektor_affaire_id ?? '')
+    if (!identifiant) {
+      setErrorMessage("Cette transaction n'a pas encore de numéro Hektor : le geste ne peut pas partir.")
+      return
+    }
+
+    // Une vente ne s'annule pas, elle DISPARAÎT : sa table n'a aucune colonne d'état.
+    // Rien ne la remet. D'où la confirmation, et le drapeau exigé jusque dans le worker.
+    if (geste === 'supprimer_vente') {
+      const daccord = window.confirm(
+        `Supprimer DÉFINITIVEMENT cette vente chez Hektor ?\n\n`
+        + `Une vente ne s'annule pas : elle disparaît, et rien ne la remet.\n`
+        + `${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id} — vente n° ${identifiant}`,
+      )
+      if (!daccord) return
+    }
+
+    setStatusChangeCorrectionPending(true)
+    setErrorMessage(null)
+    try {
+      const cible = { dossier: statusChangeTarget }
+      let job
+      if (geste === 'refus' || geste === 'accepte') {
+        job = await createChangeOffreStatusJob({ ...cible, hektorOffreId: identifiant, type: geste })
+      } else if (geste === 'annuler_compromis') {
+        job = await createCancelCompromisJob({ ...cible, hektorCompromisId: identifiant })
+      } else {
+        job = await createDeleteVenteJob({ ...cible, hektorVenteId: identifiant, confirmer: true })
+      }
+      rememberHektorActionJob(job)
+      const libelles: Record<string, string> = {
+        refus: "Refus de l'offre demandé",
+        accepte: "Acceptation de l'offre demandée",
+        annuler_compromis: 'Annulation du compromis demandée',
+        supprimer_vente: 'Suppression de la vente demandée',
+      }
+      setNoticeMessage(`${libelles[geste]} pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`)
+      closeStatusChangeModal()
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander ce geste')
+    } finally {
+      setStatusChangeCorrectionPending(false)
+    }
+  }
+
   async function handleChangeHektorAnnonceStatus(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!statusChangeTarget) return
@@ -17496,6 +17551,34 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       disabled={statusChangePending || statusChangeCorrectionPending}
                     >
                       {statusChangeCorrectionPending ? 'Enregistrement...' : 'Corriger sans envoyer à Hektor'}
+                    </button>
+                  ) : null}
+                  {affaireCourantePourStatut() && statusChangeStatus === 'offer' ? (
+                    <>
+                      <button className="ghost-button button-subtle" type="button"
+                        onClick={() => handleGesteHektor('refus')}
+                        disabled={statusChangePending || statusChangeCorrectionPending}>
+                        Refuser l'offre
+                      </button>
+                      <button className="ghost-button button-subtle" type="button"
+                        onClick={() => handleGesteHektor('accepte')}
+                        disabled={statusChangePending || statusChangeCorrectionPending}>
+                        Accepter l'offre
+                      </button>
+                    </>
+                  ) : null}
+                  {affaireCourantePourStatut() && statusChangeStatus === 'compromise' ? (
+                    <button className="ghost-button button-subtle" type="button"
+                      onClick={() => handleGesteHektor('annuler_compromis')}
+                      disabled={statusChangePending || statusChangeCorrectionPending}>
+                      Annuler le compromis
+                    </button>
+                  ) : null}
+                  {affaireCourantePourStatut() && statusChangeStatus === 'sold' ? (
+                    <button className="ghost-button button-danger" type="button"
+                      onClick={() => handleGesteHektor('supprimer_vente')}
+                      disabled={statusChangePending || statusChangeCorrectionPending}>
+                      Supprimer la vente
                     </button>
                   ) : null}
                   <button className="ghost-button button-primary" type="submit" disabled={statusChangePending || statusChangeCorrectionPending}>

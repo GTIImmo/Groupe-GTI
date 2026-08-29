@@ -13410,6 +13410,164 @@ function normalizeArchiveReasonPayload(payload) {
   };
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// C.19 ETAPE 4 -- LES TROIS GESTES D'ETAT, ET EUX SEULS, PARTENT CHEZ HEKTOR
+//
+// Les VALEURS (prix, dates, sequestre, honoraires) restent chez nous : elles se
+// corrigent dans l'app, se rangent dans app_affaire_champ_app et sont reposees
+// chaque nuit par le contrat d'autorite. Hektor ne les apprend jamais.
+//
+// Ce que ces trois-la envoient, en revanche, c'est un CHANGEMENT D'ETAT -- une
+// chose que lui seul peut acter, et que notre registre doit refleter.
+//
+// D'OU VIENNENT CES APPELS. Releves SUR ECRAN le 28/08 dans la session admin de
+// Frederic, en lisant le `onclick` des boutons de la fiche. Aucun clic, aucune
+// ecriture. Deux tentatives indirectes avaient echoue avant : nos captures ne
+// contenaient que le JavaScript d'en-tete, et les formulaires demandes au serveur
+// ignorent l'identifiant (montre avec temoin, reponses identiques octet pour octet).
+//
+//     offre_bien_change_status('refus','33027')  ->  annonce-SuiviVente-updateOffre
+//     annuleCompromis(idCompromis, fromContact)  ->  annonce-SuiviVente-clotureCompromis
+//     supprimerVente(id)                         ->  ventes-deleteVente
+//
+// CE QUI RESTE UNE HYPOTHESE, ET QU'IL FAUT EPROUVER UNE FOIS AVEC FREDERIC :
+//   1. LA METHODE HTTP. Le JavaScript de Hektor utilise $j.ajax sans que le verbe
+//      soit lisible dans ce qu'on a pu extraire. On tente GET puis POST, et on dit
+//      lequel a marche -- plutot que de deviner et d'echouer en silence.
+//   2. LE COMPTE. Un bouton de la fiche dit « Un compte administrateur ne peux pas
+//      saisir une offre ». Les boutons refuser/accepter sont pourtant BIEN PRESENTS
+//      en session admin : l'interdiction semble porter sur la creation seule. Si un
+//      refus survient, le message de Hektor est remonte tel quel.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Appelle Hektor en GET puis, si ca ne prend pas, en POST. Dit lequel a marche. */
+async function appelHektorGetPuisPost(job, categorie, params, annonceId) {
+  const enTetes = {
+    Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId || "")}`,
+    Accept: "application/json, text/javascript, */*; q=0.01",
+  };
+  const echecs = [];
+  for (const verbe of ["GET", "POST"]) {
+    try {
+      const reponse = verbe === "GET"
+        ? await hektorFetch(`${XMLRPC_URL}?${params.toString()}`, { headers: enTetes, timeoutMs: 60000 })
+        : await hektorFetch(XMLRPC_URL, {
+            method: "POST",
+            body: params,
+            headers: { ...enTetes, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            timeoutMs: 60000,
+          });
+      const texte = String(reponse.text || "");
+      let json = null;
+      try { json = JSON.parse(texte); } catch (_) { json = null; }
+      // Hektor rend soit un objet de succes, soit du HTML. Un refus explicite ou un
+      // message d'interdiction comptent comme un echec, pas comme un succes muet.
+      const refus = /ne peu[xt] pas|Credential Error|non autoris|"success"\s*:\s*false/i.test(texte);
+      if (!refus) {
+        return { verbe, ok: true, json, extrait: stripHtml(texte).slice(0, 300) };
+      }
+      echecs.push(`${verbe}: ${stripHtml(texte).slice(0, 200)}`);
+    } catch (err) {
+      echecs.push(`${verbe}: ${err && err.message ? err.message : String(err)}`);
+    }
+  }
+  throw new Error(`Hektor refuse ${categorie} -- ${echecs.join(" | ")}`);
+}
+
+/** Refuser ou accepter une offre. AJOUTE un evenement a son historique, n'ecrase rien. */
+async function handleChangeHektorOffreStatus(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const idOffre = String(payload.hektor_offre_id || payload.id_offre || "").trim();
+  const type = String(payload.type || "").trim().toLowerCase();
+  const annonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!idOffre) throw new Error("hektor_offre_id required");
+  if (type !== "refus" && type !== "accepte") {
+    throw new Error(`type doit valoir refus ou accepte (recu: ${type || "vide"})`);
+  }
+
+  await ensureAdminHektorWriteSession(job, "offre_status_admin_login");
+  await logJob(job.id, "hektor_offre_status", "running",
+    `Offre ${idOffre} : ${type === "refus" ? "refus" : "acceptation"}`, {
+      hektor_annonce_id: annonceId || null, hektor_offre_id: idOffre, type,
+    });
+
+  const params = new URLSearchParams({
+    mode: "annonce-SuiviVente-updateOffre",
+    id: idOffre,
+    type,
+  });
+  const resultat = await appelHektorGetPuisPost(job, "le changement d'etat de l'offre", params, annonceId);
+
+  await logJob(job.id, "hektor_offre_status", "done",
+    `Offre ${idOffre} passee a ${type} chez Hektor (${resultat.verbe})`, {
+      hektor_offre_id: idOffre, type, verbe: resultat.verbe,
+    });
+  return { status: "done", hektor_offre_id: idOffre, type, verbe: resultat.verbe };
+}
+
+/** Annuler (ou cloturer) un compromis. Une simple confirmation chez Hektor : pas de motif. */
+async function handleCancelHektorCompromis(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const idComp = String(payload.hektor_compromis_id || payload.id_compromis || "").trim();
+  const annonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  // isCloture distingue les deux issues du compromis : il ABOUTIT (vers la vente)
+  // ou il TOMBE. Par defaut on annule -- c'est le geste que l'app reclamait.
+  const cloture = payload.is_cloture === true || payload.is_cloture === "1" || payload.is_cloture === 1;
+  if (!idComp) throw new Error("hektor_compromis_id required");
+
+  await ensureAdminHektorWriteSession(job, "compromis_cloture_admin_login");
+  await logJob(job.id, "hektor_compromis_cloture", "running",
+    `Compromis ${idComp} : ${cloture ? "cloture" : "annulation"}`, {
+      hektor_annonce_id: annonceId || null, hektor_compromis_id: idComp, is_cloture: cloture,
+    });
+
+  const params = new URLSearchParams({
+    mode: "annonce-SuiviVente-clotureCompromis",
+    idComp,
+    isCloture: cloture ? "1" : "0",
+  });
+  const resultat = await appelHektorGetPuisPost(job, "l'annulation du compromis", params, annonceId);
+
+  await logJob(job.id, "hektor_compromis_cloture", "done",
+    `Compromis ${idComp} ${cloture ? "cloture" : "annule"} chez Hektor (${resultat.verbe})`, {
+      hektor_compromis_id: idComp, is_cloture: cloture, verbe: resultat.verbe,
+    });
+  return { status: "done", hektor_compromis_id: idComp, is_cloture: cloture, verbe: resultat.verbe };
+}
+
+/**
+ * Supprimer une vente. DEFINITIF : une vente n'a AUCUN etat chez Hektor
+ * (hektor_vente ne porte pas de colonne de statut, verifie le 28/08) -- elle
+ * n'est donc pas annulee, elle DISPARAIT. Rien ne la remet.
+ * Le garde-fou `confirmer` est exige explicitement dans la demande : aucun appel
+ * ne part sans lui, meme si le travail a ete cree par erreur.
+ */
+async function handleDeleteHektorVente(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const idVente = String(payload.hektor_vente_id || payload.id_vente || "").trim();
+  const annonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!idVente) throw new Error("hektor_vente_id required");
+  if (payload.confirmer !== true && payload.confirmer !== "1") {
+    throw new Error("Suppression de vente DEFINITIVE : la demande doit porter confirmer=true");
+  }
+
+  await ensureAdminHektorWriteSession(job, "vente_delete_admin_login");
+  await logJob(job.id, "hektor_vente_delete", "running",
+    `Suppression DEFINITIVE de la vente ${idVente}`, {
+      hektor_annonce_id: annonceId || null, hektor_vente_id: idVente,
+    });
+
+  const params = new URLSearchParams({ mode: "ventes-deleteVente", id: idVente });
+  const resultat = await appelHektorGetPuisPost(job, "la suppression de la vente", params, annonceId);
+
+  await logJob(job.id, "hektor_vente_delete", "done",
+    `Vente ${idVente} supprimee chez Hektor (${resultat.verbe}) -- geste irreversible`, {
+      hektor_vente_id: idVente, verbe: resultat.verbe,
+    });
+  return { status: "done", hektor_vente_id: idVente, verbe: resultat.verbe };
+}
+
 async function handleArchiveHektorAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
@@ -13822,6 +13980,13 @@ async function runHandler(job) {
       return handleRestoreHektorAnnonce(job);
     case "change_hektor_annonce_status":
       return handleChangeHektorAnnonceStatus(job);
+    // C.19 etape 4 : les trois gestes d etat, releves sur ecran le 28/08.
+    case "change_hektor_offre_status":
+      return handleChangeHektorOffreStatus(job);
+    case "cancel_hektor_compromis":
+      return handleCancelHektorCompromis(job);
+    case "delete_hektor_vente":
+      return handleDeleteHektorVente(job);
     case "assign_hektor_annonce_negotiator":
       return handleAssignHektorAnnonceNegotiator(job);
     case "create_hektor_draft_annonce":

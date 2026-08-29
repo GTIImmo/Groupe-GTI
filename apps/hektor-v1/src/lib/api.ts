@@ -8148,6 +8148,124 @@ export async function createRestoreHektorAnnonceJob(input: {
   return data as ConsoleJob
 }
 
+// ─── C.19 ÉTAPE 4 — LES TROIS GESTES D'ÉTAT, ET EUX SEULS, PARTENT CHEZ HEKTOR ───
+//
+// Les valeurs (prix, dates, séquestre) se corrigent chez nous — voir
+// editAffaireOptimistic. Ces trois-là, en revanche, changent un ÉTAT que seul
+// Hektor peut acter.
+//
+// Relevés sur écran le 28/08 dans la session admin, sans cliquer :
+//     offre_bien_change_status('refus','33027')  ->  annonce-SuiviVente-updateOffre
+//     annuleCompromis(id, fromContact)           ->  annonce-SuiviVente-clotureCompromis
+//     supprimerVente(id)                         ->  ventes-deleteVente
+
+/**
+ * Refuser ou accepter une offre. Le geste le plus sûr des trois : une offre est une
+ * conversation (11 061 propositions, 9 988 acceptations, 1 096 refus dans le parc) —
+ * on lui AJOUTE un événement, on n'écrase rien. Un refus se rattrape par une
+ * acceptation, la conversation continue.
+ */
+export async function createChangeOffreStatusJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  hektorOffreId: string | number
+  type: 'refus' | 'accepte'
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'change_hektor_offre_status',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        hektor_offre_id: String(input.hektorOffreId),
+        type: input.type,
+      },
+      priority: input.priority ?? 7,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor offer status job')
+  return data as ConsoleJob
+}
+
+/**
+ * Annuler un compromis. Chez Hektor c'est une simple confirmation — ni motif, ni date,
+ * contrairement à la clôture d'un mandat qui en demande trois.
+ * `isCloture` distingue les deux issues : le compromis ABOUTIT (vers la vente) ou il
+ * TOMBE. Par défaut on annule — c'est le geste qui manquait à l'app.
+ */
+export async function createCancelCompromisJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  hektorCompromisId: string | number
+  isCloture?: boolean
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'cancel_hektor_compromis',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        hektor_compromis_id: String(input.hektorCompromisId),
+        is_cloture: input.isCloture === true,
+      },
+      priority: input.priority ?? 7,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor compromis cancel job')
+  return data as ConsoleJob
+}
+
+/**
+ * Supprimer une vente. ⚠ DÉFINITIF. Une vente n'a AUCUN état chez Hektor — sa table ne
+ * porte pas de colonne de statut, vérifié le 28/08 — elle n'est donc pas « annulée »,
+ * elle DISPARAÎT. Rien ne la remet.
+ * Le `confirmer` est exigé jusque dans le worker : sans lui, aucun appel ne part, même
+ * si le travail a été créé par erreur.
+ */
+export async function createDeleteVenteJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  hektorVenteId: string | number
+  confirmer: true
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  if (input.confirmer !== true) throw new Error('Suppression de vente : confirmation explicite requise')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'delete_hektor_vente',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        hektor_vente_id: String(input.hektorVenteId),
+        confirmer: true,
+      },
+      priority: input.priority ?? 7,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor vente delete job')
+  return data as ConsoleJob
+}
+
 export type ArchiveHektorAnnonceMainChoice = 'choiceVendu' | 'choiceAutre'
 export type ArchiveHektorAnnonceSubChoice =
   | 'agence'
