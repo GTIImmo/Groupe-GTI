@@ -8197,13 +8197,15 @@ export async function createChangeOffreStatusJob(input: {
 /**
  * Annuler un compromis. Chez Hektor c'est une simple confirmation — ni motif, ni date,
  * contrairement à la clôture d'un mandat qui en demande trois.
- * `isCloture` distingue les deux issues : le compromis ABOUTIT (vers la vente) ou il
- * TOMBE. Par défaut on annule — c'est le geste qui manquait à l'app.
+ *
+ * ⚠ IL N'Y A QU'UN SEUL GESTE. Une première version proposait un choix
+ * « clôturer / annuler » : je l'avais INVENTÉ. La relecture du 29/08 montre que
+ * `annuleCompromis` envoie toujours `isCloture: '1'`, et que la popin qui l'appelle
+ * s'intitule « Annulation du compromis ». Le paramètre a donc disparu.
  */
 export async function createCancelCompromisJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
   hektorCompromisId: string | number
-  isCloture?: boolean
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -8218,7 +8220,6 @@ export async function createCancelCompromisJob(input: {
         numero_dossier: input.dossier.numero_dossier ?? null,
         titre_bien: input.dossier.titre_bien ?? null,
         hektor_compromis_id: String(input.hektorCompromisId),
-        is_cloture: input.isCloture === true,
       },
       priority: input.priority ?? 7,
       requested_by: userId,
