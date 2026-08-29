@@ -47,6 +47,28 @@ mesure fausse.**
 
 ---
 
+## CE QUI A BOUGÉ LE 29/08 — l'essai réel sur Hektor
+
+*Une journée qui a commencé par un doute de Frédéric — « je ne suis pas sûr qu'Hektor, même en
+cas de succès, nous envoie autre chose » — et qui a fini par trouver **un verbe faux et quatre
+formulations de refus non reconnues**. Aucune n'aurait été vue en relisant le code.*
+
+| | |
+|---|---|
+| 🔴 **trouvé** | le worker appelait **le chargeur de formulaire** au lieu de l'action pour annuler un compromis. Le geste n'aurait **jamais rien annulé** |
+| 🔴 **trouvé** | **trois formulations de refus** échappaient au détecteur — et elles sont **non vides**, donc comptées comme des **succès** |
+| 🔴 **trouvé** | la réponse de `ventes-deleteVente` est **vide au succès comme à l'échec**. La règle uniforme posée la veille aurait rejeté **chaque suppression réussie** |
+| ✅ **corrigé** | verbe, vocabulaire du refus, et **un arbitre par geste** *(la réponse pour l'offre, la relecture de la fiche pour le compromis et la vente)* — `779e2bf`, `dd02299` |
+| 📖 **consigné** | **les codes relevés et les interactions avec le statut** → section *« LES GESTES DE TRANSACTION CHEZ HEKTOR »* plus bas dans ce plan |
+| 🆕 **C.19-c** | le choix **« laisser actif » / « archiver »** à l'enregistrement d'une vente agit sur le statut de l'annonce : **décision métier, à remonter jusqu'à l'écran** |
+| ⏳ **reste** | éprouver la suppression d'une vente posée sur un compromis **actif**, et la branche « archiver » — *demande une session administrateur* |
+
+> **La règle de méthode qui en sort, et elle vaut pour tout le reste du chantier :**
+> **lire le code ne remplace pas regarder passer l'appel.** Le nom du mauvais verbe figurait
+> bien dans le JavaScript de Hektor — il n'est simplement pas celui qui part.
+
+---
+
 ## CE QUI A BOUGÉ LES 27-28/08
 
 *Cinq changements. Trois chantiers avancent, deux défauts inconnus ont été trouvés — et
@@ -1076,6 +1098,106 @@ Et elle bloque trois choses en aval : **C.13-c** *(le rattrapage écrirait sur d
 - **L'espace client tourne sur Render** : vérifier qu'il ne dépend de rien de Hektor.
 - **Le premier remplissage de C.6** doit se faire **pendant que Hektor vit** : c'est le miroir qui
   alimente.
+
+---
+
+## LES GESTES DE TRANSACTION CHEZ HEKTOR — codes relevés et interactions de statut
+
+*Relevé en conditions réelles le 29/08/2026 sur le bac à sable 62774, en sessions
+**administrateur** puis **négociateur**. Chaque ligne ci-dessous a été **vue passer dans le
+réseau**, pas lue dans le code. Détail complet et récit de l'essai :
+`ACTIONS_TRANSACTION_HEKTOR_2026-08-28.md`.*
+
+> ⚠ **La leçon de méthode, avant les codes.** Le verbe d'annulation du compromis avait été lu
+> **dans le JavaScript** de `annuleCompromis`, où il figure bel et bien. Ce n'est pourtant
+> **pas** celui que le navigateur émet. Le worker a tourné plusieurs jours avec un verbe qui
+> n'aurait rien annulé. **Lire le code ne remplace pas regarder passer l'appel.**
+
+### Les verbes, tels qu'ils partent
+
+| geste | méthode | mode | paramètres |
+|---|---|---|---|
+| **refuser une offre** | GET | `annonce-SuiviVente-updateOffre` | `id`, `type=refus` |
+| **accepter une offre** | GET | `annonce-SuiviVente-updateOffre` | `id`, `type=accepte` |
+| **annuler un compromis** | **GET** | **`annonce-SuiviVente-cloture`** | **`idCompromis`, `notes`** |
+| **supprimer une vente** | GET | `ventes-deleteVente` | `id` |
+| supprimer un compromis | — | `delete_compromis_vente(id)` *(front)* | confirmation Oui/Non |
+
+**Et les faux amis, à ne pas confondre avec l'action :**
+
+| | |
+|---|---|
+| `annonce-SuiviVente-clotureCompromis` *(POST)* | **le chargeur du formulaire** — rend 7 214 caractères de HTML. C'est lui que le worker appelait par erreur |
+| `annonce-SuiviVente-compromis-popinClotureCompromis` | la popin de confirmation *(1 823 c.)* |
+| `ajoutebien` *(POST)* | **appel annexe** : il échoue souvent sans empêcher le geste. Il a échoué 8 fois pendant la création — réussie — de la vente 23287 |
+
+**Le parcours d'annulation d'un compromis a TROIS temps**, pas un : bouton « Annuler » → popin
+de confirmation → **un second formulaire** *(prix net vendeur, date, note)* → « Clôturer ».
+C'est ce troisième temps qui émet l'appel.
+
+### Ce que Hektor répond — et qui n'est pas uniforme
+
+| geste | succès | échec |
+|---|---|---|
+| **offre** | `"1"` *(mesuré 3×)* | `"[]"` *(2 causes distinctes)* |
+| **compromis** | **4 caractères** *(valeur exacte non captée)* | **vide** |
+| **vente** | **vide** | **vide** |
+
+➡ **La vente est le seul geste dont la réponse ne dit RIEN.** Pour elle, seule la relecture de
+la fiche fait foi. Une règle uniforme « toute réponse vide = échec » — posée le 28/08 —
+aurait rejeté **chaque suppression réussie** et défait un geste qui avait marché.
+
+### Le vocabulaire du refus — Hektor refuse en HTTP 200, en français
+
+Quatre formulations relevées **en une seule journée**, dont trois manquaient au détecteur :
+
+```
+   « Un compte administrateur ne peux pas saisir une offre »
+   « Vous ne pouvez pas creer un bien »                          <- `ne pouvez` != `ne peux`
+   « Vous n'avez pas les droits pour creer un compromis... »     <- `les droits` != `le droit`
+   {"result":false}                                              <- et pas seulement `success`
+```
+
+➡ **Une liste de phrases ne se devine pas, elle se relève.** Le motif du worker est
+volontairement large, et toute nouvelle formulation rencontrée doit y être ajoutée.
+
+### 🔴 LES INTERACTIONS AVEC LE STATUT DE L'ANNONCE
+
+**C'est le point que Frédéric a demandé de consigner, et il commande la branche « Vendu ».**
+
+| geste | effet sur le statut de l'annonce |
+|---|---|
+| **annuler un compromis** | l'annonce **reste** « Sous compromis » ; le compromis passe « Clôturé » |
+| **supprimer un compromis** | l'annonce **redescend seule** à « **Sous offre** » |
+| **supprimer une vente** | l'annonce **redescend seule** à l'étape **compromis**, et « BIEN VENDU » disparaît |
+| **enregistrer une vente** | **deux issues au choix** : « laisser actif » ou « **archiver** » |
+| cliquer « SOUS COMPROMIS » dans la modale | change **le statut seul**, *sans créer de compromis* — sauf si l'annonce n'en a aucun, auquel cas l'assistant s'ouvre |
+
+> **La règle qui s'en dégage : chez Hektor, la transaction commande le statut ; le statut ne
+> commande pas la transaction.** La modale de statut n'est pas un créateur de transaction —
+> elle en ouvre un *quand il n'y a rien*.
+
+**Conséquence pour l'app.** Nos gestes ne doivent pas poser le statut de l'annonce à la main
+après coup : Hektor le recalcule. Poser les deux, c'est se préparer une divergence. Et le
+choix **actif / archivé** de la vente est une **décision métier** qui doit remonter jusqu'à
+l'écran — elle ne peut pas rester câblée dans le worker *(tâche **C.19-c**)*.
+
+### Les droits, mesurés — ils ne sont pas où on les croit
+
+| | administrateur | négociateur |
+|---|---|---|
+| créer une **vente** | ✅ | ❌ *(le statut VENDU disparaît de la modale)* |
+| créer un **compromis** | ✅ | ✅ |
+| **supprimer** un compromis | ✅ | ✅ |
+| voir le bouton *supprimer une vente* | ❌ *(présent en DOM mais masqué, 0×0)* | — |
+
+Et une contrainte qui n'a **rien à voir avec le compte** : **un seul compromis à la fois par
+annonce**. Tant qu'il en existe un — *même clôturé* — toute création est refusée, dans les deux
+sessions. Le supprimer libère la place.
+
+*Le bouton masqué en admin est le même phénomène que les blocs de signature invisibles en root
+admin (idUser 4). **Un contrôle masqué dans l'écran ne veut pas dire un verbe refusé par le
+serveur** : `ventes-deleteVente` a parfaitement fonctionné en HTTP depuis cette même session.*
 
 ---
 
