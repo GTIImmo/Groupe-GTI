@@ -420,3 +420,78 @@ dont on sait maintenant qu'elle peut masquer.*
    ventes            AUCUNE       23287, 23288, 23289 toutes supprimees et verifiees
    affaire 9         123 456 au lieu de 79 000   <- a retirer en fin de chantier
 ```
+
+---
+
+# C.4-bis-0 — PREMIÈRE PASSE : lecture des handlers, un par un
+
+*29/08 au soir. **Lu dans le code**, jamais par recherche de motif — cette méthode m'a trompé
+quatre fois la veille. Chaque verdict ci-dessous cite la ligne qui le fonde.*
+
+## 🔴 AUCUNE VÉRIFICATION — le geste est déclaré réussi quoi qu'il arrive
+
+| handler | ce qu'il fait |
+|---|---|
+| **`change_hektor_annonce_status`** | relit l'état d'après *(l. 10428)*, **le met dans son journal** *(l. 10445-10450)*, et **ne le compare jamais**. Retourne `status: "changed"` inconditionnellement |
+| **`assign_hektor_annonce_negotiator`** | même chose *(l. 10549, 10572-10576)* : lit, journalise, ne conclut pas |
+| **`relance_signature`** | la réponse `res` n'est **jamais examinée** ; le journal passe à `done` quoi qu'il arrive, et un **403 est explicitement avalé** *(`if (!isHektorForbiddenError(error)) throw`)* |
+
+> **`change_hektor_annonce_status` est le worker le plus utilisé du projet** — c'est lui qui porte
+> tout le cycle de statut et les transactions qui en découlent. Il ne vérifie rien.
+
+## 🟠 VÉRIFIE, MAIS LA VÉRIFICATION S'OUVRE QUAND LA RELECTURE RATE
+
+```js
+   const after = await fetchHektorPropertyByIdBestEffort(...);   // « best effort »
+   if (after && after.archived === false) { throw ... }          // after nul -> on PASSE
+```
+
+| handler | ligne |
+|---|---|
+| `archive_hektor_annonce` | `if (after && after.archived === false)` |
+| `restore_hektor_annonce` | `if (after && after.archived === true)` |
+| `delete_hektor_annonce` | `if (after && after.archived === false)` — et son journal dit « envoyée et **vérifiée** » |
+| `delete_hektor_contact` | `if (hektorDeleteSent && after.exists === true)` |
+
+**Le défaut est le même partout** : une relecture qui échoue vaut acquittement. C'est *« conclure
+du silence »*, exactement ce que C.4-bis-0 cherchait — mais déguisé en vérification, donc plus
+difficile à voir qu'une absence de contrôle.
+
+## ✅ VÉRIFIENT CORRECTEMENT — la relecture ratée est un échec
+
+| handler / contrôle | ligne |
+|---|---|
+| impersonation négociateur | `if (!after \|\| after.userId !== String(target.idUser))` *(l. 2347, 2361)* |
+| impersonation agence | `if (!after \|\| after.userId !== targetId \|\| after.role !== "AGENCE")` *(l. 3028, 3042)* |
+| rattachement d'un prospect | `if (!hektorProspectLinkedInHtml(after.text, ...))` *(l. 12775, 12784, 12932)* |
+| `update` / `add` / `delete_hektor_contact_search` | délèguent à un aide qui rend un **motif d'échec explicite**, et lèvent dessus |
+| **les 3 gestes de transaction** | corrigés le 29/08 : réponse pour l'offre, relecture de `chargeannonce_Accueil` pour compromis et vente |
+
+*La différence tient à un caractère : `if (!after || ...)` échoue proprement, `if (after && ...)`
+laisse passer. Les deux se ressemblent à la lecture rapide.*
+
+## Ce qui reste à lire — seconde passe
+
+```
+[ ] create_hektor_contact        [ ] update_hektor_contact
+[ ] create_hektor_mandant_contact [ ] update_hektor_mandant_contact
+[ ] create_hektor_mandat_auto_number
+[ ] create_hektor_draft_annonce
+[ ] upload_document_to_hektor    [ ] delete_document_from_hektor
+[ ] upload_hektor_photo          [ ] sync_hektor_photos
+[ ] cancel_signature_procedure   [ ] link_hektor_mandant (partiellement lu)
+```
+
+## Le correctif à prévoir
+
+Trois familles, trois remèdes :
+
+1. **les trois qui ne vérifient rien** → comparer l'état d'après à la cible, et lever sinon ;
+2. **les quatre qui s'ouvrent** → transformer `if (after && …)` en `if (!after || …)` : *une
+   relecture impossible n'est pas un succès* ;
+3. **`relance_signature`** → cesser d'avaler le 403, et lire la réponse.
+
+> **Et la règle générale, tirée du point 1** : la relecture doit interroger la **bonne source**.
+> Le HTML de la fiche ne contient pas le bloc transaction — c'est `chargeannonce_Accueil` qui
+> le porte. Un contrôle qui lit la mauvaise page ne vaut pas mieux qu'une absence de contrôle,
+> et il coûte plus cher : il rassure.
