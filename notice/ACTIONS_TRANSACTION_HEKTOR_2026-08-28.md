@@ -448,3 +448,84 @@ suppression de la vente ne le ressuscite pas. Reserve honnete : 50044 avait ete 
    compromis 50044   cloture     (a retirer en fin de chantier)
    vente     23287   SUPPRIMEE   (plus rien a nettoyer)
 ```
+
+---
+
+# ✅ ESSAI EN SESSION NEGOCIATEUR — trois corrections a ce qui precede
+
+*29/08, fin de journee. Frederic : « je pense que le probleme n'est pas l'acces negociateur
+mais teste, on sera fixe ». Il avait raison sur les trois points.*
+
+## ① `ajoutebien` n'a JAMAIS rien bloque — et le compromis avait bien ete cree
+
+J'avais conclu que le compte admin ne pouvait pas creer de compromis, en lisant le refus
+`Vous ne pouvez pas creer un bien` renvoye par le mode `ajoutebien`.
+
+**Faux.** En supprimant le compromis 50044, un compromis **50045** est apparu : ma tentative
+precedente **avait reussi**, elle etait simplement masquee par le bloc de 50044, qui n'affiche
+qu'un compromis a la fois. `ajoutebien` est un appel annexe qui echoue sans consequence -- il
+avait deja echoue 8 fois pendant la creation de la vente 23287, qui a pourtant abouti.
+
+> **Mes propres mesures contredisaient ma conclusion, et je ne l'ai pas vu.** Le refus d'un
+> appel annexe n'est pas le refus du geste.
+
+## ② La vraie contrainte : UN SEUL COMPROMIS A LA FOIS
+
+Sous negociateur, « Ajouter un compromis » rend en clair :
+
+> **« Vous n'avez pas les droits pour creer un compromis lie a cette annonce. »**
+
+Le meme refus qu'en admin, donc **ce n'est pas une affaire de compte** : tant qu'un compromis
+existe sur l'annonce -- meme cloture -- on n'en cree pas d'autre. Le supprimer libere la place.
+
+*Cette phrase est une TROISIEME formulation de refus, et ma regex ne la reconnaissait pas
+davantage : j'avais ecrit `le droit` au singulier, Hektor ecrit « les droits ». Corrige.*
+
+**Les comptes different quand meme, mais ailleurs** : le negociateur ne peut pas creer de
+**vente** *(le statut VENDU disparait de la modale)* ; l'admin le peut. Ils sont complementaires.
+
+## ③ 🔴 LA REPONSE DU COMPROMIS N'EST PAS MUETTE — je m'etais trompe
+
+Annulation d'un compromis **reellement actif** (50045), enregistreur arme :
+
+```
+   POST  annonce-SuiviVente-clotureCompromis   ->  7214 car   <- le CHARGEUR du formulaire
+   GET   annonce-SuiviVente-cloture            ->     4 car   <- l'ACTION
+```
+
+Et l'echec, mesure plus tot avec un identifiant inexistant : **0 caractere**.
+
+| | |
+|---|---|
+| echec | **vide** |
+| succes | **4 caracteres** *(valeur exacte non captee)* |
+
+**Elles different.** Contrairement a la vente -- ou succes et echec rendent tous deux du vide --
+la reponse du compromis **porte bien une information**. Ce que j'ai ecrit plus haut, et dans le
+message du commit 779e2bf, est donc **inexact pour le compromis**.
+
+*Le code, lui, reste bon* : il arbitre en relisant la fiche, ce qui marche dans les deux cas et
+ne depend d'aucune supposition. Mais la raison ecrite etait fausse, et une raison fausse finit
+toujours par egarer quelqu'un.
+
+Au passage, ce releve **confirme le correctif du verbe** : `clotureCompromis` en POST est le
+chargeur du formulaire *(7 214 caracteres de HTML)*, `cloture` en GET est l'action. L'ancien
+worker appelait le chargeur.
+
+## Une interaction statut / transaction, en prime
+
+Supprimer le compromis a fait **redescendre l'annonce de « Sous compromis » a « Sous offre »**,
+toute seule. A rapprocher de l'observation inverse du meme jour : cliquer « SOUS COMPROMIS »
+change le statut **sans** creer de compromis.
+
+➡ Chez Hektor, **la transaction commande le statut, le statut ne commande pas la transaction.**
+
+## Bac a sable 62774 : propre
+
+```
+   compromis 50044   supprime
+   compromis 50045   supprime
+   vente     23287   supprimee
+```
+
+Il ne reste que l'affaire 9 (123 456 au lieu de 79 000), a retirer en fin de chantier.

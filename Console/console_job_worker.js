@@ -13503,7 +13503,13 @@ async function appelHektor(job, categorie, verbe, params, annonceId, options = {
   // Toutes deux sont NON VIDES : elles franchissaient donc aussi le controle des
   // reponses vides, et le geste passait pour un SUCCES. Deux faux succes, dans le
   // detecteur cense les empecher.
-  if (/ne peu[xt] pas|ne pouv(?:ez|ons) pas|Credential Error|non autoris|n'avez pas le droit|"(?:success|result)"\s*:\s*false/i
+  //
+  // TROISIEME formulation, relevee en session NEGOCIATEUR le 29/08 :
+  //     « Vous n'avez pas les droits pour creer un compromis lie a cette annonce. »
+  // Ma regex disait `le droit` au singulier ; Hektor ecrit « les droits ». Trois
+  // formulations manquees en une journee : une liste de phrases ne se devine pas,
+  // elle se releve. D'ou le motif volontairement large ci-dessous.
+  if (/ne peu[xt] pas|ne pouv(?:ez|ons) pas|Credential Error|non autoris|n'(?:avez|avons) pas (?:le|les) droits?|n'etes pas autoris|"(?:success|result)"\s*:\s*false/i
         .test(texte)) {
     throw new Error(`Hektor refuse ${categorie} : ${stripHtml(texte).slice(0, 300)}`);
   }
