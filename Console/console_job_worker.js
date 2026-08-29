@@ -2938,6 +2938,37 @@ async function fetchAnnonceDateMajFromApi(job, annonceId, step) {
   }
 }
 
+// ETAT EXACT d'une annonce (existe ? archivee ? quel negociateur ?) par la porte 2.
+//
+// Remplace le balayage GraphQL pour les VERIFICATIONS d'apres-geste. Celui-ci ne
+// cherche que la famille SALE et pagine jusqu'a 8 pages -- il rendait `null` pour
+// une location ou un bien pro, et le controle concluait alors au succes.
+//
+// Ici : UNE requete, aucune famille, et un 404 franc quand l'annonce n'existe plus.
+// On distingue trois issues, et l'appelant DOIT les distinguer aussi :
+//     { trouve: true, archive, negociateur }   on sait
+//     { trouve: false }                        elle n'existe plus -- une reponse
+//     { _error }                               on ne sait PAS -- ce n'est pas un succes
+async function lireEtatAnnonceViaApi(job, annonceId, step) {
+  const id = String(annonceId || "").trim();
+  if (!id) return { _error: "annonce_id vide" };
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/sync/annonce_etat_from_api.py", "--annonce-id", id],
+      { timeoutMs: 30000, previewSize: 1000 });
+    const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const lu = safeJsonParse(derniere);
+    if (!lu || typeof lu !== "object") return { _error: "sortie illisible" };
+    return lu;
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    await logJob(job.id, step, "error", "Lecture de l'etat annonce (API) impossible", {
+      hektor_annonce_id: id, error: message,
+    });
+    return { _error: message };
+  }
+}
+
 async function ensureAdminHektorSession(job, reason, options = {}) {
   const requireRootAdmin = options.requireRootAdmin !== false;
   const isExpectedAdmin = (identity) => requireRootAdmin
@@ -10431,8 +10462,38 @@ async function handleChangeHektorAnnonceStatus(job) {
     priority: 72,
   });
 
+  // ─── ON COMPARE, AU LIEU DE SE CONTENTER DE JOURNALISER ───
+  //
+  // Avant, ce worker -- LE PLUS UTILISE DU PROJET -- relisait l'etat d'apres, le
+  // rangeait dans `after_property`, et retournait « changed » sans jamais le
+  // comparer a la cible. Le succes etait pose par principe.
+  //
+  // Pourquoi on ne LEVE pas quand la relecture manque : elle passe par le listing
+  // GraphQL, qui ne couvre que la famille SALE et coute jusqu'a 8 pages. Lever
+  // dessus rejouerait l'incident du 27/08 consigne plus haut (annonce creee,
+  // travail declare en echec). On distingue donc TROIS issues, et on le dit :
+  //     verifie: true   l'etat d'apres porte bien le statut vise
+  //     verifie: false  la relecture n'a rien rendu -- on ne sait pas, et on l'ecrit
+  //     erreur          l'etat d'apres CONTREDIT la cible -- la, c'est un echec
+  const statutLu = after && after.property && after.property.status != null
+    ? String(after.property.status) : null;
+  const statutAttendu = String(config.hektorValue);
+  if (statutLu !== null && statutLu !== statutAttendu) {
+    throw new Error(
+      `Statut non confirme pour l'annonce ${annonceId} : Hektor rend ${JSON.stringify(statutLu)}, ` +
+      `attendu ${JSON.stringify(statutAttendu)} (${config.label}).`);
+  }
+  if (statutLu === null) {
+    await logJob(job.id, "hektor_status", "error",
+      "Statut envoye mais NON VERIFIE : l'etat d'apres n'a pas pu etre relu (listing SALE, 2 pages)", {
+        hektor_annonce_id: annonceId, target_status: target, target_label: config.label,
+      });
+  }
+
   return {
     status: "changed",
+    verifie: statutLu !== null,
+    statut_hektor_apres: statutLu,
     hektor_annonce_id: annonceId,
     app_dossier_id: dossier.app_dossier_id || null,
     target_status: target,
@@ -10547,6 +10608,28 @@ async function handleAssignHektorAnnonceNegotiator(job) {
     });
 
     const after = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_assign_negotiator_verify_after");
+
+    // ─── LA CONFIRMATION, QUI ETAIT UN `null` EN DUR ───
+    // `confirmed_negotiator_id` valait TOUJOURS null : le champ existait, la
+    // verification non. L'API rend keyData.NEGOCIATEUR en une requete -- et le
+    // listing GraphQL, lui, ne porte meme pas le negociateur.
+    const etatApres = await lireEtatAnnonceViaApi(job, annonceId, "hektor_assign_negotiator_verify_api");
+    let negociateurConfirme = null;
+    if (etatApres && etatApres.trouve === true && etatApres.negociateur) {
+      negociateurConfirme = String(etatApres.negociateur);
+      if (negociateurConfirme !== String(targetNegotiatorId)) {
+        throw new Error(
+          `Affectation non confirmee pour l'annonce ${annonceId} : Hektor rend le negociateur ` +
+          `${JSON.stringify(negociateurConfirme)}, attendu ${JSON.stringify(String(targetNegotiatorId))}.`);
+      }
+    } else {
+      await logJob(job.id, "hektor_assign_negotiator", "error",
+        "Affectation envoyee mais NON VERIFIEE : l'etat d'apres n'a pas pu etre relu", {
+          hektor_annonce_id: annonceId,
+          target_hektor_negociateur_id: String(targetNegotiatorId),
+          cause: (etatApres && etatApres._error) || "annonce introuvable a l'API",
+        });
+    }
     const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
       reason: "assign_hektor_annonce_negotiator",
       priority: 82,
@@ -10562,7 +10645,8 @@ async function handleAssignHektorAnnonceNegotiator(job) {
       target_hektor_negociateur_id: targetNegotiatorId,
       target_label: directoryUser.display_name || null,
       target_email: directoryUser.email || null,
-      confirmed_negotiator_id: null,
+      confirmed_negotiator_id: negociateurConfirme,
+      verifie: negociateurConfirme !== null,
       before_property: before && before.property ? {
         id: before.property.id,
         folderNumber: before.property.folderNumber || null,
@@ -13178,8 +13262,16 @@ async function handleDeleteHektorContact(job) {
   }
 
   const after = await fetchHektorContactBeforeDelete(job, contactId);
-  if (hektorDeleteSent && after.exists === true) {
-    throw new Error(`Suppression Hektor non confirmee pour contact ${contactId}`);
+  // Avant : `after.exists === true`. Or fetchHektorContactBeforeDelete rend
+  // `exists: null` quand la relecture echoue -- et `null === true` est faux, donc
+  // une verification impossible valait acquittement. La lecture est CIBLEE (le
+  // formulaire du contact, une requete), donc l'exiger ne coute rien.
+  if (hektorDeleteSent && after.exists !== false) {
+    throw new Error(
+      `Suppression non confirmee pour le contact ${contactId} : ` +
+      (after.exists === null
+        ? `l'existence n'a pas pu etre relue (${after.error || "cause inconnue"})`
+        : "le contact repond toujours chez Hektor"));
   }
   await logJob(job.id, "hektor_contact_delete", "done", "Suppression Hektor envoyee", {
     hektor_contact_id: contactId,
@@ -13268,8 +13360,17 @@ async function handleDeleteHektorAnnonce(job) {
   });
   await sleep(2500);
   const after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_delete_verify_after");
-  if (after && after.archived === false) {
-    throw new Error(`Suppression Hektor non confirmee pour annonce ${hektorAnnonceId}`);
+  // ─── LA SUPPRESSION SE PROUVE PAR L'ABSENCE, PAS PAR UN DRAPEAU ───
+  // Avant : on ne levait que si l'annonce etait retrouvee NON archivee. Une annonce
+  // introuvable -- le cas le plus frequent quand la relecture rate -- passait pour
+  // supprimee. Et le journal disait « envoyee et verifiee », ce qu'il ne savait pas.
+  const etatApres = await lireEtatAnnonceViaApi(job, hektorAnnonceId, "hektor_annonce_delete_verify_api");
+  if (etatApres._error || etatApres.trouve !== false) {
+    throw new Error(
+      `Suppression non confirmee pour l'annonce ${hektorAnnonceId} : ` +
+      (etatApres._error
+        ? `l'etat n'a pas pu etre relu (${etatApres._error})`
+        : "l'annonce repond toujours a l'API"));
   }
   await logJob(job.id, "hektor_annonce_delete", "done", "Suppression Hektor envoyee et verifiee", {
     hektor_annonce_id: hektorAnnonceId,
@@ -13354,8 +13455,14 @@ async function handleRestoreHektorAnnonce(job) {
   await sleep(2500);
 
   const after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_restore_verify_after");
-  if (after && after.archived === true) {
-    throw new Error(`Desarchivage Hektor non confirme pour annonce ${hektorAnnonceId}`);
+  // Meme correction que l'archivage : une relecture impossible n'est pas un succes.
+  const etatApres = await lireEtatAnnonceViaApi(job, hektorAnnonceId, "hektor_annonce_restore_verify_api");
+  if (etatApres._error || etatApres.trouve !== true || String(etatApres.archive) !== "0") {
+    throw new Error(
+      `Desarchivage non confirme pour l'annonce ${hektorAnnonceId} : ` +
+      (etatApres._error
+        ? `l'etat n'a pas pu etre relu (${etatApres._error})`
+        : `archive=${JSON.stringify(etatApres.archive)}, attendu "0"`));
   }
 
   await logJob(job.id, "hektor_annonce_restore", "done", "Desarchivage Hektor envoye", {
@@ -13887,8 +13994,16 @@ async function handleArchiveHektorAnnonce(job) {
   await sleep(2500);
 
   const after = await fetchHektorPropertyByIdBestEffort(job, hektorAnnonceId, "hektor_annonce_archive_verify_after");
-  if (after && after.archived === false) {
-    throw new Error(`Archivage Hektor non confirme pour annonce ${hektorAnnonceId}`);
+  // ─── ON EXIGE LA PREUVE, ET PAR UNE SOURCE EXACTE ───
+  // Avant : `if (after && after.archived === false)`. Une relecture ratee rendait
+  // `after` nul, la condition etait fausse, et l'archivage passait pour reussi.
+  const etatApres = await lireEtatAnnonceViaApi(job, hektorAnnonceId, "hektor_annonce_archive_verify_api");
+  if (etatApres._error || etatApres.trouve !== true || String(etatApres.archive) !== "1") {
+    throw new Error(
+      `Archivage non confirme pour l'annonce ${hektorAnnonceId} : ` +
+      (etatApres._error
+        ? `l'etat n'a pas pu etre relu (${etatApres._error})`
+        : `archive=${JSON.stringify(etatApres.archive)}, attendu "1"`));
   }
 
   await logJob(job.id, "hektor_annonce_archive", "done", "Archivage Hektor envoye", {
