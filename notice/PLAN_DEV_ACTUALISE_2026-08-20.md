@@ -1224,7 +1224,28 @@ Sur la vente **23288**, déjà enregistrée : rouvrir l'assistant *(« Modifier 
 
 Le seul appel anormal du parcours est `ajoutebien` → *« Vous ne pouvez pas creer un bien »*.
 L'enregistrement semble **recréer** la vente ; la recréation est refusée pour l'admin ; il ne
-reste rien. *La causalité n'est pas prouvée, le résultat l'est.*
+reste rien.
+
+**Le facteur a été isolé le 29/08 au soir**, en refaisant l'essai à l'identique dans l'autre
+configuration — c'est Frédéric qui a poussé à le chercher, en soupçonnant un lien avec
+l'annulation du compromis :
+
+| vente | état du compromis | état de l'annonce | résultat |
+|---|---|---|---|
+| **23288** | **actif** | **ARCHIVÉE** *(archive=1)* | **détruite** |
+| **23289** | **clôturé** | **active** *(archive=0)* | **survit** |
+
+> **Ce n'est donc pas le compromis — c'est l'ARCHIVAGE.** Modifier une vente portée par une
+> annonce **archivée**, en choisissant « laisser actif », la fait disparaître. Hektor tente
+> vraisemblablement de la sortir de l'archive par un **supprimer-puis-recréer**, et la
+> recréation échoue.
+>
+> L'intuition de Frédéric était bonne sur le fond — *un état amont commande le sort de la
+> vente* — mais l'état en cause est l'archivage, pas le compromis. **Le compromis et la vente
+> sont indépendants** : annuler l'un ne touche pas l'autre, dans les deux sens.
+
+*Un troisième essai (archiver, puis modifier) confirmerait la causalité. Il n'est pas
+nécessaire pour la règle de sûreté ci-dessous, qui vaut dans tous les cas.*
 
 ➡ **Aucun de nos workers ne doit « modifier » une vente par ce chemin** tant que ce n'est pas
 éclairci. Et si l'app doit un jour corriger une vente, elle le fera **chez nous**
