@@ -8,6 +8,31 @@ identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (2
 
 ---
 
+## ⚖ LA RÈGLE DU « FAIT » — posée le 29/08 après l'audit
+
+> **Une tâche n'est cochée que si son ÉNONCÉ est couvert, et la mesure qui le prouve doit
+> répondre à la question que la tâche posait.**
+
+L'audit du 29/08 *(`AUDIT_PLAN_ET_REALITE_2026-08-29.md`)* a trouvé **deux tâches cochées sur
+un périmètre plus étroit que leur énoncé** — C.1' et C.4. Aucune n'était un mensonge : chacune
+avait produit du code qui tourne. Mais **la mesure produite ne répondait pas à la question
+posée** :
+
+| | la tâche demandait | la preuve apportée |
+|---|---|---|
+| **C.1'** | *« l'échec **se reprend** »* | la purge retirée sur **3 fonctions d'édition** |
+| **C.4** | *« **écrire d'abord**, envoyer, comparer »* sur 16 workers | **127 archivages, 14 affectations** — des exécutions, pas des conversions |
+
+**Ce n'est pas une faute de rigueur, c'est une faute de cadrage** : on mesure ce qui marche au
+lieu de mesurer ce qui reste. La règle ci-dessus existe pour ça.
+
+⚠ **Et elle vaut aussi pour l'auditeur.** Pendant cet audit même, **trois mesures fausses** ont
+été produites avant d'obtenir la bonne — dont **deux fois le même chiffre**, par recherche de
+motif dans le code au lieu de lecture des définitions. **Une mesure approximative vaut une
+mesure fausse.**
+
+---
+
 ## CE QUI A BOUGÉ LES 27-28/08
 
 *Cinq changements. Trois chantiers avancent, deux défauts inconnus ont été trouvés — et
@@ -304,7 +329,27 @@ protège le moins.)*
    A.1 PORTAILS  +  A.2 SIGNATURE   ------------------------->  LA COUPURE
    semaines a mois, ne depend pas de moi, A ZERO
 
-   PISTE 1, le code       C.2b C.6 C.7 C.12 [FAITS] -> C.4 -> C.9 -> C.13
+   PISTE 1, le code       -- ORDRE REVU LE 29/08, APRES AUDIT --
+
+     FAITS   C.2b C.6 C.7 C.12 C.13 C.14 C.15 C.17 C.17bis C.18 C.19
+
+       1.  C.4        finir : la branche Vendu (jamais executee)
+                      PUIS convertir les 11 workers restants (5/16 seulement)
+       2.  C.4-bis    le filet de rejeu des ACTIONS -- geste (c) de C.1'
+       3.  C.16       825 contacts actifs qui n'existent plus chez Hektor
+       4.  C.9        la creation part de l'app        } collees
+       5.  26bis-(3)  le serveur tient une annonce app } l'une a l'autre
+       6.  C.11       menage des tables mortes
+       7.  A.3-tech   le registre des mandats en propre (tant que Hektor vit)
+       8.  D.1a D.1 D.2   rapatrier documents et photos
+       9.  C.13-c     rattraper les dates de cloture   } fin de plan,
+      10.  A.1 A.2 A.3     portails, signature, registre } avec les 3 arbitrages
+
+     POURQUOI CET ORDRE. C.4 d'abord parce que ses 11 workers non convertis sont la
+     plus grosse dette mesuree, et que la branche Vendu est enfin debloquee. C.4-bis
+     juste apres, parce qu'un filet posé sur des workers convertis vaut mieux qu'un
+     filet pose deux fois. C.16 ensuite : 1 a 2 jours, et 825 fiches mentent
+     aujourd'hui. C.9 apres, car elle depend du contrat d'autorite (C.7, fait).
                           (C.5 ANNULEE le 25/08 au soir : retour arriere)
                           -> C.11 -> E.0 [FAIT le 25/08]
                                                      4 a 6 semaines
@@ -516,7 +561,7 @@ moitié manquante de l'architecture finale.
 | ✅ **C.3** | ~~**Fermer la porte sortante des recherches**~~ **FAIT le 24/08** — `push_search` devient `null` dans les **deux** fonctions d'édition *(négociateur **et** espace client)*. La ligne d'attente devient un **registre** : elle survit, elle protège, elle ne part jamais | **le mécanisme le prévoyait déjà** — la boucle d'enfilage exige `push_search is not null`, et aucune suppression n'atteint une telle ligne. Pas de table neuve, pas de cron touché. **Vérifié** : survit à 2 passages, 0 travail créé |
 | | **L'alarme a été adaptée en même temps** — les recherches du registre sortent de `data.recherche_divergente` | sans quoi elle passerait en CRITICAL dès le premier affinage, **alors que la divergence est désormais voulue**. Une sentinelle qui sonne quand tout va bien cesse d'être lue |
 | ⚠ | **Ce que ça change pour tes clients** — un acquéreur qui affine sa recherche dans son espace croira peut-être que son négociateur la verra dans Hektor. **Ce n'est plus le cas** | 28 envois en 90 jours : l'effet est nul aujourd'hui, il compte pour l'étape 2 |
-| ✅ **C.1'** | ~~**« UNE SAISIE NE SE PERD JAMAIS »**~~ **FAIT le 24/08** — la purge des 24 h retirée des 3 fonctions · la sortie de conflit *(`app_pending_resolution` + `app_annonce_pending_resolve`)* · les 3 marqueurs du worker cessent d'avaler leur échec · 4 sondes ajoutées · le bandeau distingue les deux causes et permet de clore | **FAIT** | **Deux des trois gestes existaient déjà** — la saisie était gardée, et la reprise était écrite *(5 tentatives, délai croissant)*. Le défaut réel tenait en **une ligne** : la purge des 24 h. **L'avertissement avait une durée de vie d'un jour**, et n'était visible que de qui rouvrait cette fiche précise |
+| 🟡 **C.1'** | **« UNE SAISIE NE SE PERD JAMAIS »** — **a et b FAITS le 24/08 · le geste (c) REOUVERT le 29/08**, il n'a jamais couvert les actions *(voir C.4-bis)*. Ce qui suit reste exact pour les éditions — la purge des 24 h retirée des 3 fonctions · la sortie de conflit *(`app_pending_resolution` + `app_annonce_pending_resolve`)* · les 3 marqueurs du worker cessent d'avaler leur échec · 4 sondes ajoutées · le bandeau distingue les deux causes et permet de clore | **FAIT** | **Deux des trois gestes existaient déjà** — la saisie était gardée, et la reprise était écrite *(5 tentatives, délai croissant)*. Le défaut réel tenait en **une ligne** : la purge des 24 h. **L'avertissement avait une durée de vie d'un jour**, et n'était visible que de qui rouvrait cette fiche précise |
 | ✅ **C.2a** | **Identité des contacts — la relecture** — `RELECTURE_IDENTITE_CONTACTS_2026-08-24` | **FAIT le 24/08** | **Le verrou du 20/08 est levé** : un seul fabricant de nom de recherche, local, et il consulte le registre — **0 fonction Supabase sur 27 n'en fabrique**. Ajouter une colonne ne peut plus déplacer une clé. Et le périmètre est plus petit qu'annoncé : **4 tables sur 18 portent 95 % des 202 404 lignes**, 6 sont vides |
 
 > ⚠ **Ce que ça change pour la surveillance** : la sonde ne mesure plus une perte déjà
@@ -576,6 +621,8 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | 🔴 **CORRECTION AU PROJET — LA VENTE N'EST PAS CE QU'ON CROYAIT.** Le projet affirme **trois fois** *« la vente : pas d'annulation possible »* *(commits `cfe3483`, `b8fc48e` du 25/06, et un commentaire d'`App.tsx`)* — et j'ai répété cette phrase toute la soirée pour justifier de ne pas éprouver « Vendu ». **C'est à moitié faux** : Hektor porte `annuleVente()` et `supprimerVente(id)`, tous deux vers le mode **`ventes-deleteVente`**. **Une vente ne s'annule pas : elle se SUPPRIME** — d'où l'absence de colonne d'état dans `hektor_vente`, il n'y a rien à marquer. ➡ **la branche « Vendu » de C.4 PEUT être éprouvée** : une vente d'essai se retire. La suppression reste définitive, mais ce n'est plus le point de non-retour qui bloquait l'essai | |
 | | ⚠ **CONTRAINTE TROUVÉE EN PASSANT** : un bouton de la fiche porte *« Un compte administrateur ne peux pas saisir une offre »*. **Le worker devra donc passer par un compte négociateur** pour ces gestes — comme il le fait déjà pour l'affectation. Même famille que les blocs de signature invisibles en root admin. **À vérifier avant de coder** | |
 | | ⛔ **CE QUI MANQUE POUR CODER ①** : le nom du champ **dans le FORMULAIRE** *(`PopinCompromis`)*. L'API rend `status`, mais le formulaire peut l'appeler autrement — et **un mauvais nom n'écrirait rien en silence**, exactement la classe de défaut corrigée le jour même sur la clôture. Le formulaire est chargé à la demande, donc **absent de nos captures**. ➡ **le lire d'abord, en LECTURE SEULE** *(ouvrir la popin avec un `idCompromis` ne sauvegarde rien)* | |
+| | 📐 **COUVERTURE RÉELLE : 5 SUR 16 — mesurée le 29/08, après DEUX mesures fausses.** Le principe fondateur de C.4 est *« **écrire d'abord**, envoyer, comparer au retour »*, déclaré applicable *« entièrement »* aux 16 workers B1+B2. **Cinq l'appliquent** : `update_hektor_annonce_fields` · `update_hektor_contact` · `update_hektor_contact_search` *(les trois par `app_edit_*_optimistic`)* · `change_hektor_annonce_status` *(écrit l'affaire)* · `create_hektor_draft_annonce` *(ligne provisoire)*. **Onze ne l'appliquent pas** : archiver · désarchiver · supprimer une annonce · affecter le négociateur · lier un mandant · supprimer un contact · ajouter et supprimer une recherche · créer un contact · créer un mandant · mettre à jour un mandant. ➡ **quand on archive un bien, rien n'est écrit chez nous** : le travail part, et l'utilisateur attend | |
+| | 🔬 **COMMENT CE CHIFFRE A ÉTÉ OBTENU, parce que les deux premiers étaient faux.** Une recherche de motif dans `api.ts` a rendu *« 10 sur 26 »*, puis *« 0 sur 16 »* — les deux fois en attribuant les types de travaux à la mauvaise fonction. Le bon chiffre vient de la **lecture des définitions dans `pg_proc`**, puis d'une **troisième vérification à bornes exactes** dans le front, **avec quatre témoins négatifs** *(archiver, désarchiver, affecter, lier un mandant → `insert direct`)* | |
 | | ℹ **C.4 n'est PAS l'ouverture des droits** *(corrigé le 25/08)*. Elle rend l'app capable de faire ces gestes **sans Hektor** — c'est un chantier de **coupure**, pas de permission. Les droits sont un sujet à part : **bloc F** | |
 | | **C'est ICI que se répondent les 3 arbitrages de A1** — `statut_annonce`/`archive`, `negociateur_email`, les champs de mandat | **pas avant** : la carte de A1 dit « si l'app sait écrire un champ », et **c'est précisément ce que cette tâche change**. Trancher plus tôt serait figer une carte sur un état qui va bouger *(décision de Frédéric, 24/08)* |
 | ❌ **C.5** | ~~Registre d'affaires et mandat des transactions~~ — **ANNULÉE le 25/08 au soir, le jour même.** Le worker **recopie de nouveau** la valeur de Hektor. *Le registre d'affaires, lui, reste acquis (tâche 4 du 20/08).* | **RETOUR ARRIÈRE** | **La moitié était déjà faite** : `app_affaire_ledger` porte `app_affaire_id` et `app_dossier_id` depuis le 20/08. Vérifié **avant** de refaire |
