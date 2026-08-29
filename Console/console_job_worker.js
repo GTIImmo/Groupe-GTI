@@ -13475,16 +13475,36 @@ async function appelHektor(job, categorie, verbe, params, annonceId) {
         timeoutMs: 60000,
       });
   const texte = String(reponse.text || "");
+  const nu = texte.trim();
   let json = null;
   try { json = JSON.parse(texte); } catch (_) { json = null; }
 
-  // Un refus explicite est un ECHEC, jamais un succes muet. On inclut le message
-  // du compte administrateur : « Un compte administrateur ne peux pas saisir une
-  // offre » -- si l'interdiction s'etend a ces gestes, il faut le savoir tout de suite.
+  // ─── ON EXIGE LA PREUVE DU SUCCES, on ne le deduit pas du silence ───
+  //
+  // Releve dans le navigateur le 29/08, sur le MEME appel :
+  //     offre inexistante (99999999)  ->  "[]"
+  //     offre reelle      (33027)     ->  "1"
+  //
+  // La version precedente ne cherchait que des mots de refus et concluait au succes
+  // en leur absence : une reponse vide passait donc pour un succes. Un geste qui ne
+  // faisait RIEN etait marque `done`, et l'etat optimiste restait affiche. C'est le
+  // succes muet, et il etait dans mon propre code.
+  //
+  // Un refus explicite reste un echec -- y compris le message du compte
+  // administrateur, dont on ignore encore s'il s'etend a ces gestes.
   if (/ne peu[xt] pas|Credential Error|non autoris|"success"\s*:\s*false/i.test(texte)) {
     throw new Error(`Hektor refuse ${categorie} : ${stripHtml(texte).slice(0, 300)}`);
   }
-  return { verbe, ok: true, json, extrait: stripHtml(texte).slice(0, 300) };
+  // Et une reponse VIDE en est un aussi. "[]" est la signature relevee de l'echec ;
+  // "" et "0" sont retenus par prudence. Pour le compromis et la vente, dont la
+  // signature de succes n'est pas encore connue -- aucun n'a jamais ete execute --
+  // cela garantit qu'un geste sans effet ne passera pas pour un succes.
+  if (nu === "" || nu === "[]" || nu === "{}" || nu === "0" || nu === "null" || nu === "false") {
+    throw new Error(
+      `Hektor n'a rien confirme pour ${categorie} : reponse ${JSON.stringify(nu)}. ` +
+      `Le geste n'a probablement RIEN fait -- on ne le compte pas comme reussi.`);
+  }
+  return { verbe, ok: true, json, brut: nu.slice(0, 120), extrait: stripHtml(texte).slice(0, 300) };
 }
 
 
@@ -13575,6 +13595,7 @@ async function handleChangeHektorOffreStatus(job) {
   await logJob(job.id, "hektor_offre_status", "done",
     `Offre ${idOffre} passee a ${type} chez Hektor (${resultat.verbe})`, {
       hektor_offre_id: idOffre, type, verbe: resultat.verbe, registre_lignes: lignes, sync_job: syncJob,
+      reponse_hektor: resultat.brut,
     });
   return { status: "done", hektor_offre_id: idOffre, type, verbe: resultat.verbe,
            registre_lignes: lignes, sync_job: syncJob };
@@ -13621,6 +13642,7 @@ async function handleCancelHektorCompromis(job) {
   await logJob(job.id, "hektor_compromis_cloture", "done",
     `Compromis ${idComp} annule chez Hektor`, {
       hektor_compromis_id: idComp, verbe: resultat.verbe, registre_lignes: lignes, sync_job: syncJob,
+      reponse_hektor: resultat.brut,
     });
   return { status: "done", hektor_compromis_id: idComp, verbe: resultat.verbe,
            registre_lignes: lignes, sync_job: syncJob };
@@ -13672,6 +13694,7 @@ async function handleDeleteHektorVente(job) {
   await logJob(job.id, "hektor_vente_delete", "done",
     `Vente ${idVente} supprimee chez Hektor (${resultat.verbe}) -- geste irreversible`, {
       hektor_vente_id: idVente, verbe: resultat.verbe, registre_lignes: lignes, sync_job: syncJob,
+      reponse_hektor: resultat.brut,
     });
   return { status: "done", hektor_vente_id: idVente, verbe: resultat.verbe,
            registre_lignes: lignes, sync_job: syncJob };
