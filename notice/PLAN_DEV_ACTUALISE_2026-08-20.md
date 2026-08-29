@@ -349,7 +349,9 @@ protège le moins.)*
 
        1.  C.4        finir : la branche Vendu (jamais executee)
                       PUIS convertir les 11 workers restants (5/16 seulement)
-       2.  C.4-bis    le filet de rejeu des ACTIONS -- geste (c) de C.1'
+       2.  C.4-bis-0  VERIFIER LA DETECTION, worker par worker
+                      (prealable : on ne rejoue pas ce qu'on ne sait pas rate)
+       3.  C.4-bis    le filet de rejeu des ACTIONS -- geste (c) de C.1'
        3.  C.16       825 contacts actifs qui n'existent plus chez Hektor
        4.  C.9        la creation part de l'app        } collees
        5.  26bis-(3)  le serveur tient une annonce app } l'une a l'autre
@@ -752,6 +754,11 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | 🎯 **CE QUE LA TÂCHE EST, précisée par Frédéric le 28/08** : *« tous les champs de la modale changer statut doivent pouvoir se modifier dans l'app puis le serveur **sans envoyer à Hektor** — sauf refuser/accepter pour l'offre, annuler pour le compromis, supprimer pour la vente »*. ➡ **les VALEURS restent chez nous, seuls les CHANGEMENTS D'ÉTAT partent**. Et cela **contourne l'obstacle** trouvé le même jour : modifier un compromis chez Hektor passe par un module ES impilotable — **on ne le modifie plus chez lui** | |
 | | 🧱 **CE QU'IL RESTE À CONSTRUIRE** : ① un **magasin durable** des champs d'affaire, au grain `app_affaire_id` — **patron éprouvé le 28/08** sur `mandat_date_cloture`, de bout en bout ; ② `CHAMPS_APP_AFFAIRE` dans le contrat d'autorité, avec la règle déjà validée *« l'app gagne seulement quand elle a quelque chose à dire »* ; ③ les champs éditables à l'écran, hors changement d'état. **12 des 13 champs de la modale existent déjà** comme colonnes de `app_view_generale` — seul *« jours de validité de l'offre »* manque | |
 | | ⚠ **LA CONSÉQUENCE À ASSUMER, dite à Frédéric et confirmée par lui** : un prix corrigé chez nous et pas chez Hektor **diverge définitivement**. C'est le but — nos chiffres deviennent les bons — mais **tout reporting encore lu dans Hektor affichera l'ancienne valeur** | |
+| 🆕 **C.4-bis-0** | **VÉRIFIER LA DÉTECTION, WORKER PAR WORKER — préalable au filet** *(29/08)* | **1/2 j** |
+| | ❗ **ON NE REJOUE PAS CE QU'ON NE SAIT PAS RATÉ.** Un travail marqué `done` n'est **jamais** repris. Poser C.4-bis avant cette vérification, ce serait tendre un filet sous un trou qu'on ne voit pas | |
+| | 🔬 **PROUVÉ PAR UN ESSAI, pas déduit.** Le 29/08, un refus demandé sur une offre **inexistante** *(99999999)* est passé **`done`**, l'état optimiste est resté affiché, et le retour en arrière n'a jamais joué. **Le geste n'a rien fait et l'app affichait le contraire.** Relevé chez Hektor sur le même appel : **`[]` = échec · `1` = succès** — *il DIT quand il échoue*. Mon détecteur ne cherchait que des mots de refus et concluait au succès en leur absence | |
+| | ⚖ **LE PRINCIPE, désormais posé sur les 3 gestes** *(`2b55a37`)* : **on exige la PREUVE du succès, on ne le déduit jamais de l'absence d'échec.** Une réponse vide, `[]`, `{}`, `0` ou `null` lève une erreur explicite | |
+| | ➡ **RESTE : les 18 handlers qui parlent à Hektor, un par un, EN LISANT le code.** Pas par recherche de motif — cette méthode m'a donné **quatre mesures fausses le 29/08**, dont une qui disait aveugle un handler qui vérifie bien *(`handleUpdateHektorContactSearch`)*. Seul indice à confirmer : `handleRelanceSignature` ne semble vérifier que son message d'entrée | |
 | 🆕 **C.4-bis** | **AUCUNE ACTION N'EST JAMAIS REJOUÉE** — le filet des éditions n'existe pas pour les gestes *(validé par Frédéric le 29/08)* | **1 à 2 j** |
 | | 📊 **MESURE DU 29/08** : **6 travaux en erreur, 0 rejoué**, sur six types différents — création d'annonce, numéro de mandat auto, lien mandant, changement de statut, refus d'offre, relecture. Le `attempt_count` reste à **1** partout. Un « Hektor 500 » du 28/08 n'a jamais été retenté, et personne ne l'a su | |
 | | ⚖ **LA DIFFÉRENCE DE TRAITEMENT, mesurée.** Les **éditions de champs** ont un filet complet : un balayage tourne **toutes les minutes** *(cron `app-annonce-push-due`, `app-contact-push-due`, `app-search-push-due`)*, il **nettoie** ce qui a abouti, **rejoue** ce qui a raté avec un espacement croissant *(5 · 10 · 15 · 20 · 25 min)*, et **abandonne après 5 tentatives** en posant `conflict` — un humain tranche alors. C'est C.1' : *« la purge des 24 h est retirée, la saisie reste jusqu'à ce qu'un humain la traite »*. Les **actions**, elles, n'ont **rien** | |

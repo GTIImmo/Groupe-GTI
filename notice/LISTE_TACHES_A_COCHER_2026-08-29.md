@@ -57,7 +57,25 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [ ] deployer le front                             dernier commit c484c28
 ```
 
-## 3. C.4-bis — LE FILET DE REJEU *(geste (c) de C.1', rouvert)*
+## 3. C.4-bis-0 — VÉRIFIER LA DÉTECTION *(préalable au filet)*
+
+> **On ne rejoue pas ce qu'on ne sait pas raté.** Un travail marqué `done` n'est jamais
+> repris : poser le filet avant la détection, c'est le tendre sous un trou qu'on ne voit pas.
+
+```
+[x] le defaut prouve par un essai       offre inexistante -> travail "done", etat faux affiche
+[x] la cause relevee chez Hektor        "[]" = echec, "1" = succes -- il DIT quand il echoue
+[x] le principe corrige sur mes 3 gestes  on EXIGE la preuve du succes
+[ ] verifier les 18 handlers un par un  chacun exige-t-il une PREUVE, ou conclut-il du silence ?
+                                        EN LISANT le code, pas par recherche de motif :
+                                        cette methode m'a trompe QUATRE fois le 29/08
+[ ] corriger ceux qui deduisent
+```
+*Constate au passage : `handleRelanceSignature` semble ne verifier que son message d'entree,
+pas la reponse de Hektor. A confirmer. `handleUpdateHektorContactSearch`, lui, verifie bien --
+ma premiere mesure le disait aveugle, elle etait fausse.*
+
+## 4. C.4-bis — LE FILET DE REJEU *(geste (c) de C.1', rouvert)*
 
 ```
 [x] le defaut mesure                    6 en erreur, 0 rejoue, tentatives=1 partout
@@ -68,7 +86,7 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [ ] perimetre : les 3 gestes + le changement de statut
 ```
 
-## 4. C.16 — LES CONTACTS QUI N'EXISTENT PLUS
+## 5. C.16 — LES CONTACTS QUI N'EXISTENT PLUS
 ```
 [x] remesuree                           825 fiches actives, pas 284 269
 [ ] marquer disparues les 825 actives   jamais supprimer -- regle du projet
@@ -76,33 +94,33 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [ ] poser le mecanisme "un contact a quitte le listing"   patron : reconcile_annonce_scope
 ```
 
-## 5. C.9 — LA CRÉATION PART DE L'APP  ·  6. 26bis-③
+## 6. C.9 — LA CRÉATION PART DE L'APP  ·  7. 26bis-③
 ```
 [ ] C.9      creer un bien SANS passer par Hektor         1 a 2 sem.
 [ ] 26bis-3  le serveur tient une annonce que le miroir ignore
              -> trancher les 46 colonnes (37 dans un seul blob)   collee a C.9
 ```
 
-## 7. C.11 — MÉNAGE
+## 8. C.11 — MÉNAGE
 ```
 [ ] supprimer les tables mortes
 ```
 
-## 8. A.3-TECHNIQUE — LE REGISTRE DES MANDATS
+## 9. A.3-TECHNIQUE — LE REGISTRE DES MANDATS
 ```
 [ ] un vrai registre, plus une vue des annonces    1 105 mandats invisibles
 [ ] trois couches de numerotation                  Hektor / Protexa / la tienne
                                                    3 a 5 j, TANT QUE HEKTOR VIT
 ```
 
-## 9. D — RAPATRIER LES FICHIERS *(irréversible)*
+## 10. D — RAPATRIER LES FICHIERS *(irréversible)*
 ```
 [ ] D.1a  MESURER d'abord                  combien de cloud_available sans fichier local -- 1 h
 [ ] D.1   documents                        40 493 a redimensionner
 [ ] D.2   photos                           1 397
 ```
 
-## 10. FIN DE PLAN
+## 11. FIN DE PLAN
 ```
 [ ] C.13-c  rattraper les 23 715 dates de cloture     avec les 3 regles validees
 [ ] 0.3     finir 19-R1                               rattrapage acquereurs, 4 h 35
@@ -114,7 +132,7 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [ ] F.1     utilisateurs, roles et droits             APRES la coupure
 ```
 
-## 11. CE QUI NE DÉPEND PAS DU CODE — et qui bloque la coupure
+## 12. CE QUI NE DÉPEND PAS DU CODE — et qui bloque la coupure
 ```
 [ ] A.1  PORTAILS      sortie en nom propre + reprise des ~350 annonces en ligne
 [ ] A.2  SIGNATURE     ton propre contrat (ImmoSign appartient a Hektor)
