@@ -13487,6 +13487,43 @@ async function appelHektor(job, categorie, verbe, params, annonceId) {
   return { verbe, ok: true, json, extrait: stripHtml(texte).slice(0, 300) };
 }
 
+
+/**
+ * Pose l'etat d'une transaction DANS NOTRE REGISTRE, une fois Hektor d'accord.
+ *
+ * Pourquoi c'est necessaire : la relecture ciblee ne rapatrie PAS les transactions
+ * -- elles n'arrivent que par le run de nuit (endpoints de listing). Sans cela,
+ * Hektor saurait et nous pas, pendant des heures.
+ *
+ * Pourquoi c'est sur : on n'arrive ici que si l'appel a Hektor a REUSSI ; un refus
+ * leve une erreur plus haut. Et le run de nuit repassera derriere pour confirmer.
+ *
+ * Best-effort : si Supabase refuse, le geste reste acquis chez Hektor et la nuit
+ * rattrape. On le dit, on ne fait pas echouer le travail pour autant.
+ */
+async function refleterEtatAffaire(job, categorie, filtre, etat) {
+  try {
+    const majes = await supabaseRequest(`app_affaire_ledger?${filtre}`, {
+      method: "PATCH",
+      prefer: "return=representation",
+      body: JSON.stringify({ state: etat }),
+    });
+    const touchees = Array.isArray(majes) ? majes.length : 0;
+    await logJob(job.id, categorie, touchees ? "done" : "error",
+      touchees
+        ? `Etat « ${etat} » pose dans notre registre (${touchees} ligne)`
+        : `Aucune ligne de registre mise a jour -- la nuit rattrapera`,
+      { etat, lignes: touchees });
+    return touchees;
+  } catch (erreur) {
+    const message = erreur && erreur.message ? erreur.message : String(erreur);
+    await logJob(job.id, categorie, "error",
+      "Geste acquis chez Hektor, mais notre registre n'a pas suivi -- la nuit rattrapera",
+      { etat, error: message });
+    return -1;
+  }
+}
+
 /** Refuser ou accepter une offre. AJOUTE un evenement a son historique, n'ecrase rien. */
 async function handleChangeHektorOffreStatus(job) {
   const payload = safeJsonParse(job.payload_json);
@@ -13512,8 +13549,12 @@ async function handleChangeHektorOffreStatus(job) {
   // GET : releve dans offre_bien_change_status (ajax type "GET").
   const resultat = await appelHektor(job, "le changement d'etat de l'offre", "GET", params, annonceId);
 
-  // Sans cette relecture, l'app afficherait l'ancien etat jusqu'au run de nuit :
-  // Hektor sait, nous pas. C'est ce que font deja tous les autres gestes du worker.
+  // Hektor est d'accord : on pose l'etat chez nous SANS attendre la nuit.
+  const lignes = await refleterEtatAffaire(job, "hektor_offre_status",
+    `kind=eq.offre&hektor_affaire_id=eq.${encodeURIComponent(idOffre)}`,
+    type === "refus" ? "refused" : "accepted");
+
+  // Et la relecture, pour le reste de la fiche (statut, mandats, validation).
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "change_hektor_offre_status",
     priority: 72,
@@ -13521,9 +13562,10 @@ async function handleChangeHektorOffreStatus(job) {
 
   await logJob(job.id, "hektor_offre_status", "done",
     `Offre ${idOffre} passee a ${type} chez Hektor (${resultat.verbe})`, {
-      hektor_offre_id: idOffre, type, verbe: resultat.verbe, sync_job: syncJob,
+      hektor_offre_id: idOffre, type, verbe: resultat.verbe, registre_lignes: lignes, sync_job: syncJob,
     });
-  return { status: "done", hektor_offre_id: idOffre, type, verbe: resultat.verbe, sync_job: syncJob };
+  return { status: "done", hektor_offre_id: idOffre, type, verbe: resultat.verbe,
+           registre_lignes: lignes, sync_job: syncJob };
 }
 
 /** Annuler (ou cloturer) un compromis. Une simple confirmation chez Hektor : pas de motif. */
@@ -13552,8 +13594,9 @@ async function handleCancelHektorCompromis(job) {
   // POST : annuleCompromis passe par popinPostInner.
   const resultat = await appelHektor(job, "l'annulation du compromis", "POST", params, annonceId);
 
-  // Sans cette relecture, l'app afficherait l'ancien etat jusqu'au run de nuit :
-  // Hektor sait, nous pas. C'est ce que font deja tous les autres gestes du worker.
+  const lignes = await refleterEtatAffaire(job, "hektor_compromis_cloture",
+    `kind=eq.compromis&hektor_affaire_id=eq.${encodeURIComponent(idComp)}`, "cancelled");
+
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "cancel_hektor_compromis",
     priority: 72,
@@ -13561,9 +13604,10 @@ async function handleCancelHektorCompromis(job) {
 
   await logJob(job.id, "hektor_compromis_cloture", "done",
     `Compromis ${idComp} annule chez Hektor`, {
-      hektor_compromis_id: idComp, verbe: resultat.verbe, sync_job: syncJob,
+      hektor_compromis_id: idComp, verbe: resultat.verbe, registre_lignes: lignes, sync_job: syncJob,
     });
-  return { status: "done", hektor_compromis_id: idComp, verbe: resultat.verbe, sync_job: syncJob };
+  return { status: "done", hektor_compromis_id: idComp, verbe: resultat.verbe,
+           registre_lignes: lignes, sync_job: syncJob };
 }
 
 /**
@@ -13592,8 +13636,28 @@ async function handleDeleteHektorVente(job) {
   const params = new URLSearchParams({ mode: "ventes-deleteVente", id: idVente });
   const resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId);
 
-  // Sans cette relecture, l'app afficherait l'ancien etat jusqu'au run de nuit :
-  // Hektor sait, nous pas. C'est ce que font deja tous les autres gestes du worker.
+  // LA VENTE DISPARAIT CHEZ HEKTOR, MAIS PAS CHEZ NOUS : le registre est
+  // « delete-never » par conception -- ce qu'il a vu, il le garde. On marque donc
+  // present_in_hektor a false, comme le fait le run de nuit quand Hektor retire une
+  // affaire. La trace reste, l'app sait qu'elle n'existe plus chez eux.
+  let lignes = 0;
+  try {
+    const majes = await supabaseRequest(
+      `app_affaire_ledger?kind=eq.vente&hektor_affaire_id=eq.${encodeURIComponent(idVente)}`,
+      { method: "PATCH", prefer: "return=representation",
+        body: JSON.stringify({ present_in_hektor: false }) });
+    lignes = Array.isArray(majes) ? majes.length : 0;
+    await logJob(job.id, "hektor_vente_delete", lignes ? "done" : "error",
+      lignes ? "Vente marquee absente de Hektor dans notre registre (trace conservee)"
+             : "Aucune ligne de registre marquee -- la nuit rattrapera",
+      { hektor_vente_id: idVente, lignes });
+  } catch (erreur) {
+    lignes = -1;
+    await logJob(job.id, "hektor_vente_delete", "error",
+      "Vente supprimee chez Hektor, mais notre registre n'a pas suivi -- la nuit rattrapera",
+      { hektor_vente_id: idVente, error: erreur && erreur.message ? erreur.message : String(erreur) });
+  }
+
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "delete_hektor_vente",
     priority: 72,
@@ -13601,9 +13665,10 @@ async function handleDeleteHektorVente(job) {
 
   await logJob(job.id, "hektor_vente_delete", "done",
     `Vente ${idVente} supprimee chez Hektor (${resultat.verbe}) -- geste irreversible`, {
-      hektor_vente_id: idVente, verbe: resultat.verbe, sync_job: syncJob,
+      hektor_vente_id: idVente, verbe: resultat.verbe, registre_lignes: lignes, sync_job: syncJob,
     });
-  return { status: "done", hektor_vente_id: idVente, verbe: resultat.verbe, sync_job: syncJob };
+  return { status: "done", hektor_vente_id: idVente, verbe: resultat.verbe,
+           registre_lignes: lignes, sync_job: syncJob };
 }
 
 async function handleArchiveHektorAnnonce(job) {
