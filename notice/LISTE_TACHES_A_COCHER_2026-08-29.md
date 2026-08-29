@@ -1,155 +1,247 @@
-# La liste — ce qui est fait, ce qui ne l'est pas, item par item
+# La liste complète — 62 tâches, item par item
 
-*Posée le 29/08/2026, à la demande de Frédéric : le plan explique très bien le **pourquoi**,
-mais n'a jamais listé le **quoi**. 1 700 lignes, 0 case à cocher, 0 nom de worker — alors que
-C.4 en couvre 16.*
+*Posée le 29/08/2026. Le plan dit le **pourquoi** en 1 700 lignes ; cette liste dit le **quoi**.*
 
 > **RÈGLE** *(plan, 29/08)* : une tâche n'est cochée que si son **énoncé** est couvert, et la
 > mesure qui le prouve doit répondre à la question que la tâche posait.
 
-**Légende** — `[x]` fait ET vérifié · `[~]` fait, pas encore éprouvé en vrai · `[ ]` à faire
+**Légende** `[x]` fait et vérifié · `[ ]` à faire · `[—]` annulé ou dissous
+
+*Première version incomplète : elle ne couvrait que la session des 28-29/08. Corrigée le jour
+même sur remarque de Frédéric — « il manque des étapes… saisir dans l'app, retirer les calques
+optimistes, A.1 A.2 A.3 ». **Les 62 tâches du plan sont désormais toutes ici.***
 
 ---
 
-## C.19 — LES CHAMPS ET GESTES DE TRANSACTION *(ex-tâche 13, retrouvée le 28/08)*
+# ① CE QUI RESTE À FAIRE — dans l'ordre décidé le 29/08
 
-### Étape 1 — le magasin
-```
-[x] table app_affaire_champ_app dans Supabase        RLS fermee, service_role seul
-[x] table locale + magasin_affaire_app.py            branche au run de nuit
-[x] cle sur app_affaire_id, pas le numero Hektor     29 293 numeros, 0 manquant
-[x] eprouve de bout en bout                          affaire 3, 123 456 vs 75 000
-```
+## 1. C.4 — LES 16 WORKERS *(5 convertis sur 16)*
 
-### Étape 2 — la règle
-```
-[x] CHAMPS_APP_AFFAIRE dans le contrat d'autorite    10 champs
-[x] appliquer_contrat_affaire.py                     pose ledger + vue
-[x] branche au run, APRES affaire_ledger.py          defaut d'ordre trouve et corrige
-[x] repose ses corrections dans Supabase             ecriture bornee aux affaires corrigees
-[x] EPROUVE CONTRE UN VRAI RUN                       journal du 29/08, 06:19:47
-```
-
-### Étape 3 — l'écran
-```
-[x] RPC app_edit_affaire_optimistic                  gardes eprouves
-[x] anon retire de la RPC                            trouve pendant l'audit
-[x] loadAffairesForDossier                           lit toutes les affaires d'un bien
-[x] bouton "Corriger sans envoyer a Hektor"          dans la modale
-[x] pre-remplissage par les valeurs REELLES          sinon "Corriger" ecrasait la vraie date
-[ ] DEPLOYE SUR VERCEL                               a confirmer par Frederic
-```
-
-### Étape 4 — les trois gestes
-```
-[x] les appels releves sur l'ecran de Hektor         updateOffre / clotureCompromis / deleteVente
-[x] conformite exacte aux appels reels               isCloture vaut TOUJOURS 1, fromContact ajoute
-[x] les 3 types dans la contrainte Supabase
-[x] les 3 types dans ADMIN_JOB_TYPES                 worker
-[x] les 3 types dans app_console_claim_next_job      seconde liste, oubliee d'abord
-[x] relecture apres ecriture                         comme les 13 autres handlers
-[x] RPC app_geste_affaire_optimistic                 instantane + etat precedent
-[x] retour en arriere si Hektor refuse               code pose
-[x] anon retire de la RPC
-
-[x] REFUSER une offre    eprouve chez Hektor         offre 33027, bouton disparu, temoin intact
-[x] ACCEPTER une offre   eprouve chez Hektor         offre 33026
-[ ] ANNULER un compromis                             JAMAIS EXECUTE -- cible a choisir ensemble
-[ ] SUPPRIMER une vente                              JAMAIS EXECUTE -- definitif, en dernier
-[ ] le RETOUR EN ARRIERE sur refus                   JAMAIS TESTE -- c'est le garde-fou de
-                                                     l'instantane, le plus important des trois
-[ ] REDEMARRER LES WORKERS                           ils tournent 2 correctifs en retard :
-                                                     ni le reflet d'etat, ni l'instantane
-[ ] trace d'essai a retirer                          affaire 9 : 123 456 au lieu de 79 000
-                                                     (decision de Frederic : en fin de chantier)
-```
-
----
-
-## C.4 — LES 16 WORKERS *(couverture réelle : 5 sur 16)*
-
-### Le principe : « écrire d'abord, envoyer, comparer au retour »
+Principe : *« écrire d'abord, envoyer, comparer au retour »*.
 
 ```
 CONVERTIS (5)
-[x] update_hektor_annonce_fields          app_edit_annonce_optimistic
-[x] update_hektor_contact                 app_edit_contact_optimistic
-[x] update_hektor_contact_search          app_edit_search_optimistic
-[x] change_hektor_annonce_status          ecrit l'affaire
-[x] create_hektor_draft_annonce           ligne provisoire
+[x] update_hektor_annonce_fields        app_edit_annonce_optimistic
+[x] update_hektor_contact               app_edit_contact_optimistic
+[x] update_hektor_contact_search        app_edit_search_optimistic
+[x] change_hektor_annonce_status        ecrit l'affaire
+[x] create_hektor_draft_annonce         ligne provisoire
 
 A CONVERTIR (11)
-[ ] archive_hektor_annonce                insert direct -- verifie
-[ ] restore_hektor_annonce                insert direct -- verifie
+[ ] archive_hektor_annonce              insert direct -- verifie
+[ ] restore_hektor_annonce              insert direct -- verifie
 [ ] delete_hektor_annonce
-[ ] assign_hektor_annonce_negotiator      insert direct -- verifie
-[ ] link_hektor_mandant                   insert direct -- verifie
+[ ] assign_hektor_annonce_negotiator    insert direct -- verifie
+[ ] link_hektor_mandant                 insert direct -- verifie
 [ ] delete_hektor_contact
 [ ] add_hektor_contact_search
 [ ] delete_hektor_contact_search
 [ ] create_hektor_contact
 [ ] create_hektor_mandant_contact
 [ ] update_hektor_mandant_contact
+
+LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
+[x] Actif · Offre · Compromis · Clos    14 executions depuis mai
+[ ] VENDU                               JAMAIS EXECUTEE (0 sur 16)
 ```
 
-### Les branches de `change_hektor_annonce_status`
-```
-[x] Actif · Offre · Compromis · Clos                 14 executions depuis mai
-[ ] VENDU                                            JAMAIS EXECUTEE (0 sur 16)
-                                                     debloquee par C.13 et C.19
-```
-
-*Les 3 workers B3 — numéro de mandat auto, relance et annulation de signature — sont hors C.4 :
-ce sont exactement A.1 et A.2.*
-
----
-
-## C.4-bis — LE FILET DE REJEU DES ACTIONS *(geste (c) de C.1', rouvert)*
+## 2. C.19 — LES GESTES DE TRANSACTION *(finir)*
 
 ```
-[x] le defaut mesure                       6 travaux en erreur, 0 rejoue, tentatives=1 partout
-[ ] file app_affaire_pending               sur le modele des 3 autres
-[ ] balayage a la minute                   rejeu 5 / 10 / 15 / 20 / 25 min
-[ ] abandon a 5 tentatives -> conflict     un humain tranche
+[x] refuser une offre      eprouve chez Hektor    33027 : bouton disparu, temoin intact
+[x] accepter une offre     eprouve chez Hektor    33026
+[ ] ANNULER un compromis                          JAMAIS EXECUTE
+[ ] SUPPRIMER une vente                           JAMAIS EXECUTE
+[ ] le RETOUR EN ARRIERE sur refus                JAMAIS TESTE -- garde-fou de l'instantane
+[ ] redemarrer les workers                        2 correctifs en retard
+[ ] deployer le front                             dernier commit c484c28
+```
+
+## 3. C.4-bis — LE FILET DE REJEU *(geste (c) de C.1', rouvert)*
+
+```
+[x] le defaut mesure                    6 en erreur, 0 rejoue, tentatives=1 partout
+[ ] file app_affaire_pending
+[ ] balayage a la minute                rejeu 5 / 10 / 15 / 20 / 25 min
+[ ] abandon a 5 -> conflict
 [ ] bandeau sur la fiche
 [ ] perimetre : les 3 gestes + le changement de statut
 ```
 
+## 4. C.16 — LES CONTACTS QUI N'EXISTENT PLUS
+```
+[x] remesuree                           825 fiches actives, pas 284 269
+[ ] marquer disparues les 825 actives   jamais supprimer -- regle du projet
+[ ] traiter les 5 454 archivees
+[ ] poser le mecanisme "un contact a quitte le listing"   patron : reconcile_annonce_scope
+```
+
+## 5. C.9 — LA CRÉATION PART DE L'APP  ·  6. 26bis-③
+```
+[ ] C.9      creer un bien SANS passer par Hektor         1 a 2 sem.
+[ ] 26bis-3  le serveur tient une annonce que le miroir ignore
+             -> trancher les 46 colonnes (37 dans un seul blob)   collee a C.9
+```
+
+## 7. C.11 — MÉNAGE
+```
+[ ] supprimer les tables mortes
+```
+
+## 8. A.3-TECHNIQUE — LE REGISTRE DES MANDATS
+```
+[ ] un vrai registre, plus une vue des annonces    1 105 mandats invisibles
+[ ] trois couches de numerotation                  Hektor / Protexa / la tienne
+                                                   3 a 5 j, TANT QUE HEKTOR VIT
+```
+
+## 9. D — RAPATRIER LES FICHIERS *(irréversible)*
+```
+[ ] D.1a  MESURER d'abord                  combien de cloud_available sans fichier local -- 1 h
+[ ] D.1   documents                        40 493 a redimensionner
+[ ] D.2   photos                           1 397
+```
+
+## 10. FIN DE PLAN
+```
+[ ] C.13-c  rattraper les 23 715 dates de cloture     avec les 3 regles validees
+[ ] 0.3     finir 19-R1                               rattrapage acquereurs, 4 h 35
+[ ] B.3     le declencheur de descente                en attente du journal
+[ ] E.1     19-R2, la veille de la bascule            DERNIERE OCCASION
+[ ] E.2     bascule des negociateurs sur l'app        decision d'organisation
+[ ] E.3     les workers deviennent invisibles
+[ ] E.4     le jour J                                 distributeur a 100 000
+[ ] F.1     utilisateurs, roles et droits             APRES la coupure
+```
+
+## 11. CE QUI NE DÉPEND PAS DU CODE — et qui bloque la coupure
+```
+[ ] A.1  PORTAILS      sortie en nom propre + reprise des ~350 annonces en ligne
+[ ] A.2  SIGNATURE     ton propre contrat (ImmoSign appartient a Hektor)
+[ ] A.3  REGISTRE      obligation legale, aujourd'hui adosse a Hektor
+```
+> **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas réglés.**
+> Ils sont **à zéro**, et chaque semaine de retard s'ajoute intégralement à la date de coupure.
+
 ---
 
-## CE QUI A ÉTÉ FAIT LES 28-29/08, HORS C.19
+# ② LES CINQ GESTES QUI T'APPARTIENNENT
 
 ```
-[x] C.15   les 6 types d'offre + immo pro            61 093 miroir / 61 094 serveur
-[x] C.18   bug agence multi-agences                  3 occurrences depuis juin, corrige
+[ ] redemarrer les workers
+[ ] deployer le front sur Vercel        n'a pas pu etre verifie (403 sur l'API)
+[ ] choisir l'annonce pour "Vendu"      la vente sera definitive
+[ ] choisir le compromis a annuler      tous les actifs sont de vraies affaires
+[ ] retirer la trace d'essai            affaire 9 : 123 456 au lieu de 79 000
+                                        (ta decision : en fin de chantier)
+```
+
+---
+
+# ③ CE QUI EST FAIT — 37 tâches
+
+## Protéger l'existant *(bloc 0)*
+```
+[x] 0.1  sauvegarde de app_search_registry et app_affaire_ledger   verifie en decompressant
+[x] 0.2  regle : le miroir ne se supprime jamais
+[x] 0.4  acces public ferme sur app_dossiers_current
+[x] 0.5  les 5 vues de surveillance fermees
+[x] 0.6  tmp_etape12_avant supprimee
+[x] 0.7  audit des fonctions appelables sans etre connecte   36 restent : DETTE ASSUMEE
+[x] 0.8  le correctif conflict=false sur les 3 balayages
+```
+
+## Les recherches acquéreur *(1 à 4sexies)*
+```
+[x] 1         rattacher l'irremplacable          15 lignes, 0 perdue
+[x] 2         supprimer le recalculable          13 339 lignes
+[x] 2bis      balayage nocturne des orphelins
+[x] 2ter      sentinelle sur les non rattachables
+[x] 2quater   le balayage tient un carnet
+[x] 3         le numero Hektor d'annonce peut etre vide + sentinelle
+[x] 4         identite des transactions          28 980 affaires numerotees
+[x] 4bis      archivee, toujours -- Hektor ne sait pas supprimer une recherche
+[x] 4bis-A    les archivees ne sont plus supprimees   6 777 recuperees
+[x] 4bis-B    le verrou du moteur de rapprochement
+[x] 4ter      un numero propre pour la recherche
+[x] 4quater   observer la doublure
+[x] 4quinquies  figer le nom                     76 841 noms, 0 doublon
+[x] 4sexies   sentinelle "une recherche ne disparait jamais"
+```
+
+## Le serveur apprend de l'app *(bloc B)*
+```
+[x] B.1  la descente                     124 tables, 1 530 973 lignes
+[x] B.2  la descente des fiches          10 doublures
+[x] B.4  le comparateur + 2 sondes       dans run_descente.ps1
+[x] B.5  la tache planifiee GTI Descente 07:30
+```
+
+## L'app devient l'auteur *(bloc C)*
+```
+[x] C.2a  identite des contacts, la relecture
+[x] C.2b  identite des contacts, le code       355 769 numeros, 19 tables
+[x] C.3   fermer la porte sortante des recherches
+[x] C.6   le domicile de l'annonce             app_annonce_champ_app
+[x] C.7   le serveur lit sa base               contrat d'autorite branche
+[x] C.12  la sortie de conflit, contacts
+[x] C.13-a  le domicile du mandat
+[x] C.13-b  le contrat s'allume                premier champ app-owned
+[x] C.13    la cloture ne passe plus par Hektor + elle ecrit vraiment
+[x] C.14  le titre francais cote serveur
+[x] C.15  les 6 types d'offre + immo pro       4 165 annonces qui n'entraient jamais
+[x] C.17  le monitoring voit le reseau tomber
 [x] C.17-bis  le moniteur ne meurt plus en parlant
-[x] C.13-a magasin de mandat                         3 divergences observees
-[x] C.13-b contrat de mandat                         premier champ app-owned jamais inscrit
-[x] C.13   statut et cloture decouples               Hektor n'apprend plus la cloture
-[x] C.13   la cloture ecrivait dans le vide          corrige, eprouve (ce57749)
-[x] 26bis  la carte des 163 colonnes                 139 detenues, 2 vraiment absentes
-[x] C.16   remesuree                                 825 fiches, pas 284 269
-[x] A.3-technique consignee                          3 couches de numerotation
-[x] l'analyse des transactions de bout en bout        29 293, multiplicite normale
-[x] l'audit du plan                                   4 derives trouvees
+[x] C.18  bug agence multi-agences             3 occurrences depuis juin
+[x] C.19  etapes 1 a 3 + le code de l'etape 4
+[x] E.0   audit : que ne peut-on PAS faire dans l'app ?
+```
+
+## Fait le 29/08, hors tâches numérotées
+```
+[x] l'analyse des transactions de bout en bout   29 293, multiplicite normale
+[x] le releve des appels de Hektor sur ecran     updateOffre / clotureCompromis / deleteVente
+[x] l'audit du plan face a la realite            4 derives trouvees
 [x] la regle du "fait" posee dans le plan
 [x] C.1' rouverte, C.4 corrigee, ordre revu
-[x] le correctif anon consigne dans un fichier        il manquait
+[x] le correctif anon consigne dans un fichier   il manquait
+[x] cette liste
 ```
 
 ---
 
-## LES CINQ GESTES QUI T'APPARTIENNENT
+# ④ ANNULÉ OU DISSOUS — à ne pas rechercher
 
 ```
-[ ] redemarrer les workers                 2 correctifs en retard
-[ ] deployer le front sur Vercel           dernier commit : c484c28
-[ ] choisir l'annonce pour "Vendu"          la vente sera definitive
-[ ] choisir le compromis a annuler          tous les actifs sont de vraies affaires
-[ ] 0.3 finir 19-R1                        le rattrapage acquereurs, 4 h 35
+[—] C.5   registre d'affaires et mandat des transactions   ANNULEE le 25/08, retour arriere
+[—] C.8   LE CALQUE DISPARAIT + la barriere                DISSOUTE le 25/08 :
+          "ses deux moities n'etaient pas des taches"
+[—] C.1   la regle d'arbitrage et ses 3 cas d'ecart        SUPPRIMEE le 24/08 -- l'etape 2
+                                                            fait disparaitre le cas (3)
+[—] C.10  corriger le modele "au moins" de la modale       SUPPRIMEE le 24/08
+[—] 5a    renommer les 11 parametres ambigus               RAYEE le 20/08 -- Postgres refuse
 ```
+
+> **« Retirer les calques optimistes » n'est plus une tâche** : c'est C.8, dissoute le 25/08
+> après mesure. Les calques restent, et c'est voulu — ils sont le mécanisme *« écrire d'abord »*
+> que C.4 généralise.
 
 ---
 
-*Cette liste se tient à jour en même temps que le plan. Une case ne se coche que sur une mesure,
-et la mesure est écrite à côté.*
+# ⑤ LE COMPTE
+
+```
+   62 taches au total
+   37 faites et verifiees
+    5 annulees ou dissoutes
+    4 partielles          C.1' · C.4 · C.13 · C.19
+    1 neuve               C.4-bis
+   15 ouvertes
+```
+
+**Et les trois qui commandent tout — A.1, A.2, A.3 — ne dépendent pas du code.**
+
+---
+
+*Cette liste se tient à jour avec le plan. Une case ne se coche que sur une mesure, et la mesure
+est écrite à côté.*
