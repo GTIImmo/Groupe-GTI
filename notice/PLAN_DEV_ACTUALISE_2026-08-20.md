@@ -47,6 +47,60 @@ mesure fausse.**
 
 ---
 
+## 🔎 AUDIT DU 29/08 AU SOIR — les quatre choses qui bloquent
+
+*Demandé par Frédéric : « dis-moi clairement où on en est ». Tout ce qui suit est **mesuré le
+soir même**, pas recopié.*
+
+```
+   62 taches      37 faites      15 ouvertes      5 annulees      4 partielles
+```
+
+| mesure | valeur | ce que ça veut dire |
+|---|---|---|
+| travaux en erreur | **7**, tentatives max = **1** | **aucun n'a jamais été rejoué** |
+| workers convertis | **5 sur 16** | 11 écrivent encore chez Hektor d'abord |
+| `cancel_hektor_compromis` · `delete_hektor_vente` | **0 travail, jamais** | le code corrigé ce soir **n'a jamais tourné dans la chaîne** |
+| commits non poussés | **53** *(origin/main au 28/08)* | **le front de C.19 n'est pas déployé** |
+
+### ① Le code corrigé n'a jamais tourné — 1 h
+
+Les deux handlers réparés n'ont **aucun travail à leur actif**. On les a éprouvés **à la main
+dans le navigateur**, pas par le worker. Tant qu'un vrai travail n'a pas traversé la chaîne, on
+ne sait pas si la relecture de fiche tient en conditions réelles.
+
+### ② Rien n'est rejoué — 2 à 3 j
+
+7 travaux en erreur depuis le 27/08, **zéro reprise**. Une saisie qui échoue est perdue en
+silence. C'est **C.4-bis**, moitié d'une tâche cochée trop vite en août.
+
+### ③ 53 commits ne sont pas poussés
+
+Les boutons Refuser / Accepter / Annuler / Supprimer existent dans le code, **pas dans l'app**.
+
+### ④ A.1 et A.2 sont à zéro
+
+Portails et signature. **Aucun travail technique ne permet de couper Hektor** tant qu'ils ne
+sont pas réglés, et chaque semaine de retard s'ajoute intégralement à la date de coupure.
+
+### L'ordre retenu
+
+```
+   1. C.19   faire passer un VRAI travail par le worker + deployer le front     1 j
+   2. C.4-bis-0  relire les 18 handlers : lesquels concluent du silence ?      1 a 2 j
+   3. C.4-bis    le filet de rejeu                                             2 a 3 j
+   4. C.4        les 11 workers restants + la branche « Vendu »                1 a 2 sem.
+   5. C.19-c     le choix actif/archive remonte jusqu'a l'ecran                2 j
+   6. C.16       825 contacts qui n'existent plus                              1 a 2 j
+   7. C.9 + 26bis-3   la creation part de l'app                                1 a 2 sem.
+```
+
+> **Pourquoi cet ordre.** On vient de découvrir qu'un worker peut se tromper de verbe pendant
+> des jours sans que personne le sache. Détecter, prouver, rattraper — tant que les trois ne
+> sont pas en place, chaque nouveau worker ajoute une panne possible et **muette**.
+
+---
+
 ## CE QUI A BOUGÉ LE 29/08 — l'essai réel sur Hektor
 
 *Une journée qui a commencé par un doute de Frédéric — « je ne suis pas sûr qu'Hektor, même en

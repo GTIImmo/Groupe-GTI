@@ -302,3 +302,56 @@ l'assistant et cree le compromis 50044.
 un createur de transaction : elle en ouvre un *quand il n'y a rien*. C'est une reponse directe
 a la question posee le 29/08 *(« le statut change et une transaction se cree en fonction, c'est
 bien ca ? »)* : **non, pas toujours**.
+
+---
+
+# MISE À JOUR DU 29/08 AU SOIR — après les essais réels
+
+## C.19 — ce qui est désormais éprouvé, et par quel canal
+
+```
+[x] refuser une offre         eprouve chez Hektor          33027
+[x] accepter une offre        eprouve chez Hektor          33026
+[x] ANNULER un compromis      eprouve A LA MAIN            50044, 50045, 50046
+[x] SUPPRIMER une vente       eprouve A LA MAIN            23287
+[x] le retour en arriere      job en erreur sur id bidon   14:45, apres correctif
+[x] redemarrer les workers    fait par Frederic
+[ ] un VRAI travail par le worker    cancel_hektor_compromis : 0 travail, JAMAIS
+[ ] un VRAI travail par le worker    delete_hektor_vente     : 0 travail, JAMAIS
+[ ] pousser les 53 commits           sinon le front reste fige au 28/08
+[ ] deployer le front
+```
+
+> **La distinction qui compte** : *éprouvé à la main* ≠ *éprouvé par la chaîne*. Les verbes sont
+> justes, les réponses connues, le code corrigé — mais **aucun travail n'est jamais passé par
+> `cancel_hektor_compromis` ni `delete_hektor_vente`**. C'est la première chose à faire.
+
+## LA PREUVE QUE LA SUPPRESSION D'UNE VENTE MARCHE
+
+*Frédéric a douté — « as-tu déjà réussi à supprimer une vente ? ». Doute fondé : la fiche
+n'affichait qu'un seul compromis alors que 50044 et 50045 existaient tous deux, donc le bloc
+« Vente du bien » pouvait masquer de la même façon. **Vérifié par l'AUTRE porte, l'API v2 :***
+
+```
+   /Api/Vente/VenteById/  id=23287  ->  404 Not Found   SUPPRIMEE
+   /Api/Vente/VenteById/  id=23288  ->  404 Not Found   SUPPRIMEE (par l'enregistrement desarchivant)
+   /Api/Vente/VenteById/  id=23289  ->  200, 3822 car   EXISTE
+```
+
+Le 404 contre le 200 est un témoin propre : l'endpoint répond, et il ne trouve plus les deux
+premières. **`ventes-deleteVente` fonctionne**, et la destruction de 23288 était bien réelle.
+
+## C.19-b et C.19-c — réévaluées
+
+| | |
+|---|---|
+| **C.19-b** | ✅ **fait** — le blocage que j'avais annoncé *(« l'admin ne peut pas créer de compromis »)* était **faux** : `ajoutebien` est un appel annexe. Frédéric l'a vu avant moi |
+| **C.19-c** | 🟡 **mesuré, pas codé** — parcours d'archivage relevé en entier, matrice des trois cas établie. Reste à remonter les **deux décisions** jusqu'à l'écran |
+
+## Le compte, corrigé
+
+```
+   7 travaux en erreur (etait 6)      tentatives max = 1        toujours 0 rejoue
+   5 workers convertis sur 16         inchange
+   53 commits non pousses             origin/main au 28/08
+```
