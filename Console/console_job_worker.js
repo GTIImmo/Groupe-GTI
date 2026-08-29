@@ -10475,8 +10475,14 @@ async function handleChangeHektorAnnonceStatus(job) {
   //     verifie: true   l'etat d'apres porte bien le statut vise
   //     verifie: false  la relecture n'a rien rendu -- on ne sait pas, et on l'ecrit
   //     erreur          l'etat d'apres CONTREDIT la cible -- la, c'est un echec
-  const statutLu = after && after.property && after.property.status != null
-    ? String(after.property.status) : null;
+  // La source du statut, corrigee le 29/08 apres l'avoir eprouvee. Le listing
+  // GraphQL ne voyait PAS cette annonce -- le premier essai a rendu « verifie:
+  // false ». L'API, elle, porte annonce.statut = {"id":"6","name":"Clos"} : une
+  // requete, aucune famille. On garde le listing en secours.
+  const etatApi = await lireEtatAnnonceViaApi(job, annonceId, "hektor_status_verify_api");
+  const statutLu = (etatApi && etatApi.trouve === true && etatApi.statut)
+    ? String(etatApi.statut)
+    : (after && after.property && after.property.status != null ? String(after.property.status) : null);
   const statutAttendu = String(config.hektorValue);
   if (statutLu !== null && statutLu !== statutAttendu) {
     throw new Error(
@@ -10485,7 +10491,7 @@ async function handleChangeHektorAnnonceStatus(job) {
   }
   if (statutLu === null) {
     await logJob(job.id, "hektor_status", "error",
-      "Statut envoye mais NON VERIFIE : l'etat d'apres n'a pas pu etre relu (listing SALE, 2 pages)", {
+      "Statut envoye mais NON VERIFIE : ni l'API ni le listing n'ont rendu l'etat d'apres", {
         hektor_annonce_id: annonceId, target_status: target, target_label: config.label,
       });
   }

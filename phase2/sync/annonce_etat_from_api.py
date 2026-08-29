@@ -63,9 +63,18 @@ def main() -> int:
         print(json.dumps({"trouve": False}))
         return 0
 
+    # Le STATUT vit hors de keyData : annonce.statut = {"id": "6", "name": "Clos"}.
+    # Trouve le 29/08 en eprouvant le changement de statut, qui rendait
+    # « verifie: false » parce que le listing GraphQL ne voyait pas l'annonce.
+    statut = annonce.get("statut") if isinstance(annonce, dict) else None
+    statut_id = str(statut.get("id")) if isinstance(statut, dict) and statut.get("id") is not None else ""
+    statut_nom = str(statut.get("name") or "") if isinstance(statut, dict) else ""
+
     print(json.dumps({
         "trouve": True,
         "id": str(key_data.get("id") or ""),
+        "statut": statut_id,
+        "statut_nom": statut_nom,
         "archive": str(key_data.get("archive") if key_data.get("archive") is not None else ""),
         "negociateur": str(key_data.get("NEGOCIATEUR") if key_data.get("NEGOCIATEUR") is not None else ""),
         "agence": str(key_data.get("agence") if key_data.get("agence") is not None else ""),
