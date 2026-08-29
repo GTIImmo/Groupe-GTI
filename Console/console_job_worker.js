@@ -13512,11 +13512,18 @@ async function handleChangeHektorOffreStatus(job) {
   // GET : releve dans offre_bien_change_status (ajax type "GET").
   const resultat = await appelHektor(job, "le changement d'etat de l'offre", "GET", params, annonceId);
 
+  // Sans cette relecture, l'app afficherait l'ancien etat jusqu'au run de nuit :
+  // Hektor sait, nous pas. C'est ce que font deja tous les autres gestes du worker.
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "change_hektor_offre_status",
+    priority: 72,
+  });
+
   await logJob(job.id, "hektor_offre_status", "done",
     `Offre ${idOffre} passee a ${type} chez Hektor (${resultat.verbe})`, {
-      hektor_offre_id: idOffre, type, verbe: resultat.verbe,
+      hektor_offre_id: idOffre, type, verbe: resultat.verbe, sync_job: syncJob,
     });
-  return { status: "done", hektor_offre_id: idOffre, type, verbe: resultat.verbe };
+  return { status: "done", hektor_offre_id: idOffre, type, verbe: resultat.verbe, sync_job: syncJob };
 }
 
 /** Annuler (ou cloturer) un compromis. Une simple confirmation chez Hektor : pas de motif. */
@@ -13545,11 +13552,18 @@ async function handleCancelHektorCompromis(job) {
   // POST : annuleCompromis passe par popinPostInner.
   const resultat = await appelHektor(job, "l'annulation du compromis", "POST", params, annonceId);
 
+  // Sans cette relecture, l'app afficherait l'ancien etat jusqu'au run de nuit :
+  // Hektor sait, nous pas. C'est ce que font deja tous les autres gestes du worker.
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "cancel_hektor_compromis",
+    priority: 72,
+  });
+
   await logJob(job.id, "hektor_compromis_cloture", "done",
     `Compromis ${idComp} annule chez Hektor`, {
-      hektor_compromis_id: idComp, verbe: resultat.verbe,
+      hektor_compromis_id: idComp, verbe: resultat.verbe, sync_job: syncJob,
     });
-  return { status: "done", hektor_compromis_id: idComp, verbe: resultat.verbe };
+  return { status: "done", hektor_compromis_id: idComp, verbe: resultat.verbe, sync_job: syncJob };
 }
 
 /**
@@ -13578,11 +13592,18 @@ async function handleDeleteHektorVente(job) {
   const params = new URLSearchParams({ mode: "ventes-deleteVente", id: idVente });
   const resultat = await appelHektor(job, "la suppression de la vente", "GET", params, annonceId);
 
+  // Sans cette relecture, l'app afficherait l'ancien etat jusqu'au run de nuit :
+  // Hektor sait, nous pas. C'est ce que font deja tous les autres gestes du worker.
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "delete_hektor_vente",
+    priority: 72,
+  });
+
   await logJob(job.id, "hektor_vente_delete", "done",
     `Vente ${idVente} supprimee chez Hektor (${resultat.verbe}) -- geste irreversible`, {
-      hektor_vente_id: idVente, verbe: resultat.verbe,
+      hektor_vente_id: idVente, verbe: resultat.verbe, sync_job: syncJob,
     });
-  return { status: "done", hektor_vente_id: idVente, verbe: resultat.verbe };
+  return { status: "done", hektor_vente_id: idVente, verbe: resultat.verbe, sync_job: syncJob };
 }
 
 async function handleArchiveHektorAnnonce(job) {
