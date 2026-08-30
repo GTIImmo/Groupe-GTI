@@ -43,9 +43,14 @@ VUE = "app_view_generale"
 
 # Les champs que les gestes de C.4 écriront. Le carnet les accepte tous ;
 # c'est le CONTRAT qui décidera lesquels l'app possède vraiment.
+#
+# LA SUPPRESSION N'EST PAS ICI, ET C'EST VOLONTAIRE (arbitrage du 30/08).
+# Ce carnet sert aux champs CORRIGÉS : une valeur que l'app tient pour juste en
+# face de celle d'Hektor. Une suppression n'est pas une correction, c'est un
+# événement — l'annonce s'en va, il n'y a plus rien à comparer. La ranger ici
+# aurait mélangé deux natures dans la même table.
 CHAMPS_CONNUS = (
     "archive",              # archiver / désarchiver
-    "supprime",             # supprimer une annonce
     "negociateur_email",    # affecter le négociateur
     "statut_annonce",       # changer le statut
     "diffusable",

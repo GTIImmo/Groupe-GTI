@@ -8127,24 +8127,22 @@ export async function createRestoreHektorAnnonceJob(input: {
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
-  const userId = await requireSupabaseUserId()
+  await requireSupabaseUserId()
+  // C.4 (30/08) — meme correction que l'archivage : le carnet et le travail sont
+  // ecrits ensemble, ou pas du tout.
+  const { data: created, error: rpcError } = await supabase.rpc('app_restore_annonce_optimistic', {
+    target_dossier_id: input.dossier.app_dossier_id,
+    job_payload: {},
+    job_priority: input.priority ?? 8,
+  })
+  if (rpcError || !created) throwConsoleAdminJobError(rpcError, 'Unable to create Hektor restore job')
+  const jobId = (created as { job_id?: string }).job_id
   const { data, error } = await supabase
     .from('app_console_job')
-    .insert({
-      job_type: 'restore_hektor_annonce',
-      app_dossier_id: input.dossier.app_dossier_id,
-      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
-      payload_json: {
-        numero_dossier: input.dossier.numero_dossier ?? null,
-        titre_bien: input.dossier.titre_bien ?? null,
-        target_archive: '0',
-      },
-      priority: input.priority ?? 8,
-      requested_by: userId,
-    })
     .select('*')
+    .eq('id', jobId as string)
     .single()
-  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor restore job')
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to read Hektor restore job')
   return data as ConsoleJob
 }
 
@@ -8224,29 +8222,35 @@ export async function createArchiveHektorAnnonceJob(input: {
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
-  const userId = await requireSupabaseUserId()
+  await requireSupabaseUserId()
+  // C.4 (30/08) — ON ECRIT CHEZ NOUS D'ABORD.
+  //
+  // Avant, cette fonction inserait le travail et attendait : si Hektor refusait
+  // ou tombait, l'intention d'archiver n'existait NULLE PART chez nous. La RPC
+  // pose desormais la valeur dans le carnet de l'annonce ET cree le travail dans
+  // la MEME transaction — l'un sans l'autre est impossible.
+  //
+  // `numero_dossier` et `titre_bien` ne sont plus envoyes d'ici : la RPC les lit
+  // elle-meme dans app_dossier_current, ou ils font foi.
+  const { data: created, error: rpcError } = await supabase.rpc('app_archive_annonce_optimistic', {
+    target_dossier_id: input.dossier.app_dossier_id,
+    job_payload: {
+      archive_main_choice: input.mainChoice,
+      archive_sub_choice: input.subChoice,
+      archive_other_text: input.otherText?.trim() || null,
+      archive_price: input.price?.trim() || null,
+      archive_confrere: input.confrere?.trim() || null,
+    },
+    job_priority: input.priority ?? 8,
+  })
+  if (rpcError || !created) throwConsoleAdminJobError(rpcError, 'Unable to create Hektor archive job')
+  const jobId = (created as { job_id?: string }).job_id
   const { data, error } = await supabase
     .from('app_console_job')
-    .insert({
-      job_type: 'archive_hektor_annonce',
-      app_dossier_id: input.dossier.app_dossier_id,
-      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
-      payload_json: {
-        numero_dossier: input.dossier.numero_dossier ?? null,
-        titre_bien: input.dossier.titre_bien ?? null,
-        target_archive: '1',
-        archive_main_choice: input.mainChoice,
-        archive_sub_choice: input.subChoice,
-        archive_other_text: input.otherText?.trim() || null,
-        archive_price: input.price?.trim() || null,
-        archive_confrere: input.confrere?.trim() || null,
-      },
-      priority: input.priority ?? 8,
-      requested_by: userId,
-    })
     .select('*')
+    .eq('id', jobId as string)
     .single()
-  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor archive job')
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to read Hektor archive job')
   return data as ConsoleJob
 }
 
