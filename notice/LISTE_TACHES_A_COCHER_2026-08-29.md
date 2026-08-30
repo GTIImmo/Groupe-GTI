@@ -787,3 +787,124 @@ contrôle elle-même.
    restants           6   les 4 contacts, les 2 recherches
    + la branche « Vendu », jamais executee
 ```
+
+---
+
+# 🔄 LISTE REFONDUE — 30/08 au soir
+
+*Refaite après une journée qui a beaucoup appris. Ce qui change par rapport à la version du
+matin : **quatre tâches de C.4 sortent de C.4** — elles ne dépendent pas de lui mais de la
+bascule de clé — et **une recommandation oubliée** revient en tête.*
+
+---
+
+## MAINTENANT
+
+```
+[ ] C.2b-reste   LE REGISTRE DES RECHERCHES                       30 min
+                 app_search_registry :
+                    + app_contact_id
+                    hektor_contact_id -> nullable
+                 Recommande par la relecture du 24/08 « dans C.2b, pas plus
+                 tard ». Quatre recommandations sur cinq ont ete faites ;
+                 celle-ci est tombee entre deux commits et aucune tache ne la
+                 portait. Rien n'en depend AUJOURD'HUI -- mais c'est le
+                 prealable d'un contact ne dans l'app.
+
+[ ] C.4-Vendu    LA BRANCHE JAMAIS EXECUTEE                        1 j
+                 Le seul geste de statut qui n'ait jamais tourne depuis mai.
+                 Aucune dependance d'identite.
+```
+
+---
+
+## ENSUITE — LE VERROU QUI COMMANDE TOUT LE RESTE
+
+```
+[ ] TACHE 5      BASCULER LA CLE DES CONTACTS                      3 a 5 j
+                 La doublure est POSEE et REMPLIE (19 tables, 58 731 numeros).
+                 Reste a designer laquelle des deux cases fait foi.
+                    4 tables portent 95 % des lignes, 6 sont vides
+                    701 points de code -- 40 % de l'echelle des annonces
+                    3 fonctions basculent, 8 gardent le numero Hektor
+                 ⚠ NE PAS y attacher le changement de cle primaire de
+                   app_contact_current : c'est un SECOND chantier.
+
+[ ] 4-suite      BASCULER LA CLE DES RECHERCHES
+                 La doublure tourne depuis le 21/08 et s'observe.
+```
+
+**Ce verrou leve, quatre tâches de C.4 se debloquent d'un coup :**
+
+```
+    ajouter une recherche · creer un contact
+    creer un mandant      · mettre a jour un mandant
+```
+
+*Elles etaient comptees dans C.4 ce matin. C'etait une erreur de ma part : elles n'attendent
+pas du code de worker, elles attendent une identite.*
+
+---
+
+## PUIS, dans l'ordre du plan
+
+```
+[ ] C.19-c    le choix actif / archive remonte jusqu'a l'ecran     2 j
+[ ] C.9       la creation part de l'app  + 26bis-3                 1 a 2 sem.
+[ ] A.3-tech  le registre des mandats en propre                    3 a 5 j
+```
+
+## LE BLOC RATTRAPAGES *(inchange)*
+
+```
+[ ] C.16    825 contacts actifs disparus + 5 454 archives
+[ ] D.1a    MESURER avant de courir                                1 h
+[ ] D.1     documents  40 493        [ ] D.2  photos  1 397
+[ ] R.rech  les ~270 premieres recherches invisibles
+```
+
+> ⚠ **Jamais deux en meme temps, jamais sans frein.** Le rattrapage des documents nous a deja
+> fait bannir l'IP.
+
+## FIN DE PLAN
+
+```
+[ ] C.11 · C.13-c · B.3 · E.2 · E.3 · E.4 · F.1
+```
+
+## HORS CODE — ce qui fixe la date
+
+```
+[ ] A.1  PORTAILS     [ ] A.2  SIGNATURE     [ ] A.3  REGISTRE
+```
+
+---
+
+## ✅ FAIT LE 30/08
+
+```
+[x] C.4-bis          le filet de rejeu, pose, eprouve, programme a la minute
+[x] C.4-bis-0        6 controles fermes, 5 eprouves
+[x] C.19 point 1     les 2 handlers de transaction eprouves par la chaine
+[x] C.4              archiver · desarchiver · affecter · supprimer une recherche
+[—] C.4              supprimer une annonce · lier un mandant  -> SANS OBJET, mesure
+[x] carnet annonce   table Supabase + descente + branchement au run  (dormant)
+[x] droits           app_console_can_request_job ne rend plus jamais NULL
+[x] recherches       les criteres FUSIONNENT au lieu de se remplacer
+[x] mesure           1 045 recherches (9,6 %) portent un critere invisible de l'app
+[x] commits pousses  origin/main a jour
+```
+
+## ✗ DEUX FAUSSES ALERTES DE MA PART, corrigees le jour meme
+
+```
+   « les recherches perdent 15 criteres a la saisie »
+      FAUX -- la modale n'expose que 7 champs, et l'app garde les sept.
+      J'avais lu un convertisseur generique, pas le formulaire.
+
+   « un contact orphelin, cause inconnue »
+      FAUX -- decalage d'une nuit, documente le 25/08, avec une sonde a
+      seuil 150 et non 0. Il y en avait 15 a la pose, il y en a 1.
+```
+
+*Les deux ont ete trouvees parce que Frederic a demande de verifier avant de corriger.*
