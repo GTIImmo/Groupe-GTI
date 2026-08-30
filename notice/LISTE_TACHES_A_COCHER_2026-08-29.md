@@ -804,6 +804,98 @@ contrôle elle-même.
 
 ---
 
+# 🔴 LE CONSTAT DU 30/08 — POURQUOI « VENDU » N'A JAMAIS PU MARCHER
+
+*Deux passages réels sur 62774. L'arbitre a mordu au premier essai, et le second a donné
+la cause. Ce n'était ni un droit, ni un champ manquant, ni un compromis absent.*
+
+## Ce que les deux passages ont montré
+
+```
+   statut Hektor          2 -> 5  « Vendu »        ACCEPTE
+   journal                « Transaction Vendu envoyee »
+   ventes sur la fiche    avant []   apres []      AUCUNE
+   /Api/Vente/ListVentes/ du 29 au 31/08           0
+```
+
+Les **deux portes** concordent : Hektor accepte le changement de statut et **ne crée aucune
+vente**. Sans l'arbitre, ce travail rendait « vérifié, statut 5 » — et l'app aurait affiché un
+bien vendu qui ne l'est pas. **C'est exactement l'état dans lequel 62774 se trouvait déjà, sans
+qu'on ait jamais su pourquoi.**
+
+## La cause, sur pièce
+
+La réponse à l'**enregistrement** est le **formulaire lui-même** *(`{"success":true,
+"data":{"defaultTemplate": …}}` — du CSS de popin)*. Hektor **ré-ouvre la popin au lieu
+d'enregistrer**. Et l'ouverture nous tend des cases vides : `forme_mandat: (vide)`,
+`forme_negociateur: (vide)`.
+
+Le formulaire a été déposé et lu. **Il ne contient aucun champ** :
+
+| popin | taille | champs `name=` | ce que c'est |
+|---|---|---|---|
+| **offre** *(28/08)* | 208 541 car | **22** | un vrai formulaire, plat |
+| **compromis** *(28/08)* | 85 921 car | **0** | `compromisStepHost` · `compromisStepper` · `mustacheLoader` |
+| **vente** *(30/08)* | 85 822 car | **0** | `venteStepHost` · `venteStepper` · `mustacheLoader` |
+
+➡ **L'offre est un formulaire ; le compromis et la vente sont des ASSISTANTS PAR ÉTAPES.** Leurs
+champs n'existent pas dans la page reçue : ils arrivent ensuite, par gabarits Mustache montés en
+JavaScript. Le CSS déposé porte d'ailleurs `/* VENTE STEP 3 */` et `.recapVente`.
+
+`submitHektorTransactionStatus` a été écrit **pour l'offre** — un POST plat avec
+`actionContainer[] = save, treat`. Appliqué à un assistant, il ne déclenche rien : Hektor rend
+la popin, et c'est tout.
+
+## Ce que ça explique d'un coup
+
+- **`compromis` : 0 travail. `sold` : 0 travail.** Ce n'était pas un oubli de dev — **ces deux
+  branches n'auraient pas pu marcher**. Elles étaient du code mort qui n'avait jamais tourné.
+- L'observation du 29/08 — *« cliquer Sous compromis a changé le statut sans créer de
+  compromis »* — n'était pas une bizarrerie : **c'est ce comportement-là**, vu de l'écran.
+- Et le compromis 50044, créé « par le même clic » sur un bien qui n'en avait aucun, l'a été par
+  **l'assistant piloté à la main dans le navigateur**, pas par la chaîne.
+
+## Ce qui MARCHE, et qui n'est pas rien
+
+```
+   changement de statut chez Hektor      OK, verifie (2 -> 5, puis 5 -> 2)
+   cloture du mandat CHEZ NOUS           OK, 1 ligne ecrite, registre rafraichi
+   l'arbitre                             OK -- il a attrape le defaut du 1er coup
+   la garde anti-doublement              posee, non sollicitee (rien n'a ete cree)
+   le retour a « Actif »                 OK, verifie deux fois
+```
+
+## ⚠ ET UN EFFET DE BORD MESURÉ, QUI N'ÉTAIT ÉCRIT NULLE PART
+
+Passer une annonce à « Vendu » la fait **SORTIR de `app_dossier_current`** — elle part dans
+`app_historical_annonce_index_current`. C'est le **même filtrage par statut** que celui trouvé le
+28/08 sur le registre des mandats, et il touche ici la table principale de l'app.
+
+Conséquence pratique : **le dossier disparaît au moment précis où le geste réussit**. Tout code
+qui relit `app_dossier_current` après une vente ne trouve rien — mon propre script d'essai s'y
+est cassé les dents avant d'être corrigé.
+
+---
+
+## LA DÉCISION QUI REVIENT À FRÉDÉRIC
+
+| | |
+|---|---|
+| **A — piloter l'assistant** | Relever la séquence d'étapes au navigateur, enregistreur armé, puis la coder. C'est faisable, mais c'est **un vrai chantier** — et le projet a déjà buté sur le même mur : *« modifier un compromis chez Hektor passe par un module ES impilotable »* |
+| **B — ne pas créer la vente chez Hektor** | L'app enregistre la vente **chez nous** *(la ligne d'affaire existe déjà)*, pose le statut chez Hektor *(ça marche)*, clôt le mandat chez nous *(ça marche)*. Hektor apprend **le statut**, pas la transaction |
+
+**B est déjà la direction du projet**, arbitrée le 28/08 : *« tous les champs de la modale changer
+statut doivent pouvoir se modifier dans l'app puis le serveur SANS envoyer à Hektor — sauf
+refuser/accepter pour l'offre, annuler pour le compromis, supprimer pour la vente »*. **Créer une
+vente n'a jamais figuré dans la liste des gestes qui partent.**
+
+⚠ **Ce que B coûte, et il faut le dire** : une vente née dans l'app n'existe pas chez Hektor,
+donc le run de nuit ne la trouvera jamais et la sentinelle `app_affaires_sans_numero_hektor`
+*(seuil 0)* lèvera la main **tous les jours**. Choisir B oblige à lui apprendre la différence
+entre « affaire perdue » et « affaire qui n'appartient qu'à nous ».
+
+---
+
 # 🔴 UN TROU TROUVÉ LE 30/08 — le filet de rejeu pouvait DOUBLER une création
 
 *Trouvé en préparant « Vendu », et il existait depuis le matin même. Personne ne l'avait vu
