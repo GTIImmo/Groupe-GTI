@@ -9841,6 +9841,20 @@ const ASSISTANTS_HEKTOR = {
     coquille: "annonce-SuiviVente-compromis-createCompromis",
     etape: "annonce-SuiviVente-compromis-getStepCompromis",
     conteneur: "PopinCompromis",
+    // ⚠ CE GENRE SE FAIT EN ADMINISTRATEUR, ET C'EST MESURE, PAS SUPPOSE.
+    //
+    // Dans le contexte negociateur, Hektor repond en clair, 114 caracteres :
+    //     {"success":false,"error":"Vous n'avez pas les droits pour creer
+    //      un compromis lie a cette annonce."}
+    // La MEME requete en session administrateur rend un panier de 644 car.
+    //
+    // Les trois genres ne veulent donc pas le meme compte, et c'est une regle
+    // de Hektor, pas un choix du projet :
+    //     offre       l'admin est REFUSE      (« un compte administrateur ne
+    //                 peut pas saisir une offre », vu sur la fiche)
+    //     vente       le negociateur convient (vente 23291, eprouvee)
+    //     compromis   le negociateur est REFUSE, l'admin convient
+    contexte: "admin",
     // L'etape 2 « Retrocession » est SAUTEE (grisee a l'ecran) : on passe de 2 a 3.
     // Le numero d'etape vient de l'assistant, ce n'est pas un compteur.
     pas: [
@@ -10860,7 +10874,12 @@ async function handleChangeHektorAnnonceStatus(job) {
   if (!annonceId) throw new Error("hektor_annonce_id required");
 
   await ensureAdminHektorWriteSession(job, "change_status_admin_login");
-  if (config.transactionMode) {
+  // LE COMPTE DEPEND DU GENRE (voir ASSISTANTS_HEKTOR). On ne bascule vers le
+  // negociateur que pour les gestes qui l'exigent ; le compromis reste en
+  // administrateur, seul compte qui ait le droit de le creer sur cette annonce.
+  const assistantCible = ASSISTANTS_HEKTOR[target];
+  const resteAdmin = Boolean(assistantCible && assistantCible.contexte === "admin");
+  if (config.transactionMode && !resteAdmin) {
     await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: false, preferDossierOwner: true, required: true });
   }
 
@@ -10955,7 +10974,8 @@ async function handleChangeHektorAnnonceStatus(job) {
       transactionResult = await setHektorAnnonceStatusValue(job, annonceId, config, "direct_status");
     }
   } finally {
-    if (config.transactionMode) {
+    // Rien a rendre si l'on n'a jamais quitte le compte administrateur.
+    if (config.transactionMode && !resteAdmin) {
       await returnAdminHektorSessionBestEffort(job, "change_status_return_admin");
     }
   }
