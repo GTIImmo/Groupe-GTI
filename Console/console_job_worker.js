@@ -9790,7 +9790,238 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// C.4 (30/08) -- L'ASSISTANT DE HEKTOR, POUR LE COMPROMIS ET LA VENTE.
+//
+// CE QUI ETAIT FAUX, ET DEPUIS LE 21/05. `submitHektorTransactionStatus` a ete
+// ecrit POUR L'OFFRE : un POST plat sur `...-createOffre`. Il convient a l'offre
+// et a elle seule -- mesure du 30/08 :
+//
+//     popin offre       208 541 car   22 champs   un vrai formulaire
+//     popin compromis    85 921 car    0 champ    un assistant
+//     popin vente        85 822 car    0 champ    un assistant
+//
+// Les champs n'existent pas dans la page que le worker recoit : ils arrivent
+// ensuite, par gabarits Mustache montes en JavaScript. D'ou les deux passages
+// reels du 30/08 : Hektor acceptait le statut et ne creait AUCUNE vente.
+//
+// LE PROTOCOLE, RELEVE SUR LE RESEAU (notice/PROTOCOLE_ASSISTANT_VENTE_HEKTOR_2026-08-30.md) :
+//
+//     GET   ...-createVente                          la coquille
+//     POST  ...-getStepVente  initBasket=true        l'ouverture -> basket + etape 0
+//     POST  ...-getStepVente  fromStep=0 step=2      les donnees
+//     POST  ...-getStepVente  fromStep=2 step=3      les commissions
+//     POST  ...-getStepVente  fromStep=3 step=3      + actionContainer[] DANS L'URL
+//
+// QUATRE POINTS FONT LA DIFFERENCE, et le worker les manquait tous les quatre :
+//
+//   1. LE VERBE. `createVente` ne rend que la coquille. Tout passe par
+//      `getStepVente` / `getStepCompromis`.
+//   2. LE `basket` -- l'etat serialise PHP, rendu a chaque etape et renvoye a la
+//      suivante. Il n'y a RIEN a comprendre dedans : on le recopie. Sans lui,
+//      chaque appel repart de zero et rien ne s'accumule.
+//   3. `actionContainer[]=save,treat` va DANS L'URL, pas dans le corps. Mis dans
+//      le corps, Hektor se contente de re-rendre la popin -- c'est exactement la
+//      reponse qu'on recevait.
+//   4. LE MANDAT vient de la REPONSE D'ETAPE, pas de la coquille. Le worker le
+//      lisait vide (`forme_mandat: (vide)`, mesure), et le commentaire de
+//      `normalizeStatusTransactionPayload` prevenait deja : une valeur amputee
+//      est ignoree SANS ERREUR.
+//
+// LE PRINCIPE DU PILOTE : on REPOSTE CE QUE HEKTOR A RENDU, corrige par ce que
+// l'app affirme. C'est ce que fait le navigateur. On ne fabrique aucune valeur
+// qu'on n'aurait pas recue -- regle du projet, « l'app gagne seulement quand
+// elle a quelque chose a dire ».
+//
+// ET ON SAIT DEJA FAIRE : la creation d'une annonce pilote un assistant Hektor
+// de bout en bout (`annonce-createBien-Ajx_Bien_wizardStepNew`, etapes 2 a 7,
+// 78 travaux). Le motif etait en interne ; il manquait la sequence.
+const ASSISTANTS_HEKTOR = {
+  compromise: {
+    coquille: "annonce-SuiviVente-compromis-createCompromis",
+    etape: "annonce-SuiviVente-compromis-getStepCompromis",
+    conteneur: "PopinCompromis",
+    // L'etape 2 « Retrocession » est SAUTEE (grisee a l'ecran) : on passe de 2 a 3.
+    // Le numero d'etape vient de l'assistant, ce n'est pas un compteur.
+    pas: [
+      { de: "0", vers: "2",
+        modules: ["infosFinancieresCompromis", "acquereurNotaireAutresProspectsCompromis",
+                  "annonceMandatCompromis", "agenceInterkabCompromis"] },
+      { de: "2", vers: "3", modules: ["commissionsCompromis"] },
+      { de: "3", vers: "3", modules: ["conditionsSuspensives"], enregistre: true },
+    ],
+  },
+  sold: {
+    coquille: "annonce-SuiviVente-vente-createVente",
+    etape: "annonce-SuiviVente-vente-getStepVente",
+    conteneur: "PopinVente",
+    pas: [
+      { de: "0", vers: "2",
+        modules: ["infosFinancieresVente", "acquereurNotaireAutresProspectsVente",
+                  "annonceMandatVente"] },
+      { de: "2", vers: "3", modules: ["commissionsVente"] },
+      { de: "3", vers: "3", modules: ["recapitulatifVente"], enregistre: true },
+    ],
+  },
+};
+
+/** Lit la reponse d'une etape : { basket, stepContent, currentStepIndex }. */
+function lireEtapeAssistant(texte, quoi) {
+  const json = parseHektorJson(texte, quoi);
+  const data = (json && json.data) || {};
+  return {
+    basket: typeof data.basket === "string" ? data.basket : "",
+    contenu: typeof data.stepContent === "string" ? data.stepContent : "",
+    index: data.currentStepIndex == null ? null : String(data.currentStepIndex),
+    succes: json ? json.success !== false : false,
+  };
+}
+
+/** Un appel d'etape. `actions` va dans l'URL -- c'est la que Hektor les lit. */
+async function appelerEtapeAssistant(annonceId, assistant, corps, actions) {
+  const url = actions && actions.length
+    ? `${XMLRPC_URL}?mode=${encodeURIComponent(assistant.etape)}`
+      + actions.map((a) => `&actionContainer%5B%5D=${encodeURIComponent(a)}`).join("")
+    : `${XMLRPC_URL}?mode=${encodeURIComponent(assistant.etape)}`;
+  return await hektorFetch(url, {
+    method: "POST",
+    body: corps,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      Accept: "application/json, text/javascript, */*; q=0.01",
+    },
+    timeoutMs: 60000,
+  });
+}
+
+async function submitHektorAssistantTransaction(job, annonceId, target, config, payload) {
+  const assistant = ASSISTANTS_HEKTOR[target];
+
+  // ── 1. LA COQUILLE. Elle ne porte aucun champ, mais l'ouvrir met Hektor dans
+  //       l'etat ou le navigateur le met. On ne s'en ecarte pas.
+  await hektorFetch(`${XMLRPC_URL}?mode=${encodeURIComponent(assistant.coquille)}`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+      Accept: "application/json, text/javascript, */*; q=0.01",
+    },
+    timeoutMs: 60000,
+  });
+
+  // ── 2. L'OUVERTURE : elle rend le premier basket ET le contenu de l'etape 1,
+  //       ou se trouvent le mandat, les mandants et le type d'utilisateur.
+  const ouverture = new URLSearchParams();
+  ouverture.set("idAnnonce", annonceId);
+  ouverture.set("basket", "");
+  ouverture.set("initBasket", "true");
+  const rep0 = await appelerEtapeAssistant(annonceId, assistant, ouverture, null);
+  let etat = lireEtapeAssistant(rep0.text, `ouverture ${config.label}`);
+  if (!etat.basket) {
+    throw new Error(
+      `Assistant ${config.label} : l'ouverture n'a rendu aucun panier. `
+      + `Sans lui rien ne s'accumule -- on n'envoie pas la suite.`);
+  }
+
+  await logJob(job.id, "hektor_assistant", "running",
+    `Assistant ${config.label} ouvert`, {
+      hektor_annonce_id: annonceId, etape: etat.index,
+      panier_car: etat.basket.length, contenu_car: etat.contenu.length,
+    });
+
+  // Les valeurs que l'app affirme. On passe le CONTENU D'ETAPE comme repli :
+  // c'est lui qui porte les vraies valeurs (le mandat au format <id>-<FAMILLE>),
+  // et non la coquille -- la correction du 30/08.
+  const tx = normalizeStatusTransactionPayload(payload, config, etat.contenu);
+
+  // ── 3. LES ETAPES ──
+  let derniere = null;
+  for (const pas of assistant.pas) {
+    const corps = new URLSearchParams();
+
+    // ON REPOSTE CE QUE HEKTOR A RENDU. Sans groupe : on prend tout le contenu
+    // de l'etape courante, comme le navigateur poste son formulaire.
+    const rendu = extractHektorFormValues(etat.contenu, null);
+    for (const [cle, valeur] of rendu.entries()) {
+      if (cle === "basket" || cle === "idAnnonce") continue;
+      corps.append(cle, valeur);
+    }
+
+    // Puis CE QUE L'APP AFFIRME -- et seulement si elle a quelque chose a dire.
+    const poser = (cle, valeur) => {
+      const v = String(valeur == null ? "" : valeur).trim();
+      if (!v) return;
+      corps.delete(cle);
+      corps.set(cle, v);
+    };
+    if (pas.de === "0") {
+      if (target === "sold") {
+        poser("prixDeVente", tx.salePrice);
+        poser("dateVente", tx.date);
+      } else {
+        poser("dateCompromis", tx.date);
+        poser("dateSignatureActe", normalizeStatusFrenchDate(
+          payload.signature_date || payload.date_signature_acte || payload.dateSignatureActe));
+        poser("nbJoursRetractation", String(payload.retraction_days || payload.nb_jours_retractation || "10"));
+        poser("prixPublique", tx.amount || tx.salePrice);
+        poser("prixDeVente", tx.salePrice);
+        poser("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
+        poser("sequestre", tx.sequestration);
+      }
+      poser("montantHonoraireSortie", tx.fees);
+      poser("tauxHonoraireSortie", tx.feesRate);
+      // L'ACQUEREUR remplace ce qui etait rendu -- c'est un tableau, donc on
+      // efface d'abord. Sans acquereur, on garde ce que Hektor a propose.
+      if (tx.buyer) { corps.delete("acquereurs[]"); corps.append("acquereurs[]", tx.buyer); }
+      if (tx.notary) { corps.delete("notairesAcquereur[]"); corps.append("notairesAcquereur[]", tx.notary); }
+    }
+
+    for (const m of pas.modules) corps.append("containerModule[]", m);
+    corps.set("containerName", assistant.conteneur);
+    corps.set("fromStep", pas.de);
+    corps.set("step", pas.vers);
+    corps.set("idAnnonce", annonceId);
+    corps.set("basket", etat.basket);
+
+    const rep = await appelerEtapeAssistant(
+      annonceId, assistant, corps, pas.enregistre ? ["save", "treat"] : null);
+    etat = lireEtapeAssistant(rep.text, `etape ${pas.de}->${pas.vers} ${config.label}`);
+    derniere = rep;
+
+    await logJob(job.id, "hektor_assistant", "done",
+      pas.enregistre
+        ? `Assistant ${config.label} : enregistrement envoye`
+        : `Assistant ${config.label} : etape ${pas.de} -> ${pas.vers}`, {
+        hektor_annonce_id: annonceId,
+        modules: pas.modules.join("+"),
+        panier_car: etat.basket.length,
+        succes_annonce: etat.succes,
+      });
+
+    // ⚠ `success: true` NE PROUVE RIEN : la reponse de l'enregistrement a
+    // EXACTEMENT la meme forme qu'une reponse d'etape (mesure du 30/08). C'est
+    // l'arbitre, en aval, qui tranche -- pas cette valeur.
+  }
+
+  const reponseBrute = stripHtml(String((derniere && derniere.text) || ""))
+    .replace(/\s+/g, " ").trim();
+
+  await setHektorAnnonceStatusValue(job, annonceId, config, `assistant_${target}`);
+  return {
+    assistant: true,
+    etapes: assistant.pas.length,
+    reponse: reponseBrute.slice(0, 300) || "(vide)",
+    forme_mandat: tx.mandat || "(vide)",
+    forme_negociateur: tx.negotiator || "(vide)",
+  };
+}
+
 async function submitHektorTransactionStatus(job, annonceId, target, config, payload) {
+  // LE COMPROMIS ET LA VENTE PASSENT PAR L'ASSISTANT. L'offre garde son chemin,
+  // qui marche et qui est eprouve -- on ne le touche pas.
+  if (ASSISTANTS_HEKTOR[target]) {
+    return await submitHektorAssistantTransaction(job, annonceId, target, config, payload);
+  }
+
   const initBody = new URLSearchParams({
     mode: config.transactionMode,
     idAnnonce: annonceId,
@@ -10523,12 +10754,12 @@ async function enchainerArchivageApresVente(parentJob, annonceId, appDossierId, 
 // `app_affaires_sans_numero_hektor` (seuil 0) leve la main des le lendemain sur
 // une affaire restee sans numero : c'est elle qui porte l'alerte, pas une
 // exception qui doublerait le geste.
-async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId, transactionResult) {
-  const ventesApres = await lireVentesDeLaFicheBestEffort(job, annonceId, "apres_creation");
+async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAffaireId, transactionResult) {
+  const ventesApres = await lireTransactionsBestEffort(job, annonceId, genre, "apres_creation");
 
   if (ventesApres === null) {
-    await logJob(job.id, "hektor_vente_preuve", "error",
-      "Vente envoyee mais NON VERIFIEE : la fiche n'a pas pu etre relue", {
+    await logJob(job.id, "hektor_transaction_preuve", "error",
+      `${genre} envoye mais NON VERIFIE : la fiche n'a pas pu etre relue`, {
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
       });
     return { verifie: false, cree: null };
@@ -10541,11 +10772,11 @@ async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId, tran
     : Array.from(ventesApres).filter((id) => !ventesAvant.has(id));
 
   if (nouvelles.length === 0) {
-    await logJob(job.id, "hektor_vente_preuve", "error",
-      "AUCUNE VENTE NOUVELLE sur la fiche apres l'envoi -- la creation n'a rien produit. "
-      + "Rappel : la reponse de Hektor ment (200 + « Vous ne pouvez pas creer un bien » "
-      + "alors que la vente 23287 avait bien ete creee), et le statut est decouple de la "
-      + "transaction. C'est la fiche qui fait foi.", {
+    await logJob(job.id, "hektor_transaction_preuve", "error",
+      `AUCUN ${genre} NOUVEAU sur la fiche apres l'envoi -- la creation n'a rien produit. `
+      + "Rappel : ni la reponse ni le statut ne prouvent quoi que ce soit -- la reponse de "
+      + "l'enregistrement a la MEME forme qu'une reponse d'etape, et le statut est decouple "
+      + "de la transaction. C'est la fiche qui fait foi.", {
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
         ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant),
         ventes_apres: Array.from(ventesApres),
@@ -10556,8 +10787,8 @@ async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId, tran
   }
 
   if (nouvelles.length > 1) {
-    await logJob(job.id, "hektor_vente_preuve", "error",
-      "PLUSIEURS ventes nouvelles apres l'envoi : on ne devine pas laquelle est la notre, "
+    await logJob(job.id, "hektor_transaction_preuve", "error",
+      `PLUSIEURS ${genre}s nouveaux apres l'envoi : on ne devine pas lequel est le notre, `
       + "donc on n'ecrit aucun numero dans l'app", {
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
         candidates: nouvelles,
@@ -10565,30 +10796,30 @@ async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId, tran
     return { verifie: true, cree: true, ambigu: true, candidates: nouvelles };
   }
 
-  const venteId = nouvelles[0];
+  const idTransaction = nouvelles[0];
 
   // LE SECOND TEMOIN, par l'autre porte. C'est la methode qui a prouve la
   // suppression de 23287 le 29/08 : la fiche et l'API v2 sont deux sources
   // independantes, et une seule des deux ne suffit pas.
-  const etat = await lireEtatTransactionViaApi(job, "vente", venteId, "hektor_vente_verify_api");
+  const etat = await lireEtatTransactionViaApi(job, genre, idTransaction, "hektor_transaction_verify_api");
   const confirmee = Boolean(etat && etat.trouve === true);
 
-  await logJob(job.id, "hektor_vente_preuve", confirmee ? "done" : "error",
+  await logJob(job.id, "hektor_transaction_preuve", confirmee ? "done" : "error",
     confirmee
-      ? `Vente ${venteId} creee et confirmee par les DEUX portes (fiche + API)`
-      : `Vente ${venteId} vue sur la fiche mais NON confirmee par l'API -- on le dit`, {
-      hektor_annonce_id: annonceId, hektor_vente_id: venteId,
+      ? `${genre} ${idTransaction} cree et confirme par les DEUX portes (fiche + API)`
+      : `${genre} ${idTransaction} vu sur la fiche mais NON confirme par l'API -- on le dit`, {
+      hektor_annonce_id: annonceId, hektor_transaction_id: idTransaction,
       app_affaire_id: appAffaireId || null,
       api: etat && etat._error ? etat._error : (etat ? etat.trouve : null),
     });
 
   const identite = confirmee
-    ? await poserIdVenteSurAffaire(job, appAffaireId, venteId)
+    ? await poserIdTransactionSurAffaire(job, appAffaireId, idTransaction)
     : { status: "skipped", reason: "non_confirmee_par_api" };
 
   return {
     verifie: true, cree: true, confirmee,
-    hektor_vente_id: venteId,
+    hektor_transaction_id: idTransaction,
     identite,
   };
 }
@@ -10641,23 +10872,27 @@ async function handleChangeHektorAnnonceStatus(job) {
           });
         transactionResult = { deja_creee: true, hektor_affaire_id: dejaCreee };
         venteResult = target === "sold"
-          ? { verifie: true, cree: true, confirmee: true, hektor_vente_id: dejaCreee, deja_creee: true }
+          ? { verifie: true, cree: true, confirmee: true, hektor_transaction_id: dejaCreee, deja_creee: true }
           : null;
       } else {
         // L'etat d'AVANT, pour distinguer la vente qu'on cree de celles qui
         // etaient deja la. Best-effort : ne pas savoir n'empeche pas d'envoyer.
-        const ventesAvant = target === "sold"
-          ? await lireVentesDeLaFicheBestEffort(job, annonceId, "avant_creation")
+        // Le genre arbitre : la vente et le compromis se prouvent tous deux sur
+        // la fiche, l'offre garde son propre chemin (sa reponse, elle, parle).
+        const genreArbitre = target === "sold" ? "vente"
+          : target === "compromise" ? "compromis" : null;
+        const ventesAvant = genreArbitre
+          ? await lireTransactionsBestEffort(job, annonceId, genreArbitre, "avant_creation")
           : null;
 
         transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
 
-        if (target === "sold") {
-          venteResult = await prouverVenteCreee(
-            job, annonceId, ventesAvant, appAffaireId, transactionResult);
+        if (genreArbitre) {
+          venteResult = await prouverTransactionCreee(
+            job, annonceId, genreArbitre, ventesAvant, appAffaireId, transactionResult);
 
           // C.19-c : et seulement si la vente est CONFIRMEE par les deux portes.
-          if (venteResult && venteResult.confirmee === true
+          if (target === "sold" && venteResult && venteResult.confirmee === true
               && String(payload.apres_vente || "actif") === "archiver") {
             venteResult.archivage = await enchainerArchivageApresVente(
               job, annonceId, dossier.app_dossier_id, payload);
@@ -10791,7 +11026,7 @@ async function handleChangeHektorAnnonceStatus(job) {
       isArchived: after.property.isArchived === true,
     } : null,
     transaction: transactionResult || null,
-    vente: venteResult || null,
+    transaction_preuve: venteResult || null,
     mandat_closure: mandatClosureResult || null,
     sync_job: syncJob,
   };
@@ -14178,7 +14413,19 @@ async function compterDansFicheHektor(annonceId, motifs, timeoutMs = 60000) {
 // Et l'id ainsi obtenu se confirme par L'AUTRE PORTE, /Api/Vente/VenteById/ --
 // 200 si elle existe, 404 sinon. Deux temoins independants : c'est la methode
 // qui a servi le 29/08 a prouver la suppression de 23287.
-async function lireVentesDeLaFiche(annonceId, timeoutMs = 60000) {
+// Un genre, un marqueur. Les deux ont ete VUS sur la fiche le 30/08 :
+//     supprimerVente(23290)          la vente d'essai
+//     clore_compromis_vente('50049') le compromis d'essai
+// C'est ce releve qui valide la methode a rebours : quand la transaction
+// existe, le marqueur est la -- donc un releve vide veut bien dire « aucune ».
+const MARQUEURS_TRANSACTION = {
+  vente: /supprimerVente\(\s*['"]?(\d+)['"]?\s*\)/g,
+  compromis: /clore_compromis_vente\(\s*['"]?(\d+)['"]?\s*\)/g,
+};
+
+async function lireTransactionsDeLaFiche(annonceId, genre, timeoutMs = 60000) {
+  const motif = MARQUEURS_TRANSACTION[genre];
+  if (!motif) throw new Error(`Genre de transaction inconnu : ${genre}`);
   const url = `${XMLRPC_URL}?mode=chargeannonce_Accueil&id=${encodeURIComponent(annonceId)}&lang=fr`;
   const reponse = await hektorFetch(url, { timeoutMs });
   const html = String(reponse.text || "");
@@ -14188,7 +14435,7 @@ async function lireVentesDeLaFiche(annonceId, timeoutMs = 60000) {
       + `on ne peut pas conclure, donc on ne conclut pas.`);
   }
   const trouvees = new Set();
-  const motif = /supprimerVente\(\s*['"]?(\d+)['"]?\s*\)/g;
+  motif.lastIndex = 0;
   let m;
   while ((m = motif.exec(html)) !== null) trouvees.add(String(m[1]));
   return trouvees;
@@ -14198,13 +14445,14 @@ async function lireVentesDeLaFiche(annonceId, timeoutMs = 60000) {
 // deja parti chez Hektor -- lecon du 27/08, annonce creee et travail declare en
 // echec. On rend `null` pour dire « je ne sais pas », ce qui n'est pas la meme
 // chose que « il n'y en a aucune ».
-async function lireVentesDeLaFicheBestEffort(job, annonceId, etape) {
+async function lireTransactionsBestEffort(job, annonceId, genre, etape) {
   try {
-    return await lireVentesDeLaFiche(annonceId);
+    return await lireTransactionsDeLaFiche(annonceId, genre);
   } catch (erreur) {
-    await logJob(job.id, "hektor_vente_relecture", "error",
-      "Relecture des ventes impossible -- on ne conclura pas dessus", {
+    await logJob(job.id, "hektor_transaction_relecture", "error",
+      `Relecture des ${genre}s impossible -- on ne conclura pas dessus`, {
         hektor_annonce_id: annonceId,
+        genre,
         etape,
         error: erreur && erreur.message ? erreur.message : String(erreur),
       });
@@ -14223,30 +14471,30 @@ async function lireVentesDeLaFicheBestEffort(job, annonceId, etape) {
 // lignes pour une seule vente, sur la ligne TERMINALE d'un dossier.
 //
 // Ecrire le numero ici supprime la condition : l'adoption devient inutile.
-async function poserIdVenteSurAffaire(job, appAffaireId, venteId) {
-  if (!appAffaireId || !venteId) return { status: "skipped", reason: "rien_a_poser" };
+async function poserIdTransactionSurAffaire(job, appAffaireId, idTransaction) {
+  if (!appAffaireId || !idTransaction) return { status: "skipped", reason: "rien_a_poser" };
   try {
     const majes = await supabaseRequest(
       `app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`, {
         method: "PATCH",
         prefer: "return=representation",
         body: JSON.stringify({
-          hektor_affaire_id: String(venteId),
+          hektor_affaire_id: String(idTransaction),
           present_in_hektor: true,
         }),
       });
     const touchees = Array.isArray(majes) ? majes.length : 0;
-    await logJob(job.id, "hektor_vente_identite", touchees ? "done" : "error",
+    await logJob(job.id, "hektor_transaction_identite", touchees ? "done" : "error",
       touchees
-        ? "La vente creee a recu son numero Hektor dans l'app -- pas d'attente du run de nuit"
-        : "AUCUNE ligne d'affaire mise a jour : la vente existe chez Hektor mais l'app l'ignore",
-      { app_affaire_id: appAffaireId, hektor_vente_id: String(venteId), lignes: touchees });
+        ? "La transaction creee a recu son numero Hektor dans l'app -- pas d'attente du run de nuit"
+        : "AUCUNE ligne d'affaire mise a jour : elle existe chez Hektor mais l'app l'ignore",
+      { app_affaire_id: appAffaireId, hektor_transaction_id: String(idTransaction), lignes: touchees });
     return { status: touchees ? "done" : "error", lignes: touchees };
   } catch (erreur) {
-    await logJob(job.id, "hektor_vente_identite", "error",
-      "VENTE CREEE mais son numero n'a pas pu etre ecrit dans l'app -- a reprendre", {
+    await logJob(job.id, "hektor_transaction_identite", "error",
+      "TRANSACTION CREEE mais son numero n'a pas pu etre ecrit dans l'app -- a reprendre", {
         app_affaire_id: appAffaireId,
-        hektor_vente_id: String(venteId),
+        hektor_transaction_id: String(idTransaction),
         error: erreur && erreur.message ? erreur.message : String(erreur),
       });
     return { status: "error" };
