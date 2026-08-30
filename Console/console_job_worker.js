@@ -10377,6 +10377,88 @@ async function submitHektorClosedStatus(job, annonceId, config, payload) {
   return { closure, cloture_locale: locale };
 }
 
+// C.4-VENDU (30/08) -- LA PREUVE QUE LA VENTE EXISTE.
+//
+// TROIS ISSUES, et on les nomme -- meme discipline que la verification de statut
+// juste en dessous, posee le 29/08 :
+//     cree: true    une vente nouvelle est apparue ET l'API la confirme
+//     cree: false   la relecture a REUSSI et ne montre aucune vente nouvelle
+//     verifie:false la relecture a echoue -- on ne sait pas, et on l'ecrit
+//
+// ON N'ECHOUE PAS SUR « cree: false », ET C'EST DELIBERE. Lever ferait passer le
+// travail en `error`, donc le filet de rejeu le reprendrait -- et un rejeu qui
+// recree est exactement ce qu'on veut eviter sur une vente. La sentinelle
+// `app_affaires_sans_numero_hektor` (seuil 0) leve la main des le lendemain sur
+// une affaire restee sans numero : c'est elle qui porte l'alerte, pas une
+// exception qui doublerait le geste.
+async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId) {
+  const ventesApres = await lireVentesDeLaFicheBestEffort(job, annonceId, "apres_creation");
+
+  if (ventesApres === null) {
+    await logJob(job.id, "hektor_vente_preuve", "error",
+      "Vente envoyee mais NON VERIFIEE : la fiche n'a pas pu etre relue", {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+      });
+    return { verifie: false, cree: null };
+  }
+
+  // Sans l'etat d'avant on ne sait pas distinguer la vente creee d'une vente
+  // preexistante. On ne conclut alors que si la fiche n'en porte qu'UNE.
+  const nouvelles = ventesAvant === null
+    ? Array.from(ventesApres)
+    : Array.from(ventesApres).filter((id) => !ventesAvant.has(id));
+
+  if (nouvelles.length === 0) {
+    await logJob(job.id, "hektor_vente_preuve", "error",
+      "AUCUNE VENTE NOUVELLE sur la fiche apres l'envoi -- la creation n'a rien produit. "
+      + "Rappel : la reponse de Hektor ment (200 + « Vous ne pouvez pas creer un bien » "
+      + "alors que la vente 23287 avait bien ete creee), et le statut est decouple de la "
+      + "transaction. C'est la fiche qui fait foi.", {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+        ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant),
+        ventes_apres: Array.from(ventesApres),
+      });
+    return { verifie: true, cree: false };
+  }
+
+  if (nouvelles.length > 1) {
+    await logJob(job.id, "hektor_vente_preuve", "error",
+      "PLUSIEURS ventes nouvelles apres l'envoi : on ne devine pas laquelle est la notre, "
+      + "donc on n'ecrit aucun numero dans l'app", {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+        candidates: nouvelles,
+      });
+    return { verifie: true, cree: true, ambigu: true, candidates: nouvelles };
+  }
+
+  const venteId = nouvelles[0];
+
+  // LE SECOND TEMOIN, par l'autre porte. C'est la methode qui a prouve la
+  // suppression de 23287 le 29/08 : la fiche et l'API v2 sont deux sources
+  // independantes, et une seule des deux ne suffit pas.
+  const etat = await lireEtatTransactionViaApi(job, "vente", venteId, "hektor_vente_verify_api");
+  const confirmee = Boolean(etat && etat.trouve === true);
+
+  await logJob(job.id, "hektor_vente_preuve", confirmee ? "done" : "error",
+    confirmee
+      ? `Vente ${venteId} creee et confirmee par les DEUX portes (fiche + API)`
+      : `Vente ${venteId} vue sur la fiche mais NON confirmee par l'API -- on le dit`, {
+      hektor_annonce_id: annonceId, hektor_vente_id: venteId,
+      app_affaire_id: appAffaireId || null,
+      api: etat && etat._error ? etat._error : (etat ? etat.trouve : null),
+    });
+
+  const identite = confirmee
+    ? await poserIdVenteSurAffaire(job, appAffaireId, venteId)
+    : { status: "skipped", reason: "non_confirmee_par_api" };
+
+  return {
+    verifie: true, cree: true, confirmee,
+    hektor_vente_id: venteId,
+    identite,
+  };
+}
+
 async function handleChangeHektorAnnonceStatus(job) {
   const payload = safeJsonParse(job.payload_json);
   const target = normalizeHektorStatusTarget(payload.target_status || payload.status || payload.targetStatus);
@@ -10408,9 +10490,38 @@ async function handleChangeHektorAnnonceStatus(job) {
   const before = await fetchHektorPropertyByIdBestEffort(job, annonceId, "hektor_status_verify_before");
   let transactionResult = null;
   let mandatClosureResult = null;
+  let venteResult = null;
+  // Pose par app_change_annonce_status_optimistic dans la MEME transaction que ce
+  // travail : c'est le fil qui relie la ligne d'affaire de l'app a ce geste.
+  const appAffaireId = payload.app_affaire_id || null;
   try {
     if (config.transactionMode) {
-      transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
+      // ─── LA GARDE : ne jamais recreer ce qui existe deja ───
+      const dejaCreee = await transactionDejaCreee(job, appAffaireId);
+      if (dejaCreee) {
+        await logJob(job.id, "hektor_transaction_garde", "done",
+          `Transaction deja creee chez Hektor (${dejaCreee}) par une tentative precedente : `
+          + `on ne recree pas. Sans cette garde, un rejeu doublerait la transaction.`, {
+            hektor_annonce_id: annonceId, app_affaire_id: appAffaireId,
+            hektor_affaire_id: dejaCreee, target,
+          });
+        transactionResult = { deja_creee: true, hektor_affaire_id: dejaCreee };
+        venteResult = target === "sold"
+          ? { verifie: true, cree: true, confirmee: true, hektor_vente_id: dejaCreee, deja_creee: true }
+          : null;
+      } else {
+        // L'etat d'AVANT, pour distinguer la vente qu'on cree de celles qui
+        // etaient deja la. Best-effort : ne pas savoir n'empeche pas d'envoyer.
+        const ventesAvant = target === "sold"
+          ? await lireVentesDeLaFicheBestEffort(job, annonceId, "avant_creation")
+          : null;
+
+        transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
+
+        if (target === "sold") {
+          venteResult = await prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId);
+        }
+      }
       // Chemin "Vendu" : sur demande explicite du front, on clot aussi le mandat courant
       // (motif vendu). L'annonce reste au statut Vendu pose par la transaction.
       // C.13 (28/08) : la vente est enregistree chez Hektor, on clot le mandat CHEZ NOUS.
@@ -10538,6 +10649,7 @@ async function handleChangeHektorAnnonceStatus(job) {
       isArchived: after.property.isArchived === true,
     } : null,
     transaction: transactionResult || null,
+    vente: venteResult || null,
     mandat_closure: mandatClosureResult || null,
     sync_job: syncJob,
   };
@@ -13895,6 +14007,145 @@ async function compterDansFicheHektor(annonceId, motifs, timeoutMs = 60000) {
     compte[cle] = html.split(motif).length - 1;
   }
   return compte;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// C.4-VENDU (30/08) -- LIRE LES VENTES QUE PORTE UNE ANNONCE.
+//
+// POURQUOI IL FAUT UN ARBITRE, et pourquoi il ne peut PAS etre la reponse.
+//
+// Mesure du 28/08, enregistreur reseau arme. Enregistrer une vente rend, en
+// HTTP 200 :
+//        "Vous ne pouvez pas creer un bien"   x8
+//        {"result":false}
+// ET LA VENTE EST CREEE QUAND MEME (id 23287). La reponse ment. Aucun
+// detecteur fonde sur elle ne peut valoir quoi que ce soit.
+//
+// ET LE STATUT NE VAUT PAS MIEUX. Mesure du 29/08 : cliquer « Sous compromis »
+// a change le statut SANS creer de compromis. Chez Hektor, le statut de
+// l'annonce et la transaction sont DECOUPLES -- relire « statut = 5 » ne dit
+// donc rien de l'existence de la vente. L'annonce 62774 en est la preuve
+// vivante : elle a porte « Vendu » sans aucune vente.
+//
+// RESTE LA FICHE. `supprimerVente(<id>)` y figure une fois par vente -- mesure
+// du 29/08 : `chargeannonce_Accueil` -> supprimerVente:1. Le bouton est masque
+// A L'ECRAN pour le compte administrateur (0x0, meme phenomene que les blocs
+// de signature), mais le worker lit le HTML brut : le masquage ne le concerne
+// pas.
+//
+// Et l'id ainsi obtenu se confirme par L'AUTRE PORTE, /Api/Vente/VenteById/ --
+// 200 si elle existe, 404 sinon. Deux temoins independants : c'est la methode
+// qui a servi le 29/08 a prouver la suppression de 23287.
+async function lireVentesDeLaFiche(annonceId, timeoutMs = 60000) {
+  const url = `${XMLRPC_URL}?mode=chargeannonce_Accueil&id=${encodeURIComponent(annonceId)}&lang=fr`;
+  const reponse = await hektorFetch(url, { timeoutMs });
+  const html = String(reponse.text || "");
+  if (html.length < 2000) {
+    throw new Error(
+      `Relecture de la fiche ${annonceId} inexploitable (${html.length} caracteres) : `
+      + `on ne peut pas conclure, donc on ne conclut pas.`);
+  }
+  const trouvees = new Set();
+  const motif = /supprimerVente\(\s*['"]?(\d+)['"]?\s*\)/g;
+  let m;
+  while ((m = motif.exec(html)) !== null) trouvees.add(String(m[1]));
+  return trouvees;
+}
+
+// Best-effort : une relecture impossible ne doit JAMAIS faire tomber un geste
+// deja parti chez Hektor -- lecon du 27/08, annonce creee et travail declare en
+// echec. On rend `null` pour dire « je ne sais pas », ce qui n'est pas la meme
+// chose que « il n'y en a aucune ».
+async function lireVentesDeLaFicheBestEffort(job, annonceId, etape) {
+  try {
+    return await lireVentesDeLaFiche(annonceId);
+  } catch (erreur) {
+    await logJob(job.id, "hektor_vente_relecture", "error",
+      "Relecture des ventes impossible -- on ne conclura pas dessus", {
+        hektor_annonce_id: annonceId,
+        etape,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      });
+    return null;
+  }
+}
+
+// L'AFFAIRE RECOIT SON NUMERO HEKTOR TOUT DE SUITE, au lieu d'attendre la nuit.
+//
+// Sans cela, la ligne posee par la RPC reste sans numero Hektor et
+// `present_in_hektor = false`. Le rattrapage existe -- affaire_ledger.py adopte
+// la ligne de l'app au run suivant -- mais il exige un ACQUEREUR :
+//     adopte = adoptables.pop((annonce, kind, acq_id), None) if acq_id else None
+// Sans acquereur, pas d'adoption : la ligne de l'app reste orpheline A VIE
+// (regle delete-never) et le run en cree une SECONDE pour la vraie vente. Deux
+// lignes pour une seule vente, sur la ligne TERMINALE d'un dossier.
+//
+// Ecrire le numero ici supprime la condition : l'adoption devient inutile.
+async function poserIdVenteSurAffaire(job, appAffaireId, venteId) {
+  if (!appAffaireId || !venteId) return { status: "skipped", reason: "rien_a_poser" };
+  try {
+    const majes = await supabaseRequest(
+      `app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`, {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: JSON.stringify({
+          hektor_affaire_id: String(venteId),
+          present_in_hektor: true,
+        }),
+      });
+    const touchees = Array.isArray(majes) ? majes.length : 0;
+    await logJob(job.id, "hektor_vente_identite", touchees ? "done" : "error",
+      touchees
+        ? "La vente creee a recu son numero Hektor dans l'app -- pas d'attente du run de nuit"
+        : "AUCUNE ligne d'affaire mise a jour : la vente existe chez Hektor mais l'app l'ignore",
+      { app_affaire_id: appAffaireId, hektor_vente_id: String(venteId), lignes: touchees });
+    return { status: touchees ? "done" : "error", lignes: touchees };
+  } catch (erreur) {
+    await logJob(job.id, "hektor_vente_identite", "error",
+      "VENTE CREEE mais son numero n'a pas pu etre ecrit dans l'app -- a reprendre", {
+        app_affaire_id: appAffaireId,
+        hektor_vente_id: String(venteId),
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      });
+    return { status: "error" };
+  }
+}
+
+// LA GARDE CONTRE LE DOUBLEMENT.
+//
+// `change_hektor_annonce_status` figure dans la liste des travaux que le filet
+// de rejeu reprend (c4bis, 30/08). Le commentaire de ce filet previent lui-meme :
+// « toute addition a cette liste doit s'accompagner d'une verification absolue :
+// sans elle, le rejeu transforme un succes en echec, OU DOUBLE UNE CREATION ».
+//
+// Les gestes DESTRUCTEURS de cette liste relisent tous l'etat avant d'agir. Les
+// branches CREATRICES de ce worker, elles, ne le faisaient pas -- et personne ne
+// l'avait vu, parce qu'aucune n'avait jamais tourne.
+//
+// Voici leur equivalent, et il est ABSOLU : si la ligne d'affaire de ce travail
+// porte deja un numero Hektor, la transaction a ete creee par une tentative
+// precedente. On ne recree pas. Cela ne depend d'aucun ordre, d'aucun compte,
+// d'aucune date -- c'est exactement ce que le rejeu exige.
+async function transactionDejaCreee(job, appAffaireId) {
+  if (!appAffaireId) return null;
+  try {
+    const lignes = await supabaseRequest(
+      `app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`
+      + `&select=hektor_affaire_id,kind`);
+    const ligne = Array.isArray(lignes) && lignes.length ? lignes[0] : null;
+    const deja = ligne && ligne.hektor_affaire_id != null
+      && String(ligne.hektor_affaire_id).trim() !== "";
+    return deja ? String(ligne.hektor_affaire_id).trim() : null;
+  } catch (erreur) {
+    // On ne sait pas -> on ne bloque pas. Un doute ne doit pas empecher un
+    // PREMIER envoi ; c'est le cas courant, le rejeu est l'exception.
+    await logJob(job.id, "hektor_transaction_garde", "error",
+      "Impossible de verifier si la transaction existait deja -- on continue", {
+        app_affaire_id: appAffaireId,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      });
+    return null;
+  }
 }
 
 async function handleCancelHektorCompromis(job) {
