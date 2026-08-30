@@ -712,3 +712,78 @@ manque, en masse, une bonne fois* — et le même risque : elles tapent fort che
 [x] C.4-bis-0  les 6 controles   fermes ; 5 eprouves en conditions reelles
 [x] C.19 point 1                 les 2 handlers eprouves par la chaine
 ```
+
+---
+
+# C.4 — LA FAMILLE ANNONCE, TERMINÉE *(30/08)*
+
+## Ce qui a été converti
+
+```
+[x] archiver              RPC app_archive_annonce_optimistic    eprouve, done en 35 s
+[x] desarchiver           RPC app_restore_annonce_optimistic    eprouve
+[x] affecter le negociateur  RPC app_assign_negotiator_optimistic
+```
+
+Chacune écrit **le carnet et le travail dans la même transaction**. Avant, le front insérait le
+travail et attendait : si Hektor refusait, l'intention n'existait nulle part.
+
+## Deux qui ne se convertissent PAS — et c'est mesuré, pas supposé
+
+### `delete_hektor_annonce` — déjà saine
+
+```
+   passe deja par une RPC                       verifie
+   sa RPC echoue FERMEE                         verifie : 0 travail cree sans session
+   le worker refuse de supprimer a l'aveugle    corrige le 30/08
+   le filet rend l'intention durable            pose le 30/08
+   ecrire au carnet                             SANS OBJET
+```
+
+Une suppression n'est pas un champ corrigé, c'est une disparition : il n'y a **rien à
+comparer**. L'audit la comptait comme « à convertir » sur le critère *« écrit-elle chez
+nous »*, qui ne s'applique pas ici.
+
+### `link_hektor_mandant` — ni domicile, ni trou à boucher
+
+```
+   un mandant est une RELATION, pas un champ  ->  le carnet (dossier, champ, valeur)
+                                                  ne sait pas porter une liste
+   aucune table de mandants cote app          ->  ils vivent dans un bloc JSON
+   trou de droits ?                           ->  NON, verifie
+```
+
+**La convertir ajouterait du risque sans rien apporter.** Elle reste telle quelle.
+
+## 🔴 LA DÉCOUVERTE QUI JUSTIFIE CES DEUX DÉCISIONS
+
+La table `app_console_job` porte **elle-même** son contrôle de droits, en politique RLS :
+
+```sql
+   INSERT autorise si  requested_by = auth.uid()
+                   ET  status = 'pending'
+                   ET  app_console_can_request_job(job_type, app_dossier_id, hektor_annonce_id)
+```
+
+Deux conséquences, et elles renversent ce que je croyais :
+
+**①** Toute insertion directe depuis le front **était déjà contrôlée**. Il n'y a jamais eu de
+trou de droits sur ce chemin.
+
+**②** Une politique RLS traite `NULL` comme un **refus** — contrairement au `if not (...)` du
+PL/pgSQL, où `not NULL` ne déclenche rien. Le trou trouvé ce matin ne concernait donc **que le
+chemin RPC**, parce qu'une fonction `SECURITY DEFINER` **contourne la RLS** et doit refaire le
+contrôle elle-même.
+
+> **Autrement dit : en convertissant un geste en RPC, on sort du garde-fou de la table et on
+> reprend la responsabilité du contrôle.** C'est précisément ce qui m'a mordu sur l'archivage.
+> Toute conversion future doit refaire ce contrôle — et le faire échouer fermé.
+
+## Le compte de C.4
+
+```
+   convertis          3   archiver, desarchiver, affecter le negociateur
+   sans objet         2   supprimer une annonce, lier un mandant  (mesure)
+   restants           6   les 4 contacts, les 2 recherches
+   + la branche « Vendu », jamais executee
+```
