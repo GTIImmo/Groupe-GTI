@@ -8280,6 +8280,9 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   closeEtat?: string
   closeRaison?: string
   closeMandatOnSale?: boolean
+  // C.19-c : 'actif' (defaut) ou 'archiver'. Lu par le worker APRES que la
+  // vente a ete confirmee chez Hektor -- jamais avant.
+  apresVente?: 'actif' | 'archiver'
   closePrice?: string
   priority?: number
 }): Promise<ConsoleJob> {
@@ -8317,6 +8320,7 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     close_etat: input.closeEtat?.trim() || null,
     close_raison: input.closeRaison?.trim() || null,
     close_mandat_on_sale: input.closeMandatOnSale ? true : null,
+    apres_vente: input.apresVente === 'archiver' ? 'archiver' : 'actif',
     close_price: input.closePrice?.trim() || null,
   }
   // C.4 25/08 -- L'AFFAIRE NAIT DANS L'APP, PUIS LE TRAVAIL PART CHEZ HEKTOR.

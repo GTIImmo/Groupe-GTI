@@ -11859,6 +11859,10 @@ export default function App() {
   const [statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate] = useState('')
   const [statusChangeNetSellerPrice, setStatusChangeNetSellerPrice] = useState('')
   const [statusChangeSequestration, setStatusChangeSequestration] = useState('')
+  // C.19-c (30/08) -- CE QUE DEVIENT LE BIEN UNE FOIS LA VENTE ENREGISTREE.
+  // Hektor offre deux issues a l'enregistrement d'une vente ; le defaut « laisser
+  // actif » est le seul EPROUVE, et il a ete arbitre par Frederic le 30/08.
+  const [statusChangeApresVente, setStatusChangeApresVente] = useState<'actif' | 'archiver'>('actif')
   const [statusChangeCloseReason, setStatusChangeCloseReason] = useState('')
   // Motif structuré de clôture (mécanique Hektor réelle) : etat = choiceBags, raison = sous-motif.
   const [statusChangeCloseEtat, setStatusChangeCloseEtat] = useState<'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'>('choiceAutre')
@@ -14670,6 +14674,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerFeesRate('')
     setStatusChangeNetSellerPrice('')
     setStatusChangeSequestration('')
+    setStatusChangeApresVente('actif')
     setStatusChangeCloseReason('')
     setStatusChangeCloseEtat('choiceAutre')
     setStatusChangeCloseRaison('autre')
@@ -14928,6 +14933,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         retractionDays: statusChangeRetractionDays,
         selectedMandat: statusChangeSelectedMandat,
         buyerContactId: statusChangeBuyerContactId,
+        apresVente: statusChangeApresVente,
         buyerNotaryId: statusChangeBuyerNotaryId,
         buyerFees: statusChangeBuyerFees,
         buyerFeesRate: statusChangeBuyerFeesRate,
@@ -17496,6 +17502,38 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         ) : null}
                       </div>
                     </section>
+                    {statusChangeStatus === 'sold' ? (
+                      <section className="status-change-section">
+                        <div>
+                          <p className="eyebrow">Une fois la vente enregistree</p>
+                          <strong>Que devient le bien ?</strong>
+                        </div>
+                        <div className="status-choice-grid">
+                          <button
+                            type="button"
+                            className={`status-choice-card ${statusChangeApresVente === 'actif' ? 'is-selected' : ''}`}
+                            onClick={() => setStatusChangeApresVente('actif')}
+                          >
+                            <strong>Le laisser actif</strong>
+                            <span>Il reste dans les biens actuels et affiche BIEN VENDU.</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`status-choice-card ${statusChangeApresVente === 'archiver' ? 'is-selected' : ''}`}
+                            onClick={() => setStatusChangeApresVente('archiver')}
+                          >
+                            <strong>L'archiver</strong>
+                            <span>Il sort des biens actuels, motif « vendu par l'agence ».</span>
+                          </button>
+                        </div>
+                        <p className="status-change-note">
+                          L'archivage se fait par le geste d'archivage deja eprouve, APRES que la vente
+                          a ete confirmee chez Hektor — et non par le bouton « Enregistrer &amp; archiver »
+                          de leur formulaire, dont un essai du 29/08 a montre qu'il pouvait detruire la
+                          vente precedente.
+                        </p>
+                      </section>
+                    ) : null}
                     <p className="status-change-note">Apres validation Hektor, le worker relance une reprise ciblee pour remplir les blocs transaction de la fiche. Le run quotidien reste la verification de secours.</p>
                   </>
                 ) : statusChangeStatus === 'closed' ? (

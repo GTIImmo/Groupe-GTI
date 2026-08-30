@@ -10377,6 +10377,86 @@ async function submitHektorClosedStatus(job, annonceId, config, payload) {
   return { closure, cloture_locale: locale };
 }
 
+// C.19-c (30/08) -- CE QUE DEVIENT LE BIEN UNE FOIS LA VENTE ENREGISTREE.
+//
+// Hektor propose DEUX issues a l'enregistrement d'une vente, relevees a l'ecran
+// le 29/08 : « Enregistrer & laisser actif » et « Enregistrer & archiver ». Ce
+// choix agit sur le statut de l'annonce -- decision METIER, qui ne peut pas
+// rester un defaut cable dans le worker. Il est desormais a l'ecran, defaut
+// « laisser actif » (arbitre par Frederic le 30/08, et seule issue eprouvee).
+//
+// ⚠ ON N'APPELLE PAS LEUR BOUTON « ARCHIVER », ET C'EST DELIBERE. Deux raisons :
+//
+//   1. Je n'ai PAS la mesure de ce qu'il envoie. La capture du 28/08 ne couvre
+//      que la popin d'offre, ou il n'y a qu'un seul bouton « Enregistrer ».
+//      Deviner un parametre sur un geste qui touche a une vente, non.
+//   2. Cette issue a DETRUIT une vente. Mesure du 29/08, verifiee par l'API :
+//      la vente 23288 est passee a 404 -- « supprimee par l'enregistrement
+//      desarchivant ». Leur formulaire ne se contente pas d'archiver.
+//
+// On compose donc DEUX gestes deja eprouves : creer la vente (laisser actif),
+// puis archiver par `archive_hektor_annonce` -- 127 executions a son actif, avec
+// son propre garde-fou et son propre motif. Chacun se verifie seul, chacun se
+// rejoue seul.
+//
+// ET SEULEMENT SI LA VENTE EST CONFIRMEE. Archiver un bien dont on n'a pas la
+// preuve qu'il est vendu le ferait sortir des biens actuels pour rien.
+async function enchainerArchivageApresVente(parentJob, annonceId, appDossierId, payload) {
+  try {
+    // Ne pas empiler : un rejeu ne doit pas poser un second archivage.
+    const params = new URLSearchParams({
+      select: "id,status",
+      job_type: "eq.archive_hektor_annonce",
+      hektor_annonce_id: `eq.${annonceId}`,
+      status: "in.(pending,running)",
+      limit: "1",
+    });
+    const existant = await supabaseRequest(`app_console_job?${params.toString()}`, { method: "GET" });
+    if (Array.isArray(existant) && existant.length) {
+      await logJob(parentJob.id, "archivage_apres_vente", "done",
+        "Archivage deja en attente pour cette annonce -- on n'en pose pas un second", {
+          hektor_annonce_id: annonceId, job_existant: existant[0].id,
+        });
+      return { status: "deja_en_attente", job_id: existant[0].id };
+    }
+
+    const cree = await supabaseRequest("app_console_job", {
+      method: "POST",
+      prefer: "return=representation",
+      body: JSON.stringify([{
+        job_type: "archive_hektor_annonce",
+        app_dossier_id: appDossierId || null,
+        hektor_annonce_id: String(annonceId),
+        payload_json: {
+          // Motifs Hektor reels (ARCHIVE_MAIN_CHOICES / ARCHIVE_SUB_CHOICES) :
+          // le bien sort des biens actuels parce qu'il a ete vendu par l'agence.
+          archive_main_choice: "choiceVendu",
+          archive_sub_choice: "agence",
+          archive_price: String(payload.sale_price || payload.amount || "").trim(),
+          origine: "vente_enregistree",
+          parent_job_id: parentJob.id,
+        },
+        priority: 8,
+        requested_by: parentJob.requested_by || null,
+      }]),
+    });
+    const ligne = Array.isArray(cree) && cree.length ? cree[0] : null;
+    await logJob(parentJob.id, "archivage_apres_vente", ligne ? "done" : "error",
+      ligne
+        ? "Vente confirmee : archivage du bien demande par le geste eprouve (et non par le bouton d'Hektor)"
+        : "Vente confirmee mais l'archivage n'a PAS pu etre demande -- le bien reste actif",
+      { hektor_annonce_id: annonceId, job_id: ligne ? ligne.id : null });
+    return { status: ligne ? "demande" : "error", job_id: ligne ? ligne.id : null };
+  } catch (erreur) {
+    const message = erreur && erreur.message ? erreur.message : String(erreur);
+    await logJob(parentJob.id, "archivage_apres_vente", "error",
+      "Vente confirmee mais l'archivage n'a pas pu etre demande -- le bien reste actif", {
+        hektor_annonce_id: annonceId, error: message,
+      });
+    return { status: "error", error: message };
+  }
+}
+
 // C.4-VENDU (30/08) -- LA PREUVE QUE LA VENTE EXISTE.
 //
 // TROIS ISSUES, et on les nomme -- meme discipline que la verification de statut
@@ -10520,6 +10600,13 @@ async function handleChangeHektorAnnonceStatus(job) {
 
         if (target === "sold") {
           venteResult = await prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId);
+
+          // C.19-c : et seulement si la vente est CONFIRMEE par les deux portes.
+          if (venteResult && venteResult.confirmee === true
+              && String(payload.apres_vente || "actif") === "archiver") {
+            venteResult.archivage = await enchainerArchivageApresVente(
+              job, annonceId, dossier.app_dossier_id, payload);
+          }
         }
       }
       // Chemin "Vendu" : sur demande explicite du front, on clot aussi le mandat courant
