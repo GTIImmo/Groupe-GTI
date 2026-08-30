@@ -1883,6 +1883,64 @@ toute seule, donc le problème A disparaît sans être corrigé**. Mais il faut 
 **Ne pas ajouter de garde-fou sur la suppression** — décision Frédéric du 18/08 : il ferait échouer
 les cas où le repli `list[0]` tombe juste.
 
+### ✅ LA MESURE QUE CE PLAN RÉCLAMAIT — faite le 30/08
+
+*Le plan pose ici, en préalable à la fermeture des portes entrantes : « **mesurer combien de
+recherches Hektor portent des critères invisibles dans l'app** ». C'est fait.*
+
+```
+   10 910 recherches au total
+    1 234 portent au moins un critere que l'app ne sait pas reconstruire   11,3 %
+    1 129 portent un maximum que la modale n'expose pas                    10,3 %
+```
+
+**Les critères en cause**, par fréquence :
+
+```
+   ITEM_QUARTIER_PONDERATION     979      ponderation de quartier
+   ITEM_SURFACE_MAX            1 065         ITEM_CHAMBRE_MAX            1 005       |  des MAXIMUMS -- la modale
+   ITEM_PIECES_MAX               960       |  n'expose que des minimums
+   ITEM_SURFACE_TERRAIN_MAX      269      /
+   ITEM_SURFACE_MIN_COMMERCE      67      immobilier professionnel
+   ITEM_MITTOYEN                  25
+   ITEM_NB_NIVEAU_MIN / MAX    20 + 20
+   ITEM_FLOORS_MIN / MAX         8 + 8
+   ITEM_PARTICULARITE              8
+```
+
+#### Ce que ça veut dire, exactement
+
+**Aujourd'hui, rien n'est perdu.** Deux raisons, toutes deux vérifiées :
+
+| | |
+|---|---|
+| **la modale n'expose que 7 champs** | `priceMin/Max`, `surfaceMin`, `landSurfaceMin`, `roomsMin`, `bedroomsMin`, `bathroomsMin` — et l'app persiste **les sept**. Aucune saisie ne se perd |
+| **aucune recherche n'a jamais été éditée depuis l'app** | `app_search_pending` : **0 ligne**, jamais. Le chemin existe, il n'a pas servi |
+
+**Mais le risque est réel, et il se déclenchera à la coupure.** La RPC d'édition fait
+`criteres_json = app_search_criteres_from_input(...)` — elle **remplace** la liste riche venue
+d'Hektor par une liste que l'app ne sait construire qu'à partir de **quatre** sortes
+*(équipements, DPE, marge, salles de bain min)*.
+
+```
+   AUJOURD'HUI    une edition appauvrit criteres_json
+                  -> le run de nuit le repare depuis Hektor
+   A LA COUPURE   le run n'existe plus
+                  -> l'appauvrissement devient DEFINITIF, sur 1 234 recherches
+```
+
+#### Le correctif, quand il faudra
+
+**Fusionner au lieu de remplacer** : à l'édition, conserver les clés que l'app ne connaît pas,
+et ne réécrire que celles qu'elle sait produire. C'est petit, additif, et ça retire le risque
+sans toucher au modèle « au moins » — que **C.10 a eu raison d'abandonner**, puisque la porte
+sortante fermée, l'app n'a plus à parler la langue d'Hektor.
+
+*Ce n'est pas un blocage pour C.4 : le chemin n'est pas emprunté. C'est un préalable à la
+fermeture des portes entrantes, et il est désormais chiffré.*
+
+---
+
 ### Le trou des NOUVELLES recherches — mesuré le 21/08
 
 Les trois portes ci-dessus font entrer les **modifications**. Aucune ne fait entrer une
