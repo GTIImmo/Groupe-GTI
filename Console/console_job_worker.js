@@ -9829,6 +9829,34 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     (initJson.data && (initJson.data.defaultTemplate || initJson.data.html || initJson.data.template)) ||
     ""
   );
+  // ─── LA CAPTURE QUI MANQUE AU PROJET ───
+  //
+  // La seule capture de formulaire de transaction (28/08) ne couvre que la popin
+  // d'OFFRE, qui n'a qu'UN bouton « Enregistrer ». Celle de la VENTE en a DEUX --
+  // « Enregistrer & laisser actif » et « Enregistrer & archiver » -- et le worker
+  // leur envoie l'action de l'offre (`actionContainer[] = save, treat`). Si ce
+  // n'est pas ce qu'elles attendent, Hektor n'execute rien et ne dit rien : c'est
+  // exactement ce qu'on a constate le 30/08.
+  //
+  // On depose donc le formulaire tel qu'il arrive, une fois, pour pouvoir le lire.
+  if (target === "sold") {
+    try {
+      const dossierCapture = path.join(__dirname, "exports", "popin_vente");
+      fs.mkdirSync(dossierCapture, { recursive: true });
+      const nom = `vente_${annonceId}_${new Date().toISOString().replace(/[:.]/g, "-")}.html`;
+      fs.writeFileSync(path.join(dossierCapture, nom), initHtml, "utf8");
+      await logJob(job.id, "hektor_transaction_forme", "done",
+        "Formulaire de vente depose pour lecture", {
+          fichier: `Console/exports/popin_vente/${nom}`, taille: initHtml.length,
+        });
+    } catch (erreurCapture) {
+      await logJob(job.id, "hektor_transaction_forme", "error",
+        "Formulaire de vente non depose", {
+          error: erreurCapture && erreurCapture.message ? erreurCapture.message : String(erreurCapture),
+        });
+    }
+  }
+
   const tx = normalizeStatusTransactionPayload(payload, config, initHtml);
   const body = new URLSearchParams();
   body.set("mode", config.transactionMode);
@@ -9898,16 +9926,40 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   if (savedJson.error && !savedJson.returnValue) {
     throw new Error(`Hektor refuse ${config.label}: ${stripHtml(savedJson.html || saved.text).slice(0, 600)}`);
   }
+  // ─── ON GARDE CE QUE HEKTOR A REPONDU ───
+  //
+  // Le 30/08, premier passage reel de la branche « Vendu » : Hektor a accepte le
+  // changement de statut (5) et n'a cree AUCUNE vente -- confirme par les deux
+  // portes (fiche vide, /Api/Vente/ListVentes/ a 0 sur trois jours). Impossible
+  // de dire pourquoi : la reponse etait jetee des lors qu'elle ne portait pas
+  // `error`. Elle est desormais conservee, et avec elle les trois valeurs que
+  // l'ouverture nous tend et dont depend l'enregistrement.
+  //
+  // Ce n'est pas une trace de mise au point : sans elle, un refus muet de Hektor
+  // reste indechiffrable, et c'est exactement le cas qu'on vient de rencontrer.
+  const reponseBrute = stripHtml(savedJson.html || saved.text || "").replace(/\s+/g, " ").trim();
   await logJob(job.id, "hektor_transaction", "done", `Transaction ${config.label} envoyee`, {
     hektor_annonce_id: annonceId,
     target,
     return_keys: savedJson.returnValue ? Object.keys(savedJson.returnValue) : [],
+    reponse: reponseBrute.slice(0, 500) || "(vide)",
+    reponse_taille: (saved.text || "").length,
+    // Ce que l'OUVERTURE nous a tendu : si ces cases sont vides, l'enregistrement
+    // part sans mandat ni negociateur -- et Hektor ignore alors SANS ERREUR.
+    forme_mandat: tx.mandat || "(vide)",
+    forme_mandat_selectionne: tx.selectedMandat || "(vide)",
+    forme_negociateur: tx.negotiator || "(vide)",
+    forme_acquereur: tx.buyer || "(vide)",
+    forme_taille: initHtml.length,
   });
   await setHektorAnnonceStatusValue(job, annonceId, config, `transaction_${target}`);
   return {
     init_error: initJson.error === true,
     transaction_returned: Boolean(savedJson.returnValue),
     transaction_keys: savedJson.returnValue ? Object.keys(savedJson.returnValue) : [],
+    reponse: reponseBrute.slice(0, 500) || "(vide)",
+    forme_mandat: tx.mandat || "(vide)",
+    forme_negociateur: tx.negotiator || "(vide)",
   };
 }
 
@@ -10471,7 +10523,7 @@ async function enchainerArchivageApresVente(parentJob, annonceId, appDossierId, 
 // `app_affaires_sans_numero_hektor` (seuil 0) leve la main des le lendemain sur
 // une affaire restee sans numero : c'est elle qui porte l'alerte, pas une
 // exception qui doublerait le geste.
-async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId) {
+async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId, transactionResult) {
   const ventesApres = await lireVentesDeLaFicheBestEffort(job, annonceId, "apres_creation");
 
   if (ventesApres === null) {
@@ -10497,6 +10549,8 @@ async function prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId) {
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
         ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant),
         ventes_apres: Array.from(ventesApres),
+        reponse_hektor: transactionResult && transactionResult.reponse
+          ? transactionResult.reponse : null,
       });
     return { verifie: true, cree: false };
   }
@@ -10599,7 +10653,8 @@ async function handleChangeHektorAnnonceStatus(job) {
         transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
 
         if (target === "sold") {
-          venteResult = await prouverVenteCreee(job, annonceId, ventesAvant, appAffaireId);
+          venteResult = await prouverVenteCreee(
+            job, annonceId, ventesAvant, appAffaireId, transactionResult);
 
           // C.19-c : et seulement si la vente est CONFIRMEE par les deux portes.
           if (venteResult && venteResult.confirmee === true
