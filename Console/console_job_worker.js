@@ -9917,9 +9917,22 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   const rep0 = await appelerEtapeAssistant(annonceId, assistant, ouverture, null);
   let etat = lireEtapeAssistant(rep0.text, `ouverture ${config.label}`);
   if (!etat.basket) {
+    // ON DIT CE QU'ON A RECU. Sans cela, « aucun panier » est indechiffrable --
+    // et c'est deja deux fois que ce chemin nous a coute une soiree faute
+    // d'avoir garde la reponse de Hektor.
+    const tete = stripHtml(String(rep0.text || "")).replace(/\s+/g, " ").trim().slice(0, 400);
+    await logJob(job.id, "hektor_assistant", "error",
+      `Assistant ${config.label} : l'ouverture n'a rendu aucun panier`, {
+        hektor_annonce_id: annonceId,
+        coquille: assistant.coquille,
+        verbe_etape: assistant.etape,
+        reponse_taille: String(rep0.text || "").length,
+        reponse: tete || "(vide)",
+      });
     throw new Error(
       `Assistant ${config.label} : l'ouverture n'a rendu aucun panier. `
-      + `Sans lui rien ne s'accumule -- on n'envoie pas la suite.`);
+      + `Sans lui rien ne s'accumule -- on n'envoie pas la suite. `
+      + `Hektor a repondu (${String(rep0.text || "").length} car.) : ${tete.slice(0, 200) || "(vide)"}`);
   }
 
   await logJob(job.id, "hektor_assistant", "running",
@@ -9995,6 +10008,10 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         modules: pas.modules.join("+"),
         panier_car: etat.basket.length,
         succes_annonce: etat.succes,
+        etape_rendue: etat.index,
+        // CE QU'ON A ENVOYE. Sans cette liste, un refus muet reste indechiffrable
+        // -- et c'est deux fois qu'on s'y casse les dents sur ce chemin.
+        champs_envoyes: [...new Set([...corps.keys()])].filter((k) => k !== "basket").join(","),
       });
 
     // ⚠ `success: true` NE PROUVE RIEN : la reponse de l'enregistrement a
