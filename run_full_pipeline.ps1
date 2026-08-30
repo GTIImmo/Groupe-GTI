@@ -538,6 +538,16 @@ Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat d affaire" -Arg
     "phase2\identite\appliquer_contrat_affaire.py"
 )
 
+# C.4 (30/08) -- LE CARNET DE L'ANNONCE descend chez nous.
+# Il n'a PAS de pendant "appliquer" pour l'instant, et c'est voulu : la liste
+# CHAMPS_APP_ANNONCE du contrat d'autorite est VIDE. Le carnet se remplit donc sans
+# rien changer -- Hektor garde la main jusqu'a ce que Frederic allume l'interrupteur.
+# A ce moment-la seulement, un "appliquer_contrat_annonce" viendra ici, apres cette
+# ligne et avant le push, exactement comme son frere ci-dessus.
+Invoke-OptionalStepWithRetry -Label "phase2 carnet des champs d annonce" -Arguments @(
+    "phase2\identite\magasin_annonce_app.py"
+)
+
 Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -WorkerKey "supabase.push_upgrade"
 
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
