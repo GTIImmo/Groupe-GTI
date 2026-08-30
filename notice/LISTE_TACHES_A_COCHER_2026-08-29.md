@@ -346,7 +346,7 @@ premières. **`ventes-deleteVente` fonctionne**, et la destruction de 23288 éta
 | | |
 |---|---|
 | **C.19-b** | ✅ **fait** — le blocage que j'avais annoncé *(« l'admin ne peut pas créer de compromis »)* était **faux** : `ajoutebien` est un appel annexe. Frédéric l'a vu avant moi |
-| **C.19-c** | 🟡 **mesuré, pas codé** — parcours d'archivage relevé en entier, matrice des trois cas établie. Reste à remonter les **deux décisions** jusqu'à l'écran |
+| **C.19-c** | ✅ **CODÉ le 30/08** *(`6bd5b04`)* — le choix est à l'écran, défaut « laisser actif ». ⚠ **L'archivage NE passe PAS par leur bouton** : la capture du 28/08 ne couvre que la popin d'offre, donc **je n'ai pas la mesure** de ce qu'envoie « Enregistrer & archiver » — et cette issue a **détruit la vente 23288** *(404 à l'API)*. On compose donc deux gestes éprouvés : créer la vente, puis `archive_hektor_annonce` *(127 exécutions)*, **et seulement si la vente est confirmée**. Reste le passage réel |
 
 ## Le compte, corrigé
 
@@ -419,6 +419,20 @@ dont on sait maintenant qu'elle peut masquer.*
    compromis 50048   cloture      <- a retirer
    ventes            AUCUNE       23287, 23288, 23289 toutes supprimees et verifiees
    affaire 9         123 456 au lieu de 79 000   <- a retirer en fin de chantier
+```
+
+> ⚠ **CET INSTANTANÉ EST PÉRIMÉ — relu par l'API le 30/08 :**
+>
+> ```
+>    62774   statut 2 = Actif   archive 0   negociateur 23
+> ```
+>
+> Il ne porte plus « Vendu ». La suppression de la dernière vente (23289) l'a ramené à
+> Actif — ce qui **confirme au passage le découplage** : le statut avait suivi la
+> transaction à la création, et il l'a suivie à la suppression. Le dossier porte un
+> acquéreur utilisable sur ses trois affaires — **603800** — et le mandat **18836**.
+
+```
 ```
 
 ---
@@ -790,6 +804,32 @@ contrôle elle-même.
 
 ---
 
+# 🔴 UN TROU TROUVÉ LE 30/08 — le filet de rejeu pouvait DOUBLER une création
+
+*Trouvé en préparant « Vendu », et il existait depuis le matin même. Personne ne l'avait vu
+parce que la branche concernée n'avait jamais tourné.*
+
+`change_hektor_annonce_status` figure dans la liste des travaux que le filet de rejeu reprend
+*(c4bis, 30/08)*. Le commentaire de ce filet **prévient lui-même** :
+
+> « toute addition à cette liste doit s'accompagner d'une vérification absolue : sans elle, le
+> rejeu transforme un succès en échec, **ou double une création** »
+
+Les gestes **destructeurs** de la liste relisent tous l'état avant d'agir — « on ne supprime pas
+ce qu'on ne voit pas ». Les branches **créatrices** de ce worker *(offre, compromis, vente)*, elles,
+ne le faisaient pas.
+
+**Le correctif** *(`4aa1f43`)* : si la ligne d'affaire du travail porte déjà un numéro Hektor, la
+transaction a été créée par une tentative précédente — **on ne recrée pas**. La vérification est
+**absolue** *(elle ne dépend d'aucun ordre, d'aucun compte, d'aucune date)*, ce que le rejeu exige.
+
+Et **on n'échoue pas** quand la vente n'est pas prouvée : lever ferait passer le travail en
+`error`, donc le filet le reprendrait — et un rejeu qui recrée est exactement ce qu'il ne faut
+pas sur une vente. C'est la sentinelle `app_affaires_sans_numero_hektor` *(seuil 0)* qui porte
+l'alerte dès le lendemain.
+
+---
+
 # 🔄 LISTE REFONDUE — 30/08 au soir
 
 *Refaite après une journée qui a beaucoup appris. Ce qui change par rapport à la version du
@@ -829,9 +869,30 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
                  rejoue, case remise. Premier essai fait sur la ligne 1 : les
                  trois valaient 1, la preuve ne valait rien, refaite.
 
-[ ] C.4-Vendu    LA BRANCHE JAMAIS EXECUTEE                        1 j
-                 Le seul geste de statut qui n'ait jamais tourne depuis mai.
-                 Aucune dependance d'identite.
+[~] C.4-Vendu    LA BRANCHE JAMAIS EXECUTEE               CODE le 30/08
+                 ⚠ CORRECTION : ce n'est pas UNE branche jamais executee,
+                 c'en est DEUX. Comptage des travaux :
+                    actif 7 · clos 9 (+1 err) · offre 2 · compromis 0 · VENDU 0
+                 Creer un compromis depuis l'app n'a jamais tourne non plus ;
+                 celui du 29/08 avait ete cree A LA MAIN dans le navigateur.
+
+                 CE QUI EST POSE (4aa1f43, 6bd5b04) :
+                    l'arbitre        fiche + API, deux temoins independants
+                    le numero        ecrit tout de suite, plus d'attente du run
+                    la garde         un rejeu ne recree pas la transaction
+                    C.19-c           le choix actif/archiver a l'ecran
+
+                 POURQUOI UN ARBITRE. Ni la reponse ni le statut ne peuvent
+                 servir de preuve, et les deux mesures existaient deja :
+                    28/08  creer une vente rend 200 + « Vous ne pouvez pas
+                           creer un bien » x8 + {"result":false}
+                           ET LA VENTE EST CREEE (23287). La reponse ment.
+                    29/08  cliquer « Sous compromis » a change LE STATUT SANS
+                           CREER de compromis. Statut et transaction sont
+                           DECOUPLES chez Hektor.
+
+                 RESTE : redemarrer les workers, puis le passage reel sur
+                 62774 (acquereur 603800, mandat 18836).
 ```
 
 ---
