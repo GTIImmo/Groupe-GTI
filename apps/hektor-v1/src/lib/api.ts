@@ -8356,32 +8356,38 @@ export async function createAssignHektorAnnonceNegotiatorJob(input: {
   priority?: number
 }): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
-  const userId = await requireSupabaseUserId()
+  await requireSupabaseUserId()
   const targetId = String(input.negotiator.idUser ?? '').trim()
   if (!/^\d+$/.test(targetId)) throw new Error('Choisis un negociateur Hektor valide.')
+  // C.4 (30/08) — ON ECRIT CHEZ NOUS D'ABORD.
+  //
+  // La RPC inscrit `negociateur_email` au carnet de l'annonce ET cree le travail
+  // dans la MEME transaction. Elle n'inscrit rien si l'email manque : « l'app
+  // gagne seulement quand elle a quelque chose a dire ».
+  //
+  // `numero_dossier` et `titre_bien` ne partent plus d'ici : la RPC les lit dans
+  // app_dossier_current, ou ils font foi.
+  const { data: created, error: rpcError } = await supabase.rpc('app_assign_negotiator_optimistic', {
+    target_dossier_id: input.dossier.app_dossier_id,
+    target_user_id: targetId,
+    job_payload: {
+      target_hektor_user_label: input.negotiator.label ?? null,
+      target_hektor_user_email: input.negotiator.email ?? null,
+      target_hektor_negociateur_id: input.negotiator.hektorNegociateurId ?? null,
+      target_hektor_agence_id: input.negotiator.hektorAgenceId ?? input.agency?.idAgence ?? null,
+      target_agency_id_user: input.agency?.idUser ?? input.negotiator.agenceIdUser ?? null,
+      target_agency_label: input.agency?.label ?? input.negotiator.agenceNom ?? null,
+    },
+    job_priority: input.priority ?? 9,
+  })
+  if (rpcError || !created) throwConsoleAdminJobError(rpcError, 'Unable to create Hektor negotiator assignment job')
+  const jobId = (created as { job_id?: string }).job_id
   const { data, error } = await supabase
     .from('app_console_job')
-    .insert({
-      job_type: 'assign_hektor_annonce_negotiator',
-      app_dossier_id: input.dossier.app_dossier_id,
-      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
-      payload_json: {
-        numero_dossier: input.dossier.numero_dossier ?? null,
-        titre_bien: input.dossier.titre_bien ?? null,
-        target_hektor_user_id: targetId,
-        target_hektor_user_label: input.negotiator.label ?? null,
-        target_hektor_user_email: input.negotiator.email ?? null,
-        target_hektor_negociateur_id: input.negotiator.hektorNegociateurId ?? null,
-        target_hektor_agence_id: input.negotiator.hektorAgenceId ?? input.agency?.idAgence ?? null,
-        target_agency_id_user: input.agency?.idUser ?? input.negotiator.agenceIdUser ?? null,
-        target_agency_label: input.agency?.label ?? input.negotiator.agenceNom ?? null,
-      },
-      priority: input.priority ?? 9,
-      requested_by: userId,
-    })
     .select('*')
+    .eq('id', jobId as string)
     .single()
-  if (error || !data) throwConsoleAdminJobError(error, 'Unable to create Hektor negotiator assignment job')
+  if (error || !data) throwConsoleAdminJobError(error, 'Unable to read Hektor negotiator assignment job')
   return data as ConsoleJob
 }
 
