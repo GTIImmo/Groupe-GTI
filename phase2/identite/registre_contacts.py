@@ -60,6 +60,49 @@ def connecte() -> sqlite3.Connection:
     return conn
 
 
+def propage_aux_recherches(conn: sqlite3.Connection) -> int | None:
+    """Redonne au registre des recherches le numero de contact de l'app.
+
+    POURQUOI ICI ET PAS DANS build_contacts_layer. C'est build_contacts_layer qui
+    ecrit dans app_search_registry -- mais il tourne AVANT ce script (ligne 370
+    contre 380 du pipeline). Un contact tout neuf n'a donc pas encore son numero
+    au moment ou sa recherche recoit le sien. Le remplir la-bas reviendrait a
+    ecrire NULL une nuit sur deux.
+
+    Ici, le registre des contacts vient d'etre mis a jour : le numero existe.
+    C'est un rattrapage d'une ligne, rejouable, qui ne touche que les cases vides.
+
+    ON NE CORRIGE JAMAIS UNE CASE DEJA REMPLIE : une recherche nee dans l'app
+    portera son numero de contact sans jamais avoir eu de numero Hektor, et ce
+    n'est pas a une jointure sur Hektor de le lui reprendre.
+
+    Renvoie le nombre de cases remplies, ou None si le registre des recherches
+    n'existe pas encore / n'a pas encore la colonne (base non migree).
+    """
+    existe = conn.execute(
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='app_search_registry'"
+    ).fetchone()[0] > 0
+    if not existe:
+        return None
+    colonnes = {d[1] for d in conn.execute("PRAGMA table_info(app_search_registry)")}
+    if "app_contact_id" not in colonnes:
+        return None
+
+    cur = conn.execute(
+        f"""
+        UPDATE app_search_registry
+           SET app_contact_id = (
+                 SELECT r.app_contact_id FROM {REGISTRE} r
+                  WHERE r.hektor_contact_id = app_search_registry.hektor_contact_id)
+         WHERE app_contact_id IS NULL
+           AND hektor_contact_id IS NOT NULL
+           AND EXISTS (SELECT 1 FROM {REGISTRE} r
+                        WHERE r.hektor_contact_id = app_search_registry.hektor_contact_id)
+        """
+    )
+    return cur.rowcount
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true",
@@ -139,6 +182,9 @@ def main() -> int:
                 "WHERE absent_depuis IS NULL AND hektor_contact_id IS NOT NULL "
                 f"AND NOT EXISTS (SELECT 1 FROM {SOURCE} s "
                 f"  WHERE s.hektor_contact_id = {REGISTRE}.hektor_contact_id)")
+
+        # Le registre des recherches suit : il porte le numero du contact chez nous.
+        propages = propage_aux_recherches(conn)
         conn.commit()
 
         # --- verification, apres coup et sur la base reelle
@@ -152,6 +198,16 @@ def main() -> int:
         print(f"\nregistre apres                   {pose:8d}   ({distincts} numeros distincts)")
         print(f"   marques absents               {absents:8d}")
         print(f"   contacts sans numero          {restent:8d}")
+
+        if propages is None:
+            print("   recherches : registre absent ou non migre -- rien propage.")
+        else:
+            orphelines = conn.execute(
+                "SELECT count(*) FROM app_search_registry "
+                "WHERE app_contact_id IS NULL AND hektor_contact_id IS NOT NULL"
+            ).fetchone()[0]
+            print(f"   recherches numerotees (neuves){propages:8d}")
+            print(f"   recherches sans numero        {orphelines:8d}")
 
         ok = (restent == 0 and distincts == pose)
         print("\n" + ("REGISTRE A JOUR ET VERIFIE." if ok else "ANOMALIE -- a examiner."))

@@ -1163,17 +1163,33 @@ def replace_table_rows(conn: sqlite3.Connection, table: str, rows: list[dict[str
     conn.commit()
 
 
+# C.2b (30/08) -- LE REGISTRE PORTE AUSSI LE NUMERO DE CONTACT DE L'APP.
+#
+# La relecture d'identite du 24/08 se terminait par cinq recommandations. Quatre ont
+# ete appliquees le lendemain ; la cinquieme -- « et le registre : lui ajouter
+# app_contact_id, puis relacher son NOT NULL » -- est tombee entre deux commits.
+#
+# NOT NULL est parti parce qu'une recherche nee dans l'app n'a PAS de numero Hektor.
+# La base existante a ete migree par migrer_registre_recherche_2026-08-30.py ; ce DDL
+# ne sert qu'aux bases neuves, mais il doit dire la meme chose qu'elles.
+#
+# LES DEUX INDEX SONT PARTIELS : un couple ne protege rien quand sa colonne est vide.
 SEARCH_REGISTRY_DDL = """
 CREATE TABLE IF NOT EXISTS app_search_registry (
     app_search_id      INTEGER PRIMARY KEY,
-    hektor_contact_id  TEXT NOT NULL,
+    hektor_contact_id  TEXT,
+    app_contact_id     INTEGER,
     search_index       INTEGER NOT NULL,
     contact_search_key TEXT,
     first_seen_at      TEXT,
     last_seen_at       TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_search_registry_pair
-    ON app_search_registry(hektor_contact_id, search_index);
+    ON app_search_registry(hektor_contact_id, search_index)
+    WHERE hektor_contact_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_search_registry_pair_app
+    ON app_search_registry(app_contact_id, search_index)
+    WHERE app_contact_id IS NOT NULL;
 """
 
 

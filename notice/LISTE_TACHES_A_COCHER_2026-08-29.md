@@ -801,15 +801,33 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
 ## MAINTENANT
 
 ```
-[ ] C.2b-reste   LE REGISTRE DES RECHERCHES                       30 min
+[x] C.2b-reste   LE REGISTRE DES RECHERCHES                    FAIT 30/08
                  app_search_registry :
-                    + app_contact_id
-                    hektor_contact_id -> nullable
-                 Recommande par la relecture du 24/08 « dans C.2b, pas plus
-                 tard ». Quatre recommandations sur cinq ont ete faites ;
-                 celle-ci est tombee entre deux commits et aucune tache ne la
-                 portait. Rien n'en depend AUJOURD'HUI -- mais c'est le
-                 prealable d'un contact ne dans l'app.
+                    + app_contact_id                     pose
+                    hektor_contact_id -> nullable        pose
+                    les DEUX index d'unicite -> PARTIELS
+                 Un couple ne protege rien quand sa colonne est vide : l'index
+                 Hektor ne contraint plus que les lignes qui portent un numero
+                 Hektor, et son jumeau app fait pareil de son cote.
+
+                 MESURE : 76 924 lignes avant, 76 924 apres, 0 sans numero de
+                 contact. Table d'avant conservee (app_search_registry_avant_c2b).
+
+                 TROIS PIECES, pas une : la base migree (script), le DDL des
+                 bases neuves (build_contacts_layer), et la PROPAGATION chaque
+                 nuit (registre_contacts) -- sans la troisieme, toute recherche
+                 nouvelle serait nee sans numero de contact.
+
+                 Pourquoi la propagation est dans registre_contacts et pas dans
+                 build_contacts_layer, qui pourtant ecrit le registre : build
+                 tourne AVANT (ligne 370 contre 380). Un contact tout neuf n'a
+                 pas encore son numero quand sa recherche recoit le sien.
+
+                 EPROUVE : case videe sur la recherche 76924 (contact Hektor
+                 605088, numero app 355770 -- les trois nombres differents pour
+                 qu'une coincidence ne puisse pas passer pour une preuve), run
+                 rejoue, case remise. Premier essai fait sur la ligne 1 : les
+                 trois valaient 1, la preuve ne valait rien, refaite.
 
 [ ] C.4-Vendu    LA BRANCHE JAMAIS EXECUTEE                        1 j
                  Le seul geste de statut qui n'ait jamais tourne depuis mai.
@@ -822,7 +840,15 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
 
 ```
 [ ] TACHE 5      BASCULER LA CLE DES CONTACTS                      3 a 5 j
-                 La doublure est POSEE et REMPLIE (19 tables, 58 731 numeros).
+                 La doublure est POSEE et REMPLIE (19 tables).
+                 ⚠ CHIFFRE CORRIGE LE 30/08 -- il etait sous-estime 6 fois :
+                    355 770  numeros dans la doublure locale (app_contact)
+                     58 732  contacts que l'app embarque (les « eligibles »)
+                 Les 58 731 ecrits ici mesuraient la portee APP, pas la
+                 doublure. Verifie : 58 732 est exactement le compte local de
+                 supabase_sync_eligible = 1, et exactement celui de Supabase.
+                 Ce n'est donc PAS un trou de synchro -- c'est un filtre voulu.
+                 Mais la bascule de cle porte sur les 355 770, pas sur 58 731.
                  Reste a designer laquelle des deux cases fait foi.
                     4 tables portent 95 % des lignes, 6 sont vides
                     701 points de code -- 40 % de l'echelle des annonces
