@@ -10785,7 +10785,7 @@ async function enchainerArchivageApresVente(parentJob, annonceId, appDossierId, 
 // `app_affaires_sans_numero_hektor` (seuil 0) leve la main des le lendemain sur
 // une affaire restee sans numero : c'est elle qui porte l'alerte, pas une
 // exception qui doublerait le geste.
-async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAffaireId, transactionResult) {
+async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAffaireId, transactionResult, dateTransaction) {
   // ─── LA FICHE RETARDE, ET C'EST MESURE ───
   //
   // 31/08 : un compromis a bien ete cree (50050, status 1 confirme par l'API) et
@@ -10803,7 +10803,8 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
   let nouvelles = [];
   for (let essai = 1; essai <= 3; essai += 1) {
     if (essai > 1) await sleep(4000);
-    ventesApres = await lireTransactionsBestEffort(job, annonceId, genre, `apres_creation_${essai}`);
+    ventesApres = await lireTransactionsBestEffort(
+      job, annonceId, genre, `apres_creation_${essai}`, dateTransaction);
     if (ventesApres === null) continue;
     nouvelles = ventesAvant === null
       ? Array.from(ventesApres)
@@ -10950,15 +10951,19 @@ async function handleChangeHektorAnnonceStatus(job) {
         // la fiche, l'offre garde son propre chemin (sa reponse, elle, parle).
         const genreArbitre = target === "sold" ? "vente"
           : target === "compromise" ? "compromis" : null;
+        // La date sert a borner la fenetre du listing des ventes -- sans elle
+        // il faudrait ramener les 7 500 autres.
+        const dateTransaction = String(
+          payload.transaction_date || payload.date_vente || payload.date || "").trim() || null;
         const ventesAvant = genreArbitre
-          ? await lireTransactionsBestEffort(job, annonceId, genreArbitre, "avant_creation")
+          ? await lireTransactionsBestEffort(job, annonceId, genreArbitre, "avant_creation", dateTransaction)
           : null;
 
         transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
 
         if (genreArbitre) {
           venteResult = await prouverTransactionCreee(
-            job, annonceId, genreArbitre, ventesAvant, appAffaireId, transactionResult);
+            job, annonceId, genreArbitre, ventesAvant, appAffaireId, transactionResult, dateTransaction);
 
           // C.19-c : et seulement si la vente est CONFIRMEE par les deux portes.
           if (target === "sold" && venteResult && venteResult.confirmee === true
@@ -14515,8 +14520,55 @@ async function lireTransactionsDeLaFiche(annonceId, genre, timeoutMs = 60000) {
 // deja parti chez Hektor -- lecon du 27/08, annonce creee et travail declare en
 // echec. On rend `null` pour dire « je ne sais pas », ce qui n'est pas la meme
 // chose que « il n'y en a aucune ».
-async function lireTransactionsBestEffort(job, annonceId, genre, etape) {
+// LA BONNE PORTE, ET LA FICHE N'EN EST PAS UNE POUR LE COMPROMIS.
+//
+// Mesure du 31/08, deux fois : un compromis cree (50050, puis 50051, tous deux
+// `status 1` confirmes par l'API) et la fiche ne le montrait PAS -- elle rendait
+// l'ancien identifiant, puis un autre encore apres suppression. Elle ne montre
+// QU'UN compromis a la fois, et pas toujours le dernier. Le piege etait deja au
+// dossier le 29/08 et je m'y suis laisse prendre quand meme.
+//
+// L'arbitre declarait donc « rien cree » sur des gestes REUSSIS. C'est
+// exactement le faux echec qu'il est cense empecher -- et c'est la troisieme
+// fois cette nuit que la meme lecon revient : juger sur la bonne source.
+//
+// Desormais l'API decide. Elle porte le lien vers l'annonce dans les deux
+// listings, elle ne masque rien, et elle a deja tranche trois fois ce soir.
+async function lireTransactionsParApi(job, annonceId, genre, dateTransaction) {
+  const args = ["phase2/sync/transactions_annonce_from_api.py",
+                "--annonce-id", String(annonceId), "--kind", genre];
+  if (dateTransaction) args.push("--date", String(dateTransaction));
   try {
+    const out = await runProjectPythonScript(args, { timeoutMs: 45000, previewSize: 1000 });
+    const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const lu = safeJsonParse(derniere);
+    if (lu && lu.trouve === true && Array.isArray(lu.ids)) {
+      return new Set(lu.ids.map((x) => String(x)));
+    }
+    return null;
+  } catch (erreur) {
+    await logJob(job.id, "hektor_transaction_relecture", "error",
+      `Lecture des ${genre}s par l'API impossible -- on essaiera la fiche`, {
+        hektor_annonce_id: annonceId, genre,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      });
+    return null;
+  }
+}
+
+async function lireTransactionsBestEffort(job, annonceId, genre, etape, dateTransaction) {
+  // 1. L'API d'abord : c'est elle qui fait foi.
+  const parApi = await lireTransactionsParApi(job, annonceId, genre, dateTransaction);
+  if (parApi !== null) return parApi;
+
+  // 2. La fiche en SECOURS seulement. On sait qu'elle masque -- mais une lecture
+  //    incomplete vaut mieux que pas de lecture du tout, et l'arbitre distingue
+  //    « rien vu » de « je ne sais pas ».
+  try {
+    await logJob(job.id, "hektor_transaction_relecture", "running",
+      `API muette : on se rabat sur la fiche pour les ${genre}s (elle masque, on le sait)`, {
+        hektor_annonce_id: annonceId, genre, etape,
+      });
     return await lireTransactionsDeLaFiche(annonceId, genre);
   } catch (erreur) {
     await logJob(job.id, "hektor_transaction_relecture", "error",
