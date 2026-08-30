@@ -1,0 +1,55 @@
+-- =====================================================================
+-- C.4 — SUPPRIMER UNE RECHERCHE ÉCRIT CHEZ NOUS D'ABORD
+-- Date : 2026-08-30   (4ᵉ des onze workers)
+--
+-- « SUPPRIMER » VEUT DIRE ARCHIVER — règle du projet, pas choix du jour :
+-- Hektor ne sait pas supprimer une recherche *(tâche 4bis)*, et 4bis-A a
+-- récupéré **6 777 recherches archivées** qu'on effaçait à tort. La sémantique
+-- en base est nette : `archive = true` ⟺ `is_active = false`
+-- *(6 860 archivées, 4 050 actives au 30/08)*.
+--
+-- CE QUI CHANGE. La RPC posait le travail et attendait. Elle marque désormais la
+-- recherche archivée **chez nous**, dans la même transaction. Si Hektor refuse
+-- ou tombe, l'intention ne se perd plus.
+--
+-- ─────────────────────────────────────────────────────────────────────
+-- LE VERROU PORTE LE NUMÉRO DU TRAVAIL — et c'est ce qui le distingue du verrou
+-- des ÉDITIONS, dont on vient de découvrir qu'il était éternel.
+--
+-- Celui-ci porte `push_job_id` : le balayage à la minute l'efface quand le
+-- travail aboutit, et le réarme quand il échoue. Il ne reste donc pas
+-- indéfiniment — contrairement à celui posé par les éditions, qui n'a jamais de
+-- travail à attendre depuis que C.3 a fermé la porte sortante.
+-- ─────────────────────────────────────────────────────────────────────
+--
+-- ON N'ÉCRIT QUE SI ON SAIT DE QUELLE LIGNE IL S'AGIT. Sans `search_index`, on ne
+-- devine pas : le travail part quand même, et l'archivage viendra du run. C'est
+-- la règle du projet — « l'app gagne seulement quand elle a quelque chose à dire ».
+--
+-- LA SIGNATURE NE BOUGE PAS : mêmes paramètres, même type de retour. **Le front
+-- n'a rien à changer, donc rien à redéployer.**
+--
+-- ÉPROUVÉ : appelée sans session, la RPC refuse — 0 travail créé, 0 verrou posé,
+-- 6 860 archivées inchangées. Le garde-fou tient.
+--
+-- Appliqué en production via la migration `c4_supprimer_recherche_ecrit_chez_nous`.
+-- Le texte complet de la fonction est dans cette migration.
+-- =====================================================================
+
+-- Extrait de ce qui a été ajouté, après la création du travail :
+--
+--     if search_index is not null then
+--       select * into cur from public.app_contact_search_current
+--        where hektor_contact_id = clean_contact_id and search_index = ... ;
+--
+--       if cur.contact_search_key is not null and coalesce(cur.archive, false) is not true then
+--         update public.app_contact_search_current
+--            set archive = true, is_active = false, refreshed_at = now()
+--          where ... ;
+--
+--         insert into public.app_search_pending(..., push_job_id)
+--         values (..., created_job.id)
+--         on conflict (hektor_contact_id, search_index) do update
+--           set push_job_id = excluded.push_job_id, conflict = false, updated_at = now();
+--       end if;
+--     end if;
