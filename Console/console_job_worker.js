@@ -10786,7 +10786,38 @@ async function enchainerArchivageApresVente(parentJob, annonceId, appDossierId, 
 // une affaire restee sans numero : c'est elle qui porte l'alerte, pas une
 // exception qui doublerait le geste.
 async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAffaireId, transactionResult) {
-  const ventesApres = await lireTransactionsBestEffort(job, annonceId, genre, "apres_creation");
+  // ─── LA FICHE RETARDE, ET C'EST MESURE ───
+  //
+  // 31/08 : un compromis a bien ete cree (50050, status 1 confirme par l'API) et
+  // la relecture immediate rendait encore l'ANCIEN identifiant. L'arbitre a donc
+  // declare « aucun » sur un geste REUSSI -- exactement le faux echec qu'il est
+  // cense empecher.
+  //
+  // On lui laisse trois lectures espacees. La premiere suffit le plus souvent
+  // (la vente 23291 a ete vue du premier coup) ; les deux autres ne partent que
+  // si l'on n'a rien vu, donc elles ne coutent rien quand tout va bien.
+  //
+  // Trois lectures espacees de 4 s : on reste tres loin du rythme qui nous a
+  // fait bannir en aout (1 requete/s, pause de 60 s toutes les 100).
+  let ventesApres = null;
+  let nouvelles = [];
+  for (let essai = 1; essai <= 3; essai += 1) {
+    if (essai > 1) await sleep(4000);
+    ventesApres = await lireTransactionsBestEffort(job, annonceId, genre, `apres_creation_${essai}`);
+    if (ventesApres === null) continue;
+    nouvelles = ventesAvant === null
+      ? Array.from(ventesApres)
+      : Array.from(ventesApres).filter((id) => !ventesAvant.has(id));
+    if (nouvelles.length) {
+      if (essai > 1) {
+        await logJob(job.id, "hektor_transaction_preuve", "done",
+          `${genre} vu a la ${essai}e lecture -- la fiche avait du retard`, {
+            hektor_annonce_id: annonceId, essais: essai,
+          });
+      }
+      break;
+    }
+  }
 
   if (ventesApres === null) {
     await logJob(job.id, "hektor_transaction_preuve", "error",
@@ -10796,11 +10827,13 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
     return { verifie: false, cree: null };
   }
 
-  // Sans l'etat d'avant on ne sait pas distinguer la vente creee d'une vente
+  // Sans l'etat d'avant on ne sait pas distinguer la transaction creee d'une
   // preexistante. On ne conclut alors que si la fiche n'en porte qu'UNE.
-  const nouvelles = ventesAvant === null
-    ? Array.from(ventesApres)
-    : Array.from(ventesApres).filter((id) => !ventesAvant.has(id));
+  //
+  // ⚠ ET LA FICHE NE MONTRE QU'UN COMPROMIS A LA FOIS -- piege deja consigne le
+  // 29/08 (« elle n'affichait qu'un seul compromis alors que 50044 et 50045
+  // existaient tous deux »). C'est pourquoi la confirmation par l'API, plus bas,
+  // n'est pas un luxe : elle est la seule source qui ne masque rien.
 
   if (nouvelles.length === 0) {
     await logJob(job.id, "hektor_transaction_preuve", "error",
