@@ -7679,7 +7679,21 @@ export async function createHektorContactJob(input: {
   if (!payload.last_name) throw new Error('Nom contact requis')
   if (!payload.email && !payload.phone && !payload.phone_secondary) throw new Error('Email ou telephone requis')
   if (!payload.hektor_user_id && !payload.hektor_user_email) throw new Error('Compte Hektor requis pour creer le contact')
-  const { data, error } = await supabase.rpc('app_console_create_contact_job', {
+  // C.9 (31/08) -- ON ECRIT CHEZ NOUS D'ABORD.
+  //
+  // L'OBSTACLE : app_contact_current a pour cle primaire le numero de HEKTOR,
+  // NOT NULL. Un contact qui vient de naitre n'en a pas -- il ne peut donc pas
+  // entrer dans la table principale. Il vit dans app_contact_provisional,
+  // pivote sur un jeton fabrique par l'app, jusqu'a ce que Hektor reponde.
+  //
+  // La RPC ecrit la ligne provisoire ET le travail DANS LA MEME TRANSACTION,
+  // et glisse le jeton dans la charge : c'est par lui que le worker retrouvera
+  // la ligne au retour. Si l'un des deux echoue, aucun des deux n'existe.
+  //
+  // MEME SIGNATURE, MEME TYPE DE RETOUR que l'ancienne : seul le nom change.
+  // Les garde-fous sont repris mot pour mot -- nom obligatoire, un moyen de
+  // joindre, un compte Hektor, et le controle de role.
+  const { data, error } = await supabase.rpc('app_create_contact_optimistic', {
     contact_payload: payload,
     job_priority: input.priority ?? 18,
   })

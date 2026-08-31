@@ -1267,6 +1267,66 @@ async function cleanupProvisionalForAnnonce(hektorAnnonceId) {
   }
 }
 
+// --- Meme chose, pour un CONTACT ne dans l'app (C.9, 31/08) ---
+//
+// L'OBSTACLE QUI IMPOSE CETTE LIGNE PROVISOIRE :
+//     app_contact_current   PRIMARY KEY (hektor_contact_id)   NOT NULL
+// Un contact ne dans l'app n'a pas de numero Hektor -- il ne peut pas entrer
+// dans la table principale. Il vit donc dans app_contact_provisional, pivote sur
+// un JETON fabrique par l'app, jusqu'a ce que Hektor lui donne son numero.
+//
+// La RPC app_create_contact_optimistic ecrit la ligne provisoire ET le travail
+// DANS LA MEME TRANSACTION, et glisse le jeton dans la charge. C'est par lui
+// qu'on retrouve la ligne ici -- l'app n'a rien d'autre a quoi la rattacher.
+//
+// BEST EFFORT, COMME POUR L'ANNONCE : un echec de reconciliation ne doit JAMAIS
+// faire tomber une creation qui a REUSSI chez Hektor. Le contact existe, c'est
+// l'essentiel ; la ligne provisoire se rattrape, le contact perdu ne se rattrape
+// pas. C'est la lecon du 27/08 -- annonce creee, travail declare en echec.
+async function lierContactProvisoire(creationToken, hektorContactId) {
+  const token = cleanString(creationToken);
+  const contactId = cleanString(hektorContactId);
+  if (!token || !contactId) return { status: "skipped", reason: "rien_a_lier" };
+  try {
+    const majes = await supabaseRequest(
+      `app_contact_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: JSON.stringify({
+          hektor_contact_id: contactId,
+          status: "linked",
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+    const touchees = Array.isArray(majes) ? majes.length : 0;
+    return { status: touchees ? "linked" : "aucune_ligne", lignes: touchees };
+  } catch (erreur) {
+    const message = erreur && erreur.message ? erreur.message : String(erreur);
+    console.warn(`[contact provisoire] lien echoue (jeton ${token}): ${message}`);
+    return { status: "error", error: message };
+  }
+}
+
+async function marquerContactProvisoireEnErreur(creationToken, message) {
+  const token = cleanString(creationToken);
+  if (!token) return;
+  try {
+    await supabaseRequest(
+      `app_contact_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({
+          status: "error",
+          error_message: cleanString(message) || "Erreur de creation",
+          updated_at: new Date().toISOString(),
+        }),
+      });
+  } catch (erreur) {
+    console.warn(`[contact provisoire] marquage erreur echoue (jeton ${token}): ${erreur && erreur.message ? erreur.message : erreur}`);
+  }
+}
+
 async function storageRequest(objectPath, options = {}) {
   const baseUrl = requireEnv("SUPABASE_URL", SUPABASE_URL).replace(/\/+$/, "");
   const response = await fetch(`${baseUrl}/storage/v1/object/${STORAGE_BUCKET}/${storagePathEncode(objectPath)}`, {
@@ -12680,10 +12740,35 @@ async function updateHektorContactIdentity(job, contactId, payload) {
 
 async function handleCreateHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
+  // Le jeton de la ligne provisoire, glisse par app_create_contact_optimistic.
+  // Absent quand le travail vient de l'ancien chemin : on ne reconcilie alors
+  // rien, et c'est normal -- il n'y a pas de ligne a rattacher.
+  const jetonContact = cleanString(payload.creation_token || payload.creationToken || "");
   const executionPayload = await resolveContactAgencyExecutionPayload(payload) || contactAgencyExecutionPayload(payload);
   await ensureHektorExecutionContext(job, null, executionPayload, { preferRequester: true, preferDossierOwner: false, required: true });
 
-  const created = await createHektorContact(job, payload);
+  let created;
+  try {
+    created = await createHektorContact(job, payload);
+  } catch (erreur) {
+    // Hektor a refuse : la ligne provisoire doit le DIRE, pas rester en
+    // « En creation » indefiniment. Puis on relaie l'echec.
+    await marquerContactProvisoireEnErreur(
+      jetonContact, erreur && erreur.message ? erreur.message : String(erreur));
+    throw erreur;
+  }
+
+  // Le contact EXISTE chez Hektor a partir d'ici. Tout ce qui suit est
+  // best-effort : rien ne doit plus faire tomber ce travail.
+  const lienProvisoire = await lierContactProvisoire(jetonContact, created.contactId);
+  if (jetonContact) {
+    await logJob(job.id, "contact_provisoire", lienProvisoire.status === "linked" ? "done" : "error",
+      lienProvisoire.status === "linked"
+        ? "Le contact ne dans l'app a recu son numero Hektor"
+        : "Contact CREE chez Hektor, mais la ligne provisoire n'a pas ete reliee -- a reprendre",
+      { creation_token: jetonContact, hektor_contact_id: created.contactId,
+        resultat: lienProvisoire.status, lignes: lienProvisoire.lignes ?? null });
+  }
   const crmSettings = await updateHektorContactCrmSettings(job, created.contactId, payload);
   const postCreateStep = await applyHektorContactPostCreateStep(job, created, payload);
   await sleep(1200);
@@ -12695,6 +12780,7 @@ async function handleCreateHektorContact(job) {
   return {
     status: "created",
     hektor_contact_id: created.contactId,
+    contact_provisoire: jetonContact ? lienProvisoire : null,
     contact: {
       nom: created.lastName,
       prenom: created.firstName,
