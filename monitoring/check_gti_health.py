@@ -341,6 +341,43 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 150,
     },
+    # 31/08 -- LA SONDE CI-DESSUS NE REGARDE QU'UNE TABLE SUR DIX-NEUF.
+    #
+    # `app_contact_current` est la seule qui soit ENTRETENUE (registre_contacts.py
+    # + pousser_numeros_contact.py, chaque nuit). Elle affiche 0 manquant, donc la
+    # sentinelle est au vert -- pendant que le trou se creuse a cote :
+    #
+    #     25/08 161 · 26/08 1 301 · 27/08 3 216 · 28/08 29
+    #     29/08 226 · 30/08 20    · 31/08 335        =  5 288 en 7 jours
+    #
+    # La cause : la couche contacts LOCALE est refaite chaque nuit (DELETE +
+    # INSERT) et ne porte pas la colonne -- le numero de l'app ne vit localement
+    # que dans la table de correspondance `app_contact`. Le push envoie donc des
+    # lignes sans ce numero. Les lignes deja connues de Supabase gardent le leur
+    # (l'upsert ne mentionne pas la colonne) ; les NOUVELLES naissent vides.
+    #
+    # Les annonces n'ont pas ce probleme : chez elles le numero est une COLONNE
+    # DE LA SOURCE locale, donc il voyage avec chaque ligne.
+    #
+    # LA VUE NE COMPTE QUE LE RATTRAPABLE (contact existant, numero connu). Elle
+    # ecarte les 35 orphelines de app_search_count_high_water -- deja signalees le
+    # 25/08 et laissees telles quelles -- et les 58 envois sans contact rattache.
+    # Une sentinelle qui melange le rattrapable et l'irrattrapable ne redescend
+    # jamais a zero, et on cesse de la lire.
+    #
+    # SEUIL 150, meme raison qu'au-dessus : un contact cree dans la journee entre
+    # dans Supabase avant d'entrer en local, ses lignes n'ont leur numero que le
+    # lendemain.
+    #
+    # ⚠ ELLE SONNE DES SA POSE : 5 392 aujourd'hui. C'est la mesure d'avant.
+    {
+        "key": "data.contact_lignes_sans_numero",
+        "severity": "warning",
+        "label": "Lignes liees a un contact sans numero app (18 tables)",
+        "table": "app_contacts_sans_numero",
+        "rule": "absolute",
+        "max": 150,
+    },
 ]
 
 # Surfaces publiques a sonder depuis l'exterieur (up-check HTTP simple).
