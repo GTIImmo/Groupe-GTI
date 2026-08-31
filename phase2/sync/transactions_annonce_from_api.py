@@ -31,8 +31,9 @@ BORNES ASSUMEES, et il faut les dire :
     les 7 500 autres.
 
 Sort une ligne JSON :
-    {"trouve": true, "ids": ["50051"]}     ce que l'annonce porte
-    {"trouve": true, "ids": []}            elle n'en porte aucun
+    {"trouve": true, "ids": [...], "actifs": [...]}   ce que l'annonce porte
+    "actifs" = ce qui EMPECHE d'en creer un autre : un compromis de status 1,
+    ou n'importe quelle vente (elle n'a pas d'etat, elle se supprime).
     {"_error": "..."}                      lecture impossible -- l'appelant decide
 """
 from __future__ import annotations
@@ -100,16 +101,43 @@ def main() -> int:
         return 0
 
     ids = []
+    actifs = []
     for ligne in lignes:
         if not isinstance(ligne, dict):
             continue
         if _id_annonce(ligne) != annonce:
             continue
         identifiant = ligne.get("id")
-        if identifiant is not None:
-            ids.append(str(identifiant).strip())
+        if identifiant is None:
+            continue
+        identifiant = str(identifiant).strip()
+        ids.append(identifiant)
+        # ⚠ « actifs » DECRIT UN ETAT, IL NE PREDIT PAS UN BLOCAGE.
+        #
+        # J'avais d'abord ecrit ici qu'un compromis actif empeche d'en creer un
+        # autre. C'est FAUX, et la mesure du 31/08 le dit sans ambiguite :
+        #
+        #     statut de l'annonce   etat du compromis courant
+        #     Vendu                 active      9 075   <- la majorite du parc
+        #     Clos                  cancelled     704
+        #     Sous compromis        active         90
+        #
+        # 9 075 annonces VENDUES portent un compromis toujours actif : une fois
+        # la vente enregistree, personne ne revient le clore. Le miroir compte
+        # 9 206 compromis actifs remontant a 2019. « Actif » veut donc dire
+        # « jamais clos », pas « en cours ».
+        #
+        # Et mes propres essais l'ont montre sans que je le voie : les compromis
+        # 50050 et 50051 ont ete crees ALORS QU'UN COMPROMIS ACTIF EXISTAIT.
+        #
+        # Ce champ sert donc a DECRIRE (un compromis de status 1, ou n'importe
+        # quelle vente -- elle n'a aucune colonne d'etat et ne s'annule pas, elle
+        # se supprime). Il ne doit PAS servir a refuser un envoi tant que la
+        # vraie condition de blocage n'est pas etablie.
+        if args.kind == "vente" or str(ligne.get("status", "")).strip() == "1":
+            actifs.append(identifiant)
 
-    print(json.dumps({"trouve": True, "ids": ids}))
+    print(json.dumps({"trouve": True, "ids": ids, "actifs": actifs}))
     return 0
 
 
