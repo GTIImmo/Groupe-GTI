@@ -1308,12 +1308,18 @@ async function lierContactProvisoire(creationToken, hektorContactId) {
   }
 }
 
+// 31/08 (apres essai) -- LE MARQUAGE NE PEUT PAS DEMENTIR UNE REUSSITE.
+// Le travail continue APRES la creation (reglages CRM, etape post-creation) et
+// ces suites peuvent echouer. Sans le filtre « status <> linked », un echec
+// tardif reetiquetterait « Erreur de creation » un contact qui EXISTE chez
+// Hektor -- le pire des mensonges a l'ecran. Le filtre est porte par la requete :
+// c'est le serveur qui arbitre, pas une lecture suivie d'une ecriture.
 async function marquerContactProvisoireEnErreur(creationToken, message) {
   const token = cleanString(creationToken);
   if (!token) return;
   try {
     await supabaseRequest(
-      `app_contact_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+      `app_contact_provisional?creation_token=eq.${encodeURIComponent(token)}&status=neq.linked`, {
         method: "PATCH",
         prefer: "return=minimal",
         body: JSON.stringify({
@@ -1372,12 +1378,13 @@ async function lierRechercheProvisoire(creationToken, details = {}) {
   }
 }
 
+// Meme garde que pour le contact : ne jamais dementir une reussite deja actee.
 async function marquerRechercheProvisoireEnErreur(creationToken, message) {
   const token = cleanString(creationToken);
   if (!token) return;
   try {
     await supabaseRequest(
-      `app_search_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+      `app_search_provisional?creation_token=eq.${encodeURIComponent(token)}&status=neq.linked`, {
         method: "PATCH",
         prefer: "return=minimal",
         body: JSON.stringify({
@@ -12815,8 +12822,25 @@ async function updateHektorContactIdentity(job, contactId, payload) {
   };
 }
 
+// Meme enveloppe que pour la recherche, et pour la meme raison : le travail peut
+// echouer AVANT l'appel de creation (bascule de contexte negociateur, resolution
+// d'agence). Constate par l'essai du 31/08 cote recherche ; le contact avait le
+// meme trou, il n'avait simplement pas encore ete touche.
 async function handleCreateHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
+  const jeton = cleanString(payload.creation_token || payload.creationToken || "");
+  try {
+    return await executerCreationContactHektor(job, payload);
+  } catch (erreur) {
+    // Le garde « status <> linked » evite de dementir une creation reussie dont
+    // seule une suite (reglages CRM, etape post-creation) aurait echoue.
+    await marquerContactProvisoireEnErreur(
+      jeton, erreur && erreur.message ? erreur.message : String(erreur));
+    throw erreur;
+  }
+}
+
+async function executerCreationContactHektor(job, payload) {
   // Le jeton de la ligne provisoire, glisse par app_create_contact_optimistic.
   // Absent quand le travail vient de l'ancien chemin : on ne reconcilie alors
   // rien, et c'est normal -- il n'y a pas de ligne a rattacher.
@@ -12824,16 +12848,8 @@ async function handleCreateHektorContact(job) {
   const executionPayload = await resolveContactAgencyExecutionPayload(payload) || contactAgencyExecutionPayload(payload);
   await ensureHektorExecutionContext(job, null, executionPayload, { preferRequester: true, preferDossierOwner: false, required: true });
 
-  let created;
-  try {
-    created = await createHektorContact(job, payload);
-  } catch (erreur) {
-    // Hektor a refuse : la ligne provisoire doit le DIRE, pas rester en
-    // « En creation » indefiniment. Puis on relaie l'echec.
-    await marquerContactProvisoireEnErreur(
-      jetonContact, erreur && erreur.message ? erreur.message : String(erreur));
-    throw erreur;
-  }
+  // L'echec est traite par l'enveloppe, un seul endroit.
+  const created = await createHektorContact(job, payload);
 
   // Le contact EXISTE chez Hektor a partir d'ici. Tout ce qui suit est
   // best-effort : rien ne doit plus faire tomber ce travail.
@@ -12945,8 +12961,29 @@ function contactSearchSpecFromPayload(payload) {
   return { ...nested, kind: "search_criteria", enabled: true };
 }
 
+// L'ENVELOPPE, POSEE APRES L'ESSAI DU 31/08.
+//
+// Le travail avait echoue AVANT la creation -- sur la bascule de contexte
+// negociateur (« idUser Hektor 2 actif mais non rattache a l'agence/nego
+// demande »). Le try/catch d'origine ne couvrait que l'appel de creation : la
+// ligne provisoire est restee « En creation… » indefiniment, c'est-a-dire
+// exactement le defaut qu'elle etait censee supprimer.
+//
+// Un ECHEC, D'OU QU'IL VIENNE, doit se voir. Le corps du travail est inchange ;
+// il est simplement entoure.
 async function handleAddHektorContactSearch(job) {
   const payload = safeJsonParse(job.payload_json);
+  const jeton = cleanString(payload.creation_token || payload.creationToken || "");
+  try {
+    return await executerAjoutRechercheHektor(job, payload);
+  } catch (erreur) {
+    await marquerRechercheProvisoireEnErreur(
+      jeton, erreur && erreur.message ? erreur.message : String(erreur));
+    throw erreur;
+  }
+}
+
+async function executerAjoutRechercheHektor(job, payload) {
   const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
   if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
 
@@ -12984,18 +13021,11 @@ async function handleAddHektorContactSearch(job) {
   // gratuit chez Hektor (discipline de debit du 26/08).
   const criteresAvant = jetonRecherche ? await listerCriteresBestEffort(contactId) : null;
 
-  let search;
-  try {
-    search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
-    if (search && search.status === "skipped") {
-      throw new Error(`Recherche contact non creee (${search.reason || "payload incomplet"})`);
-    }
-  } catch (erreur) {
-    // Hektor a refuse : la ligne provisoire doit le DIRE, pas rester en
-    // « En creation » indefiniment. Puis on relaie l'echec.
-    await marquerRechercheProvisoireEnErreur(
-      jetonRecherche, erreur && erreur.message ? erreur.message : String(erreur));
-    throw erreur;
+  // L'echec est traite par l'enveloppe, un seul endroit : deux endroits qui
+  // marquent la meme chose finissent par diverger.
+  const search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
+  if (search && search.status === "skipped") {
+    throw new Error(`Recherche contact non creee (${search.reason || "payload incomplet"})`);
   }
 
   // La recherche EXISTE chez Hektor a partir d'ici. Tout ce qui suit est
