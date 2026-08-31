@@ -1411,6 +1411,70 @@ async function listerCriteresBestEffort(contactId) {
   }
 }
 
+// --- Meme chose, pour un LIEN MANDANT ne dans l'app (C.4, 31/08) ---
+//
+// L'OBSTACLE : app_contact_relation_current a pour cle relation_key, un SHA1 de
+// JSON trie calcule EN PYTHON par le run de nuit. Un lien qui n'existe pas
+// encore chez Hektor n'a pas de ligne -- et reproduire cette cle ici voudrait
+// dire RECOPIER la formule. Deux copies d'une formule divergent tot ou tard, et
+// ce jour-la le lien se dedouble en silence. On ne recopie pas : on pose une
+// ligne provisoire, pivotee sur un jeton fabrique par l'app.
+//
+// LE WORKER NE CALCULE DONC AUCUNE CLE. Il dit seulement « Hektor a confirme »,
+// et rend le numero du contact quand celui-ci vient d'etre cree. C'est la
+// descente de la relation qui fera disparaitre la ligne, cote ecran.
+//
+// BEST EFFORT, comme ses trois soeurs : une fois le lien fait chez Hektor, plus
+// rien ne doit faire tomber ce travail.
+async function lierRelationProvisoire(creationToken, hektorContactId) {
+  const token = cleanString(creationToken);
+  if (!token) return { status: "skipped", reason: "rien_a_lier" };
+  const corps = {
+    status: "linked",
+    error_message: null,
+    updated_at: new Date().toISOString(),
+  };
+  // Cas « creer un mandant » : le contact vient de naitre, on pose enfin son
+  // numero. Cas « rattacher », il etait deja la : on n'ecrase rien.
+  const contactId = cleanString(hektorContactId);
+  if (contactId) corps.hektor_contact_id = contactId;
+  try {
+    const majes = await supabaseRequest(
+      `app_relation_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: JSON.stringify(corps),
+      });
+    const touchees = Array.isArray(majes) ? majes.length : 0;
+    return { status: touchees ? "linked" : "aucune_ligne", lignes: touchees };
+  } catch (erreur) {
+    const message = erreur && erreur.message ? erreur.message : String(erreur);
+    console.warn(`[relation provisoire] lien echoue (jeton ${token}): ${message}`);
+    return { status: "error", error: message };
+  }
+}
+
+// Meme garde que pour le contact et la recherche : ne jamais dementir une
+// reussite deja actee.
+async function marquerRelationProvisoireEnErreur(creationToken, message) {
+  const token = cleanString(creationToken);
+  if (!token) return;
+  try {
+    await supabaseRequest(
+      `app_relation_provisional?creation_token=eq.${encodeURIComponent(token)}&status=neq.linked`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({
+          status: "error",
+          error_message: cleanString(message) || "Erreur de creation",
+          updated_at: new Date().toISOString(),
+        }),
+      });
+  } catch (erreur) {
+    console.warn(`[relation provisoire] marquage erreur echoue (jeton ${token}): ${erreur && erreur.message ? erreur.message : erreur}`);
+  }
+}
+
 async function storageRequest(objectPath, options = {}) {
   const baseUrl = requireEnv("SUPABASE_URL", SUPABASE_URL).replace(/\/+$/, "");
   const response = await fetch(`${baseUrl}/storage/v1/object/${STORAGE_BUCKET}/${storagePathEncode(objectPath)}`, {
@@ -11446,7 +11510,22 @@ async function handleAssignHektorAnnonceNegotiator(job) {
   }
 }
 
+// L'enveloppe, meme patron que le contact et la recherche : un echec, d'ou
+// qu'il vienne (y compris la bascule de contexte negociateur, en amont), doit
+// se voir a l'ecran.
 async function handleLinkHektorMandant(job) {
+  const payloadEnveloppe = safeJsonParse(job.payload_json);
+  const jeton = cleanString(payloadEnveloppe.creation_token || payloadEnveloppe.creationToken || "");
+  try {
+    return await executerRattachementMandant(job);
+  } catch (erreur) {
+    await marquerRelationProvisoireEnErreur(
+      jeton, erreur && erreur.message ? erreur.message : String(erreur));
+    throw erreur;
+  }
+}
+
+async function executerRattachementMandant(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
   await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
@@ -11462,12 +11541,26 @@ async function handleLinkHektorMandant(job) {
     priority: 80,
   });
 
+  // Le lien EXISTE chez Hektor a partir d'ici : tout ce qui suit est best-effort.
+  const jetonRelation = cleanString(payload.creation_token || payload.creationToken || "");
+  let lienProvisoire = null;
+  if (jetonRelation) {
+    lienProvisoire = await lierRelationProvisoire(jetonRelation, contactId);
+    await logJob(job.id, "relation_provisoire", lienProvisoire.status === "linked" ? "done" : "error",
+      lienProvisoire.status === "linked"
+        ? "Le lien mandant ne dans l'app est relie"
+        : "Mandant RATTACHE chez Hektor, mais la ligne provisoire n'a pas ete reliee -- a reprendre",
+      { creation_token: jetonRelation, hektor_annonce_id: annonceId,
+        hektor_contact_id: contactId, resultat: lienProvisoire.status });
+  }
+
   return {
     status: linkResult.status,
     hektor_annonce_id: annonceId,
     hektor_contact_id: contactId,
     wait_attempts: linkResult.waitAttempts,
     sync_job: syncJob,
+    relation_provisoire: lienProvisoire,
   };
 }
 
@@ -13713,7 +13806,20 @@ async function createHektorMandantContact(job, annonceId, payload) {
   };
 }
 
+// Meme enveloppe, meme raison.
 async function handleCreateHektorMandantContact(job) {
+  const payloadEnveloppe = safeJsonParse(job.payload_json);
+  const jeton = cleanString(payloadEnveloppe.creation_token || payloadEnveloppe.creationToken || "");
+  try {
+    return await executerCreationMandantContact(job);
+  } catch (erreur) {
+    await marquerRelationProvisoireEnErreur(
+      jeton, erreur && erreur.message ? erreur.message : String(erreur));
+    throw erreur;
+  }
+}
+
+async function executerCreationMandantContact(job) {
   const payload = safeJsonParse(job.payload_json);
   let dossier = null;
   try {
@@ -13755,6 +13861,21 @@ async function handleCreateHektorMandantContact(job) {
     priority: 82,
   });
 
+  // Le mandant EXISTE et EST LIE a partir d'ici : le reste est best-effort.
+  // On pose au passage le numero du contact tout neuf : la ligne provisoire ne
+  // l'avait pas -- il n'existait pas encore au moment de la saisie.
+  const jetonRelation = cleanString(payload.creation_token || payload.creationToken || "");
+  let lienProvisoire = null;
+  if (jetonRelation) {
+    lienProvisoire = await lierRelationProvisoire(jetonRelation, created.contactId);
+    await logJob(job.id, "relation_provisoire", lienProvisoire.status === "linked" ? "done" : "error",
+      lienProvisoire.status === "linked"
+        ? "Le mandant ne dans l'app a recu son numero Hektor"
+        : "Mandant CREE chez Hektor, mais la ligne provisoire n'a pas ete reliee -- a reprendre",
+      { creation_token: jetonRelation, hektor_annonce_id: annonceId,
+        hektor_contact_id: created.contactId, resultat: lienProvisoire.status });
+  }
+
   return {
     status: "created_and_linked",
     hektor_annonce_id: annonceId,
@@ -13766,6 +13887,7 @@ async function handleCreateHektorMandantContact(job) {
     },
     sync_job: syncJob,
     contact_sync_job: contactSyncJob,
+    relation_provisoire: lienProvisoire,
   };
 }
 

@@ -102,7 +102,7 @@ import {
   createDeleteHektorContactJob,
   createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
-  createLinkHektorMandantJob,
+  createLinkHektorMandantJobOptimistic,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
   editAnnonceOptimistic,
@@ -3205,7 +3205,9 @@ function HektorMandantContactForm(props: {
     }
     setPending(true)
     try {
-      const job = await createLinkHektorMandantJob({
+      // C.4 (31/08) : le lien s'ecrit CHEZ NOUS d'abord (ligne provisoire), dans
+      // la meme transaction que le travail.
+      const job = await createLinkHektorMandantJobOptimistic({
         dossier: props.dossier,
         contactId: linkSelected.hektor_contact_id,
         contactLabel: mandantContactOptionTitle(linkSelected),

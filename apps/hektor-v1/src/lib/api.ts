@@ -7252,6 +7252,38 @@ export async function createLinkHektorMandantJob(input: {
   return data as ConsoleJob
 }
 
+// C.4 (31/08) -- RATTACHER UN MANDANT : ON ECRIT CHEZ NOUS D'ABORD.
+//
+// L'ancienne version (au-dessus, conservee) inserait le travail DIRECTEMENT dans
+// app_console_job, sans meme demander le droit d'agir. La RPC pose le lien
+// provisoire ET le travail dans la meme transaction, et retablit le garde-fou de
+// role au passage.
+//
+// Le lien n'a pas de cle calculable ici : app_contact_relation_current a pour cle
+// un SHA1 de JSON trie fabrique en Python par le run de nuit. On ne recopie pas
+// une formule -- on pose une ligne provisoire, comme pour le contact et la
+// recherche.
+export async function createLinkHektorMandantJobOptimistic(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  contactId: string
+  contactLabel?: string | null
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const { data, error } = await supabase.rpc('app_link_mandant_optimistic', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    target_contact_id: cleanContactId,
+    contact_label: input.contactLabel?.trim() || null,
+    job_priority: input.priority ?? 18,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor mandant link job')
+  return data as ConsoleJob
+}
+
 export type HektorMandantContactInput = {
   civility?: string | null
   lastName: string
@@ -8096,7 +8128,12 @@ export async function createHektorMandantContactJob(input: {
     city: input.contact.city?.trim() || null,
     hektor_user_email: input.dossier.negociateur_email ?? null,
   }
-  const { data, error } = await supabase.rpc('app_console_create_mandant_contact_job', {
+  // C.4 (31/08) -- ON ECRIT CHEZ NOUS D'ABORD.
+  // La RPC appelle app_console_create_mandant_contact_job (ses garde-fous restent
+  // a un seul endroit) puis pose le lien provisoire dans la meme transaction.
+  // Le contact n'a pas encore de numero : c'est le nom saisi qui s'affiche en
+  // attendant, et le worker posera le numero au retour.
+  const { data, error } = await supabase.rpc('app_create_mandant_contact_optimistic', {
     target_app_dossier_id: input.dossier.app_dossier_id,
     target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
     contact_payload: payload,
@@ -8129,7 +8166,17 @@ export async function createUpdateHektorMandantContactJob(input: {
     city: input.contact.city?.trim() || null,
     hektor_user_email: input.dossier.negociateur_email ?? null,
   }
-  const { data, error } = await supabase.rpc('app_console_create_update_mandant_contact_job', {
+  // C.4 (31/08) -- ON ECRIT CHEZ NOUS D'ABORD.
+  //
+  // « Modifier un mandant » EST « modifier un contact » : le worker verifie le
+  // lien puis modifie la fiche. La RPC ecrit donc le contact ET cree le travail
+  // dans la meme transaction, en reutilisant app_edit_contact_optimistic --
+  // aucune logique d'edition n'est recopiee.
+  //
+  // Elle designe aussi ce travail au balayage des pendings, pour que la meme
+  // modification ne parte pas DEUX FOIS chez Hektor (une par le push debouncé,
+  // une par ce travail).
+  const { data, error } = await supabase.rpc('app_update_mandant_contact_optimistic', {
     target_app_dossier_id: input.dossier.app_dossier_id,
     target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
     target_contact_id: cleanContactId,
