@@ -159,14 +159,26 @@ parc. Les deux faits sont vrais et parfaitement compatibles :
 ➡ **La leçon** : une mesure exacte ne protège pas d'une conclusion fausse. Il fallait
 l'expérience, pas le raisonnement.
 
-## ⚠ Une faiblesse résiduelle, à ne pas oublier
+## Ce que `ListCompromis` est vraiment — précision de Frédéric, vérifiée
 
-`ListCompromis` **ne rend que 97 lignes** alors que le miroir en compte 10 573, et le pont ne lit
-que sa première page. Pendant l'expérience, `50054` a été vu à sa création puis **a disparu du
-listing quelques minutes plus tard** — la fenêtre du listing ne se comporte pas comme un simple
-tri par date.
+J'avais classé en « faiblesse » le fait que ce listing ne rende que **97 lignes** quand le miroir
+compte 10 573 compromis, et que `50054` en ait disparu quelques minutes après sa création.
 
-Conséquence : l'arbitre peut rendre un **faux négatif** si le listing ne montre pas la
-transaction qui vient d'être créée. Il ne l'a pas fait pendant l'expérience, mais rien ne
-garantit qu'il ne le fera jamais. **La confirmation par `CompromisById` / `VenteById` reste donc
-indispensable** — c'est elle qui ne ment pas.
+**Ce n'en est pas une.** `ListCompromis` sert l'app et le front : il rend les compromis
+**EN COURS**, c'est-à-dire ceux dont l'annonce n'a pas encore de vente. Mesuré sur les 97 :
+
+```
+   dont l'annonce a DEJA une vente  :   0
+   dont l'annonce n'en a AUCUNE     :  97
+```
+
+➡ Et cela **explique exactement** la disparition de `50054` : c'est la vente `23293`, créée juste
+après sur la même annonce, qui l'a fait sortir de la liste. Rien n'a été perdu ni masqué.
+
+**Un compromis peut donc être `status 1` sans être « en cours »** — 9 206 actifs au miroir, dont
+seulement 1 689 sur une annonce sans vente. « Actif » et « en cours » sont deux choses
+différentes, et c'est la seconde qui compte.
+
+Pour l'arbitre, c'est même **la bonne liste** : un compromis qu'on vient de créer est forcément
+en cours, donc forcément dedans. La confirmation par `CompromisById` reste utile comme second
+témoin, mais elle ne rattrape pas une lacune — il n'y en a pas.

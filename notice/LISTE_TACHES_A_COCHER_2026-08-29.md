@@ -1022,11 +1022,15 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
                  compromis. Une mesure exacte ne protege pas d'une conclusion
                  fausse : il fallait l'experience, pas le raisonnement.
 
-                 ⚠ FAIBLESSE RESIDUELLE : ListCompromis ne rend que 97 lignes
-                 quand le miroir en compte 10 573, et le pont ne lit que sa
-                 premiere page. 50054 a ete vu a sa creation puis a DISPARU du
-                 listing. L'arbitre peut donc rendre un faux negatif -- d'ou
-                 l'importance de CompromisById / VenteById, qui ne ment pas.
+                 PRECISION DE FREDERIC, VERIFIEE (et j'avais classe cela en
+                 « faiblesse » a tort) : ListCompromis rend les compromis EN
+                 COURS -- ceux dont l'annonce n'a pas encore de vente. Mesure
+                 sur les 97 : ZERO n'a de vente sur son annonce. C'est ce qui
+                 explique la disparition de 50054, sortie de la liste des que
+                 la vente 23293 a ete creee.
+                 « Actif » et « en cours » sont deux choses differentes :
+                 9 206 actifs au miroir, dont 1 689 seulement sur une annonce
+                 sans vente. Pour l'arbitre c'est LA bonne liste.
 
                  BAC A SABLE SOLDE : 12 lignes d'affaire d'essai retirees,
                  la date de cloture du mandat 18836 retiree, vente et
