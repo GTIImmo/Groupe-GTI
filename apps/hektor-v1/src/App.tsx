@@ -37624,14 +37624,44 @@ function ContactsScreen(props: {
                   const avBadgeOk = categories.length > 0
                   const canRappro = categories.includes('acquereur') // Acquéreur = recherche active
                   const negoInitials = contact.commercial_nom ? userInitials(contact.commercial_nom) : 'GTI'
+                  // C.9 (31/08) -- LE CONTACT NE DANS L'APP, LE TEMPS QUE HEKTOR REPONDE.
+                  //
+                  // Il n'a pas encore de numero Hektor : il ne vient pas de la liste
+                  // normale mais de app_contact_provisional, prefixee en tete de page 1.
+                  // Sans ce marquage il s'affichait comme un contact ordinaire « a
+                  // qualifier » -- l'utilisateur voyait sa saisie, sans savoir qu'elle
+                  // etait en attente, ni qu'elle avait echoue le cas echeant.
+                  const prov = contact as unknown as {
+                    is_provisional?: boolean
+                    provisional_status?: 'pending' | 'linked' | 'error'
+                    provisional_error?: string | null
+                    creation_token?: string
+                  }
+                  const estProvisoire = prov.is_provisional === true
+                  const provEnErreur = estProvisoire && prov.provisional_status === 'error'
                   return (
-                    <div key={contact.hektor_contact_id} className={`contact-row${isSelected ? ' is-selected' : ''}`} onClick={() => openContactDetail(contact.hektor_contact_id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContactDetail(contact.hektor_contact_id) } }}>
+                    <div
+                      key={estProvisoire ? `prov-${prov.creation_token}` : contact.hektor_contact_id}
+                      className={`contact-row${isSelected ? ' is-selected' : ''}${estProvisoire ? ' is-provisional' : ''}${provEnErreur ? ' is-provisional-error' : ''}`}
+                      title={provEnErreur ? (prov.provisional_error || 'La creation a echoue chez Hektor') : undefined}
+                      onClick={() => { if (estProvisoire) return; openContactDetail(contact.hektor_contact_id) }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => { if (estProvisoire) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openContactDetail(contact.hektor_contact_id) } }}>
                       <div className="ci">
                         <div className={`ci-av has-sym ${primaryType}`} title={contactDirectoryTypeLabel[primaryType]}><span className="ci-av-sym" aria-hidden="true">{contactDirectoryTypeSymbol(primaryType)}</span><span className={`ci-av-badge ${avBadgeOk ? 'ok' : 'off'}`}>{avBadgeOk ? AV_ICONS.check : AV_ICONS.cross}</span></div>
                         <div className="ci-body">
                           <div className="ci-name">{contact.display_name}</div>
-                          <div className="ci-roles">{shownCategories.map((cat, index) => <span key={`role-${cat}-${index}`} className={`ci-role ${cat}`}>{contactDirectoryTypeLabel[cat]}</span>)}</div>
-                          <div className="ci-id">ID {contact.hektor_contact_id}</div>
+                          <div className="ci-roles">
+                            {estProvisoire
+                              ? <span className={`ci-role ${provEnErreur ? 'prov-err' : 'prov'}`}>{provEnErreur ? 'Erreur de création' : 'En création…'}</span>
+                              : shownCategories.map((cat, index) => <span key={`role-${cat}-${index}`} className={`ci-role ${cat}`}>{contactDirectoryTypeLabel[cat]}</span>)}
+                          </div>
+                          <div className="ci-id">
+                            {estProvisoire
+                              ? (provEnErreur ? 'Non créé chez Hektor' : 'Envoi à Hektor en cours')
+                              : `ID ${contact.hektor_contact_id}`}
+                          </div>
                         </div>
                       </div>
                       <div className="statut-col">{shownCategories.map((cat, index) => <div className="st-block" key={`st-${cat}-${index}`}>{renderStatut(cat, linked, activeSearch, roles)}</div>)}</div>

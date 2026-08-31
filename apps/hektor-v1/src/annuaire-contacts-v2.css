@@ -172,3 +172,27 @@
   .annuaire-v2 .qa-col{flex-direction:row;align-items:center;justify-content:flex-start;gap:8px;}
   .annuaire-v2 .lc-head{padding:16px 16px 12px;}
 }
+
+/* ── C.9 (31/08) : le contact ne dans l'app, en attente de Hektor ──
+   Il n'a pas encore de numero Hektor : sa fiche n'existe pas, donc la ligne
+   n'est pas cliquable. Le point qui bat dit que ca travaille ; en erreur, il
+   se fige et vire au rouge -- la creation ne se fera pas toute seule. */
+.annuaire-v2 .contact-row.is-provisional{cursor:default;}
+.annuaire-v2 .contact-row.is-provisional .ci-body,
+.annuaire-v2 .contact-row.is-provisional .coord-col,
+.annuaire-v2 .contact-row.is-provisional .nego-col{opacity:.82;}
+.annuaire-v2 .contact-row.is-provisional-error .ci-body{opacity:1;}
+
+.annuaire-v2 .ci-role.prov,
+.annuaire-v2 .ci-role.prov-err{display:inline-flex;align-items:center;gap:6px;}
+.annuaire-v2 .ci-role.prov{color:#8a5a00;}
+.annuaire-v2 .ci-role.prov-err{color:#b0332f;}
+.annuaire-v2 .ci-role.prov::before,
+.annuaire-v2 .ci-role.prov-err::before{content:"";width:6px;height:6px;border-radius:50%;flex:none;}
+.annuaire-v2 .ci-role.prov::before{background:#d08700;animation:ci-prov-pulse 1.4s ease-in-out infinite;}
+.annuaire-v2 .ci-role.prov-err::before{background:#b0332f;}
+
+@keyframes ci-prov-pulse{0%,100%{opacity:1;}50%{opacity:.28;}}
+@media (prefers-reduced-motion:reduce){
+  .annuaire-v2 .ci-role.prov::before{animation:none;}
+}
