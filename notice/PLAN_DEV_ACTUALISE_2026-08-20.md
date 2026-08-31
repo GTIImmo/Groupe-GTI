@@ -35,7 +35,7 @@ posée** :
 | | la tâche demandait | la preuve apportée |
 |---|---|---|
 | **C.1'** | *« l'échec **se reprend** »* | la purge retirée sur **3 fonctions d'édition** |
-| **C.4** | *« **écrire d'abord**, envoyer, comparer »* sur 16 workers | **127 archivages, 14 affectations** — des exécutions, pas des conversions |
+| **C.4** | *« **écrire d'abord**, envoyer, comparer »* sur 16 workers | **127 archivages, 14 affectations** — des exécutions, pas des conversions · ✅ **CLOS le 01/09 : 14 convertis + 2 sans objet** |
 
 **Ce n'est pas une faute de rigueur, c'est une faute de cadrage** : on mesure ce qui marche au
 lieu de mesurer ce qui reste. La règle ci-dessus existe pour ça.
@@ -167,14 +167,27 @@ sont pas réglés, et chaque semaine de retard s'ajoute intégralement à la dat
 ### L'ordre retenu
 
 ```
-   1. C.19   faire passer un VRAI travail par le worker + deployer le front     1 j
-   2. C.4-bis-0  relire les 18 handlers : lesquels concluent du silence ?      1 a 2 j
-   3. C.4-bis    le filet de rejeu                                             2 a 3 j
-   4. C.4        les 11 workers restants + la branche « Vendu »                1 a 2 sem.
-   5. C.19-c     le choix actif/archive remonte jusqu'a l'ecran                2 j
-   6. C.16       825 contacts qui n'existent plus                              1 a 2 j
-   7. C.9 + 26bis-3   la creation part de l'app                                1 a 2 sem.
+   1. C.19        VRAI travail par le worker + front deploye        FAIT 31/08
+   2. C.4-bis-0   relire les 18 handlers                            FAIT 01/09  18/20
+   3. C.4         les workers + la branche « Vendu »                FAIT 01/09  16/16
+   ------------------------------------------------------------------- ci-dessus : fait
+   4. C.4-bis     le filet de rejeu des ACTIONS                     2 a 3 j   <- LE SUIVANT
+   5. C.19-c      le choix actif/archive remonte jusqu'a l'ecran    2 j (ou 1/2 j, voir note)
+   6. C.16        825 contacts qui n'existent plus                  1 a 2 j
+   7. C.9 + 26bis-3 + 26bis-contacts + 26bis-relations              1 a 2 sem.
+                  la creation part de l'app
+   8. A.3-tech    le registre des mandats en propre                 3 a 5 j
 ```
+
+> **REVISION DU 01/09.** Les trois premiers postes sont clos, et deux d'entre eux
+> l'etaient DEJA sans que ce plan le sache -- voir la revision de C.4 et de
+> C.4-bis-0 plus bas. **C.4-bis devient le prochain**, et il est desormais
+> debloque : la detection est bonne sur 18 gestes sur 20.
+>
+> ⚠ **C.19-c est peut-etre une demi-journee, pas deux.** Frederic, 30/08 : *« on
+> devrait laisser que le choix, pas proposer le choix dans l'app puisqu'il est
+> automatiquement sur actif »*. RETIRER le choix au lieu de l'exposer -- point
+> jamais tranche.
 
 > **Pourquoi cet ordre.** On vient de découvrir qu'un worker peut se tromper de verbe pendant
 > des jours sans que personne le sache. Détecter, prouver, rattraper — tant que les trois ne
@@ -915,7 +928,9 @@ Trois gestes, et **aucun n'est de l'arbitrage** :
 | | ❗ **ON NE REJOUE PAS CE QU'ON NE SAIT PAS RATÉ.** Un travail marqué `done` n'est **jamais** repris. Poser C.4-bis avant cette vérification, ce serait tendre un filet sous un trou qu'on ne voit pas | |
 | | 🔬 **PROUVÉ PAR UN ESSAI, pas déduit.** Le 29/08, un refus demandé sur une offre **inexistante** *(99999999)* est passé **`done`**, l'état optimiste est resté affiché, et le retour en arrière n'a jamais joué. **Le geste n'a rien fait et l'app affichait le contraire.** Relevé chez Hektor sur le même appel : **`[]` = échec · `1` = succès** — *il DIT quand il échoue*. Mon détecteur ne cherchait que des mots de refus et concluait au succès en leur absence | |
 | | ⚖ **LE PRINCIPE, désormais posé sur les 3 gestes** *(`2b55a37`)* : **on exige la PREUVE du succès, on ne le déduit jamais de l'absence d'échec.** Une réponse vide, `[]`, `{}`, `0` ou `null` lève une erreur explicite | |
-| | ➡ **RESTE : les 18 handlers qui parlent à Hektor, un par un, EN LISANT le code.** Pas par recherche de motif — cette méthode m'a donné **quatre mesures fausses le 29/08**, dont une qui disait aveugle un handler qui vérifie bien *(`handleUpdateHektorContactSearch`)*. Seul indice à confirmer : `handleRelanceSignature` ne semble vérifier que son message d'entrée | |
+| | ✅ **RÉVISION DU 01/09 — C'ÉTAIT DÉJÀ FAIT. 18 handlers sur 20 exigent la preuve** *(mesuré en suivant les fonctions appelées sur deux niveaux)*. Les **2 restants** sont `handleRelanceSignature` et `handleCancelSignatureProcedure` : ils envoient l'ordre puis rendent `reminded`/`cancelled` sans vérifier. **Gelés avec A.2** — ils dépendent de l'abonnement ImmoSign et disparaîtront avec le contrat de signature en propre. ➡ **C.4-bis n'est plus bloqué.** *(Et ma 1ʳᵉ passe n'en voyait que 15 : la preuve est souvent dans la fonction APPELÉE — 5ᵉ mesure fausse par recherche de motif, l'avertissement ci-dessous était juste)* |
+| | ⚠ **UN SECOND SENS, non prévu par la tâche** *(31/08)* : elle ne cherchait que « déduire du silence » *(un échec pris pour un succès)*. Le cas symétrique existe — **« relire à l'aveugle »**, un succès pris pour un échec, et le filet rejouerait alors un geste déjà fait. Constaté sur le rattachement de mandant du 28/08. **Chercher les DEUX sens en posant C.4-bis** |
+| | ➡ ~~**RESTE : les 18 handlers qui parlent à Hektor, un par un, EN LISANT le code.**~~ Pas par recherche de motif — cette méthode m'a donné **quatre mesures fausses le 29/08**, dont une qui disait aveugle un handler qui vérifie bien *(`handleUpdateHektorContactSearch`)*. Seul indice à confirmer : `handleRelanceSignature` ne semble vérifier que son message d'entrée | |
 | 🆕 **C.4-bis** | **AUCUNE ACTION N'EST JAMAIS REJOUÉE** — le filet des éditions n'existe pas pour les gestes *(validé par Frédéric le 29/08)* | **1 à 2 j** |
 | | 📊 **MESURE DU 29/08** : **6 travaux en erreur, 0 rejoué**, sur six types différents — création d'annonce, numéro de mandat auto, lien mandant, changement de statut, refus d'offre, relecture. Le `attempt_count` reste à **1** partout. Un « Hektor 500 » du 28/08 n'a jamais été retenté, et personne ne l'a su | |
 | | ⚖ **LA DIFFÉRENCE DE TRAITEMENT, mesurée.** Les **éditions de champs** ont un filet complet : un balayage tourne **toutes les minutes** *(cron `app-annonce-push-due`, `app-contact-push-due`, `app-search-push-due`)*, il **nettoie** ce qui a abouti, **rejoue** ce qui a raté avec un espacement croissant *(5 · 10 · 15 · 20 · 25 min)*, et **abandonne après 5 tentatives** en posant `conflict` — un humain tranche alors. C'est C.1' : *« la purge des 24 h est retirée, la saisie reste jusqu'à ce qu'un humain la traite »*. Les **actions**, elles, n'ont **rien** | |
