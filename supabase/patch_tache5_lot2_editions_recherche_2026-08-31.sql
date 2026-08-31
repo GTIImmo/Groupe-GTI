@@ -1,0 +1,51 @@
+-- =====================================================================
+-- TACHE 5, LOT 2 -- LES DEUX DERNIERES FONCTIONS DE FAMILLE B
+-- Date : 2026-08-31
+--
+-- MEME GESTE QUE LE LOT 1 : la ligne d'attente porte desormais le numero de
+-- contact de l'app. Meme raison : ces deux fonctions ecrivent dans NOS tables
+-- (app_contact_search_current, app_search_pending) et n'ont rien a dire a
+-- Hektor -- C.3 a ferme leur porte sortante le 24/08, et `push_search` vaut
+-- `null` depuis.
+--
+-- LA TACHE 5 EST DONC COMPLETE COTE FONCTIONS : 3 basculent, 8 gardent le
+-- numero Hektor a jamais.
+--     app_edit_contact_optimistic          lot 1
+--     app_edit_search_optimistic           lot 2
+--     app_espace_edit_search_optimistic    lot 2
+--
+-- METHODE -- ET C'EST LE POINT QUI COMPTE. Plutot que de recopier a la main
+-- 8 300 caracteres de code (avec le risque de transcription que ca comporte),
+-- la modification se fait PAR SUBSTITUTION sur la definition existante, lue par
+-- pg_get_functiondef. Trois substitutions attendues par fonction, comptees ; si
+-- une seule ancre a bouge, le bloc LEVE et RIEN n'est applique.
+--
+-- Le numero est lu par sous-requete sur la cle primaire de app_contact_current :
+-- ces fonctions ne chargent pas la fiche contact, contrairement au lot 1.
+--
+-- CE QUI NE CHANGE PAS : les signatures (le front n'a rien a redeployer, et on
+-- evite le piege du renommage de parametre), la cle primaire, et les 8
+-- fonctions qui parlent a Hektor.
+--
+-- EPROUVE A BLANC, SANS RIEN CONSERVER. Poser une vraie ligne d'attente aurait
+-- marque la recherche « dirty » ; l'INSERT complet a donc ete joue dans un bloc
+-- qui se termine par une exception, donc annule :
+--     contact 603800, rang 0  ->  numero app 354490
+--     app_search_pending apres  : 0 ligne, 0 trace
+--     app_contact_pending apres : 0 ligne, 0 trace
+--     sentinelle                : 0
+--
+-- Appliquee via `tache5_lot2_editions_recherche_portent_le_numero_app`.
+-- =====================================================================
+
+-- Extrait de ce qui a change dans chacune des deux :
+--
+--   insert into public.app_search_pending(
+--       hektor_contact_id, search_index, app_contact_id, base_snapshot, ...)
+--   values (clean_id, v_index,
+--           (select app_contact_id from public.app_contact_current
+--             where hektor_contact_id = clean_id), v_base, ...)
+--   on conflict (hektor_contact_id, search_index) do update set
+--     app_contact_id = coalesce(app_search_pending.app_contact_id,
+--                               excluded.app_contact_id),
+--     ...
