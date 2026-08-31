@@ -27,7 +27,17 @@ Principe : *« écrire d'abord, envoyer, comparer au retour »*.
 > `api.ts`), pas les notes. C'est de la que venait l'impression de refaire les
 > memes choses.
 
-CONVERTIS (10 sur 16)                        mesure dans le code le 31/08
+C.4 EST TERMINE : 14 CONVERTIS + 2 SANS OBJET = 16/16      cloture le 01/09
+
+> ⚠ **L'INVENTAIRE DE C.4 A ETE FAUX QUATRE FOIS.** Il annoncait 5/16 le matin
+> du 31/08 ; trois workers etaient deja faits depuis le 30/08 et portaient encore
+> la mention trompeuse « insert direct -- verifie » ; un quatrieme
+> (delete_hektor_contact_search) l'etait aussi et personne ne l'avait vu.
+> **La liste ne suivait pas le code.** C'est de la que venait l'impression de
+> refaire les memes choses -- et c'est ce qui a fait naitre la regle « auditer le
+> CODE avant chaque etape », entree en memoire projet le 31/08.
+
+CONVERTIS (14 sur 16)                        mesure dans le code le 31/08
 [x] update_hektor_annonce_fields        app_edit_annonce_optimistic
 [x] update_hektor_contact               app_edit_contact_optimistic
 [x] update_hektor_contact_search        app_edit_search_optimistic
@@ -41,32 +51,61 @@ CONVERTIS (10 sur 16)                        mesure dans le code le 31/08
 [x] add_hektor_contact_search           app_create_search_optimistic       31/08
                                         eprouve a l'ecran : cycle complet
 
-A CONVERTIR (6) -- et ce ne sont PAS six travaux, c'est UNE decision
+[x] delete_hektor_contact_search   DEJA CONVERTI LE 30/08 -- constate le 01/09
+                                   app_console_create_delete_contact_search_job
+                                   ecrit archive=true, is_active=false DANS LA
+                                   MEME TRANSACTION, garde une photo d'avant
+                                   (base_snapshot) et pose un verrou portant le
+                                   numero du travail (le balayage l'efface au
+                                   succes, le rearme a l'echec).
+                                   ⚠ CE N'EST PAS UNE SUPPRESSION mais un
+                                   ARCHIVAGE : le worker appelle
+                                   archiveHektorContactSearch et rend
+                                   « status: archived ». Hektor ne sait pas
+                                   supprimer une recherche, il pose une date.
 
-    LE CARNET NE SAIT PORTER QU'UN CHAMP CORRIGE.
-    app_annonce_champ_app = (dossier, champ) -> valeur. C'est le domicile des
-    valeurs que l'app tient pour justes en face de Hektor. Les dix convertis
-    l'utilisent, ou utilisent leur table courante.
+[x] create_hektor_mandant_contact  FAIT 31/08   app_create_mandant_contact_optimistic
+[x] link_hektor_mandant            FAIT 31/08   app_link_mandant_optimistic
+                                   (+ le garde-fou de role qui MANQUAIT : le
+                                   front inserait le travail en direct)
+[x] update_hektor_mandant_contact  FAIT 31/08   app_update_mandant_contact_optimistic
+                                   « modifier un mandant » EST « modifier un
+                                   contact » : on APPELLE app_edit_contact_optimistic
+                                   au lieu de recopier sa logique, et on designe
+                                   notre travail au balayage pour qu'une meme
+                                   modification ne parte pas DEUX fois.
 
-    LES SIX RESTANTS N'ONT PAS DE CHAMP A CORRIGER :
+[—] delete_hektor_annonce          SANS OBJET -- decision du 15/05, a revoir
+[—] delete_hektor_contact          APRES la coupure des workers
 
-[ ] delete_hektor_annonce          }  un EVENEMENT, pas une correction.
-[ ] delete_hektor_contact          }  ARBITRAGE DEJA PRIS le 30/08, ecrit dans
-[ ] delete_hektor_contact_search   }  magasin_annonce_app.py :
-                                      « La suppression n'est pas ici, et c'est
-                                      volontaire. Une suppression n'est pas une
-                                      correction, c'est un evenement -- l'annonce
-                                      s'en va, il n'y a plus rien a comparer. »
-                                      -> il leur faut un domicile A ELLES.
+    POURQUOI SANS OBJET, et ce n'est pas un renoncement.
+    notice/NOTE_SUPPRESSION_ANNONCE_HEKTOR_2026-05-15.md le dit deja :
+       « Le nettoyage Supabase/local est lance seulement APRES l'appel de
+         suppression Hektor. Si Hektor refuse la suppression ou si la session
+         admin n'est pas active, les donnees locales ne sont pas nettoyees. »
+    C'est une DECISION, pas un oubli -- et elle est juste : une suppression est
+    IRREVERSIBLE. Effacer chez nous d'abord et voir Hektor refuser, c'est
+    detruire pour rien.
 
-[ ] link_hektor_mandant            }  une RELATION, pas un champ.
-[ ] create_hektor_mandant_contact  }  app_contact_relation_current n'a AUCUN
-[ ] update_hektor_mandant_contact  }  pending ni provisoire.
-                                      -> meme manque, autre forme.
-                                      NOTE : update_ edite un contact qui EXISTE
-                                      deja ; app_edit_contact_optimistic fait
-                                      peut-etre deja le travail -> a trancher
-                                      avant de coder quoi que ce soit.
+    ET LE PRINCIPE DE C.4 NE S'Y APPLIQUE PAS. « Ecrire d'abord » protege LA
+    SAISIE. Or :
+       creer un contact       ->  un nom, un telephone   <- du CONTENU a sauver
+       modifier une annonce   ->  un prix, une surface   <- du CONTENU a sauver
+       supprimer un contact   ->  RIEN
+    Une suppression n'a rien a sauvegarder : il n'y a qu'une intention, deja
+    conservee dans le travail, qui depuis C.1' ne se perd plus.
+
+    ET L'OPTIMISME Y SERAIT NUISIBLE : afficher « supprime » avant la reponse
+    de Hektor, c'est montrer une chose FAITE qui peut echouer. Si Hektor refuse,
+    l'objet REVIENT -- exactement le mensonge d'ecran que ce projet corrige
+    partout ailleurs.
+
+    MESURE QUI CONFORTE : 114 suppressions d'annonces + 8 de contacts entre mai
+    et aout, TOUTES « done ». Aucun echec. Et toutes journalisees dans
+    app_console_deleted_*_log avec l'etat complet d'avant (before_json).
+
+    A REVOIR APRES LA COUPURE DES WORKERS -- decision de Frederic, 01/09 : quand
+    Hektor ne repondra plus, une suppression devra bien s'ecrire quelque part.
 
     ⚠ ET TOUT CECI EST DORMANT, PAR CONSTRUCTION.
     contrat_autorite.py : CHAMPS_APP_ANNONCE = ()   -- VIDE
