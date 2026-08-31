@@ -999,11 +999,34 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
                  conservee partout sur ce chemin -- c'est probablement la
                  correction la plus utile de la nuit, plus que le protocole.
 
-                 OBSERVATION A VERSER AU DOSSIER : une transaction ne se cree
-                 pas si une du meme genre existe deja et qu'elle est vivante.
-                 Constate 3 fois. NE PAS en faire une regle absolue : le
-                 miroir montre 7 annonces a 2 ventes et 578 a plusieurs
-                 compromis. C'est conditionnel, la condition reste a trouver.
+                 LA CONDITION DE BLOCAGE, ETABLIE PAR EXPERIENCE le 31/08
+                 (Frederic l'avait enoncee, je l'avais contredit A TORT) :
+
+                    C1  aucun compromis actif   ->  CREE 50053   reference
+                    C2  50053 ACTIF present     ->  RIEN CREE    le test
+                        annulation de 50053                      done
+                    C3  juste apres             ->  CREE 50054   contre-epreuve
+                    V1  aucune vente            ->  CREE 23293   reference
+                    V2  23293 presente          ->  RIEN CREE    le test
+
+                    compromis  un ACTIF bloque    -> l'ANNULER (reversible)
+                    vente      TOUTE vente bloque -> la SUPPRIMER (DEFINITIF)
+
+                 Le geste qui debloque une VENTE est irreversible : il ne peut
+                 pas etre automatise sans decision humaine.
+
+                 POURQUOI JE M'ETAIS TROMPE : j'avais objecte qu'un compromis
+                 actif ne peut pas bloquer, puisque 9 075 annonces Vendues en
+                 portent un. La mesure etait juste, LE RAISONNEMENT ETAIT FAUX
+                 -- ces dossiers sont TERMINES, personne n'y cree un nouveau
+                 compromis. Une mesure exacte ne protege pas d'une conclusion
+                 fausse : il fallait l'experience, pas le raisonnement.
+
+                 ⚠ FAIBLESSE RESIDUELLE : ListCompromis ne rend que 97 lignes
+                 quand le miroir en compte 10 573, et le pont ne lit que sa
+                 premiere page. 50054 a ete vu a sa creation puis a DISPARU du
+                 listing. L'arbitre peut donc rendre un faux negatif -- d'ou
+                 l'importance de CompromisById / VenteById, qui ne ment pas.
 
                  BAC A SABLE SOLDE : 12 lignes d'affaire d'essai retirees,
                  la date de cloture du mandat 18836 retiree, vente et
