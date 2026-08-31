@@ -103,6 +103,8 @@ import {
   createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
   createLinkHektorMandantJobOptimistic,
+  loadRelationProvisionals,
+  type RelationProvisionalRow,
   createUpdateHektorMandantContactJob,
   createUpdateHektorAnnonceFieldsJob,
   editAnnonceOptimistic,
@@ -3090,6 +3092,64 @@ function HektorAnnonceFieldDetailPanel(props: {
         {groupsAfterComposition.map((group, index) => renderDetailGroup(group, index + groupsBeforeComposition.length + 1))}
       </div>
     </section>
+  )
+}
+
+// C.4 (31/08) -- LE MANDANT NE DANS L'APP, LE TEMPS QUE HEKTOR REPONDE.
+//
+// POURQUOI UN BANDEAU A COTE, ET PAS UNE LIGNE DANS LA LISTE.
+// La liste des mandants vient de `proprietaires_json` -- le detail descendu de
+// Hektor. Y glisser une ligne inventee melangerait deux sources dans un meme
+// tableau, et on ne saurait plus laquelle fait foi. On ajoute donc a COTE ce que
+// l'app sait et que Hektor n'a pas encore confirme.
+//
+// C'est le seul endroit ou la saisie reste visible apres avoir ferme l'ecran :
+// la vignette de suivi, elle, disparait avec la page.
+//
+// La ligne s'efface quand Hektor a confirme ET que la fiche est redescendue --
+// c'est-a-dire quand le mandant apparait dans la liste juste au-dessus. Une
+// ligne en ERREUR reste, quoi qu'il arrive : c'est elle qui porte le message.
+function MandantsEnCreation(props: {
+  hektorAnnonceId: number | string | null | undefined
+  contactsDejaLa: string[]
+}) {
+  const [lignes, setLignes] = useState<RelationProvisionalRow[]>([])
+
+  useEffect(() => {
+    let annule = false
+    const annonceId = String(props.hektorAnnonceId ?? '').trim()
+    if (!annonceId) { setLignes([]); return }
+    loadRelationProvisionals(annonceId)
+      .then((rows) => { if (!annule) setLignes(rows) })
+      .catch(() => { if (!annule) setLignes([]) })
+    return () => { annule = true }
+  }, [props.hektorAnnonceId])
+
+  const dejaLa = new Set(props.contactsDejaLa.map((id) => String(id).trim()).filter(Boolean))
+  const restantes = lignes.filter((ligne) => {
+    if (ligne.status === 'error') return true
+    const id = String(ligne.hektor_contact_id ?? '').trim()
+    return !id || !dejaLa.has(id)
+  })
+  if (!restantes.length) return null
+
+  return (
+    <div className="mandant-prov-wrap">
+      {restantes.map((ligne) => {
+        const enErreur = ligne.status === 'error'
+        return (
+          <div
+            key={`mandant-prov-${ligne.creation_token}`}
+            className={`mandant-prov${enErreur ? ' is-error' : ''}`}
+            title={enErreur ? (ligne.error_message || 'Le rattachement a echoue chez Hektor') : undefined}
+          >
+            <span className="mandant-prov-dot" aria-hidden="true" />
+            <strong>{ligne.contact_label || (ligne.hektor_contact_id ? `Contact ${ligne.hektor_contact_id}` : 'Mandant')}</strong>
+            <small>{enErreur ? 'Erreur de rattachement' : 'En creation…'}</small>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -26849,6 +26909,10 @@ function DossierDetailLayoutBase(props: {
                         <strong>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''} lie{props.contacts.length > 1 ? 's' : ''}</strong>
                         <small>{props.detail.mandants_texte || primaryContact.name}</small>
                       </div>
+                      <MandantsEnCreation
+                        hektorAnnonceId={dossier.hektor_annonce_id}
+                        contactsDejaLa={props.contacts.map((contact) => String(detailContactDirectoryId(contact) ?? ''))}
+                      />
                       {!isLightweightDetail ? <HektorMandantContactForm dossier={dossier} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} /> : null}
                       <article className="detail-entity-card detail-contact-card detail-contact-card-primary">
                         {(() => {

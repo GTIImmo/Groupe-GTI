@@ -7815,6 +7815,41 @@ function fallbackAnnonceContactInviteeOption(contactId: string, relation: Annonc
   }
 }
 
+// ── C.4 (31/08) : LE MANDANT « EN CREATION » SE VOIT SUR LA FICHE ──
+//
+// La rubrique « Mandants / proprietaires » n'affiche PAS la table des relations :
+// elle affiche proprietaires_json, le detail descendu de Hektor. Un mandant qui
+// vient d'etre saisi n'y est donc pas, et n'y sera qu'apres la resynchronisation.
+//
+// On ne touche pas a cette liste -- on ajoute a cote ce que l'app SAIT et que
+// Hektor n'a pas encore confirme. C'est le seul endroit ou la saisie est visible
+// apres avoir ferme l'ecran : la vignette de suivi, elle, disparait.
+export type RelationProvisionalRow = {
+  creation_token: string
+  hektor_annonce_id: string
+  hektor_contact_id: string | null
+  contact_label: string | null
+  role_contact: string
+  status: 'pending' | 'linked' | 'error'
+  error_message: string | null
+  created_at: string | null
+}
+
+export async function loadRelationProvisionals(hektorAnnonceId: string | number | null | undefined): Promise<RelationProvisionalRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const annonceId = String(hektorAnnonceId ?? '').trim()
+  if (!annonceId) return []
+  const { data, error } = await supabase
+    .from('app_relation_provisional')
+    .select('creation_token,hektor_annonce_id,hektor_contact_id,contact_label,role_contact,status,error_message,created_at')
+    .eq('hektor_annonce_id', annonceId)
+    .order('created_at', { ascending: false })
+    .limit(10)
+  // Un echec de lecture ne prive personne de sa fiche : on rend vide.
+  if (error) return []
+  return (data ?? []) as RelationProvisionalRow[]
+}
+
 export async function loadAnnonceContactInvitees(input: {
   appDossierId?: number | null
   hektorAnnonceId?: number | string | null

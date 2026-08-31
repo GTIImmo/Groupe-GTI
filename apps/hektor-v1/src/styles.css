@@ -32130,3 +32130,24 @@ body {
   .diffusion-modal-v3 .dv3-illus svg { max-width: 280px; }
   .diffusion-modal-v3 .dv3-portal-scroll { overflow: visible; }
 }
+
+/* C.4 (31/08) — le mandant né dans l'app, le temps que Hektor réponde.
+   Posé À CÔTÉ de la liste des mandants, jamais dedans : cette liste vient du
+   détail descendu de Hektor, et mélanger les deux sources ferait perdre de vue
+   laquelle fait foi. Même langage visuel que les autres provisoires du projet :
+   ambre qui pulse tant qu'on attend, rouge quand Hektor a refusé. */
+.mandant-prov-wrap{display:flex;flex-direction:column;gap:6px;margin:8px 0 10px;}
+.mandant-prov{display:flex;align-items:center;gap:8px;padding:8px 12px;
+  border:1px solid #f0d9a8;background:#fff9ee;border-radius:8px;font-size:13px;}
+.mandant-prov strong{font-weight:650;color:#3a2f1c;}
+.mandant-prov small{color:#8a5a00;font-weight:600;margin-left:auto;}
+.mandant-prov-dot{width:7px;height:7px;border-radius:50%;background:#d08700;flex:none;
+  animation:mandant-prov-pulse 1.4s ease-in-out infinite;}
+.mandant-prov.is-error{border-color:#f2c4c1;background:#fdeceb;}
+.mandant-prov.is-error small{color:#b0332f;}
+.mandant-prov.is-error .mandant-prov-dot{background:#b0332f;animation:none;}
+
+@keyframes mandant-prov-pulse{0%,100%{opacity:1;}50%{opacity:.28;}}
+@media (prefers-reduced-motion:reduce){
+  .mandant-prov-dot{animation:none;}
+}
