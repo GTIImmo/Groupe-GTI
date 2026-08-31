@@ -1138,6 +1138,86 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
                  plus, ce filet disparait.
 
                  A FAIRE AVANT C.9, comme 26bis.
+
+[ ] 26bis-RELATIONS  LE LIEN ENTRE UNE PERSONNE ET UN BIEN   AJOUTEE LE 31/08
+                 ⚠ TROUVEE PAR UNE QUESTION DE FREDERIC, pas par l'audit :
+                 « est-ce que cela va tenir apres la coupure ? »
+
+                 LA RUBRIQUE « MANDANTS » N'A PAS DEUX SOURCES, ELLE EN A UNE.
+                 Verifie dans build_contacts_layer.py :
+
+                    la liste affichee     <- proprietaires_json
+                    app_contact_relation_current <- proprietaires_json
+                                                    <- hektor_annonce_detail
+                                                       (LE MIROIR)
+
+                 La table des relations n'est pas une source independante : elle
+                 est FABRIQUEE a partir du detail Hektor, chaque nuit.
+
+                 CE QUI SE PASSERA A LA COUPURE : le miroir GELE. La liste des
+                 mandants d'un bien reste figee au jour J. Un mandant rattache
+                 apres n'y entrera JAMAIS, et la ligne provisoire posee le 31/08
+                 resterait « En creation… » A VIE, puisque rien ne viendra la
+                 confirmer.
+
+                 CONSEQUENCE SUR LE CHOIX D'AFFICHAGE DU 31/08 : mettre le
+                 mandant en attente A COTE de la liste plutot que DEDANS est
+                 NEUTRE vis-a-vis de la coupure. Les deux affichages remontent au
+                 meme miroir. Le probleme n'est pas ou l'on affiche.
+
+                 MEME NATURE QUE 26bis ET 26bis-CONTACTS, TROISIEME DU NOM :
+                    26bis            le corps de l'ANNONCE
+                    26bis-contacts   le corps du CONTACT
+                    26bis-relations  le LIEN entre les deux      <- celle-ci
+
+                 A FAIRE AVANT C.9, comme les deux autres.
+
+[ ] INVENTAIRE   TOUT VERIFIER AVANT LA COUPURE      demande de Frederic, 31/08
+                 « il faudra tout verifier a ce moment »
+
+                 POURQUOI CETTE TACHE EXISTE : on decouvre ces trous UN PAR UN,
+                 et toujours par accident.
+                    21/08  le corps de l'annonce      (26bis)
+                    31/08  le corps du contact        (26bis-contacts)
+                    31/08  le lien mandant            (26bis-relations)
+                 Trois fois le meme mecanisme, trouve trois fois separement. Il
+                 faut le chercher UNE fois, exhaustivement.
+
+                 PREMIERE MESURE, faite le 31/08 -- CE QUI EST REFAIT CHAQUE NUIT
+                 et gelera donc a la coupure :
+
+                    REMPLACEES en local (delete + insert)
+                       app_contact_current
+                       app_contact_relation_current
+                       app_contact_search_current
+                       app_contact_duplicate_group_current
+                       app_contact_duplicate_member_current
+
+                    RECONSTRUITES (drop + create as)
+                       app_view_generale
+                       app_view_demandes_mandat_diffusion
+
+                    VIDEES au push Supabase
+                       app_dossier_current
+                       app_dossier_detail_current      <- porte proprietaires_json
+                       app_mandat_register_current
+                       app_mandat_broadcast_current
+                       app_archive_annonce_index_current
+                       app_historical_annonce_index_current
+                       app_brouillon_annonce_index_current
+                       app_work_item_current
+                       app_filter_catalog_current_store
+
+                 => 16 tables au moins. Chacune doit recevoir la meme question :
+                    « qu'arrive-t-il a un objet ne dans l'app quand cette table
+                      est refaite, et Hektor ne repond plus ? »
+
+                 CE QUI SURVIT, et qu'il ne faut pas confondre avec le reste :
+                 les tables de DOUBLURE, jamais reconstruites --
+                    app_dossier · app_contact · app_search_registry
+                    app_affaire_ledger · app_*_champ_app
+                    app_*_provisional (les quatre posees en aout)
+                 Elles gardent l'IDENTITE. C'est le CORPS qui manque.
 ```
 
 **Ce verrou leve, quatre tâches de C.4 se debloquent d'un coup :**
