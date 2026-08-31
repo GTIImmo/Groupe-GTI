@@ -11647,6 +11647,18 @@ async function waitForHektorMandantLink(job, annonceId, contactId, step, options
 }
 
 async function linkHektorMandantContact(job, annonceId, contactId, step = "hektor_mandant") {
+  // Court-circuit « c'est deja fait ». Un faux negatif ici ne refuse rien, mais
+  // il REJOUE un rattachement deja pose. L'API tranche d'abord ; si elle se tait,
+  // la console garde le dernier mot comme avant.
+  const dejaSelonApi = await lienMandantSelonApi(job, annonceId, contactId, step);
+  if (dejaSelonApi.verdict === "lie") {
+    return {
+      status: "already_linked",
+      hektor_annonce_id: annonceId,
+      hektor_contact_id: contactId,
+      source: "api",
+    };
+  }
   const before = await fetchHektorProspectsList(annonceId);
   if (hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
     return {
@@ -11860,6 +11872,19 @@ async function handleCreateHektorMandatAutoNumber(job) {
   const prospects = await fetchHektorProspectsList(annonceId);
   if (!mandantIds.length) {
     mandantIds = parseHektorLinkedMandantContactIds(prospects.text, annonceId);
+  }
+  // DECOUVERTE, pas verification -- et c'etait le dernier trou du meme defaut.
+  // Si la console est aveugle aux mandants d'une autre agence, elle rend une
+  // liste VIDE, et on levait « aucun mandant rattache » sur une annonce qui en a.
+  // L'API n'est pas filtree : elle sait les nommer.
+  if (!mandantIds.length) {
+    const selonApi = await lireProprietairesViaApi(job, annonceId, "hektor_mandant_prealable");
+    if (Array.isArray(selonApi.ids) && selonApi.ids.length) {
+      mandantIds = selonApi.ids.map(String);
+      await logJob(job.id, "hektor_mandant_prealable", "done",
+        "Mandants nommes par l'API (la console n'en montrait aucun depuis ce compte)",
+        { hektor_annonce_id: String(annonceId), mandant_contact_ids: mandantIds });
+    }
   }
   if (!mandantIds.length) {
     throw new Error("Aucun mandant Hektor rattache a cette annonce: cree ou associe un mandant avant de generer le numero de mandat.");
@@ -13915,8 +13940,13 @@ async function executerCreationMandantContact(job) {
   const created = await createHektorMandantContact(job, annonceId, payload);
   await sleep(1800);
 
-  let after = await fetchHektorProspectsList(annonceId);
-  if (!hektorProspectLinkedInHtml(after.text, created.contactId, annonceId)) {
+  // Comme a la creation d'annonce : on demande a l'API AVANT de rejouer
+  // l'association, pour ne pas la reposer sur un lien qui existe deja.
+  const dejaPose = await lienMandantSelonApi(job, annonceId, created.contactId, "hektor_mandant_create");
+  let after = dejaPose.verdict === "lie"
+    ? { text: "" }
+    : await fetchHektorProspectsList(annonceId);
+  if (dejaPose.verdict !== "lie" && !hektorProspectLinkedInHtml(after.text, created.contactId, annonceId)) {
     await logJob(job.id, "hektor_mandant_create", "running", "Association automatique absente, tentative association mandant", {
       hektor_annonce_id: annonceId,
       hektor_contact_id: created.contactId,
@@ -15548,13 +15578,28 @@ async function handleCreateHektorDraftAnnonce(job) {
         hektor_user_email: payload.hektor_user_email || null,
       });
       await sleep(1800);
-      let afterMandant = await fetchHektorProspectsList(created.id);
-      if (!hektorProspectLinkedInHtml(afterMandant.text, createdContact.contactId, created.id)) {
-        await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(createdContact.contactId)}&idann=${encodeURIComponent(String(created.id))}`);
-        await sleep(1800);
+      // Meme correction que les cinq autres verifications du lien mandant : la
+      // console est filtree par l'agence du compte, l'API ne l'est pas.
+      // ICI LE RISQUE EST DOUBLE : un faux negatif ne fait pas que refuser, il
+      // REJOUE l'association (selectnouveauproprio_sup) sur un lien qui existe
+      // deja. On interroge donc l'API AVANT de rejouer, pas seulement avant de
+      // refuser.
+      let lienInitial = await lienMandantSelonApi(job, created.id, createdContact.contactId, "hektor_mandant_preuve");
+      let afterMandant = null;
+      if (lienInitial.verdict !== "lie") {
         afterMandant = await fetchHektorProspectsList(created.id);
+        if (!hektorProspectLinkedInHtml(afterMandant.text, createdContact.contactId, created.id)) {
+          await hektorFetch(`${XMLRPC_URL}?mode=selectnouveauproprio_sup&id=${encodeURIComponent(createdContact.contactId)}&idann=${encodeURIComponent(String(created.id))}`);
+          await sleep(1800);
+          afterMandant = await fetchHektorProspectsList(created.id);
+          lienInitial = await lienMandantSelonApi(job, created.id, createdContact.contactId, "hektor_mandant_preuve");
+        }
       }
-      if (!hektorProspectLinkedInHtml(afterMandant.text, createdContact.contactId, created.id)) {
+      if (lienInitial.verdict === "non_lie") {
+        throw new Error(`Creation contact OK mais association mandant non confirmee pour ${createdContact.contactId}`);
+      }
+      if (lienInitial.verdict === "inconnu"
+          && !(afterMandant && hektorProspectLinkedInHtml(afterMandant.text, createdContact.contactId, created.id))) {
         throw new Error(`Creation contact OK mais association mandant non confirmee pour ${createdContact.contactId}`);
       }
       initialMandantCreate = {
