@@ -1318,6 +1318,62 @@ taches : ils les feront SURVIVRE a la coupure.** Ce n'est pas le meme calendrier
                    « status <> linked » pour ne jamais dementir une reussite.
 ```
 
+**LA CONSOLE HEKTOR EST FILTREE PAR L'AGENCE DU COMPTE — etabli le 31/08**
+
+```
+[x] LE FAIT, lu sous DEUX comptes sur la MEME page          ETABLI 31/08
+    annonce 62964, mandant 603953
+       lu en ADMIN (idUser 4)      ->  visible, « Bien ajoute le 28-08-2026 »
+       lu en GONZALEZ (idUser 48)  ->  ABSENT
+
+    Le worker agit sous le negociateur du BIEN (preferDossierOwner: true),
+    jamais du CONTACT. Un mandant d'une autre agence lui est invisible, et il
+    conclut « pas lie ».
+
+    PAS REPARABLE EN CHANGEANT DE COMPTE : le geste touche deux objets qui
+    peuvent appartenir a deux agences. Quel que soit le compte, l'un des deux
+    sort du perimetre.
+
+[x] LA PARADE : CHANGER DE SOURCE                            FAIT 31/08
+    L'API s'authentifie par JETON, pas par session de negociateur -- elle n'est
+    pas filtree. Pont phase2/sync/annonce_proprietaires_from_api.py, sur le
+    modele d'annonce_etat_from_api.py (29/08).
+    Les DIX lectures du lien mandant y sont adossees, la console en repli.
+    L'arbitre rend TROIS issues : lie / non_lie / inconnu -- « inconnu » retombe
+    sur le scrape, jamais sur un succes suppose.
+
+    EPROUVE EN CONDITIONS REELLES le 31/08 au soir :
+       modifier un mandant   ->  done, « Firminy » arrive chez Hektor,
+                                 pending efface, un seul envoi
+       rattacher un mandant  ->  « already_linked » par l'API, RIEN de reecrit
+                                 (avant : echec, puis rattachement rejoue)
+
+[ ] CE QUI RESTE                                             a faire un jour
+    . waitForHektorMandantLink interroge la console 4 fois AVANT l'API. Pour un
+      contact hors agence ces 4 appels sont perdus d'avance -- perte de debit,
+      pas de justesse. A inverser si le debit devient un sujet.
+    . les autres garde-fous par scrape (documents, photos, transactions) n'ont
+      pas ete traites : la mesure ne le justifiait pas. A reprendre si un echec
+      inexplique apparait la-bas.
+```
+
+> ⚠ **PRECISION QUI M'AVAIT ECHAPPE, apportee par Frederic** : *« le worker
+> generer le n° de mandat a FONCTIONNE, c'est le compte formation qui pose
+> probleme »*. Verifie -- 3 reussites (24113, 62774, 62966) contre 1 echec
+> (62964), dont une le JOUR MEME de l'echec.
+>
+> **Les 9 504 liens inter-agences decrivent une CONFIGURATION A RISQUE, pas un
+> taux d'echec.** Les annonces qui ont reussi portaient elles aussi des mandants
+> d'autres agences ; l'echec ne survient que si le geste porte precisement sur un
+> lien hors agence -- sur 62964, l'unique mandant l'etait.
+>
+> Et ce n'est pas que le compte formation : l'annonce 24113 (Firminy) porte un
+> mandant de **Groupe GTI Saint-Etienne**. Une vraie agence sur le bien d'une
+> autre. C'est pour ca que la parade valait le coup malgre le faible nombre
+> d'echecs constates.
+
+---
+
 **CE QUE L'ESSAI DU 31/08 A LAISSE SUR LA TABLE :**
 
 ```
