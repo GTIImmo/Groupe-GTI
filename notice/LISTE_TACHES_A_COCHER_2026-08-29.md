@@ -139,14 +139,64 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [x] le defaut prouve par un essai       offre inexistante -> travail "done", etat faux affiche
 [x] la cause relevee chez Hektor        "[]" = echec, "1" = succes -- il DIT quand il echoue
 [x] le principe corrige sur mes 3 gestes  on EXIGE la preuve du succes
-[ ] verifier les 18 handlers un par un  chacun exige-t-il une PREUVE, ou conclut-il du silence ?
-                                        EN LISANT le code, pas par recherche de motif :
-                                        cette methode m'a trompe QUATRE fois le 29/08
-[ ] corriger ceux qui deduisent
+[x] verifier les 18 handlers un par un   FAIT le 01/09 -- ET C'ETAIT DEJA FAIT
+                                        Demande de Frederic : « mais on avait
+                                        deja fait les 18 ». Verifie dans le code.
+
+    20 handlers ecrivent chez Hektor
+    18 EXIGENT UNE PREUVE  -- ils levent une erreur explicite quand Hektor ne
+                              confirme pas : « non confirmee », « non modifiee »,
+                              « introuvable », « pas lie »
+     2 NE L'EXIGENT PAS    -- voir ci-dessous
+
+    ⚠ CINQUIEME MESURE FAUSSE PAR RECHERCHE DE MOTIF. Ma premiere passe n'en
+    trouvait que 15 : la preuve est souvent dans la fonction APPELEE, pas dans le
+    handler lui-meme. Exemple -- handleCreateHektorContact parait aveugle, mais
+    createHektorContact fait :
+        const contactId = parseHektorCreatedContactId(response.text);
+        if (!contactId) throw new Error("Creation contact Hektor non confirmee");
+    Il a fallu suivre les appels sur deux niveaux pour voir juste. C'est
+    exactement l'avertissement que le plan portait -- et je suis retombe dedans.
+
+[ ] corriger ceux qui deduisent          DEUX handlers, tous deux SIGNATURE
+    handleRelanceSignature          relance d'une signature
+    handleCancelSignatureProcedure  annulation d'une signature
+
+    Tous deux envoient leur ordre puis rendent « reminded » / « cancelled » SANS
+    verifier que la procedure a bouge. Ils gardent les 160 premiers caracteres de
+    la reponse sans les lire.
+
+    ➡ LE PLAN DU 20/08 AVAIT VU JUSTE : « Seul indice a confirmer :
+      handleRelanceSignature ne semble verifier que son message d'entree ».
+      L'indice etait bon, et il vaut aussi pour l'annulation.
+
+    ⏸ NE PAS Y TOUCHER -- decision de Frederic, 01/09. Ces deux gestes dependent
+      de l'abonnement ImmoSign de Hektor : ils disparaitront le jour du contrat
+      de signature en propre (A.2). Corriger un geste voue a disparaitre n'a pas
+      de sens tant que A.2 n'est pas tranche.
+
+    ➡ C.4-bis-0 N'EST DONC PAS « 1 a 2 jours de relecture » mais DEUX handlers,
+      tous deux hors du chemin critique. Le filet C.4-bis peut etre pose : la
+      detection est bonne sur 18 gestes sur 20, et les 2 restants ne sont pas
+      des gestes metier courants.
 ```
-*Constate au passage : `handleRelanceSignature` semble ne verifier que son message d'entree,
-pas la reponse de Hektor. A confirmer. `handleUpdateHektorContactSearch`, lui, verifie bien --
-ma premiere mesure le disait aveugle, elle etait fausse.*
+
+> ### ⚠ ET UN SECOND SENS, QUE C.4-bis-0 N'AVAIT PAS PREVU *(constate le 31/08)*
+>
+> La tache ne cherchait qu'un defaut : **deduire du silence** -- un echec qui
+> passe pour un succes. L'essai du 31/08 a montre **le cas symetrique**, et il
+> est tout aussi couteux :
+>
+> ```
+>    deduire du silence   ->  un echec passe pour un succes  ->  le filet ne le voit pas
+>    relire a l'aveugle   ->  un succes passe pour un echec  ->  le filet le rejoue pour rien
+> ```
+>
+> Le rattachement du mandant du 28/08 avait **REUSSI** et s'est declare en echec,
+> parce que la relecture etait filtree par l'agence du compte. Sans correction,
+> le filet aurait rejoue un rattachement deja pose.
+>
+> **Quand on posera C.4-bis, chercher les DEUX sens.**
 
 ## 4. C.4-bis — LE FILET DE REJEU *(geste (c) de C.1', rouvert)*
 
