@@ -1357,20 +1357,67 @@ taches : ils les feront SURVIVRE a la coupure.** Ce n'est pas le meme calendrier
       inexplique apparait la-bas.
 ```
 
-> ⚠ **PRECISION QUI M'AVAIT ECHAPPE, apportee par Frederic** : *« le worker
-> generer le n° de mandat a FONCTIONNE, c'est le compte formation qui pose
-> probleme »*. Verifie -- 3 reussites (24113, 62774, 62966) contre 1 echec
-> (62964), dont une le JOUR MEME de l'echec.
+> ### ⚠ CE QUE J'AI RACONTE DE TRAVERS, ET QUE LA CHRONOLOGIE CORRIGE
 >
-> **Les 9 504 liens inter-agences decrivent une CONFIGURATION A RISQUE, pas un
-> taux d'echec.** Les annonces qui ont reussi portaient elles aussi des mandants
-> d'autres agences ; l'echec ne survient que si le geste porte precisement sur un
-> lien hors agence -- sur 62964, l'unique mandant l'etait.
+> Frederic : *« le worker generer le n° de mandat a FONCTIONNE, c'est le compte
+> formation qui pose probleme, pas le worker »*. **Il avait raison sur le worker
+> -- et j'avais tort sur la cause, deux fois de suite.**
 >
-> Et ce n'est pas que le compte formation : l'annonce 24113 (Firminy) porte un
-> mandant de **Groupe GTI Saint-Etienne**. Une vraie agence sur le bien d'une
-> autre. C'est pour ca que la parade valait le coup malgre le faible nombre
-> d'echecs constates.
+> **CE QUI S'EST REELLEMENT PASSE sur l'annonce 62964, lu dans l'ordre des
+> travaux :**
+>
+> ```
+>    27/08 23:02   creation de l'annonce                    ->  OK
+>    28/08 05:47   « generer le n° de mandat »              ->  ERREUR
+>    28/08 05:48   « rattacher le mandant 603953 »          ->  ERREUR
+> ```
+>
+> **L'ordre est inverse.** On a demande le numero AVANT de rattacher le mandant.
+> A 05:47 l'annonce n'en avait aucun, et le worker a repondu « le contact 603953
+> n'est pas confirme comme mandant » -- **la stricte verite**. Ce n'est pas un
+> defaut, c'est un garde-fou qui fait son travail : on ne genere pas un mandat
+> sans mandant.
+>
+> **La preuve par comparaison, le meme matin :**
+>
+> ```
+>    28/08 05:53   creation de l'annonce 62966 AVEC son mandant integre
+>    28/08 05:55   « generer le n° de mandat »              ->  REUSSI
+> ```
+>
+> Six minutes plus tard, meme worker, meme compte GONZALEZ. Ca marche parce que
+> le mandant etait deja la.
+>
+> **LE VRAI DEFAUT est ailleurs -- dans le travail de 05:48 :**
+>
+> ```
+>    05:48:51   « Association mandant/proprietaire dans Hektor »   l'ecriture PART
+>    05:48:57   ERREUR « association non confirmee »               la relecture echoue
+> ```
+>
+> **L'association a ete FAITE** -- c'est pour cela qu'Hektor affiche aujourd'hui
+> « Bien ajoute le 28-08-2026 ». Ce qui a echoue, c'est la RELECTURE, filtree par
+> l'agence du compte. Le travail a ete marque en erreur alors qu'il avait reussi,
+> et on a cru le rattachement non passe.
+>
+> ```
+>    generer le n° de mandat   OK -- l'echec du 28/08 etait JUSTIFIE
+>    rattacher un mandant      a reussi mais s'est declare en echec  <- LE defaut
+>    modifier un mandant       faux negatif avere le 31/08 a 17:09   <- LE defaut
+> ```
+>
+> **La parade par l'API reste donc justifiee, mais pour DEUX gestes sur trois,
+> pas trois.** Et les 9 504 liens inter-agences decrivent une CONFIGURATION A
+> RISQUE, pas un taux d'echec : j'avais ecrit « 47 % du parc » dans un commit,
+> c'est mal formule.
+>
+> Ce n'est pas non plus que le compte formation : l'annonce 24113 (Firminy)
+> porte un mandant de **Groupe GTI Saint-Etienne**. Une vraie agence sur le bien
+> d'une autre -- c'est ce qui justifie la parade malgre si peu d'echecs constates.
+>
+> **LA LECON DE METHODE, la troisieme de la journee :** j'ai explique un echec
+> par la derniere cause trouvee (le filtrage par agence) sans lire l'ORDRE des
+> travaux. La chronologie disait tout, et je ne l'avais pas regardee.
 
 ---
 
