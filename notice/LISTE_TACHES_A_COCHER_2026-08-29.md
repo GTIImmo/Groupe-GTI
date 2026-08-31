@@ -1109,12 +1109,76 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
 **Ce verrou leve, quatre tâches de C.4 se debloquent d'un coup :**
 
 ```
-    ajouter une recherche · creer un contact
-    creer un mandant      · mettre a jour un mandant
+[x] ajouter une recherche   FAIT 31/08   [x] creer un contact   FAIT 31/08
+[ ] creer un mandant                     [ ] mettre a jour un mandant
 ```
 
 *Elles etaient comptees dans C.4 ce matin. C'etait une erreur de ma part : elles n'attendent
 pas du code de worker, elles attendent une identite.*
+
+**CORRECTION DU 31/08 :** elles n'attendaient pas 26bis-contacts non plus. L'essai le
+prouve -- le contact 605095 et la recherche du contact 605030 sont bien redescendus dans
+le miroir, parce que Hektor les a confirmes. **26bis / 26bis-contacts ne DEBLOQUENT pas ces
+taches : ils les feront SURVIVRE a la coupure.** Ce n'est pas le meme calendrier.
+
+```
+[x] C.9-recherche  AJOUTER UNE RECHERCHE ECRIT CHEZ NOUS D'ABORD   FAIT 31/08
+                   Table app_search_provisional + RPC app_create_search_optimistic
+                   (ligne provisoire ET travail dans une seule transaction, la RPC
+                   APPELLE les garde-fous existants au lieu de les recopier).
+                   Le worker relie, marque l'erreur, enchaine la resynchro.
+                   La ligne s'efface quand cette resynchro est TERMINEE -- un fait,
+                   pas un compte de recherches qu'une suppression ferait mentir.
+
+                   EPROUVE A L'ECRAN, cycle complet (contact 605030, Firminy) :
+                     ligne provisoire posee -> badge « En creation… »
+                     worker -> status linked, resynchro enchainee
+                     resynchro done -> la ligne s'efface, la vraie recherche
+                     s'affiche « Active », rapprochement calcule (7 biens)
+                   Et l'etat d'echec : badge « Erreur de creation », rouge.
+
+                   CE QUE L'ESSAI A CORRIGE EN COURS DE ROUTE :
+                   le try/catch ne couvrait que l'appel de creation. Le premier
+                   essai a echoue AVANT, sur la bascule de contexte negociateur --
+                   la ligne est restee « En creation… » pour toujours, soit
+                   exactement le defaut qu'elle devait supprimer. Enveloppe posee
+                   sur la recherche ET sur le contact (meme trou), avec le garde
+                   « status <> linked » pour ne jamais dementir une reussite.
+```
+
+**DEUX POINTS OUVERTS, sortis de l'essai du 31/08 :**
+
+```
+[ ] LISTE DES RECHERCHES SCRAPEE : elle SUR-COMPTE         constat 31/08
+    Mesure : contact 605030, UNE recherche creee, aucune avant.
+             fetchHektorContactSearchList rend 3 identifiants.
+    La regex ratisse dropDownMenu_ / contentDrop_ / valueInputAutoarchivage /
+    rel="…" / getWizardCritere. Les quatre premiers motifs porteraient le MEME
+    idCritere (donc dedupliques) : les 3 valeurs sont donc DIFFERENTES -- il y a
+    du bruit, « rel= » etant le suspect le plus large.
+
+    POURQUOI CA COMPTE, et ce n'est pas theorique :
+       handleUpdateHektorContactSearch  ->  resolveContactSearchTargetCritereId
+       handleDeleteHektorContactSearch  ->  resolveContactSearchTargetCritereId
+    qui prend « l'entree d'index N » de cette liste. Si la liste contient du
+    bruit, l'index ne designe pas la recherche voulue.
+
+    CE QU'ON NE SAIT PAS ENCORE, et qu'il ne faut pas supposer : peut-etre que la
+    premiere entree est toujours la bonne et que le bruit vient apres -- auquel
+    cas index 0 tape juste et le defaut ne se voit qu'a partir de la deuxieme
+    recherche. A ETABLIR PAR L'EXPERIENCE, comme la condition de blocage des
+    compromis : lire le HTML de contacts-contactProfile-recherche-changeTab sur
+    un contact a plusieurs recherches, et comparer.
+
+    NE PAS SUPPRIMER LA RECHERCHE D'ESSAI du contact 605030 tant que ce point
+    n'est pas etabli : la suppression passe par ce meme chemin.
+
+[ ] LES LIGNES PROVISOIRES RECONCILIEES NE SONT JAMAIS PURGEES
+    Voulu (regle C.1' : une saisie ne se perd jamais, la sortie est un geste
+    humain). Mais rien ne les retire une fois « linked » et la resynchro passee :
+    elles s'accumulent. Quelques lignes par jour, donc pas urgent -- mais a
+    trancher, pas a laisser filer par oubli.
+```
 
 ---
 
