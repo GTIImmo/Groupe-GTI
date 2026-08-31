@@ -1063,6 +1063,47 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
 
 [ ] 4-suite      BASCULER LA CLE DES RECHERCHES
                  La doublure tourne depuis le 21/08 et s'observe.
+
+[ ] 26bis-CONTACTS  LE CORPS DU CONTACT             AJOUTEE LE 31/08
+                 ⚠ CETTE TACHE N'EXISTAIT PAS. Le plan la croyait sans objet.
+
+                 CE QUE LE PLAN AFFIRMAIT :
+                    « Le contact possede tout. L'annonce possede son
+                      identite, pas son corps. »
+                 C'EST FAUX POUR LA MOITIE, et la lecture du code le dit :
+
+                    ANNONCES  app_view_generale     DROP + CREATE AS
+                    CONTACTS  app_contact_current   DELETE + INSERT
+                                                    (replace_table_rows)
+
+                 load_contacts() lit « FROM hektor_contact » -- LE MIROIR.
+                 Le corps du contact est donc refait chaque nuit depuis
+                 Hektor, EXACTEMENT comme celui de l'annonce.
+
+                 L'inventaire du 25/08 avait lu la DECLARATION des tables
+                 (CREATE IF NOT EXISTS) et non le CHEMIN DES DONNEES.
+
+                 CE QUI SURVIT A LA COUPURE, et c'est rassurant : le miroir
+                 GELE, il ne disparait pas. La reconstruction reproduit le
+                 meme contenu. Les 355 770 contacts gardent leur corps,
+                 comme les 61 099 annonces.
+
+                 CE QUI NE SURVIT PAS : un contact NE DANS L'APP n'a aucune
+                 ligne dans le miroir -> son corps est efface a la premiere
+                 reconstruction. Son identite survit dans app_contact, mais
+                 elle ne pointe plus sur rien.
+
+                 Mesure : app_contact    355 770, dont 0 sans numero Hektor
+                          app_dossier     61 099, dont 0 sans numero Hektor
+                 Le patron existe pour les deux. Il n'a JAMAIS servi.
+
+                 MEME NATURE QUE 26bis, MEME URGENCE : le remplissage ne
+                 peut se faire que PENDANT QUE HEKTOR VIT ENCORE.
+                 Aujourd'hui un contact cree dans l'app finit dans le miroir
+                 parce que Hektor le confirme ; le jour ou il ne repond
+                 plus, ce filet disparait.
+
+                 A FAIRE AVANT C.9, comme 26bis.
 ```
 
 **Ce verrou leve, quatre tâches de C.4 se debloquent d'un coup :**
