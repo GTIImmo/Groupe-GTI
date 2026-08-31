@@ -96,12 +96,15 @@ un contact poussé emmène toutes ses recherches, donc les rangs restent cohére
    delete_hektor_contact_search     2 réussis    tous deux en juin
 ```
 
-**29 travaux en deux mois et demi.** Ces chemins ne servent presque jamais — et c'est
-**normal, c'est la décision du 19/06** : l'édition d'une recherche passe par
-`editSearchOptimistic`, qui ne crée aucun travail.
+**29 travaux en deux mois et demi, et plus AUCUN depuis le 21/08.**
 
-Cela change l'échelle du risque signalé aujourd'hui (§5) : il porte sur **26 gestes en
-2,5 mois**, pas sur un flux quotidien.
+Ce silence a deux causes, et je n'avais vu que la première :
+1. l'édition passe par `editSearchOptimistic`, qui ne crée aucun travail *(19/06)* ;
+2. **et depuis C.3 (24/08), le pending lui-même est posé avec `push_search = null`** — la
+   porte sortante des recherches est fermée. Le dernier travail date du 21/08 : trois jours
+   avant.
+
+**Ce ne sont donc pas des chemins peu utilisés : ce sont des chemins fermés.** Voir §5.
 
 ### Un angle mort de mesure, à signaler
 
@@ -112,7 +115,51 @@ mais on ne peut pas mesurer ce qu'on ne compte pas.
 
 ---
 
-## 5. Le risque signalé aujourd'hui, énoncé sans le grossir
+## 5. Le « risque » signalé aujourd'hui — **sur un chemin qui ne s'exécute plus**
+
+> ### ⚠ CORRECTION, apportée par Frédéric le 31/08
+>
+> *« Dans l'app, on a acté qu'aucun worker ne partait pour les modifications de recherche.
+> C'est pour cela que tu dois avoir des traces. Cherche normalement : l'app retrouve la bonne
+> recherche pour la modifier, non ? »*
+>
+> **Oui. Et c'est écrit noir sur blanc dans `app_edit_search_optimistic` :**
+>
+> ```sql
+> -- le ciblage : dans NOTRE table, jamais chez Hektor
+> select * into cur from app_contact_search_current
+>  where hektor_contact_id = clean_id and search_index = v_index;
+>
+> -- et la porte sortante :
+> push_search = null   /* C.3 24/08 : plus d'envoi vers Hektor */
+> ```
+>
+> **L'app cible par `(contact, search_index)` dans sa propre table** — celle-là même que
+> l'écran affiche, avec le même index. Elle ne consulte jamais la console. Elle trouve donc
+> toujours la bonne recherche.
+>
+> **Et depuis C.3 (24/08), le pending est posé avec `push_search = null` : aucun travail ne
+> part plus chez Hektor.** Les 26 travaux mesurés au §4 sont des traces d'AVANT — le dernier
+> date du 21/08, soit trois jours avant la fermeture. Ce n'était pas un signe de faible
+> usage : c'était la marque d'une porte qu'on a fermée exprès.
+>
+> **Donc `fetchHektorContactSearchList` et `resolveContactSearchTargetCritereId` sont sur un
+> chemin MORT.** Le défaut décrit ci-dessous est réel dans le code, mais il ne peut pas se
+> produire : rien ne l'appelle plus.
+>
+> **Rien à corriger. Aucune doublure à poser.** Ce qui suit est conservé comme constat de
+> lecture, pas comme travail à faire.
+>
+> **Ma faute de méthode** : j'avais mesuré au §4 que ces chemins ne servaient plus, et j'ai
+> attribué ce silence à la décision du 19/06 (l'édition optimiste) sans aller vérifier
+> l'existence d'une fermeture explicite. La mesure était bonne, je me suis arrêté un cran
+> trop tôt dans la lecture — et j'ai bâti un risque sur du code inerte.
+
+---
+
+### Le constat de lecture, conservé pour mémoire
+
+
 
 **Mesure**, contact 605030, une recherche créée, aucune avant :
 `fetchHektorContactSearchList` rend **3 identifiants**.
@@ -277,10 +324,10 @@ c'est le même trou, vu de l'autre bout.)*
 
 **L'ordre que je recommande, du moins risqué au plus engageant :**
 
-1. ~~Établir le comportement de la liste scrapée~~ **FAIT le 31/08** (§5). Le défaut existe,
-   il est dormant, et le bon attribut est identifié : `data-search-id`.
-   **Suite** : lire `data-search-id` d'abord, garder l'ancienne regex en repli, journaliser les
-   deux, observer — puis basculer. Ne PAS basculer sur une seule lecture faite en admin.
+1. ~~Établir le comportement de la liste scrapée~~ **CLOS le 31/08 — SANS SUITE.**
+   Le chemin est mort depuis C.3 (24/08) : `push_search = null`, aucun travail ne part.
+   L'app cible la recherche par `(contact, search_index)` dans sa propre table.
+   **Rien à corriger, rien à observer.**
 2. **Corriger la purge des rapprochements** à la suppression d'un contact — trou net, isolé,
    sans effet sur les recherches.
 3. **Trancher la question restée ouverte depuis le 19/06** : *les recherches remontent-elles
