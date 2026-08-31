@@ -1146,38 +1146,59 @@ taches : ils les feront SURVIVRE a la coupure.** Ce n'est pas le meme calendrier
                    « status <> linked » pour ne jamais dementir une reussite.
 ```
 
-**DEUX POINTS OUVERTS, sortis de l'essai du 31/08 :**
+**CE QUE L'ESSAI DU 31/08 A LAISSE SUR LA TABLE :**
 
 ```
-[ ] LISTE DES RECHERCHES SCRAPEE : elle SUR-COMPTE         constat 31/08
-    Mesure : contact 605030, UNE recherche creee, aucune avant.
-             fetchHektorContactSearchList rend 3 identifiants.
-    La regex ratisse dropDownMenu_ / contentDrop_ / valueInputAutoarchivage /
-    rel="…" / getWizardCritere. Les quatre premiers motifs porteraient le MEME
-    idCritere (donc dedupliques) : les 3 valeurs sont donc DIFFERENTES -- il y a
-    du bruit, « rel= » etant le suspect le plus large.
+[ ] SUPPRIMER UN CONTACT LAISSE SES RAPPROCHEMENTS ORPHELINS
+    ⚡ LE SEUL VRAI TROU TROUVE LE 31/08 -- et sur un chemin BIEN VIVANT.
 
-    POURQUOI CA COMPTE, et ce n'est pas theorique :
-       handleUpdateHektorContactSearch  ->  resolveContactSearchTargetCritereId
-       handleDeleteHektorContactSearch  ->  resolveContactSearchTargetCritereId
-    qui prend « l'entree d'index N » de cette liste. Si la liste contient du
-    bruit, l'index ne designe pas la recherche voulue.
+    handleDeleteHektorContact purge app_contact_search_current (son resultat le
+    dit : « app_contact_search_current: 1 ») mais NE TOUCHE PAS a
+        app_rapprochement                 (la ligne de rapprochement)
+        app_rapprochement_score_history   (son historique de score)
+        app_rapprochement_search_state    (l'etat de la recherche)
 
-    CE QU'ON NE SAIT PAS ENCORE, et qu'il ne faut pas supposer : peut-etre que la
-    premiere entree est toujours la bonne et que le bruit vient apres -- auquel
-    cas index 0 tape juste et le defaut ne se voit qu'a partir de la deuxieme
-    recherche. A ETABLIR PAR L'EXPERIENCE, comme la condition de blocage des
-    compromis : lire le HTML de contacts-contactProfile-recherche-changeTab sur
-    un contact a plusieurs recherches, et comparer.
+    MESURE : 3 contacts d'essai supprimes le matin du 31/08 (605093, 605094,
+    605095) ont laisse 279 lignes derriere eux -- 138 + 138 + 3. Les huit autres
+    tables portant contact_search_key etaient vides pour ces cles.
 
-    NE PAS SUPPRIMER LA RECHERCHE D'ESSAI du contact 605030 tant que ce point
-    n'est pas etabli : la suppression passe par ce meme chemin.
+    POURQUOI CA N'AVAIT JAMAIS ETE VU : personne n'avait encore supprime un
+    contact QUI PORTAIT UNE RECHERCHE. Le seul contact supprime auparavant
+    (604135, juin) n'en avait pas.
+
+    NETTOYE le 31/08 (0 orphelin restant) mais LE HANDLER N'EST PAS CORRIGE :
+    la prochaine suppression d'un contact avec recherche refera le trou.
+
+    OU CORRIGER : Console/console_job_worker.js, le bloc « cleanup » de
+    handleDeleteHektorContact -- la ou app_contact_search_current est deja purge.
+    Ajouter les trois tables, dans le meme geste et par la meme cle.
 
 [ ] LES LIGNES PROVISOIRES RECONCILIEES NE SONT JAMAIS PURGEES
     Voulu (regle C.1' : une saisie ne se perd jamais, la sortie est un geste
     humain). Mais rien ne les retire une fois « linked » et la resynchro passee :
     elles s'accumulent. Quelques lignes par jour, donc pas urgent -- mais a
     trancher, pas a laisser filer par oubli.
+
+[—] LISTE DES RECHERCHES SCRAPEE          CLOS LE 31/08 -- SANS SUITE
+    J'avais signale un risque sur resolveContactSearchTargetCritereId.
+    Frederic a corrige : AUCUN WORKER NE PART PLUS pour les modifications de
+    recherche. C'est ecrit dans app_edit_search_optimistic :
+
+        push_search = null   /* C.3 24/08 : plus d'envoi vers Hektor */
+
+    et le ciblage ne passe jamais par la console :
+
+        select * into cur from app_contact_search_current
+         where hektor_contact_id = clean_id and search_index = v_index;
+
+    L'app cible par (contact, search_index) dans SA table -- celle que l'ecran
+    affiche, avec le meme index. Elle trouve toujours la bonne recherche.
+    Le defaut existe dans le code mais RIEN NE L'APPELLE. Rien a corriger.
+
+    LA LECON : les 26 traces de jobs n'etaient pas un faible usage, c'etait la
+    marque d'une porte fermee exprès (dernier job le 21/08, C.3 le 24/08).
+    Mesurer qu'un chemin ne sert plus ne dit pas POURQUOI. Il faut aller lire.
+    Voir notice/AUDIT_RECHERCHES_ETAT_REEL_2026-08-31.md
 ```
 
 ---
