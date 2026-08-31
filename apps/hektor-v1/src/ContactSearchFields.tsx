@@ -58,6 +58,14 @@ const NAV = [
 
 const TYPE_LABEL: Record<string, string> = Object.fromEntries([...TYPE_MAIN, ...TYPE_MORE].map((t) => [t.id, t.label]))
 
+// C.9 (31/08) : la ligne provisoire d'une recherche a besoin des LIBELLES, pas des
+// identifiants -- app_contact_search_current range types_json en objet
+// { "Maison": "1" }, et c'est ce que la carte lit. Seul cet ecran connait la
+// correspondance ; on l'expose plutot que de la recopier ailleurs.
+export function contactSearchTypeLabels(typeIds: string[]): string[] {
+  return (typeIds ?? []).map((id) => TYPE_LABEL[String(id)] || String(id)).filter(Boolean)
+}
+
 const EQUIP_ITEM_BY_CODE: Record<string, string> = {
   garage_parking: 'ITEM_GARAGE_PARKING', terrasse: 'ITEM_TERRASSE', balcon: 'ITEM_BALCON', piscine: 'ITEM_PISCINE',
   ascenseur: 'ITEM_ASCENSEUR', cheminee: 'ITEM_CHEMINEE', cave: 'ITEM_CAVE', double_vitrage: 'ITEM_DOUBLE_VITRAGE',

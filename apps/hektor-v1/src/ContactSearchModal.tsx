@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { createHektorContactSearchJob, editSearchOptimistic } from './lib/api'
+import { createHektorContactSearchJobOptimistic, editSearchOptimistic } from './lib/api'
 import type { AppContactSearch, ConsoleJob } from './types'
 import ContactSearchFields, {
+  contactSearchTypeLabels,
   contactSearchValueFromSearch,
   contactSearchValueToInput,
   defaultContactSearchValue,
@@ -74,7 +75,16 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
         window.setTimeout(() => props.onClose(), 1200)
         return
       } else {
-        const job = await createHektorContactSearchJob({ contactId: props.contactId, search, context })
+        // C.9 (31/08) : la recherche s'ecrit CHEZ NOUS d'abord (ligne provisoire),
+        // dans la meme transaction que le travail. Sans ca, la saisie n'existait
+        // que dans le payload du travail : conservee depuis C.1', mais invisible
+        // a l'ecran tant que Hektor n'avait pas repondu.
+        const job = await createHektorContactSearchJobOptimistic({
+          contactId: props.contactId,
+          search,
+          context,
+          typeLabels: contactSearchTypeLabels(value.typeIds),
+        })
         props.onCreated?.(job)
         props.onClose()
       }

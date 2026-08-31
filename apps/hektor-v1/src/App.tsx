@@ -31539,6 +31539,30 @@ function contactSearchTypes(value: AppContactSearch['types_json']) {
   return contactSearchTypes(parsed)
 }
 
+// C.9 (31/08) -- LA RECHERCHE NEE DANS L'APP, LE TEMPS QUE HEKTOR REPONDE.
+//
+// Elle n'a pas encore de contact_search_key (un hache calcule sur la recherche
+// DESCENDUE de Hektor) : elle ne vient pas de la liste normale mais de
+// app_search_provisional, prefixee par loadContactSearches.
+//
+// Sans ce marquage elle s'afficherait comme une recherche ordinaire « Active » --
+// l'utilisateur verrait sa saisie sans savoir qu'elle est en attente, ni qu'elle
+// a echoue le cas echeant. Et il pourrait cliquer « Modifier » ou « Supprimer »
+// sur une recherche qui n'existe pas encore chez Hektor.
+function contactSearchProvisional(search: AppContactSearch) {
+  const prov = search as unknown as {
+    is_provisional?: boolean
+    provisional_status?: 'pending' | 'linked' | 'error'
+    provisional_error?: string | null
+  }
+  const provisoire = prov.is_provisional === true
+  return {
+    provisoire,
+    enErreur: provisoire && prov.provisional_status === 'error',
+    message: prov.provisional_error ?? null,
+  }
+}
+
 function contactRangeLabel(label: string, min?: string | null, max?: string | null, suffix = '') {
   // Une borne valant 0 (ou vide) = non renseignee -> on ne l'affiche pas.
   const clean = (value?: string | null) => {
@@ -35890,13 +35914,16 @@ function ContactDetailPopupBase(props: {
                                 const isExpanded = expandedSearchKeys.has(search.contact_search_key)
                                 const shownCities = isExpanded ? cities : cities.slice(0, 6)
                                 const hiddenCities = cities.length - shownCities.length
+                                const prov = contactSearchProvisional(search)
                                 return (
-                                  <div key={`search-${search.contact_search_key}`} className="lk fcx-srch" style={{ cursor: 'default' }}>
+                                  <div key={`search-${search.contact_search_key}`} className={`lk fcx-srch${prov.provisoire ? ' is-provisional' : ''}${prov.enErreur ? ' is-provisional-error' : ''}`} title={prov.enErreur ? (prov.message || 'La creation a echoue chez Hektor') : undefined} style={{ cursor: 'default' }}>
                                     <div className="lk-bd">
                                       <div className="fcx-srch-top">
                                         <span className="fcx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="14" height="14"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.4-3.4" /></svg></span>
                                         <span className="fcx-srch-type">{types.join(' · ') || search.offre || 'Type non renseigné'}</span>
-                                        <span className={`tg ${contactBool(search.is_active) ? 'green' : ''}`}>{contactBool(search.is_active) ? 'Active' : 'Archivée'}</span>
+                                        {prov.provisoire
+                                          ? <span className={`tg ${prov.enErreur ? 'prov-err' : 'prov'}`}>{prov.enErreur ? 'Erreur de création' : 'En création…'}</span>
+                                          : <span className={`tg ${contactBool(search.is_active) ? 'green' : ''}`}>{contactBool(search.is_active) ? 'Active' : 'Archivée'}</span>}
                                       </div>
                                       <div className="fcx-srch-sec">
                                         <span className="fcx-srch-sec-k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} width="13" height="13"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg>{cities.length} commune{cities.length > 1 ? 's' : ''}</span>
@@ -35911,7 +35938,7 @@ function ContactDetailPopupBase(props: {
                                         </div>
                                       ) : null}
                                     </div>
-                                    {props.canManageContacts ? (
+                                    {props.canManageContacts && !prov.provisoire ? (
                                       <div className="lk-actions fcx-search-actions">
                                         <button className="btn brand-soft sm" type="button" onClick={() => setEditingSearch(search)}>
                                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="13" height="13"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
@@ -35925,7 +35952,7 @@ function ContactDetailPopupBase(props: {
                                         ) : null}
                                       </div>
                                     ) : null}
-                                    {contactBool(search.is_active) && props.onOpenRechercheAcquereur ? (
+                                    {contactBool(search.is_active) && !prov.provisoire && props.onOpenRechercheAcquereur ? (
                                       <button className="btn fcx-rapprocher" type="button" onClick={() => props.onOpenRechercheAcquereur?.(search)}>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="14" height="14"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10.5Z"/><path d="M9 21V13h6v8"/><circle cx="17" cy="7" r="3.5"/><path d="M15.5 5.5 17 7l2-2"/></svg>
                                         Rapprocher les biens
@@ -37005,13 +37032,16 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     if (cities.length) critParts.push(cities.length > 1 ? `${cities.length} communes` : cities[0])
                     const nBiens = rapproCounts[search.contact_search_key] ?? 0
                     const isExpanded = expandedSearchKeys.has(search.contact_search_key)
+                    const prov = contactSearchProvisional(search)
                     return (
-                      <div key={`fa-cx-srch-${search.contact_search_key}`} className="fa-cx-srch">
+                      <div key={`fa-cx-srch-${search.contact_search_key}`} className={`fa-cx-srch${prov.provisoire ? ' is-provisional' : ''}${prov.enErreur ? ' is-provisional-error' : ''}`} title={prov.enErreur ? (prov.message || 'La creation a echoue chez Hektor') : undefined}>
                         <span className="fa-cx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 11l9-7 9 7" /><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></span>
                         <div className="fa-cx-srch-main">
                           <div className="fa-cx-srch-head">
                             <span className="fa-cx-srch-ty">{types.join(' · ') || search.offre || 'Type non renseigné'}</span>
-                            <span className={`fa-cx-srch-tag ${isActive ? '' : 'archived'}`}>{isActive ? 'Active' : 'Archivée'}</span>
+                            {prov.provisoire
+                              ? <span className={`fa-cx-srch-tag ${prov.enErreur ? 'prov-err' : 'prov'}`}>{prov.enErreur ? 'Erreur de création' : 'En création…'}</span>
+                              : <span className={`fa-cx-srch-tag ${isActive ? '' : 'archived'}`}>{isActive ? 'Active' : 'Archivée'}</span>}
                           </div>
                           <div className="fa-cx-srch-crit">{critParts.join(' · ') || 'Critères non renseignés'}</div>
                           {cities.length > 1 ? (
@@ -37029,12 +37059,12 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                             </div>
                           ) : null}
                         </div>
-                        {props.onOpenRechercheAcquereur ? (
+                        {props.onOpenRechercheAcquereur && !prov.provisoire ? (
                           <button className="fa-cx-srch-match" type="button" title={`Rapprocher les biens correspondants (${nBiens})`} onClick={() => props.onOpenRechercheAcquereur?.(search)}>
                             <b>{nBiens}</b> bien{nBiens !== 1 ? 's' : ''}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                           </button>
                         ) : null}
-                        {props.canManageContacts ? (
+                        {props.canManageContacts && !prov.provisoire ? (
                           <div className="fa-cx-srch-acts">
                             <button className="fa-cx-ic-act" type="button" title="Modifier" onClick={() => setEditingSearch(search)}>
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>

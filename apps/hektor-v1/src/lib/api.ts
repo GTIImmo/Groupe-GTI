@@ -2741,6 +2741,121 @@ export async function loadContactRelations(contactId: string): Promise<AppContac
   return relations
 }
 
+// ── C.9 (31/08) : LA RECHERCHE « EN CREATION » APPARAIT DANS LA FICHE ──
+//
+// Meme patron que les contacts provisoires, et pour une raison voisine : la clé
+// de app_contact_search_current est un HACHÉ calculé sur la recherche descendue
+// de Hektor. Une recherche qu'on vient de saisir n'en a pas ; elle ne peut pas
+// être dans la liste normale. Elle vit dans app_search_provisional.
+//
+// DIFFÉRENCE AVEC LE CONTACT : ici le contact existe déjà, donc la ligne se range
+// sous le bon contact dès la saisie — pas besoin de la préfixer « en page 1 ».
+//
+// QUAND DISPARAÎT-ELLE ? Quand la resynchronisation du contact enchaînée par le
+// worker est terminée (son identifiant est gardé sur la ligne). Pas par un compte
+// de recherches, qu'une suppression concurrente ferait mentir.
+
+type SearchProvisionalRow = {
+  creation_token: string
+  hektor_contact_id: string
+  offre?: string | null
+  villes_json?: unknown
+  types_json?: unknown
+  criteres_json?: unknown
+  prix_min?: string | null; prix_max?: string | null
+  surface_min?: string | null; surface_max?: string | null
+  pieces_min?: string | null; pieces_max?: string | null
+  chambre_min?: string | null; chambre_max?: string | null
+  surface_terrain_min?: string | null; surface_terrain_max?: string | null
+  status?: string | null
+  hektor_critere_id?: string | null
+  sync_job_id?: string | null
+  error_message?: string | null
+  created_at?: string | null
+}
+
+async function loadSearchProvisionals(contactId: string): Promise<SearchProvisionalRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_search_provisional')
+    .select('creation_token,hektor_contact_id,offre,villes_json,types_json,criteres_json,prix_min,prix_max,surface_min,surface_max,pieces_min,pieces_max,chambre_min,chambre_max,surface_terrain_min,surface_terrain_max,status,hektor_critere_id,sync_job_id,error_message,created_at')
+    .eq('hektor_contact_id', contactId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  // Un échec de lecture ne doit pas priver l'utilisateur de ses recherches.
+  if (error) return []
+  return (data ?? []) as SearchProvisionalRow[]
+}
+
+// La resynchronisation enchaînée par le worker est-elle passée ? Tant qu'elle ne
+// l'est pas, la recherche n'est PAS descendue dans l'app : la ligne provisoire
+// doit rester à l'écran. C'est un fait observé, pas une supposition.
+async function syncJobsTermines(jobIds: string[]): Promise<Set<string>> {
+  const finis = new Set<string>()
+  if (!hasSupabaseEnv || !supabase || !jobIds.length) return finis
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .select('id,status')
+    .in('id', jobIds)
+  if (error || !data) return finis
+  for (const row of data as Array<{ id: string; status: string }>) {
+    if (row.status === 'done') finis.add(String(row.id))
+  }
+  return finis
+}
+
+function provisionalToAppContactSearch(row: SearchProvisionalRow): AppContactSearch {
+  const statut = (row.status as 'pending' | 'linked' | 'error') ?? 'pending'
+  return {
+    // Clé jamais confondue avec un vrai haché : elle porte son préfixe.
+    contact_search_key: `prov-${row.creation_token}`,
+    hektor_contact_id: row.hektor_contact_id,
+    search_index: -1,
+    archive: false,
+    is_active: true,
+    offre: row.offre ?? null,
+    villes_json: (row.villes_json ?? []) as string[],
+    types_json: (row.types_json ?? []) as never,
+    criteres_json: (row.criteres_json ?? []) as never,
+    prix_min: row.prix_min ?? null,
+    prix_max: row.prix_max ?? null,
+    surface_min: row.surface_min ?? null,
+    surface_max: row.surface_max ?? null,
+    pieces_min: row.pieces_min ?? null,
+    pieces_max: row.pieces_max ?? null,
+    chambre_min: row.chambre_min ?? null,
+    chambre_max: row.chambre_max ?? null,
+    surface_terrain_min: row.surface_terrain_min ?? null,
+    surface_terrain_max: row.surface_terrain_max ?? null,
+    contact_date_maj: row.created_at ?? null,
+    refreshed_at: row.created_at ?? null,
+    is_provisional: true,
+    provisional_status: statut,
+    provisional_error: row.error_message ?? null,
+    creation_token: row.creation_token,
+  } as unknown as AppContactSearch
+}
+
+async function prependProvisionalSearches(rows: AppContactSearch[], contactId: string): Promise<AppContactSearch[]> {
+  if (!PROVISIONAL_CREATION_ENABLED) return rows
+  const provis = await loadSearchProvisionals(contactId)
+  if (!provis.length) return rows
+  // Une ligne s'efface quand sa resynchronisation est terminée : la vraie
+  // recherche est alors dans la liste normale. Une ligne en ERREUR reste, quoi
+  // qu'il arrive — c'est elle qui porte le message.
+  const aVerifier = provis
+    .filter((p) => p.status === 'linked' && p.sync_job_id)
+    .map((p) => String(p.sync_job_id))
+  const finis = await syncJobsTermines(aVerifier)
+  const restantes = provis.filter((p) => {
+    if (p.status === 'error') return true
+    if (p.status === 'linked' && p.sync_job_id) return !finis.has(String(p.sync_job_id))
+    return true
+  })
+  if (!restantes.length) return rows
+  return [...restantes.map(provisionalToAppContactSearch), ...rows]
+}
+
 export async function loadContactSearches(contactId: string): Promise<AppContactSearch[]> {
   if (!hasSupabaseEnv || !supabase || !contactId.trim()) return []
   const { data, error } = await supabase
@@ -2751,7 +2866,8 @@ export async function loadContactSearches(contactId: string): Promise<AppContact
     .order('contact_date_maj', { ascending: false, nullsFirst: false })
     .order('search_index', { ascending: true })
   if (error || !data) throw new Error(error?.message ?? 'Unable to load contact searches')
-  return (data as AppContactSearch[]).map(normalizeContactSearchRow)
+  return prependProvisionalSearches(
+    (data as AppContactSearch[]).map(normalizeContactSearchRow), contactId.trim())
 }
 
 export type RapprochementComponent = { k: string; ok: boolean; v: string }
@@ -7305,6 +7421,84 @@ export async function createHektorContactSearchJob(input: {
   }
   const contextPayload = hContactSearchContextPayload(input.context)
   const { data, error } = await supabase.rpc('app_console_create_contact_search_job', {
+    target_contact_id: cleanContactId,
+    search_payload: { ...contextPayload, search },
+    job_priority: input.priority ?? 17,
+  })
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor contact search job')
+  return data as ConsoleJob
+}
+
+// C.9 (31/08) -- AJOUTER UNE RECHERCHE : UN SEUL APPEL, DONC UNE SEULE TRANSACTION.
+//
+// La RPC app_create_search_optimistic pose la ligne provisoire ET le travail
+// ensemble, et glisse le jeton dans la charge du travail : c'est par lui que le
+// worker retrouvera la ligne au retour.
+//
+// La provisoire y est BEST-EFFORT (sous-bloc à exception côté base) : si elle
+// échoue, la recherche part quand même chez Hektor. L'inverse — un travail perdu
+// — ne se rattrape pas.
+export async function createHektorContactSearchJobOptimistic(input: {
+  contactId: string
+  search: HektorContactSearchInput
+  context?: HektorContactSearchJobContext
+  // Les libelles des types choisis, fournis par la modale : app_contact_search_current
+  // range types_json en OBJET { libelle: '1' }, pas en tableau d'identifiants.
+  // Verifie dans contactSearchTypes() : un tableau y retombe sur {} et la carte
+  // afficherait « Type non renseigne ».
+  typeLabels?: string[]
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!PROVISIONAL_CREATION_ENABLED) return createHektorContactSearchJob(input)
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const search = hContactSearchPayload(input.search)
+  if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
+  if (!search.priceMax) throw new Error('Budget maximum requis')
+  if (!search.city && !search.postalCode && !(search.localities && search.localities.length)) {
+    throw new Error('Au moins une localite requise')
+  }
+  const contextPayload = hContactSearchContextPayload(input.context)
+  const token = newCreationToken()
+
+  // Le corps affichable, dans les formes de app_contact_search_current, pour que
+  // la carte se rende à l'identique — aucune conversion à l'écran.
+  const villes = (search.localities ?? [])
+    .map((loc) => [loc.postalCode, loc.city].filter(Boolean).join(' ').trim())
+    .filter(Boolean)
+  if (!villes.length && (search.city || search.postalCode)) {
+    villes.push([search.postalCode, search.city].filter(Boolean).join(' ').trim())
+  }
+  const libelles = (input.typeLabels ?? []).map((label) => String(label).trim()).filter(Boolean)
+  const types: Record<string, string> = {}
+  for (const label of (libelles.length ? libelles : (search.propertyTypeIds ?? []).map(String))) types[label] = '1'
+
+  const texte = (valeur: unknown) => {
+    const v = valeur == null ? '' : String(valeur).trim()
+    return v ? v : null
+  }
+  const champs: Record<string, unknown> = {
+    offre: search.offerCode ?? null,
+    villes_json: villes,
+    types_json: types,
+    criteres_json: [],
+    prix_min: texte(search.priceMin),
+    prix_max: texte(search.priceMax),
+    surface_min: texte(search.surfaceMin),
+    surface_max: texte(search.surfaceMax),
+    pieces_min: texte(search.roomsMin),
+    pieces_max: texte(search.roomsMax),
+    chambre_min: texte(search.bedroomsMin),
+    chambre_max: texte(search.bedroomsMax),
+    surface_terrain_min: texte(search.landSurfaceMin),
+    surface_terrain_max: texte(search.landSurfaceMax),
+  }
+
+  const { data, error } = await supabase.rpc('app_create_search_optimistic', {
+    p_token: token,
+    p_fields: sanitizeForJsonb(champs),
     target_contact_id: cleanContactId,
     search_payload: { ...contextPayload, search },
     job_priority: input.priority ?? 17,

@@ -462,3 +462,22 @@
   #fcx-root .ec-acct select{max-width:200px}
 }
 @media (max-width:520px){#fcx-root .fgrid3{grid-template-columns:1fr}}
+
+/* C.9 (31/08) — même marquage sur la fiche contact « base » (celle rendue quand
+   VITE_APP_CONTACT_V2_ENABLED est éteint). Les deux écrans existent, les deux
+   doivent dire la même chose : je ne sais pas lequel est actif chez l'utilisateur. */
+.fcx-srch .tg.prov,
+.fcx-srch .tg.prov-err{display:inline-flex;align-items:center;gap:6px;}
+.fcx-srch .tg.prov{color:#8a5a00;background:#fff6e2;border-color:#f0d9a8;}
+.fcx-srch .tg.prov-err{color:#b0332f;background:#fdeceb;border-color:#f2c4c1;}
+.fcx-srch .tg.prov::before,
+.fcx-srch .tg.prov-err::before{content:"";width:6px;height:6px;border-radius:50%;flex:none;}
+.fcx-srch .tg.prov::before{background:#d08700;animation:fcx-prov-pulse 1.4s ease-in-out infinite;}
+.fcx-srch .tg.prov-err::before{background:#b0332f;}
+.fcx-srch.is-provisional{border-left:3px solid #e2b25a;}
+.fcx-srch.is-provisional-error{border-left-color:#c9524d;}
+
+@keyframes fcx-prov-pulse{0%,100%{opacity:1;}50%{opacity:.28;}}
+@media (prefers-reduced-motion:reduce){
+  .fcx-srch .tg.prov::before{animation:none;}
+}

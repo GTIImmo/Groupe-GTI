@@ -1327,6 +1327,83 @@ async function marquerContactProvisoireEnErreur(creationToken, message) {
   }
 }
 
+// --- Meme chose, pour une RECHERCHE nee dans l'app (C.9, 31/08) ---
+//
+// L'OBSTACLE QUI IMPOSE CETTE LIGNE PROVISOIRE :
+//     app_contact_search_current   PRIMARY KEY (contact_search_key)
+// contact_search_key est un HACHE calcule sur la recherche DESCENDUE de Hektor.
+// Une recherche qu'on vient de saisir n'en a pas : elle ne peut pas entrer dans
+// la table principale. Elle vit donc dans app_search_provisional, pivotee sur un
+// JETON fabrique par l'app.
+//
+// CE QU'ON POSE ICI, ET QUI N'EXISTE NULLE PART AILLEURS : l'idCritere Hektor.
+// Verifie dans le schema -- criteres_json ne le porte pas, l'API ne le rend pas :
+// l'onglet recherche de la console est le SEUL endroit qui l'expose. Deux appels
+// de plus (la liste avant, la liste apres) suffisent a l'identifier par
+// difference. C'est le prealable que les plans oubliaient.
+//
+// BEST EFFORT, COMME PARTOUT DANS CETTE FAMILLE : une fois la recherche creee
+// chez Hektor, plus rien ne doit faire tomber ce travail.
+async function lierRechercheProvisoire(creationToken, details = {}) {
+  const token = cleanString(creationToken);
+  if (!token) return { status: "skipped", reason: "rien_a_lier" };
+  const corps = {
+    status: "linked",
+    error_message: null,
+    updated_at: new Date().toISOString(),
+  };
+  const critere = cleanString(details.critereId);
+  if (critere) corps.hektor_critere_id = critere;
+  const sync = cleanString(details.syncJobId);
+  if (sync) corps.sync_job_id = sync;
+  try {
+    const majes = await supabaseRequest(
+      `app_search_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+        method: "PATCH",
+        prefer: "return=representation",
+        body: JSON.stringify(corps),
+      });
+    const touchees = Array.isArray(majes) ? majes.length : 0;
+    return { status: touchees ? "linked" : "aucune_ligne", lignes: touchees, hektor_critere_id: critere || null };
+  } catch (erreur) {
+    const message = erreur && erreur.message ? erreur.message : String(erreur);
+    console.warn(`[recherche provisoire] lien echoue (jeton ${token}): ${message}`);
+    return { status: "error", error: message };
+  }
+}
+
+async function marquerRechercheProvisoireEnErreur(creationToken, message) {
+  const token = cleanString(creationToken);
+  if (!token) return;
+  try {
+    await supabaseRequest(
+      `app_search_provisional?creation_token=eq.${encodeURIComponent(token)}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify({
+          status: "error",
+          error_message: cleanString(message) || "Erreur de creation",
+          updated_at: new Date().toISOString(),
+        }),
+      });
+  } catch (erreur) {
+    console.warn(`[recherche provisoire] marquage erreur echoue (jeton ${token}): ${erreur && erreur.message ? erreur.message : erreur}`);
+  }
+}
+
+// Les idCritere du contact, sans faire tomber l'appelant si la lecture echoue.
+// Rendre NULL veut dire « je ne sais pas » -- et se distingue d'une liste vide,
+// qui veut dire « ce contact n'a aucune recherche ».
+async function listerCriteresBestEffort(contactId) {
+  try {
+    const liste = await fetchHektorContactSearchList(contactId);
+    return liste.map((entree) => String(entree.idCritere));
+  } catch (erreur) {
+    console.warn(`[recherche provisoire] liste des criteres indisponible (${contactId}): ${erreur && erreur.message ? erreur.message : erreur}`);
+    return null;
+  }
+}
+
 async function storageRequest(objectPath, options = {}) {
   const baseUrl = requireEnv("SUPABASE_URL", SUPABASE_URL).replace(/\/+$/, "");
   const response = await fetch(`${baseUrl}/storage/v1/object/${STORAGE_BUCKET}/${storagePathEncode(objectPath)}`, {
@@ -12898,22 +12975,72 @@ async function handleAddHektorContactSearch(job) {
     contact_next_step: contactSearchSpecFromPayload(payload),
   };
 
-  const search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
-  if (search && search.status === "skipped") {
-    throw new Error(`Recherche contact non creee (${search.reason || "payload incomplet"})`);
+  // Le jeton de la ligne provisoire, glisse par app_create_search_optimistic.
+  // Absent quand le travail vient de l'ancien chemin : on ne reconcilie alors
+  // rien, et c'est normal -- il n'y a pas de ligne a rattacher.
+  const jetonRecherche = cleanString(payload.creation_token || payload.creationToken || "");
+
+  // La photo AVANT, uniquement s'il y a une ligne a renseigner : pas d'appel
+  // gratuit chez Hektor (discipline de debit du 26/08).
+  const criteresAvant = jetonRecherche ? await listerCriteresBestEffort(contactId) : null;
+
+  let search;
+  try {
+    search = await createHektorContactSearchCriteria(job, contactId, contact, wrappedPayload);
+    if (search && search.status === "skipped") {
+      throw new Error(`Recherche contact non creee (${search.reason || "payload incomplet"})`);
+    }
+  } catch (erreur) {
+    // Hektor a refuse : la ligne provisoire doit le DIRE, pas rester en
+    // « En creation » indefiniment. Puis on relaie l'echec.
+    await marquerRechercheProvisoireEnErreur(
+      jetonRecherche, erreur && erreur.message ? erreur.message : String(erreur));
+    throw erreur;
   }
 
+  // La recherche EXISTE chez Hektor a partir d'ici. Tout ce qui suit est
+  // best-effort : rien ne doit plus faire tomber ce travail.
   await sleep(1000);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
     reason: "add_hektor_contact_search",
     priority: 82,
   });
 
+  let lienProvisoire = null;
+  if (jetonRecherche) {
+    // L'idCritere neuf = celui qui n'etait pas la avant. Si la photo d'avant
+    // manque (lecture en echec), on ne DEVINE pas : on relie sans idCritere --
+    // la ligne provisoire remplit quand meme son role a l'ecran.
+    let critereNeuf = "";
+    const criteresApres = await listerCriteresBestEffort(contactId);
+    if (Array.isArray(criteresAvant) && Array.isArray(criteresApres)) {
+      const connus = new Set(criteresAvant);
+      const nouveaux = criteresApres.filter((id) => !connus.has(id));
+      // Un seul nouveau : c'est le notre. Plusieurs : un autre negociateur a
+      // ajoute une recherche pendant ce temps -- on s'abstient plutot que de
+      // prendre le mauvais.
+      if (nouveaux.length === 1) critereNeuf = nouveaux[0];
+    }
+    lienProvisoire = await lierRechercheProvisoire(jetonRecherche, {
+      critereId: critereNeuf,
+      syncJobId: syncJob && syncJob.job_id ? syncJob.job_id : "",
+    });
+    await logJob(job.id, "recherche_provisoire", lienProvisoire.status === "linked" ? "done" : "error",
+      lienProvisoire.status === "linked"
+        ? "La recherche nee dans l'app est reliee"
+        : "Recherche CREEE chez Hektor, mais la ligne provisoire n'a pas ete reliee -- a reprendre",
+      { creation_token: jetonRecherche, hektor_contact_id: contactId,
+        hektor_critere_id: critereNeuf || null, resultat: lienProvisoire.status,
+        criteres_avant: Array.isArray(criteresAvant) ? criteresAvant.length : null,
+        criteres_apres: Array.isArray(criteresApres) ? criteresApres.length : null });
+  }
+
   return {
     status: "created",
     hektor_contact_id: contactId,
     search,
     sync_job: syncJob,
+    recherche_provisoire: lienProvisoire,
   };
 }
 

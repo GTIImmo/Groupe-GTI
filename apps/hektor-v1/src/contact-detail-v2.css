@@ -553,3 +553,23 @@
 .fa-contact-v2 .fa-cx-lk-stat.warn { color: #9a5b05; background: #fdf4e2; border-color: #f0dcb4; }
 .fa-contact-v2 .fa-cx-lk-stat.done { color: #1f5b96; background: #e9f1fb; border-color: #cfe0f2; }
 .fa-contact-v2 .fa-cx-lk-stat.muted { color: #6f6152; background: #f3ede2; border-color: #e6dccb; }
+
+/* C.9 (31/08) — la recherche née dans l'app, le temps que Hektor réponde.
+   Même langage visuel que le contact provisoire de l'annuaire : pastille ambrée
+   qui pulse tant qu'on attend, rouge quand Hektor a refusé. La ligne reste lisible
+   (pas de grisé) — c'est une saisie valide, pas une donnée dégradée. */
+.fa-cx-srch-tag.prov,
+.fa-cx-srch-tag.prov-err{display:inline-flex;align-items:center;gap:6px;}
+.fa-cx-srch-tag.prov{color:#8a5a00;background:#fff6e2;border-color:#f0d9a8;}
+.fa-cx-srch-tag.prov-err{color:#b0332f;background:#fdeceb;border-color:#f2c4c1;}
+.fa-cx-srch-tag.prov::before,
+.fa-cx-srch-tag.prov-err::before{content:"";width:6px;height:6px;border-radius:50%;flex:none;}
+.fa-cx-srch-tag.prov::before{background:#d08700;animation:fa-cx-prov-pulse 1.4s ease-in-out infinite;}
+.fa-cx-srch-tag.prov-err::before{background:#b0332f;}
+.fa-cx-srch.is-provisional{border-left:3px solid #e2b25a;}
+.fa-cx-srch.is-provisional-error{border-left-color:#c9524d;}
+
+@keyframes fa-cx-prov-pulse{0%,100%{opacity:1;}50%{opacity:.28;}}
+@media (prefers-reduced-motion:reduce){
+  .fa-cx-srch-tag.prov::before{animation:none;}
+}
