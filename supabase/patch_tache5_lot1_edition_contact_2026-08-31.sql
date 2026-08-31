@@ -1,0 +1,60 @@
+-- =====================================================================
+-- TACHE 5, LOT 1 -- LA PREMIERE DES TROIS FONCTIONS DE FAMILLE B
+-- Date : 2026-08-31
+--
+-- CE QUI CHANGE, ET C'EST TOUT : la ligne d'attente creee par
+-- `app_edit_contact_optimistic` porte desormais le numero de contact de l'app,
+-- en plus de celui de Hektor. La fonction connaissait deja ce numero (elle lit
+-- la fiche complete dans `c`) -- elle ne le faisait simplement pas voyager.
+--
+-- POURQUOI CETTE FONCTION ET PAS LES DIX AUTRES. La question n'est pas « quel
+-- numero est le vrai » mais A QUI LA FONCTION PARLE. Verifie dans le code :
+--
+--     app_console_create_update_contact_job  ->  INSERT INTO app_console_job
+--     app_edit_contact_optimistic            ->  UPDATE app_contact_current
+--                                                INSERT INTO app_contact_pending
+--
+--     8 fonctions fabriquent un travail pour le worker. Le worker ira parler a
+--       Hektor, qui ne connait que SES numeros. Elles gardent le numero Hektor
+--       A JAMAIS -- et disparaitront avec les workers le jour de la coupure.
+--     3 fonctions ecrivent dans nos tables. Elles n'ont rien a dire a Hektor.
+--       Ce sont elles qui basculent : app_edit_contact_optimistic (ici),
+--       app_edit_search_optimistic, app_espace_edit_search_optimistic.
+--
+-- CE QUE ça PREPARE. Les quatre gestes qui attendent -- ajouter une recherche,
+-- creer un contact, creer et mettre a jour un mandant -- CREENT quelque chose.
+-- Un contact qui vient de naitre dans l'app n'a pas encore de numero Hektor :
+-- si nos tables ne savent le designer que par ce numero-la, il n'a pas de nom.
+--
+-- CE QUI NE CHANGE PAS, DELIBEREMENT :
+--   * la SIGNATURE est identique -- le front n'a rien a redeployer, et on evite
+--     le piege du renommage de parametre (Postgres refuse le rename, l'appel se
+--     fait par NOM, la compilation ne voit rien) ;
+--   * la CLE PRIMAIRE de app_contact_current n'est pas touchee -- second
+--     chantier, le plan est formel ;
+--   * les 8 fonctions qui parlent a Hektor ne sont pas touchees ;
+--   * `coalesce` au conflit : on n'ecrase JAMAIS un numero deja pose par un vide.
+--
+-- EPROUVE A BLANC, sans rien conserver : l'INSERT complet joue dans un bloc qui
+-- se termine par une exception, donc annule.
+--     contact Hektor 603800  ->  numero app 354490  (identique a sa fiche)
+--     app_contact_pending apres : 0 ligne, 0 trace d'essai
+-- On ne pose PAS de vraie ligne d'attente pour essayer : elle declencherait un
+-- envoi vers Hektor.
+--
+-- Appliquee via la migration `tache5_lot1_edition_contact_porte_le_numero_app`.
+-- Le texte complet de la fonction est dans cette migration.
+-- =====================================================================
+
+-- Extrait de ce qui a change, et c'est tout :
+--
+--     insert into app_contact_pending(hektor_contact_id, app_contact_id, ...)
+--     values (target_contact_id, c.app_contact_id, ...)
+--     on conflict (hektor_contact_id) do update set
+--       app_contact_id = coalesce(app_contact_pending.app_contact_id,
+--                                 excluded.app_contact_id),
+--       ...
+--
+--     return jsonb_build_object('ok', true,
+--                               'hektor_contact_id', target_contact_id,
+--                               'app_contact_id', c.app_contact_id, ...)
