@@ -10807,8 +10807,8 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
       job, annonceId, genre, `apres_creation_${essai}`, dateTransaction);
     if (ventesApres === null) continue;
     nouvelles = ventesAvant === null
-      ? Array.from(ventesApres)
-      : Array.from(ventesApres).filter((id) => !ventesAvant.has(id));
+      ? Array.from(ventesApres.tous)
+      : Array.from(ventesApres.tous).filter((id) => !ventesAvant.tous.has(id));
     if (nouvelles.length) {
       if (essai > 1) {
         await logJob(job.id, "hektor_transaction_preuve", "done",
@@ -10843,8 +10843,8 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
       + "l'enregistrement a la MEME forme qu'une reponse d'etape, et le statut est decouple "
       + "de la transaction. C'est la fiche qui fait foi.", {
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
-        ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant),
-        ventes_apres: Array.from(ventesApres),
+        ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant.tous),
+        ventes_apres: Array.from(ventesApres.tous),
         reponse_hektor: transactionResult && transactionResult.reponse
           ? transactionResult.reponse : null,
       });
@@ -10857,6 +10857,7 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
       + "donc on n'ecrit aucun numero dans l'app", {
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
         candidates: nouvelles,
+        ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant.tous),
       });
     return { verifie: true, cree: true, ambigu: true, candidates: nouvelles };
   }
@@ -10958,6 +10959,48 @@ async function handleChangeHektorAnnonceStatus(job) {
         const ventesAvant = genreArbitre
           ? await lireTransactionsBestEffort(job, annonceId, genreArbitre, "avant_creation", dateTransaction)
           : null;
+
+        // ─── ON N'ENVOIE PAS CE QUE HEKTOR NE FERA PAS ───
+        //
+        // Condition ETABLIE PAR EXPERIENCE le 31/08, avec contre-epreuve :
+        //     C1  aucun compromis en cours   ->  CREE 50053
+        //     C2  50053 en cours             ->  RIEN CREE
+        //         annulation de 50053
+        //     C3  juste apres                ->  CREE 50054
+        //     V1  aucune vente               ->  CREE 23293
+        //     V2  23293 presente             ->  RIEN CREE
+        //
+        // Frederic l'avait enoncee ; je l'avais contredit sur une inference
+        // fausse (« 9 075 annonces vendues portent un compromis actif, donc
+        // l'actif ne bloque pas ») -- ces dossiers sont TERMINES, personne n'y
+        // cree un nouveau compromis. La regle porte sur le GESTE, pas sur le parc.
+        //
+        // AVANT : on envoyait, Hektor ne faisait rien sans le dire, et l'arbitre
+        // rattrapait apres coup -- en ayant au passage clos le mandat chez nous
+        // sur une vente qui n'existait pas.
+        //
+        // ⚠ ON NE REFUSE QUE SI L'ON SAIT. `bloquants === null` veut dire que la
+        // lecture n'a pas pu conclure (repli sur la fiche, qui ne porte pas les
+        // etats) : dans ce cas on envoie, comme avant. Un doute ne doit pas
+        // bloquer un geste legitime.
+        const bloquants = (ventesAvant && Array.isArray(ventesAvant.bloquants))
+          ? ventesAvant.bloquants : null;
+        if (genreArbitre && bloquants && bloquants.length) {
+          const commentDebloquer = genreArbitre === "compromis"
+            ? "il faut l'annuler avant d'en creer un autre -- le geste existe dans "
+              + "l'app et il est REVERSIBLE"
+            : "il faut la supprimer avant d'en creer une autre -- ⚠ la suppression "
+              + "d'une vente est DEFINITIVE, c'est une decision qui doit rester humaine";
+          await logJob(job.id, "hektor_transaction_garde", "error",
+            `Un ${genreArbitre} en cours existe deja (${bloquants.join(", ")}) : ${commentDebloquer}. `
+            + `Rien n'a ete envoye a Hektor.`, {
+              hektor_annonce_id: annonceId, genre: genreArbitre,
+              bloquants, app_affaire_id: appAffaireId || null,
+            });
+          throw new Error(
+            `${genreArbitre} en cours deja present (${bloquants.join(", ")}) sur l'annonce `
+            + `${annonceId} : ${commentDebloquer}.`);
+        }
 
         transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
 
@@ -14543,7 +14586,12 @@ async function lireTransactionsParApi(job, annonceId, genre, dateTransaction) {
     const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
     const lu = safeJsonParse(derniere);
     if (lu && lu.trouve === true && Array.isArray(lu.ids)) {
-      return new Set(lu.ids.map((x) => String(x)));
+      return {
+        tous: new Set(lu.ids.map((x) => String(x))),
+        // Ce qui EMPECHE d'en creer un autre. `null` voudrait dire « je ne sais
+        // pas » -- ici l'API l'a dit, donc on a une reponse.
+        bloquants: Array.isArray(lu.actifs) ? lu.actifs.map((x) => String(x)) : [],
+      };
     }
     return null;
   } catch (erreur) {
@@ -14569,7 +14617,9 @@ async function lireTransactionsBestEffort(job, annonceId, genre, etape, dateTran
       `API muette : on se rabat sur la fiche pour les ${genre}s (elle masque, on le sait)`, {
         hektor_annonce_id: annonceId, genre, etape,
       });
-    return await lireTransactionsDeLaFiche(annonceId, genre);
+    // La fiche ne sait pas dire ce qui bloque : elle ne porte pas les etats.
+    // On rend `bloquants: null` -- « je ne sais pas », qui n'est pas « rien ».
+    return { tous: await lireTransactionsDeLaFiche(annonceId, genre), bloquants: null };
   } catch (erreur) {
     await logJob(job.id, "hektor_transaction_relecture", "error",
       `Relecture des ${genre}s impossible -- on ne conclura pas dessus`, {
