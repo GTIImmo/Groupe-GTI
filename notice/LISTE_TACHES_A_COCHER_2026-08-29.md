@@ -1172,6 +1172,64 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
 
                  A FAIRE AVANT C.9, comme les deux autres.
 
+                 ── PERIMETRE REEL, mesure le 31/08 apres deux questions de
+                    Frederic. IL EST DEUX FOIS PLUS PETIT QUE JE NE L'AI ECRIT.
+
+                 ① « pourquoi pas une table relation comme pour les annonces ? »
+                 Verifie : les QUATRE doublures existent, la cinquieme manque.
+
+                    app_dossier            61 099   les annonces
+                    app_contact           355 770   les contacts
+                    app_search_registry    76 928   les recherches
+                    app_affaire_ledger     29 296   les affaires
+                    ------------------------------------------------
+                         (rien)                 -   les LIENS
+
+                 Ce n'est pas une decision, c'est un OUBLI : chaque doublure est
+                 nee d'un chantier precis (le numero de l'annonce, la tache 5, la
+                 cle instable des recherches, le ledger). La relation n'a jamais
+                 eu son chantier -- elle est passee entre les mailles, exactement
+                 comme cette tache n'etait pas au plan il y a une heure.
+
+                 ET C'EST PLUS SIMPLE QUE POUR LES RECHERCHES :
+                    relation_key = hash(contact, annonce, role, source, transaction)
+                 La cle NE DEPEND PAS DU CONTENU. Contrairement a celle des
+                 recherches -- qui changeait a chaque modification et a demande
+                 des semaines pour etre figee -- celle-ci est DEJA STABLE.
+                 Modifier un mandant ne change pas la cle de son lien.
+                 Mesure : 165 286 lignes uniques sur (contact, annonce, role)
+                 sur 165 836 -- 513 doublons a regarder, marginaux.
+
+                 ② « et les relations acheteurs sur les transactions ? »
+                 DEJA COUVERTES, et par toi, en aout. app_affaire_ledger porte
+                 hektor_acquereur_id ET acquereur_json :
+
+                    offre       11 116  }  28 910 / 29 296 avec l'acquereur
+                    compromis   10 574  }  identifie -- 98,7 %
+                    vente        7 606  }
+
+                 C'est le BON endroit : l'acquereur est lie au bien PAR une
+                 transaction, donc il vit la ou vit la transaction. Le mandant,
+                 lui, est lie au bien DIRECTEMENT, sans transaction -- il n'a
+                 donc jamais eu de vehicule.
+
+                 ── DONC LE CHANTIER PORTE SUR DEUX ROLES, PAS CINQ :
+
+                    mandant        74 037   ❌ aucune doublure
+                    proprietaire   58 365   ❌ aucune doublure
+                    ------------------------
+                                  132 402   liens sans domicile
+
+                    acquereur ×3   33 434   ✅ app_affaire_ledger
+
+                 ── ET LA TACHE EST DOUBLE, ce que je n'avais pas vu :
+                    L'IDENTITE   la doublure qui manque -- une table jamais
+                                 reconstruite, qui garde le lien meme quand le
+                                 miroir gele. C'EST LE PREALABLE.
+                    LE CORPS     ce que 26bis et 26bis-contacts traitent pour
+                                 l'annonce et le contact.
+                 Sans l'identite, il n'y a rien a quoi accrocher le corps.
+
 [ ] INVENTAIRE   TOUT VERIFIER AVANT LA COUPURE      demande de Frederic, 31/08
                  « il faudra tout verifier a ce moment »
 
