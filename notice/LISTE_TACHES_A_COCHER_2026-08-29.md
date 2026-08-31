@@ -961,30 +961,55 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
                  rejoue, case remise. Premier essai fait sur la ligne 1 : les
                  trois valaient 1, la preuve ne valait rien, refaite.
 
-[~] C.4-Vendu    LA BRANCHE JAMAIS EXECUTEE               CODE le 30/08
-                 ⚠ CORRECTION : ce n'est pas UNE branche jamais executee,
-                 c'en est DEUX. Comptage des travaux :
-                    actif 7 · clos 9 (+1 err) · offre 2 · compromis 0 · VENDU 0
-                 Creer un compromis depuis l'app n'a jamais tourne non plus ;
-                 celui du 29/08 avait ete cree A LA MAIN dans le navigateur.
+[x] C.4-Vendu    LA BRANCHE JAMAIS EXECUTEE          EPROUVEE le 31/08
+                 ET AVEC ELLE LE COMPROMIS, qui n'avait jamais tourne non plus.
 
-                 CE QUI EST POSE (4aa1f43, 6bd5b04) :
-                    l'arbitre        fiche + API, deux temoins independants
-                    le numero        ecrit tout de suite, plus d'attente du run
-                    la garde         un rejeu ne recree pas la transaction
-                    C.19-c           le choix actif/archiver a l'ecran
+                 EPROUVE DE BOUT EN BOUT, chaine complete :
+                    compromis 50052   cree, confirme par les DEUX portes
+                    vente     23292   cree, confirme par les DEUX portes
+                    numero Hektor ecrit dans l'app IMMEDIATEMENT
+                    (app_affaire 1000326 et 1000327)
 
-                 POURQUOI UN ARBITRE. Ni la reponse ni le statut ne peuvent
-                 servir de preuve, et les deux mesures existaient deja :
-                    28/08  creer une vente rend 200 + « Vous ne pouvez pas
-                           creer un bien » x8 + {"result":false}
-                           ET LA VENTE EST CREEE (23287). La reponse ment.
-                    29/08  cliquer « Sous compromis » a change LE STATUT SANS
-                           CREER de compromis. Statut et transaction sont
-                           DECOUPLES chez Hektor.
+                 TROIS CAUSES, toutes MESUREES, aucune devinee :
 
-                 RESTE : redemarrer les workers, puis le passage reel sur
-                 62774 (acquereur 603800, mandat 18836).
+                 1. LE PROTOCOLE. Ce n'est pas un formulaire, c'est un
+                    ASSISTANT a etapes. Le verbe n'est pas createVente mais
+                    getStepVente / getStepCompromis, et un « basket »
+                    (etat serialise PHP) se transporte d'appel en appel.
+                    actionContainer[]=save,treat va DANS L'URL.
+                    Releve sur le reseau -> PROTOCOLE_ASSISTANT_VENTE_HEKTOR
+
+                 2. LE COMPTE. Hektor l'a dit en clair, en 114 caracteres :
+                    « Vous n'avez pas les droits pour creer un compromis lie
+                      a cette annonce. »
+                    Les trois genres veulent TROIS COMPTES DIFFERENTS :
+                       offre       l'admin est REFUSE  -> negociateur
+                       vente       le negociateur convient
+                       compromis   le negociateur REFUSE -> admin
+
+                 3. LA SOURCE DE L'ARBITRE. La fiche ne montre QU'UN
+                    compromis a la fois, et pas toujours le dernier. Elle a
+                    fait declarer « rien cree » sur DEUX gestes reussis
+                    (50050 et 50051). L'arbitre juge desormais sur l'API,
+                    la fiche n'est plus qu'un secours.
+
+                 ⚠ CE QUI A COUTE LE PLUS CHER : la reponse de Hektor etait
+                 JETEE des lors qu'elle ne portait pas le mot « error ».
+                 Trois allers-retours perdus pour cela. Elle est desormais
+                 conservee partout sur ce chemin -- c'est probablement la
+                 correction la plus utile de la nuit, plus que le protocole.
+
+                 OBSERVATION A VERSER AU DOSSIER : une transaction ne se cree
+                 pas si une du meme genre existe deja et qu'elle est vivante.
+                 Constate 3 fois. NE PAS en faire une regle absolue : le
+                 miroir montre 7 annonces a 2 ventes et 578 a plusieurs
+                 compromis. C'est conditionnel, la condition reste a trouver.
+
+                 BAC A SABLE SOLDE : 12 lignes d'affaire d'essai retirees,
+                 la date de cloture du mandat 18836 retiree, vente et
+                 compromis d'essai supprimes chez Hektor, 62774 remise en
+                 « Actif » (verifie). Reste 50048, anterieur a la nuit.
+                 Sentinelle app_affaires_sans_numero_hektor : 0.
 ```
 
 ---
