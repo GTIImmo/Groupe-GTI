@@ -1,0 +1,46 @@
+-- =====================================================================
+-- C.9 -- UN CONTACT PEUT NAITRE DANS L'APP, ET SE VOIR
+-- Date : 2026-08-31
+--
+-- L'OBSTACLE, STRUCTUREL :
+--     app_contact_current   PRIMARY KEY (hektor_contact_id)   NOT NULL
+-- Un contact ne dans l'app n'a PAS de numero Hektor -- il ne peut pas entrer
+-- dans la table principale. « Ecrire chez nous d'abord » y etait impossible.
+--
+-- LES CINQ PIECES :
+--   1. table app_contact_provisional      pivot = creation_token, RLS par auteur
+--   2. app_create_contact_optimistic      ligne + travail, MEME transaction,
+--                                         garde-fous repris mot pour mot de
+--                                         app_console_create_contact_job
+--   3. le worker reconcilie par le jeton, et marque EN ERREUR si Hektor refuse
+--   4. le front appelle la nouvelle RPC (meme signature, meme retour)
+--   5. la liste des contacts AFFICHE les lignes provisoires en tete de page 1
+--
+-- La piece 5 n'est pas cosmetique : sans elle, la protection est INVISIBLE.
+-- La saisie est conservee si Hektor tombe, mais l'utilisateur ne voit rien
+-- pendant ce temps -- et croit avoir perdu son contact.
+--
+-- ET LA MEME CORRECTION COTE ANNONCE, demandee par Frederic.
+-- Le chemin optimiste de l'annonce faisait DEUX appels : la ligne provisoire,
+-- puis le travail. Si le premier reussissait et le second echouait, une ligne
+-- « En creation » restait affichee SANS RIEN DERRIERE.
+--
+--     MESURE AVANT DE CORRIGER : 78 creations d'annonce, dont 20 par ce chemin,
+--     et app_annonce_provisional a 0 ligne. Le defaut n'a JAMAIS morde.
+--     C'est une fragilite qu'on retire, pas un incendie qu'on eteint.
+--
+-- app_create_annonce_job_optimistic n'invente RIEN : elle appelle les deux
+-- fonctions existantes depuis une seule transaction (un appel PL/pgSQL
+-- s'execute dans la transaction de l'appelant). La grosse logique de creation
+-- du travail -- garde-fous, ~60 champs -- n'est pas dupliquee, donc elle ne
+-- peut pas diverger.
+--
+-- CE QU'ON NE FAIT PAS, DELIBEREMENT : aucun numero d'app n'est distribue a la
+-- naissance, ni pour le contact ni pour l'annonce. Le registre les attribue la
+-- nuit, et le passage au distributeur instantane est une tache a part (E.4),
+-- avec son propre patron eprouve -- celui de l'affaire, plage a 1 000 000.
+--
+-- Migrations : c9_contact_ne_dans_l_app_ligne_provisoire
+--              c9_creer_un_contact_ecrit_chez_nous_d_abord
+--              creation_annonce_ligne_provisoire_et_travail_meme_transaction
+-- =====================================================================

@@ -2527,6 +2527,80 @@ function contactSummaryTotalForFilters(filters: AppFilters, stats: ContactStats 
   return null
 }
 
+// ── C.9 (31/08) : LE CONTACT « EN CREATION » APPARAIT DANS LA LISTE ──
+//
+// Meme patron que les biens provisoires (prependProvisionalRows), et pour la
+// meme raison : tant que Hektor n'a pas repondu, le contact n'a PAS de numero
+// Hektor -- or c'est la cle primaire de app_contact_current. Il ne peut donc
+// pas etre dans la liste normale. Il vit dans app_contact_provisional, pivote
+// sur le jeton fabrique par l'app.
+//
+// SANS CET AFFICHAGE, la protection posee cote base est INVISIBLE : la saisie
+// est bien conservee si Hektor tombe, mais l'utilisateur ne voit rien pendant
+// ce temps -- et croit avoir perdu son contact.
+
+type ContactProvisionalRow = {
+  creation_token: string
+  nom?: string | null; prenom?: string | null; societe?: string | null
+  email?: string | null; telephone?: string | null
+  negociateur_email?: string | null; agence_nom?: string | null
+  status?: string | null; hektor_contact_id?: string | null
+  error_message?: string | null; created_at?: string | null
+}
+
+async function loadContactProvisionals(): Promise<ContactProvisionalRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_contact_provisional')
+    .select('creation_token,nom,prenom,societe,email,telephone,negociateur_email,agence_nom,status,hektor_contact_id,error_message,created_at')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  // Un echec de lecture ne doit pas priver l'utilisateur de sa liste : on rend vide.
+  if (error) return []
+  return (data ?? []) as ContactProvisionalRow[]
+}
+
+function provisionalToAppContact(row: ContactProvisionalRow): AppContact {
+  const nom = (row.nom ?? '').trim()
+  const prenom = (row.prenom ?? '').trim()
+  const societe = (row.societe ?? '').trim()
+  // Le nom affiche suit la meme regle que la liste normale : la personne
+  // d'abord, la societe en repli.
+  const affiche = [prenom, nom].filter(Boolean).join(' ').trim() || societe || 'Contact en creation'
+  return {
+    hektor_contact_id: '',
+    creation_token: row.creation_token,
+    is_provisional: true,
+    provisional_status: (row.status as 'pending' | 'linked' | 'error') ?? 'pending',
+    provisional_error: row.error_message ?? null,
+    nom: nom || null,
+    prenom: prenom || null,
+    display_name: affiche,
+    email: row.email ?? null,
+    phone_primary: row.telephone ?? null,
+    negociateur_email: row.negociateur_email ?? null,
+    agence_nom: row.agence_nom ?? null,
+    date_enregistrement: row.created_at ?? null,
+    archive: false,
+  } as unknown as AppContact
+}
+
+// Prefixe les contacts « en creation » en tete de page 1, en ecartant ceux dont
+// le vrai contact est deja arrive (le worker a pose hektor_contact_id, et la
+// fiche est descendue). Meme borne que cote annonce : page 1, hors archives.
+async function prependProvisionalContacts(
+  rows: AppContact[], page: number, filters: AppFilters,
+): Promise<AppContact[]> {
+  if (!PROVISIONAL_CREATION_ENABLED || page !== 1) return rows
+  if (filters.archive === archivedFilterValue) return rows
+  const provis = await loadContactProvisionals()
+  if (!provis.length) return rows
+  const dejaLa = new Set(rows.map((r) => String(r.hektor_contact_id ?? '')).filter(Boolean))
+  const attente = provis.filter((p) => !p.hektor_contact_id || !dejaLa.has(String(p.hektor_contact_id)))
+  if (!attente.length) return rows
+  return [...attente.map(provisionalToAppContact), ...rows]
+}
+
 export async function loadContactsPage({
   filters,
   page,
@@ -2558,8 +2632,10 @@ export async function loadContactsPage({
   if (error || !data) throw new Error(error?.message ?? 'Unable to load contacts')
   const minimumTotal = from + data.length + (data.length === pageSize ? 1 : 0)
   const exactSummaryTotal = contactSummaryTotalForFilters(filters, statsSnapshot)
+  const lignes = await prependProvisionalContacts(
+    (data as AppContact[]).map(normalizeContactRow), page, filters)
   return {
-    rows: (data as AppContact[]).map(normalizeContactRow),
+    rows: lignes,
     total: Math.max(exactSummaryTotal ?? count ?? 0, minimumTotal),
     page,
     pageSize,
@@ -4847,6 +4923,10 @@ export function newCreationToken(): string {
   return (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `prov-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
+// ⚠ PLUS APPELEE depuis le 31/08 : la creation optimiste passe desormais par
+// app_create_annonce_job_optimistic, qui ecrit la ligne provisoire ET le travail
+// dans la MEME transaction. Conservee -- elle reste le seul chemin pour poser
+// une provisoire SEULE, et la retirer sans besoin serait un retrait a l'aveugle.
 export async function createAnnonceProvisional(token: string, fields: {
   titre_bien?: string | null; prix?: string | number | null; ville?: string | null
   code_postal?: string | null; type_bien?: string | null; statut_annonce?: string | null
@@ -8609,12 +8689,18 @@ function normaliserTypeTransac(famille: string | null | undefined, sousType: str
   return texte || null
 }
 
-export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobInput): Promise<ConsoleJob> {
+export async function createHektorDraftAnnonceJob(
+  input: HektorDraftAnnonceJobInput,
+  // 31/08 -- quand des champs de ligne provisoire sont fournis, on emprunte la
+  // RPC qui ecrit la provisoire ET le travail dans la MEME TRANSACTION. La
+  // construction de la charge (~60 champs) reste ICI, a un seul endroit : elle
+  // ne peut donc pas diverger entre les deux chemins.
+  provisoire?: { token: string; fields: Record<string, string> } | null,
+): Promise<ConsoleJob> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const creationStatus = input.creationStatus === 'estimation' ? 'estimation' : 'active'
-  const { data, error } = await supabase.rpc('app_console_create_draft_annonce_job', {
-    draft_payload: sanitizeForJsonb({
+  const chargeBrute = sanitizeForJsonb({
       title: input.title?.trim() || null,
       description: input.description?.trim() || null,
       agence_nom: input.agenceNom?.trim() || null,
@@ -8687,9 +8773,18 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
         postal_code: input.initialMandant.postalCode?.trim() || null,
         city: input.initialMandant.city?.trim() || null,
       } : null,
-    }),
-    draft_priority: input.priority ?? 20,
-  })
+    })
+  const { data, error } = provisoire
+    ? await supabase.rpc('app_create_annonce_job_optimistic', {
+        p_token: provisoire.token,
+        p_fields: provisoire.fields,
+        draft_payload: chargeBrute,
+        draft_priority: input.priority ?? 20,
+      })
+    : await supabase.rpc('app_console_create_draft_annonce_job', {
+        draft_payload: chargeBrute,
+        draft_priority: input.priority ?? 20,
+      })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor draft annonce job')
   return data as ConsoleJob
 }
@@ -8700,22 +8795,36 @@ export async function createHektorDraftAnnonceJob(input: HektorDraftAnnonceJobIn
 export async function createHektorDraftAnnonceJobOptimistic(input: HektorDraftAnnonceJobInput): Promise<ConsoleJob> {
   if (!PROVISIONAL_CREATION_ENABLED) return createHektorDraftAnnonceJob(input)
   const token = newCreationToken()
-  try {
-    await createAnnonceProvisional(token, {
-      titre_bien: input.title,
-      prix: input.price,
-      ville: input.city,
-      code_postal: input.postalCode,
-      type_bien: input.propertyType,
-      statut_annonce: input.creationStatus === 'estimation' ? 'Estimation' : 'Actif',
-      commercial_nom: input.hektorUserLabel,
-      negociateur_email: input.hektorUserEmail,
-      agence_nom: input.agenceNom,
-    })
-  } catch {
-    // Best-effort : si la provisoire échoue, on crée quand même normalement (pas de blocage).
+  // 31/08 -- UN SEUL APPEL, DONC UNE SEULE TRANSACTION.
+  //
+  // AVANT : la ligne provisoire etait posee par un premier appel, le travail par
+  // un second. Si le premier reussissait et le second echouait, une ligne
+  // « En creation » restait affichee SANS RIEN DERRIERE -- un bien fantome qui
+  // n'arriverait jamais.
+  //
+  // Mesure avant correction : 78 creations d'annonce, dont 20 par ce chemin, et
+  // app_annonce_provisional a 0 ligne. Le defaut n'avait JAMAIS morde -- c'est
+  // une fragilite qu'on retire, pas un incendie qu'on eteint.
+  //
+  // La provisoire reste BEST-EFFORT a l'interieur de la RPC : si elle echoue,
+  // la creation se fait quand meme. L'inverse -- un travail perdu -- ne se
+  // rattrape pas.
+  const champs: Record<string, string> = {}
+  const poser = (cle: string, valeur: unknown) => {
+    if (valeur == null) return
+    const v = String(valeur).trim()
+    if (v) champs[cle] = v
   }
-  return createHektorDraftAnnonceJob({ ...input, creationToken: token })
+  poser('titre_bien', input.title)
+  poser('prix', input.price)
+  poser('ville', input.city)
+  poser('code_postal', input.postalCode)
+  poser('type_bien', input.propertyType)
+  poser('statut_annonce', input.creationStatus === 'estimation' ? 'Estimation' : 'Actif')
+  poser('commercial_nom', input.hektorUserLabel)
+  poser('negociateur_email', input.hektorUserEmail)
+  poser('agence_nom', input.agenceNom)
+  return createHektorDraftAnnonceJob({ ...input, creationToken: token }, { token, fields: champs })
 }
 
 export async function createConsoleDocumentSignedUrl(document: ConsoleDocument, expiresIn = 300): Promise<string> {
