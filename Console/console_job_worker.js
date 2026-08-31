@@ -7390,6 +7390,66 @@ function parseHektorLinkedMandantContactIds(html, annonceId) {
   return Array.from(ids);
 }
 
+// --- LA PREUVE DU LIEN MANDANT VIENT DE L'API (31/08/2026) ---
+//
+// LE DEFAUT, MESURE. La console filtre `div_display_prospects_liste` PAR L'AGENCE
+// DU COMPTE CONNECTE. Or le worker agit sous le negociateur du BIEN, jamais du
+// CONTACT. Un mandant d'une autre agence lui est donc invisible, et il conclut
+// « pas lie ».
+//
+//     22 755 liens vendeur sur les annonces actives
+//     10 820  (47,6 %)  contact et bien ont un negociateur different
+//      9 504  (41,8 %)  ils ont une agence differente
+//
+// Presque un mandant sur deux. Le defaut n'avait mordu que TROIS fois parce
+// qu'il n'y a eu que trois gestes mandant en 90 jours -- pas parce qu'il est
+// rare. Mesurer l'usage n'est pas mesurer le risque.
+//
+// PAS REPARABLE EN CHANGEANT DE COMPTE : le geste touche deux objets qui
+// appartiennent a deux agences, et Hektor filtre par agence. Quel que soit le
+// compte choisi, l'un des deux est invisible dans 47 % des cas.
+//
+// LA SOURCE JUSTE. L'API s'authentifie par JETON, pas par session de
+// negociateur : elle n'est pas filtree. Verifie sur le cas exact --
+//     annonce 62964, contact 603953
+//     console en tant que GONZALEZ  ->  invisible
+//     API                           ->  visible, agence=1
+//
+// Meme patron que lireEtatAnnonceViaApi (29/08) : « ON EXIGE LA PREUVE, ET PAR
+// UNE SOURCE EXACTE ». Le scrape reste EN REPLI si l'API se tait : une lecture
+// ratee ne conclut jamais.
+async function lireProprietairesViaApi(job, annonceId, step) {
+  const id = String(annonceId || "").trim();
+  if (!id) return { _error: "annonce_id vide" };
+  try {
+    const out = await runProjectPythonScript(
+      ["phase2/sync/annonce_proprietaires_from_api.py", "--annonce-id", id],
+      { timeoutMs: 30000, previewSize: 1000 });
+    const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+    const lu = safeJsonParse(derniere);
+    if (!lu || typeof lu !== "object") return { _error: "sortie illisible" };
+    return lu;
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    await logJob(job.id, step, "error", "Lecture des proprietaires (API) impossible", {
+      hektor_annonce_id: id, error: message,
+    });
+    return { _error: message };
+  }
+}
+
+// TROIS issues, la troisieme etant celle qui manquait : « je ne sais pas ».
+// L'appelant decide -- prealable comme preuve retombent alors sur la console,
+// mais aucune ne conclut au succes sur un silence.
+async function lienMandantSelonApi(job, annonceId, contactId, step) {
+  const lu = await lireProprietairesViaApi(job, annonceId, step);
+  if (lu._error) return { verdict: "inconnu", raison: lu._error };
+  if (lu.trouve !== true) return { verdict: "inconnu", raison: "annonce introuvable a l'API" };
+  const cible = String(contactId || "").trim();
+  const ids = Array.isArray(lu.ids) ? lu.ids.map(String) : [];
+  return { verdict: ids.includes(cible) ? "lie" : "non_lie", ids };
+}
+
 async function fetchHektorProspectsList(hektorAnnonceId) {
   const id = encodeURIComponent(String(hektorAnnonceId));
   return hektorFetch(`${XMLRPC_URL}?mode=div_display_prospects_liste&id=${id}`);
@@ -11574,6 +11634,15 @@ async function waitForHektorMandantLink(job, annonceId, contactId, step, options
     }
     if (index < attempts - 1) await sleep(intervalMs);
   }
+  // Avant de declarer l'echec : la console est peut-etre simplement aveugle a ce
+  // contact (autre agence). L'API tranche.
+  const ultime = await lienMandantSelonApi(job, annonceId, contactId, "hektor_mandant_preuve");
+  if (ultime.verdict === "lie") {
+    await logJob(job.id, "hektor_mandant_preuve", "done",
+      "Association confirmee par l'API (la console ne la montrait pas depuis ce compte)",
+      { hektor_annonce_id: String(annonceId), hektor_contact_id: String(contactId) });
+    return { status: "confirmed", waitAttempts: attempts, source: "api" };
+  }
   throw new Error(`Association mandant non confirmee pour contact ${contactId} sur annonce ${annonceId}`);
 }
 
@@ -11797,16 +11866,15 @@ async function handleCreateHektorMandatAutoNumber(job) {
   }
   for (const contactId of mandantIds) {
     if (!hektorProspectLinkedInHtml(prospects.text, contactId, annonceId)) {
-      // Meme raison qu'a la modification d'un mandant : le silence de la console
-      // peut venir du COMPTE connecte, pas d'une absence de lien. Notre base a
-      // donc droit de parole -- c'est un PREALABLE, pas une preuve de reussite.
-      const second = await notreBaseConnaitLeLienMandant(annonceId, contactId);
-      if (!second.connait) {
+      // Le silence de la console peut venir du COMPTE connecte, pas d'une absence
+      // de lien. L'API n'est pas filtree : c'est elle qui tranche.
+      const selonApi = await lienMandantSelonApi(job, annonceId, contactId, "hektor_mandant_prealable");
+      if (selonApi.verdict !== "lie") {
         throw new Error(`Le contact ${contactId} n'est pas confirme comme mandant de l'annonce ${annonceId}`);
       }
       await logJob(job.id, "hektor_mandant_prealable", "done",
-        "La console ne montre pas le lien depuis ce compte, mais notre base le connait -- on continue",
-        { hektor_annonce_id: String(annonceId), hektor_contact_id: String(contactId), ...second });
+        "Lien confirme par l'API (la console ne le montrait pas depuis ce compte)",
+        { hektor_annonce_id: String(annonceId), hektor_contact_id: String(contactId) });
     }
   }
 
@@ -13857,7 +13925,11 @@ async function executerCreationMandantContact(job) {
     await sleep(1800);
     after = await fetchHektorProspectsList(annonceId);
   }
-  if (!hektorProspectLinkedInHtml(after.text, created.contactId, annonceId)) {
+  const preuveCreation = await lienMandantSelonApi(job, annonceId, created.contactId, "hektor_mandant_preuve");
+  if (preuveCreation.verdict === "non_lie") {
+    throw new Error(`Creation contact OK mais association mandant non confirmee pour ${created.contactId}`);
+  }
+  if (preuveCreation.verdict === "inconnu" && !hektorProspectLinkedInHtml(after.text, created.contactId, annonceId)) {
     throw new Error(`Creation contact OK mais association mandant non confirmee pour ${created.contactId}`);
   }
 
@@ -14013,17 +14085,32 @@ async function handleUpdateHektorMandantContact(job) {
   const contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
   if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
 
-  const before = await fetchHektorProspectsList(annonceId);
-  if (!hektorProspectLinkedInHtml(before.text, contactId, annonceId)) {
+  // PREALABLE, par la source exacte. « inconnu » retombe sur la console.
+  const prealable = await lienMandantSelonApi(job, annonceId, contactId, "hektor_mandant_prealable");
+  if (prealable.verdict === "non_lie") {
     throw new Error(`Le contact ${contactId} n'est pas lie comme mandant de l'annonce ${annonceId}`);
+  }
+  if (prealable.verdict === "inconnu") {
+    const repli = await fetchHektorProspectsList(annonceId);
+    if (!hektorProspectLinkedInHtml(repli.text, contactId, annonceId)) {
+      throw new Error(`Le contact ${contactId} n'est pas lie comme mandant de l'annonce ${annonceId}`);
+    }
   }
 
   const updated = await updateHektorMandantContact(job, annonceId, contactId, payload);
   await sleep(1200);
 
-  const after = await fetchHektorProspectsList(annonceId);
-  if (!hektorProspectLinkedInHtml(after.text, contactId, annonceId)) {
+  // PREUVE DE REUSSITE. L'API repond EN DIRECT : elle peut confirmer une
+  // association posee il y a deux secondes -- ce qu'aucune source datee ne peut.
+  const apres = await lienMandantSelonApi(job, annonceId, contactId, "hektor_mandant_preuve");
+  if (apres.verdict === "non_lie") {
     throw new Error(`Modification contact OK mais association mandant non confirmee pour ${contactId}`);
+  }
+  if (apres.verdict === "inconnu") {
+    const after = await fetchHektorProspectsList(annonceId);
+    if (!hektorProspectLinkedInHtml(after.text, contactId, annonceId)) {
+      throw new Error(`Modification contact OK mais association mandant non confirmee pour ${contactId}`);
+    }
   }
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
