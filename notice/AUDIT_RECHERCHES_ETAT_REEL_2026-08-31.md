@@ -135,9 +135,69 @@ Si la liste contient du bruit, l'index ne désigne pas la recherche voulue.
 toujours la bonne et que le bruit vient après — auquel cas index 0 tape juste, les 26 gestes
 passés étaient corrects, et le défaut ne se voit qu'à partir de la deuxième recherche.
 
-**À établir par l'expérience**, comme la condition de blocage des compromis : lire le HTML de
-`contacts-contactProfile-recherche-changeTab` sur un contact à plusieurs recherches, et
-comparer les identifiants trouvés aux recherches réelles.
+### ÉTABLI LE 31/08 — et **mon diagnostic du matin était faux**
+
+Trois contacts lus directement, en lecture seule, depuis la session Hektor :
+
+| contact | recherches dans l'app | `data-search-id` trouvés | regex actuelle du worker |
+|---|---|---|---|
+| **78000** | 8 | **8** ✅ | **1** ❌ |
+| **151844** | 3 | **3** ✅ | **1** ❌ |
+| **605030** | 1 | **1** ✅ | **1** ✅ |
+
+**La liste ne sur-compte pas : elle SOUS-COMPTE.** Elle ne rend jamais que le **premier**
+identifiant, quel que soit le nombre de recherches. J'avais conclu l'inverse le matin, à partir
+d'un `criteres_apres: 3` observé côté worker — une mesure juste, une inférence fausse.
+
+**Le HTML porte pourtant l'identifiant, proprement** : un attribut `data-search-id`, **une
+balise par recherche**, dans l'ordre. Pour le contact 78000 :
+
+```
+   13589  13590  13591  13592  13595  13596  13597  13598
+                              ^^ le saut montre que l'idCritere est attribue
+                                 globalement chez Hektor, pas par contact
+```
+
+La regex actuelle ne le regarde pas. Elle ratisse `dropDownMenu_`, `contentDrop_`,
+`valueInputAutoarchivage`, `rel=` — **qui ne portent que le premier** — et `getWizardCritere`,
+**absent du HTML** (0 occurrence sur les trois contacts).
+
+### La conséquence exacte, et elle est sérieuse
+
+```js
+list.find(entry => entry.index === index) || list[0]     // resolveContactSearchTargetCritereId
+```
+
+Si la liste ne contient qu'une entrée (index 0) :
+
+```
+   search_index = 0   ->  trouve l'entree 0        ->  CORRECT
+   search_index = 1+  ->  ne trouve rien           ->  RETOMBE SUR list[0]
+                                                       = LA PREMIERE RECHERCHE
+```
+
+**Modifier ou supprimer la 2ᵉ recherche d'un contact agit sur la 1ʳᵉ. Sans erreur, sans trace.**
+
+### Mais le défaut n'a JAMAIS mordu — vérifié un par un
+
+Les **26 gestes** `update` / `delete` depuis le 12/06 portent **tous** `search_index = 0`.
+Un seul concernait un contact à 2 recherches (113412), et sa suppression portait en plus un
+`idCritere` explicite (17985) — donc sans passer par la résolution par index.
+
+> **Le risque est réel et DORMANT.** Il ne s'est jamais réalisé parce que personne n'a encore
+> touché à une deuxième recherche. Il mordra au premier geste qui le fera.
+
+### Ce qui reste non expliqué, et qu'il ne faut pas balayer
+
+Côté worker, le contact 605030 avait donné **3** identifiants ; depuis ma session je n'en compte
+**1**. La différence : le worker agit en **contexte négociateur**, moi en **admin root** — et on
+sait déjà (documents, août) que Hektor masque des blocs selon le compte. **Je n'ai donc pas
+vérifié que `data-search-id` est présent en contexte négociateur.**
+
+**Conséquence sur la façon de corriger** : lire `data-search-id` **en premier**, garder
+l'ancienne regex en repli, et **journaliser les deux** — puis observer en conditions réelles
+avant de s'y fier. C'est la méthode de la doublure, celle du registre des recherches.
+Pas de bascule sur une lecture faite depuis le mauvais compte.
 
 ⚠️ **Ne pas supprimer la recherche d'essai du contact 605030** tant que ce point n'est pas
 établi : la suppression emprunte ce même chemin.
@@ -176,7 +236,16 @@ contact. Il ne s'était jamais manifesté parce que personne n'avait encore supp
 pas.
 
 Proportion : 138 sur 49 055 rapprochements, soit **0,28 %**, et ce sont mes propres déchets
-d'essai. À nettoyer, et à corriger dans le handler.
+d'essai.
+
+**NETTOYÉ le 31/08** — 279 lignes sur trois tables (`app_rapprochement` 138,
+`app_rapprochement_score_history` 138, `app_rapprochement_search_state` 3). Les huit autres
+tables portant `contact_search_key` ne contenaient rien pour ces clés, et les trois contacts
+étaient bien absents de `app_contact_current` (témoin vérifié avant suppression).
+Contrôle après : **0 rapprochement orphelin**.
+
+**Reste à corriger dans le handler** : `delete_hektor_contact` doit purger les rapprochements
+et leur historique, comme il purge déjà la recherche.
 
 ### 6.2 La modale n'écrit toujours que 7 critères sur 12
 
@@ -208,8 +277,10 @@ c'est le même trou, vu de l'autre bout.)*
 
 **L'ordre que je recommande, du moins risqué au plus engageant :**
 
-1. **Établir le comportement de la liste scrapée** — lecture seule, un appel Hektor, aucun
-   risque. Sans ça, on ne sait pas si un défaut existe.
+1. ~~Établir le comportement de la liste scrapée~~ **FAIT le 31/08** (§5). Le défaut existe,
+   il est dormant, et le bon attribut est identifié : `data-search-id`.
+   **Suite** : lire `data-search-id` d'abord, garder l'ancienne regex en repli, journaliser les
+   deux, observer — puis basculer. Ne PAS basculer sur une seule lecture faite en admin.
 2. **Corriger la purge des rapprochements** à la suppression d'un contact — trou net, isolé,
    sans effet sur les recherches.
 3. **Trancher la question restée ouverte depuis le 19/06** : *les recherches remontent-elles
