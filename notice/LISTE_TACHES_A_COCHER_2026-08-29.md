@@ -20,29 +20,59 @@ optimistes, A.1 A.2 A.3 ». **Les 62 tâches du plan sont désormais toutes ici.
 Principe : *« écrire d'abord, envoyer, comparer au retour »*.
 
 ```
-CONVERTIS (7)                                       +2 le 31/08
+> ⚠ **CE BLOC ETAIT FAUX JUSQU'AU 31/08 AU SOIR.** Il annonçait 9 workers « a
+> convertir » dont TROIS etaient faits depuis le 30/08, avec la mention trompeuse
+> « insert direct -- verifie » qui decrivait l'etat d'AVANT leur conversion.
+> Corrige en LISANT LE CODE (les RPC `app_*_optimistic` et leurs appelants dans
+> `api.ts`), pas les notes. C'est de la que venait l'impression de refaire les
+> memes choses.
+
+CONVERTIS (10 sur 16)                        mesure dans le code le 31/08
 [x] update_hektor_annonce_fields        app_edit_annonce_optimistic
 [x] update_hektor_contact               app_edit_contact_optimistic
 [x] update_hektor_contact_search        app_edit_search_optimistic
-[x] change_hektor_annonce_status        ecrit l'affaire
-[x] create_hektor_draft_annonce         ligne provisoire
-[x] create_hektor_contact               app_create_contact_optimistic    31/08
-                                        eprouve : badge « En creation… »,
-                                        reconcilie en 20 s, badge d'erreur aussi
-[x] add_hektor_contact_search           app_create_search_optimistic     31/08
-                                        eprouve : cycle complet sur 605030
+[x] change_hektor_annonce_status        app_change_annonce_status_optimistic
+[x] create_hektor_draft_annonce         app_create_annonce_job_optimistic
+[x] archive_hektor_annonce              app_archive_annonce_optimistic     30/08
+[x] restore_hektor_annonce              app_restore_annonce_optimistic     30/08
+[x] assign_hektor_annonce_negotiator    app_assign_negotiator_optimistic   30/08
+[x] create_hektor_contact               app_create_contact_optimistic      31/08
+                                        eprouve a l'ecran : badge, 20 s, erreur
+[x] add_hektor_contact_search           app_create_search_optimistic       31/08
+                                        eprouve a l'ecran : cycle complet
 
-A CONVERTIR (9)
-[ ] archive_hektor_annonce              insert direct -- verifie
-[ ] restore_hektor_annonce              insert direct -- verifie
-[ ] delete_hektor_annonce
-[ ] assign_hektor_annonce_negotiator    insert direct -- verifie
-[ ] link_hektor_mandant                 insert direct -- verifie
-[ ] delete_hektor_contact
-[ ] delete_hektor_contact_search
-[ ] create_hektor_mandant_contact       ← le prochain de la famille
-[ ] update_hektor_mandant_contact       ← a arbitrer : editContactOptimistic
-                                          existe deja et fait le meme travail
+A CONVERTIR (6) -- et ce ne sont PAS six travaux, c'est UNE decision
+
+    LE CARNET NE SAIT PORTER QU'UN CHAMP CORRIGE.
+    app_annonce_champ_app = (dossier, champ) -> valeur. C'est le domicile des
+    valeurs que l'app tient pour justes en face de Hektor. Les dix convertis
+    l'utilisent, ou utilisent leur table courante.
+
+    LES SIX RESTANTS N'ONT PAS DE CHAMP A CORRIGER :
+
+[ ] delete_hektor_annonce          }  un EVENEMENT, pas une correction.
+[ ] delete_hektor_contact          }  ARBITRAGE DEJA PRIS le 30/08, ecrit dans
+[ ] delete_hektor_contact_search   }  magasin_annonce_app.py :
+                                      « La suppression n'est pas ici, et c'est
+                                      volontaire. Une suppression n'est pas une
+                                      correction, c'est un evenement -- l'annonce
+                                      s'en va, il n'y a plus rien a comparer. »
+                                      -> il leur faut un domicile A ELLES.
+
+[ ] link_hektor_mandant            }  une RELATION, pas un champ.
+[ ] create_hektor_mandant_contact  }  app_contact_relation_current n'a AUCUN
+[ ] update_hektor_mandant_contact  }  pending ni provisoire.
+                                      -> meme manque, autre forme.
+                                      NOTE : update_ edite un contact qui EXISTE
+                                      deja ; app_edit_contact_optimistic fait
+                                      peut-etre deja le travail -> a trancher
+                                      avant de coder quoi que ce soit.
+
+    ⚠ ET TOUT CECI EST DORMANT, PAR CONSTRUCTION.
+    contrat_autorite.py : CHAMPS_APP_ANNONCE = ()   -- VIDE
+    Le carnet se remplit, RIEN NE L'APPLIQUE. C'est l'interrupteur du chantier,
+    et le laisser eteint ne change rien en production. Convertir les six
+    derniers ne changera donc rien non plus tant qu'il est eteint.
 
 LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [x] Actif · Offre · Compromis · Clos    14 executions depuis mai
