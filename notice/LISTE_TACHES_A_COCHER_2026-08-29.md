@@ -20,29 +20,33 @@ optimistes, A.1 A.2 A.3 ». **Les 62 tâches du plan sont désormais toutes ici.
 Principe : *« écrire d'abord, envoyer, comparer au retour »*.
 
 ```
-CONVERTIS (5)
+CONVERTIS (7)                                       +2 le 31/08
 [x] update_hektor_annonce_fields        app_edit_annonce_optimistic
 [x] update_hektor_contact               app_edit_contact_optimistic
 [x] update_hektor_contact_search        app_edit_search_optimistic
 [x] change_hektor_annonce_status        ecrit l'affaire
 [x] create_hektor_draft_annonce         ligne provisoire
+[x] create_hektor_contact               app_create_contact_optimistic    31/08
+                                        eprouve : badge « En creation… »,
+                                        reconcilie en 20 s, badge d'erreur aussi
+[x] add_hektor_contact_search           app_create_search_optimistic     31/08
+                                        eprouve : cycle complet sur 605030
 
-A CONVERTIR (11)
+A CONVERTIR (9)
 [ ] archive_hektor_annonce              insert direct -- verifie
 [ ] restore_hektor_annonce              insert direct -- verifie
 [ ] delete_hektor_annonce
 [ ] assign_hektor_annonce_negotiator    insert direct -- verifie
 [ ] link_hektor_mandant                 insert direct -- verifie
 [ ] delete_hektor_contact
-[ ] add_hektor_contact_search
 [ ] delete_hektor_contact_search
-[ ] create_hektor_contact
-[ ] create_hektor_mandant_contact
-[ ] update_hektor_mandant_contact
+[ ] create_hektor_mandant_contact       ← le prochain de la famille
+[ ] update_hektor_mandant_contact       ← a arbitrer : editContactOptimistic
+                                          existe deja et fait le meme travail
 
 LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [x] Actif · Offre · Compromis · Clos    14 executions depuis mai
-[ ] VENDU                               JAMAIS EXECUTEE (0 sur 16)
+[x] VENDU                               EPROUVEE le 31/08 (voir C.4-Vendu)
 ```
 
 ## 2. C.19 — LES GESTES DE TRANSACTION *(finir)*
@@ -53,8 +57,8 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [ ] ANNULER un compromis                          JAMAIS EXECUTE
 [ ] SUPPRIMER une vente                           JAMAIS EXECUTE
 [ ] le RETOUR EN ARRIERE sur refus                JAMAIS TESTE -- garde-fou de l'instantane
-[ ] redemarrer les workers                        2 correctifs en retard
-[ ] deployer le front                             dernier commit c484c28
+[x] redemarrer les workers                        fait plusieurs fois le 31/08
+[x] deployer le front                             en ligne, bundle index-BLZWZur4
 ```
 
 ## 3. C.4-bis-0 — VÉRIFIER LA DÉTECTION *(préalable au filet)*
@@ -1149,8 +1153,37 @@ taches : ils les feront SURVIVRE a la coupure.** Ce n'est pas le meme calendrier
 **CE QUE L'ESSAI DU 31/08 A LAISSE SUR LA TABLE :**
 
 ```
-[ ] SUPPRIMER UN CONTACT LAISSE SES RAPPROCHEMENTS ORPHELINS
-    ⚡ LE SEUL VRAI TROU TROUVE LE 31/08 -- et sur un chemin BIEN VIVANT.
+[—] SUPPRIMER UN CONTACT LAISSE SES RAPPROCHEMENTS ORPHELINS
+    CLOS LE 31/08 -- LE MENAGE EXISTE DEJA, ET IL TOURNE.
+
+    Avant de coder quoi que ce soit (consigne de Frederic : « verifie ce qui
+    existe deja comme systeme de purge pour ne rien casser »), j'ai cherche.
+    Il y a app_sweep_search_orphans(), et elle fait EXACTEMENT ce travail :
+       - rattache ce qui peut l'etre (propositions, relances, retours
+         acquereur, envois email) a la recherche evidente du contact
+       - SUPPRIME app_rapprochement et app_rapprochement_score_history
+         dont la cle n'existe plus
+       - refuse d'ecrire si un conflit d'unicite se presente, et le journalise
+       - laisse une trace dans app_sweep_search_orphans_log
+
+    ELLE TOURNE TOUS LES JOURS A 05:00, sans interruption. Elle a nettoye
+    10 rapprochements + 15 historiques le 28/08.
+
+    => mes 138 lignes du matin auraient disparu d'elles-memes le lendemain.
+       Le nettoyage manuel n'a rien casse, mais il etait inutile.
+
+    RESTE UNE MIETTE, pas un trou : app_rapprochement_search_state n'est pas
+    dans le balayage -- 114 lignes orphelines. Une ligne d'etat de
+    rafraichissement qui decrit une recherche disparue ne fait rien de mal ;
+    elle occupe de la place. A ajouter au sweep un jour, sans urgence.
+    (app_notification : 13 orphelines, abandonnees par decision -- « c'est pas
+    grave de perdre les notifications ».)
+
+    LA LECON, deuxieme fois dans la meme journee : regarder ce qui existe
+    AVANT de conclure a un manque. Les deux « trous » signales le 31/08
+    etaient l'un un chemin mort, l'autre un terrain deja couvert.
+
+    ANCIEN ENONCE, conserve :
 
     handleDeleteHektorContact purge app_contact_search_current (son resultat le
     dit : « app_contact_search_current: 1 ») mais NE TOUCHE PAS a
