@@ -106,3 +106,67 @@ en interne ; ce qui manquait, c'était la séquence. Elle est là.
 Ce relevé confirme, une troisième fois, la leçon du 29/08 : **lire le code ne remplace pas
 regarder passer l'appel.** Le verbe du compromis lu statiquement était faux ; celui de la vente
 était juste ; et ici la lecture statique aurait donné `createVente` — la coquille, pas le geste.
+
+---
+
+# LA CONDITION DE BLOCAGE — établie le 31/08 par expérience
+
+*Frédéric l'avait énoncée : « il peut y avoir deux compromis sur une annonce, mais il faut que
+le premier soit noté refusé pour pouvoir en ajouter un autre. » **Je l'ai contredit à tort**, sur
+une inférence fausse. L'expérience lui donne raison.*
+
+## Le protocole — une seule variable à la fois
+
+Même code, même charge, sur le bac à sable 62774 dont l'état est maîtrisé de bout en bout.
+Chaque étape relève par l'**API** ce qui existait avant et ce qui a été créé.
+
+```
+   C1  aucun compromis actif au depart   ->  CREE 50053      reference
+   C2  50053 ACTIF present               ->  RIEN CREE       LE TEST
+       annulation de 50053                                   done
+   C3  juste apres l'annulation          ->  CREE 50054      contre-epreuve
+   V1  aucune vente au depart            ->  CREE 23293      reference
+   V2  23293 presente                    ->  RIEN CREE       LE TEST
+```
+
+Vérifié pièce par pièce : `50053 status 2` *(annulé par le travail)*, `50054 status 1` *(créé
+juste après)*, `23293` existant. **C3 ferme le raisonnement** : annuler suffit à débloquer, et
+immédiatement.
+
+## La règle, et elle diffère selon le genre
+
+| | ce qui bloque | comment on débloque | réversible ? |
+|---|---|---|---|
+| **compromis** | un compromis **actif** *(status 1)* | l'**annuler** — verbe éprouvé le 29/08 | **oui** |
+| **vente** | **toute** vente existante | la **supprimer** — elle n'a aucun état | **non** |
+
+C'est la conséquence directe d'un fait déjà mesuré : `hektor_vente` **n'a pas de colonne de
+statut**. Une vente ne se refuse pas, elle disparaît. Donc le geste qui débloque une vente est
+**définitif**, et ne peut pas être automatisé sans décision humaine.
+
+## Pourquoi je m'étais trompé — l'inférence, pas la mesure
+
+J'avais objecté : *« un compromis actif ne peut pas bloquer, puisque 9 075 annonces Vendues en
+portent un »*. La mesure était juste ; **le raisonnement était faux**.
+
+Ces 9 075 dossiers sont **terminés** — personne n'y crée un nouveau compromis, donc l'actif qui
+y dort ne bloque jamais rien. La règle porte sur le **geste de création**, pas sur l'état du
+parc. Les deux faits sont vrais et parfaitement compatibles :
+
+- une fois la vente enregistrée, le compromis reste actif et personne ne le clôt ;
+- pour en créer un **nouveau**, il faut d'abord annuler celui qui est actif.
+
+➡ **La leçon** : une mesure exacte ne protège pas d'une conclusion fausse. Il fallait
+l'expérience, pas le raisonnement.
+
+## ⚠ Une faiblesse résiduelle, à ne pas oublier
+
+`ListCompromis` **ne rend que 97 lignes** alors que le miroir en compte 10 573, et le pont ne lit
+que sa première page. Pendant l'expérience, `50054` a été vu à sa création puis **a disparu du
+listing quelques minutes plus tard** — la fenêtre du listing ne se comporte pas comme un simple
+tri par date.
+
+Conséquence : l'arbitre peut rendre un **faux négatif** si le listing ne montre pas la
+transaction qui vient d'être créée. Il ne l'a pas fait pendant l'expérience, mais rien ne
+garantit qu'il ne le fera jamais. **La confirmation par `CompromisById` / `VenteById` reste donc
+indispensable** — c'est elle qui ne ment pas.
