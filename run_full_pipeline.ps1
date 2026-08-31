@@ -575,6 +575,23 @@ if ($PushContactsToSupabase) {
     Invoke-Step -Label "phase2 pousser numeros de contact" -Arguments @(
         "phase2\identite\pousser_numeros_contact.py"
     ) -WorkerKey "supabase.push_contact_ids"
+
+    # 31/08 -- ET LE NUMERO DESCEND JUSQU'AUX 18 TABLES SATELLITES.
+    #
+    # L'etape ci-dessus ne remplit qu'UNE table : app_contact_current. Les 18
+    # autres avaient ete remplies « par jointure dans Postgres » le 25/08, UNE
+    # FOIS, et rien ne le rejouait : 5 288 lignes nees sans numero en 7 jours.
+    # Elle vient APRES, forcement : elle recopie depuis app_contact_current, qui
+    # doit donc etre a jour.
+    # ⚠ ETAPE NON BLOQUANTE, ET C'EST DELIBERE. Invoke-Step LEVE sur un code de
+    # retour non nul et arreterait tout le run. Or ceci est une REPARATION : si
+    # elle echoue, il manque quelques numeros dans une colonne que PERSONNE NE LIT
+    # ENCORE -- ce n'est pas une raison pour priver l'agence de sa nuit de
+    # synchronisation. La sentinelle data.contact_lignes_sans_numero le dira le
+    # lendemain matin, et c'est exactement son role.
+    Invoke-OptionalStepWithRetry -Label "phase2 propager numeros de contact" -Arguments @(
+        "phase2\identite\propager_numeros_contact.py"
+    ) -WorkerKey "supabase.propagate_contact_ids"
 }
 else {
     Write-RunLog "SKIP phase2 push contacts to supabase"

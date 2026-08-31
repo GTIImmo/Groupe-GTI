@@ -1,0 +1,47 @@
+-- =====================================================================
+-- LE NUMERO DE CONTACT DESCEND JUSQU'AUX 18 TABLES SATELLITES
+-- Date : 2026-08-31
+--
+-- Le 25/08, une migration a pose `app_contact_id` sur les 19 tables et les a
+-- remplies « par jointure dans Postgres » -- 144 985 lignes, EN UNE FOIS.
+-- L'entretien mis en place ensuite ne couvre qu'UNE de ces tables :
+-- `pousser_numeros_contact.py` recopie la serie dans `app_contact_current`.
+--
+-- Les 18 autres n'ont plus jamais ete alimentees : 5 288 lignes nees sans
+-- numero en 7 jours. Rien ne s'effacait -- c'est le neuf qui arrivait vide.
+--
+-- POURQUOI DANS POSTGRES ET PAS DANS LE PUSH. La premiere idee etait de faire
+-- porter la colonne a la couche LOCALE, comme les annonces la portent dans
+-- app_view_generale. Deux defauts, trouves en l'ecrivant :
+--   1. l'empreinte du push couvre toutes les colonnes sauf `refreshed_at` :
+--      ajouter une colonne changerait TOUTES les empreintes et renverrait les
+--      200 000 lignes d'un coup -- la descente du 22/08 a sature Supabase
+--      exactement comme ca, au point qu'il a fallu le redemarrer ;
+--   2. l'exclure de l'empreinte reglait le premier defaut mais en creait un
+--      pire : une ligne poussee AVANT d'avoir son numero enverrait
+--      `app_contact_id = null` et EFFACERAIT celui deja present.
+--
+-- La propagation cote Postgres n'a aucun de ces defauts, et elle couvre en plus
+-- `app_rapprochement` (2 754 lignes), calcule dans Supabase et qui ne passe
+-- jamais par le push.
+--
+-- CE QU'ELLE NE FAIT PAS, VOLONTAIREMENT : elle ne remplit QUE les cases vides,
+-- ne touche aucune autre colonne, et laisse les 35 orphelines de
+-- `app_search_count_high_water` ainsi que les 58 envois sans contact rattache --
+-- ils ne sont pas rattrapables.
+--
+-- MESURE A LA POSE : 5 392 lignes remplies, puis 0 au rejeu (idempotente).
+--     app_rapprochement              2 754
+--     app_contact_relation_current   2 406
+--     app_contact_search_current       128
+--     app_search_count_high_water      104
+--
+-- Appliquee via la migration `c2b_propager_numero_contact_chaque_nuit`.
+-- Branchee dans run_full_pipeline.ps1 APRES pousser_numeros_contact.py (elle
+-- recopie depuis app_contact_current, qui doit donc etre a jour), et en etape
+-- NON BLOQUANTE : une reparation ne doit jamais priver l'agence de sa nuit.
+-- =====================================================================
+
+-- Voir la migration pour le texte complet de la fonction.
+-- Forme : une boucle sur 18 tables, un UPDATE ... FROM app_contact_current
+-- chacune, avec `and t.app_contact_id is null`. Retour : {"total": n, "detail": {...}}.
