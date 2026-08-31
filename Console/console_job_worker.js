@@ -11797,7 +11797,16 @@ async function handleCreateHektorMandatAutoNumber(job) {
   }
   for (const contactId of mandantIds) {
     if (!hektorProspectLinkedInHtml(prospects.text, contactId, annonceId)) {
-      throw new Error(`Le contact ${contactId} n'est pas confirme comme mandant de l'annonce ${annonceId}`);
+      // Meme raison qu'a la modification d'un mandant : le silence de la console
+      // peut venir du COMPTE connecte, pas d'une absence de lien. Notre base a
+      // donc droit de parole -- c'est un PREALABLE, pas une preuve de reussite.
+      const second = await notreBaseConnaitLeLienMandant(annonceId, contactId);
+      if (!second.connait) {
+        throw new Error(`Le contact ${contactId} n'est pas confirme comme mandant de l'annonce ${annonceId}`);
+      }
+      await logJob(job.id, "hektor_mandant_prealable", "done",
+        "La console ne montre pas le lien depuis ce compte, mais notre base le connait -- on continue",
+        { hektor_annonce_id: String(annonceId), hektor_contact_id: String(contactId), ...second });
     }
   }
 
