@@ -397,7 +397,7 @@ est écrite à côté.*
 |---|---|---|
 | **C.19-a** | verbe du compromis corrige *(`annonce-SuiviVente-cloture`)*, vocabulaire du refus elargi, arbitre par geste | ✅ **fait** — 6/6 appliques, syntaxe validee, regex eprouvee sur les 5 refus mesures |
 | **C.19-b** | eprouver l'annulation d'un compromis **ACTIF**, et la suppression d'une vente posee **sur** ce compromis actif | ⏳ **bloque** — le compte admin ne peut pas creer de compromis *(mode `ajoutebien` -> refus)*. **Demande un compte negociateur** |
-| **C.19-c** | **le choix « laisser actif » / « archiver » a l'enregistrement d'une vente** | 🔴 **A FAIRE — juge tres important par Frederic** |
+| **C.19-c** | **le choix « laisser actif » / « archiver » a l'enregistrement d'une vente** | ✅ **CLOS le 01/09 — le choix est RETIRE** *(voir plus bas)* |
 
 ## Sur C.19-c, et pourquoi ca compte
 
@@ -777,7 +777,86 @@ manque, en masse, une bonne fois* — et le même risque : elles tapent fort che
 
 *La lecture des handlers documents / photos / signature se replie ici.*
 
-## 2. C.19-c — le choix « actif / archivé » · 2 j
+## 2. C.19-c — ✅ CLOS le 01/09 : le choix est RETIRE
+
+```
+[x] C.19-c   LE CHOIX « LAISSER ACTIF / ARCHIVER » DISPARAIT DE L'ECRAN
+
+    LA MESURE QUI A TRANCHE, sur le parc de Frederic :
+       8 767 ventes NON archivees   ·   423 archivees      95 % / 5 %
+
+    Les deux cartes codees le 30/08 presentaient A EGALITE une option prise dans
+    un cas sur vingt. Et l'option minoritaire enchainait un SECOND geste chez
+    Hektor -- celui-la meme dont l'essai du 29/08 a montre qu'il pouvait
+    DETRUIRE la vente precedente (23288, 404 a l'API ensuite).
+
+    A LA PLACE : une phrase qui DIT ce qui va se passer, au lieu d'une question.
+       « Le bien restera dans les biens actuels avec le statut Vendu. Pour le
+         sortir du portefeuille, utilisez l'archivage depuis la fiche. »
+
+    RETIRE DE L'ECRAN, PAS DU MECANISME : apresVente reste envoye a 'actif', et
+    toute la chaine (RPC + enchainerArchivageApresVente, conditionne a une vente
+    CONFIRMEE par les deux portes) demeure intacte.
+
+    ⚠ CE QUE J'AVAIS RECOMMANDE LE MATIN MEME ETAIT L'INVERSE : mettre
+    « archiver » en avant, « parce qu'un bien vendu qui reste actif encombre le
+    portefeuille ». Une intuition, pas une mesure. Frederic m'a repris avant que
+    je code, et ses donnees disent exactement le contraire.
+```
+
+## 2bis. LE STATUT D'UNE ANNONCE — l'etude du 01/09
+
+> **notice/ETUDE_STATUT_ANNONCE_TRANSACTIONS_MANDAT_2026-09-01.md**
+> Demandee par Frederic avant de decider : *« les interactions de statut manuel,
+> suite transaction, suite mandat »*.
+
+**LE FAIT CENTRAL, qui n'etait nomme nulle part :** dans l'app on ne cree pas une
+transaction, on CHANGE LE STATUT et Hektor cree la transaction.
+`HEKTOR_STATUS_CONFIG` le dit : `offer -> createOffre`,
+`compromise -> createCompromis`, `sold -> createVente`.
+
+```
+   CREATION     le STATUT est la cause       ->  Hektor CREE la transaction
+   ANNULATION   la TRANSACTION est la cause  ->  Hektor REDESCEND le statut
+```
+
+**Consequence pour la coupure, et elle est rassurante : le trou est PLUS PETIT
+qu'on ne le croyait.** La creation survit -- c'est l'utilisateur qui pose le
+statut, l'app le sait au clic. Seule la REDESCENTE disparait.
+
+**L'EFFET DE BORD JAMAIS NOMME :** le statut pilote la DIFFUSION.
+`Actif -> diffusable=1` (le bien repart sur les portails), `Clos -> diffusable=0`.
+
+**LES TROIS ARBITRAGES DE FREDERIC (01/09) :**
+
+```
+[x] un bien dont le compromis echoue ne repart PAS en diffusion automatiquement
+[x] « Clos » reste MANUEL -- aucune transaction ne le produit
+[x] l'archivage reste INDEPENDANT du statut, et jamais deduit
+```
+
+**CE QUI RESTE A FAIRE :**
+
+```
+[ ] LA REGLE DE REDESCENTE, appelee par les trois gestes apres confirmation
+       reste-t-il une vente vivante ?  -> Vendu
+       sinon un compromis actif ?      -> Sous compromis
+       sinon une offre acceptee ?      -> Sous offre
+       sinon                           -> Actif
+    (une affaire a TROIS etapes : offre -> compromis -> vente. Definition de
+     Frederic, 01/09. Regle extraite des donnees, pas supposee.)
+
+    OU ELLE ECRIT, et pourquoi aux deux endroits :
+       app_dossier_current.statut_annonce   pour que ce soit VISIBLE tout de suite
+       app_annonce_champ_app ('statut')     pour que ca SURVIVE a la coupure
+
+    ELLE NE TOUCHE JAMAIS diffusable.
+
+[ ] LA SENTINELLE D'ECART regle / Hektor -- comparer a chaque resynchronisation
+    ce que la regle a calcule et ce que Hektor renvoie. Le jour de la bascule, la
+    regle sera deja eprouvee au lieu d'etre allumee a l'aveugle. Methode de la
+    doublure, celle du registre des recherches et du numero de contact.
+```
 
 ## 3. C.9 + 26bis-③ — **la création part de l'app** · 1 à 2 sem. — *le vrai basculement*
 
