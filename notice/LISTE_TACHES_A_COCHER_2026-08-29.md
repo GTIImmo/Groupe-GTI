@@ -908,6 +908,64 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     la diffusion (« C+ », Frederic y est favorable) ? faut-il coder la
     suppression d'une offre et d'un compromis ?
 
+[ ] ⬛⬛ LE REGISTRE DES AFFAIRES -- CHANTIER OUVERT le 01/09  ·  URGENT AVANT COUPURE
+    Souleve par Frederic : « si mon serveur n'importe plus, le registre des
+    affaires -- clientele, offres, ventes -- est compromis, et les ids Hektor
+    etant les axes, il y aura un probleme lors de la coupure. Ne faut-il pas
+    homogeneiser ? »
+
+    A) L'IDENTITE DE L'ACQUEREUR -- le SEUL lien non double du projet
+       Frederic avait raison de rappeler que le travail avait ete fait :
+          app_contact_relation_current  (mandants)      79 760   100 %  ✓
+          app_rapprochement (acquereurs <-> biens)      47 782   99,9 % ✓
+          app_contact_search_current    (recherches)    10 910   100 %  ✓
+          app_affaire_ledger            (affaires)      29 305     0 %  ✗
+       TROIS SUR QUATRE SONT FAITES. La quatrieme manque.
+
+       POURQUOI ELLE A ETE MANQUEE -- ce n'est pas un report :
+       le cadrage (RELECTURE_IDENTITE_CONTACTS_2026-08-24) recensait les tables
+       portant `hektor_contact_id`. Celle du ledger s'appelle
+       `hektor_acquereur_id`. Elle est passee entre les mailles A CAUSE DE SON
+       NOM. app_affaire_ledger n'est citee NULLE PART dans cette note.
+
+       ⚠ ET C'EST LE SEUL ANGLE MORT : recherche exhaustive des colonnes
+       designant une personne sans s'appeler hektor_contact_id (acquereur,
+       mandant, vendeur, proprietaire, signataire, acheteur) -> UN SEUL
+       resultat, app_affaire_ledger.hektor_acquereur_id.
+
+       LA FENETRE SE REFERME, mesure :
+          28 919 affaires portent un acquereur
+          26 111 encore rattachables aujourd'hui par la jointure Hektor
+           2 802 DEJA introuvables (9,7 %) -- il ne reste que acquereur_json
+                 (nom, prenom), soit l'identite sans le lien
+       Apres la coupure, l'identifiant Hektor ne voudra plus rien dire : les
+       26 111 deviendront irrattachables a leur tour.
+
+       A FAIRE : ajouter app_contact_id au ledger · le remplir (26 111
+       immediatement) · le faire poser a la creation par la RPC, qui connait
+       deja buyer_contact_id · les 2 796 orphelins = rapprochement par le nom,
+       chantier separe.
+
+    B) LE REGISTRE DOIT REDONNER TOUS LES CHAMPS SAISIS  (demande de Frederic)
+       Le ledger ne porte que CINQ champs en colonne : montant, date, date_acte,
+       sequestre, numero_mandat. Le contrat d'autorite CHAMPS_APP_AFFAIRE en
+       nomme DIX (les 5 + prix_net_vendeur, prix_publique, honoraires,
+       part_admin, commission_agence) -- les cinq derniers n'ont PAS de colonne
+       et ne vivent que dans payload_json (cote Hektor) ou le carnet.
+
+       LA MODALE, elle, saisit QUINZE champs. Ceux qui ne reviennent nulle part :
+          validite de l'offre       jamais stocke
+          taux d'honoraires         jamais stocke
+          notaire acquereur         payload de la VENTE seulement, pas du compromis
+          delai de retractation     payload du COMPROMIS (dateEnd) seulement
+
+       Frederic veut de plus AJOUTER des champs a la modale -> il faut donc que
+       le registre les accueille SANS nouvelle colonne a chaque fois.
+
+    ➡ LES DEUX PARTIES SE TIENNENT : A donne au registre une identite qui
+      survit, B lui donne un CONTENU complet. Un registre d'affaires autonome,
+      c'est les deux.
+
 [x] LA CAUSE DE FOND DU BLOCAGE -- CORRIGEE le 01/09 (phase2/sync/affaire_ledger.py)
     Frederic : « il y a un probleme avec ces generation d'id, je veux comprendre ».
     Il avait raison d'insister : le recalage du compteur ne tenait qu'un run.
