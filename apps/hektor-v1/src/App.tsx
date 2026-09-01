@@ -14837,17 +14837,54 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     offer: 'offre', compromise: 'compromis', sold: 'vente',
   }
 
-  /** La transaction du bien qui correspond au statut choisi, si elle existe. */
+  // Une affaire morte ne se propose plus : on ne refuse pas deux fois la meme offre.
+  const AFFAIRE_ETATS_MORTS = new Set(['refused', 'cancelled'])
+
+  /** La transaction du bien qui correspond au statut choisi, si elle existe.
+   *
+   * DEUX CHEMINS, ET LE SECOND EST NEUF (01/09/2026).
+   *
+   * LE PROBLEME, vu en testant : depuis le chantier d'identite, une offre peut
+   * NAITRE DANS L'APP. Elle prend un numero de la plage reservee
+   * (app_affaire_id >= 1 000 000), sa case Hektor reste VIDE, et
+   * present_in_hektor vaut false jusqu'a ce que le run de nuit l'adopte.
+   *
+   * Or cette fonction ne la cherchait QUE par le numero d'HEKTOR -- deux fois :
+   * d'abord dans dossier.offre_id, puis dans a.hektor_affaire_id. L'affaire
+   * etait pourtant DEJA CHARGEE (loadAffairesForDossier ne filtre rien) : elle
+   * etait sous les yeux de l'ecran, qui ne la reconnaissait pas parce qu'il la
+   * cherchait par la cle de l'autre.
+   *
+   * CONSEQUENCE POUR LE NEGOCIATEUR : il creait une offre, voyait le statut
+   * passer « Sous offre »... et ne pouvait ni l'accepter ni la refuser avant le
+   * lendemain. Constate en direct le 01/09 sur EM28412, offre 1 001 324.
+   *
+   * ON N'ADOPTE QUE SI C'EST SUR : une seule candidate, et vivante. En cas
+   * d'ambiguite on ne rend rien -- mieux vaut aucun bouton qu'un bouton qui
+   * agit sur la mauvaise affaire.
+   */
   function affaireCourantePourStatut(): AffaireLedgerRow | null {
     const genre = AFFAIRE_PAR_STATUT[statusChangeStatus]
     if (!genre || !statusChangeTarget) return null
+
+    // 1. LE CHEMIN D'ORIGINE, inchange : Hektor a donne son numero, on le suit.
     const cle = genre === 'offre' ? statusChangeTarget.offre_id
       : genre === 'compromis' ? statusChangeTarget.compromis_id
       : statusChangeTarget.vente_id
-    if (cle == null) return null
-    return statusChangeAffaires.find(
-      (a) => a.kind === genre && String(a.hektor_affaire_id ?? '') === String(cle),
-    ) ?? null
+    if (cle != null) {
+      const parHektor = statusChangeAffaires.find(
+        (a) => a.kind === genre && String(a.hektor_affaire_id ?? '') === String(cle),
+      )
+      if (parHektor) return parHektor
+    }
+
+    // 2. LE REPLI : l'affaire nee chez nous, qu'Hektor n'a pas encore nommee.
+    const nees = statusChangeAffaires.filter((a) =>
+      a.kind === genre
+      && !String(a.hektor_affaire_id ?? '').trim()
+      && !AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase()),
+    )
+    return nees.length === 1 ? nees[0] : null
   }
 
   // La modale pre-remplit avec le prix du bien et la date DU JOUR : c'est juste

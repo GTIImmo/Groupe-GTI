@@ -135,6 +135,94 @@ central.**
 
 ---
 
+## 4bis. CE QUI A ETE FAIT LE 01/09 — et pourquoi on s'arrete la
+
+**SUSPENDU par Frederic le 01/09**, et la raison est juste : *« ce test est tres complique
+puisque nous sommes en plein plan dev sur l'autonomie de l'apps et il n'est pas fini »*.
+
+### Le bien
+
+```
+   EM28412  ·  annonce Hektor 24933  ·  app_dossier_id 1352132
+   proprietaire « Test SELL AND SIGNE » -- c'est deja un bien d'essai
+   mandat 11939, echu depuis le 29/03/2020
+   acquereur retenu : 605075 « Test CLOTURE », Firminy / GONZALEZ
+```
+
+### Etape 0bis — Estimation -> Actif  ✅
+
+Faite par Frederic. Le parcours reel passe par « Actif » avant l'offre ; mon protocole
+voulait l'eviter pour ne pas allumer la diffusion, c'etait une entorse au realisme.
+
+```
+   T0   API statut 1 « Estimation »   ·  app Estimation  ·  diffusable 0  ·  0 transaction
+   T2   API statut 2 « Actif »        ·  app Actif       ·  diffusable 1
+        le bien change de LISTE dans l'ecran : Estimations -> Annonces actives
+```
+
+Chaine app -> worker -> Hektor -> resynchronisation **validee**, une seule tentative.
+`diffusable` passe bien de 0 a 1, comme la table du worker l'annonce. Aucune passerelle sur
+ce bien : rien n'est parti sur les portails.
+
+### Etape 1 — Actif -> Sous offre  ✅
+
+```
+   T1  +10 s   job « running » ; ledger 1 001 324 cree
+               kind offre · state « en_cours » · hektor_affaire_id VIDE
+               present_in_hektor FALSE · 175 000 € · acquereur 605075 · mandat 11939
+   T2  +90 s   API Hektor statut 3 « Sous offre »        ✓
+               app « Sous offre »                         ✓
+               offre_id du dossier : VIDE                 ✗
+               ledger : hektor_affaire_id VIDE, present_in_hektor FALSE   ✗
+```
+
+**RESULTAT N° 1 — Hektor MONTE bien le statut a la creation.** Verifie en direct :
+`createOffre` fait passer le bien « Sous offre » tout seul. La moitie HAUTE de l'asymetrie
+decrite en section 1 de l'etude est confirmee.
+
+**RESULTAT N° 2 — la reprise ciblee ne rapproche PAS la transaction.** Le
+`refresh_console_data` s'execute entierement, sans erreur, et l'offre reste orpheline. Le
+projet notait deja que le read-through ignore la couche transaction ; **c'est plus large que
+note** : ce n'est pas seulement qu'un refus fait chez Hektor n'est pas rattrape, c'est
+qu'une offre creee DEPUIS L'APP ne revient pas non plus.
+
+➡ **Consequence pour l'utilisateur** : il cree une offre, voit le statut passer, mais
+l'offre n'apparait pas dans sa fiche -- il ne peut ni l'accepter ni la refuser avant le run
+de nuit. **Ce n'est pas un bug : c'est C.4 inachevee.** « Ecrire d'abord, envoyer, comparer
+au retour » -- l'ALLER est fait, le RETOUR n'existe que par le run.
+
+### Les deux pannes trouvees en chemin, et corrigees
+
+```
+1  LE COMPTEUR D'AFFAIRES ETAIT EN RETARD DE 306.
+   app_affaire_id_app_seq a 1 000 017, plus grand numero pris 1 000 323. Il distribuait
+   des numeros DEJA OCCUPES -> violation de cle -> « duplicate key » -> que le front
+   traduisait en « Une action Hektor est deja en cours pour cette annonce ».
+   AUCUNE creation de transaction ne pouvait aboutir, SUR AUCUN BIEN, DEPUIS LE 27/08.
+   Recale a 1 001 323 (+1 000 de marge). Cause de fond NON corrigee : le run ecrit dans
+   la plage de l'app sans faire avancer le compteur -> le decalage reviendra.
+
+2  LE POUSSEUR PRENAIT LES VERROUS POUR DU TRAVAIL.  (voir le plan)
+```
+
+### Ce qui reste testable TOUT DE SUITE, sans attendre C.4
+
+**Le bloc DESCENTE (etapes 5-6-7) sur le bien 62774.** Ses transactions sont deja
+rapprochees, avec leurs numeros Hektor : il n'a pas besoin du retour qui manque. C'est la
+que se trouve la seule question encore ouverte -- *Hektor redescend-il le statut ?* -- et
+elle ne depend d'aucun chantier en cours.
+
+### L'etat du bien EM28412, a la reprise
+
+```
+   statut « Sous offre » (app et Hektor)   ·   diffusable 0
+   ledger : 1 001 324, offre « en_cours », ORPHELINE (pas de numero Hektor)
+   le run de nuit devrait l'adopter -- regle (annonce, type, acquereur) du 25/08,
+   jamais eprouvee en vrai. A VERIFIER AU PROCHAIN RUN : c'est un test gratuit.
+```
+
+---
+
 ## 5. La fiche de relevé
 
 Une ligne par temps, à remplir au fur et à mesure.

@@ -938,6 +938,35 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     le TROISIEME acteur qui se trompait. Les deux s'eteindront d'eux-memes a la
     coupure, quand il n'y aura plus d'Hektor a relire.
 
+[x] L'ECRAN RECONNAIT UNE AFFAIRE NEE DANS L'APP -- CORRIGE le 01/09
+    Question de Frederic, et elle a mis le doigt dessus : « les contrats
+    d'autorite sont complets dans les transactions, pourquoi ce probleme ? on
+    devrait avoir l'offre enregistree chez nous !! » -- Il avait raison.
+
+    L'OFFRE ETAIT BIEN CHEZ NOUS. app_affaire_id 1 001 324, avec son montant,
+    son acquereur, son mandat. Et loadAffairesForDossier ne filtre RIEN : elle
+    etait meme deja chargee par l'ecran.
+
+    CE QUI BLOQUAIT : affaireCourantePourStatut() la cherchait UNIQUEMENT par le
+    numero d'HEKTOR -- deux fois. D'abord dossier.offre_id (vide tant que le run
+    n'est pas passe), puis a.hektor_affaire_id (vide aussi). L'affaire etait
+    sous les yeux du front, qui ne la reconnaissait pas parce qu'il la cherchait
+    par la cle de l'autre. Un reste de l'ancien monde.
+
+    ⚠ J'AVAIS DIT « c'est C.4 inachevee, il faut attendre le retour ». C'ETAIT
+    FAUX. C.4 est a 16/16, les contrats d'autorite contact/mandat/affaire sont
+    allumes, et rien de tout cela n'etait en cause.
+
+    LE CORRECTIF : un REPLI, additif. Le chemin par le numero Hektor est
+    inchange ; s'il ne trouve rien, on prend l'affaire nee chez nous -- a
+    condition qu'elle soit UNIQUE et VIVANTE (ni refused ni cancelled). En cas
+    d'ambiguite on ne rend rien : mieux vaut aucun bouton qu'un bouton qui agit
+    sur la mauvaise affaire.
+
+    CE QUE CA CHANGE POUR LE NEGOCIATEUR : il cree une offre, et il peut
+    l'accepter ou la refuser DANS LA FOULEE. Avant, il devait attendre le run de
+    nuit sans que rien ne le lui dise.
+
 [ ] LE FRONT DE LA MODALE DE STATUT -- vu le 01/09 en testant
     La modale porte 15 champs et n'en repose que 4 (montant, date, date d'acte,
     sequestre). Deux qu'on a DEJA en base ne sont jamais reposes : l'ACQUEREUR
