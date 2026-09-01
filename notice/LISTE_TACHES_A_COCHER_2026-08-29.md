@@ -908,6 +908,30 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     la diffusion (« C+ », Frederic y est favorable) ? faut-il coder la
     suppression d'une offre et d'un compromis ?
 
+[x] LA PORTEE DES TROIS PANNES DU 01/09 -- audit demande par Frederic
+    « Est-ce que les points 1, 2, 3 ne sont pas egalement le cas avec nouveau
+    compromis et vente ? »  -- VERIFIE dans le code, et la reponse est OUI pour
+    deux d'entre eux :
+
+    PANNE 1, LE COMPTEUR : OUI, et c'est la plus grave. La RPC
+    app_change_annonce_status_optimistic fait nextval pour les TROIS genres
+    (v_kind = offre / compromis / vente). Donc AUCUNE creation d'offre, NI de
+    compromis, NI de vente ne pouvait aboutir depuis le 27/08. Le recalage du
+    compteur les debloque toutes les trois d'un coup.
+
+    PANNE 2, LES ENVELOPPES VIDES : sans rapport avec les affaires. Elle porte
+    sur app_annonce_pending, donc sur TOUTES les annonces indifferemment.
+    Corrigee pour tout le monde.
+
+    PANNE 3, L'ECRAN : OUI pour les trois. affaireCourantePourStatut() traite
+    les trois genres via AFFAIRE_PAR_STATUT, et le repli filtre sur
+    a.kind === genre. Corrigee pour les trois -- mais voir le patron
+    « En creation… » ci-dessus : le correctif est a moitie fait.
+
+    ET POUR « AJOUTER CONTACT » / « AJOUTER ANNONCE » : NON, la panne 3 ne les
+    touche pas. Ces deux-la ont deja le bon patron -- « En creation… », aucune
+    action proposee. C'est justement d'eux qu'il faut s'inspirer.
+
 [x] LE POUSSEUR PRENAIT LES ENVELOPPES VIDES -- CORRIGE le 01/09
     Trouve en testant, sur EM28412 / annonce 24933. Le bien passe « Actif » a
     12:25 ; a 12:27 un pending apparait ; a 12:38 puis 12:44 deux travaux partent
@@ -966,6 +990,34 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     CE QUE CA CHANGE POUR LE NEGOCIATEUR : il cree une offre, et il peut
     l'accepter ou la refuser DANS LA FOULEE. Avant, il devait attendre le run de
     nuit sans que rien ne le lui dise.
+
+[ ] ⬛ A VERIFIER APRES LE PROCHAIN RUN (quotidien ou manuel complet)
+    L'ADOPTION DE L'AFFAIRE 1 001 324 (offre 175 000, EM28412 / annonce 24933).
+    Nee dans l'app le 01/09 a 13h18, orpheline : pas de hektor_affaire_id,
+    present_in_hektor = false.
+
+    CE QU'ON ATTEND : le run l'ADOPTE -- elle GARDE son numero 1 001 324 et
+    gagne celui d'Hektor. Regle du 25/08, cle (annonce, type, acquereur).
+    CE QU'IL NE FAUT PAS VOIR : une SECONDE ligne pour la meme offre.
+
+    MESURE DU TROU AU 01/09 -- il est plus petit qu'annonce :
+       Supabase   324 affaires dans la plage app, 1 SEULE orpheline (la notre)
+       Local      323, ZERO orpheline
+    Les 323 precedentes sont donc rapprochees des deux cotes. Le trou n'est pas
+    structurel : il dure le temps d'un run.
+
+[ ] LE PATRON « EN CREATION… » MANQUE AUX AFFAIRES
+    Mon correctif du 01/09 (5db18e3) rend l'offre nee dans l'app VISIBLE dans la
+    modale -- c'etait le trou. Mais il propose « Refuser » et « Accepter », alors
+    que handleGesteHektor exige hektor_affaire_id et repondra « Cette
+    transaction n'a pas encore de numero Hektor ». DEUX BOUTONS QUI ECHOUENT.
+
+    LE BON PATRON EXISTE DEJA, chez les annonces et les contacts : une ligne
+    provisoire affiche « En creation… » et NE PROPOSE AUCUNE ACTION (bouton
+    « Retirer » si erreur). L'utilisateur voit, et comprend pourquoi il attend.
+
+    A FAIRE : appliquer ce patron aux affaires -- montrer l'offre, la marquer
+    « En creation… », masquer les gestes tant que le numero Hektor manque.
 
 [ ] LE FRONT DE LA MODALE DE STATUT -- vu le 01/09 en testant
     La modale porte 15 champs et n'en repose que 4 (montant, date, date d'acte,
