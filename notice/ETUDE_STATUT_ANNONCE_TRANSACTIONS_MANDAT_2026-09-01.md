@@ -259,6 +259,71 @@ donc une création déguisée. Elle les *montre*, et c'est déjà beaucoup.
 
 ---
 
+## 7bis-a. LE PREMIER VRAI GESTE — et ce qu'il corrige dans cette étude
+
+**01/09, 10h03. Refus de l'offre 33027 sur le bien de test 62774** (« TEST C4 du 25-08 Villa
+Bellecour », GONZALEZ). Job `done` en une tentative, aucune erreur.
+
+```
+   10:03:48   la RPC ecrit    ledger -> refused
+                              app_dossier_current.statut_annonce -> « Actif »
+                              app_annonce_champ_app (statut)     -> « Actif »
+                              charge du travail : statut_avant « Sous offre »
+                                                  statut_apres « Actif »
+   10:03:58   Hektor accepte  « Offre 33027 passee a refus (GET) »
+   10:04:29   la resynchro    app_dossier_current -> « Sous offre »   ← ECRASE
+   10:04:30   le carnet       « Actif », origine redescente_transaction  ← TIENT
+```
+
+### ⚠ CE QUE LA SECTION 1 DISAIT, ET QUI EST FAUX
+
+J'avais écrit : *« ANNULATION → la transaction est la cause → **Hektor redescend le statut** »*.
+Interrogé juste après le geste, **l'API d'Hektor dit `statut = 3`, « Sous offre »** — alors que
+ce bien a ses **deux** offres refusées et son compromis annulé.
+
+```
+   HEKTOR N'A PAS REDESCENDU.
+```
+
+**La règle ne remplace donc pas seulement un mécanisme qui disparaîtra à la coupure : elle en
+corrige un qui ne marche déjà pas à tous les coups.** L'argument est plus fort qu'annoncé, pas
+plus faible.
+
+*(Nuance à garder : la redescente arrive parfois — deux biens du parc sont « Actif » avec une
+offre acceptée. Ce qui est établi, c'est qu'elle n'est **pas fiable**, au moins par la route que
+le worker emprunte.)*
+
+### CE QUI GAGNE AUJOURD'HUI, ET L'INTERRUPTEUR QUI CHANGERAIT ÇA
+
+```
+   app_dossier_current    « Sous offre »   vient d'Hektor, et c'est FAUX
+   le carnet              « Actif »        vient de la regle, et c'est JUSTE
+```
+
+Le carnet a tenu — c'est exactement ce qu'il doit faire. Mais l'écran lit
+`app_dossier_current`, donc **l'utilisateur voit encore la valeur fausse**.
+
+L'interrupteur qui inverserait ce rapport existe déjà et il est **dormant** :
+`phase2/identite/contrat_autorite.py` → `CHAMPS_APP_ANNONCE = ()`. Y mettre `statut` ferait
+gagner le carnet dès le prochain run, sans attendre la coupure. **C'est une décision, pas une
+évidence** — et c'est l'un des drapeaux qui dorment.
+
+### LA MODALE « VIDE » — ce n'est pas un bug, mais elle révèle une faiblesse
+
+Le bien de test est **nu** : `prix` NULL, `numero_dossier` NULL, `montant` de l'offre NULL,
+`date_acte` NULL, `sequestre` NULL. Le pré-remplissage ne pose que ce qui existe, donc il ne pose
+rien. Sur un vrai bien, la modale se remplit.
+
+**Mais la vraie faiblesse est ailleurs, et elle vaut pour tous les biens :** la modale ne dit
+jamais **quelle** transaction le geste va toucher. Ce bien porte **deux** offres ; on clique
+« Refuser l'offre » sans voir laquelle. Pour « Supprimer la vente » — irréversible — c'est plus
+gênant encore. `affaireCourantePourStatut()` désigne pourtant une affaire précise : il suffirait
+de la nommer à l'écran (n° Hektor, acquéreur, montant, date).
+
+➡ **À faire : nommer la transaction visée dans la modale, avant les boutons de geste.**
+
+---
+
 ## 7bis-b. L'AUTRE effet de bord du statut : le moteur de rapprochement
 
 Cherché **avant** de faire le premier vrai geste, pas après. `app_dossier_current` porte un
