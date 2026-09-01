@@ -223,6 +223,77 @@ elle ne depend d'aucun chantier en cours.
 
 ---
 
+## 4ter. LA SEQUENCE DE FREDERIC — celle qu'on suit desormais
+
+**Elle remplace les etapes 2 a 10 de la section 4.** Elle est meilleure : au lieu de
+monter puis descendre en bloc, elle eprouve CHAQUE interaction dans les DEUX SENS, et
+revient a zero entre chaque cycle. C'est ainsi qu'on saura ce qui produit quoi.
+
+> *« il faut aussi verifier offre annulee avant de faire compromis pour verifier
+> l'interaction du state chez Hektor et s'il repasse sur state actif »*
+
+```
+CYCLE 1 -- L'OFFRE SEULE, ET SA MORT
+  1.1  REFUSER l'offre 33037 (deja en place)
+       ? le statut redescend-il de « Sous offre » a « ACTIF » ?
+       C'EST LA QUESTION CENTRALE DU PROTOCOLE. Le 01/09 sur 62774, Hektor n'avait
+       PAS redescendu -- mais ce bien avait recu 25 changements de statut a la main.
+       Ici le bien est propre : la reponse vaudra.
+
+CYCLE 2 -- L'OFFRE ACCEPTEE
+  2.1  CREER une nouvelle offre        ? statut -> Sous offre
+  2.2  ACCEPTER cette offre            ? le statut BOUGE-T-IL ? (attendu : non)
+
+CYCLE 3 -- LE COMPROMIS, ET SON ANNULATION
+  3.1  CREER un compromis              ? statut -> Sous compromis
+  3.2  ANNULER le compromis            ? le statut redescend-il, et A QUOI ?
+                                         « Sous offre » (l'offre acceptee vit encore)
+                                         ou « Actif » ?
+                                       ? ET L'OFFRE LIEE PASSE-T-ELLE EN REFUSEE
+                                         TOUTE SEULE ?
+       ⚠ DEJA MESURE SUR LE PARC, a confirmer en direct : NON. Sur 1 194 paires
+         (compromis annule + offre du meme acquereur), 60 % des offres restent
+         ACCEPTEES. Si c'etait automatique, ce serait 100 %.
+
+CYCLE 4 -- LA CHAINE COMPLETE
+  4.1  CREER une offre                 ? statut -> Sous offre
+  4.2  ACCEPTER
+  4.3  CREER un compromis              ? statut -> Sous compromis
+  4.4  CREER une vente                 ? statut -> VENDU
+                                       ? et le compromis, que devient-il ?
+```
+
+**A CHAQUE GESTE, LES TROIS TEMPS** (T0 / T1 / T2) et les quatre releves de la
+section 3 -- dont l'etat de CHAQUE transaction, pas seulement celle qu'on touche.
+
+### La reponse a la question posee le 01/09
+
+> *« si Hektor lors du run nous remonte une transaction par le miroir, est-ce que
+> cette transaction sera aussi enregistree dans le registre et memorisee par l'app
+> puis le serveur comme une saisie dans l'app ? »*
+
+**NON, et c'est voulu.** Verifie : `affaire_ledger.py` ne mentionne jamais
+`app_affaire_champ_app` (0 occurrence), et les seules origines presentes au carnet
+sont `creation_app` et `essai_nuit_c19` -- aucune ne vient du run.
+
+Une affaire remontee par le miroir entre au registre avec TOUT ce qui l'identifie :
+son `app_affaire_id`, son acquereur par notre numero, ses cinq colonnes, son
+`payload_json` brut. **Mais sans carnet.**
+
+**Pourquoi c'est juste :** le carnet repond a « qu'est-ce que l'APP detient ? ». Sur
+une affaire saisie chez Hektor, l'app ne detient rien -- il n'y a pas eu de saisie.
+Y inscrire les valeurs de Hektor ferait croire l'inverse, et le contrat d'autorite
+les ferait alors GAGNER contre Hektor au prochain run. On rendrait faux ce qui est
+vrai.
+
+**La consequence reelle, en revanche :** pour une affaire nee chez eux, l'app ne
+connaitra jamais que les cinq colonnes plus le payload brut. La validite de l'offre
+et le taux d'honoraires n'y seront pas -- non parce qu'on les perd, mais parce que
+**l'API de Hektor ne les renvoie pas** dans ses listings. C'est une limite de Hektor,
+pas de notre conception.
+
+---
+
 ## 5. La fiche de relevé
 
 Une ligne par temps, à remplir au fur et à mesure.
