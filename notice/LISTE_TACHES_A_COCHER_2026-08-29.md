@@ -908,6 +908,36 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     la diffusion (« C+ », Frederic y est favorable) ? faut-il coder la
     suppression d'une offre et d'un compromis ?
 
+[x] LE POUSSEUR PRENAIT LES ENVELOPPES VIDES -- CORRIGE le 01/09
+    Trouve en testant, sur EM28412 / annonce 24933. Le bien passe « Actif » a
+    12:25 ; a 12:27 un pending apparait ; a 12:38 puis 12:44 deux travaux partent
+    et echouent sur « Aucun champ annonce modifiable fourni ». Toutes les six
+    minutes, indefiniment.
+
+    CE PENDING N'ETAIT PAS UNE SAISIE, C'ETAIT UN VERROU. hektor_bridge.py
+    ::_arm_diffusion_lock pose EXPRES une ligne vide pour dire au read-through
+    « ne reverte pas la diffusion pendant dix minutes ». Bon mecanisme, et il se
+    leve tout seul (diffusion_lock_expired + clear_annonce_pending).
+
+    L'ERREUR TENAIT DANS UN MOT, dans app_annonce_enqueue_due_pushes() :
+       push_fields is not null    « ce qui n'est pas absent »
+    au lieu de                    « ce qui a du contenu ».
+    Or {} n'est PAS null : une enveloppe vide est presente, donc prise.
+
+    POURQUOI JAMAIS VU AVANT : le verrou ne vit que dix minutes, le pousseur ne
+    passe que sur les lignes dues -- il faut tomber pile dedans. Le passage a
+    « Actif » a reuni les conditions, parce qu'il touche la diffusion.
+
+    LE DANGER EVITE : a la 5e tentative le pending serait passe conflict = true,
+    donc remonte dans app_en_attente_humain -- une alerte demandant de trancher
+    UNE SAISIE QUI N'EXISTE PAS.
+
+    ⚠ CE N'ETAIT NI LE READ-THROUGH NI LE DELAI DE 10 MIN. Frederic soupconnait
+    ces deux-la et voulait les retirer ; ils font tous deux leur travail (le
+    read-through est deja bride a 1 rafraichissement / 5 min par annonce). C'est
+    le TROISIEME acteur qui se trompait. Les deux s'eteindront d'eux-memes a la
+    coupure, quand il n'y aura plus d'Hektor a relire.
+
 [ ] LE FRONT DE LA MODALE DE STATUT -- vu le 01/09 en testant
     La modale porte 15 champs et n'en repose que 4 (montant, date, date d'acte,
     sequestre). Deux qu'on a DEJA en base ne sont jamais reposes : l'ACQUEREUR
