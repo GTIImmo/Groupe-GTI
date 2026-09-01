@@ -259,6 +259,37 @@ donc une création déguisée. Elle les *montre*, et c'est déjà beaucoup.
 
 ---
 
+## 7bis-b. L'AUTRE effet de bord du statut : le moteur de rapprochement
+
+Cherché **avant** de faire le premier vrai geste, pas après. `app_dossier_current` porte un
+déclencheur — `trg_dossier_dirty` — armé exactement sur `statut_annonce` :
+
+```
+   active_now := (statut_annonce = 'Actif' ET diffusable = '1')
+   si active_now ET PAS active_old  ->  app_enqueue_dirty(..., 'new')
+   sinon                            ->  app_enqueue_dirty(..., 'changed')
+```
+
+Il n'écrit **ni chez Hektor ni sur la vitrine** : il alimente `app_rapprochement_dirty`, la file
+du moteur de rapprochement acquéreurs.
+
+**Conséquence :** une redescente vers « Actif » sur un bien diffusable le marque **`new`** — il
+repart dans les rapprochements comme un bien qui vient d'entrer.
+
+**Est-ce une régression ? Non, et c'est vérifié.** `push_upgrade_to_supabase.py` écrit
+`app_dossier_current` en **upsert**, et un `UPDATE OF colonne` se déclenche dès que la colonne
+est *mentionnée*, même à valeur égale. Le déclencheur part donc déjà pour chaque bien, chaque
+nuit. La règle n'introduit rien : elle **avance de quelques heures** un marquage qui serait posé
+de toute façon quand Hektor nous renverrait le statut.
+
+**Et c'est juste métier :** un bien dont le compromis vient d'échouer *est* redevenu disponible ;
+le represénter aux acquéreurs est le bon geste. Aucun envoi ne part seul de toute façon — l'envoi
+automatique est bloqué par défaut *(voir la relance auto client)*.
+
+➡ **Rien à borner ici.** Mais c'était à vérifier avant, pas après.
+
+---
+
 ## 7ter. « Et si le registre des mandats avait ses dates de clôture ? »
 
 *Question de Frédéric, 01/09, devant les 8 fiches d'estimation qui portent une vieille vente.*
