@@ -190,6 +190,29 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 0,
     },
+    # --- CE QUI ATTEND UN HUMAIN (01/09/2026) ---------------------------------
+    # LE TROU, mesure le 01/09 : quand une saisie ou un geste ne passe pas, il est
+    # rejoue 5 fois sur ~25 minutes, puis il s'arrete. La SEULE façon de
+    # l'apprendre etait d'OUVRIR LA FICHE et d'y voir le bandeau rouge. Si
+    # personne ne la rouvre, personne ne sait -- le 29/08, deux gestes sont morts
+    # et n'ont ete decouverts que TROIS JOURS plus tard, par hasard.
+    #
+    # Rien ici ne le couvrait : les 11 sentinelles ci-dessus regardent la QUALITE
+    # des donnees, jamais l'etat d'une saisie ; et check_console_jobs compte les
+    # erreurs RECENTES, donc un abandon vieux de trois jours redevient invisible.
+    #
+    # La vue rassemble les QUATRE endroits ou quelque chose attend une decision :
+    # saisie bloquee sur une annonce, un contact, une recherche (C.1'/C.12, jamais
+    # surveillees jusqu'ici) et geste abandonne apres 5 tentatives (C.4-bis).
+    #
+    # SEUIL 0 : une ligne ici = quelqu'un attend, sans le savoir.
+    {
+        "key": "data.en_attente_humain",
+        "label": "Saisies et gestes en attente d'un humain",
+        "table": "app_en_attente_humain",
+        "rule": "absolute",
+        "max": 0,
+    },
     # --- Chantier identite / recherches (20/08/2026) ---------------------------
     # Ce que le balayage nocturne app_sweep_search_orphans() ne sait PAS reparer :
     # un orphelin dont le contact a PLUSIEURS recherches vivantes -> on ne sait pas
