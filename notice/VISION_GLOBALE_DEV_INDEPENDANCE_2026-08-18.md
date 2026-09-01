@@ -477,6 +477,47 @@ rendez-vous, relances et emails, Matterport, Google Workspace, agents IA, donné
 
 ---
 
+---
+
+# 6bis. PIÈGE D'EXPLOITATION — le drapeau invisible du pipeline
+
+**Incident du 19/08, à ne pas rejouer.**
+
+Après l'échec du run de 5h30 (arrêt à l'étape 13), les 4 étapes de publication ont été relancées
+à la main, avec les commandes et les arguments **copiés du script**. Résultat : **357 brouillons
+sont entrés dans le périmètre des annonces actives** (13 220 → 13 577), sans aucune erreur ni
+avertissement.
+
+**Cause** : `run_full_pipeline.ps1:191` pose `$env:APP_BROUILLON_BUCKET_ENABLED = "1"`.
+`phase2/sync/export_app_payload.py:324` la lit. Sans elle, `brouillon_active_exclusion_sql()`
+renvoie une chaîne vide et **les brouillons ne sont plus exclus du périmètre actif**.
+
+> **Règle : reproduire les commandes d'un script ne suffit pas — il faut reproduire son
+> environnement.** Toute reprise manuelle d'une étape de publication doit être préfixée par
+> `APP_BROUILLON_BUCKET_ENABLED=1`.
+
+**Portée vérifiée** : c'est le **seul** drapeau applicatif de ce type. Un `grep` sur `$env:` dans
+`run_full_pipeline.ps1` et `scheduled/*.ps1`, croisé avec les `os.environ.get("APP_…")` des scripts
+du pipeline, ne remonte que celui-là. Les deux autres occurrences (`CONSOLE_NODE_EXE`,
+`USERPROFILE`) ne concernent que la localisation de Node.
+
+**Correctif de fond suggéré, non fait** : ce drapeau silencieux devrait soit être posé en dur dans
+`export_app_payload.py`, soit faire échouer bruyamment le script quand il est absent. En l'état,
+son oubli produit une donnée fausse — 357 brouillons présentés comme des annonces actives — sans
+la moindre trace dans les journaux.
+
+**Détection** : le symptôme se lit par un chevauchement entre les index, qui doit toujours être nul :
+
+```sql
+select count(*) from app_dossier_current d
+join app_brouillon_annonce_index_current b on b.hektor_annonce_id = d.hektor_annonce_id;
+-- doit valoir 0
+```
+
+C'est un bon candidat pour une sentinelle de `check_gti_health.py`.
+
+---
+
 # 7. RÈGLES DE CONDUITE
 
 - **Protocole par étape** *(Frédéric, 18/08)* : vérifier et analyser → expliquer clairement →

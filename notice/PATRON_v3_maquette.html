@@ -1,0 +1,217 @@
+<style>
+  :root{
+    --navy:#16305a; --ink:#1f2733; --muted:#8b93a3; --line:#cfd6e2;
+    --paper:#ffffff; --ground:#eef1f6; --accent:#c0894a; --accent-soft:#f3e9dc;
+    --ink-hand:#20489a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;color:var(--ink)}
+  .sheet{width:794px;min-height:1123px;margin:22px auto;background:var(--paper);
+    box-shadow:0 2px 18px rgba(20,40,80,.10);padding:34px 40px 30px;position:relative}
+
+  /* En-tete */
+  .head{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid var(--navy);padding-bottom:12px;margin-bottom:20px}
+  .head h1{margin:0;font-size:22px;letter-spacing:.2px;color:var(--navy);font-weight:700}
+  .head .sub{font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.3px}
+  .head .date{font-size:11px;color:var(--muted);text-align:right}
+  .head .date .wl{display:inline-block;min-width:120px;border-bottom:1px solid var(--line);height:20px;vertical-align:bottom;margin-left:6px}
+
+  /* Section */
+  .sec{margin-bottom:16px;border:1px solid #e4e8f0;border-radius:12px;overflow:hidden}
+  .sec-hd{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#f7f9fc,#fff);
+    padding:10px 16px;border-bottom:1px solid #eef1f6}
+  .sec-hd .n{width:24px;height:24px;border-radius:7px;background:var(--navy);color:#fff;
+    font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .sec-hd .t{font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--navy)}
+  .sec-hd .hint{margin-left:auto;font-size:10px;color:var(--muted);font-style:italic}
+  .body{padding:15px 16px 17px}
+
+  /* Grilles de champs */
+  .grid{display:grid;gap:13px 20px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .span2{grid-column:span 2}
+  .span-all{grid-column:1/-1}
+
+  /* Champ = libelle au-dessus d'une ligne d'ecriture */
+  .f{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .f label{font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .f .wl{border-bottom:1.5px solid var(--line);height:27px}
+  .f .wl.tall{height:40px}
+  .f .hint{font-size:9px;color:#aeb6c4;font-style:italic}
+
+  /* Zone d'ecriture libre (plusieurs lignes) */
+  .zone{border:1px solid #e2e7f0;border-radius:8px;background:
+    repeating-linear-gradient(#fff,#fff 27px,#f2f5fa 28px);min-height:58px}
+  .zone.big{min-height:84px}
+
+  /* Petite case chiffre */
+  .num{display:flex;flex-direction:column;gap:3px}
+  .num label{font-size:9px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:center}
+  .num .box{height:34px;border:1.5px solid var(--line);border-radius:8px;background:#fbfcfe}
+  .nums{display:flex;gap:9px;flex-wrap:wrap}
+  .nums .num{width:62px}
+
+  /* Chips a entourer (choix unique/rare) */
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1.4px solid var(--line);border-radius:16px;padding:4px 12px;font-size:11px;color:#42506a;background:#fbfcfe}
+  .chips .lab{font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:600;align-self:center;margin-right:2px}
+
+  .note{font-size:10px;color:var(--muted);margin:2px 0 10px}
+  .foot{position:absolute;left:40px;right:40px;bottom:14px;display:flex;justify-content:space-between;
+    font-size:9px;color:#aeb6c4;border-top:1px solid #eef1f6;padding-top:7px}
+
+  /* Composition */
+  table.compo{width:100%;border-collapse:collapse;font-size:11px}
+  table.compo th{background:var(--navy);color:#fff;font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;
+    padding:7px 9px;text-align:left;font-weight:600}
+  table.compo td{border:1px solid #e6eaf1;height:29px;padding:0 9px}
+  table.compo tr:nth-child(even) td{background:#f7f9fc}
+  table.compo .n{width:34px;text-align:center;color:var(--muted);font-weight:600}
+</style>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="sheet">
+  <div class="head">
+    <div><h1>Fiche de visite</h1><div class="sub">Estimation · remplissez à la main, l'IA range chaque info dans le bon champ</div></div>
+    <div class="date">Date<span class="wl"></span></div>
+  </div>
+
+  <!-- 1 VENDEUR -->
+  <div class="sec">
+    <div class="sec-hd"><span class="n">1</span><span class="t">Le vendeur</span><span class="hint">le propriétaire du bien</span></div>
+    <div class="body">
+      <div class="grid g2" style="margin-bottom:13px">
+        <div class="f"><label>Nom &amp; prénom</label><span class="wl"></span></div>
+        <div class="chips" style="align-self:end;padding-bottom:2px"><span class="lab">Civilité</span><span class="chip">M.</span><span class="chip">Mme</span><span class="lab" style="margin-left:10px">Contexte</span><span class="chip">Vente</span><span class="chip">Succession</span></div>
+      </div>
+      <div class="grid g2" style="margin-bottom:13px">
+        <div class="f"><label>Téléphone</label><span class="wl"></span></div>
+        <div class="f"><label>Email</label><span class="wl"></span></div>
+      </div>
+      <div class="f span-all"><label>Adresse du vendeur</label><span class="wl"></span></div>
+      <div class="f span-all" style="margin-top:13px"><label>Motivation / délai souhaité</label><div class="zone"></div></div>
+    </div>
+  </div>
+
+  <!-- 2 LE BIEN -->
+  <div class="sec">
+    <div class="sec-hd"><span class="n">2</span><span class="t">Le bien</span><span class="hint">type &amp; adresse</span></div>
+    <div class="body">
+      <div class="chips" style="margin-bottom:14px"><span class="lab">Type</span>
+        <span class="chip">Maison</span><span class="chip">Appartement</span><span class="chip">Villa</span><span class="chip">Terrain</span>
+        <span class="chip">Immeuble</span><span class="chip">Garage</span><span class="chip">Autre…</span></div>
+      <div class="grid g3" style="grid-template-columns:2fr 1fr 1.4fr;margin-bottom:13px">
+        <div class="f"><label>Adresse du bien</label><span class="wl"></span></div>
+        <div class="f"><label>Code postal</label><span class="wl"></span></div>
+        <div class="f"><label>Ville</label><span class="wl"></span></div>
+      </div>
+      <div class="grid g2">
+        <div class="f"><label>Construction récente — garanties</label><span class="wl"></span><span class="hint">décennale, dommages-ouvrage, conformité, achèvement</span></div>
+        <div class="f"><label>Année de construction</label><span class="wl"></span></div>
+      </div>
+      <div class="f span-all" style="margin-top:13px"><label>Transport / proximité / environnement</label><div class="zone"></div></div>
+    </div>
+  </div>
+
+  <!-- 3 EXTÉRIEUR -->
+  <div class="sec">
+    <div class="sec-hd"><span class="n">3</span><span class="t">Extérieur &amp; annexes</span><span class="hint">écrivez « oui » + le détail</span></div>
+    <div class="body">
+      <div class="grid g3" style="margin-bottom:14px">
+        <div class="f"><label>Jardin</label><span class="wl"></span></div>
+        <div class="f"><label>Terrasse</label><span class="wl"></span></div>
+        <div class="f"><label>Cave</label><span class="wl"></span></div>
+        <div class="f"><label>Balcon</label><span class="wl"></span></div>
+        <div class="f"><label>Dernier étage</label><span class="wl"></span></div>
+        <div class="f"><label>Garages / parkings</label><span class="wl"></span></div>
+      </div>
+      <div class="f span-all" style="margin-bottom:14px"><label>Piscine</label><span class="wl"></span><span class="hint">oui/non · nature (coque, traditionnelle…) · dimensions · chauffée / couverte / pool house</span></div>
+      <div class="nums" style="margin-bottom:14px">
+        <div class="num"><label>Terrain</label><div class="box"></div></div>
+        <div class="num"><label>Jardin</label><div class="box"></div></div>
+        <div class="num"><label>Terrasse</label><div class="box"></div></div>
+        <div class="num"><label>Garage</label><div class="box"></div></div>
+        <div class="num"><label>SHON</label><div class="box"></div></div>
+        <div class="num" style="width:auto;flex:1;min-width:150px"><label style="text-align:left">Nb garages / park. int. / ext.</label><div class="box"></div></div>
+      </div>
+      <div class="f span-all"><label>Terrain — constructible / viabilisé / arboré / piscinable · raccordements (eau, gaz, élec, tél)</label><span class="wl"></span></div>
+    </div>
+  </div>
+
+  <div class="foot"><span>Fiche de visite — estimation · draft_annonce_v3</span><span>Page 1 / 4</span><span>Groupe GTI</span></div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="sheet">
+  <div class="head">
+    <div><h1>Intérieur &amp; composition</h1><div class="sub">surfaces, pièces et distribution</div></div>
+    <div class="date" style="color:#c7cdd8">draft_annonce_v3</div>
+  </div>
+
+  <!-- 4 INTÉRIEUR -->
+  <div class="sec">
+    <div class="sec-hd"><span class="n">4</span><span class="t">Intérieur</span></div>
+    <div class="body">
+      <div class="nums" style="margin-bottom:15px">
+        <div class="num" style="width:78px"><label>Surf. habitable</label><div class="box"></div></div>
+        <div class="num" style="width:78px"><label>Surf. Carrez</label><div class="box"></div></div>
+        <div class="num" style="width:78px"><label>Surf. séjour</label><div class="box"></div></div>
+        <div class="num"><label>Pièces</label><div class="box"></div></div>
+        <div class="num"><label>Chambres</label><div class="box"></div></div>
+        <div class="num"><label>Niveaux</label><div class="box"></div></div>
+      </div>
+      <div class="nums" style="margin-bottom:15px">
+        <div class="num"><label>SDB</label><div class="box"></div></div>
+        <div class="num"><label>Salles d'eau</label><div class="box"></div></div>
+        <div class="num"><label>WC</label><div class="box"></div></div>
+        <div class="num"><label>Étage</label><div class="box"></div></div>
+        <div class="f" style="flex:1;min-width:220px"><label>Exposition</label><span class="wl"></span><span class="hint">nord, sud, est, ouest…</span></div>
+      </div>
+      <div class="grid g2">
+        <div class="f"><label>Cuisine — agencement</label><span class="wl"></span><span class="hint">américaine, séparée, kitchenette, ouverte · équipée ?</span></div>
+        <div class="f"><label>Vue</label><span class="wl"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 COMPOSITION -->
+  <div class="sec">
+    <div class="sec-hd"><span class="n">5</span><span class="t">Composition des pièces</span><span class="hint">une pièce par ligne</span></div>
+    <div class="body">
+      <table class="compo">
+        <thead><tr><th class="n">N°</th><th>Type de pièce</th><th style="width:70px">Étage</th><th style="width:90px">Surface m²</th><th>Commentaire</th></tr></thead>
+        <tbody>
+          <tr><td class="n">1</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">2</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">3</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">4</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">5</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">6</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">7</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">8</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">9</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">10</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">11</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td class="n">12</td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 6 ÉQUIPEMENTS (ecriture libre = gros gain ergonomie) -->
+  <div class="sec">
+    <div class="sec-hd"><span class="n">6</span><span class="t">Équipements &amp; confort</span><span class="hint">listez librement — l'IA reconnaît chaque équipement</span></div>
+    <div class="body">
+      <div class="f span-all"><label>Chauffage — mode / type / énergie</label><span class="wl"></span><span class="hint">ex. individuel · pompe à chaleur · gaz de ville</span></div>
+      <div class="f span-all" style="margin-top:13px"><label>Équipements (climatisation, cheminée, vitrage, volets, sécurité, ascenseur, fibre…)</label><div class="zone big"></div></div>
+      <div class="grid g2" style="margin-top:13px">
+        <div class="f"><label>Eau</label><span class="wl"></span><span class="hint">ville, puits, forage</span></div>
+        <div class="f"><label>Assainissement</label><span class="wl"></span><span class="hint">tout-à-l'égout, fosse</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>Fiche de visite — estimation · draft_annonce_v3</span><span>Page 2 / 4</span><span>Groupe GTI</span></div>
+</div>
