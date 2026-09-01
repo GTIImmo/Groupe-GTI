@@ -232,36 +232,20 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     # une semaine d'epreuve gratuite -- methode de la doublure, celle du registre
     # des recherches et du numero de contact.
     #
-    # ⚠ ON NE SURVEILLE QUE LES REMONTEES, ET LE PREMIER VRAI GESTE A DIT POURQUOI.
-    #
-    # Le 01/09 a 10h03, refus de l'offre 33027 sur le bien de test 62774. Le geste
-    # a reussi, la regle a pose « Actif ». Puis la resynchronisation a remis
-    # « Sous offre » -- et l'API d'Hektor, interrogee juste apres, dit bien
-    # statut 3 « Sous offre » alors que ses DEUX offres sont refusees et son
-    # compromis annule.
-    #
-    # HEKTOR N'A PAS REDESCENDU. Notre regle ne remplace donc pas seulement un
-    # mecanisme qui disparaitra a la coupure : elle en corrige un qui ne marche
-    # deja pas a tous les coups.
-    #
-    # CONSEQUENCE POUR CETTE SONDE. Une REDESCENTE en ecart est desormais l'etat
-    # NORMAL -- c'est la regle qui a raison et Hektor qui traine. Sonner dessus
-    # ferait crier la sentinelle en permanence, et une sentinelle qui crie
-    # toujours ne dit plus rien. Les REMONTEES, elles, gardent tout leur sens :
-    # un statut en retard que RIEN ne corrigera (VS046 porte une vente et
-    # s'affiche « Sous offre »). Elles sont stables a quatre depuis le 01/09.
-    #
-    # La vue, elle, garde les deux sens : c'est le journal de ce que l'app sait
-    # et qu'Hektor ignore.
+    # SEUIL 4, ET NON 0. Au 01/09 il y a exactement quatre ecarts, et les quatre
+    # sont des REMONTEES que la borne 2 bloque -- ce sont de vraies incoherences
+    # DU COTE HEKTOR (une vente affichee « Sous offre », un compromis actif reste
+    # « Sous offre »), pas des erreurs de la regle. Sonner dessus tous les jours
+    # rendrait la sentinelle muette a force de crier. Un CINQUIEME ecart, lui,
+    # veut dire que quelque chose a bouge : c'est celui-la qu'on veut voir.
     {
         "key": "data.ecart_statut_regle",
-        "label": "Statuts en retard chez Hektor que rien ne corrigera",
+        "label": "Ecarts entre la regle de statut et Hektor",
         "table": "app_ecart_statut_regle",
-        "params": {"sens": "eq.remontee"},
         "rule": "absolute",
         "max": 4,
         "sample": {
-            "select": "numero_dossier,statut_hektor,statut_regle",
+            "select": "numero_dossier,statut_hektor,statut_regle,sens",
             "order": "numero_dossier.asc",
             "limit": 4,
         },
