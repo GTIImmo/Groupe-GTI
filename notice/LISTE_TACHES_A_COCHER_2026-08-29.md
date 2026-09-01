@@ -908,6 +908,37 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     la diffusion (« C+ », Frederic y est favorable) ? faut-il coder la
     suppression d'une offre et d'un compromis ?
 
+[x] LA CAUSE DE FOND DU BLOCAGE -- CORRIGEE le 01/09 (phase2/sync/affaire_ledger.py)
+    Frederic : « il y a un probleme avec ces generation d'id, je veux comprendre ».
+    Il avait raison d'insister : le recalage du compteur ne tenait qu'un run.
+
+    LE MECANISME, reconstitue :
+       25/08  la 1re affaire nee dans l'app prend 1 000 001
+              -> LE MAX DE LA TABLE SAUTE A UN MILLION
+       le run distribuait  MAX(app_affaire_id) + 1  SUR TOUTE LA TABLE
+       27/08  305 vieilles affaires HEKTOR (2021-2026) arrivent d'un coup
+              -> elles prennent 1 000 008 ... 1 000 312, DANS NOTRE PLAGE
+       la sequence de l'app, restee a 1 000 017, distribue alors des numeros
+       DEJA PRIS -> « duplicate key » -> que le front traduit en « une action
+       Hektor est deja en cours pour cette annonce ».
+
+    ➡ SEPT TESTS ONT FAIT BASCULER 305 AFFAIRES REELLES dans la plage reservee,
+      et bloque TOUTE creation d'offre / compromis / vente DU 27/08 AU 01/09.
+
+    CE QUI N'ETAIT PAS CASSE, verifie :
+       ZERO doublon (aucun triplet Hektor porte par deux app_affaire_id)
+       empreinte md5 des 323 lignes IDENTIQUE local / Supabase
+       AUCUN code ne lit le seuil 1 000 000 -- il n'est que dans des commentaires
+       l'ADOPTION marche : 1 000 001 et 1 000 002, nees dans l'app le 25/08, ont
+       garde leur numero et gagne le leur chez Hektor (33026, 33027)
+
+    LE CORRECTIF : le run ignore la moitie haute.
+       next_affaire_id = MAX(app_affaire_id) WHERE app_affaire_id < 1 000 000  + 1
+       prochain numero : 28 982 au lieu de 1 000 324, soit 972 342 d'ecart
+    Les 323 deja placees ne bougent pas : l'ON CONFLICT porte sur le triplet
+    Hektor et ne touche jamais app_affaire_id. « Un dossier ne perd jamais son
+    numero. »
+
 [x] LA PORTEE DES TROIS PANNES DU 01/09 -- audit demande par Frederic
     « Est-ce que les points 1, 2, 3 ne sont pas egalement le cas avec nouveau
     compromis et vente ? »  -- VERIFIE dans le code, et la reponse est OUI pour

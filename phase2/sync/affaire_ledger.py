@@ -37,6 +37,14 @@ import os  # noqa: E402
 
 LEDGER_TABLE = "app_affaire_ledger"
 
+# LA FRONTIERE ENTRE LES DEUX SERIES DE NUMEROS.
+#   en dessous : les affaires vues chez Hektor, numerotees par ce script (a 28 981)
+#   au-dessus  : les affaires NEES DANS L'APP, numerotees par la sequence Supabase
+#                app_affaire_id_app_seq
+# Le run ne distribue JAMAIS au-dessus de cette frontiere -- sinon les deux series
+# se telescopent et la sequence de l'app se met a rendre des numeros deja pris.
+PLAGE_RESERVEE_APP = 1_000_000
+
 # Identite (20/08/2026) : l'affaire porte d'abord le numero de l'app.
 #   app_affaire_id -- UNE serie pour les trois types. Hektor, lui, tient trois compteurs
 #     separes dont les numeros se telescopent : 7 541 numeros sont portes par deux types
@@ -133,7 +141,42 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     # Le numero d'affaire est distribue ici, par le serveur local, comme app_dossier.id.
     # On ne renumerote JAMAIS une ligne connue : l'ON CONFLICT ci-dessous laisse
     # app_affaire_id intact. Seules les affaires nouvelles prennent un numero.
-    next_affaire_id = (con.execute(f"SELECT COALESCE(MAX(app_affaire_id), 0) FROM {LEDGER_TABLE}").fetchone()[0]) + 1
+    #
+    # ⬇ 01/09/2026 -- LE RUN NE PIOCHE PLUS DANS LA PLAGE DE L'APP.
+    #
+    # CE QUI S'ETAIT PASSE. Deux chemins distribuent des numeros dans la MEME
+    # serie, et chacun comptait a sa maniere :
+    #    le run   « je prends LE PLUS GRAND + 1 »   -- il regardait TOUTE la table
+    #    l'app    « je prends LE SUIVANT »          -- sequence app_affaire_id_app_seq
+    #
+    # Le 25/08, la premiere affaire nee dans l'app a pris 1 000 001. Le MAX de la
+    # table a donc saute a un million -- et le run, qui regardait ce MAX, s'est mis
+    # a compter a partir de la. Le 27/08, un rattrapage de 305 vieilles affaires
+    # HEKTOR (2021-2026) a pris 1 000 008 ... 1 000 312 : la plage reservee etait
+    # envahie par des affaires qui n'avaient rien a y faire.
+    #
+    # La sequence de l'app, elle, n'en a rien su. Restee a 1 000 017, elle a
+    # continue de distribuer 1 000 018, 1 000 019... DES NUMEROS DEJA PRIS. La base
+    # refusait (« duplicate key »), et le front traduisait ce refus en « une action
+    # Hektor est deja en cours pour cette annonce ».
+    #
+    # ➡ RESULTAT : AUCUNE creation d'offre, de compromis NI de vente depuis l'app
+    #   n'a pu aboutir DU 27/08 AU 01/09, sur AUCUN bien -- sous un message qui
+    #   parlait d'autre chose. Trouve en testant le protocole des statuts.
+    #
+    # LE CORRECTIF. Le run ignore desormais la moitie haute : il repart de 28 982
+    # et ne remontera plus jamais vers l'app -- il faudrait 971 000 affaires
+    # nouvelles pour que la serie basse rattrape la haute.
+    #
+    # ON NE TOUCHE PAS AUX 323 DEJA PLACEES. Elles sont coherentes des deux cotes
+    # (empreinte md5 identique local/Supabase, zero doublon), et AUCUN code ne lit
+    # le seuil -- il n'apparait que dans des commentaires. Les renumeroter
+    # violerait la regle du projet (« un dossier ne perd jamais son numero ») pour
+    # corriger une gene devenue documentaire.
+    next_affaire_id = (con.execute(
+        f"SELECT COALESCE(MAX(app_affaire_id), 0) FROM {LEDGER_TABLE} WHERE app_affaire_id < ?",
+        (PLAGE_RESERVEE_APP,),
+    ).fetchone()[0]) + 1
 
     # ------------------------------------------------------------------ C.4 25/08
     # LES AFFAIRES NEES DANS L'APP, A ADOPTER PLUTOT QU'A DUPLIQUER.
