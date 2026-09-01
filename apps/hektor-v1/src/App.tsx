@@ -11927,7 +11927,12 @@ export default function App() {
   // C.19-c (30/08) -- CE QUE DEVIENT LE BIEN UNE FOIS LA VENTE ENREGISTREE.
   // Hektor offre deux issues a l'enregistrement d'une vente ; le defaut « laisser
   // actif » est le seul EPROUVE, et il a ete arbitre par Frederic le 30/08.
-  const [statusChangeApresVente, setStatusChangeApresVente] = useState<'actif' | 'archiver'>('actif')
+  // C.19-c (01/09) — LE CHOIX EST RETIRE DE L'ECRAN, PAS DU MECANISME.
+  // Le bien vendu reste au portefeuille avec le statut Vendu : c'est ce que font
+  // 95 % des ventes du parc (8 767 non archivees contre 423). La capacite
+  // « archiver apres la vente » reste INTACTE cote worker et RPC -- elle attend
+  // simplement qu'on la redemande, si un jour le besoin revient.
+  const statusChangeApresVente: 'actif' | 'archiver' = 'actif'
   const [statusChangeCloseReason, setStatusChangeCloseReason] = useState('')
   // Motif structuré de clôture (mécanique Hektor réelle) : etat = choiceBags, raison = sous-motif.
   const [statusChangeCloseEtat, setStatusChangeCloseEtat] = useState<'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'>('choiceAutre')
@@ -14739,7 +14744,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerFeesRate('')
     setStatusChangeNetSellerPrice('')
     setStatusChangeSequestration('')
-    setStatusChangeApresVente('actif')
+    // (statusChangeApresVente est desormais une constante — plus rien a reinitialiser)
     setStatusChangeCloseReason('')
     setStatusChangeCloseEtat('choiceAutre')
     setStatusChangeCloseRaison('autre')
@@ -17568,36 +17573,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       </div>
                     </section>
                     {statusChangeStatus === 'sold' ? (
-                      <section className="status-change-section">
-                        <div>
-                          <p className="eyebrow">Une fois la vente enregistree</p>
-                          <strong>Que devient le bien ?</strong>
-                        </div>
-                        <div className="status-choice-grid">
-                          <button
-                            type="button"
-                            className={`status-choice-card ${statusChangeApresVente === 'actif' ? 'is-selected' : ''}`}
-                            onClick={() => setStatusChangeApresVente('actif')}
-                          >
-                            <strong>Le laisser actif</strong>
-                            <span>Il reste dans les biens actuels et affiche BIEN VENDU.</span>
-                          </button>
-                          <button
-                            type="button"
-                            className={`status-choice-card ${statusChangeApresVente === 'archiver' ? 'is-selected' : ''}`}
-                            onClick={() => setStatusChangeApresVente('archiver')}
-                          >
-                            <strong>L'archiver</strong>
-                            <span>Il sort des biens actuels, motif « vendu par l'agence ».</span>
-                          </button>
-                        </div>
-                        <p className="status-change-note">
-                          L'archivage se fait par le geste d'archivage deja eprouve, APRES que la vente
-                          a ete confirmee chez Hektor — et non par le bouton « Enregistrer &amp; archiver »
-                          de leur formulaire, dont un essai du 29/08 a montre qu'il pouvait detruire la
-                          vente precedente.
-                        </p>
-                      </section>
+                      /* C.19-c — LE CHOIX EST RETIRE (01/09/2026, arbitrage de Frederic).
+                         MESURE QUI L'A TRANCHE : sur les ventes du parc,
+                            8 767 NE SONT PAS archivees   ·   423 le sont
+                         soit 95 % / 5 %. Les deux cartes presentaient A EGALITE une option
+                         prise dans un cas sur vingt -- et l'option minoritaire enchainait un
+                         SECOND geste chez Hektor, celui-la meme dont l'essai du 29/08 a
+                         montre qu'il pouvait detruire la vente precedente (23288, 404 a l'API).
+                         Le bien vendu reste donc au portefeuille avec le statut Vendu, et part
+                         naturellement dans l'historique. Archiver reste possible ensuite, par
+                         le geste d'archivage, qui est une decision separee. */
+                      <p className="status-change-note">
+                        Le bien restera dans les biens actuels avec le statut <strong>Vendu</strong>.
+                        Pour le sortir du portefeuille, utilisez l'archivage depuis la fiche — c'est
+                        un geste a part, et il n'est necessaire que dans de rares cas.
+                      </p>
                     ) : null}
                     <p className="status-change-note">Apres validation Hektor, le worker relance une reprise ciblee pour remplir les blocs transaction de la fiche. Le run quotidien reste la verification de secours.</p>
                   </>
