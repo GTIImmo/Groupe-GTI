@@ -971,6 +971,39 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
        deja buyer_contact_id · les 2 796 orphelins = rapprochement par le nom,
        chantier separe.
 
+    C) ⬛ LES AFFAIRES VENUES DU RUN SONT PLUS PAUVRES  -- A CORRIGER APRES LE TEST
+       Souleve par Frederic le 01/09 : « les transactions provenant du run
+       manquent d'information ». Il a raison, mais MOINS que ce que je lui ai
+       d'abord repondu -- j'avais dit « la validite n'existe nulle part », c'etait
+       FAUX. Mesure exacte, sur les affaires venues du miroir :
+
+          genre        lignes    validite      honoraires   notaire    taux
+          offre        11 121    11 068 ✓      11 121 ✓        0        0
+          compromis    10 577    10 577 ✓      10 577 ✓        0        0
+          vente         7 606       --         7 606  ✓     7 606 ✓     0
+
+       ➡ TOUT EST DEJA DANS payload_json, SAUF DEUX CHOSES :
+            le NOTAIRE      absent des offres et des compromis (present sur les ventes)
+            le TAUX         absent partout -- Hektor ne le renvoie jamais
+       La validite dort dans propositions[0].validite pour 11 068 offres ; le
+       delai de retractation dans compromis.dateEnd pour 10 577 compromis.
+
+       DONC LA CORRECTION N'EST PAS D'ALLER CHERCHER AILLEURS : c'est d'EXTRAIRE
+       du payload ce qui s'y trouve deja, et de le rendre lisible a l'ecran comme
+       le carnet l'est. Chantier de LECTURE, pas de collecte.
+
+       ⚠ ET SURTOUT : NE PAS L'ECRIRE DANS LE CARNET. Le carnet dit ce que l'APP
+       detient ; une affaire saisie chez Hektor, l'app n'en detient rien. L'y
+       inscrire la ferait GAGNER contre Hektor au prochain run, par le contrat
+       d'autorite -- on rendrait faux ce qui est vrai. Il faut donc une LECTURE
+       qui compose les trois sources dans cet ordre :
+            1. le carnet      ce que l'app detient        (prime)
+            2. les colonnes   ce que le ledger porte
+            3. le payload     ce que Hektor a renvoye     (le fond de tiroir)
+
+       A FAIRE APRES LE TEST DES STATUTS, pas avant : le test peut encore changer
+       ce qu'on croit savoir, comme il l'a deja fait trois fois aujourd'hui.
+
     B) LE REGISTRE DOIT REDONNER TOUS LES CHAMPS SAISIS  (demande de Frederic)
        Le ledger ne porte que CINQ champs en colonne : montant, date, date_acte,
        sequestre, numero_mandat. Le contrat d'autorite CHAMPS_APP_AFFAIRE en

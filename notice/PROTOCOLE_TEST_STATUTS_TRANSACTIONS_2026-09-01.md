@@ -287,10 +287,30 @@ les ferait alors GAGNER contre Hektor au prochain run. On rendrait faux ce qui e
 vrai.
 
 **La consequence reelle, en revanche :** pour une affaire nee chez eux, l'app ne
-connaitra jamais que les cinq colonnes plus le payload brut. La validite de l'offre
-et le taux d'honoraires n'y seront pas -- non parce qu'on les perd, mais parce que
-**l'API de Hektor ne les renvoie pas** dans ses listings. C'est une limite de Hektor,
-pas de notre conception.
+connaitra que les cinq colonnes plus le payload brut -- et rien de tout cela n'est
+lu par l'ecran aujourd'hui.
+
+⚠ **CORRECTION DE CE QUE J'AI D'ABORD ECRIT ICI.** J'avais dit que la validite et
+le taux « n'y seront pas, parce que l'API de Hektor ne les renvoie pas ». **C'est
+faux pour la validite** : elle dort dans `propositions[0].validite` pour **11 068
+offres sur 11 121**, et le delai de retractation dans `compromis.dateEnd` pour les
+10 577 compromis. Mesure exacte :
+
+```
+   genre        lignes    validite      honoraires   notaire    taux
+   offre        11 121    11 068 ✓      11 121 ✓        0        0
+   compromis    10 577    10 577 ✓      10 577 ✓        0        0
+   vente         7 606       --         7 606  ✓     7 606 ✓     0
+```
+
+Seuls manquent vraiment le NOTAIRE (absent des offres et compromis) et le TAUX
+(absent partout -- celui-la, Hektor ne le renvoie jamais).
+
+➡ La correction a venir est donc un chantier de **LECTURE**, pas de collecte :
+composer les trois sources dans l'ordre -- le carnet (ce que l'app detient, qui
+prime), les colonnes, puis le payload (le fond de tiroir). Voir la partie C du
+chantier « registre des affaires » au plan. **A faire APRES ce test**, qui peut
+encore changer ce qu'on croit savoir.
 
 ---
 
