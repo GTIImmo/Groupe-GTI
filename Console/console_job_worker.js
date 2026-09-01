@@ -11216,10 +11216,32 @@ async function handleChangeHektorAnnonceStatus(job) {
       } else {
         // L'etat d'AVANT, pour distinguer la vente qu'on cree de celles qui
         // etaient deja la. Best-effort : ne pas savoir n'empeche pas d'envoyer.
-        // Le genre arbitre : la vente et le compromis se prouvent tous deux sur
-        // la fiche, l'offre garde son propre chemin (sa reponse, elle, parle).
+        // ─── LES TROIS GENRES SE PROUVENT, DEPUIS LE 01/09 ───
+        //
+        // L'offre etait exclue, sur la foi de cette phrase que j'avais ecrite ici :
+        // « l'offre garde son propre chemin (sa reponse, elle, parle) ». UN ESSAI
+        // REEL A MONTRE QU'ELLE NE PARLE PAS : l'offre 1 001 324, creee depuis
+        // l'app sur l'annonce 24933, est restee SANS numero Hektor -- donc
+        // invisible aux gestes « refuser » et « accepter » -- jusqu'au run de nuit.
+        //
+        // Le compromis et la vente, eux, recevaient leur numero en QUELQUES
+        // SECONDES par ce meme chemin. L'offre attendait la nuit pour rien.
+        //
+        // Idee de Frederic : « on se sert de la console pour envoyer, on peut bien
+        // s'en servir pour consulter le resultat ». C'etait deja le cas -- pour
+        // deux genres sur trois.
         const genreArbitre = target === "sold" ? "vente"
-          : target === "compromise" ? "compromis" : null;
+          : target === "compromise" ? "compromis"
+          : target === "offer" ? "offre" : null;
+
+        // ⚠ MAIS LE BLOCAGE PREALABLE NE VAUT PAS POUR L'OFFRE.
+        //
+        // La regle « une transaction en cours empeche d'en creer une autre » a ete
+        // etablie par experience pour le COMPROMIS et la VENTE (C1/C2/C3, V1/V2 du
+        // 31/08). Elle n'a JAMAIS ete etablie pour l'offre -- et le bien temoin
+        // 62774 en porte DEUX. Bloquer sur une offre active refuserait un geste
+        // parfaitement legitime.
+        const genreBloquant = genreArbitre === "offre" ? null : genreArbitre;
         // La date sert a borner la fenetre du listing des ventes -- sans elle
         // il faudrait ramener les 7 500 autres.
         const dateTransaction = String(
@@ -11253,20 +11275,20 @@ async function handleChangeHektorAnnonceStatus(job) {
         // bloquer un geste legitime.
         const bloquants = (ventesAvant && Array.isArray(ventesAvant.bloquants))
           ? ventesAvant.bloquants : null;
-        if (genreArbitre && bloquants && bloquants.length) {
-          const commentDebloquer = genreArbitre === "compromis"
+        if (genreBloquant && bloquants && bloquants.length) {
+          const commentDebloquer = genreBloquant === "compromis"
             ? "il faut l'annuler avant d'en creer un autre -- le geste existe dans "
               + "l'app et il est REVERSIBLE"
             : "il faut la supprimer avant d'en creer une autre -- ⚠ la suppression "
               + "d'une vente est DEFINITIVE, c'est une decision qui doit rester humaine";
           await logJob(job.id, "hektor_transaction_garde", "error",
-            `Un ${genreArbitre} en cours existe deja (${bloquants.join(", ")}) : ${commentDebloquer}. `
+            `Un ${genreBloquant} en cours existe deja (${bloquants.join(", ")}) : ${commentDebloquer}. `
             + `Rien n'a ete envoye a Hektor.`, {
-              hektor_annonce_id: annonceId, genre: genreArbitre,
+              hektor_annonce_id: annonceId, genre: genreBloquant,
               bloquants, app_affaire_id: appAffaireId || null,
             });
           throw new Error(
-            `${genreArbitre} en cours deja present (${bloquants.join(", ")}) sur l'annonce `
+            `${genreBloquant} en cours deja present (${bloquants.join(", ")}) sur l'annonce `
             + `${annonceId} : ${commentDebloquer}.`);
         }
 

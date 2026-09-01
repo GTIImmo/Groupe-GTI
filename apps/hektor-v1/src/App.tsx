@@ -14878,13 +14878,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (parHektor) return parHektor
     }
 
-    // 2. LE REPLI : l'affaire nee chez nous, qu'Hektor n'a pas encore nommee.
-    const nees = statusChangeAffaires.filter((a) =>
-      a.kind === genre
-      && !String(a.hektor_affaire_id ?? '').trim()
-      && !AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase()),
-    )
-    return nees.length === 1 ? nees[0] : null
+    // 2. LE REPLI : le dossier ne porte pas encore le numero (le run n'est pas passe).
+    //
+    // ⚠ CORRIGE LE 01/09, APRES UN ESSAI QUI M'A DONNE TORT. Ce repli ne prenait
+    // d'abord QUE les affaires sans numero Hektor. Des que le worker a pose le
+    // numero sur l'offre 1 001 324, elle en est sortie -- et le chemin 1 ne la
+    // voyait toujours pas, puisque dossier.offre_id n'est rempli que par le run.
+    // Les boutons, apparus, ont DISPARU. Le repli doit donc dependre de la VIE de
+    // l'affaire, pas de la presence d'un numero.
+    //
+    // On ecarte en revanche celle que Hektor a SUPPRIMEE : elle porte un numero
+    // ET present_in_hektor = false. A ne pas confondre avec celle qui vient de
+    // naitre chez nous -- pas de numero, present_in_hektor = false aussi.
+    const vivantes = statusChangeAffaires.filter((a) => {
+      if (a.kind !== genre) return false
+      if (AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())) return false
+      const aUnNumeroHektor = Boolean(String(a.hektor_affaire_id ?? '').trim())
+      const retireeDeHektor = aUnNumeroHektor && a.present_in_hektor === false
+      return !retireeDeHektor
+    })
+    return vivantes.length === 1 ? vivantes[0] : null
   }
 
   // La modale pre-remplit avec le prix du bien et la date DU JOUR : c'est juste
