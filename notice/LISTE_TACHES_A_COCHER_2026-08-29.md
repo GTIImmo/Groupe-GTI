@@ -871,6 +871,54 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     ce que la regle a calcule et ce que Hektor renvoie. Le jour de la bascule, la
     regle sera deja eprouvee au lieu d'etre allumee a l'aveugle. Methode de la
     doublure, celle du registre des recherches et du numero de contact.
+
+[ ] ⬛ POINT DE DEV OUVERT LE 01/09 -- LE TEST REEL DES STATUTS
+    >>> notice/PROTOCOLE_TEST_STATUTS_TRANSACTIONS_2026-09-01.md
+
+    DECIDE PAR FREDERIC : « il faut etre sur de l'interaction des statuts chez
+    Hektor ». Tous les gestes faits DEPUIS L'APP, par lui en compte admin -- pas
+    de comparaison avec des gestes faits dans Hektor : on sait deja, par le releve
+    DOM du 28/08, que le worker envoie EXACTEMENT l'appel de leur ecran. Si Hektor
+    ne reagit pas a un geste venu de l'app, ce n'est pas notre route.
+
+    POURQUOI CE TEST EXISTE : mes deux dernieres reponses sur le comportement
+    d'Hektor se sont revelees trop larges, et chacune reposait sur UN SEUL CAS.
+
+    LE PRINCIPE : trois releves par geste. T0 avant, T1 juste apres (ce que
+    l'app a pose), T2 apres la resynchronisation (ce qu'Hektor dit). L'ecart
+    T1/T2 EST la reponse. Sans les trois temps on ne voit rien.
+
+    ON RELEVE AUSSI L'ETAT DE CHAQUE TRANSACTION, pas seulement le statut du
+    bien -- ajout de Frederic, et il est decisif : sa question « annuler un
+    compromis met-il l'offre en refused ? » n'aurait eu aucune reponse sinon.
+    (Deja mesure sur le parc : NON. 1 194 paires, 60 % restent 'accepted'.)
+
+    BIEN NEUF, chez GONZALEZ / Firminy. PAS 62774 : 25 changements de statut a
+    la main et six transactions empilees, on ne distinguerait pas le geste de
+    l'accumulation. Il reste comme temoin.
+
+    ⚠ DEUX GESTES SONT HORS D'ATTEINTE, et Frederic l'a confirme : deleteOffre
+    et deleteCompromis n'ont JAMAIS eu de worker -- annuler seulement. Or c'est
+    precisement SUPPRIMER un compromis qui, le 28/08, a fait redescendre le
+    statut tout seul. Si le bloc descente ne redescend jamais, cette lacune
+    devient le point de dev central.
+
+    CE QUE LE TEST TRANCHE : la regle de redescente est-elle indispensable ou
+    fait-elle double emploi ? faut-il renvoyer le statut A Hektor sans toucher
+    la diffusion (« C+ », Frederic y est favorable) ? faut-il coder la
+    suppression d'une offre et d'un compromis ?
+
+[ ] LE FRONT DE LA MODALE DE STATUT -- vu le 01/09 en testant
+    La modale porte 15 champs et n'en repose que 4 (montant, date, date d'acte,
+    sequestre). Deux qu'on a DEJA en base ne sont jamais reposes : l'ACQUEREUR
+    (hektor_acquereur_id + acquereur_json) et le MANDAT (numero_mandat).
+
+    ⚠ ET SURTOUT : la modale ne dit JAMAIS quelle transaction le geste va
+    toucher. Le bien de test portait DEUX offres ; Frederic a clique « Refuser
+    l'offre » sans voir laquelle. Pour « Supprimer la vente », irreversible,
+    c'est plus grave. affaireCourantePourStatut() designe pourtant une affaire
+    precise : il suffit de la NOMMER a l'ecran (n° Hektor, acquereur, montant,
+    date) au-dessus des boutons de geste.
 ```
 
 ## 3. C.9 + 26bis-③ — **la création part de l'app** · 1 à 2 sem. — *le vrai basculement*
