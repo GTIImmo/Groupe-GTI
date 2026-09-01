@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     hektor_mandat_id    TEXT,
     numero_mandat       TEXT,
     hektor_acquereur_id TEXT,
+    app_contact_id      INTEGER,
     acquereur_json      TEXT,
     state               TEXT,
     montant             TEXT,
@@ -131,6 +132,18 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     """UPSERT (delete-never) de toutes les affaires courantes dans le ledger local.
     En mode full, les lignes non revues ce run passent present_in_hektor=0 (conservées)."""
     con.executescript(DDL_SQLITE)
+
+    # ── LA TABLE EXISTE DEJA : le CREATE ci-dessus ne l'a pas touchee ──
+    #
+    # CREATE TABLE IF NOT EXISTS ne fait RIEN sur une table existante -- pas meme
+    # ajouter une colonne nouvelle. Sans ce rattrapage, le prochain run tomberait
+    # sur « no such column: app_contact_id » et LE RUN DE NUIT ECHOUERAIT.
+    # On ajoute donc la colonne si elle manque, sans rien casser si elle est la.
+    colonnes = {r[1] for r in con.execute(f"PRAGMA table_info({LEDGER_TABLE})")}
+    if "app_contact_id" not in colonnes:
+        con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN app_contact_id INTEGER")
+        con.commit()
+        print(f"[affaire_ledger] colonne app_contact_id ajoutee a {LEDGER_TABLE}")
     run_ts = now_iso()
     mnum = _mandat_numero(con)
 
@@ -228,6 +241,29 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         )
     }
 
+    # ── L'ACQUEREUR PAR LE NUMERO DE L'APP (01/09/2026) ──────────────────
+    #
+    # SOULEVE PAR FREDERIC : « les ids Hektor etant les axes, il y aura un
+    # probleme lors de la coupure ». Le lien entre une vente et son ACHETEUR ne
+    # passait que par hektor_acquereur_id -- le seul lien du projet qui ne fut
+    # pas double. Il etait DEJA rompu pour 2 802 affaires (9,7 %) : il ne restait
+    # d'elles que acquereur_json, le nom sans le lien.
+    #
+    # `app_contact` est la doublure d'identite des contacts : elle n'est jamais
+    # reconstruite, c'est elle qui porte le numero que nous donnons aux gens.
+    # Si elle n'existe pas encore, on continue sans -- la colonne reste vide, et
+    # le COALESCE de l'ON CONFLICT garantit qu'on n'efface jamais un rattachement
+    # deja etabli.
+    contact_app_par_hektor: dict[str, int] = {}
+    try:
+        for h, a in con.execute(
+            "SELECT hektor_contact_id, app_contact_id FROM app_contact "
+            "WHERE hektor_contact_id IS NOT NULL AND app_contact_id IS NOT NULL"
+        ):
+            contact_app_par_hektor[str(h).strip()] = int(a)
+    except sqlite3.OperationalError:
+        contact_app_par_hektor = {}
+
     seen = 0
     inserted = 0
     for r in con.execute(LEDGER_SQL):
@@ -261,15 +297,18 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             f"""
             INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
                 hektor_annonce_id, kind, hektor_affaire_id, hektor_mandat_id,
-                numero_mandat, hektor_acquereur_id, acquereur_json, state, montant, date, date_acte,
+                numero_mandat, hektor_acquereur_id, app_contact_id, acquereur_json, state, montant, date, date_acte,
                 sequestre, payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
                 hektor_mandat_id=excluded.hektor_mandat_id,
                 numero_mandat=excluded.numero_mandat,
                 hektor_acquereur_id=excluded.hektor_acquereur_id,
+                -- VIDE NE GAGNE PAS : un contact que l'app ne connait pas encore
+                -- ne doit pas effacer un rattachement deja etabli.
+                app_contact_id=COALESCE(excluded.app_contact_id, {LEDGER_TABLE}.app_contact_id),
                 acquereur_json=excluded.acquereur_json,
                 state=excluded.state, montant=excluded.montant, date=excluded.date,
                 date_acte=excluded.date_acte, sequestre=excluded.sequestre,
@@ -279,6 +318,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             (
                 propose, dossier_par_annonce.get(annonce),
                 int(annonce), kind, affaire_id, mid or None, numero or None, acq_id or None,
+                contact_app_par_hektor.get(acq_id) if acq_id else None,
                 json.dumps(party, ensure_ascii=True, separators=(",", ":")) if party else None,
                 normalize_text(r["state"]) or None, normalize_text(r["montant"]) or None,
                 normalize_text(r["dt"]) or None, normalize_text(r["date_acte"]) or None,

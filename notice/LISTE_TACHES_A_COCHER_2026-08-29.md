@@ -914,7 +914,32 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     etant les axes, il y aura un probleme lors de la coupure. Ne faut-il pas
     homogeneiser ? »
 
-    A) L'IDENTITE DE L'ACQUEREUR -- le SEUL lien non double du projet
+    A) ✅ FAIT LE 01/09 -- L'IDENTITE DE L'ACQUEREUR
+       RESULTAT :  0 %  ->  28 907 / 28 919  soit 100,0 %   ·   12 orphelines
+       Les 2 802 que je croyais perdues ont ete RETROUVEES. Explication : la
+       doublure locale `app_contact` garde les contacts disparus (delete-never),
+       la elle app_contact_current ne montre que les vivants. Le serveur local a
+       donc rattrape 2 796 acquereurs que Supabase seul ne pouvait pas.
+       ➡ LA DOUBLURE A PROUVE SA VALEUR : c'est elle qui a sauve le registre.
+
+       CE QUI A ETE FAIT, dans cet ordre :
+          1  colonne app_contact_id sur app_affaire_ledger (Supabase) + index
+          2  remplissage par la jointure Hektor (26 111)
+          3  la RPC app_change_annonce_status_optimistic la pose a la CREATION
+             -- sinon le rattrapage serait perime des demain
+          4  la meme colonne cote serveur local, avec MIGRATION DOUCE :
+             CREATE TABLE IF NOT EXISTS n'ajoute RIEN a une table existante --
+             sans l'ALTER, le run de nuit serait tombe sur « no such column »
+          5  remplissage local (28 906) puis push -> Supabase a 28 907
+       ON N'A RIEN EFFACE : hektor_acquereur_id reste a cote, et l'ON CONFLICT
+       du script porte un COALESCE (« vide ne gagne pas ») pour qu'un contact
+       inconnu n'efface jamais un rattachement etabli.
+
+       LES 12 QUI RESTENT : 6 gardent un nom dans acquereur_json (BOUZENAD,
+       Lanfranchi, SAGNARD), 6 n'ont plus rien. Contacts jamais descendus ou
+       supprimes avant la doublure. 0,04 % -- on les laisse.
+
+    A-bis) POURQUOI CE TROU EXISTAIT -- le SEUL angle mort du projet
        Frederic avait raison de rappeler que le travail avait ete fait :
           app_contact_relation_current  (mandants)      79 760   100 %  ✓
           app_rapprochement (acquereurs <-> biens)      47 782   99,9 % ✓
