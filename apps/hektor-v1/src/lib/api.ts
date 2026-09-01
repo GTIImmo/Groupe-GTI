@@ -3180,6 +3180,36 @@ export async function resolveContactPending(hektorContactId: string, mode: 'refa
   if (error) throw new Error(error.message ?? 'Unable to resolve contact pending')
 }
 
+// ── C.4-bis (01/09) : LE GESTE ABANDONNE, LU ET TRANCHE ──
+//
+// Décalque exact du couple loadContactEditStatus / resolveContactPending, posé
+// pour les SAISIES par C.1' et C.12. La différence tient en une phrase : une
+// saisie a un « pending » qu'on supprime en le résolvant ; un geste n'a que son
+// travail, qui est de l'HISTORIQUE et ne se supprime pas. C'est donc la trace de
+// résolution qui le fait sortir de la liste.
+export type ActionAbandonnee = {
+  job_id: string
+  job_type: string
+  erreur: string
+  tentatives: number
+  depuis: string | null
+}
+export type ActionStatus = { abandonnes: number; gestes: ActionAbandonnee[] }
+
+export async function loadActionStatus(appDossierId: number | null | undefined): Promise<ActionStatus | null> {
+  if (!hasSupabaseEnv || !supabase || !appDossierId) return null
+  const { data, error } = await supabase.rpc('app_action_status', { target_dossier_id: appDossierId })
+  // Un échec de lecture ne doit pas priver l'utilisateur de sa fiche.
+  if (error) return null
+  return (data ?? null) as ActionStatus | null
+}
+
+export async function resolveAction(jobId: string, mode: 'refait' | 'abandon'): Promise<void> {
+  if (!hasSupabaseEnv || !supabase || !jobId) return
+  const { error } = await supabase.rpc('app_action_resolve', { target_job_id: jobId, mode })
+  if (error) throw new Error(error.message ?? 'Unable to resolve action')
+}
+
 export type AnnonceEditSkippedField = { field: string; reason?: string | null; value?: unknown }
 export type AnnonceEditStatus = {
   pending: boolean

@@ -103,6 +103,9 @@ import {
   createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
   createLinkHektorMandantJobOptimistic,
+  loadActionStatus,
+  resolveAction,
+  type ActionAbandonnee,
   loadRelationProvisionals,
   type RelationProvisionalRow,
   createUpdateHektorMandantContactJob,
@@ -24917,6 +24920,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-rub fa-ck-lebien">
               {/* Bandeau conflit/partiel Hektor (retour du worker). Édition = en place, champ par champ. */}
               {!isLightweightDetail ? <AnnonceEditStatusBanner dossier={dossier} /> : null}
+              {!isLightweightDetail ? <GesteAbandonneBanner dossier={dossier} /> : null}
               {!isLightweightDetail ? <p className="fa-ck-lb-edithint">Clique un champ pour le modifier en place, puis <b>Enregistrer</b> (une vague vers Hektor).</p> : null}
               {/* Galerie mosaïque (façon v21) construite depuis les vraies photos */}
               {props.images.length > 0 ? (
@@ -26475,6 +26479,7 @@ function DossierDetailLayoutBase(props: {
               ) : null}
 
               <AnnonceEditStatusBanner dossier={dossier} />
+              <GesteAbandonneBanner dossier={dossier} />
 
               <nav className="detail-tabbar" aria-label="Navigation detail annonce" style={{ gridTemplateColumns: `repeat(${detailTabsForVariant.length}, minmax(0, 1fr))` }}>
                 {detailTabsForVariant.map((tab) => (
@@ -29439,6 +29444,91 @@ function ContactEditStatusBanner({ hektorContactId }: { hektorContactId: string 
 // Tier 2 — fidélité optimiste : bandeau d'alerte quand la dernière édition d'un bien
 // n'a PAS été fidèlement enregistrée dans Hektor (conflit = rien écrit, partiel = champ ignoré).
 // Lit app_annonce_pending via le RPC app_annonce_edit_status. Rien affiché si tout est OK.
+// C.4-bis 01/09 — LE GESTE ABANDONNE. Troisieme bandeau du meme patron, apres
+// celui des annonces (C.1') et celui des contacts (C.12).
+//
+// CE QU'IL COMBLE. Un geste qui echoue est rejoue 5 fois sur ~25 minutes, puis
+// il s'arrete. Jusqu'ici plus rien ne bougeait et RIEN NE LE DISAIT : deux
+// gestes sont morts le 29/08 et n'ont ete decouverts que trois jours plus tard.
+//
+// CE QUI DIFFERE DES DEUX AUTRES. Une saisie a un « pending » que la resolution
+// SUPPRIME. Un geste n'a que son travail, qui est de l'HISTORIQUE : on ne le
+// supprime pas. C'est donc la TRACE de resolution qui le fait sortir de la liste
+// -- meme table app_pending_resolution, meme vocabulaire, meme deux boutons.
+//
+// « J'ai refait » ne rejoue rien : il DIT que l'humain a traite. Rejouer serait
+// dangereux -- on ne sait pas si le geste avait deja pris chez Hektor.
+function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
+  const [gestes, setGestes] = useState<ActionAbandonnee[]>([])
+  const [resolving, setResolving] = useState<string | null>(null)
+  const [resolveError, setResolveError] = useState<string | null>(null)
+
+  const dossierId = dossier?.app_dossier_id ?? null
+
+  useEffect(() => {
+    if (!dossierId) { setGestes([]); return }
+    let cancelled = false
+    loadActionStatus(dossierId)
+      .then((s) => { if (!cancelled) setGestes(s?.gestes ?? []) })
+      .catch(() => { if (!cancelled) setGestes([]) })
+    return () => { cancelled = true }
+  }, [dossierId])
+
+  const trancher = async (jobId: string, mode: 'refait' | 'abandon') => {
+    if (resolving) return
+    setResolving(jobId)
+    setResolveError(null)
+    try {
+      await resolveAction(jobId, mode)
+      setGestes((liste) => liste.filter((g) => g.job_id !== jobId))
+    } catch (err) {
+      setResolveError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setResolving(null)
+    }
+  }
+
+  if (!gestes.length) return null
+
+  const base = { padding: '10px 14px', borderRadius: 8, fontSize: 14, lineHeight: 1.5, margin: '0 0 12px' } as const
+  const bouton = { padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #B3564C', background: '#fff', color: '#7A241C' } as const
+  const boutonEfface = { ...bouton, border: '1px solid #D8B4AF', color: '#8A4A42' } as const
+
+  return (
+    <div role="status" style={{ ...base, background: '#FDECEA', border: '1px solid #E5A29B', color: '#7A241C' }}>
+      <strong>{gestes.length === 1 ? 'Un geste non transmis.' : `${gestes.length} gestes non transmis.`}</strong>{' '}
+      Après 5 tentatives, {gestes.length === 1 ? "il n'a" : "ils n'ont"} pas pu être {gestes.length === 1 ? 'envoyé' : 'envoyés'} à Hektor.
+      {gestes.map((g) => (
+        <div key={g.job_id} style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #F0C9C4' }}>
+          <div><strong>{gesteLibelle(g.job_type)}</strong>{g.depuis ? ` · ${new Date(g.depuis).toLocaleDateString('fr-FR')}` : ''}</div>
+          {g.erreur ? <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>{g.erreur}</div> : null}
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button type="button" style={bouton} disabled={resolving === g.job_id} onClick={() => { void trancher(g.job_id, 'refait') }}>J'ai refait</button>
+            <button type="button" style={boutonEfface} disabled={resolving === g.job_id} onClick={() => { void trancher(g.job_id, 'abandon') }}>Abandonner ce geste</button>
+          </div>
+        </div>
+      ))}
+      {resolveError ? <div style={{ fontSize: 13, marginTop: 8 }}>{resolveError}</div> : null}
+    </div>
+  )
+}
+
+// Le nom du geste, en francais. Le type technique ne dit rien a personne.
+function gesteLibelle(jobType: string): string {
+  const noms: Record<string, string> = {
+    change_hektor_offre_status: "Changement d'etat d'une offre",
+    cancel_hektor_compromis: 'Annulation d\'un compromis',
+    delete_hektor_vente: 'Suppression d\'une vente',
+    change_hektor_annonce_status: 'Changement de statut du bien',
+    archive_hektor_annonce: 'Archivage du bien',
+    restore_hektor_annonce: 'Desarchivage du bien',
+    delete_hektor_annonce: 'Suppression du bien',
+    assign_hektor_annonce_negotiator: 'Affectation du negociateur',
+    delete_hektor_contact: 'Suppression du contact',
+  }
+  return noms[jobType] || jobType
+}
+
 function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
   const [status, setStatus] = useState<AnnonceEditStatus | null>(null)
   // C.1' 24/08 : le bandeau ne se contente plus d'informer, il permet de CLORE.
