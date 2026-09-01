@@ -104,6 +104,7 @@ import {
   createHektorMandantContactJob,
   createLinkHektorMandantJobOptimistic,
   loadActionStatus,
+  loadAffaireChampsApp,
   resolveAction,
   type ActionAbandonnee,
   loadRelationProvisionals,
@@ -14905,23 +14906,71 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // ses valeurs REELLES -- sinon un clic sur « Corriger » ecraserait la vraie date
   // par celle d'aujourd'hui, en silence. On repose donc les valeurs des que les
   // affaires arrivent, et a chaque changement de statut choisi.
+  // LE CARNET DES AFFAIRES, charge des que les affaires arrivent.
+  //
+  // Le ledger ne porte que CINQ champs en colonne. Le carnet porte tout ce qui a
+  // ete saisi -- y compris les quatre qui n'ont aucune colonne nulle part :
+  // jours_validite, jours_retractation, notaire_id, taux_honoraires.
+  const [carnetAffaires, setCarnetAffaires] = useState<Map<number, Record<string, string>>>(new Map())
+  useEffect(() => {
+    const ids = statusChangeAffaires.map((a) => Number(a.app_affaire_id)).filter((n) => Number.isFinite(n))
+    if (!ids.length) { setCarnetAffaires(new Map()); return }
+    let annule = false
+    loadAffaireChampsApp(ids)
+      .then((c) => { if (!annule) setCarnetAffaires(c) })
+      .catch(() => { if (!annule) setCarnetAffaires(new Map()) })
+    return () => { annule = true }
+  }, [statusChangeAffaires])
+
   useEffect(() => {
     const affaire = affaireCourantePourStatut()
     if (!affaire) return
     const texte = (v: unknown) => (v == null ? '' : String(v))
-    const date = texte(affaire.date).slice(0, 10)
-    const dateActe = texte(affaire.date_acte).slice(0, 10)
-    const montant = texte(affaire.montant)
+
+    // ─── LE CARNET PRIME SUR LE LEDGER (01/09/2026) ───
+    //
+    // Le ledger est rafraichi depuis Hektor a chaque run ; le carnet, lui, garde
+    // ce que VOUS avez saisi et n'est jamais ecrase. Quand les deux parlent du
+    // meme champ, c'est donc le carnet qui dit vrai -- c'est tout le sens du
+    // « corriger sans envoyer a Hektor ».
+    const carnet = carnetAffaires.get(Number(affaire.app_affaire_id)) ?? {}
+    const valeur = (champ: string, replis: unknown) => {
+      const duCarnet = String(carnet[champ] ?? '').trim()
+      return duCarnet || texte(replis)
+    }
+
+    const date = valeur('date', affaire.date).slice(0, 10)
+    const dateActe = valeur('date_acte', affaire.date_acte).slice(0, 10)
+    const montant = valeur('montant', affaire.montant)
     if (montant) {
       if (statusChangeStatus === 'sold') setStatusChangeSalePrice(montant)
       else setStatusChangeAmount(montant)
     }
     if (date && date !== '0000-00-00') setStatusChangeDate(date)
     if (dateActe && dateActe !== '0000-00-00') setStatusChangeSignatureDate(dateActe)
-    const sequestre = texte(affaire.sequestre)
+    const sequestre = valeur('sequestre', affaire.sequestre)
     if (sequestre && sequestre !== '0' && sequestre !== '0.00') setStatusChangeSequestration(sequestre)
+
+    // LES CHAMPS QUE SEUL LE CARNET PORTE. Ils n'ont aucune colonne : sans cette
+    // relecture, ils etaient saisis puis perdus a jamais.
+    const prixNet = String(carnet.prix_net_vendeur ?? '').trim()
+    if (prixNet) setStatusChangeNetSellerPrice(prixNet)
+    const prixPublic = String(carnet.prix_publique ?? '').trim()
+    if (prixPublic) setStatusChangeSalePrice(prixPublic)
+    const honoraires = String(carnet.honoraires ?? '').trim()
+    if (honoraires) setStatusChangeBuyerFees(honoraires)
+    const taux = String(carnet.taux_honoraires ?? '').trim()
+    if (taux) setStatusChangeBuyerFeesRate(taux)
+    const validite = String(carnet.jours_validite ?? '').trim()
+    if (validite) setStatusChangeValidityDays(validite)
+    const retractation = String(carnet.jours_retractation ?? '').trim()
+    if (retractation) setStatusChangeRetractionDays(retractation)
+    const notaire = String(carnet.notaire_id ?? '').trim()
+    if (notaire) setStatusChangeBuyerNotaryId(notaire)
+    const mandat = String(carnet.numero_mandat ?? '').trim()
+    if (mandat) setStatusChangeSelectedMandat(mandat)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusChangeAffaires, statusChangeStatus])
+  }, [statusChangeAffaires, statusChangeStatus, carnetAffaires])
 
   async function handleCorrigerAffaire() {
     const affaire = affaireCourantePourStatut()
@@ -14943,6 +14992,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         prix_publique: statusChangeSalePrice.trim(),
         honoraires: statusChangeBuyerFees.trim(),
         numero_mandat: statusChangeSelectedMandat.trim(),
+        // LES QUATRE QUI N'EXISTENT QUE DANS LE CARNET (01/09). Ils n'ont aucune
+        // colonne ou etre reposes -- « mieux vaut un champ absent qu'un champ
+        // menteur » -- donc ils se conservent et se relisent tels quels.
+        // ⚠ Le notaire se CORRIGE et se CONSERVE, mais ne repart PAS chez Hektor
+        // (arbitrage de Frederic) : cette fonction n'a jamais cree de travail
+        // worker, c'est tout le sens de « Corriger sans envoyer a Hektor ».
+        jours_validite: statusChangeValidityDays.trim(),
+        jours_retractation: statusChangeRetractionDays.trim(),
+        notaire_id: statusChangeBuyerNotaryId.trim(),
+        taux_honoraires: statusChangeBuyerFeesRate.trim(),
       })
       setNoticeMessage(
         `Correction enregistrée dans tes données (${retour.champs_retenus} champ(s)). Hektor n'en est pas informé.`,

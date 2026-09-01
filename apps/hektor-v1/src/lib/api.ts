@@ -1440,6 +1440,42 @@ const affaireLedgerSelect =
   'app_affaire_id,app_dossier_id,hektor_annonce_id,kind,hektor_affaire_id,numero_mandat,' +
   'hektor_acquereur_id,acquereur_json,state,montant,date,date_acte,sequestre,present_in_hektor'
 
+/** Ce que l'app détient sur une affaire, et que le run ne touche jamais.
+ *
+ * POURQUOI CETTE LECTURE EXISTE (01/09/2026). La modale saisit quatorze valeurs,
+ * et la RPC les rangeait dans `payload_json` de la ligne d'affaire. Mais le run
+ * remplace ce payload par celui de Hektor : **la saisie vivait jusqu'au premier
+ * run, puis s'effaçait**. Mesuré sur deux offres du même bien — celle d'avant le
+ * run l'avait perdue, celle d'après l'avait encore.
+ *
+ * Depuis, la création range aussi la saisie dans `app_affaire_champ_app`, que le
+ * run ne touche jamais. Sans cette fonction, on rangerait sans jamais relire.
+ *
+ * Quatre champs n'existent QUE là — ils n'ont aucune colonne où être reposés :
+ * `jours_validite`, `jours_retractation`, `notaire_id`, `taux_honoraires`.
+ */
+export async function loadAffaireChampsApp(appAffaireIds: number[]): Promise<Map<number, Record<string, string>>> {
+  const vide = new Map<number, Record<string, string>>()
+  if (!hasSupabaseEnv || !supabase) return vide
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  if (!ids.length) return vide
+  const { data, error } = await supabase
+    .from('app_affaire_champ_app')
+    .select('app_affaire_id,champ,valeur_app')
+    .in('app_affaire_id', ids)
+  // Best effort : le carnet est un CONFORT de relecture. S'il est illisible, la
+  // modale se pré-remplit comme avant, avec ce que porte le ledger.
+  if (error) return vide
+  const carnet = new Map<number, Record<string, string>>()
+  for (const ligne of (data ?? []) as Array<{ app_affaire_id: number; champ: string; valeur_app: string }>) {
+    const cle = Number(ligne.app_affaire_id)
+    const actuel = carnet.get(cle) ?? {}
+    actuel[String(ligne.champ)] = String(ligne.valeur_app ?? '')
+    carnet.set(cle, actuel)
+  }
+  return carnet
+}
+
 /** Toutes les affaires d'un bien — offres, compromis, ventes — la plus récente d'abord. */
 export async function loadAffairesForDossier(appDossierId: number): Promise<AffaireLedgerRow[]> {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
@@ -1465,6 +1501,15 @@ export type AffaireEditableFields = Partial<{
   part_admin: string
   commission_agence: string
   numero_mandat: string
+  // LES QUATRE QUI N'EXISTENT QUE DANS LE CARNET (01/09/2026).
+  // Aucune colonne ne peut les recevoir sans les fausser -- jours_retractation
+  // est un NOMBRE et compromis_date_end une DATE, notaire_id un IDENTIFIANT et
+  // vente_notaires_resume un RESUME de noms. Ils se conservent donc tels quels
+  // dans app_affaire_champ_app, et s'y relisent.
+  jours_validite: string
+  jours_retractation: string
+  notaire_id: string
+  taux_honoraires: string
 }>
 
 /**
