@@ -212,6 +212,18 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "table": "app_en_attente_humain",
         "rule": "absolute",
         "max": 0,
+        # UNE SENTINELLE QUI SONNE DOIT DIRE LEQUEL (01/09).
+        # Question de Frederic devant la premiere alerte : « comment je le
+        # retrouve a partir du monitoring pour savoir lequel ? » -- On ne le
+        # pouvait pas : les 12 sentinelles ne rendaient qu'un COMPTE, et il
+        # fallait ouvrir la base pour savoir de quoi on parlait.
+        # `sample` ramene quelques lignes QUAND le seuil est franchi, et
+        # seulement alors : aucune requete de plus tant que tout va bien.
+        "sample": {
+            "select": "objet,reference,libelle,cause",
+            "order": "depuis.asc",
+            "limit": 3,
+        },
     },
     # --- Chantier identite / recherches (20/08/2026) ---------------------------
     # Ce que le balayage nocturne app_sweep_search_orphans() ne sait PAS reparer :
@@ -1091,6 +1103,36 @@ class Monitor:
             {"tracked": len(data), "problem_count": len(problems), "problems": [item["name"] for item in problems]},
         )
 
+    def _sentinel_sample(self, sentinel: dict[str, Any], spec: dict[str, Any]) -> list[dict[str, Any]]:
+        """Quelques lignes de la sentinelle qui sonne, pour dire LAQUELLE.
+
+        Best effort : si la lecture echoue, on rend une liste vide et l'alerte
+        part quand meme avec son compte. Mieux vaut une alerte incomplete
+        qu'une alerte perdue.
+        """
+        if not self.supabase:
+            return []
+        params: dict[str, str] = {"select": str(spec.get("select", "*"))}
+        if spec.get("order"):
+            params["order"] = str(spec["order"])
+        params["limit"] = str(int(spec.get("limit", 3)))
+        params.update(sentinel.get("params") or {})
+        try:
+            lignes = self.supabase.get(str(sentinel["table"]), params)
+        except Exception:
+            return []
+        return lignes if isinstance(lignes, list) else []
+
+    @staticmethod
+    def _format_sample(lignes: list[dict[str, Any]]) -> str:
+        """Une ligne lisible dans le message d'alerte, pas un dump JSON."""
+        morceaux = []
+        for ligne in lignes:
+            champs = [str(v) for v in ligne.values() if v not in (None, "")]
+            if champs:
+                morceaux.append(" · ".join(champs[:3]))
+        return " | ".join(morceaux) if morceaux else ""
+
     def _previous_sentinel_count(self, status_key: str) -> int | None:
         """Lit le count du run precedent depuis app_monitor_status.details_json.count."""
         try:
@@ -1169,6 +1211,15 @@ class Monitor:
                 continue
             status, message, details = self._evaluate_sentinel(sentinel, count)
             details["count"] = count
+            # L'echantillon, seulement si ca sonne : une alerte qui dit « 1 »
+            # sans dire lequel oblige a chercher, et c'est exactement ce qu'une
+            # sonde doit eviter.
+            echantillon = sentinel.get("sample")
+            if echantillon and status != "ok" and count:
+                apercu = self._sentinel_sample(sentinel, echantillon)
+                if apercu:
+                    details["apercu"] = apercu
+                    message = f"{message} — {self._format_sample(apercu)}"
             self.add(key, "data_quality", "data", "sentinel", status, message, details)
 
     def check_email_volume(self) -> None:
