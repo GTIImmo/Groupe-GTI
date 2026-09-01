@@ -222,6 +222,34 @@ DATA_SENTINELS: list[dict[str, Any]] = [
             "limit": 3,
         },
     },
+    # --- LA DOUBLURE DU STATUT (01/09/2026) -----------------------------------
+    # LA REGLE DE REDESCENTE est codee (app_statut_redescente_calcule), mais c'est
+    # encore HEKTOR qui fait autorite : la resynchronisation nocturne reecrit
+    # statut_annonce. A la coupure, la regle deviendra seule maitre a bord.
+    #
+    # ON NE BASCULE PAS UNE REGLE A L'AVEUGLE. La vue la fait tourner A VIDE a
+    # cote du vrai statut et compte les desaccords. Chaque semaine passee ici est
+    # une semaine d'epreuve gratuite -- methode de la doublure, celle du registre
+    # des recherches et du numero de contact.
+    #
+    # SEUIL 4, ET NON 0. Au 01/09 il y a exactement quatre ecarts, et les quatre
+    # sont des REMONTEES que la borne 2 bloque -- ce sont de vraies incoherences
+    # DU COTE HEKTOR (une vente affichee « Sous offre », un compromis actif reste
+    # « Sous offre »), pas des erreurs de la regle. Sonner dessus tous les jours
+    # rendrait la sentinelle muette a force de crier. Un CINQUIEME ecart, lui,
+    # veut dire que quelque chose a bouge : c'est celui-la qu'on veut voir.
+    {
+        "key": "data.ecart_statut_regle",
+        "label": "Ecarts entre la regle de statut et Hektor",
+        "table": "app_ecart_statut_regle",
+        "rule": "absolute",
+        "max": 4,
+        "sample": {
+            "select": "numero_dossier,statut_hektor,statut_regle,sens",
+            "order": "numero_dossier.asc",
+            "limit": 4,
+        },
+    },
     # --- Chantier identite / recherches (20/08/2026) ---------------------------
     # Ce que le balayage nocturne app_sweep_search_orphans() ne sait PAS reparer :
     # un orphelin dont le contact a PLUSIEURS recherches vivantes -> on ne sait pas

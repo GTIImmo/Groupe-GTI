@@ -838,7 +838,7 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
 **CE QUI RESTE A FAIRE :**
 
 ```
-[ ] LA REGLE DE REDESCENTE, appelee par les trois gestes apres confirmation
+[x] LA REGLE DE REDESCENTE -- CODEE le 01/09
        reste-t-il une vente vivante ?  -> Vendu
        sinon un compromis actif ?      -> Sous compromis
        sinon une offre acceptee ?      -> Sous offre
@@ -852,7 +852,22 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
 
     ELLE NE TOUCHE JAMAIS diffusable.
 
-[ ] LA SENTINELLE D'ECART regle / Hektor -- comparer a chaque resynchronisation
+    ⚠ LA MESURE A CORRIGE LA REGLE AVANT TOUT USAGE. Elle demandait une offre
+    ACCEPTEE ; le passage a vide sur 13 380 biens a trouve UN contre-exemple
+    (VT9514, offre 'proposed' et statut « Sous offre »). Hektor passe le bien
+    « Sous offre » des que l'offre est POSEE : une offre proposee est VIVANTE,
+    seule une offre refusee est morte.
+
+    ETAT DE LA DOUBLURE : 716 accords / 720 biens de l'echelle. Les 4 ecarts sont
+    tous des REMONTEES, bloquees par la borne 2 -- et ce sont de vraies
+    incoherences DU COTE HEKTOR (VS046 : une vente, affichee « Sous offre »).
+    La regle est plus juste que la donnee. Elle les montre, elle ne les corrige pas.
+
+    LA DATE DE CLOTURE DES MANDATS n'y changerait rien d'utile : 87 sur 23 837
+    (0,4 %), et aucune sur les 8 fiches en cause. La borne les protege deja, sans
+    dependre d'une donnee absente. Voir l'etude, section 7ter.
+
+[x] LA SENTINELLE D'ECART regle / Hektor -- POSEE le 01/09 (seuil 4) -- comparer a chaque resynchronisation
     ce que la regle a calcule et ce que Hektor renvoie. Le jour de la bascule, la
     regle sera deja eprouvee au lieu d'etre allumee a l'aveugle. Methode de la
     doublure, celle du registre des recherches et du numero de contact.

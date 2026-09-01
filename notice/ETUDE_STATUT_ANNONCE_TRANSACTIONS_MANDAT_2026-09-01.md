@@ -168,7 +168,7 @@ transaction que le travail), mais `app_dossier_current.statut_annonce` affiche e
 
 ---
 
-## 7. La solution proposée
+## 7. La solution — ✅ CODÉE le 01/09
 
 **Une règle de REDESCENTE seulement**, appelée par les trois gestes après confirmation :
 
@@ -198,6 +198,100 @@ resynchronisation, on peut comparer ce que la règle a calculé à ce qu'Hektor 
 sentinelle compte les écarts. Le jour de la bascule, la règle sera déjà éprouvée — au lieu
 d'être allumée à l'aveugle. C'est la méthode de la **doublure**, celle du registre des
 recherches et du numéro de contact.
+
+---
+
+## 7bis. Ce qui a été codé le 01/09, et ce que la mesure a corrigé
+
+```
+   app_statut_redescente_calcule()   la regle seule, sans effet de bord
+   app_statut_rang()                 l'echelle a quatre barreaux
+   app_geste_affaire_optimistic()    la regle branchee sur le geste, avec ses bornes
+   restaurerStatutRedescendu()       si Hektor refuse, le statut remonte aussi
+   app_ecart_statut_regle            la doublure : la regle a vide, a cote du vrai statut
+   data.ecart_statut_regle           la sentinelle, seuil 4
+```
+
+**LES TROIS BORNES, telles qu'elles sont codées :**
+
+```
+   1  la regle ne s'eveille QUE sur un geste d'ANNULATION (refus/annuler/supprimer).
+      « accepte » en est exclu : c'est une CREATION, et une creation chez Hektor
+      cree une transaction. L'utilisateur pose le statut lui-meme dans la modale.
+
+   2  elle ne fait JAMAIS remonter. Rang calcule >= rang actuel -> on ne touche rien.
+
+   3  elle ne touche JAMAIS diffusable. Ni archive.
+
+   (+) hors echelle -> on ne touche rien. « Estimation » et « Clos » n'ont pas de
+       barreau : c'est ce qui protege les 8 fiches d'estimation qui portent encore
+       une vente de 2016-2021.
+```
+
+### CE QUE LA MESURE A CORRIGÉ — la règle était fausse, sur un bien
+
+La première écriture demandait une offre **acceptée**. Le passage à vide sur les 13 380 biens
+a trouvé **un seul** contre-exemple : `VT9514` (annonce 58957), offre `proposed` et statut
+« Sous offre » chez Hektor.
+
+➡ **Hektor passe le bien « Sous offre » dès que l'offre est POSÉE.** Une offre proposée est
+vivante ; seule une offre **refusée** est morte. La règle a été corrigée avant tout usage.
+
+### L'ÉTAT DE LA DOUBLURE au 01/09
+
+```
+   716 accords parfaits sur les 720 biens de l'echelle
+     4 ecarts -- et les quatre sont des REMONTEES, donc bloquees par la borne 2
+```
+
+Ces quatre écarts sont instructifs : **ce sont de vraies incohérences du côté Hektor**, pas des
+erreurs de la règle.
+
+```
+   V770062061   offre acceptee, statut « Actif »
+   VA32253      offre acceptee, statut « Actif »
+   VM70661      compromis actif, statut « Sous offre »
+   VS046        UNE VENTE, statut « Sous offre »
+```
+
+**La règle est plus juste que la donnée.** Elle ne les corrige pas — ce serait une remontée,
+donc une création déguisée. Elle les *montre*, et c'est déjà beaucoup.
+
+---
+
+## 7ter. « Et si le registre des mandats avait ses dates de clôture ? »
+
+*Question de Frédéric, 01/09, devant les 8 fiches d'estimation qui portent une vieille vente.*
+
+**La mesure d'abord :**
+
+```
+   87 dates de cloture sur 23 837 mandats au registre  ->  0,4 %
+   les 8 mandats en cause : AUCUN n'en a
+```
+
+Les 8 fiches sont toutes des **estimations** (`EM…`, `EA…`), avec ventes de 2016 à 2021 et
+**un seul mandat** chacune. Ce sont des biens vendus il y a des années, revenus en estimation
+depuis — le préfixe du dossier a même changé (`VT…` → `EM…`). Ce n'est pas une anomalie, c'est
+une **réutilisation de fiche**.
+
+**La réponse est donc en trois temps :**
+
+```
+   OUI    une date de cloture nommerait la cause : « cette vente releve d'un mandat
+          clos, elle ne compte plus ». C'est la lecture juste de ces 8 cas.
+
+   MAIS   il faudrait ECRIRE une regle de plus pour l'exploiter -- rejeter les
+          affaires dont le mandat est clos. Elle n'existe pas.
+
+   ET     surtout : LA BORNE LES PROTEGE DEJA, sans dependre de rien. Faire reposer
+          la regle sur une donnee remplie a 0,4 % la rendrait fausse dans 99,6 %
+          des cas -- un mandat sans date serait lu comme « jamais clos ».
+```
+
+➡ **La date de clôture serait un confort, pas une nécessité.** Elle deviendrait nécessaire le
+jour où l'on voudrait *lever* la borne « Estimation hors échelle » — et on ne le veut pas.
+Le rattrapage des dates de clôture reste ce qu'il était : le chantier **C.13**, à son rang.
 
 ---
 

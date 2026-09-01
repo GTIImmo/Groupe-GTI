@@ -14839,7 +14839,51 @@ async function appelHektor(job, categorie, verbe, params, annonceId, options = {
  * app_geste_affaire_optimistic dans la meme transaction que le travail. Un travail
  * cree autrement n'en a pas : on ne restaure alors rien, et on le dit.
  */
+// LE STATUT REDESCENDU SE REMONTE AUSSI (C.19, 01/09).
+//
+// Depuis aujourd'hui, un geste d'annulation ne change pas que l'etat de la
+// transaction : la RPC redescend le STATUT du bien dans la foulee, pour que
+// l'ecran ne mente pas entre le geste et la reponse d'Hektor -- et pour que ca
+// tienne apres la coupure, quand plus personne ne nous renverra ce statut.
+//
+// La contrepartie est ici. Si Hektor refuse, il faut remettre les DEUX, sinon on
+// laisserait un bien affiche « Actif » alors que son compromis vit toujours.
+// statut_avant n'est pose dans la charge QUE si le statut a reellement bouge :
+// son absence veut dire « rien a remonter », pas « on ne sait pas ».
+async function restaurerStatutRedescendu(job, categorie, payload) {
+  const statutAvant = payload && payload.statut_avant;
+  const dossierId = job && job.app_dossier_id;
+  if (!statutAvant || !dossierId) return { status: "skipped" };
+  try {
+    const majes = await supabaseRequest(
+      `app_dossier_current?app_dossier_id=eq.${encodeURIComponent(dossierId)}`,
+      { method: "PATCH", prefer: "return=representation",
+        body: JSON.stringify({ statut_annonce: statutAvant }) });
+    // Le carnet aussi : il survit aux reconstructions, donc une valeur fausse
+    // qu'on y laisserait survivrait avec lui.
+    await supabaseRequest(
+      `app_annonce_champ_app?app_dossier_id=eq.${encodeURIComponent(dossierId)}&champ=eq.statut`,
+      { method: "PATCH",
+        body: JSON.stringify({ valeur_app: statutAvant, origine: "redescente_annulee",
+                               ecrit_le: new Date().toISOString(), ecrit_par: "worker" }) });
+    const touchees = Array.isArray(majes) ? majes.length : 0;
+    await logJob(job.id, categorie, touchees ? "done" : "error",
+      touchees
+        ? `Hektor a refuse : le statut precedent (${statutAvant}) a ete remis dans l'app`
+        : "Hektor a refuse et le statut n'a PAS pu etre remis -- l'app affiche un statut faux",
+      { app_dossier_id: dossierId, statut_avant: statutAvant, lignes: touchees });
+    return { status: touchees ? "done" : "error", lignes: touchees };
+  } catch (erreur) {
+    await logJob(job.id, categorie, "error",
+      "Hektor a refuse et la remise du statut a echoue -- a corriger a la main",
+      { app_dossier_id: dossierId, statut_avant: statutAvant,
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { status: "error" };
+  }
+}
+
 async function restaurerEtatAffaire(job, categorie, payload) {
+  await restaurerStatutRedescendu(job, categorie, payload);
   const affaireId = payload && payload.app_affaire_id;
   if (!affaireId) {
     await logJob(job.id, categorie, "error",
