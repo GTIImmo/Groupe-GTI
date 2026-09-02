@@ -317,6 +317,82 @@ pas encore mesure.
 
 ---
 
+## 4sexies. RESULTAT DU CYCLE 3.1 -- CREER UN COMPROMIS -- 02/09/2026
+
+```
+T0   statut « Sous offre » · 33038 ACCEPTEE · 33037 refusee · aucun compromis
+GESTE  compromis 178 000, net vendeur 169 000, sequestre 8 900, honoraires 9 000,
+       acte prevu 14/11, retractation 12 j, mandat 11939, acquereur 605075
+T2   statut Hektor : { id 4, name « SOUS COMPROMIS » }     -> LA CREATION MONTE
+     compromis 50059, status 1
+     app : 1 001 326 compromis 50059 -- numero recu EN QUELQUES SECONDES
+```
+
+### ① LA REGLE TIENT : creer monte, le reste ne bouge pas
+
+Troisieme confirmation d'affilee. `creer` deplace le statut ; refuser et accepter ne
+le touchent pas.
+
+### ② LE CORRECTIF DU TEMOIN A MARCHE, pour la premiere fois
+
+```
+hektor_transaction_preuve/done    « 50059 cree et confirme par les DEUX portes (fiche + API) »
+hektor_transaction_identite/done  numero pose sur 1 001 326, 1 ligne
+```
+
+L'affaire n'a pas attendu le run de nuit. C'est ce que le correctif du 02/09 visait.
+
+### ③ ⚠ LES OFFRES DISPARAISSENT DU LISTING QUAND LE COMPROMIS NAIT
+
+Mesure directe, quinze minutes apres :
+
+```
+avant   ListOffres page 1 : ... 33038, 33037, 33036 ...
+apres   ListOffres page 1 : ... 33036 ...      33037 ET 33038 ONT DISPARU
+        transactions_annonce_from_api --kind offre  ->  ids: []
+```
+
+**Les DEUX offres de l'annonce quittent le listing** -- l'acceptee comme la refusee.
+Hektor les « consomme » dans le compromis.
+
+➡ CONSEQUENCE POUR LE RUN, a verifier des demain : le miroir lit les offres par ce
+listing. Si elles n'y sont plus, `present_in_hektor` passera a false sur 1 001 324 et
+1 001 325. La regle delete-never les conserve -- c'est exactement le filet B+ -- mais
+il faut le CONSTATER, et verifier que le registre ne les affiche pas comme perdues.
+
+### ④ ⚠ LE COMPROMIS EST CREE SANS ACQUEREUR
+
+```
+acquereurs : []          alors que buyer_contact_id = 605075 a bien ete envoye
+mandat     : id 10261, numero 11939      OK
+mandants   : SELL AND SIGNE (141053)     OK
+```
+
+Le worker POSE pourtant le champ (`corps.append("acquereurs[]", tx.buyer)` a l'etape 0
+de l'assistant). Hektor n'en a rien fait.
+
+HYPOTHESE, NON VERIFIEE : l'assistant du compromis attend que l'acquereur ait ete
+choisi par sa BOITE DE RECHERCHE (`addAcquereurSearch`), ce qui l'inscrit dans le
+panier cote serveur -- et le worker saute justement le `basket` quand il repose le
+formulaire (`if (cle === "basket") continue`). Un identifiant poste seul, sans cette
+selection prealable, serait ignore.
+
+C'EST GRAVE ET IL FAUT LE TRAITER : sans acquereur, le compromis n'a pas d'acheteur
+chez Hektor, et le lien offre -> compromis -> vente se fait par (annonce, acquereur).
+
+### ⑤ CE QUE LE COMPROMIS CONFIRME AU PASSAGE
+
+```
+dateStart 02/09 · dateEnd 14/09   = dateStart + 12 j = mon retraction_days
+   -> LE DELAI DE RETRACTATION VIT BIEN DANS compromis.dateEnd, comme le plan le supposait
+dateSignatureActe 14/11           = ma signature_date
+prixPublique 178 000 · prixNetVendeur 169 000 · sequestre 8 900 · honorairesSortie 9 000
+honorairesEntree 10 000           <- PAS DE NOUS : Hektor le tire du mandat
+partAdmin 0.00
+```
+
+---
+
 ### La reponse a la question posee le 01/09
 
 > *« si Hektor lors du run nous remonte une transaction par le miroir, est-ce que
