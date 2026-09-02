@@ -10159,6 +10159,85 @@ function lireEtapeAssistant(texte, quoi) {
   };
 }
 
+// ─── L'ACQUEREUR S'AJOUTE PAR SON PROPRE APPEL, PAS PAR UN CHAMP ───
+//
+// 02/09/2026. Le compromis 50059 est arrive chez Hektor complet -- prix, dates,
+// sequestre, honoraires, mandat, mandants -- SAUF son acquereur. Le champ
+// `acquereurs[]` PARTAIT pourtant : le releve des champs postes le montre. Hektor
+// l'ignorait, en silence, sans erreur.
+//
+// Sa propre synthese de l'annonce le disait mieux que nous :
+//     agreement  179 000  « (acquereur non precise) »
+//
+// POURQUOI. L'interface de Hektor n'utilise PAS ce champ pour ajouter un
+// acquereur. Elle appelle une route dediee, et la fonction a ete obtenue en la
+// demandant a la page elle-meme (les deux captures Playwright ont echoue : la
+// popin ne se rend pas dans une fenetre de cette taille) :
+//
+//     POST xmlrpc.php   mode=annonce-SuiviVente-compromis-findProspect
+//         idProspect · typeIntervenant · provenance · newView · nameInput
+//
+// Cinq parametres, et CINQ SEULEMENT. On n'en invente aucun : « un mauvais nom de
+// champ n'ecrit rien ET ne dit rien » -- lecon du 28/08, payee une soiree.
+//
+// Ce que Hektor renvoie est le BLOC ACQUEREUR RENDU. On le joint au contenu
+// d'etape, et l'etape suivante le repose avec le reste -- exactement le principe
+// du pilote : « on REPOSTE CE QUE HEKTOR A RENDU, on ne fabrique aucune valeur ».
+// Ainsi, que l'acquereur vive dans le panier ou dans un champ cache, les deux cas
+// sont couverts sans qu'on ait besoin de trancher.
+//
+// ⚠ COMPROMIS SEULEMENT. La route de la VENTE n'a pas ete observee ; son
+// assistant porte le meme module, donc tres probablement le meme verbe -- mais
+// « probablement » n'est pas une mesure. Le cycle 4 le dira.
+async function ajouterAcquereurAssistant(job, annonceId, assistant, idProspect, panier) {
+  const mode = String(assistant.etape || "").replace(/getStep[A-Za-z]*$/, "findProspect");
+  if (!/findProspect$/.test(mode)) return { statut: "mode_introuvable" };
+
+  const corps = new URLSearchParams();
+  corps.set("idProspect", String(idProspect));
+  corps.set("typeIntervenant", "addAcquereur");
+  corps.set("provenance", "compromis");
+  corps.set("newView", "2");
+  corps.set("nameInput", "acquereurs[]");
+
+  let reponse;
+  try {
+    reponse = await hektorFetch(`${XMLRPC_URL}?mode=${encodeURIComponent(mode)}`, {
+      method: "POST",
+      body: corps,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}`,
+        Accept: "application/json, text/javascript, */*; q=0.01",
+      },
+      timeoutMs: 45000,
+    });
+  } catch (erreur) {
+    // BEST-EFFORT, ET C'EST DELIBERE. Un acquereur manquant est un defaut ; un
+    // compromis non cree en est un plus grand. On dit, on ne fait pas tomber.
+    await logJob(job.id, "hektor_assistant_acquereur", "error",
+      "L'ajout de l'acquereur a echoue -- le compromis part quand meme, sans lui", {
+        hektor_annonce_id: annonceId, id_prospect: String(idProspect), mode,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      });
+    return { statut: "echec" };
+  }
+
+  const texte = String(reponse.text || "");
+  // ON N'AJOUTE QUE CE QUI RESSEMBLE A CE QU'ON ATTEND. Coller une reponse
+  // inattendue au contenu d'etape casserait la relecture du formulaire.
+  const utilisable = /acquereurs\[|<input/i.test(texte);
+  await logJob(job.id, "hektor_assistant_acquereur", utilisable ? "done" : "error",
+    utilisable
+      ? "Acquereur ajoute par findProspect -- son bloc rejoint le formulaire"
+      : "findProspect n'a pas rendu de bloc exploitable -- on ne colle rien", {
+      hektor_annonce_id: annonceId, id_prospect: String(idProspect), mode,
+      reponse_taille: texte.length,
+      apercu: stripHtml(texte).replace(/\s+/g, " ").trim().slice(0, 200) || "(vide)",
+    });
+  return { statut: utilisable ? "ok" : "reponse_inattendue", html: utilisable ? texte : "" };
+}
+
 /** Un appel d'etape. `actions` va dans l'URL -- c'est la que Hektor les lit. */
 async function appelerEtapeAssistant(annonceId, assistant, corps, actions) {
   const url = actions && actions.length
@@ -10281,6 +10360,15 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       annonceId, assistant, corps, pas.enregistre ? ["save", "treat"] : null);
     etat = lireEtapeAssistant(rep.text, `etape ${pas.de}->${pas.vers} ${config.label}`);
     derniere = rep;
+
+    // L'acquereur s'ajoute UNE FOIS l'etape 2 rendue -- c'est la que son module
+    // existe, et c'est l'etape que l'interface de Hektor passe a `newView`.
+    // Le bloc renvoye rejoint le contenu, que l'etape suivante reposera.
+    if (!pas.enregistre && pas.vers === "2" && tx.buyer && target === "compromise") {
+      const ajout = await ajouterAcquereurAssistant(
+        job, annonceId, assistant, tx.buyer, etat.basket);
+      if (ajout && ajout.html) etat = { ...etat, contenu: etat.contenu + ajout.html };
+    }
 
     await logJob(job.id, "hektor_assistant", "done",
       pas.enregistre
