@@ -1176,8 +1176,21 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     l'accepter ou la refuser DANS LA FOULEE. Avant, il devait attendre le run de
     nuit sans que rien ne le lui dise.
 
-[ ] ⬛ A VERIFIER APRES LE PROCHAIN RUN (quotidien ou manuel complet)
-    L'ADOPTION DE L'AFFAIRE 1 001 324 (offre 175 000, EM28412 / annonce 24933).
+[x] ⬛ VERIFIE LE 02/09 -- L'ADOPTION FONCTIONNE, ET SUR LES DEUX CHEMINS
+    Run quotidien relance a 11h34, alle jusqu'au bout (exit 0), etape du ledger
+    passee en 73 s :
+        1 001 324  adoptee par le TRIPLET      (annonce, type, n° Hektor)  -> 33037
+        1 001 325  adoptee par l'ACQUEREUR     (annonce, type, acquereur)  -> 33038
+        sentinelle app_affaires_sans_numero_hektor : 0 ligne
+        compteur de la serie du run : 28 983, INCHANGE
+    Ce dernier chiffre est la preuve : le run n'a BRULE AUCUN NUMERO. Il a
+    reconnu que l'affaire existait deja chez nous au lieu de la dupliquer.
+    ⚠ 1 001 325 a d'abord ete adoptee par l'ACQUEREUR -- le chemin qui compte,
+    celui qu'emprunteront toutes les transactions nees dans l'app. Frederic a
+    exige qu'on retire le numero pose a la main pour que l'epreuve ait lieu ;
+    il avait raison, sans quoi le triplet aurait rendu l'essai trivial.
+
+    (libelle d'origine) L'ADOPTION DE L'AFFAIRE 1 001 324 (offre 175 000, EM28412 / annonce 24933).
     Nee dans l'app le 01/09 a 13h18, orpheline : pas de hektor_affaire_id,
     present_in_hektor = false.
 
@@ -1215,7 +1228,92 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     c'est plus grave. affaireCourantePourStatut() designe pourtant une affaire
     precise : il suffit de la NOMMER a l'ecran (n° Hektor, acquereur, montant,
     date) au-dessus des boutons de geste.
+
+    ✅ LA CIBLE EST NOMMEE -- FAIT LE 02/09 (d712d7f). La modale porte desormais
+    le releve de TOUTES les affaires du bien (genre, etat, montant, date,
+    acquereur), la morte grisee et barree, et la mention « visee par les
+    actions » sur celle que les boutons touchent. Chaque ligne se DEPLIE sur ses
+    champs, carnet en vert (il prime) et colonnes en gris. Aucune requete
+    nouvelle. Reste de cet item : la modale ne REPOSE toujours pas l'acquereur
+    ni le mandat dans son FORMULAIRE -- voir la conflation creer/corriger ci-dessous.
 ```
+
+## 2 bis. 👁 LA VUE DES AFFAIRES — *audit du 02/09, À FAIRE EN UN SEUL PASSAGE*
+
+> **Demande de Frederic, 02/09** : *« dans rubrique affaire ou ailleurs, y a-t-il une vision sur
+> les offres proposees / refusees / acceptees ailleurs que la modale, qui sert plutot aux
+> actions ? »* — Audit fait sur le code. **Reponse : plusieurs vues, mais aucune ne montre la
+> LISTE des offres d'un bien. Toutes n'en montrent qu'UNE.**
+
+```
+ou                          ce qu on voit                          source
+rubrique Affaires           carte Offre : etat, montant, date      colonnes offre_* AU SINGULIER
+bloc Affaires abandonnees   par acquereur, chaine complete         affaires_detail_json
+listes Annonces / Registre  badge « Offre en cours »               binaire, derive de offre_id
+fiche mandat                « Offre en cours » / « Aucune »        binaire
+tuiles de pilotage          compteurs en cours / refusees          filtrent la LISTE DES BIENS
+modale de statut            rien a voir -- elle sert a AGIR        la SEULE a lire le ledger
+```
+
+**SIX DEFAUTS MESURES SUR LE CODE**
+
+```
+D1  une offre refusee FAIT DISPARAITRE la carte
+    hasO = pOffre || hasC, et pOffre tombe des que la derniere proposition est un refus.
+    Le refus est pourtant connu : il pilote le cran du cockpit (offre_ref).
+D2  l etat affiche est DEVINE
+    etat: pOffre && !hasC ? 'Proposition' : 'Acceptee'
+    des qu un compromis existe, l offre est dite « Acceptee » -- qu elle l ait ete ou non,
+    alors que offre_state est disponible sur la meme ligne.
+D3  LE PRIX DU BIEN peut s afficher A LA PLACE du montant de l offre
+    montant: money('offre_montant') || formatPrice(dossier.prix)
+    -> un chiffre FAUX, sans avertissement. Le plus grave : les autres cachent, celui-la ment.
+D4  trois champs codes VIDES EN DUR : validite:'' retract:'' notaires:''
+    or 11 068 offres portent leur validite dans propositions[0].validite.
+D5  une seule offre par acquereur, y compris dans les abandonnees
+    build_affaires_dossiers regroupe par acquereur et ne garde que « la plus avancee ».
+D6  l historique INTERNE d une offre (propositions[]) n est nulle part -- jusqu a 6 evenements.
+```
+
+**CE QUI DORT EN BASE, ET N EST PAS BRANCHE**
+
+```
+app_affaire_ledger        29 307 lignes : genre, etat, montant, date, acquereur, app_contact_id
+present_in_hektor=false   les affaires que Hektor a retirees (badge deja fait dans le registre)
+app_affaire_champ_app     14 champs de saisie, dont validite / retractation / notaire / taux
+propositions_json         l historique evenement par evenement
+```
+
+**LES LOTS — et pourquoi ils ne se font PAS separement**
+
+```
+[ ] lot 1  DIRE LE VRAI AU LIEU DE LE DEDUIRE     corrige D1 D2 D3
+           lire offre_state ; ne JAMAIS substituer le prix du bien au montant ;
+           afficher la carte meme refusee, avec sa pastille.
+[ ] lot 2  LA LISTE DES AFFAIRES DANS LA RUBRIQUE  corrige D5
+           deja fait DANS LA MODALE le 02/09 (d712d7f) -- reste a le porter dans la rubrique.
+[ ] lot 3  LE CARNET PRIME + LE PAYLOAD            corrige D4
+           = LE CHANTIER DE LECTURE deja ecrit plus haut (carnet -> colonnes -> payload).
+           Les DEUX PREMIERES sources sont faites dans la modale ; la TROISIEME reste.
+[ ] lot 4  L HISTORIQUE D UNE OFFRE                corrige D6 -- le plus lourd, propositions_json
+           n est pas remonte jusqu au front.
+```
+
+⚠ **UN SEUL PASSAGE, ET APRES LE TEST DES STATUTS.** Trois raisons, toutes verifiees :
+
+1. le bloc « Affaires abandonnees » est rendu a **DEUX endroits** — rubrique Affaires *et*
+   Fiche du cycle. Le toucher separement, c est repasser deux fois ;
+2. **C.19-c** (poste n° 5 de l ordre retenu : *« le choix actif/archive remonte jusqu a
+   l ecran »*) vise la meme modale et la meme rubrique — a grouper ;
+3. le plan le dit deja pour le chantier de lecture : *« A FAIRE APRES LE TEST DES STATUTS,
+   pas avant : le test peut encore changer ce qu on croit savoir »*. Les cycles 3 et 4
+   (compromis annule, vente) diront quels etats existent et comment ils s enchainent —
+   c est exactement ce que la vue doit montrer.
+
+⚠ **RESERVE** : la rubrique vit derriere `VITE_APP_COCKPIT_V2_ENABLED` — `true` en local,
+**a verifier cote Vercel** avant de compter dessus en production.
+
+---
 
 ## 3. C.9 + 26bis-③ — **la création part de l'app** · 1 à 2 sem. — *le vrai basculement*
 
