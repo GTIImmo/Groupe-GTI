@@ -105,11 +105,11 @@ def main() -> int:
             # particularite de ListOffres, trouvee en la branchant le 01/09.
             payload = client.get_json("/Api/Offre/ListOffres/",
                                       params={"page": "1", "version": reglages.api_version})
-            lignes = payload.get("data") or []
+            lignes = payload.get("data")  # PAS de « or [] » -- voir plus bas
         elif args.kind == "compromis":
             payload = client.get_json("/Api/Vente/ListCompromis/",
                                       params={"page": 0, "sort": "dateStart", "way": "desc"})
-            lignes = payload.get("liste") or []
+            lignes = payload.get("liste")  # PAS de « or [] » -- voir plus bas
         else:
             pivot = args.date or dt.date.today().isoformat()
             try:
@@ -121,13 +121,30 @@ def main() -> int:
                 "dateStart": (jour - dt.timedelta(days=3)).isoformat(),
                 "dateEnd": (jour + dt.timedelta(days=3)).isoformat(),
             })
-            lignes = payload.get("sales") or []
+            lignes = payload.get("sales")  # PAS de « or [] » -- voir plus bas
     except Exception as exc:  # noqa: BLE001 -- l'appelant decide quoi en faire
         print(json.dumps({"_error": str(exc)[:200]}, ensure_ascii=False))
         return 0
 
+    # ─── « JE NE SAIS PAS » N'EST PAS « IL N'Y EN A AUCUNE » ───
+    #
+    # 02/09/2026, mesure. L'offre 1 001 325 (Hektor 33038) est restee sans numero
+    # parce que la lecture d'AVANT avait rendu `ids: []` alors que l'offre 33037
+    # existait bel et bien -- verifie en direct : elle est la deuxieme de la page.
+    #
+    # La cause tenait dans deux caracteres. On ecrivait `payload.get("data") or []`,
+    # et cette ecriture transforme un `data: null` -- le 200 muet documente en tete
+    # de ce fichier -- en LISTE VIDE. Le garde-fou ci-dessous, ecrit pour ce cas
+    # precis, ne voyait donc plus rien a arreter : le script annoncait « trouve,
+    # aucune » avec l'autorite d'une vraie lecture. L'arbitre du worker comparait
+    # ensuite ce faux zero a l'etat d'apres, trouvait DEUX offres « nouvelles », et
+    # refusait d'ecrire -- ce qui etait la seule bonne decision a partir d'une
+    # donnee fausse.
+    #
+    # Une page reellement vide reste `[]` et passe ici sans encombre : c'est bien
+    # l'ABSENCE de liste qu'on refuse de lire comme un inventaire.
     if not isinstance(lignes, list):
-        print(json.dumps({"_error": "reponse inattendue"}))
+        print(json.dumps({"_error": "la route n'a pas rendu de liste -- on ne conclut pas"}))
         return 0
 
     ids = []

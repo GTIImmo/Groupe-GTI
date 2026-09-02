@@ -10314,6 +10314,40 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   };
 }
 
+// ─── HEKTOR NOMME CE QU'IL VIENT DE CREER ───
+//
+// 02/09/2026. On devinait l'identifiant d'une transaction PAR DIFFERENCE entre un
+// releve d'avant et un releve d'apres. Cette methode a deux angles morts, et le
+// second nous est tombe dessus : si le releve d'avant est faux, tout ce qui
+// existait deja passe pour neuf -- l'offre 33038 a ete creee, et l'arbitre voyait
+// DEUX creations la ou il n'y en avait qu'une.
+//
+// Or la reponse de l'enregistrement porte l'identifiant, en clair :
+//     returnValue.offre = { id: "33038", id_annonce: "24933", ... }
+// On la conservait deja pour le journal (30/08) sans jamais la LIRE.
+//
+// Elle ne remplace pas le releve : elle lui sert de temoin. L'identifiant rendu
+// n'est retenu que s'il est CONFIRME par le listing, puis par l'API -- la regle
+// des deux portes reste entiere. Ce qu'il supprime, c'est la devinette.
+function idTransactionDansLaReponse(returnValue, target) {
+  if (!returnValue || typeof returnValue !== "object") return "";
+  const chemins = target === "sold"
+    ? [["vente", "id"], ["idVente"], ["sale", "id"]]
+    : target === "compromise"
+      ? [["compromis", "id"], ["idCompromis"], ["compromisVente", "id"]]
+      : [["offre", "id"], ["idOffre"], ["offer", "id"]];
+  for (const chemin of chemins) {
+    let valeur = returnValue;
+    for (const cle of chemin) {
+      valeur = valeur && typeof valeur === "object" ? valeur[cle] : undefined;
+    }
+    const texte = String(valeur === undefined || valeur === null ? "" : valeur).trim();
+    // « 0 » est la reponse de Hektor pour « rien » (cf. addProp: "0").
+    if (/^\d+$/.test(texte) && texte !== "0") return texte;
+  }
+  return "";
+}
+
 async function submitHektorTransactionStatus(job, annonceId, target, config, payload) {
   // LE COMPROMIS ET LA VENTE PASSENT PAR L'ASSISTANT. L'offre garde son chemin,
   // qui marche et qui est eprouve -- on ne le touche pas.
@@ -10486,6 +10520,7 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   return {
     init_error: initJson.error === true,
     transaction_returned: Boolean(savedJson.returnValue),
+    hektor_transaction_id_rendu: idTransactionDansLaReponse(savedJson.returnValue, target),
     transaction_keys: savedJson.returnValue ? Object.keys(savedJson.returnValue) : [],
     reponse: reponseBrute.slice(0, 500) || "(vide)",
     forme_mandat: tx.mandat || "(vide)",
@@ -11096,6 +11131,26 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
     return { verifie: false, cree: null };
   }
 
+  // ─── LE TEMOIN QUI NE SE DEVINE PAS ───
+  //
+  // Hektor a nomme sa creation dans sa reponse. On ne la croit PAS sur parole :
+  // on exige qu'elle figure aussi dans le releve d'apres. Deux sources
+  // independantes qui disent le meme identifiant, c'est mieux qu'une
+  // soustraction entre deux releves dont l'un peut mentir.
+  const idRendu = transactionResult && transactionResult.hektor_transaction_id_rendu
+    ? String(transactionResult.hektor_transaction_id_rendu).trim() : "";
+  const nommeParHektor = idRendu && ventesApres.tous.has(idRendu) ? idRendu : "";
+  if (nommeParHektor && nouvelles.length !== 1) {
+    await logJob(job.id, "hektor_transaction_preuve", "done",
+      `${genre} ${nommeParHektor} nomme par Hektor dans sa reponse et retrouve dans le releve `
+      + `-- on ne devine pas par difference (${nouvelles.length} candidat(s) sinon)`, {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+        hektor_transaction_id: nommeParHektor,
+        candidats_par_difference: nouvelles,
+        ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant.tous),
+      });
+  }
+
   // Sans l'etat d'avant on ne sait pas distinguer la transaction creee d'une
   // preexistante. On ne conclut alors que si la fiche n'en porte qu'UNE.
   //
@@ -11104,7 +11159,7 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
   // existaient tous deux »). C'est pourquoi la confirmation par l'API, plus bas,
   // n'est pas un luxe : elle est la seule source qui ne masque rien.
 
-  if (nouvelles.length === 0) {
+  if (!nommeParHektor && nouvelles.length === 0) {
     await logJob(job.id, "hektor_transaction_preuve", "error",
       `AUCUN ${genre} NOUVEAU sur la fiche apres l'envoi -- la creation n'a rien produit. `
       + "Rappel : ni la reponse ni le statut ne prouvent quoi que ce soit -- la reponse de "
@@ -11119,7 +11174,7 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
     return { verifie: true, cree: false };
   }
 
-  if (nouvelles.length > 1) {
+  if (!nommeParHektor && nouvelles.length > 1) {
     await logJob(job.id, "hektor_transaction_preuve", "error",
       `PLUSIEURS ${genre}s nouveaux apres l'envoi : on ne devine pas lequel est le notre, `
       + "donc on n'ecrit aucun numero dans l'app", {
@@ -11130,7 +11185,7 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
     return { verifie: true, cree: true, ambigu: true, candidates: nouvelles };
   }
 
-  const idTransaction = nouvelles[0];
+  const idTransaction = nommeParHektor || nouvelles[0];
 
   // LE SECOND TEMOIN, par l'autre porte. C'est la methode qui a prouve la
   // suppression de 23287 le 29/08 : la fiche et l'API v2 sont deux sources
