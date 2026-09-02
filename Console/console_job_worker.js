@@ -10364,10 +10364,22 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     // L'acquereur s'ajoute UNE FOIS l'etape 2 rendue -- c'est la que son module
     // existe, et c'est l'etape que l'interface de Hektor passe a `newView`.
     // Le bloc renvoye rejoint le contenu, que l'etape suivante reposera.
-    if (!pas.enregistre && pas.vers === "2" && tx.buyer && target === "compromise") {
-      const ajout = await ajouterAcquereurAssistant(
-        job, annonceId, assistant, tx.buyer, etat.basket);
-      if (ajout && ajout.html) etat = { ...etat, contenu: etat.contenu + ajout.html };
+    if (!pas.enregistre && pas.vers === "2" && target === "compromise") {
+      // PLUSIEURS ACQUEREURS, parce qu'un compromis peut en porter plusieurs --
+      // un couple, une indivision. `buyer_contact_ids` est la liste ; l'acquereur
+      // unique de la modale reste accepte et vient en tete.
+      const listeAcq = [];
+      const pousser = (v) => {
+        const t = String(v == null ? "" : v).trim();
+        if (/^\d+$/.test(t) && !listeAcq.includes(t)) listeAcq.push(t);
+      };
+      pousser(tx.buyer);
+      if (Array.isArray(payload.buyer_contact_ids)) payload.buyer_contact_ids.forEach(pousser);
+      for (const idAcq of listeAcq) {
+        const ajout = await ajouterAcquereurAssistant(
+          job, annonceId, assistant, idAcq, etat.basket);
+        if (ajout && ajout.html) etat = { ...etat, contenu: etat.contenu + ajout.html };
+      }
     }
 
     await logJob(job.id, "hektor_assistant", "done",
