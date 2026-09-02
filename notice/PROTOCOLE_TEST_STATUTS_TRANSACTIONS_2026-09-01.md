@@ -314,6 +314,63 @@ encore changer ce qu'on croit savoir.
 
 ---
 
+## 4quater. CYCLE 1 — FAIT LE 02/09, ET IL A CHANGE LA REGLE
+
+### La mesure, sur un bien PROPRE
+
+EM28412 / annonce 24933 : une seule offre, aucun changement de statut a la main.
+C'est ce qui manquait a 62774, qui en avait recu vingt-cinq.
+
+```
+   T0   Hektor : statut « Sous offre »  ·  offre 33037 ACTIVE
+        on refuse l'offre depuis l'app
+   T1   notre regle : « Sous offre » -> « Actif »  ·  diffusable inchange
+   T2   Hektor : offre 33037 REFUSEE (actifs : [])   le refus EST pris
+        Hektor : statut « Sous offre »               INCHANGE
+```
+
+### ➡ HEKTOR NE REDESCEND PAS LE STATUT APRES UN REFUS D'OFFRE
+
+Il laisse le bien « Sous offre » alors qu'aucune offre n'est vivante. **Plus de doute
+possible** : le bien etait vierge de toute intervention manuelle.
+
+### Ce que Frederic en a decide, et il a raison
+
+> *« Le but de ce chantier est de connaitre les reactions d'Hektor. La creation d'une
+> offre a change le state ; le refus ne l'a pas change, alors que notre app l'avait
+> anticipe. Il faut donc que notre app se colle aux mecanismes d'Hektor. Il faut que le
+> statut reste sous offre. On verra apres pour ameliorer. Mais la, le but est de
+> RESPECTER HEKTOR. »*
+
+**Tant qu'Hektor est la, l'app ne doit pas inventer un comportement qu'il n'a pas.** Une
+divergence, meme dans le bon sens, reste une divergence -- et c'est elle qu'on aurait
+payee a la coupure.
+
+### Ce qui a ete corrige, le 02/09
+
+```
+[x] 'refus' RETIRE de la regle de redescente        mesure -> on se conforme
+[ ] 'annuler'   (compromis)   NON MESURE -- reste actif, il sert a COMPARER
+[ ] 'supprimer' (vente)       NON MESURE -- reste actif, idem
+[x] les deux biens remis a « Sous offre », comme Hektor
+[x] carnet nettoye des deux cotes (la valeur « Actif » que l'app n'aurait jamais du detenir)
+```
+
+**Pourquoi ne pas tout eteindre :** *« tu es le seul utilisateur, ca permettra de
+comparer »* (Frederic). Sur les gestes NON MESURES, l'ecart entre ce que la regle calcule
+et ce que Hektor fait **EST** le resultat qu'on cherche -- et `app_ecart_statut_regle` le
+compte deja. On corrige chaque geste au vu de SA mesure, jamais avant.
+
+### Ce que le cycle a montre en prime
+
+Notre « Actif » n'avait survecu au run que **par hasard** : le push ne renvoie que les
+dossiers dont l'empreinte a change (400 sur 13 446 ce matin-la). Le serveur local, lui,
+disait bien « Sous offre ». **Sans `CHAMPS_APP_ANNONCE`, une valeur ecrite par l'app est
+effacee des que le dossier repasse au push.** Le drapeau dormant a donc une raison d'etre
+tres concrete -- mais il n'a plus lieu de servir ici, puisqu'on se conforme a Hektor.
+
+---
+
 ## 5. La fiche de relevé
 
 Une ligne par temps, à remplir au fur et à mesure.
