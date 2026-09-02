@@ -39,7 +39,7 @@ seul sens**. C'est l'erreur que cette étude a évitée.
 | source | ce qu'elle fait | mesure |
 |---|---|---|
 | **manuel** — modale « Faire évoluer le statut » | pose le statut **ET** crée la transaction | 42 travaux depuis le 21/05 |
-| **transaction** — refuser · annuler · supprimer | Hektor **redescend** le statut d'un cran | 3 gestes, éprouvés 29-31/08 |
+| **transaction** — refuser · annuler · supprimer | ⚠ **DEMENTI LE 02/09 pour le REFUS : Hektor ne redescend PAS** *(cycle 1, bien propre)*. Annuler et supprimer : non encore mesures | 3 gestes, éprouvés 29-31/08 |
 | **mandat** — statut « Clos » | pose le statut **ET coupe la diffusion** | 9 passages à `closed` |
 
 ### 2.1 La modale n'est pas un sélecteur, c'est un formulaire de transaction
@@ -170,7 +170,15 @@ transaction que le travail), mais `app_dossier_current.statut_annonce` affiche e
 
 ## 7. La solution — ✅ CODÉE le 01/09
 
-**Une règle de REDESCENTE seulement**, appelée par les trois gestes après confirmation :
+**Une règle de REDESCENTE seulement**, appelée par les gestes d'annulation.
+
+⚠ **CORRIGE LE 02/09 — ELLE N'EN APPELLE PLUS QUE DEUX.** Le cycle 1 a mesuré, sur un
+bien vierge de toute intervention manuelle, que **Hektor ne redescend pas le statut après
+un refus d'offre**. `refus` a donc été retiré : *« il faut que notre app se colle aux
+mécanismes d'Hektor… le but est de RESPECTER HEKTOR »* (Frédéric, 02/09). Restent
+`annuler` et `supprimer`, **non encore mesurés** — ils servent d'instrument de comparaison
+jusqu'aux cycles 3 et 4.
+
 
 ```
    reste-t-il une vente vivante ?   -> Vendu
@@ -215,7 +223,9 @@ recherches et du numéro de contact.
 **LES TROIS BORNES, telles qu'elles sont codées :**
 
 ```
-   1  la regle ne s'eveille QUE sur un geste d'ANNULATION (refus/annuler/supprimer).
+   1  la regle ne s'eveille QUE sur un geste d'ANNULATION.
+      ⚠ 02/09 : `refus` RETIRE -- mesure du cycle 1, Hektor ne redescend pas.
+         Restent `annuler` et `supprimer`, non mesures.
       « accepte » en est exclu : c'est une CREATION, et une creation chez Hektor
       cree une transaction. L'utilisateur pose le statut lui-meme dans la modale.
 
