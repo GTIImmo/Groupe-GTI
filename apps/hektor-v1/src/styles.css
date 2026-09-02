@@ -2994,6 +2994,108 @@ body {
   font-size: 13px;
   line-height: 1.45;
 }
+
+/* Releve des affaires du bien, dans la modale de statut (02/09/2026).
+   Sobre a dessein : c'est un CONSTAT, pas une action. Il se lit d'un coup d'oeil
+   et ne rivalise pas avec les boutons. */
+.status-change-affaires {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.status-change-affaires .sca-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.status-change-affaires .sca-n {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  letter-spacing: 0;
+}
+.status-change-affaires ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.status-change-affaires .sca-row {
+  display: grid;
+  grid-template-columns: 78px 118px 92px 90px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+}
+.status-change-affaires .sca-g { font-weight: 600; color: #0f172a; }
+.status-change-affaires .sca-m { font-variant-numeric: tabular-nums; }
+.status-change-affaires .sca-d { font-variant-numeric: tabular-nums; color: #64748b; }
+.status-change-affaires .sca-a { color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* La mention occupe la ligne suivante : elle ne doit pas comprimer les colonnes. */
+.status-change-affaires .sca-t {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  font-size: 11.5px;
+}
+.status-change-affaires .sca-t b { color: #0f766e; font-weight: 600; }
+.status-change-affaires .sca-t i { color: #b45309; font-style: normal; }
+/* La ligne se DEPLIE : l'existence ne suffit pas, il faut les champs. */
+.status-change-affaires .sca-item { border: 1px solid #eef2f7; border-radius: 6px; background: #ffffff; }
+.status-change-affaires .sca-row { border: 0; background: transparent; cursor: pointer; list-style: none; }
+.status-change-affaires .sca-row::-webkit-details-marker { display: none; }
+.status-change-affaires .sca-item.is-morte { background: #fbfcfd; color: #94a3b8; }
+.status-change-affaires .sca-item.is-morte .sca-g { color: #94a3b8; }
+.status-change-affaires .sca-item.is-morte .sca-e { text-decoration: line-through; }
+.status-change-affaires .sca-item.is-visee { border-color: #99f6e4; background: #f0fdfa; }
+.status-change-affaires .sca-body { padding: 2px 8px 9px; border-top: 1px dashed #e2e8f0; margin: 0 0 0 0; }
+.status-change-affaires .sca-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 12px;
+  padding-top: 8px;
+}
+.status-change-affaires .sca-grid > div { display: flex; flex-direction: column; gap: 1px; }
+.status-change-affaires .sca-k { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; }
+.status-change-affaires .sca-v { font-size: 12.5px; color: #334155; font-variant-numeric: tabular-nums; }
+/* Vert = valeur SAISIE DANS L'APP : elle prime sur Hektor et survit au run. */
+.status-change-affaires .sca-grid > div.is-app .sca-v { color: #0f766e; font-weight: 600; }
+.status-change-affaires .sca-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.status-change-affaires .sca-foot b { color: #475569; font-variant-numeric: tabular-nums; }
+.status-change-affaires .sca-leg { margin-left: auto; color: #0f766e; }
+@media (max-width: 640px) {
+  .status-change-affaires .sca-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .status-change-affaires .sca-leg { margin-left: 0; }
+}
+@media (max-width: 640px) {
+  .status-change-affaires .sca-row { grid-template-columns: 1fr 1fr; }
+}
 .mobile-draft-button {
   border-color: var(--gti-final-magenta) !important;
   background: var(--gti-final-magenta) !important;

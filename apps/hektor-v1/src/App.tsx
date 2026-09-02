@@ -17756,6 +17756,133 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 ) : (
                   <p className="status-change-note">Le statut Actif est envoyé directement à Hektor puis la fiche est resynchronisée.</p>
                 )}
+                {/* ─── CE QUE LA MODALE ECARTE, ELLE DOIT LE DIRE ───
+                    02/09/2026. Le correctif du jour a rendu la designation JUSTE : une
+                    affaire morte n'est plus jamais visee par les boutons. Mais il l'a
+                    aussi rendue MUETTE -- une offre refusee cessait d'exister a l'ecran,
+                    et l'audit du meme jour a montre qu'elle n'apparait NULLE PART
+                    ailleurs : ni la rubrique Affaires (elle lit offre_id, singulier), ni
+                    le bloc des affaires abandonnees (il regroupe par acquereur et ne
+                    garde qu'une offre par dossier). Le montant refuse disparaissait.
+
+                    Ce releve repare les deux : il montre TOUTES les affaires du bien avec
+                    leur etat, et il NOMME celle que les boutons visent -- la modale ne
+                    disait jamais sur quoi elle agissait.
+
+                    Aucune requete nouvelle : statusChangeAffaires est deja chargee, et
+                    loadAffairesForDossier ne filtre rien. */}
+                {statusChangeAffaires.length > 0 ? (() => {
+                  const courante = affaireCourantePourStatut()
+                  const GENRE: Record<string, string> = { offre: 'Offre', compromis: 'Compromis', vente: 'Vente' }
+                  const etatLabel = (kind: string, state: string | null) => {
+                    const s = String(state ?? '').trim().toLowerCase()
+                    if (!s) return 'état non renseigné'
+                    if (s === 'refused' || s === 'refusee') return 'refusée'
+                    if (s === 'accepted' || s === 'acceptee') return 'acceptée'
+                    if (s === 'proposed') return 'proposée'
+                    if (s === 'cancelled' || s === 'annule') return 'annulé'
+                    if (s === 'active') return kind === 'compromis' ? 'signé' : 'en cours'
+                    if (s === 'en_cours') return "enregistrée dans l'app"
+                    return s
+                  }
+                  return (
+                    <section className="status-change-affaires">
+                      <div className="sca-h">
+                        <span>Les affaires de ce bien</span>
+                        <span className="sca-n">{statusChangeAffaires.length}</span>
+                      </div>
+                      <ul>
+                        {statusChangeAffaires.map((a) => {
+                          const morte = AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())
+                          const visee = courante != null && courante.app_affaire_id === a.app_affaire_id
+                          // ⚠ `acquereur_json` est du jsonb : PostgREST le rend DEJA
+                          // deserialise, alors que le type l'annonce en `string`.
+                          // JSON.parse sur un objet echoue en silence -> l'acquereur
+                          // se serait affiche « — » sans que rien ne le signale.
+                          const acqBrut: unknown = a.acquereur_json
+                          const acq = ckPartyName(
+                            typeof acqBrut === 'string'
+                              ? parseJson<CkAffaireParty | null>(acqBrut, null)
+                              : (acqBrut as CkAffaireParty | null),
+                          )
+                          const numero = String(a.hektor_affaire_id ?? '').trim()
+                          const partie = Boolean(numero) && a.present_in_hektor === false
+                          // ─── LES CHAMPS, PAS SEULEMENT L'EXISTENCE ───
+                          // Une ligne qui dit « offre refusee, 175 000 » sans dire sa
+                          // validite ni son mandat ne sert qu'a moitie : on sait QU'ELLE
+                          // a existe, pas CE QU'ELLE disait. Or tout est deja en memoire
+                          // -- le carnet est charge pour TOUTES les affaires, pas
+                          // seulement la courante.
+                          //
+                          // DEUX SOURCES, dans l'ordre du contrat d'autorite :
+                          //    1. le carnet   ce que l'APP detient -- il prime, et on le DIT
+                          //    2. la colonne  ce que le ledger porte, venu de Hektor
+                          // La troisieme source (payload_json de Hektor, ou dorment la
+                          // validite et le notaire des affaires qu'on n'a pas saisies) est
+                          // le chantier de LECTURE deja inscrit au plan : pas ici.
+                          const carnet = carnetAffaires.get(Number(a.app_affaire_id)) ?? {}
+                          const champ = (cle: string, colonne?: unknown) => {
+                            const duCarnet = String(carnet[cle] ?? '').trim()
+                            if (duCarnet) return { v: duCarnet, app: true }
+                            const duLedger = colonne == null ? '' : String(colonne).trim()
+                            return { v: duLedger, app: false }
+                          }
+                          const argent = (x: { v: string; app: boolean }) =>
+                            x.v ? { ...x, v: formatPrice(x.v) } : x
+                          const jour = (x: { v: string; app: boolean }) =>
+                            x.v ? { ...x, v: formatDate(x.v) } : x
+                          const detail: Array<[string, { v: string; app: boolean }]> = [
+                            ['Montant', argent(champ('montant', a.montant))],
+                            ['Prix public', argent(champ('prix_publique'))],
+                            ['Prix net vendeur', argent(champ('prix_net_vendeur'))],
+                            ['Honoraires', argent(champ('honoraires'))],
+                            ['Taux honoraires', champ('taux_honoraires').v ? { ...champ('taux_honoraires'), v: `${champ('taux_honoraires').v} %` } : champ('taux_honoraires')],
+                            ['Validité', champ('jours_validite').v ? { ...champ('jours_validite'), v: `${champ('jours_validite').v} jours` } : champ('jours_validite')],
+                            ['Rétractation', champ('jours_retractation').v ? { ...champ('jours_retractation'), v: `${champ('jours_retractation').v} jours` } : champ('jours_retractation')],
+                            ['Séquestre', argent(champ('sequestre', a.sequestre))],
+                            ['Date', jour(champ('date', a.date))],
+                            ["Date d'acte", jour(champ('date_acte', a.date_acte))],
+                            ['Notaire', champ('notaire_id')],
+                            ['N° mandat', champ('numero_mandat', a.numero_mandat)],
+                          ]
+                          return (
+                            <li key={a.app_affaire_id}>
+                              <details className={`sca-item${morte ? ' is-morte' : ''}${visee ? ' is-visee' : ''}`}>
+                                <summary className="sca-row">
+                                  <span className="sca-g">{GENRE[a.kind] ?? a.kind}</span>
+                                  <span className="sca-e">{etatLabel(a.kind, a.state)}</span>
+                                  <span className="sca-m">{a.montant != null && String(a.montant).trim() ? formatPrice(a.montant) : '—'}</span>
+                                  <span className="sca-d">{a.date ? formatDate(a.date) : '—'}</span>
+                                  <span className="sca-a">{acq || '—'}</span>
+                                  <span className="sca-t">
+                                    {visee ? <b>visée par les actions</b> : null}
+                                    {partie ? <i>plus dans Hektor</i> : null}
+                                    {!numero ? <i>née dans l'app, sans numéro Hektor</i> : null}
+                                  </span>
+                                </summary>
+                                <div className="sca-body">
+                                  <div className="sca-grid">
+                                    {detail.map(([k, x]) => (
+                                      <div key={k} className={x.app ? 'is-app' : undefined}>
+                                        <span className="sca-k">{k}</span>
+                                        <span className="sca-v">{x.v || '—'}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="sca-foot">
+                                    <span>N° app <b>{a.app_affaire_id}</b></span>
+                                    <span>N° Hektor <b>{numero || '—'}</b></span>
+                                    <span className="sca-leg">Les valeurs en vert viennent de votre saisie — elles survivent au run de nuit.</span>
+                                  </div>
+                                </div>
+                              </details>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </section>
+                  )
+                })() : null}
                 {affaireCourantePourStatut() ? (
                   <p className="status-change-note">
                     Ce bien porte déjà {statusChangeStatus === 'offer' ? 'une offre' : statusChangeStatus === 'compromise' ? 'un compromis' : 'une vente'}.
