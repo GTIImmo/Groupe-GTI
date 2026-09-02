@@ -266,6 +266,57 @@ CYCLE 4 -- LA CHAINE COMPLETE
 **A CHAQUE GESTE, LES TROIS TEMPS** (T0 / T1 / T2) et les quatre releves de la
 section 3 -- dont l'etat de CHAQUE transaction, pas seulement celle qu'on touche.
 
+## 4quinquies. RESULTAT DU CYCLE 2 -- 02/09/2026
+
+### 2.1 CREER une seconde offre -> LE STATUT MONTE
+
+```
+T0   statut « Actif »          (remis en actif par le worker apres le refus du cycle 1)
+     offres chez Hektor : 33037 refusee
+GESTE  creation offre 178 000, validite 15 j, taux 5 %, mandat 11939, acquereur 605075
+T2   statut « Actif » -> « SOUS OFFRE »        Hektor MONTE le statut
+     offres : 33038 (nouvelle, ACTIVE) · 33037 (refusee)   actifs : ["33038"]
+```
+
+⚠ **Le numero Hektor n'est pas revenu tout de suite**, et c'etait un defaut REEL, pas
+un aleas : le lecteur d'offres transformait le « 200 muet » de Hektor (`data: null`) en
+LISTE VIDE faisant autorite. L'arbitre comparait donc un faux zero a l'etat d'apres,
+voyait DEUX offres nouvelles la ou il n'y en avait qu'une, et refusait d'ecrire -- la
+seule bonne decision a partir d'une donnee fausse. Corrige le jour meme (7bf0aa2), et
+Hektor NOMME desormais sa creation dans sa reponse (`returnValue.offre.id`), ce qu'on
+conservait depuis le 30/08 sans jamais le lire.
+
+### 2.2 ACCEPTER cette offre -> LE STATUT NE BOUGE PAS
+
+```
+T0   Hektor : 33038 ACTIVE · 33037 refusee     statut « Sous offre »
+     app    : 1 001 325 proposed · 1 001 324 refused    dossier « Sous offre »
+GESTE  updateOffre id=33038 type=accepte      (job done en 10 s)
+T2   Hektor : 33038 proposition(178 000) -> accepte(178 000)
+     statut du bien : « Sous offre »          *** INCHANGE ***
+     app    : 1 001 325 accepted              dossier « Sous offre », diffusable 1
+```
+
+**C'EST L'ATTENDU, ET IL EST CONFIRME.** Le statut a ete relu chez Hektor par le
+rafraichissement differe (job `refresh_console_data` termine `done`) : ce n'est pas un
+reste de notre cote, c'est bien la valeur de Hektor.
+
+➡ **CE QUE LE CYCLE 2 ETABLIT.** L'escalier de Hektor est asymetrique, et on le sait
+maintenant sur un bien PROPRE :
+
+```
+CREER une offre      MONTE le statut       Actif -> Sous offre
+REFUSER une offre    ne le redescend PAS   (cycle 1)
+ACCEPTER une offre   ne le bouge PAS       (cycle 2.2)
+```
+
+Autrement dit : **seule la CREATION d'une transaction deplace le statut. Le cycle de
+vie de la transaction, lui, ne le touche jamais.** Reste a verifier si l'annulation
+d'un compromis fait exception (cycle 3) -- c'est le seul geste destructeur qu'on n'ait
+pas encore mesure.
+
+---
+
 ### La reponse a la question posee le 01/09
 
 > *« si Hektor lors du run nous remonte une transaction par le miroir, est-ce que
