@@ -908,6 +908,44 @@ statut, l'app le sait au clic. Seule la REDESCENTE disparait.
     la diffusion (« C+ », Frederic y est favorable) ? faut-il coder la
     suppression d'une offre et d'un compromis ?
 
+[x] CONSTATS D'EXPLOITATION DU 02/09 -- deux alertes qui ne sont PAS des defauts
+    (note pour ne pas repartir en chasse la prochaine fois)
+
+    ① LA DESCENTE ECHOUE SI LES WORKERS TOURNENT PENDANT.
+       02/09 : 131 tables sur 132 descendues, 1 346 158 lignes. Seule
+       app_console_job_log a echoue -- « 185 908 lignes lues, 185 913 attendues,
+       l'ancienne copie est conservee ». CINQ lignes d'ecart : c'est le journal
+       des workers, il grossit PENDANT la copie.
+       Le script compte au debut, lit ensuite, et REFUSE une copie incomplete.
+       C'est un garde-fou qui marche, pas une panne.
+       Frequence : 2 fois sur 8 descentes, et les DEUX fois pendant une periode
+       d'activite (27/08 descente lancee a la main en journee ; 02/09 nos
+       workers tournaient pour le test des statuts).
+
+       ⚠ J'AI PROPOSE D'EXCLURE CETTE TABLE, PUIS RETIRE MA PROPOSITION.
+       pull_from_supabase.py porte un principe pose le 22/08 :
+           « La regle n'a plus d'exception. Rien n'est jamais oublie : PAS DE
+             LISTE A TENIR, donc aucune table ne passe au travers. Aucun jugement
+             a porter sur qui est le maitre -- je me suis trompe DEUX FOIS SUR
+             DIX en essayant. »
+       Exclure ces tables reintroduirait exactement le defaut corrige ce jour-la.
+       Le benefice (eviter une alerte 2 fois sur 8) ne vaut pas ce cout.
+       ➡ ON NE TOUCHE A RIEN. On sait pourquoi ca sonne, cela suffit.
+
+    ② LES RECHERCHES ACTIVES S'ARRETENT QUAND HEKTOR TOUSSE.
+       02/09 a 03h00 : « Arret securite ContactById: hard_errors=3/3 ».
+       Detail du log : SEPT erreurs HTTP 500 -- serveur de Hektor -- plus un 403
+       et un 404. Trois erreurs consecutives declenchent l'arret
+       (--max-consecutive-hard-errors 3).
+       LE GARDE-FOU A FAIT SON TRAVAIL : il s'arrete au lieu de marteler un
+       serveur qui repond mal. C'est ce qui evite les bannissements d'aout.
+       Premiere fois en 8 jours. « Reprise : aucun lot complet, tout reprendre
+       depuis le debut » -> rien de perdu, seulement retarde d'une nuit.
+
+       ⚠ ET LES 403 NE SONT PAS UN BANNISSEMENT : 4 a 5 chaque nuit depuis une
+       semaine (28/08→02/09 : 4,5,5,5,5,4). Un ban serait massif et CROISSANT,
+       pas constant a quatre. Ce sont quelques fiches protegees.
+
 [ ] ⬛⬛ LE REGISTRE DES AFFAIRES -- CHANTIER OUVERT le 01/09  ·  URGENT AVANT COUPURE
     Souleve par Frederic : « si mon serveur n'importe plus, le registre des
     affaires -- clientele, offres, ventes -- est compromis, et les ids Hektor
