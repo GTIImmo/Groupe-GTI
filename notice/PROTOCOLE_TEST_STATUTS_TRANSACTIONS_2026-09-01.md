@@ -482,6 +482,87 @@ que le compromis est mort.
 
 ---
 
+## 4octies. L'APPEL QUI MANQUAIT POUR L'ACQUEREUR -- TROUVE LE 02/09
+
+### CE QU'ON CHERCHAIT
+
+Le compromis 50059 est arrive chez Hektor complet SAUF son acquereur, alors que
+le worker poste bien `acquereurs[]` (releve complet des champs dans le journal du
+job). Hektor le dit lui-meme, dans sa propre synthese de l'annonce :
+
+```
+02/09 16:25  accepted-offer  178 000  M. CLOTURE Test
+02/09 10:32  pending-offer   178 000  M. CLOTURE Test
+02/09 07:51  denied-offer    175 000  M. CLOTURE Test
+02/09 00:00  agreement       179 000  « (acquereur non precise) »   <- LE COMPROMIS
+01/09 15:18  pending-offer   175 000  M. CLOTURE Test
+```
+
+⚠ Le nom visible dans la popin vient du CONTEXTE DE L'ANNONCE (l'offre acceptee),
+pas du compromis -- doute leve par Frederic, verification faite, il avait raison
+de douter.
+
+⚠ Et Hektor chiffre ce compromis a **179 000**, pas 178 000 : c'est
+`prix net vendeur 169 000 + honoraires d'entree 10 000`, cette derniere valeur
+venant du MANDAT et non de nous. Il recompose le montant a sa facon.
+
+### L'APPEL, EXACTEMENT
+
+Deux captures Playwright n'ont pas suffi : la popin de l'assistant ne se rend pas
+dans une fenetre de cette taille -- ni chez Frederic, ni en pilotant son Chrome.
+On a donc demande sa fonction A LA PAGE ELLE-MEME.
+
+```
+POST xmlrpc.php
+mode = annonce-SuiviVente-compromis-findProspect
+
+    idProspect        l identifiant du contact          ex. 605075
+    typeIntervenant   « addAcquereur »
+    provenance        « compromis »  ou  « offre »
+    newView           « 2 »          l etape
+    nameInput         « acquereurs[] »
+```
+
+Cela correspond parametre par parametre a l'appel repere en juin dans le
+JavaScript capture :
+
+```js
+callPopinAcqId( data,      'addAcquereur',  'compromis', "2",     "acquereurs[]", false )
+                idProspect  typeIntervenant  provenance   newView  nameInput
+```
+
+Et ce que la fonction fait de la reponse -- `html`, `append`,
+`initSectionInfosAcquereur` -- montre qu'elle INJECTE dans le formulaire le bloc
+acquereur rendu par Hektor.
+
+### LE DEFAUT, NOMME
+
+Le worker pose une valeur dans un champ que Hektor n'a pas encore fabrique. Il
+n'a jamais demande a Hektor de « trouver le prospect ». D'ou le silence complet :
+ni erreur, ni acquereur.
+
+➡ **Le geste qui manque tient en une requete : `findProspect` AVANT de poster
+l'etape.**
+
+### LE DERNIER INCONNU, A ETABLIR AVANT DE CODER
+
+`findProspect` modifie-t-il seulement l'affichage, ou aussi le panier cote
+serveur ? Les fonctions internes sont toutes du DOM, ce qui pencherait pour le
+premier -- mais alors le bloc injecte porte le champ cache qui, lui, part avec le
+formulaire. Une seule lecture de la reponse de `findProspect` tranchera.
+
+### METHODE -- ET C'EST LA VRAIE LECON DE LA JOURNEE
+
+On n'a rien cree chez Hektor pour trouver cela. Refaire un compromis n'aurait
+appris QUE ce qu'on savait deja : que ca echoue. On a observe, puis lu.
+
+C'est exactement la discipline posee le 28/08 : *« deviner est exclu -- un mauvais
+nom de champ n'ecrit rien ET ne dit rien »*. Je m'en suis ecarte deux fois dans la
+journee en concluant sur des mesures mal faites ; les deux fois, Frederic a tenu
+bon.
+
+---
+
 ### La reponse a la question posee le 01/09
 
 > *« si Hektor lors du run nous remonte une transaction par le miroir, est-ce que
