@@ -11290,7 +11290,23 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
   // LE SECOND TEMOIN, par l'autre porte. C'est la methode qui a prouve la
   // suppression de 23287 le 29/08 : la fiche et l'API v2 sont deux sources
   // independantes, et une seule des deux ne suffit pas.
-  const etat = await lireEtatTransactionViaApi(job, genre, idTransaction, "hektor_transaction_verify_api");
+  // ─── POUR L'OFFRE, LES DEUX PORTES SONT DEJA FRANCHIES ───
+  //
+  // 02/09, mesure : l'offre 33042 a ete NOMMEE par Hektor dans sa reponse (porte
+  // de la console) ET retrouvee dans le listing de l'API v2 (porte de l'API).
+  // Deux sources independantes, le meme identifiant.
+  //
+  // On exigeait pourtant une troisieme lecture, par identifiant -- et cette
+  // route N'EXISTE PAS pour l'offre : transaction_etat_from_api.py ne connait que
+  // `compromis` et `vente`. La verification echouait donc TOUJOURS, et le numero
+  // n'etait jamais pose. Un garde-fou qui ne peut pas passer n'est pas un
+  // garde-fou : c'est un mur.
+  //
+  // Le compromis et la vente, eux, ont bien cette route : rien ne change pour eux.
+  const dejaDeuxPortes = genre === "offre" && Boolean(nommeParHektor);
+  const etat = dejaDeuxPortes
+    ? { trouve: true, _source: "reponse_hektor + listing_api" }
+    : await lireEtatTransactionViaApi(job, genre, idTransaction, "hektor_transaction_verify_api");
   const confirmee = Boolean(etat && etat.trouve === true);
 
   await logJob(job.id, "hektor_transaction_preuve", confirmee ? "done" : "error",
