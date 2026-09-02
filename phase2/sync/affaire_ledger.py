@@ -405,6 +405,61 @@ def ledger_rows_for_push(con: sqlite3.Connection) -> list[dict[str, object]]:
     return rows
 
 
+# ─── UNE LIGNE NE DOIT PLUS ARRETER LE RUN ENTIER ───
+#
+# 01 et 02/09/2026, deux nuits de suite : le push a heurte l'index unique
+#     Key (hektor_annonce_id, kind, hektor_affaire_id)=(24933, offre, 33037)
+# et le run s'est arrete LA. Tout ce qui venait apres -- le push principal
+# compris -- n'a pas tourne, et l'app est restee dix-huit heures en arriere sans
+# que rien ne le dise. Le degat n'etait pas le conflit : c'etait l'arret.
+#
+# La cause d'ordonnancement est traitee ailleurs (le pipeline descend desormais
+# la doublure JUSTE AVANT cette etape, au lieu de consulter celle de la veille).
+# Ce garde-fou traite l'autre moitie : ce qui se passe quand un conflit survient
+# quand meme, par un chemin qu'on n'a pas prevu.
+#
+# On compare donc le lot a la doublure -- l'image du serveur, descendue a
+# l'instant. Une ligne dont le triplet Hektor appartient LA-BAS a un autre numero
+# d'app est ecartee du lot : le serveur a deja la verite, et la pousser ne ferait
+# que creer un doublon. Le reste passe, le run continue.
+#
+# ET ON LE DIT FORT. Une ligne ecartee en silence, c'est un registre incomplet
+# qui se fait passer pour un registre a jour -- exactement ce qu'on refuse
+# ailleurs dans ce projet. Les cles ecartees sont nommees une par une.
+def retirer_les_lignes_en_conflit(
+    con: sqlite3.Connection, rows: list[dict[str, object]]
+) -> tuple[list[dict[str, object]], list[tuple[str, str, str, object, object]]]:
+    try:
+        cloud = {
+            (str(a), str(k), str(h)): n
+            for a, k, h, n in con.execute(
+                """SELECT hektor_annonce_id, kind, hektor_affaire_id, app_affaire_id
+                     FROM app_affaire_ledger__sb
+                    WHERE hektor_affaire_id IS NOT NULL
+                      AND TRIM(CAST(hektor_affaire_id AS TEXT)) <> ''"""
+            )
+        }
+    except sqlite3.OperationalError:
+        # Pas de doublure : on ne sait rien, donc on ne retire rien. Comportement
+        # d'avant, a l'identique.
+        return rows, []
+
+    gardees: list[dict[str, object]] = []
+    ecartees: list[tuple[str, str, str, object, object]] = []
+    for row in rows:
+        hid = row.get("hektor_affaire_id")
+        if hid is None or str(hid).strip() == "":
+            gardees.append(row)
+            continue
+        cle = (str(row.get("hektor_annonce_id")), str(row.get("kind")), str(hid).strip())
+        proprietaire = cloud.get(cle)
+        if proprietaire is not None and int(proprietaire) != int(row.get("app_affaire_id")):
+            ecartees.append((cle[0], cle[1], cle[2], row.get("app_affaire_id"), proprietaire))
+        else:
+            gardees.append(row)
+    return gardees, ecartees
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Refresh + push du ledger d'affaires (Niveau B).")
     parser.add_argument("--refresh", action="store_true", help="UPSERT local depuis le miroir Hektor.")
@@ -426,8 +481,17 @@ def main() -> None:
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required")
         client = SupabaseRestClient(base_url=url, service_role_key=key)
         rows = ledger_rows_for_push(con)
+        rows, ecartees = retirer_les_lignes_en_conflit(con, rows)
+        for annonce, kind, hid, id_local, id_serveur in ecartees:
+            print(f"[affaire_ledger] ECARTEE du push : ({annonce}, {kind}, {hid}) "
+                  f"-- le serveur la porte sous {id_serveur}, le local sous {id_local}. "
+                  f"Le serveur fait foi ; la prochaine adoption resorbera l'ecart.")
+        if ecartees:
+            print(f"[affaire_ledger] {len(ecartees)} ligne(s) ecartee(s) : le run CONTINUE, "
+                  f"mais le registre n'est pas complet sur ces lignes.")
         client.upsert_rows(path=LEDGER_TABLE, rows=rows, batch_size=args.batch_size)
-        result["push"] = {"rows_pushed": len(rows)}
+        result["push"] = {"rows_pushed": len(rows), "rows_ecartees": len(ecartees),
+                          "cles_ecartees": [f"{a}/{k}/{h}" for a, k, h, _, _ in ecartees]}
     con.close()
     print(json.dumps(result, ensure_ascii=True, indent=2))
 
