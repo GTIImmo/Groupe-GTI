@@ -123,7 +123,9 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 ```
 [x] refuser une offre      eprouve chez Hektor    33027 : bouton disparu, temoin intact
 [x] accepter une offre     eprouve chez Hektor    33026
-[ ] ANNULER un compromis                          JAMAIS EXECUTE
+[x] ANNULER un compromis    FAIT 02/09 -- compromis 50059 (EM28412) : status 1 -> 2.
+    Le statut de l'annonce NE BOUGE PAS, l'offre acceptee NE PASSE PAS refusee.
+    'annuler' retire de la redescente ; il ne reste que 'supprimer', non mesure.
 [ ] SUPPRIMER une vente                           JAMAIS EXECUTE
 [ ] le RETOUR EN ARRIERE sur refus                JAMAIS TESTE -- garde-fou de l'instantane
 [x] redemarrer les workers                        fait plusieurs fois le 31/08
