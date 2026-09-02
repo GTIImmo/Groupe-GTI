@@ -512,6 +512,31 @@ if (-not $AllowStaleSupabaseDeletes) {
     $supabaseArgs += "--skip-stale-deletes"
 }
 
+# ── LA DOUBLURE DU LEDGER, DESCENDUE JUSTE AVANT (02/09/2026) ──────────────
+#
+# POURQUOI. Le run du 02/09 a plante a l'etape suivante :
+#     Supabase REST error 409 -- Key (24933, offre, 33037) already exists
+# et TOUT CE QUI SUIT n'a pas tourne, dont le push principal : l'app est restee
+# 18 h en arriere sans que rien ne le dise.
+#
+# La cause : l'etape ledger adopte les affaires nees dans l'app en lisant
+# app_affaire_ledger__sb -- la doublure descendue par « GTI Descente », qui passe
+# a 07h30. Or ce run passe a 05h30 : il consultait donc la doublure DE LA VEILLE.
+# Une offre creee dans la journee n'y figurait pas, le run lui donnait un second
+# numero, et le push heurtait l'index unique.
+#
+# On descend donc cette seule table juste avant de s'en servir. C'est une lecture
+# Supabase vers une table locale que rien d'autre ne lit -- pull_from_supabase
+# detecte que le nom est pris et ecrit sous __sb, il ne peut PAS toucher au
+# ledger local (verifie en --dry-run le 02/09).
+#
+# ETAPE NON BLOQUANTE, deliberement : si la descente echoue, le run continue avec
+# l'ancienne doublure -- soit exactement le comportement d'avant. On ne peut pas
+# aggraver, seulement ameliorer.
+Invoke-OptionalStepWithRetry -Label "phase2 doublure du ledger d affaires" -Arguments @(
+    "phase2\sync\pull_from_supabase.py", "--table", "app_affaire_ledger"
+)
+
 # Niveau B/B+ : ledger d'affaires app-owned (offre/compromis/vente). UPSERT sur l'id stable
 # (changements d'etat refletes) mais JAMAIS supprime : si Hektor retire une affaire on la conserve
 # (present_in_hektor=false). AVANT le push registre : le registre lit les affaires disparues depuis

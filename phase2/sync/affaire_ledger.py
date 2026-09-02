@@ -212,6 +212,47 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     #
     # La source est la DOUBLURE descendue chaque matin (app_affaire_ledger__sb) : la table
     # locale, elle, ne connait pas encore ces affaires.
+    # ── ADOPTION PAR LE TRIPLET (02/09/2026) ──────────────────────────
+    #
+    # POURQUOI ELLE A FALLU. Le run du 02/09 a PLANTE ici meme :
+    #     Supabase REST error 409 -- Key (24933, offre, 33037) already exists
+    #     violates unique constraint "idx_app_affaire_ledger_hektor"
+    # et tout ce qui suivait dans le pipeline n'a pas tourne -- dont le push
+    # principal vers Supabase, laissant l'app 18 h en arriere.
+    #
+    # DEUX CAUSES CUMULEES :
+    #   1. la doublure consultee datait de la descente de LA VEILLE ; l'offre
+    #      creee a 13h18 n'y figurait pas du tout ;
+    #   2. et meme presente, elle n'aurait pas ete adoptable : depuis le
+    #      01/09 le worker lui pose son numero Hektor en QUINZE SECONDES
+    #      (poserIdTransactionSurAffaire), donc elle n'est plus « orpheline »
+    #      et le filtre ci-dessous ne la voyait plus.
+    # Le commentaire du worker disait « ecrire le numero ici supprime la
+    # condition : l'adoption devient inutile ». Elle ne devient pas inutile,
+    # ELLE DEVIENT IMPOSSIBLE -- et le run se met a fabriquer un doublon.
+    #
+    # LE TRIPLET EST LA CLE LA PLUS SURE QU'ON AIT : c'est deja l'unicite de la
+    # table (idx_app_affaire_ledger_hektor), celle-la meme qui a fait planter le
+    # run. Deux lignes ne peuvent pas le partager -- aucune ambiguite n'est
+    # possible, contrairement a l'adoption par acquereur qui doit compter ses
+    # candidates. Si la doublure dit que ce triplet porte le numero 1 001 324,
+    # c'est que cette ligne EST cette affaire.
+    #
+    # (La cause 1 se traite ailleurs : le pipeline descend desormais la doublure
+    #  juste avant cette etape.)
+    adoptables_par_triplet: dict[tuple[str, str, str], int] = {}
+    try:
+        for a_id, a_kind, a_hid, a_num in con.execute(
+            """SELECT hektor_annonce_id, kind, hektor_affaire_id, app_affaire_id
+                 FROM app_affaire_ledger__sb
+                WHERE hektor_affaire_id IS NOT NULL
+                  AND TRIM(CAST(hektor_affaire_id AS TEXT)) <> ''"""
+        ):
+            adoptables_par_triplet[(str(a_id), str(a_kind), str(a_hid))] = int(a_num)
+    except sqlite3.OperationalError:
+        # La doublure n'existe pas encore (descente jamais lancee) : rien a adopter.
+        adoptables_par_triplet = {}
+
     adoptables: dict[tuple[str, str, str], int] = {}
     ambigus: set[tuple[str, str, str]] = set()
     try:
@@ -287,7 +328,15 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         if nouvelle:
             # C.4 : si l'app a deja cree cette affaire, on REPREND son numero au lieu
             # d'en distribuer un neuf. Une adoption ne sert qu'une fois.
-            adopte = adoptables.pop((annonce, kind, acq_id), None) if acq_id else None
+            #
+            # DEUX CHEMINS, LE PLUS SUR D'ABORD :
+            #   1. par le TRIPLET -- l'affaire porte deja son numero Hektor, donc
+            #      c'est EXACTEMENT elle. Aucune ambiguite possible.
+            #   2. par l'ACQUEREUR -- elle n'a pas encore de numero Hektor. On
+            #      n'adopte que si une seule candidate, comme avant.
+            adopte = adoptables_par_triplet.get((annonce, kind, affaire_id))
+            if adopte is None and acq_id:
+                adopte = adoptables.pop((annonce, kind, acq_id), None)
             if adopte is not None:
                 propose = adopte
                 adoptees += 1
