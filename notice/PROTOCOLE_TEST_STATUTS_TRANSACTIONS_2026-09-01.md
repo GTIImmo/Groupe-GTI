@@ -342,23 +342,33 @@ hektor_transaction_identite/done  numero pose sur 1 001 326, 1 ligne
 
 L'affaire n'a pas attendu le run de nuit. C'est ce que le correctif du 02/09 visait.
 
-### ③ ⚠ LES OFFRES DISPARAISSENT DU LISTING QUAND LE COMPROMIS NAIT
+### ③ ❌ ANNULE -- « LES OFFRES DISPARAISSENT » ETAIT FAUX, ET C'ETAIT MA SONDE
 
-Mesure directe, quinze minutes apres :
+J'ai ecrit ici que creer un compromis faisait sortir les offres du listing de
+Hektor. **C'est faux.** Ma sonde appelait `/Api/Offre/ListOffres/` avec les seuls
+parametres `page` et `version` -- sans `sort=date&way=DESC`, que le run, lui,
+envoie. Sans le tri, l'API rend une vue reduite de 49 lignes ; avec, elle rend
+les 11 121 offres (`metadata.total` le dit lui-meme).
+
+Verifie apres coup, avec les parametres DU RUN, l'annonce etant deja « Sous
+compromis » :
 
 ```
-avant   ListOffres page 1 : ... 33038, 33037, 33036 ...
-apres   ListOffres page 1 : ... 33036 ...      33037 ET 33038 ONT DISPARU
-        transactions_annonce_from_api --kind offre  ->  ids: []
+offre 33038  annonce 24933  ->  ['proposition', 'accepte']     ELLE EST LA
+offre 33037  annonce 24933  ->  ['proposition', 'refus']       ELLE AUSSI
 ```
 
-**Les DEUX offres de l'annonce quittent le listing** -- l'acceptee comme la refusee.
-Hektor les « consomme » dans le compromis.
+Il n'y a donc **aucun filtre par statut**, **aucune fenetre qui se ferme**, et
+**aucun risque que le run ecrase l'etat de nos offres**. Toute l'analyse que
+j'avais construite la-dessus -- « le miroir gele », « 11 072 offres figees » --
+tombe avec la mesure qui la portait.
 
-➡ CONSEQUENCE POUR LE RUN, a verifier des demain : le miroir lit les offres par ce
-listing. Si elles n'y sont plus, `present_in_hektor` passera a false sur 1 001 324 et
-1 001 325. La regle delete-never les conserve -- c'est exactement le filet B+ -- mais
-il faut le CONSTATER, et verifier que le registre ne les affiche pas comme perdues.
+⚠ **LA LECON, ET ELLE VAUT PLUS QUE LE RESTE.** J'ai conclu deux fois dans la
+journee sur une mesure mal faite, et la seconde fois j'ai contredit ma premiere
+explication -- qui etait la bonne. Le refus efface le matin venait bien de MA
+reprise manuelle du registre a 08h33, jouee avant que Hektor n'ait ete relu.
+C'est une COURSE, pas un gel : dans l'ordre normal du run (rapatrier, normaliser,
+puis reconstruire le registre), elle ne peut pas se produire.
 
 ### ④ ⚠ LE COMPROMIS EST CREE SANS ACQUEREUR
 
@@ -390,6 +400,85 @@ prixPublique 178 000 · prixNetVendeur 169 000 · sequestre 8 900 · honorairesS
 honorairesEntree 10 000           <- PAS DE NOUS : Hektor le tire du mandat
 partAdmin 0.00
 ```
+
+---
+
+## 4septies. RESULTAT DU CYCLE 3.2 -- ANNULER LE COMPROMIS -- 02/09/2026
+
+```
+T0   compromis 50059 status 1 · statut « Sous compromis » · offre 33038 ACCEPTEE
+     notre regle de redescente disait deja « Sous offre » -- DEFAUT CORRIGE AVANT
+     LA MESURE : elle exigeait state='active', le mot de Hektor, et ne reconnaissait
+     pas 'en_cours', celui d'une affaire nee dans l'app. Meme erreur de vocabulaire
+     que sur la branche OFFRE le 01/09. Corrigee, les deux disaient « Sous compromis ».
+
+GESTE  cancel_hektor_compromis 50059      job done, « Compromis 50059 annule chez Hektor »
+
+T2   compromis 50059 : status 1 -> 2                     ANNULE ✔
+     statut de l annonce : { id 4, « Sous compromis » }  *** INCHANGE ***
+     offre 33038 : ['proposition','accepte']             *** TOUJOURS ACCEPTEE ***
+```
+
+### LES DEUX REPONSES SONT « NON »
+
+**① Le statut ne redescend pas.** Hektor laisse le bien « Sous compromis » alors
+que son compromis est annule. Incoherent pour un humain -- c'est pourtant son
+comportement, mesure en direct.
+
+**② L'offre acceptee ne passe pas refusee toute seule.** Question posee par
+Frederic le 31/08. La mesure sur le parc l'annoncait (60 % des offres restent
+acceptees apres annulation du compromis) ; on sait maintenant pourquoi : **rien
+n'est automatique**.
+
+### LA REGLE EST COMPLETE, ET SANS EXCEPTION
+
+```
+CREER une transaction     MONTE le statut       cycles 2.1 et 3.1
+REFUSER une offre         ne le bouge pas       cycle 1
+ACCEPTER une offre        ne le bouge pas       cycle 2.2
+ANNULER un compromis      ne le bouge pas       cycle 3.2  <- le dernier candidat
+```
+
+➡ **Seule la creation d'une transaction deplace le statut. Le cycle de vie ne le
+touche jamais.** L'annulation etait le seul geste destructeur jamais execute et
+le seul qui pouvait faire exception. Ce n'en est pas une.
+
+### CE QUE FREDERIC A TRANCHE, ET QUI EST CODE
+
+> *« il ne faut pas remettre le statut « Sous offre » mais noter annule sur le
+> compromis »*
+
+Le fait metier, c'est l'annulation du compromis. Le statut de l'annonce n'en est
+qu'un REFLET, et Hektor a choisi de ne pas le rafraichir. Le redescendre
+nous-memes, c'est inventer une valeur qu'il n'a pas.
+
+```
+1  'annuler' RETIRE de la liste des gestes qui redescendent le statut (RPC)
+   -> il ne reste que 'supprimer' (vente), NON MESURE, garde pour comparer au cycle 4
+2  notre statut remis a « Sous compromis »     on se recolle a Hektor
+3  la ligne « statut = Sous offre » effacee du magasin app_annonce_champ_app
+   -- dormante aujourd hui, elle serait ressortie le jour de 26bis-③ avec une
+      valeur dont on sait maintenant qu elle est fausse
+```
+
+**ETAT FINAL, ALIGNE SUR LES QUATRE POINTS :**
+
+```
+HEKTOR   33037 refus · 33038 accepte · 50059 status 2 · « Sous compromis »
+APP      33037 refused · 33038 accepted · 50059 cancelled · « Sous compromis »
+```
+
+### ⚠ CE QUE CETTE MESURE COUTE, ET QU IL FAUT ASSUMER
+
+**Le statut seul ne dit plus la verite.** Un bien « Sous compromis » dont le
+compromis est annule est commercialement de nouveau a vendre -- et cette
+information n'existe QUE dans le registre des affaires.
+
+C'est donc a la sentinelle `app_ecart_statut_regle` de le SIGNALER, pas a la RPC
+de le CORRIGER. La regle de redescente change de nature : elle ne doit plus agir,
+elle doit alerter. Et c'est un argument de plus pour la vue des affaires auditee
+le meme jour : sans elle, un negociateur lit « Sous compromis » et ne voit pas
+que le compromis est mort.
 
 ---
 
