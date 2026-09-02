@@ -14868,7 +14868,32 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const genre = AFFAIRE_PAR_STATUT[statusChangeStatus]
     if (!genre || !statusChangeTarget) return null
 
-    // 1. LE CHEMIN D'ORIGINE, inchange : Hektor a donne son numero, on le suit.
+    // ─── UNE AFFAIRE MORTE N'EST L'AFFAIRE COURANTE PAR AUCUN CHEMIN ───
+    //
+    // Mesure du 02/09. Le dossier portait offre_id = 33037 -- l'offre REFUSEE le
+    // matin meme -- pendant que l'offre vivante etait 33038. Le chemin 1 la
+    // trouvait par son numero et la rendait sans rien verifier : « Refuser » et
+    // « Accepter » auraient vise la transaction deja refusee.
+    //
+    // Ce n'est pas un accident de test. `dossier.offre_id` n'est rempli que par le
+    // run de nuit : des qu'on enchaine deux transactions dans la meme journee, il
+    // designe la PRECEDENTE. Le repli, lui, filtrait deja les mortes -- mais il
+    // n'etait jamais atteint, le chemin 1 concluant avant lui.
+    //
+    // Le test de vie est donc sorti du repli et applique aux DEUX chemins. Quand
+    // le chemin 1 tombe sur une morte, il ne la retient pas et laisse le repli
+    // faire son travail.
+    const estVivante = (a: AffaireLedgerRow) => {
+      if (AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())) return false
+      // Celle que Hektor a SUPPRIMEE porte un numero ET present_in_hektor = false.
+      // A ne pas confondre avec celle qui vient de naitre chez nous : pas de
+      // numero, et present_in_hektor = false aussi.
+      const aUnNumeroHektor = Boolean(String(a.hektor_affaire_id ?? '').trim())
+      const retireeDeHektor = aUnNumeroHektor && a.present_in_hektor === false
+      return !retireeDeHektor
+    }
+
+    // 1. LE CHEMIN D'ORIGINE : Hektor a donne son numero, on le suit -- si elle vit.
     const cle = genre === 'offre' ? statusChangeTarget.offre_id
       : genre === 'compromis' ? statusChangeTarget.compromis_id
       : statusChangeTarget.vente_id
@@ -14876,7 +14901,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       const parHektor = statusChangeAffaires.find(
         (a) => a.kind === genre && String(a.hektor_affaire_id ?? '') === String(cle),
       )
-      if (parHektor) return parHektor
+      if (parHektor && estVivante(parHektor)) return parHektor
     }
 
     // 2. LE REPLI : le dossier ne porte pas encore le numero (le run n'est pas passe).
@@ -14891,13 +14916,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // On ecarte en revanche celle que Hektor a SUPPRIMEE : elle porte un numero
     // ET present_in_hektor = false. A ne pas confondre avec celle qui vient de
     // naitre chez nous -- pas de numero, present_in_hektor = false aussi.
-    const vivantes = statusChangeAffaires.filter((a) => {
-      if (a.kind !== genre) return false
-      if (AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())) return false
-      const aUnNumeroHektor = Boolean(String(a.hektor_affaire_id ?? '').trim())
-      const retireeDeHektor = aUnNumeroHektor && a.present_in_hektor === false
-      return !retireeDeHektor
-    })
+    const vivantes = statusChangeAffaires.filter((a) => a.kind === genre && estVivante(a))
     return vivantes.length === 1 ? vivantes[0] : null
   }
 
