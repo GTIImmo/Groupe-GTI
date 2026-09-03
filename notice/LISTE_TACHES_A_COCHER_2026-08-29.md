@@ -1318,61 +1318,337 @@ propositions_json         l historique evenement par evenement
 
 ---
 
-## 2 ter. 🔴 C.19-d — **MODIFIER une transaction chez Hektor** · EN COURS
+## 2 ter. 🔴 C.19-d — **LE REGISTRE DES TRANSACTIONS** · EN COURS
 
-> Decouvert le 02/09 en cherchant pourquoi un compromis cree par l'app n'avait pas
+> Ouvert le 02/09 en cherchant pourquoi un compromis cree par l'app n'avait pas
 > son acquereur. **Le projet n'a jamais su modifier une transaction.**
+>
+> 🔄 **REQUALIFIE LE 03/09**, apres l'audit complet demande par Frederic
+> (« refaire un audit precis du code actuel et de l'ensemble du projet pour ne
+> rien oublier ») — checklist des 5 points appliquee, 12 notes supprimees relues
+> dans git, et deux essais reels sur 24933.
+>
+> **Le titre change.** Ce n'est pas « modifier une transaction » : c'est faire du
+> registre d'affaires un REGISTRE A PART ENTIERE, au meme titre que l'annonce et
+> le contact. La modification n'en est qu'une piece.
+
+### CE QUE LES DEUX ESSAIS DU 03/09 ONT ETABLI
 
 ```
-la preuve, en trois points
-   aucun travail update_hektor_offre / _compromis / _vente n existe
-   l assistant est ouvert sans idCompromis -> Hektor comprend « nouveau »
-   le bouton du front s appelle « Corriger SANS ENVOYER a Hektor »
-   -> demonstration involontaire : 50060 cree alors que 50059 existait
+ESSAI 1  reouvrir une vente existante   launchPopinVente(24933, 23294)
+         -> « Enregistrer & laisser actif »
+         UNE seule vente apres, 23294, MODIFIEE. Acquereur 605030 intact.
+         Statut inchange. Aucun doublon.
+         ➡ Hektor accepte la MODIFICATION : rouvrir par identifiant fait un UPDATE.
+            C'est le socle de la brique 0. (Ne prouve PAS que le WORKER peut le
+            piloter : j'ai conduit un navigateur, pas poste un formulaire.)
+
+ESSAI 2  annuler le compromis vivant    cancel_hektor_compromis · 50060 · done
+         compromis 50060 -> status 2       la vente 23294 -> INTACTE, acquereur inclus
+         statut annonce -> reste « Vendu »  le registre a suivi (state = cancelled)
+         ➡ LA VENTE NE DISPARAIT PAS AVEC SON COMPROMIS.
+            Les trois transactions ne sont PAS une chaine chez Hektor : ce sont
+            trois objets independants poses sur la meme annonce. Cela explique
+            enfin les 9 075 annonces vendues portant un compromis « actif ».
+         ⚠ La question inverse du 29/08 reste OUVERTE :
+            supprimer la vente fait-il revivre le compromis ?
 ```
 
-**LA ROUTE EST CONNUE**, capturee en direct le 02/09 en ouvrant l'assistant sur un
-compromis existant : `getStepCompromis` avec `idAnnonce` **et `idCompromis`**.
-Le seul parametre qui manque au worker.
-
-**LES BRIQUES**
+### CE QUE L'AUDIT A CORRIGE — trois erreurs de ma part
 
 ```
-[ ] 0  rouvrir une transaction existante        passer idCompromis
-       + LE GARDE-FOU : si une transaction est nommee, NE JAMAIS CREER
-[ ] 1  la campagne : ce que Hektor ACCEPTE      un champ · l acquereur · dates et prix
-       ce qu il REFUSE · la vente · l offre (pas d assistant, route inconnue)
-       -> produit le classement des champs en deux classes
-[ ] 2  les colonnes de classe 2 dans le registre    9 colonnes, ABSENTES du SET du run
-       -> a l app par omission, comme birth_date d un contact
-[ ] 3  la relecture immediate                   remplir le registre avec ce que Hektor
-       a RETENU -> rend les refus silencieux VISIBLES
-[ ] 4  l ecran lit le registre seul             fin de la composition carnet/colonnes
-[ ] 5  retirer le carnet                        44 lignes, toutes de nos tests
-       APRES 3 et 4 seulement : il protege encore les 5 champs que Hektor rend
-[ ] 6  les acquereurs                           findProspect CODE et eprouve (compromis 50060)
-       patron du mandant : provisoire -> Hektor -> le run confirme
+1  LE CARNET N'EST PAS LE REGISTRE
+   carnet    app_affaire_champ_app        51 lignes / 7 affaires -- toutes nos tests
+   registre  app_affaire_ledger       29 314 lignes -- tout le parc
+   « retirer le carnet » (brique 5) ne visait QUE la salle d'attente des 3 a 4
+   champs sans colonne. Mesure du 03/09 : sur ses 11 champs, 8 ont DEJA leur
+   colonne au registre (pure duplication) ; seuls jours_retractation (5),
+   jours_validite (3) et taux_honoraires (5) sont orphelins -- 13 lignes.
+   ➡ AUCUN changement de cap. J'avais fait dire a Frederic l'inverse de ce qu'il
+     disait, en confondant les deux tables.
+
+2  LA LIGNE ENTRE AU REGISTRE DES LE GESTE, pas au run
+   app_change_annonce_status_optimistic frappe deja son numero
+   (nextval app_affaire_id_app_seq, plage reservee >= 1 000 000) et pose la ligne,
+   hektor_affaire_id = NULL, present_in_hektor = false.
+   J'avais lu first_seen_at -- que l'upsert du run ECRASE. Mesure mal lue.
+   ➡ Ce qui attend le run, ce n'est pas la ligne : c'est le NUMERO HEKTOR.
+
+3  LE NUMERO MANQUANT A TROIS CAUSES, pas une   (releve dans transaction_preuve)
+   offre     33042  confirmee=false, identite skipped
+                    -> la 3e lecture (transaction_etat_from_api.py) ne connait
+                       que « compromis » et « vente ». Un garde-fou qui ne peut
+                       pas passer n'est pas un garde-fou, c'est un mur.
+                       (contournement dejaDeuxPortes ecrit, pas en service ce jour-la)
+   compromis 50060  ambigu=true, candidates [50059, 50060]
+                    -> l'arbitre travaille par DIFFERENCE avant/apres. La lecture
+                       « avant » n'a pas conclu, donc les DEUX compromis sont
+                       apparus neufs, et la regle a joue : « on ne devine pas
+                       lequel est le notre ». REFUS PRUDENT ET CORRECT, pas une panne.
+   vente     23294  confirmee=true, identite done -> numero pose immediatement
+   ➡ LA FRAGILITE N'EST PAS UN PARAMETRE, C'EST LE PRINCIPE DE LA SOUSTRACTION.
+     Elle casse des qu'une annonce porte plusieurs transactions du meme genre :
+     936 annonces pour les offres, 579 pour les compromis.
+
+   ⚠ Le parametre manquant reste un VRAI defaut, mais son effet est plus etroit :
+     transactions_annonce_from_api.py:111 n'envoie pas withCompromisStatus=false,
+     alors que sync_raw.py:231 le fait. Sans lui, Hektor masque les compromis
+     d'une annonce DEJA VENDUE -- mesure deux fois le 03/09 : la liste saute
+     50060 et 50059 et commence a 50061. L'arbitre declare alors « AUCUN
+     compromis nouveau » sur une creation REUSSIE. Faux echec, bruyant.
 ```
 
-**CE QUI EST DEJA FAIT**
+### LA DECISION D'ARCHITECTURE — arretee le 03/09
+
+Le projet a **trois mecanismes distincts**, et je les avais confondus :
+
+| mecanisme | protege quoi | employe pour |
+|---|---|---|
+| **la doublure** | le **NUMERO** | qu'une ligne ne perde jamais son identite |
+| **le contrat d'autorite** | la **VALEUR** | **uniquement** les champs que Hektor **IGNORE** |
+| **le pending + garde-fou** | l'**ECRITURE** | tous les champs que Hektor **CONNAIT** |
+
+Les transactions emploient aujourd'hui le **deuxieme** sur 10 champs que Hektor
+connait parfaitement (montant, date, date_acte, sequestre, prix_net_vendeur,
+prix_publique, honoraires, part_admin, commission_agence, numero_mandat).
+
+**C'etait juste le 29/08** : l'app ne savait pas pousser une correction, et
+proteger etait la seule facon de ne pas perdre la saisie. Le fichier le dit
+lui-meme avec gene — *« la regle est celle du mandat, pas celle des contacts,
+parce que Hektor connait ces champs-la, lui »*.
+
+**Le chantier ouvre la route de la poussee : ces 10 champs doivent passer au
+troisieme mecanisme.** Le moment est bon — `appliquer_contrat_affaire.py` NE FAIT
+RIEN aujourd'hui (le magasin est vide), donc on corrige la trajectoire avant
+qu'elle ne porte des donnees reelles.
+
+> **ON NE PROTEGE PAS LA DONNEE, ON PROTEGE L'ECRITURE.**
+> Ce que l'app a saisi n'est pas une valeur qu'elle possede : c'est une
+> **ECRITURE EN ATTENTE**, qui verifie avant de partir et qui reste en attente
+> tant qu'elle n'est pas partie. Une valeur possedee ecrase Hektor pour toujours ;
+> une saisie en attente cherche a le rejoindre, et disparait une fois arrivee.
+
+C'est le patron **deja en production sur l'annonce** — saisie optimiste +
+`base_snapshot`, garde-fou `annonce_overwrite_guard` (relire la date_maj fraiche,
+comparer a la photo, `held_conflict` si Hektor a bouge), `markAnnoncePartial` si
+la poussee est incomplete, puis relecture `refresh_console_data`. Et sur le
+contact, dont le code dit lui-meme « miroir du garde-fou contact (Lot B) ».
+
+**Il n'y a rien a inventer. Il y a a PORTER.**
+
+⚠ **ET IL EXISTE MOINS CHER, QUI N'EST PAS TECHNIQUE.** Volume reel mesure le
+03/09 : sur 30 jours, **89 offres + 18 compromis + 9 ventes = 116**, soit 4 a 5
+gestes par jour pour toute l'agence (1 168 sur l'annee). A ce volume, decider que
+*« une transaction se saisit dans l'app »* rend le garde-fou **rare et sans
+enjeu** au lieu d'en faire une piece critique. C'est exactement la doctrine du
+plan (« on inscrit un champ a l'app quand les negociateurs sont passes sur
+l'app »). **A trancher par Frederic — ce n'est pas une decision technique.**
+
+### LES TROIS CLASSES DE CHAMPS — et aucune ne demande de fusion
+
+```
+A  Hektor IGNORE le champ       colonne protegee au registre, le run ne l'ecrit jamais
+                                jours_validite, jours_retractation, taux_honoraires,
+                                notaire_id -- c'est birth_date d'un contact
+                                ZERO conflit possible : Hektor n'a rien a dire
+
+B  Hektor ACCEPTE l'ecriture    l'app POUSSE, RELIT, et ecrit ce que Hektor a RETENU
+                                -> les deux cotes identiques PAR CONSTRUCTION
+                                -> et les refus silencieux deviennent VISIBLES
+                                ZERO conflit possible : la valeur de l'app est chez eux
+
+C  Hektor REFUSE l'ecriture     l'app N'EDITE PAS le champ -- lecture seule, avec
+                                la mention « se modifie dans Hektor »
+                                ZERO conflit possible : l'app ne produit rien
+```
+
+**Dans les trois cas il n'y a jamais deux valeurs concurrentes.** C'est ce qui rend
+la solution solide : elle ne repose sur AUCUNE regle d'arbitrage, donc aucune
+regle ne peut se tromper.
+
+*Ecartees le 03/09, et c'est moi qui les avais proposees : l'empreinte de contenu
++ notre propre date de maj (ajouter un mecanisme la ou le projet en a deja un qui
+marche), et les colonnes protegees sur des champs que Hektor connait (c'est le
+GEL que Frederic a repere le premier).*
+
+---
+
+## LES PHASES — methode du 21/08 : ce que ca fait · ce que ca touche · retour arriere · verification
+
+### PHASE 0 — MESURER · rien a coder · **BLOQUANTE**
+
+> **Rien ne se code avant cette phase.** C'est elle qui decide de la forme des
+> trois autres. Si la campagne dit que Hektor refuse presque tout, la phase 3 se
+> reduit a peu de chose et la phase 2 devient l'essentiel du chantier.
+
+```
+[ ] 0.1  LA CAMPAGNE DES CHAMPS       champ par champ : Hektor ACCEPTE / REFUSE /
+         IGNORE ? -> produit le classement A / B / C, qui commande tout le reste
+         touche : rien · retour : sans objet
+         verif : un tableau des champs, chacun avec son essai reel
+
+[ ] 0.2  LE CORPS DE LA REQUETE       l'enregistrement d'une vente porte-t-il
+         l'identifiant ? Sans lui le worker ne peut pas modifier.
+         outil : Console/capture_compromis_acquereur.js -- DEJA ECRIT, lecture
+         seule, session jamais reecrite, 403 = arret immediat
+
+[ ] 0.3  LA DATE DU BIEN BOUGE-T-ELLE quand on touche une transaction ?
+         C'est le garde-fou, ou son absence. INDICE du 03/09 : apres avoir
+         reenregistre la vente a 10h28, la fiche portait datemaj 10:28:56.
+         ⚠ UNE OBSERVATION N'EST PAS UNE MESURE : ca peut venir du changement de
+           statut ou du travail de resynchronisation.
+         verif : relever la date avant/apres un geste, DEUX fois
+
+[ ] 0.4  LE COMPTE                    administrateur ou negociateur ?
+         « Un compte administrateur ne peux pas saisir une offre » (releve 28/08)
+         et supprimerVente est masque 0x0 en admin.
+```
+
+**➡ STOP. On relit ensemble avant de continuer.**
+
+### PHASE 1 — LE REGISTRE · invisible a l'ecran
+
+```
+[ ] 1.1  LE LIEN ENTRE LES ETAPES
+         Un numero de dossier d'affaire, FRAPPE par une sequence -- JAMAIS
+         calcule. Partage par l'offre, le compromis et la vente d'un meme acquereur.
+         ⚠ POURQUOI FRAPPE ET NON CALCULE : « deux copies d'une formule divergent
+           tot ou tard » -- c'est ce qui a condamne le calcul de la cle de relation
+           cote app (26bis-relations). Un numero tire d'une sequence ne peut pas
+           diverger, puisqu'il n'est calcule nulle part. Meme lecon que sur les
+           recherches : remplacer le NOM par un NUMERO.
+         AUJOURD'HUI le lien est REDEVINE CHAQUE NUIT par build_affaires_dossiers
+         (export_app_payload.py:957) a partir de l'ACQUEREUR. La logique est
+         BONNE -- un dossier par acquereur, chaine complete, classe par l'etape la
+         plus avancee, drapeau « courante », affecte a un cycle (annonce, mandat).
+         Mais c'est une devinette refaite chaque nuit, et 387 lignes (1,3 %) n'ont
+         aucun acquereur -- dont notre 50059. Apres la coupure, plus de nuit chez
+         Hektor pour la redeviner.
+         touche : une colonne sur app_affaire_ledger + une etape du run
+         retour : la colonne se laisse vide, rien ne la lit encore
+         verif : les 521 annonces a plusieurs compromis ET plusieurs acquereurs
+                 retrouvent EXACTEMENT les memes dossiers qu'aujourd'hui
+
+[ ] 1.2  LES COLONNES DE CLASSE A     3 a 4 a creer (liste arretee par 0.1)
+         retour : colonnes inutilisees · verif : le carnet n'a plus d'orphelin
+
+[ ] 1.3  LE NUMERO HEKTOR POSE PAR IDENTITE, PLUS PAR SOUSTRACTION
+         + le parametre withCompromisStatus=false corrige au passage
+         touche : console_job_worker.js -> REDEMARRAGE DES 4 SERVICES par Frederic
+         retour : revenir a la soustraction
+         verif : creer un compromis sur une annonce qui en porte DEJA un, et voir
+                 le numero arriver dans la minute (aujourd'hui : le lendemain)
+```
+
+### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
+
+```
+[ ] 2.1  LA RUBRIQUE AFFAIRES LIT LE REGISTRE
+         AUJOURD'HUI elle ne le lit PAS DU TOUT : deriveAffaire() (App.tsx:25829)
+         part de trois booleens tires du STATUT de l'annonce, et retombe sur le
+         prix du bien quand un montant manque :
+             money('vente_prix') || formatPrice(dossier.prix)
+         -> d'ou « Vente 180 000 EUR » alors qu'elle est a 172 000, et
+            l'impossibilite STRUCTURELLE d'afficher plus d'une affaire par genre.
+         Ce n'est pas un bug a corriger : c'est une rubrique jamais branchee.
+         ⚠ PLUS LOURD QU'IL N'Y PARAIT : case_dossier_source ne porte QU'UN
+           identifiant de chaque (offre_id, compromis_id, vente_id),
+           app_view_generale en herite, et le front raisonne dessus. A trancher :
+           changer la source, ou lire le registre A COTE.
+         C'est le Lot 3 deja specifie le 28/08 : « brancher app_affaire_ledger sur
+         l'annonce, comme il l'est deja sur le registre des mandats. AUCUNE donnee
+         a produire : elles sont deja la. »
+         verif : sur 24933, TROIS offres et DEUX compromis affiches, vente a
+                 172 000 et non 180 000, et la saisie visible immediatement
+
+[ ] 2.2  LE CHOIX QUAND PLUSIEURS CHAINES VIVENT
+         AUJOURD'HUI affaireCourantePourStatut() rend null en cas d'ambiguite et
+         AUCUN bouton n'apparait (« mieux vaut aucun bouton qu'un bouton qui agit
+         sur la mauvaise affaire »). Mesure du 03/09 : 17 annonces pour les
+         compromis, 16 pour les offres, 7 pour les ventes -- 40 au total.
+         Rare, mais apres la coupure ce silence devient une impasse.
+         ⚠ DOCTRINE A RESPECTER : « l'utilisateur DESIGNE, le worker EXECUTE ».
+           On AFFICHE le choix, on ne devine pas. Rendre le worker « intelligent »
+           sur le choix de la transaction est explicitement interdit (28/08).
+```
+
+### PHASE 3 — L'ECRITURE PART CHEZ HEKTOR · *conditionnee par 0.1 et 0.2*
+
+```
+[ ] 3.1  LE PATRON DES ANNONCES, PORTE AUX TRANSACTIONS
+         saisie en attente avec sa photo · garde-fou avant ecriture · conflit
+         VISIBLE · poussee partielle marquee · relecture immediate
+         ⚠ CE N'EST PAS UNE RECOPIE, C'EST UN PORTAGE : pour l'annonce le pending,
+           le conflit et le badge existent ; pour les transactions RIEN n'existe.
+
+[ ] 3.2  LA VENTE D'ABORD (la seule mesuree), L'OFFRE ENSUITE
+         (« possible pour l'offre : formulaire + idOffre », releve du 28/08)
+         LE COMPROMIS SEULEMENT SI 0.1 L'AUTORISE
+         ⚠ launchPopinCompromis charge un MODULE ES (await import Modules/Compromis),
+           pas un formulaire postable -> declare hors de portee du worker le 28/08.
+           Si ca se confirme, le compromis reste en CLASSE C : lecture seule dans
+           l'app. C'EST LE VRAI COUT DE CETTE SOLUTION, et il doit etre dit.
+
+[ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
+         CHAMPS_APP_AFFAIRE -> ne garde que la classe A
+         retour : remettre la liste (une ligne)
+         verif : modifier dans Hektor, le run redescend bien la nouvelle valeur
+```
+
+### PHASE 4 — MENAGE
+
+```
+[ ] 4.1  LE CARNET DISPARAIT           APRES 2.1 et 3.1, JAMAIS avant : tant que
+         l'ecran compose « carnet + colonnes », le carnet est le seul endroit ou
+         la saisie est a l'abri. Le retirer avant, c'est perdre des saisies.
+
+[ ] 4.2  LES DEUX POINTS EN SUSPENS    voir « 2 quater. LES STATUTS » ci-dessous
+```
+
+### CE QUI EST DEJA FAIT
 
 ```
 [x] findProspect                mode=annonce-SuiviVente-compromis-findProspect
                                 idProspect · typeIntervenant · provenance · newView · nameInput
-                                -> 50060 est le PREMIER compromis de l app avec un acquereur
+                                -> 50060 est le PREMIER compromis de l'app avec un acquereur
 [x] multi-acquereurs            buyer_contact_ids ; les DEUX appels reussissent,
-                                un seul acquereur survit -- a comprendre
+                                un seul acquereur survit -- TOUJOURS a comprendre
+[x] la modification EXISTE      essai 1 du 03/09 : rouvrir par identifiant = UPDATE
+[x] le cycle de vie est SANS EFFET sur le statut   7 mesures concordantes : seule
+                                la CREATION fait monter le statut ; refuser,
+                                accepter, annuler, reenregistrer ne le bougent jamais
 ```
 
-**LES INCONNUES ASSUMEES**
+### LES INCONNUES ASSUMEES
 
 ```
-l OFFRE      aucun assistant -> on ne sait pas si Hektor accepte de la modifier
-la VENTE     meme assistant, mais findProspect non observe pour elle
-             ⚠ la vente 23294 a son acquereur SANS findProspect -- heritage du
-               compromis, probable mais NON PROUVE (cycle 4, 03/09)
-l ARBITRE    pour un compromis, Hektor ne nomme pas sa creation dans sa reponse
-             -> le numero n est pas pose tout de suite ; le run l adopte la nuit
+la MODIFICATION PAR LE WORKER   l'essai 1 prouve que HEKTOR l'accepte, PAS que le
+                                worker peut la piloter -> c'est 0.2
+le COMPROMIS                    module ES ; si 0.1 le confirme -> classe C
+l'OFFRE                         pas d'assistant ; formulaire + idOffre, non eprouve
+supprimer la VENTE              le bouton existe dans la modale, jamais tire.
+                                23294 est la pour ca. GESTE IRREVERSIBLE.
+la vente fait-elle REVIVRE le   question de Frederic du 29/08, toujours ouverte
+compromis quand on la supprime ?
+le SECOND ACQUEREUR             pourquoi un seul survit sur 50060
+le MEME ACQUEREUR DEUX CYCLES   4 annonces multi-mandats : jamais regarde
+```
+
+### LES DONNEES DU PARC — mesurees le 03/09 sur 29 314 lignes
+
+```
+                              annonces concernees   dont plusieurs
+   offres                          10 017              936   (8,8 %)
+   compromis                        9 193              579   (5,5 %)
+   ventes                           7 600                7   (0,07 %)
+   plusieurs acquereurs                              2 314   (21,8 %)
+   MULTI-COMPROMIS + MULTI-ACQUEREURS -- le cas de Frederic    521   (4,9 %)
+   PLUSIEURS MANDATS -- la remise en vente                       4   (0,04 %)
+
+   solidite du lien par acquereur      offres   compromis   ventes
+      sans identifiant d'acquereur      0,1 %      2,8 %     1,0 %
+      sans mandat exploitable          98,0 %     25,5 %    11,6 %
+   ➡ le mandat ne peut pas servir de cle. L'acquereur, oui -- a 98,7 %.
 ```
 
 ---

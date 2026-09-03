@@ -3,8 +3,10 @@
 Remplace le plan du 18/08. Établi après quatre audits mesurés :
 identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (20/08).
 
-> **Dernière mise à jour : 28/08/2026.** Cinq changements — voir « CE QUI A BOUGÉ
-> LES 27-28/08 » juste en dessous.
+> **Dernière mise à jour : 03/09/2026.** C.19-d requalifié en **« LE REGISTRE DES
+> TRANSACTIONS »** après audit complet — voir la révision ③ du 03/09 dans
+> « L'ordre retenu », et le détail item par item dans la liste, section « 2 ter ».
+> *(Mise à jour précédente : 28/08 — voir « CE QUI A BOUGÉ LES 27-28/08 ».)*
 
 ---
 
@@ -171,7 +173,7 @@ sont pas réglés, et chaque semaine de retard s'ajoute intégralement à la dat
    2. C.4-bis-0   relire les 18 handlers                            FAIT 01/09  18/20
    3. C.4         les workers + la branche « Vendu »                FAIT 01/09  16/16
    ------------------------------------------------------------------- ci-dessus : fait
-   4. C.19-d      MODIFIER une transaction chez Hektor              <- EN COURS
+   4. C.19-d      LE REGISTRE DES TRANSACTIONS                     <- EN COURS
    5. C.4-bis     le filet de rejeu des ACTIONS                     2 a 3 j
    6. C.19-c      le choix actif/archive remonte jusqu'a l'ecran    2 j (ou 1/2 j, voir note)
    7. C.16        825 contacts qui n'existent plus                  1 a 2 j
@@ -219,6 +221,51 @@ sont pas réglés, et chaque semaine de retard s'ajoute intégralement à la dat
 > silence »* (console_job_worker.js). D'ou le patron actuel du mandant : une ligne
 > PROVISOIRE pivotee sur un jeton, que la descente remplace. **Ce patron meurt a la
 > coupure** : la provisoire attendrait une confirmation qui ne viendrait jamais.
+
+> **③ C.19-d EST REQUALIFIE — ajout du 03/09 au soir, apres l'audit complet.**
+> Frederic : *« refaire un audit precis du code actuel et de l'ensemble du projet
+> pour ne rien oublier »*. Checklist des 5 points appliquee, 12 notes supprimees
+> relues dans git, deux essais reels sur 24933. **Le detail item par item est dans
+> la liste, section « 2 ter ».** Ici, le POURQUOI.
+>
+> **Le poste ne s'appelle plus « modifier une transaction » mais « LE REGISTRE DES
+> TRANSACTIONS ».** La modification n'en est qu'une piece : ce qui se joue, c'est
+> de faire d'`app_affaire_ledger` un registre a part entiere, au meme titre que
+> l'annonce et le contact.
+>
+> ⚠ **ET IL FAUT CORRIGER UNE TRAJECTOIRE AVANT QU'ELLE NE PORTE DES DONNEES.**
+> `CHAMPS_APP_AFFAIRE` declare **10 champs comme appartenant a l'app** -- et ce
+> sont **tous des champs que Hektor connait**. C'etait juste le 29/08 : l'app ne
+> savait pas pousser une correction, proteger etait la seule facon de ne pas
+> perdre la saisie. Mais un champ protege que Hektor connait, c'est exactement
+> l'ecueil que ce plan enonce pour les ANNONCES -- *« tant qu'ils saisissent dans
+> Hektor, inscrire un champ ici le FIGERAIT sur une valeur perimee »*. **Frederic
+> l'a repere avant moi** (*« il faut prevoir que le run nous retourne certaines
+> donnees a mettre a jour »*), et il a eu raison de refuser les deux rustines que
+> je proposais ensuite (empreinte de contenu, date de maj maison).
+>
+> **La bonne reponse etait deja dans le projet, en trois mecanismes que j'avais
+> confondus :** la DOUBLURE protege le NUMERO ; le CONTRAT D'AUTORITE protege la
+> VALEUR, et **uniquement pour les champs que Hektor IGNORE** ; le PENDING +
+> GARDE-FOU protege l'ECRITURE, pour tout ce que Hektor connait. C'est ce
+> troisieme mecanisme -- deja en production sur l'annonce et le contact -- que les
+> transactions doivent adopter.
+>
+> > **On ne protege pas la donnee, on protege l'ECRITURE.** Ce que l'app a saisi
+> > n'est pas une valeur qu'elle possede : c'est une ecriture EN ATTENTE, qui
+> > verifie avant de partir et qui reste en attente tant qu'elle n'est pas partie.
+>
+> ⚠ **Une piste NON TECHNIQUE, a trancher par Frederic.** Volume mesure le 03/09 :
+> **116 transactions sur 30 jours** (89 offres, 18 compromis, 9 ventes), soit 4 a 5
+> gestes par jour pour toute l'agence. A ce volume, decider que *« une transaction
+> se saisit dans l'app »* rend le garde-fou rare et sans enjeu, au lieu d'en faire
+> une piece critique. C'est la doctrine du plan appliquee aux transactions.
+>
+> **Le chantier est desormais en 5 phases, dont la premiere ne code rien** :
+> mesurer ce que Hektor accepte / refuse / ignore, champ par champ. Ce classement
+> commande la forme de tout le reste -- si Hektor refuse presque tout, la phase 3
+> se reduit et la phase 2 (l'ecran) devient l'essentiel. **STOP et relecture avec
+> Frederic apres la phase 0.**
 
 > **REVISION DU 01/09.** Les trois premiers postes sont clos, et deux d'entre eux
 > l'etaient DEJA sans que ce plan le sache -- voir la revision de C.4 et de
