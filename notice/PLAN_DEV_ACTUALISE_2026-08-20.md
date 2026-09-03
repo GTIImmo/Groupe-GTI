@@ -171,13 +171,54 @@ sont pas réglés, et chaque semaine de retard s'ajoute intégralement à la dat
    2. C.4-bis-0   relire les 18 handlers                            FAIT 01/09  18/20
    3. C.4         les workers + la branche « Vendu »                FAIT 01/09  16/16
    ------------------------------------------------------------------- ci-dessus : fait
-   4. C.4-bis     le filet de rejeu des ACTIONS                     2 a 3 j   <- LE SUIVANT
-   5. C.19-c      le choix actif/archive remonte jusqu'a l'ecran    2 j (ou 1/2 j, voir note)
-   6. C.16        825 contacts qui n'existent plus                  1 a 2 j
-   7. C.9 + 26bis-3 + 26bis-contacts + 26bis-relations              1 a 2 sem.
-                  la creation part de l'app
-   8. A.3-tech    le registre des mandats en propre                 3 a 5 j
+   4. C.19-d      MODIFIER une transaction chez Hektor              <- EN COURS
+   5. C.4-bis     le filet de rejeu des ACTIONS                     2 a 3 j
+   6. C.19-c      le choix actif/archive remonte jusqu'a l'ecran    2 j (ou 1/2 j, voir note)
+   7. C.16        825 contacts qui n'existent plus                  1 a 2 j
+   8. LE BLOC DE LA DERNIERE CHANCE -- il exige que HEKTOR VIVE ENCORE   1 a 2 sem.
+      26bis-3         le corps de l'annonce
+      26bis-contacts  le corps du contact
+      26bis-relations le NOM des relations
+      C.9             la creation part de l'app
+   9. A.3-tech    le registre des mandats en propre                 3 a 5 j
 ```
+
+> **REVISION DU 03/09 -- DEUX CHANGEMENTS, ET ILS SONT ARGUMENTES.**
+>
+> **① C.19-d entre en poste 4.** Le protocole des statuts (01/09) a ferme sa
+> question centrale en cinq mesures, et il a decouvert au passage que **le projet
+> n'a JAMAIS su modifier une transaction chez Hektor** : aucun travail
+> `update_hektor_*` pour offre / compromis / vente, et l'assistant est toujours
+> ouvert sans `idCompromis`, donc il CREE. Preuve involontaire le 02/09 : le
+> compromis 50060 a ete cree alors que 50059 existait.
+> La route de modification est desormais connue -- `getStepCompromis` avec
+> `idCompromis`, capturee en direct -- et `findProspect` est code. C.19-d est donc
+> la suite naturelle de C.19 : l'app cree, change l'etat, et doit pouvoir CORRIGER.
+> Il repousse C.4-bis d'un cran, et c'est assume.
+>
+> **② Le poste 8 est REGROUPE et NOMME.** Ses quatre taches partagent une seule
+> contrainte, et c'est la plus dure du plan : *« le remplissage initial vient du
+> miroir, donc il exige que Hektor vive encore »*. Elles ne peuvent pas etre
+> remises apres la coupure -- elles deviendraient IMPOSSIBLES. C'est le seul bloc
+> du plan qui a une date de peremption.
+>
+> ⚠ **26bis-relations n'avait jamais ete decrit.** Mesure du 03/09 :
+> **165 870 relations** (74 045 mandants, 58 375 proprietaires, 33 450 acquereurs).
+> Leur cle est un hache STABLE -- elle exclut deliberement l'etat, le montant et la
+> date, et c'est documente depuis le 19/06 (*« maj en place, pas d'orphelin »*,
+> 0 relation orpheline mesuree le 08/08). **Le probleme n'est donc PAS la
+> stabilite** : c'est que cette cle est batie sur `contact_id` et `annonce_id` --
+> **les numeros de HEKTOR**. Le jour ou l'app cree une fiche qu'il ignore (C.9),
+> la formule ne peut plus fabriquer de nom, et le lien n'a nulle part ou vivre.
+> `26bis-relations` n'est donc pas une reparation : c'est le TROISIEME PIED de C.9,
+> au meme titre que le corps de l'annonce et celui du contact.
+>
+> ⚠ Et le detour par l'app est ferme : la cle est calculee EN PYTHON par le run.
+> La recopier cote app est explicitement refuse par le projet -- *« deux copies
+> d'une formule divergent tot ou tard, et ce jour-la le lien se dedouble en
+> silence »* (console_job_worker.js). D'ou le patron actuel du mandant : une ligne
+> PROVISOIRE pivotee sur un jeton, que la descente remplace. **Ce patron meurt a la
+> coupure** : la provisoire attendrait une confirmation qui ne viendrait jamais.
 
 > **REVISION DU 01/09.** Les trois premiers postes sont clos, et deux d'entre eux
 > l'etaient DEJA sans que ce plan le sache -- voir la revision de C.4 et de

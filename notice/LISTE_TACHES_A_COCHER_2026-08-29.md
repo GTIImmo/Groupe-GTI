@@ -1318,6 +1318,87 @@ propositions_json         l historique evenement par evenement
 
 ---
 
+## 2 ter. 🔴 C.19-d — **MODIFIER une transaction chez Hektor** · EN COURS
+
+> Decouvert le 02/09 en cherchant pourquoi un compromis cree par l'app n'avait pas
+> son acquereur. **Le projet n'a jamais su modifier une transaction.**
+
+```
+la preuve, en trois points
+   aucun travail update_hektor_offre / _compromis / _vente n existe
+   l assistant est ouvert sans idCompromis -> Hektor comprend « nouveau »
+   le bouton du front s appelle « Corriger SANS ENVOYER a Hektor »
+   -> demonstration involontaire : 50060 cree alors que 50059 existait
+```
+
+**LA ROUTE EST CONNUE**, capturee en direct le 02/09 en ouvrant l'assistant sur un
+compromis existant : `getStepCompromis` avec `idAnnonce` **et `idCompromis`**.
+Le seul parametre qui manque au worker.
+
+**LES BRIQUES**
+
+```
+[ ] 0  rouvrir une transaction existante        passer idCompromis
+       + LE GARDE-FOU : si une transaction est nommee, NE JAMAIS CREER
+[ ] 1  la campagne : ce que Hektor ACCEPTE      un champ · l acquereur · dates et prix
+       ce qu il REFUSE · la vente · l offre (pas d assistant, route inconnue)
+       -> produit le classement des champs en deux classes
+[ ] 2  les colonnes de classe 2 dans le registre    9 colonnes, ABSENTES du SET du run
+       -> a l app par omission, comme birth_date d un contact
+[ ] 3  la relecture immediate                   remplir le registre avec ce que Hektor
+       a RETENU -> rend les refus silencieux VISIBLES
+[ ] 4  l ecran lit le registre seul             fin de la composition carnet/colonnes
+[ ] 5  retirer le carnet                        44 lignes, toutes de nos tests
+       APRES 3 et 4 seulement : il protege encore les 5 champs que Hektor rend
+[ ] 6  les acquereurs                           findProspect CODE et eprouve (compromis 50060)
+       patron du mandant : provisoire -> Hektor -> le run confirme
+```
+
+**CE QUI EST DEJA FAIT**
+
+```
+[x] findProspect                mode=annonce-SuiviVente-compromis-findProspect
+                                idProspect · typeIntervenant · provenance · newView · nameInput
+                                -> 50060 est le PREMIER compromis de l app avec un acquereur
+[x] multi-acquereurs            buyer_contact_ids ; les DEUX appels reussissent,
+                                un seul acquereur survit -- a comprendre
+```
+
+**LES INCONNUES ASSUMEES**
+
+```
+l OFFRE      aucun assistant -> on ne sait pas si Hektor accepte de la modifier
+la VENTE     meme assistant, mais findProspect non observe pour elle
+             ⚠ la vente 23294 a son acquereur SANS findProspect -- heritage du
+               compromis, probable mais NON PROUVE (cycle 4, 03/09)
+l ARBITRE    pour un compromis, Hektor ne nomme pas sa creation dans sa reponse
+             -> le numero n est pas pose tout de suite ; le run l adopte la nuit
+```
+
+---
+
+## 2 quater. LES STATUTS — ce qui reste apres la cloture du protocole
+
+Le protocole du 01/09 a repondu a sa question en cinq mesures. Restent deux points.
+
+```
+[ ] 'supprimer' est encore dans la redescente    JAMAIS MESURE.
+    'refus' et 'annuler' en ont ete retires apres mesure ; 'supprimer' reste,
+    non par conviction mais pour comparer. Se tranche en supprimant la vente 23294
+    -- geste IRREVERSIBLE, dernier item de C.19.
+
+[ ] la sentinelle app_ecart_statut_regle : son SEUIL n a pas de sens.
+    Mesure du 03/09 : 6 ecarts, tous REELS et tous expliques par le protocole
+    -- 5 « remontees » (quelqu un a redescendu le statut a la main, la transaction
+    vit toujours) et 1 « redescente » (offre refusee, personne n a remis en Actif,
+    exactement le cycle 1).
+    ➡ Ce n est pas une alerte a calibrer, c est une LISTE DE TRAVAIL : chaque ligne
+      est un bien dont le statut ment. Sa place est peut-etre dans l app, pas dans
+      le monitoring. A trancher par Frederic.
+```
+
+---
+
 ## 3. C.9 + 26bis-③ — **la création part de l'app** · 1 à 2 sem. — *le vrai basculement*
 
 ## 4. A.3-technique — le registre des mandats en propre · 3 à 5 j
