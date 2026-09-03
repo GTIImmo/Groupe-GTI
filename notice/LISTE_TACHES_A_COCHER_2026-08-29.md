@@ -1563,14 +1563,62 @@ sortie possible pour le defaut de typologie -- a condition que le worker sache l
      le relire par la console, ou l'accepter en aveugle -- a trancher.
 ```
 
+**TROIS MODIFICATIONS D'AFFILEE — la preuve est refaite trois fois**
+
+```
+   177 000  ->  177 500   honorairesSortie 8 600 -> 500     note « test » ajoutee
+            ->  178 000   honorairesSortie -> 1 000
+            ->  178 500   honorairesSortie -> 1 500
+   A CHAQUE FOIS : toujours 50065, aucun 50066, et 50064 / 50060 / 50059 INTACTS.
+```
+
+**ET L'ACQUEREUR S'ECRIT PAR LA MODIFICATION — c'est la sortie du defaut de typologie**
+
+```
+   acquereurs   ['605030']                        au depart
+             -> ['49234', '605030']               Frederic en ajoute un
+             -> ['49234', '86793', '605030']      puis un autre
+```
+
+➡ Ce que la CREATION perd quand la typologie ne suit pas, la MODIFICATION l'attache.
+   C'est la reponse a la question ouverte depuis le 02/09.
+
+⚠ **86793 n'est dans AUCUNE de nos tables de contacts.** Frederic l'a choisi dans la
+liste de l'assistant. Hypothese : il vient de l'onglet « Mon reseau » (contact d'une
+autre agence) que notre synchro ne rapatrie pas. A verifier -- si des acquereurs nous
+sont inconnus, le registre portera des liens vers des contacts qu'il ne connait pas.
+
+⚠ **LE NOTAIRE RESTE INVISIBLE.** Frederic en a ajoute un au premier essai ; il n'est
+NI dans `acquereurs`, NI dans aucune cle du listing. Mon hypothese « les notaires sont
+ranges parmi les acquereurs » est REFUTEE : 86793 est un acquereur choisi a la main.
+
+**LA ROUTE EST CONNUE — journal reseau du navigateur, 03/09**
+
+```
+   GET   xmlrpc.php?mode=annonce-SuiviVente-compromis-createCompromis    <- ouverture
+   POST  xmlrpc.php?mode=annonce-SuiviVente-compromis-getStepCompromis   <- les etapes
+   POST  xmlrpc.php   (mode dans le CORPS)                               <- enregistrement
+   -> le motif se repete exactement trois fois, une par ouverture
+```
+
+➡ **MEME FAMILLE QUE LA VENTE** (`createVente` + `getStepVente`), et la vente, elle,
+porte `idVente` dans CHAQUE POST. Il reste a verifier que `idCompromis` voyage pareil.
+
 **⚠ MON ERREUR DE MESURE, ET ELLE COUTE UN ESSAI**
 
 ```
-   Ma capture reseau n'a RIEN vu passer de l'assistant : ni les etapes, ni
-   l'enregistrement. Cause : la version persistante n'enveloppait que
-   XMLHttpRequest. Le module du compromis passe par `fetch`.
-   ➡ A REFAIRE avec les DEUX enveloppes. C'est la seule chose qui manque pour
-     savoir COMMENT le worker doit s'y prendre.
+   SIX sondes JavaScript posees, AUCUNE n'a vu l'enregistrement :
+      fetch · XMLHttpRequest · sendBeacon · evenement submit ·
+      HTMLFormElement.prototype.submit · beforeunload
+   Et pourtant le journal RESEAU DU NAVIGATEUR, lui, a tout vu.
+   ➡ LA LECON : pour observer une page qu'on ne maitrise pas, le journal du
+     navigateur bat l'instrumentation JavaScript. Mes sondes meurent au
+     rechargement et ratent ce qui part par un chemin non prevu ; le journal
+     ne rate rien. J'ai perdu trois essais a m'en apercevoir.
+   ➡ ET L'OUTIL QUI DONNE LES CORPS EXISTE DEJA : Console/capture_compromis_acquereur.js,
+     ecrit le 02/09 pour cette question precise -- vrai navigateur, copie JETABLE de la
+     session worker (jamais reecrite), postData de chaque requete, arret immediat sur 403.
+     Il filtre deja sur getStepCompromis. Il n'a jamais servi a ca.
 ```
 
 **➡ CE QUI RESTE AVANT DE CODER LA MODIFICATION DEPUIS L'APP** *(demande de Frederic)*
