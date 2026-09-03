@@ -64,6 +64,14 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     numero_mandat       TEXT,
     hektor_acquereur_id TEXT,
     app_contact_id      INTEGER,
+    -- 1.1 (03/09/2026) : LE DOSSIER D'AFFAIRE. L'offre, le compromis et la vente
+    -- d'un MEME acquereur sur une MEME annonce partagent ce numero. Il est FRAPPE
+    -- par une sequence, jamais calcule -- « deux copies d'une formule divergent tot
+    -- ou tard ». Hektor ne le connait pas : rien a arbitrer, personne a contredire.
+    -- ⚠ IL N'EST PAS DANS LE « ON CONFLICT DO UPDATE SET » plus bas, ET C'EST VOULU :
+    --   ce que le run ne reecrit pas, il le preserve. C'est la protection par
+    --   omission, celle des trois champs de contact.
+    app_chaine_id       INTEGER,
     acquereur_json      TEXT,
     state               TEXT,
     montant             TEXT,
@@ -144,6 +152,10 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN app_contact_id INTEGER")
         con.commit()
         print(f"[affaire_ledger] colonne app_contact_id ajoutee a {LEDGER_TABLE}")
+    if "app_chaine_id" not in colonnes:
+        con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN app_chaine_id INTEGER")
+        con.commit()
+        print(f"[affaire_ledger] colonne app_chaine_id ajoutee a {LEDGER_TABLE}")
     run_ts = now_iso()
     mnum = _mandat_numero(con)
 
@@ -385,14 +397,85 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         cur = con.execute(f"UPDATE {LEDGER_TABLE} SET present_in_hektor=0 WHERE last_seen_at <> ?", (run_ts,))
         absent = cur.rowcount or 0
     con.commit()
+    # ⚠ LA CHAINE N'EST PAS POSEE ICI, ET C'EST DELIBERE.
+    # Voir poser_les_chaines_chez_supabase() : le frappeur est unique, et il est
+    # chez Supabase. Ce run la RECOIT apres le push, il ne l'invente pas.
     total = con.execute(f"SELECT COUNT(*) FROM {LEDGER_TABLE}").fetchone()[0]
-    return {"seen": seen, "inserted": inserted, "marked_absent": absent, "ledger_total": total}
+    return {"seen": seen, "inserted": inserted, "marked_absent": absent,
+            "ledger_total": total}
+
+
+def poser_les_chaines_chez_supabase(client, con: sqlite3.Connection) -> dict[str, int]:
+    """1.1 -- LE DOSSIER D'AFFAIRE : un numero par (annonce, acquereur).
+
+    L'offre, le compromis et la vente d'un meme acquereur sur une meme annonce
+    partagent ce numero. Il est FRAPPE par une sequence, jamais calcule -- « deux
+    copies d'une formule divergent tot ou tard ». Hektor ne le connait pas : rien
+    a arbitrer, personne a contredire.
+
+    IL N'Y A QU'UN SEUL FRAPPEUR, ET CE N'EST PAS CE SCRIPT.
+    C'est Supabase, parce que c'est la que l'APP pose deja les siens au moment du
+    geste. Une premiere version frappait ici, localement, a partir du MAX() de la
+    table locale -- encore vide. Elle aurait redemarre a 1 pendant que Supabase en
+    etait a 13 347 : deux series pour une meme chose, la faute que le projet
+    s'interdit depuis le debut.
+
+    LE RUN FAIT DONC DEUX GESTES, DANS CET ORDRE, ET APRES LE PUSH :
+      1. il demande a Supabase de combler les trous (les transactions creees DANS
+         Hektor arrivent sans chaine -- l'app n'etait pas la pour leur en poser une) ;
+      2. il redescend le resultat dans la colonne locale.
+
+    POURQUOI REDESCENDRE. La colonne locale n'est jamais poussee (voir
+    COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS) : elle ne sert pas a ecrire, elle sert a ce
+    que la sauvegarde de nuit emporte aussi cette connaissance. La chaine est de la
+    donnee app-owned que Hektor ne saura JAMAIS reconstruire -- en particulier
+    celles que l'app pose au geste, qui disent de quelle offre un compromis est ne.
+    """
+    posees = client._request(method="POST", path="rpc/app_attribuer_chaines_affaire")
+    if isinstance(posees, list) and posees:
+        posees = posees[0]
+    posees = int(posees or 0)
+    if posees:
+        print(f"[affaire_ledger] {posees} affaire(s) rattachee(s) a un dossier d'affaire")
+
+    lignes = client.fetch_all_rows(path=LEDGER_TABLE,
+                                   select="app_affaire_id,app_chaine_id",
+                                   order="app_affaire_id.asc")
+    maj = [(l.get("app_chaine_id"), l.get("app_affaire_id")) for l in lignes
+           if l.get("app_chaine_id") is not None and l.get("app_affaire_id") is not None]
+    con.executemany(
+        f"UPDATE {LEDGER_TABLE} SET app_chaine_id=? WHERE app_affaire_id=? "
+        f"AND (app_chaine_id IS NULL OR app_chaine_id <> ?)",
+        [(c, a, c) for c, a in maj])
+    con.commit()
+    manquantes = con.execute(
+        f"SELECT COUNT(*) FROM {LEDGER_TABLE} WHERE app_chaine_id IS NULL").fetchone()[0]
+    return {"chainees_par_supabase": posees, "chaines_redescendues": len(maj),
+            "locales_sans_chaine": manquantes}
+
+
+# ─── CE QUE LE PUSH N'ENVOIE PAS, ET C'EST VITAL ───
+#
+# `SELECT *` envoie TOUTES les colonnes, et l'upsert PostgREST REMPLACE la ligne.
+# Une colonne que le local ne sait pas remplir ecraserait donc sa valeur chez
+# Supabase -- en silence, et pour les 29 320 lignes d'un coup.
+#
+# app_chaine_id est exactement ce cas (03/09/2026) : c'est SUPABASE qui frappe ces
+# numeros, parce que c'est la que l'app pose les siens au moment du geste. Le local,
+# lui, n'en sait rien. S'il les poussait, il les effacerait.
+#
+# UN SEUL EMETTEUR A LA FOIS -- la regle est ancienne (note d'identite du 08/08,
+# retiree du git le 19/08) : « Pendant la transition, un seul minte. Jamais les deux
+# en meme temps. » Ici l'emetteur est Supabase, et le local n'a rien a dire.
+COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = ("app_chaine_id",)
 
 
 def ledger_rows_for_push(con: sqlite3.Connection) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for r in con.execute(f"SELECT * FROM {LEDGER_TABLE}"):
         d = dict(r)
+        for interdite in COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS:
+            d.pop(interdite, None)
         for jcol in ("acquereur_json", "payload_json"):
             v = d.get(jcol)
             if isinstance(v, str) and v:
@@ -492,6 +575,9 @@ def main() -> None:
         client.upsert_rows(path=LEDGER_TABLE, rows=rows, batch_size=args.batch_size)
         result["push"] = {"rows_pushed": len(rows), "rows_ecartees": len(ecartees),
                           "cles_ecartees": [f"{a}/{k}/{h}" for a, k, h, _, _ in ecartees]}
+        # APRES le push, jamais avant : les lignes nouvelles doivent d'abord exister
+        # chez Supabase pour qu'il puisse leur poser une chaine.
+        result["chaines"] = poser_les_chaines_chez_supabase(client, con)
     con.close()
     print(json.dumps(result, ensure_ascii=True, indent=2))
 

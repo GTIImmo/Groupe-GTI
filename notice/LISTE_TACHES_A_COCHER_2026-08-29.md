@@ -2056,25 +2056,91 @@ GEL que Frederic a repere le premier).*
 ### PHASE 1 — LE REGISTRE · invisible a l'ecran
 
 ```
-[ ] 1.1  LE LIEN ENTRE LES ETAPES
-         Un numero de dossier d'affaire, FRAPPE par une sequence -- JAMAIS
-         calcule. Partage par l'offre, le compromis et la vente d'un meme acquereur.
+[x] 1.1  LE LIEN ENTRE LES ETAPES
+         ✅ CODEE ET PROUVEE LE 03/09 AU SOIR.
+
+         CE QUE C'EST. Un numero de dossier d'affaire -- app_chaine_id -- FRAPPE
+         par une sequence, JAMAIS calcule. L'offre, le compromis et la vente d'un
+         meme acquereur sur une meme annonce le partagent.
          ⚠ POURQUOI FRAPPE ET NON CALCULE : « deux copies d'une formule divergent
            tot ou tard » -- c'est ce qui a condamne le calcul de la cle de relation
            cote app (26bis-relations). Un numero tire d'une sequence ne peut pas
            diverger, puisqu'il n'est calcule nulle part. Meme lecon que sur les
            recherches : remplacer le NOM par un NUMERO.
-         AUJOURD'HUI le lien est REDEVINE CHAQUE NUIT par build_affaires_dossiers
-         (export_app_payload.py:957) a partir de l'ACQUEREUR. La logique est
-         BONNE -- un dossier par acquereur, chaine complete, classe par l'etape la
-         plus avancee, drapeau « courante », affecte a un cycle (annonce, mandat).
-         Mais c'est une devinette refaite chaque nuit, et 387 lignes (1,3 %) n'ont
-         aucun acquereur -- dont notre 50059. Apres la coupure, plus de nuit chez
-         Hektor pour la redeviner.
-         touche : une colonne sur app_affaire_ledger + une etape du run
-         retour : la colonne se laisse vide, rien ne la lit encore
-         verif : les 521 annonces a plusieurs compromis ET plusieurs acquereurs
-                 retrouvent EXACTEMENT les memes dossiers qu'aujourd'hui
+
+         CE QU'ON REMPLACE. Le lien etait REDEVINE CHAQUE NUIT par
+         build_affaires_dossiers (export_app_payload.py:957) a partir de
+         l'acquereur. La logique etait BONNE ; c'etait une devinette refaite
+         chaque nuit, et apres la coupure il n'y aura plus de nuit chez Hektor
+         pour la refaire.
+
+         ─── LE PIEGE QU'ON A FAILLI POSER, ET IL AURAIT COUTE CHER ───
+
+         Premiere version : le run local frappait les numeros lui-meme, a partir
+         du MAX() de SA table. Deux fautes dans la meme ligne :
+
+           1. la table locale venait de recevoir la colonne, donc vide : le run
+              aurait redemarre a 1 pendant que Supabase en etait a 13 347 --
+              DEUX SERIES pour une meme chose ;
+           2. et le push fait « SELECT * », donc il aurait envoye la colonne
+              locale (toute NULLE) par-dessus les 29 320 chaines du serveur.
+              L'upsert REMPLACE la ligne : tout effacer, en silence, d'un coup.
+
+         La regle du projet dit « un seul emetteur d'ID a la fois ». L'emetteur
+         est SUPABASE, parce que c'est la que l'app pose deja les siens au geste.
+
+         ─── CE QUI A ETE FAIT ───
+
+         app_chaine_pour(annonce, acquereur)      LA regle, ecrite UNE SEULE FOIS
+             meme annonce + meme acquereur -> meme chaine
+             acquereur absent              -> chaine SOLITAIRE (un vide ne se
+                                              regroupe pas avec un autre vide)
+             le mandat ne sert PAS de cle : 98 % des offres n'en portent pas.
+
+         app_attribuer_chaines_affaire()          le rattrapage de nuit
+             n'a AUCUNE regle a lui : il appelle celle du dessus, ligne a ligne,
+             dans l'ordre des numeros. Ne touche jamais une chaine deja posee.
+
+         app_change_annonce_status_optimistic     la pose AU GESTE
+             patchee chirurgicalement depuis sa propre definition (5 400 caracteres
+             qu'on ne reecrit pas a la main). Carnet, job et acquereur-app verifies
+             intacts apres coup ; les GRANT authenticated/service_role aussi.
+
+         affaire_ledger.py                        le local RECOIT, il ne frappe plus
+             COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = ("app_chaine_id",)
+             puis, APRES le push : appel du rattrapage + redescente dans la colonne
+             locale. Elle ne sert pas a ecrire -- elle sert a ce que la sauvegarde
+             de nuit emporte aussi cette connaissance, que Hektor ne saura JAMAIS
+             reconstruire (en particulier les chaines posees au geste, qui disent
+             de quelle offre un compromis est ne).
+
+         ─── LES MESURES ───
+
+         Backfill      29 320 lignes · 13 347 chaines · 0 sans chaine
+                       moyenne 2,54 transactions par dossier · la plus longue 6
+                       387 lignes sans acquereur -> 387 chaines solitaires
+         Idempotence   2e appel du rattrapage -> 0 posee, rien touche
+         Cycle complet refresh + push reel (celui de 05:30) :
+                       rows_pushed 29 313 · chainees_par_supabase 0
+                       ^^^ LE CHIFFRE QUI PROUVE : si la colonne partait encore,
+                           Supabase aurait eu 29 313 trous a recombler.
+                       chaines_redescendues 29 320 · locales_sans_chaine 0
+         La regle      sur l'annonce 24933, en direct :
+                       Sophie 605030      -> 5469   (rejoint)
+                       CLOTURE 605075     -> 5470   (rejoint)
+                       acquereur inconnu  -> 13351  (neuve)
+                       sans acquereur     -> 13352  (neuve)
+                       sans acquereur 2e  -> 13353  (ENCORE une autre)
+
+         L'annonce d'epreuve, telle qu'elle est rangee maintenant :
+             5469   Sophie   offre 33042 · compromis 50060 · vente 23294
+                             offre 33046 · compromis 50065 · compromis 50066
+             5470   CLOTURE  offres 33037/33038/33043 · compromis 50064 · vente 23298
+             12961  le compromis 50059, sans acquereur, seul dans sa chaine
+
+         ⚠ RESTE A FAIRE, ET C'EST VOULU : rien ne LIT encore la chaine.
+           C'est la phase 2 (la rubrique Affaires lit le registre). La colonne est
+           posee et alimentee ; l'ecran ne bouge pas.
 
 [ ] 1.2  LES COLONNES DE CLASSE A     3 a 4 a creer (liste arretee par 0.1)
          retour : colonnes inutilisees · verif : le carnet n'a plus d'orphelin
