@@ -1604,6 +1604,42 @@ ranges parmi les acquereurs » est REFUTEE : 86793 est un acquereur choisi a la 
 ➡ **MEME FAMILLE QUE LA VENTE** (`createVente` + `getStepVente`), et la vente, elle,
 porte `idVente` dans CHAQUE POST. Il reste a verifier que `idCompromis` voyage pareil.
 
+### ✅ `idCompromis` VOYAGE — capture du 03/09, la derniere piece
+
+> Obtenue avec `Console/capture_compromis_acquereur.js`, modifie ce soir pour ouvrir
+> l'assistant lui-meme (`--compromis=50065`). Vrai navigateur, session en copie jetable,
+> 104 requetes enregistrees, aucun 403.
+
+```
+   GET   ?mode=annonce-SuiviVente-compromis-createCompromis        ouverture, sans corps
+   POST  ?mode=annonce-SuiviVente-compromis-getStepCompromis       75 octets, 5 champs
+            idAnnonce    = 24933
+            idCompromis  = 50065        <-- L'IDENTIFIANT VOYAGE
+            basket · initBasket · idCompromis
+```
+
+**ET C'EST MOT POUR MOT LA FORME DE LA VENTE :**
+
+```
+   vente      idAnnonce=24933 · idVente=23294     · basket · initBasket · idVente      67 o
+   compromis  idAnnonce=24933 · idCompromis=50065 · basket · initBasket · idCompromis  75 o
+```
+
+➡ **Identique au nom du champ pres.** Le worker poste deja exactement cette requete pour
+CREER un compromis ; il ne lui manquait que `idCompromis`. La phase 3 couvre donc le
+compromis, et `update_hektor_compromis` peut s'ecrire.
+
+⚠ **CE QUI EST MESURE ET CE QUI EST INFERE, pour etre honnete :**
+
+```
+   MESURE   l'OUVERTURE porte idCompromis, et elle a la meme forme que celle de la vente
+   INFERE   que l'ENREGISTREMENT le porte aussi -- par symetrie avec la vente, dont les
+            QUATRE requetes (ouverture, etape 1->2, 2->3, enregistrement) portaient
+            toutes idVente, mesure le 03/09 au matin
+   ➡ La premiere execution reelle du travail le confirmera. Le risque est faible et
+     l'echec serait bruyant (Hektor creerait un compromis au lieu d'en modifier un).
+```
+
 **⚠ MON ERREUR DE MESURE, ET ELLE COUTE UN ESSAI**
 
 ```

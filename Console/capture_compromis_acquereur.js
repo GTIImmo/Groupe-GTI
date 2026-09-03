@@ -60,6 +60,8 @@
 //   * Rien n'est poste par le script : le seul debit est celui de vos clics.
 //
 //   node Console/capture_compromis_acquereur.js 24933
+//   node Console/capture_compromis_acquereur.js 24933 --compromis=50065
+//   node Console/capture_compromis_acquereur.js 24933 --vente=23298
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -72,6 +74,30 @@ const SESSION_SOURCE = process.env.CAPTURE_ACQ_SESSION
   || path.resolve(__dirname, "sessions", "storage_state_admin.json");
 const ANNONCE_ID = (process.argv.slice(2).find((a) => !a.startsWith("--")) || "").trim();
 const MAX_DURATION_MS = Number(process.env.CAPTURE_ACQ_MAX_MS || 15 * 60 * 1000);
+
+// ─── L'ASSISTANT S'OUVRE TOUT SEUL, ET VOICI POURQUOI (03/09/2026) ───
+//
+// La fenetre s'ouvrait sur la FICHE, et il fallait ouvrir l'assistant a la main.
+// Deux problemes, mesures le 03/09 :
+//
+//   1. le bouton « Modifier » de la fiche est cable en dur sur UN compromis, et pas
+//      toujours le bon -- sur l'annonce 24933 il visait 50059, ANNULE, ce qui rend
+//      « Desole, un compromis cloture ne peut pas etre modifie ». Le compromis ACTIF
+//      etait litteralement inatteignable depuis l'interface de Hektor ;
+//   2. le contournement consistait a taper `launchPopinCompromis(annonce, compromis)`
+//      dans la console du navigateur. Demande a Frederic, ca n'a pas marche -- et
+//      c'est normal, c'est une manipulation penible qui n'a rien a faire dans un
+//      protocole d'essai.
+//
+// Le script ouvre donc l'assistant lui-meme. IL RESTE EN LECTURE SEULE : ouvrir une
+// modale n'ecrit rien chez Hektor -- mesure quatre fois le 03/09, la date de mise a
+// jour du bien ne bouge pas quand on ouvre puis ferme sans enregistrer.
+//
+//   --compromis=50065   ouvre l'assistant du COMPROMIS sur cet identifiant
+//   --vente=23298       ouvre celui de la VENTE
+//   (aucun des deux)    comportement d'origine : on s'arrete sur la fiche
+const COMPROMIS_ID = ((process.argv.slice(2).find((a) => a.startsWith("--compromis=")) || "").split("=")[1] || "").trim();
+const VENTE_ID = ((process.argv.slice(2).find((a) => a.startsWith("--vente=")) || "").split("=")[1] || "").trim();
 
 const EXPORT_ROOT = path.resolve(__dirname, "exports",
   "capture_compromis_acquereur_" + (ANNONCE_ID || "unknown") + "_" +
@@ -160,16 +186,41 @@ async function main() {
     export: EXPORT_ROOT,
     session_lue: SESSION_SOURCE,
     session_jamais_reecrite: true,
-    a_faire: [
-      "1. ouvrir l'assistant « Sous compromis »",
-      "2. taper le nom de l'acquereur dans son champ",
-      "3. CLIQUER sur le resultat pour le selectionner",
-      "4. FERMER la popin SANS ENREGISTRER",
-      "5. fermer la fenetre du navigateur pour arreter la capture",
-    ],
+    a_faire: (COMPROMIS_ID || VENTE_ID)
+      ? [
+        "L'assistant s'ouvre TOUT SEUL sur l'identifiant demande -- rien a taper.",
+        "1. changez UNE valeur si vous voulez un repere (le prix public, par exemple)",
+        "2. « Etape suivante » jusqu'au bout, puis « Enregistrer »",
+        "3. FERMEZ LA FENETRE du navigateur -- c'est ce qui ecrit le fichier",
+      ]
+      : [
+        "1. ouvrir l'assistant « Sous compromis »",
+        "2. taper le nom de l'acquereur dans son champ",
+        "3. CLIQUER sur le resultat pour le selectionner",
+        "4. FERMER la popin SANS ENREGISTRER",
+        "5. fermer la fenetre du navigateur pour arreter la capture",
+      ],
   }, null, 2));
 
   await page.goto(cible, { waitUntil: "domcontentloaded", timeout: 60000 });
+
+  // ─── ON OUVRE L'ASSISTANT A VOTRE PLACE ───
+  // Best-effort : si la fonction n'est pas la, on ne casse rien, la fiche reste
+  // ouverte et vous faites comme avant.
+  if (COMPROMIS_ID || VENTE_ID) {
+    const genre = COMPROMIS_ID ? "compromis" : "vente";
+    const cle = COMPROMIS_ID || VENTE_ID;
+    await page.waitForTimeout(6000);           // le temps que les scripts de la fiche soient la
+    const ouverture = await page.evaluate(({ annonce, id, genre }) => {
+      try {
+        const f = genre === "compromis" ? window.launchPopinCompromis : window.launchPopinVente;
+        if (typeof f !== "function") return { ouvert: false, raison: "fonction absente" };
+        f(Number(annonce), Number(id));
+        return { ouvert: true };
+      } catch (e) { return { ouvert: false, raison: String(e).slice(0, 120) }; }
+    }, { annonce: ANNONCE_ID, id: cle, genre });
+    console.log(JSON.stringify({ assistant: genre, identifiant: cle, ...ouverture }, null, 2));
+  }
 
   const depart = Date.now();
   let fermee = false;
