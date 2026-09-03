@@ -1497,7 +1497,9 @@ manquait a la lecture « avant » de l'arbitre -- voir `ventes_avant: []`.
 4  la vente vaut 176 000 chez nous et      DEFAUT. La modale envoie `amount` ET
    180 000 chez Hektor                     `sale_price` ; pour la VENTE, Hektor ne retient
                                            que `sale_price`. L'autre est jete en silence.
-5  ni 50064 ni 23298 n'ont d'acquereur     DEFAUT, cause CONNUE : 605075 n'est pas type
+5  ni 50064 ni 23298 n'ont d'acquereur     DEFAUT, cause CONFIRMEE le 03/09 par un
+                                           essai dedie -- voir « LA TYPOLOGIE » ci-dessous.
+   (ancien libelle) 605075 n'est pas type
    chez Hektor                             « acquereur » (typologies_json = ["mandant"]).
                                            605030 l'est (["acquéreur","mandant"]), et son
                                            compromis 50060 a bien recu son acquereur.
@@ -1506,6 +1508,55 @@ manquait a la lecture « avant » de l'arbitre -- voir `ventes_avant: []`.
                                              la VENTE passent par la liste « Mes
                                              acquereurs », FILTREE sur la typologie.
 ```
+
+### LA TYPOLOGIE DE L'ACQUEREUR — hypothese CONFIRMEE le 03/09
+
+> Cycle refait a la demande de Frederic, avec **Sophie (605030) des l'offre** -- la seule
+> des deux contacts d'essai typee « acquereur ». Quatre mesures, correlation parfaite.
+
+```
+   compromis 50065  status 1  177 000  ACQUEREURS ['605030']   Sophie   ✅
+   compromis 50064  status 2  176 000  ACQUEREURS aucun        605075   ❌
+   compromis 50060  status 2  172 000  ACQUEREURS ['605030']   Sophie   ✅
+   compromis 50059  status 2  178 000  ACQUEREURS aucun        (aucun envoye)
+
+   app_contact_current.typologies_json
+      605030  Sophie TEST MANDANT 25-08   ["acquéreur", "mandant"]   -> PASSE
+      605075  M. Test CLOTURE             ["mandant"]                -> PERDU
+```
+
+➡ **LA TYPOLOGIE DU CONTACT EST LE DISCRIMINANT.** Sophie passe deux fois sur deux,
+CLOTURE echoue une fois sur une. Et l'asymetrie entre les genres est mesuree :
+
+```
+   OFFRE               envoie id_acquereur, SANS filtre de typologie
+                       -> 33037/33038/33043 ont bien 605075 comme acquereur,
+                          alors qu'il n'est QUE mandant
+   COMPROMIS / VENTE   passent par la liste « Mes acquereurs », FILTREE sur la
+                       typologie -> un contact non type est ABANDONNE EN SILENCE.
+                       Le champ acquereurs[] est poste, Hektor l'ignore, personne
+                       n'est averti.
+```
+
+⚠ **C'est le pire comportement possible** : ni erreur, ni message, ni trace. Exactement
+ce que la « relecture immediate » (brique 3) doit rendre visible.
+
+**AUTRES CHAMPS ABANDONNES EN SILENCE, mesures sur l'offre 33046 du 03/09**
+
+```
+   envoye numero_mandat = 11939   ->  Hektor garde id_mandat = 0
+   (coherent avec les 98 % d'offres sans mandat du parc : ce n'est pas une
+    anomalie de nos donnees, c'est Hektor qui ne retient pas le mandat sur une offre)
+```
+
+**TROISIEME REPRODUCTION DU DEFAUT DU COMPROMIS, meme cycle**
+
+```
+   offre     33046  confirmee · identite POSEE
+   compromis 50065  AMBIGU · candidates [50065, 50059, 50060, 50064]  -> aucun numero
+```
+Les QUATRE compromis de l'annonce sont apparus comme candidats : la lecture « avant »
+n'a, une fois de plus, rien rendu. Trois cycles, trois fois le meme resultat.
 
 **LES TROIS CORRECTIONS DE CODE QUE CE RELEVE COMMANDE**
 
