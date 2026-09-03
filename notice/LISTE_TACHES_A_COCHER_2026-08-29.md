@@ -2142,8 +2142,57 @@ GEL que Frederic a repere le premier).*
            C'est la phase 2 (la rubrique Affaires lit le registre). La colonne est
            posee et alimentee ; l'ecran ne bouge pas.
 
-[ ] 1.2  LES COLONNES DE CLASSE A     3 a 4 a creer (liste arretee par 0.1)
-         retour : colonnes inutilisees · verif : le carnet n'a plus d'orphelin
+[x] 1.2  LES COLONNES DE CLASSE A
+         ✅ POSEES LE 03/09 AU SOIR -- et l'audit a CORRIGE la liste de 0.1.
+
+         ⚠ 0.1 SE CONTREDISAIT, et sur le point le plus dangereux du chantier.
+           Sa liste rangeait jours_retractation en CLASSE A ; sa propre mesure,
+           quinze lignes plus bas, disait l'inverse :
+               « retraction_days 10 -> dateEnd 2026-09-12   B mais CONVERTI »
+           Hektor CONNAIT ce delai -- il en garde la DATE au lieu du nombre. En
+           faire une colonne protegee, c'etait poser LE GEL que Frederic avait
+           repere le premier : quelqu'un repousse dateEnd dans Hektor, et notre
+           nombre ment pour toujours, sans que personne le voie.
+
+         LA LISTE, APRES MESURE ── ce que Hektor renvoie vraiment, cle par cle
+             jours_validite     A  aucune cle chez Hektor, dans AUCUN des trois
+                                   genres. Champ visible sur l'offre seule.
+             taux_honoraires    A  Hektor ne stocke que des MONTANTS. Et le taux
+                                   ne s'en deduit pas : 8 600 / 176 000 = 4,886 %
+                                   pour un taux saisi a 5.
+             notaire_id         A  NOTE DE L'APP, qui ne repart jamais chez Hektor
+                                   (arbitrage Frederic). ⚠ a ne pas confondre avec
+                                   les DEUX notaires que Hektor porte sur la VENTE
+                                   -- notaires.entree 2 927 et notaires.sortie
+                                   7 014 sur 7 606 : ceux-la vivent dans
+                                   payload_json, pas dans cette colonne.
+             jours_retractation ❌ PAS classe A -> colonne date_fin_retractation,
+                                   de CLASSE B, relue chez Hektor a chaque run.
+                                   Le nombre de jours SE DEDUIT (fin - date) au
+                                   lieu d'etre stocke deux fois -- « deux copies
+                                   d'une formule divergent tot ou tard ».
+
+         LA PROTECTION EST CELLE DE 1.1, REUTILISEE TELLE QUELLE
+             absentes du ON CONFLICT DO UPDATE SET   -> le run ne les reecrit pas
+             dans COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS  -> le push n'envoie pas de
+                 NULL par-dessus une saisie
+             redescendues apres le push              -> la sauvegarde de nuit les
+                 emporte quand meme
+
+         MESURES apres un cycle refresh+push reel :
+             date_fin_retractation  10 580 / 10 583 compromis
+                                    (les 3 manquants = affaires nees dans l'app,
+                                     sans contrepartie Hektor)
+                                    0 sur les offres et les ventes -- correct,
+                                    le delai ne concerne que le compromis
+             deduction verifiee sur 24933 : 50059 -> 12 j · 50060 -> 14 j
+             colonnes de classe A   0 partout = LE RETOUR ARRIERE : elles existent
+                                    et ne servent encore a rien
+             chainees               29 320 / 29 320
+
+         ⚠ CE QUI N'EST PAS FAIT, ET C'EST VOULU : le RPC ecrit toujours ces
+           champs AU CARNET, pas dans les colonnes. Le basculement (RPC qui ecrit
+           la colonne, front qui la lit, carnet reduit) est la brique 5.
 
 [x] 1.3  LE NUMERO HEKTOR POSE PAR IDENTITE, PLUS PAR SOUSTRACTION
          ✅ CODEE ET PROUVEE LE 03/09 AU SOIR (commit 2d8593e).

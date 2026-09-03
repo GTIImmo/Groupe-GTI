@@ -73,6 +73,24 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     --   omission, celle des trois champs de contact.
     app_chaine_id       INTEGER,
     acquereur_json      TEXT,
+    -- 1.2 (03/09/2026) : LES CHAMPS QUE HEKTOR IGNORE -- CLASSE A.
+    -- Hektor n'a AUCUNE destination pour eux (campagne 0.1). Zero conflit
+    -- possible : il n'a rien a dire. Ces colonnes sont donc ECRITES PAR L'APP
+    -- SEULE, dans Supabase. Le local ne les invente pas, ne les pousse pas
+    -- (COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS) et ne les reecrit pas (absentes du
+    -- ON CONFLICT DO UPDATE SET). Il les RECOIT apres le push, pour que la
+    -- sauvegarde de nuit les emporte.
+    jours_validite      TEXT,
+    taux_honoraires     TEXT,
+    notaire_id          TEXT,
+    -- ⚠ CELLE-CI N'EST PAS DE CLASSE A, ET C'EST UNE CORRECTION DU 03/09.
+    -- 0.1 rangeait jours_retractation en classe A, alors que sa propre mesure
+    -- disait « retraction_days 10 -> dateEnd, B mais CONVERTI ». Hektor CONNAIT
+    -- ce delai : il en garde la DATE de fin. Le figer dans une colonne protegee,
+    -- ce serait LE GEL que Frederic avait repere le premier. On relit donc la
+    -- date chez Hektor a chaque run, et le nombre de jours SE DEDUIT (fin - date)
+    -- au lieu d'etre stocke une deuxieme fois.
+    date_fin_retractation TEXT,
     state               TEXT,
     montant             TEXT,
     date                TEXT,
@@ -99,19 +117,22 @@ LEDGER_SQL = """
 SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS affaire_id,
        hektor_acquereur_id AS acq_id, acquereur_json AS acq_json, offre_state AS state,
        raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt,
-       NULL AS date_acte, NULL AS sequestre, raw_json
+       NULL AS date_acte, NULL AS sequestre, NULL AS date_fin, raw_json
 FROM hektor.hektor_offre WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
        NULL, acquereurs_json, compromis_state,
        COALESCE(prix_publique, prix_net_vendeur), COALESCE(date_start, synced_at),
-       date_signature_acte, sequestre, raw_json
+       date_signature_acte, sequestre,
+       -- CLASSE B : la fin du delai de retractation, telle que HEKTOR la porte.
+       -- C'est elle qui fait foi ; le nombre de jours s'en deduit.
+       date_end, raw_json
 FROM hektor.hektor_compromis WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
        NULL, acquereurs_json, NULL,
        prix, COALESCE(date_vente, synced_at),
-       NULL, NULL, raw_json
+       NULL, NULL, NULL, raw_json
 FROM hektor.hektor_vente WHERE hektor_annonce_id IS NOT NULL
 """
 
@@ -156,6 +177,12 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN app_chaine_id INTEGER")
         con.commit()
         print(f"[affaire_ledger] colonne app_chaine_id ajoutee a {LEDGER_TABLE}")
+    for neuve in ("jours_validite", "taux_honoraires", "notaire_id",
+                  "date_fin_retractation"):
+        if neuve not in colonnes:
+            con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
+            con.commit()
+            print(f"[affaire_ledger] colonne {neuve} ajoutee a {LEDGER_TABLE}")
     run_ts = now_iso()
     mnum = _mandat_numero(con)
 
@@ -359,8 +386,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
                 hektor_annonce_id, kind, hektor_affaire_id, hektor_mandat_id,
                 numero_mandat, hektor_acquereur_id, app_contact_id, acquereur_json, state, montant, date, date_acte,
-                sequestre, payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                sequestre, date_fin_retractation,
+                payload_json, first_seen_at, last_seen_at, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
@@ -373,6 +401,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 acquereur_json=excluded.acquereur_json,
                 state=excluded.state, montant=excluded.montant, date=excluded.date,
                 date_acte=excluded.date_acte, sequestre=excluded.sequestre,
+                date_fin_retractation=excluded.date_fin_retractation,
                 payload_json=excluded.payload_json,
                 last_seen_at=excluded.last_seen_at, present_in_hektor=1
             """,
@@ -383,7 +412,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 json.dumps(party, ensure_ascii=True, separators=(",", ":")) if party else None,
                 normalize_text(r["state"]) or None, normalize_text(r["montant"]) or None,
                 normalize_text(r["dt"]) or None, normalize_text(r["date_acte"]) or None,
-                normalize_text(r["sequestre"]) or None, normalize_text(r["raw_json"]) or None,
+                normalize_text(r["sequestre"]) or None,
+                normalize_text(r["date_fin"]) or None,
+                normalize_text(r["raw_json"]) or None,
                 first_seen, run_ts,
             ),
         )
@@ -398,14 +429,14 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         absent = cur.rowcount or 0
     con.commit()
     # ⚠ LA CHAINE N'EST PAS POSEE ICI, ET C'EST DELIBERE.
-    # Voir poser_les_chaines_chez_supabase() : le frappeur est unique, et il est
+    # Voir redescendre_ce_que_l_app_possede() : le frappeur est unique, et il est
     # chez Supabase. Ce run la RECOIT apres le push, il ne l'invente pas.
     total = con.execute(f"SELECT COUNT(*) FROM {LEDGER_TABLE}").fetchone()[0]
     return {"seen": seen, "inserted": inserted, "marked_absent": absent,
             "ledger_total": total}
 
 
-def poser_les_chaines_chez_supabase(client, con: sqlite3.Connection) -> dict[str, int]:
+def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[str, int]:
     """1.1 -- LE DOSSIER D'AFFAIRE : un numero par (annonce, acquereur).
 
     L'offre, le compromis et la vente d'un meme acquereur sur une meme annonce
@@ -438,20 +469,23 @@ def poser_les_chaines_chez_supabase(client, con: sqlite3.Connection) -> dict[str
     if posees:
         print(f"[affaire_ledger] {posees} affaire(s) rattachee(s) a un dossier d'affaire")
 
+    # On redescend TOUT ce que l'app possede -- la chaine et les champs de classe A.
+    # Le local ne s'en sert pas pour ecrire ; il les garde pour que la sauvegarde de
+    # nuit emporte aussi cette connaissance, que Hektor ne saura jamais reconstruire.
+    colonnes = list(COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS)
     lignes = client.fetch_all_rows(path=LEDGER_TABLE,
-                                   select="app_affaire_id,app_chaine_id",
+                                   select="app_affaire_id," + ",".join(colonnes),
                                    order="app_affaire_id.asc")
-    maj = [(l.get("app_chaine_id"), l.get("app_affaire_id")) for l in lignes
-           if l.get("app_chaine_id") is not None and l.get("app_affaire_id") is not None]
-    con.executemany(
-        f"UPDATE {LEDGER_TABLE} SET app_chaine_id=? WHERE app_affaire_id=? "
-        f"AND (app_chaine_id IS NULL OR app_chaine_id <> ?)",
-        [(c, a, c) for c, a in maj])
+    consigne = (f"UPDATE {LEDGER_TABLE} SET " + ", ".join(f"{c}=?" for c in colonnes)
+                + " WHERE app_affaire_id=?")
+    valeurs = [tuple(l.get(c) for c in colonnes) + (l.get("app_affaire_id"),)
+               for l in lignes if l.get("app_affaire_id") is not None]
+    con.executemany(consigne, valeurs)
     con.commit()
     manquantes = con.execute(
         f"SELECT COUNT(*) FROM {LEDGER_TABLE} WHERE app_chaine_id IS NULL").fetchone()[0]
-    return {"chainees_par_supabase": posees, "chaines_redescendues": len(maj),
-            "locales_sans_chaine": manquantes}
+    return {"chainees_par_supabase": posees, "lignes_redescendues": len(valeurs),
+            "colonnes_redescendues": len(colonnes), "locales_sans_chaine": manquantes}
 
 
 # ─── CE QUE LE PUSH N'ENVOIE PAS, ET C'EST VITAL ───
@@ -467,7 +501,14 @@ def poser_les_chaines_chez_supabase(client, con: sqlite3.Connection) -> dict[str
 # UN SEUL EMETTEUR A LA FOIS -- la regle est ancienne (note d'identite du 08/08,
 # retiree du git le 19/08) : « Pendant la transition, un seul minte. Jamais les deux
 # en meme temps. » Ici l'emetteur est Supabase, et le local n'a rien a dire.
-COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = ("app_chaine_id",)
+# Les colonnes de CLASSE A rejoignent la liste pour la meme raison exactement :
+# c'est l'app qui les ecrit, chez Supabase, et le local ne les connait pas. Les
+# pousser reviendrait a envoyer des NULL par-dessus des valeurs saisies.
+# date_fin_retractation N'EN EST PAS : celle-la, Hektor la connait et le local la
+# lit dans le miroir -- elle se pousse et se rafraichit comme les autres.
+COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
+    "app_chaine_id", "jours_validite", "taux_honoraires", "notaire_id",
+)
 
 
 def ledger_rows_for_push(con: sqlite3.Connection) -> list[dict[str, object]]:
@@ -577,7 +618,7 @@ def main() -> None:
                           "cles_ecartees": [f"{a}/{k}/{h}" for a, k, h, _, _ in ecartees]}
         # APRES le push, jamais avant : les lignes nouvelles doivent d'abord exister
         # chez Supabase pour qu'il puisse leur poser une chaine.
-        result["chaines"] = poser_les_chaines_chez_supabase(client, con)
+        result["chaines"] = redescendre_ce_que_l_app_possede(client, con)
     con.close()
     print(json.dumps(result, ensure_ascii=True, indent=2))
 
