@@ -1593,11 +1593,82 @@ GEL que Frederic a repere le premier).*
 > reduit a peu de chose et la phase 2 devient l'essentiel du chantier.
 
 ```
-[ ] 0.1  LA CAMPAGNE DES CHAMPS       champ par champ : Hektor ACCEPTE / REFUSE /
-         IGNORE ? -> produit le classement A / B / C, qui commande tout le reste
-         touche : rien · retour : sans objet
-         verif : un tableau des champs, chacun avec son essai reel
-         >>> RESTE A FAIRE. C'est le seul point ouvert de la phase 0.
+[~] 0.1  LA CAMPAGNE DES CHAMPS       COMMENCEE le 03/09 -- premier tableau obtenu
+         SANS AUCUNE ECRITURE : le cycle complet avait envoye des valeurs connues,
+         il suffisait de relire ce que Hektor a RETENU.
+
+   ── ENVOYE CONTRE RETENU, compromis 50064 ──────────────────────────────
+      amount 176 000          -> prixPublique 176 000               B accepte
+      transaction_date 02/09  -> dateStart 2026-09-02               B
+      signature_date 05/12    -> dateSignatureActe 2026-12-05       B
+      buyer_fees 8 600        -> honorairesSortie 8 600             B
+      retraction_days 10      -> dateEnd 2026-09-12                 B mais CONVERTI
+                                 (debut + 10 j : Hektor stocke une DATE, pas un nombre)
+      sale_price 180 000      -> aucun champ                        IGNORE
+      validity_days 20        -> aucun champ                        A  Hektor l'ignore
+      buyer_fees_rate 5       -> aucun champ                        A
+      net_seller_price vide   -> prixNetVendeur 170 000             C  Hektor le CALCULE
+      (rien envoye)           -> honorairesEntree 10 000            C  pose seul, du mandat
+      buyer_contact_id 605075 -> acquereurs []                      ❌ PERDU
+
+      vente 23298 : date OK · honorairesSortie OK · acquereurs [] PERDU
+      et Hektor calcule seul honoraires 18 600, honorairesHT 15 500,
+      commissionAgence 15 500, honorairesEntree 10 000.
+
+   ➡ LA CLASSE A EXISTE ET ELLE EST MESUREE : validity_days et buyer_fees_rate
+     n'ont AUCUNE destination chez Hektor. Ce sont les premiers champs a loger
+     en colonne protegee (brique 1.2).
+   ➡ LA CLASSE C EST PLUS LARGE QUE PREVU : prix net vendeur, honoraires HT,
+     commission agence et honoraires d'entree sont CALCULES par Hektor. Les
+     inscrire au contrat les figerait sur une valeur qu'on n'a pas a decider.
+   ⚠ UN DES DEUX CHAMPS DE MONTANT EST SILENCIEUSEMENT ABANDONNE, ET PAS LE MEME
+     SELON LE GENRE : sur le compromis `amount` devient le prix et `sale_price`
+     disparait ; sur la vente c'est `sale_price` qui devient le prix. La modale
+     envoie deux champs, Hektor n'en garde qu'un, sans le dire.
+   ⚠ ET UNE INCOHERENCE MESUREE : l'assistant affiche prixNetVendeur = 157 400
+     (176 000 - 8 600 - 10 000) quand l'API rend 170 000 (180 000 - 10 000).
+     Deux calculs pour le meme champ. A trancher avant de s'appuyer dessus.
+
+   ── L'INVENTAIRE DES CHAMPS DE HEKTOR, releve dans l'assistant du COMPROMIS ──
+      (compromis 50064 ACTIF, ouvert en modification puis FERME sans enregistrer)
+
+      dateCompromis              nbJoursRetractation        dateSignatureActe
+      prixPublique               prixNetVendeur             prixDeVente
+      montantHonoraireEntree     tauxHonoraireEntree     <- VENDEUR
+      montantHonoraireSortie     tauxHonoraireSortie     <- ACQUEREUR
+      sequestre                  mandat (select)            mandants[]
+      mandantSearch              addAcquereurSearch         addAcquereurNotaireSearch
+      content_pdf (textarea)
+      caches : containerName=PopinCompromis · step · fromStep · typeUser=NEGO
+               isModePrive · id_compromis
+
+      QUATRE ETAPES :  1 Donnees du compromis  ·  2 Retrocession
+                       3 Calcul des commissions  ·  4 CONDITIONS SUSPENSIVES
+      BOUTONS :        Etape suivante · Fermer · Annuler
+                       « Enregistrer le brouillon »  ·  « Enregistrer et terminer »
+
+   ── CE QUI MANQUE A LA MODALE DE L'APP (demande de Frederic) ───────────────
+      1  montantHonoraireEntree   les honoraires VENDEUR (10 000 EUR) -- la modale
+                                  n'a que ceux de l'acquereur
+      2  tauxHonoraireEntree      le taux VENDEUR (5,974 %) -- la modale n'a qu'un
+                                  seul « TAUX HONORAIRES », qui est celui de SORTIE
+      3  mandants[]               le choix des mandants ; la modale ne le propose pas
+      4  content_pdf              le contenu du document
+      5  ETAPE 2 « Retrocession »            entierement absente
+      6  ETAPE 3 « Calcul des commissions »  unites d'entree / de sortie / part reseau
+      7  ETAPE 4 « Conditions suspensives »  entierement absente
+      8  LES DEUX MODES D'ENREGISTREMENT     brouillon / terminer -- la modale n'en a
+                                             qu'un, et le « brouillon » n'existe nulle
+                                             part chez nous
+   ⚠ Le point 2 n'est pas cosmetique : le taux VENDEUR determine les honoraires
+     d'entree (10 000 EUR), donc la commission de l'agence. Il est aujourd'hui
+     invisible ET non modifiable depuis l'app.
+
+   >>> RESTE A FAIRE : les etapes 2, 3 et 4 n'ont pas pu etre inventoriees --
+       l'assistant REFUSE D'AVANCER sous automatisation (meme comportement que
+       celui de la vente au second passage). Il faudra soit un relevé fait a la
+       main par Frederic, soit lire les definitions du module
+       Modules/GenericPopinStepperManager.
 
 [x] 0.2  LE CORPS DE LA REQUETE       FAIT le 03/09 14h20 -- REPONSE : OUI.
          Capture par instrumentation XHR de la page (lecture seule, aucun envoi
