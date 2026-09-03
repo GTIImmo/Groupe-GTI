@@ -1350,8 +1350,119 @@ ESSAI 2  annuler le compromis vivant    cancel_hektor_compromis · 50060 · done
             Les trois transactions ne sont PAS une chaine chez Hektor : ce sont
             trois objets independants poses sur la meme annonce. Cela explique
             enfin les 9 075 annonces vendues portant un compromis « actif ».
-         ⚠ La question inverse du 29/08 reste OUVERTE :
-            supprimer la vente fait-il revivre le compromis ?
+```
+
+### LE CYCLE COMPLET DU 03/09 — demande par Frederic : « remettre l'annonce d'aplomb »
+
+> *« supprimer la vente cela permettra d'eprouver ce test puis remettre le statut sur
+> actif refaire une offre puis un compromis puis une vente cela bouclera le chantier »*
+
+**① SUPPRIMER LA VENTE 23294 — trois questions tranchees d'un coup**
+
+```
+[x] ventes-deleteVente FONCTIONNE          le verbe n'avait JAMAIS ete vu passer ; il
+                                           venait d'une lecture statique et etait tenu
+                                           pour suspect depuis le 29/08.
+                                           delete_hektor_vente · confirmer:true · done
+                                           -> la vente a disparu (ids: [])
+
+[x] LE COMPROMIS NE REVIT PAS              question de Frederic du 29/08, ouverte
+                                           depuis. 50060 et 50059 restent status 2.
+
+[x] 'supprimer' DANS LA REDESCENTE         l'item disait « JAMAIS MESURE ». Mesure :
+                                           le statut REDESCEND, de Vendu a Sous compromis.
+                                           ⚠ ET C'EST HEKTOR QUI LE FAIT : sa fiche
+                                             affiche le badge COMPROMIS et le rail pointe
+                                             SOUS COMPROMIS. Notre redescente a calcule
+                                             EXACTEMENT la meme chose -> elles sont
+                                             d'accord, la regle est JUSTE, l'item est CLOS.
+                                           ➡ LA REGLE DES 7 MESURES A DONC UNE EXCEPTION :
+                                             « seule la creation fait bouger le statut »
+                                             vaut pour le cycle de vie, PAS pour la
+                                             SUPPRESSION -- qui retire l'objet justifiant
+                                             le statut.
+
+     ⚠ LE BOUTON N'EST PAS CASSE, IL DEMANDE CONFIRMATION. Deux clics automatises ont
+       fige le rendu et je m'appretais a signaler un defaut inexistant. Le code dit :
+           if (geste === 'supprimer_vente') { const daccord = window.confirm(...) }
+       C'est un dialogue NATIF, pose expres sur un geste irreversible -- une automatisation
+       ne peut pas y repondre. C'est Frederic qui a clique OK.
+
+     ⚠ CONFIRMATION EN DIRECT DU FILTRE : sitot la vente supprimee, ListCompromis SANS
+       withCompromisStatus rend de nouveau ['50059','50060'] pour cette annonce -- ils
+       etaient invisibles vingt minutes plus tot. Le filtre veut bien dire « compromis
+       dont l'annonce n'a pas encore de vente » (note du 30/08, verifiee causalement).
+
+     ⚠ ET LE REGISTRE FAIT SON TRAVAIL : la vente 23294 y RESTE, marquee
+       present_in_hektor = false. Delete-never. Et la modale l'affiche « plus dans Hektor ».
+
+**② REMETTRE EN ACTIF** — `statut_hektor_apres: 2`, app et Hektor d'accord. L'annonce
+quitte le cache des vendus (`annonce_now_current`) et revient au portefeuille
+(mandats 725 -> 726, diffusions 458 -> 459).
+
+**③④⑤ REFAIRE OFFRE -> COMPROMIS -> VENTE — le meme acquereur, le meme montant**
+
+```
+   cible        preuve de l'arbitre                              statut Hektor apres
+   active       --                                                2  Bien actif
+   offer        confirmee · id 33043 · identite POSEE            3  Sous offre
+   compromise   AMBIGU · candidates [50059, 50060, 50064]        4  Sous compromis
+   sold         confirmee · id 23298 · identite POSEE            5  Vendu
+```
+
+**LE DEFAUT DU COMPROMIS EST ISOLE AU-DELA DU DOUTE.** Trois transactions creees a la
+suite, MEME acquereur (605075), MEME montant (176 000), a quatre minutes d'intervalle :
+
+```
+   1001330  offre      33043           en_cours  605075   ✅ numero en 17 s
+   1001331  compromis  (SANS NUMERO)   en_cours  605075   ❌ orpheline
+   1001332  vente      23298           en_cours  605075   ✅ numero pose
+```
+
+Rien d'autre ne differe. Et le journal du worker donne la cause EN TOUTES LETTRES :
+
+```
+   « offre 33043 nomme par Hektor dans sa reponse et retrouve dans le releve
+     -- on ne devine pas par difference (4 candidat(s) sinon) »
+     candidats_par_difference : ["33043","33042","33038","33037"]
+     ventes_avant : []                    <-- LA LECTURE « AVANT » A RENDU VIDE
+```
+
+➡ **La lecture « avant » ne vaut rien**, et pour une raison structurelle : ListOffres ne
+rend que la page des 20 plus recentes de L'AGENCE, et les offres de l'annonce en etaient
+tombees. L'offre n'a ete sauvee que par le court-circuit `nommeParHektor`. La vente s'en
+sort par sa fenetre de dates. Le compromis, que Hektor ne nomme JAMAIS, n'a aucun filet.
+
+➡ **ET LA MESURE DICTE LE CORRECTIF DE LA BRIQUE 1.3** : ne pas comparer deux lectures de
+Hektor, mais comparer la lecture d'APRES **a notre propre registre** -- qui sait exactement
+ce qu'on connaissait deja. C'est la seule source fiable de « ce qui est nouveau », et elle
+est chez nous.
+
+**CE QUE 0.3 GAGNE AU PASSAGE** — la seconde mesure positive qui manquait :
+
+```
+   14:22:00   reenregistrement de la vente        -> datemaj = 14:22:00
+   15:05:16   SUPPRESSION de la vente             -> datemaj = 15:05:16
+   15:09:31   passage en Actif                    -> datemaj = 15:09:31
+   15:21:23   creation de la vente 23298          -> datemaj = 15:21:23
+   contre-temoins : 4 h sans derive · lecture · ouvrir/fermer sans enregistrer · assistant
+                    en echec -> AUCUN mouvement
+```
+➡ **0.3 EST CLOS** : quatre positifs, quatre contre-temoins. Le garde-fou anti-ecrasement
+des annonces est transposable aux transactions en surveillant la date du BIEN.
+
+**UN DEFAUT DE LECTURE VU EN DIRECT, pour la phase 2** — pendant tout le cycle, le cockpit
+a affiche « Compromis en cours » alors que les DEUX compromis etaient annules, et la
+vignette disait « Actif » en meme temps. Le listing affichait « Sous compromis » quand
+`annonces_current` disait « Actif ». C'est exactement la rubrique qui lit le blob au lieu
+du registre.
+
+**TRACES LAISSEES SUR 24933** *(a nettoyer en fin de chantier)*
+```
+   offres      33037 refusee · 33038 refusee · 33042 acceptee · 33043 en cours
+   compromis   50059 annule · 50060 annule · 50064 ACTIF
+   ventes      23294 SUPPRIMEE (trace au registre) · 23298 active
+   statut      Vendu
 ```
 
 ### CE QUE L'AUDIT A CORRIGE — trois erreurs de ma part
@@ -1531,11 +1642,10 @@ GEL que Frederic a repere le premier).*
            seul l'ENREGISTREMENT la deplace. Le garde-fou anti-ecrasement des
            annonces est donc TRANSPOSABLE aux transactions en surveillant la date
            du BIEN.
-         ⚠ HONNETETE : le plan demandait DEUX mesures positives ; je n'en ai
-           qu'UNE (le second passage dans l'assistant n'a plus avance, et je n'ai
-           pas voulu forcer d'ecritures supplementaires chez Hektor). Les trois
-           contre-temoins compensent, mais la repetition reste a prendre a la
-           premiere occasion reelle de la phase 3.
+         ✅ REPETITION PRISE le 03/09 avec le cycle complet : QUATRE positifs
+           (14:22 reenregistrement · 15:05 suppression · 15:09 passage en Actif ·
+           15:21 creation de la vente 23298) et QUATRE contre-temoins.
+           0.3 EST CLOS -- voir « LE CYCLE COMPLET DU 03/09 » plus haut.
          ⚠ ET LE GARDE-FOU SERA LARGE : la date du bien bouge aussi pour une
            photo ou un prix. Il se trompe DU BON COTE -- il bloquera parfois pour
            rien (et montrera un conflit), jamais il ne laissera passer un
@@ -1749,10 +1859,13 @@ le COMPROMIS                    🔴 LE VERDICT DU 28/08 EST A REVOIR. Essai du 
                                   dossier revient a Frederic -- « l'utilisateur
                                   designe ».
 l'OFFRE                         pas d'assistant ; formulaire + idOffre, non eprouve
-supprimer la VENTE              le bouton existe dans la modale, jamais tire.
-                                23294 est la pour ca. GESTE IRREVERSIBLE.
-la vente fait-elle REVIVRE le   question de Frederic du 29/08, toujours ouverte
-compromis quand on la supprime ?
+supprimer la VENTE              ✅ FAIT le 03/09 -- 23294 supprimee, verbe
+                                ventes-deleteVente EPROUVE (jamais vu passer avant).
+                                Le bouton passe par window.confirm : une
+                                automatisation ne peut pas y repondre.
+la vente fait-elle REVIVRE le   ✅ REPONDU : NON. 50059 et 50060 restent annules.
+compromis quand on la supprime ? Mais le STATUT redescend (Vendu -> Sous compromis),
+                                et c'est HEKTOR qui le fait.
 le SECOND ACQUEREUR             pourquoi un seul survit sur 50060
 le MEME ACQUEREUR DEUX CYCLES   4 annonces multi-mandats : jamais regarde
 ```
@@ -1781,10 +1894,15 @@ le MEME ACQUEREUR DEUX CYCLES   4 annonces multi-mandats : jamais regarde
 Le protocole du 01/09 a repondu a sa question en cinq mesures. Restent deux points.
 
 ```
-[ ] 'supprimer' est encore dans la redescente    JAMAIS MESURE.
-    'refus' et 'annuler' en ont ete retires apres mesure ; 'supprimer' reste,
-    non par conviction mais pour comparer. Se tranche en supprimant la vente 23294
-    -- geste IRREVERSIBLE, dernier item de C.19.
+[x] 'supprimer' dans la redescente    ✅ MESURE LE 03/09, ET LA REGLE EST JUSTE.
+    'refus' et 'annuler' en avaient ete retires apres mesure ; 'supprimer' restait,
+    non par conviction mais pour comparer. La vente 23294 a ete supprimee :
+        le statut redescend Vendu -> Sous compromis
+        et c'est HEKTOR qui le fait (badge COMPROMIS, rail SOUS COMPROMIS)
+        notre redescente calcule EXACTEMENT la meme chose -> aucun ecart
+    ➡ On GARDE 'supprimer' dans la redescente. Et la regle des 7 mesures
+      (« seule la creation fait bouger le statut ») a donc une EXCEPTION : la
+      SUPPRESSION -- logique, elle retire l'objet qui justifiait le statut.
 
 [ ] la sentinelle app_ecart_statut_regle : son SEUIL n a pas de sens.
     Mesure du 03/09 : 6 ecarts, tous REELS et tous expliques par le protocole
