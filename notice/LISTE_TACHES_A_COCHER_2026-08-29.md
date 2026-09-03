@@ -1904,7 +1904,42 @@ GEL que Frederic a repere le premier).*
 ```
 la MODIFICATION PAR LE WORKER   REPONDUE le 03/09 par 0.2 : OUI pour la vente.
                                 idVente voyage a chaque etape, formulaire ordinaire.
-le COMPROMIS                    🔴 LE VERDICT DU 28/08 EST A REVOIR. Essai du 03/09
+le COMPROMIS                    🟠 A MOITIE REPONDU -- FREDERIC A CORRIGE MA
+                                CONCLUSION TROP RAPIDE (03/09).
+
+                                MESURE : l'assistant S'OUVRE en modification, pre-rempli
+                                avec les valeurs de 50064 (176 000, acte 05/12 ; 50059
+                                etait a 178 000). Le module charge donc le BON compromis.
+
+                                PAS MESURE : que l'ENREGISTREMENT vise 50064.
+                                Frederic : « je pense que le compromis que tu ouvres
+                                n'est pas le bon, le seul en affichage est cloture ».
+                                Verifie : le formulaire de l'assistant ne porte AUCUN
+                                identifiant. Ses seuls caches sont containerModule[],
+                                containerName=PopinCompromis, step, fromStep. Les deux
+                                `id_compromis` de la page (50059 et 0) appartiennent a
+                                la FICHE (#chargeannonce_Content), pas a l'assistant.
+                                ⚠ La VENTE, elle, porte idVente=23294 dans CHAQUE POST.
+                                  L'asymetrie est reelle : pour le compromis, l'identite
+                                  ne voyage pas dans le formulaire.
+                                ➡ Enregistrer pourrait donc CREER un 50065, ou ecrire
+                                  sur 50059 si le module lit le champ de la fiche.
+                                  A TRANCHER PAR UN ESSAI DISTINGUABLE : changer UNE
+                                  valeur (prixPublique 176 000 -> 176 500) puis
+                                  enregistrer.
+                                     50064 passe a 176 500      -> MODIFICATION
+                                     un compromis NEUF apparait -> CREATION
+                                  Sans cet essai, « le compromis est modifiable » reste
+                                  une conclusion non mesuree -- et je l'avais ecrite.
+
+                                CE QUI TOMBE DU 28/08, ET CE QUI RESTE :
+                                tombe -- « module ES donc hors de portee » : le module
+                                  s'ouvre, et Hektor refuse pour une raison D'ETAT, en
+                                  clair (« un compromis cloture ne peut pas etre
+                                  modifie », Modules/GenericPopinStepperManager.js).
+                                reste -- rien ne prouve que le worker puisse piloter
+                                  l'enregistrement, faute d'identifiant dans le formulaire.
+                                (ancien libelle : LE VERDICT DU 28/08 EST A REVOIR.) Essai du 03/09
                                 14h40 : launchPopinCompromis(24933, 50060) OUVRE bien
                                 l'assistant -- le module se charge, aucune
                                 impossibilite technique. Hektor refuse pour une
