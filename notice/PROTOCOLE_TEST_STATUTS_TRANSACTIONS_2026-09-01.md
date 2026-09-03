@@ -563,6 +563,84 @@ bon.
 
 ---
 
+## 4nonies. RESULTAT DU CYCLE 4 -- LA VENTE -- 03/09/2026
+
+Les trois premieres marches avaient ete faites la veille pendant le chantier de
+modification : offre 33042 (acquereur 605030) -> acceptee -> compromis 50060.
+Restait la derniere.
+
+```
+T0   statut « Sous compromis » · compromis 50060 ACTIF avec son acquereur Sophie
+GESTE  vente 172 000, net vendeur 163 400, honoraires 8 600, mandat 11939
+T2   statut Hektor : { id 5, « VENDU » }              -> LA CREATION MONTE, 5e fois
+     vente 23294 · 03/09 · 172 000 · ACQUEREUR Sophie (605030)
+     compromis 50060 : status 1 -- TOUJOURS ACTIF, son acquereur intact
+     offre 33042 : ['proposition','accepte'] -- inchangee
+```
+
+### ① LA REGLE TIENT JUSQU AU BOUT
+
+Cinquieme confirmation. Creer une transaction deplace le statut ; rien d'autre ne
+le touche. La regle etablie sur les cycles 1 a 3 couvre les quatre genres de geste
+et les trois genres de transaction.
+
+### ② LE COMPROMIS N EST PAS CLOS PAR LA VENTE
+
+`status 1` apres la vente. Hektor ne le ferme pas.
+
+Et ca confirme EN DIRECT la mesure du parc du 31/08, qui disait la meme chose sur
+9 075 biens : *« une fois la vente enregistree, personne ne revient clore le
+compromis »*. Ce qu'on lisait dans les donnees se produit sous nos yeux.
+
+➡ CONSEQUENCE : « compromis actif » ne veut PAS dire « en cours ». Le champ ne
+peut pas servir a decider si l'on peut creer autre chose -- garde-fou deja pose le
+31/08 dans transactions_annonce_from_api.py, et confirme ici.
+
+### ③ ⚠ LA VENTE A SON ACQUEREUR -- SANS findProspect
+
+Le journal est formel : AUCUNE etape `hektor_assistant_acquereur`. Mon correctif
+d'hier est limite au compromis (`target === "compromise"`), et il n'a pas tourne.
+
+Deux lectures possibles :
+```
+a) l assistant de la VENTE accepte acquereurs[] dans son formulaire
+b) la vente HERITE de l acquereur du compromis
+```
+**(b) est la plus economique** : le compromis 50059, cree avec `acquereurs[]`
+envoye et SANS findProspect, n'avait aucun acquereur. Le champ seul ne suffit
+donc pas -- ici il n'y avait qu'une difference, la presence d'un compromis
+pourvu.
+
+Si (b) est vrai, alors **le findProspect pose hier sur le compromis repare la
+vente par ricochet**, sans une ligne de code de plus.
+
+⚠ NON PROUVE. Il faudrait une vente sur un bien SANS compromis pour trancher. A
+ne pas ecrire comme un acquis.
+
+### ④ L ARBITRE FONCTIONNE POUR LA VENTE
+
+```
+hektor_transaction_preuve/done     « vente 23294 confirmee par les DEUX portes »
+hektor_transaction_identite/done   numero pose sur 1 001 329, sans attendre la nuit
+```
+Contrairement au compromis, la vente dispose d'une lecture par identifiant --
+d'ou la confirmation complete et le numero pose tout de suite.
+
+### ⑤ UN PIEGE DE METHODE, RENCONTRE DEUX FOIS EN DEUX JOURS
+
+J'ai d'abord conclu que les compromis DISPARAISSAIENT du listing apres la vente :
+quatre pages balayees, aucun. C'etait faux. Ma sonde omettait
+`withCompromisStatus=false`, que le run envoie -- avec lui, les deux compromis
+sont la.
+
+Exactement la meme erreur qu'hier avec les offres (`sort=date&way=DESC` omis).
+
+➡ **REGLE : interroger Hektor avec LES PARAMETRES DU RUN, jamais les miens.**
+Ils sont lisibles dans `raw_api_response.params_json`. Une sonde improvisee ne
+mesure pas Hektor, elle mesure ma sonde.
+
+---
+
 ### La reponse a la question posee le 01/09
 
 > *« si Hektor lors du run nous remonte une transaction par le miroir, est-ce que

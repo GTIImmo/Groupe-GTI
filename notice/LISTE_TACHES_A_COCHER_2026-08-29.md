@@ -126,7 +126,8 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [x] ANNULER un compromis    FAIT 02/09 -- compromis 50059 (EM28412) : status 1 -> 2.
     Le statut de l'annonce NE BOUGE PAS, l'offre acceptee NE PASSE PAS refusee.
     'annuler' retire de la redescente ; il ne reste que 'supprimer', non mesure.
-[ ] SUPPRIMER une vente                           JAMAIS EXECUTE
+[ ] SUPPRIMER une vente     DESORMAIS POSSIBLE : la vente 23294 existe (cycle 4,
+    03/09). Geste IRREVERSIBLE -- une vente ne s'annule pas, elle disparait.
 [ ] le RETOUR EN ARRIERE sur refus                JAMAIS TESTE -- garde-fou de l'instantane
 [x] redemarrer les workers                        fait plusieurs fois le 31/08
 [x] deployer le front                             en ligne, bundle index-BLZWZur4
