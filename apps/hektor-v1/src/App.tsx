@@ -17773,18 +17773,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     loadAffairesForDossier ne filtre rien. */}
                 {statusChangeAffaires.length > 0 ? (() => {
                   const courante = affaireCourantePourStatut()
-                  const GENRE: Record<string, string> = { offre: 'Offre', compromis: 'Compromis', vente: 'Vente' }
-                  const etatLabel = (kind: string, state: string | null) => {
-                    const s = String(state ?? '').trim().toLowerCase()
-                    if (!s) return 'état non renseigné'
-                    if (s === 'refused' || s === 'refusee') return 'refusée'
-                    if (s === 'accepted' || s === 'acceptee') return 'acceptée'
-                    if (s === 'proposed') return 'proposée'
-                    if (s === 'cancelled' || s === 'annule') return 'annulé'
-                    if (s === 'active') return kind === 'compromis' ? 'signé' : 'en cours'
-                    if (s === 'en_cours') return "enregistrée dans l'app"
-                    return s
-                  }
+                  // UNE SEULE COPIE DE LA FORMULE (03/09) : la rubrique Affaires du
+                  // cockpit affiche les memes etats. Deux copies divergent tot ou tard --
+                  // la regle du projet. Elles vivent desormais au niveau module.
+                  const GENRE = AFFAIRE_GENRE_LABEL
+                  const etatLabel = affaireEtatLabel
                   return (
                     <section className="status-change-affaires">
                       <div className="sca-h">
@@ -23354,6 +23347,218 @@ function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDos
 
 // Cockpit v2 — coquille reproduisant la maquette v26. Réutilise les composants/handlers existants ;
 // DossierDetailLayoutBase reste 100 % intacte. Rendu uniquement si le flag est ON.
+// ═══════════════════════════════════════════════════════════════════════════
+// 2.1 -- LA RUBRIQUE AFFAIRES LIT LE REGISTRE          (03/09/2026)
+//
+// CE QU'ELLE FAISAIT. Elle ne lisait PAS le registre du tout. deriveAffaire()
+// partait de trois booleens tires du STATUT DE L'ANNONCE, et retombait sur le
+// prix du bien des qu'un montant manquait :
+//         money('vente_prix') || formatPrice(dossier.prix)
+// D'ou « Vente 180 000 EUR » sur une vente a 172 000 -- et surtout l'impossibilite
+// STRUCTURELLE d'afficher plus d'une affaire par genre, puisque case_dossier_source
+// ne porte qu'UN identifiant de chaque et qu'app_view_generale en herite.
+// Ce n'etait pas un bug : c'etait une rubrique jamais branchee.
+//
+// LA DECISION QUE LE PLAN LAISSAIT OUVERTE -- « changer la source, ou lire le
+// registre A COTE » -- est tranchee ici : A COTE. Changer case_dossier_source
+// remonterait tout le pipeline pour un affichage ; lire le registre n'y touche pas,
+// et les donnees sont deja la (Lot 3 du 28/08 : « AUCUNE donnee a produire »).
+//
+// LE GRAIN EST LA CHAINE, posee par la brique 1.1 : l'offre, le compromis et la
+// vente d'un MEME acquereur partagent app_chaine_id. Une chaine = un bloc a
+// l'ecran. C'est ce qui permet enfin d'en montrer plusieurs.
+//
+// ⚠ LE COMPOSANT DE MAQUETTE N'EST PAS TOUCHE : CkAffaires prend UNE affaire, on
+//   l'appelle une fois par chaine. Rien a reecrire.
+//
+// ⚠ UNE LECTURE RATEE NE VAUT JAMAIS « AUCUNE AFFAIRE ». Si le registre est
+//   injoignable ou vide, on retombe sur deriveAffaire() -- le comportement
+//   d'aujourd'hui. On ne peut donc pas aggraver, seulement ameliorer.
+
+const AFFAIRE_GENRE_LABEL: Record<string, string> = {
+  offre: 'Offre', compromis: 'Compromis', vente: 'Vente',
+}
+
+/** L'etat d'une transaction en francais. UNE SEULE COPIE : la modale de changement
+ *  de statut appelle la meme -- deux copies d'une formule divergent tot ou tard. */
+function affaireEtatLabel(kind: string, state: string | null | undefined): string {
+  const s = String(state ?? '').trim().toLowerCase()
+  if (!s) return 'état non renseigné'
+  if (s === 'refused' || s === 'refusee') return 'refusée'
+  if (s === 'accepted' || s === 'acceptee') return 'acceptée'
+  if (s === 'proposed') return 'proposée'
+  if (s === 'cancelled' || s === 'annule') return 'annulé'
+  if (s === 'active') return kind === 'compromis' ? 'signé' : 'en cours'
+  if (s === 'en_cours') return "enregistrée dans l'app"
+  return s
+}
+
+/** ⚠ `acquereur_json` est du jsonb : PostgREST le rend DEJA deserialise, alors que
+ *  le type l'annonce en `string`. JSON.parse sur un objet echoue en silence -- et
+ *  l'acquereur s'affiche « — » sans que rien ne le signale. Piege deja rencontre
+ *  dans la modale ; la parade est reprise ici, pas redecouverte. */
+function affaireAcquereurParty(row: AffaireLedgerRow | undefined | null): CkAffaireParty | null {
+  if (!row) return null
+  const brut: unknown = row.acquereur_json
+  return typeof brut === 'string'
+    ? parseJson<CkAffaireParty | null>(brut, null)
+    : (brut as CkAffaireParty | null)
+}
+
+/** Un prix, ou RIEN. Jamais le prix du bien a la place -- c'est exactement le
+ *  mensonge qu'on corrige : « mieux vaut un champ absent qu'un champ menteur ». */
+function affairePrix(x: unknown): string {
+  const n = Number(String(x ?? '').trim())
+  return Number.isFinite(n) && n > 0 ? formatPrice(n) : ''
+}
+
+const AFFAIRE_RANG: Record<string, number> = { offre: 1, compromis: 2, vente: 3 }
+const AFFAIRE_ETAT_MORT = new Set(['refused', 'cancelled'])
+
+type ChaineAffaire = { chaine: string; lignes: AffaireLedgerRow[]; rang: number; date: string }
+
+/** Range les lignes du registre en DOSSIERS D'AFFAIRE, un par chaine, le plus
+ *  avance en premier. Une ligne sans chaine (registre pas encore rattrape) reste
+ *  visible, seule dans la sienne -- on ne la fait pas disparaitre. */
+function grouperAffairesParChaine(rows: AffaireLedgerRow[]): ChaineAffaire[] {
+  const par = new Map<string, AffaireLedgerRow[]>()
+  for (const r of rows) {
+    const cle = r.app_chaine_id != null ? String(r.app_chaine_id) : 'seule-' + String(r.app_affaire_id)
+    const l = par.get(cle)
+    if (l) l.push(r)
+    else par.set(cle, [r])
+  }
+  const out: ChaineAffaire[] = []
+  par.forEach((lignes, chaine) => {
+    let rang = 0
+    let date = ''
+    for (const l of lignes) {
+      rang = Math.max(rang, AFFAIRE_RANG[String(l.kind)] ?? 0)
+      const d = String(l.date ?? '').trim()
+      if (d > date) date = d
+    }
+    out.push({ chaine, lignes, rang, date })
+  })
+  out.sort((a, b) => (b.rang - a.rang) || (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+  return out
+}
+
+/** La derniere transaction d'un genre dans la chaine. Les lignes arrivent deja
+ *  triees par date decroissante (loadAffairesForDossier) : la premiere trouvee est
+ *  la plus recente. */
+function derniereDuGenre(lignes: AffaireLedgerRow[], kind: string): AffaireLedgerRow | null {
+  for (const l of lignes) if (String(l.kind) === kind) return l
+  return null
+}
+
+/** Construit ce que la maquette attend, A PARTIR DU REGISTRE et de lui seul. */
+function ckAffaireDepuisChaine(c: ChaineAffaire, vendeur: CkParty | null): CkAffaire {
+  const o = derniereDuGenre(c.lignes, 'offre')
+  const cp = derniereDuGenre(c.lignes, 'compromis')
+  const v = derniereDuGenre(c.lignes, 'vente')
+  const vivante = (r: AffaireLedgerRow | null) =>
+    r != null && !AFFAIRE_ETAT_MORT.has(String(r.state ?? '').trim().toLowerCase())
+
+  const party = affaireAcquereurParty(o ?? cp ?? v ?? c.lignes[0])
+  const acqNom = ckPartyName(party)
+  const coord = ckAffPartyCoord(party)
+
+  const etape = v ? 'vente' : cp ? 'compromis' : 'offre'
+  const courante = v ?? cp ?? o
+  const etat = courante ? affaireEtatLabel(String(courante.kind), courante.state) : ''
+  const morte = courante != null
+    && AFFAIRE_ETAT_MORT.has(String(courante.state ?? '').trim().toLowerCase())
+
+  const next = morte
+    ? 'Affaire arrêtée — la trace reste au registre.'
+    : etape === 'vente'
+      ? 'Affaire clôturée — établir le bilan de vente.'
+      : etape === 'compromis'
+        ? "Préparer l'acte — suivre les conditions suspensives."
+        : "Traiter l'offre — accepter, contre-proposer ou refuser."
+
+  const n = c.lignes.length
+  return {
+    banner: {
+      mood: morte ? 'block' : etape === 'offre' ? 'warn' : 'ok',
+      state: (AFFAIRE_GENRE_LABEL[etape] ?? etape)
+        + (etat ? ' · ' + etat : '')
+        + (acqNom ? ' · ' + acqNom : ''),
+      next,
+      comment: '',
+      chip: "Dossier n° " + c.chaine + ' · ' + n + ' transaction' + (n > 1 ? 's' : ''),
+    },
+    tl: {
+      offre: o ? (cp || v ? 'done' : vivante(o) ? 'active' : 'done') : 'pending',
+      compromis: cp ? (v ? 'done' : vivante(cp) ? 'active' : 'done') : 'pending',
+      vente: v ? 'done' : 'pending',
+    },
+    // Les montants viennent du REGISTRE. Vides s'ils manquent -- plus jamais le
+    // prix du bien a la place.
+    offre: o ? {
+      montant: affairePrix(o.montant),
+      net: '',
+      date: o.date ? formatDate(o.date) : '',
+      validite: '',
+      etat: affaireEtatLabel('offre', o.state),
+      raw: String(o.hektor_affaire_id ?? '').trim()
+        ? 'Hektor n° ' + String(o.hektor_affaire_id)
+        : "Enregistrée dans l'app",
+      acqNom,
+      acqTel: coord.tel ?? '',
+      acqMail: coord.email ?? '',
+    } : null,
+    compromis: cp ? {
+      prix: affairePrix(cp.montant),
+      net: '',
+      dateStart: cp.date ? formatDate(cp.date) : '',
+      dateActe: cp.date_acte ? formatDate(cp.date_acte) : '',
+      retract: '',
+      sequestre: affairePrix(cp.sequestre),
+      etat: affaireEtatLabel('compromis', cp.state),
+    } : null,
+    vente: v ? {
+      date: v.date ? formatDate(v.date) : '',
+      prix: affairePrix(v.montant),
+      honoraires: '',
+      commission: '',
+      notaires: '',
+    } : null,
+    parties: {
+      acq: acqNom ? { n: acqNom, s: 'Acquéreur' } : null,
+      notAcq: null,
+      notVend: null,
+      vendeur,
+    },
+  }
+}
+
+/** LE DETAIL DE LA CHAINE -- ce que le bloc de maquette ne peut pas montrer.
+ *  CkAffaires n'a qu'une case par genre ; une chaine peut porter trois offres.
+ *  Cette liste les rend TOUTES visibles, avec leur numero et leur etat. */
+function CkChaineLignes({ lignes }: { lignes: AffaireLedgerRow[] }) {
+  const genres = new Set(lignes.map((l) => String(l.kind)))
+  if (genres.size === lignes.length) return null   // une de chaque : le bloc suffit
+  return (
+    <ul className="fa-ck-chaine-lignes">
+      {lignes.map((l) => {
+        const numero = String(l.hektor_affaire_id ?? '').trim()
+        const prix = affairePrix(l.montant)
+        return (
+          <li key={l.app_affaire_id}>
+            <b>{AFFAIRE_GENRE_LABEL[String(l.kind)] ?? l.kind}</b>
+            {numero ? ' n° ' + numero : " (enregistrée dans l'app)"}
+            {' · ' + affaireEtatLabel(String(l.kind), l.state)}
+            {prix ? ' · ' + prix : ''}
+            {l.date ? ' · ' + formatDate(l.date) : ''}
+            {l.present_in_hektor === false && numero ? ' · plus dans Hektor' : ''}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const detailVariant = props.detailVariant ?? 'annonce'
   const [activeTab, setActiveTab] = useState<string>('synthese')
@@ -23374,6 +23579,29 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   // Quand le détail se recharge (read-through / job worker), le calque tient la valeur → on purge le diff local.
   useEffect(() => { setEdited({}); setSaveMsg(null) }, [props.detail])
+
+  // ─── 2.1 : LE REGISTRE DES TRANSACTIONS, charge par la rubrique elle-meme ───
+  // Meme patron que DossierPropositionsSection : un composant autonome qui charge
+  // ses lignes. Rien a remonter dans App(), rien a faire descendre en props.
+  //
+  // ⚠ TROIS ETATS, ET PAS DEUX. `null` = pas encore lu ; `[]` = lu, et il n'y a
+  //   rien ; une liste = lu, et voici. Confondre « je ne sais pas » avec « il n'y
+  //   a rien » est l'erreur que ce projet passe son temps a corriger -- c'est elle
+  //   qui a fait naitre des offres sans numero le 02/09. Si la lecture echoue, on
+  //   RESTE a null et la rubrique retombe sur son affichage d'aujourd'hui.
+  const [ckRegistreAffaires, setCkRegistreAffaires] = useState<AffaireLedgerRow[] | null>(null)
+  const ckDossierIdPourRegistre = props.selectedDossier?.app_dossier_id ?? null
+  useEffect(() => {
+    let vivant = true
+    setCkRegistreAffaires(null)
+    const id = Number(ckDossierIdPourRegistre)
+    if (!Number.isFinite(id) || id <= 0) return
+    loadAffairesForDossier(id)
+      .then((lignes) => { if (vivant) setCkRegistreAffaires(lignes) })
+      .catch(() => { if (vivant) setCkRegistreAffaires(null) })
+    return () => { vivant = false }
+  }, [ckDossierIdPourRegistre])
+
   // Adresse « live » pour la colonne de gauche : le parent ne re-fetch PAS le détail après un save en
   // place, donc props.address restait figé jusqu'à un refresh manuel. On superpose le diff local
   // `edited` (clés Hektor ADRESSE_COMPL/villepublique/codepublique) → l'adresse s'affiche instantanément
@@ -25861,7 +26089,41 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     honoraires: honFai ? { fai: honFai, charge: '', taux: '', part: '', rendement: '' } : undefined,
                   }
                 }
-                return <CkAffaires affaire={affMock ?? deriveAffaire()} />
+                // ─── 2.1 : LE REGISTRE D'ABORD, LA DERIVATION EN FILET ───
+                // Ordre delibere :
+                //   1. le mock riche, s'il existe (demo) -- inchange
+                //   2. LE REGISTRE : une chaine = un dossier d'affaire = un bloc.
+                //      C'est ce qui permet d'en afficher PLUSIEURS, et d'afficher
+                //      les vrais montants au lieu du prix du bien.
+                //   3. deriveAffaire() -- le comportement d'aujourd'hui, garde comme
+                //      filet. `ckRegistreAffaires === null` veut dire « pas encore lu
+                //      ou lecture ratee », JAMAIS « aucune affaire ».
+                if (affMock) return <CkAffaires affaire={affMock} />
+                const chaines = ckRegistreAffaires && ckRegistreAffaires.length
+                  ? grouperAffairesParChaine(ckRegistreAffaires)
+                  : null
+                if (chaines && chaines.length) {
+                  const c0 = props.contacts[0]
+                  const vendeurReg: CkParty | null = c0 && (c0.name || c0.lastName)
+                    ? { n: c0.name || `${c0.civility ?? ''} ${c0.firstName ?? ''} ${c0.lastName ?? ''}`.trim(), s: `Vendeur · mandant${c0.sourceId ? ` · Contact ${c0.sourceId}` : ''}`, tel: c0.phone ?? undefined, mail: c0.email ?? undefined }
+                    : null
+                  return (
+                    <>
+                      {chaines.length > 1 ? (
+                        <div className="fa-ck-lb-manage-h">
+                          {chaines.length} dossiers d'affaire sur ce bien
+                        </div>
+                      ) : null}
+                      {chaines.map((c) => (
+                        <div className="fa-ck-chaine" key={c.chaine}>
+                          <CkAffaires affaire={ckAffaireDepuisChaine(c, vendeurReg)} />
+                          <CkChaineLignes lignes={c.lignes} />
+                        </div>
+                      ))}
+                    </>
+                  )
+                }
+                return <CkAffaires affaire={deriveAffaire()} />
               })()}
               {/* Régression corrigée (audit §5 bis #4) : les propositions acquéreurs
                   (DossierPropositionsSection) n'étaient pas rendues dans le cockpit.

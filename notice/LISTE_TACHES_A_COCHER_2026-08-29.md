@@ -2259,23 +2259,56 @@ GEL que Frederic a repere le premier).*
 ### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
 
 ```
-[ ] 2.1  LA RUBRIQUE AFFAIRES LIT LE REGISTRE
-         AUJOURD'HUI elle ne le lit PAS DU TOUT : deriveAffaire() (App.tsx:25829)
-         part de trois booleens tires du STATUT de l'annonce, et retombe sur le
-         prix du bien quand un montant manque :
+[x] 2.1  LA RUBRIQUE AFFAIRES LIT LE REGISTRE
+         ✅ CODEE LE 03/09 AU SOIR. Build vert (npm run build = tsc -b + vite).
+
+         CE QU'ELLE FAISAIT. Elle ne lisait PAS le registre du tout. deriveAffaire()
+         partait de trois booleens tires du STATUT DE L'ANNONCE et retombait sur le
+         prix du bien des qu'un montant manquait :
              money('vente_prix') || formatPrice(dossier.prix)
-         -> d'ou « Vente 180 000 EUR » alors qu'elle est a 172 000, et
-            l'impossibilite STRUCTURELLE d'afficher plus d'une affaire par genre.
-         Ce n'est pas un bug a corriger : c'est une rubrique jamais branchee.
-         ⚠ PLUS LOURD QU'IL N'Y PARAIT : case_dossier_source ne porte QU'UN
-           identifiant de chaque (offre_id, compromis_id, vente_id),
-           app_view_generale en herite, et le front raisonne dessus. A trancher :
-           changer la source, ou lire le registre A COTE.
-         C'est le Lot 3 deja specifie le 28/08 : « brancher app_affaire_ledger sur
-         l'annonce, comme il l'est deja sur le registre des mandats. AUCUNE donnee
-         a produire : elles sont deja la. »
-         verif : sur 24933, TROIS offres et DEUX compromis affiches, vente a
-                 172 000 et non 180 000, et la saisie visible immediatement
+         D'ou « Vente 180 000 EUR » sur une vente a 172 000, et l'impossibilite
+         STRUCTURELLE d'afficher plus d'une affaire par genre.
+
+         ─── LA DECISION QUE LE PLAN LAISSAIT OUVERTE ───
+         « changer la source, ou lire le registre A COTE » -> **A COTE**.
+         Changer case_dossier_source remonterait tout le pipeline pour un simple
+         affichage ; lire le registre n'y touche pas, et les donnees sont deja la
+         (Lot 3 du 28/08 : « AUCUNE donnee a produire »).
+
+         ─── COMMENT ───
+         grain          la CHAINE de 1.1 : une chaine = un dossier = un bloc
+         chargement     la rubrique charge ses lignes elle-meme, patron de
+                        DossierPropositionsSection. Rien a remonter dans App().
+         maquette       CkAffaires PAS TOUCHE : il prend UNE affaire, on l'appelle
+                        une fois par chaine.
+         CkChaineLignes composant neuf : liste TOUTES les transactions d'une chaine
+                        (le bloc de maquette n'a qu'une case par genre, or une
+                        chaine peut porter trois offres). Ne s'affiche que s'il y a
+                        plus d'une transaction d'un meme genre.
+         formule        affaireEtatLabel + AFFAIRE_GENRE_LABEL montent au niveau
+                        module, et LA MODALE LES APPELLE AUSSI -- une seule copie.
+
+         ⚠ TROIS ETATS, PAS DEUX : null = pas encore lu OU lecture ratee ;
+           [] = lu, rien ; liste = lu, voici. Une lecture ratee retombe sur
+           deriveAffaire(), le comportement d'aujourd'hui. ON NE PEUT PAS AGGRAVER.
+
+         ─── VERIFICATIONS ───
+         DONNEES (Supabase, annonce 24933) : 12 transactions, 3 dossiers
+             5469   Sophie   offres 33042/33046 · compromis 50060/50065/50066
+                             · vente 23294
+             5470   CLOTURE  offres 33037/33038/33043 · compromis 50064
+                             · vente 23298
+             12961  compromis 50059, sans acquereur, seul
+             ✅ vente 23294 = 172 000 -- PAS 180 000 (le prix du bien).
+                C'est LA verification demandee par le plan.
+         REPLI (serveur mock, sans Supabase) : rubrique ouverte en direct ->
+             1 bloc, 0 chaine, aucune erreur console. La lecture echoue et l'ecran
+             garde l'affichage d'aujourd'hui. Le filet marche.
+         ⚠ PAS ENCORE VU AVEC LES VRAIES DONNEES : le serveur mock n'a pas de
+           Supabase, et le serveur de dev reel demande une connexion. Le nouvel
+           affichage est prouve sur les DONNEES et par le BUILD, pas a l'oeil.
+           A regarder au premier lancement local (le drapeau cockpit est deja
+           actif dans .env.local).
 
 [ ] 2.2  LE CHOIX QUAND PLUSIEURS CHAINES VIVENT
          AUJOURD'HUI affaireCourantePourStatut() rend null en cas d'ambiguite et

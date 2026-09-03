@@ -2653,3 +2653,30 @@
 .fcyc-ev:hover { background: rgba(197,0,95,.045); }
 .fcyc-body { gap: 20px; }
 @media (prefers-reduced-motion: reduce) { .fa-ck-aband-emb .fce-stamp { animation: none !important; } }
+
+/* ── 2.1 : PLUSIEURS DOSSIERS D'AFFAIRE SUR UN MEME BIEN (03/09/2026) ──────────
+   La rubrique lit desormais le registre. Un bien peut porter plusieurs chaines
+   (offre -> compromis -> vente d'un meme acquereur) : chacune a son bloc, et il
+   faut les separer a l'oeil, sinon deux acquereurs se lisent comme un seul.
+   Additif : aucune regle existante n'est modifiee. */
+.fa-ck-chaine + .fa-ck-chaine {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 2px dashed #dcd6c8;
+}
+
+/* Le detail que le bloc de maquette ne peut pas montrer : CkAffaires n'a qu'une
+   case par genre, or une chaine peut porter trois offres. On les liste toutes. */
+.fa-ck-chaine-lignes {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e4ddcd;
+  background: #fbfaf5;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #55503f;
+}
+.fa-ck-chaine-lignes li + li { border-top: 1px solid #efe9db; }
+.fa-ck-chaine-lignes b { color: #2f2b20; font-weight: 600; }
