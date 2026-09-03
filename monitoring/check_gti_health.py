@@ -2068,6 +2068,68 @@ def write_results(
     except Exception:
         previous_status = {}
 
+    # ─── RECONCILIER LES CLES DYNAMIQUES (03/09/2026) ───
+    #
+    # Deux familles de sondes n'ecrivent une ligne QUE quand ca va mal :
+    #     workers.heartbeat:<worker>     seulement les workers en retard
+    #     scheduledtasks:<tache>         seulement les taches en anomalie
+    #
+    # Quand ca se remet, personne ne repasse : l'ancienne alarme reste, avec sa
+    # vieille date et son vieux verdict, jusqu'a ce que la purge des 24 h la
+    # ramasse. Deux consequences, et la seconde est la vraie :
+    #
+    #   1. le tableau affiche comme actuelles des alarmes resolues -- rien ne
+    #      distingue « c'est toujours vrai » de « ca n'a pas ete reevalue » ;
+    #   2. SURTOUT, la deduplication d'alerte est faussee. La regle est
+    #      `previous_status.get(cle) != "critical"`. Si un worker tombe, se
+    #      remet, puis RETOMBE dans les 24 h, l'ancien etat dit encore
+    #      « critical » -- ce n'est donc pas une bascule, et AUCUN message ne
+    #      part. Une panne qui revient est muette.
+    #
+    # On emet donc un « ok » explicite pour toute cle de ces familles qui etait
+    # signalee et ne l'est plus. La ligne passe au vert, sa date se rafraichit,
+    # et la bascule redevient exacte.
+    #
+    # ⚠ UNE SEULE FOIS : on n'emet que si l'ancien etat n'etait pas deja « ok ».
+    # Sans cette garde, la cle serait re-emise a chaque passe et ne serait jamais
+    # ramassee par la purge -- on remplacerait une alarme fantome par une ligne
+    # verte immortelle.
+    #
+    # Rien n'est lu de plus : previous_status vient d'etre charge juste au-dessus.
+    if previous_status_lu:
+        # TROIS familles, et la troisieme s'est revelee en nettoyant les deux
+        # premieres : safe_check n'ecrit « monitor.<sonde> » QUE si la sonde
+        # plante. Quand elle repasse, l'« unknown » reste affiche.
+        FAMILLES = (
+            ("workers.heartbeat:", "workers",        "heartbeat_worker"),
+            ("scheduledtasks:",    "scheduledtasks", "windows_task"),
+            ("monitor.",           "monitor",        "sonde"),
+        )
+        cles_emises = {r.status_key for r in results}
+        for cle, ancien in previous_status.items():
+            if not isinstance(cle, str):
+                continue
+            famille = next((f for f in FAMILLES if cle.startswith(f[0])), None)
+            if famille is None:
+                continue
+            # Une cle re-emise par cette passe dit deja la verite ; une cle deja
+            # « ok » n'a rien a annoncer -- et la re-emettre l'empecherait d'etre
+            # ramassee par la purge des 24 h.
+            if cle in cles_emises or ancien == "ok":
+                continue
+            prefixe, composant, sonde = famille
+            quoi = cle[len(prefixe):] or cle
+            results.append(CheckResult(
+                status_key=cle,
+                domain="system",
+                component=composant,
+                check_name=sonde,
+                status="ok",
+                severity="info",
+                message=f"Retour a la normale : {quoi}",
+                details={"resolu": True, "etat_precedent": ancien},
+            ))
+
     dispatch_alerts(alerter, results, previous_status, previous_status_lu)
 
     try:
