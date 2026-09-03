@@ -1457,6 +1457,68 @@ vignette disait « Actif » en meme temps. Le listing affichait « Sous compromi
 `annonces_current` disait « Actif ». C'est exactement la rubrique qui lit le blob au lieu
 du registre.
 
+### LE TABLEAU DE VERITE — 03/09, demande par Frederic
+
+> *« il va falloir d'abord verifier toutes les tables et faire un appel api pour savoir
+> si Hektor les connait aussi »*. Fait : Hektor (API), registre Supabase, registre local,
+> miroir, et les pointeurs du dossier.
+
+⚠ **UN TROISIEME PARAMETRE DE LA MEME FAMILLE** : `ListOffres` avec
+`withOfferStatus=false` remonte TOUS les identifiants d'offre de l'annonce, la ou la
+page 1 par defaut ne donne que les 20 plus recentes de l'AGENCE. C'est ce parametre qui
+manquait a la lecture « avant » de l'arbitre -- voir `ventes_avant: []`.
+
+```
+                    HEKTOR              Supabase      LOCAL        miroir   pointeur
+   offre  33037     refus               refused       refused        oui
+   offre  33038     refus               refused       refused        oui
+   offre  33042     refus (3 props)     refused       ACCEPTED ✗     oui     offre_id
+   offre  33043     proposition         en_cours      ABSENT ✗     ABSENT ✗
+   comp   50059     status 2, acq []    cancelled     cancelled      oui
+   comp   50060     status 2, acq 605030 cancelled    ACTIVE ✗       oui     compromis_id
+   comp   50064     status 1 ACTIF,acq[] en_cours     ABSENT ✗     ABSENT ✗
+   vente  23294     SUPPRIMEE           trace false   absent       absent
+   vente  23298     active 180 000,acq[] en_cours     ABSENT ✗     ABSENT ✗  vente_id=NULL
+                          176 000 chez nous ✗
+```
+
+**CINQ ECARTS, DONT TROIS SEULEMENT SONT DES DEFAUTS**
+
+```
+1  le registre LOCAL a un run de retard   5 lignes contre 9.  PAS un defaut : il ne se
+   met a jour qu'a 04:31. Mais c'est lui qui alimente le miroir et les vues.
+2  le miroir ne connait aucune vente       PAS un defaut : les deux ventes sont nees
+   de cette annonce                        apres le dernier run.
+3  LES POINTEURS DU DOSSIER DESIGNENT      DEFAUT. offre_id=33042, compromis_id=50060,
+   LES ANCIENNES TRANSACTIONS              vente_id=NULL alors que le statut dit VENDU.
+                                           ➡ C'est ce qui a fait viser 33042 au lieu de
+                                             33043 quand j'ai clique « Refuser l'offre ».
+                                             Un geste part sur la mauvaise transaction.
+4  la vente vaut 176 000 chez nous et      DEFAUT. La modale envoie `amount` ET
+   180 000 chez Hektor                     `sale_price` ; pour la VENTE, Hektor ne retient
+                                           que `sale_price`. L'autre est jete en silence.
+5  ni 50064 ni 23298 n'ont d'acquereur     DEFAUT, cause CONNUE : 605075 n'est pas type
+   chez Hektor                             « acquereur » (typologies_json = ["mandant"]).
+                                           605030 l'est (["acquéreur","mandant"]), et son
+                                           compromis 50060 a bien recu son acquereur.
+                                           ➡ L'OFFRE passe quand meme (elle envoie
+                                             id_acquereur, sans filtre). Le COMPROMIS et
+                                             la VENTE passent par la liste « Mes
+                                             acquereurs », FILTREE sur la typologie.
+```
+
+**LES TROIS CORRECTIONS DE CODE QUE CE RELEVE COMMANDE**
+
+```
+[ ] A  le pointeur du dossier ne designe plus la transaction courante -- c'est le
+       REGISTRE qui le fait. (deja la brique 2.1, mais on en a maintenant la
+       consequence concrete : un geste sur la mauvaise offre)
+[ ] B  UN SEUL champ de montant par genre -- arreter d'envoyer deux valeurs dont une
+       est jetee sans le dire
+[ ] C  VERIFIER LA TYPOLOGIE DE L'ACQUEREUR avant d'envoyer un compromis ou une vente,
+       sinon le lien est perdu en silence.  ⚠ BRIQUE NOUVELLE, ABSENTE DU PLAN.
+```
+
 **TRACES LAISSEES SUR 24933** *(a nettoyer en fin de chantier)*
 ```
    offres      33037 refusee · 33038 refusee · 33042 acceptee · 33043 en cours
