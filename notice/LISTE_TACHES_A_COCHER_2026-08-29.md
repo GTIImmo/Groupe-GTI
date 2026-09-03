@@ -1509,6 +1509,81 @@ manquait a la lecture « avant » de l'arbitre -- voir `ventes_avant: []`.
                                              acquereurs », FILTREE sur la typologie.
 ```
 
+### 🟢 LE COMPROMIS EST MODIFIABLE — PROUVE le 03/09, essai distinguable
+
+> Le verdict du 28/08 (« modifier un compromis est hors de portee du worker, c'est un
+> module ES ») est DEFINITIVEMENT FAUX. Essai concu pour ne laisser aucune ambiguite :
+> ouvrir l'assistant sur un compromis ACTIF, changer UNE valeur, enregistrer, regarder
+> qui bouge. C'est Frederic qui a traverse les quatre etapes et enregistre.
+
+```
+   AVANT           50065  prixPublique 177 000  honorairesSortie 8 600
+   valeur posee    prixPublique -> 177 500  (l'assistant recalcule honorairesSortie -> 500)
+   APRES           50065  prixPublique 177 500  honorairesSortie 500  note « test »
+                   50064  176 000  INCHANGE
+                   50060  172 000  INCHANGE
+                   50059  178 000  INCHANGE
+   ➡ AUCUN 50066. C'est une MODIFICATION, pas une creation. Et le module n'a pas
+     touche au mauvais compromis -- la crainte du « pire cas » est levee.
+```
+
+**ET L'INTUITION DE FREDERIC EST VALIDEE** — *« cela pourrait etre la solution pour les
+ecritures comme acquereurs »*. Il a profite de l'essai pour AJOUTER un acquereur et un
+notaire pendant la modification :
+
+```
+   acquereurs AVANT   ['605030']                        Sophie
+   acquereurs APRES   ['49234', '605030']               + M. TEST GTI, ajoute a la main
+```
+
+➡ **LA MODIFICATION EST LA VOIE D'ECRITURE DE L'ACQUEREUR.** La creation le perd quand
+la typologie ne suit pas ; la modification permet de l'attacher APRES COUP. C'est une
+sortie possible pour le defaut de typologie -- a condition que le worker sache la piloter.
+
+**LES ETAPES 2, 3 ET 4 — enfin inventoriees, grace aux captures de Frederic**
+
+```
+   etape 2  « Retrocession »            grisee, sautee dans ce parcours
+   etape 3  « Calcul des commissions »  Honoraires 8 750 EUR HT (10 500 TTC)
+                                        Unites d'entrees   50 %  ->  4 375 HT   [+]
+                                        Unites de sorties  50 %  ->  4 375 HT   [+]
+                                        Part Reseau       100 %  ->  8 750 HT
+   etape 4  « Conditions suspensives »  un [+] pour ajouter des conditions
+                                        un champ NOTES  -> « test », RETENU par Hektor
+   bouton final : « Enregistrer »  (et non « Enregistrer et terminer » comme la vente)
+```
+
+**LE NOTAIRE N'EST PAS LISIBLE PAR L'API** — et c'est un constat pour la brique de relecture :
+
+```
+   ListCompromis      ne renvoie AUCUNE cle « notaires »  (la VENTE, elle, en a une)
+   CompromisById      400 Bad Request sur ?id=  -- et on NE DEVINE PAS un nom de
+                      parametre : « un mauvais nom n'ecrit rien ET ne dit rien »
+   ➡ un champ qu'on peut ECRIRE mais pas RELIRE echappe a la verification. Il faudra
+     le relire par la console, ou l'accepter en aveugle -- a trancher.
+```
+
+**⚠ MON ERREUR DE MESURE, ET ELLE COUTE UN ESSAI**
+
+```
+   Ma capture reseau n'a RIEN vu passer de l'assistant : ni les etapes, ni
+   l'enregistrement. Cause : la version persistante n'enveloppait que
+   XMLHttpRequest. Le module du compromis passe par `fetch`.
+   ➡ A REFAIRE avec les DEUX enveloppes. C'est la seule chose qui manque pour
+     savoir COMMENT le worker doit s'y prendre.
+```
+
+**➡ CE QUI RESTE AVANT DE CODER LA MODIFICATION DEPUIS L'APP** *(demande de Frederic)*
+
+```
+[ ] capturer la requete d'enregistrement de l'assistant compromis (fetch + XHR)
+    -> sans elle on sait que le geste MARCHE, mais pas par ou il passe
+[ ] verifier que le worker peut la rejouer (il n'a pas de module ES, il poste)
+[ ] et pour la VENTE, la route est deja connue : getStepVente + idVente a chaque etape
+```
+
+---
+
 ### LA TYPOLOGIE DE L'ACQUEREUR — hypothese CONFIRMEE le 03/09
 
 > Cycle refait a la demande de Frederic, avec **Sophie (605030) des l'offre** -- la seule
