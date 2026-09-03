@@ -2079,7 +2079,37 @@ GEL que Frederic a repere le premier).*
 [ ] 1.2  LES COLONNES DE CLASSE A     3 a 4 a creer (liste arretee par 0.1)
          retour : colonnes inutilisees · verif : le carnet n'a plus d'orphelin
 
-[ ] 1.3  LE NUMERO HEKTOR POSE PAR IDENTITE, PLUS PAR SOUSTRACTION
+[x] 1.3  LE NUMERO HEKTOR POSE PAR IDENTITE, PLUS PAR SOUSTRACTION
+         ✅ CODEE ET PROUVEE LE 03/09 AU SOIR (commit 2d8593e).
+
+         LE GESTE D'EPREUVE : creer un compromis sur 24933, qui en portait DEJA
+         CINQ -- exactement la situation qui a fait echouer l'arbitre TROIS FOIS
+         dans la journee.
+
+            AVANT   ambigu: true, candidates: [50065,50064,50060,50059]
+                    -> aucun numero, attente du run de nuit
+            APRES   cree: true · verifie: true · confirmee: true
+                    identite: { status: "done", lignes: 1 }
+                    hektor_transaction_id: "50066"
+                    et AUCUNE ligne d'ambiguite : un seul candidat.
+
+         Le journal du worker :
+            « compromis 50066 cree et confirme par les DEUX portes (fiche + API) »
+            « La transaction creee a recu son numero Hektor dans l'app --
+              pas d'attente du run de nuit »
+
+         LE REGISTRE APRES COUP -- cinq compromis, TOUS numerotes :
+            1001326  50059  cancelled  178 000
+            1001328  50060  cancelled  172 000  Sophie
+            1001331  50064  cancelled  176 000  CLOTURE
+            1001334  50065  cancelled  177 000  Sophie
+            1001335  50066  EN COURS   179 000  Sophie   <- le nouveau
+
+         ⚠ DEUX NUMEROS ONT DU ETRE POSES A LA MAIN dans la journee (50064 et
+           50065), avant le correctif, pour que l'app puisse simplement ANNULER
+           ces compromis. C'est la mesure la plus parlante de ce que 1.3 coutait :
+           sans numero, une transaction creee par l'app n'a aucune adresse, et
+           AUCUN geste ne peut la viser.
          + le parametre withCompromisStatus=false corrige au passage
          touche : console_job_worker.js -> REDEMARRAGE DES 4 SERVICES par Frederic
          retour : revenir a la soustraction
