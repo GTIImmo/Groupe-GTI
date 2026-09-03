@@ -103,12 +103,36 @@ def main() -> int:
             # sans lui la route repond 200 avec data = null, sans le moindre
             # message. Les deux autres listings s'en passent -- c'est une
             # particularite de ListOffres, trouvee en la branchant le 01/09.
+            # ⚠ `withOfferStatus=false` AJOUTE LE 03/09, ET IL FAUT DIRE POURQUOI.
+            #
+            # Sans lui, cette route rend les 20 offres les plus recentes de
+            # L'AGENCE -- pas de l'annonce. Les offres d'un bien un peu ancien en
+            # tombent, et la lecture rend une liste VIDE pour lui. Mesure du 03/09
+            # sur l'annonce 24933, qui en portait quatre :
+            #     sans le parametre   ->  aucune offre de 24933
+            #     avec le parametre   ->  33037, 33038, 33042, 33043
+            # C'est ce vide qui a fait echouer l'arbitre trois fois dans la
+            # journee : le journal du worker porte « ventes_avant: [] ».
+            # Le parametre est documente depuis mars dans REPRISE_API_PARAMS.md
+            # (« utiliser withOfferStatus=false pour remonter tous les IDs ») et
+            # sync_raw.py l'applique deja pour les compromis. Il manquait ici.
             payload = client.get_json("/Api/Offre/ListOffres/",
-                                      params={"page": "1", "version": reglages.api_version})
+                                      params={"page": "1", "version": reglages.api_version,
+                                              "withOfferStatus": "false"})
             lignes = payload.get("data")  # PAS de « or [] » -- voir plus bas
         elif args.kind == "compromis":
+            # ⚠ `withCompromisStatus=false` AJOUTE LE 03/09 -- meme famille.
+            #
+            # Sans lui, ListCompromis ne rend que les compromis « EN COURS »,
+            # c'est-a-dire ceux dont l'annonce N'A PAS ENCORE DE VENTE (note du
+            # 30/08, verifiee causalement le 03/09 : les compromis de 24933 sont
+            # redevenus visibles a la seconde ou sa vente a ete supprimee).
+            # Sur une annonce vendue, la lecture rendait donc VIDE, et l'arbitre
+            # declarait « aucun compromis nouveau » sur une creation REUSSIE.
+            # sync_raw.py:231 passe ce parametre depuis toujours ; le pont non.
             payload = client.get_json("/Api/Vente/ListCompromis/",
-                                      params={"page": 0, "sort": "dateStart", "way": "desc"})
+                                      params={"page": 0, "sort": "dateStart", "way": "desc",
+                                              "withCompromisStatus": "false"})
             lignes = payload.get("liste")  # PAS de « or [] » -- voir plus bas
         else:
             pivot = args.date or dt.date.today().isoformat()

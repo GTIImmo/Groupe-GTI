@@ -11188,6 +11188,64 @@ async function enchainerArchivageApresVente(parentJob, annonceId, appDossierId, 
 // `app_affaires_sans_numero_hektor` (seuil 0) leve la main des le lendemain sur
 // une affaire restee sans numero : c'est elle qui porte l'alerte, pas une
 // exception qui doublerait le geste.
+// ─── 1.3 (03/09/2026) : ON N'IDENTIFIE PLUS SA CREATION PAR SOUSTRACTION ───
+//
+// LE DEFAUT, REPRODUIT TROIS FOIS LE 03/09 SUR LA MEME ANNONCE. L'arbitre
+// comparait deux lectures de Hektor -- « avant » et « apres ». La lecture
+// « avant » ne vaut rien, et le journal du worker le dit en toutes lettres :
+//
+//     « offre 33043 nomme par Hektor dans sa reponse et retrouve dans le releve
+//       -- on ne devine pas par difference (4 candidat(s) sinon) »
+//       candidats_par_difference : ["33043","33042","33038","33037"]
+//       ventes_avant : []                    <-- VIDE
+//
+// Pourquoi vide : ListOffres ne rend que les 20 offres les plus recentes de
+// L'AGENCE, et celles de l'annonce en etaient tombees. Resultat : les quatre
+// offres paraissent neuves, l'arbitre refuse de deviner (a raison), et le numero
+// n'est jamais pose. Meme scenario pour les compromis 50060, 50065 et 50064.
+//
+// L'OFFRE ET LA VENTE s'en sortaient par un filet : Hektor NOMME l'offre dans sa
+// reponse, et la vente se lit par fenetre de dates. Le COMPROMIS, que Hektor ne
+// nomme jamais, n'avait aucun filet.
+//
+// LE CORRECTIF QUE LA MESURE DICTE. On ne compare plus la lecture d'apres a une
+// SECONDE LECTURE DE HEKTOR, mais A NOTRE PROPRE REGISTRE. Il sait exactement
+// quels identifiants nous connaissions deja pour cette annonce et ce genre --
+// c'est la seule source fiable de « ce qui est nouveau », et elle est CHEZ NOUS.
+// Elle ne depend d'aucune pagination, d'aucun filtre, d'aucun parametre oublie.
+//
+// RETOUR ARRIERE : passer PREUVE_PAR_REGISTRE a false, on revient a la soustraction.
+const PREUVE_PAR_REGISTRE = true;
+
+/** Les identifiants Hektor que NOTRE REGISTRE porte deja pour (annonce, genre).
+ *  Rend null si la lecture echoue -- l'appelant retombe alors sur l'ancien
+ *  comportement plutot que de conclure sur une liste vide, qui ferait passer
+ *  TOUTES les transactions pour neuves. « Je ne sais pas » n'est pas « aucune ». */
+async function idsDejaConnusDuRegistre(job, annonceId, genre) {
+  try {
+    const lignes = await supabaseRequest(
+      "app_affaire_ledger?select=hektor_affaire_id"
+      + `&hektor_annonce_id=eq.${encodeURIComponent(String(annonceId))}`
+      + `&kind=eq.${encodeURIComponent(genre)}`,
+      { method: "GET" });
+    if (!Array.isArray(lignes)) return null;
+    const connus = new Set();
+    for (const l of lignes) {
+      const id = String((l && l.hektor_affaire_id) || "").trim();
+      if (id) connus.add(id);
+    }
+    return connus;
+  } catch (erreur) {
+    await logJob(job.id, "hektor_transaction_preuve", "error",
+      `Le registre n'a pas pu etre lu pour identifier la nouvelle ${genre} -- `
+      + "on retombe sur la comparaison avant/apres", {
+        hektor_annonce_id: annonceId, genre,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      });
+    return null;
+  }
+}
+
 async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAffaireId, transactionResult, dateTransaction) {
   // ─── LA FICHE RETARDE, ET C'EST MESURE ───
   //
@@ -11202,6 +11260,12 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
   //
   // Trois lectures espacees de 4 s : on reste tres loin du rythme qui nous a
   // fait bannir en aout (1 requete/s, pause de 60 s toutes les 100).
+  // LA REFERENCE : ce que NOTRE REGISTRE connaissait deja. Lue UNE fois, avant la
+  // boucle -- elle ne bouge pas pendant les trois relectures.
+  const connusDuRegistre = PREUVE_PAR_REGISTRE
+    ? await idsDejaConnusDuRegistre(job, annonceId, genre)
+    : null;
+
   let ventesApres = null;
   let nouvelles = [];
   for (let essai = 1; essai <= 3; essai += 1) {
@@ -11209,9 +11273,15 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
     ventesApres = await lireTransactionsBestEffort(
       job, annonceId, genre, `apres_creation_${essai}`, dateTransaction);
     if (ventesApres === null) continue;
-    nouvelles = ventesAvant === null
-      ? Array.from(ventesApres.tous)
-      : Array.from(ventesApres.tous).filter((id) => !ventesAvant.tous.has(id));
+    // 1. LE REGISTRE D'ABORD -- il ne ment pas et ne pagine pas.
+    // 2. A defaut, l'ancienne soustraction avant/apres.
+    // 3. A defaut de tout, on prend ce qu'on voit (et l'arbitre refusera si
+    //    plusieurs candidats, comme avant).
+    nouvelles = connusDuRegistre !== null
+      ? Array.from(ventesApres.tous).filter((id) => !connusDuRegistre.has(id))
+      : (ventesAvant === null
+        ? Array.from(ventesApres.tous)
+        : Array.from(ventesApres.tous).filter((id) => !ventesAvant.tous.has(id)));
     if (nouvelles.length) {
       if (essai > 1) {
         await logJob(job.id, "hektor_transaction_preuve", "done",
@@ -11281,6 +11351,10 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
         candidates: nouvelles,
         ventes_avant: ventesAvant === null ? null : Array.from(ventesAvant.tous),
+        // 1.3 : DIRE SUR QUOI ON S'EST APPUYE. Sans cela, une ambiguite reste
+        // indechiffrable -- on ne sait pas si le registre a repondu ou non.
+        reference: connusDuRegistre === null ? "avant/apres (registre illisible)" : "registre",
+        connus_du_registre: connusDuRegistre === null ? null : Array.from(connusDuRegistre),
       });
     return { verifie: true, cree: true, ambigu: true, candidates: nouvelles };
   }
