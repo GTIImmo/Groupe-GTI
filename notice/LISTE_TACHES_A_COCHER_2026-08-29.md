@@ -2117,6 +2117,30 @@ GEL que Frederic a repere le premier).*
                  le numero arriver dans la minute (aujourd'hui : le lendemain)
 ```
 
+```
+[~] 1.4  L'ACQUEREUR PERDU EN SILENCE       SAUTEE -- decision de Frederic, 03/09 au soir.
+
+         LE DEFAUT RESTE ENTIER, et il est mesure cinq fois : un acquereur non type
+         « acquereur » est abandonne par Hektor sur un compromis ou une vente, SANS
+         erreur, SANS message, SANS trace. Idem pour numero_mandat sur une offre
+         (11939 envoye, 0 retenu).
+
+         DEUX FACONS DE LE TRAITER, et on a arbitre :
+            predire   verifier la typologie AVANT d'envoyer
+                      -> exige de connaitre la CAUSE. Or elle n'est PAS prouvee :
+                         cinq mesures correlees, mais Sophie et CLOTURE different
+                         par bien autre chose que leur typologie. Une regle batie
+                         sur une cause non prouvee se trompera.
+            constater RELIRE apres l'envoi, comparer demande / retenu
+                      -> aucune hypothese, attrape TOUTES les raisons.
+         ➡ Si on y revient, c'est la seconde version. Et elle rejoint naturellement
+           la « relecture immediate » de la phase 3 : autant la faire la-bas.
+
+         ⚠ EN ATTENDANT, LE DEFAUT EST OUVERT. Un acquereur peut disparaitre sans
+           que personne le sache. A dire aux negociateurs si l'app sert avant que
+           ce soit traite.
+```
+
 ### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
 
 ```
@@ -2158,7 +2182,42 @@ GEL que Frederic a repere le premier).*
          ⚠ CE N'EST PAS UNE RECOPIE, C'EST UN PORTAGE : pour l'annonce le pending,
            le conflit et le badge existent ; pour les transactions RIEN n'existe.
 
-[ ] 3.2  LA VENTE D'ABORD (la seule mesuree), L'OFFRE ENSUITE
+[ ] 3.2  LES WORKERS « MODIFIER » -- COMPROMIS ET VENTE
+         ⚠ RAPPEL EXPLICITE DE FREDERIC (03/09 au soir) : « pense bien aux workers
+           modifier compromis et vente au moment opportun ». C'est LE point d'arrivee
+           du chantier, et tout ce qui precede y mene.
+
+         CE QUI EST DEJA ACQUIS, MESURE LE 03/09 :
+            la route      GET createCompromis puis POST getStepCompromis
+                          idAnnonce · idCompromis · basket · initBasket   (75 octets)
+                          MOT POUR MOT la forme de la vente (idVente, 67 octets)
+            le geste      trois modifications successives de 50065, jamais de doublon,
+                          jamais un autre compromis touche, rien d'efface
+            l'acquereur   s'ATTACHE par la modification -- la ou la creation le perd
+            1.3           chaque transaction creee par l'app a desormais son numero,
+                          donc une adresse. C'ETAIT LE SEUL VRAI PREALABLE.
+
+         LES TROIS POINTS DE CODE, reperes le 03/09 :
+            :9904   TRANSACTIONS_REPRISES = { offre:null, compromis:null, vente:null }
+                    l'interrupteur, ETEINT
+            :9910   idTransactionAReprendre(payload, genre)  le lecteur, deja ecrit
+            :10274  l'ouverture de l'ASSISTANT  <- L'IDENTIFIANT N'Y EST PAS
+                    (il est pose lignes 10476 et 10552, mais sur l'ANCIEN chemin,
+                     MORT depuis que submitHektorAssistantTransaction prend la main
+                     ligne 10453 -- quelqu'un l'avait ecrit le 28/08, l'assistant
+                     est arrive apres et l'a court-circuite)
+
+         ⚠ ET CE N'EST PAS QU'UN PARAMETRE A ALLUMER. La charge de l'app porte
+           TOUJOURS compromis_id, meme pour une creation neuve (vu le 03/09).
+           Allumer l'interrupteur tel quel transformerait CHAQUE CREATION EN
+           MODIFICATION. Il faut une INTENTION explicite, posee par le front et
+           jamais par la creation -- c'est la vraie decision, et elle est cote ecran.
+
+         ⚠ RESERVE HONNETE : on a prouve que l'ASSISTANT attache un acquereur quand
+           on le choisit dans sa liste. On n'a PAS prouve que le WORKER y arrive --
+           il ne clique pas, il poste. On le saura au premier essai reel.
+
+[ ] 3.2b LA VENTE D'ABORD (la seule mesuree), L'OFFRE ENSUITE
          (« possible pour l'offre : formulaire + idOffre », releve du 28/08)
          LE COMPROMIS SEULEMENT SI 0.1 L'AUTORISE
          🔄 REVISE LE 03/09. Le 28/08 declarait le compromis hors de portee parce
