@@ -1486,22 +1486,116 @@ GEL que Frederic a repere le premier).*
          IGNORE ? -> produit le classement A / B / C, qui commande tout le reste
          touche : rien · retour : sans objet
          verif : un tableau des champs, chacun avec son essai reel
+         >>> RESTE A FAIRE. C'est le seul point ouvert de la phase 0.
 
-[ ] 0.2  LE CORPS DE LA REQUETE       l'enregistrement d'une vente porte-t-il
-         l'identifiant ? Sans lui le worker ne peut pas modifier.
-         outil : Console/capture_compromis_acquereur.js -- DEJA ECRIT, lecture
-         seule, session jamais reecrite, 403 = arret immediat
+[x] 0.2  LE CORPS DE LA REQUETE       FAIT le 03/09 14h20 -- REPONSE : OUI.
+         Capture par instrumentation XHR de la page (lecture seule, aucun envoi
+         de ma part), sur la reouverture de la vente 23294 :
 
-[ ] 0.3  LA DATE DU BIEN BOUGE-T-ELLE quand on touche une transaction ?
-         C'est le garde-fou, ou son absence. INDICE du 03/09 : apres avoir
-         reenregistre la vente a 10h28, la fiche portait datemaj 10:28:56.
-         ⚠ UNE OBSERVATION N'EST PAS UNE MESURE : ca peut venir du changement de
-           statut ou du travail de resynchronisation.
-         verif : relever la date avant/apres un geste, DEUX fois
+            ouverture     getStepVente   idAnnonce · idVente=23294 · basket ·
+                                         initBasket · idVente        67 o / 5 champs
+            etape 1->2    getStepVente   prixDeVente, dateVente, tauxHonoraireEntree,
+                                         tauxHonoraireSortie, mandat, selectedMandat,
+                                         mandants[], acquereurs[], typeUser,
+                                         idAnnonce, idVente, step, basket
+                                                                  1 582 o / 26 champs
+            etape 2->3    getStepVente   unitesEntreePercent, unitesSortiePercent,
+                                         idAnnonce, idVente, step, basket
+                                                                  1 936 o / 10 champs
+            ENREGISTREMENT getStepVente  containerModule[], containerName, fromStep,
+                           + save,treat  idAnnonce, idVente, step, basket
+                                                                  2 148 o /  8 champs
 
-[ ] 0.4  LE COMPTE                    administrateur ou negociateur ?
-         « Un compte administrateur ne peux pas saisir une offre » (releve 28/08)
-         et supprimerVente est masque 0x0 en admin.
+         ➡ `idVente` VOYAGE A CHAQUE ETAPE, Y COMPRIS A L'ENREGISTREMENT.
+           C'est un formulaire urlencode ordinaire, sur EXACTEMENT la route que le
+           worker emploie deja pour CREER une vente. Toute la difference entre
+           creer et modifier tient dans ce parametre. PAS de module ES pour la
+           vente -> LE WORKER PEUT MODIFIER UNE VENTE.
+           Le `basket` grossit 67 -> 1 582 -> 1 936 -> 2 148 : c'est l'etat PHP
+           serialise que le worker recopie deja sans le lire.
+         ⚠ La chorégraphie est en TROIS temps, comme la creation. Le worker devra
+           donc OUVRIR avec idVente, puis enchainer -- pas poster l'enregistrement seul.
+
+[x] 0.3  LA DATE DU BIEN BOUGE-T-ELLE  FAIT le 03/09 -- REPONSE : OUI, a la minute.
+
+            T0  14:19:09   datemaj = 10:28:56   inchangee depuis 4 h  (pas de derive)
+                ~14:22     REENREGISTREMENT de la vente 23294
+            T1  14:22:32   datemaj = 14:22:00   <- la minute exacte du geste
+            T2  14:27:17   datemaj = 14:22:00   apres rechargement de la fiche,
+                                                90 s d'attente, puis ouverture de
+                                                l'assistant et FERMETURE SANS
+                                                ENREGISTRER -> AUCUN mouvement
+
+         ➡ UN POSITIF ET TROIS CONTRE-TEMOINS : elle ne derive pas seule, la
+           LECTURE ne la touche pas, OUVRIR SANS ENREGISTRER ne la touche pas --
+           seul l'ENREGISTREMENT la deplace. Le garde-fou anti-ecrasement des
+           annonces est donc TRANSPOSABLE aux transactions en surveillant la date
+           du BIEN.
+         ⚠ HONNETETE : le plan demandait DEUX mesures positives ; je n'en ai
+           qu'UNE (le second passage dans l'assistant n'a plus avance, et je n'ai
+           pas voulu forcer d'ecritures supplementaires chez Hektor). Les trois
+           contre-temoins compensent, mais la repetition reste a prendre a la
+           premiere occasion reelle de la phase 3.
+         ⚠ ET LE GARDE-FOU SERA LARGE : la date du bien bouge aussi pour une
+           photo ou un prix. Il se trompe DU BON COTE -- il bloquera parfois pour
+           rien (et montrera un conflit), jamais il ne laissera passer un
+           ecrasement en silence.
+
+[x] 0.4  LE COMPTE                    FAIT le 03/09 -- mesure sur le DOM de la
+         fiche 24933, en session ADMINISTRATEUR :
+
+            offre_bien_change_status('refus','33042')     90x37   VISIBLE
+            offre_bien_change_status('accepte','33038')   98x37   VISIBLE
+            offre_bien_change_status('accepte','33037')   98x37   VISIBLE
+            add_offre('24933')                          210x45   VISIBLE
+                 (mais Hektor refuse au clic pour un admin -- releve du 28/08)
+            delete_compromis_vente('50059')              25x25   VISIBLE
+            clore_compromis_vente('50059')                 0x0   MASQUE
+            supprimerVente(23294)                          0x0   MASQUE
+
+         🔴 J'EN AI TIRE UNE CONCLUSION FAUSSE, ET FREDERIC L'A CORRIGEE :
+            « le compromis est annulable a partir du compte admin, mais il faut
+              etre sur compromis et pas vente ; et la vente peut etre supprimee
+              avec une gomme ».
+            Il a raison, et la preuve est dans la journee meme : notre worker a
+            ANNULE le compromis 50060 en session admin a 08h40 -- job `done`,
+            status passe a 2. Annuler un compromis en admin MARCHE.
+
+         CE QUE LA MESURE DIT VRAIMENT (sonde approfondie, 03/09 14h35) :
+            la « gomme » est la classe `icon-effacer`. Elle existe pour TOUT :
+            les 3 offres, le compromis, la vente, et le bien lui-meme.
+
+               icon-effacer  delete_offre_suivi('33042'/'33038'/'33037')   0x0
+               icon-effacer  delete_compromis_vente('50059')             25x25
+               icon-effacer  supprimerVente(23294)                         0x0
+               icon-effacer  deleteAnnonceFromListing('24933')           25x25
+
+            Les gommes des OFFRES sont a 0x0 alors que leurs boutons
+            accepter/refuser sont VISIBLES -- aucune theorie de compte n'explique
+            cela. Et la cause est ecrite en clair dans le HTML :
+
+               gomme VENTE      style="display:none;width:25px;..."   <- le SERVEUR
+               gomme COMPROMIS  style="width:25px;..."                <- meme style,
+                                                                        sans le none
+
+            Tous les parents sont visibles (div#ventes display=block), et le
+            survol ne change rien. C'est donc le SERVEUR qui decide, au cas par
+            cas, et RIEN dans cette mesure ne permet de l'imputer au compte.
+
+         ⚠ LA NOTE DU 29/08 PORTE LA MEME ERREUR : « le bouton supprimerVente
+           present en DOM mais masque (0x0) POUR LE COMPTE ADMINISTRATEUR ». Le
+           masquage est mesure, l'imputation au compte ne l'est pas. A ne pas
+           recopier tant qu'un second compte n'a pas ete essaye.
+
+         ➡ CE QUI RESTE ETABLI SUR LE COMPTE : uniquement le message de refus
+           A L'EXECUTION releve le 28/08 -- « Un compte administrateur ne peux pas
+           saisir une offre ». C'est un refus de Hektor au clic, pas un masquage.
+         ➡ ET LA VENTE RESTE SUPPRIMABLE : par le bouton « Supprimer la vente »
+           de la modale de l'app, qui passe par le travail `delete_hektor_vente`
+           (verbe `ventes-deleteVente` corrige le 29/08, jamais encore tire).
+         ➡ EN PASSANT : la fiche expose les commandes des TROIS offres, alors
+           qu'elle n'expose que celles d'UN SEUL compromis (50059, deja annule).
+           L'asymetrie est reelle et confirme le piege du 29/08.
 ```
 
 **➡ STOP. On relit ensemble avant de continuer.**
@@ -1584,10 +1678,15 @@ GEL que Frederic a repere le premier).*
 [ ] 3.2  LA VENTE D'ABORD (la seule mesuree), L'OFFRE ENSUITE
          (« possible pour l'offre : formulaire + idOffre », releve du 28/08)
          LE COMPROMIS SEULEMENT SI 0.1 L'AUTORISE
-         ⚠ launchPopinCompromis charge un MODULE ES (await import Modules/Compromis),
-           pas un formulaire postable -> declare hors de portee du worker le 28/08.
-           Si ca se confirme, le compromis reste en CLASSE C : lecture seule dans
-           l'app. C'EST LE VRAI COUT DE CETTE SOLUTION, et il doit etre dit.
+         🔄 REVISE LE 03/09. Le 28/08 declarait le compromis hors de portee parce
+           que launchPopinCompromis charge un module ES. L'essai du 03/09 montre
+           que le module S'OUVRE et que Hektor refuse pour une raison D'ETAT
+           (« un compromis cloture ne peut pas etre modifie »), pas de nature.
+           Le module s'appelle GenericPopinStepperManager -- vraisemblablement le
+           MEME que celui de la vente, qui poste un formulaire ordinaire.
+           ➡ LE COMPROMIS N'EST DONC PROBABLEMENT PAS EN CLASSE C. A confirmer sur
+             un compromis ACTIF avant de conclure. Si c'est confirme, la seule
+             vraie reserve du chantier tombe.
 
 [ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
@@ -1622,9 +1721,33 @@ GEL que Frederic a repere le premier).*
 ### LES INCONNUES ASSUMEES
 
 ```
-la MODIFICATION PAR LE WORKER   l'essai 1 prouve que HEKTOR l'accepte, PAS que le
-                                worker peut la piloter -> c'est 0.2
-le COMPROMIS                    module ES ; si 0.1 le confirme -> classe C
+la MODIFICATION PAR LE WORKER   REPONDUE le 03/09 par 0.2 : OUI pour la vente.
+                                idVente voyage a chaque etape, formulaire ordinaire.
+le COMPROMIS                    🔴 LE VERDICT DU 28/08 EST A REVOIR. Essai du 03/09
+                                14h40 : launchPopinCompromis(24933, 50060) OUVRE bien
+                                l'assistant -- le module se charge, aucune
+                                impossibilite technique. Hektor refuse pour une
+                                RAISON D'ETAT, et il le dit en clair :
+                                    « Desole, un compromis cloture ne peut pas
+                                      etre modifie »
+                                    (Modules/GenericPopinStepperManager.js)
+                                Or 50060 est annule. Le refus ne porte donc NI sur
+                                le compte NI sur la nature du module.
+                                ➡ Et le module s'appelle GENERIC...StepperManager :
+                                  c'est tres probablement LE MEME qui pilote
+                                  l'assistant de la VENTE, dont 0.2 vient de
+                                  prouver qu'il poste un formulaire ordinaire.
+                                  Le verdict « module ES donc hors de portee »
+                                  confondait deux choses : le module est la facon
+                                  dont l'INTERFACE OUVRE l'assistant, pas la facon
+                                  dont les DONNEES PARTENT.
+                                ⏳ RESTE A EPROUVER SUR UN COMPROMIS **ACTIF**.
+                                  Ni 24933 ni le bac a sable 62774 n'en portent ;
+                                  les 9 211 actifs du parc sont de VRAIS dossiers
+                                  clients. Ouvrir puis fermer est inerte (mesure :
+                                  4 contre-temoins le 03/09), mais le choix du
+                                  dossier revient a Frederic -- « l'utilisateur
+                                  designe ».
 l'OFFRE                         pas d'assistant ; formulaire + idOffre, non eprouve
 supprimer la VENTE              le bouton existe dans la modale, jamais tire.
                                 23294 est la pour ca. GESTE IRREVERSIBLE.
