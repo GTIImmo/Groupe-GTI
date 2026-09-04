@@ -2142,6 +2142,37 @@ GEL que Frederic a repere le premier).*
            C'est la phase 2 (la rubrique Affaires lit le registre). La colonne est
            posee et alimentee ; l'ecran ne bouge pas.
 
+[!] 1.2b LA MEME FAUTE, ET C'EST MOI QUI L'AI FAITE   04/09, essai reel
+         `jours_validite` N'EST PAS DE CLASSE A. Hektor le stocke, dans la
+         PROPOSITION de l'offre. Preuve par les donnees existantes, sans nouveau
+         test -- les six offres de 24933 lues en direct chez Hektor :
+             33048 -> 10   33046 -> 10   33043 -> 20
+             33042 -> 20   33038 -> 15   33037 -> 10
+         TROIS valeurs distinctes : ce n'est donc pas un defaut de Hektor, il
+         garde ce qu'on lui envoie.
+
+         D'OU VIENT LA FAUTE. 0.1 avait envoye validity_days = 20 et conclu
+         « aucun champ » -- mais la mesure portait sur un COMPROMIS. L'offre 33043,
+         issue du MEME essai, porte bien validite = 20. La valeur etait arrivee,
+         sur l'offre. Et dans la modale « Validite offre » ne s'affiche QUE pour
+         l'offre : le champ est donc de classe B, la ou l'app le saisit.
+
+         ⚠ C'EST EXACTEMENT LA FAUTE QUE J'AI CORRIGEE SUR jours_retractation LA
+           VEILLE, ET JE L'AI REPRODUITE. Meme cause : 0.1 teste un champ sur UN
+           SEUL genre de transaction et generalise aux trois. La lecon est a
+           retenir pour la fin de 0.1 (etapes 2, 3, 4 de l'assistant).
+
+         CE QUI RESTE VRAI, verifie sur la charge reelle de l'offre :
+           taux_honoraires  aucune destination -- ni dans l'offre (id, acquereur,
+                            annonce, honoraire_acquereur, id_mandat, propositions...)
+                            ni dans la proposition (id, type, montant, date,
+                            validite, initiateur). Classe A tient.
+           notaire_id       idem. Classe A tient.
+
+         A FAIRE : retirer jours_validite de COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS et
+         du commentaire de classe A ; le traiter comme date_fin_retractation --
+         relu chez Hektor, jamais fige. Rien ne le lit encore : aucun degat.
+
 [x] 1.2  LES COLONNES DE CLASSE A
          ✅ POSEES LE 03/09 AU SOIR -- et l'audit a CORRIGE la liste de 0.1.
 
