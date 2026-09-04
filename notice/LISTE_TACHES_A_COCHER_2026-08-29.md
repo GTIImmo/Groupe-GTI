@@ -2627,6 +2627,121 @@ le MEME ACQUEREUR DEUX CYCLES   4 annonces multi-mandats : jamais regarde
 
 ---
 
+## 2 quinquies. LA JOURNEE DU 04/09 — SEPT MESURES SUR L'ANNONCE 24933
+
+> Protocole voulu par Frederic : enchainer les gestes et regarder Hektor reagir.
+> Les cinq creations et les deux suppressions ont ete PILOTEES PAR NOS WORKERS,
+> via les vrais RPC (app_change_annonce_status_optimistic et
+> app_geste_affaire_optimistic), sous le compte codex.test. Aucun echec.
+
+```
+1  offre      33050   chaine 5469   acquereur ATTACHE   validite 33 gardee
+2  compromis  50069   chaine 5469   acquereur ATTACHE   +41 j -> 15/10
+3  annulation 50069 -> status 2
+4  compromis  50070   chaine 5469                       +25 j -> 29/09
+5  vente      23299   chaine 5469   acquereur ATTACHE   statut -> VENDU
+6  suppression de la vente depuis l'APP -> statut redescend a SOUS COMPROMIS
+7  suppression des compromis chez Hektor -> statut redescend a SOUS OFFRE
+```
+
+### (1) LA REGLE DU STATUT, ENFIN COMPLETE
+
+```
+creer une offre / un compromis / une vente     MONTE
+refuser une offre                              rien
+annuler un compromis                           rien
+SUPPRIMER un compromis                         DESCEND
+SUPPRIMER une vente                            DESCEND
+```
+
+**Effacer l'objet fait redescendre ; le marquer mort ne fait rien.** C'est
+symetrique et ca se tient : Hektor retire ce qui justifiait le statut.
+
+⚠ **DEUX DE MES CONCLUSIONS ETAIENT FAUSSES, ET FREDERIC A CORRIGE LES DEUX.**
+  * « supprimer un compromis ne change rien » -- mesure polluee : le statut etait
+    DEJA en bas. Refaite proprement, elle dit l'inverse.
+  * « annuler un compromis fait redescendre » (son hypothese, que j'ai d'abord
+    infirmee) -- l'annulation seule ne fait rien ; c'est la SUPPRESSION qui agit.
+  Les deux erreurs ont la meme cause : conclure sans avoir releve l'etat AVANT.
+
+➡ **CONSEQUENCE POUR LE PROJET : le statut de l'annonce est une valeur FIGEE,
+  pas un calcul.** Il ment des qu'une transaction meurt sans etre effacee. On ne
+  peut donc PAS en deduire l'affaire courante -- c'est le registre qui fait foi.
+  Et la sentinelle 4.2 se remplit toute seule pour cette raison exacte.
+
+### (2) LE POINTEUR DE HEKTOR, ET LA CONDITION QU'ON IGNORAIT
+
+La fiche n'affiche qu'UN compromis. Quatre cas mesures :
+
+```
+worker    50067   aucun compromis existant     le pointeur SUIT
+assistant 50068   50067 annule present         le pointeur SUIT
+worker    50066   50065 annule present         le pointeur RESTE  <- invisible
+worker    50070   50069 annule present         le pointeur RESTE  <- invisible
+```
+
+➡ **Notre worker cree le compromis mais ne deplace pas le pointeur quand il en
+  existe deja un. L'assistant de Hektor, lui, fait les deux.** C'est un defaut de
+  NOTRE requete, pas une limite de Hektor.
+
+⚠ J'avais cru pouvoir expliquer ces cas par un onglet perime, et j'ai ecrit un
+  correctif en ce sens. FAUX : la mesure du 04/09 a ete faite apres rechargement
+  DELIBERE, et 50070 etait bien absent de la page (0 occurrence).
+
+### (3) LE DEFAUT 1.4 A UNE CAUSE, ET CE N'EST PAS CELLE QU'ON CROYAIT
+
+```
+compromis 50067   acquereur demande 605075   -> acquereurs VIDE
+compromis 50069   acquereur demande 605030   -> acquereur ATTACHE
+vente     23299   acquereur demande 605030   -> acquereur ATTACHE
+```
+
+La difference : sur 50067 on demandait un acheteur qui n'avait PAS d'offre vivante
+sur le bien ; l'offre vivante appartenait a 605030.
+
+➡ **Hektor applique la regle metier de Frederic tout seul** : il attache l'acheteur
+  s'il a une offre sur le bien, et ignore la demande sinon -- SANS LE DIRE.
+  Le defaut n'est donc pas « Hektor perd l'acquereur » mais « on lui demande
+  quelqu'un qui n'a pas d'offre ». Cela renforce le correctif deja identifie :
+  le champ acquereur doit DESIGNER l'acheteur de l'offre acceptee.
+
+### (4) LA QUESTION DE FREDERIC EST TRANCHEE : OUI
+
+**Une vente s'ajoute sans probleme sur un compromis que Hektor n'affiche pas.**
+50070 etait invisible a l'ecran ; la vente 23299 s'est creee normalement.
+➡ La chaine app -> compromis -> vente tient SANS passer par leur interface.
+  C'est ce qui conditionnait la phase 3 : la reponse est favorable.
+
+### (5) LES BRIQUES 1.1 ET 1.3 VALIDEES EN CYCLE REEL
+
+Les cinq transactions ont recu leur numero Hektor IMMEDIATEMENT (1.3) et se sont
+rangees dans la MEME chaine 5469 (1.1), posee au geste. Aucune attente du run.
+
+⚠ ET UNE DEMONSTRATION DU CONTRAIRE, le matin : un compromis cree avec l'acquereur
+  605075 est parti dans la chaine 5470 alors que l'offre acceptee etait en 5469.
+  La chaine suit le champ saisi ; sans garde-fou, elle peut diverger de la regle.
+
+### (6) CE QUE HEKTOR CALCULE SEUL (classe C, confirmee sur trois champs)
+
+```
+prixNetVendeur 170 000   honoraires 10 000   commissionAgence 8 333,33
+```
+
+### (7) UN TROU DANS LE READ-THROUGH, TROUVE AU PASSAGE
+
+`refresh_single_annonce.py` NE RELIT PAS les transactions -- seulement l'annonce
+et ses mandats. Apres un geste, la fiche garde donc l'ancien etat jusqu'au run de
+05:30, pendant que le REGISTRE, lui, est a jour par ecriture optimiste.
+Mesure : 33046 « refusee » au registre et « proposed » sur la fiche, en meme temps.
+➡ Demonstration en direct de l'utilite de 2.1 -- et de l'urgence de 2.3 et 2.4 :
+  tant que les autres ecrans lisent les champs plats, ils affichent une verite
+  perimee a cote d'une verite fraiche.
+⚠ `sync_raw.py --resources offres --mode update` NE RATTRAPE PAS non plus : essaye
+  le 04/09, l'offre 33046 est restee `proposed`, synced_at inchange. Cause non
+  identifiee (le parametre `version` est bien passe, ce n'est pas le 200 muet).
+
+---
+
 ## 2 quater. LES STATUTS — ce qui reste apres la cloture du protocole
 
 Le protocole du 01/09 a repondu a sa question en cinq mesures. Restent deux points.
