@@ -2421,6 +2421,72 @@ GEL que Frederic a repere le premier).*
                   n'a pas de Supabase, donc la liste des affaires reste vide et le
                   selecteur ne s'affiche pas). Build vert, ambiguite mesuree.
 
+[ ] 2.2b LE CHOIX DE L'OFFRE EST LE CAS NORMAL, PAS UNE ANOMALIE  AJOUTEE 04/09
+         Frederic : « une offre est active tant qu'elle n'est pas refusee, donc il
+         faudra pouvoir la choisir dans la modale -- le choix de l'offre est
+         INDISPENSABLE ».
+
+         J'AVAIS ECRIT 2.2 COMME SI LES TROIS GENRES SE RESSEMBLAIENT. Ils ne se
+         ressemblent pas :
+             offre       plusieurs vivantes = NORMAL   -> le choix est le mode normal
+             compromis   une seule                     -> le choix = sortie d'anomalie
+             vente       une seule                     -> idem
+         Le bandeau « il ne devrait y en avoir qu'un » ne doit donc PAS s'afficher
+         pour les offres quand aucune n'est acceptee.
+
+         ⚠ MAIS LES OFFRES ONT LEURS PROPRES ANOMALIES, mesurees le 04/09 sur les
+           17 annonces a plusieurs offres vivantes :
+                5   aucune acceptee                -> NORMAL, propositions en
+                                                     concurrence, on choisit
+                7   UNE acceptee + d'autres vivantes -> anomalie : les autres
+                                                     auraient du etre refusees
+                5   PLUSIEURS acceptees            -> anomalie franche, contredit
+                                                     « une seule acceptee »
+           Douze sur dix-sept sont donc deja hors regle. Le selecteur doit dire
+           LEQUEL des trois cas on regarde, pas afficher le meme message partout.
+
+         touche : le bandeau de la modale seul (le selecteur existe deja)
+         retour : remettre le message unique
+         verif  : sur une annonce a 2 offres proposees, aucun avertissement --
+                  juste le choix ; sur une annonce a offre acceptee + une autre
+                  vivante, l'avertissement apparait
+
+[ ] 2.2c LA MODALE TIENT LA REGLE : ELLE BLOQUE LES SAISIES     AJOUTEE 04/09
+         Regle de Frederic, dans ses mots : « on ne peut pas avoir plusieurs
+         compromis en meme temps -- si un compromis est en cours, un autre ne peut
+         pas etre cree, il faut d'abord l'annuler. Et la vente est forcement liee
+         au compromis. »
+
+             genre       on BLOQUE la creation si...
+             offre       une offre est deja ACCEPTEE sur le bien
+             compromis   un compromis vivant existe   -> « annule-le d'abord »
+             vente       une vente vivante existe     -> « supprime-la d'abord »
+
+         ⚠ HEKTOR NE L'INTERDIT PAS, ET C'EST MESURE : le 04/09, le compromis 50070
+           a ete cree alors que 50069 vivait encore. C'est donc a NOUS de tenir la
+           regle -- c'est tout le sens du chantier : l'app devient l'auteur.
+
+         ⚠ LA DEFINITION DE « EN COURS » EST CELLE DE FREDERIC, et c'est deja celle
+           du code (affaireEstVivante) :
+               offre      vivante tant qu'elle n'est pas REFUSEE (acceptee = vivante)
+               compromis  vivant tant qu'il n'est pas ANNULE
+               vente      presente, ou supprimee
+           J'avais objecte que 9 092 annonces portent un compromis jamais clos.
+           L'OBJECTION NE TIENT PAS : avec cette definition, un compromis non annule
+           EST en cours. S'il traine sur un bien vendu, c'est une donnee a nettoyer,
+           pas une exception a prevoir. La regle revele le probleme au lieu de le
+           masquer.
+
+         AMPLEUR MESUREE le 04/09 :
+             93 annonces « Sous compromis » dans le portefeuille courant, dont 2 en
+             double · 5 annonces portent PLUSIEURS offres acceptees
+           Le blocage agit donc sur une population petite et identifiee.
+
+         ⚠ LE BOUTON DOIT DIRE POURQUOI IL EST ETEINT. Un bouton gris et muet est
+           pire que pas de bouton : l'utilisateur croit a une panne.
+         touche : la modale seule · retour : retirer le garde-fou (une fonction)
+         verif  : sur un bien a compromis vivant, « Envoyer vers Compromis » est
+                  eteint et la phrase nomme le compromis a annuler d'abord
 [x] 2.3  LA FICHE MOBILE LIT LE REGISTRE            ✅ CODEE LE 04/09
          Build vert. Un bloc par DOSSIER D'AFFAIRE, avec toutes ses transactions --
          numero Hektor, etat, montant, date, et « plus dans Hektor » le cas echeant.
