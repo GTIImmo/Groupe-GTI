@@ -2486,9 +2486,29 @@ GEL que Frederic a repere le premier).*
            Refait avec 605030 : chaine 5469, acquereur ATTACHE partout (offre,
            compromis ET vente).
 
-         ➡ HEKTOR APPLIQUE DEJA LA REGLE DE FREDERIC : il attache l'acheteur s'il
-           a une offre vivante sur le bien, et ignore la demande sinon. Le champ
-           libre permet donc de lui demander l'impossible, en silence.
+         ⚠ CE QUE J'EN AVAIS CONCLU ETAIT TROP FORT, ET FREDERIC M'A REPRIS :
+           « ce point n'est pas completement determine, a prouver lors des
+             correctifs sur la modification du compromis et de la vente ».
+           J'avais ecrit « Hektor attache l'acheteur s'il a une offre vivante sur
+           le bien ». UN SEUL CONTRASTE NE FAIT PAS UNE PREUVE -- et nos propres
+           donnees le CONTREDISENT :
+
+               50067  worker    · 605075 (offres toutes refusees)  -> VIDE
+               50069  worker    · 605030 (offre acceptee)          -> attache
+               50068  ASSISTANT · 86793  (AUCUNE offre sur le bien)-> attache
+
+           86793 n'a aucune offre sur 24933, et l'assistant l'a quand meme attache.
+           La regle « il faut une offre » est donc FAUSSE telle que je l'ai ecrite.
+           (Verifie aussi : les trois contacts sont actifs, meme agence -- ce n'est
+           pas une histoire d'archivage.)
+
+         ➡ L'ECART RESTANT EST ENTRE DEUX ENVOIS DU WORKER, pas entre Hektor et
+           nous. Piste la plus probable : NOTRE `findProspect`
+           (mode=annonce-SuiviVente-compromis-findProspect). S'il ne cherche que
+           parmi les prospects vivants du bien, tout s'explique -- et c'est encore
+           un defaut de notre requete.
+         ⚠ A PROUVER PENDANT 3.2, pas avant. En attendant, ne pas batir de regle
+           metier sur cette hypothese.
 
          CE QU'IL FAUT : que le champ DESIGNE l'acheteur de l'offre acceptee --
          le registre le connait (hektor_acquereur_id de la chaine courante). Un
@@ -2851,11 +2871,17 @@ vente     23299   acquereur demande 605030   -> acquereur ATTACHE
 La difference : sur 50067 on demandait un acheteur qui n'avait PAS d'offre vivante
 sur le bien ; l'offre vivante appartenait a 605030.
 
-➡ **Hektor applique la regle metier de Frederic tout seul** : il attache l'acheteur
-  s'il a une offre sur le bien, et ignore la demande sinon -- SANS LE DIRE.
-  Le defaut n'est donc pas « Hektor perd l'acquereur » mais « on lui demande
-  quelqu'un qui n'a pas d'offre ». Cela renforce le correctif deja identifie :
-  le champ acquereur doit DESIGNER l'acheteur de l'offre acceptee.
+⚠ **J'EN AVAIS TIRE UNE REGLE, ET ELLE EST FAUSSE.** J'ai ecrit « Hektor attache
+  l'acheteur s'il a une offre sur le bien ». Frederic m'a repris -- un seul
+  contraste ne prouve rien -- et nos donnees le contredisent : le compromis 50068,
+  cree par l'ASSISTANT de Hektor avec l'acquereur 86793 qui n'a AUCUNE offre sur
+  ce bien, a bien recu son acheteur.
+➡ L'ecart est donc entre DEUX ENVOIS DU WORKER, pas entre Hektor et nous.
+  Piste la plus probable : notre `findProspect` (mode
+  annonce-SuiviVente-compromis-findProspect), qui ne trouverait que les prospects
+  vivants du bien. A PROUVER PENDANT 3.2 -- ne rien batir dessus d'ici la.
+  Le correctif 2.5 (le champ acquereur DESIGNE) reste juste, mais pour la raison
+  mesuree, pas pour celle-la : la CHAINE part dans le mauvais dossier.
 
 ### (4) LA QUESTION DE FREDERIC EST TRANCHEE : OUI
 
