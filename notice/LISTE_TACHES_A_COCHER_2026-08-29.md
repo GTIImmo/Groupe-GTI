@@ -2321,6 +2321,47 @@ GEL que Frederic a repere le premier).*
            sur le choix de la transaction est explicitement interdit (28/08).
 ```
 
+[ ] 2.3  LA FICHE MOBILE LIT LE REGISTRE            AJOUTEE LE 04/09
+         ⚠ TROUVEE PAR FREDERIC : « en phase 2 il y a pas que 2.2 si ? »
+         La phase 2 n'avait que 2.1 et 2.2 -- et le CODE en montrait trois de plus.
+
+         MobileDossierDetail (App.tsx:31172) affiche encore les transactions par
+         les champs PLATS -- offre_montant, compromis_date_start, vente_prix,
+         date_signature_acte -- donc UNE SEULE par genre, avec le meme defaut de
+         fond que 2.1 vient de corriger cote cockpit.
+         ET ELLE EST BIEN RENDUE : App.tsx:19107. Ce n'est pas du code mort.
+
+         ⚠ LA REGLE DE LA DOUBLE CASCADE, deja au dossier : App.tsx rend DEUX
+           fois -- MobileLayout ET DesktopLayout. Un ecran ajoute d'un cote
+           seulement est un ecran a moitie fait. 2.1 n'a fait que le desktop.
+         touche : MobileDossierDetail seul · les helpers de 2.1 sont deja au
+                  niveau module, donc rien a reecrire -- juste a appeler
+         retour : remettre les champs plats
+         verif  : sur 24933 en mobile, TROIS dossiers d'affaire, vente a 172 000
+
+[ ] 2.4  LA FICHE BASE LIT LE REGISTRE              AJOUTEE LE 04/09
+         DossierDetailLayoutBase (App.tsx:26559) porte le meme defaut a DEUX
+         endroits : le parcours en etapes (27164-27300) et les cartes de detail
+         (27712-27795).
+
+         ⚠ PRIORITE MOINDRE, ET VOICI POURQUOI -- MESURE LE 04/09 :
+           App.tsx:26556 dit
+               APP_COCKPIT_V2_ENABLED ? <CockpitDetail/> : <DossierDetailLayoutBase/>
+           et le BUNDLE DEPLOYE porte les trois drapeaux a "true" :
+               NN = COCKPIT_V2  -> true      (lu dans index-C4TaCI_d.js,
+               VP = CONTACT_V2  -> true       2 188 273 octets, sur
+               HC = MANDAT_V3   -> true       groupe-gti.vercel.app)
+           La fiche Base n'est donc PAS rendue en production. Elle reste le
+           chemin de repli si on eteint le drapeau -- a aligner, sans urgence.
+
+         ⚠ ET CELA PERIME DEUX NOTES DU DOSSIER, qu'il faut cesser de citer :
+           * la reserve de la ligne 1316 (« a verifier cote Vercel avant de
+             compter dessus en production ») -> VERIFIE, c'est allume ;
+           * le constat du plan (24/08) « ces quatre drapeaux n'ont JAMAIS ete
+             allumes en production, 29 a 38 jours de sommeil » -> PLUS VRAI pour
+             trois d'entre eux. Reste APP_BROUILLON_BUCKET_ENABLED, non verifie.
+         ➡ CONSEQUENCE HEUREUSE : 2.1 est deja sous les yeux des negociateurs.
+
 ### PHASE 3 — L'ECRITURE PART CHEZ HEKTOR · *conditionnee par 0.1 et 0.2*
 
 ```
@@ -2392,6 +2433,13 @@ GEL que Frederic a repere le premier).*
          la saisie est a l'abri. Le retirer avant, c'est perdre des saisies.
 
 [ ] 4.2  LES DEUX POINTS EN SUSPENS    voir « 2 quater. LES STATUTS » ci-dessous
+
+[ ] 4.3  DossierInlineDetail EST DU CODE MORT        AJOUTEE LE 04/09
+         Declare a App.tsx:28060, JAMAIS rendu -- aucune occurrence de
+         « <DossierInlineDetail » dans tout le front. Il porte lui aussi un
+         affichage de vente par champ plat, ce qui l'a fait apparaitre dans
+         l'audit de la phase 2. Ne pas le corriger : le retirer.
+         verif : le build passe, et rien ne change a l'ecran.
 ```
 
 ### CE QUI EST DEJA FAIT
