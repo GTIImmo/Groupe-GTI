@@ -2341,17 +2341,30 @@ GEL que Frederic a repere le premier).*
            A regarder au premier lancement local (le drapeau cockpit est deja
            actif dans .env.local).
 
-[!] 2.2  ⚠ A REVOIR (04/09) -- LA REGLE DE FREDERIC CHANGE LA QUESTION
-         « Il ne peut pas y avoir deux affaires en cours en meme temps. » Et la
-         mesure du 04/09 lui donne raison : HEKTOR APPLIQUE DEJA CETTE REGLE -- il
-         n'attache un acquereur au compromis que si celui-ci a une offre sur le
-         bien. Deux affaires vivantes du meme genre ne sont donc peut-etre pas une
-         AMBIGUITE a arbitrer mais une ANOMALIE a signaler : le selecteur code le
-         04/09 repond peut-etre a la mauvaise question. A TRANCHER AVEC FREDERIC
-         AVANT D'ALLER PLUS LOIN.
-         (La mesure des 40 annonces reste juste, et va dans son sens : la plupart
-         portent UN SEUL acquereur et deux enregistrements dont l'ancien n'a
-         jamais ete clos -- des restes, pas des affaires concurrentes.)
+[x] 2.2  TERMINEE LE 04/09 -- ET REFORMULEE DANS LE SENS DE LA REGLE
+         Frederic : « il ne peut pas y avoir deux affaires en cours en meme temps ».
+         La premiere version presentait la situation comme une AMBIGUITE normale a
+         arbitrer (« choisis laquelle »). C'etait faux : c'est une ANOMALIE.
+         ⚠ ET HEKTOR APPLIQUE DEJA CETTE REGLE -- mesure du 04/09 : il n'attache un
+           acquereur au compromis que si celui-ci a une offre vivante sur le bien.
+
+         CE QUI CHANGE : le selecteur RESTE (il faut pouvoir agir), mais l'ecran ne
+         fait plus semblant que c'est normal, et il DISTINGUE LES DEUX CAS REELS
+         grace a l'acquereur du registre :
+             meme acquereur        « le plus ancien n'a probablement jamais ete clos »
+             acquereurs differents « deux acquereurs sur le meme bien, a verifier »
+
+         MESURE DU 04/09 sur les annonces concernees -- les deux branches servent :
+             41 annonces   dont 26 meme acquereur · 15 acquereurs differents
+                           et 19 portent DEUX dossiers d'affaire distincts
+             par genre : offres 17 · compromis 17 · ventes 7
+
+         ⚠ PAS VUE A L'OEIL (le mock n'a pas de Supabase, meme limite que 2.1 et
+           2.3). Build vert, ambiguite et branches mesurees sur les vraies donnees.
+         ⚠ RESTE OUVERT, ET CE N'EST PLUS 2.2 : faut-il CLORE automatiquement les
+           restes ? 26 annonces attendent un geste que personne n'a fait. C'est de
+           la meme famille que la sentinelle 4.2 -- une liste de travail, pas une
+           alerte. A trancher par Frederic.
 
 [x] 2.2  LE CHOIX QUAND PLUSIEURS AFFAIRES VIVENT
          ✅ CODEE LE 04/09. Build vert.

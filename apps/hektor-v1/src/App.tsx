@@ -17794,6 +17794,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   // jusqu'ici, l'ecran se taisait completement.
                   const vivantesDuGenre = affairesVivantesPourStatut()
                   const ambigu = vivantesDuGenre.length > 1
+                  // ─── CE N'EST PAS UNE AMBIGUITE, C'EST UNE ANOMALIE (04/09) ───
+                  //
+                  // Regle de Frederic : « il ne peut pas y avoir deux affaires en
+                  // cours en meme temps ». Et Hektor l'applique DEJA -- mesure du
+                  // 04/09 : il n'attache un acquereur au compromis que si celui-ci
+                  // a une offre vivante sur le bien.
+                  //
+                  // On garde le choix -- il faut pouvoir agir -- mais on ne fait
+                  // plus semblant que la situation est normale. Et on distingue les
+                  // deux cas REELS, mesures sur les 40 annonces concernees :
+                  //   meme acquereur   -> un reste : l'ancien n'a jamais ete clos
+                  //                       (36, 1801, 8263, 8834, 22794, 22826...)
+                  //   acquereurs differents -> deux acheteurs, ce qui contredit la
+                  //                       regle metier (annonce 1970, seul cas lu)
+                  const acquereursVivants = new Set(
+                    vivantesDuGenre.map((a) => String(a.hektor_acquereur_id ?? '').trim()).filter(Boolean),
+                  )
+                  const memeAcquereur = acquereursVivants.size <= 1
                   // UNE SEULE COPIE DE LA FORMULE (03/09) : la rubrique Affaires du
                   // cockpit affiche les memes etats. Deux copies divergent tot ou tard --
                   // la regle du projet. Elles vivent desormais au niveau module.
@@ -17805,8 +17823,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <p className="sca-ambigu">
                           Ce bien porte <b>{vivantesDuGenre.length}</b>{' '}
                           {AFFAIRE_GENRE_PLURIEL[AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''] ?? ''}
-                          {' '}en cours. Les actions restent en attente tant que tu n'as pas dit{' '}
-                          <b>laquelle</b> — choisis-la ci-dessous.
+                          {' '}en cours, et <b>il ne devrait y en avoir qu'un</b>.
+                          {memeAcquereur
+                            ? " Même acquéreur sur les deux : le plus ancien n'a probablement jamais été clos."
+                            : ' Deux acquéreurs différents sur le même bien — à vérifier avant d’agir.'}
+                          {' '}Désigne celui qui fait foi ci-dessous ; les actions porteront sur lui.
                         </p>
                       ) : null}
                       <div className="sca-h">
