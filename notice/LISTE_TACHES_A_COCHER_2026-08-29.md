@@ -2341,6 +2341,18 @@ GEL que Frederic a repere le premier).*
            A regarder au premier lancement local (le drapeau cockpit est deja
            actif dans .env.local).
 
+[!] 2.2  ⚠ A REVOIR (04/09) -- LA REGLE DE FREDERIC CHANGE LA QUESTION
+         « Il ne peut pas y avoir deux affaires en cours en meme temps. » Et la
+         mesure du 04/09 lui donne raison : HEKTOR APPLIQUE DEJA CETTE REGLE -- il
+         n'attache un acquereur au compromis que si celui-ci a une offre sur le
+         bien. Deux affaires vivantes du meme genre ne sont donc peut-etre pas une
+         AMBIGUITE a arbitrer mais une ANOMALIE a signaler : le selecteur code le
+         04/09 repond peut-etre a la mauvaise question. A TRANCHER AVEC FREDERIC
+         AVANT D'ALLER PLUS LOIN.
+         (La mesure des 40 annonces reste juste, et va dans son sens : la plupart
+         portent UN SEUL acquereur et deux enregistrements dont l'ancien n'a
+         jamais ete clos -- des restes, pas des affaires concurrentes.)
+
 [x] 2.2  LE CHOIX QUAND PLUSIEURS AFFAIRES VIVENT
          ✅ CODEE LE 04/09. Build vert.
 
@@ -2437,6 +2449,47 @@ GEL que Frederic a repere le premier).*
              trois d'entre eux. Reste APP_BROUILLON_BUCKET_ENABLED, non verifie.
          ➡ CONSEQUENCE HEUREUSE : 2.1 est deja sous les yeux des negociateurs.
 
+[ ] 2.5  LE CHAMP ACQUEREUR DESIGNE, IL NE SE TAPE PLUS       AJOUTEE LE 04/09
+         Aujourd'hui « Acquereur Hektor » est un champ LIBRE ou il faut saisir un
+         identifiant numerique. Frederic : « ce n'est pas pratique pour
+         l'utilisateur » -- et c'est pire que ca, c'est faux deux fois :
+
+         ⚠ MESURE DU 04/09, EN DIRECT. Un compromis cree avec l'acquereur 605075
+           alors que l'offre acceptee appartenait a 605030 :
+              cote app    la chaine est partie en 5470 au lieu de 5469
+                          -> l'offre acceptee et son compromis dans DEUX dossiers
+              cote Hektor acquereurs VIDE -- il n'a rien attache, et n'a rien dit
+           Refait avec 605030 : chaine 5469, acquereur ATTACHE partout (offre,
+           compromis ET vente).
+
+         ➡ HEKTOR APPLIQUE DEJA LA REGLE DE FREDERIC : il attache l'acheteur s'il
+           a une offre vivante sur le bien, et ignore la demande sinon. Le champ
+           libre permet donc de lui demander l'impossible, en silence.
+
+         CE QU'IL FAUT : que le champ DESIGNE l'acheteur de l'offre acceptee --
+         le registre le connait (hektor_acquereur_id de la chaine courante). Un
+         choix par NOM, pas par numero ; l'app tient ses 58 781 contacts et sait
+         deja les chercher ailleurs dans l'ecran (ContactSearchModal, selecteur de
+         mandant : NE PAS en ecrire un troisieme).
+         touche : la modale seule · retour : rendre le champ libre a nouveau
+         verif  : sur un bien a offre acceptee, l'acheteur est propose sans rien
+                  taper, et la chaine du compromis est celle de l'offre
+
+[ ] 2.6  UN SEUL ACQUEREUR DANS LA MODALE, ET C'EST TROP PEU   AJOUTEE LE 04/09
+         Releve par Frederic en essayant d'en saisir deux. Hektor en porte
+         plusieurs -- sa fiche affichait « Compromis avec M. TEST GTI, TEST
+         RODACOM Sarah, TEST MANDANT 25-08 Sophie ».
+
+         MESURE DU 04/09 sur le parc, et ce n'est pas un cas limite :
+             compromis  1 811 / 10 581  portent PLUS D'UN acquereur   17,1 %
+                        repartition : 1->8 470 · 2->1 197 · 3->95 · 4->491 · 5+->28
+             ventes       566 /  7 609                                 7,4 %
+         Un compromis sur six. Un couple qui achete, c'est la norme.
+         ⚠ ET LE WORKER SAIT DEJA FAIRE : `buyer_contact_ids` est code et les deux
+           appels reussissent (releve « multi-acquereurs » deja coche). C'est la
+           MODALE qui ne sait pas l'exprimer.
+         touche : la modale · retour : revenir a un champ unique
+
 ### PHASE 3 — L'ECRITURE PART CHEZ HEKTOR · *conditionnee par 0.1 et 0.2*
 
 ```
@@ -2494,10 +2547,74 @@ GEL que Frederic a repere le premier).*
              un compromis ACTIF avant de conclure. Si c'est confirme, la seule
              vraie reserve du chantier tombe.
 
+[ ] 3.2c LE WORKER NE DEPLACE PAS LE POINTEUR DE HEKTOR        AJOUTEE LE 04/09
+         La fiche de Hektor n'affiche qu'UN compromis, celui qu'elle POINTE.
+         Quatre cas mesures le 03 et le 04/09 :
+
+             worker    50067   aucun compromis existant   le pointeur SUIT
+             assistant 50068   50067 annule present       le pointeur SUIT
+             worker    50066   50065 annule present       le pointeur RESTE
+             worker    50070   50069 annule present       le pointeur RESTE
+
+         ➡ Notre worker cree bien le compromis, mais ne met pas a jour le pointeur
+           QUAND IL EN EXISTE DEJA UN. L'assistant de Hektor, lui, fait les deux.
+           C'est un defaut de NOTRE requete, pas une limite de Hektor.
+
+         ⚠ CONSEQUENCE VECUE : le 04/09 au matin, Frederic voit « compromis
+           cloture » chez Hektor pendant que l'app dit « compromis en cours ».
+           L'app avait RAISON -- 50066 etait actif, mais invisible a l'ecran.
+           Tant que ce n'est pas corrige, chaque compromis cree par l'app sur un
+           bien qui en porte deja un sera INTROUVABLE dans Hektor : ni crayon, ni
+           gomme. Frederic n'a pas pu supprimer 50070 depuis la fiche.
+
+         ⚠ ET CE N'EST PAS BLOQUANT POUR LA SUITE : mesure du 04/09, une VENTE
+           s'ajoute normalement sur un compromis invisible. Le defaut gene
+           l'humain qui regarde Hektor, pas la chaine de donnees.
+         verif : creer un compromis sur un bien qui en porte deja un, et voir la
+                 fiche Hektor pointer le NOUVEAU
+
 [ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)
          verif : modifier dans Hektor, le run redescend bien la nouvelle valeur
+[ ] 3.4  SUPPRIMER LE COMPROMIS -- LE VERBE QUI MANQUE         AJOUTEE LE 04/09
+         L'app sait ANNULER un compromis, pas le SUPPRIMER. Or la mesure du 04/09
+         dit que les deux gestes n'ont pas le meme effet :
+             annuler   -> le compromis reste, marque mort, LE STATUT NE BOUGE PAS
+             supprimer -> le compromis disparait, LE STATUT REDESCEND
+         C'est donc un geste metier a part entiere, pas un doublon.
+
+         LA ROUTE EST CONNUE, relevee sur la fiche le 04/09 :
+             delete_compromis_vente('50065')
+         ⚠ UN SEUL VERBE POUR LE COMPROMIS ET LA VENTE. Le worker a deja
+           `delete_hektor_vente` : la moitie du chemin est faite.
+
+         TROIS COUCHES, toutes petites :
+           app_geste_affaire_optimistic  n'accepte `supprimer` que pour kind='vente'
+                                         -> l'ouvrir a 'compromis'
+           worker                        un handler delete_hektor_compromis, calque
+                                         sur delete_hektor_vente
+           front                         un bouton « Supprimer le compromis », a
+                                         cote de « Annuler le compromis » qui existe
+         ⚠ LA LIGNE DU REGISTRE RESTE : present_in_hektor = false, comme pour la
+           vente. Le delete-never ne change pas.
+         retour : retirer le bouton · verif : le statut redescend, la ligne reste
+
+[ ] 3.5  LE READ-THROUGH NE RELIT PAS LES TRANSACTIONS         AJOUTEE LE 04/09
+         Mesure du 04/09 : apres un refus d'offre depuis l'app,
+             registre  33046 « refusee »   <- ecriture optimiste, a jour
+             fiche     33046 « proposed »  <- perimee jusqu'au run de 05:30
+         Deux verites en meme temps, dans la meme app.
+
+         CAUSE : `refresh_single_annonce.py` ne rafraichit QUE l'annonce et ses
+         mandats. Les offres, compromis et ventes ne sont pas relus.
+         ⚠ ET `sync_raw.py --resources offres --mode update` NE RATTRAPE PAS non
+           plus -- essaye le 04/09, l'offre est restee `proposed`, synced_at
+           inchange. Le parametre `version` est bien passe : ce n'est PAS le 200
+           muet. Cause a trouver.
+         ➡ C'est la demonstration en direct de l'utilite de 2.1, et de l'urgence
+           de 2.3 et 2.4 : tant que les autres ecrans lisent les champs plats, ils
+           affichent une verite perimee a cote d'une verite fraiche.
 ```
 
 ### PHASE 4 — MENAGE
