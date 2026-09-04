@@ -2462,7 +2462,14 @@ GEL que Frederic a repere le premier).*
          * les 484 compromis sans offre acceptee : ouvrir une chaine (prudent) ou
            rattacher par l'acquereur (etape 2 de la regle) ?
 
-[~] 1.8  LE REGISTRE GARDE TOUS LES ACQUEREURS   SERVEUR FAIT 05/09 · ECRAN A FAIRE
+[x] 1.8  LE REGISTRE GARDE TOUS LES ACQUEREURS         FAITE LE 05/09/2026
+         ─── L'ECRAN AUSSI, DEPUIS LE 05/09 (commit 31afa9f) ───
+         App.tsx : affaireAcquereursParties / ...DeChaine / ...Noms. La banniere
+         du cockpit et la fiche mobile nomment TOUS les acheteurs du dossier,
+         dedoublonnes par IDENTIFIANT (jamais par le nom).
+         ⚠ affaireAcquereurParty reste en place : le mail et le telephone sont
+           ceux d'UNE personne, ou une liste n'aurait pas de sens.
+         VERIFIE sur l'annonce 478 : « BCJF Pierre-Eric FAURE et Agnes FAURE ».
          ─── FAIT LE 05/09/2026 ───
          local     colonne acquereurs_json (ADDITIVE : acquereur_json garde le
                    principal, le front actuel ne casse pas). LEDGER_SQL lit la
