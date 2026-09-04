@@ -2408,7 +2408,18 @@ GEL que Frederic a repere le premier).*
                   n'a pas de Supabase, donc la liste des affaires reste vide et le
                   selecteur ne s'affiche pas). Build vert, ambiguite mesuree.
 
-[ ] 2.3  LA FICHE MOBILE LIT LE REGISTRE            AJOUTEE LE 04/09
+[x] 2.3  LA FICHE MOBILE LIT LE REGISTRE            ✅ CODEE LE 04/09
+         Build vert. Un bloc par DOSSIER D'AFFAIRE, avec toutes ses transactions --
+         numero Hektor, etat, montant, date, et « plus dans Hektor » le cas echeant.
+         RIEN DE NEUF N'A ETE ECRIT : grouperAffairesParChaine, affaireEtatLabel,
+         affairePrix et AFFAIRE_GENRE_LABEL viennent de 2.1, au niveau module.
+         Une seule formule, deux ecrans.
+         REPLI : les trois cartes d'origine (offre/compromis/vente par champs plats)
+         restent, et servent si la lecture echoue -- verifie en direct sur le
+         serveur mock, 3 cartes rendues, aucune casse.
+         ⚠ Le chemin registre n'est pas vu a l'oeil (le mock n'a pas de Supabase),
+           meme limite que 2.1.
+         --- description d'origine ---
          ⚠ TROUVEE PAR FREDERIC : « en phase 2 il y a pas que 2.2 si ? »
          La phase 2 n'avait que 2.1 et 2.2 -- et le CODE en montrait trois de plus.
 

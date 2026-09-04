@@ -31230,6 +31230,21 @@ function DossierDetailScreen(props: {
   )
 }
 
+/** 2.3 (04/09/2026) -- LA FICHE MOBILE LIT LE REGISTRE, ELLE AUSSI.
+ *
+ *  TROUVE PAR FREDERIC : « en phase 2 il y a pas que 2.2 si ? ». La phase 2
+ *  n'avait que 2.1 et 2.2 ; le code en montrait trois de plus. Celui-ci est le
+ *  seul qui soit REELLEMENT RENDU (App.tsx:19107) -- les deux autres sont le
+ *  chemin de repli et du code mort.
+ *
+ *  ⚠ LA REGLE DE LA DOUBLE CASCADE ETAIT DEJA AU DOSSIER : l'app se dessine deux
+ *    fois, une version mobile et une version bureau. Un ecran ajoute d'un seul
+ *    cote est un ecran a moitie fait -- 2.1 n'avait fait que le bureau.
+ *
+ *  RIEN DE NEUF N'EST ECRIT ICI : grouperAffairesParChaine, affaireEtatLabel,
+ *  affairePrix et AFFAIRE_GENRE_LABEL viennent de 2.1, au niveau module. Une
+ *  seule formule, deux ecrans.
+ */
 function MobileDossierDetail(props: {
   selectedDossier: Dossier | null
   detail: DossierDetailPayload
@@ -31350,6 +31365,23 @@ function MobileDossierDetail(props: {
     ['Montant', formatPrice(props.detail.offre_montant)],
     ['Acquereur', props.detail.offre_acquereur_nom ?? '-'],
   ]
+  // 2.3 : le registre, charge par la fiche elle-meme. TROIS ETATS, pas deux --
+  // null = pas encore lu OU lecture ratee, [] = lu et rien, liste = lu et voici.
+  // Une lecture ratee retombe sur les champs plats : on ne peut pas aggraver.
+  const [mobRegistre, setMobRegistre] = useState<AffaireLedgerRow[] | null>(null)
+  const mobDossierId = props.selectedDossier?.app_dossier_id ?? null
+  useEffect(() => {
+    let vivant = true
+    setMobRegistre(null)
+    const id = Number(mobDossierId)
+    if (!Number.isFinite(id) || id <= 0) return
+    loadAffairesForDossier(id)
+      .then((lignes) => { if (vivant) setMobRegistre(lignes) })
+      .catch(() => { if (vivant) setMobRegistre(null) })
+    return () => { vivant = false }
+  }, [mobDossierId])
+  const mobChaines = mobRegistre && mobRegistre.length ? grouperAffairesParChaine(mobRegistre) : null
+
   const compromisFacts = [
     ['ID', props.detail.compromis_id ?? '-'],
     ['Etat', props.detail.compromis_state ?? '-'],
@@ -31502,6 +31534,40 @@ function MobileDossierDetail(props: {
             emptyLabel="Aucun changement de prix historise pour cette annonce."
           />
         </div>
+        {mobChaines ? (
+          <div className="mobile-transaction-stack">
+            {mobChaines.map((c, rang) => {
+              const party = affaireAcquereurParty(c.lignes[0])
+              const acq = ckPartyName(party)
+              return (
+                <article className="mobile-transaction-card" key={c.chaine}>
+                  <div className="mobile-transaction-head">
+                    <span>{String(rang + 1).padStart(2, '0')}</span>
+                    <strong>Dossier n° {c.chaine}</strong>
+                    <StatusPill value={acq || `${c.lignes.length} transaction${c.lignes.length > 1 ? 's' : ''}`} />
+                  </div>
+                  <div className="mobile-detail-lines">
+                    {c.lignes.map((l) => {
+                      const numero = String(l.hektor_affaire_id ?? '').trim()
+                      const prix = affairePrix(l.montant)
+                      return (
+                        <div key={l.app_affaire_id}>
+                          <span>{AFFAIRE_GENRE_LABEL[String(l.kind)] ?? l.kind}{numero ? ` n° ${numero}` : ''}</span>
+                          <b>
+                            {affaireEtatLabel(String(l.kind), l.state)}
+                            {prix ? ` · ${prix}` : ''}
+                            {l.date ? ` · ${formatDate(l.date)}` : ''}
+                            {l.present_in_hektor === false && numero ? ' · plus dans Hektor' : ''}
+                          </b>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        ) : (
         <div className="mobile-transaction-stack">
           <article className="mobile-transaction-card">
             <div className="mobile-transaction-head">
@@ -31534,6 +31600,7 @@ function MobileDossierDetail(props: {
             </div>
           </article>
         </div>
+        )}
         {commercialFacts.length > 0 ? (
           <div className="mobile-detail-lines">
             <strong>Honoraires et rendement</strong>
