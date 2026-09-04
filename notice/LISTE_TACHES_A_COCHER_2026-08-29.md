@@ -2287,6 +2287,14 @@ GEL que Frederic a repere le premier).*
            ce soit traite.
 ```
 
+[—] 1.5  L'ACQUEREUR RETENU QUAND HEKTOR EN RENVOIE PLUSIEURS
+         ❌ SANS OBJET depuis 1.7 (04/09). La regle de chainage ne repose plus sur
+         l'acquereur, donc il n'y a plus d'acquereur a CHOISIR. Le code ecrit le
+         04/09 n'a jamais ete commite -- rien a defaire.
+         ⚠ ET IL AURAIT NUI : mesure, +22 liens gagnes mais 6 CASSES, dont
+           l'annonce 478 (le couple FAURE). Elle choisissait la ou il fallait
+           comparer, puis on a decouvert qu'il ne fallait ni choisir ni comparer.
+         --- description d'origine ---
 [ ] 1.5  L'ACQUEREUR RETENU QUAND HEKTOR EN RENVOIE PLUSIEURS   AJOUTEE 04/09
          Trouve par Frederic : « comment la regle va reagir si Hektor retourne
          deux ou trois acquereurs ? »
@@ -2348,6 +2356,87 @@ GEL que Frederic a repere le premier).*
          ETAPE 2 : le correctif, qui dependra de la reponse.
          ⚠ AMPLEUR CONNUE : 2 chaines sur 13 348. Ne pas surinvestir avant d'avoir
            mesure -- mais ne pas l'oublier, parce que c'est du FAUX en base.
+
+[ ] 1.7  LA REGLE DE CHAINAGE, REFONDEE PAR LA SEQUENCE     AJOUTEE LE 04/09
+         ⚠ REMPLACE la regle posee en 1.1, et REND 1.5 SANS OBJET.
+         Trouvee par Frederic apres une journee ou j'ai suivi QUATRE fausses
+         pistes. Sa formulation, mot pour mot :
+
+             « une chaine c'est trois blocs, ou deux, ou un seul. Par logique un
+               compromis est clos soit quand il est annule soit quand la vente est
+               passee. Une vente est close quand elle est passee, sinon supprimee.
+               L'app genere le numero de chaine a l'offre d'achat mais il se peut
+               que certaine affaire n'ait pas ce bloc. »
+
+         ─── LE PRINCIPE ───
+         Une affaire n'est PAS definie par QUI achete. Elle est definie par la
+         SEQUENCE OUVERTE sur le bien : offre -> compromis -> vente. Chaque bloc
+         se rattache au PRECEDENT VIVANT, et la chaine peut commencer a n'importe
+         lequel des trois.
+
+         ─── LA REGLE ───
+         OFFRE      une chaine par acquereur. Plusieurs offres coexistent, c'est
+                    NORMAL (regle metier : plusieurs proposees, une seule acceptee).
+
+         COMPROMIS  1. l'unique offre ACCEPTEE anterieure du bien
+                    2. sinon, une offre du MEME ACQUEREUR
+                    3. sinon, nouvelle chaine
+
+         VENTE      1. l'unique compromis NON ANNULE anterieur
+                    2. sinon, nouvelle chaine
+                    3. si PLUSIEURS candidats : elle reste seule, et l'ecran
+                       SIGNALE l'anomalie (c'est la population de 2.2)
+
+         ─── LES MESURES QUI L'ETABLISSENT (04/09, parc entier) ───
+             compromis -> offre acceptee
+                 9 206 / 10 581   87,0 %   rattachement CERTAIN
+                   889             8,4 %   aucune offre : la chaine commence la
+                   484             4,6 %   des offres mais aucune acceptee
+                     2             0,0 %   plusieurs acceptees -> a departager
+             vente -> compromis vivant
+                 7 504 /  7 609   98,6 %   rattachement CERTAIN
+                    83             1,1 %   aucun compromis : la chaine commence la
+                    22             0,3 %   plusieurs, ou aucun vivant -> anomalie
+         ➡ 24 cas ambigus sur 18 190 rattachements. Et ce sont de VRAIES anomalies
+           (deux compromis actifs le meme jour), pas des limites de la regle.
+
+         ─── POURQUOI ELLE BAT TOUT CE QUE J'AI PROPOSE AVANT ───
+             l'acquereur seul .......... 84,8 %  et se trompe 1 138 fois
+             le croisement de listes ... +18 chaines seulement
+             le montant ................ 99,7 %  MAIS 149 ambiguites
+             LA SEQUENCE ............... 98,6 %  et les 24 restants sont VISIBLES
+
+         ⚠ ET ELLE DESAMORCE L'OBJECTION DE FREDERIC SUR LE MONTANT : « on peut
+           avoir deux compromis au meme montant, un annule et un qui passe en
+           vente ». Mesure : 145 cas sur 149 sont exactement ceux-la. Avec la
+           sequence, l'annule n'est pas candidat -- le probleme disparait.
+
+         ─── LES QUATRE FAUSSES PISTES, a ne pas refaire ───
+         1. L'ACQUEREUR COMME CLE (1.1, 1.5). Instable : 1 034 ventes isolees dont
+            le compromis est sur la meme annonce, 109 au meme nom de famille.
+            L'identite de l'acheteur CHANGE entre les etapes (couple, SCI, doublon
+            de contact) alors que la sequence, elle, ne change pas.
+         2. LE CROISEMENT DE LISTES COMPLETES. La donnee existe (165 902 relations
+            locales, 97 a 99 % de couverture) mais elle ne repare que 18 chaines :
+            991 fois sur 1 034, les listes ne se croisent VRAIMENT pas.
+         3. LE MONTANT. 99,7 % mais 149 ambiguites, dont 145 du scenario ci-dessus.
+            Reste utile en filet, jamais en juge.
+         4. LE MANDAT. 412 annonces ont un seul mandat et plusieurs acquereurs :
+            regrouper par mandat y fusionnerait des affaires distinctes.
+
+         ─── CE QUI RESTE VRAI DE 1.1 ───
+         Le numero de chaine reste FRAPPE par une sequence, jamais calcule. Ce qui
+         change, c'est la facon de decider QUI le partage.
+
+         ─── CE QUI RESTE A TRANCHER ───
+         * recalculer les 13 348 chaines existantes, ou n'appliquer qu'aux
+           nouvelles ? Recalculer corrige le passe mais deplace des numeros de
+           dossier deja affiches a l'ecran.
+         * les 89 chaines qui s'etalent sur plus de 2 ans : deux affaires
+           successives du meme acquereur, fusionnees. La sequence ne les separe
+           pas non plus -- c'est la seule chose que la periode de mandat ferait.
+         * les 484 compromis sans offre acceptee : ouvrir une chaine (prudent) ou
+           rattacher par l'acquereur (etape 2 de la regle) ?
 
 ### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
 
