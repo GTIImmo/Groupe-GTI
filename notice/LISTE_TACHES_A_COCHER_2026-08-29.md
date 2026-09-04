@@ -2438,6 +2438,76 @@ GEL que Frederic a repere le premier).*
          * les 484 compromis sans offre acceptee : ouvrir une chaine (prudent) ou
            rattacher par l'acquereur (etape 2 de la regle) ?
 
+[ ] 1.8  LE REGISTRE GARDE TOUS LES ACQUEREURS, PAS LE PREMIER   AJOUTEE 04/09
+         Question de Frederic, et elle n'a pas de bonne reponse :
+             « si on a les donnees en brut, c'est-a-dire TOUS les acquereurs par
+               transaction, pourquoi en garder juste UN ? »
+
+         ─── L'ORIGINE DU RACCOURCI ───
+         export_app_payload.py, _compact_party() :
+             if isinstance(obj, list):
+                 obj = obj[0] if obj else None      # ← le PREMIER, sans discuter
+         Cette fonction a ete ecrite pour AFFICHER une partie (un nom, un
+         telephone, un mail). Prendre le premier etait raisonnable pour ca. Elle a
+         ensuite ete reutilisee pour fabriquer la ligne du REGISTRE, et la ce ne
+         l'est plus du tout.
+
+         ⚠ NE PAS CONFONDRE DEUX COLONNES QUI PORTENT PRESQUE LE MEME NOM :
+             hektor_offre.acquereur_json        UN acquereur -- normal, une offre
+                                                n'en a qu'un (0 cas mesure a 2+)
+             hektor_compromis.acquereurs_json   LA LISTE, au pluriel, complete
+             hektor_vente.acquereurs_json       LA LISTE, complete
+             app_affaire_ledger.acquereur_json  UN seul -- c'est LA que ca se perd
+
+         ─── L'AMPLEUR, MESUREE LE 04/09 ───
+             compromis   13 274 acquereurs au brut  ->  10 281 gardes   2 993 perdus
+             vente        9 077                     ->   7 534 gardes   1 543 perdus
+             ─────────────────────────────────────────────────────────────────
+             TOTAL PERDU : 4 536 acquereurs presents chez Hektor et invisibles
+                           dans le registre
+             1 811 compromis (17,1 %) et 566 ventes (7,4 %) en portent plusieurs.
+             Sur les compromis RECENTS c'est un sur quatre (240 sur 979 le 04/09).
+
+         ─── CE QU'IL FAUT TOUCHER, ET C'EST PETIT ───
+         serveur   affaire_ledger.py:356   la lecture (ne plus passer par
+                                           _compact_party pour le registre)
+                   affaire_ledger.py:471   l'upsert qui recopie la colonne
+                   ⚠ NE PAS toucher _compact_party : HUIT points d'appel en
+                     production, dont les MANDANTS et les NOTAIRES et le blob que
+                     lit le front. Le corriger la changerait tout autre chose.
+                   ⚠ view_generale.py:351-352 lit le portable et le mail de
+                     l'acquereur d'OFFRE -> pas concerne, une offre n'en a qu'un.
+         front     App.tsx:23470  affaireAcquereurParty -- POINT UNIQUE, pose le
+                                  03/09 au niveau module par 2.1 ; la modale
+                                  (17845) et les rubriques passent toutes par la.
+
+         ─── CE QUE CA DONNE ───
+             AUJOURD'HUI  compromis 23528  « BCJF Pierre-Eric FAURE »
+             DEMAIN                        « Agnes FAURE et Pierre-Eric FAURE »
+
+         ⚠ ET CE N'EST PAS POUR LE CHAINAGE. Mesure du 04/09 : disposer des listes
+           completes ne debloque AUCUN rattachement que la regle 1.7 ne trouve
+           deja -- 366 par identifiant avec la liste entiere, exactement le meme
+           chiffre qu'avec un seul acquereur, et ZERO par le nom. Le croisement de
+           listes ne reparait que 18 chaines sur 1 034.
+         ➡ LA RAISON EST AILLEURS, ET ELLE SUFFIT : garder une donnee amputee
+           quand on a la donnee complete, c'est une dette qui se paiera a l'ecran,
+           dans les relances, dans les documents -- partout ou l'app nommera un
+           acheteur. Et LE JOUR DE LA COUPURE C'EST LE REGISTRE QUI FERA FOI : il
+           aurait tort sur 4 536 personnes.
+
+         ⚠ LA DONNEE EXISTE DEJA AILLEURS EN LOCAL, et il faut le savoir avant de
+           choisir la forme : app_contact_relation_current (LOCAL) porte 165 902
+           relations, une par acquereur, avec transaction_id -- couverture 99,8 %
+           des offres, 97,1 % des compromis, 99,0 % des ventes. Trois formes
+           possibles, a trancher : (a) acquereur_json devient un TABLEAU,
+           (b) une table a part, (c) le front lit les relations. La (a) est la
+           plus directe ; la (c) evite toute migration mais lie l'affichage a une
+           table batie pour les contacts.
+
+         touche : 3 points serveur + 1 point front · retour : remettre _compact_party
+         verif  : sur l'annonce 478, le compromis 23528 affiche DEUX acquereurs
+
 ### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
 
 ```
