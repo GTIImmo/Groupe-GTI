@@ -2310,16 +2310,60 @@ GEL que Frederic a repere le premier).*
            A regarder au premier lancement local (le drapeau cockpit est deja
            actif dans .env.local).
 
-[ ] 2.2  LE CHOIX QUAND PLUSIEURS CHAINES VIVENT
-         AUJOURD'HUI affaireCourantePourStatut() rend null en cas d'ambiguite et
-         AUCUN bouton n'apparait (« mieux vaut aucun bouton qu'un bouton qui agit
-         sur la mauvaise affaire »). Mesure du 03/09 : 17 annonces pour les
-         compromis, 16 pour les offres, 7 pour les ventes -- 40 au total.
-         Rare, mais apres la coupure ce silence devient une impasse.
-         ⚠ DOCTRINE A RESPECTER : « l'utilisateur DESIGNE, le worker EXECUTE ».
-           On AFFICHE le choix, on ne devine pas. Rendre le worker « intelligent »
-           sur le choix de la transaction est explicitement interdit (28/08).
-```
+[x] 2.2  LE CHOIX QUAND PLUSIEURS AFFAIRES VIVENT
+         ✅ CODEE LE 04/09. Build vert.
+
+         LE DEFAUT TENAIT DANS UNE LIGNE (App.tsx, affaireCourantePourStatut) :
+             return vivantes.length === 1 ? vivantes[0] : null
+         Deux transactions vivantes du meme genre -> null -> et TOUS les boutons
+         disparaissent : Refuser, Accepter, Annuler le compromis, Supprimer la
+         vente, Corriger. La liste s'affiche, mais on ne peut rien en faire.
+
+         ⚠ LA REGLE NE CHANGE PAS. On ne devine toujours pas -- « mieux vaut aucun
+           bouton qu'un bouton qui agit sur la mauvaise affaire », et « rendre le
+           worker intelligent sur le choix est explicitement interdit » (28/08).
+           Ce qui change : ON DEMANDE. Un bouton « Choisir » par affaire vivante,
+           et un bandeau qui dit pourquoi les actions attendent.
+           Tant que rien n'est choisi -> null, comme aujourd'hui.
+
+         LE CHOIX PASSE AVANT LE NUMERO DU DOSSIER, et c'est voulu : si quelqu'un
+         a clique, il sait mieux que nous. On verifie seulement que l'affaire
+         designee est TOUJOURS vivante (un choix peut survivre a un rechargement).
+
+         REMISES A ZERO : a l'ouverture de la modale (on n'herite jamais du choix
+         d'un autre bien) et au changement de genre (une offre designee ne vaut
+         pas pour un compromis).
+
+         ─── UNE FAUTE DE 2.1 CORRIGEE AU PASSAGE ───
+         En codant 2.1 j'avais pose AFFAIRE_ETAT_MORT au niveau module alors que
+         AFFAIRE_ETATS_MORTS existait deja dans la modale, a l'identique. DEUX
+         COPIES DE LA MEME REGLE. Reunies. Et le test de vie complet
+         (etat mort OU supprimee chez Hektor) monte au niveau module sous
+         affaireEstVivante() : la rubrique et la modale l'appellent desormais.
+
+         ─── MESURES DU 04/09 ───
+         AMBIGUITE REELLE, avec le test de vie du code :
+             compromis 17 · offres 16 · ventes 7  =  40 annonces
+             ✅ exactement le chiffre du plan -- le code reproduit la mesure.
+         ⚠ ET LA NATURE DU CAS N'EST PAS CELLE QU'ON CROYAIT : sur les cas lus,
+           la PLUPART portent UN SEUL dossier et UN SEUL acquereur -- deux
+           enregistrements pour le meme acheteur, l'ancien jamais clos
+           (36, 1801, 8263, 8834, 22794, 22826...). Un seul cas lu porte deux
+           acquereurs distincts : l'annonce 1970 (compromis 49868 et 49943).
+           Le selecteur sert donc surtout a distinguer DEUX LIGNES QUI SE
+           RESSEMBLENT -> il montre le numero Hektor, le montant, la date ET
+           l'acquereur. Sans le numero, on ne pourrait pas les separer.
+
+         ⚠ 24933 N'EST PLUS UN CAS D'ESSAI : le run de la nuit a rapatrie les
+           vrais etats (50060 active -> cancelled, 33042 accepted -> refused).
+           Il n'y reste qu'une offre et un compromis vivants. Bonne nouvelle en
+           soi -- le pipeline fait son travail -- mais l'essai a l'oeil demande
+           maintenant un des 40 vrais dossiers.
+
+         retour : retirer le bouton et le bandeau -> on revient au silence
+         verif  : PAS ENCORE VUE A L'OEIL (meme limite que 2.1 : le serveur mock
+                  n'a pas de Supabase, donc la liste des affaires reste vide et le
+                  selecteur ne s'affiche pas). Build vert, ambiguite mesuree.
 
 [ ] 2.3  LA FICHE MOBILE LIT LE REGISTRE            AJOUTEE LE 04/09
          ⚠ TROUVEE PAR FREDERIC : « en phase 2 il y a pas que 2.2 si ? »

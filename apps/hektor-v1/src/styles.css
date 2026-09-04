@@ -32253,3 +32253,31 @@ body {
 @media (prefers-reduced-motion:reduce){
   .mandant-prov-dot{animation:none;}
 }
+
+/* ── 2.2 : LE CHOIX QUAND PLUSIEURS AFFAIRES VIVENT (04/09/2026) ──────────────
+   Avant, un bien portant deux transactions vivantes du meme genre n'affichait
+   AUCUN bouton -- « mieux vaut aucun bouton qu'un bouton qui agit sur la mauvaise
+   affaire ». On ne devine toujours pas : on demande. Additif, aucune regle
+   existante n'est modifiee. */
+.status-change-affaires .sca-ambigu {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #f0d9a8;
+  background: #fdf6e6;
+  color: #6b4e12;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.status-change-affaires .sca-choisir {
+  border: 1px solid #94a3b8;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 2px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.status-change-affaires .sca-choisir:hover { border-color: #0f172a; background: #f1f5f9; }
+.status-change-affaires .sca-choisir:focus-visible { outline: 2px solid #0f172a; outline-offset: 2px; }

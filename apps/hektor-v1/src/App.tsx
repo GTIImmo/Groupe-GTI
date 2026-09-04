@@ -11918,6 +11918,10 @@ export default function App() {
   // C.19 : les affaires du bien, pour CORRIGER une transaction existante sans
   // rien envoyer a Hektor. Chargees a l'ouverture de la modale.
   const [statusChangeAffaires, setStatusChangeAffaires] = useState<AffaireLedgerRow[]>([])
+  // 2.2 (04/09) -- L'AFFAIRE QUE L'UTILISATEUR A DESIGNEE, quand plusieurs vivent.
+  // null = il n'a rien designe, et les boutons restent caches : c'est le
+  // comportement d'aujourd'hui, conserve tel quel.
+  const [statusChangeAffaireChoisie, setStatusChangeAffaireChoisie] = useState<number | null>(null)
   const [statusChangeCorrectionPending, setStatusChangeCorrectionPending] = useState(false)
   const [statusChangeBuyerContactId, setStatusChangeBuyerContactId] = useState('')
   const [statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId] = useState('')
@@ -14725,6 +14729,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // C.19 : on charge les transactions du bien pour pouvoir les corriger.
     // Best-effort : si la lecture echoue, la modale garde son comportement d'avant.
     setStatusChangeAffaires([])
+    setStatusChangeAffaireChoisie(null)   // 2.2 : on n'herite jamais du choix d'un autre bien
     if (dossier.app_dossier_id != null) {
       loadAffairesForDossier(Number(dossier.app_dossier_id))
         .then(setStatusChangeAffaires)
@@ -14839,7 +14844,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   // Une affaire morte ne se propose plus : on ne refuse pas deux fois la meme offre.
-  const AFFAIRE_ETATS_MORTS = new Set(['refused', 'cancelled'])
+  // UNE SEULE DEFINITION (04/09). En codant 2.1 j'en avais pose une SECONDE au
+  // niveau module (AFFAIRE_ETAT_MORT) alors que celle-ci existait deja, a
+  // l'identique. Deux copies de la meme regle, c'est ce que le projet interdit
+  // depuis le debut. On garde le nom d'ici, on pointe sur la definition unique.
+  const AFFAIRE_ETATS_MORTS = AFFAIRE_ETAT_MORT
 
   /** La transaction du bien qui correspond au statut choisi, si elle existe.
    *
@@ -14864,9 +14873,31 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
    * d'ambiguite on ne rend rien -- mieux vaut aucun bouton qu'un bouton qui
    * agit sur la mauvaise affaire.
    */
+  /** Les transactions VIVANTES du genre vise. Sortie a part le 04/09 (brique 2.2) :
+   *  l'ecran a besoin de savoir s'il y a AMBIGUITE, et la regle de vie ne doit
+   *  exister qu'a un seul endroit. */
+  function affairesVivantesPourStatut(): AffaireLedgerRow[] {
+    const genre = AFFAIRE_PAR_STATUT[statusChangeStatus]
+    if (!genre || !statusChangeTarget) return []
+    return statusChangeAffaires.filter((a) => a.kind === genre && affaireEstVivante(a))
+  }
+
   function affaireCourantePourStatut(): AffaireLedgerRow | null {
     const genre = AFFAIRE_PAR_STATUT[statusChangeStatus]
     if (!genre || !statusChangeTarget) return null
+
+    const vivantes = affairesVivantesPourStatut()
+
+    // ─── 2.2 : CE QUE L'UTILISATEUR A DESIGNE PASSE AVANT TOUT (04/09) ───
+    //
+    // Y COMPRIS avant le numero que le dossier porte. Si quelqu'un a clique
+    // « Choisir », c'est qu'il sait mieux que nous -- « l'utilisateur DESIGNE, le
+    // worker EXECUTE ». On verifie seulement qu'elle est toujours vivante : un
+    // choix fait avant un rechargement peut viser une affaire qui ne l'est plus.
+    if (statusChangeAffaireChoisie != null) {
+      const choisie = vivantes.find((a) => a.app_affaire_id === statusChangeAffaireChoisie)
+      if (choisie) return choisie
+    }
 
     // ─── UNE AFFAIRE MORTE N'EST L'AFFAIRE COURANTE PAR AUCUN CHEMIN ───
     //
@@ -14879,29 +14910,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // run de nuit : des qu'on enchaine deux transactions dans la meme journee, il
     // designe la PRECEDENTE. Le repli, lui, filtrait deja les mortes -- mais il
     // n'etait jamais atteint, le chemin 1 concluant avant lui.
-    //
-    // Le test de vie est donc sorti du repli et applique aux DEUX chemins. Quand
-    // le chemin 1 tombe sur une morte, il ne la retient pas et laisse le repli
-    // faire son travail.
-    const estVivante = (a: AffaireLedgerRow) => {
-      if (AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())) return false
-      // Celle que Hektor a SUPPRIMEE porte un numero ET present_in_hektor = false.
-      // A ne pas confondre avec celle qui vient de naitre chez nous : pas de
-      // numero, et present_in_hektor = false aussi.
-      const aUnNumeroHektor = Boolean(String(a.hektor_affaire_id ?? '').trim())
-      const retireeDeHektor = aUnNumeroHektor && a.present_in_hektor === false
-      return !retireeDeHektor
-    }
 
     // 1. LE CHEMIN D'ORIGINE : Hektor a donne son numero, on le suit -- si elle vit.
     const cle = genre === 'offre' ? statusChangeTarget.offre_id
       : genre === 'compromis' ? statusChangeTarget.compromis_id
       : statusChangeTarget.vente_id
     if (cle != null) {
-      const parHektor = statusChangeAffaires.find(
-        (a) => a.kind === genre && String(a.hektor_affaire_id ?? '') === String(cle),
+      const parHektor = vivantes.find(
+        (a) => String(a.hektor_affaire_id ?? '') === String(cle),
       )
-      if (parHektor && estVivante(parHektor)) return parHektor
+      if (parHektor) return parHektor
     }
 
     // 2. LE REPLI : le dossier ne porte pas encore le numero (le run n'est pas passe).
@@ -14913,10 +14931,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // Les boutons, apparus, ont DISPARU. Le repli doit donc dependre de la VIE de
     // l'affaire, pas de la presence d'un numero.
     //
-    // On ecarte en revanche celle que Hektor a SUPPRIMEE : elle porte un numero
-    // ET present_in_hektor = false. A ne pas confondre avec celle qui vient de
-    // naitre chez nous -- pas de numero, present_in_hektor = false aussi.
-    const vivantes = statusChangeAffaires.filter((a) => a.kind === genre && estVivante(a))
+    // ⚠ ET S'IL Y EN A PLUSIEURS, ON REND null -- INCHANGE. Mieux vaut aucun bouton
+    // qu'un bouton qui agit sur la mauvaise affaire. La nouveaute de 2.2 n'est pas
+    // de deviner : c'est d'OFFRIR LE CHOIX a l'ecran, plus haut dans cette fonction.
     return vivantes.length === 1 ? vivantes[0] : null
   }
 
@@ -17621,7 +17638,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       key={option.value}
                       className={`status-choice-card ${statusChangeStatus === option.value ? 'is-selected' : ''}`}
                       type="button"
-                      onClick={() => setStatusChangeStatus(option.value)}
+                      onClick={() => { setStatusChangeStatus(option.value); setStatusChangeAffaireChoisie(null) }}
                     >
                       <strong>{option.label}</strong>
                       <span>{option.description}</span>
@@ -17773,6 +17790,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     loadAffairesForDossier ne filtre rien. */}
                 {statusChangeAffaires.length > 0 ? (() => {
                   const courante = affaireCourantePourStatut()
+                  // 2.2 : ambigu = plusieurs vivantes du genre vise. C'est le cas ou,
+                  // jusqu'ici, l'ecran se taisait completement.
+                  const vivantesDuGenre = affairesVivantesPourStatut()
+                  const ambigu = vivantesDuGenre.length > 1
                   // UNE SEULE COPIE DE LA FORMULE (03/09) : la rubrique Affaires du
                   // cockpit affiche les memes etats. Deux copies divergent tot ou tard --
                   // la regle du projet. Elles vivent desormais au niveau module.
@@ -17780,6 +17801,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   const etatLabel = affaireEtatLabel
                   return (
                     <section className="status-change-affaires">
+                      {ambigu && !courante ? (
+                        <p className="sca-ambigu">
+                          Ce bien porte <b>{vivantesDuGenre.length}</b>{' '}
+                          {AFFAIRE_GENRE_PLURIEL[AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''] ?? ''}
+                          {' '}en cours. Les actions restent en attente tant que tu n'as pas dit{' '}
+                          <b>laquelle</b> — choisis-la ci-dessous.
+                        </p>
+                      ) : null}
                       <div className="sca-h">
                         <span>Les affaires de ce bien</span>
                         <span className="sca-n">{statusChangeAffaires.length}</span>
@@ -17848,6 +17877,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                   <span className="sca-d">{a.date ? formatDate(a.date) : '—'}</span>
                                   <span className="sca-a">{acq || '—'}</span>
                                   <span className="sca-t">
+                                    {/* 2.2 (04/09) : QUAND PLUSIEURS VIVENT, ON OFFRE LE CHOIX.
+                                        Avant, l'app rendait null et TOUS les boutons disparaissaient
+                                        -- « mieux vaut aucun bouton qu'un bouton qui agit sur la
+                                        mauvaise affaire ». La regle ne change pas : on ne devine
+                                        toujours pas. On demande. */}
+                                    {ambigu && !visee && affaireEstVivante(a) ? (
+                                      <button type="button" className="sca-choisir"
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation()
+                                                          setStatusChangeAffaireChoisie(a.app_affaire_id) }}>
+                                        Choisir
+                                      </button>
+                                    ) : null}
                                     {visee ? <b>visée par les actions</b> : null}
                                     {partie ? <i>plus dans Hektor</i> : null}
                                     {!numero ? <i>née dans l'app, sans numéro Hektor</i> : null}
@@ -23378,6 +23419,12 @@ function CkAbandonDossiers({ dossiers, onOpenContact }: { dossiers: CkAffaireDos
 const AFFAIRE_GENRE_LABEL: Record<string, string> = {
   offre: 'Offre', compromis: 'Compromis', vente: 'Vente',
 }
+// « compromis » ne prend pas de s. Un pluriel fabrique en collant un s aurait
+// ecrit « 2 Compromiss » a l'ecran -- le genre de detail qui decredibilise tout
+// le reste.
+const AFFAIRE_GENRE_PLURIEL: Record<string, string> = {
+  offre: 'offres', compromis: 'compromis', vente: 'ventes',
+}
 
 /** L'etat d'une transaction en francais. UNE SEULE COPIE : la modale de changement
  *  de statut appelle la meme -- deux copies d'une formule divergent tot ou tard. */
@@ -23414,6 +23461,20 @@ function affairePrix(x: unknown): string {
 
 const AFFAIRE_RANG: Record<string, number> = { offre: 1, compromis: 2, vente: 3 }
 const AFFAIRE_ETAT_MORT = new Set(['refused', 'cancelled'])
+
+/** Une affaire est-elle encore vivante ? Regle unique, appelee par la rubrique
+ *  Affaires ET par la modale de changement de statut.
+ *
+ *  DEUX FACONS DE NE PLUS ETRE VIVANTE, et il ne faut pas les confondre :
+ *    - l'etat le dit         refusee ou annulee
+ *    - Hektor l'a SUPPRIMEE  elle porte un numero ET present_in_hektor = false
+ *  ⚠ A ne pas confondre avec celle qui vient de NAITRE chez nous : pas de numero,
+ *    et present_in_hektor = false aussi. Celle-la est bien vivante. */
+function affaireEstVivante(a: AffaireLedgerRow): boolean {
+  if (AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase())) return false
+  const aUnNumeroHektor = Boolean(String(a.hektor_affaire_id ?? '').trim())
+  return !(aUnNumeroHektor && a.present_in_hektor === false)
+}
 
 type ChaineAffaire = { chaine: string; lignes: AffaireLedgerRow[]; rang: number; date: string }
 
