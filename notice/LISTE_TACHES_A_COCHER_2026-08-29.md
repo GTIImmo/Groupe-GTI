@@ -2534,6 +2534,85 @@ GEL que Frederic a repere le premier).*
            MODALE qui ne sait pas l'exprimer.
          touche : la modale · retour : revenir a un champ unique
 
+[ ] 2.7  LA PERIODE DE MANDAT PASSE DU MIROIR AU REGISTRE      AJOUTEE LE 04/09
+         ⚠ POINT A PART, pose par Frederic : « c'est un autre point, quand on
+           reliera l'app au registre en direct ». Ne pas le melanger aux briques
+           d'ecran (2.1 a 2.6) : celles-la BRANCHENT le registre, celle-ci lui
+           ajoute une dimension.
+
+         ─── CE QUE LE CODE FAIT AUJOURD'HUI : DEUX CHEMINS QUI NE SE PARLENT PAS ───
+
+         A. tu cliques une pastille de mandat
+               ckCycleAff['11939'].affaires_detail_json      un BLOB
+               fabrique la nuit par build_cycle_affaire_blob
+               a partir du MIROIR (SQL_MANDAT_AFFAIRES_ALL lit hektor_offre/
+               compromis/vente ; le ledger n'y sert que de filet pour les
+               affaires DISPARUES de Hektor)
+            -> la periode est geree, mais la donnee date de la nuit
+
+         B. aucun cycle selectionne  (le chemin rebranche par 2.1)
+               loadAffairesForDossier() -> app_affaire_ledger EN DIRECT
+            -> la donnee est fraiche, mais AUCUNE notion de periode
+
+         La MODALE est sur le chemin B : elle charge toutes les affaires du bien,
+         TOUS MANDATS CONFONDUS.
+
+         ⚠ ET LE CHEMIN A MEURT A LA COUPURE. Le blob est bati sur le miroir ;
+           plus de Hektor -> plus de miroir alimente -> plus de blob -> la vue par
+           cycle s'eteint. Le registre, lui, accumule et ne se reconstruit pas.
+           C'est la vraie raison de faire ce portage, pas le confort d'affichage.
+
+         ─── CE QUI EST DEJA LA, MESURE LE 04/09 ───
+
+         Le registre PORTE DEJA le mandat, aux memes taux que le miroir :
+             vente      6 723 / 7 609    88 %
+             compromis  7 885 / 10 581   74 %
+             offre        224 / 11 133    2 %   <- le seul trou
+         Et nous n'en perdons RIEN : quand Hektor envoie un mandat.id, on le range.
+         Verifie ligne a ligne : 0 cas ou le brut porte un id et la colonne est vide.
+
+         Hektor envoie un OBJET complet sur les trois genres :
+             { id, numero, type, debut, fin, cloture, avenants, note }
+
+         ⚠ LE TROU DES OFFRES EST HISTORIQUE, PAS STRUCTUREL : les 224 offres a
+           mandat sont quasiment toutes recentes -- 217 sur 224 entre fevrier et
+           septembre 2026, rien ou presque avant. Hektor s'est mis a le renseigner,
+           et le trou se referme tout seul.
+
+         ─── LA CASCADE PROPOSEE, du plus sur au plus faible ───
+
+             1. le mandat que Hektor donne          88 % ventes · 74 % compromis
+             2. sinon, l'annonce n'a qu'UN mandat   99,3 % des annonces (177 sur
+                                                    24 665 en portent plusieurs)
+             3. sinon, la PERIODE : la date de la transaction tombe dans debut->fin
+                                    24 945 mandats sur 24 947 ont debut ET fin
+             4. sinon, le MANDANT   99,9 % sur compromis et ventes
+                                    ABSENT des offres (Hektor n'en envoie pas)
+             5. sinon « mandat indetermine » -- on ne devine pas
+
+         ⚠ LA PERIODE AVANT LE MANDANT, ET C'EST DELIBERE : le vendeur est souvent
+           le meme d'un mandat a l'autre sur un meme bien, il ne distingue pas les
+           periodes. La date, si. Et c'est DEJA la logique des pastilles de cycle
+           du front : on n'invente pas un mecanisme, on etend celui qui existe.
+
+         ─── CE QUE CA DEBLOQUE ───
+         * un seul chemin dans la rubrique au lieu de deux ; le blob de nuit devient
+           inutile, et la vue par cycle survit a la coupure
+         * la modale ne melange plus les mandats
+         * le cas de Frederic devient exprimable : une vente non close, un NOUVEAU
+           mandat sur le meme bien -> deux periodes, deux affaires, meme acheteur
+         * le repli actuel de build_affaires_dossiers (« mandat introuvable -> le
+           dossier apparait dans TOUS les cycles ») peut enfin se refermer
+
+         ⚠ ET CE N'EST PAS LA REPONSE A 2.2 -- mesure du 04/09 :
+             41 cas ambigus  ·  4 seraient departages par la periode  ·  37 non
+           Les 37 ont leurs transactions vivantes sous le MEME mandat. 2.2 garde
+           donc tout son sens ; la periode n'en resorbe qu'un dixieme.
+
+         retour : le chemin A existe toujours, on ne le retire qu'apres coup
+         verif  : sur une annonce multi-mandats, la rubrique et la modale ne
+                  montrent que les transactions du mandat choisi, et fraiches
+
 ### PHASE 3 — L'ECRITURE PART CHEZ HEKTOR · *conditionnee par 0.1 et 0.2*
 
 ```
