@@ -2287,6 +2287,68 @@ GEL que Frederic a repere le premier).*
            ce soit traite.
 ```
 
+[ ] 1.5  L'ACQUEREUR RETENU QUAND HEKTOR EN RENVOIE PLUSIEURS   AJOUTEE 04/09
+         Trouve par Frederic : « comment la regle va reagir si Hektor retourne
+         deux ou trois acquereurs ? »
+
+         CE QUE LE CODE FAIT, et ca tient dans une ligne (_compact_party,
+         export_app_payload.py) :
+             if isinstance(obj, list):
+                 obj = obj[0] if obj else None      # on garde LE PREMIER
+         Ce premier devient hektor_acquereur_id -- donc LA CLE DE LA CHAINE.
+
+         MESURE DU 04/09 sur les 1 811 compromis a plusieurs acquereurs
+         (17,1 % du parc ; 566 ventes aussi, soit 7,4 %) :
+             1 610  le premier retenu correspond bien a l'acquereur d'une offre
+                51  il ne correspond pas
+                37  ... alors qu'un AUTRE de la liste aurait correspondu
+         ➡ 37 CHAINES SONT CASSEES POUR RIEN. Un couple achete, Hektor liste
+           « Monsieur, Madame » sur le compromis et « Madame » sur l'offre : on
+           retient Monsieur, et l'offre part dans une autre chaine. Ce n'est pas
+           de l'incomplet, c'est du FAUX -- la chaine affirme deux affaires la ou
+           il n'y en a qu'une.
+
+         LE CORRECTIF, sans risque : au lieu du premier aveuglement, prendre
+         CELUI QUI CORRESPOND DEJA A UNE OFFRE DU BIEN, et le premier seulement a
+         defaut. Resorbe les 37 sans toucher aux 1 610.
+         ⚠ NE PAS CONFONDRE AVEC 2.6 : ici c'est le REGISTRE qui choisit sur quel
+           acquereur il indexe ; 2.6 c'est la MODALE qui n'en accepte qu'un a la
+           saisie. Deux couches, deux taches.
+         touche : _compact_party / la construction du ledger · retour : une ligne
+         verif  : les 37 cas se retrouvent dans la meme chaine que leur offre
+
+[ ] 1.6  LES IDENTIFIANTS HEKTOR RECYCLES -- MESURER D'ABORD    AJOUTEE 04/09
+         Trouve en verifiant le doute de Frederic sur la chaine. Deux chaines sur
+         13 348 portent DEUX ventes, et les deux portent des identifiants Hektor
+         anormalement bas :
+
+             chaine 10254 · annonce 45672 · acquereur 355902
+                vente « 2 »    2024-11-12   ·  vente 2713  2025-01-30
+                offre « 3 » acceptee 2025-01-30
+             chaine 12123 · annonce 53342 · acquereur 392898
+                vente « 718 »  2024-08-28   ·  vente « 4 »  2025-04-23
+                offre « 7 » acceptee 2024-08-29
+
+         ⚠ LA CHAINE N'Y EST POUR RIEN : elle regroupe fidelement ce que le
+           registre lui donne. C'est le registre qui a herite d'une collision
+           d'identifiants cote Hektor.
+
+         LE PROJET CONNAIT DEJA CE PIEGE SUR LES MANDATS -- la cle y est le COUPLE
+         (annonce, mandat) precisement parce que « Hektor reutilise les id bas ».
+         Le registre utilise deja le triplet (annonce, genre, numero), ce qui
+         protege d'une collision ENTRE DEUX BIENS -- mais PAS d'un numero recycle
+         rattache au MAUVAIS bien, qui est le cas ici.
+
+         ⚠ ON NE SAIT PAS ENCORE CORRIGER, ET IL NE FAUT PAS PRETENDRE LE
+           CONTRAIRE. Il faut d'abord etablir POURQUOI une vente « 2 » se retrouve
+           sur l'annonce 45672 : collision cote Hektor, ou lecture fautive de notre
+           cote ? Ca se verifie par un appel API sur ces deux ventes.
+         ETAPE 1 (mesure, rien a coder) : combien de transactions portent un
+           numero anormalement bas, et Hektor les confirme-t-il sur ce bien ?
+         ETAPE 2 : le correctif, qui dependra de la reponse.
+         ⚠ AMPLEUR CONNUE : 2 chaines sur 13 348. Ne pas surinvestir avant d'avoir
+           mesure -- mais ne pas l'oublier, parce que c'est du FAUX en base.
+
 ### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
 
 ```
