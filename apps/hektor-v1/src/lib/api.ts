@@ -1425,14 +1425,24 @@ export type AffaireLedgerRow = {
   hektor_annonce_id: string | number | null
   kind: 'offre' | 'compromis' | 'vente' | string
   hektor_affaire_id: string | number | null
-  /** LE DOSSIER D'AFFAIRE (brique 1.1, 03/09/2026). L'offre, le compromis et la
-   *  vente d'un MEME acquereur sur un MEME bien portent le meme numero. Frappe
-   *  par une sequence chez Supabase, jamais calcule. C'est lui qui permet enfin
-   *  d'afficher PLUSIEURS affaires sur une annonce, au lieu d'une seule par genre. */
+  /** LE DOSSIER D'AFFAIRE. ⚠ LA REGLE A CHANGE LE 05/09/2026 (1.7) : on ne
+   *  regroupe plus par acquereur mais par la SEQUENCE ouverte sur le bien
+   *  (offre -> compromis -> vente). L'identite de l'acheteur change d'une etape a
+   *  l'autre -- l'offre au nom de Monsieur, le compromis aux deux noms, l'acte au
+   *  nom de Madame -- et l'ancienne regle en faisait trois dossiers : 1 034 ventes
+   *  etaient separees de leur propre compromis.
+   *  Le numero n'est plus frappe par une sequence : c'est le plus petit
+   *  app_affaire_id de la chaine, RECALCULE a chaque run de nuit. */
   app_chaine_id: number | null
   numero_mandat: string | null
   hektor_acquereur_id: string | number | null
   acquereur_json: string | null
+  /** TOUS les acquereurs de la transaction (1.8, 05/09/2026), et pas seulement le
+   *  premier : 4 536 personnes presentes chez Hektor etaient invisibles ici.
+   *  ⚠ jsonb -- PostgREST le rend DEJA deserialise, d'ou `unknown` plutot que
+   *    `string`. Un couple donne un TABLEAU, une offre un OBJET seul.
+   *  acquereur_json reste la, inchangee : elle porte le principal. */
+  acquereurs_json: unknown
   state: string | null
   montant: string | number | null
   date: string | null
@@ -1443,7 +1453,7 @@ export type AffaireLedgerRow = {
 
 const affaireLedgerSelect =
   'app_affaire_id,app_dossier_id,hektor_annonce_id,kind,hektor_affaire_id,numero_mandat,' +
-  'hektor_acquereur_id,acquereur_json,state,montant,date,date_acte,sequestre,present_in_hektor,' +
+  'hektor_acquereur_id,acquereur_json,acquereurs_json,state,montant,date,date_acte,sequestre,present_in_hektor,' +
   'app_chaine_id'
 
 /** Ce que l'app détient sur une affaire, et que le run ne touche jamais.

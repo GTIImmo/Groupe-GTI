@@ -23473,6 +23473,60 @@ function affaireAcquereurParty(row: AffaireLedgerRow | undefined | null): CkAffa
     : (brut as CkAffaireParty | null)
 }
 
+/** TOUS les acquereurs d'UNE transaction (1.8, 05/09/2026).
+ *
+ *  POURQUOI CETTE FONCTION EXISTE. `acquereur_json` ne porte que le PREMIER de la
+ *  liste : cote serveur, _compact_party() faisait obj[0] -- une fonction ecrite
+ *  pour AFFICHER une partie, puis reutilisee pour fabriquer la ligne du registre.
+ *  Mesure du 04/09 : 4 536 acquereurs presents chez Hektor et invisibles ici,
+ *  17,1 % des compromis en portant plusieurs (un sur quatre parmi les recents).
+ *
+ *  ⚠ MEME PIEGE QUE CI-DESSUS : jsonb, donc PostgREST le rend deja deserialise.
+ *  ⚠ ON NE REMPLACE PAS affaireAcquereurParty : elle sert encore a prendre le
+ *    telephone et le mail d'UNE personne, ou une liste n'aurait pas de sens. */
+function affaireAcquereursParties(row: AffaireLedgerRow | undefined | null): CkAffaireParty[] {
+  if (!row) return []
+  const brut: unknown = typeof row.acquereurs_json === 'string'
+    ? parseJson<unknown>(row.acquereurs_json, null)
+    : row.acquereurs_json
+  const liste = Array.isArray(brut) ? brut : brut ? [brut] : []
+  const out = liste.filter((x): x is CkAffaireParty => Boolean(x) && typeof x === 'object')
+  // Filet : si la liste complete manque (6 offres du parc, dont Hektor lui-meme
+  // n'a pas la fiche detaillee), on retombe sur le principal plutot que sur rien.
+  if (out.length) return out
+  const seul = affaireAcquereurParty(row)
+  return seul ? [seul] : []
+}
+
+/** Les acquereurs d'un DOSSIER entier, sans doublon, dans l'ordre ou ils
+ *  apparaissent. C'est la reponse a « qui achete ? » -- et elle ne tient pas
+ *  toujours en une personne : sur l'annonce 478, l'offre est au nom de
+ *  Pierre-Eric, le compromis aux deux noms, l'acte au nom d'Agnes. Trois etapes,
+ *  deux acheteurs, UN dossier.
+ *  ⚠ On dedoublonne par IDENTIFIANT, jamais par le nom : deux freres portent le
+ *    meme nom de famille, et un couple n'a pas toujours le meme. */
+function affaireAcquereursDeChaine(lignes: AffaireLedgerRow[]): CkAffaireParty[] {
+  const vus = new Set<string>()
+  const out: CkAffaireParty[] = []
+  for (const l of lignes) {
+    for (const p of affaireAcquereursParties(l)) {
+      const cle = String(p?.id ?? '').trim() || ckPartyName(p).toLowerCase()
+      if (!cle || vus.has(cle)) continue
+      vus.add(cle)
+      out.push(p)
+    }
+  }
+  return out
+}
+
+/** « Agnes FAURE et Pierre-Eric FAURE ». Vide si personne -- jamais un
+ *  remplissage : « mieux vaut un champ absent qu'un champ menteur ». */
+function affaireAcquereursNoms(lignes: AffaireLedgerRow[]): string {
+  const noms = affaireAcquereursDeChaine(lignes).map(ckPartyName).filter(Boolean)
+  if (noms.length <= 1) return noms[0] ?? ''
+  return noms.slice(0, -1).join(', ') + ' et ' + noms[noms.length - 1]
+}
+
 /** Un prix, ou RIEN. Jamais le prix du bien a la place -- c'est exactement le
  *  mensonge qu'on corrige : « mieux vaut un champ absent qu'un champ menteur ». */
 function affairePrix(x: unknown): string {
@@ -23541,8 +23595,10 @@ function ckAffaireDepuisChaine(c: ChaineAffaire, vendeur: CkParty | null): CkAff
   const vivante = (r: AffaireLedgerRow | null) =>
     r != null && !AFFAIRE_ETAT_MORT.has(String(r.state ?? '').trim().toLowerCase())
 
+  // Le contact joignable reste UNE personne (un mail, un telephone) ; le NOM
+  // affiche, lui, les nomme tous -- 1.8.
   const party = affaireAcquereurParty(o ?? cp ?? v ?? c.lignes[0])
-  const acqNom = ckPartyName(party)
+  const acqNom = affaireAcquereursNoms(c.lignes) || ckPartyName(party)
   const coord = ckAffPartyCoord(party)
 
   const etape = v ? 'vente' : cp ? 'compromis' : 'offre'
@@ -31558,8 +31614,7 @@ function MobileDossierDetail(props: {
         {mobChaines ? (
           <div className="mobile-transaction-stack">
             {mobChaines.map((c, rang) => {
-              const party = affaireAcquereurParty(c.lignes[0])
-              const acq = ckPartyName(party)
+              const acq = affaireAcquereursNoms(c.lignes)
               return (
                 <article className="mobile-transaction-card" key={c.chaine}>
                   <div className="mobile-transaction-head">
