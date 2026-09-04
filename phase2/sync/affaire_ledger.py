@@ -73,6 +73,16 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     --   omission, celle des trois champs de contact.
     app_chaine_id       INTEGER,
     acquereur_json      TEXT,
+    -- 1.8 (04/09/2026) : TOUS LES ACQUEREURS, pas seulement le premier.
+    -- Frederic : « si on a les donnees en brut, pourquoi en garder juste un ? »
+    -- _compact_party() fait obj[0] -- ecrit pour AFFICHER une partie, puis
+    -- reutilise pour fabriquer la ligne du registre. Resultat mesure le 04/09 :
+    -- 4 536 acquereurs presents chez Hektor et invisibles ici (2 993 sur les
+    -- compromis, 1 543 sur les ventes). 17,1 % des compromis en portent
+    -- plusieurs, et UN SUR QUATRE parmi les recents.
+    -- ⚠ COLONNE ADDITIVE : acquereur_json garde le principal, pour que le front
+    --   ne casse pas. Sa migration est la part « ecran » de 1.8.
+    acquereurs_json     TEXT,
     -- 1.2 (03/09/2026) : LES CHAMPS QUE HEKTOR IGNORE -- CLASSE A.
     -- Hektor n'a AUCUNE destination pour eux (campagne 0.1). Zero conflit
     -- possible : il n'a rien a dire. Ces colonnes sont donc ECRITES PAR L'APP
@@ -115,13 +125,14 @@ CREATE INDEX IF NOT EXISTS idx_affaire_ledger_acq ON {LEDGER_TABLE}(hektor_acque
 # Toutes les affaires, offres INCLUSES (pas de filtre mandat : 98% des offres ont mandat_id=0).
 LEDGER_SQL = """
 SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS affaire_id,
-       hektor_acquereur_id AS acq_id, acquereur_json AS acq_json, offre_state AS state,
+       hektor_acquereur_id AS acq_id, acquereur_json AS acq_json, acquereur_json AS acq_tous,
+       offre_state AS state,
        raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt,
        NULL AS date_acte, NULL AS sequestre, NULL AS date_fin, raw_json
 FROM hektor.hektor_offre WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
-       NULL, acquereurs_json, compromis_state,
+       NULL, acquereurs_json, acquereurs_json, compromis_state,
        COALESCE(prix_publique, prix_net_vendeur), COALESCE(date_start, synced_at),
        date_signature_acte, sequestre,
        -- CLASSE B : la fin du delai de retractation, telle que HEKTOR la porte.
@@ -130,7 +141,7 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
 FROM hektor.hektor_compromis WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
-       NULL, acquereurs_json, NULL,
+       NULL, acquereurs_json, acquereurs_json, NULL,
        prix, COALESCE(date_vente, synced_at),
        NULL, NULL, NULL, raw_json
 FROM hektor.hektor_vente WHERE hektor_annonce_id IS NOT NULL
@@ -178,7 +189,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         con.commit()
         print(f"[affaire_ledger] colonne app_chaine_id ajoutee a {LEDGER_TABLE}")
     for neuve in ("jours_validite", "taux_honoraires", "notaire_id",
-                  "date_fin_retractation"):
+                  "date_fin_retractation", "acquereurs_json"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -385,10 +396,11 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             f"""
             INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
                 hektor_annonce_id, kind, hektor_affaire_id, hektor_mandat_id,
-                numero_mandat, hektor_acquereur_id, app_contact_id, acquereur_json, state, montant, date, date_acte,
+                numero_mandat, hektor_acquereur_id, app_contact_id, acquereur_json, acquereurs_json,
+                state, montant, date, date_acte,
                 sequestre, date_fin_retractation,
                 payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
@@ -399,6 +411,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 -- ne doit pas effacer un rattachement deja etabli.
                 app_contact_id=COALESCE(excluded.app_contact_id, {LEDGER_TABLE}.app_contact_id),
                 acquereur_json=excluded.acquereur_json,
+                acquereurs_json=excluded.acquereurs_json,
                 state=excluded.state, montant=excluded.montant, date=excluded.date,
                 date_acte=excluded.date_acte, sequestre=excluded.sequestre,
                 date_fin_retractation=excluded.date_fin_retractation,
@@ -410,6 +423,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 int(annonce), kind, affaire_id, mid or None, numero or None, acq_id or None,
                 contact_app_par_hektor.get(acq_id) if acq_id else None,
                 json.dumps(party, ensure_ascii=True, separators=(",", ":")) if party else None,
+                normalize_text(r["acq_tous"]) or None,     # 1.8 : la liste ENTIERE, telle que Hektor la donne
                 normalize_text(r["state"]) or None, normalize_text(r["montant"]) or None,
                 normalize_text(r["dt"]) or None, normalize_text(r["date_acte"]) or None,
                 normalize_text(r["sequestre"]) or None,
@@ -428,12 +442,228 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         cur = con.execute(f"UPDATE {LEDGER_TABLE} SET present_in_hektor=0 WHERE last_seen_at <> ?", (run_ts,))
         absent = cur.rowcount or 0
     con.commit()
-    # ⚠ LA CHAINE N'EST PAS POSEE ICI, ET C'EST DELIBERE.
-    # Voir redescendre_ce_que_l_app_possede() : le frappeur est unique, et il est
-    # chez Supabase. Ce run la RECOIT apres le push, il ne l'invente pas.
+    # ─── LES CHAINES SE RECALCULENT ICI, ENTIEREMENT, A CHAQUE RUN (04/09) ───
+    # Frederic : « le run doit actualiser les chaines comme l'app le ferait ».
+    # Une chaine n'est pas une saisie mais une DEDUCTION : on la refait a neuf
+    # plutot que de la conserver. Cout mesure : 0,09 s sur 29 321 lignes.
+    # Ce qui remplace l'ancien dispositif -- une sequence chez Supabase, et une
+    # colonne protegee que le run n'avait pas le droit de toucher.
+    chaines = recalculer_les_chaines(con)
     total = con.execute(f"SELECT COUNT(*) FROM {LEDGER_TABLE}").fetchone()[0]
     return {"seen": seen, "inserted": inserted, "marked_absent": absent,
-            "ledger_total": total}
+            "ledger_total": total, "chaines": chaines}
+
+
+ETATS_OFFRE_MORTS = {"refused", "refusee"}
+ETATS_OFFRE_ACCEPTEE = {"accepted", "acceptee"}
+ETATS_COMPROMIS_MORTS = {"cancelled", "annule"}
+ORDRE_DES_BLOCS = {"offre": 0, "compromis": 1, "vente": 2}
+
+
+def _date_utile(valeur: object) -> str | None:
+    """Une date exploitable pour ordonner les blocs, ou rien.
+
+    ⚠ 224 transactions du parc portent une date inexploitable (203 vides ou
+    « 0000-00-00 », 7 en 1990, 14 offres sans date). Sans date, on ne peut dire ni
+    ce qui precede ni ce qui suit : ces transactions ouvrent leur propre chaine et
+    n'en rejoignent jamais aucune. Decision de Frederic le 04/09 : « on peut tenter
+    de les rattacher a la main, mais pas dans la regle. »
+    """
+    texte = normalize_text(valeur)[:10] if valeur is not None else ""
+    if len(texte) != 10:
+        return None
+    try:
+        annee = int(texte[:4])
+    except ValueError:
+        return None
+    return texte if 2000 <= annee <= 2030 else None
+
+
+def _acquereurs(brut: object) -> set[str]:
+    """Les identifiants de TOUS les acquereurs d'une transaction (1.8)."""
+    if isinstance(brut, str):
+        try:
+            brut = json.loads(brut)
+        except Exception:
+            return set()
+    if isinstance(brut, dict):
+        brut = [brut]
+    if not isinstance(brut, list):
+        return set()
+    out: set[str] = set()
+    for item in brut:
+        if isinstance(item, dict):
+            ident = normalize_text(item.get("id"))
+            if ident and ident != "0":
+                out.add(ident)
+    return out
+
+
+def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
+    """LA REGLE DE CHAINAGE -- refondue le 04/09/2026 par Frederic.
+
+    ═══ CE QU'ELLE REMPLACE, ET POURQUOI ═══
+
+    La premiere version (1.1, 03/09) regroupait par (annonce, acquereur). Elle
+    partait d'une idee juste mais fausse : qu'une affaire se reconnait a QUI achete.
+    Mesures du 04/09 sur le parc entier :
+        1 034 ventes isolees alors que leur compromis etait sur la meme annonce
+          109 d'entre elles au MEME NOM DE FAMILLE (un couple, un doublon de contact)
+          386 transactions sans aucun acquereur, donc chacune seule
+    L'identite de l'acheteur CHANGE d'une etape a l'autre : l'offre au nom de
+    Monsieur, le compromis aux deux noms, l'acte au nom de Madame. Trois fois la
+    meme affaire, trois dossiers.
+
+    QUATRE AUTRES PISTES ONT ETE MESUREES ET ECARTEES -- ne pas les refaire :
+        le croisement des listes completes  +56 chaines sur 13 348 seulement
+        le montant + la chronologie         99,7 % MAIS 149 ambiguites, dont
+                                            145 du scenario que Frederic a decrit :
+                                            deux compromis au meme prix, un annule
+        le mandat                           412 annonces ont UN mandat et PLUSIEURS
+                                            acquereurs : il les fusionnerait a tort
+        la periode de mandat                ne departage que 4 des 41 ambiguites
+
+    ═══ LA REGLE, DANS LES MOTS DE FREDERIC ═══
+
+        « Une chaine c'est trois blocs, ou deux, ou un seul. Par logique un
+          compromis est clos soit quand il est annule soit quand la vente est
+          passee. Une vente est close quand elle est passee, sinon supprimee.
+          L'etat ferme la chaine, pour permettre d'en ouvrir une autre. »
+
+    Une affaire n'est donc PAS une identite : c'est une SEQUENCE OUVERTE sur un
+    bien. Chaque bloc rejoint le precedent encore vivant.
+
+        OUVRE   une offre (une chaine par acquereur)
+                un compromis qui ne trouve pas d'offre acceptee ouverte
+                une vente qui ne trouve pas de compromis ouvert
+
+        FERME   la VENTE            -- l'affaire a abouti
+                l'offre REFUSEE     -- l'affaire est morte
+                le compromis ANNULE -- l'affaire est morte
+
+        Une chaine fermee ne recoit plus jamais rien.
+
+    ⚠ C'EST CE QUI REGLE LA REVENTE, sans avoir besoin du mandat. Un bien vendu en
+      2020 puis remis en vente en 2026 : la chaine de 2020 est fermee par sa vente,
+      la nouvelle offre ne peut qu'en ouvrir une seconde -- meme si c'est le MEME
+      acheteur qui rachete. Mesure du 04/09 : 7 507 compromis sont anterieurs a une
+      vente et TOUJOURS marques actifs chez Hektor, parce que personne ne les clot
+      apres l'acte. Sans la fermeture par la vente, ils seraient tous candidats.
+
+    ═══ LE NUMERO DE LA CHAINE ═══
+
+    C'est le PLUS PETIT app_affaire_id de ses transactions -- autrement dit, le
+    numero de celle qui l'a ouverte. Ni sequence, ni compteur :
+      * stable   -- il ne bouge pas tant que la premiere transaction reste en tete
+      * unique   -- une transaction n'appartient qu'a une chaine
+      * refaisable -- le run recalcule tout chaque nuit et retombe sur les memes
+                    numeros, sans etat a conserver
+    Frederic, 04/09 : « le run doit actualiser les chaines comme l'app le ferait ».
+    Une chaine n'est pas une saisie, c'est une DEDUCTION -- et une deduction se
+    refait. Cout mesure d'un recalcul complet : 0,09 s sur 29 321 lignes.
+
+    ⚠ RESERVE ASSUMEE : on raisonne sur l'etat FINAL de chaque transaction, pas sur
+      son etat au moment des faits. Une offre aujourd'hui « refusee » a pu etre
+      acceptee d'abord. L'historique existe (les `propositions` de chaque offre
+      portent chaque evenement date) : s'en servir affinerait le resultat, jamais
+      ne le degraderait. A faire quand le besoin s'en fera sentir.
+    """
+    lignes = list(con.execute(f"""
+        SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json
+          FROM {LEDGER_TABLE}
+    """))
+    par_annonce: dict[str, list[tuple]] = {}
+    for app_id, annonce, kind, state, date, acq in lignes:
+        par_annonce.setdefault(normalize_text(annonce), []).append(
+            (int(app_id), normalize_text(kind), normalize_text(state).lower(),
+             _date_utile(date), _acquereurs(acq))
+        )
+
+    attribution: dict[int, int] = {}
+    anomalies: dict[str, int] = {}
+    sans_date = 0
+
+    def signale(quoi: str) -> None:
+        anomalies[quoi] = anomalies.get(quoi, 0) + 1
+
+    for annonce, items in par_annonce.items():
+        # sans date : chacune sa chaine, elle-meme, et on n'y revient plus
+        for app_id, kind, state, date, acqs in items:
+            if date is None:
+                attribution[app_id] = app_id
+                sans_date += 1
+
+        datees = sorted((x for x in items if x[3] is not None),
+                        key=lambda y: (y[3], ORDRE_DES_BLOCS.get(y[1], 9), y[0]))
+        ouvertes: list[dict] = []   # les chaines encore OUVERTES de ce bien
+        toutes: list[dict] = []     # toutes celles du bien, pour numeroter a la fin
+
+        def ouvrir(app_id: int, acqs: set[str]) -> dict:
+            chaine = {"membres": [app_id], "acquereurs": set(acqs),
+                      "offre_acceptee": False, "compromis": False}
+            ouvertes.append(chaine)
+            toutes.append(chaine)
+            return chaine
+
+        for app_id, kind, state, date, acqs in datees:
+            if kind == "offre":
+                # une chaine par acquereur -- plusieurs offres coexistent, c'est normal
+                cible = next((c for c in ouvertes
+                              if not c["compromis"] and (acqs & c["acquereurs"])), None)
+                if cible is None:
+                    cible = ouvrir(app_id, acqs)
+                else:
+                    cible["membres"].append(app_id)
+                    cible["acquereurs"] |= acqs
+                if state in ETATS_OFFRE_ACCEPTEE:
+                    cible["offre_acceptee"] = True
+                elif state in ETATS_OFFRE_MORTS:
+                    ouvertes.remove(cible)          # l'etat FERME la chaine
+
+            elif kind == "compromis":
+                candidates = [c for c in ouvertes if c["offre_acceptee"] and not c["compromis"]]
+                if len(candidates) == 1:
+                    cible = candidates[0]
+                    cible["membres"].append(app_id)
+                else:
+                    if len(candidates) > 1:
+                        signale("plusieurs chaines a offre acceptee")
+                    cible = ouvrir(app_id, acqs)
+                cible["compromis"] = True
+                cible["acquereurs"] |= acqs
+                if state in ETATS_COMPROMIS_MORTS:
+                    ouvertes.remove(cible)          # annule : la chaine est close
+
+            else:  # vente -- elle ferme toujours la chaine qu'elle rejoint
+                candidates = [c for c in ouvertes if c["compromis"]]
+                if len(candidates) == 1:
+                    cible = candidates[0]
+                    cible["membres"].append(app_id)
+                    ouvertes.remove(cible)
+                else:
+                    # ON NE DEVINE PAS. La vente reste seule, et on le DIT.
+                    signale("vente : plusieurs compromis ouverts" if candidates
+                            else "vente sans compromis ouvert")
+                    ouvrir(app_id, acqs)
+
+        # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
+        # le plus petit app_affaire_id de ses membres -- or une transaction au numero
+        # plus bas peut la rejoindre APRES coup. Numeroter au fil de l'eau laissait
+        # les premiers membres avec l'ancien numero : mesure du 05/09, 21 710 chaines
+        # au lieu de 12 648, soit 9 000 dossiers coupes en deux.
+        for chaine in toutes:
+            tete = min(chaine["membres"])
+            for membre in chaine["membres"]:
+                attribution[membre] = tete
+
+    con.executemany(f"UPDATE {LEDGER_TABLE} SET app_chaine_id=? WHERE app_affaire_id=?",
+                    [(chaine, app_id) for app_id, chaine in attribution.items()])
+    con.commit()
+    resultat = {"transactions": len(attribution),
+                "chaines": len(set(attribution.values())),
+                "sans_date": sans_date}
+    resultat.update(anomalies)
+    return resultat
 
 
 def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[str, int]:
@@ -506,8 +736,12 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
 # pousser reviendrait a envoyer des NULL par-dessus des valeurs saisies.
 # date_fin_retractation N'EN EST PAS : celle-la, Hektor la connait et le local la
 # lit dans le miroir -- elle se pousse et se rafraichit comme les autres.
+# ⚠ app_chaine_id A QUITTE CETTE LISTE LE 04/09. Elle y etait parce que Supabase
+# frappait les numeros et que le local ne les connaissait pas. Depuis la refonte de
+# la regle (recalculer_les_chaines), c'est LE LOCAL qui les calcule, a chaque run,
+# pour toutes les lignes. Il doit donc les pousser.
 COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
-    "app_chaine_id", "jours_validite", "taux_honoraires", "notaire_id",
+    "jours_validite", "taux_honoraires", "notaire_id",
 )
 
 
@@ -517,7 +751,9 @@ def ledger_rows_for_push(con: sqlite3.Connection) -> list[dict[str, object]]:
         d = dict(r)
         for interdite in COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS:
             d.pop(interdite, None)
-        for jcol in ("acquereur_json", "payload_json"):
+        # ⚠ acquereurs_json est jsonb cote Supabase : sans ce decodage on y
+        # pousserait une CHAINE DE CARACTERES contenant du JSON, pas du JSON.
+        for jcol in ("acquereur_json", "acquereurs_json", "payload_json"):
             v = d.get(jcol)
             if isinstance(v, str) and v:
                 try:

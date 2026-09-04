@@ -2357,7 +2357,31 @@ GEL que Frederic a repere le premier).*
          ⚠ AMPLEUR CONNUE : 2 chaines sur 13 348. Ne pas surinvestir avant d'avoir
            mesure -- mais ne pas l'oublier, parce que c'est du FAUX en base.
 
-[ ] 1.7  LA REGLE DE CHAINAGE, REFONDEE PAR LA SEQUENCE     AJOUTEE LE 04/09
+[x] 1.7  LA REGLE DE CHAINAGE, REFONDEE PAR LA SEQUENCE   FAITE LE 05/09/2026
+         ─── CE QUI A ETE FAIT, ET CE QUE CA A DONNE ───
+         serveur   recalculer_les_chaines() dans phase2/sync/affaire_ledger.py,
+                   appelee par refresh_ledger a CHAQUE run. Les 29 321 chaines se
+                   refont a neuf en 0,09 s.
+         Supabase  app_chaine_pour(annonce, acquereur, genre, numero) --
+                   supabase/patch_chaine_regle_sequence_2026-09-05.sql.
+                   L'ancienne a 2 arguments est conservee, intouchee.
+                   app_change_annonce_status_optimistic branchee dessus.
+         RESULTAT MESURE, avant -> apres :
+             les trois blocs    5 738 -> 7 256   +1 518 affaires enfin completes
+             vente seule        1 088 ->   109     -979 ventes orphelines
+             offre+compromis    3 192 -> 1 911
+             compromis+vente      626 ->   242
+             compromis seul       586 -> 1 172    +586 : la regle REFUSE de deviner
+             TOTAL             13 348 -> 12 643 chaines
+         CONCORDANCE des deux copies de la regle (sur un tiers du parc) :
+             compromis 97,8 % · vente 99,8 % · offre 99,7 % (cas reel)
+         ANOMALIES QUE LE RUN COMPTE ET NOMME :
+             108 vente sans compromis ouvert · 6 vente a plusieurs compromis
+               1 plusieurs chaines a offre acceptee · 224 transactions sans date
+         ⚠ CE QUI RESTE OUVERT : les 89 chaines de plus de 2 ans (deux affaires
+           successives du meme acquereur, fusionnees) ; l'etat FINAL sert de juge
+           alors que l'historique des propositions existe.
+         ⚠ REMPLACE la regle posee en 1.1, et REND 1.5 SANS OBJET.
          ⚠ REMPLACE la regle posee en 1.1, et REND 1.5 SANS OBJET.
          Trouvee par Frederic apres une journee ou j'ai suivi QUATRE fausses
          pistes. Sa formulation, mot pour mot :
@@ -2438,7 +2462,23 @@ GEL que Frederic a repere le premier).*
          * les 484 compromis sans offre acceptee : ouvrir une chaine (prudent) ou
            rattacher par l'acquereur (etape 2 de la regle) ?
 
-[ ] 1.8  LE REGISTRE GARDE TOUS LES ACQUEREURS, PAS LE PREMIER   AJOUTEE 04/09
+[~] 1.8  LE REGISTRE GARDE TOUS LES ACQUEREURS   SERVEUR FAIT 05/09 · ECRAN A FAIRE
+         ─── FAIT LE 05/09/2026 ───
+         local     colonne acquereurs_json (ADDITIVE : acquereur_json garde le
+                   principal, le front actuel ne casse pas). LEDGER_SQL lit la
+                   liste entiere pour les trois genres.
+         Supabase  colonne acquereurs_json en jsonb, poussee et verifiee.
+         MESURE APRES : 33 465 acquereurs des deux cotes, contre 28 096 avant.
+                        +5 369 personnes. 2 377 transactions en portent plusieurs.
+         CONTROLE LIGNE A LIGNE contre le miroir : 29 315 listes identiques,
+                  0 surplus, et 6 offres ou il manque un nom -- absent CHEZ HEKTOR
+                  (sa fiche detaillee est vide), l'identifiant etant bien present.
+         ─── CE QUI RESTE : L'ECRAN ───
+         App.tsx:23470 affaireAcquereurParty ne lit toujours QUE acquereur_json.
+         Tant que ce point n'est pas migre, l'ecran continue d'afficher un seul
+         nom alors que la donnee complete est en base.
+         VERIF : sur l'annonce 478, le compromis 23528 doit afficher DEUX noms
+                 (Agnes FAURE et Pierre-Eric FAURE).
          Question de Frederic, et elle n'a pas de bonne reponse :
              « si on a les donnees en brut, c'est-a-dire TOUS les acquereurs par
                transaction, pourquoi en garder juste UN ? »
