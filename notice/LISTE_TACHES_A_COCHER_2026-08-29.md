@@ -2611,21 +2611,32 @@ GEL que Frederic a repere le premier).*
            vente. Le delete-never ne change pas.
          retour : retirer le bouton · verif : le statut redescend, la ligne reste
 
-[ ] 3.5  LE READ-THROUGH NE RELIT PAS LES TRANSACTIONS         AJOUTEE LE 04/09
-         Mesure du 04/09 : apres un refus d'offre depuis l'app,
+[—] 3.5  LE READ-THROUGH NE RELIT PAS LES TRANSACTIONS
+         ❌ RETIREE LE 04/09 PAR FREDERIC, ET IL A RAISON :
+         « ce n'est pas utile puisque l'on veut que l'app lise le REGISTRE dans
+           les autres etapes ».
+
+         LE CONSTAT RESTE VRAI. Mesure du 04/09 : apres un refus depuis l'app,
              registre  33046 « refusee »   <- ecriture optimiste, a jour
              fiche     33046 « proposed »  <- perimee jusqu'au run de 05:30
-         Deux verites en meme temps, dans la meme app.
+         `refresh_single_annonce.py` ne rafraichit que l'annonce et ses mandats ;
+         `sync_raw --resources offres --mode update` ne rattrape pas non plus.
 
-         CAUSE : `refresh_single_annonce.py` ne rafraichit QUE l'annonce et ses
-         mandats. Les offres, compromis et ventes ne sont pas relus.
-         ⚠ ET `sync_raw.py --resources offres --mode update` NE RATTRAPE PAS non
-           plus -- essaye le 04/09, l'offre est restee `proposed`, synced_at
-           inchange. Le parametre `version` est bien passe : ce n'est PAS le 200
-           muet. Cause a trouver.
-         ➡ C'est la demonstration en direct de l'utilite de 2.1, et de l'urgence
-           de 2.3 et 2.4 : tant que les autres ecrans lisent les champs plats, ils
-           affichent une verite perimee a cote d'une verite fraiche.
+         MAIS LE DEFAUT DISPARAIT TOUT SEUL quand 2.1, 2.3 et 2.4 sont faites :
+         les trois ecrans lisent alors le registre, et la fraicheur des champs
+         plats cesse d'avoir de l'importance. Reparer le read-through, ce serait
+         ENTRETENIR LA SOURCE QU'ON ABANDONNE.
+
+         ➡ C'est exactement le patron du chantier 3bis : « une fois les quatre
+           portes fermees, plus personne ne recalcule le hachage -- le defaut
+           disparait SANS AVOIR ETE CORRIGE, la solution la plus economique du
+           dossier ». Deuxieme fois que ce raisonnement s'applique.
+
+         ⚠ CE QUI RESTE A SURVEILLER, et ce n'est pas cette tache : le statut de
+           l'annonce (statut_annonce) ne vient PAS du registre -- il appartient a
+           Hektor, et on a mesure le 04/09 qu'il ment des qu'une transaction meurt
+           sans etre effacee. C'est la sentinelle 4.2, pas le read-through.
+
 ```
 
 ### PHASE 4 — MENAGE
