@@ -2839,7 +2839,22 @@ GEL que Frederic a repere le premier).*
                   juste le choix ; sur une annonce a offre acceptee + une autre
                   vivante, l'avertissement apparait
 
-[ ] 2.2c LA MODALE DIT AVANT CE QUE LE WORKER DIT APRES   REFORMULEE 05/09
+[x] 2.2c LA MODALE DIT AVANT CE QUE LE WORKER DIT APRES    FAITE LE 05/09/2026
+         CODE : dossiersOuvertsDuBien() + avisGardeFouSaisie() au niveau module,
+         gardeFouPourStatut() dans le composant. Cinq branchements dans la modale.
+         VERDICT MESURE SUR LE PORTEFEUILLE, avant/apres :
+             97 biens   compromis BLOQUE      les vrais dossiers ouverts
+              8 biens   compromis EXPLIQUE    les reventes -- NON bloquees
+             71 biens   rien
+              0 bien    vente bloquee
+           97 + 8 = 105, le compte exact des biens portant un compromis.
+         DESIGN : pastille « dossier n° » sur chaque ligne, attenuee et marquee
+           « terminé » sur un dossier clos, ou « Choisir » disparait aussi.
+           ⚠ CONTRASTE CORRIGE APRES MESURE AU NAVIGATEUR : les teintes discretes
+             evidentes tombaient a 4,34 et 4,50, sous le seuil AA de 4,5 pour du
+             texte de 11 px. Portees a 5,74 et 5,76.
+         VERIFIE : le bouton eteint garde son infobulle et son curseur barre.
+         --- redaction d'origine ---
          ⚠ REFORMULEE APRES AUDIT. Ma redaction du 04/09 disait « ajouter un
            garde-fou ». C'ETAIT FAUX SUR DEUX POINTS.
 

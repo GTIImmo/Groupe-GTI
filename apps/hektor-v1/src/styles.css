@@ -32315,6 +32315,30 @@ body {
 }
 .status-change-affaires .sca-ambigu.is-alerte::before { background: #b0332f; }
 .status-change-affaires .sca-ambigu.is-alerte .sca-amb-t { color: #7a2621; }
+/* 2.2c (05/09/2026) — LE DOSSIER AUQUEL UNE TRANSACTION APPARTIENT.
+   Discret par defaut : c'est un reperage, pas une alerte. Barre et attenue
+   quand le dossier est TERMINE -- la ligne reste lisible, mais on voit d'un
+   coup d'oeil qu'elle appartient a une affaire close, et son bouton
+   « Choisir » a disparu. */
+.status-change-affaires .sca-dossier {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  /* ⚠ 11 px, meme en gras, reste du PETIT texte au sens WCAG : seuil 4,5.
+     Les teintes discretes evidentes tombaient a 4,34 (neutre) et 4,50 (clos,
+     sur la ligne exactement). Mesurees au navigateur, pas estimees a l'oeil. */
+  color: #556172;              /* 5,74 sur #f1f5f9 */
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.status-change-affaires .sca-dossier.is-clos {
+  color: #775d2c;              /* 5,76 sur #fdf6e6 */
+  background: #fdf6e6;
+}
+
 .status-change-affaires .sca-choisir {
   border: 1px solid #94a3b8;
   background: #fff;

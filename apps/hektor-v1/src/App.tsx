@@ -14882,6 +14882,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return statusChangeAffaires.filter((a) => a.kind === genre && affaireEstVivante(a))
   }
 
+  /** 2.2c (05/09) : ce que le worker dirait APRES, dit ICI, AVANT la saisie.
+   *  Rend null sur les onglets « Actif » et « Clos » -- ils n'ont pas de genre
+   *  dans AFFAIRE_PAR_STATUT, donc rien ne se declenche et ces deux onglets
+   *  gardent exactement leur comportement. */
+  function gardeFouPourStatut(): AvisGardeFou | null {
+    if (!statusChangeTarget) return null
+    return avisGardeFouSaisie(
+      AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '', statusChangeAffaires)
+  }
+
   function affaireCourantePourStatut(): AffaireLedgerRow | null {
     const genre = AFFAIRE_PAR_STATUT[statusChangeStatus]
     if (!genre || !statusChangeTarget) return null
@@ -17800,6 +17810,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   // au niveau module, avec les mesures qui l'etablissent.
                   const avis = avisPlusieursAffaires(
                     AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '', vivantesDuGenre)
+                  // 2.2c : le garde-fou raisonne sur les DOSSIERS OUVERTS, jamais
+                  // sur les transactions -- sinon il bloquerait les 8 biens vendus
+                  // autrefois et revenus en estimation.
+                  const garde = gardeFouPourStatut()
+                  // Les dossiers TERMINES du bien : pour nommer chaque ligne, et
+                  // retirer « Choisir » sur ce qui est clos -- on ne choisit pas
+                  // une affaire terminee.
+                  const dossiersClos = new Set(
+                    dossiersOuvertsDuBien(statusChangeAffaires)
+                      .filter((d) => !d.ouvert).map((d) => d.chaine))
                   // UNE SEULE COPIE DE LA FORMULE (03/09) : la rubrique Affaires du
                   // cockpit affiche les memes etats. Deux copies divergent tot ou tard --
                   // la regle du projet. Elles vivent desormais au niveau module.
@@ -17807,6 +17827,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   const etatLabel = affaireEtatLabel
                   return (
                     <section className="status-change-affaires">
+                      {garde ? (
+                        <p className={`sca-ambigu ${garde.bloque ? 'is-alerte' : 'is-normal'}`}
+                           role={garde.bloque ? 'alert' : 'status'}>
+                          <b className="sca-amb-t">{garde.titre}</b>
+                          <span className="sca-amb-d">{garde.detail}</span>
+                        </p>
+                      ) : null}
                       {avis && !courante ? (
                         <p className={`sca-ambigu is-${avis.ton}`}
                            role={avis.ton === 'normal' ? 'status' : 'alert'}>
@@ -17887,7 +17914,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                         -- « mieux vaut aucun bouton qu'un bouton qui agit sur la
                                         mauvaise affaire ». La regle ne change pas : on ne devine
                                         toujours pas. On demande. */}
-                                    {ambigu && !visee && affaireEstVivante(a) ? (
+                                    {/* 2.2c : le dossier auquel cette transaction appartient.
+                                        Sans lui, un compromis de 2011 se presente comme
+                                        vivant sans rien dire de son dossier clos. */}
+                                    {a.app_chaine_id != null ? (
+                                      <i className={dossiersClos.has(String(a.app_chaine_id))
+                                        ? 'sca-dossier is-clos' : 'sca-dossier'}>
+                                        dossier n° {a.app_chaine_id}
+                                        {dossiersClos.has(String(a.app_chaine_id)) ? ' · terminé' : ''}
+                                      </i>
+                                    ) : null}
+                                    {ambigu && !visee && affaireEstVivante(a)
+                                      && !(a.app_chaine_id != null
+                                           && dossiersClos.has(String(a.app_chaine_id))) ? (
                                       <button type="button" className="sca-choisir"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation()
                                                           setStatusChangeAffaireChoisie(a.app_affaire_id) }}>
@@ -17969,7 +18008,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       Supprimer la vente
                     </button>
                   ) : null}
-                  <button className="ghost-button button-primary" type="submit" disabled={statusChangePending || statusChangeCorrectionPending}>
+                  {/* 2.2c : ETEINT quand un dossier ouvert porte deja ce genre.
+                      ⚠ UN BOUTON GRIS ET MUET EST PIRE QUE PAS DE BOUTON : l'infobulle
+                      dit pourquoi, le bandeau le repete en clair, et le geste qui
+                      debloque (« Annuler le compromis ») est juste au-dessus. */}
+                  <button className="ghost-button button-primary" type="submit"
+                    title={gardeFouPourStatut()?.bloque
+                      ? `${gardeFouPourStatut()?.titre} — ${gardeFouPourStatut()?.detail}`
+                      : undefined}
+                    disabled={statusChangePending || statusChangeCorrectionPending
+                      || Boolean(gardeFouPourStatut()?.bloque)}>
                     {statusChangePending ? 'Envoi...' : `Envoyer vers ${hektorStatusTargetLabel(statusChangeStatus)}`}
                   </button>
                 </div>
@@ -23603,6 +23651,144 @@ function affaireEstVivante(a: AffaireLedgerRow): boolean {
   if (AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase())) return false
   const aUnNumeroHektor = Boolean(String(a.hektor_affaire_id ?? '').trim())
   return !(aUnNumeroHektor && a.present_in_hektor === false)
+}
+
+/** ─── 2.2c : LES DOSSIERS OUVERTS D'UN BIEN (05/09/2026) ───
+ *
+ *  TROISIEME COPIE DE LA REGLE DE CHAINAGE, et il faut le savoir : la premiere
+ *  est recalculer_les_chaines() dans phase2/sync/affaire_ledger.py, la deuxieme
+ *  app_chaine_pour() chez Supabase. Les trois doivent dire la meme chose --
+ *  « deux copies d'une formule divergent tot ou tard ».
+ *
+ *      une chaine est CLOSE si   elle porte une vente
+ *                                ou son compromis est annule
+ *                                ou (sans compromis) toutes ses offres sont refusees
+ *      sinon                     elle est OUVERTE
+ *
+ *  ⚠ POURQUOI ON NE COMPTE PAS LES TRANSACTIONS. Objection de Frederic, 05/09 :
+ *    « il faut gerer le cas d'une chaine offre-compromis-vente d'un ANCIEN mandat
+ *    sur la meme annonce ». Mesure du meme jour : 105 biens du portefeuille
+ *    portent un compromis « actif », 97 seulement ont une chaine OUVERTE. Les 8
+ *    autres sont des biens VENDUS AUTREFOIS, revenus en ESTIMATION -- son
+ *    scenario, en vrai, huit fois. Compter les transactions les bloquerait.
+ *  ⚠ Le worker, lui, ne les bloque pas : le listing de Hektor ne les rend pas.
+ *    Mais L'ECRAN LIT NOTRE REGISTRE, QUI VOIT TOUT L'HISTORIQUE -- il serait donc
+ *    PLUS SEVERE QUE HEKTOR s'il comptait les transactions. */
+type DossierDuBien = {
+  chaine: string
+  ouvert: boolean
+  genres: Set<string>
+  /** la transaction de ce genre a nommer a l'utilisateur */
+  porteur: Map<string, AffaireLedgerRow>
+  /** la vente qui a clos le dossier, s'il l'est par une vente */
+  closePar: AffaireLedgerRow | null
+}
+
+function dossiersOuvertsDuBien(lignes: AffaireLedgerRow[]): DossierDuBien[] {
+  const etat = (a: AffaireLedgerRow) => String(a.state ?? '').trim().toLowerCase()
+  const par = new Map<string, AffaireLedgerRow[]>()
+  for (const r of lignes) {
+    const cle = r.app_chaine_id != null ? String(r.app_chaine_id) : 'seule-' + String(r.app_affaire_id)
+    const l = par.get(cle)
+    if (l) l.push(r)
+    else par.set(cle, [r])
+  }
+  const out: DossierDuBien[] = []
+  par.forEach((membres, chaine) => {
+    const genres = new Set<string>()
+    const porteur = new Map<string, AffaireLedgerRow>()
+    let vente: AffaireLedgerRow | null = null
+    let compromisVivant = false
+    let aCompromis = false
+    let aOffre = false
+    let offreVivante = false
+    for (const m of membres) {
+      const kind = String(m.kind)
+      genres.add(kind)
+      if (!porteur.has(kind)) porteur.set(kind, m)
+      if (kind === 'vente') vente = m
+      else if (kind === 'compromis') {
+        aCompromis = true
+        if (etat(m) !== 'cancelled' && etat(m) !== 'annule') compromisVivant = true
+      } else if (kind === 'offre') {
+        aOffre = true
+        if (etat(m) !== 'refused' && etat(m) !== 'refusee') offreVivante = true
+      }
+    }
+    const ouvert = !vente
+      && (!aCompromis || compromisVivant)
+      && (aCompromis || !aOffre || offreVivante)
+    out.push({ chaine, ouvert, genres, porteur, closePar: vente })
+  })
+  return out
+}
+
+/** Ce que la modale doit dire AVANT que l'utilisateur saisisse, pour le genre vise.
+ *
+ *  ⚠ LE GARDE-FOU EXISTE DEJA, dans le worker (31/08), avec la contre-epreuve de
+ *    Frederic : C1 aucun compromis -> CREE · C2 un en cours -> RIEN CREE · C3
+ *    apres annulation -> CREE. Il interroge Hektor en direct et refuse d'envoyer.
+ *    Ce qu'on ajoute ici ne le remplace pas : il joue TROIS ETAGES TROP BAS, apres
+ *    que douze champs ont ete saisis et que la ligne a ete ecrite chez nous.
+ *
+ *      L'ECRAN    voit tout l'historique, peut avoir 24 h de retard -> il PREVIENT
+ *      LE WORKER  voit l'instant present, ne voit pas loin          -> il REFUSE
+ *
+ *  ⚠ L'OFFRE N'EST JAMAIS BLOQUEE. Regle de Frederic, deja celle du worker : le
+ *    bien 62774 en porte deux, et bloquer refuserait un geste legitime.
+ *  ⚠ RIEN NE SE DECLENCHE SUR LES ONGLETS « Actif » ET « Clos » : ils n'ont pas
+ *    de genre (AFFAIRE_PAR_STATUT n'en contient que trois), donc genre = '' et
+ *    cette fonction rend null. La modale garde son comportement, et elle n'est
+ *    jamais inutilisable -- le blocage porte sur UN onglet, jamais sur elle. */
+type AvisGardeFou = {
+  bloque: boolean
+  titre: string
+  detail: string
+  /** la transaction qu'il faut annuler ou supprimer d'abord, si blocage */
+  aDebloquer: AffaireLedgerRow | null
+}
+
+function avisGardeFouSaisie(genre: string, lignes: AffaireLedgerRow[]): AvisGardeFou | null {
+  if (!genre || genre === 'offre' || !lignes.length) return null
+  const dossiers = dossiersOuvertsDuBien(lignes)
+  const bloquant = dossiers.find((d) => d.ouvert && d.genres.has(genre))
+  const mot = genre === 'compromis' ? 'un compromis' : 'une vente'
+
+  if (bloquant) {
+    const t = bloquant.porteur.get(genre) ?? null
+    const numero = String(t?.hektor_affaire_id ?? '').trim()
+    const quand = t?.date ? formatDate(String(t.date)) : ''
+    return {
+      bloque: true,
+      titre: `Ce bien a déjà ${mot} en cours`,
+      detail: `Dossier n° ${bloquant.chaine}`
+        + (numero ? ` · ${AFFAIRE_GENRE_LABEL[genre] ?? genre} n° ${numero}` : '')
+        + (quand ? ` · ${quand}` : '')
+        + (genre === 'compromis'
+          ? ". Il faut l'annuler avant d'en créer un autre."
+          : ". Il faut la supprimer avant d'en créer une autre."),
+      aDebloquer: t,
+    }
+  }
+
+  // ─── LE DOSSIER CLOS QUI NE BLOQUE PAS, ET QU'IL FAUT QUAND MEME EXPLIQUER ───
+  // Sans cette phrase, on voit un compromis dans la liste, on ne comprend pas
+  // pourquoi il n'empeche rien, et on doute de l'app.
+  const clos = dossiers.find((d) => !d.ouvert && d.genres.has(genre) && d.closePar)
+  if (clos) {
+    const t = clos.porteur.get(genre) ?? null
+    const numero = String(t?.hektor_affaire_id ?? '').trim()
+    const quand = clos.closePar?.date ? formatDate(String(clos.closePar.date)) : ''
+    return {
+      bloque: false,
+      titre: `Ce bien porte ${mot}, mais d'un dossier terminé`,
+      detail: (numero ? `${AFFAIRE_GENRE_LABEL[genre] ?? genre} n° ${numero} — d` : 'D')
+        + `ossier n° ${clos.chaine}, clos par sa vente`
+        + (quand ? ` du ${quand}` : '') + '. Il ne bloque pas.',
+      aDebloquer: null,
+    }
+  }
+  return null
 }
 
 type ChaineAffaire = { chaine: string; lignes: AffaireLedgerRow[]; rang: number; date: string }
