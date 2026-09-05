@@ -2689,7 +2689,28 @@ GEL que Frederic a repere le premier).*
                   n'a pas de Supabase, donc la liste des affaires reste vide et le
                   selecteur ne s'affiche pas). Build vert, ambiguite mesuree.
 
-[ ] 2.2b LE CHOIX DE L'OFFRE EST LE CAS NORMAL, PAS UNE ANOMALIE  AJOUTEE 04/09
+[x] 2.2b LE CHOIX DE L'OFFRE EST LE CAS NORMAL       FAITE LE 05/09/2026
+         avisPlusieursAffaires() au niveau module (App.tsx) : un message par
+         situation, et TROIS TONS au lieu d'un seul jaune.
+             offre · aucune acceptee     gris     « 3 offres en concurrence »
+             offre · une acceptee        ambre    « les autres auraient du etre
+                                                    refusees »
+             offre · plusieurs acceptees rouge    « il ne peut y en avoir qu'une »
+             compromis / vente           ambre    message d'origine, inchange
+         DESIGN : pastille + titre + explication, dans le langage visuel deja pose
+         par .mandant-prov (ambre qui avertit, rouge qui bloque). Pas de langage
+         neuf. role="status" pour le cas normal, role="alert" pour les anomalies.
+         VERIFIE au navigateur : couleurs calculees conformes, contrastes 6,65 a
+         13,3 (seuil AA = 4,5).
+         ⚠ MESURE HONNETE DU 05/09 : sur le portefeuille courant, le cas NORMAL
+           n'existe pas encore (0 sur 4). Les 4 biens a plusieurs offres vivantes
+           sont TOUS des anomalies -- 2 avec une acceptee, 2 avec plusieurs. Ce
+           correctif ne change donc rien a ce qui s'affiche aujourd'hui : il rend
+           la modale juste pour le jour ou deux offres se concurrenceront, et il
+           SEPARE les deux anomalies que le message unique confondait.
+         ⚠ RIEN D'AUTRE N'A BOUGE : le selecteur « Choisir »,
+           affaireCourantePourStatut et la regle de vie datent de 2.2.
+         --- description d'origine ---
          Frederic : « une offre est active tant qu'elle n'est pas refusee, donc il
          faudra pouvoir la choisir dans la modale -- le choix de l'offre est
          INDISPENSABLE ».

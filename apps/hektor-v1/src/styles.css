@@ -32259,9 +32259,20 @@ body {
    AUCUN bouton -- « mieux vaut aucun bouton qu'un bouton qui agit sur la mauvaise
    affaire ». On ne devine toujours pas : on demande. Additif, aucune regle
    existante n'est modifiee. */
+/* 2.2b (05/09/2026) — TROIS TONS, PARCE QU'IL Y A TROIS SITUATIONS.
+   Le meme jaune d'avertissement servait pour tout, y compris pour le cas NORMAL
+   (plusieurs offres en concurrence). Un signal qui se declenche sur une situation
+   saine apprend a l'utilisateur a l'ignorer -- et c'est comme ca qu'un vrai signal
+   se noie. La pastille et la palette sont celles des provisoires du projet
+   (.mandant-prov), pas un langage neuf : ambre qui avertit, rouge qui bloque. */
 .status-change-affaires .sca-ambigu {
+  display: grid;
+  grid-template-columns: 7px 1fr;
+  align-items: start;
+  column-gap: 10px;
+  row-gap: 2px;
   margin: 0 0 10px;
-  padding: 9px 12px;
+  padding: 10px 12px 11px;
   border-radius: 8px;
   border: 1px solid #f0d9a8;
   background: #fdf6e6;
@@ -32269,6 +32280,41 @@ body {
   font-size: 13px;
   line-height: 1.5;
 }
+.status-change-affaires .sca-ambigu::before {
+  content: '';
+  grid-column: 1;
+  grid-row: 1;
+  width: 7px;
+  height: 7px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: #d08700;
+}
+.status-change-affaires .sca-amb-t {
+  grid-column: 2;
+  font-weight: 650;
+  color: #3a2f1c;
+}
+.status-change-affaires .sca-amb-d { grid-column: 2; }
+
+/* LE CAS NORMAL — gris d'information. Il ne demande pas qu'on s'inquiete, il
+   demande qu'on choisisse. */
+.status-change-affaires .sca-ambigu.is-normal {
+  border-color: #dbe2ea;
+  background: #f6f8fb;
+  color: #47566b;
+}
+.status-change-affaires .sca-ambigu.is-normal::before { background: #7b8ca3; }
+.status-change-affaires .sca-ambigu.is-normal .sca-amb-t { color: #1f2c3d; }
+
+/* L'ANOMALIE FRANCHE — le rouge de .mandant-prov.is-error, a l'identique. */
+.status-change-affaires .sca-ambigu.is-alerte {
+  border-color: #f2c4c1;
+  background: #fdeceb;
+  color: #8a3b37;
+}
+.status-change-affaires .sca-ambigu.is-alerte::before { background: #b0332f; }
+.status-change-affaires .sca-ambigu.is-alerte .sca-amb-t { color: #7a2621; }
 .status-change-affaires .sca-choisir {
   border: 1px solid #94a3b8;
   background: #fff;

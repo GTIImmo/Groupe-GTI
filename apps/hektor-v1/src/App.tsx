@@ -17794,24 +17794,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   // jusqu'ici, l'ecran se taisait completement.
                   const vivantesDuGenre = affairesVivantesPourStatut()
                   const ambigu = vivantesDuGenre.length > 1
-                  // ─── CE N'EST PAS UNE AMBIGUITE, C'EST UNE ANOMALIE (04/09) ───
-                  //
-                  // Regle de Frederic : « il ne peut pas y avoir deux affaires en
-                  // cours en meme temps ». Et Hektor l'applique DEJA -- mesure du
-                  // 04/09 : il n'attache un acquereur au compromis que si celui-ci
-                  // a une offre vivante sur le bien.
-                  //
-                  // On garde le choix -- il faut pouvoir agir -- mais on ne fait
-                  // plus semblant que la situation est normale. Et on distingue les
-                  // deux cas REELS, mesures sur les 40 annonces concernees :
-                  //   meme acquereur   -> un reste : l'ancien n'a jamais ete clos
-                  //                       (36, 1801, 8263, 8834, 22794, 22826...)
-                  //   acquereurs differents -> deux acheteurs, ce qui contredit la
-                  //                       regle metier (annonce 1970, seul cas lu)
-                  const acquereursVivants = new Set(
-                    vivantesDuGenre.map((a) => String(a.hektor_acquereur_id ?? '').trim()).filter(Boolean),
-                  )
-                  const memeAcquereur = acquereursVivants.size <= 1
+                  // ─── 2.2b (05/09) : LA PHRASE DEPEND DE LA SITUATION ───
+                  // Trois genres, trois regles metier differentes -- et pour les
+                  // offres, trois cas distincts. Tout vit dans avisPlusieursAffaires,
+                  // au niveau module, avec les mesures qui l'etablissent.
+                  const avis = avisPlusieursAffaires(
+                    AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '', vivantesDuGenre)
                   // UNE SEULE COPIE DE LA FORMULE (03/09) : la rubrique Affaires du
                   // cockpit affiche les memes etats. Deux copies divergent tot ou tard --
                   // la regle du projet. Elles vivent desormais au niveau module.
@@ -17819,15 +17807,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   const etatLabel = affaireEtatLabel
                   return (
                     <section className="status-change-affaires">
-                      {ambigu && !courante ? (
-                        <p className="sca-ambigu">
-                          Ce bien porte <b>{vivantesDuGenre.length}</b>{' '}
-                          {AFFAIRE_GENRE_PLURIEL[AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''] ?? ''}
-                          {' '}en cours, et <b>il ne devrait y en avoir qu'un</b>.
-                          {memeAcquereur
-                            ? " Même acquéreur sur les deux : le plus ancien n'a probablement jamais été clos."
-                            : ' Deux acquéreurs différents sur le même bien — à vérifier avant d’agir.'}
-                          {' '}Désigne celui qui fait foi ci-dessous ; les actions porteront sur lui.
+                      {avis && !courante ? (
+                        <p className={`sca-ambigu is-${avis.ton}`}
+                           role={avis.ton === 'normal' ? 'status' : 'alert'}>
+                          <b className="sca-amb-t">{avis.titre}</b>
+                          <span className="sca-amb-d">{avis.detail}</span>
                         </p>
                       ) : null}
                       <div className="sca-h">
@@ -23445,6 +23429,76 @@ const AFFAIRE_GENRE_LABEL: Record<string, string> = {
 // le reste.
 const AFFAIRE_GENRE_PLURIEL: Record<string, string> = {
   offre: 'offres', compromis: 'compromis', vente: 'ventes',
+}
+
+/** ─── 2.2b : UN MESSAGE PAR SITUATION, PAS UN POUR TOUTES (05/09/2026) ───
+ *
+ *  Frederic : « une offre est active tant qu'elle n'est pas refusee, donc il faut
+ *  pouvoir la choisir dans la modale -- le choix de l'offre est INDISPENSABLE ».
+ *
+ *  J'AVAIS ECRIT 2.2 COMME SI LES TROIS GENRES SE RESSEMBLAIENT. Ils ne se
+ *  ressemblent pas :
+ *      offre       plusieurs vivantes = LE METIER. Trois acheteurs proposent, on
+ *                  en accepte une. Le choix est le mode NORMAL.
+ *      compromis   une seule a la fois -> le choix est une sortie d'anomalie
+ *      vente       idem
+ *  Crier a l'anomalie devant une situation saine apprend a l'utilisateur a ignorer
+ *  l'avertissement -- et c'est comme ca qu'un vrai signal se noie.
+ *
+ *  MAIS LES OFFRES ONT LEURS PROPRES ANOMALIES, mesurees le 05/09 sur le
+ *  portefeuille courant (156 biens portent une offre, 4 en portent plusieurs) :
+ *      aucune acceptee                   0   le cas normal -- pas encore rencontre
+ *      UNE acceptee + d'autres vivantes  2   les autres auraient du etre refusees
+ *      PLUSIEURS acceptees               2   contredit « une seule acceptee »
+ *  Les quatre cas reels sont donc des anomalies, et la modale les confondait sous
+ *  le meme message. Ce qui suit les separe.
+ *
+ *  ⚠ ON NE TOUCHE PAS AU CHOIX LUI-MEME. Le selecteur, affaireCourantePourStatut
+ *    et la regle de vie datent de 2.2 et restent tels quels : seule la PHRASE
+ *    change, et la couleur qui l'accompagne. */
+type AvisAffaires = { ton: 'normal' | 'avertir' | 'alerte'; titre: string; detail: string }
+
+function avisPlusieursAffaires(genre: string, vivantes: AffaireLedgerRow[]): AvisAffaires | null {
+  if (vivantes.length < 2) return null
+  const n = vivantes.length
+  const pluriel = AFFAIRE_GENRE_PLURIEL[genre] ?? genre
+
+  if (genre === 'offre') {
+    const acceptees = vivantes.filter((a) =>
+      ['accepted', 'acceptee'].includes(String(a.state ?? '').trim().toLowerCase())).length
+    if (acceptees === 0) {
+      return { ton: 'normal',
+               titre: `${n} offres en concurrence`,
+               detail: "C'est le cas normal : plusieurs acheteurs peuvent proposer en même temps. "
+                     + 'Désigne celle sur laquelle les actions doivent porter.' }
+    }
+    if (acceptees === 1) {
+      const autres = n - 1
+      return { ton: 'avertir',
+               titre: 'Une offre est acceptée, et ce bien en porte encore ' + autres + ' autre' + (autres > 1 ? 's' : ''),
+               detail: `Ces ${autres > 1 ? 'offres auraient' : 'offre aurait'} dû être refusée`
+                     + (autres > 1 ? 's' : '') + " au moment de l'acceptation. Désigne celle qui fait foi." }
+    }
+    return { ton: 'alerte',
+             titre: `${acceptees} offres acceptées sur ce bien`,
+             detail: "Il ne peut y en avoir qu'une. Désigne celle qui fait foi, "
+                   + 'puis refuse les autres — sinon le compromis se rattachera au hasard.' }
+  }
+
+  // ─── COMPROMIS ET VENTE : le message d'origine, qui lui est exact ───
+  // La nuance sur l'acquereur vient des 40 annonces lues le 04/09 : meme
+  // acquereur = l'ancien n'a jamais ete clos ; acquereurs differents = deux
+  // acheteurs sur un bien, ce qui contredit la regle metier.
+  const acquereurs = new Set(
+    vivantes.map((a) => String(a.hektor_acquereur_id ?? '').trim()).filter(Boolean))
+  return {
+    ton: 'avertir',
+    titre: `Ce bien porte ${n} ${pluriel} en cours, et il ne devrait y en avoir qu'un`,
+    detail: (acquereurs.size <= 1
+      ? "Même acquéreur sur les deux : le plus ancien n'a probablement jamais été clos."
+      : 'Deux acquéreurs différents sur le même bien — à vérifier avant d’agir.')
+      + ' Désigne celui qui fait foi ; les actions porteront sur lui.',
+  }
 }
 
 /** L'etat d'une transaction en francais. UNE SEULE COPIE : la modale de changement
