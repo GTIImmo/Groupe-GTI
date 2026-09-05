@@ -66,3 +66,14 @@ Console/logs/
 Thumbs.db
 ~$*
 pull_from_supabase.lock
+
+# ─── LES SAUVEGARDES D'ETAT : DANS LE PROJET, PAS DANS GIT ───
+# Avant une refonte on photographie l'etat d'une table pour pouvoir revenir en
+# arriere. Ces photos pesent des Mo (11 Mo pour les 13 348 chaines du 04/09/2026)
+# et ne se relisent qu'une fois, tout de suite. Les mettre dans git alourdirait
+# le depot pour toujours, alors qu'elles ne servent que quelques jours.
+# ⚠ NE PAS ELARGIR EN notice/*.json : les petites TRACES de gestes deliberes
+#   (SUPPRESSION_PARASITES_*, ESSAI_NUIT_*) sont versionnees EXPRES -- elles
+#   racontent une decision, elles ne sauvegardent pas un etat.
+# CONVENTION : *_AVANT_*.json = une photo d'avant-bascule, elle reste en local.
+notice/*_AVANT_*.json
