@@ -2558,6 +2558,52 @@ GEL que Frederic a repere le premier).*
 ### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
 
 ```
+[ ] 1.9  LE SERVEUR LOCAL NE RECOIT PAS CE QUE L'APP ECRIT   VUE LE 05/09
+         ⚠ MISE EN NOTE A LA DEMANDE DE FREDERIC -- « on verra plus tard ».
+         Trouvee en repondant a sa question : « est-ce que le chantier va
+         resoudre ce probleme de fraicheur pour les ecritures depuis l'app ? »
+         REPONSE : il resout ce qu'on VOIT, pas ce qu'on CONSERVE.
+
+         ─── LE FAIT, VERIFIE DANS LE CODE ───
+         Le registre LOCAL n'a qu'une seule source : le miroir, donc Hektor.
+         redescendre_ce_que_l_app_possede() fait
+             UPDATE app_affaire_ledger SET ... WHERE app_affaire_id = ?
+         un UPDATE, JAMAIS un INSERT. Une ligne absente du local n'y sera pas
+         creee -- elle est simplement ignoree.
+
+         ─── CE QUE CA DONNE, MESURE LE 04/09 AU SOIR ───
+             20 h   Supabase 7 offres sur 24933   ·   local 5    16 h d'ecart
+             06 h   Hektor les renvoie, le miroir les capte, le local les adopte
+         ⚠ ET LE CAS GRAVE N'EST PAS LE RETARD : si Hektor ne renvoie JAMAIS la
+           transaction (refus du worker, erreur, annonce archivee entre-temps),
+           le local ne l'aura JAMAIS. Pas dans 24 h. Jamais.
+
+         ⚠ ET CA TOUCHE LA SAUVEGARDE. backup_critical sauvegarde les bases
+           LOCALES, app_affaire_ledger compris. Donc : ce que l'app a ecrit n'est
+           protege par aucune sauvegarde tant que Hektor ne l'a pas confirme.
+           C'est le point le plus genant, parce qu'il est SILENCIEUX.
+
+         ─── L'ASYMETRIE AVEC LES ANNONCES ───
+             annonces       26bis-3  « le serveur tient une annonce que le
+                                       miroir ignore »
+             transactions   ————     rien d'equivalent
+           Ce n'est pas un oubli de conception : le registre ecrit par l'app est
+           RECENT -- premiere ligne le 25/08.
+
+         ─── CE QUE JE PROPOSERAIS, ET C'EST PETIT ───
+         Que le run INSERE aussi les lignes que LA DOUBLURE porte et que le
+         miroir ignore. La doublure est deja descendue chaque nuit (29 323
+         lignes, la table Supabase entiere) JUSTE AVANT l'etape du registre :
+         tout est deja sur le disque, il manque un INSERT.
+             le local connait enfin ce que l'app a ecrit
+             recalculer_les_chaines les integre -> local et Supabase concordent
+             la sauvegarde de nuit les emporte
+             et le jour de la coupure, le local est deja complet
+         ⚠ L'AUTRE VOIE (le worker ecrit dans le local) demanderait qu'il
+           atteigne le serveur, ce qu'il ne fait jamais aujourd'hui. Plus lourd,
+           plus fragile.
+         touche : refresh_ledger seul · retour : retirer l'INSERT
+
 [x] 2.1  LA RUBRIQUE AFFAIRES LIT LE REGISTRE
          ✅ CODEE LE 03/09 AU SOIR. Build vert (npm run build = tsc -b + vite).
 
