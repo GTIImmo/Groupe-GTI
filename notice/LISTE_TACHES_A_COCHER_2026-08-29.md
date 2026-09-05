@@ -2558,11 +2558,27 @@ GEL que Frederic a repere le premier).*
 ### PHASE 2 — L'ECRAN · **c'est la que Frederic voit le changement**
 
 ```
-[ ] 1.9  LE SERVEUR LOCAL NE RECOIT PAS CE QUE L'APP ECRIT   VUE LE 05/09
-         ⚠ MISE EN NOTE A LA DEMANDE DE FREDERIC -- « on verra plus tard ».
-         Trouvee en repondant a sa question : « est-ce que le chantier va
-         resoudre ce probleme de fraicheur pour les ecritures depuis l'app ? »
-         REPONSE : il resout ce qu'on VOIT, pas ce qu'on CONSERVE.
+[ ] 26bis-TRANSACTIONS  LE SERVEUR TIENT UNE TRANSACTION QUE LE MIROIR IGNORE
+         (ex-1.9, renommee le 05/09 : elle appartient a la famille 26bis)
+         ⚠ QUAND : AVEC 3.1, en ouverture de la phase 3. Pas avant -- voir
+           « L'URGENCE, MESUREE » plus bas : zero dommage a ce jour.
+
+         ─── LA FAMILLE, ET LA PLACE DE CELLE-CI ───
+             26bis            le corps de l'ANNONCE        manquait
+             26bis-contacts   le corps du CONTACT          manquait
+             26bis-relations  le LIEN entre les deux       manquait
+             26bis-3          le serveur tient une ANNONCE que le miroir ignore
+             ─────────────────────────────────────────────────────────────
+             celle-ci         le serveur tient une TRANSACTION que le miroir ignore
+
+         ⚠ ET IL N'Y A PAS DE « 26bis-transactions » POUR LE CORPS, parce qu'il
+           n'en faut pas. Mesure du 05/09 :
+               app_dossier         (annonce)      10 colonnes, IDENTITE SEULE
+               app_affaire_ledger  (transaction)  25 colonnes, IDENTITE + CORPS
+                                                  payload_json rempli 29 327/29 327
+           Le registre des transactions est ne EN AVANCE sur la doctrine : il
+           detient deja son corps, pendant que les annonces attendent le leur.
+           Ce qui manque n'est pas le corps, c'est LA SOURCE.
 
          ─── LE FAIT, VERIFIE DANS LE CODE ───
          Le registre LOCAL n'a qu'une seule source : le miroir, donc Hektor.
@@ -2571,6 +2587,43 @@ GEL que Frederic a repere le premier).*
          un UPDATE, JAMAIS un INSERT. Une ligne absente du local n'y sera pas
          creee -- elle est simplement ignoree.
 
+         ─── L'URGENCE, MESUREE LE 05/09 : ELLE EST NULLE POUR L'INSTANT ───
+             transactions nees dans l'app depuis le 25/08      25
+                    dont sans numero Hektor                     0
+                    dont bloquees depuis plus de 2 jours        0
+         25 sur 25 ont recu leur numero et sont redescendues. Le risque est reel
+         mais ne s'est JAMAIS produit -- parce que l'app ne fait que CREER, et
+         que Hektor accepte les creations.
+
+         ─── POURQUOI CA CESSERA DE MARCHER, ET DONC POURQUOI 3.1 ───
+             3.2  l'app MODIFIE           Hektor peut refuser ou transformer :
+                                          « confirme » ne voudra plus dire
+                                          « notre valeur a survecu »
+             3.3  le contrat d'autorite   les 10 champs n'ont plus de filet
+                  disparait
+           Et le jour ou Frederic tranchera « une transaction se saisit dans
+           l'app » (116 gestes sur 30 jours), l'app devient l'auteur principal.
+
+         ─── LES TROIS SIGNAUX QUI RENDRAIENT LA TACHE URGENTE AVANT 3.1 ───
+             une transaction reste plus de 48 h sans numero Hektor
+             la saisie des transactions bascule dans l'app
+             le garde-fou de 2.2c commence a REFUSER des gestes
+                 -> la ligne serait ecrite chez Supabase et JAMAIS confirmee.
+                    C'est le signal le plus proche : 2.2c va le rendre visible.
+
+         ─── CE QU'IL Y A A FAIRE, ET C'EST PETIT ───
+         Que le run INSERE aussi les lignes que LA DOUBLURE porte et que le
+         miroir ignore. La doublure est deja descendue chaque nuit (29 323
+         lignes, la table Supabase entiere) JUSTE AVANT l'etape du registre :
+         tout est deja sur le disque, il manque un INSERT.
+             le local connait enfin ce que l'app a ecrit
+             recalculer_les_chaines les integre -> local et Supabase concordent
+             la sauvegarde de nuit les emporte
+             et le jour de la coupure, le local est deja complet
+         ⚠ L'AUTRE VOIE (le worker ecrit dans le local) demanderait qu'il
+           atteigne le serveur, ce qu'il ne fait jamais aujourd'hui. Plus lourd,
+           plus fragile.
+         touche : refresh_ledger seul · retour : retirer l'INSERT
          ─── CE QUE CA DONNE, MESURE LE 04/09 AU SOIR ───
              20 h   Supabase 7 offres sur 24933   ·   local 5    16 h d'ecart
              06 h   Hektor les renvoie, le miroir les capte, le local les adopte
@@ -2786,42 +2839,108 @@ GEL que Frederic a repere le premier).*
                   juste le choix ; sur une annonce a offre acceptee + une autre
                   vivante, l'avertissement apparait
 
-[ ] 2.2c LA MODALE TIENT LA REGLE : ELLE BLOQUE LES SAISIES     AJOUTEE 04/09
-         Regle de Frederic, dans ses mots : « on ne peut pas avoir plusieurs
-         compromis en meme temps -- si un compromis est en cours, un autre ne peut
-         pas etre cree, il faut d'abord l'annuler. Et la vente est forcement liee
-         au compromis. »
+[ ] 2.2c LA MODALE DIT AVANT CE QUE LE WORKER DIT APRES   REFORMULEE 05/09
+         ⚠ REFORMULEE APRES AUDIT. Ma redaction du 04/09 disait « ajouter un
+           garde-fou ». C'ETAIT FAUX SUR DEUX POINTS.
 
-             genre       on BLOQUE la creation si...
-             offre       une offre est deja ACCEPTEE sur le bien
-             compromis   un compromis vivant existe   -> « annule-le d'abord »
-             vente       une vente vivante existe     -> « supprime-la d'abord »
+         ① LE GARDE-FOU EXISTE DEJA, dans le worker (console_job_worker.js,
+           pose le 31/08), avec la contre-epreuve de Frederic :
+               C1  aucun compromis en cours  -> CREE 50053
+               C2  50053 en cours            -> RIEN CREE
+               C3  apres annulation          -> CREE 50054
+               V1  aucune vente              -> CREE 23293
+               V2  23293 presente            -> RIEN CREE
+           Il interroge HEKTOR EN DIRECT, refuse d'envoyer, et dit pourquoi. Il
+           ne bloque PAS l'offre (le bien 62774 en porte deux). C'est deja la
+           regle de Frederic, appliquee -- mais TROIS ETAGES TROP BAS : tu
+           remplis douze champs, tu envoies, la ligne est ecrite chez nous, et
+           c'est seulement la que le worker dit non.
 
-         ⚠ HEKTOR NE L'INTERDIT PAS, ET C'EST MESURE : le 04/09, le compromis 50070
-           a ete cree alors que 50069 vivait encore. C'est donc a NOUS de tenir la
-           regle -- c'est tout le sens du chantier : l'app devient l'auteur.
+         ② BLOQUER SUR LES TRANSACTIONS SERAIT PLUS SEVERE QUE HEKTOR.
+           Objection de Frederic, le 05/09 : « il faut gerer le cas d'une chaine
+           offre-compromis-vente d'un ANCIEN mandat sur la meme annonce ».
+           MESURE : 105 biens du portefeuille portent un compromis « actif »,
+           97 seulement ont une chaine OUVERTE. Les 8 autres sont des biens
+           VENDUS AUTREFOIS, revenus en ESTIMATION -- son scenario, en vrai,
+           huit fois : EM41252 EM19904 EM29852 EM33490 EA14544 EM16784 EM42200
+           EM42964. Un garde-fou qui compte les TRANSACTIONS les bloquerait.
+           ⚠ Le worker, lui, ne les bloque pas -- le listing Hektor ne les rend
+             pas. MAIS L'ECRAN LIT NOTRE REGISTRE, QUI VOIT TOUT L'HISTORIQUE.
+             Il serait donc plus severe que Hektor s'il comptait les
+             transactions. C'est pourquoi il doit compter LES DOSSIERS OUVERTS.
 
-         ⚠ LA DEFINITION DE « EN COURS » EST CELLE DE FREDERIC, et c'est deja celle
-           du code (affaireEstVivante) :
-               offre      vivante tant qu'elle n'est pas REFUSEE (acceptee = vivante)
-               compromis  vivant tant qu'il n'est pas ANNULE
-               vente      presente, ou supprimee
-           J'avais objecte que 9 092 annonces portent un compromis jamais clos.
-           L'OBJECTION NE TIENT PAS : avec cette definition, un compromis non annule
-           EST en cours. S'il traine sur un bien vendu, c'est une donnee a nettoyer,
-           pas une exception a prevoir. La regle revele le probleme au lieu de le
-           masquer.
+         ─── LE PARTAGE DES ROLES ───
+             L'ECRAN    voit tout l'historique, peut avoir 24 h de retard
+                        -> il PREVIENT, il explique, il propose le deblocage
+             LE WORKER  voit l'instant present, ne voit pas loin
+                        -> il REFUSE, et il garde le dernier mot
+           L'ecran ne condamne pas sur des donnees de la veille.
 
-         AMPLEUR MESUREE le 04/09 :
-             93 annonces « Sous compromis » dans le portefeuille courant, dont 2 en
-             double · 5 annonces portent PLUSIEURS offres acceptees
-           Le blocage agit donc sur une population petite et identifiee.
+         ─── CE QU'ON AJOUTE : UNE FONCTION ───
+         dossiersOuvertsDuBien(lignes) -- rejoue la regle de chainage deja
+         ecrite (recalculer_les_chaines cote local, app_chaine_pour cote
+         Supabase, TROISIEME copie ici) :
+             une chaine est CLOSE si  elle porte une vente
+                                      ou son compromis est annule
+                                      ou toutes ses offres sont refusees
+             sinon                    elle est OUVERTE
 
-         ⚠ LE BOUTON DOIT DIRE POURQUOI IL EST ETEINT. Un bouton gris et muet est
-           pire que pas de bouton : l'utilisateur croit a une panne.
-         touche : la modale seule · retour : retirer le garde-fou (une fonction)
+         ─── LE COMPORTEMENT ───
+             un dossier OUVERT porte deja ce genre
+                -> bouton d'envoi ETEINT, la phrase NOMME le dossier et le
+                   compromis, et « Annuler le compromis n° X » est juste a cote
+             seul un dossier CLOS en porte un  (les 8 biens)
+                -> RIEN n'est bloque, mais on l'explique : « appartient au
+                   dossier n° 5187, clos par sa vente du 04/11/2011 »
+             une offre
+                -> JAMAIS bloquee. Regle de Frederic, deja celle du worker.
+
+         ─── ⚠ LES CINQ ONGLETS NE DOIVENT PAS BOUGER (exigence de Frederic) ───
+         La modale sert AUSSI a changer l'etat de l'annonce, et son onglet
+         d'ouverture suit statut_annonce :
+             Actif · Offre · Compromis · Vendu · Clos
+         AFFAIRE_PAR_STATUT ne contient QUE offer/compromise/sold. `active` et
+         `closed` n'y sont pas -- donc, deja aujourd'hui, ils n'ont ni affaire
+         courante, ni bandeau, ni « Choisir ». Le RPC ne leur ecrit AUCUNE ligne
+         de registre.
+         ➡ LE GARDE-FOU SE BRANCHE SUR CETTE MEME TABLE : genre vide = il ne
+           fait RIEN. Actif et Clos gardent un comportement identique. Le
+           positionnement initial, la bascule entre onglets, la cloture du
+           mandat : rien n'est touche.
+         ⚠ ET LA MODALE N'EST JAMAIS INUTILISABLE : le blocage porte sur UN
+           onglet. On bascule sur Clos ou Actif et le geste passe.
+
+         ─── L'AFFICHAGE QUI VA AVEC ───
+         La liste des affaires montre le NUMERO DE DOSSIER, et « Choisir »
+         disparait sur un dossier clos : on ne choisit pas une affaire terminee.
+         Aujourd'hui un compromis de 2011 s'y presente comme vivant, avec son
+         bouton, sans rien dire de son dossier.
+
+         ─── LE RISQUE, ET SON ANTIDOTE ───
+         Notre registre peut avoir 24 h de retard : un compromis annule chez
+         Hektor a 9 h bloquerait encore a 10 h. L'antidote est DANS L'ECRAN --
+         le bouton « Annuler le compromis » est la, et annuler un compromis deja
+         annule ne casse rien (mesure du 31/08). On n'est jamais coince.
+
+         ⚠ CE QUI RESTE HORS DE CETTE TACHE, ET C'EST VOULU :
+           * faire lire HEKTOR a l'ecran -- ce serait la vraie solution, mais le
+             front ne peut pas parler a Hektor (les DEUX PORTES : les cookies
+             sont chez le worker). Demanderait un travail dedie et une attente.
+           * empecher l'ECRITURE optimiste avant de savoir -- la ligne est creee
+             avant que le worker refuse. C'est le « garde-fou avant ecriture »
+             de 3.1, qui n'existe pour les transactions nulle part. Ne pas
+             l'improviser ici.
+           * ⚠ ET C'EST 2.2c QUI RENDRA CE MANQUE VISIBLE : si le blocage se met
+             a jouer, on aura les premieres lignes creees puis refusees -- le
+             signal qui declenche 26bis-TRANSACTIONS.
+
+         touche : la modale seule · retour : retirer une fonction, la condition
+                  redevient ce qu'elle etait. Aucune migration, aucune donnee.
          verif  : sur un bien a compromis vivant, « Envoyer vers Compromis » est
-                  eteint et la phrase nomme le compromis a annuler d'abord
+                  eteint et la phrase nomme le compromis a annuler d'abord ;
+                  sur EM41252 (vendu autrefois, revenu en estimation) le bouton
+                  reste ACTIF et une phrase explique le dossier clos ;
+                  sur les onglets Actif et Clos, rien ne change.
 [x] 2.3  LA FICHE MOBILE LIT LE REGISTRE            ✅ CODEE LE 04/09
          Build vert. Un bloc par DOSSIER D'AFFAIRE, avec toutes ses transactions --
          numero Hektor, etat, montant, date, et « plus dans Hektor » le cas echeant.
