@@ -8731,6 +8731,12 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   retractionDays?: string
   selectedMandat?: string
   buyerContactId?: string
+  /** 2.6 (06/09/2026) : TOUS les acquereurs, quand il y en a plusieurs.
+   *  ⚠ ADDITIF -- buyerContactId reste le PREMIER, et reste ce que le worker et
+   *    le RPC lisent depuis toujours. Mesure du 04/09 : 1 811 compromis sur
+   *    10 581 (17,1 %) et 566 ventes sur 7 609 portent plusieurs acquereurs.
+   *    Un couple qui achete, c'est la norme. */
+  buyerContactIds?: string[]
   buyerNotaryId?: string
   buyerFees?: string
   buyerFeesRate?: string
@@ -8771,6 +8777,12 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     retraction_days: input.retractionDays?.trim() || null,
     selected_mandat: input.selectedMandat?.trim() || null,
     buyer_contact_id: input.buyerContactId?.trim() || null,
+    // Le worker lit `buyer_contact_ids` -- deja code cote assistant du compromis.
+    // On n'envoie la cle QUE s'il y a plus d'un acquereur : une charge inchangee
+    // pour le cas courant, donc aucun comportement modifie sans raison.
+    buyer_contact_ids: (input.buyerContactIds ?? []).length > 1
+      ? input.buyerContactIds!.map((x) => String(x ?? '').trim()).filter(Boolean)
+      : null,
     buyer_notary_id: input.buyerNotaryId?.trim() || null,
     buyer_fees: input.buyerFees?.trim() || null,
     buyer_fees_rate: input.buyerFeesRate?.trim() || null,

@@ -32315,6 +32315,90 @@ body {
 }
 .status-change-affaires .sca-ambigu.is-alerte::before { background: #b0332f; }
 .status-change-affaires .sca-ambigu.is-alerte .sca-amb-t { color: #7a2621; }
+/* ── 2.5 + 2.6 (06/09/2026) — L'ACQUEREUR SE DESIGNE ─────────────────────────
+   Le champ etait un <input> ou l'on tapait un identifiant numerique. Il devient
+   une recherche par NOM qui accepte PLUSIEURS personnes -- un compromis sur six
+   en porte plusieurs, un couple qui achete est la norme.
+   Meme grammaire visuelle que le reste de la modale : jetons arrondis, liste de
+   propositions sobre, etats en petit. Rien de neuf n'est invente. */
+.status-change-acq { position: relative; }
+.status-change-acq > span { display: block; }
+
+.status-change-acq .sca-acq-choisis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+.status-change-acq .sca-acq-jeton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 5px 3px 10px;
+  border: 1px solid #cfd8e3;
+  background: #f6f8fb;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: #1f2c3d;
+}
+.status-change-acq .sca-acq-jeton b { font-weight: 600; }
+/* « principal » : celui que Hektor recevra en tete. On le DIT, on ne le
+   laisse pas deviner a la position. */
+.status-change-acq .sca-acq-jeton i {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: #556172;
+}
+.status-change-acq .sca-acq-jeton button {
+  border: 0;
+  background: #e2e8f0;
+  color: #47566b;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.status-change-acq .sca-acq-jeton button:hover { background: #cbd5e1; color: #0f172a; }
+.status-change-acq .sca-acq-jeton button:focus-visible { outline: 2px solid #0f172a; outline-offset: 1px; }
+
+.status-change-acq .sca-acq-liste {
+  display: flex;
+  flex-direction: column;
+  margin-top: 5px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+.status-change-acq .sca-acq-liste button {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 7px 11px;
+  border: 0;
+  border-bottom: 1px solid #eef2f6;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: #1f2c3d;
+}
+.status-change-acq .sca-acq-liste button:last-child { border-bottom: 0; }
+.status-change-acq .sca-acq-liste button:hover { background: #f6f8fb; }
+.status-change-acq .sca-acq-liste button:focus-visible { outline: 2px solid #0f172a; outline-offset: -2px; }
+.status-change-acq .sca-acq-liste b { font-weight: 600; }
+/* 5,74 sur #fff — mesure au navigateur, pas estimee a l'oeil (cf. 2.2c) */
+.status-change-acq .sca-acq-liste small { color: #556172; font-size: 11.5px; }
+
+.status-change-acq .sca-acq-etat { display: block; margin-top: 4px; color: #556172; font-size: 11.5px; }
+.status-change-acq .sca-acq-err  { display: block; margin-top: 4px; color: #8a3b37; font-size: 11.5px; }
+
 /* 2.2c (05/09/2026) — LE DOSSIER AUQUEL UNE TRANSACTION APPARTIENT.
    Discret par defaut : c'est un reperage, pas une alerte. Barre et attenue
    quand le dossier est TERMINE -- la ligne reste lisible, mais on voit d'un

@@ -11924,6 +11924,25 @@ export default function App() {
   const [statusChangeAffaireChoisie, setStatusChangeAffaireChoisie] = useState<number | null>(null)
   const [statusChangeCorrectionPending, setStatusChangeCorrectionPending] = useState(false)
   const [statusChangeBuyerContactId, setStatusChangeBuyerContactId] = useState('')
+  // ─── 2.5 + 2.6 (06/09/2026) : L'ACQUEREUR SE DESIGNE, ET ILS PEUVENT ETRE PLUSIEURS ───
+  //
+  // Avant : un <input> ou il fallait TAPER un identifiant numerique. Frederic :
+  // « ce n'est pas pratique » -- et c'etait faux deux fois. Mesure du 04/09 : un
+  // compromis cree avec 605075 au lieu de 605030 a envoye la chaine dans le
+  // mauvais dossier, ET Hektor n'a rien attache du tout, sans rien dire.
+  //
+  // ⚠ statusChangeBuyerContactId RESTE, et reste le PREMIER de la liste : c'est
+  //   lui que l'API envoie en `buyer_contact_id`, ce que le worker et le RPC
+  //   attendent depuis toujours. La liste vient EN PLUS, jamais A LA PLACE.
+  //
+  // POURQUOI PLUSIEURS (2.6), mesure du 04/09 : 1 811 compromis sur 10 581 en
+  // portent plus d'un -- 17,1 %, un sur six. Et 566 ventes sur 7 609.
+  // Un couple qui achete, c'est la norme, pas le cas limite.
+  const [statusChangeBuyers, setStatusChangeBuyers] = useState<MandantContactSearchOption[]>([])
+  const [statusChangeBuyerSearch, setStatusChangeBuyerSearch] = useState('')
+  const [statusChangeBuyerOptions, setStatusChangeBuyerOptions] = useState<MandantContactSearchOption[]>([])
+  const [statusChangeBuyerLoading, setStatusChangeBuyerLoading] = useState(false)
+  const [statusChangeBuyerError, setStatusChangeBuyerError] = useState<string | null>(null)
   const [statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId] = useState('')
   const [statusChangeBuyerFees, setStatusChangeBuyerFees] = useState('')
   const [statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate] = useState('')
@@ -14713,6 +14732,63 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
+  // ─── LA RECHERCHE DE CONTACT, MEME MOTEUR QUE PARTOUT AILLEURS ───
+  // searchMandantContactOptions est deja utilise par la modale « Ajouter RDV » et
+  // par le selecteur de mandant. ON N'EN ECRIT PAS UN TROISIEME : meme fonction,
+  // meme perimetre agence/negociateur, meme delai de frappe (260 ms), meme
+  // longueur minimale (3 lettres, ou 1 chiffre pour chercher par identifiant).
+  useEffect(() => {
+    if (!statusChangeTarget) { setStatusChangeBuyerOptions([]); return }
+    const recherche = statusChangeBuyerSearch.trim()
+    const minimum = /^\d+$/.test(recherche) ? 1 : 3
+    if (recherche.length < minimum) {
+      setStatusChangeBuyerOptions([])
+      setStatusChangeBuyerLoading(false)
+      setStatusChangeBuyerError(null)
+      return
+    }
+    let annule = false
+    setStatusChangeBuyerLoading(true)
+    setStatusChangeBuyerError(null)
+    const minuteur = window.setTimeout(async () => {
+      try {
+        const lignes = await searchMandantContactOptions({ search: recherche, scope: dataScope, limit: 8 })
+        if (!annule) setStatusChangeBuyerOptions(lignes)
+      } catch (erreur) {
+        if (annule) return
+        setStatusChangeBuyerOptions([])
+        setStatusChangeBuyerError(erreur instanceof Error ? erreur.message : 'Recherche contact impossible.')
+      } finally {
+        if (!annule) setStatusChangeBuyerLoading(false)
+      }
+    }, 260)
+    return () => { annule = true; window.clearTimeout(minuteur) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeBuyerSearch, statusChangeTarget?.app_dossier_id])
+
+  /** Ajoute un acquereur a la liste, sans doublon, et tient a jour le champ
+   *  d'origine -- le PREMIER de la liste reste `buyer_contact_id`. */
+  function ajouterAcquereurStatut(option: MandantContactSearchOption) {
+    const id = String(option.hektor_contact_id ?? '').trim()
+    if (!id) return
+    setStatusChangeBuyers((liste) => {
+      if (liste.some((x) => String(x.hektor_contact_id ?? '').trim() === id)) return liste
+      const suivante = [...liste, option]
+      setStatusChangeBuyerContactId(String(suivante[0].hektor_contact_id ?? '').trim())
+      return suivante
+    })
+    setStatusChangeBuyerSearch('')
+    setStatusChangeBuyerOptions([])
+  }
+
+  function retirerAcquereurStatut(id: string) {
+    setStatusChangeBuyers((liste) => {
+      const suivante = liste.filter((x) => String(x.hektor_contact_id ?? '').trim() !== id)
+      setStatusChangeBuyerContactId(suivante.length ? String(suivante[0].hektor_contact_id ?? '').trim() : '')
+      return suivante
+    })
+  }
+
   function openStatusChangeModal(dossier: Dossier) {
     if (!isAdmin) return
     const current = String(dossier.statut_annonce ?? '').trim().toLowerCase()
@@ -14745,6 +14821,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeRetractionDays('10')
     setStatusChangeSelectedMandat('')
     setStatusChangeBuyerContactId('')
+    setStatusChangeBuyers([])            // 2.6 : on n'herite jamais des acquereurs d'un autre bien
+    setStatusChangeBuyerSearch('')
+    setStatusChangeBuyerOptions([])
+    setStatusChangeBuyerError(null)
     setStatusChangeBuyerNotaryId('')
     setStatusChangeBuyerFees('')
     setStatusChangeBuyerFeesRate('')
@@ -15158,6 +15238,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         retractionDays: statusChangeRetractionDays,
         selectedMandat: statusChangeSelectedMandat,
         buyerContactId: statusChangeBuyerContactId,
+        buyerContactIds: statusChangeBuyers
+          .map((x) => String(x.hektor_contact_id ?? '').trim()).filter(Boolean),
         apresVente: statusChangeApresVente,
         buyerNotaryId: statusChangeBuyerNotaryId,
         buyerFees: statusChangeBuyerFees,
@@ -17697,10 +17779,53 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <span>Mandat Hektor</span>
                           <input value={statusChangeSelectedMandat} onChange={(event) => setStatusChangeSelectedMandat(event.target.value)} placeholder="Auto si vide" />
                         </label>
-                        <label className="filter-field">
-                          <span>Acquereur Hektor</span>
-                          <input value={statusChangeBuyerContactId} onChange={(event) => setStatusChangeBuyerContactId(event.target.value)} placeholder="ID contact si connu" />
-                        </label>
+                        {/* ─── 2.5 + 2.6 : L'ACQUEREUR SE DESIGNE, ET ILS PEUVENT ETRE PLUSIEURS ───
+                            Avant : un champ ou il fallait TAPER un identifiant. Le 04/09, un
+                            compromis cree avec 605075 au lieu de 605030 est parti dans le
+                            mauvais dossier ET Hektor n'a rien attache, sans rien dire.
+                            ⚠ Le PREMIER de la liste reste `buyer_contact_id` -- ce que le
+                              worker et le RPC attendent. La liste vient EN PLUS. */}
+                        <div className="filter-field status-change-acq">
+                          <span>Acquéreur{statusChangeBuyers.length > 1 ? 's' : ''}</span>
+                          {statusChangeBuyers.length ? (
+                            <div className="sca-acq-choisis">
+                              {statusChangeBuyers.map((option, rang) => {
+                                const id = String(option.hektor_contact_id ?? '').trim()
+                                return (
+                                  <span className="sca-acq-jeton" key={`acq-${id}`}>
+                                    <b>{mandantContactOptionTitle(option)}</b>
+                                    {rang === 0 && statusChangeBuyers.length > 1
+                                      ? <i title="C'est lui que Hektor recevra en premier">principal</i> : null}
+                                    <button type="button" aria-label={`Retirer ${mandantContactOptionTitle(option)}`}
+                                      onClick={() => retirerAcquereurStatut(id)}>×</button>
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          ) : null}
+                          <input
+                            value={statusChangeBuyerSearch}
+                            onChange={(event) => setStatusChangeBuyerSearch(event.target.value)}
+                            placeholder={statusChangeBuyers.length ? 'Ajouter un acquéreur…' : 'Nom, email, téléphone…'} />
+                          {statusChangeBuyerLoading ? <small className="sca-acq-etat">Recherche…</small> : null}
+                          {statusChangeBuyerError ? <small className="sca-acq-err">{statusChangeBuyerError}</small> : null}
+                          {statusChangeBuyerOptions.length ? (
+                            <div className="sca-acq-liste">
+                              {statusChangeBuyerOptions.map((option) => (
+                                <button type="button" key={`acq-opt-${option.hektor_contact_id}`}
+                                  onClick={() => ajouterAcquereurStatut(option)}>
+                                  <b>{mandantContactOptionTitle(option)}</b>
+                                  <small>{mandantContactOptionSubtitle(option)}</small>
+                                </button>
+                              ))}
+                            </div>
+                          ) : statusChangeBuyerSearch.trim().length > 0
+                              && statusChangeBuyerSearch.trim().length < (/^\d+$/.test(statusChangeBuyerSearch.trim()) ? 1 : 3)
+                            ? <small className="sca-acq-etat">Trois lettres suffisent, ou un numéro de contact.</small>
+                            : statusChangeBuyerSearch.trim().length >= 3 && !statusChangeBuyerLoading
+                              ? <small className="sca-acq-etat">Aucun contact trouvé dans ton périmètre.</small>
+                              : null}
+                        </div>
                         <label className="filter-field">
                           <span>Notaire acquereur</span>
                           <input value={statusChangeBuyerNotaryId} onChange={(event) => setStatusChangeBuyerNotaryId(event.target.value)} placeholder="ID notaire si connu" />
