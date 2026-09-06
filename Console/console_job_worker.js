@@ -10307,6 +10307,41 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   // et non la coquille -- la correction du 30/08.
   const tx = normalizeStatusTransactionPayload(payload, config, etat.contenu);
 
+  // ── LES ACQUEREURS VOULUS, calcules UNE FOIS (06/09/2026) ──
+  //
+  // ⚠ CORRECTIF NE D'UN ESSAI REEL, PAS D'UNE RELECTURE. Le 06/09, un compromis
+  // cree depuis l'app avec DEUX acquereurs : le worker a bien appele findProspect
+  // deux fois, Hektor a repondu deux fois (1 896 et 1 883 car.), et le compromis
+  // 50072 n'en a retenu QU'UN. Preuve par le journal du travail :
+  //     etape 0 -> 2   champs envoyes : ... acquereurs[] ...   (UNE valeur)
+  //     etape 2 -> 3   champs envoyes : unitesEntreePercent, unitesSortiePercent
+  //     etape 3 -> fin champs envoyes : conditionsSuspensivesSelected, notes
+  // ➡ `acquereurs[]` N'EST ENVOYE QU'A L'ETAPE 0. Les blocs rendus par
+  //   findProspect rejoignent bien le CONTENU, mais le corps des etapes
+  //   suivantes est reconstruit par extractHektorFormValues() et ne les reprend
+  //   pas. Seul l'acquereur de l'etape 0 arrive au bout.
+  // ⚠ CONTROLE FAIT AVANT DE CONCLURE : sur les 20 compromis de la page,
+  //   l'API et notre miroir donnent le MEME compte d'acquereurs (0 ecart). Le
+  //   listing ne tronque pas -- Hektor n'en avait vraiment gardé qu'un.
+  //
+  // LE CORRECTIF : on REPOSE la liste a chaque etape, comme l'etape 0 le fait
+  // deja pour le principal. On ne compte plus sur le contenu rendu.
+  // ⚠ ON GARDE findProspect : c'est lui qui fait connaitre le prospect a Hektor.
+  //   Envoyer un identifiant qu'il n'a pas resolu ne l'attache pas -- mesure du
+  //   04/09, acquereurs VIDE.
+  const acquereursVoulus = [];
+  {
+    const pousser = (v) => {
+      const t = String(v == null ? "" : v).trim();
+      if (/^\d+$/.test(t) && !acquereursVoulus.includes(t)) acquereursVoulus.push(t);
+    };
+    pousser(tx.buyer);
+    if (Array.isArray(payload.buyer_contact_ids)) payload.buyer_contact_ids.forEach(pousser);
+  }
+  // Passe a VRAI une fois findProspect appele : avant, Hektor ne les connait pas
+  // encore, et reposer la liste n'aurait aucun sens.
+  let acquereursConnusDeHektor = false;
+
   // ── 3. LES ETAPES ──
   let derniere = null;
   for (const pas of assistant.pas) {
@@ -10343,10 +10378,22 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       }
       poser("montantHonoraireSortie", tx.fees);
       poser("tauxHonoraireSortie", tx.feesRate);
-      // L'ACQUEREUR remplace ce qui etait rendu -- c'est un tableau, donc on
+      // LES ACQUEREURS remplacent ce qui etait rendu -- c'est un tableau, donc on
       // efface d'abord. Sans acquereur, on garde ce que Hektor a propose.
-      if (tx.buyer) { corps.delete("acquereurs[]"); corps.append("acquereurs[]", tx.buyer); }
+      // 06/09 : TOUTE la liste, plus seulement le premier.
+      if (acquereursVoulus.length) {
+        corps.delete("acquereurs[]");
+        for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
+      }
       if (tx.notary) { corps.delete("notairesAcquereur[]"); corps.append("notairesAcquereur[]", tx.notary); }
+    }
+
+    // ⚠ ON REPOSE LES ACQUEREURS A CHAQUE ETAPE, une fois Hektor mis au courant.
+    // C'est LE correctif du 06/09 : sans cela, seule l'etape 0 les portait, et le
+    // compromis 50072 n'en a garde qu'un sur deux.
+    if (acquereursConnusDeHektor && acquereursVoulus.length) {
+      corps.delete("acquereurs[]");
+      for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
     }
 
     for (const m of pas.modules) corps.append("containerModule[]", m);
@@ -10366,20 +10413,14 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     // Le bloc renvoye rejoint le contenu, que l'etape suivante reposera.
     if (!pas.enregistre && pas.vers === "2" && target === "compromise") {
       // PLUSIEURS ACQUEREURS, parce qu'un compromis peut en porter plusieurs --
-      // un couple, une indivision. `buyer_contact_ids` est la liste ; l'acquereur
-      // unique de la modale reste accepte et vient en tete.
-      const listeAcq = [];
-      const pousser = (v) => {
-        const t = String(v == null ? "" : v).trim();
-        if (/^\d+$/.test(t) && !listeAcq.includes(t)) listeAcq.push(t);
-      };
-      pousser(tx.buyer);
-      if (Array.isArray(payload.buyer_contact_ids)) payload.buyer_contact_ids.forEach(pousser);
-      for (const idAcq of listeAcq) {
+      // un couple, une indivision. La liste est calculee plus haut, une fois.
+      for (const idAcq of acquereursVoulus) {
         const ajout = await ajouterAcquereurAssistant(
           job, annonceId, assistant, idAcq, etat.basket);
         if (ajout && ajout.html) etat = { ...etat, contenu: etat.contenu + ajout.html };
       }
+      // A partir d'ici Hektor les connait : les etapes suivantes REPOSENT la liste.
+      acquereursConnusDeHektor = acquereursVoulus.length > 0;
     }
 
     await logJob(job.id, "hektor_assistant", "done",
