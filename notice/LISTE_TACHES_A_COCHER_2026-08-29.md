@@ -2325,7 +2325,53 @@ GEL que Frederic a repere le premier).*
          touche : _compact_party / la construction du ledger · retour : une ligne
          verif  : les 37 cas se retrouvent dans la meme chaine que leur offre
 
-[ ] 1.6  LES IDENTIFIANTS HEKTOR RECYCLES -- MESURER D'ABORD    AJOUTEE 04/09
+[x] 1.6  LES IDENTIFIANTS HEKTOR « RECYCLES »   MESUREE LE 06/09 -- ET CE N'EN EST PAS
+         ⚠ MON TITRE ETAIT FAUX, ET LA MESURE LE DIT. J'avais ecrit
+           « identifiants recycles » sur deux chaines portant des numeros
+           « anormalement bas ». Ce ne sont pas des numeros recycles : ce sont
+           DEUX SERIES QUI COEXISTENT, exactement comme pour les mandats.
+
+         ─── CE QUI EST MESURE, SUR LE PARC ENTIER ───
+         Un petit numero n'est pas un signal en soi : les premieres transactions
+         en portent naturellement. Le vrai signal est un petit numero sur une
+         transaction RECENTE. Il y en a ~280, et elles se concentrent par AGENCE :
+             Groupe GTI Ambert      offres  748 / 769 sous 1000
+                                    ventes  550 / 562 sous 1000
+             Groupe GTI COURPIERE   offres  151 / 534   ventes 304 / 410
+             toutes les autres      0 sous 1000
+         ➡ Une seconde serie, portee surtout par deux agences.
+
+         ─── LE CAS QUI AVAIT DECLENCHE LA TACHE, ELUCIDE ───
+         Annonce 45672, deux ventes :
+             n°    2  · 12/11/2024 · 129 000 € · mandat 18872 (n° 17191)
+             n° 2713  · 30/01/2025 · 129 000 € · mandat 18872 (n° 17191)
+         MEME MANDAT, MEME PRIX. C'est LA MEME VENTE, enregistree dans les DEUX
+         registres. Pas une collision : un doublement.
+
+         ─── L'AMPLEUR DU DOUBLEMENT : DEUX ANNONCES ───
+         Signature cherchee sur tout le parc (meme annonce, meme genre, meme
+         mandat, meme montant, deux numeros d'echelles differentes) :
+             offre  4 paires · vente 2 paires · TOTAL 6, sur 2 ANNONCES
+         Ce sont exactement les deux que j'avais reperees. Il n'y en a pas d'autres.
+
+         ─── ET LE REGISTRE TIENT : RIEN A CORRIGER ───
+         CONTROLE : combien de lignes partagent un meme (annonce, genre, numero) ?
+             ZERO, sur 29 328 lignes.
+         Le triplet -- deja l'unicite de la table -- protege de bout en bout. Le
+         chainage, lui, voit deux ventes la ou il n'y en a qu'une : c'est le seul
+         effet, et il porte sur DEUX annonces.
+
+         ➡ LA SUITE N'EST PAS ICI. Ce que cette mesure etablit, le plan global le
+           dit deja pour les mandats, dans A.3-TECHNIQUE :
+               « chaque ligne doit porter son numero ET son registre d'origine.
+                 Un numero seul ne designe rien »
+           C'est le meme fait, sur les transactions. La reponse est donc A.3-tech,
+           pas une rustine dans le registre des affaires.
+         ⚠ ET SURTOUT : ne pas « corriger » ces six lignes. Elles sont fideles a
+           ce que Hektor porte. Les fusionner serait inventer une verite que la
+           source n'a pas.
+
+         --- description d'origine ---
          Trouve en verifiant le doute de Frederic sur la chaine. Deux chaines sur
          13 348 portent DEUX ventes, et les deux portent des identifiants Hektor
          anormalement bas :
