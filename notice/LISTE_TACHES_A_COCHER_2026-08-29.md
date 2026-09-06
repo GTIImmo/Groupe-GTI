@@ -3008,7 +3008,17 @@ GEL que Frederic a repere le premier).*
              trois d'entre eux. Reste APP_BROUILLON_BUCKET_ENABLED, non verifie.
          ➡ CONSEQUENCE HEUREUSE : 2.1 est deja sous les yeux des negociateurs.
 
-[ ] 2.5  LE CHAMP ACQUEREUR DESIGNE, IL NE SE TAPE PLUS       AJOUTEE LE 04/09
+[x] 2.5  L'ACQUEREUR SE DESIGNE, IL NE SE TAPE PLUS       FAITE LE 06/09/2026
+         ✅ EPROUVEE EN VRAI, depuis Chrome, sur EM28412 / annonce 24933.
+         Le champ etait <input placeholder="ID contact si connu" />. C'est
+         desormais une recherche par NOM : tape « TEST », six contacts proposes,
+         nom en gras et coordonnees dessous.
+         ⚠ PAS DE TROISIEME SELECTEUR : searchMandantContactOptions, le meme
+           moteur que la modale « Ajouter RDV » et le selecteur de mandant.
+         ⚠ FAITE AVEC 2.6, et les separer aurait ete absurde : ajouter
+           « plusieurs acquereurs » a un champ ou l'on TAPE des identifiants aurait
+           donne « tapez 605030, 605075 separes par des virgules ».
+         --- description d'origine ---
          Aujourd'hui « Acquereur Hektor » est un champ LIBRE ou il faut saisir un
          identifiant numerique. Frederic : « ce n'est pas pratique pour
          l'utilisateur » -- et c'est pire que ca, c'est faux deux fois :
@@ -3054,7 +3064,54 @@ GEL que Frederic a repere le premier).*
          verif  : sur un bien a offre acceptee, l'acheteur est propose sans rien
                   taper, et la chaine du compromis est celle de l'offre
 
-[ ] 2.6  UN SEUL ACQUEREUR DANS LA MODALE, ET C'EST TROP PEU   AJOUTEE LE 04/09
+[~] 2.6  PLUSIEURS ACQUEREURS   ECRAN FAIT ET EPROUVE · WORKER CORRIGE, NON EPROUVE
+         ═══ CE QUI EST FAIT ET PROUVE, essai reel du 06/09 sur 24933 ═══
+         ecran     deux jetons, libelle au PLURIEL, mention « principal » sur le
+                   premier. Vu a l'ecran, pas deduit du code.
+         API       buyer_contact_ids envoye UNIQUEMENT s'il y en a plusieurs --
+                   la charge du cas courant ne change pas d'un octet.
+         RPC       app_acquereurs_json() : la transaction nee dans l'app porte
+                   ses noms TOUT DE SUITE. Trou trouve en preparant 2.6 -- le RPC
+                   ecrivait l'identifiant mais AUCUN NOM, donc la ligne restait
+                   anonyme jusqu'au run alors que 1.8 venait de faire en sorte
+                   que la rubrique les nomme tous.
+         registre  1 001 343 · nb_acquereurs = 2 · « Sophie TEST MANDANT 25-08
+                   + Test CLOTURE », a la seconde du geste.
+         worker    findProspect appele DEUX fois, Hektor a repondu deux fois.
+
+         ═══ ⚠ CE QUI NE MARCHE PAS ENCORE, ET C'EST MESURE ═══
+         HEKTOR N'A ATTACHE QU'UN ACQUEREUR au compromis 50072.
+         Le journal du travail donne le diagnostic, champ par champ :
+             etape 0 -> 2    ... acquereurs[] ...      UNE valeur
+             etape 2 -> 3    unitesEntreePercent, unitesSortiePercent
+             etape 3 -> fin  conditionsSuspensivesSelected, notesCompromis
+         ➡ acquereurs[] n'est envoye QU'A L'ETAPE 0. Les blocs rendus par
+           findProspect rejoignent le CONTENU, mais le corps des etapes suivantes
+           est reconstruit par extractHektorFormValues() et ne les reprend pas.
+         ⚠ CONTROLE FAIT AVANT DE CONCLURE : sur les 20 compromis de la page,
+           l'API et NOTRE MIROIR donnent le meme compte (0 ecart). Le listing ne
+           tronque pas -- Hektor n'en avait vraiment garde qu'un.
+
+         ═══ LE CORRECTIF EST ECRIT (ef3f670) MAIS PAS EPROUVE ═══
+         Trois points dans submitHektorAssistantTransaction :
+             1. la liste se calcule UNE FOIS, avant la boucle des etapes
+             2. l'etape 0 pose TOUTE la liste, plus seulement le premier
+             3. chaque etape suivante la REPOSE (drapeau acquereursConnusDeHektor)
+         ⚠ findProspect est GARDE : c'est lui qui fait connaitre le prospect a
+           Hektor ; un identifiant non resolu ne s'attache pas (mesure du 04/09).
+         ➡ VERIFICATION REPORTEE A 3.2 -- decision de Frederic, 06/09. Elle exige
+           un redemarrage des quatre services et un second essai reel (annuler
+           50072, recreer avec deux acquereurs). 3.2 rouvre l'assistant de toute
+           facon : c'est la que ca se prouve.
+         ⚠ EN ATTENDANT : le run alignera acquereurs_json sur Hektor, donc le
+           second nom de 50072 sera perdu. Normal (Hektor fait foi sur ce champ),
+           mais il faut le savoir en relisant cette ligne plus tard.
+
+         ⚠ ET JE DOIS CORRIGER MA PROPRE NOTE DU 04/09. Elle disait « le worker
+           sait deja faire, le releve multi-acquereurs est coche ». Le releve
+           disait que les DEUX APPELS REUSSISSENT -- pas que Hektor garde les
+           deux. J'ai lu une preuve d'appel comme une preuve d'effet.
+         --- description d'origine ---
          Releve par Frederic en essayant d'en saisir deux. Hektor en porte
          plusieurs -- sa fiche affichait « Compromis avec M. TEST GTI, TEST
          RODACOM Sarah, TEST MANDANT 25-08 Sophie ».
@@ -3158,6 +3215,18 @@ GEL que Frederic a repere le premier).*
            le conflit et le badge existent ; pour les transactions RIEN n'existe.
 
 [ ] 3.2  LES WORKERS « MODIFIER » -- COMPROMIS ET VENTE
+         ⭐ A FAIRE EN PREMIER, AVANT TOUT LE RESTE DE 3.2 (ajoute le 06/09) :
+            EPROUVER LE CORRECTIF DES ACQUEREURS MULTIPLES (ef3f670, voir 2.6).
+            Il est ecrit, documente, jamais execute. Protocole :
+              1. redemarrer les QUATRE services Windows       (main de Frederic)
+              2. annuler le compromis 50072 depuis l'app -- eprouve au passage le
+                 bouton « Annuler le compromis » que le garde-fou 2.2c met en avant
+              3. recreer un compromis sur 24933 avec DEUX acquereurs
+                 (605030 Sophie + 605075 M. Test CLOTURE)
+              4. relire Hektor : deux acquereurs attaches, ou toujours un ?
+            ⚠ Tant que 4 n'a pas parle, 2.6 n'est pas terminee.
+            ⚠ Et c'est le MEME code que 3.2 va rouvrir : le corriger a l'aveugle
+              une seconde fois referait l'erreur du 06/09.
          ⚠ RAPPEL EXPLICITE DE FREDERIC (03/09 au soir) : « pense bien aux workers
            modifier compromis et vente au moment opportun ». C'est LE point d'arrivee
            du chantier, et tout ce qui precede y mene.
