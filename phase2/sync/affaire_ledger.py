@@ -783,6 +783,35 @@ COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
 )
 
 
+# ⛔ NE JAMAIS LANCER `--push` SEUL EN PLEINE JOURNEE. Lecon du 07/09/2026.
+#
+# CE QUI S'EST PASSE, en une heure :
+#     06:38  un compromis est ANNULE depuis l'app
+#            -> le worker ecrit `cancelled` chez Supabase, en quelques secondes
+#     07:52  `--push` lance a la main (pour un autre correctif)
+#            -> il pousse l'etat du MIROIR LOCAL, qui date du run de 04:18,
+#               quand le compromis etait encore `active`
+#            -> l'annulation est EFFACEE chez Supabase
+#     08:05  le read-through passe et ne repare rien : il ne relit que le
+#            compromis POINTE par la fiche, et ce n'etait plus celui-la
+#
+# LE GESTE DE L'UTILISATEUR EST DONC PERDU JUSQU'AU RUN SUIVANT. Ici l'ecran a
+# rattrape (le garde-fou 2.2c bloquait, le bouton « Annuler » etait a cote, un
+# clic a suffi) -- mais c'est une chance, pas un mecanisme.
+#
+# LA CAUSE N'EST PAS LE PUSH, C'EST L'ORDRE. Le run de nuit fait refresh PUIS
+# push : le miroir est frais, l'etat pousse est le bon. Pousser sans rafraichir
+# revient a affirmer un etat qu'on n'a pas relu.
+#
+# ➡ REGLE : `--push` ne se lance jamais seul. Soit `--refresh --push` (le
+#   defaut sans argument), soit on attend le run. Et si le miroir lui-meme est
+#   perime -- il ne connait que ce que Hektor avait a 04:18 -- alors AUCUN push
+#   manuel ne peut etre juste pour les gestes du jour.
+#
+# ⚠ CE N'EST PAS LE MEME PROBLEME QUE LA DOUBLURE. Le garde-fou
+#   retirer_les_lignes_en_conflit() protege des collisions d'IDENTITE (deux
+#   numeros pour un meme triplet). Ici l'identite est bonne : c'est la VALEUR
+#   qui est perimee, et rien ne la protege.
 def ledger_rows_for_push(con: sqlite3.Connection) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for r in con.execute(f"SELECT * FROM {LEDGER_TABLE}"):

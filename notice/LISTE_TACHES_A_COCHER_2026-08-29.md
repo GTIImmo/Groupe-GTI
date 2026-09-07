@@ -3330,6 +3330,21 @@ GEL que Frederic a repere le premier).*
             ➡ CE QU'IL RESTE A EPROUVER sur les acquereurs multiples : voir 2.6,
               section « CE QUE 3.2 DEVRA INSTRUMENTER ». Deux pistes sont deja
               ecartees (le corps des etapes, le panier) -- ne pas les refaire.
+
+         ✅ ETAPE A FAITE LE 07/09 -- ET ELLE CHANGE L'ORDRE DU CHANTIER.
+            Question posee : « enregistrer depuis l'assistant rouvert, est-ce que
+            ca MODIFIE ou est-ce que ca CREE ? »
+            REPONSE OBTENUE SANS RIEN ECRIRE, et elle rend l'essai B inutile pour
+            l'instant : l'assistant ne porte aucun identifiant, c'est LA FICHE qui
+            designe (champ cache `id_compromis`), et notre worker ne le deplace
+            pas. Mesure : fiche affichant 50075 (actif) et pointant 50073 (annule).
+            ➡ ON NE PEUT PAS CHOISIR CE QU'ON MODIFIE. 3.2c DEVIENT LE PREALABLE
+              DE 3.2 : maitriser le pointeur d'abord, la modification ensuite.
+            ⚠ NE PAS allumer TRANSACTIONS_REPRISES pour le compromis avant cela --
+              ce serait modifier au hasard.
+            ⚠ LA VENTE, ELLE, N'A PAS CE PROBLEME : idVente voyage dans CHAQUE
+              POST (mesure 0.2 du 03/09). L'asymetrie est reelle, et elle indique
+              par ou commencer : 3.2b disait deja « la vente d'abord ».
          ⚠ RAPPEL EXPLICITE DE FREDERIC (03/09 au soir) : « pense bien aux workers
            modifier compromis et vente au moment opportun ». C'est LE point d'arrivee
            du chantier, et tout ce qui precede y mene.
@@ -3377,7 +3392,55 @@ GEL que Frederic a repere le premier).*
              un compromis ACTIF avant de conclure. Si c'est confirme, la seule
              vraie reserve du chantier tombe.
 
-[ ] 3.2c LE WORKER NE DEPLACE PAS LE POINTEUR DE HEKTOR        AJOUTEE LE 04/09
+[ ] 3.2c LE POINTEUR DE LA FICHE -- ⭐ PREALABLE DE 3.2, ETABLI LE 07/09
+         ⚠ CETTE TACHE A CHANGE DE RANG. Elle etait « un defaut qui gene l'humain
+           qui regarde Hektor ». La mesure du 07/09 en fait LE VERROU DE 3.2.
+
+         ─── CE QUI A ETE MESURE (etape A de 3.2, sans rien ecrire) ───
+         Compromis 50075 cree depuis l'app sur 24933, laisse ACTIF. Puis lecture
+         de la fiche Hektor, en lecture seule :
+             ce que la fiche AFFICHE   50075 -- 180 000 €, 07/09, retractation 17/09
+             ce que la fiche POINTE    id_compromis = « 50073 »  -- ANNULE
+         Etat reel chez Hektor au meme instant :
+             50075  statut 1  ACTIF        50073  statut 2  annule
+             50072  statut 2  annule
+         ➡ LE POINTEUR N'A PAS SUIVI, et il designe un compromis CLOTURE.
+
+         ─── POURQUOI CELA BLOQUE 3.2 ───
+         1. l'ASSISTANT ne porte AUCUN identifiant -- verifie le 03/09 : ses seuls
+            champs caches sont containerModule[], containerName, step, fromStep
+         2. c'est donc LA FICHE qui designe, par son champ cache `id_compromis`
+         3. notre worker ne le deplace pas
+         ➡ « Modifier » via l'assistant viserait LE COMPROMIS QUE HEKTOR POINTE,
+           pas celui qu'on veut. Allumer TRANSACTIONS_REPRISES pour le compromis
+           ne servira a RIEN tant que le pointeur n'est pas maitrise.
+         ⚠ Et l'avertissement du 28/08 prend tout son sens : « si l'enregistrement
+           honorait l'identifiant, modifier EFFACERAIT ces champs » -- sauf qu'ici
+           on ne peut meme pas choisir l'identifiant.
+
+         ─── CE QUI RESTE A TROUVER, ET C'EST PLUS ETROIT QU'AVANT ───
+         Comment Hektor deplace-t-il son pointeur ? La reponse est dans SA requete,
+         pas dans la notre. A CAPTURER AU RESEAU, sur une creation faite A LA MAIN
+         dans son interface -- meme methode que 3.2d : la seule source qui a deja
+         reussi, c'est leur interface.
+         ⚠ NE PAS DEVINER. Deux fois cette semaine, une hypothese plausible a coute
+           une demi-journee (les acquereurs multiples, 06 et 07/09).
+
+         ─── CE QUI RESTE VRAI DE LA REDACTION D'ORIGINE ───
+         Quatre cas mesures les 03 et 04/09 :
+             worker    50067   aucun compromis existant   le pointeur SUIT
+             assistant 50068   50067 annule present       le pointeur SUIT
+             worker    50066   50065 annule present       le pointeur RESTE
+             worker    50070   50069 annule present       le pointeur RESTE
+         ➡ Le 07/09 ajoute un cinquieme cas au meme motif : 50075 cree, 50073
+           annule present, LE POINTEUR RESTE. L'assistant de Hektor, lui, fait les
+           deux -- c'est un defaut de NOTRE requete, pas une limite de Hektor.
+         ⚠ ET CE N'EST PAS BLOQUANT POUR LA CHAINE DE DONNEES : une VENTE s'ajoute
+           normalement sur un compromis invisible (mesure du 04/09). Le defaut gene
+           l'humain qui regarde Hektor -- ET il verrouille la MODIFICATION.
+         verif : creer un compromis sur un bien qui en porte deja un, et voir
+                 id_compromis de la fiche pointer le NOUVEAU
+         --- redaction d'origine ---
          La fiche de Hektor n'affiche qu'UN compromis, celui qu'elle POINTE.
          Quatre cas mesures le 03 et le 04/09 :
 
