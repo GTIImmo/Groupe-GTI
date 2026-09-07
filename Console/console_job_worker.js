@@ -11578,7 +11578,23 @@ async function handleChangeHektorAnnonceStatus(job) {
   try {
     if (config.transactionMode) {
       // ─── LA GARDE : ne jamais recreer ce qui existe deja ───
-      const dejaCreee = await transactionDejaCreee(job, appAffaireId);
+      //
+      // ⚠ ELLE NE S'APPLIQUE PAS A LA MODIFICATION (3.2, 07/09/2026).
+      //
+      // Elle a ete ecrite pour les REJEUX : si une tentative precedente a cree la
+      // transaction, la suivante ne doit pas la doubler. Mais quand le geste est
+      // « modifier », l'existence de la transaction est la CONDITION du geste,
+      // pas son obstacle -- et sortir ici empechait le chemin de reprise d'etre
+      // atteint.
+      //
+      // MESURE DU 07/09, essai reel : le travail sortait sur
+      //     « Transaction deja creee chez Hektor (50078) [...] on ne recree pas »
+      // SANS JAMAIS OUVRIR L'ASSISTANT. Et il se declarait `done` -- un FAUX
+      // SUCCES : l'app affichait 168 500 tandis que Hektor gardait 165 000.
+      // Pour un rejeu de creation ce « done » est juste (il n'y avait rien a
+      // faire) ; pour une modification il ment.
+      const veutReprendre = Boolean(payload && payload.reprendre_transaction === true);
+      const dejaCreee = veutReprendre ? null : await transactionDejaCreee(job, appAffaireId);
       if (dejaCreee) {
         await logJob(job.id, "hektor_transaction_garde", "done",
           `Transaction deja creee chez Hektor (${dejaCreee}) par une tentative precedente : `
