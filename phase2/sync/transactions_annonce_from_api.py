@@ -173,6 +173,18 @@ def main() -> int:
 
     ids = []
     actifs = []
+    # ─── ET LES VALEURS, POUR PROUVER UNE MODIFICATION (3.2, 08/09/2026) ───
+    #
+    # Jusqu'ici ce script ne rendait que des NUMEROS, parce qu'il ne servait qu'a
+    # une question : « qu'est-ce qui est apparu ? ». La modification en pose une
+    # autre : « la valeur a-t-elle change ? » -- et un numero ne sait pas y
+    # repondre. On rend donc aussi les champs simples de chaque ligne, tels que
+    # Hektor les ecrit (« 165000.00 »), sans les interpreter : c'est l'appelant
+    # qui comparera.
+    #
+    # ⚠ AUCUNE REQUETE DE PLUS. La ligne complete etait deja en main -- on
+    #   cessait simplement de la regarder.
+    details = {}
     for ligne in lignes:
         if not isinstance(ligne, dict):
             continue
@@ -183,6 +195,8 @@ def main() -> int:
             continue
         identifiant = str(identifiant).strip()
         ids.append(identifiant)
+        details[identifiant] = {k: v for k, v in ligne.items()
+                                if isinstance(v, (str, int, float)) or v is None}
         # ⚠ « actifs » DECRIT UN ETAT, IL NE PREDIT PAS UN BLOCAGE.
         #
         # J'avais d'abord ecrit ici qu'un compromis actif empeche d'en creer un
@@ -222,7 +236,7 @@ def main() -> int:
         elif args.kind == "vente" or str(ligne.get("status", "")).strip() == "1":
             actifs.append(identifiant)
 
-    print(json.dumps({"trouve": True, "ids": ids, "actifs": actifs}))
+    print(json.dumps({"trouve": True, "ids": ids, "actifs": actifs, "details": details}))
     return 0
 
 

@@ -11378,6 +11378,106 @@ async function idsDejaConnusDuRegistre(job, annonceId, genre) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// PROUVER UNE MODIFICATION — 3.2, 08/09/2026
+// ══════════════════════════════════════════════════════════════════════════════
+// « Une action a une fin visible » (regle 3 du projet). Un envoi qui part n'est
+// pas une modification faite : le 07/09, un travail s'est declare `done` alors
+// que l'app affichait 168 500 et Hektor 165 000. On ne recommence pas.
+//
+// LA PREUVE EST CELLE-CI : on relit la transaction chez Hektor et on compare,
+// champ par champ, CE QU'ON A ENVOYE a ce qu'elle porte maintenant. On ne
+// compare rien d'autre -- un champ qu'on n'a pas touche n'a pas a etre juge.
+//
+// ⚠ ON TOLERE LE RETARD, comme l'arbitre de creation : trois lectures espacees
+//   de 4 s. Mesure du 31/08 -- la fiche rendait encore l'ancien identifiant
+//   apres une creation REUSSIE.
+// ⚠ ET « JE NE SAIS PAS » N'EST PAS « C'EST FAUX ». Si la relecture ne rend
+//   rien, on ne declare pas l'echec : on dit qu'on n'a pas pu verifier.
+const CHAMPS_PROUVABLES = {
+  compromis: {
+    amount: "prixPublique", sale_price: "prixPublique",
+    net_seller_price: "prixNetVendeur", buyer_fees: "honorairesEntree",
+    sequestration: "sequestre", transaction_date: "dateStart",
+    signature_date: "dateSignatureActe",
+  },
+  vente: {
+    amount: "prixPublique", sale_price: "prixPublique",
+    net_seller_price: "prixNetVendeur", buyer_fees: "honorairesEntree",
+    transaction_date: "date",
+  },
+  offre: { amount: "montant", transaction_date: "date" },
+};
+
+function memeValeurHektor(envoye, chezHektor) {
+  const a = String(envoye == null ? "" : envoye).trim().replace(",", ".");
+  const b = String(chezHektor == null ? "" : chezHektor).trim().replace(",", ".");
+  if (a === "") return null;              // rien envoye -> rien a juger
+  if (a === b) return true;
+  const na = Number(a); const nb = Number(b);
+  // « 168500 » et « 168500.00 » sont la meme somme. Une date ne passe pas ici.
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na === nb;
+  return false;
+}
+
+async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, payload, dateTransaction) {
+  const cible = String(
+    payload[genre === "offre" ? "offre_id" : genre === "vente" ? "vente_id" : "compromis_id"] || "").trim();
+  const table = CHAMPS_PROUVABLES[genre] || {};
+  // Ce qu'on a REELLEMENT envoye, et qui se verifie.
+  const aVerifier = [];
+  for (const [cleApp, cleHektor] of Object.entries(table)) {
+    const envoye = payload ? payload[cleApp] : null;
+    if (envoye == null || String(envoye).trim() === "") continue;
+    if (aVerifier.some((v) => v.hektor === cleHektor)) continue;   // amount/sale_price
+    aVerifier.push({ app: cleApp, hektor: cleHektor, envoye: String(envoye).trim() });
+  }
+
+  let lu = null;
+  let ecarts = [];
+  let conformes = [];
+  for (let essai = 1; essai <= 3; essai += 1) {
+    if (essai > 1) await sleep(4000);
+    lu = await lireTransactionsBestEffort(job, annonceId, genre, `apres_modification_${essai}`, dateTransaction);
+    if (!lu || !lu.details || !lu.details[cible]) continue;
+    const chez = lu.details[cible];
+    ecarts = []; conformes = [];
+    for (const v of aVerifier) {
+      const verdict = memeValeurHektor(v.envoye, chez[v.hektor]);
+      if (verdict === true) conformes.push(`${v.hektor}=${v.envoye}`);
+      else if (verdict === false) ecarts.push(`${v.hektor} : envoye ${v.envoye}, Hektor porte ${chez[v.hektor]}`);
+    }
+    if (!ecarts.length) break;
+  }
+
+  if (!lu || !lu.details || !lu.details[cible]) {
+    await logJob(job.id, "hektor_transaction_preuve", "error",
+      `${genre} ${cible} MODIFIE mais NON VERIFIE : la relecture ne l'a pas retrouve. `
+      + "On ne conclut pas -- ni au succes, ni a l'echec.", {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+        hektor_transaction_id: cible, champs_envoyes: aVerifier.map((v) => v.hektor),
+      });
+    return { verifie: false, modifiee: null, hektor_transaction_id: cible };
+  }
+  if (ecarts.length) {
+    await logJob(job.id, "hektor_transaction_preuve", "error",
+      `${genre} ${cible} : Hektor N'A PAS PRIS la modification -- ${ecarts.join(" ; ")}`, {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+        hektor_transaction_id: cible, ecarts, conformes,
+      });
+    return { verifie: true, modifiee: false, hektor_transaction_id: cible, ecarts };
+  }
+  await logJob(job.id, "hektor_transaction_preuve", "done",
+    conformes.length
+      ? `${genre} ${cible} MODIFIE et RELU chez Hektor : ${conformes.join(", ")}`
+      : `${genre} ${cible} : aucun champ prouvable n'a ete envoye -- rien a verifier`, {
+      hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+      hektor_transaction_id: cible, conformes,
+    });
+  return { verifie: true, modifiee: true, confirmee: true,
+           hektor_transaction_id: cible, conformes };
+}
+
 async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAffaireId, transactionResult, dateTransaction) {
   // ─── LA FICHE RETARDE, ET C'EST MESURE ───
   //
@@ -11634,7 +11734,27 @@ async function handleChangeHektorAnnonceStatus(job) {
         // 31/08). Elle n'a JAMAIS ete etablie pour l'offre -- et le bien temoin
         // 62774 en porte DEUX. Bloquer sur une offre active refuserait un geste
         // parfaitement legitime.
-        const genreBloquant = genreArbitre === "offre" ? null : genreArbitre;
+        //
+        // ⚠ ET ELLE NE VAUT QUE POUR LA CREATION (3.2, 08/09/2026).
+        //
+        // « Une transaction en cours empeche d'en creer une autre » -- toute la
+        // phrase porte sur la CREATION. Quand le geste est « modifier », il n'y
+        // a rien a creer : la transaction qui bloque EST celle qu'on vient
+        // corriger. La regle n'a alors plus d'objet.
+        //
+        // MESURE DU 08/09, essai reel (travail f7a1e5f4) : la premiere garde
+        // laissait enfin passer la modification, et celle-ci l'arretait treize
+        // secondes plus tard --
+        //     « Un compromis en cours existe deja (50078) : il faut l'annuler
+        //       avant d'en creer un autre »
+        // On demandait donc d'annuler la transaction pour pouvoir... la modifier.
+        //
+        // ⚠ Celle-ci sortait en ERREUR, elle -- pas en faux succes. Elle disait
+        //   vrai sur ce qu'elle voyait ; elle se trompait de question.
+        //
+        // ON NE L'ASSOUPLIT PAS POUR LA CREATION : C1/C2/C3 et V1/V2 du 31/08
+        // restent la regle, mot pour mot.
+        const genreBloquant = (genreArbitre === "offre" || veutReprendre) ? null : genreArbitre;
         // La date sert a borner la fenetre du listing des ventes -- sans elle
         // il faudrait ramener les 7 500 autres.
         const dateTransaction = String(
@@ -11687,7 +11807,18 @@ async function handleChangeHektorAnnonceStatus(job) {
 
         transactionResult = await submitHektorTransactionStatus(job, annonceId, target, config, payload);
 
-        if (genreArbitre) {
+        if (genreArbitre && veutReprendre) {
+          // ─── UNE MODIFICATION NE SE PROUVE PAS PAR « QUOI DE NEUF » ───
+          //
+          // prouverTransactionCreee cherche un identifiant qui n'etait pas la
+          // avant. Sur une modification il n'en apparait AUCUN -- c'est le
+          // resultat normal, et l'arbitre de creation le lirait comme un echec
+          // (« AUCUN compromis NOUVEAU [...] la creation n'a rien produit »).
+          // La bonne question n'est pas « qu'est-ce qui est apparu ? » mais
+          // « la valeur a-t-elle change ? ».
+          venteResult = await prouverTransactionModifiee(
+            job, annonceId, genreArbitre, appAffaireId, payload, dateTransaction);
+        } else if (genreArbitre) {
           venteResult = await prouverTransactionCreee(
             job, annonceId, genreArbitre, ventesAvant, appAffaireId, transactionResult, dateTransaction);
 
@@ -15541,6 +15672,9 @@ async function lireTransactionsParApi(job, annonceId, genre, dateTransaction) {
         // Ce qui EMPECHE d'en creer un autre. `null` voudrait dire « je ne sais
         // pas » -- ici l'API l'a dit, donc on a une reponse.
         bloquants: Array.isArray(lu.actifs) ? lu.actifs.map((x) => String(x)) : [],
+        // Les valeurs telles que Hektor les ecrit. Sert a la PREUVE PAR LA
+        // VALEUR (3.2) -- absent des vieilles lectures, d'ou le repli sur {}.
+        details: (lu.details && typeof lu.details === "object") ? lu.details : {},
       };
     }
     return null;
