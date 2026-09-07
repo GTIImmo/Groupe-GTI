@@ -3406,8 +3406,45 @@ GEL que Frederic a repere le premier).*
              LOT 1  les honoraires VENDEUR (montant + taux)   -> la commission
              LOT 2  le notaire acquereur par RECHERCHE, comme l'acquereur (2.5)
              LOT 3  mandants[] · conditions suspensives · notes · content_pdf
-         ⚠ Le meme releve reste A FAIRE POUR LA VENTE : son assistant n'a pas ete
-           journalise champ par champ. Le faire au premier essai de 3.2b.
+         ─── ⚠ LES TROIS GENRES, TROIS CHEMINS, TROIS COMPTES ───
+         Frederic, 07/09 : « il faut l'ajouter pour la vente mais aussi pour les
+         offres ». Il a raison, et c'est plus qu'un troisieme releve : LE CHEMIN
+         N'EST PAS LE MEME, donc la METHODE de releve n'est pas la meme non plus.
+
+             OFFRE      formulaire SIMPLE · containerName PopinOffre
+                        modules infosFinancieres + acquereurNotaireAutresProspects
+                                + AnnoncesOffreMandat
+                        champs poses par le worker : idOffre, montantOffre,
+                        dateOffre, nbJoursValidite, prixDeVente, isWrite,
+                        montantHonoraireSortie, tauxHonoraireSortie
+                        ⚠ COMPTE NEGOCIATEUR OBLIGATOIRE -- l'admin est REFUSE
+                          (« un compte administrateur ne peut pas saisir une
+                           offre », vu sur la fiche)
+
+             COMPROMIS  ASSISTANT en 3 pas · PopinCompromis · COMPTE ADMIN
+                        (le negociateur est REFUSE : « Vous n'avez pas les droits
+                         pour creer un compromis lie a cette annonce »)
+                        ✅ DEJA INVENTORIE -- journal du 06/09, ci-dessus
+
+             VENTE      ASSISTANT · le negociateur convient (vente 23291, eprouvee)
+                        ❌ JAMAIS journalise champ par champ
+
+         ➡ TROIS RELEVES A FAIRE, PAS UN :
+             compromis  ✅ fait, sans l'avoir cherche
+             vente      au premier essai de 3.2b -- meme methode : lire
+                        `champs_envoyes` dans app_console_job_log
+             offre      ⚠ AUTRE METHODE. Le formulaire simple ne rend pas ses
+                        etapes ; il faut lire ce que la COQUILLE renvoie
+                        (extractHektorFormValues sur le rendu d'ouverture), ou
+                        journaliser le corps envoye. ET IL FAUT UNE SESSION
+                        NEGOCIATEUR : le releve ne peut pas se faire en admin.
+
+         ⚠ ET UN SOUPCON A VERIFIER SUR L'OFFRE, pas une certitude : la modale
+           lui propose VALIDITE OFFRE (nbJoursValidite), que 0.1 a classe A --
+           « Hektor l'ignore ». Or le worker le POSE dans le corps. Si Hektor le
+           lit sur ce chemin-la, la classe A de jours_validite tombe une seconde
+           fois (voir 1.2b, deja corrigee une fois pour la meme raison). Le releve
+           de l'offre tranchera.
 
          verif : le journal d'un travail reel montre TOUS les champs attendus par
                  Hektor, et la modale porte ceux que l'arbitrage a retenus
