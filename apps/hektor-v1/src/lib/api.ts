@@ -8739,6 +8739,10 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   buyerContactIds?: string[]
   /** 3.2 : vrai = MODIFIER la transaction existante chez Hektor, pas en creer une. */
   reprendreTransaction?: boolean
+  /** 3.2 : QUELLE transaction on modifie. C'est l'ECRAN qui designe -- la base ne
+   *  peut pas deviner : un bien porte souvent plusieurs offres (sept sur l'annonce
+   *  temoin). Vide = creation. */
+  modifierAffaireId?: number
   buyerNotaryId?: string
   buyerFees?: string
   buyerFeesRate?: string
@@ -8821,12 +8825,33 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   // au lieu d'en creer une seconde.
   //
   // Le controle d'acces ne change pas : le RPC exige toujours le role admin.
-  const { data: created, error: rpcError } = await supabase.rpc('app_change_annonce_status_optimistic', {
-    target_dossier_id: input.dossier.app_dossier_id,
-    target_status: input.targetStatus,
-    job_payload: payload,
-    job_priority: input.priority ?? 7,
-  })
+  // ─── 3.2 (07/09/2026) : DEUX GESTES, DEUX RPC, UNE SEULE CHARGE ───
+  //
+  // POURQUOI PAS UN SIMPLE DRAPEAU. Essai reel du 07/09 : l'intention traversait
+  // bien toute la chaine, mais app_change_annonce_status_optimistic frappe un
+  // numero NEUF sans condition --
+  //     v_affaire_id := nextval('app_affaire_id_app_seq');
+  // -> « modifier » a fabrique l'affaire 1001348 au lieu de reprendre 1001347.
+  // Une correction creait un dossier de plus.
+  //
+  // ⚠ ON GARDE UNE SEULE CONSTRUCTION DE CHARGE. Dupliquer les trente champs de
+  //   la modale pour le second geste, c'est la promesse d'une divergence -- le
+  //   projet en a deja paye plusieurs. Seule la RPC appelee change.
+  // ⚠ ET LA CIBLE VIENT DE L'ECRAN. app_modifier_affaire_optimistic refuse une
+  //   affaire sans numero Hektor ou effacee : « modifier » ne se transforme
+  //   jamais en creation silencieuse.
+  const { data: created, error: rpcError } = input.modifierAffaireId
+    ? await supabase.rpc('app_modifier_affaire_optimistic', {
+        target_affaire_id: input.modifierAffaireId,
+        job_payload: payload,
+        job_priority: input.priority ?? 7,
+      })
+    : await supabase.rpc('app_change_annonce_status_optimistic', {
+        target_dossier_id: input.dossier.app_dossier_id,
+        target_status: input.targetStatus,
+        job_payload: payload,
+        job_priority: input.priority ?? 7,
+      })
   if (rpcError || !created) throwConsoleAdminJobError(rpcError, 'Unable to create Hektor status job')
   const jobId = (created as { job_id?: string }).job_id
   const { data, error } = await supabase

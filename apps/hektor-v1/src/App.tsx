@@ -15291,6 +15291,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         closeMandatOnSale: statusChangeStatus === 'sold',
         closePrice: statusChangeSalePrice || statusChangeAmount,
         reprendreTransaction: reprendre,
+        // C'EST L'ECRAN QUI DESIGNE. affaireCourantePourStatut() rend la ligne du
+        // registre que la modale AFFICHE -- la base, elle, ne peut pas choisir
+        // entre les sept offres d'un meme bien.
+        modifierAffaireId: reprendre ? affaireCourantePourStatut()?.app_affaire_id : undefined,
         priority: 7,
       })
       rememberHektorActionJob(job)
