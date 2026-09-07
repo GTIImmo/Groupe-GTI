@@ -3573,7 +3573,68 @@ GEL que Frederic a repere le premier).*
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)
          verif : modifier dans Hektor, le run redescend bien la nouvelle valeur
-[ ] 3.4  SUPPRIMER LE COMPROMIS -- LE VERBE QUI MANQUE         AJOUTEE LE 04/09
+[ ] 3.4  SUPPRIMER LE COMPROMIS -- ⭐ LA ROUTE EST RELEVEE (07/09/2026)
+         ✅ RELEVE FAIT EN CONDITIONS REELLES, sur 24933, en instrumentant la
+         fiche de Hektor pendant que Frederic cliquait « Oui » :
+
+             GET  /admin/xmlrpc.php
+                  mode        = annonce-SuiviVente-deleteCompromis
+                  idCompromis = <id du compromis>
+                  idAnn       = <id de l'annonce>
+
+         ⚠ TROIS CORRECTIONS A LA REDACTION D'ORIGINE, toutes mesurees :
+
+         ① CE N'EST PAS LE VERBE DE LA VENTE. La note disait « UN SEUL VERBE POUR
+           LE COMPROMIS ET LA VENTE ». Faux. Frederic a corrige la lecture :
+           `delete_compromis_vente` veut dire « supprimer LE COMPROMIS DE VENTE »,
+           pas « le compromis ET la vente ». Eprouve : `ventes-deleteVente&id=50073`
+           rend 200 avec un corps VIDE et NE SUPPRIME RIEN.
+
+         ② LE PARAMETRE N'EST PAS `id`. C'est `idCompromis`, ET il faut `idAnn`.
+           Deux essais ont echoue avant le releve, faute de ces deux noms :
+               ventes-deleteVente&id=...                  -> corps vide, sans effet
+               annonce-SuiviVente-deleteCompromis&id=...   -> {"empty":"0"}, sans effet
+           Avec les bons noms : {"empty":"1"} et le compromis DISPARAIT.
+
+         ③ LE STATUT NE REDESCEND PAS TOUT SEUL. La tache disait « supprimer ->
+           le statut redescend » comme si c'etait un effet de Hektor. NON : c'est
+           LEUR INTERFACE qui enchaine un SECOND appel, capture au meme instant :
+               POST /admin/xmlrpc.php
+                    mode=ajoutebien_wizardBien
+                    offredem · idType · statutAnnonce · idann
+           ➡ NOTRE WORKER DEVRA FAIRE LES DEUX. Sinon l'annonce reste
+             « Sous compromis » sans compromis -- le champ menteur qu'on chasse.
+
+         ─── UN ARBITRE, ET C'EST MIEUX QUE POUR LA VENTE ───
+         La reponse est exploitable, contrairement a `ventes-deleteVente` dont le
+         corps est vide au succes comme a l'echec :
+             {"empty":"1"}   il ne reste PLUS AUCUN compromis sur l'annonce
+             {"empty":"0"}   il en reste (ou l'appel n'a rien fait)
+         ⚠ Ce n'est PAS « le compromis vise a ete supprime » : c'est l'etat de
+           l'annonce APRES. Sur un bien qui en porte plusieurs, {"empty":"0"} ne
+           dit pas si le geste a pris. La relecture par l'API reste obligatoire --
+           meme regle que pour la vente.
+
+         ─── ET UNE PIECE POUR 3.2c ───
+             creation     -> le pointeur NE SUIT PAS   (5 cas mesures)
+             SUPPRESSION  -> le pointeur SUIT          (07/09 : 50073 supprime,
+                             la fiche est passee a pointer 50075)
+
+         ─── CE QUI RESTE A CODER, ET LE CHEMIN EST DEGAGE ───
+           app_geste_affaire_optimistic  n'accepte `supprimer` que pour kind='vente'
+                                         -> l'ouvrir a 'compromis'
+           worker                        handler delete_hektor_compromis, calque sur
+                                         delete_hektor_vente (session admin, lecture
+                                         AVANT, appel, relecture APRES, restauration
+                                         si l'objet repond encore) + LE SECOND APPEL
+                                         de statut
+           front                         bouton « Supprimer le compromis », a cote
+                                         de « Annuler le compromis » qui existe
+         ⚠ LA LIGNE DU REGISTRE RESTE : present_in_hektor = false, comme pour la
+           vente. Le delete-never ne change pas.
+         ⚠ EXIGER confirmer=true, comme la vente : le geste est IRREVERSIBLE.
+         retour : retirer le bouton · verif : le statut redescend, la ligne reste
+         --- redaction d'origine ---
          L'app sait ANNULER un compromis, pas le SUPPRIMER. Or la mesure du 04/09
          dit que les deux gestes n'ont pas le meme effet :
              annuler   -> le compromis reste, marque mort, LE STATUT NE BOUGE PAS
