@@ -3592,7 +3592,7 @@ GEL que Frederic a repere le premier).*
            taux_honoraires et notaire_id -- mais aucun des deux n'est dans les
            DIX, donc « ne garder que la classe A » revient a VIDER la liste.
            A relire au moment de le faire, pas avant.
-[~] 3.4  SUPPRIMER LE COMPROMIS -- ✅ CODE LE 07/09, RESTE L'ESSAI REEL
+[x] 3.4  SUPPRIMER LE COMPROMIS -- ✅ EPROUVE EN REEL LE 07/09/2026
          ✅ RELEVE FAIT EN CONDITIONS REELLES, sur 24933, en instrumentant la
          fiche de Hektor pendant que Frederic cliquait « Oui » :
 
@@ -3700,14 +3700,48 @@ GEL que Frederic a repere le premier).*
          statut qui n'a pas redescendu est un defaut VISIBLE et reparable a la
          main ; le taire serait pire. Le journal le dit en clair.
 
-         [ ] CE QUI RESTE : L'ESSAI REEL, et il demande un compromis a sacrifier.
-             ⚠ 24933 n'en porte plus aucun (nettoyage du 07/09). Il faudra en
-               CREER un, le supprimer, et verifier les trois effets :
-                   le compromis disparait de l'API Hektor
-                   le statut de l'annonce redescend a « Sous offre » (pas Actif)
-                   la ligne du registre RESTE, present_in_hektor = false
-             ⚠ REDEMARRER LES 4 SERVICES avant l'essai : sans cela le handler
-               n'existe pas dans le processus qui tourne.
+         [x] L'ESSAI REEL, FAIT LE 07/09 A 18:13 -- LES SIX POINTS PASSENT
+             Compromis 50077 cree depuis l'app sur 24933 (acquereur 605030), puis
+             supprime depuis l'app. Duree du geste : SEPT SECONDES.
+             ① LE BOUTON  « Supprimer le compromis », rouge, SECOND, a cote
+                          d'« Annuler le compromis ». Et « Envoyer vers
+                          Compromis » etait grise : le garde-fou 2.2c voyait le
+                          compromis existant.
+             ② LES TROIS PORTES ont tenu -- le travail a ete CREE (CHECK ouvert),
+                          RECLAME par le worker admin (claim ouvert), et ROUTE
+                          (switch). Aucune ne s'est tue.
+             ③ LE GESTE   session admin, lecture avant, appel, relecture apres.
+             ④ LA REDESCENTE DU STATUT A MARCHE, et c'etait le point le plus
+                          fragile -- ce second appel n'avait JAMAIS tourne :
+                              journal   « Statut Hektor redescendu a Sous offre »
+                              charge    statut_avant=Sous compromis -> apres=Sous offre
+                          ✅ ET LA CIBLE ETAIT LA BONNE : « Sous offre », pas
+                            « Actif » -- l'offre 33050 est encore vivante, et
+                            app_statut_redescente_calcule() l'a vu.
+             ⑤ LA LIGNE RESTE  present_in_hektor=false, montant 165 000, date,
+                          6 champs au carnet. Le delete-never tient.
+             ⑥ LA CHAINE   app_chaine_id 1001346 conserve.
+
+             CONTROLE INDEPENDANT CHEZ HEKTOR, apres coup -- on ne croit pas le
+             worker sur parole :
+                 ListCompromis 24933      ids: []          (plus aucun)
+                 CompromisById 50077      trouve: false
+                 AnnonceById 24933        statut {"id":"3","name":"Sous offre"}
+             Et cote app : statut_annonce « Sous offre », carnet « Sous offre ».
+
+             ⚠ DEUX CHOSES QUE L'ESSAI A APPRISES EN PASSANT :
+               • LA CREATION A SURVECU A UNE COUPURE RESEAU. Le premier essai est
+                 tombe pile entre l'ecriture et la relecture : Hektor a bien cree
+                 le compromis, mais les trois relectures ont echoue et le worker a
+                 conclu « compromis envoye mais NON VERIFIE » -- sans numero.
+                 LE GARDE-FOU A FAIT EXACTEMENT SON TRAVAIL : il n'a pas conclu.
+                 La reconciliation etait ensuite sans ambiguite (un compromis de
+                 chaque cote). C'est la demonstration que « on ne conclut pas sur
+                 une relecture qui a echoue » protege vraiment.
+               • LE CLIC NE PEUT PAS ETRE AUTOMATISE. La confirmation est un
+                 window.confirm : le pilotage par CDP la RETIENT sans l'afficher,
+                 et la page se fige. L'essai doit se finir a la main -- a savoir
+                 pour les prochains (3.2, la vente).
          --- redaction d'origine ---
          L'app sait ANNULER un compromis, pas le SUPPRIMER. Or la mesure du 04/09
          dit que les deux gestes n'ont pas le meme effet :
