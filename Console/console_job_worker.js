@@ -10345,6 +10345,12 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       `Reprise : l'assistant ${config.label} s'ouvre sur la transaction ${idRepris}`,
       { hektor_annonce_id: annonceId, genre: genreRepris, identifiant: idRepris });
   }
+  // La reprise est REELLE seulement si l'identifiant est la. Tout ce qui suit
+  // s'y accroche : sans identifiant, on cree, et on cree comme avant.
+  const enReprise = Boolean(idRepris);
+  // Les champs qu'on laisse DELIBEREMENT a Hektor. L'arbitre ne doit pas les
+  // compter comme des echecs -- on ne les a pas ecrits.
+  const nonVerifiables = [];
   ouverture.set("basket", "");
   ouverture.set("initBasket", "true");
   const rep0 = await appelerEtapeAssistant(annonceId, assistant, ouverture, null);
@@ -10457,6 +10463,81 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       if (target === "sold") {
         poser("prixDeVente", tx.salePrice);
         poser("dateVente", tx.date);
+      } else if (enReprise) {
+        // ═══ MODIFICATION : UN CHAMP PREREMPLI N'EST PAS UNE AFFIRMATION ═══
+        //
+        // MESURE DU 08/09, deux lectures, aucune ecriture. L'assistant ouvert sur
+        // le compromis 50078 rend un formulaire DEJA REMPLI et COHERENT :
+        //     prix public 165 000 = prix de vente 165 000
+        //     net vendeur 155 000 + honoraires 10 000 = 165 000
+        // (l'API, elle, rend prixNetVendeur 170 000 -- des honoraires negatifs :
+        //  c'est elle qui a tort, pas le formulaire.)
+        //
+        // ⚠ CE QUI AURAIT CASSE. La charge de l'ecran portait sale_price = 180 000
+        //   -- LE PRIX DE L'ANNONCE (miroir : hektor_annonce 24933 -> 180 000), que
+        //   la modale preremplit. Personne ne l'a tape. La branche de creation
+        //   l'aurait pose dans prixDeVente : le compromis serait passe de 165 000 a
+        //   180 000, sans que ce soit demande.
+        //
+        // C'est « vide ne gagne pas » transpose : en modification, seul ce que la
+        // charge porte EXPLICITEMENT est une intention. Le reste vient du
+        // formulaire que Hektor a rendu -- et le worker le repose deja
+        // (extractHektorFormValues, plus haut). Ne rien poser, c'est CONSERVER.
+        const affirme = (cle) => {
+          const v = payload ? payload[cle] : null;
+          return v == null ? "" : String(v).trim();
+        };
+        // ⚠ normalizeStatusFrenchDate("") REND LA DATE DU JOUR -- son repli est
+        //   `new Date()`. L'appeler sur un champ vide poserait aujourd'hui a la
+        //   place de la date du compromis : exactement le defaut qu'on corrige
+        //   ici, reintroduit par une fonction utilitaire. On ne normalise donc
+        //   que ce qui existe. (Trouve en LISANT l'aide, pas en l'essayant.)
+        const dateAffirmee = (...cles) => {
+          const v = cles.map(affirme).find((x) => x) || "";
+          return v ? normalizeStatusFrenchDate(v) : "";
+        };
+        poser("dateCompromis", dateAffirmee("transaction_date"));
+        poser("dateSignatureActe", dateAffirmee("signature_date", "date_signature_acte"));
+        poser("nbJoursRetractation", affirme("retraction_days"));
+        poser("prixNetVendeur", cleanMoneyValue(affirme("net_seller_price"), ""));
+        poser("sequestre", cleanMoneyValue(affirme("sequestration"), ""));
+        poser("montantHonoraireSortie", cleanMoneyValue(affirme("buyer_fees"), ""));
+        poser("tauxHonoraireSortie", cleanMoneyValue(affirme("buyer_fees_rate"), ""));
+
+        // ─── « LE MONTANT » S'ECRIT DANS LE PRIX DE VENTE ───
+        //
+        // prixPublique est CALCULE par Hektor -- son propre formulaire le dit :
+        //     « il est calcule par rapport au prix de vente + les honoraires
+        //       acquereurs »
+        // C'est un champ de classe C. Y ecrire pendant qu'on donne un autre prix
+        // de vente, c'est ecrire dans une case qu'il va recalculer.
+        //
+        // On pose donc le PRIX DE VENTE. Et on ne recopie la meme valeur dans le
+        // prix public QUE si les deux sont egaux dans le formulaire rendu --
+        // c'est-a-dire quand aucun honoraire acquereur ne les separe. Sinon on
+        // laisse Hektor calculer : « on recopie ce qu'il rend, on ne reconstruit
+        // pas sa formule ».
+        const montantVoulu = cleanMoneyValue(affirme("amount"), "");
+        if (montantVoulu) {  // eslint-disable-line no-lonely-if
+          poser("prixDeVente", montantVoulu);
+          const publiqueRendu = String(htmlInputValue(etat.contenu, "prixPublique") || "").trim();
+          const venteRendu = String(htmlInputValue(etat.contenu, "prixDeVente") || "").trim();
+          const separes = Number(publiqueRendu) !== Number(venteRendu);
+          if (!separes) poser("prixPublique", montantVoulu);
+          // Ce qu'on N'A PAS ecrit ne doit pas etre juge comme un echec par
+          // l'arbitre : il compare `amount` a prixPublique, et ici on l'a
+          // volontairement laisse a Hektor.
+          else nonVerifiables.push("prixPublique");
+          await logJob(job.id, "hektor_assistant", "running",
+            separes
+              ? `Modification : prix de vente ${montantVoulu}. Prix public LAISSE A HEKTOR `
+                + `(il le calcule, et des honoraires acquereurs l'ecartent du prix de vente : `
+                + `${publiqueRendu} vs ${venteRendu})`
+              : `Modification : prix de vente et prix public ${montantVoulu} `
+                + `(aucun honoraire acquereur ne les separe)`,
+            { hektor_annonce_id: annonceId, montant: montantVoulu,
+              prix_public_rendu: publiqueRendu, prix_vente_rendu: venteRendu });
+        }
       } else {
         poser("dateCompromis", tx.date);
         poser("dateSignatureActe", normalizeStatusFrenchDate(
@@ -10467,22 +10548,30 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         poser("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
         poser("sequestre", tx.sequestration);
       }
-      poser("montantHonoraireSortie", tx.fees);
-      poser("tauxHonoraireSortie", tx.feesRate);
+      if (!enReprise) {
+        poser("montantHonoraireSortie", tx.fees);
+        poser("tauxHonoraireSortie", tx.feesRate);
+      }
       // LES ACQUEREURS remplacent ce qui etait rendu -- c'est un tableau, donc on
       // efface d'abord. Sans acquereur, on garde ce que Hektor a propose.
       // 06/09 : TOUTE la liste, plus seulement le premier.
-      if (acquereursVoulus.length) {
+      // ⚠ EN REPRISE, ON NE TOUCHE PAS AUX ACQUEREURS. Decision de Frederic du
+      //   07/09 : « la modification acquereur sera a faire mais EN DERNIER, car
+      //   la plus compliquee des modifications ». Le formulaire rendu en porte
+      //   deja deux (mesure du 08/09) et le worker les repose avec le reste :
+      //   ne rien poser, c'est les CONSERVER. Reposer une liste calculee a partir
+      //   d'une modale qui ne les gere pas encore, ce serait les perdre.
+      if (!enReprise && acquereursVoulus.length) {
         corps.delete("acquereurs[]");
         for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
       }
-      if (tx.notary) { corps.delete("notairesAcquereur[]"); corps.append("notairesAcquereur[]", tx.notary); }
+      if (!enReprise && tx.notary) { corps.delete("notairesAcquereur[]"); corps.append("notairesAcquereur[]", tx.notary); }
     }
 
     // ⚠ ON REPOSE LES ACQUEREURS A CHAQUE ETAPE, une fois Hektor mis au courant.
     // C'est LE correctif du 06/09 : sans cela, seule l'etape 0 les portait, et le
     // compromis 50072 n'en a garde qu'un sur deux.
-    if (acquereursConnusDeHektor && acquereursVoulus.length) {
+    if (!enReprise && acquereursConnusDeHektor && acquereursVoulus.length) {
       corps.delete("acquereurs[]");
       for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
     }
@@ -10502,7 +10591,7 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     // L'acquereur s'ajoute UNE FOIS l'etape 2 rendue -- c'est la que son module
     // existe, et c'est l'etape que l'interface de Hektor passe a `newView`.
     // Le bloc renvoye rejoint le contenu, que l'etape suivante reposera.
-    if (!pas.enregistre && pas.vers === "2" && target === "compromise") {
+    if (!enReprise && !pas.enregistre && pas.vers === "2" && target === "compromise") {
       // PLUSIEURS ACQUEREURS, parce qu'un compromis peut en porter plusieurs --
       // un couple, une indivision. La liste est calculee plus haut, une fois.
       for (const idAcq of acquereursVoulus) {
@@ -10540,6 +10629,8 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   return {
     assistant: true,
     etapes: assistant.pas.length,
+    reprise: enReprise ? idRepris : null,
+    champs_non_verifiables: nonVerifiables,
     reponse: reponseBrute.slice(0, 300) || "(vide)",
     forme_mandat: tx.mandat || "(vide)",
     forme_negociateur: tx.negotiator || "(vide)",
@@ -11420,15 +11511,22 @@ function memeValeurHektor(envoye, chezHektor) {
   return false;
 }
 
-async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, payload, dateTransaction) {
+async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, payload, dateTransaction, ventesAvant, transactionResult) {
   const cible = String(
     payload[genre === "offre" ? "offre_id" : genre === "vente" ? "vente_id" : "compromis_id"] || "").trim();
   const table = CHAMPS_PROUVABLES[genre] || {};
+  // Ce que l'envoi a DELIBEREMENT laisse a Hektor (prix public quand des
+  // honoraires acquereurs le separent du prix de vente). On ne juge pas ce
+  // qu'on n'a pas ecrit -- sinon on fabrique un faux echec.
+  const laissesAHektor = new Set(
+    (transactionResult && Array.isArray(transactionResult.champs_non_verifiables))
+      ? transactionResult.champs_non_verifiables : []);
   // Ce qu'on a REELLEMENT envoye, et qui se verifie.
   const aVerifier = [];
   for (const [cleApp, cleHektor] of Object.entries(table)) {
     const envoye = payload ? payload[cleApp] : null;
     if (envoye == null || String(envoye).trim() === "") continue;
+    if (laissesAHektor.has(cleHektor)) continue;
     if (aVerifier.some((v) => v.hektor === cleHektor)) continue;   // amount/sale_price
     aVerifier.push({ app: cleApp, hektor: cleHektor, envoye: String(envoye).trim() });
   }
@@ -11448,6 +11546,32 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
       else if (verdict === false) ecarts.push(`${v.hektor} : envoye ${v.envoye}, Hektor porte ${chez[v.hektor]}`);
     }
     if (!ecarts.length) break;
+  }
+
+  // ═══ LE FILET : UNE MODIFICATION NE DOIT RIEN CREER ═══
+  //
+  // ⚠ J'AI RETIRE LA SEULE PROTECTION QUI L'EMPECHAIT. La garde de blocage
+  //   « un compromis en cours empeche d'en creer un autre » servait aussi de
+  //   filet contre le doublon ; il a fallu la lever pour que la modification
+  //   passe (08/09). Si l'enregistrement CREE au lieu de corriger, plus rien ne
+  //   l'arrete -- alors on le NOMME, tout de suite.
+  //
+  // ⚠ ON NE LEVE PAS D'ERREUR ICI, ET C'EST DELIBERE. Un `throw` mettrait le
+  //   travail en echec, et l'echec REJOUE (5 tentatives) : cinq doublons au lieu
+  //   d'un. La creation accidentelle se repare a la main -- le geste existe
+  //   depuis 3.4 et il est eprouve -- une cascade, non.
+  if (lu && lu.tous && ventesAvant && ventesAvant.tous) {
+    const apparus = Array.from(lu.tous).filter((id) => !ventesAvant.tous.has(id));
+    if (apparus.length) {
+      await logJob(job.id, "hektor_transaction_doublon", "error",
+        `⚠ MODIFICATION DEMANDEE, CREATION OBTENUE : le ${genre} ${apparus.join(", ")} `
+        + `n'existait pas avant l'envoi. La transaction ${cible} devait etre corrigee, pas doublee. `
+        + `A supprimer chez Hektor -- le geste existe dans l'app.`, {
+          hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
+          cible, apparus, avant: Array.from(ventesAvant.tous), apres: Array.from(lu.tous),
+        });
+      return { verifie: true, modifiee: false, doublon: apparus, hektor_transaction_id: cible };
+    }
   }
 
   if (!lu || !lu.details || !lu.details[cible]) {
@@ -11817,7 +11941,8 @@ async function handleChangeHektorAnnonceStatus(job) {
           // La bonne question n'est pas « qu'est-ce qui est apparu ? » mais
           // « la valeur a-t-elle change ? ».
           venteResult = await prouverTransactionModifiee(
-            job, annonceId, genreArbitre, appAffaireId, payload, dateTransaction);
+            job, annonceId, genreArbitre, appAffaireId, payload, dateTransaction,
+            ventesAvant, transactionResult);
         } else if (genreArbitre) {
           venteResult = await prouverTransactionCreee(
             job, annonceId, genreArbitre, ventesAvant, appAffaireId, transactionResult, dateTransaction);
