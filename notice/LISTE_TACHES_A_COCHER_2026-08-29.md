@@ -3573,7 +3573,7 @@ GEL que Frederic a repere le premier).*
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)
          verif : modifier dans Hektor, le run redescend bien la nouvelle valeur
-[ ] 3.4  SUPPRIMER LE COMPROMIS -- ⭐ LA ROUTE EST RELEVEE (07/09/2026)
+[~] 3.4  SUPPRIMER LE COMPROMIS -- ✅ CODE LE 07/09, RESTE L'ESSAI REEL
          ✅ RELEVE FAIT EN CONDITIONS REELLES, sur 24933, en instrumentant la
          fiche de Hektor pendant que Frederic cliquait « Oui » :
 
@@ -3634,6 +3634,61 @@ GEL que Frederic a repere le premier).*
            vente. Le delete-never ne change pas.
          ⚠ EXIGER confirmer=true, comme la vente : le geste est IRREVERSIBLE.
          retour : retirer le bouton · verif : le statut redescend, la ligne reste
+
+         ✅ CODE LE 07/09/2026 -- LES CINQ PIECES SONT POSEES
+             RPC        app_geste_affaire_optimistic accepte `supprimer` sur
+                        kind='compromis' et produit `delete_hektor_compromis`
+             CHECK      app_console_job_job_type_check ouvert au nouveau type
+             CLAIM      app_console_claim_next_job : le kind 'admin' le reclame
+             worker     handleDeleteHektorCompromis + redescendreStatutHektor
+             front      bouton « Supprimer le compromis », rouge, second, avec
+                        une confirmation qui PROPOSE « Annuler » a la place
+             copie versionnee : supabase/patch_supprimer_compromis_2026-09-07.sql
+
+         ⚠ DEUX PORTES QUI SE SERAIENT TUES, trouvees en relisant et non en
+           testant. Un nouveau `job_type` en traverse TROIS, et deux echouent mal :
+             ① le CHECK          leve AU INSERT, donc APRES que la RPC a deja pose
+                                  present_in_hektor=false et redescendu le statut :
+                                  l'app aurait montre un compromis supprime que
+                                  RIEN n'aurait envoye
+             ② la liste du claim  AUCUNE erreur, le travail reste `pending` pour
+                                  toujours -- le worker l'annonce depuis le 29/08 :
+                                  « Oublier cette liste = un travail qui reste en
+                                  attente indefiniment, SANS erreur »
+             ③ le switch du worker leve, lui au moins
+           ➡ A REFAIRE POUR TOUT NOUVEAU job_type. Les trois, jamais deux.
+
+         ─── DEUX CHOIX QU'IL FAUT POUVOIR DEFENDRE ───
+         ① LA REDESCENTE PASSE PAR `upval&champ=status`, PAS PAR LEUR ROUTE.
+            Hektor envoie `POST ajoutebien_wizardBien`. Chez nous cette route
+            OUVRE l'assistant de creation : s'en servir comme d'un enregistrement
+            serait DEVINER, et deviner a coute une demi-journee deux fois cette
+            semaine. `upval` est notre route eprouvee depuis le 21/05, quatre
+            points d'appel.
+            ⚠ ET ON N'ENVOIE PAS `diffusable`. setHektorAnnonceStatusValue le
+              joint pour « Actif » (valeur 1) : cela REPUBLIERAIT un bien retire
+              des portails. La RPC s'interdit deja diffusable et archive (borne 3),
+              le worker s'aligne -- d'ou un envoi dedie plutot que la fonction
+              existante.
+         ② LE STATUT VISE N'EST PAS DEVINE PAR LE WORKER. Il vient de la charge,
+            sous `statut_apres`, calcule par app_statut_redescente_calcule() qui
+            regarde ce qui RESTE sur le bien. Sur 24933, qui porte une offre
+            vivante (33050), la cible est « Sous offre » et non « Actif ».
+            L'utilisateur designe, le worker execute.
+
+         ─── ET SI LA REDESCENTE ECHOUE ? ON NE DEFAIT RIEN ───
+         Le compromis a disparu chez Hektor : le remettre est impossible. Un
+         statut qui n'a pas redescendu est un defaut VISIBLE et reparable a la
+         main ; le taire serait pire. Le journal le dit en clair.
+
+         [ ] CE QUI RESTE : L'ESSAI REEL, et il demande un compromis a sacrifier.
+             ⚠ 24933 n'en porte plus aucun (nettoyage du 07/09). Il faudra en
+               CREER un, le supprimer, et verifier les trois effets :
+                   le compromis disparait de l'API Hektor
+                   le statut de l'annonce redescend a « Sous offre » (pas Actif)
+                   la ligne du registre RESTE, present_in_hektor = false
+             ⚠ REDEMARRER LES 4 SERVICES avant l'essai : sans cela le handler
+               n'existe pas dans le processus qui tourne.
          --- redaction d'origine ---
          L'app sait ANNULER un compromis, pas le SUPPRIMER. Or la mesure du 04/09
          dit que les deux gestes n'ont pas le meme effet :

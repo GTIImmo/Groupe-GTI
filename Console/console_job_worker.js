@@ -66,6 +66,7 @@ const ADMIN_JOB_TYPES = new Set([
   // attente indefiniment, SANS erreur : aucun service ne le reclame.
   "change_hektor_offre_status",
   "cancel_hektor_compromis",
+  "delete_hektor_compromis",
   "delete_hektor_vente",
 ]);
 const MATTERPORT_JOB_TYPES = new Set([
@@ -15746,6 +15747,182 @@ async function handleDeleteHektorVente(job) {
            registre_lignes: lignes, sync_job: syncJob };
 }
 
+/**
+ * Faire redescendre le statut de l'annonce chez Hektor, APRES un geste qui retire
+ * une transaction.
+ *
+ * HEKTOR NE LE FAIT PAS TOUT SEUL, et c'est mesure. Le 07/09/2026, en
+ *   instrumentant leur fiche pendant une suppression de compromis, DEUX appels
+ *   partent, pas un :
+ *       GET  mode=annonce-SuiviVente-deleteCompromis   la suppression
+ *       POST mode=ajoutebien_wizardBien                le statut
+ *   La note de la tache 3.4 disait « supprimer -> le statut redescend » comme si
+ *   c'etait un effet de Hektor. Non : c'est un SECOND GESTE de leur interface.
+ *   Sans lui, l'annonce reste « Sous compromis » sans compromis -- exactement le
+ *   champ menteur que ce projet chasse.
+ *
+ * ON N'UTILISE PAS LEUR ROUTE, ET C'EST DELIBERE. `ajoutebien_wizardBien` est
+ *   chez nous la route qui OUVRE l'assistant de creation ; s'en servir comme
+ *   d'un enregistrement serait deviner. On envoie `upval&champ=status`, qui est
+ *   notre route eprouvee depuis le 21/05 (quatre points d'appel).
+ *
+ * ET ON NE TOUCHE PAS `diffusable`. setHektorAnnonceStatusValue l'envoie pour
+ *   « Actif » (valeur 1) : cela REPUBLIERAIT un bien retire des portails. La RPC
+ *   s'interdit deja diffusable et archive (borne 3) ; le worker s'aligne.
+ *
+ * LE STATUT VISE N'EST PAS DEVINE ICI. Il vient de la charge, sous
+ *   `statut_apres`, calcule par app_statut_redescente_calcule() qui regarde ce
+ *   qui RESTE sur le bien -- une offre vivante rend « Sous offre », pas
+ *   « Actif ». L'utilisateur designe, le worker execute.
+ */
+async function redescendreStatutHektor(job, categorie, annonceId, payload) {
+  const vise = String((payload && payload.statut_apres) || "").trim();
+  if (!vise || !annonceId) return { status: "skipped", reason: "pas_de_statut_vise" };
+  let config = null;
+  try {
+    config = HEKTOR_STATUS_CONFIG[normalizeHektorStatusTarget(vise)];
+  } catch (_) {
+    await logJob(job.id, categorie, "error",
+      `Statut « ${vise} » inconnu de Hektor : la redescente n'a PAS ete envoyee`,
+      { hektor_annonce_id: annonceId, statut_apres: vise });
+    return { status: "error", reason: "statut_inconnu" };
+  }
+  try {
+    await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+      mode: "upval", id: annonceId, champ: "status", val: config.hektorValue,
+    }).toString()}`, {
+      headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonceId)}` },
+    });
+    await logJob(job.id, categorie, "done",
+      `Statut Hektor redescendu a « ${config.label} »`,
+      { hektor_annonce_id: annonceId, statut_apres: vise, val: config.hektorValue });
+    return { status: "done", statut_apres: vise, val: config.hektorValue };
+  } catch (erreur) {
+    // ON NE DEFAIT PAS LA SUPPRESSION POUR AUTANT. Le compromis a disparu chez
+    //   Hektor : le remettre est impossible. Un statut qui n'a pas redescendu est
+    //   un defaut VISIBLE et reparable a la main ; le taire serait pire.
+    await logJob(job.id, categorie, "error",
+      "Le compromis est supprime mais le statut n'a PAS redescendu -- a corriger a la main",
+      { hektor_annonce_id: annonceId, statut_apres: vise,
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { status: "error", reason: "envoi_refuse" };
+  }
+}
+
+/**
+ * Supprimer un compromis. DEFINITIF, et ce n'est PAS « annuler ».
+ *
+ * --- DEUX VERBES QU'ON A LONGTEMPS CONFONDUS ---
+ *     annuler     le compromis RESTE, marque mort (statut 2). Le statut de
+ *                 l'annonce NE BOUGE PAS. C'est handleCancelHektorCompromis.
+ *     supprimer   le compromis DISPARAIT. Le statut redescend -- par un second
+ *                 appel, voir redescendreStatutHektor().
+ *
+ * --- LA ROUTE, RELEVEE EN CONDITIONS REELLES LE 07/09/2026 ---
+ *     GET /admin/xmlrpc.php
+ *         mode        = annonce-SuiviVente-deleteCompromis
+ *         idCompromis = <id du compromis>
+ *         idAnn       = <id de l'annonce>
+ *
+ * TROIS PIEGES, TOUS PAYES AVANT LE RELEVE :
+ *   1) CE N'EST PAS LE VERBE DE LA VENTE. La note du 28/08 disait « un seul verbe
+ *      pour le compromis et la vente », en lisant `delete_compromis_vente` comme
+ *      « le compromis ET la vente ». C'est « le compromis DE VENTE ». Eprouve :
+ *      `ventes-deleteVente&id=50073` rend 200 avec un corps VIDE et ne fait RIEN.
+ *   2) LE PARAMETRE N'EST PAS `id`, c'est `idCompromis`, ET `idAnn` est exige :
+ *          deleteCompromis&id=...   ->  {"empty":"0"}, sans effet
+ *          avec les deux bons noms  ->  {"empty":"1"}, le compromis disparait
+ *   3) `empty` N'EST PAS L'ARBITRE. Il decrit l'ANNONCE apres coup -- « il ne
+ *      reste plus aucun compromis » -- pas le sort de CELUI qu'on visait. Sur un
+ *      bien qui en porte plusieurs, {"empty":"0"} ne dit rien. On juge donc sur
+ *      la RELECTURE par l'API, comme pour la vente : absolue, donc rejouable.
+ */
+async function handleDeleteHektorCompromis(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const idComp = String(payload.hektor_compromis_id || payload.id_compromis || "").trim();
+  const annonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!idComp) throw new Error("hektor_compromis_id required");
+  if (!annonceId) {
+    // `idAnn` est OBLIGATOIRE cote Hektor : sans lui l'appel rend {"empty":"0"}
+    // et ne fait rien. Mieux vaut refuser que d'envoyer un geste sans effet.
+    throw new Error("hektor_annonce_id required : Hektor exige idAnn pour supprimer un compromis");
+  }
+  if (payload.confirmer !== true && payload.confirmer !== "1") {
+    throw new Error("Suppression de compromis DEFINITIVE : la demande doit porter confirmer=true");
+  }
+
+  await ensureAdminHektorWriteSession(job, "compromis_delete_admin_login");
+  await logJob(job.id, "hektor_compromis_delete", "running",
+    `Suppression DEFINITIVE du compromis ${idComp}`, {
+      hektor_annonce_id: annonceId, hektor_compromis_id: idComp,
+    });
+
+  // On ne supprime pas ce qu'on ne voit pas -- meme regle que pour la vente.
+  const avant = await lireEtatTransactionViaApi(job, "compromis", idComp, "hektor_compromis_delete_verify_before_api");
+  if (avant._error) {
+    throw new Error(
+      `Suppression NON ENVOYEE pour le compromis ${idComp} : son etat n'a pas pu etre lu ` +
+      `(${avant._error}). On ne supprime pas ce qu'on ne voit pas.`);
+  }
+  const dejaAbsent = avant.trouve !== true;
+  if (dejaAbsent) {
+    await logJob(job.id, "hektor_compromis_delete", "error",
+      `Le compromis ${idComp} n'existe deja plus chez Hektor : rien n'a ete envoye`,
+      { hektor_compromis_id: idComp });
+  }
+
+  let resultat = { verbe: "GET", brut: "", ok: true, json: null };
+  if (!dejaAbsent) {
+    const params = new URLSearchParams({
+      mode: "annonce-SuiviVente-deleteCompromis",
+      idCompromis: idComp,
+      idAnn: annonceId,
+    });
+    try {
+      resultat = await appelHektor(job, "la suppression du compromis", "GET", params, annonceId,
+                                   { arbitre: "relecture" });
+    } catch (refus) {
+      await restaurerEtatAffaire(job, "hektor_compromis_delete", payload);
+      throw refus;
+    }
+  }
+
+  const apres = await lireEtatTransactionViaApi(job, "compromis", idComp, "hektor_compromis_delete_verify_after_api");
+  if (apres._error || apres.trouve !== false) {
+    await restaurerEtatAffaire(job, "hektor_compromis_delete", payload);
+    throw new Error(
+      `Suppression non confirmee pour le compromis ${idComp} : ` +
+      (apres._error
+        ? `l'etat n'a pas pu etre relu (${apres._error})`
+        : "il repond toujours a l'API"));
+  }
+
+  // LE SECOND GESTE, et il vient APRES la preuve que le compromis a disparu :
+  // redescendre un statut alors que le compromis tient encore serait mentir dans
+  // l'autre sens.
+  const redescente = await redescendreStatutHektor(job, "hektor_compromis_delete", annonceId, payload);
+
+  // Chez nous la ligne RESTE : present_in_hektor = false, pose par la RPC au clic.
+  // Le delete-never ne change pas -- ce que le registre a vu, il le garde.
+  const lignes = payload.app_affaire_id ? 1 : 0;
+
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "delete_hektor_compromis",
+    priority: 72,
+  });
+
+  await logJob(job.id, "hektor_compromis_delete", "done",
+    `Compromis ${idComp} supprime chez Hektor (${resultat.verbe}) -- geste irreversible`, {
+      hektor_compromis_id: idComp, verbe: resultat.verbe, registre_lignes: lignes,
+      sync_job: syncJob, reponse_hektor: resultat.brut,
+      // `empty` est consigne pour ce qu'il vaut : un indice sur l'ANNONCE, pas une preuve.
+      annonce_sans_compromis: resultat.json && resultat.json.empty === "1" ? true : null,
+      redescente_statut: redescente.status, statut_apres: payload.statut_apres || null,
+    });
+  return { status: "done", hektor_compromis_id: idComp, verbe: resultat.verbe,
+           registre_lignes: lignes, sync_job: syncJob, redescente_statut: redescente.status };
+}
+
 async function handleArchiveHektorAnnonce(job) {
   const payload = safeJsonParse(job.payload_json);
   const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
@@ -16186,6 +16363,8 @@ async function runHandler(job) {
       return handleChangeHektorOffreStatus(job);
     case "cancel_hektor_compromis":
       return handleCancelHektorCompromis(job);
+    case "delete_hektor_compromis":
+      return handleDeleteHektorCompromis(job);
     case "delete_hektor_vente":
       return handleDeleteHektorVente(job);
     case "assign_hektor_annonce_negotiator":

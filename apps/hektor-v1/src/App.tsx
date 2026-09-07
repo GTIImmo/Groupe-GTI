@@ -15148,13 +15148,37 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   //
   // Tout le reste de cette modale reste chez nous. Ces trois-là changent un ÉTAT que
   // seul Hektor peut acter, et que notre registre doit refléter.
-  async function handleGesteHektor(geste: 'refus' | 'accepte' | 'annuler_compromis' | 'supprimer_vente') {
+  async function handleGesteHektor(
+    geste: 'refus' | 'accepte' | 'annuler_compromis' | 'supprimer_compromis' | 'supprimer_vente',
+  ) {
     const affaire = affaireCourantePourStatut()
     if (!affaire || !statusChangeTarget) return
     const identifiant = String(affaire.hektor_affaire_id ?? '')
     if (!identifiant) {
       setErrorMessage("Cette transaction n'a pas encore de numéro Hektor : le geste ne peut pas partir.")
       return
+    }
+
+    // ─── 3.4 — SUPPRIMER N'EST PAS ANNULER, et la confirmation le dit ───
+    //
+    // Mesuré le 04/09 puis le 07/09, sur l'annonce témoin :
+    //     annuler     le compromis RESTE, marqué mort. Le statut ne bouge pas.
+    //                 La trace est gardée, la chaîne se referme proprement.
+    //     supprimer   le compromis DISPARAÎT de chez Hektor. Le statut redescend.
+    //
+    // ⚠ ON PROPOSE DONC LE GESTE RÉVERSIBLE DANS LA MÊME PHRASE. Neuf fois sur dix
+    //   « Annuler le compromis » est ce qu'il faut ; supprimer sert aux essais et
+    //   aux saisies fausses. Un bouton rouge sans cette phrase inviterait à effacer
+    //   une trace qu'on ne sait pas reconstruire.
+    if (geste === 'supprimer_compromis') {
+      const daccord = window.confirm(
+        `Supprimer DÉFINITIVEMENT ce compromis chez Hektor ?\n\n`
+        + `Il disparaîtra de la fiche Hektor, et rien ne le remettra.\n`
+        + `Si tu veux seulement acter qu'il ne se fera pas, utilise plutôt `
+        + `« Annuler le compromis » : la trace reste.\n\n`
+        + `${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id} — compromis n° ${identifiant}`,
+      )
+      if (!daccord) return
     }
 
     // Une vente ne s'annule pas, elle DISPARAÎT : sa table n'a aucune colonne d'état.
@@ -15175,7 +15199,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       // transaction, avec l'état précédent : si Hektor refuse, le worker le remet.
       const gestes: Record<string, GesteAffaire> = {
         refus: 'refus', accepte: 'accepte',
-        annuler_compromis: 'annuler', supprimer_vente: 'supprimer',
+        annuler_compromis: 'annuler',
+        // Le MÊME verbe que la vente : c'est le `kind` de l'affaire qui tranche
+        // dans la RPC, pas l'écran. Un seul endroit décide.
+        supprimer_compromis: 'supprimer', supprimer_vente: 'supprimer',
       }
       const retour = await gesteAffaireOptimistic(affaire.app_affaire_id, gestes[geste])
       if (retour.deja_dans_cet_etat) {
@@ -15187,6 +15214,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         refus: "Refus de l'offre demandé",
         accepte: "Acceptation de l'offre demandée",
         annuler_compromis: 'Annulation du compromis demandée',
+        supprimer_compromis: 'Suppression du compromis demandée',
         supprimer_vente: 'Suppression de la vente demandée',
       }
       setNoticeMessage(`${libelles[geste]} pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`)
@@ -18120,11 +18148,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </>
                   ) : null}
                   {affaireCourantePourStatut() && statusChangeStatus === 'compromise' ? (
-                    <button className="ghost-button button-subtle" type="button"
-                      onClick={() => handleGesteHektor('annuler_compromis')}
-                      disabled={statusChangePending || statusChangeCorrectionPending}>
-                      Annuler le compromis
-                    </button>
+                    <>
+                      <button className="ghost-button button-subtle" type="button"
+                        onClick={() => handleGesteHektor('annuler_compromis')}
+                        disabled={statusChangePending || statusChangeCorrectionPending}>
+                        Annuler le compromis
+                      </button>
+                      {/* 3.4 — LE GESTE IRRÉVERSIBLE, ET IL EST SECOND.
+                          L'ordre compte : « Annuler » d'abord, en discret ; « Supprimer »
+                          après, en rouge. C'est le même ordre que pour la vente, où seul
+                          le geste destructeur existe. */}
+                      <button className="ghost-button button-danger" type="button"
+                        onClick={() => handleGesteHektor('supprimer_compromis')}
+                        disabled={statusChangePending || statusChangeCorrectionPending}
+                        title="Le compromis disparaît de Hektor et le statut du bien redescend. Rien ne le remet.">
+                        Supprimer le compromis
+                      </button>
+                    </>
                   ) : null}
                   {affaireCourantePourStatut() && statusChangeStatus === 'sold' ? (
                     <button className="ghost-button button-danger" type="button"
