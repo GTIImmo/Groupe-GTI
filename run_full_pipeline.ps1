@@ -3,6 +3,43 @@
     [switch]$SkipAndroid,
     [switch]$SkipContactDetails,
     [int]$DailyRawMaxPages = 0,
+    # ─── PERIMETRE DES TRANSACTIONS (07/09/2026) ───
+    #
+    # LE RUN NE VOYAIT QU'UNE FENETRE, et personne ne le savait. En mode `update`,
+    # resolve_generic_max_pages() plafonne :
+    #     compromis   ceil(compromis_recent_limit / 20)  ->  1 000 sur 10 582
+    #     offres      ceil(offre_recent_limit / 20)      ->  1 000 sur 11 136
+    #     ventes      pas de plafond de pages, MAIS dateStart = il y a 12 mois
+    #
+    # CONSEQUENCE MESUREE : l'inventaire complet des compromis date du 30/03/2026
+    # (523 pages), celui des offres du 30/03, celui des ventes du 26/05. Depuis,
+    # seuls les recents entrent. Une transaction que le flux des recents rate
+    # n'entre JAMAIS -- et rien ne peut nous le dire.
+    #   ⚠ Le precedent existe et il a coute cher : pour les recherches acquereurs,
+    #     « une PREMIERE recherche n'entre dans aucun run » -- ~270 invisibles.
+    #
+    # CE QU'ON CHANGE : le PERIMETRE, pas le mecanisme. Meme mode `update`, meme
+    # chemin d'appel, meme tri, meme traitement. On retire seulement les oeilleres.
+    #   ⚠ Une limite enorme ne coute AUCUNE requete de plus : sync_generic_listing
+    #     s'arrete des qu'une page revient vide (`if not data or next_page in (...)`).
+    #     Elle cesse simplement de tronquer.
+    #
+    # COUT MESURE : +~1 350 pages, soit ~17 min (0,45 a 0,86 s/page en mars et mai).
+    # Le run passe de 59 a ~76 min. D'ou l'avance de la tache planifiee a 05:00 :
+    # fin ~06:16, soit 44 min de marge avant la sauvegarde de 07:00 -- CONTRE 13 min
+    # si on elargissait en restant a 05:30. Les deux vont ensemble.
+    #
+    # ⛔ CE N'EST PAS ENCORE LE BALAYAGE. Elargir n'EFFACE rien : normalize_source
+    #   fait INSERT ... ON CONFLICT DO UPDATE, il ajoute et met a jour, il ne retire
+    #   jamais. Les transactions supprimees chez Hektor restent donc au miroir pour
+    #   l'instant. C'est VOULU : elargir est le PREALABLE du balayage, pas le
+    #   balayage. Effacer avant d'elargir supprimerait ~90 % du registre des la
+    #   premiere nuit (1 000 compromis vus, 9 582 « non revus »).
+    #
+    # RETOUR ARRIERE : remettre 1000 / 1000 / $null. Rien d'autre a defaire.
+    [int]$CompromisRecentLimit = 999999,
+    [int]$OffreRecentLimit = 999999,
+    [string]$VenteDateStart = "2010-01-01",
     [int]$ContactDetailLimit = 1000,
     [int]$ContactDetailBatchSize = 1000,
     [int]$ContactDetailMaxAttempts = 1,
@@ -200,7 +237,7 @@ if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt 0 -and $HektorChauf
 
 Write-RunLog "Pipeline started"
 Write-RunLog "Log file: $runLog"
-Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SupabaseSinceWatermark=$SupabaseSinceWatermark AllowStaleSupabaseDeletes=$AllowStaleSupabaseDeletes SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError SkipHektorChauffage=$SkipHektorChauffage HektorChauffageScope=$HektorChauffageScope HektorChauffageLimit=$HektorChauffageLimit HektorChauffageStaleDays=$HektorChauffageStaleDays HektorChauffageDelaySeconds=$HektorChauffageDelaySeconds HektorChauffageBatchSize=$HektorChauffageBatchSize HektorChauffageBatchPauseSeconds=$HektorChauffageBatchPauseSeconds HektorChauffageForce=$HektorChauffageForce HektorChauffageSkipJobCheck=$HektorChauffageSkipJobCheck RunConsoleMissingFields=$RunConsoleMissingFields SkipConsoleMissingFields=$SkipConsoleMissingFields ConsoleMissingFieldsAnnonceScope=$ConsoleMissingFieldsAnnonceScope ConsoleMissingFieldsLimit=$ConsoleMissingFieldsLimit ConsoleMissingFieldsStaleDays=$ConsoleMissingFieldsStaleDays ConsoleMissingFieldsDelaySeconds=$ConsoleMissingFieldsDelaySeconds ConsoleMissingFieldsBatchSize=$ConsoleMissingFieldsBatchSize ConsoleMissingFieldsBatchPauseSeconds=$ConsoleMissingFieldsBatchPauseSeconds ConsoleMissingFieldsForce=$ConsoleMissingFieldsForce ConsoleMissingFieldsSkipJobCheck=$ConsoleMissingFieldsSkipJobCheck PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly MatterportPushMode=$MatterportPushMode"
+Write-RunLog "Options: PushAndroidFront=$PushAndroidFront SkipAndroid=$SkipAndroid FullRebuildSupabase=$FullRebuildSupabase SupabaseSinceWatermark=$SupabaseSinceWatermark AllowStaleSupabaseDeletes=$AllowStaleSupabaseDeletes SkipContactDetails=$SkipContactDetails DailyRawMaxPages=$DailyRawMaxPages CompromisRecentLimit=$CompromisRecentLimit OffreRecentLimit=$OffreRecentLimit VenteDateStart=$VenteDateStart ContactDetailLimit=$ContactDetailLimit ContactDetailBatchSize=$ContactDetailBatchSize ContactDetailMaxAttempts=$ContactDetailMaxAttempts ContactDetailRetryDelaySeconds=$ContactDetailRetryDelaySeconds ContactDetailRequestDelaySeconds=$ContactDetailRequestDelaySeconds ContactDetailBatchPauseSeconds=$ContactDetailBatchPauseSeconds ContactDetailMaxHardErrors=$ContactDetailMaxHardErrors ContactDetailMaxConsecutiveHardErrors=$ContactDetailMaxConsecutiveHardErrors ContactDetailMax404Errors=$ContactDetailMax404Errors ContactDetailMaxConsecutive404Errors=$ContactDetailMaxConsecutive404Errors ContactDetailClientMaxRetries=$ContactDetailClientMaxRetries FailOnContactDetailsError=$FailOnContactDetailsError SkipHektorChauffage=$SkipHektorChauffage HektorChauffageScope=$HektorChauffageScope HektorChauffageLimit=$HektorChauffageLimit HektorChauffageStaleDays=$HektorChauffageStaleDays HektorChauffageDelaySeconds=$HektorChauffageDelaySeconds HektorChauffageBatchSize=$HektorChauffageBatchSize HektorChauffageBatchPauseSeconds=$HektorChauffageBatchPauseSeconds HektorChauffageForce=$HektorChauffageForce HektorChauffageSkipJobCheck=$HektorChauffageSkipJobCheck RunConsoleMissingFields=$RunConsoleMissingFields SkipConsoleMissingFields=$SkipConsoleMissingFields ConsoleMissingFieldsAnnonceScope=$ConsoleMissingFieldsAnnonceScope ConsoleMissingFieldsLimit=$ConsoleMissingFieldsLimit ConsoleMissingFieldsStaleDays=$ConsoleMissingFieldsStaleDays ConsoleMissingFieldsDelaySeconds=$ConsoleMissingFieldsDelaySeconds ConsoleMissingFieldsBatchSize=$ConsoleMissingFieldsBatchSize ConsoleMissingFieldsBatchPauseSeconds=$ConsoleMissingFieldsBatchPauseSeconds ConsoleMissingFieldsForce=$ConsoleMissingFieldsForce ConsoleMissingFieldsSkipJobCheck=$ConsoleMissingFieldsSkipJobCheck PushContactsToSupabase=$PushContactsToSupabase ContactsEligibleOnly=$ContactsEligibleOnly MatterportPushMode=$MatterportPushMode"
 
 # La ressource "mandats" a ete retiree le 21/07/2026. Elle declenchait deux appels
 # qui n'apportent plus rien :
@@ -223,6 +260,10 @@ Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "--mode", "update",
     "--resources", "negos", "annonces", "contacts", "offres", "compromis", "ventes", "broadcasts",
     "--max-pages", [string]$DailyRawMaxPages,
+    # Voir le bloc PERIMETRE DES TRANSACTIONS en tete de fichier.
+    "--compromis-recent-limit", [string]$CompromisRecentLimit,
+    "--offre-recent-limit", [string]$OffreRecentLimit,
+    "--vente-date-start", $VenteDateStart,
     "--missing-only"
 ) -WorkerKey "phase1.sync_raw"
 
