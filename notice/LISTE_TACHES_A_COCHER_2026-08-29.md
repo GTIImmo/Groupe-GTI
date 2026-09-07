@@ -3807,24 +3807,63 @@ GEL que Frederic a repere le premier).*
                   A 05:00 il finit vers 06:16, 44 min de marge, MIEUX qu'avant.
                   Tache planifiee changee par Frederic (session elevee requise).
                   La tache de 03:00 finit entre 04:16 et 04:27 (4 nuits mesurees).
-         [ ] 2. OBSERVER 2 OU 3 NUITS. Combien de transactions le miroir detient-il
-                que Hektor ne rend plus ? On ne l'a JAMAIS su -- la liste complete
-                manquait. On compte, on ne supprime pas.
-                verif : duree reelle du run (attendu ~76 min), et le compte d'ecarts
-         [ ] 3. CORRIGER LA CHAINE -- ⛔ A FAIRE AVANT L'ETAPE 4, SINON ON AGGRAVE.
-                recalculer_les_chaines() (phase2) et app_chaine_pour() (Supabase)
-                ne regardent PAS present_in_hektor. Une ligne marquee absente
-                compterait encore comme un compromis vivant : une vente irait se
-                rattacher a un fantome. L'ecran, lui, filtre deja
-                (affaireEstVivante).
-         [ ] 4. ALLUMER LE BALAYAGE, garde-fou RECOPIE de
-                reconcile_active_annonce_scope -- ne rien inventer :
-                    refus si le balayage etait partiel (--max-pages)
-                    refus si le listing rend moins de 50 % du connu
-                    la trace est ecrite AVANT la suppression ; si le journal
-                    echoue, on ne supprime pas
-                ⚠ SANS L'ETAPE 1, CE BALAYAGE SUPPRIME ~90 % DU REGISTRE la
-                  premiere nuit : 1 000 compromis vus, 9 582 « non revus ».
+         [x] 3. CORRIGER LA CHAINE                                  FAIT LE 07/09
+                LES DEUX COPIES, dans le meme commit (6bd4def) :
+                recalculer_les_chaines() en Python, app_chaine_pour() (les DEUX
+                surcharges) chez Supabase. « Deux copies d'une formule divergent
+                tot ou tard » -- la clause est ecrite mot pour mot des deux cotes.
+                ⚠ LE FILTRE NAIF ETAIT FAUX, et c'est LE piege de cette tache.
+                  « WHERE present_in_hektor » exclurait aussi les transactions
+                  NEES DANS L'APP : pas de numero Hektor et present_in_hektor
+                  =false jusqu'a l'adoption par le run. Une offre creee le matin
+                  perdrait son dossier jusqu'au lendemain. La regle est celle de
+                  l'ecran (affaireEstVivante), mot pour mot :
+                      exclure SI (numero Hektor present) ET (present_in_hektor faux)
+                  Chez Supabase : `is false`, pas `= false` -- un NULL veut dire
+                  « on ne sait pas », on garde.
+                ⚠ app_chaine_id N'EST PAS REMIS A NULL pour les exclues : la trace
+                  garde son dossier. On veut pouvoir dire « cette vente appartenait
+                  au dossier 12 648 », meme effacee chez Hektor.
+                VERIFIE INERTE avant deploiement, des deux cotes :
+                    local (rejoue sur COPIE)  29 327 transactions, 12 648 chaines
+                    Supabase                  29 327 / 12 648, 0 ligne exclue
+         [x] 4. LE MIROIR S'ALIGNE SUR HEKTOR                       FAIT LE 07/09
+                aligner_miroir_sur_hektor() dans normalize_source.py, appelee a la
+                fin des trois upsert_* (6bd4def).
+                ⚠ LE REMPLACEMENT LITTERAL NE MARCHE PAS -- trouvaille de l'audit,
+                  et elle a change l'implementation. « DELETE FROM hektor_compromis
+                  puis on reinsere » REINJECTERAIT LES FANTOMES : la boucle lit
+                  DEUX endpoints (COMPROMIS_ENDPOINTS), dont l'instantane complet
+                  `list_compromis` fige au 30/03/2026 et jamais repurge. On
+                  reinsererait depuis mars exactement ce qu'on veut retirer.
+                  ➡ Le miroir est aligne sur la liste FRAICHE (`*_update`), qui
+                    depuis l'etape 1 vaut la liste complete. Meme resultat.
+                  ➡ raw_api_response N'EST PAS TOUCHE (regle 5, « l'archive de
+                    tout ce que Hektor a jamais dit »). Les pages de mars
+                    enrichissent encore le CONTENU des lignes ; elles ne decident
+                    plus de leur EXISTENCE.
+                GARDE-FOU recopie de reconcile_active_annonce_scope :
+                    refus si la liste fraiche est VIDE
+                    refus si elle rend moins de 50 % du connu
+                    le compte est TOUJOURS journalise, meme a zero -- un balayage
+                    silencieux se confond avec un balayage qui n'a pas tourne
+                EPROUVE EN LECTURE SEULE le 07/09 : il REFUSE les trois, comme il
+                le doit, la liste elargie n'etant rapatriee que cette nuit :
+                    offres     980 fraiches / 11 136 au miroir   -> REFUS
+                    compromis  980 / 10 582                      -> REFUS
+                    ventes     348 /  7 609                      -> REFUS
+         [ ] 5. LIRE LE JOURNAL DU PREMIER RUN ELARGI       ⭐ LE 08/09 AU MATIN
+                Trois choses a verifier dans .tmp/full_pipeline_2026-09-08_*.log :
+                  a) la duree -- attendu ~76 min, fin vers 06:16
+                  b) les trois lignes « [miroir] ... -> N retiree(s) ». Si elles
+                     disent encore REFUS, l'elargissement n'a pas pris : lire
+                     d'abord le compte de pages de sync_raw.
+                  c) le compte de chaines apres coup : 12 648 avant. Un ecart
+                     s'explique par les transactions retirees, pas autrement.
+                ⚠ C'EST LA PREMIERE NUIT POUR LES DEUX CHANGEMENTS A LA FOIS
+                  (perimetre elargi + alignement). Le garde-fou borne le risque :
+                  son echec est « aucune suppression », jamais « suppression de
+                  masse ». Mais il faut REGARDER.
 
          ─── EFFETS DE BORD AUDITES ───
              app_contact_relation_current  reconstruite (DELETE+INSERT) depuis le
