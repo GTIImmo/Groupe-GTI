@@ -466,10 +466,82 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     if adoptees:
         print(f"[affaire_ledger] {adoptees} affaire(s) nee(s) dans l'app ADOPTEE(S) "
               f"au lieu d'etre dupliquee(s)")
+    # ═══════════════════════════════════════════════════════════════════════════
+    # LE SILENCE NE GAGNE PAS                                        07/09/2026
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Frederic, en m'arretant : « le miroir de Hektor ne doit pas avoir autorite sur
+    # les lignes de mon registre du moment ou les workers fonctionnent ».
+    #
+    # CE QUI A CHANGE LE MEME JOUR, ET QUI REND CECI NECESSAIRE. Ce balayage tourne
+    # depuis toujours et n'avait JAMAIS rien marque -- mesure : 0 ligne sur 29 327.
+    # Non parce qu'il etait prudent, mais parce que le miroir ne perdait jamais rien.
+    # En rendant le miroir fidele (normalize_source, meme jour), on lui a donne le
+    # pouvoir d'effacer -- et ce balayage transformait aussitot son silence en VERDICT.
+    #
+    # ⚠ C'EST LA DIRECTION INVERSE DU PLAN. C.7 s'intitule « le miroir de Hektor
+    #   devient une SOURCE D'INFORMATION » : il doit passer de VERITE a TEMOIGNAGE.
+    #   Le laisser effacer, c'est en faire un juge. Le miroir temoigne ; il n'execute pas.
+    #
+    # LA REGLE, transposee de « vide ne gagne pas » (contrat d'autorite) :
+    #     LE SILENCE NE GAGNE PAS. Une absence n'est pas une affirmation.
+    #
+    # ─── QUI DECIDE, SELON LA LIGNE ───
+    #   venue de Hektor, jamais touchee par l'app  ->  LE MIROIR. Il est seul dans
+    #                                                  la piece, il a raison.
+    #   que l'APP possede                          ->  PERSONNE, tout seul. La ligne
+    #                                                  reste vivante, et l'ecart est
+    #                                                  COMPTE, pas tranche.
+    #
+    # ⚠ DETECTER N'EST PAS RESOUDRE -- c'est le principe des doublures (B.2/B.4).
+    #   L'ecart n'invente pas d'alarme : il tombe dans le journal de 07:30
+    #   (comparer_doublures.py), colonne « app seule », qui couvre DEJA
+    #   app_affaire_ledger__sb. La resolution attend C.7, comme prevu.
+    #
+    # ⚠ ET ON NE FAIT PAS GAGNER L'APP AVEUGLEMENT. Le plan met en garde :
+    #   « Un "l'app gagne" aveugle les aurait effacees des la premiere nuit, en
+    #   silence. » Ici l'app ne gagne rien : elle empeche seulement qu'on tranche
+    #   contre elle sans preuve.
     absent = 0
+    proteges = 0
     if full:
-        cur = con.execute(f"UPDATE {LEDGER_TABLE} SET present_in_hektor=0 WHERE last_seen_at <> ?", (run_ts,))
+        # Les trois signaux de possession, tous lus EN LOCAL (aucun appel reseau).
+        gardes = ["app_affaire_id < %d" % PLAGE_RESERVEE_APP]   # nee dans l'app
+        for table, colonne in (("app_affaire_champ_app", "app_affaire_id"),
+                               ("app_affaire_champ_app__sb", "app_affaire_id")):
+            # Le carnet : l'app a quelque chose a dire sur cette transaction.
+            # Les DEUX copies sont lues -- la locale peut avoir du retard sur la
+            # descente, et l'inverse est vrai aussi. On protege sur l'union.
+            if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                           (table,)).fetchone():
+                gardes.append(f'app_affaire_id NOT IN (SELECT {colonne} FROM "{table}" '
+                              f'WHERE {colonne} IS NOT NULL)')
+        if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                       ("app_console_job",)).fetchone():
+            # Un travail en cours : l'app est en train d'ecrire, le miroir ne peut pas
+            # savoir. ⚠ Cette table descend de Supabase a 07:30 : elle a jusqu'a 22 h
+            # de retard. Le retard joue DANS LE BON SENS -- il protege trop, jamais
+            # trop peu.
+            gardes.append(
+                "app_affaire_id NOT IN ("
+                "  SELECT CAST(json_extract(payload_json, '$.app_affaire_id') AS INTEGER)"
+                "    FROM app_console_job"
+                "   WHERE status IN ('pending', 'running')"
+                "     AND json_extract(payload_json, '$.app_affaire_id') IS NOT NULL)")
+
+        candidates = con.execute(
+            f"SELECT COUNT(*) FROM {LEDGER_TABLE} WHERE last_seen_at <> ?", (run_ts,)
+        ).fetchone()[0]
+        cur = con.execute(
+            f"UPDATE {LEDGER_TABLE} SET present_in_hektor=0 "
+            f" WHERE last_seen_at <> ? AND " + " AND ".join(gardes), (run_ts,))
         absent = cur.rowcount or 0
+        proteges = candidates - absent
+        if proteges:
+            # ON LE DIT TOUJOURS. Une protection muette ne se distingue pas d'une
+            # protection absente -- et c'est ce chiffre qui dira si C.7 presse.
+            print(f"[ledger] {proteges} ligne(s) que l'APP possede sont restees vivantes "
+                  f"malgre le silence du miroir (ecart a lire dans le journal des "
+                  f"doublures, colonne « app seule »)")
     con.commit()
     # ─── LES CHAINES SE RECALCULENT ICI, ENTIEREMENT, A CHAQUE RUN (04/09) ───
     # Frederic : « le run doit actualiser les chaines comme l'app le ferait ».
@@ -480,6 +552,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     chaines = recalculer_les_chaines(con)
     total = con.execute(f"SELECT COUNT(*) FROM {LEDGER_TABLE}").fetchone()[0]
     return {"seen": seen, "inserted": inserted, "marked_absent": absent,
+            "proteges_app": proteges,
             "ledger_total": total, "chaines": chaines}
 
 
