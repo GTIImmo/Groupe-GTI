@@ -1,0 +1,712 @@
+{
+ "annonce": 24933,
+ "pris_le": "2026-09-07T08:52:47.276895+00:00",
+ "pourquoi": "Compromis d'essai crees pendant le releve de la route de suppression (tache 3.4). Ils sont SUPPRIMES chez Hektor -- verifie par l'API, ids: [] -- donc les garder en delete-never laisserait trois lignes qui affirment une realite qui n'existe plus, sur l'annonce temoin du chantier.",
+ "retour_arriere": "Reinserer les lignes de ce fichier dans app_affaire_ledger (Supabase et local), app_affaire_champ_app, et hektor_compromis du miroir. Puis relancer refresh_ledger pour recalculer les chaines.",
+ "ledger_supabase": [
+  {
+   "hektor_annonce_id": 24933,
+   "kind": "compromis",
+   "hektor_affaire_id": "50072",
+   "hektor_mandat_id": "10261",
+   "numero_mandat": "11939",
+   "hektor_acquereur_id": "605030",
+   "acquereur_json": {
+    "id": "605030",
+    "nom": "TEST MANDANT 25-08",
+    "prenom": "Sophie",
+    "civilite": null,
+    "coordonnees": {
+     "email": "test.mandant.25082026@example.invalid",
+     "portable": "0600002508"
+    }
+   },
+   "state": "cancelled",
+   "montant": "165000.00",
+   "date": "2026-09-04",
+   "date_acte": "2026-09-06",
+   "sequestre": "0.00",
+   "payload_json": {
+    "id": "50072",
+    "note": null,
+    "mandat": {
+     "id": "10261",
+     "fin": null,
+     "note": "Numéro : 11939 Commentaire confidentiel mandat : les conditions particulières du mandat de vente Durée initial mandat : 3 Honoraires vendeur ou bailleur montant : 10000.0",
+     "type": "SIMPLE",
+     "debut": null,
+     "numero": "11939",
+     "cloture": null,
+     "montant": "180000",
+     "CartePro": null,
+     "avenants": [],
+     "mandants": "Test SELL AND SIGNEchemin des garennes",
+     "taciteReconduction": "0",
+     "duree_irrevocabilite": ""
+    },
+    "status": "1",
+    "annonce": {
+     "id": "24933",
+     "prix": 180000,
+     "corps": "",
+     "photo": "https://groupe-gti-immobilier.staticlbi.com/original/images/biens/12/b1cecc92d472ee874b0b2d50ea6f222b/8bc0a35faf63759f7ea3737259860d5c.jpg",
+     "titre": "",
+     "agence": "12",
+     "idtype": "30",
+     "valide": "0",
+     "archive": "0",
+     "dateenr": "2018-03-29 09:49:15",
+     "datemaj": "2026-09-06 18:42:55",
+     "partage": "1",
+     "surface": "240",
+     "localite": {
+      "pays": "fr",
+      "privee": {
+       "code": "43140",
+       "ville": "Saint-Didier-en-Velay",
+       "adresse": "chemin des garennes",
+       "latitude": "45.303745000",
+       "longitude": "4.281533000"
+      },
+      "publique": {
+       "code": "43140",
+       "ville": "Saint-Didier-en-Velay",
+       "latitude": "45.303745000",
+       "longitude": "4.281533000"
+      }
+     },
+     "offredem": "0",
+     "NO_MANDAT": "11939",
+     "NO_DOSSIER": "EM28412",
+     "diffusable": "0",
+     "NEGOCIATEUR": "23"
+    },
+    "dateEnd": "2026-09-14",
+    "mandants": [
+     {
+      "id": "141053",
+      "nom": "SELL AND SIGNE",
+      "url": null,
+      "siret": null,
+      "agence": "12",
+      "prenom": "Test",
+      "archive": "0",
+      "dateenr": "2018-03-29",
+      "datemaj": "2026-09-06 18:42:54",
+      "civilite": "",
+      "localite": {
+       "pays": "fr",
+       "localite": {
+        "code": "43140",
+        "ville": "Saint-Didier-en-Velay",
+        "adresse": "chemin des garennes",
+        "latitude": "4.283329964",
+        "longitude": "45.299999237"
+       }
+      },
+      "refCouple": "141053",
+      "typologie": [
+       "mandant"
+      ],
+      "coordonnees": {
+       "email": "franck.gerphagnon@gmail.com",
+       "portable": "0625486395"
+      },
+      "commentaires": "Date Gdpr secondaire : 2018-12-20T12:00:00",
+      "dateAutoArchiv": "0000-00-00 00:00:00",
+      "id_negociateur": "2"
+     },
+     {
+      "id": "485955",
+      "nom": "",
+      "url": null,
+      "siret": null,
+      "agence": "12",
+      "prenom": "",
+      "archive": "0",
+      "dateenr": "2018-03-29",
+      "datemaj": "2026-09-06 18:42:54",
+      "civilite": "Mr./Mme",
+      "localite": {
+       "pays": "",
+       "localite": {
+        "code": "",
+        "ville": "",
+        "adresse": "",
+        "latitude": "",
+        "longitude": ""
+       }
+      },
+      "refCouple": "141053",
+      "typologie": [
+       "mandant"
+      ],
+      "coordonnees": null,
+      "commentaires": "",
+      "dateAutoArchiv": "0000-00-00 00:00:00",
+      "id_negociateur": "2"
+     },
+     {
+      "id": "605030",
+      "nom": "TEST MANDANT 25-08",
+      "url": null,
+      "siret": null,
+      "agence": "12",
+      "prenom": "Sophie",
+      "archive": "0",
+      "dateenr": "2026-08-25",
+      "datemaj": "2026-09-06 18:42:54",
+      "civilite": "",
+      "localite": {
+       "pays": "fr",
+       "localite": {
+        "code": "",
+        "ville": "",
+        "adresse": "3 rue de la Chaine",
+        "latitude": "0.000000000",
+        "longitude": "0.000000000"
+       }
+      },
+      "refCouple": null,
+      "typologie": [
+       "acquéreur",
+       "mandant"
+      ],
+      "coordonnees": {
+       "email": "test.mandant.25082026@example.invalid",
+       "portable": "0600002508"
+      },
+      "commentaires": "",
+      "dateAutoArchiv": "2028-08-25 00:00:00",
+      "id_negociateur": "23"
+     }
+    ],
+    "dateStart": "2026-09-04",
+    "partAdmin": "0.00",
+    "sequestre": "0.00",
+    "acquereurs": [
+     {
+      "id": "605030",
+      "nom": "TEST MANDANT 25-08",
+      "url": null,
+      "siret": null,
+      "agence": "12",
+      "prenom": "Sophie",
+      "archive": "0",
+      "dateenr": "2026-08-25",
+      "datemaj": "2026-09-06 18:42:54",
+      "civilite": "",
+      "localite": {
+       "pays": "fr",
+       "localite": {
+        "code": "",
+        "ville": "",
+        "adresse": "3 rue de la Chaine",
+        "latitude": "0.000000000",
+        "longitude": "0.000000000"
+       }
+      },
+      "refCouple": null,
+      "typologie": [
+       "acquéreur",
+       "mandant"
+      ],
+      "coordonnees": {
+       "email": "test.mandant.25082026@example.invalid",
+       "portable": "0600002508"
+      },
+      "commentaires": "",
+      "dateAutoArchiv": "2028-08-25 00:00:00",
+      "id_negociateur": "23"
+     }
+    ],
+    "prixPublique": "165000.00",
+    "prixNetVendeur": "170000.00",
+    "honorairesEntree": "10000.00",
+    "honorairesSortie": "0.00",
+    "dateSignatureActe": "2026-09-06"
+   },
+   "first_seen_at": "2026-09-07T04:18:14+00:00",
+   "last_seen_at": "2026-09-07T07:52:21+00:00",
+   "present_in_hektor": true,
+   "app_affaire_id": 1001343,
+   "app_dossier_id": 1352132,
+   "app_contact_id": 355712,
+   "app_chaine_id": 1001343,
+   "jours_validite": null,
+   "taux_honoraires": null,
+   "notaire_id": null,
+   "date_fin_retractation": "2026-09-14",
+   "acquereurs_json": [
+    {
+     "id": "605030",
+     "nom": "TEST MANDANT 25-08",
+     "url": null,
+     "siret": null,
+     "agence": "12",
+     "prenom": "Sophie",
+     "archive": "0",
+     "dateenr": "2026-08-25",
+     "datemaj": "2026-09-06 18:42:54",
+     "civilite": "",
+     "localite": {
+      "pays": "fr",
+      "localite": {
+       "code": "",
+       "ville": "",
+       "adresse": "3 rue de la Chaine",
+       "latitude": "0.000000000",
+       "longitude": "0.000000000"
+      }
+     },
+     "refCouple": null,
+     "typologie": [
+      "acquéreur",
+      "mandant"
+     ],
+     "coordonnees": {
+      "email": "test.mandant.25082026@example.invalid",
+      "portable": "0600002508"
+     },
+     "commentaires": "",
+     "dateAutoArchiv": "2028-08-25 00:00:00",
+     "id_negociateur": "23"
+    }
+   ]
+  },
+  {
+   "hektor_annonce_id": 24933,
+   "kind": "compromis",
+   "hektor_affaire_id": "50073",
+   "hektor_mandat_id": null,
+   "numero_mandat": "11939",
+   "hektor_acquereur_id": "605030",
+   "acquereur_json": {
+    "id": "605030",
+    "nom": "TEST MANDANT 25-08",
+    "prenom": "Sophie",
+    "civilite": "",
+    "coordonnees": {
+     "email": "test.mandant.25082026@example.invalid",
+     "portable": "0600002508"
+    }
+   },
+   "state": "cancelled",
+   "montant": "180000",
+   "date": "2026-09-07",
+   "date_acte": null,
+   "sequestre": null,
+   "payload_json": {
+    "amount": "180000",
+    "offre_id": "33050",
+    "vente_id": null,
+    "buyer_fees": null,
+    "close_etat": "choiceAutre",
+    "sale_price": "180000",
+    "titre_bien": "[Sans titre] EM28412",
+    "apres_vente": "actif",
+    "close_price": "180000",
+    "close_state": null,
+    "offre_state": "proposed",
+    "close_raison": "autre",
+    "close_reason": null,
+    "compromis_id": "50072",
+    "numero_mandat": "11939",
+    "sequestration": null,
+    "target_status": "compromise",
+    "validity_days": "10",
+    "numero_dossier": "EM28412",
+    "signature_date": null,
+    "buyer_fees_rate": null,
+    "buyer_notary_id": null,
+    "compromis_state": "active",
+    "retraction_days": "10",
+    "selected_mandat": null,
+    "buyer_contact_id": "605030",
+    "net_seller_price": null,
+    "transaction_date": "2026-09-07",
+    "buyer_contact_ids": [
+     "605030",
+     "605075"
+    ],
+    "negociateur_email": "gonzalez@gti-immobilier.fr",
+    "close_mandat_on_sale": null
+   },
+   "first_seen_at": "2026-09-07T06:41:00.455403+00:00",
+   "last_seen_at": "2026-09-07T06:41:00.455403+00:00",
+   "present_in_hektor": true,
+   "app_affaire_id": 1001344,
+   "app_dossier_id": 1352132,
+   "app_contact_id": 355712,
+   "app_chaine_id": 1001344,
+   "jours_validite": null,
+   "taux_honoraires": null,
+   "notaire_id": null,
+   "date_fin_retractation": null,
+   "acquereurs_json": [
+    {
+     "id": "605030",
+     "nom": "TEST MANDANT 25-08",
+     "prenom": "Sophie",
+     "civilite": "",
+     "coordonnees": {
+      "email": "test.mandant.25082026@example.invalid",
+      "portable": "0600002508"
+     }
+    },
+    {
+     "id": "605075",
+     "nom": "CLOTURE",
+     "prenom": "Test",
+     "civilite": "M.",
+     "coordonnees": {
+      "email": "frederic.gerphagnon@gti-immobilier.fr",
+      "portable": ""
+     }
+    }
+   ]
+  },
+  {
+   "hektor_annonce_id": 24933,
+   "kind": "compromis",
+   "hektor_affaire_id": "50075",
+   "hektor_mandat_id": null,
+   "numero_mandat": "11939",
+   "hektor_acquereur_id": "605030",
+   "acquereur_json": {
+    "id": "605030",
+    "nom": "TEST MANDANT 25-08",
+    "prenom": "Sophie",
+    "civilite": "",
+    "coordonnees": {
+     "email": "test.mandant.25082026@example.invalid",
+     "portable": "0600002508"
+    }
+   },
+   "state": "en_cours",
+   "montant": "180000",
+   "date": "2026-09-07",
+   "date_acte": null,
+   "sequestre": null,
+   "payload_json": {
+    "amount": "180000",
+    "offre_id": "33050",
+    "vente_id": null,
+    "buyer_fees": null,
+    "close_etat": "choiceAutre",
+    "sale_price": "180000",
+    "titre_bien": "[Sans titre] EM28412",
+    "apres_vente": "actif",
+    "close_price": "180000",
+    "close_state": null,
+    "offre_state": "proposed",
+    "close_raison": "autre",
+    "close_reason": null,
+    "compromis_id": "50072",
+    "numero_mandat": "11939",
+    "sequestration": null,
+    "target_status": "compromise",
+    "validity_days": "10",
+    "numero_dossier": "EM28412",
+    "signature_date": null,
+    "buyer_fees_rate": null,
+    "buyer_notary_id": null,
+    "compromis_state": "active",
+    "retraction_days": "10",
+    "selected_mandat": null,
+    "buyer_contact_id": "605030",
+    "net_seller_price": null,
+    "transaction_date": "2026-09-07",
+    "buyer_contact_ids": null,
+    "negociateur_email": "gonzalez@gti-immobilier.fr",
+    "close_mandat_on_sale": null
+   },
+   "first_seen_at": "2026-09-07T08:08:19.29182+00:00",
+   "last_seen_at": "2026-09-07T08:08:19.29182+00:00",
+   "present_in_hektor": true,
+   "app_affaire_id": 1001345,
+   "app_dossier_id": 1352132,
+   "app_contact_id": 355712,
+   "app_chaine_id": 1001345,
+   "jours_validite": null,
+   "taux_honoraires": null,
+   "notaire_id": null,
+   "date_fin_retractation": null,
+   "acquereurs_json": [
+    {
+     "id": "605030",
+     "nom": "TEST MANDANT 25-08",
+     "prenom": "Sophie",
+     "civilite": "",
+     "coordonnees": {
+      "email": "test.mandant.25082026@example.invalid",
+      "portable": "0600002508"
+     }
+    }
+   ]
+  }
+ ],
+ "carnet_supabase": [
+  {
+   "app_affaire_id": 1001343,
+   "champ": "date",
+   "valeur_app": "2026-09-04",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-06T16:41:29.725651+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "jours_retractation",
+   "valeur_app": "10",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-06T16:41:29.725651+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "jours_validite",
+   "valeur_app": "33",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-06T16:41:29.725651+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "montant",
+   "valeur_app": "165000",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-06T16:41:29.725651+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "numero_mandat",
+   "valeur_app": "11939",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-06T16:41:29.725651+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "prix_publique",
+   "valeur_app": "180000",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-06T16:41:29.725651+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001344,
+   "champ": "date",
+   "valeur_app": "2026-09-07",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T06:41:00.455403+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001344,
+   "champ": "jours_retractation",
+   "valeur_app": "10",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T06:41:00.455403+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001344,
+   "champ": "jours_validite",
+   "valeur_app": "10",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T06:41:00.455403+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001344,
+   "champ": "montant",
+   "valeur_app": "180000",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T06:41:00.455403+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001344,
+   "champ": "numero_mandat",
+   "valeur_app": "11939",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T06:41:00.455403+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001344,
+   "champ": "prix_publique",
+   "valeur_app": "180000",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T06:41:00.455403+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001345,
+   "champ": "date",
+   "valeur_app": "2026-09-07",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T08:08:19.29182+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001345,
+   "champ": "jours_retractation",
+   "valeur_app": "10",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T08:08:19.29182+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001345,
+   "champ": "jours_validite",
+   "valeur_app": "10",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T08:08:19.29182+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001345,
+   "champ": "montant",
+   "valeur_app": "180000",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T08:08:19.29182+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001345,
+   "champ": "numero_mandat",
+   "valeur_app": "11939",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T08:08:19.29182+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  },
+  {
+   "app_affaire_id": 1001345,
+   "champ": "prix_publique",
+   "valeur_app": "180000",
+   "origine": "creation_app",
+   "ecrit_le": "2026-09-07T08:08:19.29182+00:00",
+   "ecrit_par": "d4b1685f-948b-4ce8-af15-671b94a725e6"
+  }
+ ],
+ "ledger_local": [
+  {
+   "app_affaire_id": 1001343,
+   "app_dossier_id": 1352132,
+   "hektor_annonce_id": 24933,
+   "kind": "compromis",
+   "hektor_affaire_id": "50072",
+   "hektor_mandat_id": "10261",
+   "numero_mandat": "11939",
+   "hektor_acquereur_id": "605030",
+   "acquereur_json": "{\"id\":\"605030\",\"civilite\":null,\"nom\":\"TEST MANDANT 25-08\",\"prenom\":\"Sophie\",\"coordonnees\":{\"portable\":\"0600002508\",\"email\":\"test.mandant.25082026@example.invalid\"}}",
+   "state": "active",
+   "montant": "165000.00",
+   "date": "2026-09-04",
+   "date_acte": "2026-09-06",
+   "sequestre": "0.00",
+   "payload_json": "{\"id\": \"50072\", \"dateStart\": \"2026-09-04\", \"dateEnd\": \"2026-09-14\", \"note\": null, \"status\": \"1\", \"dateSignatureActe\": \"2026-09-06\", \"partAdmin\": \"0.00\", \"sequestre\": \"0.00\", \"prixNetVendeur\": \"170000.00\", \"prixPublique\": \"165000.00\", \"honorairesEntree\": \"10000.00\", \"honorairesSortie\": \"0.00\", \"annonce\": {\"id\": \"24933\", \"NO_DOSSIER\": \"EM28412\", \"NO_MANDAT\": \"11939\", \"offredem\": \"0\", \"idtype\": \"30\", \"prix\": 180000, \"surface\": \"240\", \"titre\": \"\", \"corps\": \"\", \"photo\": \"https://groupe-gti-immobilier.staticlbi.com/original/images/biens/12/b1cecc92d472ee874b0b2d50ea6f222b/8bc0a35faf63759f7ea3737259860d5c.jpg\", \"agence\": \"12\", \"NEGOCIATEUR\": \"23\", \"archive\": \"0\", \"diffusable\": \"0\", \"partage\": \"1\", \"localite\": {\"pays\": \"fr\", \"publique\": {\"ville\": \"Saint-Didier-en-Velay\", \"code\": \"43140\", \"latitude\": \"45.303745000\", \"longitude\": \"4.281533000\"}, \"privee\": {\"ville\": \"Saint-Didier-en-Velay\", \"code\": \"43140\", \"latitude\": \"45.303745000\", \"longitude\": \"4.281533000\", \"adresse\": \"chemin des garennes\"}}, \"valide\": \"0\", \"dateenr\": \"2018-03-29 09:49:15\", \"datemaj\": \"2026-09-06 18:42:55\"}, \"mandat\": {\"id\": \"10261\", \"type\": \"SIMPLE\", \"debut\": null, \"fin\": null, \"cloture\": null, \"numero\": \"11939\", \"CartePro\": null, \"note\": \"Numéro : 11939 Commentaire confidentiel mandat : les conditions particulières du mandat de vente Durée initial mandat : 3 Honoraires vendeur ou bailleur montant : 10000.0\", \"duree_irrevocabilite\": \"\", \"taciteReconduction\": \"0\", \"montant\": \"180000\", \"mandants\": \"Test SELL AND SIGNEchemin des garennes\", \"avenants\": []}, \"acquereurs\": [{\"id\": \"605030\", \"civilite\": \"\", \"nom\": \"TEST MANDANT 25-08\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2026-08-25\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"23\", \"dateAutoArchiv\": \"2028-08-25 00:00:00\", \"refCouple\": null, \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"0.000000000\", \"longitude\": \"0.000000000\", \"adresse\": \"3 rue de la Chaine\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Sophie\", \"typologie\": [\"acquéreur\", \"mandant\"], \"coordonnees\": {\"portable\": \"0600002508\", \"email\": \"test.mandant.25082026@example.invalid\"}}], \"mandants\": [{\"id\": \"141053\", \"civilite\": \"\", \"nom\": \"SELL AND SIGNE\", \"commentaires\": \"Date Gdpr secondaire : 2018-12-20T12:00:00\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2018-03-29\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"2\", \"dateAutoArchiv\": \"0000-00-00 00:00:00\", \"refCouple\": \"141053\", \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"Saint-Didier-en-Velay\", \"code\": \"43140\", \"latitude\": \"4.283329964\", \"longitude\": \"45.299999237\", \"adresse\": \"chemin des garennes\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Test\", \"typologie\": [\"mandant\"], \"coordonnees\": {\"email\": \"franck.gerphagnon@gmail.com\", \"portable\": \"0625486395\"}}, {\"id\": \"485955\", \"civilite\": \"Mr./Mme\", \"nom\": \"\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2018-03-29\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"2\", \"dateAutoArchiv\": \"0000-00-00 00:00:00\", \"refCouple\": \"141053\", \"localite\": {\"pays\": \"\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"\", \"longitude\": \"\", \"adresse\": \"\"}}, \"siret\": null, \"url\": null, \"prenom\": \"\", \"typologie\": [\"mandant\"], \"coordonnees\": null}, {\"id\": \"605030\", \"civilite\": \"\", \"nom\": \"TEST MANDANT 25-08\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2026-08-25\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"23\", \"dateAutoArchiv\": \"2028-08-25 00:00:00\", \"refCouple\": null, \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"0.000000000\", \"longitude\": \"0.000000000\", \"adresse\": \"3 rue de la Chaine\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Sophie\", \"typologie\": [\"acquéreur\", \"mandant\"], \"coordonnees\": {\"portable\": \"0600002508\", \"email\": \"test.mandant.25082026@example.invalid\"}}]}",
+   "first_seen_at": "2026-09-07T04:18:14+00:00",
+   "last_seen_at": "2026-09-07T07:52:21+00:00",
+   "present_in_hektor": 1,
+   "app_contact_id": 355712,
+   "app_chaine_id": 1001343,
+   "jours_validite": null,
+   "taux_honoraires": null,
+   "notaire_id": null,
+   "date_fin_retractation": "2026-09-14",
+   "acquereurs_json": "[{\"id\": \"605030\", \"civilite\": \"\", \"nom\": \"TEST MANDANT 25-08\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2026-08-25\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"23\", \"dateAutoArchiv\": \"2028-08-25 00:00:00\", \"refCouple\": null, \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"0.000000000\", \"longitude\": \"0.000000000\", \"adresse\": \"3 rue de la Chaine\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Sophie\", \"typologie\": [\"acquéreur\", \"mandant\"], \"coordonnees\": {\"portable\": \"0600002508\", \"email\": \"test.mandant.25082026@example.invalid\"}}]"
+  }
+ ],
+ "carnet_local": [
+  {
+   "app_affaire_id": 1001343,
+   "champ": "date",
+   "valeur_app": "2026-09-04",
+   "valeur_miroir": "2026-09-04",
+   "hektor_annonce_id": "24933",
+   "kind": "compromis",
+   "origine": "creation_app",
+   "vu_le": "2026-09-07 04:19:21",
+   "vu_la_premiere_fois": "2026-09-07 04:19:21"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "jours_retractation",
+   "valeur_app": "10",
+   "valeur_miroir": null,
+   "hektor_annonce_id": "24933",
+   "kind": "compromis",
+   "origine": "creation_app",
+   "vu_le": "2026-09-07 04:19:21",
+   "vu_la_premiere_fois": "2026-09-07 04:19:21"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "jours_validite",
+   "valeur_app": "33",
+   "valeur_miroir": null,
+   "hektor_annonce_id": "24933",
+   "kind": "compromis",
+   "origine": "creation_app",
+   "vu_le": "2026-09-07 04:19:21",
+   "vu_la_premiere_fois": "2026-09-07 04:19:21"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "montant",
+   "valeur_app": "165000",
+   "valeur_miroir": "165000",
+   "hektor_annonce_id": "24933",
+   "kind": "compromis",
+   "origine": "creation_app",
+   "vu_le": "2026-09-07 04:19:21",
+   "vu_la_premiere_fois": "2026-09-07 04:19:21"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "numero_mandat",
+   "valeur_app": "11939",
+   "valeur_miroir": null,
+   "hektor_annonce_id": "24933",
+   "kind": "compromis",
+   "origine": "creation_app",
+   "vu_le": "2026-09-07 04:19:21",
+   "vu_la_premiere_fois": "2026-09-07 04:19:21"
+  },
+  {
+   "app_affaire_id": 1001343,
+   "champ": "prix_publique",
+   "valeur_app": "180000",
+   "valeur_miroir": null,
+   "hektor_annonce_id": "24933",
+   "kind": "compromis",
+   "origine": "creation_app",
+   "vu_le": "2026-09-07 04:19:21",
+   "vu_la_premiere_fois": "2026-09-07 04:19:21"
+  }
+ ],
+ "miroir_compromis": [
+  {
+   "hektor_compromis_id": "50072",
+   "hektor_annonce_id": "24933",
+   "hektor_mandat_id": "10261",
+   "status": "1",
+   "compromis_state": "active",
+   "date_start": "2026-09-04",
+   "date_end": "2026-09-14",
+   "date_signature_acte": "2026-09-06",
+   "part_admin": "0.00",
+   "sequestre": "0.00",
+   "prix_net_vendeur": "170000.00",
+   "prix_publique": "165000.00",
+   "mandants_json": "[{\"id\": \"141053\", \"civilite\": \"\", \"nom\": \"SELL AND SIGNE\", \"commentaires\": \"Date Gdpr secondaire : 2018-12-20T12:00:00\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2018-03-29\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"2\", \"dateAutoArchiv\": \"0000-00-00 00:00:00\", \"refCouple\": \"141053\", \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"Saint-Didier-en-Velay\", \"code\": \"43140\", \"latitude\": \"4.283329964\", \"longitude\": \"45.299999237\", \"adresse\": \"chemin des garennes\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Test\", \"typologie\": [\"mandant\"], \"coordonnees\": {\"email\": \"franck.gerphagnon@gmail.com\", \"portable\": \"0625486395\"}}, {\"id\": \"485955\", \"civilite\": \"Mr./Mme\", \"nom\": \"\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2018-03-29\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"2\", \"dateAutoArchiv\": \"0000-00-00 00:00:00\", \"refCouple\": \"141053\", \"localite\": {\"pays\": \"\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"\", \"longitude\": \"\", \"adresse\": \"\"}}, \"siret\": null, \"url\": null, \"prenom\": \"\", \"typologie\": [\"mandant\"], \"coordonnees\": null}, {\"id\": \"605030\", \"civilite\": \"\", \"nom\": \"TEST MANDANT 25-08\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2026-08-25\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"23\", \"dateAutoArchiv\": \"2028-08-25 00:00:00\", \"refCouple\": null, \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"0.000000000\", \"longitude\": \"0.000000000\", \"adresse\": \"3 rue de la Chaine\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Sophie\", \"typologie\": [\"acquéreur\", \"mandant\"], \"coordonnees\": {\"portable\": \"0600002508\", \"email\": \"test.mandant.25082026@example.invalid\"}}]",
+   "acquereurs_json": "[{\"id\": \"605030\", \"civilite\": \"\", \"nom\": \"TEST MANDANT 25-08\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2026-08-25\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"23\", \"dateAutoArchiv\": \"2028-08-25 00:00:00\", \"refCouple\": null, \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"0.000000000\", \"longitude\": \"0.000000000\", \"adresse\": \"3 rue de la Chaine\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Sophie\", \"typologie\": [\"acquéreur\", \"mandant\"], \"coordonnees\": {\"portable\": \"0600002508\", \"email\": \"test.mandant.25082026@example.invalid\"}}]",
+   "raw_json": "{\"id\": \"50072\", \"dateStart\": \"2026-09-04\", \"dateEnd\": \"2026-09-14\", \"note\": null, \"status\": \"1\", \"dateSignatureActe\": \"2026-09-06\", \"partAdmin\": \"0.00\", \"sequestre\": \"0.00\", \"prixNetVendeur\": \"170000.00\", \"prixPublique\": \"165000.00\", \"honorairesEntree\": \"10000.00\", \"honorairesSortie\": \"0.00\", \"annonce\": {\"id\": \"24933\", \"NO_DOSSIER\": \"EM28412\", \"NO_MANDAT\": \"11939\", \"offredem\": \"0\", \"idtype\": \"30\", \"prix\": 180000, \"surface\": \"240\", \"titre\": \"\", \"corps\": \"\", \"photo\": \"https://groupe-gti-immobilier.staticlbi.com/original/images/biens/12/b1cecc92d472ee874b0b2d50ea6f222b/8bc0a35faf63759f7ea3737259860d5c.jpg\", \"agence\": \"12\", \"NEGOCIATEUR\": \"23\", \"archive\": \"0\", \"diffusable\": \"0\", \"partage\": \"1\", \"localite\": {\"pays\": \"fr\", \"publique\": {\"ville\": \"Saint-Didier-en-Velay\", \"code\": \"43140\", \"latitude\": \"45.303745000\", \"longitude\": \"4.281533000\"}, \"privee\": {\"ville\": \"Saint-Didier-en-Velay\", \"code\": \"43140\", \"latitude\": \"45.303745000\", \"longitude\": \"4.281533000\", \"adresse\": \"chemin des garennes\"}}, \"valide\": \"0\", \"dateenr\": \"2018-03-29 09:49:15\", \"datemaj\": \"2026-09-06 18:42:55\"}, \"mandat\": {\"id\": \"10261\", \"type\": \"SIMPLE\", \"debut\": null, \"fin\": null, \"cloture\": null, \"numero\": \"11939\", \"CartePro\": null, \"note\": \"Numéro : 11939 Commentaire confidentiel mandat : les conditions particulières du mandat de vente Durée initial mandat : 3 Honoraires vendeur ou bailleur montant : 10000.0\", \"duree_irrevocabilite\": \"\", \"taciteReconduction\": \"0\", \"montant\": \"180000\", \"mandants\": \"Test SELL AND SIGNEchemin des garennes\", \"avenants\": []}, \"acquereurs\": [{\"id\": \"605030\", \"civilite\": \"\", \"nom\": \"TEST MANDANT 25-08\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2026-08-25\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"23\", \"dateAutoArchiv\": \"2028-08-25 00:00:00\", \"refCouple\": null, \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"0.000000000\", \"longitude\": \"0.000000000\", \"adresse\": \"3 rue de la Chaine\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Sophie\", \"typologie\": [\"acquéreur\", \"mandant\"], \"coordonnees\": {\"portable\": \"0600002508\", \"email\": \"test.mandant.25082026@example.invalid\"}}], \"mandants\": [{\"id\": \"141053\", \"civilite\": \"\", \"nom\": \"SELL AND SIGNE\", \"commentaires\": \"Date Gdpr secondaire : 2018-12-20T12:00:00\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2018-03-29\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"2\", \"dateAutoArchiv\": \"0000-00-00 00:00:00\", \"refCouple\": \"141053\", \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"Saint-Didier-en-Velay\", \"code\": \"43140\", \"latitude\": \"4.283329964\", \"longitude\": \"45.299999237\", \"adresse\": \"chemin des garennes\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Test\", \"typologie\": [\"mandant\"], \"coordonnees\": {\"email\": \"franck.gerphagnon@gmail.com\", \"portable\": \"0625486395\"}}, {\"id\": \"485955\", \"civilite\": \"Mr./Mme\", \"nom\": \"\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2018-03-29\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"2\", \"dateAutoArchiv\": \"0000-00-00 00:00:00\", \"refCouple\": \"141053\", \"localite\": {\"pays\": \"\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"\", \"longitude\": \"\", \"adresse\": \"\"}}, \"siret\": null, \"url\": null, \"prenom\": \"\", \"typologie\": [\"mandant\"], \"coordonnees\": null}, {\"id\": \"605030\", \"civilite\": \"\", \"nom\": \"TEST MANDANT 25-08\", \"commentaires\": \"\", \"datemaj\": \"2026-09-06 18:42:54\", \"dateenr\": \"2026-08-25\", \"agence\": \"12\", \"archive\": \"0\", \"id_negociateur\": \"23\", \"dateAutoArchiv\": \"2028-08-25 00:00:00\", \"refCouple\": null, \"localite\": {\"pays\": \"fr\", \"localite\": {\"ville\": \"\", \"code\": \"\", \"latitude\": \"0.000000000\", \"longitude\": \"0.000000000\", \"adresse\": \"3 rue de la Chaine\"}}, \"siret\": null, \"url\": null, \"prenom\": \"Sophie\", \"typologie\": [\"acquéreur\", \"mandant\"], \"coordonnees\": {\"portable\": \"0600002508\", \"email\": \"test.mandant.25082026@example.invalid\"}}]}",
+   "synced_at": "2026-09-07T04:04:08Z"
+  }
+ ]
+}
