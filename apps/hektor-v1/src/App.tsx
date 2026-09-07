@@ -15226,7 +15226,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
-  async function handleChangeHektorAnnonceStatus(event: FormEvent<HTMLFormElement>) {
+  // ─── 3.2 : LE MEME CHEMIN SERT A CREER ET A MODIFIER (07/09/2026) ───
+  //
+  // Un seul parametre les separe, et c'est mesure : l'assistant de Hektor ouvre
+  // sur la transaction existante quand on lui donne son identifiant, et sur un
+  // formulaire vierge sinon. La modale envoie donc les MEMES champs ; seule
+  // l'INTENTION change.
+  // ⚠ Elle ne peut pas se deduire des donnees : la charge porte toujours
+  //   compromis_id. Elle vient du BOUTON, et de lui seul.
+  async function handleChangeHektorAnnonceStatus(
+    event: FormEvent<HTMLFormElement>,
+    reprendre = false,
+  ) {
     event.preventDefault()
     if (!statusChangeTarget) return
     if (statusChangeNeedsTransaction(statusChangeStatus) && !statusChangeAmount.trim()) {
@@ -15279,11 +15290,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         closeRaison: statusChangeCloseRaison,
         closeMandatOnSale: statusChangeStatus === 'sold',
         closePrice: statusChangeSalePrice || statusChangeAmount,
+        reprendreTransaction: reprendre,
         priority: 7,
       })
       rememberHektorActionJob(job)
       setStatusChangeTarget(null)
-      setNoticeMessage(`Changement vers ${hektorStatusTargetLabel(statusChangeStatus)} demande pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`)
+      setNoticeMessage(reprendre
+        ? `Modification du ${AFFAIRE_GENRE_LABEL[AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''] ?? 'la transaction'} demandee pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`
+        : `Changement vers ${hektorStatusTargetLabel(statusChangeStatus)} demande pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de changement de statut')
     } finally {
@@ -18146,6 +18160,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         Accepter l'offre
                       </button>
                     </>
+                  ) : null}
+                  {/* 3.2 (07/09) -- MODIFIER CHEZ HEKTOR.
+                      Visible seulement quand une transaction VIVANTE existe : c'est
+                      elle qu'on va reprendre. Le geste envoie les memes champs que
+                      la creation, plus l'INTENTION -- sans quoi le worker cree.
+                      ⚠ Il ne remplace pas encore « Corriger sans envoyer a Hektor » :
+                        celui-la part avec 3.3, quand le contrat d'autorite sera
+                        vide. Le retirer avant, ce serait oter le filet avant
+                        d'avoir pose le plancher. */}
+                  {affaireCourantePourStatut() && statusChangeStatus !== 'closed' && statusChangeStatus !== 'active' ? (
+                    <button className="ghost-button button-subtle" type="button"
+                      onClick={(e) => { void handleChangeHektorAnnonceStatus(e as unknown as FormEvent<HTMLFormElement>, true) }}
+                      disabled={statusChangePending || statusChangeCorrectionPending}
+                      title="Reprend la transaction existante chez Hektor au lieu d'en creer une nouvelle.">
+                      {statusChangePending ? 'Envoi...' : 'Modifier chez Hektor'}
+                    </button>
                   ) : null}
                   {affaireCourantePourStatut() && statusChangeStatus === 'compromise' ? (
                     <>

@@ -9902,15 +9902,67 @@ function acquireWorkerLock() {
 // etapes, `compromisStepper`, dont les champs arrivent par gabarits Mustache).
 //
 // POUR REPRENDRE : capture dans Console/exports/transaction_actions_* (et son temoin).
+// ─── 3.2 (07/09/2026) : CE QUI A CHANGE DEPUIS LE COMMENTAIRE CI-DESSUS ───
+//
+// LE VERDICT DU 28/08 PORTAIT SUR UNE ROUTE MORTE. Il mesurait l'ANCIENNE popin
+// (`createCompromis` + init:1) -- celle que submitHektorAssistantTransaction a
+// court-circuitee depuis. Sur la route VIVANTE, celle de l'assistant
+// (`getStepCompromis`), l'identifiant est bel et bien pris en compte.
+//
+// TEMOIN REFAIT LE 07/09, sur le MEME compromis que le 28/08 (50043, annonce
+// 53372), en lecture seule -- aucune etape soumise, rien enregistre :
+//     SANS identifiant   49 636 car.   panier 642 car.
+//     AVEC idCompromis   49 708 car.   panier 706 car.   (+64)
+//     et la reponse AVEC contient « 50043 » ; la reponse SANS, non.
+// ➡ L'assistant INSCRIT l'identifiant dans le panier -- ce panier qui voyage
+//   d'etape en etape et porte tout l'etat.
+//
+// ET LA MODIFICATION ELLE-MEME EST PROUVEE, par ses effets (03/09, Frederic aux
+// commandes sur l'assistant de Hektor) : 50065 modifie TROIS FOIS d'affilee,
+// 177 000 -> 177 500 -> 178 000 -> 178 500, ses voisins 50064/50060/50059
+// INTACTS, et AUCUN 50066 cree. C'est une modification, pas une creation.
+//
+// ⚠ CE QUI RESTE INFERE, ET IL FAUT LE SAVOIR : que l'ENREGISTREMENT porte
+//   l'identifiant lui aussi. Il n'a jamais ete capture -- verifie le 07/09 dans
+//   les quatre captures existantes, elles s'arretent a l'ouverture. L'inference
+//   vient de la VENTE, dont les QUATRE requetes portaient toutes idVente.
+//   L'echec serait BRUYANT : Hektor creerait un second compromis au lieu d'en
+//   modifier un. On le verrait au premier essai.
+//
+// ─── L'ARBITRAGE DE FREDERIC (07/09) : AUCUN ETAT N'EST REVOLU ───
+//
+// « il faut pouvoir modifier des offres refusees dans le cas ou l'on veut la
+//   passer en valide et si possible changer le montant et l'etat, idem un
+//   compromis peut etre debloque en cas d'erreur »
+//
+// On n'interdit donc RIEN d'avance : on envoie, et si Hektor refuse on montre sa
+// reponse. Il le fait parfois -- mesure du 03/09 : « un compromis cloture ne peut
+// pas etre modifie ». C'est un refus d'ETAT, pas de nature ; mieux vaut le
+// laisser dire que de le deviner a sa place.
+//     new Set()  = la reprise est POSSIBLE, aucun etat ne l'interdit
+//     null       = la reprise est ETEINTE pour ce genre
 const TRANSACTIONS_REPRISES = {
-  offre: null,
-  compromis: null,
-  vente: null,
+  offre: new Set(),
+  compromis: new Set(),
+  vente: new Set(),
 };
 
 function idTransactionAReprendre(payload, genre) {
+  // ─── L'INTENTION D'ABORD, ET C'EST ELLE QUI REND TOUT CECI SANS DANGER ───
+  //
+  // ⚠ LA CHARGE DE L'APP PORTE TOUJOURS compromis_id, MEME POUR UNE CREATION
+  //   NEUVE (mesure du 03/09) : c'est le compromis courant du dossier, que le
+  //   front joint systematiquement. Sans ce verrou, ouvrir la reprise
+  //   transformerait CHAQUE CREATION sur un bien qui porte deja une transaction
+  //   EN MODIFICATION de celle-ci. On croirait ajouter, on ecraserait.
+  //
+  // ➡ La reprise n'a donc lieu que si le front l'a DEMANDEE explicitement. Tant
+  //   que le bouton « Modifier » n'existe pas, ce drapeau n'est jamais envoye et
+  //   le comportement d'aujourd'hui ne change pas d'un octet.
+  if (!payload || payload.reprendre_transaction !== true) return "";
+
   const revolus = TRANSACTIONS_REPRISES[genre];
-  if (revolus === null || revolus === undefined) return "";   // l'offre passe ici
+  if (revolus === null || revolus === undefined) return "";   // genre eteint
   const champId = { offre: "offre_id", compromis: "compromis_id", vente: "vente_id" }[genre];
   const champEtat = { offre: "offre_state", compromis: "compromis_state", vente: null }[genre];
   const id = String((payload && payload[champId]) || "").trim();
@@ -10274,6 +10326,25 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   //       ou se trouvent le mandat, les mandants et le type d'utilisateur.
   const ouverture = new URLSearchParams();
   ouverture.set("idAnnonce", annonceId);
+  // ─── 3.2 : L'IDENTIFIANT, S'IL S'AGIT D'UNE MODIFICATION (07/09/2026) ───
+  //
+  // C'EST LA SEULE CHOSE QUI SEPARE CREER DE MODIFIER. Releve le 03/09 sur la
+  // requete de LEUR interface, 75 octets :
+  //     idAnnonce · idCompromis · basket · initBasket
+  // Notre ouverture envoyait les trois autres et pas celui-la.
+  //
+  // ⚠ LE BLOC QUI FAISAIT CECI EXISTAIT DEJA, ET IL EST JUSTE -- il est dans
+  //   submitHektorTransactionStatus, mais APRES le `return` qui envoie le
+  //   compromis et la vente vers l'assistant. Il ne tourne donc que pour l'offre.
+  //   Ecrit le 28/08, court-circuite par l'assistant arrive apres.
+  const genreRepris = { offer: "offre", compromise: "compromis", sold: "vente" }[target];
+  const idRepris = genreRepris ? idTransactionAReprendre(payload, genreRepris) : "";
+  if (idRepris) {
+    ouverture.set({ offre: "idOffre", compromis: "idCompromis", vente: "idVente" }[genreRepris], idRepris);
+    await logJob(job.id, "hektor_assistant", "running",
+      `Reprise : l'assistant ${config.label} s'ouvre sur la transaction ${idRepris}`,
+      { hektor_annonce_id: annonceId, genre: genreRepris, identifiant: idRepris });
+  }
   ouverture.set("basket", "");
   ouverture.set("initBasket", "true");
   const rep0 = await appelerEtapeAssistant(annonceId, assistant, ouverture, null);

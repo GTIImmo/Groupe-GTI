@@ -8737,6 +8737,8 @@ export async function createChangeHektorAnnonceStatusJob(input: {
    *    10 581 (17,1 %) et 566 ventes sur 7 609 portent plusieurs acquereurs.
    *    Un couple qui achete, c'est la norme. */
   buyerContactIds?: string[]
+  /** 3.2 : vrai = MODIFIER la transaction existante chez Hektor, pas en creer une. */
+  reprendreTransaction?: boolean
   buyerNotaryId?: string
   buyerFees?: string
   buyerFeesRate?: string
@@ -8795,6 +8797,16 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     close_mandat_on_sale: input.closeMandatOnSale ? true : null,
     apres_vente: input.apresVente === 'archiver' ? 'archiver' : 'actif',
     close_price: input.closePrice?.trim() || null,
+    // ─── 3.2 (07/09/2026) : L'INTENTION DE MODIFIER ───
+    //
+    // ⚠ SANS ELLE, LE WORKER NE REPREND JAMAIS -- et c'est voulu. La charge porte
+    //   TOUJOURS compromis_id / vente_id (le courant du dossier), meme pour une
+    //   creation neuve. Si le worker s'y fiait, toute creation sur un bien qui
+    //   porte deja une transaction deviendrait une MODIFICATION de celle-ci.
+    //   L'intention doit donc venir d'un GESTE, jamais d'une donnee presente.
+    // On n'envoie la cle que si elle vaut true : la charge du cas courant ne
+    // change pas d'un octet.
+    reprendre_transaction: input.reprendreTransaction === true ? true : null,
   }
   // C.4 25/08 -- L'AFFAIRE NAIT DANS L'APP, PUIS LE TRAVAIL PART CHEZ HEKTOR.
   //
