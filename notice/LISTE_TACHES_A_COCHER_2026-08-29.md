@@ -3573,6 +3573,25 @@ GEL que Frederic a repere le premier).*
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)
          verif : modifier dans Hektor, le run redescend bien la nouvelle valeur
+
+         ⛔ ELLE DEPEND DE 3.2, ET L'ENONCE NE LE DIT PAS. Constate le 07/09 en
+           cherchant une tache libre a enchainer -- elle a l'air d'etre une ligne
+           a changer, elle ne l'est pas.
+           Les DIX champs sont des champs que HEKTOR CONNAIT. Le contrat les
+           protege aujourd'hui pour une raison ecrite dans contrat_autorite.py :
+           l'app ne sait pas encore MODIFIER une transaction chez Hektor, donc
+           elle garde sa correction chez elle pour qu'elle survive au run.
+           ➡ Retirer le contrat AVANT que « modifier » marche, c'est rendre les
+             corrections SILENCIEUSEMENT PERISSABLES : saisies le jour, effacees
+             par le run de la nuit. Exactement le defaut que B1 a corrige le
+             03/09 (« la saisie vivait jusqu'au premier run, puis s'effacait »).
+           ➡ ORDRE REEL : 3.2c -> 3.2 -> 3.3. Et 3.2 est elle-meme bloquee par
+             le pointeur de la fiche.
+         ⚠ ET LA CLASSE A A CHANGE LE 07/09 : jours_validite l'a quittee (1.2b),
+           il est desormais lu chez Hektor a chaque run. Il ne reste que
+           taux_honoraires et notaire_id -- mais aucun des deux n'est dans les
+           DIX, donc « ne garder que la classe A » revient a VIDER la liste.
+           A relire au moment de le faire, pas avant.
 [~] 3.4  SUPPRIMER LE COMPROMIS -- ✅ CODE LE 07/09, RESTE L'ESSAI REEL
          ✅ RELEVE FAIT EN CONDITIONS REELLES, sur 24933, en instrumentant la
          fiche de Hektor pendant que Frederic cliquait « Oui » :
