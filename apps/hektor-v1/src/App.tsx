@@ -23851,8 +23851,36 @@ type DossierDuBien = {
 
 function dossiersOuvertsDuBien(lignes: AffaireLedgerRow[]): DossierDuBien[] {
   const etat = (a: AffaireLedgerRow) => String(a.state ?? '').trim().toLowerCase()
+
+  // ─── CE QUE HEKTOR A EFFACE NE TIENT PLUS UN DOSSIER OUVERT (07/09/2026) ───
+  //
+  // TROUVE PAR L'USAGE, pas par relecture : apres avoir supprime le compromis
+  // 50077 depuis l'app (essai reel de 3.4), « Envoyer vers Compromis » restait
+  // GRISE. Le garde-fou voyait encore un compromis vivant.
+  //
+  // POURQUOI. Une transaction supprimee garde son `state` -- ici « en_cours ».
+  // Supprimer n'est pas annuler : on ne touche pas a l'etat, on marque
+  // present_in_hektor = false. Cette fonction ne regardait que l'etat.
+  // ➡ Le bien serait reste bloque POUR TOUJOURS : plus jamais de nouveau
+  //   compromis, sans que rien n'explique pourquoi.
+  //
+  // ⚠ ET C'EST MA TROISIEME COPIE OUBLIEE. Le meme jour j'ai corrige
+  //   recalculer_les_chaines() et app_chaine_pour(), en ecrivant dans le
+  //   commentaire « l'ecran, lui, filtre deja (affaireEstVivante) ». C'etait vrai
+  //   pour affaireCourantePourStatut, et FAUX ici : ce sont deux fonctions.
+  //   « Deux copies d'une formule divergent tot ou tard » -- il y en avait trois.
+  //
+  // ⚠ ON N'UTILISE PAS affaireEstVivante ICI, ET C'EST DELIBERE. Elle exclut
+  //   aussi les refusees et les annulees -- or cette fonction a BESOIN de les
+  //   voir : c'est la distinction entre « le dossier porte un compromis » et
+  //   « il en porte un VIVANT » qui decide s'il est ouvert. On ne retire donc
+  //   que ce que Hektor n'a plus.
+  const effaceeChezHektor = (a: AffaireLedgerRow) =>
+    Boolean(String(a.hektor_affaire_id ?? '').trim()) && a.present_in_hektor === false
+
   const par = new Map<string, AffaireLedgerRow[]>()
   for (const r of lignes) {
+    if (effaceeChezHektor(r)) continue
     const cle = r.app_chaine_id != null ? String(r.app_chaine_id) : 'seule-' + String(r.app_affaire_id)
     const l = par.get(cle)
     if (l) l.push(r)
@@ -23883,6 +23911,9 @@ function dossiersOuvertsDuBien(lignes: AffaireLedgerRow[]): DossierDuBien[] {
     const ouvert = !vente
       && (!aCompromis || compromisVivant)
       && (aCompromis || !aOffre || offreVivante)
+    // Une chaine dont TOUTES les lignes ont ete effacees chez Hektor n'a plus de
+    // membre : elle ne doit pas compter comme un dossier, meme vide.
+    if (!membres.length) return
     out.push({ chaine, ouvert, genres, porteur, closePar: vente })
   })
   return out
