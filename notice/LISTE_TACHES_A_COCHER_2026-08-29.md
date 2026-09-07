@@ -3757,6 +3757,92 @@ GEL que Frederic a repere le premier).*
            Hektor, et on a mesure le 04/09 qu'il ment des qu'une transaction meurt
            sans etre effacee. C'est la sentinelle 4.2, pas le read-through.
 
+[~] 3.5  LE MIROIR DES TRANSACTIONS DOIT COLLER A HEKTOR      OUVERTE LE 07/09/2026
+         Demande de Frederic : « si suppression soit compromis soit vente, la
+         ligne doit entierement disparaitre de mon serveur et de mon apps ».
+
+         ─── CE QUI A ETE ETABLI, EN MESURANT ───
+         ① LE MIROIR N'OUBLIE JAMAIS. Le seul DELETE du projet sur
+           hektor_offre / hektor_compromis / hektor_vente est prune_annonce_scope,
+           qui supprime par ANNONCE sortie du perimetre, jamais par transaction.
+           normalize_source fait INSERT ... ON CONFLICT DO UPDATE : il ajoute et
+           met a jour, il ne retire pas.
+         ② DONC LE MARQUAGE NE TIENT PAS UNE NUIT. Eprouve sur une COPIE de
+           phase2.sqlite : on pose present_in_hektor=0 sur un compromis reel,
+           on joue refresh_ledger(full=True) --> marked_absent: 0, et le drapeau
+           REPASSE A 1. La ligne ne reste pas morte : elle ressuscite.
+         ③ ET LE MECANISME EXISTE POURTANT DEJA :
+               UPDATE app_affaire_ledger SET present_in_hektor=0
+                WHERE last_seen_at <> run_ts
+           Il tourne chaque nuit et n'a JAMAIS rien marque, faute de signal --
+           le miroir revoit toujours tout. Rendre le miroir strict l'allume.
+         ④ L'INVENTAIRE ETAIT UNE FENETRE, pas une liste. En mode `update`,
+           1 000 compromis sur 10 582, 1 000 offres sur 11 136, 12 mois de ventes.
+           La derniere liste COMPLETE des compromis datait du 30/03/2026.
+         ⑤ 8 compromis anciens sondes chez Hektor : 8 presents, 0 fantome.
+           Hektor supprime RAREMENT -- c'est un geste manuel, pas un flux.
+
+         ─── POURQUOI C'EST LEGITIME, ET LA REGLE EXACTE ───
+         Le precedent des annonces ne dit PAS « le miroir copie Hektor ». Il coupe
+         en deux, et le refus ajoute le 26/08 apres incident le dit :
+             ce qui est RECONSTRUCTIBLE peut partir   (sync_annonce_state, liens)
+             ce qui est IRREMPLACABLE ne part jamais  (les charges brutes)
+         ⚠ L'incident : le 19/08, les annonces 62815, 62825 et 62855 ont perdu
+           leur detail brut. Perdues pour de bon -- « une coquille [Sans titre] ».
+         ➡ hektor_offre / compromis / vente sont RECONSTRUITES chaque nuit depuis
+           raw_api_response. Elles sont donc de la premiere classe : elles ont le
+           droit de suivre Hektor. Et raw_api_response, lui, n'est pas touche.
+         ➡ LA MEMOIRE PASSE AU REGISTRE, et par OMISSION : une ligne absente du
+           miroir n'est plus dans le SELECT, donc pas reecrite -- son payload_json,
+           son montant, son acquereur restent. C'est l'autonomie voulue.
+
+         ─── LES QUATRE ETAPES, DANS CET ORDRE ───
+         [x] 1. ELARGIR LE PERIMETRE + AVANCER LE RUN A 05:00       FAIT LE 07/09
+                trois parametres dans run_full_pipeline.ps1 (aa361fb) :
+                CompromisRecentLimit / OffreRecentLimit / VenteDateStart.
+                Meme mode `update`, meme endpoint, meme tri : on retire les
+                oeilleres, on ne change pas le mecanisme.
+                ⚠ LES DEUX VONT ENSEMBLE : +17 min. A 05:30 le run finirait vers
+                  06:47, soit 13 min avant la sauvegarde de 07:00 -- trop court.
+                  A 05:00 il finit vers 06:16, 44 min de marge, MIEUX qu'avant.
+                  Tache planifiee changee par Frederic (session elevee requise).
+                  La tache de 03:00 finit entre 04:16 et 04:27 (4 nuits mesurees).
+         [ ] 2. OBSERVER 2 OU 3 NUITS. Combien de transactions le miroir detient-il
+                que Hektor ne rend plus ? On ne l'a JAMAIS su -- la liste complete
+                manquait. On compte, on ne supprime pas.
+                verif : duree reelle du run (attendu ~76 min), et le compte d'ecarts
+         [ ] 3. CORRIGER LA CHAINE -- ⛔ A FAIRE AVANT L'ETAPE 4, SINON ON AGGRAVE.
+                recalculer_les_chaines() (phase2) et app_chaine_pour() (Supabase)
+                ne regardent PAS present_in_hektor. Une ligne marquee absente
+                compterait encore comme un compromis vivant : une vente irait se
+                rattacher a un fantome. L'ecran, lui, filtre deja
+                (affaireEstVivante).
+         [ ] 4. ALLUMER LE BALAYAGE, garde-fou RECOPIE de
+                reconcile_active_annonce_scope -- ne rien inventer :
+                    refus si le balayage etait partiel (--max-pages)
+                    refus si le listing rend moins de 50 % du connu
+                    la trace est ecrite AVANT la suppression ; si le journal
+                    echoue, on ne supprime pas
+                ⚠ SANS L'ETAPE 1, CE BALAYAGE SUPPRIME ~90 % DU REGISTRE la
+                  premiere nuit : 1 000 compromis vus, 9 582 « non revus ».
+
+         ─── EFFETS DE BORD AUDITES ───
+             app_contact_relation_current  reconstruite (DELETE+INSERT) depuis le
+                                           miroir -> la relation d'un compromis
+                                           supprime disparait. Correct.
+             app_affaire_ledger Supabase   recoit present_in_hektor=false par le
+                                           push. Converge.
+             ecran                         affaireEstVivante() masque deja. Rien
+                                           a coder.
+             raw_api_response              jamais touche. L'archive tient.
+
+         ─── ET LE GESTE VENU DE L'APP (3.4) ───
+         Une suppression lancee depuis l'app n'a pas besoin de ce balayage : on
+         sait quelle ligne, et le worker a la PREUVE que Hektor l'a effacee.
+         Il peut donc retirer la ligne des quatre endroits (miroir, registre
+         local, Supabase, chaine) sans rien deviner. Reste a coder -- c'est la
+         suite de 3.4, une fois l'etape 3 faite.
+
 ```
 
 ### PHASE 4 — MENAGE
