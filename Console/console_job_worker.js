@@ -10309,26 +10309,45 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
 
   // ── LES ACQUEREURS VOULUS, calcules UNE FOIS (06/09/2026) ──
   //
-  // ⚠ CORRECTIF NE D'UN ESSAI REEL, PAS D'UNE RELECTURE. Le 06/09, un compromis
-  // cree depuis l'app avec DEUX acquereurs : le worker a bien appele findProspect
-  // deux fois, Hektor a repondu deux fois (1 896 et 1 883 car.), et le compromis
-  // 50072 n'en a retenu QU'UN. Preuve par le journal du travail :
-  //     etape 0 -> 2   champs envoyes : ... acquereurs[] ...   (UNE valeur)
-  //     etape 2 -> 3   champs envoyes : unitesEntreePercent, unitesSortiePercent
-  //     etape 3 -> fin champs envoyes : conditionsSuspensivesSelected, notes
-  // ➡ `acquereurs[]` N'EST ENVOYE QU'A L'ETAPE 0. Les blocs rendus par
-  //   findProspect rejoignent bien le CONTENU, mais le corps des etapes
-  //   suivantes est reconstruit par extractHektorFormValues() et ne les reprend
-  //   pas. Seul l'acquereur de l'etape 0 arrive au bout.
-  // ⚠ CONTROLE FAIT AVANT DE CONCLURE : sur les 20 compromis de la page,
-  //   l'API et notre miroir donnent le MEME compte d'acquereurs (0 ecart). Le
-  //   listing ne tronque pas -- Hektor n'en avait vraiment gardé qu'un.
+  // ⛔ CE CORRECTIF EST MESURE INEFFICACE. NE PAS LE CROIRE SUFFISANT.
   //
-  // LE CORRECTIF : on REPOSE la liste a chaque etape, comme l'etape 0 le fait
-  // deja pour le principal. On ne compte plus sur le contenu rendu.
-  // ⚠ ON GARDE findProspect : c'est lui qui fait connaitre le prospect a Hektor.
-  //   Envoyer un identifiant qu'il n'a pas resolu ne l'attache pas -- mesure du
-  //   04/09, acquereurs VIDE.
+  // CE QU'IL FAIT VRAIMENT, et c'est verifie : `acquereurs[]` part desormais aux
+  // TROIS etapes de l'assistant (journal du 07/09, compromis 50073). Avant, il
+  // n'etait envoye qu'a l'etape 0. C'est donc un envoi plus fidele a ce que l'app
+  // veut dire -- mais CA NE CHANGE RIEN AU RESULTAT.
+  //
+  //     06/09  compromis 50072  deux acquereurs demandes  ->  UN attache
+  //     07/09  compromis 50073  deux acquereurs demandes  ->  UN attache
+  //                             (avec ce correctif actif)
+  //
+  // ⚠ ET LE PHENOMENE ETAIT DEJA CONNU, ce que j'aurais du lire avant de coder.
+  //   La liste des taches le portait, section « CE QUI EST DEJA FAIT » :
+  //       « multi-acquereurs : buyer_contact_ids, les DEUX appels reussissent,
+  //         UN SEUL ACQUEREUR SURVIT -- TOUJOURS A COMPRENDRE »
+  //   et la piste etait ecrite AVEC SON INTERDICTION :
+  //       « piste la plus probable : notre findProspect, qui ne trouverait que
+  //         les prospects vivants du bien. A PROUVER PENDANT 3.2 -- ne rien
+  //         batir dessus d'ici la. »
+  //   J'ai bati dessus quand meme, sur une hypothese (le corps des etapes
+  //   suivantes), et la mesure l'a dementie.
+  //
+  // ⚠ DEUX PISTES DEJA ECARTEES, pour ne pas les refaire :
+  //   * le CORPS des etapes -- corrige ici, sans effet (07/09)
+  //   * le PANIER (`basket`) -- il circule correctement, point 2 du protocole du
+  //     30/08 : « rendu a chaque etape et renvoye a la suivante ; il n'y a RIEN a
+  //     comprendre dedans, on le recopie ». Verifie dans le code.
+  //
+  // ➡ LE FAIT QUI ORIENTE LA SUITE, et il est ancien : le compromis 50068, cree
+  //   par l'ASSISTANT DE HEKTOR avec un acquereur SANS offre sur le bien, a bien
+  //   recu son acheteur. LEUR interface y arrive, la notre non. L'ecart est donc
+  //   dans NOTRE facon d'envoyer -- reste a trouver laquelle.
+  //   A REPRENDRE DANS 3.2, avec instrumentation : combien de valeurs partent
+  //   reellement dans acquereurs[] (le journal DEDOUBLONNE les noms de champs,
+  //   donc il ne le dit pas), et que renvoie findProspect exactement.
+  //
+  // ON GARDE findProspect : c'est lui qui fait connaitre le prospect a Hektor.
+  // Envoyer un identifiant qu'il n'a pas resolu ne l'attache pas -- mesure du
+  // 04/09, acquereurs VIDE.
   const acquereursVoulus = [];
   {
     const pousser = (v) => {

@@ -3138,11 +3138,40 @@ GEL que Frederic a repere le premier).*
            l'API et NOTRE MIROIR donnent le meme compte (0 ecart). Le listing ne
            tronque pas -- Hektor n'en avait vraiment garde qu'un.
 
-         ═══ LE CORRECTIF EST ECRIT (ef3f670) MAIS PAS EPROUVE ═══
-         Trois points dans submitHektorAssistantTransaction :
-             1. la liste se calcule UNE FOIS, avant la boucle des etapes
-             2. l'etape 0 pose TOUTE la liste, plus seulement le premier
-             3. chaque etape suivante la REPOSE (drapeau acquereursConnusDeHektor)
+         ═══ ⛔ LE CORRECTIF (ef3f670) EST MESURE INEFFICACE -- 07/09 ═══
+         EPROUVE EN VRAI le 07/09 : compromis 50072 annule, 50073 recree avec les
+         DEUX acquereurs, worker redemarre et correctif actif.
+             journal   acquereurs[] envoye aux TROIS etapes   ✅ le correctif agit
+             Hektor    UN SEUL acquereur attache              ❌ rien n'a change
+         ➡ LE CORRECTIF FAIT CE QU'IL DIT ET NE RESOUT RIEN. Il est GARDE (l'envoi
+           est plus fidele a ce que l'app veut dire) mais marque INEFFICACE dans le
+           code, pour que personne ne croie le probleme regle.
+
+         ⚠ ET J'AURAIS DU LIRE LE DOSSIER AVANT DE CODER. La section « CE QUI EST
+           DEJA FAIT » portait deja, depuis trois jours :
+               « multi-acquereurs : les DEUX appels reussissent, UN SEUL ACQUEREUR
+                 SURVIT -- TOUJOURS A COMPRENDRE »
+           et la piste etait ecrite AVEC SON INTERDICTION :
+               « piste la plus probable : notre findProspect [...] A PROUVER PENDANT
+                 3.2 -- ne rien batir dessus d'ici la. »
+           J'ai bati dessus. C'est Frederic qui m'a fait relire (« je crois que nous
+           avons deja cherche ») -- et il avait raison.
+
+         ⚠ DEUX PISTES SONT DESORMAIS ECARTEES, ne pas les refaire :
+             le CORPS des etapes   corrige, sans effet (07/09)
+             le PANIER (basket)    il circule correctement -- point 2 du protocole
+                                   du 30/08, verifie dans le code le 07/09
+         ➡ CE QUI ORIENTE LA SUITE, et c'est ancien : le compromis 50068, cree par
+           L'ASSISTANT DE HEKTOR avec un acquereur SANS offre sur le bien, a bien
+           recu son acheteur. LEUR interface y arrive, la notre non.
+
+         ═══ CE QUE 3.2 DEVRA INSTRUMENTER ═══
+             combien de valeurs partent REELLEMENT dans acquereurs[] -- le
+             journal DEDOUBLONNE les noms de champs (`new Set`), donc il ne le dit
+             pas. C'est la premiere chose a savoir, et on ne la sait pas.
+             ce que findProspect renvoie EXACTEMENT (on n'en lit que le HTML).
+             ce que LEUR interface envoie, capture au reseau -- c'est la seule
+             source qui a deja reussi.
          ⚠ findProspect est GARDE : c'est lui qui fait connaitre le prospect a
            Hektor ; un identifiant non resolu ne s'attache pas (mesure du 04/09).
          ➡ VERIFICATION REPORTEE A 3.2 -- decision de Frederic, 06/09. Elle exige
@@ -3261,18 +3290,19 @@ GEL que Frederic a repere le premier).*
            le conflit et le badge existent ; pour les transactions RIEN n'existe.
 
 [ ] 3.2  LES WORKERS « MODIFIER » -- COMPROMIS ET VENTE
-         ⭐ A FAIRE EN PREMIER, AVANT TOUT LE RESTE DE 3.2 (ajoute le 06/09) :
-            EPROUVER LE CORRECTIF DES ACQUEREURS MULTIPLES (ef3f670, voir 2.6).
-            Il est ecrit, documente, jamais execute. Protocole :
-              1. redemarrer les QUATRE services Windows       (main de Frederic)
-              2. annuler le compromis 50072 depuis l'app -- eprouve au passage le
-                 bouton « Annuler le compromis » que le garde-fou 2.2c met en avant
-              3. recreer un compromis sur 24933 avec DEUX acquereurs
-                 (605030 Sophie + 605075 M. Test CLOTURE)
-              4. relire Hektor : deux acquereurs attaches, ou toujours un ?
-            ⚠ Tant que 4 n'a pas parle, 2.6 n'est pas terminee.
-            ⚠ Et c'est le MEME code que 3.2 va rouvrir : le corriger a l'aveugle
-              une seconde fois referait l'erreur du 06/09.
+         ⛔ A LIRE AVANT DE TOUCHER A CE CHEMIN -- lecon du 07/09.
+            Le protocole d'essai a ete joue EN ENTIER (services redemarres, 50072
+            annule, 50073 recree a deux acquereurs, Hektor relu) : TOUJOURS UN SEUL
+            ACQUEREUR. Le correctif ef3f670 est mesure INEFFICACE.
+            Et le phenomene etait DEJA au dossier depuis trois jours, avec sa piste
+            ET son interdiction : « a prouver pendant 3.2, ne rien batir dessus
+            d'ici la ». J'ai bati dessus, et perdu une demi-journee.
+            ➡ REGLE : avant de coder sur l'assistant, relire « CE QUI EST DEJA
+              FAIT » et « LES INCONNUES ASSUMEES ». Ce qui y est ecrit [x] veut
+              dire « le pont est code », PAS « le resultat est bon ».
+            ➡ CE QU'IL RESTE A EPROUVER sur les acquereurs multiples : voir 2.6,
+              section « CE QUE 3.2 DEVRA INSTRUMENTER ». Deux pistes sont deja
+              ecartees (le corps des etapes, le panier) -- ne pas les refaire.
          ⚠ RAPPEL EXPLICITE DE FREDERIC (03/09 au soir) : « pense bien aux workers
            modifier compromis et vente au moment opportun ». C'est LE point d'arrivee
            du chantier, et tout ce qui precede y mene.
@@ -3527,8 +3557,13 @@ GEL que Frederic a repere le premier).*
 [x] findProspect                mode=annonce-SuiviVente-compromis-findProspect
                                 idProspect · typeIntervenant · provenance · newView · nameInput
                                 -> 50060 est le PREMIER compromis de l'app avec un acquereur
-[x] multi-acquereurs            buyer_contact_ids ; les DEUX appels reussissent,
-                                un seul acquereur survit -- TOUJOURS a comprendre
+[!] multi-acquereurs            buyer_contact_ids ; les DEUX appels reussissent,
+                                UN SEUL ACQUEREUR SURVIT -- TOUJOURS A COMPRENDRE
+                                ⛔ LA CASE EST PASSEE DE [x] A [!] LE 07/09. Le [x]
+                                  voulait dire « le pont est code » ; je l'ai relu
+                                  comme « ca marche », et j'ai bati un correctif
+                                  dessus. Deuxieme essai reel le 07/09 (50073) :
+                                  TOUJOURS UN SEUL. Rien n'est resolu.
 [x] la modification EXISTE      essai 1 du 03/09 : rouvrir par identifiant = UPDATE
 [x] le cycle de vie est SANS EFFET sur le statut   7 mesures concordantes : seule
                                 la CREATION fait monter le statut ; refuser,
