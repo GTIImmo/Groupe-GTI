@@ -90,7 +90,13 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     -- (COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS) et ne les reecrit pas (absentes du
     -- ON CONFLICT DO UPDATE SET). Il les RECOIT apres le push, pour que la
     -- sauvegarde de nuit les emporte.
+    -- ⚠ jours_validite A QUITTE LA CLASSE A LE 07/09 (1.2b). Il est reste sous
+    --   ce commentaire deux jours de trop : Hektor le GARDE, dans la proposition
+    --   de l'OFFRE, la ou l'app le saisit. Il est desormais relu a chaque run,
+    --   comme date_fin_retractation juste en dessous.
     jours_validite      TEXT,
+    -- Ceux-la restent de classe A, verifie sur la charge reelle de l'offre :
+    -- aucune destination, ni dans l'offre ni dans la proposition.
     taux_honoraires     TEXT,
     notaire_id          TEXT,
     -- ⚠ CELLE-CI N'EST PAS DE CLASSE A, ET C'EST UNE CORRECTION DU 03/09.
@@ -128,7 +134,19 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS 
        hektor_acquereur_id AS acq_id, acquereur_json AS acq_json, acquereur_json AS acq_tous,
        offre_state AS state,
        raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt,
-       NULL AS date_acte, NULL AS sequestre, NULL AS date_fin, raw_json
+       NULL AS date_acte, NULL AS sequestre, NULL AS date_fin,
+       -- 1.2b (07/09/2026) : LA VALIDITE EST DE CLASSE B, PAS A -- ma faute.
+       -- Hektor la garde, dans la PROPOSITION de l'offre. Preuve sans nouvel
+       -- essai, les six offres de 24933 lues en direct : 10, 10, 20, 20, 15, 10.
+       -- Trois valeurs distinctes : il garde ce qu'on lui envoie.
+       -- 0.1 avait conclu « aucun champ » en mesurant sur un COMPROMIS et en
+       -- generalisant aux trois genres -- exactement la faute corrigee la veille
+       -- sur jours_retractation, et que j'ai reproduite.
+       -- ⚠ « 0 » VEUT DIRE VIDE, comme partout chez Hektor (le projet le sait
+       --   depuis le DPE). Mesure du 07/09 sur le miroir : 10 811 offres sur
+       --   11 083 portent « 0 », et 271 seulement une vraie valeur.
+       NULLIF(json_extract(propositions_json, '$[0].validite'), '0') AS validite,
+       raw_json
 FROM hektor.hektor_offre WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
@@ -137,13 +155,17 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
        date_signature_acte, sequestre,
        -- CLASSE B : la fin du delai de retractation, telle que HEKTOR la porte.
        -- C'est elle qui fait foi ; le nombre de jours s'en deduit.
-       date_end, raw_json
+       date_end,
+       NULL AS validite,          -- la validite ne concerne QUE l'offre
+       raw_json
 FROM hektor.hektor_compromis WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
 SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
        NULL, acquereurs_json, acquereurs_json, NULL,
        prix, COALESCE(date_vente, synced_at),
-       NULL, NULL, NULL, raw_json
+       NULL, NULL, NULL,
+       NULL AS validite,          -- idem
+       raw_json
 FROM hektor.hektor_vente WHERE hektor_annonce_id IS NOT NULL
 """
 
@@ -398,9 +420,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 hektor_annonce_id, kind, hektor_affaire_id, hektor_mandat_id,
                 numero_mandat, hektor_acquereur_id, app_contact_id, acquereur_json, acquereurs_json,
                 state, montant, date, date_acte,
-                sequestre, date_fin_retractation,
+                sequestre, date_fin_retractation, jours_validite,
                 payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
@@ -415,6 +437,12 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 state=excluded.state, montant=excluded.montant, date=excluded.date,
                 date_acte=excluded.date_acte, sequestre=excluded.sequestre,
                 date_fin_retractation=excluded.date_fin_retractation,
+                -- 1.2b : jours_validite EST RELU A CHAQUE RUN. Il etait absent de
+                -- cette liste tant qu'on le croyait de classe A -- « protection par
+                -- omission ». Il ne l'est plus : Hektor le connait, donc Hektor fait
+                -- foi, et le figer serait exactement le gel que 1.2 avait evite sur
+                -- jours_retractation.
+                jours_validite=excluded.jours_validite,
                 payload_json=excluded.payload_json,
                 last_seen_at=excluded.last_seen_at, present_in_hektor=1
             """,
@@ -428,6 +456,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 normalize_text(r["dt"]) or None, normalize_text(r["date_acte"]) or None,
                 normalize_text(r["sequestre"]) or None,
                 normalize_text(r["date_fin"]) or None,
+                normalize_text(r["validite"]) or None,     # 1.2b : classe B, relue
                 normalize_text(r["raw_json"]) or None,
                 first_seen, run_ts,
             ),
@@ -740,8 +769,17 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
 # frappait les numeros et que le local ne les connaissait pas. Depuis la refonte de
 # la regle (recalculer_les_chaines), c'est LE LOCAL qui les calcule, a chaque run,
 # pour toutes les lignes. Il doit donc les pousser.
+# ⚠ jours_validite A QUITTE CETTE LISTE LE 07/09 (1.2b), ET C'ETAIT MA FAUTE.
+# Je l'avais range en classe A sur une mesure de 0.1 faite sur un COMPROMIS puis
+# generalisee aux trois genres. Hektor le garde bel et bien -- dans la PROPOSITION
+# de l'OFFRE, la ou l'app le saisit. Six offres de 24933 lues en direct portent
+# trois valeurs distinctes (10, 15, 20). Il est desormais relu a chaque run,
+# comme date_fin_retractation.
+# ⚠ MEME FAUTE QUE SUR jours_retractation, CORRIGEE LA VEILLE. La cause est
+#   toujours la meme : 0.1 mesure un champ sur UN SEUL genre et conclut pour les
+#   trois. A garder en tete pour les etapes 2, 3 et 4 de 0.1.
 COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
-    "jours_validite", "taux_honoraires", "notaire_id",
+    "taux_honoraires", "notaire_id",
 )
 
 

@@ -2142,7 +2142,26 @@ GEL que Frederic a repere le premier).*
            C'est la phase 2 (la rubrique Affaires lit le registre). La colonne est
            posee et alimentee ; l'ecran ne bouge pas.
 
-[!] 1.2b LA MEME FAUTE, ET C'EST MOI QUI L'AI FAITE   04/09, essai reel
+[x] 1.2b LA MEME FAUTE -- CORRIGEE LE 07/09/2026, trois jours apres l'avoir vue
+         jours_validite a quitte la classe A. Il est desormais LU chez Hektor a
+         chaque run, dans propositions_json de l'offre, et relu comme
+         date_fin_retractation.
+         ⚠ « 0 » VEUT DIRE VIDE, et c'est mesure : 10 811 offres sur 11 083 portent
+           « 0 ». Le piege est ancien dans ce projet (le DPE), l'extraction fait donc
+           NULLIF(..., '0'). Sans ca, on aurait rempli 10 811 lignes d'un faux zero.
+         RESULTAT, apres refresh + push :
+             offre       272 / 11 136 avec une validite   valeurs 10, 15, 20, 30, 33
+             compromis   0 / 10 584                       le champ ne les concerne pas
+             vente       0 /  7 609                       idem
+         CONTROLE sur les offres de 24933 -- exactement les valeurs relevees le
+         04/09 en direct chez Hektor :
+             33037 -> 10   33038 -> 15   33042 -> 20   33043 -> 20
+             33046 -> 10   33048 -> 10   33050 -> 33
+         ⚠ AUCUNE SAISIE ECRASEE : la colonne etait VIDE chez Supabase (0 sur 29 329)
+           -- la classe A n'avait jamais rien ecrit. Et l'ecran lit le CARNET
+           d'abord, donc rien ne change a l'affichage.
+         RESTENT DE CLASSE A, verifie : taux_honoraires et notaire_id.
+         --- description d'origine ---
          `jours_validite` N'EST PAS DE CLASSE A. Hektor le stocke, dans la
          PROPOSITION de l'offre. Preuve par les donnees existantes, sans nouveau
          test -- les six offres de 24933 lues en direct chez Hektor :
@@ -2295,7 +2314,15 @@ GEL que Frederic a repere le premier).*
            l'annonce 478 (le couple FAURE). Elle choisissait la ou il fallait
            comparer, puis on a decouvert qu'il ne fallait ni choisir ni comparer.
          --- description d'origine ---
-[ ] 1.5  L'ACQUEREUR RETENU QUAND HEKTOR EN RENVOIE PLUSIEURS   AJOUTEE 04/09
+[x] 1.5  SANS OBJET DEPUIS 1.7 -- case cochee le 07/09, elle trainait
+         1.7 a refondu la regle le 05/09 : le chainage ne s'indexe PLUS sur
+         l'acquereur, il suit la SEQUENCE. Choisir « le bon » acquereur pour
+         indexer la chaine n'a donc plus de sens -- le probleme a disparu avec sa
+         cause. La case etait restee vide par oubli.
+         ⚠ NE PAS CONFONDRE avec ce qui reste ouvert : que Hektor n'attache qu'UN
+           acquereur sur deux (voir 2.6) est un TOUT AUTRE probleme, et il n'est
+           pas resolu.
+         --- description d'origine ---
          Trouve par Frederic : « comment la regle va reagir si Hektor retourne
          deux ou trois acquereurs ? »
 
@@ -3543,7 +3570,11 @@ GEL que Frederic a repere le premier).*
 
 [ ] 4.2  LES DEUX POINTS EN SUSPENS    voir « 2 quater. LES STATUTS » ci-dessous
 
-[ ] 4.3  DossierInlineDetail EST DU CODE MORT        AJOUTEE LE 04/09
+[x] 4.3  DossierInlineDetail RETIRE                  FAIT LE 07/09/2026
+         91 lignes en moins. Verifie avant de retirer : UNE declaration, ZERO
+         rendu -- aucune occurrence de « <DossierInlineDetail » dans tout le front.
+         Build vert, et rien ne change a l'ecran puisque rien ne le rendait.
+         --- description d'origine ---
          Declare a App.tsx:28060, JAMAIS rendu -- aucune occurrence de
          « <DossierInlineDetail » dans tout le front. Il porte lui aussi un
          affichage de vente par champ plat, ce qui l'a fait apparaitre dans
