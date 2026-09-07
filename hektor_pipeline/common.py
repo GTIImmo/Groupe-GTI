@@ -76,12 +76,48 @@ class Settings:
         )
 
 
+# ─── LE PLANCHER ENTRE DEUX APPELS (07/09/2026) ───
+#
+# LE WORKER S'IMPOSE 1 s DEPUIS DES MOIS, PAS LE PIPELINE. Console/console_job_worker.js
+# porte CONSOLE_HEKTOR_MIN_REQUEST_INTERVAL_MS = 1000 ; ici il n'y avait RIEN --
+# ni plancher, ni limiteur, ni recul. La seule pause du pipeline etait un
+# sleep_brief(0.1) place dans les APPELANTS, donc contournable par oubli.
+#
+# MESURE DU 07/09 QUI A MOTIVE CECI : le run lance a 14:08 a envoye 4 633 requetes
+# en 55 min, soit 1,4/s SOUTENU -- 40 % au-dessus de la limite que le projet
+# s'impose a lui-meme -- en pleine journee, depuis la MEME IP que l'agence. La
+# porte web a cesse de repondre 17 minutes plus tard.
+#
+# ⚠ LE PLANCHER EST DANS LE CLIENT, PAS DANS LES APPELANTS. C'est tout l'interet :
+#   aucun script, present ou futur, ne peut le contourner en oubliant sa pause.
+# ⚠ IL S'APPLIQUE AUSSI A authenticate() : un login est une requete comme une
+#   autre pour un pare-feu, et c'est justement un login qui a bloque le 07/09.
+HEKTOR_MIN_REQUEST_INTERVAL_S = max(
+    0.0, float(os.getenv("HEKTOR_MIN_REQUEST_INTERVAL_MS", "1000")) / 1000.0)
+
+
 class HektorClient:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.session = requests.Session()
         self.jwt: Optional[str] = None
         self.max_retries = 4
+        self.min_request_interval = HEKTOR_MIN_REQUEST_INTERVAL_S
+        self._last_request_at = 0.0
+
+    def _respecter_le_plancher(self) -> None:
+        """Attend, si besoin, pour ne jamais depasser le rythme autorise.
+
+        Volontairement simple et SANS ETAT PARTAGE entre processus : deux scripts
+        lances en parallele peuvent donc doubler le rythme. C'est assume -- le run
+        est sequentiel -- mais c'est a savoir avant d'en lancer deux a la main.
+        """
+        if self.min_request_interval <= 0:
+            return
+        attente = self._last_request_at + self.min_request_interval - time.monotonic()
+        if attente > 0:
+            time.sleep(attente)
+        self._last_request_at = time.monotonic()
 
     def authenticate(self) -> str:
         last_error: Optional[Exception] = None
@@ -89,6 +125,7 @@ class HektorClient:
         for attempt in range(1, self.max_retries + 1):
             try:
                 last_stage = "authenticate"
+                self._respecter_le_plancher()
                 auth_resp = self.session.post(
                     f"{self.settings.base_url}/Api/OAuth/Authenticate/",
                     params={
@@ -133,6 +170,7 @@ class HektorClient:
         last_error: Optional[Exception] = None
         for attempt in range(1, self.max_retries + 1):
             try:
+                self._respecter_le_plancher()
                 response = self.session.request(
                     method,
                     f"{self.settings.base_url}{path}",
@@ -165,24 +203,41 @@ class HektorClient:
 
         raise RuntimeError(f"{method} {path} failed after {self.max_retries} attempts: {last_error}")
 
+    # ─── L'AMPLIFICATION PAR 16, RETIREE LE 07/09/2026 ───
+    #
+    # CE QUI SE PASSAIT. Cette boucle tournait max_retries fois (4) et appelait
+    # request(), qui reessaie DEJA max_retries fois : 4 x 4 = SEIZE tentatives pour
+    # UN SEUL appel logique, a 30 s de delai chacune. Quand Hektor ralentit, on lui
+    # envoyait donc SEIZE FOIS PLUS de trafic, pendant jusqu'a 8 minutes par appel.
+    #
+    # ⚠ C'EST EXACTEMENT CE QUE LE PROJET S'INTERDIT AILLEURS. sync_hektor_immo_pro
+    #   porte la phrase, ecrite apres le bannissement du 26/08 : « 403 = refus
+    #   d'acces : on NE REESSAIE PAS. [...] c'est l'insistance qui avait aggrave le
+    #   bannissement ». Cette insistance-la etait codee en dur dans le client.
+    # ⚠ ET ELLE NE SE VOYAIT PAS : un 4xx est bien epargne
+    #   (HektorNonRetryableError), mais un TIMEOUT declenchait la cascade complete.
+    #   Or un pare-feu qui ralentit produit precisement des timeouts.
+    #
+    # CE QU'ON GARDE. request() conserve ses 4 tentatives avec recul exponentiel :
+    # c'est la ou la reprise sur incident reseau a un sens. Ici on ne reessaie plus
+    # QUE le cas propre a cette methode -- une reponse 200 dont le corps n'est pas
+    # du JSON -- et une seule fois, apres une seconde. Ce cas est rare et ne vient
+    # pas d'une surcharge.
     def get_json(self, path: str, *, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        last_error: Optional[Exception] = None
-        for attempt in range(1, self.max_retries + 1):
+        response = self.request("GET", path, params=params)
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            time.sleep(1.0)
+            response = self.request("GET", path, params=params)
             try:
-                response = self.request("GET", path, params=params)
                 payload = response.json()
-                if isinstance(payload, dict) and payload.get("refresh"):
-                    self.jwt = str(payload["refresh"]).strip()
-                return payload
-            except HektorNonRetryableError:
-                raise
-            except (ValueError, RuntimeError) as exc:
-                last_error = exc
-                if attempt >= self.max_retries:
-                    break
-                time.sleep(0.35 * (2 ** (attempt - 1)))
-
-        raise RuntimeError(f"GET {path} did not return valid JSON after {self.max_retries} attempts: {last_error}")
+            except ValueError:
+                raise RuntimeError(
+                    f"GET {path} n'a pas rendu de JSON valide (deux essais) : {exc}") from exc
+        if isinstance(payload, dict) and payload.get("refresh"):
+            self.jwt = str(payload["refresh"]).strip()
+        return payload
 
 
 def ensure_parent_dir(path: str | Path) -> None:

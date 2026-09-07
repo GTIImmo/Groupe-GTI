@@ -23,6 +23,7 @@ import argparse
 import json
 import sqlite3
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -33,6 +34,36 @@ HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 DEFAULT_SESSION = ROOT / "Console" / "sessions" / "storage_state_sync_light.json"
 HEKTOR_BASE_URL = "https://groupe-gti-immobilier.la-boite-immo.com"
 GRAPHQL_URL = f"{HEKTOR_BASE_URL}/ws/GraphQL_Web"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LES FREINS, AJOUTES LE 07/09/2026 APRES UN BLOCAGE REEL
+# ═══════════════════════════════════════════════════════════════════════════════
+# CE SCRIPT ETAIT LE SEUL DE LA PORTE WEB SANS AUCUN GARDE-FOU. Audit du 07/09,
+# sur les cinq scripts qui passent par la Console :
+#     sync_hektor_immo_pro        pause 2 s, recul 15 s, ARRET sur 403
+#     sync_hektor_chauffages      delai + pause de lot, ARRET sur 403
+#     sync_console_contact_missing  idem
+#     sync_console_missing_fields   idem
+#     sync_hektor_drafts (ici)    RIEN -- zero pause, zero 403, zero journal
+# Les freins ont ete ajoutes apres le bannissement du 26/08 aux scripts ecrits a
+# cette periode. Celui-ci, plus ancien, n'a jamais ete rattrape.
+#
+# CE QUI S'EST PASSE LE 07/09. Lance juste apres 55 minutes de rafale de sync_raw
+# (4 633 requetes, 1,4/s, en pleine journee), il a ouvert une connexion navigateur
+# et s'est fige DIX-SEPT MINUTES, a 0 seconde de CPU. Aucune trace, aucune erreur.
+#
+# ⚠ ET LE `timeout=60` NE PROTEGEAIT PAS. C'est un delai PAR LECTURE DE SOCKET,
+#   pas une echeance totale : un serveur qui distille les octets fait attendre
+#   indefiniment sans jamais declencher le timeout. D'ou --deadline-minutes, qui
+#   est une vraie limite de duree -- aucun de ses freres n'en a.
+PAUSE_ENTRE_PAGES_S = 2.0      # meme valeur que sync_hektor_immo_pro
+RECUL_APRES_ECHEC_S = 15.0     # idem
+DEADLINE_DEFAUT_MIN = 10       # au-dela, on s'arrete proprement
+
+
+class Arret403(RuntimeError):
+    """403 = refus d'acces. On NE REESSAIE PAS : c'est la signature du bannissement."""
+
 
 PROPERTY_LISTING_QUERY = (
     "query PropertyListing($filters: AnnonceSearchInput!){listing:properties(filters:$filters){"
@@ -89,6 +120,13 @@ def graphql_page(session: requests.Session, cookies: str, token: str | None, pag
         },
     }
     resp = session.post(GRAPHQL_URL, json=payload, headers=headers, timeout=60)
+    # 403 = refus d'acces : ARRET IMMEDIAT, on ne reessaie pas. C'est l'insistance
+    # qui avait aggrave le bannissement du 26/08 -- phrase reprise de son frere
+    # sync_hektor_immo_pro, qui la porte depuis ce jour-la.
+    if resp.status_code == 403:
+        raise Arret403(
+            "403 Hektor sur PropertyListing -- acces refuse. ARRET IMMEDIAT : "
+            "ne pas reessayer, ne pas relancer le script, laisser retomber.")
     resp.raise_for_status()
     body = resp.json()
     if body.get("errors"):
@@ -170,6 +208,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--session", type=Path, default=DEFAULT_SESSION)
     p.add_argument("--max-pages", type=int, default=0, help="Plafond de pages (0 = illimite).")
     p.add_argument("--dry-run", action="store_true", help="N'ecrit rien, affiche seulement.")
+    p.add_argument("--deadline-minutes", type=int, default=DEADLINE_DEFAUT_MIN,
+                   help="Echeance TOTALE du balayage (0 = aucune). Le timeout de requests\n                         ne protege pas d'un serveur qui distille les octets.")
+    p.add_argument("--pause-seconds", type=float, default=PAUSE_ENTRE_PAGES_S,
+                   help="Pause entre deux pages.")
     return p.parse_args()
 
 
@@ -203,6 +245,8 @@ def main() -> int:
     print(f"Mode: {mode} | watermark_createdAt={wm_created or '(aucun)'}")
 
     session = requests.Session()
+    debut = time.monotonic()
+    echeance = args.deadline_minutes * 60 if args.deadline_minutes > 0 else 0
     seen_draft_ids: set[str] = set()
     seen_total = 0
     new_max_created = wm_created
@@ -210,8 +254,28 @@ def main() -> int:
     page = 1
     stop = False
     while not stop:
-        listing = graphql_page(session, cookies, token, page)
+        # L'ECHEANCE, D'ABORD. Elle borne le pire cas : un serveur qui repond
+        # lentement mais repond, cas ou aucun timeout de socket ne se declenche.
+        if echeance and (time.monotonic() - debut) > echeance:
+            print(f"ARRET : echeance de {args.deadline_minutes} min atteinte a la page {page}. "
+                  f"Ce qui a ete lu est conserve ; le watermark n'avance pas plus loin.",
+                  file=sys.stderr)
+            break
+        try:
+            listing = graphql_page(session, cookies, token, page)
+        except Arret403:
+            raise
+        except requests.RequestException as err:
+            # Un seul recul, puis on abandonne. On ne s'acharne pas.
+            print(f"page {page} : {type(err).__name__} -- recul de {RECUL_APRES_ECHEC_S:.0f} s "
+                  f"puis un dernier essai", file=sys.stderr)
+            time.sleep(RECUL_APRES_ECHEC_S)
+            listing = graphql_page(session, cookies, token, page)
         props = listing.get("properties") or []
+        # UNE LIGNE PAR PAGE : le 07/09 il a tourne 17 min SANS RIEN ECRIRE, et on
+        # etait aveugles. Un balayage muet se confond avec un balayage fige.
+        print(f"  page {page:>3} : {len(props)} bien(s) "
+              f"[{time.monotonic() - debut:.0f}s]", flush=True)
         if not props:
             break
         page_has_new = False
@@ -250,6 +314,9 @@ def main() -> int:
         if nxt in (None, "", 0, "0"):
             break
         page = int(nxt)
+        # LE FREIN. Deux secondes, comme sync_hektor_immo_pro. Sans lui, cette
+        # boucle enchainait les pages aussi vite que le reseau le permettait.
+        time.sleep(max(0.0, args.pause_seconds))
 
     # En full : les anciens brouillons non revus comme isDraft repassent is_draft=0 (finalises/supprimes).
     demoted = 0
