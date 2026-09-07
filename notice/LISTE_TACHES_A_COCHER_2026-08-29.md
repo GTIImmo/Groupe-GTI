@@ -3379,6 +3379,57 @@ GEL que Frederic a repere le premier).*
            on le choisit dans sa liste. On n'a PAS prouve que le WORKER y arrive --
            il ne clique pas, il poste. On le saura au premier essai reel.
 
+         ✅ ETAPE B FAITE LE 07/09 -- LE VERROU N'EN ETAIT PAS UN.
+            QUESTION POSEE : le dossier portait DEUX mesures qui se contredisaient.
+                28/08  « Hektor IGNORE l'identifiant a l'ouverture -- octet pour
+                       octet », avec temoin (offre 33026, compromis 50043)
+                03/09  la route de modification PORTE idCompromis, et trois
+                       modifications successives de 50065 ont marche
+            ⚠ JE N'AI PAS TRANCHE PAR DEDUCTION -- c'est l'erreur qui a coute une
+              demi-journee sur 2.6. J'ai refait le temoin, sur le MEME compromis
+              que le 28/08 (50043, annonce 53372), MAIS SUR LA ROUTE DE
+              L'ASSISTANT (getStepCompromis) au lieu de l'ancienne popin.
+
+            RESULTAT, en lecture seule (aucune etape soumise, rien enregistre) :
+                SANS identifiant   49 636 car.   panier 642 car.
+                AVEC idCompromis   49 708 car.   panier 706 car.   (+64)
+                et la reponse AVEC contient « 50043 » ; la reponse SANS, non.
+
+            ➡ L'ASSISTANT TIENT COMPTE DE L'IDENTIFIANT, ET L'INSCRIT DANS LE
+              PANIER -- ce panier qui voyage ensuite d'etape en etape et qui porte
+              tout l'etat. Les deux mesures etaient vraies : celle du 28/08 portait
+              sur l'ANCIENNE popin (createCompromis + init:1), morte depuis que
+              submitHektorAssistantTransaction a pris la main.
+            ➡ 3.2c CESSE D'ETRE LE VERROU DE 3.2. On ne cherche plus a deplacer le
+              pointeur de Hektor : on lui DIT quel compromis charger. Le pointeur
+              redevient ce qu'il etait -- un defaut d'AFFICHAGE de leur fiche.
+            ⚠ CE QUI N'EST PAS ENCORE PROUVE : que l'ENREGISTREMENT modifie au lieu
+              de creer. Le panier retient l'identifiant, c'est acquis ; la suite
+              demande d'ECRIRE, donc un compromis a sacrifier. Ne pas conclure.
+
+            ⚠ ET LE CODE DE REPRISE EXISTE DEJA, MAIS HORS D'ATTEINTE. Dans
+              submitHektorTransactionStatus, le bloc qui pose l'identifiant est
+              ECRIT ET JUSTE -- il est seulement place APRES le `return` qui envoie
+              le compromis et la vente vers l'assistant. Il ne tourne donc que pour
+              l'offre. Ecrit le 28/08, court-circuite par l'assistant arrive apres.
+
+         ─── DEUX ARBITRAGES DE FREDERIC, 07/09 ───
+         ① ON DOIT POUVOIR REPRENDRE UNE OFFRE REFUSEE ET UN COMPROMIS ANNULE.
+           « il faut pouvoir modifier des offres refused dans le cas ou l'on veut la
+             passer en valide et si possible changer le montant et l'etat, idem un
+             compromis peut etre debloque en cas d'erreur »
+           ➡ TRANSACTIONS_REPRISES ne doit donc EXCLURE AUCUN ETAT. On n'interdit
+             pas d'avance : on envoie, et si Hektor refuse on montre sa reponse.
+           ⚠ ET IL REFUSE PARFOIS, C'EST MESURE (03/09) : « un compromis cloture ne
+             peut pas etre modifie ». C'est un refus D'ETAT, pas de nature. Mieux
+             vaut le laisser dire que de le deviner a sa place.
+         ② « CORRIGER SANS ENVOYER A HEKTOR » DOIT DISPARAITRE de la modale.
+           C'est une ancienne fonction, anterieure a ce worker. Son mecanisme (le
+           carnet) peut resservir pour les champs qu'on n'envoie PAS a Hektor.
+           ⚠ MAIS APRES, PAS AVANT : tant que « Modifier » ne marche pas, ce bouton
+             est le SEUL moyen de retenir une valeur. Le retirer d'abord, ce serait
+             oter le filet avant d'avoir pose le plancher. Il part avec 3.3.
+
 [ ] 3.2b LA VENTE D'ABORD (la seule mesuree), L'OFFRE ENSUITE
          (« possible pour l'offre : formulaire + idOffre », releve du 28/08)
          LE COMPROMIS SEULEMENT SI 0.1 L'AUTORISE
