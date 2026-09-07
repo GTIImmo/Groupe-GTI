@@ -597,9 +597,38 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
       portent chaque evenement date) : s'en servir affinerait le resultat, jamais
       ne le degraderait. A faire quand le besoin s'en fera sentir.
     """
+    # ─── CE QUE HEKTOR A EFFACE NE COMPTE PLUS DANS LA CHAINE (07/09/2026) ───
+    #
+    # Jusqu'ici cette requete lisait TOUT le registre, sans regarder
+    # present_in_hektor. C'etait sans consequence tant que le drapeau ne se
+    # levait jamais -- mesure du 07/09 : 0 ligne sur 29 327, des deux cotes.
+    # Le miroir ne perdant rien, refresh_ledger revoyait toujours tout.
+    #
+    # ⚠ MAIS LE REMPLACEMENT DU MIROIR REVEILLE CE DEFAUT. Des que le miroir
+    #   cesse de garder ce que Hektor a efface, le drapeau se leve pour de vrai,
+    #   et une vente irait se rattacher a un compromis QUI N'EXISTE PLUS
+    #   (`compromis_vivant` le compterait encore). D'ou cette correction AVANT.
+    #
+    # ⚠ ET LE FILTRE NAIF EST FAUX. « WHERE present_in_hektor » exclurait aussi
+    #   les transactions NEES DANS L'APP : elles portent present_in_hektor=false
+    #   ET aucun numero Hektor jusqu'a ce que le run les adopte. Une offre creee
+    #   le matin perdrait son dossier jusqu'au lendemain.
+    #   La regle est donc celle de l'ecran, mot pour mot (affaireEstVivante) :
+    #
+    #       exclure SI  (elle porte un numero Hektor)  ET  (present_in_hektor faux)
+    #       pas de numero = nee chez nous = VIVANTE
+    #
+    # ⚠ ON NE REMET PAS app_chaine_id A NULL pour les exclues : elles ne sont
+    #   simplement plus dans `attribution`, donc leur numero de chaine reste tel
+    #   quel. La trace garde son dossier -- c'est voulu, on veut pouvoir dire
+    #   « cette vente appartenait au dossier 12 648 », meme effacee chez Hektor.
     lignes = list(con.execute(f"""
         SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json
           FROM {LEDGER_TABLE}
+         WHERE NOT (
+                   TRIM(COALESCE(CAST(hektor_affaire_id AS TEXT), '')) <> ''
+               AND CAST(present_in_hektor AS TEXT) IN ('0', 'false', 'False')
+               )
     """))
     par_annonce: dict[str, list[tuple]] = {}
     for app_id, annonce, kind, state, date, acq in lignes:

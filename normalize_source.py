@@ -998,6 +998,85 @@ def upsert_contacts(conn: sqlite3.Connection, contact_ids: Iterable[str] | None 
     return len(seen_contact_ids)
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# LE MIROIR DES TRANSACTIONS REFLETE HEKTOR                        07/09/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# Frederic : « j'aimerais que le miroir soit entierement remplace comme une mise
+# a jour globale ».
+#
+# CE QUI SE PASSAIT. upsert_offres / upsert_compromis / upsert_ventes font
+# INSERT ... ON CONFLICT DO UPDATE : ils ajoutent et modifient, ils N'ENLEVENT
+# JAMAIS. Le seul DELETE du projet sur ces tables est prune_annonce_scope, qui
+# supprime par ANNONCE sortie du perimetre, jamais par transaction. Une
+# transaction effacee chez Hektor restait donc chez nous indefiniment.
+#
+# ⚠ ET LE REMPLACEMENT LITTERAL NE MARCHE PAS -- c'est la trouvaille de l'audit.
+#   « DELETE FROM hektor_compromis puis on reinsere » REINJECTERAIT LES FANTOMES :
+#   la boucle lit DEUX endpoints (COMPROMIS_ENDPOINTS), dont l'instantane complet
+#   `list_compromis` fige au 30/03/2026 et jamais repurge. On reinsererait donc
+#   depuis mars exactement ce qu'on veut retirer.
+#   ➡ LE MIROIR EST DONC ALIGNE SUR LA LISTE FRAICHE -- celle que le run vient de
+#     rapatrier (`*_update`), qui depuis le 07/09 n'est plus tronquee et vaut la
+#     liste complete. Le resultat est celui demande : le miroir egale Hektor.
+#   ➡ ON NE TOUCHE PAS raw_api_response. Regle 5 : « l'archive de tout ce que
+#     Hektor a jamais dit ». Les pages de mars restent, elles enrichissent encore
+#     le CONTENU des lignes ; elles ne decident plus de leur EXISTENCE.
+#
+# ⚠ CE PREALABLE N'EST PAS UNE PREFERENCE. Sans l'elargissement du perimetre
+#   (run_full_pipeline.ps1, aa361fb), la liste fraiche ne contient que 1 000
+#   compromis sur 10 582 : l'alignement en supprimerait 9 582. Le garde-fou
+#   ci-dessous refuse ce cas, mais l'ordre reste : elargir, puis aligner.
+#
+# LE GARDE-FOU EST RECOPIE de reconcile_active_annonce_scope, ecrit apres un
+# incident reel : on ne supprime jamais sur un balayage qu'on soupconne tronque.
+# Le 02/09, sept erreurs HTTP 500 de Hektor ont interrompu un balayage en cours.
+SEUIL_MIROIR_COMPLET = 0.5
+
+
+def aligner_miroir_sur_hektor(conn: sqlite3.Connection, *, table: str, id_col: str,
+                              endpoint_frais: str, libelle: str) -> int:
+    """Retire du miroir ce que la liste FRAICHE de Hektor ne contient plus.
+
+    Rend le nombre de lignes retirees. Ne leve jamais : un refus est un refus,
+    pas une panne -- le run doit continuer.
+    """
+    frais = set()
+    for item in iter_listing_items(fetch_latest_raw_payloads(conn, endpoint_frais)):
+        # MEME EXPRESSION que celle qui alimente la colonne, sinon on comparerait
+        # deux choses differentes et on supprimerait tout.
+        ident = str(item.get("id") or "")
+        if ident:
+            frais.add(ident)
+
+    connus = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+    if not frais:
+        print(f"[miroir] REFUS ({libelle}) : la liste fraiche est VIDE -- "
+              f"{connus} ligne(s) conservee(s), aucune suppression")
+        return 0
+    if connus and len(frais) < connus * SEUIL_MIROIR_COMPLET:
+        print(f"[miroir] REFUS ({libelle}) : la liste fraiche ne rend que {len(frais)} "
+              f"ligne(s) pour {connus} connue(s) -- balayage soupconne tronque, "
+              f"aucune suppression")
+        return 0
+
+    conn.execute("DROP TABLE IF EXISTS temp_miroir_frais")
+    conn.execute("CREATE TEMP TABLE temp_miroir_frais (id TEXT PRIMARY KEY)")
+    conn.executemany("INSERT OR IGNORE INTO temp_miroir_frais(id) VALUES (?)",
+                     [(x,) for x in frais])
+    cur = conn.execute(
+        f"DELETE FROM {table} WHERE CAST({id_col} AS TEXT) NOT IN "
+        f"(SELECT id FROM temp_miroir_frais)")
+    retirees = cur.rowcount or 0
+    conn.execute("DROP TABLE temp_miroir_frais")
+
+    # ON LE DIT TOUJOURS, meme a zero : un balayage silencieux se confond avec un
+    # balayage qui n'a pas tourne.
+    print(f"[miroir] {libelle} : {len(frais)} chez Hektor, {connus} au miroir "
+          f"-> {retirees} retiree(s)")
+    return retirees
+
+
 def upsert_offres(conn: sqlite3.Connection) -> None:
     for item in iter_listing_items_for_endpoints(conn, OFFRE_ENDPOINTS):
         source = item
@@ -1045,6 +1124,8 @@ def upsert_offres(conn: sqlite3.Connection) -> None:
                 now_utc_iso(),
             ),
         )
+    aligner_miroir_sur_hektor(conn, table="hektor_offre", id_col="hektor_offre_id",
+                              endpoint_frais="list_offres_update", libelle="offres")
     conn.commit()
 
 
@@ -1097,6 +1178,8 @@ def upsert_compromis(conn: sqlite3.Connection) -> None:
                 now_utc_iso(),
             ),
         )
+    aligner_miroir_sur_hektor(conn, table="hektor_compromis", id_col="hektor_compromis_id",
+                              endpoint_frais="list_compromis_update", libelle="compromis")
     conn.commit()
 
 
@@ -1141,6 +1224,8 @@ def upsert_ventes(conn: sqlite3.Connection) -> None:
                 now_utc_iso(),
             ),
         )
+    aligner_miroir_sur_hektor(conn, table="hektor_vente", id_col="hektor_vente_id",
+                              endpoint_frais="list_ventes_update", libelle="ventes")
     conn.commit()
 
 
