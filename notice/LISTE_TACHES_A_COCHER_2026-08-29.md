@@ -3346,6 +3346,72 @@ GEL que Frederic a repere le premier).*
          verif : creer un compromis sur un bien qui en porte deja un, et voir la
                  fiche Hektor pointer le NOUVEAU
 
+[ ] 3.2d LA MODALE PORTE-T-ELLE TOUS LES CHAMPS DE HEKTOR ?   AJOUTEE 07/09
+         Demande de Frederic : « il faut verifier les champs des modales de
+         changement de statut : est-ce que tous les champs disponibles dans
+         Hektor sont presents ? Donc une verification au moment de la correction
+         des workers. »
+         ⚠ A FAIRE PENDANT 3.2, pas avant : c'est en modifiant le worker qu'on
+           voit ce que le formulaire porte reellement.
+
+         ─── ⭐ L'INVENTAIRE EXISTE DEJA, ET IL VIENT D'UN RUN REEL ───
+         Le journal du travail c2d909b3 (06/09, compromis 50072) porte le champ
+         `champs_envoyes` a CHAQUE etape. C'est un releve EN CONDITIONS REELLES,
+         la ou 0.1 avait echoue a la main -- « l'assistant REFUSE D'AVANCER sous
+         automatisation ». Les etapes 2, 3 et 4 y sont.
+
+         etape 0 -> 2   modules infosFinancieresCompromis
+                                + acquereurNotaireAutresProspectsCompromis
+                                + annonceMandatCompromis + agenceInterkabCompromis
+             montantHonoraireEntree · tauxHonoraireEntree · mandat · selectedMandat
+             mandantSearch · mandants[] · typeUser · addAcquereurSearch
+             addAcquereurNotaireSearch · dateCompromis · dateSignatureActe
+             nbJoursRetractation · prixPublique · prixDeVente · prixNetVendeur
+             sequestre · montantHonoraireSortie · tauxHonoraireSortie · acquereurs[]
+         etape 2 -> 3   module commissionsCompromis
+             unitesEntreePercent · unitesSortiePercent
+         etape 3 -> fin module conditionsSuspensives
+             conditionsSuspensivesSelected[][note] · notesCompromis
+
+         ─── L'ECART, CHAMP PAR CHAMP (releve le 07/09) ───
+         PRESENTS ET BRANCHES :
+             dateCompromis, dateSignatureActe, nbJoursRetractation, prixPublique,
+             prixDeVente, prixNetVendeur, sequestre, montantHonoraireSortie,
+             tauxHonoraireSortie, mandat/selectedMandat, acquereurs[]
+         ABSENTS DE LA MODALE :
+             montantHonoraireEntree   les honoraires VENDEUR
+             tauxHonoraireEntree      le taux VENDEUR
+             mandants[] + mandantSearch   le choix des mandants
+             unitesEntreePercent      etape « Calcul des commissions »
+             unitesSortiePercent      idem
+             conditionsSuspensivesSelected[][note]   etape « Conditions suspensives »
+             notesCompromis           idem
+             content_pdf              le contenu du document
+         A MOITIE :
+             addAcquereurNotaireSearch -> la modale a un champ LIBRE
+             « ID notaire si connu », alors que Hektor propose une RECHERCHE.
+             Meme defaut que l'acquereur avant 2.5 : on tape un numero.
+
+         ⚠ LE POINT LE PLUS IMPORTANT N'EST PAS COSMETIQUE. Le TAUX VENDEUR
+           determine les honoraires d'entree (10 000 € mesures le 03/09), donc la
+           COMMISSION DE L'AGENCE. Il est aujourd'hui invisible ET non modifiable
+           depuis l'app. La modale n'a qu'un seul « TAUX HONORAIRES », et c'est
+           celui de SORTIE.
+
+         ─── CE QU'IL FAUT DECIDER, ET C'EST UN ARBITRAGE, PAS UNE EVIDENCE ───
+         Tout ajouter ferait de la modale un second assistant Hektor. La question
+         n'est donc pas « tout mettre » mais « que doit-on pouvoir saisir depuis
+         l'app le jour de la coupure ? » -- et la reponse appartient a Frederic.
+         Trois lots naturels :
+             LOT 1  les honoraires VENDEUR (montant + taux)   -> la commission
+             LOT 2  le notaire acquereur par RECHERCHE, comme l'acquereur (2.5)
+             LOT 3  mandants[] · conditions suspensives · notes · content_pdf
+         ⚠ Le meme releve reste A FAIRE POUR LA VENTE : son assistant n'a pas ete
+           journalise champ par champ. Le faire au premier essai de 3.2b.
+
+         verif : le journal d'un travail reel montre TOUS les champs attendus par
+                 Hektor, et la modale porte ceux que l'arbitrage a retenus
+
 [ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)
