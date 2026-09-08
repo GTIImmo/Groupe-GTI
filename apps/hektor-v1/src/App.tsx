@@ -15008,6 +15008,30 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return statusChangeAffaires.filter((a) => a.kind === genre && affaireEstVivante(a))
   }
 
+  /** TOUTES les affaires du genre vise, mortes comprises.
+   *
+   *  ─── ARBITRAGE DE FREDERIC, 08/09/2026 ───
+   *  « dans la modale zone offre d'achat toutes les offres doivent etre visibles,
+   *    chainage ouvert ou ferme, etat refuse / propose / accepte, avec la
+   *    possibilite de choisir l'offre que l'on souhaite modifier »
+   *
+   *  MESURE DU 08/09 QUI L'AUTORISE : l'offre 33048 de l'annonce 24933, REFUSEE le
+   *  04/09, a ete acceptee puis re-refusee depuis l'app. HEKTOR NE L'INTERDIT PAS.
+   *  Le blocage etait donc entierement dans notre ecran.
+   *
+   *  ⚠ ELLE NE SERT QU'AU CHOIX EXPLICITE. Le ciblage AUTOMATIQUE continue de
+   *    n'utiliser que les vivantes -- c'est l'incident du 02/09, et il tient
+   *    toujours : le dossier portait offre_id = 33037, l'offre REFUSEE du matin,
+   *    et « Accepter » l'aurait visee. La ligne de partage est nette :
+   *        AUTOMATIQUE  ->  seulement les vivantes ; si aucune, RIEN
+   *        EXPLICITE    ->  tout, sur le clic de l'utilisateur
+   *    « l'utilisateur DESIGNE, le worker EXECUTE. » */
+  function affairesDuGenrePourStatut(): AffaireLedgerRow[] {
+    const genre = AFFAIRE_PAR_STATUT[statusChangeStatus]
+    if (!genre || !statusChangeTarget) return []
+    return statusChangeAffaires.filter((a) => a.kind === genre)
+  }
+
   /** 2.2c (05/09) : ce que le worker dirait APRES, dit ICI, AVANT la saisie.
    *  Rend null sur les onglets « Actif » et « Clos » -- ils n'ont pas de genre
    *  dans AFFAIRE_PAR_STATUT, donc rien ne se declenche et ces deux onglets
@@ -15031,7 +15055,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // worker EXECUTE ». On verifie seulement qu'elle est toujours vivante : un
     // choix fait avant un rechargement peut viser une affaire qui ne l'est plus.
     if (statusChangeAffaireChoisie != null) {
-      const choisie = vivantes.find((a) => a.app_affaire_id === statusChangeAffaireChoisie)
+      // ⚠ ON CHERCHE DANS TOUTES LES AFFAIRES DU GENRE, PAS SEULEMENT LES VIVANTES
+      //   (08/09). Avant, meme un clic explicite sur une offre refusee etait
+      //   ecarte : `vivantes.find(...)` ne la trouvait pas. C'etait le seul
+      //   obstacle au besoin de Frederic -- Hektor, lui, accepte de reprendre une
+      //   offre refusee (mesure du 08/09 sur l'offre 33048).
+      //   Le repli AUTOMATIQUE, plus bas, reste filtre : l'incident du 02/09 tient.
+      const choisie = affairesDuGenrePourStatut()
+        .find((a) => a.app_affaire_id === statusChangeAffaireChoisie)
       if (choisie) return choisie
     }
 
@@ -18097,6 +18128,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <span className="sca-amb-d">{avis.detail}</span>
                         </p>
                       ) : null}
+                      {/* ─── 08/09 : REPRENDRE UNE AFFAIRE MORTE SE DIT ───
+                          Le geste est desormais permis (arbitrage de Frederic), mais
+                          il n'est pas anodin : ROUVRIR une chaine fermee peut en
+                          laisser DEUX ouvertes sur le meme bien. Or app_chaine_pour
+                          exige UNE SEULE chaine candidate pour y rattacher un futur
+                          compromis (`if v_n <> 1 then v_cible := null`) -- sinon il
+                          en ouvre une neuve, et le compromis part tout seul.
+                          On ne bloque pas : on previent. L'app signale, l'utilisateur
+                          tranche -- comme pour l'ecart de prix. */}
+                      {courante && !affaireEstVivante(courante) ? (
+                        <p className="sca-ambigu is-alerte" role="alert">
+                          <b className="sca-amb-t">
+                            Vous reprenez {GENRE[courante.kind] ?? courante.kind}
+                            {' '}{etatLabel(courante.kind, courante.state) ? `« ${etatLabel(courante.kind, courante.state)} »` : ''}
+                          </b>
+                          <span className="sca-amb-d">
+                            Hektor l'accepte, et le geste ajoutera une ligne a son historique
+                            plutot que d'en corriger une. Mais rouvrir un dossier terminé peut
+                            en laisser deux ouverts sur ce bien : un compromis créé ensuite ne
+                            saurait plus auquel se rattacher, et partirait seul.
+                          </span>
+                        </p>
+                      ) : null}
                       <div className="sca-h">
                         <span>Les affaires de ce bien</span>
                         <span className="sca-n">{statusChangeAffaires.length}</span>
@@ -18180,9 +18234,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                         {dossiersClos.has(String(a.app_chaine_id)) ? ' · terminé' : ''}
                                       </i>
                                     ) : null}
-                                    {ambigu && !visee && affaireEstVivante(a)
-                                      && !(a.app_chaine_id != null
-                                           && dossiersClos.has(String(a.app_chaine_id))) ? (
+                                    {/* ─── 08/09 : ON PEUT DESIGNER N'IMPORTE QUELLE AFFAIRE DU GENRE ───
+                                        Avant, TROIS conditions bloquaient : il fallait que ce
+                                        soit « ambigu » (donc au moins deux vivantes), que
+                                        l'affaire soit vivante, et que son dossier ne soit pas
+                                        clos. Resultat : sur un bien avec UNE offre vivante et
+                                        six refusees, AUCUN bouton n'apparaissait -- on ne
+                                        pouvait designer personne.
+                                        ⚠ Le ciblage AUTOMATIQUE reste filtre (incident du
+                                          02/09). Ici c'est un CLIC : il passe avant. */}
+                                    {!visee && a.kind === (AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '') ? (
                                       <button type="button" className="sca-choisir"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation()
                                                           setStatusChangeAffaireChoisie(a.app_affaire_id) }}>
