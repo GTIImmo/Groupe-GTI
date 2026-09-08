@@ -1936,11 +1936,54 @@ GEL que Frederic a repere le premier).*
      d'entree (10 000 EUR), donc la commission de l'agence. Il est aujourd'hui
      invisible ET non modifiable depuis l'app.
 
-   >>> RESTE A FAIRE : les etapes 2, 3 et 4 n'ont pas pu etre inventoriees --
-       l'assistant REFUSE D'AVANCER sous automatisation (meme comportement que
-       celui de la vente au second passage). Il faudra soit un relevé fait a la
-       main par Frederic, soit lire les definitions du module
-       Modules/GenericPopinStepperManager.
+   ── ⭐ LES TROIS ETAPES MANQUANTES, RELEVEES LE 08/09/2026 ──────────────
+      ⚠ « L'ASSISTANT REFUSE D'AVANCER SOUS AUTOMATISATION » ETAIT FAUX.
+        Il refuse un formulaire qu'on ne lui rend pas fidelement. En reposant ce
+        que Hektor vient de rendre -- ce que le worker fait depuis le 08/09 --
+        l'assistant se parcourt entierement. Le relevé du 03/09 se heurtait a la
+        methode, pas a une protection.
+      OUTIL : `node Console/releve_assistant_etapes.js compromis 24933 50078`
+      ⚠ IL N'ENREGISTRE JAMAIS, ET C'EST STRUCTUREL : l'enregistrement n'existe
+        que si l'URL porte actionContainer[]=save&treat ; ce script ne construit
+        JAMAIS ce parametre. Pas de drapeau a oublier, pas de branche a rater.
+
+      COMPROMIS 50078 -- 32 champs distincts sur 4 vues :
+
+      ouverture (48 entrees, index 0)
+          dateCompromis · nbJoursRetractation · dateSignatureActe
+          prixPublique · prixDeVente · prixNetVendeur · sequestre
+          montantHonoraireEntree · tauxHonoraireEntree      <- VENDEUR
+          montantHonoraireSortie · tauxHonoraireSortie      <- ACQUEREUR
+          mandat (select, 3 options) · selectedMandat · mandantSearch
+          mandants[] x3 · addAcquereurSearch · acquereurs[] x1
+          addAcquereurNotaireSearch · typeUser=NEGO
+          agenceReseauSelected  <- 20 AGENCES en radio (la retrocession)
+      etape 0 -> 2  [commissionsCompromis]      DEUX champs, et pas n'importe lesquels
+          unitesEntreePercent 50 · unitesSortiePercent 50   <- LE PARTAGE DE LA COMMISSION
+      etape 2 -> 3  [conditionsSuspensives]
+          conditionsSuspensivesSelected[][note] · [][etat] · notesCompromis
+      etape 3 -> 3  [conditionsSuspensives], second rendu -- PLUS RICHE
+          [][id_condition] · [][clef] · [][jours_validites] · [][note] · [][etat]
+
+      ➡ TROIS FAMILLES ENTIERES SONT ABSENTES DE TOUTE L'APP -- ni colonne, ni
+        carnet, ni ecran : le PARTAGE DE LA COMMISSION, la RETROCESSION, et les
+        CONDITIONS SUSPENSIVES (qui sont STRUCTUREES, pas un texte libre : chacune
+        a un identifiant, une clef, un delai en jours, une note et un etat).
+      ⚠ `content_pdf` N'APPARAIT PAS sur ce chemin : il appartenait a l'ancienne
+        popin. Le relevé du 03/09 le listait ; il n'est plus a chercher ici.
+
+      ⚠ UN RISQUE OUVERT PAR LA MODIFICATION, NON MESURE. Le worker enregistre en
+        reposant ce que l'etape 2 -> 3 lui a rendu -- donc SANS `id_condition` ni
+        `clef`, qui n'apparaissent qu'au second rendu. Sur le compromis d'essai
+        les conditions sont vides : on ne peut rien conclure. Sur un compromis qui
+        en PORTE, une modification pourrait les abimer. C'est juridique.
+        >>> A EPROUVER AVANT D'OUVRIR « Modifier » A UN VRAI COMPROMIS : poser une
+            condition suspensive sur 50078 DEPUIS HEKTOR (geste humain), puis
+            refaire une modification et relire.
+
+   >>> RESTE A FAIRE : le meme relevé pour la VENTE
+       (`node Console/releve_assistant_etapes.js vente <annonce> <idVente>`).
+       L'offre n'utilise pas l'assistant : c'est un formulaire ordinaire.
 
 [x] 0.2  LE CORPS DE LA REQUETE       FAIT le 03/09 14h20 -- REPONSE : OUI.
          Capture par instrumentation XHR de la page (lecture seule, aucun envoi
@@ -3316,7 +3359,32 @@ GEL que Frederic a repere le premier).*
          ⚠ CE N'EST PAS UNE RECOPIE, C'EST UN PORTAGE : pour l'annonce le pending,
            le conflit et le badge existent ; pour les transactions RIEN n'existe.
 
-[ ] 3.2  LES WORKERS « MODIFIER » -- COMPROMIS ET VENTE
+[~] 3.2  LES WORKERS « MODIFIER » -- COMPROMIS ET VENTE
+         ⭐ LE COMPROMIS EST FAIT ET PROUVE SUR L'ECRAN -- 08/09/2026.
+           Quatre modifications reelles sur 50078, verifiees SUR LA FICHE HEKTOR
+           (pas sur l'API : voir plus bas pourquoi c'est la difference).
+           Ce qui a fallu lever, dans l'ordre, chacun trouve par l'essai suivant :
+             1. l'ouverture de l'assistant n'envoyait pas l'identifiant
+             2. la RPC frappait un numero NEUF -> app_modifier_affaire_optimistic
+             3. la garde anti-doublon sortait en FAUX SUCCES (done, rien fait)
+             4. la garde de blocage « un compromis en cours empeche d'en creer un
+                autre » -- vraie pour la CREATION, sans objet pour la modification
+             5. l'arbitre cherchait « quoi de neuf » -> prouverTransactionModifiee,
+                la preuve PAR LA VALEUR
+             6. la charge preremplie ecrasait : sale_price = 180 000 = LE PRIX DE
+                L'ANNONCE, que personne n'avait tape. « Vide ne gagne pas »
+                transpose : en modification, seul ce que la charge porte
+                EXPLICITEMENT est une intention.
+             7. le NET VENDEUR retardait d'une modification -> la fiche affichait
+                l'ancien prix (elle affiche net + honoraires d'entree, pas le
+                champ qu'on ecrit). Trouve parce que Frederic a regarde la fiche
+                quand je regardais l'API.
+           ⚠ LA LECON DE METHODE, ecrite ici parce qu'elle a coute quatre
+             redemarrages de services : ces sept points etaient TOUS trouvables en
+             lisant handleChangeHektorAnnonceStatus d'un bout a l'autre (330
+             lignes). Je les ai decouverts un par un, en essayant. Essayer ne me
+             coute rien et coute a Frederic un geste avec elevation.
+         ⚠ RESTE : la VENTE, l'OFFRE (3.2b), et les multi-acquereurs (2.6).
          ⛔ A LIRE AVANT DE TOUCHER A CE CHEMIN -- lecon du 07/09.
             Le protocole d'essai a ete joue EN ENTIER (services redemarres, 50072
             annule, 50073 recree a deux acquereurs, Hektor relu) : TOUJOURS UN SEUL
@@ -3403,6 +3471,14 @@ GEL que Frederic a repere le premier).*
             ➡ 3.2c CESSE D'ETRE LE VERROU DE 3.2. On ne cherche plus a deplacer le
               pointeur de Hektor : on lui DIT quel compromis charger. Le pointeur
               redevient ce qu'il etait -- un defaut d'AFFICHAGE de leur fiche.
+            ⭐ PROUVE LE 08/09/2026, ET AUCUN COMPROMIS N'A ETE SACRIFIE.
+              Quatre modifications reelles sur le compromis 50078 (ACTIF, status 1)
+              de l'annonce 24933 -- travaux 8461bd33, 6d2853ea, 2652884b, beafdfc8 :
+                  165 000 -> 168 500 -> 172 500 -> 175 000
+              A chaque fois : UN SEUL compromis sur l'annonce (`ids ['50078']`),
+              dates / sequestre / acquereur / mandants CONSERVES.
+              ➡ L'ENREGISTREMENT MODIFIE. Il ne recree pas.
+            --- ce qui etait ecrit avant, et qui a tenu jusqu'au 08/09 ---
             ⚠ CE QUI N'EST PAS ENCORE PROUVE : que l'ENREGISTREMENT modifie au lieu
               de creer. Le panier retient l'identifiant, c'est acquis ; la suite
               demande d'ECRIRE, donc un compromis a sacrifier. Ne pas conclure.
@@ -3442,6 +3518,14 @@ GEL que Frederic a repere le premier).*
            ➡ LE COMPROMIS N'EST DONC PROBABLEMENT PAS EN CLASSE C. A confirmer sur
              un compromis ACTIF avant de conclure. Si c'est confirme, la seule
              vraie reserve du chantier tombe.
+           ⭐ CONFIRME LE 08/09/2026 : le compromis 50078 est ACTIF (status 1) et
+             il a ete modifie quatre fois de suite. LA SEULE VRAIE RESERVE DU
+             CHANTIER TOMBE.
+           ⚠ CE QUI RESTE DE 3.2b : la VENTE et l'OFFRE. On a fait le compromis
+             EN PREMIER -- l'inverse de ce que cette tache prevoyait (« la vente
+             d'abord, la seule mesuree ») -- parce que c'est lui qui bloquait.
+             La vente emprunte le MEME assistant (GenericPopinStepperManager) et
+             le meme chemin de reprise : le portage devrait etre court.
 
 [ ] 3.2c LE POINTEUR DE LA FICHE -- ⭐ PREALABLE DE 3.2, ETABLI LE 07/09
          ⚠ CETTE TACHE A CHANGE DE RANG. Elle etait « un defaut qui gene l'humain
@@ -3577,6 +3661,39 @@ GEL que Frederic a repere le premier).*
              LOT 1  les honoraires VENDEUR (montant + taux)   -> la commission
              LOT 2  le notaire acquereur par RECHERCHE, comme l'acquereur (2.5)
              LOT 3  mandants[] · conditions suspensives · notes · content_pdf
+             LOT 4  (AJOUTE LE 08/09, releve des etapes 2 et 3)
+                    unitesEntreePercent / unitesSortiePercent -> LE PARTAGE de la
+                    commission · agenceReseauSelected -> la RETROCESSION (20 agences)
+
+         ⭐ LOT 1 FAIT LE 08/09/2026 -- mais par une IDEE DE FREDERIC, meilleure
+           que celle qui etait ecrite ici :
+               « pourquoi dans la modale on ne verifie pas avant, pour aider
+                 l'utilisateur, que Net + Commission = Prix de vente ? Il faut
+                 juste verifier qu'il n'y ait pas d'ecart »
+           VERIFIER, c'est aider ; RECONSTRUIRE la formule de Hektor, c'est decider
+           a sa place. Mais la modale ne POUVAIT pas verifier : il lui manquait le
+           terme du milieu.
+           CE QUI A ETE FAIT :
+             · le registre porte trois colonnes neuves, extraites du payload --
+               prix_net_vendeur · honoraires_entree · honoraires_sortie
+               (CLASSE C, donc RELUES A CHAQUE RUN, comme jours_validite en 1.2b)
+             · la modale pre-remplit le net vendeur : LE CARNET D'ABORD (c'est la
+               saisie humaine), LE REGISTRE ENSUITE
+             · la COMMISSION DE L'AGENCE devient visible, en lecture seule
+             · l'ecart s'affiche, chiffre, et N'EMPECHE PAS D'ENVOYER
+           L'INVARIANT, MESURE AVANT D'Y CROIRE, sur les 10 583 compromis
+           mesurables du registre :
+               prix public = net vendeur + honoraires d'ENTREE + honoraires de SORTIE
+               10 055 le verifient   95,01 %
+                  528 en ecart, dont 508 ANTERIEURS A 2025
+           ➡ sur les donnees recentes il tient : l'alerte ne crie pas dans le vide.
+           ⚠ ELLE AVERTIT, ELLE NE BLOQUE PAS -- 528 compromis reels ne le
+             verifient pas ; refuser l'envoi ferait de l'app un juge des donnees
+             de Hektor. Et elle SE TAIT tant qu'un terme manque.
+           ⚠ C'EST AUSSI LE PREMIER MORCEAU REEL DE LA CIBLE DU 08/09 : « le
+             registre des transactions autonome doit comporter tous les champs
+             Hektor ; l'app lit et saisit dans ce registre. » Trois champs ont
+             quitte payload_json pour devenir des colonnes.
          ─── ⚠ LES TROIS GENRES, TROIS CHEMINS, TROIS COMPTES ───
          Frederic, 07/09 : « il faut l'ajouter pour la vente mais aussi pour les
          offres ». Il a raison, et c'est plus qu'un troisieme releve : LE CHEMIN
