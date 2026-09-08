@@ -88,6 +88,26 @@ const PAS = [
 const VALEURS_DEFAUT = {
   etape0: {
     prixDeVente: "170000",
+    // ─── CE QU'IL FAUT POUR TRANCHER LE TAUX ACQUEREUR ───
+    //
+    // `tauxHonoraireSortie` valait 0 aux deux premieres campagnes -- parce que
+    // les honoraires acquereur valaient 0. IL N'Y AVAIT RIEN A OBSERVER : on ne
+    // pouvait pas savoir si Hektor le GARDE (B) ou le RECALCULE (C).
+    //
+    // ⚠ ET ON NE CLASSE PAS PAR SYMETRIE. Son jumeau `tauxHonoraireEntree` est
+    //   de classe C, mesure deux fois -- mais 0.1 rappelle que la faute la plus
+    //   repetee du chantier est justement de mesurer sur UN cas et de conclure
+    //   pour les autres (deja payee sur jours_validite et jours_retractation).
+    //
+    // ON POSE DONC DES HONORAIRES ACQUEREUR REELS, ET UN TAUX QUI NE LEUR
+    // CORRESPOND PAS : 5 000 sur 175 000 font 2,857 %, on envoie 9,99.
+    //     s'il rend 9,99   -> B, il garde ce qu'on affirme
+    //     s'il rend 2,857  -> C, il le recalcule
+    // ⭐ BONUS : c'est aussi la premiere fois que prix public et prix de vente
+    //   seront SEPARES (public = vente + honoraires acquereur). Ca eprouve la
+    //   branche `separes` du worker, ecrite le matin et jamais rencontree.
+    montantHonoraireSortie: "5000",
+    tauxHonoraireSortie: "9.99",
     sequestre: "4321",
     montantHonoraireEntree: "12345",
     // ⚠ ON EN RETIRE UN DES TROIS (605030). S'il revient, Hektor les recalcule
@@ -228,18 +248,31 @@ function injecter(corps, pas, valeurs, contenu) {
     // tel quel, c'est ecrire la valeur d'AVANT notre modification. Meme regle que
     // le worker : net = prix de vente - honoraires d'entree, avec les honoraires
     // TELS QU'ILS SERONT apres ce passage.
-    // La BASE est le prix public s'il est pose, sinon le prix de vente. Formule
-    // mesuree trois fois : net = base - honoraires de SORTIE - honoraires d'ENTREE.
-    const base = v.prixPublique != null ? v.prixPublique : v.prixDeVente;
+    // ─── LE NET SE DEDUIT, MAIS PAS DE N'IMPORTE QUELLE BASE ───
+    //
+    // Les trois prix sont lies ainsi (mesure du 03/09 et du 08/09) :
+    //     prix public = prix de vente + honoraires de SORTIE (acquereur)
+    //     net vendeur = prix de vente - honoraires d'ENTREE  (vendeur)
+    // d'ou, si l'on part du public : net = public - sortie - entree.
+    //
+    // ⚠ LA SOUSTRACTION DE `sortie` NE VAUT DONC QUE POUR LE PRIX PUBLIC. Partir
+    //   du prix de vente ET retrancher la sortie, c'est la compter DEUX FOIS --
+    //   defaut trouve en tracant le calcul avant de lancer, pas apres.
+    //   Tant que les honoraires acquereur valaient 0, l'erreur etait invisible :
+    //   c'est precisement la campagne qui les rend non nuls qui l'aurait revelee.
+    const partDuPublic = v.prixPublique != null;
+    const base = partDuPublic ? v.prixPublique : v.prixDeVente;
     if (base != null && v.prixNetVendeur == null) {
       const lu = (cle, depuis) => depuis != null ? String(depuis)
         : String(valeurDe(contenu, cle) || "");
       const entree = lu("montantHonoraireEntree", v.montantHonoraireEntree);
-      const sortie = lu("montantHonoraireSortie", v.montantHonoraireSortie);
+      const sortie = partDuPublic ? lu("montantHonoraireSortie", v.montantHonoraireSortie) : "0";
       const net = Number(base) - Number(entree || "0") - Number(sortie || "0");
       if (entree !== "" && Number.isFinite(net) && net > 0) {
         poser("prixNetVendeur", String(net));
-        console.log(`   net vendeur recalcule : ${base} - ${entree} - ${sortie || 0} = ${net}`);
+        console.log(`   net vendeur recalcule : ${base}`
+          + `${partDuPublic ? ` - ${sortie || 0} (sortie)` : " (prix de vente)"}`
+          + ` - ${entree} = ${net}`);
       }
     }
   } else if (pas.de === "2") {
@@ -354,6 +387,10 @@ const texteDe = (html, nom) => {
       prixDeVente: valeurDe(vAvant.ouverture, "prixDeVente"),
       sequestre: valeurDe(vAvant.ouverture, "sequestre"),
       montantHonoraireEntree: valeurDe(vAvant.ouverture, "montantHonoraireEntree"),
+      // ⚠ SANS EUX, LE RETOUR ARRIERE NE LES REMET PAS. Lecon du prix, le meme
+      //   jour : ce qu'on ne capture pas ne revient pas.
+      montantHonoraireSortie: valeurDe(vAvant.ouverture, "montantHonoraireSortie"),
+      tauxHonoraireSortie: valeurDe(vAvant.ouverture, "tauxHonoraireSortie"),
       "mandants[]": toutesLesValeurs(vAvant.ouverture, "mandants[]"),
     },
     etape2: {
@@ -401,7 +438,9 @@ const texteDe = (html, nom) => {
   };
 
   const v0 = VALEURS.etape0 || {}; const v2 = VALEURS.etape2 || {}; const v3 = VALEURS.etape3 || {};
-  for (const cle of ["prixDeVente", "sequestre", "montantHonoraireEntree"]) {
+  for (const cle of ["prixPublique", "prixDeVente", "sequestre",
+                     "montantHonoraireEntree", "montantHonoraireSortie",
+                     "tauxHonoraireSortie"]) {
     if (v0[cle] != null) juger(cle, v0[cle], valeurDe(vApres.ouverture, cle));
   }
   if (v0["mandants[]"]) {

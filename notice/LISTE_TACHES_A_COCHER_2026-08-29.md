@@ -2100,13 +2100,43 @@ GEL que Frederic a repere le premier).*
            mon outil, ce qui confirme le diagnostic une troisieme fois. Repare en
            passant par le worker, qui porte le correctif.
 
-   >>> RESTE TROIS INCONNUES SUR LE COMPROMIS, et on ne les maquille pas :
-       agenceReseauSelected   la RETROCESSION (20 agences en radio). Aucune n'est
-                              cochee ; en cocher une n'est pas trivialement
-                              reversible (un radio ne se decoche pas en le
-                              repostant vide). ARBITRAGE, pas campagne.
-       conditions suspensives  mecanisme d'ecriture non compris (5 champs)
-       tauxHonoraireSortie     jamais isole
+   ── LE DECOMPTE EXACT (refait le 08/09 au soir, l'ancien melangeait tout) ──
+      Sur les 32 champs du relevé, CINQ sont de la plomberie (containerModule[],
+      containerName, step, fromStep, typeUser). Restent 27 -- dont TROIS ne sont
+      pas des donnees : ce sont des boites de recherche.
+
+          24 champs de DONNEES    ·   22 classes   ·   2 inconnus
+           3 boites de recherche  ·   sans classe, par nature
+                                      (mandantSearch · addAcquereurSearch
+                                       · addAcquereurNotaireSearch)
+      ⚠ L'une de ces trois compte pour 3.2d : la modale offre un champ LIBRE
+        « ID notaire si connu » la ou Hektor propose une RECHERCHE -- meme defaut
+        que l'acquereur avant 2.5.
+
+   >>> LES DEUX INCONNUES, et on ne les maquille pas :
+
+       ① agenceReseauSelected -- LA RETROCESSION (20 agences en radio)
+         Le partage d'honoraires quand UNE AUTRE AGENCE DU RESEAU a apporte
+         l'acquereur. Aucune n'est cochee aujourd'hui.
+         ⚠ CE N'EST PAS UNE MESURE QUI MANQUE, C'EST UN ARBITRAGE. Un bouton radio
+           NE SE DECOCHE PAS : une fois coche, on ne revient pas a « aucune » en
+           repostant vide. C'est le SEUL champ dont l'essai ne serait pas
+           reversible -- tous les autres ont ete remis en place.
+         >>> Si l'app doit piloter la retrocession : on teste sur un compromis
+             qu'on supprimera ensuite. Sinon : on n'y touche jamais, question close.
+
+       ② tauxHonoraireSortie -- LE TAUX DES HONORAIRES ACQUEREUR
+         Il vaut 0 parce que les honoraires acquereur valent 0 : RIEN A OBSERVER.
+         ⚠ ON NE LE CLASSE PAS PAR SYMETRIE avec tauxHonoraireEntree (C, mesure
+           deux fois). C'est exactement la faute que cette tache signale comme la
+           plus repetee du chantier -- deja payee sur jours_validite et
+           jours_retractation.
+         ✅ AJOUTE A LA PROCHAINE CAMPAGNE (08/09 au soir) : on pose des honoraires
+           acquereur reels (5 000) et un taux qui NE LEUR CORRESPOND PAS (9,99 au
+           lieu de 2,857). S'il rend 9,99 -> B ; s'il rend 2,857 -> C.
+         ⭐ BONUS : ce sera la premiere fois que prix public et prix de vente
+           seront SEPARES (public = vente + honoraires acquereur), ce qui eprouve
+           la branche `separes` du worker -- ecrite le matin, jamais rencontree.
 
    >>> RESTE A FAIRE : le meme relevé pour la VENTE
        (`node Console/releve_assistant_etapes.js vente <annonce> <idVente>`).
