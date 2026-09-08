@@ -18107,6 +18107,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   const dossiersClos = new Set(
                     dossiersOuvertsDuBien(statusChangeAffaires)
                       .filter((d) => !d.ouvert).map((d) => d.chaine))
+                  // Le bien est-il ENGAGE ? Calcule une fois pour toute la liste.
+                  const engage = bienEngage(statusChangeAffaires)
                   // UNE SEULE COPIE DE LA FORMULE (03/09) : la rubrique Affaires du
                   // cockpit affiche les memes etats. Deux copies divergent tot ou tard --
                   // la regle du projet. Elles vivent desormais au niveau module.
@@ -18137,6 +18139,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           en ouvre une neuve, et le compromis part tout seul.
                           On ne bloque pas : on previent. L'app signale, l'utilisateur
                           tranche -- comme pour l'ecart de prix. */}
+                      {/* Quand le bien est engage, les offres ne sont plus designables :
+                          sans un mot, l'utilisateur cherche un bouton qui n'existe pas. */}
+                      {engage && (AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '') === 'offre' ? (
+                        <p className="sca-ambigu is-normal" role="status">
+                          <b className="sca-amb-t">Ce bien est déjà engagé</b>
+                          <span className="sca-amb-d">
+                            Une offre acceptée ou un compromis est en cours. On ne reprend pas
+                            une autre offre tant que ce dossier vit — il faudrait d'abord le
+                            libérer. Les actions ci-dessous visent l'offre en cours.
+                          </span>
+                        </p>
+                      ) : null}
                       {courante && !affaireEstVivante(courante) ? (
                         <p className="sca-ambigu is-alerte" role="alert">
                           <b className="sca-amb-t">
@@ -18234,16 +18248,32 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                         {dossiersClos.has(String(a.app_chaine_id)) ? ' · terminé' : ''}
                                       </i>
                                     ) : null}
-                                    {/* ─── 08/09 : ON PEUT DESIGNER N'IMPORTE QUELLE AFFAIRE DU GENRE ───
-                                        Avant, TROIS conditions bloquaient : il fallait que ce
-                                        soit « ambigu » (donc au moins deux vivantes), que
-                                        l'affaire soit vivante, et que son dossier ne soit pas
-                                        clos. Resultat : sur un bien avec UNE offre vivante et
-                                        six refusees, AUCUN bouton n'apparaissait -- on ne
-                                        pouvait designer personne.
-                                        ⚠ Le ciblage AUTOMATIQUE reste filtre (incident du
-                                          02/09). Ici c'est un CLIC : il passe avant. */}
-                                    {!visee && a.kind === (AFFAIRE_PAR_STATUT[statusChangeStatus] ?? '') ? (
+                                    {/* ─── QUI PEUT-ON DESIGNER ? — corrige le 08/09 au soir ───
+                                        ⚠ MA PREMIERE VERSION ETAIT FAUSSE, ET ELLE EST PARTIE EN
+                                          PRODUCTION : j'avais retire TOUTE condition metier au lieu
+                                          d'ecrire la bonne. On pouvait designer une offre refusee
+                                          alors qu'un compromis tournait -- et « Accepter » aurait
+                                          engage le bien une seconde fois.
+
+                                        LA REGLE, dans les mots de Frederic : « il peut y avoir
+                                        plusieurs offres, mais plus possible quand compromis ouvert
+                                        ou offre acceptee ».
+                                          bien LIBRE   -> toute offre est designable, meme refusee
+                                          bien ENGAGE  -> AUCUNE offre ne l'est, quel que soit son
+                                                          etat (arbitrage : « on bloque tout »)
+                                        ⚠ Le ciblage AUTOMATIQUE continue de viser l'offre VIVANTE :
+                                          « Refuser » et « Accepter » restent donc disponibles sur un
+                                          bien engage. On n'empeche que de CHANGER DE CIBLE.
+                                        ⚠ LES AUTRES GENRES GARDENT LEUR COMPORTEMENT D'ORIGINE --
+                                          on ne touche qu'a l'offre. */}
+                                    {(() => {
+                                      const genreVise = AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''
+                                      if (visee || a.kind !== genreVise) return false
+                                      if (genreVise === 'offre') return !engage
+                                      return ambigu && affaireEstVivante(a)
+                                        && !(a.app_chaine_id != null
+                                             && dossiersClos.has(String(a.app_chaine_id)))
+                                    })() ? (
                                       <button type="button" className="sca-choisir"
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation()
                                                           setStatusChangeAffaireChoisie(a.app_affaire_id) }}>
@@ -23983,6 +24013,9 @@ function affairePrix(x: unknown): string {
 
 const AFFAIRE_RANG: Record<string, number> = { offre: 1, compromis: 2, vente: 3 }
 const AFFAIRE_ETAT_MORT = new Set(['refused', 'cancelled'])
+/** Les etats qui ENGAGENT le bien. Ecrits comme le registre les porte, et comme
+ *  app_chaine_pour les teste cote Supabase (`in ('accepted','acceptee')`). */
+const AFFAIRE_ETATS_ACCEPTES = new Set(['accepted', 'acceptee'])
 
 /** Une affaire est-elle encore vivante ? Regle unique, appelee par la rubrique
  *  Affaires ET par la modale de changement de statut.
@@ -24019,6 +24052,44 @@ function affaireEstVivante(a: AffaireLedgerRow): boolean {
  *  ⚠ Le worker, lui, ne les bloque pas : le listing de Hektor ne les rend pas.
  *    Mais L'ECRAN LIT NOTRE REGISTRE, QUI VOIT TOUT L'HISTORIQUE -- il serait donc
  *    PLUS SEVERE QUE HEKTOR s'il comptait les transactions. */
+/** ─── LE BIEN EST-IL ENGAGE ? — 08/09/2026 ───
+ *
+ *  REGLE DE FREDERIC, dans ses mots : « il peut y avoir plusieurs offres, mais
+ *  plus possible quand compromis ouvert ou offre acceptee ».
+ *
+ *      un bien est ENGAGE  s'il existe un DOSSIER OUVERT qui porte
+ *                          un COMPROMIS  ou  une OFFRE ACCEPTEE
+ *
+ *  ⚠ LA VENTE N'ENTRE JAMAIS DANS LE CALCUL, et c'est capital. Elle FERME son
+ *    dossier (`ouvert = !vente && ...`), donc aucun dossier ouvert n'en porte
+ *    jamais. Un bien vendu en 2019 et remis en vente en 2026 est LIBRE.
+ *    Objection de Frederic, 08/09 : « apres une vente il y a la possibilite de
+ *    faire une offre pour une autre affaire, si par exemple on revend la maison
+ *    des annees plus tard ». MESURE DU MEME JOUR sur le parc entier :
+ *        8 169 biens libres, dont 7 484 PORTENT DEJA UNE VENTE.
+ *    Une regle qui compterait les ventes en bloquerait 7 484 a tort.
+ *
+ *  ⚠ ON RAISONNE SUR LES DOSSIERS, JAMAIS SUR LES TRANSACTIONS -- meme raison
+ *    que le garde-fou 2.2c, et meme mesure : 105 biens portent un compromis
+ *    « actif », 97 seulement ont un dossier ouvert. Les 8 autres sont des biens
+ *    vendus autrefois, revenus en estimation.
+ *
+ *  VERIFIE AVANT D'ETRE ECRITE : phase2/checks/verifier_regle_chainage.py
+ *  confronte les TROIS copies de la regle de chainage sur le registre entier --
+ *  0 divergence entre le run et le front sur 12 639 chaines, 0 cas ou Supabase
+ *  serait plus permissif. */
+function bienEngage(lignes: AffaireLedgerRow[]): boolean {
+  const dossiers = dossiersOuvertsDuBien(lignes)
+  if (dossiers.some((d) => d.ouvert && d.genres.has('compromis'))) return true
+  const ouvertes = new Set(dossiers.filter((d) => d.ouvert).map((d) => d.chaine))
+  return lignes.some((a) => {
+    if (String(a.kind) !== 'offre') return false
+    if (!AFFAIRE_ETATS_ACCEPTES.has(String(a.state ?? '').trim().toLowerCase())) return false
+    const cle = a.app_chaine_id != null ? String(a.app_chaine_id) : 'seule-' + String(a.app_affaire_id)
+    return ouvertes.has(cle)
+  })
+}
+
 type DossierDuBien = {
   chaine: string
   ouvert: boolean
