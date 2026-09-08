@@ -2074,6 +2074,19 @@ GEL que Frederic a repere le premier).*
           ➡ « MODIFIER » NE DETRUIT PAS LES CONDITIONS SUSPENSIVES. L'interdiction
             posee le matin du 08/09 est levee, sur mesure et non sur raisonnement.
 
+        ⭐ ET L'APP SAIT AUSSI EN RETIRER UNE (08/09, 16:57). Le retour arriere,
+          qui n'envoyait aucune condition, les a fait DISPARAITRE : l'etape 3 ne
+          rend plus que le gabarit vide. La famille entiere est donc en CLASSE B --
+          poser, garder a travers une modification, et retirer.
+
+        ⚠ UN PIEGE DU RETOUR ARRIERE, TROUVE PAR CE MEME PASSAGE ET CORRIGE :
+          il capturait `prixDeVente` pour remettre le prix. Or ce champ est de
+          CLASSE C -- Hektor le recalcule depuis `prixPublique`. Mesure : envoye
+          175 000, revenu 176 000 ; le prix n'etait donc PAS restaure.
+          ✅ Le fichier d'avant capture desormais `prixPublique`, et le net se
+            calcule sur la base qui commande : net = base - honoraires de SORTIE
+            - honoraires d'ENTREE (formule mesuree trois fois).
+
       ⚠ DEUX DEFAUTS DE MA PROPRE MESURE, consignes pour qu'on ne relise pas sa
         sortie de travers :
         1. le script comparait les champs des etapes 2 et 3 dans le formulaire

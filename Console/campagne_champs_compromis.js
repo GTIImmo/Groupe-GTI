@@ -228,14 +228,18 @@ function injecter(corps, pas, valeurs, contenu) {
     // tel quel, c'est ecrire la valeur d'AVANT notre modification. Meme regle que
     // le worker : net = prix de vente - honoraires d'entree, avec les honoraires
     // TELS QU'ILS SERONT apres ce passage.
-    if (v.prixDeVente != null && v.prixNetVendeur == null) {
-      const honos = v.montantHonoraireEntree != null
-        ? String(v.montantHonoraireEntree)
-        : String(valeurDe(contenu, "montantHonoraireEntree") || "");
-      const net = Number(v.prixDeVente) - Number(honos || "0");
-      if (honos !== "" && Number.isFinite(net) && net > 0) {
+    // La BASE est le prix public s'il est pose, sinon le prix de vente. Formule
+    // mesuree trois fois : net = base - honoraires de SORTIE - honoraires d'ENTREE.
+    const base = v.prixPublique != null ? v.prixPublique : v.prixDeVente;
+    if (base != null && v.prixNetVendeur == null) {
+      const lu = (cle, depuis) => depuis != null ? String(depuis)
+        : String(valeurDe(contenu, cle) || "");
+      const entree = lu("montantHonoraireEntree", v.montantHonoraireEntree);
+      const sortie = lu("montantHonoraireSortie", v.montantHonoraireSortie);
+      const net = Number(base) - Number(entree || "0") - Number(sortie || "0");
+      if (entree !== "" && Number.isFinite(net) && net > 0) {
         poser("prixNetVendeur", String(net));
-        console.log(`   net vendeur recalcule : ${v.prixDeVente} - ${honos} = ${net}`);
+        console.log(`   net vendeur recalcule : ${base} - ${entree} - ${sortie || 0} = ${net}`);
       }
     }
   } else if (pas.de === "2") {
@@ -341,6 +345,12 @@ const texteDe = (html, nom) => {
   // L'etat d'avant, au format que ce script relit pour le retour arriere.
   const avant = {
     etape0: {
+      // ⚠ LE PRIX PUBLIC D'ABORD -- correctif du 08/09 au soir.
+      //   Le retour arriere ne savait pas remettre le prix : il capturait
+      //   `prixDeVente`, qui est de CLASSE C. Hektor le recalcule depuis
+      //   `prixPublique`, donc le reposer ne sert a rien -- mesure : envoye
+      //   175 000, revenu 176 000. C'est le prix PUBLIC qui commande.
+      prixPublique: valeurDe(vAvant.ouverture, "prixPublique"),
       prixDeVente: valeurDe(vAvant.ouverture, "prixDeVente"),
       sequestre: valeurDe(vAvant.ouverture, "sequestre"),
       montantHonoraireEntree: valeurDe(vAvant.ouverture, "montantHonoraireEntree"),
