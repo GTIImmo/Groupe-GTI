@@ -1125,6 +1125,30 @@
 
 /* ===== Modale « Changer le statut annonce » alignée sur la maquette v29 (scopée au flag cockpit) ===== */
 .fa-ck-statusmodal { font-family: 'Hanken Grotesk', 'Inter Variable', Inter, system-ui, sans-serif; overflow: hidden !important; }
+/* ⚠ LA MODALE NE DESCENDAIT PLUS — corrigé le 08/09/2026, signalé par Frédéric :
+   « sur le front la modale ne descend plus, impossible d'accéder aux champs en
+   bas de page ».
+
+   LA CAUSE, et elle dormait ici depuis l'arrivée du skin :
+       .modal-panel        max-height: calc(100vh - 32px)  +  overflow: auto   → il défile
+       .fa-ck-statusmodal  overflow: hidden !important                         → ça l'annule
+   Le panneau était donc plafonné en hauteur ET privé de défilement : tout ce qui
+   dépassait devenait inatteignable — y compris le bouton d'envoi.
+
+   ⚠ CE N'ÉTAIT VISIBLE QUE QUAND LE CONTENU DÉBORDAIT. Il tenait de justesse ;
+     le champ « Honoraires vendeur » ajouté le même jour l'a fait basculer. Le
+     défaut est antérieur, l'ajout n'a fait que le révéler.
+
+   LE CORRECTIF : on GARDE overflow:hidden sur le panneau — il sert à découper les
+   coins arrondis et le dégradé sombre de l'en-tête — et on rend le FORMULAIRE
+   défilant. `.modal-panel` est en `display: grid` : deux rangées, l'en-tête qui
+   reste, le formulaire qui défile. `minmax(0, 1fr)` est indispensable — sans lui
+   une rangée de grille ne descend jamais sous la taille de son contenu, et
+   overflow-y n'aurait aucun effet.
+   ⚠ On ne touche PAS à .modal-panel : les autres modales défilent déjà bien.
+     C'est la seule occurrence d'`overflow: hidden !important` du skin. */
+.fa-ck-statusmodal { grid-template-rows: auto minmax(0, 1fr) !important; }
+.fa-ck-statusmodal .status-change-form { min-height: 0 !important; overflow-y: auto !important; overscroll-behavior: contain; }
 /* header sombre pleine largeur + barre magenta + icône drapeau + X rond */
 .fa-ck-statusmodal .status-change-head { background: linear-gradient(115deg, #241016, #160a10 60%) !important; color: #fff !important; padding: 16px 22px !important; }
 .fa-ck-statusmodal .status-change-head::before { background: #c2125f !important; }
