@@ -10874,7 +10874,38 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     body.set("montantOffre", tx.amount);
     body.set("dateOffre", tx.date);
     body.set("nbJoursValidite", tx.validity);
-    body.set("prixDeVente", tx.salePrice);
+
+    // ═══ EN REPRISE, LE FORMULAIRE FAIT FOI POUR LE PRIX DE VENTE ═══
+    //
+    // ⚠ ET ON NE PEUT PAS APPLIQUER ICI LA SOLUTION DU COMPROMIS -- LES DEUX
+    //   CHEMINS N'ONT PAS LA MEME MECANIQUE, et c'est le point a retenir :
+    //     l'ASSISTANT (compromis, vente) REPOSTE tout le formulaire rendu, donc
+    //       « ne rien poser » veut dire CONSERVER ;
+    //     ce chemin-ci (l'offre) construit un corps NEUF, champ par champ, donc
+    //       « ne rien poser » veut dire NE PAS ENVOYER LE CHAMP -- et rien ne dit
+    //       que Hektor lise une absence comme « inchange ».
+    //   Omettre serait donc un pari, pas une protection. On garde le champ, et
+    //   on change seulement D'OU VIENT SA VALEUR.
+    //
+    // LE DEFAUT QU'ON CORRIGE : `tx.salePrice` prend d'abord `payload.sale_price`,
+    // que la modale envoie TOUJOURS -- et qui vaut LE PRIX DE L'ANNONCE (180 000
+    // sur le bien temoin, mesure du 08/09), jamais tape par personne. Modifier le
+    // seul montant d'une offre aurait donc aussi reecrit son prix de vente.
+    // En reprise on lit le formulaire OUVERT SUR L'OFFRE : il porte la valeur
+    // reelle de cette offre-la.
+    const prixDeVenteOffre = idRepris
+      ? (htmlInputValue(initHtml, "offre_prixDeVente")
+         || htmlInputValue(initHtml, "prixDeVente") || tx.salePrice)
+      : tx.salePrice;
+    body.set("prixDeVente", prixDeVenteOffre);
+    if (idRepris) {
+      await logJob(job.id, "hektor_transaction_reprise", "running",
+        `Reprise de l'offre ${idRepris} : prix de vente lu sur le formulaire `
+        + `(${prixDeVenteOffre}) et non sur la charge (${tx.salePrice}).`, {
+          hektor_annonce_id: annonceId, offre: idRepris,
+          prix_du_formulaire: prixDeVenteOffre, prix_de_la_charge: tx.salePrice,
+        });
+    }
     if (tx.isWritten === "1") body.set("isWrite", "1");
     body.set("montantHonoraireSortie", tx.fees);
     body.set("tauxHonoraireSortie", tx.feesRate);
