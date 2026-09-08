@@ -30,29 +30,30 @@
  *   node Console/campagne_champs_compromis.js [--valeurs fichier.json]
  *
  * ═══════════════════════════════════════════════════════════════════════════════
- * ⚠⚠ DEUX DÉFAUTS CONNUS — constatés au premier vrai passage, le 08/09/2026.
- *    À CORRIGER AVANT DE S'EN SERVIR POUR LA VENTE.
+ * ✅ DEUX DÉFAUTS, CONSTATÉS AU PREMIER VRAI PASSAGE (08/09) ET CORRIGÉS LE MÊME
+ *    JOUR. Gardés écrits : ils disent comment relire les rapports déjà produits.
  *
- *  ① SA SORTIE MENT SUR LES ÉTAPES 2 ET 3. Le tableau final relit les champs
- *    dans le formulaire d'OUVERTURE, où `unitesEntreePercent`,
+ *  ① SA SORTIE MENTAIT SUR LES ÉTAPES 2 ET 3. Le tableau final relisait les
+ *    champs dans le formulaire d'OUVERTURE, où `unitesEntreePercent`,
  *    `unitesSortiePercent`, `notesCompromis` et les conditions suspensives
- *    N'EXISTENT PAS — ils appartiennent aux étapes suivantes. Il en conclut
- *    « IGNORE ou vide », ce qui est FAUX.
- *    ➡ Ces lignes-là ne prouvent rien. Pour les lire, passer par
- *      `releve_assistant_etapes.js`, qui parcourt toutes les étapes et
- *      N'ÉCRIT JAMAIS. Vérifié le 08/09 : 60/40 et la note étaient bien
- *      enregistrés, contrairement à ce que ce script affichait.
+ *    N'EXISTENT PAS — ils appartiennent aux étapes suivantes. Il en concluait
+ *    « IGNORE ou vide », ce qui était FAUX (vérifié : 60/40 et la note étaient
+ *    bien enregistrés).
+ *    ✅ CORRIGÉ : le script fait maintenant TROIS parcours — lecture avant,
+ *      écriture, lecture après — et compare CHAQUE CHAMP À SON ÉTAGE.
+ *    ⚠ Les rapports produits AVANT ce correctif gardent leurs lignes fausses :
+ *      n'en retenir que prixDeVente, sequestre, montantHonoraireEntree, mandants[].
  *
- *  ② IL REPOSE UN NET VENDEUR PÉRIMÉ. Comme le worker avant son correctif du
- *    matin même, il recopie `prixNetVendeur` tel que le formulaire le rend — or
+ *  ② IL REPOSAIT UN NET VENDEUR PÉRIMÉ. Comme le worker avant son correctif du
+ *    matin même, il recopiait `prixNetVendeur` tel que le formulaire le rend — or
  *    Hektor le recalcule à l'AFFICHAGE, depuis les valeurs d'AVANT notre
  *    écriture. Mesure : le retour arrière du 08/09 a laissé 162 655
  *    (= 175 000 − 12 345, les honoraires d'essai) au lieu de 165 000.
- *    ➡ Le décalage d'une modification, reproduit ici par mon propre outil : la
- *      troisième confirmation indépendante du diagnostic. Réparé en passant par
- *      le worker, qui porte le correctif — pas par ce script.
- *    ➡ Correctif à porter ici : quand le prix change, poser
- *      `prixNetVendeur = prix de vente − montantHonoraireEntree`.
+ *    ➡ Le décalage d'une modification, reproduit par mon propre outil : la
+ *      troisième confirmation indépendante du diagnostic.
+ *    ✅ CORRIGÉ : même règle que le worker — quand le prix de vente est posé et
+ *      que le net ne l'est pas, on écrit `net = prix de vente − honoraires
+ *      d'entrée`, avec les honoraires TELS QU'ILS SERONT après ce passage.
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 const fs = require("fs");
@@ -173,6 +174,85 @@ function lireEtape(texte) {
            brut: texte };
 }
 
+/** Un parcours complet. `valeurs` = null -> LECTURE SEULE (aucun save/treat).
+ *  Rend le contenu de CHAQUE etage, pour comparer chaque champ la ou il VIT.
+ *  ✅ C'est le correctif ① : comparer dans le formulaire d'ouverture des champs
+ *    qui appartiennent aux etapes suivantes ne prouve RIEN. */
+async function parcourir(valeurs) {
+  const ecrit = valeurs !== null;
+  let etat = await ouvrir();
+  if (!etat.basket) throw new Error("ouverture sans panier");
+  const vues = { ouverture: etat.contenu };
+
+  for (const pas of PAS) {
+    const corps = new URLSearchParams();
+    for (const [k, v] of champsDuFormulaire(etat.contenu).entries()) {
+      if (k === "basket" || k === "idAnnonce") continue;
+      corps.append(k, v);
+    }
+    if (ecrit) injecter(corps, pas, valeurs, etat.contenu);
+    for (const m of pas.modules) corps.append("containerModule[]", m);
+    corps.set("containerName", CONTENEUR);
+    corps.set("fromStep", pas.de); corps.set("step", pas.vers);
+    corps.set("idAnnonce", ANNONCE); corps.set("basket", etat.basket);
+
+    // ⚠ C'EST CE SUFFIXE, ET LUI SEUL, QUI ECRIT CHEZ HEKTOR. En lecture il
+    //   n'est jamais construit : un parcours de lecture ne peut pas deraper.
+    const url = `${XMLRPC_URL}?mode=${encodeURIComponent(ETAPE)}`
+      + (ecrit && pas.enregistre ? "&actionContainer%5B%5D=save&actionContainer%5B%5D=treat" : "");
+    const r = await fetch(url, { method: "POST", body: corps,
+      headers: { ...ENTETES, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" } });
+    etat = lireEtape(await r.text());
+    vues[`${pas.de}->${pas.vers}`] = etat.contenu;
+    if (ecrit) console.log(`   etape ${pas.de} -> ${pas.vers}`
+      + `${pas.enregistre ? "  [ENREGISTREMENT]" : ""}  index=${etat.index} · ${etat.contenu.length} car`);
+    await new Promise((x) => setTimeout(x, 1200));
+  }
+  return vues;
+}
+
+/** Pose les valeurs d'essai a l'etage qui les porte. */
+function injecter(corps, pas, valeurs, contenu) {
+  const poser = (cle, val) => { corps.delete(cle); corps.set(cle, String(val)); };
+  if (pas.de === "0") {
+    const v = valeurs.etape0 || {};
+    for (const [cle, val] of Object.entries(v)) {
+      if (Array.isArray(val)) { corps.delete(cle); for (const x of val) corps.append(cle, x); }
+      else poser(cle, val);
+    }
+    // ✅ CORRECTIF ② : LE NET VENDEUR SUIT LE PRIX.
+    // Hektor le recalcule a l'AFFICHAGE depuis ce qu'il a en base ; le reposter
+    // tel quel, c'est ecrire la valeur d'AVANT notre modification. Meme regle que
+    // le worker : net = prix de vente - honoraires d'entree, avec les honoraires
+    // TELS QU'ILS SERONT apres ce passage.
+    if (v.prixDeVente != null && v.prixNetVendeur == null) {
+      const honos = v.montantHonoraireEntree != null
+        ? String(v.montantHonoraireEntree)
+        : String(valeurDe(contenu, "montantHonoraireEntree") || "");
+      const net = Number(v.prixDeVente) - Number(honos || "0");
+      if (honos !== "" && Number.isFinite(net) && net > 0) {
+        poser("prixNetVendeur", String(net));
+        console.log(`   net vendeur recalcule : ${v.prixDeVente} - ${honos} = ${net}`);
+      }
+    }
+  } else if (pas.de === "2") {
+    for (const [cle, val] of Object.entries(valeurs.etape2 || {})) poser(cle, val);
+  } else {
+    const v = valeurs.etape3 || {};
+    const conds = Array.isArray(v.conditions) ? v.conditions : [];
+    for (const cle of ["id_condition", "clef", "jours_validites", "note", "etat"]) {
+      corps.delete(`conditionsSuspensivesSelected[][${cle}]`);
+    }
+    // ⚠ TABLEAUX PARALLELES : meme longueur, meme ordre.
+    for (const c of conds) {
+      for (const cle of ["id_condition", "clef", "jours_validites", "note", "etat"]) {
+        corps.append(`conditionsSuspensivesSelected[][${cle}]`, String(c[cle] ?? ""));
+      }
+    }
+    if (v.notesCompromis != null) poser("notesCompromis", v.notesCompromis);
+  }
+}
+
 async function ouvrir() {
   await fetch(`${XMLRPC_URL}?mode=${encodeURIComponent(COQUILLE)}`, { headers: ENTETES });
   const c = new URLSearchParams();
@@ -184,6 +264,17 @@ async function ouvrir() {
   return lireEtape(await r.text());
 }
 
+
+/** Le contenu d'un <textarea> (notesCompromis en est un). */
+const texteDe = (html, nom) => {
+  for (const m of String(html || "").matchAll(/<textarea\b[^>]*>[\s\S]*?<\/textarea>/gi)) {
+    if (attr(m[0], "name") === nom) {
+      return (m[0].match(/<textarea\b[^>]*>([\s\S]*?)<\/textarea>/i) || [])[1].trim();
+    }
+  }
+  return null;
+};
+
 (async () => {
   fs.mkdirSync(SORTIE, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -191,135 +282,103 @@ async function ouvrir() {
   console.log("⚠ CE SCRIPT ECRIT CHEZ HEKTOR.");
   console.log("");
 
-  // ─── ② L'ETAT D'AVANT, AVANT LA MOINDRE ECRITURE ───
-  let etat = await ouvrir();
-  if (!etat.basket) { console.error("ouverture sans panier -- on s'arrete"); process.exit(1); }
-  const avantHtml = etat.contenu;
+  // ─── ① UN PARCOURS DE LECTURE D'ABORD, POUR VOIR CHAQUE ETAGE ───
+  // C'est le correctif du defaut n°1 : on capture les etapes 2 et 3 LA OU ELLES
+  // VIVENT, au lieu de les chercher dans le formulaire d'ouverture.
+  console.log("--- lecture AVANT (aucune ecriture) ---");
+  const vAvant = await parcourir(null);
+
+  // L'etat d'avant, au format que ce script relit pour le retour arriere.
   const avant = {
     etape0: {
-      prixDeVente: valeurDe(avantHtml, "prixDeVente"),
-      sequestre: valeurDe(avantHtml, "sequestre"),
-      montantHonoraireEntree: valeurDe(avantHtml, "montantHonoraireEntree"),
-      "mandants[]": toutesLesValeurs(avantHtml, "mandants[]"),
+      prixDeVente: valeurDe(vAvant.ouverture, "prixDeVente"),
+      sequestre: valeurDe(vAvant.ouverture, "sequestre"),
+      montantHonoraireEntree: valeurDe(vAvant.ouverture, "montantHonoraireEntree"),
+      "mandants[]": toutesLesValeurs(vAvant.ouverture, "mandants[]"),
     },
-    etape2: {}, etape3: {},
+    etape2: {
+      unitesEntreePercent: valeurDe(vAvant["0->2"], "unitesEntreePercent"),
+      unitesSortiePercent: valeurDe(vAvant["0->2"], "unitesSortiePercent"),
+    },
+    etape3: { conditions: [], notesCompromis: texteDe(vAvant["2->3"], "notesCompromis") || "" },
     _releve: {
-      prixPublique: valeurDe(avantHtml, "prixPublique"),
-      prixNetVendeur: valeurDe(avantHtml, "prixNetVendeur"),
-      tauxHonoraireEntree: valeurDe(avantHtml, "tauxHonoraireEntree"),
-      acquereurs: toutesLesValeurs(avantHtml, "acquereurs[]"),
+      prixPublique: valeurDe(vAvant.ouverture, "prixPublique"),
+      prixNetVendeur: valeurDe(vAvant.ouverture, "prixNetVendeur"),
+      tauxHonoraireEntree: valeurDe(vAvant.ouverture, "tauxHonoraireEntree"),
+      acquereurs: toutesLesValeurs(vAvant.ouverture, "acquereurs[]"),
+      conditions_brut: toutesLesValeurs(vAvant["3->3"], "conditionsSuspensivesSelected[][id_condition]"),
     },
   };
   const fichierAvant = path.join(SORTIE, `avant_${stamp}.json`);
+  fs.writeFileSync(fichierAvant, JSON.stringify(avant, null, 1), "utf8");
+  console.log(`⚠ ETAT D'AVANT DEPOSE (retour arriere) : ${fichierAvant}`);
+  console.log("");
 
-  // ─── LE PARCOURS, avec injection au bon etage ───
-  const journal = [];
-  for (const pas of PAS) {
-    const corps = new URLSearchParams();
-    for (const [k, v] of champsDuFormulaire(etat.contenu).entries()) {
-      if (k === "basket" || k === "idAnnonce") continue;
-      corps.append(k, v);
-    }
-    const poser = (cle, val) => { corps.delete(cle); corps.set(cle, String(val)); };
-
-    if (pas.de === "0") {
-      const v = VALEURS.etape0 || {};
-      for (const [cle, val] of Object.entries(v)) {
-        if (Array.isArray(val)) { corps.delete(cle); for (const x of val) corps.append(cle, x); }
-        else poser(cle, val);
-      }
-      journal.push({ etape: "0", envoye: v });
-    } else if (pas.de === "2") {
-      const v = VALEURS.etape2 || {};
-      for (const [cle, val] of Object.entries(v)) poser(cle, val);
-      // Ce que l'etape 2 rendait AVANT qu'on ecrive -- capture ici, c'est le seul
-      // moment ou on la voit sans avoir encore enregistre.
-      avant.etape2 = { unitesEntreePercent: valeurDe(etat.contenu, "unitesEntreePercent"),
-                       unitesSortiePercent: valeurDe(etat.contenu, "unitesSortiePercent") };
-      journal.push({ etape: "2", envoye: v });
-    } else {
-      const v = VALEURS.etape3 || {};
-      avant.etape3 = { conditions: [], notesCompromis: "" };
-      const conds = Array.isArray(v.conditions) ? v.conditions : [];
-      for (const cle of ["id_condition", "clef", "jours_validites", "note", "etat"]) {
-        corps.delete(`conditionsSuspensivesSelected[][${cle}]`);
-      }
-      // ⚠ TABLEAUX PARALLELES : meme longueur, meme ordre. C'est ainsi que leur
-      //   formulaire les poste ; s'en ecarter, c'est melanger les conditions.
-      for (const c of conds) {
-        for (const cle of ["id_condition", "clef", "jours_validites", "note", "etat"]) {
-          corps.append(`conditionsSuspensivesSelected[][${cle}]`, String(c[cle] ?? ""));
-        }
-      }
-      if (v.notesCompromis != null) poser("notesCompromis", v.notesCompromis);
-      journal.push({ etape: "3", envoye: v });
-    }
-
-    for (const m of pas.modules) corps.append("containerModule[]", m);
-    corps.set("containerName", CONTENEUR);
-    corps.set("fromStep", pas.de); corps.set("step", pas.vers);
-    corps.set("idAnnonce", ANNONCE); corps.set("basket", etat.basket);
-
-    if (pas.enregistre) {
-      fs.writeFileSync(fichierAvant, JSON.stringify(avant, null, 1), "utf8");
-      console.log(`⚠ ETAT D'AVANT DEPOSE (retour arriere) : ${fichierAvant}`);
-      console.log("");
-    }
-    // ⚠ C'EST CETTE LIGNE, ET ELLE SEULE, QUI ECRIT CHEZ HEKTOR.
-    const url = `${XMLRPC_URL}?mode=${encodeURIComponent(ETAPE)}`
-      + (pas.enregistre ? "&actionContainer%5B%5D=save&actionContainer%5B%5D=treat" : "");
-    const r = await fetch(url, { method: "POST", body: corps,
-      headers: { ...ENTETES, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" } });
-    etat = lireEtape(await r.text());
-    console.log(`   etape ${pas.de} -> ${pas.vers}${pas.enregistre ? "  [ENREGISTREMENT]" : ""}`
-                + `  index=${etat.index} · ${etat.contenu.length} car`);
-    await new Promise((x) => setTimeout(x, 1500));
-  }
-
-  // ─── LA RELECTURE, par une ouverture NEUVE ───
+  // ─── L'ECRITURE ───
+  console.log("--- ECRITURE ---");
+  await parcourir(VALEURS);
   console.log("");
   await new Promise((x) => setTimeout(x, 3000));
-  const apres = await ouvrir();
-  const A = apres.contenu;
 
-  const lignes = [];
-  const cmp = (nom, envoye, retenu) => lignes.push({ nom, envoye, retenu,
-    verdict: envoye == null ? "-"
-      : (retenu == null || retenu === "" ? "IGNORE ou vide"
-      : (String(Number(retenu)) === String(Number(envoye)) || retenu === envoye ? "GARDE  -> B"
-      : `REMPLACE par ${retenu}  -> C`)) });
+  // ─── ET UN PARCOURS DE LECTURE APRES ───
+  console.log("--- lecture APRES (aucune ecriture) ---");
+  const vApres = await parcourir(null);
+  console.log("");
 
-  cmp("prixDeVente", VALEURS.etape0.prixDeVente, valeurDe(A, "prixDeVente"));
-  cmp("sequestre", VALEURS.etape0.sequestre, valeurDe(A, "sequestre"));
-  cmp("montantHonoraireEntree", VALEURS.etape0.montantHonoraireEntree, valeurDe(A, "montantHonoraireEntree"));
-  cmp("unitesEntreePercent", (VALEURS.etape2 || {}).unitesEntreePercent, null);
-  cmp("unitesSortiePercent", (VALEURS.etape2 || {}).unitesSortiePercent, null);
+  // ─── LA COMPARAISON, CHAQUE CHAMP A SON ETAGE ───
+  const lignesRapport = [];
+  const juger = (nom, envoye, retenu) => {
+    let verdict;
+    if (envoye == null) verdict = "-";
+    else if (retenu == null) verdict = "CHAMP ABSENT de cette vue";
+    else if (retenu === "" ) verdict = "IGNORE (revenu vide)";
+    else {
+      const na = Number(envoye); const nr = Number(retenu);
+      const pareil = (Number.isFinite(na) && Number.isFinite(nr)) ? na === nr : String(envoye) === String(retenu);
+      verdict = pareil ? "GARDE  -> B" : `REMPLACE par ${retenu}  -> C`;
+    }
+    lignesRapport.push({ nom, envoye, retenu, verdict });
+  };
 
-  const mandantsApres = toutesLesValeurs(A, "mandants[]");
-  lignes.push({ nom: "mandants[]", envoye: (VALEURS.etape0["mandants[]"] || []).join(","),
-    retenu: mandantsApres.join(","),
-    verdict: mandantsApres.length === (VALEURS.etape0["mandants[]"] || []).length
-      ? "GARDE  -> B (l'app peut les piloter)"
-      : `REMPLACE (${mandantsApres.length} au lieu de ${(VALEURS.etape0["mandants[]"] || []).length})  -> C` });
+  const v0 = VALEURS.etape0 || {}; const v2 = VALEURS.etape2 || {}; const v3 = VALEURS.etape3 || {};
+  for (const cle of ["prixDeVente", "sequestre", "montantHonoraireEntree"]) {
+    if (v0[cle] != null) juger(cle, v0[cle], valeurDe(vApres.ouverture, cle));
+  }
+  if (v0["mandants[]"]) {
+    const ap = toutesLesValeurs(vApres.ouverture, "mandants[]");
+    lignesRapport.push({ nom: "mandants[]", envoye: v0["mandants[]"].join(","), retenu: ap.join(","),
+      verdict: ap.length === v0["mandants[]"].length ? "GARDE  -> B (l'app peut les piloter)"
+        : `REMPLACE (${ap.length} au lieu de ${v0["mandants[]"].length})  -> C` });
+  }
+  // ✅ A LEUR ETAGE, pas dans l'ouverture.
+  for (const cle of ["unitesEntreePercent", "unitesSortiePercent"]) {
+    if (v2[cle] != null) juger(cle, v2[cle], valeurDe(vApres["0->2"], cle));
+  }
+  if (v3.notesCompromis != null) juger("notesCompromis", v3.notesCompromis, texteDe(vApres["2->3"], "notesCompromis"));
+  if (Array.isArray(v3.conditions) && v3.conditions.length) {
+    const ids = toutesLesValeurs(vApres["3->3"], "conditionsSuspensivesSelected[][id_condition]").filter(Boolean);
+    lignesRapport.push({ nom: "conditions suspensives", envoye: v3.conditions.map((c) => c.id_condition).join(","),
+      retenu: ids.join(",") || "(aucune)",
+      verdict: ids.length ? "CREEE -> B" : "NON CREEE -- mecanisme non compris" });
+  }
 
-  console.log("=== ENVOYE CONTRE RETENU ===");
-  for (const l of lignes) {
-    console.log("   %s envoye=%s  retenu=%s  %s".replace("%s", String(l.nom).padEnd(24))
-      .replace("%s", String(l.envoye).padEnd(12)).replace("%s", String(l.retenu).padEnd(14))
-      .replace("%s", l.verdict));
+  console.log("=== ENVOYE CONTRE RETENU (chaque champ lu a son etage) ===");
+  for (const l of lignesRapport) {
+    console.log("   " + String(l.nom).padEnd(24) + " envoye=" + String(l.envoye).padEnd(14)
+      + " retenu=" + String(l.retenu).padEnd(16) + " " + l.verdict);
   }
   console.log("");
-  console.log("--- ce que le formulaire rend aussi (pour information) ---");
+  console.log("--- ce que le formulaire rend aussi (information) ---");
   for (const n of ["prixPublique", "prixNetVendeur", "tauxHonoraireEntree", "montantHonoraireSortie"]) {
-    console.log("   %s avant=%s  apres=%s".replace("%s", n.padEnd(24))
-      .replace("%s", String(avant._releve[n] ?? valeurDe(avantHtml, n)).padEnd(12))
-      .replace("%s", String(valeurDe(A, n))));
+    console.log("   " + n.padEnd(24) + " avant=" + String(valeurDe(vAvant.ouverture, n)).padEnd(12)
+      + " apres=" + String(valeurDe(vApres.ouverture, n)));
   }
 
   const rapport = path.join(SORTIE, `campagne_${stamp}.json`);
-  fs.writeFileSync(rapport, JSON.stringify({ avant, envoye: journal, lignes,
-    apres_html_taille: A.length }, null, 1), "utf8");
-  fs.writeFileSync(path.join(SORTIE, `apres_${stamp}.html`), A, "utf8");
+  fs.writeFileSync(rapport, JSON.stringify({ avant, envoye: VALEURS, lignes: lignesRapport }, null, 1), "utf8");
+  for (const [nom, html] of Object.entries(vApres)) {
+    fs.writeFileSync(path.join(SORTIE, `apres_${nom.replace(/[^\w]+/g, "_")}_${stamp}.html`), html, "utf8");
+  }
   console.log("");
   console.log("rapport : " + rapport);
   console.log("RETOUR ARRIERE : node Console/campagne_champs_compromis.js --valeurs " + fichierAvant);
