@@ -173,9 +173,74 @@ def human(num_bytes: float) -> str:
     return f"{num_bytes:.1f} To"
 
 
-def connect_readonly(path: Path) -> sqlite3.Connection:
-    """Ouvre une base en LECTURE SEULE : impossible d'alterer la source."""
-    return sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True)
+# ═══════════════════════════════════════════════════════════════════════════
+# UNE BASE OCCUPEE N'EST PAS UNE BASE PERDUE        08/09/2026
+# ═══════════════════════════════════════════════════════════════════════════
+# MESURE DU 08/09. Le run quotidien s'est termine a 06:56:09, la sauvegarde part
+# a 07:00 : quatre minutes de marge. Et le run avait dure 1 h 56 au lieu des
+# ~85 min habituelles -- `sync_raw` a lui seul pesait 76,8 min, consequence du
+# perimetre elargi aux transactions. La marge se refermera.
+#
+# L'horaire a ete decale a 08:15 (apres la descente). Mais decaler ACHETE DU
+# TEMPS, CA NE SUPPRIME PAS LE MODE D'ECHEC : le jour ou deux taches se
+# chevauchent quand meme, la sauvegarde tombait sur « database is locked » et
+# LA JOURNEE N'AVAIT PAS D'ARCHIVE -- sur la tache dont l'en-tete dit qu'elle
+# est « le dernier filet du projet ».
+#
+# Le defaut de sqlite3.connect est de n'attendre que 5 secondes. On attend
+# desormais une vraie minute, et l'on reessaie trois fois. Un verrou dure des
+# secondes ; on ne renonce plus pour lui.
+#
+# ⚠ ON NE RATTRAPE QUE LE VERROU. Toute autre erreur remonte telle quelle et
+#   fait echouer la tache -- correctif du 19/08 : « une sauvegarde qui echoue
+#   chaque nuit serait restee invisible ». Attendre un verrou, oui ; masquer une
+#   panne, jamais.
+# ⚠ ET L'ECHEC FINAL RESTE UN ECHEC. Apres trois tentatives on leve, la tache
+#   sort en 1, et check_gti_health la voit (elle y est classee « critical »).
+VERROU_ATTENTE_S = 60.0      # ce qu'une connexion accepte d'attendre
+VERROU_TENTATIVES = 3
+VERROU_RECUL_S = 90.0        # entre deux tentatives
+
+
+def connect_readonly(path: Path, timeout: float = VERROU_ATTENTE_S) -> sqlite3.Connection:
+    """Ouvre une base en LECTURE SEULE : impossible d'alterer la source.
+
+    `timeout` est le temps qu'on accepte d'attendre qu'un verrou se libere. Le
+    defaut de la bibliotheque est 5 s -- trop court quand le pipeline ecrit.
+    """
+    return sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=timeout)
+
+
+def _est_un_verrou(exc: BaseException) -> bool:
+    """Vrai seulement pour « database is locked » / « database is busy »."""
+    if not isinstance(exc, sqlite3.OperationalError):
+        return False
+    motif = str(exc).lower()
+    return "locked" in motif or "busy" in motif
+
+
+def reessayer_si_verrouille(libelle: str, faire):
+    """Rejoue `faire` tant qu'un VERROU l'en empeche. Toute autre erreur remonte.
+
+    Les operations appelees ici sont rejouables : chacune commence par effacer
+    sa cible si elle existe, et ferme sa connexion dans un `finally`.
+    """
+    derniere = None
+    for tentative in range(1, VERROU_TENTATIVES + 1):
+        try:
+            return faire()
+        except Exception as exc:  # noqa: BLE001 -- on trie juste apres
+            if not _est_un_verrou(exc):
+                raise
+            derniere = exc
+            if tentative < VERROU_TENTATIVES:
+                log(f"  ! {libelle} : base occupee ({exc}). "
+                    f"Nouvelle tentative dans {int(VERROU_RECUL_S)} s "
+                    f"({tentative}/{VERROU_TENTATIVES})")
+                time.sleep(VERROU_RECUL_S)
+    raise RuntimeError(
+        f"{libelle} : base toujours verrouillee apres {VERROU_TENTATIVES} tentatives "
+        f"({derniere}). AUCUNE ARCHIVE POUR CE PASSAGE.")
 
 
 def table_exists(con: sqlite3.Connection, table: str) -> bool:
@@ -373,20 +438,24 @@ def main() -> int:
 
     produced: list[Path] = []
     try:
-        result = backup_critical_tables(stamp, args.dry_run)
+        result = reessayer_si_verrouille(
+            "tables critiques", lambda: backup_critical_tables(stamp, args.dry_run))
         if result:
             produced.append(result)
 
         if args.weekly or args.full:
-            result = snapshot_database(PHASE2_DB, "phase2", stamp, args.dry_run)
+            result = reessayer_si_verrouille(
+                "instantane phase2", lambda: snapshot_database(PHASE2_DB, "phase2", stamp, args.dry_run))
             if result:
                 produced.append(result)
+            # Les documents sont des fichiers, pas une base : aucun verrou a attendre.
             result = backup_documents(stamp, args.dry_run)
             if result:
                 produced.append(result)
 
         if args.full:
-            result = snapshot_database(HEKTOR_DB, "hektor", stamp, args.dry_run)
+            result = reessayer_si_verrouille(
+                "instantane hektor", lambda: snapshot_database(HEKTOR_DB, "hektor", stamp, args.dry_run))
             if result:
                 produced.append(result)
     except Exception as exc:  # noqa: BLE001 - on veut le motif exact dans le log de la tache

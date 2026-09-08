@@ -1,10 +1,20 @@
-# Tache planifiee : SAUVEGARDE des donnees locales irremplacables (07:00).
+# Tache planifiee : SAUVEGARDE des donnees locales irremplacables (08:15).
 # Chantier Phase 0.1 -- voir notice/NOTE_AUDIT_MAITRE_2026-08-17.md section 5.
 #
-# Pourquoi 07:00 et pas dans le pipeline : le run quotidien se termine vers 06:25 ;
-# on sauvegarde APRES (donnees fraiches) mais dans une tache SEPAREE, pour que la
-# sauvegarde ait lieu meme les jours ou le pipeline echoue -- precisement les jours
-# ou l'on peut en avoir besoin.
+# Pourquoi une tache SEPAREE et pas une etape du pipeline : pour que la sauvegarde
+# ait lieu meme les jours ou le pipeline echoue -- precisement les jours ou l'on
+# peut en avoir besoin.
+#
+# 2026-09-08 : DECALEE DE 07:00 A 08:15. L'horaire de 07:00 avait ete choisi quand
+# le run quotidien finissait vers 06:25. Il a depuis ete avance a 05:00 ET elargi a
+# TOUTES les transactions : le 08/09 il s'est termine a 06:56:09 (1 h 56, dont
+# 76,8 min pour `sync_raw` seul). Quatre minutes de marge. 08:15 place la
+# sauvegarde APRES la descente (07:30-08:00), avec plus d'une heure de chaque cote.
+#
+# ⚠ ET L'HORAIRE NE SUFFIT PAS. Decaler achete du temps, ca ne supprime pas le mode
+#   d'echec : backup_critical.py ATTEND desormais qu'un verrou se libere (60 s par
+#   connexion, 3 tentatives) au lieu d'abandonner apres les 5 s par defaut de la
+#   bibliotheque. Un chevauchement ne coute plus l'archive du jour.
 #
 # Niveaux : quotidien = tables critiques (~8 Mo) ; dimanche = + instantane phase2
 # (~220 Mo). Retention glissante geree par le script Python (90 j / 28 j).
