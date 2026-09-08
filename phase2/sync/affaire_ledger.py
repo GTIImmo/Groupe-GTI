@@ -815,7 +815,38 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                     # ON NE DEVINE PAS. La vente reste seule, et on le DIT.
                     signale("vente : plusieurs compromis ouverts" if candidates
                             else "vente sans compromis ouvert")
-                    ouvrir(app_id, acqs)
+                    # ─── UNE VENTE FERME TOUJOURS, MEME LA CHAINE QU'ELLE OUVRE ───
+                    #
+                    # ⚠ DEFAUT TROUVE LE 08/09/2026 par phase2/checks/verifier_regle_chainage.py,
+                    #   dont le test EMPIRIQUE cherche un bloc date APRES la vente qui ferme
+                    #   sa chaine. Il en a trouve QUATRE -- alors que la regle dit
+                    #   « une chaine fermee ne recoit plus jamais rien ».
+                    #
+                    # LA CAUSE, en trois temps, sur l'annonce 48458 :
+                    #     vente     13/07/2017  acquereur 402473  -> aucun compromis ouvert,
+                    #                                                donc `ouvrir(...)` -- et
+                    #                                                la chaine RESTAIT dans
+                    #                                                `ouvertes`, faute du
+                    #                                                `remove` qu'a la branche
+                    #                                                normale juste au-dessus
+                    #     offre     04/09/2017  MEME acquereur    -> chaine sans compromis et
+                    #                                                acquereur commun : elle
+                    #                                                la REJOINT
+                    #     compromis 21/09/2017                    -> rejoint via l'offre acceptee
+                    # Resultat : un dossier { vente + offre + compromis }, que l'ecran declare
+                    # TERMINE (il porte une vente) alors que son compromis est ACTIF -- neuf ans
+                    # plus tard sur ce bien-la.
+                    #
+                    # ⚠ ET CE DEFAUT CREAIT UN ANGLE MORT DANS LA REGLE DU BIEN ENGAGE ecrite
+                    #   le meme jour : sans dossier ouvert, ces biens passaient pour LIBRES, donc
+                    #   leurs offres redevenaient designables pendant qu'un compromis tournait.
+                    #
+                    # PORTEE MESUREE AVANT CORRECTION : 4 chaines sur les 7 608 qui portent une
+                    # vente (0,05 %) -- celles ou la vente est EN TETE et ou d'autres blocs
+                    # suivent. Les 101 « ventes seules » ne bougent pas : rien ne les a rejointes.
+                    # Sans danger : le numero de chaine n'est pas une saisie, c'est une DEDUCTION,
+                    # et le run la refait entierement chaque nuit (0,09 s sur 29 321 lignes).
+                    ouvertes.remove(ouvrir(app_id, acqs))
 
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
