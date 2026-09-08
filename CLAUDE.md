@@ -29,36 +29,50 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 Cinq phases, dans `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` à partir de la **ligne 1321**.
 
 ```
-PHASE 0  mesurer, bloquante        l. 1861   0.1 EN COURS  ·  0.2 0.3 0.4 faites
-PHASE 1  le registre, invisible    l. 2099   terminee
-PHASE 2  l'ecran                   l. 2674   reste 2.4 (l. 3104), 2.7 (l. 3274),
-                                             26bis-TRANSACTIONS (l. 2677)
-PHASE 3  l'ecriture part chez Hektor  l. 3353   EN COURS
-PHASE 4  menage                    l. 4089   reste 4.1 (l. 4092), 4.2  ·  4.3 faite le 07/09
+PHASE 0  mesurer, bloquante        l. 1861   0.1 quasi finie  ·  0.2 0.3 0.4 faites
+PHASE 1  le registre, invisible    l. 2277   terminee
+PHASE 2  l'ecran                   l. 2852   reste 2.4, 2.7, 26bis-TRANSACTIONS
+PHASE 3  l'ecriture part chez Hektor  l. 3531   EN COURS
+PHASE 4  menage                    l. 4292   reste 4.1 (l. 4295), 4.2  ·  4.3 faite le 07/09
 ```
 
-**Au 08/09/2026 : `3.2` est faite POUR LE COMPROMIS, et prouvée sur l'écran.**
-Quatre modifications réelles sur le compromis 50078 (165 000 → 175 000), un seul compromis,
-rien de perdu. Le détail des **sept obstacles levés** est en tête de `3.2`, ligne 3362.
+**Au 08/09/2026 — LES TROIS GENRES SONT MODIFIABLES, ET PROUVÉS EN RÉEL.**
 
-**La tâche ouverte est `3.2d` — ligne 3604.** Son **lot 1 est fait** (la commission de
-l'agence est visible, et la modale vérifie `prix = net + honoraires`). Restent les lots 2, 3
-et 4 — le lot 4 vient du relevé du 08/09 : le **partage de la commission** et la
-**rétrocession**, absents de toute l'app.
+```
+compromis  50078   165 000 → 175 000, quatre fois · aucun doublon · fiche vérifiée
+vente      23301   créée, modifiée 175 000 → 176 500, supprimée · annonce rendue intacte
+offre      33050   165 000 → 167 000  ·  33048 REFUSÉE re-acceptée puis re-refusée
+```
 
-Ensuite : `3.2b` (l. 3509 — la vente, puis l'offre), `3.3`, `3.1`.
+**La tâche ouverte est `3.2d` — ligne 3807.** Lot 1 fait (la commission est visible, la
+modale vérifie `prix = net + honoraires`). Restent les lots 2, 3, 4.
+Ensuite : `3.3` (l. 3943), `3.1` (l. 3534) — qui commande `4.1`.
 
-> ⭐ **`0.1` n'est plus bloquée.** Sa phrase *« l'assistant refuse d'avancer sous
-> automatisation »* était fausse : il refuse un formulaire qu'on ne lui rend pas fidèlement.
-> Les trois étapes manquantes sont relevées (l. 1868) avec
-> `node Console/releve_assistant_etapes.js` — **qui n'enregistre jamais**.
-> Reste le même relevé pour la **vente**.
+> ⭐ **`0.1` est quasi finie.** Sa phrase *« l'assistant refuse d'avancer sous
+> automatisation »* était **fausse** : il refuse un formulaire qu'on ne lui rend pas
+> fidèlement. **23 champs de données classés sur 24** ; le dernier,
+> `agenceReseauSelected` (la rétrocession), est **hors périmètre par décision de Frédéric**,
+> pas par oubli. Reste le relevé de l'offre.
 >
-> ⚠ **Un risque ouvert et NON MESURÉ** (l. 1868) : l'enregistrement repose les conditions
-> suspensives **sans leur `id_condition`**. Sur un compromis qui en porte, une modification
-> pourrait les abîmer — c'est juridique. À éprouver avant d'ouvrir « Modifier » à un vrai
-> compromis.
+> ⚠ **« C » NE VEUT PAS DIRE « il refuse l'écriture ».** Hektor *calcule* le net vendeur et
+> la commission si on n'envoie rien — mais **il garde ce qu'on lui envoie, sans vérifier**.
+> Il a accepté une fiche à *« 177 345 € »* pour un prix public de 175 000 sans broncher.
+> **Rien ne rattrape une incohérence : l'alerte de la modale est le seul filet.**
 >
+> ⚠ Le risque des **conditions suspensives est LEVÉ** (mesuré le 08/09) : une modification
+> les préserve. Le principe *« on repose ce que Hektor a rendu »* les protège sans code.
+
+### Les outils du 08/09 — tous rejouables
+
+```
+Console/releve_assistant_etapes.js      l'inventaire des étapes    N'ÉCRIT JAMAIS
+Console/mesure_reprise_compromis.js     le formulaire pré-rempli ? N'ÉCRIT JAMAIS
+Console/mesure_reprise_panier.js        le panier retient-il l'id ? N'ÉCRIT JAMAIS
+Console/campagne_champs_compromis.js    ⚠ LE SEUL QUI ÉCRIT CHEZ HEKTOR
+phase2/checks/verifier_regle_chainage.py       les 3 copies de la règle, confrontées
+phase2/checks/test_chainage_vente_ferme.py     le correctif du run, sur registre jetable
+```
+
 > ⚠ **Il existe deux tâches nommées `0.1`** — celle de la phase 0 (l. 1868) et une autre,
 > sans rapport, l. 289.
 
