@@ -2125,6 +2125,22 @@ GEL que Frederic a repere le premier).*
          >>> Si l'app doit piloter la retrocession : on teste sur un compromis
              qu'on supprimera ensuite. Sinon : on n'y touche jamais, question close.
 
+       ✅ tauxHonoraireSortie -- TRANCHE LE 08/09 A 17:17 : CLASSE C.
+           Envoye 9,99 sur des honoraires acquereur de 5 000 -> Hektor rend 2,941.
+           5 000 / 170 000 = 2,941 % : IL LE RECALCULE, ET SUR LE PRIX DE VENTE,
+           pas sur le prix public (qui donnerait 2,857). Bien nous a pris de ne
+           pas conclure par symetrie : le resultat est le meme que son jumeau
+           d'entree, mais LA BASE DU CALCUL, elle, n'allait pas de soi.
+           ⭐ Au passage, prix public et prix de vente ont ete SEPARES pour la
+             premiere fois (175 000 = 170 000 + 5 000) : la formule du net tient
+             avec une sortie non nulle -- 175 000 - 5 000 - 12 345 = 157 655,
+             exactement ce que l'API rend.
+           ⚠ ET UNE COINCIDENCE A NE PAS RELIRE DE TRAVERS : au meme passage,
+             prixDeVente envoye a 170 000 est revenu a 170 000, et l'outil a
+             conclu « GARDE -> B ». C'EST UN HASARD ARITHMETIQUE (public - sortie
+             = 175 000 - 5 000). Sa classe C reste etablie par la mesure du matin.
+
+       --- l'enonce d'origine, garde pour memoire ---
        ② tauxHonoraireSortie -- LE TAUX DES HONORAIRES ACQUEREUR
          Il vaut 0 parce que les honoraires acquereur valent 0 : RIEN A OBSERVER.
          ⚠ ON NE LE CLASSE PAS PAR SYMETRIE avec tauxHonoraireEntree (C, mesure

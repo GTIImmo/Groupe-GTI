@@ -339,15 +339,24 @@ async function ouvrir() {
 }
 
 
-/** Les conditions suspensives REELLEMENT retenues : on lit toute clef nommee
- *  `conditionsSuspensivesSelected[<libelle>][id_condition]`. Le gabarit, lui,
- *  porte `[]` vide -- il ne compte pas. */
+/** Les conditions suspensives REELLEMENT retenues.
+ *
+ *  ⚠ ON RECONNAIT UNE CONDITION A SA CLEF, PAS A SON id_condition.
+ *    Mesure du 08/09, deux campagnes de suite : Hektor NE CONSERVE PAS
+ *    `id_condition` -- il revient toujours vide. La condition vit par son
+ *    LIBELLE ; c'est leur modele, pas une perte.
+ *  ⚠ J'AI ANNONCE « NON CREEE » DEUX FOIS A TORT a cause de ce detail. La
+ *    premiere fois j'ai corrige l'expression pour accepter les clefs nommees --
+ *    mais j'avais garde l'exigence d'une VALEUR non vide, qui est le vrai
+ *    coupable. Corrige pour de bon : on lit la clef, et rien d'autre.
+ *  ⚠ LE GABARIT (`[]` vide) NE COMPTE PAS : c'est le modele que leur
+ *    JavaScript clone, il est toujours present. */
 const conditionsRetenues = (html) => {
   const out = [];
   for (const m of String(html || "").matchAll(/<input\b[^>]*>/gi)) {
     const nom = attr(m[0], "name");
-    const g = nom && nom.match(/^conditionsSuspensivesSelected\[(.+)\]\[id_condition\]$/);
-    if (g && g[1] !== "" && attr(m[0], "value")) out.push(`${g[1]}=${attr(m[0], "value")}`);
+    const g = nom && nom.match(/^conditionsSuspensivesSelected\[(.+)\]\[clef\]$/);
+    if (g && g[1] !== "") out.push(g[1]);
   }
   return out;
 };
@@ -438,6 +447,12 @@ const texteDe = (html, nom) => {
   };
 
   const v0 = VALEURS.etape0 || {}; const v2 = VALEURS.etape2 || {}; const v3 = VALEURS.etape3 || {};
+  // ⚠ prixDeVente : ATTENTION AUX COINCIDENCES. Hektor le recalcule toujours
+  //   (public - sortie). Le 08/09 au soir, envoye 170 000 avec une sortie de
+  //   5 000 sur un public de 175 000 : il a rendu 170 000, et l'outil a conclu
+  //   « GARDE -> B ». C'ETAIT UN HASARD ARITHMETIQUE. Sa classe C est etablie par
+  //   la mesure du matin (envoye 170 000, sortie 0, public 175 000 -> rendu
+  //   175 000). Ne pas relire ce verdict-la sans cette note.
   for (const cle of ["prixPublique", "prixDeVente", "sequestre",
                      "montantHonoraireEntree", "montantHonoraireSortie",
                      "tauxHonoraireSortie"]) {
@@ -459,7 +474,7 @@ const texteDe = (html, nom) => {
     const ids = conditionsRetenues(vApres["3->3"]);
     lignesRapport.push({ nom: "conditions suspensives", envoye: v3.conditions.map((c) => c.id_condition).join(","),
       retenu: ids.join(",") || "(aucune)",
-      verdict: ids.length ? "CREEE -> B" : "NON CREEE -- mecanisme non compris" });
+      verdict: ids.length ? "CREEE -> B" : "NON CREEE" });
   }
 
   console.log("=== ENVOYE CONTRE RETENU (chaque champ lu a son etage) ===");
