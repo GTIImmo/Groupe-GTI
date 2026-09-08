@@ -47,6 +47,27 @@ TASK_CRITICALITY: dict[str, str] = {
     # pas l'erreur logique. Si le niveau 1 (tables critiques, dont phase2.app_dossier) cesse
     # de tourner, plus rien ne protege le mapping d'identite -> "critical", pas "warning".
     "GTI Sauvegarde": "critical",
+    # 2026-09-08 : ajout de "GTI Descente". MEME TROU QUE LA SAUVEGARDE AVANT LE
+    # 19/08 -- elle sortait deja en 1 quand une table echouait, et personne ne le
+    # lisait. Constate en direct ce matin : la descente a echoue a 07:53
+    # (app_matterport_group_model, HTTP 525 de Cloudflare en pleine pagination) et
+    # aucune alerte n'est partie. Frederic l'a su parce qu'il a pose la question.
+    #
+    # POURQUOI "critical" ET NON LE DEFAUT "warning" : parce que dans ce fichier
+    # SEULS LES CRITICAL DECLENCHENT UN ENVOI (dispatch(..., kind="critical")).
+    # Un "warning" est enregistre et personne n'est prevenu -- ce serait
+    # reconduire le silence qu'on corrige ici.
+    #
+    # ⚠ LE PRIX ASSUME : un echec TRANSITOIRE (525, coupure reseau) alertera lui
+    #   aussi, alors qu'il se repare seul -- la liste des tables est reconstruite
+    #   a chaque passage, donc une table ratee est redescendue le lendemain sans
+    #   intervention. La deduplication limite les degats (seuls les
+    #   `newly_critical` partent, et un retour a la normale envoie un
+    #   retablissement). Si le bruit devient genant, le remede n'est PAS de
+    #   repasser en warning -- c'est un reessai par table dans
+    #   pull_from_supabase.py, comme celui ecrit le meme jour pour la sauvegarde :
+    #   un incident transitoire cesserait alors de faire echouer la tache.
+    "GTI Descente": "critical",
 }
 
 # Codes LastTaskResult consideres comme sains : succes / en cours / jamais lance.
@@ -1952,7 +1973,14 @@ def build_parser() -> argparse.ArgumentParser:
         # 43 objets sans qu'aucune erreur ne remonte. Elle peut desormais signaler son echec
         # (propagation du code de sortie, commit a5e6292 + 981c686) : encore fallait-il que
         # quelqu'un le lise.
-        default="GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,GTI Relances Email,GTI Sauvegarde",
+        # 2026-09-08 : ajout de "GTI Descente". Elle porte tout ce que le serveur
+        # local sait de Supabase (132 tables, 1,5 million de lignes le 08/09) et
+        # elle n'etait surveillee par personne. Voir TASK_CRITICALITY plus haut
+        # pour le motif du niveau "critical".
+        # ⚠ Le lanceur (run_gti_health.ps1) appelle le script SANS
+        #   --scheduled-tasks : c'est bien ce defaut qui sert. Verifie le 08/09.
+        default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
+                 "GTI Relances Email,GTI Sauvegarde,GTI Descente"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
