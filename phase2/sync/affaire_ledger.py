@@ -112,6 +112,27 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     date                TEXT,
     date_acte           TEXT,
     sequestre           TEXT,
+    -- ─── CE QUE HEKTOR CALCULE, ET QUE L'APP DOIT POUVOIR MONTRER (08/09/2026) ───
+    --
+    -- L'INVARIANT :  prix de vente = prix net vendeur + honoraires d'ENTREE
+    --                prix public   = prix de vente    + honoraires de SORTIE
+    -- Mesure du 08/09 sur le compromis 50078 : 172 500 = 162 500 + 10 000.
+    --
+    -- POURQUOI ILS ENTRENT ICI. La modale ne peut pas verifier cet invariant :
+    -- elle porte les honoraires de l'ACQUEREUR et pas ceux du VENDEUR. C'est le
+    -- manque n°1 de la tache 0.1 -- « le taux VENDEUR determine les honoraires
+    -- d'entree, donc LA COMMISSION DE L'AGENCE ; il est aujourd'hui invisible ET
+    -- non modifiable ». Trois champs quittent payload_json pour devenir lisibles.
+    --
+    -- ⚠ CLASSE C : Hektor les calcule (0.1 -- « net_seller_price vide ->
+    --   prixNetVendeur 170 000 ; rien envoye -> honorairesEntree 10 000, pose
+    --   seul, du mandat »). Ils sont donc RELUS A CHAQUE RUN, comme
+    --   jours_validite depuis 1.2b : les figer serait le gel que 1.2 a evite.
+    -- ⚠ LA VENTE NE PORTE PAS prixNetVendeur (elle a prix + honoraires). Le
+    --   champ y reste NULL -- « mieux vaut un champ absent qu'un champ menteur ».
+    prix_net_vendeur    TEXT,
+    honoraires_entree   TEXT,
+    honoraires_sortie   TEXT,
     payload_json        TEXT,
     first_seen_at       TEXT,
     last_seen_at        TEXT,
@@ -146,6 +167,9 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS 
        --   depuis le DPE). Mesure du 07/09 sur le miroir : 10 811 offres sur
        --   11 083 portent « 0 », et 271 seulement une vraie valeur.
        NULLIF(json_extract(propositions_json, '$[0].validite'), '0') AS validite,
+       json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
+       json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
+       json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
        raw_json
 FROM hektor.hektor_offre WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
@@ -157,6 +181,9 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
        -- C'est elle qui fait foi ; le nombre de jours s'en deduit.
        date_end,
        NULL AS validite,          -- la validite ne concerne QUE l'offre
+       json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
+       json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
+       json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
        raw_json
 FROM hektor.hektor_compromis WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
@@ -165,6 +192,9 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
        prix, COALESCE(date_vente, synced_at),
        NULL, NULL, NULL,
        NULL AS validite,          -- idem
+       json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
+       json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
+       json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
        raw_json
 FROM hektor.hektor_vente WHERE hektor_annonce_id IS NOT NULL
 """
@@ -211,7 +241,8 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         con.commit()
         print(f"[affaire_ledger] colonne app_chaine_id ajoutee a {LEDGER_TABLE}")
     for neuve in ("jours_validite", "taux_honoraires", "notaire_id",
-                  "date_fin_retractation", "acquereurs_json"):
+                  "date_fin_retractation", "acquereurs_json",
+                  "prix_net_vendeur", "honoraires_entree", "honoraires_sortie"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -421,8 +452,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 numero_mandat, hektor_acquereur_id, app_contact_id, acquereur_json, acquereurs_json,
                 state, montant, date, date_acte,
                 sequestre, date_fin_retractation, jours_validite,
+                prix_net_vendeur, honoraires_entree, honoraires_sortie,
                 payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
@@ -443,6 +475,11 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 -- foi, et le figer serait exactement le gel que 1.2 avait evite sur
                 -- jours_retractation.
                 jours_validite=excluded.jours_validite,
+                -- CLASSE C : Hektor les calcule, donc Hektor fait foi. Meme
+                -- raisonnement que jours_validite ci-dessus.
+                prix_net_vendeur=excluded.prix_net_vendeur,
+                honoraires_entree=excluded.honoraires_entree,
+                honoraires_sortie=excluded.honoraires_sortie,
                 payload_json=excluded.payload_json,
                 last_seen_at=excluded.last_seen_at, present_in_hektor=1
             """,
@@ -457,6 +494,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 normalize_text(r["sequestre"]) or None,
                 normalize_text(r["date_fin"]) or None,
                 normalize_text(r["validite"]) or None,     # 1.2b : classe B, relue
+                normalize_text(r["prix_net_vendeur"]) or None,
+                normalize_text(r["honoraires_entree"]) or None,
+                normalize_text(r["honoraires_sortie"]) or None,
                 normalize_text(r["raw_json"]) or None,
                 first_seen, run_ts,
             ),

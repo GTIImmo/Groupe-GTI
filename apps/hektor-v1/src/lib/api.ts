@@ -1449,11 +1449,26 @@ export type AffaireLedgerRow = {
   date_acte: string | null
   sequestre: string | number | null
   present_in_hektor: boolean | null
+  /** ─── CE QUE HEKTOR CALCULE (08/09/2026) ───
+   *  L'INVARIANT :  prix public = prix net vendeur + honoraires d'ENTREE + honoraires de SORTIE
+   *  Mesure du 08/09 sur les 10 583 compromis mesurables du registre :
+   *      10 055 le verifient (95,01 %) ; 528 en ecart, dont 508 anterieurs a 2025.
+   *  Sur les donnees recentes il tient. C'est ce qui rend la verification de la
+   *  modale utile : elle ne criera pas dans le vide.
+   *  ⚠ La VENTE ne porte pas de prix net vendeur (elle a prix + honoraires) : null. */
+  prix_net_vendeur: string | null
+  /** Les honoraires du VENDEUR, c'est-a-dire LA COMMISSION DE L'AGENCE. Pose seul
+   *  par Hektor depuis le mandat -- l'app ne l'envoie pas. Il manquait a la modale,
+   *  qui ne portait que ceux de l'acquereur : c'est le manque n°1 de la tache 0.1. */
+  honoraires_entree: string | null
+  /** Les honoraires de l'ACQUEREUR -- ce que la modale appelle « Honoraires acquereur ». */
+  honoraires_sortie: string | null
 }
 
 const affaireLedgerSelect =
   'app_affaire_id,app_dossier_id,hektor_annonce_id,kind,hektor_affaire_id,numero_mandat,' +
   'hektor_acquereur_id,acquereur_json,acquereurs_json,state,montant,date,date_acte,sequestre,present_in_hektor,' +
+  'prix_net_vendeur,honoraires_entree,honoraires_sortie,' +
   'app_chaine_id'
 
 /** Ce que l'app détient sur une affaire, et que le run ne touche jamais.

@@ -11947,6 +11947,51 @@ export default function App() {
   const [statusChangeBuyerFees, setStatusChangeBuyerFees] = useState('')
   const [statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate] = useState('')
   const [statusChangeNetSellerPrice, setStatusChangeNetSellerPrice] = useState('')
+  // LES HONORAIRES DU VENDEUR -- la commission de l'agence. EN LECTURE SEULE :
+  // Hektor les pose seul, depuis le mandat (tache 0.1, classe C), et l'app ne
+  // les lui envoie pas. On les MONTRE parce que sans eux l'utilisateur ne peut
+  // pas voir si son prix est coherent -- c'est le terme du milieu de
+  // l'invariant, et il manquait (manque n°1 de 0.1).
+  const [statusChangeHonorairesEntree, setStatusChangeHonorairesEntree] = useState('')
+
+  // ═══ L'INVARIANT DU PRIX — 08/09/2026 ═══
+  //
+  //     prix public = prix net vendeur + honoraires d'ENTREE + honoraires de SORTIE
+  //
+  // Demande de Frederic : « pourquoi dans la modale on ne verifie pas avant, pour
+  // aider l'utilisateur, que Net + Commission = Prix de vente ? Il faut juste
+  // verifier qu'il n'y ait pas d'ecart. » -- c'est mieux que ce que faisait le
+  // worker : VERIFIER, c'est aider ; RECONSTRUIRE, c'est decider a la place de
+  // Hektor.
+  //
+  // MESURE AVANT DE L'AJOUTER, sur les 10 583 compromis mesurables du registre :
+  //     10 055 verifient l'invariant  (95,01 %)
+  //        528 en ecart, dont 508 ANTERIEURS A 2025
+  // Sur les donnees recentes il tient. Cette alerte ne criera donc pas dans le
+  // vide -- et quand elle parle, elle dit quelque chose.
+  //
+  // ⚠ ELLE AVERTIT, ELLE NE BLOQUE PAS. 528 compromis reels ne le verifient pas :
+  //   refuser l'envoi ferait de l'app un juge des donnees de Hektor. L'app
+  //   signale, l'utilisateur tranche.
+  // ⚠ ELLE SE TAIT TANT QU'ELLE NE SAIT PAS. Un seul terme manquant ou illisible
+  //   et il n'y a rien a comparer : mieux vaut se taire qu'alerter sur du vide.
+  const ecartPrixTransaction = useMemo(() => {
+    const nombre = (v: string) => {
+      const t = String(v ?? '').replace(/\s/g, '').replace(',', '.').trim()
+      if (!t) return null
+      const n = Number(t)
+      return Number.isFinite(n) ? n : null
+    }
+    const prix = nombre(statusChangeStatus === 'sold' ? statusChangeSalePrice : statusChangeAmount)
+    const net = nombre(statusChangeNetSellerPrice)
+    const entree = nombre(statusChangeHonorairesEntree)
+    const sortie = nombre(statusChangeBuyerFees) ?? 0
+    if (prix === null || net === null || entree === null) return null
+    const attendu = net + entree + sortie
+    const ecart = prix - attendu
+    return Math.abs(ecart) < 0.5 ? null : { prix, net, entree, sortie, attendu, ecart }
+  }, [statusChangeStatus, statusChangeAmount, statusChangeSalePrice,
+      statusChangeNetSellerPrice, statusChangeHonorairesEntree, statusChangeBuyerFees])
   const [statusChangeSequestration, setStatusChangeSequestration] = useState('')
   // C.19-c (30/08) -- CE QUE DEVIENT LE BIEN UNE FOIS LA VENTE ENREGISTREE.
   // Hektor offre deux issues a l'enregistrement d'une vente ; le defaut « laisser
@@ -14829,6 +14874,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerFees('')
     setStatusChangeBuyerFeesRate('')
     setStatusChangeNetSellerPrice('')
+    setStatusChangeHonorairesEntree('')
     setStatusChangeSequestration('')
     // (statusChangeApresVente est desormais une constante — plus rien a reinitialiser)
     setStatusChangeCloseReason('')
@@ -15079,8 +15125,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
     // LES CHAMPS QUE SEUL LE CARNET PORTE. Ils n'ont aucune colonne : sans cette
     // relecture, ils etaient saisis puis perdus a jamais.
+    // ─── LE NET VENDEUR N'EST PLUS UNE CASE VIDE A DEVINER (08/09/2026) ───
+    //
+    // Il ne venait QUE du carnet, donc uniquement si un humain l'avait tape --
+    // et personne ne le tapait. La case restait vide avec « Auto si vide », et
+    // « auto » voulait dire, en modification, « on repose la valeur perimee ».
+    // Resultat mesure le 08/09 : la fiche de Hektor continuait d'afficher
+    // l'ancien prix, parce qu'elle l'affiche comme « net + honoraires d'entree ».
+    //
+    // Le registre porte desormais la valeur de Hektor. Le carnet garde la
+    // priorite -- c'est la saisie humaine, elle dit vrai sur le meme champ.
     const prixNet = String(carnet.prix_net_vendeur ?? '').trim()
+      || texte(affaire.prix_net_vendeur)
     if (prixNet) setStatusChangeNetSellerPrice(prixNet)
+    // Les honoraires du VENDEUR : lecture seule, ils viennent de Hektor.
+    setStatusChangeHonorairesEntree(texte(affaire.honoraires_entree))
     const prixPublic = String(carnet.prix_publique ?? '').trim()
     if (prixPublic) setStatusChangeSalePrice(prixPublic)
     const honoraires = String(carnet.honoraires ?? '').trim()
@@ -17890,6 +17949,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               <span>Prix net vendeur</span>
                               <input value={statusChangeNetSellerPrice} onChange={(event) => setStatusChangeNetSellerPrice(event.target.value)} inputMode="numeric" placeholder="Auto si vide" />
                             </label>
+                            {/* LES HONORAIRES DU VENDEUR = LA COMMISSION DE L'AGENCE.
+                                En LECTURE : Hektor les pose seul, depuis le mandat
+                                (classe C), et l'app ne les lui envoie pas. Ils etaient
+                                invisibles -- manque n°1 de la tache 0.1 -- alors qu'ils
+                                sont le terme du milieu de l'invariant du prix. */}
+                            {statusChangeHonorairesEntree ? (
+                              <label className="filter-field">
+                                <span>Honoraires vendeur (agence)</span>
+                                <input value={statusChangeHonorairesEntree} readOnly disabled title="Pose par Hektor depuis le mandat. L'app ne le modifie pas." />
+                              </label>
+                            ) : null}
                             <label className="filter-field">
                               <span>Sequestre</span>
                               <input value={statusChangeSequestration} onChange={(event) => setStatusChangeSequestration(event.target.value)} inputMode="numeric" placeholder="0" />
@@ -17897,6 +17967,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </>
                         ) : null}
                       </div>
+                      {/* L'ECART, S'IL Y EN A UN. On avertit, on ne bloque pas :
+                          528 compromis reels du registre ne verifient pas cet
+                          invariant (dont 508 d'avant 2025). L'app signale,
+                          l'utilisateur tranche. */}
+                      {ecartPrixTransaction ? (
+                        <p className="fa-ck-alerte" style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.45 }}>
+                          &#9888; Le compte n'y est pas : {ecartPrixTransaction.net.toLocaleString('fr-FR')} net
+                          {' + '}{ecartPrixTransaction.entree.toLocaleString('fr-FR')} d'honoraires vendeur
+                          {ecartPrixTransaction.sortie ? ` + ${ecartPrixTransaction.sortie.toLocaleString('fr-FR')} acquereur` : ''}
+                          {' = '}{ecartPrixTransaction.attendu.toLocaleString('fr-FR')}, et non
+                          {' '}{ecartPrixTransaction.prix.toLocaleString('fr-FR')}
+                          {' '}(ecart de {Math.abs(ecartPrixTransaction.ecart).toLocaleString('fr-FR')} &euro;).
+                          {' '}Vous pouvez envoyer quand meme &mdash; Hektor recalculera le net vendeur.
+                        </p>
+                      ) : null}
                     </section>
                     {statusChangeStatus === 'sold' ? (
                       /* C.19-c — LE CHOIX EST RETIRE (01/09/2026, arbitrage de Frederic).
