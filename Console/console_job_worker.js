@@ -10351,6 +10351,10 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   // Les champs qu'on laisse DELIBEREMENT a Hektor. L'arbitre ne doit pas les
   // compter comme des echecs -- on ne les a pas ecrits.
   const nonVerifiables = [];
+  // Les champs que l'app CALCULE au lieu de les recopier (le net vendeur). La
+  // charge ne les porte pas, donc l'arbitre ne les verifierait pas : on les lui
+  // annonce, pour qu'il verifie exactement ce qui est parti.
+  const calcules = [];
   ouverture.set("basket", "");
   ouverture.set("initBasket", "true");
   const rep0 = await appelerEtapeAssistant(annonceId, assistant, ouverture, null);
@@ -10528,6 +10532,62 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
           // l'arbitre : il compare `amount` a prixPublique, et ici on l'a
           // volontairement laisse a Hektor.
           else nonVerifiables.push("prixPublique");
+
+          // ═══ LE NET VENDEUR SUIT LE PRIX, SINON L'ECRAN MENT ═══
+          //
+          // MESURE DU 08/09, trouvee parce que Frederic a regarde LA FICHE quand
+          // je regardais l'API. La fiche de Hektor n'affiche pas le champ qu'on
+          // ecrit : elle affiche « prix net vendeur + honoraires d'entree ».
+          //     net 158 500 + honoraires 10 000 = 168 500   <- ce qu'il voyait
+          // alors que l'API rendait deja prixPublique = 172 500.
+          //
+          // POURQUOI. Hektor RECALCULE le net a l'affichage du formulaire, a
+          // partir du prix qu'il a EN BASE. Trois ouvertures successives :
+          //     prix stocke 165 000 -> le formulaire rend 155 000
+          //     prix stocke 168 500 -> le formulaire rend 158 500
+          //     prix stocke 172 500 -> le formulaire rend 162 500
+          // On reposait cette valeur PUIS on ecrivait le nouveau prix : le net
+          // arrivait donc toujours avec UNE MODIFICATION DE RETARD -- et comme
+          // c'est lui qui nourrit l'affichage, le prix visible restait l'ancien.
+          //
+          // LA FORMULE EST MESUREE, PAS SUPPOSEE. Deux cas independants :
+          //     08/09  172 500 - 10 000            = 162 500  (releve de l'assistant)
+          //     03/09  176 000 - 8 600 - 10 000    = 157 400  (liste, tache 0.1)
+          // soit net = prix de vente - honoraires d'ENTREE, le prix de vente
+          // valant lui-meme prix public - honoraires de SORTIE. Comme on pose
+          // deja `prixDeVente = montantVoulu`, il reste : net = montant - entree.
+          //
+          // ⚠ OUI, CELA RECONSTRUIT UNE FORMULE DE HEKTOR, ce que le projet
+          //   evite (« on recopie ce qu'il rend, on ne reconstruit pas »). Ici
+          //   recopier fidelement produit UN ECRAN QUI MENT : c'est le seul cas
+          //   ou la fidelite au rendu trahit la valeur. Et la tache 0.1 range le
+          //   net vendeur en CLASSE C -- « calcule par Hektor » : on ne decide
+          //   pas sa valeur, on maintient SA formule coherente avec le prix que
+          //   l'utilisateur vient de choisir.
+          // ⚠ ET SEULEMENT SI L'UTILISATEUR NE L'A PAS DIT. Un net affirme dans
+          //   la modale gagne toujours -- il est pose plus haut, et on ne
+          //   l'ecrase pas ici.
+          const netAffirme = cleanMoneyValue(affirme("net_seller_price"), "");
+          if (!netAffirme) {
+            const honorairesEntree = String(
+              htmlInputValue(etat.contenu, "montantHonoraireEntree") || "").trim();
+            const net = Number(montantVoulu) - Number(honorairesEntree || "0");
+            if (honorairesEntree !== "" && Number.isFinite(net) && net > 0) {
+              poser("prixNetVendeur", String(net));
+              calcules.push({ hektor: "prixNetVendeur", envoye: String(net) });
+              await logJob(job.id, "hektor_assistant", "running",
+                `Net vendeur recalcule : ${montantVoulu} - ${honorairesEntree} = ${net}. `
+                + `Sans cela la fiche continuerait d'afficher l'ancien prix (mesure du 08/09).`,
+                { hektor_annonce_id: annonceId, montant: montantVoulu,
+                  honoraires_entree: honorairesEntree, net_vendeur: net });
+            } else {
+              await logJob(job.id, "hektor_assistant", "running",
+                `Net vendeur LAISSE A HEKTOR : honoraires d'entree illisibles `
+                + `("${honorairesEntree}") -- on ne devine pas.`,
+                { hektor_annonce_id: annonceId, montant: montantVoulu });
+              nonVerifiables.push("prixNetVendeur");
+            }
+          }
           await logJob(job.id, "hektor_assistant", "running",
             separes
               ? `Modification : prix de vente ${montantVoulu}. Prix public LAISSE A HEKTOR `
@@ -10631,6 +10691,7 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     etapes: assistant.pas.length,
     reprise: enReprise ? idRepris : null,
     champs_non_verifiables: nonVerifiables,
+    champs_calcules: calcules,
     reponse: reponseBrute.slice(0, 300) || "(vide)",
     forme_mandat: tx.mandat || "(vide)",
     forme_negociateur: tx.negotiator || "(vide)",
@@ -11529,6 +11590,14 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
     if (laissesAHektor.has(cleHektor)) continue;
     if (aVerifier.some((v) => v.hektor === cleHektor)) continue;   // amount/sale_price
     aVerifier.push({ app: cleApp, hektor: cleHektor, envoye: String(envoye).trim() });
+  }
+  // Ce que l'app a CALCULE et envoye sans que la charge le porte (le net
+  // vendeur). Sans cette reprise, le champ partait sans jamais etre relu.
+  for (const c of (transactionResult && Array.isArray(transactionResult.champs_calcules)
+                   ? transactionResult.champs_calcules : [])) {
+    if (!c || !c.hektor || laissesAHektor.has(c.hektor)) continue;
+    if (aVerifier.some((v) => v.hektor === c.hektor)) continue;
+    aVerifier.push({ app: "(calcule)", hektor: c.hektor, envoye: String(c.envoye).trim() });
   }
 
   let lu = null;
