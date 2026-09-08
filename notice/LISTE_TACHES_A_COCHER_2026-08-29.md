@@ -2045,14 +2045,34 @@ GEL que Frederic a repere le premier).*
           >>> SI LA CONDITION N'EST TOUJOURS PAS CREEE AU PROCHAIN ESSAI, CHERCHER
               LA D'ABORD. Le mecanisme, lui, n'est plus en cause.
 
-        ➡ LE RISQUE JURIDIQUE N'EST TOUJOURS PAS LEVE : on sait desormais COMMENT
-          en poser une, mais on ne l'a pas fait, donc on n'a pas pu tester si une
-          modification la preserve. LA REGLE TIENT -- ne pas ouvrir « Modifier »
-          sur un vrai compromis.
-        ⚠ ET LE SOUPCON DE DEPART SE PRECISE. Le worker enregistre en reposant ce
-          que l'etape 2 -> 3 lui a rendu, c'est-a-dire LE GABARIT (`[]` vide) et
-          non les clefs nommees. S'il ecrase les conditions existantes par ce
-          gabarit, elles disparaissent. C'est precisement ce qu'il faut eprouver.
+        ⭐ CREATION REUSSIE AU SECOND PASSAGE (08/09, 13:02) -- clefs nommees :
+              jours_validites  45                  (notre valeur, pas les 60 du catalogue)
+              clef             Obtention Crédit    ⭐ AVEC SON ACCENT
+              note             ESSAI 0.1 du 08/09
+              etat             coche
+              id_condition     ""                  ← seul champ NON conserve
+          ⭐ LA QUESTION DE L'ENCODAGE EST TRANCHEE, PAR LA NEGATIVE : la clef
+            accentuee revient intacte, donc l'UTF-8 d'URLSearchParams passe. Ce
+            n'etait pas le probleme.
+          ⚠ `id_condition` N'EST PAS CONSERVE : la condition vit par son LIBELLE,
+            pas par son numero de catalogue. Ce n'est pas une perte, c'est leur
+            modele. (Ma fonction de relecture exigeait un id non vide et a donc
+            annonce « non creee » a tort -- corrige.)
+
+        ⭐⭐ LE RISQUE JURIDIQUE EST LEVE -- MESURE LE 08/09 A 13:04.
+          Une condition suspensive REELLE etant enfin posee, on a lance une
+          modification par le worker (prix 175 000 -> 176 000, travail aa7bdfb1).
+          RELECTURE APRES : la condition est INTACTE, dans ses quatre champs
+          (45 jours · Obtention Crédit · la note · etat coche).
+
+          ➡ MON SOUPCON ETAIT FAUX, ET VOICI POURQUOI. Je croyais que le worker ne
+            reposait que le GABARIT (`[]` vide). Il repose en realite TOUT ce que
+            Hektor rend -- les clefs nommees sont DANS le contenu de l'etape, donc
+            extractHektorFormValues les recupere et les renvoie fidelement.
+            Le principe « on repose ce que Hektor a rendu » protege les conditions
+            suspensives SANS QU'ON AIT EU RIEN A CODER.
+          ➡ « MODIFIER » NE DETRUIT PAS LES CONDITIONS SUSPENSIVES. L'interdiction
+            posee le matin du 08/09 est levee, sur mesure et non sur raisonnement.
 
       ⚠ DEUX DEFAUTS DE MA PROPRE MESURE, consignes pour qu'on ne relise pas sa
         sortie de travers :
