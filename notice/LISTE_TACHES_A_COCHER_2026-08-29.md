@@ -2105,8 +2105,11 @@ GEL que Frederic a repere le premier).*
       containerName, step, fromStep, typeUser). Restent 27 -- dont TROIS ne sont
       pas des donnees : ce sont des boites de recherche.
 
-          24 champs de DONNEES    ·   22 classes   ·   2 inconnus
+          24 champs de DONNEES    ·   23 classes   ·   1 HORS PERIMETRE
            3 boites de recherche  ·   sans classe, par nature
+      ⭐ LE TABLEAU DU COMPROMIS EST COMPLET AU 08/09. Tous les champs mesurables
+        le sont ; le seul restant (la retrocession) est ecarte par decision, pas
+        par manque de mesure.
                                       (mandantSearch · addAcquereurSearch
                                        · addAcquereurNotaireSearch)
       ⚠ L'une de ces trois compte pour 3.2d : la modale offre un champ LIBRE
@@ -2115,15 +2118,17 @@ GEL que Frederic a repere le premier).*
 
    >>> LES DEUX INCONNUES, et on ne les maquille pas :
 
-       ① agenceReseauSelected -- LA RETROCESSION (20 agences en radio)
-         Le partage d'honoraires quand UNE AUTRE AGENCE DU RESEAU a apporte
-         l'acquereur. Aucune n'est cochee aujourd'hui.
-         ⚠ CE N'EST PAS UNE MESURE QUI MANQUE, C'EST UN ARBITRAGE. Un bouton radio
-           NE SE DECOCHE PAS : une fois coche, on ne revient pas a « aucune » en
-           repostant vide. C'est le SEUL champ dont l'essai ne serait pas
-           reversible -- tous les autres ont ete remis en place.
-         >>> Si l'app doit piloter la retrocession : on teste sur un compromis
-             qu'on supprimera ensuite. Sinon : on n'y touche jamais, question close.
+       ✅ agenceReseauSelected -- HORS PERIMETRE. ARBITRAGE DE FREDERIC, 08/09 :
+         « l'app devra-t-elle un jour piloter la retrocession ? NON, pas utile »
+         LA RETROCESSION RESTE UN GESTE HEKTOR. On ne la mesure pas, on ne la
+         classe pas, ON N'Y TOUCHE PAS -- et le worker ne doit jamais poser
+         `agenceReseauSelected`. Il ne le fait pas aujourd'hui : il repose ce que
+         Hektor rend, ce qui est exactement le comportement voulu.
+         ⚠ A RELIRE SI QUELQU'UN VEUT « COMPLETER LE TABLEAU » : ce champ n'est pas
+           un oubli, c'est une decision. Et son essai serait le SEUL irreversible
+           du lot -- un bouton radio ne se decoche pas en le repostant vide.
+         (C'etait : le partage d'honoraires quand une AUTRE agence du reseau
+          apporte l'acquereur. 20 agences en radio, aucune cochee.)
 
        ✅ tauxHonoraireSortie -- TRANCHE LE 08/09 A 17:17 : CLASSE C.
            Envoye 9,99 sur des honoraires acquereur de 5 000 -> Hektor rend 2,941.
