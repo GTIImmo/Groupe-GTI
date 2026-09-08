@@ -185,7 +185,11 @@ function lireEtape(texte) {
   await fetch(`${XMLRPC_URL}?mode=${encodeURIComponent(A.coquille)}`, { headers: ENTETES });
   const ouverture = new URLSearchParams();
   ouverture.set("idAnnonce", ANNONCE);
-  ouverture.set(A.cleId, TRANSACTION);
+  // « - » = ouvrir SANS identifiant, donc le formulaire de CREATION. Utile pour
+  // inventorier un genre dont on n'a pas de transaction sous la main -- la vente
+  // du 08/09 : l'annonce d'essai n'en porte aucune, et en creer une la ferait
+  // passer en « Vendu ». Le formulaire, lui, porte les memes champs.
+  if (TRANSACTION && TRANSACTION !== "-") ouverture.set(A.cleId, TRANSACTION);
   ouverture.set("basket", "");
   ouverture.set("initBasket", "true");
   let rep = await fetch(`${XMLRPC_URL}?mode=${encodeURIComponent(A.etape)}`, {

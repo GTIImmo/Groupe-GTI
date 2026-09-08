@@ -10464,7 +10464,43 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       corps.set(cle, v);
     };
     if (pas.de === "0") {
-      if (target === "sold") {
+      // ─── CE QUE LA CHARGE AFFIRME, ET RIEN D'AUTRE (en reprise) ───
+      // Hisse ici le 08/09 au soir : la VENTE en avait besoin autant que le
+      // compromis, et ne l'avait pas.
+      const affirme = (cle) => {
+        const v = payload ? payload[cle] : null;
+        return v == null ? "" : String(v).trim();
+      };
+      // ⚠ normalizeStatusFrenchDate("") REND LA DATE DU JOUR -- son repli est
+      //   `new Date()`. On ne normalise donc que ce qui existe.
+      const dateAffirmee = (...cles) => {
+        const v = cles.map(affirme).find((x) => x) || "";
+        return v ? normalizeStatusFrenchDate(v) : "";
+      };
+
+      if (target === "sold" && enReprise) {
+        // ═══ MODIFIER UNE VENTE : LE MEME PIEGE QUE LE COMPROMIS ═══
+        //
+        // ⚠ TROUVE LE 08/09 EN RELEVANT L'ASSISTANT DE LA VENTE. La branche
+        //   `sold` passait AVANT le test de reprise, donc la vente n'a JAMAIS eu
+        //   les protections ecrites le matin pour le compromis. Une modification
+        //   aurait pose `prixDeVente = tx.salePrice` -- c'est-a-dire le prix
+        //   PREREMPLI DE L'ANNONCE (180 000 sur le bien temoin), que personne
+        //   n'a tape. Exactement le bug corrige le matin, reste vivant a cote.
+        //
+        // ⚠ ET LA VENTE N'A PAS LES MEMES CHAMPS QUE LE COMPROMIS -- releve du
+        //   08/09, assistant ouvert en lecture : ni prixPublique, ni
+        //   prixNetVendeur, ni sequestre, ni date d'acte, ni retractation, ni
+        //   conditions suspensives. Son etape 3 (`recapitulatifVente`) ne porte
+        //   AUCUN champ : c'est un recapitulatif. Il n'y a donc pas de net
+        //   vendeur a recalculer ici -- et ne pas en inventer un.
+        //
+        // 0.1 (03/09) : sur la vente c'est `sale_price` qui devient le prix,
+        // alors que sur le compromis c'est `amount`. On accepte les deux, le
+        // prix de vente d'abord.
+        poser("prixDeVente", cleanMoneyValue(affirme("sale_price") || affirme("amount"), ""));
+        poser("dateVente", dateAffirmee("transaction_date", "date_vente"));
+      } else if (target === "sold") {
         poser("prixDeVente", tx.salePrice);
         poser("dateVente", tx.date);
       } else if (enReprise) {
@@ -10487,19 +10523,8 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         // charge porte EXPLICITEMENT est une intention. Le reste vient du
         // formulaire que Hektor a rendu -- et le worker le repose deja
         // (extractHektorFormValues, plus haut). Ne rien poser, c'est CONSERVER.
-        const affirme = (cle) => {
-          const v = payload ? payload[cle] : null;
-          return v == null ? "" : String(v).trim();
-        };
-        // ⚠ normalizeStatusFrenchDate("") REND LA DATE DU JOUR -- son repli est
-        //   `new Date()`. L'appeler sur un champ vide poserait aujourd'hui a la
-        //   place de la date du compromis : exactement le defaut qu'on corrige
-        //   ici, reintroduit par une fonction utilitaire. On ne normalise donc
-        //   que ce qui existe. (Trouve en LISANT l'aide, pas en l'essayant.)
-        const dateAffirmee = (...cles) => {
-          const v = cles.map(affirme).find((x) => x) || "";
-          return v ? normalizeStatusFrenchDate(v) : "";
-        };
+        // (`affirme` et `dateAffirmee` sont desormais definis plus haut : la
+        //  vente en a besoin aussi.)
         poser("dateCompromis", dateAffirmee("transaction_date"));
         poser("dateSignatureActe", dateAffirmee("signature_date", "date_signature_acte"));
         poser("nbJoursRetractation", affirme("retraction_days"));
@@ -11546,17 +11571,35 @@ async function idsDejaConnusDuRegistre(job, annonceId, genre) {
 //   apres une creation REUSSIE.
 // ⚠ ET « JE NE SAIS PAS » N'EST PAS « C'EST FAUX ». Si la relecture ne rend
 //   rien, on ne declare pas l'echec : on dit qu'on n'a pas pu verifier.
+// ⚠ CETTE TABLE A ETE ECRITE PAR ANALOGIE LE MATIN DU 08/09, ET ELLE PORTAIT
+//   DEUX ERREURS -- corrigees le soir en LISANT les charges reelles de Hektor.
+//   C'est exactement la faute que 0.1 signale comme la plus repetee du chantier :
+//   supposer qu'un genre se comporte comme un autre.
+//
+//   ce que l'API rend VRAIMENT, releve sur des lignes reelles du miroir :
+//     compromis  id · dateStart · dateEnd · note · status · dateSignatureActe
+//                partAdmin · sequestre · prixNetVendeur · prixPublique
+//                honorairesEntree · honorairesSortie
+//     vente      id · prix · honoraires · date · retro_* · honorairesEntree
+//                honorairesSortie · honorairesHT · commissionAgence · partAdmin
+//
+//   ① LA VENTE N'A PAS DE `prixPublique` NI DE `prixNetVendeur` : son prix
+//     s'appelle `prix`. La preuve cherchait un champ inexistant et aurait
+//     annonce un echec sur une modification REUSSIE.
+//   ② `buyer_fees`, CE SONT LES HONORAIRES DE L'ACQUEREUR -- donc
+//     `honorairesSortie`, pas `honorairesEntree` (qui sont ceux du VENDEUR, la
+//     commission de l'agence). Mesure du 08/09 : le worker pose bien
+//     `montantHonoraireSortie` a partir de buyer_fees.
 const CHAMPS_PROUVABLES = {
   compromis: {
     amount: "prixPublique", sale_price: "prixPublique",
-    net_seller_price: "prixNetVendeur", buyer_fees: "honorairesEntree",
+    net_seller_price: "prixNetVendeur", buyer_fees: "honorairesSortie",
     sequestration: "sequestre", transaction_date: "dateStart",
     signature_date: "dateSignatureActe",
   },
   vente: {
-    amount: "prixPublique", sale_price: "prixPublique",
-    net_seller_price: "prixNetVendeur", buyer_fees: "honorairesEntree",
-    transaction_date: "date",
+    amount: "prix", sale_price: "prix",
+    buyer_fees: "honorairesSortie", transaction_date: "date",
   },
   offre: { amount: "montant", transaction_date: "date" },
 };
