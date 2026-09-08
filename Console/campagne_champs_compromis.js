@@ -28,6 +28,32 @@
  *   pas une campagne. Laissé de côté DÉLIBÉRÉMENT.
  *
  *   node Console/campagne_champs_compromis.js [--valeurs fichier.json]
+ *
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ⚠⚠ DEUX DÉFAUTS CONNUS — constatés au premier vrai passage, le 08/09/2026.
+ *    À CORRIGER AVANT DE S'EN SERVIR POUR LA VENTE.
+ *
+ *  ① SA SORTIE MENT SUR LES ÉTAPES 2 ET 3. Le tableau final relit les champs
+ *    dans le formulaire d'OUVERTURE, où `unitesEntreePercent`,
+ *    `unitesSortiePercent`, `notesCompromis` et les conditions suspensives
+ *    N'EXISTENT PAS — ils appartiennent aux étapes suivantes. Il en conclut
+ *    « IGNORE ou vide », ce qui est FAUX.
+ *    ➡ Ces lignes-là ne prouvent rien. Pour les lire, passer par
+ *      `releve_assistant_etapes.js`, qui parcourt toutes les étapes et
+ *      N'ÉCRIT JAMAIS. Vérifié le 08/09 : 60/40 et la note étaient bien
+ *      enregistrés, contrairement à ce que ce script affichait.
+ *
+ *  ② IL REPOSE UN NET VENDEUR PÉRIMÉ. Comme le worker avant son correctif du
+ *    matin même, il recopie `prixNetVendeur` tel que le formulaire le rend — or
+ *    Hektor le recalcule à l'AFFICHAGE, depuis les valeurs d'AVANT notre
+ *    écriture. Mesure : le retour arrière du 08/09 a laissé 162 655
+ *    (= 175 000 − 12 345, les honoraires d'essai) au lieu de 165 000.
+ *    ➡ Le décalage d'une modification, reproduit ici par mon propre outil : la
+ *      troisième confirmation indépendante du diagnostic. Réparé en passant par
+ *      le worker, qui porte le correctif — pas par ce script.
+ *    ➡ Correctif à porter ici : quand le prix change, poser
+ *      `prixNetVendeur = prix de vente − montantHonoraireEntree`.
+ * ═══════════════════════════════════════════════════════════════════════════════
  */
 const fs = require("fs");
 const path = require("path");

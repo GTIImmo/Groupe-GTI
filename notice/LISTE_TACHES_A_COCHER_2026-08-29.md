@@ -1981,6 +1981,70 @@ GEL que Frederic a repere le premier).*
             condition suspensive sur 50078 DEPUIS HEKTOR (geste humain), puis
             refaire une modification et relire.
 
+   ── ⭐ LA CAMPAGNE DU 08/09 : SEPT CLASSES DE PLUS ───────────────────
+      OUTIL : `node Console/campagne_champs_compromis.js`
+      ⚠⚠ SEUL SCRIPT DU DOSSIER Console/ QUI ECRIVE CHEZ HEKTOR. Annonce et
+        compromis EN DUR (24933 / 50078), etat d'avant depose AVANT d'ecrire,
+        retour arriere par `--valeurs <ce fichier>`. Lance par Frederic -- le
+        harnais refuse cette ecriture a l'agent, et c'est bien ainsi.
+      METHODE : envoyer une valeur reconnaissable, enregistrer, ROUVRIR, comparer.
+      C'est celle du 03/09, appliquee d'un coup au lieu d'un champ a la fois.
+
+          champ                    envoye        retenu       classe
+          prixDeVente              170 000       175 000      C  il le RECALCULE
+                                                                 depuis le prix public
+          sequestre                4 321         4 321        B
+          montantHonoraireEntree   12 345        12 345       B  ⚠ voir ci-dessous
+          mandants[]               2 sur 3       2            B  l'app peut les piloter
+          unitesEntreePercent      60            60           B  ─ LE PARTAGE DE
+          unitesSortiePercent      40            40           B  ─ LA COMMISSION
+          notesCompromis           texte date    texte date   B
+
+      ⚠ « C » NE VEUT PAS DIRE « IL REFUSE L'ECRITURE ». C'est LA nuance du 08/09,
+        et elle vaut pour deux champs au moins :
+            prixNetVendeur    Hektor le calcule si on n'envoie rien, MAIS il garde
+                              ce qu'on lui envoie, sans recalculer
+            montantHonoraireEntree   idem -- et c'est LA COMMISSION DE L'AGENCE.
+                              L'app PEUT la changer, et personne ne l'en empeche.
+        La bonne formulation de C est donc : « il sait le calculer, mais il ne
+        recalcule pas ce qu'on affirme ».
+
+      ⭐ LA DEMONSTRATION QUI JUSTIFIE LA VERIFICATION DE LA MODALE. Avec
+        honoraires = 12 345 et un net reste a 165 000, la fiche a affiche
+            Prix de vente : 177 345 EUR     (165 000 + 12 345)
+        alors que le prix public valait 175 000. HEKTOR A ACCEPTE L'INCOHERENCE
+        ET NE L'A PAS CORRIGEE. L'alerte de la modale (3.2d) est donc le SEUL
+        endroit ou cette faute peut etre arretee.
+
+      ⚠ LA CONDITION SUSPENSIVE N'A PAS ETE CREEE. Envoyee en tableaux paralleles
+        (id_condition=2 « Obtention Credit », clef, jours_validites=45, note, etat),
+        elle n'apparait pas : l'etape 3 revient exactement comme avant. Notre
+        lecture de leur mecanisme est fausse quelque part.
+        ➡ CONSEQUENCE : LE RISQUE JURIDIQUE N'EST PAS LEVE. Faute d'avoir su en
+          poser une, on n'a pas pu tester si une modification la preserve. LA REGLE
+          TIENT : ne pas ouvrir « Modifier » sur un vrai compromis.
+
+      ⚠ DEUX DEFAUTS DE MA PROPRE MESURE, consignes pour qu'on ne relise pas sa
+        sortie de travers :
+        1. le script comparait les champs des etapes 2 et 3 dans le formulaire
+           d'OUVERTURE, ou ils n'existent pas -> ses lignes « IGNORE ou vide » sont
+           FAUSSES. Trou referme par `releve_assistant_etapes.js` (lecture seule),
+           qui montre 60/40 et la note bien enregistres.
+        2. le RETOUR ARRIERE a laisse prixNetVendeur a 162 655 au lieu de 165 000 :
+           le script repose le net rendu par le formulaire, qui valait
+           175 000 - 12 345 au moment de l'ouverture. C'EST EXACTEMENT LE RETARD
+           D'UNE MODIFICATION corrige le matin meme dans le worker -- reproduit par
+           mon outil, ce qui confirme le diagnostic une troisieme fois. Repare en
+           passant par le worker, qui porte le correctif.
+
+   >>> RESTE TROIS INCONNUES SUR LE COMPROMIS, et on ne les maquille pas :
+       agenceReseauSelected   la RETROCESSION (20 agences en radio). Aucune n'est
+                              cochee ; en cocher une n'est pas trivialement
+                              reversible (un radio ne se decoche pas en le
+                              repostant vide). ARBITRAGE, pas campagne.
+       conditions suspensives  mecanisme d'ecriture non compris (5 champs)
+       tauxHonoraireSortie     jamais isole
+
    >>> RESTE A FAIRE : le meme relevé pour la VENTE
        (`node Console/releve_assistant_etapes.js vente <annonce> <idVente>`).
        L'offre n'utilise pas l'assistant : c'est un formulaire ordinaire.
