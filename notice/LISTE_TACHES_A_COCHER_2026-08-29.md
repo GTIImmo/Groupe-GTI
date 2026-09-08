@@ -3699,6 +3699,31 @@ GEL que Frederic a repere le premier).*
            ⭐ CONFIRME LE 08/09/2026 : le compromis 50078 est ACTIF (status 1) et
              il a ete modifie quatre fois de suite. LA SEULE VRAIE RESERVE DU
              CHANTIER TOMBE.
+           ⭐⭐ LA VENTE EST FAITE ET PROUVEE -- 08/09, 17:54. ESSAI REEL COMPLET :
+                creation   vente 23301 sur 24933, prix 175 000 (contexte NEGOCIATEUR,
+                           comme le code le documente)
+                MODIFICATION  175 000 -> 176 500, reprise sur 23301
+                           ventes sur l'annonce : ['23301'] -- UNE SEULE, aucun doublon
+                           fiche Hektor : « 176 500 EUR » sous « Bien vendu »
+                suppression  vente 23301 retiree (DEFINITIF, confirmer=true exige)
+                etat rendu   « Sous compromis », archive 0, mandat 11939, prix 180 000,
+                           compromis 50078 intact a 175 000. RIEN NE RESTE DE L'ESSAI.
+
+           ⭐ AUCUN DES SEPT OBSTACLES DU COMPROMIS NE S'EST PRESENTE. C'est le
+             benefice direct de la matinee : filtrage des champs affirmes, garde
+             anti-doublon levee en reprise, preuve par la valeur -- tout etait
+             deja en place quand la vente est arrivee.
+           ⚠ ET DEUX CORRECTIFS DU SOIR ONT ETE DECISIFS, tous deux trouves en
+             RELEVANT la vente au lieu de la supposer semblable au compromis :
+               ① la branche `sold` passait AVANT le test de reprise -- sans le
+                 correctif, le prix aurait ete ecrase par les 180 000 de l'annonce
+               ② la table de preuve cherchait `prixPublique`, que la vente N'A PAS
+                 (son prix s'appelle `prix`) : elle aurait annonce un ECHEC sur une
+                 modification REUSSIE
+
+           ⚠ CE QUI RESTE DE 3.2b : l'OFFRE (elle n'utilise pas l'assistant :
+             formulaire ordinaire + idOffre, releve du 28/08).
+           --- l'enonce d'origine ---
            ⚠ CE QUI RESTE DE 3.2b : la VENTE et l'OFFRE. On a fait le compromis
              EN PREMIER -- l'inverse de ce que cette tache prevoyait (« la vente
              d'abord, la seule mesuree ») -- parce que c'est lui qui bloquait.

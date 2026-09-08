@@ -16,13 +16,30 @@
 const fs = require("fs");
 const path = require("path");
 
-const ANNONCE = String(process.argv[2] || "24933");
-const COMPROMIS = String(process.argv[3] || "50078");
+// ─── GENERALISE A LA VENTE, 08/09 au soir ───
+// La question posee au compromis se pose aussi a la vente, et la reponse n'est
+// PAS forcement la meme : 0.2 (03/09) a capture leur interface postant `idVente`
+// A CHAQUE ETAPE, ce qui laisse penser que le panier de la vente ne le retient
+// peut-etre pas. Si le panier differe, il le retient ; sinon, l'identifiant doit
+// voyager a la main -- et c'est ce qui separerait modifier de CREER UNE SECONDE
+// VENTE sur un dossier reel.
+//   node Console/mesure_reprise_panier.js [genre] [idAnnonce] [idTransaction]
+const GENRE = String(process.argv[2] || "compromis").toLowerCase();
+const ANNONCE = String(process.argv[3] || "24933");
+const COMPROMIS = String(process.argv[4] || "50078");
 const BASE = process.env.HEKTOR_BASE_URL || "https://groupe-gti-immobilier.la-boite-immo.com";
 const ADMIN_URL = `${BASE.replace(/\/+$/, "")}/admin/`;
 const XMLRPC_URL = `${ADMIN_URL}xmlrpc.php`;
-const COQUILLE = "annonce-SuiviVente-compromis-createCompromis";
-const ETAPE = "annonce-SuiviVente-compromis-getStepCompromis";
+const GENRES = {
+  compromis: { coquille: "annonce-SuiviVente-compromis-createCompromis",
+               etape: "annonce-SuiviVente-compromis-getStepCompromis", cle: "idCompromis" },
+  vente:     { coquille: "annonce-SuiviVente-vente-createVente",
+               etape: "annonce-SuiviVente-vente-getStepVente", cle: "idVente" },
+};
+const G = GENRES[GENRE];
+if (!G) { console.error("genre inconnu : " + GENRE); process.exit(1); }
+const COQUILLE = G.coquille;
+const ETAPE = G.etape;
 const SESSION = path.resolve(__dirname, "sessions", "storage_state_admin.json");
 
 const etat = JSON.parse(fs.readFileSync(SESSION, "utf8"));
@@ -41,7 +58,7 @@ async function panier(avec) {
   await fetch(`${XMLRPC_URL}?mode=${encodeURIComponent(COQUILLE)}`, { headers: entetes });
   const corps = new URLSearchParams();
   corps.set("idAnnonce", ANNONCE);
-  if (avec) corps.set("idCompromis", COMPROMIS);
+  if (avec) corps.set(G.cle, COMPROMIS);
   corps.set("basket", "");
   corps.set("initBasket", "true");
   const rep = await fetch(`${XMLRPC_URL}?mode=${encodeURIComponent(ETAPE)}`, {
@@ -73,6 +90,9 @@ function lisible(b) {
   fs.writeFileSync(path.join(sorties, "panier_avec.txt"), lisible(avec), "utf8");
   fs.writeFileSync(path.join(sorties, "panier_sans.txt"), lisible(sans), "utf8");
 
+  console.log(`GENRE ${GENRE.toUpperCase()} · annonce ${ANNONCE} · transaction ${COMPROMIS}`);
+  console.log("⚠ LECTURE SEULE : on s'arrete a l'ouverture, rien n'est enregistre.");
+  console.log("");
   console.log(`panier AVEC : ${avec.length} car.`);
   console.log(`panier SANS : ${sans.length} car.`);
   console.log("");
