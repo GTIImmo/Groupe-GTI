@@ -98,7 +98,10 @@ const VALEURS_DEFAUT = {
   etape3: {
     // Catalogue relevé dans le formulaire : 1 = Préemption mairie, 2 = Obtention
     // Crédit, 9 = Autre. Les tableaux sont PARALLÈLES : même longueur, même ordre.
-    conditions: [{ id_condition: "2", clef: "Obtention Credit",
+    // ⚠ LA CLEF DOIT ETRE LE LIBELLE EXACT DU CATALOGUE, ACCENT COMPRIS.
+    //   Le 08/09 j'avais ecrit « Obtention Credit » sans accent : deux fautes
+    //   d'un coup, la forme du tableau ET la clef.
+    conditions: [{ id_condition: "2", clef: "Obtention Crédit",
                    jours_validites: "45", note: "ESSAI 0.1 du 08/09", etat: "1" }],
     notesCompromis: "ESSAI 0.1 du 08/09 -- classement des champs A/B/C",
   },
@@ -240,13 +243,47 @@ function injecter(corps, pas, valeurs, contenu) {
   } else {
     const v = valeurs.etape3 || {};
     const conds = Array.isArray(v.conditions) ? v.conditions : [];
-    for (const cle of ["id_condition", "clef", "jours_validites", "note", "etat"]) {
-      corps.delete(`conditionsSuspensivesSelected[][${cle}]`);
+
+    // ═══ LA CLEF DU TABLEAU EST LE NOM DE LA CONDITION ═══
+    //
+    // MESURE DU 08/09, faite EN OUVRANT LEUR PROPRE INTERFACE et en cliquant le
+    // « + » d'une condition, puis en fermant SANS ENREGISTRER. Ce que leur
+    // JavaScript fabrique n'est pas ce que le gabarit laisse croire :
+    //
+    //     AVANT le clic   (rien -- aucun champ nomme)
+    //     APRES le clic
+    //         conditionsSuspensivesSelected[Obtention Credit][id_condition]  = 2
+    //         conditionsSuspensivesSelected[Obtention Credit][clef]          = Obtention Credit
+    //         conditionsSuspensivesSelected[Obtention Credit][jours_validites] = 60
+    //         conditionsSuspensivesSelected[Obtention Credit][note]          = ""
+    //         conditionsSuspensivesSelected[Obtention Credit][etat]          = case a cocher
+    //
+    // ➡ VOILA POURQUOI LA CAMPAGNE DU 08/09 N'A RIEN CREE. J'avais poste des
+    //   tableaux paralleles `[]`, que PHP indexe 0, 1, 2... alors que Hektor
+    //   indexe PAR LE LIBELLE. Les `[]` visibles dans le formulaire sont le
+    //   GABARIT que leur JavaScript clone et renomme -- pas le format d'envoi.
+    //
+    // ⚠ `etat` EST UNE CASE A COCHER, decochee par defaut : un navigateur ne
+    //   poste PAS une case decochee. On ne l'envoie donc que si elle vaut 1,
+    //   sinon on ecrirait un etat que l'utilisateur n'a pas donne.
+    //
+    // ⚠⚠ QUESTION NON TRANCHEE -- L'ENCODAGE. Leur page est en ISO-8859-1 (le
+    //   relevé lu en UTF-8 rend « Pr�emption », « Cr�dit »), donc leur
+    //   navigateur poste la clef en latin-1. URLSearchParams, lui, encode
+    //   TOUJOURS en UTF-8. Pour une clef accentuee -- « Obtention Credit » en
+    //   porte une -- les deux ne coincident pas.
+    //   >>> SI LA CONDITION N'EST TOUJOURS PAS CREEE AU PROCHAIN ESSAI, CHERCHER
+    //       LA D'ABORD, et pas ailleurs.
+    for (const k of Array.from(corps.keys())) {
+      if (k.startsWith("conditionsSuspensivesSelected[")) corps.delete(k);
     }
-    // ⚠ TABLEAUX PARALLELES : meme longueur, meme ordre.
     for (const c of conds) {
-      for (const cle of ["id_condition", "clef", "jours_validites", "note", "etat"]) {
-        corps.append(`conditionsSuspensivesSelected[][${cle}]`, String(c[cle] ?? ""));
+      const clef = String(c.clef ?? "");
+      for (const champ of ["id_condition", "clef", "jours_validites", "note"]) {
+        corps.set(`conditionsSuspensivesSelected[${clef}][${champ}]`, String(c[champ] ?? ""));
+      }
+      if (String(c.etat ?? "") === "1") {
+        corps.set(`conditionsSuspensivesSelected[${clef}][etat]`, "1");
       }
     }
     if (v.notesCompromis != null) poser("notesCompromis", v.notesCompromis);
@@ -264,6 +301,19 @@ async function ouvrir() {
   return lireEtape(await r.text());
 }
 
+
+/** Les conditions suspensives REELLEMENT retenues : on lit toute clef nommee
+ *  `conditionsSuspensivesSelected[<libelle>][id_condition]`. Le gabarit, lui,
+ *  porte `[]` vide -- il ne compte pas. */
+const conditionsRetenues = (html) => {
+  const out = [];
+  for (const m of String(html || "").matchAll(/<input\b[^>]*>/gi)) {
+    const nom = attr(m[0], "name");
+    const g = nom && nom.match(/^conditionsSuspensivesSelected\[(.+)\]\[id_condition\]$/);
+    if (g && g[1] !== "" && attr(m[0], "value")) out.push(`${g[1]}=${attr(m[0], "value")}`);
+  }
+  return out;
+};
 
 /** Le contenu d'un <textarea> (notesCompromis en est un). */
 const texteDe = (html, nom) => {
@@ -356,7 +406,8 @@ const texteDe = (html, nom) => {
   }
   if (v3.notesCompromis != null) juger("notesCompromis", v3.notesCompromis, texteDe(vApres["2->3"], "notesCompromis"));
   if (Array.isArray(v3.conditions) && v3.conditions.length) {
-    const ids = toutesLesValeurs(vApres["3->3"], "conditionsSuspensivesSelected[][id_condition]").filter(Boolean);
+    // On cherche N'IMPORTE QUELLE clef -- c'est le libelle, pas un index.
+    const ids = conditionsRetenues(vApres["3->3"]);
     lignesRapport.push({ nom: "conditions suspensives", envoye: v3.conditions.map((c) => c.id_condition).join(","),
       retenu: ids.join(",") || "(aucune)",
       verdict: ids.length ? "CREEE -> B" : "NON CREEE -- mecanisme non compris" });

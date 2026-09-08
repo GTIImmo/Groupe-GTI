@@ -2016,13 +2016,43 @@ GEL que Frederic a repere le premier).*
         ET NE L'A PAS CORRIGEE. L'alerte de la modale (3.2d) est donc le SEUL
         endroit ou cette faute peut etre arretee.
 
-      ⚠ LA CONDITION SUSPENSIVE N'A PAS ETE CREEE. Envoyee en tableaux paralleles
-        (id_condition=2 « Obtention Credit », clef, jours_validites=45, note, etat),
-        elle n'apparait pas : l'etape 3 revient exactement comme avant. Notre
-        lecture de leur mecanisme est fausse quelque part.
-        ➡ CONSEQUENCE : LE RISQUE JURIDIQUE N'EST PAS LEVE. Faute d'avoir su en
-          poser une, on n'a pas pu tester si une modification la preserve. LA REGLE
-          TIENT : ne pas ouvrir « Modifier » sur un vrai compromis.
+      ⚠ LA CONDITION SUSPENSIVE N'A PAS ETE CREEE -- ET ON SAIT MAINTENANT POURQUOI.
+
+        ⭐ MESURE DU 08/09, FAITE DANS LEUR PROPRE INTERFACE. Assistant ouvert sur
+          50078, clic sur le « + » d'une condition, lecture du DOM, puis FERMETURE
+          SANS ENREGISTRER (verifie apres coup : aucune condition creee).
+
+              AVANT le clic    aucun champ nomme
+              APRES le clic
+                  conditionsSuspensivesSelected[Obtention Credit][id_condition]    = 2
+                  conditionsSuspensivesSelected[Obtention Credit][clef]            = Obtention Credit
+                  conditionsSuspensivesSelected[Obtention Credit][jours_validites] = 60
+                  conditionsSuspensivesSelected[Obtention Credit][note]            = ""
+                  conditionsSuspensivesSelected[Obtention Credit][etat]            = case a cocher
+
+        ➡ LA CLEF DU TABLEAU EST LE LIBELLE DE LA CONDITION, PAS UN INDEX VIDE.
+          J'avais poste des tableaux paralleles `[]`, que PHP indexe 0, 1, 2...
+          alors que Hektor indexe PAR LE NOM. Les `[]` qu'on lit dans le
+          formulaire sont le GABARIT que leur JavaScript clone et RENOMME -- pas
+          le format d'envoi. Deux fautes d'un coup, puisque j'avais en plus ecrit
+          la clef SANS SON ACCENT.
+        ⚠ `etat` est une CASE A COCHER, decochee par defaut : un navigateur ne
+          poste pas une case decochee. Ne l'envoyer que si elle vaut 1.
+        ⚠⚠ UNE QUESTION RESTE OUVERTE -- L'ENCODAGE. Leur page est en ISO-8859-1
+          (le relevé lu en UTF-8 rend « Pr?emption », « Cr?dit ») : leur
+          navigateur poste donc la clef en latin-1, alors qu'URLSearchParams
+          encode TOUJOURS en UTF-8. Pour une clef accentuee, les deux different.
+          >>> SI LA CONDITION N'EST TOUJOURS PAS CREEE AU PROCHAIN ESSAI, CHERCHER
+              LA D'ABORD. Le mecanisme, lui, n'est plus en cause.
+
+        ➡ LE RISQUE JURIDIQUE N'EST TOUJOURS PAS LEVE : on sait desormais COMMENT
+          en poser une, mais on ne l'a pas fait, donc on n'a pas pu tester si une
+          modification la preserve. LA REGLE TIENT -- ne pas ouvrir « Modifier »
+          sur un vrai compromis.
+        ⚠ ET LE SOUPCON DE DEPART SE PRECISE. Le worker enregistre en reposant ce
+          que l'etape 2 -> 3 lui a rendu, c'est-a-dire LE GABARIT (`[]` vide) et
+          non les clefs nommees. S'il ecrase les conditions existantes par ce
+          gabarit, elles disparaissent. C'est precisement ce qu'il faut eprouver.
 
       ⚠ DEUX DEFAUTS DE MA PROPRE MESURE, consignes pour qu'on ne relise pas sa
         sortie de travers :
