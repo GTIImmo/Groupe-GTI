@@ -10668,6 +10668,31 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     corps.set("idAnnonce", annonceId);
     corps.set("basket", etat.basket);
 
+    // ═══ L'IDENTIFIANT VOYAGE A CHAQUE ETAPE, PAS SEULEMENT A L'OUVERTURE ═══
+    //
+    // 0.2 (03/09) l'a etabli en capturant les requetes de LEUR interface rouvrant
+    // la vente 23294 : « idVente VOYAGE A CHAQUE ETAPE, Y COMPRIS A
+    // L'ENREGISTREMENT [...] le worker devra OUVRIR avec idVente, PUIS ENCHAINER
+    // -- pas poster l'enregistrement seul ».
+    //
+    // ⚠ NOUS NE LE POSIONS QU'A L'OUVERTURE. Pour le COMPROMIS ca suffit -- le
+    //   panier le retient (mesure du 08/09 : 708 caracteres avec l'identifiant
+    //   contre 646 sans), et quatre modifications reelles l'ont prouve. Mais
+    //   RIEN NE GARANTIT QU'IL EN AILLE DE MEME POUR LA VENTE : le formulaire ne
+    //   rend AUCUN champ cache `idVente`, donc s'il ne vit pas dans le panier, il
+    //   est perdu des la premiere etape -- et Hektor CREERAIT au lieu de modifier.
+    //
+    // ⚠ ON NE LE FAIT QUE POUR LA VENTE, ET C'EST DELIBERE.
+    //   Le chemin du COMPROMIS est prouve QUATRE FOIS (08/09, compromis 50078) :
+    //   ajouter un parametre a un chemin qui marche, sans l'avoir mesure, c'est
+    //   exactement le genre de « petite amelioration » qui coute une journee.
+    //   Et la capture du 03/09 porte sur la VENTE, pas sur le compromis : rien ne
+    //   dit que leur interface envoie `idCompromis` a chaque etape.
+    //   ➡ La vente fait ce que 0.2 a MESURE. Le compromis garde ce qui MARCHE.
+    if (idRepris && target === "sold") {
+      corps.set("idVente", idRepris);
+    }
+
     const rep = await appelerEtapeAssistant(
       annonceId, assistant, corps, pas.enregistre ? ["save", "treat"] : null);
     etat = lireEtapeAssistant(rep.text, `etape ${pas.de}->${pas.vers} ${config.label}`);
