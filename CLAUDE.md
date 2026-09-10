@@ -44,6 +44,50 @@ vente      23301   créée, modifiée 175 000 → 176 500, supprimée · annonce
 offre      33050   165 000 → 167 000  ·  33048 REFUSÉE re-acceptée puis re-refusée
 ```
 
+**Au 10/09/2026 — CE QUE L'API CACHE, LE WORKER LE LIT MAINTENANT.**
+
+Le registre a gagné quatre colonnes tirées de `payload_json` (`mandants_json`,
+`notaires_json`, `propositions_json`, `commission_agence`) et le worker ne jette
+plus le formulaire de Hektor : à chaque écriture il en tire ce que l'API ne rend
+jamais, **sans une requête de plus**, dans `app_affaire_console`.
+
+```
+notairesAcquereur[] · notairesMandant[]     0 sur 10 586 par l'API
+unitesEntreePercent / unitesSortiePercent   le partage de la commission
+conditions suspensives : retenues + CATALOGUE de l'agence
+montantHonoraireEntree / tauxHonoraireEntree   le TAUX VENDEUR (manque n°1 de 0.1)
+```
+
+Prouvé trois fois en réel sur le compromis 50078, et rejouable hors ligne :
+`node Console/test_lecture_console.js` — onze assertions sur du HTML capturé.
+
+⭐ **`2.6` A CHANGÉ DE NATURE.** La piste « la typologie du contact filtre » venait
+de quatre mesures ; **le parc la dément à 39 %** — sur 12 446 acquéreurs réels de
+compromis, 4 886 ne portent PAS la typologie et sont pourtant attachés. Et la
+comparaison console/API sur 649 compromis donne **zéro écart** : l'API ne cache
+rien, le défaut est bien à l'ÉCRITURE. L'instrumentation que le dossier réclamait
+depuis le 06/09 est posée (ce qui part vraiment, ce que le formulaire garde, ce
+que `findProspect` rend). ⚠ Reste l'essai avec deux contacts, jamais fait.
+
+⚠ **LES TROIS ESSAIS « DEUX ACQUÉREURS » (02, 06 et 07/09) UTILISAIENT LE MÊME
+  COUPLE**, dont un contact que Hektor n'a jamais attaché. Ils ne prouvent donc
+  pas que Hektor n'en garde qu'un.
+
+### Les outils du 10/09
+
+```
+Console/lecture_assistant.js                  le lecteur, PARTAGE (extrait du worker)
+Console/test_lecture_console.js               11 assertions, N'APPELLE PAS HEKTOR
+Console/extract_hektor_compromis_console.js   le rattrapage, LECTURE SEULE
+phase2/sync/sync_hektor_compromis_console.py  son pilote, cadence de reference
+```
+
+⚠ **LA CADENCE N'EST PAS NEGOCIABLE** : 1 requête par compromis, 0,5 s entre deux,
+lots de 100 avec 60 s, vagues de 2 000 avec 300 s. C'est la méthode de
+`notice/NOTE_EXTRACTION_CHAUFFAGE_HEKTOR_2026-06-09.md`, la seule qui n'ait jamais
+rien déclenché (56 926 lectures). La coquille est écartée pour lire — mesuré le
+10/09 : le formulaire arrive identique sans elle, ce qui divise le flux par deux.
+
 **La tâche ouverte est `3.2d` — ligne 3836.** Lot 1 fait (la commission est visible, la
 modale vérifie `prix = net + honoraires`). Restent les lots 2, 3, 4.
 Ensuite : `3.3` (l. 3972), `3.1` (l. 3538) — qui commande `4.1`.

@@ -1,0 +1,630 @@
+            <!-- Module(s) -->
+                    <input type="hidden" name="containerModule[]" value="infosFinancieresCompromis">
+                    <input type="hidden" name="containerModule[]" value="acquereurNotaireAutresProspectsCompromis">
+                    <input type="hidden" name="containerModule[]" value="annonceMandatCompromis">
+                    <input type="hidden" name="containerModule[]" value="agenceInterkabCompromis">
+            
+            <!-- Name -->
+        <input type="hidden" name="containerName" value="PopinCompromis">
+    
+    
+    <!-- Step -->
+            <input type="hidden" name="step" value="0">
+        <input type="hidden" name="fromStep" value="0">
+    
+    
+<div class="popinForm bxrow">
+    <div class="formRowContainer bxd12 multipleInputRow">
+        <div class="formRow bxd12">
+            <p class="formRowLabel m0">Date du<br> compromis</p>
+            <div class="formRowStructure">
+                <input class="formRowInput" type="text" value="03-09-2026"
+                       name="dateCompromis"
+                       onfocusout="checkFormatDate()"
+                       onchange="setDefaultSignatureDate(this);"
+                       maxlength="10"
+                       id="proposition_date_ocv"
+                       autocomplete="off">
+                <span class="formRow1Devise fontIcon icon5-agendaAnnonce"></span>
+                            </div>
+            <div class="formRowStructure_2">
+                <span class="retractCompromisText">R\u00e9tractation apr\u00e8s compromis de vente</span>
+                <input class="formRow1Input" type="text" value="10"
+                       name="nbJoursRetractation"
+                       id="availability">
+                <span class="structureSpan">Jours</span>
+                            </div>
+        </div>
+    </div>
+    <div class="formRowContainer bxd6 ">
+        <div class="tooltipContainer">
+            <span class="iconToolTips tooltipContainer_iconToolTips__element icon21-info iconInfo"></span>
+            <div class="tooltipContent transition250" style="height: 0px;">
+                <p class="tooltip tooltipContainer_tooltipContent_tooltip__element transition250">
+                    Date pr\u00e9visionnelle de signature de l'acte authentique
+                </p>
+            </div>
+        </div>
+        <div class="formRow bxd12">
+            <p class="formRowLabel m0">Signature pr\u00e9visionnelle</p>
+            <div class="formRowStructure">
+                <input class="formRowInput" type="text"
+                       value="05-12-2026"
+                       name="dateSignatureActe"
+                       id="signature_date_ocv"
+                       autocomplete="off">
+                <span class="formRow1Devise fontIcon icon5-agendaAnnonce"></span>
+                            </div>
+        </div>
+    </div>
+    <div class="formRowContainer bxd6 ">
+        <div class="tooltipContainer">
+            <span class="iconToolTips tooltipContainer_iconToolTips__element icon21-info iconInfo"></span>
+            <div class="tooltipContent transition250" style="height: 0px;">
+                <p class="tooltip tooltipContainer_tooltipContent_tooltip__element transition250">
+                    Le prix public correspond au prix affich\u00e9 sur les diff\u00e9rents supports de communication. Si les
+                    honoraires de l'agence sont \u00e0 la charge de l'acqu\u00e9reur, le prix public les englobe.
+                </p>
+            </div>
+        </div>
+        <div class="formRow bxd12">
+            <!-- PRIX PUBLIC -------------------------------------------------------------------------------->
+            <!-- prix_publique ==> il est calcul\u00e9 par rapport au prix de vente + les honoraires acqu\u00e9reurs.-->
+            <p class="formRowLabel m0">
+                                    Prix public
+                            </p>
+            <div class="formRowStructure">
+                <input class="formRowInput stronger colorPrimary_ColorActive active"
+                       type="number"
+                       value="178500.00" min="0"
+                       name="prixPublique" id="prix_publique"
+                       onchange="changePrixPublicA();"
+                >
+                <span class="formRow1Devise">\u20ac</span></div>
+                    </div>
+    </div>
+    <div class="formRowContainer bxd6 multipleInputColumn">
+        <div class="formRow bxd12">
+            <p class="formRowLabel m0">Honoraires <br>vendeur</p>
+            <div class="formRowStructure">
+                <!-- HONORAIRES VENDEURS -------------------------------------------------------------------------------->
+                <!------------------------------------------------------------------------------------------------------->
+                <div class="formColumnContent">
+                    <input class="formRowInput stronger colorPrimary_ColorActive active"
+                           type="number"
+                           value="10000.00" min="0"
+                           name="montantHonoraireEntree"
+                           id="venteHonorairesEntreeTaux"
+                           onchange="changeHonorairesEntree()"
+                    >
+                    <span class="formRow1Devise">\u20ac<span class="ttcElement">/TTC</span></span>
+                                    </div>
+                <!-- HONORAIRES VENDEURS PERCENT ------------------------------------------------------------------------>
+                <!------------------------------------------------------------------------------------------------------->
+                <div class="formColumnContent">
+                    <input class="formRowInput"
+                           type="number"
+                           value="5.650" min="0"
+                           name="tauxHonoraireEntree"
+                           id="venteHonorairesEntreePercent"
+                           onchange="changePercentHE();"
+                    >
+                    <span class="formRow1Devise pimpe-percent-sign">%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="formRowContainer bxd6 multipleInputColumn">
+        <div class="formRow bxd12">
+            <p class="formRowLabel m0">Honoraires <br>acqu\u00e9reur</p>
+            <div class="formRowStructure">
+                <!-- HONORAIRES ACQUEREURS ------------------------------------------------------------------------------>
+                <!------------------------------------------------------------------------------------------------------->
+                <div class="formColumnContent">
+                    <input class="formRowInput stronger colorPrimary_ColorActive active"
+                           type="number"
+                           value="1500.00" min="0"
+                           name="montantHonoraireSortie"
+                           id="venteHonorairesSortieTaux"
+                           onchange=" changeHonrorairesSortie();"
+                    >
+                    <span class="formRow1Devise">\u20ac<span class="ttcElement">/TTC</span></span>
+                                    </div>
+                <!-- HONORAIRES ACQUEREURS PERCENT ---------------------------------------------------------------------->
+                <!------------------------------------------------------------------------------------------------------->
+                <div class="formColumnContent">
+                    <input class="formRowInput"
+                           type="number"
+                           value="0.847" min="0"
+                           name="tauxHonoraireSortie"
+                           id="venteHonorairesSortiePercent"
+                           onchange="changePercentHS();"
+                    >
+                    <span class="formRow1Devise pimpe-percent-sign">%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="formRowContainer bxd6">
+        <div class="tooltipContainer">
+            <span class="iconToolTips tooltipContainer_iconToolTips__element icon21-info iconInfo"></span>
+            <div class="tooltipContent transition250">
+                <p class="tooltip tooltipContainer_tooltipContent_tooltip__element transition250">
+                    Le prix net vendeur correspond au montant que le propri\u00e9taire va r\u00e9ellement toucher sur la vente de
+                    son bien une fois les honoraires de l'agence d\u00e9duis.
+                </p>
+            </div>
+        </div>
+        <div class="formRow bxd12">
+            <p class="formRowLabel m0">Soit prix<br>net vendeur</p>
+            <div class="formRowStructure">
+                <!-- PRIX NET VENDEUR ---------------------------------------------------------------------->
+                <!------------------------------------------------------------------------------------------>
+
+                <input class="formRowInput stronger colorPrimary_ColorActive active"
+                       type="number"
+                       value="167000" min="0"
+                       name="prixNetVendeur"
+                       id="montant_net_vendeur"
+                                                    onchange="changePrixNetA();"
+                                        >
+                <span class="formRow1Devise">\u20ac</span>
+                            </div>
+        </div>
+    </div>
+    <div class="formRowContainer bxd6">
+        <div class="tooltipContainer">
+            <span class="iconToolTips tooltipContainer_iconToolTips__element icon21-info iconInfo"></span>
+            <div class="tooltipContent transition250">
+                <p class="tooltip tooltipContainer_tooltipContent_tooltip__element transition250">
+                    Le prix de vente correspond au prix qui est sign\u00e9 chez le notaire. Il est \u00e9gal au prix public
+                    lorsque les honoraires sont \u00e0 la charge du vendeur. Le prix de vente est \u00e9gal au prix net vendeur
+                    lorsque les honoraires sont \u00e0 la charge de l'acqu\u00e9reur. Les honoraires sont toujours calcul\u00e9s en %
+                    du prix de vente.
+                </p>
+            </div>
+        </div>
+        <div class="formRow bxd12">
+            <p class="formRowLabel m0">Soit prix<br>de vente</p>
+            <div class="formRowStructure">
+                <!-- PRIX DE LA VENTE ---------------------------------------------------------------------->
+                <!------------------------------------------------------------------------------------------>
+                <input class="formRowInput stronger colorPrimary_ColorActive active"
+                       type="number"
+                       value="177000" min="0"
+                       name="prixDeVente"
+                       id="montant_prix_vente"
+                                                    onchange="changePrixVenteA();"
+                            onfocusin="savePrevPrixVente();"
+                                        >
+                <span class="formRow1Devise">\u20ac</span>
+                            </div>
+        </div>
+    </div>
+    <div class="formRowContainer bxd6">
+        <div class="formRow bxd12">
+            <p class="formRowLabel m0">S\u00e9questre</p>
+            <div class="formRowStructure">
+                <input class="formRowInput stronger colorPrimary_ColorActive active"
+                       type="number"
+                       value="0.00" min="0"
+                       name="sequestre"
+                       id="sequestreG"
+                       onchange="setSequestre();">
+                <span class="formRow1Devise">\u20ac</span>
+                            </div>
+        </div>
+    </div>
+</div>
+<script>
+    window.initiateDateTimePickerOCV && window.initiateDateTimePickerOCV();
+    </script>        <div class="mandatSelectContainer">
+        <p class="mandatSelectText m0"><span class=textStrong>Mandat</span> concern\u00e9 par le compromis</p>
+        <select class="mandatSelect" name="mandat" id="id_mandat" onchange="changeMandatIdValue_v2(this);">
+            <option disabled>Selectionner un mandat</option>
+            <option value="-1">Mandat non renseign\u00e9 sur Hektor</option>
+                            <option selected="selected"                        value="10261-HEKTOR">Mandat
+                    n\u00b011939 - SIMPLE
+                    - actif</option>
+                    </select>
+        <div id="mandatSelectedContent">
+                            <div class="mandatDetailsContainer">
+    <div class="mandatDetailRow bxrow">
+        <div class="mandatBubble bxd6">
+            <p class="m0 textAndValue"><span class="strongText">N\u00b0 mandat :</span> 11939</p>
+        </div>
+        <div class="mandatBubble bxd6">
+            <p class="m0 textAndValue"><span class="strongText">Type du mandat :</span> SIMPLE</p>
+        </div>
+    </div>
+    <div class="mandatDetailRow bxrow">
+        <div class="mandatBubble bxd6">
+            <p class="m0 textAndValue"><span class="strongText">Date de d\u00e9but du mandat :</span> 28/03/2018</p>
+        </div>
+        <div class="mandatBubble bxd6">
+            <p class="m0 textAndValue"><span class="strongText">Date de fin du mandat :</span> 29/03/2020</p>
+        </div>
+    </div>
+</div>
+                    </div>
+    </div>
+    <input type="hidden" class="requiredOther" id="selectedMandatId" name="selectedMandat"
+           value="10261-HEKTOR">
+    <input type="hidden" class="requiredOther" id="selectedMandatType"
+           value="HEKTOR">
+
+
+    <div class="addMandantNotaireContainer">
+    <p class="textTitle m0">Les informations <span class=textStrong>mandant</span></p>
+            <div class="addMandantNotaireStructure bxrow">
+            <div id="mandantContainerSearch"
+                 class="addMandantAcquNotaireContent bxd6 bxrow" >
+                <p class="bxd12 labelText m0">Selectionner un mandant</p>
+                <div class="inputFormContent bxld24">
+                    <input type="text" value="" id="mandantSearch" name="mandantSearch"
+                           class="ui-autocomplete-input inputFormMandantNotaire" autocomplete="off">
+                </div>
+                <div class="addElementButtonContent bxld3">
+                                    </div>
+                <div class="bxd12 mandantSelected" id="mandantContainerList">
+                                                                                            <div class="bxd12 mandantNotaireSelectedContainer bxrow 2Container"
+     data-type-intervenant="2">
+    <div class="avatarUserImgContent bxld5">
+        <img class="avatarUser" src="https://groupe-gti-immobilier.la-boite-immo.com/external/img/admin/monreseau/nego.jpg">
+    </div>
+    <div class="avatarUserTextContent bxld17">
+        <p class="typeUser m0">MANDANT</p>
+        <p class="infosUser m0"> SELL AND SIGNE Test<br>06 25 48 63 95</p>
+    </div>
+            <div class="bxld2 avatarUserBtnContent">
+            <button class="icon55-fermer-regular" type="button" onclick="deleteProspectSelected(this);"></button>
+        </div>
+        <input type="hidden" class="prospectCompromisRequire" name="mandants[]"
+           id="prospectCompromisRequire141053" value="141053">
+</div>
+                                                    <div class="bxd12 mandantNotaireSelectedContainer bxrow 2Container"
+     data-type-intervenant="2">
+    <div class="avatarUserImgContent bxld5">
+        <img class="avatarUser" src="https://groupe-gti-immobilier.la-boite-immo.com/external/img/admin/monreseau/nego.jpg">
+    </div>
+    <div class="avatarUserTextContent bxld17">
+        <p class="typeUser m0">MANDANT</p>
+        <p class="infosUser m0">Mr./Mme Test SELL AND SIGNE / <br></p>
+    </div>
+            <div class="bxld2 avatarUserBtnContent">
+            <button class="icon55-fermer-regular" type="button" onclick="deleteProspectSelected(this);"></button>
+        </div>
+        <input type="hidden" class="prospectCompromisRequire" name="mandants[]"
+           id="prospectCompromisRequire485955" value="485955">
+</div>
+                                                    <div class="bxd12 mandantNotaireSelectedContainer bxrow 2Container"
+     data-type-intervenant="2">
+    <div class="avatarUserImgContent bxld5">
+        <img class="avatarUser" src="https://groupe-gti-immobilier.staticlbi.com/original/images/negociateurs/avatar_b203fef97715bad9a79a2de3b0a71c11.jpg">
+    </div>
+    <div class="avatarUserTextContent bxld17">
+        <p class="typeUser m0">MANDANT</p>
+        <p class="infosUser m0"> TEST MANDANT 25-08 Sophie<br>06 00 00 25 08</p>
+    </div>
+            <div class="bxld2 avatarUserBtnContent">
+            <button class="icon55-fermer-regular" type="button" onclick="deleteProspectSelected(this);"></button>
+        </div>
+        <input type="hidden" class="prospectCompromisRequire" name="mandants[]"
+           id="prospectCompromisRequire605030" value="605030">
+</div>
+                                                            </div>
+            </div>
+
+            <div id="notaireMandantContainerSearch" class="addMandantAcquNotaireContent bxd6 bxrow">
+                <p class="bxd12 labelText m0">Selectionner un notaire</p>
+                <div class="inputFormContent bxld21">
+                    <input type="text" value="" id="notaireMandantSearch"
+                           class="ui-autocomplete-input inputFormMandantNotaire" autocomplete="off">
+                </div>
+                <div class="addElementButtonContent bxld3">
+                    <button type="button" id="addNewContactNotaireMandant"
+                            class="addElementButton infosMandantNewContact icon63-plus_2"
+                            onclick="callAjxNewNotaire_v2('insert', '', '', 'addNewContactNotaireMandant');return false;"></button>
+                </div>
+                <div class="bxd12 notaireSelected" id="notaireMandantContainerList">
+                                                        </div>
+            </div>
+        </div>
+
+    </div>
+
+<div id="negoForm" style="background:white;"
+     class="containerForm col-md-12 mb25px hide">
+    <div class="col-md-12 p05em greybg2 upper OpenSansSemiBold text-left">Ajouter un nouveau contact</div>
+    <div class="col-md-12 p0 pt1em">
+        <div id="contentDivNotaire"></div>
+        <input type="hidden" name="typeUser" id="typeUser" value="NEGO"/>
+        <input type="hidden" id="agenceId" value=""/>
+        <input type="hidden" id="contactId" value=""/>
+        <input type="hidden" id="reseauaq" value="0"/>
+    </div>
+</div>
+<script>
+    autoCompletePopinActionAnnonce("mandant", "prospect-searchProspectsByCurrentUser", null, 3, "compromis", false, false, 'mandants[]', 24933)
+    autoCompletePopinActionAnnonce("notaireMandant", "notaires-searchNotaireByAgence", null, 3, "compromis", true, false, 'notairesMandant[]', 24933)
+</script>
+<div class="infosAcquereurContainer withOutInterkab">
+    <p class="infosAcquereurTitle m0">Les informations <span class=textStrong>acqu\u00e9reur</span></p>
+    <div class="infosAcquereurStructure bxrow">
+        <div class="infosAcquereurLeftContent bxd12">
+            <p class="texTitreSection">Offre enregistr\u00e9e avec un acqu\u00e9reur<br> de mon agence / r\u00e9seau</p>
+            <div class="btnContentCenter">
+                <button type="button" onclick="infosAcquereurAccordeon(this);"
+                        class="btnDefaultLight js_infosAcquereurAccordeon btnGreyBkg_3 btnGreyBkg_3__element transition250 colorPrimary_BackgroundActive colorPrimary_BackgroundHover active"
+                        data-id="infosAcquereurSectionAcquereur">Mes acqu\u00e9reurs</button>
+                                    <button type="button" onclick="infosAcquereurAccordeon(this);"
+                            class="btnDefaultLight js_infosAcquereurAccordeon btnGreyBkg_3 btnGreyBkg_3__element transition250 colorPrimary_BackgroundActive colorPrimary_BackgroundHover "
+                            data-id="infosAcquereurSectionReseau">Mon r\u00e9seau</button>
+                                            </div>
+            <div class="addAcquNotaireContainer js_addAcquNotaireContainer">
+                    
+    <div class="addAcquNotaireStructure active bxrow column"
+     id="infosAcquereurSectionAcquereur">
+    <div class="addMandantAcquNotaireContainer herzeraze bxrow bxd5">
+        <div class="addMandantAcquNotaireContent bxd12 bxrow">
+            <p class="bxd12 labelText m0">S\u00e9lectionner un acqu\u00e9reur</p>
+            <div class="inputFormContent bxld24">
+                <input type="text" id="addAcquereurSearch" name="addAcquereurSearch"
+                       class="ui-autocomplete-input inputFormMandantNotaire" autocomplete="off">
+            </div>
+                    </div>
+        <div class="bxd12 addMandantAcquNotaireContentChecked bxrow js_initElement" data-couple="acquereur"
+             id="addAcquereurContainerList">
+                                                                <div class="bxd12 mandantNotaireSelectedContainer bxrow 2Container"
+     data-type-intervenant="2">
+    <div class="avatarUserImgContent bxld5">
+        <img class="avatarUser" src="https://groupe-gti-immobilier.la-boite-immo.com/external/img/admin/monreseau/nego.jpg">
+    </div>
+    <div class="avatarUserTextContent bxld17">
+        <p class="typeUser m0">ACQUEREUR</p>
+        <p class="infosUser m0">M. TEST GTI TEST GTI<br></p>
+    </div>
+            <div class="bxld2 avatarUserBtnContent">
+            <button class="icon55-fermer-regular" type="button" onclick="deleteProspectSelected(this);"></button>
+        </div>
+        <input type="hidden" class="prospectCompromisRequire" name="acquereurs[]"
+           id="prospectCompromisRequire49234" value="49234">
+</div>
+                                    <div class="bxd12 mandantNotaireSelectedContainer bxrow 2Container"
+     data-type-intervenant="2">
+    <div class="avatarUserImgContent bxld5">
+        <img class="avatarUser" src="https://groupe-gti-immobilier.la-boite-immo.com/external/img/admin/monreseau/nego.jpg">
+    </div>
+    <div class="avatarUserTextContent bxld17">
+        <p class="typeUser m0">ACQUEREUR</p>
+        <p class="infosUser m0"> TEST RODACOM Sarah<br>04 76 46 13 69</p>
+    </div>
+            <div class="bxld2 avatarUserBtnContent">
+            <button class="icon55-fermer-regular" type="button" onclick="deleteProspectSelected(this);"></button>
+        </div>
+        <input type="hidden" class="prospectCompromisRequire" name="acquereurs[]"
+           id="prospectCompromisRequire86793" value="86793">
+</div>
+                                    <div class="bxd12 mandantNotaireSelectedContainer bxrow 2Container"
+     data-type-intervenant="2">
+    <div class="avatarUserImgContent bxld5">
+        <img class="avatarUser" src="https://groupe-gti-immobilier.staticlbi.com/original/images/negociateurs/avatar_b203fef97715bad9a79a2de3b0a71c11.jpg">
+    </div>
+    <div class="avatarUserTextContent bxld17">
+        <p class="typeUser m0">ACQUEREUR</p>
+        <p class="infosUser m0"> TEST MANDANT 25-08 Sophie<br>06 00 00 25 08</p>
+    </div>
+            <div class="bxld2 avatarUserBtnContent">
+            <button class="icon55-fermer-regular" type="button" onclick="deleteProspectSelected(this);"></button>
+        </div>
+        <input type="hidden" class="prospectCompromisRequire" name="acquereurs[]"
+           id="prospectCompromisRequire605030" value="605030">
+</div>
+                                    </div>
+    </div>
+            <div class="bxld2 separatorContent">
+        </div>
+        <div class="addMandantAcquNotaireContainer bxrow bxd5">
+        <div class="addMandantAcquNotaireContent bxd12 bxrow">
+            <p class="bxd12 labelText m0">Selectionner un notaire</p>
+            <div class="inputFormContent bxld21">
+                <input type="text" id="addAcquereurNotaireSearch" name="addAcquereurNotaireSearch"
+                       class="ui-autocomplete-input inputFormMandantNotaire" autocomplete="off">
+            </div>
+            <div class="addElementButtonContent bxld3">
+                <button type="button" id="addNewContactNotaireAcquereur"
+                        class="addElementButton infosAcquereurNewContact icon63-plus_2"
+                        onclick="callAjxNewNotaire_v2('insert', 2, '', 'addNewContactNotaireAcquereur');return false;"></button>
+            </div>
+        </div>
+        <div class=" bxd12 addMandantAcquNotaireContentChecked bxrow js_initElement"
+             data-couple="acquereur"
+             id="addAcquereurNotaireContainerList">
+                                                                <div class="bxd12 mandantNotaireSelectedContainer bxrow 2Container"
+     data-type-intervenant="2">
+    <div class="avatarUserImgContent bxld5">
+        <img class="avatarUser" src="https://groupe-gti-immobilier.la-boite-immo.com/external/img/admin/monreseau/nego.jpg">
+    </div>
+    <div class="avatarUserTextContent bxld17">
+        <p class="typeUser m0"></p>
+        <p class="infosUser m0"> MALET-CLEMENT Evelyne<br>04 92 61 01 67</p>
+    </div>
+            <div class="bxld2 avatarUserBtnContent">
+            <button class="icon55-fermer-regular" type="button" onclick="deleteProspectSelected(this);"></button>
+        </div>
+        <input type="hidden" class="prospectCompromisRequire" name="notairesAcquereur[]"
+           id="prospectCompromisRequire49708" value="49708">
+</div>
+                                    </div>
+    </div>
+</div>
+
+
+<script>
+    autoCompletePopinActionAnnonce("addAcquereur", "prospect-searchProspectsByCurrentUser", null, 2, "compromis", false, false, 'acquereurs[]', 24933)
+    autoCompletePopinActionAnnonce("addAcquereurNotaire", "notaires-searchNotaireByAgence", null, 2, "compromis", true, false, 'notairesAcquereur[]', 24933)
+</script>
+                                    <div class="addAcquNotaireStructure bxrow " id="infosAcquereurSectionReseau">
+    <div class="inputContent">
+        <input type="text" placeholder="Rechercher" class="inputForm" id="agenceReseau"
+               onkeyup="getAgenceRegex(this, '#agenceReseauList .elementAgence');">
+        <button type="button" class="iconForm icon52-recherche"></button>
+    </div>
+    <div class="listAgencesContainer" id="agenceReseauContainerList" data-couple="agenceReseau">
+        <div class="listAgencesStruture bxrow" id="agenceReseauList">
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Compte Formation"
+                     title="Compte Formation">
+                    <input
+                            id="agenceReseauElemId_1" value="1"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_1">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.la-boite-immo.com/external/img/admin/monreseau/agence.png"
+                             alt="Compte Formation">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Courpiere"
+                     title="Groupe Gti Courpiere">
+                    <input
+                            id="agenceReseauElemId_2" value="2"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_2">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_0a48b4848656af16f2998f7bc0256c60.jpg"
+                             alt="Groupe Gti Courpiere">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Saint-just-saint-rambert"
+                     title="Groupe Gti Saint-just-saint-rambert">
+                    <input
+                            id="agenceReseauElemId_3" value="3"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_3">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_cb92c04f7db40472a950d5e674083e08.jpg"
+                             alt="Groupe Gti Saint-just-saint-rambert">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Craponne-sur-arzon"
+                     title="Groupe Gti Craponne-sur-arzon">
+                    <input
+                            id="agenceReseauElemId_4" value="4"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_4">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_c9bdea43763db1b280603ed77c66c7ac.png"
+                             alt="Groupe Gti Craponne-sur-arzon">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Saint-didier-en-velay"
+                     title="Groupe Gti Saint-didier-en-velay">
+                    <input
+                            id="agenceReseauElemId_5" value="5"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_5">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_c53be445d53f0e43d9dc1d0c32f437f3.png"
+                             alt="Groupe Gti Saint-didier-en-velay">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Saint-bonnet-le-ch\u00e2teau"
+                     title="Groupe Gti Saint-bonnet-le-ch\u00e2teau">
+                    <input
+                            id="agenceReseauElemId_6" value="6"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_6">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_3b1053f3f86fe49ad7776fe8072b7ae8.jpg"
+                             alt="Groupe Gti Saint-bonnet-le-ch\u00e2teau">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Yssingeaux"
+                     title="Groupe Gti Yssingeaux">
+                    <input
+                            id="agenceReseauElemId_7" value="7"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_7">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_08f672d76d7fdb9d8e2681632e2dc0e7.jpg"
+                             alt="Groupe Gti Yssingeaux">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Duni\u00e8res"
+                     title="Groupe Gti Duni\u00e8res">
+                    <input
+                            id="agenceReseauElemId_8" value="8"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_8">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_27c7d05e152b49741f67e385f9f22de9.png"
+                             alt="Groupe Gti Duni\u00e8res">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Tence"
+                     title="Groupe Gti Tence">
+                    <input
+                            id="agenceReseauElemId_9" value="9"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_9">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_261ba8bb7e6cca0805d53dc3b8d29c68.jpeg"
+                             alt="Groupe Gti Tence">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Annonay"
+                     title="Groupe Gti Annonay">
+                    <input
+                            id="agenceReseauElemId_10" value="10"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_10">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_f4426d7fcea3131845461442a7dfd5a0.jpg"
+                             alt="Groupe Gti Annonay">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Brioude"
+                     title="Groupe Gti Brioude">
+                    <input
+                            id="agenceReseauElemId_11" value="11"
+                            data-couple="agenceReseau" name="agenceReseauSelected"
+                            type="radio" class="colorPrimary_Index js_initElement"
+                            onclick="initSectionInfosAcquereur('agenceReseau');"
+                                                >
+                    <label class="labelAgence colorPrimary_EnfantBorderChecked"
+                           for="agenceReseauElemId_11">
+                        <img class="agenceLogo colorPrimary_BorderHover" src="https://groupe-gti-immobilier.staticlbi.com/original/images/agences/avatar_b055cca2861c235893747bdcd37fd2e7.jpeg"
+                             alt="Groupe Gti Brioude">
+                    </label>
+                </div>
+                            <div class="elementAgence bxd6 colorPrimary_Parent " data-nom-agence="Groupe Gti Montbrison"
+                     title="Gro

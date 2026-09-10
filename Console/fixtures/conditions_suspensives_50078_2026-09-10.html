@@ -1,0 +1,397 @@
+tton-remove"></button>
+    </div>
+    <input type="hidden" class="inputHiddenConditionSelectedKey"  value="" data-entry-viewref="input-key">
+    <input type="hidden" class="inputHiddenConditionSelectedId"  value="9" data-entry-viewref="input-id">
+</div>
+
+
+
+
+    
+        <div class="itemConditionSuspensive bxrow lastOrder">
+        <div class="textContent bxd6">
+            <p class="text m0">Autre :</p>
+            <input class="formInputText" type="text" id="addNewConditionSuspensive" data-entry-viewref="add-new-input-key">
+        </div>
+        <div class="inputDureeJoursContent bxd5">
+            <p class="m0">Validité</p>
+            <input class="formInputText" type="number" min="0" placeholder="0" id="addNewConditionSuspensiveDayValid" data-entry-viewref="add-new-input-days">
+            <p class="m0"> jours</p>
+        </div>
+        <div class="btnContent bxd1">
+            <button type="button" data-entry-action="addOtherCondition" class="btnIcon btnIconAdd icon63-plus_2"></button>
+        </div>
+    </div>
+</div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="tableContentCondition" id="tableContentCondition" data-entry-viewref="list-notes">
+                    </div>
+
+        <template id="conditionsSuspensivesLine">
+            <div class="itemConditionSuspensive bxrow"
+     data-condition-id=""
+     data-condition-key=""
+     data-condition-days="">
+    <div class="textContent bxd6">
+        <p class="text m0 bxd6" data-entry-viewref="title"></p>
+    </div>
+    <div class="inputDureeJoursContent bxd5">
+        <p class="m0">Validité</p>
+        <input id="addConditionSuspensiveDayValid"
+               class="formInputText"
+               type="number"
+               min="0"
+               placeholder="0"
+                              value=""
+               readonly               data-entry-viewref="input-days">
+        <p class="m0"> jours</p>
+    </div>
+    <div class="btnContent bxd1">
+        <button type="button" data-entry-action="addCondition" class="btnIcon btnIconAdd icon63-plus_2 " data-entry-viewref="button-add"></button>
+        <button type="button" data-entry-action="removeSelectedCondition" class="btnIcon btnIconDelete icon-effacer hide" data-entry-viewref="button-remove"></button>
+    </div>
+    <input type="hidden" class="inputHiddenConditionSelectedKey"  value="" data-entry-viewref="input-key">
+    <input type="hidden" class="inputHiddenConditionSelectedId"  value="" data-entry-viewref="input-id">
+</div>
+
+
+
+
+        </template>
+        <template id="conditionsSuspensivesNotesLine">
+            <div class="noteSuspensiveSelected" data-condition-key="">
+    <p class="m0 etatText">Etat <span class="colorPrimary_Color textColor" data-entry-viewref="title"></span></p>
+    <div class="bxrow noteContent">
+        <div class="bxd12">
+            <p class="text m0">Note</p>
+        </div>
+        <div class="bxld23">
+            <textarea id="suspensiveSelectedNote" class="textareaNote" name="conditionsSuspensivesSelected[][note]" data-entry-viewref="input-note"></textarea>
+        </div>
+        <div class="bxld1">
+            <div class="checkboxDefaultContainer size_2">
+                <div class="checkboxDefault colorPrimary_Parent">
+                    <input id="suspensiveSelectedEtat"
+                           class="colorPrimary_Index inputCheckbox checkboxDefaultContainer_checkboxDefault_inputCheckbox__element "
+                           type="checkbox"
+                           name="conditionsSuspensivesSelected[][etat]"                            value="1"
+                           data-entry-viewref="input-state">
+                    <label for="suspensiveSelectedEtat"
+                           class="checkbox checkboxDefaultContainer_checkboxDefault_checkbox__element colorPrimary_EnfantBorderChecked colorPrimary_EnfantBackgroundChecked newChecker"
+                           data-entry-viewref="input-state-label">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>        </template>
+
+        <div class="notesCompromisContent">
+            <p class="text m0">Notes</p>
+            <textarea id="notesCompromis" class="notesCompromis" name="notesCompromis"></textarea>
+        </div>
+    </c-conditions-suspensives-editor>
+
+            <div class="buttonContent ">
+        <button type="button" onclick="closePopin();"
+        class="btnDefault transition250 btnGreyBorder btnGreyBorder__element colorPrimary_BorderHover colorPrimary_BackgroundHover">
+    Fermer
+</button>
+
+                <button type="button" data-navigation-button="goToPreviousStep"
+        class="btnDefault transition250 btnGreyBkg btnGreyBkg__element colorPrimary_BackgroundHover">
+    Etape précedente
+</button>
+    
+        
+                <button type="button" data-navigation-button="saveObject"
+        class="btnDefault transition250 btnGreyBkg btnGreyBkg__element colorPrimary_BackgroundHover">
+    Enregistrer
+</button>
+    
+        
+        </div>    </div>
+
+
+<script>
+    acordeonFunction();
+</script>
+
+<div class="conditionSuspensivesContainer">
+                <!-- Module(s) -->
+                    <input type="hidden" name="containerModule[]" value="conditionsSuspensives">
+            
+            <!-- Name -->
+        <input type="hidden" name="containerName" value="PopinCompromis">
+    
+    
+    <!-- Step -->
+            <input type="hidden" name="step" value="3">
+        <input type="hidden" name="fromStep" value="3">
+    
+    
+
+    <c-conditions-suspensives-editor>
+        <div class="acordeonSection" data-open-accordeon="false">
+            <div class="titleSectionDefault titleSectionDefault__element js_iconAcordeon">
+                <p class="textStronger">Les <span>conditions suspensives</span></p>
+                <button type="button" class="icon titleSectionDefault_icon__element colorPrimary_BackgroundHover icon63-plus_2 transition250 iconAcordeon"></button>
+            </div>
+            <div class="acordeonContainer transition250">
+                <div class="acordeonContent acordeonSection_acordeonContainer_acordeonContent__element">
+                    <div class="listConditionsSuspensivesChecked" id="listConditionsSuspensivesChecked" data-entry-viewref="list-selected">
+            <div class="itemConditionSuspensive bxrow"
+     data-condition-id=""
+     data-condition-key=""
+     data-condition-days="">
+    <div class="textContent bxd6">
+        <p class="text m0 bxd6" data-entry-viewref="title"></p>
+    </div>
+    <div class="inputDureeJoursContent bxd5">
+        <p class="m0">Validité</p>
+        <input id="addConditionSuspensiveDayValid"
+               class="formInputText"
+               type="number"
+               min="0"
+               placeholder="0"
+               name="conditionsSuspensivesSelected[][jours_validites]"               value=""
+                              data-entry-viewref="input-days">
+        <p class="m0"> jours</p>
+    </div>
+    <div class="btnContent bxd1">
+        <button type="button" data-entry-action="addCondition" class="btnIcon btnIconAdd icon63-plus_2 hide" data-entry-viewref="button-add"></button>
+        <button type="button" data-entry-action="removeSelectedCondition" class="btnIcon btnIconDelete icon-effacer " data-entry-viewref="button-remove"></button>
+    </div>
+    <input type="hidden" class="inputHiddenConditionSelectedKey" name="conditionsSuspensivesSelected[][clef]" value="" data-entry-viewref="input-key">
+    <input type="hidden" class="inputHiddenConditionSelectedId" name="conditionsSuspensivesSelected[][id_condition]" value="" data-entry-viewref="input-id">
+</div>
+
+
+
+
+    </div>
+
+<div class="listConditionsSuspensives" id="listConditionsSuspensives" data-entry-viewref="list">
+            <div class="itemConditionSuspensive bxrow"
+     data-condition-id="1"
+     data-condition-key="Préemption mairie"
+     data-condition-days="0">
+    <div class="textContent bxd6">
+        <p class="text m0 bxd6" data-entry-viewref="title">Préemption mairie</p>
+    </div>
+    <div class="inputDureeJoursContent bxd5">
+        <p class="m0">Validité</p>
+        <input id="addConditionSuspensiveDayValidPréemption mairie"
+               class="formInputText"
+               type="number"
+               min="0"
+               placeholder="0"
+                              value="0"
+               readonly               data-entry-viewref="input-days">
+        <p class="m0"> jours</p>
+    </div>
+    <div class="btnContent bxd1">
+        <button type="button" data-entry-action="addCondition" class="btnIcon btnIconAdd icon63-plus_2 " data-entry-viewref="button-add"></button>
+        <button type="button" data-entry-action="removeSelectedCondition" class="btnIcon btnIconDelete icon-effacer hide" data-entry-viewref="button-remove"></button>
+    </div>
+    <input type="hidden" class="inputHiddenConditionSelectedKey"  value="Préemption mairie" data-entry-viewref="input-key">
+    <input type="hidden" class="inputHiddenConditionSelectedId"  value="1" data-entry-viewref="input-id">
+</div>
+
+
+
+
+            <div class="itemConditionSuspensive bxrow"
+     data-condition-id="2"
+     data-condition-key="Obtention Crédit"
+     data-condition-days="45">
+    <div class="textContent bxd6">
+        <p class="text m0 bxd6" data-entry-viewref="title">Obtention Crédit</p>
+    </div>
+    <div class="inputDureeJoursContent bxd5">
+        <p class="m0">Validité</p>
+        <input id="addConditionSuspensiveDayValidObtention Crédit"
+               class="formInputText"
+               type="number"
+               min="0"
+               placeholder="0"
+                              value="45"
+               readonly               data-entry-viewref="input-days">
+        <p class="m0"> jours</p>
+    </div>
+    <div class="btnContent bxd1">
+        <button type="button" data-entry-action="addCondition" class="btnIcon btnIconAdd icon63-plus_2 " data-entry-viewref="button-add"></button>
+        <button type="button" data-entry-action="removeSelectedCondition" class="btnIcon btnIconDelete icon-effacer hide" data-entry-viewref="button-remove"></button>
+    </div>
+    <input type="hidden" class="inputHiddenConditionSelectedKey"  value="Obtention Crédit" data-entry-viewref="input-key">
+    <input type="hidden" class="inputHiddenConditionSelectedId"  value="2" data-entry-viewref="input-id">
+</div>
+
+
+
+
+            <div class="itemConditionSuspensive bxrow"
+     data-condition-id="9"
+     data-condition-key=""
+     data-condition-days="0">
+    <div class="textContent bxd6">
+        <p class="text m0 bxd6" data-entry-viewref="title"></p>
+    </div>
+    <div class="inputDureeJoursContent bxd5">
+        <p class="m0">Validité</p>
+        <input id="addConditionSuspensiveDayValid"
+               class="formInputText"
+               type="number"
+               min="0"
+               placeholder="0"
+                              value="0"
+               readonly               data-entry-viewref="input-days">
+        <p class="m0"> jours</p>
+    </div>
+    <div class="btnContent bxd1">
+        <button type="button" data-entry-action="addCondition" class="btnIcon btnIconAdd icon63-plus_2 " data-entry-viewref="button-add"></button>
+        <button type="button" data-entry-action="removeSelectedCondition" class="btnIcon btnIconDelete icon-effacer hide" data-entry-viewref="button-remove"></button>
+    </div>
+    <input type="hidden" class="inputHiddenConditionSelectedKey"  value="" data-entry-viewref="input-key">
+    <input type="hidden" class="inputHiddenConditionSelectedId"  value="9" data-entry-viewref="input-id">
+</div>
+
+
+
+
+    
+        <div class="itemConditionSuspensive bxrow lastOrder">
+        <div class="textContent bxd6">
+            <p class="text m0">Autre :</p>
+            <input class="formInputText" type="text" id="addNewConditionSuspensive" data-entry-viewref="add-new-input-key">
+        </div>
+        <div class="inputDureeJoursContent bxd5">
+            <p class="m0">Validité</p>
+            <input class="formInputText" type="number" min="0" placeholder="0" id="addNewConditionSuspensiveDayValid" data-entry-viewref="add-new-input-days">
+            <p class="m0"> jours</p>
+        </div>
+        <div class="btnContent bxd1">
+            <button type="button" data-entry-action="addOtherCondition" class="btnIcon btnIconAdd icon63-plus_2"></button>
+        </div>
+    </div>
+</div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="tableContentCondition" id="tableContentCondition" data-entry-viewref="list-notes">
+                            <div class="noteSuspensiveSelected" data-condition-key="">
+    <p class="m0 etatText">Etat <span class="colorPrimary_Color textColor" data-entry-viewref="title"></span></p>
+    <div class="bxrow noteContent">
+        <div class="bxd12">
+            <p class="text m0">Note</p>
+        </div>
+        <div class="bxld23">
+            <textarea id="suspensiveSelectedNote" class="textareaNote" name="conditionsSuspensivesSelected[][note]" data-entry-viewref="input-note"></textarea>
+        </div>
+        <div class="bxld1">
+            <div class="checkboxDefaultContainer size_2">
+                <div class="checkboxDefault colorPrimary_Parent">
+                    <input id="suspensiveSelectedEtat"
+                           class="colorPrimary_Index inputCheckbox checkboxDefaultContainer_checkboxDefault_inputCheckbox__element "
+                           type="checkbox"
+                           name="conditionsSuspensivesSelected[][etat]"                            value="1"
+                           data-entry-viewref="input-state">
+                    <label for="suspensiveSelectedEtat"
+                           class="checkbox checkboxDefaultContainer_checkboxDefault_checkbox__element colorPrimary_EnfantBorderChecked colorPrimary_EnfantBackgroundChecked newChecker"
+                           data-entry-viewref="input-state-label">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>                    </div>
+
+        <template id="conditionsSuspensivesLine">
+            <div class="itemConditionSuspensive bxrow"
+     data-condition-id=""
+     data-condition-key=""
+     data-condition-days="">
+    <div class="textContent bxd6">
+        <p class="text m0 bxd6" data-entry-viewref="title"></p>
+    </div>
+    <div class="inputDureeJoursContent bxd5">
+        <p class="m0">Validité</p>
+        <input id="addConditionSuspensiveDayValid"
+               class="formInputText"
+               type="number"
+               min="0"
+               placeholder="0"
+                              value=""
+               readonly               data-entry-viewref="input-days">
+        <p class="m0"> jours</p>
+    </div>
+    <div class="btnContent bxd1">
+        <button type="button" data-entry-action="addCondition" class="btnIcon btnIconAdd icon63-plus_2 " data-entry-viewref="button-add"></button>
+        <button type="button" data-entry-action="removeSelectedCondition" class="btnIcon btnIconDelete icon-effacer hide" data-entry-viewref="button-remove"></button>
+    </div>
+    <input type="hidden" class="inputHiddenConditionSelectedKey"  value="" data-entry-viewref="input-key">
+    <input type="hidden" class="inputHiddenConditionSelectedId"  value="" data-entry-viewref="input-id">
+</div>
+
+
+
+
+        </template>
+        <template id="conditionsSuspensivesNotesLine">
+            <div class="noteSuspensiveSelected" data-condition-key="">
+    <p class="m0 etatText">Etat <span class="colorPrimary_Color textColor" data-entry-viewref="title"></span></p>
+    <div class="bxrow noteContent">
+        <div class="bxd12">
+            <p class="text m0">Note</p>
+        </div>
+        <div class="bxld23">
+            <textarea id="suspensiveSelectedNote" class="textareaNote" name="conditionsSuspensivesSelected[][note]" data-entry-viewref="input-note"></textarea>
+        </div>
+        <div class="bxld1">
+            <div class="checkboxDefaultContainer size_2">
+                <div class="checkboxDefault colorPrimary_Parent">
+                    <input id="suspensiveSelectedEtat"
+                           class="colorPrimary_Index inputCheckbox checkboxDefaultContainer_checkboxDefault_inputCheckbox__element "
+                           type="checkbox"
+                           name="conditionsSuspensivesSelected[][etat]"                            value="1"
+                           data-entry-viewref="input-state">
+                    <label for="suspensiveSelectedEtat"
+                           class="checkbox checkboxDefaultContainer_checkboxDefault_checkbox__element colorPrimary_EnfantBorderChecked colorPrimary_EnfantBackgroundChecked newChecker"
+                           data-entry-viewref="input-state-label">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>        </template>
+
+        <div class="notesCompromisContent">
+            <p class="text m0">Notes</p>
+            <textarea id="notesCompromis" class="notesCompromis" name="notesCompromis"></textarea>
+        </div>
+    </c-conditions-suspensives-editor>
+
+            <div class="buttonContent ">
+        <button type="button" onclick="closePopin();"
+        class="btnDefault transition250 btnGreyBorder btnGreyBorder__element colorPrimary_BorderHover colorPrimary_BackgroundHover">
+    Fermer
+</button>
+
+                <button type="button" data-navigation-button="goToPreviousStep"
+        class="btnDefault transition250 btnGreyBkg btnGreyBkg__element colorPrimary_BackgroundHover">
+    Etape précedente
+</button>
+    
+        
+                <button type="button" data-navigation-button="saveObject"
+        class="btnDefault transition250 btnGreyBkg btnGreyBkg__element colorPrimary_BackgroundHover">
+    Enregistrer
+</button>
+    
+        

@@ -10081,30 +10081,125 @@ function lireIdentifiantsTableauCache(html, motifNom) {
 
 const RE_NOTAIRE_ACQUEREUR = /<input\b[^>]*name=["']notairesAcquereur\[\]["'][^>]*>/gi;
 const RE_NOTAIRE_MANDANT = /<input\b[^>]*name=["']notairesMandant\[\]["'][^>]*>/gi;
-// ⚠ FORME INCONNUE. Le nom du champ vient du journal du travail c2d909b3
-// (`conditionsSuspensivesSelected[][note]`), pas d'une capture : on n'a JAMAIS
-// vu le HTML des etapes 2 et 3. On lit donc TOUT champ dont le nom commence
-// ainsi, sans rien supposer de sa structure -- et si on ne trouve rien, on
-// garde le brut pour l'ecrire sur du reel plus tard. Deviner un selecteur a
-// coute une demi-journee deux fois cette semaine.
-const RE_CONDITION_SUSPENSIVE = /<(?:input|textarea|select)\b[^>]*name=["'](conditionsSuspensivesSelected[^"']*)["'][^>]*>/gi;
+// ─── LES PARTIES, ET POURQUOI ON LES LIT ICI (10/09/2026) ───
+//
+// La fiche Hektor du compromis 50078 porte DEUX acquereurs ; notre registre n'en
+// porte qu'UN. Et le controle du 06/09 qui concluait « Hektor n'en a vraiment
+// garde qu'un » comparait l'API et notre miroir -- DEUX SOURCES NOURRIES PAR LA
+// MEME API. Jamais la fiche.
+//
+// La capture du 03/09 dit la meme chose : le formulaire rendu portait
+//     acquereurs[]  49234 · 86793 · 605030
+//     mandants[]   141053 · 485955 · 605030
+// soit TROIS de chaque, quand le registre en garde un.
+//
+// ⚠ CE N'EST PAS UNE CONCLUSION, C'EST UNE MESURE A INSTALLER. Deux lectures ne
+//   disent pas si Hektor perd les acquereurs a l'ECRITURE ou si l'API les cache
+//   a la LECTURE. Le rattrapage comparera les deux sur les 1 810 compromis qui
+//   en portent plusieurs. « Ne rien batir sur une hypothese » -- c'est
+//   exactement ce qui a coute deux demi-journees les 06 et 07/09.
+const RE_ACQUEREURS = /<input\b[^>]*name=["']acquereurs\[\]["'][^>]*>/gi;
+const RE_MANDANTS = /<input\b[^>]*name=["']mandants\[\]["'][^>]*>/gi;
+// ═══ LES CONDITIONS SUSPENSIVES ═══
+//
+// ⚠ MA PREMIERE VERSION LISAIT LES GABARITS, ET ELLE A MENTI. Elle comptait
+//   tout champ nomme `conditionsSuspensivesSelected[...]`, et en a trouve NEUF
+//   sur le compromis 50078 -- annonces au journal comme « 9 condition(s) ».
+//   La fenetre gardee au meme moment montre qu'il n'y en a AUCUNE : les neuf
+//   champs appartiennent a la ligne VIDE du conteneur des retenues et aux deux
+//   <template> que le JavaScript de Hektor clone a l'execution.
+//
+// LA STRUCTURE REELLE, relevee le 10/09 :
+//     #listConditionsSuspensivesChecked   les conditions RETENUES
+//     #listConditionsSuspensives          le CATALOGUE de l'agence
+// et chaque ligne porte ce qu'il faut, en clair :
+//     <div class="itemConditionSuspensive bxrow"
+//          data-condition-id="1" data-condition-key="Preemption mairie"
+//          data-condition-days="0">
+// Une ligne dont `data-condition-key` est VIDE est un gabarit, pas une donnee.
+//
+// ⚠ J'AI CRU A UN PROBLEME D'ENCODAGE, IL N'Y EN A PAS. En inspectant la
+//   fenetre gardee, j'ai lu « Pr<?>emption mairie » et j'en ai conclu que
+//   Hektor servait du latin-1 mal decode. C'etait MON outil d'inspection, pas
+//   le worker : le passage reel de 11:20 a rendu « Preemption mairie » et
+//   « Obtention Credit » intacts, accents compris. On garde quand meme
+//   l'identifiant comme cle -- un libelle peut etre renomme, un numero non.
+const RE_ITEM_CONDITION = /<div\b[^>]*class=["'][^"']*itemConditionSuspensive[^"']*["'][^>]*>/gi;
+
+function lireConditionsSuspensives(tout) {
+  // On prend le PREMIER conteneur : les etapes sont concatenees, donc le
+  // module peut apparaitre deux fois. Deux lectures du meme bloc valent une.
+  const depart = tout.indexOf('id="listConditionsSuspensivesChecked"');
+  if (depart < 0) return { retenues: null, catalogue: null };
+  // Le catalogue suit immediatement les retenues : il borne le bloc.
+  const fin = tout.indexOf('id="listConditionsSuspensives"', depart + 10);
+  // ⚠ ON DEDOUBLONNE, et ce n'est pas de la coquetterie. Le module des
+  //   conditions est rendu a DEUX etapes de l'assistant, et on concatene les
+  //   etapes : le catalogue arrivait donc deux fois (mesure du 11:20 : quatre
+  //   entrees pour deux conditions). Une liste qui compte double se lit comme
+  //   une donnee, pas comme un artefact.
+  const bloc = (bornes) => {
+    const out = [];
+    const vus = new Set();
+    RE_ITEM_CONDITION.lastIndex = 0;
+    let m;
+    while ((m = RE_ITEM_CONDITION.exec(bornes))) {
+      const cle = String(htmlAttrValue(m[0], "data-condition-key") || "").trim();
+      if (!cle) continue;                       // gabarit, pas une donnee
+      const id = String(htmlAttrValue(m[0], "data-condition-id") || "").trim();
+      const empreinte = id + "|" + cle;
+      if (vus.has(empreinte)) continue;
+      vus.add(empreinte);
+      out.push({
+        id,
+        libelle: cle,
+        jours: String(htmlAttrValue(m[0], "data-condition-days") || "").trim(),
+      });
+    }
+    return out;
+  };
+  return {
+    retenues: bloc(fin > depart ? tout.slice(depart, fin) : tout.slice(depart)),
+    catalogue: fin > depart ? bloc(tout.slice(fin)) : [],
+  };
+}
+
+/** Le morceau de formulaire qui entoure les conditions suspensives.
+ *
+ *  ⚠ POURQUOI UNE FENETRE ET PAS UN PARSEUR. Premier passage reel, 10/09 a
+ *    09:42 : les neuf champs lus portent TOUS le meme nom, sans indice --
+ *        conditionsSuspensivesSelected[][note]   [][etat]   [][jours_validites]
+ *        conditionsSuspensivesSelected[][clef]   [][id_condition]
+ *    On sait donc qu'il y a trois conditions, mais RIEN ne dit ou l'une finit
+ *    et ou la suivante commence, et le LIBELLE de chacune n'est pas capture.
+ *    Le groupement vit dans la structure HTML, qu'on n'a jamais vue.
+ *
+ *  On garde donc le morceau qui les contient, borne, pour ecrire le groupement
+ *  sur du reel au prochain passage. Deviner a coute une demi-journee deux fois
+ *  cette semaine (acquereurs multiples, 06 et 07/09). */
+function fenetreDesConditions(tout) {
+  const premier = tout.indexOf("conditionsSuspensivesSelected");
+  if (premier < 0) return null;
+  const dernier = tout.lastIndexOf("conditionsSuspensivesSelected");
+  const debut = Math.max(0, premier - 3000);
+  const fin = Math.min(tout.length, dernier + 1500);
+  return tout.slice(debut, fin);
+}
 
 function lireChampsConsoleAssistant(contenus) {
   const tout = (Array.isArray(contenus) ? contenus : [contenus]).join("\n");
-  const conditions = [];
-  RE_CONDITION_SUSPENSIVE.lastIndex = 0;
-  let m;
-  while ((m = RE_CONDITION_SUSPENSIVE.exec(tout))) {
-    conditions.push({ champ: m[1], valeur: String(htmlAttrValue(m[0], "value") || "") });
-  }
+  const cond = lireConditionsSuspensives(tout);
   return {
+    conditions_catalogue: cond.catalogue,
+    acquereurs: lireIdentifiantsTableauCache(tout, RE_ACQUEREURS),
+    mandants: lireIdentifiantsTableauCache(tout, RE_MANDANTS),
     notaires_acquereur: lireIdentifiantsTableauCache(tout, RE_NOTAIRE_ACQUEREUR),
     notaires_mandant: lireIdentifiantsTableauCache(tout, RE_NOTAIRE_MANDANT),
     montant_honoraire_entree: htmlInputValue(tout, "montantHonoraireEntree") || null,
     taux_honoraire_entree: htmlInputValue(tout, "tauxHonoraireEntree") || null,
     unites_entree_percent: htmlInputValue(tout, "unitesEntreePercent") || null,
     unites_sortie_percent: htmlInputValue(tout, "unitesSortiePercent") || null,
-    conditions_suspensives: conditions,
+    conditions_suspensives: cond.retenues,
   };
 }
 
@@ -10122,7 +10217,14 @@ async function enregistrerLectureConsole(job, payload, annonceId, genre, idTrans
   try {
     const champs = lireChampsConsoleAssistant(contenus);
     const rienDeNeuf = !champs.unites_entree_percent && !champs.unites_sortie_percent
-      && champs.conditions_suspensives.length === 0;
+      && champs.conditions_suspensives === null;
+    // ⚠ ON NE GARDE PLUS LE BRUT QUAND ON TROUVE ZERO CONDITION -- zero est une
+    //   REPONSE, pas une ignorance : le conteneur des retenues etait la et il
+    //   etait vide. On ne le garde que si le conteneur lui-meme a disparu,
+    //   c'est-a-dire si Hektor a change sa page sous nos pieds.
+    const fenetre = champs.conditions_suspensives === null
+      ? fenetreDesConditions((Array.isArray(contenus) ? contenus : [contenus]).join("\n"))
+      : null;
     const ligne = {
       app_affaire_id: appAffaireId,
       hektor_annonce_id: Number(annonceId) || null,
@@ -10132,10 +10234,16 @@ async function enregistrerLectureConsole(job, payload, annonceId, genre, idTrans
       // TEMPORAIRE, et il se tarit tout seul : on ne garde le brut que tant
       // qu'on n'a rien su lire des etapes 2 et 3. Le jour ou les selecteurs
       // sont justes, cette colonne cesse de se remplir d'elle-meme.
+      // DEUX CAS, ET ILS SE TARISSENT TOUS LES DEUX :
+      //   · on n'a RIEN su lire -> on garde tout, il manque une forme entiere
+      //   · on a lu les conditions sans savoir les grouper -> on garde la
+      //     fenetre qui les entoure, et rien d'autre
       html_etapes: rienDeNeuf
-        ? (Array.isArray(contenus) ? contenus : [contenus])
-            .map((h, i) => ({ etape: i, html: String(h || "").slice(0, 60000) }))
-        : null,
+        ? { motif: "aucun champ des etapes 2 et 3 reconnu",
+            etapes: (Array.isArray(contenus) ? contenus : [contenus])
+              .map((h, i) => ({ etape: i, html: String(h || "").slice(0, 60000) })) }
+        : (fenetre ? { motif: "conteneur des conditions suspensives introuvable",
+                       fenetre_conditions: fenetre.slice(0, 40000) } : null),
       source: "worker",
       lu_le: new Date().toISOString(),
     };
@@ -10145,10 +10253,16 @@ async function enregistrerLectureConsole(job, payload, annonceId, genre, idTrans
       body: JSON.stringify([ligne]),
     });
     await logJob(job.id, "hektor_console_lecture", "done",
-      `Assistant relu : ${champs.notaires_acquereur.length} notaire(s) acquereur, `
+      `Assistant relu : ${champs.acquereurs.length} acquereur(s), `
+      + `${champs.mandants.length} mandant(s), `
+      + `${champs.notaires_acquereur.length} notaire(s) acquereur, `
       + `${champs.notaires_mandant.length} notaire(s) mandant, `
       + `unites ${champs.unites_entree_percent || "?"}/${champs.unites_sortie_percent || "?"}, `
-      + `${champs.conditions_suspensives.length} condition(s)`, {
+      + `${champs.conditions_suspensives === null
+            ? "conteneur des conditions INTROUVABLE"
+            : champs.conditions_suspensives.length + " condition(s) retenue(s)"}`
+      + ` sur ${(champs.conditions_catalogue || []).length} au catalogue`, {
+        acquereurs: champs.acquereurs, mandants: champs.mandants,
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId, genre,
         hektor_affaire_id: idTransaction || null,
         brut_conserve: Boolean(ligne.html_etapes),
@@ -10407,12 +10521,27 @@ async function ajouterAcquereurAssistant(job, annonceId, assistant, idProspect, 
   // ON N'AJOUTE QUE CE QUI RESSEMBLE A CE QU'ON ATTEND. Coller une reponse
   // inattendue au contenu d'etape casserait la relecture du formulaire.
   const utilisable = /acquereurs\[|<input/i.test(texte);
+  // ─── 2.6 : CE QUE findProspect REND, EN CLAIR (10/09/2026) ───
+  //
+  // Le dossier 2.6 reclame cette mesure depuis le 06/09 : « que renvoie
+  // findProspect exactement -- on n'en lit que le HTML ». On lit desormais LES
+  // IDENTIFIANTS qu'il pose, avec le meme lecteur que partout ailleurs.
+  //
+  // CE QU'ON CHERCHE A SAVOIR : quand on demande le SECOND acquereur, Hektor
+  // rend-il un bloc qui porte les DEUX, ou seulement le dernier ? Si son bloc
+  // ne porte qu'un identifiant, la perte vient de LUI et non de notre envoi --
+  // et les deux pistes deja ecartees (le corps des etapes, le panier) prennent
+  // enfin leur sens.
+  const idsRendus = lireIdentifiantsTableauCache(texte, RE_ACQUEREURS);
   await logJob(job.id, "hektor_assistant_acquereur", utilisable ? "done" : "error",
     utilisable
-      ? "Acquereur ajoute par findProspect -- son bloc rejoint le formulaire"
+      ? `Acquereur ${idProspect} : findProspect rend ${idsRendus.length} identifiant(s) `
+        + `[${idsRendus.join(", ")}]`
       : "findProspect n'a pas rendu de bloc exploitable -- on ne colle rien", {
       hektor_annonce_id: annonceId, id_prospect: String(idProspect), mode,
       reponse_taille: texte.length,
+      acquereurs_rendus: idsRendus,
+      porte_le_demande: idsRendus.includes(String(idProspect)),
       apercu: stripHtml(texte).replace(/\s+/g, " ").trim().slice(0, 200) || "(vide)",
     });
   return { statut: utilisable ? "ok" : "reponse_inattendue", html: utilisable ? texte : "" };
@@ -10509,6 +10638,10 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     `Assistant ${config.label} ouvert`, {
       hektor_annonce_id: annonceId, etape: etat.index,
       panier_car: etat.basket.length, contenu_car: etat.contenu.length,
+      // 2.6 : l'etat AVANT toute ecriture. C'est le point de depart auquel
+      // comparer les etapes suivantes.
+      acquereurs_a_l_ouverture: lireIdentifiantsTableauCache(etat.contenu, RE_ACQUEREURS),
+      mandants_a_l_ouverture: lireIdentifiantsTableauCache(etat.contenu, RE_MANDANTS),
     });
 
   // Le formulaire rendu a chaque etape. Il portait deja tout ce qu'on cherche ;
@@ -10857,6 +10990,23 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         // CE QU'ON A ENVOYE. Sans cette liste, un refus muet reste indechiffrable
         // -- et c'est deux fois qu'on s'y casse les dents sur ce chemin.
         champs_envoyes: [...new Set([...corps.keys()])].filter((k) => k !== "basket").join(","),
+        // ─── 2.6 : LES DEUX COMPTES QUI MANQUAIENT (10/09/2026) ───
+        //
+        // ⚠ `champs_envoyes` DEDOUBLONNE les noms (new Set) : deux acquereurs
+        //   envoyes s'y lisent comme un seul champ. Le dossier 2.6 le dit
+        //   lui-meme : « c'est la premiere chose a savoir, et on ne la sait
+        //   pas ». Ces deux lignes la donnent.
+        //
+        //   acquereurs_envoyes  ce que NOTRE corps porte a cette etape
+        //   acquereurs_rendus   ce que HEKTOR a mis dans le formulaire d'APRES
+        //
+        // Leur comparaison, etape par etape, localise la perte au lieu de la
+        // supposer : envoyes 2 / rendus 1 designe Hektor, envoyes 1 designe
+        // nous. Deux hypotheses ont deja coute une demi-journee chacune faute
+        // de ce chiffre.
+        acquereurs_envoyes: corps.getAll("acquereurs[]"),
+        acquereurs_rendus: lireIdentifiantsTableauCache(etat.contenu, RE_ACQUEREURS),
+        mandants_rendus: lireIdentifiantsTableauCache(etat.contenu, RE_MANDANTS),
       });
 
     // ⚠ `success: true` NE PROUVE RIEN : la reponse de l'enregistrement a

@@ -3434,6 +3434,55 @@ GEL que Frederic a repere le premier).*
            second nom de 50072 sera perdu. Normal (Hektor fait foi sur ce champ),
            mais il faut le savoir en relisant cette ligne plus tard.
 
+         ═══ ⭐ 10/09/2026 — LA PISTE « TYPOLOGIE » EST DEMENTIE PAR LE PARC ═══
+         Le commit cceef21 (03/09) concluait, sur QUATRE mesures et une correlation
+         parfaite : « le compromis passe par la liste Mes acquereurs, FILTREE sur la
+         typologie ; un contact non type y est abandonne en silence ».
+
+         MESURE DU 10/09 SUR LE PARC ENTIER, 12 446 acquereurs distincts reellement
+         attaches a des compromis chez Hektor :
+             types « acquereur »      7 559   61 %
+             PAS types acquereur      4 886   39 %   dont 4 331 « partenaire »,
+                                                     386 « mandant »
+         ➡ Hektor attache tres bien des contacts non types. La typologie n'est PAS
+           une condition sur la donnee. Le rattachement CREE la relation -- c'est ce
+           que dit app_contact_relation_current, 79 820 lignes, ou le role vient du
+           lien et non de l'etiquette (acquereur_compromis 11 649, acquereur_offre
+           9 417, acquereur_vente 8 618).
+
+         ⚠ ET LES TROIS ESSAIS « DEUX ACQUEREURS » NE PROUVENT DONC RIEN.
+           Les 02/09 17:46, 06/09 16:42 et 07/09 06:41 -- les seuls du journal a
+           porter DEUX appels findProspect -- utilisaient tous le MEME couple :
+               605030  TEST MANDANT 25-08 Sophie   [« acquereur », « mandant »]
+               605075  CLOTURE Test                [« mandant »]
+           Un sur deux passait, un sur deux tombait, et on a lu ce resultat comme
+           « Hektor n'en garde qu'un ». AUCUN essai n'a jamais ete fait avec deux
+           contacts que Hektor accepte tous les deux.
+
+         ═══ CE QUI EST DESORMAIS ETABLI, ET CE QUI NE L'EST PAS ═══
+         ETABLI  l'API NE CACHE RIEN. Comparaison console contre API sur 649
+                 compromis relus le 10/09 : 649 identiques, 0 ecart, et 147 portent
+                 PLUSIEURS acquereurs des deux cotes. Le defaut est a l'ECRITURE.
+         PAS ETABLI  la cause. Trois candidates, aucune eliminee :
+                 la typologie (affaiblie par les 39 %) · le PORTEFEUILLE de
+                 l'utilisateur courant (l'endpoint s'appelle
+                 prospect-searchProspectsByCurrentUser, et le compromis tourne en
+                 session ADMINISTRATEUR) · notre envoi.
+
+         ═══ L'INSTRUMENTATION EST POSEE (10/09), elle ne demande aucune requete ═══
+         Le journal du worker porte desormais, a chaque etape :
+             acquereurs_envoyes   ce que NOTRE corps porte (getAll, plus de new Set)
+             acquereurs_rendus    ce que HEKTOR met dans le formulaire d'apres
+             acquereurs_rendus    de findProspect : les identifiants qu'il pose, et
+                                  s'il porte bien celui qu'on lui a demande
+         La lecture devient mecanique : envoyes 2 / rendus 1 designe Hektor,
+         envoyes 1 nous designe.
+         ⚠ IL FAUT REDEMARRER LES QUATRE SERVICES pour l'activer.
+
+         PROCHAIN ESSAI, ET IL TRANCHE : un compromis avec DEUX contacts que Hektor
+         accepte. Choisir deux acquereurs deja attaches ailleurs dans le parc --
+         il y en a 147 rien que dans les 649 compromis relus.
+
          ⚠ ET JE DOIS CORRIGER MA PROPRE NOTE DU 04/09. Elle disait « le worker
            sait deja faire, le releve multi-acquereurs est coche ». Le releve
            disait que les DEUX APPELS REUSSISSENT -- pas que Hektor garde les
