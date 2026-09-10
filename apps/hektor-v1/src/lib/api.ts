@@ -1463,13 +1463,91 @@ export type AffaireLedgerRow = {
   honoraires_entree: string | null
   /** Les honoraires de l'ACQUEREUR -- ce que la modale appelle « Honoraires acquereur ». */
   honoraires_sortie: string | null
+  /** ─── CE QUI DORMAIT DANS payload_json JUSQU'AU 10/09/2026 ───
+   *  Inventaire des 29 349 lignes, clé par clé. Ces quatre-là étaient remplies et
+   *  personne ne les lisait :
+   *      mandants      compromis 10 587 · ventes 7 605
+   *      notaires      ventes 7 610 sur 7 610 (les DEUX rôles)
+   *      propositions  offres 11 088 — l'historique DATÉ de la négociation
+   *      commission    ventes 6 472
+   *  ⚠ `commission_agence` N'EST PAS UN MONTANT HORS TAXES malgré son nom :
+   *    rapports honoraires/commission mesurés 1,2 · 2,4 · 4,8, soit la totalité,
+   *    la moitié, le quart. C'est LA PART QUI RESTE À L'AGENCE après partage. */
+  mandants_json: unknown
+  notaires_json: unknown
+  propositions_json: unknown
+  commission_agence: string | null
 }
 
 const affaireLedgerSelect =
   'app_affaire_id,app_dossier_id,hektor_annonce_id,kind,hektor_affaire_id,numero_mandat,' +
   'hektor_acquereur_id,acquereur_json,acquereurs_json,state,montant,date,date_acte,sequestre,present_in_hektor,' +
   'prix_net_vendeur,honoraires_entree,honoraires_sortie,' +
+  'mandants_json,notaires_json,propositions_json,commission_agence,' +
   'app_chaine_id'
+
+/** ─── CE QUE SEUL L'ASSISTANT DE HEKTOR REND (10/09/2026) ───
+ *
+ *  L'API ne rend AUCUN notaire sur un compromis — 0 sur 10 586 — alors que Hektor
+ *  en tient un. Le worker, lui, reçoit le formulaire rendu à chaque écriture et
+ *  y lit ce que l'API cache, sans une requête de plus ; le rattrapage console va
+ *  chercher la même chose dans l'historique. Les deux écrivent ici.
+ *
+ *  ⚠ TABLE À PART, ET C'EST DÉLIBÉRÉ. Le run de nuit pousse le registre avec
+ *    `SELECT *` : une colonne que le serveur local ne sait pas remplir y serait
+ *    écrasée par des NULL, pour les 29 349 lignes d'un coup. Ici le run n'écrit
+ *    jamais — il ne fait que redescendre la table chaque matin.
+ *
+ *  ⚠ L'IDENTITÉ, PAS SEULEMENT LE NUMÉRO. Les notaires sont des contacts de
+ *    typologie « partenaire » et `app_contact_current` n'en connaît qu'un sur
+ *    quatre : sans le nom lu dans le formulaire, on afficherait un identifiant nu. */
+export type AffaireConsoleRow = {
+  app_affaire_id: number
+  kind: string | null
+  hektor_affaire_id: string | null
+  /** Les honoraires du VENDEUR et leur taux — le manque n°1 de la tâche 0.1. */
+  montant_honoraire_entree: string | null
+  taux_honoraire_entree: string | null
+  /** LE PARTAGE de la commission, invisible partout ailleurs. */
+  unites_entree_percent: string | null
+  unites_sortie_percent: string | null
+  /** Les conditions RETENUES. ⚠ `null` veut dire « conteneur introuvable »,
+   *  `[]` veut dire « aucune retenue » — deux choses différentes. */
+  conditions_suspensives: Array<{ id?: string; libelle?: string; jours?: string }> | null
+  /** Ce que l'agence PROPOSE, pour la saisie à venir (lot 3 de 3.2d). */
+  conditions_catalogue: Array<{ id?: string; libelle?: string; jours?: string }> | null
+  /** { acquereurs, mandants, notaires_acquereur, notaires_mandant }, chacun
+   *  une liste de { id, nom?, tel? }. */
+  parties_json: Record<string, Array<{ id: string; nom?: string; tel?: string }>> | null
+  source: string | null
+  lu_le: string | null
+}
+
+const affaireConsoleSelect =
+  'app_affaire_id,kind,hektor_affaire_id,montant_honoraire_entree,taux_honoraire_entree,' +
+  'unites_entree_percent,unites_sortie_percent,conditions_suspensives,conditions_catalogue,' +
+  'parties_json,source,lu_le'
+
+/** Ce que l'assistant a rendu, pour les affaires données. Jamais d'exception :
+ *  une lecture ratée rend une carte vide, et l'écran retombe sur le registre. */
+export async function loadAffairesConsole(
+  appAffaireIds: number[],
+): Promise<Map<number, AffaireConsoleRow>> {
+  const vide = new Map<number, AffaireConsoleRow>()
+  if (!hasSupabaseEnv || !supabase) return vide
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  if (!ids.length) return vide
+  const { data, error } = await supabase
+    .from('app_affaire_console')
+    .select(affaireConsoleSelect)
+    .in('app_affaire_id', ids)
+  if (error) return vide
+  const out = new Map<number, AffaireConsoleRow>()
+  for (const ligne of (data ?? []) as unknown as AffaireConsoleRow[]) {
+    out.set(Number(ligne.app_affaire_id), ligne)
+  }
+  return out
+}
 
 /** Ce que l'app détient sur une affaire, et que le run ne touche jamais.
  *

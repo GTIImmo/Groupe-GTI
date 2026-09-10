@@ -10067,6 +10067,62 @@ function htmlInputValue(html, key) {
  *      <input type="hidden" class="prospectCompromisRequire"
  *             name="notairesAcquereur[]" id="prospectCompromisRequire49708"
  *             value="49708"> */
+/** L'identite d'une partie, pas seulement son numero.
+ *
+ *  POURQUOI. Mesure du 10/09 : les notaires sont des contacts de typologie
+ *  « partenaire », et la couche contacts de l'app n'en connait qu'UN sur les
+ *  quatre rencontres. Garder le seul identifiant nous laisserait avec un numero
+ *  que l'app ne sait pas nommer -- exactement le defaut que 1.8 a corrige sur les
+ *  acquereurs du registre (« si on a les donnees en brut, pourquoi en garder
+ *  juste un ? »).
+ *
+ *  LE BLOC, tel que Hektor le rend (capture du 03/09, fixture au depot) :
+ *      <div class="... mandantNotaireSelectedContainer ..." data-type-intervenant="2">
+ *        ...
+ *        <p class="infosUser m0"> MALET-CLEMENT Evelyne<br>04 92 61 01 67</p>
+ *        ...
+ *        <input type="hidden" name="notairesAcquereur[]" value="49708">
+ *      </div>
+ *  Le nom PRECEDE l'input dans le meme bloc : on remonte donc en arriere depuis
+ *  l'input, sur une fenetre bornee, et on prend le dernier `infosUser`.
+ *
+ *  ⚠ ON NE FABRIQUE RIEN. Pas de nom trouve -> pas de champ `nom`. Un identifiant
+ *    sans nom reste un identifiant honnete ; un nom devine serait un mensonge. */
+const RE_INFOS_USER = /<p\b[^>]*class=["'][^"']*infosUser[^"']*["'][^>]*>([\s\S]*?)<\/p>/gi;
+
+function identiteAvantLInput(html, positionInput) {
+  const fenetre = html.slice(Math.max(0, positionInput - 1500), positionInput);
+  let dernier = null;
+  RE_INFOS_USER.lastIndex = 0;
+  let m;
+  while ((m = RE_INFOS_USER.exec(fenetre))) dernier = m[1];
+  if (!dernier) return {};
+  // <br> separe le nom du telephone ; le reste des balises tombe.
+  const morceaux = String(dernier).split(/<br\s*\/?>/i)
+    .map((x) => decodeHtml(stripHtml(x)).replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const out = {};
+  if (morceaux[0]) out.nom = morceaux[0];
+  if (morceaux[1]) out.tel = morceaux[1];
+  return out;
+}
+
+/** Les parties d'un champ tableau cache, avec leur identite quand Hektor la donne. */
+function lirePartiesTableauCache(html, motifNom) {
+  const out = [];
+  const source = String(html || "");
+  const vus = new Set();
+  motifNom.lastIndex = 0;
+  let m;
+  while ((m = motifNom.exec(source))) {
+    const v = String(htmlAttrValue(m[0], "value") || "").trim();
+    if (!/^\d+$/.test(v) || v === "0" || vus.has(v)) continue;
+    vus.add(v);
+    out.push({ id: v, ...identiteAvantLInput(source, m.index) });
+  }
+  return out;
+}
+
 function lireIdentifiantsTableauCache(html, motifNom) {
   const out = [];
   const source = String(html || "");
@@ -10191,10 +10247,18 @@ function lireChampsConsoleAssistant(contenus) {
   const cond = lireConditionsSuspensives(tout);
   return {
     conditions_catalogue: cond.catalogue,
+    // Les identifiants seuls -- la forme historique, celle que le journal compte.
     acquereurs: lireIdentifiantsTableauCache(tout, RE_ACQUEREURS),
     mandants: lireIdentifiantsTableauCache(tout, RE_MANDANTS),
     notaires_acquereur: lireIdentifiantsTableauCache(tout, RE_NOTAIRE_ACQUEREUR),
     notaires_mandant: lireIdentifiantsTableauCache(tout, RE_NOTAIRE_MANDANT),
+    // Et leur IDENTITE, parce que l'app ne sait pas nommer un « partenaire ».
+    parties: {
+      acquereurs: lirePartiesTableauCache(tout, RE_ACQUEREURS),
+      mandants: lirePartiesTableauCache(tout, RE_MANDANTS),
+      notaires_acquereur: lirePartiesTableauCache(tout, RE_NOTAIRE_ACQUEREUR),
+      notaires_mandant: lirePartiesTableauCache(tout, RE_NOTAIRE_MANDANT),
+    },
     montant_honoraire_entree: htmlInputValue(tout, "montantHonoraireEntree") || null,
     taux_honoraire_entree: htmlInputValue(tout, "tauxHonoraireEntree") || null,
     unites_entree_percent: htmlInputValue(tout, "unitesEntreePercent") || null,
@@ -10231,6 +10295,7 @@ async function enregistrerLectureConsole(job, payload, annonceId, genre, idTrans
       kind: genre || null,
       hektor_affaire_id: idTransaction ? String(idTransaction) : null,
       ...champs,
+      parties_json: champs.parties || null,
       // TEMPORAIRE, et il se tarit tout seul : on ne garde le brut que tant
       // qu'on n'a rien su lire des etapes 2 et 3. Le jour ou les selecteurs
       // sont justes, cette colonne cesse de se remplir d'elle-meme.

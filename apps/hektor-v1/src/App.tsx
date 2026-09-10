@@ -164,8 +164,10 @@ import {
   hasOffreAchatRefusee,
   hasCompromisEnCours,
   loadAffairesForDossier,
+  loadAffairesConsole,
   editAffaireOptimistic,
   type AffaireLedgerRow,
+  type AffaireConsoleRow,
   gesteAffaireOptimistic,
   type GesteAffaire,
   setBienStatut,
@@ -23431,6 +23433,11 @@ function CkDpeScale({ label, value, unit, kind }: { label: string; value: number
 type CkParty = { n: string; s?: string; tel?: string; mail?: string }
 type CkAffaire = {
   banner?: { mood?: string; state?: string; next?: string; comment?: string; chip?: string }
+  /** Ce que seul l'assistant de Hektor rend, quand on l'a lu. Absent = on n'a
+   *  pas encore relu cette transaction : la carte n'affiche alors rien de plus,
+   *  au lieu d'afficher un tiret qui ferait croire a une donnee vide. */
+  console?: { notaireAcq?: string; notaireVend?: string; tauxVendeur?: string;
+              honVendeur?: string; partage?: string; conditions?: string } | null
   tl?: { offre?: string; compromis?: string; vente?: string }
   offre?: Record<string, string> | null
   compromis?: Record<string, string> | null
@@ -23474,6 +23481,7 @@ function CkParty({ role, p }: { role: string; p?: CkParty | null }) {
   )
 }
 function CkAffaires({ affaire }: { affaire: CkAffaire }) {
+  const af = affaire
   const tl = affaire.tl ?? {}
   const steps: Array<{ k: string; label: string; meta: string }> = [
     { k: 'offre', label: 'Offre', meta: affaire.offre ? `${affaire.offre.montant ?? ''} · ${affaire.offre.date ?? ''}` : 'Non renseignée' },
@@ -23532,6 +23540,23 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
           {c ? (
             <CkTxCard num="02" kind="compromis" title="Compromis de vente" sub={`Acte le ${c.dateActe ?? '—'} · séquestre ${c.sequestre ?? '—'}`} pill={tl.compromis === 'done' ? 'Signé' : 'En cours'} pillTone={tl.compromis === 'done' ? 'done' : 'on'} open={tl.compromis !== 'done'} rows={[
               ['Prix de vente', c.prix ?? '—'], ['Prix net vendeur', c.net ?? '—'], ['Date compromis', c.dateStart ?? '—'], ['Date acte prévue', c.dateActe ?? '—'], ['Rétractation SRU', c.retract ?? '—'], ['Séquestre', c.sequestre ?? '—'],
+              // ─── CE QUE L'API NE REND PAS, ET QU'ON A ÉTÉ CHERCHER (10/09) ───
+              //
+              // Le notaire d'un compromis est absent de la charge de Hektor : ZÉRO
+              // sur 10 586. Il n'existe que dans le formulaire de l'assistant. Ces
+              // lignes n'apparaissent donc que si cette transaction a été relue —
+              // par le worker à l'écriture, ou par le rattrapage console.
+              //
+              // ⚠ ON N'AFFICHE PAS UN TIRET QUAND ON N'A PAS LU. Un « — » se lirait
+              //   comme « il n'y a pas de notaire », alors qu'il y en a un dans
+              //   85 % des cas (1 085 sur 1 151 relus). L'absence de ligne dit
+              //   honnêtement « on ne sait pas encore ».
+              ...(af.console?.notaireAcq ? [['Notaire acquéreur', af.console.notaireAcq, true] as [string, string, boolean]] : []),
+              ...(af.console?.notaireVend ? [['Notaire mandant', af.console.notaireVend, true] as [string, string, boolean]] : []),
+              ...(af.console?.honVendeur ? [['Honoraires vendeur (agence)', af.console.honVendeur] as [string, string]] : []),
+              ...(af.console?.tauxVendeur ? [['Taux vendeur', af.console.tauxVendeur] as [string, string]] : []),
+              ...(af.console?.partage ? [['Partage entrée / sortie', af.console.partage] as [string, string]] : []),
+              ...(af.console?.conditions ? [['Conditions suspensives', af.console.conditions, true] as [string, string, boolean]] : []),
             ]} />
           ) : null}
           {v ? (
@@ -24275,7 +24300,22 @@ function derniereDuGenre(lignes: AffaireLedgerRow[], kind: string): AffaireLedge
 }
 
 /** Construit ce que la maquette attend, A PARTIR DU REGISTRE et de lui seul. */
-function ckAffaireDepuisChaine(c: ChaineAffaire, vendeur: CkParty | null): CkAffaire {
+/** Le libelle d'une partie lue dans l'assistant : « nom · tel », ou son numero
+ *  seul si Hektor ne l'a pas nommee. On ne fabrique jamais de nom. */
+function ckPartieConsole(
+  liste?: Array<{ id: string; nom?: string; tel?: string }> | null,
+): string {
+  if (!liste || !liste.length) return ''
+  return liste
+    .map((p) => [p.nom || ('Contact ' + p.id), p.tel].filter(Boolean).join(' \u00b7 '))
+    .join(' \u2014 ')
+}
+
+function ckAffaireDepuisChaine(
+  c: ChaineAffaire,
+  vendeur: CkParty | null,
+  console_?: Map<number, AffaireConsoleRow>,
+): CkAffaire {
   const o = derniereDuGenre(c.lignes, 'offre')
   const cp = derniereDuGenre(c.lignes, 'compromis')
   const v = derniereDuGenre(c.lignes, 'vente')
@@ -24302,8 +24342,31 @@ function ckAffaireDepuisChaine(c: ChaineAffaire, vendeur: CkParty | null): CkAff
         ? "Préparer l'acte — suivre les conditions suspensives."
         : "Traiter l'offre — accepter, contre-proposer ou refuser."
 
+  // La lecture de l'assistant, pour la transaction la plus avancee de la chaine.
+  const lu = console_ && courante ? console_.get(Number(courante.app_affaire_id)) : undefined
+  const parties = lu?.parties_json ?? null
+  const conditionsLues = lu?.conditions_suspensives
+  const console_infos = lu ? {
+    notaireAcq: ckPartieConsole(parties?.notaires_acquereur),
+    notaireVend: ckPartieConsole(parties?.notaires_mandant),
+    tauxVendeur: lu.taux_honoraire_entree ? lu.taux_honoraire_entree + ' %' : '',
+    honVendeur: lu.montant_honoraire_entree ? affairePrix(lu.montant_honoraire_entree) : '',
+    // \u26a0 « aucune » et « pas encore lu » ne se disent pas pareil : conditions_suspensives
+    //   vaut [] quand le conteneur est la et vide, null quand il est introuvable.
+    partage: (lu.unites_entree_percent && lu.unites_sortie_percent)
+      ? lu.unites_entree_percent + ' / ' + lu.unites_sortie_percent
+      : '',
+    conditions: Array.isArray(conditionsLues)
+      ? (conditionsLues.length
+          ? conditionsLues.map((x) => [x.libelle, x.jours ? x.jours + ' j' : '']
+              .filter(Boolean).join(' \u00b7 ')).join(' \u2014 ')
+          : 'Aucune')
+      : '',
+  } : null
+
   const n = c.lignes.length
   return {
+    console: console_infos,
     banner: {
       mood: morte ? 'block' : etape === 'offre' ? 'warn' : 'ok',
       state: (AFFAIRE_GENRE_LABEL[etape] ?? etape)
@@ -24335,7 +24398,9 @@ function ckAffaireDepuisChaine(c: ChaineAffaire, vendeur: CkParty | null): CkAff
     } : null,
     compromis: cp ? {
       prix: affairePrix(cp.montant),
-      net: '',
+      // Le net vendeur vient du REGISTRE depuis le 08/09 -- il etait vide ici
+      // alors que la colonne existait et qu'elle est remplie 10 587 fois.
+      net: affairePrix(cp.prix_net_vendeur),
       dateStart: cp.date ? formatDate(cp.date) : '',
       dateActe: cp.date_acte ? formatDate(cp.date_acte) : '',
       retract: '',
@@ -24345,9 +24410,26 @@ function ckAffaireDepuisChaine(c: ChaineAffaire, vendeur: CkParty | null): CkAff
     vente: v ? {
       date: v.date ? formatDate(v.date) : '',
       prix: affairePrix(v.montant),
-      honoraires: '',
-      commission: '',
-      notaires: '',
+      // Honoraires = entree + sortie, la somme que Hektor porte lui-meme
+      // (verifie sur 7 608 ventes sur 7 608). Commission = LA PART DE L'AGENCE
+      // apres partage, pas un montant hors taxes.
+      honoraires: affairePrix(v.honoraires_entree) || affairePrix(v.honoraires_sortie)
+        ? [affairePrix(v.honoraires_entree), affairePrix(v.honoraires_sortie)]
+            .filter(Boolean).join(' + ')
+        : '',
+      commission: affairePrix(v.commission_agence),
+      // La vente est le SEUL genre ou l'API rend le notaire : 7 610 sur 7 610.
+      notaires: ckPartieConsole(
+        (v.notaires_json && typeof v.notaires_json === 'object'
+          ? Object.values(v.notaires_json as Record<string, unknown>)
+              .filter((x): x is { id?: string; nom?: string; prenom?: string } =>
+                Boolean(x) && typeof x === 'object')
+              .map((x) => ({
+                id: String(x.id ?? ''),
+                nom: [x.nom, x.prenom].filter(Boolean).join(' ').trim() || undefined,
+              }))
+          : []) as Array<{ id: string; nom?: string }>,
+      ),
     } : null,
     parties: {
       acq: acqNom ? { n: acqNom, s: 'Acquéreur' } : null,
@@ -24415,6 +24497,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   //   qui a fait naitre des offres sans numero le 02/09. Si la lecture echoue, on
   //   RESTE a null et la rubrique retombe sur son affichage d'aujourd'hui.
   const [ckRegistreAffaires, setCkRegistreAffaires] = useState<AffaireLedgerRow[] | null>(null)
+  // ─── CE QUE L'ASSISTANT DE HEKTOR A RENDU (10/09/2026) ───
+  //
+  // Le notaire d'un compromis n'est PAS dans l'API : 0 sur 10 586. Il n'existe
+  // que dans le formulaire de l'assistant, que le worker relit a chaque ecriture
+  // et que le rattrapage console est alle chercher dans l'histoire.
+  // Sans cette lecture, la carte affichait « Notaires — » sur une donnee que
+  // Hektor detient pourtant sur presque tous les compromis (1 085 sur 1 151 lus).
+  const [ckConsoleAffaires, setCkConsoleAffaires] =
+    useState<Map<number, AffaireConsoleRow>>(new Map())
   const ckDossierIdPourRegistre = props.selectedDossier?.app_dossier_id ?? null
   useEffect(() => {
     let vivant = true
@@ -24422,7 +24513,16 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     const id = Number(ckDossierIdPourRegistre)
     if (!Number.isFinite(id) || id <= 0) return
     loadAffairesForDossier(id)
-      .then((lignes) => { if (vivant) setCkRegistreAffaires(lignes) })
+      .then((lignes) => {
+        if (!vivant) return
+        setCkRegistreAffaires(lignes)
+        // La lecture de l'assistant suit celle du registre : elle se range par
+        // app_affaire_id, donc il faut d'abord savoir quelles affaires afficher.
+        // Elle ne fait JAMAIS echouer l'ecran -- sans elle, on montre le registre.
+        loadAffairesConsole(lignes.map((l) => Number(l.app_affaire_id)))
+          .then((m) => { if (vivant) setCkConsoleAffaires(m) })
+          .catch(() => { if (vivant) setCkConsoleAffaires(new Map()) })
+      })
       .catch(() => { if (vivant) setCkRegistreAffaires(null) })
     return () => { vivant = false }
   }, [ckDossierIdPourRegistre])
@@ -26941,7 +27041,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       ) : null}
                       {chaines.map((c) => (
                         <div className="fa-ck-chaine" key={c.chaine}>
-                          <CkAffaires affaire={ckAffaireDepuisChaine(c, vendeurReg)} />
+                          <CkAffaires affaire={ckAffaireDepuisChaine(c, vendeurReg, ckConsoleAffaires)} />
                           <CkChaineLignes lignes={c.lignes} />
                         </div>
                       ))}

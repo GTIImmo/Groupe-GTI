@@ -49,7 +49,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -267,6 +267,64 @@ def ligne_pour_supabase(cible: dict[str, Any], resultat: dict[str, Any]) -> dict
     }
 
 
+def heure_limite_atteinte(stop_at: str) -> bool:
+    """L'heure d'arret est-elle passee ?
+
+    ⚠ POURQUOI CETTE CEINTURE EXISTE. Le run quotidien part a 05:00 et fait, lui
+      aussi, de l'extraction CONSOLE (le chauffage). Deux flux console en meme
+      temps, c'est le doublement de debit que la methode de reference interdit --
+      et c'est ce qui a fait bannir notre IP en juillet.
+
+      Une estimation ne suffit pas : si Hektor repond plus lentement qu'au dernier
+      essai, un run parti a 22:00 peut mordre sur 03:00 ou 05:00. Cette ceinture
+      rend l'estimation SANS IMPORTANCE.
+
+      Et l'arret ne coute rien : chaque compromis deja lu est saute au
+      relancement, donc la reprise repart exactement ou elle s'est arretee.
+    """
+    if not stop_at:
+        return False
+    try:
+        h, m = (int(x) for x in stop_at.split(":", 1))
+    except ValueError:
+        return False
+    maintenant = datetime.now()
+    limite = maintenant.replace(hour=h, minute=m, second=0, microsecond=0)
+    # Une heure du matin demandee a 22 h designe le LENDEMAIN.
+    if limite < maintenant - timedelta(hours=12):
+        limite += timedelta(days=1)
+    return maintenant >= limite
+
+
+def attendre_que_la_voie_soit_libre(maxi_minutes: int) -> str:
+    """S'efface tant qu'un travail console tourne.
+
+    Le garde-fou d'origine REFUSE de demarrer si un travail est en cours. C'est
+    juste au demarrage, et inutile pendant quatre heures de run : l'utilisateur a
+    le droit de se servir de l'app pendant que le rattrapage tourne. Chaque geste
+    declenche un worker qui parle a Hektor lui aussi -- alors on lui laisse la
+    place, au lieu de tirer en meme temps que lui.
+    """
+    debut = time.time()
+    attendu = 0
+    while True:
+        try:
+            aucun_travail_console_en_cours()
+            if attendu:
+                print(f"[courtoisie] voie libre apres {attendu} s", file=sys.stderr)
+            return ""
+        except RuntimeError as exc:
+            if "Travaux console en cours" not in str(exc):
+                raise
+            if time.time() - debut > maxi_minutes * 60:
+                return f"travail console toujours en cours apres {maxi_minutes} min"
+            if not attendu:
+                print("[courtoisie] un travail console tourne -- on s'efface",
+                      file=sys.stderr)
+            time.sleep(15)
+            attendu = int(time.time() - debut)
+
+
 def par_lots(valeurs: list, taille: int):
     t = max(1, taille)
     for i in range(0, len(valeurs), t):
@@ -296,6 +354,12 @@ def arguments() -> argparse.Namespace:
     p.add_argument("--wave-pause-seconds", type=int, default=300,
                    help="Pause entre deux vagues. 300 s = methode de reference.")
     p.add_argument("--refresh-session-on-expired", action="store_true")
+    p.add_argument("--stop-at", default="",
+                   help="Heure locale HH:MM au-dela de laquelle on s'arrete entre deux lots.")
+    p.add_argument("--courtoisie", action="store_true",
+                   help="S'effacer tant qu'un travail console tourne, au lieu de refuser.")
+    p.add_argument("--courtoisie-max-minutes", type=int, default=30,
+                   help="Au-dela, on renonce plutot que d'attendre indefiniment.")
     return p.parse_args()
 
 
@@ -334,6 +398,17 @@ def main() -> int:
     traites = 0
     lots = list(par_lots(retenues, args.batch_size))
     for index, lot in enumerate(lots, start=1):
+        # ── LES DEUX CEINTURES, AVANT CHAQUE LOT ──
+        if heure_limite_atteinte(args.stop_at):
+            resume["arret_horaire"] = (
+                f"arret demande a {args.stop_at} -- {index - 1} lot(s) faits, "
+                f"le reste sera repris au prochain lancement")
+            break
+        if args.courtoisie:
+            renoncement = attendre_que_la_voie_soit_libre(args.courtoisie_max_minutes)
+            if renoncement:
+                resume["arret_courtoisie"] = renoncement
+                break
         par_numero = {str(c["hektor_affaire_id"]): c for c in lot}
         try:
             charge = lire_un_lot(args.node_exe, lot, args)

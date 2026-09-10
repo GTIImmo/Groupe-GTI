@@ -42,8 +42,12 @@ function extraire(src, nom, type) {
 /** Les morceaux à emporter, dans l'ordre où ils se dépendent. */
 const MORCEAUX = [
   ["decodeHtml", "function"],
+  ["stripHtml", "function"],
   ["htmlAttrValue", "function"],
   ["htmlInputValue", "function"],
+  ["RE_INFOS_USER", "const"],
+  ["identiteAvantLInput", "function"],
+  ["lirePartiesTableauCache", "function"],
   ["lireIdentifiantsTableauCache", "function"],
   ["RE_ACQUEREURS", "const"],
   ["RE_MANDANTS", "const"],

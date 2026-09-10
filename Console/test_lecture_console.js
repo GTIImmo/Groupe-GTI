@@ -36,36 +36,16 @@ function htmlDeLaCapture() {
   return fs.readFileSync(FIXTURE_ETAPE0, "utf8");
 }
 
-// ── 2. LES FONCTIONS DU WORKER, prises dans le worker.
-function extraire(src, nom, type) {
-  const marqueur = type === "const" ? `const ${nom} = ` : `function ${nom}(`;
-  const debut = src.indexOf(marqueur);
-  if (debut < 0) throw new Error(`introuvable dans le worker : ${nom}`);
-  if (type === "const") return src.slice(debut, src.indexOf("\n", debut));
-  let n = 0;
-  for (let j = src.indexOf("{", debut); j < src.length; j += 1) {
-    if (src[j] === "{") n += 1;
-    else if (src[j] === "}") { n -= 1; if (n === 0) return src.slice(debut, j + 1); }
-  }
-  throw new Error(`fin introuvable : ${nom}`);
-}
+// ── 2. LE LECTEUR, PRIS DANS LE WORKER — par le module partagé.
+//
+// ⚠ CE TEST AVAIT SA PROPRE COPIE DE LA LISTE DES MORCEAUX, et elle a diverge
+//   le jour meme : le worker a gagne lirePartiesTableauCache, le test ne le
+//   savait pas et tombait. C'est exactement le defaut que lecture_assistant.js
+//   existe pour empecher. Une seule liste, ici comme dans le rattrapage.
+const { chargerLecteur } = require("./lecture_assistant");
 
 function lecteurDuWorker() {
-  const src = fs.readFileSync(path.join(RACINE, "Console", "console_job_worker.js"), "utf8");
-  const morceaux = [
-    extraire(src, "decodeHtml", "function"),
-    extraire(src, "htmlAttrValue", "function"),
-    extraire(src, "htmlInputValue", "function"),
-    extraire(src, "lireIdentifiantsTableauCache", "function"),
-    extraire(src, "RE_ACQUEREURS", "const"),
-    extraire(src, "RE_MANDANTS", "const"),
-    extraire(src, "RE_NOTAIRE_ACQUEREUR", "const"),
-    extraire(src, "RE_NOTAIRE_MANDANT", "const"),
-    extraire(src, "RE_ITEM_CONDITION", "const"),
-    extraire(src, "lireConditionsSuspensives", "function"),
-    extraire(src, "lireChampsConsoleAssistant", "function"),
-  ];
-  return new Function(`${morceaux.join("\n")}\nreturn lireChampsConsoleAssistant;`)();
+  return chargerLecteur();
 }
 
 // ── 3. LES CONDITIONS SUSPENSIVES, sur la fenêtre gardée par le worker
@@ -92,6 +72,15 @@ function main() {
       r.acquereurs.length === 3 && r.acquereurs.includes("86793")],
     ["les TROIS mandants aussi (141053, 485955, 605030)", r.mandants.length === 3],
     ["le notaire acquéreur 49708 est lu", r.notaires_acquereur.includes("49708")],
+    // L'IDENTITÉ, et pas seulement le numéro : les notaires sont de typologie
+    // « partenaire » et la couche contacts de l'app n'en connaît qu'un sur quatre.
+    ["le notaire porte son nom et son téléphone",
+      r.parties.notaires_acquereur[0]?.nom === "MALET-CLEMENT Evelyne"
+      && r.parties.notaires_acquereur[0]?.tel === "04 92 61 01 67"],
+    ["les trois acquéreurs portent leur nom",
+      r.parties.acquereurs.length === 3 && r.parties.acquereurs.every((x) => x.nom)],
+    ["aucun nom fabriqué : un id sans nom reste sans nom",
+      r.parties.mandants.every((x) => x.id && (x.nom === undefined || x.nom.length > 0))],
     ["les honoraires du VENDEUR valent 10000.00", r.montant_honoraire_entree === "10000.00"],
     ["le taux VENDEUR vaut 5.650", r.taux_honoraire_entree === "5.650"],
     ["aucun faux positif sur les unités (étape 2 absente)", r.unites_entree_percent === null],
