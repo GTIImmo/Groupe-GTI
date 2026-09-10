@@ -15190,6 +15190,86 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusChangeAffaires, statusChangeStatus, carnetAffaires])
 
+  // ═══ LA VENTE HERITE DU COMPROMIS DE SA CHAINE (10/09/2026) ═══
+  //
+  // REGLE DE FREDERIC, dans ses mots : « si une chaine est ouverte avec un
+  // compromis il faut recuperer les elements deja presents dont l'acquereur.
+  // Si pas de compromis, vente directe qui ouvre la chaine, la oui la modale est
+  // vide. Sinon la modale doit forcement etre pre-remplie et correspondre au
+  // compromis pour les champs similaires. »
+  //
+  // ⚠ ET C'EST HEKTOR LUI-MEME QUI FAIT AINSI. Mesure du 10/09, capturee dans
+  //   leur interface : le lien « Transformer en vente » du bloc compromis appelle
+  //   `launchPopinVente(24933)` et n'envoie que TROIS champs --
+  //       idAnnonce · basket · initBasket
+  //   exactement ceux de notre worker. Et pourtant son formulaire revient rempli :
+  //       prixDeVente 177 000 · montantHonoraireEntree 10 000 · tauxHonoraireEntree
+  //       5,650 · selectedMandat · mandants[] les TROIS · acquereurs[] 605030
+  //   C'est le SERVEUR qui va chercher le compromis pointe par la fiche.
+  //
+  // ⚠ POURQUOI CA NOUS MANQUAIT, ET CE QUE CA A COUTE. Le 10/09 a 15:49, une
+  //   vente creee depuis l'app avec un champ acquereur VIDE : le worker n'a pose
+  //   aucun `acquereurs[]`, et l'assistant de Hektor N'A JAMAIS QUITTE L'ETAPE 0
+  //   -- `etape_rendue` reste a 0 aux trois requetes, alors qu'il repond
+  //   `success: true` a chaque fois. L'enregistrement est parti dans le vide :
+  //   AUCUNE vente creee, mais l'annonce passee en « Vendu ». Comparaison avec la
+  //   creation reussie du 08/09 : la seule difference dans les champs envoyes est
+  //   `acquereurs[]`, present ce jour-la, absent celui-ci.
+  //
+  // ⚠ ON N'HERITE QUE SI LA CHAINE EST SANS AMBIGUITE : un seul compromis vivant
+  //   dans un dossier OUVERT. Deux compromis ouverts -> on ne devine pas, la
+  //   modale reste vide et l'utilisateur designe. C'est la meme regle que partout
+  //   ailleurs ici (2.2 : « mieux vaut aucun bouton qu'un bouton qui agit sur la
+  //   mauvaise affaire »).
+  //
+  // ⚠ ET LA DATE NE S'HERITE PAS. Une vente a la sienne -- celle du jour, posee a
+  //   l'ouverture de la modale. Seuls les champs SIMILAIRES passent.
+  useEffect(() => {
+    if (statusChangeStatus !== 'sold') return
+    if (!statusChangeAffaires.length) return
+    // Une vente existe deja : la modale la reprend, il n'y a rien a heriter.
+    if (statusChangeAffaires.some((a) => String(a.kind) === 'vente')) return
+
+    const ouverts = new Set(
+      dossiersOuvertsDuBien(statusChangeAffaires).filter((d) => d.ouvert).map((d) => d.chaine))
+    const cleDe = (a: AffaireLedgerRow) => a.app_chaine_id != null
+      ? String(a.app_chaine_id) : 'seule-' + String(a.app_affaire_id)
+    const compromis = statusChangeAffaires.filter((a) => String(a.kind) === 'compromis'
+      && !AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase())
+      && ouverts.has(cleDe(a)))
+    if (compromis.length !== 1) return          // vente directe, ou ambigu : on ne devine pas
+    const c = compromis[0]
+
+    // Les champs SIMILAIRES, et eux seuls.
+    const montant = String(c.montant ?? '').trim()
+    if (montant) { setStatusChangeAmount(montant); setStatusChangeSalePrice(montant) }
+    const mandat = String(c.numero_mandat ?? '').trim()
+    if (mandat) setStatusChangeSelectedMandat(mandat)
+    const honoraires = String(c.honoraires_sortie ?? '').trim()
+    if (honoraires && honoraires !== '0' && honoraires !== '0.00') setStatusChangeBuyerFees(honoraires)
+
+    // ⭐ L'ACQUEREUR, ET C'EST LUI QUI COMPTE : sans lui, Hektor refuse d'avancer
+    //   l'assistant -- en silence. On reprend TOUS ceux du compromis (1.8), le
+    //   premier restant `buyer_contact_id`.
+    const parties = affaireAcquereursDeChaine([c])
+    if (parties.length) {
+      const options = parties
+        .map((p) => ({
+          hektor_contact_id: String(p?.id ?? '').trim(),
+          nom: (p?.nom ?? null) as string | null,
+          prenom: (p?.prenom ?? null) as string | null,
+          civilite: (p?.civilite ?? null) as string | null,
+          display_name: ckPartyName(p) || null,
+        }))
+        .filter((o) => o.hektor_contact_id) as unknown as MandantContactSearchOption[]
+      if (options.length) {
+        setStatusChangeBuyers(options)
+        setStatusChangeBuyerContactId(String(options[0].hektor_contact_id ?? '').trim())
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus])
+
   async function handleCorrigerAffaire() {
     const affaire = affaireCourantePourStatut()
     if (!affaire) return

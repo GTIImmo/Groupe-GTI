@@ -10334,6 +10334,15 @@ async function enregistrerLectureConsole(job, payload, annonceId, genre, idTrans
   }
   try {
     const champs = lireChampsConsoleAssistant(contenus);
+    // ⚠ `parties` ET `intervenants` NE SONT PAS DES COLONNES -- elles s'appellent
+    //   `parties_json` et `intervenants_json`. Le spread `...champs` plus bas les
+    //   envoyait telles quelles, et PostgREST refusait la ligne ENTIERE :
+    //       « Could not find the 'parties' column of 'app_affaire_console' »
+    //   Trouve au premier passage sur une VENTE (10/09, 15:49) : le geste de
+    //   l'utilisateur avait abouti, seule la lecture etait perdue -- c'est
+    //   exactement ce que le try/catch promettait, mais la ligne n'etait pas
+    //   rangee pour autant. On separe donc explicitement.
+    const { parties, intervenants, ...colonnes } = champs;
     const rienDeNeuf = !champs.unites_entree_percent && !champs.unites_sortie_percent
       && champs.conditions_suspensives === null;
     // ⚠ ON NE GARDE PLUS LE BRUT QUAND ON TROUVE ZERO CONDITION -- zero est une
@@ -10348,9 +10357,9 @@ async function enregistrerLectureConsole(job, payload, annonceId, genre, idTrans
       hektor_annonce_id: Number(annonceId) || null,
       kind: genre || null,
       hektor_affaire_id: idTransaction ? String(idTransaction) : null,
-      ...champs,
-      parties_json: champs.parties || null,
-      intervenants_json: champs.intervenants || null,
+      ...colonnes,
+      parties_json: parties || null,
+      intervenants_json: intervenants || null,
       // TEMPORAIRE, et il se tarit tout seul : on ne garde le brut que tant
       // qu'on n'a rien su lire des etapes 2 et 3. Le jour ou les selecteurs
       // sont justes, cette colonne cesse de se remplir d'elle-meme.
@@ -11082,6 +11091,49 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     etat = lireEtapeAssistant(rep.text, `etape ${pas.de}->${pas.vers} ${config.label}`);
     derniere = rep;
     if (etat.contenu) contenusRendus.push(etat.contenu);
+
+    // ═══ SI L'ASSISTANT N'A PAS AVANCE, ON N'ENREGISTRE PAS ═══   10/09/2026
+    //
+    // CE QUI S'EST PASSE. Une vente creee depuis l'app avec un champ acquereur
+    // VIDE : le worker n'a pose aucun `acquereurs[]`, et Hektor a repondu
+    // `success: true` aux TROIS requetes en restant a l'etape 0. L'enregistrement
+    // est parti quand meme, dans le vide. Resultat : AUCUNE vente creee, mais
+    // l'annonce passee en « Vendu » -- un bien vendu sans vente.
+    //
+    // ⚠ ET C'EST LA TROISIEME FOIS. Le 30/08 deja : « Hektor a accepte le
+    //   changement de statut (5) et n'a cree AUCUNE vente ». On avait alors
+    //   conserve la reponse pour comprendre ; elle disait deja tout, et personne
+    //   ne la lisait. `etape_rendue` etait dans le journal depuis le debut.
+    //
+    // LA MESURE QUI AUTORISE CE GARDE-FOU, sur tous les parcours du journal :
+    //     REUSSIS   etape 0->2 rend 2  ·  etape 2->3 rend 3     (08 et 10/09)
+    //     ECHOUE    etape 0->2 rend 0  ·  etape 2->3 rend 0     (10/09 15:49)
+    // L'index rendu est donc un signal FIABLE, et il ne coute rien : Hektor le
+    // donne dans chaque reponse.
+    //
+    // ⚠ ON NE TESTE PAS L'ETAPE D'ENREGISTREMENT : elle va de « 3 » a « 3 » sur
+    //   les deux genres, l'index ne bouge pas par construction.
+    if (!pas.enregistre && etat.index != null && String(etat.index) !== String(pas.vers)) {
+      await logJob(job.id, "hektor_assistant", "error",
+        `Assistant ${config.label} BLOQUE a l'etape ${etat.index} : Hektor n'a pas avance `
+        + `de ${pas.de} vers ${pas.vers}. On N'ENREGISTRE PAS -- un enregistrement `
+        + `envoye ici ne cree rien et laisse l'annonce dans un etat faux.`, {
+          hektor_annonce_id: annonceId,
+          etape_demandee: pas.vers, etape_rendue: etat.index,
+          modules: pas.modules.join("+"),
+          champs_envoyes: [...new Set([...corps.keys()])].filter((k) => k !== "basket").join(","),
+          acquereurs_envoyes: corps.getAll("acquereurs[]"),
+          // La cause la plus probable, mesuree le 10/09 : sans acquereur,
+          // l'assistant de la VENTE refuse d'avancer, sans le dire.
+          piste: corps.getAll("acquereurs[]").length ? null
+            : "aucun acquereur envoye -- l'assistant de la vente l'exige",
+        });
+      throw new Error(
+        `Assistant ${config.label} : Hektor n'a pas avance de l'etape ${pas.de} a ${pas.vers} `
+        + `(il rend encore ${etat.index}). Rien n'a ete enregistre.`
+        + (corps.getAll("acquereurs[]").length ? ""
+           : " Aucun acquereur n'a ete envoye, et l'assistant de la vente l'exige."));
+    }
 
     // L'acquereur s'ajoute UNE FOIS l'etape 2 rendue -- c'est la que son module
     // existe, et c'est l'etape que l'interface de Hektor passe a `newView`.
