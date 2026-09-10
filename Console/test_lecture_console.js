@@ -100,6 +100,30 @@ function main() {
       (c.conditions_catalogue || []).every((x) => x.id && x.libelle)],
   );
 
+  // ── 4. LE PARTAGE DE LA COMMISSION, sur l'étape 2 RÉELLE d'une vente
+  //       (transaction 23300, relevée en lecture seule le 10/09).
+  //
+  // ⚠ CE CAS VIENT DE LA VENTE, PAS DU COMPROMIS. Leurs assistants se
+  //   ressemblent et ne sont pas identiques : la vente nomme les intervenants
+  //   et donne la part de chacun, ce que le compromis ne montrait pas.
+  const cv = lecteurDuWorker()([fs.readFileSync(
+    path.join(RACINE, "Console", "fixtures", "commissions_vente_23300_2026-09-10.html"),
+    "utf8")]);
+  console.log(`\nCommissions d'une vente réelle : ${(cv.intervenants || []).length} intervenant(s)`
+    + ` · unités ${cv.unites_entree_percent}/${cv.unites_sortie_percent}\n`);
+  attendus.push(
+    ["les unités de la vente valent 50 / 50",
+      cv.unites_entree_percent === "50" && cv.unites_sortie_percent === "50"],
+    ["deux intervenants : le même négociateur en entrée ET en sortie",
+      (cv.intervenants || []).length === 2
+      && cv.intervenants.every((x) => x.id === "43")],
+    ["l'intervenant porte son NOM, pas seulement son numéro",
+      cv.intervenants?.[0]?.nom === "Stephanie JEOFFROY"],
+    ["les deux sens ont des montants distincts (2083.33 / 2083.34)",
+      cv.intervenants?.[0]?.montant === "2083.33"
+      && cv.intervenants?.[1]?.montant === "2083.34"],
+  );
+
   let ok = true;
   for (const [libelle, verdict] of attendus) {
     if (!verdict) ok = false;

@@ -10242,6 +10242,57 @@ function fenetreDesConditions(tout) {
   return tout.slice(debut, fin);
 }
 
+// ═══ LE PARTAGE DE LA COMMISSION, PERSONNE PAR PERSONNE ═══   10/09/2026
+//
+// CE QU'ON NE SAVAIT PAS. Le releve de l'assistant de la VENTE (23300, lu en
+// lecture seule le 10/09) montre que l'etape 2 ne porte pas seulement deux
+// pourcentages : elle NOMME les intervenants et donne la part de chacun.
+//
+//     <p class="calcBlockTitle signataireName">Stephanie JEOFFROY</p>
+//     <input name="intervenantsEntree[43][ca_percent]"  value="100">
+//     <input name="intervenantsEntree[43][ca_montant]"  value="2083.33">
+//     <input name="intervenantsEntree[43][percent]"     value="100">
+//     <input name="intervenantsEntree[43][montant]"     value="2083.33">
+//     <input name="intervenantsEntree[43][type]"        value="NEGO">
+//
+// C'est la repartition REELLE de la commission entre les personnes. Ni l'API,
+// ni le registre, ni l'app ne la portent -- `commissionAgence` en donnait le
+// resultat sans jamais dire comment il etait obtenu.
+//
+// ⚠ 43 EST L'IDENTIFIANT DU NEGOCIATEUR, pas un index de tableau. Deux sens
+//   coexistent pour la meme personne (Entree et Sortie), avec des montants
+//   differents (2083.33 et 2083.34) : on groupe donc par (sens, identifiant).
+const RE_INTERVENANT = /<input\b[^>]*name=["']intervenants(Entree|Sortie)\[(\d+)\]\[([a-z_]+)\]["'][^>]*>/gi;
+const RE_SIGNATAIRE = /<p\b[^>]*class=["'][^"']*signataireName[^"']*["'][^>]*>([\s\S]*?)<\/p>/gi;
+
+function lireIntervenants(tout) {
+  const source = String(tout || "");
+  const par = new Map();
+  RE_INTERVENANT.lastIndex = 0;
+  let m;
+  while ((m = RE_INTERVENANT.exec(source))) {
+    const cle = m[1].toLowerCase() + ":" + m[2];
+    if (!par.has(cle)) {
+      // Le nom est dans le bloc, AVANT l'input. On remonte sur une fenetre
+      // bornee et on prend le dernier signataire rencontre.
+      const fenetre = source.slice(Math.max(0, m.index - 4000), m.index);
+      let nom = null;
+      RE_SIGNATAIRE.lastIndex = 0;
+      let n;
+      while ((n = RE_SIGNATAIRE.exec(fenetre))) nom = n[1];
+      const entree = { sens: m[1].toLowerCase(), id: m[2] };
+      if (nom) {
+        const propre = decodeHtml(stripHtml(nom)).replace(/\s+/g, " ").trim();
+        if (propre) entree.nom = propre;
+      }
+      par.set(cle, entree);
+    }
+    const valeur = String(htmlAttrValue(m[0], "value") || "").trim();
+    if (valeur) par.get(cle)[m[3]] = valeur;
+  }
+  return par.size ? Array.from(par.values()) : null;
+}
+
 function lireChampsConsoleAssistant(contenus) {
   const tout = (Array.isArray(contenus) ? contenus : [contenus]).join("\n");
   const cond = lireConditionsSuspensives(tout);
@@ -10263,6 +10314,9 @@ function lireChampsConsoleAssistant(contenus) {
     taux_honoraire_entree: htmlInputValue(tout, "tauxHonoraireEntree") || null,
     unites_entree_percent: htmlInputValue(tout, "unitesEntreePercent") || null,
     unites_sortie_percent: htmlInputValue(tout, "unitesSortiePercent") || null,
+    // ⚠ `null` = on n'a pas vu l'etape des commissions ; une LISTE VIDE serait
+    //   un mensonge (il y a toujours au moins un intervenant quand elle est la).
+    intervenants: lireIntervenants(tout),
     conditions_suspensives: cond.retenues,
   };
 }
@@ -10296,6 +10350,7 @@ async function enregistrerLectureConsole(job, payload, annonceId, genre, idTrans
       hektor_affaire_id: idTransaction ? String(idTransaction) : null,
       ...champs,
       parties_json: champs.parties || null,
+      intervenants_json: champs.intervenants || null,
       // TEMPORAIRE, et il se tarit tout seul : on ne garde le brut que tant
       // qu'on n'a rien su lire des etapes 2 et 3. Le jour ou les selecteurs
       // sont justes, cette colonne cesse de se remplir d'elle-meme.
