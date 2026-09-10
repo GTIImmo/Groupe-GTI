@@ -31,9 +31,9 @@ Cinq phases, dans `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` à partir de la *
 ```
 PHASE 0  mesurer, bloquante        l. 1861   0.1 quasi finie  ·  0.2 0.3 0.4 faites
 PHASE 1  le registre, invisible    l. 2277   terminee
-PHASE 2  l'ecran                   l. 2852   reste 2.4, 2.7, 26bis-TRANSACTIONS
-PHASE 3  l'ecriture part chez Hektor  l. 3531   EN COURS
-PHASE 4  menage                    l. 4292   reste 4.1 (l. 4295), 4.2  ·  4.3 faite le 07/09
+PHASE 2  l'ecran                   l. 2852   reste 2.4 (l. 3282), 2.6, 2.7 (l. 3456), 26bis-TRANSACTIONS (l. 2855)
+PHASE 3  l'ecriture part chez Hektor  l. 3535   EN COURS
+PHASE 4  menage                    l. 4321   reste 4.1 (l. 4324), 4.2 (l. 4328)  ·  4.3 faite le 07/09
 ```
 
 **Au 08/09/2026 — LES TROIS GENRES SONT MODIFIABLES, ET PROUVÉS EN RÉEL.**
@@ -44,9 +44,9 @@ vente      23301   créée, modifiée 175 000 → 176 500, supprimée · annonce
 offre      33050   165 000 → 167 000  ·  33048 REFUSÉE re-acceptée puis re-refusée
 ```
 
-**La tâche ouverte est `3.2d` — ligne 3807.** Lot 1 fait (la commission est visible, la
+**La tâche ouverte est `3.2d` — ligne 3836.** Lot 1 fait (la commission est visible, la
 modale vérifie `prix = net + honoraires`). Restent les lots 2, 3, 4.
-Ensuite : `3.3` (l. 3943), `3.1` (l. 3534) — qui commande `4.1`.
+Ensuite : `3.3` (l. 3972), `3.1` (l. 3538) — qui commande `4.1`.
 
 > ⭐ **`0.1` est quasi finie.** Sa phrase *« l'assistant refuse d'avancer sous
 > automatisation »* était **fausse** : il refuse un formulaire qu'on ne lui rend pas

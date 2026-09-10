@@ -10035,6 +10035,133 @@ function htmlInputValue(html, key) {
   return "";
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CE QUE L'ASSISTANT REND, ET QU'ON JETAIT                       10/09/2026
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// L'AUDIT DU 10/09, EN UNE PHRASE : il existe des champs que Hektor accepte
+// d'ecrire et ne rend JAMAIS par l'API. On peut donc les envoyer sans pouvoir
+// verifier ce qu'on a ecrit -- ce qu'interdit la regle 3 du projet, « une
+// action a une fin visible ».
+//
+//     notairesAcquereur[] / notairesMandant[]   0 sur 10 586 compromis par l'API
+//     unitesEntreePercent / unitesSortiePercent  le PARTAGE de la commission
+//     conditionsSuspensivesSelected[]            absentes de toutes les charges
+//     montantHonoraireEntree / tauxHonoraireEntree  le TAUX VENDEUR
+//
+// OR LE WORKER LES A DEJA SOUS LES YEUX. A chaque ecriture il ouvre l'assistant,
+// recoit le formulaire rendu -- 50 000 a 86 000 caracteres -- en tire trois
+// valeurs, et jette le reste. Le lire ici ne coute AUCUNE requete de plus, et
+// rafraichit exactement la transaction que l'utilisateur vient de toucher.
+//
+// ⚠ CE N'EST PAS LE RATTRAPAGE. Celui-ci ne voit que ce qui passe par l'app.
+//   L'historique des 10 586 compromis demande une lecture console dediee (4 a
+//   6 h, palier B). Les deux ecrivent dans la MEME table.
+//
+// ⚠ ET CA N'ECHOUE JAMAIS UN TRAVAIL. Une lecture ratee est une lecture ratee,
+//   pas une ecriture ratee : on journalise et on continue. Le geste de
+//   l'utilisateur a deja abouti quand on arrive ici.
+
+/** Les identifiants poses dans un champ tableau cache (`notairesAcquereur[]`).
+ *  Forme relevee sur la capture du compromis 24933, le 03/09 :
+ *      <input type="hidden" class="prospectCompromisRequire"
+ *             name="notairesAcquereur[]" id="prospectCompromisRequire49708"
+ *             value="49708"> */
+function lireIdentifiantsTableauCache(html, motifNom) {
+  const out = [];
+  const source = String(html || "");
+  let m;
+  motifNom.lastIndex = 0;
+  while ((m = motifNom.exec(source))) {
+    const v = String(htmlAttrValue(m[0], "value") || "").trim();
+    if (/^\d+$/.test(v) && v !== "0" && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
+
+const RE_NOTAIRE_ACQUEREUR = /<input\b[^>]*name=["']notairesAcquereur\[\]["'][^>]*>/gi;
+const RE_NOTAIRE_MANDANT = /<input\b[^>]*name=["']notairesMandant\[\]["'][^>]*>/gi;
+// ⚠ FORME INCONNUE. Le nom du champ vient du journal du travail c2d909b3
+// (`conditionsSuspensivesSelected[][note]`), pas d'une capture : on n'a JAMAIS
+// vu le HTML des etapes 2 et 3. On lit donc TOUT champ dont le nom commence
+// ainsi, sans rien supposer de sa structure -- et si on ne trouve rien, on
+// garde le brut pour l'ecrire sur du reel plus tard. Deviner un selecteur a
+// coute une demi-journee deux fois cette semaine.
+const RE_CONDITION_SUSPENSIVE = /<(?:input|textarea|select)\b[^>]*name=["'](conditionsSuspensivesSelected[^"']*)["'][^>]*>/gi;
+
+function lireChampsConsoleAssistant(contenus) {
+  const tout = (Array.isArray(contenus) ? contenus : [contenus]).join("\n");
+  const conditions = [];
+  RE_CONDITION_SUSPENSIVE.lastIndex = 0;
+  let m;
+  while ((m = RE_CONDITION_SUSPENSIVE.exec(tout))) {
+    conditions.push({ champ: m[1], valeur: String(htmlAttrValue(m[0], "value") || "") });
+  }
+  return {
+    notaires_acquereur: lireIdentifiantsTableauCache(tout, RE_NOTAIRE_ACQUEREUR),
+    notaires_mandant: lireIdentifiantsTableauCache(tout, RE_NOTAIRE_MANDANT),
+    montant_honoraire_entree: htmlInputValue(tout, "montantHonoraireEntree") || null,
+    taux_honoraire_entree: htmlInputValue(tout, "tauxHonoraireEntree") || null,
+    unites_entree_percent: htmlInputValue(tout, "unitesEntreePercent") || null,
+    unites_sortie_percent: htmlInputValue(tout, "unitesSortiePercent") || null,
+    conditions_suspensives: conditions,
+  };
+}
+
+/** Range la lecture dans app_affaire_console. Ne jette JAMAIS. */
+async function enregistrerLectureConsole(job, payload, annonceId, genre, idTransaction, contenus) {
+  const appAffaireId = Number(payload && payload.app_affaire_id) || null;
+  if (!appAffaireId) {
+    // Sans le numero de l'app, on n'a pas de cle. On le dit plutot que de
+    // ranger la lecture sous un identifiant devine.
+    await logJob(job.id, "hektor_console_lecture", "done",
+      "Lecture de l'assistant NON rangee : le travail ne porte pas d'app_affaire_id",
+      { hektor_annonce_id: annonceId, genre });
+    return;
+  }
+  try {
+    const champs = lireChampsConsoleAssistant(contenus);
+    const rienDeNeuf = !champs.unites_entree_percent && !champs.unites_sortie_percent
+      && champs.conditions_suspensives.length === 0;
+    const ligne = {
+      app_affaire_id: appAffaireId,
+      hektor_annonce_id: Number(annonceId) || null,
+      kind: genre || null,
+      hektor_affaire_id: idTransaction ? String(idTransaction) : null,
+      ...champs,
+      // TEMPORAIRE, et il se tarit tout seul : on ne garde le brut que tant
+      // qu'on n'a rien su lire des etapes 2 et 3. Le jour ou les selecteurs
+      // sont justes, cette colonne cesse de se remplir d'elle-meme.
+      html_etapes: rienDeNeuf
+        ? (Array.isArray(contenus) ? contenus : [contenus])
+            .map((h, i) => ({ etape: i, html: String(h || "").slice(0, 60000) }))
+        : null,
+      source: "worker",
+      lu_le: new Date().toISOString(),
+    };
+    await supabaseRequest("app_affaire_console", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      body: JSON.stringify([ligne]),
+    });
+    await logJob(job.id, "hektor_console_lecture", "done",
+      `Assistant relu : ${champs.notaires_acquereur.length} notaire(s) acquereur, `
+      + `${champs.notaires_mandant.length} notaire(s) mandant, `
+      + `unites ${champs.unites_entree_percent || "?"}/${champs.unites_sortie_percent || "?"}, `
+      + `${champs.conditions_suspensives.length} condition(s)`, {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId, genre,
+        hektor_affaire_id: idTransaction || null,
+        brut_conserve: Boolean(ligne.html_etapes),
+      });
+  } catch (erreur) {
+    await logJob(job.id, "hektor_console_lecture", "error",
+      "Lecture de l'assistant impossible -- le geste de l'utilisateur, lui, a abouti", {
+        hektor_annonce_id: annonceId, app_affaire_id: appAffaireId, genre,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      });
+  }
+}
+
 function appendIfValue(params, key, value) {
   const clean = String(value == null ? "" : value).trim();
   if (clean) params.set(key, clean);
@@ -10384,6 +10511,10 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       panier_car: etat.basket.length, contenu_car: etat.contenu.length,
     });
 
+  // Le formulaire rendu a chaque etape. Il portait deja tout ce qu'on cherche ;
+  // on ne le jette plus. Rien n'est envoye a Hektor pour l'obtenir.
+  const contenusRendus = [etat.contenu];
+
   // Les valeurs que l'app affirme. On passe le CONTENU D'ETAPE comme repli :
   // c'est lui qui porte les vraies valeurs (le mandat au format <id>-<FAMILLE>),
   // et non la coquille -- la correction du 30/08.
@@ -10697,6 +10828,7 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       annonceId, assistant, corps, pas.enregistre ? ["save", "treat"] : null);
     etat = lireEtapeAssistant(rep.text, `etape ${pas.de}->${pas.vers} ${config.label}`);
     derniere = rep;
+    if (etat.contenu) contenusRendus.push(etat.contenu);
 
     // L'acquereur s'ajoute UNE FOIS l'etape 2 rendue -- c'est la que son module
     // existe, et c'est l'etape que l'interface de Hektor passe a `newView`.
@@ -10734,6 +10866,10 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
 
   const reponseBrute = stripHtml(String((derniere && derniere.text) || ""))
     .replace(/\s+/g, " ").trim();
+
+  // APRES l'enregistrement, jamais avant : on range ce que Hektor a rendu une
+  // fois qu'on sait que le geste est parti.
+  await enregistrerLectureConsole(job, payload, annonceId, genreRepris, idRepris, contenusRendus);
 
   await setHektorAnnonceStatusValue(job, annonceId, config, `assistant_${target}`);
   return {
@@ -10981,6 +11117,13 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     forme_acquereur: tx.buyer || "(vide)",
     forme_taille: initHtml.length,
   });
+  // L'offre n'a qu'un formulaire, pas trois etapes -- mais il porte le meme
+  // module `acquereurNotaireAutresProspects`, donc le meme notaire.
+  await enregistrerLectureConsole(
+    job, payload, annonceId,
+    { offer: "offre", compromise: "compromis", sold: "vente" }[target] || null,
+    idRepris, [initHtml]);
+
   await setHektorAnnonceStatusValue(job, annonceId, config, `transaction_${target}`);
   return {
     init_error: initJson.error === true,

@@ -3358,7 +3358,11 @@ GEL que Frederic a repere le premier).*
          verif  : sur un bien a offre acceptee, l'acheteur est propose sans rien
                   taper, et la chaine du compromis est celle de l'offre
 
-[~] 2.6  PLUSIEURS ACQUEREURS   ECRAN FAIT ET EPROUVE · WORKER CORRIGE, NON EPROUVE
+[~] 2.6  PLUSIEURS ACQUEREURS   ECRAN FAIT ET EPROUVE · CORRECTIF WORKER EPROUVE INEFFICACE
+         ⚠ TITRE CORRIGE LE 10/09 : il disait « worker corrige, NON EPROUVE » alors que
+           son propre corps raconte l'essai du 07/09 (compromis 50073, services redemarres)
+           qui l'a prouve INEFFICACE. Le titre datait d'avant l'essai, et laissait croire
+           qu'il restait un simple test a faire.
          ═══ CE QUI EST FAIT ET PROUVE, essai reel du 06/09 sur 24933 ═══
          ecran     deux jetons, libelle au PLURIEL, mention « principal » sur le
                    premier. Vu a l'ecran, pas deduit du code.
@@ -3537,7 +3541,10 @@ GEL que Frederic a repere le premier).*
          ⚠ CE N'EST PAS UNE RECOPIE, C'EST UN PORTAGE : pour l'annonce le pending,
            le conflit et le badge existent ; pour les transactions RIEN n'existe.
 
-[~] 3.2  LES WORKERS « MODIFIER » -- COMPROMIS ET VENTE
+[~] 3.2  LES WORKERS « MODIFIER » -- LES TROIS GENRES
+         ⚠ TITRE CORRIGE LE 10/09 : il disait « COMPROMIS ET VENTE ». L'OFFRE a ete
+           faite et prouvee le 08/09 (33050 : 165 000 -> 167 000 ; 33048 refusee,
+           acceptee, re-refusee). Le titre laissait croire qu'elle restait a faire.
          ⭐ LE COMPROMIS EST FAIT ET PROUVE SUR L'ECRAN -- 08/09/2026.
            Quatre modifications reelles sur 50078, verifiees SUR LA FICHE HEKTOR
            (pas sur l'API : voir plus bas pourquoi c'est la difference).
@@ -3684,7 +3691,15 @@ GEL que Frederic a repere le premier).*
              est le SEUL moyen de retenir une valeur. Le retirer d'abord, ce serait
              oter le filet avant d'avoir pose le plancher. Il part avec 3.3.
 
-[ ] 3.2b LA VENTE D'ABORD (la seule mesuree), L'OFFRE ENSUITE
+[x] 3.2b LA VENTE D'ABORD (la seule mesuree), L'OFFRE ENSUITE   FAITE LE 08/09/2026
+         COCHEE LE 10/09, apres relecture du code : l'enonce est couvert, les TROIS
+         genres se modifient et chacun a ete prouve EN REEL, sur la fiche et pas
+         sur l'API (c'est la fiche qui fait foi) :
+             compromis 50078   165 000 -> 175 000, quatre fois, aucun doublon
+             vente     23301   creee, modifiee 175 000 -> 176 500, supprimee
+             offre     33050   165 000 -> 167 000  ·  33048 re-acceptee puis re-refusee
+         ⚠ Et la reserve de l'enonce est levee : le compromis N'EST PAS de classe C.
+           Hektor refusait pour une raison D'ETAT, pas de nature.
          (« possible pour l'offre : formulaire + idOffre », releve du 28/08)
          LE COMPROMIS SEULEMENT SI 0.1 L'AUTORISE
          🔄 REVISE LE 03/09. Le 28/08 declarait le compromis hors de portee parce
@@ -3730,9 +3745,23 @@ GEL que Frederic a repere le premier).*
              La vente emprunte le MEME assistant (GenericPopinStepperManager) et
              le meme chemin de reprise : le portage devrait etre court.
 
-[ ] 3.2c LE POINTEUR DE LA FICHE -- ⭐ PREALABLE DE 3.2, ETABLI LE 07/09
-         ⚠ CETTE TACHE A CHANGE DE RANG. Elle etait « un defaut qui gene l'humain
-           qui regarde Hektor ». La mesure du 07/09 en fait LE VERROU DE 3.2.
+[ ] 3.2c LE POINTEUR DE LA FICHE -- N'EST PLUS LE VERROU DE 3.2 (10/09)
+         ⚠ CETTE TACHE A CHANGE DE RANG DEUX FOIS.
+           07/09 : promue « LE VERROU DE 3.2 », sur le raisonnement ci-dessous --
+                   l'assistant ne portant aucun identifiant, ce serait LA FICHE qui
+                   designe, donc « Modifier » viserait le mauvais compromis.
+           08/09 : LE RAISONNEMENT EST TOMBE, et par une mesure. L'OUVERTURE de
+                   l'assistant accepte l'identifiant -- c'est ce que fait le
+                   JavaScript de Hektor lui-meme :
+                       popinPostInner({ mode: ...createCompromis, idCompromis, initBasket })
+                   Le worker le pose donc a l'ouverture (console_job_worker.js), et le
+                   panier le retient : 708 caracteres avec l'identifiant contre 646
+                   sans. QUATRE modifications reelles du compromis 50078 l'ont prouve.
+           ➡ L'app DESIGNE la transaction, le worker l'ouvre par son numero. Le
+             pointeur de la fiche n'est plus consulte, donc il ne bloque plus rien.
+         ⚠ LA TACHE RESTE OUVERTE quand meme, pour sa raison D'ORIGINE : le pointeur
+           designe un compromis CLOTURE, et cela trompe l'humain qui regarde Hektor.
+           Priorite redevenue basse.
 
          ─── CE QUI A ETE MESURE (etape A de 3.2, sans rien ecrire) ───
          Compromis 50075 cree depuis l'app sur 24933, laisse ACTIF. Puis lecture

@@ -133,6 +133,58 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     prix_net_vendeur    TEXT,
     honoraires_entree   TEXT,
     honoraires_sortie   TEXT,
+    -- ─── CE QUE HEKTOR REND ET QUE PERSONNE NE LISAIT (10/09/2026) ───
+    --
+    -- Inventaire des 29 349 lignes, cle par cle, avec le taux de remplissage :
+    --     propositions      offre       11 088 / 11 142    99 %
+    --     mandants          compromis   10 587 / 10 597    99 %
+    --     notaires          vente        7 610 /  7 610   100 %
+    --     mandants          vente        7 605 /  7 610    99 %
+    --     commissionAgence  vente        6 472 /  7 610    85 %
+    -- Ecartes parce que VIDES PARTOUT, mesure et non suppose :
+    --     partAdmin 0/18 207 · note (compromis) 0/10 597 · retro_* 0/7 610
+    --
+    -- ⚠ DEUX CHAMPS ECARTES BIEN QU'ILS SOIENT REMPLIS, et c'est le point :
+    --     honoraires    = honorairesEntree + honorairesSortie sur 7 608 / 7 608.
+    --                     EXACT, toujours. Deux colonnes le portent deja depuis
+    --                     le 08/09 -- le stocker une troisieme fois, c'est se
+    --                     preparer une divergence.
+    --     honorairesHT  = honoraires sur 7 403 / 7 608 (97 %). LE NOM MENT, ce
+    --                     n'est pas un montant hors taxes. Une colonne
+    --                     `honoraires_ht` aurait menti sur 7 403 lignes.
+    --   C'est la lecon du 08/09 sur tauxHonoraireSortie, reappliquee : NE JAMAIS
+    --   CLASSER PAR SYMETRIE -- deux noms qui se ressemblent ne disent pas la
+    --   meme chose.
+    --
+    -- LA LISTE ENTIERE, JAMAIS UN « PRINCIPAL ». Comme acquereurs_json depuis
+    -- 1.8 : garder le seul acquereur principal avait cache 4 536 acquereurs
+    -- reels pendant des mois. On ne refait pas ce choix-la.
+    mandants_json       TEXT,
+    -- Deux roles, tels que Hektor les rend : `entree` = le notaire du VENDEUR,
+    -- `sortie` = celui de l'ACQUEREUR.
+    -- (pas d'accolades dans ce commentaire : DDL_SQLITE est une f-string.)
+    -- Remplissage mesure : sortie 7 017, entree 2 931.
+    -- ⚠ VENTE UNIQUEMENT. L'API ne rend AUCUN notaire sur le compromis -- 0 sur
+    --   10 586, et la cle `notaires` n'existe meme pas dans sa charge. Hektor le
+    --   connait pourtant : le formulaire du compromis 24933, capture le 03/09,
+    --   porte <input name="notairesAcquereur[]" value="49708"> et propose les
+    --   DEUX roles (notairesAcquereur[] et notairesMandant[]). Seule une lecture
+    --   CONSOLE peut le recuperer -- la colonne l'accueillera sans changer.
+    -- ⚠ NE PAS CONFONDRE AVEC `notaire_id` juste au-dessus : celle-la est de
+    --   CLASSE A, l'app seule l'ecrit, et le push ne l'envoie jamais. Ici c'est
+    --   une LECTURE de Hektor. Une saisie et une lecture ne se melangent pas.
+    notaires_json       TEXT,
+    -- L'historique DATE des propositions d'une offre. C'est deja d'ici que
+    -- viennent montant, date et jours_validite (1.2b) ; on garde la suite.
+    propositions_json   TEXT,
+    -- ⚠ CE N'EST PAS UN MONTANT HORS TAXES, malgre ce que le nom suggere.
+    --   Rapports honoraires / commission mesures sur le parc : 1,2 · 2,4 · 4,8,
+    --   soit la TOTALITE, la MOITIE, le QUART. C'est LA PART QUI RESTE A
+    --   L'AGENCE apres partage -- et 1 138 ventes ne la portent pas du tout.
+    --   C'est la seule trace actuelle de ce que gouvernera le lot 4 de 3.2d
+    --   (unitesEntreePercent / unitesSortiePercent), qui vit dans l'assistant et
+    --   que l'API ne rend jamais.
+    commission_agence   TEXT,
     payload_json        TEXT,
     first_seen_at       TEXT,
     last_seen_at        TEXT,
@@ -170,6 +222,10 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS 
        json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
        json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
        json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
+       NULL AS mandants,          -- l'offre n'en porte pas
+       NULL AS notaires,          -- ni notaire
+       propositions_json AS propositions,
+       NULL AS commission,        -- ni commission
        raw_json
 FROM hektor.hektor_offre WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
@@ -184,6 +240,13 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'compromis', hektor_compromis_id,
        json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
        json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
        json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
+       mandants_json AS mandants,
+       -- ⚠ L'API NE REND AUCUN NOTAIRE SUR LE COMPROMIS : 0 sur 10 586. Ce
+       --   NULL n'est pas un oubli, c'est un CONSTAT. Hektor en tient un
+       --   (formulaire du 24933, deux roles) mais seule la console le voit.
+       NULL AS notaires,
+       NULL AS propositions,      -- elles n'existent que sur l'offre
+       NULL AS commission,        -- ni commission d'agence
        raw_json
 FROM hektor.hektor_compromis WHERE hektor_annonce_id IS NOT NULL
 UNION ALL
@@ -195,6 +258,10 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'vente', hektor_vente_id,
        json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
        json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
        json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
+       mandants_json AS mandants,
+       notaires_json AS notaires,
+       NULL AS propositions,
+       commission_agence AS commission,
        raw_json
 FROM hektor.hektor_vente WHERE hektor_annonce_id IS NOT NULL
 """
@@ -242,7 +309,10 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         print(f"[affaire_ledger] colonne app_chaine_id ajoutee a {LEDGER_TABLE}")
     for neuve in ("jours_validite", "taux_honoraires", "notaire_id",
                   "date_fin_retractation", "acquereurs_json",
-                  "prix_net_vendeur", "honoraires_entree", "honoraires_sortie"):
+                  "prix_net_vendeur", "honoraires_entree", "honoraires_sortie",
+                  # 10/09 : le brut que Hektor rend et que personne ne lisait.
+                  "mandants_json", "notaires_json", "propositions_json",
+                  "commission_agence"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -453,8 +523,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 state, montant, date, date_acte,
                 sequestre, date_fin_retractation, jours_validite,
                 prix_net_vendeur, honoraires_entree, honoraires_sortie,
+                mandants_json, notaires_json, propositions_json, commission_agence,
                 payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
@@ -480,6 +551,12 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 prix_net_vendeur=excluded.prix_net_vendeur,
                 honoraires_entree=excluded.honoraires_entree,
                 honoraires_sortie=excluded.honoraires_sortie,
+                -- 10/09 : CLASSE B/C, donc RELUES. Hektor fait foi sur ce qu'il
+                -- rend ; les figer serait le gel que 1.2 avait evite.
+                mandants_json=excluded.mandants_json,
+                notaires_json=excluded.notaires_json,
+                propositions_json=excluded.propositions_json,
+                commission_agence=excluded.commission_agence,
                 payload_json=excluded.payload_json,
                 last_seen_at=excluded.last_seen_at, present_in_hektor=1
             """,
@@ -497,6 +574,10 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 normalize_text(r["prix_net_vendeur"]) or None,
                 normalize_text(r["honoraires_entree"]) or None,
                 normalize_text(r["honoraires_sortie"]) or None,
+                normalize_text(r["mandants"]) or None,
+                normalize_text(r["notaires"]) or None,
+                normalize_text(r["propositions"]) or None,
+                normalize_text(r["commission"]) or None,
                 normalize_text(r["raw_json"]) or None,
                 first_seen, run_ts,
             ),
@@ -993,7 +1074,12 @@ def ledger_rows_for_push(con: sqlite3.Connection) -> list[dict[str, object]]:
             d.pop(interdite, None)
         # ⚠ acquereurs_json est jsonb cote Supabase : sans ce decodage on y
         # pousserait une CHAINE DE CARACTERES contenant du JSON, pas du JSON.
-        for jcol in ("acquereur_json", "acquereurs_json", "payload_json"):
+        # ⚠ TOUTE colonne jsonb cote Supabase doit figurer ici. Sans le
+        # decodage, PostgREST accepte la chaine et range du texte dans du jsonb --
+        # sans erreur, donc invisible. mandants/notaires/propositions ont rejoint
+        # la liste le 10/09, en meme temps que leurs colonnes.
+        for jcol in ("acquereur_json", "acquereurs_json", "payload_json",
+                     "mandants_json", "notaires_json", "propositions_json"):
             v = d.get(jcol)
             if isinstance(v, str) and v:
                 try:
