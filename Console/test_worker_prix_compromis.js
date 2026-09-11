@@ -51,6 +51,13 @@ function arg(nom, defaut) {
     process.exit(1);
   }
   const prix = String(arg("prix", "178000")).trim();
+  // --acquereurs 605030,49234   (defaut : celui deja en place, donc inchange)
+  const acquereurs = String(arg("acquereurs", CIBLE.acquereur))
+    .split(",").map((x) => x.trim()).filter(Boolean);
+  if (!acquereurs.length) {
+    console.error("--acquereurs doit porter au moins un identifiant");
+    process.exit(1);
+  }
   if (!/^\d+$/.test(prix)) {
     console.error("--prix doit etre un nombre entier");
     process.exit(1);
@@ -77,7 +84,12 @@ function arg(nom, defaut) {
       transaction_date: CIBLE.date,
       amount: prix,
       sale_price: prix,
-      buyer_contact_id: CIBLE.acquereur,
+      buyer_contact_id: acquereurs[0],
+      // ⚠ 2.6 -- LA CLE N'EST POSEE QU'A PARTIR DE DEUX. En dessous, la charge
+      //   du cas courant ne change pas d'un octet : c'est la regle du front
+      //   (api.ts), et on la reproduit a l'identique pour ne rien tester
+      //   d'autre que ce qu'on veut tester.
+      buyer_contact_ids: acquereurs.length > 1 ? acquereurs : null,
     },
     priority: 7,
   };
@@ -95,6 +107,7 @@ function arg(nom, defaut) {
   console.log("statut  ", r.status);
   console.log("job     ", jobId);
   console.log("prix    ", prix, "  sur le compromis", CIBLE.compromis_id);
+  console.log("acquereurs", acquereurs.join(", "));
   const t = await r.text();
   if (r.status >= 300) console.log(t.slice(0, 400));
 })().catch((e) => { console.error(e); process.exit(1); });
