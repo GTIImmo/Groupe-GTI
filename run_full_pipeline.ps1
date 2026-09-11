@@ -605,6 +605,33 @@ Invoke-Step -Label "phase2 affaire ledger refresh+push" -Arguments @(
     "--push"
 ) -WorkerKey "supabase.affaire_ledger"
 
+# 11/09/2026 -- L'ENTRETIEN DE LA LECTURE CONSOLE DES COMPROMIS.
+#
+# ICI ET PAS AILLEURS, et c'est une question de CALENDRIER. Le registre des
+# affaires vient d'etre rafraichi juste au-dessus : une transaction creee dans
+# Hektor depuis hier n'existe chez nous que depuis cette seconde. Une tache
+# planifiee lancee a 01:00 l'aurait lue LE LENDEMAIN -- un jour de retard pour
+# rien. Placee ici, elle est lue dans la foulee.
+#
+# CE QU'ELLE PREND : les compromis JAMAIS LUS, et ceux dont la date du BIEN a
+# bouge depuis notre lecture. Rien d'autre -- pas de relecture a l'age.
+# Le signal vient de la tache 0.3, mesuree le 03/09 : " seul l'ENREGISTREMENT
+# deplace la date du bien ". Mesure du 11/09 sur les 9 216 compromis lus : UNE
+# SEULE fiche etait a reprendre. En regime normal, quelques secondes.
+#
+# /!\ ETAPE NON BLOQUANTE, ET C'EST DELIBERE. C'est un ENRICHISSEMENT : un 403
+# ou une session expiree ne doit pas priver l'agence de sa nuit de
+# synchronisation. Le script s'arrete de lui-meme sur 403 et rend 3 ; la nuit
+# suivante reprend ou il en etait, sans rien noter.
+Invoke-OptionalStepWithRetry -Label "phase2 entretien compromis console" -Arguments @(
+    "phase2\sync\sync_hektor_compromis_console.py",
+    "--limit", "150",
+    "--stale-days", "0",
+    "--suivre-annonce",
+    "--courtoisie",
+    "--refresh-session-on-expired"
+) -WorkerKey "console.entretien_compromis"
+
 # C.19 (29/08) -- LES CHAMPS D'AFFAIRE APPARTIENNENT A L'APP.
 # PLACE ICI, ET PAS AILLEURS : affaire_ledger.py ci-dessus vient de relire le miroir
 # Hektor et de reposer SA valeur dans le ledger. Nos corrections doivent donc etre

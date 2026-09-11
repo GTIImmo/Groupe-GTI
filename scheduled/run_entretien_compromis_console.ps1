@@ -5,6 +5,12 @@
 # zero erreur. Les 9 restants portent `present_in_hektor = false` -- Hektor ne
 # les rend plus, donc personne ne peut les ouvrir.
 #
+# /!\ L'ENTRETIEN AUTOMATIQUE N'EST PAS ICI. Il est une ETAPE du run
+#   quotidien (run_full_pipeline.ps1), juste apres le rafraichissement du
+#   registre des affaires -- une transaction creee dans Hektor n'existe chez
+#   nous qu'a cette seconde-la, et une tache planifiee a 01:00 l'aurait lue
+#   LE LENDEMAIN. Ce lanceur-ci sert a le faire A LA MAIN, entre deux nuits.
+#
 # CE SCRIPT EXISTE POUR QUE CE TRAVAIL NE SOIT PAS A REFAIRE. Sans lui, les
 # compromis nouveaux n'entrent jamais dans la lecture console, et ceux qui
 # changent chez Hektor gardent chez nous l'etat du jour ou on les a lus.
