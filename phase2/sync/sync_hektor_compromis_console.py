@@ -61,6 +61,9 @@ SESSION = RACINE / "Console" / "sessions" / "storage_state_admin.json"
 EXTRACTEUR = RACINE / "Console" / "extract_hektor_compromis_console.js"
 LOGIN = RACINE / "Console" / "playwright_login.js"
 TABLE = "app_affaire_console"
+# Le miroir porte la date de derniere modification du BIEN -- le signal de la
+# tache 0.3, seul mouvement fiable quand une transaction change chez Hektor.
+MIROIR = RACINE / "data" / "hektor.sqlite"
 
 
 def charger_env(chemin: Path, prefixe: str = "") -> None:
@@ -194,22 +197,78 @@ def cibles(args: argparse.Namespace) -> list[dict[str, Any]]:
         con.close()
 
 
-def deja_lues(stale_jours: int) -> set[int]:
+def dates_annonces() -> dict[str, str]:
+    """La date de derniere modification de CHAQUE bien, prise au miroir.
+
+    ⚠ C'EST LE SIGNAL ETABLI PAR LA TACHE 0.3, et il a ete mesure, pas suppose :
+      « seul l'ENREGISTREMENT la deplace ». Quatre positifs et quatre
+      contre-temoins le 03/09 -- elle ne derive pas seule, la LECTURE ne la
+      touche pas, ouvrir l'assistant et fermer SANS enregistrer ne la touche pas.
+      C'est donc la bonne facon de savoir qu'une transaction a bouge chez Hektor.
+
+    ⚠ ET LE SIGNAL EST LARGE : la date du bien bouge aussi pour une photo ou un
+      prix. Il se trompe DU BON COTE -- on relira parfois pour rien, jamais on ne
+      laissera passer une transaction modifiee.
+
+    ⚠ PAS `app_dossier_current.source_updated_at` : mesure du 11/09, elle porte
+      la date d'ENREGISTREMENT du bien (2018 pour l'annonce 24933), pas celle de
+      sa derniere modification. Se tromper de colonne, c'est ne relire jamais.
+    """
+    if not MIROIR.exists():
+        return {}
+    con = sqlite3.connect(f"file:{MIROIR.as_posix()}?mode=ro", uri=True)
+    try:
+        return {str(a): str(d or "") for a, d in
+                con.execute("SELECT hektor_annonce_id, date_maj FROM hektor_annonce")}
+    finally:
+        con.close()
+
+
+def _instant(texte: str):
+    """Une date Hektor ou ISO, ramenee a un instant comparable. None si illisible."""
+    t = str(texte or "").strip().replace("Z", "+00:00").replace(" ", "T")
+    if not t:
+        return None
+    try:
+        v = datetime.fromisoformat(t)
+    except ValueError:
+        return None
+    return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+
+
+def deja_lues(stale_jours: int, suivre_annonce: bool = False) -> set[int]:
     """Ce que la table porte deja et qu'il est inutile de relire.
 
     ⚠ ON NE SAUTE PAS CE QUE LE WORKER A ECRIT. Sa lecture est la plus fraiche
       qui soit -- elle date du geste de l'utilisateur.
+
+    `suivre_annonce` est le mode ENTRETIEN : on ne relit plus par rotation, on
+    relit CE QUI A BOUGE. Une fiche est reprise si la date de son bien est
+    posterieure a notre lecture. Mesure du 11/09 sur les 9 216 compromis lus :
+    UN SEUL etait a relire. L'entretien coute donc quelques secondes par nuit,
+    la ou une rotation a 90 jours en demandait cent par nuit pour rien.
+
+    ⚠ QUAND UNE DES DEUX DATES MANQUE, ON NE RELIT PAS -- 299 cas, des biens que
+      le miroir ne porte plus. Relire sans pouvoir comparer, ce serait les
+      reprendre CHAQUE nuit sans jamais rien apprendre.
     """
+    par_annonce = dates_annonces() if suivre_annonce else {}
     vues: set[int] = set()
     depart = 0
     while True:
         lot = supabase_get(TABLE, {
-            "select": "app_affaire_id,lu_le", "order": "app_affaire_id.asc",
+            "select": "app_affaire_id,hektor_annonce_id,lu_le",
+            "order": "app_affaire_id.asc",
             "offset": str(depart), "limit": "1000"})
         if not isinstance(lot, list) or not lot:
             break
         for ligne in lot:
             quand = str(ligne.get("lu_le") or "")
+            if suivre_annonce:
+                bouge = _instant(par_annonce.get(str(ligne.get("hektor_annonce_id") or ""), ""))
+                lue = _instant(quand)
+                if bouge and lue and bouge > lue:
+                    continue          # le bien a bouge depuis : on la reprend
             if stale_jours > 0 and quand:
                 try:
                     age = (datetime.now(timezone.utc)
@@ -373,6 +432,9 @@ def arguments() -> argparse.Namespace:
     p.add_argument("--limit", type=int, default=1, help="Nombre maximum. 0 = sans limite.")
     p.add_argument("--stale-days", type=int, default=90,
                    help="Relire ce qui a plus de N jours. 0 = ne jamais relire.")
+    p.add_argument("--suivre-annonce", action="store_true",
+                   help="ENTRETIEN : relire une fiche quand la date de son BIEN a "
+                        "bouge depuis notre lecture, au lieu d'une rotation a l'age.")
     p.add_argument("--force", action="store_true",
                    help="Relire meme ce que la table porte deja. Sert aux paliers d'essai.")
     p.add_argument("--dry-run", action="store_true")
@@ -410,7 +472,7 @@ def main() -> int:
         "lues": [], "erreurs": [],
     }
 
-    vues = set() if (args.dry_run or args.force) else deja_lues(args.stale_days)
+    vues = set() if (args.dry_run or args.force) else deja_lues(args.stale_days, args.suivre_annonce)
     retenues = [c for c in toutes if int(c["app_affaire_id"]) not in vues]
     if args.limit > 0:
         retenues = retenues[:args.limit]
