@@ -170,6 +170,30 @@ const contactsCurrentView = 'app_contacts_current'
 const contactStatsCurrentTable = 'app_contact_stats_current'
 const contactRelationsCurrentView = 'app_contact_relations_current'
 const contactSearchesCurrentView = 'app_contact_searches_current'
+/** UNE PERSONNE, UNE LIGNE — regle de Frederic, 11/09/2026.
+ *
+ *  Hektor cree une SECONDE fiche, vide, pour le second membre d'un menage. Elle
+ *  est rattachee aux memes biens et aux memes transactions, mais elle n'a pas
+ *  d'identite : l'annuaire en affichait 15 618, toutes intitulees « Mr./Mme »,
+ *  impossibles a distinguer l'une de l'autre.
+ *
+ *  ⚠ ON LA MASQUE, ON NE LA REND PAS TROUVABLE. J'avais d'abord propose de lui
+ *    donner le nom de sa porteuse pour qu'elle remonte a la recherche : deux
+ *    resultats pour une seule personne, ce qui est pire que le mal. Frederic a
+ *    tranche l'inverse, et il a raison -- le serveur sait deja resoudre le
+ *    menage, l'ecran n'a pas a montrer la couture.
+ *
+ *  ⚠ ON NE MASQUE QUE CELLES QUI ONT UNE PORTEUSE. 14 080 liens sur 124 455
+ *    pointent vers une fiche SUPPRIMEE chez Hektor (verifie par API, 404) :
+ *    personne ne peut les nommer, et les cacher ferait disparaitre un mandant
+ *    d'un bien sans explication. Elles restent, sous « Contact <numero> ».
+ *
+ *  ⚠ `neq` SEUL NE SUFFIT PAS : en SQL, `couple_role <> 'x'` est NUL quand la
+ *    colonne est nulle, donc il ecarterait TOUS les contacts ordinaires. D'ou
+ *    le `is.null` explicite.
+ */
+const SANS_FICHE_DE_MENAGE = 'couple_role.is.null,couple_role.neq.menage_resolu'
+
 const contactsListingSelect = [
   'hektor_contact_id',
   'hektor_agence_id',
@@ -195,6 +219,11 @@ const contactsListingSelect = [
   'marital_status',
   'typologies_json',
   'relation_roles_json',
+  // Le MENAGE (11/09/2026). `couple_role` vaut « menage_resolu » pour la fiche
+  // vide dont la porteuse est connue, « menage_orphelin » quand elle a disparu
+  // de Hektor, et rien pour tout le reste. Voir 26bis-COUPLES.
+  'hektor_couple_contact_id',
+  'couple_role',
   'linked_annonce_count',
   'active_search_count',
   'total_search_count',
@@ -2775,7 +2804,8 @@ export async function loadContactsPage({
   const { data, error, count } = await applyContactFiltersToQuery(
     supabase
       .from(contactsCurrentView)
-      .select(contactsListingSelect, { count: countMode }),
+      .select(contactsListingSelect, { count: countMode })
+      .or(SANS_FICHE_DE_MENAGE),          // une personne, une ligne
     filters,
   )
     .order('duplicate_group_count', { ascending: false, nullsFirst: false })
@@ -8112,6 +8142,7 @@ export async function searchMandantContactOptions(input: {
       .from(contactsCurrentView)
       .select(contactsListingSelect)
       .eq('archive', false)
+      .or(SANS_FICHE_DE_MENAGE)           // une personne, une ligne
       .order('date_maj', { ascending: false, nullsFirst: false })
       .order('display_name', { ascending: true })
       .limit(limit),

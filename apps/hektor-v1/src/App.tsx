@@ -6921,7 +6921,31 @@ function mergeDetailContacts(current: DetailContact, incoming: DetailContact): D
 
 function buildDetailContactsFromProprietaires(value: string | null | undefined, idPrefix = 'contact') {
   const contacts = new Map<string, DetailContact>()
-  parseJson<Array<Record<string, unknown>>>(value, []).forEach((item, index) => {
+  const items = parseJson<Array<Record<string, unknown>>>(value, [])
+
+  // ═══ LA FICHE DE MENAGE NE FAIT PLUS UNE LIGNE DE PLUS ═══     11/09/2026
+  //
+  // Hektor rattache au bien DEUX fiches pour un menage : celle qui porte
+  // l'identite, et une seconde, vide, pour le second membre. Mesure du 11/09 :
+  // 31 899 biens sur 58 528 listent les deux, et l'ecran en faisait deux lignes
+  // dont une intitulee « Mr./Mme », sans rien d'autre.
+  //
+  // ⚠ LE CODE DE FUSION EXISTAIT DEJA -- `contactMergeKey` regroupe sur
+  //   `couple:<refCouple>` et `mergeDetailContacts` sait assembler. Il ne
+  //   servait jamais : `hasUsableData` ecartait la fiche vide AVANT lui.
+  //
+  // ⚠ ON NE GARDE QUE CELLES DONT LA PORTEUSE EST DANS LE MEME LOT. Une fiche
+  //   vide toute seule resterait vide a l'ecran : mieux vaut ne pas l'afficher
+  //   que d'afficher un mandant sans nom.
+  const numerosDuLot = new Set(
+    items.map((x) => safeText(x.id)).filter(Boolean))
+  const aUnePorteuseIci = (item: Record<string, unknown>) => {
+    const ref = safeText(item.refCouple)
+    const moi = safeText(item.id)
+    return Boolean(ref) && ref !== moi && numerosDuLot.has(ref)
+  }
+
+  items.forEach((item, index) => {
     const coords = (item.coordonnees as Record<string, unknown> | undefined) ?? {}
     const locality = ((item.localite as Record<string, unknown> | undefined)?.localite as Record<string, unknown> | undefined) ?? {}
     const postalCode = safeText(locality.code)
@@ -6953,7 +6977,11 @@ function buildDetailContactsFromProprietaires(value: string | null | undefined, 
       negotiatorId: safeText(item.id_negociateur),
     }
     const hasUsableData = Boolean(contact.firstName || contact.lastName || contact.phone || contact.email || contact.address || contact.comment)
-    if (!hasUsableData || (isGenericContactName(contact) && !contact.phone && !contact.email && !contact.address && !contact.comment)) return
+    // La fiche de menage n'a rien a elle : elle passe quand meme, pour aller se
+    // fondre dans sa porteuse juste en dessous.
+    const ficheDeMenage = !hasUsableData && aUnePorteuseIci(item)
+    if (!ficheDeMenage
+      && (!hasUsableData || (isGenericContactName(contact) && !contact.phone && !contact.email && !contact.address && !contact.comment))) return
     const key = contactMergeKey(contact)
     const existing = contacts.get(key)
     contacts.set(key, existing ? mergeDetailContacts(existing, contact) : contact)
