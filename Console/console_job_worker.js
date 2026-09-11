@@ -567,12 +567,45 @@ function isHektorRootAdminIdentity(identity) {
   return !identity.impersonateUserId;
 }
 
+// ═══ LE DOMAINE CIBLE GAGNE LA COLLISION DE COOKIES ═══        11/09/2026
+//
+// CE QUI S'EST PASSE. Depuis que Ma Boite Immo fait entrer dans Hektor par
+// www.gti-immobilier.fr, le login rapporte DEUX `PHPSESSID` -- un par domaine.
+// Ce pot etait indexe par le seul NOM du cookie : le second ecrasait le premier.
+// Le worker envoyait donc a groupe-gti-immobilier.la-boite-immo.com le jeton de
+// l'AUTRE domaine. Hektor ne le reconnait pas et rend la page de connexion, d'ou
+// « Session Hektor expiree ou invalide » sur une session pourtant valide, puis
+// l'echec du retour en compte administrateur.
+//
+// ⚠ LE DEFAUT DORMAIT DEPUIS TOUJOURS. Tant qu'il n'existait qu'un domaine, deux
+//   cookies de meme nom ne pouvaient pas se rencontrer. Rien n'avait change chez
+//   nous : c'est l'apparition du second domaine qui l'a revele.
+//
+// LA REGLE, la plus petite qui repare : a nom egal, on garde le cookie du domaine
+// vers lequel on va reellement travailler (celui de HEKTOR_BASE_URL). Les cookies
+// d'un autre domaine ne sont conserves que si AUCUN cookie du meme nom n'existe
+// pour la cible -- on ne perd donc rien de ce qui servait avant.
+function cookieDomainMatchesTarget(domaine, cible) {
+  const d = String(domaine || "").replace(/^\./, "").toLowerCase();
+  const c = String(cible || "").toLowerCase();
+  if (!d || !c) return false;
+  return d === c || c.endsWith("." + d);
+}
+
 function cookieJarFromStorageState(state) {
   const jar = new Map();
   const now = Date.now() / 1000;
+  let cible = "";
+  try { cible = new URL(HEKTOR_BASE_URL).hostname; } catch (_) { cible = ""; }
   for (const cookie of Array.isArray(state.cookies) ? state.cookies : []) {
     if (cookie.expires && cookie.expires > 0 && cookie.expires <= now) continue;
-    jar.set(cookie.name, { ...cookie });
+    const pourLaCible = cookieDomainMatchesTarget(cookie.domain, cible);
+    const dejaLa = jar.get(cookie.name);
+    // Un cookie de la cible remplace toujours ; un cookie etranger ne s'installe
+    // que sur une place libre, et ne deloge jamais celui de la cible.
+    if (dejaLa && !pourLaCible) continue;
+    if (dejaLa && pourLaCible && dejaLa.__cible) continue;
+    jar.set(cookie.name, { ...cookie, __cible: pourLaCible });
   }
   return jar;
 }
