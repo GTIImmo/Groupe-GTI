@@ -223,6 +223,13 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 ## 6. C.9 — LA CRÉATION PART DE L'APP  ·  7. 26bis-③
 ```
 [ ] C.9      creer un bien SANS passer par Hektor         1 a 2 sem.
+[ ] C.9-couple  CREER UN MENAGE SANS HEKTOR            ajoutee le 11/09
+             aujourd'hui l'app envoie le bloc conjoint (spouse_*, que le
+             worker traduit en prenom_m2 / nom_m2) et c'est HEKTOR qui cree
+             la seconde fiche du menage et pose le lien. A la coupure,
+             PERSONNE ne le fera. L'app doit donc savoir produire la PAIRE.
+             ⚠ A ecrire PENDANT QUE HEKTOR VIT : c'est le seul moment ou l'on
+               peut comparer notre paire a la sienne. Voir 26bis-COUPLES.
 [ ] 26bis-3  le serveur tient une annonce que le miroir ignore
              -> trancher les 46 colonnes (37 dans un seul blob)   collee a C.9
 ```
@@ -5099,6 +5106,64 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
                  plus, ce filet disparait.
 
                  A FAIRE AVANT C.9, comme 26bis.
+
+[ ] 26bis-COUPLES  LE LIEN ENTRE DEUX PERSONNES          AJOUTEE LE 11/09
+                 ⚠ TROUVEE EN CHERCHANT POURQUOI 34 % DES MANDANTS DU
+                   RATTRAPAGE N'AVAIENT PAS DE NOM. Ce n'etait pas un defaut
+                   de recuperation.
+
+                 CE QUE HEKTOR FAIT, ET QUE NOTRE CHAINE IGNORE. Chaque contact
+                 porte un `refCouple`, numero de MENAGE qui vaut l'identifiant
+                 de la fiche portant l'identite. Quand la civilite est
+                 « Mr./Mme », Hektor cree une SECONDE fiche, vide, pour le
+                 second membre. Chez GTI elle n'a jamais ete remplie.
+
+                    contacts au miroir                     355 978
+                    sans nom ni prenom                     133 343   37,5 %
+                    dont nommables par refCouple            96 877
+                    annuaire Supabase affichant « Mr./Mme »  15 618
+                    relations affichees sans nom             19 384
+                    biens listant les DEUX fiches du menage  31 899
+
+                 ⚠ L'API CONFIRME LE MIROIR : ContactById sur neuf muets rend
+                   `nom: ""`, `prenom: ""`, `coordonnees: null`. Aucun run n'y
+                   changera rien. Ce n'est pas a rattraper, c'est a RESOUDRE.
+
+                 ⚠ ET HEKTOR LE RESOUT DEJA A L'AFFICHAGE. Son formulaire de
+                   compromis ecrit `Mr./Mme Test SELL AND SIGNE /` : civilite,
+                   identite de la porteuse, puis un slash qui est la place vide
+                   du second prenom. Notre chaine est la seule a ne pas le faire.
+
+                 LA REGLE D'AFFICHAGE, ARRETEE PAR FREDERIC LE 11/09 :
+                 UNE PERSONNE, UNE LIGNE. La fiche vide sort de la recherche et
+                 de l'annuaire ; elle reste en base avec son identifiant et ses
+                 rattachements. Ne PAS la rendre trouvable : deux resultats pour
+                 une personne seraient pires que le mal.
+
+                 ⚠ SAUF CELLES QUI N'ONT PLUS DE PORTEUSE : 14 080 liens sur
+                   124 455 pointent vers une fiche SUPPRIMEE chez Hektor
+                   (verifie par API : 404). Les masquer ferait disparaitre un
+                   mandant d'un bien sans explication. Les garder visibles sous
+                   « Contact <numero> », jamais sous « Mr./Mme ».
+
+                 OU CA SE POSE, REPERE LE 11/09 :
+                    normalize_source.py:912          l'INSERT du miroir
+                    build_contacts_layer.py:63       display_name, LA ligne
+                    build_contacts_layer.py:437      FROM hektor_contact
+                    App.tsx buildDetailContactsFromProprietaires
+                                                     le code de fusion EXISTE
+                                                     deja, un filtre l'empeche
+                                                     de servir (hasUsableData)
+
+                 ⚠ LE LIEN S'ECRIT EN NUMERO APP, PAS EN NUMERO HEKTOR. Le
+                   registre app_contact couvre les 355 978 contacts : 110 375
+                   liens sur 124 455 sont traduisibles tout de suite. L'ecran
+                   lit le lien APP, donc il est utilise des le premier jour --
+                   la regle du plan, « ce qui est utilise est ce qui est
+                   verifie », et jamais de numero genere mais dormant. Le jour
+                   de la renumerotation des contacts, le lien NE BOUGE PAS.
+
+                 A FAIRE AVANT C.9, comme les trois autres 26bis.
 
 [ ] 26bis-RELATIONS  LE LIEN ENTRE UNE PERSONNE ET UN BIEN   AJOUTEE LE 31/08
                  ⚠ TROUVEE PAR UNE QUESTION DE FREDERIC, pas par l'audit :

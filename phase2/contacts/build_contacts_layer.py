@@ -8,7 +8,7 @@ import re
 import sqlite3
 import unicodedata
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -57,9 +57,82 @@ class ContactRow:
     typologie_json: str | None
     raw_json: str | None
     synced_at: str | None
+    # Le MENAGE selon Hektor (son `refCouple`) : les fiches d'un meme menage
+    # partagent cette valeur, et la porteuse est celle dont l'identifiant l'egale.
+    hektor_couple_contact_id: str | None = None
+    # L'identite de la porteuse, resolue APRES le chargement (voir resoudre_menages).
+    # None tant qu'on n'a pas cherche, ou quand la porteuse a disparu de Hektor.
+    couple_identite_porteuse: str | None = None
+
+    @property
+    def est_fiche_de_menage(self) -> bool:
+        """La seconde fiche d'un menage : vide, et rattachee a une autre.
+
+        Mesure du 11/09 sur les 355 978 contacts : 133 343 fiches sont sans nom
+        NI prenom, et 133 286 portent la civilite « Mr./Mme ». Ce n'est pas un
+        defaut de recuperation -- l'API rend la meme chose, `coordonnees: null`
+        compris. C'est la place du SECOND MEMBRE, que Hektor cree pour tout le
+        parc et que personne n'a jamais remplie ici.
+        """
+        if clean_text(self.nom) or clean_text(self.prenom):
+            return False
+        lien = clean_text(self.hektor_couple_contact_id)
+        return bool(lien) and lien != clean_text(self.hektor_contact_id)
+
+    @property
+    def couple_role(self) -> str | None:
+        """Ce que l'ecran doit savoir, en UN champ.
+
+            « menage_resolu »    fiche vide, porteuse connue  -> A MASQUER
+                                 l'identite est ailleurs, la montrer ferait deux
+                                 lignes pour une personne  (regle de Frederic,
+                                 11/09 : « une personne, une ligne »)
+            « menage_orphelin »  fiche vide, porteuse DISPARUE de Hektor
+                                 -> A GARDER : elle est rattachee a un bien reel,
+                                 la masquer ferait disparaitre un mandant sans
+                                 explication
+            None                 tout le reste
+
+        On ne pose PAS de role « porteur » : il faudrait savoir qui pointe vers
+        nous, et personne ne s'en servirait. Regle du plan : jamais un champ
+        genere mais inutilise.
+        """
+        if not self.est_fiche_de_menage:
+            return None
+        return "menage_resolu" if clean_text(self.couple_identite_porteuse) else "menage_orphelin"
 
     @property
     def display_name(self) -> str:
+        # ── LA FICHE DE MENAGE EMPRUNTE L'IDENTITE DE SA PORTEUSE.
+        #
+        # ⚠ ET C'EST EXACTEMENT CE QUE FAIT HEKTOR. Son formulaire de compromis
+        #   affiche pour la fiche muette 485955 : « Mr./Mme Test SELL AND SIGNE / »
+        #   -- la civilite de la fiche, l'identite de la porteuse 141053, puis un
+        #   slash qui est la place vide du second prenom. On reproduit son geste
+        #   au lieu d'en inventer un : c'est ce que l'utilisateur voit deja
+        #   ailleurs, et aucun prefixe fabrique ne vient s'y ajouter -- une
+        #   porteuse nommee « ABDENOURI MONSIEUR ET MADAME » donnerait sinon
+        #   « M. et Mme ABDENOURI MONSIEUR ET MADAME ».
+        if self.est_fiche_de_menage:
+            if clean_text(self.couple_identite_porteuse):
+                return " ".join(part for part in [self.civilite, self.couple_identite_porteuse]
+                                if clean_text(part))
+            # Porteuse disparue de Hektor : 14 080 liens sur 124 455, verifie par
+            # appel API (404). « Mr./Mme » tout court rendrait ces fiches
+            # indistinguables les unes des autres ; le numero, lui, les separe.
+            return f"Contact {self.hektor_contact_id}"
+        # ── UNE CIVILITE N'EST PAS UN NOM.
+        #
+        # ⚠ C'ETAIT LE DEFAUT D'ORIGINE, et il survivait au correctif ci-dessus.
+        #   L'ancienne formule joignait civilite + prenom + nom, et son repli
+        #   « Contact <numero> » ne se declenchait QUE si les trois manquaient.
+        #   Une fiche vide portant « Mr./Mme » sortait donc « Mr./Mme » tout
+        #   court -- 133 286 fiches au depart, et il en restait ENCORE 22 414
+        #   apres la resolution des menages : celles qui n'ont aucun lien, donc
+        #   personne pour les nommer. Toutes identiques a l'ecran, impossibles a
+        #   distinguer l'une de l'autre.
+        if not clean_text(self.nom) and not clean_text(self.prenom):
+            return f"Contact {self.hektor_contact_id}"
         return " ".join(part for part in [self.civilite, self.prenom, self.nom] if clean_text(part)) or f"Contact {self.hektor_contact_id}"
 
     @property
@@ -223,6 +296,7 @@ def contact_from_row(row: sqlite3.Row) -> ContactRow:
         typologie_json=clean_text(row["typologie_json"]) or None,
         raw_json=clean_text(row["raw_json"]) or None,
         synced_at=clean_text(row["synced_at"]) or None,
+        hektor_couple_contact_id=clean_text(row["hektor_couple_contact_id"]) or None,
     )
 
 
@@ -258,6 +332,11 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
             nom TEXT,
             prenom TEXT,
             display_name TEXT NOT NULL,
+            -- Le MENAGE. `hektor_couple_contact_id` est la reference de Hektor,
+            -- assumee comme telle ; le numero de l'app arrive apres, pose par le
+            -- registre d'identite. `couple_role` est ce que l'ecran lit.
+            hektor_couple_contact_id TEXT,
+            couple_role TEXT,
             archive INTEGER NOT NULL DEFAULT 0,
             date_enregistrement TEXT,
             date_maj TEXT,
@@ -417,6 +496,11 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
         ("supabase_sync_eligible", "INTEGER NOT NULL DEFAULT 0"),
         ("eligibility_reasons_json", "TEXT NOT NULL DEFAULT '[]'"),
         ("adresse", "TEXT"),
+        # Le menage, 11/09/2026. La table n'est jamais recreee -- elle est videe
+        # puis remplie -- donc sans ces deux lignes l'insertion tomberait sur
+        # « no such column » des le premier run.
+        ("hektor_couple_contact_id", "TEXT"),
+        ("couple_role", "TEXT"),
     ):
         if column_name not in existing_columns:
             conn.execute(f"ALTER TABLE app_contact_current ADD COLUMN {column_name} {column_type}")
@@ -433,7 +517,7 @@ def load_contacts(
     sql = """
         SELECT hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom,
                archive, date_enregistrement, date_maj, email, portable, fixe, ville, code_postal, adresse,
-               typologie_json, raw_json, synced_at
+               typologie_json, raw_json, synced_at, hektor_couple_contact_id
         FROM hektor_contact
         WHERE NULLIF(TRIM(hektor_contact_id), '') IS NOT NULL
     """
@@ -444,7 +528,52 @@ def load_contacts(
     sql += " ORDER BY CAST(hektor_contact_id AS INTEGER)"
     if limit and limit > 0:
         sql += f" LIMIT {int(limit)}"
-    return [contact_from_row(row) for row in conn.execute(sql, params).fetchall()]
+    return resoudre_menages(conn, [contact_from_row(row) for row in conn.execute(sql, params).fetchall()])
+
+
+def resoudre_menages(conn: sqlite3.Connection, contacts: list[ContactRow]) -> list[ContactRow]:
+    """Donne a chaque fiche de menage l'identite de sa porteuse.
+
+    ⚠ ON CHERCHE EN BASE, PAS DANS LE LOT. `load_contacts` accepte une liste
+      d'identifiants -- c'est ce que fait refresh_contact_inproc.py pour un seul
+      contact. La porteuse n'est alors PAS dans le lot charge, et se contenter de
+      la chercher en memoire donnerait « Contact 457053 » a une fiche dont le nom
+      existe. Une requete, quelle que soit la taille du lot.
+
+    ⚠ ON NE FABRIQUE AUCUN NOM. Si la porteuse a disparu de Hektor -- 14 080 cas
+      sur 124 455 liens, verifie par appel API qui repond 404 -- le champ reste
+      vide et l'affichage retombe sur le numero. « Mieux vaut un champ absent
+      qu'un champ menteur. »
+    """
+    a_resoudre = {c.hektor_couple_contact_id for c in contacts if c.est_fiche_de_menage}
+    a_resoudre.discard(None)
+    if not a_resoudre:
+        return contacts
+
+    identites: dict[str, str] = {}
+    ids = [str(x) for x in a_resoudre]
+    # SQLite plafonne le nombre de parametres : on decoupe, comme partout ailleurs.
+    for depart in range(0, len(ids), 400):
+        tranche = ids[depart:depart + 400]
+        marques = ",".join("?" for _ in tranche)
+        for ligne in conn.execute(
+            f"""SELECT hektor_contact_id, prenom, nom FROM hektor_contact
+                 WHERE CAST(hektor_contact_id AS TEXT) IN ({marques})""",
+            tranche,
+        ).fetchall():
+            identite = " ".join(
+                part for part in [clean_text(ligne["prenom"]), clean_text(ligne["nom"])] if part
+            )
+            if identite:
+                identites[clean_text(ligne["hektor_contact_id"])] = identite
+
+    if not identites:
+        return contacts
+    return [
+        replace(c, couple_identite_porteuse=identites.get(c.hektor_couple_contact_id))
+        if c.est_fiche_de_menage else c
+        for c in contacts
+    ]
 
 
 def table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
@@ -1118,6 +1247,8 @@ def build_contact_rows(
             "nom": contact.nom,
             "prenom": contact.prenom,
             "display_name": contact.display_name,
+            "hektor_couple_contact_id": contact.hektor_couple_contact_id,
+            "couple_role": contact.couple_role,
             "archive": contact.archive,
             "date_enregistrement": contact.date_enregistrement,
             "date_maj": contact.date_maj,

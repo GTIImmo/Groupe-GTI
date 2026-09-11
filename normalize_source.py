@@ -911,8 +911,9 @@ def upsert_contact_from_sources(
         """
         INSERT INTO hektor_contact(
             hektor_contact_id, hektor_agence_id, hektor_negociateur_id, civilite, nom, prenom, archive, date_enregistrement,
-            date_maj, email, portable, fixe, ville, code_postal, adresse, typologie_json, raw_json, synced_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            date_maj, email, portable, fixe, ville, code_postal, adresse, typologie_json,
+            hektor_couple_contact_id, raw_json, synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(hektor_contact_id) DO UPDATE SET
             hektor_agence_id = excluded.hektor_agence_id,
             hektor_negociateur_id = excluded.hektor_negociateur_id,
@@ -929,6 +930,14 @@ def upsert_contact_from_sources(
             code_postal = CASE WHEN NULLIF(TRIM(excluded.code_postal),'') IS NULL THEN code_postal ELSE excluded.code_postal END,
             adresse = CASE WHEN NULLIF(TRIM(excluded.adresse),'') IS NULL THEN adresse ELSE excluded.adresse END,
             typologie_json = CASE WHEN excluded.typologie_json IS NULL OR TRIM(excluded.typologie_json) IN ('','[]','null') THEN typologie_json ELSE excluded.typologie_json END,
+            -- « VIDE NE GAGNE PAS », et ici c'est un choix, pas un reflexe.
+            -- Un lien de menage peut venir du listing comme du detail ; si une
+            -- source passe sans le porter, l'ecraser retirerait d'un coup le
+            -- nom de 96 877 fiches. Le cas inverse -- un couple DEFAIT chez
+            -- Hektor dont on garderait le lien -- est rare et se voit a l'ecran.
+            -- On protege donc le lien comme une identite, pas comme un etat.
+            hektor_couple_contact_id = CASE WHEN NULLIF(TRIM(excluded.hektor_couple_contact_id),'') IS NULL
+                THEN hektor_couple_contact_id ELSE excluded.hektor_couple_contact_id END,
             raw_json = excluded.raw_json,
             synced_at = excluded.synced_at
         """,
@@ -949,6 +958,10 @@ def upsert_contact_from_sources(
             inner.get("code") if isinstance(inner, dict) else None,
             inner.get("adresse") if isinstance(inner, dict) else None,
             json_dumps(source.get("typologie")),
+            # Le listing ET le detail portent `refCouple` : on prend celui qui
+            # repond, comme pour tous les champs ci-dessus. Hektor ecrit « 0 »
+            # pour dire « aucun », et normalized_id le ramene a vide.
+            normalized_id(source.get("refCouple")) or normalized_id(item.get("refCouple")),
             json_dumps(source),
             now_utc_iso(),
         ),

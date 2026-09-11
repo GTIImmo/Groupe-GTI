@@ -34,9 +34,18 @@ class ContactsLayerTest(unittest.TestCase):
                         fixe TEXT,
                         ville TEXT,
                         code_postal TEXT,
+                        -- ⚠ CE SCHEMA EST UNE COPIE, et il avait deja DIVERGE :
+                        --   `adresse` etait au vrai miroir et pas ici, donc ce
+                        --   test tombait sur « no such column » AVANT le chantier
+                        --   des menages du 11/09. Meme defaut que la liste des
+                        --   morceaux du lecteur d'assistant, qui avait diverge le
+                        --   jour meme. Toute colonne lue par load_contacts doit
+                        --   etre ajoutee ici le meme jour.
+                        adresse TEXT,
                         typologie_json TEXT,
                         raw_json TEXT,
-                        synced_at TEXT
+                        synced_at TEXT,
+                        hektor_couple_contact_id TEXT
                     );
                     CREATE TABLE sync_annonce_contact_link (
                         hektor_annonce_id TEXT,
@@ -80,7 +89,7 @@ class ContactsLayerTest(unittest.TestCase):
                     """
                     INSERT INTO hektor_contact VALUES (
                         ?, '10', '20', 'M.', ?, ?, ?, '2024-01-01', ?, ?, ?, NULL,
-                        'Lyon', '69000', '["mandant"]', '{}', '2026-05-25'
+                        'Lyon', '69000', NULL, '["mandant"]', '{}', '2026-05-25', NULL
                     )
                     """,
                     [
