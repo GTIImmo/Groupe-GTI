@@ -421,6 +421,22 @@ Invoke-Step -Label "phase2 registre identite contacts" -Arguments @(
     "phase2\identite\registre_contacts.py"
 ) -WorkerKey "phase2.registre_contacts"
 
+# 11/09/2026 -- SI HEKTOR NOMME QUELQU'UN DANS UNE TRANSACTION, L'APP DOIT
+# POUVOIR LE NOMMER. L'eligibilite ne tenait qu'a deux criteres, tous deux lies
+# a ce qui est ACTIF : une annonce active, ou une recherche active. Elle est
+# anterieure a la lecture console, et elle laissait dehors les parties des
+# transactions DEJA FAITES -- 1 191 mandants, 465 acquereurs -- ainsi que LES
+# NOTAIRES, dont 137 sur 143 : ils n'entrent dans AUCUNE relation, l'API ne les
+# rend jamais, et seul le formulaire de l'assistant les connait.
+#
+# ICI ET PAS AILLEURS : apres la reconstruction de la couche, qui remet
+# l'eligibilite a ce que SA regle dit, et AVANT le push, qui lit le resultat.
+# Relit Supabase en direct et PAGINE -- app_affaire_console y compte 9 216
+# lignes contre 1 400 en local -- meme patron que annonces_app_seule.py.
+Invoke-Step -Label "phase2 perimetre contacts cites par la console" -Arguments @(
+    "phase2\contacts\elargir_perimetre_console.py"
+) -WorkerKey "phase2.perimetre_console"
+
 Invoke-Step -Label "phase2 quality checks" -Arguments @(
     "phase2\checks\run_quality_checks.py"
 ) -WorkerKey "phase2.quality_checks"
