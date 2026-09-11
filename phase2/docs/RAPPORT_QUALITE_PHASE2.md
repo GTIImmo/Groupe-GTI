@@ -4,8 +4,8 @@ Controles automatises de coherence sur `phase2.sqlite`.
 
 ## Metriques
 
-- `vue_generale_total` : 56666 | attente : doit rester stable entre deux runs hors variation source
-- `demandes_total` : 21866 | attente : doit rester stable entre deux runs hors variation source
+- `vue_generale_total` : 61184 | attente : doit rester stable entre deux runs hors variation source
+- `demandes_total` : 23124 | attente : doit rester stable entre deux runs hors variation source
 - `missing_titles` : 0 | attente : 0
 - `view_generale_without_dossier` : 0 | attente : 0
 - `demandes_without_view_generale` : 0 | attente : 0
@@ -48,7 +48,7 @@ Controles automatises de coherence sur `phase2.sqlite`.
     "hektor_annonce_id": "10003",
     "no_dossier": "EM18604",
     "no_mandat": "3914",
-    "mandat_id": "10003:3715",
+    "mandat_id": "3715",
     "hektor_mandat_id": "3914",
     "numero": "3181",
     "mandat_annonce_id": "10383"
