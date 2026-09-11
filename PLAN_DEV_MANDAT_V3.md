@@ -36,9 +36,9 @@ Maquette de référence : artifact `mandat-rubrique-v3.html` (8 crans pilotés p
 | 2 | Squelette piloté par `ckStage` + cycle de vie 6 crans (Numéro→Diffusé) + rendu conditionnel des blocs | à faire |
 | 3 | Sans n° / À éditer / Édité : générer + check complétude (missingFields + champs Hektor) + éditer + UI voie manuscrite | à faire |
 | 4 | Envoyé / Signé / Attente : `MandatSignatureTracker` en timeline + demande validation + fils d'échange inline | à faire |
-| 5 | Validé / Échu : caractéristiques compact + mandants résumé + avenant + historique prix + historique mandats | à faire |
-| 6 | Illustrations + animations + finitions (densité, focus, harmonie tokens cockpit) | à faire |
-| 7 (backend, séparé) | Voie manuscrite : marquer doc uploadé `signature.status='signed'` (source manuscrite) → `ckStage` = Signé | à faire |
+| 5 | Validé / Échu : caractéristiques compact + mandants résumé + avenant + historique prix + historique mandats | **FAIT** (commit cd1a23e) |
+| 6 | Illustrations + animations + finitions (densité, focus, harmonie tokens cockpit) | **FAIT** (commit 733bb56) |
+| 7 (backend, séparé) | Voie manuscrite : marquer doc uploadé `signature.status='signed'` (source manuscrite) → `ckStage` = Signé | **FAIT** (commit c226e14) |
 
 ## États → contenu (cible = maquette)
 - **Sans n°** (`man_creer`) : bloc unique « Générer le numéro » (garde-fou registre) + historique permanent.

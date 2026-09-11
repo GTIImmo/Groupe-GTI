@@ -215,11 +215,12 @@ def ceder_au_verrou(attente_max: float) -> float:
     return cede
 
 
-def conseil_reprise(dernier_id_sur: str) -> str:
+def conseil_reprise(dernier_id_sur: str, descending: bool = False) -> str:
     """Le conseil de reprise, par IDENTIFIANT et jamais par position."""
     if not dernier_id_sur:
         return "Reprise : aucun lot complet, tout reprendre depuis le debut."
-    return f"Reprise : --start-after-id {dernier_id_sur}"
+    option = "--start-before-id" if descending else "--start-after-id"
+    return f"Reprise : {option} {dernier_id_sur}"
 
 
 def main() -> int:
@@ -234,6 +235,19 @@ def main() -> int:
              "superieur a N. Un identifiant ne bouge pas, contrairement a une position : "
              "la liste des acquereurs a perdu 67 entrees en 5 h le 22/08. Prendre l'id du "
              "dernier contact reellement reconstruit et pousse, que le run affiche en sortant.",
+    )
+    parser.add_argument(
+        "--descending", action="store_true",
+        help="Parcourir des identifiants les PLUS GRANDS aux plus petits, donc du contact "
+             "le plus recent au plus ancien. C'est l'ordre de la methode de reference "
+             "(backfill_contact_missing.ps1 : « RECENTS d'abord »), et c'est la ou vivent "
+             "les recherches : 12,7 %% des acquereurs de la derniere tranche d'ids en "
+             "portent une, contre 0 %% dans la tranche 433 737-453 638.",
+    )
+    parser.add_argument(
+        "--start-before-id", type=int, default=0,
+        help="Reprise en parcours DECROISSANT : ne traite que les contacts d'id "
+             "STRICTEMENT INFERIEUR a N. Pendant du --start-after-id du parcours croissant.",
     )
     parser.add_argument(
         "--start-at", type=int, default=0,
@@ -303,7 +317,16 @@ def main() -> int:
     else:
         ids = active_search_contact_ids(args.phase2_db)
         libelle = "contacts a recherche active"
+    if args.descending:
+        ids = list(reversed(ids))
     population = len(ids)
+    if args.start_before_id and args.start_before_id > 0:
+        avant = len(ids)
+        ids = [c for c in ids if int(c) < args.start_before_id]
+        print(
+            f"[recherches-actives] reprise avant l'id {args.start_before_id} : "
+            f"{avant - len(ids)} contacts deja faits ecartes, {len(ids)} restants"
+        )
     if args.start_after_id and args.start_after_id > 0:
         avant = len(ids)
         ids = [c for c in ids if int(c) > args.start_after_id]
@@ -361,7 +384,7 @@ def main() -> int:
                   batch_pause_seconds=args.fetch_batch_pause_seconds)
     except Exception as exc:  # noqa: BLE001
         print(f"[recherches-actives] LECTURE HEKTOR EN ECHEC : {exc}")
-        print(f"[recherches-actives] {conseil_reprise('')}")
+        print(f"[recherches-actives] {conseil_reprise('', args.descending)}")
         return 2
     print(f"[recherches-actives] lecture terminee ({round(time.time() - start)}s) -- etapes locales")
 
@@ -416,7 +439,7 @@ def main() -> int:
             print(
                 f"[recherches-actives] COUPE-CIRCUIT : {consecutive_failed} lots consecutifs en echec"
                 f" -- run ABANDONNE a {done}/{total} ({round(time.time() - start)}s). {cause}"
-                f" {conseil_reprise(dernier_id_sur)}"
+                f" {conseil_reprise(dernier_id_sur, args.descending)}"
             )
             break
         # Pause de fin de VAGUE (23/08/2026). Le delai par fiche aplatit le profil DANS un
@@ -440,7 +463,7 @@ def main() -> int:
         print(
             f"[recherches-actives] TERMINE AVEC {failed_batches} lot(s) en echec sur "
             f"{((total - 1) // max(args.batch_size, 1)) + 1} -- {done} contacts traites en "
-            f"{round(time.time() - start)}s. {conseil_reprise(dernier_id_sur)}"
+            f"{round(time.time() - start)}s. {conseil_reprise(dernier_id_sur, args.descending)}"
         )
         return 1  # code non nul -> la tache planifiee signale l'echec partiel
     # Afficher le point de reprise MEME quand tout s'est bien passe : la passe complete se
@@ -451,7 +474,7 @@ def main() -> int:
     suite = (
         "liste terminee, rien ne reste apres cet id."
         if fin_de_liste
-        else f"session suivante : --start-after-id {dernier_id_sur}"
+        else f"session suivante : {'--start-before-id' if args.descending else '--start-after-id'} {dernier_id_sur}"
     )
     print(
         f"[recherches-actives] termine OK : {done} contacts en {round(time.time() - start)}s"

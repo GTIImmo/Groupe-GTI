@@ -311,7 +311,7 @@ def attendre_que_la_voie_soit_libre(maxi_minutes: int) -> str:
         try:
             aucun_travail_console_en_cours()
             if attendu:
-                print(f"[courtoisie] voie libre apres {attendu} s", file=sys.stderr)
+                print(f"[courtoisie] voie libre apres {attendu} s")
             return ""
         except RuntimeError as exc:
             if "Travaux console en cours" not in str(exc):
@@ -319,8 +319,7 @@ def attendre_que_la_voie_soit_libre(maxi_minutes: int) -> str:
             if time.time() - debut > maxi_minutes * 60:
                 return f"travail console toujours en cours apres {maxi_minutes} min"
             if not attendu:
-                print("[courtoisie] un travail console tourne -- on s'efface",
-                      file=sys.stderr)
+                print("[courtoisie] un travail console tourne -- on s'efface")
             time.sleep(15)
             attendu = int(time.time() - debut)
 
@@ -463,8 +462,7 @@ def main() -> int:
         traites += len(lot)
         if index < len(lots):
             if args.wave_every > 0 and traites % args.wave_every < args.batch_size:
-                print(f"[vague] {traites} lus -- pause de {args.wave_pause_seconds} s",
-                      file=sys.stderr)
+                print(f"[vague] {traites} lus -- pause de {args.wave_pause_seconds} s")
                 time.sleep(args.wave_pause_seconds)
             elif args.batch_pause_seconds > 0:
                 time.sleep(args.batch_pause_seconds)

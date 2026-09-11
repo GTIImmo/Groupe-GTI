@@ -52,7 +52,9 @@ param(
     [switch]$SansCourtoisie
 )
 
-$ErrorActionPreference = "Stop"
+# Continue : un avertissement ne doit pas interrompre un run de plusieurs heures.
+# Les vrais echecs sont rendus par le CODE DE SORTIE du script python.
+$ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
 $py = Join-Path $root ".venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { $py = "python" }
@@ -71,7 +73,13 @@ if (-not $SansCourtoisie) { $argsPy += "--courtoisie" }
 Write-Output "=== RATTRAPAGE COMPROMIS CONSOLE -- depart $(Get-Date -Format 'HH:mm:ss') ==="
 Write-Output "    arret programme : $StopAt   journal : $journal"
 
-& $py $argsPy 2>&1 | Tee-Object -FilePath $journal
+# /!\ PAS DE `2>&1` ICI. PowerShell 5.1 enveloppe chaque ligne d'erreur d'un
+# executable natif dans un ErrorRecord ; avec ErrorActionPreference = Stop, la
+# PREMIERE ligne ecrite sur la sortie d'erreur TUE le run. Mesure du 10/09 :
+# le rattrapage s'est arrete net a la premiere vague, apres 2 000 compromis,
+# sur une simple ligne de progression. Le script python n'ecrit plus que sur
+# la sortie standard, et on ne redirige plus rien.
+& $py $argsPy | Tee-Object -FilePath $journal
 $code = $LASTEXITCODE
 
 # /!\ UN 403 N'EST PAS UN INCIDENT A REESSAYER, C'EST LE DEBUT D'UN BANNISSEMENT.

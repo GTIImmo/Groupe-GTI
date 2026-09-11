@@ -10,6 +10,8 @@
 # reessaie JAMAIS derriere un echec : c'est ce qui a aggrave chaque incident de la semaine.
 param(
     [long]$StartAfterId  = 0,
+    [long]$StartBeforeId = 0,
+    [switch]$Descending,
     [int]$SessionSize    = 2000,
     [int]$PauseSeconds   = 300,
     [int]$MaxSessions    = 20
@@ -23,7 +25,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 $log = Join-Path $logDir "rattrapage_boucle_$(Get-Date -Format 'yyyy-MM-dd_HH-mm-ss').log"
 Start-Transcript -Path $log -Append | Out-Null
 
-$courant = $StartAfterId
+$courant = if ($Descending) { $StartBeforeId } else { $StartAfterId }
 $n = 0
 $fini = $false
 try {
@@ -31,7 +33,12 @@ try {
         $n++
         Write-Output "=== SESSION $n -- depart apres l'id $courant -- $(Get-Date -Format 'HH:mm:ss') ==="
         $a = @("--scope", "acquereurs", "--limit", [string]$SessionSize)
-        if ($courant -gt 0) { $a += @("--start-after-id", [string]$courant) }
+        if ($Descending) {
+            $a += "--descending"
+            if ($courant -gt 0) { $a += @("--start-before-id", [string]$courant) }
+        } elseif ($courant -gt 0) {
+            $a += @("--start-after-id", [string]$courant)
+        }
         $sortie = & $py $script @a 2>&1
         $code = $LASTEXITCODE
         $sortie | ForEach-Object { Write-Output $_ }
@@ -46,13 +53,15 @@ try {
             $fini = $true
             break
         }
-        if ($texte -match "--start-after-id\s+(\d+)\s*$" -or $texte -match "session suivante\s*:\s*--start-after-id\s+(\d+)") {
+        $opt = if ($Descending) { "--start-before-id" } else { "--start-after-id" }
+        if ($texte -match "session suivante\s*:\s*$([regex]::Escape($opt))\s+(\d+)") {
             $suivant = [long]$Matches[1]
         } else {
             Write-Output "=== AUCUN identifiant de reprise annonce -- BOUCLE ARRETEE par securite ==="
             break
         }
-        if ($suivant -le $courant) {
+        $bloque = if ($Descending) { ($courant -gt 0) -and ($suivant -ge $courant) } else { $suivant -le $courant }
+        if ($bloque) {
             Write-Output "=== l'identifiant de reprise n'avance pas ($courant -> $suivant) -- ARRET ==="
             break
         }
@@ -66,4 +75,6 @@ try {
 } finally {
     Stop-Transcript | Out-Null
 }
-if (-not $fini) { exit 1 }
+# Atteindre le plafond de vagues est un cas NORMAL, pas un echec : seul un arret
+# premature (session en erreur, reprise bloquee) merite un code non nul.
+if (-not $fini -and $n -lt $MaxSessions) { exit 1 }
