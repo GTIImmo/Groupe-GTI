@@ -63,7 +63,11 @@ LOGIN = RACINE / "Console" / "playwright_login.js"
 TABLE = "app_affaire_console"
 
 
-def charger_env(chemin: Path) -> None:
+def charger_env(chemin: Path, prefixe: str = "") -> None:
+    """Charge un .env dans l'environnement, sans jamais ecraser ce qui existe.
+
+    `prefixe` restreint aux cles qui commencent par lui. Voir charger_porte_web.
+    """
     if not chemin.exists():
         return
     for ligne in chemin.read_text(encoding="utf-8", errors="ignore").splitlines():
@@ -72,8 +76,27 @@ def charger_env(chemin: Path) -> None:
             continue
         cle, valeur = ligne.split("=", 1)
         cle = cle.strip()
+        if prefixe and not cle.startswith(prefixe):
+            continue
         if cle and cle not in os.environ:
             os.environ[cle] = valeur.strip().strip('"').strip("'")
+
+
+def charger_porte_web() -> None:
+    """Les adresses HEKTOR_* viennent de Console/.env, et EN PREMIER.
+
+    ⚠ POURQUOI, mesure du 11/09. Ce pilote passe son environnement entier au
+      sous-processus node (`env = dict(os.environ)`), et dotenv n'ecrase jamais
+      une variable deja posee. En chargeant d'abord le .env de la RACINE, il
+      imposait donc au node l'adresse de la porte API -- l'ancien domaine --
+      alors que node aurait pris celle de Console/.env. Resultat : « Hektor 403
+      sur l'ouverture » des la premiere lecture, sur une session pourtant valide.
+
+    ⚠ SEULEMENT LE PREFIXE HEKTOR_ : ce fichier porte aussi des secrets et des
+      reglages propres au worker, qui n'ont rien a faire ici. On prend l'adresse
+      de la porte web, rien d'autre.
+    """
+    charger_env(RACINE / "Console" / ".env", prefixe="HEKTOR_")
 
 
 def maintenant() -> str:
@@ -254,6 +277,18 @@ def ligne_pour_supabase(cible: dict[str, Any], resultat: dict[str, Any]) -> dict
         "notaires_mandant": champs.get("notaires_mandant"),
         "montant_honoraire_entree": champs.get("montant_honoraire_entree"),
         "taux_honoraire_entree": champs.get("taux_honoraire_entree"),
+        # ⚠ L'IDENTITE, ET ELLE MANQUAIT -- 0 ligne sur 8 600.
+        #
+        # Ce convertisseur est anterieur au lecteur d'identite : il ne copiait
+        # que les NUMEROS. Resultat mesure le 11/09 : `parties_json` vide sur la
+        # totalite du rattrapage, alors que le lecteur avait bel et bien capte
+        # les noms que Hektor affiche dans son formulaire.
+        #
+        # Ces noms ne font pas double emploi avec le miroir : ils viennent de
+        # Hektor LUI-MEME, et ils nomment des fiches que la couche contacts ne
+        # sait pas nommer -- les notaires (typologie « partenaire »), et les
+        # fiches de menage vides (voir 26bis-COUPLES).
+        "parties_json": champs.get("parties"),
         # ⚠ NI LES UNITES NI LES CONDITIONS : elles vivent aux etapes 2 et 3,
         #   que cette passe ne parcourt pas. Elles sont donc ABSENTES de cette
         #   ligne -- et c'est sans danger : MESURE DU 10/09 sur une ligne
@@ -364,6 +399,7 @@ def arguments() -> argparse.Namespace:
 
 def main() -> int:
     args = arguments()
+    charger_porte_web()          # AVANT la racine : voir charger_porte_web
     charger_env(ENV_RACINE)
     charger_env(ENV_APP)
 
