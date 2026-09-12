@@ -4025,6 +4025,119 @@ GEL que Frederic a repere le premier).*
          verif : le journal d'un travail reel montre TOUS les champs attendus par
                  Hektor, et la modale porte ceux que l'arbitrage a retenus
 
+[ ] 3.2e LA VENTE, COMME LE COMPROMIS                     AJOUTEE LE 11/09
+         Demande de Frederic : « il manque la partie vente de la modale et le
+         worker qui n'a pas ete analyse comme le compromis, je pense que c'est
+         dans le 3.2d ».
+
+         ⚠ ELLE NE TIENT PAS DANS 3.2d, ET C'EST POUR CA QU'ELLE EXISTE. 3.2d
+           s'appuie ENTIEREMENT sur le compromis : son inventaire vient du
+           journal du compromis 50072 et du releve des etapes du compromis. Ses
+           quatre lots sont ecrits pour lui. La vente n'y figure nulle part.
+
+         ─── CE QU'ON SAIT DEJA, deux releves EN LECTURE ───
+         08/09, assistant de la vente ouvert : ni prixPublique, ni prixNetVendeur,
+           ni sequestre, ni date d'acte, ni retractation, ni conditions
+           suspensives. L'etape 3 (`recapitulatifVente`) ne porte AUCUN champ :
+           c'est un recapitulatif. Il n'y a donc pas de net vendeur a recalculer
+           -- et surtout pas a en inventer un.
+         10/09, etape 2 de la vente 23300 : elle NOMME les intervenants et donne
+           la part de chacun dans la commission, ce que le compromis ne montrait
+           pas (fixture commissions_vente_23300_2026-09-10.html).
+
+         ─── L'ECART, MESURE LE 11/09 ───
+             champs que le worker sait PROUVER   compromis 7   vente 4
+                 vente : amount, sale_price, buyer_fees, transaction_date
+                 il manque net_seller_price, sequestration, signature_date
+             classement A / B / C des champs     compromis FAIT   vente JAMAIS
+             creation eprouvee de bout en bout   compromis OUI    vente OUI
+
+         ⚠ CE QUI EST DEJA CORRIGE, ne pas le refaire : la branche `sold`
+           passait AVANT le test de reprise -- une modification aurait pose le
+           prix PREREMPLI de l'annonce. Corrige le 08/09 au soir
+           (`if (target === "sold" && enReprise)`), verifie le 11/09.
+
+         ─── CE QU'ELLE CONTIENT ───
+         1. LE CLASSEMENT A / B / C des champs de la vente.
+            Console/campagne_champs_vente.js est ECRIT et n'a JAMAIS tourne
+            (0 vente dans app_affaire_console au 11/09).
+            /!\ IL ECRIT CHEZ HEKTOR : il demande une vente de TEST et un feu
+                vert explicite, comme la campagne du compromis.
+         2. CE QUE LA MODALE PORTE face a ce que l'assistant accepte -- la
+            question de 3.2d, posee cette fois a la vente.
+         3. ⚠ CORRECTION DU 12/09 -- LA CREATION MARCHE DEJA, je l'avais dit
+            « jamais aboutie » sans lire les journaux. SEPT ventes creees et UNE
+            modifiee, toutes confirmees par les DEUX portes (fiche + API) :
+
+                30/08 21:48  62774  echec, rien produit   (avant correctifs)
+                30/08 21:53  62774  vente 23291 creee
+                31/08 05:02  62774  vente 23292 creee
+                31/08 05:57  62774  vente 23293 creee
+                31/08 05:58  62774  echec, rien produit
+                03/09 07:20  24933  vente 23294 creee
+                03/09 13:20  24933  vente 23298 creee
+                04/09 09:06  24933  vente 23299 creee
+                08/09 15:54  24933  vente 23301 creee
+                08/09 15:55  24933  vente 23301 MODIFIEE -> 176 500
+                10/09 15:48  24933  echec : parti SANS acquereur
+
+            Il reste donc a REJOUER l'essai du 10/09, le seul dont la cause est
+            corrigee depuis (heritage du compromis + garde-fou d'etape) et qui
+            n'a jamais ete repris. Ce n'est pas « faire marcher la vente »,
+            c'est refermer un essai.
+
+         ─── ⭐ L'INVENTAIRE DE LA VENTE, FAIT LE 12/09 ───
+         Releve par Console/releve_assistant_etapes.js (N'ECRIT JAMAIS) et
+         confronte a la session Chrome reelle. 17 champs de donnee distincts :
+
+           etape 0   prixDeVente · dateVente
+                     montantHonoraireEntree · tauxHonoraireEntree
+                     montantHonoraireSortie · tauxHonoraireSortie
+                     mandat / selectedMandat · mandants[] · notairesMandant[]
+                     acquereurs[] · notairesAcquereur[] · typeUser
+                     agenceReseauSelected (20 agences -- HORS PERIMETRE, decision
+                     de Frederic)
+           etape 2   unitesEntreePercent / unitesSortiePercent
+                     intervenants(Entree|Sortie)[id][ca_percent, ca_montant,
+                     percent, montant, type, typeCommission]
+           etape 3   recapitulatifVente : AUCUN champ de donnee
+
+         CE QUE L'APP ENVOIE AUJOURD'HUI : QUATRE.
+             prixDeVente · dateVente (branche sold, creation ET reprise)
+             acquereurs[] · notairesAcquereur[] (poses pour tous les genres)
+         Les treize autres, l'app ne les pose pas -- et Hektor les CONSERVE,
+         puisque le worker repose fidelement le formulaire rendu.
+
+         ─── ⭐⭐ LE PRE-REMPLISSAGE VIENT DE LEUR SERVEUR -- MESURE LE 12/09 ───
+         « Transformer en vente » ouvert dans Hektor, session reelle, RIEN
+         enregistre. Le formulaire revient avec le compromis dedans :
+
+             champ                vente pre-remplie   compromis 50078
+             prix de vente              179 000           179 000
+             honoraires vendeur          10 000            10 000
+             taux                         5,587             5,587
+             mandat                       10261             10261
+             mandants                  les TROIS         les TROIS
+             acquereur                   605030            605030
+             date                    12-09-2026        04-09-2026  <- le JOUR
+
+         ⚠ NOUS N'ENVOYONS QUE TROIS PARAMETRES TECHNIQUES (idAnnonce, basket,
+           initBasket) : c'est LEUR serveur qui va chercher le compromis pointe
+           par la fiche. Frederic l'avait dit, la mesure le confirme.
+         ⚠ ET C'EST CE QUI DISPARAIT A LA COUPURE. Tant que Hektor repond, ce
+           pre-remplissage est gratuit et MASQUE le trou. Apres, c'est l'app qui
+           devra tout reprendre.
+         ✅ HERITAGE COMPLETE LE 12/09 : la modale reprend desormais aussi les
+           honoraires d'entree et le net vendeur, en plus du prix, du mandat, des
+           honoraires de sortie et des acquereurs. Sans les honoraires d'entree,
+           la verification « prix = net + honoraires » perdait son terme du
+           milieu et l'ecran affichait un faux ecart.
+         ⚠ LA DATE NE S'HERITE PAS : une vente porte la sienne, celle du jour.
+           Hektor fait pareil.
+
+         verif : une vente creee ET modifiee depuis l'app, relue chez Hektor,
+                 avec le meme journal de preuve que le compromis 50078
+
 [ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)

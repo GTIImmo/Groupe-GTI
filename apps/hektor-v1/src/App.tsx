@@ -15276,6 +15276,33 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const honoraires = String(c.honoraires_sortie ?? '').trim()
     if (honoraires && honoraires !== '0' && honoraires !== '0.00') setStatusChangeBuyerFees(honoraires)
 
+    // ⭐ LA COMMISSION SUIT LE PRIX -- ajoute le 12/09, sur une mesure.
+    //
+    // RELEVE DANS HEKTOR, session reelle, « Transformer en vente » ouvert sans
+    // rien enregistrer : son formulaire revient avec le prix ET la commission du
+    // compromis, a la decimale pres.
+    //     prix de vente         179 000    = compromis
+    //     honoraires vendeur     10 000    = compromis
+    //     taux                    5,587    = compromis
+    //     date                12-09-2026   <- le JOUR, pas celle du compromis
+    // C'est LEUR serveur qui va chercher le compromis pointe par la fiche ; nous
+    // ne lui envoyons que trois parametres techniques.
+    //
+    // ⚠ ET C'EST EXACTEMENT CE QUI DISPARAIT A LA COUPURE. Tant que Hektor
+    //   repond, ce pre-remplissage est gratuit et masque le trou. Le jour ou il
+    //   ne repond plus, c'est CETTE fonction qui devra tout reprendre.
+    //   Frederic, 12/09 : « la commission doit etre la meme comme le prix que
+    //   sur le compromis ».
+    //
+    // ⚠ LES HONORAIRES D'ENTREE SONT EN LECTURE SEULE dans la modale -- ils
+    //   viennent du mandat et l'app ne les modifie pas. On les REPREND quand
+    //   meme : sans eux, la verification « prix = net + honoraires » n'a plus
+    //   son terme du milieu et l'ecran afficherait un faux ecart.
+    const honorairesEntree = String(c.honoraires_entree ?? '').trim()
+    if (honorairesEntree) setStatusChangeHonorairesEntree(honorairesEntree)
+    const netVendeur = String(c.prix_net_vendeur ?? '').trim()
+    if (netVendeur && netVendeur !== '0' && netVendeur !== '0.00') setStatusChangeNetSellerPrice(netVendeur)
+
     // ⭐ L'ACQUEREUR, ET C'EST LUI QUI COMPTE : sans lui, Hektor refuse d'avancer
     //   l'assistant -- en silence. On reprend TOUS ceux du compromis (1.8), le
     //   premier restant `buyer_contact_id`.
