@@ -12158,6 +12158,70 @@ const CHAMPS_PROUVABLES = {
   offre: { amount: "montant", transaction_date: "date" },
 };
 
+// ═══ UNE SAISIE DISPARAIT UNE FOIS ARRIVEE ═══                 11/09/2026
+//
+// LA REGLE VIENT DU PLAN, et elle y est ecrite en toutes lettres :
+//     « ON NE PROTEGE PAS LA DONNEE, ON PROTEGE L'ECRITURE. Ce que l'app a
+//       saisi n'est pas une valeur qu'elle possede : c'est une ECRITURE EN
+//       ATTENTE (...). Une valeur possedee ecrase Hektor pour toujours ; une
+//       saisie en attente cherche a le rejoindre, et DISPARAIT UNE FOIS
+//       ARRIVEE. »
+//
+// CE QUI SE PASSAIT SANS CELA, mesure le 11/09 sur le compromis 50078. L'app
+// avait saisi 177 000 le matin ; le carnet l'a garde. Hektor porte 178 000
+// depuis l'apres-midi, prouve et relu. Mais le contrat d'autorite fait gagner
+// l'app, donc la modale continuait d'afficher 177 000 -- et le run de nuit
+// l'aurait remis la, indefiniment. Pire : le carnet portait 177 000 de prix
+// pour 165 000 de net et 10 000 d'honoraires, soit 2 000 d'ecart, une
+// incoherence que Hektor n'a pas (178 000 = 168 000 + 10 000).
+//
+// ⚠ ON NE RETIRE QUE CE QUI EST PROUVE CONFORME. S'il reste un ecart, la
+//   saisie n'est PAS arrivee : elle doit rester en attente, c'est tout son
+//   sens. Et on ne retire jamais un champ qu'on n'a pas envoye.
+//
+// La correspondance vient de app_modifier_affaire_optimistic, qui ecrit le
+// carnet : une cle de charge peut alimenter DEUX champs (`sale_price` sert de
+// prix public, et de montant quand `amount` est absent).
+const CHAMPS_CARNET_PAR_CHARGE = {
+  amount: ["montant"],
+  sale_price: ["prix_publique", "montant"],
+  net_seller_price: ["prix_net_vendeur"],
+  buyer_fees: ["honoraires"],
+  sequestration: ["sequestre"],
+  transaction_date: ["date"],
+  signature_date: ["date_acte"],
+};
+// Le net vendeur part CALCULE, sans cle de charge : on le reconnait par son nom
+// chez Hektor, sinon il resterait au carnet pour toujours.
+const CHAMPS_CARNET_PAR_HEKTOR = { prixNetVendeur: ["prix_net_vendeur"] };
+
+async function retirerDuCarnetCeQuiEstArrive(job, appAffaireId, arrivees) {
+  const id = Number(appAffaireId);
+  if (!Number.isFinite(id) || id <= 0 || !arrivees || !arrivees.size) return;
+  const champs = Array.from(arrivees);
+  try {
+    await supabaseRequest(
+      `app_affaire_champ_app?app_affaire_id=eq.${id}`
+      + `&champ=in.(${champs.map((c) => encodeURIComponent(c)).join(",")})`,
+      { method: "DELETE" });
+    await logJob(job.id, "app_carnet_saisie", "done",
+      `Saisie(s) arrivee(s) chez Hektor, retiree(s) du carnet : ${champs.join(", ")}. `
+      + "Le registre reprend desormais ce que Hektor dit.", {
+        app_affaire_id: id, champs,
+      });
+  } catch (error) {
+    // ⚠ ON N'ECHOUE PAS LE TRAVAIL POUR CA. La modification est passee chez
+    //   Hektor ; un carnet qui garde une ligne de trop se voit et se repare,
+    //   un travail rejoue cinq fois fabrique des doublons.
+    await logJob(job.id, "app_carnet_saisie", "error",
+      `Retrait du carnet impossible (${champs.join(", ")}) -- la modification chez `
+      + "Hektor est bien passee. Le registre gardera l'ancienne valeur jusqu'au retrait.", {
+        app_affaire_id: id, champs,
+        error: error && error.message ? error.message : String(error),
+      });
+  }
+}
+
 function memeValeurHektor(envoye, chezHektor) {
   const a = String(envoye == null ? "" : envoye).trim().replace(",", ".");
   const b = String(chezHektor == null ? "" : chezHektor).trim().replace(",", ".");
@@ -12200,15 +12264,18 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
   let lu = null;
   let ecarts = [];
   let conformes = [];
+  // Le detail de ce qui est PROUVE ARRIVE : le libelle sert au journal, ceci
+  // sert a retirer la saisie du carnet. Voir retirerDuCarnetCeQuiEstArrive.
+  let conformesDetail = [];
   for (let essai = 1; essai <= 3; essai += 1) {
     if (essai > 1) await sleep(4000);
     lu = await lireTransactionsBestEffort(job, annonceId, genre, `apres_modification_${essai}`, dateTransaction);
     if (!lu || !lu.details || !lu.details[cible]) continue;
     const chez = lu.details[cible];
-    ecarts = []; conformes = [];
+    ecarts = []; conformes = []; conformesDetail = [];
     for (const v of aVerifier) {
       const verdict = memeValeurHektor(v.envoye, chez[v.hektor]);
-      if (verdict === true) conformes.push(`${v.hektor}=${v.envoye}`);
+      if (verdict === true) { conformes.push(`${v.hektor}=${v.envoye}`); conformesDetail.push(v); }
       else if (verdict === false) ecarts.push(`${v.hektor} : envoye ${v.envoye}, Hektor porte ${chez[v.hektor]}`);
     }
     if (!ecarts.length) break;
@@ -12264,6 +12331,34 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
       hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
       hektor_transaction_id: cible, conformes,
     });
+
+  // ═══ LA SAISIE EST ARRIVEE : ELLE QUITTE LE CARNET ═══
+  //
+  // ⚠ ICI ET NULLE PART AILLEURS. On ne retire QUE dans cette branche : celle
+  //   ou la preuve est faite ET sans ecart. Un ecart, une relecture qui ne
+  //   retrouve pas la transaction, un doublon -- et la saisie RESTE en attente,
+  //   c'est tout son sens. Les branches d'erreur sortent avant, exprès.
+  const auCarnet = new Set();
+  for (const v of conformesDetail) {
+    for (const c of (CHAMPS_CARNET_PAR_CHARGE[v.app] || [])) auCarnet.add(c);
+    for (const c of (CHAMPS_CARNET_PAR_HEKTOR[v.hektor] || [])) auCarnet.add(c);
+  }
+  // ⚠ LE JUMEAU. `amount` et `sale_price` visent le MEME champ chez Hektor
+  //   (prixPublique, ou prix pour la vente) : aVerifier n'en garde qu'un, sinon
+  //   il jugerait deux fois la meme chose. Mais le carnet, lui, en porte DEUX --
+  //   `montant` et `prix_publique`. Sans cette reprise, l'un des deux resterait
+  //   au carnet et continuerait d'ecraser Hektor.
+  //   On ne l'ajoute QUE si la charge portait la meme valeur : une valeur
+  //   differente n'a pas ete envoyee, donc elle n'est pas arrivee.
+  for (const [cleApp, cleHektor] of Object.entries(table)) {
+    const envoye = payload ? payload[cleApp] : null;
+    if (envoye == null || String(envoye).trim() === "") continue;
+    const jumeau = conformesDetail.find((v) => v.hektor === cleHektor);
+    if (jumeau && memeValeurHektor(String(envoye).trim(), jumeau.envoye) === true) {
+      for (const c of (CHAMPS_CARNET_PAR_CHARGE[cleApp] || [])) auCarnet.add(c);
+    }
+  }
+  await retirerDuCarnetCeQuiEstArrive(job, appAffaireId, auCarnet);
   return { verifie: true, modifiee: true, confirmee: true,
            hektor_transaction_id: cible, conformes };
 }
