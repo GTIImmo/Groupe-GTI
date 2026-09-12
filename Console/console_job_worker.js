@@ -12195,6 +12195,74 @@ const CHAMPS_CARNET_PAR_CHARGE = {
 // chez Hektor, sinon il resterait au carnet pour toujours.
 const CHAMPS_CARNET_PAR_HEKTOR = { prixNetVendeur: ["prix_net_vendeur"] };
 
+// ═══ CE QUE HEKTOR A RETENU, LE REGISTRE LE PORTE TOUT DE SUITE ═══ 12/09/2026
+//
+// C'EST LA SECONDE MOITIE DE LA CLASSE B, telle que le plan la definit :
+//     « B  Hektor ACCEPTE l'ecriture -> l'app POUSSE, RELIT, et ecrit ce que
+//          Hektor a RETENU -> les deux cotes identiques PAR CONSTRUCTION »
+// Nous poussions et relisions ; nous n'ecrivions pas. La valeur relue partait
+// dans un journal et le registre attendait le run de nuit.
+//
+// CE QUE CA DONNAIT, constate sur capture le 12/09 : Hektor portait 179 000
+// depuis 08:06, la modale affichait encore 177 000 -- et son avertissement
+// « 168 000 + 10 000 = 178 000, et non 180 000 » comparait des valeurs venues
+// de TROIS instants differents.
+//
+// ⚠ ON N'ECRIT QUE CE QU'ON A RELU CHEZ EUX, jamais ce qu'on a envoye. La
+//   nuance est tout l'interet : si Hektor arrondit, complete ou refuse en
+//   silence, c'est SA valeur qui arrive chez nous, pas notre intention.
+// ⚠ CES HUIT COLONNES EXISTENT, ET ELLES SEULES -- verifie dans le schema le
+//   12/09 apres un echec. J'avais ajoute `prix_publique` en le supposant : il
+//   n'existe pas au registre, et PostgREST refuse TOUT le PATCH pour une seule
+//   colonne inconnue. Une supposition de trop annule l'ecriture entiere.
+const REGISTRE_PAR_HEKTOR = {
+  prixPublique: ["montant"],         // compromis
+  prix: ["montant"],                 // vente
+  montant: ["montant"],              // offre
+  prixNetVendeur: ["prix_net_vendeur"],
+  honorairesSortie: ["honoraires_sortie"],
+  sequestre: ["sequestre"],
+  dateStart: ["date"],
+  date: ["date"],
+  dateSignatureActe: ["date_acte"],
+};
+
+async function reporterAuRegistre(job, appAffaireId, chezHektor) {
+  const id = Number(appAffaireId);
+  if (!Number.isFinite(id) || id <= 0 || !chezHektor) return;
+  const corps = {};
+  for (const [cleHektor, colonnes] of Object.entries(REGISTRE_PAR_HEKTOR)) {
+    const v = chezHektor[cleHektor];
+    const t = String(v == null ? "" : v).trim();
+    if (!t) continue;                // « vide ne gagne pas », ici aussi
+    for (const c of colonnes) corps[c] = t;
+  }
+  if (!Object.keys(corps).length) return;
+  try {
+    await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${id}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(corps),
+    });
+    await logJob(job.id, "app_registre_transaction", "done",
+      `Registre mis a jour avec ce que Hektor a RETENU : `
+      + Object.entries(corps).map(([k, v]) => `${k}=${v}`).join(", ") + ". "
+      + "La fiche et la modale n'attendent plus le run de nuit.", {
+        app_affaire_id: id, champs: corps,
+      });
+  } catch (error) {
+    // ⚠ ON N'ECHOUE PAS LE TRAVAIL POUR CA : la modification est passee chez
+    //   Hektor. Un registre en retard se rattrape la nuit ; un travail rejoue
+    //   cinq fois fabrique des doublons.
+    await logJob(job.id, "app_registre_transaction", "error",
+      "Report au registre impossible -- la modification chez Hektor est bien "
+      + "passee. Le run de nuit remettra la valeur.", {
+        app_affaire_id: id, champs: corps,
+        error: error && error.message ? error.message : String(error),
+      });
+  }
+}
+
 async function retirerDuCarnetCeQuiEstArrive(job, appAffaireId, arrivees) {
   const id = Number(appAffaireId);
   if (!Number.isFinite(id) || id <= 0 || !arrivees || !arrivees.size) return;
@@ -12359,6 +12427,9 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
     }
   }
   await retirerDuCarnetCeQuiEstArrive(job, appAffaireId, auCarnet);
+  // Puis le registre porte ce que Hektor a retenu -- l'ordre compte : on retire
+  // d'abord ce qui ecrasait, on ecrit ensuite ce qui fait foi.
+  await reporterAuRegistre(job, appAffaireId, (lu && lu.details) ? lu.details[cible] : null);
   return { verifie: true, modifiee: true, confirmee: true,
            hektor_transaction_id: cible, conformes };
 }

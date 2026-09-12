@@ -15255,8 +15255,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   useEffect(() => {
     if (statusChangeStatus !== 'sold') return
     if (!statusChangeAffaires.length) return
-    // Une vente existe deja : la modale la reprend, il n'y a rien a heriter.
-    if (statusChangeAffaires.some((a) => String(a.kind) === 'vente')) return
+    // Une vente VIVANTE existe deja : la modale la reprend, il n'y a rien a heriter.
+    //
+    // ⚠ CORRECTIF DU 12/09 -- CETTE CONDITION NE TESTAIT PAS LA MORT. Elle
+    //   s'arretait des qu'une vente existait, ANNULEE COMPRISE. Le bien temoin
+    //   porte la vente fantome 1001349, annulee la veille : l'heritage voyait
+    //   une vente, concluait qu'il n'y avait rien a faire, et sortait AVANT
+    //   d'avoir rien repris. Constate sur capture le 12/09 -- acquereur VIDE,
+    //   prix de vente a 180 000 (le prix de l'ANNONCE) au lieu du compromis.
+    //   La regle existait pourtant trois lignes plus bas, pour les compromis :
+    //   AFFAIRE_ETAT_MORT. Elle manquait ici.
+    if (statusChangeAffaires.some((a) => String(a.kind) === 'vente'
+      && !AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase()))) return
 
     const ouverts = new Set(
       dossiersOuvertsDuBien(statusChangeAffaires).filter((d) => d.ouvert).map((d) => d.chaine))
