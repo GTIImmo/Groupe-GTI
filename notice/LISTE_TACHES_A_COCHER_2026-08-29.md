@@ -3591,11 +3591,34 @@ GEL que Frederic a repere le premier).*
 ### PHASE 3 — L'ECRITURE PART CHEZ HEKTOR · *conditionnee par 0.1 et 0.2*
 
 ```
-[ ] 3.1  LE PATRON DES ANNONCES, PORTE AUX TRANSACTIONS
+[~] 3.1  LE PATRON DES ANNONCES, PORTE AUX TRANSACTIONS
          saisie en attente avec sa photo · garde-fou avant ecriture · conflit
          VISIBLE · poussee partielle marquee · relecture immediate
          ⚠ CE N'EST PAS UNE RECOPIE, C'EST UN PORTAGE : pour l'annonce le pending,
            le conflit et le badge existent ; pour les transactions RIEN n'existe.
+
+         ─── ⭐ ETAT AUDITE LE 12/09, EN LISANT LE CODE ET LE SCHEMA ───
+         L'enonce disait « RIEN n'existe ». Ce n'est plus vrai : deux des cinq
+         pieces sont posees. Le carnet `app_affaire_champ_app` existe
+         (patch_c19_magasin_affaire_2026-08-29.sql) et le worker s'en sert.
+
+           piece                        transactions              annonces (patron)
+           ------------------------------------------------------------------------
+           saisie en attente            OUI  app_affaire_champ_app  app_annonce_pending
+           ⚠ SA PHOTO                   NON  -- pas de base_snapshot   base_snapshot
+           garde-fou avant ecriture     OUI  avisGardeFouSaisie (ecran)
+                                             + garde anti-doublon (worker)
+           conflit VISIBLE              NON  -- pas de colonne conflict  conflict bool
+           poussee partielle marquee    NON      patch_annonce_edit_partial_status
+           relecture immediate          OUI  FAITE LE 12/09 -- prouverTransactionModifiee
+                                             + reporterAuRegistre (a3c6b78)
+
+         ⚠ LES TROIS QUI MANQUENT SE TIENNENT, ET LA PHOTO COMMANDE LES DEUX
+           AUTRES : sans la valeur de Hektor AU MOMENT DE LA SAISIE, on ne peut
+           pas dire si un ecart est un conflit (quelqu'un a change chez eux) ou
+           simplement notre propre saisie pas encore partie. C'est exactement ce
+           que `base_snapshot` resout pour l'annonce depuis le 20/06.
+         ⚠ ET C'EST 4.1 QUI ATTEND CELA : « le carnet disparait APRES 2.1 et 3.1 ».
 
 [~] 3.2  LES WORKERS « MODIFIER » -- LES TROIS GENRES
          ⚠ TITRE CORRIGE LE 10/09 : il disait « COMPROMIS ET VENTE ». L'OFFRE a ete
@@ -4134,6 +4157,43 @@ GEL que Frederic a repere le premier).*
            milieu et l'ecran affichait un faux ecart.
          ⚠ LA DATE NE S'HERITE PAS : une vente porte la sienne, celle du jour.
            Hektor fait pareil.
+
+         ⛔ ET L'HERITAGE NE SE DECLENCHAIT PAS -- DEUX PORTES FERMEES, MEME OUBLI,
+           A DIX LIGNES D'INTERVALLE. Trouve sur une CAPTURE de Frederic (modale
+           « Vendu » du 24933 : acquereur VIDE, prix a 180 000 = le prix de
+           l'ANNONCE, et un avertissement d'ecart). Corrige le 12/09, 1478f91 puis
+           a3c6b78.
+             porte 1  l'effet sortait des qu'une vente existait sur le bien,
+                      ANNULEE COMPRISE -- le 24933 porte la vente fantome 1001349.
+             porte 2  dossiersOuvertsDuBien ferme un dossier des qu'il porte une
+                      vente, annulee comprise : le compromis vivant 1001347 est
+                      dans LE MEME dossier qu'elle, donc « aucun compromis ouvert ».
+           Les deux fonctions testaient pourtant la mort pour les compromis et
+           pour les offres. QUATRIEME copie de cette famille de bug (cf. 07/09,
+           « et c'est ma troisieme copie oubliee »).
+           ⚠ LA REGLE ELLE-MEME N'A PAS ETE TOUCHEE, et c'est delibere : elle est
+             recopiee en QUATRE endroits (front, recalculer_les_chaines, la
+             fonction Supabase, et le verificateur qui les confronte). Mesure du
+             12/09 : UNE chaine sur 7 613 est concernee -- la notre. On a donc
+             ajoute une INFORMATION (`closeParMorte`), aucun verdict ne bouge, et
+             verifier_regle_chainage.py rend toujours 0 divergence sur 12 653
+             chaines. Changer le verdict appartient au menage de la phase 4.
+           ⚠ ET UN CORRECTIF NAIF AURAIT REFERME UNE AUTRE PORTE : cette meme
+             fonction alimente le garde-fou « ce bien a deja une vente en cours ».
+
+         ⭐ LE REGISTRE EST MIS A JOUR A CHAUD -- 12/09, et c'est la SECONDE MOITIE
+           de la classe B (« l'app POUSSE, RELIT, et ecrit ce que Hektor a
+           RETENU »). Nous poussions et relisions ; la valeur relue partait dans un
+           journal et personne ne l'ecrivait, donc la modale lisait l'etat de la
+           veille. `reporterAuRegistre` (console_job_worker.js) ecrit desormais ce
+           qui a ete RELU, jamais ce qui a ete envoye.
+           ⚠ UN REPORT QUI ECHOUE N'ECHOUE PAS LE TRAVAIL : la modification est
+             passee chez Hektor. Un registre en retard se rattrape la nuit ; un
+             travail rejoue cinq fois fabrique des doublons.
+           PREUVE : compromis 50078 porte a 182 000 -> registre montant=182000.00,
+           net=172000.00, date=2026-09-04, date_acte=2026-09-07. 172 000 + 10 000
+           = 182 000, et les 3 lignes restees au carnet sont les bonnes (jours de
+           validite, retractation, numero de mandat : Hektor ne les connait pas).
 
          verif : une vente creee ET modifiee depuis l'app, relue chez Hektor,
                  avec le meme journal de preuve que le compromis 50078
