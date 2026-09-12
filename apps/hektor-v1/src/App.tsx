@@ -15268,8 +15268,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (statusChangeAffaires.some((a) => String(a.kind) === 'vente'
       && !AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase()))) return
 
+    // ─── LA SECONDE PORTE, FERMEE POUR LA MEME RAISON QUE LA PREMIERE ───
+    //
+    // dossiersOuvertsDuBien ferme un dossier des qu'il porte une vente, ANNULEE
+    // COMPRISE -- elle teste la mort pour les compromis et pour les offres, pas
+    // pour les ventes. Or la vente fantome et le compromis vivant du bien temoin
+    // sont dans LE MEME dossier. Sans la ligne ci-dessous, l'heritage cherchait
+    // un compromis dans un dossier ouvert, n'en trouvait aucun, et le correctif
+    // de dix lignes plus haut ne servait a rien.
+    //
+    // ⚠ UN DOSSIER CLOS PAR UNE VENTE MORTE N'EST PAS CLOS. C'est le meme
+    //   raisonnement que le garde-fou C3 du worker, verifie par Frederic le
+    //   31/08 sur les compromis : « apres annulation -> CREE ». Annuler n'est
+    //   pas aboutir.
+    //
+    // ⚠ ET CELA NE PEUT PAS RAMASSER UN BIEN VENDU AUTREFOIS. Une vente VIVANTE,
+    //   ou qu'elle soit sur le bien, fait sortir l'effet dix lignes plus haut.
+    //   Ce qu'on rouvre ici ne peut donc etre qu'un dossier dont la SEULE vente
+    //   est morte. Mesure du 12/09 sur le registre entier : UNE chaine sur
+    //   7 613 -- la notre.
     const ouverts = new Set(
-      dossiersOuvertsDuBien(statusChangeAffaires).filter((d) => d.ouvert).map((d) => d.chaine))
+      dossiersOuvertsDuBien(statusChangeAffaires)
+        .filter((d) => d.ouvert || d.closeParMorte)
+        .map((d) => d.chaine))
     const cleDe = (a: AffaireLedgerRow) => a.app_chaine_id != null
       ? String(a.app_chaine_id) : 'seule-' + String(a.app_affaire_id)
     const compromis = statusChangeAffaires.filter((a) => String(a.kind) === 'compromis'
@@ -24268,6 +24289,12 @@ type DossierDuBien = {
   porteur: Map<string, AffaireLedgerRow>
   /** la vente qui a clos le dossier, s'il l'est par une vente */
   closePar: AffaireLedgerRow | null
+  /** ⭐ AJOUT DU 12/09 -- CETTE VENTE EST-ELLE MORTE ? Purement informatif : le
+   *  verdict `ouvert` ne bouge pas d'un iota, et aucun appelant existant ne lit
+   *  ce champ. Il n'existe que pour l'heritage de la modale « Vendu », qui a
+   *  besoin de distinguer « ce dossier est clos par sa vente » de « ce dossier
+   *  traine une vente annulee ». Voir le commentaire de l'effet d'heritage. */
+  closeParMorte: boolean
 }
 
 function dossiersOuvertsDuBien(lignes: AffaireLedgerRow[]): DossierDuBien[] {
@@ -24335,7 +24362,16 @@ function dossiersOuvertsDuBien(lignes: AffaireLedgerRow[]): DossierDuBien[] {
     // Une chaine dont TOUTES les lignes ont ete effacees chez Hektor n'a plus de
     // membre : elle ne doit pas compter comme un dossier, meme vide.
     if (!membres.length) return
-    out.push({ chaine, ouvert, genres, porteur, closePar: vente })
+    // ⚠ ON NE CHANGE PAS `ouvert`, ET C'EST DELIBERE. Une vente annulee ferme
+    //   toujours le dossier ici, comme dans les TROIS autres copies de la regle
+    //   (le run, la fonction Supabase, et le verificateur qui les confronte --
+    //   phase2/checks/verifier_regle_chainage.py, 0 divergence sur 12 639
+    //   chaines). Toucher au verdict, c'est devoir toucher aux quatre.
+    //   On se contente donc de DIRE si cette vente est morte, et l'heritage en
+    //   tire sa conclusion tout seul.
+    const closeParMorte = vente != null
+      && AFFAIRE_ETAT_MORT.has(String((vente as AffaireLedgerRow).state ?? '').trim().toLowerCase())
+    out.push({ chaine, ouvert, genres, porteur, closePar: vente, closeParMorte })
   })
   return out
 }
