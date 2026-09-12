@@ -10603,6 +10603,83 @@ const ASSISTANTS_HEKTOR = {
   },
 };
 
+// ═══ LA COMMISSION APPARTIENT A QUELQU'UN ═══                      12/09/2026
+//
+// CE QU'ON A MESURE, ET QUI A OUVERT CE CHANTIER. La page 3 de l'assistant de
+// vente, lue en direct sur le bien temoin, dit mot pour mot :
+//     « Vous n'avez pas d'intervenant selectionne. »
+//     « Commission administrateur   8 333 EUR/HT »
+// Et la preuve directe, sur le compromis 50078 que l'APP a cree :
+//     une vente faite a la main    14 champs d'intervenant
+//     le compromis cree par l'app   0
+// Toute transaction nee dans l'app partait donc avec sa commission NON ATTRIBUEE.
+// Le negociateur qui a vendu n'y figurait pas. Mesure du 12/09 sur 40 ventes
+// reelles : 40 sur 40 portent un intervenant, une personne par cote.
+//
+// POURQUOI PERSONNE NE L'AVAIT VU. Ce n'est pas un champ oublie, c'est un BOUTON :
+// la page propose un nom dans un `<li onclick="addIntervenantRow(...)">`, et les
+// sept champs n'existent qu'UNE FOIS CLIQUE. Le worker repose fidelement ce que
+// Hektor rend -- c'est sa regle, et c'est la bonne -- mais un bouton ne se repose
+// pas. Et l'API est aveugle : `partAdmin` vaut 0 sur les 7 612 ventes du miroir,
+// `retro_idUser` aussi. Rien, nulle part, ne disait que l'information manquait.
+//
+// ⚠ ON NE RECONSTRUIT AUCUNE FORMULE. Le montant de chaque moitie est LU dans la
+//   page (`header-section-amount-Entree` / `-Sortie`), jamais calcule a partir des
+//   honoraires. Si Hektor ne l'affiche pas, on n'invente pas : on ne pose rien et
+//   on le dit. C'est la regle du projet, et elle vaut ici plus qu'ailleurs -- une
+//   commission fausse se retrouve sur une paie.
+//
+// ⚠ ON NE TOUCHE JAMAIS A UN INTERVENANT DEJA RETENU. Si la page en porte un, il
+//   est deja dans ce que Hektor rend, donc deja repose : intervenir serait
+//   remplacer le choix d'un humain par le notre.
+//
+// ⚠ LA SERIE D'IDENTIFIANTS EST UN PIEGE MESURE. L'annuaire porte
+//   `hektor_negociateur_id` ET `hektor_user_id`, et le MEME nombre designe deux
+//   personnes : 115 vaut ACHON dans la premiere serie, REYNAUD dans la seconde.
+//   La vente 23304 porte l'intervenant 115 et son recapitulatif nomme Corinne
+//   REYNAUD. C'est donc `hektor_user_id`, et se tromper de serie payerait
+//   quelqu'un d'autre EN SILENCE.
+const COTES_COMMISSION = ["Entree", "Sortie"];
+
+/** Le montant d'une moitie, LU dans la page. Vide si Hektor ne l'affiche pas. */
+function montantMoitieCommission(html, cote) {
+  const m = String(html || "").match(new RegExp(
+    `id=["']header-section-amount-${cote}["'][^>]*>([^<]*)<`, "i"));
+  if (!m) return "";
+  // « 4 166,67 » -> « 4166.67 » : on normalise l'ECRITURE, pas la valeur.
+  const v = m[1].replace(/&nbsp;/gi, " ").replace(/[\s ]/g, "").replace(",", ".").trim();
+  return /^\d+(\.\d+)?$/.test(v) ? v : "";
+}
+
+/** Les personnes que la page PROPOSE, par cote. Le 2e argument de
+ *  `addIntervenantRow(this, '{...}', 'Entree', ...)` porte le cote. */
+function candidatsCommission(html) {
+  const out = { Entree: [], Sortie: [] };
+  const re = /addIntervenantRow\s*\(\s*this\s*,\s*'([\s\S]*?)'\s*,\s*'(Entree|Sortie)'/gi;
+  let m;
+  while ((m = re.exec(String(html || "")))) {
+    // Hektor echappe en \uXXXX dans l'attribut onclick ; et les URL d'avatar
+    // arrivent en `\\/`, ce qui casse tout analyseur JSON. On lit au motif : ce
+    // qu'on cherche est UN NUMERO, il se lit sans analyseur.
+    const brut = m[1].replace(/\\u([0-9a-fA-F]{4})/g, (_, x) => String.fromCharCode(parseInt(x, 16)));
+    const lire = (cle) => (brut.match(new RegExp(`"${cle}"\\s*:\\s*"([^"]*)"`)) || [])[1] || "";
+    const id = lire("idUser") || lire("id");
+    if (!id) continue;
+    if (out[m[2]].some((x) => x.id === id)) continue;
+    out[m[2]].push({ id, alias: lire("alias"), type: lire("type") || "NEGO" });
+  }
+  return out;
+}
+
+/** Les cotes qui portent DEJA un intervenant retenu -- on n'y touche pas. */
+function cotesDejaAttribuees(html) {
+  const vus = new Set();
+  const re = /name\s*=\s*["']intervenants(Entree|Sortie)\[(\d+)\]/gi;
+  let m;
+  while ((m = re.exec(String(html || "")))) vus.add(m[1]);
+  return vus;
+}
+
 /** Lit la reponse d'une etape : { basket, stepContent, currentStepIndex }. */
 function lireEtapeAssistant(texte, quoi) {
   const json = parseHektorJson(texte, quoi);
@@ -10871,6 +10948,8 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
 
   // ── 3. LES ETAPES ──
   let derniere = null;
+  // Ce qu'on a attribue a l'etape des commissions, pour le REPOSER ensuite.
+  const intervenantsPoses = [];
   for (const pas of assistant.pas) {
     const corps = new URLSearchParams();
 
@@ -11085,6 +11164,69 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     if (!enReprise && acquereursConnusDeHektor && acquereursVoulus.length) {
       corps.delete("acquereurs[]");
       for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
+    }
+
+    // ═══ LA COMMISSION APPARTIENT A QUELQU'UN ═══                  12/09/2026
+    //
+    // C'est l'etape 2 qui porte les commissions, et elle seule. On y pose les
+    // sept champs par personne, puis on les REPOSE a chaque etape suivante --
+    // meme raison que les acquereurs le 06/09 : sans cela seule l'etape qui les
+    // a vus les porterait, et le compromis 50072 n'en avait garde qu'un sur deux.
+    if (pas.de === "2") {
+      const deja = cotesDejaAttribuees(etat.contenu);
+      const proposes = candidatsCommission(etat.contenu);
+      for (const cote of COTES_COMMISSION) {
+        // Un choix humain ne se remplace pas : s'il est la, il est deja repose.
+        if (deja.has(cote)) continue;
+        const demande = String(payload[`intervenant_${cote.toLowerCase()}_id`] || "").trim();
+        const propose = (proposes[cote][0] && proposes[cote][0].id) || "";
+        const qui = demande || propose;
+        const montant = montantMoitieCommission(etat.contenu, cote);
+        if (!qui || !montant) {
+          // ⚠ ON N'INVENTE RIEN, ET ON LE DIT. Un montant devine, c'est une paie
+          //   fausse ; un silence, c'est le defaut d'aujourd'hui qui continue --
+          //   mais au moins il est ecrit.
+          await logJob(job.id, "hektor_commission", "error",
+            `Commission ${cote} NON ATTRIBUEE : ${!qui ? "aucun intervenant (ni demande, ni propose)"
+              : "Hektor n'affiche pas le montant de cette moitie"}. `
+            + "La part ira a la commission administrateur.", {
+              hektor_annonce_id: annonceId, cote,
+              demande: demande || null, propose: propose || null, montant: montant || null,
+            });
+          continue;
+        }
+        const type = demande ? "NEGO"
+          : ((proposes[cote][0] && proposes[cote][0].type) || "NEGO");
+        const prefixe = `intervenants${cote}[${qui}]`;
+        // Les sept champs, releves sur la vente reelle 23304 le 12/09.
+        corps.set(`${prefixe}[id]`, qui);
+        corps.set(`${prefixe}[type]`, type);
+        corps.set(`${prefixe}[typeCommission]`, cote);
+        corps.set(`${prefixe}[percent]`, "100");
+        corps.set(`${prefixe}[montant]`, montant);
+        corps.set(`${prefixe}[ca_percent]`, "100");
+        corps.set(`${prefixe}[ca_montant]`, montant);
+        intervenantsPoses.push({ cote, id: qui, montant, type,
+                                 origine: demande ? "choisi par l'app" : "propose par Hektor" });
+        await logJob(job.id, "hektor_commission", "running",
+          `Commission ${cote} attribuee a l'utilisateur ${qui} `
+          + `(${demande ? "CHOISI PAR L'APP" : "propose par Hektor"}) : ${montant} HT`, {
+            hektor_annonce_id: annonceId, cote, id_user: qui, montant,
+            alias_propose: (proposes[cote][0] && proposes[cote][0].alias) || null,
+          });
+      }
+    } else if (intervenantsPoses.length) {
+      // On les repose, a l'enregistrement compris. Voir le correctif acquereurs.
+      for (const i of intervenantsPoses) {
+        const p = `intervenants${i.cote}[${i.id}]`;
+        corps.set(`${p}[id]`, i.id);
+        corps.set(`${p}[type]`, i.type);
+        corps.set(`${p}[typeCommission]`, i.cote);
+        corps.set(`${p}[percent]`, "100");
+        corps.set(`${p}[montant]`, i.montant);
+        corps.set(`${p}[ca_percent]`, "100");
+        corps.set(`${p}[ca_montant]`, i.montant);
+      }
     }
 
     for (const m of pas.modules) corps.append("containerModule[]", m);

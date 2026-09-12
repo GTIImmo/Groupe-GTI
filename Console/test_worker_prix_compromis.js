@@ -58,6 +58,20 @@ function arg(nom, defaut) {
     console.error("--acquereurs doit porter au moins un identifiant");
     process.exit(1);
   }
+  // ── LES DEUX INTERVENANTS DE LA COMMISSION (12/09/2026) ──
+  // Laisser vide = le worker prend celui que Hektor propose. Donner un numero =
+  // on eprouve si Hektor ACCEPTE notre choix. Question de Frederic, 12/09 :
+  // « il faut pouvoir choisir le negociateur si possible mais je sais pas
+  //   comment Hektor accepte ou pas ». Seul un envoi reel le dit.
+  const intervenantEntree = String(arg("intervenant-entree", "")).trim();
+  const intervenantSortie = String(arg("intervenant-sortie", "")).trim();
+  for (const [nom, v] of [["--intervenant-entree", intervenantEntree],
+                          ["--intervenant-sortie", intervenantSortie]]) {
+    if (v && !/^\d+$/.test(v)) {
+      console.error(nom + " doit etre un hektor_user_id (nombre entier)");
+      process.exit(1);
+    }
+  }
   if (!/^\d+$/.test(prix)) {
     console.error("--prix doit etre un nombre entier");
     process.exit(1);
@@ -90,6 +104,16 @@ function arg(nom, defaut) {
       //   (api.ts), et on la reproduit a l'identique pour ne rien tester
       //   d'autre que ce qu'on veut tester.
       buyer_contact_ids: acquereurs.length > 1 ? acquereurs : null,
+      // ⚠ LA COMMISSION -- AJOUTE LE 12/09. Mesure du jour : une transaction
+      //   creee par l'app porte ZERO intervenant la ou 40 ventes reelles sur 40
+      //   en portent un par cote. La part tombe alors sur « Commission
+      //   administrateur ». Ces deux cles sont des `hektor_user_id` -- PAS des
+      //   `hektor_negociateur_id` : le meme nombre designe deux personnes (115
+      //   vaut ACHON dans une serie, REYNAUD dans l'autre), et se tromper
+      //   payerait quelqu'un d'autre EN SILENCE.
+      //   Vide = on laisse le worker prendre ce que Hektor PROPOSE.
+      intervenant_entree_id: intervenantEntree || null,
+      intervenant_sortie_id: intervenantSortie || null,
     },
     priority: 7,
   };
@@ -108,6 +132,8 @@ function arg(nom, defaut) {
   console.log("job     ", jobId);
   console.log("prix    ", prix, "  sur le compromis", CIBLE.compromis_id);
   console.log("acquereurs", acquereurs.join(", "));
+  console.log("intervenants entree=" + (intervenantEntree || "(celui propose par Hektor)")
+    + "  sortie=" + (intervenantSortie || "(celui propose par Hektor)"));
   const t = await r.text();
   if (r.status >= 300) console.log(t.slice(0, 400));
 })().catch((e) => { console.error(e); process.exit(1); });
