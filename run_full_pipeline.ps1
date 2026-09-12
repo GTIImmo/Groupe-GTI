@@ -421,22 +421,6 @@ Invoke-Step -Label "phase2 registre identite contacts" -Arguments @(
     "phase2\identite\registre_contacts.py"
 ) -WorkerKey "phase2.registre_contacts"
 
-# 11/09/2026 -- SI HEKTOR NOMME QUELQU'UN DANS UNE TRANSACTION, L'APP DOIT
-# POUVOIR LE NOMMER. L'eligibilite ne tenait qu'a deux criteres, tous deux lies
-# a ce qui est ACTIF : une annonce active, ou une recherche active. Elle est
-# anterieure a la lecture console, et elle laissait dehors les parties des
-# transactions DEJA FAITES -- 1 191 mandants, 465 acquereurs -- ainsi que LES
-# NOTAIRES, dont 137 sur 143 : ils n'entrent dans AUCUNE relation, l'API ne les
-# rend jamais, et seul le formulaire de l'assistant les connait.
-#
-# ICI ET PAS AILLEURS : apres la reconstruction de la couche, qui remet
-# l'eligibilite a ce que SA regle dit, et AVANT le push, qui lit le resultat.
-# Relit Supabase en direct et PAGINE -- app_affaire_console y compte 9 216
-# lignes contre 1 400 en local -- meme patron que annonces_app_seule.py.
-Invoke-Step -Label "phase2 perimetre contacts cites par la console" -Arguments @(
-    "phase2\contacts\elargir_perimetre_console.py"
-) -WorkerKey "phase2.perimetre_console"
-
 Invoke-Step -Label "phase2 quality checks" -Arguments @(
     "phase2\checks\run_quality_checks.py"
 ) -WorkerKey "phase2.quality_checks"
@@ -631,6 +615,30 @@ Invoke-OptionalStepWithRetry -Label "phase2 entretien compromis console" -Argume
     "--courtoisie",
     "--refresh-session-on-expired"
 ) -WorkerKey "console.entretien_compromis"
+
+# ⚠ DEPLACEE ICI LE 12/09, APRES SA SOURCE. Elle etait posee juste apres le
+#   registre d'identite, donc AVANT l'entretien qui remplit app_affaire_console.
+#   Elle lisait les transactions de la VEILLE : un contact cite par un compromis
+#   lu cette nuit n'entrait dans l'annuaire que la nuit SUIVANTE. Constate sur le
+#   premier run reel, le 12/09 -- perimetre a 06:41:41, entretien a 06:46:46.
+#   Elle reste AVANT le push des contacts (06:53), qui lit son resultat.
+# 11/09/2026 -- SI HEKTOR NOMME QUELQU'UN DANS UNE TRANSACTION, L'APP DOIT
+# POUVOIR LE NOMMER. L'eligibilite ne tenait qu'a deux criteres, tous deux lies
+# a ce qui est ACTIF : une annonce active, ou une recherche active. Elle est
+# anterieure a la lecture console, et elle laissait dehors les parties des
+# transactions DEJA FAITES -- 1 191 mandants, 465 acquereurs -- ainsi que LES
+# NOTAIRES, dont 137 sur 143 : ils n'entrent dans AUCUNE relation, l'API ne les
+# rend jamais, et seul le formulaire de l'assistant les connait.
+#
+# SA PLACE TIENT A TROIS VOISINS, dans cet ordre :
+#   APRES build_contacts_layer, qui remet l'eligibilite a ce que SA regle dit ;
+#   APRES l'entretien ci-dessus, qui remplit sa source ;
+#   AVANT le push des contacts, qui lit son resultat.
+# Relit Supabase en direct et PAGINE -- app_affaire_console y compte 9 216
+# lignes contre 1 400 en local -- meme patron que annonces_app_seule.py.
+Invoke-Step -Label "phase2 perimetre contacts cites par la console" -Arguments @(
+    "phase2\contacts\elargir_perimetre_console.py"
+) -WorkerKey "phase2.perimetre_console"
 
 # C.19 (29/08) -- LES CHAMPS D'AFFAIRE APPARTIENNENT A L'APP.
 # PLACE ICI, ET PAS AILLEURS : affaire_ledger.py ci-dessus vient de relire le miroir
