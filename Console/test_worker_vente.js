@@ -38,8 +38,20 @@
  *   un defaut deja mesure et ecrit au plan, qui sera corrige a part. Fabriquer
  *   ici une vente mal datee ne prouverait rien de plus et salirait l'essai.
  *
- *   node Console/test_worker_vente.js                      (creer)
- *   node Console/test_worker_vente.js --prix 185000
+ * ⛔ LA CREATION NE PASSE PAS PAR ICI, ET C'EST UNE BONNE NOUVELLE — 13/09.
+ *   `app_change_annonce_status_optimistic` REFUSE la cle de service :
+ *       403  42501  forbidden_change_status
+ *   Le RPC exige un utilisateur AUTHENTIFIE, pas un jeton de service. Le controle
+ *   d'acces fait donc exactement son travail, et on ne le contourne pas pour un
+ *   essai : contourner une garde pour la tester, c'est tester autre chose.
+ *   ➡ LA CREATION SE FAIT DEPUIS L'APP, par la modale « Vendu ». C'est de toute
+ *     facon le chemin le plus fidele : le travail porte alors l'identite de qui
+ *     a clique, donc le worker s'impersonne comme en production -- et c'est
+ *     PRECISEMENT la condition qu'on cherche a mesurer. Un essai lance d'ici
+ *     tournerait en session administrateur et ne repondrait a rien.
+ *   ➡ CE QUI RESTE UTILE DANS CE FICHIER : `--supprimer`, le retour arriere. Il
+ *     insere un travail `delete_hektor_vente`, qui n'est pas soumis au RPC.
+ *
  *   node Console/test_worker_vente.js --supprimer 23305    (retour arriere)
  */
 const path = require("path");
