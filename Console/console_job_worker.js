@@ -11298,10 +11298,22 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
           modules: pas.modules.join("+"),
           champs_envoyes: [...new Set([...corps.keys()])].filter((k) => k !== "basket").join(","),
           acquereurs_envoyes: corps.getAll("acquereurs[]"),
-          // La cause la plus probable, mesuree le 10/09 : sans acquereur,
-          // l'assistant de la VENTE refuse d'avancer, sans le dire.
-          piste: corps.getAll("acquereurs[]").length ? null
-            : "aucun acquereur envoye -- l'assistant de la vente l'exige",
+          // ⚠ LA PISTE DEPEND DE L'ETAPE, ET ELLE NE LE FAISAIT PAS (13/09).
+          //   Elle annoncait « aucun acquereur envoye » sur un blocage a
+          //   l'etape 2 -- or la page des commissions ne porte AUCUN acquereur,
+          //   c'est normal qu'il n'y en ait pas dans ce corps-la. Le message
+          //   m'a fait chercher du cote de l'acquereur pendant que la vraie
+          //   cause etait l'intervenant. Une piste fausse coute plus cher qu'une
+          //   absence de piste.
+          piste: pas.de === "0"
+            ? (corps.getAll("acquereurs[]").length ? null
+               : "aucun acquereur envoye -- l'assistant de la vente l'exige")
+            : pas.de === "2"
+              ? (intervenantsPoses.some((i) => i.origine === "choisi par l'app")
+                 ? "un intervenant CHOISI PAR L'APP a ete pose ; mesure du 13/09 : Hektor "
+                   + "refuse d'avancer si l'identifiant ne figurait pas dans SA liste"
+                 : null)
+              : null,
         });
       throw new Error(
         `Assistant ${config.label} : Hektor n'a pas avance de l'etape ${pas.de} a ${pas.vers} `

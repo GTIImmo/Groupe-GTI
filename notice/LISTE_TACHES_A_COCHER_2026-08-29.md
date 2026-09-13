@@ -4198,6 +4198,74 @@ GEL que Frederic a repere le premier).*
          verif : une vente creee ET modifiee depuis l'app, relue chez Hektor,
                  avec le meme journal de preuve que le compromis 50078
 
+         ─── LOT 5 (NOUVEAU, 12-13/09) : LA COMMISSION APPARTIENT A QUELQU'UN ───
+         ⭐ FAIT ET PROUVE EN REEL LE 13/09. Trouve en lisant les pages 2 et 3 de
+           l'assistant, que personne n'avait ouvertes -- question de Frederic :
+           « as tu consulter les autres pages de la vente ? ».
+
+         LE DEFAUT. La page 3 ecrit mot pour mot « Vous n'avez pas d'intervenant
+         selectionne » et « Commission administrateur 8 333 EUR/HT ». Toute
+         transaction nee dans l'app partait avec sa commission NON ATTRIBUEE.
+             une vente faite a la main (23304)   14 champs d'intervenant
+             le compromis 50078, cree par l'app   0
+             40 ventes reelles mesurees          40 sur 40 en portent un
+
+         ⚠ TROIS SILENCES, ET C'EST POUR CA QUE PERSONNE NE L'A VU.
+           ① ce n'est pas un champ, c'est un BOUTON (`addIntervenantRow`) : les
+              sept champs n'existent qu'une fois clique, et un bouton ne se
+              repose pas -- or reposer est toute la methode du worker ;
+           ② l'API est aveugle : partAdmin = 0 sur 7 612 ventes, retro_idUser
+              aussi (meme cecite que les notaires, 0 sur 10 586) ;
+           ③ notre colonne intervenants_json vaut NULL sur 9 218 transactions --
+              le rattrapage s'arrete a la PAGE 1.
+
+         ⛔ HEKTOR REFUSE UN INTERVENANT QU'IL N'A PAS PROPOSE -- MESURE, PAS
+           SUPPOSE. Deux essais reels le 13/09 sur le compromis 50078, a 40 s
+           d'intervalle, tout le reste identique :
+               entree 48 (non propose) + sortie 51   -> BLOQUE a l'etape 2
+               entree 51 + sortie 51 (proposes)      -> PASSE, et Hektor GARDE
+           Et son refus est MUET : il rend `success` et reste a l'etape 2. Seul
+           le garde-fou du 10/09 (comparer l'etape rendue a l'etape demandee) a
+           evite un enregistrement dans le vide.
+           ➡ REPONSE A FREDERIC (« il faut pouvoir choisir le negociateur si
+             possible ») : PAS LIBREMENT. L'app ne pourra offrir que ce que la
+             page propose. RESTE A COMPRENDRE d'ou vient cette liste : sur 24933
+             elle ne porte QUE PEREIRA (51), qui n'est ni le compte connecte
+             (GERPHAGNON 46) ni le negociateur de l'annonce (GONZALEZ 48) ; or la
+             vente 23304 porte DEUX personnes differentes, donc un humain a bien
+             pu choisir. Piste non eprouvee : le CONTEXTE Hektor (le worker
+             s'impersonne en negociateur avant d'ouvrir l'assistant).
+
+         CE QUE FAIT LE CORRECTIF (7d7e6b8) : a l'etape des commissions, les sept
+         champs par personne, puis REPOSES a chaque etape suivante (meme raison
+         que les acquereurs le 06/09). Defaut sans consigne = CE QUE HEKTOR
+         PROPOSE, donc le trou est bouche pour toutes les transactions avant meme
+         que la modale sache choisir.
+         ⚠ LE MONTANT EST LU DANS LA PAGE (`header-section-amount-Entree`),
+           JAMAIS RECALCULE : une commission devinee finit sur une paie.
+         ⚠ UN INTERVENANT DEJA RETENU N'EST JAMAIS TOUCHE.
+         ⚠ C'EST `hektor_user_id`, PAS `hektor_negociateur_id` : le meme nombre
+           designe deux personnes (115 = ACHON / REYNAUD).
+
+         PREUVE : le compromis 50078 ne designait personne le matin du 13/09 ; il
+         porte desormais intervenantsEntree[51] et intervenantsSortie[51], 100 %
+         et 4 166,67 HT chacun, relus chez Hektor.
+
+         OUTILS : Console/mesure_intervenants_vente.js (40 ventes) ·
+         releve_commissions_vente.js (valeurs + candidats) ·
+         test_commission_intervenants.js (11 assertions HORS LIGNE).
+
+         ─── LES AUTRES ECARTS DE LA MODALE, RELEVES LE 12/09 EN DIRECT ───
+         MANQUENT dans l'app, que Hektor porte : taux honoraires VENDEUR (5,495)
+           · les mandants (trois sur 24933) · le partage de commission.
+         EN TROP dans l'app, que la VENTE de Hektor n'a pas : « Montant / prix
+           public » (doublon du prix de vente), « Prix net vendeur », « Sequestre ».
+           Ce sont trois champs du COMPROMIS, affiches a tort sur la vente.
+         ⛔ ET UN ECART DE VALEUR : la modale propose la date du COMPROMIS
+           (04/09) la ou Hektor propose LE JOUR (12/09). Une vente signee
+           aujourd'hui partirait datee du 4. A corriger.
+
+
 [ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)
