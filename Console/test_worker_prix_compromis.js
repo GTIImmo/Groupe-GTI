@@ -63,6 +63,8 @@ function arg(nom, defaut) {
   // on eprouve si Hektor ACCEPTE notre choix. Question de Frederic, 12/09 :
   // « il faut pouvoir choisir le negociateur si possible mais je sais pas
   //   comment Hektor accepte ou pas ». Seul un envoi reel le dit.
+  // --negociateur gonzalez@gti-immobilier.fr  (vide = session administrateur)
+  const negociateur = String(arg("negociateur", "")).trim();
   const intervenantEntree = String(arg("intervenant-entree", "")).trim();
   const intervenantSortie = String(arg("intervenant-sortie", "")).trim();
   for (const [nom, v] of [["--intervenant-entree", intervenantEntree],
@@ -89,6 +91,15 @@ function arg(nom, defaut) {
     // -- c'est ce qui a fabrique l'affaire 1001350 ce matin.
     payload_json: {
       target_status: "compromise",
+      // ⚠ LE CONTEXTE CHANGE CE QUE HEKTOR PROPOSE -- mesure du 13/09.
+      //   Sans cette cle, le worker reste en session ADMINISTRATEUR et la page
+      //   des commissions propose PEREIRA (51). Un vrai travail venu de l'app
+      //   porte toujours le negociateur du dossier, et s'impersonne. Le defaut
+      //   du correctif etant « prendre celui que Hektor propose », il FAUT
+      //   mesurer dans le bon contexte : sinon on eprouve une proposition que
+      //   personne ne verra jamais en production.
+      negociateur_email: negociateur || null,
+
       reprendre_transaction: true,
       app_affaire_id: CIBLE.app_affaire_id,
       compromis_id: CIBLE.compromis_id,
@@ -132,6 +143,7 @@ function arg(nom, defaut) {
   console.log("job     ", jobId);
   console.log("prix    ", prix, "  sur le compromis", CIBLE.compromis_id);
   console.log("acquereurs", acquereurs.join(", "));
+  console.log("contexte  ", negociateur || "(session administrateur)");
   console.log("intervenants entree=" + (intervenantEntree || "(celui propose par Hektor)")
     + "  sortie=" + (intervenantSortie || "(celui propose par Hektor)"));
   const t = await r.text();
