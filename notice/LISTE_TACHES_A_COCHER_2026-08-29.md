@@ -4251,6 +4251,52 @@ GEL que Frederic a repere le premier).*
          porte desormais intervenantsEntree[51] et intervenantsSortie[51], 100 %
          et 4 166,67 HT chacun, relus chez Hektor.
 
+         ─── ⭐ L'ESSAI REEL DE LA VENTE, 13/09 17:31 (travail a7b81784) ───
+         Fait DEPUIS L'APP, par la modale « Vendu » : le RPC refuse la cle de
+         service (403 forbidden_change_status), et c'est heureux -- un travail
+         lance en ligne de commande tourne en session administrateur et
+         n'aurait rien mesure.
+             vente 23305 creee et confirmee par les DEUX portes (fiche + API)
+             son numero Hektor pose dans l'app SANS attendre le run de nuit
+             l'heritage de la modale a rempli seul : 183 000 · net 173 000 ·
+               honoraires 10 000 · mandat 11939 · acquereur Sophie
+         Puis supprimee, et le bien remis en « Sous compromis ».
+
+         ⭐⭐ LA REGLE DE LA PROPOSITION EST TROUVEE, et elle etait sous nos yeux :
+           HEKTOR PROPOSE LES NEGOCIATEURS **ACTIFS** DE L'AGENCE DU BIEN.
+           L'agence Firminy compte 45 personnes et UNE SEULE active, Emmanuelle
+           PEREIRA (51) -- d'ou le nom unique qui m'intriguait depuis hier. Et le
+           journal donne la seconde moitie : « Negociateur proprietaire INACTIF
+           -> ecriture via contexte AGENCE (fallback) » : GONZALEZ, negociateur
+           du bien temoin, est inactif.
+           ➡ SUR UN BIEN NORMAL, le negociateur actif du dossier sera donc dans
+             la liste. MAIS LE WORKER PREND LE PREMIER PROPOSE : si l'agence
+             compte plusieurs actifs, rien ne garantit que ce soit LUI.
+             ⚠ A CORRIGER : preferer le negociateur DU DOSSIER quand il figure
+               parmi les proposes. Non code -- arbitrage a confirmer.
+
+         ⭐ ET LA VENTE HERITE DES INTERVENANTS DU COMPROMIS. Le journal de la
+           creation ne porte AUCUNE ligne `hektor_commission` : la garde « deja
+           attribue » n'a rien eu a faire, parce que le formulaire de vente est
+           arrive avec 51/51 -- ceux poses sur le compromis le matin meme.
+           ➡ ATTRIBUER AU COMPROMIS SUFFIT DONC POUR LA VENTE QUI EN DECOULE.
+             C'est une bonne nouvelle : le point de reparation est unique.
+
+         ⚠ DEUX EFFETS DE BORD, MESURES ET NON SUPPOSES :
+           ① creer une vente RETIRE le bien de `app_dossier_current` -- il
+              disparait de l'ecran. Normal (il est vendu), mais il faut le savoir
+              avant d'essayer sur autre chose qu'un bien de test.
+           ② supprimer la vente chez Hektor NE REMET PAS le statut : la fiche
+              reste « Vendu » sans vente. Deja ecrit dans le worker pour le
+              compromis (« Hektor ne le fait pas tout seul, c'est un SECOND
+              GESTE »), desormais confirme pour la vente. La remise en etat a
+              demande une modification du compromis existant.
+           ③ et `present_in_hektor` n'est PAS pose par le travail de suppression :
+              il l'est par LA RPC, au moment du clic. Un travail insere en direct
+              saute donc ce marquage et laisse un fantome -- exactement celui qui
+              bloquait l'heritage le matin meme. Ce n'est pas un defaut produit,
+              c'est un piege pour qui teste en contournant l'ecran.
+
          OUTILS : Console/mesure_intervenants_vente.js (40 ventes) ·
          releve_commissions_vente.js (valeurs + candidats) ·
          test_commission_intervenants.js (11 assertions HORS LIGNE).
