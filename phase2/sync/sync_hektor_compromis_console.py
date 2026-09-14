@@ -59,6 +59,42 @@ ENV_RACINE = RACINE / ".env"
 ENV_APP = RACINE / "apps" / "hektor-v1" / ".env"
 SESSION = RACINE / "Console" / "sessions" / "storage_state_admin.json"
 EXTRACTEUR = RACINE / "Console" / "extract_hektor_compromis_console.js"
+
+# ═══ LA PAUSE SE COMPTE EN REQUETES, PAS EN PIECES ═══             14/09/2026
+#
+# ⛔ CE QUI A FAILLI ARRIVER. La pause de 60 s tombe tous les `--batch-size`
+#   PIECES. Tant qu'une piece coutait UNE requete, un lot de 100 valait 100
+#   requetes : la cadence du run chauffage, 56 926 lectures sans incident. Une
+#   VENTE en coute DEUX -- ouverture, puis page des commissions. Un lot de 100
+#   pieces en vaudrait 200, et LA RAFALE ENTRE DEUX PAUSES DOUBLERAIT, sans
+#   qu'aucun compteur ne bouge, sur 7 612 pieces d'affilee. C'est le profil qui a
+#   fait bannir notre IP en juillet : le RYTHME, jamais le total.
+#
+# ⚠ ET LA PROTECTION VIT ICI, PAS DANS LES LANCEURS. Le 14/09 j'ai corrige le
+#   lanceur d'entretien en oubliant celui du rattrapage -- j'avais repare ce qui
+#   etait sous les yeux au lieu de demander QUI APPELLE CE PILOTE. Un garde-fou
+#   pose dans un appelant ne protege que celui-la ; pose ici, il protege aussi
+#   celui que quelqu'un ecrira l'an prochain.
+REQUETES_PAR_PIECE = {"compromis": 1, "vente": 2}
+REQUETES_PAR_LOT = 100
+
+
+def taille_de_lot(genre: str, demande: int) -> tuple[int, str]:
+    """Le lot, en PIECES, pour que 100 REQUETES separent deux pauses.
+
+    Rend aussi la phrase a afficher : un reglage qu'on ne voit pas est un reglage
+    qu'on oublie, et celui-ci ne se remarque que le jour ou il est trop tard.
+    """
+    par_piece = REQUETES_PAR_PIECE.get(genre, 1)
+    plafond = max(1, REQUETES_PAR_LOT // par_piece)
+    if demande and demande > 0:
+        if demande > plafond:
+            return plafond, (f"lot ramene de {demande} a {plafond} pieces : une "
+                             f"{genre} coute {par_piece} requete(s), et la pause doit "
+                             f"tomber toutes les {REQUETES_PAR_LOT} requetes")
+        return demande, f"lot de {demande} pieces ({demande * par_piece} requetes)"
+    return plafond, (f"lot de {plafond} pieces, soit {plafond * par_piece} requetes "
+                     f"entre deux pauses")
 LOGIN = RACINE / "Console" / "playwright_login.js"
 TABLE = "app_affaire_console"
 # Le miroir porte la date de derniere modification du BIEN -- le signal de la
@@ -525,7 +561,10 @@ def arguments() -> argparse.Namespace:
     p.add_argument("--node-exe", default=os.environ.get("CONSOLE_NODE_EXE") or "node.exe")
     p.add_argument("--timeout-seconds", type=int, default=60)
     p.add_argument("--delay-seconds", type=float, default=0.5)
-    p.add_argument("--batch-size", type=int, default=100)
+    # ⚠ 0 = LE PILOTE DECIDE, ET C'EST LE DEFAUT DEPUIS LE 14/09. Voir
+    #   `REQUETES_PAR_PIECE` : la pause doit tomber toutes les 100 REQUETES, pas
+    #   toutes les 100 pieces.
+    p.add_argument("--batch-size", type=int, default=0)
     p.add_argument("--batch-pause-seconds", type=int, default=60,
                    help="Respiration entre deux lots. 60 s = methode de reference.")
     p.add_argument("--wave-every", type=int, default=2000,
@@ -555,6 +594,9 @@ def main() -> int:
         "lues": [], "erreurs": [],
     }
 
+    # La cadence se regle AVANT tout appel, et elle se dit.
+    args.batch_size, phrase_lot = taille_de_lot(args.genre, args.batch_size)
+    resume["cadence"] = phrase_lot
     vues = set() if (args.dry_run or args.force) else deja_lues(args.stale_days, args.suivre_annonce)
     retenues = [c for c in toutes if int(c["app_affaire_id"]) not in vues]
     if args.limit > 0:

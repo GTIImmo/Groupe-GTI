@@ -45,9 +45,29 @@
 #     .\scheduled\run_rattrapage_compromis_console.ps1 -Depuis 2024-01-01
 # ===========================================================================
 param(
+    # ═══ LE GENRE, AJOUTE LE 14/09 ═══
+    #
+    # /!\ ET IL AURAIT DU L'ETRE EN MEME TEMPS QUE L'AUTRE LANCEUR. Le 14/09 j'ai
+    #   appris les ventes au lecteur, au pilote et au lanceur d'ENTRETIEN, sans
+    #   jamais demander qui d'autre appelait ce pilote. Ils sont trois : les deux
+    #   lanceurs et l'etape du run quotidien. Reparer ce qu'on a sous les yeux
+    #   n'est pas reparer.
+    #
+    # /!\ LA CADENCE, ELLE, N'EST PAS ICI. Une vente coute deux requetes ; le
+    #   PILOTE ramene le lot a 50 pieces pour que la pause tombe toujours toutes
+    #   les 100 requetes, et il l'annonce. Aucun lanceur n'a a le savoir.
+    [ValidateSet("compromis", "vente")]
+    [string]$Genre = "compromis",
     [string]$StopAt = "02:00",
     [string]$Depuis = "",
     [int]$Limit = 0,
+    # /!\ CE LANCEUR N'AVAIT PAS DE SIMULATION, ET CA M'A PIEGE LE 14/09.
+    #   J'ai voulu « eprouver » la commande et j'ai lance un VRAI rattrapage --
+    #   200 ventes lues avant que je l'arrete. Aucun degat : la cadence etait la
+    #   bonne et la donnee est celle qu'on voulait. Mais un lanceur qui ne sait
+    #   QUE partir pour de vrai est un piege, et le pilote, lui, sait simuler
+    #   depuis toujours. Il manquait juste le fil entre les deux.
+    [switch]$Simulation,
     [switch]$Force,
     [switch]$SansCourtoisie
 )
@@ -60,18 +80,22 @@ $py = Join-Path $root ".venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { $py = "python" }
 
 $script = Join-Path $root "phase2\sync\sync_hektor_compromis_console.py"
-$journal = Join-Path $root ("logs\scheduled\rattrapage_compromis_" +
+# Le journal porte le genre : pour le compromis le nom ne change pas d'un
+# caractere, et les journaux de septembre restent lisibles a cote.
+$journal = Join-Path $root ("logs\scheduled\rattrapage_${Genre}_" +
     (Get-Date -Format "yyyy-MM-dd_HH-mm-ss") + ".log")
 New-Item -ItemType Directory -Force -Path (Split-Path $journal) | Out-Null
 
-$argsPy = @($script, "--limit", "$Limit", "--refresh-session-on-expired")
+$argsPy = @($script, "--genre", $Genre, "--limit", "$Limit", "--refresh-session-on-expired")
 if ($StopAt) { $argsPy += @("--stop-at", $StopAt) }
 if ($Depuis) { $argsPy += @("--depuis", $Depuis) }
+if ($Simulation) { $argsPy += "--dry-run" }
 if ($Force) { $argsPy += "--force" }
 if (-not $SansCourtoisie) { $argsPy += "--courtoisie" }
 
-Write-Output "=== RATTRAPAGE COMPROMIS CONSOLE -- depart $(Get-Date -Format 'HH:mm:ss') ==="
+Write-Output "=== RATTRAPAGE $($Genre.ToUpper()) CONSOLE -- depart $(Get-Date -Format 'HH:mm:ss') ==="
 Write-Output "    arret programme : $StopAt   journal : $journal"
+if ($Simulation) { Write-Output "    SIMULATION -- aucune lecture chez Hektor" }
 
 # /!\ PAS DE `2>&1` ICI. PowerShell 5.1 enveloppe chaque ligne d'erreur d'un
 # executable natif dans un ErrorRecord ; avec ErrorActionPreference = Stop, la
