@@ -15398,8 +15398,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     //   prix de vente a 180 000 (le prix de l'ANNONCE) au lieu du compromis.
     //   La regle existait pourtant trois lignes plus bas, pour les compromis :
     //   AFFAIRE_ETAT_MORT. Elle manquait ici.
-    if (statusChangeAffaires.some((a) => String(a.kind) === 'vente'
-      && !AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase()))) return
+    // ⚠ CORRECTIF DU 14/09 -- CE QUE HEKTOR N'A PLUS NE BLOQUE PLUS NON PLUS.
+    //   Le 12/09 j'avais ajoute la mort (annulee/refusee). Il manquait l'autre
+    //   cas, et il s'est presente aussitot : la vente d'essai 1001351, SUPPRIMEE
+    //   chez Hektor le 13/09, garde son etat « en_cours » -- « supprimer n'est
+    //   pas annuler : on ne touche pas a l'etat, on marque present_in_hektor ».
+    //   Elle n'etait donc ni morte ni presente, et elle rebloquait l'heritage :
+    //   la modale reproposait 180 000, le prix de l'ANNONCE.
+    //   C'est exactement la regle que dossiersOuvertsDuBien applique depuis le
+    //   07/09 (`effaceeChezHektor`) -- elle manquait ici. Troisieme copie.
+    const venteQuiCompte = (a: AffaireLedgerRow) =>
+      String(a.kind) === 'vente'
+      && !AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase())
+      && !(Boolean(String(a.hektor_affaire_id ?? '').trim()) && a.present_in_hektor === false)
+    if (statusChangeAffaires.some(venteQuiCompte)) return
 
     // ─── LA SECONDE PORTE, FERMEE POUR LA MEME RAISON QUE LA PREMIERE ───
     //
