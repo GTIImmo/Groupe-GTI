@@ -4284,6 +4284,64 @@ GEL que Frederic a repere le premier).*
          app_affaire_champ_app le 29/08. Rien ne lit ni n'ecrit cette table
          aujourd'hui ; le worker ne la lira jamais, elle ne part pas chez Hektor.
 
+         ─── ⭐ LE RATTRAPAGE DES REPARTITIONS : PERIMETRE ET PIEGES (14/09) ───
+
+         ⛔ UN PIEGE DE CADENCE, TROUVE AVANT TOUT DEGAT. Le pilote fait sa pause
+           de 60 s tous les `--batch-size` PIECES. Une piece coutait UNE requete,
+           donc un lot de 100 valait 100 requetes -- la cadence du run chauffage,
+           56 926 lectures sans incident. Une VENTE en coute DEUX : un lot de 100
+           pieces en aurait valu 200, et LA RAFALE ENTRE DEUX PAUSES AURAIT DOUBLE
+           sur 7 612 pieces, sans qu'aucun compteur ne bouge.
+           ➡ Le lot suit desormais le genre : 100 compromis, 50 ventes -- 100
+             REQUETES entre deux pauses dans les deux cas. Le lanceur l'affiche.
+           ⚠ Et j'avais ecrit l'inverse le matin meme dans le lecteur (« le debit
+             par seconde ne change pas ») : vrai du LECTEUR, qui garde 0,5 s entre
+             chaque requete ; faux du PILOTE. Deux fichiers, deux rythmes.
+
+         LES DUREES, CALCULEES SUR LE JOURNAL REEL du rattrapage des compromis --
+         8 600 pieces en 15 894 s, soit 1,1 s par requete tout compris :
+             ventes, tout le parc   7 612   7 h 30
+             ventes, 5 dernieres annees  2 008   2 h
+             ventes, 3 dernieres annees  1 112   1 h 10
+             compromis ouverts      2 545   2 h 30
+         ⚠ Mon estimation de 6 h 15 venait d'un essai de 10 pieces, trop court
+           pour qu'une seule pause de lot apparaisse. Ne pas extrapoler une cadence
+           depuis un echantillon plus petit que sa periode.
+
+         ⭐⭐ ET CE QUE CE RATTRAPAGE N'APPORTE PAS -- deux corrections a mes
+           propres affirmations, toutes deux trouvees par une question de Frederic.
+
+           ① LES IDENTITES NE MANQUENT PAS, NI POUR LES VENTES, NI POUR LES
+              COMPROMIS. Le REGISTRE les porte deja, avec les noms :
+                  compromis   mandants 100 % nommes · acquereurs 96 %
+                  ventes      notaires 100 % · mandants 99,9 % · acquereurs 99 %
+              30 341 personnes distinctes y sont nommees pour les seules ventes.
+              J'avais presente `app_affaire_console.parties_json` (7 %) comme un
+              trou : c'est une COMMODITE qui double le registre, pas un manque.
+
+           ② ET HEKTOR EST ASYMETRIQUE, CE QUI EXPLIQUE TOUT. Son API ne rend
+              AUCUN notaire sur les compromis (0 / 10 586) -- c'est ce qui a
+              justifie le rattrapage console de septembre -- mais elle les rend
+              TOUS sur les ventes (94,8 % en ont au moins un, sous forme d'objet
+              {entree, sortie} avec nom et civilite).
+              ➡ Les « 29 notaires recoltes au passage » que j'annoncais comme un
+                benefice de la lecture des ventes N'EN SONT PAS UN.
+
+           ③ ET LE NOTAIRE DU COMPROMIS SE NOMME SANS LA CONSOLE. Elle en ramene
+              le NUMERO ; le nom vit dans le miroir des contacts -- 1 320 notaires
+              cites, 1 320 presents, 1 320 nommes. Le serveur sait le faire seul.
+
+         ➡ CONCLUSION : lire les ventes par la console n'apporte QU'UNE chose, la
+           REPARTITION DE COMMISSION. Rien d'autre. Le perimetre se choisit donc
+           sur cette seule valeur -- d'ou la recommandation des 5 dernieres
+           annees : 2 h, et toutes les commissions encore discutables.
+
+         ⚠ LA FENETRE DE LANCEMENT, mesuree le 14/09 sur les taches planifiees :
+               GTI Recherches Actives  03:00  (porte API, ~20 min)
+               GTI Quotidien           05:00  (dont l'entretien console)
+           Le lanceur s'arrete a 04:30 par defaut. Pour eviter TOUT recouvrement,
+           y compris avec le flux API de 03:00, s'arreter a 02:55.
+
          ─── ⭐ PEUT-ON CREDITER UNE AUTRE AGENCE ? DEUX MECANISMES (14/09) ───
          Question de Frederic : « mais on peut pas changer agence ? ». Elle est
          legitime -- l'assistant porte un module nomme `agenceInterkab`.
