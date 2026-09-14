@@ -4251,6 +4251,29 @@ GEL que Frederic a repere le premier).*
          porte desormais intervenantsEntree[51] et intervenantsSortie[51], 100 %
          et 4 166,67 HT chacun, relus chez Hektor.
 
+         ─── ⭐⭐ OU L'ATTRIBUTION SE FAIT-ELLE ? AU COMPROMIS. (14/09) ───
+         Question de Frederic : « dans Hektor les intervenants sont saisis au
+         compromis ? ». Je ne l'avais vu que sur NOTRE bien temoin, ou c'est nous
+         qui venions de les poser la veille -- donc sur rien du tout. Mesure :
+
+             39 compromis REELS lus sur 39 lisibles   -> 39 portent un intervenant
+             16 biens portant compromis ET vente      -> 16 fois LES MEMES
+                dont l'annonce 61943, la seule a deux personnes (115 / 55) :
+                identique des deux cotes elle aussi
+
+         ➡ L'ATTRIBUTION SE FAIT AU COMPROMIS, ET LA VENTE LA REPREND. Le point de
+           reparation est donc UNIQUE, et c'est le compromis. Pour la vente, la
+           garde « deja attribue » suffit : elle ne doit rien faire, et c'est
+           exactement ce que l'essai du 13/09 a montre (aucune ligne
+           `hektor_commission` a la creation de la vente 23305).
+
+         ⚠ ET UN PIEGE D'INSTRUMENT, PAYE LE 14/09 : les trois premieres lectures
+           ont rendu « intervenant RETENU » alors que l'identifiant de transaction
+           etait `undefined`. Hektor avait ouvert un formulaire de CREATION et
+           l'avait PRE-REMPLI depuis la transaction courante de la fiche. Le
+           resultat etait juste PAR ACCIDENT, donc faux. Le script refuse
+           desormais un identifiant illisible au lieu de lire autre chose.
+
          ─── ⭐ L'ESSAI REEL DE LA VENTE, 13/09 17:31 (travail a7b81784) ───
          Fait DEPUIS L'APP, par la modale « Vendu » : le RPC refuse la cle de
          service (403 forbidden_change_status), et c'est heureux -- un travail
@@ -4274,6 +4297,18 @@ GEL que Frederic a repere le premier).*
              compte plusieurs actifs, rien ne garantit que ce soit LUI.
              ⚠ A CORRIGER : preferer le negociateur DU DOSSIER quand il figure
                parmi les proposes. Non code -- arbitrage a confirmer.
+           ⛔ ET CE N'EST PAS THEORIQUE -- MESURE LE 13/09 SUR TROIS AGENCES :
+               Firminy   1 actif  -> 1 propose
+               Annonay   2 actifs -> 2 proposes
+               Le Puy    3 actifs -> 3 proposes (31, 32, 268), DANS L'ORDRE DES
+                         NUMEROS. Le negociateur de l'annonce 62866 est GENTES
+                         (32) ; le worker prendrait DECHAUD (31).
+             Sur le parc entier, 26 870 annonces jugeables :
+               le premier propose EST le bon        12 665   47,1 %
+               le premier propose N'EST PAS le bon  14 205   52,9 %
+             ⚠ UNE SUR DEUX. Et c'est PIRE que l'etat d'avant : « Commission
+               administrateur » est visiblement faux, un vrai collegue ne l'est
+               pas. Une erreur plausible ne se voit pas.
 
          ⭐ ET LA VENTE HERITE DES INTERVENANTS DU COMPROMIS. Le journal de la
            creation ne porte AUCUNE ligne `hektor_commission` : la garde « deja

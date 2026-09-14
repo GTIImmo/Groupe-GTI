@@ -57,7 +57,22 @@ const path = require("path");
 const { execFileSync } = require("child_process");
 
 const RACINE = path.resolve(__dirname, "..");
-const COMBIEN = Math.max(1, Math.min(400, Number(process.argv[2] || 40)));
+function arg(nom, defaut) {
+  const t = process.argv.find((a) => a.startsWith(`--${nom}=`) || a === `--${nom}`);
+  if (!t) return defaut;
+  if (t.includes("=")) return t.split("=")[1];
+  return process.argv[process.argv.indexOf(t) + 1] || defaut;
+}
+const COMBIEN = Math.max(1, Math.min(400, Number(arg("combien", process.argv[2]) || 40)));
+// ─── LE GENRE, AJOUTE LE 14/09 ───
+// Question de Frederic : « dans Hektor les intervenants sont saisis au
+// compromis ? ». Je ne l'avais verifie que sur NOTRE bien de test, ou c'est nous
+// qui venions de les poser -- donc sur rien du tout. Le meme instrument, pointe
+// sur les compromis REELS, repond sans supposer.
+const GENRE = String(arg("genre", "vente")).toLowerCase();
+// Et la liste d'annonces peut venir d'un releve precedent : pour comparer le
+// compromis ET la vente D'UN MEME BIEN, il faut lire les deux sur les memes.
+const DEPUIS = String(arg("annonces-du", "")).trim();
 
 // ─── LE DOMAINE SE LIT DANS .env, IL NE SE DEVINE PAS ───
 // Leçon du 11/09 : la porte web est passée à www.gti-immobilier.fr tandis que la
@@ -100,11 +115,23 @@ const ENTETES = {
   "User-Agent": "Mozilla/5.0",
 };
 
-const PAS = [
-  { de: "0", vers: "2", modules: ["infosFinancieresVente",
-      "acquereurNotaireAutresProspectsVente", "annonceMandatVente", "agenceInterkabVente"] },
-  { de: "2", vers: "3", modules: ["commissionsVente"] },
-];
+const ASSISTANTS = {
+  vente: { mode: "annonce-SuiviVente-vente-getStepVente", conteneur: "PopinVente",
+    cleId: "idVente", table: "hektor_vente", colId: "hektor_vente_id", colDate: "date_vente",
+    pas: [{ de: "0", vers: "2", modules: ["infosFinancieresVente",
+             "acquereurNotaireAutresProspectsVente", "annonceMandatVente", "agenceInterkabVente"] },
+          { de: "2", vers: "3", modules: ["commissionsVente"] }] },
+  compromis: { mode: "annonce-SuiviVente-compromis-getStepCompromis", conteneur: "PopinCompromis",
+    cleId: "idCompromis", table: "hektor_compromis", colId: "hektor_compromis_id",
+    colDate: "date_start",
+    pas: [{ de: "0", vers: "2", modules: ["infosFinancieresCompromis",
+             "acquereurNotaireAutresProspectsCompromis", "annonceMandatCompromis",
+             "agenceInterkabCompromis"] },
+          { de: "2", vers: "3", modules: ["commissionsCompromis"] }] },
+};
+const A = ASSISTANTS[GENRE];
+if (!A) { console.error("genre inconnu : " + GENRE); process.exit(1); }
+const PAS = A.pas;
 
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 let requetes = 0;
@@ -164,8 +191,7 @@ async function appel(corps, annonce) {
     await dormir(60000);
   }
   requetes += 1;
-  const rep = await fetch(`${XMLRPC_URL}?mode=${encodeURIComponent(
-    "annonce-SuiviVente-vente-getStepVente")}`, {
+  const rep = await fetch(`${XMLRPC_URL}?mode=${encodeURIComponent(A.mode)}`, {
     method: "POST", body: corps,
     headers: { ...ENTETES,
       Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonce)}`,
@@ -233,9 +259,19 @@ function verdictEtape3(html) {
   // On écarte le bien témoin 24933 : ses ventes viennent de l'app, ce sont elles
   // qu'on instruit. Les plus récentes d'abord -- si une pratique a changé, c'est
   // la pratique actuelle qui nous intéresse.
-  const sql = "SELECT hektor_vente_id, hektor_annonce_id, date_vente, prix, honoraires "
-    + "FROM hektor_vente WHERE hektor_annonce_id <> '24933' AND hektor_vente_id IS NOT NULL "
-    + `ORDER BY date_vente DESC LIMIT ${COMBIEN}`;
+  // ⚠ QUAND ON COMPARE DEUX GENRES, IL FAUT LES MEMES BIENS. Lire 40 compromis
+  //   au hasard et 40 ventes au hasard ne dit RIEN sur « la vente herite-t-elle
+  //   du compromis » : il faut le compromis ET la vente D'UN MEME BIEN.
+  const filtreAnnonces = DEPUIS && fs.existsSync(DEPUIS)
+    ? [...new Set(JSON.parse(fs.readFileSync(DEPUIS, "utf8"))
+        .map((x) => String(x.annonce || "")).filter(Boolean))]
+    : null;
+  const sql = `SELECT ${A.colId} AS id, hektor_annonce_id, ${A.colDate} AS quand `
+    + `FROM ${A.table} WHERE hektor_annonce_id <> '24933' AND ${A.colId} IS NOT NULL `
+    + (filtreAnnonces
+       ? `AND hektor_annonce_id IN (${filtreAnnonces.map((a) => `'${a}'`).join(",")}) `
+       : "")
+    + `ORDER BY ${A.colDate} DESC LIMIT ${COMBIEN}`;
   const brut = execFileSync(path.join(RACINE, ".venv", "Scripts", "python.exe"),
     ["-c", "import json,sqlite3,sys;c=sqlite3.connect('file:" +
       path.join(RACINE, "data", "hektor.sqlite").replace(/\\/g, "/") +
@@ -247,7 +283,7 @@ function verdictEtape3(html) {
   console.log("MESURE : LA COMMISSION D'UNE VENTE EST-ELLE ATTRIBUÉE ?");
   console.log(`   domaine   ${BASE}`);
   console.log(`   session   ${COOKIES.split("; ").filter(Boolean).length} cookies vivants pour ${HOTE}`);
-  console.log(`   échantillon ${ventes.length} ventes réelles, les plus récentes, bien témoin exclu`);
+  console.log(`   échantillon ${ventes.length} ${GENRE}(s) réel(s)${filtreAnnonces ? " sur les mêmes biens que le relevé précédent" : ", les plus récent(e)s"}, bien témoin exclu`);
   console.log("   ⚠ AUCUN ENREGISTREMENT : actionContainer[] n'est construit nulle part.");
   console.log("");
 
@@ -256,18 +292,30 @@ function verdictEtape3(html) {
 
   for (const v of ventes) {
     const annonce = String(v.hektor_annonce_id);
-    const id = String(v.hektor_vente_id);
+    const id = String(v.id || "");   // alias pose par le SQL, quel que soit le genre
     try {
+      if (!/^\d+$/.test(id)) {
+        // ⚠ PIEGE PAYE LE 14/09 : avec un identifiant vide, `ouverture.set` pose
+        //   « undefined », Hektor ouvre un formulaire de CREATION -- et il le
+        //   PRE-REMPLIT depuis la transaction courante de la fiche. Les trois
+        //   premieres lectures ont donc rendu « intervenant retenu » sans qu'on
+        //   ait ouvert le compromis vise. Un resultat juste par accident est un
+        //   resultat faux.
+        illisibles += 1;
+        lignes.push({ transaction: id, annonce, verdict: "identifiant illisible" });
+        console.log(`   ${GENRE.padEnd(9)} ${String(id).padEnd(7)} annonce ${annonce.padEnd(7)} — identifiant illisible, IGNORE`);
+        continue;
+      }
       const ouverture = new URLSearchParams();
       ouverture.set("idAnnonce", annonce);
-      ouverture.set("idVente", id);
+      ouverture.set(A.cleId, id);
       ouverture.set("basket", "");
       ouverture.set("initBasket", "true");
       let etat = await appel(ouverture, annonce);
       if (!etat.basket) {
         illisibles += 1;
-        lignes.push({ vente: id, annonce, verdict: "ouverture sans panier" });
-        console.log(`   vente ${id.padEnd(7)} annonce ${annonce.padEnd(7)} — ouverture sans panier`);
+        lignes.push({ transaction: id, annonce, verdict: "ouverture sans panier" });
+        console.log(`   ${GENRE.padEnd(9)} ${id.padEnd(7)} annonce ${annonce.padEnd(7)} — ouverture sans panier`);
         await dormir(2000);
         continue;
       }
@@ -279,7 +327,7 @@ function verdictEtape3(html) {
           corps.append(cle, val);
         }
         for (const m of pas.modules) corps.append("containerModule[]", m);
-        corps.set("containerName", "PopinVente");
+        corps.set("containerName", A.conteneur);
         corps.set("fromStep", pas.de);
         corps.set("step", pas.vers);
         corps.set("idAnnonce", annonce);
@@ -297,10 +345,10 @@ function verdictEtape3(html) {
       if (c3.aucun_intervenant === true) { verdict = "AUCUN intervenant"; sansIntervenant += 1; }
       else if (c3.aucun_intervenant === false) { verdict = "intervenant RETENU"; avecIntervenant += 1; }
       else { verdict = "illisible"; illisibles += 1; }
-      lignes.push({ vente: id, annonce, date: v.date_vente, honoraires: v.honoraires,
+      lignes.push({ transaction: id, annonce, date: v.quand, genre: GENRE,
                     verdict, ...c2, commission_administrateur: c3.commission_administrateur,
                     extrait: String(c3.texte || "").slice(0, 220) });
-      console.log(`   vente ${id.padEnd(7)} annonce ${annonce.padEnd(7)} ${String(v.date_vente).padEnd(11)} `
+      console.log(`   ${GENRE.padEnd(9)} ${id.padEnd(7)} annonce ${annonce.padEnd(7)} ${String(v.quand).padEnd(11)} `
         + `${verdict.padEnd(20)} entree=${c2.entree_percent || "-"} sortie=${c2.sortie_percent || "-"} `
         + `champs=${c2.champs_intervenant.length}`);
     } catch (e) {
@@ -311,18 +359,18 @@ function verdictEtape3(html) {
         process.exit(3);
       }
       illisibles += 1;
-      lignes.push({ vente: id, annonce, verdict: "erreur", erreur: String(e && e.message || e) });
-      console.log(`   vente ${id.padEnd(7)} annonce ${annonce.padEnd(7)} — erreur : ${e && e.message}`);
+      lignes.push({ transaction: id, annonce, verdict: "erreur", erreur: String(e && e.message || e) });
+      console.log(`   ${GENRE.padEnd(9)} ${id.padEnd(7)} annonce ${annonce.padEnd(7)} — erreur : ${e && e.message}`);
     }
     await dormir(2000);
   }
 
-  const fichier = path.join(SORTIE, `mesure_${new Date().toISOString().slice(0, 10)}.json`);
+  const fichier = path.join(SORTIE, `mesure_${GENRE}_${new Date().toISOString().slice(0, 10)}.json`);
   fs.writeFileSync(fichier, JSON.stringify(lignes, null, 1), "utf8");
   const total = avecIntervenant + sansIntervenant;
   console.log("");
   console.log("─── LE VERDICT ───");
-  console.log(`   ventes lues                    ${total + illisibles}`);
+  console.log(`   ${GENRE}(s) lu(s)                 ${total + illisibles}`);
   console.log(`   un intervenant EST retenu      ${avecIntervenant}`
     + (total ? `   ${(100 * avecIntervenant / total).toFixed(1)} %` : ""));
   console.log(`   AUCUN intervenant              ${sansIntervenant}`
