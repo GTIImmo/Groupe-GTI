@@ -132,8 +132,27 @@ def supabase_get(chemin: str, requete: dict[str, str]) -> Any:
 
 
 def supabase_upsert(lignes: list[dict[str, Any]]) -> None:
+    """⚠ ON ENVOIE UN GROUPE PAR JEU DE CLES, ET CE N'EST PAS UN RAFFINEMENT.
+
+    PostgREST construit la liste des colonnes a partir du LOT : toutes les lignes
+    d'un meme envoi doivent porter les MEMES cles, sinon il refuse (« All object
+    keys must match »). Or depuis le 14/09 une ligne dont la page des commissions
+    n'a pas repondu n'emporte pas `intervenants_json` -- « vide ne gagne pas ».
+    Sans ce regroupement, un seul echec de page 2 ferait tomber le lot ENTIER,
+    soit jusqu'a cent lectures reussies perdues d'un coup.
+
+    En regime normal il n'y a qu'un seul groupe, donc un seul appel, comme avant.
+    """
     if not lignes:
         return
+    groupes: dict[tuple, list[dict[str, Any]]] = {}
+    for ligne in lignes:
+        groupes.setdefault(tuple(sorted(ligne)), []).append(ligne)
+    for lot in groupes.values():
+        _supabase_upsert_un_lot(lot)
+
+
+def _supabase_upsert_un_lot(lignes: list[dict[str, Any]]) -> None:
     url, cle = _supabase()
     corps = json.dumps(lignes).encode("utf-8")
     req = urllib.request.Request(f"{url}/rest/v1/{TABLE}", data=corps, method="POST", headers={
@@ -179,7 +198,13 @@ def cibles(args: argparse.Namespace) -> list[dict[str, Any]]:
         #   cloture ne peut pas etre modifie ».
         #   Leur notaire restera donc inconnu. Ils sont 1 373 sur 10 586, tous
         #   termines : c'est de l'histoire, pas de la donnee vivante.
-        ou = ["kind = 'compromis'", "present_in_hektor = 1",
+        # ⚠ LE FILTRE DES ANNULES NE GENE PAS LA VENTE, et il faut le savoir
+        #   plutot que de l'enlever : une vente n'a AUCUN etat chez Hektor --
+        #   mesure du 14/09, `state` vaut NULL sur 7 613 des 7 615 lignes. Le
+        #   COALESCE rend donc '' et la ligne passe. Retirer la condition pour le
+        #   genre vente ne changerait rien, sinon qu'on aurait deux chemins la ou
+        #   un seul suffit.
+        ou = [f"kind = '{args.genre}'", "present_in_hektor = 1",
               "COALESCE(state, '') NOT IN ('cancelled', 'annule')",
               "hektor_affaire_id IS NOT NULL", "hektor_annonce_id IS NOT NULL"]
         params: list[Any] = []
@@ -297,6 +322,7 @@ def rafraichir_session(node: str, delai: int) -> None:
 
 def lire_un_lot(node: str, lot: list[dict[str, Any]], args: argparse.Namespace) -> dict[str, Any]:
     cmd = [node, str(EXTRACTEUR),
+           "--genre", args.genre,
            "--storage-state", str(SESSION),
            "--timeout-ms", str(args.timeout_seconds * 1000),
            "--delay-ms", str(int(args.delay_seconds * 1000))]
@@ -323,12 +349,27 @@ def lire_un_lot(node: str, lot: list[dict[str, Any]], args: argparse.Namespace) 
     return charge
 
 
-def ligne_pour_supabase(cible: dict[str, Any], resultat: dict[str, Any]) -> dict[str, Any]:
+def sans_vide(champs: dict[str, Any]) -> dict[str, Any]:
+    """Ne garder que ce qui porte quelque chose.
+
+    ⚠ « VIDE NE GAGNE PAS » -- la regle du projet, transposee au rattrapage.
+      Une cle absente CONSERVE ce que la table portait ; une cle a `null`
+      l'EFFACE. Comme le worker lit une page de plus que nous, ecrire nos vides
+      par-dessus ses lectures serait une perte nette.
+    """
+    return {c: v for c, v in champs.items() if v not in (None, "", [], {})}
+
+
+def ligne_pour_supabase(cible: dict[str, Any], resultat: dict[str, Any],
+                        genre: str = "compromis") -> dict[str, Any]:
     champs = resultat.get("champs") or {}
     return {
         "app_affaire_id": int(cible["app_affaire_id"]),
         "hektor_annonce_id": int(cible["hektor_annonce_id"]),
-        "kind": "compromis",
+        # ⚠ LE GENRE VIENT DE CE QU'ON A DEMANDE, jamais d'une supposition : la
+        #   table melange les deux, et une vente rangee en « compromis » serait
+        #   invisible pour toujours.
+        "kind": genre,
         "hektor_affaire_id": str(cible["hektor_affaire_id"]),
         "acquereurs": champs.get("acquereurs"),
         "mandants": champs.get("mandants"),
@@ -348,6 +389,36 @@ def ligne_pour_supabase(cible: dict[str, Any], resultat: dict[str, Any]) -> dict
         # sait pas nommer -- les notaires (typologie « partenaire »), et les
         # fiches de menage vides (voir 26bis-COUPLES).
         "parties_json": champs.get("parties"),
+        # ═══ LA REPARTITION DE COMMISSION ═══                       14/09/2026
+        #
+        # ⚠ MEME OUBLI QUE LE 11/09, ET TROUVE DE LA MEME FACON : en verifiant.
+        #   Ce jour-la, `parties_json` etait vide sur TOUT le rattrapage parce que
+        #   le convertisseur ne copiait que les numeros, alors que le lecteur
+        #   avait bel et bien capte les noms. Ici les trois premieres ventes lues
+        #   sont arrivees SANS leurs intervenants, alors que le lecteur les
+        #   rendait : REYNAUD a l'entree, MARTINEZ a la sortie. Le lecteur voit,
+        #   le convertisseur ne recopie pas. Un champ ajoute au lecteur doit
+        #   TOUJOURS etre ajoute ici -- c'est la deuxieme fois.
+        #
+        # ⚠ ET `unites_*` PEUT MANQUER SANS QUE LES INTERVENANTS MANQUENT.
+        #   Mesure du 14/09 sur la vente 8004 (2022) : deux intervenants nommes,
+        #   leurs montants presents, et AUCUN pourcentage de partage. On enregistre
+        #   donc ce qu'on a, tel quel. La conversion en repartition saura retomber
+        #   sur les montants -- elle ne devinera pas ici.
+        # ⚠ VIDE NE GAGNE PAS, ET ICI CA COMPTE VRAIMENT. Le WORKER, lui, traverse
+        #   les TROIS pages quand il ecrit : sa lecture est plus riche que la
+        #   notre, qui s'arrete a la deuxieme. Poser `null` par-dessus effacerait
+        #   ses conditions suspensives -- on aurait remplace une donnee par un
+        #   trou, en croyant enrichir. Les cles ne sont donc ajoutees QUE si elles
+        #   portent quelque chose (voir `sans_vide` juste apres).
+        # ⚠ ET LES CONDITIONS SUSPENSIVES NE SONT PAS ECRITES DU TOUT. Elles vivent
+        #   page 3, que ce lecteur n'ouvre pas : n'en rien dire est la seule
+        #   position honnete. Le worker, lui, les lit et les ecrit.
+        **sans_vide({
+            "intervenants_json": champs.get("intervenants"),
+            "unites_entree_percent": champs.get("unites_entree_percent"),
+            "unites_sortie_percent": champs.get("unites_sortie_percent"),
+        }),
         # ⚠ NI LES UNITES NI LES CONDITIONS : elles vivent aux etapes 2 et 3,
         #   que cette passe ne parcourt pas. Elles sont donc ABSENTES de cette
         #   ligne -- et c'est sans danger : MESURE DU 10/09 sur une ligne
@@ -426,6 +497,18 @@ def par_lots(valeurs: list, taille: int):
 
 def arguments() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Rattrapage console des compromis (lecture seule).")
+    # ═══ LE GENRE, APPRIS LE 14/09 ═══
+    #
+    # Ce pilote a lu 9 216 compromis sans incident ; on ne le reecrit pas, on lui
+    # ajoute une seconde cible. En mode compromis il se comporte exactement comme
+    # avant -- meme requete, meme ecriture, meme appariement.
+    #
+    # ⚠ POURQUOI LES VENTES D'ABORD. Arbitrage de Frederic : une vente est une
+    #   commission REELLEMENT DUE, un compromis n'est qu'une promesse. Et la
+    #   repartition ne vit que dans l'assistant -- l'API rend `partAdmin` vide sur
+    #   les 7 612 ventes comme sur les compromis.
+    p.add_argument("--genre", default="compromis", choices=("compromis", "vente"),
+                   help="Ce qu'on lit. Defaut : compromis, comme avant.")
     p.add_argument("--compromis", action="append", default=[],
                    help="Numero Hektor de compromis. Repetable.")
     p.add_argument("--depuis", default="", help="Ne prendre que les compromis a partir de cette date.")
@@ -526,19 +609,23 @@ def main() -> int:
                 raise
 
         lignes = []
+        # ⚠ LA CLE DE SORTIE SUIT LE GENRE. Le lecteur rend `hektor_vente_id`
+        #   pour une vente ; chercher `hektor_compromis_id` ne trouverait rien et
+        #   le lot entier serait ignore EN SILENCE.
+        cle_sortie = "hektor_vente_id" if args.genre == "vente" else "hektor_compromis_id"
         for r in charge.get("resultats") or []:
-            cible = par_numero.get(str(r.get("hektor_compromis_id")))
+            cible = par_numero.get(str(r.get(cle_sortie)))
             if not cible:
                 continue
             if r.get("status") != "done":
                 resume["erreurs"].append({"cible": f"{r.get('hektor_annonce_id')}:"
-                                                   f"{r.get('hektor_compromis_id')}",
+                                                   f"{r.get(cle_sortie)}",
                                           "status": r.get("status"), "error": r.get("error")})
                 continue
-            lignes.append(ligne_pour_supabase(cible, r))
+            lignes.append(ligne_pour_supabase(cible, r, args.genre))
             champs = r.get("champs") or {}
             resume["lues"].append({
-                "cible": f"{r.get('hektor_annonce_id')}:{r.get('hektor_compromis_id')}",
+                "cible": f"{r.get('hektor_annonce_id')}:{r.get(cle_sortie)}",
                 "notaires": len(champs.get("notaires_acquereur") or [])
                             + len(champs.get("notaires_mandant") or []),
                 "acquereurs": len(champs.get("acquereurs") or []),
