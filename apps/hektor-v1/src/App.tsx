@@ -15301,11 +15301,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   //   les 12,1 % qui n'en ont pas -- elle vaut pour la suite. La rattacher a la
   //   transaction obligerait a la ressaisir, et deux saisies divergent.
   const repartitionChaineId = useCallback((): string => {
-    const ouverts = dossiersOuvertsDuBien(statusChangeAffaires)
+    const candidats = dossiersOuvertsDuBien(statusChangeAffaires)
       .filter((d) => d.ouvert || d.closeParMorte)
-    // Un seul dossier ouvert : c'est le sien. Plusieurs ou aucun : on ne devine
-    // pas -- l'ecran proposera la saisie une fois la transaction creee.
-    return ouverts.length === 1 ? String(ouverts[0].chaine) : ''
+    // ⛔ « UN SEUL DOSSIER OUVERT » NE MARCHAIT PAS, ET C'ETAIT MESURABLE.
+    //   Le bien temoin en porte DEUX : une offre encore vivante (chaine 1001336)
+    //   et le compromis (chaine 1001347). Ma regle exigeait l'unicite, rendait
+    //   vide, et la repartition enregistree ne remontait jamais. Deux essais
+    //   perdus a chercher ailleurs.
+    // ➡ ON SUIT L'ORDRE DES ETAPES, comme le chainage lui-meme : une vente
+    //   s'accroche au dossier qui porte le compromis, un compromis a celui qui
+    //   porte l'offre. Le dossier le plus avance l'emporte donc.
+    const vivante = (r: AffaireLedgerRow | null | undefined) =>
+      r != null && !AFFAIRE_ETAT_MORT.has(String(r.state ?? '').trim().toLowerCase())
+    const avecCompromis = candidats.find((d) => vivante(d.porteur.get('compromis')))
+    if (avecCompromis) return String(avecCompromis.chaine)
+    const avecOffre = candidats.find((d) => vivante(d.porteur.get('offre')))
+    if (avecOffre) return String(avecOffre.chaine)
+    // Aucun des deux : un seul dossier tranche, plusieurs ne se devinent pas.
+    return candidats.length === 1 ? String(candidats[0].chaine) : ''
   }, [statusChangeAffaires])
 
   const repartitionLigne = useCallback(
