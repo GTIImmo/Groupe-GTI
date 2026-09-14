@@ -5223,6 +5223,136 @@ export async function loadNegotiatorOptionForContact(params: {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// LA REPARTITION DE COMMISSION -- une donnee PROPRE A L'APP        14/09/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Decision de Frederic : « le systeme de repartition des commissions de Hektor
+// n'est pas utile POUR MON APPS a l'avenir ». Elle ne part JAMAIS chez eux --
+// leur page ne propose que les negociateurs ACTIFS DE L'AGENCE DU BIEN, or 26,6 %
+// des compromis ont l'acquereur suivi par une AUTRE agence. Un quart des
+// repartitions reelles leur est inexprimable.
+//
+// ⚠ LA SERIE D'IDENTIFIANTS EST UN PIEGE DEJA PAYE. L'annuaire porte
+//   `hektor_user_id` ET `hektor_negociateur_id`, et LE MEME NOMBRE Y DESIGNE DEUX
+//   PERSONNES : 43 vaut Olivier POMBAR comme negociateur, Stephanie JEOFFROY
+//   comme utilisateur. Les commissions emploient la serie UTILISATEUR. Un
+//   commentaire du worker s'y est trompe, corrige le 14/09.
+export type RepartitionPersonne = {
+  idUser: string
+  nom: string
+  agenceNom: string | null
+}
+
+export type RepartitionLigne = {
+  cote: 'entree' | 'sortie'
+  rang: 1 | 2
+  hektorUserId: string
+  nomAuMoment: string | null
+  pourcentage: number
+  origine: string | null
+}
+
+/** LES TRENTE. Mesure du 14/09 : les comptes de type « NEGO » de
+ *  app_user_directory sont EXACTEMENT les 30 actifs de l'annuaire, memes
+ *  identifiants. On lit donc l'annuaire, qui porte l'agence en plus.
+ *  ⚠ SANS FILTRE D'AGENCE, et c'est demande : « sans contrainte d'agence etc. ».
+ *    C'est precisement ce que Hektor ne sait pas faire. */
+export async function loadRepartitionPersonnes(): Promise<RepartitionPersonne[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_hektor_negotiator_agency_directory')
+    .select('hektor_user_id,display_name,agence_nom,is_active')
+    .eq('is_active', true)
+    .order('display_name', { ascending: true })
+    .limit(500)
+  if (error) throw new Error(error.message)
+  const vus = new Set<string>()
+  const out: RepartitionPersonne[] = []
+  for (const row of (data ?? []) as Array<{ hektor_user_id?: string | number | null; display_name?: string | null; agence_nom?: string | null }>) {
+    const idUser = row.hektor_user_id == null ? '' : String(row.hektor_user_id).trim()
+    if (!idUser || vus.has(idUser)) continue
+    vus.add(idUser)
+    out.push({ idUser, nom: (row.display_name ?? '').trim() || `Utilisateur ${idUser}`, agenceNom: row.agence_nom ?? null })
+  }
+  return out
+}
+
+/** Ce que le dossier porte deja. Vide = personne n'a encore decide. */
+export async function loadRepartition(chaineId: number | string): Promise<RepartitionLigne[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const cle = String(chaineId ?? '').trim()
+  if (!cle) return []
+  const { data, error } = await supabase
+    .from('app_affaire_repartition')
+    .select('cote,rang,hektor_user_id,nom_au_moment,pourcentage,origine')
+    .eq('app_chaine_id', cle)
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    cote: String(row.cote) === 'sortie' ? 'sortie' : 'entree',
+    rang: Number(row.rang) === 2 ? 2 : 1,
+    hektorUserId: String(row.hektor_user_id ?? '').trim(),
+    nomAuMoment: (row.nom_au_moment as string | null) ?? null,
+    pourcentage: Number(row.pourcentage ?? 0),
+    origine: (row.origine as string | null) ?? null,
+  }))
+}
+
+/** REMPLACE la repartition du dossier, en une fois.
+ *  ⚠ PAS D'ECRITURE DIRECTE : la table a la RLS active et aucune policy
+ *    d'ecriture. Le geste passe par une RPC qui exige le meme role que la modale
+ *    qui le porte -- c'est de l'argent, une policy laisserait n'importe quel
+ *    compte connecte reecrire la part de n'importe qui. */
+export async function saveRepartition(params: {
+  chaineId: number | string
+  appDossierId: number | string
+  lignes: RepartitionLigne[]
+}): Promise<{ lignes: number; total: number; nonAttribue: number }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase indisponible')
+  const { data, error } = await supabase.rpc('app_repartition_commission_set', {
+    target_chaine_id: Number(params.chaineId),
+    target_dossier_id: Number(params.appDossierId),
+    lignes: params.lignes
+      .filter((l) => l.hektorUserId.trim())
+      .map((l) => ({
+        cote: l.cote,
+        rang: String(l.rang),
+        hektor_user_id: l.hektorUserId.trim(),
+        nom_au_moment: l.nomAuMoment,
+        pourcentage: l.pourcentage,
+        origine: l.origine ?? 'saisie',
+      })),
+  })
+  if (error) throw new Error(error.message)
+  const r = (data ?? {}) as { lignes?: number; total?: number; non_attribue?: number }
+  return { lignes: Number(r.lignes ?? 0), total: Number(r.total ?? 0), nonAttribue: Number(r.non_attribue ?? 0) }
+}
+
+/** LE NEGOCIATEUR D'UN CONTACT, dans la serie UTILISATEUR.
+ *  Sert au defaut du cote SORTIE : « le commercial en charge de la fiche
+ *  contact » (Frederic, 14/09). Mesure : 85,2 % des contacts le portent ; pour
+ *  les autres, l'emplacement reste VIDE -- un nom faux se paie, un vide se voit. */
+export async function loadRepartitionDefautSortie(contactId: string | number | null | undefined): Promise<RepartitionPersonne | null> {
+  if (!hasSupabaseEnv || !supabase) return null
+  const cle = String(contactId ?? '').trim()
+  if (!cle) return null
+  const { data, error } = await supabase
+    .from('app_contact_current')
+    .select('hektor_negociateur_id,negociateur_email,commercial_nom')
+    .eq('hektor_contact_id', cle)
+    .limit(1)
+  if (error) return null
+  const row = (data ?? [])[0] as { hektor_negociateur_id?: string | number | null; negociateur_email?: string | null; commercial_nom?: string | null } | undefined
+  if (!row) return null
+  const option = await loadNegotiatorOptionForContact({
+    hektorNegociateurId: row.hektor_negociateur_id == null ? null : String(row.hektor_negociateur_id),
+    negociateurEmail: row.negociateur_email ?? null,
+    commercialNom: row.commercial_nom ?? null,
+  }).catch(() => null)
+  if (!option || !option.idUser) return null
+  return { idUser: String(option.idUser), nom: option.label ?? '', agenceNom: option.agenceNom ?? null }
+}
+
 export async function loadHektorAgencyOptions(): Promise<HektorAgencyOption[]> {
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase

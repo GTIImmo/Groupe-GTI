@@ -43,6 +43,12 @@ import {
   loadHektorAgencyOptions,
   loadHektorNegotiatorOptions,
   loadNegotiatorOptionForContact,
+  loadRepartitionPersonnes,
+  loadRepartition,
+  saveRepartition,
+  loadRepartitionDefautSortie,
+  type RepartitionPersonne,
+  type RepartitionLigne,
   loadUserNegotiatorContext,
   loadUserProfile,
   loadGoogleWorkspaceIdentity,
@@ -12037,6 +12043,13 @@ export default function App() {
   const [statusChangeCloseEtat, setStatusChangeCloseEtat] = useState<'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'>('choiceAutre')
   const [statusChangeCloseRaison, setStatusChangeCloseRaison] = useState('autre')
   const [statusChangePending, setStatusChangePending] = useState(false)
+  // ─── LA REPARTITION DE COMMISSION (14/09/2026) ───
+  // Donnee PROPRE A L'APP : elle ne part jamais chez Hektor. Quatre emplacements,
+  // deux par cote -- la forme que Frederic a demandee, et celle de Hektor, qui
+  // indexe lui aussi par personne et par sens.
+  const [repartitionPersonnes, setRepartitionPersonnes] = useState<RepartitionPersonne[]>([])
+  const [repartitionLignes, setRepartitionLignes] = useState<RepartitionLigne[]>([])
+  const [repartitionChargee, setRepartitionChargee] = useState(false)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [hektorAgencies, setHektorAgencies] = useState<HektorAgencyOption[]>([])
   const [negotiatorAssignTarget, setNegotiatorAssignTarget] = useState<HektorNegotiatorRequiredDossier | null>(null)
@@ -14918,6 +14931,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (statusChangePending) return
     setStatusChangeTarget(null)
     setStatusChangeCloseReason('')
+    // ⚠ SANS CECI, LA REPARTITION D'UN BIEN SUIVRAIT SUR LE SUIVANT. La modale se
+    //   rouvre sur une autre annonce avec le meme etat React : on remet a zero,
+    //   et le prochain chargement refera ses defauts.
+    setRepartitionLignes([])
+    setRepartitionChargee(false)
   }
 
   function openMissingNegotiatorModal(dossier: HektorNegotiatorRequiredDossier) {
@@ -15252,6 +15270,102 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   //
   // ⚠ ET LA DATE NE S'HERITE PAS. Une vente a la sienne -- celle du jour, posee a
   //   l'ouverture de la modale. Seuls les champs SIMILAIRES passent.
+  // ═══ LA REPARTITION DE COMMISSION ═══                          14/09/2026
+  //
+  // ⚠ ELLE APPARTIENT AU DOSSIER, PAS A LA TRANSACTION. Saisie une fois sur la
+  //   premiere transaction -- une offre dans 72,4 % des cas, un compromis dans
+  //   les 12,1 % qui n'en ont pas -- elle vaut pour la suite. La rattacher a la
+  //   transaction obligerait a la ressaisir, et deux saisies divergent.
+  const repartitionChaineId = useCallback((): string => {
+    const ouverts = dossiersOuvertsDuBien(statusChangeAffaires)
+      .filter((d) => d.ouvert || d.closeParMorte)
+    // Un seul dossier ouvert : c'est le sien. Plusieurs ou aucun : on ne devine
+    // pas -- l'ecran proposera la saisie une fois la transaction creee.
+    return ouverts.length === 1 ? String(ouverts[0].chaine) : ''
+  }, [statusChangeAffaires])
+
+  const repartitionLigne = useCallback(
+    (cote: 'entree' | 'sortie', rang: 1 | 2): RepartitionLigne | null =>
+      repartitionLignes.find((l) => l.cote === cote && l.rang === rang) ?? null,
+    [repartitionLignes])
+
+  const repartitionTotal = useMemo(
+    () => repartitionLignes.filter((l) => l.hektorUserId.trim())
+      .reduce((t, l) => t + (Number.isFinite(l.pourcentage) ? l.pourcentage : 0), 0),
+    [repartitionLignes])
+
+  /** Poser ou retirer quelqu'un sur un emplacement.
+   *  ⚠ LE POURCENTAGE SUIT LE NOMBRE DE PERSONNES, mais seulement tant que
+   *    personne ne l'a touche : un chiffre saisi a la main ne se fait pas
+   *    recalculer sous les doigts. */
+  const repartitionPoser = useCallback((cote: 'entree' | 'sortie', rang: 1 | 2, idUser: string) => {
+    setRepartitionLignes((avant) => {
+      const autres = avant.filter((l) => !(l.cote === cote && l.rang === rang))
+      const personne = repartitionPersonnes.find((p) => p.idUser === idUser)
+      const suite = idUser && personne
+        ? [...autres, { cote, rang, hektorUserId: idUser, nomAuMoment: personne.nom,
+                        pourcentage: 0, origine: 'saisie' as string | null }]
+        : autres
+      // On repartit a parts egales SUR CHAQUE COTE : deux personnes a l'entree
+      // font 25 + 25, une seule fait 50. C'est la regle de Frederic.
+      const surLeCote = (c: 'entree' | 'sortie') => suite.filter((l) => l.cote === c)
+      return suite.map((l) => {
+        const n = surLeCote(l.cote).length
+        return { ...l, pourcentage: n > 0 ? Number((50 / n).toFixed(3)) : 0 }
+      })
+    })
+  }, [repartitionPersonnes])
+
+  const repartitionPourcentage = useCallback((cote: 'entree' | 'sortie', rang: 1 | 2, valeur: string) => {
+    const n = Number(String(valeur).replace(',', '.'))
+    setRepartitionLignes((avant) => avant.map((l) =>
+      l.cote === cote && l.rang === rang
+        ? { ...l, pourcentage: Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0 }
+        : l))
+  }, [])
+
+  // ─── CHARGEMENT ET DEFAUTS, une seule fois par ouverture de modale ───
+  useEffect(() => {
+    if (!statusChangeTarget || repartitionChargee) return
+    let vivant = true
+    void (async () => {
+      const gens = await loadRepartitionPersonnes().catch(() => [])
+      if (!vivant) return
+      setRepartitionPersonnes(gens)
+      const chaine = repartitionChaineId()
+      const deja = chaine ? await loadRepartition(chaine).catch(() => []) : []
+      if (!vivant) return
+      if (deja.length) { setRepartitionLignes(deja); setRepartitionChargee(true); return }
+
+      // ⚠ LE DEFAUT NE S'APPLIQUE QU'A UN DOSSIER QUI N'A RIEN. Une repartition
+      //   posee par quelqu'un ne se fait jamais recalculer -- c'est la regle du
+      //   projet partout ailleurs, et ici elle touche a de l'argent.
+      const lignes: RepartitionLigne[] = []
+      const entree = String(statusChangeTarget.commercial_id ?? '').trim()
+        ? await loadNegotiatorOptionForContact({
+            hektorNegociateurId: String(statusChangeTarget.commercial_id ?? ''),
+            negociateurEmail: statusChangeTarget.negociateur_email ?? null,
+            commercialNom: statusChangeTarget.commercial_nom ?? null,
+          }).catch(() => null)
+        : null
+      if (entree && entree.idUser && gens.some((p) => p.idUser === String(entree.idUser))) {
+        lignes.push({ cote: 'entree', rang: 1, hektorUserId: String(entree.idUser),
+                      nomAuMoment: entree.label ?? null, pourcentage: 50, origine: 'defaut' })
+      }
+      const acquereur = statusChangeBuyers[0]?.hektor_contact_id ?? statusChangeBuyerContactId
+      const sortie = await loadRepartitionDefautSortie(acquereur).catch(() => null)
+      if (sortie && gens.some((p) => p.idUser === sortie.idUser)) {
+        lignes.push({ cote: 'sortie', rang: 1, hektorUserId: sortie.idUser,
+                      nomAuMoment: sortie.nom, pourcentage: 50, origine: 'defaut' })
+      }
+      if (!vivant) return
+      setRepartitionLignes(lignes)
+      setRepartitionChargee(true)
+    })()
+    return () => { vivant = false }
+  }, [statusChangeTarget, repartitionChargee, repartitionChaineId,
+      statusChangeBuyers, statusChangeBuyerContactId])
+
   useEffect(() => {
     if (statusChangeStatus !== 'sold') return
     if (!statusChangeAffaires.length) return
@@ -15556,6 +15670,35 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         priority: 7,
       })
       rememberHektorActionJob(job)
+
+      // ═══ LA REPARTITION PART APRES, ET SEULEMENT CHEZ NOUS ═══   14/09/2026
+      //
+      // ⚠ APRES, PARCE QU'A LA CREATION LE DOSSIER N'EXISTE PAS ENCORE. La RPC de
+      //   statut cree l'affaire et rend son numero dans la charge du travail ; un
+      //   dossier neuf porte le numero de la transaction qui l'ouvre. S'il existait
+      //   deja, on garde le sien.
+      // ⚠ ET UN ECHEC ICI NE FAIT PAS ECHOUER LE GESTE : la transaction est partie
+      //   chez Hektor. Meme raison que le registre cote worker -- un travail rejoue
+      //   fabrique des doublons, une repartition manquante se ressaisit.
+      try {
+        const chaineExistante = repartitionChaineId()
+        const neuf = (job as { payload_json?: { app_affaire_id?: number | string | null } } | null)
+          ?.payload_json?.app_affaire_id
+        const chaine = chaineExistante || (neuf == null ? '' : String(neuf))
+        const aEcrire = repartitionLignes.filter((l) => l.hektorUserId.trim())
+        if (chaine && (aEcrire.length || repartitionChargee)) {
+          await saveRepartition({
+            chaineId: chaine,
+            appDossierId: statusChangeTarget.app_dossier_id,
+            lignes: aEcrire,
+          })
+        }
+      } catch (erreurRepartition) {
+        // On le DIT, on ne le tait pas : c'est de l'argent.
+        setNoticeMessage(`Transaction envoyee, mais la repartition de commission n'a pas ete enregistree : ${
+          erreurRepartition instanceof Error ? erreurRepartition.message : 'erreur inconnue'}. A ressaisir.`)
+      }
+
       setStatusChangeTarget(null)
       setNoticeMessage(reprendre
         ? `Modification du ${AFFAIRE_GENRE_LABEL[AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''] ?? 'la transaction'} demandee pour ${statusChangeTarget.numero_dossier ?? statusChangeTarget.hektor_annonce_id}.`
@@ -18166,6 +18309,69 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </>
                         ) : null}
                       </div>
+                      {/* ═══ LA REPARTITION DE COMMISSION ═══         14/09/2026
+                          Elle N'EST PAS ENVOYEE A HEKTOR : leur page ne propose
+                          que les actifs de l'agence DU BIEN, or 26,6 % des
+                          compromis ont l'acquereur suivi par une autre agence.
+                          Ici la liste est celle des 30 actifs, SANS contrainte
+                          d'agence -- c'est tout l'interet.
+                          ⚠ QUATRE EMPLACEMENTS, deux par cote. Le second reste
+                            vide tant qu'on n'y met personne ; y poser quelqu'un
+                            partage le cote a parts egales (50 -> 25 + 25). */}
+                      <section className="status-change-repartition">
+                        <p className="status-change-note">
+                          <strong>Repartition de la commission</strong> — elle reste dans l'app et
+                          n'est pas transmise a Hektor.
+                        </p>
+                        <div className="filter-grid">
+                          {(['entree', 'sortie'] as const).map((cote) => (
+                            <Fragment key={cote}>
+                              {([1, 2] as const).map((rang) => {
+                                const ligne = repartitionLigne(cote, rang)
+                                return (
+                                  <label className="filter-field" key={`${cote}-${rang}`}>
+                                    <span>
+                                      {cote === 'entree' ? 'Entree' : 'Sortie'} {rang}
+                                      {rang === 1 && ligne?.origine === 'defaut' ? ' · propose' : ''}
+                                    </span>
+                                    <select
+                                      value={ligne?.hektorUserId ?? ''}
+                                      onChange={(event) => repartitionPoser(cote, rang, event.target.value)}
+                                      disabled={statusChangePending}>
+                                      <option value="">—</option>
+                                      {repartitionPersonnes.map((p) => (
+                                        <option key={p.idUser} value={p.idUser}>
+                                          {p.nom}{p.agenceNom ? ` · ${p.agenceNom}` : ''}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {ligne ? (
+                                      <input
+                                        value={String(ligne.pourcentage)}
+                                        onChange={(event) => repartitionPourcentage(cote, rang, event.target.value)}
+                                        inputMode="decimal"
+                                        aria-label={`Part ${cote} ${rang} en pour cent`}
+                                        placeholder="%" />
+                                    ) : null}
+                                  </label>
+                                )
+                              })}
+                            </Fragment>
+                          ))}
+                        </div>
+                        {/* ⚠ ON PREVIENT, ON NE BLOQUE PAS. La base refuse plus de
+                            100 ; en dessous, la part restante n'est simplement
+                            attribuee a personne -- c'est ce que Hektor appelle
+                            « Part Reseau », et cela existe. */}
+                        {repartitionTotal > 0 && Math.abs(repartitionTotal - 100) > 0.01 ? (
+                          <p className="status-change-note is-alerte">
+                            Les parts font {repartitionTotal.toFixed(2)} %.
+                            {repartitionTotal < 100
+                              ? ` Il reste ${(100 - repartitionTotal).toFixed(2)} % attribue a personne.`
+                              : " Au-dessus de 100 %, l'enregistrement sera refuse."}
+                          </p>
+                        ) : null}
+                      </section>
                       {/* L'ECART, S'IL Y EN A UN. On avertit, on ne bloque pas :
                           528 compromis reels du registre ne verifient pas cet
                           invariant (dont 508 d'avant 2025). L'app signale,
