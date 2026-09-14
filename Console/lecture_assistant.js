@@ -67,4 +67,33 @@ function chargerLecteur(cheminSource) {
   return new Function(`${code}\nreturn lireChampsConsoleAssistant;`)();
 }
 
-module.exports = { chargerLecteur, extraire, SOURCE };
+/** ═══ REPOSER LE FORMULAIRE, POUR ALLER A LA PAGE SUIVANTE ═══  14/09/2026
+ *
+ *  POURQUOI IL FAUT CA. Les intervenants -- qui touche la commission, et pour
+ *  quelle part -- ne sont PAS sur la page d'ouverture. Ils vivent une page plus
+ *  loin, celle des commissions. Pour y arriver, il faut faire ce que le
+ *  navigateur fait : REPOSER a Hektor le formulaire qu'il vient de rendre, et
+ *  lui demander l'etape suivante.
+ *
+ *  ⚠ ON EMPRUNTE LA FONCTION DU WORKER, ON N'EN ECRIT PAS UNE SECONDE. C'est
+ *    tout le principe de ce module depuis le 10/09 : « un outil de mesure ne
+ *    doit pas dependre du code qu'il instruit » -- mais il ne doit pas non plus
+ *    en fabriquer une copie qui derivera. On decoupe la vraie, dans le vrai
+ *    worker, a chaque appel.
+ *
+ *      const reposer = chargerReposeur()
+ *      reposer(htmlRendu)   ->  URLSearchParams, prets a etre renvoyes
+ */
+const MORCEAUX_REPOSE = [
+  ["decodeHtmlEntities", "function"],
+  ["attrValue", "function"],
+  ["extractHektorFormValues", "function"],
+];
+
+function chargerReposeur(cheminSource) {
+  const src = fs.readFileSync(cheminSource || SOURCE, "utf8");
+  const code = MORCEAUX_REPOSE.map(([nom, type]) => extraire(src, nom, type)).join("\n");
+  return new Function(`${code}\nreturn extractHektorFormValues;`)();
+}
+
+module.exports = { chargerLecteur, chargerReposeur, extraire, SOURCE };
