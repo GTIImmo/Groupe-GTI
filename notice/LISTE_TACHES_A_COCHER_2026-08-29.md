@@ -4284,6 +4284,22 @@ GEL que Frederic a repere le premier).*
          app_affaire_champ_app le 29/08. Rien ne lit ni n'ecrit cette table
          aujourd'hui ; le worker ne la lira jamais, elle ne part pas chez Hektor.
 
+         ─── ⚠ `app_chaine_id` N'A PAS D'INDEX EN LOCAL (mesure du 14/09) ───
+         `app_affaire_ledger` (29 359 lignes) porte cinq index :
+             app_affaire_id · hektor_acquereur_id · app_dossier_id
+             hektor_annonce_id · (hektor_annonce_id, kind, hektor_affaire_id)
+         AUCUN sur `app_chaine_id`. Une sous-requete correlee sur la chaine
+         balaye donc la table entiere a chaque ligne : chronometre a 2 529 s --
+         QUARANTE-DEUX MINUTES -- pour un simple comptage.
+         ➡ Le filtre « sans vente » se fait en memoire pour cette raison, et il
+           rend le MEME resultat : la version SQL, laissee tourner jusqu'au bout,
+           a fini par confirmer le compte. C'est la vitesse qui differe, pas la
+           reponse.
+         ⚠ ON N'A PAS CREE L'INDEX, et c'est un choix : toucher au schema pendant
+           qu'un rattrapage tourne pour gagner une seconde n'en vaut pas le
+           risque. Si un jour une requete de production a besoin de la chaine,
+           c'est la qu'il faudra regarder.
+
          ─── 🔴 LE RATTRAPAGE EST LANCE -- 14/09 18:41, EN COURS ───
          `run_rattrapage_compromis_console.ps1 -Genre vente -StopAt "02:55"`
              perimetre     TOUTES les ventes, 7 612 (216 deja lues)
