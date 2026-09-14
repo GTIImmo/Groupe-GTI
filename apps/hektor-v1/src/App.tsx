@@ -15175,7 +15175,26 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   useEffect(() => {
     const affaire = affaireCourantePourStatut()
-    if (!affaire) return
+    if (!affaire) {
+      // ═══ LA DATE NE DOIT PAS RESTER CELLE DE L'ONGLET PRECEDENT ═══ 14/09/2026
+      //
+      // CE QU'ON VOYAIT : sur le bien temoin, la modale « Vendu » proposait le
+      // 04/09 -- la date du COMPROMIS -- alors que Hektor propose LE JOUR. Une
+      // vente signee aujourd'hui serait partie datee du 4.
+      //
+      // ⚠ CE N'ETAIT PAS L'HERITAGE, qui ne touche deliberement pas a la date :
+      //   « une vente porte la sienne ». C'est un RESTE. La modale s'ouvre sur le
+      //   statut courant (Sous compromis), cet effet repose la date du compromis,
+      //   puis on clique « Vendu » : il n'y a pas de vente, donc il sortait ICI,
+      //   sans rien remettre. La valeur precedente survivait a l'onglet.
+      //
+      // ⚠ ON NE REMET QUE LA DATE, ET RIEN D'AUTRE. L'heritage de la vente pose le
+      //   prix, le mandat, le net et les acquereurs juste avant : tout remettre a
+      //   zero ici les effacerait. Le commentaire de cet effet dit deja l'intention
+      //   -- « la modale preremplit avec la date DU JOUR : c'est juste pour CREER ».
+      if (statusChangeNeedsTransaction(statusChangeStatus)) setStatusChangeDate(todayInputDate())
+      return
+    }
     const texte = (v: unknown) => (v == null ? '' : String(v))
 
     // ─── LE CARNET PRIME SUR LE LEDGER (01/09/2026) ───
@@ -15612,7 +15631,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   ) {
     event.preventDefault()
     if (!statusChangeTarget) return
-    if (statusChangeNeedsTransaction(statusChangeStatus) && !statusChangeAmount.trim()) {
+    // ⚠ ON N'EXIGE PLUS LE MONTANT SUR LA VENTE -- 14/09/2026. Sa case vient
+    //   d'etre retiree de l'ecran (elle faisait doublon avec le prix de vente,
+    //   les deux alimentant le meme champ chez Hektor). Continuer a l'exiger
+    //   bloquerait l'envoi sur un champ INVISIBLE, avec un message qui ne
+    //   designerait rien. Pour la vente, c'est le prix de vente qui est exige,
+    //   juste en dessous.
+    if (statusChangeNeedsTransaction(statusChangeStatus) && statusChangeStatus !== 'sold'
+        && !statusChangeAmount.trim()) {
       setErrorMessage('Indique le montant de la transaction avant envoi.')
       return
     }
@@ -18192,10 +18218,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <strong>{statusChangeStatus === 'offer' ? 'Offre a enregistrer' : statusChangeStatus === 'compromise' ? 'Compromis a enregistrer' : 'Vente a enregistrer'}</strong>
                       </div>
                       <div className="status-change-grid">
-                        <label className="filter-field">
-                          <span>{statusChangeStatus === 'offer' ? "Montant de l'offre" : 'Montant / prix public'}</span>
-                          <input value={statusChangeAmount} onChange={(event) => setStatusChangeAmount(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" required />
-                        </label>
+                        {/* ⚠ « MONTANT / PRIX PUBLIC » FAIT DOUBLON SUR LA VENTE --
+                            14/09/2026. Chez Hektor, une vente n'a pas de prix
+                            public : le worker envoie `prixDeVente` a partir de
+                            sale_price OU amount, le premier gagnant. Deux cases
+                            pour une seule valeur, et si elles divergeaient rien ne
+                            disait laquelle l'emporte. Le compromis, lui, a bien les
+                            DEUX chez eux (prixPublique et prixDeVente) : on la
+                            garde pour lui et pour l'offre. */}
+                        {statusChangeStatus !== 'sold' ? (
+                          <label className="filter-field">
+                            <span>{statusChangeStatus === 'offer' ? "Montant de l'offre" : 'Montant / prix public'}</span>
+                            <input value={statusChangeAmount} onChange={(event) => setStatusChangeAmount(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" required />
+                          </label>
+                        ) : null}
                         <label className="filter-field">
                           <span>Prix de vente</span>
                           <input value={statusChangeSalePrice} onChange={(event) => setStatusChangeSalePrice(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" required={statusChangeNeedsSalePrice(statusChangeStatus)} />
@@ -18285,7 +18321,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <span>Taux honoraires</span>
                           <input value={statusChangeBuyerFeesRate} onChange={(event) => setStatusChangeBuyerFeesRate(event.target.value)} inputMode="decimal" placeholder="0" />
                         </label>
-                        {statusChangeStatus !== 'offer' ? (
+                        {/* ⚠ NET VENDEUR ET SEQUESTRE : LE COMPROMIS SEULEMENT --
+                            14/09/2026. Releve EN DIRECT sur le formulaire de vente
+                            de Hektor : il ne porte ni prixNetVendeur ni sequestre.
+                            Et le worker, pour une creation de vente, ne pose QUE
+                            prixDeVente et dateVente. Ces deux cases ne partaient
+                            donc nulle part : deux champs morts, qu'on remplissait
+                            en croyant qu'ils servaient. */}
+                        {statusChangeStatus === 'compromise' ? (
                           <>
                             <label className="filter-field">
                               <span>Prix net vendeur</span>
@@ -18307,6 +18350,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               <input value={statusChangeSequestration} onChange={(event) => setStatusChangeSequestration(event.target.value)} inputMode="numeric" placeholder="0" />
                             </label>
                           </>
+                        ) : null}
+                        {/* LES HONORAIRES VENDEUR RESTENT, EUX, SUR LA VENTE AUSSI :
+                            le formulaire de vente les porte (montantHonoraireEntree,
+                            lu en direct le 12/09), et surtout ils sont le terme du
+                            milieu de la verification « prix = net + honoraires ».
+                            Sans eux l'ecran afficherait un faux ecart. */}
+                        {statusChangeStatus === 'sold' && statusChangeHonorairesEntree ? (
+                          <label className="filter-field">
+                            <span>Honoraires vendeur (agence)</span>
+                            <input value={statusChangeHonorairesEntree} readOnly disabled title="Pose par Hektor depuis le mandat. L'app ne le modifie pas." />
+                          </label>
                         ) : null}
                       </div>
                       {/* ═══ LA REPARTITION DE COMMISSION ═══         14/09/2026
