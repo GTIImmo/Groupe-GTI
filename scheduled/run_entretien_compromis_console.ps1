@@ -74,6 +74,19 @@ param(
     [string]$Genre = "compromis",
     [string]$StopAt = "04:30",
     [int]$Limit = 150,
+    # ═══ LE LOT SE COMPTE EN REQUETES, PAS EN PIECES ═══            14/09/2026
+    #
+    # /!\ PIEGE TROUVE AVANT D'AVOIR FAIT LE MOINDRE DEGAT. Le pilote fait une
+    #   pause de 60 s tous les `--batch-size` PIECES. Tant qu'une piece coutait
+    #   UNE requete, un lot de 100 valait 100 requetes -- la cadence de reference
+    #   du run chauffage, celle qui n'a jamais rien declenche en 56 926 lectures.
+    #   Une VENTE coute DEUX requetes : un lot de 100 pieces en vaudrait 200, et
+    #   le debit entre deux pauses DOUBLERAIT sans que rien ne le dise.
+    #   C'est exactement le genre d'ecart qui a fait bannir notre IP en juillet --
+    #   la ou le profil fautif etait « ~3 requetes par annonce a 1,3 s ».
+    # ➡ 0 = on decide selon le genre : 100 pour le compromis, 50 pour la vente.
+    #   Dans les deux cas, 100 REQUETES entre deux pauses.
+    [int]$TaillePaquet = 0,
     # 0 = aucune relecture a l'age. On ne relit QUE ce qui a bouge.
     [int]$StaleDays = 0,
     [switch]$SansCourtoisie
@@ -93,13 +106,19 @@ $journal = Join-Path $root ("logs\scheduled\entretien_${Genre}_" +
     (Get-Date -Format "yyyy-MM-dd_HH-mm-ss") + ".log")
 New-Item -ItemType Directory -Force -Path (Split-Path $journal) | Out-Null
 
+if ($TaillePaquet -le 0) {
+    # Le compromis coute une requete, la vente en coute deux : le lot suit.
+    $TaillePaquet = if ($Genre -eq "vente") { 50 } else { 100 }
+}
 $argsPy = @($script, "--genre", $Genre, "--limit", "$Limit", "--stale-days", "$StaleDays",
+            "--batch-size", "$TaillePaquet",
             "--suivre-annonce", "--refresh-session-on-expired")
 if ($StopAt) { $argsPy += @("--stop-at", $StopAt) }
 if (-not $SansCourtoisie) { $argsPy += "--courtoisie" }
 
 Write-Output "=== ENTRETIEN $($Genre.ToUpper()) CONSOLE -- depart $(Get-Date -Format 'HH:mm:ss') ==="
 Write-Output "    nouveaux + biens modifies   plafond : $Limit   arret : $StopAt"
+Write-Output "    lot : $TaillePaquet pieces, soit 100 requetes entre deux pauses"
 
 # /!\ PAS DE `2>&1` ICI. PowerShell 5.1 enveloppe chaque ligne d'erreur d'un
 # executable natif dans un ErrorRecord : une simple ligne de progression suffit
