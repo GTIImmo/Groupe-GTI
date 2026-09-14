@@ -2,7 +2,7 @@
  * LA LECTURE DE LA PAGE DES COMMISSIONS, ÉPROUVÉE HORS LIGNE     12/09/2026
  * ═══════════════════════════════════════════════════════════════════════════════
  *
- * ⚠ IL N'APPELLE PAS HEKTOR. Il rejoue les fonctions du worker sur du HTML
+ * ⚠ IL N'APPELLE PAS HEKTOR. Il rejoue les fonctions de lecture sur du HTML
  *   CAPTURÉ, comme test_lecture_console.js le fait depuis le 10/09. C'est ce qui
  *   permet de vérifier un correctif sans écrire chez eux, et sans attendre
  *   qu'une transaction réelle passe.
@@ -23,10 +23,16 @@ const DOSSIER = path.join(__dirname, "exports", "releve_assistant");
 const SANS = path.join(DOSSIER, "compromis_etape_0_2_infosFinancieresCompromis_"
   + "acquereurNotaireAutresProspectsCompromis_annonceMandatCompromis_agenceInterkabCompromis_.html");
 
-// ─── Les trois fonctions, RECOPIÉES du worker à l'identique ───
-// Volontairement recopiées : un test qui importe le code qu'il éprouve ne prouve
-// que sa propre cohérence. Si elles divergent, ce test doit tomber.
-const COTES_COMMISSION = ["Entree", "Sortie"];
+// ─── Les trois fonctions de LECTURE de la page des commissions ───
+// ⚠ LEUR PREMISSE A CHANGÉ LE 14/09. Elles étaient recopiées du worker, qui
+//   ÉCRIVAIT alors les intervenants. Frédéric a tranché « rien dans Hektor » :
+//   le worker n'écrit plus, et elles n'y vivent plus. Elles servent désormais
+//   aux OUTILS DE MESURE -- mesure_intervenants_vente.js et
+//   releve_commissions_vente.js -- qui ne font que lire.
+// ⚠ ET CE TEST GARDE TOUT SON SENS. « Un montant illisible ne produit jamais une
+//   valeur devinée » vaut autant pour mesurer que pour écrire : c'est en croyant
+//   lire un compromis précis, alors que l'identifiant valait `undefined`, que
+//   j'ai failli rapporter une mesure fausse le 14/09.
 
 function montantMoitieCommission(html, cote) {
   const m = String(html || "").match(new RegExp(

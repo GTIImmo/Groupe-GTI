@@ -144,10 +144,10 @@ async function appelSupabase(chemin, corps) {
     close_price: prix,
     close_etat: "choiceAutre",
     close_raison: "autre",
-    // Vide des deux cotes = on laisse le worker prendre CE QUE HEKTOR PROPOSE.
-    // C'est tout l'objet de cet essai : lire ce nom dans le journal.
-    intervenant_entree_id: String(arg("intervenant-entree", "")).trim() || null,
-    intervenant_sortie_id: String(arg("intervenant-sortie", "")).trim() || null,
+    // ⚠ PLUS AUCUNE REPARTITION DANS LA CHARGE -- 14/09. Elle devient une donnee
+    //   de l'app et ne part plus chez Hektor. Leur fiche affichera « Part Reseau
+    //   100 % », c'est-a-dire « personne d'attribue » : c'est VRAI, alors qu'un
+    //   nom pose par defaut serait faux une fois sur quatre.
   };
 
   const r = await appelSupabase("/rest/v1/rpc/app_change_annonce_status_optimistic", {
