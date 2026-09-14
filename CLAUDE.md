@@ -88,9 +88,36 @@ lots de 100 avec 60 s, vagues de 2 000 avec 300 s. C'est la méthode de
 rien déclenché (56 926 lectures). La coquille est écartée pour lire — mesuré le
 10/09 : le formulaire arrive identique sans elle, ce qui divise le flux par deux.
 
-**La tâche ouverte est `3.2d` — ligne 3836.** Lot 1 fait (la commission est visible, la
-modale vérifie `prix = net + honoraires`). Restent les lots 2, 3, 4.
-Ensuite : `3.3` (l. 3972), `3.1` (l. 3538) — qui commande `4.1`.
+**La tâche ouverte est `3.2e` — le LOT 5, la RÉPARTITION DE COMMISSION.**
+
+⭐ **Chantier ouvert le 12/09 en lisant les pages 2 et 3 de l'assistant**, que personne
+n'avait ouvertes. Une transaction créée par l'app partait avec sa commission **non
+attribuée** : 40 ventes réelles sur 40 en portent une, le compromis 50078 créé par l'app
+en portait zéro, et « Part Réseau » ramassait les 8 333 € HT.
+
+**Ce qui est établi, et mesuré :**
+```
+l'attribution se fait AU COMPROMIS      39 compromis réels sur 39
+la vente REPREND celle du compromis     16 biens portant les deux, 16 fois identique
+Hektor propose les ACTIFS de l'agence   3 agences vérifiées, proposés = actifs
+l'acquéreur est suivi par une AUTRE agence   26,6 % (1 445 / 5 428)
+« Part Réseau » est le RÉSIDU           100 % sans personne, 0 % dès qu'on désigne
+```
+
+⛔ **DÉCISION DE FRÉDÉRIC, 14/09 : RIEN NE PART CHEZ HEKTOR** (06bd38b). Leur modèle ne
+sait pas exprimer un quart des répartitions réelles. La répartition devient une donnée
+de l'app — *« mieux vaut un champ absent qu'un champ menteur »*.
+
+**Ce qui reste à faire, dans l'ordre :**
+1. la table `app_affaire_repartition` (Supabase ; la descente la ramène en local seule —
+   elle rapatrie déjà 134 tables) ;
+2. les 4 emplacements dans la modale, sur la **première transaction du dossier**
+   (offre dans 72,4 % des cas, compromis sinon) ;
+3. l'affichage au registre et sur la fiche.
+⚠ Le relevé par négociateur vient APRÈS — arbitrage de Frédéric : *« d'abord il faut que
+les intervenants soient au minimum sur le registre des affaires de mon apps et le serveur »*.
+
+Ensuite : `3.2d` lots 2-3-4 (l. 3892), `3.3`, `3.1` — qui commande `4.1`.
 
 > ⭐ **`0.1` est quasi finie.** Sa phrase *« l'assistant refuse d'avancer sous
 > automatisation »* était **fausse** : il refuse un formulaire qu'on ne lui rend pas

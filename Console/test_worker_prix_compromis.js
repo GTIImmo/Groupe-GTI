@@ -50,6 +50,11 @@ function arg(nom, defaut) {
     console.error("Manque SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
     process.exit(1);
   }
+  // --negociateur gonzalez@gti-immobilier.fr  (vide = session administrateur)
+  // ⚠ CETTE CONSTANTE AVAIT ETE EMPORTEE avec le bloc des intervenants, alors que
+  //   la charge la référençait encore : le script tombait avant d'ecrire.
+  //   Elle sert toujours -- elle decide du CONTEXTE dans lequel le worker ecrit.
+  const negociateur = String(arg("negociateur", "")).trim();
   const prix = String(arg("prix", "178000")).trim();
   // --acquereurs 605030,49234   (defaut : celui deja en place, donc inchange)
   const acquereurs = String(arg("acquereurs", CIBLE.acquereur))
