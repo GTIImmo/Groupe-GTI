@@ -67,6 +67,14 @@ param(
     #   bonne et la donnee est celle qu'on voulait. Mais un lanceur qui ne sait
     #   QUE partir pour de vrai est un piege, et le pilote, lui, sait simuler
     #   depuis toujours. Il manquait juste le fil entre les deux.
+    # /!\ « OUVERT » SE JUGE SUR LE DOSSIER, PAS SUR LE BIEN -- arbitrage du
+    #   14/09. Un bien vendu en 2019, remis sur le marche en 2026 et de nouveau
+    #   sous compromis, a bien un dossier OUVERT : juger sur le bien le raterait.
+    #   L'ecart est de 18 dossiers sur 1 711, et ce sont ceux-la.
+    # /!\ ET IL FAUT -Force AVEC. Les 9 218 compromis sont deja lus (page 1) :
+    #   sans -Force, la garde « deja lu » les sauterait tous et il n'y aurait rien
+    #   a faire. C'est leur PAGE 2 qu'on vient chercher.
+    [switch]$SansVente,
     [switch]$Simulation,
     [switch]$Force,
     [switch]$SansCourtoisie
@@ -89,6 +97,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path $journal) | Out-Null
 $argsPy = @($script, "--genre", $Genre, "--limit", "$Limit", "--refresh-session-on-expired")
 if ($StopAt) { $argsPy += @("--stop-at", $StopAt) }
 if ($Depuis) { $argsPy += @("--depuis", $Depuis) }
+if ($SansVente) { $argsPy += "--sans-vente" }
 if ($Simulation) { $argsPy += "--dry-run" }
 if ($Force) { $argsPy += "--force" }
 if (-not $SansCourtoisie) { $argsPy += "--courtoisie" }

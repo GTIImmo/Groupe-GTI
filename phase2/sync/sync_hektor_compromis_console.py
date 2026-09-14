@@ -244,16 +244,43 @@ def cibles(args: argparse.Namespace) -> list[dict[str, Any]]:
               "COALESCE(state, '') NOT IN ('cancelled', 'annule')",
               "hektor_affaire_id IS NOT NULL", "hektor_annonce_id IS NOT NULL"]
         params: list[Any] = []
+        # ⚠ LE FILTRE « SANS VENTE » NE SE FAIT PAS EN SQL, ET C'EST MESURE.
+        #   La sous-requete correlee qui semblait naturelle balaye la table
+        #   entiere pour CHACUN des 9 218 compromis -- 29 362 lignes a chaque
+        #   fois, sans index sur app_chaine_id. Essai du 14/09 : plus de SEPT
+        #   MINUTES sans rendre la main. On la fait donc en memoire, en un seul
+        #   passage, juste apres (voir `chaines_avec_vente`).
+        #   Creer un index aurait marche aussi, mais modifier le schema d'une base
+        #   pendant qu'un rattrapage tourne n'est pas un geste a prendre a la
+        #   legere pour gagner une seconde.
         if args.compromis:
             ou.append("hektor_affaire_id IN (%s)" % ",".join("?" for _ in args.compromis))
             params.extend(args.compromis)
         elif args.depuis:
             ou.append("date >= ?")
             params.append(args.depuis)
-        sql = ("SELECT app_affaire_id, hektor_annonce_id, hektor_affaire_id, date "
+        sql = ("SELECT app_affaire_id, hektor_annonce_id, hektor_affaire_id, date, "
+               "app_chaine_id "
                f"FROM app_affaire_ledger WHERE {' AND '.join(ou)} "
                "ORDER BY date DESC, app_affaire_id DESC")
-        return [dict(r) for r in con.execute(sql, tuple(params))]
+        retenues = [dict(r) for r in con.execute(sql, tuple(params))]
+        if not args.sans_vente:
+            return retenues
+
+        # ─── LES DOSSIERS QUI PORTENT DEJA UNE VENTE ───
+        # Un seul passage sur la table, un ensemble en memoire, et la comparaison
+        # devient immediate.
+        # ⚠ UNE VENTE QUE HEKTOR N'A PLUS NE FERME PAS LE DOSSIER -- meme regle
+        #   qu'aux quatre autres endroits du projet.
+        chaines_avec_vente = {
+            str(r[0]) for r in con.execute(
+                "SELECT DISTINCT app_chaine_id FROM app_affaire_ledger "
+                "WHERE kind = 'vente' AND app_chaine_id IS NOT NULL "
+                "  AND NOT (TRIM(COALESCE(hektor_affaire_id, '')) <> '' "
+                "           AND CAST(present_in_hektor AS TEXT) IN ('0','false','False'))")}
+        return [c for c in retenues
+                if c.get("app_chaine_id") is not None
+                and str(c["app_chaine_id"]) not in chaines_avec_vente]
     finally:
         con.close()
 
@@ -548,6 +575,21 @@ def arguments() -> argparse.Namespace:
     p.add_argument("--compromis", action="append", default=[],
                    help="Numero Hektor de compromis. Repetable.")
     p.add_argument("--depuis", default="", help="Ne prendre que les compromis a partir de cette date.")
+    # ═══ « OUVERT » SE JUGE SUR LE DOSSIER, PAS SUR LE BIEN ═══      14/09/2026
+    #
+    # Arbitrage de Frederic. Les deux definitions ne different que de 18 dossiers
+    # sur 1 710 -- mais ce sont exactement les cas interessants : un bien vendu en
+    # 2019, remis sur le marche en 2026, de nouveau sous compromis. Juger sur le
+    # BIEN le raterait, puisque le bien porte deja une vente ; juger sur le
+    # DOSSIER le voit, parce que c'est un dossier neuf. Et c'est ainsi que le
+    # registre raisonne partout ailleurs.
+    #
+    # ⚠ UNE VENTE QUE HEKTOR N'A PLUS NE FERME PAS LE DOSSIER. Meme regle qu'aux
+    #   quatre autres endroits du projet : porter un numero Hektor ET
+    #   present_in_hektor faux = elle n'existe plus, donc elle ne compte pas.
+    p.add_argument("--sans-vente", action="store_true",
+                   help="Ne prendre que les transactions dont le DOSSIER ne porte "
+                        "aucune vente vivante -- les affaires encore en cours.")
     p.add_argument("--limit", type=int, default=1, help="Nombre maximum. 0 = sans limite.")
     p.add_argument("--stale-days", type=int, default=90,
                    help="Relire ce qui a plus de N jours. 0 = ne jamais relire.")
