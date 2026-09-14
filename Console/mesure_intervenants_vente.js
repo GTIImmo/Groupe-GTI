@@ -73,6 +73,12 @@ const GENRE = String(arg("genre", "vente")).toLowerCase();
 // Et la liste d'annonces peut venir d'un releve precedent : pour comparer le
 // compromis ET la vente D'UN MEME BIEN, il faut lire les deux sur les memes.
 const DEPUIS = String(arg("annonces-du", "")).trim();
+// ─── L'OUVERTURE SEULE (14/09) ───
+// Question de Frederic : « mais on peut pas changer agence ? ». La reponse vit
+// dans `informations.hasRetrocession`, que Hektor rend DES L'OUVERTURE. Une
+// requete par transaction au lieu de trois : trois fois moins de debit pour une
+// question qui n'a pas besoin des pages suivantes.
+const OUVERTURE_SEULE = process.argv.includes("--ouverture-seule");
 
 // ─── LE DOMAINE SE LIT DANS .env, IL NE SE DEVINE PAS ───
 // Leçon du 11/09 : la porte web est passée à www.gti-immobilier.fr tandis que la
@@ -178,6 +184,7 @@ function lireEtape(texte) {
     basket: typeof d.basket === "string" ? d.basket : "",
     contenu: typeof d.stepContent === "string" ? d.stepContent : "",
     index: d.currentStepIndex == null ? null : String(d.currentStepIndex),
+    informations: d.informations || null,
     brut: texte,
   };
 }
@@ -289,6 +296,7 @@ function verdictEtape3(html) {
 
   const lignes = [];
   let avecIntervenant = 0, sansIntervenant = 0, illisibles = 0;
+  let avecRetro = 0, sansRetro = 0;
 
   for (const v of ventes) {
     const annonce = String(v.hektor_annonce_id);
@@ -316,6 +324,19 @@ function verdictEtape3(html) {
         illisibles += 1;
         lignes.push({ transaction: id, annonce, verdict: "ouverture sans panier" });
         console.log(`   ${GENRE.padEnd(9)} ${id.padEnd(7)} annonce ${annonce.padEnd(7)} — ouverture sans panier`);
+        await dormir(2000);
+        continue;
+      }
+      if (OUVERTURE_SEULE) {
+        const info = etat.informations || {};
+        const retro = info.hasRetrocession === true;
+        const mandante = info.isAgenceMandante === true;
+        if (retro) avecRetro += 1; else sansRetro += 1;
+        lignes.push({ transaction: id, annonce, date: v.quand, genre: GENRE,
+                      has_retrocession: retro, is_agence_mandante: mandante });
+        console.log(`   ${GENRE.padEnd(9)} ${id.padEnd(7)} annonce ${annonce.padEnd(7)} `
+          + `${String(v.quand).padEnd(11)} retrocession=${retro ? "OUI" : "non"} `
+          + `agence mandante=${mandante ? "oui" : "NON"}`);
         await dormir(2000);
         continue;
       }
@@ -370,6 +391,22 @@ function verdictEtape3(html) {
   const total = avecIntervenant + sansIntervenant;
   console.log("");
   console.log("─── LE VERDICT ───");
+  if (OUVERTURE_SEULE) {
+    // ⚠ UN RESUME QUI REUTILISE DES COMPTEURS D'AUTRE CHOSE EST UN RESUME QUI
+    //   MENT. Ce mode repond a UNE question, il a donc son propre decompte.
+    const t = avecRetro + sansRetro;
+    console.log(`   ${GENRE}(s) lu(s)                 ${t + illisibles}`);
+    console.log(`   AVEC retrocession inter-agences ${avecRetro}`
+      + (t ? `   ${(100 * avecRetro / t).toFixed(1)} %` : ""));
+    console.log(`   sans retrocession               ${sansRetro}`
+      + (t ? `   ${(100 * sansRetro / t).toFixed(1)} %` : ""));
+    console.log(`   requêtes envoyées               ${requetes}`);
+    fs.writeFileSync(path.join(SORTIE, `retrocession_${GENRE}.json`),
+                     JSON.stringify(lignes, null, 1), "utf8");
+    console.log("");
+    console.log("relevé déposé : " + path.join(SORTIE, `retrocession_${GENRE}.json`));
+    return;
+  }
   console.log(`   ${GENRE}(s) lu(s)                 ${total + illisibles}`);
   console.log(`   un intervenant EST retenu      ${avecIntervenant}`
     + (total ? `   ${(100 * avecIntervenant / total).toFixed(1)} %` : ""));

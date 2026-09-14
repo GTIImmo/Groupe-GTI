@@ -4251,6 +4251,31 @@ GEL que Frederic a repere le premier).*
          porte desormais intervenantsEntree[51] et intervenantsSortie[51], 100 %
          et 4 166,67 HT chacun, relus chez Hektor.
 
+         ─── ⭐ PEUT-ON CREDITER UNE AUTRE AGENCE ? DEUX MECANISMES (14/09) ───
+         Question de Frederic : « mais on peut pas changer agence ? ». Elle est
+         legitime -- l'assistant porte un module nomme `agenceInterkab`.
+
+         ① PAS PAR LES INTERVENANTS. La liste proposee est celle des negociateurs
+            ACTIFS de l'agence DU BIEN. Sur 73 transactions relevees (compromis et
+            ventes confondus), ZERO porte un intervenant d'une autre agence, et
+            zero croise entree et sortie entre deux agences.
+         ② MAIS PAR LA RETROCESSION, qui est un mecanisme A PART. Hektor rend
+            `informations.hasRetrocession` des l'ouverture, et l'etape 0 porte 19
+            boutons d'agence (`agenceReseauSelected`) -- celui que Frederic a mis
+            HORS PERIMETRE le 03/09. Mesure du 14/09 :
+                40 ventes    hasRetrocession = false 40 fois, agence mandante 40/40
+                19 compromis hasRetrocession = false 19 fois
+            ➡ GTI ne s'en sert pas sur la periode mesuree. L'exclure ne coute rien
+              AUJOURD'HUI -- mais c'est une exclusion, pas une absence.
+
+         ⭐ ET « PART RESEAU » EST LE RESIDU, pas une part d'agence. Preuve par
+           notre propre temoin, deux lectures du MEME compromis 50078 :
+               personne de designe   Part Reseau 100 %  soit 8 333,33 EUR HT
+               51/51 designes        Part Reseau   0 %  soit     0,00 EUR HT
+           Le correctif ne fait donc pas que « nommer quelqu'un » : il DEPLACE
+           8 333 EUR de la ligne reseau vers une personne. C'est la mesure la plus
+           parlante de ce que le defaut coutait.
+
          ─── ⭐⭐ OU L'ATTRIBUTION SE FAIT-ELLE ? AU COMPROMIS. (14/09) ───
          Question de Frederic : « dans Hektor les intervenants sont saisis au
          compromis ? ». Je ne l'avais vu que sur NOTRE bien temoin, ou c'est nous
