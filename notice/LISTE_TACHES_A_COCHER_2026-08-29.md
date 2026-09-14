@@ -4284,6 +4284,35 @@ GEL que Frederic a repere le premier).*
          app_affaire_champ_app le 29/08. Rien ne lit ni n'ecrit cette table
          aujourd'hui ; le worker ne la lira jamais, elle ne part pas chez Hektor.
 
+         ─── 🔴 LE RATTRAPAGE EST LANCE -- 14/09 18:41, EN COURS ───
+         `run_rattrapage_compromis_console.ps1 -Genre vente -StopAt "02:55"`
+             perimetre     TOUTES les ventes, 7 612 (216 deja lues)
+             duree prevue  7 h 23, fin vers 02:03, arret force a 02:55
+             ordre         les plus recentes d'abord (ORDER BY date DESC) : une
+                           interruption laisse donc la part la plus utile en base
+             journal       logs/scheduled/rattrapage_vente_2026-09-14_18-41-16.log
+
+         ⚠ A REGARDER AU MATIN, dans cet ordre :
+             « cadence »  doit dire 50 pieces / 100 requetes
+             « erreurs »  doit etre vide
+             un arret sur 403  -> NE PAS RELANCER, verifier depuis une AUTRE IP
+         ⚠ LE SEUL VRAI INCONNU : la session Hektor sur 7 h 23. La plus longue
+           duree prouvee est 4 h 25 (rattrapage compromis du 10/09). Le
+           renouvellement automatique est arme mais jamais eprouve si longtemps.
+           Un echec coute une nuit, pas une donnee : tout ce qui est lu est ecrit
+           au fur et a mesure, et une relance reprend ou elle s'est arretee.
+
+         ➡ ENSUITE, ET C'EST DECIDE : LES COMPROMIS OUVERTS.
+           ⚠ IL MANQUE UN FILTRE AU PILOTE. Il ne sait selectionner que par date,
+             pas « ce bien n'a pas encore de vente ». Sans lui, viser les
+             compromis recents prendrait ~2 000 pieces dont la plupart ont deja
+             leur vente -- donc deja leurs intervenants par elle. Ajout a faire
+             AVANT ce troisieme passage.
+           ⚠ ET UN ARBITRAGE ATTEND FREDERIC A CE MOMENT-LA : sur les 2 545
+             compromis sans vente, 250 SEULEMENT datent des cinq dernieres
+             annees. Les 2 295 autres sont des affaires jamais abouties, parfois
+             tres anciennes -- 2 h 30 de lecture contre 20 min.
+
          ─── ⭐ LE RATTRAPAGE DES REPARTITIONS : PERIMETRE ET PIEGES (14/09) ───
 
          ⛔ UN PIEGE DE CADENCE, TROUVE AVANT TOUT DEGAT. Le pilote fait sa pause
