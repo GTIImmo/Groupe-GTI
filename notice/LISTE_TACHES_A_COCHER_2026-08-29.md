@@ -4251,6 +4251,39 @@ GEL que Frederic a repere le premier).*
          porte desormais intervenantsEntree[51] et intervenantsSortie[51], 100 %
          et 4 166,67 HT chacun, relus chez Hektor.
 
+         ─── ⭐ LA TABLE DE REPARTITION EXISTE (14/09, patch applique) ───
+         `app_affaire_repartition` -- une ligne PAR PERSONNE CREDITEE, rattachee
+         au DOSSIER (app_chaine_id) et non a la transaction : saisie une fois sur
+         la premiere transaction, elle vaut pour le compromis puis la vente.
+             cote (entree|sortie) · rang (1|2) -> les QUATRE emplacements
+             hektor_user_id  ⚠ PAS hektor_negociateur_id (43 = POMBAR / JEOFFROY)
+             pourcentage     part DU TOTAL ; quatre lignes a 25 font 100
+             nom_au_moment   filet si la personne disparait de l'annuaire
+             app_dossier_id  filet si le run rechaine et deplace la tete
+         ⚠ UN EMPLACEMENT VIDE N'EST PAS UNE LIGNE : on n'ecrit que ce qui est
+           decide. Et DES POURCENTAGES, JAMAIS DES MONTANTS -- la commission bouge
+           avec le prix, un montant fige mentirait des la premiere correction.
+
+         LES GARDES, EPROUVEES UNE PAR UNE APRES APPLICATION (pas « success ») :
+             une ligne valide passe · un cote invente REFUSE · un rang 3 REFUSE
+             un pourcentage > 100 REFUSE · une personne sans numero REFUSEE
+
+         ⭐ ET LA CONDITION DE FREDERIC EST REMPLIE -- « au minimum sur le registre
+           des affaires de mon apps ET LE SERVEUR ». Aller-retour prouve le 14/09 :
+           deux lignes ecrites en ligne, `pull_from_supabase.py --table
+           app_affaire_repartition` lancee, les deux relues DANS phase2.sqlite.
+           Aucun cablage : la descente DECOUVRE les tables par la spec OpenAPI.
+           ⚠ Et elle EFFACE aussi : lignes retirees en ligne -> 0 en local au
+             passage suivant. Verifie, pas suppose.
+           ⚠ L'essai portait deliberement une SORTIE d'une autre agence que le
+             bien (REYNAUD, Annonay, sur un bien de Firminy) -- exactement ce que
+             Hektor ne saurait pas porter. La table est vide depuis.
+
+         RLS : lecture aux comptes connectes, ECRITURE A PERSONNE. Le geste de
+         l'ecran passera par une RPC avec controle de role -- meme demarche que
+         app_affaire_champ_app le 29/08. Rien ne lit ni n'ecrit cette table
+         aujourd'hui ; le worker ne la lira jamais, elle ne part pas chez Hektor.
+
          ─── ⭐ PEUT-ON CREDITER UNE AUTRE AGENCE ? DEUX MECANISMES (14/09) ───
          Question de Frederic : « mais on peut pas changer agence ? ». Elle est
          legitime -- l'assistant porte un module nomme `agenceInterkab`.
