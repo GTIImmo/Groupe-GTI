@@ -58,6 +58,20 @@
 #     .\scheduled\run_entretien_compromis_console.ps1 -Limit 300
 # ===========================================================================
 param(
+    # ═══ LE GENRE, AJOUTE LE 14/09 ═══
+    #
+    # Defaut : compromis. Une tache planifiee ou une habitude existante ne change
+    # donc pas d'un caractere -- ce lanceur fait exactement ce qu'il faisait.
+    #
+    # /!\ LE PERIMETRE EST LE MEME POUR LES DEUX GENRES, et c'est MESURE, pas
+    #   suppose. Le signal est `hektor_annonce.date_maj`, la date du BIEN : il ne
+    #   sait rien du genre de la transaction. Verification du 14/09 :
+    #       compromis  10 589   dont le bien porte une date_maj  10 589  (100 %)
+    #       ventes      7 612   dont le bien porte une date_maj   7 612  (100 %)
+    #   Aucune des deux familles n'a de trou. La regle « on ne relit pas quand une
+    #   date manque » ne laisse donc personne de cote.
+    [ValidateSet("compromis", "vente")]
+    [string]$Genre = "compromis",
     [string]$StopAt = "04:30",
     [int]$Limit = 150,
     # 0 = aucune relecture a l'age. On ne relit QUE ce qui a bouge.
@@ -73,16 +87,18 @@ $py = Join-Path $root ".venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { $py = "python" }
 
 $script = Join-Path $root "phase2\sync\sync_hektor_compromis_console.py"
-$journal = Join-Path $root ("logs\scheduled\entretien_compromis_" +
+# Le journal porte le genre. Pour le compromis le nom ne change pas d'un
+# caractere -- les journaux d'avant restent lisibles a cote des nouveaux.
+$journal = Join-Path $root ("logs\scheduled\entretien_${Genre}_" +
     (Get-Date -Format "yyyy-MM-dd_HH-mm-ss") + ".log")
 New-Item -ItemType Directory -Force -Path (Split-Path $journal) | Out-Null
 
-$argsPy = @($script, "--limit", "$Limit", "--stale-days", "$StaleDays",
+$argsPy = @($script, "--genre", $Genre, "--limit", "$Limit", "--stale-days", "$StaleDays",
             "--suivre-annonce", "--refresh-session-on-expired")
 if ($StopAt) { $argsPy += @("--stop-at", $StopAt) }
 if (-not $SansCourtoisie) { $argsPy += "--courtoisie" }
 
-Write-Output "=== ENTRETIEN COMPROMIS CONSOLE -- depart $(Get-Date -Format 'HH:mm:ss') ==="
+Write-Output "=== ENTRETIEN $($Genre.ToUpper()) CONSOLE -- depart $(Get-Date -Format 'HH:mm:ss') ==="
 Write-Output "    nouveaux + biens modifies   plafond : $Limit   arret : $StopAt"
 
 # /!\ PAS DE `2>&1` ICI. PowerShell 5.1 enveloppe chaque ligne d'erreur d'un
