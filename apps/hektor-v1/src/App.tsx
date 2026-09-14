@@ -12049,7 +12049,12 @@ export default function App() {
   // indexe lui aussi par personne et par sens.
   const [repartitionPersonnes, setRepartitionPersonnes] = useState<RepartitionPersonne[]>([])
   const [repartitionLignes, setRepartitionLignes] = useState<RepartitionLigne[]>([])
-  const [repartitionChargee, setRepartitionChargee] = useState(false)
+  // ⚠ PAS UN BOOLEEN, MAIS LE DOSSIER POUR LEQUEL ON A CHARGE -- 14/09/2026.
+  //   Avec un booleen, le premier passage avait lieu AVANT que les affaires du
+  //   bien soient arrivees : aucun dossier a interroger, « charge » quand meme,
+  //   et la repartition enregistree ne remontait jamais. Constate en verifiant.
+  //   `null` = jamais charge · '' = charge alors qu'aucun dossier n'existait.
+  const [repartitionChargeePour, setRepartitionChargeePour] = useState<string | null>(null)
   const [hektorNegotiators, setHektorNegotiators] = useState<HektorNegotiatorOption[]>([])
   const [hektorAgencies, setHektorAgencies] = useState<HektorAgencyOption[]>([])
   const [negotiatorAssignTarget, setNegotiatorAssignTarget] = useState<HektorNegotiatorRequiredDossier | null>(null)
@@ -14935,7 +14940,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     //   rouvre sur une autre annonce avec le meme etat React : on remet a zero,
     //   et le prochain chargement refera ses defauts.
     setRepartitionLignes([])
-    setRepartitionChargee(false)
+    setRepartitionChargeePour(null)
   }
 
   function openMissingNegotiatorModal(dossier: HektorNegotiatorRequiredDossier) {
@@ -15345,16 +15350,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   // ─── CHARGEMENT ET DEFAUTS, une seule fois par ouverture de modale ───
   useEffect(() => {
-    if (!statusChangeTarget || repartitionChargee) return
+    if (!statusChangeTarget) return
+    const pour = repartitionChaineId()
+    if (repartitionChargeePour === pour) return
+    // ⚠ UNE SAISIE EN COURS NE SE FAIT PAS RECHARGER SOUS LES DOIGTS. Si le
+    //   dossier apparait apres coup et que quelqu'un a deja choisi, on prend acte
+    //   du dossier sans toucher a ce qu'il a pose.
+    if (repartitionLignes.some((l) => l.origine === 'saisie')) {
+      setRepartitionChargeePour(pour)
+      return
+    }
     let vivant = true
     void (async () => {
       const gens = await loadRepartitionPersonnes().catch(() => [])
       if (!vivant) return
       setRepartitionPersonnes(gens)
-      const chaine = repartitionChaineId()
-      const deja = chaine ? await loadRepartition(chaine).catch(() => []) : []
+      const deja = pour ? await loadRepartition(pour).catch(() => []) : []
       if (!vivant) return
-      if (deja.length) { setRepartitionLignes(deja); setRepartitionChargee(true); return }
+      if (deja.length) { setRepartitionLignes(deja); setRepartitionChargeePour(pour); return }
 
       // ⚠ LE DEFAUT NE S'APPLIQUE QU'A UN DOSSIER QUI N'A RIEN. Une repartition
       //   posee par quelqu'un ne se fait jamais recalculer -- c'est la regle du
@@ -15379,10 +15392,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }
       if (!vivant) return
       setRepartitionLignes(lignes)
-      setRepartitionChargee(true)
+      setRepartitionChargeePour(pour)
     })()
     return () => { vivant = false }
-  }, [statusChangeTarget, repartitionChargee, repartitionChaineId,
+  }, [statusChangeTarget, repartitionChargeePour, repartitionChaineId, repartitionLignes,
       statusChangeBuyers, statusChangeBuyerContactId])
 
   useEffect(() => {
@@ -15724,7 +15737,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           ?.payload_json?.app_affaire_id
         const chaine = chaineExistante || (neuf == null ? '' : String(neuf))
         const aEcrire = repartitionLignes.filter((l) => l.hektorUserId.trim())
-        if (chaine && (aEcrire.length || repartitionChargee)) {
+        if (chaine && (aEcrire.length || repartitionChargeePour !== null)) {
           await saveRepartition({
             chaineId: chaine,
             appDossierId: statusChangeTarget.app_dossier_id,
