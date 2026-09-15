@@ -4690,6 +4690,27 @@ GEL que Frederic a repere le premier).*
                   Une page qui se vide une nuit est reprise par l'entretien du
                   lendemain, sans que personne ait a compter des lignes un matin.
 
+         ⭐ ET LA QUESTION EST DEFINITIVEMENT FERMEE (15/09) : L'API EST AVEUGLE
+           SUR LA COMMISSION PAR SES DEUX PORTES. Question de Frederic : « il y a
+           le registre, pas un registre des relations dans l'API ? ».
+           ⚠ ON N'AVAIT MESURE QUE LES LISTES. `VenteById` et `CompromisById` sont
+             SANS APPELANT depuis le 21/07 : personne n'avait jamais regarde ce
+             qu'elles rendent. Mesure du 15/09, sur deux pieces dont on SAIT qui
+             est credite :
+                 vente 23208 (Marion BILLIG DURAND 100 %)
+                     partAdmin "0.00" · commissionAgence "0.00"
+                     retro_idUser/idContact/nom/qualite  null
+                 compromis 49955 (Tatiana CROIZIER)
+                     partAdmin "0.00", et rien d'autre
+             Les routes de DETAIL rendent exactement les memes champs que les
+             LISTES. Aucun intervenant, nulle part.
+           ⚠ ET LE REGISTRE DES RELATIONS DU MIROIR N'AIDE PAS :
+             `sync_annonce_contact_link` (50 481 liens) porte des CONTACTS avec
+             leur role -- mandants, acquereurs -- pas des negociateurs, et aucune
+             commission.
+           ➡ LA CONSOLE EST LE SEUL CHEMIN. C'est desormais prouve sur les deux
+             portes, plus seulement sur les listes.
+
          [ ] 3. LE RATTRAPAGE CONSOLE, EN UNE PASSE.
                     ~880 ventes de la fenetre perdue       46 min
                     1 610 ventes d'avant 2010            1 h 23
