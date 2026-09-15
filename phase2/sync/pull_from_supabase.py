@@ -197,12 +197,18 @@ class SupabaseReader:
             if not props:
                 continue
             colonnes = list(props.keys())
-            cle = next(
-                (c for c in colonnes
-                 if "primary key" in str((props[c] or {}).get("description", "")).lower()),
-                colonnes[0],
-            )
-            out[name] = (colonnes, cle)
+            # ⚠ UNE CLE PRIMAIRE PEUT ETRE COMPOSITE, et n'en prendre que le
+            #   PREMIER morceau donne une colonne qui SE REPETE. Le parcours par
+            #   valeur (« les lignes apres la derniere lue ») saute alors les
+            #   lignes restantes de la valeur coupee au bord d'une page.
+            #   Vu en vrai le 15/09 sur app_affaire_repartition, cle
+            #   (app_chaine_id, cote, rang) : 13 305 lignes lues sur 13 309.
+            #   Le commentaire du correctif du 22/08 disait « aucune [table] ne
+            #   l'est aujourd'hui » -- c'etait vrai, et ca ne l'est plus.
+            cles = [c for c in colonnes
+                    if "primary key" in str((props[c] or {}).get("description", "")).lower()]
+            cle = cles[0] if cles else colonnes[0]
+            out[name] = (colonnes, cle, cles)
         return out
 
     def count(self, table: str) -> int | None:
@@ -283,7 +289,8 @@ def encode(value: Any) -> Any:
 
 
 def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
-               table: str, columns: list[str], cle: str, stamp: str) -> tuple[int, int]:
+               table: str, columns: list[str], cle: str, stamp: str,
+               cles: list[str] | None = None) -> tuple[int, int]:
     """Recopie une table. Renvoie (lignes ecrites, appels API).
 
     `distant` = le nom chez Supabase, celui qu'on interroge.
@@ -318,7 +325,55 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     appels = 0
     borne: Any = None
     taille = PAGE_SIZE
-    while True:
+
+    # ─── CLE COMPOSITE : PARCOURS PAR RANG, D'EMBLEE ───          15/09/2026
+    #
+    # Le parcours par valeur exige une cle UNIQUE PAR LIGNE. Avec une cle en
+    # plusieurs morceaux on n'en tient qu'un, qui se repete, et on saute des
+    # lignes. On ordonne donc sur TOUTE la cle -- l'ordre devient total, aucune
+    # ligne ne peut plus etre a egalite -- et on avance par rang.
+    #
+    # ⚠ POURQUOI L'OFFSET EST ACCEPTABLE ICI, alors qu'il a fait tomber
+    #   app_dossier_match_attrs en 'statement timeout' le 21/08 : c'etait une VUE
+    #   CALCULEE, que Postgres refabriquait a chaque page. Une vraie table a un
+    #   INDEX sur sa cle primaire, et c'est precisement lui qu'on lui demande de
+    #   suivre. Le repli par rang existant (l.~395) reste la pour les vues, avec
+    #   son plafond de 5 000 -- il ne change pas.
+    #
+    # ⚠ ET LE CONTROLE DE COMPLETUDE RESTE LE JUGE. Si ce parcours se trompait
+    #   lui aussi, la table serait REFUSEE, pas posee a moitie.
+    composite = bool(cles) and len(cles or []) > 1
+    if composite:
+        ordre_cle = list(cles or [])
+        print(f"        {distant} : cle composite ({'+'.join(ordre_cle)}) -- parcours par rang")
+        rang = 0
+        while True:
+            while True:
+                try:
+                    rows = reader.page_par_rang(distant, ordre_cle, rang, taille)
+                    break
+                except RuntimeError as exc:
+                    lourd = any(m in str(exc) for m in ("522", "504", "57014", "timeout", "reseau"))
+                    if not lourd or taille <= 25:
+                        raise
+                    taille = max(25, taille // 4)
+                    print(f"        {distant} : reponse trop lourde, paquet ramene a {taille}")
+            appels += 1
+            if not rows:
+                break
+            conn.executemany(
+                'INSERT INTO "%s" (%s) VALUES (%s)' % (tmp, quoted, placeholders),
+                [tuple(encode(row.get(c)) for c in columns) for row in rows],
+            )
+            total += len(rows)
+            rang += len(rows)
+            if len(rows) < taille:
+                break
+            time.sleep(PAUSE_PAGE)
+        rows = []
+
+    # Cle simple : le parcours PAR VALEUR d'origine, inchange.
+    while not composite:
         # PAQUET QUI S'ADAPTE -- correctif du 22/08. Les tables de detail portent un gros
         # paquet JSON par ligne (app_dossier_detail_current : 249 Mo pour 13 212 lignes,
         # soit ~19 ko/ligne). Un paquet de 1 000 lignes = ~19 Mo dans une seule reponse :
@@ -616,8 +671,9 @@ def main() -> int:
         echecs: list[tuple[str, str]] = []
         for index, (distant, local) in enumerate(cibles, start=1):
             try:
-                colonnes, cle = schema[distant]
-                lignes, appels = copy_table(conn, reader, distant, local, colonnes, cle, stamp)
+                colonnes, cle, cles = schema[distant]
+                lignes, appels = copy_table(conn, reader, distant, local, colonnes, cle, stamp,
+                                            cles=cles)
                 lignes_totales += lignes
                 appels_totaux += appels
                 print(f"  [{index:>3}/{len(cibles)}] {local:<46} {lignes:>8} lignes")
