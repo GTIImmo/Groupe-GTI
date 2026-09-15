@@ -10500,6 +10500,22 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
   const agency = String(payload.agence_reseau_selected || payload.agenceReseauSelected || "").trim();
   const buyer = String(payload.acquereur_id || payload.buyer_contact_id || payload.id_acquereur || "").trim();
   const notary = String(payload.notaire_id || payload.buyer_notary_id || payload.id_notaire || "").trim();
+  // ─── 3.2d lot 2 (15/09/2026) : LE NOTAIRE DU VENDEUR ───
+  //
+  // `notairesMandant[]` n'etait POSE NULLE PART : le worker le LIT depuis le 10/09
+  // (RE_NOTAIRE_MANDANT) et ne l'a jamais ecrit. La modale n'avait meme pas de case.
+  //
+  // ⚠ ET C'EST LE CAS MAJORITAIRE. Mesure du 15/09 sur 18 442 lectures console :
+  //     compromis  notaire MANDANT 8 203 / 9 218 (89 %)  ACQUEREUR 3 351 (36 %)
+  //     vente      notaire MANDANT 6 428 / 9 224 (70 %)  ACQUEREUR 2 822 (31 %)
+  const notaryMandant = String(payload.seller_notary_id || payload.notaire_mandant_id || "").trim();
+  // ⚠ CE QUE L'UTILISATEUR A DESIGNE DANS LA MODALE, ET RIEN D'AUTRE.
+  //   En reprise, un champ prerempli n'est pas une intention -- c'est la lecon du
+  //   08/09, ou `sale_price` portait LE PRIX DE L'ANNONCE (180 000) que personne
+  //   n'avait tape, et aurait fait passer un compromis de 165 000 a 180 000.
+  const notairesAffirmes = (payload && payload.notaires_affirmes) || {};
+  const notaireAcqAffirme = notairesAffirmes.acquereur === true;
+  const notaireMandantAffirme = notairesAffirmes.mandant === true;
   const fees = cleanMoneyValue(payload.buyer_fees || payload.montant_honoraire_sortie || payload.montantHonoraireSortie, htmlInputValue(initHtml, "offre_montant_honoraires_0") || "0");
   const feesRate = cleanMoneyValue(payload.buyer_fees_rate || payload.taux_honoraire_sortie || payload.tauxHonoraireSortie, htmlInputValue(initHtml, "offreHonorairesSortiePercent_1") || "0");
   if (!amount && (config.hektorValue === "3" || config.hektorValue === "4")) throw new Error("Montant requis pour ce changement de statut");
@@ -10515,6 +10531,9 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
     agency,
     buyer,
     notary,
+    notaryMandant,
+    notaireAcqAffirme,
+    notaireMandantAffirme,
     fees,
     feesRate,
     isWritten: payload.is_written === false || payload.isWrite === false || payload.is_written === "0" ? "0" : "1",
@@ -11085,7 +11104,29 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         corps.delete("acquereurs[]");
         for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
       }
-      if (!enReprise && tx.notary) { corps.delete("notairesAcquereur[]"); corps.append("notairesAcquereur[]", tx.notary); }
+      // ─── LES DEUX NOTAIRES ───   3.2d lot 2, 15/09/2026
+      //
+      // A LA CREATION : on pose ce que la modale porte, comme avant pour
+      // l'acquereur -- et desormais AUSSI pour le mandant, qui ne partait nulle
+      // part. Le compromis 50078, cree par l'app, en est la preuve : il est sorti
+      // avec ZERO notaire des deux cotes.
+      //
+      // EN REPRISE : on ne pose QUE ce que l'utilisateur a designe dans cette
+      // modale. Sinon on reimposerait la valeur preremplie -- le piege du prix de
+      // vente. Et ne rien poser, ici, veut dire CONSERVER : l'assistant repose le
+      // formulaire que Hektor a rendu (extractHektorFormValues, plus haut).
+      //
+      // ⚠ RETIRER UN NOTAIRE N'EFFACE RIEN CHEZ HEKTOR. Une valeur vide n'est
+      //   jamais posee ; effacer demanderait de poster un tableau vide, jamais
+      //   eprouve. L'ecran le dit a l'utilisateur, on ne le suppose pas ici.
+      const poserNotaire = (cle, valeur, affirme) => {
+        if (!valeur) return;
+        if (enReprise && !affirme) return;
+        corps.delete(cle);
+        corps.append(cle, valeur);
+      };
+      poserNotaire("notairesAcquereur[]", tx.notary, tx.notaireAcqAffirme);
+      poserNotaire("notairesMandant[]", tx.notaryMandant, tx.notaireMandantAffirme);
     }
 
     // ⚠ ON REPOSE LES ACQUEREURS A CHAQUE ETAPE, une fois Hektor mis au courant.
@@ -11413,7 +11454,19 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   appendIfValue(body, "instigateur", tx.negotiator);
   appendIfValue(body, "agenceReseauSelected", tx.agency);
   appendIfValue(body, "acquereurs[]", tx.buyer);
-  appendIfValue(body, "notairesAcquereur[]", tx.notary);
+  // ─── LES DEUX NOTAIRES, MEME REGLE QUE L'ASSISTANT ───   3.2d lot 2, 15/09/2026
+  //
+  // ⚠ ICI LE CORPS EST NEUF, champ par champ : ne pas poser veut dire NE PAS
+  //   ENVOYER LE CHAMP, et rien ne dit que Hektor lise une absence comme
+  //   « inchange » (c'est ecrit plus bas, pour le prix de vente). On garde donc
+  //   la meme discipline que l'assistant -- en creation on pose, en reprise on
+  //   ne pose que ce qui est affirme -- sans parier sur autre chose.
+  if (tx.notary && (!idRepris || tx.notaireAcqAffirme)) {
+    appendIfValue(body, "notairesAcquereur[]", tx.notary);
+  }
+  if (tx.notaryMandant && (!idRepris || tx.notaireMandantAffirme)) {
+    appendIfValue(body, "notairesMandant[]", tx.notaryMandant);
+  }
   body.set("fromContact", "0");
 
   if (target === "offer") {

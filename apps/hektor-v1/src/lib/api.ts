@@ -8998,6 +8998,29 @@ export async function createChangeHektorAnnonceStatusJob(input: {
    *  temoin). Vide = creation. */
   modifierAffaireId?: number
   buyerNotaryId?: string
+  /** ─── 3.2d lot 2 (15/09/2026) : LE NOTAIRE DU VENDEUR ───
+   *
+   *  Chez Hektor c'est `notairesMandant[]`, dans le meme module que celui de
+   *  l'acquereur. Il n'a JAMAIS ete envoye : aucun `append("notairesMandant[]")`
+   *  n'existait dans le worker, et la modale n'avait pas de case.
+   *
+   *  ⚠ ET C'EST LE CAS MAJORITAIRE, pas l'accessoire. Mesure du 15/09 sur les
+   *    18 442 lectures console : le notaire du MANDANT est rempli sur 8 203 des
+   *    9 218 compromis (89 %) et 6 428 des 9 224 ventes (70 %), contre 36 % et
+   *    31 % pour celui de l'acquereur. */
+  sellerNotaryId?: string
+  /** ─── CE QUE L'UTILISATEUR A VRAIMENT DESIGNE DANS CETTE MODALE ───
+   *
+   *  ⚠ SANS CETTE CLE, OUVRIR L'ENVOI DES NOTAIRES EN MODIFICATION SERAIT UN
+   *    PIEGE. La charge porte toujours un notaire -- prerempli depuis le
+   *    registre -- que personne n'a tape. Le reposer en reprise reimposerait une
+   *    valeur perimee : exactement le defaut du prix de vente du 08/09, ou
+   *    `sale_price` valait LE PRIX DE L'ANNONCE et aurait fait passer un
+   *    compromis de 165 000 a 180 000 sans que ce soit demande.
+   *
+   *  ➡ En reprise, le worker ne pose QUE ce qui est affirme ici. Le reste vient
+   *    du formulaire que Hektor a rendu, et ne rien poser veut dire CONSERVER. */
+  notairesAffirmes?: { acquereur?: boolean; mandant?: boolean }
   buyerFees?: string
   buyerFeesRate?: string
   netSellerPrice?: string
@@ -9044,6 +9067,15 @@ export async function createChangeHektorAnnonceStatusJob(input: {
       ? input.buyerContactIds!.map((x) => String(x ?? '').trim()).filter(Boolean)
       : null,
     buyer_notary_id: input.buyerNotaryId?.trim() || null,
+    // 3.2d lot 2 : le notaire du vendeur. On n'envoie la cle que si elle vaut
+    // quelque chose -- la charge du cas courant ne change pas d'un octet.
+    seller_notary_id: input.sellerNotaryId?.trim() || null,
+    notaires_affirmes: (input.notairesAffirmes?.acquereur || input.notairesAffirmes?.mandant)
+      ? {
+          acquereur: input.notairesAffirmes?.acquereur === true ? true : null,
+          mandant: input.notairesAffirmes?.mandant === true ? true : null,
+        }
+      : null,
     buyer_fees: input.buyerFees?.trim() || null,
     buyer_fees_rate: input.buyerFeesRate?.trim() || null,
     net_seller_price: input.netSellerPrice?.trim() || null,

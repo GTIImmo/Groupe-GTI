@@ -171,7 +171,6 @@ import {
   hasCompromisEnCours,
   loadAffairesForDossier,
   loadAffairesConsole,
-  editAffaireOptimistic,
   type AffaireLedgerRow,
   type AffaireConsoleRow,
   gesteAffaireOptimistic,
@@ -11980,6 +11979,18 @@ export default function App() {
   const [statusChangeBuyerLoading, setStatusChangeBuyerLoading] = useState(false)
   const [statusChangeBuyerError, setStatusChangeBuyerError] = useState<string | null>(null)
   const [statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId] = useState('')
+  // ─── 3.2d lot 2 (15/09/2026) : LES DEUX NOTAIRES ───
+  // Le NOM a cote du numero : sans lui le jeton retomberait sur « 49708 », ce
+  // qu'on corrige justement ici. On ne fabrique PAS un faux contact pour autant
+  // -- un nom vide reste vide, et le jeton affiche alors « n° 49708 », honnete.
+  const [statusChangeBuyerNotaryNom, setStatusChangeBuyerNotaryNom] = useState('')
+  const [statusChangeSellerNotaryId, setStatusChangeSellerNotaryId] = useState('')
+  const [statusChangeSellerNotaryNom, setStatusChangeSellerNotaryNom] = useState('')
+  // ⚠ CE QUE L'UTILISATEUR A DESIGNE DANS CETTE MODALE, et rien d'autre. En
+  //   modification, le worker ne posera QUE ce qui est marque ici : un champ
+  //   prerempli n'est pas une intention (lecon du prix de vente, 08/09).
+  const [statusChangeNotairesAffirmes, setStatusChangeNotairesAffirmes] =
+    useState<{ acquereur: boolean; mandant: boolean }>({ acquereur: false, mandant: false })
   const [statusChangeBuyerFees, setStatusChangeBuyerFees] = useState('')
   const [statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate] = useState('')
   const [statusChangeNetSellerPrice, setStatusChangeNetSellerPrice] = useState('')
@@ -14919,6 +14930,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerOptions([])
     setStatusChangeBuyerError(null)
     setStatusChangeBuyerNotaryId('')
+    setStatusChangeBuyerNotaryNom('')
+    setStatusChangeSellerNotaryId('')
+    setStatusChangeSellerNotaryNom('')
+    setStatusChangeNotairesAffirmes({ acquereur: false, mandant: false })
     setStatusChangeBuyerFees('')
     setStatusChangeBuyerFeesRate('')
     setStatusChangeNetSellerPrice('')
@@ -15253,8 +15268,28 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (validite) setStatusChangeValidityDays(validite)
     const retractation = String(carnet.jours_retractation ?? '').trim()
     if (retractation) setStatusChangeRetractionDays(retractation)
-    const notaire = String(carnet.notaire_id ?? '').trim()
-    if (notaire) setStatusChangeBuyerNotaryId(notaire)
+    // ─── LES DEUX NOTAIRES, DEPUIS `notaires_json` ───   3.2d lot 2, 15/09/2026
+    //
+    // ⚠ LE SENS DES DEUX COTES EST L'INVERSE DE CE QU'ON CROIT, ET C'EST MESURE.
+    //   `notaires_json` porte { entree, sortie }. Par analogie avec les
+    //   honoraires (entree = vendeur) on pose naturellement entree = mandant.
+    //   C'EST FAUX. Confrontation du 15/09 entre le registre et les lectures
+    //   console, sur 366 ventes ou les deux cotes DIFFERENT :
+    //       entree = notaire de l'ACQUEREUR   366 fois
+    //       l'inverse                           0 fois
+    //   Sans cette mesure, la modale aurait interverti les deux notaires en
+    //   silence -- et les aurait renvoyes intervertis chez Hektor.
+    const notairesRegistre = lireNotairesAffaire(affaire.notaires_json)
+    // Le carnet garde la priorite sur l'acquereur : c'est une saisie humaine.
+    const notaire = String(carnet.notaire_id ?? '').trim() || notairesRegistre.acquereur.id
+    if (notaire) {
+      setStatusChangeBuyerNotaryId(notaire)
+      if (notairesRegistre.acquereur.id === notaire) setStatusChangeBuyerNotaryNom(notairesRegistre.acquereur.nom)
+    }
+    if (notairesRegistre.mandant.id) {
+      setStatusChangeSellerNotaryId(notairesRegistre.mandant.id)
+      setStatusChangeSellerNotaryNom(notairesRegistre.mandant.nom)
+    }
     const mandat = String(carnet.numero_mandat ?? '').trim()
     if (mandat) setStatusChangeSelectedMandat(mandat)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -15545,56 +15580,28 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusChangeAffaires, statusChangeStatus])
 
-  async function handleCorrigerAffaire() {
-    const affaire = affaireCourantePourStatut()
-    if (!affaire) return
-    setStatusChangeCorrectionPending(true)
-    setErrorMessage(null)
-    try {
-      // Le montant ne désigne pas la même chose selon le type : pour une vente
-      // c'est le prix de vente, pour une offre le montant proposé.
-      const montant = statusChangeStatus === 'sold'
-        ? (statusChangeSalePrice.trim() || statusChangeAmount.trim())
-        : statusChangeAmount.trim()
-      const retour = await editAffaireOptimistic(affaire.app_affaire_id, {
-        montant,
-        date: statusChangeDate.trim(),
-        date_acte: statusChangeSignatureDate.trim(),
-        sequestre: statusChangeSequestration.trim(),
-        prix_net_vendeur: statusChangeNetSellerPrice.trim(),
-        prix_publique: statusChangeSalePrice.trim(),
-        honoraires: statusChangeBuyerFees.trim(),
-        numero_mandat: statusChangeSelectedMandat.trim(),
-        // LES QUATRE QUI N'EXISTENT QUE DANS LE CARNET (01/09). Ils n'ont aucune
-        // colonne ou etre reposes -- « mieux vaut un champ absent qu'un champ
-        // menteur » -- donc ils se conservent et se relisent tels quels.
-        // ⚠ Le notaire se CORRIGE et se CONSERVE, mais ne repart PAS chez Hektor
-        // (arbitrage de Frederic) : cette fonction n'a jamais cree de travail
-        // worker, c'est tout le sens de « Corriger sans envoyer a Hektor ».
-        jours_validite: statusChangeValidityDays.trim(),
-        jours_retractation: statusChangeRetractionDays.trim(),
-        notaire_id: statusChangeBuyerNotaryId.trim(),
-        taux_honoraires: statusChangeBuyerFeesRate.trim(),
-      })
-      setNoticeMessage(
-        `Correction enregistrée dans tes données (${retour.champs_retenus} champ(s)). Hektor n'en est pas informé.`,
-      )
-      if (statusChangeTarget?.app_dossier_id != null) {
-        loadAffairesForDossier(Number(statusChangeTarget.app_dossier_id))
-          .then(setStatusChangeAffaires)
-          .catch(() => undefined)
-      }
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Impossible d enregistrer la correction')
-    } finally {
-      setStatusChangeCorrectionPending(false)
-    }
-  }
-
-  // ─── C.19 ÉTAPE 4 — LES TROIS GESTES QUI PARTENT, EUX, CHEZ HEKTOR ───
+  // ─── « CORRIGER SANS ENVOYER A HEKTOR » A ETE RETIRE ───   15/09/2026
   //
-  // Tout le reste de cette modale reste chez nous. Ces trois-là changent un ÉTAT que
-  // seul Hektor peut acter, et que notre registre doit refléter.
+  // DECISION DE FREDERIC, apres audit. Le bouton ecrivait dans le carnet
+  // (`app_affaire_champ_app`) LES MEMES CHAMPS que « Modifier », sans les
+  // envoyer. Il existait parce que quatre valeurs n'avaient nulle part ou aller.
+  //
+  // ⚠ CE N'EST PLUS VRAI, ET C'EST MESURE :
+  //     jours_validite         a quitte la classe app le 07/09 (1.2b) --
+  //                            Hektor le garde, dans la PROPOSITION de l'offre
+  //     date_fin_retractation  Hektor la connait, le local la lit au miroir
+  //     taux_honoraires        « Modifier » l'envoie (offre et compromis)
+  //     notaire_id             ce lot vient de l'ouvrir, des DEUX cotes
+  //
+  // ⚠ ET IL N'AVAIT JAMAIS SERVI EN REEL. Le carnet des affaires, au 15/09 :
+  //   58 lignes sur DEUX annonces -- 29 et 24933, les biens de test (origines
+  //   `essai_nuit_c19`, `creation_app`). Zero notaire, zero dossier reel.
+  //
+  // RETOUR ARRIERE : `git revert`. `editAffaireOptimistic` et la RPC
+  // `app_edit_affaire_optimistic` restent EN PLACE, intactes -- seul l'appel
+  // disparait. Rien n'est detruit en base, et le carnet se relit toujours :
+  // le preremplissage de la modale s'en sert encore.
+
   async function handleGesteHektor(
     geste: 'refus' | 'accepte' | 'annuler_compromis' | 'supprimer_compromis' | 'supprimer_vente',
   ) {
@@ -15735,6 +15742,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           .map((x) => String(x.hektor_contact_id ?? '').trim()).filter(Boolean),
         apresVente: statusChangeApresVente,
         buyerNotaryId: statusChangeBuyerNotaryId,
+        // 3.2d lot 2 : le notaire du vendeur, et ce que l'utilisateur a
+        // VRAIMENT designe ici -- seul ce qui est affirme sera pose en reprise.
+        sellerNotaryId: statusChangeSellerNotaryId,
+        notairesAffirmes: statusChangeNotairesAffirmes,
         buyerFees: statusChangeBuyerFees,
         buyerFeesRate: statusChangeBuyerFeesRate,
         netSellerPrice: statusChangeNetSellerPrice,
@@ -18365,10 +18376,48 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               ? <small className="sca-acq-etat">Aucun contact trouvé dans ton périmètre.</small>
                               : null}
                         </div>
-                        <label className="filter-field">
-                          <span>Notaire acquereur</span>
-                          <input value={statusChangeBuyerNotaryId} onChange={(event) => setStatusChangeBuyerNotaryId(event.target.value)} placeholder="ID notaire si connu" />
-                        </label>
+                        {/* ─── 3.2d lot 2 : LES DEUX NOTAIRES SE DESIGNENT ───   15/09/2026
+                            « Notaire acquereur » etait un champ ou l'on TAPAIT un numero ;
+                            « notaire vendeur » n'existait pas du tout, alors que c'est le
+                            plus souvent rempli : 8 203 compromis sur 9 218 (89 %) et 6 428
+                            ventes sur 9 224 (70 %), contre 36 % et 31 % cote acquereur. */}
+                        <SelecteurNotaire
+                          libelle="Notaire du vendeur"
+                          aide="Nom du notaire, ou son numéro…"
+                          nom={statusChangeSellerNotaryNom}
+                          numero={statusChangeSellerNotaryId}
+                          scope={dataScope}
+                          onChoisir={(option) => {
+                            setStatusChangeSellerNotaryId(String(option.hektor_contact_id ?? '').trim())
+                            setStatusChangeSellerNotaryNom(mandantContactOptionTitle(option))
+                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, mandant: true }))
+                          }}
+                          onRetirer={() => {
+                            // ⚠ RETIRER N'EFFACE PAS CHEZ HEKTOR, et il ne faut pas le
+                            //   laisser croire. Le worker ne pose jamais une valeur vide
+                            //   (« ne rien poser, c'est conserver ») : on cesse seulement
+                            //   de l'envoyer. Effacer chez eux demanderait de poster un
+                            //   tableau vide — jamais eprouve, donc jamais suppose.
+                            setStatusChangeSellerNotaryId('')
+                            setStatusChangeSellerNotaryNom('')
+                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, mandant: false }))
+                          }} />
+                        <SelecteurNotaire
+                          libelle="Notaire de l'acquéreur"
+                          aide="Nom du notaire, ou son numéro…"
+                          nom={statusChangeBuyerNotaryNom}
+                          numero={statusChangeBuyerNotaryId}
+                          scope={dataScope}
+                          onChoisir={(option) => {
+                            setStatusChangeBuyerNotaryId(String(option.hektor_contact_id ?? '').trim())
+                            setStatusChangeBuyerNotaryNom(mandantContactOptionTitle(option))
+                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, acquereur: true }))
+                          }}
+                          onRetirer={() => {
+                            setStatusChangeBuyerNotaryId('')
+                            setStatusChangeBuyerNotaryNom('')
+                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, acquereur: false }))
+                          }} />
                         <label className="filter-field">
                           <span>Honoraires acquereur</span>
                           <input value={statusChangeBuyerFees} onChange={(event) => setStatusChangeBuyerFees(event.target.value)} inputMode="numeric" placeholder="0" />
@@ -18795,22 +18844,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 {affaireCourantePourStatut() ? (
                   <p className="status-change-note">
                     Ce bien porte déjà {statusChangeStatus === 'offer' ? 'une offre' : statusChangeStatus === 'compromise' ? 'un compromis' : 'une vente'}.
-                    Tu peux <strong>corriger ses montants et ses dates dans tes données</strong> sans rien envoyer à Hektor —
-                    la correction survit au run de nuit. Un champ laissé vide rend la main à Hektor.
+                    <strong> Modifier chez Hektor</strong> reprend celle-là au lieu d'en créer une seconde.
+                    Un champ laissé vide n'efface rien : il conserve ce que Hektor porte déjà.
                   </p>
                 ) : null}
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending || statusChangeCorrectionPending}>Annuler</button>
-                  {affaireCourantePourStatut() ? (
-                    <button
-                      className="ghost-button button-subtle"
-                      type="button"
-                      onClick={handleCorrigerAffaire}
-                      disabled={statusChangePending || statusChangeCorrectionPending}
-                    >
-                      {statusChangeCorrectionPending ? 'Enregistrement...' : 'Corriger sans envoyer à Hektor'}
-                    </button>
-                  ) : null}
                   {affaireCourantePourStatut() && statusChangeStatus === 'offer' ? (
                     <>
                       <button className="ghost-button button-subtle" type="button"
@@ -33911,6 +33950,150 @@ function mandantContactOptionMeta(option: MandantContactSearchOption) {
     option.agence_nom,
     mandantContactOptionTypologies(option),
   ].filter(Boolean).join(' - ')
+}
+
+/** ─── 3.2d lot 2 (15/09/2026) : LE NOTAIRE SE DESIGNE, IL NE SE TAPE PLUS ───
+ *
+ *  Le champ etait `<input placeholder="ID notaire si connu" />` : on y tapait un
+ *  NUMERO. Personne ne connait par coeur le numero d'un notaire -- et le seul
+ *  compromis cree par l'app (50078) est parti SANS notaire des DEUX cotes, la
+ *  case etant restee vide. Meme classe de defaut que la commission le 12/09.
+ *
+ *  ⚠ MEME MOTEUR QUE PARTOUT AILLEURS : `searchMandantContactOptions`, celui du
+ *    selecteur de mandant, de « Ajouter RDV » et de l'acquereur (2.5). On n'en
+ *    ecrit pas un cinquieme -- c'est la regle posee en 2.5.
+ *
+ *  ⚠ IL N'EXISTE AUCUNE TYPOLOGIE « NOTAIRE », et on ne peut donc pas filtrer.
+ *    Mesure du 15/09 : chez Hektor un notaire est un PARTENAIRE, comme le
+ *    diagnostiqueur ou le syndic (105 053 partenaires au serveur, 11 324
+ *    publies). Filtrer sur « partenaire » ne trierait rien ; filtrer sur autre
+ *    chose exclurait de vrais notaires. ➡ On AFFICHE la typologie sur chaque
+ *    proposition, et l'oeil tranche. Un filtre menteur serait pire qu'aucun.
+ *
+ *  ⚠ LE NUMERO RESTE UN CHEMIN : taper des chiffres cherche par identifiant.
+ *    Mesure du 15/09 sur les transactions depuis 2024, 1 772 portant un
+ *    notaire : 87 % citent un notaire que cette recherche trouve. Les 13 %
+ *    restants sont archives ou hors annuaire -- pour eux le numero reste le
+ *    seul chemin, exactement comme avant. On ne perd rien, jamais. */
+/** ─── `notaires_json` : { entree, sortie } — ET LES DEUX COTES SONT INVERSES ───
+ *
+ *  Mesure du 15/09/2026, registre confronte aux lectures console sur 366 ventes
+ *  dont les deux notaires DIFFERENT :
+ *      entree = le notaire de l'ACQUEREUR    366 fois
+ *      l'inverse                               0 fois
+ *  Contre-intuitif -- « honoraires d'entree » designe le VENDEUR -- et c'est
+ *  exactement pour cela que la mesure existe. Ne pas « corriger » sans remesurer.
+ *
+ *  ⚠ ON NE FABRIQUE RIEN : pas de nom dans la charge -> pas de nom. Le jeton
+ *    affichera « n° 49708 », qui est vrai, plutot qu'un nom devine. */
+function lireNotairesAffaire(brut: unknown): {
+  acquereur: { id: string; nom: string }
+  mandant: { id: string; nom: string }
+} {
+  const vide = { id: '', nom: '' }
+  let objet: Record<string, unknown> | null = null
+  if (brut && typeof brut === 'object' && !Array.isArray(brut)) objet = brut as Record<string, unknown>
+  else if (typeof brut === 'string' && brut.trim()) {
+    try {
+      const analyse = JSON.parse(brut)
+      if (analyse && typeof analyse === 'object' && !Array.isArray(analyse)) objet = analyse as Record<string, unknown>
+    } catch { objet = null }
+  }
+  const lire = (cle: string) => {
+    const valeur = objet ? objet[cle] : null
+    if (!valeur || typeof valeur !== 'object') return { ...vide }
+    const fiche = valeur as Record<string, unknown>
+    const id = String(fiche.id ?? '').trim()
+    const nom = [fiche.civilite, fiche.prenom, fiche.nom]
+      .map((x) => String(x ?? '').trim()).filter(Boolean).join(' ')
+    return { id, nom }
+  }
+  return { acquereur: lire('entree'), mandant: lire('sortie') }
+}
+
+function SelecteurNotaire(props: {
+  libelle: string
+  aide: string
+  /** Le nom du notaire deja pose, s'il est connu. Vide = on n'affiche que son numero. */
+  nom: string
+  numero: string
+  scope: DataScope | null | undefined
+  onChoisir: (option: MandantContactSearchOption) => void
+  onRetirer: () => void
+}) {
+  const [recherche, setRecherche] = useState('')
+  const [options, setOptions] = useState<MandantContactSearchOption[]>([])
+  const [charge, setCharge] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  useEffect(() => {
+    const terme = recherche.trim()
+    // Meme seuil que l'acquereur : 3 lettres, ou UN chiffre pour chercher par numero.
+    const minimum = /^\d+$/.test(terme) ? 1 : 3
+    if (terme.length < minimum) { setOptions([]); setCharge(false); setErreur(null); return }
+    let annule = false
+    setCharge(true)
+    setErreur(null)
+    const minuteur = window.setTimeout(async () => {
+      try {
+        const lignes = await searchMandantContactOptions({ search: terme, scope: props.scope ?? null, limit: 8 })
+        if (!annule) setOptions(lignes)
+      } catch (erreurRecherche) {
+        if (annule) return
+        setOptions([])
+        setErreur(erreurRecherche instanceof Error ? erreurRecherche.message : 'Recherche contact impossible.')
+      } finally {
+        if (!annule) setCharge(false)
+      }
+    }, 260)
+    return () => { annule = true; window.clearTimeout(minuteur) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recherche, props.scope])
+
+  const terme = recherche.trim()
+  // ⚠ UN NUMERO SANS NOM RESTE UN NUMERO HONNETE. Si le notaire n'est pas dans
+  //   l'annuaire (13 % des cas), on affiche « n° 49708 » plutot que d'inventer.
+  const numero = props.numero.trim()
+  const nom = props.nom.trim()
+
+  return (
+    <div className="filter-field status-change-acq">
+      <span>{props.libelle}</span>
+      {numero ? (
+        <div className="sca-acq-choisis">
+          <span className="sca-acq-jeton">
+            <b>{nom || `n° ${numero}`}</b>
+            <button type="button" aria-label={`Retirer le ${props.libelle.toLowerCase()}`}
+              onClick={() => { setRecherche(''); setOptions([]); props.onRetirer() }}>×</button>
+          </span>
+          {nom ? <small className="sca-acq-etat">n° {numero}</small> : null}
+        </div>
+      ) : (
+        <>
+          <input value={recherche} onChange={(event) => setRecherche(event.target.value)}
+            placeholder={props.aide} />
+          {charge ? <small className="sca-acq-etat">Recherche…</small> : null}
+          {erreur ? <small className="sca-acq-err">{erreur}</small> : null}
+          {options.length ? (
+            <div className="sca-acq-liste">
+              {options.map((option) => (
+                <button type="button" key={`not-opt-${option.hektor_contact_id}`}
+                  onClick={() => { setRecherche(''); setOptions([]); props.onChoisir(option) }}>
+                  <b>{mandantContactOptionTitle(option)}</b>
+                  <small>{[mandantContactOptionTypologies(option), mandantContactOptionSubtitle(option)]
+                    .filter(Boolean).join(' · ')}</small>
+                </button>
+              ))}
+            </div>
+          ) : terme.length > 0 && terme.length < (/^\d+$/.test(terme) ? 1 : 3)
+            ? <small className="sca-acq-etat">Trois lettres suffisent, ou un numéro de contact.</small>
+            : terme.length >= 3 && !charge
+              ? <small className="sca-acq-etat">Aucun contact trouvé dans ton périmètre.</small>
+              : null}
+        </>
+      )}
+    </div>
+  )
 }
 
 function optionalBooleanSelectValue(value: boolean | null | undefined) {
