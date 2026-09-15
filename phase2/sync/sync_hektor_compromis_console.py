@@ -75,7 +75,21 @@ EXTRACTEUR = RACINE / "Console" / "extract_hektor_compromis_console.js"
 #   etait sous les yeux au lieu de demander QUI APPELLE CE PILOTE. Un garde-fou
 #   pose dans un appelant ne protege que celui-la ; pose ici, il protege aussi
 #   celui que quelqu'un ecrira l'an prochain.
-REQUETES_PAR_PIECE = {"compromis": 1, "vente": 2}
+# ⚠ CE CHIFFRE DOIT SUIVRE LE LECTEUR, ET IL NE L'A PAS SUIVI.  15/09/2026
+#   Depuis le 14/09, extract_hektor_compromis_console.js ouvre la page des
+#   commissions POUR LES DEUX GENRES -- seul `--sans-commissions` la coupe, et
+#   personne ne le passe. Un compromis coute donc DEUX requetes.
+#   Tant qu'il en declarait une, `taille_de_lot` calculait des lots de 100 pieces
+#   = 200 requetes : la pause tombait toutes les 200 au lieu de 100. Le
+#   rattrapage des compromis de la nuit du 14 au 15 a tourne au DOUBLE du rythme
+#   prevu entre deux pauses.
+#   ⚠ Aucun degat prouve : le creux de la nuit est arrive sur le run des VENTES,
+#     qui etait compte juste. Mais c'est une regle du projet violee en silence,
+#     et le bannissement de juillet s'est paye sur ce genre d'erreur de rythme.
+#   ⚠ LE DEFAUT DE FOND EST D'ECRIRE CE COUT DEUX FOIS -- ici et dans le lecteur.
+#     Deux ecritures finissent toujours par diverger. Le jour ou une troisieme
+#     page s'ajoute, c'est ICI qu'il faudra revenir.
+REQUETES_PAR_PIECE = {"compromis": 2, "vente": 2}
 REQUETES_PAR_LOT = 100
 
 
@@ -639,6 +653,11 @@ def main() -> int:
     # La cadence se regle AVANT tout appel, et elle se dit.
     args.batch_size, phrase_lot = taille_de_lot(args.genre, args.batch_size)
     resume["cadence"] = phrase_lot
+    # ⚠ DECLARES ICI ET PAS AU FIL DE L'EAU : un compteur qui n'apparait que
+    #   lorsqu'il est non nul se lit comme une absence de probleme.
+    resume["page_commissions_lue"] = 0
+    resume["page_commissions_vide"] = 0
+    resume["avec_intervenants"] = 0
     vues = set() if (args.dry_run or args.force) else deja_lues(args.stale_days, args.suivre_annonce)
     retenues = [c for c in toutes if int(c["app_affaire_id"]) not in vues]
     if args.limit > 0:
@@ -708,11 +727,40 @@ def main() -> int:
                 continue
             lignes.append(ligne_pour_supabase(cible, r, args.genre))
             champs = r.get("champs") or {}
+            # ─── CE QUE LA PAGE DES COMMISSIONS A RENDU ───      15/09/2026
+            #
+            # ⚠ SANS CETTE LIGNE, UN RUN PEUT PERDRE LES TROIS QUARTS DE SA
+            #   RECOLTE EN ANNONCANT « 0 ERREUR ». C'est arrive dans la nuit du
+            #   14 au 15 : la deuxieme requete partait, repondait, et son contenu
+            #   revenait VIDE par fenetres entieres. Le lecteur rendait alors
+            #   `commissions = 0`, aucun intervenant, et la piece etait comptee
+            #   `done`. Mesure : les ventes ont perdu 880 pieces entre 20:03 et
+            #   21:07 avant de remonter SEULES a 100 %. Personne ne l'a vu
+            #   pendant le run ; je l'ai trouve QUATRE HEURES plus tard en
+            #   comptant des lignes en base.
+            #
+            # ⚠ LE LECTEUR RENDAIT DEJA `commissions_octets`. C'est le pilote qui
+            #   le jetait. Le defaut n'etait pas d'ignorer la panne, c'etait de
+            #   jeter la seule mesure qui l'aurait montree.
+            #
+            # `commissions` : la taille du contenu rendu par l'etape 2.
+            #    None = on ne l'a pas demandee (--sans-commissions)
+            #    0    = demandee, et REVENUE VIDE  <- le signal qui manquait
+            octets = r.get("commissions_octets")
+            gens = len(champs.get("intervenants") or [])
+            if octets == 0:
+                resume["page_commissions_vide"] += 1
+            elif octets:
+                resume["page_commissions_lue"] += 1
+            if gens:
+                resume["avec_intervenants"] += 1
             resume["lues"].append({
                 "cible": f"{r.get('hektor_annonce_id')}:{r.get(cle_sortie)}",
                 "notaires": len(champs.get("notaires_acquereur") or [])
                             + len(champs.get("notaires_mandant") or []),
                 "acquereurs": len(champs.get("acquereurs") or []),
+                "commissions": octets,
+                "intervenants": gens,
                 "ms": r.get("elapsed_ms")})
         supabase_upsert(lignes)
         # ─── LA RESPIRATION ET LA VAGUE ───
