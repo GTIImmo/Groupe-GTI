@@ -26,14 +26,19 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
 **Chantier : `C.19-d` — LE REGISTRE DES TRANSACTIONS.**
-Cinq phases, dans `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` à partir de la **ligne 1321**.
+⚬ **LA PAGE DE TÊTE DE LA LISTE REMPLACE SA LECTURE** : `notice/LISTE_TACHES_A_COCHER_2026-08-29.md`,
+les **44 premières lignes**. Elle porte la tâche en cours, les trois suivantes, ce qui attend
+Frédéric, et les renvois par numéro de ligne. Le reste du document est une **archive** : on
+l’ouvre à la ligne indiquée, jamais en entier (6 500 lignes).
+
+Cinq phases, à partir de la **ligne 1372**.
 
 ```
-PHASE 0  mesurer, bloquante        l. 1861   0.1 quasi finie  ·  0.2 0.3 0.4 faites
-PHASE 1  le registre, invisible    l. 2277   terminee
-PHASE 2  l'ecran                   l. 2852   reste 2.4 (l. 3282), 2.6, 2.7 (l. 3456), 26bis-TRANSACTIONS (l. 2855)
-PHASE 3  l'ecriture part chez Hektor  l. 3535   EN COURS
-PHASE 4  menage                    l. 4321   reste 4.1 (l. 4324), 4.2 (l. 4328)  ·  4.3 faite le 07/09
+PHASE 0  mesurer, bloquante        l. 1912   0.1 quasi finie  ·  0.2 0.3 0.4 faites
+PHASE 1  le registre, invisible    l. 2328   terminee
+PHASE 2  l'ecran                   l. 2903   reste 2.4 (l. 3333), 2.6, 2.7 (l. 3556), 26bis-TRANSACTIONS (l. 2906)
+PHASE 3  l'ecriture part chez Hektor  l. 3635   EN COURS
+PHASE 4  menage                    l. 5290   reste 4.1 (l. 5293), 4.2 (l. 5297)  ·  4.3 faite le 07/09
 ```
 
 **Au 08/09/2026 — LES TROIS GENRES SONT MODIFIABLES, ET PROUVÉS EN RÉEL.**
@@ -127,7 +132,7 @@ Frédéric est remplie : *« au minimum sur le registre des affaires de mon apps
 pour écrire dans Supabase alors que sa matière est en local. Décision de Frédéric, 15/09.
 ⚠ Le relevé par négociateur vient APRÈS.
 
-Ensuite : `3.2d` lots 2-3-4 (l. 3892), `3.3`, `3.1` — qui commande `4.1`.
+Ensuite : `3.2d` lots 2-3-4 (l. 4017), `3.3`, `3.1` — qui commande `4.1`.
 
 > ⭐ **`0.1` est quasi finie.** Sa phrase *« l'assistant refuse d'avancer sous
 > automatisation »* était **fausse** : il refuse un formulaire qu'on ne lui rend pas
@@ -154,8 +159,8 @@ phase2/checks/verifier_regle_chainage.py       les 3 copies de la règle, confro
 phase2/checks/test_chainage_vente_ferme.py     le correctif du run, sur registre jetable
 ```
 
-> ⚠ **Il existe deux tâches nommées `0.1`** — celle de la phase 0 (l. 1868) et une autre,
-> sans rapport, l. 289.
+> ⚠ **Il existe deux tâches nommées `0.1`** — celle de la phase 0 (l. 1919) et une autre,
+> sans rapport, l. 340.
 
 ---
 
@@ -201,7 +206,7 @@ décision écrite) · **Est-ce mesuré ?** (mesurer, *puis* conclure) · **Qu'es
 | | |
 |---|---|
 | le **pourquoi** | `notice/PLAN_DEV_ACTUALISE_2026-08-20.md` (2 278 l.) |
-| le **quoi**, item par item | `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` (6 250 l.) |
+| le **quoi**, item par item | `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` (6 500 l. — lire la page de tête, l. 1-44) |
 | le protocole de test en cours | `notice/PROTOCOLE_TEST_STATUTS_TRANSACTIONS_2026-09-01.md` |
 | les pièges déjà payés | la mémoire projet (voir §3.5) |
 

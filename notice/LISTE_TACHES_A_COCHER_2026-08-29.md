@@ -1,3 +1,47 @@
+# ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
+
+> **Mis à jour le 15/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> archive qu'on ouvre **par numéro de ligne**, jamais en entier — elle fait 6 400 lignes.
+
+**LA CIBLE** — *étape 2, redite par Frédéric le 15/09* : les négociateurs travaillent dans
+l'app et n'ouvrent plus Hektor ; lui reste alimenté par les workers. **A.1 · A.2 · A.3 sont
+HORS DE PORTÉE pour l'instant** (portails, signature, registre légal) : il n'y a pas de
+coupure datée, et rien ne l'attend.
+
+```
+   EN COURS     3.2e lot 5   la répartition de commission     FINI le 15/09,
+                             reste UNE NUIT à observer (l. 4245)
+
+   LES 3 SUIVANTES, dans cet ordre
+     1. 3.2d lot 2   le notaire acquéreur PAR RECHERCHE       l. 4017
+                     aujourd'hui on tape un numéro à la main
+     2. les 3 dettes du 15/09  surveillance en alerte permanente depuis juillet ·
+                     la descente met Supabase par terre chaque matin ·
+                     le numéro de contact ne voyage pas avec sa fiche
+     3. 3.5 + 2.6    la suppression disparaît partout · plusieurs acquéreurs
+                     l. 5163 et 3412
+
+   EN ATTENTE DE FRÉDÉRIC
+     3.2d lot 3   « que doit-on pouvoir saisir depuis l'app ? »   l. 4018
+                  mandants · conditions suspensives · notes · PDF
+     E.2          quel négociateur passe sur l'app en premier ?
+     le mot de passe de la base, apparu en clair le 14/09
+     les 5 écarts de statut : des biens sous compromis annoncés « Actif »
+```
+
+**CE QUI A COÛTÉ CHER, ET QUI SE RÉPÈTE** — ⚠ *deux écarts la nuit du 14 au 15 : l'arbitrage
+était écrit à la **ligne 4486** et personne ne l'a lu ; le contrôle du matin était écrit
+**à la ligne 4472** et n'a pas été appliqué.* ➡ **Relire la section AVANT de lancer** — la
+checklist est au plan maître, l. 378. Et **mesurer avant de conclure** : le 15/09, une
+corrélation due à l'ordre de traitement a été prise pour une preuve, et a coûté quatre heures.
+
+**RÈGLE D'ÉCRITURE DE CE DOCUMENT** *(posée le 15/09)* — il est passé de 155 lignes le 29/08 à
+6 400 aujourd'hui. Les tâches convergent (8 ajoutées, 34 terminées depuis le 30/08), pas le
+texte. ➡ **Une découverte va dans sa tâche, en trois lignes.** Le récit détaillé va dans une
+note de `notice/`, citée par son nom. Cette page de tête, elle, ne dépasse jamais l'écran.
+
+---
+
 # La liste complète — 62 tâches, item par item
 
 *Posée le 29/08/2026. Le plan dit le **pourquoi** en 1 700 lignes ; cette liste dit le **quoi**.*
