@@ -678,10 +678,32 @@ Invoke-OptionalStepWithRetry -Label "phase2 entretien ventes console" -Arguments
 #
 # RETOUR ARRIERE : retirer ce bloc. Les lignes deja posees restent, et se
 # suppriment par `origine LIKE 'hektor%'`.
-Invoke-OptionalStepWithRetry -Label "phase2 repartition de commission" -Arguments @(
-    "phase2\identite\convertir_repartition_commission.py",
-    "--appliquer"
-) -WorkerKey "phase2.repartition_commission"
+# ⛔ DESACTIVEE LE 15/09 PAR FREDERIC, ET POUR UNE BONNE RAISON.
+#
+# Le convertisseur ci-dessous LIT SUPABASE ET ECRIT DANS SUPABASE. Tout le reste
+# du projet fait l'inverse : il CALCULE EN LOCAL, a partir de phase2.sqlite, puis
+# POUSSE. J'ai branche l'outil que j'avais au lieu de l'ecrire a la forme du
+# projet -- c'etait un outil de rattrapage ponctuel, ou lire Supabase etait le
+# chemin le plus court parce que le rattrapage venait d'y ecrire.
+#
+# CE QUE CETTE FORME A DEJA COUTE, EN UNE SEULE JOURNEE :
+#   - une pagination REST refaite a la main, qui sautait 4 lignes sur 13 309 ;
+#   - un POST entier refuse pour UNE valeur a 100,001, laissant l'ecriture a
+#     mi-chemin (10 822 lignes sur 13 307) ;
+#   - le serveur local qui n'a rien, puisqu'il attend la descente ;
+#   - et une etape qui ne peut RIEN faire quand Supabase est en panne, alors que
+#     la matiere premiere est entierement disponible en local.
+#
+# ➡ A REECRIRE A LA FORME DU PROJET : lire app_affaire_console et
+#   app_affaire_ledger dans phase2.sqlite, calculer en SQL local, ecrire une
+#   table LOCALE, puis pousser -- comme affaire_ledger.py et export_app_payload.py.
+#   Le serveur aura alors la donnee en premier, et une panne Supabase ne fera que
+#   retarder la poussee.
+#
+# Invoke-OptionalStepWithRetry -Label "phase2 repartition de commission" -Arguments @(
+#     "phase2\identite\convertir_repartition_commission.py",
+#     "--appliquer"
+# ) -WorkerKey "phase2.repartition_commission"
 
 # ⚠ DEPLACEE ICI LE 12/09, APRES SA SOURCE. Elle etait posee juste apres le
 #   registre d'identite, donc AVANT l'entretien qui remplit app_affaire_console.
