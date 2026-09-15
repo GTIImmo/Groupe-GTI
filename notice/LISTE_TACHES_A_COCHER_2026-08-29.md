@@ -4373,6 +4373,24 @@ GEL que Frederic a repere le premier).*
              relues portent desormais leur vraie taille de page : elles sortent du
              selecteur d'elles-memes. Le mecanisme s'est auto-corrige.
 
+           ⭐ ET LA DERNIERE PISTE EST FERMEE, PAR MESURE -- question de Frederic :
+             « il faut juste rattraper les intervenants des COMPROMIS sur cette
+             periode pour mettre aussi a jour leur vente, non ? ». Legitime :
+             l'attribution se fait AU COMPROMIS (39/39) et la vente la REPREND, et
+             la page 2 des compromis de 2015-2017 n'avait JAMAIS ete ouverte -- le
+             lecteur ne sait la lire que depuis le 14/09, et le rattrapage des
+             compromis n'avait vise que 2026 et l'avant-2010.
+             ESSAI DU 15/09 : 24 compromis tires ETALES de 2014-01 a 2017-03,
+             tous choisis parmi les 867 dont la VENTE est vide.
+                 24 lus sans erreur · pages de 43 000 a 50 000 caracteres
+                 ZERO intervenant, sur les 24
+             (Un premier essai de 4 donnait deja 0 ; 4 etait trop peu pour
+             condamner 1 194 compromis, d'ou l'echantillon etale.)
+             ➡ NI LA VENTE NI LE COMPROMIS ne portent la repartition sur cette
+               periode. Rien a rattraper, et 1 194 lectures economisees.
+             ⚠ CE QUI A ETE RECUPERE, LUI, L'A ETE EN ENTIER : 310 dossiers de la
+               periode portent leur repartition, et les 310 sont dans la table.
+
            ⚠ ET IL NE RESTE PLUS QU'UN LOT A LIRE : les 1 610 ventes de 2006-2009,
              jamais lues. Vu que 2010-2014 sont a 95-99 %, elles devraient porter
              leurs intervenants.
