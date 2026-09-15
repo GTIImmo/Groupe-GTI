@@ -39,7 +39,22 @@
     # RETOUR ARRIERE : remettre 1000 / 1000 / $null. Rien d'autre a defaire.
     [int]$CompromisRecentLimit = 999999,
     [int]$OffreRecentLimit = 999999,
-    [string]$VenteDateStart = "2010-01-01",
+    # ⛔ 2010 ETAIT UNE BORNE AVEUGLE, ET ELLE FABRIQUAIT 1 585 FAUX DOSSIERS.
+    #   Hektor A des ventes avant : 1 610 entre 2006 et 2009 (mesure API du 15/09
+    #   -- 2006:85, 2007:547, 2008:549, 2009:429). Nous ne les importions pas.
+    #   Or Hektor n'exprime la conclusion d'un compromis QUE par l'existence d'une
+    #   vente : son `status` ne vaut que 1 (actif) ou 2 (annule), jamais « conclu ».
+    #   Tout compromis d'avant 2010 restait donc « en cours » POUR TOUJOURS, et le
+    #   filtre `--sans-vente` du rattrapage en ramassait 1 585 -- 65 de ses 71
+    #   minutes passees sur vingt ans d'archives.
+    # ⚠ PAS PLUS BAS QUE 2000 : `_date_utile` (affaire_ledger.py) refuse une date
+    #   hors [2000, 2030], donc une vente de 1998 n'attacherait aucun compromis.
+    # ⚠ ET LES ECRANS N'EN SOUFFRAIENT PAS : le listing n'affichait que 98 biens
+    #   en « compromis en cours ». Le desordre vivait dans la TABLE, la ou le
+    #   rattrapage l'interroge sans les filtres de l'ecran.
+    # COUT : listing seul, aucune fiche detaillee (sync_generic_details est sans
+    #   appelant depuis le 21/07). RETOUR ARRIERE : remettre 2010-01-01.
+    [string]$VenteDateStart = "2000-01-01",
     [int]$ContactDetailLimit = 1000,
     [int]$ContactDetailBatchSize = 1000,
     [int]$ContactDetailMaxAttempts = 1,

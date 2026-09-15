@@ -4609,7 +4609,36 @@ GEL que Frederic a repere le premier).*
                 ecarts de la nuit : la section affirmait encore que la table etait
                 vide et que rien ne l'ecrivait.
 
-         [ ] 1. LEVER LA BORNE DES VENTES -- API SEULE, PAS DE CONSOLE.
+         [~] 1. LEVER LA BORNE DES VENTES -- FAIT EN LOCAL LE 15/09, PUSH CE SOIR.
+                RESULTAT, le controle bloquant PASSE :
+                    chaines compromis sans vente   1 709 -> 132
+                    miroir hektor_vente            7 613 -> 9 223 (depuis 2006-07-24)
+                    registre app_affaire_ledger   29 363 -> 30 973
+                CE QUI RESTE : 99 recents et reels (2024-2026), 12 non chainables
+                (date « 0000 »), 9 affaires de 2006-2009 jamais conclues, 12 divers.
+                ⚠ LE PUSH N'EST PAS FAIT, ET C'EST VOULU : « `--push` ne se lance
+                  jamais seul en pleine journee » (lecon du 07/09). `--refresh` a
+                  tourne seul, en local ; le run de 05:00 poussera l'etat juste.
+                  Supabase porte donc encore l'ancien chainage jusqu'a demain matin.
+
+                ⛔ ⭐ ET LE RISQUE D'ANCRAGE S'EST REALISE -- 1 DOSSIER SUR 6 655.
+                  Le commentaire de la table l'annoncait mot pour mot : « si le run
+                  rechaine et qu'une autre passe en tete, la repartition se
+                  retrouverait orpheline ». C'est arrive sur le bien 1367875, qui
+                  portait DEUX cycles (compromis 2007 et compromis 2011) : l'arrivee
+                  de sa vente de 2008 a rechaine le second, et sa vente de 2011 a
+                  rejoint la chaine 18855 au lieu de rester seule sur 18859 -- ou sa
+                  repartition etait posee.
+                  ⭐ LE FILET A JOUE : `app_dossier_id` = 1367875 est stocke, le bien
+                    est retrouvable. Et la ligne est d'origine `hektor_partage_suppose`,
+                    pas une saisie humaine.
+                  ➡ A TRAITER DANS L'ETAPE 4 : le convertisseur doit SUPPRIMER les
+                    lignes dont la chaine n'existe plus, sinon il ecrira la bonne
+                    (18855) en laissant la perimee (18859) -- et un releve par
+                    negociateur compterait la commission DEUX FOIS.
+
+                ─── le geste, pour memoire ───
+         [ ] 1bis. LEVER LA BORNE DES VENTES -- API SEULE, PAS DE CONSOLE.
                 `VenteDateStart` 2010-01-01 -> 2000-01-01 (run_full_pipeline.ps1:42),
                 puis synchro des ventes seules, puis le chainage.
                 ⚠ Pas plus bas que 2000 : `_date_utile` (affaire_ledger.py:702)
