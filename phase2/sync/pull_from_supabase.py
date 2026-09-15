@@ -104,6 +104,7 @@ USAGE
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import sqlite3
@@ -259,6 +260,28 @@ class SupabaseReader:
         rows = self.get(path)
         return rows if isinstance(rows, list) else []
 
+    def page_delta(self, table: str, colonne: str, borne: str, size: int,
+                   rang: int) -> list[dict[str, Any]]:
+        """Les lignes dont l'horodatage est >= `borne`, page par page.
+
+        ⚠ `gte` ET PAS `gt`, ET C'EST DELIBERE. Deux lignes peuvent porter le
+          meme instant ; couper a `>` perdrait celles qui tombent au bord d'une
+          page. Le recouvrement d'une ligne ne coute rien : on ecrit en
+          INSERT OR REPLACE.
+
+        ⚠ PAGINATION PAR RANG, pas par valeur, pour la meme raison : sur un
+          horodatage qui se repete, « les lignes apres la derniere valeur lue »
+          sauterait les suivantes de la meme seconde. Le delta est petit par
+          construction (un jour de mouvements), donc le cout du rang est sans
+          consequence -- et le plafond empeche qu'il grandisse.
+        """
+        path = (f"{urllib.parse.quote(table)}?select=*"
+                f"&order={urllib.parse.quote(colonne)}.asc"
+                f"&{urllib.parse.quote(colonne)}=gte.{urllib.parse.quote(borne, safe='')}"
+                f"&limit={size}&offset={rang}")
+        rows = self.get(path)
+        return rows if isinstance(rows, list) else []
+
     def page_apres(self, table: str, cle: str, borne: Any, size: int) -> list[dict[str, Any]]:
         """Pagination PAR CLE, pas par OFFSET.
 
@@ -276,6 +299,59 @@ class SupabaseReader:
         return rows if isinstance(rows, list) else []
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# NE REDESCENDRE QUE CE QUI A CHANGE                              16/09/2026
+#
+# Question de Frederic : « la descente devrait retourner que les maj, pas
+# toutes, c'est ca ? ». Oui. Elle rapatriait 1 592 469 lignes chaque matin, dont
+# l'immense majorite identiques a la veille -- 27 minutes et 2 285 requetes, et
+# c'est elle qui a mis Supabase par terre le 15/09.
+#
+# ⚠ ON N'ACTIVE LE DELTA QUE LA OU L'HORODATAGE EST ECRIT A CHAQUE ECRITURE.
+#   C'est la seule condition qui rende la chose SURE, et elle a ete verifiee
+#   table par table le 16/09 : AUCUN declencheur n'existe dans cette base (0 sur
+#   les sept tables candidates). Donc `updated_at` ne vaut que ce que l'ecrivain
+#   a bien voulu y mettre -- s'y fier ferait manquer des modifications EN
+#   SILENCE, ce qui est pire que de tout redescendre.
+#
+#   app_rapprochement_score_history  computed_at  448 582  HISTORIQUE : on ajoute,
+#                                                          on ne modifie jamais
+#   app_console_job_log              created_at   189 430  JOURNAL : idem
+#   app_affaire_console              lu_le         18 442  la ligne EST la lecture
+#   app_affaire_repartition          ecrit_le      15 991  la RPC remplace le
+#                                                          dossier : toujours un INSERT
+#
+#   soit 672 445 lignes, 42 % de la descente. Les 58 % restants continuent de
+#   descendre en entier -- `app_console_job` par exemple, dont le statut change
+#   sans que rien ne garantisse son `updated_at`.
+#
+# ⚠ TROIS FILETS, parce qu'un delta peut mentir la ou une copie complete ne le
+#   peut pas :
+#     1. LE COMPTE. Apres le delta, on compare le total local au total distant.
+#        Ils different -> quelque chose a ete SUPPRIME la-haut, ou saute ici :
+#        on refait une copie complete dans la foulee.
+#     2. LE CALENDRIER. Une copie complete au moins tous les SEPT jours, quoi
+#        qu'il arrive. Aucune derive ne peut donc durer plus d'une semaine.
+#     3. LE PLAFOND. Un delta de plus de 50 000 lignes n'en est plus un : on
+#        repasse en copie complete, qui est alors plus rapide et plus sure.
+#
+# ⚠ ET LE RECOUVREMENT EST VOULU : on relit a partir de `>= dernier horodatage`,
+#   pas `>`. Deux lignes peuvent porter la meme seconde ; en coupant a `>` on
+#   perdrait celles qui tombent juste au bord d'une page. Les relire ne coute
+#   rien -- l'ecriture est un INSERT OR REPLACE, donc idempotente.
+# ═══════════════════════════════════════════════════════════════════════════
+DELTA_HORODATAGE: dict[str, str] = {
+    "app_rapprochement_score_history": "computed_at",
+    "app_console_job_log": "created_at",
+    "app_affaire_console": "lu_le",
+    "app_affaire_repartition": "ecrit_le",
+}
+# Au-dela, le delta n'a plus d'interet : la copie complete est plus sure.
+DELTA_PLAFOND = 50_000
+# Une copie complete au moins tous les N jours, meme si le delta se porte bien.
+DELTA_COMPLETE_TOUS_LES_JOURS = 7
+
+
 def ensure_state_table(conn: sqlite3.Connection) -> None:
     conn.execute(
         f"""CREATE TABLE IF NOT EXISTS {STATE_TABLE} (
@@ -288,6 +364,10 @@ def ensure_state_table(conn: sqlite3.Connection) -> None:
     colonnes = {r[1] for r in conn.execute(f"PRAGMA table_info({STATE_TABLE})")}
     if "dernier_echec" not in colonnes:
         conn.execute(f"ALTER TABLE {STATE_TABLE} ADD COLUMN dernier_echec TEXT")
+    # 16/09 : la date de la derniere copie COMPLETE. Sans elle, le filet n°2 (une
+    # copie entiere par semaine) n'aurait rien pour se declencher.
+    if "derniere_complete" not in colonnes:
+        conn.execute(f"ALTER TABLE {STATE_TABLE} ADD COLUMN derniere_complete TEXT")
     conn.commit()
 
 
@@ -526,6 +606,121 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
     return total, appels
 
 
+def assurer_index_unique(conn: sqlite3.Connection, table: str, cles: list[str]) -> bool:
+    """La copie locale n'a aucune cle -- il lui en faut une pour ecrire par delta.
+
+    ⚠ C'EST AUSSI LA REPARATION D'UN DEFAUT REEL. Le 15/09, une ecriture dans une
+      table descendue a fabrique QUATRE lignes pour un seul dossier : sans index
+      unique, `INSERT OR REPLACE` se comporte comme un simple `INSERT`. L'index
+      pose ici rend l'ecriture idempotente, ce qui est la condition du delta.
+
+    Rend False si l'index ne peut pas exister (doublons deja presents) : l'appelant
+    retombe alors sur la copie complete, qui ne demande aucune cle.
+    """
+    if not cles:
+        return False
+    nom = "idx_delta_" + table
+    colonnes = ", ".join('"%s"' % c.replace('"', '""') for c in cles)
+    try:
+        conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS "%s" ON "%s" (%s)' % (nom, table, colonnes))
+        conn.commit()
+        return True
+    except sqlite3.OperationalError:
+        return False
+    except sqlite3.IntegrityError:
+        # Des doublons dormaient deja dans la copie : on ne les cache pas sous un
+        # index, on repasse en copie complete, qui les balaiera.
+        return False
+
+
+def copy_delta(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
+               table: str, colonnes: list[str], cles: list[str], horodatage: str,
+               stamp: str) -> tuple[int, int, bool]:
+    """Ne redescend que les lignes touchees depuis la derniere fois.
+
+    Rend (lignes ecrites, appels API, reussi). `reussi = False` veut dire « refais
+    une copie complete » -- et l'appelant le fait sans discuter.
+    """
+    if horodatage not in colonnes or not assurer_index_unique(conn, table, cles):
+        return (0, 0, False)
+    borne = conn.execute('SELECT MAX("%s") FROM "%s"' % (horodatage, table)).fetchone()[0]
+    if not borne:
+        return (0, 0, False)          # table vide en local : autant tout prendre
+
+    quoted = ", ".join('"%s"' % c.replace('"', '""') for c in colonnes)
+    placeholders = ", ".join("?" for _ in colonnes)
+    appels = 0
+    lignes = 0
+    rang = 0
+    taille = PAGE_SIZE
+    while True:
+        rows = reader.page_delta(distant, horodatage, str(borne), taille, rang)
+        appels += 1
+        if not rows:
+            break
+        conn.executemany(
+            'INSERT OR REPLACE INTO "%s" (%s) VALUES (%s)' % (table, quoted, placeholders),
+            [tuple(encode(r.get(c)) for c in colonnes) for r in rows])
+        lignes += len(rows)
+        rang += len(rows)
+        if lignes > DELTA_PLAFOND:
+            # Ce n'est plus un delta. On rend la main : la copie complete sera
+            # plus rapide, et elle balaiera aussi ce qui a disparu la-haut.
+            conn.rollback()
+            return (0, appels, False)
+        if len(rows) < taille:
+            break
+    conn.commit()
+
+    # ─── FILET n°1 : LE COMPTE ───
+    # Un delta ne voit jamais une SUPPRESSION. Si les totaux ne se rejoignent pas,
+    # c'est qu'il manque quelque chose d'un cote ou de l'autre : copie complete.
+    distant_total = reader.count(distant)
+    appels += 1
+    local_total = conn.execute('SELECT COUNT(*) FROM "%s"' % table).fetchone()[0]
+    if distant_total is None or distant_total != local_total:
+        return (lignes, appels, False)
+
+    conn.execute(
+        f"INSERT INTO {STATE_TABLE}(table_name, lignes, derniere_descente, dernier_echec) "
+        "VALUES(?, ?, ?, NULL) "
+        "ON CONFLICT(table_name) DO UPDATE SET lignes=excluded.lignes, "
+        "derniere_descente=excluded.derniere_descente, dernier_echec=NULL",
+        (table, local_total, stamp))
+    conn.commit()
+    return (lignes, appels, True)
+
+
+def delta_possible(conn: sqlite3.Connection, table: str, stamp: str) -> bool:
+    """Le delta est-il permis pour cette table, cette nuit ?
+
+    ⚠ FILET n°2 : une copie COMPLETE au moins tous les sept jours. Sans elle, une
+      derive silencieuse pourrait durer indefiniment.
+    """
+    if table not in DELTA_HORODATAGE:
+        return False
+    ligne = conn.execute(
+        f"SELECT lignes, derniere_complete FROM {STATE_TABLE} WHERE table_name = ?",
+        (table,)).fetchone()
+    if not ligne or ligne[0] is None:
+        return False                  # jamais copiee entierement : on commence par la
+    if not ligne[1]:
+        return False                  # on ne sait pas quand : on refait une complete
+    try:
+        veille = datetime.datetime.fromisoformat(str(ligne[1])[:19])
+        aujourd = datetime.datetime.fromisoformat(stamp[:19])
+    except ValueError:
+        return False
+    return (aujourd - veille).days < DELTA_COMPLETE_TOUS_LES_JOURS
+
+
+def marquer_complete(conn: sqlite3.Connection, table: str, stamp: str) -> None:
+    conn.execute(
+        f"UPDATE {STATE_TABLE} SET derniere_complete = ? WHERE table_name = ?",
+        (stamp, table))
+    conn.commit()
+
+
 def marquer_echec(conn: sqlite3.Connection, table: str, message: str) -> None:
     """Une copie ratee ne laisse JAMAIS de table partielle derriere elle.
 
@@ -718,11 +913,27 @@ def main() -> int:
         for index, (distant, local) in enumerate(cibles, start=1):
             try:
                 colonnes, cle, cles = schema[distant]
-                lignes, appels = copy_table(conn, reader, distant, local, colonnes, cle, stamp,
-                                            cles=cles)
-                lignes_totales += lignes
-                appels_totaux += appels
-                print(f"  [{index:>3}/{len(cibles)}] {local:<46} {lignes:>8} lignes")
+                # ─── LE DELTA D'ABORD, QUAND IL EST PERMIS ───   16/09/2026
+                # Il rend la main (reussi = False) des qu'un doute existe, et la
+                # copie complete prend alors le relais dans la meme iteration :
+                # aucune table ne peut rester a moitie descendue par ce chemin.
+                fait_par_delta = False
+                if delta_possible(conn, local, stamp):
+                    lignes, appels, reussi = copy_delta(
+                        conn, reader, distant, local, colonnes, cles,
+                        DELTA_HORODATAGE[local], stamp)
+                    appels_totaux += appels
+                    if reussi:
+                        lignes_totales += lignes
+                        fait_par_delta = True
+                        print(f"  [{index:>3}/{len(cibles)}] {local:<46} {lignes:>8} lignes  (delta)")
+                if not fait_par_delta:
+                    lignes, appels = copy_table(conn, reader, distant, local, colonnes, cle, stamp,
+                                                cles=cles)
+                    marquer_complete(conn, local, stamp)
+                    lignes_totales += lignes
+                    appels_totaux += appels
+                    print(f"  [{index:>3}/{len(cibles)}] {local:<46} {lignes:>8} lignes")
             except Exception as exc:                                   # noqa: BLE001
                 # Une table en echec ne doit pas arreter la descente : on note et on continue.
                 # marquer_echec supprime la copie partielle -- voir le correctif du 21/08.
