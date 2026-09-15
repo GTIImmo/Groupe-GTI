@@ -4731,7 +4731,50 @@ GEL que Frederic a repere le premier).*
                 repartition), les offres (pas d'assistant), les 1 373 annules
                 (Hektor refuse de les ouvrir).
 
-         [ ] 4. REECRIRE LE CONVERTISSEUR A LA FORME DU PROJET.
+         [~] 4. REECRIRE LE CONVERTISSEUR -- FAIT LE 15/09, RESTE LA POUSSEE.
+                `phase2/sync/repartition_commission.py` remplace celui de
+                `phase2/identite/`. Deux temps, comme affaire_ledger.py :
+                    --calculer  lit phase2.sqlite, ecrit la table LOCALE, EN UNE
+                                TRANSACTION. Aucun reseau : tourne meme pendant une
+                                panne Supabase -- ce qui etait le cas ce matin.
+                    --pousser   envoie par la RPC, qui porte la garde.
+                ⚠ L'ANCIEN ENVOYAIT 67 PAQUETS HTTP : le 54e a ete refuse pour UNE
+                  valeur a 100,001 et l'ecriture s'est arretee a 10 822 lignes sur
+                  13 307. En local c'est tout ou rien.
+
+                ⭐ LA GARDE EST DANS LA BASE (patch_repartition_garde_2026-09-15) :
+                  `app_repartition_absorber` refuse de toucher un dossier dont UNE
+                  ligne ne vient pas de Hektor. NULL est du cote de l'app -- le
+                  doute profite a la saisie. EPROUVEE SUR LA VRAIE BASE :
+                      un intrus 'hektor' sur le dossier 1001347  -> REFUSE, saisie intacte
+                      un dossier derive                          -> ecrit
+                      un total de 150 %                          -> REFUSE, rien touche
+                ⚠ ON NE POUVAIT PAS LIRE LA LISTE DES PROTEGES EN LOCAL : descente
+                  a 07:30, run a 05:00 -> jusqu'a 21 h de retard sur une saisie.
+
+                ⭐ ET LA PURGE DES ORPHELINES EST FAITE : `--purger-orphelines` a
+                  supprime les 2 lignes derivees du dossier 18859, et gardé 0 saisie
+                  (« supprimer n'est pas annuler » : une saisie orpheline est
+                  comptee et laissee, jamais effacee).
+
+                VERIFICATION EXIGEE PAR LE PLAN, FAITE : comparaison ligne a ligne
+                du nouveau calcul avec les 13 309 deja en base.
+                    identiques                                13 305
+                    dossier 18855, absentes en base                2  <- la BONNE
+                                                                       chaine apres
+                                                                       rechainage
+                    dossier 18859, absentes du calcul              2  <- les perimees
+                    dossier 1001347, valeur differente             2  <- votre saisie,
+                                                                       que la base
+                                                                       refuse d'ecraser
+                Chacun des quatre ecarts s'explique. Aucun n'est un defaut.
+
+                ⚠ RESTE LA POUSSEE, volontairement differee : le calcul repose sur
+                  l'etat de `app_affaire_console` d'AVANT le rattrapage en cours.
+                  On recalculera et on poussera UNE FOIS, quand il aura fini.
+
+                ─── le detail, pour memoire ───
+         [x] 4bis. REECRIRE LE CONVERTISSEUR A LA FORME DU PROJET.
                 Le squelette du rattrapage des notaires : lire `phase2.sqlite` en
                 LECTURE SEULE, calculer, pousser en un upsert.
                 ⚠ LA PROTECTION NE PEUT PAS VENIR DU LOCAL : descente a 07:30, run

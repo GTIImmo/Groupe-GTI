@@ -75,6 +75,21 @@ param(
     #   sans -Force, la garde « deja lu » les sauterait tous et il n'y aurait rien
     #   a faire. C'est leur PAGE 2 qu'on vient chercher.
     [switch]$SansVente,
+    # ═══ LES PIECES DONT LA PAGE DES COMMISSIONS S'EST VIDEE ═══   15/09/2026
+    #
+    # /!\ ET IL FAUT -Force AVEC, pour la meme raison que -SansVente : ces pieces
+    #   sont DEJA LUES (page 1), la garde « deja lu » les sauterait toutes. C'est
+    #   leur PAGE 2 qu'on vient rechercher.
+    #
+    # /!\ QUI D'AUTRE APPELLE LE PILOTE ? La question du 14/09, et cette fois je
+    #   la pose AVANT. Ils sont trois : ce lanceur, run_entretien_*.ps1, et les
+    #   deux etapes du run quotidien. Je n'ajoute le drapeau qu'ICI, et c'est
+    #   DELIBERE : dans le pilote les filtres se CUMULENT (AND). Le mettre a
+    #   l'entretien donnerait « ce qui a bouge ET dont la page est vide » -- une
+    #   intersection presque toujours vide -- la ou il faudrait un OU.
+    #   ➡ Rendre l'entretien auto-reparable demande un OU dans la selection.
+    #     A faire, mais pas en meme temps qu'un rattrapage.
+    [switch]$SansCommission,
     [switch]$Simulation,
     [switch]$Force,
     [switch]$SansCourtoisie
@@ -98,6 +113,7 @@ $argsPy = @($script, "--genre", $Genre, "--limit", "$Limit", "--refresh-session-
 if ($StopAt) { $argsPy += @("--stop-at", $StopAt) }
 if ($Depuis) { $argsPy += @("--depuis", $Depuis) }
 if ($SansVente) { $argsPy += "--sans-vente" }
+if ($SansCommission) { $argsPy += "--sans-commission" }
 if ($Simulation) { $argsPy += "--dry-run" }
 if ($Force) { $argsPy += "--force" }
 if (-not $SansCourtoisie) { $argsPy += "--courtoisie" }
