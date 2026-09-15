@@ -85,10 +85,39 @@ def client() -> SupabaseRestClient | None:
     return SupabaseRestClient(base_url=url, service_role_key=cle)
 
 
-def lire_tout(cl: SupabaseRestClient, table: str, champs: str, cle: str) -> list[dict]:
+def lire_tout(cl: SupabaseRestClient, table: str, champs: str, cle: str,
+              unique: bool = True) -> list[dict]:
     """⚠ PostgREST plafonne TOUTE reponse a 1 000 lignes, silencieusement. Sans
-    pagination on conclurait sur un bout en croyant avoir tout lu."""
+    pagination on conclurait sur un bout en croyant avoir tout lu.
+
+    ⚠ ET LA CLE DE PARCOURS DOIT ETRE UNIQUE PAR LIGNE. « Les lignes apres la
+      derniere valeur lue » ne saute rien tant qu'aucune valeur ne se repete.
+      Sur `app_affaire_repartition` la cle primaire est COMPOSITE
+      (app_chaine_id, cote, rang) : avancer sur `app_chaine_id` seul saute les
+      lignes restantes de la chaine coupee au bord d'une page.
+      MESURE DU 15/09 : 4 lignes sur 13 309 invisibles.
+
+    ⚠ ET CE N'ETAIT PAS QU'UN FAUX COMPTE. Cette lecture sert a construire
+      l'ensemble des dossiers QU'ON NE DOIT PAS TOUCHER. Une ligne humaine tombee
+      au bord d'une page serait sortie de la protection, donc ECRASEE. Les deux
+      saisies du 14/09 etaient visibles -- par chance, pas par construction.
+
+    `unique=False` bascule sur un parcours PAR RANG avec un ordre TOTAL : plus
+    aucune ligne ne peut etre a egalite, donc « les 1 000 suivantes » ne peut
+    plus rien omettre. Meme remede que `pull_from_supabase.page_par_rang`.
+    """
     out: list[dict] = []
+    if not unique:
+        ordre = ",".join(c.strip() + ".asc" for c in champs.split(",") if c.strip())
+        while True:
+            page = cl.request(method="GET", path=(
+                f"{table}?select={champs}&order={ordre}&limit=1000&offset={len(out)}"))
+            if not isinstance(page, list) or not page:
+                break
+            out.extend(page)
+            if len(page) < 1000:
+                break
+        return out
     curseur = -1
     while True:
         page = cl.request(method="GET", path=(
@@ -96,7 +125,12 @@ def lire_tout(cl: SupabaseRestClient, table: str, champs: str, cle: str) -> list
         if not isinstance(page, list) or not page:
             break
         out.extend(page)
-        curseur = int(page[-1][cle])
+        suivant = int(page[-1][cle])
+        if suivant == curseur:
+            raise RuntimeError(
+                f"{table} : la cle « {cle} » ne progresse plus -- elle se repete. "
+                "Passer unique=False.")
+        curseur = suivant
     return out
 
 
@@ -172,18 +206,29 @@ def main() -> int:
         print("   effacees chez Hektor           %6d   (ignorees)" % efface)
 
     # ── 4. CE QUI EST DEJA LA, ET QU'ON NE TOUCHE PAS ──
-    deja = lire_tout(cl, CIBLE, "app_chaine_id,cote,rang,origine", "app_chaine_id")
+    # ⚠ `unique=False` : la cle primaire est composite, voir lire_tout.
+    deja = lire_tout(cl, CIBLE, "app_chaine_id,cote,rang,origine", "app_chaine_id",
+                     unique=False)
+    # ⚠ ON PROTEGE TOUT CE QUI VIENT DE L'APP, PAS SEULEMENT « saisie ».
+    #   La modale inscrit `origine = 'defaut'` quand quelqu'un ACCEPTE les noms
+    #   proposes (App.tsx:15398/15404), et `api.ts:5323` renvoie cette origine
+    #   telle quelle. Une repartition VALIDEE par un humain porte donc `defaut`.
+    #   Ne proteger que `saisie`, c'etait effacer ces validations-la.
+    #   ➡ Regle : tout ce qui ne vient pas de Hektor appartient a l'app.
+    #     'hektor', 'hektor_partage_suppose'  -> a nous de les rafraichir
+    #     'saisie', 'defaut', ou tout futur    -> on n'y touche pas
     humains = {int(r["app_chaine_id"]) for r in deja
-               if str(r.get("origine") or "") == "saisie"}
-    print("   dossiers portant une SAISIE    %6d   (jamais ecrases)" % len(humains))
+               if not str(r.get("origine") or "").startswith("hektor")}
+    print("   dossiers poses par l'APP       %6d   (jamais ecrases)" % len(humains))
 
     # ── 5. LA CONVERSION ──
     a_ecrire: list[dict] = []
     compte = defaultdict(int)
     exemples: list[str] = []
+    plafonnes: list[str] = []
     for chaine, src in sorted(meilleure.items()):
         if chaine in humains:
-            compte["saisie humaine respectee"] += 1
+            compte["pose par l'app -- respecte"] += 1
             continue
         gens = src.get("intervenants_json") or []
         if isinstance(gens, str):
@@ -220,6 +265,26 @@ def main() -> int:
                 if part is None:
                     part = Decimal("100")
                     suppose = True
+                # ── LE PLAFOND, ET POURQUOI IL EXISTE ──          15/09/2026
+                # Mesure du jour : 1 ligne sur 13 313 depasse 100, de 5 dix
+                # millemes. Elle vient de HEKTOR, qui ecrit `percent = 200.001`
+                # la ou il veut dire 200 -- sa facon d'exprimer « cette personne
+                # prend tout, y compris la part de l'autre cote » (vente 23208,
+                # Marion BILLIG DURAND, montant sortie a 0). 50 x 200,001 / 100
+                # fait 100,0005, et la contrainte de la table refuse.
+                # ⚠ ON PLAFONNE, MAIS ON NE SE TAIT PAS. Un plafonnement muet
+                #   masquerait le jour ou un vrai 150 % arriverait. Le compteur
+                #   `plafonnee a 100` et la liste nommee sont la pour ca.
+                valeur = unites * part / Decimal("100")
+                if valeur > Decimal("100"):
+                    compte["plafonnee a 100 (arrondi de Hektor)"] += 1
+                    if len(plafonnes) < 5:
+                        plafonnes.append("dossier %s : %s %s = %s %%"
+                                         % (chaine, cote, (g.get("nom") or "?"), valeur))
+                    valeur = Decimal("100")
+                elif valeur < 0:
+                    compte["negative -- NON CONVERTIE"] += 1
+                    continue
                 lignes_dossier.append({
                     "app_chaine_id": chaine,
                     "app_dossier_id": src.get("_dossier"),
@@ -227,7 +292,7 @@ def main() -> int:
                     "rang": rang,
                     "hektor_user_id": str(g.get("id")).strip(),
                     "nom_au_moment": (str(g.get("nom") or "").strip() or None),
-                    "pourcentage": deux_decimales(unites * part / Decimal("100")),
+                    "pourcentage": deux_decimales(valeur),
                 })
         etiquette = "hektor_partage_suppose" if suppose else "hektor"
         for l in lignes_dossier:
@@ -242,6 +307,11 @@ def main() -> int:
     for k, v in sorted(compte.items(), key=lambda x: -x[1]):
         print("   %-42s %6d" % (k, v))
     print("   %-42s %6d" % ("LIGNES au total", len(a_ecrire)))
+    if plafonnes:
+        print("")
+        print("-- LES LIGNES PLAFONNEES A 100, NOMMEES --")
+        for e in plafonnes:
+            print("   " + e)
     if exemples:
         print("")
         print("-- LES DOSSIERS NON CONVERTIS, NOMMES --")

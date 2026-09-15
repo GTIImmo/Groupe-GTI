@@ -15353,11 +15353,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     })
   }, [repartitionPersonnes])
 
+  /** ⚠ TOUCHER UN POURCENTAGE, C'EST DECIDER -- et ca doit se voir.  15/09/2026
+   *
+   *  Jusqu'ici cette fonction ne changeait que le nombre. L'`origine` restait
+   *  celle d'avant : 'defaut' pour un nom propose, ou meme
+   *  'hektor_partage_suppose' pour une ligne venue de la conversion, puisque
+   *  loadRepartition rend l'origine STOCKEE et que saveRepartition la renvoie
+   *  telle quelle (api.ts:5296 et 5323).
+   *
+   *  Consequence mesuree a l'audit du 15/09 : ouvrir un dossier converti, passer
+   *  de 50/50 a 25/75, enregistrer -- et la ligne repartait en base etiquetee
+   *  « venue de Hektor ». La decision humaine devenait indiscernable de celle de
+   *  la machine, et la conversion suivante l'effacait.
+   *
+   *  ⚠ ON NE TOUCHE PAS AUX LIGNES VOISINES : seule celle qu'on modifie change
+   *    d'origine. Marquer tout le dossier ferait passer pour decide un nom que
+   *    personne n'a regarde. */
   const repartitionPourcentage = useCallback((cote: 'entree' | 'sortie', rang: 1 | 2, valeur: string) => {
     const n = Number(String(valeur).replace(',', '.'))
     setRepartitionLignes((avant) => avant.map((l) =>
       l.cote === cote && l.rang === rang
-        ? { ...l, pourcentage: Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0 }
+        ? { ...l,
+            pourcentage: Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0,
+            origine: 'saisie' as string | null }
         : l))
   }, [])
 

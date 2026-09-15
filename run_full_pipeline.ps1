@@ -616,6 +616,73 @@ Invoke-OptionalStepWithRetry -Label "phase2 entretien compromis console" -Argume
     "--refresh-session-on-expired"
 ) -WorkerKey "console.entretien_compromis"
 
+# ─── ET LES VENTES, QUI N'ETAIENT ENTRETENUES PAR PERSONNE ───   15/09/2026
+#
+# L'etape ci-dessus ne passe AUCUN `--genre` : elle prend donc le defaut,
+# `compromis`. Constate a l'audit du 15/09 -- une vente creee chez Hektor
+# n'entrait dans aucune lecture console, et ses notaires comme sa repartition de
+# commission restaient inconnus POUR TOUJOURS.
+#
+# ⚠ LE COUT EST DERISOIRE, ET IL EST MESURE, PAS ESTIME. L'entretien des
+#   compromis prend 7 a 19 SECONDES par nuit sur cinq nuits relevees (le
+#   chauffage en prend 80). Le volume reel est de 4 a 10 transactions nouvelles
+#   par jour, tous genres confondus.
+#
+# ⚠ SEQUENTIEL, JAMAIS SIMULTANE. C'est deux flux console EN MEME TEMPS qui ont
+#   fait bannir notre IP en juillet, pas leur total. Invoke-Step attend la fin de
+#   l'etape precedente : ces deux lectures ne se chevauchent jamais.
+#
+# ⚠ ET PAS D'OFFRES : le lecteur ne connait que deux assistants, `compromis` et
+#   `vente` (ASSISTANTS, extract_hektor_compromis_console.js). Une offre n'a pas
+#   d'assistant a ouvrir -- ce n'est pas un oubli.
+#
+# ⚠ NON BLOQUANTE comme sa voisine : un 403 ou une session expiree ne doit pas
+#   priver l'agence de sa nuit de synchronisation.
+Invoke-OptionalStepWithRetry -Label "phase2 entretien ventes console" -Arguments @(
+    "phase2\sync\sync_hektor_compromis_console.py",
+    "--genre", "vente",
+    "--limit", "150",
+    "--stale-days", "0",
+    "--suivre-annonce",
+    "--courtoisie",
+    "--refresh-session-on-expired"
+) -WorkerKey "console.entretien_ventes"
+
+# ─── CE QUE HEKTOR PORTE DEVIENT LA REPARTITION DE L'APP ───     15/09/2026
+#
+# POURQUOI CETTE ETAPE EXISTE, ET CE QU'ELLE PROTEGE
+# --------------------------------------------------
+# Les deux entretiens ci-dessus rapportent `intervenants_json` : un bloc recopie
+# du formulaire de Hektor. Tel quel, il ne sert a rien -- le front ne le lit pas,
+# et le jour de la coupure plus personne ne saura le relire ni le regenerer.
+# Cette etape le transforme en lignes de `app_affaire_repartition` : un nom, un
+# pourcentage, un dossier. C'est CE QUI SURVIT A LA COUPURE.
+#
+# ⚠ SA PLACE EST ICI, ET PAS AILLEURS. Elle a besoin des DEUX :
+#     `app_chaine_id` a jour      -> pose par « phase2 affaire ledger refresh+push »
+#     les lectures console du jour -> posees par les deux entretiens juste au-dessus
+#   La mettre juste apres le registre l'aurait fait travailler sur les lectures de
+#   la VEILLE -- exactement l'erreur corrigee le 12/09 sur le perimetre contacts.
+#
+# ⚠ ELLE N'ECRASE JAMAIS CE QUE L'APP A POSE. Regle du 15/09 : tout ce dont
+#   l'origine ne commence pas par `hektor` appartient a l'app et n'est pas touche
+#   ('saisie', 'defaut', et tout ce qu'on inventera). Ne proteger que 'saisie'
+#   effacait les repartitions VALIDEES a l'ecran, qui portent 'defaut'.
+#
+# ⚠ ELLE N'APPELLE PAS HEKTOR. Tout est deja en base : aucune requete console,
+#   aucun risque de cadence. Cout mesure le 15/09 : ~17 lectures et ~67 ecritures
+#   Supabase pour 13 309 lignes, soit environ deux minutes.
+#
+# ⚠ NON BLOQUANTE, mais elle SIGNALE : un echec envoie un battement « error » au
+#   monitoring. C'est de l'argent -- un ratage muet serait pire que pas d'etape.
+#
+# RETOUR ARRIERE : retirer ce bloc. Les lignes deja posees restent, et se
+# suppriment par `origine LIKE 'hektor%'`.
+Invoke-OptionalStepWithRetry -Label "phase2 repartition de commission" -Arguments @(
+    "phase2\identite\convertir_repartition_commission.py",
+    "--appliquer"
+) -WorkerKey "phase2.repartition_commission"
+
 # ⚠ DEPLACEE ICI LE 12/09, APRES SA SOURCE. Elle etait posee juste apres le
 #   registre d'identite, donc AVANT l'entretien qui remplit app_affaire_console.
 #   Elle lisait les transactions de la VEILLE : un contact cite par un compromis
