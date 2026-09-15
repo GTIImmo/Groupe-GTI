@@ -31,9 +31,11 @@ CE QUE CETTE FORME A COUTE EN UNE SEULE JOURNEE -- et chacun disparait ici :
 
 LES DEUX TEMPS, comme affaire_ledger.py
 ---------------------------------------
-    --calculer   lit phase2.sqlite, calcule, ECRIT LA TABLE LOCALE. Aucun reseau :
-                 tourne meme quand Supabase est en panne.
-    --pousser    envoie a Supabase par la RPC `app_repartition_absorber`.
+    le calcul    lit phase2.sqlite -- TOUJOURS fait, et affiche. Aucun reseau :
+                 il tourne meme quand Supabase est en panne.
+    --pousser    envoie a Supabase par la RPC `app_repartition_absorber`, qui
+                 porte la garde. Le serveur local recoit la table par la DESCENTE,
+                 comme `app_affaire_console` -- il n'y a pas deux ecrivains.
 
 ⚠ ET LA PROTECTION NE VIENT PAS D'ICI. C'est la BASE qui refuse d'ecraser un
   dossier que l'app a pose (patch_repartition_garde_2026-09-15.sql). L'ancien
@@ -50,9 +52,8 @@ sa part DE SA MOITIE. Notre table stocke la part DU TOTAL :
 
     part du total = (unites du cote / 100) x (part de la personne / 100) x 100
 
-    python phase2/sync/repartition_commission.py                 # a blanc
-    python phase2/sync/repartition_commission.py --calculer
-    python phase2/sync/repartition_commission.py --calculer --pousser
+    python phase2/sync/repartition_commission.py                        # a blanc
+    python phase2/sync/repartition_commission.py --purger-orphelines --pousser
 """
 from __future__ import annotations
 
@@ -86,22 +87,28 @@ RANG_GENRE = {"offre": 0, "compromis": 1, "vente": 2}
 #   millieme. Refuser a 100 pile rejetterait de la donnee juste.
 TOLERANCE = Decimal("100.001")
 
-DDL = f"""
-CREATE TABLE IF NOT EXISTS {CIBLE} (
-    app_chaine_id   INTEGER NOT NULL,
-    app_dossier_id  INTEGER,
-    cote            TEXT    NOT NULL,
-    rang            INTEGER NOT NULL,
-    hektor_user_id  TEXT    NOT NULL,
-    nom_au_moment   TEXT,
-    pourcentage     REAL    NOT NULL DEFAULT 0,
-    origine         TEXT,
-    ecrit_le        TEXT,
-    ecrit_par       TEXT,
-    PRIMARY KEY (app_chaine_id, cote, rang)
-)
-"""
-
+# ⛔ PAS DE TABLE LOCALE, ET C'EST UNE CORRECTION DU 15/09 APRES COUP.
+#
+# J'avais copie la forme d'`affaire_ledger.py` -- calculer en local, ECRIRE EN
+# LOCAL, puis pousser. C'etait faux ici, pour deux raisons mesurees le jour meme :
+#
+#   ① LA TABLE LOCALE EST CELLE DE LA DESCENTE, et `pull_from_supabase` cree ses
+#     tables SANS CLE PRIMAIRE. Mon `INSERT OR REPLACE` s'est donc comporte en
+#     simple INSERT : le dossier 1001347 s'est retrouve avec QUATRE lignes -- les
+#     deux saisies de Frederic ET les deux derivees, sur les memes emplacements.
+#     Un releve par negociateur l'aurait compte deux fois.
+#   ② ET LA DESCENTE LA REVENDIQUE : elle est dans `sb_pull_state`. A 07:30 elle
+#     aurait remplace le travail du convertisseur. Deux ecritures pour une table,
+#     c'est le conflit de doublure que le projet connait deja.
+#
+# ➡ SUPABASE POSSEDE CETTE TABLE -- c'est la qu'est la garde qui protege les
+#   saisies, et une garde ne vaut que si tout passe par elle. Le local en est une
+#   COPIE, apportee par la descente, exactement comme `app_affaire_console`.
+#   C'est la forme du rattrapage des notaires, celle que Frederic a designee.
+#
+# ⚠ CE QU'ON PERD, ET C'EST ASSUME : pendant une panne Supabase le calcul tourne
+#   toujours (il ne lit que le local) mais n'a nulle part ou se poser. Il suffit de
+#   le relancer au retour -- c'est ce qu'on a fait ce matin.
 
 def nombre(v) -> Decimal | None:
     t = str(v if v is not None else "").strip().replace(",", ".")
@@ -233,32 +240,6 @@ def calculer(con: sqlite3.Connection) -> tuple[list[dict], dict]:
     return lignes, compte
 
 
-def ecrire_local(con: sqlite3.Connection, lignes: list[dict]) -> int:
-    """Remplace la table LOCALE, en une transaction.
-
-    ⚠ UNE SEULE TRANSACTION, ET C'EST TOUT L'INTERET DU LOCAL. L'ancien
-      convertisseur envoyait 67 paquets HTTP : le 15/09, le 54e a ete refuse pour
-      UNE valeur a 100,001 et l'ecriture s'est arretee a 10 822 lignes sur 13 307,
-      laissant la base a moitie convertie. Ici, c'est tout ou rien.
-    """
-    con.execute(DDL)
-    con.execute("BEGIN")
-    try:
-        con.execute(f"DELETE FROM {CIBLE} WHERE COALESCE(origine,'') LIKE 'hektor%'")
-        con.executemany(
-            f"INSERT OR REPLACE INTO {CIBLE} (app_chaine_id, app_dossier_id, cote, rang, "
-            "hektor_user_id, nom_au_moment, pourcentage, origine, ecrit_le, ecrit_par) "
-            "VALUES (?,?,?,?,?,?,?,?,datetime('now'),'conversion')",
-            [(l["app_chaine_id"], l["app_dossier_id"], l["cote"], l["rang"],
-              l["hektor_user_id"], l["nom_au_moment"], l["pourcentage"], l["origine"])
-             for l in lignes])
-        con.execute("COMMIT")
-    except Exception:
-        con.execute("ROLLBACK")
-        raise
-    return len(lignes)
-
-
 def client() -> SupabaseRestClient | None:
     for f in DEFAULT_ENV_FILES:
         load_env_file(f)
@@ -299,7 +280,7 @@ def pousser(cl: SupabaseRestClient, lignes: list[dict], paquet: int = 400) -> di
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repartition de commission (lot 5).")
-    ap.add_argument("--calculer", action="store_true", help="Ecrire la table LOCALE.")
+    # Le calcul est TOUJOURS fait et affiche ; `--pousser` est ce qui ecrit.
     ap.add_argument("--pousser", action="store_true", help="Envoyer a Supabase (RPC).")
     ap.add_argument("--purger-orphelines", action="store_true",
                     help="Supprimer les lignes DERIVEES dont le dossier n'existe plus.")
@@ -322,19 +303,10 @@ def main() -> int:
         for e in nommes:
             print("   " + e)
 
-    if not (args.calculer or args.pousser or args.purger_orphelines):
+    if not (args.pousser or args.purger_orphelines):
         print("")
-        print("a blanc : RIEN n'a ete ecrit. Ajouter --calculer [--pousser].")
+        print("a blanc : RIEN n'a ete ecrit. Ajouter --pousser.")
         return 0
-
-    if args.calculer:
-        ecriture = sqlite3.connect(PHASE2_DB)
-        try:
-            n = ecrire_local(ecriture, lignes)
-        finally:
-            ecriture.close()
-        print("")
-        print("   table LOCALE remplacee : %d lignes" % n)
 
     if args.pousser or args.purger_orphelines:
         cl = client()

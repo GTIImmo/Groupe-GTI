@@ -751,8 +751,7 @@ Invoke-OptionalStepWithRetry -Label "phase2 redescente des lectures console" -Ar
 #
 # RETOUR ARRIERE : commenter ces deux etapes. Les lignes deja posees restent.
 Invoke-OptionalStepWithRetry -Label "phase2 repartition de commission" -Arguments @(
-    "phase2\syncepartition_commission.py",
-    "--calculer",
+    "phase2\sync\repartition_commission.py",
     "--purger-orphelines",
     "--pousser"
 ) -WorkerKey "phase2.repartition_commission"
