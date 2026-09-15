@@ -4277,12 +4277,35 @@ GEL que Frederic a repere le premier).*
              passage suivant. Verifie, pas suppose.
            ⚠ L'essai portait deliberement une SORTIE d'une autre agence que le
              bien (REYNAUD, Annonay, sur un bien de Firminy) -- exactement ce que
-             Hektor ne saurait pas porter. La table est vide depuis.
+             Hektor ne saurait pas porter.
+           ⭐ MISE A JOUR 15/09 : LA TABLE N'EST PLUS VIDE. Elle porte
+             13 309 lignes sur 6 655 dossiers, dont 6 635 totalisent exactement
+             100 %. 12 sont a 100,001 % (arrondi de Hektor, voir plus bas) et 8
+             en dessous (part reseau legitime : 50 %, 75 %, 87,5 %). Descendue
+             au serveur local le 15/09 a 09:29.
 
          RLS : lecture aux comptes connectes, ECRITURE A PERSONNE. Le geste de
          l'ecran passera par une RPC avec controle de role -- meme demarche que
-         app_affaire_champ_app le 29/08. Rien ne lit ni n'ecrit cette table
-         aujourd'hui ; le worker ne la lira jamais, elle ne part pas chez Hektor.
+         app_affaire_champ_app le 29/08. Le worker ne la lira jamais, elle ne part
+         pas chez Hektor.
+         ⭐ MISE A JOUR 15/09 : DEUX CHOSES L'ECRIVENT DESORMAIS.
+           ① la modale, par la RPC `app_repartition_commission_set` -- 2 lignes
+              d'origine `saisie` posees le 14/09 ;
+           ② `phase2/identite/convertir_repartition_commission.py`, LANCE A LA
+              MAIN, qui transforme `app_affaire_console.intervenants_json` en
+              lignes -- 13 307 ecrites le 15/09 a 07:20.
+         ⛔ ET ELLE N'EST PAS DANS LE RUN, par decision de Frederic le 15/09.
+           Le convertisseur LIT SUPABASE ET ECRIT DANS SUPABASE, alors que toute
+           sa matiere est en local (`app_affaire_console` 16 831 lignes,
+           `app_affaire_ledger` 29 363) : ce n'est ni la forme du rattrapage des
+           notaires, qui lit phase2.sqlite en LECTURE SEULE pour decider, ni celle
+           d'affaire_ledger.py, qui calcule en local et ne se sert de Supabase que
+           pour POUSSER. L'etape est commentee dans run_full_pipeline.ps1 (8456e9f)
+           et le convertisseur est A REECRIRE a cette forme.
+         ⚠ ET LA LISTE DES DOSSIERS A NE PAS TOUCHER NE PEUT PAS VENIR DU LOCAL :
+           la descente passe a 07:30 et le run a 05:00, donc la copie locale de
+           cette table peut avoir 21 h de retard sur une saisie. Elle viendra de
+           Supabase, ou mieux d'une garde cote base.
 
          ─── ⚠ `app_chaine_id` N'A PAS D'INDEX EN LOCAL (mesure du 14/09) ───
          `app_affaire_ledger` (29 359 lignes) porte cinq index :
@@ -4300,7 +4323,35 @@ GEL que Frederic a repere le premier).*
            risque. Si un jour une requete de production a besoin de la chaine,
            c'est la qu'il faudra regarder.
 
-         ─── 🔴 LE RATTRAPAGE EST LANCE -- 14/09 18:41, EN COURS ───
+         ─── ✅ LE RATTRAPAGE DES VENTES EST FINI -- 15/09 01:01 ───
+             lues          7 397 sur 7 612 (215 deja lues), ZERO erreur, 6 h 20
+             cadence       « lot de 50 pieces, soit 100 requetes » -- CONFORME
+             recolte       6 548 avec leur commission, soit 86 %
+         ⭐ LA SESSION HEKTOR A TENU 6 H 20. La plus longue duree prouvee etait
+           4 h 25 : le seul vrai inconnu de ce rattrapage est leve.
+
+         ⛔ MAIS IL MANQUE ~880 VENTES, ET RIEN NE L'A SIGNALE. Entre 20:03 et
+           21:07 UTC, la page des commissions est revenue VIDE : la 2e requete
+           partait, repondait, et `contenuDeLEtape` n'en tirait rien. Le lecteur
+           rendait alors `commissions = 0`, aucun intervenant, et la piece etait
+           comptee `done`. La couverture est remontee SEULE a 100 % ensuite.
+           PREUVE QUE C'EST UN MECANISME ET NON LES DONNEES -- l'annee 2017 est a
+           cheval sur la fenetre :
+               dans la fenetre   290 lues   35 % avec commission
+               hors fenetre      162 lues   98 %
+           Meme population. Sur toute la fenetre : 1 228 lues, 350 seulement
+           portent leur commission, contre 97 % partout ailleurs.
+         ➡ LE LECTEUR RENDAIT DEJA `commissions_octets` ; le pilote le JETAIT.
+           Le defaut n'etait pas d'ignorer la panne, c'etait de jeter la seule
+           mesure qui l'aurait montree. Journalise depuis aa7869a, avec trois
+           compteurs de run (`page_commissions_lue/vide`, `avec_intervenants`).
+         ⚠ ET IL MANQUE ENCORE DE QUOI LES VISER : rien en base ne distingue
+           « page revenue vide » de « page lue, personne d'attribue » -- et 14 %
+           des ventes sont dans le second cas, legitimement. Il faut la colonne
+           `commissions_octets` sur app_affaire_console, PUIS un selecteur
+           `--sans-commission`. Sans elle, le trou n'est pas auto-reparable.
+
+         ─── le lancement, pour memoire ───
          `run_rattrapage_compromis_console.ps1 -Genre vente -StopAt "02:55"`
              perimetre     TOUTES les ventes, 7 612 (216 deja lues)
              duree prevue  7 h 23, fin vers 02:03, arret force a 02:55
@@ -4318,16 +4369,46 @@ GEL que Frederic a repere le premier).*
            Un echec coute une nuit, pas une donnee : tout ce qui est lu est ecrit
            au fur et a mesure, et une relance reprend ou elle s'est arretee.
 
-         ➡ ENSUITE, ET C'EST DECIDE : LES COMPROMIS OUVERTS.
-           ⚠ IL MANQUE UN FILTRE AU PILOTE. Il ne sait selectionner que par date,
-             pas « ce bien n'a pas encore de vente ». Sans lui, viser les
-             compromis recents prendrait ~2 000 pieces dont la plupart ont deja
-             leur vente -- donc deja leurs intervenants par elle. Ajout a faire
-             AVANT ce troisieme passage.
-           ⚠ ET UN ARBITRAGE ATTEND FREDERIC A CE MOMENT-LA : sur les 2 545
-             compromis sans vente, 250 SEULEMENT datent des cinq dernieres
-             annees. Les 2 295 autres sont des affaires jamais abouties, parfois
-             tres anciennes -- 2 h 30 de lecture contre 20 min.
+         ─── ⛔ LES COMPROMIS OUVERTS : FAIT, MAIS HORS PLAN (15/09 01:02-02:13) ───
+           1 711 selectionnes, 1 710 lus, 1 erreur, 1 h 11. Recolte : 92 seulement.
+           Le filtre `--sans-vente` manquant a bien ete ajoute avant. MAIS :
+
+           ⛔ L'ARBITRAGE CI-DESSOUS N'A JAMAIS ETE POSE A FREDERIC. Le run est
+             parti sur 1 711 pieces sans que le choix ecrit ici lui soit presente.
+             C'est LUI qui l'a trouve le lendemain matin : « 1700 compromis
+             ouvert cela etait bizarre, il y en a une centaine pas plus ».
+             ➡ CAUSE : la liste de relecture en tete de ce plan n'a pas ete
+               appliquee avant de lancer. C'est exactement ce qu'elle existe pour
+               eviter, et c'est la deuxieme fois.
+           ⛔ ET LE CONTROLE DU MATIN N'A PAS ETE APPLIQUE AU SECOND RUN. Son
+             journal dit « lot de 100 pieces, soit 100 requetes » la ou le plan
+             demandait 50 : une ligne suffisait. Le defaut de cadence n'a ete
+             trouve que des heures plus tard, par accident.
+
+           ⭐ ET LE CHIFFRE VRAI, MESURE LE 15/09 : les compromis REELLEMENT
+             ouverts sont 114 depuis 2010, dont 101 depuis 2024. Les 1 585 autres
+             datent de 2006-2009.
+           ⛔ LA CAUSE EST CHEZ NOUS, PAS CHEZ HEKTOR. `run_full_pipeline.ps1:42`
+             pose `VenteDateStart = "2010-01-01"` par DEFAUT : nous n'importons
+             aucune vente anterieure. Or Hektor EN A 1 610 (2006:85, 2007:547,
+             2008:549, 2009:429 -- mesure API du 15/09). Tout compromis d'avant
+             2010 n'a donc mecaniquement aucune vente CHEZ NOUS, et comme Hektor
+             n'exprime la conclusion QUE par l'existence d'une vente (son `status`
+             ne vaut que 1=actif ou 2=annule, sur 2 060 pieces de 2006-2009 et
+             1 072 de 2024-2026), ils restent « en cours » pour toujours.
+           ⭐ LES ECRANS, EUX, DISAIENT VRAI : le listing n'affiche que 98 biens
+             en « compromis en cours », dont UN SEUL d'avant 2010 -- les vieilles
+             annonces ont quitte `app_dossiers_current`, et le listing ne retient
+             qu'un compromis par couple annonce-mandat, celui du mandat courant.
+             Le desordre s'arrete a la table ; c'est le rattrapage qui l'interroge
+             sans les filtres de l'ecran.
+           ⚠ NE PAS RELIRE CES 1 585 COMPROMIS. Une fois leur vente entree, la
+             conversion prend la transaction la PLUS AVANCEE de la chaine
+             (RANG_GENRE vente=2) : leur repartition viendra de la vente. 1 585
+             lectures economisees.
+           ⚠ Leur page 2 a d'ailleurs ete lue cette nuit-la et n'a rien rendu :
+             1 618 pieces anciennes, ZERO intervenant. Les 92 qui en portent sont
+             exactement les 92 de 2026.
 
          ─── ⭐ LE RATTRAPAGE DES REPARTITIONS : PERIMETRE ET PIEGES (14/09) ───
 
@@ -4337,8 +4418,19 @@ GEL que Frederic a repere le premier).*
            56 926 lectures sans incident. Une VENTE en coute DEUX : un lot de 100
            pieces en aurait valu 200, et LA RAFALE ENTRE DEUX PAUSES AURAIT DOUBLE
            sur 7 612 pieces, sans qu'aucun compteur ne bouge.
-           ➡ Le lot suit desormais le genre : 100 compromis, 50 ventes -- 100
-             REQUETES entre deux pauses dans les deux cas. Le lanceur l'affiche.
+           ➡ Le lot suit desormais le genre -- 100 REQUETES entre deux pauses
+             quel que soit le genre. Le lanceur l'affiche.
+           ⛔ CORRIGE LE 15/09 : « 100 compromis » ETAIT DEJA FAUX EN L'ECRIVANT.
+             Le lecteur ouvre la page des commissions POUR LES DEUX GENRES depuis
+             le 14/09 (seul `--sans-commissions` la coupe, personne ne le passe).
+             Un compromis coute donc DEUX requetes, comme une vente. Le pilote en
+             declarait UNE : le rattrapage des compromis du 15/09 a tourne avec
+             des lots de 100 pieces = 200 REQUETES entre deux pauses, soit le
+             double du rythme prevu, pendant 1 h 11.
+             `REQUETES_PAR_PIECE = {"compromis": 2, "vente": 2}` depuis aa7869a.
+           ⚠ AUCUN DEGAT PROUVE -- le creux de la nuit est arrive sur le run des
+             VENTES, qui etait compte juste. Mais la regle a ete violee en silence,
+             et le controle du matin ci-dessous l'aurait attrape en une ligne.
            ⚠ Et j'avais ecrit l'inverse le matin meme dans le lecteur (« le debit
              par seconde ne change pas ») : vrai du LECTEUR, qui garde 0,5 s entre
              chaque requete ; faux du PILOTE. Deux fichiers, deux rythmes.
@@ -4506,6 +4598,84 @@ GEL que Frederic a repere le premier).*
          ⛔ ET UN ECART DE VALEUR : la modale propose la date du COMPROMIS
            (04/09) la ou Hektor propose LE JOUR (12/09). Une vente signee
            aujourd'hui partirait datee du 4. A corriger.
+
+         ═══ ⭐ CE QU'IL RESTE A FAIRE -- VALIDE PAR FREDERIC LE 15/09 ═══
+         L'ORDRE COMPTE : 1 avant 3 (sinon on relit des ventes qui n'existent pas
+         encore chez nous), 2 avant 3 (sinon on ne sait pas quoi relire), 4 avant
+         5 (sinon on rebranche ce qu'on vient de retirer).
+
+         [x] 0. METTRE CE PLAN A JOUR -- fait le 15/09, c'est ce bloc et les
+                corrections ci-dessus. La dette de methode qui a produit les deux
+                ecarts de la nuit : la section affirmait encore que la table etait
+                vide et que rien ne l'ecrivait.
+
+         [ ] 1. LEVER LA BORNE DES VENTES -- API SEULE, PAS DE CONSOLE.
+                `VenteDateStart` 2010-01-01 -> 2000-01-01 (run_full_pipeline.ps1:42),
+                puis synchro des ventes seules, puis le chainage.
+                ⚠ Pas plus bas que 2000 : `_date_utile` (affaire_ledger.py:702)
+                  refuse une date hors [2000, 2030], donc une vente de 1998
+                  n'attacherait rien.
+                COUT : ~81 pages de listing, aucune fiche detaillee
+                (sync_generic_details est sans appelant depuis le 21/07). Minutes.
+                RISQUE : nul. normalize_source fait INSERT ... ON CONFLICT DO
+                UPDATE : il ajoute et met a jour, il ne retire jamais.
+                ⚠ MESURE DE CONTROLE, BLOQUANTE : les chaines dont le compromis est
+                  la derniere etape vivante doivent tomber de 1 711 a ~114. Si elles
+                  ne tombent pas, on s'arrete la.
+                ⚠ RESIDU CONNU ET ACCEPTE : 204 compromis dates « 0000 » et 7 dates
+                  1990 ne seront JAMAIS chaines (hors [2000,2030]). Dont l'annonce
+                  8494, seul bien EN VENTE concerne : son garde-fou de saisie dira
+                  « ce bien a deja un compromis en cours » sans que personne puisse
+                  savoir de quand il date.
+
+         [ ] 2. SE DONNER LE MOYEN DE VISER -- AVANT toute relecture console.
+                a) colonne `commissions_octets` sur `app_affaire_console` ;
+                b) le pilote l'ecrit (il la journalise deja depuis aa7869a) ;
+                c) selecteur `--sans-commission` : les pieces LUES dont la page 2
+                   est revenue VIDE.
+                ⚠ POURQUOI PAS « intervenants_json IS NULL » : 14 % des ventes n'ont
+                  legitimement personne d'attribue. Elles seraient relues sans fin.
+                  Seul le compte d'octets distingue « page vide » de « page lue,
+                  personne d'attribue ».
+                ⭐ CE QUE CA CHANGE POUR TOUJOURS : le trou devient AUTO-REPARABLE.
+                  Une page qui se vide une nuit est reprise par l'entretien du
+                  lendemain, sans que personne ait a compter des lignes un matin.
+
+         [ ] 3. LE RATTRAPAGE CONSOLE, EN UNE PASSE.
+                    ~880 ventes de la fenetre perdue       46 min
+                    1 610 ventes d'avant 2010            1 h 23
+                    TOTAL          ~2 490 pieces         2 h 09
+                Duree calculee sur le run REEL du 14/09 (7 397 ventes en 6 h 20,
+                soit 3,1 s/piece), pas extrapolee d'un echantillon.
+                FENETRE : depart apres 22:00, `-StopAt "02:55"` (le flux API de
+                03:00 et le run de 05:00 font eux aussi de la console).
+                ⚠ LES CONTROLES DU MATIN, ET CETTE FOIS ON LES APPLIQUE :
+                    « cadence »                doit dire 50 pieces / 100 requetes
+                    « erreurs »                doit etre vide
+                    « page_commissions_vide »  doit etre a ZERO   (nouveau)
+                    un arret sur 403  -> NE PAS RELANCER, verifier d'une AUTRE IP
+                ⚠ ET LA RAISON D'ETRE : lire une vente par la console n'apporte
+                  QU'UNE chose, la repartition. Les notaires des ventes sont deja
+                  rendus par l'API (94,8 %) et les identites sont deja au registre.
+                NE PAS RELIRE : les 1 585 vieux compromis (leur vente portera la
+                repartition), les offres (pas d'assistant), les 1 373 annules
+                (Hektor refuse de les ouvrir).
+
+         [ ] 4. REECRIRE LE CONVERTISSEUR A LA FORME DU PROJET.
+                Le squelette du rattrapage des notaires : lire `phase2.sqlite` en
+                LECTURE SEULE, calculer, pousser en un upsert.
+                ⚠ LA PROTECTION NE PEUT PAS VENIR DU LOCAL : descente a 07:30, run
+                  a 05:00 -> jusqu'a 21 h de retard sur une saisie. Elle vient de
+                  Supabase, ou mieux d'une GARDE COTE BASE (recommande : l'interdit
+                  devient impossible a violer, quel que soit le client).
+                ⚠ VERIFICATION AVANT DE POUSSER : faire tourner le calcul SEUL,
+                  hors ligne, et comparer ligne a ligne aux 13 309 deja en base.
+                  Identiques, ou on ne pousse pas.
+
+         [ ] 5. REMETTRE L'ETAPE AU RUN, apres les DEUX entretiens (elle a besoin
+                des chaines a jour ET des lectures console DU JOUR). La placer
+                juste apres le registre la ferait travailler sur celles de la
+                veille -- l'erreur corrigee le 12/09 sur le perimetre contacts.
 
 
 [ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE

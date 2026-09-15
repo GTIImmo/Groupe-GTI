@@ -108,14 +108,24 @@ l'acquéreur est suivi par une AUTRE agence   26,6 % (1 445 / 5 428)
 sait pas exprimer un quart des répartitions réelles. La répartition devient une donnée
 de l'app — *« mieux vaut un champ absent qu'un champ menteur »*.
 
-**Ce qui reste à faire, dans l'ordre :**
-1. la table `app_affaire_repartition` (Supabase ; la descente la ramène en local seule —
-   elle rapatrie déjà 134 tables) ;
-2. les 4 emplacements dans la modale, sur la **première transaction du dossier**
-   (offre dans 72,4 % des cas, compromis sinon) ;
-3. l'affichage au registre et sur la fiche.
-⚠ Le relevé par négociateur vient APRÈS — arbitrage de Frédéric : *« d'abord il faut que
-les intervenants soient au minimum sur le registre des affaires de mon apps et le serveur »*.
+**Au 15/09 — LA TABLE EXISTE ET ELLE EST REMPLIE.** 13 309 lignes sur 6 655 dossiers,
+dont 6 635 totalisent exactement 100 %. Descendue au serveur local. La condition de
+Frédéric est remplie : *« au minimum sur le registre des affaires de mon apps et le serveur »*.
+
+**Ce qui reste, et l'ordre compte** (détail : liste, section 3.2e, bloc « CE QU'IL RESTE À FAIRE ») :
+1. **lever `VenteDateStart`** de 2010 à 2000 (`run_full_pipeline.ps1:42`) — Hektor a
+   1 610 ventes de 2006-2009 que nous n'importons pas, et c'est la SEULE cause des
+   1 585 « compromis en cours » fantômes. Contrôle bloquant : 1 711 → ~114 ;
+2. **colonne `commissions_octets` + sélecteur `--sans-commission`** — sans elle on ne
+   peut pas viser les ~880 ventes dont la page 2 est revenue vide, et le trou n'est
+   pas auto-réparable ;
+3. **le rattrapage console** : ~2 490 pièces, 2 h 09, `-StopAt "02:55"` ;
+4. **réécrire le convertisseur** à la forme du projet (lire `phase2.sqlite`, pousser) ;
+5. **puis seulement** remettre l'étape au run, après les deux entretiens.
+
+⛔ **L'étape de conversion est DÉSACTIVÉE dans le run** (8456e9f) : elle lisait Supabase
+pour écrire dans Supabase alors que sa matière est en local. Décision de Frédéric, 15/09.
+⚠ Le relevé par négociateur vient APRÈS.
 
 Ensuite : `3.2d` lots 2-3-4 (l. 3892), `3.3`, `3.1` — qui commande `4.1`.
 
@@ -191,7 +201,7 @@ décision écrite) · **Est-ce mesuré ?** (mesurer, *puis* conclure) · **Qu'es
 | | |
 |---|---|
 | le **pourquoi** | `notice/PLAN_DEV_ACTUALISE_2026-08-20.md` (2 278 l.) |
-| le **quoi**, item par item | `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` (4 695 l.) |
+| le **quoi**, item par item | `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` (6 250 l.) |
 | le protocole de test en cours | `notice/PROTOCOLE_TEST_STATUTS_TRANSACTIONS_2026-09-01.md` |
 | les pièges déjà payés | la mémoire projet (voir §3.5) |
 
