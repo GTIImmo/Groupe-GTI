@@ -4851,7 +4851,44 @@ GEL que Frederic a repere le premier).*
                   hors ligne, et comparer ligne a ligne aux 13 309 deja en base.
                   Identiques, ou on ne pousse pas.
 
-         [ ] 5. REMETTRE L'ETAPE AU RUN, apres les DEUX entretiens (elle a besoin
+         [x] 3. LE RATTRAPAGE CONSOLE -- FAIT LE 15/09, EN DEUX PASSES.
+                PASSE 1 (10:53-11:39) : 798 des 878 pieces « page vide » relues,
+                  ARRETEE A LA MAIN parce que la recolte etait nulle -- c'est ce
+                  qui a fait decouvrir que ma these etait fausse (voir plus haut).
+                  Aucune perte : elles portent desormais leur vraie taille de page.
+                PASSE 2 (12:12-13:33) : les 1 610 ventes de 2006-2009, jamais lues.
+                    cadence               lot de 50 pieces / 100 requetes  CONFORME
+                    erreurs               0
+                    page_commissions_vide 0        <- le controle ajoute ce matin
+                    lues                  1 611
+                    avec intervenants     1 342  (83 %)
+                    page 2 : mediane 24 884 octets, min 12 640, max 34 834, JAMAIS 0
+                ⭐ 83 % -- les ventes de 2006-2009 portent leur repartition comme
+                  celles de 2010-2014. Le trou de 12/2014-07/2017 est bien une
+                  PARENTHESE isolee, encadree des deux cotes.
+
+         [x] 4bis. LA CONVERSION COMPLETE, POUSSEE UNE SEULE FOIS (15/09 13:40).
+                    avant   13 311 lignes / 6 655 dossiers
+                    apres   15 991 lignes / 7 996 dossiers
+                    a exactement 100 %   7 976  (99,75 %)
+                    12 a 100,001 % (arrondi Hektor) · 8 en dessous (part reseau)
+                ⭐ `proteges_app: 1` -- LA BASE A REFUSE de toucher le dossier
+                  1001347, qui porte la saisie de Frederic. La garde a joue en
+                  exploitation reelle, pas seulement a l'essai.
+
+         [x] 5. REMETTRE L'ETAPE AU RUN -- FAIT LE 15/09.
+                ⚠ ET IL A FALLU DEUX ETAPES, PAS UNE. Le convertisseur lit
+                  `phase2.sqlite` (c'est tout l'interet), mais les entretiens
+                  ecrivent dans SUPABASE et la descente ne passe qu'a 07:30, APRES
+                  le run. Sans une redescente ciblee de `app_affaire_console` juste
+                  avant, il aurait travaille sur les lectures de la VEILLE --
+                  exactement l'erreur corrigee le 12/09 sur le perimetre contacts,
+                  rejouee a l'identique. Cout : 18 442 lignes en 12 s.
+                ORDRE FINAL : registre -> entretien compromis -> entretien ventes
+                  -> redescente console -> repartition.
+                ⚠ RESTE A OBSERVER UNE NUIT avant de declarer l'etape bonne.
+
+         [ ] 5bis. REMETTRE L'ETAPE AU RUN, apres les DEUX entretiens (elle a besoin
                 des chaines a jour ET des lectures console DU JOUR). La placer
                 juste apres le registre la ferait travailler sur celles de la
                 veille -- l'erreur corrigee le 12/09 sur le perimetre contacts.

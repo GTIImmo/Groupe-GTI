@@ -715,10 +715,47 @@ Invoke-OptionalStepWithRetry -Label "phase2 entretien ventes console" -Arguments
 #   Le serveur aura alors la donnee en premier, et une panne Supabase ne fera que
 #   retarder la poussee.
 #
-# Invoke-OptionalStepWithRetry -Label "phase2 repartition de commission" -Arguments @(
-#     "phase2\identite\convertir_repartition_commission.py",
-#     "--appliquer"
-# ) -WorkerKey "phase2.repartition_commission"
+# ⭐ REMISE AU RUN LE 15/09, A LA FORME DU PROJET (7985e8b).
+#
+# ⚠ DEUX ETAPES, ET LA PREMIERE N'EST PAS UN LUXE. Le convertisseur lit
+#   `phase2.sqlite` -- c'est tout l'interet. Mais les deux entretiens ci-dessus
+#   ecrivent dans SUPABASE, et la descente ne passe qu'a 07:30, APRES ce run.
+#   Sans cette redescente ciblee, il travaillerait sur les lectures de la VEILLE.
+#   C'est exactement l'erreur corrigee le 12/09 sur le perimetre contacts, et
+#   elle se serait rejouee ici a l'identique.
+#   COUT MESURE : 18 442 lignes en 12 secondes, 19 appels.
+Invoke-OptionalStepWithRetry -Label "phase2 redescente des lectures console" -Arguments @(
+    "phase2\sync\pull_from_supabase.py",
+    "--table", "app_affaire_console"
+) -WorkerKey "phase2.redescente_console"
+
+# ─── CE QUE HEKTOR PORTE DEVIENT LA REPARTITION DE L'APP ───
+#
+# `intervenants_json` est un bloc recopie du formulaire de Hektor : le front ne le
+# lit pas, et le jour de la coupure plus personne ne saura le relire ni le
+# regenerer. Cette etape le transforme en donnee A NOUS -- un nom, un pourcentage,
+# un dossier. C'EST CE QUI SURVIT A LA COUPURE.
+#
+# ⚠ SA PLACE EST ICI. Elle a besoin des TROIS : les chaines a jour (« affaire
+#   ledger refresh+push »), les lectures console DU JOUR (les deux entretiens), et
+#   leur redescente juste au-dessus.
+#
+# ⚠ ELLE NE PEUT PAS ECRASER UNE SAISIE, ET CE N'EST PLUS UNE QUESTION DE
+#   POLITESSE : `app_repartition_absorber` refuse, DANS LA BASE, de toucher un
+#   dossier dont une seule ligne ne vient pas de Hektor. Eprouve le 15/09 --
+#   un intrus sur le dossier 1001347 rejete, saisie intacte.
+#
+# ⚠ ELLE N'APPELLE PAS HEKTOR : aucune requete console, aucun risque de cadence.
+# ⚠ NON BLOQUANTE, mais elle SIGNALE : un echec envoie un battement « error » au
+#   monitoring. C'est de l'argent -- un ratage muet serait pire que pas d'etape.
+#
+# RETOUR ARRIERE : commenter ces deux etapes. Les lignes deja posees restent.
+Invoke-OptionalStepWithRetry -Label "phase2 repartition de commission" -Arguments @(
+    "phase2\syncepartition_commission.py",
+    "--calculer",
+    "--purger-orphelines",
+    "--pousser"
+) -WorkerKey "phase2.repartition_commission"
 
 # ⚠ DEPLACEE ICI LE 12/09, APRES SA SOURCE. Elle etait posee juste apres le
 #   registre d'identite, donc AVANT l'entretien qui remplit app_affaire_console.
