@@ -1504,6 +1504,25 @@ export type AffaireLedgerRow = {
    *    la moitié, le quart. C'est LA PART QUI RESTE À L'AGENCE après partage. */
   mandants_json: unknown
   notaires_json: unknown
+  /** ─── LES DEUX NOTAIRES, RANGES DANS LE REGISTRE ───        16/09/2026
+   *
+   *  ⚠ NE PAS LIRE `notaires_json` POUR LES AFFICHER. Cette colonne vient de
+   *    l'API, qui ne rend AUCUN notaire sur un compromis (0 sur 10 599) ni sur
+   *    une offre : la modale serait aveugle sur 87 % des transactions vivantes.
+   *    Ces colonnes-ci portent la fusion des deux sources, faite au serveur par
+   *    `registre_depuis_console.py`. Un seul endroit a lire. */
+  notaire_acquereur_id: string | null
+  notaire_acquereur_nom: string | null
+  notaire_mandant_id: string | null
+  notaire_mandant_nom: string | null
+  /** Le taux d'honoraires du VENDEUR -- celui qui fait la commission de l'agence.
+   *  A ne pas confondre avec `taux_honoraires`, qui est la saisie de l'app cote
+   *  ACQUEREUR. Deux taux, deux cotes : la lecon du 08/09 sur les noms voisins. */
+  taux_honoraire_entree: string | null
+  unites_entree_percent: string | null
+  unites_sortie_percent: string | null
+  /** 'api' | 'console' | 'saisie'. 'saisie' fige la ligne cote serveur. */
+  notaires_origine: string | null
   propositions_json: unknown
   commission_agence: string | null
 }
@@ -1513,6 +1532,8 @@ const affaireLedgerSelect =
   'hektor_acquereur_id,acquereur_json,acquereurs_json,state,montant,date,date_acte,sequestre,present_in_hektor,' +
   'prix_net_vendeur,honoraires_entree,honoraires_sortie,' +
   'mandants_json,notaires_json,propositions_json,commission_agence,' +
+  'notaire_acquereur_id,notaire_acquereur_nom,notaire_mandant_id,notaire_mandant_nom,' +
+  'taux_honoraire_entree,unites_entree_percent,unites_sortie_percent,notaires_origine,' +
   'app_chaine_id'
 
 /** ─── CE QUE SEUL L'ASSISTANT DE HEKTOR REND (10/09/2026) ───

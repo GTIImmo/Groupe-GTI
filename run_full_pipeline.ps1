@@ -729,6 +729,35 @@ Invoke-OptionalStepWithRetry -Label "phase2 redescente des lectures console" -Ar
     "--table", "app_affaire_console"
 ) -WorkerKey "phase2.redescente_console"
 
+# ─── LE MIROIR CONSOLE ENTRE DANS LE REGISTRE DES AFFAIRES ───   16/09/2026
+#
+# Demande de Frederic : « que le rattrapage et l'entretien quotidien console pour
+# notaire et le reste soient recuperes comme une sorte de miroir de Hektor puis
+# envoyes au registre des affaires ou il y a les chaines, sur le serveur et l'app ».
+#
+# ⚠ SA PLACE EST ICI, APRES LA REDESCENTE. Elle lit la copie LOCALE des lectures
+#   console ; sans la redescente juste au-dessus, elle travaillerait sur celles de
+#   la veille -- le meme piege que la repartition.
+#
+# ⚠ ELLE ECRIT DANS LE REGISTRE, DONT LE SERVEUR EST LE MAITRE. C'est tout
+#   l'objet : `app_affaire_console` est un MIROIR de Hektor, illisible le jour ou
+#   l'acces s'arrete. Le registre, lui, reste.
+#
+# ⚠ ELLE POUSSE ELLE-MEME, ET SEULEMENT SES HUIT COLONNES. Le push du registre
+#   tourne bien AVANT les entretiens : sans envoi ici, ce qu'elle pose attendrait
+#   la nuit SUIVANTE. L'upsert partiel ne touche ni `state` ni `montant` -- c'est
+#   ce qui le distingue d'un `--push` complet, qui avait efface une annulation le
+#   07/09.
+#
+# ⚠ ELLE N'APPELLE PAS HEKTOR : aucune requete console, aucun risque de cadence.
+#
+# RETOUR ARRIERE : commenter cette etape. Les colonnes deja posees restent.
+Invoke-OptionalStepWithRetry -Label "phase2 registre depuis console" -Arguments @(
+    "phase2\sync\registre_depuis_console.py",
+    "--ecrire",
+    "--pousser"
+) -WorkerKey "phase2.registre_console"
+
 # ─── CE QUE HEKTOR PORTE DEVIENT LA REPARTITION DE L'APP ───
 #
 # `intervenants_json` est un bloc recopie du formulaire de Hektor : le front ne le

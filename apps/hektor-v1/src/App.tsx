@@ -15268,27 +15268,28 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (validite) setStatusChangeValidityDays(validite)
     const retractation = String(carnet.jours_retractation ?? '').trim()
     if (retractation) setStatusChangeRetractionDays(retractation)
-    // ─── LES DEUX NOTAIRES, DEPUIS `notaires_json` ───   3.2d lot 2, 15/09/2026
+    // ─── LES DEUX NOTAIRES, DEPUIS LE REGISTRE ───   3.2d lot 2, 16/09/2026
     //
-    // ⚠ LE SENS DES DEUX COTES EST L'INVERSE DE CE QU'ON CROIT, ET C'EST MESURE.
-    //   `notaires_json` porte { entree, sortie }. Par analogie avec les
-    //   honoraires (entree = vendeur) on pose naturellement entree = mandant.
-    //   C'EST FAUX. Confrontation du 15/09 entre le registre et les lectures
-    //   console, sur 366 ventes ou les deux cotes DIFFERENT :
-    //       entree = notaire de l'ACQUEREUR   366 fois
-    //       l'inverse                           0 fois
-    //   Sans cette mesure, la modale aurait interverti les deux notaires en
-    //   silence -- et les aurait renvoyes intervertis chez Hektor.
-    const notairesRegistre = lireNotairesAffaire(affaire.notaires_json)
-    // Le carnet garde la priorite sur l'acquereur : c'est une saisie humaine.
-    const notaire = String(carnet.notaire_id ?? '').trim() || notairesRegistre.acquereur.id
+    // ⚠ CORRIGE LE 16/09 : la modale lisait `notaires_json`, c'est-a-dire l'API.
+    //   Elle restait donc VIDE sur tous les compromis et toutes les offres --
+    //   l'API n'y rend aucun notaire (0 sur 10 599). Constate a l'ecran le meme
+    //   jour, sur le compromis 50078, alors que Hektor en portait deux.
+    //   Le serveur fusionne desormais les deux sources dans le registre
+    //   (`registre_depuis_console.py`) ; la modale lit le registre, comme pour
+    //   le prix, les dates et le net vendeur. Un seul endroit.
+    const notaireAcq = String(affaire.notaire_acquereur_id ?? '').trim()
+    const notaireMan = String(affaire.notaire_mandant_id ?? '').trim()
+    // Le carnet garde la priorite cote acquereur : c'est une saisie humaine.
+    const notaire = String(carnet.notaire_id ?? '').trim() || notaireAcq
     if (notaire) {
       setStatusChangeBuyerNotaryId(notaire)
-      if (notairesRegistre.acquereur.id === notaire) setStatusChangeBuyerNotaryNom(notairesRegistre.acquereur.nom)
+      if (notaireAcq === notaire) {
+        setStatusChangeBuyerNotaryNom(String(affaire.notaire_acquereur_nom ?? '').trim())
+      }
     }
-    if (notairesRegistre.mandant.id) {
-      setStatusChangeSellerNotaryId(notairesRegistre.mandant.id)
-      setStatusChangeSellerNotaryNom(notairesRegistre.mandant.nom)
+    if (notaireMan) {
+      setStatusChangeSellerNotaryId(notaireMan)
+      setStatusChangeSellerNotaryNom(String(affaire.notaire_mandant_nom ?? '').trim())
     }
     const mandat = String(carnet.numero_mandat ?? '').trim()
     if (mandat) setStatusChangeSelectedMandat(mandat)
@@ -33975,41 +33976,22 @@ function mandantContactOptionMeta(option: MandantContactSearchOption) {
  *    notaire : 87 % citent un notaire que cette recherche trouve. Les 13 %
  *    restants sont archives ou hors annuaire -- pour eux le numero reste le
  *    seul chemin, exactement comme avant. On ne perd rien, jamais. */
-/** ─── `notaires_json` : { entree, sortie } — ET LES DEUX COTES SONT INVERSES ───
+/** ─── OU SONT PASSES LES NOTAIRES ───                          16/09/2026
  *
- *  Mesure du 15/09/2026, registre confronte aux lectures console sur 366 ventes
- *  dont les deux notaires DIFFERENT :
- *      entree = le notaire de l'ACQUEREUR    366 fois
- *      l'inverse                               0 fois
- *  Contre-intuitif -- « honoraires d'entree » designe le VENDEUR -- et c'est
- *  exactement pour cela que la mesure existe. Ne pas « corriger » sans remesurer.
+ *  `lireNotairesAffaire` vivait ici : elle decodait `notaires_json` pour en
+ *  tirer les deux notaires. Elle a servi UN JOUR, et elle etait aveugle sur les
+ *  compromis -- l'API n'y met aucun notaire (0 sur 10 599).
  *
- *  ⚠ ON NE FABRIQUE RIEN : pas de nom dans la charge -> pas de nom. Le jeton
- *    affichera « n° 49708 », qui est vrai, plutot qu'un nom devine. */
-function lireNotairesAffaire(brut: unknown): {
-  acquereur: { id: string; nom: string }
-  mandant: { id: string; nom: string }
-} {
-  const vide = { id: '', nom: '' }
-  let objet: Record<string, unknown> | null = null
-  if (brut && typeof brut === 'object' && !Array.isArray(brut)) objet = brut as Record<string, unknown>
-  else if (typeof brut === 'string' && brut.trim()) {
-    try {
-      const analyse = JSON.parse(brut)
-      if (analyse && typeof analyse === 'object' && !Array.isArray(analyse)) objet = analyse as Record<string, unknown>
-    } catch { objet = null }
-  }
-  const lire = (cle: string) => {
-    const valeur = objet ? objet[cle] : null
-    if (!valeur || typeof valeur !== 'object') return { ...vide }
-    const fiche = valeur as Record<string, unknown>
-    const id = String(fiche.id ?? '').trim()
-    const nom = [fiche.civilite, fiche.prenom, fiche.nom]
-      .map((x) => String(x ?? '').trim()).filter(Boolean).join(' ')
-    return { id, nom }
-  }
-  return { acquereur: lire('entree'), mandant: lire('sortie') }
-}
+ *  Ils viennent desormais du REGISTRE, ou le serveur les range apres avoir
+ *  fusionne l'API et les lectures console (`registre_depuis_console.py`) :
+ *      affaire.notaire_acquereur_id / _nom
+ *      affaire.notaire_mandant_id   / _nom
+ *
+ *  ⚠ ET LE PIEGE RESTE ECRIT, PARCE QU'IL RESSERVIRA : dans `notaires_json`,
+ *    `entree` est le notaire de l'ACQUEREUR et `sortie` celui du MANDANT --
+ *    l'inverse de ce que l'analogie avec les honoraires d'entree suggere.
+ *    Mesure : sur 366 ventes dont les deux cotes different, entree = acquereur
+ *    366 fois, l'inverse 0 fois. Ne pas « corriger » sans refaire la mesure. */
 
 function SelecteurNotaire(props: {
   libelle: string

@@ -160,8 +160,23 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     -- 1.8 : garder le seul acquereur principal avait cache 4 536 acquereurs
     -- reels pendant des mois. On ne refait pas ce choix-la.
     mandants_json       TEXT,
-    -- Deux roles, tels que Hektor les rend : `entree` = le notaire du VENDEUR,
-    -- `sortie` = celui de l'ACQUEREUR.
+    -- Deux roles, tels que Hektor les rend.
+    -- ⚠ CORRECTION DU 16/09/2026 -- CE COMMENTAIRE DISAIT L'INVERSE.
+    --   Il annoncait « entree = le notaire du VENDEUR, sortie = celui de
+    --   l'ACQUEREUR ». C'EST FAUX, et ses propres chiffres le disaient deja :
+    --   « sortie 7 017, entree 2 931 », alors que le cote acquereur est le
+    --   PLUS RARE (2 822 sur 9 224 ventes lues par la console).
+    --   MESURE, deux fois, en confrontant cette colonne aux lectures console
+    --   (qui lisent les champs nommes par Hektor lui-meme, notairesAcquereur[]
+    --   et notairesMandant[]) :
+    --       366 ventes dont les deux cotes DIFFERENT : entree = ACQUEREUR 366
+    --                                                  l'inverse            0
+    --       cote par cote sur 9 223 ventes           : d'accord         9 223
+    --                                                  contradictions       27
+    --   ➡  `entree` = le notaire de l'ACQUEREUR · `sortie` = celui du MANDANT.
+    --   Ne pas « recorriger » sans refaire la mesure : l'analogie avec les
+    --   honoraires d'entree (qui, eux, sont ceux du VENDEUR) est un faux ami,
+    --   et c'est exactement ce qui a produit l'erreur d'origine.
     -- (pas d'accolades dans ce commentaire : DDL_SQLITE est une f-string.)
     -- Remplissage mesure : sortie 7 017, entree 2 931.
     -- ⚠ VENTE UNIQUEMENT. L'API ne rend AUCUN notaire sur le compromis -- 0 sur
@@ -174,6 +189,48 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     --   CLASSE A, l'app seule l'ecrit, et le push ne l'envoie jamais. Ici c'est
     --   une LECTURE de Hektor. Une saisie et une lecture ne se melangent pas.
     notaires_json       TEXT,
+    -- ═══ CE QUE LA CONSOLE RAPPORTE, RANGE ICI POUR DE BON ═══   16/09/2026
+    --
+    -- POURQUOI CES COLONNES EXISTENT. `app_affaire_console` est un MIROIR : une
+    -- recopie du formulaire de Hektor. Le jour ou l'acces s'arrete, plus
+    -- personne ne sait la relire ni la regenerer. Le registre, lui, est a nous.
+    -- C'est le meme geste que la repartition de commission le 15/09 : le miroir
+    -- transporte, le registre GARDE.
+    --
+    -- CE QUE CA DEBLOQUE, mesure sur 18 442 lectures console :
+    --     notaire du MANDANT     14 631        notaire de l'ACQUEREUR  6 173
+    --     taux d'honoraire VENDEUR  18 442 -- la TOTALITE, et c'etait le
+    --                            « manque n°1 de la tache 0.1 »
+    -- Et surtout : l'API ne rend AUCUN notaire sur un compromis (0 / 10 599)
+    -- ni sur une offre. Sans ces colonnes, la modale reste aveugle sur 87 % des
+    -- transactions vivantes.
+    --
+    -- ⚠ LA REGLE DE FUSION, MESUREE AVANT D'ETRE ECRITE :
+    --     vente      l'API d'abord -- elle parle seule sur 2 377 cotes, la
+    --                console sur ZERO. 27 contradictions sur 9 250 (0,3 %),
+    --                comptees et nommees par l'etape, jamais avalees.
+    --     compromis  la console seule -- l'API est aveugle.
+    --     offre      personne : il n'y a PAS d'assistant a ouvrir pour une offre.
+    --
+    -- ⚠ PROTECTION PAR OMISSION, comme jours_validite avant 1.2b : ces colonnes
+    --   sont ABSENTES du ON CONFLICT DO UPDATE plus bas, donc le run de nuit ne
+    --   les efface pas. Et `notaires_origine = 'saisie'` fige la ligne : l'etape
+    --   n'y touche plus, exactement comme `app_repartition_absorber` refuse un
+    --   dossier ou un humain a ecrit.
+    notaire_acquereur_id   TEXT,
+    notaire_acquereur_nom  TEXT,
+    notaire_mandant_id     TEXT,
+    notaire_mandant_nom    TEXT,
+    -- Le taux VENDEUR, celui qui determine la commission de l'agence. A ne pas
+    -- confondre avec `taux_honoraires` (classe A, saisie de l'app, cote
+    -- ACQUEREUR) : deux taux, deux cotes, deux origines.
+    taux_honoraire_entree  TEXT,
+    -- Le partage de la commission tel que Hektor l'affiche. La repartition
+    -- calculee vit dans sa propre table ; ces deux-la sont la PREUVE BRUTE.
+    unites_entree_percent  TEXT,
+    unites_sortie_percent  TEXT,
+    -- 'api' · 'console' · 'saisie'. C'est lui qui protege une saisie humaine.
+    notaires_origine       TEXT,
     -- L'historique DATE des propositions d'une offre. C'est deja d'ici que
     -- viennent montant, date et jours_validite (1.2b) ; on garde la suite.
     propositions_json   TEXT,
@@ -312,7 +369,13 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   "prix_net_vendeur", "honoraires_entree", "honoraires_sortie",
                   # 10/09 : le brut que Hektor rend et que personne ne lisait.
                   "mandants_json", "notaires_json", "propositions_json",
-                  "commission_agence"):
+                  "commission_agence",
+                  # 16/09 : ce que la console rapporte, range dans le registre.
+                  "notaire_acquereur_id", "notaire_acquereur_nom",
+                  "notaire_mandant_id", "notaire_mandant_nom",
+                  "taux_honoraire_entree",
+                  "unites_entree_percent", "unites_sortie_percent",
+                  "notaires_origine"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
