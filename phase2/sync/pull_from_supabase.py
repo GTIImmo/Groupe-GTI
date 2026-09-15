@@ -122,6 +122,11 @@ STATE_TABLE = "sb_pull_state"
 PAGE_SIZE = 1000
 PAUSE_PAGE = 0.3        # secondes entre deux pages
 PAUSE_TABLE = 2.0       # secondes entre deux tables
+# ⚠ LE PLAFOND DE POIDS D'UNE REPONSE. Au-dela, la page se divise par deux. 4 Mo
+#   est large pour PostgREST et minuscule devant les 28 Mo qui l'ont fait tomber
+#   le 15/09. C'est un POIDS et pas un nombre de lignes : la mesure decide, il n'y
+#   a aucune liste de tables lourdes a tenir a jour.
+POIDS_PAGE_MAX = 4 * 1024 * 1024
 VERROU = "pull_from_supabase.lock"
 RELECTURE_ENTIERE_MAX = 5000   # au-dela, on ne redemande pas une table en un seul bloc
 
@@ -162,18 +167,32 @@ class SupabaseReader:
         if extra_headers:
             headers.update(extra_headers)
         request = urllib.request.Request(url, headers=headers, method="GET")
+        self.dernier_poids = 0
         last: Exception | None = None
         for attempt in range(1, self.max_retries + 1):
             try:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
                     raw = response.read().decode("utf-8")
+                    # Le POIDS de la reponse, pour que copy_table adapte sa page.
+                    self.dernier_poids = len(raw)
                     data = json.loads(raw) if raw else None
                     return (data, dict(response.headers)) if with_headers else data
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", errors="replace")
-                if exc.code in (500, 502, 503, 504) and attempt < self.max_retries:
+                # ⚠ 520 A 524 SONT DES COUPURES DE PASSERELLE, PAS DES REFUS.
+                #   Elles n'etaient PAS reessayees, et ca s'est paye le 15/09 : une
+                #   secousse de QUATRE-VINGT-DIX SECONDES (PostgREST rechargeant son
+                #   cache de schema) a tue `app_affaire_repartition` et
+                #   `app_dossier_detail_current` DU PREMIER COUP. Un seul reessai les
+                #   aurait sauvees toutes les deux.
+                #     520 erreur inconnue · 521 origine injoignable
+                #     522 delai de connexion · 523 origine inatteignable · 524 delai depasse
+                #   ⚠ ON NE REESSAYE PAS LES 4xx : un refus est un refus.
+                if exc.code in (500, 502, 503, 504, 520, 521, 522, 523, 524) and attempt < self.max_retries:
                     last = RuntimeError(f"HTTP {exc.code}: {detail[:300]}")
-                    time.sleep(1.5 * attempt)
+                    # Une passerelle qui vient de tomber a besoin de plus qu'une
+                    # seconde et demie : on attend plus longtemps pour ces codes-la.
+                    time.sleep((6.0 if exc.code >= 520 else 1.5) * attempt)
                     continue
                 raise RuntimeError(f"Supabase GET {path} -> HTTP {exc.code}: {detail[:500]}") from exc
             except (TimeoutError, urllib.error.URLError) as exc:
@@ -367,6 +386,12 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
             )
             total += len(rows)
             rang += len(rows)
+            poids = getattr(reader, "dernier_poids", 0)
+            if poids > POIDS_PAGE_MAX and taille > 50:
+                taille = max(50, taille // 2)
+                print(f"        {distant} : page de {poids // 1048576} Mo -- ramenee a {taille} lignes")
+            elif poids and poids < POIDS_PAGE_MAX // 8 and taille < PAGE_SIZE:
+                taille = min(PAGE_SIZE, taille * 2)
             if len(rows) < taille:
                 break
             time.sleep(PAUSE_PAGE)
@@ -398,6 +423,27 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
             [tuple(encode(row.get(c)) for c in columns) for row in rows],
         )
         total += len(rows)
+        # ─── LA PAGE S'ADAPTE AU POIDS, AVANT L'ERREUR ───        15/09/2026
+        #
+        # ⚠ ELLE NE S'ADAPTAIT QU'APRES COUP, et c'est ce qui a mis la passerelle
+        #   par terre. `app_dossier_detail_current` pese 370 Mo pour 13 407 lignes,
+        #   soit ~28 ko par ligne : une page de 1 000 lignes fait 28 Mo DANS UNE
+        #   SEULE REPONSE. PostgREST tue alors ses fils d'execution (« Thread
+        #   killed by timeout manager », 16 fois le 15/09), tente de recharger son
+        #   cache de schema, n'y arrive pas (PGRST002, 64 fois), et repond 503 A
+        #   TOUT LE MONDE -- l'app de l'agence comprise.
+        #   Le 15/09 au matin, la descente de 07:30 a rendu Supabase inutilisable
+        #   de 07:30 a 09:15. Les erreurs commencent A LA MINUTE ou elle demarre.
+        #
+        # ⚠ ON VISE LE POIDS, PAS LE NOMBRE DE LIGNES. Une table etroite garde ses
+        #   1 000 lignes par page ; une table a gros blocs JSON descend d'elle-meme
+        #   a 100 ou 50. Aucune liste a tenir : la mesure decide.
+        poids = getattr(reader, "dernier_poids", 0)
+        if poids > POIDS_PAGE_MAX and taille > 50:
+            taille = max(50, taille // 2)
+            print(f"        {distant} : page de {poids // 1048576} Mo -- ramenee a {taille} lignes")
+        elif poids and poids < POIDS_PAGE_MAX // 8 and taille < PAGE_SIZE:
+            taille = min(PAGE_SIZE, taille * 2)
         suivante = rows[-1].get(cle)
         if suivante is None or suivante == borne:
             # La colonne de parcours ne progresse plus (valeur nulle, ou repetee sur toute
