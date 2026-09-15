@@ -4657,7 +4657,27 @@ GEL que Frederic a repere le premier).*
                   « ce bien a deja un compromis en cours » sans que personne puisse
                   savoir de quand il date.
 
-         [ ] 2. SE DONNER LE MOYEN DE VISER -- AVANT toute relecture console.
+         [x] 2. SE DONNER LE MOYEN DE VISER -- FAIT LE 15/09.
+                a) `commissions_octets` sur app_affaire_console (patch applique),
+                   + index partiel sur `= 0` ;
+                b) le pilote l'ecrit -- ⚠ DANS `sans_vide`, qui garde 0 et ecarte
+                   None : c'est exactement la distinction voulue ;
+                c) selecteur `--sans-commission`, qui lit le LOCAL comme le reste
+                   de la selection.
+                ⭐ ET UN MARQUAGE UNIQUE, parce que les 878 pieces perdues ont ete
+                  lues AVANT que la colonne existe : elles portaient NULL (« page
+                  non demandee ») au lieu de 0 (« revenue vide »). PATCH cible sur
+                  la fenetre 14/09 20:03-21:08 UTC, ventes sans intervenants ->
+                  878 marquees. Sans lui le selecteur ne les aurait jamais vues.
+                ⚠ LE SUR-MARQUAGE EST SANS DANGER : dans la fenetre, quelques
+                  ventes n'ont legitimement personne d'attribue. Marquees 0, elles
+                  seront relues UNE FOIS, la relecture ecrira leur vraie valeur, et
+                  elles sortiront du filtre d'elles-memes.
+                EPROUVE A BLANC : `--genre vente --sans-commission` -> 878
+                selectionnees, cadence « 50 pieces / 100 requetes ».
+
+                ─── le detail, pour memoire ───
+         [x] 2bis. SE DONNER LE MOYEN DE VISER -- AVANT toute relecture console.
                 a) colonne `commissions_octets` sur `app_affaire_console` ;
                 b) le pilote l'ecrit (il la journalise deja depuis aa7869a) ;
                 c) selecteur `--sans-commission` : les pieces LUES dont la page 2

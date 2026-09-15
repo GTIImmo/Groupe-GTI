@@ -267,6 +267,23 @@ def cibles(args: argparse.Namespace) -> list[dict[str, Any]]:
         #   Creer un index aurait marche aussi, mais modifier le schema d'une base
         #   pendant qu'un rattrapage tourne n'est pas un geste a prendre a la
         #   legere pour gagner une seconde.
+        # ─── LES PIECES DONT LA PAGE 2 S'EST VIDEE ───          15/09/2026
+        #
+        # ⚠ CE FILTRE REND LE TROU AUTO-REPARABLE, et c'est sa raison d'etre. Dans
+        #   la nuit du 14 au 15, la page des commissions est revenue vide pendant
+        #   64 minutes : ~880 ventes ont ete comptees `done` sans leur commission,
+        #   et personne ne l'a su avant le lendemain matin. Avec ce filtre,
+        #   l'entretien du lendemain les reprend tout seul.
+        #
+        # ⚠ ON LIT LE LOCAL, comme tout le reste de cette selection (le registre
+        #   est deja ouvert en lecture seule juste au-dessus). La copie locale de
+        #   `app_affaire_console` date de la derniere descente : pour decider QUOI
+        #   RELIRE, un jour de retard est sans consequence -- au pire on relit une
+        #   piece deja reparee, ce qui la confirme.
+        if args.sans_commission:
+            ou.append("app_affaire_id IN (SELECT app_affaire_id FROM app_affaire_console "
+                      "WHERE kind = ? AND commissions_octets = 0)")
+            params.append(args.genre)
         if args.compromis:
             ou.append("hektor_affaire_id IN (%s)" % ",".join("?" for _ in args.compromis))
             params.extend(args.compromis)
@@ -495,6 +512,17 @@ def ligne_pour_supabase(cible: dict[str, Any], resultat: dict[str, Any],
             "intervenants_json": champs.get("intervenants"),
             "unites_entree_percent": champs.get("unites_entree_percent"),
             "unites_sortie_percent": champs.get("unites_sortie_percent"),
+            # ⚠ ZERO EST LE SIGNAL, ET IL DOIT PASSER.        15/09/2026
+            #   `sans_vide` ecarte None, "", [] et {} -- mais PAS 0, parce que
+            #   0 ne vaut aucun d'eux. C'est voulu et c'est tout l'objet :
+            #       NULL  la page n'a pas ete demandee
+            #       0     DEMANDEE, ET REVENUE VIDE  <- ce qu'on veut retrouver
+            #       > 0   lue
+            #   Sans cette colonne on ne peut pas distinguer « la page s'est
+            #   videe » de « page lue, personne d'attribue » -- et 14 % des ventes
+            #   sont legitimement dans le second cas. Un selecteur fonde sur
+            #   l'absence d'intervenants les relirait indefiniment pour rien.
+            "commissions_octets": resultat.get("commissions_octets"),
         }),
         # ⚠ NI LES UNITES NI LES CONDITIONS : elles vivent aux etapes 2 et 3,
         #   que cette passe ne parcourt pas. Elles sont donc ABSENTES de cette
@@ -601,6 +629,9 @@ def arguments() -> argparse.Namespace:
     # ⚠ UNE VENTE QUE HEKTOR N'A PLUS NE FERME PAS LE DOSSIER. Meme regle qu'aux
     #   quatre autres endroits du projet : porter un numero Hektor ET
     #   present_in_hektor faux = elle n'existe plus, donc elle ne compte pas.
+    p.add_argument("--sans-commission", action="store_true",
+                   help="Ne prendre que les pieces DEJA LUES dont la page des "
+                        "commissions est revenue VIDE (commissions_octets = 0).")
     p.add_argument("--sans-vente", action="store_true",
                    help="Ne prendre que les transactions dont le DOSSIER ne porte "
                         "aucune vente vivante -- les affaires encore en cours.")
