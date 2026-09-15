@@ -4330,6 +4330,54 @@ GEL que Frederic a repere le premier).*
          ⭐ LA SESSION HEKTOR A TENU 6 H 20. La plus longue duree prouvee etait
            4 h 25 : le seul vrai inconnu de ce rattrapage est leve.
 
+         ⛔⛔ CORRECTION DU 15/09 11:45 -- LE BLOC CI-DESSOUS EST FAUX, ET JE LE
+           LAISSE POUR QUE PERSONNE NE REFASSE LE RAISONNEMENT.
+           IL N'Y A EU AUCUNE PANNE DE MECANISME. Les ~880 ventes ne sont pas
+           perdues : elles n'ont REELLEMENT PERSONNE D'ATTRIBUE chez Hektor.
+
+           LA PREUVE, par relecture : 798 pieces relues le 15/09 a 11 h ->
+           798 pages LUES (13 944 caracteres en moyenne, pas vides) et ZERO
+           intervenant. Et trois temoins relus a la main, un jour apres :
+               vente 9373  (2016) 24 947 car. 2 intervenants -- comme hier
+               vente 8920  (2016) 13 944 car. 0 intervenant  -- comme hier
+               vente 23208 (2026) 23 428 car. 2 intervenants -- comme hier
+           Les lectures sont PARFAITEMENT REPRODUCTIBLES. Une page sans
+           intervenant pese ~13 900 caracteres, une page avec en pese ~24 000 :
+           l'ecart de ~10 000, c'est le bloc lui-meme.
+
+           ⛔ MON ERREUR DE RAISONNEMENT, ET ELLE EST GROSSIERE. Le run lit dans
+             l'ordre `date DESC` : l'HEURE DE LECTURE et la DATE DE LA VENTE sont
+             donc correlees PAR CONSTRUCTION. « La coupure suit l'heure de
+             lecture » et « la coupure suit le calendrier » sont LA MEME PHRASE.
+             J'ai presente une tautologie comme une preuve, et bati quatre heures
+             de travail dessus. Le « temoin 2017 » (98 % dehors, 35 % dedans) ne
+             prouvait rien : 2017 est a cheval sur la periode, point.
+
+           ⭐ LA VERITE, MESUREE : GTI A CESSE DE RENSEIGNER LA REPARTITION DANS
+             HEKTOR DE DECEMBRE 2014 A JUILLET 2017. Les deux mois de transition
+             sont 2014-12 (65 %) et 2017-07 (57 %), en CALENDRIER.
+                 2010-2014-11   95 a 100 %
+                 2014-12 a 2017-07   6 a 42 %
+                 2017-08 a 2024      95 a 100 %
+             ⚠ ET UN SECOND CREUX, RECENT ET DIFFERENT : 2025 baisse de 91 % en
+               juillet a 57 % en novembre, puis remonte a 73 %. Ce n'est pas une
+               coupure nette mais un RELACHEMENT DE PRATIQUE, et il est recent
+               donc rattrapable a la main. A SIGNALER A FREDERIC.
+             ➡ HORS la periode 12/2014-07/2017 : 6 427 ventes lues, 6 253 avec
+               commission, soit 97 %. LE PARC EST SAIN.
+
+           ⚠ CE QUI RESTE VALIDE MALGRE L'ERREUR : la colonne `commissions_octets`
+             et son selecteur (ils distinguent bien « page vide » de « page lue,
+             personne d'attribue » -- et c'est CE compteur qui m'a permis de voir
+             mon erreur), le journal, et la correction de cadence. Les 878 pieces
+             relues portent desormais leur vraie taille de page : elles sortent du
+             selecteur d'elles-memes. Le mecanisme s'est auto-corrige.
+
+           ⚠ ET IL NE RESTE PLUS QU'UN LOT A LIRE : les 1 610 ventes de 2006-2009,
+             jamais lues. Vu que 2010-2014 sont a 95-99 %, elles devraient porter
+             leurs intervenants.
+
+         ─── le raisonnement FAUX, conserve comme garde-fou ───
          ⛔ MAIS IL MANQUE ~880 VENTES, ET RIEN NE L'A SIGNALE. Entre 20:03 et
            21:07 UTC, la page des commissions est revenue VIDE : la 2e requete
            partait, repondait, et `contenuDeLEtape` n'en tirait rien. Le lecteur
