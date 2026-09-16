@@ -6508,3 +6508,41 @@ taches : ils les feront SURVIVRE a la coupure.** Ce n'est pas le meme calendrier
 ```
 
 *Les deux ont ete trouvees parce que Frederic a demande de verifier avant de corriger.*
+
+
+---
+
+## ⏱ À OBSERVER — les biens sans date de mise à jour *(posé le 16/09/2026)*
+
+**Demande de Frédéric : noter le chiffre, et regarder s'il évolue.** Un correctif avait été
+écrit puis **annulé** — il relisait 615 fiches tous les 30 jours pour en couvrir 6.
+
+```
+LE FAIT, mesuré le 16/09
+   biens au miroir                                  61 207
+   dont date_maj = '0000-00-00 00:00:00'             5 634   (9,2 %)
+      archivés 3 828   ·   non archivés 1 806
+   lectures console gelées par ce fait                 615   (compromis 299 · vente 316)
+      dont la transaction date de 2024 ou après          6
+      dont antérieure                                  609
+
+LA CAUSE, et elle n'est pas un défaut de Hektor
+   `date_maj` n'est pose QU'A LA PREMIERE MODIFICATION. Mesure sur les 655 biens
+   enregistrés depuis le 01/06/2026 : 582 ont une date, 73 n'en ont AUCUNE (11 %).
+   Une annonce neuve, jamais retouchée, n'a donc pas de date de mise à jour.
+   ➡ Le zéro ne veut pas dire « cassé », il veut dire « jamais modifié depuis sa création ».
+
+CE QUE ÇA IMPLIQUE
+   La population n'est pas figée : un bien la quitte dès qu'on le modifie, un bien
+   neuf y entre. Le nombre doit donc OSCILLER, pas croître. S'il croît franchement,
+   c'est qu'autre chose se passe — et c'est ça qu'on surveille.
+
+⚠ ET UNE ERREUR D'ANALYSE A NE PAS REFAIRE
+   J'avais annoncé « 614 des 615 sont sur un bien VIVANT ». Vrai au sens de
+   l'étiquette (non archivé), faux au sens qui compte : leurs transactions datent
+   d'avant 2018 pour l'essentiel. Le vrai risque portait sur SIX transactions.
+   `archive = 0` ne veut pas dire « vivant ».
+```
+
+**À REMESURER** : dans un mois, puis dans trois. Les trois nombres à comparer sont
+`5 634` biens · `615` lectures gelées · `6` transactions récentes.
