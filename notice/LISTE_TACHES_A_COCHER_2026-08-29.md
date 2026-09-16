@@ -1,6 +1,6 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 15/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> **Mis à jour le 16/09/2026.** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier — elle fait 6 400 lignes.
 
 **LA CIBLE** — *étape 2, redite par Frédéric le 15/09* : les négociateurs travaillent dans
@@ -9,24 +9,24 @@ HORS DE PORTÉE pour l'instant** (portails, signature, registre légal) : il n'y
 coupure datée, et rien ne l'attend.
 
 ```
-   EN COURS     3.2e lot 5   la répartition de commission     FINI le 15/09,
-                             reste UNE NUIT à observer (l. 4245)
+   FINI LE 16/09, PROUVÉ DANS LE RUN DE 05:00
+     3.2d lot 2  les DEUX notaires (l. 4017)  ·  3.2d lot 3  les conditions (l. 4018)
+     le registre reçoit le miroir console  ·  la descente en delta (42 % du volume)
+     les 615 fiches gelées : cause trouvée ('0000-00-00'), rotation 30 jours
 
    LES 3 SUIVANTES, dans cet ordre
-     1. 3.2d lot 2   le notaire acquéreur PAR RECHERCHE       l. 4017
-                     aujourd'hui on tape un numéro à la main
-     2. les 3 dettes du 15/09  surveillance en alerte permanente depuis juillet ·
-                     la descente met Supabase par terre chaque matin ·
+     1. les 2 dettes restantes   la surveillance crie depuis juillet ·
                      le numéro de contact ne voyage pas avec sa fiche
+     2. les MANDANTS depuis l'app (lot 3, 1er morceau)          l. 4018
+                     la console en rapporte 18 424, le registre les porte
      3. 3.5 + 2.6    la suppression disparaît partout · plusieurs acquéreurs
                      l. 5163 et 3412
 
    EN ATTENTE DE FRÉDÉRIC
-     3.2d lot 3   « que doit-on pouvoir saisir depuis l'app ? »   l. 4018
-                  mandants · conditions suspensives · notes · PDF
      E.2          quel négociateur passe sur l'app en premier ?
      le mot de passe de la base, apparu en clair le 14/09
      les 5 écarts de statut : des biens sous compromis annoncés « Actif »
+     le catalogue des conditions suspensives n'a que 2 entrées
 ```
 
 **CE QUI A COÛTÉ CHER, ET QUI SE RÉPÈTE** — ⚠ *deux écarts la nuit du 14 au 15 : l'arbitrage
@@ -4014,8 +4014,8 @@ GEL que Frederic a repere le premier).*
          l'app le jour de la coupure ? » -- et la reponse appartient a Frederic.
          Trois lots naturels :
              LOT 1  les honoraires VENDEUR (montant + taux)   -> la commission
-             LOT 2  le notaire acquereur par RECHERCHE, comme l'acquereur (2.5)
-             LOT 3  mandants[] · conditions suspensives · notes · content_pdf
+             LOT 2  ✅ FAIT 16/09 : les DEUX notaires par recherche (acq + mandant)
+             LOT 3  mandants[] · ✅ conditions 16/09 (app seule) · notes · content_pdf
              LOT 4  (AJOUTE LE 08/09, releve des etapes 2 et 3)
                     unitesEntreePercent / unitesSortiePercent -> LE PARTAGE de la
                     commission · agenceReseauSelected -> la RETROCESSION (20 agences)
