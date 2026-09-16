@@ -6546,3 +6546,49 @@ CE QUE ÇA IMPLIQUE
 
 **À REMESURER** : dans un mois, puis dans trois. Les trois nombres à comparer sont
 `5 634` biens · `615` lectures gelées · `6` transactions récentes.
+
+
+---
+
+## ⏱ À OBSERVER — la surveillance qui crie depuis juillet *(posé le 16/09/2026)*
+
+**Décision de Frédéric, 16/09 : on ne corrige que les deux affaires de test. Le reste reste
+en observation** — rien n'est supprimé, rien n'est masqué.
+
+```
+CE QUE LA SONDE DIT, ET CE QUE C'EST VRAIMENT  (mesuré le 16/09)
+
+  86 notifications sans destinataire     ⚠ CE NE SONT PAS DES TESTS
+     toutes de type « nouveau_rapprochement », du 07/07 au 15/09 (dont hier)
+        80 concernent un bien qui A un negociateur -> il n'a pas ete recopie
+         6 concernent un bien sorti du perimetre
+     ➡ defaut d'ecriture du moteur de rapprochement. Les supprimer effacerait la
+       preuve sans corriger la cause, et il s'en creerait d'autres la nuit suivante.
+
+  1 163 notifications non lues           AUCUNE n'a JAMAIS ete lue depuis le 20/06
+     nouveau_rapprochement 1 016 · mandat_echu 128 · job_echec 11 · autres 8
+     ➡ « c'est normal, personne n'utilise l'app » (Frederic). La sonde ne mesure
+       donc rien d'actionnable aujourd'hui. Le jour ou on la reprendra : ne compter
+       que ce qui merite d'interrompre quelqu'un (echecs, conflits), et l'ECRIRE
+       dans la sonde. Onze echecs qui se voient valent mieux que 1 163 lignes
+       que personne ne lit.
+
+  3 gestes abandonnes                    TESTS, et ils MEURENT SEULS le 07/10
+     tous sur 24933 : « compromis en cours deja present (50078) », 7 et 11/09.
+     ⚠ NE PAS SUPPRIMER LE TRAVAIL : la sentinelle les ignore des qu'une ligne
+       existe dans `app_pending_resolution` -- c'est la regle « une saisie ne se
+       perd jamais, la sortie de conflit est un geste humain trace ». Et la vue ne
+       regarde que les 30 derniers jours.
+
+  5 ecarts de statut                     REELS — geste de Frederic, dans Hektor
+  415 contacts sans numero               l'autre dette, a part
+```
+
+**À REMESURER** : les 86 (croissent-elles ?), et les 5 écarts (corrigés ?).
+Les deux affaires de test — `1001349` et `1001350` — ont été supprimées le 16/09.
+
+⚠ **ET ELLES N'EXISTAIENT QUE DANS SUPABASE.** Je m'attendais à devoir les retirer des deux
+côtés ; le serveur ne les avait **jamais** connues. C'est la démonstration vivante de
+`26bis-TRANSACTIONS` : *« ce que l'app crée et que Hektor refuse n'existe que dans Supabase —
+votre serveur ne le verra jamais, et aucune sauvegarde ne le protège »*. Deux lignes nées
+d'un geste de l'app, refusées par Hektor, invisibles au serveur pendant six jours.
