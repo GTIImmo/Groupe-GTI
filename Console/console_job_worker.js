@@ -12457,7 +12457,18 @@ async function reporterAuRegistre(job, appAffaireId, chezHektor) {
     });
     await logJob(job.id, "app_registre_transaction", "done",
       `Registre mis a jour avec ce que Hektor a RETENU : `
-      + Object.entries(corps).map(([k, v]) => `${k}=${v}`).join(", ") + ". "
+      // 16/09 : une LISTE ne se met pas dans une phrase avec `${v}` -- le journal
+      // affichait « acquereurs_json=[object Object] », c'est-a-dire rien. La
+      // charge JSON du journal porte bien le detail ; c'est la ligne LISIBLE qui
+      // etait aveugle, et c'est elle qu'on lit en premier quand ca va mal.
+      + Object.entries(corps).map(([k, v]) => {
+          if (Array.isArray(v)) {
+            const ids = v.map((p) => p && p.id).filter(Boolean);
+            return `${k}=[${ids.join(", ")}]`;
+          }
+          if (v && typeof v === "object") return `${k}=${v.id ?? "?"}`;
+          return `${k}=${v}`;
+        }).join(", ") + ". "
       + "La fiche et la modale n'attendent plus le run de nuit.", {
         app_affaire_id: id, champs: corps,
       });
