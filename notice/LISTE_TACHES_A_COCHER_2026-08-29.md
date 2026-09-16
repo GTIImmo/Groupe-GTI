@@ -3569,7 +3569,42 @@ GEL que Frederic a repere le premier).*
            MODALE qui ne sait pas l'exprimer.
          touche : la modale · retour : revenir a un champ unique
 
-[ ] 2.7  LA PERIODE DE MANDAT PASSE DU MIROIR AU REGISTRE      AJOUTEE LE 04/09
+[x] 2.7  LA PERIODE DE MANDAT PASSE DU MIROIR AU REGISTRE   FAIT LE 16/09/2026
+         La cascade des CINQ marches est codee dans `_mandat_de_la_transaction`
+         (affaire_ledger.py), et chaque marche porte SON RENDEMENT MESURE :
+             hektor l'a dit                 14 854   48,0 %
+             l'annonce n'a qu'UN mandat     +8 334   -> 74,9 %
+             la periode                         +1
+             le mandant                         +0
+             aucun mandat au miroir          7 787   (92 % de 2006-2011)
+         EPREUVE : la VRAIE fonction, sur copies jetables. 8 331 mandats GAGNES,
+         0 PERDU. Couverture 48,0 % -> 74,9 %.
+         ⭐ LA COLONNE `mandat_origine` DIT D'OU VIENT LE NUMERO. Sans elle, un
+           mandat DEDUIT serait indiscernable d'un mandat DONNE -- meme lecon que
+           le gel, la photo et le verdict, tous corriges le meme jour.
+         ⚠ LA MARCHE 3 NE RAPPORTE QU'UNE LIGNE, et il faut savoir pourquoi : le
+           cas « plusieurs mandats » concerne 37 annonces et 17 transactions dans
+           tout le parc. Les 141 autres annonces a plusieurs LIGNES de mandat sont
+           des DOUBLONS du meme numero -- la marche 2 les absorbe, puisqu'elle
+           compare les NUMEROS distincts, pas les lignes.
+         ⚠ LA MARCHE 4 RAPPORTE ZERO, ET C'EST STRUCTUREL : les transactions qui
+           arrivent jusque-la sont TOUTES des offres, et Hektor n'envoie pas de
+           mandants sur une offre. Gardee pour le jour ou il s'y mettra -- comme il
+           vient de le faire pour le mandat des offres.
+         ⚠ ON NE DEDUIT JAMAIS `hektor_mandat_id`, SEULEMENT LE NUMERO : l'id sert
+           de CLE ailleurs, et Hektor en partage 342 entre annonces. Une deduction
+           dans une colonne-cle, c'est du faux qui voyage.
+         ⚠ LE PLAFOND REEL EST ~75 %, PAS 100 % : les 7 770 sans mandat sont des
+           affaires closes depuis quinze ans. Ce n'est pas une dette.
+         ⭐ CE QUE CA DEBLOQUE : le blob de nuit (build_cycle_affaire_blob) n'est
+           plus le seul a porter la periode -- et LUI MEURT A LA COUPURE, le
+           registre non. C'etait la vraie raison de ce portage.
+         retour : cesser de remplir la colonne ; le registre se refait chaque nuit
+         reste  : l'ECRAN -- un seul chemin au lieu de deux, et signaler les 17
+                  transactions multi-mandat plutot que d'inventer une regle
+
+         --- enonce d'origine ---
+[x] 2.7  LA PERIODE DE MANDAT PASSE DU MIROIR AU REGISTRE      AJOUTEE LE 04/09
          ⚠ POINT A PART, pose par Frederic : « c'est un autre point, quand on
            reliera l'app au registre en direct ». Ne pas le melanger aux briques
            d'ecran (2.1 a 2.6) : celles-la BRANCHENT le registre, celle-ci lui

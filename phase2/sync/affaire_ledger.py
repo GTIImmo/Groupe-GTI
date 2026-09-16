@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     hektor_affaire_id   TEXT,
     hektor_mandat_id    TEXT,
     numero_mandat       TEXT,
+    mandat_origine      TEXT,        -- 2.7 (16/09/2026) : voir _mandat_de_la_transaction
+
     hektor_acquereur_id TEXT,
     app_contact_id      INTEGER,
     -- 1.1 (03/09/2026) : LE DOSSIER D'AFFAIRE. L'offre, le compromis et la vente
@@ -344,6 +346,126 @@ def _mandat_numero(con: sqlite3.Connection) -> dict[tuple[str, str], str]:
     return out
 
 
+def _mandats_par_annonce(con: sqlite3.Connection) -> dict[str, list[dict]]:
+    """Tous les mandats du miroir, ranges par annonce -- avec de quoi les departager."""
+    out: dict[str, list[dict]] = {}
+    for a, mid, num, deb, fin, gens in con.execute(
+            "SELECT hektor_annonce_id, hektor_mandat_id, numero, date_debut, date_fin, "
+            "mandants_texte FROM hektor.hektor_mandat"):
+        annonce = normalize_text(a)
+        numero = normalize_text(num)
+        if not annonce or not numero:
+            continue
+        out.setdefault(annonce, []).append({
+            "id": normalize_text(mid),
+            "numero": numero,
+            "debut": normalize_text(deb)[:10],
+            "fin": normalize_text(fin)[:10],
+            "mandants": normalize_text(gens).upper(),
+        })
+    return out
+
+
+def _noms_des_mandants(brut: object) -> set[str]:
+    """Les NOMS des mandants d'une transaction, pour la derniere marche."""
+    if isinstance(brut, str):
+        try:
+            brut = json.loads(brut)
+        except Exception:                                           # noqa: BLE001
+            return set()
+    if isinstance(brut, dict):
+        brut = [brut]
+    if not isinstance(brut, list):
+        return set()
+    noms = set()
+    for item in brut:
+        if isinstance(item, dict):
+            nom = normalize_text(item.get("nom")).upper()
+            if len(nom) >= 3:            # « M. » ou « SCI » ne distinguent rien
+                noms.add(nom)
+    return noms
+
+
+def _mandat_de_la_transaction(annonce: str, mid: str, date: str, mandants: object,
+                              mnum: dict, par_annonce: dict) -> tuple[str, str]:
+    """A QUEL MANDAT CETTE TRANSACTION APPARTIENT-ELLE ?   2.7, 16/09/2026
+
+    ═══ POURQUOI CETTE QUESTION EXISTE ═══
+    Un bien peut etre mis en vente sous un mandat, ne pas se vendre, puis repartir
+    sous un NOUVEAU mandat des annees plus tard. Les offres de 2020 appartiennent
+    au premier, celles de 2024 au second : deux histoires, pas une.
+    L'ecran sait deja les separer -- mais par un BLOB refait chaque nuit depuis le
+    miroir. ⚠ CE BLOB MEURT A LA COUPURE : plus de Hektor, plus de miroir alimente,
+    plus de blob, et la vue par cycle s'eteint. Le registre, lui, ACCUMULE. C'est
+    la vraie raison de ce portage -- pas le confort d'affichage.
+
+    ═══ LA CASCADE, DU PLUS SUR AU PLUS FAIBLE ═══
+    Et chaque marche porte SON RENDEMENT MESURE le 16/09, sur les 30 958 lignes
+    vivantes du registre. Une regle dont on ignore le rendement est une regle qu'on
+    ne saura jamais retirer.
+
+        1. HEKTOR L'A DIT                            14 858   48,0 %
+           Il envoie un objet mandat complet sur les trois genres. Quand il le
+           donne, on ne discute pas.
+        2. L'ANNONCE N'A QU'UN SEUL MANDAT           +8 305   -> 74,8 %
+           Il n'y a rien a deviner : c'est lui ou rien. 99,3 % des annonces sont
+           dans ce cas. C'est la marche qui porte TOUT le gain.
+        3. LA PERIODE : la date tombe entre debut et fin    +4
+           ⚠ QUATRE TRANSACTIONS. Le cas « plusieurs mandats » concerne 37 annonces
+             et 17 transactions dans tout le parc -- les 141 autres annonces a
+             plusieurs LIGNES de mandat sont des DOUBLONS du meme numero.
+             On la garde parce qu'elle est juste et qu'elle ne coute rien, pas
+             parce qu'elle rapporte.
+        4. LE MANDANT : un seul mandat porte ce vendeur      +0
+           ⚠ ZERO, ET C'EST STRUCTUREL : les 25 transactions qui arrivent jusqu'ici
+             sont TOUTES des offres, et Hektor n'envoie pas de mandants sur une
+             offre. Elle ne servira que le jour ou il s'y mettra -- comme il vient
+             de le faire pour le mandat des offres (245 lignes, toutes recentes).
+        5. RIEN -- on ne devine pas.                          21
+
+    ⚠ LA PERIODE AVANT LE MANDANT, ET C'EST DELIBERE (Frederic, 04/09) : le vendeur
+      est souvent le meme d'un mandat a l'autre sur un meme bien, il ne distingue
+      donc pas les periodes. La date, si.
+
+    ⚠ ON NE REMPLIT QUE LE NUMERO, JAMAIS `hektor_mandat_id`. L'identifiant sert de
+      CLE ailleurs -- le couple (annonce, mandat), et Hektor reutilise ses id bas :
+      342 sont partages entre annonces. Ecrire une DEDUCTION dans une colonne qui
+      sert de cle, c'est fabriquer du faux qui voyage. Le numero, lui, s'affiche.
+
+    Rend (numero, origine). L'origine n'est pas cosmetique : sans elle, un mandat
+    DEDUIT serait indiscernable d'un mandat DONNE -- la meme famille de defaut que
+    le gel du contrat d'autorite, corrige le meme jour.
+    """
+    # 1. Hektor l'a dit.
+    if mid and mid != "0":
+        donne = mnum.get((annonce, mid), "")
+        if donne:
+            return donne, "hektor"
+    liste = par_annonce.get(annonce) or []
+    if not liste:
+        return "", ""
+    # 2. l'annonce n'a qu'un seul mandat.
+    numeros = {m["numero"] for m in liste}
+    if len(numeros) == 1:
+        return liste[0]["numero"], "deduit_unique"
+    # 3. la periode.
+    jour = normalize_text(date)[:10]
+    if jour:
+        dedans = {m["numero"] for m in liste
+                  if m["debut"] and m["fin"] and m["debut"] <= jour <= m["fin"]}
+        if len(dedans) == 1:
+            return next(iter(dedans)), "deduit_periode"
+    # 4. le mandant.
+    noms = _noms_des_mandants(mandants)
+    if noms:
+        portent = {m["numero"] for m in liste
+                   if m["mandants"] and any(n in m["mandants"] for n in noms)}
+        if len(portent) == 1:
+            return next(iter(portent)), "deduit_mandant"
+    # 5. on ne devine pas.
+    return "", "indetermine"
+
+
 def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, int]:
     """UPSERT (delete-never) de toutes les affaires courantes dans le ledger local.
     En mode full, les lignes non revues ce run passent present_in_hektor=0 (conservées)."""
@@ -375,13 +497,18 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   "notaire_mandant_id", "notaire_mandant_nom",
                   "taux_honoraire_entree",
                   "unites_entree_percent", "unites_sortie_percent",
-                  "notaires_origine"):
+                  "notaires_origine",
+                  # 2.7 (16/09) : d'ou vient le numero de mandat -- Hektor l'a dit,
+                  # ou on l'a deduit. Sans elle, les deux se confondent.
+                  "mandat_origine"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
             print(f"[affaire_ledger] colonne {neuve} ajoutee a {LEDGER_TABLE}")
     run_ts = now_iso()
     mnum = _mandat_numero(con)
+    # 2.7 (16/09) : de quoi departager quand Hektor ne dit rien.
+    mandats_annonce = _mandats_par_annonce(con)
 
     existing_first: dict[tuple[str, str, str], str] = {}
     for row in con.execute(f"SELECT hektor_annonce_id, kind, hektor_affaire_id, first_seen_at FROM {LEDGER_TABLE}"):
@@ -552,7 +679,10 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         mid = normalize_text(r["hektor_mandat_id"])
         party = _compact_party(r["acq_json"])
         acq_id = normalize_text(r["acq_id"]) or (normalize_text(party.get("id")) if party else "")
-        numero = mnum.get((annonce, mid), "") if mid and mid != "0" else ""
+        # 2.7 : la cascade remplace la lecture directe. Elle rend AUSSI d'ou
+        # vient le numero -- voir _mandat_de_la_transaction.
+        numero, mandat_origine = _mandat_de_la_transaction(
+            annonce, mid, normalize_text(r["dt"]), r["mandants"], mnum, mandats_annonce)
         key = (annonce, kind, affaire_id)
         first_seen = existing_first.get(key, run_ts)
         nouvelle = key not in existing_first
@@ -582,18 +712,20 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             f"""
             INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
                 hektor_annonce_id, kind, hektor_affaire_id, hektor_mandat_id,
-                numero_mandat, hektor_acquereur_id, app_contact_id, acquereur_json, acquereurs_json,
+                numero_mandat, mandat_origine, hektor_acquereur_id, app_contact_id,
+                acquereur_json, acquereurs_json,
                 state, montant, date, date_acte,
                 sequestre, date_fin_retractation, jours_validite,
                 prix_net_vendeur, honoraires_entree, honoraires_sortie,
                 mandants_json, notaires_json, propositions_json, commission_agence,
                 payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
                 hektor_mandat_id=excluded.hektor_mandat_id,
                 numero_mandat=excluded.numero_mandat,
+                mandat_origine=excluded.mandat_origine,
                 hektor_acquereur_id=excluded.hektor_acquereur_id,
                 -- VIDE NE GAGNE PAS : un contact que l'app ne connait pas encore
                 -- ne doit pas effacer un rattachement deja etabli.
@@ -625,7 +757,8 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             """,
             (
                 propose, dossier_par_annonce.get(annonce),
-                int(annonce), kind, affaire_id, mid or None, numero or None, acq_id or None,
+                int(annonce), kind, affaire_id, mid or None, numero or None,
+                mandat_origine or None, acq_id or None,
                 contact_app_par_hektor.get(acq_id) if acq_id else None,
                 json.dumps(party, ensure_ascii=True, separators=(",", ":")) if party else None,
                 normalize_text(r["acq_tous"]) or None,     # 1.8 : la liste ENTIERE, telle que Hektor la donne
