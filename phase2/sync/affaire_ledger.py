@@ -765,6 +765,53 @@ def _date_utile(valeur: object) -> str | None:
     return texte if 2000 <= annee <= 2030 else None
 
 
+def _date_de_tri(kind: object, date: object, propositions: object) -> str | None:
+    """LA DATE QUI ORDONNE LA SEQUENCE -- corrigee le 16/09/2026.
+
+    ⚠ LE DEFAUT. La colonne `date` d'une offre porte
+      COALESCE(offre_event_date, raw_date, synced_at) : la date du DERNIER
+      EVENEMENT, pas celle de l'offre. Une offre faite le 4 et refusee le 8 est
+      donc rangee AU 8 -- apres des offres plus tardives, et apres le compromis
+      qu'elle a pourtant precede.
+    ⚠ CE QUE CA CASSAIT. Le compromis cherche « l'unique offre acceptee ouverte ».
+      Si l'offre est datee de son refus, le run la rencontre APRES le compromis :
+      celui-ci ne la voit pas et part seul. Quatre affaires du parc sont coupees
+      en deux pour cette seule raison (annonces 1970, 23353, 40519, 61599).
+    ⚠ AMPLEUR MESUREE LE 16/09 : 207 offres sur 11 148 (1,9 %) sont rangees a une
+      autre date que la leur. La plus ecartee est faite le 30/03 et rangee au 25/06.
+
+    LA DATE DE L'OFFRE, C'EST CELLE DE SA PREMIERE PROPOSITION. Hektor date chaque
+    proposition (proposition / accepte / refus) : la plus ancienne est le moment ou
+    l'offre a ete faite.
+
+    ⚠ ON NE FAIT JAMAIS PIRE QU'AVANT : si les propositions sont illisibles, vides,
+      ou portent une date que `_date_utile` refuse, on garde la colonne `date`.
+      Aucune transaction ne peut PERDRE sa date a cause de ce correctif.
+    ⚠ ET SEULE L'OFFRE EST CONCERNEE : le compromis et la vente n'ont pas de
+      propositions, leur `date` est deja la bonne.
+    ⭐ EFFET DE BORD HEUREUX : la chaine d'une offre ne depend plus de la colonne
+      `date`, que l'etape du contrat d'autorite reecrit TROIS MINUTES APRES le
+      calcul (mesure du 16/09). Le chainage des offres redevient donc REJOUABLE
+      depuis la table -- ce qu'il n'etait plus.
+    """
+    utile = _date_utile(date)
+    if normalize_text(kind) != "offre":
+        return utile
+    brut = propositions
+    if isinstance(brut, str):
+        try:
+            brut = json.loads(brut)
+        except Exception:                                           # noqa: BLE001
+            return utile
+    if not isinstance(brut, list):
+        return utile
+    dates = [normalize_text(p.get("date")) for p in brut
+             if isinstance(p, dict) and normalize_text(p.get("date"))]
+    if not dates:
+        return utile
+    return _date_utile(min(dates)) or utile
+
+
 def _acquereurs(brut: object) -> set[str]:
     """Les identifiants de TOUS les acquereurs d'une transaction (1.8)."""
     if isinstance(brut, str):
@@ -824,8 +871,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 une vente qui ne trouve pas de compromis ouvert
 
         FERME   la VENTE            -- l'affaire a abouti
-                l'offre REFUSEE     -- l'affaire est morte
                 le compromis ANNULE -- l'affaire est morte
+                l'offre REFUSEE, mais SEULEMENT si plus aucune offre du dossier
+                n'est vivante -- une offre acceptee a cote garde le dossier
+                ouvert (precise le 16/09 : le code disait « une seule »)
 
         Une chaine fermee ne recoit plus jamais rien.
 
@@ -880,7 +929,8 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     #   quel. La trace garde son dossier -- c'est voulu, on veut pouvoir dire
     #   « cette vente appartenait au dossier 12 648 », meme effacee chez Hektor.
     lignes = list(con.execute(f"""
-        SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json
+        SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json,
+               propositions_json
           FROM {LEDGER_TABLE}
          WHERE NOT (
                    TRIM(COALESCE(CAST(hektor_affaire_id AS TEXT), '')) <> ''
@@ -888,10 +938,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                )
     """))
     par_annonce: dict[str, list[tuple]] = {}
-    for app_id, annonce, kind, state, date, acq in lignes:
+    for app_id, annonce, kind, state, date, acq, props in lignes:
         par_annonce.setdefault(normalize_text(annonce), []).append(
             (int(app_id), normalize_text(kind), normalize_text(state).lower(),
-             _date_utile(date), _acquereurs(acq))
+             _date_de_tri(kind, date, props), _acquereurs(acq))
         )
 
     attribution: dict[int, int] = {}
@@ -915,7 +965,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
 
         def ouvrir(app_id: int, acqs: set[str]) -> dict:
             chaine = {"membres": [app_id], "acquereurs": set(acqs),
-                      "offre_acceptee": False, "compromis": False}
+                      "offre_acceptee": False, "compromis": False,
+                      # 16/09 : il faut savoir si TOUTES les offres du dossier
+                      # sont refusees avant de le fermer -- voir la branche offre.
+                      "offres": []}
             ouvertes.append(chaine)
             toutes.append(chaine)
             return chaine
@@ -930,10 +983,40 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 else:
                     cible["membres"].append(app_id)
                     cible["acquereurs"] |= acqs
+                cible["offres"].append(state)
                 if state in ETATS_OFFRE_ACCEPTEE:
                     cible["offre_acceptee"] = True
                 elif state in ETATS_OFFRE_MORTS:
-                    ouvertes.remove(cible)          # l'etat FERME la chaine
+                    # ⭐ CORRIGE LE 16/09/2026 -- LE CODE DISAIT « UNE SEULE »,
+                    #   LES TROIS AUTRES COPIES DISENT « TOUTES ».
+                    #
+                    # Le code retirait le dossier des ouvertes des qu'UNE offre
+                    # etait refusee. Un dossier portant une offre ACCEPTEE et une
+                    # offre refusee du meme acquereur se fermait donc, et le
+                    # compromis qui arrivait ensuite ne trouvait plus rien : il
+                    # partait seul. L'affaire se retrouvait en DEUX dossiers.
+                    #
+                    # LES TROIS AUTRES ECRITURES DE LA REGLE DISENT « TOUTES » :
+                    #   front    (aCompromis || !aOffre || offreVivante)
+                    #   Supabase (not a_offre or offre_vivante)
+                    #   controle fermee_selon_le_run(), qui ajoute meme en toutes
+                    #            lettres « ne vaut QUE tant que la chaine n'a pas
+                    #            de compromis »
+                    # Le run etait le seul des quatre a dire autre chose -- et le
+                    # seul a decider, puisqu'il refait tous les dossiers chaque nuit.
+                    #
+                    # MESURE DU 16/09, AVANT CORRECTION : 6 offres encore VIVANTES
+                    # enfermees dans un dossier ferme, dont 5 ACCEPTEES ; 4 affaires
+                    # coupees en deux (annonces 22994, 47989, 49238, 23459 --
+                    # l'offre acceptee d'un cote, son compromis et sa vente de l'autre).
+                    #
+                    # ⚠ LA CLAUSE « PAS DE COMPROMIS VIVANT » EST INUTILE ICI, et il
+                    #   faut savoir pourquoi pour ne pas l'ajouter par reflexe : une
+                    #   offre ne rejoint jamais un dossier qui porte un compromis
+                    #   (`not c["compromis"]` juste au-dessus), donc `cible` n'en
+                    #   porte jamais au moment ou on la lit.
+                    if all(s in ETATS_OFFRE_MORTS for s in cible["offres"]):
+                        ouvertes.remove(cible)      # l'etat FERME la chaine
 
             elif kind == "compromis":
                 candidates = [c for c in ouvertes if c["offre_acceptee"] and not c["compromis"]]

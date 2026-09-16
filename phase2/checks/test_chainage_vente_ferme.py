@@ -52,7 +52,11 @@ def registre_jetable() -> sqlite3.Connection:
     con.execute(f"""CREATE TABLE {LEDGER_TABLE} (
         app_affaire_id INTEGER PRIMARY KEY, app_chaine_id INTEGER,
         hektor_annonce_id TEXT, kind TEXT, state TEXT, date TEXT,
-        acquereurs_json TEXT, hektor_affaire_id TEXT, present_in_hektor INTEGER)""")
+        acquereurs_json TEXT, hektor_affaire_id TEXT, present_in_hektor INTEGER,
+        -- 16/09 : la regle ordonne desormais l'offre sur SA date, lue dans ses
+        -- propositions. La table jetable doit porter la colonne, sinon le test
+        -- n'exerce plus la vraie fonction -- il la fait echouer.
+        propositions_json TEXT)""")
     for app_id, annonce, kind, state, date, acq in CAS:
         con.execute(
             f"INSERT INTO {LEDGER_TABLE}(app_affaire_id, hektor_annonce_id, kind, state,"

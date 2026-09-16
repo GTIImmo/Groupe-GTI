@@ -21,6 +21,17 @@ La règle de chaînage est écrite TROIS FOIS, dans trois langages :
 les transcrit depuis LE CODE (chaque fonction cite sa source) et les fait juger
 la même donnée, ligne par ligne.
 
+⛔ ET UNE TRANSCRIPTION N'EST PAS LE CODE — leçon du 16/09/2026, payée cher.
+   `fermee_selon_le_run()` disait « fermée quand TOUTES les offres sont refusées ».
+   Le run, lui, fermait dès qu'UNE SEULE l'était. Ce script comparait donc trois
+   copies de l'INTENTION, les trouvait identiques — elles l'étaient — et rendait
+   « 0 divergence » pendant que SIX offres vivantes étaient enfermées dans un
+   dossier clos, et QUATRE affaires coupées en deux.
+   ➡ D'où le test ⑤, ajouté le 16/09 : il SÈME un registre jetable, appelle
+     `recalculer_les_chaines()` — la vraie, celle du run — et compare son résultat
+     aux numéros de dossier réellement en base. C'est le seul test qui ne puisse
+     pas se tromper sur ce que le code fait, puisqu'il le fait tourner.
+
    python phase2/checks/verifier_regle_chainage.py
 """
 from __future__ import annotations
@@ -159,6 +170,48 @@ def candidate_selon_supabase(membres: list[dict], genre: str) -> bool:
     return False
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# ⑤ LA VRAIE FONCTION, APPELEE -- ajoute le 16/09/2026
+#    On ne transcrit plus : on seme une copie JETABLE du registre local et on
+#    appelle `recalculer_les_chaines()`. Ce qu'elle rend doit etre ce qui est
+#    en base. Tout ecart est soit un correctif qui attend le prochain run, soit
+#    une donnee qui a bouge depuis -- dans les deux cas, on veut le SAVOIR.
+# ⚠ LECTURE SEULE SUR LA VRAIE BASE : la copie vit en memoire, l'UPDATE de la
+#   fonction ne touche qu'elle.
+# ═══════════════════════════════════════════════════════════════════════════════
+def rejouer_la_vraie_regle() -> tuple[int, int, list] | None:
+    """Rend (lignes, ecarts, exemples), ou None si le registre local est absent."""
+    import sqlite3
+    base = Path("phase2/phase2.sqlite")
+    if not base.exists():
+        return None
+    try:
+        from phase2.sync.affaire_ledger import LEDGER_TABLE, recalculer_les_chaines
+    except Exception:                                               # noqa: BLE001
+        return None
+    src = sqlite3.connect(f"file:{base}?mode=ro", uri=True)
+    jetable = sqlite3.connect(":memory:")
+    for table in (LEDGER_TABLE, "app_dossier"):
+        ddl = src.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+                          (table,)).fetchone()
+        if not ddl:
+            continue
+        jetable.execute(ddl[0])
+        cols = [r[1] for r in src.execute(f"PRAGMA table_info({table})")]
+        jetable.executemany(
+            f"INSERT INTO {table} ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})",
+            list(src.execute(f"SELECT {','.join(cols)} FROM {table}")))
+    jetable.commit()
+    src.close()
+    avant = dict(jetable.execute(f"SELECT app_affaire_id, app_chaine_id FROM {LEDGER_TABLE}"))
+    genre = dict(jetable.execute(f"SELECT app_affaire_id, kind FROM {LEDGER_TABLE}"))
+    recalculer_les_chaines(jetable)
+    apres = dict(jetable.execute(f"SELECT app_affaire_id, app_chaine_id FROM {LEDGER_TABLE}"))
+    jetable.close()
+    ecarts = [(a, avant.get(a), v, genre.get(a)) for a, v in apres.items() if avant.get(a) != v]
+    return len(apres), len(ecarts), ecarts
+
+
 def main() -> int:
     lignes = [l for l in lire_registre() if not effacee_chez_hektor(l)]
     print(f"registre lu : {len(lignes)} lignes vivantes (effacées chez Hektor écartées)")
@@ -246,6 +299,19 @@ def main() -> int:
             libres += 1
             if any(any(str(x.get("kind")) == "vente" for x in m) for m in groupes):
                 revendus_libres += 1
+    rejeu = rejouer_la_vraie_regle()
+    print("--- ⑤ LA VRAIE FONCTION DU RUN, APPELÉE SUR UNE COPIE JETABLE ---")
+    if rejeu is None:
+        print("   registre local introuvable — test sauté (ce script tourne hors serveur)")
+    else:
+        lues, n, exemples = rejeu
+        print(f"   {lues} lignes rejouées · écarts avec ce qui est en base : {n}"
+              + ("   (aucun : la base EST le résultat de la règle)" if not n
+                 else "   <<< le prochain run déplacera ces dossiers"))
+        for app_id, av, ap, kind in exemples[:10]:
+            print(f"      affaire {app_id} ({kind}) : dossier {av} -> {ap}")
+    print("")
+
     print("--- ④ CE QUE LA RÈGLE PROPOSÉE FERAIT, sur le parc entier ---")
     print("   « un bien est ENGAGÉ s'il a un dossier OUVERT portant")
     print("     un compromis ou une offre acceptée » — la vente n'entre jamais en compte")

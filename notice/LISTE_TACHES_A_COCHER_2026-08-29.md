@@ -2723,6 +2723,22 @@ GEL que Frederic a repere le premier).*
          ANOMALIES QUE LE RUN COMPTE ET NOMME :
              108 vente sans compromis ouvert · 6 vente a plusieurs compromis
                1 plusieurs chaines a offre acceptee · 224 transactions sans date
+         ⭐ CORRIGE LE 16/09 -- LE CODE NE DISAIT PAS CE QUE LES TROIS AUTRES
+           COPIES DISENT. Il fermait le dossier des qu'UNE offre etait refusee ;
+           le front, Supabase et le controle disent « quand TOUTES le sont ».
+           Cout mesure : 6 offres vivantes (dont 5 ACCEPTEES) enfermees dans un
+           dossier clos, 4 affaires coupees en deux (22994, 47989, 49238, 23459).
+           Et l'offre est desormais rangee a SA date -- sa premiere proposition --
+           et non a celle de son dernier evenement (207 offres, 1,9 %, etaient
+           deplacees dans le temps ; 1970 et 61599 s'en trouvent recollees).
+           28 transactions changent de dossier, 0 repartition orpheline.
+           ⚠ LE CONTROLE NE VOYAIT RIEN : il TRANSCRIVAIT la regle au lieu de
+             l'appeler, donc il validait l'intention. Test ⑥ ajoute : il seme un
+             registre jetable et appelle recalculer_les_chaines() pour de vrai.
+           ⚠ RESTE : 23353 et 40519 (offre acceptee PUIS refusee apres le
+             compromis) exigent de lire l'etat AU MOMENT DES FAITS -- la reserve
+             ecrite le 04/09 et toujours pas levee.
+
          ⚠ CE QUI RESTE OUVERT : les 89 chaines de plus de 2 ans (deux affaires
            successives du meme acquereur, fusionnees) ; l'etat FINAL sert de juge
            alors que l'historique des propositions existe.
