@@ -103,6 +103,9 @@ function arg(nom, defaut) {
     // La regle du front, reproduite a l'identique : la cle ne part QU'A PARTIR
     // DE DEUX. En dessous, la charge du cas courant ne change pas d'un octet.
     buyer_contact_ids: acquereurs.length > 1 ? acquereurs : null,
+    // 2.6 (16/09) : le temoin que l'ecran pose quand il touche la liste. Sans
+    // lui, une reprise CONSERVE les acquereurs de Hektor -- c'est le defaut.
+    acquereurs_affirmes: acquereurs.length ? true : null,
     // ─── LES DEUX NOTAIRES, comme la modale les envoie ───
     notaire_id: notaireAcq || null,
     seller_notary_id: notaireVend || null,

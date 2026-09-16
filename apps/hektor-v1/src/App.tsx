@@ -15383,6 +15383,33 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (validite) setStatusChangeValidityDays(validite)
     const retractation = String(carnet.jours_retractation ?? '').trim()
     if (retractation) setStatusChangeRetractionDays(retractation)
+    // ─── LES ACQUEREURS, DEPUIS LE REGISTRE ───   2.6, 16/09/2026
+    //
+    // ⚠ ILS N'ETAIENT PAS MONTRES A LA MODIFICATION, et c'est le trou que
+    //   Frederic a repere : « il faut que les donnees du registre acquereurs
+    //   notaires etc. soient bien visibles en cas de modification ». Ils
+    //   n'etaient preremplis QUE dans un cas -- la vente qui herite de son
+    //   compromis (regle du 10/09). En ouvrant un compromis pour le modifier, on
+    //   ne voyait donc PAS qui achete.
+    //
+    // ⚠ ET LE PREREMPLISSAGE N'EST PAS UNE INTENTION : on ne pose PAS
+    //   `acquereursAffirmes`. Tant que personne ne touche la liste, le worker
+    //   conserve celle de Hektor -- c'est toute la discipline ouverte ce matin.
+    //
+    // ⚠ ON NE LES POSE QUE SI LA LISTE EST VIDE : une saisie en cours ne se fait
+    //   pas recharger sous les doigts, meme regle que la repartition.
+    const acquereursRegistre = lireMandantsAffaire(affaire.acquereurs_json)
+    if (acquereursRegistre.length) {
+      setStatusChangeBuyers((deja) => {
+        if (deja.length) return deja
+        setStatusChangeBuyerContactId(acquereursRegistre[0].id)
+        return acquereursRegistre.map((p) => ({
+          hektor_contact_id: p.id,
+          display_name: p.nom || null,
+          nom: null, prenom: null, civilite: null,
+        })) as unknown as MandantContactSearchOption[]
+      })
+    }
     // ─── LES MANDANTS, DEPUIS LE REGISTRE ───   3.2d lot 3, 16/09/2026
     //
     // ⚠ ON MONTRE CE QUE HEKTOR PORTE, on ne le remplace pas. Le drapeau
@@ -34261,7 +34288,8 @@ function mandantContactOptionMeta(option: MandantContactSearchOption) {
  *    Mesure : sur 366 ventes dont les deux cotes different, entree = acquereur
  *    366 fois, l'inverse 0 fois. Ne pas « corriger » sans refaire la mesure. */
 
-/** Les mandants tels que le registre les porte : une LISTE de fiches completes.
+/** Une LISTE de fiches completes du registre -- `mandants_json` comme
+ *  `acquereurs_json` : les deux ont exactement la meme forme.
  *  ⚠ ON NE FABRIQUE RIEN : pas de nom lisible -> on garde le numero seul, qui
  *    est vrai. Le jeton affichera « n° 5415 » plutot qu'un nom devine. */
 function lireMandantsAffaire(brut: unknown): Array<{ id: string; nom: string }> {
