@@ -1578,6 +1578,100 @@ const affaireConsoleSelect =
   'unites_entree_percent,unites_sortie_percent,conditions_suspensives,conditions_catalogue,' +
   'parties_json,source,lu_le'
 
+/** ─── LES CONDITIONS SUSPENSIVES, DONNEE DE L'APP ───           16/09/2026
+ *
+ *  Decision de Frederic : « comme d'autres champs dans la modale, mais
+ *  uniquement conservees dans l'app, rien envoye a Hektor ».
+ *
+ *  ⚠ C'EST CE CHOIX QUI DEBLOQUE LE LOT 3. Tant qu'on voulait les ecrire chez
+ *    Hektor, il fallait d'abord savoir ce qu'il porte, sinon la modale les
+ *    ecrasait a l'aveugle. Or la console n'en a capte AUCUNE -- 0 sur 18 442
+ *    lectures, elles vivent sur une troisieme page que l'entretien n'ouvre pas.
+ *    Ne rien envoyer supprime la question.
+ *
+ *  ⚠ ET L'ECRAN LE PROMETTAIT DEJA SANS RIEN DERRIERE : le cockpit affiche
+ *    « Suivez les conditions suspensives jusqu'a l'acte », et aucune table
+ *    n'existait, ni en ligne ni en local. Verifie le 16/09. */
+export type AffaireCondition = {
+  rang?: number
+  libelle: string
+  /** Delai en jours depuis la signature. L'echeance s'en deduit. */
+  jours?: number | null
+  date_echeance?: string | null
+  /** attente · levee · non_levee · sans_objet */
+  etat?: string
+  date_levee?: string | null
+  note?: string | null
+  /** Renseigne quand le libelle vient du catalogue de l'agence. */
+  catalogue_id?: string | null
+}
+
+export type ConditionCatalogueRow = {
+  id: string
+  libelle: string
+  jours_defaut: number | null
+  actif: boolean
+  rang: number
+}
+
+/** Le catalogue de l'agence. Jamais d'exception : sans lui, la saisie libre
+ *  reste possible -- c'est une aide, pas une condition. */
+export async function loadConditionCatalogue(): Promise<ConditionCatalogueRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const { data, error } = await supabase
+    .from('app_condition_catalogue')
+    .select('id,libelle,jours_defaut,actif,rang')
+    .eq('actif', true)
+    .order('rang', { ascending: true })
+  if (error || !data) return []
+  return data as ConditionCatalogueRow[]
+}
+
+/** Les conditions des affaires données. Une lecture ratée rend une carte vide. */
+export async function loadAffairesConditions(
+  appAffaireIds: number[],
+): Promise<Map<number, AffaireCondition[]>> {
+  const vide = new Map<number, AffaireCondition[]>()
+  if (!hasSupabaseEnv || !supabase) return vide
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  if (!ids.length) return vide
+  const { data, error } = await supabase
+    .from('app_affaire_condition')
+    .select('app_affaire_id,rang,libelle,jours,date_echeance,etat,date_levee,note,catalogue_id')
+    .in('app_affaire_id', ids)
+    .order('rang', { ascending: true })
+  if (error || !data) return vide
+  const out = new Map<number, AffaireCondition[]>()
+  for (const ligne of data as Array<AffaireCondition & { app_affaire_id: number }>) {
+    const cle = Number(ligne.app_affaire_id)
+    const liste = out.get(cle) ?? []
+    liste.push(ligne)
+    out.set(cle, liste)
+  }
+  return out
+}
+
+/** Remplace la liste ENTIERE d'une transaction.
+ *
+ *  ⚠ ON ENVOIE TOUJOURS TOUT. La fonction efface puis repose : une liste arrivee
+ *    a moitie perdrait l'autre moitie. C'est la meme regle que la repartition,
+ *    qui refuse de couper un dossier en deux paquets.
+ *  ⚠ RIEN NE PART CHEZ HEKTOR. Aucun travail worker n'est cree -- c'est tout le
+ *    sens de la decision du 16/09. */
+export async function ecrireAffaireConditions(
+  appAffaireId: number,
+  conditions: AffaireCondition[],
+): Promise<{ ok: boolean; lignes: number }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_conditions_affaire_ecrire', {
+    target_affaire_id: appAffaireId,
+    conditions,
+  })
+  if (error) throw new Error(error.message)
+  return data as { ok: boolean; lignes: number }
+}
+
 /** Ce que l'assistant a rendu, pour les affaires données. Jamais d'exception :
  *  une lecture ratée rend une carte vide, et l'écran retombe sur le registre. */
 export async function loadAffairesConsole(

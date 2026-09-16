@@ -171,6 +171,11 @@ import {
   hasCompromisEnCours,
   loadAffairesForDossier,
   loadAffairesConsole,
+  loadAffairesConditions,
+  loadConditionCatalogue,
+  ecrireAffaireConditions,
+  type AffaireCondition,
+  type ConditionCatalogueRow,
   type AffaireLedgerRow,
   type AffaireConsoleRow,
   gesteAffaireOptimistic,
@@ -11978,6 +11983,14 @@ export default function App() {
   const [statusChangeBuyerOptions, setStatusChangeBuyerOptions] = useState<MandantContactSearchOption[]>([])
   const [statusChangeBuyerLoading, setStatusChangeBuyerLoading] = useState(false)
   const [statusChangeBuyerError, setStatusChangeBuyerError] = useState<string | null>(null)
+  // ─── LES CONDITIONS SUSPENSIVES ───   3.2d lot 3, 16/09/2026
+  // Decision de Frederic : « comme d'autres champs dans la modale, mais
+  // uniquement conservees dans l'app, rien envoye a Hektor ».
+  const [statusChangeConditions, setStatusChangeConditions] = useState<AffaireCondition[]>([])
+  const [conditionCatalogue, setConditionCatalogue] = useState<ConditionCatalogueRow[]>([])
+  // Quelle affaire a fourni la liste affichee. Sans ce temoin, rouvrir la modale
+  // sur une AUTRE transaction garderait les conditions de la precedente.
+  const [conditionsChargeesPour, setConditionsChargeesPour] = useState<number | null>(null)
   const [statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId] = useState('')
   // ─── 3.2d lot 2 (15/09/2026) : LES DEUX NOTAIRES ───
   // Le NOM a cote du numero : sans lui le jeton retomberait sur « 49708 », ce
@@ -14836,6 +14849,84 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
   }
 
+  // ─── LE CATALOGUE DE L'AGENCE, UNE SEULE FOIS ───          16/09/2026
+  // ⚠ SANS LUI LA SAISIE LIBRE RESTE POSSIBLE : c'est une aide, pas une
+  //   condition. Une lecture ratee rend une liste vide, et rien ne casse.
+  useEffect(() => {
+    let annule = false
+    loadConditionCatalogue()
+      .then((lignes) => { if (!annule) setConditionCatalogue(lignes) })
+      .catch(() => undefined)
+    return () => { annule = true }
+  }, [])
+
+  // ─── LES CONDITIONS DE LA TRANSACTION VISEE ───
+  // ⚠ ON RECHARGE QUAND L'AFFAIRE CHANGE, pas seulement a l'ouverture : la
+  //   modale permet de DESIGNER une autre transaction du meme bien, et garder la
+  //   liste precedente ferait ecrire les conditions de l'une sur l'autre.
+  useEffect(() => {
+    const affaire = affaireCourantePourStatut()
+    const cible = affaire ? Number(affaire.app_affaire_id) : null
+    if (cible == null) {
+      setStatusChangeConditions([])
+      setConditionsChargeesPour(null)
+      return
+    }
+    if (cible === conditionsChargeesPour) return
+    let annule = false
+    loadAffairesConditions([cible])
+      .then((par_affaire) => {
+        if (annule) return
+        setStatusChangeConditions(par_affaire.get(cible) ?? [])
+        setConditionsChargeesPour(cible)
+      })
+      .catch(() => undefined)
+    return () => { annule = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie])
+
+  /** Ajoute une condition, du catalogue ou libre. Trente au maximum -- la base
+   *  en refuse davantage, et l'ecran doit dire la meme chose qu'elle. */
+  function ajouterCondition(depuis: ConditionCatalogueRow | null) {
+    setStatusChangeConditions((liste) => {
+      if (liste.length >= 30) return liste
+      return [...liste, {
+        libelle: depuis ? depuis.libelle : '',
+        jours: depuis ? depuis.jours_defaut : null,
+        etat: 'attente',
+        catalogue_id: depuis ? depuis.id : null,
+      }]
+    })
+  }
+
+  function modifierCondition(rang: number, champ: keyof AffaireCondition, valeur: string) {
+    setStatusChangeConditions((liste) => liste.map((c, i) => {
+      if (i !== rang) return c
+      if (champ === 'jours') {
+        const n = valeur.trim() === '' ? null : Number(valeur)
+        return { ...c, jours: Number.isFinite(n as number) ? (n as number) : null }
+      }
+      return { ...c, [champ]: valeur }
+    }))
+  }
+
+  function retirerCondition(rang: number) {
+    setStatusChangeConditions((liste) => liste.filter((_, i) => i !== rang))
+  }
+
+  /** L'echeance se DEDUIT de la date du compromis et du delai -- on ne la fige
+   *  pas : si la date du compromis bouge, l'echeance doit suivre. */
+  function echeanceCondition(condition: AffaireCondition): string {
+    if (condition.date_echeance) return String(condition.date_echeance)
+    const base = statusChangeDate.trim()
+    const jours = condition.jours
+    if (!base || jours == null || !Number.isFinite(jours)) return ''
+    const quand = new Date(`${base}T00:00:00`)
+    if (Number.isNaN(quand.getTime())) return ''
+    quand.setDate(quand.getDate() + Number(jours))
+    return quand.toISOString().slice(0, 10)
+  }
+
   // ─── LA RECHERCHE DE CONTACT, MEME MOTEUR QUE PARTOUT AILLEURS ───
   // searchMandantContactOptions est deja utilise par la modale « Ajouter RDV » et
   // par le selecteur de mandant. ON N'EN ECRIT PAS UN TROISIEME : meme fonction,
@@ -14931,6 +15022,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerError(null)
     setStatusChangeBuyerNotaryId('')
     setStatusChangeBuyerNotaryNom('')
+    setStatusChangeConditions([])
+    setConditionsChargeesPour(null)
     setStatusChangeSellerNotaryId('')
     setStatusChangeSellerNotaryNom('')
     setStatusChangeNotairesAffirmes({ acquereur: false, mandant: false })
@@ -15791,6 +15884,28 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         // On le DIT, on ne le tait pas : c'est de l'argent.
         setNoticeMessage(`Transaction envoyee, mais la repartition de commission n'a pas ete enregistree : ${
           erreurRepartition instanceof Error ? erreurRepartition.message : 'erreur inconnue'}. A ressaisir.`)
+      }
+
+      // ─── LES CONDITIONS SUSPENSIVES, DANS LE MEME GESTE ───   16/09/2026
+      //
+      // ⚠ APRES L'ENVOI, ET JAMAIS AVANT. Meme raison que la repartition : si le
+      //   travail chez Hektor echoue, on n'a pas ecrit une condition rattachee a
+      //   une transaction qui n'existe pas.
+      // ⚠ RIEN NE PART CHEZ HEKTOR : la fonction ecrit dans l'app, point. Le
+      //   worker n'en sait rien et n'a pas a en savoir.
+      // ⚠ ON N'ECRIT QUE SI LA MODALE A TOUCHE LE SUJET -- soit il y a des
+      //   lignes, soit on en avait charge et l'utilisateur les a toutes
+      //   retirees. Sans ce test, ouvrir puis envoyer effacerait les conditions
+      //   d'une transaction dont on n'a rien voulu changer.
+      try {
+        const affaireConditions = affaireCourantePourStatut()
+        const cible = affaireConditions ? Number(affaireConditions.app_affaire_id) : null
+        if (cible != null && (statusChangeConditions.length || conditionsChargeesPour === cible)) {
+          await ecrireAffaireConditions(cible, statusChangeConditions)
+        }
+      } catch (erreurConditions) {
+        setNoticeMessage(`Transaction envoyee, mais les conditions suspensives n'ont pas ete enregistrees : ${
+          erreurConditions instanceof Error ? erreurConditions.message : 'erreur inconnue'}. A ressaisir.`)
       }
 
       setStatusChangeTarget(null)
@@ -18532,6 +18647,100 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </p>
                         ) : null}
                       </section>
+                      {/* ─── LES CONDITIONS SUSPENSIVES ───            16/09/2026
+                          Decision de Frederic : « comme d'autres champs dans la
+                          modale, mais uniquement conservees dans l'app, rien
+                          envoye a Hektor ».
+
+                          ⚠ LE COMPROMIS SEULEMENT. Releve du 08/09, assistant de
+                            la VENTE ouvert : il ne porte aucune condition
+                            suspensive -- son etape 3 est un recapitulatif. Une
+                            condition est une clause du compromis, qui se leve
+                            AVANT l'acte ; l'afficher sur la vente n'aurait pas
+                            de sens.
+
+                          ⚠ ET L'ECRAN LE PROMETTAIT DEJA SANS RIEN DERRIERE : le
+                            cockpit dit « Suivez les conditions suspensives
+                            jusqu'a l'acte » depuis des semaines, et aucune table
+                            n'existait, ni en ligne ni en local. */}
+                      {statusChangeStatus === 'compromise' ? (
+                        <section className="status-change-repartition">
+                          <p className="status-change-note">
+                            <strong>Conditions suspensives</strong> — elles restent dans l'app et
+                            ne sont pas transmises a Hektor.
+                          </p>
+                          {statusChangeConditions.map((condition, rang) => {
+                            const echeance = echeanceCondition(condition)
+                            return (
+                              <div className="filter-grid" key={`cond-${rang}`}>
+                                <label className="filter-field">
+                                  <span>Condition {rang + 1}</span>
+                                  <input
+                                    value={condition.libelle}
+                                    onChange={(event) => modifierCondition(rang, 'libelle', event.target.value)}
+                                    placeholder="Obtention du prêt, préemption…" />
+                                </label>
+                                <label className="filter-field">
+                                  <span>Délai (jours){echeance ? ` · échéance ${formatDate(echeance)}` : ''}</span>
+                                  <input
+                                    value={condition.jours == null ? '' : String(condition.jours)}
+                                    onChange={(event) => modifierCondition(rang, 'jours', event.target.value)}
+                                    inputMode="numeric"
+                                    placeholder="45" />
+                                </label>
+                                <label className="filter-field">
+                                  <span>État</span>
+                                  <select
+                                    value={condition.etat ?? 'attente'}
+                                    onChange={(event) => modifierCondition(rang, 'etat', event.target.value)}>
+                                    <option value="attente">En attente</option>
+                                    <option value="levee">Levée</option>
+                                    <option value="non_levee">Non levée</option>
+                                    <option value="sans_objet">Sans objet</option>
+                                  </select>
+                                </label>
+                                <label className="filter-field">
+                                  <span>&nbsp;</span>
+                                  <button type="button" className="ghost-button button-subtle"
+                                    onClick={() => retirerCondition(rang)}>
+                                    Retirer
+                                  </button>
+                                </label>
+                              </div>
+                            )
+                          })}
+                          <div className="filter-grid">
+                            <label className="filter-field">
+                              <span>Ajouter depuis le catalogue</span>
+                              <select
+                                value=""
+                                onChange={(event) => {
+                                  const choix = conditionCatalogue.find((c) => c.id === event.target.value)
+                                  if (choix) ajouterCondition(choix)
+                                }}>
+                                <option value="">—</option>
+                                {conditionCatalogue.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.libelle}{c.jours_defaut ? ` · ${c.jours_defaut} j` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="filter-field">
+                              <span>&nbsp;</span>
+                              <button type="button" className="ghost-button button-subtle"
+                                onClick={() => ajouterCondition(null)}>
+                                ＋ Condition libre
+                              </button>
+                            </label>
+                          </div>
+                          {statusChangeConditions.length >= 30 ? (
+                            <p className="status-change-note is-alerte">
+                              Trente conditions au maximum : la base n'en accepte pas davantage.
+                            </p>
+                          ) : null}
+                        </section>
+                      ) : null}
                       {/* L'ECART, S'IL Y EN A UN. On avertit, on ne bloque pas :
                           528 compromis reels du registre ne verifient pas cet
                           invariant (dont 508 d'avant 2025). L'app signale,
