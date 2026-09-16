@@ -355,18 +355,6 @@ def _instant(texte: str):
     return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
 
 
-# Le delai de rotation des fiches dont la date du bien est illisible.
-#
-# ⚠ 30 JOURS, ET PAS 90. L'ancienne rotation generale etait a 90 jours parce
-#   qu'elle portait sur TOUT le parc -- « cent lectures par nuit pour rien ».
-#   Ici elle ne porte que sur 615 fiches, soit 3 % des lectures :
-#       615 / 30 jours = 20 lectures de plus par nuit
-#   contre 7 a 90 jours. Vingt lectures ne se voient pas dans une cadence de
-#   2 300 a l'heure, et trois mois d'aveuglement sur 614 transactions VIVANTES,
-#   si. On prend la borne qui protege, pas celle qui rassure.
-ROTATION_SANS_DATE = 30
-
-
 def deja_lues(stale_jours: int, suivre_annonce: bool = False) -> set[int]:
     """Ce que la table porte deja et qu'il est inutile de relire.
 
@@ -379,27 +367,9 @@ def deja_lues(stale_jours: int, suivre_annonce: bool = False) -> set[int]:
     UN SEUL etait a relire. L'entretien coute donc quelques secondes par nuit,
     la ou une rotation a 90 jours en demandait cent par nuit pour rien.
 
-    ⚠ QUAND UNE DES DEUX DATES MANQUE, ON NE RELIT PAS -- et c'est juste : relire
-      sans pouvoir comparer, ce serait les reprendre CHAQUE nuit sans jamais rien
-      apprendre.
-
-    ⚠ MAIS LA CAUSE N'ETAIT PAS CELLE QU'ON CROYAIT, ET ELLE EST PIRE.
-      Le commentaire disait « 299 cas, des biens que le miroir ne porte plus ».
-      FAUX sur les deux points, mesure du 16/09 :
-          le bien absent du miroir                          0 cas
-          date_maj = '0000-00-00 00:00:00'                615 cas
-      Hektor ecrit cette valeur a la place d'une date sur 5 634 de ses 61 207
-      biens (9 %), dont 1 806 ENCORE ACTIFS. Notre lecteur de dates la refuse --
-      a raison, ce n'est pas une date -- et la regle ci-dessus s'applique alors.
-      Sur les 615 fiches ainsi gelees, 614 portent sur un bien VIVANT : une
-      modification faite chez Hektor n'y serait JAMAIS vue.
-      (Et le 299 n'avait pas double : c'etait le compte des COMPROMIS seuls ; les
-       316 ventes sont venues avec leur propre rattrapage les 14 et 15/09.)
-
-    ➡ POUR CELLES-LA, ET POUR ELLES SEULES, ON REVIENT A LA ROTATION. Faute de
-      pouvoir comparer, on les relit tous les `ROTATION_SANS_DATE` jours. Cout :
-      615 pieces sur 90 jours, soit SEPT lectures de plus par nuit -- contre 614
-      transactions vivantes aujourd'hui invisibles.
+    ⚠ QUAND UNE DES DEUX DATES MANQUE, ON NE RELIT PAS -- 299 cas, des biens que
+      le miroir ne porte plus. Relire sans pouvoir comparer, ce serait les
+      reprendre CHAQUE nuit sans jamais rien apprendre.
     """
     par_annonce = dates_annonces() if suivre_annonce else {}
     vues: set[int] = set()
@@ -418,16 +388,6 @@ def deja_lues(stale_jours: int, suivre_annonce: bool = False) -> set[int]:
                 lue = _instant(quand)
                 if bouge and lue and bouge > lue:
                     continue          # le bien a bouge depuis : on la reprend
-                if lue and not bouge:
-                    # ─── LA ROTATION DES FICHES SANS DATE COMPARABLE ───  16/09
-                    # On ne peut rien comparer (Hektor a mis '0000-00-00' sur ce
-                    # bien) : on relit a l'anciennete, faute de mieux. C'est le
-                    # seul endroit du pilote qui relise sans savoir si ca sert --
-                    # et c'est assume : 614 des 615 fiches concernees portent sur
-                    # un bien VIVANT.
-                    age = (datetime.now(timezone.utc) - lue).days
-                    if age >= ROTATION_SANS_DATE:
-                        continue      # trop vieille et aveugle : on la reprend
             if stale_jours > 0 and quand:
                 try:
                     age = (datetime.now(timezone.utc)
