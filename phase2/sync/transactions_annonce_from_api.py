@@ -197,6 +197,26 @@ def main() -> int:
         ids.append(identifiant)
         details[identifiant] = {k: v for k, v in ligne.items()
                                 if isinstance(v, (str, int, float)) or v is None}
+        # ─── LES PERSONNES PASSENT AUSSI ─── 16/09/2026
+        #
+        # ⚠ MEME RAISON QUE LES CHIFFRES, ET C'EST ECRIT JUSTE AU-DESSUS :
+        #   « la ligne complete etait deja en main -- on cessait simplement de la
+        #   regarder ». Le filtre ne gardait que les valeurs SIMPLES ; les listes
+        #   tombaient, donc les acquereurs et les mandants aussi.
+        # ⚠ CE QUE CA CASSAIT : apres une modification, le registre gardait la
+        #   liste de la CREATION. Mesure du 16/09 : un acquereur retire chez
+        #   Hektor a 09:28 etait encore au registre a 18:30 -- neuf heures.
+        # ⚠ ON NOMME LES DEUX LISTES, on ne laisse pas passer « toutes les
+        #   listes » : la charge reste petite, et on sait ce qu'on transporte.
+        # ⚠ ON GARDE LES FICHES ENTIERES, telles que Hektor les rend. C'est ce
+        #   que le run de nuit ecrit dans acquereurs_json (LEDGER_SQL lit
+        #   acquereurs_json du miroir tel quel) : le geste et le run doivent
+        #   ecrire la MEME FORME, sinon la ligne change d'allure chaque nuit.
+        # ⚠ AUCUNE REQUETE DE PLUS, la aussi.
+        for cle_liste in ("acquereurs", "mandants"):
+            valeur = ligne.get(cle_liste)
+            if isinstance(valeur, list):
+                details[identifiant][cle_liste] = valeur
         # ⚠ « actifs » DECRIT UN ETAT, IL NE PREDIT PAS UN BLOCAGE.
         #
         # J'avais d'abord ecrit ici qu'un compromis actif empeche d'en creer un

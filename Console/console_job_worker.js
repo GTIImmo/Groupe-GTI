@@ -12394,6 +12394,49 @@ async function reporterAuRegistre(job, appAffaireId, chezHektor) {
     if (!t) continue;                // « vide ne gagne pas », ici aussi
     for (const c of colonnes) corps[c] = t;
   }
+
+  // ─── LES PERSONNES, RELUES CHEZ EUX ─── 16/09/2026
+  //
+  // C'EST LA SECONDE MOITIE DE LA CLASSE B, pour les personnes cette fois.
+  // Depuis le 12/09 on ecrit ce que Hektor a RETENU -- mais seulement les
+  // chiffres. Les acquereurs et les mandants restaient ceux de la CREATION
+  // jusqu'au run de nuit.
+  //
+  // CE QUE CA DONNAIT, mesure le 16/09 : un acquereur retire du compromis 50086
+  // a 09:28, retire CHEZ HEKTOR (verifie par son API), et toujours present au
+  // registre a 18:30. Pire, la modale de la vente le REPROPOSAIT -- il a fallu
+  // le retirer une seconde fois pour ne pas le propager.
+  //
+  // ⚠ ON N'ECRIT QUE CE QU'ON A RELU, jamais ce qu'on a envoye. Si Hektor a
+  //   ecarte un acquereur en silence -- il sait le faire, c'est la tache 1.4 --
+  //   c'est SA liste qui arrive chez nous, et l'ecran le montre.
+  // ⚠ « VIDE NE GAGNE PAS » : sans liste relue, on ne touche a rien. Le repli
+  //   sur la fiche ne rend aucun `details`, donc on sort avant meme d'arriver
+  //   ici. Une liste VIDE ne s'ecrit pas non plus : retirer TOUS les acquereurs
+  //   n'est pas un geste de la modale (elle en exige un), et on prefere le run
+  //   de nuit a une supposition. C'est une limite ASSUMEE, pas un oubli.
+  // ⚠ ON NE TOUCHE PAS A `hektor_acquereur_id`, ET C'EST DELIBERE : cette
+  //   colonne est la CLE du chainage des offres et de l'adoption au run. La
+  //   deplacer au geste ferait bouger un dossier entre deux runs. Le run la
+  //   recalcule depuis le miroir ; on ne lui dispute pas ce champ.
+  const partiesRelues = (cle) => {
+    const brut = chezHektor[cle];
+    if (!Array.isArray(brut)) return null;      // absent = « je ne sais pas »
+    const gens = brut.filter((p) => p && typeof p === "object"
+                                 && String(p.id ?? "").trim());
+    return gens.length ? gens : null;
+  };
+  const acquereurs = partiesRelues("acquereurs");
+  if (acquereurs) {
+    corps.acquereurs_json = acquereurs;
+    // Le singulier reste le PRINCIPAL : c'est lui que la fiche lit pour le mail
+    // et le telephone (affaireAcquereurParty). Le laisser perime montrerait les
+    // coordonnees de quelqu'un qui n'est plus sur l'affaire.
+    corps.acquereur_json = acquereurs[0];
+  }
+  const mandants = partiesRelues("mandants");
+  if (mandants) corps.mandants_json = mandants;
+
   if (!Object.keys(corps).length) return;
   try {
     await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${id}`, {

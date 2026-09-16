@@ -4258,6 +4258,20 @@ GEL que Frederic a repere le premier).*
          verif : une vente creee ET modifiee depuis l'app, relue chez Hektor,
                  avec le meme journal de preuve que le compromis 50078
 
+         ⭐ LES PERSONNES AUSSI -- 16/09/2026. `reporterAuRegistre` n'ecrivait que
+           HUIT COLONNES CHIFFREES : les acquereurs et les mandants restaient ceux
+           de la CREATION jusqu'au run de nuit. Trouve en faisant l'audit de bout
+           en bout : un acquereur retire du compromis 50086 a 09:28, retire CHEZ
+           HEKTOR (verifie par son API), etait encore au registre a 18:30 -- et la
+           modale de la VENTE le reproposait.
+           ⚠ ET AUCUNE REQUETE DE PLUS : la relecture par l'API tenait deja les
+             deux listes en main, le filtre de details ne gardait que les valeurs
+             SIMPLES et les jetait. Meme cause, mot pour mot, que pour les chiffres.
+           ⚠ LIMITE ASSUMEE : une liste VIDE ne s'ecrit pas. Retirer TOUS les
+             acquereurs n'est pas un geste de la modale ; le run de nuit tranche.
+           ⚠ `hektor_acquereur_id` N'EST PAS TOUCHE : c'est la cle du chainage des
+             offres et de l'adoption. On ne la dispute pas au run.
+
          ─── LOT 5 (NOUVEAU, 12-13/09) : LA COMMISSION APPARTIENT A QUELQU'UN ───
          ⭐ FAIT ET PROUVE EN REEL LE 13/09. Trouve en lisant les pages 2 et 3 de
            l'assistant, que personne n'avait ouvertes -- question de Frederic :
