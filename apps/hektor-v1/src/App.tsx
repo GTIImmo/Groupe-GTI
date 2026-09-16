@@ -11991,6 +11991,14 @@ export default function App() {
   // Quelle affaire a fourni la liste affichee. Sans ce temoin, rouvrir la modale
   // sur une AUTRE transaction garderait les conditions de la precedente.
   const [conditionsChargeesPour, setConditionsChargeesPour] = useState<number | null>(null)
+  // ─── LES MANDANTS (les VENDEURS) ───   3.2d lot 3, 16/09/2026
+  // ⚠ `affirmes` PART A FAUX : tant que l'utilisateur n'a rien touche, on
+  //   n'envoie RIEN. Hektor remplit les mandants lui-meme depuis le mandat --
+  //   mesure du 16/09, compromis 50084 revenu avec trois mandants sans qu'on en
+  //   envoie un seul. Poser notre liste par-dessus la sienne la remplacerait.
+  const [statusChangeMandants, setStatusChangeMandants] =
+    useState<Array<{ id: string; nom: string }>>([])
+  const [statusChangeMandantsAffirmes, setStatusChangeMandantsAffirmes] = useState(false)
   const [statusChangeBuyerNotaryId, setStatusChangeBuyerNotaryId] = useState('')
   // ─── 3.2d lot 2 (15/09/2026) : LES DEUX NOTAIRES ───
   // Le NOM a cote du numero : sans lui le jeton retomberait sur « 49708 », ce
@@ -15022,6 +15030,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerError(null)
     setStatusChangeBuyerNotaryId('')
     setStatusChangeBuyerNotaryNom('')
+    setStatusChangeMandants([])
+    setStatusChangeMandantsAffirmes(false)
     setStatusChangeConditions([])
     setConditionsChargeesPour(null)
     setStatusChangeSellerNotaryId('')
@@ -15361,6 +15371,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (validite) setStatusChangeValidityDays(validite)
     const retractation = String(carnet.jours_retractation ?? '').trim()
     if (retractation) setStatusChangeRetractionDays(retractation)
+    // ─── LES MANDANTS, DEPUIS LE REGISTRE ───   3.2d lot 3, 16/09/2026
+    //
+    // ⚠ ON MONTRE CE QUE HEKTOR PORTE, on ne le remplace pas. Le drapeau
+    //   `affirmes` reste FAUX : sans geste de l'utilisateur, rien ne partira.
+    setStatusChangeMandants(lireMandantsAffaire(affaire.mandants_json))
+    setStatusChangeMandantsAffirmes(false)
     // ─── LES DEUX NOTAIRES, DEPUIS LE REGISTRE ───   3.2d lot 2, 16/09/2026
     //
     // ⚠ CORRIGE LE 16/09 : la modale lisait `notaires_json`, c'est-a-dire l'API.
@@ -15838,6 +15854,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         buyerNotaryId: statusChangeBuyerNotaryId,
         // 3.2d lot 2 : le notaire du vendeur, et ce que l'utilisateur a
         // VRAIMENT designe ici -- seul ce qui est affirme sera pose en reprise.
+        // 3.2d lot 3 : les mandants, et SEULEMENT si quelqu'un y a touche.
+        mandantContactIds: statusChangeMandantsAffirmes
+          ? statusChangeMandants.map((x) => x.id) : undefined,
         sellerNotaryId: statusChangeSellerNotaryId,
         notairesAffirmes: statusChangeNotairesAffirmes,
         buyerFees: statusChangeBuyerFees,
@@ -18492,6 +18511,31 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               ? <small className="sca-acq-etat">Aucun contact trouvé dans ton périmètre.</small>
                               : null}
                         </div>
+                        {/* ─── 3.2d lot 3 : LES MANDANTS ───   16/09/2026
+                            Ils n'existaient nulle part dans la modale. Ici on les
+                            MONTRE ; on ne les envoie que si quelqu'un y touche. */}
+                        <SelecteurMandants
+                          choisis={statusChangeMandants}
+                          scope={dataScope}
+                          onAjouter={(option) => {
+                            const id = String(option.hektor_contact_id ?? '').trim()
+                            if (!id) return
+                            setStatusChangeMandants((liste) => (
+                              liste.some((x) => x.id === id)
+                                ? liste
+                                : [...liste, { id, nom: mandantContactOptionTitle(option) }]))
+                            setStatusChangeMandantsAffirmes(true)
+                          }}
+                          onRetirer={(id) => {
+                            setStatusChangeMandants((liste) => liste.filter((x) => x.id !== id))
+                            setStatusChangeMandantsAffirmes(true)
+                          }} />
+                        {statusChangeMandantsAffirmes ? (
+                          <p className="status-change-note is-alerte">
+                            La liste des mandants sera <strong>envoyée à Hektor</strong> et remplacera
+                            la sienne. Tant que vous n'y touchez pas, c'est la sienne qui vaut.
+                          </p>
+                        ) : null}
                         {/* ─── 3.2d lot 2 : LES DEUX NOTAIRES SE DESIGNENT ───   15/09/2026
                             « Notaire acquereur » etait un champ ou l'on TAPAIT un numero ;
                             « notaire vendeur » n'existait pas du tout, alors que c'est le
@@ -34201,6 +34245,140 @@ function mandantContactOptionMeta(option: MandantContactSearchOption) {
  *    l'inverse de ce que l'analogie avec les honoraires d'entree suggere.
  *    Mesure : sur 366 ventes dont les deux cotes different, entree = acquereur
  *    366 fois, l'inverse 0 fois. Ne pas « corriger » sans refaire la mesure. */
+
+/** Les mandants tels que le registre les porte : une LISTE de fiches completes.
+ *  ⚠ ON NE FABRIQUE RIEN : pas de nom lisible -> on garde le numero seul, qui
+ *    est vrai. Le jeton affichera « n° 5415 » plutot qu'un nom devine. */
+function lireMandantsAffaire(brut: unknown): Array<{ id: string; nom: string }> {
+  let liste: unknown = brut
+  if (typeof brut === 'string' && brut.trim()) {
+    try { liste = JSON.parse(brut) } catch { return [] }
+  }
+  if (!Array.isArray(liste)) return []
+  const out: Array<{ id: string; nom: string }> = []
+  for (const element of liste) {
+    if (!element || typeof element !== 'object') continue
+    const fiche = element as Record<string, unknown>
+    const id = String(fiche.id ?? '').trim()
+    if (!id) continue
+    const nom = [fiche.civilite, fiche.prenom, fiche.nom]
+      .map((x) => String(x ?? '').trim()).filter(Boolean).join(' ')
+    out.push({ id, nom })
+  }
+  return out
+}
+
+/** ─── LE MOTEUR DE RECHERCHE, EXTRAIT ───                      16/09/2026
+ *
+ *  ⚠ EXTRAIT, PAS RECOPIE. Le selecteur de notaire et celui de mandant ont
+ *    besoin du meme debit (260 ms), du meme seuil (3 lettres, ou 1 chiffre) et
+ *    du meme perimetre. Les ecrire deux fois, c'est se preparer deux
+ *    comportements qui divergent -- la regle « NE PAS en ecrire un troisieme »
+ *    posee en 2.5 vaut aussi pour le cinquieme et le sixieme.
+ *  ⚠ ET C'EST TOUJOURS `searchMandantContactOptions` dessous : un seul moteur
+ *    pour le mandant, l'acquereur, le notaire, le RDV et la fiche contact. */
+function useRechercheContact(scope: DataScope | null | undefined) {
+  const [recherche, setRecherche] = useState('')
+  const [options, setOptions] = useState<MandantContactSearchOption[]>([])
+  const [charge, setCharge] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+
+  useEffect(() => {
+    const terme = recherche.trim()
+    const minimum = /^\d+$/.test(terme) ? 1 : 3
+    if (terme.length < minimum) { setOptions([]); setCharge(false); setErreur(null); return }
+    let annule = false
+    setCharge(true)
+    setErreur(null)
+    const minuteur = window.setTimeout(async () => {
+      try {
+        const lignes = await searchMandantContactOptions({ search: terme, scope: scope ?? null, limit: 8 })
+        if (!annule) setOptions(lignes)
+      } catch (erreurRecherche) {
+        if (annule) return
+        setOptions([])
+        setErreur(erreurRecherche instanceof Error ? erreurRecherche.message : 'Recherche contact impossible.')
+      } finally {
+        if (!annule) setCharge(false)
+      }
+    }, 260)
+    return () => { annule = true; window.clearTimeout(minuteur) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recherche, scope])
+
+  const vider = () => { setRecherche(''); setOptions([]) }
+  return { recherche, setRecherche, options, charge, erreur, vider }
+}
+
+/** L'etat de la recherche, en une ligne, pour les deux selecteurs. */
+function EtatRecherche(props: { terme: string; charge: boolean; erreur: string | null; vide: boolean }) {
+  const terme = props.terme.trim()
+  if (props.charge) return <small className="sca-acq-etat">Recherche…</small>
+  if (props.erreur) return <small className="sca-acq-err">{props.erreur}</small>
+  if (!props.vide) return null
+  const minimum = /^\d+$/.test(terme) ? 1 : 3
+  if (terme.length > 0 && terme.length < minimum) {
+    return <small className="sca-acq-etat">Trois lettres suffisent, ou un numéro de contact.</small>
+  }
+  if (terme.length >= 3) return <small className="sca-acq-etat">Aucun contact trouvé dans ton périmètre.</small>
+  return null
+}
+
+/** ─── 3.2d lot 3 : LES MANDANTS SE DESIGNENT ───               16/09/2026
+ *
+ *  Les mandants, ce sont les VENDEURS. La modale n'avait aucun champ pour eux :
+ *  on ne pouvait ni les voir ni les corriger.
+ *
+ *  ⚠ ET HEKTOR LES REMPLIT DEJA TOUT SEUL, contrairement aux notaires. Preuve du
+ *    16/09 : le compromis 50084, cree par l'app SANS qu'on envoie un seul
+ *    mandant, est revenu avec TROIS (141053, 485955, 605030). Il les deduit du
+ *    mandat.
+ *  ➡ ON NE POSE DONC JAMAIS LES MANDANTS, SAUF SI L'UTILISATEUR LES A CHANGES --
+ *    a la creation comme a la modification. C'est la difference avec les
+ *    notaires, ou Hektor ne remplissait rien. Envoyer une liste incomplete
+ *    par-dessus la sienne ferait pire que mieux.
+ *  ⚠ ET LA LISTE DE HEKTOR N'EST PAS TOUJOURS JUSTE : sur ce meme 50084, le
+ *    contact 605030 figure a la fois comme ACQUEREUR et comme MANDANT. C'est
+ *    exactement le cas que ce champ permet de corriger. */
+function SelecteurMandants(props: {
+  choisis: Array<{ id: string; nom: string }>
+  scope: DataScope | null | undefined
+  onAjouter: (option: MandantContactSearchOption) => void
+  onRetirer: (id: string) => void
+}) {
+  const r = useRechercheContact(props.scope)
+  return (
+    <div className="filter-field status-change-acq">
+      <span>Mandant{props.choisis.length > 1 ? 's' : ''} (vendeurs)</span>
+      {props.choisis.length ? (
+        <div className="sca-acq-choisis">
+          {props.choisis.map((partie) => (
+            <span className="sca-acq-jeton" key={`man-${partie.id}`}>
+              <b>{partie.nom || `n° ${partie.id}`}</b>
+              <button type="button" aria-label={`Retirer ${partie.nom || partie.id}`}
+                onClick={() => props.onRetirer(partie.id)}>×</button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <input value={r.recherche} onChange={(event) => r.setRecherche(event.target.value)}
+        placeholder={props.choisis.length ? 'Ajouter un mandant…' : 'Nom, email, téléphone…'} />
+      {r.options.length ? (
+        <div className="sca-acq-liste">
+          {r.options.map((option) => (
+            <button type="button" key={`man-opt-${option.hektor_contact_id}`}
+              onClick={() => { r.vider(); props.onAjouter(option) }}>
+              <b>{mandantContactOptionTitle(option)}</b>
+              <small>{mandantContactOptionSubtitle(option)}</small>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <EtatRecherche terme={r.recherche} charge={r.charge} erreur={r.erreur} vide />
+      )}
+    </div>
+  )
+}
 
 function SelecteurNotaire(props: {
   libelle: string

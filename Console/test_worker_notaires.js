@@ -35,6 +35,15 @@ const CIBLE = {
   date: "2026-09-04",
 };
 
+/** Rend null quand l'option est ABSENTE -- a distinguer d'une valeur vide. */
+function argOption(nom) {
+  const t = process.argv.find((a) => a.startsWith(`--${nom}=`) || a === `--${nom}`);
+  if (!t) return null;
+  if (t.includes("=")) return t.split("=")[1];
+  const i = process.argv.indexOf(t);
+  return process.argv[i + 1] || "vide";
+}
+
 function arg(nom, defaut) {
   const t = process.argv.find((a) => a.startsWith(`--${nom}=`) || a === `--${nom}`);
   if (!t) return defaut;
@@ -52,6 +61,14 @@ function arg(nom, defaut) {
   const notaireAcq = String(arg("acq", "")).trim();
   const notaireVend = String(arg("vend", "")).trim();
   const creer = process.argv.includes("--creer");
+  // --mandants 141053,485955   ou   --mandants vide   pour affirmer une liste VIDE.
+  // ⚠ ABSENT N'EST PAS VIDE : sans l'option, la cle ne part pas du tout et Hektor
+  //   garde les mandants qu'il deduit du mandat. C'est tout l'objet du test.
+  const mandantsBrut = argOption("mandants");
+  const mandantsAffirmes = mandantsBrut !== null;
+  const mandants = mandantsAffirmes && mandantsBrut !== "vide"
+    ? mandantsBrut.split(",").map((x) => x.trim()).filter(Boolean)
+    : [];
   if (!/^\d+$/.test(prix)) { console.error("--prix doit etre un entier"); process.exit(1); }
 
   // ⚠ « AFFIRME » NE VEUT PAS DIRE « PRESENT ». C'est tout l'objet du test :
@@ -76,6 +93,7 @@ function arg(nom, defaut) {
     notaire_id: notaireAcq || null,
     seller_notary_id: notaireVend || null,
     notaires_affirmes: Object.keys(affirmes).length ? affirmes : null,
+    mandant_contact_ids: mandantsAffirmes ? mandants : null,
   };
   if (!creer) {
     payload.reprendre_transaction = true;
@@ -110,6 +128,7 @@ function arg(nom, defaut) {
   console.log("notaire acq.   ", notaireAcq || "(non envoye)");
   console.log("notaire vendeur", notaireVend || "(non envoye)");
   console.log("affirmes       ", JSON.stringify(payload.notaires_affirmes));
+  console.log("mandants       ", mandantsAffirmes ? JSON.stringify(mandants) : "(non affirmes -- Hektor garde les siens)");
   const t = await r.text();
   if (r.status >= 300) console.log(t.slice(0, 400));
 })().catch((e) => { console.error(e); process.exit(1); });

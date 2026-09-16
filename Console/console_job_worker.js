@@ -10509,6 +10509,23 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
   //     compromis  notaire MANDANT 8 203 / 9 218 (89 %)  ACQUEREUR 3 351 (36 %)
   //     vente      notaire MANDANT 6 428 / 9 224 (70 %)  ACQUEREUR 2 822 (31 %)
   const notaryMandant = String(payload.seller_notary_id || payload.notaire_mandant_id || "").trim();
+  // ─── 3.2d lot 3 (16/09/2026) : LES MANDANTS, C'EST-A-DIRE LES VENDEURS ───
+  //
+  // ⚠ NULL ET TABLEAU VIDE NE DISENT PAS LA MEME CHOSE, et tout tient la-dedans.
+  //     absent / null  -> l'app n'y a pas touche : ON NE POSE RIEN, Hektor garde
+  //                       les siens (il les deduit du mandat, tout seul).
+  //     tableau, meme VIDE -> l'app affirme cette liste : on la pose.
+  //   Mesure du 16/09 : le compromis 50084, cree par l'app SANS qu'on envoie un
+  //   seul mandant, est revenu avec TROIS (141053, 485955, 605030). Poser
+  //   systematiquement notre liste remplacerait la sienne -- et une liste
+  //   incomplete ferait pire que mieux.
+  //
+  // ⚠ C'EST LA DIFFERENCE AVEC LES NOTAIRES, ou Hektor ne remplissait rien : ici
+  //   la discipline « affirme » vaut AUSSI A LA CREATION, pas seulement en reprise.
+  const mandantsAffirmes = Array.isArray(payload.mandant_contact_ids);
+  const mandantsVoulus = mandantsAffirmes
+    ? payload.mandant_contact_ids.map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
   // ⚠ CE QUE L'UTILISATEUR A DESIGNE DANS LA MODALE, ET RIEN D'AUTRE.
   //   En reprise, un champ prerempli n'est pas une intention -- c'est la lecon du
   //   08/09, ou `sale_price` portait LE PRIX DE L'ANNONCE (180 000) que personne
@@ -10532,6 +10549,8 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
     buyer,
     notary,
     notaryMandant,
+    mandantsAffirmes,
+    mandantsVoulus,
     notaireAcqAffirme,
     notaireMandantAffirme,
     fees,
@@ -11127,6 +11146,18 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       };
       poserNotaire("notairesAcquereur[]", tx.notary, tx.notaireAcqAffirme);
       poserNotaire("notairesMandant[]", tx.notaryMandant, tx.notaireMandantAffirme);
+      // ─── LES MANDANTS ───   3.2d lot 3, 16/09/2026
+      // Meme forme que les acquereurs : c'est un tableau, donc on efface avant
+      // de reposer. Mais ici la condition n'est PAS `!enReprise` -- elle est
+      // « l'app l'a demande », a la creation comme en modification. Sans geste,
+      // on ne touche a rien et l'assistant repose ce que Hektor a rendu.
+      if (tx.mandantsAffirmes) {
+        corps.delete("mandants[]");
+        for (const idMandant of tx.mandantsVoulus) corps.append("mandants[]", idMandant);
+        await logJob(job.id, "hektor_assistant_mandants", "done",
+          `Mandants poses par l'app : ${tx.mandantsVoulus.length || "aucun"}`,
+          { mandants: tx.mandantsVoulus });
+      }
     }
 
     // ⚠ ON REPOSE LES ACQUEREURS A CHAQUE ETAPE, une fois Hektor mis au courant.
@@ -11466,6 +11497,12 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   }
   if (tx.notaryMandant && (!idRepris || tx.notaireMandantAffirme)) {
     appendIfValue(body, "notairesMandant[]", tx.notaryMandant);
+  }
+  // Les mandants : seulement si l'app les affirme, ici aussi. Ce corps est NEUF,
+  // donc ne pas poser veut dire ne pas envoyer le champ -- et Hektor gardera ce
+  // qu'il a. C'est exactement ce qu'on veut tant que personne n'y a touche.
+  if (tx.mandantsAffirmes) {
+    for (const idMandant of tx.mandantsVoulus) body.append("mandants[]", idMandant);
   }
   body.set("fromContact", "0");
 

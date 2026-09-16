@@ -9123,6 +9123,16 @@ export async function createChangeHektorAnnonceStatusJob(input: {
    *    18 442 lectures console : le notaire du MANDANT est rempli sur 8 203 des
    *    9 218 compromis (89 %) et 6 428 des 9 224 ventes (70 %), contre 36 % et
    *    31 % pour celui de l'acquereur. */
+  /** ─── 3.2d lot 3 (16/09/2026) : LES MANDANTS, C'EST-A-DIRE LES VENDEURS ───
+   *
+   *  ⚠ N'EST PRESENT QUE SI L'UTILISATEUR A TOUCHE LA LISTE. Hektor remplit les
+   *    mandants LUI-MEME depuis le mandat -- preuve du 16/09 : le compromis
+   *    50084, cree par l'app sans qu'on envoie un seul mandant, est revenu avec
+   *    TROIS. Poser systematiquement notre liste remplacerait la sienne, et une
+   *    liste incomplete ferait pire que mieux.
+   *  ⚠ C'EST LA DIFFERENCE AVEC LES NOTAIRES, ou Hektor ne remplissait rien :
+   *    la discipline « affirme » s'applique ici A LA CREATION AUSSI. */
+  mandantContactIds?: string[]
   sellerNotaryId?: string
   /** ─── CE QUE L'UTILISATEUR A VRAIMENT DESIGNE DANS CETTE MODALE ───
    *
@@ -9184,6 +9194,11 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     buyer_notary_id: input.buyerNotaryId?.trim() || null,
     // 3.2d lot 2 : le notaire du vendeur. On n'envoie la cle que si elle vaut
     // quelque chose -- la charge du cas courant ne change pas d'un octet.
+    // On n'envoie la cle QUE si la liste a ete touchee : une charge inchangee
+    // pour le cas courant, donc aucun comportement modifie sans raison.
+    mandant_contact_ids: input.mandantContactIds
+      ? input.mandantContactIds.map((x) => String(x ?? '').trim()).filter(Boolean)
+      : null,
     seller_notary_id: input.sellerNotaryId?.trim() || null,
     notaires_affirmes: (input.notairesAffirmes?.acquereur || input.notairesAffirmes?.mandant)
       ? {
