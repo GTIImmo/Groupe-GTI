@@ -9106,6 +9106,15 @@ export async function createChangeHektorAnnonceStatusJob(input: {
    *    10 581 (17,1 %) et 566 ventes sur 7 609 portent plusieurs acquereurs.
    *    Un couple qui achete, c'est la norme. */
   buyerContactIds?: string[]
+  /** ─── 2.6 (16/09/2026) : L'ECRAN A-T-IL TOUCHE LA LISTE DES ACQUEREURS ? ───
+   *
+   *  ⚠ SANS CE TEMOIN, LA MODIFICATION NE PART PAS -- et c'est voulu depuis le
+   *    07/09 : « la modification acquereur sera a faire mais EN DERNIER, car la
+   *    plus compliquee des modifications ». En reprise, l'assistant repose les
+   *    acquereurs qu'il a rendus ; ne rien poser, c'est les CONSERVER. Reposer
+   *    une liste que personne n'a touchee les remplacerait par la notre.
+   *  ⚠ A LA CREATION, IL NE SERT A RIEN : il n'y a rien a conserver. */
+  acquereursAffirmes?: boolean
   /** 3.2 : vrai = MODIFIER la transaction existante chez Hektor, pas en creer une. */
   reprendreTransaction?: boolean
   /** 3.2 : QUELLE transaction on modifie. C'est l'ECRAN qui designe -- la base ne
@@ -9196,6 +9205,7 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     // quelque chose -- la charge du cas courant ne change pas d'un octet.
     // On n'envoie la cle QUE si la liste a ete touchee : une charge inchangee
     // pour le cas courant, donc aucun comportement modifie sans raison.
+    acquereurs_affirmes: input.acquereursAffirmes === true ? true : null,
     mandant_contact_ids: input.mandantContactIds
       ? input.mandantContactIds.map((x) => String(x ?? '').trim()).filter(Boolean)
       : null,

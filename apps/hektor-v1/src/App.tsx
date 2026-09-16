@@ -11996,6 +11996,12 @@ export default function App() {
   //   n'envoie RIEN. Hektor remplit les mandants lui-meme depuis le mandat --
   //   mesure du 16/09, compromis 50084 revenu avec trois mandants sans qu'on en
   //   envoie un seul. Poser notre liste par-dessus la sienne la remplacerait.
+  // ─── 2.6 : LA MODIFICATION DES ACQUEREURS ───   16/09/2026
+  // ⚠ FAUX TANT QUE PERSONNE N'Y TOUCHE. En reprise, l'assistant de Hektor
+  //   repose les acquereurs qu'il a rendus : ne rien poser, c'est les CONSERVER.
+  //   On n'ouvre donc l'envoi que sur un geste explicite -- meme discipline que
+  //   les notaires et les mandants, eprouvee deux fois le 16/09.
+  const [statusChangeAcquereursAffirmes, setStatusChangeAcquereursAffirmes] = useState(false)
   const [statusChangeMandants, setStatusChangeMandants] =
     useState<Array<{ id: string; nom: string }>>([])
   const [statusChangeMandantsAffirmes, setStatusChangeMandantsAffirmes] = useState(false)
@@ -14982,6 +14988,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     })
     setStatusChangeBuyerSearch('')
     setStatusChangeBuyerOptions([])
+    setStatusChangeAcquereursAffirmes(true)
   }
 
   function retirerAcquereurStatut(id: string) {
@@ -14990,6 +14997,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setStatusChangeBuyerContactId(suivante.length ? String(suivante[0].hektor_contact_id ?? '').trim() : '')
       return suivante
     })
+    // ⚠ RETIRER EST UNE INTENTION AUTANT QU'AJOUTER. Sans ce temoin, enlever un
+    //   acquereur dans la modale n'aurait aucun effet chez Hektor -- l'assistant
+    //   reposerait le sien, et l'ecran mentirait.
+    setStatusChangeAcquereursAffirmes(true)
   }
 
   function openStatusChangeModal(dossier: Dossier) {
@@ -15030,6 +15041,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerError(null)
     setStatusChangeBuyerNotaryId('')
     setStatusChangeBuyerNotaryNom('')
+    setStatusChangeAcquereursAffirmes(false)
     setStatusChangeMandants([])
     setStatusChangeMandantsAffirmes(false)
     setStatusChangeConditions([])
@@ -15850,6 +15862,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         buyerContactId: statusChangeBuyerContactId,
         buyerContactIds: statusChangeBuyers
           .map((x) => String(x.hektor_contact_id ?? '').trim()).filter(Boolean),
+        // 2.6 (16/09) : l'ecran DIT qu'il a touche la liste. Sans ce temoin, le
+        // worker conserve celle de Hektor -- c'est le comportement d'avant.
+        acquereursAffirmes: statusChangeAcquereursAffirmes,
         apresVente: statusChangeApresVente,
         buyerNotaryId: statusChangeBuyerNotaryId,
         // 3.2d lot 2 : le notaire du vendeur, et ce que l'utilisateur a

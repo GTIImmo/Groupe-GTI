@@ -10522,6 +10522,8 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
   //
   // ⚠ C'EST LA DIFFERENCE AVEC LES NOTAIRES, ou Hektor ne remplissait rien : ici
   //   la discipline « affirme » vaut AUSSI A LA CREATION, pas seulement en reprise.
+  // 2.6 (16/09) : l'ecran a-t-il touche la liste des acquereurs ?
+  const acquereursAffirmes = payload.acquereurs_affirmes === true;
   const mandantsAffirmes = Array.isArray(payload.mandant_contact_ids);
   const mandantsVoulus = mandantsAffirmes
     ? payload.mandant_contact_ids.map((x) => String(x || "").trim()).filter(Boolean)
@@ -10549,6 +10551,7 @@ function normalizeStatusTransactionPayload(payload, config, initHtml) {
     buyer,
     notary,
     notaryMandant,
+    acquereursAffirmes,
     mandantsAffirmes,
     mandantsVoulus,
     notaireAcqAffirme,
@@ -11119,7 +11122,12 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
       //   deja deux (mesure du 08/09) et le worker les repose avec le reste :
       //   ne rien poser, c'est les CONSERVER. Reposer une liste calculee a partir
       //   d'une modale qui ne les gere pas encore, ce serait les perdre.
-      if (!enReprise && acquereursVoulus.length) {
+      // ⚠ EN REPRISE, ON NE POSE QUE SI L'ECRAN L'AFFIRME -- ouvert le 16/09,
+      //   apres que l'essai du meme jour a montre que Hektor garde bien DEUX
+      //   acquereurs a la creation (605029 + 605030 retenus). La regle de 09/07
+      //   (« ne rien poser, c'est les CONSERVER ») reste donc entiere pour qui
+      //   n'a pas touche la liste.
+      if ((!enReprise || tx.acquereursAffirmes) && acquereursVoulus.length) {
         corps.delete("acquereurs[]");
         for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
       }
@@ -11163,7 +11171,10 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     // ⚠ ON REPOSE LES ACQUEREURS A CHAQUE ETAPE, une fois Hektor mis au courant.
     // C'est LE correctif du 06/09 : sans cela, seule l'etape 0 les portait, et le
     // compromis 50072 n'en a garde qu'un sur deux.
-    if (!enReprise && acquereursConnusDeHektor && acquereursVoulus.length) {
+    // ⚠ ET ON LES REPOSE A CHAQUE ETAPE, meme en reprise affirmee : c'est LE
+    //   correctif du 06/09 -- sans cela, seule l'etape 0 les portait et le
+    //   compromis 50072 n'en avait garde qu'un sur deux.
+    if ((!enReprise || tx.acquereursAffirmes) && acquereursConnusDeHektor && acquereursVoulus.length) {
       corps.delete("acquereurs[]");
       for (const idAcq of acquereursVoulus) corps.append("acquereurs[]", idAcq);
     }
