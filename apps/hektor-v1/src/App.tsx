@@ -19154,14 +19154,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   const estVente = String(verrou.kind) === 'vente'
                   const numero = String(verrou.hektor_affaire_id ?? '').trim()
                   return (
-                    <p className="sca-ambigu is-alerte" role="alert">
-                      <b className="sca-amb-t">On ne revient plus sur cette offre</b>
-                      <span className="sca-amb-d">
-                        Son dossier porte {estVente ? 'une vente' : 'un compromis en cours'}
-                        {numero ? ` (n° ${numero})` : ''}. La refuser ou l'accepter maintenant
-                        couperait l'affaire en deux dans le registre. Pour y revenir, il faut
-                        d'abord {estVente ? 'supprimer la vente' : 'annuler le compromis'}.
-                      </span>
+                    <p className="status-change-note">
+                      <strong>On ne revient plus sur cette offre.</strong>{' '}
+                      Son dossier porte {estVente ? 'une vente' : 'un compromis en cours'}
+                      {numero ? ` (n° ${numero})` : ''}. La refuser ou l'accepter maintenant
+                      couperait l'affaire en deux dans le registre. Pour y revenir, il faut
+                      d'abord {estVente ? 'supprimer la vente' : 'annuler le compromis'}.
                     </p>
                   )
                 })()}
