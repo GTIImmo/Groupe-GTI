@@ -3089,6 +3089,14 @@ body {
 }
 .status-change-affaires .sca-foot b { color: #475569; font-variant-numeric: tabular-nums; }
 .status-change-affaires .sca-leg { margin-left: auto; color: #0f766e; }
+/* 3.1 (16/09/2026) : le verdict sur une saisie du carnet. Le vert disait
+   « elle vient de vous » ; il ne disait pas si elle etait ARRIVEE. */
+.status-change-affaires .sca-etat { margin-left: 6px; font-size: 10px; font-style: normal;
+  text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 5px; border-radius: 6px;
+  background: #f1f5f9; color: #64748b; vertical-align: middle; }
+.status-change-affaires .sca-etat.is-conflit { background: #fee2e2; color: #b91c1c; }
+.status-change-affaires .sca-etat.is-en_attente { background: #fef3c7; color: #a16207; }
+.status-change-affaires .sca-etat.is-arrivee { background: #dcfce7; color: #15803d; }
 @media (max-width: 640px) {
   .status-change-affaires .sca-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .status-change-affaires .sca-leg { margin-left: 0; }

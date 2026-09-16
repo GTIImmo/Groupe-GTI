@@ -12395,6 +12395,109 @@ const REGISTRE_PAR_HEKTOR = {
   dateSignatureActe: ["date_acte"],
 };
 
+// ═══ 3.1 -- LE VERDICT SUR CE QUI RESTE AU CARNET ═══            16/09/2026
+//
+// CE QU'ON REPARE, ET CA SE VOIT A L'ECRAN. Une valeur du carnet s'affiche en
+// VERT. Quand l'envoi arrive, le worker retire la ligne et le vert disparait.
+// Mais quand l'envoi ne part pas, ou quand quelqu'un a change chez eux, LA LIGNE
+// RESTE EN VERT -- indiscernable d'une saisie faite il y a trois secondes. Le
+// negociateur croit que c'est parti.
+//
+// LE VERDICT SE DEDUIT DE TROIS VALEURS, il ne s'observe pas :
+//     la photo    ce que Hektor portait AVANT la saisie   (valeur_hektor_au_moment)
+//     la saisie   ce que le negociateur a tape            (valeur_app)
+//     la relue    ce que le REGISTRE porte maintenant     (= ce que Hektor a retenu,
+//                                                          reporterAuRegistre vient
+//                                                          de l'y ecrire)
+//
+//     relue == saisie   -> « arrivee »     et on le DIT : la ligne aurait du etre
+//                                          retiree. C'est un trou de detection, pas
+//                                          un drame -- mais un trou qui se cache est
+//                                          un trou qui grandit.
+//     relue == photo    -> « en_attente »  rien n'a bouge chez eux : l'envoi n'est
+//                                          pas passe.
+//     sinon             -> « conflit »     leur valeur a change, et ce n'est pas la
+//                                          notre. Sortie par un geste humain.
+//     pas de photo      -> « inconnu »     on ne devine pas.
+//
+// ⚠ ON COMPARE AU REGISTRE, PAS AUX CLES DE HEKTOR. Les champs qui ont recu une
+//   photo sont EXACTEMENT ceux qu'on sait juger : la meme correspondance sert
+//   aux deux. Une seconde table divergerait -- « deux copies d'une formule
+//   divergent tot ou tard », et on en a fait l'experience ce matin sur le
+//   chainage.
+// ⚠ LA POUSSEE PARTIELLE N'A RIEN A STOCKER. Pour l'annonce il faut `partial` et
+//   `skipped_fields` ; ici le carnet porte UNE LIGNE PAR CHAMP, donc « 7 sur 10
+//   sont passes » se LIT : sept lignes retirees, trois qui portent leur verdict.
+// ⚠ ON N'ECHOUE JAMAIS LE TRAVAIL POUR CA : la modification est passee chez
+//   Hektor. Un verdict manquant se repose au geste suivant ; un travail rejoue
+//   cinq fois fabrique des doublons.
+//
+// La correspondance carnet -> registre. LES AUTRES CHAMPS N'EN ONT PAS, et ce
+// n'est pas un oubli : prix_publique n'a pas de colonne au registre, honoraires
+// ne dit pas entree ou sortie, jours_retractation est une DATE la-bas, et
+// notaire_id / taux_honoraires sont de CLASSE A -- notre valeur, pas la leur.
+const CARNET_VERS_REGISTRE = {
+  montant:          "montant",
+  date:             "date",
+  date_acte:        "date_acte",
+  sequestre:        "sequestre",
+  prix_net_vendeur: "prix_net_vendeur",
+  numero_mandat:    "numero_mandat",
+  jours_validite:   "jours_validite",
+};
+
+async function marquerLeCarnetRestant(job, appAffaireId) {
+  const id = Number(appAffaireId);
+  if (!Number.isFinite(id) || id <= 0) return;
+  try {
+    const colonnes = Array.from(new Set(Object.values(CARNET_VERS_REGISTRE))).join(",");
+    const registre = await supabaseRequest(
+      `app_affaire_ledger?app_affaire_id=eq.${id}&select=${colonnes}&limit=1`, { method: "GET" });
+    const ligne = Array.isArray(registre) ? registre[0] : null;
+    if (!ligne) return;
+    const carnet = await supabaseRequest(
+      `app_affaire_champ_app?app_affaire_id=eq.${id}`
+      + `&select=champ,valeur_app,valeur_hektor_au_moment`, { method: "GET" });
+    if (!Array.isArray(carnet) || !carnet.length) return;
+
+    const quand = new Date().toISOString();
+    const resume = [];
+    for (const l of carnet) {
+      const champ = String(l.champ || "").trim();
+      const colonne = CARNET_VERS_REGISTRE[champ];
+      const photo = String(l.valeur_hektor_au_moment == null ? "" : l.valeur_hektor_au_moment).trim();
+      const relue = colonne ? String(ligne[colonne] == null ? "" : ligne[colonne]).trim() : "";
+      let etat = "inconnu";
+      if (colonne && photo && relue) {
+        if (memeValeurHektor(l.valeur_app, relue) === true) etat = "arrivee";
+        else if (memeValeurHektor(photo, relue) === true) etat = "en_attente";
+        else etat = "conflit";
+      }
+      await supabaseRequest(
+        `app_affaire_champ_app?app_affaire_id=eq.${id}`
+        + `&champ=eq.${encodeURIComponent(champ)}`, {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ etat, valeur_hektor_relue: relue || null, constate_le: quand }),
+        });
+      resume.push(`${champ}=${etat}`);
+    }
+    const conflits = resume.filter((x) => x.endsWith("=conflit")).length;
+    await logJob(job.id, "app_carnet_verdict", conflits ? "error" : "done",
+      (conflits ? `⚠ ${conflits} CONFLIT(S) au carnet. ` : "")
+      + `Verdict pose sur ${resume.length} ligne(s) : ${resume.join(", ")}.`, {
+        app_affaire_id: id, verdicts: resume,
+      });
+  } catch (error) {
+    await logJob(job.id, "app_carnet_verdict", "error",
+      "Verdict du carnet impossible -- la modification chez Hektor est bien passee. "
+      + "Il se reposera au geste suivant.", {
+        app_affaire_id: id,
+        error: error && error.message ? error.message : String(error),
+      });
+  }
+}
+
 async function reporterAuRegistre(job, appAffaireId, chezHektor) {
   const id = Number(appAffaireId);
   if (!Number.isFinite(id) || id <= 0 || !chezHektor) return;
@@ -12652,6 +12755,9 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
   // Puis le registre porte ce que Hektor a retenu -- l'ordre compte : on retire
   // d'abord ce qui ecrasait, on ecrit ensuite ce qui fait foi.
   await reporterAuRegistre(job, appAffaireId, (lu && lu.details) ? lu.details[cible] : null);
+  // 3.1 (16/09) : APRES le report, jamais avant -- le verdict compare a ce que
+  // le registre porte de HEKTOR, donc il faut que le report ait eu lieu.
+  await marquerLeCarnetRestant(job, appAffaireId);
   return { verifie: true, modifiee: true, confirmee: true,
            hektor_transaction_id: cible, conformes };
 }

@@ -1707,6 +1707,41 @@ export async function loadAffairesConsole(
  * Quatre champs n'existent QUE là — ils n'ont aucune colonne où être reposés :
  * `jours_validite`, `jours_retractation`, `notaire_id`, `taux_honoraires`.
  */
+/** ─── 3.1 : LE VERDICT SUR CHAQUE SAISIE DU CARNET ─── 16/09/2026
+ *
+ *  Le worker pose `etat` apres chaque envoi, en comparant TROIS valeurs : la
+ *  photo de ce que Hektor portait avant, la saisie, et ce que le registre porte
+ *  maintenant. Sans lui, une valeur du carnet s'affiche en vert qu'elle soit
+ *  arrivee, bloquee ou en conflit -- les trois se ressemblent.
+ *
+ *  ⚠ UNE SECONDE REQUETE, ET C'EST ASSUME. On pourrait l'obtenir en elargissant
+ *    `loadAffaireChampsApp`, mais sa valeur de retour est lue a SIX endroits de
+ *    la modale (le pre-remplissage, la grille de detail...). En changer la forme
+ *    pour une colonne d'affichage ferait payer cher un confort. Deux petites
+ *    lectures valent mieux qu'un remaniement.
+ *  ⚠ BEST EFFORT, comme le carnet lui-meme : sans verdict, l'ecran se comporte
+ *    comme avant. On n'empeche jamais d'ouvrir une fiche pour un libelle.
+ */
+export async function loadAffaireCarnetEtats(appAffaireIds: number[]): Promise<Map<number, Record<string, string>>> {
+  const vide = new Map<number, Record<string, string>>()
+  if (!hasSupabaseEnv || !supabase) return vide
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  if (!ids.length) return vide
+  const { data, error } = await supabase
+    .from('app_affaire_champ_app')
+    .select('app_affaire_id,champ,etat')
+    .in('app_affaire_id', ids)
+  if (error) return vide
+  const out = new Map<number, Record<string, string>>()
+  for (const l of (data ?? []) as Array<{ app_affaire_id: number; champ: string; etat: string | null }>) {
+    const cle = Number(l.app_affaire_id)
+    const actuel = out.get(cle) ?? {}
+    actuel[String(l.champ)] = String(l.etat ?? '')
+    out.set(cle, actuel)
+  }
+  return out
+}
+
 export async function loadAffaireChampsApp(appAffaireIds: number[]): Promise<Map<number, Record<string, string>>> {
   const vide = new Map<number, Record<string, string>>()
   if (!hasSupabaseEnv || !supabase) return vide

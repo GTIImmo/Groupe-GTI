@@ -111,6 +111,7 @@ import {
   createLinkHektorMandantJobOptimistic,
   loadActionStatus,
   loadAffaireChampsApp,
+  loadAffaireCarnetEtats,
   resolveAction,
   type ActionAbandonnee,
   loadRelationProvisionals,
@@ -15298,13 +15299,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // ete saisi -- y compris les quatre qui n'ont aucune colonne nulle part :
   // jours_validite, jours_retractation, notaire_id, taux_honoraires.
   const [carnetAffaires, setCarnetAffaires] = useState<Map<number, Record<string, string>>>(new Map())
+  // 3.1 (16/09) : le verdict que le worker a pose sur chaque saisie --
+  // arrivee, en_attente, conflit, inconnu. Garde a PART de `carnetAffaires`
+  // pour ne pas changer la forme d'une valeur lue a six endroits.
+  const [carnetEtats, setCarnetEtats] = useState<Map<number, Record<string, string>>>(new Map())
   useEffect(() => {
     const ids = statusChangeAffaires.map((a) => Number(a.app_affaire_id)).filter((n) => Number.isFinite(n))
-    if (!ids.length) { setCarnetAffaires(new Map()); return }
+    if (!ids.length) { setCarnetAffaires(new Map()); setCarnetEtats(new Map()); return }
     let annule = false
     loadAffaireChampsApp(ids)
       .then((c) => { if (!annule) setCarnetAffaires(c) })
       .catch(() => { if (!annule) setCarnetAffaires(new Map()) })
+    loadAffaireCarnetEtats(ids)
+      .then((e) => { if (!annule) setCarnetEtats(e) })
+      .catch(() => { if (!annule) setCarnetEtats(new Map()) })
     return () => { annule = true }
   }, [statusChangeAffaires])
 
@@ -19028,17 +19036,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           // validite et le notaire des affaires qu'on n'a pas saisies) est
                           // le chantier de LECTURE deja inscrit au plan : pas ici.
                           const carnet = carnetAffaires.get(Number(a.app_affaire_id)) ?? {}
+                          // 3.1 : la cle voyage avec la valeur -- sans elle, la grille ne
+                          // sait plus de QUEL champ elle parle, donc pas quel verdict afficher.
+                          const etats = carnetEtats.get(Number(a.app_affaire_id)) ?? {}
                           const champ = (cle: string, colonne?: unknown) => {
                             const duCarnet = String(carnet[cle] ?? '').trim()
-                            if (duCarnet) return { v: duCarnet, app: true }
+                            if (duCarnet) return { v: duCarnet, app: true, cle }
                             const duLedger = colonne == null ? '' : String(colonne).trim()
-                            return { v: duLedger, app: false }
+                            return { v: duLedger, app: false, cle }
                           }
-                          const argent = (x: { v: string; app: boolean }) =>
+                          const argent = <T extends { v: string }>(x: T): T =>
                             x.v ? { ...x, v: formatPrice(x.v) } : x
-                          const jour = (x: { v: string; app: boolean }) =>
+                          const jour = <T extends { v: string }>(x: T): T =>
                             x.v ? { ...x, v: formatDate(x.v) } : x
-                          const detail: Array<[string, { v: string; app: boolean }]> = [
+                          const detail: Array<[string, { v: string; app: boolean; cle: string }]> = [
                             ['Montant', argent(champ('montant', a.montant))],
                             ['Prix public', argent(champ('prix_publique'))],
                             ['Prix net vendeur', argent(champ('prix_net_vendeur'))],
@@ -19116,17 +19127,30 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                 </summary>
                                 <div className="sca-body">
                                   <div className="sca-grid">
-                                    {detail.map(([k, x]) => (
-                                      <div key={k} className={x.app ? 'is-app' : undefined}>
-                                        <span className="sca-k">{k}</span>
-                                        <span className="sca-v">{x.v || '—'}</span>
-                                      </div>
-                                    ))}
+                                    {detail.map(([k, x]) => {
+                                      // 3.1 : on ne qualifie QUE ce qui vient du carnet. Une
+                                      // valeur du registre n'attend rien, elle EST.
+                                      const etat = x.app ? String(etats[x.cle] ?? '') : ''
+                                      const dit = etat === 'conflit' ? 'conflit'
+                                        : etat === 'en_attente' ? 'pas encore parti'
+                                        : etat === 'arrivee' ? 'arrivé' : ''
+                                      return (
+                                        <div key={k} className={x.app ? 'is-app' : undefined}>
+                                          <span className="sca-k">{k}</span>
+                                          <span className="sca-v">
+                                            {x.v || '—'}
+                                            {dit ? (
+                                              <i className={`sca-etat is-${etat}`}>{dit}</i>
+                                            ) : null}
+                                          </span>
+                                        </div>
+                                      )
+                                    })}
                                   </div>
                                   <div className="sca-foot">
                                     <span>N° app <b>{a.app_affaire_id}</b></span>
                                     <span>N° Hektor <b>{numero || '—'}</b></span>
-                                    <span className="sca-leg">Les valeurs en vert viennent de votre saisie — elles survivent au run de nuit.</span>
+                                    <span className="sca-leg">Les valeurs en vert viennent de votre saisie — elles survivent au run de nuit. <b>Conflit</b> : quelqu'un a changé cette valeur chez Hektor. <b>Pas encore parti</b> : l'envoi n'est pas passé.</span>
                                   </div>
                                 </div>
                               </details>

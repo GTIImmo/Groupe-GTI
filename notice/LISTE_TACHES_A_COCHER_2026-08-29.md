@@ -3668,8 +3668,8 @@ GEL que Frederic a repere le premier).*
            ⭐ SA PHOTO                   OUI  FAITE LE 16/09 -- voir ci-dessous
            garde-fou avant ecriture     OUI  avisGardeFouSaisie (ecran)
                                              + garde anti-doublon (worker)
-           conflit VISIBLE              NON  -- pas de colonne conflict  conflict bool
-           poussee partielle marquee    NON      patch_annonce_edit_partial_status
+           ⭐ conflit VISIBLE            OUI  FAIT LE 16/09 -- colonne `etat`
+           ⭐ poussee partielle marquee  OUI  SANS COLONNE -- voir ci-dessous
            relecture immediate          OUI  FAITE LE 12/09 -- prouverTransactionModifiee
                                              + reporterAuRegistre (a3c6b78)
 
@@ -3699,9 +3699,29 @@ GEL que Frederic a repere le premier).*
          EPROUVE A L'ECRAN sur le compromis 50086 : montant 178 000 -> 177 500,
          carnet -> numero_mandat photographie a 11939. jours_validite sans photo,
          et c'est JUSTE : le miroir ne le remplit que pour les OFFRES.
-         ⚠ RIEN NE LIT ENCORE LA PHOTO. Le conflit visible et la poussee partielle
-           viennent apres, quand on aura vu ce qu'elle raconte. Aucun redemarrage
-           de worker : le worker n'est pas touche.
+         ⭐ ET LE VERDICT SUIT, LE MEME SOIR -- 3.1 EST CLOSE.
+         ⚠ J'AVAIS DIT « attendons quelques jours d'observation ». C'ETAIT FAUX,
+           et Frederic l'a repere : le verdict se DEDUIT, il ne s'observe pas.
+           Avec la photo, le worker tient trois valeurs et la regle tombe seule :
+               relue == saisie   -> arrivee     (la ligne aurait du etre retiree :
+                                                 on le DIT, un trou qui se cache grandit)
+               relue == photo    -> en_attente  (rien n'a bouge chez eux)
+               ni l'un ni l'autre-> conflit     (leur valeur a change)
+               pas de photo      -> inconnu     (on ne devine pas)
+         ⚠ ON COMPARE AU REGISTRE, PAS AUX CLES DE HEKTOR : reporterAuRegistre vient
+           d'y ecrire ce qu'ils ont retenu, et les champs qui ont une photo sont
+           EXACTEMENT ceux qu'on sait juger. Une seconde correspondance divergerait.
+         ⭐ LA POUSSEE PARTIELLE N'A BESOIN D'AUCUNE COLONNE. Pour l'annonce il faut
+           `partial` + `skipped_fields` ; ici le carnet porte UNE LIGNE PAR CHAMP,
+           donc « 7 sur 10 sont passes » se LIT : sept lignes retirees, trois qui
+           portent leur verdict. On ne recopie pas le patron a la lettre, et c'est
+           plus simple que lui.
+         ecran    la grille de la modale ecrit « conflit », « pas encore parti » ou
+                  « arrive » a cote de la valeur verte, et la legende l'explique.
+         ⚠ LES 28 LIGNES ECRITES AVANT LA PHOTO restent « inconnu » : on ne fabrique
+           pas de jugement retroactif. Elles se resoudront a la prochaine saisie.
+         ⚠ REDEMARRAGE DES QUATRE SERVICES : le worker est touche.
+         retour : les colonnes peuvent rester, il suffit de cesser de les lire.
 
 [~] 3.2  LES WORKERS « MODIFIER » -- LES TROIS GENRES
          ⚠ TITRE CORRIGE LE 10/09 : il disait « COMPROMIS ET VENTE ». L'OFFRE a ete
