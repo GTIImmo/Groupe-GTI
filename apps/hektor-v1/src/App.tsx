@@ -34297,6 +34297,11 @@ function lireMandantsAffaire(brut: unknown): Array<{ id: string; nom: string }> 
   if (typeof brut === 'string' && brut.trim()) {
     try { liste = JSON.parse(brut) } catch { return [] }
   }
+  // ⚠ UN OBJET SEUL EST UNE LISTE D'UN. Mesure du 16/09, vue A L'ECRAN et pas
+  //   dans le code : `acquereurs_json` vaut un OBJET sur une offre (un seul
+  //   acheteur) et une LISTE sur un compromis. N'accepter que les listes rendait
+  //   vide sur TOUTES les offres -- la modale n'y montrait aucun acquereur.
+  if (liste && typeof liste === 'object' && !Array.isArray(liste)) liste = [liste]
   if (!Array.isArray(liste)) return []
   const out: Array<{ id: string; nom: string }> = []
   for (const element of liste) {
