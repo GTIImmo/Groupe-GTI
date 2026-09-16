@@ -41,7 +41,53 @@ from hektor_pipeline.common import HektorClient, Settings  # noqa: E402
 CHEMINS = {
     "compromis": ("/Api/Vente/CompromisById/", "idCompromis"),
     "vente": ("/Api/Vente/VenteById/", "id"),
+    # 16/09 : l'offre y entre. Le balayage du miroir doit pouvoir verifier les
+    # TROIS genres, sinon il continue de deviner sur l'un d'eux.
+    "offre": ("/Api/Offre/OffreById/", "id"),
 }
+
+
+def etat_transaction(kind: str, ident: str) -> dict:
+    """L'etat d'une transaction chez Hektor, par son numero.
+
+    ⚠ TROIS REPONSES, ET ELLES NE SE CONFONDENT PAS :
+        {"trouve": True, ...}   elle existe
+        {"trouve": False}       Hektor repond 404 : elle n'existe plus
+        {"_error": "..."}       on n'a pas pu savoir -- L'APPELANT DECIDE, et la
+                                seule decision sure est de NE RIEN SUPPRIMER.
+
+    ⚠ ON N'IMPRIME JAMAIS L'EXCEPTION BRUTE ailleurs que dans `_error` tronque :
+      `authenticate()` met le secret dans l'URL, et une trace le recopierait.
+    """
+    ident = str(ident or "").strip()
+    if kind not in CHEMINS or not ident.isdigit():
+        return {"_error": "genre ou identifiant invalide"}
+    chemin, param = CHEMINS[kind]
+    try:
+        client = HektorClient(Settings.from_env())
+        payload = client.get_json(chemin, params={param: ident})
+    except Exception as exc:                                        # noqa: BLE001
+        texte = str(exc)
+        if "404" in texte:
+            return {"trouve": False}
+        return {"_error": texte[:200]}
+
+    # ⚠ L'OFFRE NE REPOND PAS SOUS `res`, MAIS SOUS `offre`. Mesure du 16/09 :
+    #   OffreById rend {"offre": {...}, "refresh": ...}. Lire `res` rendait None,
+    #   donc « trouve: False » sur une offre BIEN VIVANTE -- le pire des defauts
+    #   pour un verificateur de suppression : il aurait confirme des effacements
+    #   a tort. Teste sur trois offres : 9469 et 33050 vivantes, 32790 en 404.
+    cle = "offre" if kind == "offre" else "res"
+    res = payload.get(cle) if isinstance(payload, dict) else None
+    if isinstance(res, list):
+        res = res[0] if res else None
+    if kind == "vente":
+        vivante = bool(payload) and not (isinstance(res, (dict, list)) and not res)
+        return {"trouve": bool(vivante)}
+    if not isinstance(res, dict) or res.get("id") is None:
+        return {"trouve": False}
+    return {"trouve": True, "id": str(res.get("id")),
+            "status": str(res.get("status")) if res.get("status") is not None else ""}
 
 
 def main() -> int:

@@ -4,6 +4,8 @@ import argparse
 import hashlib
 import json
 import sqlite3
+import sys
+import time
 from typing import Any, Dict, Iterable
 
 from hektor_pipeline.common import Settings, connect_db, fetch_latest_raw_payloads, init_db, json_dumps, now_utc_iso
@@ -1046,9 +1048,66 @@ def upsert_contacts(conn: sqlite3.Connection, contact_ids: Iterable[str] | None 
 SEUIL_MIROIR_COMPLET = 0.5
 
 
+# Au-dela, ce n'est plus une suppression : c'est une anomalie. On refuse de
+# verifier 500 lignes une par une, et on refuse encore plus de les retirer.
+PLAFOND_CANDIDATS = 200
+
+
+def verifier_chez_hektor(genre: str, identifiants: list[str]) -> tuple[set[str], dict[str, str]]:
+    """Demande a Hektor, UN PAR UN, si ces transactions existent encore.
+
+    Rend (celles qui ont VRAIMENT disparu, celles qu'on garde et pourquoi).
+
+    ⚠ POURQUOI CETTE VERIFICATION EXISTE -- mesure du 16/09/2026.
+      Le compromis 22976 (annonce 6859, actif, 22 700 EUR) a ete retire du miroir
+      par ce balayage. Il EXISTE toujours : `CompromisById` le rend avec
+      `status: 1`. La liste de Hektor ne le compte pas -- son propre total
+      l'exclut -- et aucune des huit hypotheses testees ne l'explique (parametre,
+      statut du bien, annonce archivee, mandat manquant, dates a zero, notre
+      pagination, vente sur l'annonce, acquereur archive).
+      ➡ On ne peut donc pas se fier a la liste seule. Sur les 17 lignes marquees
+        absentes au 16/09 : 16 vraies suppressions, 1 fantome. 94 %, et les 6 %
+        coutent un compromis REEL masque dans l'app.
+
+    ⚠ ET C'EST DEJA LA REGLE DU WORKER, mot pour mot : « on ne supprime pas ce
+      qu'on ne voit pas ». Il relit par l'API avant d'effacer. Le balayage le
+      faisait pas.
+
+    ⚠ EN CAS DE DOUTE, ON GARDE. Une lecture qui echoue (`_error`) n'est pas une
+      disparition : la ligne reste, et on le dit.
+    """
+    from pathlib import Path as _Path
+    racine = _Path(__file__).resolve().parent
+    if str(racine / "phase2" / "sync") not in sys.path:
+        sys.path.insert(0, str(racine / "phase2" / "sync"))
+    try:
+        from transaction_etat_from_api import etat_transaction   # noqa: PLC0415
+    except Exception as exc:                                     # noqa: BLE001
+        print(f"[miroir] verification IMPOSSIBLE ({type(exc).__name__}) : "
+              f"aucune suppression ne sera faite.")
+        return (set(), {i: "verificateur indisponible" for i in identifiants})
+
+    disparues: set[str] = set()
+    gardees: dict[str, str] = {}
+    for ident in identifiants:
+        etat = etat_transaction(genre, ident)
+        if etat.get("trouve") is False:
+            disparues.add(ident)
+        elif etat.get("trouve") is True:
+            gardees[ident] = f"EXISTE ENCORE (status {etat.get('status') or '?'})"
+        else:
+            gardees[ident] = f"lecture impossible ({etat.get('_error', 'inconnue')})"
+        time.sleep(0.3)      # meme courtoisie que partout ailleurs
+    return (disparues, gardees)
+
+
 def aligner_miroir_sur_hektor(conn: sqlite3.Connection, *, table: str, id_col: str,
-                              endpoint_frais: str, libelle: str) -> int:
+                              endpoint_frais: str, libelle: str,
+                              genre: str | None = None) -> int:
     """Retire du miroir ce que la liste FRAICHE de Hektor ne contient plus.
+
+    ⚠ ET SEULEMENT APRES L'AVOIR DEMANDE A HEKTOR, transaction par transaction,
+      quand `genre` est fourni. Voir verifier_chez_hektor : la liste se trompe.
 
     Rend le nombre de lignes retirees. Ne leve jamais : un refus est un refus,
     pas une panne -- le run doit continuer.
@@ -1077,11 +1136,38 @@ def aligner_miroir_sur_hektor(conn: sqlite3.Connection, *, table: str, id_col: s
     conn.execute("CREATE TEMP TABLE temp_miroir_frais (id TEXT PRIMARY KEY)")
     conn.executemany("INSERT OR IGNORE INTO temp_miroir_frais(id) VALUES (?)",
                      [(x,) for x in frais])
-    cur = conn.execute(
-        f"DELETE FROM {table} WHERE CAST({id_col} AS TEXT) NOT IN "
-        f"(SELECT id FROM temp_miroir_frais)")
-    retirees = cur.rowcount or 0
+    candidats = [str(r[0]) for r in conn.execute(
+        f"SELECT CAST({id_col} AS TEXT) FROM {table} WHERE CAST({id_col} AS TEXT) NOT IN "
+        f"(SELECT id FROM temp_miroir_frais)")]
     conn.execute("DROP TABLE temp_miroir_frais")
+
+    if not candidats:
+        print(f"[miroir] {libelle} : {len(frais)} chez Hektor, {connus} au miroir "
+              f"-> 0 retiree(s)")
+        return 0
+    if len(candidats) > PLAFOND_CANDIDATS:
+        print(f"[miroir] REFUS ({libelle}) : {len(candidats)} candidats a la suppression, "
+              f"au-dela du plafond de {PLAFOND_CANDIDATS}. Ce n'est plus une suppression, "
+              f"c'est une anomalie -- aucune ligne retiree.")
+        return 0
+
+    a_retirer = set(candidats)
+    if genre:
+        a_retirer, gardees = verifier_chez_hektor(genre, candidats)
+        for ident, pourquoi in gardees.items():
+            print(f"[miroir] GARDEE ({libelle}) {ident} : {pourquoi}. "
+                  f"La liste ne la rend plus, Hektor si -- on ne supprime pas ce "
+                  f"qu'on ne voit pas.")
+    if not a_retirer:
+        print(f"[miroir] {libelle} : {len(candidats)} candidat(s), AUCUN confirme "
+              f"-> 0 retiree(s)")
+        return 0
+
+    marques = ",".join("?" for _ in a_retirer)
+    cur = conn.execute(
+        f"DELETE FROM {table} WHERE CAST({id_col} AS TEXT) IN ({marques})",
+        tuple(a_retirer))
+    retirees = cur.rowcount or 0
 
     # ON LE DIT TOUJOURS, meme a zero : un balayage silencieux se confond avec un
     # balayage qui n'a pas tourne.
@@ -1138,7 +1224,8 @@ def upsert_offres(conn: sqlite3.Connection) -> None:
             ),
         )
     aligner_miroir_sur_hektor(conn, table="hektor_offre", id_col="hektor_offre_id",
-                              endpoint_frais="list_offres_update", libelle="offres")
+                              endpoint_frais="list_offres_update", libelle="offres",
+                              genre="offre")
     conn.commit()
 
 
@@ -1192,7 +1279,8 @@ def upsert_compromis(conn: sqlite3.Connection) -> None:
             ),
         )
     aligner_miroir_sur_hektor(conn, table="hektor_compromis", id_col="hektor_compromis_id",
-                              endpoint_frais="list_compromis_update", libelle="compromis")
+                              endpoint_frais="list_compromis_update", libelle="compromis",
+                              genre="compromis")
     conn.commit()
 
 
@@ -1238,7 +1326,8 @@ def upsert_ventes(conn: sqlite3.Connection) -> None:
             ),
         )
     aligner_miroir_sur_hektor(conn, table="hektor_vente", id_col="hektor_vente_id",
-                              endpoint_frais="list_ventes_update", libelle="ventes")
+                              endpoint_frais="list_ventes_update", libelle="ventes",
+                              genre="vente")
     conn.commit()
 
 
