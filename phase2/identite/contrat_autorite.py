@@ -140,11 +140,44 @@ CHAMPS_APP_MANDAT: tuple[str, ...] = ("mandat_date_cloture",)
 #
 # L'ACQUEREUR est ecarte pour une autre raison : changer qui achete n'est pas une
 # correction, c'est une autre affaire. Elle se cree, elle ne se rectifie pas.
-CHAMPS_APP_AFFAIRE: tuple[str, ...] = (
-    "montant", "date", "date_acte", "sequestre",
-    "prix_net_vendeur", "prix_publique", "honoraires", "part_admin",
-    "commission_agence", "numero_mandat",
-)
+# ─── 3.3 : LES DIX CHAMPS ONT QUITTE LE CONTRAT ─── 16/09/2026
+#
+# ⚠ CE CONTRAT PROTEGEAIT DIX CHAMPS QUE HEKTOR CONNAIT. C'est exactement
+#   l'ecueil que le plan enonce pour les ANNONCES : « tant qu'ils saisissent dans
+#   Hektor, inscrire un champ ici le FIGERAIT sur une valeur perimee ». Frederic
+#   l'avait repere le premier, le 03/09, et l'avait nomme LE GEL.
+#
+# ⚠ ET LE GEL A COUTE, MESURE LE 16/09. L'enigme de la journee -- le registre
+#   incapable de rejouer ses propres chaines -- venait de la : le contrat
+#   reposait sa `date` TROIS MINUTES apres que le run avait calcule les chaines
+#   dessus. Le registre ne contenait plus la donnee de son propre calcul.
+#   Vider la liste supprime ce defaut a la racine.
+#
+# ⚠ ON NE POUVAIT PAS LE FAIRE AVANT, ET LE PLAN L'INTERDISAIT : « retirer le
+#   contrat AVANT que "modifier" marche, c'est rendre les corrections
+#   SILENCIEUSEMENT PERISSABLES ». Les deux conditions sont levees :
+#       l'app MODIFIE           eprouve sur les trois genres (07-08/09)
+#       la saisie a un FILET    le carnet (que le run ne touche jamais) + le
+#                               VERDICT pose le 16/09 : une saisie non arrivee
+#                               s'affiche « pas encore parti », elle ne se tait plus
+#
+# ⭐ ET LE RESULTAT EST PLUS SUR QU'AVANT, pas moins. Avant, une saisie qui
+#   n'arrivait pas FIGEAIT la colonne du registre sur notre valeur -- ce qui
+#   MASQUAIT la divergence. Desormais la colonne porte la valeur de Hektor, le
+#   carnet porte la notre, et l'ecran montre les deux avec le verdict. On ne
+#   protege plus la donnee : on protege l'ECRITURE, et on la rend visible.
+#
+# CE QUE LA LISTE CONTENAIT, pour le retour arriere :
+#     "montant", "date", "date_acte", "sequestre", "prix_net_vendeur",
+#     "prix_publique", "honoraires", "part_admin", "commission_agence",
+#     "numero_mandat"
+# La remettre suffit : `appliquer_contrat_affaire.py` est le SEUL lecteur, et il
+# sort proprement sur une liste vide (« contrat affaire vide : rien a appliquer »).
+#
+# ⚠ LES DEUX CHAMPS DE CLASSE A NE SONT PAS CONCERNES : `taux_honoraires` et
+#   `notaire_id` n'ont JAMAIS ete dans cette liste. Hektor les ignore, donc
+#   personne ne les ecrase -- ils vivent au carnet, et le carnet suffit.
+CHAMPS_APP_AFFAIRE: tuple[str, ...] = ()
 
 VIDE_NE_GAGNE_PAS: bool = True
 

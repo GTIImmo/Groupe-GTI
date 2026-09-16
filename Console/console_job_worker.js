@@ -12473,6 +12473,32 @@ async function marquerLeCarnetRestant(job, appAffaireId) {
         else if (memeValeurHektor(photo, relue) === true) etat = "en_attente";
         else etat = "conflit";
       }
+      if (etat === "arrivee") {
+        // ⭐ LE VERDICT RETIRE CE QU'IL DECLARE ARRIVE -- 16/09/2026 au soir.
+        //
+        // TROUVE PAR LE VERDICT LUI-MEME, a sa toute premiere passe :
+        // `numero_mandat` s'est declare « arrivee » alors que la ligne restait
+        // au carnet, donc verte a l'ecran, indefiniment.
+        //
+        // LA CAUSE. `retirerDuCarnetCeQuiEstArrive` ne retire que les champs de
+        // la table des PROUVABLES (CHAMPS_CARNET_PAR_CHARGE). Quatre champs n'y
+        // sont pas -- numero_mandat, jours_validite, jours_retractation, et les
+        // deux de classe A -- et restaient donc au carnet POUR TOUJOURS.
+        //
+        // ⚠ POURQUOI C'EST SUR DE RETIRER ICI : « arrivee » veut dire que le
+        //   REGISTRE porte exactement la saisie -- et le registre vient de
+        //   recevoir ce que Hektor a RETENU (reporterAuRegistre, deux lignes
+        //   plus haut). La valeur est donc chez eux. Il n'y a plus rien a garder.
+        // ⚠ ET CA DEVIENT VITAL AVEC 3.3 : une fois le contrat d'autorite vide,
+        //   le carnet est LE SEUL gardien de la saisie. Un gardien qui garde des
+        //   lignes deja arrivees est un gardien qui crie au loup -- on ne le
+        //   croirait plus le jour ou il aurait raison.
+        await supabaseRequest(
+          `app_affaire_champ_app?app_affaire_id=eq.${id}`
+          + `&champ=eq.${encodeURIComponent(champ)}`, { method: "DELETE" });
+        resume.push(`${champ}=arrivee, retire`);
+        continue;
+      }
       await supabaseRequest(
         `app_affaire_champ_app?app_affaire_id=eq.${id}`
         + `&champ=eq.${encodeURIComponent(champ)}`, {

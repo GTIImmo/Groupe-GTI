@@ -5011,7 +5011,28 @@ GEL que Frederic a repere le premier).*
                 veille -- l'erreur corrigee le 12/09 sur le perimetre contacts.
 
 
-[ ] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
+[x] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE     FAIT LE 16/09/2026
+         CHAMPS_APP_AFFAIRE est VIDE. `appliquer_contrat_affaire.py` en est le SEUL
+         lecteur et sort proprement (« contrat affaire vide : rien a appliquer »,
+         code retour 0 -- eprouve avant de commiter).
+         ⚠ LES DEUX CONDITIONS QUE CETTE TACHE POSAIT SONT LEVEES :
+             l'app MODIFIE          eprouve sur les trois genres (07-08/09)
+             la saisie a un FILET   le carnet + le VERDICT pose le meme jour
+         ⭐ ET LE GEL AVAIT DEJA COUTE, MESURE LE 16/09 : l'enigme du registre
+           incapable de rejouer ses propres chaines venait de la -- le contrat
+           reposait sa `date` TROIS MINUTES apres le calcul. Vider la liste
+           supprime ce defaut a la racine, et rend inutile le correctif
+           « deplacer le recalcul des chaines dans le run ».
+         ⭐ PLUS SUR QU'AVANT, PAS MOINS : une saisie non arrivee FIGEAIT la colonne
+           du registre sur notre valeur, ce qui MASQUAIT la divergence. Desormais
+           la colonne porte Hektor, le carnet porte l'app, et l'ecran montre les
+           deux avec le verdict.
+         ⚠ taux_honoraires et notaire_id N'Y ONT JAMAIS ETE (classe A) : Hektor les
+           ignore, personne ne les ecrase, le carnet suffit.
+         retour : remettre les dix noms dans la liste (ils sont dans le commentaire)
+
+         --- enonce d'origine ---
+[x] 3.3  LES 10 CHAMPS QUITTENT LE CONTRAT D'AUTORITE
          CHAMPS_APP_AFFAIRE -> ne garde que la classe A
          retour : remettre la liste (une ligne)
          verif : modifier dans Hektor, le run redescend bien la nouvelle valeur
