@@ -312,6 +312,17 @@ function runProjectPythonScript(args, options = {}) {
       settled = true;
       if (timeout) clearTimeout(timeout);
       if (code === 0) {
+        // ⛔ `previewSize` NE FAIT PAS QUE RACCOURCIR L'AFFICHAGE : il tronque
+        //   CE QUE L'APPELANT VA PARSER. Son nom dit « apercu », son effet dit
+        //   « coupe la reponse ». Piege paye le 16/09/2026 : la relecture des
+        //   transactions par l'API passait `previewSize: 1000` ; le jour ou sa
+        //   reponse a depasse 1 000 caracteres, le JSON est arrive ampute du
+        //   DEBUT, le parse a echoue, et le worker a conclu « API muette » --
+        //   un message qui accuse Hektor pour une coupure faite a la maison.
+        // ⚠ TOUT APPELANT QUI PARSE la sortie doit donner un previewSize
+        //   LARGEMENT au-dessus de sa plus grosse reponse. Ce n'est pas un
+        //   reglage d'affichage. Onze appels en passent un : les relire avant
+        //   d'enrichir la sortie d'un script.
         resolve({
           stdout: stdout.slice(-Number(options.previewSize || 1800)),
           stderr: stderr.slice(-Number(options.previewSize || 1800)),
@@ -16820,9 +16831,24 @@ async function lireTransactionsParApi(job, annonceId, genre, dateTransaction) {
                 "--annonce-id", String(annonceId), "--kind", genre];
   if (dateTransaction) args.push("--date", String(dateTransaction));
   try {
-    const out = await runProjectPythonScript(args, { timeoutMs: 45000, previewSize: 1000 });
+    // 16/09 : 200 000 et non 1 000 -- `previewSize` TRONQUE la sortie qu'on
+    // parse (voir runProjectPythonScript). Depuis que la relecture rapporte
+    // aussi les acquereurs et les mandants, une reponse fait ~2 000 caracteres
+    // pour UNE transaction ; un bien qui en porte dix en fait vingt mille.
+    const out = await runProjectPythonScript(args, { timeoutMs: 45000, previewSize: 200000 });
     const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
     const lu = safeJsonParse(derniere);
+    // 16/09 : quand la lecture rate, on DIT la taille. Le jour ou une troncature
+    // a coupe le JSON, le worker a mis la faute sur Hektor pendant que la cause
+    // etait chez nous. Une ligne de journal aurait suffi a le voir tout de suite.
+    if (!lu) {
+      await logJob(job.id, "hektor_transaction_relecture", "error",
+        `Reponse de l'API illisible : ${String(out.stdout || "").length} caracteres recus, `
+        + `derniere ligne de ${derniere.length}. Verifier previewSize AVANT d'accuser Hektor.`, {
+          hektor_annonce_id: annonceId, genre,
+          debut: derniere.slice(0, 120), fin: derniere.slice(-120),
+        });
+    }
     if (lu && lu.trouve === true && Array.isArray(lu.ids)) {
       return {
         tous: new Set(lu.ids.map((x) => String(x))),
