@@ -13,6 +13,16 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+
+
+def _il_y_a_48h() -> str:
+    """La borne de la sentinelle des transactions disparues.
+
+    ⚠ CALCULEE A CHAQUE LANCEMENT, et le script tourne toutes les deux heures :
+      la fenetre glisse donc d'elle-meme. Une constante figee aurait cesse de
+      dire quelque chose des le lendemain.
+    """
+    return (datetime.now(timezone.utc) - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
 from pathlib import Path
 from typing import Any
 
@@ -223,6 +233,43 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     # faux, ma lecture de cette liste s'etait arretee trop tot. Une verite par
     # sujet : ne pas dupliquer ici ce qu'elles couvrent deja.
     #
+    # --- LES TRANSACTIONS QUE HEKTOR A FAIT DISPARAITRE (16/09/2026) ----------
+    #
+    # Question de Frederic, 16/09 : « la donnee resterait, mais on serait averti
+    # qu'elle a ete supprimee chez Hektor. C'est ca ? ». La donnee restait et
+    # etait marquee -- mais PERSONNE N'ETAIT AVERTI : on ne le voyait qu'en
+    # ouvrant le bien concerne. Aucun compteur, aucune alerte.
+    #
+    # ⚠ ON COMPTE LE MOUVEMENT, PAS LE STOCK, et c'est tout l'interet. Il y a
+    #   deja 17 lignes marquees absentes (11 compromis, 5 offres, 1 vente) :
+    #   sonner sur le stock ferait crier la sentinelle en permanence, exactement
+    #   le defaut de `contact_sans_numero`. On ne regarde donc que ce que le
+    #   DERNIER run a fait disparaitre.
+    #
+    # COMMENT `last_seen_at` DIT L'AGE. Le run repose cette date sur toute ligne
+    # qu'il revoit au miroir. Une ligne disparue cesse d'etre revue : sa date se
+    # fige a la derniere nuit ou Hektor la portait encore. « Marquee absente ET
+    # vue il y a moins de 48 h » veut donc dire « elle a disparu cette nuit ».
+    # 48 h et non 24 : une nuit ratee ne doit pas faire manquer l'alerte.
+    #
+    # ⚠ CETTE SENTINELLE NE VOIT PAS LES SUPPRESSIONS ORDONNEES PAR L'APP, et
+    #   c'est voulu : celles-la retirent la ligne (journal app_affaire_supprimee),
+    #   elles ne la marquent pas. Ce qu'on surveille ici, c'est ce que Hektor
+    #   fait SANS nous le dire.
+    {
+        "key": "data.transaction_disparue",
+        "label": "Transactions disparues de Hektor cette nuit",
+        "table": "app_affaire_ledger",
+        "params": {"present_in_hektor": "is.false",
+                   "last_seen_at": f"gte.{_il_y_a_48h()}"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "kind,hektor_annonce_id,hektor_affaire_id,montant,date",
+            "order": "last_seen_at.desc",
+            "limit": 5,
+        },
+    },
     # SEUIL 0 : une ligne ici = quelqu'un attend, sans le savoir.
     {
         "key": "data.geste_abandonne",

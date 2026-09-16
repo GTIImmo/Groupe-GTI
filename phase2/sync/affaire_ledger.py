@@ -1209,6 +1209,73 @@ def retirer_les_lignes_en_conflit(
     return gardees, ecartees
 
 
+def appliquer_les_suppressions(con: sqlite3.Connection, client) -> dict:
+    """Le serveur retire les lignes que l'app a fait supprimer chez Hektor.
+
+    ⚠ POURQUOI CETTE ETAPE EXISTE, ET POURQUOI ICI. Le worker efface la ligne
+      chez Supabase ; si le serveur gardait la sienne, le push d'en dessous la
+      RECREERAIT -- il fait `SELECT *` puis upsert. Le serveur est maitre de ce
+      registre : c'est donc a lui d'apprendre la suppression, et il l'apprend par
+      le journal `app_affaire_supprimee`.
+
+    ⚠ ON LIT LE JOURNAL EN LIGNE, PAS SA COPIE LOCALE. La copie descend a 07:30,
+      le run tourne a 05:00 : une suppression faite hier a 10:00 ne serait pas
+      encore descendue, et la ligne locale ressusciterait la ligne en ligne. Une
+      lecture REST de quelques lignes coute moins qu'un jour de fantome.
+
+    ⚠ ET LA SUPPRESSION EST LOCALE UNIQUEMENT. On ne retouche pas Supabase : le
+      worker l'a deja fait, avec la preuve. Ici on s'aligne, on ne decide pas.
+
+    ⚠ DELETE-NEVER RESTE LA REGLE PAR DEFAUT. Cette etape ne traite QUE ce que
+      l'app a ordonne. Ce que Hektor efface dans son coin garde sa ligne, marquee
+      `present_in_hektor = false` -- on ne sait pas pourquoi elle a disparu.
+    """
+    resume = {"au_journal": 0, "retirees_en_local": 0, "cochees": 0, "deja_absentes": 0}
+    try:
+        lignes = client.request(
+            method="GET",
+            path="app_affaire_supprimee?serveur_aligne=is.false"
+                 "&select=app_affaire_id,kind,hektor_affaire_id&limit=1000")
+    except Exception as exc:                                        # noqa: BLE001
+        # Ne JAMAIS faire echouer le run pour ca : sans cette lecture, la ligne
+        # reste une nuit de plus, ce qui est genant mais pas grave.
+        print(f"[affaire_ledger] journal des suppressions illisible ({type(exc).__name__}) : "
+              f"le registre local n'est pas aligne cette nuit.")
+        return resume
+    if not isinstance(lignes, list) or not lignes:
+        return resume
+    resume["au_journal"] = len(lignes)
+    faits: list[int] = []
+    for ligne in lignes:
+        try:
+            affaire = int(ligne.get("app_affaire_id"))
+        except (TypeError, ValueError):
+            continue
+        curseur = con.execute(
+            f"DELETE FROM {LEDGER_TABLE} WHERE app_affaire_id = ?", (affaire,))
+        if curseur.rowcount:
+            resume["retirees_en_local"] += 1
+            print(f"[affaire_ledger] SUPPRIMEE en local : affaire {affaire} "
+                  f"({ligne.get('kind')} {ligne.get('hektor_affaire_id')}) -- "
+                  f"suppression ordonnee par l'app, journal a l'appui.")
+        else:
+            resume["deja_absentes"] += 1
+        faits.append(affaire)
+    con.commit()
+    # On ne coche QU'APRES avoir commis en local : si le processus tombe entre
+    # les deux, la nuit suivante repassera dessus sans dommage (le DELETE est
+    # idempotent). L'inverse laisserait une suppression cochee mais pas faite.
+    for affaire in faits:
+        try:
+            client.request(method="PATCH",
+                           path=f"app_affaire_supprimee?app_affaire_id=eq.{affaire}",
+                           payload={"serveur_aligne": True}, prefer="return=minimal")
+            resume["cochees"] += 1
+        except Exception:                                           # noqa: BLE001
+            pass
+    return resume
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Refresh + push du ledger d'affaires (Niveau B).")
     parser.add_argument("--refresh", action="store_true", help="UPSERT local depuis le miroir Hektor.")
@@ -1229,6 +1296,15 @@ def main() -> None:
         if not (url and key):
             raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required")
         client = SupabaseRestClient(base_url=url, service_role_key=key)
+        # ⚠ AVANT DE POUSSER, PAS APRES : pousser d'abord recreerait en ligne les
+        #   lignes que le worker vient d'effacer.
+        suppressions = appliquer_les_suppressions(con, client)
+        if suppressions["au_journal"]:
+            result["suppressions"] = suppressions
+            print(f"[affaire_ledger] journal des suppressions : "
+                  f"{suppressions['au_journal']} a traiter, "
+                  f"{suppressions['retirees_en_local']} retiree(s) en local, "
+                  f"{suppressions['deja_absentes']} deja absente(s).")
         rows = ledger_rows_for_push(con)
         rows, ecartees = retirer_les_lignes_en_conflit(con, rows)
         for annonce, kind, hid, id_local, id_serveur in ecartees:

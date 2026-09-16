@@ -17051,11 +17051,11 @@ async function handleDeleteHektorVente(job) {
         : "elle repond toujours a l'API"));
   }
 
-  // LA VENTE DISPARAIT CHEZ HEKTOR, MAIS PAS CHEZ NOUS : le registre est
-  // « delete-never » par conception -- ce qu'il a vu, il le garde. present_in_hektor
-  // a deja ete mis a false par la RPC, au moment du clic. La trace reste, et l'app
-  // sait qu'elle n'existe plus chez eux.
-  const lignes = payload.app_affaire_id ? 1 : 0;
+  // ─── LA VENTE DISPARAIT CHEZ HEKTOR, ET CHEZ NOUS AUSSI ───   16/09/2026
+  // Meme regle que le compromis : le delete-never protege ce que HEKTOR efface
+  // sans nous le dire, pas ce que l'app a ordonne avec preuve a l'appui.
+  const retrait = await retirerAffaireDuRegistre(job, payload, resultat.brut);
+  const lignes = retrait.efface ? 1 : 0;
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "delete_hektor_vente",
@@ -17069,6 +17069,86 @@ async function handleDeleteHektorVente(job) {
     });
   return { status: "done", hektor_vente_id: idVente, verbe: resultat.verbe,
            registre_lignes: lignes, sync_job: syncJob };
+}
+
+/** ─── UNE SUPPRESSION ORDONNEE PAR L'APP DISPARAIT PARTOUT ───   16/09/2026
+ *
+ *  Demande de Frederic, 07/09 : « si suppression, la ligne doit ENTIEREMENT
+ *  DISPARAITRE de mon serveur et de mon apps ».
+ *
+ *  ⚠ DEUX CAS, DEUX VERITES, ET ON NE LES MELANGE PAS :
+ *      HEKTOR a supprime dans son coin -> le balayage de nuit le decouvre APRES
+ *        COUP, on ne sait pas pourquoi, et la ligne RESTE (marquee absente).
+ *        Effacer une fausse manoeuvre de leur cote la perdrait pour de bon.
+ *      L'APP a ordonne -> on sait laquelle, et on a la PREUVE que Hektor l'a
+ *        effacee (relecture par l'API, `trouve = false` exige). La ligne part.
+ *
+ *  ⚠ ET ON N'EFFACE PAS QUE CHEZ SUPABASE. Le push du registre fait
+ *    `SELECT * FROM app_affaire_ledger` EN LOCAL puis upsert : la ligne locale
+ *    recreerait la ligne en ligne des le run suivant. Le serveur est maitre de
+ *    ce registre -- il doit donc APPRENDRE la suppression. C'est l'objet du
+ *    journal `app_affaire_supprimee`, que `affaire_ledger.py` lit avant de
+ *    pousser.
+ *
+ *  ⚠ ON INSCRIT AVANT D'EFFACER. Si l'effacement echoue, il reste une trace de
+ *    l'intention ; l'inverse laisserait une ligne morte que personne ne
+ *    reclamerait. Et le journal ne s'efface JAMAIS : une suppression oubliee ne
+ *    se distingue pas d'une suppression qui n'a pas eu lieu.
+ *
+ *  ⚠ NE JETTE JAMAIS. Hektor a deja efface : faire echouer le travail ici
+ *    donnerait « echec » a un geste qui a REUSSI la ou ca compte. On journalise
+ *    et on rend la main.
+ */
+async function retirerAffaireDuRegistre(job, payload, preuve) {
+  const appAffaireId = payload && payload.app_affaire_id;
+  if (!appAffaireId) {
+    await logJob(job.id, "app_registre_suppression", "done",
+      "Pas d'app_affaire_id dans la charge : rien a retirer du registre", null);
+    return { inscrit: false, efface: false };
+  }
+  const ligne = {
+    app_affaire_id: appAffaireId,
+    hektor_annonce_id: payload.hektor_annonce_id ? Number(payload.hektor_annonce_id) : null,
+    kind: payload.kind || null,
+    hektor_affaire_id: String(payload.hektor_compromis_id || payload.hektor_vente_id
+                              || payload.hektor_offre_id || "") || null,
+    preuve: String(preuve || "").slice(0, 2000) || null,
+    origine: "geste_app",
+    supprime_par: job.requested_by || null,
+    serveur_aligne: false,
+  };
+  let inscrit = false;
+  try {
+    await supabaseRequest("app_affaire_supprimee", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=minimal",
+      // ⚠ JSON.stringify : supabaseRequest passe `options` tel quel a fetch, qui
+      //   attend une chaine. Un tableau nu partirait en "[object Object]".
+      body: JSON.stringify([ligne]),
+    });
+    inscrit = true;
+  } catch (erreur) {
+    await logJob(job.id, "app_registre_suppression", "error",
+      "Journal des suppressions NON ecrit : la ligne du registre est laissee en place",
+      { error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return { inscrit: false, efface: false };
+  }
+  let efface = false;
+  try {
+    await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`,
+                          { method: "DELETE", prefer: "return=minimal" });
+    efface = true;
+  } catch (erreur) {
+    await logJob(job.id, "app_registre_suppression", "error",
+      "Ligne du registre NON effacee en ligne, mais INSCRITE au journal : le serveur s'alignera",
+      { error: erreur && erreur.message ? erreur.message : String(erreur) });
+  }
+  await logJob(job.id, "app_registre_suppression", "done",
+    `Affaire ${appAffaireId} : journal ${inscrit ? "ecrit" : "NON ecrit"}, `
+    + `ligne en ligne ${efface ? "effacee" : "conservee"}. Le serveur retirera la sienne `
+    + `au prochain run (il lit le journal avant de pousser).`,
+    { app_affaire_id: appAffaireId, inscrit, efface });
+  return { inscrit, efface };
 }
 
 /**
@@ -17226,9 +17306,11 @@ async function handleDeleteHektorCompromis(job) {
   // l'autre sens.
   const redescente = await redescendreStatutHektor(job, "hektor_compromis_delete", annonceId, payload);
 
-  // Chez nous la ligne RESTE : present_in_hektor = false, pose par la RPC au clic.
-  // Le delete-never ne change pas -- ce que le registre a vu, il le garde.
-  const lignes = payload.app_affaire_id ? 1 : 0;
+  // ─── ET CHEZ NOUS, ELLE PART AUSSI ───   16/09/2026, tache 3.5
+  // Le delete-never vaut pour ce que HEKTOR efface dans son coin -- pas pour ce
+  // que l'app a ORDONNE et dont elle a la preuve. Voir retirerAffaireDuRegistre.
+  const retrait = await retirerAffaireDuRegistre(job, payload, resultat.brut);
+  const lignes = retrait.efface ? 1 : 0;
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "delete_hektor_compromis",
