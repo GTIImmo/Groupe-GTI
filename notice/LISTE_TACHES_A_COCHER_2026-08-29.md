@@ -3665,7 +3665,7 @@ GEL que Frederic a repere le premier).*
            piece                        transactions              annonces (patron)
            ------------------------------------------------------------------------
            saisie en attente            OUI  app_affaire_champ_app  app_annonce_pending
-           ⚠ SA PHOTO                   NON  -- pas de base_snapshot   base_snapshot
+           ⭐ SA PHOTO                   OUI  FAITE LE 16/09 -- voir ci-dessous
            garde-fou avant ecriture     OUI  avisGardeFouSaisie (ecran)
                                              + garde anti-doublon (worker)
            conflit VISIBLE              NON  -- pas de colonne conflict  conflict bool
@@ -3679,6 +3679,29 @@ GEL que Frederic a repere le premier).*
            simplement notre propre saisie pas encore partie. C'est exactement ce
            que `base_snapshot` resout pour l'annonce depuis le 20/06.
          ⚠ ET C'EST 4.1 QUI ATTEND CELA : « le carnet disparait APRES 2.1 et 3.1 ».
+
+         ⭐ LA PHOTO EST POSEE -- 16/09/2026, patch_photo_saisie_affaire.
+         colonne  `valeur_hektor_au_moment` sur app_affaire_champ_app : ce que le
+                  registre portait DE HEKTOR avant la saisie. Une photo par CHAMP
+                  (le carnet porte deja une ligne par champ), la ou l'annonce
+                  photographie tout d'un bloc.
+         ⚠ LA PREMIERE PHOTO GAGNE, et c'est le point delicat : la ligne du registre
+           est ecrite de facon OPTIMISTE par cette meme RPC, donc juste apres une
+           modification elle porte NOTRE valeur pendant ~40 s. Rephotographier
+           prendrait notre valeur precedente pour celle de Hektor. Le `coalesce` de
+           l'ON CONFLICT garde donc la premiere -- et la ligne disparait quand la
+           valeur arrive, donc la photo suivante est fraiche. Aucun entretien.
+         ⚠ QUATRE CHAMPS SANS PHOTO, ASSUMES : prix_publique (le registre n'a pas
+           cette colonne), honoraires (entree ou sortie ? on ne tranche pas),
+           jours_retractation (le registre porte une DATE, pas un nombre),
+           notaire_id et taux_honoraires (CLASSE A : notre valeur, pas la leur).
+           NULL veut dire « on ne savait pas », pas « on a oublie ».
+         EPROUVE A L'ECRAN sur le compromis 50086 : montant 178 000 -> 177 500,
+         carnet -> numero_mandat photographie a 11939. jours_validite sans photo,
+         et c'est JUSTE : le miroir ne le remplit que pour les OFFRES.
+         ⚠ RIEN NE LIT ENCORE LA PHOTO. Le conflit visible et la poussee partielle
+           viennent apres, quand on aura vu ce qu'elle raconte. Aucun redemarrage
+           de worker : le worker n'est pas touche.
 
 [~] 3.2  LES WORKERS « MODIFIER » -- LES TROIS GENRES
          ⚠ TITRE CORRIGE LE 10/09 : il disait « COMPROMIS ET VENTE ». L'OFFRE a ete
