@@ -278,25 +278,112 @@ def pousser(cl: SupabaseRestClient, lignes: list[dict], paquet: int = 400) -> di
     return dict(total)
 
 
+def empreinte(ligne: dict) -> tuple:
+    """Ce qui distingue une ligne d'une autre. Le reste (l'horodatage, l'auteur)
+    change a chaque ecriture et ne dit rien du contenu."""
+    return (str(ligne.get("cote") or ""), int(ligne.get("rang") or 0),
+            str(ligne.get("hektor_user_id") or "").strip(),
+            str(ligne.get("nom_au_moment") or "").strip(),
+            trois_decimales(Decimal(str(ligne.get("pourcentage") or 0))),
+            str(ligne.get("origine") or ""))
+
+
+def deja_en_ligne(con: sqlite3.Connection) -> dict[int, set] | None:
+    """Ce que la copie locale porte, par dossier. None si on ne peut pas savoir.
+
+    ⚠ POURQUOI LA COPIE LOCALE FAIT FOI ICI. Cette table est descendue chaque
+      matin a 07:30, APRES le push de 05:00 : elle reflete donc exactement ce que
+      cette etape a ecrit la veille. Le seul autre ecrivain est une SAISIE
+      humaine -- et celle-la, la base la protege d'elle-meme (`proteges_app`).
+      Comparer en local coute zero requete ; demander a Supabase ce qu'il porte
+      en couterait une quarantaine, pour la meme reponse.
+
+    ⚠ ET EN CAS DE DOUTE, ON ENVOIE. Table absente, illisible, vide : on rend
+      None et tout repart. Se taire par erreur serait pire que reecrire.
+    """
+    try:
+        rows = con.execute(
+            "SELECT app_chaine_id, cote, rang, hektor_user_id, nom_au_moment, "
+            "pourcentage, origine FROM app_affaire_repartition").fetchall()
+    except sqlite3.Error:
+        return None
+    if not rows:
+        return None
+    par_dossier: dict[int, set] = defaultdict(set)
+    for r in rows:
+        try:
+            chaine = int(r[0])
+        except (TypeError, ValueError):
+            continue
+        par_dossier[chaine].add(empreinte({
+            "cote": r[1], "rang": r[2], "hektor_user_id": r[3],
+            "nom_au_moment": r[4], "pourcentage": r[5], "origine": r[6]}))
+    return par_dossier
+
+
+def a_envoyer(lignes: list[dict], en_ligne: dict[int, set] | None) -> tuple[list[dict], int]:
+    """Ne garde que les dossiers dont le contenu a CHANGE.
+
+    ⚠ PAR DOSSIER ENTIER, jamais par ligne : la RPC remplace le dossier qu'elle
+      recoit. Envoyer une seule ligne d'un dossier effacerait les autres.
+    """
+    if en_ligne is None:
+        return (lignes, 0)
+    par_dossier: dict[int, list[dict]] = defaultdict(list)
+    for l in lignes:
+        par_dossier[int(l["app_chaine_id"])].append(l)
+    garde: list[dict] = []
+    inchanges = 0
+    for chaine, bloc in par_dossier.items():
+        if en_ligne.get(chaine) == {empreinte(b) for b in bloc}:
+            inchanges += 1
+            continue
+        garde.extend(bloc)
+    return (garde, inchanges)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repartition de commission (lot 5).")
     # Le calcul est TOUJOURS fait et affiche ; `--pousser` est ce qui ecrit.
     ap.add_argument("--pousser", action="store_true", help="Envoyer a Supabase (RPC).")
     ap.add_argument("--purger-orphelines", action="store_true",
                     help="Supprimer les lignes DERIVEES dont le dossier n'existe plus.")
+    # ─── POURQUOI CETTE COMPARAISON EXISTE ───                    16/09/2026
+    #
+    # Question de Frederic : « pourquoi la descente aurait-elle du mettre a jour
+    # ce matin, on n'a rien change depuis ? ». Elle avait redescendu les 15 989
+    # lignes de cette table -- a juste titre : le push de 05:00 les avait TOUTES
+    # reecrites, donc leur horodatage avait bouge.
+    #
+    # ⚠ LE GASPILLAGE VENAIT DE NOUS. On ecrivait 15 989 lignes pour zero
+    #   changement, et la descente les redescendait toutes. Le delta de la
+    #   descente etait honnete ; c'est l'etape d'avant qui lui mentait.
+    #
+    # ➡ On compare donc avant d'ecrire, exactement comme l'etape des notaires
+    #   (« 18 441 deja a jour, 0 a ecrire »).
+    ap.add_argument("--tout", action="store_true",
+                    help="Envoyer TOUT, sans comparer. Pour une remise a niveau.")
     args = ap.parse_args()
 
     con = sqlite3.connect(f"file:{PHASE2_DB.as_posix()}?mode=ro", uri=True)
     try:
         lignes, compte = calculer(con)
+        en_ligne = None if args.tout else deja_en_ligne(con)
     finally:
         con.close()
+    total_calcule = len(lignes)
+    lignes, dossiers_inchanges = a_envoyer(lignes, en_ligne)
 
     nommes = compte.pop("_nommes", [])  # type: ignore[arg-type]
     print("-- CE QUE LE CALCUL LOCAL DONNE --")
     for k, v in sorted(compte.items(), key=lambda x: -x[1]):
         print("   %-44s %6d" % (k, v))
-    print("   %-44s %6d" % ("LIGNES au total", len(lignes)))
+    print("   %-44s %6d" % ("LIGNES au total", total_calcule))
+    if en_ligne is None:
+        print("   %-44s %6s" % ("comparaison impossible : on envoie tout", "-"))
+    else:
+        print("   %-44s %6d" % ("dossiers deja a jour (rien a envoyer)", dossiers_inchanges))
+        print("   %-44s %6d" % ("LIGNES A ENVOYER", len(lignes)))
     if nommes:
         print("")
         print("-- LES DOSSIERS NON CONVERTIS, NOMMES --")
@@ -316,7 +403,9 @@ def main() -> int:
             r = cl.request(method="POST", path="rpc/app_repartition_purger_orphelines",
                            payload={})
             print("   purge des orphelines   : %s" % json.dumps(r, ensure_ascii=False))
-        if args.pousser:
+        if args.pousser and not lignes:
+            print("   rien a envoyer : la table en ligne est deja a jour.")
+        if args.pousser and lignes:
             r = pousser(cl, lignes)
             print("   pousse vers Supabase   : %s" % json.dumps(r, ensure_ascii=False))
             print("   ⚠ `proteges_app` compte les dossiers que l'APP possede : la base")
