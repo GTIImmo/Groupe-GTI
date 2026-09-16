@@ -3409,7 +3409,7 @@ GEL que Frederic a repere le premier).*
          verif  : sur un bien a offre acceptee, l'acheteur est propose sans rien
                   taper, et la chaine du compromis est celle de l'offre
 
-[~] 2.6  PLUSIEURS ACQUEREURS   ECRAN FAIT ET EPROUVE · CORRECTIF WORKER EPROUVE INEFFICACE
+[x] 2.6  PLUSIEURS ACQUEREURS   PROUVE LE 16/09 : HEKTOR EN GARDE BIEN DEUX
          ⚠ TITRE CORRIGE LE 10/09 : il disait « worker corrige, NON EPROUVE » alors que
            son propre corps raconte l'essai du 07/09 (compromis 50073, services redemarres)
            qui l'a prouve INEFFICACE. Le titre datait d'avant l'essai, et laissait croire

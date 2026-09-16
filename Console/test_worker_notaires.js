@@ -64,6 +64,14 @@ function arg(nom, defaut) {
   // --mandants 141053,485955   ou   --mandants vide   pour affirmer une liste VIDE.
   // ⚠ ABSENT N'EST PAS VIDE : sans l'option, la cle ne part pas du tout et Hektor
   //   garde les mandants qu'il deduit du mandat. C'est tout l'objet du test.
+  // --acquereurs 605030,605029  : 2.6, l'essai qui manque depuis le 02/09.
+  // ⚠ LES TROIS ESSAIS PRECEDENTS UTILISAIENT LE MEME COUPLE, dont un contact
+  //   (605075) que Hektor n'a JAMAIS attache et qui n'est que « mandant ». Ils
+  //   ne prouvaient donc pas que Hektor n'en garde qu'un.
+  const acquereursBrut = argOption("acquereurs");
+  const acquereurs = acquereursBrut && acquereursBrut !== "vide"
+    ? acquereursBrut.split(",").map((x) => x.trim()).filter(Boolean)
+    : [];
   const mandantsBrut = argOption("mandants");
   const mandantsAffirmes = mandantsBrut !== null;
   const mandants = mandantsAffirmes && mandantsBrut !== "vide"
@@ -78,6 +86,10 @@ function arg(nom, defaut) {
   if (notaireAcq) affirmes.acquereur = true;
   if (notaireVend) affirmes.mandant = true;
 
+  // ⚠ LA CIBLE SE REDESIGNE : 50078 a ete supprime le 16/09, 50084 l'a remplace.
+  //   `--compromis 50084` evite de recopier ce script a chaque essai.
+  const compromisId = arg("compromis", CIBLE.compromis_id);
+
   const jobId = crypto.randomUUID();
   const payload = {
     target_status: "compromise",
@@ -87,8 +99,10 @@ function arg(nom, defaut) {
     transaction_date: CIBLE.date,
     amount: prix,
     sale_price: prix,
-    buyer_contact_id: CIBLE.acquereur,
-    buyer_contact_ids: null,
+    buyer_contact_id: acquereurs[0] || CIBLE.acquereur,
+    // La regle du front, reproduite a l'identique : la cle ne part QU'A PARTIR
+    // DE DEUX. En dessous, la charge du cas courant ne change pas d'un octet.
+    buyer_contact_ids: acquereurs.length > 1 ? acquereurs : null,
     // ─── LES DEUX NOTAIRES, comme la modale les envoie ───
     notaire_id: notaireAcq || null,
     seller_notary_id: notaireVend || null,
@@ -98,7 +112,7 @@ function arg(nom, defaut) {
   if (!creer) {
     payload.reprendre_transaction = true;
     payload.app_affaire_id = CIBLE.app_affaire_id;
-    payload.compromis_id = CIBLE.compromis_id;
+    payload.compromis_id = compromisId;
     payload.compromis_state = "active";
   }
 
@@ -123,11 +137,12 @@ function arg(nom, defaut) {
   });
   console.log("statut         ", r.status);
   console.log("job            ", jobId);
-  console.log("geste          ", creer ? "CREATION" : `reprise du compromis ${CIBLE.compromis_id}`);
+  console.log("geste          ", creer ? "CREATION" : `reprise du compromis ${compromisId}`);
   console.log("prix           ", prix);
   console.log("notaire acq.   ", notaireAcq || "(non envoye)");
   console.log("notaire vendeur", notaireVend || "(non envoye)");
   console.log("affirmes       ", JSON.stringify(payload.notaires_affirmes));
+  console.log("acquereurs     ", acquereurs.length ? JSON.stringify(acquereurs) : `(defaut ${CIBLE.acquereur})`);
   console.log("mandants       ", mandantsAffirmes ? JSON.stringify(mandants) : "(non affirmes -- Hektor garde les siens)");
   const t = await r.text();
   if (r.status >= 300) console.log(t.slice(0, 400));
