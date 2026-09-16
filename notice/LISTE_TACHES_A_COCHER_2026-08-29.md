@@ -5176,6 +5176,34 @@ GEL que Frederic a repere le premier).*
            Hektor, et on a mesure le 04/09 qu'il ment des qu'une transaction meurt
            sans etre effacee. C'est la sentinelle 4.2, pas le read-through.
 
+[x] 3.6  L'OFFRE NE SE TOUCHE PLUS QUAND SON DOSSIER EST ENGAGE   FAIT LE 16/09/2026
+         Frederic : « il faut empecher la modification des offres d'achat du moment
+         ou un compromis est ouvert. Refuser une offre sur une chaine avec compromis
+         et vente ne devrait pas etre possible. »
+         ⚠ LA REGLE EXISTAIT DEPUIS LE 08/09, A MOITIE POSEE. `bienEngage()` retirait
+           le bouton « Choisir » ; le code disait lui-meme « Refuser et Accepter
+           restent disponibles sur un bien engage, on n'empeche que de CHANGER DE
+           CIBLE ». C'est cette moitie qui est fermee.
+         POURQUOI : offre acceptee -> compromis signe -> offre refusee apres coup.
+         L'etat FINAL devient « refusee », la regle ne voit plus d'offre acceptee,
+         le compromis part seul. Quatre affaires du parc en sont coupees en deux.
+         ARBITRAGE DE FREDERIC : on verrouille sur le COMPROMIS OUVERT, pas sur la
+         simple acceptation -- revenir sur une offre acceptee tant que rien n'est
+         signe reste un geste legitime.
+         ecran    offreVerrouilleeParSonDossier() cache les deux boutons et NOMME
+                  le bloc qui verrouille + la porte de sortie (annuler le compromis).
+                  On ne regarde QUE le dossier de l'offre : les offres ecartees des
+                  autres acquereurs restent refusables, c'est le geste normal.
+         serveur  app_geste_affaire_optimistic leve `offre_verrouillee` -- l'ecran
+                  n'est pas une serrure. patch_offre_verrouillee_2026-09-16.sql,
+                  CREATE OR REPLACE meme signature, les GRANT verifies apres coup
+                  (postgres, authenticated, service_role -- anon toujours absent).
+         MESURE : 103 offres vivantes verrouillees par un compromis, 8 475 par une
+         vente (affaires deja conclues), 1 462 libres.
+         retour : retirer le bloc marque « 16/09 » des deux cotes
+         verif  : sur une offre dont le dossier porte un compromis, les deux boutons
+                  disparaissent ; la RPC refuse et ne cree AUCUN travail
+
 [~] 3.5  LE MIROIR DES TRANSACTIONS DOIT COLLER A HEKTOR      OUVERTE LE 07/09/2026
          Demande de Frederic : « si suppression soit compromis soit vente, la
          ligne doit entierement disparaitre de mon serveur et de mon apps ».

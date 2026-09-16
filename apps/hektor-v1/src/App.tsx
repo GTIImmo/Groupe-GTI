@@ -19144,9 +19144,32 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     Un champ laissé vide n'efface rien : il conserve ce que Hektor porte déjà.
                   </p>
                 ) : null}
+                {(() => {
+                  // 16/09 : on DIT pourquoi les deux boutons ne sont pas la.
+                  // Sans un mot, l'utilisateur cherche un bouton disparu.
+                  const verrou = statusChangeStatus === 'offer'
+                    ? offreVerrouilleeParSonDossier(statusChangeAffaires, affaireCourantePourStatut())
+                    : null
+                  if (!verrou) return null
+                  const estVente = String(verrou.kind) === 'vente'
+                  const numero = String(verrou.hektor_affaire_id ?? '').trim()
+                  return (
+                    <p className="sca-ambigu is-alerte" role="alert">
+                      <b className="sca-amb-t">On ne revient plus sur cette offre</b>
+                      <span className="sca-amb-d">
+                        Son dossier porte {estVente ? 'une vente' : 'un compromis en cours'}
+                        {numero ? ` (n° ${numero})` : ''}. La refuser ou l'accepter maintenant
+                        couperait l'affaire en deux dans le registre. Pour y revenir, il faut
+                        d'abord {estVente ? 'supprimer la vente' : 'annuler le compromis'}.
+                      </span>
+                    </p>
+                  )
+                })()}
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending || statusChangeCorrectionPending}>Annuler</button>
-                  {affaireCourantePourStatut() && statusChangeStatus === 'offer' ? (
+                  {affaireCourantePourStatut() && statusChangeStatus === 'offer'
+                   && !offreVerrouilleeParSonDossier(statusChangeAffaires,
+                                                     affaireCourantePourStatut()) ? (
                     <>
                       <button className="ghost-button button-subtle" type="button"
                         onClick={() => handleGesteHektor('refus')}
@@ -24871,6 +24894,59 @@ function affaireEstVivante(a: AffaireLedgerRow): boolean {
   if (AFFAIRE_ETAT_MORT.has(String(a.state ?? '').trim().toLowerCase())) return false
   const aUnNumeroHektor = Boolean(String(a.hektor_affaire_id ?? '').trim())
   return !(aUnNumeroHektor && a.present_in_hektor === false)
+}
+
+/** ─── 16/09/2026 : L'OFFRE EST VERROUILLEE PAR SON PROPRE DOSSIER ───
+ *
+ *  LA REGLE, DANS LES MOTS DE FREDERIC : « il faut empecher la modification des
+ *  offres d'achat du moment ou un compromis est ouvert. Refuser une offre sur une
+ *  chaine avec compromis et vente ne devrait pas etre possible. »
+ *
+ *  POURQUOI. Une offre acceptee, un compromis signe derriere, puis l'offre passee
+ *  en REFUS : son etat FINAL devient « refusee », et la regle de chainage -- qui
+ *  lit l'etat final -- ne voit plus d'offre acceptee. Le compromis part seul, et
+ *  l'affaire se retrouve coupee en deux. Mesure du 16/09 : quatre fois dans le
+ *  parc (annonces 1970, 23353, 40519, 61599).
+ *
+ *  ⚠ ON NE REGARDE QUE LE DOSSIER DE CETTE OFFRE, jamais tout le bien. Refuser
+ *    les offres ecartees quand une autre est retenue est le geste NORMAL du
+ *    metier : les bloquer enfermerait le negociateur pour rien.
+ *  ⚠ CE QUE HEKTOR A EFFACE NE VERROUILLE RIEN -- meme clause que le chainage
+ *    depuis le 07/09. Sinon un compromis supprime chez eux tiendrait l'offre en
+ *    otage POUR TOUJOURS.
+ *  ⚠ UNE AFFAIRE SANS DOSSIER n'est pas verrouillee : nee dans l'app, elle n'a
+ *    pas encore de numero de chaine, et il n'y a rien a proteger.
+ *
+ *  ⚠ L'ECRAN N'EST PAS LA SERRURE. Le refus vit dans la RPC
+ *    (app_geste_affaire_optimistic, patch_offre_verrouillee_2026-09-16.sql) :
+ *    un travail rejoue ou un front en cache passerait ici sans s'arreter. Cette
+ *    fonction sert a EXPLIQUER avant, pas a interdire.
+ *
+ *  Rend le bloc qui verrouille -- pour pouvoir le NOMMER a l'ecran -- ou null.
+ */
+function offreVerrouilleeParSonDossier(
+  lignes: AffaireLedgerRow[],
+  affaire: AffaireLedgerRow | null | undefined,
+): AffaireLedgerRow | null {
+  if (!affaire || String(affaire.kind) !== 'offre') return null
+  const cleDe = (r: AffaireLedgerRow) => (r.app_chaine_id != null
+    ? String(r.app_chaine_id)
+    : 'seule-' + String(r.app_affaire_id))
+  const cle = cleDe(affaire)
+  // Les memes mots que la fonction Supabase : ('cancelled','annule').
+  const compromisMort = (r: AffaireLedgerRow) => {
+    const e = String(r.state ?? '').trim().toLowerCase()
+    return e === 'cancelled' || e === 'annule' || e === 'annulé' || e === 'annuled'
+  }
+  const memeDossier = lignes.filter((r) => {
+    if (r.app_affaire_id === affaire.app_affaire_id) return false
+    if (cleDe(r) !== cle) return false
+    const aUnNumero = Boolean(String(r.hektor_affaire_id ?? '').trim())
+    return !(aUnNumero && r.present_in_hektor === false)
+  })
+  const vente = memeDossier.find((r) => String(r.kind) === 'vente')
+  if (vente) return vente
+  return memeDossier.find((r) => String(r.kind) === 'compromis' && !compromisMort(r)) ?? null
 }
 
 /** ─── 2.2c : LES DOSSIERS OUVERTS D'UN BIEN (05/09/2026) ───
