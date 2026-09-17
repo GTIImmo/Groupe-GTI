@@ -27,7 +27,7 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 **Chantier : `C.19-d` — LE REGISTRE DES TRANSACTIONS.**
 ⚬ **LA PAGE DE TÊTE DE LA LISTE REMPLACE SA LECTURE** : `notice/LISTE_TACHES_A_COCHER_2026-08-29.md`,
-les **44 premières lignes**. Elle porte la tâche en cours, les trois suivantes, ce qui attend
+les **57 premières lignes**. Elle porte la tâche en cours, les trois suivantes, ce qui attend
 Frédéric, et les renvois par numéro de ligne. Le reste du document est une **archive** : on
 l’ouvre à la ligne indiquée, jamais en entier (6 500 lignes).
 
@@ -36,7 +36,7 @@ Cinq phases, à partir de la **ligne 1372**.
 ```
 PHASE 0  mesurer, bloquante        l. 1912   0.1 quasi finie  ·  0.2 0.3 0.4 faites
 PHASE 1  le registre, invisible    l. 2328   terminee
-PHASE 2  l'ecran                   l. 2903   reste 2.4 (l. 3333), 2.6, 2.7 (l. 3556), 26bis-TRANSACTIONS (l. 2906)
+PHASE 2  l'ecran                   l. 2903   reste 2.4 (l. 3333), 2.6, 2.7 COTE ECRAN (l. 3556), 26bis-TRANSACTIONS (l. 2906)
 PHASE 3  l'ecriture part chez Hektor  l. 3635   EN COURS
 PHASE 4  menage                    l. 5290   reste 4.1 (l. 5293), 4.2 (l. 5297)  ·  4.3 faite le 07/09
 ```
@@ -93,46 +93,36 @@ lots de 100 avec 60 s, vagues de 2 000 avec 300 s. C'est la méthode de
 rien déclenché (56 926 lectures). La coquille est écartée pour lire — mesuré le
 10/09 : le formulaire arrive identique sans elle, ce qui divise le flux par deux.
 
-**La tâche ouverte est `3.2e` — le LOT 5, la RÉPARTITION DE COMMISSION.**
+**LA TÂCHE OUVERTE est `3.5` — L'ESSAI RÉEL DE LA SUPPRESSION** (liste, l. 5163).
 
-⭐ **Chantier ouvert le 12/09 en lisant les pages 2 et 3 de l'assistant**, que personne
-n'avait ouvertes. Une transaction créée par l'app partait avec sa commission **non
-attribuée** : 40 ventes réelles sur 40 en portent une, le compromis 50078 créé par l'app
-en portait zéro, et « Part Réseau » ramassait les 8 333 € HT.
+Les cinq pièces sont codées depuis le 07/09 et le journal a été ajouté le 16/09 —
+mais il n'avait **jamais été lu** (`request` au lieu de `_request`, corrigé le 17/09
+par `bcb05fe`). Sans ce correctif, une suppression ordonnée par l'app **revenait au
+run suivant**. Il ne reste que la preuve de bout en bout. ⚠ **Elle écrit chez Hektor
+et demande un go explicite.**
 
-**Ce qui est établi, et mesuré :**
-```
-l'attribution se fait AU COMPROMIS      39 compromis réels sur 39
-la vente REPREND celle du compromis     16 biens portant les deux, 16 fois identique
-Hektor propose les ACTIFS de l'agence   3 agences vérifiées, proposés = actifs
-l'acquéreur est suivi par une AUTRE agence   26,6 % (1 445 / 5 428)
-« Part Réseau » est le RÉSIDU           100 % sans personne, 0 % dès qu'on désigne
-```
+**Les deux suivantes** : les **mandants depuis l'app** (lot 3, l. 4018), puis
+**2.7 côté écran** (l. 3556) et **2.6** (l. 3412).
 
-⛔ **DÉCISION DE FRÉDÉRIC, 14/09 : RIEN NE PART CHEZ HEKTOR** (06bd38b). Leur modèle ne
-sait pas exprimer un quart des répartitions réelles. La répartition devient une donnée
-de l'app — *« mieux vaut un champ absent qu'un champ menteur »*.
+⛔ **CE QUE FRÉDÉRIC A MIS DE CÔTÉ**, et qu'on cesse de remonter à chaque tour : les
+**2 dettes** (la surveillance qui crie depuis juillet · le numéro de contact qui ne
+voyage pas avec sa fiche).
 
-**Au 15/09 — LA TABLE EXISTE ET ELLE EST REMPLIE.** 13 309 lignes sur 6 655 dossiers,
-dont 6 635 totalisent exactement 100 %. Descendue au serveur local. La condition de
-Frédéric est remplie : *« au minimum sur le registre des affaires de mon apps et le serveur »*.
+### `3.2e` — la répartition de commission *(détail : liste, section 3.2e)*
 
-**Ce qui reste, et l'ordre compte** (détail : liste, section 3.2e, bloc « CE QU'IL RESTE À FAIRE ») :
-1. **lever `VenteDateStart`** de 2010 à 2000 (`run_full_pipeline.ps1:42`) — Hektor a
-   1 610 ventes de 2006-2009 que nous n'importons pas, et c'est la SEULE cause des
-   1 585 « compromis en cours » fantômes. Contrôle bloquant : 1 711 → ~114 ;
-2. **colonne `commissions_octets` + sélecteur `--sans-commission`** — sans elle on ne
-   peut pas viser les ~880 ventes dont la page 2 est revenue vide, et le trou n'est
-   pas auto-réparable ;
-3. **le rattrapage console** : ~2 490 pièces, 2 h 09, `-StopAt "02:55"` ;
-4. **réécrire le convertisseur** à la forme du projet (lire `phase2.sqlite`, pousser) ;
-5. **puis seulement** remettre l'étape au run, après les deux entretiens.
+⛔ **RIEN NE PART CHEZ HEKTOR** (Frédéric, 14/09, 06bd38b) : leur modèle ne sait pas
+exprimer un quart des répartitions réelles — l'acquéreur est suivi par une AUTRE agence
+dans 26,6 % des cas. *« Mieux vaut un champ absent qu'un champ menteur. »*
+La table existe et elle est remplie ; le reste est **garé**. ✅ Le point 1 — lever
+`VenteDateStart` à 2000 — est fait (993dcc5). ⛔ L'étape de conversion reste
+**désactivée dans le run** (8456e9f).
 
-⛔ **L'étape de conversion est DÉSACTIVÉE dans le run** (8456e9f) : elle lisait Supabase
-pour écrire dans Supabase alors que sa matière est en local. Décision de Frédéric, 15/09.
-⚠ Le relevé par négociateur vient APRÈS.
-
-Ensuite : `3.2d` lots 2-3-4 (l. 4017), `3.3`, `3.1` — qui commande `4.1`.
+**Au 17/09 — LA JOURNÉE QUI A TOUT ÉPROUVÉ D'UN COUP.** `2.7` (couverture mandat
+48 % → 74,9 %), `3.3` (le contrat d'autorité vidé), `3.1` (le verdict du carnet), le
+chaînage (12 670 chaînes, les 4 copies de la règle d'accord, test ⑤ à 0 écart) et la
+note libre d'une transaction. ⚠ **Et un bannissement d'IP à 06:34** : le balayage du
+miroir fabriquait un client neuf par pièce, donc 17 logins OAuth en 22 s. Corrigé
+(`c524f7e`), **pas encore éprouvé en réel** — le run de 5 h est son juge.
 
 > ⭐ **`0.1` est quasi finie.** Sa phrase *« l'assistant refuse d'avancer sous
 > automatisation »* était **fausse** : il refuse un formulaire qu'on ne lui rend pas
