@@ -1464,6 +1464,12 @@ export type AffaireLedgerRow = {
    *  app_affaire_id de la chaine, RECALCULE a chaque run de nuit. */
   app_chaine_id: number | null
   numero_mandat: string | null
+  /** D'OU VIENT `numero_mandat` -- 2.7, 17/09/2026.
+   *  `hektor` (il l'a envoye) · `deduit_unique` (l'annonce n'a qu'un mandat) ·
+   *  `deduit_periode` (la date tombe dans ses bornes) · `deduit_mandant` ·
+   *  `indetermine`. Sans elle, un mandat DEDUIT serait indiscernable d'un
+   *  mandat DONNE -- et l'ecran affirmerait ce qu'il a devine. */
+  mandat_origine: string | null
   hektor_acquereur_id: string | number | null
   acquereur_json: string | null
   /** TOUS les acquereurs de la transaction (1.8, 05/09/2026), et pas seulement le
@@ -1529,6 +1535,7 @@ export type AffaireLedgerRow = {
 
 const affaireLedgerSelect =
   'app_affaire_id,app_dossier_id,hektor_annonce_id,kind,hektor_affaire_id,numero_mandat,' +
+  'mandat_origine,' +
   'hektor_acquereur_id,acquereur_json,acquereurs_json,state,montant,date,date_acte,sequestre,present_in_hektor,' +
   'prix_net_vendeur,honoraires_entree,honoraires_sortie,' +
   'mandants_json,notaires_json,propositions_json,commission_agence,' +

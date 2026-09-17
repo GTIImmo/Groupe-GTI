@@ -19070,6 +19070,39 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <span>Les affaires de ce bien</span>
                         <span className="sca-n">{statusChangeAffaires.length}</span>
                       </div>
+                      {/* ─── 2.7 : PLUSIEURS MANDATS SUR UN MEME BIEN ─── 17/09/2026
+                          Un bien peut etre mis en vente, ne pas trouver preneur, puis
+                          REPARTIR sous un nouveau mandat des annees plus tard. Les
+                          offres de 2020 appartiennent au premier, celles de 2024 au
+                          second : deux histoires, pas une.
+
+                          ⚠ ON SIGNALE, ON NE FILTRE PAS -- et c'est la consigne de la
+                            tache, mot pour mot : « signaler plutot que d'inventer une
+                            regle ». Filtrer cette liste serait un defaut connu : elle
+                            ne filtre RIEN volontairement, c'est ce qui permet de
+                            retrouver une affaire NEE DANS L'APP (numero >= 1 000 000,
+                            case Hektor vide). Le 01/09, une offre creee depuis l'app
+                            etait invisible aux boutons pour cette raison exacte.
+                          ⚠ LE CAS EST RARE, ET MESURE le 17/09 sur le registre entier :
+                            UNE annonce, DEUX transactions. La tache en annoncait 17,
+                            mais ce chiffre datait du MIROIR, avant la cascade -- depuis,
+                            Hektor tranche lui-meme la quasi-totalite des cas. */}
+                      {(() => {
+                        const mandats = Array.from(new Set(
+                          statusChangeAffaires
+                            .map((a) => String(a.numero_mandat ?? '').trim())
+                            .filter(Boolean),
+                        ))
+                        if (mandats.length < 2) return null
+                        return (
+                          <p className="status-change-note" role="status">
+                            <strong>{mandats.length} mandats différents</strong> sur ce bien
+                            {' '}({mandats.join(', ')}). Les affaires les plus anciennes
+                            {' '}appartiennent à une mise en vente précédente — vérifiez le
+                            {' '}numéro avant d'agir.
+                          </p>
+                        )
+                      })()}
                       <ul>
                         {statusChangeAffaires.map((a) => {
                           const morte = AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())
@@ -19125,7 +19158,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             ['Date', jour(champ('date', a.date))],
                             ["Date d'acte", jour(champ('date_acte', a.date_acte))],
                             ['Notaire', champ('notaire_id')],
-                            ['N° mandat', champ('numero_mandat', a.numero_mandat)],
+                            // ─── 2.7 : LE NUMERO DIT D'OU IL VIENT ─── 17/09/2026
+                            // Le registre porte le mandat de 74,9 % des transactions,
+                            // mais la MOITIE est DEDUITE par la cascade (8 335 lignes
+                            // sur 23 191). Afficher les deux a l'identique, c'est
+                            // affirmer ce qu'on a devine.
+                            // ⚠ On ne qualifie QUE la valeur du registre : si elle
+                            //   vient du carnet, c'est une saisie humaine et l'origine
+                            //   calculee ne la decrit pas.
+                            ['N° mandat', (() => {
+                              const m = champ('numero_mandat', a.numero_mandat)
+                              const devine = !m.app && m.v
+                                && String(a.mandat_origine ?? '').startsWith('deduit')
+                              return devine ? { ...m, v: `${m.v} · déduit` } : m
+                            })()],
                           ]
                           return (
                             <li key={a.app_affaire_id}>
