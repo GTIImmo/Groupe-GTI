@@ -1504,12 +1504,36 @@ def appliquer_les_suppressions(con: sqlite3.Connection, client) -> dict:
     # idempotent). L'inverse laisserait une suppression cochee mais pas faite.
     for affaire in faits:
         try:
-            client.request(method="PATCH",
-                           path=f"app_affaire_supprimee?app_affaire_id=eq.{affaire}",
-                           payload={"serveur_aligne": True}, prefer="return=minimal")
+            # ⚠ `_request`, AVEC LE TIRET BAS -- SECOND correctif, 17/09/2026.
+            #
+            # Le matin du 17 j'ai corrige la LECTURE du journal (bcb05fe) et pas
+            # celle-ci, dans la MEME fonction, vingt lignes plus bas. L'essai reel
+            # de 3.5 l'a trouvee le jour meme : les suppressions etaient bien
+            # appliquees en local, mais le drapeau ne se cochait jamais.
+            #
+            # ⚠ CE `except` EST LE PIRE DU FICHIER : il n'imprime RIEN. La lecture
+            #   d'en haut annoncait au moins « journal illisible (AttributeError) » ;
+            #   ici, l'echec etait TOTALEMENT muet. Il rend maintenant la raison.
+            # ⚠ LE DEGAT ETAIT BORNE, et c'est la seule raison pour laquelle ca n'a
+            #   pas coute : le DELETE local est idempotent, donc une suppression
+            #   jamais cochee repasse chaque nuit sans rien casser -- elle
+            #   s'applique, ne trouve plus rien, et se compte « deja absente ».
+            #   Le journal, lui, ne se vidait jamais.
+            # ⚠ DEUX CLASSES `SupabaseRestClient` COEXISTENT dans le projet :
+            #   celle de push_contacts_to_supabase expose `request`, celle de
+            #   push_upgrade_to_supabase -- la NOTRE, celle qu'on importe --
+            #   n'expose que `_request`. Copier une ligne d'un fichier a l'autre
+            #   ne suffit donc pas : il faut savoir DE QUI on tient son client.
+            client._request(method="PATCH",                          # noqa: SLF001
+                            path=f"app_affaire_supprimee?app_affaire_id=eq.{affaire}",
+                            payload={"serveur_aligne": True}, prefer="return=minimal")
             resume["cochees"] += 1
-        except Exception:                                           # noqa: BLE001
-            pass
+        except Exception as exc:                                    # noqa: BLE001
+            # On ne fait pas echouer le run pour un drapeau : la suppression EST
+            # faite en local, et c'est ce qui compte. Mais on le DIT.
+            print(f"[affaire_ledger] affaire {affaire} : suppression appliquee en "
+                  f"local mais drapeau NON coche ({type(exc).__name__}) -- "
+                  f"elle repassera au prochain run, sans dommage.")
     return resume
 
 
