@@ -1448,13 +1448,34 @@ def appliquer_les_suppressions(con: sqlite3.Connection, client) -> dict:
     """
     resume = {"au_journal": 0, "retirees_en_local": 0, "cochees": 0, "deja_absentes": 0}
     try:
-        lignes = client.request(
+        # ⚠ `_request`, AVEC LE TIRET BAS -- corrige le 17/09/2026.
+        #
+        # Ecrit `client.request(...)` le 16/09. SupabaseRestClient
+        # (push_upgrade_to_supabase.py) n'expose QUE `_request` : l'appel levait une
+        # AttributeError A CHAQUE EXECUTION, depuis la premiere. Le `except` d'en
+        # dessous l'avalait et annoncait « le registre local n'est pas aligne cette
+        # nuit » -- un message qui se lit comme un constat metier, pas comme un
+        # plantage. Le chemin ② n'a donc JAMAIS fonctionne.
+        #
+        # ⚠ CE QUE CA COUTAIT, et ce n'est pas un nettoyage qui saute : sans cette
+        #   lecture, la ligne locale survit ; le push d'en dessous fait `SELECT *`
+        #   en local puis upsert ; la transaction supprimee REVIENT chez Supabase au
+        #   run suivant. Une suppression qui s'annule toute seule pendant la nuit --
+        #   exactement le scenario que le journal existait pour empecher.
+        # ⚠ SANS DEGAT A CE JOUR : 0 suppression en attente au moment du correctif,
+        #   le journal ne portait que 3 lignes, toutes deja alignees. Le defaut
+        #   n'aurait mordu qu'a la premiere suppression ordonnee depuis l'app.
+        lignes = client._request(                                   # noqa: SLF001
             method="GET",
             path="app_affaire_supprimee?serveur_aligne=is.false"
                  "&select=app_affaire_id,kind,hektor_affaire_id&limit=1000")
     except Exception as exc:                                        # noqa: BLE001
         # Ne JAMAIS faire echouer le run pour ca : sans cette lecture, la ligne
         # reste une nuit de plus, ce qui est genant mais pas grave.
+        # ⚠ MAIS CE FILET EST AUSSI UN BANDEAU : ecrit pour tolerer une panne
+        #   RESEAU, il a avale pendant un jour une faute de FRAPPE. Si ce bloc
+        #   reparle un jour d'AttributeError, de TypeError ou de NameError, ce
+        #   n'est pas l'environnement qui flanche -- c'est le code.
         print(f"[affaire_ledger] journal des suppressions illisible ({type(exc).__name__}) : "
               f"le registre local n'est pas aligne cette nuit.")
         return resume
