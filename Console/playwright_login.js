@@ -421,7 +421,8 @@ async function gotoWithRetry(page, url, opts = {}) {
           filters: {
             limit: 1,
             offers: ["SALE"],
-            status: "ALL",
+            // 17/09/2026 : Hektor a remplace `status` par `statuses` (16/09 apres-midi).
+            statuses: ["ALL"],
             page: 1,
             order: "LATEST",
             sources: ["local"],

@@ -148,7 +148,8 @@ def graphql_page(
                 # La LOCATION pro (11) est volontairement exclue : decision du 27/08,
                 # elle reste au serveur et n'apparait pas dans l'app.
                 "offers": ["COMMERCIAL_SALE"],
-                "status": "ALL",
+                # 17/09/2026 : Hektor a remplace `status` par `statuses` (16/09 apres-midi). Eprouve : total identique au miroir.
+                "statuses": ["ALL"],
                 "page": page,
                 "order": "LATEST",
                 "sources": ["local"],

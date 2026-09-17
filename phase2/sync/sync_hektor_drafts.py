@@ -111,7 +111,8 @@ def graphql_page(session: requests.Session, cookies: str, token: str | None, pag
             "filters": {
                 "limit": 50,
                 "offers": ["SALE"],
-                "status": "ALL",
+                # 17/09/2026 : Hektor a remplace `status` par `statuses` (16/09 apres-midi). Eprouve : total identique au miroir.
+                "statuses": ["ALL"],
                 "page": page,
                 "order": "LATEST",
                 "sources": ["local"],

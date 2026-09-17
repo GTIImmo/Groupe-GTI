@@ -2968,7 +2968,8 @@ async function fetchLatestHektorProperties(page = 1, archived = false, famille =
     filters: {
       limit: 50,
       offers: [famille],
-      status: "ALL",
+      // 17/09/2026 : Hektor a remplace `status` par `statuses` (16/09 apres-midi).
+      statuses: ["ALL"],
       page,
       order: "LATEST",
       sources: ["local"],
