@@ -1672,6 +1672,55 @@ export async function ecrireAffaireConditions(
   return data as { ok: boolean; lignes: number }
 }
 
+/** ─── LA NOTE LIBRE D'UNE TRANSACTION ─── 17/09/2026
+ *
+ *  Un texte par transaction, sur les TROIS genres. Donnee propre a l'app : elle
+ *  ne part jamais chez Hektor, et le run de nuit ne la touche jamais.
+ *
+ *  ⚠ BEST EFFORT A LA LECTURE, comme les conditions : une lecture ratee rend une
+ *    carte vide et l'ecran se comporte comme avant. On n'empeche jamais d'ouvrir
+ *    une fiche parce qu'une note n'a pas pu etre lue.
+ */
+export async function loadAffairesNotes(
+  appAffaireIds: number[],
+): Promise<Map<number, string>> {
+  const vide = new Map<number, string>()
+  if (!hasSupabaseEnv || !supabase) return vide
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  if (!ids.length) return vide
+  const { data, error } = await supabase
+    .from('app_affaire_note')
+    .select('app_affaire_id,texte')
+    .in('app_affaire_id', ids)
+  if (error || !data) return vide
+  const out = new Map<number, string>()
+  for (const ligne of data as Array<{ app_affaire_id: number; texte: string | null }>) {
+    out.set(Number(ligne.app_affaire_id), String(ligne.texte ?? ''))
+  }
+  return out
+}
+
+/** Ecrit la note d'une transaction -- ou l'EFFACE si le texte est vide.
+ *
+ *  ⚠ RIEN NE PART CHEZ HEKTOR. Aucun travail worker n'est cree : c'est le meme
+ *    choix que les conditions suspensives de la veille.
+ *  ⚠ CELLE-CI LEVE, contrairement a la lecture : une saisie qu'on croit
+ *    enregistree et qui ne l'est pas est pire qu'une erreur affichee.
+ */
+export async function ecrireAffaireNote(
+  appAffaireId: number,
+  texte: string,
+): Promise<{ ok: boolean }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_affaire_note_ecrire', {
+    target_affaire_id: appAffaireId,
+    texte,
+  })
+  if (error) throw new Error(error.message)
+  return data as { ok: boolean }
+}
+
 /** Ce que l'assistant a rendu, pour les affaires données. Jamais d'exception :
  *  une lecture ratée rend une carte vide, et l'écran retombe sur le registre. */
 export async function loadAffairesConsole(

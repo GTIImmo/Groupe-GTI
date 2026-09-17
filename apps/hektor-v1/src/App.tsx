@@ -175,6 +175,8 @@ import {
   loadAffairesConditions,
   loadConditionCatalogue,
   ecrireAffaireConditions,
+  loadAffairesNotes,
+  ecrireAffaireNote,
   type AffaireCondition,
   type ConditionCatalogueRow,
   type AffaireLedgerRow,
@@ -11992,6 +11994,11 @@ export default function App() {
   // Quelle affaire a fourni la liste affichee. Sans ce temoin, rouvrir la modale
   // sur une AUTRE transaction garderait les conditions de la precedente.
   const [conditionsChargeesPour, setConditionsChargeesPour] = useState<number | null>(null)
+  // La note libre de la transaction visee (17/09). Gardee a PART des
+  // conditions : une note n'est pas une liste, et elle vaut pour les TROIS
+  // genres alors que les conditions ne valent que pour le compromis.
+  const [statusChangeNote, setStatusChangeNote] = useState<string>('')
+  const [noteChargeePour, setNoteChargeePour] = useState<number | null>(null)
   // ─── LES MANDANTS (les VENDEURS) ───   3.2d lot 3, 16/09/2026
   // ⚠ `affirmes` PART A FAUX : tant que l'utilisateur n'a rien touche, on
   //   n'envoie RIEN. Hektor remplit les mandants lui-meme depuis le mandat --
@@ -14885,6 +14892,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (cible == null) {
       setStatusChangeConditions([])
       setConditionsChargeesPour(null)
+      setStatusChangeNote('')
+      setNoteChargeePour(null)
       return
     }
     if (cible === conditionsChargeesPour) return
@@ -14894,6 +14903,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         if (annule) return
         setStatusChangeConditions(par_affaire.get(cible) ?? [])
         setConditionsChargeesPour(cible)
+      })
+      .catch(() => undefined)
+    // ⚠ DANS LE MEME EFFET, DONC SUR LA MEME CIBLE. Deux effets separes
+    //   pourraient charger la note d'une transaction et les conditions d'une
+    //   autre le temps d'un aller-retour -- et la sauvegarde ecrirait le
+    //   melange.
+    loadAffairesNotes([cible])
+      .then((par_affaire) => {
+        if (annule) return
+        setStatusChangeNote(par_affaire.get(cible) ?? '')
+        setNoteChargeePour(cible)
       })
       .catch(() => undefined)
     return () => { annule = true }
@@ -15047,6 +15067,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeMandantsAffirmes(false)
     setStatusChangeConditions([])
     setConditionsChargeesPour(null)
+    setStatusChangeNote('')
+    setNoteChargeePour(null)
     setStatusChangeSellerNotaryId('')
     setStatusChangeSellerNotaryNom('')
     setStatusChangeNotairesAffirmes({ acquereur: false, mandant: false })
@@ -15975,6 +15997,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       } catch (erreurConditions) {
         setNoticeMessage(`Transaction envoyee, mais les conditions suspensives n'ont pas ete enregistrees : ${
           erreurConditions instanceof Error ? erreurConditions.message : 'erreur inconnue'}. A ressaisir.`)
+      }
+
+      // ⚠ MEME GARDE QUE LES CONDITIONS : on n'ecrit que si la modale a touche le
+      //   sujet -- soit il y a un texte, soit on en avait charge un et
+      //   l'utilisateur l'a efface. Sans ce test, ouvrir puis envoyer effacerait
+      //   la note d'une transaction dont on n'a rien voulu changer.
+      // ⚠ SON PROPRE try/catch : une note qui echoue ne doit pas faire croire que
+      //   les conditions ont echoue, ni l'inverse.
+      try {
+        const affaireNote = affaireCourantePourStatut()
+        const cibleNote = affaireNote ? Number(affaireNote.app_affaire_id) : null
+        if (cibleNote != null && (statusChangeNote.trim() || noteChargeePour === cibleNote)) {
+          await ecrireAffaireNote(cibleNote, statusChangeNote)
+        }
+      } catch (erreurNote) {
+        setNoticeMessage(`Transaction envoyee, mais la note n'a pas ete enregistree : ${
+          erreurNote instanceof Error ? erreurNote.message : 'erreur inconnue'}. A ressaisir.`)
       }
 
       setStatusChangeTarget(null)
@@ -18835,6 +18874,31 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           ) : null}
                         </section>
                       ) : null}
+                      {/* ─── LA NOTE LIBRE ─── 17/09/2026
+                          ⚠ HORS DE LA CONDITION « compromis » CI-DESSUS, ET C'EST
+                            VOULU (arbitrage de Frederic, 17/09). Une condition
+                            suspensive est une clause du compromis PAR NATURE ;
+                            une note libre ne l'est pas. Offre, compromis et vente
+                            en portent une.
+                          ⚠ ELLE NE PART PAS CHEZ HEKTOR, comme les conditions. La
+                            consequence est a connaitre : elle n'apparaitra pas sur
+                            le document que Hektor imprime. C'est l'usage
+                            OPERATIONNEL qu'elle sert, pas l'usage contractuel. */}
+                      <section className="status-change-repartition">
+                        <p className="status-change-note">
+                          <strong>Note</strong> — elle reste dans l'app et n'est pas
+                          transmise a Hektor.
+                        </p>
+                        <label className="filter-field">
+                          <span>Note libre</span>
+                          <textarea
+                            value={statusChangeNote}
+                            maxLength={4000}
+                            rows={4}
+                            onChange={(event) => setStatusChangeNote(event.target.value)}
+                            placeholder="Relancer la banque avant le 15, dossier incomplet…" />
+                        </label>
+                      </section>
                       {/* L'ECART, S'IL Y EN A UN. On avertit, on ne bloque pas :
                           528 compromis reels du registre ne verifient pas cet
                           invariant (dont 508 d'avant 2025). L'app signale,

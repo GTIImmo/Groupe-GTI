@@ -3089,6 +3089,13 @@ body {
 }
 .status-change-affaires .sca-foot b { color: #475569; font-variant-numeric: tabular-nums; }
 .status-change-affaires .sca-leg { margin-left: auto; color: #0f766e; }
+/* 17/09/2026 : la note libre d'une transaction. Scope a la section pour ne
+   rien changer aux autres zones de texte de l'application. */
+.status-change-repartition textarea { width: 100%; min-height: 84px; resize: vertical;
+  font: inherit; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px;
+  background: #fff; color: inherit; box-sizing: border-box; }
+.status-change-repartition textarea:focus { outline: none; border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12); }
 /* 3.1 (16/09/2026) : le verdict sur une saisie du carnet. Le vert disait
    « elle vient de vous » ; il ne disait pas si elle etait ARRIVEE. */
 .status-change-affaires .sca-etat { margin-left: 6px; font-size: 10px; font-style: normal;
