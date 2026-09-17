@@ -1,6 +1,6 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 16/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> **Mis à jour le 17/09/2026.** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier — elle fait 6 400 lignes.
 
 **LA CIBLE** — *étape 2, redite par Frédéric le 15/09* : les négociateurs travaillent dans
@@ -9,31 +9,45 @@ HORS DE PORTÉE pour l'instant** (portails, signature, registre légal) : il n'y
 coupure datée, et rien ne l'attend.
 
 ```
-   FINI LE 16/09, PROUVÉ DANS LE RUN DE 05:00
-     3.2d lot 2  les DEUX notaires (l. 4017)  ·  3.2d lot 3  les conditions (l. 4018)
-     le registre reçoit le miroir console  ·  la descente en delta (42 % du volume)
-     les 615 fiches gelées : cause trouvée ('0000-00-00'), rotation 30 jours
+   FINI LE 17/09, ET VÉRIFIÉ EN BASE
+     2.7  d'où vient le mandat     couverture 48 % → 74,9 %, `mandat_origine` rempli
+     3.3  le contrat d'autorité    vidé — « contrat affaire vide : rien à appliquer »
+     3.1  le verdict du carnet     arrivée · en attente · conflit
+     chaînage   12 670 chaînes, les 4 copies de la règle d'accord, test ⑤ à 0 écart
+     la note libre d'une transaction, sur les TROIS genres — rien ne part chez Hektor
+
+   ⛔ L'INCIDENT DU JOUR — IP BANNIE À 06:34, RUN MORT À 06:55, ZÉRO REMONTÉE
+     cause       le balayage fabriquait un client neuf PAR PIÈCE = 17 logins OAuth
+                 en 22 s, plancher contourné.  Corrigé c524f7e — détail au commit.
+     au passage  le journal des suppressions n'avait JAMAIS été lu (`request` au
+                 lieu de `_request`) : 3.5 était muet.  Corrigé bcb05fe.
+     réparé      reprise locale, zéro requête Hektor. 740 actifs · 13 424 dossiers.
 
    LES 3 SUIVANTES, dans cet ordre
-     1. les 2 dettes restantes   la surveillance crie depuis juillet ·
-                     le numéro de contact ne voyage pas avec sa fiche
+     1. 3.5  l'ESSAI RÉEL de la suppression    l. 5163
+                     codé depuis le 07/09, débloqué ce matin ; ⚠ ÉCRIT CHEZ HEKTOR
      2. les MANDANTS depuis l'app (lot 3, 1er morceau)          l. 4018
-                     la console en rapporte 18 424, le registre les porte
-     3. 3.5 + 2.6    la suppression disparaît partout · plusieurs acquéreurs
-                     l. 5163 et 3412
+     3. 2.7 côté écran · 2.6 plusieurs acquéreurs      l. 3556 et 3412
+
+   MISES DE CÔTÉ PAR FRÉDÉRIC, ne pas les remonter seules
+     les 2 dettes : la surveillance qui crie · le numéro de contact qui ne voyage pas
 
    EN ATTENTE DE FRÉDÉRIC
+     le message à Ma Boîte Immo — l'IP est revenue seule ; le seuil reste inconnu
      E.2          quel négociateur passe sur l'app en premier ?
      le mot de passe de la base, apparu en clair le 14/09
      les 5 écarts de statut : des biens sous compromis annoncés « Actif »
      le catalogue des conditions suspensives n'a que 2 entrées
 ```
 
-**CE QUI A COÛTÉ CHER, ET QUI SE RÉPÈTE** — ⚠ *deux écarts la nuit du 14 au 15 : l'arbitrage
-était écrit à la **ligne 4486** et personne ne l'a lu ; le contrôle du matin était écrit
-**à la ligne 4472** et n'a pas été appliqué.* ➡ **Relire la section AVANT de lancer** — la
-checklist est au plan maître, l. 378. Et **mesurer avant de conclure** : le 15/09, une
-corrélation due à l'ordre de traitement a été prise pour une preuve, et a coûté quatre heures.
+**CE QUI A COÛTÉ CHER, ET QUI SE RÉPÈTE** — ⚠ *le 17/09, deux commits de la veille ont eu
+leur toute première exécution le même matin : les deux étaient défectueux — l'un a coûté
+l'IP en 22 secondes, l'autre était muet, avalé par son propre `except`.*
+➡ **Un commit poussé APRÈS le run de 5 h n'est pas éprouvé ; il le sera le lendemain**, et
+un `except` qui parle d'`AttributeError` accuse le code, pas l'environnement.
+⚠ *Le même jour, rejouer un run en recopiant ses ÉTAPES sans son ENVIRONNEMENT a compté
+208 brouillons comme des biens actifs.* ➡ **Relire la section AVANT de lancer** (checklist :
+plan maître, l. 378) et **mesurer avant de conclure**.
 
 **RÈGLE D'ÉCRITURE DE CE DOCUMENT** *(posée le 15/09)* — il est passé de 155 lignes le 29/08 à
 6 400 aujourd'hui. Les tâches convergent (8 ajoutées, 34 terminées depuis le 30/08), pas le
