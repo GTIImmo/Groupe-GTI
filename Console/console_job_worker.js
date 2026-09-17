@@ -17277,7 +17277,12 @@ async function handleDeleteHektorVente(job) {
   // ─── LA VENTE DISPARAIT CHEZ HEKTOR, ET CHEZ NOUS AUSSI ───   16/09/2026
   // Meme regle que le compromis : le delete-never protege ce que HEKTOR efface
   // sans nous le dire, pas ce que l'app a ordonne avec preuve a l'appui.
-  const retrait = await retirerAffaireDuRegistre(job, payload, resultat.brut);
+  // LA PREUVE, C'EST LA RELECTURE -- pas la reponse, qui est VIDE a l'echec comme
+  // au succes. Le 17/09, la trace de la vente 23307 avait une preuve vide.
+  const preuveVente = `Travail ${job.id} (delete_hektor_vente) : relecture API apres le geste, `
+    + `trouve=false${venteDejaAbsente ? " -- et DEJA absente avant : rien n'a ete envoye" : ""}. `
+    + `Reponse Hektor : ${resultat.brut ? String(resultat.brut).slice(0, 500) : "vide (la vente ne rend rien, succes comme echec)"}.`;
+  const retrait = await retirerAffaireDuRegistre(job, payload, preuveVente, "vente", idVente);
   const lignes = retrait.efface ? 1 : 0;
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
@@ -17321,20 +17326,74 @@ async function handleDeleteHektorVente(job) {
  *  ⚠ NE JETTE JAMAIS. Hektor a deja efface : faire echouer le travail ici
  *    donnerait « echec » a un geste qui a REUSSI la ou ca compte. On journalise
  *    et on rend la main.
+ *
+ *  ─── 17/09/2026 : TROIS DEFAUTS TROUVES PAR L'ESSAI 3.5, CORRIGES ICI ───
+ *
+ *  ① LE GENRE ET LE NUMERO HEKTOR VIENNENT DU GESTIONNAIRE, PLUS DE LA CHARGE.
+ *    La charge ne porte pas toujours `kind` : 3 traces sur 4 l'avaient vide. Le
+ *    gestionnaire, lui, SAIT ce qu'il vient de supprimer -- c'est son type.
+ *
+ *  ② UN MEME NUMERO D'APP PEUT PORTER PLUSIEURS TRANSACTIONS SUCCESSIVES.
+ *    Le 1001352 a porte le compromis 50084, puis 50086. D'ou :
+ *      - le journal a pour cle (app_affaire_id, kind, hektor_affaire_id), et on
+ *        y ecrit en `ignore-duplicates` : une relance ne reecrit pas la trace, et
+ *        surtout ne remet pas `serveur_aligne` a faux ;
+ *      - l'effacement du registre VISE LA TRANSACTION, pas le numero. Depuis le
+ *        17/09 la suppression est RELANCEE jusqu'a 24 h : sans ce filtre, une
+ *        relance tardive effacerait la transaction recreee entre-temps sous le
+ *        meme numero.
+ *
+ *  ③ SANS NUMERO D'APP DANS LA CHARGE, ON LE CHERCHE -- on ne renonce plus.
+ *    Le compromis 50085 (16/09) a ete supprime chez Hektor et JAMAIS retire du
+ *    registre, parce que sa demande n'en portait pas. Le registre le connait par
+ *    (genre, numero Hektor, annonce) : c'est l'index de reconciliation.
+ *
+ *  ④ LE CARNET DE LA TRANSACTION PART AVEC ELLE.
+ *    Une saisie attend de rejoindre une transaction ; si la transaction n'existe
+ *    plus, elle n'attend plus rien. Le 17/09, 21 lignes sur 27 du carnet
+ *    appartenaient a des transactions supprimees. Et elles ne sont pas inertes :
+ *    le run lit le carnet pour decider qu'une ligne du registre est « possedee
+ *    par l'app » -- et, sous un numero reutilise, elles s'appliqueraient a la
+ *    transaction suivante.
+ *    ⚠ ON NE RETIRE QUE LES SAISIES ANTERIEURES A LA DEMANDE. Une saisie posee
+ *      apres appartient a ce qui a ete recree sous le meme numero.
  */
-async function retirerAffaireDuRegistre(job, payload, preuve) {
-  const appAffaireId = payload && payload.app_affaire_id;
-  if (!appAffaireId) {
+async function retirerAffaireDuRegistre(job, payload, preuve, genre, hektorAffaireId) {
+  const kind = String(genre || "").trim();
+  const hektorId = String(hektorAffaireId || "").trim();
+  const annonceId = String(job.hektor_annonce_id || (payload && payload.hektor_annonce_id) || "").trim();
+  let appAffaireId = payload && payload.app_affaire_id;
+  if (!appAffaireId && kind && hektorId) {
+    try {
+      const trouvees = await supabaseRequest(
+        `app_affaire_ledger?select=app_affaire_id&kind=eq.${encodeURIComponent(kind)}`
+        + `&hektor_affaire_id=eq.${encodeURIComponent(hektorId)}`
+        + (annonceId ? `&hektor_annonce_id=eq.${encodeURIComponent(annonceId)}` : ""),
+        { method: "GET" });
+      // UNE seule ligne, sinon on ne choisit pas : deux candidates, c'est deviner.
+      if (Array.isArray(trouvees) && trouvees.length === 1) {
+        appAffaireId = trouvees[0].app_affaire_id;
+        await logJob(job.id, "app_registre_suppression", "running",
+          `Pas d'app_affaire_id dans la charge : retrouve par le registre (${kind} ${hektorId}) -> ${appAffaireId}`,
+          null);
+      }
+    } catch (erreur) {
+      await logJob(job.id, "app_registre_suppression", "error",
+        "Registre illisible pour retrouver le numero d'app",
+        { error: erreur && erreur.message ? erreur.message : String(erreur) });
+    }
+  }
+  if (!appAffaireId || !kind || !hektorId) {
     await logJob(job.id, "app_registre_suppression", "done",
-      "Pas d'app_affaire_id dans la charge : rien a retirer du registre", null);
-    return { inscrit: false, efface: false };
+      `Transaction introuvable au registre (${kind || "genre ?"} ${hektorId || "numero ?"}) : rien a retirer`,
+      null);
+    return { inscrit: false, efface: false, carnet: 0 };
   }
   const ligne = {
     app_affaire_id: appAffaireId,
-    hektor_annonce_id: payload.hektor_annonce_id ? Number(payload.hektor_annonce_id) : null,
-    kind: payload.kind || null,
-    hektor_affaire_id: String(payload.hektor_compromis_id || payload.hektor_vente_id
-                              || payload.hektor_offre_id || "") || null,
+    hektor_annonce_id: annonceId ? Number(annonceId) : null,
+    kind,
+    hektor_affaire_id: hektorId,
     preuve: String(preuve || "").slice(0, 2000) || null,
     origine: "geste_app",
     supprime_par: job.requested_by || null,
@@ -17344,7 +17403,7 @@ async function retirerAffaireDuRegistre(job, payload, preuve) {
   try {
     await supabaseRequest("app_affaire_supprimee", {
       method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
+      prefer: "resolution=ignore-duplicates,return=minimal",
       // ⚠ JSON.stringify : supabaseRequest passe `options` tel quel a fetch, qui
       //   attend une chaine. Un tableau nu partirait en "[object Object]".
       body: JSON.stringify([ligne]),
@@ -17354,11 +17413,13 @@ async function retirerAffaireDuRegistre(job, payload, preuve) {
     await logJob(job.id, "app_registre_suppression", "error",
       "Journal des suppressions NON ecrit : la ligne du registre est laissee en place",
       { error: erreur && erreur.message ? erreur.message : String(erreur) });
-    return { inscrit: false, efface: false };
+    return { inscrit: false, efface: false, carnet: 0 };
   }
   let efface = false;
   try {
-    await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`,
+    await supabaseRequest(`app_affaire_ledger?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`
+                          + `&kind=eq.${encodeURIComponent(kind)}`
+                          + `&hektor_affaire_id=eq.${encodeURIComponent(hektorId)}`,
                           { method: "DELETE", prefer: "return=minimal" });
     efface = true;
   } catch (erreur) {
@@ -17366,12 +17427,29 @@ async function retirerAffaireDuRegistre(job, payload, preuve) {
       "Ligne du registre NON effacee en ligne, mais INSCRITE au journal : le serveur s'alignera",
       { error: erreur && erreur.message ? erreur.message : String(erreur) });
   }
+  // ④ Le carnet. `requested_at` borne : ce qui est ecrit APRES la demande
+  //   appartient a la transaction recreee sous ce numero, pas a celle-ci.
+  let carnet = 0;
+  const borne = job.requested_at ? new Date(job.requested_at).toISOString() : new Date().toISOString();
+  try {
+    const retirees = await supabaseRequest(
+      `app_affaire_champ_app?app_affaire_id=eq.${encodeURIComponent(appAffaireId)}`
+      + `&or=(ecrit_le.is.null,ecrit_le.lte.${encodeURIComponent(borne)})`,
+      { method: "DELETE", prefer: "return=representation" });
+    carnet = Array.isArray(retirees) ? retirees.length : 0;
+  } catch (erreur) {
+    // Pas grave pour le geste : le carnet orphelin sera retire par
+    // phase2/identite/nettoyer_carnet_affaire.py (motif « affaire absente »).
+    await logJob(job.id, "app_registre_suppression", "error",
+      "Carnet de la transaction NON purge",
+      { error: erreur && erreur.message ? erreur.message : String(erreur) });
+  }
   await logJob(job.id, "app_registre_suppression", "done",
-    `Affaire ${appAffaireId} : journal ${inscrit ? "ecrit" : "NON ecrit"}, `
-    + `ligne en ligne ${efface ? "effacee" : "conservee"}. Le serveur retirera la sienne `
-    + `au prochain run (il lit le journal avant de pousser).`,
-    { app_affaire_id: appAffaireId, inscrit, efface });
-  return { inscrit, efface };
+    `Affaire ${appAffaireId} (${kind} ${hektorId}) : journal ${inscrit ? "ecrit" : "NON ecrit"}, `
+    + `ligne en ligne ${efface ? "effacee" : "conservee"}, ${carnet} saisie(s) retiree(s) du carnet. `
+    + `Le serveur retirera sa ligne au prochain run (il lit le journal avant de pousser).`,
+    { app_affaire_id: appAffaireId, kind, hektor_affaire_id: hektorId, inscrit, efface, carnet });
+  return { inscrit, efface, carnet };
 }
 
 /**
@@ -17532,7 +17610,12 @@ async function handleDeleteHektorCompromis(job) {
   // ─── ET CHEZ NOUS, ELLE PART AUSSI ───   16/09/2026, tache 3.5
   // Le delete-never vaut pour ce que HEKTOR efface dans son coin -- pas pour ce
   // que l'app a ORDONNE et dont elle a la preuve. Voir retirerAffaireDuRegistre.
-  const retrait = await retirerAffaireDuRegistre(job, payload, resultat.brut);
+  // `{"empty":"1"}` n'est pas une preuve (il decrit l'ANNONCE) : la preuve est la relecture.
+  const preuveCompromis = `Travail ${job.id} (delete_hektor_compromis) : relecture API apres le geste, `
+    + `trouve=false${dejaAbsent ? " -- et DEJA absent avant : rien n'a ete envoye" : ""}. `
+    + `Reponse Hektor : ${resultat.brut ? String(resultat.brut).slice(0, 500) : "vide"} `
+    + `(un indice sur l'annonce, pas une preuve).`;
+  const retrait = await retirerAffaireDuRegistre(job, payload, preuveCompromis, "compromis", idComp);
   const lignes = retrait.efface ? 1 : 0;
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {

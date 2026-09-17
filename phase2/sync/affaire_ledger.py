@@ -18,6 +18,7 @@ import argparse
 import json
 import sqlite3
 import sys
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -1482,14 +1483,28 @@ def appliquer_les_suppressions(con: sqlite3.Connection, client) -> dict:
     if not isinstance(lignes, list) or not lignes:
         return resume
     resume["au_journal"] = len(lignes)
-    faits: list[int] = []
+    faits: list[tuple[int, str, str]] = []
     for ligne in lignes:
         try:
             affaire = int(ligne.get("app_affaire_id"))
         except (TypeError, ValueError):
             continue
+        genre = str(ligne.get("kind") or "").strip()
+        numero = str(ligne.get("hektor_affaire_id") or "").strip()
+        if not genre or not numero:
+            # Depuis le 17/09 la base l'interdit (NOT NULL). Si ca arrive quand
+            # meme, on ne supprime pas « au numero d'app » : ce serait viser large.
+            print(f"[affaire_ledger] affaire {affaire} : trace sans genre ou sans numero "
+                  f"Hektor -- ignoree, on ne supprime pas a l'aveugle.")
+            continue
+        # ⚠ LA TRANSACTION, PAS LE NUMERO D'APP -- 17/09/2026.
+        #   Un meme app_affaire_id porte parfois plusieurs transactions successives
+        #   (1001352 : compromis 50084, puis 50086). Effacer « au numero » aurait
+        #   retire, en appliquant la suppression de la premiere, la seconde qui
+        #   vivait encore.
         curseur = con.execute(
-            f"DELETE FROM {LEDGER_TABLE} WHERE app_affaire_id = ?", (affaire,))
+            f"DELETE FROM {LEDGER_TABLE} WHERE app_affaire_id = ? AND kind = ? "
+            f"AND CAST(hektor_affaire_id AS TEXT) = ?", (affaire, genre, numero))
         if curseur.rowcount:
             resume["retirees_en_local"] += 1
             print(f"[affaire_ledger] SUPPRIMEE en local : affaire {affaire} "
@@ -1497,12 +1512,12 @@ def appliquer_les_suppressions(con: sqlite3.Connection, client) -> dict:
                   f"suppression ordonnee par l'app, journal a l'appui.")
         else:
             resume["deja_absentes"] += 1
-        faits.append(affaire)
+        faits.append((affaire, genre, numero))
     con.commit()
     # On ne coche QU'APRES avoir commis en local : si le processus tombe entre
     # les deux, la nuit suivante repassera dessus sans dommage (le DELETE est
     # idempotent). L'inverse laisserait une suppression cochee mais pas faite.
-    for affaire in faits:
+    for affaire, genre, numero in faits:
         try:
             # ⚠ `_request`, AVEC LE TIRET BAS -- SECOND correctif, 17/09/2026.
             #
@@ -1524,8 +1539,12 @@ def appliquer_les_suppressions(con: sqlite3.Connection, client) -> dict:
             #   push_upgrade_to_supabase -- la NOTRE, celle qu'on importe --
             #   n'expose que `_request`. Copier une ligne d'un fichier a l'autre
             #   ne suffit donc pas : il faut savoir DE QUI on tient son client.
+            # La cle du journal est (app_affaire_id, kind, hektor_affaire_id) depuis
+            # le 17/09 : on coche CETTE trace, pas toutes celles du numero.
             client._request(method="PATCH",                          # noqa: SLF001
-                            path=f"app_affaire_supprimee?app_affaire_id=eq.{affaire}",
+                            path=(f"app_affaire_supprimee?app_affaire_id=eq.{affaire}"
+                                  f"&kind=eq.{urllib.parse.quote(genre)}"
+                                  f"&hektor_affaire_id=eq.{urllib.parse.quote(numero)}"),
                             payload={"serveur_aligne": True}, prefer="return=minimal")
             resume["cochees"] += 1
         except Exception as exc:                                    # noqa: BLE001

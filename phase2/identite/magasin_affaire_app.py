@@ -170,6 +170,27 @@ def main() -> int:
         return 4
     print("app    : %d saisie(s) lue(s) dans %s" % (len(saisies), MAGASIN))
 
+    # ─── LA COPIE LOCALE OUBLIE CE QUE L'APP A RETIRE ─── 17/09/2026
+    # Ce magasin ne savait QU'AJOUTER. Or le carnet en ligne se vide : le worker
+    # retire une saisie arrivee chez Hektor (11/09), le nettoyeur retire les
+    # orphelines (12/09), et depuis le 17/09 une suppression retire le carnet de
+    # sa transaction. Mesure le 17/09 : 68 lignes ici, 27 en ligne -- 49 fantomes,
+    # dont les essais d'aout.
+    # ⚠ ELLES NE SONT PAS INERTES : affaire_ledger.py lit ce magasin pour decider
+    #   qu'une ligne du registre est « possedee par l'app » et la garder vivante.
+    # ⚠ ON N'OUBLIE QUE SUR UNE LECTURE REUSSIE -- on est ici apres le `return 4`.
+    #   Une lecture ratee ne vaut jamais « l'app n'a plus rien ».
+    en_ligne = {(int(l["app_affaire_id"]), str(l.get("champ") or "").strip())
+                for l in saisies if l.get("app_affaire_id") is not None}
+    fantomes = [(aid, champ) for aid, champ in conn.execute(
+        "SELECT app_affaire_id, champ FROM " + MAGASIN)
+        if (int(aid), str(champ or "").strip()) not in en_ligne]
+    if fantomes and not args.dry_run:
+        conn.executemany("DELETE FROM " + MAGASIN + " WHERE app_affaire_id = ? AND champ = ?",
+                         fantomes)
+    print("oublie : %d saisie(s) retiree(s) du carnet en ligne%s"
+          % (len(fantomes), "   (dry-run : rien retire)" if args.dry_run else ""))
+
     ecrits = inconnus = vides = 0
     for ligne in saisies:
         aid = ligne.get("app_affaire_id")
