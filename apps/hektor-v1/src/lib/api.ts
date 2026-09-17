@@ -1728,6 +1728,48 @@ export async function ecrireAffaireNote(
   return data as { ok: boolean }
 }
 
+/** ─── 1.4 : UNE PERSONNE DEMANDEE QUE HEKTOR N'A PAS GARDEE ─── 17/09/2026
+ *  Posee par le worker apres la relecture d'une creation ou d'une modification.
+ *  ⚠ LA TRANSACTION SE DESIGNE PAR (kind, hektor_affaire_id), pas par le numero
+ *    d'app : un meme numero d'app porte parfois plusieurs transactions successives. */
+export type AffairePersonneEcart = {
+  id: number
+  kind: string
+  hektor_affaire_id: string
+  app_affaire_id: number | null
+  role: 'acquereur' | 'mandant'
+  contact_id: string
+  contact_nom: string | null
+  constate_le: string
+}
+
+/** Les bandeaux OUVERTS pour ces transactions. Jamais d'exception : une lecture
+ *  ratee rend une liste vide -- le journal du travail garde l'ecart. */
+export async function loadAffairePersonneEcarts(
+  numerosHektor: string[],
+): Promise<AffairePersonneEcart[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const numeros = Array.from(new Set(numerosHektor.map((n) => String(n ?? '').trim()).filter(Boolean)))
+  if (!numeros.length) return []
+  const { data, error } = await supabase
+    .from('app_affaire_personne_ecart')
+    .select('id,kind,hektor_affaire_id,app_affaire_id,role,contact_id,contact_nom,constate_le')
+    .in('hektor_affaire_id', numeros)
+    .is('ferme_le', null)
+    .order('constate_le', { ascending: false })
+  if (error || !data) return []
+  return data as AffairePersonneEcart[]
+}
+
+/** Ferme un bandeau a la main. Ne supprime rien, n'envoie RIEN chez Hektor.
+ *  ⚠ LEVE : un bandeau qu'on croit ferme et qui revient est pire qu'une erreur. */
+export async function fermerAffairePersonneEcart(id: number): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { error } = await supabase.rpc('app_affaire_personne_ecart_fermer', { target_id: id })
+  if (error) throw new Error(error.message)
+}
+
 /** Ce que l'assistant a rendu, pour les affaires données. Jamais d'exception :
  *  une lecture ratée rend une carte vide, et l'écran retombe sur le registre. */
 export async function loadAffairesConsole(

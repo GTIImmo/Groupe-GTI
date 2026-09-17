@@ -11386,6 +11386,16 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
     reponse: reponseBrute.slice(0, 300) || "(vide)",
     forme_mandat: tx.mandat || "(vide)",
     forme_negociateur: tx.negotiator || "(vide)",
+    // 1.4 (17/09) : CE QUE L'APP A DEMANDE, pour le comparer a ce que Hektor garde.
+    //   `null` = on n'a rien pose pour ce role (reprise sans geste, mandants non
+    //   affirmes) : alors il n'y a rien a juger -- Hektor garde les siens.
+    //   ⚠ Memes conditions que les `append` plus haut, recopiees : une demande
+    //     qu'on n'a pas envoyee ne peut pas avoir ete refusee.
+    personnes_posees: {
+      acquereurs: ((!enReprise || tx.acquereursAffirmes) && acquereursVoulus.length)
+        ? acquereursVoulus.slice() : null,
+      mandants: tx.mandantsAffirmes ? tx.mandantsVoulus.slice() : null,
+    },
   };
 }
 
@@ -12741,7 +12751,8 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
         hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
         hektor_transaction_id: cible, ecarts, conformes,
       });
-    return { verifie: true, modifiee: false, hektor_transaction_id: cible, ecarts };
+    return { verifie: true, modifiee: false, hektor_transaction_id: cible, ecarts,
+             personnes_relues: personnesRelues(lu.details[cible]) };
   }
   await logJob(job.id, "hektor_transaction_preuve", "done",
     conformes.length
@@ -12785,7 +12796,132 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
   // le registre porte de HEKTOR, donc il faut que le report ait eu lieu.
   await marquerLeCarnetRestant(job, appAffaireId);
   return { verifie: true, modifiee: true, confirmee: true,
-           hektor_transaction_id: cible, conformes };
+           hektor_transaction_id: cible, conformes,
+           personnes_relues: personnesRelues(lu.details[cible]) };
+}
+
+/** Les deux listes de personnes telles que Hektor les a rendues a la relecture.
+ *  `null` pour un role = « je ne sais pas » (la liste n'est pas dans la lecture),
+ *  ce qui n'est PAS « personne » -- on ne juge alors pas ce role. */
+function personnesRelues(chez) {
+  if (!chez || typeof chez !== "object") return null;
+  const ids = (cle) => (Array.isArray(chez[cle])
+    ? chez[cle].map((p) => String((p && typeof p === "object" ? p.id : p) ?? "").trim()).filter(Boolean)
+    : null);
+  return { acquereurs: ids("acquereurs"), mandants: ids("mandants") };
+}
+
+/** ─── 1.4 : L'ACQUEREUR PERDU EN SILENCE -- ON LE CONSTATE ───   17/09/2026
+ *
+ *  Hektor peut ne pas garder une personne qu'on lui envoie, SANS erreur ni
+ *  message (mesure cinq fois, liste tache 1.4). Le registre recopie ensuite sa
+ *  liste : la personne disparait de l'ecran et personne ne sait qu'elle a ete
+ *  demandee.
+ *
+ *  METHODE ARBITREE LE 03/09 : « constater », pas « predire ». On compare ce
+ *  qu'on a POSE a ce que Hektor a GARDE -- aucune hypothese sur la cause, qui
+ *  n'est pas prouvee. Aucune requete chez Hektor : la relecture est deja faite.
+ *
+ *  ⚠ ON NE JUGE QUE LES MANQUANTS. Hektor AJOUTE parfois des mandants de lui-meme
+ *    (il les deduit du mandat, 16/09) : ce n'est pas un refus.
+ *  ⚠ ON NE LEVE JAMAIS. Le geste est passe chez Hektor ; un `throw` le rejouerait
+ *    cinq fois, pour un refus qui se reproduirait a l'identique.
+ *  ⚠ LE BANDEAU SE FERME TOUT SEUL quand la situation est reglee : un envoi
+ *    suivant ou Hektor garde la personne, ou une liste reaffirmee qui ne la
+ *    contient plus. On ne ferme que ce qu'on a pu JUGER sur ce role.
+ */
+async function constaterLesPersonnes(job, ctx) {
+  const { annonceId, genre, appAffaireId, appDossierId, hektorId, posees, relues } = ctx;
+  const numero = String(hektorId || "").trim();
+  if (!genre || !numero || !posees || !relues) return null;
+  const bilan = {};
+  const manquantsTous = [];
+  for (const [role, cle] of [["acquereur", "acquereurs"], ["mandant", "mandants"]]) {
+    const demandes = Array.isArray(posees[cle]) ? posees[cle].map(String) : null;
+    const gardes = Array.isArray(relues[cle]) ? new Set(relues[cle].map(String)) : null;
+    if (!demandes || !gardes) continue;          // rien pose, ou liste non relue
+    const manquants = demandes.filter((id) => !gardes.has(id));
+    bilan[cle] = { demandes, gardes: Array.from(gardes), manquants };
+    for (const id of manquants) manquantsTous.push({ role, id });
+    // FERMER ce qui est regle sur ce role. Deux motifs, deux requetes :
+    //   la personne est desormais chez Hektor ;
+    //   l'app a reaffirme une liste qui ne la contient plus.
+    const fermer = async (filtre, motif) => {
+      try {
+        await supabaseRequest(
+          `app_affaire_personne_ecart?kind=eq.${encodeURIComponent(genre)}`
+          + `&hektor_affaire_id=eq.${encodeURIComponent(numero)}`
+          + `&role=eq.${role}&ferme_le=is.null&${filtre}`,
+          { method: "PATCH", prefer: "return=minimal",
+            body: JSON.stringify({ ferme_le: new Date().toISOString(),
+                                   ferme_par: "worker", ferme_motif: motif }) });
+      } catch (erreur) {
+        await logJob(job.id, "hektor_transaction_personnes", "error",
+          `Fermeture des bandeaux (${role}) impossible`,
+          { error: erreur && erreur.message ? erreur.message : String(erreur) });
+      }
+    };
+    const liste = (ids) => `(${ids.map((x) => `"${String(x).replace(/"/g, "")}"`).join(",")})`;
+    if (gardes.size) await fermer(`contact_id=in.${liste(Array.from(gardes))}`, "gardee_au_renvoi");
+    await fermer(demandes.length ? `contact_id=not.in.${liste(demandes)}` : "contact_id=not.is.null",
+                 "retiree_par_l_app");
+  }
+  if (!Object.keys(bilan).length) return null;
+
+  if (!manquantsTous.length) {
+    await logJob(job.id, "hektor_transaction_personnes", "done",
+      `${genre} ${numero} : Hektor a garde toutes les personnes envoyees`, bilan);
+    return { ecart: false, ...bilan };
+  }
+
+  // Les noms : la personne n'est PLUS sur la transaction, le registre ne les
+  // donnera plus. Best-effort -- sans nom, le bandeau montre le numero.
+  const noms = new Map();
+  try {
+    const ids = Array.from(new Set(manquantsTous.map((m) => m.id)));
+    const lignes = await supabaseRequest(
+      `app_contact_current?select=hektor_contact_id,display_name,prenom,nom`
+      + `&hektor_contact_id=in.(${ids.map((x) => encodeURIComponent(x)).join(",")})`,
+      { method: "GET" });
+    for (const l of Array.isArray(lignes) ? lignes : []) {
+      const nom = String(l.display_name || [l.prenom, l.nom].filter(Boolean).join(" ") || "").trim();
+      if (nom) noms.set(String(l.hektor_contact_id), nom);
+    }
+  } catch (_) { /* le numero suffira */ }
+
+  const texte = manquantsTous
+    .map((m) => `${m.role} ${noms.get(m.id) || m.id}`).join(", ");
+  await logJob(job.id, "hektor_transaction_personnes", "error",
+    `⚠ ${genre} ${numero} : HEKTOR N'A PAS GARDE ${texte}. Aucune erreur de sa part -- `
+    + "c'est le defaut 1.4. Bandeau pose dans la modale.", bilan);
+
+  try {
+    // L'index unique partiel ne se designe pas par `on_conflict` : on lit ce qui
+    // est deja ouvert et on n'ecrit que le reste. Un second refus identique ne
+    // double donc pas le bandeau.
+    const ouverts = await supabaseRequest(
+      `app_affaire_personne_ecart?select=role,contact_id&kind=eq.${encodeURIComponent(genre)}`
+      + `&hektor_affaire_id=eq.${encodeURIComponent(numero)}&ferme_le=is.null`,
+      { method: "GET" });
+    const deja = new Set((Array.isArray(ouverts) ? ouverts : []).map((o) => `${o.role}|${o.contact_id}`));
+    const neufs = manquantsTous.filter((m) => !deja.has(`${m.role}|${m.id}`)).map((m) => ({
+      kind: genre, hektor_affaire_id: numero,
+      app_affaire_id: appAffaireId ? Number(appAffaireId) : null,
+      app_dossier_id: appDossierId ? Number(appDossierId) : null,
+      hektor_annonce_id: annonceId ? Number(annonceId) : null,
+      role: m.role, contact_id: m.id, contact_nom: noms.get(m.id) || null, job_id: job.id,
+    }));
+    if (neufs.length) {
+      await supabaseRequest("app_affaire_personne_ecart", {
+        method: "POST", prefer: "return=minimal", body: JSON.stringify(neufs),
+      });
+    }
+  } catch (erreur) {
+    await logJob(job.id, "hektor_transaction_personnes", "error",
+      "Bandeau NON pose -- l'ecart reste dans ce journal",
+      { error: erreur && erreur.message ? erreur.message : String(erreur) });
+  }
+  return { ecart: true, manquants: manquantsTous, ...bilan };
 }
 
 async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAffaireId, transactionResult, dateTransaction) {
@@ -12942,6 +13078,9 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
     verifie: true, cree: true, confirmee,
     hektor_transaction_id: idTransaction,
     identite,
+    // 1.4 : la relecture qui a trouve la creation porte deja ses personnes.
+    personnes_relues: personnesRelues(ventesApres && ventesApres.details
+      ? ventesApres.details[idTransaction] : null),
   };
 }
 
@@ -13139,6 +13278,18 @@ async function handleChangeHektorAnnonceStatus(job) {
             venteResult.archivage = await enchainerArchivageApresVente(
               job, annonceId, dossier.app_dossier_id, payload);
           }
+        }
+        // 1.4 (17/09) : APRES la preuve -- on ne compare qu'une transaction
+        // identifiee, sinon on ne sait pas de QUI on parle.
+        if (genreArbitre && venteResult && venteResult.personnes_relues
+            && venteResult.hektor_transaction_id) {
+          venteResult.personnes = await constaterLesPersonnes(job, {
+            annonceId, genre: genreArbitre, appAffaireId,
+            appDossierId: dossier.app_dossier_id,
+            hektorId: venteResult.hektor_transaction_id,
+            posees: transactionResult && transactionResult.personnes_posees,
+            relues: venteResult.personnes_relues,
+          });
         }
       }
       // Chemin "Vendu" : sur demande explicite du front, on clot aussi le mandat courant

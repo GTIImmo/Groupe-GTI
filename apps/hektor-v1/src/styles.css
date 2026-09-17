@@ -32330,6 +32330,11 @@ body {
 }
 .status-change-affaires .sca-ambigu.is-alerte::before { background: #b0332f; }
 .status-change-affaires .sca-ambigu.is-alerte .sca-amb-t { color: #7a2621; }
+/* 1.4 (17/09) : le bandeau « personne non gardee ». Aucun langage neuf -- le rouge
+   de l'anomalie franche, et le bouton « Choisir » de la liste. */
+.status-change-affaires .sca-perdues { display: grid; gap: 8px; margin: 0 0 10px; }
+.status-change-affaires .sca-perdues .sca-ambigu { margin: 0; }
+.status-change-affaires .sca-t i.sca-perdue { color: #b0332f; }
 /* ── 2.5 + 2.6 (06/09/2026) — L'ACQUEREUR SE DESIGNE ─────────────────────────
    Le champ etait un <input> ou l'on tapait un identifiant numerique. Il devient
    une recherche par NOM qui accepte PLUSIEURS personnes -- un compromis sur six

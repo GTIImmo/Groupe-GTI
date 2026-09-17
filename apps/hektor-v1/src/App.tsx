@@ -177,6 +177,9 @@ import {
   ecrireAffaireConditions,
   loadAffairesNotes,
   ecrireAffaireNote,
+  loadAffairePersonneEcarts,
+  fermerAffairePersonneEcart,
+  type AffairePersonneEcart,
   type AffaireCondition,
   type ConditionCatalogueRow,
   type AffaireLedgerRow,
@@ -15338,6 +15341,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     return () => { annule = true }
   }, [statusChangeAffaires])
 
+  // ─── 1.4 : LES PERSONNES QUE HEKTOR N'A PAS GARDEES ─── 17/09/2026
+  // Le registre recopie la liste de Hektor : une personne refusee disparait de
+  // l'ecran sans un mot. Ce bandeau est le seul endroit ou elle reste visible.
+  const [personnesEcarts, setPersonnesEcarts] = useState<AffairePersonneEcart[]>([])
+  const [personnesEcartErreur, setPersonnesEcartErreur] = useState('')
+  const rechargerPersonnesEcarts = useCallback(async () => {
+    const numeros = statusChangeAffaires.map((a) => String(a.hektor_affaire_id ?? '').trim()).filter(Boolean)
+    setPersonnesEcarts(numeros.length ? await loadAffairePersonneEcarts(numeros) : [])
+  }, [statusChangeAffaires])
+  useEffect(() => {
+    setPersonnesEcartErreur('')
+    void rechargerPersonnesEcarts()
+  }, [rechargerPersonnesEcarts])
+
   useEffect(() => {
     const affaire = affaireCourantePourStatut()
     if (!affaire) {
@@ -19103,6 +19120,50 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </p>
                         )
                       })()}
+                      {(() => {
+                        // ─── 1.4 : HEKTOR N'A PAS GARDE UNE PERSONNE ─── 17/09/2026
+                        // AU-DESSUS DE LA LISTE, pas dans une ligne repliee : c'est
+                        // un signal qu'on ne doit pas avoir a aller chercher.
+                        // ⚠ On ne montre que les ecarts d'une transaction PRESENTE
+                        //   dans cette liste, rapprochee par (genre, numero Hektor).
+                        const visibles = personnesEcarts.filter((e) => statusChangeAffaires.some(
+                          (a) => a.kind === e.kind && String(a.hektor_affaire_id ?? '').trim() === e.hektor_affaire_id))
+                        if (!visibles.length) return null
+                        return (
+                          <div className="sca-perdues">
+                            {visibles.map((e) => (
+                              <p key={e.id} className="sca-ambigu is-alerte" role="alert">
+                                <b className="sca-amb-t">
+                                  Hektor n'a pas gardé {e.role === 'mandant' ? 'le mandant' : "l'acquéreur"}{' '}
+                                  {e.contact_nom || `n° ${e.contact_id}`}
+                                </b>
+                                <span className="sca-amb-d">
+                                  Sur {({ offre: "l'offre", compromis: 'le compromis', vente: 'la vente' } as Record<string, string>)[e.kind] ?? e.kind} n° {e.hektor_affaire_id},
+                                  {' '}envoi du {formatDate(e.constate_le)}. Hektor n'a signalé aucune erreur :
+                                  {' '}la personne a simplement disparu de la transaction. Vérifiez la fiche chez
+                                  {' '}Hektor, puis renvoyez-la ou fermez ce message.
+                                </span>
+                                <span className="sca-amb-d">
+                                  <button type="button" className="sca-choisir" onClick={async () => {
+                                    setPersonnesEcartErreur('')
+                                    try {
+                                      await fermerAffairePersonneEcart(e.id)
+                                      await rechargerPersonnesEcarts()
+                                    } catch (err) {
+                                      setPersonnesEcartErreur(err instanceof Error ? err.message : String(err))
+                                    }
+                                  }}>
+                                    J'ai vu, fermer
+                                  </button>
+                                </span>
+                              </p>
+                            ))}
+                            {personnesEcartErreur ? (
+                              <small className="sca-acq-err">Fermeture impossible : {personnesEcartErreur}</small>
+                            ) : null}
+                          </div>
+                        )
+                      })()}
                       <ul>
                         {statusChangeAffaires.map((a) => {
                           const morte = AFFAIRE_ETATS_MORTS.has(String(a.state ?? '').trim().toLowerCase())
@@ -19232,6 +19293,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                     ) : null}
                                     {visee ? <b>visée par les actions</b> : null}
                                     {partie ? <i>plus dans Hektor</i> : null}
+                                    {personnesEcarts.some((e) => e.kind === a.kind && e.hektor_affaire_id === numero)
+                                      ? <i className="sca-perdue">personne non gardée par Hektor</i> : null}
                                     {!numero ? <i>née dans l'app, sans numéro Hektor</i> : null}
                                   </span>
                                 </summary>
