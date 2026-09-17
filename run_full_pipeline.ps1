@@ -513,7 +513,14 @@ if (-not $SkipContactMissing -and $ContactMissingLimit -gt 0) {
     if ($ContactMissingRefreshSession) {
         $contactMissingArgs += "--refresh-session-on-expired"
     }
-    Invoke-Step -Label "contact champs manquants (naissance/lieu/matrimonial) delta" -Arguments $contactMissingArgs
+    # NON BLOQUANTE DEPUIS LE 17/09/2026, comme les cinq autres etapes Hektor.
+    #   Ce matin-la, les cinq voisines ont echoue et ont ecrit « SKIP, on
+    #   continue » ; celle-ci, appelee par Invoke-Step, a LEVE et tue le run a
+    #   06:55:57. Trois champs d'etat civil sur cinquante contacts ont coute
+    #   toute la remontee vers Supabase : le registre des affaires, la
+    #   repartition de commission, les contacts, l'annuaire, l'export Android.
+    #   C'est un ENRICHISSEMENT : il ne doit pas priver l'agence de sa nuit.
+    Invoke-OptionalStepWithRetry -Label "contact champs manquants (naissance/lieu/matrimonial) delta" -Arguments $contactMissingArgs
 }
 else {
     Write-RunLog "SKIP contact champs manquants delta"

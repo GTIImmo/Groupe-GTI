@@ -47,7 +47,8 @@ CHEMINS = {
 }
 
 
-def etat_transaction(kind: str, ident: str) -> dict:
+def etat_transaction(kind: str, ident: str,
+                     client: HektorClient | None = None) -> dict:
     """L'etat d'une transaction chez Hektor, par son numero.
 
     ⚠ TROIS REPONSES, ET ELLES NE SE CONFONDENT PAS :
@@ -58,13 +59,20 @@ def etat_transaction(kind: str, ident: str) -> dict:
 
     ⚠ ON N'IMPRIME JAMAIS L'EXCEPTION BRUTE ailleurs que dans `_error` tronque :
       `authenticate()` met le secret dans l'URL, et une trace le recopierait.
+
+    ⚠ `client` SE PASSE QUAND ON APPELLE EN BOUCLE -- 17/09/2026.
+      Sans lui, chaque appel fabrique un client neuf, donc un LOGIN OAuth complet.
+      Dix-sept pieces a verifier le 17/09 = dix-sept logins en vingt-deux
+      secondes : notre IP a ete bloquee au seizieme. Le parametre est OPTIONNEL,
+      donc le chemin en ligne de commande (le worker lance ce script en
+      sous-processus, UNE piece a la fois) ne change pas d'un iota.
     """
     ident = str(ident or "").strip()
     if kind not in CHEMINS or not ident.isdigit():
         return {"_error": "genre ou identifiant invalide"}
     chemin, param = CHEMINS[kind]
     try:
-        client = HektorClient(Settings.from_env())
+        client = client or HektorClient(Settings.from_env())
         payload = client.get_json(chemin, params={param: ident})
     except Exception as exc:                                        # noqa: BLE001
         texte = str(exc)

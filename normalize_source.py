@@ -1050,7 +1050,13 @@ SEUIL_MIROIR_COMPLET = 0.5
 
 # Au-dela, ce n'est plus une suppression : c'est une anomalie. On refuse de
 # verifier 500 lignes une par une, et on refuse encore plus de les retirer.
-PLAFOND_CANDIDATS = 200
+#
+# 200 -> 30 LE 17/09/2026. A 200, le balayage s'autorisait 200 lectures d'affilee
+# -- et, avant le correctif du meme jour, 200 LOGINS. Le volume reel est de 17
+# candidats par nuit, stable sur huit nuits relevees (5 offres, 10 compromis,
+# 2 ventes). Un matin a plus de 30, ce n'est plus un balayage : c'est un
+# evenement qui merite un humain, pas trente requetes de plus.
+PLAFOND_CANDIDATS = 30
 
 
 def verifier_chez_hektor(genre: str, identifiants: list[str]) -> tuple[set[str], dict[str, str]]:
@@ -1087,10 +1093,33 @@ def verifier_chez_hektor(genre: str, identifiants: list[str]) -> tuple[set[str],
               f"aucune suppression ne sera faite.")
         return (set(), {i: "verificateur indisponible" for i in identifiants})
 
+    # UN SEUL CLIENT POUR TOUTE LA BOUCLE -- 17/09/2026, apres le bannissement.
+    #
+    # Ce qu'on faisait : `etat_transaction(genre, ident)` sans client fabriquait un
+    # HektorClient NEUF a chaque tour -- donc un LOGIN OAuth complet par piece, et
+    # un plancher remis a zero qui ne s'appliquait pas a ce login. Le 17/09 au
+    # matin, premiere execution de ce code : 5 offres + 10 compromis + 2 ventes =
+    # DIX-SEPT LOGINS EN VINGT-DEUX SECONDES. L'IP a ete bloquee au seizieme.
+    #
+    # ATTENTION : LE VERDICT NE CHANGE PAS D'UN IOTA -- meme point d'entree, memes
+    #   parametres, meme lecture, meme decision a trois branches. Seul le nombre de
+    #   fois ou on dit bonjour change : 17 logins deviennent 1.
+    # ATTENTION : si le client ne se construit pas, ON NE SUPPRIME RIEN. Meme regle
+    #   que l'import manquant juste au-dessus : en cas de doute, on garde.
+    # ATTENTION : on n'imprime pas l'exception -- `Settings.from_env()` porte le
+    #   secret, et une trace le recopierait.
+    try:
+        from hektor_pipeline.common import HektorClient, Settings  # noqa: PLC0415
+        client = HektorClient(Settings.from_env())
+    except Exception as exc:                                       # noqa: BLE001
+        print(f"[miroir] client INDISPONIBLE ({type(exc).__name__}) : "
+              f"aucune suppression ne sera faite.")
+        return (set(), {i: "client indisponible" for i in identifiants})
+
     disparues: set[str] = set()
     gardees: dict[str, str] = {}
     for ident in identifiants:
-        etat = etat_transaction(genre, ident)
+        etat = etat_transaction(genre, ident, client=client)
         if etat.get("trouve") is False:
             disparues.add(ident)
         elif etat.get("trouve") is True:

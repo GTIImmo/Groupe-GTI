@@ -95,6 +95,28 @@ class Settings:
 HEKTOR_MIN_REQUEST_INTERVAL_S = max(
     0.0, float(os.getenv("HEKTOR_MIN_REQUEST_INTERVAL_MS", "1000")) / 1000.0)
 
+# LA MEMOIRE DU RYTHME EST ICI, PAS DANS L'INSTANCE -- 17/09/2026.
+#
+# LE LOT B DU 07/09 disait : « DANS LE CLIENT, PAS DANS LES APPELANTS : aucun
+# script, present ou futur, ne peut le contourner en oubliant sa pause. » Il
+# protegeait contre l'OUBLI. Il ne protegeait pas contre la RECONSTRUCTION.
+#
+# CE QUE CA A COUTE, le 17/09 : `verifier_chez_hektor` fabriquait un client neuf
+# a chaque piece. Un client neuf nait avec `jwt = None` (donc un login complet)
+# ET un compteur a zero (donc le plancher ne s'applique pas a ce login). Dix-sept
+# pieces a verifier = DIX-SEPT LOGINS OAuth EN VINGT-DEUX SECONDES. Notre IP a
+# ete bloquee au seizieme, et les deux portes -- API et web -- avec elle.
+#
+# ATTENTION : un compteur d'instance ne protege que ce que l'instance fait. Au
+#   module, il survit a la reconstruction : un client neuf herite du rythme
+#   deja consomme.
+# ATTENTION : le commentaire d'origine avait vu le cas VOISIN, pas celui-la. Il
+#   parlait de « deux scripts lances en parallele » -- deux PROCESSUS. Deux
+#   clients dans le MEME script, ce n'etait pas prevu. Ca l'est desormais.
+# ATTENTION : entre PROCESSUS, rien ne change -- deux runs lances a la main
+#   doublent toujours le rythme. C'est toujours a savoir.
+_DERNIER_APPEL = 0.0
+
 
 class HektorClient:
     def __init__(self, settings: Settings):
@@ -108,16 +130,24 @@ class HektorClient:
     def _respecter_le_plancher(self) -> None:
         """Attend, si besoin, pour ne jamais depasser le rythme autorise.
 
-        Volontairement simple et SANS ETAT PARTAGE entre processus : deux scripts
-        lances en parallele peuvent donc doubler le rythme. C'est assume -- le run
+        Le compteur vit au MODULE (`_DERNIER_APPEL`), pas dans l'instance : un
+        client neuf herite du rythme deja consomme au lieu de repartir a zero.
+        Voir le bloc au-dessus de `_DERNIER_APPEL` -- c'est la lecon du 17/09.
+
+        Toujours SANS ETAT PARTAGE entre PROCESSUS : deux scripts lances en
+        parallele peuvent donc encore doubler le rythme. C'est assume -- le run
         est sequentiel -- mais c'est a savoir avant d'en lancer deux a la main.
         """
+        global _DERNIER_APPEL
         if self.min_request_interval <= 0:
             return
-        attente = self._last_request_at + self.min_request_interval - time.monotonic()
+        attente = _DERNIER_APPEL + self.min_request_interval - time.monotonic()
         if attente > 0:
             time.sleep(attente)
-        self._last_request_at = time.monotonic()
+        _DERNIER_APPEL = time.monotonic()
+        # Garde l'instance coherente : personne ne le lit aujourd'hui, mais un
+        # compteur d'instance qui ment serait un piege pour le prochain lecteur.
+        self._last_request_at = _DERNIER_APPEL
 
     def authenticate(self) -> str:
         last_error: Optional[Exception] = None
