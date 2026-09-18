@@ -13085,6 +13085,183 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// QUALIFIER UN ACQUEREUR AVANT LE COMPROMIS OU LA VENTE        18/09/2026
+// ═══════════════════════════════════════════════════════════════════════════
+// LA CAUSE DU DEFAUT 1.4, ETABLIE LE 17-18/09 DANS L'INTERFACE DE HEKTOR :
+//   leur champ acquereur interroge `prospect-searchProspectsByCurrentUser`
+//   avec `typeProspect=2` -- il ne propose QUE les contacts deja « acquereur ».
+//   Un contact qui ne l'est pas (605075, mandant seulement) est abandonne en
+//   silence par l'assistant, TROIS fois de suite. Ce n'etait pas notre envoi.
+// LA SORTIE, PROUVEE : une recherche fait de lui un acquereur. Recherche creee
+//   pour 605075 -> typologie « acquereur » -> garde sur le compromis 50088.
+//
+// LE MONTAGE, DECIDE PAR FREDERIC LE 18/09 : creer la recherche, ATTACHER la
+//   transaction, PUIS archiver la recherche. Une fois attache, le contact est
+//   acquereur par la transaction elle-meme ; la recherche ne vit que le temps
+//   du geste, et ne laisse ni rapprochement ni recherche active derriere elle.
+//
+// ⚠ TOUT DANS LE MEME TRAVAIL, DANS L'ORDRE. Deux travaux separes tourneraient
+//   sur deux workers en parallele : la transaction pourrait partir avant que la
+//   recherche existe, et l'acquereur serait refuse quand meme.
+// ⚠ DEUX CONTEXTES. Creer ou archiver une recherche exige le contexte du
+//   negociateur du contact (sinon 403) ; le compromis se cree en administrateur.
+//   On qualifie AVANT la bascule administrateur, et on archive APRES le geste.
+// ⚠ ON NE DEVINE PAS : un contact inconnu de notre base n'est pas qualifie (on
+//   le dit), et une recherche dont on ne retrouve pas l'identifiant n'est pas
+//   archivee a l'aveugle (on le dit aussi).
+// ⚠ UN TRAVAIL RELANCE NE CREE PAS UNE SECONDE RECHERCHE : il relit dans son
+//   propre journal les qualifications deja faites.
+
+// Les acquereurs que l'assistant va reellement poster -- memes conditions que
+// submitHektorAssistantTransaction (creation : tous ; reprise : si affirmes).
+function acquereursDemandesPourQualification(payload) {
+  if (payload && payload.reprendre_transaction === true && payload.acquereurs_affirmes !== true) return [];
+  const ids = [];
+  const pousser = (v) => {
+    const t = String(v == null ? "" : v).trim();
+    if (/^\d+$/.test(t) && !ids.includes(t)) ids.push(t);
+  };
+  pousser(payload && (payload.buyer_contact_id || payload.acquereur_id));
+  if (payload && Array.isArray(payload.buyer_contact_ids)) payload.buyer_contact_ids.forEach(pousser);
+  return ids;
+}
+
+function estQualifieAcquereur(typologies) {
+  const liste = Array.isArray(typologies) ? typologies
+    : (typeof typologies === "string" ? (safeJsonParse(typologies) || []) : []);
+  return liste.some((t) => /acqu/i.test(String(t || "")));
+}
+
+async function qualifierAcquereursAvantTransaction(job, payload, target, annonceId) {
+  if (!ASSISTANTS_HEKTOR[target]) return [];            // l'offre n'a pas ce filtre
+  const ids = acquereursDemandesPourQualification(payload);
+  if (!ids.length) return [];
+
+  // Les qualifications deja faites par CE travail (relance) : on ne recree rien.
+  const dejaFaites = new Map();
+  try {
+    const traces = await supabaseRequest(
+      `app_console_job_log?job_id=eq.${encodeURIComponent(job.id)}`
+      + `&step=eq.hektor_qualification_acquereur&status=eq.done&select=payload_preview`,
+      { method: "GET" });
+    for (const t of Array.isArray(traces) ? traces : []) {
+      const p = safeJsonParse(t.payload_preview) || {};
+      if (p.hektor_contact_id) dejaFaites.set(String(p.hektor_contact_id), p.id_critere || "");
+    }
+  } catch (_) { /* sans journal lisible, on s'appuie sur la typologie seule */ }
+
+  let contacts = [];
+  try {
+    contacts = await supabaseRequest(
+      `app_contact_current?select=hektor_contact_id,typologies_json`
+      + `&hektor_contact_id=in.(${ids.map((x) => encodeURIComponent(x)).join(",")})`,
+      { method: "GET" });
+  } catch (erreur) {
+    await logJob(job.id, "hektor_qualification_acquereur", "error",
+      "Typologie des acquereurs illisible : aucune qualification tentee", {
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return [];
+  }
+  const parId = new Map((Array.isArray(contacts) ? contacts : []).map((c) => [String(c.hektor_contact_id), c]));
+  const aQualifier = [];
+  for (const id of ids) {
+    if (dejaFaites.has(id)) {
+      aQualifier.push({ contactId: id, idCritere: dejaFaites.get(id), reprise: true });
+      continue;
+    }
+    const c = parId.get(id);
+    if (!c) {
+      await logJob(job.id, "hektor_qualification_acquereur", "error",
+        `Contact ${id} inconnu de notre base : pas de qualification (on ne devine pas)`, { hektor_contact_id: id });
+      continue;
+    }
+    if (!estQualifieAcquereur(c.typologies_json)) aQualifier.push({ contactId: id });
+  }
+  const neufs = aQualifier.filter((q) => !q.reprise);
+  if (!neufs.length) return aQualifier;
+
+  // Les criteres viennent du BIEN et de la TRANSACTION -- rien n'est invente.
+  let bien = null;
+  try {
+    const lignes = await supabaseRequest(
+      `app_dossier_current?select=type_bien,ville,code_postal,numero_dossier`
+      + `&hektor_annonce_id=eq.${encodeURIComponent(annonceId)}&limit=1`, { method: "GET" });
+    bien = Array.isArray(lignes) && lignes.length ? lignes[0] : null;
+  } catch (_) { bien = null; }
+  const montant = Number(String(payload.amount || payload.sale_price || "").replace(/[^0-9.]/g, ""));
+  if (!bien || !bien.type_bien || !bien.ville || !Number.isFinite(montant) || montant <= 0) {
+    await logJob(job.id, "hektor_qualification_acquereur", "error",
+      "Bien ou montant incomplet : qualification impossible, la transaction part quand meme", {
+        type_bien: bien && bien.type_bien, ville: bien && bien.ville, montant: montant || null });
+    return aQualifier.filter((q) => q.reprise);
+  }
+  const spec = {
+    kind: "search_criteria", enabled: true, offerCode: "0",
+    propertyTypeIds: [String(bien.type_bien)],
+    localities: [{ city: String(bien.ville), postalCode: String(bien.code_postal || "") }],
+    priceMin: String(Math.round(montant * 0.95)),
+    priceMax: String(Math.round(montant * 1.05)),
+  };
+
+  for (const q of neufs) {
+    try {
+      const { context } = await ensureContactSearchExecution(job, { hektor_contact_id: q.contactId });
+      const avant = await listerCriteresBestEffort(q.contactId);
+      const contact = contactSearchExecutionContact({ qualification: "2" }, context.contact);
+      await createHektorContactSearchCriteria(job, q.contactId, contact, {
+        hektor_contact_id: q.contactId, qualification: "2",
+        __prime_contact_search_wizard: true, contact_next_step: spec,
+      });
+      const apres = await listerCriteresBestEffort(q.contactId);
+      // L'identifiant de NOTRE recherche = le seul nouveau. Plusieurs ou aucun :
+      // on ne choisit pas, et on ne l'archivera pas a l'aveugle.
+      let idCritere = "";
+      if (Array.isArray(avant) && Array.isArray(apres)) {
+        const connus = new Set(avant);
+        const nouveaux = apres.filter((x) => !connus.has(x));
+        if (nouveaux.length === 1) idCritere = nouveaux[0];
+      }
+      q.idCritere = idCritere;
+      await logJob(job.id, "hektor_qualification_acquereur", "done",
+        `Acquereur ${q.contactId} qualifie : recherche de qualification creee chez Hektor`
+        + (idCritere ? ` (critere ${idCritere})` : " -- identifiant non retrouve, elle ne sera pas archivee"),
+        { hektor_contact_id: q.contactId, id_critere: idCritere || null, bien: bien.numero_dossier || null,
+          criteres: { type: spec.propertyTypeIds, ville: bien.ville, prix: [spec.priceMin, spec.priceMax] } });
+    } catch (erreur) {
+      // On n'arrete PAS la transaction : l'acquereur risque d'etre abandonne, et
+      // le bandeau de l'etape C le dira. Le reste du geste doit partir.
+      q.echec = true;
+      await logJob(job.id, "hektor_qualification_acquereur", "error",
+        `Qualification de ${q.contactId} impossible -- la transaction part quand meme`,
+        { hektor_contact_id: q.contactId, error: erreur && erreur.message ? erreur.message : String(erreur) });
+    }
+  }
+  return aQualifier.filter((q) => !q.echec);
+}
+
+// APRES le geste, qu'il ait reussi ou non : on ne laisse pas une recherche de
+// qualification vivante derriere nous (elle ferait des rapprochements).
+async function archiverRecherchesDeQualification(job, qualifications) {
+  let bascule = false;
+  for (const q of qualifications || []) {
+    if (!q || !q.idCritere) continue;
+    try {
+      await ensureContactSearchExecution(job, { hektor_contact_id: q.contactId });
+      bascule = true;
+      await archiveHektorContactSearch(job, q.contactId, q.idCritere);
+      await enqueueRefreshConsoleContactDataJobBestEffort(job, q.contactId, {
+        reason: "qualification_acquereur_archivee", priority: 82 });
+    } catch (erreur) {
+      await logJob(job.id, "hektor_qualification_acquereur", "error",
+        `Recherche de qualification ${q.idCritere} NON archivee -- a archiver a la main (contact ${q.contactId})`,
+        { hektor_contact_id: q.contactId, id_critere: q.idCritere,
+          error: erreur && erreur.message ? erreur.message : String(erreur) });
+    }
+  }
+  if (bascule) await returnAdminHektorSessionBestEffort(job, "qualification_return_admin");
+}
+
 async function handleChangeHektorAnnonceStatus(job) {
   const payload = safeJsonParse(job.payload_json);
   const target = normalizeHektorStatusTarget(payload.target_status || payload.status || payload.targetStatus);
@@ -13102,6 +13279,11 @@ async function handleChangeHektorAnnonceStatus(job) {
   }
   const annonceId = String(dossier.hektor_annonce_id || job.hektor_annonce_id || "").trim();
   if (!annonceId) throw new Error("hektor_annonce_id required");
+
+  // 18/09 : qualifier AVANT la bascule administrateur (contexte negociateur requis).
+  const qualifications = config.transactionMode
+    ? await qualifierAcquereursAvantTransaction(job, payload, target, annonceId)
+    : [];
 
   await ensureAdminHektorWriteSession(job, "change_status_admin_login");
   // LE COMPTE DEPEND DU GENRE (voir ASSISTANTS_HEKTOR). On ne bascule vers le
@@ -13332,6 +13514,8 @@ async function handleChangeHektorAnnonceStatus(job) {
       transactionResult = await setHektorAnnonceStatusValue(job, annonceId, config, "direct_status");
     }
   } finally {
+    // 18/09 : la recherche de qualification ne survit pas au geste, reussi ou non.
+    if (qualifications.length) await archiverRecherchesDeQualification(job, qualifications);
     // Rien a rendre si l'on n'a jamais quitte le compte administrateur.
     if (config.transactionMode && !resteAdmin) {
       await returnAdminHektorSessionBestEffort(job, "change_status_return_admin");

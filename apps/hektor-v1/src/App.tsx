@@ -18582,9 +18582,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <div className="sca-acq-choisis">
                               {statusChangeBuyers.map((option, rang) => {
                                 const id = String(option.hektor_contact_id ?? '').trim()
+                                // ─── 18/09 : HEKTOR N'ACCEPTE QU'UN CONTACT DEJA « ACQUEREUR » ───
+                                // Son propre champ ne propose que ceux-la (typeProspect=2) ; un
+                                // autre est abandonne en silence. Le worker le qualifie donc a
+                                // l'envoi (recherche etroite, puis archivee). On le DIT ici.
+                                // ⚠ Seulement pour le compromis et la vente : l'offre n'a pas ce
+                                //   filtre (mesure du 03/09).
+                                const typologies = Array.isArray(option.typologies_json)
+                                  ? option.typologies_json
+                                  : (() => { try { return JSON.parse(String(option.typologies_json ?? '[]')) } catch { return [] } })()
+                                const aQualifier = (statusChangeStatus === 'compromise' || statusChangeStatus === 'sold')
+                                  && !(Array.isArray(typologies) && typologies.some((t: unknown) => /acqu/i.test(String(t ?? ''))))
                                 return (
-                                  <span className="sca-acq-jeton" key={`acq-${id}`}>
+                                  <span className={`sca-acq-jeton${aQualifier ? ' is-a-qualifier' : ''}`} key={`acq-${id}`}
+                                    title={aQualifier ? "Pas encore acquéreur chez Hektor : il sera qualifié automatiquement à l'envoi (recherche créée puis archivée)" : undefined}>
                                     <b>{mandantContactOptionTitle(option)}</b>
+                                    {aQualifier ? <i className="sca-acq-qualif">sera qualifié</i> : null}
                                     {rang === 0 && statusChangeBuyers.length > 1
                                       ? <i title="C'est lui que Hektor recevra en premier">principal</i> : null}
                                     <button type="button" aria-label={`Retirer ${mandantContactOptionTitle(option)}`}
@@ -18593,6 +18606,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                 )
                               })}
                             </div>
+                          ) : null}
+                          {(statusChangeStatus === 'compromise' || statusChangeStatus === 'sold') && statusChangeBuyers.some((option) => {
+                            const t = Array.isArray(option.typologies_json) ? option.typologies_json
+                              : (() => { try { return JSON.parse(String(option.typologies_json ?? '[]')) } catch { return [] } })()
+                            return !(Array.isArray(t) && t.some((x: unknown) => /acqu/i.test(String(x ?? ''))))
+                          }) ? (
+                            <small className="sca-acq-etat">
+                              Hektor n'accepte comme acquéreur qu'un contact déjà qualifié. Ceux marqués
+                              « sera qualifié » le seront automatiquement à l'envoi : une recherche est créée,
+                              la transaction est enregistrée, puis la recherche est archivée.
+                            </small>
                           ) : null}
                           <input
                             value={statusChangeBuyerSearch}

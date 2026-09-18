@@ -32362,6 +32362,10 @@ body {
   color: #1f2c3d;
 }
 .status-change-acq .sca-acq-jeton b { font-weight: 600; }
+/* 18/09 : acquereur pas encore qualifie chez Hektor -- l'ambre des provisoires,
+   pas le rouge : ce n'est pas une erreur, le worker s'en occupe. */
+.status-change-acq .sca-acq-jeton.is-a-qualifier { border-color: #f0d9a8; background: #fdf6e6; }
+.status-change-acq .sca-acq-jeton i.sca-acq-qualif { color: #8a5a00; }
 /* « principal » : celui que Hektor recevra en tete. On le DIT, on ne le
    laisse pas deviner a la position. */
 .status-change-acq .sca-acq-jeton i {
