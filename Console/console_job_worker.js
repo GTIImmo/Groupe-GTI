@@ -10998,9 +10998,16 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         // une case non touchee reste vide et Hektor garde les siens.
         poser("montantHonoraireSortie", cleanMoneyValue(affirme("buyer_fees"), ""));
         poser("tauxHonoraireSortie", cleanMoneyValue(affirme("buyer_fees_rate"), ""));
+        // 18/09 : la commission vendeur, si la modale l'affirme (case touchee).
+        // Le formulaire de vente la porte (releve du 12/09).
+        poser("montantHonoraireEntree", cleanMoneyValue(affirme("seller_fees"), ""));
       } else if (target === "sold") {
         poser("prixDeVente", tx.salePrice);
         poser("dateVente", tx.date);
+        // 18/09 : vente directe ou commission renegociee -- seulement si la
+        // modale l'affirme ; sinon Hektor garde celle qu'il a preremplie (celle
+        // du compromis, ou du mandat sans compromis).
+        poser("montantHonoraireEntree", cleanMoneyValue(payload.seller_fees, ""));
       } else if (enReprise) {
         // ═══ MODIFICATION : UN CHAMP PREREMPLI N'EST PAS UNE AFFIRMATION ═══
         //
@@ -12398,6 +12405,7 @@ const CHAMPS_PROUVABLES = {
   vente: {
     amount: "prix", sale_price: "prix",
     buyer_fees: "honorairesSortie", transaction_date: "date",
+    seller_fees: "honorairesEntree",   // 18/09
   },
   offre: { amount: "montant", transaction_date: "date" },
 };
