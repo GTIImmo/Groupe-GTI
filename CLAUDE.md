@@ -25,11 +25,11 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
-> **18/09/2026 — LES TRANSACTIONS SONT PRÊTES ; LE CHANTIER DEVIENT « L'ÉTAPE 2 ».**
-> Le plan est dans `notice/PLAN_DEV_ACTUALISE_2026-08-20.md`, section **« L'ÉTAPE 2 — CE QUI
-> RESTE »** (audit global du 18/09, fait en lisant le code). On commence par **P1** (E2-1 à
-> E2-5, les défauts qui perdent des données), **E2-1 d'abord** : archiver une recherche vise
-> la mauvaise quand le contact en a plusieurs. La page de tête de la liste est à jour.
+> **18/09/2026 — LES TRANSACTIONS SONT PRÊTES.** L'audit global du 18/09 a relu la liste
+> `① CE QUI RESTE À FAIRE` contre le code, **rubrique par rubrique, sous les mêmes numéros**
+> (C.4, C.4-bis/C.1', C.19-d 3.5, C.17-ter, D.0, 0.3, E.0-bis, A.2). L'ordre avant E.2 est dans
+> la **page de tête de la liste** ; on commence par **C.4 : archiver une recherche vise la
+> mauvaise** quand le contact en a plusieurs.
 > Ce qui suit dans cette section date d'avant le 18/09 : il reste vrai, il n'est plus l'ordre.
 
 **Chantier : `C.19-d` — LE REGISTRE DES TRANSACTIONS.**

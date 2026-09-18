@@ -7,25 +7,26 @@
 lui reste alimenté par les workers. **A.1 · A.2 · A.3 hors de portée** : pas de coupure datée.
 
 ```
-   FINI LE 18/09 -- LES TRANSACTIONS SONT PRÊTES (3.1 3.2 3.2d 3.2e 1.4 cochées)
-     compromis · vente · offre : créer, modifier, supprimer, qualifier l'acquéreur -- EN RÉEL
-     commission vendeur modifiable, charge acquéreur, vente sans compromis, historique d'offre
-     montant des offres : RUN corrigé (f089883) -- se remplit au run du 19/09
-     relecture par NUMÉRO offre/compromis (daa4b39, d79f88f) -- au redémarrage des services
+   FINI LE 18/09 : C.19 / C.19-d -- LES TRANSACTIONS SONT PRÊTES (3.1 3.2 3.2d 3.2e cochées)
+     compromis · vente · offre en réel ; montant des offres corrigé dans le RUN (19/09)
 
-   LE PLAN DE L'ÉTAPE 2 -- audit global du 18/09 : PLAN_DEV_ACTUALISE, section « L'ÉTAPE 2 »
-     P1  défauts qui perdent des données       E2-1 à E2-5     ~2 j   ← COMMENCER ICI
-         E2-1 archiver une recherche vise la MAUVAISE (222 exposées)
-     P2  run + surveillance                    E2-6 à E2-8     ~1,5 j
-     P3  gestes qui obligent à ouvrir Hektor   E2-9 à E2-13    ~10-15 j ou exceptions
-     P4  rattrapage 19-R1 + essais             E2-14, E2-15
+   AUDIT DU 18/09 -- la liste ① relue contre le CODE, rubrique par rubrique (mêmes numéros)
+     AVANT E.2, dans cet ordre :
+       1.  C.4      archiver une recherche vise la MAUVAISE (222 exposées)      ← D'ABORD
+       4.  C.4-bis  C.1' : la relecture efface une saisie en conflit ; saisie partielle
+       2.  C.19-d   3.5 : une transaction supprimée peut ressusciter
+           C.17-ter 13 étapes du run non surveillées ; sonde « IP bannie » ; reprise versionnée
+       10. D.0      la redescente des documents, arrêtée depuis le 23/08
+       11. 0.3      19-R1 : ~270 recherches invisibles
+       11. E.0-bis  mandat existant · photos · fusion de doublons (ou exception)
+       12. A.2      lancer une signature depuis l'app (ou exception)
+     PAS AVANT E.2 : C.9 (la création marche via Hektor) · C.16 · A.3-tech · C.11 · D.1/D.2
 
-   DEMAIN MATIN (19/09) : run de 5 h (bannissement ? balayage ? montants d'offres ?),
-     recherches de qualification archivées (605075 · 605414 · 605429), essai offre 33050
+   DEMAIN MATIN (19/09) : run de 5 h · recherches de qualification archivées · essai offre 33050
 
    EN ATTENTE DE FRÉDÉRIC
-     E.2 (qui en premier) · exceptions signature (E2-9) et fusion (E2-13) · 4 gestes
-     abandonnés · 6 écarts de statut · mot de passe de la base · 50039 net/commission inversés
+     E.2 (qui en premier) · exceptions A.2 et fusion · 4 gestes abandonnés · 6 écarts de
+     statut (4.2) · mot de passe de la base · 50039 net/commission inversés
 ```
 
 **CE QUI A COÛTÉ CHER, ET QUI SE RÉPÈTE** — ⚠ *le 17/09, deux commits de la veille ont eu
@@ -98,6 +99,16 @@ CONVERTIS (14 sur 16)                        mesure dans le code le 31/08
                                         eprouve a l'ecran : cycle complet
 
 [x] delete_hektor_contact_search   DEJA CONVERTI LE 30/08 -- constate le 01/09
+    ⚠ 18/09 -- CE « DEJA CONVERTI » ETAIT FAUX, ET IL RESTE UN DEFAUT :
+      la fonction PLANTAIT a chaque appel (search_index ambigu) du 30/08 au
+      18/09 (corrige 03f1bdc). ET ELLE VISE PAR POSITION : l'app n'envoie pas
+      l'idCritere (api.ts : target_critere_id: null) et ne le STOCKE PAS
+      (app_contact_search_current : criteres_json seul) ; le worker prend la
+      recherche au rang demande dans une liste scrapee qui ne rend que la 1re
+      (mesure 31/08), repli list[0] (console_job_worker.js ~15641).
+      ➡ ARCHIVER LA 2e RECHERCHE D'UN CONTACT ARCHIVE LA 1re CHEZ HEKTOR.
+        222 recherches actives au rang >= 2 exposees.  A CORRIGER AVANT E.2 :
+        capturer l'idCritere (~0,5-1 j), a defaut bloquer au-dela du rang 1.
                                    app_console_create_delete_contact_search_job
                                    ecrit archive=true, is_active=false DANS LA
                                    MEME TRANSACTION, garde une photo d'avant
@@ -123,6 +134,8 @@ CONVERTIS (14 sur 16)                        mesure dans le code le 31/08
 
 [—] delete_hektor_annonce          SANS OBJET -- decision du 15/05, a revoir
 [—] delete_hektor_contact          APRES la coupure des workers
+    ⚠ 18/09 : la suppression d'un contact (admin) laisse ses RAPPROCHEMENTS
+      orphelins -- handleDeleteHektorContact ne purge pas les 3 tables. ~2 h.
 
     POURQUOI SANS OBJET, et ce n'est pas un renoncement.
     notice/NOTE_SUPPRESSION_ANNONCE_HEKTOR_2026-05-15.md le dit deja :
@@ -172,11 +185,23 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [x] ANNULER un compromis    FAIT 02/09 -- compromis 50059 (EM28412) : status 1 -> 2.
     Le statut de l'annonce NE BOUGE PAS, l'offre acceptee NE PASSE PAS refusee.
     'annuler' retire de la redescente ; il ne reste que 'supprimer', non mesure.
-[ ] SUPPRIMER une vente     DESORMAIS POSSIBLE : la vente 23294 existe (cycle 4,
+[x] SUPPRIMER une vente     ✅ 18/09 : faite 9 fois (23294 le 03/09 ... 23317 le 18/09) ;
+    Hektor redescend SEUL le statut (5 mesures). DESORMAIS POSSIBLE : la vente 23294 existe (cycle 4,
     03/09). Geste IRREVERSIBLE -- une vente ne s'annule pas, elle disparait.
-[ ] le RETOUR EN ARRIERE sur refus                JAMAIS TESTE -- garde-fou de l'instantane
+[x] le RETOUR EN ARRIERE sur refus                ✅ EPROUVE LE 08/09 : 33048 refusee,
+                                                re-acceptee puis re-refusee (ac83db4)
 [x] redemarrer les workers                        fait plusieurs fois le 31/08
 [x] deployer le front                             en ligne, bundle index-BLZWZur4
+
+LE CHAPITRE C.19-d (plus bas, phases 0 a 4) -- CE QUI RESTE, relu contre le code le 18/09
+[ ] 3.5  UNE TRANSACTION SUPPRIMEE PEUT RESSUSCITER   le journal app_affaire_supprimee
+         n'est lu que tant que serveur_aligne=false ; refresh_ledger ne le consulte
+         jamais -> si le miroir la garde (balayage qui refuse, nuit de bannissement),
+         elle revient (vente 30650, 17/09).  ~0,5 j
+[ ] 26bis-TRANSACTIONS   une transaction nee dans l'app n'est au registre LOCAL
+         qu'une fois retrouvee chez Hektor (UPDATE, jamais INSERT)
+[ ] 2.4 · 3.2c · « B » (un seul champ de montant) · 4.2   petits, non bloquants
+[ ] 4.1  le carnet disparait -- APRES la coupure seulement
 ```
 
 ## 3. C.4-bis-0 — VÉRIFIER LA DÉTECTION *(préalable au filet)*
@@ -251,16 +276,28 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 
 ```
 [x] le defaut mesure                    6 en erreur, 0 rejoue, tentatives=1 partout
-[ ] file app_affaire_pending
-[ ] balayage a la minute                rejeu 5 / 10 / 15 / 20 / 25 min
-[ ] abandon a 5 -> conflict
-[ ] bandeau sur la fiche
-[ ] perimetre : les 3 gestes + le changement de statut
+[x] file app_affaire_pending            ✅ FAIT AUTREMENT (verifie 18/09) : le travail
+                                        LUI-MEME est rejoue (app_console_action_enqueue_
+                                        due_retries), pas de file separee
+[x] balayage a la minute                ✅ tache Supabase app-action-retry-due, chaque minute
+[x] abandon a 5 -> conflict             ✅ + trace app_pending_resolution (33 abandons au total)
+[x] bandeau sur la fiche                ✅ « gestes non transmis » (App.tsx ~32112)
+[x] perimetre : les 3 gestes + le changement de statut   ✅ + delete_hektor_compromis (17/09)
+[ ] ELARGIR LE PERIMETRE -- 18/09 : creation d'annonce, numero de mandat, photo, document
+    ne sont PAS rejoues. ~0,5-1 j
+
+C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en lisant le code
+[ ] LA RELECTURE DE FICHE EFFACE UNE SAISIE EN CONFLIT   push_single_annonce_to_supabase.py
+    ~l.574 : conflict -> clear_annonce_pending -> Hektor gagne. Contredit « une saisie ne
+    se perd jamais ». La garder, ou l'archiver dans app_pending_resolution.  ~0,5 j
+[ ] UNE SAISIE PARTIELLE SE RENVOIE SANS FIN   app_annonce_enqueue_due_pushes ne filtre
+    pas `partial` (lu dans le code, pas observe : 0 ligne).  ~0,5 j
 ```
 
 ## 5. C.16 — LES CONTACTS QUI N'EXISTENT PLUS
 ```
 [x] remesuree                           825 fiches actives, pas 284 269
+    ⚠ 18/09 : a l'etape 2, MODIFIER l'un de ces 825 finira en conflit. Pas bloquant.
 [ ] marquer disparues les 825 actives   jamais supprimer -- regle du projet
 [ ] traiter les 5 454 archivees
 [ ] poser le mecanisme "un contact a quitte le listing"   patron : reconcile_annonce_scope
@@ -269,6 +306,11 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 ## 6. C.9 — LA CRÉATION PART DE L'APP  ·  7. 26bis-③
 ```
 [ ] C.9      creer un bien SANS passer par Hektor         1 a 2 sem.
+             ⚠ 18/09 : PAS BLOQUANT POUR L'ETAPE 2 -- la creation depuis l'app
+             PASSE par Hektor via le worker (77 reussies sur 78) ; le calque
+             optimiste est ALLUME depuis le 26/06 (PROVISIONAL_CREATION_ENABLED,
+             api.ts), contrairement a ce que disaient le plan et la memoire.
+             C.9 prepare la COUPURE.
 [ ] C.9-couple  CREER UN MENAGE SANS HEKTOR            ajoutee le 11/09
              aujourd'hui l'app envoie le bloc conjoint (spouse_*, que le
              worker traduit en prenom_m2 / nom_m2) et c'est HEKTOR qui cree
@@ -294,6 +336,13 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 
 ## 10. D — RAPATRIER LES FICHIERS *(irréversible)*
 ```
+[ ] D.0   LA REDESCENTE DES DOCUMENTS EST ARRETEE DEPUIS LE 23/08   dernier job
+            sync_console_documents : 23/08 -- arretee apres le bannissement du 20/08.
+            Un document ajoute ou SIGNE cote Hektor n'arrive plus dans l'app.
+            La reprise est CONCUE (memoire sync-documents-empreinte, 19/08) : empreinte
+            de contenu + suivi signature (242 annonces), syncdoc inchange sauf son
+            perimetre ; derriere le frein anti-bannissement.  1-2 j.  BLOQUANT ETAPE 2
+            (les mandats signes).
 [ ] D.1a  MESURER d'abord                  combien de cloud_available sans fichier local -- 1 h
 [ ] D.1   documents                        40 493 a redimensionner
 [ ] D.2   photos                           1 397
@@ -303,8 +352,18 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 ```
 [ ] C.13-c  rattraper les 23 715 dates de cloture     avec les 3 regles validees
 [ ] 0.3     finir 19-R1                               rattrapage acquereurs, 4 h 35
+            ⚠ 18/09 : arrete le 23/08 (reprise prevue apres le contact 427258) ;
+            ~270 recherches creees chez Hektor invisibles dans l'app -- A FAIRE AVANT E.2
 [ ] B.3     le declencheur de descente                en attente du journal
 [ ] E.1     19-R2, la veille de la bascule            DERNIERE OCCASION
+[ ] E.0-bis LES GESTES QUE L'APP NE SAIT TOUJOURS PAS FAIRE   audit du 18/09, en lisant le
+            code -- E.0 (25/08) concluait « aucun manque n'est du code », c'est faux :
+              modifier un MANDAT existant (dates, duree, avenant qui prolonge) -- seuls
+                prix / honoraires / surface le sont                         2-3 j
+              PHOTOS : supprimer, reordonner, choisir la principale        2-3 j
+              FUSIONNER des doublons de contacts (le bouton ouvre Hektor) 2-4 j
+                OU reserve a l'admin -- a trancher par Frederic
+            Ce sont eux qui, avec D.0 et A.2, obligeraient un negociateur a ouvrir Hektor.
 [ ] E.2     bascule des negociateurs sur l'app        decision d'organisation
 [ ] E.3     les workers deviennent invisibles
 [ ] E.4     le jour J                                 distributeur a 100 000
@@ -315,6 +374,9 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 ```
 [ ] A.1  PORTAILS      sortie en nom propre + reprise des ~350 annonces en ligne
 [ ] A.2  SIGNATURE     ton propre contrat (ImmoSign appartient a Hektor)
+         ⚠ ET POUR L'ETAPE 2 (plan §5.2) : l'app ne sait pas LANCER une signature -- le
+           bouton ouvre Hektor. Soit un travail worker ImmoSign (2-4 j + essai, Frederic
+           seul signataire), soit une EXCEPTION assumee a l'etape 2. A trancher.
 [ ] A.3  REGISTRE      obligation legale, aujourd'hui adosse a Hektor
 ```
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas réglés.**
@@ -389,9 +451,16 @@ LA BRANCHE MANQUANTE DU CHANGEMENT DE STATUT
 [x] C.15  les 6 types d'offre + immo pro       4 165 annonces qui n'entraient jamais
 [x] C.17  le monitoring voit le reseau tomber
 [x] C.17-bis  le moniteur ne meurt plus en parlant
+[ ] C.17-ter  CE QUE LE MONITEUR NE VOIT PAS -- audit du 18/09
+              13 cles de heartbeat du run absentes de app_worker_registry : heartbeat.py
+              fait un PATCH, donc RIEN, sans erreur (ex. « entretien ventes » en echec le
+              18/09 06:58, invisible).  ~30 min SQL additif
+              aucune sonde « Hektor injoignable / IP bannie » ; la reprise d'un run mort
+              vit dans un scratchpad, hors depot (l'oubli d'une option a coute 7 182
+              recherches le 17/09).  ~1 j
 [x] C.18  bug agence multi-agences             3 occurrences depuis juin
 [x] C.19  etapes 1 a 3 + le code de l'etape 4
-[x] E.0   audit : que ne peut-on PAS faire dans l'app ?
+[x] E.0   audit : que ne peut-on PAS faire dans l'app ?   ⚠ INCOMPLET -- voir E.0-bis (18/09)
 ```
 
 ## Fait le 29/08, hors tâches numérotées
