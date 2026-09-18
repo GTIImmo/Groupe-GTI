@@ -15396,7 +15396,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const montant = valeur('montant', affaire.montant)
     if (montant) {
       if (statusChangeStatus === 'sold') setStatusChangeSalePrice(montant)
-      else setStatusChangeAmount(montant)
+      else {
+        setStatusChangeAmount(montant)
+        // 18/09 : pour le COMPROMIS, le prix de vente suit le montant de l'offre
+        // (ou du compromis repris). Il gardait le prix de l'ANNONCE, prerempli a
+        // l'ouverture -- et a la creation, le worker s'en sert pour prixDeVente et,
+        // faute de saisie, pour le net vendeur : un net de 180 000 pour un
+        // compromis a 165 000. Il reste modifiable ; le prix du mandat reste
+        // affiche en repere sous le champ.
+        if (statusChangeStatus === 'compromise') setStatusChangeSalePrice(montant)
+      }
     }
     if (date && date !== '0000-00-00') setStatusChangeDate(date)
     if (dateActe && dateActe !== '0000-00-00') setStatusChangeSignatureDate(dateActe)
@@ -18543,6 +18552,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <label className="filter-field">
                           <span>Prix de vente</span>
                           <input value={statusChangeSalePrice} onChange={(event) => setStatusChangeSalePrice(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" required={statusChangeNeedsSalePrice(statusChangeStatus)} />
+                          {/* 18/09 : le prix du mandat, en REPERE -- le prix de vente vient de l'offre. */}
+                          {statusChangeStatus === 'compromise' && statusChangeTarget?.prix != null && String(statusChangeTarget.prix).trim() !== '' ? (
+                            <small className="sca-acq-etat">Prix du mandat : {formatPrice(statusChangeTarget.prix)}</small>
+                          ) : null}
                         </label>
                         <label className="filter-field">
                           <span>Date</span>
