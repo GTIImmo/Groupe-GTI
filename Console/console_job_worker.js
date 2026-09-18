@@ -10988,6 +10988,16 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         // prix de vente d'abord.
         poser("prixDeVente", cleanMoneyValue(affirme("sale_price") || affirme("amount"), ""));
         poser("dateVente", dateAffirmee("transaction_date", "date_vente"));
+        // ─── 18/09 : LES HONORAIRES ACQUEREUR, COMME LE COMPROMIS ───
+        // Le formulaire de vente les porte (releves du 08/09 et du 12/09), la
+        // modale les montre et la preuve les compare -- mais seule la creation
+        // les posait. Modifier les honoraires d'une vente existante etait donc
+        // perdu, et la preuve accusait Hektor d'un « envoye X » jamais envoye.
+        // Meme regle que le compromis : seulement ce que la charge affirme. En
+        // modification la modale ne les preremplit QUE depuis le carnet, donc
+        // une case non touchee reste vide et Hektor garde les siens.
+        poser("montantHonoraireSortie", cleanMoneyValue(affirme("buyer_fees"), ""));
+        poser("tauxHonoraireSortie", cleanMoneyValue(affirme("buyer_fees_rate"), ""));
       } else if (target === "sold") {
         poser("prixDeVente", tx.salePrice);
         poser("dateVente", tx.date);

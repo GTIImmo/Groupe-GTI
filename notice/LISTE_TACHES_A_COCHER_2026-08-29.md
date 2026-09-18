@@ -4811,6 +4811,17 @@ GEL que Frederic a repere le premier).*
               compromis (« Hektor ne le fait pas tout seul, c'est un SECOND
               GESTE »), desormais confirme pour la vente. La remise en etat a
               demande une modification du compromis existant.
+              ⛔ FAUX -- RECTIFIE LE 18/09. Hektor REDESCEND SEUL le statut quand
+                 on supprime une vente (Vendu -> Sous compromis). Mesure QUATRE
+                 fois : 03/09 (23294), 04/09 (23299), 08/09 (23301), 17/09 (23307 :
+                 trois minutes apres, la reprise de l'app lisait « Sous compromis »
+                 chez Hektor -- la suppression du compromis de 09:41 porte
+                 statut_avant = Sous compromis). Le 13/09, le statut a ete remis
+                 a la main 75 s apres la suppression (travaux 17:34:17 -> 17:35:42) :
+                 on a regarde trop tot. ➡ C'est l'INVERSE du compromis, dont
+                 l'interface fait un second geste. NE PAS ajouter
+                 redescendreStatutHektor a handleDeleteHektorVente -- propose
+                 a tort le 18/09 sur la foi de cette ligne, retire apres audit.
            ③ et `present_in_hektor` n'est PAS pose par le travail de suppression :
               il l'est par LA RPC, au moment du clic. Un travail insere en direct
               saute donc ce marquage et laisse un fantome -- exactement celui qui
