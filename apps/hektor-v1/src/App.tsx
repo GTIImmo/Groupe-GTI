@@ -18591,8 +18591,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                 const typologies = Array.isArray(option.typologies_json)
                                   ? option.typologies_json
                                   : (() => { try { return JSON.parse(String(option.typologies_json ?? '[]')) } catch { return [] } })()
+                                // ⚠ TYPOLOGIE INCONNUE ≠ NON QUALIFIE (vu a l'essai du 18/09) : les
+                                //   acquereurs repris du registre n'en portent pas. On ne signale que
+                                //   ce qu'on SAIT ; le worker, lui, relit la typologie en base.
+                                const typologieConnue = option.typologies_json != null && Array.isArray(typologies) && typologies.length > 0
                                 const aQualifier = (statusChangeStatus === 'compromise' || statusChangeStatus === 'sold')
-                                  && !(Array.isArray(typologies) && typologies.some((t: unknown) => /acqu/i.test(String(t ?? ''))))
+                                  && typologieConnue
+                                  && !typologies.some((t: unknown) => /acqu/i.test(String(t ?? '')))
                                 return (
                                   <span className={`sca-acq-jeton${aQualifier ? ' is-a-qualifier' : ''}`} key={`acq-${id}`}
                                     title={aQualifier ? "Pas encore acquéreur chez Hektor : il sera qualifié automatiquement à l'envoi (recherche créée puis archivée)" : undefined}>
@@ -18610,7 +18615,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           {(statusChangeStatus === 'compromise' || statusChangeStatus === 'sold') && statusChangeBuyers.some((option) => {
                             const t = Array.isArray(option.typologies_json) ? option.typologies_json
                               : (() => { try { return JSON.parse(String(option.typologies_json ?? '[]')) } catch { return [] } })()
-                            return !(Array.isArray(t) && t.some((x: unknown) => /acqu/i.test(String(x ?? ''))))
+                            return option.typologies_json != null && Array.isArray(t) && t.length > 0
+                              && !t.some((x: unknown) => /acqu/i.test(String(x ?? '')))
                           }) ? (
                             <small className="sca-acq-etat">
                               Hektor n'accepte comme acquéreur qu'un contact déjà qualifié. Ceux marqués
