@@ -4133,7 +4133,23 @@ GEL que Frederic a repere le premier).*
                       branche `separes` posait le public dans prixDeVente). Taux
                       vendeur NON envoye (Hektor le deduit). Vente : lecture seule.
                       Carnet : patch_commission_vendeur_carnet_2026-09-18.sql.
-                      ⚠ ESSAI REEL A FAIRE.
+                      ✅ ESSAI REEL FAIT LE 18/09 (24933, depuis la modale) :
+                        compromis 50091 cree commission 8 000 -> gardee, net 172 000 ;
+                          modifie 9 000 -> net 171 000, RELU ; notaires intacts
+                        vente 23315 sur 50091 : commission 9 000 reprise ; modifiee
+                          date + honoraires acq 1 500 (c4c59c9) puis commission
+                          8 500 -> RELU ; notaires intacts sans y toucher ;
+                          supprimee -> Hektor redescend SEUL a Sous compromis
+                        compromis 50092 CHARGE ACQUEREUR : 185 000 / acq 7 500 /
+                          vendeur 0 (garde a 0) / net 177 500 ; modifie acq 8 000
+                          -> public 185 000, vente 177 000, net 177 000 (releve)
+                        vente directe 23316 : 178 000 / commission 7 000 / acq
+                          2 000 / 2 notaires -> tout garde ; supprimee -> Sous offre
+                      RESTE : qualification sur une vente (aucun contact de test
+                        non « acquereur » disponible) ; 2 defauts d'affichage
+                        (honoraires acq vides en modification ; prix de vente
+                        du compromis a la creation = prix de l'annonce, ecrit
+                        au carnet prix_publique).
              LOT 2  ✅ FAIT 16/09 : les DEUX notaires par recherche (acq + mandant)
              LOT 3  mandants[] · ✅ conditions 16/09 (app seule) · notes · content_pdf
              LOT 4  (AJOUTE LE 08/09, releve des etapes 2 et 3)
