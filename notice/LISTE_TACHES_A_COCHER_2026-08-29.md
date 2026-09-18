@@ -4145,11 +4145,16 @@ GEL que Frederic a repere le premier).*
                           -> public 185 000, vente 177 000, net 177 000 (releve)
                         vente directe 23316 : 178 000 / commission 7 000 / acq
                           2 000 / 2 notaires -> tout garde ; supprimee -> Sous offre
-                      RESTE : qualification sur une vente (aucun contact de test
-                        non « acquereur » disponible) ; 2 defauts d'affichage
-                        (honoraires acq vides en modification ; prix de vente
-                        du compromis a la creation = prix de l'annonce, ecrit
-                        au carnet prix_publique).
+                        QUALIFICATION SUR UNE VENTE : contact de test 605429 cree
+                          « Proprietaire » -> vente 23317 : recherche 471697 creee,
+                          2 acquereurs GARDES, recherche archivee ; contact devenu
+                          « acquereur ». Vente supprimee -> Sous offre.
+                        ⚠ La recherche 471697 reste ACTIVE dans l'app (Hektor
+                          archive par une DATE = aujourd'hui) : a verifier au run
+                          du 19/09 avec celles de 605075 et 605414.
+                      ✅ 2 defauts d'affichage corriges (5968211) : honoraires acq
+                        preremplis en modification ; prix de vente du compromis
+                        qui suit le montant a la creation.
              LOT 2  ✅ FAIT 16/09 : les DEUX notaires par recherche (acq + mandant)
              LOT 3  mandants[] · ✅ conditions 16/09 (app seule) · notes · content_pdf
              LOT 4  (AJOUTE LE 08/09, releve des etapes 2 et 3)
