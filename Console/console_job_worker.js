@@ -12407,7 +12407,10 @@ const CHAMPS_PROUVABLES = {
     buyer_fees: "honorairesSortie", transaction_date: "date",
     seller_fees: "honorairesEntree",   // 18/09
   },
-  offre: { amount: "montant", transaction_date: "date" },
+  // 18/09 : lue par numero (details_offre) -- la DERNIERE proposition. La date
+  // s'appelle dateProposition (sans l'heure) pour ne pas ecraser la date de
+  // l'offre au registre ; la validite devient prouvable.
+  offre: { amount: "montant", transaction_date: "dateProposition", validity_days: "validite" },
 };
 
 // ═══ UNE SAISIE DISPARAIT UNE FOIS ARRIVEE ═══                 11/09/2026
@@ -12440,6 +12443,7 @@ const CHAMPS_CARNET_PAR_CHARGE = {
   net_seller_price: ["prix_net_vendeur"],
   buyer_fees: ["honoraires"],
   seller_fees: ["honoraires_entree"],   // 18/09
+  validity_days: ["jours_validite"],    // 18/09 : l'offre, relue par numero
   sequestration: ["sequestre"],
   transaction_date: ["date"],
   signature_date: ["date_acte"],
@@ -12475,6 +12479,7 @@ const REGISTRE_PAR_HEKTOR = {
   prixNetVendeur: ["prix_net_vendeur"],
   honorairesSortie: ["honoraires_sortie"],
   honorairesEntree: ["honoraires_entree"],   // 18/09 : la commission vendeur
+  validite: ["jours_validite"],              // 18/09 : l'offre seulement
   sequestre: ["sequestre"],
   dateStart: ["date"],
   date: ["date"],
@@ -12775,7 +12780,21 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
   let conformesDetail = [];
   for (let essai = 1; essai <= 3; essai += 1) {
     if (essai > 1) await sleep(4000);
-    lu = await lireTransactionsBestEffort(job, annonceId, genre, `apres_modification_${essai}`, dateTransaction);
+    // ─── 18/09 : L'OFFRE SE RELIT PAR SON NUMERO ───
+    // La liste ne rend que les 20 offres les plus recentes de L'AGENCE : elle a
+    // ete faite pour TROUVER le numero d'une offre qu'on vient de creer (« une
+    // offre ancienne n'y sera pas, et c'est voulu »). La modification en a
+    // herite sans le dire -- et on modifie justement des offres anciennes. Le
+    // 08/09 : « offre 33050 MODIFIE mais NON VERIFIE ».
+    // Ici le numero est CONNU : une lecture par numero (OffreById, deja celle
+    // qui verifie les suppressions), qui rend le montant, la validite et la date
+    // de la DERNIERE proposition. Une requete par essai, sur une offre vivante.
+    if (genre === "offre") {
+      const e = await lireEtatTransactionViaApi(job, "offre", cible, `apres_modification_${essai}`);
+      lu = (e && e.trouve === true && e.details) ? { details: { [cible]: e.details } } : null;
+    } else {
+      lu = await lireTransactionsBestEffort(job, annonceId, genre, `apres_modification_${essai}`, dateTransaction);
+    }
     if (!lu || !lu.details || !lu.details[cible]) continue;
     const chez = lu.details[cible];
     ecarts = []; conformes = []; conformesDetail = [];
@@ -12799,15 +12818,22 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
   //   travail en echec, et l'echec REJOUE (5 tentatives) : cinq doublons au lieu
   //   d'un. La creation accidentelle se repare a la main -- le geste existe
   //   depuis 3.4 et il est eprouve -- une cascade, non.
-  if (lu && lu.tous && ventesAvant && ventesAvant.tous) {
-    const apparus = Array.from(lu.tous).filter((id) => !ventesAvant.tous.has(id));
+  // Pour l'offre, `lu` vient de la lecture par numero et ne porte pas la liste :
+  // UNE lecture de la liste, ici seulement, pour garder ce filet -- une offre
+  // creee par erreur est forcement parmi les 20 plus recentes.
+  let luListe = lu;
+  if (genre === "offre" && ventesAvant && ventesAvant.tous) {
+    luListe = await lireTransactionsBestEffort(job, annonceId, genre, "apres_modification_liste", dateTransaction);
+  }
+  if (luListe && luListe.tous && ventesAvant && ventesAvant.tous) {
+    const apparus = Array.from(luListe.tous).filter((id) => !ventesAvant.tous.has(id));
     if (apparus.length) {
       await logJob(job.id, "hektor_transaction_doublon", "error",
         `⚠ MODIFICATION DEMANDEE, CREATION OBTENUE : le ${genre} ${apparus.join(", ")} `
         + `n'existait pas avant l'envoi. La transaction ${cible} devait etre corrigee, pas doublee. `
         + `A supprimer chez Hektor -- le geste existe dans l'app.`, {
           hektor_annonce_id: annonceId, app_affaire_id: appAffaireId || null,
-          cible, apparus, avant: Array.from(ventesAvant.tous), apres: Array.from(lu.tous),
+          cible, apparus, avant: Array.from(ventesAvant.tous), apres: Array.from(luListe.tous),
         });
       return { verifie: true, modifiee: false, doublon: apparus, hektor_transaction_id: cible };
     }

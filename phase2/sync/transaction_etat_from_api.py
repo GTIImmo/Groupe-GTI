@@ -94,8 +94,43 @@ def etat_transaction(kind: str, ident: str,
         return {"trouve": bool(vivante)}
     if not isinstance(res, dict) or res.get("id") is None:
         return {"trouve": False}
-    return {"trouve": True, "id": str(res.get("id")),
-            "status": str(res.get("status")) if res.get("status") is not None else ""}
+    lu = {"trouve": True, "id": str(res.get("id")),
+          "status": str(res.get("status")) if res.get("status") is not None else ""}
+    if kind == "offre":
+        lu["details"] = details_offre(res)
+    return lu
+
+
+def details_offre(res: dict) -> dict:
+    """Ce qu'une offre porte AUJOURD'HUI, lu dans son historique -- 18/09/2026.
+
+    Une offre n'a pas de prix « a plat » : Hektor garde une ligne par
+    proposition, puis une par acceptation ou refus. L'historique est TOUJOURS
+    chronologique (0 exception sur 11 098 offres, mesure du 18/09), donc la
+    valeur courante est celle de la DERNIERE ligne « proposition » -- la meme
+    regle que le run (affaire_ledger.py).
+
+    ⚠ LA DATE EST RENDUE SANS L'HEURE. Hektor date la proposition avec la date
+      saisie PLUS une heure (« 2026-09-04 18:30:06 ») : la comparer telle quelle
+      a la date envoyee fabriquerait un faux ecart. Et elle s'appelle
+      `dateProposition`, pas `date`, pour que le report au registre ne
+      l'ecrive pas a la place de la date de l'offre.
+    """
+    props = res.get("propositions")
+    props = props if isinstance(props, list) else []
+    lignes = [p for p in props if isinstance(p, dict)]
+    faites = [p for p in lignes if str(p.get("type", "")).strip().lower() == "proposition"]
+    derniere = faites[-1] if faites else {}
+    def propre(v):
+        t = str(v if v is not None else "").strip()
+        return "" if t in ("", "0") else t
+    return {
+        "montant": propre(derniere.get("montant")),
+        "validite": propre(derniere.get("validite")),
+        "dateProposition": str(derniere.get("date") or "").strip()[:10],
+        "etat": str((lignes[-1] if lignes else {}).get("type", "")).strip().lower(),
+        "propositions": len(faites),
+    }
 
 
 def main() -> int:
@@ -108,38 +143,14 @@ def main() -> int:
         print(json.dumps({"_error": "id non numerique"}))
         return 0
 
-    chemin, param = CHEMINS[args.kind]
-    try:
-        client = HektorClient(Settings.from_env())
-        payload = client.get_json(chemin, params={param: ident})
-    except Exception as exc:
-        texte = str(exc)
-        # Un 404 est une REPONSE, pas une panne : l'objet n'existe plus.
-        if "404" in texte:
-            print(json.dumps({"trouve": False}))
-            return 0
-        print(json.dumps({"_error": texte[:200]}, ensure_ascii=False))
-        return 0
-
-    res = payload.get("res") if isinstance(payload, dict) else None
-    if isinstance(res, list):
-        res = res[0] if res else None
-
-    if args.kind == "vente":
-        # La vente n'a pas d'etat chez Hektor : elle existe, ou elle a disparu.
-        vivante = bool(payload) and not (isinstance(res, (dict, list)) and not res)
-        print(json.dumps({"trouve": bool(vivante)}))
-        return 0
-
-    if not isinstance(res, dict) or res.get("id") is None:
-        print(json.dumps({"trouve": False}))
-        return 0
-
-    print(json.dumps({
-        "trouve": True,
-        "id": str(res.get("id")),
-        "status": str(res.get("status")) if res.get("status") is not None else "",
-    }, ensure_ascii=False))
+    # ─── 18/09/2026 : UNE SEULE LECTURE, CELLE DE etat_transaction() ───
+    # Cette commande recopiait la logique au lieu de l'appeler. Le 16/09 on a
+    # corrige la fonction (l'offre repond sous `offre`, pas sous `res`) -- et
+    # la copie, ici, est restee fausse : pour une offre, elle rendait TOUJOURS
+    # « trouve: False ». Latent (l'app ne supprime pas d'offre, le balayage
+    # appelle la fonction), mais c'est cette commande que le worker lance.
+    # Compromis et vente : memes reponses qu'avant, a la lettre.
+    print(json.dumps(etat_transaction(args.kind, ident), ensure_ascii=False))
     return 0
 
 
