@@ -11030,6 +11030,14 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         poser("sequestre", cleanMoneyValue(affirme("sequestration"), ""));
         poser("montantHonoraireSortie", cleanMoneyValue(affirme("buyer_fees"), ""));
         poser("tauxHonoraireSortie", cleanMoneyValue(affirme("buyer_fees_rate"), ""));
+        // ─── 18/09 : LA COMMISSION VENDEUR SE NEGOCIE AU COMPROMIS ───
+        // Demande de Frederic : elle n'est pas forcement celle du mandat. Hektor
+        // GARDE ce qu'on lui envoie (campagne du 08/09 : 12 345 envoye, 12 345
+        // retenu) mais NE RECALCULE PAS le net derriere -- d'ou la deduction
+        // plus bas. Seulement si la modale l'affirme (case touchee) : sinon on
+        // repose le formulaire rendu, c'est-a-dire on CONSERVE.
+        // Le taux vendeur n'est pas envoye : Hektor le deduit du montant (C).
+        poser("montantHonoraireEntree", cleanMoneyValue(affirme("seller_fees"), ""));
 
         // ─── « LE MONTANT » S'ECRIT DANS LE PRIX DE VENTE ───
         //
@@ -11046,15 +11054,29 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         // pas sa formule ».
         const montantVoulu = cleanMoneyValue(affirme("amount"), "");
         if (montantVoulu) {  // eslint-disable-line no-lonely-if
-          poser("prixDeVente", montantVoulu);
           const publiqueRendu = String(htmlInputValue(etat.contenu, "prixPublique") || "").trim();
           const venteRendu = String(htmlInputValue(etat.contenu, "prixDeVente") || "").trim();
-          const separes = Number(publiqueRendu) !== Number(venteRendu);
-          if (!separes) poser("prixPublique", montantVoulu);
-          // Ce qu'on N'A PAS ecrit ne doit pas etre juge comme un echec par
-          // l'arbitre : il compare `amount` a prixPublique, et ici on l'a
-          // volontairement laisse a Hektor.
-          else nonVerifiables.push("prixPublique");
+          // ─── 18/09 : LE DOSSIER A CHARGE ACQUEREUR ───
+          // « Sur une transaction, c'est soit la commission vendeur, soit la
+          // commission acquereur » (Frederic). Mesure du parc 2025+ : 620
+          // compromis a charge vendeur, 19 a charge acquereur, 2 les deux. Sur
+          // les 19, net = montant - honoraires acquereur, 19 fois sur 19 : le
+          // MONTANT du registre est donc le PRIX PUBLIC (prixPublique -> montant).
+          // L'ancienne branche `separes` posait ce prix public dans prixDeVente
+          // -- jamais rencontree en essai. On pose maintenant la paire
+          // COHERENTE : public = montant, vente = montant - honoraires acquereur.
+          // Sans honoraires acquereur (97 %), RIEN NE CHANGE : les deux = montant.
+          const sortieVoulue = Number(cleanMoneyValue(affirme("buyer_fees"), "")
+            || String(htmlInputValue(etat.contenu, "montantHonoraireSortie") || "").trim() || "0");
+          const separes = Number.isFinite(sortieVoulue) && sortieVoulue > 0
+            && Number(montantVoulu) - sortieVoulue > 0;
+          if (separes) {
+            poser("prixPublique", montantVoulu);
+            poser("prixDeVente", String(Number(montantVoulu) - sortieVoulue));
+          } else {
+            poser("prixDeVente", montantVoulu);
+            poser("prixPublique", montantVoulu);
+          }
 
           // ═══ LE NET VENDEUR SUIT LE PRIX, SINON L'ECRAN MENT ═══
           //
@@ -11092,17 +11114,23 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
           //   l'ecrase pas ici.
           const netAffirme = cleanMoneyValue(affirme("net_seller_price"), "");
           if (!netAffirme) {
-            const honorairesEntree = String(
+            // 18/09 : la commission vendeur AFFIRMEE passe avant celle du
+            // formulaire (sinon on deduirait l'ancienne), et les honoraires
+            // acquereur sont deduits aussi -- 0 dans 97 % des cas.
+            const honorairesEntree = cleanMoneyValue(affirme("seller_fees"), "") || String(
               htmlInputValue(etat.contenu, "montantHonoraireEntree") || "").trim();
-            const net = Number(montantVoulu) - Number(honorairesEntree || "0");
+            const sortieDeduite = separes ? sortieVoulue : 0;
+            const net = Number(montantVoulu) - Number(honorairesEntree || "0") - sortieDeduite;
             if (honorairesEntree !== "" && Number.isFinite(net) && net > 0) {
               poser("prixNetVendeur", String(net));
               calcules.push({ hektor: "prixNetVendeur", envoye: String(net) });
               await logJob(job.id, "hektor_assistant", "running",
-                `Net vendeur recalcule : ${montantVoulu} - ${honorairesEntree} = ${net}. `
+                `Net vendeur recalcule : ${montantVoulu} - ${honorairesEntree}`
+                + (sortieDeduite ? ` - ${sortieDeduite} (acquereur)` : "") + ` = ${net}. `
                 + `Sans cela la fiche continuerait d'afficher l'ancien prix (mesure du 08/09).`,
                 { hektor_annonce_id: annonceId, montant: montantVoulu,
-                  honoraires_entree: honorairesEntree, net_vendeur: net });
+                  honoraires_entree: honorairesEntree, honoraires_sortie: sortieDeduite,
+                  net_vendeur: net });
             } else {
               await logJob(job.id, "hektor_assistant", "running",
                 `Net vendeur LAISSE A HEKTOR : honoraires d'entree illisibles `
@@ -11113,9 +11141,9 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
           }
           await logJob(job.id, "hektor_assistant", "running",
             separes
-              ? `Modification : prix de vente ${montantVoulu}. Prix public LAISSE A HEKTOR `
-                + `(il le calcule, et des honoraires acquereurs l'ecartent du prix de vente : `
-                + `${publiqueRendu} vs ${venteRendu})`
+              ? `Modification : prix public ${montantVoulu}, prix de vente `
+                + `${Number(montantVoulu) - sortieVoulue} (charge acquereur : ${sortieVoulue}). `
+                + `Formulaire rendu : ${publiqueRendu} / ${venteRendu}`
               : `Modification : prix de vente et prix public ${montantVoulu} `
                 + `(aucun honoraire acquereur ne les separe)`,
             { hektor_annonce_id: annonceId, montant: montantVoulu,
@@ -11128,7 +11156,33 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
         poser("nbJoursRetractation", String(payload.retraction_days || payload.nb_jours_retractation || "10"));
         poser("prixPublique", tx.amount || tx.salePrice);
         poser("prixDeVente", tx.salePrice);
-        poser("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
+        // ─── 18/09 : LA COMMISSION VENDEUR, ET LE NET QUI S'EN DEDUIT ───
+        // La commission : seulement si la modale l'affirme -- sinon Hektor pose
+        // celle du mandat (mesure du 03/09), ce qui reste le cas courant.
+        // Le net, s'il n'est pas saisi : prix public - commission vendeur -
+        // honoraires acquereur, la regle que 97 % du parc verifie. Avant, on
+        // prenait le net PROPOSE par le formulaire -- et le 03/09 il valait
+        // 170 000 (le prix de l'ANNONCE moins 10 000) pour un compromis a 176 000.
+        const commissionVendeur = cleanMoneyValue(payload.seller_fees, "");
+        poser("montantHonoraireEntree", commissionVendeur);
+        const netSaisi = cleanMoneyValue(payload.net_seller_price, "");
+        const publicVoulu = cleanMoneyValue(tx.amount || tx.salePrice, "");
+        const entreeConnue = commissionVendeur
+          || String(htmlInputValue(etat.contenu, "montantHonoraireEntree") || "").trim();
+        const sortieConnue = Number(cleanMoneyValue(tx.fees, "") || "0");
+        const netDeduit = Number(publicVoulu) - Number(entreeConnue || "0")
+          - (Number.isFinite(sortieConnue) ? sortieConnue : 0);
+        if (!netSaisi && publicVoulu && entreeConnue !== "" && Number.isFinite(netDeduit) && netDeduit > 0) {
+          poser("prixNetVendeur", String(netDeduit));
+          await logJob(job.id, "hektor_assistant", "running",
+            `Creation : net vendeur deduit ${publicVoulu} - ${entreeConnue}`
+            + (sortieConnue ? ` - ${sortieConnue} (acquereur)` : "") + ` = ${netDeduit}`
+            + (commissionVendeur ? " (commission vendeur saisie dans l'app)" : " (commission du mandat)"),
+            { hektor_annonce_id: annonceId, prix_public: publicVoulu,
+              honoraires_entree: entreeConnue, honoraires_sortie: sortieConnue, net_vendeur: netDeduit });
+        } else {
+          poser("prixNetVendeur", tx.netSellerPrice || tx.salePrice);
+        }
         poser("sequestre", tx.sequestration);
       }
       if (!enReprise) {
@@ -12337,6 +12391,7 @@ const CHAMPS_PROUVABLES = {
   compromis: {
     amount: "prixPublique", sale_price: "prixPublique",
     net_seller_price: "prixNetVendeur", buyer_fees: "honorairesSortie",
+    seller_fees: "honorairesEntree",   // 18/09 : la commission vendeur
     sequestration: "sequestre", transaction_date: "dateStart",
     signature_date: "dateSignatureActe",
   },
@@ -12376,6 +12431,7 @@ const CHAMPS_CARNET_PAR_CHARGE = {
   sale_price: ["prix_publique", "montant"],
   net_seller_price: ["prix_net_vendeur"],
   buyer_fees: ["honoraires"],
+  seller_fees: ["honoraires_entree"],   // 18/09
   sequestration: ["sequestre"],
   transaction_date: ["date"],
   signature_date: ["date_acte"],
@@ -12410,6 +12466,7 @@ const REGISTRE_PAR_HEKTOR = {
   montant: ["montant"],              // offre
   prixNetVendeur: ["prix_net_vendeur"],
   honorairesSortie: ["honoraires_sortie"],
+  honorairesEntree: ["honoraires_entree"],   // 18/09 : la commission vendeur
   sequestre: ["sequestre"],
   dateStart: ["date"],
   date: ["date"],
@@ -12463,6 +12520,7 @@ const CARNET_VERS_REGISTRE = {
   date_acte:        "date_acte",
   sequestre:        "sequestre",
   prix_net_vendeur: "prix_net_vendeur",
+  honoraires_entree: "honoraires_entree",   // 18/09
   numero_mandat:    "numero_mandat",
   jours_validite:   "jours_validite",
 };

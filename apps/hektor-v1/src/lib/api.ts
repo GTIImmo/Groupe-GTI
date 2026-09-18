@@ -9290,6 +9290,9 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   notairesAffirmes?: { acquereur?: boolean; mandant?: boolean }
   buyerFees?: string
   buyerFeesRate?: string
+  /** 18/09 : la commission VENDEUR du compromis. N'est transmise que si la case a
+   *  ete touchee -- sinon Hektor garde la sienne (celle du mandat a la creation). */
+  sellerFees?: string
   netSellerPrice?: string
   sequestration?: string
   closeReason?: string
@@ -9351,6 +9354,7 @@ export async function createChangeHektorAnnonceStatusJob(input: {
       : null,
     buyer_fees: input.buyerFees?.trim() || null,
     buyer_fees_rate: input.buyerFeesRate?.trim() || null,
+    seller_fees: input.sellerFees?.trim() || null,
     net_seller_price: input.netSellerPrice?.trim() || null,
     sequestration: input.sequestration?.trim() || null,
     close_reason: input.closeReason?.trim() || null,

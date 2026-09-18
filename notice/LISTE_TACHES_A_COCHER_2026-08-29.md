@@ -4122,6 +4122,18 @@ GEL que Frederic a repere le premier).*
          l'app le jour de la coupure ? » -- et la reponse appartient a Frederic.
          Trois lots naturels :
              LOT 1  les honoraires VENDEUR (montant + taux)   -> la commission
+                    ⭐ 18/09 : le MONTANT devient MODIFIABLE sur le compromis
+                      (creation + modification), demande de Frederic -- « elle se
+                      negocie, ce n'est pas forcement celle du mandat ». Envoyee
+                      seulement si la case est touchee (seller_fees ->
+                      montantHonoraireEntree) ; NET = montant - vendeur - acquereur,
+                      deduit a la saisie (modale) et, a defaut, par le worker.
+                      Charge acquereur (19/641 compromis 2025+) : en modification
+                      public = montant, vente = montant - honoraires acquereur (la
+                      branche `separes` posait le public dans prixDeVente). Taux
+                      vendeur NON envoye (Hektor le deduit). Vente : lecture seule.
+                      Carnet : patch_commission_vendeur_carnet_2026-09-18.sql.
+                      ⚠ ESSAI REEL A FAIRE.
              LOT 2  ✅ FAIT 16/09 : les DEUX notaires par recherche (acq + mandant)
              LOT 3  mandants[] · ✅ conditions 16/09 (app seule) · notes · content_pdf
              LOT 4  (AJOUTE LE 08/09, releve des etapes 2 et 3)

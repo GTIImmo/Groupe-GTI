@@ -12037,7 +12037,18 @@ export default function App() {
   // les lui envoie pas. On les MONTRE parce que sans eux l'utilisateur ne peut
   // pas voir si son prix est coherent -- c'est le terme du milieu de
   // l'invariant, et il manquait (manque n°1 de 0.1).
+  // ⬆ 18/09 : MODIFIABLE SUR LE COMPROMIS. Demande de Frederic -- la commission
+  //   se negocie au compromis, elle n'est pas forcement celle du mandat. Hektor
+  //   GARDE ce qu'on lui envoie (08/09 : 12 345 envoye, 12 345 retenu). Sur la
+  //   VENTE elle reste en lecture : elle vient du compromis.
   const [statusChangeHonorairesEntree, setStatusChangeHonorairesEntree] = useState('')
+  // N'est envoyee que si la case a ete TOUCHEE : un champ prerempli n'est pas
+  // une affirmation (regle du 08/09).
+  const [statusChangeHonorairesEntreeTouche, setStatusChangeHonorairesEntreeTouche] = useState(false)
+  // LE NET EST UNE DEDUCTION : montant - commission vendeur - honoraires
+  // acquereur (97 % du parc 2025+ le verifie). Il se recalcule quand on modifie
+  // l'un des trois -- sauf si l'utilisateur l'a tape lui-meme.
+  const [statusChangeNetManuel, setStatusChangeNetManuel] = useState(false)
 
   // ═══ L'INVARIANT DU PRIX — 08/09/2026 ═══
   //
@@ -12060,6 +12071,29 @@ export default function App() {
   //   signale, l'utilisateur tranche.
   // ⚠ ELLE SE TAIT TANT QU'ELLE NE SAIT PAS. Un seul terme manquant ou illisible
   //   et il n'y a rien a comparer : mieux vaut se taire qu'alerter sur du vide.
+  // ─── 18/09 : LE NET VENDEUR EST UNE DEDUCTION ───
+  // Appelee a la SAISIE (montant, commission vendeur, honoraires acquereur), pas
+  // au preremplissage : un net prerempli depuis Hektor n'est pas une intention,
+  // le recalculer a l'ouverture l'enverrait sans que personne l'ait demande.
+  // Un net tape a la main n'est plus touche ; l'alerte d'ecart, dessous, veille.
+  function apresSaisieCommission(suivant: { montant?: string; entree?: string; sortie?: string }) {
+    if (statusChangeStatus !== 'compromise' || statusChangeNetManuel) return
+    const nombre = (v: string) => {
+      const t = String(v ?? '').replace(/\s/g, '').replace(',', '.').trim()
+      if (!t) return null
+      const n = Number(t)
+      return Number.isFinite(n) ? n : null
+    }
+    const montant = nombre(suivant.montant ?? statusChangeAmount)
+    const entree = nombre(suivant.entree ?? statusChangeHonorairesEntree)
+    const sortie = nombre(suivant.sortie ?? statusChangeBuyerFees) ?? 0
+    // Sans commission vendeur connue, on ne devine pas : le worker deduira avec
+    // celle du mandat, que Hektor connait.
+    if (montant === null || entree === null) return
+    const net = montant - entree - sortie
+    if (net > 0) setStatusChangeNetSellerPrice(String(Math.round(net * 100) / 100))
+  }
+
   const ecartPrixTransaction = useMemo(() => {
     const nombre = (v: string) => {
       const t = String(v ?? '').replace(/\s/g, '').replace(',', '.').trim()
@@ -15079,6 +15113,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeBuyerFeesRate('')
     setStatusChangeNetSellerPrice('')
     setStatusChangeHonorairesEntree('')
+    setStatusChangeHonorairesEntreeTouche(false)
+    setStatusChangeNetManuel(false)
     setStatusChangeSequestration('')
     // (statusChangeApresVente est desormais une constante — plus rien a reinitialiser)
     setStatusChangeCloseReason('')
@@ -15427,8 +15463,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const prixNet = String(carnet.prix_net_vendeur ?? '').trim()
       || texte(affaire.prix_net_vendeur)
     if (prixNet) setStatusChangeNetSellerPrice(prixNet)
-    // Les honoraires du VENDEUR : lecture seule, ils viennent de Hektor.
-    setStatusChangeHonorairesEntree(texte(affaire.honoraires_entree))
+    // Les honoraires du VENDEUR. 18/09 : modifiables sur le compromis -- donc,
+    // comme les autres champs, LE CARNET D'ABORD (la saisie pas encore arrivee).
+    setStatusChangeHonorairesEntree(valeur('honoraires_entree', affaire.honoraires_entree))
     const prixPublic = String(carnet.prix_publique ?? '').trim()
     if (prixPublic) setStatusChangeSalePrice(prixPublic)
     const honoraires = String(carnet.honoraires ?? '').trim()
@@ -15959,6 +15996,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         notairesAffirmes: statusChangeNotairesAffirmes,
         buyerFees: statusChangeBuyerFees,
         buyerFeesRate: statusChangeBuyerFeesRate,
+        // 18/09 : la commission vendeur, SEULEMENT si la case a ete touchee, et
+        // seulement pour le compromis (sur la vente elle est en lecture).
+        sellerFees: statusChangeStatus === 'compromise' && statusChangeHonorairesEntreeTouche
+          ? statusChangeHonorairesEntree : undefined,
         netSellerPrice: statusChangeNetSellerPrice,
         sequestration: statusChangeSequestration,
         closeReason: statusChangeCloseReason,
@@ -18546,7 +18587,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         {statusChangeStatus !== 'sold' ? (
                           <label className="filter-field">
                             <span>{statusChangeStatus === 'offer' ? "Montant de l'offre" : 'Montant / prix public'}</span>
-                            <input value={statusChangeAmount} onChange={(event) => setStatusChangeAmount(event.target.value)} inputMode="numeric" placeholder="Ex : 180000" required />
+                            <input value={statusChangeAmount} onChange={(event) => {
+                              setStatusChangeAmount(event.target.value)
+                              apresSaisieCommission({ montant: event.target.value })
+                            }} inputMode="numeric" placeholder="Ex : 180000" required />
                           </label>
                         ) : null}
                         <label className="filter-field">
@@ -18729,7 +18773,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           }} />
                         <label className="filter-field">
                           <span>Honoraires acquereur</span>
-                          <input value={statusChangeBuyerFees} onChange={(event) => setStatusChangeBuyerFees(event.target.value)} inputMode="numeric" placeholder="0" />
+                          <input value={statusChangeBuyerFees} onChange={(event) => {
+                            setStatusChangeBuyerFees(event.target.value)
+                            apresSaisieCommission({ sortie: event.target.value })
+                          }} inputMode="numeric" placeholder="0" />
                         </label>
                         <label className="filter-field">
                           <span>Taux honoraires</span>
@@ -18746,19 +18793,32 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <>
                             <label className="filter-field">
                               <span>Prix net vendeur</span>
-                              <input value={statusChangeNetSellerPrice} onChange={(event) => setStatusChangeNetSellerPrice(event.target.value)} inputMode="numeric" placeholder="Auto si vide" />
+                              <input value={statusChangeNetSellerPrice} onChange={(event) => {
+                                setStatusChangeNetSellerPrice(event.target.value)
+                                // Vider la case rend la main au calcul.
+                                setStatusChangeNetManuel(event.target.value.trim() !== '')
+                              }} inputMode="numeric" placeholder="Auto si vide" />
+                              <small className="sca-acq-etat">
+                                {statusChangeNetManuel
+                                  ? 'Saisi à la main — il ne suit plus les commissions.'
+                                  : 'Montant − commission vendeur − honoraires acquéreur.'}
+                              </small>
                             </label>
                             {/* LES HONORAIRES DU VENDEUR = LA COMMISSION DE L'AGENCE.
                                 En LECTURE : Hektor les pose seul, depuis le mandat
                                 (classe C), et l'app ne les lui envoie pas. Ils etaient
                                 invisibles -- manque n°1 de la tache 0.1 -- alors qu'ils
                                 sont le terme du milieu de l'invariant du prix. */}
-                            {statusChangeHonorairesEntree ? (
-                              <label className="filter-field">
-                                <span>Honoraires vendeur (agence)</span>
-                                <input value={statusChangeHonorairesEntree} readOnly disabled title="Pose par Hektor depuis le mandat. L'app ne le modifie pas." />
-                              </label>
-                            ) : null}
+                            {/* 18/09 : MODIFIABLE -- la commission se negocie au compromis.
+                                Vide a la creation : Hektor pose alors celle du mandat. */}
+                            <label className="filter-field">
+                              <span>Honoraires vendeur (agence)</span>
+                              <input value={statusChangeHonorairesEntree} onChange={(event) => {
+                                setStatusChangeHonorairesEntree(event.target.value)
+                                setStatusChangeHonorairesEntreeTouche(true)
+                                apresSaisieCommission({ entree: event.target.value })
+                              }} inputMode="numeric" placeholder="Celle du mandat si vide" />
+                            </label>
                             <label className="filter-field">
                               <span>Sequestre</span>
                               <input value={statusChangeSequestration} onChange={(event) => setStatusChangeSequestration(event.target.value)} inputMode="numeric" placeholder="0" />
