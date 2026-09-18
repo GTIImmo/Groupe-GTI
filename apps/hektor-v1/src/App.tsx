@@ -12049,6 +12049,10 @@ export default function App() {
   // acquereur (97 % du parc 2025+ le verifie). Il se recalcule quand on modifie
   // l'un des trois -- sauf si l'utilisateur l'a tape lui-meme.
   const [statusChangeNetManuel, setStatusChangeNetManuel] = useState(false)
+  // 18/09 (essai reel) : sur le COMPROMIS, le prix de vente restait au prix de
+  // l'annonce quand on tapait le montant -- et partait au carnet (prix_publique).
+  // Il suit desormais le montant, sauf s'il a ete tape a la main.
+  const [statusChangePrixVenteManuel, setStatusChangePrixVenteManuel] = useState(false)
 
   // ═══ L'INVARIANT DU PRIX — 08/09/2026 ═══
   //
@@ -15119,6 +15123,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeHonorairesEntree('')
     setStatusChangeHonorairesEntreeTouche(false)
     setStatusChangeNetManuel(false)
+    setStatusChangePrixVenteManuel(false)
     setStatusChangeSequestration('')
     // (statusChangeApresVente est desormais une constante — plus rien a reinitialiser)
     setStatusChangeCloseReason('')
@@ -15472,7 +15477,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeHonorairesEntree(valeur('honoraires_entree', affaire.honoraires_entree))
     const prixPublic = String(carnet.prix_publique ?? '').trim()
     if (prixPublic) setStatusChangeSalePrice(prixPublic)
+    // 18/09 (essai reel) : la case restait VIDE en modification des qu'il n'y
+    // avait plus de saisie au carnet, alors que Hektor en porte -- le registre
+    // les a (honoraires_sortie, releve a chaque ecriture). Sans danger pour
+    // Hektor (vide = on conserve), mais trompeur, et surtout la DEDUCTION du net
+    // les ignorait : changer le montant d'un dossier a charge acquereur aurait
+    // calcule un net faux. Le carnet garde la priorite ; zero ne s'affiche pas.
+    const honorairesRegistre = texte(affaire.honoraires_sortie).trim()
     const honoraires = String(carnet.honoraires ?? '').trim()
+      || (Number(honorairesRegistre) > 0 ? honorairesRegistre : '')
     if (honoraires) setStatusChangeBuyerFees(honoraires)
     const taux = String(carnet.taux_honoraires ?? '').trim()
     if (taux) setStatusChangeBuyerFeesRate(taux)
@@ -18617,6 +18630,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <input value={statusChangeAmount} onChange={(event) => {
                               setStatusChangeAmount(event.target.value)
                               apresSaisieCommission({ montant: event.target.value })
+                              if (statusChangeStatus === 'compromise' && !statusChangePrixVenteManuel) {
+                                setStatusChangeSalePrice(event.target.value)
+                              }
                             }} inputMode="numeric" placeholder="Ex : 180000" required />
                           </label>
                         ) : null}
@@ -18625,6 +18641,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <input value={statusChangeSalePrice} onChange={(event) => {
                             setStatusChangeSalePrice(event.target.value)
                             if (statusChangeStatus === 'sold') apresSaisieCommission({ montant: event.target.value })
+                            // Vider la case rend le prix de vente au montant.
+                            setStatusChangePrixVenteManuel(event.target.value.trim() !== '')
                           }} inputMode="numeric" placeholder="Ex : 180000" required={statusChangeNeedsSalePrice(statusChangeStatus)} />
                           {/* 18/09 : le prix du mandat, en REPERE -- le prix de vente vient de l'offre. */}
                           {(statusChangeStatus === 'compromise' || statusChangeStatus === 'sold') && statusChangeTarget?.prix != null && String(statusChangeTarget.prix).trim() !== '' ? (
