@@ -1355,16 +1355,24 @@ propositions_json         l historique evenement par evenement
 **LES LOTS — et pourquoi ils ne se font PAS separement**
 
 ```
-[ ] lot 1  DIRE LE VRAI AU LIEU DE LE DEDUIRE     corrige D1 D2 D3
-           lire offre_state ; ne JAMAIS substituer le prix du bien au montant ;
-           afficher la carte meme refusee, avec sa pastille.
-[ ] lot 2  LA LISTE DES AFFAIRES DANS LA RUBRIQUE  corrige D5
-           deja fait DANS LA MODALE le 02/09 (d712d7f) -- reste a le porter dans la rubrique.
-[ ] lot 3  LE CARNET PRIME + LE PAYLOAD            corrige D4
-           = LE CHANTIER DE LECTURE deja ecrit plus haut (carnet -> colonnes -> payload).
-           Les DEUX PREMIERES sources sont faites dans la modale ; la TROISIEME reste.
-[ ] lot 4  L HISTORIQUE D UNE OFFRE                corrige D6 -- le plus lourd, propositions_json
-           n est pas remonte jusqu au front.
+[x] lot 1  DIRE LE VRAI AU LIEU DE LE DEDUIRE     corrige D1 D2 D3
+           ✅ FAIT LE 03/09 PAR 2.1 (e0406f6) -- coche le 18/09 seulement : la
+           liste n'avait pas suivi le code. ckAffaireDepuisChaine lit le registre,
+           l'etat vient de lui, « plus jamais le prix du bien a la place ».
+           deriveAffaire() (l'ancien code) ne reste qu'en SECOURS de lecture ratee.
+           ⚠ Le montant des OFFRES etait vide au registre (11 152 sur 11 152) --
+             corrige dans le run le 18/09 (f089883) : derniere proposition.
+[x] lot 2  LA LISTE DES AFFAIRES DANS LA RUBRIQUE  corrige D5
+           ✅ FAIT LE 03/09 PAR 2.1 : CkChaineLignes liste toutes les transactions
+           d'une chaine.
+[x] lot 3  LE CARNET PRIME + LE PAYLOAD            corrige D4
+           ✅ 18/09 : validite (offre) et fin de retractation (compromis) LUES au
+           registre -- ni chargees (affaireLedgerSelect) ni affichees (vides en dur
+           dans la rubrique, carnet seul dans la modale). 293 et 10 598 valeurs.
+[x] lot 4  L HISTORIQUE D UNE OFFRE                corrige D6
+           ✅ 18/09 : HistoriqueOffre dans le detail deplie de la modale -- une
+           ligne par evenement, ecart de montant, « montant actuel » sur la derniere
+           proposition. Lecture seule.
 ```
 
 ⚠ **UN SEUL PASSAGE, ET APRES LE TEST DES STATUTS.** Trois raisons, toutes verifiees :

@@ -3104,6 +3104,26 @@ body {
 .status-change-affaires .sca-etat.is-conflit { background: #fee2e2; color: #b91c1c; }
 .status-change-affaires .sca-etat.is-en_attente { background: #fef3c7; color: #a16207; }
 .status-change-affaires .sca-etat.is-arrivee { background: #dcfce7; color: #15803d; }
+/* 18/09/2026 -- lot 4 : l'historique d'une offre, dans le detail deplie. Memes
+   teintes que les verdicts ci-dessus : ambre pour une proposition en cours,
+   vert pour l'acceptation, rouge pour le refus. */
+.status-change-affaires .sca-histo { margin-top: 9px; padding-top: 7px; border-top: 1px dashed #e2e8f0; }
+.status-change-affaires .sca-histo ol { list-style: none; margin: 4px 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: 3px; }
+.status-change-affaires .sca-histo li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  font-size: 12px; color: #334155; font-variant-numeric: tabular-nums; }
+.status-change-affaires .sca-histo-d { min-width: 108px; color: #64748b; }
+.status-change-affaires .sca-histo-t { font-style: normal; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 1px 6px; border-radius: 6px; background: #f1f5f9; color: #64748b; }
+.status-change-affaires .sca-histo li.is-proposition .sca-histo-t { background: #fef3c7; color: #a16207; }
+.status-change-affaires .sca-histo li.is-accepte .sca-histo-t { background: #dcfce7; color: #15803d; }
+.status-change-affaires .sca-histo li.is-refus .sca-histo-t { background: #fee2e2; color: #b91c1c; }
+.status-change-affaires .sca-histo-m { font-weight: 600; }
+.status-change-affaires .sca-histo-e { color: #0f766e; font-size: 11px; }
+.status-change-affaires .sca-histo-v { color: #94a3b8; font-size: 11px; }
+.status-change-affaires .sca-histo-c { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #0f766e; }
+.status-change-affaires .sca-histo-vide { margin: 9px 0 0; font-size: 11.5px; color: #94a3b8; font-style: italic; }
 @media (max-width: 640px) {
   .status-change-affaires .sca-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .status-change-affaires .sca-leg { margin-left: 0; }

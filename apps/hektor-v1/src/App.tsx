@@ -19371,8 +19371,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             ['Prix net vendeur', argent(champ('prix_net_vendeur'))],
                             ['Honoraires', argent(champ('honoraires'))],
                             ['Taux honoraires', champ('taux_honoraires').v ? { ...champ('taux_honoraires'), v: `${champ('taux_honoraires').v} %` } : champ('taux_honoraires')],
-                            ['Validité', champ('jours_validite').v ? { ...champ('jours_validite'), v: `${champ('jours_validite').v} jours` } : champ('jours_validite')],
-                            ['Rétractation', champ('jours_retractation').v ? { ...champ('jours_retractation'), v: `${champ('jours_retractation').v} jours` } : champ('jours_retractation')],
+                            // 18/09 (D4) : le registre en repli -- ces deux lignes ne lisaient
+                            // QUE le carnet, donc restaient vides sans saisie dans l'app.
+                            ['Validité', champ('jours_validite', a.jours_validite).v ? { ...champ('jours_validite', a.jours_validite), v: `${champ('jours_validite', a.jours_validite).v} jours` } : champ('jours_validite', a.jours_validite)],
+                            ['Rétractation', champ('jours_retractation').v
+                              ? { ...champ('jours_retractation'), v: `${champ('jours_retractation').v} jours` }
+                              : a.date_fin_retractation
+                                ? { v: `jusqu'au ${formatDate(a.date_fin_retractation)}`, app: false, cle: 'jours_retractation' }
+                                : champ('jours_retractation')],
                             ['Séquestre', argent(champ('sequestre', a.sequestre))],
                             ['Date', jour(champ('date', a.date))],
                             ["Date d'acte", jour(champ('date_acte', a.date_acte))],
@@ -19478,6 +19484,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                       )
                                     })}
                                   </div>
+                                  {a.kind === 'offre' ? <HistoriqueOffre propositions={a.propositions_json} /> : null}
                                   <div className="sca-foot">
                                     <span>N° app <b>{a.app_affaire_id}</b></span>
                                     <span>N° Hektor <b>{numero || '—'}</b></span>
@@ -25572,6 +25579,60 @@ function ckPartieConsole(
     .join(' \u2014 ')
 }
 
+// ─── LOT 4 : L'HISTORIQUE D'UNE OFFRE ───                          18/09/2026
+// Une offre n'a pas un montant, elle a un HISTORIQUE : une ligne par proposition,
+// puis une par acceptation ou refus (qui repetent le montant). Il dormait au
+// registre (propositions_json) sans aucun ecran -- defaut D6 du 02/09.
+// L'ordre de Hektor est chronologique (0 exception sur 11 098 offres, mesure du
+// 18/09) ; le montant COURANT est celui de la derniere proposition -- la meme
+// regle que le run (affaire_ledger.py) et que la relecture du worker.
+// LECTURE SEULE : rien ne part, rien ne s'ecrit.
+type LigneProposition = { date?: unknown; type?: unknown; montant?: unknown; validite?: unknown }
+function HistoriqueOffre({ propositions }: { propositions: unknown }) {
+  let lignes: LigneProposition[] = []
+  try {
+    const brut = typeof propositions === 'string' ? JSON.parse(propositions) : propositions
+    if (Array.isArray(brut)) lignes = brut.filter((x) => x && typeof x === 'object') as LigneProposition[]
+  } catch { lignes = [] }
+  if (!lignes.length) {
+    return <p className="sca-histo-vide">Historique non transmis par Hektor.</p>
+  }
+  const typeDe = (l: LigneProposition) => String(l.type ?? '').trim().toLowerCase()
+  const indexCourant = lignes.map(typeDe).lastIndexOf('proposition')
+  const LIBELLE: Record<string, string> = { proposition: 'Proposition', accepte: 'Acceptée', refus: 'Refusée' }
+  const nombre = (v: unknown) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null }
+  let precedent: number | null = null
+  return (
+    <div className="sca-histo">
+      <span className="sca-k">Historique de l'offre</span>
+      <ol>
+        {lignes.map((l, i) => {
+          const t = typeDe(l)
+          const montant = nombre(l.montant)
+          let ecart = ''
+          if (t === 'proposition' && montant !== null && precedent !== null && montant !== precedent) {
+            const d = montant - precedent
+            ecart = `${d > 0 ? '+' : '−'}${formatPrice(Math.abs(d))}`
+          }
+          if (t === 'proposition' && montant !== null) precedent = montant
+          const validite = String(l.validite ?? '').trim()
+          const date = String(l.date ?? '').trim()
+          return (
+            <li key={i} className={`is-${t || 'autre'}`}>
+              <span className="sca-histo-d">{date ? `${formatDate(date)}${date.length > 10 ? ' ' + date.slice(11, 16) : ''}` : '—'}</span>
+              <i className="sca-histo-t">{LIBELLE[t] ?? (t || 'Événement')}</i>
+              <span className="sca-histo-m">{montant !== null && montant > 0 ? formatPrice(montant) : '—'}</span>
+              {ecart ? <span className="sca-histo-e">{ecart}</span> : null}
+              {t === 'proposition' && validite && validite !== '0' ? <span className="sca-histo-v">{validite} j</span> : null}
+              {i === indexCourant ? <b className="sca-histo-c">montant actuel</b> : null}
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
 function ckAffaireDepuisChaine(
   c: ChaineAffaire,
   vendeur: CkParty | null,
@@ -25648,7 +25709,8 @@ function ckAffaireDepuisChaine(
       montant: affairePrix(o.montant),
       net: '',
       date: o.date ? formatDate(o.date) : '',
-      validite: '',
+      // 18/09 (D4) : lue au registre -- elle etait vide EN DUR.
+      validite: String(o.jours_validite ?? '').trim() ? `${String(o.jours_validite).trim()} jours` : '',
       etat: affaireEtatLabel('offre', o.state),
       raw: String(o.hektor_affaire_id ?? '').trim()
         ? 'Hektor n° ' + String(o.hektor_affaire_id)
@@ -25664,7 +25726,8 @@ function ckAffaireDepuisChaine(
       net: affairePrix(cp.prix_net_vendeur),
       dateStart: cp.date ? formatDate(cp.date) : '',
       dateActe: cp.date_acte ? formatDate(cp.date_acte) : '',
-      retract: '',
+      // 18/09 (D4) : Hektor porte une DATE de fin, pas un nombre de jours.
+      retract: cp.date_fin_retractation ? `jusqu'au ${formatDate(cp.date_fin_retractation)}` : '',
       sequestre: affairePrix(cp.sequestre),
       etat: affaireEtatLabel('compromis', cp.state),
     } : null,

@@ -1530,6 +1530,11 @@ export type AffaireLedgerRow = {
   /** 'api' | 'console' | 'saisie'. 'saisie' fige la ligne cote serveur. */
   notaires_origine: string | null
   propositions_json: unknown
+  /** 18/09 : la VALIDITE d'une offre (jours) et la FIN DE RETRACTATION d'un
+   *  compromis, telles que Hektor les porte. Elles etaient au registre (293 et
+   *  10 598 lignes) mais pas lues : l'ecran les affichait vides en dur (D4). */
+  jours_validite?: string | null
+  date_fin_retractation?: string | null
   commission_agence: string | null
 }
 
@@ -1539,6 +1544,7 @@ const affaireLedgerSelect =
   'hektor_acquereur_id,acquereur_json,acquereurs_json,state,montant,date,date_acte,sequestre,present_in_hektor,' +
   'prix_net_vendeur,honoraires_entree,honoraires_sortie,' +
   'mandants_json,notaires_json,propositions_json,commission_agence,' +
+  'jours_validite,date_fin_retractation,' +
   'notaire_acquereur_id,notaire_acquereur_nom,notaire_mandant_id,notaire_mandant_nom,' +
   'taux_honoraire_entree,unites_entree_percent,unites_sortie_percent,notaires_origine,' +
   'app_chaine_id'
