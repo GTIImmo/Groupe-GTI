@@ -1059,6 +1059,35 @@ SEUIL_MIROIR_COMPLET = 0.5
 PLAFOND_CANDIDATS = 30
 
 
+# ─── LA RELECTURE UN PAR UN EST COUPEE ─── 18/09/2026, decision de Frederic
+#
+# Ajoutee le 16/09 (ba7679d) pour ne pas retirer un compromis reel que la liste
+# de Hektor oubliait (22976 : 1 cas sur 17). Premiere nuit avec elle : IP bloquee
+# a 06:34 (17/09). Deuxieme nuit, apres le correctif des logins : IP bloquee a
+# nouveau, au MEME endroit, vers 06:25 (18/09). Du 07 au 16/09, sans elle :
+# jamais de blocage.
+#
+# POURQUOI ELLE NE POUVAIT QUE MAL FINIR -- la remarque de Frederic :
+#   les candidats sont, par construction, des transactions que Hektor a
+#   SUPPRIMEES. Les lui redemander une par une, c'est interroger des objets qui
+#   n'existent plus : 404 presque a chaque fois, 403 pour deux offres (32813,
+#   32819). Et l'instantane de mars (`list_compromis`) les reinjecte chaque nuit,
+#   donc c'est la MEME rafale tous les matins -- ~17 lectures d'objets absents,
+#   et on continuait apres le 403. Pour un pare-feu : quelqu'un qui teste des
+#   adresses.
+#
+# ➡ ABSENT DE LA LISTE FRAICHE = RETIRE DU MIROIR, sans rien demander. C'est le
+#   fonctionnement du 07/09 au 16/09. Les garde-fous restent : liste vide, liste
+#   tronquee (< 50 %), plus de PLAFOND_CANDIDATS candidats -> aucune suppression.
+# ⚠ LE CAS 22976 RESTE COUVERT AILLEURS : le registre (app_affaire_ledger) ne
+#   supprime jamais sur une absence, il marque `present_in_hektor = false`, et la
+#   ligne revient d'elle-meme le jour ou Hektor la relistera.
+# ⚠ verifier_chez_hektor() EST CONSERVEE, pas appelee. La rebrancher exige d'abord
+#   une MEMOIRE des suppressions confirmees (ne jamais redemander deux fois le meme
+#   numero) et un ARRET NET au premier 403. Sans les deux, ne pas repasser a True.
+VERIFIER_CHEZ_HEKTOR = False
+
+
 def verifier_chez_hektor(genre: str, identifiants: list[str]) -> tuple[set[str], dict[str, str]]:
     """Demande a Hektor, UN PAR UN, si ces transactions existent encore.
 
@@ -1181,7 +1210,7 @@ def aligner_miroir_sur_hektor(conn: sqlite3.Connection, *, table: str, id_col: s
         return 0
 
     a_retirer = set(candidats)
-    if genre:
+    if genre and VERIFIER_CHEZ_HEKTOR:
         a_retirer, gardees = verifier_chez_hektor(genre, candidats)
         for ident, pourquoi in gardees.items():
             print(f"[miroir] GARDEE ({libelle}) {ident} : {pourquoi}. "
