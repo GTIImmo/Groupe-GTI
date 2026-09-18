@@ -266,7 +266,23 @@ LEDGER_SQL = """
 SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS affaire_id,
        hektor_acquereur_id AS acq_id, acquereur_json AS acq_json, acquereur_json AS acq_tous,
        offre_state AS state,
-       raw_montant AS montant, COALESCE(offre_event_date, raw_date, synced_at) AS dt,
+       -- ─── 18/09/2026 : LE MONTANT D'UNE OFFRE VIT DANS SES PROPOSITIONS ───
+       -- raw_montant est VIDE sur les 11 152 offres du miroir : Hektor ne porte
+       -- pas de prix « a plat » sur une offre, il garde un HISTORIQUE (une ligne
+       -- par proposition, puis une par acceptation ou refus, qui repetent le
+       -- montant). Resultat : le registre n'avait AUCUN montant d'offre, la
+       -- modale affichait « — » et, en modification, reposait le carnet ou le
+       -- prix de l'annonce -- qu'elle aurait renvoyes chez Hektor.
+       -- LA REGLE, MESUREE sur le parc : historique TOUJOURS chronologique
+       -- (0 exception sur 11 098), donc le montant courant est celui de la
+       -- DERNIERE ligne de type « proposition ». raw_montant reste en repli.
+       COALESCE(
+         (SELECT NULLIF(json_extract(p.value, '$.montant'), '0')
+            FROM json_each(propositions_json) p
+           WHERE json_extract(p.value, '$.type') = 'proposition'
+           ORDER BY CAST(p.key AS INTEGER) DESC LIMIT 1),
+         raw_montant) AS montant,
+       COALESCE(offre_event_date, raw_date, synced_at) AS dt,
        NULL AS date_acte, NULL AS sequestre, NULL AS date_fin,
        -- 1.2b (07/09/2026) : LA VALIDITE EST DE CLASSE B, PAS A -- ma faute.
        -- Hektor la garde, dans la PROPOSITION de l'offre. Preuve sans nouvel
@@ -278,7 +294,14 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS 
        -- ⚠ « 0 » VEUT DIRE VIDE, comme partout chez Hektor (le projet le sait
        --   depuis le DPE). Mesure du 07/09 sur le miroir : 10 811 offres sur
        --   11 083 portent « 0 », et 271 seulement une vraie valeur.
-       NULLIF(json_extract(propositions_json, '$[0].validite'), '0') AS validite,
+       -- ⚠ 18/09 : `$[0]` lisait la PREMIERE proposition -- la validite
+       --   d'ORIGINE. L'historique etant chronologique, une validite modifiee
+       --   serait restee l'ancienne. Meme regle que le montant : la derniere
+       --   proposition. (Aucune difference aujourd'hui sur le parc, mesure.)
+       (SELECT NULLIF(json_extract(p.value, '$.validite'), '0')
+          FROM json_each(propositions_json) p
+         WHERE json_extract(p.value, '$.type') = 'proposition'
+         ORDER BY CAST(p.key AS INTEGER) DESC LIMIT 1) AS validite,
        json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
        json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
        json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
