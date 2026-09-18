@@ -3,10 +3,109 @@
 Remplace le plan du 18/08. Établi après quatre audits mesurés :
 identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (20/08).
 
-> **Dernière mise à jour : 03/09/2026.** C.19-d requalifié en **« LE REGISTRE DES
+> **Dernière mise à jour : 18/09/2026** — section « L'ÉTAPE 2 — CE QUI RESTE » ci-dessous.
+> *(Mise à jour précédente : 03/09/2026.)* C.19-d requalifié en **« LE REGISTRE DES
 > TRANSACTIONS »** après audit complet — voir la révision ③ du 03/09 dans
 > « L'ordre retenu », et le détail item par item dans la liste, section « 2 ter ».
 > *(Mise à jour précédente : 28/08 — voir « CE QUI A BOUGÉ LES 27-28/08 ».)*
+
+---
+
+## 🎯 L'ÉTAPE 2 — CE QUI RESTE, audit global du 18/09/2026
+
+> **La cible** (Frédéric, 15/09) : les négociateurs travaillent **dans l'app** et n'ouvrent plus
+> Hektor ; Hektor reste alimenté par les workers. **Pas la coupure** : A.1 · A.2 · A.3 restent
+> hors de portée. Audit fait **en lisant le code et la base**, par domaine (annonces-mandats,
+> contacts-recherches, transactions, robustesse) — les notes étaient en retard sur le code dans
+> les deux sens.
+
+**Le constat en une phrase.** Les transactions sont prêtes. Ce qui empêche l'étape 2, ce sont
+**trois défauts qui perdent ou trompent des données** et **cinq gestes qui obligent encore à
+ouvrir Hektor** — l'étude E.0 du 25/08 (« aucun manque n'est du code ») est démentie par le code.
+
+### P1 — LES DÉFAUTS QUI PERDENT DES DONNÉES *(à faire d'abord · ~2 j)*
+```
+E2-1  ARCHIVER UNE RECHERCHE VISE LA MAUVAISE      l'app n'envoie pas l'idCritere (api.ts
+      target_critere_id: null) ; le worker prend la recherche par POSITION dans une liste
+      scrapee qui, mesure du 31/08, ne rend que la premiere -> repli sur list[0]. L'app ne
+      STOCKE PAS l'idCritere (app_contact_search_current : criteres_json seulement).
+      222 recherches actives au rang >= 2 exposees.  ~0,5-1 j (capturer l'idCritere) ; a
+      defaut, bloquer l'archivage au-dela du rang 1.
+E2-2  LA RELECTURE DE FICHE EFFACE UNE SAISIE EN CONFLIT   push_single_annonce_to_supabase.py
+      (~l.574) : conflict -> clear_annonce_pending -> Hektor gagne. Contredit C.1'. La garder,
+      ou l'archiver dans app_pending_resolution.  ~0,5 j
+E2-3  UNE SAISIE PARTIELLE SE RENVOIE SANS FIN     app_annonce_enqueue_due_pushes ne filtre pas
+      `partial` (lu dans le code, pas observe : 0 ligne).  ~0,5 j
+E2-4  UNE TRANSACTION SUPPRIMEE PEUT RESSUSCITER    le journal app_affaire_supprimee n'est lu
+      que tant que serveur_aligne=false ; refresh_ledger ne le consulte jamais -> si le miroir
+      la garde (balayage refuse, nuit de bannissement), elle revient (30650).  ~0,5 j
+E2-5  SUPPRIMER UN CONTACT LAISSE SES RAPPROCHEMENTS    handleDeleteHektorContact.  ~2 h
+```
+
+### P2 — LE RUN ET LA SURVEILLANCE *(~1,5 j)*
+```
+E2-6  ÉPROUVER le run du 19/09 (balayage sans requete, abbbadb ; relecture montants d'offres)
+E2-7  13 CLES DE HEARTBEAT NON ENREGISTREES      heartbeat.py fait un PATCH : rien, sans erreur.
+      Ex. « entretien ventes » a echoue le 18/09 06:58, invisible.  ~30 min SQL additif
+E2-8  SONDE « HEKTOR INJOIGNABLE / IP BANNIE » + SCRIPT DE REPRISE DU RUN VERSIONNE
+      (la reprise vit dans un scratchpad ; l'oubli d'une option a coute 7 182 recherches).  ~1 j
+```
+
+### P3 — LES GESTES QUI OBLIGENT ENCORE À OUVRIR HEKTOR *(~10-15 j, ou exceptions assumées)*
+```
+E2-9   LANCER UNE SIGNATURE ImmoSign     bouton = ouvrir Hektor.  2-4 j + essai (Frederic seul)
+       OU exception assumee jusqu'a A.2 -- A TRANCHER PAR FREDERIC
+E2-10  VOIR LES DOCUMENTS ajoutes/signes cote Hektor   sync_console_documents : dernier job le
+       23/08 (le lanceur ne passe plus -EnqueueConsoleDocuments).  1-2 j, conception « empreinte »
+       deja validee, apres le frein anti-bannissement
+E2-11  MODIFIER UN MANDAT EXISTANT (dates, duree, avenant qui prolonge)   seuls prix/honoraires/
+       surface le sont.  2-3 j  (cas VA6482 : bien bloque « echu »)
+E2-12  PHOTOS : supprimer, reordonner, choisir la principale   aucun job, aucun ecran.  2-3 j
+E2-13  FUSIONNER DES DOUBLONS DE CONTACTS   le bouton ouvre Hektor.  2-4 j
+       OU reserve a l'admin -- A TRANCHER PAR FREDERIC
+```
+
+### P4 — LES RATTRAPAGES ET LES ESSAIS *(avant d'ouvrir aux négociateurs)*
+```
+E2-14  R.rech / 19-R1   ~270 recherches creees chez Hektor invisibles dans l'app ; arrete le
+       23/08. 4 h 35 de run (pause 20 s obligatoire), EN DEHORS du run de nuit.
+E2-15  ESSAIS : creation de mandat (4 essais, 1 erreur) · modification d'une recherche de bout
+       en bout (jamais depuis C.3) · offre 33050 · intervenants d'une vente sans compromis ·
+       relecture par numero offre/compromis (au redemarrage des services)
+```
+
+### P5 — CE QUI EST À FRÉDÉRIC *(pas du code)*
+```
+E.2   qui passe en premier sur l'app ? (2 commerciaux actifs aujourd'hui, 3 admins)
+      les 4 gestes abandonnes en attente · les 6 ecarts de statut (4.2)
+      les exceptions E2-9 et E2-13 · la rotation du mot de passe de la base (14/09)
+```
+
+### Utile, pas bloquant
+Frein **commun** aux 4 services et au run (chaque processus compte seul) · C.16 (825 contacts
+disparus : leur modification finira en conflit) · rejouer aussi création d'annonce, numéro de
+mandat, photo/document · garder l'intention visible pendant un rejeu de statut · 26bis-TRANSACTIONS
+(une transaction née dans l'app n'est au registre local qu'une fois retrouvée chez Hektor) ·
+2.4, 3.2c, « B » (transactions) · C.11 · critères max dans la modale recherche.
+
+### Seulement pour la coupure (ne rien faire maintenant)
+C.9 · C.9-couple · 26bis-3 · CHAMPS_APP_ANNONCE (vide, c'est voulu) · TACHE 5 · 4-suite ·
+E.1 (19-R2) · E.3 · E.4 · F.1 · A.1 · A.2 · A.3 · D.1a/D.1/D.2 · C.13-c · 4.1.
+
+### Ce que l'audit a corrigé dans nos propres documents
+- « Sauvegarde 07:00 » : elle tourne à **08:15** depuis le 08/09.
+- « Aucun des 4 drapeaux n'a jamais été allumé » : APP_BROUILLON_BUCKET_ENABLED=1 depuis le
+  22/06 ; PROVISIONAL_CREATION_ENABLED=true depuis le 26/06.
+- « Un seul interrupteur » : il y a **quatre** listes de champs app (contact 3 · annonce 0 ·
+  mandat 1 · transaction 0).
+- La modification d'une recherche **fusionne** les critères depuis le 30/08 (le plan disait
+  « remplace ») ; elle ne part plus chez Hektor (C.3), la création et l'archivage si.
+- `delete_hektor_contact_search` était donné « converti le 30/08 » : il plantait à chaque appel
+  jusqu'au 18/09 (03f1bdc).
+
+**ORDRE PROPOSÉ :** P1 → P2 → P4 (essais au fil de l'eau) → P3 selon les arbitrages de P5.
+Estimation : **~4 j** pour P1+P2, puis **~10-15 j** pour P3 si aucun geste n'est laissé en
+exception.
 
 ---
 

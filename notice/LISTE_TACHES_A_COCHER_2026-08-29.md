@@ -1,43 +1,31 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 17/09/2026.** Cette page remplace la lecture du document. Le reste est une
-> archive qu'on ouvre **par numéro de ligne**, jamais en entier — elle fait 6 400 lignes.
+> **Mis à jour le 18/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> archive qu'on ouvre **par numéro de ligne**, jamais en entier.
 
-**LA CIBLE** — *étape 2, redite par Frédéric le 15/09* : les négociateurs travaillent dans
-l'app et n'ouvrent plus Hektor ; lui reste alimenté par les workers. **A.1 · A.2 · A.3 sont
-HORS DE PORTÉE pour l'instant** (portails, signature, registre légal) : il n'y a pas de
-coupure datée, et rien ne l'attend.
+**LA CIBLE** — *étape 2* : les négociateurs travaillent dans l'app et n'ouvrent plus Hektor ;
+lui reste alimenté par les workers. **A.1 · A.2 · A.3 hors de portée** : pas de coupure datée.
 
 ```
-   FINI LE 17/09, ET VÉRIFIÉ EN BASE
-     2.7  d'où vient le mandat     couverture 48 % → 74,9 %, `mandat_origine` rempli
-     3.3  le contrat d'autorité    vidé — « contrat affaire vide : rien à appliquer »
-     3.1  le verdict du carnet     arrivée · en attente · conflit
-     chaînage   12 670 chaînes, les 4 copies de la règle d'accord, test ⑤ à 0 écart
-     la note libre d'une transaction, sur les TROIS genres — rien ne part chez Hektor
+   FINI LE 18/09 -- LES TRANSACTIONS SONT PRÊTES (3.1 3.2 3.2d 3.2e 1.4 cochées)
+     compromis · vente · offre : créer, modifier, supprimer, qualifier l'acquéreur -- EN RÉEL
+     commission vendeur modifiable, charge acquéreur, vente sans compromis, historique d'offre
+     montant des offres : RUN corrigé (f089883) -- se remplit au run du 19/09
+     relecture par NUMÉRO offre/compromis (daa4b39, d79f88f) -- au redémarrage des services
 
-   ⛔ L'INCIDENT DU JOUR — IP BANNIE À 06:34, RUN MORT À 06:55, ZÉRO REMONTÉE
-     cause       le balayage fabriquait un client neuf PAR PIÈCE = 17 logins OAuth
-                 en 22 s, plancher contourné.  Corrigé c524f7e — détail au commit.
-     au passage  le journal des suppressions n'avait JAMAIS été lu (`request` au
-                 lieu de `_request`) : 3.5 était muet.  Corrigé bcb05fe.
-     réparé      reprise locale, zéro requête Hektor. 740 actifs · 13 424 dossiers.
+   LE PLAN DE L'ÉTAPE 2 -- audit global du 18/09 : PLAN_DEV_ACTUALISE, section « L'ÉTAPE 2 »
+     P1  défauts qui perdent des données       E2-1 à E2-5     ~2 j   ← COMMENCER ICI
+         E2-1 archiver une recherche vise la MAUVAISE (222 exposées)
+     P2  run + surveillance                    E2-6 à E2-8     ~1,5 j
+     P3  gestes qui obligent à ouvrir Hektor   E2-9 à E2-13    ~10-15 j ou exceptions
+     P4  rattrapage 19-R1 + essais             E2-14, E2-15
 
-   LES 3 SUIVANTES, dans cet ordre
-     1. 3.5  l'ESSAI RÉEL de la suppression    l. 5163
-                     codé depuis le 07/09, débloqué ce matin ; ⚠ ÉCRIT CHEZ HEKTOR
-     2. les MANDANTS depuis l'app (lot 3, 1er morceau)          l. 4018
-     3. 2.7 côté écran · 2.6 plusieurs acquéreurs      l. 3556 et 3412
-
-   MISES DE CÔTÉ PAR FRÉDÉRIC, ne pas les remonter seules
-     les 2 dettes : la surveillance qui crie · le numéro de contact qui ne voyage pas
+   DEMAIN MATIN (19/09) : run de 5 h (bannissement ? balayage ? montants d'offres ?),
+     recherches de qualification archivées (605075 · 605414 · 605429), essai offre 33050
 
    EN ATTENTE DE FRÉDÉRIC
-     le message à Ma Boîte Immo — l'IP est revenue seule ; le seuil reste inconnu
-     E.2          quel négociateur passe sur l'app en premier ?
-     le mot de passe de la base, apparu en clair le 14/09
-     les 5 écarts de statut : des biens sous compromis annoncés « Actif »
-     le catalogue des conditions suspensives n'a que 2 entrées
+     E.2 (qui en premier) · exceptions signature (E2-9) et fusion (E2-13) · 4 gestes
+     abandonnés · 6 écarts de statut · mot de passe de la base · 50039 net/commission inversés
 ```
 
 **CE QUI A COÛTÉ CHER, ET QUI SE RÉPÈTE** — ⚠ *le 17/09, deux commits de la veille ont eu
@@ -1733,10 +1721,11 @@ compromis, et `update_hektor_compromis` peut s'ecrire.
 **➡ CE QUI RESTE AVANT DE CODER LA MODIFICATION DEPUIS L'APP** *(demande de Frederic)*
 
 ```
-[ ] capturer la requete d'enregistrement de l'assistant compromis (fetch + XHR)
+[x] capturer la requete d'enregistrement de l'assistant compromis (fetch + XHR)
     -> sans elle on sait que le geste MARCHE, mais pas par ou il passe
-[ ] verifier que le worker peut la rejouer (il n'a pas de module ES, il poste)
-[ ] et pour la VENTE, la route est deja connue : getStepVente + idVente a chaque etape
+    ✅ 18/09 : DEPASSE -- l'assistant est pilote et prouve depuis le 08/09 (3.2).
+[x] verifier que le worker peut la rejouer (il n'a pas de module ES, il poste)
+[x] et pour la VENTE, la route est deja connue : getStepVente + idVente a chaque etape
 ```
 
 ---
@@ -1798,7 +1787,9 @@ n'a, une fois de plus, rien rendu. Trois cycles, trois fois le meme resultat.
        consequence concrete : un geste sur la mauvaise offre)
 [ ] B  UN SEUL champ de montant par genre -- arreter d'envoyer deux valeurs dont une
        est jetee sans le dire
-[ ] C  VERIFIER LA TYPOLOGIE DE L'ACQUEREUR avant d'envoyer un compromis ou une vente,
+[x] C  VERIFIER LA TYPOLOGIE DE L'ACQUEREUR avant d'envoyer un compromis ou une vente,
+       ✅ 18/09 : qualification automatique (8d70f1e) -- recherche creee, transaction
+       attachee, recherche archivee ; prouvee sur compromis (605414) ET vente (605429).
        sinon le lien est perdu en silence.  ⚠ BRIQUE NOUVELLE, ABSENTE DU PLAN.
 ```
 
@@ -1938,7 +1929,9 @@ GEL que Frederic a repere le premier).*
 > reduit a peu de chose et la phase 2 devient l'essentiel du chantier.
 
 ```
-[~] 0.1  LA CAMPAGNE DES CHAMPS       COMMENCEE le 03/09 -- premier tableau obtenu
+[x] 0.1  LA CAMPAGNE DES CHAMPS       COMMENCEE le 03/09 -- premier tableau obtenu
+         ✅ CLOSE LE 18/09 : le dernier point (validite de l'offre) est tranche depuis
+         le 07/09 (1.2b, classe B). Le « releve de l'offre » n'a plus d'objet.
          SANS AUCUNE ECRITURE : le cycle complet avait envoye des valeurs connues,
          il suffisait de relire ce que Hektor a RETENU.
 
@@ -2577,7 +2570,9 @@ GEL que Frederic a repere le premier).*
 ```
 
 ```
-[~] 1.4  L'ACQUEREUR PERDU EN SILENCE       SAUTEE -- decision de Frederic, 03/09 au soir.
+[x] 1.4  L'ACQUEREUR PERDU EN SILENCE       SAUTEE -- decision de Frederic, 03/09 au soir.
+         ✅ FAITE LES 17-18/09 : constat affiche dans la modale (ba197f7,
+         app_affaire_personne_ecart) + la CAUSE traitee, la qualification (8d70f1e).
 
          LE DEFAUT RESTE ENTIER, et il est mesure cinq fois : un acquereur non type
          « acquereur » est abandonne par Hektor sur un compromis ou une vente, SANS
@@ -3708,7 +3703,9 @@ GEL que Frederic a repere le premier).*
 ### PHASE 3 — L'ECRITURE PART CHEZ HEKTOR · *conditionnee par 0.1 et 0.2*
 
 ```
-[~] 3.1  LE PATRON DES ANNONCES, PORTE AUX TRANSACTIONS
+[x] 3.1  LE PATRON DES ANNONCES, PORTE AUX TRANSACTIONS
+         ✅ 18/09 : les SIX pieces sont « OUI » dans le tableau ci-dessous (la
+         derniere le 16/09) ; case jamais cochee.
          saisie en attente avec sa photo · garde-fou avant ecriture · conflit
          VISIBLE · poussee partielle marquee · relecture immediate
          ⚠ CE N'EST PAS UNE RECOPIE, C'EST UN PORTAGE : pour l'annonce le pending,
@@ -3780,7 +3777,10 @@ GEL que Frederic a repere le premier).*
          ⚠ REDEMARRAGE DES QUATRE SERVICES : le worker est touche.
          retour : les colonnes peuvent rester, il suffit de cesser de les lire.
 
-[~] 3.2  LES WORKERS « MODIFIER » -- LES TROIS GENRES
+[x] 3.2  LES WORKERS « MODIFIER » -- LES TROIS GENRES
+         ✅ 18/09 : les trois genres prouves en reel ; la relecture se fait par
+         NUMERO pour l'offre et le compromis (daa4b39, d79f88f -- a eprouver au
+         prochain redemarrage des services).
          ⚠ TITRE CORRIGE LE 10/09 : il disait « COMPROMIS ET VENTE ». L'OFFRE a ete
            faite et prouvee le 08/09 (33050 : 165 000 -> 167 000 ; 33048 refusee,
            acceptee, re-refusee). Le titre laissait croire qu'elle restait a faire.
@@ -4072,7 +4072,10 @@ GEL que Frederic a repere le premier).*
          verif : creer un compromis sur un bien qui en porte deja un, et voir la
                  fiche Hektor pointer le NOUVEAU
 
-[ ] 3.2d LA MODALE PORTE-T-ELLE TOUS LES CHAMPS DE HEKTOR ?   AJOUTEE 07/09
+[x] 3.2d LA MODALE PORTE-T-ELLE TOUS LES CHAMPS DE HEKTOR ?   AJOUTEE 07/09
+         ✅ 18/09 : lot 1 commission vendeur (ad4e318, prouve 50091) · lot 2 notaires
+         (15/09) · lot 3 mandants + conditions (16/09) · lot 4 partage de commission
+         GARDE DANS L'APP (decision du 14/09, rien ne part chez Hektor).
          Demande de Frederic : « il faut verifier les champs des modales de
          changement de statut : est-ce que tous les champs disponibles dans
          Hektor sont presents ? Donc une verification au moment de la correction
@@ -4241,7 +4244,9 @@ GEL que Frederic a repere le premier).*
          verif : le journal d'un travail reel montre TOUS les champs attendus par
                  Hektor, et la modale porte ceux que l'arbitrage a retenus
 
-[ ] 3.2e LA VENTE, COMME LE COMPROMIS                     AJOUTEE LE 11/09
+[x] 3.2e LA VENTE, COMME LE COMPROMIS                     AJOUTEE LE 11/09
+         ✅ 18/09 : prouvee avec compromis (23315) et SANS (23316) : commission,
+         honoraires en modification (c4c59c9), notaires, qualification (23317).
          Demande de Frederic : « il manque la partie vente de la modale et le
          worker qui n'a pas ete analyse comme le compromis, je pense que c'est
          dans le 3.2d ».
