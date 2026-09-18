@@ -98,6 +98,13 @@ def etat_transaction(kind: str, ident: str,
           "status": str(res.get("status")) if res.get("status") is not None else ""}
     if kind == "offre":
         lu["details"] = details_offre(res)
+    elif kind == "compromis":
+        # 18/09 : CompromisById rend EXACTEMENT les champs de la liste
+        # (prixPublique, prixNetVendeur, honorairesEntree/Sortie, sequestre,
+        # dateStart, dateSignatureActe, acquereurs, mandants) -- mesure sur le
+        # compromis reel 50039. On les rend tels quels, comme la liste le fait
+        # (« sans les interpreter ») : la preuve du worker les lit a l'identique.
+        lu["details"] = res
     return lu
 
 

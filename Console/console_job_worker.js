@@ -12789,8 +12789,12 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
     // Ici le numero est CONNU : une lecture par numero (OffreById, deja celle
     // qui verifie les suppressions), qui rend le montant, la validite et la date
     // de la DERNIERE proposition. Une requete par essai, sur une offre vivante.
-    if (genre === "offre") {
-      const e = await lireEtatTransactionViaApi(job, "offre", cible, `apres_modification_${essai}`);
+    // 18/09 : LE COMPROMIS AUSSI. Sa liste ne rend que les 20 plus recents de
+    // l'agence (tri par date) : un vrai compromis signe il y a des semaines n'y
+    // est plus. CompromisById rend les memes champs (mesure sur 50039). La
+    // VENTE garde sa liste : elle est cherchee autour de SA date, et la trouve.
+    if (genre === "offre" || genre === "compromis") {
+      const e = await lireEtatTransactionViaApi(job, genre, cible, `apres_modification_${essai}`);
       lu = (e && e.trouve === true && e.details) ? { details: { [cible]: e.details } } : null;
     } else {
       lu = await lireTransactionsBestEffort(job, annonceId, genre, `apres_modification_${essai}`, dateTransaction);
@@ -12818,11 +12822,11 @@ async function prouverTransactionModifiee(job, annonceId, genre, appAffaireId, p
   //   travail en echec, et l'echec REJOUE (5 tentatives) : cinq doublons au lieu
   //   d'un. La creation accidentelle se repare a la main -- le geste existe
   //   depuis 3.4 et il est eprouve -- une cascade, non.
-  // Pour l'offre, `lu` vient de la lecture par numero et ne porte pas la liste :
-  // UNE lecture de la liste, ici seulement, pour garder ce filet -- une offre
-  // creee par erreur est forcement parmi les 20 plus recentes.
+  // Pour l'offre et le compromis, `lu` vient de la lecture par numero et ne porte
+  // pas la liste : UNE lecture de la liste, ici seulement, pour garder ce filet
+  // -- une transaction creee par erreur est forcement parmi les 20 plus recentes.
   let luListe = lu;
-  if (genre === "offre" && ventesAvant && ventesAvant.tous) {
+  if ((genre === "offre" || genre === "compromis") && ventesAvant && ventesAvant.tous) {
     luListe = await lireTransactionsBestEffort(job, annonceId, genre, "apres_modification_liste", dateTransaction);
   }
   if (luListe && luListe.tous && ventesAvant && ventesAvant.tous) {
@@ -17285,7 +17289,10 @@ async function lireEtatTransactionViaApi(job, kind, id, step) {
   try {
     const out = await runProjectPythonScript(
       ["phase2/sync/transaction_etat_from_api.py", "--kind", kind, "--id", ident],
-      { timeoutMs: 30000, previewSize: 1000 });
+      // 18/09 : 200 000 et non 1 000. `previewSize` TRONQUE la sortie qu'on
+      // parse (piege du 16/09). La lecture par numero rend desormais le detail
+      // d'un compromis -- acquereurs et mandants complets, bien plus de 1 000.
+      { timeoutMs: 30000, previewSize: 200000 });
     const derniere = String(out.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
     const lu = safeJsonParse(derniere);
     if (!lu || typeof lu !== "object") return { _error: "sortie illisible" };
