@@ -19,9 +19,14 @@
 const fs = require("fs");
 const path = require("path");
 
-const DOSSIER = path.join(__dirname, "exports", "releve_assistant");
-const SANS = path.join(DOSSIER, "compromis_etape_0_2_infosFinancieresCompromis_"
-  + "acquereurNotaireAutresProspectsCompromis_annonceMandatCompromis_agenceInterkabCompromis_.html");
+// ⚠ 18/09/2026 : LA PAGE EST DANS fixtures/, PLUS DANS exports/. Elle etait lue
+//   dans exports/releve_assistant/, que l'outil de releve REECRIT a chaque
+//   passage : un releve en lecture seule, le 18/09, l'a remplacee par la page
+//   d'un autre compromis, et le test a echoue sans qu'aucun code ait bouge.
+//   Une reference de test doit etre FIGEE et VERSIONNEE. La page d'origine
+//   (50078, 10/09) n'etait pas dans git : on fige celle du compromis d'essai
+//   50092 (18/09), meme forme -- une transaction SANS intervenant.
+const SANS = path.join(__dirname, "fixtures", "commissions_compromis_50092_2026-09-18.html");
 
 // ─── Les trois fonctions de LECTURE de la page des commissions ───
 // ⚠ LEUR PREMISSE A CHANGÉ LE 14/09. Elles étaient recopiées du worker, qui
@@ -81,16 +86,17 @@ if (!fs.existsSync(SANS)) {
 }
 const sans = fs.readFileSync(SANS, "utf8");
 
-console.log("① UNE TRANSACTION SANS INTERVENANT (compromis 50078, créé par l'app)");
+console.log("① UNE TRANSACTION SANS INTERVENANT (compromis 50092, créé par l'app le 18/09)");
 verifier("aucun côté n'est déjà attribué", [...cotesDejaAttribuees(sans)].sort(), []);
 const props = candidatsCommission(sans);
 verifier("Hektor propose une personne côté entrée", props.Entree.map((x) => x.id), ["51"]);
 verifier("Hektor propose une personne côté sortie", props.Sortie.map((x) => x.id), ["51"]);
 verifier("et il la nomme", (props.Entree[0] || {}).alias, "Mme. Emmanuelle PEREIRA");
 verifier("son type est NEGO", (props.Entree[0] || {}).type, "NEGO");
+// 50092 est a CHARGE ACQUEREUR : 8 000 TTC -> 6 666,67 HT -> 3 333,33 par moitie.
 verifier("montant de la moitié entrée, LU et non calculé",
-  montantMoitieCommission(sans, "Entree"), "4166.67");
-verifier("montant de la moitié sortie", montantMoitieCommission(sans, "Sortie"), "4166.67");
+  montantMoitieCommission(sans, "Entree"), "3333.33");
+verifier("montant de la moitié sortie", montantMoitieCommission(sans, "Sortie"), "3333.33");
 
 console.log("");
 console.log("② UNE PAGE QUI PORTE DÉJÀ SES INTERVENANTS (forme de la vente 23304)");
