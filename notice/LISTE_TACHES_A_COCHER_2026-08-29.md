@@ -20,8 +20,13 @@ sans Hektor**, sauf **numéro de mandat · signature · portails**. Hektor devie
                   avant de supprimer les recherches (c'etait l'ordre, le defaut).
                   146 orphelins purges (inventaire garde), sonde posee. La note
                   disait « rapprochements orphelins » : il y en avait 0.   718eb7a
-     4. [ ] C.17-ter  13 etapes du run sans sonde · sonde « IP bannie » · reprise
-                      versionnee                                    <- LA PROCHAINE
+     4. [x] C.17-ter  les 13 cles posees (28/28 surveillees) · sonde « Hektor
+                      injoignable » qui distingue le BLOCAGE D'IP d'une panne
+                      reseau · scheduledelancer_run.ps1 (demarre la TACHE, donc
+                      on ne recopie plus ses options)                    c025bd1
+
+   ✅ LOT L0 TERMINE le 20/09. Le lot suivant est L1 -- LES NUMEROS A LA NAISSANCE
+      (5b la cle des contacts · 4-suite la cle des recherches · le distributeur).
 
    PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
          L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
