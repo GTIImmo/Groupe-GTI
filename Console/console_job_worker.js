@@ -16580,15 +16580,68 @@ async function cleanupSupabaseBrouillonRows(hektorAnnonceId) {
   return results;
 }
 
+// C.4 -- 20/09/2026 : LE MENAGE ALLAIT JUSQU'A LA FICHE, PAS JUSQU'AU BOUT.
+//
+// Le ménage ne connaissait que les tables portant `hektor_contact_id`. Or tout un
+// pan du travail acquereur ne pend pas du contact mais de SA RECHERCHE
+// (contact_search_key) : l'etat de calcul du rapprochement, les notifications,
+// l'historique des scores, les relances. En supprimant d'abord les recherches, on
+// perdait la seule poignee permettant d'atteindre ces lignes -- elles restaient,
+// pointant dans le vide.
+//
+// MESURE DU 20/09, avant correctif : 132 etats de calcul, 14 notifications et
+// 1 lien agenda orphelins. Ce ne sont pas des pertes de travail (rapprochements,
+// propositions, envois, relances : 0 orphelin), mais des lignes qui faussent les
+// compteurs et affichent des notifications qui ne s'ouvrent pas.
+//
+// ⚠ ON LIT LES CLES AVANT DE SUPPRIMER. C'est tout le correctif : l'ordre.
+//
+// ⚠ LE LIEN AGENDA GOOGLE N'EST PAS SUPPRIME, DELIBEREMENT. L'evenement, lui,
+//   reste dans l'agenda du negociateur : effacer notre ligne effacerait la trace
+//   d'un rendez-vous qui existe toujours. Un lien orphelin se voit ; un RDV
+//   fantome dans un agenda, non.
+async function fetchContactSearchKeys(hektorContactId) {
+  try {
+    const rows = await supabaseRequest(
+      `app_contact_search_current?hektor_contact_id=eq.${encodeURIComponent(String(hektorContactId))}&select=contact_search_key`,
+      { method: "GET" });
+    return (Array.isArray(rows) ? rows : [])
+      .map((r) => String(r && r.contact_search_key ? r.contact_search_key : "").trim())
+      .filter(Boolean);
+  } catch (_) {
+    // Best-effort : sans les cles on fait le menage d'avant, jamais moins.
+    return [];
+  }
+}
+
 async function cleanupSupabaseContactRows(hektorContactId) {
   const filters = [["hektor_contact_id", hektorContactId]];
+  const results = [];
+
+  // 1) Ce qui pend sous les RECHERCHES du contact -- avant de les supprimer.
+  const cles = await fetchContactSearchKeys(hektorContactId);
+  const tablesParCle = [
+    "app_rapprochement",
+    "app_rapprochement_score_history",
+    "app_rapprochement_search_state",
+    "app_relance_rapprochement",
+    "app_notification",
+  ];
+  for (const cle of cles) {
+    for (const table of tablesParCle) {
+      results.push(...await deleteSupabaseRows(table, [["contact_search_key", cle]]));
+    }
+  }
+
+  // 2) Puis ce qui pend sous le CONTACT lui-meme.
   const tables = [
+    "app_proposition",
+    "app_bien_acquereur_statut",
     "app_contact_search_current",
     "app_contact_relation_current",
     "app_contact_duplicate_member_current",
     "app_contact_current",
   ];
-  const results = [];
   for (const table of tables) {
     results.push(...await deleteSupabaseRows(table, filters));
   }

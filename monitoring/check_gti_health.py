@@ -388,6 +388,18 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     {
+        # C.4 20/09 : les lignes accrochees a une recherche disparue. La cause a ete
+        # corrigee dans le worker (il lit les cles AVANT de supprimer les recherches)
+        # et 146 orphelins ont ete purges le meme jour. Cette sonde dit si ca revient.
+        "key": "data.orphelins_recherche",
+        "severity": "warning",
+        "label": "Lignes accrochees a une recherche disparue",
+        "table": "app_v_orphelins_recherche",
+        "params": {},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
         "key": "data.annonce_partielle",
         # CRITICAL : un champ ignore au push = divergence app/Hektor invisible.
         "severity": "critical",
