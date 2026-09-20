@@ -7,6 +7,36 @@
 
 ---
 
+## 0. LA METHODE — *posee par Frederic le 20/09/2026, elle ne s'oublie jamais*
+
+> **A chaque chapitre du plan, dans cet ordre, sans qu'il ait a le redemander :**
+>
+> 1. **AUDITER** le sujet — le code et la base d'abord, les notes ensuite. En cas de
+>    desaccord, le code gagne.
+> 2. **EXPLIQUER** clairement et simplement : ce que j'ai trouve, ce que je vais faire,
+>    ce que ca touche, comment on revient en arriere, comment on verifiera.
+> 3. **CODER**, en additif, derriere un interrupteur quand c'est possible.
+> 4. **CONTROLER** : essais hors ligne, puis preuve en reel si necessaire. Dire aussi
+>    ce qui a rate.
+> 5. **METTRE A JOUR LE PLAN** : la case cochee AVEC sa mesure, la page de tete, le
+>    journal des decisions, le commit qui porte l'identifiant de la tache.
+> 6. **PASSER A L'ETAPE SUIVANTE** et recommencer.
+>
+> **LE FEU VERT, au cas par cas selon le risque** *(arbitrage du 20/09)* :
+>
+> | | |
+> |---|---|
+> | **J'enchaine sans attendre** | tache additive et reversible : code neuf dormant, lecture, mesure, audit, mise a jour des documents |
+> | **J'attends le « vas-y »** | modification de code existant, du run de nuit, des workers |
+> | **Accord OBLIGATOIRE, toujours** | ecriture en base de production · ecriture chez Hektor (creer / modifier / supprimer) · lancer un run ou un rattrapage · redemarrer un service · deployer · tout geste irreversible |
+>
+> **Une seule tache en code a la fois.** Les audits peuvent tourner en parallele.
+> **Chaque message de travail commence par une ligne de position** : `L0 · C.1' · 2 sur 4`.
+> **Rien n'est fini tant que ce n'est pas ecrit dans les documents** : cette conversation
+> sera resumee, les fichiers survivent.
+
+---
+
 ## 1. Où tu es
 
 Le dépôt est **`C:\Hektor\Projet`**. `C:\Hektor` n'est pas un dépôt git : si une commande

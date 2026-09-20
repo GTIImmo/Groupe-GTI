@@ -1,32 +1,34 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 18/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> **Mis à jour le 20/09/2026.** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier.
 
-**LA CIBLE** — *étape 2* : les négociateurs travaillent dans l'app et n'ouvrent plus Hektor ;
-lui reste alimenté par les workers. **A.1 · A.2 · A.3 hors de portée** : pas de coupure datée.
+**LA CIBLE** — *étape 2, définie par Frédéric le 19/09* : l'app assure **toutes ses fonctions
+sans Hektor**, sauf **numéro de mandat · signature · portails**. Hektor devient une copie tenue
+à jour par les workers. ➡ **La charte, le journal des décisions et LES DIX LOTS sont en tête du
+`PLAN_DEV_ACTUALISE`.** ➡ **La méthode de travail est en §0 de `CLAUDE.md`.**
 
 ```
-   FINI LE 18/09 : C.19 / C.19-d -- LES TRANSACTIONS SONT PRÊTES (3.1 3.2 3.2d 3.2e cochées)
-     compromis · vente · offre en réel ; montant des offres corrigé dans le RUN (19/09)
+   LOT EN COURS : L0 -- NE PLUS RIEN PERDRE            (~3 j)
+     1. C.1'      la relecture efface une saisie en conflit   <- LA PROCHAINE
+                  (push_single_annonce_to_supabase.py:582)
+     2. C.1'      une saisie partielle se renvoie sans fin
+     3. C.4       supprimer un contact laisse ses rapprochements
+     4. C.17-ter  13 etapes du run sans sonde · sonde « IP bannie » · reprise versionnee
 
-   AUDIT DU 18/09 -- la liste ① relue contre le CODE, rubrique par rubrique (mêmes numéros)
-     AVANT E.2, dans cet ordre :
-       1.  C.4      archiver une recherche vise la MAUVAISE (222 exposées)      ← D'ABORD
-       4.  C.4-bis  C.1' : la relecture efface une saisie en conflit ; saisie partielle
-       2.  C.19-d   3.5 : une transaction supprimée peut ressusciter
-           C.17-ter 13 étapes du run non surveillées ; sonde « IP bannie » ; reprise versionnée
-       10. D.0      la redescente des documents, arrêtée depuis le 23/08
-       11. 0.3      19-R1 : ~270 recherches invisibles
-       11. E.0-bis  mandat existant · photos · fusion de doublons (ou exception)
-       12. A.2      lancer une signature depuis l'app (ou exception)
-     PAS AVANT E.2 : C.9 (la création marche via Hektor) · C.16 · A.3-tech · C.11 · D.1/D.2
+   PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
+         L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
+         L3 l'interrupteur · L4 la creation part de l'app · L5 les gestes manquants
+         L6 les remontees · L7 les fichiers · L8 bascule (E.2) · L9 registre des mandats
 
-   DEMAIN MATIN (19/09) : run de 5 h · recherches de qualification archivées · essai offre 33050
+   FAIT LE 20/09
+     une recherche creee dans Hektor entre dans l'app (passage en acquereur)  d7a3586
+     sa sonde                                                                fb6abbd
 
    EN ATTENTE DE FRÉDÉRIC
-     E.2 (qui en premier) · exceptions A.2 et fusion · 4 gestes abandonnés · 6 écarts de
-     statut (4.2) · mot de passe de la base · 50039 net/commission inversés
+     L5 : fusion de doublons · suppression d'annonce · brouillons -- app ou admin ?
+     RDV et visites (audit fait le 19/09) · rapprochement automatique (mode, seuil, RGPD)
+     E.2 qui passe en premier · mot de passe de la base · 50039 net/commission inverses
 ```
 
 **CE QUI A COÛTÉ CHER, ET QUI SE RÉPÈTE** — ⚠ *le 17/09, deux commits de la veille ont eu
@@ -5906,11 +5908,46 @@ Le protocole du 01/09 a repondu a sa question en cinq mesures. Restent deux poin
 
 ---
 
+## 5 bis. ⚠ LES NUMEROS QUI DESIGNENT DEUX TACHES — *releve du 20/09/2026*
+
+*On ne renumerote pas : ce serait perdre l'historique des commits et des notes. On
+ecrit la collision, une fois, pour qu'une phrase comme « 3.5 est prouve » ne puisse
+plus designer deux choses.*
+
+```
+   0.3    bloc 0   finir 19-R1 (rattrapage des recherches)
+          C.19-d   « la date du bien bouge-t-elle » -- CLOS le 03/09
+   3.5    rubrique 2  une transaction supprimee peut RESSUSCITER
+          C.19-d      le miroir des transactions doit coller a Hektor
+   4.1    chantier 4  la creation d'annonce part de l'app
+          C.19-d      le carnet disparait (menage)
+   1.4    chantier 1  identite des transactions (FAIT le 20/08)
+          rubrique    l'acquereur perdu en silence (FAIT les 17-18/09)
+   2.4    chantier 2  meme regle sur l'import de nuit
+          rubrique    la fiche base lit le registre (sans objet depuis le 04/09)
+   3.2    chantier 3  les workers « modifier », les trois genres
+          C.19-d      phase 3.2 (modale et relecture)
+   1bis   recherches  lever la borne des ventes (API seule)
+          3.2e        remettre l'etape au run
+   R.rech = 0.3 (bloc 0) : MEME TRAVAIL, deux noms.
+```
+
+---
+
 ## 6. FIN DE PLAN
 
 ```
 [ ] C.11    menage des tables mortes
 [ ] C.13-c  rattraper 23 715 dates de cloture
+   ⚠ CINQ TACHES OUVERTES NE FIGURENT PAS DANS LA LISTE ① -- elles ne vivent que
+     dans « ENSUITE, LE VERROU QUI COMMANDE TOUT LE RESTE » (chercher ce titre).
+     Releve du 20/09 ; elles portent l'essentiel des lots L1 et L2 :
+        TACHE 5 + 5b      la cle des contacts                        L1
+        4-suite           la cle des recherches                      L1
+        26bis-CONTACTS    le corps du contact                        L2
+        26bis-RELATIONS   le lien entre une personne et un bien      L2
+        26bis-COUPLES     le lien entre deux personnes               L2
+        INVENTAIRE        les 16 tables refaites chaque nuit         L2
 [ ] B.3     le declencheur de descente
 [ ] E.2     bascule des negociateurs sur l'app
 [ ] E.3     les workers deviennent invisibles
@@ -6256,7 +6293,19 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
 ## ENSUITE — LE VERROU QUI COMMANDE TOUT LE RESTE
 
 ```
-[ ] TACHE 5      BASCULER LA CLE DES CONTACTS                      3 a 5 j
+[~] TACHE 5      BASCULER LA CLE DES CONTACTS                      3 a 5 j
+                 ✅ LOT 1 (c544b77) et LOT 2 (c7b7533), FAITS LE 31/08, jamais
+                 notes ici : les TROIS fonctions de famille B transportent
+                 desormais le numero de l'app (app_edit_contact_optimistic,
+                 app_edit_search_optimistic, app_espace_edit_search_optimistic).
+                 Les 8 autres gardent le numero Hektor A JAMAIS -- elles
+                 fabriquent un travail pour le worker.
+                 ⚠ RESTE : la BASCULE elle-meme, et elle a un nom depuis le
+                 20/08 -- c'est **5b** ci-dessous. Mesure du 20/09 : la cle
+                 primaire de app_contact_current est TOUJOURS le numero Hektor,
+                 l'ecran utilise 0 fois le numero de l'app contre 270 fois celui
+                 de Hektor, et les 3 fonctions basculees CHERCHENT encore par
+                 le numero Hektor (where hektor_contact_id = ...).
                  La doublure est POSEE et REMPLIE (19 tables).
                  ⚠ CHIFFRE CORRIGE LE 30/08 -- il etait sous-estime 6 fois :
                     355 770  numeros dans la doublure locale (app_contact)
@@ -6272,6 +6321,21 @@ bascule de clé — et **une recommandation oubliée** revient en tête.*
                     3 fonctions basculent, 8 gardent le numero Hektor
                  ⚠ NE PAS y attacher le changement de cle primaire de
                    app_contact_current : c'est un SECOND chantier.
+
+[ ] 5b           L'IDENTITE ELLE-MEME -- LE « SECOND CHANTIER »     LOT L1
+                 Nomme le 20/08 (audit d'identite des contacts), repousse le
+                 25/08 (« NE PAS y attacher le changement de cle primaire »),
+                 puis jamais inscrit nulle part. C'est lui qui reste apres les
+                 lots 1 et 2 de la tache 5 :
+                    la cle primaire de app_contact_current
+                    les jointures de l'ecran qui servent a RELIER (pas a viser
+                       Hektor : celles-la ne bougent pas)
+                    les 3 fonctions de famille B qui cherchent encore par le
+                       numero Hektor
+                    la case Hektor devient FACULTATIVE -> c'est ce geste qui
+                       autorise un contact ne dans l'app
+                 Doublure posee et remplie depuis le 25/08 : 356 108 numeros,
+                 20 tables, 0 incoherence, observee 26 jours.
 
 [ ] 4-suite      BASCULER LA CLE DES RECHERCHES
                  La doublure tourne depuis le 21/08 et s'observe.

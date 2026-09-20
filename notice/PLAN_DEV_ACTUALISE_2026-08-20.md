@@ -3,11 +3,104 @@
 Remplace le plan du 18/08. Établi après quatre audits mesurés :
 identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (20/08).
 
-> **Dernière mise à jour : 18/09/2026** — « MISE À JOUR DU 18/09 » ci-dessous : la liste ① relue contre le code.
+> **Dernière mise à jour : 20/09/2026** — la CHARTE DE L'ÉTAPE 2, le JOURNAL DES
+> DÉCISIONS et LES DIX LOTS ouvrent ce document.
+> *(Mise à jour précédente : 18/09/2026)* — « MISE À JOUR DU 18/09 » ci-dessous : la liste ① relue contre le code.
 > *(Mise à jour précédente : 03/09/2026.)* C.19-d requalifié en **« LE REGISTRE DES
 > TRANSACTIONS »** après audit complet — voir la révision ③ du 03/09 dans
 > « L'ordre retenu », et le détail item par item dans la liste, section « 2 ter ».
 > *(Mise à jour précédente : 28/08 — voir « CE QUI A BOUGÉ LES 27-28/08 ».)*
+
+---
+
+## 🧭 LA CHARTE DE L'ÉTAPE 2 — *validée par Frédéric le 20/09/2026*
+
+> **La cible.** Mon logiciel métier assure **toutes ses fonctions actuelles sans Hektor**,
+> sauf trois : **le numéro de mandat**, **la signature électronique**, **les passerelles
+> publicitaires**. Hektor devient une copie **tenue à jour par nos workers**, et il fait
+> remonter certains éléments.
+
+**Les cinq règles**
+
+1. **L'app fait autorité** : une saisie ne se perd jamais et ne s'écrase jamais.
+2. **Hektor ne remonte que s'il diffère réellement** de ce que l'app lui a envoyé. Égal =
+   confirmation. Différent = vraie modification : on la reprend **et on la signale**.
+3. **Certains gestes sont des mises à jour sans retour** — on envoie, on n'attend ni
+   confirmation ni remontée. *Premier cas tranché : l'archivage d'une recherche.*
+4. **Tant que la diffusion passe par Hektor, Hektor doit rester à jour.**
+5. **Un numéro ne se perd jamais · une action a toujours une fin visible · le miroir se met
+   à jour, il ne se remplace pas.**
+
+**Hors périmètre de l'étape 2** — les **leads** (chantier suivant) · la création d'un
+**collaborateur** (passe par Hektor) · le **numéro de dossier** EM…/VA… (Hektor le fournit
+tant qu'il vit) · tout ce qui relève de la coupure (A.1, A.2, extinction du miroir, jour J).
+
+---
+
+## 🗒 LE JOURNAL DES DÉCISIONS — *une ligne par décision, il fait foi*
+
+*Posé le 20/09 : les décisions vivaient dans le chat, les commits et la mémoire. Quand une
+question semble revenir, c'est ici qu'on regarde avant de la reposer.*
+
+| Date | Décision |
+|---|---|
+| 20/08 | **Les recherches ne remontent plus à Hektor** — la modale n'exprime que 7 critères sur 12, les renvoyer les appauvrit |
+| 24/08 | **À l'étape 2, les négociateurs n'ouvrent plus Hektor** |
+| 25/08 | La bascule de la clé des contacts est **séparée** de la doublure : c'est un second chantier *(il s'appelle **5b**)* |
+| 28/08 | Le registre des mandats doit devenir **un vrai registre**, avec trois couches de numérotation *(Hektor · PROTEXA · app)* |
+| 14/09 | **La répartition de commission reste dans l'app** : rien ne part chez Hektor |
+| 15/09 | Une répartition **saisie dans l'app écrase** toute modification venue de Hektor |
+| **19/09** | **DÉFINITION DE L'ÉTAPE 2** *(charte ci-dessus)*. L'app reprend une mise à jour de Hektor **seulement si elle diffère réellement** |
+| 19/09 | Les **leads** sont un chantier séparé, **après** celui-ci |
+| 19/09 | Un **nouveau collaborateur** se crée dans Hektor : le worker agit en son nom |
+| **20/09** | **L'archivage d'une recherche continue de partir chez Hektor** — utile à la typologie des transactions ; l'erreur en cas de recherches multiples est **acceptée** ; **aucun retour attendu** |
+| 20/09 | Une recherche créée dans Hektor entre dans l'app par le **passage en acquéreur** *(livré, `d7a3586`)*. Pas de balayage tournant. Le **rattrapage global** reste pour avant la coupure |
+| 20/09 | **Une étape non surveillée doit au moins avoir une sonde** *(`fb6abbd`)* |
+| 20/09 | **Le registre électronique des mandats remplacera PROTEXA** — étudié **juste avant la coupure** *(lot L9)* |
+| 20/09 | **La méthode de travail** : auditer → expliquer → coder → contrôler → mettre à jour le plan → suivant. Feu vert **au cas par cas selon le risque** *(voir `CLAUDE.md` §0)* |
+
+---
+
+## 🧱 LES DIX LOTS DE L'ÉTAPE 2 — *l'ordre de travail, identifiants d'origine*
+
+**État vérifié le 20/09, contre le code et la base** : les **transactions** sont prêtes ·
+les **contacts** ont leur doublure remplie *(356 108 numéros, 20 tables, 0 incohérence)* mais
+**pas la bascule de clé** · le **corps de l'annonce** est réécrit chaque nuit *(la liste des
+champs de l'app est **vide**)* · les **relations** sont effacées et reconstruites en entier
+chaque nuit · la **redescente des documents** est arrêtée depuis le **22/08** · une **photo**
+ajoutée par l'app est effacée de chez nous après envoi · **aucun objet ne peut naître dans
+l'app**, sauf une transaction.
+
+| Lot | Objectif | Contenu *(identifiants d'origine)* | Durée | Fini quand |
+|---|---|---|---|---|
+| **L0** | **Ne plus rien perdre** | **C.1'** la relecture efface une saisie en conflit *(`push_single_annonce_to_supabase.py`, ligne 582)* · le renvoi partiel sans fin · **C.4** supprimer un contact laisse ses rapprochements · **C.17-ter** 13 étapes du run sans sonde, sonde « IP bannie », script de reprise versionné | **~3 j** | Aucune saisie ne disparaît sans trace, et un arrêt se voit |
+| **L1** | **Les numéros à la naissance** | **5b** bascule de la clé des contacts · **4-suite** clé des recherches · clé des relations sur les numéros app · **E.4 / 6.1-6.3** le distributeur, dans Supabase · la case « numéro app » dans les tables de création | **1,5–2,5 sem** | Un contact, une recherche, un bien naissent dans l'app avec leur numéro |
+| **L2** | **Les corps chez l'app** ⚠ *dernière chance* | **26bis-3** · **26bis-CONTACTS** · **26bis-RELATIONS** · **26bis-COUPLES** · **INVENTAIRE** *(les 16 tables refaites chaque nuit)* | **2–3 sem** | Le serveur tient un objet que le miroir ignore |
+| **L3** | **L'interrupteur** | **Chantier 2** *(2.3, 2.4)* · remplir `CHAMPS_APP_*` · la règle « Hektor ne remonte que s'il diffère » · la relecture à l'ouverture de fiche · **C.16** *(825 contacts disparus)* | **1–2 sem** | Le run de nuit **confirme**, il n'écrase plus |
+| **L4** | **La création part de l'app** | **C.9** · **C.9-couple** · **26bis-TRANSACTIONS** · **4.3** *(contact + recherche + mandant d'un coup)* | **1,5–2 sem** | On crée **sans attendre Hektor** ; il reçoit ensuite |
+| **L5** | **Les gestes manquants** | **E.0-bis** *(mandat existant, photos, fusion de doublons)* · **C.13** clôture du mandat · supprimer une annonce · contrôle de baisse de prix et validation **lus dans l'app** · reprise des brouillons · retirer les liens « Ouvrir Hektor » | **2–3 sem** | Plus aucun écran ne renvoie vers Hektor |
+| **L6** | **Ce que Hektor fait remonter** | **D.0** documents et mandats signés · état de la signature · état de la diffusion · numéro de mandat | **1–1,5 sem** | Les trois exceptions remontent proprement, le reste ne remonte plus |
+| **L7** | **Les fichiers chez l'app** | **D.1a** · **D.1** · **D.2** · garder la copie de chaque photo ajoutée | **1–2 sem** | Afficher un document ou une photo ne dépend plus de Hektor |
+| **L8** | **Exploitation et bascule** | **C.4-bis** élargi *(création, numéro de mandat, photo, document)* · **E.3** · **0.3 / E.1** rattrapage des recherches, dont **19-R2** la veille · **E.2** | **~1 sem** | Les négociateurs travaillent dans l'app |
+| **L9** | **Le registre électronique des mandats** *(juste avant la coupure)* | **A.3-technique** *(table `app_mandat`, remplissage depuis le miroir, sonde, puis le registre **lit la table**)* · les **trois couches de numérotation** · la **série propre**, à la place de PROTEXA · **C.13-c** *(23 715 dates de clôture)* · le négociateur manquant *(3 318 lignes)* · **A.3-juridique**, étudié le moment venu | **~1 sem** + l'étude | Un mandat neuf s'enregistre sans Hektor — **la 1re des 3 exceptions tombe** |
+
+**Total : ~3 à 4 mois.** Tout se construit **dormant**, derrière un interrupteur.
+
+⚠ **Deux lots ont une date de péremption** : **L2** et **L9** se remplissent **depuis le
+miroir**. Ils exigent que **Hektor vive encore** — L9 doit donc être **fini avant** la
+coupure, pas pendant.
+
+**Quand l'utilisateur cesse d'attendre** *(mesuré le 20/09 sur 60 jours)* : créer un contact
+coûte **18 s**, une annonce **58 s**, une photo **25 s**, un document **16 s** — la connexion
+à froid chez Hektor en explique ~35. **L3** fait que la saisie ne revient plus modifiée ;
+**L4** rend la **création immédiate** ; **L7** rend photos et documents immédiats ; **L8**
+rend les workers invisibles.
+
+**Ce qui attend une décision de Frédéric** : les gestes de **L5** *(fusion de doublons,
+suppression d'annonce, reprise d'un brouillon : tout dans l'app ou exception admin ?)* ·
+**RDV et visites** *(audit fait le 19/09 : tout est construit, presque rien n'est utilisé ;
+les visites Hektor ne sont importées nulle part)* · **le rapprochement automatique**
+*(automatique pur ou validé en un clic · seuil 75 ou 80 · base RGPD · relances)*.
 
 ---
 
