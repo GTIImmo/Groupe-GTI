@@ -895,6 +895,83 @@ def upsert_mandats(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# LE PASSAGE EN ACQUEREUR -- LE CARNET                             20/09/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# LE TROU : une recherche creee DANS Hektor n'entre dans aucun run. Le listing ne
+# porte pas les recherches, creer une recherche ne bouge pas la date_maj du
+# contact, et le run de 03:00 ne relit que les contacts dont l'app connait DEJA
+# une recherche active. La fiche reste donc invisible indefiniment.
+#
+# LE SIGNAL, gratuit : Hektor pose lui-meme la typologie « acquereur » quand une
+# recherche est enregistree -- prouve sur les trois contacts de qualification des
+# 28/08 et 18/09 (605075, 605414, 605429), crees en « mandant » et devenus
+# « acquereur, mandant » sans que personne ne coche quoi que ce soit. Et la
+# typologie est dans le LISTING, que le run de 05:00 rapporte en entier chaque
+# nuit : aucun appel supplementaire chez Hektor pour la voir.
+#
+# CE CARNET NE FAIT QUE NOTER. Quand la typologie GAGNE « acquereur », on inscrit
+# une ligne. Le run de 03:00 la lira pour relire cette fiche-la, et la marquera
+# traitee. Rien n'est relu ici, rien ne part vers Hektor.
+#
+# ⚠ SEULEMENT SUR UN CONTACT DEJA CONNU. Un contact NEUF arrive avec une date
+#   fraiche : le delta du run de 05:00 lit deja son detail, donc sa recherche
+#   entre le soir meme (mesure du 19/09 : 167 des 188 recherches apparues depuis
+#   le 25/08 sont arrivees ainsi). L'inscrire ici ferait relire deux fois.
+#
+# RETOUR ARRIERE : DROP TABLE sync_contact_typologie_acquereur.
+CARNET_ACQUEREUR_TABLE = "sync_contact_typologie_acquereur"
+
+
+def ensure_carnet_acquereur(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {CARNET_ACQUEREUR_TABLE} (
+            hektor_contact_id TEXT PRIMARY KEY,
+            typologie_avant TEXT,
+            typologie_apres TEXT,
+            detecte_le TEXT NOT NULL,
+            traite_le TEXT,
+            lu_le TEXT
+        )
+        """
+    )
+    conn.execute(
+        f"CREATE INDEX IF NOT EXISTS idx_{CARNET_ACQUEREUR_TABLE}_a_traiter "
+        f"ON {CARNET_ACQUEREUR_TABLE}(traite_le)"
+    )
+
+
+def _porte_acquereur(typologie_json: str | None) -> bool:
+    """« acqu » suffit : le miroir porte l'accent dans plusieurs encodages
+    (acquereur, acqu\xe9reur, acqu?reur) et aucune autre typologie Hektor ne
+    commence ainsi -- mandant, proprietaire, partenaire, locataire, vendeur."""
+    return "acqu" in str(typologie_json or "").lower()
+
+
+def noter_passage_acquereur(
+    conn: sqlite3.Connection,
+    contact_id: str,
+    typologie_avant: str | None,
+    typologie_apres: str | None,
+) -> bool:
+    if not _porte_acquereur(typologie_apres) or _porte_acquereur(typologie_avant):
+        return False
+    conn.execute(
+        f"""
+        INSERT INTO {CARNET_ACQUEREUR_TABLE}(
+            hektor_contact_id, typologie_avant, typologie_apres, detecte_le, traite_le, lu_le
+        ) VALUES (?, ?, ?, ?, NULL, NULL)
+        ON CONFLICT(hektor_contact_id) DO UPDATE SET
+            typologie_apres = excluded.typologie_apres,
+            detecte_le = excluded.detecte_le,
+            traite_le = NULL
+        """,
+        (contact_id, typologie_avant, typologie_apres, now_utc_iso()),
+    )
+    return True
+
+
 def upsert_contact_from_sources(
     conn: sqlite3.Connection,
     item: Dict[str, Any],
@@ -909,6 +986,14 @@ def upsert_contact_from_sources(
     coords = source.get("coordonnees") or {}
     localite = source.get("localite") or {}
     inner = localite.get("localite") if isinstance(localite, dict) else {}
+    # LE PASSAGE EN ACQUEREUR (20/09) : on lit la typologie d'AVANT tant qu'elle
+    # existe encore. Lecture par cle primaire, sans jointure -- le cout est nul a
+    # l'echelle du run (356 000 fiches, deja une ecriture chacune).
+    ligne_avant = conn.execute(
+        "SELECT typologie_json FROM hektor_contact WHERE hektor_contact_id = ?",
+        (contact_id,),
+    ).fetchone()
+    typologie_neuve = json_dumps(source.get("typologie"))
     conn.execute(
         """
         INSERT INTO hektor_contact(
@@ -959,7 +1044,7 @@ def upsert_contact_from_sources(
             inner.get("ville") if isinstance(inner, dict) else None,
             inner.get("code") if isinstance(inner, dict) else None,
             inner.get("adresse") if isinstance(inner, dict) else None,
-            json_dumps(source.get("typologie")),
+            typologie_neuve,
             # Le listing ET le detail portent `refCouple` : on prend celui qui
             # repond, comme pour tous les champs ci-dessus. Hektor ecrit « 0 »
             # pour dire « aucun », et normalized_id le ramene a vide.
@@ -968,11 +1053,16 @@ def upsert_contact_from_sources(
             now_utc_iso(),
         ),
     )
+    # Un contact NEUF (ligne_avant absente) n'est pas inscrit : le delta du run
+    # de 05:00 lit deja son detail le soir meme.
+    if ligne_avant is not None:
+        noter_passage_acquereur(conn, contact_id, ligne_avant[0], typologie_neuve)
     return True
 
 
 def upsert_contacts(conn: sqlite3.Connection, contact_ids: Iterable[str] | None = None) -> int:
     requested_ids = explicit_numeric_ids(contact_ids or [])
+    ensure_carnet_acquereur(conn)
     detail_map = latest_contact_detail_map(conn, requested_ids or None)
 
     if requested_ids:

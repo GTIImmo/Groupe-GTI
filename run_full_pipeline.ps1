@@ -885,6 +885,34 @@ if ($PushContactsToSupabase) {
     Invoke-OptionalStepWithRetry -Label "phase2 propager numeros de contact" -Arguments @(
         "phase2\identite\propager_numeros_contact.py"
     ) -WorkerKey "supabase.propagate_contact_ids"
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # LES CONTACTS DEVENUS ACQUEREURS -- LA RECHERCHE CREEE DANS HEKTOR  20/09
+    # ─────────────────────────────────────────────────────────────────────────
+    # Hektor pose lui-meme la typologie « acquereur » des qu'une recherche est
+    # enregistree (prouve sur 605075, 605414, 605429). Le listing de ce run vient
+    # de rapporter cette typologie ; normalize_source a inscrit le PASSAGE dans
+    # le carnet sync_contact_typologie_acquereur. On relit ces fiches-la, et
+    # elles seules : c'est le seul chemin par lequel une recherche nee dans
+    # Hektor peut entrer dans l'app (le listing ne porte pas les recherches, et
+    # en creer une ne bouge pas la date_maj du contact).
+    #
+    # ICI, ET PAS AILLEURS : apres le push contacts, donc les fiches neuves sont
+    # deja montees ; et en fin de run, donc la recherche entre LE MATIN MEME au
+    # lieu d'attendre le run de 03:00 le lendemain (37 h -> 17 h).
+    #
+    # VOLUME : quelques fiches par nuit, plafonnees a 500. La cadence est celle
+    # du run de 03:00, inchangee : 0,5 s par fiche, 60 s entre paquets de 100,
+    # UNE authentification, coupe-circuit apres 3 lots consecutifs en echec.
+    # Sans carnet a traiter, le script sort immediatement.
+    #
+    # ⚠ ETAPE NON BLOQUANTE, comme la propagation ci-dessus : si Hektor ne repond
+    # pas, il ne faut pas perdre la fin du run pour autant. Le run de 03:00
+    # reprendra ce qui n'a pas ete lu -- le carnet ne perd rien, une fiche n'est
+    # marquee traitee que si sa lecture a vraiment eu lieu.
+    Invoke-OptionalStepWithRetry -Label "phase2 contacts devenus acquereurs" -Arguments @(
+        "phase2\sync\sync_active_searches.py", "--carnet-seul"
+    ) -WorkerKey "hektor.carnet_acquereurs"
 }
 else {
     Write-RunLog "SKIP phase2 push contacts to supabase"

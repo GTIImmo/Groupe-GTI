@@ -24,6 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -94,6 +95,81 @@ def acquereur_contact_ids(hektor_db: Path) -> list[str]:
             seen.add(cid)
             out.append(cid)
     return out
+
+
+CARNET_ACQUEREUR_TABLE = "sync_contact_typologie_acquereur"
+
+
+def carnet_acquereur_ids(hektor_db: Path, plafond: int) -> list[str]:
+    """LES CONTACTS QUI VIENNENT DE DEVENIR ACQUEREURS -- 20/09/2026.
+
+    Hektor pose lui-meme la typologie « acquereur » quand une recherche est
+    enregistree (prouve sur 605075, 605414, 605429 : crees « mandant », devenus
+    « acquereur, mandant » sans intervention). Le listing de 05:00 rapporte cette
+    typologie chaque nuit ; normalize_source inscrit le PASSAGE dans ce carnet.
+
+    Relire ces fiches-la, et elles seules, fait entrer la recherche creee dans
+    Hektor -- le seul cas que ni le delta de 05:00 (la date_maj ne bouge pas) ni
+    la passe habituelle de 03:00 (elle ne lit que les recherches DEJA connues) ne
+    voient.
+
+    Le carnet peut ne pas exister (premier passage, ou retour arriere par DROP) :
+    on rend une liste vide, jamais une erreur.
+    """
+    conn = sqlite3.connect(f"file:{hektor_db}?mode=ro", uri=True)
+    try:
+        existe = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (CARNET_ACQUEREUR_TABLE,),
+        ).fetchone()
+        if not existe:
+            return []
+        rows = conn.execute(
+            f"SELECT hektor_contact_id FROM {CARNET_ACQUEREUR_TABLE} "
+            f"WHERE traite_le IS NULL ORDER BY detecte_le, CAST(hektor_contact_id AS INTEGER)"
+        ).fetchall()
+    finally:
+        conn.close()
+    out = [str(r[0]).strip() for r in rows if str(r[0] or "").strip().isdigit()]
+    # PLAFOND DE DEBIT, pas de confort : un jour d'import massif chez Hektor
+    # (reprise de portefeuille, reclassement en masse) ferait basculer des
+    # milliers de fiches d'un coup. On en prend un nombre borne ; le reste attend
+    # la nuit suivante, le carnet ne perd rien.
+    return out[:plafond] if plafond > 0 else out
+
+
+def marquer_carnet_traite(hektor_db: Path, ids: list[str], depuis: str) -> int:
+    """Marque traitees les fiches du carnet dont le DETAIL a ete relu pendant ce
+    run. On ne se fie pas au fait d'avoir demande la lecture : on verifie qu'elle
+    a eu lieu (sync_contact_state.last_detail_sync_at). Une fiche en echec, en
+    liste noire ou sautee par le coupe-circuit reste donc a traiter demain."""
+    if not ids:
+        return 0
+    conn = sqlite3.connect(str(hektor_db))
+    try:
+        conn.execute("PRAGMA busy_timeout = 30000")
+        marques = 0
+        for lot in (ids[i : i + 400] for i in range(0, len(ids), 400)):
+            places = ",".join("?" for _ in lot)
+            cur = conn.execute(
+                f"""
+                UPDATE {CARNET_ACQUEREUR_TABLE}
+                   SET traite_le = ?,
+                       lu_le = (SELECT s.last_detail_sync_at FROM sync_contact_state s
+                                 WHERE s.hektor_contact_id = {CARNET_ACQUEREUR_TABLE}.hektor_contact_id)
+                 WHERE traite_le IS NULL
+                   AND hektor_contact_id IN ({places})
+                   AND EXISTS (SELECT 1 FROM sync_contact_state s
+                                WHERE s.hektor_contact_id = {CARNET_ACQUEREUR_TABLE}.hektor_contact_id
+                                  AND s.last_detail_sync_at >= ?)
+                """,
+                [datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), *lot, depuis],
+            )
+            marques += cur.rowcount or 0
+        conn.commit()
+        return marques
+    finally:
+        conn.close()
 
 
 class EchecEtape(RuntimeError):
@@ -309,9 +385,29 @@ def main() -> int:
              "ne relache pas le verrou. 0 = ne jamais ceder.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Affiche le volume sans fetch.")
+    parser.add_argument(
+        "--sans-carnet-acquereur", action="store_true",
+        help="INTERRUPTEUR (20/09/2026) : ne pas traiter les contacts qui viennent de "
+             "devenir acquereurs. Le run redevient alors exactement celui d'avant.",
+    )
+    parser.add_argument(
+        "--carnet-seul", action="store_true",
+        help="Ne traiter QUE les contacts devenus acquereurs (le carnet), sans la passe "
+             "habituelle. C'est la forme utilisee en fin de run quotidien : quelques fiches, "
+             "pour que la recherche creee dans Hektor entre le matin meme au lieu du "
+             "lendemain 03:00. Sans carnet a traiter, le script sort immediatement.",
+    )
+    parser.add_argument(
+        "--max-carnet-acquereur", type=int, default=500,
+        help="Plafond de fiches du carnet par passage (defaut 500). Le reste attend la "
+             "nuit suivante : le carnet ne perd rien.",
+    )
     args = parser.parse_args()
 
-    if args.scope == "acquereurs":
+    if args.carnet_seul:
+        ids = []
+        libelle = "contacts devenus acquereurs (carnet seul)"
+    elif args.scope == "acquereurs":
         ids = acquereur_contact_ids(args.hektor_db)
         libelle = "acquereurs (typologie Hektor)"
     else:
@@ -319,6 +415,28 @@ def main() -> int:
         libelle = "contacts a recherche active"
     if args.descending:
         ids = list(reversed(ids))
+    # LE CARNET D'ABORD (20/09/2026). Ces fiches-la sont la raison d'etre du
+    # correctif : une recherche vient d'y naitre chez Hektor. Elles passent en
+    # tete pour etre lues meme si le run s'arrete plus tard -- et elles suivent
+    # EXACTEMENT le meme chemin que les autres : meme cadence, meme session, meme
+    # coupe-circuit. Aucune requete supplementaire n'est inventee ici.
+    ids_carnet: list[str] = []
+    if not args.sans_carnet_acquereur:
+        ids_carnet = carnet_acquereur_ids(args.hektor_db, args.max_carnet_acquereur)
+        # Un contact du carnet PEUT deja etre dans la liste habituelle -- c'est le
+        # cas des qualifications d'acquereur, ou l'app a cree la recherche et ou
+        # Hektor a pose la typologie dans la foulee. On ne le lit pas deux fois,
+        # mais on le marque quand meme traite : sinon il resterait au carnet
+        # indefiniment (defaut trouve a l'essai du 20/09).
+        deja = set(ids)
+        a_ajouter = [c for c in ids_carnet if c not in deja]
+        if ids_carnet:
+            print(
+                f"[recherches-actives] carnet : {len(ids_carnet)} contact(s) devenu(s) acquereur"
+                f" -- {len(a_ajouter)} lu(s) en tete, {len(ids_carnet) - len(a_ajouter)} deja dans la liste"
+            )
+        if a_ajouter:
+            ids = a_ajouter + ids
     population = len(ids)
     if args.start_before_id and args.start_before_id > 0:
         avant = len(ids)
@@ -358,6 +476,9 @@ def main() -> int:
         return 0
 
     start = time.time()
+    # Repere de debut, pour ne marquer traitees que les fiches du carnet dont la
+    # lecture a EU LIEU pendant ce run (et pas une lecture d'hier).
+    debut_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     done = 0
     failed_batches = 0
     consecutive_failed = 0
@@ -455,6 +576,14 @@ def main() -> int:
                     f"-- pause de {int(args.pause_between_batches)}s"
                 )
             time.sleep(args.pause_between_batches)
+    if ids_carnet:
+        # On marque APRES les etapes locales : une fiche n'est « traitee » que si
+        # son detail a vraiment ete relu. Ce qui a echoue revient demain.
+        marques = marquer_carnet_traite(args.hektor_db, ids_carnet, debut_utc)
+        print(
+            f"[recherches-actives] carnet : {marques}/{len(ids_carnet)} fiche(s) marquee(s) traitee(s)"
+            + ("" if marques == len(ids_carnet) else " -- le reste sera repris au prochain passage")
+        )
     if cede_total > 0:
         print(f"[recherches-actives] {int(cede_total)}s cedees au total a un traitement lourd")
     if aborted:
