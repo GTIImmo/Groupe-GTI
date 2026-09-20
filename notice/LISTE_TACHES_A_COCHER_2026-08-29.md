@@ -10,11 +10,14 @@ sans Hektor**, sauf **numéro de mandat · signature · portails**. Hektor devie
 
 ```
    LOT EN COURS : L0 -- NE PLUS RIEN PERDRE            (~3 j)
-     1. C.1'      la relecture efface une saisie en conflit   <- LA PROCHAINE
-                  (push_single_annonce_to_supabase.py:582)
-     2. C.1'      une saisie partielle se renvoie sans fin
-     3. C.4       supprimer un contact laisse ses rapprochements
-     4. C.17-ter  13 etapes du run sans sonde · sonde « IP bannie » · reprise versionnee
+     1. [x] C.1'  la relecture n'efface plus une saisie, et le run de nuit non plus
+     2. [x] C.1'  une saisie partielle ne se renvoie plus sans fin (1 ecriture/min)
+            + les DEUX CAUSES separees (hektor_plus_recent / envoi_impossible),
+              reprise a 6 h, alerte email a Frederic, bandeau sans question pour
+              le negociateur                                31411aa -- ⚠ REDEMARRER
+                                                            LES 4 SERVICES WORKER
+     3. [ ] C.4       supprimer un contact laisse ses rapprochements  <- LA PROCHAINE
+     4. [ ] C.17-ter  13 etapes du run sans sonde · sonde « IP bannie » · reprise versionnee
 
    PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
          L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
