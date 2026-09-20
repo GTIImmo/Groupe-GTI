@@ -571,15 +571,36 @@ def main() -> int:
                 raise RuntimeError(f"app_dossier introuvable pour annonce Hektor {hektor_annonce_id}")
             seed_target_work_items(con, app_dossier_id)
             pending = get_annonce_pending(client, app_dossier_id)
-            if pending is not None and (
-                bool(pending.get("conflict"))
-                or (str(pending.get("source") or "") == "diffusion" and diffusion_lock_expired(pending))
-            ):
-                # Édition en CONFLIT (échouée, ex. anti-écrasement) OU verrou diffusion expiré :
-                # on NE gèle PAS le bien -> on lève le pending et on resynchronise depuis Hektor
-                # (Hektor gagne ; l'édition optimiste échouée est abandonnée). Évite qu'un conflit
-                # fige le bien pour toutes les modifs suivantes.
+            verrou_diffusion_expire = (
+                pending is not None
+                and str(pending.get("source") or "") == "diffusion"
+                and diffusion_lock_expired(pending)
+            )
+            if verrou_diffusion_expire:
+                # Un verrou de diffusion n'est PAS une saisie : il porte {} et n'attend
+                # qu'une chose, expirer. On le lève et on resynchronise.
                 clear_annonce_pending(client, app_dossier_id)
+                pending = None
+            elif pending is not None and bool(pending.get("conflict")):
+                # ⚠ 20/09/2026 -- ON N'EFFACE PLUS UNE SAISIE. C'est la règle de
+                # Frédéric : « l'écriture de l'utilisateur est protégée, sauf écriture
+                # plus récente chez Hektor ».
+                #
+                # CE QUE CE CODE FAISAIT, et qui la contredisait : il SUPPRIMAIT la
+                # ligne d'attente en conflit, donc la saisie (base_snapshot +
+                # push_fields) et le bandeau avec elle. La relecture part à chaque
+                # ouverture de fiche : une saisie pouvait disparaître dans la
+                # demi-heure, sans trace et sans que personne soit prévenu.
+                #
+                # CE QU'IL FAIT MAINTENANT : il ne gèle pas le bien pour autant --
+                # l'écran doit rester juste -- donc on RAFRAÎCHIT quand même depuis
+                # Hektor, mais on GARDE la ligne. La saisie reste lisible, la sonde la
+                # voit, et Frédéric est alerté : à l'étape 2, un envoi qui ne passe pas
+                # est un bug entre Hektor et l'app, pas une décision à prendre par le
+                # négociateur.
+                #
+                # Le cas « Hektor est plus récent » ne passe plus par ici : le worker
+                # le solde lui-même, avec sa trace au journal des résolutions.
                 pending = None
             if pending is not None:
                 counts = {

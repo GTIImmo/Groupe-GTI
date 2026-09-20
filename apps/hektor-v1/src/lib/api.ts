@@ -3655,6 +3655,16 @@ export type AnnonceEditStatus = {
   partial?: boolean
   skipped_fields?: AnnonceEditSkippedField[]
   push_attempts?: number
+  /** 20/09 : la cause est portée par la ligne d'attente, elle n'est plus devinée.
+   *  `envoi_impossible`   = l'envoi n'est pas passé : un bug entre Hektor et l'app,
+   *                         la saisie est gardée et réessayée, Frédéric est alerté.
+   *  `hektor_plus_recent` = Hektor a été modifié depuis la saisie : il gagne, et le
+   *                         worker solde la ligne avec sa trace (on ne la voit donc
+   *                         plus ici, sauf si le solde lui-même a échoué). */
+  cause?: string | null
+  /** 20/09 : seul un admin se voit proposer de trancher. Le négociateur ne peut rien
+   *  faire d'un envoi qui ne passe pas — on ne lui pose plus la question. */
+  peut_trancher?: boolean
 }
 export async function loadAnnonceEditStatus(appDossierId: number): Promise<AnnonceEditStatus | null> {
   if (!hasSupabaseEnv || !supabase || appDossierId == null) return null

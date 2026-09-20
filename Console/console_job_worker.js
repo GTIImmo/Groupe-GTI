@@ -9695,7 +9695,28 @@ async function handleUpdateHektorAnnonceFields(job) {
       const freshDateMaj = await fetchAnnonceDateMajFromApi(job, annonceId, "annonce_overwrite_guard");
       if (freshDateMaj && freshDateMaj > baseDateMaj) {
         const conflictDossierId = job.app_dossier_id || payload.app_dossier_id || (dossier && dossier.app_dossier_id) || null;
-        await markAnnoncePendingConflict(conflictDossierId);
+        // 20/09 : HEKTOR EST PLUS RECENT -> IL GAGNE, ET ON SOLDE LA SAISIE.
+        // La regle de Frederic : l'ecriture de l'app est protegee « sauf en cas
+        // d'ecriture plus recente chez Hektor ». Ici c'en est une : garder la ligne
+        // ne servirait qu'a demander au negociateur de trancher quelque chose qui
+        // est deja tranche. On ne l'EFFACE pas pour autant -- la saisie part au
+        // journal des resolutions avec sa valeur, son auteur et son heure.
+        // Si le solde echoue, on retombe sur l'ancien comportement (ligne gardee en
+        // conflit) : ne jamais perdre la saisie prime sur la proprete de l'etat.
+        try {
+          await supabaseRequest("rpc/app_annonce_pending_solder_hektor", {
+            method: "POST",
+            body: JSON.stringify({
+              target_dossier_id: Number(conflictDossierId),
+              detail: { base_date_maj: baseDateMaj, fresh_date_maj: freshDateMaj, hektor_annonce_id: annonceId },
+            }),
+          });
+        } catch (errSolde) {
+          await markAnnoncePendingConflict(conflictDossierId, "hektor_plus_recent");
+          await logJob(job.id, "annonce_overwrite_guard", "error",
+            `Solde impossible, la saisie est gardee en conflit : ${errSolde && errSolde.message ? errSolde.message : errSolde}`,
+            { hektor_annonce_id: annonceId });
+        }
         await logJob(job.id, "annonce_overwrite_guard", "done", "Bien modifié dans Hektor depuis l'édition : écriture bloquée (anti-écrasement)", {
           hektor_annonce_id: annonceId,
           base_date_maj: baseDateMaj,
@@ -15901,13 +15922,21 @@ async function clearAnnoncePending(appDossierId) {
       { method: "DELETE", prefer: "return=minimal" });
   } catch (_) { /* best-effort */ }
 }
-async function markAnnoncePendingConflict(appDossierId) {
+// 20/09/2026 -- LA CAUSE EST UN FAIT, PLUS UNE DEVINETTE (regle de Frederic).
+// Deux situations opposees portaient le meme etat « conflit » :
+//    hektor_plus_recent  quelqu'un a modifie la fiche DANS Hektor depuis la saisie.
+//                        Hektor gagne, c'est la regle -- ce n'est pas un incident.
+//    envoi_impossible    l'envoi n'est pas passe. Personne n'a rien modifie : c'est
+//                        un BUG entre Hektor et l'app. On garde, on reessaie (6 h),
+//                        et c'est FREDERIC qu'on alerte, pas le negociateur -- il
+//                        ne peut rien y faire.
+async function markAnnoncePendingConflict(appDossierId, cause = "envoi_impossible") {
   if (appDossierId == null) return;
   try {
     await supabaseRequest(
       `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}`,
       { method: "PATCH", prefer: "return=minimal",
-        body: JSON.stringify({ conflict: true, push_job_id: null, updated_at: new Date().toISOString() }) });
+        body: JSON.stringify({ conflict: true, cause, push_job_id: null, updated_at: new Date().toISOString() }) });
   } catch (err) {
     // C.1' 24/08 : ON N'AVALE PLUS CET ECHEC. Si la protection n'est pas posee,
     // la ligne d'attente repart dans le circuit normal et se fait supprimer a la

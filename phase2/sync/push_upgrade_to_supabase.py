@@ -1083,14 +1083,27 @@ def now_iso() -> str:
 def fetch_dirty_annonce_ids(client) -> set[int]:
     """Tier 2 dirty-skip : app_dossier_id ayant un pending d'edition optimiste
     (table app_annonce_pending) -> a NE PAS reecraser lors du push (on preserve la
-    valeur optimiste affichee jusqu'a confirmation du push Hektor)."""
+    valeur optimiste affichee jusqu'a confirmation du push Hektor).
+
+    ⚠ 20/09/2026 -- LES LIGNES EN CONFLIT NE GELENT PLUS LE BIEN. Elles restent
+    (une saisie ne se perd jamais, regle du 20/09), mais elles ne peuvent pas
+    empecher le bien d'etre rafraichi pendant des semaines : un envoi qui ne passe
+    pas est un bug entre Hektor et l'app, et pendant ce temps l'ecran doit rester
+    juste. Meme regle que la relecture de fiche, qui divergeait de celle-ci.
+    La saisie reste lisible dans la ligne d'attente et dans l'alerte envoyee a
+    Frederic ; c'est le lot L3 (protection par CHAMP) qui fera mieux.
+    """
     try:
+        # Le filtre se fait ICI et pas dans l'URL : _request colle son propre « ? »
+        # sur le chemin, un filtre glisse dedans produirait une URL invalide.
         rows = client.fetch_all_rows(
-            path="app_annonce_pending", select="app_dossier_id", order="app_dossier_id.asc")
+            path="app_annonce_pending", select="app_dossier_id,conflict", order="app_dossier_id.asc")
     except Exception:
         return set()
     out: set[int] = set()
     for row in rows or []:
+        if bool(row.get("conflict")):
+            continue  # en conflit : la saisie est gardee, mais le bien se rafraichit
         try:
             out.add(int(row["app_dossier_id"]))
         except (TypeError, ValueError, KeyError):

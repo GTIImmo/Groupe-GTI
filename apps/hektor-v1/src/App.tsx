@@ -32231,17 +32231,40 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
     // les 5 tentatives d'envoi ont echoue. A l'etape 2, quand plus personne n'ouvrira
     // Hektor, la premiere cause disparaitra mais PAS la seconde -- l'ancien texte
     // unique aurait alors annonce une modification Hektor qui n'a jamais eu lieu.
-    const envoiImpossible = (status.push_attempts ?? 0) >= 5
+    // 20/09/2026 -- RÈGLE DE FRÉDÉRIC : « ce n'est pas l'utilisateur qui doit être
+    // prévenu, son écriture est saisie donc protégée. C'est moi qui dois l'être,
+    // puisque ce serait un bug entre Hektor et l'app. Lui ne peut rien y faire. »
+    //
+    // On ne lui pose donc plus de question : le négociateur voit un ÉTAT ("c'est
+    // enregistré, Hektor attend"), pas une décision. Les deux boutons restent pour
+    // l'admin, que la fonction Supabase désigne elle-même (`peut_trancher`).
+    //
+    // La cause vient maintenant de la ligne d'attente (`cause`) ; l'ancienne
+    // devinette « 5 tentatives ? » ne sert plus que de repli pour les lignes posées
+    // avant ce correctif.
+    const envoiImpossible = status.cause
+      ? status.cause === 'envoi_impossible'
+      : (status.push_attempts ?? 0) >= 5
+    if (!status.peut_trancher) {
+      return (
+        <div role="status" style={{ ...base, background: '#FCF3E3', border: '1px solid #E4C583', color: '#6B4E12' }}>
+          <strong>Enregistré.</strong>{' '}
+          {envoiImpossible
+            ? <>La mise à jour de Hektor n'est pas encore passée : elle sera renvoyée automatiquement. <strong>Votre saisie est conservée</strong>, vous n'avez rien à faire — l'administrateur est prévenu.</>
+            : <>Le bien a été modifié dans Hektor depuis votre saisie, c'est cette version-là qui est affichée. Votre saisie est gardée en mémoire.</>}
+        </div>
+      )
+    }
     const bouton = { padding: '6px 12px', borderRadius: 6, fontSize: 13, cursor: resolving ? 'default' : 'pointer', border: '1px solid #B3564C', background: '#fff', color: '#7A241C' } as const
     const boutonEfface = { ...bouton, border: '1px solid #D8B4AF', color: '#8A4A42' } as const
     return (
       <div role="status" style={{ ...base, background: '#FDECEA', border: '1px solid #E5A29B', color: '#7A241C' }}>
         {envoiImpossible ? (
-          <><strong>Modification non transmise.</strong> Après 5 tentatives, elle n'a pas pu être envoyée à Hektor.</>
+          <><strong>Modification non transmise.</strong> Après 5 tentatives, elle n'a pas pu être envoyée à Hektor — elle sera réessayée toutes les 6 heures.</>
         ) : (
-          <><strong>Modification non enregistrée.</strong> Le bien a été modifié dans Hektor depuis votre édition : vos changements n'ont pas été appliqués. Rouvrez la fiche et refaites la modification.</>
+          <><strong>Modification non enregistrée.</strong> Le bien a été modifié dans Hektor depuis l'édition : les changements n'ont pas été appliqués.</>
         )}{' '}
-        <strong>Votre saisie est conservée</strong> et ne sera pas écrasée tant que vous n'aurez pas tranché.
+        <strong>La saisie est conservée</strong> et ne sera pas écrasée tant que personne n'aura tranché.
         <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" style={bouton} disabled={resolving} onClick={() => { void resoudre('refait') }}>J'ai refait</button>
           <button type="button" style={boutonEfface} disabled={resolving} onClick={() => { void resoudre('abandon') }}>Abandonner cette saisie</button>

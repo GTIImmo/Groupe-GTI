@@ -374,8 +374,14 @@ DATA_SENTINELS: list[dict[str, Any]] = [
     {
         "key": "data.annonce_conflit",
         # CRITICAL : une edition bloquee = du travail negociateur perdu en silence.
+        # 20/09 : depuis que les deux causes sont separees, il ne reste ICI que la
+        # cause B -- « l'envoi n'est pas passe », c'est-a-dire un BUG entre Hektor et
+        # l'app. Le cas « Hektor est plus recent » est solde par le worker, avec sa
+        # trace au journal des resolutions : il n'a rien a faire dans une alerte.
+        # C'est FREDERIC que cette sonde previent (email), pas le negociateur : lui
+        # ne peut rien y faire.
         "severity": "critical",
-        "label": "Editions annonce bloquees (conflit Hektor)",
+        "label": "Saisies non transmises a Hektor (envoi impossible)",
         "table": "app_annonce_pending",
         "params": {"conflict": "eq.true"},
         "rule": "absolute",
