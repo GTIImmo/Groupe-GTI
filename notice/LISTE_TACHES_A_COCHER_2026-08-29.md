@@ -16,8 +16,12 @@ sans Hektor**, sauf **numéro de mandat · signature · portails**. Hektor devie
               reprise a 6 h, alerte email a Frederic, bandeau sans question pour
               le negociateur                                31411aa -- ⚠ REDEMARRER
                                                             LES 4 SERVICES WORKER
-     3. [ ] C.4       supprimer un contact laisse ses rapprochements  <- LA PROCHAINE
-     4. [ ] C.17-ter  13 etapes du run sans sonde · sonde « IP bannie » · reprise versionnee
+     3. [x] C.4   supprimer un contact ne laisse plus rien : le menage lit les CLES
+                  avant de supprimer les recherches (c'etait l'ordre, le defaut).
+                  146 orphelins purges (inventaire garde), sonde posee. La note
+                  disait « rapprochements orphelins » : il y en avait 0.   718eb7a
+     4. [ ] C.17-ter  13 etapes du run sans sonde · sonde « IP bannie » · reprise
+                      versionnee                                    <- LA PROCHAINE
 
    PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
          L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
