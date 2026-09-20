@@ -964,6 +964,7 @@ class Monitor:
             ("data_sentinels", self.check_data_sentinels),
             ("email_volume", self.check_email_volume),
             ("public_surfaces", self.check_public_surfaces),
+            ("hektor_joignable", self.check_hektor_joignable),
             ("vitrine_catalogue", self.check_vitrine_catalogue),
             ("cron_health", self.check_cron_health),
             ("supabase_runs", self.check_supabase_runs),
@@ -1400,6 +1401,66 @@ class Monitor:
                     f"{label} injoignable: {exc}",
                     {"url": url, "error": str(exc)[:200]},
                 )
+
+    def check_hektor_joignable(self) -> None:
+        """C.17-ter 20/09/2026 -- HEKTOR REPOND-IL DEPUIS CE SERVEUR ?
+
+        TROIS BLOCAGES D'IP EN SEPTEMBRE (17, 18, 19), et les trois ont ete
+        decouverts APRES COUP, en lisant les journaux d'un run deja mort. Le 19,
+        le run de 5 h est tombe a 05:01 sur sa premiere etape : la nuit entiere
+        etait perdue, et l'alerte n'est venue que de la lecture manuelle.
+
+        ⚠ UNE SEULE OUVERTURE DE CONNEXION, PAS D'AUTHENTIFICATION. C'est la
+          regle de debit du projet : la sonde qui surveille le bannissement ne
+          doit surtout pas y contribuer. On ouvre le port 443 et on ferme --
+          aucune requete HTTP, aucun compte, aucun cookie.
+
+        DEUX ADRESSES, et la comparaison porte le diagnostic : l'administration
+        Hektor et le site vitrine de l'agence vivent sur le MEME cluster. Si les
+        deux tombent et qu'Internet repond, c'est notre IP qui est bloquee --
+        c'est la signature exacte des trois incidents.
+        """
+        cibles = [
+            ("groupe-gti-immobilier.la-boite-immo.com", "Hektor (administration)"),
+            ("www.gti-immobilier.fr", "Site vitrine (meme cluster)"),
+        ]
+        temoin = "www.google.com"
+        resultats: dict[str, float | None] = {}
+        for hote, _ in cibles + [(temoin, "Temoin Internet")]:
+            debut = time.monotonic()
+            try:
+                socket.create_connection((hote, 443), timeout=10).close()
+                resultats[hote] = round((time.monotonic() - debut) * 1000, 1)
+            except Exception:
+                resultats[hote] = None
+
+        muets = [h for h, _ in cibles if resultats.get(h) is None]
+        internet_ok = resultats.get(temoin) is not None
+
+        if not muets:
+            self.add(
+                "hektor.joignable", "system", "hektor", "reachability", "ok",
+                "Hektor repond ({:.0f} ms)".format(resultats[cibles[0][0]] or 0),
+                {"latences_ms": resultats},
+            )
+            return
+
+        if len(muets) == len(cibles) and internet_ok:
+            message = ("HEKTOR ET LE SITE VITRINE NE REPONDENT PAS alors qu'Internet repond : "
+                       "signature d'un BLOCAGE DE NOTRE IP. Ne rien relancer -- verifier depuis "
+                       "une autre connexion avant de conclure.")
+            severite = "critical"
+        elif not internet_ok:
+            message = "Hektor injoignable, mais le temoin Internet ne repond pas non plus : panne de reseau locale, pas un blocage."
+            severite = "warning"
+        else:
+            message = "Une des deux adresses Hektor ne repond pas : " + ", ".join(muets)
+            severite = "warning"
+
+        self.add(
+            "hektor.joignable", "system", "hektor", "reachability", severite,
+            message, {"latences_ms": resultats, "muets": muets, "internet": internet_ok},
+        )
 
     def check_vitrine_catalogue(self) -> None:
         """Sante du catalogue vitrine : nb de biens + fraicheur (generatedAt).
