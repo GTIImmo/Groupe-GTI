@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""26bis-CONTACTS et 26bis-RELATIONS — LE SERVEUR TIENT CE QUE LE MIROIR IGNORE.
-                                                                      21/09/2026
+"""26bis-CONTACTS, 26bis-RELATIONS et 26bis-RECHERCHES — LE SERVEUR TIENT CE QUE
+LE MIROIR IGNORE.                                                     21/09/2026
 
 LE TROU, et il est le jumeau exact de celui des annonces (annonces_app_seule.py,
 26bis-(1), pose le 26/08) :
 
-    build_contacts_layer.py refait CHAQUE NUIT le corps des contacts et la table
-    des relations -- DELETE FROM puis INSERT, depuis le miroir de Hektor
-    (replace_table_rows, lignes 1281 et 1674).
+    build_contacts_layer.py refait CHAQUE NUIT le corps des contacts, la table
+    des relations ET celle des recherches -- DELETE FROM puis INSERT, depuis le
+    miroir de Hektor (replace_table_rows, lignes 1281 et 1674).
+
+    ⚠ LES RECHERCHES ONT ETE AJOUTEES LE 21/09, par l'audit « les recherches
+      seront-elles autonomes a la coupure ? ». Le filet existait pour l'annonce
+      (26/08), le contact et la relation (le matin meme) -- pas pour elle, alors
+      qu'elle suit exactement le meme chemin. Personne ne l'avait vu.
 
     Un contact ne dans l'app n'a aucune ligne dans le miroir. Le serveur ne le
     connaitrait donc pas -- et le push du lendemain, qui supprime dans Supabase
@@ -27,7 +32,7 @@ LA TABLE ACCUMULE, ELLE NE SE VIDE JAMAIS. Un echec de lecture veut dire « aucu
 nouvelle ce matin », jamais « elles ont disparu ». C'est la regle 5 du projet.
 Et comme partout : ABSENT_DEPUIS, JAMAIS DE SUPPRESSION.
 
-AUJOURD'HUI : ZERO. Aucun contact, aucune relation n'est ne dans l'app -- la
+AUJOURD'HUI : ZERO. Aucun contact, aucune relation, aucune recherche n'est ne dans l'app -- la
 creation sans Hektor est le lot L4. Ce script est donc INERTE, et c'est voulu :
 une doublure se pose AVANT d'en avoir besoin, jamais dans l'urgence. Le jour ou
 le compteur bougera, la sonde le dira.
@@ -39,6 +44,7 @@ le compteur bougera, la sonde le dira.
 
 RETOUR ARRIERE : retirer l'etape du run, puis
     DROP TABLE app_contact_app_seul;  DROP TABLE app_relation_app_seule;
+    DROP TABLE app_recherche_app_seule;
 Aucune donnee existante n'est modifiee : on n'ecrit QUE des lignes neuves.
 """
 from __future__ import annotations
@@ -64,19 +70,31 @@ BASE = RACINE / "phase2" / "phase2.sqlite"
 # Ce que le serveur refait chaque nuit depuis le miroir.
 COUCHE_CONTACT = "app_contact_current"
 COUCHE_RELATION = "app_contact_relation_current"
+COUCHE_RECHERCHE = "app_contact_search_current"
 # Ce que l'app detient, relu dans Supabase.
 REGISTRE_CONTACT = "app_contact_app_seul"
 REGISTRE_RELATION = "app_relation_app_seule"
+REGISTRE_RECHERCHE = "app_recherche_app_seule"
 
 # Planchers : si la couche locale est anormalement courte, un run amont a
 # echoue. On ne recense pas dans le vide -- on croirait que tout l'app est
 # « ne dans l'app ».
 PLANCHER_CONTACTS = 100000
 PLANCHER_RELATIONS = 10000
+PLANCHER_RECHERCHES = 10000
 
 DDL = f"""
 CREATE TABLE IF NOT EXISTS {REGISTRE_CONTACT} (
     hektor_contact_id   TEXT PRIMARY KEY,
+    app_contact_id      INTEGER,
+    donnees_json        TEXT NOT NULL,
+    vu_la_premiere_fois TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    vu_le               TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    absent_depuis       TEXT
+);
+CREATE TABLE IF NOT EXISTS {REGISTRE_RECHERCHE} (
+    contact_search_key  TEXT PRIMARY KEY,
+    hektor_contact_id   TEXT,
     app_contact_id      INTEGER,
     donnees_json        TEXT NOT NULL,
     vu_la_premiere_fois TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -207,6 +225,19 @@ def main() -> int:
         champs=["relation_key", "hektor_contact_id", "hektor_annonce_id", "app_contact_id", "role_contact"],
         plancher=PLANCHER_RELATIONS, libelle="relations")
     if relations is None:
+        return 4
+
+    # 26bis-RECHERCHES, ajoutee le 21/09 par l'audit d'autonomie des recherches :
+    # le filet existait pour l'annonce, le contact et la relation, PAS pour elle --
+    # alors que sa table est refaite chaque nuit depuis le miroir, comme les autres.
+    # ⚠ L'APP N'EN PORTE QUE LES ACTIVES (11 369 sur 77 061) : la comparaison se
+    #   fait donc sur la CLE, pas sur un volume, et le plancher protege du cas ou
+    #   la couche locale serait tronquee par un run amont en echec.
+    recherches = recenser_objet(
+        conn, client, couche=COUCHE_RECHERCHE, registre=REGISTRE_RECHERCHE, cle="contact_search_key",
+        champs=["contact_search_key", "hektor_contact_id", "app_contact_id", "search_index", "is_active"],
+        plancher=PLANCHER_RECHERCHES, libelle="recherches")
+    if recherches is None:
         return 4
 
     conn.close()
