@@ -66,7 +66,11 @@ elancer_run.ps1 (demarre la TACHE, donc
             changee dans Hektor a 15 h -> le prix reste a l'app, la surface
             arrive de Hektor. Eprouve sur un vrai bien, en transaction annulee.
             Appelee apres la relecture d'une fiche ET a la fin du run.
-     3. [ ] 2.4  la meme regle de recence dans le run de nuit       <- LA PROCHAINE
+     3. [x] 2.4  le run ne gele plus un bien en cours d'edition : il rafraichit
+            TOUT, puis repose les champs saisis. Le gel est devenu inutile et
+            faux -- il empechait une surface changee dans Hektor d'arriver.
+     4. [ ] la relecture a l'ouverture de fiche  <- ⚠ FAITE AVEC 2.4, a verifier
+     5. [ ] C.16  les 825 contacts disparus                        <- LA PROCHAINE
 
    LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP   (renomme le 21/09)
      ⚠ CE N'EST PAS UN INTERRUPTEUR. Saisir dans Hektor OU dans l'app doit
@@ -88,8 +92,7 @@ elancer_run.ps1 (demarre la TACHE, donc
             contre 12 exposes. ➡ 102 champs d'annonce et 40 de contact sont
             CREABLES MAIS JAMAIS CORRIGIBLES depuis l'app -> ajoute a L5.
      2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier
-     4. [ ] la relecture a l'ouverture de fiche
-     5. [ ] C.16  les 825 contacts disparus
+
 
    PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
          L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
