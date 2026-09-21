@@ -15434,6 +15434,31 @@ async function executerCreationContactHektor(job, payload) {
 
   // Le contact EXISTE chez Hektor a partir d'ici. Tout ce qui suit est
   // best-effort : rien ne doit plus faire tomber ce travail.
+  // L4-b 21/09/2026 : le contact EXISTE DEJA dans l'app, avec son identite. Ce
+  // que Hektor vient de rendre n'est pas son identite -- c'est le numero par
+  // lequel on le VISERA chez lui. Il va donc dans la case cible, et l'identite
+  // ne bouge pas : c'est la regle « un numero ne se perd jamais ».
+  const identiteApp = cleanString(payload.app_identite || payload.app_identity || "");
+  if (identiteApp && created && created.contactId) {
+    try {
+      await supabaseRequest(
+        `app_contact_current?hektor_contact_id=eq.${encodeURIComponent(identiteApp)}`,
+        { method: "PATCH", prefer: "return=minimal",
+          body: JSON.stringify({ hektor_target_id: String(created.contactId),
+                                 updated_at: new Date().toISOString() }) });
+      await logJob(job.id, "contact_cible_hektor", "done",
+        "Le numero de Hektor est range dans la case cible", {
+          app_identite: identiteApp, hektor_target_id: String(created.contactId) });
+    } catch (err) {
+      // BEST EFFORT, comme le lien provisoire : le contact EXISTE chez Hektor,
+      // c'est l'essentiel. Sans la case cible, ses travaux attendent (la
+      // barriere) au lieu de partir a l'aveugle -- genant, jamais destructeur.
+      await logJob(job.id, "contact_cible_hektor", "error",
+        `Case cible non posee : ${err && err.message ? err.message : err}`,
+        { app_identite: identiteApp });
+    }
+  }
+
   const lienProvisoire = await lierContactProvisoire(jetonContact, created.contactId);
   if (jetonContact) {
     await logJob(job.id, "contact_provisoire", lienProvisoire.status === "linked" ? "done" : "error",

@@ -520,14 +520,31 @@ def delete_searches_except_dirty(
     return count
 
 
+# L4-b 21/09/2026 : la plage reservee aux objets nes dans l'app.
+PLAGE_NUMEROS_APP = 10000000
+
+
+def est_ne_dans_l_app(contact_id: object) -> bool:
+    """Un contact ne dans l'app porte une identite >= 10 000 000 (option B, 21/09).
+
+    ⚠ IL N'EXISTE PAS DANS LE MIROIR, PAR CONSTRUCTION. La repose nocturne, qui
+    se fait depuis le miroir, ne peut donc jamais le contenir -- et sans ce
+    filtre, le push le verrait « disparu » et le SUPPRIMERAIT la nuit meme de sa
+    creation. Il n'existe nulle part ailleurs : il serait perdu.
+    """
+    texte = str(contact_id or "").strip()
+    return texte.isdigit() and int(texte) >= PLAGE_NUMEROS_APP
+
+
 def delete_contacts_except_dirty(
     client: "SupabaseRestClient", contact_ids: list[str], dirty_contact_ids: set[str], batch_size: int
 ) -> int:
-    """Supprime les contacts cibles SAUF ceux en édition optimiste."""
+    """Supprime les contacts cibles SAUF ceux en édition optimiste, et SAUF ceux
+    qui sont nes dans l'app (L4-b 21/09)."""
     safe_contact_ids = [
         str(contact_id)
         for contact_id in contact_ids
-        if str(contact_id) not in dirty_contact_ids
+        if str(contact_id) not in dirty_contact_ids and not est_ne_dans_l_app(contact_id)
     ]
     if not safe_contact_ids:
         return 0
