@@ -77,9 +77,31 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
-> **21/09/2026 — LA TÂCHE OUVERTE EST `C.9`, LA CRÉATION D'ANNONCE** *(lot **L4**)*.
-> Commencer par son **audit**, pas par du code : elle aura la forme qu'on vient de déboguer
-> sur le contact — l'identité, la case cible, la substitution au retour.
+> **21/09/2026 (23 h) — LA TÂCHE OUVERTE EST `L4-c`, « UNE PERSONNE, UN NUMÉRO »**, décidée
+> le soir même et placée **AVANT `C.9`**. Prochain pas : la **répétition sur copie**
+> *(bascule des 356 111 + le registre des recherches, puis un run complet par-dessus, et le
+> compte des orphelins)*. Tout est dans `notice/MESURE_BASCULE_CLE_CONTACT_2026-09-21.md`.
+>
+> ⚠ **CE QUI COMMANDE CE LOT** : le registre des recherches **bouge avec le contact, pas
+> après** — son ancrage est la paire `(hektor_contact_id, rang)`, donc une **position**. Si
+> l'identité change sans lui, aucune recherche n'est reconnue le lendemain : 11 368 clés
+> neuves, et tout ce qui pend dessous orphelin, **sans un bruit**.
+>
+> **LE SOCLE EST ÉPROUVÉ.** Run complet + descente rejoués en vrai le 21/09 au soir
+> *(20 h 23 → 23 h 14, résultat 0)* :
+> couloir des annonces **+7 pour 7 annonces** *(l'ancien défaut donnait +61 235)* ·
+> les deux témoins nés dans l'app **ont survécu** alors que leurs jumelles chez Hektor
+> n'existent plus · **aucune clé perdue** · **aucun 403 neuf** · **toutes les sondes à zéro**.
+>
+> ⚠ **DEUX DÉFAUTS INVISIBLES TROUVÉS LE MÊME SOIR**, tous deux dans des étapes
+> `Invoke-OptionalStepWithRetry` — qui **n'arrêtent pas le run** et le laissent finir en
+> « succès » : un chemin de script coupé par un `\r` (`ab94c9d`), et une colonne manquante
+> qui faisait tomber le recensement (`8ee966f`). **Vérifier que ces étapes ont une sonde**
+> *(tâche C.17-ter)* — c'est la classe de défaut la plus dangereuse ici.
+>
+> **`C.9`, la création d'annonce, vient après.** Son audit est déjà fait *(voir le journal
+> du plan)* : l'annonce vit déjà sous **son** numéro, donc elle ne peut pas fabriquer deux
+> fiches ; ses trous sont `app_mandat_champ_app` et les empreintes de relation.
 >
 > **Ce qui vient d'être fait, et qui sert de patron.** Un contact **naît dans l'app**, prouvé
 > deux fois en réel : identité `10 000 002` tirée de la plage de l'app, case cible `605 453`
