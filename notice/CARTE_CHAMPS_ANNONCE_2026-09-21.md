@@ -21,7 +21,7 @@ Mesuré dans la base et le code. **Aucune donnée modifiée.**
 |---|---|---|---|
 | **Annonce** | **167 champs** *(111 appartement · 109 maison · 35 immeuble · 28 terrain · 18 autre · 10 garage)* | **53 champs** | ⚠️ **102** |
 | **Contact** | **46 champs** | **13 champs** | ⚠️ **40** |
-| **Recherche acquéreur** | **~100 critères** envoyés à Hektor | ~12 exposés par la modale | ⚠️ le reste |
+| **Recherche acquéreur** | **~100 critères** envoyés à Hektor | ~12 exposés par la modale | ✅ **hors sujet — voir §2 bis** |
 | **Transaction** *(offre, compromis, vente)* | complet | complet *(fait en septembre)* | ✅ aucun |
 | **Relation** *(mandant)* | oui *(rattacher / créer)* | non | à mesurer |
 | **Mandat** | numéro + type + dates | prix, honoraires, surface | ⚠️ dates et durée — c'est **E.0-bis** |
@@ -40,8 +40,30 @@ Mesuré dans la base et le code. **Aucune donnée modifiée.**
   chauffée, couverte)*, résidence, dates de disponibilité, murs mitoyens, certificat de
   conformité, assurance dommages-ouvrage.
 - **Contact** : 46 champs à la création, 13 modifiables.
-- **Recherche** : le worker sait envoyer ~100 critères ; la modale n'en expose qu'une douzaine.
-  *(C'est le défaut déjà noté « critères max non stockés ».)*
+*(La recherche ne fait pas partie de cette liste — voir juste en dessous.)*
+
+---
+
+## 2 bis. La recherche suit une règle À PART, et c'est une décision, pas un trou
+
+**Décision de Frédéric du 20/08, appliquée le 24/08 (C.3) :**
+
+> **Seuls l'ajout et l'archivage d'une recherche partent chez Hektor. Tout le reste est
+> autonome dans l'app** — la modification des critères, les rapprochements, les propositions,
+> les relances, les retours acquéreur.
+
+Donc « le worker sait envoyer 100 critères, la modale n'en expose que 12 » **n'est pas un geste
+manquant** : c'est le partage voulu. Une modification n'a pas à repartir chez Hektor ; l'y
+renvoyer l'appauvrirait, puisque la modale n'exprime pas tout.
+
+**Et ce qui aurait pu faire perdre des critères est déjà corrigé** : depuis le 30/08, une
+modification **fusionne** au lieu de remplacer. Les critères venus de Hektor que l'app ne sait pas
+produire sont **conservés** — 1 045 recherches sur 10 910 en portent au moins un, le plus fréquent
+étant la pondération de quartier. Avant ce correctif, la perte aurait été immédiate et définitive.
+
+**Ce qui reste ouvert pour la recherche**, et c'est un autre sujet : enrichir la modale pour que
+le négociateur puisse **exprimer** plus de critères — un travail de confort côté app, pas une
+dépendance à Hektor.
 
 **La bonne nouvelle** : le worker sait **déjà envoyer** tous ces champs, puisqu'il les pose à la
 création. Le chemin existe — il est à ouvrir **dans l'autre sens**.
@@ -79,7 +101,7 @@ longitude, garages)*, **41 dans le calque seulement**.
 | Où | Quoi |
 |---|---|
 | **L3** *(inchangé)* | La protection par champ, sur ce que l'app sait écrire |
-| **L5 — les gestes manquants** | **Rendre modifiables les champs qu'on ne sait que créer** : 102 pour l'annonce, 40 pour le contact, les critères de recherche. À côté de « modifier un mandat existant » et « gérer les photos » — c'est la même nature de trou |
+| **L5 — les gestes manquants** | **Rendre modifiables les champs qu'on ne sait que créer** : **102 pour l'annonce, 40 pour le contact**. ⚠️ **Pas la recherche** : ajout et archivage seuls passent par Hektor, le reste est autonome *(décision du 20/08)*. À côté de « modifier un mandat existant » et « gérer les photos » — même nature de trou |
 
 **Avant d'ouvrir 102 portes**, il faudra mesurer lesquelles servent vraiment dans le parc : un
 champ rempli sur 12 000 biens et jamais corrigé ne mérite pas le même effort que la cave ou le
