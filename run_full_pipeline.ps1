@@ -907,8 +907,7 @@ Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -W
 #   la valeur de Hektor une nuit de plus -- genant, pas grave -- et la saisie
 #   reste dans sa ligne d'attente, protegee.
 Invoke-OptionalStepWithRetry -Label "phase2 reappliquer les saisies de l app" -Arguments @(
-    "phase2\identite
-eappliquer_saisies_app.py"
+    "phase2\identite\reappliquer_saisies_app.py"
 ) -WorkerKey "phase2.reappliquer_saisies"
 
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
