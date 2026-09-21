@@ -456,6 +456,18 @@ Invoke-Step -Label "phase2 registre identite contacts" -Arguments @(
     "phase2\identite\registre_contacts.py"
 ) -WorkerKey "phase2.registre_contacts"
 
+# C.16 21/09/2026 -- LES CONTACTS QUE HEKTOR NE CONNAIT PLUS.
+# Quand une fiche est supprimee chez lui, son detail repond 404 et le pipeline
+# l'inscrit en liste noire pour ne pas s'acharner -- mais RIEN ne le disait au
+# serveur : la fiche restait « normale », et seule une modification aurait revele
+# le probleme, en finissant en conflit.
+# ON NE SUPPRIME JAMAIS, ON MARQUE (absent_depuis) : effacer orphelinerait les
+# 18 tables qui pointent le contact, et aucune contrainte ne les protege.
+# ICI, apres le registre : c'est lui qui porte la colonne.
+Invoke-OptionalStepWithRetry -Label "phase2 marquer les contacts disparus" -Arguments @(
+    "phase2\identite\marquer_contacts_disparus.py"
+) -WorkerKey "phase2.contacts_disparus"
+
 Invoke-Step -Label "phase2 quality checks" -Arguments @(
     "phase2\checks\run_quality_checks.py"
 ) -WorkerKey "phase2.quality_checks"
@@ -878,7 +890,8 @@ Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -W
 #   la valeur de Hektor une nuit de plus -- genant, pas grave -- et la saisie
 #   reste dans sa ligne d'attente, protegee.
 Invoke-OptionalStepWithRetry -Label "phase2 reappliquer les saisies de l app" -Arguments @(
-    "phase2\identiteeappliquer_saisies_app.py"
+    "phase2\identite
+eappliquer_saisies_app.py"
 ) -WorkerKey "phase2.reappliquer_saisies"
 
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
