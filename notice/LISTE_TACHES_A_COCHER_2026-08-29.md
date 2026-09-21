@@ -65,6 +65,11 @@ elancer_run.ps1 (demarre la TACHE, donc
             ⭐ LE FAIT QUI DECIDE : la ligne d'attente porte DEJA la liste des
             champs saisis, un par un -- la protection par champ n'a rien a
             inventer, juste a l'appliquer au lieu de geler le bien.
+            ⚠ CORRIGEE LE JOUR MEME : la 1re version n'avait mesure QUE la
+            modification. LA CREATION en connait 167 (111 pour un appartement),
+            le contact 46 contre 13 modifiables, la recherche ~100 criteres
+            contre 12 exposes. ➡ 102 champs d'annonce et 40 de contact sont
+            CREABLES MAIS JAMAIS CORRIGIBLES depuis l'app -> ajoute a L5.
      2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier
      3. [ ] 2.4  la meme regle de recence dans le run de nuit
      4. [ ] la relecture a l'ouverture de fiche

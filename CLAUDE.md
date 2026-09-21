@@ -30,6 +30,28 @@
 > | **J'attends le « vas-y »** | modification de code existant, du run de nuit, des workers |
 > | **Accord OBLIGATOIRE, toujours** | ecriture en base de production · ecriture chez Hektor (creer / modifier / supprimer) · lancer un run ou un rattrapage · redemarrer un service · deployer · tout geste irreversible |
 >
+> ⚠ **UN AUDIT BALAIE LES OBJETS *ET* LES GESTES — regle posee par Frederic le 21/09**,
+> apres un audit qui n'avait mesure QUE la modification d'une annonce et avait manque les
+> 167 champs de la CREATION. « Tu vas trop vite dans tes audits, il faut les rendre plus
+> approfondis. »
+>
+> **Avant de conclure quoi que ce soit, dresser le tableau, meme s'il est vide :**
+>
+> |  | creer | modifier | supprimer / archiver | lire / remonter |
+> |---|---|---|---|---|
+> | **annonce** | | | | |
+> | **contact** | | | | |
+> | **recherche** | | | | |
+> | **relation** (mandant, proprietaire, acquereur) | | | | |
+> | **transaction** (offre, compromis, vente) | | | | |
+> | **mandat** | | | | |
+> | **document / photo** | | | | |
+> | **RDV / visite** | | | | |
+>
+> Une case qu'on ne sait pas remplir se DIT (« non mesure »), elle ne se saute pas. Et si
+> l'audit ne porte que sur un objet, l'ecrire en tete : « audit limite a X, les autres ne
+> sont pas mesures ».
+>
 > **Une seule tache en code a la fois.** Les audits peuvent tourner en parallele.
 > **Chaque message de travail commence par une ligne de position** : `L0 · C.1' · 2 sur 4`.
 > **Rien n'est fini tant que ce n'est pas ecrit dans les documents** : cette conversation

@@ -1,75 +1,95 @@
-# 🗺 LA CARTE DES CHAMPS D'UNE ANNONCE
+# 🗺 LA CARTE DES CHAMPS — CRÉER *et* MODIFIER, OBJET PAR OBJET
 
-**21/09/2026.** Tâche **26bis-3**, préalable de la **protection par champ** *(lot L3)*.
+**21/09/2026.** Tâche **26bis-3**, élargie le jour même après une correction de Frédéric.
 Mesuré dans la base et le code. **Aucune donnée modifiée.**
 
-> **La question à laquelle cette carte répond :** *« si un négociateur saisit un champ dans
-> l'app, où cette valeur est-elle rangée — et peut-on la protéger sans geler tout le bien ? »*
+> ⚠️ **CE DOCUMENT A ÉTÉ CORRIGÉ DEUX HEURES APRÈS SA PREMIÈRE VERSION, ET LA LEÇON VAUT PLUS
+> QUE LA CARTE.** La première version ne mesurait que **le chemin de modification** (53 champs)
+> et concluait « la protection par champ n'a rien à inventer ». Frédéric : *« le worker ajout
+> annonces permet de remplir entièrement un bien avec des centaines de champs, pourquoi tu ne
+> m'en parles pas ? »*
+>
+> **Il avait raison.** Un audit qui regarde un seul geste sur un seul objet n'est pas un audit.
+> D'où la règle de méthode posée le même jour *(`CLAUDE.md` §0)* : **tout audit balaie les
+> objets ET les gestes, en tableau, avant de conclure.**
 
 ---
 
-## 1. Combien de champs, vraiment
+## 1. Ce que l'app sait faire, objet par objet, geste par geste
+
+| Objet | **Créer** | **Modifier** | Créables mais **non modifiables** |
+|---|---|---|---|
+| **Annonce** | **167 champs** *(111 appartement · 109 maison · 35 immeuble · 28 terrain · 18 autre · 10 garage)* | **53 champs** | ⚠️ **102** |
+| **Contact** | **46 champs** | **13 champs** | ⚠️ **40** |
+| **Recherche acquéreur** | **~100 critères** envoyés à Hektor | ~12 exposés par la modale | ⚠️ le reste |
+| **Transaction** *(offre, compromis, vente)* | complet | complet *(fait en septembre)* | ✅ aucun |
+| **Relation** *(mandant)* | oui *(rattacher / créer)* | non | à mesurer |
+| **Mandat** | numéro + type + dates | prix, honoraires, surface | ⚠️ dates et durée — c'est **E.0-bis** |
+
+---
+
+## 2. L'asymétrie, en clair
+
+**Le même défaut se répète sur trois objets : on sait remplir, on ne sait pas corriger.**
+
+- **Annonce** : un négociateur crée un appartement avec ses 111 champs. Trois jours plus tard, il
+  veut corriger « cave : non » en « cave : oui ». **Il doit ouvrir Hektor.**
+  Parmi les 102 : cave, balcon, terrasse et leurs surfaces, séjour, cuisine équipée, ascenseur,
+  accès handicapé, chauffage, eau et assainissement, climatisation, cheminée, alarme, interphone,
+  digicode, volets électriques, double vitrage, piscine *(type, nature, traitement, dimensions,
+  chauffée, couverte)*, résidence, dates de disponibilité, murs mitoyens, certificat de
+  conformité, assurance dommages-ouvrage.
+- **Contact** : 46 champs à la création, 13 modifiables.
+- **Recherche** : le worker sait envoyer ~100 critères ; la modale n'en expose qu'une douzaine.
+  *(C'est le défaut déjà noté « critères max non stockés ».)*
+
+**La bonne nouvelle** : le worker sait **déjà envoyer** tous ces champs, puisqu'il les pose à la
+création. Le chemin existe — il est à ouvrir **dans l'autre sens**.
+
+---
+
+## 3. Où vit la valeur, côté app *(annonce)*
 
 | | Nombre |
 |---|---|
-| Colonnes de l'annonce dans l'app *(`app_dossier_current`)* | **71** |
+| Colonnes de l'annonce *(`app_dossier_current`)* | **71** |
 | Clés du **grand bloc** *(`detail_payload_json`)* | **134** |
-| **Total, côté app** | **~205** |
-| Colonnes sur le serveur *(`app_view_generale`)* | **163** |
-| Colonnes **communes** app / serveur — donc arbitrables par la machinerie actuelle | **58** |
-| Champs que le worker sait **envoyer à Hektor** | **53** |
+| **Total côté app** | **~205** |
+| Colonnes sur le serveur *(`app_view_generale`)* | 163 |
+| Colonnes **communes**, donc arbitrables par la machinerie actuelle | 58 |
 
-**« 46 colonnes dont 37 dans un blob »**, comme disait la tâche, était un ordre de grandeur pris
-sur un périmètre plus étroit. Le compte réel est **205 champs, dont 134 dans un seul paquet**.
+Et pour les autres objets : **43** colonnes pour le contact, **23** pour la recherche.
 
----
+**Les quatre endroits où une valeur peut vivre** : la colonne · le grand bloc · **le calque**
+*(ce que l'app vient de saisir, champ par champ)* · **la ligne d'attente** *(les champs pas encore
+confirmés par Hektor)*.
 
-## 2. Les quatre endroits où une valeur peut vivre
+**Ce qui reste vrai de la première version** : le calque et la ligne d'attente portent déjà la
+liste exacte des champs saisis, un par un. **La protection par champ n'a donc pas besoin de
+créer 41 colonnes** — elle applique cette liste au lieu de geler le bien.
 
-| | Où | Ce que c'est | Survit à la nuit ? |
-|---|---|---|---|
-| **①** | **Colonne de l'app** — 71 | prix, ville, code postal, numéro de mandat, statut… | Réécrite depuis le serveur, **sauf** si une saisie est en attente sur ce bien |
-| **②** | **Grand bloc** — 134 clés | surface, pièces, DPE, copropriété, chauffage, portails… Beaucoup sont eux-mêmes des paquets *(`mandats_json`, `honoraires_json`, `detail_raw_json`…)* | Idem |
-| **③** | **Le calque** *(`app_optimistic_overlay`, dans le bloc)* | **Ce que l'app vient de saisir**, champ par champ, avant confirmation | **Il n'existe que le temps de l'attente** — 0 dossier aujourd'hui |
-| **④** | **La ligne d'attente** *(`app_annonce_pending.push_fields`)* | Les champs saisis **et pas encore confirmés par Hektor** | Oui, tant qu'elle vit |
-
-**Le fait qui décide de tout** : ③ et ④ portent déjà **exactement** la liste des champs saisis par
-l'app, un par un. **La protection par champ n'a donc rien à inventer** — elle a seulement à
-appliquer cette liste au lieu de geler le bien entier.
+**Où vivent les 53 champs modifiables** : 5 en colonne *(prix, ville, code postal, numéro de
+mandat, titre)*, 7 dans une clé nommée du bloc *(surface, pièces, chambres, terrain, latitude,
+longitude, garages)*, **41 dans le calque seulement**.
 
 ---
 
-## 3. Les 53 champs que l'app sait envoyer, et où ils vivent
+## 4. Ce que ça ajoute au plan
 
-| Où vit la valeur | Champs |
+| Où | Quoi |
 |---|---|
-| **Colonne de l'app** *(5)* | `price` → prix · `city` → ville · `postal_code` → code postal · `mandate_number` → numéro de mandat · `title` → titre |
-| **Grand bloc, clé nommée** *(7)* | `surface` · `room_count` → nb_pieces · `bedroom_count` → nb_chambres · `land_surface` · `latitude` · `longitude` · `garage_count` |
-| **Calque seulement** *(41)* | adresse et complément, ville et code postal privés, immeuble, transports, proximité, environnement, cuisine, exposition, vue, jardin, piscine, terrasse, état intérieur et extérieur, DPE, GES, commentaire de risques, type et dates de mandat, surface Carrez, étage, niveaux, salles de bain, salles d'eau, WC, surface du jardin, terrasses, surface de garage, parkings intérieurs et extérieurs, année de construction, lots et charges de copropriété, quote-part, fonds de travaux, honoraires, prix net vendeur, description |
+| **L3** *(inchangé)* | La protection par champ, sur ce que l'app sait écrire |
+| **L5 — les gestes manquants** | **Rendre modifiables les champs qu'on ne sait que créer** : 102 pour l'annonce, 40 pour le contact, les critères de recherche. À côté de « modifier un mandat existant » et « gérer les photos » — c'est la même nature de trou |
 
-⚠️ **Les 41 du bas sont le vrai sujet** : la saisie s'affiche *(par le calque)* et part chez Hektor,
-mais **aucune colonne ne la range**. Tant que Hektor ne l'a pas confirmée, elle ne vit que dans le
-calque et la ligne d'attente — qui disparaissent quand la saisie est soldée.
-
----
-
-## 4. Ce que la carte permet de décider
-
-1. **La protection par champ est possible sans rien restructurer** : la liste des champs à protéger
-   est déjà écrite dans la ligne d'attente, à chaque saisie.
-2. **Elle ne demande pas de créer 41 colonnes.** Le calque fait déjà le travail d'affichage ; ce qui
-   manque, c'est que la reconstruction nocturne **le respecte champ par champ** au lieu de sauter
-   le bien.
-3. **Le grand bloc n'est un obstacle que pour un objet né dans l'app** — un bien que le miroir
-   ignore n'a aucun bloc à recomposer. C'est 26bis-3 au sens strict, et ça appartient à **L4**,
-   collé à la création.
+**Avant d'ouvrir 102 portes**, il faudra mesurer lesquelles servent vraiment dans le parc : un
+champ rempli sur 12 000 biens et jamais corrigé ne mérite pas le même effort que la cave ou le
+chauffage.
 
 ---
 
-## 5. Ce que la carte ne dit pas encore
+## 5. Comment refaire cette mesure
 
-- **Quels champs sont exclusifs à l'app.** Aujourd'hui : aucun côté annonce. Le jour où il y en
-  aura un *(une note interne, un état de cycle)*, il ira au contrat d'autorité.
-- **Les 9 champs à vérifier un par un** : surface, pièces, chambres, terrain, latitude, longitude,
-  année de construction, prix net vendeur, honoraires — ils ont une colonne **sur le serveur** mais
-  pas dans l'app. À regarder au moment de la protection par champ.
+`phase2/checks/carte_champs_annonce.py` — lecture seule, il rend les comptes de la section 3.
+Les comptes de la section 1 se relèvent dans `Console/console_job_worker.js` :
+`HEKTOR_WIZARD_FIELDS_BY_PROFILE` *(création)*, `HEKTOR_CLEANFIELD_TEXT_KEYS` et
+`HEKTOR_CLEANFIELD_NUMBER_KEYS` *(modification)*.
