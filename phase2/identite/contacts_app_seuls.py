@@ -105,12 +105,44 @@ CREATE TABLE IF NOT EXISTS {REGISTRE_RELATION} (
     relation_key        TEXT PRIMARY KEY,
     hektor_contact_id   TEXT,
     hektor_annonce_id   TEXT,
+    app_contact_id      INTEGER,
     donnees_json        TEXT NOT NULL,
     vu_la_premiere_fois TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     vu_le               TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     absent_depuis       TEXT
 );
 """
+
+# Les colonnes que `recenser_objet` recopie quand Supabase les rend. Si l'une
+# manque a la table, l'INSERT tombe -- et comme l'etape est « optionnelle », le
+# run continue et PERSONNE ne le voit.
+#
+# ⚠ CONSTATE EN REEL LE 21/09, au premier vrai passage : la table des relations
+#   n'avait pas `app_contact_id` alors que la requete le demandait. Le
+#   recensement des CONTACTS avait reussi (2 lignes), celui des RELATIONS est
+#   tombe, et le run s'est termine en « succes ».
+#
+# CREATE TABLE IF NOT EXISTS n'ajoute RIEN a une table deja creee : il faut donc
+# rattraper les installations existantes, ici, a chaque passage.
+COLONNES_ATTENDUES = {
+    REGISTRE_CONTACT:   {"app_contact_id": "INTEGER"},
+    REGISTRE_RELATION:  {"app_contact_id": "INTEGER", "hektor_annonce_id": "TEXT"},
+    REGISTRE_RECHERCHE: {"app_contact_id": "INTEGER", "hektor_contact_id": "TEXT"},
+}
+
+
+def assurer_colonnes(conn: sqlite3.Connection) -> list[str]:
+    """Ajoute les colonnes manquantes aux registres deja crees. Idempotent."""
+    ajoutees: list[str] = []
+    for table, colonnes in COLONNES_ATTENDUES.items():
+        presentes = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if not presentes:
+            continue
+        for nom, type_sql in colonnes.items():
+            if nom not in presentes:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {nom} {type_sql}")
+                ajoutees.append(f"{table}.{nom}")
+    return ajoutees
 
 
 def connecte() -> sqlite3.Connection:
@@ -207,6 +239,9 @@ def main() -> int:
 
     conn = connecte()
     conn.executescript(DDL)
+    ajoutees = assurer_colonnes(conn)
+    if ajoutees:
+        print(f"[schema] colonnes ajoutees aux registres : {', '.join(ajoutees)}")
     conn.commit()
 
     client = client_supabase()
