@@ -1,111 +1,34 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 20/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> **Mis à jour le 21/09/2026.** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier.
 
-**LA CIBLE** — *étape 2, définie par Frédéric le 19/09* : l'app assure **toutes ses fonctions
-sans Hektor**, sauf **numéro de mandat · signature · portails**. Hektor devient une copie tenue
-à jour par les workers. ➡ **La charte, le journal des décisions et LES DIX LOTS sont en tête du
-`PLAN_DEV_ACTUALISE`.** ➡ **La méthode de travail est en §0 de `CLAUDE.md`.**
+**LA CIBLE** — *étape 2* : l'app assure **toutes ses fonctions sans Hektor**, sauf **numéro de
+mandat · signature · portails**. ➡ **La charte, le journal des décisions et LES DIX LOTS sont en
+tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
 
 ```
-   LOT EN COURS : L0 -- NE PLUS RIEN PERDRE            (~3 j)
-     1. [x] C.1'  la relecture n'efface plus une saisie, et le run de nuit non plus
-     2. [x] C.1'  une saisie partielle ne se renvoie plus sans fin (1 ecriture/min)
-            + les DEUX CAUSES separees (hektor_plus_recent / envoi_impossible),
-              reprise a 6 h, alerte email a Frederic, bandeau sans question pour
-              le negociateur                                31411aa -- ⚠ REDEMARRER
-                                                            LES 4 SERVICES WORKER
-     3. [x] C.4   supprimer un contact ne laisse plus rien : le menage lit les CLES
-                  avant de supprimer les recherches (c'etait l'ordre, le defaut).
-                  146 orphelins purges (inventaire garde), sonde posee. La note
-                  disait « rapprochements orphelins » : il y en avait 0.   718eb7a
-     4. [x] C.17-ter  les 13 cles posees (28/28 surveillees) · sonde « Hektor
-                      injoignable » qui distingue le BLOCAGE D'IP d'une panne
-                      reseau · scheduled
-elancer_run.ps1 (demarre la TACHE, donc
-                      on ne recopie plus ses options)                    c025bd1
+   L0 ✅  ne plus rien perdre            C.1' · C.4 · C.17-ter            20/09
+   L1 ✅  les numeros a la naissance     option B : identite / cible      21/09
+   L2 ✅  les corps chez l'app           le filet couvre les 4 objets     21/09
+          (annonce 26/08 · contact, relation, RECHERCHE 21/09 · inventaire · couples)
+   L3 🟡  la regle de RECENCE, PAR CHAMP
+          [x] la carte des champs        205 champs, 41 dans le calque seul
+          [x] la protection par CHAMP    prix a l'app + surface de Hektor
+          [x] 2.4 le run ne gele plus    la relecture non plus
+          [ ] C.16  les 825 contacts disparus              <- LA PROCHAINE
+   L4     la creation part de l'app      C.9 · C.9-couple · 26bis-TRANSACTIONS
+   L5     les gestes manquants           + 102 champs d'annonce et 40 de contact
+                                           CREABLES MAIS JAMAIS CORRIGIBLES
+   L6 remontees · L7 fichiers · L8 bascule (E.2) · L9 registre des mandats
 
-   ✅ LOT L0 TERMINE le 20/09.
-
-   LOT EN COURS : L1 -- LES NUMEROS A LA NAISSANCE
-     ⚠ 21/09 : FREDERIC A CHOISI L'OPTION B -- on n'inverse pas les 340 endroits
-       qui relient nos donnees (6 a 9 j, echecs SILENCIEUX), on ne touche qu'aux
-       88 qui visent Hektor. C'est le mecanisme E.4/6.2 du plan (« les deux
-       cases »), avance du jour J a maintenant. 4-suite devient SANS OBJET :
-       les 500 000 lignes accrochees aux recherches ne bougent pas.
-     1. [x] la case cible + la recopie (61 955) + le declencheur + le
-            distributeur (depart 10 000 000) + la sonde              62cd00e
-     2. [x] la PORTE du worker : 8 passages, garde-fou « >= 10 000 000 refuse »,
-            listes de mandants filtrees                              5eef5eb
-     3. [x] la BARRIERE : un envoi attend au lieu d'echouer, et repart tout seul
-            quand le numero arrive (geste 2.6 du plan)               acdffb4
-     4. [ ] le distributeur BRANCHE a la creation  -> c'est L4 (C.9), pas ici
-
-   LOT L2 -- LES CORPS CHEZ L'APP (exige Hektor vivant)
-     [x] 26bis-CONTACTS + 26bis-RELATIONS  le filet : le serveur RECENSE ce que
-         le miroir ignore (0 aujourd'hui, et c'est voulu)              bc359b6
-     [x] INVENTAIRE  les tables refaites chaque nuit, et ce qui protege chacune
-         -> notice/INVENTAIRE_TABLES_REFAITES_2026-09-21.md            7dabc89
-     [x] 26bis-COUPLES  le lien de menage dans NOTRE serie (37 398 / 40 150)
-         + son entretien nocturne + sa sonde                           ca5fde2
-     [x] 26bis-3  la CARTE DES CHAMPS -> le reste passe en L3
-     [x] 26bis-RECHERCHES  AJOUTEE ET FAITE LE 21/09               230ce98
-         Le filet « le serveur tient ce que le miroir ignore » existe pour
-         l'annonce (26/08), le contact et la relation (21/09) -- PAS pour la
-         recherche, alors que sa table est refaite chaque nuit depuis le miroir.
-         Risque nul aujourd'hui (aucune recherche nee sans Hektor) ; indispensable
-         des que la creation devient app-first (L4), et IMPOSSIBLE apres la
-         coupure.  Meme patron, meme demi-journee.
-         -> notice/AUDIT_RECHERCHES_AUTONOMIE_2026-09-21.md
-     ✅ LOT L2 TERMINE le 21/09.
-
-   LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP
-     2. [x] la PROTECTION PAR CHAMP au lieu du bien entier            6932135
-            L'exemple de Frederic resolu : prix saisi dans l'app a 14 h + surface
-            changee dans Hektor a 15 h -> le prix reste a l'app, la surface
-            arrive de Hektor. Eprouve sur un vrai bien, en transaction annulee.
-            Appelee apres la relecture d'une fiche ET a la fin du run.
-     3. [x] 2.4  le run ne gele plus un bien en cours d'edition : il rafraichit
-            TOUT, puis repose les champs saisis. Le gel est devenu inutile et
-            faux -- il empechait une surface changee dans Hektor d'arriver.
-     4. [ ] la relecture a l'ouverture de fiche  <- ⚠ FAITE AVEC 2.4, a verifier
-     5. [ ] C.16  les 825 contacts disparus                        <- LA PROCHAINE
-
-   LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP   (renomme le 21/09)
-     ⚠ CE N'EST PAS UN INTERRUPTEUR. Saisir dans Hektor OU dans l'app doit
-       fonctionner des deux cotes DES MAINTENANT ; ce qu'on interdit, c'est de
-       saisir des deux cotes A LA FOIS sur le meme champ. L'arbitre est la
-       RECENCE, en permanence -- pas une bascule datee.
-     ⚠ ET PENDANT TOUTE LA MIGRATION, LES COMMERCIAUX SAISISSENT DANS HEKTOR :
-       l'app et le serveur doivent continuer d'etre alimentes par lui.
-     1. [x] 26bis-3  la carte des champs -> notice/CARTE_CHAMPS_ANNONCE_2026-09-21.md
-            205 champs cote app (71 colonnes + 134 dans le grand bloc), 163 sur le
-            serveur, 58 communs. Des 53 poussables : 5 en colonne, 7 dans une cle
-            nommee, 41 dans le CALQUE seulement.
-            ⭐ LE FAIT QUI DECIDE : la ligne d'attente porte DEJA la liste des
-            champs saisis, un par un -- la protection par champ n'a rien a
-            inventer, juste a l'appliquer au lieu de geler le bien.
-            ⚠ CORRIGEE LE JOUR MEME : la 1re version n'avait mesure QUE la
-            modification. LA CREATION en connait 167 (111 pour un appartement),
-            le contact 46 contre 13 modifiables, la recherche ~100 criteres
-            contre 12 exposes. ➡ 102 champs d'annonce et 40 de contact sont
-            CREABLES MAIS JAMAIS CORRIGIBLES depuis l'app -> ajoute a L5.
-     2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier
-
-
-   PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
-         L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
-         L3 l'interrupteur · L4 la creation part de l'app · L5 les gestes manquants
-         L6 les remontees · L7 les fichiers · L8 bascule (E.2) · L9 registre des mandats
-
-   FAIT LE 20/09
-     une recherche creee dans Hektor entre dans l'app (passage en acquereur)  d7a3586
-     sa sonde                                                                fb6abbd
+   ⚠ DEUX REGLES QUI COMMANDENT TOUT (journal des decisions, 21/09)
+     · pendant la migration, LES COMMERCIAUX SAISISSENT ENCORE DANS HEKTOR
+     · PAS D'INTERRUPTEUR : l'arbitre est la RECENCE, dans les deux sens, toujours
 
    EN ATTENTE DE FRÉDÉRIC
      L5 : fusion de doublons · suppression d'annonce · brouillons -- app ou admin ?
-     RDV et visites (audit fait le 19/09) · rapprochement automatique (mode, seuil, RGPD)
+     RDV et visites · rapprochement automatique (mode, seuil, RGPD)
      E.2 qui passe en premier · mot de passe de la base · 50039 net/commission inverses
 ```
 
