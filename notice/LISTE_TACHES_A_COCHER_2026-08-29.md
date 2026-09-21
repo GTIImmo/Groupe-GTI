@@ -16,8 +16,11 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
           [x] la carte des champs        205 champs, 41 dans le calque seul
           [x] la protection par CHAMP    prix a l'app + surface de Hektor
           [x] 2.4 le run ne gele plus    la relecture non plus
-          [ ] C.16  les 825 contacts disparus              <- LA PROCHAINE
-   L4     la creation part de l'app      C.9 · C.9-couple · 26bis-TRANSACTIONS
+          [x] C.16  marques, jamais supprimes (7 658). ⚠ le « 825 » a vieilli :
+              2 205 actifs cote serveur, mais UNE SEULE fiche encore active
+              dans l'app -- les autres ont perdu leur eligibilite
+   L3 ✅  TERMINE le 21/09
+   L4     la creation part de l'app      C.9 · C.9-couple · 26bis-TRANSACTIONS   <- LA SUITE
    L5     les gestes manquants           + 102 champs d'annonce et 40 de contact
                                            CREABLES MAIS JAMAIS CORRIGIBLES
    L6 remontees · L7 fichiers · L8 bascule (E.2) · L9 registre des mandats
