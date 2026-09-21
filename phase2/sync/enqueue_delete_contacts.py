@@ -79,9 +79,19 @@ def appel(url: str, cle: str, chemin: str, methode: str = "GET", corps=None, pre
     donnees = json.dumps(corps).encode("utf-8") if corps is not None else None
     requete = urllib.request.Request(f"{url}/rest/v1/{chemin}", data=donnees,
                                      headers=entetes, method=methode)
-    with urllib.request.urlopen(requete, timeout=60) as reponse:
-        texte = reponse.read().decode("utf-8")
-        return json.loads(texte) if texte.strip() else []
+    try:
+        with urllib.request.urlopen(requete, timeout=60) as reponse:
+            texte = reponse.read().decode("utf-8")
+            return json.loads(texte) if texte.strip() else []
+    except urllib.error.HTTPError as err:
+        # On rend LE MESSAGE DU SERVEUR, pas une trace d'appels : « HTTP 400 »
+        # tout seul n'apprend rien, et la trace noie ce qui compte.
+        detail = ""
+        try:
+            detail = json.loads(err.read().decode("utf-8")).get("message", "")
+        except Exception:
+            pass
+        raise SystemExit(f"REFUS Supabase {err.code} sur {chemin} : {detail or 'sans detail'}")
 
 
 def main() -> int:
@@ -133,7 +143,10 @@ def main() -> int:
 
     travaux = [{
         "job_type": "delete_hektor_contact",
-        "status": "queued",
+        # ⚠ « pending », pas « queued ». La table porte une contrainte qui
+        #   n'admet que pending / running / done / error / pending_approval --
+        #   et elle refuse le lot ENTIER sinon (constate le 21/09).
+        "status": "pending",
         "priority": JOB_PRIORITY,
         "payload_json": {
             "source": args.raison,
