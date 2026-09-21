@@ -77,6 +77,27 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
+> **21/09/2026 — LA TÂCHE OUVERTE EST `C.9`, LA CRÉATION D'ANNONCE** *(lot **L4**)*.
+> Commencer par son **audit**, pas par du code : elle aura la forme qu'on vient de déboguer
+> sur le contact — l'identité, la case cible, la substitution au retour.
+>
+> **Ce qui vient d'être fait, et qui sert de patron.** Un contact **naît dans l'app**, prouvé
+> deux fois en réel : identité `10 000 002` tirée de la plage de l'app, case cible `605 453`
+> rapportée par le worker, **une seule fiche**. L'essai a trouvé **deux défauts que rien
+> d'autre n'aurait trouvés** — la case cible ne partait pas *(un `updated_at` inexistant
+> faisait rejeter tout le PATCH)*, et le retour fabriquait **une seconde fiche**.
+> ⚠ **La leçon du second, elle vaut pour C.9** : la substitution d'un numéro se fait **à
+> l'entrée du build**, jamais au push — les clés des relations et des recherches sont des
+> **empreintes calculées sur ce numéro**, et traduire après coup ferait supprimer ces lignes
+> au run suivant. `4e82f25` · `13ecedc` · `6cbb59a` · `21565cb`.
+>
+> **Deux fiches d'essai sont gardées exprès** — `10000001` et `10000002`, sans jumelle chez
+> Hektor : elles servent de témoin pour vérifier au matin que la substitution du run de nuit
+> s'est bien comportée. À retirer ensuite.
+>
+> ⛔ **Ne jamais relire la section ci-dessous comme un ordre du jour** : elle date d'avant
+> le 19/09 et décrit le chantier des transactions, terminé.
+
 > **18/09/2026 — LES TRANSACTIONS SONT PRÊTES.** L'audit global du 18/09 a relu la liste
 > `① CE QUI RESTE À FAIRE` contre le code, **rubrique par rubrique, sous les mêmes numéros**
 > (C.4, C.4-bis/C.1', C.19-d 3.5, C.17-ter, D.0, 0.3, E.0-bis, A.2). L'ordre avant E.2 est dans

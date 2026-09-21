@@ -20,7 +20,25 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
               2 205 actifs cote serveur, mais UNE SEULE fiche encore active
               dans l'app -- les autres ont perdu leur eligibilite
    L3 ✅  TERMINE le 21/09
-   L4     la creation part de l'app      C.9 · C.9-couple · 26bis-TRANSACTIONS   <- LA SUITE
+   L4 🟡  la creation part de l'app
+          [x] L4-a  distributeurs et plages (annonce 10M · recherche 1M)
+          [x] L4-b  LE CONTACT NAIT DANS L'APP -- prouve 2 fois en reel le 21/09
+              36 s puis 51 s de bout en bout ; identite 10 000 002, cible 605 453
+              ⚠ 2 defauts trouves PAR l'essai, les deux corriges :
+                (1) la case cible ne partait pas -- le PATCH portait un
+                    `updated_at` qui n'existe pas sur app_contact_current,
+                    PostgREST rejetait TOUT le PATCH en 400       4e82f25
+                (2) DEUX fiches pour une personne -- le retour reposait la
+                    fiche sous le numero de Hektor. Substitution d'identite
+                    A L'ENTREE DU BUILD (pas au push : les cles sont des
+                    empreintes CALCULEES sur le numero) + sonde        13ecedc
+              [x] la phrase de confirmation de suppression, meme famille 6cbb59a
+          [ ] C.9  LA CREATION D'ANNONCE          <- LA SUITE, audit d'abord
+          [ ] C.9-couple  ⚠ son 1er pas est une MESURE, pas du code :
+              quand on envoie un couple, Hektor cree-t-il UNE fiche ou DEUX ?
+              jamais verifie. Tant qu'on l'ignore, on ne sait pas si le
+              conjoint a droit a sa propre identite chez nous
+          [ ] 26bis-TRANSACTIONS · 4.3 (contact + recherche + mandant d'un coup)
    L5     les gestes manquants           + 102 champs d'annonce et 40 de contact
                                            CREABLES MAIS JAMAIS CORRIGIBLES
    L6 remontees · L7 fichiers · L8 bascule (E.2) · L9 registre des mandats
