@@ -388,6 +388,19 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     {
+        # 5b 21/09 : ce qui attend que son contact existe chez Hektor. Normal
+        # quelques minutes apres une creation ; anormal au-dela -- cela voudrait
+        # dire que le worker de creation n'a pas rapporte le numero, et la saisie
+        # resterait dans la bannette sans jamais partir.
+        "key": "data.envois_en_attente_hektor",
+        "severity": "warning",
+        "label": "Saisies en attente d'un numero Hektor",
+        "table": "app_v_envois_en_attente_hektor",
+        "params": {},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
         # 5b 21/09 : la case cible de Hektor. Un contact venu de lui DOIT la porter,
         # sinon ses travaux n'ont plus rien a viser et attendent indefiniment. Le
         # declencheur la remplit ; cette sonde dit si un ecrivain lui a echappe.
