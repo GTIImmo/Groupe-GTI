@@ -15438,14 +15438,20 @@ async function executerCreationContactHektor(job, payload) {
   // que Hektor vient de rendre n'est pas son identite -- c'est le numero par
   // lequel on le VISERA chez lui. Il va donc dans la case cible, et l'identite
   // ne bouge pas : c'est la regle « un numero ne se perd jamais ».
+  //
+  // ⚠ ESSAI REEL DU 21/09, contact « ESSAI L4B » : ce PATCH portait aussi un
+  //   `updated_at` -- colonne qui N'EXISTE PAS sur app_contact_current (elle
+  //   s'appelle `refreshed_at`). PostgREST a donc rejete TOUT le PATCH en 400,
+  //   `hektor_target_id` compris, et la case cible est restee vide. On n'envoie
+  //   plus QUE la case cible : `refreshed_at` est l'horodatage de FRAICHEUR du
+  //   serveur, il n'appartient pas au worker et la regle de recence s'en sert.
   const identiteApp = cleanString(payload.app_identite || payload.app_identity || "");
   if (identiteApp && created && created.contactId) {
     try {
       await supabaseRequest(
         `app_contact_current?hektor_contact_id=eq.${encodeURIComponent(identiteApp)}`,
         { method: "PATCH", prefer: "return=minimal",
-          body: JSON.stringify({ hektor_target_id: String(created.contactId),
-                                 updated_at: new Date().toISOString() }) });
+          body: JSON.stringify({ hektor_target_id: String(created.contactId) }) });
       await logJob(job.id, "contact_cible_hektor", "done",
         "Le numero de Hektor est range dans la case cible", {
           app_identite: identiteApp, hektor_target_id: String(created.contactId) });
