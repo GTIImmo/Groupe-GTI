@@ -163,9 +163,17 @@ def main() -> int:
         if neufs:
             # L'ordre decide de la serie : on suit celui de Hektor, ce qui rend
             # la table lisible et la reprise reproductible.
+            # L4-b 21/09/2026 -- LE NUMERO EST DONNE EXPLICITEMENT, DANS LE COULOIR
+            # DU SERVEUR. La table est en AUTOINCREMENT : adopter un numero de
+            # l'app (>= 10 000 000) ferait sauter son compteur dans cette plage
+            # POUR TOUJOURS -- SQLite refuse de le faire redescendre, verifie le
+            # 21/09. On calcule donc nous-memes, sous la plage de l'app.
             conn.execute(
-                f"INSERT INTO {REGISTRE} (hektor_contact_id) "
-                f"SELECT s.hektor_contact_id FROM {SOURCE} s "
+                f"INSERT INTO {REGISTRE} (app_contact_id, hektor_contact_id) "
+                f"SELECT (SELECT COALESCE(MAX(app_contact_id), 0) FROM {REGISTRE} "
+                "         WHERE app_contact_id < 10000000) "
+                "       + ROW_NUMBER() OVER (ORDER BY CAST(s.hektor_contact_id AS INTEGER), s.hektor_contact_id), "
+                f"       s.hektor_contact_id FROM {SOURCE} s "
                 f"WHERE NOT EXISTS (SELECT 1 FROM {REGISTRE} r "
                 "  WHERE r.hektor_contact_id = s.hektor_contact_id) "
                 "ORDER BY CAST(s.hektor_contact_id AS INTEGER), s.hektor_contact_id")

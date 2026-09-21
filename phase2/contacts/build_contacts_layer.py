@@ -1359,7 +1359,14 @@ def assign_search_ids(
         ):
             known[(str(cid), int(idx))] = (int(sid), key)
 
-    next_id = int(conn.execute("SELECT COALESCE(MAX(app_search_id), 0) FROM app_search_registry").fetchone()[0]) + 1
+    # L4-b 21/09/2026 -- LE COULOIR DU SERVEUR. Le prochain numero se prend parmi
+    # ceux que le SERVEUR a fabriques, jamais parmi ceux de l'app (>= 1 000 000).
+    # Sans ce filtre, la premiere recherche nee dans l'app ferait sauter la serie
+    # du serveur dans la plage de l'app, et deux recherches differentes
+    # finiraient par porter le meme numero -- sans que rien ne le signale.
+    next_id = int(conn.execute(
+        "SELECT COALESCE(MAX(app_search_id), 0) FROM app_search_registry "
+        "WHERE app_search_id < 1000000").fetchone()[0]) + 1
     nouveaux: list[tuple[Any, ...]] = []
     noms_a_poser: list[tuple[Any, ...]] = []
     reprises = 0

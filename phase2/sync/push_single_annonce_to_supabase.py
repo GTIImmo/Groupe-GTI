@@ -88,6 +88,7 @@ def sync_target_app_dossier(con: sqlite3.Connection, hektor_annonce_id: str) -> 
                   AND src.hektor_annonce_id = ?
             )
             INSERT INTO app_dossier (
+                id,
                 hektor_annonce_id,
                 hektor_mandat_id,
                 numero_dossier,
@@ -96,6 +97,10 @@ def sync_target_app_dossier(con: sqlite3.Connection, hektor_annonce_id: str) -> 
                 commercial_nom
             )
             SELECT
+                -- L4-b 21/09/2026 : meme regle que le bootstrap -- le numero vient du
+                -- couloir du serveur, jamais du compteur, qui sauterait dans la plage
+                -- de l'app des la premiere adoption.
+                (SELECT COALESCE(MAX(id), 0) FROM app_dossier WHERE id < 10000000) + 1,
                 CAST(src.hektor_annonce_id AS INTEGER),
                 COALESCE(mm.hektor_mandat_id, src.mandat_id),
                 src.no_dossier,

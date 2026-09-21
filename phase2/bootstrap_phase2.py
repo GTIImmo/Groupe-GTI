@@ -110,6 +110,7 @@ def bootstrap_app_dossier(con: sqlite3.Connection) -> None:
                   AND src.hektor_annonce_id IS NOT NULL
             )
             INSERT INTO app_dossier (
+                id,
                 hektor_annonce_id,
                 hektor_mandat_id,
                 numero_dossier,
@@ -118,6 +119,24 @@ def bootstrap_app_dossier(con: sqlite3.Connection) -> None:
                 commercial_nom
             )
             SELECT
+                -- L4-b 21/09/2026 : le numero est donne EXPLICITEMENT, dans le couloir
+                -- du serveur (sous 10 000 000). Sans cela, adopter un numero de l'app
+                -- ferait sauter le compteur AUTOINCREMENT dans sa plage POUR TOUJOURS --
+                -- SQLite refuse de le faire redescendre (verifie le 21/09).
+                --
+                -- ⚠ ET LE RANG NE COMPTE QUE LES LIGNES NEUVES (PARTITION BY). Premier
+                --   essai du 21/09 : le rang portait sur les 61 237 annonces, donc une
+                --   seule annonce neuve recevait « max + 61 235 » -- la serie aurait
+                --   atteint la plage de l'app en une quarantaine de runs. C'est
+                --   probablement ainsi qu'elle est montee a 7,5 millions pour 61 237
+                --   lignes.
+                COALESCE(
+                    deja.id,
+                    (SELECT COALESCE(MAX(id), 0) FROM app_dossier WHERE id < 10000000)
+                      + ROW_NUMBER() OVER (
+                            PARTITION BY CASE WHEN deja.id IS NULL THEN 1 ELSE 0 END
+                            ORDER BY CAST(src.hektor_annonce_id AS INTEGER))
+                ),
                 CAST(src.hektor_annonce_id AS INTEGER),
                 COALESCE(mm.hektor_mandat_id, src.mandat_id),
                 src.no_dossier,
@@ -128,6 +147,8 @@ def bootstrap_app_dossier(con: sqlite3.Connection) -> None:
             LEFT JOIN mandat_match mm
                 ON mm.hektor_annonce_id = src.hektor_annonce_id
                AND mm.rn = 1
+            LEFT JOIN app_dossier deja
+                ON deja.hektor_annonce_id = CAST(src.hektor_annonce_id AS INTEGER)
             WHERE src.annonce_source_status = 'present'
               AND src.hektor_annonce_id IS NOT NULL
             ON CONFLICT(hektor_annonce_id) DO UPDATE SET
