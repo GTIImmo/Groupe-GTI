@@ -1085,6 +1085,15 @@ def fetch_dirty_annonce_ids(client) -> set[int]:
     (table app_annonce_pending) -> a NE PAS reecraser lors du push (on preserve la
     valeur optimiste affichee jusqu'a confirmation du push Hektor).
 
+    ⚠ 21/09/2026 (2.4) -- PLUS AUCUNE LIGNE NE GELE LE BIEN, ET LA FONCTION NE
+    SERT PLUS QU'A COMPTER. La protection par CHAMP (6932135) repose les champs
+    saisis JUSTE APRES ce push, dans la meme nuit : geler le bien en plus serait
+    doublement protecteur et simplement faux -- c'est ce qui empechait une surface
+    changee dans Hektor d'arriver tant qu'un prix saisi dans l'app n'etait pas
+    confirme (l'exemple de Frederic).
+    ⚠ SI LA REAPPLICATION ECHOUE : l'app affiche la valeur de Hektor une nuit de
+      plus. La saisie, elle, reste dans sa ligne d'attente -- jamais perdue.
+
     ⚠ 20/09/2026 -- LES LIGNES EN CONFLIT NE GELENT PLUS LE BIEN. Elles restent
     (une saisie ne se perd jamais, regle du 20/09), mais elles ne peuvent pas
     empecher le bien d'etre rafraichi pendant des semaines : un envoi qui ne passe
@@ -1100,15 +1109,17 @@ def fetch_dirty_annonce_ids(client) -> set[int]:
             path="app_annonce_pending", select="app_dossier_id,conflict", order="app_dossier_id.asc")
     except Exception:
         return set()
-    out: set[int] = set()
+    # 21/09 : on COMPTE, on ne gele plus. La liste rendue est vide ; le comptage
+    # reste affiche pour que le journal du run dise combien de biens etaient en
+    # cours d'edition cette nuit-la.
+    en_edition = 0
     for row in rows or []:
-        if bool(row.get("conflict")):
-            continue  # en conflit : la saisie est gardee, mais le bien se rafraichit
-        try:
-            out.add(int(row["app_dossier_id"]))
-        except (TypeError, ValueError, KeyError):
-            continue
-    return out
+        if not bool(row.get("conflict")):
+            en_edition += 1
+    if en_edition:
+        print(f"[tier2] {en_edition} bien(s) en cours d'edition -- non geles, "
+              f"leurs champs saisis seront reposes apres le push (L3)")
+    return set()
 
 
 def main() -> None:

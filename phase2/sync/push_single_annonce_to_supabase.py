@@ -626,6 +626,24 @@ def main() -> int:
                 # Le cas « Hektor est plus récent » ne passe plus par ici : le worker
                 # le solde lui-même, avec sa trace au journal des résolutions.
                 pending = None
+            elif pending is not None:
+                # ⚠ 21/09/2026 (2.4) -- ON NE GÈLE PLUS UN BIEN EN COURS D'ÉDITION.
+                #
+                # Jusqu'ici, une saisie non encore confirmée faisait SAUTER tout le
+                # bien : on ne le rafraîchissait pas, de peur d'écraser la valeur
+                # affichée. Conséquence, mesurée sur l'exemple de Frédéric : une
+                # surface changée dans Hektor n'arrivait JAMAIS tant que le prix
+                # saisi dans l'app n'était pas confirmé.
+                #
+                # La protection par CHAMP (6932135) rend ce gel inutile : on
+                # rafraîchit tout, puis on repose les champs saisis, et eux seuls.
+                # Le bien reste donc juste sur tout le reste.
+                #
+                # ⚠ SI LA RÉAPPLICATION ÉCHOUE : l'écran affiche la valeur de Hektor
+                #   jusqu'au prochain passage -- gênant, pas grave. LA SAISIE, ELLE,
+                #   reste dans sa ligne d'attente : elle n'est jamais perdue, et le
+                #   run de nuit la repose.
+                pending = None
             if pending is not None:
                 counts = {
                     "dossiers_upserted": 0,
