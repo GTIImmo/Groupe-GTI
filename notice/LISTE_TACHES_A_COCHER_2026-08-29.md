@@ -61,7 +61,12 @@ elancer_run.ps1 (demarre la TACHE, donc
      ✅ LOT L2 TERMINE le 21/09.
 
    LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP
-     2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier          <- LA PROCHAINE
+     2. [x] la PROTECTION PAR CHAMP au lieu du bien entier            6932135
+            L'exemple de Frederic resolu : prix saisi dans l'app a 14 h + surface
+            changee dans Hektor a 15 h -> le prix reste a l'app, la surface
+            arrive de Hektor. Eprouve sur un vrai bien, en transaction annulee.
+            Appelee apres la relecture d'une fiche ET a la fin du run.
+     3. [ ] 2.4  la meme regle de recence dans le run de nuit       <- LA PROCHAINE
 
    LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP   (renomme le 21/09)
      ⚠ CE N'EST PAS UN INTERRUPTEUR. Saisir dans Hektor OU dans l'app doit
@@ -83,7 +88,6 @@ elancer_run.ps1 (demarre la TACHE, donc
             contre 12 exposes. ➡ 102 champs d'annonce et 40 de contact sont
             CREABLES MAIS JAMAIS CORRIGIBLES depuis l'app -> ajoute a L5.
      2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier
-     3. [ ] 2.4  la meme regle de recence dans le run de nuit
      4. [ ] la relecture a l'ouverture de fiche
      5. [ ] C.16  les 825 contacts disparus
 
