@@ -324,6 +324,30 @@ def clear_annonce_pending(client: SupabaseRestClient, app_dossier_id: int) -> No
         pass
 
 
+def reappliquer_saisies_app(client: SupabaseRestClient, app_dossier_id: int) -> None:
+    """L3 21/09/2026 -- LA PROTECTION PASSE DU BIEN AU CHAMP.
+
+    On vient de rafraîchir le bien depuis Hektor. Les champs que l'app a saisis
+    et que Hektor n'a pas encore confirmés viennent donc d'être écrasés à
+    l'écran : on les repose par-dessus, et EUX SEULS.
+
+    L'exemple de Frédéric : prix corrigé dans l'app à 14 h, envoi en échec ;
+    surface changée dans Hektor à 15 h. Le prix reste celui de l'app, la surface
+    arrive de Hektor. Avant, il fallait choisir -- geler le bien ou perdre la
+    saisie -- et les deux étaient faux.
+
+    Best-effort : si l'appel échoue, on a exactement le comportement d'avant.
+    """
+    try:
+        client._request(  # noqa: SLF001
+            method="POST",
+            path="rpc/app_annonce_reappliquer_saisies",
+            payload={"target_dossier_id": int(app_dossier_id)},
+        )
+    except Exception:
+        pass
+
+
 def diffusion_lock_expired(pending: dict[str, Any]) -> bool:
     """Verrou diffusion = pending source='diffusion' avec push_after (délai de grâce).
     Expiré -> on lève le verrou et on resynchronise depuis Hektor. JAMAIS coincé :
@@ -627,6 +651,9 @@ def main() -> int:
                         connection=con,
                     )
                     counts = push_payload(client, payload, app_dossier_id)
+                    # L3 21/09 : le bien vient d'etre rafraichi depuis Hektor ->
+                    # on repose les champs saisis dans l'app et non confirmes.
+                    reappliquer_saisies_app(client, app_dossier_id)
                     counts["ghost_dossiers_removed"] = reconcile_annonce_dossiers(client, hektor_annonce_id, app_dossier_id)
                     counts.update(reconcile_lightweight_indexes(client, con, hektor_annonce_id))
                 finally:

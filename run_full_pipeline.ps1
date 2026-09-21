@@ -863,6 +863,24 @@ Invoke-OptionalStepWithRetry -Label "phase2 carnet des champs d annonce" -Argume
 
 Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -WorkerKey "supabase.push_upgrade"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# L3 -- LA PROTECTION PASSE DU BIEN AU CHAMP                          21/09/2026
+# Le push vient de reecrire les annonces depuis le miroir. Les champs que l'app a
+# saisis et que Hektor n'a pas encore confirmes viennent d'etre ecrases : on les
+# repose par-dessus, et EUX SEULS.
+#   14 h  prix corrige dans l'app, envoi en echec
+#   15 h  surface changee dans Hektor
+#   -> avant : geler le bien OU perdre la saisie. Les deux sont faux.
+#   -> maintenant : le prix reste a l'app, la surface arrive de Hektor.
+# ICI, APRES le push : il porte la logique de delta par empreinte, on n'y touche
+# pas. Rien n'est envoye a Hektor, aucun travail n'est cree.
+# ⚠ ETAPE NON BLOQUANTE : c'est une REAPPLICATION. Si elle echoue, l'app affiche
+#   la valeur de Hektor une nuit de plus -- genant, pas grave -- et la saisie
+#   reste dans sa ligne d'attente, protegee.
+Invoke-OptionalStepWithRetry -Label "phase2 reappliquer les saisies de l app" -Arguments @(
+    "phase2\identiteeappliquer_saisies_app.py"
+) -WorkerKey "phase2.reappliquer_saisies"
+
 Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
     "phase2\sync\push_hektor_directory_to_supabase.py"
 ) -WorkerKey "supabase.push_hektor_directory"
