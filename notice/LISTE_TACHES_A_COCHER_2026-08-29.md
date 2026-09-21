@@ -22,11 +22,27 @@ sans Hektor**, sauf **numéro de mandat · signature · portails**. Hektor devie
                   disait « rapprochements orphelins » : il y en avait 0.   718eb7a
      4. [x] C.17-ter  les 13 cles posees (28/28 surveillees) · sonde « Hektor
                       injoignable » qui distingue le BLOCAGE D'IP d'une panne
-                      reseau · scheduledelancer_run.ps1 (demarre la TACHE, donc
+                      reseau · scheduled
+elancer_run.ps1 (demarre la TACHE, donc
                       on ne recopie plus ses options)                    c025bd1
 
-   ✅ LOT L0 TERMINE le 20/09. Le lot suivant est L1 -- LES NUMEROS A LA NAISSANCE
-      (5b la cle des contacts · 4-suite la cle des recherches · le distributeur).
+   ✅ LOT L0 TERMINE le 20/09.
+
+   LOT EN COURS : L1 -- LES NUMEROS A LA NAISSANCE
+     ⚠ 21/09 : FREDERIC A CHOISI L'OPTION B -- on n'inverse pas les 340 endroits
+       qui relient nos donnees (6 a 9 j, echecs SILENCIEUX), on ne touche qu'aux
+       88 qui visent Hektor. C'est le mecanisme E.4/6.2 du plan (« les deux
+       cases »), avance du jour J a maintenant. 4-suite devient SANS OBJET :
+       les 500 000 lignes accrochees aux recherches ne bougent pas.
+     1. [x] la case cible + la recopie (61 955) + le declencheur + le
+            distributeur (depart 10 000 000) + la sonde              62cd00e
+     2. [x] la PORTE du worker : 8 passages, garde-fou « >= 10 000 000 refuse »,
+            listes de mandants filtrees                              5eef5eb
+     3. [x] la BARRIERE : un envoi attend au lieu d'echouer, et repart tout seul
+            quand le numero arrive (geste 2.6 du plan)               acdffb4
+     4. [ ] le distributeur BRANCHE a la creation  -> c'est L4 (C.9), pas ici
+
+   PUIS  L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
 
    PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
          L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
