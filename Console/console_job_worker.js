@@ -16834,11 +16834,27 @@ async function handleDeleteHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
   let contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
   if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  // ⚠ 21/09 -- LA PHRASE DE CONFIRMATION SE COMPOSE SUR LE NUMERO DEMANDE.
+  //
+  // Trouve en preparant le menage des contacts d'essai. L'ecran compose la
+  // phrase avec l'IDENTITE (App.tsx : `SUPPRIMER CONTACT ${contact.hektor_contact_id}`),
+  // et on la comparait ici APRES traduction, donc au numero de Hektor. Pour un
+  // contact ne dans l'app les deux different -- 10 000 002 contre 605 453 --
+  // et le bouton « Supprimer » de l'app REFUSAIT la suppression.
+  //
+  // Les deux numeros designent la meme personne : on accepte l'un ou l'autre.
+  // Ce n'est pas un affaiblissement du verrou -- il est la pour qu'un humain
+  // ait tape le numero qu'il voit, et c'est l'identite qu'il voit.
+  // Pour les 356 000 contacts venus de Hektor, identite = cible : rien ne change.
+  const numeroDemande = contactId;
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
   contactId = await cibleHektorContact(contactId, { contexte: "delete_hektor_contact" });
-  const expectedConfirm = `SUPPRIMER CONTACT ${contactId}`;
-  if (payload.confirm_text !== expectedConfirm) {
-    throw new Error(`Confirmation suppression contact invalide pour ${contactId}`);
+  const confirmationsAcceptees = new Set([
+    `SUPPRIMER CONTACT ${numeroDemande}`,
+    `SUPPRIMER CONTACT ${contactId}`,
+  ]);
+  if (!confirmationsAcceptees.has(payload.confirm_text)) {
+    throw new Error(`Confirmation suppression contact invalide pour ${numeroDemande}`);
   }
 
   await ensureAdminHektorWriteSession(job, "delete_contact_admin_login");
