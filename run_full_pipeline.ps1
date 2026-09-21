@@ -432,6 +432,26 @@ Invoke-Step -Label "phase2 build contacts layer" -Arguments @(
 # vient de reconstruire. Un registre qui ne se maintient pas rote des le lendemain --
 # constate le jour meme de sa creation : 15 contacts crees la veille etaient deja dans
 # Supabase et pas encore en local. Idempotent : sans nouveaute il affiche 0/0/0.
+# ─────────────────────────────────────────────────────────────────────────────
+# 26bis-CONTACTS / 26bis-RELATIONS -- LE SERVEUR TIENT CE QUE LE MIROIR IGNORE
+#                                                                     21/09/2026
+# Jumeau exact de l'etape des annonces ci-dessus. build_contacts_layer refait
+# chaque nuit le corps des contacts ET la table des relations (DELETE puis
+# INSERT, depuis le miroir). Un contact ne dans l'app n'y serait pas -- et le
+# push du lendemain, qui supprime dans Supabase ce qui manque en local,
+# l'effacerait. Il n'existe nulle part ailleurs.
+# ON NE BRANCHE QUE --recenser : poser ces lignes dans la couche changerait ce
+# que l'app recoit. Ce geste-la se decide champ par champ, c'est le lot L3.
+# AUJOURD'HUI : ZERO (mesure du 21/09). L'etape est inerte, et c'est voulu --
+# une doublure se pose avant d'en avoir besoin, jamais dans l'urgence.
+# ⚠ APRES build contacts layer, forcement : elle compare l'app a la couche que
+#   celui-ci vient de refaire.
+Invoke-OptionalStepWithRetry -Label "phase2 contacts connus de l app seule" -Arguments @(
+    "phase2\identite\contacts_app_seuls.py",
+    "--recenser"
+) -WorkerKey "phase2.contacts_app_seuls"
+
+
 Invoke-Step -Label "phase2 registre identite contacts" -Arguments @(
     "phase2\identite\registre_contacts.py"
 ) -WorkerKey "phase2.registre_contacts"
