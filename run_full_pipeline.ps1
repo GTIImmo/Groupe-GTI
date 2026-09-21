@@ -422,6 +422,23 @@ Invoke-Step -Label "phase2 annonces connues de l app seule" -Arguments @(
     "--recenser"
 ) -WorkerKey "phase2.annonces_app_seule"
 
+# L4-b (②) 21/09/2026 -- LE SERVEUR APPREND QUEL NUMERO HEKTOR EST QUELLE IDENTITE.
+# L'essai reel du 21/09 a fini en DEUX fiches pour une personne : l'app avait
+# donne l'identite 10 000 001, le retour du worker a repose la fiche sous le
+# numero de Hektor, 605 450. Rien ne disait au serveur que c'etait la meme.
+# ⚠ AVANT build contacts layer, IMPERATIVEMENT : c'est lui qui substitue, et il
+#   calcule les empreintes des relations et des recherches SUR ce numero. Une
+#   correspondance qui arriverait apres serait sans effet -- et pire, elle
+#   changerait les empreintes au run suivant.
+# NON BLOQUANTE : sans elle, le build retombe sur son comportement d'avant (il
+# range sous le numero de Hektor). C'est le defaut qu'on corrige, pas une perte
+# -- et la sonde data.contacts_double_identite le dira.
+# AUJOURD'HUI : 1 ligne (le contact d'essai). Pour les 356 000 autres,
+# identite = numero Hektor, il n'y a rien a traduire.
+Invoke-OptionalStepWithRetry -Label "phase2 correspondance identite app" -Arguments @(
+    "phase2\identite\descendre_correspondance_contacts.py"
+) -WorkerKey "phase2.correspondance_identite"
+
 Invoke-Step -Label "phase2 build contacts layer" -Arguments @(
     "phase2\contacts\build_contacts_layer.py",
     "--no-reports"

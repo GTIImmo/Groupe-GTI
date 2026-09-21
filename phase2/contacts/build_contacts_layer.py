@@ -255,6 +255,70 @@ def first_non_empty(*values: Any) -> str | None:
     return None
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# L4-b (②) — LA SUBSTITUTION D'IDENTITE                          21/09/2026
+# ═══════════════════════════════════════════════════════════════════════════
+# LE DEFAUT, mesure en reel le 21/09 sur le premier contact ne dans l'app : il
+# a fini en DEUX fiches. L'app lui avait donne l'identite 10 000 001 ; le retour
+# du worker l'a repose sous le numero que Hektor venait de lui donner, 605450.
+# Rien ne disait au serveur que les deux numeros designent la meme personne.
+#
+# LA CORRESPONDANCE EST REDESCENDUE AVANT LE BUILD, dans app_contact_identite_app
+# (phase2/identite/descendre_correspondance_contacts.py). Ici, on s'en sert pour
+# une chose et une seule : remplacer le numero Hektor par l'identite de l'app,
+# A L'ENTREE, avant tout calcul.
+#
+# ⚠ C'EST POUR CA QUE CA SE PASSE ICI ET PAS AU PUSH. Les cles des relations et
+#   des recherches ne CONTIENNENT pas le numero de contact : elles sont
+#   CALCULEES dessus (`relation_key = stable_hash({"contact_id": ...})`, plus
+#   bas dans ce fichier). Substituer apres coup laisserait des empreintes
+#   calculees sur un numero et des colonnes portant l'autre -- et le run suivant
+#   prendrait ces lignes pour des disparues, donc il les SUPPRIMERAIT.
+#
+# INERTE PAR DEFAUT : la table n'existe pas encore chez tout le monde, et elle
+# est vide tant qu'aucun contact ne nait dans l'app. `identite_app` rend alors
+# exactement ce qu'on lui donne, et le build se comporte comme avant.
+_IDENTITE_APP: dict[str, str] = {}
+
+
+def charger_identites_app(conn: sqlite3.Connection) -> int:
+    """Charge la correspondance numero Hektor -> identite de l'app."""
+    _IDENTITE_APP.clear()
+    if not table_exists(conn, "app_contact_identite_app"):
+        return 0
+    for row in conn.execute(
+            "SELECT hektor_contact_id, app_identite FROM app_contact_identite_app"):
+        hektor_id = clean_text(row[0])
+        identite = clean_text(row[1])
+        if hektor_id and identite and hektor_id != identite:
+            _IDENTITE_APP[hektor_id] = identite
+    return len(_IDENTITE_APP)
+
+
+def identite_app(contact_id: Any) -> str:
+    """Le numero sous lequel ce contact doit etre RANGE chez nous.
+
+    Pour 356 000 contacts sur 356 002, c'est le numero de Hektor lui-meme : ils
+    y sont nes. Pour ceux qui sont nes dans l'app, c'est leur identite.
+    """
+    texte = clean_text(contact_id)
+    return _IDENTITE_APP.get(texte, texte)
+
+
+def numero_hektor_pour_le_miroir(contact_id: Any) -> str:
+    """Le chemin inverse : sous quel numero le MIROIR connait-il ce contact ?
+
+    Un rafraichissement cible peut arriver avec l'identite de l'app ; le miroir,
+    lui, ne connait que le numero de Hektor. Sans cette traduction, la requete
+    ne trouverait rien et la fiche paraitrait disparue.
+    """
+    texte = clean_text(contact_id)
+    for hektor_id, identite in _IDENTITE_APP.items():
+        if identite == texte:
+            return hektor_id
+    return texte
+
+
 def normalize_contact_ids(values: Iterable[Any]) -> list[str]:
     ids: list[str] = []
     seen: set[str] = set()
@@ -277,8 +341,12 @@ def active_archive_flag(value: Any) -> int:
 
 
 def contact_from_row(row: sqlite3.Row) -> ContactRow:
+    # L4-b (②) : le miroir parle en numeros de Hektor ; chez nous, un contact ne
+    # dans l'app se range sous SON identite. La substitution a lieu ici, a
+    # l'entree, pour que tout ce qui suit -- empreintes comprises -- soit
+    # calcule sur un seul numero.
     return ContactRow(
-        hektor_contact_id=clean_text(row["hektor_contact_id"]),
+        hektor_contact_id=identite_app(row["hektor_contact_id"]),
         hektor_agence_id=clean_text(row["hektor_agence_id"]) or None,
         hektor_negociateur_id=clean_text(row["hektor_negociateur_id"]) or None,
         civilite=clean_text(row["civilite"]) or None,
@@ -296,7 +364,7 @@ def contact_from_row(row: sqlite3.Row) -> ContactRow:
         typologie_json=clean_text(row["typologie_json"]) or None,
         raw_json=clean_text(row["raw_json"]) or None,
         synced_at=clean_text(row["synced_at"]) or None,
-        hektor_couple_contact_id=clean_text(row["hektor_couple_contact_id"]) or None,
+        hektor_couple_contact_id=identite_app(row["hektor_couple_contact_id"]) or None,
     )
 
 
@@ -612,7 +680,11 @@ def contact_id_from_payload(value: Any) -> str:
     item = value[0] if isinstance(value, list) and value and isinstance(value[0], dict) else value
     if not isinstance(item, dict):
         return ""
-    return first_non_empty(item.get("id"), item.get("id_contact"), item.get("contact_id")) or ""
+    # L4-b (②) : meme substitution que partout ailleurs -- les relations doivent
+    # designer la personne par son identite, sinon elles pendent sous la seconde
+    # fiche au lieu de la premiere.
+    return identite_app(
+        first_non_empty(item.get("id"), item.get("id_contact"), item.get("contact_id")) or "")
 
 
 def load_relations(
@@ -843,7 +915,8 @@ def load_relations(
         ).fetchall()
         seen_contacts: set[str] = set()
         for row in detail_rows:
-            contact_id = first_non_empty(row["object_id_key"], row["object_id"])
+            # L4-b (②) : substitution a l'entree (voir identite_app).
+            contact_id = identite_app(first_non_empty(row["object_id_key"], row["object_id"]))
             if not contact_id or contact_id in seen_contacts:
                 continue
             seen_contacts.add(contact_id)
@@ -936,7 +1009,10 @@ def load_contact_searches(
     ).fetchall()
     seen_contacts: set[str] = set()
     for row in rows:
-        contact_id = first_non_empty(row["object_id_key"], row["object_id"])
+        # L4-b (②) : substitution a l'entree. Elle compte double ici : c'est
+        # `contact_id` qui entre dans l'empreinte de la recherche, deux lignes
+        # plus bas.
+        contact_id = identite_app(first_non_empty(row["object_id_key"], row["object_id"]))
         if not contact_id or contact_id in seen_contacts:
             continue
         seen_contacts.add(contact_id)
@@ -1015,7 +1091,7 @@ def load_contact_detail_state(
                 """,
                 state_params,
             ).fetchall():
-                contact_id = clean_text(row["hektor_contact_id"])
+                contact_id = identite_app(row["hektor_contact_id"])  # L4-b (②)
                 if contact_id:
                     detail_state[contact_id] = clean_text(row["last_detail_sync_at"]) or None
 
@@ -1042,7 +1118,7 @@ def load_contact_detail_state(
             raw_params,
         ).fetchall()
         for row in rows:
-            contact_id = first_non_empty(row["object_id_key"], row["object_id"])
+            contact_id = identite_app(first_non_empty(row["object_id_key"], row["object_id"]))  # L4-b (②)
             if not contact_id:
                 continue
             detail_state.setdefault(contact_id, clean_text(row["fetched_at"]) or None)
@@ -1548,11 +1624,19 @@ def refresh_contact_slice(
     phase2_conn = connect(phase2_db)
     try:
         init_contacts_schema(phase2_conn)
-        contacts = load_contacts(hektor_conn, contact_ids=ids)
+        # L4-b (②) : la correspondance D'ABORD -- tout ce qui suit s'en sert.
+        charger_identites_app(phase2_conn)
+        # Deux listes, et il faut les deux. Le MIROIR ne connait que les numeros
+        # de Hektor ; NOS tables rangent sous l'identite. Un rafraichissement
+        # peut arriver avec l'un ou l'autre : le worker envoie le numero de
+        # Hektor, un ecran de l'app enverrait l'identite.
+        ids_miroir = [numero_hektor_pour_le_miroir(contact_id) for contact_id in ids]
+        ids_chez_nous = [identite_app(contact_id) for contact_id in ids]
+        contacts = load_contacts(hektor_conn, contact_ids=ids_miroir)
         valid_contact_ids = {contact.hektor_contact_id for contact in contacts}
-        relation_rows, roles_by_contact = load_relations(hektor_conn, phase2_conn, contact_ids=ids)
-        search_rows, total_search_counts, active_search_counts = load_contact_searches(hektor_conn, contact_ids=ids)
-        contact_detail_state = load_contact_detail_state(hektor_conn, contact_ids=ids)
+        relation_rows, roles_by_contact = load_relations(hektor_conn, phase2_conn, contact_ids=ids_miroir)
+        search_rows, total_search_counts, active_search_counts = load_contact_searches(hektor_conn, contact_ids=ids_miroir)
+        contact_detail_state = load_contact_detail_state(hektor_conn, contact_ids=ids_miroir)
 
         raw_relation_total = sum(len(rows) for rows in relation_rows.values())
         relation_rows = {
@@ -1569,8 +1653,8 @@ def refresh_contact_slice(
         }
 
         negotiator_map, agency_map = load_directory_maps(hektor_conn)
-        previous_duplicate_fields = load_existing_duplicate_fields(phase2_conn, ids)
-        previous_relation_rows = load_existing_relation_rows(phase2_conn, ids)
+        previous_duplicate_fields = load_existing_duplicate_fields(phase2_conn, ids_chez_nous)
+        previous_relation_rows = load_existing_relation_rows(phase2_conn, ids_chez_nous)
         contact_rows = build_contact_rows(
             contacts,
             relation_rows,
@@ -1591,7 +1675,12 @@ def refresh_contact_slice(
         )
         refreshed_at = now_utc_iso()
 
-        for contact_id in ids:
+        # L4-b (②) : on vide sous LES DEUX numeros. Sous l'identite parce que
+        # c'est la qu'on repose ; sous le numero de Hektor parce qu'une fiche y
+        # a peut-etre ete rangee avant ce correctif -- c'est exactement la
+        # seconde fiche de l'essai du 21/09, et si on ne l'enleve pas, elle
+        # survit a sa propre correction.
+        for contact_id in dict.fromkeys([*ids, *ids_miroir, *ids_chez_nous]):
             phase2_conn.execute("DELETE FROM app_contact_current WHERE hektor_contact_id = ?", (contact_id,))
             phase2_conn.execute("DELETE FROM app_contact_relation_current WHERE hektor_contact_id = ?", (contact_id,))
             phase2_conn.execute("DELETE FROM app_contact_search_current WHERE hektor_contact_id = ?", (contact_id,))
@@ -1637,6 +1726,9 @@ def build_contacts_layer(
     phase2_conn = connect(phase2_db)
     try:
         init_contacts_schema(phase2_conn)
+        # L4-b (②) : la correspondance D'ABORD. Sans elle, un contact ne dans
+        # l'app serait repose sous le numero de Hektor -- une seconde fiche.
+        charger_identites_app(phase2_conn)
         contacts = load_contacts(hektor_conn, limit)
         relation_rows, roles_by_contact = load_relations(hektor_conn, phase2_conn)
         search_rows, total_search_counts, active_search_counts = load_contact_searches(hektor_conn)

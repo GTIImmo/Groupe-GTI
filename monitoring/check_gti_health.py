@@ -441,6 +441,20 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     {
+        # L4-b (②) 21/09 : UNE PERSONNE, UNE FICHE. Le premier contact ne dans
+        # l'app a fini en deux fiches -- l'identite 10 000 001 d'un cote, le
+        # numero de Hektor 605 450 de l'autre -- et RIEN ne l'a signale : les
+        # deux lignes etaient parfaitement valides. La substitution du build
+        # l'empeche ; cette sonde dit si elle a ete contournee.
+        "key": "data.contacts_double_identite",
+        "severity": "critical",
+        "label": "Deux fiches pour une meme personne",
+        "table": "app_v_contacts_en_double_identite",
+        "params": {},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
         # C.4 20/09 : les lignes accrochees a une recherche disparue. La cause a ete
         # corrigee dans le worker (il lit les cles AVANT de supprimer les recherches)
         # et 146 orphelins ont ete purges le meme jour. Cette sonde dit si ca revient.
