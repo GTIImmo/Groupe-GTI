@@ -388,6 +388,18 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     {
+        # 5b 21/09 : la case cible de Hektor. Un contact venu de lui DOIT la porter,
+        # sinon ses travaux n'ont plus rien a viser et attendent indefiniment. Le
+        # declencheur la remplit ; cette sonde dit si un ecrivain lui a echappe.
+        "key": "data.contacts_sans_cible",
+        "severity": "critical",
+        "label": "Contacts Hektor sans numero cible",
+        "table": "app_v_contacts_sans_cible",
+        "params": {},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
         # C.4 20/09 : les lignes accrochees a une recherche disparue. La cause a ete
         # corrigee dans le worker (il lit les cles AVANT de supprimer les recherches)
         # et 146 orphelins ont ete purges le meme jour. Cette sonde dit si ca revient.
