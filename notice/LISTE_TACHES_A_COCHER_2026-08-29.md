@@ -38,7 +38,18 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
               quand on envoie un couple, Hektor cree-t-il UNE fiche ou DEUX ?
               jamais verifie. Tant qu'on l'ignore, on ne sait pas si le
               conjoint a droit a sa propre identite chez nous
-          [ ] 26bis-TRANSACTIONS · 4.3 (contact + recherche + mandant d'un coup)
+          [ ] 26bis-TRANSACTIONS  ⚠ SA VRAIE QUESTION, posee par Frederic le 21/09 :
+              « et il n'y a pas de recensement sur annonce et transaction ? »
+              L'ANNONCE en a un (depuis le 26/08, dans le run, 0 ligne : inerte).
+              LA TRANSACTION n'en a pas -- et n'en a PAS BESOIN de la meme
+              facon : son registre ACCUMULE au lieu d'etre refait chaque nuit
+              (30 992 lignes, 17 marquees « plus dans Hektor », 0 supprimee).
+              ➡ LA QUESTION N'EST DONC PAS « poser un filet » mais :
+                « le registre garde-t-il une transaction que Hektor n'a JAMAIS
+                 vue ? » -- mesure du 21/09 : les 330 transactions nees dans
+                l'app portent TOUTES un numero de Hektor, donc le cas n'a
+                JAMAIS ETE EPROUVE. C'est un essai a faire, pas du code.
+          [ ] 4.3 (contact + recherche + mandant d'un coup)
    L5     les gestes manquants           + 102 champs d'annonce et 40 de contact
                                            CREABLES MAIS JAMAIS CORRIGIBLES
    L6 remontees · L7 fichiers · L8 bascule (E.2) · L9 registre des mandats
