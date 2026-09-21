@@ -42,7 +42,28 @@ elancer_run.ps1 (demarre la TACHE, donc
             quand le numero arrive (geste 2.6 du plan)               acdffb4
      4. [ ] le distributeur BRANCHE a la creation  -> c'est L4 (C.9), pas ici
 
-   PUIS  L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant
+   LOT L2 -- LES CORPS CHEZ L'APP (exige Hektor vivant)
+     [x] 26bis-CONTACTS + 26bis-RELATIONS  le filet : le serveur RECENSE ce que
+         le miroir ignore (0 aujourd'hui, et c'est voulu)              bc359b6
+     [x] INVENTAIRE  les tables refaites chaque nuit, et ce qui protege chacune
+         -> notice/INVENTAIRE_TABLES_REFAITES_2026-09-21.md            7dabc89
+     [x] 26bis-COUPLES  le lien de menage dans NOTRE serie (37 398 / 40 150)
+         + son entretien nocturne + sa sonde                           ca5fde2
+     [ ] 26bis-3  la CARTE DES CHAMPS -> passe en L3 (voir ci-dessous) <- ICI
+
+   LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP   (renomme le 21/09)
+     ⚠ CE N'EST PAS UN INTERRUPTEUR. Saisir dans Hektor OU dans l'app doit
+       fonctionner des deux cotes DES MAINTENANT ; ce qu'on interdit, c'est de
+       saisir des deux cotes A LA FOIS sur le meme champ. L'arbitre est la
+       RECENCE, en permanence -- pas une bascule datee.
+     ⚠ ET PENDANT TOUTE LA MIGRATION, LES COMMERCIAUX SAISISSENT DANS HEKTOR :
+       l'app et le serveur doivent continuer d'etre alimentes par lui.
+     1. [ ] 26bis-3  la carte des champs : ou vit la valeur de chacun
+            (5 en colonne · 38 dans le grand bloc · 9 a verifier)      <- LA PROCHAINE
+     2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier
+     3. [ ] 2.4  la meme regle de recence dans le run de nuit
+     4. [ ] la relecture a l'ouverture de fiche
+     5. [ ] C.16  les 825 contacts disparus
 
    PUIS  L1 les numeros a la naissance (5b · 4-suite · distributeur)
          L2 les corps chez l'app (26bis) -- DERNIERE CHANCE, exige Hektor vivant

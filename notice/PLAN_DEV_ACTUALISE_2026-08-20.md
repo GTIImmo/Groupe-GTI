@@ -58,6 +58,9 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | 20/09 | **Une étape non surveillée doit au moins avoir une sonde** *(`fb6abbd`)* |
 | 20/09 | **Le registre électronique des mandats remplacera PROTEXA** — étudié **juste avant la coupure** *(lot L9)* |
 | 20/09 | **La méthode de travail** : auditer → expliquer → coder → contrôler → mettre à jour le plan → suivant. Feu vert **au cas par cas selon le risque** *(voir `CLAUDE.md` §0)* |
+| **21/09** | **L'identité et la cible se séparent — option B.** Plutôt que de basculer les 340 endroits qui relient nos données *(6 à 9 j, échecs silencieux)*, on ne touche qu'aux **88 qui visent Hektor**. `hektor_contact_id` devient **l'identité**, `hektor_target_id` **le numéro pour viser Hektor**. C'est E.4/6.2, avancé. ➡ **4-suite devient sans objet** : les 500 000 lignes accrochées aux recherches ne bougent pas |
+| **21/09** | **Pendant toute la migration, les commerciaux saisissent encore dans Hektor.** L'app et le serveur doivent continuer d'être alimentés par lui **sans interruption**. Rien de ce qu'on construit ne doit inverser le courant aujourd'hui |
+| **21/09** | **PAS D'INTERRUPTEUR — la règle est permanente et symétrique.** Saisir dans Hektor **ou** dans l'app doit fonctionner, des deux côtés, dès maintenant ; ce qu'on interdit, c'est de saisir **des deux côtés à la fois sur le même champ**. L'arbitre est donc **la récence**, toujours, et non une bascule d'autorité datée. ➡ **Le contrat d'autorité ne sert qu'aux champs EXCLUSIFS à l'app** *(ceux que Hektor ignore)* — il reste vide côté annonce tant qu'il n'y en a aucun |
 
 ---
 
@@ -73,10 +76,10 @@ l'app**, sauf une transaction.
 
 | Lot | Objectif | Contenu *(identifiants d'origine)* | Durée | Fini quand |
 |---|---|---|---|---|
-| **L0** | **Ne plus rien perdre** | **C.1'** la relecture efface une saisie en conflit *(`push_single_annonce_to_supabase.py`, ligne 582)* · le renvoi partiel sans fin · **C.4** supprimer un contact laisse ses rapprochements · **C.17-ter** 13 étapes du run sans sonde, sonde « IP bannie », script de reprise versionné | **~3 j** | Aucune saisie ne disparaît sans trace, et un arrêt se voit |
-| **L1** | **Les numéros à la naissance** | **5b** bascule de la clé des contacts · **4-suite** clé des recherches · clé des relations sur les numéros app · **E.4 / 6.1-6.3** le distributeur, dans Supabase · la case « numéro app » dans les tables de création | **1,5–2,5 sem** | Un contact, une recherche, un bien naissent dans l'app avec leur numéro |
-| **L2** | **Les corps chez l'app** ⚠ *dernière chance* | **26bis-3** · **26bis-CONTACTS** · **26bis-RELATIONS** · **26bis-COUPLES** · **INVENTAIRE** *(les 16 tables refaites chaque nuit)* | **2–3 sem** | Le serveur tient un objet que le miroir ignore |
-| **L3** | **L'interrupteur** | **Chantier 2** *(2.3, 2.4)* · remplir `CHAMPS_APP_*` · la règle « Hektor ne remonte que s'il diffère » · la relecture à l'ouverture de fiche · **C.16** *(825 contacts disparus)* | **1–2 sem** | Le run de nuit **confirme**, il n'écrase plus |
+| **L0** ✅ | **Ne plus rien perdre** *(fait le 20/09)* | **C.1'** la relecture efface une saisie en conflit *(`push_single_annonce_to_supabase.py`, ligne 582)* · le renvoi partiel sans fin · **C.4** supprimer un contact laisse ses rapprochements · **C.17-ter** 13 étapes du run sans sonde, sonde « IP bannie », script de reprise versionné | **~3 j** | Aucune saisie ne disparaît sans trace, et un arrêt se voit |
+| **L1** ✅ | **Les numéros à la naissance** *(fait le 21/09, option B — voir le journal)* | **5b** bascule de la clé des contacts · **4-suite** clé des recherches · clé des relations sur les numéros app · **E.4 / 6.1-6.3** le distributeur, dans Supabase · la case « numéro app » dans les tables de création | **1,5–2,5 sem** | Un contact, une recherche, un bien naissent dans l'app avec leur numéro |
+| **L2** 🟡 | **Les corps chez l'app** ⚠ *dernière chance* — contacts, relations, couples et inventaire **faits le 21/09** ; **26bis-3** rejoint L3 *(voir ci-dessous)* | **26bis-3** · **26bis-CONTACTS** · **26bis-RELATIONS** · **26bis-COUPLES** · **INVENTAIRE** *(les 16 tables refaites chaque nuit)* | **2–3 sem** | Le serveur tient un objet que le miroir ignore |
+| **L3** | **La règle de récence, par CHAMP** *(renommé le 21/09 : ce n'est pas un interrupteur)* | **26bis-3** la carte des champs *(où vit la valeur de chacun : 5 en colonne, 38 dans le grand bloc, 9 à vérifier)* · **la protection par CHAMP** au lieu du bien entier · **Chantier 2** *(2.3, 2.4)* la même règle dans le run de nuit · la relecture à l'ouverture · **C.16** *(825 contacts disparus)* | **1–2 sem** | Le run de nuit **confirme**, il n'écrase plus |
 | **L4** | **La création part de l'app** | **C.9** · **C.9-couple** · **26bis-TRANSACTIONS** · **4.3** *(contact + recherche + mandant d'un coup)* | **1,5–2 sem** | On crée **sans attendre Hektor** ; il reçoit ensuite |
 | **L5** | **Les gestes manquants** | **E.0-bis** *(mandat existant, photos, fusion de doublons)* · **C.13** clôture du mandat · supprimer une annonce · contrôle de baisse de prix et validation **lus dans l'app** · reprise des brouillons · retirer les liens « Ouvrir Hektor » | **2–3 sem** | Plus aucun écran ne renvoie vers Hektor |
 | **L6** | **Ce que Hektor fait remonter** | **D.0** documents et mandats signés · état de la signature · état de la diffusion · numéro de mandat | **1–1,5 sem** | Les trois exceptions remontent proprement, le reste ne remonte plus |
@@ -84,7 +87,19 @@ l'app**, sauf une transaction.
 | **L8** | **Exploitation et bascule** | **C.4-bis** élargi *(création, numéro de mandat, photo, document)* · **E.3** · **0.3 / E.1** rattrapage des recherches, dont **19-R2** la veille · **E.2** | **~1 sem** | Les négociateurs travaillent dans l'app |
 | **L9** | **Le registre électronique des mandats** *(juste avant la coupure)* | **A.3-technique** *(table `app_mandat`, remplissage depuis le miroir, sonde, puis le registre **lit la table**)* · les **trois couches de numérotation** · la **série propre**, à la place de PROTEXA · **C.13-c** *(23 715 dates de clôture)* · le négociateur manquant *(3 318 lignes)* · **A.3-juridique**, étudié le moment venu | **~1 sem** + l'étude | Un mandat neuf s'enregistre sans Hektor — **la 1re des 3 exceptions tombe** |
 
-**Total : ~3 à 4 mois.** Tout se construit **dormant**, derrière un interrupteur.
+**Total : ~3 à 4 mois.**
+
+> ⚠ **CORRECTION DU 21/09, ET ELLE VAUT POUR TOUT LE PLAN.** On écrivait « tout se construit
+> dormant, derrière un interrupteur ». **Frédéric a corrigé** : il n'y a pas d'interrupteur à
+> actionner un jour. Saisir dans Hektor **ou** dans l'app doit fonctionner **des deux côtés,
+> dès maintenant** — ce qu'on interdit, c'est de saisir **des deux côtés à la fois sur le même
+> champ**. L'arbitre est **la récence**, en permanence.
+>
+> Conséquence : chaque lot doit améliorer le comportement **tout de suite**, dans la
+> configuration actuelle *(les commerciaux dans Hektor)*, et non préparer une bascule. Ce qui
+> reste « dormant » au sens strict, ce sont seulement les mécanismes qui ne peuvent servir
+> qu'à un objet né dans l'app — la porte, la barrière, les recensements — puisqu'il n'en
+> existe encore aucun.
 
 ⚠ **Deux lots ont une date de péremption** : **L2** et **L9** se remplissent **depuis le
 miroir**. Ils exigent que **Hektor vive encore** — L9 doit donc être **fini avant** la
