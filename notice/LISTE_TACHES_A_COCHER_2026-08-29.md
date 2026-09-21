@@ -50,14 +50,18 @@ elancer_run.ps1 (demarre la TACHE, donc
      [x] 26bis-COUPLES  le lien de menage dans NOTRE serie (37 398 / 40 150)
          + son entretien nocturne + sa sonde                           ca5fde2
      [x] 26bis-3  la CARTE DES CHAMPS -> le reste passe en L3
-     [ ] 26bis-RECHERCHES  AJOUTEE LE 21/09 par l'audit d'autonomie des recherches
+     [x] 26bis-RECHERCHES  AJOUTEE ET FAITE LE 21/09               230ce98
          Le filet « le serveur tient ce que le miroir ignore » existe pour
          l'annonce (26/08), le contact et la relation (21/09) -- PAS pour la
          recherche, alors que sa table est refaite chaque nuit depuis le miroir.
          Risque nul aujourd'hui (aucune recherche nee sans Hektor) ; indispensable
          des que la creation devient app-first (L4), et IMPOSSIBLE apres la
          coupure.  Meme patron, meme demi-journee.
-         -> notice/AUDIT_RECHERCHES_AUTONOMIE_2026-09-21.md            <- ICI
+         -> notice/AUDIT_RECHERCHES_AUTONOMIE_2026-09-21.md
+     ✅ LOT L2 TERMINE le 21/09.
+
+   LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP
+     2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier          <- LA PROCHAINE
 
    LOT L3 -- LA REGLE DE RECENCE, PAR CHAMP   (renomme le 21/09)
      ⚠ CE N'EST PAS UN INTERRUPTEUR. Saisir dans Hektor OU dans l'app doit
