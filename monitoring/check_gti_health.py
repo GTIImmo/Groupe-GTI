@@ -388,6 +388,20 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     {
+        # 26bis-COUPLES 21/09 : les liens de menage que l'app ne sait pas ecrire
+        # dans sa serie. ⚠ CETTE SONDE N'EST PAS A ZERO, ET C'EST NORMAL : 2 752
+        # conjoints sont hors du perimetre de l'app ou supprimes chez Hektor. Ce
+        # qui compte est que le nombre NE MONTE PAS -- une hausse voudrait dire
+        # que l'entretien nocturne a cesse.
+        "key": "data.couples_non_traduits",
+        "severity": "warning",
+        "label": "Liens de menage sans equivalent dans notre serie",
+        "table": "app_v_couples_non_traduits",
+        "params": {},
+        "rule": "absolute",
+        "max": 3000,
+    },
+    {
         # 5b 21/09 : ce qui attend que son contact existe chez Hektor. Normal
         # quelques minutes apres une creation ; anormal au-dela -- cela voudrait
         # dire que le worker de creation n'a pas rapporte le numero, et la saisie
