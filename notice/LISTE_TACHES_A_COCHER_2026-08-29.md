@@ -58,8 +58,13 @@ elancer_run.ps1 (demarre la TACHE, donc
        RECENCE, en permanence -- pas une bascule datee.
      ⚠ ET PENDANT TOUTE LA MIGRATION, LES COMMERCIAUX SAISISSENT DANS HEKTOR :
        l'app et le serveur doivent continuer d'etre alimentes par lui.
-     1. [ ] 26bis-3  la carte des champs : ou vit la valeur de chacun
-            (5 en colonne · 38 dans le grand bloc · 9 a verifier)      <- LA PROCHAINE
+     1. [x] 26bis-3  la carte des champs -> notice/CARTE_CHAMPS_ANNONCE_2026-09-21.md
+            205 champs cote app (71 colonnes + 134 dans le grand bloc), 163 sur le
+            serveur, 58 communs. Des 53 poussables : 5 en colonne, 7 dans une cle
+            nommee, 41 dans le CALQUE seulement.
+            ⭐ LE FAIT QUI DECIDE : la ligne d'attente porte DEJA la liste des
+            champs saisis, un par un -- la protection par champ n'a rien a
+            inventer, juste a l'appliquer au lieu de geler le bien.
      2. [ ] la PROTECTION PAR CHAMP au lieu du bien entier
      3. [ ] 2.4  la meme regle de recence dans le run de nuit
      4. [ ] la relecture a l'ouverture de fiche
