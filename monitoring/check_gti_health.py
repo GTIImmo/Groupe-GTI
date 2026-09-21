@@ -388,6 +388,20 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 0,
     },
     {
+        # L4-a 21/09 : les plages de numeros. Cette sonde ne surveille pas un flux
+        # mais une HYPOTHESE -- « la serie de Hektor n'atteindra jamais la notre ».
+        # Ecarts au 21/09 : annonce 2 472 137, contact 9 394 567, recherche 922 932.
+        # Si elle sonne un jour, deux objets differents pourraient porter le meme
+        # numero, et rien d'autre ne le dirait.
+        "key": "data.plages_numeros",
+        "severity": "critical",
+        "label": "Plages de numeros app / Hektor trop proches",
+        "table": "app_v_plages_trop_proches",
+        "params": {},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
         # 26bis-COUPLES 21/09 : les liens de menage que l'app ne sait pas ecrire
         # dans sa serie. ⚠ CETTE SONDE N'EST PAS A ZERO, ET C'EST NORMAL : 2 752
         # conjoints sont hors du perimetre de l'app ou supprimes chez Hektor. Ce
