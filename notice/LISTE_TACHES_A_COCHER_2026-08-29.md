@@ -5976,6 +5976,12 @@ plus designer deux choses.*
         26bis-RELATIONS   le lien entre une personne et un bien      L2
         26bis-COUPLES     le lien entre deux personnes               L2
         INVENTAIRE        les 16 tables refaites chaque nuit         L2
+                          ✅ FAIT le 21/09 -> notice/INVENTAIRE_TABLES_REFAITES_2026-09-21.md
+                          Il ne decouvre AUCUN trou nouveau : il confirme que la
+                          liste du plan est complete. 4 tables sans filet = 26bis-3,
+                          26bis-CONTACTS, 26bis-RELATIONS, A.3-technique. Les
+                          recherches sont le seul objet protege de bout en bout --
+                          c'est le modele a recopier.
 [ ] B.3     le declencheur de descente
 [ ] E.2     bascule des negociateurs sur l'app
 [ ] E.3     les workers deviennent invisibles
