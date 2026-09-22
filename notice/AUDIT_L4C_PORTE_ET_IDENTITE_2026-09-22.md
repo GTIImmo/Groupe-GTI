@@ -133,6 +133,56 @@ change.
 
 ---
 
+## 7bis. ⛔⛔ LES DEUX SÉRIES SE CHEVAUCHENT — trouvé le 22/09 en codant `L4-c`
+
+**J'allais rendre le registre des recherches « tolérant »** : qu'il retrouve sa ligne sous
+l'ancien numéro **ou** sous le nouveau. Une mesure faite avant d'écrire l'a arrêté net.
+
+```
+contacts                                   356 137
+plus grand numero HEKTOR                   605 461
+plus grand numero APP (doublure)           356 137
+
+NUMEROS PRESENTS DANS LES DEUX SERIES      194 687
+   dont les deux numeros du MEME contact         4
+   donc AMBIGUS : un numero, DEUX contacts  194 683
+```
+
+**194 683 numéros désignent un contact dans une série et un AUTRE contact dans l'autre.**
+Plus de la moitié du parc. Un lecteur « tolérant » aurait rendu la mauvaise fiche 194 683
+fois — sans erreur, sans trace, et avec des données parfaitement valides.
+
+➡ **CONSÉQUENCE DE FOND : la bascule ne peut pas être progressive.** Pendant une période
+mixte, un numéro seul **ne dit pas à quelle série il appartient**. Aucune tolérance n'est
+possible : soit tout bascule d'un coup, soit les numéros deviennent auto-descriptifs.
+
+### La sortie, et elle est déjà dans la doctrine du projet
+
+Le 21/09 on a choisi que **la plage de l'app commence à 10 000 000** — pour les contacts nés
+dans l'app, pour les annonces, pour les recherches. La doublure `app_contact_id` est
+**antérieure à cette convention** et la viole : elle vit de 1 à 356 137, en plein dans la
+série de Hektor.
+
+**Déplacer la doublure dans la plage de l'app** *(`app_contact_id + 10 000 000`)* rend chaque
+numéro **auto-descriptif** : `< 10 000 000` = Hektor, `>= 10 000 000` = nous. L'ambiguïté
+disparaît, et une transition progressive redevient possible.
+
+**Et ça ne coûtera JAMAIS moins cher qu'aujourd'hui**, parce que rien ne lit encore la
+doublure *(0 occurrence dans le worker, 0 dans le front)* :
+
+```
+Supabase   relations 81 297 · contacts 61 975 · rapprochements 49 624
+           recherches 11 382 · emails 24 · propositions 11      = 204 313 lignes
+local      app_contact 356 137 · app_search_registry 77 070
+```
+
+C'est un décalage arithmétique sur une colonne que personne ne lit : mécanique, vérifiable,
+et réversible par une soustraction.
+
+➡ **`L4-c` gagne donc une étape ZÉRO : déplacer la doublure, avant tout le reste.**
+
+---
+
 ## 8. Ce qui reste NON MESURÉ, et qui se dit
 
 - Le **RDV / visite** n'a pas été balayé comme objet propre *(il apparaît par ricochet dans les
