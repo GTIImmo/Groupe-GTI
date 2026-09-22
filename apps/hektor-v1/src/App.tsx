@@ -7917,10 +7917,32 @@ function buildHektorMandatPrixUrl(hektorAnnonceId: number | string | null | unde
   return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-biens/mon-bien/mandat-prix&id=${encodeURIComponent(id)}`
 }
 
+/** L4-c ③ 22/09 : le numéro pour VISER Hektor, jamais l'identité.
+ *
+ *  Ce lien est le seul endroit du front qui envoie un numéro chez Hektor **hors
+ *  de tout travail** : la porte du worker ne peut pas le protéger. Il doit donc
+ *  choisir lui-même, et refuser un numéro que Hektor ne connaît pas — sinon il
+ *  ouvre une fiche qui n'existe pas, ou pire, celle de quelqu'un d'autre. */
+const PLAGE_NUMEROS_APP = 10_000_000
+
+function cibleHektorDuContact(contact: { hektor_contact_id?: string | null; hektor_target_id?: string | null } | null | undefined) {
+  if (!contact) return null
+  const cible = String(contact.hektor_target_id ?? '').trim()
+  if (cible) return cible
+  const identite = String(contact.hektor_contact_id ?? '').trim()
+  // Pas de case cible et une identité dans la plage de l'app : ce contact
+  // n'est pas (encore) chez Hektor. On ne fabrique pas de lien mort.
+  if (!identite || (/^\d+$/.test(identite) && Number(identite) >= PLAGE_NUMEROS_APP)) return null
+  return identite
+}
+
 function buildHektorContactUrl(hektorContactId: number | string | null | undefined) {
   if (hektorContactId == null || hektorContactId === '') return null
   const id = String(hektorContactId).trim()
   if (!id) return null
+  // Garde-fou de dernier recours : un numéro de la plage de l'app n'a aucun
+  // sens chez Hektor, même si un appelant l'a laissé passer.
+  if (/^\d+$/.test(id) && Number(id) >= PLAGE_NUMEROS_APP) return null
   return `https://groupe-gti-immobilier.la-boite-immo.com/admin/?page=/mes-contacts/mon-contact&id=${encodeURIComponent(id)}`
 }
 
@@ -38938,7 +38960,7 @@ function ContactDetailPopupBase(props: {
                 <button className="btn icon" type="button" aria-haspopup="true" aria-expanded={contactActionsOpen} aria-label="Plus d'options" onClick={() => setContactActionsOpen((open) => !open)}><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg></button>
                 {contactActionsOpen ? (
                   <div className="menu-pop">
-                    <button className="menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(props.contact.hektor_contact_id) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor<svg className="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg></button>
+                    <button className="menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(cibleHektorDuContact(props.contact)) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor<svg className="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg></button>
                     {props.canDeleteContacts ? (
                       <button className="menu-item danger" type="button" onClick={() => { setContactActionsOpen(false); setDeleteOpen(true) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Supprimer</button>
                     ) : null}
@@ -39166,7 +39188,7 @@ function ContactDetailPopupBase(props: {
                           <div className="dub-s">{duplicateCount > 0 ? 'Doublons à contrôler avant fusion pour fiabiliser la base contact.' : 'La fiche ne présente aucun groupe doublon classé.'}</div>
                         </div>
                         {candidateId ? <span className="dub-candi">Candidat principal · {candidateId}</span> : null}
-                        {duplicateCount > 0 ? <button className="btn brand-soft sm" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>Comparer &amp; fusionner</button> : null}
+                        {duplicateCount > 0 ? <button className="btn brand-soft sm" type="button" onClick={() => openHektorContact(cibleHektorDuContact(props.contact))}>Comparer &amp; fusionner</button> : null}
                       </div>
                     </div>
                   </section>
@@ -40117,7 +40139,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                   </button>
                   {contactActionsOpen ? (
                     <div className="fa-cx-act-menu">
-                      <button className="fa-cx-menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(props.contact.hektor_contact_id) }}>
+                      <button className="fa-cx-menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(cibleHektorDuContact(props.contact)) }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor
                         <svg className="fa-cx-menu-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M7 17 17 7M9 7h8v8" /></svg>
                       </button>
@@ -40521,7 +40543,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     </div>
                   ) : null}
                   {duplicateCount > 0 ? (
-                    <button className="fa-cx-dq-merge" type="button" onClick={() => openHektorContact(props.contact.hektor_contact_id)}>Comparer &amp; fusionner</button>
+                    <button className="fa-cx-dq-merge" type="button" onClick={() => openHektorContact(cibleHektorDuContact(props.contact))}>Comparer &amp; fusionner</button>
                   ) : null}
                 </div>
                 {/* ── GAP 3 — Données Hektor (portage de l'onglet Synchronisation de ...Base) ── */}

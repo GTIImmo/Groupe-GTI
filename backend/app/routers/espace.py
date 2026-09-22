@@ -42,7 +42,8 @@ def _resolve_envoi_id(svc: EspaceClientService, payload: dict, *, bien_id=None) 
     - token contact → l'envoi (le plus récent) ayant proposé ce bien ; à défaut, le plus récent.
     """
     if payload.get("a") == email_tokens.ACTION_ESPACE_CONTACT:
-        cid = str(payload.get("c") or "")
+        # L4-c ③ : le numero du jeton peut dater d'avant la bascule.
+        cid = svc.identite_depuis_jeton(str(payload.get("c") or ""))
         if bien_id is not None:
             eid = svc.envoi_for_contact_bien(cid, bien_id)
             if eid:
@@ -71,7 +72,7 @@ def espace_page(token: str, request: Request, settings: Settings = Depends(get_s
         featured = payload.get("f")
         from_email = (request.query_params.get("from") or "").lower() == "email"
         return HTMLResponse(svc.render_contact_portal(
-            hektor_contact_id=str(payload.get("c") or ""), token=token,
+            hektor_contact_id=svc.identite_depuis_jeton(str(payload.get("c") or "")), token=token,  # L4-c ③
             featured_dossier_id=int(featured) if str(featured or "").isdigit() else None,
             from_email=from_email))
     return HTMLResponse(svc.render_page(envoi_id=str(payload.get("e") or ""), token=token))

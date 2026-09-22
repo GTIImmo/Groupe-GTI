@@ -196,6 +196,7 @@ const SANS_FICHE_DE_MENAGE = 'couple_role.is.null,couple_role.neq.menage_resolu'
 
 const contactsListingSelect = [
   'hektor_contact_id',
+  'hektor_target_id',   // L4-c ③ : le numero pour viser Hektor
   'hektor_agence_id',
   'hektor_negociateur_id',
   'negociateur_email',

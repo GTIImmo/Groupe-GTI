@@ -428,6 +428,11 @@ export type ContactDuplicateSeverity = 'low' | 'medium' | 'high' | 'critical'
 
 export type AppContact = {
   hektor_contact_id: string
+  /** L4-c ③ 22/09 : LE numéro pour viser Hektor.
+   *  `hektor_contact_id` est l'IDENTITÉ chez nous et peut valoir un numéro
+   *  d'app (≥ 10 000 000) que Hektor ne connaît pas. Tout lien ou envoi vers
+   *  Hektor doit passer par celui-ci. */
+  hektor_target_id?: string | null
   hektor_agence_id?: string | null
   hektor_negociateur_id?: string | null
   negociateur_email?: string | null

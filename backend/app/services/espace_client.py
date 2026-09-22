@@ -33,6 +33,45 @@ class EspaceClientService:
         self.tracking = EmailTrackingService(settings)
         self.renderer = RapprochementEmailService(settings)
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # L4-c ③ 22/09/2026 — LE NUMERO GRAVE DANS UN JETON DEJA PARTI
+    # ═══════════════════════════════════════════════════════════════════════
+    # `make_espace_contact_token` grave le numero du contact dans un jeton
+    # signe : `{"c": "<numero>"}`, valable 60 JOURS, et deja parti dans des
+    # emails vers des acquereurs. On ne peut pas le rattraper -- il est chez
+    # eux.
+    #
+    # Le jour ou l'identite du contact devient celle de l'app, ce numero
+    # (celui de Hektor) ne designe plus rien dans nos tables, et le lien de
+    # l'espace tombe sur une page vide -- pour le client, sans un message.
+    #
+    # ⚠ CETTE TRADUCTION N'ETAIT PAS POSSIBLE AVANT LE 22/09. Les deux series
+    #   de numeros se recouvraient sur 194 683 valeurs : traduire « au cas ou »
+    #   aurait ouvert l'espace du MAUVAIS contact. Depuis le decalage (L4-c ⓪)
+    #   les plages sont disjointes et un numero dit d'ou il vient :
+    #       < 10 000 000  numero de Hektor -> on cherche l'identite qui le vise
+    #       >= 10 000 000 deja une identite -> on ne touche a rien
+    #
+    # SANS EFFET AUJOURD'HUI : identite = cible pour tout le parc, la recherche
+    # rend le meme numero. Et si la lecture echoue, on rend le numero tel quel
+    # -- le comportement d'avant, jamais une page d'erreur.
+    PLAGE_NUMEROS_APP = 10_000_000
+
+    def identite_depuis_jeton(self, numero: str) -> str:
+        """Traduit un numero sorti d'un jeton en l'identite courante du contact."""
+        brut = str(numero or "").strip()
+        if not brut.isdigit() or int(brut) >= self.PLAGE_NUMEROS_APP:
+            return brut
+        try:
+            rows = self.renderer._rest_get(
+                "app_contact_current",
+                {"select": "hektor_contact_id", "hektor_target_id": f"eq.{brut}", "limit": "1"})
+        except Exception:
+            return brut
+        if rows and str(rows[0].get("hektor_contact_id") or "").strip():
+            return str(rows[0]["hektor_contact_id"]).strip()
+        return brut
+
     def _load_dossier_by_id(self, dossier_id: int) -> tuple[dict[str, Any], dict[str, Any]]:
         rows = self.renderer._rest_get(
             "app_dossier_current",
