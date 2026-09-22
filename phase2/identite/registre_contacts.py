@@ -163,15 +163,37 @@ def main() -> int:
         if neufs:
             # L'ordre decide de la serie : on suit celui de Hektor, ce qui rend
             # la table lisible et la reprise reproductible.
-            # L4-b 21/09/2026 -- LE NUMERO EST DONNE EXPLICITEMENT, DANS LE COULOIR
-            # DU SERVEUR. La table est en AUTOINCREMENT : adopter un numero de
-            # l'app (>= 10 000 000) ferait sauter son compteur dans cette plage
-            # POUR TOUJOURS -- SQLite refuse de le faire redescendre, verifie le
-            # 21/09. On calcule donc nous-memes, sous la plage de l'app.
+            # L4-b 21/09/2026 -- LE NUMERO EST DONNE EXPLICITEMENT. La table est
+            # en AUTOINCREMENT et SQLite refuse de faire redescendre un compteur
+            # qui a saute : on calcule donc nous-memes.
+            #
+            # ⛔ CORRIGE LE 22/09, ET LE DEFAUT ETAIT MUET. La version du 21/09
+            #   cherchait « le plus grand numero SOUS 10 000 000 », pour rester
+            #   sous la plage reservee a l'app. Le decalage du 22/09 (L4-c ⓪) a
+            #   fait monter TOUTE la doublure au-dessus de 10 000 000 : plus une
+            #   seule ligne ne passait ce filtre, COALESCE rendait 0, et le
+            #   contact suivant aurait recu le numero 1, puis 2, puis 3 --
+            #   recreant exactement le recouvrement des deux series qu'on venait
+            #   de supprimer. Et sans rien casser : les numeros 1 a 100 sont
+            #   libres depuis le decalage, l'INSERT aurait reussi.
+            #
+            # ⚠ ET UN SECOND DEFAUT, TROUVE DANS LA FOULEE : retirer le filtre
+            #   ne suffisait pas. Le registre LOCAL sert les contacts venus de
+            #   HEKTOR ; le distributeur de Supabase sert ceux qui NAISSENT dans
+            #   l'app. Les deux auraient donne 10 356 138 au suivant -- deux
+            #   personnes, un seul numero. Mesure du 22/09.
+            #
+            # D'OU TROIS ETAGES, et chacun se reconnait a son ordre de grandeur :
+            #       < 10 000 000                 Hektor (mort a la coupure)
+            #       10 000 001 a 19 999 999      la doublure, contacts de Hektor
+            #       >= 20 000 000                contacts NES DANS L'APP
+            # Tout ce qui est au-dessus de 10 M est a nous ; le second seuil
+            # separe seulement nos deux sources. Le distributeur de Supabase a
+            # ete repositionne a 20 000 000 le meme jour.
             conn.execute(
                 f"INSERT INTO {REGISTRE} (app_contact_id, hektor_contact_id) "
                 f"SELECT (SELECT COALESCE(MAX(app_contact_id), 0) FROM {REGISTRE} "
-                "         WHERE app_contact_id < 10000000) "
+                "         WHERE app_contact_id < 20000000) "
                 "       + ROW_NUMBER() OVER (ORDER BY CAST(s.hektor_contact_id AS INTEGER), s.hektor_contact_id), "
                 f"       s.hektor_contact_id FROM {SOURCE} s "
                 f"WHERE NOT EXISTS (SELECT 1 FROM {REGISTRE} r "
