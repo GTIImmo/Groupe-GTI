@@ -63,6 +63,28 @@ class ContactRow:
     # L'identite de la porteuse, resolue APRES le chargement (voir resoudre_menages).
     # None tant qu'on n'a pas cherche, ou quand la porteuse a disparu de Hektor.
     couple_identite_porteuse: str | None = None
+    # ═══════════════════════════════════════════════════════════════════════
+    # L4-c ④ 22/09/2026 — LE NUMERO POUR VISER HEKTOR, PORTE PAR LA COUCHE
+    # ═══════════════════════════════════════════════════════════════════════
+    # ⛔ SANS CE CHAMP, LA BASCULE COUPE LE LIEN VERS HEKTOR POUR TOUT LE PARC.
+    #   Le raisonnement, verifie le 22/09 avant d'allumer quoi que ce soit :
+    #     · le push ecrit en FUSION (resolution=merge-duplicates), donc une
+    #       colonne absente de l'envoi est PRESERVEE -- rassurant, mais hors
+    #       sujet ;
+    #     · car la bascule ne modifie pas une ligne : elle CHANGE SA CLE.
+    #       '605449' devient '10356127', qui n'entre en conflit avec rien ->
+    #       ce n'est pas une fusion, c'est une ligne NEUVE, sans cible ;
+    #     · et le declencheur `app_contact_remplir_cible` ne la remplit pas :
+    #       il ne le fait que sous 10 000 000 ;
+    #     · pendant ce temps l'ancienne ligne n'est plus produite -> vue comme
+    #       disparue -> supprimee.
+    #   Soit 62 000 lignes remplacees, TOUTES avec une case cible vide, et plus
+    #   un seul contact joignable chez Hektor. Sans une erreur, sans un bruit.
+    #
+    # LA VALEUR EST EVIDENTE ET N'A PAS A ETRE CHERCHEE : c'est l'identifiant
+    # que porte le MIROIR, qui est une copie de Hektor. On le garde au moment
+    # ou on lui substitue l'identite de l'app -- deux lignes plus bas.
+    hektor_target_id: str | None = None
 
     @property
     def est_fiche_de_menage(self) -> bool:
@@ -347,6 +369,10 @@ def contact_from_row(row: sqlite3.Row) -> ContactRow:
     # calcule sur un seul numero.
     return ContactRow(
         hektor_contact_id=identite_app(row["hektor_contact_id"]),
+        # L4-c ④ : la CIBLE, c'est le numero du miroir -- celui de Hektor, par
+        # definition. On le capture ici, au moment meme ou l'identite le
+        # remplace, parce que c'est le seul endroit ou les deux coexistent.
+        hektor_target_id=clean_text(row["hektor_contact_id"]) or None,
         hektor_agence_id=clean_text(row["hektor_agence_id"]) or None,
         hektor_negociateur_id=clean_text(row["hektor_negociateur_id"]) or None,
         civilite=clean_text(row["civilite"]) or None,
@@ -387,10 +413,27 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
     }
     if relation_columns and "relation_key" not in relation_columns:
         conn.execute("DROP TABLE app_contact_relation_current")
+
+    # ⚠ L4-c ④ 22/09 : CREATE TABLE IF NOT EXISTS N'AJOUTE RIEN A UNE TABLE
+    #   DEJA CREEE. Lecon payee le matin meme : le recensement des relations
+    #   demandait une colonne que son DDL declarait, mais que la table posee la
+    #   veille n'avait pas -- l'INSERT tombait, et le run disait « succes ».
+    #   On rattrape donc explicitement les installations existantes, a chaque
+    #   passage. Idempotent : la colonne presente n'est pas re-ajoutee.
+    colonnes_contact = {
+        row["name"] for row in conn.execute("PRAGMA table_info(app_contact_current)").fetchall()
+    }
+    if colonnes_contact and "hektor_target_id" not in colonnes_contact:
+        conn.execute("ALTER TABLE app_contact_current ADD COLUMN hektor_target_id TEXT")
+
     conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS app_contact_current (
             hektor_contact_id TEXT PRIMARY KEY,
+            -- L4-c ④ 22/09 : LE numero pour viser Hektor. Tant qu'identite et
+            -- cible sont egales il ne sert a rien ; le jour de la bascule, il
+            -- est la SEULE chose qui garde le parc joignable (voir ContactRow).
+            hektor_target_id TEXT,
             hektor_agence_id TEXT,
             hektor_negociateur_id TEXT,
             negociateur_email TEXT,
@@ -1336,6 +1379,7 @@ def build_contact_rows(
             "nom": contact.nom,
             "prenom": contact.prenom,
             "display_name": contact.display_name,
+            "hektor_target_id": contact.hektor_target_id,  # L4-c ④
             "hektor_couple_contact_id": contact.hektor_couple_contact_id,
             "couple_role": contact.couple_role,
             "archive": contact.archive,
