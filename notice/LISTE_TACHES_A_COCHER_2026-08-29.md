@@ -66,10 +66,39 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
               la paire (hektor_contact_id, rang) -- une POSITION. Sans lui,
               11 368 cles neuves le lendemain et tout ce qui pend dessous
               orphelin, sans un bruit. Index unique deja pose.
-          [ ] ③ les 3 dependances HORS BASE (jetons signes 60 j deja partis par
-              email, numero fige dans un JSON d'agenda, lien « Ouvrir Hektor »
-              hors job) + les 12 endroits ambigus.
+          [x] ② IDENTITE ET CIBLE NE SE CONFONDENT PLUS (22/09, 5eb9695)
+              ⚠ L'AUDIT A RE-CADRE LE LOT : la « re-cle des 6 tables » etait
+              INUTILE (la cle porte deja notre numero apres bascule, seul son
+              NOM ment) et les 87 endroits de l'API comme les ~60 du front
+              n'ont RIEN a changer. Le vrai defaut etait dans le worker :
+              `contactId = await cibleHektorContact(contactId)` ECRASAIT
+              l'identite, et le resultat servait aux DEUX usages.
+              7 handlers demeles, garde-fou porte a 15 assertions.
+          [x] ③ LES DEPENDANCES HORS BASE -- 2 sur 3 (22/09, fa2a3f1 + 825f64c)
+              · le jeton signe (60 j, deja parti par email) se traduit au
+                point de lecture -- impossible avant le decalage ⓪ ;
+              · le lien « Ouvrir Hektor » du front vise la CIBLE (le front
+                ignorait `hektor_target_id` : 0 occurrence). Type + select +
+                4 appels + garde-fou.
+              ⚠ LA VUE D'ABORD, LE FRONT ENSUITE. `app_contacts_current`
+                n'exposait pas la colonne : deployer le front avant aurait
+                fait 400 a chaque chargement de l'annuaire. Vu AVANT.
+              [ ] reste : le numero fige dans metadata_json->attendee_contacts
+                  des liens d'agenda (9 lignes) -- rattrapage de donnees, a
+                  faire dans la fenetre de la bascule.
               ➡ notice/AUDIT_L4C_PORTE_ET_IDENTITE_2026-09-22.md
+          [ ] ④ ALLUMER LA BASCULE : remplir app_contact_identite_app avec les
+              356 137 paires. Plus une ligne de code a ecrire -- tout est
+              prouve sur copie. ⚠ code ET donnees la meme nuit : le push
+              remplace les 167 448 cles de relation en une fois.
+
+   VERIFIE EN REEL LE 22/09 APRES DEPLOIEMENT (session Chrome de Frederic) :
+       annuaire         170 494 contacts, requete avec hektor_target_id -> 206
+       fiche contact    s'ouvre, « Ouvrir dans Hektor » -> le BON contact
+                        (Sylvie DEVIDAL, identite 605449 = cible 605449)
+       annonces         732 actives          registre  563 mandats
+       console          AUCUNE erreur sur les quatre ecrans
+       sondes           les cinq a zero  ·  doublure 10 000 003 a 10 356 136
 
           [ ] C.9  LA CREATION D'ANNONCE     <- APRES L4-c ; son audit est FAIT
           [ ] C.9-couple  ⚠ son 1er pas est une MESURE, pas du code :
