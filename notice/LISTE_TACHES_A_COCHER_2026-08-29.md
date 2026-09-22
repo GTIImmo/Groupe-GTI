@@ -87,10 +87,21 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   des liens d'agenda (9 lignes) -- rattrapage de donnees, a
                   faire dans la fenetre de la bascule.
               ➡ notice/AUDIT_L4C_PORTE_ET_IDENTITE_2026-09-22.md
-          [ ] ④ ALLUMER LA BASCULE : remplir app_contact_identite_app avec les
-              356 137 paires. Plus une ligne de code a ecrire -- tout est
-              prouve sur copie. ⚠ code ET donnees la meme nuit : le push
-              remplace les 167 448 cles de relation en une fois.
+          [x] ④ LA COUCHE PORTE LA CIBLE (22/09, 3a85e8a) -- LA PIECE QUI
+              MANQUAIT, et sans elle la bascule coupait Hektor pour TOUT le
+              parc. La bascule ne modifie pas une ligne, elle CHANGE SA CLE :
+              ligne neuve sans cible, declencheur muet au-dessus de 10 M,
+              ancienne ligne supprimee. 62 000 contacts injoignables, sans
+              une erreur. Corrige et EPROUVE SUR LA VRAIE BASE sans un appel
+              a Hektor : 59 217 contacts, 59 217 avec leur cible.
+          [ ] ⑤ ALLUMER LA BASCULE : remplir app_contact_identite_app avec les
+              356 147 paires. Plus une ligne de code a ecrire.
+              ⚠ code ET donnees la meme nuit : le push remplace les 167 459
+                cles de relation en une fois.
+              ⚠ les 9 liens d'agenda (numero fige dans metadata_json) dans la
+                MEME fenetre.
+              ⚠ ECRIRE LA COMMANDE COMPLETE ET LA MONTRER AVANT DE L'EXECUTER
+                (regle posee apres la suppression accidentelle du 22/09).
 
    VERIFIE EN REEL LE 22/09 APRES DEPLOIEMENT (session Chrome de Frederic) :
        annuaire         170 494 contacts, requete avec hektor_target_id -> 206

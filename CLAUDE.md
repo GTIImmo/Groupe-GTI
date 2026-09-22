@@ -77,11 +77,12 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
-> **22/09/2026 (midi) — LA TÂCHE OUVERTE EST `L4-c ①`, LA BASCULE.** Faire lire
-> `app_contact_id` là où c'est « relier nos données » : **87 endroits dans l'API, ~60 dans le
-> front, 6 tables à re-clé**, et le **registre des recherches dans le même geste**.
-> ⚠ `app_contact_id` n'apparaît **ni dans le worker ni dans le front** — aucun point d'appui,
-> tout est à écrire. ➡ `notice/AUDIT_L4C_PORTE_ET_IDENTITE_2026-09-22.md`
+> **22/09/2026 (soir) — IL NE RESTE QU'À ALLUMER LA BASCULE** *(`L4-c ⑤`)* : remplir
+> `app_contact_identite_app` avec les **356 147 paires**. **Plus une ligne de code à écrire.**
+> ⚠ **Trois conditions, toutes écrites dans la liste** : code et données **la même nuit**
+> *(le push remplace les 167 459 clés de relation en une fois)* · les **9 liens d'agenda**
+> dans la même fenêtre · et **écrire la commande complète et la MONTRER avant de l'exécuter**.
+> ➡ `notice/AUDIT_L4C_PORTE_ET_IDENTITE_2026-09-22.md`
 >
 > **FAIT LE 22/09 :**
 > · **`L4-b′` la porte est fermée** *(`a19d9c5`)* — 9 sortants envoyaient un numéro à Hektor
