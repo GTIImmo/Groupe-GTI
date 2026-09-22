@@ -77,10 +77,25 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
-> **21/09/2026 (23 h) — LA TÂCHE OUVERTE EST `L4-c`, « UNE PERSONNE, UN NUMÉRO »**, décidée
-> le soir même et placée **AVANT `C.9`**. Prochain pas : la **répétition sur copie**
-> *(bascule des 356 111 + le registre des recherches, puis un run complet par-dessus, et le
-> compte des orphelins)*. Tout est dans `notice/MESURE_BASCULE_CLE_CONTACT_2026-09-21.md`.
+> **22/09/2026 (midi) — LA TÂCHE OUVERTE EST `L4-c ①`, LA BASCULE.** Faire lire
+> `app_contact_id` là où c'est « relier nos données » : **87 endroits dans l'API, ~60 dans le
+> front, 6 tables à re-clé**, et le **registre des recherches dans le même geste**.
+> ⚠ `app_contact_id` n'apparaît **ni dans le worker ni dans le front** — aucun point d'appui,
+> tout est à écrire. ➡ `notice/AUDIT_L4C_PORTE_ET_IDENTITE_2026-09-22.md`
+>
+> **FAIT LE 22/09 :**
+> · **`L4-b′` la porte est fermée** *(`a19d9c5`)* — 9 sortants envoyaient un numéro à Hektor
+>   sans traduction, dont 5 sans garde-fou ; la traduction était **calculée puis jetée**, et
+>   le filtre des mandants **écartait en silence**. Garde-fou : `Console/test_porte_contacts.js`.
+> · **`L4-c ⓪` la doublure est montée dans la plage de l'app** *(`2a4e0f0`)* — **194 683
+>   numéros** existaient dans les deux séries en désignant des personnes **différentes**.
+>   244 834 lignes côté serveur + 463 543 en local, build complet par-dessus, **0 clé changée**.
+>   Désormais : **sous 10 M c'est Hektor, au-dessus c'est nous.**
+>
+> ⚠ **LA LEÇON DES DEUX JOURS, et elle vaut pour la suite** : sur ces deux lots, **cinq
+> défauts** ont été trouvés — deux par un **essai réel**, trois par une **répétition sur
+> copie**. **Aucun n'aurait planté. Les cinq auraient fait des dégâts muets.** Ici, un défaut
+> ne crie jamais : il faut aller le chercher.
 >
 > ⚠ **CE QUI COMMANDE CE LOT** : le registre des recherches **bouge avec le contact, pas
 > après** — son ancrage est la paire `(hektor_contact_id, rang)`, donc une **position**. Si

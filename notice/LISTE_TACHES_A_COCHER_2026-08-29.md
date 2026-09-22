@@ -33,7 +33,45 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                     A L'ENTREE DU BUILD (pas au push : les cles sont des
                     empreintes CALCULEES sur le numero) + sonde        13ecedc
               [x] la phrase de confirmation de suppression, meme famille 6cbb59a
-          [ ] C.9  LA CREATION D'ANNONCE          <- LA SUITE, audit d'abord
+          [x] L4-b' FERMER LA PORTE (22/09, a19d9c5). NEUF sortants envoyaient
+              un numero a Hektor sans passer par cibleHektorContact, dont 5
+              sans garde-fou. Deux vrais defauts : la traduction etait CALCULEE
+              PUIS JETEE (l. 13390), et le filtre des mandants ECARTAIT en
+              silence au lieu de traduire -- un mandant ne dans l'app
+              disparaissait du mandat, definitivement.
+              ⚠ probleme de C.9, pas de L4-c : ce sont les chemins qu'emprunte
+              une annonce creee depuis l'app.
+              Garde-fou : Console/test_porte_contacts.js, 10 assertions.
+
+   L4-c 🟡  UNE PERSONNE, UN NUMERO
+          [x] ⓪ LA DOUBLURE MONTE DANS LA PLAGE DE L'APP (22/09, 2a4e0f0)
+              194 683 numeros existaient dans LES DEUX series en designant des
+              personnes DIFFERENTES. Rien n'etait casse -- chaque lecteur nomme
+              sa colonne -- mais j'etais A UNE LIGNE d'ecrire le lecteur
+              tolerant qui aurait rendu la mauvaise fiche 194 683 fois.
+              FAIT : Supabase 244 834 lignes + local 463 543, build complet
+              par-dessus, 0 cle changee, local et serveur d'accord.
+              La doublure vit de 10 000 001 a 10 356 137.
+              ⚠ TROIS defauts de mon propre script trouves PAR LA REPETITION
+                sur copie ; aucun n'aurait plante, les trois auraient fait des
+                degats MUETS : garde-fou par table au lieu de global, tables de
+                sauvegarde decalees, ecriture dans 20 COPIES de Supabase que la
+                descente de 7 h 30 aurait effacees.
+              ⚠ les 2 contacts d'essai supprimes pour liberer la plage.
+          [ ] ① LA BASCULE : faire lire app_contact_id la ou c'est « relier nos
+              donnees » -- 87 endroits dans l'API, ~60 dans le front, 6 tables
+              a re-cler. ⚠ app_contact_id n'apparait NI dans le worker NI dans
+              le front : aucun point d'appui, tout est a ecrire.
+          [ ] ② LE REGISTRE DES RECHERCHES, DANS LE MEME GESTE. Il s'ancre sur
+              la paire (hektor_contact_id, rang) -- une POSITION. Sans lui,
+              11 368 cles neuves le lendemain et tout ce qui pend dessous
+              orphelin, sans un bruit. Index unique deja pose.
+          [ ] ③ les 3 dependances HORS BASE (jetons signes 60 j deja partis par
+              email, numero fige dans un JSON d'agenda, lien « Ouvrir Hektor »
+              hors job) + les 12 endroits ambigus.
+              ➡ notice/AUDIT_L4C_PORTE_ET_IDENTITE_2026-09-22.md
+
+          [ ] C.9  LA CREATION D'ANNONCE     <- APRES L4-c ; son audit est FAIT
           [ ] C.9-couple  ⚠ son 1er pas est une MESURE, pas du code :
               quand on envoie un couple, Hektor cree-t-il UNE fiche ou DEUX ?
               jamais verifie. Tant qu'on l'ignore, on ne sait pas si le
