@@ -723,7 +723,20 @@ def load_relations(
         transaction_date: str | None = None,
         transaction_amount: str | None = None,
     ) -> None:
-        contact_id = clean_text(contact_id)
+        # ⚠ L4-c ① 22/09 : LA SUBSTITUTION SE FAIT ICI, ET NULLE PART AILLEURS.
+        # C'est LE point de passage de toutes les sources de relations. Le 21/09
+        # je l'avais posee sur DEUX entrees seulement (le payload des relations
+        # et les lignes de detail) -- trois autres sources l'evitaient :
+        #     api_annonce_detail_proprietaires   75 543 relations
+        #     sync_annonce_contact_link          50 524
+        #     api_list_offres                    11 137
+        # La repetition du 22/09 l'a montre sans ambiguite : en simulant la
+        # bascule, ces trois sources tombaient a ZERO et le total perdait
+        # 11 270 relations. Elles gardaient le numero de Hektor pendant que la
+        # couche des contacts portait celui de l'app : plus aucune
+        # correspondance, donc « contact inconnu », donc jetees.
+        # Une seule porte vaut mieux que cinq entrees a ne pas oublier.
+        contact_id = identite_app(contact_id)
         annonce_id = clean_text(annonce_id)
         role = clean_text(role) or "contact"
         if not contact_id or not annonce_id:
@@ -1423,17 +1436,42 @@ def assign_search_ids(
     if not search_rows:
         return {"reprises": 0, "attribues": 0}
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # L4-c ① 22/09/2026 — LE REGISTRE SE RETROUVE SOUS L'UN OU L'AUTRE NUMERO
+    # ═══════════════════════════════════════════════════════════════════════
+    # POURQUOI C'EST NECESSAIRE. Ce registre s'ancre sur la paire
+    # (numero de contact, rang). Le jour ou l'identite du contact devient
+    # `app_contact_id`, les lignes arrivent avec l'autre numero : la recherche
+    # n'est plus reconnue, elle recoit un numero neuf et un nom neuf fige --
+    # 11 368 cles changent d'un coup, et tout ce qui pend dessous devient
+    # orphelin, SANS UN BRUIT (aucune cle etrangere ne protege ces tables).
+    # C'est le piege que l'audit du 22/09 a sorti.
+    #
+    # ⛔ POURQUOI ON NE POUVAIT PAS LE FAIRE AVANT CE MATIN. Les deux series de
+    #   numeros se RECOUVRAIENT : 194 683 numeros existaient dans les deux en
+    #   designant des personnes DIFFERENTES. Indexer les deux dans le meme
+    #   dictionnaire aurait rendu la ligne d'un AUTRE contact -- 194 683 fois,
+    #   sans erreur et sans trace.
+    #   Depuis le decalage (L4-c ⓪, 22/09), les plages sont DISJOINTES :
+    #       < 10 000 000  numero de Hektor
+    #       >= 10 000 000 numero de l'app
+    #   Un numero dit d'ou il vient, donc les deux cles peuvent cohabiter.
     ids = sorted({str(row["hektor_contact_id"]) for row in search_rows})
     known: dict[tuple[str, int], tuple[int, str | None]] = {}
     for start in range(0, len(ids), 400):
         chunk = ids[start:start + 400]
         placeholders = ",".join("?" for _ in chunk)
-        for cid, idx, sid, key in conn.execute(
-            f"SELECT hektor_contact_id, search_index, app_search_id, contact_search_key "
-            f"FROM app_search_registry WHERE hektor_contact_id IN ({placeholders})",
-            tuple(chunk),
+        for cid, aid, idx, sid, key in conn.execute(
+            f"SELECT hektor_contact_id, app_contact_id, search_index, app_search_id, contact_search_key "
+            f"FROM app_search_registry "
+            f"WHERE hektor_contact_id IN ({placeholders}) OR app_contact_id IN ({placeholders})",
+            tuple(chunk) + tuple(chunk),
         ):
-            known[(str(cid), int(idx))] = (int(sid), key)
+            valeur = (int(sid), key)
+            if cid is not None:
+                known[(str(cid), int(idx))] = valeur
+            if aid is not None:
+                known[(str(aid), int(idx))] = valeur
 
     # L4-b 21/09/2026 -- LE COULOIR DU SERVEUR. Le prochain numero se prend parmi
     # ceux que le SERVEUR a fabriques, jamais parmi ceux de l'app (>= 1 000 000).
@@ -1481,15 +1519,21 @@ def assign_search_ids(
             "contact_search_key, first_seen_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)",
             nouveaux,
         )
+    # L4-c ① 22/09 : les mises a jour visent LES DEUX colonnes, pour la meme
+    # raison que la lecture plus haut -- la ligne peut arriver sous l'un ou
+    # l'autre numero. Sans ca, une ligne retrouvee par la doublure n'aurait
+    # jamais ete marquee « vue », et le menage l'aurait crue disparue.
+    # Sans danger depuis que les plages sont disjointes (L4-c ⓪).
     if noms_a_poser:
         conn.executemany(
             "UPDATE app_search_registry SET contact_search_key = ? "
-            "WHERE hektor_contact_id = ? AND search_index = ?",
-            noms_a_poser,
+            "WHERE search_index = ? AND (hektor_contact_id = ? OR app_contact_id = ?)",
+            [(nom, rang, cid, cid) for nom, cid, rang in noms_a_poser],
         )
     conn.executemany(
-        "UPDATE app_search_registry SET last_seen_at = ? WHERE hektor_contact_id = ? AND search_index = ?",
-        [(refreshed_at, pair[0], pair[1]) for pair in known],
+        "UPDATE app_search_registry SET last_seen_at = ? "
+        "WHERE search_index = ? AND (hektor_contact_id = ? OR app_contact_id = ?)",
+        [(refreshed_at, pair[1], pair[0], pair[0]) for pair in known],
     )
     return {
         "reprises": reprises,
