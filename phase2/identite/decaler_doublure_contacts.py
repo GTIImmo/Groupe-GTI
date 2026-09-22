@@ -67,10 +67,34 @@ DECALAGE = 10_000_000
 MOTIFS_EXCLUS = ("_avant_", "_backup", "_bak", "_old")
 
 
+def tables_descendues(conn: sqlite3.Connection) -> set[str]:
+    """Les tables locales qui sont des COPIES de Supabase (`pull_from_supabase`).
+
+    ⛔ ON N'ECRIT JAMAIS DEDANS. C'est la regle posee le 21/08, ecrite en tete
+      de `pull_from_supabase.py` : « toute table listee dans sb_pull_state est
+      une COPIE, refaite a chaque descente. Si un script se met a y ecrire, son
+      travail sera EFFACE a la descente suivante, sans un bruit. »
+
+    ⚠ LA PREMIERE VERSION DE CE SCRIPT LES DECALAIT TOUTES -- 20 des 26 tables.
+      La descente de 7 h 30 aurait rendu la moitie du decalage, en silence, et
+      les deux cotes auraient diverge : exactement la fracture qu'on cherche a
+      empecher. Mesure du 22/09 : 148 tables locales sont des copies.
+
+    Pour ces tables-la, c'est SUPABASE qu'il faut decaler -- la descente
+    rapportera les nouvelles valeurs d'elle-meme.
+    """
+    try:
+        return {r[0] for r in conn.execute("SELECT table_name FROM sb_pull_state")}
+    except sqlite3.Error:
+        # Pas de descente installee : toutes les tables locales sont maitresses.
+        return set()
+
+
 def tables_concernees(conn: sqlite3.Connection) -> list[str]:
+    copies = tables_descendues(conn)
     noms = []
     for (t,) in conn.execute("SELECT name FROM sqlite_master WHERE type='table'"):
-        if any(motif in t for motif in MOTIFS_EXCLUS):
+        if any(motif in t for motif in MOTIFS_EXCLUS) or t in copies:
             continue
         colonnes = {r[1] for r in conn.execute(f'PRAGMA table_info("{t}")')}
         if "app_contact_id" in colonnes:
