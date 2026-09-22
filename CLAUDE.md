@@ -92,10 +92,22 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 >   244 834 lignes côté serveur + 463 543 en local, build complet par-dessus, **0 clé changée**.
 >   Désormais : **sous 10 M c'est Hektor, au-dessus c'est nous.**
 >
-> ⚠ **LA LEÇON DES DEUX JOURS, et elle vaut pour la suite** : sur ces deux lots, **cinq
-> défauts** ont été trouvés — deux par un **essai réel**, trois par une **répétition sur
-> copie**. **Aucun n'aurait planté. Les cinq auraient fait des dégâts muets.** Ici, un défaut
-> ne crie jamais : il faut aller le chercher.
+> **ET LE 22/09 APRÈS-MIDI, DEUX DE PLUS** *(run réel, 121 min, résultat 0)* :
+> · ⛔ **le décalage avait cassé le couloir du registre** — le prochain contact aurait reçu
+>   le numéro **1**, et l'INSERT aurait réussi. Puis, le filtre retiré, le registre local et
+>   le distributeur Supabase auraient donné **le même numéro à deux personnes**.
+>   ➡ **trois étages** : `< 10 M` Hektor · `10 M–20 M` la doublure · `≥ 20 M` l'app.
+>   **Prouvé** : 12 contacts livrés ont reçu 10 356 138 à 10 356 149.
+> · ⛔ **le run mourait d'impatience** : 4 tentatives en **2,5 secondes**, et un unique 500
+>   sur une page d'archives tuait 2 heures de travail. ➡ **2 s · 8 s · 30 s**. Le run
+>   relancé est passé. ⚠ **les 403 lèvent toujours immédiatement** — la patience ne vaut que
+>   pour les 5xx.
+>
+> ⚠ **LA LEÇON DE CES DEUX JOURS, et elle vaut pour la suite** : **sept défauts** trouvés —
+> par des **essais réels**, des **répétitions sur copie** et les **questions de Frédéric**.
+> **Aucun n'aurait planté. Les sept auraient fait des dégâts muets.** Ici, un défaut ne crie
+> jamais : il faut aller le chercher. ➡ Ne jamais conclure sans mesurer, ne jamais déployer
+> sans éprouver, et **répéter sur une copie avant tout geste irréversible**.
 >
 > ⚠ **CE QUI COMMANDE CE LOT** : le registre des recherches **bouge avec le contact, pas
 > après** — son ancrage est la paire `(hektor_contact_id, rang)`, donc une **position**. Si
