@@ -72,6 +72,43 @@ const controles = [
     ok: () => /const \{ contactId: cibleArchive \} =/.test(src)
            && /archiveHektorContactSearch\(job, cibleArchive/.test(src),
   },
+  // ── L4-c ② : IDENTITE ET CIBLE NE SE CONFONDENT PLUS ─────────────────────
+  // Le motif fautif etait `contactId = await cibleHektorContact(contactId)` :
+  // il ECRASAIT l'identite par la cible, et le resultat servait ensuite aux
+  // DEUX usages -- viser Hektor, et interroger NOS tables. Invisible tant que
+  // les deux valeurs sont egales ; faux des que l'identite devient celle de
+  // l'app.
+  {
+    nom: "L4-c ② plus aucun ecrasement de l'identite par la cible",
+    // ⚠ Le « (?<!const ) » est indispensable : sans lui, l'expression attrapait
+    //   aussi `const contactId = await cibleHektorContact(...)`, qui est
+    //   justement la forme CORRIGEE. Un controle qui accuse la bonne reponse
+    //   se fait desactiver au bout de trois fois -- deuxieme fois aujourd'hui.
+    ok: () => !/(?<!const )\bcontactId = await cibleHektorContact\(/.test(src)
+           && !/(?<!const )\bhektorContactId = await cibleHektorContact\(/.test(src),
+  },
+  {
+    nom: "L4-c ② ensureContactSearchExecution rend LES DEUX numeros",
+    ok: () => /return \{ contactId, identite, contextPayload, context \}/.test(src)
+           && /loadContactExecutionContext\(identite\)/.test(src),
+  },
+  {
+    nom: "L4-c ② les bannettes et le garde-fou visent l'identite",
+    ok: () => /markContactPendingConflict\(identite\)/.test(src)
+           && /clearContactPending\(identite\)/.test(src)
+           && /markSearchPendingConflict\(identite, pendingIndex\)/.test(src)
+           && /clearSearchPending\(identite, pendingIndex\)/.test(src),
+  },
+  {
+    nom: "L4-c ② le menage de suppression vise l'identite",
+    ok: () => /cleanupSupabaseContactRows\(numeroDemande\)/.test(src)
+           && /runDeletedContactLocalCleanup\(job, numeroDemande\)/.test(src)
+           && /loadSupabaseContactRelationsForCleanup\(numeroDemande\)/.test(src),
+  },
+  {
+    nom: "L4-c ② la ligne provisoire de relation vise l'identite",
+    ok: () => /lierRelationProvisoire\(jetonRelation, identite\)/.test(src),
+  },
   {
     // LE CONTROLE LE PLUS IMPORTANT. La version du 21/09 retirait en silence
     // les numeros de la plage de l'app de la liste des mandants : le mandat

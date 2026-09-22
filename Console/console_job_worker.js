@@ -4031,10 +4031,14 @@ async function runContactRefreshPipeline(job, hektorContactId, logCategory = "re
 
 async function handleRefreshConsoleContactData(job) {
   const payload = safeJsonParse(job.payload_json);
-  let hektorContactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
-  if (!/^\d+$/.test(hektorContactId)) throw new Error("hektor_contact_id numerique requis pour refresh_console_contact_data");
+  // L4-c ② 22/09 : deux numeros, deux variables -- meme ici, ou TOUT est
+  // tourne vers Hektor (le pipeline Python relit sa fiche). Aucune ecriture
+  // dans nos tables ne se fait avec ce numero ; on ne l'ecrase plus quand meme,
+  // pour qu'aucun lecteur n'ait a deviner laquelle des deux valeurs il tient.
+  const identite = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("hektor_contact_id numerique requis pour refresh_console_contact_data");
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  hektorContactId = await cibleHektorContact(hektorContactId, { contexte: "refresh_console_contact_data" });
+  const hektorContactId = await cibleHektorContact(identite, { contexte: "refresh_console_contact_data" });
 
   await logJob(job.id, "refresh_console_contact_data", "running", "Synchronisation differee du contact", {
     hektor_contact_id: hektorContactId,
@@ -14029,10 +14033,11 @@ async function executerRattachementMandant(job) {
   const dossier = await loadDossier(job);
   await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
 
-  let contactId = String(payload.contact_id || payload.hektor_contact_id || "").trim();
-  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  // L4-c ② 22/09 : deux numeros, deux variables.
+  const identite = String(payload.contact_id || payload.hektor_contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  contactId = await cibleHektorContact(contactId, { contexte: "link_hektor_mandant" });
+  const contactId = await cibleHektorContact(identite, { contexte: "link_hektor_mandant" });
 
   const annonceId = String(dossier.hektor_annonce_id);
   const linkResult = await linkHektorMandantContact(job, annonceId, contactId, "hektor_mandant");
@@ -14046,7 +14051,8 @@ async function executerRattachementMandant(job) {
   const jetonRelation = cleanString(payload.creation_token || payload.creationToken || "");
   let lienProvisoire = null;
   if (jetonRelation) {
-    lienProvisoire = await lierRelationProvisoire(jetonRelation, contactId);
+    // L4-c ② : la ligne provisoire est a NOUS -> identite.
+    lienProvisoire = await lierRelationProvisoire(jetonRelation, identite);
     await logJob(job.id, "relation_provisoire", lienProvisoire.status === "linked" ? "done" : "error",
       lienProvisoire.status === "linked"
         ? "Le lien mandant ne dans l'app est relie"
@@ -15574,11 +15580,12 @@ async function executerCreationContactHektor(job, payload) {
 
 async function handleUpdateHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
-  let contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
-  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  // L4-c ② 22/09 : deux numeros, deux variables (voir ensureContactSearchExecution).
+  const identite = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  contactId = await cibleHektorContact(contactId, { contexte: "update_hektor_contact" });
-  const context = await loadContactExecutionContext(contactId);
+  const contactId = await cibleHektorContact(identite, { contexte: "update_hektor_contact" });
+  const context = await loadContactExecutionContext(identite);
   const contextPayload = {
     ...payload,
     hektor_user_email: payload.hektor_user_email || payload.target_hektor_user_email || context.contact.negociateur_email || null,
@@ -15603,8 +15610,9 @@ async function handleUpdateHektorContact(job) {
     if (baseDateMaj) {
       const freshDateMaj = await fetchContactDateMajFromApi(job, contactId, "contact_overwrite_guard");
       if (freshDateMaj && freshDateMaj > baseDateMaj) {
-        await markContactPendingConflict(contactId);
-        await notifyNegoContactConflict(job, contactId, contextPayload);
+        // L4-c ② : la bannette et la notification sont a NOUS -> identite.
+        await markContactPendingConflict(identite);
+        await notifyNegoContactConflict(job, identite, contextPayload);
         await logJob(job.id, "contact_overwrite_guard", "done", "Contact modifié dans Hektor depuis l'édition : écriture bloquée (anti-écrasement)", {
           hektor_contact_id: contactId,
           base_date_maj: baseDateMaj,
@@ -15618,9 +15626,12 @@ async function handleUpdateHektorContact(job) {
   const updated = await updateHektorContactIdentity(job, contactId, contextPayload);
   const crmSettings = await updateHektorContactCrmSettings(job, contactId, contextPayload);
   // Lot B : push from_pending réussi -> on efface le pending (avant l'after-refresh).
-  if (payload.from_pending === true) await clearContactPending(contactId);
+  // L4-c ② : la bannette est a NOUS -> identite.
+  if (payload.from_pending === true) await clearContactPending(identite);
   await sleep(1000);
-  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
+  // L4-c ② : le travail qu'on enfile sera RE-TRADUIT par son propre handler,
+  // donc on lui passe l'identite -- lui donner la cible ferait traduire deux fois.
+  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, identite, {
     reason: "update_hektor_contact",
     priority: 82,
   });
@@ -15668,12 +15679,13 @@ async function handleAddHektorContactSearch(job) {
 }
 
 async function executerAjoutRechercheHektor(job, payload) {
-  let contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
-  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  // L4-c ② 22/09 : deux numeros, deux variables.
+  const identite = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  contactId = await cibleHektorContact(contactId, { contexte: "add_hektor_contact_search" });
+  const contactId = await cibleHektorContact(identite, { contexte: "add_hektor_contact_search" });
 
-  const context = await loadContactExecutionContext(contactId);
+  const context = await loadContactExecutionContext(identite);
   const contextPayload = {
     ...payload,
     hektor_user_email: payload.hektor_user_email || payload.target_hektor_user_email || context.contact.negociateur_email || null,
@@ -15763,11 +15775,26 @@ async function executerAjoutRechercheHektor(job, payload) {
 // Prepare l'execution d'une action recherche : resout l'id contact, bascule dans
 // le contexte negociateur cible (indispensable, sinon Hektor renvoie 403).
 async function ensureContactSearchExecution(job, payload) {
-  let contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
-  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  // ═══════════════════════════════════════════════════════════════════════
+  // L4-c ② 22/09 — DEUX NUMEROS, DEUX VARIABLES, ET ON NE LES CONFOND PLUS
+  // ═══════════════════════════════════════════════════════════════════════
+  // Le code d'avant ECRASAIT l'identite par la cible (`contactId = await
+  // cibleHektorContact(contactId)`), puis se servait du resultat pour les DEUX
+  // usages : viser Hektor, et interroger NOS tables.
+  //
+  // Invisible aujourd'hui -- pour les 356 000 fiches venues de Hektor,
+  // identite et cible sont le MEME nombre. Le jour ou l'identite devient celle
+  // de l'app, elles divergent, et toutes les lectures de nos tables faites
+  // avec la cible ne trouvent plus rien. L'audit du 22/09 l'avait classe
+  // « ambigu » faute de pouvoir trancher : c'est un defaut certain.
+  //
+  //    identite  -> NOS tables (app_contact_current, les bannettes, le menage)
+  //    cible     -> HEKTOR, et lui seul
+  const identite = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  contactId = await cibleHektorContact(contactId, { contexte: "ensure_contact_search_execution" });
-  const context = await loadContactExecutionContext(contactId);
+  const contactId = await cibleHektorContact(identite, { contexte: "ensure_contact_search_execution" });
+  const context = await loadContactExecutionContext(identite);
   const contextPayload = {
     ...payload,
     hektor_user_email: payload.hektor_user_email || payload.target_hektor_user_email || context.contact.negociateur_email || null,
@@ -15782,7 +15809,10 @@ async function ensureContactSearchExecution(job, payload) {
   };
   const executionPayload = await resolveContactAgencyExecutionPayload(contextPayload) || contactAgencyExecutionPayload(contextPayload);
   await ensureHektorExecutionContext(job, context.dossier, executionPayload, { preferRequester: true, preferDossierOwner: true, required: true });
-  return { contactId, contextPayload, context };
+  // On rend LES DEUX. `contactId` reste la cible pour ne rien casser chez les
+  // appelants qui parlent a Hektor ; `identite` est la pour ceux qui touchent
+  // nos tables. Nommer les deux, c'est ce qui empeche de les reconfondre.
+  return { contactId, identite, contextPayload, context };
 }
 
 // Liste les recherches (criteres prospect) d'un contact en scrapant l'onglet
@@ -16187,7 +16217,11 @@ async function notifyNegoContactConflict(job, contactId, payload) {
 }
 
 // Retourne { blocked: false } si l'écriture est sûre, sinon { blocked: true, result }.
-async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
+// L4-c ② 22/09 : cette fonction fait LES DEUX choses -- elle relit Hektor (avec
+// la cible) et elle lit nos tables (avec l'identite). Elle recoit donc les deux.
+// `identite` retombe sur `contactId` quand on ne la donne pas : c'est le
+// comportement d'avant, exact, pour tout ce qui vient de Hektor.
+async function guardContactSearchOverwrite(job, contactId, payload, negoEmail, identite = contactId) {
   const base = payload.base_snapshot;
   // Comparer aussi les champs numériques seulement si la photo les porte (rétro-compat).
   const includeNumeric = !!(base && typeof base === "object" && "prix_max" in base);
@@ -16209,8 +16243,10 @@ async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
 
   // from_pending : la recherche dirty est sautée par le push (C) -> Supabase garde l'état
   // optimiste. On compare donc à l'état Hektor FRAIS lu dans le local.
+  // L4-c ② : la photo LOCALE se lit avec l'identite (c'est notre table) ;
+  // la photo FRAICHE se lit chez Hektor, donc avec la cible.
   const fresh = fromPending
-    ? await fetchLocalContactSearchSnapshot(job, contactId, searchIndex)
+    ? await fetchLocalContactSearchSnapshot(job, identite, searchIndex)
     : await fetchFreshContactSearchSnapshot(contactId, searchIndex);
   const freshFp = fresh ? searchCoreFingerprint(fresh, includeNumeric) : null;
 
@@ -16222,7 +16258,8 @@ async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
     return { blocked: false };
   }
 
-  await notifyNegoSearchConflict(job, contactId, payload, { found: Boolean(fresh), negoEmail });
+  // L4-c ② : la notification est a NOUS -> identite.
+  await notifyNegoSearchConflict(job, identite, payload, { found: Boolean(fresh), negoEmail });
   await logJob(job.id, "search_overwrite_guard", "done", "Recherche modifiée côté Hektor : écriture bloquée (anti-écrasement)", {
     hektor_contact_id: String(contactId),
     search_index: searchIndex,
@@ -16241,7 +16278,9 @@ async function guardContactSearchOverwrite(job, contactId, payload, negoEmail) {
 
 async function handleUpdateHektorContactSearch(job) {
   const payload = safeJsonParse(job.payload_json);
-  const { contactId, contextPayload, context } = await ensureContactSearchExecution(job, payload);
+  // L4-c ② 22/09 : on prend LES DEUX numeros. `contactId` vise Hektor,
+  // `identite` interroge nos tables (les bannettes, le garde-fou).
+  const { contactId, identite, contextPayload, context } = await ensureContactSearchExecution(job, payload);
 
   const idCritere = await resolveContactSearchTargetCritereId(job, contactId, payload);
 
@@ -16251,9 +16290,11 @@ async function handleUpdateHektorContactSearch(job) {
 
   // Correctif n°1 — anti-écrasement : si la recherche a été modifiée dans Hektor
   // depuis l'édition (par un négociateur), on protège sa saisie et on n'écrit pas.
-  const guard = await guardContactSearchOverwrite(job, contactId, payload, context.contact && context.contact.negociateur_email);
+  const guard = await guardContactSearchOverwrite(
+    job, contactId, payload, context.contact && context.contact.negociateur_email, identite);
   if (guard.blocked) {
-    if (fromPending) await markSearchPendingConflict(contactId, pendingIndex);
+    // L4-c ② : la bannette est a NOUS -> identite.
+    if (fromPending) await markSearchPendingConflict(identite, pendingIndex);
     return { ...guard.result, idCritere };
   }
 
@@ -16273,7 +16314,7 @@ async function handleUpdateHektorContactSearch(job) {
 
   // Affinage Supabase-first (E) : push Hektor confirmé -> on efface le pending (avant
   // l'after-refresh, pour qu'il resynchronise normalement).
-  if (fromPending) await clearSearchPending(contactId, pendingIndex);
+  if (fromPending) await clearSearchPending(identite, pendingIndex);  // L4-c ② : a NOUS
 
   await sleep(1000);
   const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, contactId, {
@@ -16613,10 +16654,14 @@ async function handleUpdateHektorMandantContact(job) {
   await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
 
   const annonceId = String(dossier.hektor_annonce_id);
-  let contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
-  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  // L4-c ② 22/09 : deux numeros, deux variables. Ici TOUT est tourne vers
+  // Hektor (verification du lien, ecriture du mandant), donc seule la cible
+  // sert -- mais on ne l'ecrase plus, pour que le prochain lecteur voie
+  // laquelle des deux il manipule.
+  const identite = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  contactId = await cibleHektorContact(contactId, { contexte: "update_hektor_mandant_contact" });
+  const contactId = await cibleHektorContact(identite, { contexte: "update_hektor_mandant_contact" });
 
   // PREALABLE, par la source exacte. « inconnu » retombe sur la console.
   const prealable = await lienMandantSelonApi(job, annonceId, contactId, "hektor_mandant_prealable");
@@ -16902,8 +16947,8 @@ async function insertDeletedContactLog(job, payload) {
 
 async function handleDeleteHektorContact(job) {
   const payload = safeJsonParse(job.payload_json);
-  let contactId = String(payload.hektor_contact_id || payload.contact_id || "").trim();
-  if (!/^\d+$/.test(contactId)) throw new Error("contact_id Hektor numerique requis");
+  const identiteDemandee = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(identiteDemandee)) throw new Error("contact_id Hektor numerique requis");
   // ⚠ 21/09 -- LA PHRASE DE CONFIRMATION SE COMPOSE SUR LE NUMERO DEMANDE.
   //
   // Trouve en preparant le menage des contacts d'essai. L'ecran compose la
@@ -16916,9 +16961,11 @@ async function handleDeleteHektorContact(job) {
   // Ce n'est pas un affaiblissement du verrou -- il est la pour qu'un humain
   // ait tape le numero qu'il voit, et c'est l'identite qu'il voit.
   // Pour les 356 000 contacts venus de Hektor, identite = cible : rien ne change.
-  const numeroDemande = contactId;
+  // L4-c ② 22/09 : `numeroDemande` EST l'identite -- c'est elle qui sert au
+  // menage de nos tables, plus bas. On n'ecrase plus la variable d'origine.
+  const numeroDemande = identiteDemandee;
   // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  contactId = await cibleHektorContact(contactId, { contexte: "delete_hektor_contact" });
+  const contactId = await cibleHektorContact(identiteDemandee, { contexte: "delete_hektor_contact" });
   const confirmationsAcceptees = new Set([
     `SUPPRIMER CONTACT ${numeroDemande}`,
     `SUPPRIMER CONTACT ${contactId}`,
@@ -16934,7 +16981,8 @@ async function handleDeleteHektorContact(job) {
   const before = await fetchHektorContactBeforeDelete(job, contactId);
   let relatedAnnonces = [];
   try {
-    relatedAnnonces = await loadSupabaseContactRelationsForCleanup(contactId);
+    // L4-c ② : nos relations -> identite.
+    relatedAnnonces = await loadSupabaseContactRelationsForCleanup(numeroDemande);
   } catch (error) {
     await logJob(job.id, "contact_relations_snapshot", "error", "Relations annonce non lues avant suppression", {
       hektor_contact_id: contactId,
@@ -17024,12 +17072,14 @@ async function handleDeleteHektorContact(job) {
     cleanup.errors.push({ step: "related_annonce_sync_jobs", error: error && error.message ? error.message : String(error) });
   }
   try {
-    cleanup.supabase_rows = await cleanupSupabaseContactRows(contactId);
+    // L4-c ② : nos tables -> identite.
+    cleanup.supabase_rows = await cleanupSupabaseContactRows(numeroDemande);
   } catch (error) {
     cleanup.errors.push({ step: "supabase_rows", error: error && error.message ? error.message : String(error) });
   }
   try {
-    cleanup.local = await runDeletedContactLocalCleanup(job, contactId);
+    // L4-c ② : notre base locale -> identite.
+    cleanup.local = await runDeletedContactLocalCleanup(job, numeroDemande);
   } catch (error) {
     cleanup.errors.push({ step: "local", error: error && error.message ? error.message : String(error) });
   }
