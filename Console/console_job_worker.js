@@ -1915,6 +1915,47 @@ async function cibleHektorContact(identite, { contexte = "" } = {}) {
   return brut;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// L4-b' 22/09/2026 — LA MEME PORTE, POUR UNE LISTE
+// ═══════════════════════════════════════════════════════════════════════════
+// L'audit du 22/09 a trouve NEUF sortants qui envoyaient un numero de contact a
+// Hektor sans passer par la porte. La plupart envoient une LISTE -- les
+// acquereurs d'un compromis, les mandants d'un mandat -- d'ou cette variante.
+//
+// ⚠ ELLE REFUSE LE LOT ENTIER SI UN SEUL CONTACT N'EST PAS ENCORE CHEZ HEKTOR,
+//   et c'est le point important. Le code d'avant ECARTAIT silencieusement les
+//   numeros de la plage de l'app (l. 14130) : un mandat serait parti avec un
+//   mandant en moins, Hektor l'aurait accepte sans rien dire, et mon propre
+//   commentaire promettait que « le contact rejoindra la liste des qu'il aura
+//   son vrai numero » -- RIEN ne le faisait rejoindre.
+//   Mieux vaut un travail qui attend qu'un mandat amoute.
+async function ciblesHektorContacts(ids, { contexte = "" } = {}) {
+  const uniques = [];
+  const vus = new Set();
+  for (const valeur of Array.isArray(ids) ? ids : [ids]) {
+    const id = String(valeur || "").trim();
+    if (/^\d+$/.test(id) && !vus.has(id)) { vus.add(id); uniques.push(id); }
+  }
+  const cibles = [];
+  const enAttente = [];
+  for (const id of uniques) {
+    try {
+      cibles.push(await cibleHektorContact(id, { contexte }));
+    } catch (err) {
+      // cibleHektorContact leve pour un contact ne dans l'app et pas encore
+      // cree chez Hektor. On collecte au lieu de tomber tout de suite, pour
+      // pouvoir NOMMER tous les manquants dans un seul message.
+      enAttente.push(id);
+    }
+  }
+  if (enAttente.length) {
+    throw new Error(
+      `${enAttente.length} contact(s) pas encore cree(s) chez Hektor : ${enAttente.join(", ")}` +
+      `${contexte ? ` (${contexte})` : ""}. Le travail sera repris quand leurs numeros seront rapportes.`);
+  }
+  return cibles;
+}
+
 async function loadContactExecutionContext(contactId) {
   const cleanContactId = String(contactId || "").trim();
   if (!/^\d+$/.test(cleanContactId)) throw new Error("contact_id Hektor numerique requis");
@@ -10993,15 +11034,23 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   // ON GARDE findProspect : c'est lui qui fait connaitre le prospect a Hektor.
   // Envoyer un identifiant qu'il n'a pas resolu ne l'attache pas -- mesure du
   // 04/09, acquereurs VIDE.
-  const acquereursVoulus = [];
+  const acquereursDemandes = [];
   {
     const pousser = (v) => {
       const t = String(v == null ? "" : v).trim();
-      if (/^\d+$/.test(t) && !acquereursVoulus.includes(t)) acquereursVoulus.push(t);
+      if (/^\d+$/.test(t) && !acquereursDemandes.includes(t)) acquereursDemandes.push(t);
     };
     pousser(tx.buyer);
     if (Array.isArray(payload.buyer_contact_ids)) payload.buyer_contact_ids.forEach(pousser);
   }
+  // L4-b' 22/09 : LA PORTE. Ces numeros viennent de la charge du travail, donc
+  // de NOUS. Ils partaient bruts dans `acquereurs[]` et dans `idProspect` --
+  // trois sortants que l'audit du 22/09 a trouves sans garde-fou.
+  // On refuse le lot entier si un acquereur n'est pas encore chez Hektor : un
+  // compromis ampute de son acquereur serait accepte sans un mot.
+  const acquereursVoulus = await ciblesHektorContacts(acquereursDemandes, {
+    contexte: "submit_hektor_assistant_transaction",
+  });
   // Passe a VRAI une fois findProspect appele : avant, Hektor ne les connait pas
   // encore, et reposer la liste n'aurait aucun sens.
   let acquereursConnusDeHektor = false;
@@ -11663,7 +11712,12 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   appendIfValue(body, "selectedMandat", tx.selectedMandat);
   appendIfValue(body, "instigateur", tx.negotiator);
   appendIfValue(body, "agenceReseauSelected", tx.agency);
-  appendIfValue(body, "acquereurs[]", tx.buyer);
+  // L4-b' 22/09 : LA PORTE. `tx.buyer` vient de la charge brute du travail --
+  // c'etait le quatrieme sortant sans garde-fou trouve par l'audit.
+  const acquereurCible = cleanString(tx.buyer)
+    ? (await ciblesHektorContacts([tx.buyer], { contexte: "submit_hektor_transaction_status" }))[0]
+    : tx.buyer;
+  appendIfValue(body, "acquereurs[]", acquereurCible);
   // ─── LES DEUX NOTAIRES, MEME REGLE QUE L'ASSISTANT ───   3.2d lot 2, 15/09/2026
   //
   // ⚠ ICI LE CORPS EST NEUF, champ par champ : ne pas poser veut dire NE PAS
@@ -13387,14 +13441,22 @@ async function qualifierAcquereursAvantTransaction(job, payload, target, annonce
 
   for (const q of neufs) {
     try {
-      const { context } = await ensureContactSearchExecution(job, { hektor_contact_id: q.contactId });
-      const avant = await listerCriteresBestEffort(q.contactId);
+      // ⚠ L4-b' 22/09 : ON DESTRUCTURE `contactId`, ET C'EST LE CORRECTIF.
+      // `ensureContactSearchExecution` TRADUIT le numero (elle appelle la porte)
+      // et le rend -- mais on ne prenait que `context`, et les quatre appels
+      // suivants repartaient sur `q.contactId`, le numero BRUT de la charge.
+      // La traduction etait donc calculee puis jetee. Invisible aujourd'hui
+      // (identite = cible pour les 356 000 fiches venues de Hektor), fausse des
+      // qu'un acquereur nait dans l'app.
+      const { contactId: cibleQualif, context } =
+        await ensureContactSearchExecution(job, { hektor_contact_id: q.contactId });
+      const avant = await listerCriteresBestEffort(cibleQualif);
       const contact = contactSearchExecutionContact({ qualification: "2" }, context.contact);
-      await createHektorContactSearchCriteria(job, q.contactId, contact, {
-        hektor_contact_id: q.contactId, qualification: "2",
+      await createHektorContactSearchCriteria(job, cibleQualif, contact, {
+        hektor_contact_id: cibleQualif, qualification: "2",
         __prime_contact_search_wizard: true, contact_next_step: spec,
       });
-      const apres = await listerCriteresBestEffort(q.contactId);
+      const apres = await listerCriteresBestEffort(cibleQualif);
       // L'identifiant de NOTRE recherche = le seul nouveau. Plusieurs ou aucun :
       // on ne choisit pas, et on ne l'archivera pas a l'aveugle.
       let idCritere = "";
@@ -13428,10 +13490,13 @@ async function archiverRecherchesDeQualification(job, qualifications) {
   for (const q of qualifications || []) {
     if (!q || !q.idCritere) continue;
     try {
-      await ensureContactSearchExecution(job, { hektor_contact_id: q.contactId });
+      // L4-b' 22/09 : meme correctif qu'a la creation -- on prend le numero
+      // TRADUIT que la fonction rend, au lieu de repartir sur le brut.
+      const { contactId: cibleArchive } =
+        await ensureContactSearchExecution(job, { hektor_contact_id: q.contactId });
       bascule = true;
-      await archiveHektorContactSearch(job, q.contactId, q.idCritere);
-      await enqueueRefreshConsoleContactDataJobBestEffort(job, q.contactId, {
+      await archiveHektorContactSearch(job, cibleArchive, q.idCritere);
+      await enqueueRefreshConsoleContactDataJobBestEffort(job, cibleArchive, {
         reason: "qualification_acquereur_archivee", priority: 82 });
     } catch (erreur) {
       await logJob(job.id, "hektor_qualification_acquereur", "error",
@@ -14123,11 +14188,8 @@ function normalizeMandatContactIds(payload) {
   const seen = new Set();
   for (const value of raw) {
     const id = String(value || "").trim();
-    // 5b 21/09 : un numero de la plage de l'app n'a AUCUN sens chez Hektor. On
-    // l'ecarte de la liste plutot que de l'envoyer : le formulaire partirait avec
-    // un mandant fantome, et Hektor l'accepterait sans rien dire. Le contact
-    // rejoindra la liste des qu'il aura son vrai numero.
-    if (/^\d+$/.test(id) && Number(id) >= PLAGE_NUMEROS_APP) continue;
+    // ⚠ L4-b' 22/09 : meme correction que pour normalizeMandatContactIds --
+    // la liste reste COMPLETE, la traduction et le refus se font a l'envoi.
     if (/^\d+$/.test(id) && !seen.has(id)) {
       ids.push(id);
       seen.add(id);
@@ -14151,11 +14213,13 @@ function normalizeInitialMandantContactIds(payload) {
   const seen = new Set();
   for (const value of raw) {
     const id = String(value || "").trim();
-    // 5b 21/09 : un numero de la plage de l'app n'a AUCUN sens chez Hektor. On
-    // l'ecarte de la liste plutot que de l'envoyer : le formulaire partirait avec
-    // un mandant fantome, et Hektor l'accepterait sans rien dire. Le contact
-    // rejoindra la liste des qu'il aura son vrai numero.
-    if (/^\d+$/.test(id) && Number(id) >= PLAGE_NUMEROS_APP) continue;
+    // ⚠ L4-b' 22/09 : ON N'ECARTE PLUS RIEN ICI. La version du 21/09 retirait
+    // silencieusement les numeros de la plage de l'app, en promettant que « le
+    // contact rejoindra la liste des qu'il aura son vrai numero » -- rien ne le
+    // faisait rejoindre, et le mandat partait avec un mandant en moins que
+    // Hektor acceptait sans broncher. La liste est desormais COMPLETE ; c'est
+    // `ciblesHektorContacts` qui traduit juste avant l'envoi, et qui refuse le
+    // lot entier si un contact n'est pas encore chez Hektor.
     if (/^\d+$/.test(id) && !seen.has(id)) {
       ids.push(id);
       seen.add(id);
@@ -14254,7 +14318,13 @@ async function handleCreateHektorMandatAutoNumber(job) {
     },
   });
 
-  let mandantIds = mandat.mandantContactIds;
+  // L4-b' 22/09 : LA PORTE. Les mandants viennent de la charge du travail, donc
+  // avec NOS numeros. On les traduit ici, avant tout envoi -- et si l'un d'eux
+  // n'est pas encore chez Hektor, le travail attend au lieu de fabriquer un
+  // mandat amoute. Les listes decouvertes plus bas viennent deja de Hektor.
+  let mandantIds = await ciblesHektorContacts(mandat.mandantContactIds, {
+    contexte: "create_hektor_mandat_auto_number",
+  });
   const prospects = await fetchHektorProspectsList(annonceId);
   if (!mandantIds.length) {
     mandantIds = parseHektorLinkedMandantContactIds(prospects.text, annonceId);
@@ -18448,8 +18518,16 @@ async function handleCreateHektorDraftAnnonce(job) {
     const links = [];
     for (const contactId of initialMandantContactIds) {
       try {
+        // L4-b' 22/09 : LA PORTE, contact par contact. Ici on NE refuse PAS le
+        // lot : l'annonce est deja creee chez Hektor a ce stade, et un mandant
+        // qui n'a pas encore son numero ne doit pas faire retomber le reste.
+        // Le `catch` ci-dessous le consigne, comme n'importe quel autre echec
+        // de rattachement -- visible, jamais silencieux.
+        const cibleMandant = await cibleHektorContact(contactId, {
+          contexte: "hektor_mandant_link_initial",
+        });
         await ensureHektorExecutionContext(job, null, payload, { preferDossierOwner: false, required: true });
-        const linkResult = await linkHektorMandantContact(job, String(created.id), contactId, "hektor_mandant_link_initial");
+        const linkResult = await linkHektorMandantContact(job, String(created.id), cibleMandant, "hektor_mandant_link_initial");
         links.push(linkResult);
         await logJob(job.id, "hektor_mandant_link_initial", "done", "Mandant existant associe a l annonce creee", {
           hektor_annonce_id: String(created.id),
