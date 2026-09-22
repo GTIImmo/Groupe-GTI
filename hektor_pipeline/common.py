@@ -229,9 +229,47 @@ class HektorClient:
                 last_error = exc
                 if attempt >= self.max_retries:
                     break
-                time.sleep(0.35 * (2 ** (attempt - 1)))
+                time.sleep(self._attente_avant_nouvel_essai(attempt))
 
         raise RuntimeError(f"{method} {path} failed after {self.max_retries} attempts: {last_error}")
+
+    # ─── LA PATIENCE, POSEE LE 22/09/2026 ────────────────────────────────────
+    #
+    # CE QUI EST ARRIVE. Le run du 22/09 est mort apres 48 minutes de lecture
+    # irreprochable, sur UNE page du listing des annonces ARCHIVEES (la 1711 sur
+    # ~1888) qui a renvoye 500. Quatre tentatives, puis abandon, et les deux
+    # heures de travail qui suivaient n'ont jamais eu lieu.
+    #
+    # CE QUE L'ANALYSE A ETABLI -- ce n'est PAS une page empoisonnee :
+    #   · les 20 memes annonces avaient ete lues SANS PROBLEME a 06:24 le matin
+    #     meme, et leur contenu n'avait pas change ;
+    #   · un seul 500 dans 30 jours de journaux ;
+    #   · Hektor repondait parfaitement a la seconde d'avant, des milliers de
+    #     fois -- ce n'est donc ni un refus ni un bannissement.
+    #
+    # ⛔ LE VRAI DEFAUT ETAIT NOTRE IMPATIENCE. Les quatre tentatives tenaient
+    #   dans 2,5 SECONDES (0,35 · 0,70 · 1,40). Aucun serveur ne se remet d'un
+    #   hoquet en deux secondes et demie. On lui demandait quatre fois la meme
+    #   chose pendant qu'il trebuchait, puis on declarait forfait.
+    #
+    # DESORMAIS : 2 s, 8 s, 30 s -- 40 secondes de patience au total.
+    #   Negligeable devant un run de 113 minutes, et suffisant pour laisser
+    #   passer la quasi-totalite des hoquets.
+    #
+    # ⚠ LE NOMBRE DE TENTATIVES NE BOUGE PAS (4). On espace, on n'insiste pas
+    #   davantage -- c'est la lecon de « l'amplification par 16 » retiree le
+    #   07/09 (voir plus bas) : plus de tentatives, c'est plus de trafic sur un
+    #   serveur qui souffre deja.
+    #
+    # ⚠ ET LES 403 NE PASSENT PAS PAR ICI. Les 4xx levent HektorNonRetryableError
+    #   plus haut, sans une seule nouvelle tentative. Le signal de bannissement
+    #   reste immediat et intact : cette patience ne vaut que pour les 5xx et les
+    #   coupures reseau.
+    ATTENTES_SECONDES = (2, 8, 30)
+
+    def _attente_avant_nouvel_essai(self, tentative: int) -> float:
+        index = min(tentative, len(self.ATTENTES_SECONDES)) - 1
+        return float(self.ATTENTES_SECONDES[index])
 
     # ─── L'AMPLIFICATION PAR 16, RETIREE LE 07/09/2026 ───
     #
