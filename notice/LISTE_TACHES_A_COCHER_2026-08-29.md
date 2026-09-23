@@ -20,7 +20,7 @@ de `L4-c` ⑤**, né de l'audit complet du 23/09 *(`notice/AUDIT_COMPLET_AVANT_B
                                      GESTES DE LA FENETRE (patch SQL, traduction
                                      des tables, --reset-push-state, sauvegarde)
 19 genants      0 fait               l'app marche, mais elle ment
- 8 non mesures  0 tranche            dont 2 peuvent changer la FORME de la bascule
+ 8 non mesures  8 TRANCHES le 23/09  et l'un d'eux a fait tomber C-5 (voir la note)
 ```
 
 ➡ **Le code dormant est fini.** Il reste à décider **quand** on ouvre la fenêtre.
@@ -7168,7 +7168,7 @@ Détail complet, avec fichier et ligne pour chaque point :
 
 ## Bloquants — gestes de la fenêtre de bascule
 
-- [ ] **(1)** combler les **5** lignes de `app_search_registry` sans doublure
+- [x] ~~combler les 5 lignes de `app_search_registry`~~ **ANNULÉ** : contacts supprimés, clés référencées nulle part
 - [ ] **(2)** file vide *(déjà le cas)* + **arrêter les 4 services**
 - [ ] **(3)** sauvegarde locale `VACUUM INTO` + compte de chaque table
 - [ ] **C-13** patch SQL : bascule + traduire les **28 tables** figées

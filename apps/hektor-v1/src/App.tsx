@@ -31425,7 +31425,11 @@ function GoogleAgendaGlobalEventModal(props: {
     setDescription([
       'RDV cree depuis Agenda global GTI.',
       activeContactLabel ? `Contact : ${activeContactLabel}` : '',
-      selectedContact?.hektor_contact_id ? `Contact Hektor : ${selectedContact.hektor_contact_id}` : '',
+      // (1) 23/09 : l'etiquette dit « Hektor », donc le numero doit etre CELUI DE HEKTOR.
+      // Ce texte part dans la description de l'evenement Google et n'est JAMAIS reecrit :
+      // y ecrire l'identite de l'app graverait chez Google un numero que Hektor ne connait
+      // pas. Sans cible, on n'ecrit pas la ligne plutot que d'ecrire un numero faux.
+      cibleHektorDuContact(selectedContact) ? `Contact Hektor : ${cibleHektorDuContact(selectedContact)}` : '',
       activeContactEmail ? `Email contact : ${activeContactEmail}` : '',
       selectedAnnonce ? `Bien : ${selectedAnnonceTitle}` : '',
       selectedAnnonce?.hektor_annonce_id ? `Annonce Hektor : ${selectedAnnonce.hektor_annonce_id}` : '',
@@ -37621,7 +37625,8 @@ function GoogleAgendaContactModal(props: {
     setDescription([
       'RDV cree depuis GTI.',
       `Contact : ${contactLabel}`,
-      props.contact.hektor_contact_id ? `Contact Hektor : ${props.contact.hektor_contact_id}` : '',
+      // (1) 23/09 : meme raison qu'au-dessus -- ce texte est grave chez Google.
+      cibleHektorDuContact(props.contact) ? `Contact Hektor : ${cibleHektorDuContact(props.contact)}` : '',
       contactEmail ? `Email contact : ${contactEmail}` : '',
       isVisit && selectedAnnonce ? `Bien : ${annonceTitle}` : '',
       isVisit && selectedAnnonce?.hektor_annonce_id ? `Annonce Hektor : ${selectedAnnonce.hektor_annonce_id}` : '',

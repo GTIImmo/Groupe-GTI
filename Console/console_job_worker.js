@@ -15632,7 +15632,16 @@ async function executerCreationContactHektor(job, payload) {
     }
   }
 
-  const lienProvisoire = await lierContactProvisoire(jetonContact, created.contactId);
+  // ── (3) tranché le 23/09 : LA LIGNE PROVISOIRE PORTE L'IDENTITE ──────────
+  // Cette ligne existe pour que L'ECRAN retrouve le contact une fois Hektor
+  // passe. L'ecran, lui, ne connait que nos numeros : la relier au numero de
+  // Hektor ferait qu'il ne retrouverait rien apres la bascule.
+  // ⚠ Le chemin voisin (« creer un mandant », `create_hektor_mandant_contact`)
+  //   ne porte AUCUNE identite d'app dans sa charge -- ce n'est pas une
+  //   incoherence a corriger ici, c'est un manque a combler dans C.9, quand la
+  //   creation d'annonce passera elle aussi par les numeros de l'app.
+  const numeroPourLaLigneProvisoire = identiteApp || created.contactId;
+  const lienProvisoire = await lierContactProvisoire(jetonContact, numeroPourLaLigneProvisoire);
   if (jetonContact) {
     await logJob(job.id, "contact_provisoire", lienProvisoire.status === "linked" ? "done" : "error",
       lienProvisoire.status === "linked"

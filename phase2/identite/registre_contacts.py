@@ -44,12 +44,44 @@ SCHEMA = f"""
 CREATE TABLE {REGISTRE} (
     app_contact_id    INTEGER PRIMARY KEY AUTOINCREMENT,
     hektor_contact_id TEXT,
+    hektor_target_id  TEXT,
     created_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     absent_depuis     TEXT,
     UNIQUE(hektor_contact_id)
 )
 """
+
+
+def assurer_la_case_cible(conn: sqlite3.Connection) -> int:
+    """Le registre garde le numero de Hektor a part, AVANT qu'on y touche.
+
+    ⚠ TRANCHE LE 23/09/2026, ET CELA CORRIGE MA PROPRE PROCEDURE DE BASCULE.
+      Le plan disait « traduire app_contact.hektor_contact_id en identite ».
+      Mesure faite ce jour : cette table n'a QUE deux colonnes de numero --
+      app_contact_id et hektor_contact_id. Traduire en place EFFACERAIT le
+      numero de Hektor du registre, et avec lui la seule correspondance locale
+      dont `affaire_ledger` se sert pour relier une VENTE a son ACHETEUR
+      (le lien que Frederic avait fait doubler le 01/09 precisement parce qu'il
+      etait le seul non double du projet).
+
+      C'est le meme geste que L4-c ④ a fait cote couche : on garde la cible a
+      part. La couche l'avait, le registre ne l'a jamais eu.
+
+    Idempotent : un CREATE TABLE IF NOT EXISTS n'ajoute RIEN a une table qui
+    existe deja -- d'ou cet ALTER explicite.
+    Dormant : tant que rien n'est traduit, cible = numero de Hektor.
+    """
+    colonnes = {d[1] for d in conn.execute(f"PRAGMA table_info({REGISTRE})")}
+    if "hektor_target_id" not in colonnes:
+        conn.execute(f"ALTER TABLE {REGISTRE} ADD COLUMN hektor_target_id TEXT")
+    # On ne remplit QUE les cases vides : apres la bascule, hektor_contact_id
+    # portera l'identite, et il ne faudrait surtout pas la recopier par-dessus.
+    curseur = conn.execute(
+        f"UPDATE {REGISTRE} SET hektor_target_id = hektor_contact_id "
+        f"WHERE hektor_target_id IS NULL AND hektor_contact_id IS NOT NULL "
+        f"  AND CAST(hektor_contact_id AS INTEGER) < 10000000")
+    return curseur.rowcount or 0
 
 
 def connecte() -> sqlite3.Connection:
@@ -133,6 +165,12 @@ def main() -> int:
             print(f"{REGISTRE} absent -- creation.")
             if not args.dry_run:
                 conn.execute(SCHEMA)
+
+        # (2) 23/09 : la case cible, AVANT toute traduction. Voir la fonction.
+        if not args.dry_run:
+            posees = assurer_la_case_cible(conn)
+            if posees:
+                print(f"case cible du registre : {posees} numero(s) de Hektor mis a l'abri.")
 
         deja = 0 if not existe else conn.execute(
             f"SELECT count(*) FROM {REGISTRE}").fetchone()[0]

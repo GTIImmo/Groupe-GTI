@@ -432,31 +432,49 @@ de contact : **`app_affaire_personne_ecart.contact_id`** et
 
 ---
 
-## 4. Ce qui reste NON MESURÉ, et qui se dit
+## 4. Les huit points non mesurés — TRANCHÉS le 23/09
 
-1. **La description des événements Google Agenda** contient littéralement
-   `Contact Hektor : 605453`. Ce texte est **chez Google**, il ne sera jamais réécrit.
-2. **`app_affaire_ledger.hektor_acquereur_id`** — doit-il rester un numéro Hektor (il vient
-   de la relecture Hektor) ou devenir une identité ? Le commentaire dit « ON NE TOUCHE PAS »
-   sans dire pourquoi.
-3. **Les tables `*_provisional`** : `lierContactProvisoire` y écrit le numéro **Hektor**,
-   `lierRelationProvisoire` y écrit **l'identité**. Incohérence constatée, conséquence non
-   tranchée.
-4. **`propager_numeros_contact.py`** : le travail est fait par une fonction Postgres que je
-   n'ai pas lue.
-5. **`reappliquer_saisies_app.py`**, **`magasin_affaire_app.py`**, **`magasin_mandat_app.py`**,
-   **`backfill_couple_contact.py`**, **`quality_checks.py`** : non ouverts.
-6. **`build_contacts_layer.py:238-240`** : une seconde fonction de hachage, appelants non
-   identifiés.
-7. **`app_contact_audit_run`** : aucun script trouvé qui l'écrive ou la lise.
-8. **RDV / visites comme objet propre** : toujours pas balayé.
+| # | question | réponse mesurée |
+|---|---|---|
+| **1** | la description des événements **Google Agenda** porte `Contact Hektor : <n>` | **CORRIGÉ.** Le front écrivait **l'identité** sous une étiquette qui dit « Hektor ». Il écrit désormais la **cible**, et n'écrit **rien** plutôt qu'un numéro faux. Les **9** déjà chez Google sont justes *(cible = identité aujourd'hui)* et intouchables |
+| **2** | `app_affaire_ledger.hektor_acquereur_id` : Hektor ou identité ? | **reste Hektor** — c'est la trace brute de ce que Hektor a dit. Le doublage s'est fait en **ajoutant** `app_contact_id` à côté. ⚠ **Et cette question a fait tomber C-5** : voir ci-dessous |
+| **3** | les tables `*_provisional` | **2** lignes contact, **2** recherche, **0** ailleurs. Le lien du contact porte désormais **l'identité** *(c'est l'écran qui le relit, et l'écran ne connaît que nos numéros)*. Le chemin voisin « créer un mandant » **ne porte aucune identité d'app** : ce n'est pas une incohérence, c'est un manque à combler dans **C.9** |
+| **4** | `app_contact_id_propager`, la fonction Postgres non lue | **elle survit.** Elle ne remplit que les **cases vides**, par auto-jointure : après la bascule les lignes neuves portent l'identité des deux côtés. Résidu à rattraper : **37** rapprochements + **40** compteurs *(contacts absents de l'app, poids mort)* + **1** lien d'agenda. La lancer **dans la fenêtre** suffit — c'était déjà l'étape (1) |
+| **5** | 5 scripts jamais ouverts | **4 n'ont AUCUNE** occurrence de contact *(`reappliquer_saisies_app`, `magasin_affaire_app`, `magasin_mandat_app`, `quality_checks`)*. Le 5ᵉ, `backfill_couple_contact`, travaille **entièrement dans le miroir** — numéro Hektor des deux côtés — et **ne figure pas au run quotidien** |
+| **6** | la seconde fonction de hachage, `build_contacts_layer.py:237` | `short_hash` porte sur **l'email, le téléphone et une clé normalisée**. **Jamais un numéro de contact** |
+| **7** | `app_contact_audit_run` | **des comptes et des dates**, rien d'autre |
+| **8** | **RDV et visites** comme objet propre | **9 tables** balayées. **Deux seulement** portent un contact — `app_espace_visite_request` *(3)* et `app_google_calendar_event_link` *(11)* — et **les deux étaient déjà comptées**. Les sept autres, dont `app_appointment_public_link` *(2 222 lignes)*, n'en portent **aucun**. Les RDV n'apportent rien de neuf à la bascule |
+
+### ⚠ Ce que la question 2 a fait tomber : **C-5 était faux**
+
+Le plan disait « traduire `app_contact.hektor_contact_id` en identité ». Mesure du jour :
+
+```
+app_contact (le registre)   app_contact_id . hektor_contact_id
+                            created_at . updated_at . absent_depuis
+```
+
+**Aucune colonne pour la cible.** Traduire en place **effacerait le numéro de Hektor du
+registre** — et avec lui la seule correspondance locale dont `affaire_ledger` se sert pour
+relier une **vente à son acheteur**. C'est-à-dire le lien que tu avais fait doubler le 01/09
+*précisément* parce qu'il était le seul non doublé du projet.
+
+> **FAIT** : `hektor_target_id` posé sur `app_contact`, **356 156 / 356 156** remplis.
+> Même geste que L4-c ④ côté couche — la couche l'avait, le registre ne l'a jamais eu.
+
+### Et les 5 lignes à combler : **il n'y en a pas**
+
+Les **5** lignes de `app_search_registry` sans doublure appartiennent à des contacts qui
+**n'existent plus** — `605093/94/95` *(31/08)* et les deux témoins du 21/09. Leurs clés figées
+sont référencées **nulle part** *(0 dans les six tables qui pendent dessus)*.
+➡ **L'étape (1) de la procédure est annulée.**
 
 ---
 
 ## 5. L'ordre, puisque c'est lui qui décide de tout
 
 ```
-(1)  combler les 5 lignes de app_search_registry sans doublure
+(1)  lancer app_contact_id_propager  -> rattrape 37 + 40 + 1
 (2)  vider la file (deja vide) + ARRETER les 4 services
 (3)  SAUVEGARDE locale (VACUUM INTO) + compte de chaque table
 (4)  C-1 C-2 C-3 C-6 C-9 C-12 : le code, DORMANT, deploye avant
