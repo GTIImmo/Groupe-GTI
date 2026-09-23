@@ -208,6 +208,24 @@ def recenser_objet(conn, client, *, couche, registre, cle, champs, plancher, lib
     connus = {str(r[0]) for r in conn.execute(f'SELECT "{cle}" FROM "{couche}"')}
     inconnus = [r for r in distant if str(r.get(cle) or "") and str(r.get(cle)) not in connus]
 
+    # ── G-12, 23/09/2026 : LE PLANCHER NE PROTEGE PAS DE CE CAS-LA ──────────
+    # Les planchers ci-dessus refusent une couche locale TROP COURTE. Ils ne
+    # disent rien d'une couche locale COMPLETE mais qui ne parle plus la meme
+    # langue : pendant la fenetre de bascule, un cote porte les identites et
+    # l'autre encore les numeros de Hektor. Alors AUCUNE cle ne se retrouve, et
+    # ce script conclut que TOUT SUPABASE est « ne dans l'app ». Il inscrirait
+    # le parc entier dans un registre qui, lui, NE SE VIDE JAMAIS.
+    #
+    # Le signe est sans ambiguite : la couche locale est pleine, et pourtant
+    # elle ne reconnait presque rien de ce que Supabase lui montre.
+    if distant and len(inconnus) > 0.9 * len(distant) and len(distant) > 100:
+        print(f"REFUS : {couche} -- {len(inconnus)} lignes sur {len(distant)} inconnues "
+              f"de la couche locale, qui compte pourtant {total_local} lignes.")
+        print("        Les deux cotes ne parlent probablement pas la meme serie de")
+        print("        numeros (bascule en cours ?). On ne recense pas un parc entier")
+        print("        comme « ne dans l'app » : ce registre ne se vide jamais.")
+        return None
+
     maintenant = "CURRENT_TIMESTAMP"
     neufs = 0
     for ligne in inconnus:

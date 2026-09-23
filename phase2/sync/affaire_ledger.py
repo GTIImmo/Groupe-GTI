@@ -682,13 +682,31 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     # Si elle n'existe pas encore, on continue sans -- la colonne reste vide, et
     # le COALESCE de l'ON CONFLICT garantit qu'on n'efface jamais un rattachement
     # deja etabli.
+    #
+    # ── G-10, 23/09/2026 : LA TABLE SE CHERCHE PAR LES DEUX NUMEROS ─────────
+    # `acq_id`, plus bas, vient de hektor_offre / hektor_compromis / hektor_vente,
+    # c'est-a-dire DU MIROIR : un numero de Hektor, toujours. Or le registre sera
+    # range par IDENTITE des la bascule. Avec la seule colonne hektor_contact_id,
+    # la table serait clee en identites et aucune recherche n'aboutirait --
+    # `app_contact_id` resterait NULL sur toutes les affaires NEUVES.
+    # Le COALESCE de l'ON CONFLICT protege l'existant, mais LE LIEN CESSERAIT
+    # D'ETRE CREE : exactement celui qu'on a double le 01/09 parce qu'il etait le
+    # seul non double du projet.
+    # `hektor_target_id` a ete pose sur app_contact le 23/09 (356 156 lignes) ;
+    # aujourd'hui il vaut l'identite, la table est donc identique.
     contact_app_par_hektor: dict[str, int] = {}
     try:
-        for h, a in con.execute(
-            "SELECT hektor_contact_id, app_contact_id FROM app_contact "
-            "WHERE hektor_contact_id IS NOT NULL AND app_contact_id IS NOT NULL"
+        for h, cible, a in con.execute(
+            "SELECT hektor_contact_id, hektor_target_id, app_contact_id FROM app_contact "
+            "WHERE app_contact_id IS NOT NULL"
         ):
-            contact_app_par_hektor[str(h).strip()] = int(a)
+            numero = int(a)
+            if h is not None and str(h).strip():
+                contact_app_par_hektor[str(h).strip()] = numero
+            # La cible EN SECOND : si les deux existent et different, c'est elle
+            # que le miroir connait, et c'est elle qui doit gagner.
+            if cible is not None and str(cible).strip():
+                contact_app_par_hektor[str(cible).strip()] = numero
     except sqlite3.OperationalError:
         contact_app_par_hektor = {}
 

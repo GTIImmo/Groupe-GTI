@@ -697,11 +697,22 @@ def resoudre_menages(conn: sqlite3.Connection, contacts: list[ContactRow]) -> li
     if not a_resoudre:
         return contacts
 
+    # ── G-13, 23/09/2026 : LA TRADUCTION ALLAIT DANS LE MAUVAIS SENS ───────
+    # `hektor_couple_contact_id` a DEJA ete traduit en identite a l'entree du
+    # build (contact_from_row). Mais la requete ci-dessous interroge le MIROIR,
+    # qui ne connait que les numeros de Hektor. Chercher une identite dedans ne
+    # rend rien -- et le defaut serait MUET : le nom de la porteuse resterait
+    # vide et l'ecran retomberait sur le numero, exactement le « Contact 457053 »
+    # que cette fonction existe pour eviter.
+    # On interroge donc avec le numero DU MIROIR, et on range le resultat sous
+    # l'identite, qui est ce que les fiches portent.
     identites: dict[str, str] = {}
     ids = [str(x) for x in a_resoudre]
+    identite_par_numero_miroir = {numero_hektor_pour_le_miroir(i): i for i in ids}
+    numeros_miroir = list(identite_par_numero_miroir.keys())
     # SQLite plafonne le nombre de parametres : on decoupe, comme partout ailleurs.
-    for depart in range(0, len(ids), 400):
-        tranche = ids[depart:depart + 400]
+    for depart in range(0, len(numeros_miroir), 400):
+        tranche = numeros_miroir[depart:depart + 400]
         marques = ",".join("?" for _ in tranche)
         for ligne in conn.execute(
             f"""SELECT hektor_contact_id, prenom, nom FROM hektor_contact
@@ -712,7 +723,8 @@ def resoudre_menages(conn: sqlite3.Connection, contacts: list[ContactRow]) -> li
                 part for part in [clean_text(ligne["prenom"]), clean_text(ligne["nom"])] if part
             )
             if identite:
-                identites[clean_text(ligne["hektor_contact_id"])] = identite
+                lu = clean_text(ligne["hektor_contact_id"])
+                identites[identite_par_numero_miroir.get(lu, lu)] = identite
 
     if not identites:
         return contacts
@@ -772,6 +784,17 @@ def load_relations(
     contact_ids: Iterable[str] | None = None,
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, set[str]]]:
     contact_filter = set(normalize_contact_ids(contact_ids or []))
+    # ── G-14, 23/09/2026 : DEUX TAMIS, PARCE QU'IL Y A DEUX LANGUES ─────────
+    # `contact_filter` sert aux requetes SQL ci-dessous, qui interrogent LE
+    # MIROIR : il doit rester en numeros de Hektor (refresh_contact_slice lui
+    # passe `ids_miroir`, l. 1757).
+    # Mais `add_relation` compare APRES la substitution d'identite, donc en
+    # numeros A NOUS. Le meme ensemble ne peut pas servir aux deux : le jour de
+    # la bascule, les deux cotes ne se rencontreraient JAMAIS et toutes les
+    # relations du contact rafraichi seraient jetees -- en silence.
+    # Aujourd'hui les deux ensembles sont identiques.
+    contact_filter_apres_substitution = {
+        identite_app(cid) for cid in contact_filter} | set(contact_filter)
     dossier_by_annonce: dict[str, sqlite3.Row] = {}
     for row in phase2_conn.execute(
         """
@@ -820,7 +843,8 @@ def load_relations(
         role = clean_text(role) or "contact"
         if not contact_id or not annonce_id:
             return
-        if contact_filter and contact_id not in contact_filter:
+        # G-14 : le tamis D'APRES la substitution -- voir plus haut.
+        if contact_filter and contact_id not in contact_filter_apres_substitution:
             return
         dossier = dossier_by_annonce.get(annonce_id)
         source_identity = relation_source if clean_text(transaction_id) else "non_transaction"

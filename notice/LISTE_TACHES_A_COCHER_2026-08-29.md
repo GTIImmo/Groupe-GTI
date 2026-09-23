@@ -7181,7 +7181,18 @@ Détail complet, avec fichier et ligne pour chaque point :
 ## Gênants — l'app marche mais ment  *(G-1 → G-19 dans la note)*
 
 - [ ] front : **G-2** la recherche par numéro · **G-3** la répartition de commission · **G-1** le doublon d'invité · **G-4** l'acquéreur en double · **G-5** invités sans email · **G-6/G-7/G-8** les deux séries · **G-19** `'invite'` dans un champ de numéro
-- [ ] serveur : **G-9** `marquer_contacts_disparus` · **G-10** le lien vente↔acheteur · **G-11** les **1 738** personnes qui ressortent de l'annuaire · **G-12** « tout paraît né dans l'app » · **G-13/G-14** le build · **G-15/G-16** les sondes et le test qui passe au vert sans rien tester
+- [x] **serveur : les 8 gênants faits le 23/09** — `phase2/checks/test_genants_serveur.py`
+      **G-11 était MAL CLASSÉ** : ce n'est pas un gênant. Le build remet l'éligibilité à zéro
+      chaque nuit et ce script la repose ; ne plus rien trouver, c'est voir les **1 738**
+      personnes citées par Hektor **sortir de l'annuaire la nuit même**.
+      **G-9 G-10 G-11** joignent désormais par **les deux numéros** *(la case cible posée sur
+      `app_contact` le matin même les rend possibles)*. **G-13** interrogeait le miroir avec
+      une identité ; **G-14** comparait un tamis du miroir à un numéro déjà traduit.
+      **G-12** refuse maintenant de recenser un parc entier comme « né dans l'app » ;
+      **G-15** nomme la cause au lieu de crier ; **G-16** l'absence de témoin est un **ÉCHEC**
+      *(le contrôle se sautait et passait au vert sans rien tester)*.
+      14 contrôles, chacun passé sur une base **déjà basculée**, forme d'avant ET d'après.
+      ⚠ **PAS DEPLOYE** : serveur, partira au run de nuit.
 - [ ] API : **G-17** les 9 liens d'agenda · **G-18** les doublons de relance
 
 ## Non mesuré — à trancher avant, pas pendant

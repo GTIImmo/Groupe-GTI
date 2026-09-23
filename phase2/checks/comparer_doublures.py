@@ -202,6 +202,16 @@ def _relever(args) -> int:
             continue
         releves.append((doublure, r))
         print(f"{doublure:<44} {r['accord']:>9} {r['hektor_seul']:>12} {r['app_seule']:>10}")
+        # ── G-15, 23/09/2026 : NOMMER LA CAUSE AU LIEU DE CRIER ────────────
+        # Pendant la fenetre de bascule, le natif et la doublure descendue ne
+        # portent pas la meme serie de numeros : l'accord tombe a ZERO et les
+        # deux colonnes se remplissent. Ce n'est pas une divergence, c'est une
+        # traduction en cours. Sans ce mot, la sonde hurlerait au sinistre au
+        # pire moment -- et on s'habituerait a l'ignorer, ce qui est pire.
+        if r["accord"] == 0 and r["hektor_seul"] > 0 and r["app_seule"] > 0:
+            print(f"{'':<44}   ^ accord NUL des deux cotes : les deux tables ne parlent "
+                  f"probablement pas la meme serie de numeros (bascule en cours ?), "
+                  f"ce n'est pas une divergence de contenu.")
 
     divergentes = recherches_divergentes(conn)
     print()

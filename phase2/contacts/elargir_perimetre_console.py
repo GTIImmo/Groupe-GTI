@@ -169,13 +169,26 @@ def main() -> int:
         f"SELECT COUNT(*) FROM {CIBLE} WHERE supabase_sync_eligible = 1").fetchone()[0]
 
     # Qui est cite ET aujourd'hui ecarte. On ne touche a personne d'autre.
+    # ── G-11, 23/09/2026 : ON COMPARE AVEC LES DEUX NUMEROS ─────────────────
+    # `cites` vient de app_affaire_console, c'est-a-dire du formulaire de HEKTOR
+    # recopie par le worker : ce sont des numeros de Hektor. La table d'en face,
+    # elle, est rangee par IDENTITE des le jour de la bascule.
+    #
+    # ⚠ ET LA CONSEQUENCE N'ETAIT PAS « GENANTE », elle etait grave : ce script
+    #   ne fait qu'AJOUTER de l'eligibilite, mais le build la remet a ce que sa
+    #   regle dit, chaque nuit (run_full_pipeline, l. 855-860). Ne plus rien
+    #   trouver, c'est donc voir les 1 738 personnes citees par Hektor --
+    #   mandants, acquereurs, notaires -- SORTIR DE L'ANNUAIRE la nuit meme.
+    #
+    # Aujourd'hui identite et cible sont egales : la liste est la meme.
     a_marquer: list[tuple[str, str]] = []
     for ligne in conn.execute(
-        f"SELECT hektor_contact_id, eligibility_reasons_json FROM {CIBLE} "
+        f"SELECT hektor_contact_id, hektor_target_id, eligibility_reasons_json FROM {CIBLE} "
         f"WHERE supabase_sync_eligible = 0"
     ):
         cid = str(ligne["hektor_contact_id"])
-        if cid not in cites:
+        cible = str(ligne["hektor_target_id"] or "").strip()
+        if cid not in cites and (not cible or cible not in cites):
             continue
         try:
             raisons = json.loads(ligne["eligibility_reasons_json"] or "[]")

@@ -113,7 +113,20 @@ def main() -> int:
         echecs.append("② la recherche ne pend pas sous l'identite")
     if recherches_hektor != 0:
         echecs.append("② une recherche pend encore sous le numero de Hektor")
-    if temoin and (avant_temoin != 1 or apres_temoin != 1):
+    # ── G-16, 23/09/2026 : UN CONTROLE QUI SE SAUTE NE CONTROLE RIEN ───────
+    # Le temoin se choisit par `CAST(hektor_contact_id AS INTEGER) < 10000000`.
+    # Apres la bascule, PLUS AUCUNE ligne ne repond a ce critere : `temoin`
+    # valait None, le `if temoin` sautait l'assertion, et le test passait AU VERT
+    # en ne testant plus rien. C'est le pire etat possible pour un controle --
+    # pire qu'un echec, parce qu'il rassure.
+    # Desormais l'absence de temoin est elle-meme un ECHEC : elle veut dire que
+    # le critere de selection a vieilli, et il faut le dire.
+    if not temoin:
+        echecs.append(
+            "④ AUCUN TEMOIN TROUVE -- le critere de selection a vieilli "
+            "(apres la bascule, aucun contact n'a plus de numero < 10 000 000). "
+            "Ce controle ne testait plus rien : le corriger avant de continuer.")
+    elif avant_temoin != 1 or apres_temoin != 1:
         echecs.append("④ UN CONTACT ORDINAIRE A BOUGE -- arreter tout")
 
     if echecs:

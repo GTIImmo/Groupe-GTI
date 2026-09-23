@@ -65,16 +65,25 @@ def main() -> int:
     marques = 0
     for lot in (disparus[i:i + 400] for i in range(0, len(disparus), 400)):
         places = ",".join("?" for _ in lot)
+        # ── G-9, 23/09/2026 : LES DEUX NUMEROS, ICI AUSSI ───────────────────
+        # La liste noire vient du MIROIR : ce sont des numeros de Hektor. Le
+        # registre, lui, sera range par IDENTITE des la bascule. Sans le second
+        # terme, ce script ne marquerait plus personne -- et il l'annoncerait
+        # tranquillement : « 0 nouvellement marquee ». Une fonction qui meurt en
+        # disant zero est pire qu'une qui leve.
+        # `app_contact.hektor_target_id` a ete pose le 23/09 (356 156 lignes).
         if args.dry_run:
             n = conn.execute(
                 f"SELECT COUNT(*) FROM app_contact WHERE absent_depuis IS NULL "
-                f"AND hektor_contact_id IN ({places})", lot).fetchone()[0]
+                f"AND (hektor_contact_id IN ({places}) OR hektor_target_id IN ({places}))",
+                [*lot, *lot]).fetchone()[0]
             marques += n
             continue
         cur = conn.execute(
             f"UPDATE app_contact SET absent_depuis = ?, updated_at = ? "
-            f"WHERE absent_depuis IS NULL AND hektor_contact_id IN ({places})",
-            [maintenant, maintenant, *lot])
+            f"WHERE absent_depuis IS NULL "
+            f"AND (hektor_contact_id IN ({places}) OR hektor_target_id IN ({places}))",
+            [maintenant, maintenant, *lot, *lot])
         marques += cur.rowcount or 0
     if not args.dry_run:
         conn.commit()
