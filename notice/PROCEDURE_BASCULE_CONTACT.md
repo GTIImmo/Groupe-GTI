@@ -312,3 +312,46 @@ Puis le registre local à l'envers, puis rejouer ⑥ et ⑦. Et la sauvegarde �
 - **Le chemin « créer un mandant »** ne porte aucune identité d'app : il relie sa ligne
   provisoire au numéro de Hektor. **C'est un manque à combler dans C.9**, pas un défaut
   de la bascule.
+
+
+---
+
+# CE QUE LA BASCULE DU 23/09 A DONNÉ
+
+**Jouée de 18h40 à 19h05**, services arrêtés, personne dans l'app depuis 12h01.
+
+```
+contacts        61 985 portent NOTRE numero
+recherches      11 387 suivent -- le nom fige a tenu
+relations       81 313 videes puis refaites par le build
+liens d'agenda       9 JSON traduits
+registre local 356 166 -- AUCUN numero Hektor perdu
+```
+
+## VÉRIFIÉ APRÈS
+
+| contrôle | résultat |
+|---|---|
+| rapprochements joignables à un **contact** | **49 742 / 49 742** |
+| rapprochements joignables à une **recherche** | **49 742 / 49 742** |
+| sondes *(double identité, envois en attente, orphelins)* | **toutes à zéro** |
+| contacts restés en arrière | **0** |
+| travaux en erreur | **0** |
+| recherches retrouvables par l'identité | **11 387**, dont **0 introuvable** |
+| la **barrière** *(C-2)* tourne après la bascule | **oui**, 0 enfilé *(bannettes vides)* |
+| **une fiche contact ouverte dans l'app** | négociateur résolu, **bien lié retrouvé** |
+| **la recherche par le numéro de HEKTOR** | **elle trouve** la fiche, qui porte `10 356 150` *(G-2)* |
+
+## LE TROISIÈME GESTE HUMAIN N'EST PAS FAIT, ET IL SE DIT
+
+**Modifier une recherche depuis l'app** n'a **pas** pu être joué :
+`app_edit_search_optimistic` refuse une connexion SQL avec `forbidden_update_contact_search`
+— le garde `app_console_can_request_contact_job` vérifie **qui demande**, et seul un
+négociateur connecté passe.
+
+✅ **Ce que ce refus prouve quand même** : la fonction a **trouvé le contact** sous son
+identité *(sinon elle aurait levé `contact_not_found`)*. **L'identité marche ; c'est
+l'autorisation qui manque** — ce qui est exactement ce qu'on attend d'une app.
+
+➡ **À faire par un humain connecté** : ouvrir un acquéreur, modifier un critère, vérifier
+que le travail part et **n'est pas bloqué en conflit**. C'est le dernier point non couvert.
