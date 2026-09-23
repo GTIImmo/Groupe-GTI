@@ -8,8 +8,32 @@ OU ON EST, EN TROIS NIVEAUX
 
   ETAPE 2       L0 OK  L1 OK  L2 OK  L3 OK  L4 EN COURS   puis L5 L6 L7 L8 L9
   L4            L4-a OK  L4-b OK  L4-b' OK  L4-c EN COURS  ...puis C.9
-  L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  ->  (5) ALLUMER LA BASCULE
+  L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  (5) OK -- BASCULE FAITE 23/09 19h05
 ```
+
+## ✅ `L4-c` EST TERMINÉ — la bascule a été jouée le 23/09/2026, services arrêtés
+
+```
+contacts        61 985 portent NOTRE numero
+recherches      11 387 suivent, le nom fige a tenu
+relations       81 313 videes puis refaites par le build
+liens d'agenda       9 JSON traduits
+registre local 356 166 -- AUCUN numero Hektor perdu (la case cible les garde)
+
+VERIFIE APRES  rapprochements joignables   49 742 / 49 742
+               sondes                      toutes a ZERO
+               contacts restes en arriere  0
+               travaux en erreur           0
+               une fiche contact ouverte : negociateur + bien lies OK
+               recherche par le numero HEKTOR : elle trouve (G-2)
+```
+
+⚠ **DEUX DÉFAUTS DE MA PROCÉDURE, TROUVÉS EN LA JOUANT** — tous deux corrigés dedans :
+`elargir_perimetre_console` manquait **entre le build et le push** *(2 763 personnes)*, et
+`--reset-push-state` **ne protégeait pas le run en cours** *(la remise à zéro venait après le
+calcul des disparues : 61 985 contacts supprimés puis reposés)*.
+
+➡ **`C.9` — la création d'annonce depuis l'app — est désormais le chantier ouvert.**
 
 **ON EST DANS `L4-c` ⑤.** Et `C-1 … C-13` **n'est pas un autre plan** : c'est **le contenu
 de `L4-c` ⑤**, né de l'audit complet du 23/09 *(`notice/AUDIT_COMPLET_AVANT_BASCULE_2026-09-23.md`)*.
