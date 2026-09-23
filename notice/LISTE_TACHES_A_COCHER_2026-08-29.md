@@ -7101,7 +7101,7 @@ Détail complet, avec fichier et ligne pour chaque point :
       Le repli de panne refuse desormais de viser avec un numero de l'app.
       2 controles ajoutes a `test_porte_contacts.js` — **verifies en ECHEC sur la version d'avant**,
       donc ce ne sont pas des controles decoratifs. 17/17 verts.
-      ⚠ **PAS ENCORE DEPLOYE** : il faut redemarrer les 4 services.
+      ✅ **DEPLOYE le 23/09 à 09:48** — les 4 services redémarrés, fichier de 08:56.
 - [x] **C-2** la sonde d'attente voit et NOMME les deux causes — `patch_c2_sonde_attente_voit_tout_2026-09-23.sql`
       **FAIT le 23/09.** ⚠ **Reclassé** : ce n'est **pas** un bloquant de bascule
       *(la bannette est remplie par le front avec l'identité — les deux côtés concordent)*.
@@ -7109,7 +7109,13 @@ Détail complet, avec fichier et ligne pour chaque point :
       *(61 984 sur 356 000, et il rétrécit chaque nuit)* voit sa saisie abandonnée en silence.
       Preuve du correctif : ancienne forme **0 ligne vue**, nouvelle **1**. Droits conservés.
       ✓ Déjà en production *(c'est une vue, rien à redémarrer)*.
-- [ ] **C-3** correspondance : pagination, plafond au parc, **étape bloquante** — `descendre_correspondance_contacts.py:67,88,112`
+- [x] **C-3** correspondance : pagination + contrôle de FORME + arrêt dans le build
+      **FAIT le 23/09.** La vue rend **0** ligne aujourd'hui et **61 984** à la bascule
+      *(pas 356 000 : c'est le périmètre éligible)*. `limit=10000` tronquait, `PLAFOND=5000` refusait.
+      Le plafond n'a **pas** été augmenté — il est devenu un contrôle de cohérence.
+      L'arrêt est dans le **build** (dormant), pas dans le run : un hoquet Supabase ne tue rien.
+      16 contrôles hors ligne : `phase2/checks/test_c3_correspondance.py`.
+      ⚠ **PAS ENCORE DEPLOYE** : c'est le serveur, ça partira au prochain run de nuit.
 - [ ] **C-6** verrou : refuser d'insérer un numéro ≥ 10 M dans le miroir — `normalize_source.py:1068` + traduire à la sortie — `sync_active_searches.py:45`
 - [ ] **C-9** mandants et notaires par `ciblesHektorContacts` — `console_job_worker.js:11366,11375,11733,11742`
 - [ ] **C-12** la photo fraîche se lit avec **l'identité** — `console_job_worker.js:15939`

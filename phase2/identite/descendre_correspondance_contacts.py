@@ -61,10 +61,23 @@ VUE = "app_v_correspondance_identite_cible"
 sys.path.insert(0, str(RACINE / "phase2" / "sync"))
 from push_contacts_to_supabase import DEFAULT_ENV_FILES, load_env_file  # noqa: E402
 
-# GARDE-FOU. Si la vue remonte soudain des milliers de lignes, c'est que quelque
-# chose a derape (une case cible posee en masse, une plage qui s'est croisee).
-# On s'arrete et on regarde, plutot que de traduire tout un parc.
-PLAFOND = 5000
+# ── C-3, 23/09/2026 : LE GARDE-FOU NE PEUT PLUS ETRE UN COMPTE ─────────────
+# La version du 21/09 refusait au-dela de 5 000 lignes : « un derapage est plus
+# probable qu'un parc entier ne dans l'app ». C'etait vrai tant que la vue
+# rendait 0 ou 1 ligne. LE JOUR DE LA BASCULE ELLE EN REND 61 984 -- tout le
+# perimetre eligible -- et ce garde-fou arretait l'etape. Pire : l'etape etant
+# non bloquante, le run continuait avec la correspondance de la veille, et le
+# build rangeait tout un parc sous les numeros de Hektor.
+#
+# ⚠ ET ON NE LE REPARE PAS EN L'AUGMENTANT. Si un parc entier devient normal,
+#   un derapage le devient aussi : le compte ne distingue plus rien.
+#
+# On verifie donc la FORME, pas la taille -- et la forme tient a n'importe quel
+# volume. Un vrai derapage, c'est deux identites qui visent le meme numero de
+# Hektor, ou un numero qui sort de sa plage. Pas un grand nombre.
+PLAFOND_ABSURDE = 1_000_000
+PLAGE_NUMEROS_APP = 10_000_000
+PAGE = 1000  # PostgREST plafonne ses reponses ; on pagine au lieu d'esperer.
 
 
 def charger_env() -> None:
@@ -83,15 +96,77 @@ def assurer_table(conn: sqlite3.Connection) -> None:
 
 
 def lire_supabase() -> list[dict]:
+    """Lit la correspondance ENTIERE, page par page.
+
+    ⚠ La version du 21/09 demandait `limit=10000` en une fois. PostgREST plafonne
+      ses reponses : au-dela, il rend une page et se tait. Avec 0 ou 1 ligne cela
+      ne se voyait pas ; a la bascule, la correspondance serait arrivee TRONQUEE,
+      et les contacts manquants auraient ete ranges sous leur numero Hektor --
+      c'est-a-dire une seconde fiche pour chacun d'eux.
+    """
     url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
     cle = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not cle:
         raise RuntimeError("SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis.")
-    adresse = f"{url.rstrip('/')}/rest/v1/{VUE}?select=app_identite,hektor_contact_id&limit=10000"
-    requete = urllib.request.Request(adresse, headers={
-        "apikey": cle, "Authorization": f"Bearer {cle}", "Accept": "application/json"})
-    with urllib.request.urlopen(requete, timeout=60) as reponse:
-        return json.loads(reponse.read().decode("utf-8"))
+    base = f"{url.rstrip('/')}/rest/v1/{VUE}?select=app_identite,hektor_contact_id"
+    # ORDRE STABLE OBLIGATOIRE : sans `order`, deux pages successives peuvent
+    # rendre la meme ligne et en sauter une autre. Une pagination sans tri n'est
+    # pas une pagination.
+    base += "&order=hektor_contact_id.asc"
+    toutes: list[dict] = []
+    depart = 0
+    while True:
+        adresse = f"{base}&offset={depart}&limit={PAGE}"
+        requete = urllib.request.Request(adresse, headers={
+            "apikey": cle, "Authorization": f"Bearer {cle}", "Accept": "application/json"})
+        with urllib.request.urlopen(requete, timeout=60) as reponse:
+            page = json.loads(reponse.read().decode("utf-8"))
+        if not isinstance(page, list) or not page:
+            break
+        toutes.extend(page)
+        if len(page) < PAGE:
+            break
+        depart += len(page)
+        if len(toutes) > PLAFOND_ABSURDE:
+            raise RuntimeError(
+                f"{len(toutes)} correspondances lues : au-dela du concevable, on s'arrete.")
+    return toutes
+
+
+def verifier_la_correspondance(lignes: list[dict]) -> list[str]:
+    """Le garde-fou : la FORME, pas la taille. Rend la liste des griefs.
+
+    Un derapage ne se reconnait pas a son volume mais a son incoherence :
+      - une identite qui ne serait pas dans NOTRE plage ;
+      - un numero Hektor qui serait dans la notre ;
+      - DEUX identites qui visent le meme numero Hektor -- c'est exactement le
+        defaut du 21/09 (une personne, deux fiches), vu depuis l'autre bout ;
+      - une identite qui apparaitrait deux fois.
+    """
+    griefs: list[str] = []
+    vus_hektor: dict[str, str] = {}
+    vus_identite: dict[str, str] = {}
+    for ligne in lignes:
+        hektor = str(ligne.get("hektor_contact_id") or "").strip()
+        identite = str(ligne.get("app_identite") or "").strip()
+        if not hektor.isdigit() or not identite.isdigit():
+            griefs.append(f"non numerique : hektor={hektor!r} identite={identite!r}")
+            continue
+        if int(identite) < PLAGE_NUMEROS_APP:
+            griefs.append(f"identite {identite} hors de notre plage (< {PLAGE_NUMEROS_APP})")
+        if int(hektor) >= PLAGE_NUMEROS_APP:
+            griefs.append(f"numero Hektor {hektor} dans NOTRE plage (>= {PLAGE_NUMEROS_APP})")
+        if hektor in vus_hektor and vus_hektor[hektor] != identite:
+            griefs.append(
+                f"deux identites visent le numero Hektor {hektor} : "
+                f"{vus_hektor[hektor]} et {identite}")
+        if identite in vus_identite and vus_identite[identite] != hektor:
+            griefs.append(
+                f"l'identite {identite} vise deux numeros Hektor : "
+                f"{vus_identite[identite]} et {hektor}")
+        vus_hektor[hektor] = identite
+        vus_identite[identite] = hektor
+    return griefs[:20]  # on en montre assez pour comprendre, pas de deluge
 
 
 def main() -> int:
@@ -111,9 +186,12 @@ def main() -> int:
         print(f"[correspondance] lecture impossible, on garde la table precedente : {type(err).__name__}")
         return 0
 
-    if len(lignes) > PLAFOND:
-        print(f"REFUS : {len(lignes)} correspondances (plafond {PLAFOND}).")
-        print("        Un derapage est plus probable qu'un parc entier ne dans l'app.")
+    griefs = verifier_la_correspondance(lignes)
+    if griefs:
+        print(f"REFUS : la correspondance est incoherente ({len(lignes)} ligne(s) lues).")
+        for grief in griefs:
+            print(f"        - {grief}")
+        print("        On ne traduit pas sur une table dont la forme est fausse.")
         return 3
 
     maintenant = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

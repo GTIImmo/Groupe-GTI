@@ -119,8 +119,9 @@ attend voit **cette saisie abandonnée en silence**. C'est le contraire de la r�
 **C-3 · La table de traduction se refuse elle-même**
 `phase2/identite/descendre_correspondance_contacts.py:67`, `:88`, `:112-115`
 
-La vue `app_v_correspondance_identite_cible` ne rend aujourd'hui que **2 lignes**. Après la
-bascule elle en rend **356 000**. Or :
+La vue `app_v_correspondance_identite_cible` ne rend aujourd'hui **aucune ligne**
+*(les contacts d'essai ont été supprimés)*. Après la bascule elle en rend **61 984** — tout
+le périmètre éligible. Or :
 
 ```python
 adresse = f"...&limit=10000"     # tronque silencieusement
@@ -129,10 +130,28 @@ PLAFOND = 5000                   # -> "REFUS", return 3
 
 Et l'étape est **non bloquante** dans le run (`run_full_pipeline.ps1:438`) : le build tourne
 quand même avec la correspondance de la veille => **la couche entière repart en numéros
-Hektor** pendant que Supabase est en numéros app.
+Hektor**, en **recalculant les empreintes** au passage.
 
-> **Correctif** : pagination, plafond porté au parc, et **étape bloquante le jour de la
-> bascule**. Une traduction absente doit arrêter le run, pas le laisser mentir.
+> **FAIT le 23/09.** Trois gestes, parce qu'il y avait trois défauts :
+>
+> **① Pagination.** PostgREST plafonne ses réponses : `limit=10000` rendait **une page**
+> et se taisait. On lit page par page, **avec un tri stable** — une pagination sans ordre
+> n'en est pas une.
+>
+> **② Le plafond devient un contrôle de FORME.** On ne répare pas un plafond en
+> l'augmentant : **si un parc entier devient normal, un dérapage aussi**. Le nouveau
+> contrôle refuse ce qui est *incohérent* — une identité hors plage, un numéro Hektor dans
+> la nôtre, **deux identités qui visent le même numéro** *(le défaut du 21/09 vu de
+> l'autre bout)*, une identité qui en vise deux. Ça tient à n'importe quel volume.
+>
+> **③ L'arrêt est placé dans le BUILD, pas dans le run.** Rendre l'étape bloquante tuerait
+> le run pour un hoquet Supabase un soir ordinaire. La règle s'arme toute seule :
+> **si la couche porte déjà des identités à nous et que la correspondance est vide,
+> le build s'arrête.** Aujourd'hui : 0 identité dans la plage ⇒ **dormante**.
+>
+> **16 contrôles** dans `phase2/checks/test_c3_correspondance.py`, hors ligne.
+> *(Au passage : le chemin inverse parcourait toute la correspondance à chaque appel —
+> 61 984 parcours de 61 984 entrées le jour J. C'est une table maintenant.)*
 
 ---
 
@@ -372,7 +391,7 @@ de contact : **`app_affaire_personne_ecart.contact_id`** et
 (4)  C-1 C-2 C-3 C-6 C-9 C-12 : le code, DORMANT, deploye avant
 (5)  patch SQL : bascule app_contact_current + C-13 les 28 tables
 (6)  traduire app_contact local (356 156)                          [C-5]
-(7)  descendre la correspondance  -> 356 000 paires                [C-3]
+(7)  descendre la correspondance  -> 61 984 paires                 [C-3]
 (8)  push_contacts --reset-push-state --include-archived-searches  [C-4]
 (9)  build_contacts_layer
 (10) redemarrer les services, verifier : rapprochements visibles,

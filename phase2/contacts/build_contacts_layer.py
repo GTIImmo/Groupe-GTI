@@ -301,19 +301,55 @@ def first_non_empty(*values: Any) -> str | None:
 # est vide tant qu'aucun contact ne nait dans l'app. `identite_app` rend alors
 # exactement ce qu'on lui donne, et le build se comporte comme avant.
 _IDENTITE_APP: dict[str, str] = {}
+_NUMERO_MIROIR: dict[str, str] = {}
+PLAGE_NUMEROS_APP = 10_000_000
 
 
 def charger_identites_app(conn: sqlite3.Connection) -> int:
-    """Charge la correspondance numero Hektor -> identite de l'app."""
+    """Charge la correspondance numero Hektor -> identite de l'app.
+
+    ⚠ C-3, 23/09/2026 -- L'INVARIANT QUI MANQUAIT. L'etape qui remplit cette
+      table est NON BLOQUANTE dans le run (run_full_pipeline.ps1) : si Supabase
+      ne repond pas, on garde la table de la veille et le run continue. C'est le
+      bon choix un soir ordinaire, ou la table est vide et ou il n'y a rien a
+      traduire.
+
+      Ce n'est plus le bon choix apres la bascule. La couche porterait alors des
+      identites a nous, et un build sans correspondance les rangerait toutes
+      sous les numeros de Hektor -- en RECALCULANT au passage les empreintes des
+      relations et des recherches, donc en fabriquant un parc entier de fiches
+      en double.
+
+      D'ou la regle, qui s'arme toute seule : SI LA COUCHE PORTE DEJA DES
+      IDENTITES A NOUS ET QUE LA CORRESPONDANCE EST VIDE, ON S'ARRETE. Tant que
+      la bascule n'est pas faite, aucune identite n'est dans la plage et cette
+      garde ne se declenche jamais.
+    """
     _IDENTITE_APP.clear()
-    if not table_exists(conn, "app_contact_identite_app"):
-        return 0
-    for row in conn.execute(
-            "SELECT hektor_contact_id, app_identite FROM app_contact_identite_app"):
-        hektor_id = clean_text(row[0])
-        identite = clean_text(row[1])
-        if hektor_id and identite and hektor_id != identite:
-            _IDENTITE_APP[hektor_id] = identite
+    _NUMERO_MIROIR.clear()
+    if table_exists(conn, "app_contact_identite_app"):
+        for row in conn.execute(
+                "SELECT hektor_contact_id, app_identite FROM app_contact_identite_app"):
+            hektor_id = clean_text(row[0])
+            identite = clean_text(row[1])
+            if hektor_id and identite and hektor_id != identite:
+                _IDENTITE_APP[hektor_id] = identite
+                # Le chemin inverse, pose ICI une fois pour toutes : le chercher
+                # a chaque appel coutait un parcours de toute la table.
+                _NUMERO_MIROIR[identite] = hektor_id
+
+    if not _IDENTITE_APP and table_exists(conn, "app_contact_current"):
+        deja_bascule = conn.execute(
+            "SELECT COUNT(*) FROM app_contact_current"
+            " WHERE CAST(hektor_contact_id AS INTEGER) >= ?",
+            (PLAGE_NUMEROS_APP,)).fetchone()[0]
+        if deja_bascule:
+            raise RuntimeError(
+                f"ARRET : {deja_bascule} contact(s) de la couche portent deja une identite "
+                f"a nous (>= {PLAGE_NUMEROS_APP}), mais la correspondance est VIDE. "
+                "Construire maintenant les rangerait sous les numeros de Hektor et "
+                "recalculerait toutes les empreintes. Relancer "
+                "phase2/identite/descendre_correspondance_contacts.py d'abord.")
     return len(_IDENTITE_APP)
 
 
@@ -335,10 +371,10 @@ def numero_hektor_pour_le_miroir(contact_id: Any) -> str:
     ne trouverait rien et la fiche paraitrait disparue.
     """
     texte = clean_text(contact_id)
-    for hektor_id, identite in _IDENTITE_APP.items():
-        if identite == texte:
-            return hektor_id
-    return texte
+    # C-3 23/09 : table inverse posee au chargement. Avant, chaque appel
+    # parcourait toute la correspondance -- invisible sur 1 ligne, mais
+    # 61 984 parcours de 61 984 entrees le jour de la bascule.
+    return _NUMERO_MIROIR.get(texte, texte)
 
 
 def normalize_contact_ids(values: Iterable[Any]) -> list[str]:

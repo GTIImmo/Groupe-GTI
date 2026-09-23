@@ -2455,3 +2455,25 @@ Hektor**. La porte que j'ai écrite pour protéger la bascule est ce qui l'empê
 (`patch_5b_barriere_attente_2026-09-21.sql:62-66`) fait `continue` quand la jointure échoue.
 **Aucune édition ne repart**, sans erreur, sans trace — et **la sonde censée le voir joint de
 la même façon**, donc la panne est invisible.
+
+### 23/09 — où en est la pile des correctifs
+
+| | état | déployé ? |
+|---|---|---|
+| **C-1** la porte lit la cible **avant** de refuser | ✅ `d26ad2e` | ✅ **oui** — 4 services redémarrés à 09:48, fichier de 08:56 |
+| **C-2** la sonde d'attente voit et **nomme** les deux causes | ✅ `e1ff6fa` | ✅ **oui** — c'est une vue, rien à redémarrer |
+| C-3 la table de traduction se refuse elle-même | → en cours | |
+| C-4 C-5 C-6 C-9 C-12 | à faire, **dormants** | |
+
+**Deux leçons de ces deux-là, et elles valent pour la suite :**
+
+① **Un contrôle doit être éprouvé contre le défaut qu'il prétend voir.** L'ancienne
+assertion de la porte cherchait la **présence** d'une comparaison — que les deux versions
+contiennent. Ce n'était pas sa présence qui comptait, **c'était sa place**. Les deux
+assertions ajoutées ont été passées sur la version d'avant : **elles y échouent**.
+
+② **L'audit déclasse autant qu'il classe.** C-2 n'était **pas** un bloquant de bascule —
+je l'avais écrit trop grave le matin même. Mais en regardant de près, il cachait un défaut
+d'**aujourd'hui** : le périmètre éligible ne compte que **61 984** contacts sur 356 000 et
+**rétrécit chaque nuit**, si bien qu'une saisie dont le contact en sort est **abandonnée en
+silence**. La note a été corrigée : **un plan qui garde une gravité fausse ment deux fois.**
