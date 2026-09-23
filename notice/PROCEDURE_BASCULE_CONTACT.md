@@ -342,7 +342,52 @@ registre local 356 166 -- AUCUN numero Hektor perdu
 | **une fiche contact ouverte dans l'app** | négociateur résolu, **bien lié retrouvé** |
 | **la recherche par le numéro de HEKTOR** | **elle trouve** la fiche, qui porte `10 356 150` *(G-2)* |
 
-## LE TROISIÈME GESTE HUMAIN N'EST PAS FAIT, ET IL SE DIT
+## LE TROISIÈME GESTE — **FAIT le 23/09 à 20h39, dans l'app, session admin**
+
+Cobaye : **M. Claude TEST CHAINE 25-08** *(contact d'essai du 25/08)*, identité `10 355 711`,
+numéro Hektor `605 029`. Budget max **250 000 → 255 000 €**, par la modale « Modifier la
+recherche ».
+
+```
+l'app affiche          120 000 - 255 000 EUR     aucun message de conflit
+la couche porte        255 000
+sa cle figee           9b8dd2b1116ac7e6be3dcfcb  INCHANGEE
+la bannette            1 ligne sous 10 355 711, conflit = false
+le rapprochement       37 biens correspondants, meilleur score 100 %
+```
+
+### ✅ C-2 EST VALIDÉ — condition par condition
+
+La barrière tourne **chaque minute** *(cron `app-search-push-due`, vérifié : 20:49, 20:50,
+20:51, 20:52, 20:53, toutes `succeeded`)*. Chacune de ses conditions, mesurée sur la ligne :
+
+| condition | |
+|---|---|
+| **le contact est trouvé** | **OUI** — c'est la jointure que C-2 concernait |
+| **il a sa cible** | **OUI**, `605 029` |
+| pas en conflit | oui |
+| délai écoulé | oui |
+| `push_search` rempli | **non** — et c'est **voulu**, voir ci-dessous |
+
+### ⚠ CE QUE J'AI D'ABORD PRIS POUR UNE PANNE EST UNE DÉCISION
+
+`app_edit_search_optimistic` écrit délibérément `push_search = null`, avec ce commentaire
+dans le code : **`/* C.3 24/08 : plus d'envoi vers Hektor */`**.
+
+**Depuis le 24 août, modifier une recherche dans l'app ne l'envoie plus à Hektor.** L'app est
+l'auteur des recherches. La ligne de bannette n'est **pas une file d'envoi** — c'est un
+**marqueur qui protège la saisie du run de nuit**.
+
+> **Et ce marqueur fonctionne après la bascule** : la paire *(contact, rang)* de la bannette
+> se retrouve dans la couche — `10 355 711 / 0` des deux côtés. Le run de nuit sautera cette
+> ligne au lieu de l'écraser.
+
+*(La valeur reste à 255 000 sur ce contact d'essai : c'est la trace de la vérification, et
+revenir en arrière créerait une seconde ligne de bannette sans rien prouver de plus.)*
+
+---
+
+## CE QUI N'A PAS PU ÊTRE FAIT AUTREMENT, ET QUI SE DIT
 
 **Modifier une recherche depuis l'app** n'a **pas** pu être joué :
 `app_edit_search_optimistic` refuse une connexion SQL avec `forbidden_update_contact_search`
@@ -353,5 +398,4 @@ négociateur connecté passe.
 identité *(sinon elle aurait levé `contact_not_found`)*. **L'identité marche ; c'est
 l'autorisation qui manque** — ce qui est exactement ce qu'on attend d'une app.
 
-➡ **À faire par un humain connecté** : ouvrir un acquéreur, modifier un critère, vérifier
-que le travail part et **n'est pas bloqué en conflit**. C'est le dernier point non couvert.
+➡ **Fait depuis, dans l'app, session admin** — voir ci-dessus.
