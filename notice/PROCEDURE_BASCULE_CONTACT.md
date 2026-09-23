@@ -93,7 +93,15 @@ Vérifié ligne à ligne : **leur contact n'existe plus dans l'app**. Elles sont
 orphelines aujourd'hui, la bascule ne les abîme pas davantage. **Il n'y a rien à faire, et
 ce n'est pas un incident** — c'est écrit ici pour qu'on ne le redécouvre pas le jour J.
 
-### Le compte à blanc, joue en reel le 23/09 à 11h50 — **au vert**
+### ÉTAT DE L'OUTIL, vérifié le 23/09
+
+Les deux fonctions sont **installées dans Supabase**, dans leur version à jour — celle qui
+porte le message de refus corrigé **et** la traduction du JSON des liens d'agenda.
+
+**Le signe qui le prouve** : le compte à blanc affiche `"_json_liens_agenda": 9`.
+S'il manque, c'est l'ancienne version et il faut recoller le patch.
+
+### Le compte à blanc, joue en reel le 23/09 — **au vert**
 
 ```
 deja bascules                              0
@@ -104,6 +112,7 @@ vider    les doublons                      0
 app_rapprochement                     49 721
 app_search_count_high_water           10 184
 app_email_envoi 24 . propositions 11 . relances 10 . agenda 8 . statuts 7 . visites 3
+_json_liens_agenda                         9
 ```
 
 ---
