@@ -1,7 +1,29 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 21/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> **Mis à jour le 23/09/2026.** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier.
+
+```
+OU ON EST, EN TROIS NIVEAUX
+
+  ETAPE 2       L0 OK  L1 OK  L2 OK  L3 OK  L4 EN COURS   puis L5 L6 L7 L8 L9
+  L4            L4-a OK  L4-b OK  L4-b' OK  L4-c EN COURS  ...puis C.9
+  L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  ->  (5) ALLUMER LA BASCULE
+```
+
+**ON EST DANS `L4-c` ⑤.** Et `C-1 … C-13` **n'est pas un autre plan** : c'est **le contenu
+de `L4-c` ⑤**, né de l'audit complet du 23/09 *(`notice/AUDIT_COMPLET_AVANT_BASCULE_2026-09-23.md`)*.
+
+```
+13 bloquants    7 faits le 23/09     C-1 C-2 C-3 C-4 C-6 C-9 C-12
+                6 restants           ce ne sont PAS du code : ce sont les
+                                     GESTES DE LA FENETRE (patch SQL, traduction
+                                     des tables, --reset-push-state, sauvegarde)
+19 genants      0 fait               l'app marche, mais elle ment
+ 8 non mesures  0 tranche            dont 2 peuvent changer la FORME de la bascule
+```
+
+➡ **Le code dormant est fini.** Il reste à décider **quand** on ouvre la fenêtre.
 
 **LA CIBLE** — *étape 2* : l'app assure **toutes ses fonctions sans Hektor**, sauf **numéro de
 mandat · signature · portails**. ➡ **La charte, le journal des décisions et LES DIX LOTS sont en
