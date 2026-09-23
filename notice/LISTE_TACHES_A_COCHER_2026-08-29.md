@@ -112,6 +112,21 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
        sondes           les cinq a zero  ·  doublure 10 000 003 a 10 356 136
 
           [ ] C.9  LA CREATION D'ANNONCE     <- APRES L4-c ; son audit est FAIT
+
+   [ ] 7 ANNONCES ACTIVES SANS DETAIL, ET INVISIBLES DANS L'APP  (mesure 23/09)
+       Trouve en repondant a une question de Frederic sur les dates de passage.
+           3 310 annonces du miroir n'ont aucun detail
+             3 243  archivees    -> normal, on ne lit pas leur detail
+                60  brouillons   -> normal, exclus par conception
+                 7  INEXPLIQUEES : 63118 · 63120 · 63122 · 63123 (21-22/09)
+                                   62859 (08/09) · 62660 (10/07) · 63124 (date vide)
+       ⚠ AUCUNE des 7 n'est dans app_dossier_current : elles sont donc
+         INVISIBLES pour les negociateurs. Pas d'impact ressenti aujourd'hui,
+         mais une annonce active de Hektor qui n'arrive jamais dans l'app est
+         exactement ce que l'etape 2 doit rendre impossible.
+       ⚠ 62660 dure depuis le 10 JUILLET -- ce n'est pas un retard de sync.
+       NON MESURE : pourquoi leur detail n'est jamais lu (brouillon mal
+       etiquete ? 404 silencieux ? annonce d'une autre agence ?).
           [ ] C.9-couple  ⚠ son 1er pas est une MESURE, pas du code :
               quand on envoie un couple, Hektor cree-t-il UNE fiche ou DEUX ?
               jamais verifie. Tant qu'on l'ignore, on ne sait pas si le
