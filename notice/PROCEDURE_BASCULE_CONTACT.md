@@ -59,7 +59,27 @@ python -c "import sqlite3,datetime;d=datetime.date.today().isoformat();sqlite3.c
 
 ---
 
-## ② Le rattrapage des doublures
+## ② Le rattrapage des doublures — **DEUX étapes, pas une**
+
+⚠ **Trouvé par le compte à blanc du 23/09 : la fonction REFUSAIT, pour 6 contacts.**
+Ils avaient pourtant leur doublure **côté serveur** depuis le matin même. Elle n'était
+jamais montée — `pousser_numeros_contact.py` lit `app_contact_current__sb`, **la copie
+descendue à 07:30**, alors qu'il tourne à 05:0x dans le run. Il travaille sur la photo de
+la veille, si bien qu'**un contact né chez Hektor dans la journée n'obtient sa doublure
+dans Supabase que la nuit SUIVANTE.**
+
+**②a — faire monter les numéros du registre local** *(sans quoi ②b ne peut rien remplir :
+il copie `app_contact_current.app_contact_id`, qui serait encore vide)*
+
+```powershell
+python phase2\identite\pousser_numeros_contact.py --dry-run
+python phase2\identite\pousser_numeros_contact.py
+```
+
+*Frein intégré : lots de 2 000, pause de 0,4 s, 31 requêtes. La RPC ne sait
+qu'**actualiser** — renvoyer une valeur identique ne touche aucune ligne.*
+
+**②b — propager la doublure dans les satellites**
 
 ```bash
 python -c "import urllib.request,os,json,sys;sys.path.insert(0,r'C:\Hektor\Projet\phase2\sync');from push_contacts_to_supabase import DEFAULT_ENV_FILES,load_env_file;[load_env_file(f) for f in DEFAULT_ENV_FILES];u=os.environ['SUPABASE_URL'].rstrip('/');k=os.environ['SUPABASE_SERVICE_ROLE_KEY'];r=urllib.request.Request(f'{u}/rest/v1/rpc/app_contact_id_propager',data=b'{}',headers={'apikey':k,'Authorization':f'Bearer {k}','Content-Type':'application/json'},method='POST');print(urllib.request.urlopen(r,timeout=300).read().decode())"
