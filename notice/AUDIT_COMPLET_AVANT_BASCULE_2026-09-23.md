@@ -303,8 +303,20 @@ Effet immédiat : `constaterLesPersonnes` (`:13073-13085`) compare des mandants 
 traduits** à ce que Hektor relit => **tous les mandants comptés comme refusés**, bandeau
 d'écart faux sur chaque transaction.
 
-> **Correctif** : passer mandants et notaires par `ciblesHektorContacts`, comme les
-> acquéreurs le sont déjà.
+> **FAIT le 23/09.** Pas six rustines — **une traduction du `tx` entier, en place**, juste
+> après sa construction, aux **deux** endroits qui en bâtissent un.
+>
+> C'est le seul point où les trois valeurs se rencontrent. Corriger les six endroits
+> d'envoi aurait laissé `personnes_posees` faux — donc **le bandeau d'écart faux** — et
+> le prochain envoi ajouté serait revenu à en oublier un.
+>
+> **4 contrôles ajoutés** à `Console/test_porte_contacts.js` *(21 au total)*, dont un sur
+> **l'ordre** : la traduction doit venir **avant** les envois. *C'est exactement la forme du
+> défaut C-1 — le bon geste, au mauvais moment.* **Les 4 échouent sur la version d'avant.**
+>
+> ⚠ **Ce que ces contrôles ne font pas** : ils lisent le texte du code, ils n'exécutent pas
+> le worker *(19 000 lignes, non importable isolément)*. La forme est prouvée, le
+> comportement ne l'est pas.
 
 ---
 

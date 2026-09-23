@@ -1975,6 +1975,62 @@ async function ciblesHektorContacts(ids, { contexte = "" } = {}) {
   return cibles;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// C-9 — 23/09/2026 : LES PERSONNES D'UNE TRANSACTION PASSENT AUSSI LA PORTE
+// ═══════════════════════════════════════════════════════════════════════════
+// L'audit du 22/09 avait fait passer les ACQUEREURS par la porte. Il en restait
+// trois qui partaient BRUTS chez Hektor, et le front leur envoie l'identite :
+//
+//     notairesAcquereur[]   tx.notary          (:11385, :11752)
+//     notairesMandant[]     tx.notaryMandant   (:11386, :11755)
+//     mandants[]            tx.mandantsVoulus  (:11394, :11761)
+//
+// Au mieux Hektor les ignore ; AU PIRE il designera la fiche d'un tiers le jour
+// ou ses numeros atteindront notre plage.
+//
+// ⚠ ET UN EFFET IMMEDIAT, AVANT MEME CETTE HYPOTHESE : `constaterLesPersonnes`
+//   compare `personnes_posees` (:11613) a ce que Hektor relit. Poser des numeros
+//   non traduits et relire des numeros de Hektor, c'est compter TOUS LES
+//   MANDANTS COMME REFUSES -- un bandeau d'ecart faux sur chaque transaction, et
+//   une ligne inscrite dans app_affaire_personne_ecart.
+//
+// ON TRADUIT LE `tx` UNE FOIS, EN PLACE, juste apres sa construction. C'est le
+// seul point ou les trois valeurs se rencontrent : corriger les six endroits
+// d'envoi laisserait `personnes_posees` faux, et le prochain envoi ajoute
+// reviendrait a en oublier un.
+async function traduireLesPersonnesDeLaTransaction(tx, { contexte = "" } = {}) {
+  if (!tx) return tx;
+  const aTraduire = [];
+  const prendre = (valeur) => {
+    const texte = String(valeur || "").trim();
+    if (/^\d+$/.test(texte)) aTraduire.push(texte);
+  };
+  prendre(tx.notary);
+  prendre(tx.notaryMandant);
+  if (Array.isArray(tx.mandantsVoulus)) tx.mandantsVoulus.forEach(prendre);
+  if (!aTraduire.length) return tx;
+
+  const uniques = [...new Set(aTraduire)];
+  const cibles = await ciblesHektorContacts(uniques, { contexte });
+  if (!Array.isArray(cibles) || cibles.length !== uniques.length) {
+    // La porte des listes dedoublonne elle aussi : les deux tableaux doivent se
+    // correspondre un pour un. S'ils divergent un jour, on ne devine pas.
+    throw new Error(
+      `Traduction des personnes impossible : ${uniques.length} demandes, ` +
+      `${Array.isArray(cibles) ? cibles.length : 0} cibles${contexte ? ` (${contexte})` : ""}.`);
+  }
+  const table = new Map();
+  uniques.forEach((id, rang) => table.set(id, cibles[rang]));
+  const viser = (valeur) => {
+    const texte = String(valeur || "").trim();
+    return table.has(texte) ? table.get(texte) : valeur;
+  };
+  tx.notary = viser(tx.notary);
+  tx.notaryMandant = viser(tx.notaryMandant);
+  if (Array.isArray(tx.mandantsVoulus)) tx.mandantsVoulus = tx.mandantsVoulus.map(viser);
+  return tx;
+}
+
 async function loadContactExecutionContext(contactId) {
   const cleanContactId = String(contactId || "").trim();
   if (!/^\d+$/.test(cleanContactId)) throw new Error("contact_id Hektor numerique requis");
@@ -11015,6 +11071,8 @@ async function submitHektorAssistantTransaction(job, annonceId, target, config, 
   // c'est lui qui porte les vraies valeurs (le mandat au format <id>-<FAMILLE>),
   // et non la coquille -- la correction du 30/08.
   const tx = normalizeStatusTransactionPayload(payload, config, etat.contenu);
+  // C-9 23/09 : notaires et mandants passent la porte, comme les acquereurs.
+  await traduireLesPersonnesDeLaTransaction(tx, { contexte: "assistant_hektor_transaction" });
 
   // ── LES ACQUEREURS VOULUS, calcules UNE FOIS (06/09/2026) ──
   //
@@ -11726,6 +11784,8 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
   }
 
   const tx = normalizeStatusTransactionPayload(payload, config, initHtml);
+  // C-9 23/09 : notaires et mandants passent la porte, comme les acquereurs.
+  await traduireLesPersonnesDeLaTransaction(tx, { contexte: "submit_hektor_transaction_status" });
   const body = new URLSearchParams();
   body.set("mode", config.transactionMode);
   body.set("idAnnonce", annonceId);

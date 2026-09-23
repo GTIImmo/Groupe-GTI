@@ -7124,7 +7124,12 @@ Détail complet, avec fichier et ligne pour chaque point :
       Non-régression : 3 970 = 3 970, listes identiques. 13 contrôles, 3 éprouvés en échec avant.
       ⚠ **PAS ENCORE DEPLOYE** : serveur (run de nuit) — `refresh_contact_inproc` sert au worker,
       mais c'est un script Python relu à chaque appel : **pas de redémarrage nécessaire**.
-- [ ] **C-9** mandants et notaires par `ciblesHektorContacts` — `console_job_worker.js:11366,11375,11733,11742`
+- [x] **C-9** les personnes d'une transaction passent la porte
+      **FAIT le 23/09.** Une traduction du `tx` **entier, en place**, aux 2 sites — pas 6 rustines.
+      Effet immédiat corrigé au passage : `personnes_posees` était comparé à ce que Hektor
+      relit, donc **tous les mandants étaient comptés comme refusés** (bandeau d'écart faux).
+      21 contrôles, dont 4 nouveaux éprouvés en échec sur la version d'avant.
+      ⚠ **REDEMARRAGE DES 4 SERVICES REQUIS.**
 - [ ] **C-12** la photo fraîche se lit avec **l'identité** — `console_job_worker.js:15939`
 - [x] **C-4** le garde-fou est BRANCHE — `push_contacts_to_supabase.py`
       **FAIT le 23/09.** ⚠ Le trou n'était pas dans le run de nuit mais dans le

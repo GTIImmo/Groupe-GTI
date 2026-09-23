@@ -137,6 +137,42 @@ const controles = [
     ok: () => /lierRelationProvisoire\(jetonRelation, identite\)/.test(src),
   },
   {
+    // C-9, 23/09/2026. L'audit du 22/09 avait fait passer les ACQUEREURS par la
+    // porte. Il restait NOTAIRES et MANDANTS, qui partaient bruts.
+    nom: "C-9 les personnes d'une transaction sont traduites EN UNE FOIS",
+    ok: () => /async function traduireLesPersonnesDeLaTransaction\(/.test(src)
+           && /tx\.notary = viser\(tx\.notary\)/.test(src)
+           && /tx\.notaryMandant = viser\(tx\.notaryMandant\)/.test(src)
+           && /tx\.mandantsVoulus = tx\.mandantsVoulus\.map\(viser\)/.test(src),
+  },
+  {
+    nom: "C-9 la traduction est faite aux DEUX endroits qui batissent un tx",
+    ok: () => src.split("await traduireLesPersonnesDeLaTransaction(tx,").length - 1 === 2,
+  },
+  {
+    // CE QUI COMPTE N'EST PAS QU'ELLE EXISTE, C'EST QU'ELLE VIENNE AVANT.
+    // Traduire apres l'envoi ne servirait a rien -- et c'est exactement la
+    // forme du defaut C-1 : le bon geste, au mauvais moment.
+    nom: "C-9 elle vient AVANT que les mandants partent chez Hektor",
+    ok: () => {
+      const traduction = src.indexOf("await traduireLesPersonnesDeLaTransaction(tx,");
+      const envoi = src.indexOf('corps.append("mandants[]"');
+      const envoi2 = src.indexOf('body.append("mandants[]"');
+      return traduction > 0 && envoi > traduction && envoi2 > traduction;
+    },
+  },
+  {
+    // ET DONC le constat d'ecart compare des choses comparables : `posees`
+    // porte maintenant les memes numeros que ce que Hektor relit. Avant, TOUS
+    // les mandants etaient comptes comme refuses.
+    nom: "C-9 le constat d'ecart lit un tx deja traduit",
+    ok: () => {
+      const traduction = src.indexOf("await traduireLesPersonnesDeLaTransaction(tx,");
+      const posees = src.indexOf("mandants: tx.mandantsAffirmes ? tx.mandantsVoulus.slice()");
+      return traduction > 0 && posees > traduction;
+    },
+  },
+  {
     // LE CONTROLE LE PLUS IMPORTANT. La version du 21/09 retirait en silence
     // les numeros de la plage de l'app de la liste des mandants : le mandat
     // partait ampute, et Hektor l'acceptait sans un mot.
