@@ -78,6 +78,32 @@ TASK_CRITICALITY: dict[str, str] = {
     #   pull_from_supabase.py, comme celui ecrit le meme jour pour la sauvegarde :
     #   un incident transitoire cesserait alors de faire echouer la tache.
     "GTI Descente": "critical",
+    # 2026-09-23 : ajout de "GTI Recherches Actives". TROISIEME FOIS LE MEME TROU
+    # -- apres la sauvegarde (19/08) et la descente (08/09). Et decouvert de la
+    # meme facon : Frederic a demande « verifie le run de 3h », et c'est en
+    # regardant qu'on a vu que celui du 19/09 avait ECHOUE (OAuth Hektor en
+    # timeout) sans que personne ne soit prevenu. Un warning est enregistre et
+    # ne part nulle part : c'etait donc un silence, pas une surveillance.
+    #
+    # POURQUOI CELLE-LA MERITE "critical" : c'est le SEUL mecanisme qui capte les
+    # recherches modifiees DANS HEKTOR -- le delta du run quotidien y est aveugle
+    # (trou mesure et corrige en juillet). Une nuit ratee se repare seule, puisque
+    # le lendemain relit les 3 970 fiches. TROIS nuits ratees en silence, et les
+    # recherches derivent sans que rien ne le dise.
+    #
+    # ⚠ LE PRIX, LE MEME QU'AILLEURS : une panne passagere de Hektor alertera
+    #   alors qu'elle se repare seule. On l'assume, comme pour la descente.
+    "GTI Recherches Actives": "critical",
+    # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
+    #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
+    #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
+    #   --allow-auto-send : l'envoi automatique au client est bloque par
+    #   decision, donc la tache ne fait presque rien. L'alerter, ce serait du
+    #   bruit horaire pour un mecanisme volontairement eteint -- et le bruit
+    #   finit par faire ignorer les vraies alertes.
+    #   LE JOUR OU L'ENVOI AUTO SERA RALLUME, il faudra la passer "critical"
+    #   ou, mieux, ecrire une sonde de DONNEES (des relances dues qui ne
+    #   partent pas) -- l'echec d'une execution horaire n'est pas le bon signal.
 }
 
 # Codes LastTaskResult consideres comme sains : succes / en cours / jamais lance.

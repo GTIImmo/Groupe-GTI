@@ -101,8 +101,65 @@ rejoue, personne ne les efface. Les 19 « Hektor injoignable » sont sans consé
 *« hektor_offre_id required »*, un mandant jamais rattaché — **et ceux-là étaient des gestes
 d'utilisateur qui n'ont pas abouti**.
 
-La question n'est pas technique : **veut-on une file d'erreurs qu'on relit, ou pas ?** Si
-non, il faut les purger et le dire. Si oui, il faut quelqu'un pour les lire.
+### Les 37, triées une par une le 23/09 — **ce sont TOUTES des essais**
+
+| | |
+|---|---|
+| 19 | Hektor injoignable — externe, se répare seul |
+| 4 | verrou SQLite — dont 2 pendant la descente *(voir plus haut)* |
+| **10** | sur **`TEST C15 agence Firminy - a supprimer`**, **`TEST C4 Villa Bellecour`** et **`[Sans titre] EM28412`** *(l'annonce 24933, essais déjà connus)* |
+| 4 | sans annonce rattachée — création de brouillon, statut d'offre, recherche : même période d'essais |
+
+➡ **Pas un seul geste client perdu.** Le plus alarmant à lire — trois échecs d'affilée sur
+un mandant qu'on n'arrivait pas à rattacher — portait sur une annonce nommée
+*« à supprimer »*.
+
+**Mais personne ne le savait**, et c'est ça le vrai sujet : **37 erreurs mortes garantissent
+que la 38ᵉ, la vraie, passera inaperçue.**
+
+> **Recommandation** : purger les 37, et écrire que la file doit rester à zéro. Une file
+> qu'on laisse grossir cesse d'être une file : elle devient un décor.
+
+⚠ **Et deux annonces d'essai sont encore `Actif`, non archivées**, un mois après — dont une
+qui s'appelle littéralement *« TEST C15 agence Firminy - a supprimer »*.
+
+---
+
+## L'ALERTE MANQUANTE — corrigée le 23/09
+
+`GTI Recherches Actives` n'était pas dans la liste des tâches qui alertent. Son échec du
+**19/09** *(OAuth Hektor en timeout)* n'a donc prévenu personne. **Troisième fois le même
+trou** — après la sauvegarde (19/08) et la descente (08/09), et découvert de la même
+façon : parce que Frédéric a demandé à vérifier.
+
+> **FAIT.** Elle est `critical`. C'est le **seul** mécanisme qui capte les recherches
+> modifiées dans Hektor ; une nuit ratée se répare seule, **trois nuits en silence font
+> dériver les recherches**.
+
+⚠ **`GTI Relances Email` a été laissée de côté DÉLIBÉRÉMENT.** Elle tourne **toutes les
+heures** et lance `relance_worker` **sans `--allow-auto-send`** : l'envoi automatique est
+bloqué par décision. L'alerter serait du bruit horaire pour un mécanisme éteint — et le
+bruit finit par faire ignorer les vraies alertes. *Le jour où l'envoi sera rallumé, il
+faudra une sonde de **données** (des relances dues qui ne partent pas), pas l'échec d'une
+exécution.*
+
+---
+
+## LES 2 ORPHELINS — réglés, et ils n'étaient pas ce que je croyais
+
+Je les avais attribués à mon accident du 22/09. **Faux.** Leurs deux recherches **existent
+sur le serveur** et ont été revues le 23/09 à 12:52. Mais leurs contacts sont **archivés**
+et **hors périmètre** : elles ne sont donc légitimement pas dans Supabase.
+
+C'étaient des lignes d'état du moteur, laissées derrière quand le contact a quitté
+l'annuaire. **Supprimées** — elles se reconstruiraient seules si le contact revenait.
+
+## Six avertissements que personne ne lit
+
+La sonde en produit **six**, et **aucun ne part** *(seuls les `critical` déclenchent un
+envoi)*. Deux méritent un œil : **90 notifications sans destinataire** *(seuil 20)* et
+**4 Go dans `.tmp`** — sur le volume unique qui porte aussi le code, les bases et les
+sauvegardes.
 
 ---
 
