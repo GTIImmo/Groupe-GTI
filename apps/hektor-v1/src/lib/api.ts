@@ -2428,7 +2428,12 @@ function applyContactFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (search.length >= 3) {
     const ilike = `%${search}%`
     query = /^\d+$/.test(search)
-      ? query.or(`hektor_contact_id.eq.${search},search_text.ilike.${ilike}`)
+      // G-2, 23/09 : le placeholder promet « ou un ID contact », et l'ID que tu as
+      // sous les yeux est celui que HEKTOR affiche. Sans le second terme, taper ce
+      // numero ne trouverait plus rien apres la bascule -- la requete retomberait
+      // en silence sur la recherche textuelle et rendrait une liste vide.
+      ? query.or(
+          `hektor_contact_id.eq.${search},hektor_target_id.eq.${search},search_text.ilike.${ilike}`)
       : query.ilike('search_text', ilike)
   }
   return query
@@ -3081,6 +3086,23 @@ export async function loadContactsPage({
   }
 }
 
+/** G-6, 23/09/2026 : ON RETROUVE PAR LES DEUX NUMEROS.
+ *
+ *  Cette fonction est la porte unique du front pour ouvrir un contact, et le
+ *  numero qu'on lui passe vient de l'EXTERIEUR : une fiche annonce, un
+ *  rapprochement, une transaction -- autant de sources qui parlent encore la
+ *  langue de Hektor. `detailContactDirectoryId` (App.tsx) choisit d'ailleurs le
+ *  premier candidat numerique sans savoir de quelle serie il parle : apres la
+ *  bascule, il rendrait un numero de Hektor a une base rangee par identite.
+ *
+ *  Meme remede que le registre des recherches, qui tient 456 000 lignes par ce
+ *  seul principe : on cherche sous l'un OU l'autre. Les deux plages sont
+ *  DISJOINTES (< 10 M / >= 10 M), donc au plus une fiche repond.
+ *
+ *  NE PAS etendre ce principe aux fonctions qui recoivent le numero d'un
+ *  contact DEJA CHARGE (loadContactRelations, loadContactSearches) : celles-la
+ *  sont coherentes par construction, et elargir leur filtre n'ajouterait que
+ *  du risque. */
 export async function loadContactById(contactId: string): Promise<AppContact | null> {
   if (!hasSupabaseEnv || !supabase) return null
   const cleanId = contactId.trim()
@@ -3088,7 +3110,7 @@ export async function loadContactById(contactId: string): Promise<AppContact | n
   const { data, error } = await supabase
     .from(contactsCurrentView)
     .select(contactsListingSelect)
-    .eq('hektor_contact_id', cleanId)
+    .or(`hektor_contact_id.eq.${cleanId},hektor_target_id.eq.${cleanId}`)
     .maybeSingle()
   if (error) throw new Error(error.message)
   return data ? normalizeContactRow(data as unknown as AppContact) : null
@@ -5604,7 +5626,11 @@ export async function loadRepartitionDefautSortie(contactId: string | number | n
   const { data, error } = await supabase
     .from('app_contact_current')
     .select('hektor_negociateur_id,negociateur_email,commercial_nom')
-    .eq('hektor_contact_id', cle)
+    // G-3, 23/09 : `cle` vient du REGISTRE D'AFFAIRES, qui porte le numero de
+    // Hektor. Sans le second terme, la repartition de commission cesserait
+    // d'etre posee -- et l'echec est avale par un `.catch(() => null)` chez
+    // l'appelant : aucune erreur, aucune ligne, personne de prevenu.
+    .or(`hektor_contact_id.eq.${cle},hektor_target_id.eq.${cle}`)
     .limit(1)
   if (error) return null
   const row = (data ?? [])[0] as { hektor_negociateur_id?: string | number | null; negociateur_email?: string | null; commercial_nom?: string | null } | undefined
@@ -8367,6 +8393,9 @@ export async function searchOwnerAnnonceOptions(input: {
 
 export type MandantContactSearchOption = Pick<AppContact,
   | 'hektor_contact_id'
+  // G-7, 23/09 : la CIBLE manquait, alors que la requete la ramene deja. Sans
+  // elle, un ecran qui choisit un mandant ne peut pas dire a Hektor QUI viser.
+  | 'hektor_target_id'
   | 'negociateur_email'
   | 'commercial_nom'
   | 'agence_nom'
@@ -8547,7 +8576,12 @@ export async function searchMandantContactOptions(input: {
   if (search) {
     const ilike = `%${search}%`
     query = /^\d+$/.test(search)
-      ? query.or(`hektor_contact_id.eq.${search},search_text.ilike.${ilike}`)
+      // G-2, 23/09 : le placeholder promet « ou un ID contact », et l'ID que tu as
+      // sous les yeux est celui que HEKTOR affiche. Sans le second terme, taper ce
+      // numero ne trouverait plus rien apres la bascule -- la requete retomberait
+      // en silence sur la recherche textuelle et rendrait une liste vide.
+      ? query.or(
+          `hektor_contact_id.eq.${search},hektor_target_id.eq.${search},search_text.ilike.${ilike}`)
       : query.ilike('search_text', ilike)
   }
 

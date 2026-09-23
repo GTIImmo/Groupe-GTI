@@ -7180,7 +7180,19 @@ Détail complet, avec fichier et ligne pour chaque point :
 
 ## Gênants — l'app marche mais ment  *(G-1 → G-19 dans la note)*
 
-- [ ] front : **G-2** la recherche par numéro · **G-3** la répartition de commission · **G-1** le doublon d'invité · **G-4** l'acquéreur en double · **G-5** invités sans email · **G-6/G-7/G-8** les deux séries · **G-19** `'invite'` dans un champ de numéro
+- [x] **front : G-1 G-2 G-3 G-4 G-6 G-7 faits le 23/09** — `apps/hektor-v1/test_genants_front.cjs`
+      Le front interroge un contact par son numéro à **cinq** endroits ; **trois** seulement
+      reçoivent un numéro venu de l'**extérieur** — les deux autres le tiennent d'un contact
+      déjà chargé et sont cohérentes par construction. **Elles n'ont PAS été élargies**, et un
+      contrôle le vérifie : élargir sans raison, c'est ajouter du risque.
+      **G-2** : l'assertion a révélé une **seconde** barre de recherche que l'audit avait ratée.
+      **G-1** et **G-4** sont des **doublons**, pas des jointures : deux sources, deux langues,
+      une seule clé. Réparés grâce à la cible exposée par **G-7**.
+      ⚠ **G-5 est un FAUX POSITIF** : mesuré, **0** relation pointe hors de l'annuaire, et les
+      deux côtés basculent ensemble. Rien à corriger.
+      Reste : **G-8** *(les 12 garde-fous `/^\d+$/`)* et **G-19** *(les sentinelles)*.
+      ✅ build OK — partira au prochain `git push` (Vercel).
+- [ ] API : **G-17** les 9 liens d'agenda · **G-18** les doublons de relance
 - [x] **serveur : les 8 gênants faits le 23/09** — `phase2/checks/test_genants_serveur.py`
       **G-11 était MAL CLASSÉ** : ce n'est pas un gênant. Le build remet l'éligibilité à zéro
       chaque nuit et ce script la repose ; ne plus rien trouver, c'est voir les **1 738**

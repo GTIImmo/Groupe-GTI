@@ -15065,11 +15065,25 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   /** Ajoute un acquereur a la liste, sans doublon, et tient a jour le champ
    *  d'origine -- le PREMIER de la liste reste `buyer_contact_id`. */
+  /** G-4, 23/09/2026 : LES DEUX NUMEROS D'UNE MEME PERSONNE.
+   *
+   *  Cette liste est PRE-REMPLIE depuis le registre d'affaires et depuis la
+   *  transaction de Hektor -- donc en numeros de HEKTOR -- puis completee par
+   *  la recherche, qui rend des IDENTITES. Comparer un seul champ laisserait
+   *  donc ajouter DEUX FOIS la meme personne apres la bascule, et le retrait
+   *  n'en enleverait qu'une. */
+  function numerosDuContact(option: MandantContactSearchOption): string[] {
+    return [option.hektor_contact_id, option.hektor_target_id]
+      .map((valeur) => String(valeur ?? '').trim())
+      .filter(Boolean)
+  }
+
   function ajouterAcquereurStatut(option: MandantContactSearchOption) {
     const id = String(option.hektor_contact_id ?? '').trim()
     if (!id) return
+    const candidat = new Set(numerosDuContact(option))
     setStatusChangeBuyers((liste) => {
-      if (liste.some((x) => String(x.hektor_contact_id ?? '').trim() === id)) return liste
+      if (liste.some((x) => numerosDuContact(x).some((n) => candidat.has(n)))) return liste
       const suivante = [...liste, option]
       setStatusChangeBuyerContactId(String(suivante[0].hektor_contact_id ?? '').trim())
       return suivante
@@ -15081,7 +15095,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function retirerAcquereurStatut(id: string) {
     setStatusChangeBuyers((liste) => {
-      const suivante = liste.filter((x) => String(x.hektor_contact_id ?? '').trim() !== id)
+      // G-4 : on retire la PERSONNE, quel que soit celui de ses deux numeros
+      // que le bouton portait.
+      const suivante = liste.filter((x) => !numerosDuContact(x).includes(String(id ?? '').trim()))
       setStatusChangeBuyerContactId(suivante.length ? String(suivante[0].hektor_contact_id ?? '').trim() : '')
       return suivante
     })
@@ -32498,8 +32514,24 @@ function GoogleAgendaAnnonceSection(props: {
   const canSubmitGoogleAgendaEvent = Boolean(summary.trim()) && (!isVisit || attendeeEmails.length > 0)
   const linkedAgendaContacts = useMemo(() => {
     const contactsByKey = new Map<string, GoogleAgendaLinkedInviteeOption>()
+    // ── G-1, 23/09/2026 : LES DEUX SOURCES NE PARLENT PAS LA MEME LANGUE ──
+    // `props.contacts` donne le numero de HEKTOR (il vient du detail de
+    // l'annonce) ; `linkedRelationContactOptions` donne NOTRE identite (elle
+    // vient de app_contacts_current). La cle de dedoublonnage etant le
+    // numero, la meme personne arriverait sous DEUX cles apres la bascule --
+    // affichee deux fois, une fois avec son email et une fois sans.
+    //
+    // La seconde source porte desormais LES DEUX numeros (G-7) : on s'en
+    // sert pour ramener toute cible a son identite. Aujourd'hui les deux
+    // sont egales, la table est vide et rien ne change.
+    const identiteParCible = new Map<string, string>()
+    linkedRelationContactOptions.forEach((option) => {
+      const cible = safeText(option.hektor_target_id)
+      const identite = safeText(option.hektor_contact_id)
+      if (cible && identite && cible !== identite) identiteParCible.set(cible, identite)
+    })
     const addContact = (item: Omit<GoogleAgendaLinkedInviteeOption, 'key'>) => {
-      const hektorContactId = safeText(item.hektorContactId)
+      const hektorContactId = ((brut) => identiteParCible.get(brut) ?? brut)(safeText(item.hektorContactId))
       const email = safeText(item.email).toLowerCase()
       const key = hektorContactId ? `contact-${hektorContactId}` : email ? `email-${email}` : `label-${item.label}-${contactsByKey.size}`
       const link = item.link ?? (email ? {
