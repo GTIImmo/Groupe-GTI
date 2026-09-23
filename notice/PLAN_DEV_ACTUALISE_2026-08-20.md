@@ -2418,4 +2418,40 @@ contacts, en 37 secondes.
 - **Les 176 champs du grand bloc** — affichables et modifiables, non filtrables dans les listes.
 - **La clé de recherche** — hachage du contenu, elle change à chaque édition : **1 270 rapprochements
   déjà orphelins**.
-- **Le coût réel de l'identifiant contact** — quelles tables parmi les 21 qui portent le numéro Hektor.
+- ~~**Le coût réel de l'identifiant contact**~~ — **MESURÉ le 23/09** : 28 tables Supabase,
+  35 fonctions et vues, 52 tables locales. Voir `notice/AUDIT_COMPLET_AVANT_BASCULE_2026-09-23.md`.
+
+---
+
+## 23/09/2026 — AUDIT COMPLET AVANT LA BASCULE (`L4-c ⑤`)
+
+**« Comment as-tu pu rater cela ? »** — parce que mes audits lisaient du **code** et ne
+comptaient jamais la **donnée**, et parce que je mesurais **une famille à la fois**. La
+bascule ne casse pas une famille : elle casse **la couture** entre une table reconstruite
+chaque nuit et une table qui ne l'est jamais. Et cette couture ne meurt jamais avec une
+erreur — elle rend zéro ligne.
+
+Quatre balayages, une seule question : *qu'est-ce qui casse le jour où la VALEUR de
+`hektor_contact_id` change ?*
+
+> **LE LISTING COMPLET : `notice/AUDIT_COMPLET_AVANT_BASCULE_2026-09-23.md`**
+> 13 corrections bloquantes (C-1 → C-13), 19 gênantes (G-1 → G-19), ce qui est protégé,
+> ce qui reste non mesuré, et l'ordre des dix gestes.
+
+**Les trois mesures qui changent la forme du chantier :**
+
+| mesure | conséquence |
+|---|---|
+| `app_search_registry` : **77 083 / 77 088** lignes ont déjà leur doublure | **les 456 000 lignes qui pendent sous `contact_search_key` ne bougeront pas.** La plus grosse dépendance du projet est **déjà protégée**. Il reste **5** lignes à combler |
+| **0** travail en file, **0** `app_contact_pending`, **0** `app_search_pending` | tout le chapitre « travail créé avant, consommé après » **disparaît si l'on bascule file vide**. C'est une règle de procédure, pas un développement |
+| **35** fonctions et vues cousent reconstruit ↔ figé *(je disais 11 RPC)* | la traduction des tables figées (**C-13**) règle à elle seule dix des treize bloquants |
+
+**Le premier de tous les défauts** : la **porte** du worker
+(`console_job_worker.js:1886-1892`) lève pour tout numéro ≥ 10 M **avant** d'avoir lu la
+cible. Après la bascule, tous les contacts sont ≥ 10 M — **plus aucun travail ne part vers
+Hektor**. La porte que j'ai écrite pour protéger la bascule est ce qui l'empêche.
+
+**Le plus silencieux** : `app_contact_enqueue_due_pushes`
+(`patch_5b_barriere_attente_2026-09-21.sql:62-66`) fait `continue` quand la jointure échoue.
+**Aucune édition ne repart**, sans erreur, sans trace — et **la sonde censée le voir joint de
+la même façon**, donc la panne est invisible.

@@ -1885,17 +1885,24 @@ async function loadDossier(job) {
 //   rapporte le vrai numero.
 const PLAGE_NUMEROS_APP = 10000000;
 
+// ── C-1, 23/09/2026 : ON LIT LA CIBLE AVANT DE REFUSER ─────────────────────
+// La version du 21/09 levait des que l'identite etait >= 10 000 000, AVANT
+// d'avoir lu `hektor_target_id`. Tant qu'aucun contact n'etait dans cette
+// plage, personne ne l'a vu. Le jour de la bascule, TOUS les contacts y sont
+// -- et la porte ecrite pour proteger la bascule devenait ce qui l'empeche :
+// plus un seul travail ne serait parti vers Hektor, alors que la cible est
+// posee sur chacun d'eux (mesure du 23/09 : 0 contact sans cible).
+//
+// La bonne question n'est pas « ce numero est-il a nous ? » mais « ai-je un
+// numero a viser ? ». On refuse l'absence de cible, pas la plage.
 async function cibleHektorContact(identite, { contexte = "" } = {}) {
   const brut = String(identite || "").trim();
   if (!/^\d+$/.test(brut)) throw new Error("contact_id numerique requis");
 
-  if (Number(brut) >= PLAGE_NUMEROS_APP) {
-    // Rien a viser chez Hektor : ce contact est ne dans l'app et il n'y est pas
-    // encore. Le travail echoue proprement au lieu de partir a l'aveugle.
-    throw new Error(
-      `Contact ${brut} pas encore cree chez Hektor : rien a viser${contexte ? ` (${contexte})` : ""}. ` +
-      "Le travail sera repris quand le numero Hektor sera rapporte.");
-  }
+  // La plage ne decide plus du refus : elle decide de ce qu'on fait QUAND on
+  // n'a pas de cible. Un numero de Hektor se vise lui-meme ; un numero a nous
+  // ne se vise pas du tout.
+  const dansLaPlageDeLApp = Number(brut) >= PLAGE_NUMEROS_APP;
 
   try {
     const lignes = await supabaseRequest(
@@ -1905,9 +1912,21 @@ async function cibleHektorContact(identite, { contexte = "" } = {}) {
       ? String(lignes[0].hektor_target_id || "").trim() : "";
     if (cible) return cible;
   } catch (_) {
-    // Lecture impossible : on retombe sur l'identite ci-dessous, qui est le
-    // comportement d'avant le 21/09. Une panne Supabase ne doit pas bloquer un
-    // envoi qui marchait hier.
+    // Lecture impossible. Une panne Supabase ne doit pas bloquer un envoi qui
+    // marchait hier -- MAIS elle ne doit pas non plus nous faire viser a
+    // l'aveugle. Un numero de Hektor se vise lui-meme, comme avant le 21/09.
+    if (!dansLaPlageDeLApp) return brut;
+    throw new Error(
+      `Contact ${brut} : cible Hektor illisible (Supabase muet)${contexte ? ` (${contexte})` : ""}. ` +
+      "On n'envoie pas un numero de l'app a Hektor : le travail sera repris.");
+  }
+
+  if (dansLaPlageDeLApp) {
+    // Rien a viser chez Hektor : ce contact est ne dans l'app et il n'y est pas
+    // encore. Le travail echoue proprement au lieu de partir a l'aveugle.
+    throw new Error(
+      `Contact ${brut} pas encore cree chez Hektor : rien a viser${contexte ? ` (${contexte})` : ""}. ` +
+      "Le travail sera repris quand le numero Hektor sera rapporte.");
   }
   // Pas de cible posee, mais l'identite est dans la plage de Hektor : c'est une
   // fiche d'avant la recopie, ou une fiche que le declencheur n'a pas vue. Elle

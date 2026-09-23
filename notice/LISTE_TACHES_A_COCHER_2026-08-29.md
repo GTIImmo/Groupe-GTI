@@ -7085,3 +7085,53 @@ côtés ; le serveur ne les avait **jamais** connues. C'est la démonstration vi
 `26bis-TRANSACTIONS` : *« ce que l'app crée et que Hektor refuse n'existe que dans Supabase —
 votre serveur ne le verra jamais, et aucune sauvegarde ne le protège »*. Deux lignes nées
 d'un geste de l'app, refusées par Hektor, invisibles au serveur pendant six jours.
+
+
+---
+
+# L4-c ⑤ — AVANT D'ALLUMER LA BASCULE  *(posé le 23/09/2026)*
+
+Détail complet, avec fichier et ligne pour chaque point :
+**`notice/AUDIT_COMPLET_AVANT_BASCULE_2026-09-23.md`**
+
+## Bloquants — à coder AVANT, dormant
+
+- [x] **C-1** la porte du worker lit `hektor_target_id` **avant** de lever — `console_job_worker.js:1868-1917`
+      **FAIT le 23/09.** Mesure prealable : 0 contact dans la plage, 0 sans cible ⇒ **dormant**.
+      Le repli de panne refuse desormais de viser avec un numero de l'app.
+      2 controles ajoutes a `test_porte_contacts.js` — **verifies en ECHEC sur la version d'avant**,
+      donc ce ne sont pas des controles decoratifs. 17/17 verts.
+      ⚠ **PAS ENCORE DEPLOYE** : il faut redemarrer les 4 services.
+- [ ] **C-2** la barrière joint `app_contact_pending` par identité **ou** cible + la sonde sans jointure — `patch_5b_barriere_attente:62,147,190`
+- [ ] **C-3** correspondance : pagination, plafond au parc, **étape bloquante** — `descendre_correspondance_contacts.py:67,88,112`
+- [ ] **C-6** verrou : refuser d'insérer un numéro ≥ 10 M dans le miroir — `normalize_source.py:1068` + traduire à la sortie — `sync_active_searches.py:45`
+- [ ] **C-9** mandants et notaires par `ciblesHektorContacts` — `console_job_worker.js:11366,11375,11733,11742`
+- [ ] **C-12** la photo fraîche se lit avec **l'identité** — `console_job_worker.js:15939`
+- [ ] **C-4** brancher ou retirer `delete_contacts_except_dirty` — `push_contacts_to_supabase.py:539`
+
+## Bloquants — gestes de la fenêtre de bascule
+
+- [ ] **(1)** combler les **5** lignes de `app_search_registry` sans doublure
+- [ ] **(2)** file vide *(déjà le cas)* + **arrêter les 4 services**
+- [ ] **(3)** sauvegarde locale `VACUUM INTO` + compte de chaque table
+- [ ] **C-13** patch SQL : bascule + traduire les **28 tables** figées
+      — **PAS** `app_console_deleted_contact_log` ni `app_contact_consent` *(ce sont des journaux)*
+- [ ] **C-5** traduire `app_contact` local — **356 156** lignes
+- [ ] **C-4** `push_contacts --reset-push-state --include-archived-searches`
+- [ ] **C-7** couper l'envoi automatique pendant la fenêtre
+- [ ] vérifier : rapprochements visibles, sondes à zéro, cibles à 100 %, **un envoi d'espace client réel**
+
+## Gênants — l'app marche mais ment  *(G-1 → G-19 dans la note)*
+
+- [ ] front : **G-2** la recherche par numéro · **G-3** la répartition de commission · **G-1** le doublon d'invité · **G-4** l'acquéreur en double · **G-5** invités sans email · **G-6/G-7/G-8** les deux séries · **G-19** `'invite'` dans un champ de numéro
+- [ ] serveur : **G-9** `marquer_contacts_disparus` · **G-10** le lien vente↔acheteur · **G-11** les **1 738** personnes qui ressortent de l'annuaire · **G-12** « tout paraît né dans l'app » · **G-13/G-14** le build · **G-15/G-16** les sondes et le test qui passe au vert sans rien tester
+- [ ] API : **G-17** les 9 liens d'agenda · **G-18** les doublons de relance
+
+## Non mesuré — à trancher avant, pas pendant
+
+- [ ] la description des événements **Google Agenda** porte `Contact Hektor : <n>` — **chez Google, jamais réécrit**
+- [ ] `app_affaire_ledger.hektor_acquereur_id` : numéro Hektor par construction, ou identité ?
+- [ ] tables `*_provisional` : `lierContactProvisoire` écrit **Hektor**, `lierRelationProvisoire` écrit **l'identité**
+- [ ] `propager_numeros_contact` : la fonction Postgres non lue
+- [ ] `reappliquer_saisies_app` · `magasin_affaire_app` · `magasin_mandat_app` · `backfill_couple_contact` · `quality_checks` : non ouverts
+- [ ] **RDV / visites** comme objet propre : toujours pas balayé

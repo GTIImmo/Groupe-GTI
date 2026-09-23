@@ -27,9 +27,36 @@ const src = fs.readFileSync(FICHIER, "utf8");
 
 const controles = [
   {
-    nom: "la porte existe, et elle refuse la plage de l'app",
+    nom: "la porte existe, et elle connait la plage de l'app",
     ok: () => /async function cibleHektorContact\(/.test(src)
            && /Number\(brut\) >= PLAGE_NUMEROS_APP/.test(src),
+  },
+  {
+    // C-1, 23/09/2026. LE CONTROLE QUI MANQUAIT. L'ancienne version levait des
+    // que l'identite etait dans la plage de l'app, AVANT de lire la cible. Le
+    // controle d'au-dessus ne voyait rien : les deux versions contiennent la
+    // meme comparaison. Ce n'est pas sa PRESENCE qui compte, c'est sa PLACE.
+    //
+    // Tant qu'aucun contact n'etait dans la plage, le defaut etait invisible.
+    // Le jour de la bascule il aurait arrete TOUS les envois vers Hektor.
+    nom: "C-1 la porte LIT la cible AVANT de refuser",
+    ok: () => {
+      const debut = src.indexOf("async function cibleHektorContact(");
+      const fin = src.indexOf("async function ciblesHektorContacts(");
+      if (debut < 0 || fin < 0 || fin < debut) return false;
+      const corps = src.slice(debut, fin);
+      const lecture = corps.indexOf("select=hektor_target_id");
+      const refus = corps.indexOf("pas encore cree chez Hektor");
+      return lecture > 0 && refus > 0 && lecture < refus;
+    },
+  },
+  {
+    // Le repli de panne : Supabase muet ne doit pas nous faire envoyer un
+    // numero de l'app a Hektor. Avant C-1 ce cas n'existait pas (on levait
+    // plus haut) ; maintenant il existe, et il doit refuser.
+    nom: "C-1 Supabase muet ne fait JAMAIS viser un numero de l'app",
+    ok: () => /if \(!dansLaPlageDeLApp\) return brut;/.test(src)
+           && /cible Hektor illisible \(Supabase muet\)/.test(src),
   },
   {
     nom: "la porte existe aussi pour une LISTE",
