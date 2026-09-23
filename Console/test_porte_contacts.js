@@ -173,6 +173,27 @@ const controles = [
     },
   },
   {
+    // C-12, 23/09/2026. Le commentaire du 22/09 disait « la photo FRAICHE se lit
+    // chez Hektor, donc avec la cible ». La fonction interroge en realite
+    // app_contact_search_current -- NOTRE table, rangee par identite. Avec la
+    // cible, apres la bascule : aucune ligne, donc conflit sur CHAQUE edition.
+    nom: "C-12 les DEUX photos de recherche se lisent avec l'identite",
+    ok: () => /await fetchLocalContactSearchSnapshot\(job, identite, searchIndex\)/.test(src)
+           && /await fetchFreshContactSearchSnapshot\(identite, searchIndex\)/.test(src)
+           && !/fetchFreshContactSearchSnapshot\(contactId,/.test(src),
+  },
+  {
+    // C-12 : C-6 a donne a refresh_contact_inproc.py de quoi traduire lui-meme.
+    // Son contrat a donc change -- il prend L'IDENTITE -- et les deux appelants
+    // lui passaient encore la cible. Un contrat qui change sans que ses
+    // appelants bougent, c'est une panne qui attend son jour.
+    nom: "C-12 le read-through recoit l'IDENTITE (il resout la cible seul)",
+    ok: () => src.split("runContactRefreshPipeline(job, identite,").length - 1 === 1
+           && src.split("runContactRefreshPipeline(job, String(identite),").length - 1 === 1
+           && !/runContactRefreshPipeline\(job, hektorContactId/.test(src)
+           && !/runContactRefreshPipeline\(job, String\(contactId\)/.test(src),
+  },
+  {
     // LE CONTROLE LE PLUS IMPORTANT. La version du 21/09 retirait en silence
     // les numeros de la plage de l'app de la liste des mandants : le mandat
     // partait ampute, et Hektor l'acceptait sans un mot.

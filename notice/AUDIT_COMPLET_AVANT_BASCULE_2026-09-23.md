@@ -353,8 +353,17 @@ fonction lit **notre** table `app_contact_search_current`, avec la cible. Après
 `fresh = null` => `recherche_introuvable_cote_hektor` => **toute édition de recherche bloquée
 en conflit**.
 
-> **Correctif** : lire notre table avec **l'identité**. Le commentaire décrivait une
-> intention que le code ne tient pas.
+> **FAIT le 23/09.** Les deux photos se lisent avec l'identité. Et le **paramètre s'appelait
+> `contactId`** — un nom qui mentait, puisque la fonction lit *notre* table : renommé.
+> *Un nom ambigu a suffi à ce qu'on lui passe la cible pendant un jour.*
+>
+> **⚠ ET C-12 EN CACHAIT UN SECOND, que j'avais créé moi-même une heure plus tôt.** C-6 a
+> donné à `refresh_contact_inproc.py` de quoi traduire seul : **son contrat a changé**, il
+> prend désormais l'identité. Or **ses deux appelants du worker lui passaient encore la
+> cible**. Invisible aujourd'hui, faux le jour J. *Un contrat qui change sans que ses
+> appelants bougent, c'est une panne qui attend son jour.*
+>
+> **23 contrôles** au total, les 2 nouveaux **éprouvés en échec** sur la version d'avant.
 
 ---
 

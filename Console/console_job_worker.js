@@ -4082,7 +4082,16 @@ async function handleRefreshConsoleData(job) {
 // (détail ContactById -> normalize -> build couche contacts -> push Supabase).
 // Extrait de handleRefreshConsoleContactData pour être réutilisé À L'IDENTIQUE par
 // le garde-fou anti-écrasement de update_hektor_contact_search (correctif n°1).
-async function runContactRefreshPipeline(job, hektorContactId, logCategory = "refresh_console_contact_data") {
+async function runContactRefreshPipeline(job, identiteContact, logCategory = "refresh_console_contact_data") {
+  // ⚠ C-12 23/09/2026 : CE POINT D'ENTREE PREND L'IDENTITE, PAS LA CIBLE.
+  // C-6 a donne a refresh_contact_inproc.py de quoi traduire lui-meme : ses 4
+  // etapes ne parlent pas la meme langue (Hektor et le miroir attendent la
+  // cible, le build et le push attendent l'identite), et un seul argument ne
+  // pouvait pas servir les deux. Il resout donc la cible tout seul -- a
+  // condition qu'on lui donne l'identite. Les deux appelants lui passaient
+  // encore la cible : invisible tant que les deux numeros sont egaux, faux le
+  // jour de la bascule.
+  //
   // Read-through fusionné (optim n°8) : les 4 étapes (detail -> normalize -> build ->
   // push) tournent dans UN SEUL process Python (refresh_contact_inproc.py) au lieu de
   // 4 lancements séparés. Mêmes flags qu'avant, scripts d'origine inchangés (le chef
@@ -4092,10 +4101,10 @@ async function runContactRefreshPipeline(job, hektorContactId, logCategory = "re
   const output = await runProjectPythonScript([
     "phase2/sync/refresh_contact_inproc.py",
     "--contact-id",
-    hektorContactId,
+    identiteContact,
   ], { timeoutMs: 180000, previewSize: 8000 });
   await logJob(job.id, logCategory, "running", "Read-through contact fusionne (1 process)", {
-    hektor_contact_id: hektorContactId,
+    hektor_contact_id: identiteContact,
     stdout: output.stdout,
     stderr: output.stderr,
   });
@@ -4121,7 +4130,10 @@ async function handleRefreshConsoleContactData(job) {
     parent_job_id: payload.parent_job_id || null,
   });
 
-  const { detailOutput, normalizeOutput, buildOutput, pushOutput } = await runContactRefreshPipeline(job, hektorContactId, "refresh_console_contact_data");
+  // C-12 23/09 : le pipeline prend L IDENTITE (il resout la cible lui-meme).
+  // `hektorContactId` reste lu plus haut : il vaut le controle que la fiche EST
+  // visible chez Hektor, et il nomme la cible dans le journal.
+  const { detailOutput, normalizeOutput, buildOutput, pushOutput } = await runContactRefreshPipeline(job, identite, "refresh_console_contact_data");
 
   await logJob(job.id, "refresh_console_contact_data", "done", "Contact reconstruit et pousse vers Supabase", {
     hektor_contact_id: hektorContactId,
@@ -16015,10 +16027,15 @@ function searchCoreFingerprint(snap, includeNumeric) {
   return JSON.stringify(fp);
 }
 
-async function fetchFreshContactSearchSnapshot(contactId, searchIndex) {
+// ⚠ C-12 23/09 : LE PARAMETRE S'APPELAIT `contactId`, ET CE NOM MENTAIT.
+// Cette fonction interroge app_contact_search_current -- NOTRE table, rangee par
+// IDENTITE. Elle est « fraiche » parce que le read-through vient de la
+// reconstruire depuis Hektor, pas parce qu'elle lirait Hektor. Un nom ambigu a
+// suffi a ce qu'on lui passe la cible pendant un jour.
+async function fetchFreshContactSearchSnapshot(identiteContact, searchIndex) {
   const params = new URLSearchParams({
     select: "offre,types_json,villes_json,surface_terrain_min,criteres_json,prix_min,prix_max,surface_min,pieces_min,chambre_min,search_index",
-    hektor_contact_id: `eq.${contactId}`,
+    hektor_contact_id: `eq.${identiteContact}`,
     search_index: `eq.${searchIndex}`,
     archive: "eq.false",
     limit: "1",
@@ -16318,15 +16335,22 @@ async function guardContactSearchOverwrite(job, contactId, payload, negoEmail, i
     search_index: searchIndex,
     from_pending: fromPending,
   });
-  await runContactRefreshPipeline(job, String(contactId), "search_overwrite_guard");
+  await runContactRefreshPipeline(job, String(identite), "search_overwrite_guard");  // C-12 : l identite
 
   // from_pending : la recherche dirty est sautée par le push (C) -> Supabase garde l'état
   // optimiste. On compare donc à l'état Hektor FRAIS lu dans le local.
-  // L4-c ② : la photo LOCALE se lit avec l'identite (c'est notre table) ;
-  // la photo FRAICHE se lit chez Hektor, donc avec la cible.
+  // ⚠ C-12 23/09 : LE COMMENTAIRE DU 22/09 DECRIVAIT UNE INTENTION QUE LE CODE
+  //   NE TENAIT PAS. Il disait « la photo FRAICHE se lit chez Hektor, donc avec
+  //   la cible » -- mais fetchFreshContactSearchSnapshot interroge
+  //   app_contact_search_current, c'est-a-dire NOTRE table, qui est rangee par
+  //   IDENTITE. Elle est fraiche parce que le pipeline vient de la reconstruire
+  //   depuis Hektor, juste au-dessus ; pas parce qu'on lirait Hektor.
+  //   Avec la cible, apres la bascule : aucune ligne -> fresh = null ->
+  //   « recherche_introuvable_cote_hektor » -> TOUTE edition de recherche
+  //   bloquee en conflit. Les deux photos se lisent donc avec l'identite.
   const fresh = fromPending
     ? await fetchLocalContactSearchSnapshot(job, identite, searchIndex)
-    : await fetchFreshContactSearchSnapshot(contactId, searchIndex);
+    : await fetchFreshContactSearchSnapshot(identite, searchIndex);
   const freshFp = fresh ? searchCoreFingerprint(fresh, includeNumeric) : null;
 
   if (fresh && freshFp === baseFp) {
