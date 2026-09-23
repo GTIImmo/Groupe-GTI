@@ -7119,7 +7119,13 @@ Détail complet, avec fichier et ligne pour chaque point :
 - [ ] **C-6** verrou : refuser d'insérer un numéro ≥ 10 M dans le miroir — `normalize_source.py:1068` + traduire à la sortie — `sync_active_searches.py:45`
 - [ ] **C-9** mandants et notaires par `ciblesHektorContacts` — `console_job_worker.js:11366,11375,11733,11742`
 - [ ] **C-12** la photo fraîche se lit avec **l'identité** — `console_job_worker.js:15939`
-- [ ] **C-4** brancher ou retirer `delete_contacts_except_dirty` — `push_contacts_to_supabase.py:539`
+- [x] **C-4** le garde-fou est BRANCHE — `push_contacts_to_supabase.py`
+      **FAIT le 23/09.** ⚠ Le trou n'était pas dans le run de nuit mais dans le
+      **rafraîchissement ciblé** : un contact né dans l'app, rafraîchi avant que Hektor
+      le connaisse, était supprimé — et Supabase est son seul exemplaire. Ses relations
+      et recherches aussi. 11 contrôles, dont 2 éprouvés en échec sur la version d'avant.
+      L'ordre du calcul des « disparues » est écrit comme une protection (NE PAS DÉPLACER).
+      ⚠ **PAS ENCORE DEPLOYE** : serveur, partira au run de nuit.
 
 ## Bloquants — gestes de la fenêtre de bascule
 

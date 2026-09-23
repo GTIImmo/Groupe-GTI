@@ -626,6 +626,16 @@ def main() -> int:
         loaded.append((table, rows))
     loaded_counts = {table: len(rows) for table, rows in loaded}
     contact_stats = None if args.skip_stats else build_contact_stats_row(args.phase2_db, args.contacts_scope, stats_contact_where)
+    # ⚠ C-4 23/09 : L'ORDRE DE CES TROIS LIGNES EST UNE PROTECTION, PAS UN HASARD.
+    #   `find_stale_row_keys` compare l'etat de push a `loaded`. Ce qui n'est pas
+    #   dans `loaded` est declare DISPARU, donc supprime chez Supabase.
+    #   Or `loaded` est RETRECI deux fois plus bas :
+    #     - les lignes « dirty » en sont retirees (saisie de l'app en attente) ;
+    #     - `filter_changed_rows` n'y laisse que ce qui a change (mode update).
+    #   Si l'un de ces deux retrecissements passait AVANT cette ligne, toutes les
+    #   lignes retirees seraient prises pour des disparues et SUPPRIMEES : les
+    #   saisies en attente la nuit meme, et en mode update la totalite du parc.
+    #   NE PAS DEPLACER CETTE LIGNE PLUS BAS.
     stale_by_table = {} if contact_ids else find_stale_row_keys(args.phase2_db, loaded)
 
     if args.reset_push_state:
@@ -754,6 +764,17 @@ def main() -> int:
             column = key_column(table)
             if column is None:
                 continue
+            # C-4 23/09 : deuxieme verrou, gratuit. Pour app_contact_current la
+            # cle EST le numero, donc le filtre est local : aucun appel reseau.
+            # Il ne devrait jamais mordre -- un contact ne dans l'app n'a jamais
+            # ete envoye par le serveur, donc il n'est pas dans l'etat de push,
+            # donc il ne peut pas etre declare disparu. On le pose quand meme :
+            # ce raisonnement tient a un ORDRE (voir find_stale_row_keys), et un
+            # verrou qui ne sert jamais ne coute rien.
+            if table == "app_contact_current":
+                stale_row_keys = [k for k in stale_row_keys if not est_ne_dans_l_app(k)]
+                if not stale_row_keys:
+                    continue
             deleted_results[table] = client.delete_rows_by_key(table, column, stale_row_keys, args.batch_size)
             deleted_state[table] = stale_row_keys
 
@@ -779,8 +800,17 @@ def main() -> int:
             if str(cid) not in present_contact_ids and str(cid) not in dirty_contact_ids
         ]
         if to_delete:
-            deleted_results["app_contact_current"] = client.delete_rows_by_filter(
-                "app_contact_current", "hektor_contact_id", to_delete, args.batch_size
+            # ── C-4, 23/09/2026 : LE GARDE-FOU ETAIT ECRIT, TESTE, ET MORT ────
+            # `delete_contacts_except_dirty` existait depuis le 21/09 et n'etait
+            # appelee que par phase2/sync/test_dirty_guards.py -- aucun appel en
+            # production. Elle passait au vert chaque fois et ne protegeait rien.
+            #
+            # CE QU'ELLE EVITE, ICI PRECISEMENT : un contact ne dans l'app et
+            # rafraichi AVANT que Hektor le connaisse n'est pas dans la repose
+            # (le miroir ne l'a jamais vu) et n'est pas « dirty ». Il tombait
+            # donc dans `to_delete` -- et Supabase est son SEUL exemplaire.
+            deleted_results["app_contact_current"] = delete_contacts_except_dirty(
+                client, to_delete, dirty_contact_ids, args.batch_size
             )
 
         # Relations et recherches : au lieu de supprimer toutes les lignes de ces contacts,
@@ -808,6 +838,13 @@ def main() -> int:
             for row in remote_rows:
                 key = str(row.get(col) or "")
                 if not key or key in reposed:
+                    continue
+                # C-4 23/09 : la meme protection que pour la fiche elle-meme.
+                # Les relations et les recherches d'un contact ne dans l'app
+                # n'existent, elles non plus, QUE dans Supabase : la repose
+                # nocturne vient du miroir, qui ne les a jamais vues. Sans ce
+                # filtre, la fiche serait epargnee et ses relations effacees.
+                if est_ne_dans_l_app(row.get("hektor_contact_id")):
                     continue
                 if is_search and dirty_search_pairs:
                     try:

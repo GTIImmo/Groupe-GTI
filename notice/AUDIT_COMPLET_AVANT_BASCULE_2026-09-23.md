@@ -164,12 +164,49 @@ suppression de la totalité des contacts et des relations, puis les ré-insère.
 ~520 000 suppressions + 520 000 insertions — **exactement le scénario qui a saturé Supabase
 le 22/08**.
 
-Aggravant : le garde-fou `delete_contacts_except_dirty` (`:539-552`) **n'est appelé que par
-un test** (`test_dirty_guards.py`). Il ne joue pas en production.
+**Ce qui n'arrivera PAS**, vérifié : **aucune clé étrangère** ne pointe vers ces tables,
+donc **pas de cascade**. Et les cibles Hektor survivent — le déclencheur
+`app_contact_remplir_cible` n'écrit **que si la case est vide**, il n'écrase jamais, et la
+cible voyage dans l'envoi depuis L4-c ④.
 
-> **Correctif** : `--reset-push-state` **avant** le premier push post-bascule, pour que le run
-> reparte d'une page blanche au lieu de tout déclarer périmé. Et brancher réellement le
-> garde-fou, ou le retirer — un garde-fou mort est pire qu'aucun.
+**Le compte exact** *(les recherches sont épargnées par le nom figé)* :
+
+```
+app_contact_relation_current   81 315   la cle est un calcul SUR le numero -> change
+app_contact_current            61 984   la cle EST le numero              -> change
+app_contact_search_current     11 384   nom fige                          -> NE CHANGE PAS
+                              ────────
+                              143 299 cles declarees disparues d'un coup
+```
+
+Et **la suppression passe avant la repose** *(ligne 757 puis 765)* : il y a un moment où les
+contacts et les relations **ne sont plus dans Supabase**.
+
+> **Le geste de la fenêtre** : `--reset-push-state` avant le premier push post-bascule. Plus
+> aucune clé ancienne, donc **rien ne paraît disparu**, donc **aucune suppression**.
+
+**Et le garde-fou mort — FAIT le 23/09.** `delete_contacts_except_dirty` existait depuis le
+21/09, testé par `test_dirty_guards.py`, **vert à chaque fois, et appelé nulle part**.
+
+> ⚠ **Le trou n'était pas où je l'avais dit.** Dans le run de nuit, un contact né dans
+> l'app **ne peut pas** être supprimé : il n'a jamais été envoyé par le serveur, donc il
+> n'est pas dans la mémoire d'envoi, donc rien ne le déclare disparu.
+>
+> **Le trou est dans le rafraîchissement CIBLÉ** — celui que le worker appelle pour un seul
+> contact. Un contact né dans l'app et rafraîchi **avant** que Hektor le connaisse n'est ni
+> dans la repose ni « dirty » : il tombait dans `to_delete`, **et Supabase est son seul
+> exemplaire**. Ses **relations et ses recherches** aussi — épargner la fiche et effacer ses
+> relations ne vaut rien.
+>
+> Le garde-fou est **branché là**, plus un second verrou local, gratuit, sur le run de nuit.
+> Et l'**ordre** des trois lignes qui calculent les disparues est désormais **écrit comme une
+> protection** : si le calcul passait après le filtre des changements, le mode `update`
+> déclarerait disparu **tout ce qui n'a pas changé**, c'est-à-dire le parc.
+>
+> **11 contrôles** (`phase2/checks/test_c4_suppressions.py`), dont **deux éprouvés en échec
+> sur la version d'avant**. Vérifier qu'une fonction marche ne dit rien de savoir si
+> quelqu'un l'appelle : c'est un contrôle de **branchement** qu'il fallait.
+> Dry-run avec les options réelles du run de nuit : **`to_delete: 0` partout**.
 
 ---
 
