@@ -471,26 +471,22 @@ sont référencées **nulle part** *(0 dans les six tables qui pendent dessus)*.
 
 ---
 
-## 5. L'ordre, puisque c'est lui qui décide de tout
+## 5. L'ordre — il a sa propre note
 
-```
-(1)  lancer app_contact_id_propager  -> rattrape 37 + 40 + 1
-(2)  vider la file (deja vide) + ARRETER les 4 services
-(3)  SAUVEGARDE locale (VACUUM INTO) + compte de chaque table
-(4)  C-1 C-2 C-3 C-6 C-9 C-12 : le code, DORMANT, deploye avant
-(5)  patch SQL : bascule app_contact_current + C-13 les 28 tables
-(6)  traduire app_contact local (356 156)                          [C-5]
-(7)  descendre la correspondance  -> 61 984 paires                 [C-3]
-(8)  push_contacts --reset-push-state --include-archived-searches  [C-4]
-(9)  build_contacts_layer
-(10) redemarrer les services, verifier : rapprochements visibles,
-     sondes a zero, cibles a 100 %, un envoi d'espace client reel
-```
+> ➡ **`notice/PROCEDURE_BASCULE_CONTACT.md`** — neuf étapes, **chaque commande écrite en
+> entier**, les comptes attendus à chaque palier, le retour arrière, et les trois gestes
+> humains qu'aucun compte ne remplace.
 
-**(5) à (9) dans la même fenêtre.** Entre (5) et (9) la base est incohérente.
+**Le patch** : `supabase/patch_c13_bascule_identite_contact_2026-09-23.sql` — une **fonction**
+qui sait compter avant d'agir *(`false` = à blanc, `true` = appliquer)*, et qui **refuse**
+tant qu'un contact n'a pas sa doublure ou sa case cible.
 
-**Écrire chaque commande en entier et la MONTRER avant de l'exécuter** *(règle posée le
-22/09 après la suppression accidentelle de 7 201 recherches, causée par un drapeau oublié)*.
+⚠ **La liste d'étapes que j'avais écrite ce matin était fausse sur un point de fond.**
+Elle disait « traduire les 28 tables ». Or `relation_key` et `duplicate_group_id` sont des
+**empreintes calculées sur le numéro** : aucun `UPDATE` SQL ne peut les recalculer
+*(c'est un sha1 Python sur un JSON)*. Les traduire aurait donné **les anciennes lignes sous
+leur ancienne clé PLUS les nouvelles sous la nouvelle** — des doublons, pas une traduction.
 
-**RETOUR ARRIÈRE** : la sauvegarde (3), plus la traduction inverse — `app_contact_id` ->
-l'ancien numéro, lisible dans `hektor_target_id`.
+**Ces deux familles se VIDENT, et le build les refait.** Vérifié le 23/09 : **rien ne pend sur
+ces deux empreintes** — aucune clé étrangère, et les deux seuls objets qui les citent sont
+les vues homonymes au pluriel.
