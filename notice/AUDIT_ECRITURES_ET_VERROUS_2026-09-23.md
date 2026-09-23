@@ -117,8 +117,22 @@ un mandant qu'on n'arrivait pas à rattacher — portait sur une annonce nommée
 **Mais personne ne le savait**, et c'est ça le vrai sujet : **37 erreurs mortes garantissent
 que la 38ᵉ, la vraie, passera inaperçue.**
 
-> **Recommandation** : purger les 37, et écrire que la file doit rester à zéro. Une file
-> qu'on laisse grossir cesse d'être une file : elle devient un décor.
+> **PURGÉ le 23/09** : 37 travaux, **282 lignes de journal** emportées par la cascade,
+> **0 trace de suppression touchée** *(les deux journaux d'audit sont en `SET NULL`, ils
+> restent)*. La file affiche désormais **55 492 `done`, 0 erreur**.
+
+### ⚠ LA RÈGLE, et elle vaut plus que la purge
+
+**`app_console_job` en erreur doit rester à ZÉRO.** Pas « peu », pas « connu » : zéro.
+
+Une erreur qui reste est une erreur qu'on a décidé de ne pas traiter. En laisser 37 pendant
+un mois, c'est garantir que la 38ᵉ — la vraie, celle d'un client — sera invisible au milieu.
+
+Deux façons de tenir la règle, et il en faut une : **soit on rejoue**, soit on **purge en
+écrivant pourquoi**. Ce qu'on ne peut plus faire, c'est laisser grossir.
+
+➡ **À faire** : une sonde `data.travaux_en_erreur` au seuil 0, en `critical`. Sans elle,
+cette règle tiendra jusqu'à ce qu'on l'oublie.
 
 ⚠ **Et deux annonces d'essai sont encore `Actif`, non archivées**, un mois après — dont une
 qui s'appelle littéralement *« TEST C15 agence Firminy - a supprimer »*.

@@ -7234,3 +7234,31 @@ Détail complet, avec fichier et ligne pour chaque point :
 - [ ] `propager_numeros_contact` : la fonction Postgres non lue
 - [ ] `reappliquer_saisies_app` · `magasin_affaire_app` · `magasin_mandat_app` · `backfill_couple_contact` · `quality_checks` : non ouverts
 - [ ] **RDV / visites** comme objet propre : toujours pas balayé
+
+
+---
+
+# LES TROIS RESTES — **FAITS le 23/09**
+
+- [x] **L'alerte manquante** — `GTI Recherches Actives` est `critical`. Son échec du 19/09
+      n'avait prévenu personne. **Troisième fois le même trou**, après la sauvegarde
+      (19/08) et la descente (08/09).
+      ⚠ `GTI Relances Email` laissée de côté **délibérément** : horaire, et l'envoi auto
+      est bloqué par décision. L'alerter serait du bruit pour un mécanisme éteint.
+- [x] **Les 2 orphelins** — supprimés. ⚠ Ils n'étaient **pas** ce que je croyais : pas des
+      séquelles du 22/09, mais des lignes d'état laissées derrière quand un contact quitte
+      le périmètre. Leurs recherches sont vivantes sur le serveur.
+- [x] **Les 37 travaux en erreur** — triés un par un : **ce sont TOUS des essais**, pas un
+      seul geste client perdu. Purgés *(37 travaux, 282 lignes de journal, 0 trace d'audit
+      touchée)*. La file est à **55 492 `done`, 0 erreur**.
+
+- [ ] **À FAIRE — la sonde qui tient la règle** : `data.travaux_en_erreur`, seuil **0**,
+      sévérité `critical`. **Sans elle, la file regrossira et on ne le verra pas** —
+      exactement ce qui vient de se passer pendant un mois.
+- [ ] **À TRANCHER — deux annonces d'essai encore `Actif`** *(dont une nommée « TEST C15
+      agence Firminy - a supprimer »)*. Elles vivent **chez Hektor** : les retirer de
+      Supabase ne sert à rien, le run les remettrait. Il faut **les archiver**, et c'est
+      un geste à faire sciemment.
+- [ ] **À REGARDER** : **90 notifications sans destinataire** *(seuil 20)* et **4 Go dans
+      `.tmp`**, sur le volume unique qui porte aussi le code, la base de 3,8 Go et les
+      sauvegardes.
