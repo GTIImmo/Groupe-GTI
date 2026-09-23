@@ -92,9 +92,33 @@ encore sans doublure au 23/09.
 
 ## ③ La bascule Supabase — **à blanc d'abord**
 
+⚠ **Les deux fonctions doivent exister.** On ne peut PAS les créer depuis PowerShell :
+`psql` et la CLI Supabase sont absents de la machine, et l'API REST n'exécute que des
+**appels** de fonctions, jamais du SQL libre. ➡ coller
+`supabase/patch_c13_bascule_identite_contact_2026-09-23.sql` dans **l'éditeur SQL du
+tableau de bord Supabase**.
+
+**Depuis l'éditeur SQL :**
+
 ```sql
 select public.app_bascule_identite_contact(false);
 ```
+
+**Ou depuis PowerShell** *(éprouvé le 23/09 — les trois détails ci-dessous ne sont pas
+décoratifs)* :
+
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $e=@{}; Get-Content 'C:\Hektor\Projetpps\hektor-v1\.env' | Where-Object { $_ -match '^\s*[A-Za-z_][A-Za-z0-9_]*\s*=' } | ForEach-Object { $p = $_ -split '=',2; $e[$p[0].Trim()] = $p[1].Trim().Trim('"') }; $u=$e['VITE_SUPABASE_URL'].TrimEnd('/'); $k=$e['SUPABASE_SERVICE_ROLE_KEY']; Invoke-RestMethod -Method Post -Uri "$u/rest/v1/rpc/app_bascule_identite_contact" -Headers @{apikey=$k; Authorization="Bearer $k"} -ContentType 'application/json' -Body '{"p_appliquer": false}' -UserAgent 'GTI-PowerShell/1.0' | ConvertTo-Json -Depth 8
+```
+
+| le détail | ce qui arrive sans lui |
+|---|---|
+| **`-UserAgent`** | Supabase répond *« Forbidden use of secret API key in browser »* : il prend PowerShell pour un navigateur et **refuse la clé de service** |
+| **`apps\hektor-v1\.env`** | le `.env` racine ne porte **que** `SUPABASE_POOLER_HOST` — ni l'URL, ni la clé |
+| **`Tls12` explicite** | PowerShell 5.1 négocie encore du TLS ancien par défaut |
+
+*Pour appliquer : `"p_appliquer": true`. Pour défaire : même commande avec
+`app_bascule_identite_contact_annuler`.*
 
 **Lire les comptes. Les montrer.** Ils doivent ressembler à ceci *(mesures du 23/09)* :
 
