@@ -37,7 +37,15 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
 BASE = RACINE / "phase2" / "phase2.sqlite"
-VERROU = RACINE / "phase2" / ".descente.lock"
+# ⚠ CORRIGE LE 23/09/2026 : ce garde-fou visait `phase2/.descente.lock`,
+#   un fichier que PERSONNE NE CREE. Il n'a jamais existe sur le disque, la
+#   condition etait donc toujours fausse et ce script ecrivait PENDANT la
+#   descente -- c'est-a-dire exactement ce que le commentaire ci-dessous dit
+#   vouloir eviter. L'intention etait juste, le nom de fichier ne l'etait pas.
+#   Le vrai verrou, pose par VerrouUnique apres l'incident du 22/08, est
+#   `pull_from_supabase.lock` a la racine -- celui que magasin_mandat_app et
+#   sync_active_searches regardent deja.
+VERROU = RACINE / "pull_from_supabase.lock"
 MAGASIN = "app_annonce_champ_app"
 VUE = "app_view_generale"
 

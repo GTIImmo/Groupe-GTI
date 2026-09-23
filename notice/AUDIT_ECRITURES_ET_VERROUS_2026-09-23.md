@@ -50,8 +50,20 @@ dans le code, et qui ne protège rien. Deuxième fois en une journée.
 > **Deux scripts frères — `magasin_mandat_app` et `magasin_affaire_app` — utilisent deux
 > verrous différents.** L'un le vrai, l'autre le fantôme.
 
-**Correctif** : les trois scripts doivent tester `pull_from_supabase.lock`, comme leurs
-frères. Une ligne chacun.
+> **FAIT le 23/09.** Les trois scripts visent désormais `pull_from_supabase.lock`. Une
+> ligne chacun — **l'intention était juste, le nom de fichier ne l'était pas** : leur
+> propre commentaire dit *« la descente tient ce verrou ~21 minutes »*.
+>
+> ⚠ **Vérifié avant de toucher** : `magasin_annonce_app` est l'**étape 3 de la descente
+> elle-même**. Les étapes 1 et 2 prennent le verrou **chacune à son tour et le relâchent**,
+> donc l'étape 3 ne se bloque pas sur son propre run.
+>
+> **10 contrôles** (`phase2/checks/test_un_seul_verrou.py`). Il ne vérifie pas qu'un verrou
+> existe — il vérifie que **tout le monde regarde le même**, et que c'est bien celui que
+> quelqu'un **crée**. Éprouvé en échec sur la version d'avant.
+>
+> *(Sa première forme s'accusait elle-même : son propre texte contient le nom qu'elle
+> traque. Quatrième contrôle faux de la journée, attrapé tout de suite.)*
 
 ---
 
