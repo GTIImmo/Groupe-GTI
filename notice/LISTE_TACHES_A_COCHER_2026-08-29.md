@@ -7102,7 +7102,13 @@ Détail complet, avec fichier et ligne pour chaque point :
       2 controles ajoutes a `test_porte_contacts.js` — **verifies en ECHEC sur la version d'avant**,
       donc ce ne sont pas des controles decoratifs. 17/17 verts.
       ⚠ **PAS ENCORE DEPLOYE** : il faut redemarrer les 4 services.
-- [ ] **C-2** la barrière joint `app_contact_pending` par identité **ou** cible + la sonde sans jointure — `patch_5b_barriere_attente:62,147,190`
+- [x] **C-2** la sonde d'attente voit et NOMME les deux causes — `patch_c2_sonde_attente_voit_tout_2026-09-23.sql`
+      **FAIT le 23/09.** ⚠ **Reclassé** : ce n'est **pas** un bloquant de bascule
+      *(la bannette est remplie par le front avec l'identité — les deux côtés concordent)*.
+      Mais l'audit a trouvé un défaut d'**aujourd'hui** : un contact qui sort du périmètre
+      *(61 984 sur 356 000, et il rétrécit chaque nuit)* voit sa saisie abandonnée en silence.
+      Preuve du correctif : ancienne forme **0 ligne vue**, nouvelle **1**. Droits conservés.
+      ✓ Déjà en production *(c'est une vue, rien à redémarrer)*.
 - [ ] **C-3** correspondance : pagination, plafond au parc, **étape bloquante** — `descendre_correspondance_contacts.py:67,88,112`
 - [ ] **C-6** verrou : refuser d'insérer un numéro ≥ 10 M dans le miroir — `normalize_source.py:1068` + traduire à la sortie — `sync_active_searches.py:45`
 - [ ] **C-9** mandants et notaires par `ciblesHektorContacts` — `console_job_worker.js:11366,11375,11733,11742`

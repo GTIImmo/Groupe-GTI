@@ -74,22 +74,45 @@ compromis, aucune vente, aucun mandat.
 
 ---
 
-**C-2 · Le rideau : plus aucune édition ne repart vers Hektor**
+**C-2 · La sonde d'attente était aveugle au seul cas qui demande un humain**
 `supabase/patch_5b_barriere_attente_2026-09-21.sql:62-66`, `:147-151`, `:190-198`
+
+> ⚠ **CORRIGÉ LE 23/09, ET J'AVAIS ÉCRIT TROP GRAVE CE MATIN.** J'avais annoncé
+> « plus aucune édition ne repart à la bascule ». **C'est faux** : la bannette est
+> remplie **par le front en direct**, avec l'identité — la même que porte
+> `app_contact_current`. Après la bascule, les deux côtés parlent la même langue.
+> Le risque réel se réduit à **une ligne qui enjambe la bascule** : **0** aujourd'hui,
+> et on bascule services arrêtés.
+>
+> **Mais l'audit a trouvé un défaut d'AUJOURD'HUI**, ci-dessous. Voir aussi le
+> patch `supabase/patch_c2_sonde_attente_voit_tout_2026-09-23.sql`.
 
 ```sql
 select * into ec from app_contact_current where hektor_contact_id = r.hektor_contact_id;
 if ec.hektor_contact_id is null then continue;   -- silencieux
 ```
 
-`r` vient de `app_contact_pending` (figée). La jointure ne rend plus rien => `continue` =>
-**aucune saisie ne repart**, sans erreur, sans travail, sans trace. Et la **sonde** censée
-voir l'attente (`app_v_envois_en_attente_hektor`) joint de la même façon : **la panne est
-invisible**.
+`r` vient de `app_contact_pending`. Quand la jointure ne rend rien, `continue` : **la saisie
+reste dans la bannette pour toujours**, sans erreur, sans travail, sans trace. Et la **sonde**
+censée voir l'attente (`app_v_envois_en_attente_hektor`) joignait de la même façon : **elle
+était aveugle exactement au cas qu'elle devait voir**.
 
-> **Correctif** : joindre `app_contact_pending` par l'identité **ou** la cible, comme le fait
-> déjà `app_search_registry`. Et faire remonter la sonde sur `app_*_pending` **seule**, sans
-> jointure — une file qui grossit doit se voir même quand la couture est rompue.
+*(Ce que j'avais mal lu ce matin : la jointure ne casse pas à la bascule, puisque les deux
+côtés portent l'identité. Elle casse quand le contact n'est **pas là** — et ça, ça arrive
+déjà.)*
+
+**Le défaut d'aujourd'hui.** `app_contact_current` ne porte que le **périmètre éligible**
+— **61 984** contacts au 23/09, pas les 356 000 de l'app — et ce périmètre **rétrécit
+chaque nuit** (`elargir_perimetre_console.py`). Un contact qui en sort pendant que sa saisie
+attend voit **cette saisie abandonnée en silence**. C'est le contraire de la règle C.1' :
+*une saisie ne se perd jamais*.
+
+> **FAIT le 23/09** : la sonde passe en `LEFT JOIN LATERAL`, accepte **les deux numéros**, et
+> **nomme la cause** — `en_attente_du_numero` *(normal, se résout seul)* contre
+> `contact_absent_de_l_index` *(anormal, il faut un humain)*.
+> **Preuve** : sur une saisie dont le contact est absent, l'ancienne forme voyait
+> **0 ligne**, la nouvelle en voit **1**. Droits conservés *(`CREATE OR REPLACE`, colonne
+> ajoutée en fin)*. **0 ligne aujourd'hui** — pas de fausse alerte.
 
 ---
 
