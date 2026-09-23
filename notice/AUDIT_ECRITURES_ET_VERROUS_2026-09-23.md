@@ -185,3 +185,52 @@ sauvegardes.
   la liste des champs « app » est cohérente entre le serveur, le worker et le front.
 - Les **148 copies `__sb`** : j'ai vérifié en septembre qu'on n'y écrit pas ; je ne l'ai
   pas re-mesuré aujourd'hui.
+
+
+---
+
+## Les deux avertissements restants, regardés le 23/09 au soir
+
+### Les 4 Go de `.tmp` — **ce n'étaient pas des journaux**
+
+```
+442 fichiers, 3,97 Go
+   dont UN SEUL         phase2_avant_decalage_20260922_113818.sqlite   4 023 Mo
+   les 131 plus vieux que 30 jours      0,02 Go
+```
+
+C'était **la sauvegarde d'avant le décalage de la doublure**, posée dans un dossier fait
+pour être nettoyé. **Une sauvegarde dans un répertoire temporaire est une sauvegarde qu'on
+perd.** Et c'était la seule copie complète du 22/09 — la plus récente ailleurs date du
+20/09.
+
+> **DÉPLACÉE** vers `C:\Hektorackups`. Le disque a **693 Go libres sur 894** : la garder
+> ne coûte rien, la perdre coûterait un retour arrière. `.tmp` est retombé à **39 Mo**.
+
+### Les 90 notifications sans destinataire — **la cause est en amont**
+
+```
+90 sans destinataire, toutes de type nouveau_rapprochement
+   88  le contact n'a AUCUN negociateur
+    0  recherche disparue
+    0  contact hors annuaire
+    2  inexpliquees
+```
+
+Et l'ampleur : **7 865 contacts éligibles sans négociateur** *(13 % du parc)*, dont **110 ont
+une recherche active**. Ce sont eux qui fabriquent ces lignes, à raison de 90 depuis juillet.
+
+`app_generate_rapprochement_alerts` insère `c.contact_nego` **sans aucun repli**. Pas de
+négociateur, pas de destinataire — et la ligne est créée quand même. Elle ne sera jamais
+lue par personne : ce n'est pas « non lue », c'est **indélivrable**.
+
+> ⚠ **À TRANCHER, et c'est une décision de fond, pas de plomberie.** Un rapprochement dit
+> *« un bien correspond à la recherche de votre acquéreur »*. Si l'acquéreur n'a pas de
+> négociateur, **qui doit l'apprendre ?**
+>
+> **Ma recommandation : le négociateur DU BIEN.** C'est lui qui a un acquéreur pour son
+> mandat — l'information lui est utile, pas seulement réparatrice. Un `coalesce` d'une
+> ligne dans la RPC.
+>
+> *(Effet immédiat quasi nul — personne ne lit les notifications aujourd'hui — mais ça
+> arrête la fabrication de lignes mortes.)*
