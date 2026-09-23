@@ -2477,3 +2477,36 @@ je l'avais écrit trop grave le matin même. Mais en regardant de près, il cach
 d'**aujourd'hui** : le périmètre éligible ne compte que **61 984** contacts sur 356 000 et
 **rétrécit chaque nuit**, si bien qu'une saisie dont le contact en sort est **abandonnée en
 silence**. La note a été corrigée : **un plan qui garde une gravité fausse ment deux fois.**
+
+### 23/09, fin de matinée — les sept bloquants du code sont posés
+
+| | commit | déployé |
+|---|---|---|
+| **C-1** la porte lit la cible avant de refuser | `d26ad2e` | ✅ 10:22 |
+| **C-2** la sonde d'attente voit et nomme les causes | `e1ff6fa` | ✅ *(vue)* |
+| **C-3** la correspondance arrive entière, ou le build s'arrête | `80b9ae8` | ⏳ run de nuit |
+| **C-4** le garde-fou de suppression est branché | `f01217b` | ⏳ run de nuit |
+| **C-6** le miroir reste une copie de Hektor | `3b9b086` | ⏳ run de nuit |
+| **C-9** notaires et mandants passent la porte | `fced315` | ✅ 10:22 |
+| **C-12** les deux photos se lisent avec l'identité | `ff1d67a` | ✅ 10:22 |
+
+**C-5** reste, mais ce n'est pas du code dormant : c'est un **geste de la fenêtre**
+*(traduire les 356 156 lignes de `app_contact` en même temps que le patch SQL)*.
+
+**CE QUE CETTE MATINÉE A APPRIS, et qui vaut pour la suite :**
+
+① **Un contrôle doit être passé sur le défaut qu'il prétend voir.** Chaque correctif porte
+désormais sa preuve : les assertions ajoutées sont rejouées sur la version d'avant et
+**doivent y échouer**. Trois contrôles écrits faux cette semaine, dont un ce matin.
+
+② **L'audit déclasse autant qu'il classe.** C-2 n'était pas un bloquant de bascule — mais il
+cachait un défaut d'aujourd'hui. C-4 n'était pas dans le run de nuit mais dans le
+rafraîchissement ciblé. **Trois gravités corrigées dans la note le jour même.**
+
+③ **Corriger crée des défauts.** C-6 a changé le contrat de `refresh_contact_inproc.py` ;
+**ses deux appelants n'ont pas bougé**, et c'est C-12 qui l'a rattrapé une heure plus tard.
+*Un contrat qui change sans ses appelants, c'est une panne qui attend son jour.*
+
+④ **Un nom qui ment finit par tromper quelqu'un.** `fetchFreshContactSearchSnapshot(contactId)`
+lisait NOTRE table : le paramètre a été renommé plutôt que de ruser avec une expression
+régulière.

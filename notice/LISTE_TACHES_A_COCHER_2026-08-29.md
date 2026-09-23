@@ -7129,13 +7129,13 @@ Détail complet, avec fichier et ligne pour chaque point :
       Effet immédiat corrigé au passage : `personnes_posees` était comparé à ce que Hektor
       relit, donc **tous les mandants étaient comptés comme refusés** (bandeau d'écart faux).
       21 contrôles, dont 4 nouveaux éprouvés en échec sur la version d'avant.
-      ⚠ **REDEMARRAGE DES 4 SERVICES REQUIS.**
+      ✅ **DEPLOYE le 23/09 à 10:22** — 4 services redémarrés et vus `active` dans le registre.
 - [x] **C-12** les deux photos de recherche se lisent avec l'identité
       **FAIT le 23/09.** Le paramètre s'appelait `contactId` — nom menteur, renommé.
       ⚠ **Et il en cachait un second, créé par C-6 une heure plus tôt** : le contrat de
       `refresh_contact_inproc.py` a changé (il prend l'identité) et **ses 2 appelants du
       worker lui passaient encore la cible**. 23 contrôles, 2 éprouvés en échec avant.
-      ⚠ **REDEMARRAGE DES 4 SERVICES REQUIS** (avec C-9).
+      ✅ **DEPLOYE le 23/09 à 10:22** (avec C-9).
 - [x] **C-4** le garde-fou est BRANCHE — `push_contacts_to_supabase.py`
       **FAIT le 23/09.** ⚠ Le trou n'était pas dans le run de nuit mais dans le
       **rafraîchissement ciblé** : un contact né dans l'app, rafraîchi avant que Hektor
