@@ -7190,9 +7190,14 @@ Détail complet, avec fichier et ligne pour chaque point :
       une seule clé. Réparés grâce à la cible exposée par **G-7**.
       ⚠ **G-5 est un FAUX POSITIF** : mesuré, **0** relation pointe hors de l'annuaire, et les
       deux côtés basculent ensemble. Rien à corriger.
-      Reste : **G-8** *(les 12 garde-fous `/^\d+$/`)* et **G-19** *(les sentinelles)*.
+      **G-8** et **G-19** sont des **faux positifs mesurés** *(un seul chemin vers Hektor, déjà
+      protégé ; et 0 sentinelle dans la base)*.
       ✅ build OK — partira au prochain `git push` (Vercel).
-- [ ] API : **G-17** les 9 liens d'agenda · **G-18** les doublons de relance
+- [x] API : **G-17** fait — le numéro gravé dans le **JSON** (2 endroits, 9 lignes), traduit
+      **dans la fonction de bascule** : un rattrapage à part se serait oublié le jour J.
+      **G-18** est un **faux positif** : il filtre par la clé figée — 10 lignes, 10 clés valides.
+      ⚠ **RECOLLER LE PATCH** dans l'éditeur SQL : la version installée n'a ni G-17 ni le
+      message de refus corrigé. C'est un `create or replace`, donc sans effet de bord.
 - [x] **serveur : les 8 gênants faits le 23/09** — `phase2/checks/test_genants_serveur.py`
       **G-11 était MAL CLASSÉ** : ce n'est pas un gênant. Le build remet l'éligibilité à zéro
       chaque nuit et ce script la repose ; ne plus rien trouver, c'est voir les **1 738**
@@ -7205,7 +7210,11 @@ Détail complet, avec fichier et ligne pour chaque point :
       *(le contrôle se sautait et passait au vert sans rien tester)*.
       14 contrôles, chacun passé sur une base **déjà basculée**, forme d'avant ET d'après.
       ⚠ **PAS DEPLOYE** : serveur, partira au run de nuit.
-- [ ] API : **G-17** les 9 liens d'agenda · **G-18** les doublons de relance
+- [x] API : **G-17** fait — le numéro gravé dans le **JSON** (2 endroits, 9 lignes), traduit
+      **dans la fonction de bascule** : un rattrapage à part se serait oublié le jour J.
+      **G-18** est un **faux positif** : il filtre par la clé figée — 10 lignes, 10 clés valides.
+      ⚠ **RECOLLER LE PATCH** dans l'éditeur SQL : la version installée n'a ni G-17 ni le
+      message de refus corrigé. C'est un `create or replace`, donc sans effet de bord.
 
 ## Non mesuré — à trancher avant, pas pendant
 

@@ -388,29 +388,40 @@ de contact : **`app_affaire_personne_ecart.contact_id`** et
 
 ---
 
-### Gênants — l'app marche, mais ment
+### Gênants — **les 19 traités le 23/09**
 
-| # | où | ce qui casse |
+```
+faits        14      serveur 8  .  front 6
+faux positifs 4      G-5  G-8  G-18  G-19   -- mesures, pas supposes
+reclasse      1      G-11 n'etait PAS un genant : bloquant
+```
+
+**Serveur — les 8** : **G-9** *(0 contact marqué disparu, et le script annonce « 0 »)* ·
+**G-10** *(le lien vente↔acheteur cesse d'être créé)* · **G-11** · **G-12** *(le parc entier
+inscrit « né dans l'app », dans un registre qui ne se vide jamais)* · **G-13** · **G-14**
+*(le rafraîchissement ciblé jetait toutes les relations)* · **G-15** · **G-16**
+*(le contrôle se sautait et passait au vert sans rien tester)*.
+→ `phase2/checks/test_genants_serveur.py`, **14 contrôles sur une base déjà basculée**.
+
+**Front — les 6** : **G-1** et **G-4** *(des doublons, pas des jointures : deux sources, deux
+langues, une seule clé)* · **G-2** · **G-3** · **G-6** · **G-7**.
+→ `apps/hektor-v1/test_genants_front.cjs`, **8 contrôles**, chacun rejoué sur la version
+d'avant. ⚠ Le front interroge un contact à **cinq** endroits ; **deux n'ont PAS été
+élargis** — ils sont cohérents par construction, et un contrôle le vérifie.
+
+**API — G-17** : le numéro gravé dans le **JSON** des liens d'agenda, à deux endroits
+*(`contact_id` à la racine, `attendee_contacts[].hektor_contact_id`)*. Aucune boucle de
+colonnes ne l'aurait vu. **Traduit dans la fonction de bascule elle-même** — un rattrapage
+à part se serait oublié le jour J. **9 lignes**, validé en lecture seule.
+
+### Les 4 faux positifs — et pourquoi ils le sont
+
+| # | ce que l'audit disait | ce que la mesure dit |
 |---|---|---|
-| G-1 | `App.tsx:32505-32535` | **la même personne deux fois** dans les invités d'un RDV, une fois avec email, une fois sans |
-| G-2 | `App.tsx:20946` + `api.ts:2429-2431` | **taper le numéro lu dans Hektor ne trouve plus rien** ; le placeholder promet pourtant « ou un ID contact » |
-| G-3 | `api.ts:5600-5617` + `App.tsx:15734` | la **répartition de commission** n'est plus posée — échec avalé par `.catch(() => null)` |
-| G-4 | `App.tsx:15067-15085` | le **même acquéreur ajouté deux fois**, le retrait n'en enlève qu'un |
-| G-5 | `api.ts:8476-8516` | les invités perdent **email et téléphone**, remplacés par « Contact 10605453 » |
-| G-6 | `App.tsx:6839-6841` | `detailContactDirectoryId` retient le **premier candidat numérique** — il ne sait pas de quelle série il parle |
-| G-7 | `api.ts:8368-8386` | `MandantContactSearchOption` **n'expose pas `hektor_target_id`** alors que la requête le ramène |
-| G-8 | 12 sites du front | les garde-fous `/^\d+$/` « ID Hektor numérique requis » **ne distinguent pas les deux séries** — ils ne protègent de rien |
-| G-9 | `marquer_contacts_disparus.py:48-78` | lit le miroir, écrit dans l'app => **0 ligne marquée**, et affiche « 0 nouvellement marquée » |
-| G-10 | `affaire_ledger.py:685-693`, `:786` | le **lien vente <-> acheteur cesse d'être créé** — celui-là même qu'on avait doublé pour la coupure |
-| G-11 | `elargir_perimetre_console.py:96-204` | **0 contact marqué éligible** => les 1 738 personnes citées par Hektor **ressortent de l'annuaire la nuit même** |
-| G-12 | `contacts_app_seuls.py:71-73` | **tout Supabase paraît « né dans l'app »** si les deux côtés ne basculent pas ensemble |
-| G-13 | `build_contacts_layer.py:645-684` | `resoudre_menages` traduit **dans le mauvais sens** => nom de la porteuse vide |
-| G-14 | `build_contacts_layer.py:738 + 787` | filtre posé en numéros miroir, comparé à l'identité => **le rafraîchissement ciblé jette tout** |
-| G-15 | `comparer_doublures.py:79-85`, `:163-165` · `check_gti_health.py:1945` | les **sondes de doublure** comptent 100 % d'écart : fausse alarme, puis alarme aveugle |
-| G-16 | `test_substitution_identite.py:61-66` | le témoin ne se trouve plus => **l'assertion est sautée en silence**, le test passe au vert sans rien tester |
-| G-17 | `google_calendar_event_link_service.py:105-110` | les **9 liens d'agenda** ne remontent plus, ni par colonne ni par JSON |
-| G-18 | `email_tracking.py:299-314` | réconciliation des relances muette => **doublons de relance** |
-| G-19 | `App.tsx:36936`, `:36961`, `:37002`, `:31669` | `'invite'`, `'agenda_global'` ou **une adresse email** posées dans un champ de numéro de contact |
+| **G-5** | les invités perdent email et téléphone | les numéros viennent de la table des **relations**, qui bascule avec les contacts. **0** relation pointe hors de l'annuaire : le repli ne se déclenche jamais |
+| **G-8** | 12 garde-fous `/^\d+$/` qui ne protègent de rien | ils n'ont jamais eu pour rôle de distinguer les séries — ils rejettent le non-numérique, et le font toujours. **Un seul** chemin du front envoie un numéro de contact à Hektor, et il passe déjà par la cible *(les 3 autres URL portent un numéro d'**annonce**)* |
+| **G-18** | réconciliation des relances muette | elle filtre par `contact_search_key`, **figée par le registre**. **10 lignes, 10 clés encore valides** |
+| **G-19** | `'invite'` / une adresse email dans un champ de numéro | **0 valeur non numérique, 0 sentinelle, 0 email** dans la table. Le chemin existe, il n'a **jamais** servi — et une valeur non numérique serait laissée intacte par la traduction |
 
 ---
 

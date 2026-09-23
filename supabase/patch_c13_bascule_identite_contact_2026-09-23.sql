@@ -147,6 +147,9 @@ begin
            and hektor_contact_id <> app_contact_id::text', cible) into n;
       if n > 0 then detail := detail || jsonb_build_object(cible, n); end if;
     end loop;
+    select count(*) into n from public.app_google_calendar_event_link l
+     where l.metadata_json::text like '%hektor_contact_id%';
+    if n > 0 then detail := detail || jsonb_build_object('_json_liens_agenda', n); end if;
     return jsonb_build_object('mode', 'a_blanc', 'detail', detail);
   end if;
 
@@ -190,6 +193,47 @@ begin
     get diagnostics n = row_count;
     if n > 0 then detail := detail || jsonb_build_object(cible, n); end if;
   end loop;
+
+  -- ── G-17 : LE NUMERO GRAVE DANS LE JSON DES LIENS D'AGENDA ────────────
+  -- Les boucles ci-dessus traduisent des COLONNES. Celui-la vit dans du
+  -- JSON, a deux endroits : `contact_id` a la racine et
+  -- `attendee_contacts[].hektor_contact_id`. Aucune boucle ne l'aurait vu,
+  -- et google_calendar_event_link_service.list_links filtre justement
+  -- DESSUS : les 9 liens existants ne seraient plus jamais remontes.
+  --
+  -- ⚠ ON CHERCHE PAR LES DEUX NUMEROS et on ecrit app_contact_id : ainsi ce
+  --   bloc donne le meme resultat qu'il tourne avant ou apres la traduction
+  --   des colonnes. Un geste dont l'ordre n'a pas d'importance est un geste
+  --   qu'on ne peut pas jouer de travers.
+  with corr as (
+    select l.id,
+           (select c.app_contact_id::text from public.app_contact_current c
+             where c.app_contact_id is not null
+               and (c.hektor_contact_id = l.metadata_json->>'contact_id'
+                 or c.hektor_target_id  = l.metadata_json->>'contact_id')
+             limit 1) as racine,
+           (select jsonb_agg(
+                     case when c.app_contact_id is null then a
+                          else jsonb_set(a, '{hektor_contact_id}',
+                                         to_jsonb(c.app_contact_id::text)) end)
+              from jsonb_array_elements(l.metadata_json->'attendee_contacts') a
+              left join public.app_contact_current c
+                on (c.hektor_contact_id = a->>'hektor_contact_id'
+                 or c.hektor_target_id  = a->>'hektor_contact_id')) as invites
+      from public.app_google_calendar_event_link l
+     where l.metadata_json::text like '%hektor_contact_id%'
+        or l.metadata_json ? 'contact_id')
+  update public.app_google_calendar_event_link l
+     set metadata_json =
+           case when corr.invites is null then l.metadata_json
+                else jsonb_set(l.metadata_json, '{attendee_contacts}', corr.invites) end
+           || case when corr.racine is null then '{}'::jsonb
+                   else jsonb_build_object('contact_id', corr.racine) end
+    from corr
+   where corr.id = l.id
+     and (corr.racine is not null or corr.invites is not null);
+  get diagnostics n = row_count;
+  detail := detail || jsonb_build_object('_json_liens_agenda', n);
 
   return jsonb_build_object('mode', 'applique', 'detail', detail);
 end
