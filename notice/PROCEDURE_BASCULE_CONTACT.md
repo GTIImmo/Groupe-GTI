@@ -85,8 +85,26 @@ qu'**actualiser** — renvoyer une valeur identique ne touche aucune ligne.*
 python -c "import urllib.request,os,json,sys;sys.path.insert(0,r'C:\Hektor\Projet\phase2\sync');from push_contacts_to_supabase import DEFAULT_ENV_FILES,load_env_file;[load_env_file(f) for f in DEFAULT_ENV_FILES];u=os.environ['SUPABASE_URL'].rstrip('/');k=os.environ['SUPABASE_SERVICE_ROLE_KEY'];r=urllib.request.Request(f'{u}/rest/v1/rpc/app_contact_id_propager',data=b'{}',headers={'apikey':k,'Authorization':f'Bearer {k}','Content-Type':'application/json'},method='POST');print(urllib.request.urlopen(r,timeout=300).read().decode())"
 ```
 
-**Attendu** : rattrape les **37** rapprochements, **40** compteurs et **1** lien d'agenda
-encore sans doublure au 23/09.
+**Attendu** *(joue en reel le 23/09)* : les **37** rapprochements passent de 49 684 à
+**49 721** — tous couverts. Les compteurs passent de 10 180 à **10 184**.
+
+⚠ **Et il RESTE 37 lignes que rien ne peut rattraper** — 36 compteurs et 1 lien d'agenda.
+Vérifié ligne à ligne : **leur contact n'existe plus dans l'app**. Elles sont déjà
+orphelines aujourd'hui, la bascule ne les abîme pas davantage. **Il n'y a rien à faire, et
+ce n'est pas un incident** — c'est écrit ici pour qu'on ne le redécouvre pas le jour J.
+
+### Le compte à blanc, joue en reel le 23/09 à 11h50 — **au vert**
+
+```
+deja bascules                              0
+traduire app_contact_current          61 984
+traduire app_contact_search_current   11 384
+vider    app_contact_relation_current 81 315
+vider    les doublons                      0
+app_rapprochement                     49 721
+app_search_count_high_water           10 184
+app_email_envoi 24 . propositions 11 . relances 10 . agenda 8 . statuts 7 . visites 3
+```
 
 ---
 

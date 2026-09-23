@@ -97,8 +97,16 @@ begin
     from app_contact_current
    where app_contact_id is null;
   if restants > 0 then
+    -- ⚠ LE MESSAGE CORRIGE LE 23/09, APRES L'AVOIR VECU. Il nommait
+    --   app_contact_id_propager seul -- or propager RECOPIE app_contact_id
+    --   depuis app_contact_current, et pour ces contacts-la cette colonne est
+    --   justement vide. C'est pousser_numeros_contact.py qui la remplit, depuis
+    --   le registre local. DEUX gestes, dans cet ordre.
     return jsonb_build_object('refus', format(
-      '%s contact(s) sans app_contact_id : lancer app_contact_id_propager d abord.', restants));
+      '%s contact(s) sans app_contact_id. DEUX gestes, dans cet ordre : '
+      '(1) python phase2\identite\pousser_numeros_contact.py  -- fait monter les '
+      'numeros du registre local ; (2) rpc/app_contact_id_propager -- les recopie '
+      'dans les tables satellites.', restants));
   end if;
 
   -- (b) une fiche sans case cible perdrait son numero de Hektor pour toujours.
