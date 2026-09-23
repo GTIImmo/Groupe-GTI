@@ -212,11 +212,38 @@ identités à nous *(garde C-3)*. Un arrêt ici veut dire : reprendre à ⑤.
 
 ---
 
+## ⑥bis — ÉLARGIR LE PÉRIMÈTRE *(manquait à cette procédure — trouvé le 23/09 en la jouant)*
+
+Le build vient de remettre l'éligibilité à ce que sa règle dit. **C'est ce script qui
+repose les personnes citées par Hektor** — c'est l'étape 17 du run de nuit, et elle doit
+venir **entre le build et le push**. Sans elle, 2 763 personnes ne sont pas rafraîchies.
+
+```powershell
+python phase2\contacts\elargir_perimetre_console.py --dry-run
+python phase2\contacts\elargir_perimetre_console.py
+```
+
+**Mesuré le 23/09, après la bascule** : `annuaire avant 59 222 → a faire entrer 2 763
+→ annuaire apres 61 985`. **C'est la preuve en direct que G-11 était nécessaire** : `cites`
+porte les numéros **Hektor**, l'annuaire porte les **identités**. Sans le correctif du
+matin, ce script aurait trouvé **zéro**.
+
+---
+
 ## ⑦ Le push, avec **--reset-push-state**
 
-⚠ **Sans ce drapeau, le run demanderait à Supabase la suppression de 143 299 lignes** —
-toutes les clés d'hier sont périmées d'un coup. Avec lui, la mémoire d'envoi repart vierge :
-**rien ne paraît disparu, donc rien n'est supprimé.**
+⚠ **CE QUE J'AVAIS ÉCRIT ICI ÉTAIT FAUX, ET JE L'AI SU EN LE SUBISSANT.** Je disais que ce
+drapeau empêchait la suppression. **Non** : dans la version du 23/09 matin, la remise à zéro
+venait **après** le calcul des disparues — elle ne préparait que le run *suivant*.
+
+Résultat en direct pendant la bascule : le push a **supprimé 61 985 contacts et 81 313
+relations**, puis les a reposés. La donnée était intacte à l'arrivée, **mais le chemin ne
+l'était pas** : un échec d'envoi en cours de route *(le PGRST102 du 01/08)* aurait laissé
+le parc supprimé.
+
+> **CORRIGÉ le 23/09, dans la fenêtre même** : la remise à zéro passe **avant** le calcul.
+> Dire « je ne sais plus ce que j'ai envoyé », c'est ne rien déclarer disparu — ce que le
+> drapeau promettait.
 
 ```powershell
 python phase2\sync\push_contacts_to_supabase.py --push-mode full --contacts-scope eligible --include-archived-searches --reset-push-state

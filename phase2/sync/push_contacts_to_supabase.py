@@ -636,8 +636,16 @@ def main() -> int:
     #   lignes retirees seraient prises pour des disparues et SUPPRIMEES : les
     #   saisies en attente la nuit meme, et en mode update la totalite du parc.
     #   NE PAS DEPLACER CETTE LIGNE PLUS BAS.
-    stale_by_table = {} if contact_ids else find_stale_row_keys(args.phase2_db, loaded)
-
+    # ── CORRIGE LE 23/09, PENDANT LA BASCULE, APRES L'AVOIR SUBI ───────────
+    # `--reset-push-state` venait APRES le calcul des disparues : il ne
+    # preparait donc que le run SUIVANT et ne protegeait pas celui-la.
+    # Constate en direct pendant la bascule : le push a supprime 61 985
+    # contacts et 81 313 relations avant de les reposer. Le resultat etait
+    # bon, LE CHEMIN NE L'ETAIT PAS -- un echec d'envoi en cours de route
+    # (le PGRST102 du 01/08) aurait laisse le parc supprime.
+    # Remettre l'etat a zero AVANT le calcul, c'est dire « je ne sais plus
+    # ce que j'ai envoye », donc « je ne declare rien disparu ». C'est
+    # exactement ce que ce drapeau promet.
     if args.reset_push_state:
         conn = _connect(args.phase2_db)
         try:
@@ -646,6 +654,8 @@ def main() -> int:
             conn.commit()
         finally:
             conn.close()
+
+    stale_by_table = {} if contact_ids else find_stale_row_keys(args.phase2_db, loaded)
 
     if args.push_mode == "update" and not contact_ids:
         loaded = filter_changed_rows(args.phase2_db, loaded)
