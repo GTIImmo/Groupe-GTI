@@ -28,25 +28,62 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def cible_hektor(identite: str) -> str:
+    """Le numero que HEKTOR comprend, pour ce contact.
+
+    ⚠ C-6, 23/09/2026 -- QUATRE ETAPES, DEUX LANGUES. Le worker appelle ce point
+      d'entree avec le numero que le front connait : l'IDENTITE. Or les etapes 1
+      et 2 ne parlent pas cette langue -- l'une interroge Hektor, l'autre ecrit
+      dans le MIROIR, qui est une copie de Hektor. Tant que les deux numeros sont
+      egaux, un seul argument suffit ; a la bascule, ouvrir une fiche contact
+      aurait envoye notre numero chez Hektor (404, puis liste noire) et fait
+      ecrire une fiche vide dans le miroir sous notre numero.
+
+    En cas de doute -- base illisible, contact inconnu -- on rend l'identite,
+    c'est-a-dire le comportement d'avant.
+    """
+    texte = str(identite or "").strip()
+    if not texte.isdigit():
+        return texte
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(ROOT / "phase2" / "phase2.sqlite"), timeout=30)
+        try:
+            ligne = conn.execute(
+                "SELECT hektor_target_id FROM app_contact_current "
+                "WHERE hektor_contact_id = ? LIMIT 1", (texte,)).fetchone()
+        finally:
+            conn.close()
+    except Exception:
+        return texte
+    cible = str(ligne[0] or "").strip() if ligne else ""
+    return cible or texte
+
+
 def _steps(contact_id: str):
     """(libellé, chemin relatif depuis ROOT, argv) — flags IDENTIQUES au worker."""
+    identite = str(contact_id or "").strip()
+    pour_hektor = cible_hektor(identite)
     return [
+        # ETAPES 1 et 2 : la langue de HEKTOR et de son miroir.
         ("detail", "phase2/sync/sync_contact_details.py", [
-            "--skip-listing-refresh", "--contact-id", contact_id,
+            "--skip-listing-refresh", "--contact-id", pour_hektor,
             "--batch-size", "1", "--limit", "0",
             "--request-delay-seconds", "0", "--batch-pause-seconds", "0",
             "--max-hard-errors", "1", "--max-consecutive-hard-errors", "1",
             "--no-normalize",
         ]),
-        ("normalize", "normalize_source.py", ["--contact-id", contact_id]),
+        ("normalize", "normalize_source.py", ["--contact-id", pour_hektor]),
+        # ETAPES 3 et 4 : NOTRE langue. (Le build accepte les deux, il traduit
+        # dans les deux sens ; on lui donne l'identite, qui est la sienne.)
         ("build", "phase2/contacts/build_contacts_layer.py", [
-            "--contact-id", contact_id, "--no-reports",
+            "--contact-id", identite, "--no-reports",
         ]),
         # --include-archived-searches (21/08/2026) : meme raison que dans le run de 03:00.
         # Sans elle, ouvrir une fiche contact suffirait a resupprimer ses recherches
         # archivees de Supabase, et a reorpheliner ce qui pointait dessus.
         ("push", "phase2/sync/push_contacts_to_supabase.py", [
-            "--contact-id", contact_id,
+            "--contact-id", identite,
             "--push-mode", "full", "--contacts-scope", "active_or_eligible",
             "--skip-stats", "--include-archived-searches",
         ]),

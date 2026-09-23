@@ -242,8 +242,21 @@ contenir nos numéros, et le run suivant les relit comme des contacts réels. He
 `marquer_contacts_disparus`.
 Même trou dans `refresh_contact_inproc.py:33-53` et `scheduled/run_recherches_actives.ps1`.
 
-> **Correctif** : traduire vers la cible **avant** toute sortie vers Hektor, et poser un
-> verrou dans `normalize_source` : refuser d'insérer dans le miroir un numéro >= 10 M.
+> **FAIT le 23/09.** Deux gestes, à deux hauteurs différentes :
+>
+> **① Un verrou à la PORTE du miroir** (`upsert_contact_from_sources`). C'est la seule
+> entrée de `hektor_contact`, donc le seul endroit qui tienne **quel que soit le chemin**.
+> Il refuse, il le dit, et il ne lève pas.
+>
+> **② Les listes cessent de mélanger deux langues.** C'était le défaut de fond :
+> `sync_active_searches` donnait **une seule liste** à trois étapes dont deux parlent la
+> langue de Hektor *(l'API, le miroir)* et une la nôtre *(le push)*. Idem dans
+> `refresh_contact_inproc`, où **un seul numéro** servait à quatre étapes — et c'est celui
+> que le worker appelle **chaque fois qu'on ouvre une fiche contact**.
+>
+> **Non-régression mesurée sur la vraie base** : ancienne liste **3 970**, nouvelle
+> **3 970**, *identiques*. **13 contrôles** (`phase2/checks/test_c6_miroir_propre.py`),
+> dont **trois éprouvés en échec sur la version d'avant**.
 
 ---
 

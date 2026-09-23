@@ -983,6 +983,23 @@ def upsert_contact_from_sources(
     contact_id = str(source.get("id") or item.get("id") or "").strip()
     if not contact_id:
         return False
+    # ── C-6, 23/09/2026 : LE MIROIR NE RECOIT QUE DES NUMEROS DE HEKTOR ──────
+    # `hektor_contact` est une COPIE DE CE QUE HEKTOR A DIT, pour toujours. Un
+    # numero ne dans l'app (>= 10 000 000) n'a aucun sens ici.
+    #
+    # LE CHEMIN QUI L'Y AMENAIT : sync_active_searches tire sa liste de NOTRE
+    # couche et la passe telle quelle a `normalize_source --contact-id`. Dans
+    # upsert_contacts, un id sans detail connu devient `{"id": contact_id}` et
+    # arrive ici -- une fiche VIDE serait creee sous notre numero, puis relue au
+    # run suivant comme un vrai contact de Hektor. Le miroir mentirait.
+    #
+    # On refuse a la PORTE, et pas seulement chez l'appelant : c'est la seule
+    # entree de cette table, donc le seul endroit qui tienne quel que soit le
+    # chemin. Aujourd'hui aucun numero n'est dans cette plage : ce verrou dort.
+    if contact_id.isdigit() and int(contact_id) >= 10_000_000:
+        print(f"[miroir] REFUS d'ecrire le numero d'app {contact_id} dans hektor_contact "
+              "(le miroir ne contient que des numeros de Hektor).")
+        return False
     coords = source.get("coordonnees") or {}
     localite = source.get("localite") or {}
     inner = localite.get("localite") if isinstance(localite, dict) else {}

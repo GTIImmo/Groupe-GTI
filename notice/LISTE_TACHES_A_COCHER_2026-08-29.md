@@ -7116,7 +7116,14 @@ Détail complet, avec fichier et ligne pour chaque point :
       L'arrêt est dans le **build** (dormant), pas dans le run : un hoquet Supabase ne tue rien.
       16 contrôles hors ligne : `phase2/checks/test_c3_correspondance.py`.
       ⚠ **PAS ENCORE DEPLOYE** : c'est le serveur, ça partira au prochain run de nuit.
-- [ ] **C-6** verrou : refuser d'insérer un numéro ≥ 10 M dans le miroir — `normalize_source.py:1068` + traduire à la sortie — `sync_active_searches.py:45`
+- [x] **C-6** le miroir reste une copie de Hektor
+      **FAIT le 23/09.** Verrou à la **porte** de `hektor_contact` *(seule entrée, tient quel
+      que soit le chemin)* + les listes cessent de mélanger deux langues :
+      `sync_active_searches` donnait UNE liste à trois étapes, `refresh_contact_inproc`
+      UN numéro à quatre — et c'est lui que le worker appelle **à chaque ouverture de fiche**.
+      Non-régression : 3 970 = 3 970, listes identiques. 13 contrôles, 3 éprouvés en échec avant.
+      ⚠ **PAS ENCORE DEPLOYE** : serveur (run de nuit) — `refresh_contact_inproc` sert au worker,
+      mais c'est un script Python relu à chaque appel : **pas de redémarrage nécessaire**.
 - [ ] **C-9** mandants et notaires par `ciblesHektorContacts` — `console_job_worker.js:11366,11375,11733,11742`
 - [ ] **C-12** la photo fraîche se lit avec **l'identité** — `console_job_worker.js:15939`
 - [x] **C-4** le garde-fou est BRANCHE — `push_contacts_to_supabase.py`

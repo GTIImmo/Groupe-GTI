@@ -42,25 +42,72 @@ VERROU_MARGE_S = 5.0
 
 
 def active_search_contact_ids(db_path: Path) -> list[str]:
-    """IDs des contacts ayant >=1 recherche active (couche locale phase2)."""
+    """Les NUMEROS DE HEKTOR des contacts ayant >=1 recherche active.
+
+    ⚠ C-6, 23/09/2026 -- CETTE LISTE PART CHEZ HEKTOR, ET ELLE VENAIT DE CHEZ NOUS.
+      Elle est tiree de NOTRE couche puis passee telle quelle a
+      `sync_contact_details` (donc a l'API de Hektor) et a
+      `normalize_source --contact-id` (donc au MIROIR). Tant qu'un contact porte
+      le meme numero des deux cotes, cela ne se voit pas. Le jour de la bascule,
+      ce sont nos numeros qui partaient : Hektor aurait repondu 404 -- et il les
+      aurait inscrits en liste noire -- pendant que le miroir, lui, se serait
+      laisse ecrire des fiches vides sous nos numeros.
+
+      On demande donc explicitement la CIBLE. Aujourd'hui elle vaut l'identite,
+      la liste est identique au caractere pres.
+    """
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(
-            "SELECT DISTINCT hektor_contact_id FROM app_contact_search_current "
-            "WHERE is_active = 1 AND (archive IS NULL OR archive = 0) "
-            "ORDER BY CAST(hektor_contact_id AS INTEGER)"
+            "SELECT DISTINCT COALESCE(NULLIF(c.hektor_target_id, ''), s.hektor_contact_id) "
+            "       AS pour_hektor "
+            "FROM app_contact_search_current s "
+            "LEFT JOIN app_contact_current c ON c.hektor_contact_id = s.hektor_contact_id "
+            "WHERE s.is_active = 1 AND (s.archive IS NULL OR s.archive = 0) "
+            "ORDER BY CAST(pour_hektor AS INTEGER)"
         ).fetchall()
     finally:
         conn.close()
     out: list[str] = []
     seen: set[str] = set()
     for row in rows:
-        cid = str(row["hektor_contact_id"] or "").strip()
+        cid = str(row["pour_hektor"] or "").strip()
         if cid.isdigit() and cid not in seen:
             seen.add(cid)
             out.append(cid)
     return out
+
+
+def identites_pour_ces_cibles(db_path: Path, cibles: list[str]) -> list[str]:
+    """Le chemin inverse : sous quel numero NOTRE couche range-t-elle ces contacts ?
+
+    Les trois etapes locales ne parlent pas la meme langue : `normalize_source`
+    travaille sur le MIROIR (numeros de Hektor), le push travaille sur NOTRE
+    couche (identites). Une seule liste pour les deux etait juste tant que les
+    deux numeros etaient egaux.
+    """
+    if not cibles:
+        return []
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        connues: dict[str, str] = {}
+        for debut in range(0, len(cibles), 400):
+            tranche = cibles[debut:debut + 400]
+            trous = ",".join("?" for _ in tranche)
+            for row in conn.execute(
+                f"SELECT hektor_contact_id, hektor_target_id FROM app_contact_current "
+                f"WHERE hektor_target_id IN ({trous})", tuple(tranche)
+            ):
+                cible = str(row["hektor_target_id"] or "").strip()
+                if cible:
+                    connues[cible] = str(row["hektor_contact_id"] or "").strip()
+    finally:
+        conn.close()
+    # Un contact que notre couche ne connait pas encore reste sous son numero de
+    # Hektor : c'est ce que faisait le code d'avant, et c'est juste.
+    return [connues.get(cible) or cible for cible in cibles]
 
 
 def acquereur_contact_ids(hektor_db: Path) -> list[str]:
@@ -243,16 +290,26 @@ def _fetch_step(liste: str, request_delay_seconds: float,
     ])
 
 
-def process_local(ids: list[str]) -> None:
-    """Etapes 2 a 4 : normalize -> couche contacts -> push. AUCUN appel a Hektor."""
-    csv = ",".join(ids)
-    run_step(["normalize_source.py", "--contact-id", csv])
-    run_step(["phase2/contacts/build_contacts_layer.py", "--contact-id", csv, "--no-reports"])
+def process_local(ids: list[str], db_path: Path) -> None:
+    """Etapes 2 a 4 : normalize -> couche contacts -> push. AUCUN appel a Hektor.
+
+    ⚠ C-6, 23/09/2026 -- TROIS ETAPES, DEUX LANGUES. `normalize_source` travaille
+      sur le MIROIR : il lui faut le numero de Hektor. Le push travaille sur
+      NOTRE couche : il lui faut l'identite. Une seule liste servait aux deux,
+      ce qui etait juste tant que les deux numeros etaient egaux.
+      `build_contacts_layer` accepte les deux (il traduit dans les deux sens,
+      cf. refresh_contact_slice) ; on lui donne l'identite, qui est sa langue.
+    """
+    csv_hektor = ",".join(ids)
+    identites = identites_pour_ces_cibles(db_path, ids)
+    csv_app = ",".join(identites)
+    run_step(["normalize_source.py", "--contact-id", csv_hektor])
+    run_step(["phase2/contacts/build_contacts_layer.py", "--contact-id", csv_app, "--no-reports"])
     # --include-archived-searches (21/08/2026) : SANS cette option, ce run considererait
     # les recherches archivees deja poussees comme "disparues" et les supprimerait de
     # Supabase -- defaisant chaque nuit ce que le run de 05:30 vient d'ecrire.
     run_step([
-        "phase2/sync/push_contacts_to_supabase.py", "--contact-id", csv,
+        "phase2/sync/push_contacts_to_supabase.py", "--contact-id", csv_app,
         "--push-mode", "full", "--contacts-scope", "active_or_eligible", "--skip-stats",
         "--include-archived-searches",
     ])
@@ -513,7 +570,7 @@ def main() -> int:
         batch = ids[i : i + max(args.batch_size, 1)]
         # Robustesse : une tranche locale en echec ne doit PAS arreter tout le run.
         try:
-            process_local(batch)
+            process_local(batch, args.phase2_db)
             consecutive_failed = 0
             etapes_en_echec = []
             if not echec_rencontre:
