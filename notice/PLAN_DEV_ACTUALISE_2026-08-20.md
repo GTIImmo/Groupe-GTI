@@ -2510,3 +2510,24 @@ rafraîchissement ciblé. **Trois gravités corrigées dans la note le jour mêm
 ④ **Un nom qui ment finit par tromper quelqu'un.** `fetchFreshContactSearchSnapshot(contactId)`
 lisait NOTRE table : le paramètre a été renommé plutôt que de ruser avec une expression
 régulière.
+
+### 23/09, fin de journée — le run, la descente, et trois restes
+
+**Le run quotidien et la descente ont été rejoués en plein jour**, exprès, pour éprouver les
+onze correctifs serveur avant d'aller plus loin. **45/45 étapes, puis 3/3, zéro erreur.**
+La donnée n'a fait que croître.
+
+| ce que le run a prouvé | |
+|---|---|
+| **G-11** | `annuaire avant 59 222 → a faire entrer 2 763`. **Sans le correctif du matin, 2 763 personnes sortaient de l'annuaire cette nuit** — et ce n'était pas 1 738 comme l'ancienne note le disait |
+| **un défaut de mon propre correctif** | la case cible était posée **avant** l'insertion des contacts neufs : les 10 nés cette nuit sont repartis sans elle. Il ne se voyait **qu'en tournant sur des contacts réellement neufs** |
+| **le verrou fantôme** | `magasin_annonce_app` est l'**étape 3 de la descente elle-même**. Le correctif a été éprouvé là où il pouvait tout bloquer — et l'étape a travaillé |
+
+**Et une cinquième leçon, qui prolonge les quatre du matin :**
+
+⑤ **Un garde-fou qu'on n'a pas vu se déclencher n'est pas un garde-fou.** Trois trouvés morts
+en une journée — `delete_contacts_except_dirty` (C-4), `phase2/.descente.lock`, et l'alerte
+manquante sur `GTI Recherches Actives`. Les trois étaient écrits, lisibles, convaincants.
+Désormais chaque protection posée est **éprouvée dans les deux sens** : elle doit passer au
+vert quand tout va bien **et** crier quand ça va mal. La sonde `data.travaux_en_erreur` a été
+la première à subir ce traitement le jour même de sa naissance.

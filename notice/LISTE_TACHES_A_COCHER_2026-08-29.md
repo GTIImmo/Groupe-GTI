@@ -7252,9 +7252,13 @@ Détail complet, avec fichier et ligne pour chaque point :
       seul geste client perdu. Purgés *(37 travaux, 282 lignes de journal, 0 trace d'audit
       touchée)*. La file est à **55 492 `done`, 0 erreur**.
 
-- [ ] **À FAIRE — la sonde qui tient la règle** : `data.travaux_en_erreur`, seuil **0**,
-      sévérité `critical`. **Sans elle, la file regrossira et on ne le verra pas** —
-      exactement ce qui vient de se passer pendant un mois.
+- [x] **La sonde qui tient la règle** — `data.travaux_en_erreur`, seuil **0**, `critical`.
+      **FAIT le 23/09.** Éprouvée dans les deux sens : elle lit **0** aujourd'hui, et
+      pointée sur une copie vers 55 492 lignes elle passe en `CRITICAL` et fait basculer
+      le résumé. *Une sonde qui lit zéro ne prouve rien — c'est la leçon du jour.*
+      ⚠ **Les lectures ne sont PAS séparées des gestes, et c'est un choix écrit** :
+      les sortir, ce serait les remettre en « avertissement », donc les effacer, puisque
+      **seuls les `critical` partent**. C'est le trou rebouché trois fois cette année.
 - [ ] **À TRANCHER — deux annonces d'essai encore `Actif`** *(dont une nommée « TEST C15
       agence Firminy - a supprimer »)*. Elles vivent **chez Hektor** : les retirer de
       Supabase ne sert à rien, le run les remettrait. Il faut **les archiver**, et c'est

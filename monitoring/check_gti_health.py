@@ -165,6 +165,33 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "max": 150,
     },
     {
+        # 2026-09-23 : LA FILE DES TRAVAUX RESTE A ZERO. Posee le jour ou on a
+        # trouve 37 travaux en erreur dormant depuis le 27/08 -- tries un par un,
+        # c'etaient TOUS des essais, pas un seul geste client perdu. Mais
+        # PERSONNE NE LE SAVAIT : 37 erreurs mortes garantissent que la 38e, la
+        # vraie, passe inapercue.
+        #
+        # SEUIL 0, PAS "PEU". Une erreur qui reste est une erreur qu'on a decide
+        # de ne pas traiter. Soit on rejoue, soit on purge en ecrivant pourquoi.
+        #
+        # ⚠ POURQUOI ON NE SEPARE PAS LES LECTURES DES GESTES. La tentation etait
+        #   de sortir refresh_console_data (un rafraichissement rate, sans
+        #   gravite) pour reduire le bruit. Separer, c'est le remettre en
+        #   "warning" -- donc l'effacer, puisque SEULS LES CRITICAL PARTENT.
+        #   C'est exactement le trou rebouche trois fois cette annee (sauvegarde
+        #   19/08, descente 08/09, recherches actives 23/09). On assume le mail :
+        #   si Hektor tombe, l'apprendre est une information, pas une nuisance.
+        #   Et la deduplication ne fait partir que les NOUVEAUX critiques, donc
+        #   une panne de 10 travaux envoie UN message, pas dix.
+        "key": "data.travaux_en_erreur",
+        "severity": "critical",
+        "label": "Travaux console en erreur",
+        "table": "app_console_job",
+        "params": {"status": "eq.error"},
+        "rule": "absolute",
+        "max": 0,
+    },
+    {
         "key": "data.diffusion_erreur",
         "label": "Annonces en erreur de diffusion",
         "table": "app_dossier_current",
