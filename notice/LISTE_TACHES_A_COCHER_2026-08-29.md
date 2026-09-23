@@ -15,15 +15,25 @@ OU ON EST, EN TROIS NIVEAUX
 de `L4-c` ⑤**, né de l'audit complet du 23/09 *(`notice/AUDIT_COMPLET_AVANT_BASCULE_2026-09-23.md`)*.
 
 ```
-13 bloquants    7 faits le 23/09     C-1 C-2 C-3 C-4 C-6 C-9 C-12
+13 bloquants    7 CODES + deployes   C-1 C-2 C-3 C-4 C-6 C-9 C-12
                 6 restants           ce ne sont PAS du code : ce sont les
-                                     GESTES DE LA FENETRE (patch SQL, traduction
-                                     des tables, --reset-push-state, sauvegarde)
-19 genants      0 fait               l'app marche, mais elle ment
- 8 non mesures  8 TRANCHES le 23/09  et l'un d'eux a fait tomber C-5 (voir la note)
+                                     GESTES DE LA FENETRE, ecrits commande par
+                                     commande dans PROCEDURE_BASCULE_CONTACT.md
+                                     -- et TROIS d'entre eux ont deja ete repetes
+                                     en reel le 23/09, jusqu'au feu vert
+19 genants      14 FAITS             serveur 8 . front 6
+                 4 faux positifs     G-5 G-8 G-18 G-19, mesures et non supposes
+                 1 reclasse          G-11 n'etait pas un genant : BLOQUANT
+ 8 non mesures  8 TRANCHES           et l'un d'eux a fait tomber C-5 (voir la note)
 ```
 
-➡ **Le code dormant est fini.** Il reste à décider **quand** on ouvre la fenêtre.
+➡ **IL NE RESTE RIEN DE TECHNIQUE.** L'outil de bascule est **installé dans Supabase** et
+son compte à blanc est **au vert** *(le signe : `"_json_liens_agenda": 9`)*.
+Il reste à décider **quand** on ouvre la fenêtre.
+
+⚠ **AVANT D'EN REPARLER** : vérifier le run de la nuit du 23 au 24/09. Il embarque **onze
+correctifs serveur d'un coup** — C-3, C-4, C-6 et les huit gênants. C'est beaucoup de code
+neuf en une fois, et ça n'a jamais tourné en conditions réelles.
 
 **LA CIBLE** — *étape 2* : l'app assure **toutes ses fonctions sans Hektor**, sauf **numéro de
 mandat · signature · portails**. ➡ **La charte, le journal des décisions et LES DIX LOTS sont en
