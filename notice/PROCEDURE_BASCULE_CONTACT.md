@@ -68,6 +68,11 @@ descendue à 07:30**, alors qu'il tourne à 05:0x dans le run. Il travaille sur 
 la veille, si bien qu'**un contact né chez Hektor dans la journée n'obtient sa doublure
 dans Supabase que la nuit SUIVANTE.**
 
+> **CONFIRMÉ PAR LE RUN DU 23/09 à 15h10** : 10 contacts neufs sont arrivés pendant le run,
+> et **4 d'entre eux n'avaient pas leur doublure dans Supabase** juste après. Le décalage
+> n'est pas un accident : **il se reproduit à chaque run**. L'étape ②a n'est donc pas une
+> précaution, c'est une nécessité — et elle doit être jouée **le soir même**, pas la veille.
+
 **②a — faire monter les numéros du registre local** *(sans quoi ②b ne peut rien remplir :
 il copie `app_contact_current.app_contact_id`, qui serait encore vide)*
 
