@@ -251,6 +251,18 @@ def main() -> int:
                 f"AND NOT EXISTS (SELECT 1 FROM {SOURCE} s "
                 f"  WHERE s.hektor_contact_id = {REGISTRE}.hektor_contact_id)")
 
+        # ⚠ LA CASE CIBLE, UNE SECONDE FOIS -- ET C'EST ICI QU'ELLE COMPTE.
+        # L'appel du haut sert aux fiches DEJA presentes. Mais les contacts
+        # NEUFS sont inseres APRES lui : au run du 23/09, les 10 nouveaux sont
+        # repartis sans leur case cible, et ne l'auraient eue que la nuit
+        # SUIVANTE. Or c'est justement elle qui garde le numero de Hektor quand
+        # la bascule reecrira hektor_contact_id -- sans elle, pour ces dix-la,
+        # le numero de Hektor aurait ete PERDU.
+        # Defaut de mon propre correctif du matin, trouve par le run du soir.
+        posees_apres = assurer_la_case_cible(conn)
+        if posees_apres:
+            print(f"case cible des neufs : {posees_apres} numero(s) mis a l'abri.")
+
         # Le registre des recherches suit : il porte le numero du contact chez nous.
         propages = propage_aux_recherches(conn)
         conn.commit()
