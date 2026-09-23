@@ -7263,6 +7263,21 @@ Détail complet, avec fichier et ligne pour chaque point :
       agence Firminy - a supprimer »)*. Elles vivent **chez Hektor** : les retirer de
       Supabase ne sert à rien, le run les remettrait. Il faut **les archiver**, et c'est
       un geste à faire sciemment.
-- [ ] **À REGARDER** : **90 notifications sans destinataire** *(seuil 20)* et **4 Go dans
-      `.tmp`**, sur le volume unique qui porte aussi le code, la base de 3,8 Go et les
-      sauvegardes.
+- [x] **Les 4 Go de `.tmp`** — un seul fichier : la sauvegarde d'avant le décalage,
+      posée dans un dossier fait pour être nettoyé. Déplacée dans `C:\Hektorackups`.
+
+---
+
+## ⚠ HORS PLAN — noté, pas traité
+
+*Trouvé en auditant, mais ça ne rapproche pas de l'étape 2. À reprendre un autre jour,
+sur décision, pas dans la foulée d'un audit.*
+
+- [ ] **Les notifications de rapprochement sans destinataire** — 90 lignes indélivrables,
+      parce que 110 contacts à recherche active n'ont **aucun négociateur** *(sur 7 865
+      éligibles sans négociateur, 13 % du parc)*. La RPC insère le négociateur du contact
+      sans repli. **C'est une décision produit** *(qui doit l'apprendre ?)*, pas un défaut
+      d'autonomie. ⚠ **NE PAS TOUCHER sans arbitrage explicite.**
+- [ ] **Deux annonces d'essai encore `Actif`** — dont une nommée « TEST C15 ... a
+      supprimer ». À archiver dans Hektor, geste délibéré.
+- [ ] **Les 7 865 contacts sans négociateur** — sujet de données, à part entière.
