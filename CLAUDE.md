@@ -80,11 +80,18 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **24/09/2026 — `L4-c` EST FAIT, `C.9` EST OUVERT (audit fait, AUCUN code écrit).**
 > ➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` — lire **§4** *(ce que la seconde
 > passe a réfuté de la première)* et **§5** *(l'ordre C.9-a → C.9-f et le feu vert de chacun)*.
-> **`C.9-a` est BRANCHÉ au run depuis le 24/09** *(`descendre_correspondance_annonces.py`,
-> run l. 379, avant le bootstrap)* : le serveur apprend le numéro d'une annonce née dans
-> l'app avant de lui en fabriquer un second. **Inerte** tant que rien n'est né dans l'app,
-> mais il pose dès la 1re nuit le garde-fou du compteur. ⚠ **Vérifier le 25/09 au matin**,
-> puis **`C.9-b`** *(l'œil : accord annonce serveur ↔ Supabase)*.
+> **24/09 fin de matinée — C.9 : a, b, c, e1, e2, e3 EN SERVICE, et l'ESSAI RÉEL A RÉUSSI.**
+> « ESSAI C9 bis » créée depuis l'app (interrupteur `app_setting.c9_annonce_nait_dans_app`,
+> **éteint** hors essai) : ligne **10 000 000**, Hektor **63147**, **un seul numéro** des deux
+> côtés, adoptée par le serveur. Détail et chiffres : bloc C.9 de la liste.
+> ⚠ **L'ORDRE A CHANGÉ** *(accord de Frédéric)* : **e avant d** — d et f préparent la coupure ;
+> **d doit vivre DANS le build** (la clé d'un lien ne se recalcule que pour 57 % des lignes).
+> ⚠ **D8** trouvé en auditant e : le rafraîchissement effaçait le numéro de l'app une minute
+> après la création → corrigé par e1 + e2.
+> ⚠ **Les patchs SQL de production, c'est Frédéric qui les applique** (l'outil est bloqué).
+> **EN COURS : le run de jour lancé à 12 h 35, puis la descente** — faire le bilan (C.9-a avant
+> le bootstrap, push avec C.9-c, sonde C.9-b après la descente). **Puis C.9-d, dans le build
+> (go obligatoire), puis C.9-f.** Deux annonces de test à supprimer plus tard : 63146, 63147.
 >
 > · la bascule contact a été jouée le **23/09 à 19h05** *(61 985 contacts sur notre numéro)* ;
 > · le premier run d'après a **doublé 294 179 identités** dans le registre local — réparé,

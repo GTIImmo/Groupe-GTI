@@ -7,10 +7,12 @@
 OU ON EST, EN TROIS NIVEAUX
 
   ETAPE 2       L0 OK  L1 OK  L2 OK  L3 OK  L4 EN COURS   puis L5 L6 L7 L8 L9
-  L4            L4-a OK  L4-b OK  L4-b' OK  L4-c OK  C.9 EN COURS (audit fait)
+  L4            L4-a OK  L4-b OK  L4-b' OK  L4-c OK  C.9 EN COURS
   L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  (5) OK -- BASCULE FAITE 23/09 19h05
-  C.9           a  b  c  d  e  f  -- AUCUN code ecrit ; audit du 24/09 :
-                notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md
+  C.9           a OK  b OK  c OK  e1 OK  e2 OK  e3 OK (eteint) -- ESSAI REEL OK 24/09
+                RUN DE JOUR lance 12:35, puis descente -- bilan a faire (C.9-a avant le
+                bootstrap, push C.9-c, sonde C.9-b) ; reste d puis f (preparent la coupure)
+                ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
 ```
 
 ## ✅ `L4-c` EST TERMINÉ — la bascule a été jouée le 23/09/2026, services arrêtés

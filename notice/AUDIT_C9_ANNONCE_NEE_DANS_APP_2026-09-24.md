@@ -172,6 +172,12 @@ naissance** — l'inverse exact de C.9. C.9-a ne le rattrape pas : il ne tourne 
 
 Puis **C.9-couple** *(son premier pas est une mesure)* et l'essai **26bis-TRANSACTIONS**.
 
+> **MISE À JOUR DU 24/09 (fin de matinée)** — l'ordre réellement suivi : **a → b → c → e → d → f**.
+> e passe avant d *(accord de Frédéric)* : d et f préparent la coupure, et **d doit vivre dans le
+> build** (la clé ne se recalcule que pour 57 % des liens depuis la table). **e s'est scindé en
+> trois pièces** après **D8** (voir §3) : e1 rafraîchissement, e2 worker, e3 création. a, b, c, e1,
+> e2, e3 sont faits ; l'essai réel a réussi (10 000 000 ↔ 63147).
+
 **Reste NON MESURÉ, à auditer au moment de la tâche concernée** : le chemin de retour du worker
 *(`linkProvisionalCreation`, `rememberCreatedHektorAnnonceId`)* → à C.9-e · la sémantique exacte
 de `id_rewrites` dans le push → à C.9-b · pourquoi `app_contact_identite_seq` a lui aussi un

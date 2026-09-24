@@ -74,6 +74,9 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | **21/09** | **PAS D'INTERRUPTEUR — la règle est permanente et symétrique.** Saisir dans Hektor **ou** dans l'app doit fonctionner, des deux côtés, dès maintenant ; ce qu'on interdit, c'est de saisir **des deux côtés à la fois sur le même champ**. L'arbitre est donc **la récence**, toujours, et non une bascule d'autorité datée. ➡ **Le contrat d'autorité ne sert qu'aux champs EXCLUSIFS à l'app** *(ceux que Hektor ignore)* — il reste vide côté annonce tant qu'il n'y en a aucun |
 | **24/09** | ⛔ **LE PREMIER RUN APRÈS LA BASCULE A DOUBLÉ 294 179 IDENTITÉS** dans le registre local — le registre était juste, le build aussi : c'est leur **désaccord de portée** *(registre traduit en entier, correspondance descendue du seul périmètre éligible)* qui a fait le dégât. Réparé, cause fermée *(la correspondance vient d'abord du registre local)*, contrôle `registre_couche_desaccord` **chaque nuit** *(`f974ef9`, `376dc7b`)*. **Leçon : un contrôle vérifie que deux côtés sont D'ACCORD, pas qu'un mécanisme existe** |
 | **24/09** | **C.9 : l'ordre est fixé par un audit en deux passes.** D'abord **le serveur apprend le numéro de l'annonce avant le bootstrap** *(sinon le run de nuit lui donne un second numéro, dans le cas NORMAL)*, puis **l'œil** *(accord serveur ↔ Supabase)* et **la protection au push** ; la RPC de création **ensuite seulement**, drapeau éteint. **Pas de porte worker** pour l'annonce : ses deux numéros vivent dans deux colonnes. ➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` |
+| **24/09** | **C.9 : e AVANT d** *(accord de Frédéric)*. d et f préparent la **coupure** — tant que Hektor vit, le lien d'une annonce née dans l'app revient par le miroir ; e est le livrable de l'étape 2. Et **d vivra DANS le build** : la clé d'un lien ne se recalcule depuis la table que pour 57 % des lignes (le rôle est réécrit après le hache, `build_contacts_layer.py` l. 1107) |
+| **24/09** | ⛔ **D8 — le rafraîchissement effaçait le numéro de l'app une minute après la création** (`reconcile_annonce_dossiers` le prenait pour un fantôme). Corrigé par **e1** (le rafraîchissement adopte) et **e2** (le worker pose le numéro Hektor sur notre ligne AVANT de rafraîchir) |
+| **24/09** | ✅ **PREMIÈRE ANNONCE NÉE DANS L'APP, EN RÉEL** : « ESSAI C9 bis », **10 000 000 ↔ Hektor 63147**, un seul numéro dans Supabase et sur le serveur. **Les patchs SQL de production sont appliqués par Frédéric** : l'écriture par l'outil de la session est bloquée par son garde-fou |
 
 ---
 
@@ -2555,4 +2558,12 @@ l'app, parce qu'il ne la reconnaît que par son numéro Hektor et tourne avant t
 ➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` *(§4 : ce que la seconde passe a réfuté
 de la première ; §5 : l'ordre C.9-a → C.9-f et le feu vert de chacun)*.
 
-**Aucune ligne de code C.9 n'est écrite.** La prochaine est **C.9-a**, et elle attend le go.
+~~**Aucune ligne de code C.9 n'est écrite.**~~ *(vrai le matin ; dépassé le jour même)*
+
+**Dans la journée** : C.9-a (le serveur adopte avant le bootstrap), C.9-b (la sonde « une annonce,
+un numéro »), C.9-c (le push n'efface plus une annonce que le serveur ignore), puis C.9-e en trois
+pièces après la découverte de **D8** — e1 le rafraîchissement adopte, e2 le worker pose le numéro
+Hektor avant de rafraîchir, e3 la création donne le numéro (interrupteur en base, éteint).
+**L'essai réel a réussi** : 10 000 000 ↔ 63147, un seul numéro. Le run de jour (12 h 35) et la
+descente doivent en donner la preuve de nuit. **Reste C.9-d (dans le build) puis C.9-f.**
+Chaque pièce a son contrôle, éprouvé dans les deux sens ; le détail est dans le bloc C.9 de la liste.
