@@ -25,7 +25,29 @@ OU ON EST, EN TROIS NIVEAUX
                 qui y sont (contacts eligibles) sont sous leur identite, 0 sous l'ancien
                 numero, 0 ancienne cle de lien ; les 13 autres n'y ont jamais ete (non
                 eligibles). Regles mal rangee / desaccord : 0 / 0. 8 contacts NEUFS du jour
-                (605514-605521) passent une nuit sous leur n° Hektor : normal.
+                (605514-605521) passent une nuit sous leur n° Hektor -- ⛔ PAS « normal » :
+                ➡ SECONDE PASSE DU BUILD (24/09 soir, « Oui » de Frederic). Le run fait
+                  build -> registre -> push : le registre numerote les contacts neufs
+                  APRES le build, qui les a ecrits sous leur n° Hektor ; ils partaient
+                  vers Supabase sous ce numero et changeaient d'identite le lendemain,
+                  laissant derriere eux ce que l'app leur avait accroche (mesure : 67
+                  rapprochements des contacts L4-c-bis encore sous l'ancien numero ;
+                  30 pour les 8 neufs). Depuis la bascule du 23/09 seulement.
+                  Correctif : le run relance le build APRES le registre, AVANT le push,
+                  avec --seulement-si-contacts-a-traduire (0 -> s'arrete sans rien ecrire).
+                  Non bloquante, 1 essai. ~4 min les jours ou il y a des contacts neufs.
+                  test_seconde_passe_contacts_neufs.py 7/7 ; PREUVE sur cc9010f : echoue.
+                  REPETITION sur COPIE de la vraie base (8 neufs a traduire) : 211 s,
+                  8/8 traduits, leurs 5 recherches gardent LEUR cle, 0 autre lien ni
+                  recherche change, carnet 100 % / 0 conflit ; registre derriere : 0
+                  second numero ; 2e passe : « 0 a traduire », rien ecrit. Vraie base
+                  intacte. EN SERVICE a la nuit du 25/09.
+                  [ ] A COCHER apres la nuit : ligne « [seconde passe] » au journal,
+                      et au run suivant « contacts a traduire » = 0 avant le build.
+                  [ ] RESTE (mesure, lecture) : les 67 + 30 rapprochements portant un
+                      ancien numero sont-ils rattaches au bon contact dans les ecrans ?
+                      (ils sont cles par la RECHERCHE, dont la cle ne change pas --
+                      probable, NON MESURE)
                 ⚠ HORS PLAN, trouve en passant : C.16 et le registre se contredisent --
                   le registre leve chaque nuit les 7 658 marques « disparu » de C.16
                   (contacts supprimes chez Hektor mais toujours dans la couche), C.16

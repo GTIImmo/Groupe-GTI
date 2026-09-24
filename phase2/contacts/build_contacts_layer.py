@@ -2142,6 +2142,38 @@ def build_contacts_layer(
     return summary
 
 
+# ── SECONDE PASSE, 24/09/2026 : UN CONTACT NEUF NE DOIT PAS PASSER UNE NUIT ──
+# ── SOUS SON NUMERO HEKTOR ──────────────────────────────────────────────────
+# Le run fait : build (17:47) -> registre (17:51) -> push. Le registre decouvre
+# les contacts neufs EN LISANT la couche que le build vient d'ecrire : un contact
+# cree chez Hektor dans la journee est donc ecrit sous son numero Hektor, recoit
+# son identite juste APRES, part vers Supabase sous l'ancien numero, et n'est
+# traduit qu'au run suivant. Pendant ce jour, tout ce que l'app lui accroche
+# (rapprochements, recherches...) porte un numero qui va disparaitre -- mesure du
+# 24/09 : 67 rapprochements des 23 contacts L4-c-bis encore sous l'ancien numero.
+# Depuis la bascule du 23/09 seulement (avant, identite = numero Hektor).
+# ➡ Le run relance le build APRES le registre, AVANT le push, avec cette option :
+#   s'il n'y a rien a traduire il s'arrete sans rien ecrire ; sinon il refait
+#   exactement ce que le build du lendemain aurait fait -- en avance.
+def contacts_a_traduire(phase2_db: Path) -> int:
+    """Contacts de la couche encore sous leur numero Hektor alors que le registre
+    leur a donne une identite (meme regle que registre_couche_desaccord, sans le
+    delai de 36 h). Lecture seule."""
+    conn = sqlite3.connect(f"file:{Path(phase2_db).as_posix()}?mode=ro", uri=True, timeout=30)
+    try:
+        return conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM app_contact_current c
+            JOIN app_contact r ON r.hektor_target_id = c.hektor_contact_id
+            WHERE CAST(c.hektor_contact_id AS INTEGER) < 10000000
+              AND CAST(r.hektor_contact_id AS INTEGER) >= 10000000
+            """
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Construit la couche Contacts Phase2 et audite les doublons sans suppression.")
     parser.add_argument("--hektor-db", type=Path, default=DEFAULT_HEKTOR_DB)
@@ -2155,12 +2187,23 @@ def parse_args() -> argparse.Namespace:
         help="Reconstruit uniquement un ou plusieurs contacts Hektor (valeurs separees par virgule acceptees).",
     )
     parser.add_argument("--no-reports", action="store_true", help="Ne genere pas les CSV/JSON d'audit.")
+    parser.add_argument(
+        "--seulement-si-contacts-a-traduire",
+        action="store_true",
+        help="Seconde passe du run : ne reconstruit que si des contacts neufs attendent leur identite.",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     contact_ids = normalize_contact_ids(args.contact_id)
+    if args.seulement_si_contacts_a_traduire:
+        a_traduire = contacts_a_traduire(args.phase2_db)
+        if a_traduire == 0:
+            print("[seconde passe] 0 contact a traduire -- rien a refaire, rien n'est ecrit")
+            return 0
+        print(f"[seconde passe] {a_traduire} contact(s) neuf(s) attendent leur identite -- on reconstruit")
     if contact_ids:
         summary = refresh_contact_slice(
             contact_ids=contact_ids,

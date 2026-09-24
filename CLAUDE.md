@@ -99,7 +99,12 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > recette exacte de chaque clé, doublure lue par personne). Répété sur copie : 100 % des recettes
 > refabriquent leur clé. **1re nuit = 24→25 : vérifier la ligne `[carnet des liens]` du build.**
 > ✅ **D6 CODÉ aussi** : le recensement « connu de l'app seule » marque ses départs (26 lignes
-> périmées ce soir). **Reste : C.9-f (go + répétition sur copie), après une nuit du carnet.**
+> périmées ce soir). **Run de jour 16:05-18:09 : C.9-d, D6, L4-c-bis PROUVÉS en réel.**
+> ✅ **SECONDE PASSE DU BUILD** (24/09 soir) : un contact neuf ne passe plus une nuit sous son
+> numéro Hektor (le run relance le build après le registre, avant le push). Répétée sur copie,
+> **en service à la nuit du 25/09** — vérifier la ligne `[seconde passe]`. Reste une mesure : les
+> 97 rapprochements laissés sous un ancien numéro sont-ils bien rattachés dans les écrans ?
+> **Puis C.9-f (go + répétition sur copie).**
 > *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
 > build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et

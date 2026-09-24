@@ -488,6 +488,23 @@ Invoke-Step -Label "phase2 registre identite contacts" -Arguments @(
     "phase2\identite\registre_contacts.py"
 ) -WorkerKey "phase2.registre_contacts"
 
+# SECONDE PASSE DU BUILD, 24/09/2026 -- UN CONTACT NEUF PART SOUS SON IDENTITE.
+# Le registre juste au-dessus vient de donner une identite aux contacts crees
+# chez Hektor dans la journee -- APRES le build, qui les a donc ecrits sous leur
+# numero Hektor. Sans cette passe, ils partiraient vers Supabase sous ce numero
+# et changeraient d'identite le lendemain, laissant derriere eux ce que l'app
+# leur a accroche entre-temps (67 rapprochements le 24/09).
+# ⚠ APRES le registre, AVANT le push : c'est tout son sens.
+# Sans contact neuf elle s'arrete aussitot, sans rien ecrire (--seulement-si-...).
+# NON BLOQUANTE, 1 essai : si elle tombe, le build est annule en bloc et la couche
+# reste celle de la premiere passe -- le comportement d'avant (traduits le
+# lendemain), que le controle registre_couche_desaccord surveille.
+Invoke-OptionalStepWithRetry -Label "phase2 build contacts layer seconde passe" -Arguments @(
+    "phase2\contacts\build_contacts_layer.py",
+    "--no-reports",
+    "--seulement-si-contacts-a-traduire"
+) -MaxAttempts 1 -RetryDelaySeconds 0
+
 # C.16 21/09/2026 -- LES CONTACTS QUE HEKTOR NE CONNAIT PLUS.
 # Quand une fiche est supprimee chez lui, son detail repond 404 et le pipeline
 # l'inscrit en liste noire pour ne pas s'acharner -- mais RIEN ne le disait au
