@@ -74,6 +74,42 @@ def charge_env() -> None:
         load_env_file(fichier)
 
 
+def retraduire_satellites(client, appliquer: bool) -> dict | None:
+    """24/09/2026 -- LES TABLES SATELLITES SUIVENT LE CONTACT QUAND IL CHANGE DE NUMERO.
+
+    app_contact_id_propager (ci-dessous) ne remplit que les cases VIDES : elle ne
+    corrige jamais un hektor_contact_id perime. Or 13 tables de Supabase figent
+    ce numero a la naissance de la ligne, et les ecrans lisent PAR lui (69
+    rapprochements sans nom le 24/09). Regle et preuve :
+    supabase/patch_retraduire_satellites_2026-09-24.sql et
+    notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md.
+
+    AVANT la propagation : une ligne traduite recoit aussi son app_contact_id.
+    NE FAIT JAMAIS TOMBER L'ETAPE : fonction absente (patch pas encore applique)
+    ou erreur -> on le dit, et la propagation continue comme avant.
+    """
+    try:
+        resultat = client.request(method="POST", path="rpc/app_contact_retraduire_satellites",
+                                  payload={"p_appliquer": appliquer})
+        if isinstance(resultat, str):
+            resultat = json.loads(resultat)
+    except Exception as exc:  # noqa: BLE001 -- jamais d'exception brute a l'ecran
+        print("   retraduction satellites : NON FAITE (%s) -- la propagation continue"
+              % type(exc).__name__)
+        return None
+    if not isinstance(resultat, dict):
+        print("   retraduction satellites : reponse inexploitable -- la propagation continue")
+        return None
+    print("   retraduction satellites (%s) : a traduire %s, traduits %s, sautes %s, ecarts %s"
+          % (resultat.get("mode"), resultat.get("a_traduire"), resultat.get("traduits"),
+             resultat.get("sautes"), resultat.get("ecarts") or "{}"))
+    detail = resultat.get("detail") or {}
+    for cle in ("traduits", "ambigus", "contradictoires", "collisions"):
+        for table, n in sorted((detail.get(cle) or {}).items()):
+            print("      %-16s %-36s %6d" % (cle, table, n))
+    return resultat
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true",
@@ -98,8 +134,11 @@ def main() -> int:
     print("   lignes rattrapables avant : %d" % a_rattraper)
 
     if args.dry_run:
+        retraduire_satellites(client, appliquer=False)
         print("\n   --dry-run : rien ecrit.")
         return 0
+
+    retraduire_satellites(client, appliquer=True)
 
     resultat = client.request(method="POST", path="rpc/app_contact_id_propager",
                               payload={})

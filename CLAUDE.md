@@ -104,6 +104,9 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > numéro Hektor (le run relance le build après le registre, avant le push). Répétée sur copie,
 > **en service à la nuit du 25/09** — vérifier la ligne `[seconde passe]`. Reste une mesure : les
 > 97 rapprochements laissés sous un ancien numéro sont-ils bien rattachés dans les écrans ?
+> ✅ **TABLES SATELLITES** : 13 tables figeaient le numéro du contact (69 rapprochements sans nom).
+> Fonction de réparation + appel de nuit + sonde, prouvés — **reste : Frédéric applique
+> `supabase/patch_retraduire_satellites_2026-09-24.sql`**, puis à blanc, puis pour de bon.
 > **ORDRE DU SOIR (go de Frédéric) : (1) mesure des rapprochements, lecture seule ; (2) C.9-f
 > audité → expliqué → codé → répété sur copie, en service dès la nuit du 25/09 si 0 clé changée ;
 > (3) contrôle de la nuit ; (4) allumage de e3 = décision de Frédéric.**

@@ -1094,6 +1094,7 @@ class Monitor:
             ("doublures", self.check_doublures),
             ("annonce_un_numero", self.check_annonce_un_numero),
             ("contacts_identite", self.check_contacts_identite),
+            ("contacts_satellites", self.check_contacts_satellites),
             ("local_logs", self.check_local_logs),
             ("playwright_sessions", self.check_playwright_sessions),
             ("document_storage", self.check_document_storage),
@@ -2082,6 +2083,59 @@ class Monitor:
             self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "ok",
                      f"Une annonce, un numero : 0 ecart sur {mesure['supabase']} "
                      f"({mesure['en_attente']} en attente de Hektor)", mesure)
+
+    def check_contacts_satellites(self) -> None:
+        """24/09/2026 -- LES TABLES SATELLITES SUIVENT-ELLES LE CONTACT ? SUPABASE.
+
+        13 tables de Supabase (rapprochements, statuts, propositions...) figent le
+        numero du contact a la naissance de la ligne ; les ecrans lisent PAR ce
+        numero. Quand un contact change de numero, la ligne s'affiche sans nom et
+        sort des compteurs -- 69 rapprochements le 24/09. L'etape de nuit
+        (propager_numeros_contact.py) les retraduit.
+
+        LA REGLE N'EST PAS ICI : on appelle la fonction de reparation A BLANC
+        (app_contact_retraduire_satellites(false)) -- une seule copie de la regle.
+            ecarts        une ligne qu'aucune regle ne classe     critical
+            traduisibles  l'etape de nuit n'a pas tourne         warning
+            sautes        ambigue / contradictoire / collision   warning (a examiner)
+        Audit : notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md
+        """
+        if not self.supabase:
+            return
+        try:
+            r = self.supabase.request("rpc/app_contact_retraduire_satellites", method="POST",
+                                      payload={"p_appliquer": False})
+        except Exception as exc:
+            self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "ok",
+                     "Satellites des contacts : en attente du patch "
+                     "(patch_retraduire_satellites_2026-09-24.sql)",
+                     {"pending_migration": True, "error": type(exc).__name__}, severity="info")
+            return
+        if isinstance(r, str):
+            try:
+                r = json.loads(r)
+            except ValueError:
+                r = None
+        if not isinstance(r, dict):
+            self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "warning",
+                     "Satellites des contacts : reponse inexploitable -- NON MESURE", {})
+            return
+        ecarts = r.get("ecarts") or {}
+        traduisibles = int(r.get("traduisibles") or 0)
+        sautes = int(r.get("sautes") or 0)
+        mesure = {"traduisibles": traduisibles, "sautes": sautes, "ecarts": ecarts,
+                  "detail": r.get("detail") or {}}
+        if ecarts:
+            self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "critical",
+                     f"Satellites des contacts : lignes qu'aucune regle ne classe {ecarts}", mesure)
+        elif traduisibles or sautes:
+            self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "warning",
+                     f"Lignes satellites sous un ANCIEN numero de contact : {traduisibles} a "
+                     f"retraduire (etape de nuit pas passee ?), {sautes} non traduisibles "
+                     f"(a examiner) -- seuil 0", mesure)
+        else:
+            self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "ok",
+                     "Les tables satellites suivent leur contact (0 ancien numero)", mesure)
 
     def check_contacts_identite(self) -> None:
         """L4-c-bis (24/09/2026) -- UN CONTACT NUMEROTE DOIT PORTER SON IDENTITE. LOCALE.

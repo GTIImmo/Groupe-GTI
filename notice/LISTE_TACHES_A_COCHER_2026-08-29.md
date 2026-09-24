@@ -69,7 +69,27 @@ OU ON EST, EN TROIS NIVEAUX
                         + les 30 des 8 neufs deviendront orphelins CETTE NUIT (traduits).
                       - C'etait une table « figee » de la bascule du 23/09 (13 tables
                         traduites a la main, que le build ne refait pas).
-                  [ ] REPARATION a decider par Frederic (ecriture prod = son geste) :
+                  [~] REPARATION CODEE 24/09 soir (« Oui ») -- audit complet :
+                      notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md
+                      supabase/patch_retraduire_satellites_2026-09-24.sql : fonction
+                      app_contact_retraduire_satellites(p_appliquer) sur les 13 tables
+                      figees ; a blanc par defaut ; saute+compte ambigus / contradictoires
+                      / collisions (4 index uniques) ; « le compte doit tomber juste »
+                      (ecarts) ; trace app_contact_retraduction_log ; service_role seul.
+                      PREUVE sur copies temporaires annulees (vraies donnees + 6 cas
+                      pieges) : 1re passe a trouve MON defaut (17 lignes ni traduites ni
+                      comptees : app_contact_id VIDE sur 10 fiches -> NULL) ; corrigee ;
+                      2e passe : 74 traduites (69 + 3 compteurs + 2 pieges), 3 sautees,
+                      0 ecart, rejeu = rien, 0 rapprochement sans contact ; prod intacte.
+                      Appel de nuit : propager_numeros_contact.py AVANT la propagation,
+                      protege (fonction absente -> l'etape continue). Sonde
+                      data.contacts_satellites (a blanc : ecart critical, reste warning).
+                      test_retraduire_satellites.py 9/9 ; PREUVE sur cb711df : echoue.
+                      [ ] Frederic applique le patch ; a blanc (attendu 72) ; pour de bon.
+                      ⚠ HORS PLAN NOTE : 10 fiches de app_contact_current (Supabase) sous
+                        identite ont app_contact_id VIDE (les contacts L4-c-bis) --
+                        pousser_numeros_contact ne les a pas remplies. Non traite.
+                  (ancien) REPARATION a decider par Frederic (ecriture prod = son geste) :
                       UPDATE app_rapprochement -> identite, via hektor_target_id, APRES
                       la nuit du 25/09 (couvre 69 + 30). + garde durable a discuter
                       (le moteur met a jour hektor_contact_id, ou re-traduction des
