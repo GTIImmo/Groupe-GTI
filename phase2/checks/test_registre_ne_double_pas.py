@@ -91,6 +91,16 @@ plus_haut = q("SELECT COALESCE(MAX(app_contact_id), 0) FROM app_contact")
 controle("(4) la serie reste dans le couloir de la doublure",
          plus_haut < 20_000_000, f"le plus haut est {plus_haut}")
 
+# ── ⑤ L'IDENTITE EST DANS LA COLONNE D'IDENTITE (L4-c-bis, 24/09) ──────────
+# Les quatre points ci-dessus cherchent des DOUBLONS. Ils n'ont pas vu le defaut
+# inverse : 23 contacts numerotes par le registre, mais dont le numero de Hektor
+# occupait la colonne d'identite -- donc jamais traduits par le build.
+mal_ranges = q("""SELECT COUNT(*) FROM app_contact
+                   WHERE CAST(hektor_contact_id AS INTEGER) < ?
+                     AND app_contact_id >= ?""", (PLAGE_APP, PLAGE_APP))
+controle("(5) l'identite de chaque contact est dans la colonne d'identite",
+         mal_ranges == 0, f"{mal_ranges} contact(s) numerote(s) mais range(s) sous leur n° Hektor")
+
 print()
 print(f"   registre : {q('SELECT COUNT(*) FROM app_contact')} lignes, "
       f"plus haut numero {plus_haut}")

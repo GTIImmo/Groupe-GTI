@@ -84,8 +84,67 @@ def assurer_la_case_cible(conn: sqlite3.Connection) -> int:
     return curseur.rowcount or 0
 
 
-def connecte() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(BASE), timeout=60)
+# ═══════════════════════════════════════════════════════════════════════════
+# L4-c-bis 24/09/2026 — UN CONTACT NEUF RECOIT SON IDENTITE DANS LA BONNE COLONNE
+# ═══════════════════════════════════════════════════════════════════════════
+# DEPUIS LA BASCULE DU 23/09, une ligne de ce registre porte l'IDENTITE dans
+# hektor_contact_id (= app_contact_id) et le numero de Hektor dans hektor_target_id.
+# Les 356 166 lignes de la bascule sont ainsi. Mais l'INSERT des contacts NEUFS n'a
+# pas suivi : il ecrivait encore le numero de Hektor dans hektor_contact_id. Le
+# build, qui ne lit que cette colonne comme identite, voyait « cible = identite » et
+# ne traduisait jamais : 23 contacts crees chez Hektor apres la bascule sont restes
+# sous leur numero Hektor -- et le controle de nuit ne le voyait pas.
+#
+# ⚠ ET LE PIEGE QUI COMMANDE LA CORRECTION : un contact neuf arrive UNE NUIT sous son
+#   numero de Hektor (le build tourne avant ce script), puis sous son identite. Le
+#   registre doit donc le reconnaitre SOUS L'UN OU L'AUTRE numero. Sinon, la nuit
+#   de la traduction, il le prend pour un inconnu et lui donne un SECOND numero --
+#   exactement le doublement du 24/09 au matin -- ou il le marque « disparu ».
+#   Les deux plages sont disjointes (< 10 M Hektor, >= 10 M nous) : un numero ne
+#   peut tomber que dans une des deux colonnes.
+#
+# ⚠ DEUX CONDITIONS, PAS UN « OU » DANS UNE SEULE SOUS-REQUETE : chacune a son index
+#   (unicite sur hektor_contact_id, idx_app_contact_target sur la cible).
+PLAGE_APP = 10_000_000
+PLAGE_NES_DANS_L_APP = 20_000_000
+
+
+def _connu(alias_registre: str, expr_numero: str) -> str:
+    """« le registre connait ce numero, sous l'une ou l'autre colonne »."""
+    return (f"(EXISTS (SELECT 1 FROM {REGISTRE} {alias_registre} "
+            f"WHERE {alias_registre}.hektor_contact_id = {expr_numero}) "
+            f"OR EXISTS (SELECT 1 FROM {REGISTRE} {alias_registre} "
+            f"WHERE {alias_registre}.hektor_target_id = {expr_numero}))")
+
+
+def _present_dans_la_source(alias_registre: str) -> str:
+    """« la couche porte ce contact, sous son identite OU sous son numero Hektor »."""
+    return (f"(EXISTS (SELECT 1 FROM {SOURCE} s WHERE s.hektor_contact_id = {alias_registre}.hektor_contact_id) "
+            f"OR ({alias_registre}.hektor_target_id IS NOT NULL AND EXISTS "
+            f"(SELECT 1 FROM {SOURCE} s WHERE s.hektor_contact_id = {alias_registre}.hektor_target_id)))")
+
+
+def reparer_les_identites(conn: sqlite3.Connection) -> int:
+    """Remet l'identite dans hektor_contact_id pour les lignes posees par l'ancien
+    INSERT (numero Hektor dans la colonne d'identite, identite dans app_contact_id).
+    Le numero de Hektor est deja a l'abri dans la cible (assurer_la_case_cible).
+    Idempotent : 0 la nuit suivante. Ne touche JAMAIS une ligne dont l'identite
+    serait deja portee par une autre -- unicite oblige."""
+    cur = conn.execute(
+        f"UPDATE {REGISTRE} "
+        f"   SET hektor_target_id  = COALESCE(hektor_target_id, hektor_contact_id), "
+        f"       hektor_contact_id = CAST(app_contact_id AS TEXT), "
+        f"       updated_at = CURRENT_TIMESTAMP "
+        f" WHERE CAST(hektor_contact_id AS INTEGER) < {PLAGE_APP} "
+        f"   AND app_contact_id >= {PLAGE_APP} AND app_contact_id < {PLAGE_NES_DANS_L_APP} "
+        f"   AND (hektor_target_id IS NULL OR hektor_target_id = hektor_contact_id) "
+        f"   AND NOT EXISTS (SELECT 1 FROM {REGISTRE} autre "
+        f"                    WHERE autre.hektor_contact_id = CAST({REGISTRE}.app_contact_id AS TEXT))")
+    return cur.rowcount or 0
+
+
+def connecte(base: Path = BASE) -> sqlite3.Connection:
+    conn = sqlite3.connect(str(base), timeout=60)
     # phase2 est en WAL et plusieurs ecrivains coexistent : sans ce reglage, un
     # autre run (le rattrapage acquereurs) se fait tuer au bout de 5 secondes.
     conn.execute("PRAGMA busy_timeout = 30000")
@@ -123,13 +182,14 @@ def propage_aux_recherches(conn: sqlite3.Connection) -> int | None:
     cur = conn.execute(
         f"""
         UPDATE app_search_registry
-           SET app_contact_id = (
-                 SELECT r.app_contact_id FROM {REGISTRE} r
-                  WHERE r.hektor_contact_id = app_search_registry.hektor_contact_id)
+           SET app_contact_id = COALESCE(
+                 (SELECT r.app_contact_id FROM {REGISTRE} r
+                   WHERE r.hektor_contact_id = app_search_registry.hektor_contact_id),
+                 (SELECT r.app_contact_id FROM {REGISTRE} r
+                   WHERE r.hektor_target_id = app_search_registry.hektor_contact_id))
          WHERE app_contact_id IS NULL
            AND hektor_contact_id IS NOT NULL
-           AND EXISTS (SELECT 1 FROM {REGISTRE} r
-                        WHERE r.hektor_contact_id = app_search_registry.hektor_contact_id)
+           AND {_connu("r", "app_search_registry.hektor_contact_id")}
         """
     )
     return cur.rowcount
@@ -139,9 +199,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true",
                     help="mesure et affiche, n'ecrit rien")
+    ap.add_argument("--base", type=Path, default=BASE,
+                    help="la base a traiter (repetition sur copie : L4-c-bis, 24/09)")
     args = ap.parse_args()
 
-    conn = connecte()
+    conn = connecte(args.base)
     try:
         existe = conn.execute(
             "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?",
@@ -171,18 +233,22 @@ def main() -> int:
             posees = assurer_la_case_cible(conn)
             if posees:
                 print(f"case cible du registre : {posees} numero(s) de Hektor mis a l'abri.")
+            # L4-c-bis 24/09 : APRES la case cible (le numero Hektor est a l'abri).
+            reparees = reparer_les_identites(conn)
+            if reparees:
+                print(f"identite remise en place : {reparees} contact(s) poses par l'ancien code (L4-c-bis).")
 
         deja = 0 if not existe else conn.execute(
             f"SELECT count(*) FROM {REGISTRE}").fetchone()[0]
 
         # --- ce qui manque, ce qui revient, ce qui disparait
-        req_neufs = (f"SELECT count(*) FROM {SOURCE} s WHERE NOT EXISTS "
-                     f"(SELECT 1 FROM {REGISTRE} r WHERE r.hektor_contact_id = s.hektor_contact_id)")
+        # L4-c-bis 24/09 : un contact se reconnait sous L'UN OU L'AUTRE numero.
+        req_neufs = (f"SELECT count(*) FROM {SOURCE} s WHERE NOT {_connu('r', 's.hektor_contact_id')}")
         req_revenus = (f"SELECT count(*) FROM {REGISTRE} r WHERE r.absent_depuis IS NOT NULL "
-                       f"AND EXISTS (SELECT 1 FROM {SOURCE} s WHERE s.hektor_contact_id = r.hektor_contact_id)")
+                       f"AND {_present_dans_la_source('r')}")
         req_partis = (f"SELECT count(*) FROM {REGISTRE} r WHERE r.absent_depuis IS NULL "
                       f"AND r.hektor_contact_id IS NOT NULL "
-                      f"AND NOT EXISTS (SELECT 1 FROM {SOURCE} s WHERE s.hektor_contact_id = r.hektor_contact_id)")
+                      f"AND NOT {_present_dans_la_source('r')}")
 
         neufs = conn.execute(req_neufs).fetchone()[0] if existe else total
         revenus = conn.execute(req_revenus).fetchone()[0] if existe else 0
@@ -228,28 +294,32 @@ def main() -> int:
             # Tout ce qui est au-dessus de 10 M est a nous ; le second seuil
             # separe seulement nos deux sources. Le distributeur de Supabase a
             # ete repositionne a 20 000 000 le meme jour.
+            # L4-c-bis 24/09 : un numero de Hektor (< 10 M) va dans la CIBLE, et
+            # l'identite dans hektor_contact_id -- comme les 356 166 lignes de la
+            # bascule. Un numero deja a nous (>= 10 M) reste ou il est.
             conn.execute(
-                f"INSERT INTO {REGISTRE} (app_contact_id, hektor_contact_id) "
-                f"SELECT (SELECT COALESCE(MAX(app_contact_id), 0) FROM {REGISTRE} "
-                "         WHERE app_contact_id < 20000000) "
-                "       + ROW_NUMBER() OVER (ORDER BY CAST(s.hektor_contact_id AS INTEGER), s.hektor_contact_id), "
-                f"       s.hektor_contact_id FROM {SOURCE} s "
-                f"WHERE NOT EXISTS (SELECT 1 FROM {REGISTRE} r "
-                "  WHERE r.hektor_contact_id = s.hektor_contact_id) "
-                "ORDER BY CAST(s.hektor_contact_id AS INTEGER), s.hektor_contact_id")
+                f"INSERT INTO {REGISTRE} (app_contact_id, hektor_contact_id, hektor_target_id) "
+                "SELECT n.numero, "
+                f"       CASE WHEN CAST(n.cle AS INTEGER) < {PLAGE_APP} THEN CAST(n.numero AS TEXT) ELSE n.cle END, "
+                f"       CASE WHEN CAST(n.cle AS INTEGER) < {PLAGE_APP} THEN n.cle ELSE NULL END "
+                f"  FROM (SELECT (SELECT COALESCE(MAX(app_contact_id), 0) FROM {REGISTRE} "
+                "                 WHERE app_contact_id < 20000000) "
+                "               + ROW_NUMBER() OVER (ORDER BY CAST(s.hektor_contact_id AS INTEGER), s.hektor_contact_id) AS numero, "
+                f"              s.hektor_contact_id AS cle FROM {SOURCE} s "
+                f"         WHERE NOT {_connu('r', 's.hektor_contact_id')}) n "
+                " ORDER BY n.numero")
         if revenus:
             conn.execute(
                 f"UPDATE {REGISTRE} SET absent_depuis = NULL, "
                 "updated_at = CURRENT_TIMESTAMP "
-                "WHERE absent_depuis IS NOT NULL AND EXISTS "
-                f"(SELECT 1 FROM {SOURCE} s WHERE s.hektor_contact_id = {REGISTRE}.hektor_contact_id)")
+                "WHERE absent_depuis IS NOT NULL AND "
+                f"{_present_dans_la_source(REGISTRE)}")
         if partis:
             conn.execute(
                 f"UPDATE {REGISTRE} SET absent_depuis = date('now'), "
                 "updated_at = CURRENT_TIMESTAMP "
                 "WHERE absent_depuis IS NULL AND hektor_contact_id IS NOT NULL "
-                f"AND NOT EXISTS (SELECT 1 FROM {SOURCE} s "
-                f"  WHERE s.hektor_contact_id = {REGISTRE}.hektor_contact_id)")
+                f"AND NOT {_present_dans_la_source(REGISTRE)}")
 
         # ⚠ LA CASE CIBLE, UNE SECONDE FOIS -- ET C'EST ICI QU'ELLE COMPTE.
         # L'appel du haut sert aux fiches DEJA presentes. Mais les contacts

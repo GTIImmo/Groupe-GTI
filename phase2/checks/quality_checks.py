@@ -27,7 +27,11 @@ SELECT COUNT(*) AS value
 FROM app_contact_current c
 JOIN app_contact r ON r.hektor_target_id = c.hektor_contact_id
 WHERE CAST(c.hektor_contact_id AS INTEGER) < 10000000
-  AND CAST(r.hektor_contact_id AS INTEGER) >= 10000000;
+  AND CAST(r.hektor_contact_id AS INTEGER) >= 10000000
+  -- L4-c-bis 24/09 : un contact NEUF passe UNE nuit sous son numero Hektor (le
+  -- build tourne avant le registre) : c'est normal, et le registre le reconnait
+  -- sous ses deux numeros. Ce qui est anormal, c'est d'y RESTER.
+  AND r.created_at < datetime('now', '-36 hours');
 """,
         expectation=(
             "DOIT RESTER A ZERO. Le matin du 24/09, ce compte valait 294 179 et "
@@ -37,6 +41,25 @@ WHERE CAST(c.hektor_contact_id AS INTEGER) < 10000000
             "nuit, sans une erreur. Ce n'etait pas une faute de code mais un DESACCORD "
             "entre deux cotes corrects pris separement. Toute valeur > 0 annonce le "
             "meme degat au prochain run."
+        ),
+    ),
+    QualityCheck(
+        key="registre_identite_mal_rangee",
+        label="Contacts numerotes dont l'identite n'est pas dans la colonne d'identite",
+        sql="""
+SELECT COUNT(*) AS value
+FROM app_contact
+WHERE CAST(hektor_contact_id AS INTEGER) < 10000000
+  AND app_contact_id >= 10000000;
+""",
+        expectation=(
+            "DOIT RESTER A ZERO. L4-c-bis, 24/09 : l'INSERT des contacts neufs rangeait "
+            "leur numero de Hektor dans hektor_contact_id -- colonne qui porte "
+            "l'IDENTITE depuis la bascule -- et l'identite a cote. Le build ne les "
+            "traduisait jamais : 23 contacts restes sous leur numero Hektor, et le "
+            "controle d'accord ne les voyait pas (il ne cherchait que les doublons). "
+            "registre_contacts.py repare ces lignes a chaque nuit ; une valeur > 0 "
+            "apres son passage veut dire que la reparation n'a pas pu se faire."
         ),
     ),
     QualityCheck(

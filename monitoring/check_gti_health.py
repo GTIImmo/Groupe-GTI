@@ -2082,6 +2082,54 @@ class Monitor:
                      f"Une annonce, un numero : 0 ecart sur {mesure['supabase']} "
                      f"({mesure['en_attente']} en attente de Hektor)", mesure)
 
+    def check_contacts_identite(self) -> None:
+        """L4-c-bis (24/09/2026) -- UN CONTACT NUMEROTE DOIT PORTER SON IDENTITE. LOCALE.
+
+        Le 24/09, 23 contacts crees chez Hektor apres la bascule sont restes sous leur
+        numero Hektor : le registre rangeait leur identite a cote de la colonne
+        d'identite, et le build ne les traduisait jamais. Aucune sonde ne l'a vu --
+        celles qui existaient cherchaient des DOUBLONS, pas des oublis.
+
+        LES FORMULES NE SONT PAS ICI : ce sont deux controles de phase2/checks/
+        quality_checks.py, lus par leur cle (une seule copie de chaque regle) :
+            registre_identite_mal_rangee  identite rangee a cote            seuil 0
+            registre_couche_desaccord     reste sous son n° Hektor > 36 h   seuil 0
+        """
+        db = self.root / "phase2" / "phase2.sqlite"
+        cles = ("registre_identite_mal_rangee", "registre_couche_desaccord")
+        try:
+            if str(self.root) not in sys.path:
+                sys.path.insert(0, str(self.root))
+            from phase2.checks.quality_checks import CHECKS
+            requetes = {c.key: c.sql for c in CHECKS if c.key in cles}
+        except Exception as exc:  # pragma: no cover
+            self.add("data.contacts_identite", "data_quality", "contact", "absolute", "warning",
+                     f"Controles d'identite des contacts introuvables ({type(exc).__name__})", {})
+            return
+        if set(requetes) != set(cles) or not db.exists():
+            self.add("data.contacts_identite", "data_quality", "contact", "absolute", "warning",
+                     "Identite des contacts : NON MESURABLE (controle ou base absents)", {})
+            return
+        try:
+            conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                mesure = {k: conn.execute(requetes[k]).fetchone()[0] for k in cles}
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            self.add("data.contacts_identite", "data_quality", "contact", "absolute", "warning",
+                     f"Base phase2 illisible pour l'identite des contacts ({type(exc).__name__})", {})
+            return
+        total = sum(mesure.values())
+        if total > 0:
+            self.add("data.contacts_identite", "data_quality", "contact", "absolute", "critical",
+                     f"Contacts numerotes mais restes sous leur numero Hektor : {total} "
+                     f"(identite mal rangee {mesure[cles[0]]}, bloques > 36 h {mesure[cles[1]]}) -- seuil 0",
+                     mesure)
+        else:
+            self.add("data.contacts_identite", "data_quality", "contact", "absolute", "ok",
+                     "Chaque contact numerote porte son identite (seuil 0)", mesure)
+
     def check_sqlite_files(self) -> None:
         sqlite_specs = [
             ("sqlite.hektor", self.root / "data" / "hektor.sqlite", self.args.sqlite_freshness_minutes, "critical"),
