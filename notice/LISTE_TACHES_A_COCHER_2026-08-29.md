@@ -263,8 +263,21 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                        signal « startup » sans erreur pour chacun ; rafraichissement reel
                        (61397) traite par le nouveau code : done en 20 s, 0 erreur.
                        Inerte tant que e3 est eteint (aucun travail ne porte de n° d'app).
-                    e3 la RPC donne le numero -- interrupteur en base, ETEINT ;
+                    [~] e3 la RPC donne le numero -- interrupteur en base, ETEINT ;
                        pas de provisoire quand il est allume (sinon ligne en double)
+                       ECRIT ET EPROUVE 24/09, PAS APPLIQUE :
+                       supabase/patch_c9e3_annonce_nait_dans_app_2026-09-24.sql
+                       interrupteur = app_setting 'c9_annonce_nait_dans_app' (off) ;
+                       meme signature, memes noms de parametres ; type_bien NON ecrit
+                       (code vs libelle) ; negociateur_email ecrit (visibilite RLS).
+                       Epreuve : le corps EXACT du patch rejoue sur des copies
+                       temporaires, dans UN bloc annule par une erreur volontaire :
+                       eteint = comportement d'avant ; allume = ligne 10 000 000 +
+                       travail qui l'emporte, 0 provisoire ; refus -> annonce annulee ;
+                       repli titre/prix ; OFF/Oui. Prod verifiee intacte apres.
+                       ⚠ 1re annonce = 10 000 000 (depart de la sequence) ; un refus
+                         consomme un numero (trou dans la serie).
+                       ➡ APPLIQUER = ecriture en prod : go de Frederic.
                   e1 et e2 AVANT d'allumer e3. Puis RUN DE JOUR 1 = l'essai reel.
               [ ] C.9-f substitution annonce dans la cle de relation      go + copie
               CALENDRIER DES RUNS DE C.9 (pose le 24/09, demande de Frederic)
