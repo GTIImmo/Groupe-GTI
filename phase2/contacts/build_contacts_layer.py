@@ -327,6 +327,31 @@ def charger_identites_app(conn: sqlite3.Connection) -> int:
     """
     _IDENTITE_APP.clear()
     _NUMERO_MIROIR.clear()
+
+    # ── LE REGISTRE LOCAL D'ABORD, 24/09/2026 ──────────────────────────────
+    # LE DEFAUT QUE CECI FERME, et il a coute 294 179 doublons le matin du 24.
+    # La table descendue de Supabase ne connait que le PERIMETRE ELIGIBLE
+    # (61 985 paires au 24/09), parce que la vue qui l'alimente lit
+    # app_contact_current COTE SUPABASE. Les 294 187 contacts hors perimetre
+    # n'y figurent pas -- le build les rangeait donc sous leur numero de
+    # Hektor, et le registre, qui les avait deja numerotes, leur donnait une
+    # SECONDE identite. Le parc a double en une nuit, en silence.
+    #
+    # Or la serie d'identite est LOCALE : « Supabase RECOIT la serie, il ne
+    # la fabrique jamais » (regle du 19/08). Le registre `app_contact` est
+    # donc la source, et il connait les 356 166 paires -- perimetre ou pas.
+    # La table descendue reste lue APRES, en complement : elle ne peut
+    # qu'ajouter ce que le registre ignorerait encore.
+    if table_exists(conn, "app_contact"):
+        for row in conn.execute(
+                "SELECT hektor_target_id, hektor_contact_id FROM app_contact "
+                " WHERE hektor_target_id IS NOT NULL AND hektor_contact_id IS NOT NULL"):
+            hektor_id = clean_text(row[0])
+            identite = clean_text(row[1])
+            if hektor_id and identite and hektor_id != identite:
+                _IDENTITE_APP[hektor_id] = identite
+                _NUMERO_MIROIR[identite] = hektor_id
+
     if table_exists(conn, "app_contact_identite_app"):
         for row in conn.execute(
                 "SELECT hektor_contact_id, app_identite FROM app_contact_identite_app"):

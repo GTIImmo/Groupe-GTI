@@ -20,6 +20,26 @@ class QualityCheck:
 
 CHECKS: tuple[QualityCheck, ...] = (
     QualityCheck(
+        key="registre_couche_desaccord",
+        label="Fiches que le registre a numerotees mais que la couche range sous Hektor",
+        sql="""
+SELECT COUNT(*) AS value
+FROM app_contact_current c
+JOIN app_contact r ON r.hektor_target_id = c.hektor_contact_id
+WHERE CAST(c.hektor_contact_id AS INTEGER) < 10000000
+  AND CAST(r.hektor_contact_id AS INTEGER) >= 10000000;
+""",
+        expectation=(
+            "DOIT RESTER A ZERO. Le matin du 24/09, ce compte valait 294 179 et "
+            "personne ne le voyait : le registre avait numerote ces fiches, la couche "
+            "les rangeait encore sous leur numero de Hektor, et le run suivant leur a "
+            "donne une SECONDE identite -- 650 353 lignes au lieu de 356 166, en une "
+            "nuit, sans une erreur. Ce n'etait pas une faute de code mais un DESACCORD "
+            "entre deux cotes corrects pris separement. Toute valeur > 0 annonce le "
+            "meme degat au prochain run."
+        ),
+    ),
+    QualityCheck(
         key="vue_generale_total",
         label="Nombre de lignes vue generale",
         sql="SELECT COUNT(*) AS value FROM app_view_generale;",
