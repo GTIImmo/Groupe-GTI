@@ -288,6 +288,22 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                 25/09 jour    C.9-d (registre des relations, doublure) + C.9-e
                               (RPC + retour worker, interrupteur ETEINT)
                 nuit 25->26   run normal : prouve C.9-d
+                ✅ ESSAI REEL FAIT le 24/09 (choix de Frederic : l'essai PUIS le run)
+                   « ESSAI C9 bis » creee dans l'app, compte formation, Estimation :
+                   12:20:56 interrupteur allume · creation -> ligne 10 000 000, travail
+                   portant numero_app, 0 provisoire · 12:22:15 Hektor = 63147 · e2 « n°
+                   Hektor pose AVANT le rafraichissement » · e1 : Supabase = UNE ligne
+                   10 000 000 <-> 63147 ; serveur : adoptee 12:22:29, declencheurs poses,
+                   sqlite_sequence = 10 000 000 (prevu, garde). 12:33 eteint ; 0 autre
+                   creation pendant la fenetre.
+                   ⚠ Mon erreur juste avant : 3 clics sur « Suivant » sans regarder ont
+                   CREE « ESSAI C9 » interrupteur ETEINT -> ancien chemin, Hektor 63146,
+                   numero serveur 7 589 129. Utile malgre tout : preuve reelle que
+                   l'interrupteur eteint = comportement d'avant, e1/e2 inertes.
+                   ⚠ Formulaire : le compte formation n'est proposable QUE depuis l'ecran
+                   Estimations (catalogue d'agences par ecran) ; le statut depend de
+                   l'ecran d'ouverture (Estimations -> Estimation).
+                   Deux annonces de test a supprimer plus tard (63146, 63147).
                 RUN DE JOUR 1 (~2 h, go) l'ESSAI REEL : une annonce de test creee
                               dans l'app, Hektor repond, puis run + descente :
                               un seul numero, adoptee, sonde C.9-b a 0
