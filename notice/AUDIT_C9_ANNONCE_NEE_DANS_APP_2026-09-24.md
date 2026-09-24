@@ -120,6 +120,30 @@ numéro Hektor (vue le 22/09) et sous l'identité (vue le 24/09) — annonces 6,
 +65 340 pour +30 lignes : un **pic unique**, pas une dérive *(max(id) ne bouge que de +30)*.
 La sonde `app_v_plages_numeros` lit `max(app_dossier_id)` : **aveugle au compteur**.
 
+### D8 ⛔ EN PLEINE JOURNÉE, une minute après la création, l'annonce perdrait son numéro
+
+*Trouvé le 24/09 au soir, en auditant C.9-e — c'était le point « non mesuré » du §5.*
+
+Après la création chez Hektor, le worker programme un rafraîchissement
+(`enqueueRefreshConsoleDataJobBestEffort`), qui lance `push_single_annonce_to_supabase.py` :
+
+```
+push_single  sync_target_app_dossier : ne reconnait l'annonce que par son numero Hektor
+             -> fabrique un numero SERVEUR (max < 10 M + 1) pour 63 200
+             reconcile_annonce_dossiers(63 200, garder = numero serveur)
+             -> 10 000 001 vu comme un FANTOME : 21 tables re-pointees vers le numero
+                serveur, puis 10 000 001 EFFACE de app_dossier_current et consorts
+```
+
+Rien n'est perdu (tout est re-pointé), mais **l'annonce change de numéro une minute après sa
+naissance** — l'inverse exact de C.9. C.9-a ne le rattrape pas : il ne tourne que la nuit.
+
+**Et deux contraintes pour la création elle-même :**
+- `app_dossier_current` exige `titre_bien` et `source_hash` (sans défaut) ;
+- l'écran n'écarte une ligne provisoire que si une vraie ligne porte **le même numéro Hektor**
+  (`prependProvisionalRows`) : une vraie ligne ET une provisoire, toutes deux en attente de
+  Hektor, s'afficheraient **en double**. Quand l'annonce naît dans l'app, pas de provisoire.
+
 ---
 
 ## 4. Ce que la seconde passe a RÉFUTÉ de la première

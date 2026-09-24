@@ -242,6 +242,16 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                     annonce nee dans l'app revient par le miroir (audit §4). e n'en
                     depend pas.
               [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
+                  ⛔ D8 (audit 24/09 soir) : le RAFRAICHISSEMENT lance 1 min apres la
+                  creation (push_single) fabrique un numero serveur, puis
+                  reconcile_annonce_dossiers efface 10 000 001 comme « fantome ».
+                  ➡ C.9-e = TROIS pieces, dans cet ordre de mise en service :
+                    e1 push_single ADOPTE le numero de l'app (meme fonction que C.9-a)
+                    e2 le worker pose le n° Hektor sur NOTRE ligne AVANT le rafraich.
+                       (redemarrage des 4 services : geste de Frederic)
+                    e3 la RPC donne le numero -- interrupteur en base, ETEINT ;
+                       pas de provisoire quand il est allume (sinon ligne en double)
+                  e1 et e2 AVANT d'allumer e3. Puis RUN DE JOUR 1 = l'essai reel.
               [ ] C.9-f substitution annonce dans la cle de relation      go + copie
               CALENDRIER DES RUNS DE C.9 (pose le 24/09, demande de Frederic)
                 nuit 24->25   run normal : prouve que a, b, c ne cassent rien
