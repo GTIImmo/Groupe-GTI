@@ -85,7 +85,15 @@ OU ON EST, EN TROIS NIVEAUX
                       protege (fonction absente -> l'etape continue). Sonde
                       data.contacts_satellites (a blanc : ecart critical, reste warning).
                       test_retraduire_satellites.py 9/9 ; PREUVE sur cb711df : echoue.
-                      [ ] Frederic applique le patch ; a blanc (attendu 72) ; pour de bon.
+                      [x] APPLIQUE 24/09 ~23:50 par Frederic (empreinte du corps installe
+                          = celle du fichier, 50c8da99…, aux fins de ligne pres). A blanc :
+                          72 traduisibles, 0 saute, 0 ecart. Pour de bon (00:07, go de
+                          Frederic, l'etape de nuit elle-meme) : 72 traduits (69 + 3).
+                          Apres : 0 rapprochement sans contact sur 50 204, 0 desaccord de
+                          colonnes, rejeu a blanc = 0, trace 1 ligne ; l'ecran du bien
+                          1379038 affiche de nouveau « M. Jeremy KUPKOWSKI » (10650346).
+                      [ ] nuit du 25/09 : les 30 des 8 contacts neufs retraduits par le run
+                          (ligne « retraduction satellites » au journal), sonde a 0.
                       ⚠ HORS PLAN NOTE : 10 fiches de app_contact_current (Supabase) sous
                         identite ont app_contact_id VIDE (les contacts L4-c-bis) --
                         pousser_numeros_contact ne les a pas remplies. Non traite.
