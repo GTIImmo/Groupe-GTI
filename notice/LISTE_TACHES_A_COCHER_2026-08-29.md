@@ -21,7 +21,11 @@ OU ON EST, EN TROIS NIVEAUX
                 numero, controles a 0. Reel : 23 lignes reparees en transaction verifiee ;
                 le build traduira cette nuit (605491 -> 10650346). Sonde data.contacts_
                 identite INSCRITE (critical, prouvee : mal rangee / bloque > 36 h / ok).
-                ⚠ A VERIFIER le 25/09 : les 23 sous leur identite dans Supabase.
+                ✅ VERIFIE au run de jour du 24/09 (16:05-18:09) : dans Supabase, les 10
+                qui y sont (contacts eligibles) sont sous leur identite, 0 sous l'ancien
+                numero, 0 ancienne cle de lien ; les 13 autres n'y ont jamais ete (non
+                eligibles). Regles mal rangee / desaccord : 0 / 0. 8 contacts NEUFS du jour
+                (605514-605521) passent une nuit sous leur n° Hektor : normal.
                 ⚠ HORS PLAN, trouve en passant : C.16 et le registre se contredisent --
                   le registre leve chaque nuit les 7 658 marques « disparu » de C.16
                   (contacts supprimes chez Hektor mais toujours dans la couche), C.16
@@ -276,7 +280,11 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                     5 cles changees = les 5 liens des contacts L4-c-bis (605495 ->
                     10650350...) : attendu cette nuit, independant de C.9-d.
                     vraie base et miroir intacts (taille + date).
-                  [ ] A COCHER apres la nuit du 25/09 : ligne du carnet au journal, carnet ~
+                  [x] PROUVE EN REEL, run de jour du 24/09 16:05 -> 18:09 (code 0) :
+                      carnet 167 496 liens, 167 496/167 496 recettes = meme cle, 0 conflit,
+                      0 sans note, 9 sans n° de bien. Cles vs photo de 16:05 : 6 parties /
+                      16 neuves = 5 contacts L4-c-bis + les vrais mouvements du jour.
+                  (ancien libelle) apres la nuit du 25/09 : ligne du carnet au journal, carnet ~
                       nombre de liens, 0 conflit, 0 sans recette.
                   [~] D6 (audit) : le recensement contacts_app_seuls n'expirait rien
                       CODE LE 24/09 (« Vas y » de Frederic) -- EN SERVICE cette nuit.
@@ -293,7 +301,12 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                       vraie relecture Supabase en lecture) : app seule ce jour = 0 / 0 / 0 ;
                       les 26 lignes du registre (3 contacts, 23 liens) toutes perimees
                       (restes de la bascule et de L4-c-bis) -> marquees. Vraie base intacte.
-                      [ ] A COCHER apres la nuit : « departs marques ce matin : 3 / 23 / 0 ».
+                      [x] PROUVE EN REEL, run de jour du 24/09 : « departs marques : 3 / 23 / 0 ».
+                      ⚠ A SAVOIR : le recensement tourne AVANT le push. Une identite traduite
+                        par le build apparait donc UN jour « connue de l'app seule » (Supabase
+                        porte encore l'ancien numero), puis est marquee partie au run suivant.
+                        Constate : 10 contacts + 6 liens le 24/09 (les contacts L4-c-bis).
+                        Pas un defaut ; ne pas s'en alarmer.
                   MESURE 24/09 : depuis la table, la cle ne se recalcule que pour
                   57 % des liens (95 683 / 167 477). Cause : build l. 1107 REECRIT le
                   role (mandant/proprietaire selon le n° de mandat) APRES le calcul de
