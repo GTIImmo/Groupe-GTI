@@ -226,7 +226,21 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   run depuis le 24/09 soir) ; PREUVE sur bd3ca5f (epingle,
                   pas HEAD) : il echoue ; vraies donnees en lecture : 0 a effacer, 0 a
                   epargner. [x] apres la nuit du 25/09.
-              [ ] C.9-d registre des cles de relation (doublure)          additif
+              [ ] C.9-d registre des cles de relation (doublure)          ⚠ LE BUILD
+                  MESURE 24/09 : depuis la table, la cle ne se recalcule que pour
+                  57 % des liens (95 683 / 167 477). Cause : build l. 1107 REECRIT le
+                  role (mandant/proprietaire selon le n° de mandat) APRES le calcul de
+                  la cle. ➡ un script a part ne peut PAS figer les cles : le registre
+                  doit etre nourri DANS add_relation, avec les entrees exactes du
+                  hache (comme le registre des recherches, deja dans le build).
+                  ➡ ce n'est plus « additif hors run » : c'est une modif du build de
+                  nuit -> go obligatoire, et le code d'observation ne doit JAMAIS
+                  pouvoir faire tomber le build.
+                  Ancre (contact, app_dossier_id, role, source, type, n° transaction) :
+                  167 468 ancres, 0 avec plusieurs cles ; 9 liens sans app_dossier_id.
+                  ⚠ d et f preparent la COUPURE : tant que Hektor vit, le lien d'une
+                    annonce nee dans l'app revient par le miroir (audit §4). e n'en
+                    depend pas.
               [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
               [ ] C.9-f substitution annonce dans la cle de relation      go + copie
               CALENDRIER DES RUNS DE C.9 (pose le 24/09, demande de Frederic)
