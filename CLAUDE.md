@@ -92,7 +92,10 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **EN COURS : le run de jour lancé à 12 h 35, puis la descente** — faire le bilan (C.9-a avant
 > le bootstrap, push avec C.9-c, sonde C.9-b après la descente). **Puis C.9-d, dans le build
 > (go obligatoire), puis C.9-f.** Deux annonces de test à supprimer plus tard : 63146, 63147.
-> ⛔ **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
+> ✅ **L4-c-bis CORRIGÉ le 24/09 après-midi** (répété sur copie, 23 fiches réparées, sonde
+> `data.contacts_identite` en service) — **à vérifier le 25/09** : les 23 sous leur identité dans
+> Supabase. Hors plan noté : C.16 et le registre se contredisent (date « absent depuis » réécrite).
+> *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
 > build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et
 > couche d'un seul geste, répété sur copie : le correctif naïf refait le doublement du 24/09.

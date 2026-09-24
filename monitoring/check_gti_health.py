@@ -1093,6 +1093,7 @@ class Monitor:
             ("sqlite_files", self.check_sqlite_files),
             ("doublures", self.check_doublures),
             ("annonce_un_numero", self.check_annonce_un_numero),
+            ("contacts_identite", self.check_contacts_identite),
             ("local_logs", self.check_local_logs),
             ("playwright_sessions", self.check_playwright_sessions),
             ("document_storage", self.check_document_storage),

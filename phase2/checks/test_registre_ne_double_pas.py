@@ -74,15 +74,18 @@ controle("(2) aucune fiche ne perd son numero de Hektor",
 # LE CONTROLE QUI MANQUAIT. Une fiche que le registre a numerotee doit etre
 # rangee sous CETTE identite dans la couche -- sinon le registre la reverra
 # comme inconnue au prochain run et lui donnera un second numero.
-desaccord = q("""
-  SELECT COUNT(*) FROM app_contact_current c
-   JOIN app_contact r ON r.hektor_target_id = c.hektor_contact_id
-  WHERE CAST(c.hektor_contact_id AS INTEGER) < ?
-    AND CAST(r.hektor_contact_id AS INTEGER) >= ?""", (PLAGE_APP, PLAGE_APP))
-controle("(3) la couche et le registre parlent de la MEME personne",
+# ⚠ L4-c-bis 24/09 : LA REGLE N'EST PLUS RECOPIEE ICI. Cette copie ne savait pas
+#   qu'un contact NEUF passe normalement une nuit sous son numero Hektor, et
+#   annoncait un « second numero » que le registre ne donne plus (il reconnait
+#   un contact sous ses deux numeros). On lit la regle du controle de nuit.
+sys.path.insert(0, str(RACINE))
+from phase2.checks.quality_checks import CHECKS  # noqa: E402
+REGLE_ACCORD = next(c.sql for c in CHECKS if c.key == "registre_couche_desaccord")
+desaccord = q(REGLE_ACCORD)
+controle("(3) la couche et le registre parlent de la MEME personne (au-dela d'une nuit)",
          desaccord == 0,
-         f"{desaccord} fiche(s) rangees sous leur numero Hektor alors que le registre "
-         f"leur a deja donne une identite -- elles recevront un SECOND numero au prochain run")
+         f"{desaccord} fiche(s) restees plus de 36 h sous leur numero Hektor alors que le "
+         f"registre leur a donne une identite -- le build ne les traduit pas")
 
 # ── ④ LE COULOIR N'A PAS DEBORDE ──────────────────────────────────────────
 # La doublure vit de 10 000 001 a 19 999 999. Au-dela, c'est la plage des

@@ -13,7 +13,19 @@ OU ON EST, EN TROIS NIVEAUX
                 RUN DE JOUR lance 12:35, puis descente -- bilan a faire (C.9-a avant le
                 bootstrap, push C.9-c, sonde C.9-b) ; reste d puis f (preparent la coupure)
                 ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
-  L4-c-bis      ⛔ TROUVE 24/09 14:35 -- A TRAITER APRES LE BILAN C.9 (go + copie)
+  L4-c-bis      ✅ CORRIGE 24/09 (code e414fe0 + 23 fiches reparees 15:4x, go de Frederic)
+                repetition sur COPIE de la vraie base : registre -> build -> registre :
+                23 traduits, 5 liens et 4 recherches suivent (cles IDENTIQUES), 0 second
+                numero, controles a 0. Reel : 23 lignes reparees en transaction verifiee ;
+                le build traduira cette nuit (605491 -> 10650346). Sonde data.contacts_
+                identite INSCRITE (critical, prouvee : mal rangee / bloque > 36 h / ok).
+                ⚠ A VERIFIER le 25/09 : les 23 sous leur identite dans Supabase.
+                ⚠ HORS PLAN, trouve en passant : C.16 et le registre se contredisent --
+                  le registre leve chaque nuit les 7 658 marques « disparu » de C.16
+                  (contacts supprimes chez Hektor mais toujours dans la couche), C.16
+                  les repose aussitot : etat final juste, mais la date « absent depuis »
+                  est reecrite chaque nuit. Preexistant (l'ancienne regle faisait pareil).
+  (historique)  TROUVE 24/09 14:35
                 Tout contact cree chez Hektor DEPUIS LA BASCULE reste sous son numero
                 Hektor, indefiniment : 23 au 24/09 (~10 de plus par jour).
                 Cause : registre_contacts.py l. 232 inscrit le n° Hektor dans la colonne
