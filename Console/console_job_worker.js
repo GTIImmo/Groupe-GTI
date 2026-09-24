@@ -5,6 +5,8 @@ const crypto = require("crypto");
 const zlib = require("zlib");
 const { spawn, execFileSync } = require("child_process");
 const { chromium } = require("playwright");
+// C.9-e (e2) 24/09/2026 : le numero Hektor se pose sur la ligne de l'app -- module a part, testable.
+const { poserNumeroHektorSurLigneApp } = require("./numero_annonce_app");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", ".env") });
 require("dotenv").config({ path: path.resolve(__dirname, "..", "matterport", ".env") });
@@ -18672,6 +18674,34 @@ async function handleCreateHektorDraftAnnonce(job) {
 
   if (!created) {
     throw new Error(`Creation annonce Hektor non confirmee par GraphQL apres enregistrement wizard ${idannWizard}`);
+  }
+
+  // C.9-e (e2) 24/09/2026 -- D8. Une annonce NEE DANS L'APP a deja sa ligne sous son
+  // numero a nous : on y pose le numero Hektor ICI, juste apres la confirmation, et
+  // AVANT le rafraichissement plus bas -- c'est par ce numero que le rafraichissement
+  // la retrouve (e1). Dans l'autre ordre il fabrique un numero serveur : l'annonce
+  // en double. Pour une annonce ordinaire (sans numero d'app), rien, pas une requete.
+  // Si la pose echoue, le travail tombe en ERREUR -- il n'est jamais relance tout
+  // seul, donc pas de seconde creation chez Hektor -- et le numero reste lisible
+  // sur le travail (rememberCreatedHektorAnnonceId) pour une reparation a la main.
+  try {
+    const numeroApp = await poserNumeroHektorSurLigneApp({
+      appDossierId: payload.app_dossier_id,
+      hektorAnnonceId: created.id,
+      requete: supabaseRequest,
+    });
+    if (numeroApp.status !== "skipped") {
+      await logJob(job.id, "numero_annonce_app", "done",
+        "Numero Hektor pose sur la ligne de l'app, AVANT le rafraichissement", numeroApp);
+    }
+  } catch (error) {
+    await logJob(job.id, "numero_annonce_app", "error",
+      "Annonce creee chez Hektor, mais son numero n'a PAS ete pose sur la ligne de l'app", {
+        app_dossier_id: payload.app_dossier_id || null,
+        hektor_annonce_id: String(created.id),
+        error: error && error.message ? error.message : String(error),
+      });
+    throw error;
   }
 
   let initialMandantLinks = { status: "skipped", reason: "not_requested", links: [] };

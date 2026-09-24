@@ -253,8 +253,14 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                         worker relit le fichier) : verifie contre le vrai Supabase (0 ligne,
                         56-101 ms, lecture seule) puis 2 rafraichissements REELS en prod
                         (62189, 63098) : done, etape push_single comprise, 0 erreur.
-                    e2 le worker pose le n° Hektor sur NOTRE ligne AVANT le rafraich.
-                       (redemarrage des 4 services : geste de Frederic)
+                    [~] e2 le worker pose le n° Hektor sur NOTRE ligne AVANT le rafraich.
+                       CODE ET EPROUVE 24/09 : Console/numero_annonce_app.js (module a part,
+                       testable) + 1 appel dans le worker, apres la confirmation Hektor.
+                       Ne remplit qu'une case VIDE ; autre valeur -> arret ; 3 tentatives ;
+                       annonce ordinaire -> rien. test_numero_annonce_app.js 13/13 ; PREUVE
+                       sur 59aac63 : echoue. Filtre valide contre le vrai Supabase (GET).
+                       ⚠ PAS ACTIF tant que les 4 services ne sont pas redemarres
+                       (geste de Frederic). Inerte ensuite tant que e3 est eteint.
                     e3 la RPC donne le numero -- interrupteur en base, ETEINT ;
                        pas de provisoire quand il est allume (sinon ligne en double)
                   e1 et e2 AVANT d'allumer e3. Puis RUN DE JOUR 1 = l'essai reel.
