@@ -181,7 +181,11 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                  tourne AVANT toute adoption. Jumeau du defaut contact du 21/09.
               [~] C.9-a le serveur apprend le numero AVANT le bootstrap (+ D2 :
                         adopter_numeros_app = 0 appelant, 3 defauts)       go
-                  CODE ET EPROUVE le 24/09 -- branchement au run EN ATTENTE du go
+                  CODE, EPROUVE ET BRANCHE le 24/09 (go de Frederic) -- run l. 379,
+                  entre build_case_index et le bootstrap, -FailOnError
+                  ⚠ A VERIFIER le 25/09 au matin : ligne « [annonces app] 0 annonce(s) »
+                    dans le journal, 2 declencheurs poses, compteur 7 654 438 inchange,
+                    bootstrap passe. Alors seulement : [x]
                   phase2/identite/descendre_correspondance_annonces.py
                   n'adopte QUE ce que Hektor a numerote ET que le miroir connait
                   (sinon ligne VIDE poussee par-dessus la vraie fiche) ;

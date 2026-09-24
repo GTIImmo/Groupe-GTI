@@ -80,9 +80,11 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **24/09/2026 — `L4-c` EST FAIT, `C.9` EST OUVERT (audit fait, AUCUN code écrit).**
 > ➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` — lire **§4** *(ce que la seconde
 > passe a réfuté de la première)* et **§5** *(l'ordre C.9-a → C.9-f et le feu vert de chacun)*.
-> **La prochaine tâche est `C.9-a`** : le serveur apprend le numéro de l'annonce **avant**
-> `bootstrap_phase2`. Sans elle, dans le cas NORMAL, le run de nuit donnerait un **second
-> numéro** à toute annonce née dans l'app. ⚠ Touche le run : **go de Frédéric requis**.
+> **`C.9-a` est BRANCHÉ au run depuis le 24/09** *(`descendre_correspondance_annonces.py`,
+> run l. 379, avant le bootstrap)* : le serveur apprend le numéro d'une annonce née dans
+> l'app avant de lui en fabriquer un second. **Inerte** tant que rien n'est né dans l'app,
+> mais il pose dès la 1re nuit le garde-fou du compteur. ⚠ **Vérifier le 25/09 au matin**,
+> puis **`C.9-b`** *(l'œil : accord annonce serveur ↔ Supabase)*.
 >
 > · la bascule contact a été jouée le **23/09 à 19h05** *(61 985 contacts sur notre numéro)* ;
 > · le premier run d'après a **doublé 294 179 identités** dans le registre local — réparé,

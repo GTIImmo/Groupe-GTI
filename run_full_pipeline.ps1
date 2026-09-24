@@ -365,6 +365,21 @@ Invoke-Step -Label "build_case_index" -Arguments @(
     "build_case_index.py"
 ) -WorkerKey "phase1.build_case_index"
 
+# C.9-a 24/09/2026 -- LE SERVEUR APPREND LE NUMERO D'UNE ANNONCE NEE DANS L'APP.
+# ICI, et l'ordre n'est pas negociable : APRES l'index du miroir (qu'il lit, pour
+# n'adopter que ce que le miroir connait) et AVANT le bootstrap (qu'il protege).
+# Le bootstrap ne reconnait une annonce que par son numero Hektor : sans cette
+# etape il fabriquerait un SECOND numero a toute annonce nee dans l'app, dans le
+# cas NORMAL ou Hektor repond en 30 s. Audit : notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md (D1).
+# -FailOnError EXPRES : une nuit sans synchro vaut mieux qu'un second numero.
+# Tant qu'aucune annonce n'est nee dans l'app, le script rend 0 meme si Supabase
+# est muet : l'etape ne peut pas bloquer le run pour rien.
+# AU 24/09 : 0 annonce dans la plage de l'app -- l'etape est inerte, mais elle pose
+# des cette nuit le garde-fou du compteur (table app_dossier_adoption + 2 declencheurs).
+Invoke-OptionalStepWithRetry -Label "phase2 correspondance annonces app" -Arguments @(
+    "phase2\identite\descendre_correspondance_annonces.py"
+) -MaxAttempts 3 -RetryDelaySeconds 60 -FailOnError -WorkerKey "phase2.correspondance_annonces"
+
 Invoke-Step -Label "phase2 bootstrap" -Arguments @(
     "phase2\bootstrap_phase2.py"
 ) -WorkerKey "phase2.bootstrap"
