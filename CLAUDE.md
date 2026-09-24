@@ -77,6 +77,22 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
+> **24/09/2026 — `L4-c` EST FAIT, `C.9` EST OUVERT (audit fait, AUCUN code écrit).**
+> ➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` — lire **§4** *(ce que la seconde
+> passe a réfuté de la première)* et **§5** *(l'ordre C.9-a → C.9-f et le feu vert de chacun)*.
+> **La prochaine tâche est `C.9-a`** : le serveur apprend le numéro de l'annonce **avant**
+> `bootstrap_phase2`. Sans elle, dans le cas NORMAL, le run de nuit donnerait un **second
+> numéro** à toute annonce née dans l'app. ⚠ Touche le run : **go de Frédéric requis**.
+>
+> · la bascule contact a été jouée le **23/09 à 19h05** *(61 985 contacts sur notre numéro)* ;
+> · le premier run d'après a **doublé 294 179 identités** dans le registre local — réparé,
+>   cause fermée, contrôle chaque nuit *(`f974ef9`, `376dc7b`)* ; Supabase jamais touché ;
+> · vérification complète le 24/09 : **rien de perdu, rien de cassé** *(§6 de la note)*.
+>   ⚠ **À revérifier le 25/09 au matin** : 3 contacts encore sous leur numéro Hektor dans
+>   Supabase, et l'alarme « critères différents : 1 » de la descente.
+>
+> ⛔ La section ci-dessous date du 22/09 : elle décrit une bascule **faite depuis**.
+
 > **22/09/2026 (soir) — IL NE RESTE QU'À ALLUMER LA BASCULE** *(`L4-c ⑤`)* : remplir
 > `app_contact_identite_app` avec les **356 147 paires**. **Plus une ligne de code à écrire.**
 > ⚠ **Trois conditions, toutes écrites dans la liste** : code et données **la même nuit**
@@ -141,9 +157,9 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **empreintes calculées sur ce numéro**, et traduire après coup ferait supprimer ces lignes
 > au run suivant. `4e82f25` · `13ecedc` · `6cbb59a` · `21565cb`.
 >
-> **Deux fiches d'essai sont gardées exprès** — `10000001` et `10000002`, sans jumelle chez
-> Hektor : elles servent de témoin pour vérifier au matin que la substitution du run de nuit
-> s'est bien comportée. À retirer ensuite.
+> ~~**Deux fiches d'essai sont gardées exprès** — `10000001` et `10000002`~~ — **supprimées le
+> 22/09** pour libérer la plage *(liste, bloc L4-c ⓪)*. Ces deux numéros sont aujourd'hui la
+> **doublure** des contacts Hektor 1 et 2 — ce ne sont plus des fiches d'essai.
 >
 > ⛔ **Ne jamais relire la section ci-dessous comme un ordre du jour** : elle date d'avant
 > le 19/09 et décrit le chantier des transactions, terminé.

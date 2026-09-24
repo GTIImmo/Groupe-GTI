@@ -72,6 +72,8 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | **22/09** | ⛔ **SANS LA CASE CIBLE DANS LA COUCHE, LA BASCULE COUPAIT TOUT HEKTOR.** Le push écrit en **fusion**, donc une colonne absente est préservée — rassurant et **hors sujet** : la bascule ne modifie pas une ligne, elle **change sa clé**. `605449` devient `10356127`, qui n'entre en conflit avec rien → **ligne neuve, sans cible** ; le déclencheur ne la remplit pas *(il ne le fait que sous 10 M)* ; et l'ancienne, n'étant plus produite, est **supprimée**. ➡ 62 000 lignes remplacées, **toutes sans cible**, plus un contact joignable — **sans une erreur**. ✅ **Corrigé** : la couche porte `hektor_target_id` *(= le numéro du miroir, capturé à l'instant où l'identité le remplace)*, et le push le transporte tout seul *(`SELECT *`)*. **Éprouvé sur la vraie base sans un appel à Hektor : 59 217 contacts, 59 217 avec leur cible** |
 | **22/09** | ⚠ **MA DEUXIÈME ERREUR ARRIVÉE EN PRODUCTION** *(la 1re : `updated_at`, 21/09)*. J'ai lancé le push **sans les options du run de nuit** → **7 201 recherches archivées supprimées** de Supabase. Vu dans le compte-rendu du push, drapeau manquant identifié *(`--include-archived-searches`, dont le commentaire du script dit exactement pourquoi il existe)*, **réparé en 3 minutes**, et confronté ligne à ligne : serveur **11 269 dont 4 182 actives**, Supabase **11 269 dont 4 182 actives**, orphelins **0**. ➡ **C'est mot pour mot la faute écrite en tête de la liste** — *« rejouer un run en recopiant ses ÉTAPES sans son ENVIRONNEMENT »*. Je l'avais citée le matin même. **RÈGLE : écrire la commande complète, avec toutes ses options, et la MONTRER avant de l'exécuter** |
 | **21/09** | **PAS D'INTERRUPTEUR — la règle est permanente et symétrique.** Saisir dans Hektor **ou** dans l'app doit fonctionner, des deux côtés, dès maintenant ; ce qu'on interdit, c'est de saisir **des deux côtés à la fois sur le même champ**. L'arbitre est donc **la récence**, toujours, et non une bascule d'autorité datée. ➡ **Le contrat d'autorité ne sert qu'aux champs EXCLUSIFS à l'app** *(ceux que Hektor ignore)* — il reste vide côté annonce tant qu'il n'y en a aucun |
+| **24/09** | ⛔ **LE PREMIER RUN APRÈS LA BASCULE A DOUBLÉ 294 179 IDENTITÉS** dans le registre local — le registre était juste, le build aussi : c'est leur **désaccord de portée** *(registre traduit en entier, correspondance descendue du seul périmètre éligible)* qui a fait le dégât. Réparé, cause fermée *(la correspondance vient d'abord du registre local)*, contrôle `registre_couche_desaccord` **chaque nuit** *(`f974ef9`, `376dc7b`)*. **Leçon : un contrôle vérifie que deux côtés sont D'ACCORD, pas qu'un mécanisme existe** |
+| **24/09** | **C.9 : l'ordre est fixé par un audit en deux passes.** D'abord **le serveur apprend le numéro de l'annonce avant le bootstrap** *(sinon le run de nuit lui donne un second numéro, dans le cas NORMAL)*, puis **l'œil** *(accord serveur ↔ Supabase)* et **la protection au push** ; la RPC de création **ensuite seulement**, drapeau éteint. **Pas de porte worker** pour l'annonce : ses deux numéros vivent dans deux colonnes. ➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` |
 
 ---
 
@@ -2531,3 +2533,26 @@ manquante sur `GTI Recherches Actives`. Les trois étaient écrits, lisibles, co
 Désormais chaque protection posée est **éprouvée dans les deux sens** : elle doit passer au
 vert quand tout va bien **et** crier quand ça va mal. La sonde `data.travaux_en_erreur` a été
 la première à subir ce traitement le jour même de sa naissance.
+
+## 24/09/2026 — la première nuit après la bascule, puis l'audit de `C.9`
+
+**Le run de 05:00 a doublé 294 179 identités** dans `app_contact` *(356 166 → 650 353)*, sans
+une erreur ni une alerte. Trouvé à la lecture du run, réparé le matin même, cause fermée et
+contrôle branché — voir le journal ci-dessus. **Supabase n'a jamais été touché.**
+
+**Vérification complète avant d'ouvrir C.9**, à la demande de Frédéric *(« que ma data est
+similaire à il y a 4 jours sauf les mises à jour normales »)* : sauvegarde du 20/09 contre
+aujourd'hui, 18 tables, **toutes ont grossi ou tenu** ; 0 orphelin côté Supabase ; santé
+**0 critique** ; l'app en réel, **zéro erreur console**. La descente de 07:30 a fini à 07:55,
+exit 0 ; elle a levé une alarme *(« critères différents : 1 »)* qui était **un écart du 25/08
+devenu visible**, pas une saisie perdue.
+
+**`C.9` est ouvert.** L'audit, fait deux fois dans la journée, a trouvé que presque tout est
+déjà posé *(numéro Hektor nullable, clé primaire à nous, distributeur, barrière, recensement)*
+— et **trois défauts que la première passe n'avait pas vus**, dont un qui commande l'ordre :
+dans le cas normal, **le bootstrap de nuit donnerait un second numéro** à une annonce née dans
+l'app, parce qu'il ne la reconnaît que par son numéro Hektor et tourne avant toute adoption.
+➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` *(§4 : ce que la seconde passe a réfuté
+de la première ; §5 : l'ordre C.9-a → C.9-f et le feu vert de chacun)*.
+
+**Aucune ligne de code C.9 n'est écrite.** La prochaine est **C.9-a**, et elle attend le go.

@@ -1,14 +1,16 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 23/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> **Mis à jour le 24/09/2026.** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier.
 
 ```
 OU ON EST, EN TROIS NIVEAUX
 
   ETAPE 2       L0 OK  L1 OK  L2 OK  L3 OK  L4 EN COURS   puis L5 L6 L7 L8 L9
-  L4            L4-a OK  L4-b OK  L4-b' OK  L4-c EN COURS  ...puis C.9
+  L4            L4-a OK  L4-b OK  L4-b' OK  L4-c OK  C.9 EN COURS (audit fait)
   L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  (5) OK -- BASCULE FAITE 23/09 19h05
+  C.9           a  b  c  d  e  f  -- AUCUN code ecrit ; audit du 24/09 :
+                notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md
 ```
 
 ## ✅ `L4-c` EST TERMINÉ — la bascule a été jouée le 23/09/2026, services arrêtés
@@ -55,9 +57,12 @@ de `L4-c` ⑤**, né de l'audit complet du 23/09 *(`notice/AUDIT_COMPLET_AVANT_B
 son compte à blanc est **au vert** *(le signe : `"_json_liens_agenda": 9`)*.
 Il reste à décider **quand** on ouvre la fenêtre.
 
-⚠ **AVANT D'EN REPARLER** : vérifier le run de la nuit du 23 au 24/09. Il embarque **onze
-correctifs serveur d'un coup** — C-3, C-4, C-6 et les huit gênants. C'est beaucoup de code
-neuf en une fois, et ça n'a jamais tourné en conditions réelles.
+✅ **LE RUN DU 23 AU 24/09 A ÉTÉ VÉRIFIÉ** — et il a trouvé un défaut : **294 179 identités
+doublées** dans le registre local *(faute de PORTÉE, pas de code)*. Réparé, cause fermée,
+contrôle branché chaque nuit : `f974ef9`, `376dc7b`. Puis vérification complète le 24/09
+*(données contre la sauvegarde du 20/09, Supabase, app en réel)* : **rien de perdu, rien de
+cassé** — détail en §6 de la note d'audit C.9. ⚠ **À revérifier le 25/09 au matin** : les 3
+contacts restés sous leur numéro Hektor dans Supabase, et l'alarme « critères différents : 1 ».
 
 **LA CIBLE** — *étape 2* : l'app assure **toutes ses fonctions sans Hektor**, sauf **numéro de
 mandat · signature · portails**. ➡ **La charte, le journal des décisions et LES DIX LOTS sont en
@@ -150,7 +155,8 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
               ancienne ligne supprimee. 62 000 contacts injoignables, sans
               une erreur. Corrige et EPROUVE SUR LA VRAIE BASE sans un appel
               a Hektor : 59 217 contacts, 59 217 avec leur cible.
-          [ ] ⑤ ALLUMER LA BASCULE : remplir app_contact_identite_app avec les
+          [x] ⑤ FAIT LE 23/09 a 19h05 -- voir la page de tete.
+              ALLUMER LA BASCULE : remplir app_contact_identite_app avec les
               356 147 paires. Plus une ligne de code a ecrire.
               ⚠ code ET donnees la meme nuit : le push remplace les 167 459
                 cles de relation en une fois.
@@ -167,7 +173,21 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
        console          AUCUNE erreur sur les quatre ecrans
        sondes           les cinq a zero  ·  doublure 10 000 003 a 10 356 136
 
-          [ ] C.9  LA CREATION D'ANNONCE     <- APRES L4-c ; son audit est FAIT
+          [ ] C.9  LA CREATION D'ANNONCE     <- OUVERT le 24/09 ; audit en DEUX passes
+              ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md
+              ⛔ D1 LE DEFAUT QUI COMMANDE TOUT : dans le cas NORMAL (Hektor repond
+                 en 30 s), le run de nuit donnerait un SECOND numero a l'annonce --
+                 bootstrap_phase2 ne la reconnait que par son numero Hektor, et
+                 tourne AVANT toute adoption. Jumeau du defaut contact du 21/09.
+              [ ] C.9-a le serveur apprend le numero AVANT le bootstrap (+ D2 :
+                        adopter_numeros_app = 0 appelant, 3 defauts)       go
+              [ ] C.9-b l'oeil : accord annonce serveur <-> Supabase      additif
+              [ ] C.9-c le push n'efface plus une annonce nee dans l'app  go
+              [ ] C.9-d registre des cles de relation (doublure)          additif
+              [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
+              [ ] C.9-f substitution annonce dans la cle de relation      go + copie
+              ⚠ PAS de porte worker a ecrire : les deux numeros de l'annonce
+                vivent dans deux colonnes separees (refute le 24/09)
 
    [ ] 7 ANNONCES ACTIVES SANS DETAIL, ET INVISIBLES DANS L'APP  (mesure 23/09)
        Trouve en repondant a une question de Frederic sur les dates de passage.
