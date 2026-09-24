@@ -223,7 +223,7 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   le worker n'efface jamais ; 3 outils MANUELS (purge_*, cleanup_upgrade)
                   videraient aussi les annonces nees dans l'app -- NOTE, pas touche.
                   controle test_c9c_push_epargne.py : 10/10 (dans l'ENVIRONNEMENT du
-                  run depuis le 24/09 soir) ; PREUVE sur bd3ca5f (epingle,
+                  run depuis le 24/09) ; PREUVE sur bd3ca5f (epingle,
                   pas HEAD) : il echoue ; vraies donnees en lecture : 0 a effacer, 0 a
                   epargner. [x] apres la nuit du 25/09.
               [ ] C.9-d registre des cles de relation (doublure)          ⚠ LE BUILD
@@ -242,11 +242,17 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                     annonce nee dans l'app revient par le miroir (audit §4). e n'en
                     depend pas.
               [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
-                  ⛔ D8 (audit 24/09 soir) : le RAFRAICHISSEMENT lance 1 min apres la
+                  ⛔ D8 (audit 24/09) : le RAFRAICHISSEMENT lance 1 min apres la
                   creation (push_single) fabrique un numero serveur, puis
                   reconcile_annonce_dossiers efface 10 000 001 comme « fantome ».
                   ➡ C.9-e = TROIS pieces, dans cet ordre de mise en service :
-                    e1 push_single ADOPTE le numero de l'app (meme fonction que C.9-a)
+                    [x] e1 push_single ADOPTE le numero de l'app (meme fonction que C.9-a)
+                        FAIT 24/09. test_c9e1 11/11 : les VRAIES fonctions reproduisent
+                        D8 sans e1 (10 000 001 efface), le gardent avec e1 ; deux numeros
+                        -> arret, rien efface ; Supabase muet -> arret. EN SERVICE (le
+                        worker relit le fichier) : verifie contre le vrai Supabase (0 ligne,
+                        56-101 ms, lecture seule) puis 2 rafraichissements REELS en prod
+                        (62189, 63098) : done, etape push_single comprise, 0 erreur.
                     e2 le worker pose le n° Hektor sur NOTRE ligne AVANT le rafraich.
                        (redemarrage des 4 services : geste de Frederic)
                     e3 la RPC donne le numero -- interrupteur en base, ETEINT ;

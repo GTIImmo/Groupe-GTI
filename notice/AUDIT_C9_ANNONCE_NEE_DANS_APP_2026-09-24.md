@@ -122,7 +122,7 @@ La sonde `app_v_plages_numeros` lit `max(app_dossier_id)` : **aveugle au compteu
 
 ### D8 ⛔ EN PLEINE JOURNÉE, une minute après la création, l'annonce perdrait son numéro
 
-*Trouvé le 24/09 au soir, en auditant C.9-e — c'était le point « non mesuré » du §5.*
+*Trouvé le 24/09 dans la matinée, en auditant C.9-e — c'était le point « non mesuré » du §5.*
 
 Après la création chez Hektor, le worker programme un rafraîchissement
 (`enqueueRefreshConsoleDataJobBestEffort`), qui lance `push_single_annonce_to_supabase.py` :

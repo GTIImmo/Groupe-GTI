@@ -133,6 +133,73 @@ def sync_target_app_dossier(con: sqlite3.Connection, hektor_annonce_id: str) -> 
         con.execute("DETACH DATABASE hektor")
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# C.9-e (e1) 24/09/2026 — ADOPTER LE NUMERO DE L'APP AVANT D'EN FABRIQUER UN
+# ═══════════════════════════════════════════════════════════════════════════
+# Defaut D8 (notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md). Ce rafraichissement
+# part UNE MINUTE apres la creation d'une annonce. sync_target_app_dossier ne
+# reconnait une annonce que par son numero Hektor : pour une annonce NEE DANS L'APP
+# (10 000 001, que Hektor vient de numeroter 63 200), il fabriquait un numero
+# serveur -- puis reconcile_annonce_dossiers, qui garde CE numero, effacait
+# 10 000 001 comme un « fantome » (21 tables re-pointees). L'annonce changeait de
+# numero une minute apres sa naissance.
+#
+# LE GESTE : AVANT de fabriquer, demander a Supabase si une annonce de la plage de
+# l'app porte deja ce numero Hektor, et l'ADOPTER -- avec la fonction de C.9-a,
+# pas une copie (deux copies d'une regle divergent tot ou tard). La ligne existe
+# alors sur le serveur sous SON numero ; l'INSERT qui suit tombe sur le conflit du
+# numero Hektor et la met a jour, et reconcile ne voit plus de fantome.
+#
+# POUR UNE ANNONCE NEE CHEZ HEKTOR (tout le parc aujourd'hui) : une lecture de
+# plus, qui ne rend rien, et rien d'autre ne change.
+#
+# ⚠ DEUX ARRETS VOLONTAIRES, et ils valent mieux que ce qu'ils empechent :
+#   - deux numeros deja la      -> on s'arrete au lieu d'en effacer un ; la sonde
+#                                  data.annonce_un_numero (C.9-b) le crie ;
+#   - Supabase illisible        -> on s'arrete : le push qui suit aurait echoue de
+#                                  toute facon, et on ne fabrique pas a l'aveugle.
+PLAGE_ANNONCE_APP = 10_000_000
+
+
+def adopter_numero_app_si_existe(client: SupabaseRestClient, con: sqlite3.Connection,
+                                 hektor_annonce_id: str, miroir: Path | None = None) -> dict[str, Any]:
+    from phase2.identite import descendre_correspondance_annonces as c9a
+
+    numero = str(hektor_annonce_id).strip()
+    if not numero.isdigit():
+        return {"lignes": 0}
+    rows = client._request(
+        method="GET",
+        path="app_dossier_current",
+        query={"select": "app_dossier_id,hektor_annonce_id",
+               "hektor_annonce_id": f"eq.{int(numero)}",
+               "app_dossier_id": f"gte.{PLAGE_ANNONCE_APP}"},
+    )
+    if not isinstance(rows, list):
+        raise RuntimeError(f"C.9-e : lecture Supabase inattendue pour l'annonce {numero} -- "
+                           "on ne fabrique pas de numero a l'aveugle")
+    if not rows:
+        return {"lignes": 0}
+    griefs = c9a.verifier_la_forme(rows)
+    if griefs:
+        raise RuntimeError(f"C.9-e : correspondance incoherente pour l'annonce {numero} : {griefs[:3]}")
+    chemin = miroir or HEKTOR_DB
+    lecteur = sqlite3.connect(f"file:{Path(chemin).as_posix()}?mode=ro", uri=True, timeout=30)
+    try:
+        presents = c9a.presents_dans_le_miroir(lecteur, {int(numero)})
+    finally:
+        lecteur.close()
+    c9a.assurer_garde(con)
+    bilan = c9a.adopter(con, rows, presents)
+    if bilan["anomalies"]:
+        con.rollback()
+        raise RuntimeError(f"C.9-e : DEUX NUMEROS pour l'annonce {numero}, rien n'est touche : "
+                           f"{bilan['anomalies'][:3]}")
+    con.commit()
+    bilan["lignes"] = len(rows)
+    return bilan
+
+
 def seed_target_work_items(con: sqlite3.Connection, app_dossier_id: int) -> None:
     con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
     try:
@@ -595,6 +662,8 @@ def main() -> int:
         con = sqlite3.connect(PHASE2_DB, timeout=30)
         try:
             ensure_schema(con)
+            # C.9-e (e1) : AVANT de fabriquer un numero -- voir la fonction.
+            adopter_numero_app_si_existe(client, con, hektor_annonce_id)
             app_dossier_id = sync_target_app_dossier(con, hektor_annonce_id)
             if app_dossier_id is None:
                 raise RuntimeError(f"app_dossier introuvable pour annonce Hektor {hektor_annonce_id}")
