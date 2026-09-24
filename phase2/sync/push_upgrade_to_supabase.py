@@ -930,6 +930,40 @@ def fetch_local_app_dossier_identity() -> list[dict[str, int]]:
         con.close()
 
 
+# C.9-c 24/09/2026 -- LE PUSH N'EFFACE PLUS UNE ANNONCE QUE LE SERVEUR NE CONNAIT PAS ENCORE.
+# Audit : notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md, defaut D3.
+#
+# « Disparue » veut dire ici : presente dans Supabase, absente de la vue locale. Pour
+# une annonce venue de Hektor, c'est le chemin NORMAL de l'archivage -- on n'y touche
+# pas. Mais une annonce NEE DANS L'APP que le serveur n'a pas encore adoptee (Hektor
+# n'a pas repondu, ou le miroir ne l'a pas encore tiree -- voir C.9-a) n'existe QUE
+# dans Supabase : l'effacer, c'est la perdre. C'est le jumeau exact de C-4 cote contact.
+#
+# ⚠ LA LIGNE EST FINE, ET ELLE EST VOULUE. On n'epargne PAS toute la plage de l'app :
+#   une annonce nee dans l'app que le serveur CONNAIT (adoptee) suit la regle commune,
+#   et si elle est archivee elle doit quitter la table comme les autres. Sinon on
+#   fabriquerait des « annonces archivees fantomes » -- un defaut deja paye une fois
+#   (archivee chez Hektor, encore « active » dans l'app ; corrige par ce meme chemin).
+PLAGE_ANNONCE_APP = 10_000_000
+
+
+def fetch_local_app_range_ids() -> set[int]:
+    """Les numeros de la plage de l'app que le serveur connait (adoptes par C.9-a)."""
+    con = sqlite_read_connection(PHASE2_DB)
+    try:
+        return {int(row[0]) for row in con.execute(
+            "SELECT id FROM app_dossier WHERE id >= ?", (PLAGE_ANNONCE_APP,))}
+    finally:
+        con.close()
+
+
+def separer_annonces_app_en_attente(stale_ids: list[int], ids_app_connus: set[int]) -> tuple[list[int], list[int]]:
+    """Rend (a_effacer, epargnees). Epargnee = nee dans l'app ET inconnue du serveur."""
+    epargnees = [i for i in stale_ids if i >= PLAGE_ANNONCE_APP and i not in ids_app_connus]
+    gardees = set(epargnees)
+    return [i for i in stale_ids if i not in gardees], epargnees
+
+
 def rewrite_payload_app_dossier_ids(payload: dict[str, list[dict[str, object]]], id_rewrites: dict[int, int]) -> None:
     if not id_rewrites:
         return
@@ -1254,6 +1288,15 @@ def main() -> None:
     else:
         candidate_ids = sorted(local_ids)
         stale_ids = stale_remote_ids()
+
+    # C.9-c : AVANT le frein de securite, et donc avant toute suppression -- les
+    # cinq tables effacees plus bas (fiche, detail, travaux, diffusion, registre)
+    # lisent toutes stale_ids : un seul filtre les couvre.
+    stale_ids, annonces_app_epargnees = separer_annonces_app_en_attente(
+        stale_ids, fetch_local_app_range_ids())
+    if annonces_app_epargnees:
+        print(f"INFO C.9-c : {len(annonces_app_epargnees)} annonce(s) nee(s) dans l'app, pas encore "
+              f"connue(s) du serveur -- epargnee(s) par le push : {annonces_app_epargnees[:20]}")
 
     if stale_ids and not args.allow_stale_deletes and (baseline_adopted or len(stale_ids) > args.max_stale_deletes):
         raise RuntimeError(

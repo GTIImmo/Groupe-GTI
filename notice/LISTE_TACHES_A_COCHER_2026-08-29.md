@@ -214,13 +214,42 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                     du run -- une requete qui planterait (table absente)
                     arreterait tout le run, pour une trace qui n'ajoute rien.
                   [x] des que la sonde a tourne une nuit sans fausse alerte.
-              [ ] C.9-c le push n'efface plus une annonce nee dans l'app  go
+              [~] C.9-c le push n'efface plus une annonce nee dans l'app  go
+                  CODE le 24/09 (« suis le plan ») -- EN SERVICE cette nuit : le push
+                  lit le fichier sur le disque. Epargne UNIQUEMENT une annonce de la
+                  plage de l'app que le serveur ne connait pas encore ; une annonce
+                  adoptee suit la regle commune (sinon : archivees fantomes).
+                  Audit des suppressions : UN seul chemin automatique (push l. 1492) ;
+                  le worker n'efface jamais ; 3 outils MANUELS (purge_*, cleanup_upgrade)
+                  videraient aussi les annonces nees dans l'app -- NOTE, pas touche.
+                  controle test_c9c_push_epargne.py : 9/9 ; PREUVE sur bd3ca5f (epingle,
+                  pas HEAD) : il echoue ; vraies donnees en lecture : 0 a effacer, 0 a
+                  epargner. [x] apres la nuit du 25/09.
               [ ] C.9-d registre des cles de relation (doublure)          additif
               [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
               [ ] C.9-f substitution annonce dans la cle de relation      go + copie
+              CALENDRIER DES RUNS DE C.9 (pose le 24/09, demande de Frederic)
+                nuit 24->25   run normal : prouve que a, b, c ne cassent rien
+                25/09 jour    C.9-d (registre des relations, doublure) + C.9-e
+                              (RPC + retour worker, interrupteur ETEINT)
+                nuit 25->26   run normal : prouve C.9-d
+                RUN DE JOUR 1 (~2 h, go) l'ESSAI REEL : une annonce de test creee
+                              dans l'app, Hektor repond, puis run + descente :
+                              un seul numero, adoptee, sonde C.9-b a 0
+                RUN DE JOUR 2 (~2 h, go) C.9-f, apres repetition sur copie
+                hors des heures du run (05-07 h) et de la descente (07:30)
               ⚠ PAS de porte worker a ecrire : les deux numeros de l'annonce
                 vivent dans deux colonnes separees (refute le 24/09)
 
+   [ ] 417 ANNONCES DU PERIMETRE DU PUSH, ABSENTES DE SUPABASE  (mesure 24/09)
+       HORS PLAN C.9 -- trouve en eprouvant C.9-c. Vue locale (perimetre du push)
+       13 849 contre Supabase 13 432 : 214 « Actif » + 203 « Estimation », non
+       archivees, TOUTES avec detail, « present » dans le miroir, sans numero de
+       mandat, absentes des index archives/historique ; du 02/02 au 23/09/2026.
+       ⚠ ANCIEN (des fevrier) : pas un effet de la bascule. NON MESURE : quelle
+         regle du constructeur de payload les ecarte (volontaire ou trou ?).
+         A trancher par Frederic : l'etape 2 veut qu'une annonce active de
+         Hektor arrive TOUJOURS dans l'app.
    [ ] 7 ANNONCES ACTIVES SANS DETAIL, ET INVISIBLES DANS L'APP  (mesure 23/09)
        Trouve en repondant a une question de Frederic sur les dates de passage.
            3 310 annonces du miroir n'ont aucun detail
