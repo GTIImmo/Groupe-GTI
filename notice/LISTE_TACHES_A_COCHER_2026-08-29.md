@@ -11,9 +11,20 @@ OU ON EST, EN TROIS NIVEAUX
   L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  (5) OK -- BASCULE FAITE 23/09 19h05
   C.9           a OK  b OK  c OK  e1 OK  e2 OK  e3 OK (eteint) -- ESSAI REEL OK 24/09
                 RUN DE JOUR 12:35 + descente : OK (1 numero des deux cotes, 0 ecart)
-                d CODE 24/09 soir (carnet des liens, doublure, dans le build) + D6
-                (le recensement marque ses departs) -- 1re nuit 24->25 ; reste f
-                (go + copie, APRES une nuit du carnet) -- prepare la coupure
+                d OK + D6 OK : PROUVES au RUN DE JOUR 24/09 16:05-18:09 (code 0, 0 403)
+                SECONDE PASSE du build (contact neuf sous son identite des J) : codee
+                  18:40, repetee sur copie -- sa preuve reelle = la nuit du 25/09
+                ORDRE DECIDE 24/09 soir (Frederic : « Oui, d'abord le plan ») :
+                  (1) MESURE lecture seule : les 97 rapprochements sous un ancien n°
+                      sont-ils rattaches au bon contact dans les ecrans ?
+                  (2) C.9-f : audit -> explication -> code -> repetition sur COPIE
+                      (le carnet EXISTE dans la vraie base depuis le run de 16:05 :
+                      plus besoin d'attendre une nuit). Attendu : 0 cle changee.
+                      Si 0 sur la copie -> en service DES LA NUIT du 25/09, en meme
+                      temps que la seconde passe (chacune sa ligne au journal).
+                  (3) 25/09 matin : controle de la nuit (seconde passe, carnet, D6,
+                      C.9-f = 0 cle changee, sondes a 0)
+                  (4) decision de Frederic : allumer e3 pour de bon
                 ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
   L4-c-bis      ✅ CORRIGE 24/09 (code e414fe0 + 23 fiches reparees 15:4x, go de Frederic)
                 repetition sur COPIE de la vraie base : registre -> build -> registre :
@@ -385,6 +396,9 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                        et droits inchanges, sequence jamais appelee, 0 annonce >= 10 M.
                   e1 et e2 AVANT d'allumer e3. Puis RUN DE JOUR 1 = l'essai reel.
               [ ] C.9-f substitution annonce dans la cle de relation      go + copie
+                  GO donne le 24/09 soir (« Oui »). Prealable leve : le carnet existe
+                  dans la vraie base (run de jour 16:05, 167 496 liens, 100 % rejouables).
+                  Mise en service des la nuit du 25/09 SI la copie donne 0 cle changee.
               CALENDRIER DES RUNS DE C.9 (pose le 24/09, demande de Frederic)
                 nuit 24->25   run normal : prouve que a, b, c ne cassent rien
                 25/09 jour    C.9-d (registre des relations, doublure) + C.9-e
