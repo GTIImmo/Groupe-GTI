@@ -222,7 +222,8 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   Audit des suppressions : UN seul chemin automatique (push l. 1492) ;
                   le worker n'efface jamais ; 3 outils MANUELS (purge_*, cleanup_upgrade)
                   videraient aussi les annonces nees dans l'app -- NOTE, pas touche.
-                  controle test_c9c_push_epargne.py : 9/9 ; PREUVE sur bd3ca5f (epingle,
+                  controle test_c9c_push_epargne.py : 10/10 (dans l'ENVIRONNEMENT du
+                  run depuis le 24/09 soir) ; PREUVE sur bd3ca5f (epingle,
                   pas HEAD) : il echoue ; vraies donnees en lecture : 0 a effacer, 0 a
                   epargner. [x] apres la nuit du 25/09.
               [ ] C.9-d registre des cles de relation (doublure)          additif
@@ -241,15 +242,15 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
               ⚠ PAS de porte worker a ecrire : les deux numeros de l'annonce
                 vivent dans deux colonnes separees (refute le 24/09)
 
-   [ ] 417 ANNONCES DU PERIMETRE DU PUSH, ABSENTES DE SUPABASE  (mesure 24/09)
-       HORS PLAN C.9 -- trouve en eprouvant C.9-c. Vue locale (perimetre du push)
-       13 849 contre Supabase 13 432 : 214 « Actif » + 203 « Estimation », non
-       archivees, TOUTES avec detail, « present » dans le miroir, sans numero de
-       mandat, absentes des index archives/historique ; du 02/02 au 23/09/2026.
-       ⚠ ANCIEN (des fevrier) : pas un effet de la bascule. NON MESURE : quelle
-         regle du constructeur de payload les ecarte (volontaire ou trou ?).
-         A trancher par Frederic : l'etape 2 veut qu'une annonce active de
-         Hektor arrive TOUJOURS dans l'app.
+   [x] 417 ANNONCES « ABSENTES DE SUPABASE » -- FAUX SIGNAL, ferme le 24/09
+       Ce sont les BROUILLONS (isDraft), exclus EXPRES de app_dossier_current depuis
+       le 22/06 et ranges dans app_brouillon_annonce_index_current (badge « En
+       creation »). Mesure : 417/417 is_draft=1 · 417/417 dans l'index brouillons ·
+       0 en double dans l'actif · index 482 = suivi serveur 482 · rafraichi 06:48.
+       LA CAUSE ETAIT MA MESURE : j'avais appele le push SANS l'interrupteur
+       APP_BROUILLON_BUCKET_ENABLED que le run pose (l. 243). Avec lui : 0 absente.
+       Piste donnee par Frederic (« je pense savoir : les brouillons »).
+       ⚠ Toute mesure du perimetre du push DOIT poser cet interrupteur.
    [ ] 7 ANNONCES ACTIVES SANS DETAIL, ET INVISIBLES DANS L'APP  (mesure 23/09)
        Trouve en repondant a une question de Frederic sur les dates de passage.
            3 310 annonces du miroir n'ont aucun detail

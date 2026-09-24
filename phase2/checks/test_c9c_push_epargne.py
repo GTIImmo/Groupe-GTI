@@ -24,6 +24,13 @@ import sys
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
+# ⚠ L'ENVIRONNEMENT DU RUN, AVANT l'import : run_full_pipeline.ps1 l. 243 pose
+#   APP_BROUILLON_BUCKET_ENABLED=1, et le push le lit A L'IMPORT. Sans lui, la vue
+#   locale garde les 417 brouillons -- c'est ce qui a fabrique, le 24/09, un faux
+#   « trou » de 417 annonces. Rejouer les ETAPES du run sans son ENVIRONNEMENT, c'est
+#   la faute ecrite en tete de la liste le 22/09.
+import os  # noqa: E402
+os.environ["APP_BROUILLON_BUCKET_ENABLED"] = "1"
 sys.path.insert(0, str(RACINE / "phase2" / "sync"))
 import push_upgrade_to_supabase as push  # noqa: E402
 
@@ -85,7 +92,6 @@ else:
 
 # ── (3) les vraies donnees, en lecture seule ─────────────────────────────
 push.load_env_files(push.DEFAULT_ENV_FILES)
-import os  # noqa: E402
 url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
 cle = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 if not url or not cle:
@@ -102,6 +108,8 @@ else:
     connus = push.fetch_local_app_range_ids()
     a_effacer, epargnees = push.separer_annonces_app_en_attente(disparues, connus)
     controle("(3) les fonctions du push tournent sur la vraie base et le vrai Supabase", True)
+    controle("(3) dans l'environnement du run, la vue locale colle a Supabase",
+             len(locaux - ids_distants) == 0, f"{len(locaux - ids_distants)} en trop")
     controle("(3) aujourd'hui : aucune annonce nee dans l'app, rien a epargner",
              epargnees == [], str(epargnees[:10]))
     print(f"       vue locale {len(locaux)} · Supabase {len(ids_distants)} · "
