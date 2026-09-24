@@ -77,6 +77,7 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | **24/09** | **C.9 : e AVANT d** *(accord de Frédéric)*. d et f préparent la **coupure** — tant que Hektor vit, le lien d'une annonce née dans l'app revient par le miroir ; e est le livrable de l'étape 2. Et **d vivra DANS le build** : la clé d'un lien ne se recalcule depuis la table que pour 57 % des lignes (le rôle est réécrit après le hache, `build_contacts_layer.py` l. 1107) |
 | **24/09** | ⛔ **D8 — le rafraîchissement effaçait le numéro de l'app une minute après la création** (`reconcile_annonce_dossiers` le prenait pour un fantôme). Corrigé par **e1** (le rafraîchissement adopte) et **e2** (le worker pose le numéro Hektor sur notre ligne AVANT de rafraîchir) |
 | **24/09** | ✅ **PREMIÈRE ANNONCE NÉE DANS L'APP, EN RÉEL** : « ESSAI C9 bis », **10 000 000 ↔ Hektor 63147**, un seul numéro dans Supabase et sur le serveur. **Les patchs SQL de production sont appliqués par Frédéric** : l'écriture par l'outil de la session est bloquée par son garde-fou |
+| **24/09** | ⛔ **L4-c-bis AVANT LA SUITE DE C.9** *(décision de Frédéric, 14 h 45)* : les contacts créés chez Hektor **depuis la bascule** restent sous leur numéro Hektor (23 au 24/09). Le registre met leur identité dans `app_contact_id`, le build ne lit que `hektor_contact_id`. **Corriger d'abord** (registre et couche d'un seul geste, répété sur copie — le correctif naïf refait le doublement du matin), **puis reprendre C.9** *(bilan de la descente, C.9-d dans le build, C.9-f)* |
 
 ---
 

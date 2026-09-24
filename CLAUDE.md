@@ -94,7 +94,7 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > (go obligatoire), puis C.9-f.** Deux annonces de test à supprimer plus tard : 63146, 63147.
 > ⛔ **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
-> build ne lit que `hektor_contact_id`. **À traiter juste après le bilan C.9**, registre et
+> build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et
 > couche d'un seul geste, répété sur copie : le correctif naïf refait le doublement du 24/09.
 >
 > · la bascule contact a été jouée le **23/09 à 19h05** *(61 985 contacts sur notre numéro)* ;
