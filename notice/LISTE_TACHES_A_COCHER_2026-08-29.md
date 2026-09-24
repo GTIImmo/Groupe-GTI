@@ -55,10 +55,26 @@ OU ON EST, EN TROIS NIVEAUX
                   intacte. EN SERVICE a la nuit du 25/09.
                   [ ] A COCHER apres la nuit : ligne « [seconde passe] » au journal,
                       et au run suivant « contacts a traduire » = 0 avant le build.
-                  [ ] RESTE (mesure, lecture) : les 67 + 30 rapprochements portant un
-                      ancien numero sont-ils rattaches au bon contact dans les ecrans ?
-                      (ils sont cles par la RECHERCHE, dont la cle ne change pas --
-                      probable, NON MESURE)
+                  [x] MESURE (lecture, 24/09 soir) : NON, ils ne sont PAS rattaches.
+                      - app_upsert_one_rapprochement : ON CONFLICT met a jour le score,
+                        JAMAIS hektor_contact_id -> un rapprochement ne sous le n° Hektor
+                        le garde pour toujours.
+                      - app_get_rapprochements_for_dossier : LEFT JOIN contact PAR CE
+                        NUMERO -> ligne affichee SANS nom/email/tel/nego ;
+                        app_count_rapprochements_for_contact : filtre PAR CE NUMERO ->
+                        le compteur « N biens » de la fiche ne les compte pas ;
+                        app_generate_rapprochement_alerts : meme jointure.
+                      - Parc entier : 69 lignes / 5 contacts sous un ANCIEN n° Hektor
+                        (tous eligibles), 0 action de negociateur dessus ; 50 135 bons.
+                        + les 30 des 8 neufs deviendront orphelins CETTE NUIT (traduits).
+                      - C'etait une table « figee » de la bascule du 23/09 (13 tables
+                        traduites a la main, que le build ne refait pas).
+                  [ ] REPARATION a decider par Frederic (ecriture prod = son geste) :
+                      UPDATE app_rapprochement -> identite, via hektor_target_id, APRES
+                      la nuit du 25/09 (couvre 69 + 30). + garde durable a discuter
+                      (le moteur met a jour hektor_contact_id, ou re-traduction des
+                      tables figees apres le push). La seconde passe empeche les
+                      NOUVEAUX cas ; elle ne repare pas les anciens.
                 ⚠ HORS PLAN, trouve en passant : C.16 et le registre se contredisent --
                   le registre leve chaque nuit les 7 658 marques « disparu » de C.16
                   (contacts supprimes chez Hektor mais toujours dans la couche), C.16
