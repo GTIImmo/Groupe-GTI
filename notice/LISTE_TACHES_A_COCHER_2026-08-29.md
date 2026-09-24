@@ -11,8 +11,9 @@ OU ON EST, EN TROIS NIVEAUX
   L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  (5) OK -- BASCULE FAITE 23/09 19h05
   C.9           a OK  b OK  c OK  e1 OK  e2 OK  e3 OK (eteint) -- ESSAI REEL OK 24/09
                 RUN DE JOUR 12:35 + descente : OK (1 numero des deux cotes, 0 ecart)
-                d CODE 24/09 soir (carnet des liens, doublure, dans le build) -- 1re nuit
-                25/09 ; reste D6 (go), puis f (go + copie) -- preparent la coupure
+                d CODE 24/09 soir (carnet des liens, doublure, dans le build) + D6
+                (le recensement marque ses departs) -- 1re nuit 24->25 ; reste f
+                (go + copie, APRES une nuit du carnet) -- prepare la coupure
                 ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
   L4-c-bis      ✅ CORRIGE 24/09 (code e414fe0 + 23 fiches reparees 15:4x, go de Frederic)
                 repetition sur COPIE de la vraie base : registre -> build -> registre :
@@ -277,9 +278,22 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                     vraie base et miroir intacts (taille + date).
                   [ ] A COCHER apres la nuit du 25/09 : ligne du carnet au journal, carnet ~
                       nombre de liens, 0 conflit, 0 sans recette.
-                  [ ] D6 (audit) : le recensement contacts_app_seuls n'expire rien
-                      (8 relations en double, table lue par personne) -- ecrit en base
-                      locale et touche le run -> go separe. PAS FAIT.
+                  [~] D6 (audit) : le recensement contacts_app_seuls n'expirait rien
+                      CODE LE 24/09 (« Vas y » de Frederic) -- EN SERVICE cette nuit.
+                      La marque absent_depuis etait LEVEE, jamais POSEE. Desormais posee
+                      sur ce qui n'est plus « connu de l'app seule », APRES une relecture
+                      complete ET pleine (PLANCHER_APP_* = ~80 % des volumes Supabase du
+                      24/09 : 50 000 / 65 000 / 9 000) ; relecture courte -> aucune
+                      conclusion ; jamais efface ; 1re date gardee. Seul lecteur
+                      (adopter_numeros_app.py, hors run) n'utilise pas la colonne :
+                      AUCUN comportement change.
+                      controle test_d6_recensement_expire.py 10/10 ; PREUVE sur 6250f85 :
+                      echoue ; 3 mutants attrapes (plancher, 1re date, mauvaise liste).
+                      REPETITION (base jetable = cles des 3 couches + 3 registres copies,
+                      vraie relecture Supabase en lecture) : app seule ce jour = 0 / 0 / 0 ;
+                      les 26 lignes du registre (3 contacts, 23 liens) toutes perimees
+                      (restes de la bascule et de L4-c-bis) -> marquees. Vraie base intacte.
+                      [ ] A COCHER apres la nuit : « departs marques ce matin : 3 / 23 / 0 ».
                   MESURE 24/09 : depuis la table, la cle ne se recalcule que pour
                   57 % des liens (95 683 / 167 477). Cause : build l. 1107 REECRIT le
                   role (mandant/proprietaire selon le n° de mandat) APRES le calcul de

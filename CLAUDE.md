@@ -98,7 +98,8 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > ✅ **C.9-d CODÉ le 24/09 au soir** — le build tient **le carnet des liens** (`app_relation_registry`,
 > recette exacte de chaque clé, doublure lue par personne). Répété sur copie : 100 % des recettes
 > refabriquent leur clé. **1re nuit = 24→25 : vérifier la ligne `[carnet des liens]` du build.**
-> **Reste : D6 (go séparé), puis C.9-f (go + répétition sur copie).**
+> ✅ **D6 CODÉ aussi** : le recensement « connu de l'app seule » marque ses départs (26 lignes
+> périmées ce soir). **Reste : C.9-f (go + répétition sur copie), après une nuit du carnet.**
 > *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
 > build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et

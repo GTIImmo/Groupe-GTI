@@ -177,6 +177,9 @@ Puis **C.9-couple** *(son premier pas est une mesure)* et l'essai **26bis-TRANSA
 > **MISE À JOUR DU 24/09 (soir)** — **C.9-d est codé, le registre seulement** (`app_relation_registry`,
 > nourri dans `add_relation`, build complet seul, SAVEPOINT). **L'expiration du recensement (D6)
 > n'est PAS faite** : elle touche `contacts_app_seuls.py` et écrit en base locale → go séparé.
+> **Faite le soir même** (go de Frédéric) : la marque est posée après une relecture complète et
+> pleine. Mesure : les « 8 relations en double » étaient en fait **26 lignes périmées** (3 contacts,
+> 23 liens), toutes des restes de la bascule ; **0 objet réellement « app seule »** le 24/09.
 > e passe avant d *(accord de Frédéric)* : d et f préparent la coupure, et **d doit vivre dans le
 > build** (la clé ne se recalcule que pour 57 % des liens depuis la table). **e s'est scindé en
 > trois pièces** après **D8** (voir §3) : e1 rafraîchissement, e2 worker, e3 création. a, b, c, e1,

@@ -79,6 +79,7 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | **24/09** | ✅ **PREMIÈRE ANNONCE NÉE DANS L'APP, EN RÉEL** : « ESSAI C9 bis », **10 000 000 ↔ Hektor 63147**, un seul numéro dans Supabase et sur le serveur. **Les patchs SQL de production sont appliqués par Frédéric** : l'écriture par l'outil de la session est bloquée par son garde-fou |
 | **24/09** | ⛔ **L4-c-bis AVANT LA SUITE DE C.9** *(décision de Frédéric, 14 h 45)* : les contacts créés chez Hektor **depuis la bascule** restent sous leur numéro Hektor (23 au 24/09). Le registre met leur identité dans `app_contact_id`, le build ne lit que `hektor_contact_id`. **Corriger d'abord** (registre et couche d'un seul geste, répété sur copie — le correctif naïf refait le doublement du matin), **puis reprendre C.9** *(bilan de la descente, C.9-d dans le build, C.9-f)* |
 | **24/09** | ✅ **L4-c-bis CORRIGÉ** : le registre range l'identité d'un contact neuf dans la bonne colonne et **reconnaît un contact sous ses deux numéros** (sinon, la nuit de la traduction : second numéro). Répété sur une **copie de la vraie base** (registre → build → registre : 23 traduits, 0 second numéro), puis 23 fiches réparées en réel. **Leçon : le contrôle ne cherchait que les doublons, pas les oubliés** — sonde `data.contacts_identite` ajoutée, et une seconde copie de la règle (dans le contrôle manuel) remplacée par la lecture de l'unique |
+| **24/09** | ✅ **D6 CODÉ** : `contacts_app_seuls.py` pose désormais `absent_depuis` sur ce qui n'est plus « connu de l'app seule » — seulement après une relecture complète et pleine (planchers côté app). Aucun lecteur ne s'en sert : observation pure. Répété sur base jetable : 26 lignes périmées marquées, 0 objet « app seule » ce jour |
 | **24/09** | ✅ **C.9-d CODÉ — le carnet des liens** (`app_relation_registry`, dans le build complet, SAVEPOINT) : chaque lien noté avec **la recette exacte de son identifiant**, prise avant la réécriture du rôle. Doublure, lu par personne avant C.9-f. Répétition sur copie : **167 486 / 167 486 recettes refabriquent leur clé**, 0 conflit, 9 sans n° de bien. **D6 (expiration du recensement) reste à faire, go séparé** |
 
 ---
@@ -2575,5 +2576,8 @@ pour chaque lien écrit, son identifiant et **la recette exacte qui l'a fabriqu�
 `add_relation` avant que le rôle soit réécrit *(71 799 liens sur 167 486 le sont : sans le
 carnet, C.9-f n'aurait pas pu les figer)*. Doublure : **personne ne le lit** avant C.9-f.
 Répété sur copie avec le vrai build : **100 % des recettes refabriquent leur identifiant**,
-0 conflit, vraie base intacte. Reste **D6** *(go séparé)* puis **C.9-f**.
+0 conflit, vraie base intacte. **D6 fait dans la foulée** *(« Vas y »)* : le recensement « connu de
+l'app seule » **marque enfin ses départs** (il levait la marque, ne la posait jamais), après une
+relecture complète et pleine seulement. Répété : 0 objet « app seule » ce jour, les 26 lignes du
+registre étaient des restes de la bascule. **Reste C.9-f**, après une nuit du carnet.
 Chaque pièce a son contrôle, éprouvé dans les deux sens ; le détail est dans le bloc C.9 de la liste.

@@ -31,6 +31,8 @@ manquerait. Meme raisonnement que C.7 et que le script des annonces.
 LA TABLE ACCUMULE, ELLE NE SE VIDE JAMAIS. Un echec de lecture veut dire « aucune
 nouvelle ce matin », jamais « elles ont disparu ». C'est la regle 5 du projet.
 Et comme partout : ABSENT_DEPUIS, JAMAIS DE SUPPRESSION.
+⚠ D6, 24/09/2026 : jusque-la la marque n'etait JAMAIS posee (seulement levee).
+  Elle l'est desormais, apres une relecture complete et pleine (PLANCHER_APP_*).
 
 AUJOURD'HUI : ZERO. Aucun contact, aucune relation, aucune recherche n'est ne dans l'app -- la
 creation sans Hektor est le lot L4. Ce script est donc INERTE, et c'est voulu :
@@ -82,6 +84,20 @@ REGISTRE_RECHERCHE = "app_recherche_app_seule"
 PLANCHER_CONTACTS = 100000
 PLANCHER_RELATIONS = 10000
 PLANCHER_RECHERCHES = 10000
+
+# D6 (audit C.9, 24/09/2026) -- PLANCHERS COTE APP, pour MARQUER les departs.
+# Jusqu'au 24/09 ce script levait la marque absent_depuis mais ne la POSAIT
+# jamais : une ligne notee un jour « connue de l'app seule » le restait pour
+# toujours, meme quand le serveur l'avait rattrapee ou que l'app l'avait
+# perdue. Mesure du 24/09 : 23 relations au registre, dont 19 pas revues --
+# les 8 de l'ancien numero Hektor (22/09) ET leurs jumelles sous l'identite.
+# On ne marque qu'apres une relecture COMPLETE et PLEINE : une relecture courte
+# veut dire « aucune nouvelle ce matin », jamais « elles sont parties » (regle 5).
+# ~80 % des volumes Supabase du 24/09 : contacts 62 003, relations 81 333,
+# recherches 11 393.
+PLANCHER_APP_CONTACTS = 50000
+PLANCHER_APP_RELATIONS = 65000
+PLANCHER_APP_RECHERCHES = 9000
 
 DDL = f"""
 CREATE TABLE IF NOT EXISTS {REGISTRE_CONTACT} (
@@ -194,7 +210,8 @@ def lire_supabase(client: SupabaseRestClient, table: str, champs: list[str], cle
     return lignes
 
 
-def recenser_objet(conn, client, *, couche, registre, cle, champs, plancher, libelle) -> int | None:
+def recenser_objet(conn, client, *, couche, registre, cle, champs, plancher, libelle,
+                   plancher_app: int | None = None) -> int | None:
     total_local = conn.execute(f'SELECT COUNT(*) FROM "{couche}"').fetchone()[0]
     if total_local < plancher:
         print(f"REFUS : {couche} ne compte que {total_local} lignes (plancher {plancher}).")
@@ -240,10 +257,29 @@ def recenser_objet(conn, client, *, couche, registre, cle, champs, plancher, lib
             valeurs,
         )
         neufs += 1 if cur.rowcount else 0
+
+    # ── D6 : ce qui n'est plus « connu de l'app seule » ce matin est MARQUE ──
+    # (le serveur l'a rattrape, ou l'app ne l'a plus). Jamais efface ; la marque
+    # tombe d'elle-meme si la ligne revient (ON CONFLICT ci-dessus). Une ligne
+    # deja marquee garde sa premiere date. Sans plancher_app : on ne marque pas.
+    marques = 0
+    if plancher_app is None or len(distant) < plancher_app:
+        print(f"[{libelle}] departs NON marques : relecture de {len(distant)} lignes "
+              f"(plancher {plancher_app}) -- aucune conclusion ce matin")
+    else:
+        conn.execute("CREATE TEMP TABLE IF NOT EXISTS d6_vus_ce_matin (cle TEXT PRIMARY KEY)")
+        conn.execute("DELETE FROM d6_vus_ce_matin")
+        conn.executemany("INSERT OR IGNORE INTO d6_vus_ce_matin (cle) VALUES (?)",
+                         [(str(r.get(cle)),) for r in inconnus])
+        marques = conn.execute(
+            f"UPDATE {registre} SET absent_depuis = CURRENT_TIMESTAMP "
+            f"WHERE absent_depuis IS NULL AND {cle} NOT IN (SELECT cle FROM d6_vus_ce_matin)"
+        ).rowcount or 0
     conn.commit()
     total_registre = conn.execute(f"SELECT COUNT(*) FROM {registre}").fetchone()[0]
     print(f"[{libelle}] app={len(distant)} serveur={total_local} "
-          f"connus de l'app seule={len(inconnus)} (registre : {total_registre})")
+          f"connus de l'app seule={len(inconnus)} (registre : {total_registre}, "
+          f"departs marques ce matin : {marques})")
     return len(inconnus)
 
 
@@ -269,14 +305,14 @@ def main() -> int:
     contacts = recenser_objet(
         conn, client, couche=COUCHE_CONTACT, registre=REGISTRE_CONTACT, cle="hektor_contact_id",
         champs=["hektor_contact_id", "app_contact_id", "display_name", "email", "date_maj"],
-        plancher=PLANCHER_CONTACTS, libelle="contacts")
+        plancher=PLANCHER_CONTACTS, libelle="contacts", plancher_app=PLANCHER_APP_CONTACTS)
     if contacts is None:
         return 4
 
     relations = recenser_objet(
         conn, client, couche=COUCHE_RELATION, registre=REGISTRE_RELATION, cle="relation_key",
         champs=["relation_key", "hektor_contact_id", "hektor_annonce_id", "app_contact_id", "role_contact"],
-        plancher=PLANCHER_RELATIONS, libelle="relations")
+        plancher=PLANCHER_RELATIONS, libelle="relations", plancher_app=PLANCHER_APP_RELATIONS)
     if relations is None:
         return 4
 
@@ -289,7 +325,7 @@ def main() -> int:
     recherches = recenser_objet(
         conn, client, couche=COUCHE_RECHERCHE, registre=REGISTRE_RECHERCHE, cle="contact_search_key",
         champs=["contact_search_key", "hektor_contact_id", "app_contact_id", "search_index", "is_active"],
-        plancher=PLANCHER_RECHERCHES, libelle="recherches")
+        plancher=PLANCHER_RECHERCHES, libelle="recherches", plancher_app=PLANCHER_APP_RECHERCHES)
     if recherches is None:
         return 4
 
