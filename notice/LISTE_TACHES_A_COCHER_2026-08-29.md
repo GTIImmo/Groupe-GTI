@@ -179,8 +179,22 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                  en 30 s), le run de nuit donnerait un SECOND numero a l'annonce --
                  bootstrap_phase2 ne la reconnait que par son numero Hektor, et
                  tourne AVANT toute adoption. Jumeau du defaut contact du 21/09.
-              [ ] C.9-a le serveur apprend le numero AVANT le bootstrap (+ D2 :
+              [~] C.9-a le serveur apprend le numero AVANT le bootstrap (+ D2 :
                         adopter_numeros_app = 0 appelant, 3 defauts)       go
+                  CODE ET EPROUVE le 24/09 -- branchement au run EN ATTENTE du go
+                  phase2/identite/descendre_correspondance_annonces.py
+                  n'adopte QUE ce que Hektor a numerote ET que le miroir connait
+                  (sinon ligne VIDE poussee par-dessus la vraie fiche) ;
+                  declencheur : un numero >= 10 M n'entre dans app_dossier
+                  que s'il est adopte (le compteur saute a la 1re adoption)
+                  controle phase2/checks/test_c9a_correspondance_annonces.py
+                    22/22 ; le VRAI SQL du bootstrap REPRODUIT D1 sans l'etape ;
+                    mutations : sans adoption 12 ECHECS, sans declencheur 2
+                  T2 vrai bootstrap + declencheur sur copie des 61 267 lignes
+                    et le vrai miroir (lecture seule) : 1,4 s, 0 erreur
+                  T3 dry-run reel : 0 annonce dans la plage, base intacte
+                  ⚠ AVANT C.9-e : l'etape est DEJA en -FailOnError ; le script
+                    rend 0 sur Supabase muet tant que rien n'est ne dans l'app
               [ ] C.9-b l'oeil : accord annonce serveur <-> Supabase      additif
               [ ] C.9-c le push n'efface plus une annonce nee dans l'app  go
               [ ] C.9-d registre des cles de relation (doublure)          additif
