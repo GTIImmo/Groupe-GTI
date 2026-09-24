@@ -92,6 +92,10 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **EN COURS : le run de jour lancé à 12 h 35, puis la descente** — faire le bilan (C.9-a avant
 > le bootstrap, push avec C.9-c, sonde C.9-b après la descente). **Puis C.9-d, dans le build
 > (go obligatoire), puis C.9-f.** Deux annonces de test à supprimer plus tard : 63146, 63147.
+> ⛔ **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
+> sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
+> build ne lit que `hektor_contact_id`. **À traiter juste après le bilan C.9**, registre et
+> couche d'un seul geste, répété sur copie : le correctif naïf refait le doublement du 24/09.
 >
 > · la bascule contact a été jouée le **23/09 à 19h05** *(61 985 contacts sur notre numéro)* ;
 > · le premier run d'après a **doublé 294 179 identités** dans le registre local — réparé,

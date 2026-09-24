@@ -13,6 +13,19 @@ OU ON EST, EN TROIS NIVEAUX
                 RUN DE JOUR lance 12:35, puis descente -- bilan a faire (C.9-a avant le
                 bootstrap, push C.9-c, sonde C.9-b) ; reste d puis f (preparent la coupure)
                 ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
+  L4-c-bis      ⛔ TROUVE 24/09 14:35 -- A TRAITER APRES LE BILAN C.9 (go + copie)
+                Tout contact cree chez Hektor DEPUIS LA BASCULE reste sous son numero
+                Hektor, indefiniment : 23 au 24/09 (~10 de plus par jour).
+                Cause : registre_contacts.py l. 232 inscrit le n° Hektor dans la colonne
+                hektor_contact_id (qui porte l'IDENTITE depuis le 23/09) et l'identite
+                dans app_contact_id ; build_contacts_layer.py l. 357 ne lit QUE
+                hektor_contact_id -> pour eux cible = identite -> jamais traduits.
+                ⚠ Correctif naif (lire app_contact_id) = la couche passe sous 10650346,
+                  le registre ne la reconnait plus (il cherche 605491) -> SECOND numero :
+                  le mecanisme exact du 294 179 du matin. Registre ET couche d'un geste.
+                ⚠ Le controle de nuit est AVEUGLE a ce cas (il ne cherche que les
+                  doublons) : ajouter « n° d'app attribue mais n° Hektor en identite ».
+                ⚠ Ce matin j'avais dit « decalage de 24 h » : c'etait faux.
 ```
 
 ## ✅ `L4-c` EST TERMINÉ — la bascule a été jouée le 23/09/2026, services arrêtés
