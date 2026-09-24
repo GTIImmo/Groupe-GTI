@@ -199,7 +199,17 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   T3 dry-run reel : 0 annonce dans la plage, base intacte
                   ⚠ AVANT C.9-e : l'etape est DEJA en -FailOnError ; le script
                     rend 0 sur Supabase muet tant que rien n'est ne dans l'app
-              [ ] C.9-b l'oeil : accord annonce serveur <-> Supabase      additif
+              [~] C.9-b l'oeil : accord annonce serveur <-> Supabase      additif
+                  MESURE 24/09 : 0 ecart sur 13 432 (empreinte copie = Supabase direct)
+                  phase2/checks/annonce_un_numero.py -- UNE formule, lue par la sonde
+                  ET le controle de nuit ; « en attente » compte a part (pas grave)
+                  controle test_c9b_annonce_un_numero.py : 13/13, dans les deux sens ;
+                  mutations : sans le cas D1 -> ECHEC ; sans conversion -> ECHEC
+                  (la 1re mutation ne faisait RIEN echouer : test complete)
+                  ⚠ PAS BRANCHE, EXPRES : une seule nouveaute par nuit (C.9-a).
+                  Le 25/09, APRES la verif de C.9-a : 1 ligne dans la liste des
+                  sondes (check_gti_health.py l. 1094) + 1 controle dans
+                  quality_checks.py. Alors seulement : [x]
               [ ] C.9-c le push n'efface plus une annonce nee dans l'app  go
               [ ] C.9-d registre des cles de relation (doublure)          additif
               [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
