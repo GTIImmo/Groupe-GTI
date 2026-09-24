@@ -1,6 +1,6 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
-> **Mis à jour le 24/09/2026.** Cette page remplace la lecture du document. Le reste est une
+> **Mis à jour le 25/09/2026 (00 h 10).** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier.
 
 ```
@@ -15,15 +15,19 @@ OU ON EST, EN TROIS NIVEAUX
                 SECONDE PASSE du build (contact neuf sous son identite des J) : codee
                   18:40, repetee sur copie -- sa preuve reelle = la nuit du 25/09
                 ORDRE DECIDE 24/09 soir (Frederic : « Oui, d'abord le plan ») :
-                  (1) MESURE lecture seule : les 97 rapprochements sous un ancien n°
-                      sont-ils rattaches au bon contact dans les ecrans ?
+                  (1) ✅ FAIT : les rapprochements n'etaient PAS rattaches -> audit
+                      (notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md),
+                      fonction de retraduction des 13 tables satellites + appel de nuit
+                      + sonde ; APPLIQUEE 25/09 00:07 : 72 lignes retraduites, 0
+                      rapprochement sans contact (bloc L4-c-bis ci-dessous)
                   (2) C.9-f : audit -> explication -> code -> repetition sur COPIE
                       (le carnet EXISTE dans la vraie base depuis le run de 16:05 :
                       plus besoin d'attendre une nuit). Attendu : 0 cle changee.
                       Si 0 sur la copie -> en service DES LA NUIT du 25/09, en meme
                       temps que la seconde passe (chacune sa ligne au journal).
                   (3) 25/09 matin : controle de la nuit (seconde passe, carnet, D6,
-                      C.9-f = 0 cle changee, sondes a 0)
+                      retraduction satellites = les 30 des 8 neufs, sonde
+                      data.contacts_satellites, sondes a 0)
                   (4) decision de Frederic : allumer e3 pour de bon
                 ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
   L4-c-bis      ✅ CORRIGE 24/09 (code e414fe0 + 23 fiches reparees 15:4x, go de Frederic)

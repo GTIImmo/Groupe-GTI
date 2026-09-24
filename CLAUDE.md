@@ -105,8 +105,12 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **en service à la nuit du 25/09** — vérifier la ligne `[seconde passe]`. Reste une mesure : les
 > 97 rapprochements laissés sous un ancien numéro sont-ils bien rattachés dans les écrans ?
 > ✅ **TABLES SATELLITES** : 13 tables figeaient le numéro du contact (69 rapprochements sans nom).
-> Fonction de réparation + appel de nuit + sonde, prouvés — **reste : Frédéric applique
-> `supabase/patch_retraduire_satellites_2026-09-24.sql`**, puis à blanc, puis pour de bon.
+> Fonction de réparation + appel de nuit + sonde — **APPLIQUÉE le 25/09 à 00 h 07 : 72 lignes
+> retraduites, 0 rapprochement sans contact.** Cette nuit : les 30 des 8 contacts neufs.
+> ➡ `notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md`
+> **25/09 MATIN, À CONTRÔLER** : journal du run (lignes `[seconde passe]`, `[carnet des liens]`,
+> « retraduction satellites », « départs marqués »), sondes `data.contacts_satellites`,
+> `data.contacts_identite`, `data.annonce_un_numero` à 0. **Puis C.9-f.**
 > **ORDRE DU SOIR (go de Frédéric) : (1) mesure des rapprochements, lecture seule ; (2) C.9-f
 > audité → expliqué → codé → répété sur copie, en service dès la nuit du 25/09 si 0 clé changée ;
 > (3) contrôle de la nuit ; (4) allumage de e3 = décision de Frédéric.**
