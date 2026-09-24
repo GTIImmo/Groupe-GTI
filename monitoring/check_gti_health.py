@@ -1092,6 +1092,7 @@ class Monitor:
             ("backend_health", self.check_backend_health),
             ("sqlite_files", self.check_sqlite_files),
             ("doublures", self.check_doublures),
+            ("annonce_un_numero", self.check_annonce_un_numero),
             ("local_logs", self.check_local_logs),
             ("playwright_sessions", self.check_playwright_sessions),
             ("document_storage", self.check_document_storage),
@@ -2030,6 +2031,56 @@ class Monitor:
         else:
             self.add("data.recherche_divergente", "data_quality", "doublure", "absolute", "ok",
                      "Recherches dont les criteres different app/Hektor: 0 (seuil 0)", detail)
+
+    def check_annonce_un_numero(self) -> None:
+        """C.9-b (24/09/2026) -- UNE ANNONCE, UN NUMERO. LOCALE, comme check_doublures.
+
+        Le serveur (app_dossier) et Supabase (sa copie app_dossier_current) doivent
+        donner le MEME numero a chaque annonce. Le contact a cet oeil depuis le 24/09
+        au matin (registre_couche_desaccord) ; l'annonce n'en avait aucun, et le push
+        reconcilie ses ecarts en silence. Audit : notice/AUDIT_C9_..._2026-09-24.md, D4.
+
+        LA FORMULE N'EST PAS ICI : elle vit dans phase2/checks/annonce_un_numero.py,
+        seule copie. Seuil ZERO, tenable : 0 ecart mesure le 24/09 sur 13 432.
+        « en attente » (nee dans l'app, pas encore chez Hektor) n'est PAS grave.
+        """
+        db = self.root / "phase2" / "phase2.sqlite"
+        try:
+            chemin = str(self.root / "phase2" / "checks")
+            if chemin not in sys.path:
+                sys.path.insert(0, chemin)
+            import annonce_un_numero as a1n
+        except Exception as exc:  # pragma: no cover
+            self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "warning",
+                     f"Mesure « une annonce, un numero » introuvable ({type(exc).__name__})", {})
+            return
+        if not db.exists():
+            self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "warning",
+                     "Base phase2 introuvable : une annonce, un numero non mesurable",
+                     {"path": str(db)})
+            return
+        try:
+            conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                mesure = a1n.mesurer(conn)
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "warning",
+                     f"Base phase2 illisible pour la mesure ({type(exc).__name__})", {})
+            return
+        if mesure is None:
+            self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "warning",
+                     "Une annonce, un numero : NON MESURABLE (table manquante) -- ce n'est pas un zero",
+                     {})
+        elif mesure["graves"] > 0:
+            self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "critical",
+                     f"Annonces avec deux numeros, numeros croises ou hors plage : "
+                     f"{mesure['graves']} (seuil 0)", mesure)
+        else:
+            self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "ok",
+                     f"Une annonce, un numero : 0 ecart sur {mesure['supabase']} "
+                     f"({mesure['en_attente']} en attente de Hektor)", mesure)
 
     def check_sqlite_files(self) -> None:
         sqlite_specs = [

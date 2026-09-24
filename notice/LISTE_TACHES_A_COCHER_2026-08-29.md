@@ -206,10 +206,14 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   controle test_c9b_annonce_un_numero.py : 13/13, dans les deux sens ;
                   mutations : sans le cas D1 -> ECHEC ; sans conversion -> ECHEC
                   (la 1re mutation ne faisait RIEN echouer : test complete)
-                  ⚠ PAS BRANCHE, EXPRES : une seule nouveaute par nuit (C.9-a).
-                  Le 25/09, APRES la verif de C.9-a : 1 ligne dans la liste des
-                  sondes (check_gti_health.py l. 1094) + 1 controle dans
-                  quality_checks.py. Alors seulement : [x]
+                  BRANCHE le 24/09 sur la SONDE DE SANTE (data.annonce_un_numero,
+                  critique, seuil 0) : en service, « 0 ecart sur 13432 ».
+                  Prouvee par la VRAIE methode : sain -> ok, double fabrique ->
+                  critical ; module absent -> avertissement, pas de plantage.
+                  ⚠ PAS dans quality_checks, EXPRES : c'est une etape OBLIGATOIRE
+                    du run -- une requete qui planterait (table absente)
+                    arreterait tout le run, pour une trace qui n'ajoute rien.
+                  [x] des que la sonde a tourne une nuit sans fausse alerte.
               [ ] C.9-c le push n'efface plus une annonce nee dans l'app  go
               [ ] C.9-d registre des cles de relation (doublure)          additif
               [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
