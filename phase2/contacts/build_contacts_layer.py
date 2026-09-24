@@ -305,6 +305,16 @@ _NUMERO_MIROIR: dict[str, str] = {}
 PLAGE_NUMEROS_APP = 10_000_000
 
 
+# ⚠ SI TU LANCES CE SCRIPT A LA MAIN, HORS DU RUN : ENCHAINE AVEC
+#       python phase2/contacts/elargir_perimetre_console.py
+#   Le build remet l'eligibilite a ce que SA regle dit (59 230 au 24/09) ;
+#   c'est elargir_perimetre_console qui repose ensuite les personnes citees
+#   par Hektor (+2 763). Entre les deux, la couche est incomplete : un push
+#   joue dans cet intervalle prendrait ces 2 763 pour des disparues et LES
+#   SUPPRIMERAIT de Supabase.
+#   Dans le run de nuit l'ordre est correct (etape 8 puis 17). A la main, il
+#   s'oublie -- constate DEUX FOIS en 24 h, les 23 et 24/09.
+
 def charger_identites_app(conn: sqlite3.Connection) -> int:
     """Charge la correspondance numero Hektor -> identite de l'app.
 
