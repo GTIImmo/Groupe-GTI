@@ -10,8 +10,9 @@ OU ON EST, EN TROIS NIVEAUX
   L4            L4-a OK  L4-b OK  L4-b' OK  L4-c OK  C.9 EN COURS
   L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  (5) OK -- BASCULE FAITE 23/09 19h05
   C.9           a OK  b OK  c OK  e1 OK  e2 OK  e3 OK (eteint) -- ESSAI REEL OK 24/09
-                RUN DE JOUR lance 12:35, puis descente -- bilan a faire (C.9-a avant le
-                bootstrap, push C.9-c, sonde C.9-b) ; reste d puis f (preparent la coupure)
+                RUN DE JOUR 12:35 + descente : OK (1 numero des deux cotes, 0 ecart)
+                d CODE 24/09 soir (carnet des liens, doublure, dans le build) -- 1re nuit
+                25/09 ; reste D6 (go), puis f (go + copie) -- preparent la coupure
                 ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
   L4-c-bis      ✅ CORRIGE 24/09 (code e414fe0 + 23 fiches reparees 15:4x, go de Frederic)
                 repetition sur COPIE de la vraie base : registre -> build -> registre :
@@ -253,7 +254,32 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   run depuis le 24/09) ; PREUVE sur bd3ca5f (epingle,
                   pas HEAD) : il echoue ; vraies donnees en lecture : 0 a effacer, 0 a
                   epargner. [x] apres la nuit du 25/09.
-              [ ] C.9-d registre des cles de relation (doublure)          ⚠ LE BUILD
+              [~] C.9-d registre des cles de relation (doublure)          ⚠ LE BUILD
+                  CODE LE 24/09 (go de Frederic, « Oui ») -- EN SERVICE cette nuit.
+                  Table app_relation_registry (phase2.sqlite) = « le carnet des liens » :
+                  relation_key, contact, app_dossier_id, n° Hektor, role, source,
+                  recette_json (les entrees EXACTES du hache, prises dans add_relation
+                  AVANT la reecriture du role), first/last_seen, absent_depuis (jamais
+                  efface). Ecrit par le BUILD COMPLET seul (le cible marquerait tout
+                  disparu), dans un SAVEPOINT : une panne annule ses ecritures, le build
+                  continue. PERSONNE NE LE LIT avant C.9-f. Ligne « [carnet des liens] »
+                  dans le journal du build + summary.relation_registry.
+                  controle test_c9d_carnet_des_liens.py 19/19 ; PREUVE sur cdfeebb
+                  (epingle) : echoue ; 4 mutants, 3 attrapes (le 4e -- n° de bien non
+                  capte -- ne se voit que sur donnees : la repetition l'a verifie).
+                  REPETITION sur COPIE (VACUUM INTO), vrai build, 263 s, code 0 :
+                    167 486 liens notes, 0 sans note, recette rejouee = meme cle
+                    167 486 / 167 486 (100 %), 0 conflit d'ancre, 9 sans n° de bien
+                    (= la mesure), n° de bien = celui de la couche 167 477/167 477,
+                    role reecrit apres hachage : 71 799 (ce que le carnet sauve).
+                    5 cles changees = les 5 liens des contacts L4-c-bis (605495 ->
+                    10650350...) : attendu cette nuit, independant de C.9-d.
+                    vraie base et miroir intacts (taille + date).
+                  [ ] A COCHER apres la nuit du 25/09 : ligne du carnet au journal, carnet ~
+                      nombre de liens, 0 conflit, 0 sans recette.
+                  [ ] D6 (audit) : le recensement contacts_app_seuls n'expire rien
+                      (8 relations en double, table lue par personne) -- ecrit en base
+                      locale et touche le run -> go separe. PAS FAIT.
                   MESURE 24/09 : depuis la table, la cle ne se recalcule que pour
                   57 % des liens (95 683 / 167 477). Cause : build l. 1107 REECRIT le
                   role (mandant/proprietaire selon le n° de mandat) APRES le calcul de
@@ -315,6 +341,7 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                 25/09 jour    C.9-d (registre des relations, doublure) + C.9-e
                               (RPC + retour worker, interrupteur ETEINT)
                 nuit 25->26   run normal : prouve C.9-d
+                ⚠ AVANCE : C.9-d code le 24/09 soir -> sa 1re nuit est celle du 24->25
                 ✅ ESSAI REEL FAIT le 24/09 (choix de Frederic : l'essai PUIS le run)
                    « ESSAI C9 bis » creee dans l'app, compte formation, Estimation :
                    12:20:56 interrupteur allume · creation -> ligne 10 000 000, travail

@@ -173,6 +173,10 @@ naissance** — l'inverse exact de C.9. C.9-a ne le rattrape pas : il ne tourne 
 Puis **C.9-couple** *(son premier pas est une mesure)* et l'essai **26bis-TRANSACTIONS**.
 
 > **MISE À JOUR DU 24/09 (fin de matinée)** — l'ordre réellement suivi : **a → b → c → e → d → f**.
+>
+> **MISE À JOUR DU 24/09 (soir)** — **C.9-d est codé, le registre seulement** (`app_relation_registry`,
+> nourri dans `add_relation`, build complet seul, SAVEPOINT). **L'expiration du recensement (D6)
+> n'est PAS faite** : elle touche `contacts_app_seuls.py` et écrit en base locale → go séparé.
 > e passe avant d *(accord de Frédéric)* : d et f préparent la coupure, et **d doit vivre dans le
 > build** (la clé ne se recalcule que pour 57 % des liens depuis la table). **e s'est scindé en
 > trois pièces** après **D8** (voir §3) : e1 rafraîchissement, e2 worker, e3 création. a, b, c, e1,

@@ -813,12 +813,128 @@ def contact_id_from_payload(value: Any) -> str:
         first_non_empty(item.get("id"), item.get("id_contact"), item.get("contact_id")) or "")
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# C.9-d 24/09/2026 — LE CARNET DES LIENS (app_relation_registry), EN DOUBLURE
+# ═══════════════════════════════════════════════════════════════════════════
+# Audit : notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md (D5).
+#
+# L'identifiant d'un lien (relation_key) est FABRIQUE a partir de sa recette :
+# le contact, le numero HEKTOR du bien, le role, la source, la transaction. Le
+# jour ou un bien n'aura plus de numero Hektor (ne dans l'app, apres la coupure),
+# la recette ne pourra plus rien fabriquer. C.9-f la fera donc avec NOTRE numero
+# de bien -- et sans ce carnet, les 167 000 identifiants changeraient d'un coup.
+#
+# CE CARNET NOTE, pour chaque lien ECRIT, son identifiant et SA RECETTE EXACTE
+# (celle qui a servi au hache), plus notre numero de bien. C.9-f y lira
+# l'identifiant fige d'un lien deja connu. D'ici la, PERSONNE NE LE LIT : il
+# observe. Aucun identifiant ne change.
+#
+# ⚠ LA RECETTE EST PRISE A LA SOURCE, dans add_relation : le role est reecrit
+#   plus bas (mandant / proprietaire), et relire la table ne retrouve
+#   l'identifiant que pour 57 % des liens (mesure du 24/09).
+# ⚠ SEUL LE BUILD COMPLET l'ecrit : le build cible ne voit qu'une poignee de
+#   liens, et marquerait « disparus » tous les autres.
+# ⚠ IL NE PEUT PAS FAIRE TOMBER LE BUILD : tout se passe dans un SAVEPOINT ; a la
+#   moindre erreur, ses ecritures sont annulees et le build continue.
+# RETOUR ARRIERE : retirer l'appel dans build_contacts_layer ; DROP TABLE app_relation_registry.
+_ANCRES_RELATIONS: dict[str, dict[str, Any]] = {}
+
+REGISTRE_RELATIONS_DDL = """
+CREATE TABLE IF NOT EXISTS app_relation_registry (
+    relation_key      TEXT PRIMARY KEY,
+    contact_id        TEXT NOT NULL,
+    app_dossier_id    INTEGER,
+    hektor_annonce_id TEXT,
+    role              TEXT,
+    source            TEXT,
+    recette_json      TEXT NOT NULL,
+    first_seen_at     TEXT NOT NULL,
+    last_seen_at      TEXT NOT NULL,
+    absent_depuis     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_relation_registry_ancre
+    ON app_relation_registry(contact_id, app_dossier_id, role, source);
+"""
+
+
+def enregistrer_registre_relations(
+    conn: sqlite3.Connection, cles_ecrites: list[str], refreshed_at: str, complet: bool,
+) -> dict[str, Any]:
+    """Consigne dans le carnet les liens reellement ecrits. Ne leve JAMAIS."""
+    try:
+        conn.execute("SAVEPOINT registre_relations")
+    except sqlite3.Error as exc:
+        print(f"[carnet des liens] non ouvert ({type(exc).__name__}) -- le build continue")
+        return {"statut": "erreur", "erreur": type(exc).__name__}
+    try:
+        for instruction in REGISTRE_RELATIONS_DDL.strip().split(";"):
+            if instruction.strip():
+                conn.execute(instruction)
+        lignes = []
+        sans_recette = 0
+        for cle in cles_ecrites:
+            ancre = _ANCRES_RELATIONS.get(cle)
+            if ancre is None:
+                sans_recette += 1
+                continue
+            recette = ancre["recette"]
+            lignes.append((
+                cle, recette["contact_id"], ancre["app_dossier_id"], recette["annonce_id"],
+                recette["role"], recette["source"],
+                json.dumps(recette, ensure_ascii=True, sort_keys=True, separators=(",", ":")),
+                refreshed_at, refreshed_at))
+        avant = conn.execute("SELECT COUNT(*) FROM app_relation_registry").fetchone()[0]
+        conn.executemany(
+            "INSERT INTO app_relation_registry (relation_key, contact_id, app_dossier_id, "
+            "hektor_annonce_id, role, source, recette_json, first_seen_at, last_seen_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(relation_key) DO UPDATE SET last_seen_at = excluded.last_seen_at, "
+            "absent_depuis = NULL, "
+            "app_dossier_id = COALESCE(app_relation_registry.app_dossier_id, excluded.app_dossier_id)",
+            lignes)
+        apres = conn.execute("SELECT COUNT(*) FROM app_relation_registry").fetchone()[0]
+        absentes = 0
+        if complet:
+            absentes = conn.execute(
+                "UPDATE app_relation_registry SET absent_depuis = ? "
+                "WHERE absent_depuis IS NULL AND last_seen_at < ?",
+                (refreshed_at, refreshed_at)).rowcount or 0
+        conflits = conn.execute(
+            "SELECT COUNT(*) FROM (SELECT 1 FROM app_relation_registry "
+            " WHERE absent_depuis IS NULL AND app_dossier_id IS NOT NULL "
+            " GROUP BY contact_id, app_dossier_id, role, source, "
+            "          json_extract(recette_json, '$.transaction_type'), "
+            "          json_extract(recette_json, '$.transaction_id') "
+            " HAVING COUNT(*) > 1)").fetchone()[0]
+        sans_dossier = conn.execute(
+            "SELECT COUNT(*) FROM app_relation_registry "
+            "WHERE absent_depuis IS NULL AND app_dossier_id IS NULL").fetchone()[0]
+        conn.execute("RELEASE registre_relations")
+        bilan = {"statut": "ok", "ecrits": len(lignes), "nouveaux": apres - avant,
+                 "disparus_marques": absentes, "carnet": apres, "ancres_en_conflit": conflits,
+                 "sans_numero_de_bien": sans_dossier, "sans_recette": sans_recette,
+                 "complet": complet}
+        print(f"[carnet des liens] {len(lignes)} liens notes, {apres - avant} nouveaux, "
+              f"{absentes} marques disparus, conflits {conflits}, sans numero de bien {sans_dossier}, "
+              f"sans recette {sans_recette} (carnet : {apres})")
+        return bilan
+    except Exception as exc:
+        try:
+            conn.execute("ROLLBACK TO registre_relations")
+            conn.execute("RELEASE registre_relations")
+        except sqlite3.Error:
+            pass
+        print(f"[carnet des liens] ERREUR ({type(exc).__name__}) -- ecritures annulees, le build continue")
+        return {"statut": "erreur", "erreur": type(exc).__name__}
+
+
 def load_relations(
     hektor_conn: sqlite3.Connection,
     phase2_conn: sqlite3.Connection,
     contact_ids: Iterable[str] | None = None,
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, set[str]]]:
     contact_filter = set(normalize_contact_ids(contact_ids or []))
+    _ANCRES_RELATIONS.clear()  # C.9-d : les recettes de CETTE lecture seulement
     # ── G-14, 23/09/2026 : DEUX TAMIS, PARCE QU'IL Y A DEUX LANGUES ─────────
     # `contact_filter` sert aux requetes SQL ci-dessous, qui interrogent LE
     # MIROIR : il doit rester en numeros de Hektor (refresh_contact_slice lui
@@ -883,16 +999,20 @@ def load_relations(
             return
         dossier = dossier_by_annonce.get(annonce_id)
         source_identity = relation_source if clean_text(transaction_id) else "non_transaction"
-        relation_key = stable_hash(
-            {
-                "contact_id": contact_id,
-                "annonce_id": annonce_id,
-                "role": role,
-                "source": source_identity,
-                "transaction_type": transaction_type,
-                "transaction_id": transaction_id,
-            }
-        )[:24]
+        # C.9-d : la MEME recette qu'avant, nommee pour pouvoir la noter.
+        recette = {
+            "contact_id": contact_id,
+            "annonce_id": annonce_id,
+            "role": role,
+            "source": source_identity,
+            "transaction_type": transaction_type,
+            "transaction_id": transaction_id,
+        }
+        relation_key = stable_hash(recette)[:24]
+        _ANCRES_RELATIONS[relation_key] = {
+            "recette": recette,
+            "app_dossier_id": dossier["app_dossier_id"] if dossier else None,
+        }
         relation_by_key[relation_key] = {
             "relation_key": relation_key,
             "hektor_contact_id": contact_id,
@@ -1954,6 +2074,10 @@ def build_contacts_layer(
         assign_search_ids(phase2_conn, search_rows, refreshed_at)
         replace_table_rows(phase2_conn, "app_contact_current", contact_rows, refreshed_at)
         replace_table_rows(phase2_conn, "app_contact_relation_current", relation_flat_rows, refreshed_at)
+        # C.9-d : le carnet des liens, en doublure. Ne leve jamais.
+        carnet_des_liens = enregistrer_registre_relations(
+            phase2_conn, [row["relation_key"] for row in relation_flat_rows], refreshed_at,
+            complet=not limit)
         replace_table_rows(phase2_conn, "app_contact_search_current", search_rows, refreshed_at)
         replace_table_rows(phase2_conn, "app_contact_duplicate_group_current", group_rows, refreshed_at)
         replace_table_rows(phase2_conn, "app_contact_duplicate_member_current", member_rows, refreshed_at)
@@ -1971,6 +2095,7 @@ def build_contacts_layer(
             "transaction_relations_total": sum(1 for row in relation_flat_rows if row.get("transaction_id")),
             "contacts_with_relation": len(relation_rows),
             "relations_skipped_missing_contact": skipped_missing_contact_relations,
+            "relation_registry": carnet_des_liens,
             "searches_total": len(search_rows),
             "active_searches_total": sum(int(row["is_active"]) for row in search_rows),
             "contacts_with_active_search": sum(1 for count in active_search_counts.values() if count),
