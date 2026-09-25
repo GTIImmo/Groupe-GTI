@@ -187,6 +187,53 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 >   401/403/429/503, session morte, connexion refusée. Un **500 ou un timeout isolé** continue
 >   de passer sans rien conclure. Ce qui est déjà trouvé **est quand même enfilé**.
 >   Garde-fou `Console/test_frein_detection.js` *(15 contrôles, prouvé au rouge deux fois)*.
+> ⭐⭐ **25/09 SOIR — L'AJOUT DEVIENT AUTONOME (lots 1, 2a, 2b faits, DORMANTS).**
+>   *Remarque de Frédéric : « les documents photos attendent toujours une confirmation de
+>   Hektor avant de sauvegarder, contrairement au reste du dev comme contact ». Exact.*
+>   Contacts, annonces et recherches ont leur couche optimiste ; **documents et photos
+>   étaient les deux SEULES entités à exiger Hektor pour exister**. À la coupure, ajouter
+>   un document depuis l'app aurait **cessé de fonctionner** — absent des 3 exceptions.
+>   **L'INVERSION** : notre serveur d'abord, Hektor ensuite. Si Hektor ne répond pas, le
+>   document existe quand même — dans l'app et chez nous.
+>   · **lot 1** (`7428303`) : base *(3 colonnes + index partiel × 2 tables, appliquées)* +
+>     `completerEnvoiDocumentDiffere`. L'envoi Hektor **extrait et partagé** ; l'ordre du
+>     chemin d'origine **préservé à l'identique**. 18 contrôles, rouge prouvé 2×.
+>   · **lot 2a** (`db5c38c`) : la jumelle photo. ⚠ Préalable levé : `hektor_photo_id` était
+>     **NOT NULL** — l'app ne pouvait pas créer une photo avant l'envoi. Contrainte retirée,
+>     unicité conservée *(les NULL y sont distincts)*, 1 397 photos intactes. 25 contrôles.
+>   · **lot 2b** (`ec838b2`) : `Console/reprendre_envois_hektor.js`. **Il ne s'acharne pas** —
+>     respiration 15 min, pas de repose par-dessus une file, et un échec de +24 h est
+>     **signalé et sort en 1**. Le tri est une fonction pure. 14 contrôles.
+>   ⚠⚠ **VÉRIFIÉ AVANT D'ÉCRIRE, c'était le risque qui pouvait tout arrêter** : une ligne
+>   **sans numéro Hektor SURVIT à la synchro de nuit**. Les deux nettoyages ne suppriment
+>   que des lignes qui *ont* un numéro Hektor devenu obsolète.
+> ⛔ **LOT 2c BLOQUÉ SUR UN PRÉALABLE DE SÉCURITÉ (25/09 au soir)** : le front n'a que
+>   **SELECT** sur `app_console_document` et `app_console_photo` — il ne peut créer qu'un
+>   *travail*. **C'est précisément pourquoi le schéma est « Hektor d'abord ».** Il faut une
+>   **RPC SECURITY DEFINER** *(patron de la signature manuscrite)* qui crée la ligne pour le
+>   front — **et qui vérifie que le négociateur a accès à l'annonce**, sinon n'importe qui
+>   dépose un document sur n'importe quel bien. **À faire de tête reposée.**
+> ✅ **ET LA FUITE EST BOUCHÉE** (`c95cb9b`) : une photo ajoutée depuis l'app est enfin
+>   **gardée sur le serveur** (+ Supabase si l'annonce est vivante), comme les documents le
+>   font depuis des mois. Best-effort et bruyant : lever ferait rejouer le travail donc
+>   **renvoyer la photo**, et Hektor en aurait deux. Explique les 42 photos « en attente ».
+> ✅ **MATTERPORT** (`80676d0` + patch appliqué) : 4 484 groupes portent nos deux numéros,
+>   **0 incohérence**, l'identifiant **intact** *(les 5 049 scans y pendent)*, et le run le
+>   recalcule à chaque passage. ⚠ Il ne parle JAMAIS à Hektor — vérifié.
+> ⭐ **PHOTOS — le rapatriement est prêt** (`3c17057` + `f27f9b5`) : **444 431 photos**, dont
+>   **435 166 à faire**, **~110 Go**, **~7 h** à 17/s. ⚠⚠ **LES ADRESSES SONT DÉJÀ CHEZ NOUS**
+>   (miroir local, `hektor_annonce_detail.images_json`) → **le rapatriement ne touche JAMAIS
+>   Hektor** et peut tourner en parallèle du rattrapage documents. *(Les « 13 nuits de quota »
+>   que j'annonçais n'existent pas — je n'avais pas appliqué la règle « chercher d'abord en
+>   local ».)* Calibré sur 900 téléchargements, **0 refus**. ⚠ **Échéance : AVANT la coupure**,
+>   après quoi le CDN ne sert plus rien. ➡ `notice/AUDIT_PHOTOS_2026-09-25.md`
+> ⚠⚠ **ET LA LEÇON DU JOUR, écrite parce qu'elle se répétera** : j'ai corrigé l'empreinte
+>   documentaire le matin *(numéro Hektor seul)*, puis écrit l'après-midi un script créant
+>   435 126 lignes **avec le seul numéro Hektor**. *« Comment as-tu pu oublier alors qu'on a
+>   tout fait pour que tu ne perdes pas le fil ? »* → **j'applique la règle quand j'INSPECTE
+>   l'existant, pas quand j'ÉCRIS.** Les garde-fous du projet sont tous tournés vers l'audit.
+>   **Il manque une sonde nocturne** : « une table porte-t-elle un numéro Hektor sans le
+>   nôtre ? ». ➡ `notice/AUDIT_DEUX_NUMEROS_PARTOUT_2026-09-25.md`
 > ⛔ **IL RESTE :**
 >   ③ **relancer le rattrapage** — `enqueue_empreinte_lot.js`, lots de 3 000, archive →
 >      historique → brouillon. **~61 h.** *(go de Frédéric obligatoire)*
