@@ -1005,6 +1005,88 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 
 ## 10. D — RAPATRIER LES FICHIERS *(irréversible)*
 ```
+[~] D.0   LA REDESCENTE DES DOCUMENTS -- EN COURS DE REPRISE DEPUIS LE 25/09
+    ================================================================================
+    ETAT AU 25/09 AU SOIR -- 4 correctifs faits, le rattrapage est programme.
+
+    [x] D.0-a  LE MANDAT SIGNE ETAIT REMPLACE PAR SON ANNEXE        f92ec50
+          Sous le nom « Mandat », 88 annonces n'affichaient que l'ANNEXE (197 ko)
+          ou le BAREME : l'archive ImmoSign contient DEUX pdf et extractPdfFromZip
+          prenait LE PREMIER. Correctif 19d7a33 prouve sur 120 archives reelles
+          (ancienne version : 28 annexes choisies ; nouvelle : 0).
+          Rattrapage passe par Frederic : 88/88, 0 restant, moyenne 1,00 Mo,
+          0 ecart taille <-> metadonnee. L'ancien pdf est garde (annexe_ecartee).
+          ⚠ Console/rattrapage_mandat_signe.js exige un PowerShell ADMINISTRATEUR.
+
+    [x] D.0-b  L'EMPREINTE N'AVAIT AUCUN NUMERO DE L'APP            3f2c203
+          app_console_document_fingerprint est LE CARNET DU RATTRAPAGE. Elle etait
+          la SEULE table de la chaine sans app_dossier_id (sa cle primaire EST
+          hektor_annonce_id) et absente de REPOINT_TABLES, alors que document,
+          photo et job y sont. Une ligne laissee sous un dossier fantome ferait
+          refaire le travail.
+          ⚠ GARDE DE FREDERIC : « ne pas casser les workers qui ont besoin des id
+          hektor ». Tout est ADDITIF -- cle de conflit inchangee, numero Hektor
+          toujours envoye, 3 autres points d'appel intacts. Patch applique :
+          17 149/17 149, 0 incoherence. Garde-fou test_empreinte_numero_app.js.
+
+    [x] D.0-c  LA DETECTION LISAIT HEKTOR SANS FREIN                b04cb13
+          enqueue_console_sync_jobs.js utilisait un fetch NU : 0 ms entre 3 lectures
+          (mesure) et un 403 avale puis « continue » -- la mecanique exacte du
+          bannissement du 20/08. Desormais meme frein que le worker, par LES MEMES
+          variables d'environnement, et ArretBalayage sur 401/403/429/503, session
+          morte, connexion refusee. Un 500 ou timeout isole passe toujours.
+          Garde-fou test_frein_detection.js (15 controles, prouve au rouge 2 fois).
+
+    [x] D.0-d  LA TACHE DE 23:00                            441b28e + 4b7ec8a
+          scheduled/run_rattrapage_documents.ps1 : un lot de 3 000 par nuit,
+          --scope auto (archive -> historique -> brouillon), quotidienne SANS date
+          de fin (choix de Frederic : une nuit sautee ne doit pas arreter le
+          rattrapage en silence). Elle POSE le lot, elle ne parle pas a Hektor.
+          Trois refus VISIBLES (codes 3 et 4 sortent en 1) : file non vide ·
+          >= 20 erreurs en 24 h · plus rien a faire.
+          ⚠ RESTE A INSTALLER PAR FREDERIC (elevation) :
+             & "C:\Hektor\Projet\scheduled\installer_tache_rattrapage.ps1"
+
+    [~] D.0-e  LE RATTRAPAGE LUI-MEME                       ~15 NUITS
+          ⚠ MA 1re MESURE ETAIT FAUSSE : « 97,3 %, rien a refaire » ne portait que
+          sur daily-cloud (13 437) alors que le parc fait 58 140. Releve par
+          Frederic. MEME CLASSE D'ERREUR QUE L5 : une liste partielle.
+                              total    fait    reste   nuits
+              archive        35 299   4 065   31 234     11
+              historique      8 920      26    8 894      3
+              brouillon         484       0      484      1
+              TOTAL          58 140  17 149   40 612     15
+          Essai reel de 10 le 25/09 : 10/10, 0 erreur, 3,1 s/annonce, et LES 10
+          EMPREINTES PORTENT NOTRE NUMERO (1re preuve du patch en reel).
+          ⚠⚠ LE MUR EST UN QUOTA DE VOLUME, PAS UN DEBIT (memoire, 20/08) :
+          13 000-17 000 requetes par periode. 3 000 annonces x ~3 req = ~9 000,
+          40 % sous le seuil. C'est LA REGLE DE FREDERIC du 20/08.
+          ⚠ Sa prudence « 2 000/jour les 3 premiers jours » N'EST PAS appliquee
+          -- question posee le 25/09, sans reponse : la tache est a 3 000.
+          SUIVI : node Console/enqueue_empreinte_lot.js --scope auto --dry-run
+          FIN : quand il repond rien_a_faire -> retirer la tache, allumer D.0-g.
+
+    [ ] D.0-f  LE PIPELINE N'APPELLE JAMAIS --detect
+          run_full_pipeline.ps1:1033 lance --scope daily-cloud SANS --detect : le
+          drapeau ajoute tel quel empilerait les 13 437 chaque nuit. ⚠⚠ ET UN
+          BALAYAGE DU PARC ENTIER COUTE 56 867 REQUETES = 4x LE SEUIL (memoire) :
+          la detection quotidienne doit rester PLAFONNEE.
+          Et l'etape est BLOQUANTE (throw) alors que ses voisines fragiles sont en
+          Invoke-OptionalStepWithRetry : une session morte tuerait Matterport, les
+          liens publics de RDV, la vitrine et l'export Android.
+
+    [ ] D.0-g  FREDERIC : allumer -EnqueueConsoleDocuments dans run_quotidien.ps1
+          APRES le rattrapage. Le run quotidien n'aura plus que les mises a jour.
+
+    ▫ petit : 53 documents sur 4 annonces (49540, 33151, 61654, 35884) portent un
+      app_dossier_id absent des 4 index.
+    ✅ verifie sain : les 4 series d'index partagent UNE SEULE numerotation,
+      0 collision sur 58 140 ; documents et photos portent les deux numeros a
+      100 % ; le front lit par app_dossier_id ; les actions Hektor par
+      hektor_annonce_id.
+    ➡ notice/AUDIT_RATTRAPAGE_DOCUMENTS_2026-09-25.md
+    ================================================================================
+    (enonce d'origine, garde pour memoire)
 [ ] D.0   LA REDESCENTE DES DOCUMENTS EST ARRETEE DEPUIS LE 23/08   <-- LE PLUS URGENT
         ⭐ CONFIRME LE 25/09 par la base : dernier sync_console_documents le
           23/08 a 16 h 09, soit 33 JOURS. 0 travail en erreur : c'est ARRETE,
