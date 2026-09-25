@@ -75,6 +75,52 @@ C'est un des trois gestes de `L5`, chiffré 2-3 j.
 | **`L9`** registre des mandats | ⚠ **avant** la coupure, il se remplit depuis le miroir |
 | **`A.1` / `A.2`** portails, signature | **à zéro** — ils fixent la date |
 
+## 3bis. LA REVUE DES ÉCRANS — faite le 25/09 dans l'app connectée
+
+*Frédéric a donné l'accès à sa session. Revue en lecture seule : rien n'a été modifié.*
+⚠ **Rappel de cadrage, posé par Frédéric : ces chantiers sont INDÉPENDANTS DE L'AUTONOMIE.**
+C'est du confort d'écran, pas de la coupure. Important à savoir, mais à ne pas confondre avec
+`D.0`, les photos, `L9`, `A.1` ou `A.2`.
+
+| écran | verdict |
+|---|---|
+| **Cockpit V2** *(fiche annonce)* | ✅ **en service et complet.** Parcours « Vie du mandat » en 5 étapes, bandeau d'état, actions. **Les 11 rubriques sont au nouveau style** : Le Bien · Publicité · Rapprochement · Rendez-vous · Contact, puis 6 sous « Autres rubriques » *(Média et Documents · Mandat · Estimation · Affaires · Historique · Reporting mandant)* |
+| **Mandat V3** | ✅ **en service et complet.** Cycle de vie *(Numéro · Édité · Envoyé · Signé · Validé)*, montant, type, jours restants, tous les champs, Mandants, Avenant, Annulation, Historique, Nouveau mandat |
+| **Fiche contact V2** | ✅ **en service, ET les deux « restes » sont faits** : le bloc « À faire / Planifier une relance » **et** l'agrégateur « Activité & relation » *(Tout · Annonce · RDV · Emails · Rapprochements · Transactions · Relances)* |
+| **Listing Estimations** | ✅ **déployé** — « Futurs mandats potentiels », 12 704 estimations |
+| **Annuaire contacts** | ✅ déployé *(grille, qualité, filtres)* |
+| **Création optimiste** | ✅ allumée |
+
+➡ **Aucun de ces chantiers n'est inachevé à l'écran.** Ce que les notes disaient « restant »
+était fait depuis un moment.
+
+### Le seul vrai manque trouvé : l'avenant ne sait pas prolonger
+
+La section « **Avenant & baisse de prix** » existe, avec son bouton « Préparer avenant ».
+**Mais l'écran le dit lui-même** :
+
+> *« Éditer un avenant. Possible car le mandat est validé — l'avenant reprend le mandat, vous
+> ne saisissez que **le nouveau prix**. »*
+
+➡ **L'avenant change le PRIX. Il ne prolonge pas** *(dates, durée)*. Sur la fiche examinée, le
+mandat expirait **dans 19 jours** : pour le prolonger, il faut ouvrir Hektor. C'est exactement
+ce que décrit `E.0-bis`, et c'est l'un des trois gestes de `L5`.
+
+### Deux anomalies d'affichage, confirmées à l'écran
+- l'annuaire annonce **170 494 contacts** — un instantané du 06/06 ; la base en compte 62 003
+  éligibles ;
+- les **deux fiches d'essai du 18/09** sont toujours affichées « En création… ».
+
+## 3ter. Ce que cette revue m'apprend sur ma propre mémoire
+
+⚠ **Les FICHIERS de mémoire étaient justes. C'est leur RÉSUMÉ qui était faux.**
+`cockpit-v2-merge-prod.md` disait, en toutes lettres et depuis le 20/07 : *« cockpit ACTIVÉ EN
+PROD »*. Mais sa ligne `description:` — et donc l'index `MEMORY.md`, le seul que je lis au
+démarrage — disait encore *« flag OFF »*.
+
+➡ **Je me suis fié à l'index au lieu d'ouvrir le fichier.** Les six résumés ont été corrigés le
+25/09, et chaque fichier porte désormais le constat daté de cette revue.
+
 ## 4. La leçon
 
 **« Zéro erreur » n'est pas « terminé ».** Mesurer les travaux en échec dit seulement que rien
