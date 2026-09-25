@@ -4794,16 +4794,42 @@ function extractPdfFromZip(buf) {
     if (buf.readUInt32LE(off) !== 0x02014b50) break;
     const method = buf.readUInt16LE(off + 10);
     const compSize = buf.readUInt32LE(off + 20);
+    const uncompSize = buf.readUInt32LE(off + 24); // 25/09 : sert a choisir le BON pdf
     const nameLen = buf.readUInt16LE(off + 28);
     const extraLen = buf.readUInt16LE(off + 30);
     const commentLen = buf.readUInt16LE(off + 32);
     const lhOff = buf.readUInt32LE(off + 42);
     const name = buf.toString("utf8", off + 46, off + 46 + nameLen);
-    files.push({ name, method, compSize, lhOff });
+    files.push({ name, method, compSize, uncompSize, lhOff });
     off += 46 + nameLen + extraLen + commentLen;
   }
   if (!files.length) throw new Error("ZIP sans fichier");
-  const pick = files.find((f) => /\.pdf$/i.test(f.name)) || files[0];
+  // ── 25/09/2026 : ON PRENAIT L'ANNEXE A LA PLACE DU MANDAT ──────────────────
+  // L'archive d'une procedure ImmoSign contient DEUX PDF : le document signe et
+  // son annexe (« informations precontractuelles » ou le bareme d'honoraires).
+  // L'ancien code prenait LE PREMIER -- et l'annexe y precede souvent le mandat.
+  // Resultat, mesure du 25/09 : 85 documents sur 280 (83 annonces) affichaient
+  // l'ANNEXE sous le nom « Mandat ». Constate a l'ecran par Frederic, puis
+  // verifie en ouvrant les PDF (3 pages de bareme / 8 pages d'annexe au lieu du
+  // mandat de 11 pages).
+  //
+  // LA REGLE : le PLUS GROS pdf. Les noms sont ALEATOIRES (mandatGras_…,
+  // mandat1870_…, BALTUSdupl_…, ANNEXEMAND_…) : on ne peut pas choisir dessus.
+  // MESURE SUR LES 279 ARCHIVES DU SERVEUR, 266 ayant 2 pdf ou plus :
+  //     264  le plus PETIT s'appelle ANNEXE/BAREME
+  //       0  le plus GROS s'appelle ainsi      <- la regle ne se trompe jamais
+  //   rapport de taille gros/petit : 1,84x au minimum, 4,5x median
+  //   aucune archive sous 1,5x : le choix n'est JAMAIS serre.
+  // Le nom ne sert donc que de FILET, jamais de critere principal.
+  const pdfs = files.filter((f) => /\.pdf$/i.test(f.name));
+  let pick;
+  if (pdfs.length > 1) {
+    const utiles = pdfs.filter((f) => !/(annexe|bareme)/i.test(f.name));
+    const candidats = utiles.length ? utiles : pdfs;
+    pick = candidats.reduce((a, b) => ((b.uncompSize || b.compSize || 0) > (a.uncompSize || a.compSize || 0) ? b : a));
+  } else {
+    pick = pdfs[0] || files[0];
+  }
   const lh = pick.lhOff;
   if (buf.readUInt32LE(lh) !== 0x04034b50) throw new Error("ZIP local header invalide");
   const dataStart = lh + 30 + buf.readUInt16LE(lh + 26) + buf.readUInt16LE(lh + 28);
