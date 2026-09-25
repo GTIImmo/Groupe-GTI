@@ -7475,22 +7475,108 @@ async function handleGenerateCadastreDocument(job) {
   };
 }
 
-async function handleUploadDocumentToHektor(job) {
-  const payload = safeJsonParse(job.payload_json);
-  const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
-  const tempPath = payload.temp_storage_path;
-  const filename = safeFilename(payload.original_filename, "document.pdf");
-  const visibility = payload.visibility === "shared" ? "shared" : "private";
+// LE CHEMIN DIFFERE : la ligne et le fichier existent AVANT Hektor.
+//
+// L'INVERSION tient en deux lignes : on ecrit sur NOTRE serveur d'abord, on previent
+// Hektor ensuite. Si Hektor ne repond pas, le document existe quand meme -- dans l'app
+// et chez nous. Aujourd'hui, sans ce chemin, il n'existerait nulle part.
+//
+// ⚠ IL NE LEVE JAMAIS sur un echec Hektor. Lever mettrait le travail en erreur et
+// ferait perdre de vue un document pourtant bien stocke. On marque « echec » sur la
+// ligne, on ecrit au journal, et un repassage le reprendra (l'index partiel
+// idx_app_console_document_envoi_a_faire est la pour ca).
+// ⛔ RESTE A FAIRE (lot 2) : le repassage lui-meme, et le front qui cree la ligne.
+async function completerEnvoiDocumentDiffere(job, dossier, payload) {
+  const lignes = await supabaseRequest(
+    `app_console_document?id=eq.${encodeURIComponent(String(payload.app_document_id))}&select=*&limit=1`,
+    { method: "GET" },
+  );
+  const ligne = Array.isArray(lignes) ? lignes[0] : null;
+  if (!ligne) throw new Error(`Document ${payload.app_document_id} introuvable`);
+  if (!ligne.storage_path) throw new Error(`Document ${payload.app_document_id} sans fichier`);
+
+  const filename = safeFilename(ligne.document_name || payload.original_filename, "document.pdf");
+  const visibility = ligne.visibility === "shared" ? "shared" : "private";
+  const fichier = await downloadStorageObject(ligne.storage_path);
+
+  // ① NOTRE SERVEUR D'ABORD. C'est l'inversion.
+  const garde = await persistProvidedDocumentFile(ligne, fichier.buffer, fichier.mimeType,
+    { cloud: shouldKeepCloud(dossier) });
+
+  // ② HEKTOR ENSUITE, et son silence n'efface rien.
+  const maintenant = new Date().toISOString();
+  try {
+    await ensureHektorExecutionContext(job, dossier, payload,
+      { preferRequester: true, preferDossierOwner: true, required: true });
+    const envoi = await envoyerDocumentAHektor(dossier, {
+      buffer: fichier.buffer, mimeType: fichier.mimeType, filename, visibility,
+    });
+    if (!envoi.found) throw new Error(`Upload Hektor non confirme dans la liste documents: ${filename}`);
+
+    // ADOPTION : on pose le numero Hektor sur NOTRE ligne AVANT de reindexer, pour que
+    // l'indexation la reconnaisse et la complete au lieu d'en creer une seconde.
+    await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(ligne.id)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        hektor_document_id: envoi.found.hektor_document_id,
+        envoi_hektor_statut: "envoye",
+        envoi_hektor_erreur: null,
+        envoi_hektor_at: maintenant,
+        updated_at: maintenant,
+      }),
+    });
+    await upsertConsoleDocuments(dossier, envoi.entries);
+
+    await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id,
+      { reason: "upload_document_to_hektor", priority: 82 });
+    return {
+      app_document_id: ligne.id,
+      envoi_hektor: "envoye",
+      hektor_document_id: envoi.found.hektor_document_id,
+      copie_serveur: garde ? garde.local_path : null,
+    };
+  } catch (error) {
+    const motif = error && error.message ? error.message : String(error);
+    await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(ligne.id)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        envoi_hektor_statut: "echec",
+        envoi_hektor_erreur: motif.slice(0, 500),
+        envoi_hektor_at: maintenant,
+        updated_at: maintenant,
+      }),
+    });
+    await logJob(job.id, "upload_document_to_hektor", "running",
+      "Document garde chez nous, envoi Hektor en echec -- sera repris", {
+        app_document_id: ligne.id,
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        erreur: motif,
+      });
+    // PAS DE LEVEE : le document existe, il est chez nous, seul l'envoi a manque.
+    return {
+      app_document_id: ligne.id,
+      envoi_hektor: "echec",
+      envoi_hektor_erreur: motif,
+      copie_serveur: garde ? garde.local_path : null,
+    };
+  }
+}
+
+// L'ENVOI D'UN DOCUMENT CHEZ HEKTOR -- extrait le 25/09 pour etre PARTAGE par les deux
+// chemins (immediat et differe). Deux copies divergeraient au premier ajustement de
+// Hektor, et l'un des deux chemins enverrait alors un formulaire perime sans qu'on le voie.
+//
+// ⚠ IL NE LEVE PAS si le document n'est pas retrouve dans la liste : c'est a l'appelant
+// de decider. Le chemin immediat leve (comme avant), le chemin differe marque « echec »
+// et garde la ligne -- c'est toute la difference entre les deux.
+async function envoyerDocumentAHektor(dossier, { buffer, mimeType, filename, visibility }) {
   const publicValue = visibility === "shared" ? "2" : "0";
   const publicKey = visibility === "shared" ? "partage" : "privee";
   const idContentDiv = visibility === "shared" ? "listDocUpload_partage" : "listDocUpload_privee";
-
-  if (!tempPath) throw new Error("payload_json.temp_storage_path required");
-  const temp = await downloadStorageObject(tempPath);
   const id = encodeURIComponent(String(dossier.hektor_annonce_id));
-  const formUrl = `${XMLRPC_URL}?mode=UploadedDocument_uploadForm&type=bien&id_foreign=${id}&public=${publicValue}&publicKey=${publicKey}&idContentDiv=${idContentDiv}`;
-  await hektorFetch(formUrl);
+  await hektorFetch(`${XMLRPC_URL}?mode=UploadedDocument_uploadForm&type=bien&id_foreign=${id}&public=${publicValue}&publicKey=${publicKey}&idContentDiv=${idContentDiv}`);
 
   const form = new FormData();
   form.set("type", "bien");
@@ -7498,12 +7584,44 @@ async function handleUploadDocumentToHektor(job) {
   form.set("subType", "0");
   form.set("subId", "0");
   form.set("public", publicValue);
-  form.set("Filedata", new Blob([temp.buffer], { type: temp.mimeType }), filename);
+  form.set("Filedata", new Blob([buffer], { type: mimeType }), filename);
   await hektorFetch(`${ADMIN_URL}upload_uploadeddoc.php`, { method: "POST", body: form, headers: {} });
 
   const entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id);
+  const found = entries.find((entry) => entry.document_name === filename
+    || entry.document_name.includes(filename) || filename.includes(entry.document_name));
+  return { entries, found: found || null };
+}
+
+async function handleUploadDocumentToHektor(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+
+  // ⚠⚠ CHEMIN DIFFERE (25/09) : la ligne EXISTE DEJA, creee par l'app avec son fichier.
+  // C'est le modele des contacts, des annonces et des recherches -- les trois entites qui
+  // ont deja leur couche optimiste. Documents et photos etaient les seules a exiger une
+  // confirmation de Hektor pour exister. A la coupure, cela aurait arrete l'ajout.
+  // DORMANT : aucun appelant ne pose app_document_id tant que le front n'est pas bascule.
+  if (payload.app_document_id) {
+    return await completerEnvoiDocumentDiffere(job, dossier, payload);
+  }
+
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+  const tempPath = payload.temp_storage_path;
+  const filename = safeFilename(payload.original_filename, "document.pdf");
+  const visibility = payload.visibility === "shared" ? "shared" : "private";
+
+  if (!tempPath) throw new Error("payload_json.temp_storage_path required");
+  const temp = await downloadStorageObject(tempPath);
+
+  const envoi = await envoyerDocumentAHektor(dossier, {
+    buffer: temp.buffer, mimeType: temp.mimeType, filename, visibility,
+  });
+  const entries = envoi.entries;
+  // ⚠ ORDRE PRESERVE : l'indexation a lieu AVANT le controle de confirmation, exactement
+  // comme avant l'extraction. L'inverser changerait le comportement en cas d'echec.
   const indexed = await upsertConsoleDocuments(dossier, entries);
-  const found = entries.find((entry) => entry.document_name === filename || entry.document_name.includes(filename) || filename.includes(entry.document_name));
+  const found = envoi.found;
   if (!found) throw new Error(`Upload Hektor non confirme dans la liste documents: ${filename}`);
   const storedRow = indexed.find((row) => row.hektor_document_id === found.hektor_document_id);
   const stored = storedRow ? await persistProvidedDocumentFile(storedRow, temp.buffer, temp.mimeType, { cloud: shouldKeepCloud(dossier) }) : null;
