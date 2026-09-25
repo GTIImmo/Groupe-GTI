@@ -129,15 +129,27 @@ function choisir(pdfs) {
     } catch (e) { sansArchive += 1; continue; }
     const bon = choisir(contenu.files);
     if (!bon) { sansArchive += 1; continue; }
-    // deja le bon ? (meme taille que le pdf actuellement enregistre)
-    if (Number(sd.size) === Number(bon.uncompSize)) { dejaBon += 1; continue; }
-    aFaire.push({ ligne: l, sd, zipLocal, contenu, bon });
+    // ⚠ 25/09 : ON REGARDE LES DEUX COTES. Le premier essai a mis Supabase a jour
+    // mais PAS le fichier du serveur (mon catch avalait l'erreur en silence) :
+    // la metadonnee disait 1 359 168 o et le disque gardait l'annexe a 197 443 o.
+    // Une ligne est donc « a faire » si la metadonnee OU le fichier local est perime.
+    const metaPerimee = Number(sd.size) !== Number(bon.uncompSize);
+    const local = String(sd.local_archive_path || "");
+    let localPerime = false;
+    if (local) {
+      try { localPerime = !fs.existsSync(local) || fs.statSync(local).size !== Number(bon.uncompSize); }
+      catch (_) { localPerime = true; }
+    }
+    if (!metaPerimee && !localPerime) { dejaBon += 1; continue; }
+    aFaire.push({ ligne: l, sd, zipLocal, contenu, bon, metaPerimee, localPerime });
   }
 
   console.log(`\n  documents signes lus        : ${(lignes || []).length}`);
   console.log(`  deja le bon pdf             : ${dejaBon}`);
   console.log(`  sans archive exploitable    : ${sansArchive}`);
   console.log(`  ⚠ A RATTRAPER               : ${aFaire.length}`);
+  console.log(`      dont metadonnee perimee  : ${aFaire.filter((x) => x.metaPerimee).length}`);
+  console.log(`      dont fichier serveur     : ${aFaire.filter((x) => x.localPerime).length}`);
   if (!aFaire.length) { console.log("\nRien a faire."); return; }
 
   console.log("\n  (annonce)  actuel -> remplace par");
@@ -167,7 +179,16 @@ function choisir(pdfs) {
       });
       if (!up.ok) throw new Error(`storage ${up.status}`);
 
-      if (local) { try { fs.writeFileSync(local, pdf); } catch (_) { /* archive locale best-effort */ } }
+      // LE SERVEUR : on ecrit, PUIS ON VERIFIE. Une erreur n'est plus avalee --
+      // c'est exactement ce qui a masque l'echec du premier essai.
+      if (local) {
+        fs.mkdirSync(path.dirname(local), { recursive: true });
+        fs.writeFileSync(local, pdf);
+        const taille = fs.statSync(local).size;
+        if (taille !== pdf.length) throw new Error(`serveur : ${taille} o ecrits au lieu de ${pdf.length}`);
+      } else {
+        console.log(`\n  NOTE annonce ${x.ligne.hektor_annonce_id} : pas de chemin local connu, seul Supabase est mis a jour`);
+      }
 
       const md = x.ligne.metadata_json || {};
       await rest(`app_console_document?id=eq.${encodeURIComponent(x.ligne.id)}`, {
