@@ -28,10 +28,15 @@
 > L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
 >        (il se remplit depuis le MIROIR : impossible apres)
 >
-> ⚠⚠ DEUX TRAVAUX ONT UNE DATE DE PEREMPTION, pas seulement une priorite :
->    L9 (le registre se remplit depuis le miroir) ET C.9-couple (l. 624 : c'est le
->    seul moment ou l'on peut comparer NOTRE paire a celle de Hektor). Les deux
->    doivent etre finis AVANT la coupure, pas pendant.
+> ⚠⚠ TROIS TRAVAUX ONT UNE DATE DE PEREMPTION, pas seulement une priorite :
+>    · L9        le registre se remplit depuis le MIROIR
+>    · C.9-couple (l. 624) seul moment ou l'on peut comparer NOTRE paire a celle
+>                 de Hektor
+>    · LA VITRINE ET LES LIENS PUBLICS DE RDV (section 11bis) : les liens deja
+>                 DIFFUSES portent le numero Hektor. Il faut servir l'ancienne ET
+>                 la nouvelle forme EN PARALLELE pendant que Hektor vit --
+>                 un recouvrement, pas un remplacement.
+>    Les trois doivent etre finis AVANT la coupure, pas pendant.
 > hors lot  A.1 portails · A.2 signature · A.3 juridique  -> FIXENT LA DATE, a zero
 >           C.19 transactions · C.11 menage · B.3 · F.1 (apres la coupure)
 > ```
@@ -1125,6 +1130,54 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 [ ] E.3     les workers deviennent invisibles
 [ ] E.4     le jour J                                 distributeur a 100 000
 [ ] F.1     utilisateurs, roles et droits             APRES la coupure
+```
+
+## 11bis. LA VITRINE PUBLIQUE ET LES DEUX SYSTEMES DE RENDEZ-VOUS
+```
+⚠ SIGNALES PAR FREDERIC LE 25/09 -- ILS N'ETAIENT DANS AUCUN AUDIT, AUCUNE LISTE,
+  AUCUNE LIGNE DU PLAN. Pourtant ce sont DEUX ETAPES DU RUN DE NUIT :
+    « backfill appointment public links »   et   « android vitrine export and push »
+➡ notice/AUDIT_VITRINE_ET_RDV_2026-09-25.md
+
+CE QUI EST DEJA SAIN
+  · la vitrine est hebergee sur GitHub (gtiimmo.github.io) : l'HEBERGEMENT ne doit
+    rien a Hektor
+  · les 2 227 liens publics de RDV portent DEJA un jeton ET notre numero de bien
+    (100 %, 0 trou) -- et le service accepte DEJA le jeton comme « ref »
+  · les RDV Google (rapprochements) portent les DEUX numeros, bien et contact :
+    10/11 avec notre n° de bien, 8/11 avec notre n° de contact
+
+CE QUI CASSERA A LA COUPURE
+[ ] ① LA VITRINE FABRIQUE SES LIENS DE RDV AVEC LE NUMERO HEKTOR
+       export_project_vitrine.py, build_appointment_url() :
+       .../vitrine/rdv/index.html?ref={hektor_annonce_id}
+       ➡ exporter le JETON a la place. Il existe deja pour les 2 227 liens.  petit
+[ ] ② LE SERVICE DE RDV RETOMBE SUR HEKTOR AU DERNIER MOMENT
+       appointment_service.py l. 192-201 : le jeton est bien reconnu, mais le bien
+       est ensuite relu par hektor_annonce_id. Une annonce NEE DANS L'APP ne serait
+       donc trouvee NI par son numero NI par son jeton.
+       ➡ lire le bien par NOTRE numero quand le ref est un jeton.            petit
+[ ] ③ LA FICHE VISITE (PDF) EST PRODUITE PAR HEKTOR
+       build_listing_url() : gti-immobilier.fr/admin/pdf.php?...&idann=...
+       Ce n'est PAS un probleme d'identifiant : c'est un SERVICE qui disparait.
+       ➡ la produire nous-memes (l'app sait deja faire des PDF : estimation,
+         cadastre, mandat).                                                 moyen
+[ ] ④ un lien d'agenda vise le contact 603496, qui n'existe NULLE PART
+       (contact supprime chez Hektor -- pas un defaut de traduction)     minuscule
+
+⚠⚠ LA PRECAUTION QUI COMMANDE L'ORDRE : CES LIENS SONT PUBLICS. Ils ont ete
+   diffuses par QR code, par mail, sur des supports IMPRIMES. Changer leur forme
+   ne doit PAS casser ceux qui circulent deja.
+   ➡ l'ancienne forme (numero Hektor) doit continuer de repondre TANT QUE HEKTOR
+     VIT, et la nouvelle (jeton) etre servie EN PARALLELE.
+     C'EST UN RECOUVREMENT, PAS UN REMPLACEMENT.
+   ➡ et donc : ① et ② sont a faire AVANT la coupure, pas pendant.
+
+NON MESURE
+  · depuis quand les liens deja diffuses portent le numero Hektor, et combien
+    circulent aujourd'hui
+  · si la vitrine expose d'AUTRES liens vers Hektor que ces deux-la
+  · ce que devient le QR code d'un support deja imprime
 ```
 
 ## 12. CE QUI NE DÉPEND PAS DU CODE — et qui bloque la coupure
