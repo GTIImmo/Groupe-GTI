@@ -7726,9 +7726,125 @@ async function uploadHektorPhotoWithPlaywright(job, dossier, payload, filePath, 
   }
 }
 
+// LE CHEMIN DIFFERE POUR LES PHOTOS -- jumelle de completerEnvoiDocumentDiffere.
+//
+// Meme inversion : NOTRE serveur d'abord, Hektor ensuite. Si Hektor ne repond pas, la
+// photo existe quand meme -- dans l'app et chez nous. Aujourd'hui elle n'existerait
+// nulle part.
+//
+// ⚠ Prealable leve le 25/09 : app_console_photo.hektor_photo_id etait NOT NULL, ce qui
+// interdisait a l'app de creer une photo avant l'envoi. Contrainte retiree ; l'index
+// UNIQUE reste (en Postgres les NULL y sont distincts, donc plusieurs photos en attente
+// cohabitent), et le nettoyage de la synchro ignore les lignes sans numero Hektor.
+//
+// ⚠ IL NE LEVE JAMAIS sur un echec Hektor : la photo est chez nous, seul l'envoi a
+// manque. On marque « echec » et un repassage la reprendra.
+// DORMANT : rien ne pose app_photo_id tant que le front n'est pas bascule.
+async function completerEnvoiPhotoDifferee(job, dossier, payload) {
+  const lignes = await supabaseRequest(
+    `app_console_photo?id=eq.${encodeURIComponent(String(payload.app_photo_id))}&select=*&limit=1`,
+    { method: "GET" },
+  );
+  const ligne = Array.isArray(lignes) ? lignes[0] : null;
+  if (!ligne) throw new Error(`Photo ${payload.app_photo_id} introuvable`);
+  if (!ligne.storage_path) throw new Error(`Photo ${payload.app_photo_id} sans fichier`);
+
+  const filename = safeFilename(ligne.filename || payload.original_filename, "photo.jpg");
+  const fichier = await downloadStorageObject(ligne.storage_path);
+  const mimeType = String(ligne.mime_type || fichier.mimeType || "");
+  if (mimeType && !/^image\/(jpeg|jpg|png|webp|gif)$/i.test(mimeType)) {
+    throw new Error(`Type fichier photo refuse: ${mimeType}`);
+  }
+
+  // ① NOTRE SERVEUR D'ABORD. C'est l'inversion.
+  const garde = await persistProvidedPhotoFile(ligne, fichier.buffer, mimeType || fichier.mimeType,
+    { cloud: shouldKeepCloud(dossier) });
+
+  // ② HEKTOR ENSUITE, et son silence n'efface rien.
+  const maintenant = new Date().toISOString();
+  let local = null;
+  try {
+    await ensureHektorExecutionContext(job, dossier, payload,
+      { preferRequester: true, preferDossierOwner: true, required: true });
+    const avant = await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+    local = await writeTempUploadFile(fichier.buffer, filename);
+    const res = await uploadHektorPhotoWithPlaywright(job, dossier, payload, local.filePath, avant.length);
+    const entries = res.entries && res.entries.length
+      ? res.entries
+      : await fetchConsolePhotoEntries(dossier.hektor_annonce_id);
+    if (entries.length <= avant.length) {
+      throw new Error(`Upload photo Hektor non confirme dans la galerie: ${filename}`);
+    }
+    const dejaLa = new Set(avant.map((e) => String(e.hektor_photo_id)));
+    const neuve = entries.find((e) => !dejaLa.has(String(e.hektor_photo_id)));
+    if (!neuve) throw new Error(`Photo ajoutee introuvable dans la galerie: ${filename}`);
+
+    // ADOPTION : le numero Hektor sur NOTRE ligne AVANT de reindexer, pour que
+    // l'indexation la reconnaisse et la complete au lieu d'en creer une seconde.
+    await supabaseRequest(`app_console_photo?id=eq.${encodeURIComponent(ligne.id)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        hektor_photo_id: String(neuve.hektor_photo_id),
+        envoi_hektor_statut: "envoye",
+        envoi_hektor_erreur: null,
+        envoi_hektor_at: maintenant,
+        updated_at: maintenant,
+      }),
+    });
+    await upsertConsolePhotos(dossier, entries);
+
+    await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id,
+      { reason: "upload_hektor_photo", priority: 82 });
+    return {
+      app_photo_id: ligne.id,
+      envoi_hektor: "envoye",
+      hektor_photo_id: String(neuve.hektor_photo_id),
+      copie_serveur: garde ? garde.local_path : null,
+    };
+  } catch (error) {
+    const motif = error && error.message ? error.message : String(error);
+    await supabaseRequest(`app_console_photo?id=eq.${encodeURIComponent(ligne.id)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        envoi_hektor_statut: "echec",
+        envoi_hektor_erreur: motif.slice(0, 500),
+        envoi_hektor_at: maintenant,
+        updated_at: maintenant,
+      }),
+    });
+    await logJob(job.id, "upload_hektor_photo", "running",
+      "Photo gardee chez nous, envoi Hektor en echec -- sera repris", {
+        app_photo_id: ligne.id,
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        erreur: motif,
+      });
+    // PAS DE LEVEE : la photo existe, elle est chez nous, seul l'envoi a manque.
+    return {
+      app_photo_id: ligne.id,
+      envoi_hektor: "echec",
+      envoi_hektor_erreur: motif,
+      copie_serveur: garde ? garde.local_path : null,
+    };
+  } finally {
+    if (local) {
+      try { fs.unlinkSync(local.filePath); } catch (_) {}
+      try { fs.rmdirSync(local.tempDir); } catch (_) {}
+    }
+  }
+}
+
 async function handleUploadHektorPhoto(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
+
+  // ⚠⚠ CHEMIN DIFFERE : la ligne EXISTE DEJA, creee par l'app avec son fichier.
+  // DORMANT tant que le front ne pose pas app_photo_id.
+  if (payload.app_photo_id) {
+    return await completerEnvoiPhotoDifferee(job, dossier, payload);
+  }
+
   await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
   const tempPath = payload.temp_storage_path;
   const filename = safeFilename(payload.original_filename, "photo.jpg");

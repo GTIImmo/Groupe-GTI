@@ -153,6 +153,83 @@ function charger(hektorEchoue) {
     (src.match(/envoyerDocumentAHektor\(/g) || []).length >= 3,
     "un des chemins ne l'utilise pas");
 
+  // ═══ ⑥ LA JUMELLE POUR LES PHOTOS ═══════════════════════════════════════
+  const blocPhoto = tranche("async function completerEnvoiPhotoDifferee(");
+  if (!blocPhoto) {
+    controle("(s) le chemin differe photo est dans le worker", false, "introuvable");
+  } else {
+    function chargerPhoto(hektorEchoue) {
+      const journal = [];
+      const patches = [];
+      const faux = {
+        supabaseRequest: async (chemin, options) => {
+          if (!options || options.method === "GET") {
+            journal.push("lecture_ligne");
+            return [{ id: "pho-1", hektor_annonce_id: "62087", filename: "salon.jpg",
+                      storage_path: "annonces/62087/photos/pho-1/salon.jpg",
+                      mime_type: "image/jpeg", metadata_json: {} }];
+          }
+          journal.push("patch_ligne");
+          patches.push(JSON.parse(options.body));
+          return null;
+        },
+        downloadStorageObject: async () => {
+          journal.push("lecture_fichier");
+          return { buffer: Buffer.alloc(1024, 5), mimeType: "image/jpeg" };
+        },
+        persistProvidedPhotoFile: async () => {
+          journal.push("ECRITURE_SERVEUR");
+          return { local_path: "C:/serveur/annonces/62087/photos/pho-1/salon.jpg" };
+        },
+        shouldKeepCloud: () => true,
+        ensureHektorExecutionContext: async () => { journal.push("contexte_hektor"); },
+        fetchConsolePhotoEntries: async () => (journal.push("galerie"), [{ hektor_photo_id: "1" }]),
+        writeTempUploadFile: async () => ({ filePath: "/tmp/x.jpg", tempDir: "/tmp" }),
+        uploadHektorPhotoWithPlaywright: async () => {
+          journal.push("APPEL_HEKTOR");
+          if (hektorEchoue) throw new Error("Playwright : Hektor injoignable");
+          return { entries: [{ hektor_photo_id: "1" }, { hektor_photo_id: "42" }] };
+        },
+        upsertConsolePhotos: async () => { journal.push("reindexation"); return []; },
+        enqueueRefreshConsoleDataJobBestEffort: async () => null,
+        logJob: async () => { journal.push("journal"); },
+        safeFilename: (n, f) => n || f,
+        fs: { unlinkSync: () => {}, rmdirSync: () => {} },
+      };
+      // eslint-disable-next-line no-new-func
+      const fn = new Function(...Object.keys(faux), `${blocPhoto}; return completerEnvoiPhotoDifferee;`)(
+        ...Object.values(faux));
+      return { fn, journal, patches };
+    }
+
+    let { fn, journal, patches } = chargerPhoto(false);
+    let r = await fn({ id: "j" }, { hektor_annonce_id: "62087" }, { app_photo_id: "pho-1" });
+    controle("(s) photo : le serveur AVANT Hektor",
+      journal.indexOf("ECRITURE_SERVEUR") >= 0
+        && journal.indexOf("APPEL_HEKTOR") > journal.indexOf("ECRITURE_SERVEUR"),
+      journal.join(" > "));
+    controle("(t) photo : le numero Hektor est adopte AVANT la reindexation",
+      patches.some((p) => p.hektor_photo_id === "42")
+        && journal.indexOf("patch_ligne") < journal.indexOf("reindexation"),
+      `${JSON.stringify(patches)} | ${journal.join(" > ")}`);
+    controle("(u) photo : statut « envoye »", r && r.envoi_hektor === "envoye", JSON.stringify(r));
+
+    ({ fn, journal, patches } = chargerPhoto(true));
+    let leve = null;
+    try { r = await fn({ id: "j" }, { hektor_annonce_id: "62087" }, { app_photo_id: "pho-1" }); }
+    catch (e) { leve = e.message; }
+    controle("(v) photo : un echec Hektor NE LEVE PAS", leve === null, `a leve : ${leve}`);
+    controle("(w) photo : le fichier est QUAND MEME sur notre serveur",
+      journal.includes("ECRITURE_SERVEUR"), journal.join(" > "));
+    controle("(x) photo : la ligne est marquee « echec »",
+      patches.some((p) => p.envoi_hektor_statut === "echec"), JSON.stringify(patches));
+  }
+
+  // ⚠ Sans cette contrainte levee, l'app ne pourrait PAS creer une photo avant l'envoi.
+  controle("(y) l'aiguillage photo existe",
+    /if \(payload\.app_photo_id\) \{\s*return await completerEnvoiPhotoDifferee/.test(src),
+    "le chemin differe photo n'est pas branche");
+
   console.log(`\n${echecs ? `${echecs} ECHEC(S)` : "TOUT VERT"}`);
   process.exit(echecs ? 1 : 0);
 })();
