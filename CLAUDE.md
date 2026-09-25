@@ -139,6 +139,12 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 >   suffit pas à afficher. **Le chemin d'affichage est un arbitrage de Frédéric.**
 > ✅ **Le reste du plan fonctionne** : 36 types de travaux, **0 en erreur**. Les 3 exceptions
 >   restent **numéro de mandat** *(`L9`)*, **signature** *(`A.2`)*, **portails** *(`A.1`)*.
+> ⚠⚠ **DEUX TRAVAUX ONT UNE DATE DE PÉREMPTION, pas seulement une priorité** : **`L9`**
+>   *(le registre se remplit depuis le miroir)* et **`C.9-couple`** *(seul moment où l'on peut
+>   comparer NOTRE paire à celle de Hektor — l'app envoie le conjoint, c'est **Hektor** qui crée
+>   la 2ᵉ fiche et pose le lien ; à la coupure, personne ne le fera)*. **Son 1er pas est une
+>   MESURE d'1 h** : créer un couple d'essai et regarder si Hektor fait une fiche ou deux.
+>   *(Rappelé par Frédéric le 25/09 — je l'avais omis de la liste des choses à faire.)*
 > ➡ `notice/AUDIT_DOCUMENTS_ET_ETAT_DES_FONCTIONS_2026-09-25.md` · `notice/AUDIT_PHOTOS_2026-09-25.md`
 > *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le

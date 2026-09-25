@@ -27,6 +27,11 @@
 > L8     C.4-bis elargi · E.3 · 0.3 / E.1 rattrapages · E.2
 > L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
 >        (il se remplit depuis le MIROIR : impossible apres)
+>
+> ⚠⚠ DEUX TRAVAUX ONT UNE DATE DE PEREMPTION, pas seulement une priorite :
+>    L9 (le registre se remplit depuis le miroir) ET C.9-couple (l. 624 : c'est le
+>    seul moment ou l'on peut comparer NOTRE paire a celle de Hektor). Les deux
+>    doivent etre finis AVANT la coupure, pas pendant.
 > hors lot  A.1 portails · A.2 signature · A.3 juridique  -> FIXENT LA DATE, a zero
 >           C.19 transactions · C.11 menage · B.3 · F.1 (apres la coupure)
 > ```
@@ -621,10 +626,33 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
        ⚠ 62660 dure depuis le 10 JUILLET -- ce n'est pas un retard de sync.
        NON MESURE : pourquoi leur detail n'est jamais lu (brouillon mal
        etiquete ? 404 silencieux ? annonce d'une autre agence ?).
-          [ ] C.9-couple  ⚠ son 1er pas est une MESURE, pas du code :
-              quand on envoie un couple, Hektor cree-t-il UNE fiche ou DEUX ?
-              jamais verifie. Tant qu'on l'ignore, on ne sait pas si le
-              conjoint a droit a sa propre identite chez nous
+          [ ] C.9-couple  CREER UN MENAGE SANS HEKTOR
+              ⚠⚠ A ECRIRE PENDANT QUE HEKTOR VIT -- MEME FAMILLE QUE L9.
+                 C'est le seul moment ou l'on peut COMPARER notre paire a la
+                 sienne. Apres la coupure, plus aucune reference pour savoir si
+                 on fait juste. Ce n'est donc pas qu'une priorite : c'est une
+                 DATE DE PEREMPTION. (Rappele par Frederic le 25/09 -- je l'avais
+                 omis de la liste des choses a faire.)
+              AUJOURD'HUI : l'app envoie le bloc conjoint a Hektor (nom_m2,
+              prenom_m2, email_m2... worker l. 14681-14687, 14834) et c'est
+              HEKTOR qui cree la seconde fiche ET pose le lien. L'app ne sait pas
+              produire la paire.
+              CE QUI EST DEJA FAIT (26bis-COUPLES, 21/09) : le lien de menage est
+              TRADUIT dans notre serie chaque nuit, par app_contact_id_propager.
+                MESURE DU 25/09 (Supabase) :
+                  40 157 contacts ont un conjoint (sur 62 010)
+                  37 404 liens TRADUITS dans notre serie
+                   2 753 non traduits (conjoint hors perimetre ou supprime)
+                  vue de controle app_v_couples_non_traduits : presente
+              [ ] ETAPE 1 -- LA MESURE, ~1 h, PAS DU CODE :
+                  creer un couple d'essai depuis l'app et REGARDER ce que Hektor
+                  fabrique. UNE fiche ou DEUX ? Quel lien pose-t-il ? Dans quel
+                  sens ? Jamais verifie a ce jour.
+                  ⚠ ecrit chez Hektor -> go explicite, et une fiche a supprimer
+                    apres (voir le menage des essais L4-b du 21/09).
+              [ ] ETAPE 2 -- selon le resultat : l'app sait produire la PAIRE
+                  (deux fiches, deux numeros de NOTRE serie, et le lien entre
+                  elles), puis la comparer a ce que Hektor rend.
           [ ] 26bis-TRANSACTIONS  ⚠ SA VRAIE QUESTION, posee par Frederic le 21/09 :
               « et il n'y a pas de recensement sur annonce et transaction ? »
               L'ANNONCE en a un (depuis le 26/08, dans le run, 0 ligne : inerte).
