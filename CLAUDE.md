@@ -121,7 +121,15 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **IL RESTE : (1) contrôle de la nuit du 26/09 (C.9-f) ; (2) surveiller la 1re annonce réelle
 > d'un négociateur ; (3) supprimer les annonces de test 63146 et 63147.**
 > ⚠ Connus : le compte formation n'est proposable que depuis l'écran Estimations · un refus
-> consomme un numéro. **PUIS L5** *(= `E.0-bis` + les 102 champs d'annonce et 40 de contact)*.
+> consomme un numéro.
+> ⛔→✅ **L5 AUDITÉ le 25/09 : son gros morceau n'existait pas.** Les « 102 champs d'annonce et
+> 40 de contact » sont une **mesure réfutée** — 0 créable sans être corrigible, fait depuis le
+> 02/06. **L5 = 6-10 j, pas 2-3 sem** : restent **les photos** *(supprimer, réordonner,
+> principale)*, **le mandat existant** *(dates, durée, avenant)*, **la fusion de doublons**
+> *(ton arbitrage : app ou admin ?)*. ➡ `notice/AUDIT_L5_GESTES_MANQUANTS_2026-09-25.md`
+> ⚠ **Les autres chiffrages du plan n'ont pas été revérifiés** : ordres de grandeur, pas mesures.
+> **PROCHAINE ÉTAPE : audit des photos.** Et toujours en attente : **D.0** *(documents arrêtés
+> depuis le 23/08, le plus urgent)* · **A.1 / A.2** *(portails, signature — fixent la date)*.
 > *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
 > build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et
