@@ -1110,6 +1110,46 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             22 493 local_only (28 Go, SUR TON SERVEUR, INVISIBLES DANS L'APP)
             22 023 cloud_available (32 Go, dans Supabase, donc visibles)
             disque : 45 006 fichiers / 60,6 Go   Supabase : 22 925 / 33 Go
+[~] D.2   photos -- LE RAPATRIEMENT TOURNE DEPUIS LE 25/09 AU SOIR
+    ================================================================================
+    ⚠ LE CHIFFRE DU PLAN ETAIT FAUX D'UN FACTEUR SIX : « 318 000 photos, 125 Go »
+      venait d'un COMMENTAIRE dans le code, pas d'une mesure. Compte reel tire du
+      miroir local : 444 431 photos sur 49 045 annonces, ~110 Go (262 ko de moyenne).
+
+    ⭐ ET LES ADRESSES SONT DEJA CHEZ NOUS -- hektor_annonce_detail.images_json,
+      57 967 annonces. Le rapatriement NE TOUCHE JAMAIS HEKTOR : il lit le miroir et
+      telecharge sur le CDN public. Aucune requete contre le quota, il tourne en
+      parallele du rattrapage documents. (Les « 13 nuits de quota » que j'annoncais
+      n'existent pas : je n'avais pas applique la regle « chercher d'abord en local ».)
+
+    [x] le frein                 3c17057   aucune cadence, aucun arret sur refus.
+          Calibre sur 900 telechargements, 0 refus : 8,2 / 17,0 / 28,0 photos/s.
+    [x] les deux numeros         f27f9b5   ma 1re version creait 435 126 lignes avec
+          le SEUL numero Hektor -- defaut trouve par Frederic.
+    [x] la fuite a l'ajout       c95cb9b   une photo ajoutee depuis l'app n'etait
+          gardee NULLE PART. Explique les 42 photos « en attente ».
+    [~] LE RAPATRIEMENT           lance le 25/09 au soir, ~7 h
+          lot d'essai de 500 : 500/500, 0 echec, 128 Mo, les deux numeros, 0 fichier
+          vide, au chemin exact du worker. Reste 434 666.
+          ⚠ ECHEANCE : AVANT LA COUPURE. Apres, le CDN ne sert plus rien et les
+            photos non rapatriees sont DEFINITIVEMENT perdues.
+          ▫ 8 013 photos / 583 annonces « Mandat clos » ecartees (hors des 4 index).
+
+    ⛔⛔ MAIS RAPATRIER NE SUFFIT PAS A AFFICHER -- et c'est le point le plus grave.
+      Le front lit photo_url_listing et images_preview_json = des adresses HEKTOR,
+      30 occurrences dans App.tsx. A la coupure, TOUTES les photos disparaissent de
+      l'ecran, meme avec les 110 Go sur le serveur.
+      [ ] P1  verser les annonces VIVANTES dans Supabase   ~29 Go (62 sur 100 inclus)
+      [ ] P2  faire lire l'app CHEZ NOUS                   30 points, sous interrupteur
+      ⚠ P2 est le SEUL point dont l'echeance est la coupure elle-meme.
+
+    ⛔ ET LES GESTES QUI N'EXISTENT PAS : supprimer, reordonner, choisir la principale
+      -- ni worker, ni front, ET LES COMMANDES HEKTOR SONT INCONNUES. Premier pas :
+      un RELEVE en lecture seule, pas du code.
+
+    ➡ notice/RESTE_A_FAIRE_DOCUMENTS_PHOTOS_2026-09-25.md (D1->D8 et P1->P8)
+    ================================================================================
+    (enonce d'origine, garde pour memoire)
 [ ] D.2   photos                            MESURE 25/09 : 1 397 indexees, 524 Mo
             1 355 sur le serveur / 4 dans Supabase / 223 annonces sur 13 437 = 1,7 %
             ⚠ LE PARC ENTIER : ~318 000 photos, ~125 Go (moyenne 396 ko)

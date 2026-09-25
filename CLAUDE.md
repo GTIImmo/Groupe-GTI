@@ -234,6 +234,21 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 >   l'existant, pas quand j'ÉCRIS.** Les garde-fous du projet sont tous tournés vers l'audit.
 >   **Il manque une sonde nocturne** : « une table porte-t-elle un numéro Hektor sans le
 >   nôtre ? ». ➡ `notice/AUDIT_DEUX_NUMEROS_PARTOUT_2026-09-25.md`
+> ⛔⛔ **LE POINT LE PLUS GRAVE, TROUVÉ LE 25/09 AU SOIR : L'APP AFFICHE LES PHOTOS
+>   DEPUIS HEKTOR.** Le front lit `photo_url_listing` et `images_preview_json` — des
+>   adresses `staticlbi`, donc l'abonnement Hektor. **30 occurrences dans `App.tsx`.**
+>   ➡ **Le jour de la coupure, TOUTES les photos disparaissent de l'écran en même temps**
+>   *(fiches, listes, vitrine publique)* — **même avec les 110 Go rapatriés sur le serveur.**
+>   **Rapatrier remplit le coffre ; ça n'a jamais suffi à afficher.** Preuve côté documents :
+>   les 22 023 poussés dans Supabase sont visibles, les 22 493 restés sur le serveur non.
+>   ➡ **DEUX gestes** : `P1` verser les vivantes dans Supabase *(~29 Go → 62 sur 100 inclus)*
+>   et `P2` faire lire l'app chez nous *(30 points, derrière un interrupteur, repli sur
+>   l'adresse Hektor tant qu'elle répond)*. **`P2` est le seul point dont l'échéance est la
+>   coupure elle-même — il ne se rattrape pas après.**
+>   ➡ **LA LISTE COMPLÈTE, D1→D8 et P1→P8** : `notice/RESTE_A_FAIRE_DOCUMENTS_PHOTOS_2026-09-25.md`
+>   *(ajouter et supprimer exigent encore Hektor · l'état ne suit pas dans les deux sens :
+>   2,2 Go bloqués, ×4 en 5 semaines · le repassage n'est branché nulle part · supprimer /
+>   réordonner / photo principale n'existent NI chez nous NI comme commandes Hektor connues)*
 > ⛔ **IL RESTE :**
 >   ③ **relancer le rattrapage** — `enqueue_empreinte_lot.js`, lots de 3 000, archive →
 >      historique → brouillon. **~61 h.** *(go de Frédéric obligatoire)*
