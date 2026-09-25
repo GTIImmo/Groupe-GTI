@@ -972,7 +972,18 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 
 ## 10. D — RAPATRIER LES FICHIERS *(irréversible)*
 ```
-[ ] D.0   LA REDESCENTE DES DOCUMENTS EST ARRETEE DEPUIS LE 23/08   dernier job
+[ ] D.0   LA REDESCENTE DES DOCUMENTS EST ARRETEE DEPUIS LE 23/08   <-- LE PLUS URGENT
+        ⭐ CONFIRME LE 25/09 par la base : dernier sync_console_documents le
+          23/08 a 16 h 09, soit 33 JOURS. 0 travail en erreur : c'est ARRETE,
+          pas casse. Depuis, un document ajoute ou SIGNE chez Hektor n'arrive plus.
+        ⚠ DEUX TROUS CONNUS, trouves le 07/09 (session « Documents extraction »,
+          qui n'a laisse AUCUN commit -- c'etait une exploration) :
+          · les blocs ImmoSign et « Mes documents » n'ont pas de force_transfert,
+            donc ils ne sont JAMAIS indexes ;
+          · les boutons de signature sont masques en connexion ADMINISTRATEUR,
+            ce qui ferme le suivi de signature. Ce n'est pas une panne.
+        ➡ notice/AUDIT_DOCUMENTS_ET_ETAT_DES_FONCTIONS_2026-09-25.md
+                                                                   dernier job
             sync_console_documents : 23/08 -- arretee apres le bannissement du 20/08.
             Un document ajoute ou SIGNE cote Hektor n'arrive plus dans l'app.
             La reprise est CONCUE (memoire sync-documents-empreinte, 19/08) : empreinte
@@ -980,8 +991,36 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             perimetre ; derriere le frein anti-bannissement.  1-2 j.  BLOQUANT ETAPE 2
             (les mandats signes).
 [ ] D.1a  MESURER d'abord                  combien de cloud_available sans fichier local -- 1 h
-[ ] D.1   documents                        40 493 a redimensionner
-[ ] D.2   photos                           1 397
+[ ] D.1   documents                        MESURE 25/09 : 44 516 indexes, 60 Go
+            22 493 local_only (28 Go, SUR TON SERVEUR, INVISIBLES DANS L'APP)
+            22 023 cloud_available (32 Go, dans Supabase, donc visibles)
+            disque : 45 006 fichiers / 60,6 Go   Supabase : 22 925 / 33 Go
+[ ] D.2   photos                            MESURE 25/09 : 1 397 indexees, 524 Mo
+            1 355 sur le serveur / 4 dans Supabase / 223 annonces sur 13 437 = 1,7 %
+            ⚠ LE PARC ENTIER : ~318 000 photos, ~125 Go (moyenne 396 ko)
+        ⛔ ET LE VRAI SUJET, MESURE LE 25/09 -- LES PHOTOS NE SURVIVRONT PAS A LA COUPURE
+            les 13 437 vignettes d'annonces pointent vers staticlbi = CHEZ HEKTOR.
+            Supabase n'a QUE DES LIENS pour les photos (l'index pese 2,3 Mo).
+            Le jour de la coupure, tout devient image morte sauf les 1,7 % rapatries.
+            ⚠ ET RAPATRIER NE SUFFIT PAS A LES AFFICHER : le front (Vercel) et le
+              backend (Render) ne peuvent pas lire C:\Hektor\HektorConsoleDocuments.
+              Les 1 355 deja rapatriees sont une ARCHIVE MORTE, jamais affichee.
+            ➡ TROIS PIECES, pas deux (decision de Frederic 25/09 : VISIBLE AU PLAN,
+              A FAIRE APRES LES DOCUMENTS) :
+              [ ] 1. rapatrier ~125 Go sur le serveur   (cadence lente, plusieurs nuits)
+              [ ] 2. le worker ecrit sur le SERVEUR D'ABORD, puis envoie a Hektor
+                     (aujourd'hui le fichier n'est garde NULLE PART a l'ajout :
+                      le temporaire Supabase est efface apres l'envoi)
+              [ ] 3. LE CHEMIN D'AFFICHAGE -- l'arbitrage de Frederic :
+                     a) tout dans Supabase : marche tout de suite, mais 33 -> ~158 Go,
+                        au-dela des 100 Go inclus du plan Pro (tarif au Go NON VERIFIE)
+                     b) exposer le serveur : pas de cout, mais accès a ouvrir et a
+                        securiser, et l'app depend de la machine
+                     c) les deux : serveur pour tout, Supabase pour les VIGNETTES
+                        seules + la HD a la demande  <- recommande, a chiffrer
+            ⚠ CE N'EST PAS UNE LIMITE DE NOMBRE : le plan Pro ne plafonne pas les
+              fichiers, il facture le POIDS au-dela de 100 Go. Verifie le 25/09.
+            ➡ notice/AUDIT_PHOTOS_2026-09-25.md
 ```
 
 ## 11. FIN DE PLAN

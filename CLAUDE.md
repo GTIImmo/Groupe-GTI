@@ -128,8 +128,18 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > principale)*, **le mandat existant** *(dates, durée, avenant)*, **la fusion de doublons**
 > *(ton arbitrage : app ou admin ?)*. ➡ `notice/AUDIT_L5_GESTES_MANQUANTS_2026-09-25.md`
 > ⚠ **Les autres chiffrages du plan n'ont pas été revérifiés** : ordres de grandeur, pas mesures.
-> **PROCHAINE ÉTAPE : audit des photos.** Et toujours en attente : **D.0** *(documents arrêtés
-> depuis le 23/08, le plus urgent)* · **A.1 / A.2** *(portails, signature — fixent la date)*.
+> ⛔ **DÉCISION DE FRÉDÉRIC (25/09) : LES DOCUMENTS D'ABORD, LES PHOTOS ENSUITE.**
+> · **`D.0`** — arrêté depuis le **23/08** *(33 j)*, 0 en erreur : **arrêté, pas cassé**. Deux
+>   trous : blocs **ImmoSign** et **« Mes documents »** sans `force_transfert` *(jamais indexés)* ;
+>   signature masquée en connexion **administrateur**. Reprise **déjà conçue** *(empreinte de
+>   contenu + « procédure en cours » = 242 annonces)*, derrière le frein anti-bannissement.
+>   ⚠ **Ne jamais rejouer les annonces en échec · cadence lente · un 403 arrête tout.**
+> · **Les photos** *(noté au plan, après)* : **13 437 vignettes pointent chez Hektor**, 1,7 %
+>   rapatriées — et **le serveur n'est lisible ni par Vercel ni par Render**, donc rapatrier ne
+>   suffit pas à afficher. **Le chemin d'affichage est un arbitrage de Frédéric.**
+> ✅ **Le reste du plan fonctionne** : 36 types de travaux, **0 en erreur**. Les 3 exceptions
+>   restent **numéro de mandat** *(`L9`)*, **signature** *(`A.2`)*, **portails** *(`A.1`)*.
+> ➡ `notice/AUDIT_DOCUMENTS_ET_ETAT_DES_FONCTIONS_2026-09-25.md` · `notice/AUDIT_PHOTOS_2026-09-25.md`
 > *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
 > build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et
