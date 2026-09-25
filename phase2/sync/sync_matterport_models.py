@@ -270,6 +270,41 @@ def scan_matterport_models(client: MatterportClient, max_models: int | None = No
     return list(models_by_id.values()), folders
 
 
+_NUMERO_APP: dict[str, int] | None = None
+
+
+def numero_app_par_annonce() -> dict[str, int]:
+    """NOTRE numero de bien, par numero Hektor.
+
+    Il est deja dans le miroir : load_current_hektor_by_mandat selectionne
+    app_dossier_id depuis app_view_generale... sans jamais l'ecrire. Cette table le
+    rend disponible a l'envoi.
+
+    ⚠ Matterport ne parle JAMAIS a Hektor (le run n'appelle que api.matterport.com) :
+    le numero Hektor n'y sert qu'a designer l'annonce. Le doubler par le notre est
+    donc sans effet sur Matterport, et c'est ce qui permettra a la visite de rester
+    rattachee a son bien apres la coupure.
+
+    Lu une seule fois par execution -- 4 484 groupes n'ont pas besoin de 4 484 lectures.
+    """
+    global _NUMERO_APP
+    if _NUMERO_APP is not None:
+        return _NUMERO_APP
+    table: dict[str, int] = {}
+    if PHASE2_DB.exists():
+        con = sqlite3.connect(PHASE2_DB)
+        try:
+            for hektor_id, app_id in con.execute(
+                "SELECT hektor_annonce_id, app_dossier_id FROM app_view_generale "
+                "WHERE app_dossier_id IS NOT NULL AND hektor_annonce_id IS NOT NULL"
+            ):
+                table[str(hektor_id)] = int(app_id)
+        finally:
+            con.close()
+    _NUMERO_APP = table
+    return table
+
+
 def load_current_hektor_by_mandat() -> dict[str, list[dict[str, Any]]]:
     if not PHASE2_DB.exists():
         return {}
@@ -714,10 +749,25 @@ def build_supabase_rows(rows: list[dict[str, Any]], groups: list[dict[str, Any]]
     model_rows: list[dict[str, Any]] = []
     now = utc_now_iso()
 
+    # ⚠⚠ `id` N'EST PAS TOUCHE. C'est la cle de conflit de l'upsert et le point
+    # d'accroche des 5 047 lignes app_matterport_group_model (group_id). La changer
+    # creerait 4 466 lignes neuves, supprimerait les anciennes, et les scans
+    # tomberaient avec elles. Geler l'identifiant fige L'ADRESSE, pas le contenu :
+    # libelle, etat, visibilite, validation et scans continuent d'etre mis a jour.
+    #
+    # app_dossier_id est en revanche RECALCULE a chaque passage : si une annonce est
+    # reindexee, le lien se remet seul la nuit suivante -- pas besoin d'attendre le
+    # repointage. (Meme principe que app_affaire_ledger.)
+    numero_app = numero_app_par_annonce()
+    sans_numero = 0
     for group in groups:
+        notre_numero = numero_app.get(str(group["hektor_annonce_id"]))
+        if notre_numero is None:
+            sans_numero += 1
         group_rows.append(
             {
                 "id": group["id"],
+                "app_dossier_id": notre_numero,
                 "hektor_annonce_id": int(group["hektor_annonce_id"]),
                 "numero_mandat": group["numero_mandat"],
                 "group_label": f"Mandat {group['numero_mandat']}",
@@ -729,6 +779,13 @@ def build_supabase_rows(rows: list[dict[str, Any]], groups: list[dict[str, Any]]
                 "updated_at": now,
             }
         )
+
+    if sans_numero:
+        # On NE BLOQUE PAS : une visite peut porter sur une annonce que l'app ne
+        # connait pas encore. Mais on le DIT -- un lien muet qui s'installe en
+        # silence est precisement ce qu'on cherche a ne plus produire.
+        print(f"WARN matterport : {sans_numero} groupe(s) sans numero d'app "
+              f"(annonce absente de app_view_generale)")
 
     model_index: dict[tuple[str, str], int] = defaultdict(int)
     matched_rows = [row for row in rows if row.get("match_status") == "matched_current" and row.get("hektor_annonce_ids") and row.get("selected_numero_mandat")]
