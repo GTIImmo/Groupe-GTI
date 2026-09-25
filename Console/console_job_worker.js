@@ -1107,18 +1107,29 @@ function documentContentFingerprint(html) {
 
 // Ecriture best-effort : l'empreinte est un accelerateur, jamais une source de verite.
 // Un echec ne doit pas faire tomber la sync documents (au pire l'annonce sera resynchronisee).
-async function saveDocumentContentFingerprint(hektorAnnonceId, fingerprint) {
+async function saveDocumentContentFingerprint(hektorAnnonceId, fingerprint, appDossierId = null) {
   if (!hektorAnnonceId || !fingerprint) return;
   const now = new Date().toISOString();
+  const ligne = {
+    hektor_annonce_id: String(hektorAnnonceId),
+    fingerprint,
+    checked_at: now,
+    synced_at: now,
+  };
+  // 25/09 : NOTRE numero EN PLUS du sien. La cle de conflit reste hektor_annonce_id --
+  // les workers en ont besoin pour designer la fiche chez Hektor, on ne substitue rien --
+  // mais la table devient repointable (REPOINT_TABLES) et restera lisible a la coupure.
+  // Elle etait la SEULE de la chaine documents sans numero d'app, alors que
+  // app_console_document, app_console_photo et app_console_job l'ont tous.
+  // Troisieme argument absent => la colonne n'est pas dans la charge utile, donc PostgREST
+  // ne la touche pas et la valeur deja en base est conservee : comportement d'avant inchange.
+  if (appDossierId != null && Number.isFinite(Number(appDossierId))) {
+    ligne.app_dossier_id = Number(appDossierId);
+  }
   await supabaseRequest("app_console_document_fingerprint?on_conflict=hektor_annonce_id", {
     method: "POST",
     prefer: "resolution=merge-duplicates,return=minimal",
-    body: JSON.stringify([{
-      hektor_annonce_id: String(hektorAnnonceId),
-      fingerprint,
-      checked_at: now,
-      synced_at: now,
-    }]),
+    body: JSON.stringify([ligne]),
   });
 }
 
@@ -5342,7 +5353,7 @@ async function handleSyncConsoleDocuments(job) {
   // ecrit — meme protection.)
   try {
     if (modeloSkipped === 0) {
-      await saveDocumentContentFingerprint(dossier.hektor_annonce_id, lecture.fingerprint);
+      await saveDocumentContentFingerprint(dossier.hektor_annonce_id, lecture.fingerprint, dossier.app_dossier_id);
     } else {
       await logJob(job.id, "hektor", "running", "Empreinte non posee : synchro incomplete", {
         hektor_annonce_id: String(dossier.hektor_annonce_id),

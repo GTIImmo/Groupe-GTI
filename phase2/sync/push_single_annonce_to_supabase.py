@@ -460,6 +460,11 @@ REPOINT_TABLES = (
     "app_email_event",              # SANS FILET
     "app_console_document",
     "app_console_photo",
+    # 25/09/2026 : le CARNET DU RATTRAPAGE documentaire. Il dit quelles annonces ont
+    # deja ete regardees ; une ligne laissee sous un dossier fantome ferait refaire
+    # le travail (61 h mesurees pour le parc restant). Sa cle primaire reste
+    # hektor_annonce_id -- on repointe la colonne app_dossier_id ajoutee le meme jour.
+    "app_console_document_fingerprint",
     "app_appointment_public_link",
     "app_appointment_request",
     "app_dossier_estimation",
