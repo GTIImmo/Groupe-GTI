@@ -207,6 +207,53 @@ const reponse = (status, taille = 1024) => ({
   controle("(t) il ne parle jamais a Hektor",
     !/xmlrpc|la-boite-immo\.com\/admin|hektorFetch/.test(srcScript), "une requete Hektor existe");
 
+  // ═══ ⑥ LES DEUX NUMEROS, TOUJOURS ════════════════════════════════════════
+  // Regle du projet : une ligne porte NOTRE numero ET celui de Hektor. Les 1 397
+  // lignes photo deja en place les ont toutes les deux (0 sans numero d'app).
+  // Une table ancree sur le seul numero Hektor devient illisible a la coupure et
+  // invisible au repointage -- defaut corrige le matin meme sur l'empreinte
+  // documentaire, et que la 1re version de ce script reproduisait a l'identique.
+  controle("(u) la ligne creee porte NOTRE numero",
+    /app_dossier_id: numeroApp\.get\(p\.hektor_annonce_id\)/.test(srcScript),
+    "app_dossier_id absent de la creation");
+  controle("(v) elle porte aussi celui de Hektor",
+    /hektor_annonce_id: p\.hektor_annonce_id/.test(srcScript), "numero Hektor absent");
+  controle("(w) la correspondance est lue dans les QUATRE index",
+    ["app_dossier_current", "app_archive_annonce_index_current",
+     "app_historical_annonce_index_current", "app_brouillon_annonce_index_current"]
+      .every((t2) => srcScript.includes(t2)),
+    "un index manque -- les archives n'auraient pas de numero");
+  controle("(x) une photo sans numero d'app est ECARTEE, pas ecrite a moitie",
+    /sansNumeroApp/.test(srcScript) && /const connues = photos\.filter/.test(srcScript),
+    "les photos sans numero seraient indexees quand meme");
+
+  // le garde-fou du paquet, execute pour de vrai
+  const blocGarde = (() => {
+    const i = srcScript.indexOf("const muettes = paquet.filter");
+    if (i < 0) return null;
+    // ⚠ PAS la 1re accolade fermante apres le throw : le message est un gabarit de
+    // chaine, et `${muettes.length}` en contient une. On va jusqu'a la fermeture du
+    // `if`, seule a cette indentation. (1re version du test fausse pour cette raison.)
+    const f = srcScript.indexOf("\n    }\n", i);
+    return f < 0 ? null : srcScript.slice(i, f + 7);
+  })();
+  if (!blocGarde) {
+    controle("(y) le garde-fou du paquet existe", false, "introuvable");
+  } else {
+    const essai = (paquet) => {
+      try {
+        // eslint-disable-next-line no-new-func
+        new Function("paquet", `${blocGarde}; return "pose";`)(paquet);
+        return "pose";
+      } catch (e) { return e.message; }
+    };
+    controle("(y) un paquet complet passe",
+      essai([{ app_dossier_id: 12 }, { app_dossier_id: 13 }]) === "pose", "refuse a tort");
+    controle("(z) un paquet avec UNE ligne muette est REFUSE EN ENTIER",
+      /REFUS/.test(essai([{ app_dossier_id: 12 }, { app_dossier_id: undefined }])),
+      "la ligne muette serait posee");
+  }
+
   console.log(`\n${echecs ? `${echecs} ECHEC(S)` : "TOUT VERT"}`);
   process.exit(echecs ? 1 : 0);
 })();

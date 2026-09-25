@@ -188,6 +188,26 @@ function lireLeMiroir() {
     return;
   }
 
+  // ── NOTRE numero de bien, depuis les QUATRE index ───────────────────────────
+  // ⚠ REGLE DU PROJET, et elle vaut pour les photos comme pour tout le reste :
+  // une ligne porte TOUJOURS les deux numeros. Le numero Hektor designe la fiche
+  // chez eux ; le notre survit a la coupure et suit l'annonce si elle est
+  // reindexee (REPOINT_TABLES contient app_console_photo).
+  // Les 1 397 lignes deja en place les ont toutes les deux : 0 sans numero d'app.
+  // Une annonce ne vit pas que dans app_dossier_current -- il faut les 4 index.
+  const numeroApp = new Map();
+  for (const [table, colonne] of [
+    ["app_dossier_current", "app_dossier_id"],
+    ["app_archive_annonce_index_current", "app_archive_id"],
+    ["app_historical_annonce_index_current", "app_historical_id"],
+    ["app_brouillon_annonce_index_current", "app_brouillon_id"],
+  ]) {
+    for (const r of await tout(`${table}?select=${colonne},hektor_annonce_id&${colonne}=not.is.null`)) {
+      if (r.hektor_annonce_id != null) numeroApp.set(String(r.hektor_annonce_id), Number(r[colonne]));
+    }
+  }
+  console.log(`  correspondance des numeros   : ${numeroApp.size} annonces`);
+
   // ── l'index existant, par (annonce, photo Hektor) ───────────────────────────
   const index = new Map();
   for (const r of await tout("app_console_photo?select=id,hektor_annonce_id,hektor_photo_id,file_size,metadata_json")) {
@@ -195,10 +215,15 @@ function lireLeMiroir() {
   }
   console.log(`  deja dans l'index            : ${index.size}`);
 
-  const aIndexer = photos.filter((p) => !index.has(p.cle));
+  // On REFUSE d'indexer une photo dont l'annonce n'a pas notre numero : mieux vaut
+  // une ligne absente qu'une ligne muette, invisible au repointage. Elles sont
+  // comptees et nommees, pas avalees en silence.
+  const sansNumeroApp = photos.filter((p) => !numeroApp.has(p.hektor_annonce_id));
+  const connues = photos.filter((p) => numeroApp.has(p.hektor_annonce_id));
+  const aIndexer = connues.filter((p) => !index.has(p.cle));
   let dejaLa = 0;
   const candidates = [];
-  for (const p of photos) {
+  for (const p of connues) {
     const r = index.get(p.cle);
     const chemin = r && r.metadata_json && r.metadata_json.local_archive_path;
     if (chemin) {
@@ -208,6 +233,11 @@ function lireLeMiroir() {
     candidates.push(p);
   }
 
+  if (sansNumeroApp.length) {
+    const annonces = new Set(sansNumeroApp.map((p) => p.hektor_annonce_id));
+    console.log(`  ⛔ ECARTEES (pas de numero app) : ${sansNumeroApp.length} photo(s), ${annonces.size} annonce(s)`);
+    console.log(`     annonces : ${[...annonces].slice(0, 10).join(", ")}${annonces.size > 10 ? " ..." : ""}`);
+  }
   console.log(`  a creer dans l'index         : ${aIndexer.length}`);
   console.log(`  deja sur le serveur          : ${dejaLa}`);
   console.log(`  ⚠ A RAPATRIER                : ${candidates.length}`);
@@ -225,7 +255,8 @@ function lireLeMiroir() {
   const lotIndex = aIndexer.slice(0, LIMITE || aIndexer.length);
   for (let i = 0; i < lotIndex.length; i += 500) {
     const paquet = lotIndex.slice(i, i + 500).map((p) => ({
-      hektor_annonce_id: p.hektor_annonce_id,
+      app_dossier_id: numeroApp.get(p.hektor_annonce_id),   // NOTRE numero
+      hektor_annonce_id: p.hektor_annonce_id,               // le sien
       hektor_photo_id: p.hektor_photo_id,
       filename: p.filename,
       url_hd: p.url,
@@ -237,6 +268,14 @@ function lireLeMiroir() {
       source_json: { origine: "hektor_annonce_detail.images_json", rattrape_le: new Date().toISOString() },
       storage_status: "pending",
     }));
+    // Garde-fou : on ne pose RIEN si une seule ligne du paquet partait sans notre
+    // numero. C'est le defaut corrige le matin meme sur l'empreinte documentaire --
+    // une table de la chaine ancree sur le seul numero Hektor devient illisible a
+    // la coupure, et invisible au repointage.
+    const muettes = paquet.filter((r) => !Number.isFinite(r.app_dossier_id));
+    if (muettes.length) {
+      throw new Error(`REFUS : ${muettes.length} ligne(s) sans numero d'app dans le paquet`);
+    }
     await rest("app_console_photo?on_conflict=hektor_annonce_id,hektor_photo_id", {
       method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: JSON.stringify(paquet),
     });
