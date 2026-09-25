@@ -344,9 +344,11 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
        console          AUCUNE erreur sur les quatre ecrans
        sondes           les cinq a zero  ·  doublure 10 000 003 a 10 356 136
 
-          [~] C.9  LA CREATION D'ANNONCE  -- a -> f TOUS CODES au 25/09. Il ne reste
-              AUCUN code : (1) controle de la nuit du 26/09 pour C.9-f, (2) allumer e3
-              (decision de Frederic), (3) supprimer les annonces d'essai 63146/63147.
+          [~] C.9  LA CREATION D'ANNONCE  -- a -> f TOUS CODES, ET e3 ALLUME LE 25/09
+              A 08 h 15. ⭐ L'ANNONCE NAIT DESORMAIS DANS L'APP, EN SERVICE REEL. ⭐
+              Il ne reste AUCUN code : (1) controle de la nuit du 26/09 pour C.9-f,
+              (2) surveiller la 1re annonce reelle creee par un negociateur,
+              (3) supprimer les annonces d'essai 63146/63147.
               Libelle d'origine : OUVERT le 24/09 ; audit en DEUX passes
               ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md
               ⛔ D1 LE DEFAUT QUI COMMANDE TOUT : dans le cas NORMAL (Hektor repond
@@ -468,10 +470,21 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   ⚠ d et f preparent la COUPURE : tant que Hektor vit, le lien d'une
                     annonce nee dans l'app revient par le miroir (audit §4). e n'en
                     depend pas.
-              [~] C.9-e la « tache 22 » : la RPC -- e1, e2, e3 TOUS CODES ET EPROUVES
-                  (essai reel du 24/09). IL NE RESTE QUE L'ALLUMAGE DE e3, qui est une
-                  DECISION, pas un travail : app_setting 'c9_annonce_nait_dans_app'
-                  = 'off' -> 'on', dans l'editeur SQL de Supabase.  go deploy
+              [x] C.9-e la « tache 22 » : la RPC -- e1, e2, e3 CODES, EPROUVES, ET
+                  ⭐ ALLUMES LE 25/09 A 08 h 15 PAR FREDERIC ⭐
+                  app_setting 'c9_annonce_nait_dans_app' = 'on'. Verifie AVANT : e1/e2
+                  inchanges depuis le 24/09 10:36-10:40, les 4 services en marche
+                  (redemarres a 10:52, donc APRES e2), 0 travail non termine, sequence a
+                  10 000 000 -> la prochaine annonce nee dans l'app prendra 10 000 001.
+                  Verifie APRES : reglage « on », 0 provisoire, 1 annonce dans la plage
+                  (l'essai du 24/09).
+                  RETOUR ARRIERE : la meme requete avec 'off' -- immediat, la fonction
+                  relit le reglage a chaque creation.
+                  ⚠ A SURVEILLER sur la 1re annonce reelle d'un negociateur : ligne
+                    10 000 00x cote app, n° Hektor pose par e2 AVANT le rafraichissement,
+                    0 provisoire, adoption par e1, sonde data.annonce_un_numero a 0.
+                  ⚠ CONNUS, non bloquants : le compte formation n'est proposable que
+                    depuis l'ecran Estimations ; un refus consomme un numero (trou).
                   ⛔ D8 (audit 24/09) : le RAFRAICHISSEMENT lance 1 min apres la
                   creation (push_single) fabrique un numero serveur, puis
                   reconcile_annonce_dossiers efface 10 000 001 comme « fantome ».

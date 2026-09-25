@@ -115,8 +115,13 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > le carnet fige les existants. **Répétition sur copie : 0 identifiant changé sur 167 496.**
 > Deux garde-fous (carnet trop court, trop d'identifiants disparus → le build recommence sans
 > substituer). **EN SERVICE à la nuit du 26/09** — vérifier la ligne `[numero de bien dans la cle]`.
-> **IL RESTE : (1) contrôle de la nuit du 26/09 ; (2) allumage de e3 = décision de Frédéric ;
-> (3) supprimer les annonces de test 63146 et 63147.** C.9 est alors terminé.
+> ⭐ **e3 ALLUMÉ LE 25/09 À 08 h 15 PAR FRÉDÉRIC** — `c9_annonce_nait_dans_app = 'on'`.
+> **Une annonce créée dans l'app naît désormais avec NOTRE numéro** (la prochaine : 10 000 001).
+> Retour arrière : la même requête avec `'off'`, immédiat.
+> **IL RESTE : (1) contrôle de la nuit du 26/09 (C.9-f) ; (2) surveiller la 1re annonce réelle
+> d'un négociateur ; (3) supprimer les annonces de test 63146 et 63147.**
+> ⚠ Connus : le compte formation n'est proposable que depuis l'écran Estimations · un refus
+> consomme un numéro. **PUIS L5** *(= `E.0-bis` + les 102 champs d'annonce et 40 de contact)*.
 > *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
 > build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et
