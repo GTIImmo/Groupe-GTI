@@ -64,6 +64,69 @@ trompeur.
 Le seuil de 260 Ko est une **hypothèse tirée de ces deux cas**, pas une règle vérifiée.
 **Il faut ouvrir les 8 pour conclure.**
 
+## 2bis. L'INVENTAIRE COMPLET — ce qu'on a déjà récupéré *(mesuré le 25/09)*
+
+### Vue d'ensemble
+
+| | |
+|---|---|
+| **documents indexés** | **44 516** |
+| **poids total** | **60 Go** |
+| **annonces couvertes** | **8 549** *(sur 13 437 dans l'app)* |
+| dans Supabase *(donc visibles dans l'app)* | **22 023** |
+| sur le serveur seulement *(invisibles)* | **22 493** |
+| période couverte | 29/06 → **26/08/2026** |
+
+### Par source — d'où ils viennent chez Hektor
+
+| source | documents | annonces | poids | dans Supabase | serveur seul |
+|---|---|---|---|---|---|
+| **documents privés** *(console)* | **42 181** | 8 459 | 58 Go | 19 768 | **22 413** |
+| documents partagés | 1 184 | 158 | 1,4 Go | 1 150 | 34 |
+| modèles | 667 | 238 | 171 Mo | 629 | 38 |
+| **bloc ImmoSign** | **448** | 313 | 299 Mo | 440 | 8 |
+| **mandats signés** *(lignes synthétiques)* | **36** | 32 | 25 Mo | 36 | 0 |
+
+⚠ Les **36** ne sont pas « les seuls mandats signés » : ce sont les cas où le document
+**a perdu son `force_transfert`** en étant signé, et qu'une ligne de rattrapage a dû
+reconstruire *(le correctif `808dfe5` du 29/06)*.
+
+### Par famille — de quoi il s'agit *(classé sur le nom du fichier)*
+
+| famille | documents | annonces | poids |
+|---|---|---|---|
+| **cadastre / plan** | 5 492 | 3 942 | 2,8 Go |
+| **images** | 4 590 | 1 561 | 7,5 Go |
+| **mandats** | **4 303** | **2 951** | 3,2 Go |
+| **avis de valeur** | 3 956 | 2 927 | 12 Go |
+| **diagnostics** | 3 316 | 1 824 | 8,1 Go |
+| copropriété | 2 694 | 1 663 | 3,7 Go |
+| pièces d'identité | 1 947 | 799 | 1,8 Go |
+| offres | 968 | 555 | 865 Mo |
+| avenants | 882 | 608 | 351 Mo |
+| taxes | 862 | 752 | 750 Mo |
+| compromis / promesses | 446 | 360 | 1,5 Go |
+| **autre / non classé** | **15 060** | 5 110 | 18 Go |
+
+⚠ **Ce classement est une DÉDUCTION sur le nom du fichier**, pas une donnée de Hektor : la
+colonne `document_type` vaut « document » pour **tous**. D'où les **15 060 non classés (34 %)**.
+**Hektor ne nous dit pas ce qu'est un document.**
+
+### La signature — et c'est une bonne surprise
+
+| | documents | annonces |
+|---|---|---|
+| **signés** | **281** | ~240 |
+| en procédure, pas encore signés *(`pending`)* | 48 | 45 |
+| « signable » mais jamais envoyé *(`to_send`)* | 7 258 | ~2 140 |
+
+Et surtout : **les 244 ImmoSign marqués « signés » ont TOUS leur PDF signé rapatrié**
+*(244 sur 244)*, **et** leur `procedure-NNN.zip`. **Aucun trou de ce côté.**
+
+➡ **Le mécanisme de récupération des signés fonctionne.** Le défaut est ailleurs : dans
+**ce que contient** le PDF rapatrié pour 8 d'entre eux *(§2)*, et dans le **nom affiché**,
+qui ne distingue pas le mandat de ses annexes.
+
 ## 3. Ce qu'il reste à comprendre — non mesuré
 
 - **Pourquoi certaines procédures ne rendent que l'annexe.** Hypothèses non vérifiées :
