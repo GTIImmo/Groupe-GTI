@@ -4679,7 +4679,47 @@ async function persistImmoSignCompanionFiles(dossier, document, options = {}) {
 // Les URLs photos pointent le CDN public de Hektor (staticlbi) : elles repondent
 // SANS authentification (verifie sur 300 URLs, 0 echec). On n'a donc pas besoin
 // de la session Playwright ici, contrairement aux documents.
+// ── LE FREIN DU CDN (25/09/2026) ────────────────────────────────────────────
+// fetchPublicBinary telechargeait les photos SANS AUCUNE PAUSE et sans s'arreter
+// sur un refus -- le meme defaut que celui corrige le meme jour dans la detection
+// documentaire (b04cb13). Tant qu'on ne prend que quelques photos ca ne se voit pas ;
+// sur les 444 431 du parc, c'est un pari.
+//
+// ⚠ CE N'EST PAS LA CADENCE DE HEKTOR, ET C'EST VOULU. staticlbi est un CDN : servir
+// des fichiers en masse est son metier. Mesure du 20/08, pendant que l'admin nous
+// bannissait : « le CDN repond en 55 ms depuis la MEME IP ». Lui imposer la seconde
+// de Hektor ferait durer le rapatriement des semaines pour rien.
+// Reglages SEPARES de ceux de Hektor -- les melanger reglerait les deux d'un coup.
+const CDN_MIN_INTERVAL_MS = Number(process.env.CONSOLE_CDN_MIN_REQUEST_INTERVAL_MS || 150);
+const CDN_PAUSE_EVERY_N = Number(process.env.CONSOLE_CDN_PAUSE_EVERY_N_REQUESTS || 500);
+const CDN_PAUSE_MS = Number(process.env.CONSOLE_CDN_PAUSE_MS || 10000);
+let cdnLastRequestAt = 0;
+let cdnRequestCount = 0;
+
+// Erreur qui doit ARRETER un rapatriement en cours, par opposition a un fichier
+// manquant isole. Meme distinction que ArretBalayage cote detection.
+class ArretTelechargement extends Error {
+  constructor(motif) {
+    super(motif);
+    this.name = "ArretTelechargement";
+    this.motif = motif;
+  }
+}
+
+async function freinCdn() {
+  const attente = Math.max(0, cdnLastRequestAt + CDN_MIN_INTERVAL_MS - Date.now());
+  if (attente > 0) await sleep(attente);
+  cdnRequestCount += 1;
+  if (CDN_PAUSE_EVERY_N > 0 && cdnRequestCount % CDN_PAUSE_EVERY_N === 0) {
+    console.log(JSON.stringify({ worker: WORKER_ID, step: "cdn_respiration",
+      requetes: cdnRequestCount, pause_ms: CDN_PAUSE_MS }));
+    await sleep(CDN_PAUSE_MS);
+  }
+  cdnLastRequestAt = Date.now();
+}
+
 async function fetchPublicBinary(url, timeoutMs = 30000) {
+  await freinCdn();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -4687,6 +4727,12 @@ async function fetchPublicBinary(url, timeoutMs = 30000) {
       signal: controller.signal,
       headers: { "User-Agent": "GTI-ConsoleWorker/1.0", Accept: "image/*,*/*" },
     });
+    // ⚠ UN REFUS ARRETE LE RAPATRIEMENT. Insister prolonge le blocage -- c'est la
+    // lecon des trois bannissements. Un 404 (photo effacee chez Hektor) reste une
+    // erreur ORDINAIRE : elle ne concerne que cette photo, on passe a la suivante.
+    if ([401, 403, 429, 503].includes(response.status)) {
+      throw new ArretTelechargement(`CDN ${response.status} sur ${url} -- le serveur nous ecarte`);
+    }
     if (!response.ok) throw new Error(`HTTP ${response.status} sur ${url}`);
     const arrayBuffer = await response.arrayBuffer();
     return {
@@ -19162,4 +19208,4 @@ if (require.main === module) {
 }
 
 // Export pour tests/outils (n'affecte pas le service : lancé via `node console_job_worker.js`).
-module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries, documentContentFingerprint };
+module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries, documentContentFingerprint, localPhotoDir, localPhotoPath, safeFilename, storageSafeFilename };
