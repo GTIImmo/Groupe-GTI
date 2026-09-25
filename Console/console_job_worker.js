@@ -4797,6 +4797,55 @@ async function persistConsolePhotoFile(dossier, photo, options = {}) {
   return { photo_id: photo.id, local_path: localPath, bytes: file.buffer.length, cloud: cloudWanted };
 }
 
+// Jumelle de persistProvidedDocumentFile, pour les photos (25/09/2026).
+//
+// CE QUI MANQUAIT : a l'ajout d'une photo depuis l'app, le fichier n'etait garde NULLE
+// PART chez nous. Il partait a Hektor, on indexait la ligne, et le temporaire Supabase
+// etait efface. Le serveur n'en voyait jamais la couleur.
+// Les documents, eux, font ce geste depuis des mois (persistProvidedDocumentFile) --
+// c'est le meme patron, applique au chemin voisin qui l'avait oublie.
+// Et c'est ce qui explique les 42 photos « en attente » de 6 annonces, jamais traitees.
+//
+// Le fichier est DEJA en memoire : on ne retelecharge rien.
+async function persistProvidedPhotoFile(photo, buffer, mimeType, options = {}) {
+  const metadata = photo.metadata_json || {};
+  const fallbackName = `${photo.hektor_photo_id || photo.id}.jpg`;
+  const filename = safeFilename(photo.filename, fallbackName);
+  const storageFilename = storageSafeFilename(photo.filename, fallbackName);
+  const localPath = metadata.local_archive_path
+    || localPhotoPath(photo.hektor_annonce_id, photo.id, filename);
+
+  writeLocalArchiveFile(localPath, buffer);          // le serveur : SYSTEMATIQUE
+  const cleanMimeType = normalizeMimeType(mimeType, filename);
+  const digest = sha256Buffer(buffer);
+  const cloudWanted = Boolean(options.cloud);        // Supabase : selon l'etat de l'annonce
+  const storagePath = photo.storage_path
+    || `annonces/${photo.hektor_annonce_id}/photos/${photo.id}/${storageFilename}`;
+  if (cloudWanted) await uploadStorageObject(storagePath, buffer, cleanMimeType);
+
+  await supabaseRequest(`app_console_photo?id=eq.${encodeURIComponent(photo.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      storage_bucket: cloudWanted ? STORAGE_BUCKET : photo.storage_bucket,
+      storage_path: cloudWanted ? storagePath : photo.storage_path,
+      storage_status: cloudWanted ? "cloud_available" : "local_only",
+      file_size: buffer.length,
+      sha256: digest,
+      synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      metadata_json: {
+        ...metadata,
+        ...localArchiveMetadata(localPath),
+        mime_type: cleanMimeType,
+      },
+    }),
+  });
+
+  return { local_path: localPath, storage_path: cloudWanted ? storagePath : photo.storage_path,
+           bytes: buffer.length, sha256: digest, cloud: cloudWanted };
+}
+
 async function persistProvidedDocumentFile(document, buffer, mimeType, options = {}) {
   const metadata = document.metadata_json || {};
   const filename = safeFilename(document.document_name, `${document.id}.bin`);
@@ -7583,7 +7632,48 @@ async function handleUploadHektorPhoto(job) {
       throw new Error(`Upload photo Hektor non confirme dans la galerie: ${filename}`);
     }
     const indexed = await upsertConsolePhotos(dossier, entries);
-    await deleteStorageObject(tempPath);
+
+    // ⚠⚠ ON GARDE LE FICHIER -- le geste que les documents font et que les photos
+    // avaient oublie. Sans lui, la photo n'existe qu'a Hektor et disparait a la coupure.
+    //
+    // BEST-EFFORT ET BRUYANT, jamais bloquant, et c'est un choix : la photo est DEJA
+    // chez Hektor a ce stade. Lever ici ferait rejouer le travail, donc RENVOYER la
+    // photo -- et Hektor en aurait deux. Mieux vaut une copie manquante, rattrapable
+    // par la synchro (son adresse est connue), qu'un doublon chez Hektor.
+    // Le temporaire n'est efface QUE si la copie a reussi : sinon elle reste recuperable.
+    const dejaLa = new Set(beforeEntries.map((e) => String(e.hektor_photo_id)));
+    const nouvelles = entries.filter((e) => !dejaLa.has(String(e.hektor_photo_id)));
+    let gardee = null;
+    let gardeeErreur = null;
+    try {
+      for (const neuve of nouvelles) {
+        const lignes = await supabaseRequest(
+          `app_console_photo?hektor_annonce_id=eq.${encodeURIComponent(String(dossier.hektor_annonce_id))}`
+          + `&hektor_photo_id=eq.${encodeURIComponent(String(neuve.hektor_photo_id))}`
+          + "&select=id,hektor_annonce_id,hektor_photo_id,filename,storage_bucket,storage_path,metadata_json&limit=1",
+          { method: "GET" },
+        );
+        const ligne = Array.isArray(lignes) ? lignes[0] : null;
+        if (!ligne) continue;
+        gardee = await persistProvidedPhotoFile(ligne, temp.buffer, mimeType || temp.mimeType,
+          { cloud: shouldKeepCloud(dossier) });
+      }
+    } catch (error) {
+      gardeeErreur = error && error.message ? error.message : String(error);
+    }
+
+    if (gardeeErreur || !gardee) {
+      // On le DIT. Une copie manquante qui s'installe en silence est precisement ce
+      // qu'on cherche a ne plus produire -- et le temporaire reste en place.
+      await logJob(job.id, "upload_hektor_photo", "running",
+        "Photo envoyee a Hektor mais NON copiee sur le serveur", {
+          hektor_annonce_id: String(dossier.hektor_annonce_id),
+          erreur: gardeeErreur,
+          temporaire_conserve: tempPath,
+        });
+    } else {
+      await deleteStorageObject(tempPath);
+    }
     const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id, {
       reason: "upload_hektor_photo",
       priority: 82,
@@ -7596,6 +7686,9 @@ async function handleUploadHektorPhoto(job) {
       before_count: beforeEntries.length,
       after_count: entries.length,
       captured: uploadResult.captured,
+      copie_serveur: gardee ? gardee.local_path : null,
+      copie_cloud: gardee ? gardee.cloud : false,
+      copie_erreur: gardeeErreur,
       sync_job: syncJob,
     };
   } finally {
