@@ -17,7 +17,10 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 420) -- codee, ETEINTE
-> L5     E.0-bis (l. 901) + les 102 champs d'annonce et 40 de contact
+> L5     E.0-bis (l. 901)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+>          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
+>          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
+>          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
 >          + C.13 · supprimer une annonce · brouillons · retirer « Ouvrir Hektor »
 > L6     D.0 (l. 881) documents et mandats signes · signature · diffusion · n° mandat
 > L7     D.1a · D.1 · D.2 · garder la copie des photos
@@ -634,8 +637,9 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                 l'app portent TOUTES un numero de Hektor, donc le cas n'a
                 JAMAIS ETE EPROUVE. C'est un essai a faire, pas du code.
           [ ] 4.3 (contact + recherche + mandant d'un coup)
-   L5     les gestes manquants           + 102 champs d'annonce et 40 de contact
-                                           CREABLES MAIS JAMAIS CORRIGIBLES
+   L5     les gestes manquants    ⛔ les 102+40 champs : MESURE REFUTEE le 25/09
+                                    (0 creable sans etre corrigible, fait depuis le 02/06)
+                                    reste : mandat existant · photos · fusion de doublons
    L6 remontees · L7 fichiers · L8 bascule (E.2) · L9 registre des mandats
 
    ⚠ DEUX REGLES QUI COMMANDENT TOUT (journal des decisions, 21/09)
