@@ -187,6 +187,59 @@ const HEKTOR_XMLRPC = HEKTOR_BASE_URL + "/admin/xmlrpc.php";
 const DETECT_STORAGE_STATE = process.env.CONSOLE_DETECT_STORAGE_STATE_PATH
   || path.resolve(__dirname, "sessions", "storage_state_documents.json");
 
+// =====================================================================================
+// LE FREIN (2026-09-25) — les MEMES reglages que le worker, pas une seconde verite
+// =====================================================================================
+// Ce fichier lisait Hektor avec un fetch NU : aucune cadence, et un 403 etait compte dans
+// lectures_ko puis IGNORE -- le balayage continuait, jusqu'a 13 000 requetes contre un
+// serveur qui venait de nous fermer la porte. C'est la mecanique exacte du bannissement
+// d'IP du 20/08 (debit + 403 repetes), que hektorFetch a corrigee cote worker (7143a1a)
+// mais qui restait entiere ici.
+//
+// Les constantes sont lues dans LES MEMES variables d'environnement que le worker : un
+// seul reglage pour les deux. Les dupliquer en dur ferait diverger les deux cadences au
+// premier ajustement, et on croirait freiner alors qu'un des deux chemins galoperait.
+const MIN_INTERVAL_MS = Number(process.env.CONSOLE_HEKTOR_MIN_REQUEST_INTERVAL_MS || 1000);
+const PAUSE_EVERY_N = Number(process.env.CONSOLE_HEKTOR_PAUSE_EVERY_N_REQUESTS || 100);
+const LONG_PAUSE_MS = Number(process.env.CONSOLE_HEKTOR_LONG_PAUSE_MS || 60000);
+const WAVE_EVERY_N = Number(process.env.CONSOLE_HEKTOR_WAVE_EVERY_N_REQUESTS || 2000);
+const WAVE_PAUSE_MS = Number(process.env.CONSOLE_HEKTOR_WAVE_PAUSE_MS || 300000);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let derniereRequeteAt = 0;
+let nbRequetes = 0;
+
+async function freinHektor() {
+  const attente = Math.max(0, derniereRequeteAt + MIN_INTERVAL_MS - Date.now());
+  if (attente > 0) await sleep(attente);
+  nbRequetes += 1;
+  // La vague prime sur la respiration : 2 000 etant un multiple de 100, les deux tomberaient
+  // ensemble et on dormirait 6 minutes d'affilee sans raison. (Meme regle que hektorThrottle.)
+  if (WAVE_EVERY_N > 0 && nbRequetes % WAVE_EVERY_N === 0) {
+    console.error(JSON.stringify({ step: "hektor_fin_de_vague", requetes: nbRequetes, pause_ms: WAVE_PAUSE_MS }));
+    await sleep(WAVE_PAUSE_MS);
+  } else if (PAUSE_EVERY_N > 0 && nbRequetes % PAUSE_EVERY_N === 0) {
+    console.error(JSON.stringify({ step: "hektor_respiration", requetes: nbRequetes, pause_ms: LONG_PAUSE_MS }));
+    await sleep(LONG_PAUSE_MS);
+  }
+  derniereRequeteAt = Date.now();
+}
+
+// Erreur qui ARRETE le balayage, par opposition a une lecture ratee isolee (timeout, 500)
+// qu'on passe sans rien conclure. La distinction est le coeur du correctif : tout ignorer
+// prolongeait le bannissement, tout arreter perdrait le balayage sur un hoquet.
+class ArretBalayage extends Error {
+  constructor(motif) {
+    super(motif);
+    this.name = "ArretBalayage";
+    this.motif = motif;
+  }
+}
+
+// Signature d'un blocage reseau (bannissement constate les 19 et 20/08) : la connexion
+// n'aboutit meme pas. Chaque nouvelle tentative le prolonge -> on arrete.
+const RESEAU_BLOQUE = /UND_ERR_CONNECT_TIMEOUT|ECONNREFUSED|ECONNRESET|EAI_AGAIN/i;
+
 // Session Hektor : on REUTILISE le pot de cookies du worker documents, en LECTURE SEULE.
 // On ne le reecrit jamais et on ne relogue pas ici : si la session est morte, la detection
 // s'arrete proprement et le passage suivant reessaiera.
@@ -201,16 +254,34 @@ function loadHektorCookieHeader() {
 }
 
 async function fetchDocumentsHtml(hektorAnnonceId, cookieHeader, timeoutMs = 20000) {
+  await freinHektor();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const url = HEKTOR_XMLRPC + "?mode=chargeannonce_Documents&id=" + encodeURIComponent(hektorAnnonceId) + "&lang=fr";
-    const response = await fetch(url, { signal: controller.signal, headers: { Cookie: cookieHeader, Accept: "text/html,*/*" } });
+    let response;
+    try {
+      response = await fetch(url, { signal: controller.signal, headers: { Cookie: cookieHeader, Accept: "text/html,*/*" } });
+    } catch (error) {
+      const message = String((error && error.message) || error);
+      const code = String((error && error.cause && error.cause.code) || (error && error.code) || "");
+      if (RESEAU_BLOQUE.test(message) || RESEAU_BLOQUE.test(code)) {
+        throw new ArretBalayage("connexion refusee (" + (code || message).slice(0, 60) + ") -- signature d'un blocage reseau");
+      }
+      throw error;   // timeout isole : lecture ratee, on passera a la suivante
+    }
+    // ⚠ UN REFUS ARRETE TOUT. Avant, le 403 etait compte puis ignore et le balayage
+    // continuait -- c'est ce qui a fait bannir notre IP. Regle du projet : un 403 = stop,
+    // jamais de nouvel essai.
+    if ([401, 403, 429, 503].includes(response.status)) {
+      throw new ArretBalayage("Hektor " + response.status + " -- le serveur nous ecarte");
+    }
     if (!response.ok) throw new Error("Hektor " + response.status);
     const text = await response.text();
     // Page de login = session morte. Sans ce controle on conclurait "contenu vide" et on
-    // ferait resynchroniser tout le parc.
-    if (/type=["']password["']/i.test(text.slice(0, 20000))) throw new Error("Session Hektor expiree");
+    // ferait resynchroniser tout le parc. Et toutes les lectures suivantes sont vouees a
+    // l'echec -> on arrete au lieu de les enchainer.
+    if (/type=["']password["']/i.test(text.slice(0, 20000))) throw new ArretBalayage("Session Hektor expiree");
     return text;
   } finally {
     clearTimeout(timer);
@@ -291,7 +362,7 @@ async function runDetection(args) {
   });
 
   const aSynchroniser = [];
-  const stats = { balayees: 0, inchangees: 0, changees: 0, sans_empreinte: 0, suivi_signature: 0, lectures_ko: 0 };
+  const stats = { balayees: 0, inchangees: 0, changees: 0, sans_empreinte: 0, suivi_signature: 0, lectures_ko: 0, arret: null };
 
   // Ensemble 2 d'abord : aucune lecture Hektor, et c'est le seul moyen de voir une signature
   // aboutir.
@@ -314,6 +385,14 @@ async function runDetection(args) {
     try {
       html = await fetchDocumentsHtml(id, cookieHeader);
     } catch (error) {
+      // ARRET : le serveur nous ecarte, ou la session est morte. On sort de la boucle --
+      // insister prolonge le bannissement. Ce qui a DEJA ete retenu est quand meme empile
+      // juste apres : le travail fait n'est pas perdu, et la reprise se fera par identifiant
+      // au passage suivant (l'empreinte absente vaut "a traiter").
+      if (error instanceof ArretBalayage) {
+        stats.arret = error.motif;
+        break;
+      }
       // Lecture impossible : on ne conclut RIEN. L'empreinte reste en place et l'annonce sera
       // revue au prochain passage. Une panne Hektor ne doit provoquer ni fausse detection, ni
       // resynchronisation massive.

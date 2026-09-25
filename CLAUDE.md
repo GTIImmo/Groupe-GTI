@@ -144,18 +144,62 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 >   `annexe_ecartee`. ⚠ **Il doit tourner dans un PowerShell ADMINISTRATEUR** : ces fichiers
 >   appartiennent au service (LocalSystem), `BUILTIN\Utilisateurs` n'a que `(RX)` dessus —
 >   créer un fichier passe, l'écraser non. *(Ce n'était PAS le bac à sable : même refus sans lui.)*
-> ⛔ **`D.0 ②` — LE RALLUMAGE N'EST PAS PRÊT, ET L'ALLUMER TEL QUEL REFERAIT BANNIR L'IP :**
->   ① `Console/enqueue_console_sync_jobs.js` lit Hektor avec un `fetch` **nu**, pas `hektorFetch` :
->      **aucune cadence**, et un **403 est avalé** *(`lectures_ko` puis `continue`, l. 316)* —
->      jusqu'à 13 437 lectures à pleine vitesse ;
->   ② `run_full_pipeline.ps1:1033` n'appelle **jamais `--detect`** : le mode empreinte est écrit
->      et inutilisé → le drapeau ajouté tel quel empilerait **les 13 437 annonces chaque nuit** ;
->   ③ l'étape est **bloquante** (`throw`) alors que ses voisines fragiles sont en
->      `Invoke-OptionalStepWithRetry` : une session Hektor morte tuerait Matterport, les **liens
->      publics de RDV**, **la vitrine** et l'export Android ;
->   ④ aucun garde-fou hors ligne sur la détection.
->   **Mesures du 25/09** : périmètre 13 437 · empreintes 17 149 · « signature en cours » **73** ·
->   0 en attente, 0 en erreur · dernier enfilage 23/08 16:09. **EN ATTENTE DU GO.**
+> ⛔⛔ **`D.0 ②` — LE VRAI CHANTIER : LE RATTRAPAGE EST À 29,5 %, PAS À 97 %.**
+>   ⚠ **Ma 1re mesure était fausse par omission** — elle ne portait que sur `daily-cloud`
+>   (13 437 annonces) alors que le parc en fait **58 140**. *Frédéric l'a relevé : « tu es
+>   juste sur le périmètre des annonces de l'app et pas les archives ».* **Même classe
+>   d'erreur que L5 : une liste partielle prise pour la liste entière.**
+>   ➡ `notice/AUDIT_RATTRAPAGE_DOCUMENTS_2026-09-25.md`
+>
+>   | périmètre | annonces | empreinte | lue sans empreinte | **jamais lue** |
+>   |---|---:|---:|---:|---:|
+>   | archive | 35 299 | 4 055 | 4 531 | **26 713** |
+>   | courant | 13 437 | 13 068 | 17 | 352 |
+>   | historique | 8 920 | 26 | 0 | **8 894** |
+>   | brouillon | 484 | 0 | 0 | **484** |
+>   | **total** | **58 140** | **17 149** | 4 548 | **36 443** |
+>
+>   Le rattrapage a tourné du 18 au 23/08 (scope `archive`, **10 786 jobs**, `lot: empreinte`)
+>   puis s'est **arrêté** — pas échoué : **0 en erreur**. Le 20/08 à 10 h 08, `7143a1a` posait
+>   le frein : *« notre IP a été bannie »*.
+>   **Débit mesuré** : 877/h avant le frein, **594/h après** → **36 443 ÷ 594 ≈ 61 h**.
+>   ⭐ **L'OUTIL EST `Console/enqueue_empreinte_lot.js`** *(21/08, lots de 3 000)*, PAS
+>   `enqueue_console_sync_jobs.js` sans `--detect` — celui-ci ne saute que les jobs
+>   `pending`/`running`, jamais les `done`, et ré-empilerait les 3 000 premières déjà faites.
+>   Ses 3 exclusions : empreinte posée · **job en erreur = NE JAMAIS REJOUER** · déjà en file.
+>   Reprise **par identifiant**, jamais par position.
+> ✅ **① FAIT (25/09, `3f2c203`) — l'empreinte porte enfin NOTRE numéro.**
+>   `app_console_document_fingerprint` était la **seule** table de la chaîne documents sans
+>   numéro d'app *(sa clé primaire EST `hektor_annonce_id`)* et **absente de `REPOINT_TABLES`**,
+>   alors que document / photo / job y sont. C'est **le carnet du rattrapage** : une ligne
+>   laissée sous un dossier fantôme ferait refaire les 61 h.
+>   ⚠ **GARDE DE FRÉDÉRIC : « ne pas casser les workers qui ont besoin des id hektor ».**
+>   Tout est **additif** : clé de conflit inchangée, numéro Hektor toujours envoyé, les 3 autres
+>   points d'appel intacts, appel à 2 arguments n'écrase rien. Patch appliqué par Frédéric :
+>   **17 149/17 149 remplies, 0 incohérence**, clé primaire toujours `hektor_annonce_id`.
+>   Garde-fou `Console/test_empreinte_numero_app.js` *(12 contrôles, prouvé au rouge)*.
+>   **Workers redémarrés à 14 h 13, APRÈS le patch.**
+> ✅ **② FAIT (25/09) — la détection freine et s'arrête au 403.**
+>   `enqueue_console_sync_jobs.js` lisait Hektor avec un `fetch` **nu** : **aucune cadence**
+>   *(mesuré : 0 ms entre 3 lectures)* et un **403 avalé** puis `continue` — la mécanique exacte
+>   du bannissement. Désormais : même frein que le worker, **piloté par les mêmes variables
+>   d'environnement** *(un seul réglage, pas deux vérités)*, et `ArretBalayage` sur
+>   401/403/429/503, session morte, connexion refusée. Un **500 ou un timeout isolé** continue
+>   de passer sans rien conclure. Ce qui est déjà trouvé **est quand même enfilé**.
+>   Garde-fou `Console/test_frein_detection.js` *(15 contrôles, prouvé au rouge deux fois)*.
+> ⛔ **IL RESTE :**
+>   ③ **relancer le rattrapage** — `enqueue_empreinte_lot.js`, lots de 3 000, archive →
+>      historique → brouillon. **~61 h.** *(go de Frédéric obligatoire)*
+>   ④ `run_full_pipeline.ps1:1033` n'appelle **jamais `--detect`** → le drapeau ajouté tel quel
+>      empilerait tout le périmètre chaque nuit ; et l'étape est **bloquante** (`throw`) alors
+>      que ses voisines sont en `Invoke-OptionalStepWithRetry` : une session morte tuerait
+>      Matterport, les **liens publics de RDV**, **la vitrine**, l'export Android ;
+>   ⑤ **Frédéric** : allumer `-EnqueueConsoleDocuments` dans `run_quotidien.ps1`.
+>   ▫ petit : **53 documents sur 4 annonces** (49540, 33151, 61654, 35884) portent un
+>      `app_dossier_id` absent des 4 index.
+>   ✅ Vérifié sain : les 4 séries d'index partagent **une seule** numérotation, **0 collision
+>      sur 58 140** ; documents et photos portent les deux numéros à 100 % ; le front lit par
+>      `app_dossier_id` ; les actions vers Hektor passent par `hektor_annonce_id`.
 > · **Les photos** *(noté au plan, après)* : **13 437 vignettes pointent chez Hektor**, 1,7 %
 >   rapatriées — et **le serveur n'est lisible ni par Vercel ni par Render**, donc rapatrier ne
 >   suffit pas à afficher. **Le chemin d'affichage est un arbitrage de Frédéric.**
