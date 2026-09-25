@@ -84,6 +84,94 @@ les autres écrans *(`Console/releve_assistant_etapes.js` est le patron : il n'�
   tant que les fichiers vivent chez Hektor, **une photo disparaît de l'app le jour de la
   coupure**. Ce n'est pas dans `L5` mais dans `L7` — à ne pas mélanger, seulement à savoir.
 
+## 4bis. Les quatre points soulevés par Frédéric — vérifiés un par un
+
+### ① « le worker ajoute la photo chez Hektor, sur le serveur, puis Supabase »
+
+**Presque.** Le flux exact, lu dans le code :
+
+```
+l'app depose la photo en TEMPORAIRE prive chez Supabase  (temp/photos/{job}/…)
+   -> le worker la telecharge
+   -> l'envoie a HEKTOR via Playwright (la page Photos officielle)
+   -> relit vignettes / vignettes_hidden et met a jour l'INDEX app_console_photo
+   -> SUPPRIME le temporaire Supabase   (deleteStorageObject)
+```
+
+⚠ **À l'ajout, le fichier ne reste NI sur le serveur NI dans Supabase.** Il ne subsiste que
+chez Hektor, plus une **ligne d'index** chez nous. Le temporaire est effacé exprès.
+
+**Le serveur n'est alimenté que par un AUTRE chemin** : `sync_hektor_photos`, qui appelle
+`persistConsolePhotoFile`. Et celui-là fait exactement ce que Frédéric décrit :
+
+```js
+writeLocalArchiveFile(localPath, file.buffer);   // serveur : SYSTEMATIQUE
+if (cloudWanted) await uploadStorageObject(...); // Supabase : SEULEMENT SI DEMANDE
+```
+
+➡ **La règle « le serveur d'abord, Supabase seulement si on le demande » est DÉJÀ écrite,
+et c'est exactement celle que tu proposes.** Le drapeau s'appelle `cloud`.
+
+### ② « le rapatriement des photos des annonces actives et archivées n'a pas été fait »
+
+**Exact.** Le mécanisme existe, il n'a jamais tourné en masse.
+
+| | |
+|---|---|
+| index `app_console_photo` | **1 397** photos, **223 annonces** |
+| fichiers photos **sur le serveur** | **1 355** (524 Mo) — exactement les `local_only` |
+| photos **dans Supabase** | **4** |
+| annonces du parc | **13 437** |
+
+**Soit 1,7 % du parc.** Le commentaire du code parle d'un rattrapage de **318 000 photos** :
+c'est l'ordre de grandeur du parc entier. Rien de tel n'a été lancé.
+
+⚠ **Et le rattrapage est déjà conçu pour être rejouable sans coût** : si le fichier est là
+avec la même taille, il n'est pas retéléchargé *(« Rend le rattrapage massif rejouable sans
+coût »)*.
+
+### ③ « mettre les photos sur le serveur pour ne pas charger Supabase »
+
+**C'est déjà la règle, et les chiffres te donnent raison :**
+
+| | serveur | Supabase |
+|---|---|---|
+| **photos** | 1 355 — **524 Mo** | 4 |
+| **documents** | 45 006 — **60,6 Go** | 22 925 — **33 Go** |
+
+Supabase porte donc **33 Go**, presque uniquement des **documents**. Les photos n'y sont pas.
+
+**Extrapolation pour le parc entier** : 396 ko en moyenne × ~318 000 photos ≈ **125 Go**.
+Sur le serveur, c'est un disque *(203 Go utilisés sur 894, il reste 692 Go)*. Chez Supabase,
+ce serait **quatre fois le stockage actuel**.
+
+### ④ « je crois que le nombre de photos est limité sur Supabase »
+
+**Ce n'est pas le NOMBRE qui est limité, c'est le POIDS — et le prix.** Vérifié :
+
+| | |
+|---|---|
+| plan de l'organisation « Grou GTI » | **Pro** |
+| stockage inclus dans le Pro | **100 Go**, puis facturé au Go |
+| utilisé aujourd'hui | **33 Go** de fichiers + 2,3 Go de base |
+
+Il n'y a **pas de plafond en nombre de fichiers**. Mais ajouter ~125 Go de photos ferait
+passer de 33 à ~158 Go, **bien au-delà des 100 Go inclus**. ⚠ *Le tarif exact au Go
+supplémentaire n'a pas été vérifié auprès de Supabase : à confirmer avant tout transfert.*
+
+➡ **Ta conclusion est la bonne, et pour la bonne raison** : ce n'est pas une limite technique,
+c'est le coût. Le serveur a la place ; Supabase la facturerait.
+
+### Ce que ça change pour le plan
+
+1. **Aucun code n'est à écrire pour « mettre les photos sur le serveur »** : c'est déjà le
+   comportement par défaut. Ce qui manque, c'est **de le lancer sur tout le parc** *(= `D.2`)*.
+2. **Un vrai trou, lui, reste ouvert** : à l'ajout d'une photo, le fichier n'est **jamais**
+   gardé chez nous. Il faudrait appeler le rapatriement juste après l'envoi — sinon toute
+   photo ajoutée depuis l'app **disparaîtra le jour de la coupure**.
+3. **La question du poids se pose pour les DOCUMENTS, pas pour les photos** : 33 Go sont déjà
+   chez Supabase, et 60,6 Go sur le serveur. C'est `D.1`, hors de ce lot.
+
 ## 5. Ce qui n'a pas été mesuré
 
 - **Pourquoi 229 annonces seulement** sont dans l'index Console, sur 13 437.
