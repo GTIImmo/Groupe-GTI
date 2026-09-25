@@ -839,6 +839,85 @@ def contact_id_from_payload(value: Any) -> str:
 # RETOUR ARRIERE : retirer l'appel dans build_contacts_layer ; DROP TABLE app_relation_registry.
 _ANCRES_RELATIONS: dict[str, dict[str, Any]] = {}
 
+# ═══════════════════════════════════════════════════════════════════════════
+# C.9-f 25/09/2026 — L'IDENTIFIANT D'UN LIEN SE FABRIQUE AVEC *NOTRE* NUMERO
+# ═══════════════════════════════════════════════════════════════════════════
+# Jusqu'ici la recette prenait le numero HEKTOR du bien. Apres la coupure, un
+# bien ne dans l'app n'en aura plus : la recette ne pourrait plus rien fabriquer.
+# Elle prend donc desormais NOTRE numero (app_dossier_id).
+#
+# ⚠ SEUL, ce changement refabriquerait 167 487 identifiants d'un coup (mesure du
+#   25/09). Le push supprimerait puis reposerait 167 000 lignes en une nuit --
+#   c'est ce qui a sature Supabase le 22/08. D'OU LE CARNET (C.9-d) : pour un
+#   lien DEJA CONNU, on reprend l'identifiant qu'il avait ; seul un lien NEUF
+#   recoit un identifiant fabrique avec notre numero. Attendu : 0 change.
+#
+# L'ancre (contact, notre n° de bien, role, source, type et n° de transaction)
+# ne laisse qu'UN champ libre dans la recette : le numero du bien. Le carnet rend
+# donc simplement CELUI QUI A SERVI AU HACHE, et la recette rejouee redonne
+# exactement le meme identifiant.
+#
+# TROIS CAS, dans cet ordre :
+#   ancre connue du carnet   -> on REPREND le numero d'origine (rien ne change)
+#   ancre inconnue (neuf)    -> NOTRE numero
+#   pas de numero chez nous  -> repli : le numero Hektor (9 liens le 25/09,
+#                               des biens que Hektor lui-meme ne connait plus)
+# Un lien disparu puis revenu retrouve son identifiant : le carnet n'efface rien.
+#
+# DEUX GARDE-FOUS, parce qu'ici un defaut ne crie jamais :
+#   a l'entree  carnet absent ou trop court   -> on ne substitue pas du tout
+#   a la sortie trop d'identifiants changes   -> on RECOMMENCE sans substituer,
+#               donc exactement le comportement d'avant (build_contacts_layer)
+# RETOUR ARRIERE : appeler load_relations(..., substituer=False).
+_CLES_FIGEES: dict[tuple[str, ...], str | None] = {}
+
+# Au-dela de ce nombre d'identifiants disparus en une nuit, on ne croit plus la
+# substitution : un run ordinaire en voit quelques-uns (6 le 24/09, mouvements
+# reels chez Hektor), jamais des centaines.
+SEUIL_CLES_CHANGEES = 1000
+
+
+def _ancre_relation(contact_id, app_dossier_id, role, source, transaction_type, transaction_id):
+    """L'ancre d'un lien : tout ce qui l'identifie SAUF le numero du bien.
+
+    Les deux cotes (le carnet relu, et add_relation) doivent la fabriquer
+    pareil : le carnet rend du JSON (entier ou texte), add_relation des valeurs
+    Python. On ramene tout a du texte, et le vide et l'absent se valent.
+    """
+    def part(v):
+        return "" if v is None else str(v)
+    return (part(contact_id), part(app_dossier_id), part(role), part(source),
+            part(transaction_type), part(transaction_id))
+
+
+def charger_cles_figees(conn: sqlite3.Connection) -> tuple[dict, dict]:
+    """Relit le carnet : ancre -> le numero de bien qui a SERVI au hache.
+
+    Sans filtrer absent_depuis : un lien revenu doit retrouver son identifiant.
+    Une ancre portee par deux identifiants differents est AMBIGUE -- on ne
+    reprend alors rien pour elle (0 cas mesure le 25/09).
+    """
+    try:
+        lignes = conn.execute(
+            "SELECT relation_key, contact_id, app_dossier_id, role, source,"
+            " json_extract(recette_json, '$.transaction_type'),"
+            " json_extract(recette_json, '$.transaction_id'),"
+            " json_extract(recette_json, '$.annonce_id')"
+            " FROM app_relation_registry WHERE app_dossier_id IS NOT NULL").fetchall()
+    except sqlite3.Error as exc:
+        return {}, {"statut": "carnet_illisible", "erreur": type(exc).__name__}
+    cles: dict[tuple[str, ...], str | None] = {}
+    ambigues = 0
+    for _cle, contact, dossier, role, source, ttype, tid, annonce in lignes:
+        ancre = _ancre_relation(contact, dossier, role, source, ttype, tid)
+        annonce = None if annonce is None else str(annonce)
+        if ancre not in cles:
+            cles[ancre] = annonce
+        elif cles[ancre] != annonce:
+            cles[ancre] = None  # ambigue : on laissera fabriquer
+            ambigues += 1
+    return cles, {"statut": "ok", "notes": len(lignes), "ancres": len(cles), "ambigues": ambigues}
+
 REGISTRE_RELATIONS_DDL = """
 CREATE TABLE IF NOT EXISTS app_relation_registry (
     relation_key      TEXT PRIMARY KEY,
@@ -932,9 +1011,31 @@ def load_relations(
     hektor_conn: sqlite3.Connection,
     phase2_conn: sqlite3.Connection,
     contact_ids: Iterable[str] | None = None,
+    substituer: bool = True,
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, set[str]]]:
     contact_filter = set(normalize_contact_ids(contact_ids or []))
     _ANCRES_RELATIONS.clear()  # C.9-d : les recettes de CETTE lecture seulement
+    # ── C.9-f : le carnet, et le garde-fou D'ENTREE ─────────────────────────
+    global _CLES_FIGEES
+    _CLES_FIGEES = {}
+    if substituer:
+        cles, bilan = charger_cles_figees(phase2_conn)
+        deja_ecrits = 0
+        try:
+            deja_ecrits = phase2_conn.execute(
+                "SELECT COUNT(*) FROM app_contact_relation_current").fetchone()[0]
+        except sqlite3.Error:
+            deja_ecrits = 0
+        # Un carnet absent ou nettement plus court que la couche ne peut pas
+        # figer les identifiants existants : substituer les refabriquerait tous.
+        if deja_ecrits > 1000 and len(cles) < 0.9 * deja_ecrits:
+            print(f"[numero de bien dans la cle] REFUS : le carnet ne couvre que "
+                  f"{len(cles)} ancres pour {deja_ecrits} liens ecrits -- on garde le "
+                  f"numero Hektor (comportement d'avant)")
+        else:
+            _CLES_FIGEES = cles
+            print(f"[numero de bien dans la cle] carnet : {bilan.get('ancres', 0)} ancres "
+                  f"({bilan.get('ambigues', 0)} ambigues) pour {deja_ecrits} liens ecrits")
     # ── G-14, 23/09/2026 : DEUX TAMIS, PARCE QU'IL Y A DEUX LANGUES ─────────
     # `contact_filter` sert aux requetes SQL ci-dessous, qui interrogent LE
     # MIROIR : il doit rester en numeros de Hektor (refresh_contact_slice lui
@@ -999,10 +1100,20 @@ def load_relations(
             return
         dossier = dossier_by_annonce.get(annonce_id)
         source_identity = relation_source if clean_text(transaction_id) else "non_transaction"
-        # C.9-d : la MEME recette qu'avant, nommee pour pouvoir la noter.
+        # ── C.9-f : QUEL NUMERO DE BIEN ENTRE DANS LA RECETTE ────────────────
+        # Par defaut celui de Hektor (repli : sans numero chez nous, on n'a rien
+        # d'autre). Sinon : celui que le carnet a fige, ou le notre si le lien
+        # est neuf. Voir l'en-tete de _CLES_FIGEES.
+        annonce_pour_la_cle = annonce_id
+        if dossier is not None and _CLES_FIGEES is not None:
+            notre_numero = str(dossier["app_dossier_id"])
+            figee = _CLES_FIGEES.get(_ancre_relation(
+                contact_id, notre_numero, role, source_identity, transaction_type, transaction_id))
+            annonce_pour_la_cle = figee if figee else notre_numero
+        # C.9-d : la recette, nommee pour pouvoir la noter.
         recette = {
             "contact_id": contact_id,
-            "annonce_id": annonce_id,
+            "annonce_id": annonce_pour_la_cle,
             "role": role,
             "source": source_identity,
             "transaction_type": transaction_type,
@@ -2016,6 +2127,36 @@ def refresh_contact_slice(
         phase2_conn.close()
 
 
+def verifier_substitution(conn: sqlite3.Connection, relation_rows: dict) -> dict[str, Any]:
+    """C.9-f — combien d'identifiants de liens ont change ? Ne leve JAMAIS.
+
+    Attendu : ZERO. Le carnet rend a chaque lien deja connu l'identifiant qu'il
+    avait ; seuls les liens reellement neufs en recoivent un. Quelques
+    disparitions sont normales (un lien retire chez Hektor) -- des centaines, non.
+    """
+    try:
+        anciennes = {r[0] for r in conn.execute(
+            "SELECT relation_key FROM app_contact_relation_current")}
+    except sqlite3.Error as exc:
+        return {"statut": "non_mesure", "erreur": type(exc).__name__, "recommence": False}
+    if not anciennes:
+        return {"statut": "premier_build", "recommence": False}
+    nouvelles = {row["relation_key"] for rows in relation_rows.values() for row in rows}
+    disparues = len(anciennes - nouvelles)
+    recommence = disparues > SEUIL_CLES_CHANGEES
+    bilan = {"statut": "recommence_sans_substitution" if recommence else "ok",
+             "identifiants_disparus": disparues, "identifiants_neufs": len(nouvelles - anciennes),
+             "seuil": SEUIL_CLES_CHANGEES, "recommence": recommence}
+    if recommence:
+        print(f"[numero de bien dans la cle] ALERTE : {disparues} identifiants de liens "
+              f"disparaitraient (seuil {SEUIL_CLES_CHANGEES}) -- on RECOMMENCE avec le "
+              f"numero Hektor, comme avant. Rien n'est ecrit avec la substitution.")
+    else:
+        print(f"[numero de bien dans la cle] {disparues} identifiant(s) disparu(s), "
+              f"{len(nouvelles - anciennes)} neuf(s) -- sous le seuil")
+    return bilan
+
+
 def build_contacts_layer(
     *,
     hektor_db: Path = DEFAULT_HEKTOR_DB,
@@ -2034,6 +2175,15 @@ def build_contacts_layer(
         charger_identites_app(phase2_conn)
         contacts = load_contacts(hektor_conn, limit)
         relation_rows, roles_by_contact = load_relations(hektor_conn, phase2_conn)
+        # ── C.9-f : LE GARDE-FOU DE SORTIE ──────────────────────────────────
+        # Le carnet doit rendre les identifiants INCHANGES. S'il en manque trop,
+        # c'est que la reprise n'a pas fonctionne -- et laisser passer ferait
+        # supprimer puis reposer tout le parc chez Supabase (22/08). On
+        # RECOMMENCE alors sans substituer : le comportement d'avant, a l'identique.
+        substitution = verifier_substitution(phase2_conn, relation_rows)
+        if substitution.get("recommence"):
+            relation_rows, roles_by_contact = load_relations(
+                hektor_conn, phase2_conn, substituer=False)
         search_rows, total_search_counts, active_search_counts = load_contact_searches(hektor_conn)
         contact_detail_state = load_contact_detail_state(hektor_conn)
         valid_contact_ids = {contact.hektor_contact_id for contact in contacts}
@@ -2096,6 +2246,7 @@ def build_contacts_layer(
             "contacts_with_relation": len(relation_rows),
             "relations_skipped_missing_contact": skipped_missing_contact_relations,
             "relation_registry": carnet_des_liens,
+            "substitution_numero_bien": substitution,
             "searches_total": len(search_rows),
             "active_searches_total": sum(int(row["is_active"]) for row in search_rows),
             "contacts_with_active_search": sum(1 for count in active_search_counts.values() if count),

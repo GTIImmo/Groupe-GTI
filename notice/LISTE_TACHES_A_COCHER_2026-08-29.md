@@ -22,6 +22,9 @@ OU ON EST, EN TROIS NIVEAUX
                       fonction de retraduction des 13 tables satellites + appel de nuit
                       + sonde ; APPLIQUEE 25/09 00:07 : 72 lignes retraduites, 0
                       rapprochement sans contact (bloc L4-c-bis ci-dessous)
+                  (2) ✅ FAIT le 25/09 : C.9-f code, 15/15, repete sur copie -> 0 cle
+                      changee ; EN SERVICE a la nuit du 26/09 (le run de 05:00 lit le
+                      fichier). (ancien libelle ci-dessous)
                   (2) C.9-f : audit -> explication -> code -> repetition sur COPIE
                       (le carnet EXISTE dans la vraie base depuis le run de 16:05 :
                       plus besoin d'attendre une nuit). Attendu : 0 cle changee.
@@ -455,10 +458,36 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                        Verifie apres : interrupteur « off », nouvelle fonction, signature
                        et droits inchanges, sequence jamais appelee, 0 annonce >= 10 M.
                   e1 et e2 AVANT d'allumer e3. Puis RUN DE JOUR 1 = l'essai reel.
-              [ ] C.9-f substitution annonce dans la cle de relation      go + copie
-                  GO donne le 24/09 soir (« Oui »). Prealable leve : le carnet existe
-                  dans la vraie base (run de jour 16:05, 167 496 liens, 100 % rejouables).
-                  Mise en service des la nuit du 25/09 SI la copie donne 0 cle changee.
+              [~] C.9-f substitution annonce dans la cle de relation      go + copie
+                  CODE LE 25/09 (« Oui » de Frederic) -- EN SERVICE a la nuit du 26/09.
+                  La recette prend NOTRE numero de bien. Trois cas, dans cet ordre :
+                    ancre connue du carnet -> on REPREND le numero d'origine (rien ne change)
+                    ancre inconnue (neuf)  -> notre numero
+                    pas de numero chez nous-> repli sur le numero Hektor (les 9 liens)
+                  Un lien disparu puis revenu retrouve son identifiant (le carnet n'efface rien).
+                  DEUX GARDE-FOUS : a l'entree, carnet absent ou < 90 % des liens -> on ne
+                  substitue pas ; a la sortie, > 1 000 identifiants disparus -> le build
+                  RECOMMENCE sans substituer (comportement d'avant, rien d'ecrit entre-temps).
+                  AUDIT : la cle d'un lien n'est CLE DE RIEN d'autre -- une seule table
+                  (+ sa vue), 0 fonction Supabase, 0 ecran ne filtre dessus (le front lit
+                  par contact ou par bien). Sans le carnet : 167 487 cles changeraient,
+                  0 collision. Le push contacts n'a AUCUN garde-fou de volume -> d'ou le
+                  garde-fou de sortie.
+                  controle test_c9f_numero_bien_dans_cle.py 15/15 ; PREUVE sur e005f49 :
+                  echoue ; 4 mutants, 4 attrapes.
+                  ⚠ DEUX PIEGES TROUVES EN ECRIVANT LE CONTROLE :
+                    - ma 1re version REJOUAIT la regle au lieu d'appeler load_relations :
+                      casser la reprise du carnet la laissait VERTE. Reecrit pour faire
+                      tourner la VRAIE fonction sur un miroir minimal (point 4bis).
+                    - hors transaction, add_relation met None (pas "") dans la recette :
+                      mes notes d'essai etaient irrealistes. Les deux cotes se rejoignent
+                      bien en reel, mais la preuve aurait porte sur du faux.
+                  REPETITION sur COPIE de la vraie base, vrai build, 163 s, code 0 :
+                    *** 0 identifiant disparu, 0 neuf sur 167 496 ***
+                    carnet : 167 489 ancres (0 ambigue), recette = cle 167 496/167 496,
+                    0 lien sans note, 9 sans numero chez nous. Vraie base et miroir intacts.
+                  [ ] A COCHER apres la nuit du 26/09 : ligne « [numero de bien dans la cle] »
+                      au journal, 0 identifiant disparu, et le push sans suppression massive.
               CALENDRIER DES RUNS DE C.9 (pose le 24/09, demande de Frederic)
                 nuit 24->25   run normal : prouve que a, b, c ne cassent rien
                 25/09 jour    C.9-d (registre des relations, doublure) + C.9-e

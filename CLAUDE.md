@@ -111,9 +111,12 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 > **25/09 MATIN, À CONTRÔLER** : journal du run (lignes `[seconde passe]`, `[carnet des liens]`,
 > « retraduction satellites », « départs marqués »), sondes `data.contacts_satellites`,
 > `data.contacts_identite`, `data.annonce_un_numero` à 0. **Puis C.9-f.**
-> **ORDRE DU SOIR (go de Frédéric) : (1) mesure des rapprochements, lecture seule ; (2) C.9-f
-> audité → expliqué → codé → répété sur copie, en service dès la nuit du 25/09 si 0 clé changée ;
-> (3) contrôle de la nuit ; (4) allumage de e3 = décision de Frédéric.**
+> ✅ **C.9-f CODÉ le 25/09** — l'identifiant d'un lien se fabrique avec **notre** numéro de bien ;
+> le carnet fige les existants. **Répétition sur copie : 0 identifiant changé sur 167 496.**
+> Deux garde-fous (carnet trop court, trop d'identifiants disparus → le build recommence sans
+> substituer). **EN SERVICE à la nuit du 26/09** — vérifier la ligne `[numero de bien dans la cle]`.
+> **IL RESTE : (1) contrôle de la nuit du 26/09 ; (2) allumage de e3 = décision de Frédéric ;
+> (3) supprimer les annonces de test 63146 et 63147.** C.9 est alors terminé.
 > *(historique)* **L4-c-bis, trouvé à 14 h 35** : les contacts créés chez Hektor **depuis la bascule** restent
 > sous leur numéro Hektor (23 au 24/09) — le registre met l'identité dans `app_contact_id`, le
 > build ne lit que `hektor_contact_id`. **DÉCISION DE FRÉDÉRIC (14 h 45) : on le corrige AVANT de reprendre C.9**, registre et
