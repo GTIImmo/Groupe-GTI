@@ -63,6 +63,15 @@ anti-bannissement)* · ③ L5, en commençant par les 102 + 40 champs.
 3. **4 annonces actives restent invisibles dans l'app** : 63118, 63122, 62859, **62660 depuis
    le 10 juillet**. Mesurées le 23/09, jamais traitées. *(Sur les 7 d'origine, 3 sont revenues
    — 63120, 63123, 63124, en statut « Estimation ».)*
+   ⭐ **Mesure complétée le 25/09, et elle change le diagnostic.** Le serveur local est
+   **complet** : sur les 12 tables du miroir, **0 annonce ne lui manque** (61 277 comparées).
+   Les 4 sont donc bien chez nous — `app_dossier` **et** `app_view_generale` les portent — mais
+   **ne sont jamais arrivées dans Supabase**. Leur point commun : **aucun détail lu**
+   (`hektor_annonce_detail` = 0), et **3 des 4 sont étiquetées brouillon** dans le miroir
+   *(63118, 62859, 62660)* — donc écartées par conception, ce qui explique enfin leur silence.
+   **Reste 63122** : non archivée, non brouillon, sans détail, absente de Supabase — la seule
+   vraie anomalie du lot. ➡ le trou n'est **pas** « l'annonce n'arrive pas chez nous » mais
+   « son détail n'est jamais lu, et sans détail elle ne part pas ». Chantier bien plus petit.
 
 ### Moyens
 4. **`0.3` / 19-R1** : rattrapage des recherches arrêté le 23/08 ; ~270 recherches créées chez
