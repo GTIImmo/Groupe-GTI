@@ -1026,11 +1026,46 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 ## 11. FIN DE PLAN
 ```
 [ ] C.13-c  rattraper les 23 715 dates de cloture     avec les 3 regles validees
-[ ] 0.3     finir 19-R1                               rattrapage acquereurs, 4 h 35
-            ⚠ 18/09 : arrete le 23/08 (reprise prevue apres le contact 427258) ;
-            ~270 recherches creees chez Hektor invisibles dans l'app -- A FAIRE AVANT E.2
+[ ] 0.3  ->  DEPLACE EN RATTRAPAGE DE COUPURE le 25/09 (decision de Frederic)
+        ⭐ POURQUOI ON NE LE FAIT PLUS MAINTENANT : le trou est FERME depuis le 20/09.
+          Le run detecte les contacts qui DEVIENNENT acquereurs chez Hektor (carnet
+          sync_contact_typologie_acquereur) et relit leur fiche LE MATIN MEME.
+          Verifie le 25/09 : carnet present, 2 contacts detectes, 0 restant a traiter.
+          ➡ UNE recherche creee aujourd'hui dans Hektor ARRIVE dans l'app.
+          ➡ LE STOCK D'INVISIBLES NE GROSSIT PLUS : il est fige, donc le rattrapage
+            sera aussi efficace la veille de la coupure. UNE seule passe suffira
+            desormais, au lieu des deux prevues (19-R1 + 19-R2).
+        ETAT DU STOCK, mesure le 25/09 :
+          288 099 contacts n'ont AUCUNE recherche connue de l'app
+            157 270 deja balayes par 19-R1 (<= contact 427258)
+            130 829 JAMAIS RELUS (au-dela de 427258, la ou 19-R1 s'est arrete le 23/08)
+        ⚠ COMBIEN DE RECHERCHES INVISIBLES ? ON NE SAIT PAS. Le « ~270 » du plan vient
+          d'UN SEUL cas observe sur 249 fiches sondees (21/08) : la fourchette a 95 %
+          va de ~50 a ~1 600. Et le 22/08, sur les 7 500 premiers contacts relus,
+          ZERO recherche decouverte alors qu'on en attendait 26. Le chiffre est un
+          point au milieu d'une fourchette tres large, PAS une mesure.
+        ⚠ LES TROIS REGLES DU RATTRAPAGE, payees cher :
+          · pause de 20 s tous les 300 : OBLIGATOIRE (c'est la cadence sans pause qui
+            a fait bannir l'IP le 20/08) ;
+          · NE JAMAIS reprendre par POSITION (--start-at) : le compteur additionne les
+            lots reussis ET rates, et la liste bouge sous les pieds. Reprendre par
+            IDENTIFIANT du dernier contact reellement pousse, ou tout refaire ;
+          · un 403 arrete tout.
+        ➡ voir le bloc « RATTRAPAGES DE COUPURE » ci-dessous.
 [ ] B.3     le declencheur de descente                en attente du journal
-[ ] E.1     19-R2, la veille de la bascule            DERNIERE OCCASION
+[ ] E.1  LES RATTRAPAGES DE COUPURE -- LA DERNIERE OCCASION
+        ⚠ CORRECTION DU 25/09 : le plan disait « la veille de la BASCULE DES
+          NEGOCIATEURS (E.2) ». C'est TROP TOT. Apres E.2, Hektor VIT ENCORE et
+          reste lisible. LA VRAIE DERNIERE OCCASION, C'EST LA COUPURE ELLE-MEME.
+          (Ce qui se perd a E.2, ce ne sont pas les donnees : c'est l'arrivee de
+           NOUVELLES saisies dans Hektor -- et celles-la, le carnet les attrape
+           deja depuis le 20/09.)
+        A FAIRE DANS LA FENETRE QUI PRECEDE LA COUPURE, tant que Hektor repond :
+          [ ] les RECHERCHES acquereur (ex-0.3 / 19-R1+R2) -- 71 337 fiches, 4 h 35
+              130 829 contacts jamais relus ; cadence lente OBLIGATOIRE
+          [ ] les PHOTOS -- ~318 000, ~125 Go (voir bloc D.2)
+          [ ] les DOCUMENTS restants (voir D.0 / D.1)
+        ⚠ APRES LA COUPURE, CE QUI N'A PAS ETE RAPATRIE N'EXISTE PLUS NULLE PART.
 [ ] E.0-bis LES GESTES QUE L'APP NE SAIT TOUJOURS PAS FAIRE   audit du 18/09, en lisant le
             code -- E.0 (25/08) concluait « aucun manque n'est du code », c'est faux :
               modifier un MANDAT existant (dates, duree, avenant qui prolonge) -- seuls
