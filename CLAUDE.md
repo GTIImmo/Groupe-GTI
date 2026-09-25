@@ -134,6 +134,28 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 >   signature masquée en connexion **administrateur**. Reprise **déjà conçue** *(empreinte de
 >   contenu + « procédure en cours » = 242 annonces)*, derrière le frein anti-bannissement.
 >   ⚠ **Ne jamais rejouer les annonces en échec · cadence lente · un 403 arrête tout.**
+> ✅ **`D.0 ①` LE MANDAT / L'ANNEXE EST RÉGLÉ (25/09).** Sous le nom « Mandat », 88 annonces
+>   n'affichaient que l'**annexe** (197 Ko) ou le **barème** : l'archive ImmoSign contient DEUX
+>   pdf et `extractPdfFromZip` prenait **le premier**. Correctif `19d7a33` *(on écarte
+>   annexe/barème, sinon le plus gros)*, prouvé sur **120 archives réelles** — l'ancienne
+>   version en choisissait 28, la nouvelle 0. **4 services redémarrés à 13 h 09.**
+>   Rattrapage `Console/rattrapage_mandat_signe.js` passé par Frédéric : **88 rattrapés,
+>   0 restant**, taille moyenne 1,00 Mo, 0 écart taille ↔ métadonnée, l'ancien PDF tracé dans
+>   `annexe_ecartee`. ⚠ **Il doit tourner dans un PowerShell ADMINISTRATEUR** : ces fichiers
+>   appartiennent au service (LocalSystem), `BUILTIN\Utilisateurs` n'a que `(RX)` dessus —
+>   créer un fichier passe, l'écraser non. *(Ce n'était PAS le bac à sable : même refus sans lui.)*
+> ⛔ **`D.0 ②` — LE RALLUMAGE N'EST PAS PRÊT, ET L'ALLUMER TEL QUEL REFERAIT BANNIR L'IP :**
+>   ① `Console/enqueue_console_sync_jobs.js` lit Hektor avec un `fetch` **nu**, pas `hektorFetch` :
+>      **aucune cadence**, et un **403 est avalé** *(`lectures_ko` puis `continue`, l. 316)* —
+>      jusqu'à 13 437 lectures à pleine vitesse ;
+>   ② `run_full_pipeline.ps1:1033` n'appelle **jamais `--detect`** : le mode empreinte est écrit
+>      et inutilisé → le drapeau ajouté tel quel empilerait **les 13 437 annonces chaque nuit** ;
+>   ③ l'étape est **bloquante** (`throw`) alors que ses voisines fragiles sont en
+>      `Invoke-OptionalStepWithRetry` : une session Hektor morte tuerait Matterport, les **liens
+>      publics de RDV**, **la vitrine** et l'export Android ;
+>   ④ aucun garde-fou hors ligne sur la détection.
+>   **Mesures du 25/09** : périmètre 13 437 · empreintes 17 149 · « signature en cours » **73** ·
+>   0 en attente, 0 en erreur · dernier enfilage 23/08 16:09. **EN ATTENTE DU GO.**
 > · **Les photos** *(noté au plan, après)* : **13 437 vignettes pointent chez Hektor**, 1,7 %
 >   rapatriées — et **le serveur n'est lisible ni par Vercel ni par Render**, donc rapatrier ne
 >   suffit pas à afficher. **Le chemin d'affichage est un arbitrage de Frédéric.**
