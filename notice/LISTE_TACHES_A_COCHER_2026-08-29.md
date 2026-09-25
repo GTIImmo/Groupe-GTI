@@ -12,8 +12,10 @@ OU ON EST, EN TROIS NIVEAUX
   C.9           a OK  b OK  c OK  e1 OK  e2 OK  e3 OK (eteint) -- ESSAI REEL OK 24/09
                 RUN DE JOUR 12:35 + descente : OK (1 numero des deux cotes, 0 ecart)
                 d OK + D6 OK : PROUVES au RUN DE JOUR 24/09 16:05-18:09 (code 0, 0 403)
-                SECONDE PASSE du build (contact neuf sous son identite des J) : codee
-                  18:40, repetee sur copie -- sa preuve reelle = la nuit du 25/09
+                SECONDE PASSE du build : 1re nuit 25/09 -> « 0 contact a traduire, rien
+                  n'est ecrit » en 1 s (aucun contact neuf chez Hektor cette nuit : le
+                  registre annonce « a numeroter 0 »). Le chemin inerte est prouve ; le cas
+                  AVEC un contact neuf reste a voir en reel (sur copie le 24/09 : 8/8)
                 ORDRE DECIDE 24/09 soir (Frederic : « Oui, d'abord le plan ») :
                   (1) ✅ FAIT : les rapprochements n'etaient PAS rattaches -> audit
                       (notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md),
@@ -96,8 +98,12 @@ OU ON EST, EN TROIS NIVEAUX
                           Apres : 0 rapprochement sans contact sur 50 204, 0 desaccord de
                           colonnes, rejeu a blanc = 0, trace 1 ligne ; l'ecran du bien
                           1379038 affiche de nouveau « M. Jeremy KUPKOWSKI » (10650346).
-                      [ ] nuit du 25/09 : les 30 des 8 contacts neufs retraduits par le run
-                          (ligne « retraduction satellites » au journal), sonde a 0.
+                      [x] NUIT DU 25/09 (run 05:00-06:55, exit 0) : « retraduction
+                          satellites (applique) : a traduire 30, traduits 30, sautes 0,
+                          ecarts {} » -> 0 rapprochement sans contact sur 50 207 ; sonde
+                          a blanc = 0 ; trace 2 lignes (72 le 24/09, 30 le 25/09).
+                          ⚠ NOTE : la propagation qui suit a rempli 4 app_contact_id (dont
+                            3 rapprochements) -- les DEUX etapes servent, dans cet ordre.
                       ⚠ HORS PLAN NOTE : 10 fiches de app_contact_current (Supabase) sous
                         identite ont app_contact_id VIDE (les contacts L4-c-bis) --
                         pousser_numeros_contact ne les a pas remplies. Non traite.
@@ -361,6 +367,9 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                     5 cles changees = les 5 liens des contacts L4-c-bis (605495 ->
                     10650350...) : attendu cette nuit, independant de C.9-d.
                     vraie base et miroir intacts (taille + date).
+                  [x] NUIT DU 25/09 : carnet 167 498 notes (167 496 actives, 2 marquees
+                      disparues), 167 496/167 496 recettes = meme cle, 0 conflit, 0 lien
+                      sans note, 9 sans n° de bien. Stable d'une nuit a l'autre.
                   [x] PROUVE EN REEL, run de jour du 24/09 16:05 -> 18:09 (code 0) :
                       carnet 167 496 liens, 167 496/167 496 recettes = meme cle, 0 conflit,
                       0 sans note, 9 sans n° de bien. Cles vs photo de 16:05 : 6 parties /
@@ -382,6 +391,9 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                       vraie relecture Supabase en lecture) : app seule ce jour = 0 / 0 / 0 ;
                       les 26 lignes du registre (3 contacts, 23 liens) toutes perimees
                       (restes de la bascule et de L4-c-bis) -> marquees. Vraie base intacte.
+                      [x] NUIT DU 25/09 : « departs marques : 3 / 23 / 0 » puis ce matin
+                          2 / 10 / 0 -- exactement le cycle prevu (une identite traduite
+                          apparait un jour « app seule », marquee le lendemain).
                       [x] PROUVE EN REEL, run de jour du 24/09 : « departs marques : 3 / 23 / 0 ».
                       ⚠ A SAVOIR : le recensement tourne AVANT le push. Une identite traduite
                         par le build apparait donc UN jour « connue de l'app seule » (Supabase
