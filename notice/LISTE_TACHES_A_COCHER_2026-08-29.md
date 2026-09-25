@@ -1074,6 +1074,25 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               FUSIONNER des doublons de contacts (le bouton ouvre Hektor) 2-4 j
                 OU reserve a l'admin -- a trancher par Frederic
             Ce sont eux qui, avec D.0 et A.2, obligeraient un negociateur a ouvrir Hektor.
+[ ] PETITS DEFAUTS D'ECRAN -- releves le 25/09, aucun ne bloque, tous VERIFIES
+        [ ] LE CHAMP DE RECHERCHE DE L'ACCUEIL EST UN DECOR. App.tsx l. 22126 :
+            <input readOnly value="" placeholder="Rechercher un bien, un contact,
+            un mandat..." /> -- readOnly ET value fige a vide. On peut cliquer et
+            taper : RIEN ne s'inscrit, aucune recherche n'est lancee. Essaye 3 fois
+            le 25/09. ⚠ C'est ce qui a fait croire a Frederic qu'une annonce avait
+            disparu (V800061890) : elle est bien la, trouvable depuis l'ecran
+            Annonces. A cabler vers Annonces/Contacts, ou a retirer.
+        [ ] STATUT INCOHERENT annonce 61890 : la base dit « Estimation »
+            (app_dossier_current ET app_view_generale), l'ecran Annonces affiche
+            « Actif ». Non mesure : lequel a raison, et d'ou vient l'ecart.
+        [ ] le compteur de l'annuaire affiche 170 494 contacts -- instantane du
+            06/06 ; la base en compte 62 003 eligibles
+        [ ] 9 compteurs de filtre repondent 503
+        [ ] alarme « criteres differents : 1 » = la fiche d'essai TEST CHAINE 25-08
+        [ ] 2 annonces d'essai a supprimer chez Hektor : 63146, 63147
+        ⚠ A SAVOIR, ce n'est PAS un defaut : la recherche de l'ecran Annonces est
+          limitee aux actives / offres / compromis ; il faut cliquer « Etendre aux
+          archives, vendus et clos ». Peut donner l'impression qu'un bien manque.
 [ ] E.2     bascule des negociateurs sur l'app        decision d'organisation
 [ ] E.3     les workers deviennent invisibles
 [ ] E.4     le jour J                                 distributeur a 100 000
