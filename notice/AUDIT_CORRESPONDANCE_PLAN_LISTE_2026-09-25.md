@@ -66,6 +66,11 @@ mécanisme ».
 | dont **périmées** *(§3)* | **11** |
 | **tâches réellement ouvertes** | **38** *(+ les 5 gestes de Frédéric)* |
 
+⭐ **Après correction (25/09) : 41, pas 38.** Corriger les 11 cases périmées a **révélé
+trois vraies tâches** qu'elles masquaient : le lien d'agenda vers le contact 603496 · la
+seule annonce vraiment anormale, 63122 · le va-et-vient C.16 ↔ registre sur la date
+« absent depuis ». Une case périmée ne cache pas que du vide.
+
 ## 5. Ce que la réorganisation doit faire
 
 1. **Poser la table de correspondance** (§2) en tête de la liste — elle n'existe nulle part.

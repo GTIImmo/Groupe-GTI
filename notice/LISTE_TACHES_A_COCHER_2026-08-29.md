@@ -1,5 +1,46 @@
 # ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
 
+> ## 🔑 LE PLAN ET CETTE LISTE NE PARLENT PAS LA MÊME LANGUE — *table posée le 25/09*
+>
+> Le **plan** raisonne en **lots** `L0`…`L9`. Cette **liste** raisonne en **tâches**
+> `C.9`, `D.0`, `E.0-bis`, `A.2`… Aucun des deux ne portait la correspondance : d'où la
+> question de Frédéric, *« mais e3 et L5 ne sont pas dans le plan ? »* — ils y sont, sous
+> d'autres noms. ➡ audit : `notice/AUDIT_CORRESPONDANCE_PLAN_LISTE_2026-09-25.md`
+>
+> ```
+> L0 ✅  C.1' la relecture · le renvoi partiel · C.4 · C.17-ter
+> L1 ✅  5b · 4-suite · cle des relations · E.4/6.1-6.3 le distributeur
+>        (« E.4 le jour J » reste ouvert : c'est un GESTE, pas du code)
+> L2 ✅  26bis-CONTACTS · -RELATIONS · -COUPLES · -RECHERCHES · INVENTAIRE
+> L3 ✅  la carte des champs · protection par champ · chantier 2 · C.16
+> L4-b' ✅ les 9 sortants · normalizeMandatContactIds · la qualification
+> L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
+> L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
+>          ⚠ « e3 » = la 3e piece de C.9-e (l. 420) -- codee, ETEINTE
+> L5     E.0-bis (l. 901) + les 102 champs d'annonce et 40 de contact
+>          + C.13 · supprimer une annonce · brouillons · retirer « Ouvrir Hektor »
+> L6     D.0 (l. 881) documents et mandats signes · signature · diffusion · n° mandat
+> L7     D.1a · D.1 · D.2 · garder la copie des photos
+> L8     C.4-bis elargi · E.3 · 0.3 / E.1 rattrapages · E.2
+> L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
+>        (il se remplit depuis le MIROIR : impossible apres)
+> hors lot  A.1 portails · A.2 signature · A.3 juridique  -> FIXENT LA DATE, a zero
+>           C.19 transactions · C.11 menage · B.3 · F.1 (apres la coupure)
+> ```
+>
+> **LE COMPTE, au 25/09** : 121 cases ouvertes dans tout le document, mais **~72 sont de
+> l'archive repetee** (apres la fin de la liste vivante, signalee dans le texte).
+> Liste vivante : 49, dont **11 perimees corrigees le 25/09** -- et **3 vraies taches se
+> sont revelees dessous** (le lien d'agenda 603496 · l'annonce 63122 · le va-et-vient
+> C.16/registre). ➡ **41 reellement ouvertes**, plus les 5 gestes de Frederic.
+>
+> ```
+> OU ELLES SONT           page de tete 1 · C.9/L4-c 6 · C.19 4 · C.4-bis-0 1
+>                         C.4-bis 1 · C.16 1 · C.9/26bis-3 3 · C.11 1 · A.3 2
+>                         D (fichiers) 4 · fin de plan 9 · hors code 3   = 36
+>                         + les 5 gestes de Frederic                     = 41
+> ```
+
 > **Mis à jour le 25/09/2026 (00 h 10).** Cette page remplace la lecture du document. Le reste est une
 > archive qu'on ouvre **par numéro de ligne**, jamais en entier.
 
@@ -242,11 +283,16 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                 sauvegarde decalees, ecriture dans 20 COPIES de Supabase que la
                 descente de 7 h 30 aurait effacees.
               ⚠ les 2 contacts d'essai supprimes pour liberer la plage.
-          [ ] ① LA BASCULE : faire lire app_contact_id la ou c'est « relier nos
+          [x] ① LA BASCULE -- JOUEE LE 23/09 (perime corrige le 25/09) : l'audit du
+              22/09 avait montre que les 87 points d'API et les ~60 du front n'avaient
+              RIEN a changer ; seul le worker devait etre demele. Libelle d'origine :
+              ① LA BASCULE : faire lire app_contact_id la ou c'est « relier nos
               donnees » -- 87 endroits dans l'API, ~60 dans le front, 6 tables
               a re-cler. ⚠ app_contact_id n'apparait NI dans le worker NI dans
               le front : aucun point d'appui, tout est a ecrire.
-          [ ] ② LE REGISTRE DES RECHERCHES, DANS LE MEME GESTE. Il s'ancre sur
+          [x] ② LE REGISTRE DES RECHERCHES -- FAIT DANS LE MEME GESTE le 23/09
+              (perime corrige le 25/09) : 11 387 recherches ont suivi, nom fige.
+              Libelle d'origine : ② LE REGISTRE DES RECHERCHES. Il s'ancre sur
               la paire (hektor_contact_id, rang) -- une POSITION. Sans lui,
               11 368 cles neuves le lendemain et tout ce qui pend dessous
               orphelin, sans un bruit. Index unique deja pose.
@@ -267,9 +313,11 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
               ⚠ LA VUE D'ABORD, LE FRONT ENSUITE. `app_contacts_current`
                 n'exposait pas la colonne : deployer le front avant aurait
                 fait 400 a chaque chargement de l'annuaire. Vu AVANT.
-              [ ] reste : le numero fige dans metadata_json->attendee_contacts
-                  des liens d'agenda (9 lignes) -- rattrapage de donnees, a
-                  faire dans la fenetre de la bascule.
+              [x] les 9 liens d'agenda ONT ETE TRADUITS dans la fenetre de la bascule
+                  (verifie le 25/09 : 10 lignes sur 11 portent l'identite).
+                  [ ] RESTE 1 LIGNE, et ce n'est PAS un reste de bascule : elle vise le
+                      contact 603496, qui n'existe NULLE PART (ni identite, ni cible)
+                      -- fiche supprimee chez Hektor. A rattacher ou a marquer.
               ➡ notice/AUDIT_L4C_PORTE_ET_IDENTITE_2026-09-22.md
           [x] ④ LA COUCHE PORTE LA CIBLE (22/09, 3a85e8a) -- LA PIECE QUI
               MANQUAIT, et sans elle la bascule coupait Hektor pour TOUT le
@@ -296,7 +344,10 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
        console          AUCUNE erreur sur les quatre ecrans
        sondes           les cinq a zero  ·  doublure 10 000 003 a 10 356 136
 
-          [ ] C.9  LA CREATION D'ANNONCE     <- OUVERT le 24/09 ; audit en DEUX passes
+          [~] C.9  LA CREATION D'ANNONCE  -- a -> f TOUS CODES au 25/09. Il ne reste
+              AUCUN code : (1) controle de la nuit du 26/09 pour C.9-f, (2) allumer e3
+              (decision de Frederic), (3) supprimer les annonces d'essai 63146/63147.
+              Libelle d'origine : OUVERT le 24/09 ; audit en DEUX passes
               ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md
               ⛔ D1 LE DEFAUT QUI COMMANDE TOUT : dans le cas NORMAL (Hektor repond
                  en 30 s), le run de nuit donnerait un SECOND numero a l'annonce --
@@ -417,7 +468,10 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
                   ⚠ d et f preparent la COUPURE : tant que Hektor vit, le lien d'une
                     annonce nee dans l'app revient par le miroir (audit §4). e n'en
                     depend pas.
-              [ ] C.9-e la « tache 22 » : la RPC, drapeau ETEINT          go deploy
+              [~] C.9-e la « tache 22 » : la RPC -- e1, e2, e3 TOUS CODES ET EPROUVES
+                  (essai reel du 24/09). IL NE RESTE QUE L'ALLUMAGE DE e3, qui est une
+                  DECISION, pas un travail : app_setting 'c9_annonce_nait_dans_app'
+                  = 'off' -> 'on', dans l'editeur SQL de Supabase.  go deploy
                   ⛔ D8 (audit 24/09) : le RAFRAICHISSEMENT lance 1 min apres la
                   creation (push_single) fabrique un numero serveur, puis
                   reconcile_annonce_dossiers efface 10 000 001 comme « fantome ».
@@ -527,7 +581,17 @@ tête du `PLAN_DEV_ACTUALISE`.** ➡ **La méthode est en §0 de `CLAUDE.md`.**
        APP_BROUILLON_BUCKET_ENABLED que le run pose (l. 243). Avec lui : 0 absente.
        Piste donnee par Frederic (« je pense savoir : les brouillons »).
        ⚠ Toute mesure du perimetre du push DOIT poser cet interrupteur.
-   [ ] 7 ANNONCES ACTIVES SANS DETAIL, ET INVISIBLES DANS L'APP  (mesure 23/09)
+   [~] 7 ANNONCES ACTIVES SANS DETAIL -- REMESUREES LE 25/09, il n'en reste qu'UNE.
+       Le serveur local est COMPLET : sur les 12 tables du miroir, 0 annonce ne lui
+       manque (61 277 comparees). Les 7 sont donc chez nous (app_dossier ET
+       app_view_generale) mais ne partent pas vers Supabase, faute de DETAIL.
+         3 sont revenues depuis (63120, 63123, 63124, statut « Estimation »)
+         3 sont etiquetees BROUILLON dans le miroir (63118, 62859, 62660)
+           -> ecartees par conception, ce qui explique enfin le silence de 62660
+         [ ] RESTE 63122 : non archivee, non brouillon, sans detail, absente de
+             Supabase. La seule vraie anomalie. NON MESURE : pourquoi son detail
+             n'est jamais lu.
+       Libelle d'origine (mesure 23/09)
        Trouve en repondant a une question de Frederic sur les dates de passage.
            3 310 annonces du miroir n'ont aucun detail
              3 243  archivees    -> normal, on ne lit pas leur detail
@@ -829,10 +893,15 @@ LE CHAPITRE C.19-d (plus bas, phases 0 a 4) -- CE QUI RESTE, relu contre le code
     ne sont PAS rejoues. ~0,5-1 j
 
 C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en lisant le code
-[ ] LA RELECTURE DE FICHE EFFACE UNE SAISIE EN CONFLIT   push_single_annonce_to_supabase.py
+[x] LA RELECTURE DE FICHE EFFACE UNE SAISIE EN CONFLIT -- CORRIGE LE 20/09 (lot L0),
+    case perimee corrigee le 25/09 : push_single_annonce_to_supabase.py ne supprime plus
+    la ligne en conflit (commentaire date dans le code, ~l. 681 : « ON N'EFFACE PLUS UNE
+    SAISIE »). Libelle d'origine :   push_single_annonce_to_supabase.py
     ~l.574 : conflict -> clear_annonce_pending -> Hektor gagne. Contredit « une saisie ne
     se perd jamais ». La garder, ou l'archiver dans app_pending_resolution.  ~0,5 j
-[ ] UNE SAISIE PARTIELLE SE RENVOIE SANS FIN   app_annonce_enqueue_due_pushes ne filtre
+[x] UNE SAISIE PARTIELLE SE RENVOIE SANS FIN -- CORRIGE (lot L0), case perimee corrigee
+    le 25/09 : app_annonce_enqueue_due_pushes FILTRE bien `partial` (verifie dans la
+    fonction Supabase). Libelle d'origine :   app_annonce_enqueue_due_pushes ne filtre
     pas `partial` (lu dans le code, pas observe : 0 ligne).  ~0,5 j
 ```
 
@@ -840,9 +909,17 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 ```
 [x] remesuree                           825 fiches actives, pas 284 269
     ⚠ 18/09 : a l'etape 2, MODIFIER l'un de ces 825 finira en conflit. Pas bloquant.
-[ ] marquer disparues les 825 actives   jamais supprimer -- regle du projet
-[ ] traiter les 5 454 archivees
-[ ] poser le mecanisme "un contact a quitte le listing"   patron : reconcile_annonce_scope
+[x] marquer disparues les 825 actives  ET  [x] traiter les 5 454 archivees  ET
+[x] poser le mecanisme "un contact a quitte le listing"
+    LES TROIS SONT FAITES (lot L3) -- cases perimees corrigees le 25/09.
+    phase2/identite/marquer_contacts_disparus.py tourne CHAQUE NUIT (run l. 517) et
+    marque TOUTE fiche inconnue de Hektor, active ou archivee, sans jamais supprimer.
+    Mesure du 25/09 : 7 660 fiches marquees, dont 7 658 ce matin.
+    [ ] ⚠ MAIS IL RESTE UN DEFAUT, trouve le 24/09 et non traite : le registre LEVE
+        chaque nuit les 7 658 marques, que C.16 REPOSE aussitot. L'etat final est juste,
+        mais la date « absent depuis » est REECRITE chaque nuit -- on ne sait donc pas
+        depuis quand une fiche a disparu. Ce n'est plus « poser le mecanisme », c'est le
+        reparer.
 ```
 
 ## 6. C.9 — LA CRÉATION PART DE L'APP  ·  7. 26bis-③
@@ -940,6 +1017,13 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 ---
 
 # ③ CE QUI EST FAIT — 37 tâches
+
+> ═══════════════════════════════════════════════════════════════════════════
+> ⛔ **FIN DE LA LISTE VIVANTE. TOUT CE QUI SUIT EST UNE ARCHIVE.**
+> Les sections ci-dessous rappellent ce qui est fait, et **repetent 72 cases deja
+> comptees plus haut** sous d'anciens noms *(C.16, D.1, A.1, A.2…)*. **Ne jamais les
+> recompter** : le compte qui fait foi est celui de la page de tete.
+> ═══════════════════════════════════════════════════════════════════════════
 
 ## Protéger l'existant *(bloc 0)*
 ```
