@@ -7498,7 +7498,26 @@ taches : ils les feront SURVIVRE a la coupure.** Ce n'est pas le meme calendrier
     handleDeleteHektorContact -- la ou app_contact_search_current est deja purge.
     Ajouter les trois tables, dans le meme geste et par la meme cle.
 
-[ ] LES LIGNES PROVISOIRES RECONCILIEES NE SONT JAMAIS PURGEES
+[x] LES LIGNES PROVISOIRES RECONCILIEES NE SONT JAMAIS PURGEES
+    ⭐ CORRIGE LE 25/09 -- trouve par une question de Frederic sur deux contacts
+      restes « En creation... » dans l'annuaire depuis le 18/09.
+      CE QUI SE PASSAIT : crees avec succes (605414, 605429), puis SUPPRIMES chez
+      Hektor le 21/09 a 15:46 par le menage des essais L4-b. Le contact reel
+      n'arrivera donc JAMAIS -> la ligne provisoire reste affichee pour toujours.
+      LA CAUSE : le balayage app_sweep_stale_provisionals (cron CHAQUE MINUTE) ne
+      traitait QUE app_annonce_provisional. Les trois autres tables n'etaient
+      JAMAIS nettoyees : contacts 2 lignes (18/09), recherches 2 lignes (31/08,
+      25 jours), relations 0.
+      LE CORRECTIF (supabase/patch_purge_provisoires_2026-09-25.sql, applique par
+      Frederic) couvre les 4 tables, avec une regle PLUS PRUDENTE que celle des
+      annonces : on efface (a) des que l'objet reel est la, (b) sinon au bout de
+      24 h -- JAMAIS une creation en vol ; et une creation bloquee > 15 min
+      devient une ERREUR VISIBLE au lieu de tourner sans fin.
+      PREUVE sur copies temporaires annulees : 11 controles verts (dont les 4
+      pieges : objet deja la, ligne trop jeune, fantome de 30 h, creation en vol),
+      production intacte. REEL : au passage de cron de 09:00, les 4 tables sont
+      passees a ZERO.
+    (ancien libelle)
     Voulu (regle C.1' : une saisie ne se perd jamais, la sortie est un geste
     humain). Mais rien ne les retire une fois « linked » et la resynchro passee :
     elles s'accumulent. Quelques lignes par jour, donc pas urgent -- mais a
