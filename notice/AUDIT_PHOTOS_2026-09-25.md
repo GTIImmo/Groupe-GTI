@@ -177,3 +177,121 @@ c'est le coût. Le serveur a la place ; Supabase la facturerait.
 - **Pourquoi 229 annonces seulement** sont dans l'index Console, sur 13 437.
 - **Les 42 photos `pending`** de 6 annonces, jamais traitées — depuis quand, et pourquoi.
 - Le comportement de l'upload quand Hektor renvoie une erreur de taille ou de format.
+
+
+---
+
+# COMPLEMENT DU 25/09 AU SOIR — LE COMPTE EXACT, ET LE « 318 000 » EST FAUX
+
+*Demande de Frederic : « si il y a uniquement des liens photos sur Supabase cela pose
+probleme ». Reponse : oui, et voici la mesure exacte.*
+
+## Le « 318 000 photos / 125 Go » du plan n'est pas une mesure
+
+Il vient d'un **commentaire dans le code**. Mon audit de ce matin l'a recopie sans le
+verifier — **l'erreur que Frederic corrige pour la troisieme fois aujourd'hui** (L5, le
+perimetre du rattrapage, et maintenant ceci). Le compte reel, tire de
+`app_dossier_current.images_preview_json` :
+
+```
+annonces vivantes                      13 437
+   dont SANS AUCUNE PHOTO               3 218   (vignette = no_pic.jpg)
+   dont avec photos                    10 219
+PHOTOS REELLES                         51 146   toutes sur staticlbi
+                                                toutes en resolution ORIGINALE (/original/)
+poids estime (396 ko de moyenne)        ~20 Go
+```
+
+⚠ Le nom `images_preview_json` est trompeur : ce ne sont **pas** des apercus. Les URL
+pointent sur `/original/` — ce sont les fichiers pleine resolution.
+
+| | plan actuel | **mesure** |
+|---|---:|---:|
+| photos | ~318 000 | **51 146** |
+| poids | ~125 Go | **~20 Go** |
+
+**Consequence : l'objection du cout tombe.** Supabase (Pro, 100 Go inclus) est a 33 Go.
+33 + 20 = **53 Go**, dans le forfait. Le calcul qui rendait `D.2` impensable etait faux
+d'un facteur six.
+
+## Ce que Supabase contient pour les photos, exactement
+
+```
+app_dossier_current   : des URL, rien d'autre           -> 51 146 liens vers staticlbi
+app_console_photo     : 1 397 lignes d'INDEX, 229 annonces
+                        storage_path rempli :        0
+                        dans Supabase Storage :      0
+                        sur le serveur seulement : 1 355  (524 Mo)
+                        en attente, jamais traitees :  42  (6 annonces)
+bucket hektor-console-documents : 22 925 fichiers = DES DOCUMENTS, aucune photo
+```
+
+➡ **Aucun fichier photo n'existe chez Supabase. Zero.** La regle du 18/05 n'a jamais ete
+enfreinte : *« Supabase ne stocke pas les fichiers photos »*.
+
+## Pourquoi « uniquement des liens » est un probleme — et quand
+
+Un lien `staticlbi.com` est servi par **l'abonnement Hektor**. Le jour de la coupure, il ne
+repond plus. **Les 51 146 photos deviennent des images mortes en meme temps**, dans toutes
+les fiches, toutes les listes, la vitrine publique et les PDF qui les incorporent.
+Ce n'est pas une degradation progressive : c'est un basculement, le meme jour.
+
+⚠ Meme mecanique que [[signature-immosign-appartient-a-hektor]] : ce qui vit dans
+l'abonnement s'arrete avec l'abonnement.
+
+## LE MUR QUI RESTE, ET IL N'EST PAS LE POIDS
+
+**Rapatrier ne suffit pas a afficher.** Le front est sur **Vercel**, le back sur **Render** :
+ni l'un ni l'autre ne peut lire `C:\Hektor\HektorConsoleDocuments`.
+
+La preuve est deja dans les documents, cote a cote :
+
+```
+22 023 documents pousses dans Supabase    -> VISIBLES dans l'app
+22 493 documents restes sur le serveur    -> INVISIBLES
+```
+
+➡ **Les 1 355 photos deja rapatriees sont une archive morte** : conservees, jamais
+affichees. Le serveur est un coffre-fort, pas une vitrine. **Pour qu'une photo survive ET
+reste visible, elle doit aller dans Supabase Storage.**
+
+## Ce qui est deja ecrit et qui marche
+
+`persistConsolePhotoFile` fait deja exactement ce qu'il faut :
+
+```js
+writeLocalArchiveFile(localPath, file.buffer);   // serveur : SYSTEMATIQUE
+if (cloudWanted) await uploadStorageObject(...); // Supabase : SEULEMENT SI DEMANDE
+```
+
+**Il n'y a aucun code a ecrire pour « mettre les photos sur le serveur ».** Ce qui manque,
+c'est de le LANCER, avec `cloud` allume pour les annonces vivantes.
+
+Et le telechargement **n'emprunte pas la porte qui nous fait bannir** : `fetchPublicBinary`
+est un `fetch` public vers le CDN, sans cookie, hors de `hektorFetch`. La note du 20/08 le
+confirme : pendant le bannissement, *« le CDN staticlbi repond en 55 ms depuis la MEME IP »*.
+➡ **Le rapatriement photos et le rattrapage documents peuvent tourner en parallele.**
+
+⚠⚠ **MAIS `fetchPublicBinary` N'A AUCUN FREIN** : ni pause, ni arret sur refus. C'est le
+defaut exact corrige ce jour dans la detection (`b04cb13`). 51 146 telechargements a pleine
+vitesse contre un CDN jamais sollicite ainsi : **a corriger AVANT de lancer**, meme remede.
+
+## Deux trous independants du rapatriement
+
+1. **Une photo ajoutee depuis l'app n'est gardee nulle part chez nous.** Le flux depose le
+   fichier en temporaire Supabase, l'envoie a Hektor, **puis SUPPRIME le temporaire**. Il ne
+   reste qu'une ligne d'index. ➡ **Toute photo ajoutee depuis l'app disparaitra a la
+   coupure**, meme apres un rapatriement complet. Correctif : appeler le rapatriement juste
+   apres l'envoi.
+2. **Supprimer / reordonner / choisir la principale n'existent pas** — ni worker, ni front,
+   **et les commandes Hektor correspondantes ne sont pas connues**. Le worker ne connait que
+   `vignettes` et `vignettes_hidden`, tous deux en lecture. C'est `L5`, et son premier pas
+   est un RELEVE en lecture seule.
+
+## Ce qui reste non mesure
+
+- Le parc **archive / historique** : 44 703 annonces dont les photos n'ont pas ete comptees
+  ici. A faire avant de chiffrer `D.2` en entier.
+- Le tarif Supabase au Go au-dela des 100 Go inclus.
+- Pourquoi **229 annonces seulement** sont dans l'index Console, et depuis quand les
+  **42 photos `pending`** de 6 annonces attendent.
