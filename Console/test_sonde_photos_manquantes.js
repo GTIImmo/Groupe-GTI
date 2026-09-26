@@ -1,4 +1,4 @@
-// LA SONDE SAIT-ELLE TROUVER SA SESSION, ET VOIR UNE DIVERGENCE ?
+// LA SONDE SAIT-ELLE TROUVER SA SESSION, ET VOIR UNE PHOTO MANQUANTE ?
 //                                                                  26/09/2026
 // ⚠⚠ LE DEFAUT QU'ELLE A REVELE, et qui depassait la sonde : LA CONSOLE HEKTOR REPOND
 //    SUR DEUX NOMS DE DOMAINE. `groupe-gti-immobilier.la-boite-immo.com` ET
@@ -19,7 +19,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const SONDE = path.join(__dirname, "sonde_photos_datemaj.js");
+const SONDE = path.join(__dirname, "sonde_photos_manquantes.js");
 const ENQ = path.join(__dirname, "enqueue_console_sync_jobs.js");
 const srcSonde = fs.readFileSync(SONDE, "utf8");
 const srcEnq = fs.readFileSync(ENQ, "utf8");
@@ -52,56 +52,63 @@ function potTemporaire(cookies) {
   // en plein milieu de la declaration (1re version de ce test, SyntaxError).
   const iH = srcSonde.indexOf("const HOTES =");
   const blocHotes = iH < 0 ? "" : srcSonde.slice(iH, srcSonde.indexOf(";", iH) + 1);
-  const blocSession = tranche(srcSonde, "function session(");
-  if (!blocSession) {
-    controle("(0) la sonde sait resoudre sa session", false, "fonction introuvable");
+  const blocSessions = tranche(srcSonde, "function sessions(");
+  if (!blocSessions) {
+    controle("(0) la sonde sait lister ses entrees", false, "fonction introuvable");
   } else {
     function charger(pot) {
       // eslint-disable-next-line no-new-func
-      return new Function("fs", "POT", `${blocHotes}\n${blocSession}; return session;`)(fs, pot);
+      return new Function("fs", "POT", `${blocHotes}\n${blocSessions}; return sessions;`)(fs, pot);
     }
+    const essai = (cookies) => {
+      const pot = potTemporaire(cookies);
+      try { return { out: charger(pot)(), leve: "" }; }
+      catch (e) { return { out: null, leve: e.message }; }
+      finally { fs.rmSync(pot, { force: true }); }
+    };
 
     // le cas VECU : plus aucun cookie la-boite-immo, seulement www.gti-immobilier.fr
-    // ⚠ On ENROBE : si la sonde revenait au filtre d'un seul domaine, elle leverait ici.
-    // Un test qui tombe dit moins bien lequel des controles a echoue.
-    let p = potTemporaire([{ domain: GTI, name: "PHPSESSID", value: "abc" },
-                           { domain: ".vimeo.com", name: "x", value: "y" }]);
-    let r = null;
-    let leveA = "";
-    try { r = charger(p)(); } catch (e) { leveA = e.message; }
-    controle("(a) ⚠ le cas vecu : session trouvee sur www.gti-immobilier.fr",
-      r && /gti-immobilier\.fr$/.test(r.base),
-      leveA ? `a leve : ${leveA}` : JSON.stringify(r));
-    if (!r) r = { base: "", cookieHeader: "" };
+    let r = essai([{ domain: GTI, name: "PHPSESSID", value: "abc" },
+                   { domain: ".vimeo.com", name: "x", value: "y" }]);
+    controle("(a) ⚠ le cas vecu : l'entree www.gti-immobilier.fr est trouvee",
+      r.out && r.out.length === 1 && r.out[0].base === "https://" + GTI,
+      r.leve ? `a leve : ${r.leve}` : JSON.stringify(r.out));
     controle("(b) ⚠ ET l'adresse de base SUIT les cookies",
-      r.base === "https://" + GTI, r.base);
+      r.out && r.out[0] && r.out[0].base === "https://" + GTI, JSON.stringify(r.out));
     controle("(c) les cookies etrangers ne sont pas embarques",
-      !/vimeo/.test(r.cookieHeader), r.cookieHeader);
-    fs.rmSync(p, { force: true });
+      r.out && r.out[0] && !/vimeo/.test(r.out[0].cookieHeader),
+      r.out && r.out[0] ? r.out[0].cookieHeader : "-");
 
-    // l'autre domaine, seul
-    p = potTemporaire([{ domain: "." + LBI, name: "PHPSESSID", value: "def" }]);
-    r = charger(p)();
-    controle("(d) l'autre domaine marche aussi, point initial du domaine compris",
-      r.base === "https://" + LBI, r.base);
-    fs.rmSync(p, { force: true });
+    r = essai([{ domain: "." + LBI, name: "PHPSESSID", value: "def" }]);
+    controle("(d) l'autre entree marche aussi, point initial du domaine compris",
+      r.out && r.out[0] && r.out[0].base === "https://" + LBI, JSON.stringify(r.out));
 
-    // les deux : on prend le premier de la liste, de facon deterministe
-    p = potTemporaire([{ domain: GTI, name: "a", value: "1" }, { domain: LBI, name: "b", value: "2" }]);
-    const r1 = charger(p)();
-    const r2 = charger(p)();
-    controle("(e) avec les deux : choix DETERMINISTE (pas un coup de des)",
-      r1.base === r2.base, `${r1.base} puis ${r2.base}`);
-    fs.rmSync(p, { force: true });
+    // ⚠ LE POINT APPRIS LE 26/09 : avoir un badge ne veut pas dire qu'il est VALIDE.
+    // La sonde doit rendre LES DEUX entrees pour que l'appelant puisse essayer.
+    r = essai([{ domain: GTI, name: "a", value: "1" }, { domain: LBI, name: "b", value: "2" }]);
+    controle("(e) ⚠ avec les deux badges, LES DEUX entrees sont rendues",
+      r.out && r.out.length === 2, JSON.stringify(r.out && r.out.map((x) => x.base)));
+    controle("(e2) et dans un ordre DETERMINISTE",
+      r.out && r.out[0].base === "https://" + LBI, JSON.stringify(r.out && r.out.map((x) => x.base)));
 
-    // aucun : on leve, et le message dit ou on a cherche
-    p = potTemporaire([{ domain: ".vimeo.com", name: "x", value: "y" }]);
-    let leve = "";
-    try { charger(p)(); } catch (e) { leve = e.message; }
-    controle("(f) aucun cookie Hektor -> on leve, et le message NOMME les domaines cherches",
-      /aucun cookie/i.test(leve) && leve.includes(GTI) && leve.includes(LBI), leve || "n'a pas leve");
-    fs.rmSync(p, { force: true });
+    r = essai([{ domain: ".vimeo.com", name: "x", value: "y" }]);
+    controle("(f) aucun badge Hektor -> on leve, et le message NOMME les entrees cherchees",
+      /aucun cookie/i.test(r.leve) && r.leve.includes(GTI) && r.leve.includes(LBI),
+      r.leve || "n'a pas leve");
   }
+
+  // ═══ ①bis LE CHOIX DE L'ENTREE ══════════════════════════════════════════
+  // Vecu le 26/09 : la-boite-immo.com avait un badge et a rendu 403 ; www.gti a repondu.
+  controle("(a2) l'entree est choisie AVANT la boucle, pas pendant",
+    /async function choisirEntree\(/.test(srcSonde), "aucun choix d'entree");
+  controle("(a3) ⚠ chaque entree n'est essayee QU'UNE FOIS -- pas une boucle d'essais",
+    /for \(const s of candidates\)/.test(srcSonde) && !/while/.test(
+      srcSonde.slice(srcSonde.indexOf("async function choisirEntree("),
+                     srcSonde.indexOf("async function choisirEntree(") + 600)),
+    "un nouvel essai en boucle apres un refus prolongerait un bannissement");
+  controle("(a4) si AUCUNE entree ne repond : on s'arrete et on ne conclut RIEN",
+    /on n'a pas pu regarder/.test(srcSonde) && /aucune entree Hektor ne repond/.test(srcSonde),
+    "un echec d'acces serait pris pour « aucune photo manquante »");
 
   // ═══ ② LA COMPARAISON DES LISTES ════════════════════════════════════════
   // C'est le coeur de la sonde : une photo presente chez Hektor et absente du miroir
@@ -134,7 +141,7 @@ function potTemporaire(cookies) {
   controle("(n) elle vise les annonces les PLUS ANCIENNEMENT modifiees",
     /ORDER BY COALESCE\(s\.date_maj, ''\) ASC/.test(srcSonde),
     "un echantillon recent ne prouverait rien");
-  controle("(o) une divergence fait SORTIR EN 1, donc elle se voit",
+  controle("(o) une photo MANQUANTE fait SORTIR EN 1, donc elle se voit",
     /process\.exitCode = 1;/.test(srcSonde), "la divergence passerait inapercue");
   controle("(p) la lecture de galerie est IMPORTEE du worker, pas recopiee",
     /extractConsolePhotoEntries \} = require\("\.\/console_job_worker\.js"\)/.test(srcSonde),

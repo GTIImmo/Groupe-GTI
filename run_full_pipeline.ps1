@@ -1095,18 +1095,14 @@ if (-not $photosOk) {
     Write-RunLog "WARN  Photos non rapatriees cette nuit (echec non bloquant) - voir heartbeat phase2.rattrapage_photos"
 }
 
-# LE REPLI, et c'est une SONDE, pas un balayage.
-# Mesure du 26/09 : ajouter une photo dans Hektor FAIT BOUGER la date_maj de l'annonce
-# (63146 : 24/09 12:10:17 -> 26/09 09:32:51). Le delta du run suffit donc, et aucun
-# balayage n'est necessaire. MAIS cette mesure porte sur l'API AnnonceById, alors que le
-# delta lit le LISTING -- tres probablement le meme champ, pas prouve.
-# Plutot que construire un balayage de 13 437 lectures dont on n'a peut-etre jamais
-# besoin, on tire 20 annonces au sort et on compare le miroir a la Console. Si ca
-# diverge, la date est aveugle et il faudra le balayage -- on le saura AVANT d'avoir
-# perdu des photos. 20 requetes par nuit.
-Invoke-OptionalStepWithRetry -Label "phase2 sonde photos (la date_maj suit-elle ?)" -Arguments @(
-    (Join-Path $projectRoot "Console\sonde_photos_datemaj.js"),
-    "--echantillon", "20"
+# LA SONDE : Hektor a-t-il des photos que nous n'avons pas ?
+# Une question, une reponse. 25 annonces par nuit -- les plus anciennement modifiees,
+# car c'est la qu'un ecart se verrait -- et on compare la galerie de Hektor au miroir.
+# Si une photo manque, on le sait le lendemain et la sonde sort en 1 (donc ca se voit
+# dans le journal et dans check_gti_health). 50 requetes, cadence Hektor.
+Invoke-OptionalStepWithRetry -Label "phase2 sonde photos (Hektor en a-t-il que nous n'avons pas ?)" -Arguments @(
+    (Join-Path $projectRoot "Console\sonde_photos_manquantes.js"),
+    "--echantillon", "25"
 ) -Exe $nodeExeGlobal -MaxAttempts 1 -WorkerKey "phase2.sonde_photos"
 
 # Matterport = etape non critique (SaaS externe). Un plantage cote Matterport (ex. 500

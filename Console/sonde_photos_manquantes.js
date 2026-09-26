@@ -1,27 +1,20 @@
-// SONDE : la date_maj d'une annonce suit-elle vraiment ses photos ?
+// SONDE : Hektor a-t-il des photos que nous n'avons pas ?
 //                                                                  26/09/2026
-// MESURE DU 26/09, faite sur idee de Frederic : ajouter une photo dans Hektor FAIT
-// BOUGER la date_maj de l'annonce -- 63146 est passee de « 2026-09-24 12:10:17 » a
-// « 2026-09-26 09:32:51 », l'instant exact de l'ajout. C'est l'inverse des documents,
-// ou la date est aveugle a 91 %.
+// Une question, une reponse. Chaque nuit, elle prend quelques annonces et compare la
+// galerie de Hektor a ce que porte notre miroir. Si Hektor en a une de plus, c'est que
+// le rapatriement l'a manquee -- et on le sait le lendemain, pas dans six mois.
 //
-// CONSEQUENCE : le delta du run suffit. Une photo ajoutee chez Hektor fait relire
-// l'annonce, images_json porte la photo neuve, et le rattrapage la telecharge.
-// AUCUN balayage de 13 437 lectures n'est necessaire.
+// ⚠ Elle prend les annonces les PLUS ANCIENNEMENT modifiees. C'est la que l'ecart se
+//   verrait : une annonce modifiee hier vient d'etre relue de toute facon, elle ne
+//   prouverait rien.
 //
-// ⚠ MAIS CETTE MESURE PORTE SUR L'API AnnonceById, alors que le delta du run lit le
-//   LISTING. Tres probablement le meme champ -- pas prouve.
+// Pour situer : le rapatriement quotidien s'appuie sur le fait qu'ajouter une photo
+// dans Hektor FAIT BOUGER la date de l'annonce -- mesure le 26/09 sur 63146, passee de
+// « 2026-09-24 12:10:17 » a « 2026-09-26 09:32:51 », l'instant exact de l'ajout. La
+// sonde est la pour verifier que ca reste vrai, sans rien supposer.
 //
-// CETTE SONDE EST LE REPLI, et c'est un DETECTEUR, pas un balayage. Chaque nuit elle
-// tire quelques annonces au sort et compare la galerie de Hektor a notre miroir. Si ca
-// diverge, la date est aveugle pour ce cas-la et il faudra construire le balayage --
-// on le saura AVANT d'avoir perdu des photos, pour 40 requetes au lieu de 13 437.
-//
-// ⚠ Elle privilegie les annonces a date_maj ANCIENNE : si la date suivait mal, c'est
-//   la que l'ecart se verrait. Une annonce modifiee hier ne prouverait rien.
-//
-//   node Console/sonde_photos_datemaj.js --echantillon 20
-// N'ECRIT RIEN, NI EN LOCAL NI DANS SUPABASE. Sort en 1 si une divergence est trouvee.
+//   node Console/sonde_photos_manquantes.js --echantillon 25
+// N'ECRIT RIEN, NI EN LOCAL NI DANS SUPABASE. Sort en 1 si des photos manquent.
 
 const fs = require("fs");
 const path = require("path");
@@ -64,18 +57,40 @@ async function frein() {
 // qui porte effectivement les cookies.
 const HOTES = ["groupe-gti-immobilier.la-boite-immo.com", "www.gti-immobilier.fr"];
 
-function session() {
+// ⚠ AVOIR un badge pour une entree ne veut pas dire qu'il y est VALIDE. Constate le
+// 26/09 : la sonde a choisi la-boite-immo.com parce qu'elle y avait des cookies, et
+// Hektor a rendu 403. On rend donc TOUTES les entrees possibles, et l'appelant essaie.
+function sessions() {
   const etat = JSON.parse(fs.readFileSync(POT, "utf8"));
   const toutes = etat.cookies || [];
+  const out = [];
   for (const hote of HOTES) {
     const liste = toutes
       .filter((c) => String(c.domain || "").replace(/^\./, "") === hote)
       .map((c) => c.name + "=" + c.value);
-    if (liste.length) {
-      return { cookieHeader: liste.join("; "), base: "https://" + hote };
+    if (liste.length) out.push({ cookieHeader: liste.join("; "), base: "https://" + hote });
+  }
+  if (!out.length) {
+    throw new Error(`aucun cookie Hektor dans ${POT} (cherches sur : ${HOTES.join(", ")})`);
+  }
+  return out;
+}
+
+// On essaie chaque entree UNE SEULE FOIS, AVANT la boucle, sur une annonce connue.
+// ⚠ Ce n'est PAS un nouvel essai apres un refus -- la regle du projet reste tenue :
+// dans la boucle, un 403 arrete tout. Ici on choisit la porte, au plus deux requetes
+// par execution, et si aucune ne repond on s'arrete sans rien tenter de plus.
+async function choisirEntree(candidates, annonceTemoin) {
+  const refus = [];
+  for (const s of candidates) {
+    try {
+      await lireGalerie(annonceTemoin, s.cookieHeader, s.base);
+      return { session: s, refus };
+    } catch (e) {
+      refus.push(`${s.base} -> ${e.message}`);
     }
   }
-  throw new Error(`aucun cookie Hektor dans ${POT} (cherches sur : ${HOTES.join(", ")})`);
+  return { session: null, refus };
 }
 
 async function lireGalerie(annonceId, cookieHeader, base) {
@@ -128,8 +143,17 @@ function lireLeMiroir() {
   console.log(`sonde photos : ${lot.length} annonce(s), les plus anciennement modifiees`);
   console.log(`  la plus ancienne : ${lot[0].date_maj}\n`);
 
-  const { cookieHeader, base } = session();
-  console.log(`  session sur : ${base}\n`);
+  const candidates = sessions();
+  const choix = await choisirEntree(candidates, lot[0].id);
+  for (const r of choix.refus) console.log(`  entree refusee : ${r}`);
+  if (!choix.session) {
+    console.log(`\n⛔ aucune entree Hektor ne repond -- sonde abandonnee, rien conclu.`);
+    console.log(`   (ce n'est PAS « aucune photo manquante » : on n'a pas pu regarder.)`);
+    process.exitCode = 1;
+    return;
+  }
+  const { cookieHeader, base } = choix.session;
+  console.log(`  entree retenue : ${base}\n`);
   const divergences = [];
   let lues = 0, arret = null;
 
@@ -167,13 +191,18 @@ function lireLeMiroir() {
     }
   }
 
-  if (divergences.length) {
-    console.log(`\n⚠⚠ LA DATE_MAJ NE SUIT PAS TOUJOURS LES PHOTOS.`);
-    console.log(`   Le delta du run ne suffit pas : il faut construire le balayage plafonne.`);
-    console.log(`   (Mesure du 26/09 : elle suivait sur un ajout. Ce cas-la est different.)`);
+  const manquantes = divergences.filter((d) => d.absentes_du_miroir.length);
+  if (manquantes.length) {
+    const combien = manquantes.reduce((n, d) => n + d.absentes_du_miroir.length, 0);
+    console.log(`\n⚠⚠ ${combien} PHOTO(S) CHEZ HEKTOR QUE NOUS N'AVONS PAS, sur ${manquantes.length} annonce(s).`);
+    console.log(`   Le rapatriement quotidien les a manquees -- a regarder.`);
     process.exitCode = 1;
+  } else if (divergences.length) {
+    // Des photos retirees chez Hektor ne sont PAS un probleme : on les garde expres,
+    // une adresse deja diffusee (portail, email) peut encore les reclamer.
+    console.log(`\n▫ Aucune photo manquante. ${divergences.length} annonce(s) ont des photos`);
+    console.log(`  que Hektor n'a plus -- c'est normal, on les conserve volontairement.`);
   } else if (lues) {
-    console.log(`\n✅ Aucune divergence : la date_maj suit les photos sur cet echantillon.`);
-    console.log(`   Le delta du run suffit, pas de balayage a construire.`);
+    console.log(`\n✅ Aucune photo manquante sur cet echantillon.`);
   }
 })().catch((e) => { console.error("ERREUR :", e.message); process.exit(2); });
