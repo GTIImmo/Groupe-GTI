@@ -20,13 +20,13 @@
 > L4-b' ✅ les 9 sortants · normalizeMandatContactIds · la qualification
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
->          ⚠ « e3 » = la 3e piece de C.9-e (l. 393) -- codee, ETEINTE
-> L5     E.0-bis (l. 1452)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+>          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
+> L5     E.0-bis (l. 1472)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
 >          + C.13 · supprimer une annonce · brouillons · retirer « Ouvrir Hektor »
-> L6     D.0 (l. 915) documents et mandats signes · signature · diffusion · n° mandat
+> L6     D.0 (l. 935) documents et mandats signes · signature · diffusion · n° mandat
 > L7     D.1a · D.1 · D.2 · garder la copie des photos
 > L8     C.4-bis elargi · E.3 · 0.3 / E.1 rattrapages · E.2
 > L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
@@ -34,7 +34,7 @@
 >
 > ⚠⚠ TROIS TRAVAUX ONT UNE DATE DE PEREMPTION, pas seulement une priorite :
 >    · L9        le registre se remplit depuis le MIROIR
->    · C.9-couple (l. 890) seul moment ou l'on peut comparer NOTRE paire a celle
+>    · C.9-couple (l. 892) seul moment ou l'on peut comparer NOTRE paire a celle
 >                 de Hektor
 >    · LA VITRINE ET LES LIENS PUBLICS DE RDV (section 11bis) : les liens deja
 >                 DIFFUSES portent le numero Hektor. Il faut servir l'ancienne ET
@@ -45,17 +45,19 @@
 >           C.19 transactions · C.11 menage · B.3 · F.1 (apres la coupure)
 > ```
 >
-> **LE COMPTE, au 25/09** : 121 cases ouvertes dans tout le document, mais **~72 sont de
-> l'archive repetee** (apres la fin de la liste vivante, signalee dans le texte).
-> Liste vivante : 49, dont **11 perimees corrigees le 25/09** -- et **3 vraies taches se
-> sont revelees dessous** (le lien d'agenda 603496 · l'annonce 63122 · le va-et-vient
-> C.16/registre). ➡ **41 reellement ouvertes**, plus les 5 gestes de Frederic.
+> **LE COMPTE, au 26/09** — recompté, pas reporté :
 >
 > ```
-> OU ELLES SONT           page de tete 1 · C.9/L4-c 6 · C.19 4 · C.4-bis-0 1
->                         C.4-bis 1 · C.16 1 · C.9/26bis-3 3 · C.11 1 · A.3 2
->                         D (fichiers) 4 · fin de plan 9 · hors code 3   = 36
->                         + les 5 gestes de Frederic                     = 41
+> 43   cases ouvertes dans la LISTE VIVANTE (avant « 11. FIN DE PLAN »)
+> -11  section 10 (D) : REPRISE par la 10bis -> doublons, bandeau en tete de la section
+> ---
+> 32   reellement ouvertes, plus les 5 gestes de Frederic
+>
+> OU ELLES SONT   10bis fichiers 11 · L4-c 8 · C.19 4 · C.9 3 · A.3 2
+>                 C.4-bis-0 1 · C.4-bis 1 · C.16 1 · C.11 1        = 32
+>
+> (102 autres cases ouvertes vivent APRES « 11. FIN DE PLAN » : c'est de l'archive
+>  repetee, elle ne se traite pas.)
 > ```
 
 > **Réécrite le 26/09/2026.** Cette page remplace la lecture du document : le reste est une
@@ -66,22 +68,22 @@
 ```
 OU ON EST, PAR FRONT -- ils avancent separement
 
-  ① IDENTITE     L4/C.9 l. 882  la bascule contact est faite (23/09) ; une annonce NAIT
-                 (L4-c l. 100)  dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service
+  ① IDENTITE     L4/C.9 l. 884  la bascule contact est faite (23/09) ; une annonce NAIT
+                 (L4-c l. 102)  dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service
                                la nuit du 26/09.
                                RESTE : lire la ligne [numero de bien dans la cle] du run ·
                                  surveiller la 1re annonce reelle d'un negociateur ·
                                  supprimer les annonces d'essai 63146 et 63147
 
-  ② DOCUMENTS    D.0 l. 915       4 defauts fermes (mandat/annexe, empreinte, frein, ajout
+  ② DOCUMENTS    D.0 l. 935       4 defauts fermes (mandat/annexe, empreinte, frein, ajout
                  G.1->G.6      autonome dormant). LE RATTRAPAGE TOURNE SEUL : tache « GTI
-                 l. 1132       Rattrapage Documents » a 23 h, lots de 3 000, 0 en erreur.
+                 l. 1152       Rattrapage Documents » a 23 h, lots de 3 000, 0 en erreur.
                                RESTE : 40 987 annonces (~14 nuits) · G.2 --detect plafonne ·
                                  G.3 le menage des 3 Go · G.4 l'etat doit suivre ·
                                  G.5 la RPC d'ajout autonome
 
   ③ PHOTOS       section 10bis 4 cases cochees le 26/09, TOUT DORMANT : le coffre public
-                 l. 1115       gti-photo · le calibrage (18 ko / 226 ko -> ~18 Go, pas 25) ·
+                 l. 1135       gti-photo · le calibrage (18 ko / 226 ko -> ~18 Go, pas 25) ·
                                l'adresse qui ne disparait plus (G.10bis) · le generateur.
                                RESTE : G.13 generer les derives (~3 h) · G.14 le logo ·
                                  G.15 rebrancher les 48 points avec repli · G.16 les restes
@@ -911,6 +913,24 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 ```
 
 ## 10. D — RAPATRIER LES FICHIERS *(irréversible)*
+
+> ⛔⛔ **SECTION REPRISE PAR LA 10bis LE 26/09/2026 — NE PAS S'EN SERVIR COMME LISTE.**
+> Elle est gardée pour l'historique *(le raisonnement de D.0 y est)*, mais **ses chiffres
+> ont été réfutés depuis** et la lire comme un ordre du jour ferait refaire du travail :
+>
+> | ici | repris en | ce qui a changé |
+> |---|---|---|
+> | `D.0-e` le rattrapage, « ~15 nuits » | **`G.1`** | mesuré : **40 987** annonces, ~14 nuits, la tâche de 23 h tourne **seule** |
+> | `D.0-f` `--detect` | **`G.2`** | — |
+> | `D.0-g` allumer `-EnqueueConsoleDocuments` | **`G.6`** | — |
+> | « `D.0` ARRÊTÉE DEPUIS LE 23/08 ← LE PLUS URGENT » | **`G.1`** | ⛔ **plus vrai** : elle a repris le 25/09 |
+> | « 1. rapatrier ~125 Go » | **`G.7`** | ✅ **fait** : **436 522** photos, **169 Go**, vérifié des deux côtés |
+> | `P1` verser les vivantes, « ~29 Go » | **`G.13`** | ⛔ **réfuté** : on verse des **dérivés**, **~18 Go** mesurés — pas les masters |
+> | `P2` faire lire l'app chez nous, « 30 points » | **`G.15`** | **48** points, pas 30 |
+> | `D.1a` / `D.1` / `D.2` mesurer | **`G.3`** | mesuré : 3 Go à reprendre *(1 749 documents d'archives + 902 orphelins)* |
+>
+> ⚠ Ses **11 cases ouvertes sont donc des doublons** de la 10bis. Le compte réel est en
+> page de tête. ➡ **la liste vivante des fichiers est la section 10bis.**
 ```
 [~] D.0   LA REDESCENTE DES DOCUMENTS -- EN COURS DE REPRISE DEPUIS LE 25/09
     ================================================================================

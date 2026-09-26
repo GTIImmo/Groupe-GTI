@@ -100,8 +100,8 @@ L0 ✅   L1 ✅   L2 ✅   L3 ✅   L4 🟡   puis  L5  L6  L7  L8  L9
 | front | où c'en est | ce qui reste |
 |---|---|---|
 | **① L'IDENTITÉ** *(`L4` / `C.9`)* | la bascule contact est faite *(23/09)*, une annonce **naît dans l'app** depuis le 25/09 *(`e3` allumé)*, `C.9-f` en service la nuit du 26/09 | contrôler la ligne `[numero de bien dans la cle]` du run · surveiller la **1re annonce réelle** d'un négociateur · supprimer les annonces d'essai **63146** et **63147** |
-| **② LES DOCUMENTS** *(`D.0`, l. 911 · `G.1`→`G.6`)* | 4 défauts fermés *(mandat/annexe, empreinte, frein, ajout autonome dormant)*. Le **rattrapage tourne seul** : tâche « GTI Rattrapage Documents » à 23 h, lots de 3 000 | **40 987 annonces**, ~14 nuits. Puis `G.2` `--detect` plafonné · `G.3` le ménage des 3 Go · `G.4` l'état doit suivre · `G.5` la RPC d'ajout |
-| **③ LES PHOTOS** *(section **10bis**, l. 1111)* | **4 cases cochées le 26/09**, tout **dormant** : le coffre, le calibrage, l'adresse qui ne disparaît plus, le générateur | `G.13` générer les dérivés *(~18 Go, ~3 h)* · `G.14` le logo · `G.15` rebrancher les **48 points** avec repli · `G.16` les restes |
+| **② LES DOCUMENTS** *(`D.0`, l. 935 · `G.1`→`G.6`)* | 4 défauts fermés *(mandat/annexe, empreinte, frein, ajout autonome dormant)*. Le **rattrapage tourne seul** : tâche « GTI Rattrapage Documents » à 23 h, lots de 3 000 | **40 987 annonces**, ~14 nuits. Puis `G.2` `--detect` plafonné · `G.3` le ménage des 3 Go · `G.4` l'état doit suivre · `G.5` la RPC d'ajout |
+| **③ LES PHOTOS** *(section **10bis**, l. 1135)* | **4 cases cochées le 26/09**, tout **dormant** : le coffre, le calibrage, l'adresse qui ne disparaît plus, le générateur | `G.13` générer les dérivés *(~18 Go, ~3 h)* · `G.14` le logo · `G.15` rebrancher les **48 points** avec repli · `G.16` les restes |
 
 **Le détail des trois fronts est dans la liste, par numéro de ligne. Pas ici.**
 
@@ -212,6 +212,17 @@ décision écrite) · **Est-ce mesuré ?** (mesurer, *puis* conclure) · **Qu'es
   pas**. Un correctif non redémarré n'est pas actif — plusieurs essais ont été perdus comme ça.
 - Le front se valide par `npm run build` dans `apps/hektor-v1` (c'est ce que fait Vercel).
 - Vérifier un écran qui « plante » : **la console du déployé d'abord**, la base ensuite.
+- **Les renvois `l. N` se décalent en silence** dès qu'on insère ailleurs dans la liste.
+  Un renvoi ne se *calcule* pas, il se *trouve* — le 26/09, quatre étaient faux, dont
+  trois depuis des jours *(`C.9-couple` pointait la section `C.4`)*. Après toute édition
+  de la liste ou de cette page :
+
+  ```bash
+  python phase2/checks/verifier_renvois_liste.py --reparer
+  ```
+
+  Puis **relancer sans `--reparer`** : une correction change la taille du texte, donc
+  peut décaler les suivants.
 
 ---
 
