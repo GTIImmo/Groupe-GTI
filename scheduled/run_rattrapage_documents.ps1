@@ -40,10 +40,16 @@ $runFailed = $false
 try {
     Write-Output "=== Rattrapage documents demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
 
-    $nodeCandidates = @(
+    # ⚠ LE @() AUTOUR DU FILTRE EST INDISPENSABLE -- piege PowerShell vecu le 25/09 a 23 h.
+    # Quand Where-Object ne laisse passer QU'UN SEUL element, PowerShell ne rend pas un
+    # tableau d'un element : il rend la CHAINE. Et [0] sur une chaine donne son PREMIER
+    # CARACTERE. La tache de 23 h a donc essaye de lancer une commande nommee « C » :
+    #   « Le terme "C" n'est pas reconnu comme nom d'applet de commande... »
+    # Les autres scripts tenaient par chance -- deux installations de Node sur la machine.
+    $nodeCandidates = @(@(
         $env:CONSOLE_NODE_EXE,
         "C:\Program Files\nodejs\node.exe"
-    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
     if ($nodeCandidates.Count -eq 0) { throw "node.exe introuvable" }
     $nodeExe = $nodeCandidates[0]
 
