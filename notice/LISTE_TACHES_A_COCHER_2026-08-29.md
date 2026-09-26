@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1601)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1611)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1279,11 +1279,16 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             en a AUCUNE. Verifie sur les 4 index et sur app_console_photo : « archive »
             est un DRAPEAU (du texte, « 0 » ou « 1 »), pas une date. Les seules dates
             disponibles (date_maj, refreshed_at) bougent pour dix autres raisons.
-            -> Il faut poser l'ancre SOI-MEME : une colonne sur la photo, horodatee le
-               jour ou son annonce quitte l'ensemble vivant (meme regle que
-               shouldKeepCloud), et REMISE A VIDE si l'annonce redevient vivante.
-               Exactement le patron de absent_depuis pose pour G.10bis.
-            ⚠ Sans cette colonne, G.13 peut se faire, mais la purge des 6 mois non.
+            ⭐ TRANCHE PAR FREDERIC LE 26/09 : « ok pour ta propo ». ON POSE L'ANCRE.
+               Une colonne sur la photo, horodatee le jour ou son annonce quitte
+               l'ensemble vivant (meme regle que shouldKeepCloud), REMISE A VIDE si
+               l'annonce redevient vivante. Patron de absent_depuis (G.10bis).
+            ⚠ ORDRE : la colonne doit exister AVANT G.13. Sinon les derives naissent
+              sans horloge, et il faudra deviner leur date de depart apres coup.
+            ▫ Les annonces DEJA archivees n'ont pas de date de depart : elles seront
+              horodatees a leur premiere synchro apres la pose. Leur compte de 6 mois
+              demarrera donc plus tard que la realite -- on garde TROP LONGTEMPS, jamais
+              trop peu. C'est le bon sens de l'erreur.
 
 [ ] G.9   L'ETAT DES PHOTOS N'EST PAS CELUI DES DOCUMENTS
             ⚠ Les documents DESCENDENT du cloud a l'archivage (G.4). Pour les photos ce
@@ -1525,14 +1530,19 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                  rapatriement herite donc du filtre de l'app, alors qu'il travaille pour
                  le SERVEUR. (Le numero, lui, existe : app_dossier local porte 61 279
                  lignes contre 58 146 indexees.)
-                 DEUX CHEMINS, et le choix t'appartient :
-                   A. on laisse -- l'app n'a pas besoin des locations, et a la coupure
-                      leurs photos sont perdues (le CDN ne sert plus rien) ;
-                   B. on rapatrie SUR LE SERVEUR SEULEMENT -- il faut alors resoudre le
-                      numero depuis app_dossier, et surtout NE PAS creer de ligne
-                      d'index Supabase pour elles, sinon on fait fuir des locations dans
-                      l'app : exactement ce que le filtre du 26/08 empeche.
-                 ⚠ ECHEANCE : la coupure. Apres, le choix ne se pose plus.
+                 ⭐ TRANCHE PAR FREDERIC LE 26/09 : ON LAISSE. « il faut laisser comme
+                   actuel, pas besoin de les recuperer dans le serveur. »
+                 CE QUE CA VEUT DIRE, ecrit pour qu'on ne le rouvre pas :
+                   · les 8 013 photos des 583 annonces de LOCATION restent chez Hektor
+                     et disparaitront a la coupure. C'est assume.
+                   · rattrapage_photos.js garde son REFUS (il resout le numero depuis les
+                     4 index Supabase) -- ce n'est plus un defaut a corriger, c'est le
+                     comportement voulu. NE PAS le « reparer » plus tard par reflexe.
+                   · si un jour les locations entrent dans l'app, il suffira d'ajouter
+                     leur type a TYPES_OFFRE_APP : le rapatriement les prendra alors
+                     tout seul, sans une ligne de code.
+                 ⚠ Les 8 013 ne comptent donc PLUS comme un reste a faire. Le seul
+                   « reste » de G.16 est les 2 photos sans fichier.
 
             ⛔ 17 photos / 4 annonces QUI ONT un numero d'app et ne sont pas rapatriees :
                  63153 (n° 7589140, Estimation, 10 photos) · 63154 (7589141, brouillon,
