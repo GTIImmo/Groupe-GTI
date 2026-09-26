@@ -57,21 +57,43 @@ async function frein() {
 // qui porte effectivement les cookies.
 const HOTES = ["groupe-gti-immobilier.la-boite-immo.com", "www.gti-immobilier.fr"];
 
-// ⚠ AVOIR un badge pour une entree ne veut pas dire qu'il y est VALIDE. Constate le
-// 26/09 : la sonde a choisi la-boite-immo.com parce qu'elle y avait des cookies, et
-// Hektor a rendu 403. On rend donc TOUTES les entrees possibles, et l'appelant essaie.
+// ⚠⚠ L'HOTE VIENT DE LA CONFIGURATION, LES COOKIES SUIVENT -- mesure du 26/09.
+//
+// La Console Hektor repond sur deux noms : `www.gti-immobilier.fr` (celui que
+// HEKTOR_BASE_URL designe, et qui REPOND) et `groupe-gti-immobilier.la-boite-immo.com`
+// (qui rend 403). Le pot de cookies du worker porte LES DEUX -- memes noms de cookie,
+// MAIS DES VALEURS DIFFERENTES : ce sont deux sessions distinctes, mesure faite
+// (0 valeur identique sur 2 cookies communs).
+//
+// Consequence, et c'etait le defaut : ce fichier appelait le BON hote avec les cookies
+// de L'AUTRE session -> Hektor rendait la page de connexion, et la detection aurait
+// echoue sur CHAQUE annonce. Ce n'etait pas « aucun cookie trouve », c'etait
+// « mauvaise session envoyee ».
+// ⚠ Et deduire l'hote DES COOKIES ne corrige rien : on appelle alors l'hote qui refuse.
+//
+// La regle est donc : on prend l'hote de HEKTOR_BASE_URL, et les cookies DE CET HOTE.
+// Si cet hote n'a pas de cookie, on le DIT au lieu d'en envoyer d'autres au hasard.
+// On rend l'hote CONFIGURE en premier, puis les autres en secours -- au cas ou la
+// configuration changerait sans que le pot de cookies suive.
 function sessions() {
   const etat = JSON.parse(fs.readFileSync(POT, "utf8"));
   const toutes = etat.cookies || [];
+  let ordre;
+  try {
+    const configure = new URL(BASE).hostname;
+    ordre = [configure, ...HOTES.filter((h) => h !== configure)];
+  } catch (_) { ordre = [...HOTES]; }
+
   const out = [];
-  for (const hote of HOTES) {
+  for (const hote of ordre) {
     const liste = toutes
       .filter((c) => String(c.domain || "").replace(/^\./, "") === hote)
       .map((c) => c.name + "=" + c.value);
     if (liste.length) out.push({ cookieHeader: liste.join("; "), base: "https://" + hote });
   }
   if (!out.length) {
-    throw new Error(`aucun cookie Hektor dans ${POT} (cherches sur : ${HOTES.join(", ")})`);
+    const presents = [...new Set(toutes.map((c) => String(c.domain || "").replace(/^\./, "")))].join(", ");
+    throw new Error(`aucun cookie Hektor dans ${POT} -- domaines presents : ${presents}`);
   }
   return out;
 }

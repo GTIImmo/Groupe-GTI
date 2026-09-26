@@ -251,21 +251,36 @@ const RESEAU_BLOQUE = /UND_ERR_CONNECT_TIMEOUT|ECONNREFUSED|ECONNRESET|EAI_AGAIN
 // Un filtre sur un seul domaine rend donc « aucun cookie Hektor » alors que la session
 // est parfaitement valide. On accepte les deux, et on deduit l'adresse de base de celui
 // qui porte effectivement les cookies.
-const HOTES_HEKTOR = ["groupe-gti-immobilier.la-boite-immo.com", "www.gti-immobilier.fr"];
-
+// ⚠⚠ L'HOTE VIENT DE LA CONFIGURATION, LES COOKIES SUIVENT -- mesure du 26/09.
+//
+// La Console Hektor repond sur deux noms : `www.gti-immobilier.fr` (celui que
+// HEKTOR_BASE_URL designe, et qui REPOND) et `groupe-gti-immobilier.la-boite-immo.com`
+// (qui rend 403). Le pot de cookies du worker porte LES DEUX -- memes noms de cookie,
+// MAIS DES VALEURS DIFFERENTES : ce sont deux sessions distinctes, mesure faite
+// (0 valeur identique sur 2 cookies communs).
+//
+// Consequence, et c'etait le defaut : ce fichier appelait le BON hote avec les cookies
+// de L'AUTRE session -> Hektor rendait la page de connexion, et la detection aurait
+// echoue sur CHAQUE annonce. Ce n'etait pas « aucun cookie trouve », c'etait
+// « mauvaise session envoyee ».
+// ⚠ Et deduire l'hote DES COOKIES ne corrige rien : on appelle alors l'hote qui refuse.
+//
+// La regle est donc : on prend l'hote de HEKTOR_BASE_URL, et les cookies DE CET HOTE.
+// Si cet hote n'a pas de cookie, on le DIT au lieu d'en envoyer d'autres au hasard.
 function loadHektorCookieHeader() {
   const fs = require("fs");
+  const hote = new URL(HEKTOR_BASE_URL).hostname;
   const state = JSON.parse(fs.readFileSync(DETECT_STORAGE_STATE, "utf8"));
-  const toutes = state.cookies || [];
-  for (const hote of HOTES_HEKTOR) {
-    const cookies = toutes
-      .filter((c) => String(c.domain || "").replace(/^\./, "") === hote)
-      .map((c) => c.name + "=" + c.value);
-    // L'adresse de base doit suivre les cookies : un cookie de www.gti-immobilier.fr ne
-    // sera pas envoye a la-boite-immo.com, et Hektor rendrait la page de login.
-    if (cookies.length) return { header: cookies.join("; "), base: "https://" + hote };
+  const cookies = (state.cookies || [])
+    .filter((c) => String(c.domain || "").replace(/^\./, "") === hote)
+    .map((c) => c.name + "=" + c.value);
+  if (!cookies.length) {
+    const presents = [...new Set((state.cookies || [])
+      .map((c) => String(c.domain || "").replace(/^\./, "")))].join(", ");
+    throw new Error(`Aucun cookie pour ${hote} dans ${DETECT_STORAGE_STATE}`
+      + ` -- domaines presents : ${presents}`);
   }
-  throw new Error(`Aucun cookie Hektor dans ${DETECT_STORAGE_STATE} (cherches sur : ${HOTES_HEKTOR.join(", ")})`);
+  return { header: cookies.join("; "), base: "https://" + hote };
 }
 
 async function fetchDocumentsHtml(hektorAnnonceId, session, timeoutMs = 20000) {

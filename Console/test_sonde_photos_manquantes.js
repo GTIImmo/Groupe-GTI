@@ -56,13 +56,15 @@ function potTemporaire(cookies) {
   if (!blocSessions) {
     controle("(0) la sonde sait lister ses entrees", false, "fonction introuvable");
   } else {
-    function charger(pot) {
+    // BASE est desormais un parametre : c'est l'hote CONFIGURE, et il prime.
+    function charger(pot, base) {
       // eslint-disable-next-line no-new-func
-      return new Function("fs", "POT", `${blocHotes}\n${blocSessions}; return sessions;`)(fs, pot);
+      return new Function("fs", "POT", "BASE", "URL",
+        `${blocHotes}\n${blocSessions}; return sessions;`)(fs, pot, base, URL);
     }
-    const essai = (cookies) => {
+    const essai = (cookies, base = "https://" + GTI) => {
       const pot = potTemporaire(cookies);
-      try { return { out: charger(pot)(), leve: "" }; }
+      try { return { out: charger(pot, base)(), leve: "" }; }
       catch (e) { return { out: null, leve: e.message }; }
       finally { fs.rmSync(pot, { force: true }); }
     };
@@ -83,17 +85,31 @@ function potTemporaire(cookies) {
     controle("(d) l'autre entree marche aussi, point initial du domaine compris",
       r.out && r.out[0] && r.out[0].base === "https://" + LBI, JSON.stringify(r.out));
 
-    // ⚠ LE POINT APPRIS LE 26/09 : avoir un badge ne veut pas dire qu'il est VALIDE.
-    // La sonde doit rendre LES DEUX entrees pour que l'appelant puisse essayer.
-    r = essai([{ domain: GTI, name: "a", value: "1" }, { domain: LBI, name: "b", value: "2" }]);
-    controle("(e) ⚠ avec les deux badges, LES DEUX entrees sont rendues",
-      r.out && r.out.length === 2, JSON.stringify(r.out && r.out.map((x) => x.base)));
-    controle("(e2) et dans un ordre DETERMINISTE",
-      r.out && r.out[0].base === "https://" + LBI, JSON.stringify(r.out && r.out.map((x) => x.base)));
+    // ⚠⚠ LE POINT DECISIF, MESURE LE 26/09 : les deux hotes portent des cookies de MEME
+    // NOM mais de VALEURS DIFFERENTES -- deux sessions distinctes (0 valeur identique sur
+    // 2 cookies communs). Envoyer les cookies de l'un a l'autre fait rendre la page de
+    // connexion. Donc l'hote CONFIGURE prime, et les cookies suivent.
+    r = essai([{ domain: GTI, name: "a", value: "1" }, { domain: LBI, name: "b", value: "2" }],
+              "https://" + GTI);
+    controle("(e) ⚠ l'hote CONFIGURE vient en premier",
+      r.out && r.out[0] && r.out[0].base === "https://" + GTI,
+      JSON.stringify(r.out && r.out.map((x) => x.base)));
+    controle("(e2) et ses cookies sont les SIENS, pas ceux de l'autre session",
+      r.out && r.out[0] && r.out[0].cookieHeader === "a=1",
+      r.out && r.out[0] ? r.out[0].cookieHeader : "-");
+    controle("(e3) l'autre reste en secours, apres",
+      r.out && r.out.length === 2 && r.out[1].base === "https://" + LBI,
+      JSON.stringify(r.out && r.out.map((x) => x.base)));
+
+    // si la configuration change et que le pot ne suit pas, on le DIT
+    r = essai([{ domain: LBI, name: "b", value: "2" }], "https://" + GTI);
+    controle("(e4) configuration sans cookie -> l'autre hote sert de secours, pas de silence",
+      r.out && r.out.length === 1 && r.out[0].base === "https://" + LBI,
+      JSON.stringify(r.out && r.out.map((x) => x.base)));
 
     r = essai([{ domain: ".vimeo.com", name: "x", value: "y" }]);
-    controle("(f) aucun badge Hektor -> on leve, et le message NOMME les entrees cherchees",
-      /aucun cookie/i.test(r.leve) && r.leve.includes(GTI) && r.leve.includes(LBI),
+    controle("(f) aucun badge Hektor -> on leve, et le message NOMME les domaines PRESENTS",
+      /aucun cookie/i.test(r.leve) && /vimeo/.test(r.leve),
       r.leve || "n'a pas leve");
   }
 
@@ -148,11 +164,19 @@ function potTemporaire(cookies) {
     "deux extractions divergeraient");
 
   // ═══ ④ LE MEME CORRECTIF DANS LA DETECTION DOCUMENTAIRE ═════════════════
-  controle("(q) la detection documentaire accepte les DEUX domaines",
-    /HOTES_HEKTOR/.test(srcEnq), "elle filtrerait encore un seul domaine");
-  controle("(r) et son adresse de base suit ses cookies",
-    /session\.base \+ "\/admin\/xmlrpc\.php/.test(srcEnq),
-    "elle appellerait un domaine pour lequel elle n'a pas de cookie");
+  // ⚠ Cote detection, la regle est plus simple encore : l'hote vient de la configuration,
+  // il n'y a pas de secours. Envoyer les cookies d'une autre session ferait rendre la page
+  // de connexion sur CHAQUE annonce -- le defaut qu'on vient de fermer.
+  controle("(q) la detection documentaire prend l'hote de HEKTOR_BASE_URL",
+    /new URL\(HEKTOR_BASE_URL\)\.hostname/.test(srcEnq),
+    "elle deduirait l'hote des cookies -> elle appellerait celui qui refuse");
+  controle("(r) et les cookies DE CET HOTE",
+    /\.replace\(\/\^\\\.\/, ""\) === hote\)/.test(srcEnq),
+    "elle prendrait les cookies d'une autre session");
+  controle("(s) si cet hote n'a pas de cookie, le message NOMME les domaines presents",
+    /domaines presents/.test(srcEnq), "on ne saurait pas quoi regarder");
+  controle("(t) et son adresse de base suit",
+    /session\.base \+ "\/admin\/xmlrpc\.php/.test(srcEnq), "adresse en dur ailleurs");
 
   console.log(`\n${echecs ? `${echecs} ECHEC(S)` : "TOUT VERT"}`);
   process.exit(echecs ? 1 : 0);
