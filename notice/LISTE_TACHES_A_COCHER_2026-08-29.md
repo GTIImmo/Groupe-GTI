@@ -1300,8 +1300,14 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             Aujourd'hui 0 photo concernee -- parce qu'il n'y en a AUCUNE dans le cloud.
             La fuite commence le jour ou on y verse les derives.
 
-[ ] G.10  CREER LE COFFRE « gti-photo »         nom arrete par Frederic
+[x] G.10  CREER LE COFFRE « gti-photo »         fait le 26/09, VERIFIE EN REEL
             public = true · images seulement (jpeg/png/webp) · 10 Mo par fichier.
+            Mesures, pas suppositions -- un fichier depose puis relu SANS AUCUNE CLE :
+              lecture publique       OK, octet pour octet, type image/jpeg
+              depot sans la cle      reste impossible (0 politique posee sur ce coffre)
+              un PDF                 REFUSE 400 -> la protection par types TIENT
+              coffre des documents   22 926 fichiers, prive : INTACT
+            Le coffre est vide et n'a AUCUN effet tant que G.11 ne depose rien.
             ⚠ Un coffre public n'est pas un coffre sans regles : seule la LECTURE est
               libre, le depot reste reserve au worker. Et limiter les types fait qu'un
               PDF ne peut PAS y entrer par erreur -- protection par construction.
@@ -1314,9 +1320,33 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             ⚠ Bibliotheque d'images cote worker (sharp est le standard Node) -- cout
               d'installation sur le serveur NON MESURE.
             ⚠ On PRE-GENERE : le redimensionnement a la volee de Supabase existe et
-              marche, mais il coute 5 $ / 1 000 images distinctes par cycle, quota Pro
-              = 100 -> ~375 $ le premier mois sur 74 550 photos. Leur propre
-              documentation recommande de pre-generer a ce volume.
+              MARCHE (verifie le 26/09, il repond en image/jpeg), mais il coute
+              5 $ / 1 000 images distinctes par cycle, quota Pro = 100 -> ~375 $ le
+              premier mois sur 74 550 photos. Leur propre documentation recommande de
+              pre-generer a ce volume.
+
+            ⚠⚠ DEUX OBSTACLES MESURES LE 26/09 -- a traiter DANS G.11, pas apres :
+
+            ① LE DEPOT ACTUEL NE SAIT PAS VISER UN AUTRE COFFRE.
+               storageRequest (console_job_worker.js) ecrit l'adresse en dur avec
+               STORAGE_BUCKET (:24). uploadStorageObject n'a pas de parametre de coffre
+               -> tel quel, un derive partirait dans le coffre PRIVE des documents, ou
+               il serait invisible du front (lecture par URL signee seulement) ET
+               compterait dans les 50 Mo/fichier au lieu de 10.
+               -> ajouter un coffre OPTIONNEL a storageRequest/uploadStorageObject,
+                  valeur par defaut STORAGE_BUCKET : aucun appel existant ne change.
+
+            ② SANS DUREE DE CACHE, CHAQUE AFFICHAGE RETRAVERSE SUPABASE.
+               Un depot brut ressort en `no-cache` : les portails et les emails
+               rechargent la meme adresse en boucle, et tout passe en egress facture.
+               La forme de l'en-tete est PIEGEUSE, mesuree aux deux essais :
+                 "max-age=31536000"                       -> public, max-age=31536000 ✅
+                 "public, max-age=31536000, immutable"    -> no-cache ⛔ SANS ERREUR
+               Supabase parse `max-age=N` et REFABRIQUE l'en-tete. Une forme plus
+               riche est ignoree EN SILENCE -- aucun code d'erreur, rien dans les logs.
+               -> poser exactement `cache-control: max-age=31536000` au depot. C'est
+                  sans danger ici : l'adresse contient le numero de la photo, donc un
+                  contenu different a TOUJOURS une adresse differente (cf G.15).
 
 [ ] G.12  CALIBRER SUR 200 PHOTOS
             Les 40 ko (w400) et 300 ko (w1600) sont des ordres de grandeur, PAS des
