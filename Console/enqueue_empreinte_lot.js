@@ -60,15 +60,34 @@ async function rest(pathname, options = {}) {
   return options.prefer === "return=minimal" ? null : response.json();
 }
 
-// Pagination systematique : sans elle PostgREST plafonne a 1000 lignes et on croirait a tort
-// que les annonces non retournees sont "a faire" -> on les rejouerait indefiniment.
-async function loadSet(pathname, column) {
+// ⚠⚠ PAGINATION PAR CURSEUR, et deux defauts vecus le 25/09 au soir l'imposent.
+//
+// ① SANS TRI, rien ne tient. Lire 436 000 lignes par pages de 1 000 avec un simple
+//    decalage et sans ORDER BY ne garantit rien : Postgres n'est pas tenu de rendre les
+//    lignes dans le meme ordre d'une page a l'autre. Certaines reviennent deux fois,
+//    d'autres JAMAIS. Constate : 174 433 photos sur 435 126 absentes de la table de
+//    correspondance, comptees « en echec » alors que le CDN n'avait rien refuse.
+//    40 % du travail perdu, sans un seul message d'erreur.
+//
+// ② AVEC TRI MAIS PAR DECALAGE, ca expire. « saute 400 000 lignes puis donne-m'en
+//    1 000 » oblige Postgres a parcourir les 400 000 a chaque page -> statement timeout.
+//
+// -> On demande « les 1 000 suivants APRES cet identifiant ». Le cout ne depend plus de
+//    la profondeur, et l'ordre est stable par construction.
+// ⚠ La cle doit etre UNIQUE et figurer dans le select, sinon le curseur saute des lignes.
+async function loadSet(pathname, column, cleUnique) {
+  const cle = cleUnique || column;
   const set = new Set();
   const page = 1000;
-  for (let offset = 0; ; offset += page) {
-    const rows = await rest(pathname + "&limit=" + page + "&offset=" + offset);
+  let curseur = null;
+  for (;;) {
+    const apres = curseur == null ? "" : "&" + cle + "=gt." + encodeURIComponent(String(curseur));
+    const rows = await rest(pathname + apres + "&order=" + cle + ".asc&limit=" + page);
     if (!Array.isArray(rows) || !rows.length) break;
     for (const row of rows) set.add(String(row[column]));
+    const dernier = rows[rows.length - 1][cle];
+    if (dernier == null) throw new Error("loadSet() : " + cle + " absent du select");
+    curseur = dernier;
     if (rows.length < page) break;
   }
   return set;
@@ -121,9 +140,9 @@ async function premierReste(source, empreintes, erreurs, enFile) {
 async function main() {
   const args = parseArgs(process.argv);
 
-  const empreintes = await loadSet("app_console_document_fingerprint?select=hektor_annonce_id", "hektor_annonce_id");
-  const erreurs = await loadSet("app_console_job?select=hektor_annonce_id&job_type=eq." + JOB_TYPE + "&status=eq.error", "hektor_annonce_id");
-  const enFile = await loadSet("app_console_job?select=hektor_annonce_id&job_type=eq." + JOB_TYPE + "&status=in.(pending,running)", "hektor_annonce_id");
+  const empreintes = await loadSet("app_console_document_fingerprint?select=hektor_annonce_id", "hektor_annonce_id", "hektor_annonce_id");
+  const erreurs = await loadSet("app_console_job?select=id,hektor_annonce_id&job_type=eq." + JOB_TYPE + "&status=eq.error", "hektor_annonce_id", "id");
+  const enFile = await loadSet("app_console_job?select=id,hektor_annonce_id&job_type=eq." + JOB_TYPE + "&status=in.(pending,running)", "hektor_annonce_id", "id");
 
   const code = await refusEventuel(args, enFile);
   if (code) { process.exitCode = code; return; }

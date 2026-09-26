@@ -56,15 +56,39 @@ async function rest(chemin, options = {}) {
   return txt ? JSON.parse(txt) : null;
 }
 
-// Pagination systematique : sans elle PostgREST plafonne a 1 000 lignes et on croirait
-// que les lignes non rendues n'ont rien a envoyer.
-async function tout(chemin) {
+// ⚠⚠ PAGINATION PAR CURSEUR, et deux defauts vecus le 25/09 au soir l'imposent.
+//
+// ① SANS TRI, rien ne tient. Lire 436 000 lignes par pages de 1 000 avec un simple
+//    decalage et sans ORDER BY ne garantit rien : Postgres n'est pas tenu de rendre les
+//    lignes dans le meme ordre d'une page a l'autre. Certaines reviennent deux fois,
+//    d'autres JAMAIS. Constate : 174 433 photos sur 435 126 absentes de la table de
+//    correspondance, comptees « en echec » alors que le CDN n'avait rien refuse.
+//    40 % du travail perdu, sans un seul message d'erreur.
+//
+// ② AVEC TRI MAIS PAR DECALAGE, ca expire. « saute 400 000 lignes puis donne-m'en
+//    1 000 » oblige Postgres a parcourir les 400 000 a chaque page -> statement timeout.
+//
+// -> On demande « les 1 000 suivants APRES cet identifiant ». Le cout ne depend plus de
+//    la profondeur, et l'ordre est stable par construction.
+// ⚠ La cle doit etre UNIQUE et figurer dans le select, sinon le curseur saute des lignes.
+async function tout(chemin, cleUnique) {
+  if (!cleUnique) throw new Error("tout() : cle unique de tri obligatoire");
+  // ⚠ Le curseur impose SON ordre : un ordre metier dans le chemin produirait deux
+  // « order= » concurrents. On le refuse, et l'appelant trie apres lecture.
+  if (/[?&]order=/.test(chemin)) {
+    throw new Error("tout() : pas d'ordre dans le chemin -- le curseur impose le sien, trier apres lecture");
+  }
   const out = [];
   const page = 1000;
-  for (let offset = 0; ; offset += page) {
-    const rows = await rest(`${chemin}&limit=${page}&offset=${offset}`);
+  let curseur = null;
+  for (;;) {
+    const apres = curseur == null ? "" : `&${cleUnique}=gt.${encodeURIComponent(String(curseur))}`;
+    const rows = await rest(`${chemin}${apres}&order=${cleUnique}.asc&limit=${page}`);
     if (!Array.isArray(rows) || !rows.length) break;
     out.push(...rows);
+    const dernier = rows[rows.length - 1][cleUnique];
+    if (dernier == null) throw new Error(`tout() : ${cleUnique} absent du select`);
+    curseur = dernier;
     if (rows.length < page) break;
   }
   return out;
@@ -100,11 +124,14 @@ function trier(lignes, enFile, maintenant, { limite, respirationMs, alerteMs, li
   for (const sorte of SORTES) {
     const lignes = await tout(
       `${sorte.table}?select=id,app_dossier_id,hektor_annonce_id,${sorte.libelle},envoi_hektor_statut,envoi_hektor_at,envoi_hektor_erreur`
-      + "&envoi_hektor_statut=in.(a_envoyer,echec)&order=envoi_hektor_at.asc.nullsfirst");
+      + "&envoi_hektor_statut=in.(a_envoyer,echec)", "id");
+    // « le plus ancien d'abord » est applique ICI : le curseur impose son propre ordre a
+    // la base, et un ordre metier ne departage de toute facon pas deux lignes de meme date.
+    lignes.sort((x, y) => (Date.parse(x.envoi_hektor_at || 0) || 0) - (Date.parse(y.envoi_hektor_at || 0) || 0));
 
     // deja en file : on ne repose pas par-dessus
     const enFile = new Set();
-    for (const j of await tout(`app_console_job?select=payload_json&job_type=eq.${sorte.travail}&status=in.(pending,running)`)) {
+    for (const j of await tout(`app_console_job?select=id,payload_json&job_type=eq.${sorte.travail}&status=in.(pending,running)`, "id")) {
       const v = j.payload_json && j.payload_json[sorte.cle];
       if (v) enFile.add(String(v));
     }
