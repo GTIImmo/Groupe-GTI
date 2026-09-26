@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1596)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1611)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1511,16 +1511,31 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                 val: config.hektorValue, c'est-a-dire « 6 ». Le libelle « Mandat clos »
                 de HEKTOR_STATUS_CONFIG ne sert QU'AU JOURNAL. Verifie avant d'accuser.
 
-              ⚠⚠ ET LE LIBELLE EST ARRIVE CE MATIN : le synced_at des 672 vaut
-                2026-09-26 04:25:05 -> 04:25:06, soit UNE SECONDE. Celui des 34 009
-                'Clos' s'etale du 30/04 au 26/09. Hektor a donc change le libelle, et
-                il se propage AU FUR ET A MESURE DES RELECTURES. Les identifiants
-                touches vont de 55119 a 58868, et il n'y en a AUCUN au-dela de 60000
-                -> forte presomption que d'autres basculeront les nuits suivantes.
-              ▫ NON ETABLI : etaient-elles dans le registre AVANT ce matin ? L'etat
-                precedent du miroir a ete ecrase a 04:25, et C:\Hektor\Backups est hors
-                du depot (lecture refusee). C'est la difference entre « une regression
-                qui a commence ce matin » et « un trou ancien ». A demander a Frederic.
+              ✅ CE N'EST PAS UNE REGRESSION -- TRANCHE LE 26/09 SUR LES SAUVEGARDES
+                (Frederic a autorise la lecture de C:\Hektor\Backups) :
+                   22/09 11:38   « Mandat clos » = 672   perimetre historique = 8 916
+                   23/09 18:41   « Mandat clos » = 672   perimetre historique = 8 916
+                   26/09         « Mandat clos » = 672
+                Le compte est STABLE. C'est un trou ANCIEN, pas un glissement en cours,
+                et il ne grandit pas. Les identifiants touches (55119-58868, aucun
+                au-dela de 60000) sont une BANDE figee, pas un front qui avance.
+              ⚠ MON ERREUR, ET ELLE VAUT D'ETRE GARDEE : j'avais conclu « le libelle
+                est arrive ce matin » parce que le synced_at des 672 valait
+                04:25:05 -> 04:25:06, soit une seconde. C'etait la trace du RUN qui
+                les relit en lot, pas celle d'un changement. Un horodatage dit QUAND ON
+                A LU, jamais QUAND LA VALEUR A CHANGE. Pour cette question-la, seule
+                une sauvegarde repond.
+
+              ⚠⚠ ET LE NUMERO D'APP EXISTE POURTANT. Verifie dans la sauvegarde du
+                25/09 : les 16 annonces echantillonnees sont TOUTES dans app_dossier
+                (local), avec leur numero, absent_depuis = NULL. Le titre « sans numero
+                d'app » etait donc impropre :
+                   ce qui manque = leur presence dans les 4 INDEX pousses a Supabase
+                   ce qui existe  = leur numero, en local, depuis toujours
+                Il n'y a PAS de table d'identite cote Supabase : seuls les 4 index
+                scopes y montent (61 279 lignes en local contre 58 146 indexees).
+                -> rattrapage_photos.js:221-230 resout le numero depuis ces 4 index
+                   uniquement. D'ou son refus, alors que le numero est connu.
 
               ➡ LE CORRECTIF : comparer sur statut_id, pas sur le libelle. Quatre
                 endroits : ANNONCES_SCOPE_WHERE, SQL_HISTORICAL_ANNONCE_INDEX_BASE et
