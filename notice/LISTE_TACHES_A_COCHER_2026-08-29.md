@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1611)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1663)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1265,7 +1265,7 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             Mesure qui, elle, tient : ajouter une photo dans Hektor FAIT BOUGER la
             date_maj de l'annonce -> pas de balayage necessaire.
 
-[ ] G.8   LA REGLE D'ESPACE                     ⭐ VALIDEE PAR FREDERIC LE 26/09
+[x] G.8   LA REGLE D'ESPACE      ⭐ VALIDEE 26/09 · L'ANCRE EST POSEE LE MEME JOUR
             annonce en vente        -> w400 + w1600 presents
             annonce archivee        -> conserves 6 MOIS, puis retires
             le master               -> TOUJOURS sur le serveur, jamais retire
@@ -1279,7 +1279,59 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             en a AUCUNE. Verifie sur les 4 index et sur app_console_photo : « archive »
             est un DRAPEAU (du texte, « 0 » ou « 1 »), pas une date. Les seules dates
             disponibles (date_maj, refreshed_at) bougent pour dix autres raisons.
-            ⭐ TRANCHE PAR FREDERIC LE 26/09 : « ok pour ta propo ». ON POSE L'ANCRE.
+            ✅ L'ANCRE EST POSEE ET EPROUVEE (26/09) -- « ok pour ta propo ».
+               ➡ notice/patch_ancre_six_mois_2026-09-26.sql
+
+               CE QUI EXISTE MAINTENANT :
+                 colonne   app_console_photo.hors_vitrine_depuis (+ index partiel)
+                 fonction  public.app_photo_marquer_sortie_vitrine()  SECURITY DEFINER,
+                           service_role seul ; rend un compte-rendu jsonb
+                 travail   pg_cron « app-photo-sortie-vitrine », 08 h 30 chaque jour
+                           (apres le run de 05 h et la descente de 07 h 30, donc
+                           app_dossier_current est a jour quand la fonction le lit)
+
+               ⚠⚠ LE POINT DE CONCEPTION : ON NE REECRIT PAS « ANNONCE VIVANTE ».
+                 La reecrire en SQL creerait DEUX verites qui derivertaient, et la purge
+                 effacerait un jour les derives d'annonces encore en vente. Or
+                 app_dossier_current EST l'ensemble des vivantes, par construction.
+                 Donc : vivante = le numero de la photo est dans app_dossier_current.
+                 RECOUPEMENT : 74 550 photos restent sans ancre -- exactement la cible
+                 de G.13, mesuree independamment le matin. Les deux definitions
+                 coincident au chiffre pres.
+
+               MESURES DE LA MISE EN SERVICE :
+                 vivantes dans l'index      13 438
+                 photos sans ancre          74 550   (annonces en vente)
+                 photos marquees sorties   361 974
+                 vivantes datees a tort          0
+                 sorties sans ancre              0   (couverture complete)
+
+               CONTROLES, tous passes :
+                 ▫ LE GARDE-FOU REFUSE -- prouve avec une copie jetable a plancher
+                   999 999 : statut « refus », 0 ligne ecrite. Sans lui, un run de nuit
+                   casse (app_dossier_current vide) horodaterait TOUT LE PARC, et la
+                   purge effacerait six mois plus tard les derives de toutes les
+                   annonces en vente. Plancher retenu : 5 000 (parc vivant = 13 438).
+                 ▫ IDEMPOTENTE : 2e passe = 0 marquee, 0 liberee.
+                 ▫ L'HORLOGE NE REPART PAS : la date est INCHANGEE apres la 2e passe.
+                   C'etait le controle decisif -- re-dater chaque nuit repousserait la
+                   purge indefiniment.
+                 ▫ LE RETOUR MARCHE : 3 photos d'annonces vivantes datees A TORT
+                   volontairement -> liberees a la passe suivante, 0 restante.
+                 ▫ updated_at N'EST PAS TOUCHE : l'ancre est notre comptabilite, pas un
+                   changement de contenu. (Verifie d'abord que personne ne s'en sert
+                   comme curseur de delta -- c'est le cas, il n'est lu que pour
+                   l'affichage. Sinon 361 974 faux deltas.)
+                 ▫ SURVEILLE DES LE 1er JOUR : check_gti_health.py decouvre les travaux
+                   pg_cron DYNAMIQUEMENT (l. 1672) -> il passera de 11 a 12 suivis, et
+                   criera sur « dernier run en echec » ou « pas de run depuis N min ».
+                   Pas de 5e repetition du trou de surveillance.
+
+               RETOUR ARRIERE : select cron.unschedule('app-photo-sortie-vitrine');
+                 La colonne reste, sans effet -- rien ne la lit encore.
+               ⛔ CE PATCH NE SUPPRIME RIEN. La purge des six mois viendra APRES G.13,
+                 et elle lira cette date. Aujourd'hui le coffre public est vide : l'ancre
+                 tourne a blanc, ce qui est exactement voulu.
                Une colonne sur la photo, horodatee le jour ou son annonce quitte
                l'ensemble vivant (meme regle que shouldKeepCloud), REMISE A VIDE si
                l'annonce redevient vivante. Patron de absent_depuis (G.10bis).
