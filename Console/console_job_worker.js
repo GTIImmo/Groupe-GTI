@@ -4322,28 +4322,49 @@ async function upsertConsolePhotos(dossier, entries) {
     source_json: entry.source_json || {},
     synced_at: now,
     updated_at: now,
+    // Une photo qui REVIENT chez Hektor cesse d'etre marquee absente. Sans ces deux
+    // lignes, un retour laisserait la photo invisible dans l'app pour toujours.
+    present_in_hektor: true,
+    absent_depuis: null,
   }));
 
-  if (rows.length) {
-    await supabaseRequest("app_console_photo?on_conflict=hektor_annonce_id,hektor_photo_id", {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
-      body: JSON.stringify(rows),
-    });
+  // ⚠⚠ LA GARDE EST SYMETRIQUE -- corrige le 26/09 (G.10bis).
+  // Avant, `if (rows.length)` protegeait le depot mais PAS la suppression : quand
+  // Hektor rendait une liste vide (accroc, lecture partielle, parse rate -- ce projet
+  // en a connu), keepIds etait vide et TOUTES les photos de l'annonce etaient
+  // effacees de l'index. On ne touche plus a rien quand on n'a rien lu.
+  if (!rows.length) {
+    console.warn(`[photos] ${dossier.hektor_annonce_id} : aucune photo lue chez Hektor`
+      + " -- l'index est laisse INTACT (ni depot, ni marquage)");
+    return rows;
   }
 
+  await supabaseRequest("app_console_photo?on_conflict=hektor_annonce_id,hektor_photo_id", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates,return=minimal",
+    body: JSON.stringify(rows),
+  });
+
+  // ⚠⚠ DELETE-NEVER -- on MARQUE, on ne supprime plus (G.10bis, P-2 de l'audit).
+  // L'id de cette ligne porte deux choses irreversibles : le chemin du fichier sur le
+  // serveur (localPhotoDir) et, des G.11, l'adresse PUBLIQUE de ses derives, qu'un
+  // portail met en cache et qu'un email integre. Un id supprime ne revient jamais :
+  // l'adresse tomberait et le derive deviendrait orphelin.
+  // Meme patron que app_affaire_ledger.present_in_hektor.
   const keepIds = new Set(rows.map((row) => row.hektor_photo_id));
-  const existing = await supabaseRequest(`app_console_photo?hektor_annonce_id=eq.${encodeURIComponent(String(dossier.hektor_annonce_id))}&select=id,hektor_photo_id`, {
+  const existing = await supabaseRequest(`app_console_photo?hektor_annonce_id=eq.${encodeURIComponent(String(dossier.hektor_annonce_id))}&select=id,hektor_photo_id,present_in_hektor`, {
     method: "GET",
   });
-  const obsoleteIds = (Array.isArray(existing) ? existing : [])
+  const partiesIds = (Array.isArray(existing) ? existing : [])
     .filter((row) => row.hektor_photo_id && !keepIds.has(String(row.hektor_photo_id)))
+    .filter((row) => row.present_in_hektor !== false)   // deja marquee : on n'ecrase pas sa date
     .map((row) => row.id)
     .filter(Boolean);
-  if (obsoleteIds.length) {
-    await supabaseRequest(`app_console_photo?id=in.(${obsoleteIds.map((id) => encodeURIComponent(id)).join(",")})`, {
-      method: "DELETE",
+  if (partiesIds.length) {
+    await supabaseRequest(`app_console_photo?id=in.(${partiesIds.map((id) => encodeURIComponent(id)).join(",")})`, {
+      method: "PATCH",
       prefer: "return=minimal",
+      body: JSON.stringify({ present_in_hektor: false, absent_depuis: now, updated_at: now }),
     });
   }
 
@@ -5537,6 +5558,10 @@ async function downloadConsolePhotoFiles(job, dossier) {
   const params = new URLSearchParams({
     select: "id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,storage_bucket,storage_path,file_size,metadata_json",
     hektor_annonce_id: `eq.${dossier.hektor_annonce_id}`,
+    // Depuis G.10bis les photos retirees chez Hektor RESTENT dans l'index (marquees).
+    // Sans ce filtre on redemanderait leur binaire au CDN a chaque passage, pour des
+    // adresses qui rendent 404 -- des appels perdus qui comptent dans le frein.
+    present_in_hektor: "eq.true",
     order: "sort_order.asc",
   });
   const photos = await supabaseRequest(`app_console_photo?${params.toString()}`, { method: "GET" });

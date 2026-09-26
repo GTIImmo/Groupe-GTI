@@ -7351,6 +7351,11 @@ export async function loadConsolePhotos(appDossierId: number): Promise<ConsolePh
     .from('app_console_photo')
     .select('id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,visible,legend,sort_order,source,source_json,synced_at,created_at,updated_at')
     .eq('app_dossier_id', appDossierId)
+    // Depuis le 26/09 (G.10bis) une photo retiree chez Hektor n'est plus SUPPRIMEE :
+    // elle est marquee, parce que l'id de sa ligne porte le chemin de son fichier sur
+    // le serveur et l'adresse publique de ses derives. Ce filtre garde l'ecran
+    // exactement tel qu'il etait : on n'affiche que ce qui est encore chez Hektor.
+    .eq('present_in_hektor', true)
     .order('visible', { ascending: false })
     .order('sort_order', { ascending: true })
     .limit(500)
