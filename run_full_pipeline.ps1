@@ -126,12 +126,8 @@ $pythonExe = Join-Path $projectRoot ".venv\Scripts\python.exe"
 # Reproduit le 26/09 : type System.String, .Count = 1 (donc le garde-fou passait), [0] = 'C'.
 $nodeExeGlobal = @(@(
     $env:CONSOLE_NODE_EXE,
-    "C:\Program Files
-odejs
-ode.exe",
-    "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies
-odein
-ode.exe"
+    "C:\Program Files\nodejs\node.exe",
+    "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\nodejs\bin\node.exe"
 ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })[0]
 if (-not $nodeExeGlobal) { $nodeExeGlobal = "node.exe" }
 $logDir = Join-Path $projectRoot ".tmp"
@@ -1085,7 +1081,7 @@ if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
 #   le run si un retard s'est accumule (2 000 a 17 photos/s = 2 minutes).
 $photosOk = $false
 Invoke-OptionalStepWithRetry -Label "phase2 rattrapage photos (CDN, hors quota Hektor)" -Arguments @(
-    (Join-Path $projectRoot "Consoleattrapage_photos.js"),
+    (Join-Path $projectRoot "Console\rattrapage_photos.js"),
     "--appliquer",
     "--parallele", "8",
     "--intervalle", "40",

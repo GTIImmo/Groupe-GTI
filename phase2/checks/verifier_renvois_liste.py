@@ -89,13 +89,18 @@ def main() -> int:
             tete = re.sub(motif_renvoi, lambda g: g.group(1) + str(reel) + g.group(3), tete, count=1, flags=re.M)
             repares += 1
 
+    # ⚠ ON ECRIT, MAIS ON NE SORT PAS : CLAUDE.md navigue dans la meme liste et doit
+    # etre repare dans la MEME passe. Sortir ici obligeait a lancer --reparer deux fois,
+    # et laissait la porte d'entree avec des numeros perimes entre les deux.
     if REPARER and repares:
         LISTE.write_text(tete + saut + saut.join(lignes[fin - 1:]), encoding="utf-8", newline="")
-        print(f"\n{repares} renvoi(s) corrige(s). RELANCER SANS --reparer pour confirmer :")
-        print("une correction change la taille de la page de tete, donc peut decaler les suivants.")
-        return 1
 
     # ── les renvois de CLAUDE.md, qui visent la MEME liste ────────────────────
+    # ⚠ ON RELIT LA LISTE D'ABORD. Si on vient de la reparer, ses lignes ont bouge :
+    # verifier CLAUDE.md contre la version d'AVANT lui donnerait des numeros perimes.
+    # C'est le defaut que ce script est cense empecher -- il l'avait lui-meme.
+    if REPARER and repares:
+        lignes = LISTE.read_text(encoding="utf-8", newline="").split(saut)
     print("\nCLAUDE.md (il navigue dans la meme liste) :")
     tp = PORTE.read_text(encoding="utf-8", newline="")
     for motif_renvoi, motif_ancre in RENVOIS_PORTE:

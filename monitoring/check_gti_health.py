@@ -94,6 +94,20 @@ TASK_CRITICALITY: dict[str, str] = {
     # ⚠ LE PRIX, LE MEME QU'AILLEURS : une panne passagere de Hektor alertera
     #   alors qu'elle se repare seule. On l'assume, comme pour la descente.
     "GTI Recherches Actives": "critical",
+    # 2026-09-26 : ajout de "GTI Rattrapage Documents". QUATRIEME FOIS LE MEME TROU,
+    # et cette fois le fichier le disait deja trois fois au-dessus.
+    #
+    # Elle a ete installee le 25/09 et a echoue des sa PREMIERE nuit (LastTaskResult=1,
+    # le piege PowerShell du « C »). Personne ne l'a su : elle n'etait pas surveillee,
+    # et le plan la decrivait comme « elle tourne seule ». Corrigee le 26/09, mais le
+    # defaut de fond etait l'absence de surveillance, pas le piege.
+    #
+    # ⚠ POURQUOI ELLE COMPTE PLUS QUE LES AUTRES : elle porte un travail de ~14 NUITS
+    #   (40 987 annonces a rattraper, lots de 3 000). Une nuit ratee ne se repare PAS
+    #   toute seule -- le lendemain repose le meme lot, et le chantier n'avance plus.
+    #   Et son script sort en 3 quand la file n'est pas digeree, en 4 quand Hektor
+    #   rejette : deux etats qui doivent se VOIR, pas s'accumuler en silence.
+    "GTI Rattrapage Documents": "critical",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS

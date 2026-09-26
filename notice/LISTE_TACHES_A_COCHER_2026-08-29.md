@@ -21,12 +21,12 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1472)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1558)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
 >          + C.13 · supprimer une annonce · brouillons · retirer « Ouvrir Hektor »
-> L6     D.0 (l. 935) documents et mandats signes · signature · diffusion · n° mandat
+> L6     D.0 (l. 944) documents et mandats signes · signature · diffusion · n° mandat
 > L7     D.1a · D.1 · D.2 · garder la copie des photos
 > L8     C.4-bis elargi · E.3 · 0.3 / E.1 rattrapages · E.2
 > L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
@@ -75,15 +75,15 @@ OU ON EST, PAR FRONT -- ils avancent separement
                                  surveiller la 1re annonce reelle d'un negociateur ·
                                  supprimer les annonces d'essai 63146 et 63147
 
-  ② DOCUMENTS    D.0 l. 935       4 defauts fermes (mandat/annexe, empreinte, frein, ajout
+  ② DOCUMENTS    D.0 l. 944       4 defauts fermes (mandat/annexe, empreinte, frein, ajout
                  G.1->G.6      autonome dormant). LE RATTRAPAGE TOURNE SEUL : tache « GTI
-                 l. 1152       Rattrapage Documents » a 23 h, lots de 3 000, 0 en erreur.
+                 l. 1187       Rattrapage Documents » a 23 h, lots de 3 000, 0 en erreur.
                                RESTE : 40 987 annonces (~14 nuits) · G.2 --detect plafonne ·
                                  G.3 le menage des 3 Go · G.4 l'etat doit suivre ·
                                  G.5 la RPC d'ajout autonome
 
   ③ PHOTOS       section 10bis 4 cases cochees le 26/09, TOUT DORMANT : le coffre public
-                 l. 1135       gti-photo · le calibrage (18 ko / 226 ko -> ~18 Go, pas 25) ·
+                 l. 1144       gti-photo · le calibrage (18 ko / 226 ko -> ~18 Go, pas 25) ·
                                l'adresse qui ne disparait plus (G.10bis) · le generateur.
                                RESTE : G.13 generer les derives (~3 h) · G.14 le logo ·
                                  G.15 rebrancher les 48 points avec repli · G.16 les restes
@@ -931,6 +931,15 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 >
 > ⚠ Ses **11 cases ouvertes sont donc des doublons** de la 10bis. Le compte réel est en
 > page de tête. ➡ **la liste vivante des fichiers est la section 10bis.**
+>
+> ⚠⚠ **UNE CHOSE ICI N'EST PAS PÉRIMÉE, ET LA 10bis NE LA PORTE PAS** : la ligne
+> *« ⛔ ET LES GESTES QUI N'EXISTENT PAS : supprimer, réordonner, choisir la principale »*.
+> Vérifié le 26/09 dans le code : côté photo le worker ne connaît que `upload_hektor_photo`
+> et `sync_hektor_photos`, le front que `createUploadHektorPhotoJob` et `loadConsolePhotos`.
+> **Aucun geste de suppression, de réordonnancement ni de photo principale n'existe** —
+> alors que les documents, eux, ont `delete_document_from_hektor`. Ces trois gestes sont
+> du ressort de **`E.0-bis`** *(« PHOTOS : supprimer, réordonner, choisir la principale,
+> 2-3 j »)*, pas de la 10bis.
 ```
 [~] D.0   LA REDESCENTE DES DOCUMENTS -- EN COURS DE REPRISE DEPUIS LE 25/09
     ================================================================================
@@ -1146,6 +1155,32 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
        consommation du quota Hektor.
 ```
 
+> ⚠⚠ **CE QUE CETTE SECTION NE COUVRE PAS** *(posé par l'audit du 26/09, parce qu'un
+> lecteur qui finit `G.16` pourrait croire les photos terminées)* :
+> **les GESTES** — supprimer une photo, les réordonner, choisir la principale. Ils
+> n'existent **ni chez nous ni comme commandes Hektor connues**, et ils relèvent de
+> **`E.0-bis`**. La 10bis traite le FICHIER *(où il vit, comment il s'affiche)*, pas ce
+> qu'on peut en faire. Les documents, eux, savent déjà se supprimer.
+
+> ⛔ **DEUX POINTS VIVANTS, TROUVÉS PAR L'AUDIT DU 26/09 :**
+>
+> **① LE FRONT N'EST PAS DÉPLOYÉ, ET LE WORKER L'EST.** Le dernier commit poussé date du
+> **24/09 07:16** — 93 commits derrière. Depuis le redémarrage, le worker **marque** les
+> photos retirées de Hektor *(`G.10bis`)*, mais le front n'a pas le filtre qui les cache.
+> Une photo retirée apparaîtrait donc dans le **panneau photos**, dans la **liste de
+> pièces jointes** d'un envoi, et surtout sur la **photo de la fiche visite**.
+> ▫ **La fenêtre est ouverte mais VIDE** : 0 photo marquée à ce jour *(mesuré)*. Elle se
+>   referme en poussant. Tant que rien n'est marqué, il ne se passe rien.
+>
+> **② LA TÂCHE DE 23 h N'ÉTAIT SURVEILLÉE PAR PERSONNE — 4ᵉ fois le même trou.** Elle a
+> échoué dès sa **première nuit** *(25/09, `LastTaskResult=1`, le piège PowerShell du
+> « C »)* et **personne ne l'a su**, alors que le plan la décrivait comme *« elle tourne
+> seule »*. Le fichier `monitoring/check_gti_health.py` portait déjà trois commentaires
+> disant *« même trou »*, *« troisième fois le même trou »*.
+> ✅ **Corrigé le 26/09** : `"GTI Rattrapage Documents": "critical"`. ⚠ Le prochain
+>   passage du moniteur **va alerter** sur l'échec de cette nuit — c'est normal, et ça
+>   se résoudra si la tâche passe ce soir.
+
 ### LES DOCUMENTS
 
 ```
@@ -1170,8 +1205,8 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 [ ] G.3   LE MENAGE DES 3 Go                    ENTRE DEUX NUITS
             2 318 Mo : 1 749 documents de 98 annonces ARCHIVEES, qui n'ont plus droit
               au cloud mais que rien n'en redescend ;
-            702 Mo : 902 fichiers ORPHELINS (plus aucune ligne ne les reclame), dont
-              108 temporaires jamais effaces.
+            702 Mo : 903 fichiers ORPHELINS (plus aucune ligne ne les reclame), dont
+              108 temporaires jamais effaces. (Re-mesure du 26/09 : 903, pas 902.)
             Sans risque : les fichiers sont sur le serveur, et prepare_document_cloud
             sait les remonter a la demande. Garde-fou : fichier local present ET
             sha256 conforme AVANT toute suppression.
@@ -1180,9 +1215,17 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             ➡ memoire purge-cloud-documents-archives
 
 [ ] G.4   L'ETAT DOIT SUIVRE (ex-D4)            CODER MAINTENANT, REDEMARRER EN JOURNEE
-            nextStatus (console_job_worker.js:4574) ne sait que MONTER : une annonce
-            archivee garde ses fichiers dans le cloud indefiniment. Mesure : 1 691
-            documents / 95 annonces / 2,2 Go, contre 628 Mo le 21/08 -> x4 en 5 semaines.
+            nextStatus (console_job_worker.js, dans persistConsoleDocumentFile) ne sait
+            que MONTER : une annonce archivee garde ses fichiers dans le cloud
+            indefiniment.
+            ⚠ G.3 ET G.4 DECRIVENT LE MEME ENSEMBLE, mesure a deux dates -- ne pas le
+              compter deux fois. Mesure du 26/09, la seule a retenir : 1 749 documents,
+              98 annonces, 2 318 Mo. G.3 = le menage ; G.4 = le code, pour que ca ne
+              revienne pas. (Contre 628 Mo le 21/08 : x3,7 en 5 semaines.)
+            ✅ VERIFIE le 26/09 : nextStatus vit dans persistConsoleDocumentFile, donc il
+              ne touche QUE les documents. Les photos ont leur propre chemin
+              (persistConsolePhotoFile) -> aucun risque que G.4 emporte la regle des
+              6 mois de G.8. Les deux chantiers ne se croisent pas.
             Et rien ne les REMONTE au retour d'archive : apres la coupure, une annonce
             reactivee s'ouvrirait sans ses documents. ~34 annonces changent d'etat/mois.
             ⚠ POUR LES PHOTOS, LA REGLE EST DIFFERENTE -- voir G.9.
@@ -1207,9 +1250,21 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 ```
 [x] G.7   LE COFFRE EST PLEIN                   fait le 25-26/09
             436 522 photos, 169 Go sur le serveur. Verifie des deux cotes.
-            Et il s'ENTRETIENT depuis le 26/09 : etape dans le run (22 photos ce
-            matin) + sonde de 25 annonces. Mesure decisive : ajouter une photo dans
-            Hektor FAIT BOUGER la date_maj de l'annonce -> pas de balayage necessaire.
+            ⛔ CORRIGE PAR L'AUDIT DU 26/09 : j'avais ecrit « il s'ENTRETIENT depuis le
+            26/09, 22 photos ce matin ». C'ETAIT FAUX, deux fois :
+              · l'etape a ete ajoutee au pipeline a 11 h 15 CE JOUR-LA -- le run de
+                05 h 00 lui etait anterieur, elle n'avait donc jamais tourne ;
+              · et son chemin etait CASSE : « Console » + un RETOUR CHARIOT +
+                « attrapage_photos.js ». Ecrit a travers une chaine Python, ou  est un
+                echappement. Le meme defaut a touche la resolution de node (
+ et ).
+                C'est la 2e fois dans ce projet (cf ab94c9d, 21/09) -- et comme l'etape
+                est NON BLOQUANTE, le run aurait fini en « succes » sans une ligne.
+            ✅ Les trois litteraux sont repares (au niveau des OCTETS), le fichier passe
+            le parseur PowerShell, node et les deux scripts se resolvent.
+            ⚠ PREMIER VRAI PASSAGE : la nuit du 27/09. A verifier au journal.
+            Mesure qui, elle, tient : ajouter une photo dans Hektor FAIT BOUGER la
+            date_maj de l'annonce -> pas de balayage necessaire.
 
 [ ] G.8   LA REGLE D'ESPACE                     ⭐ VALIDEE PAR FREDERIC LE 26/09
             annonce en vente        -> w400 + w1600 presents
@@ -1219,6 +1274,17 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             surveillance            -> alerte si le coffre depasse 60 Go
             Pourquoi 6 mois : au-dela, le portail a retire l'annonce et les emails sont
             perimes. Et comme le master ne bouge jamais, retirer n'est JAMAIS une perte.
+
+            ⛔⛔ TROUVE PAR L'AUDIT DU 26/09 : CETTE REGLE N'EST PAS IMPLEMENTABLE EN
+            L'ETAT. « 6 mois apres l'archivage » suppose une DATE D'ARCHIVAGE -- il n'y
+            en a AUCUNE. Verifie sur les 4 index et sur app_console_photo : « archive »
+            est un DRAPEAU (du texte, « 0 » ou « 1 »), pas une date. Les seules dates
+            disponibles (date_maj, refreshed_at) bougent pour dix autres raisons.
+            -> Il faut poser l'ancre SOI-MEME : une colonne sur la photo, horodatee le
+               jour ou son annonce quitte l'ensemble vivant (meme regle que
+               shouldKeepCloud), et REMISE A VIDE si l'annonce redevient vivante.
+               Exactement le patron de absent_depuis pose pour G.10bis.
+            ⚠ Sans cette colonne, G.13 peut se faire, mais la purge des 6 mois non.
 
 [ ] G.9   L'ETAT DES PHOTOS N'EST PAS CELUI DES DOCUMENTS
             ⚠ Les documents DESCENDENT du cloud a l'archivage (G.4). Pour les photos ce
@@ -1397,6 +1463,10 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             backend/app/services/appointment_service.py 3   les RDV / fiche visite
             backend/app/services/rapprochement_email.py 2   les EMAILS
             CINQ consommateurs, dont trois publics ou envoyes a l'exterieur.
+            ⚠ RE-MESURE DU 26/09 : 44 occurrences, pas 48 -- la vitrine en a 4, pas 8.
+              Et le vrai compte de TRAVAIL est plus petit encore : la vitrine n'a qu'UNE
+              fonction (visible_photos) a rebrancher, pas huit endroits. Compter des
+              occurrences et compter des gestes, ce n'est pas la meme chose.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
             ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en
@@ -1410,12 +1480,28 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               C'est le travail d'identite des 24-26/09 qui le rend possible.
               ⛔ Et cette adresse ne vaut que si la LIGNE ne disparait pas : G.10bis.
 
-[ ] G.16  LES RESTES CONNUS
-            8 013 photos / 583 annonces « Mandat clos » : dans le miroir, dans AUCUN
-              des 4 index de l'app -> ecartees. A trancher : ces annonces doivent-elles
-              exister dans l'app ?
-            2 photos sans fichier : anciennes lignes de la couche Console, adresses
+[ ] G.16  LES RESTES CONNUS      ⚠ RE-MESURES ET COMPLETES PAR L'AUDIT DU 26/09
+            Le miroir porte 444 390 photos sur 49 050 annonces ; l'index en a 436 524
+            sur 48 465. L'ecart se decompose en TROIS, pas deux :
+
+            ▫ 8 013 photos / 583 annonces SANS NUMERO D'APP (confirme au chiffre pres).
+              Elles sont dans le miroir et dans AUCUN des 4 index -> le rapatriement les
+              REFUSE, par construction (il exige notre numero). Ce n'est pas un defaut,
+              c'est la regle qui joue. A TRANCHER PAR FREDERIC : ces annonces
+              doivent-elles exister dans l'app ? Tant que la reponse est non, leurs
+              photos ne seront jamais chez nous -- et apres la coupure, plus jamais.
+
+            ⛔ 17 photos / 4 annonces QUI ONT un numero d'app et ne sont pas rapatriees :
+                 63153 (n° 7589140, Estimation, 10 photos) · 63154 (7589141, brouillon,
+                 5) · 63155 (7589142, Actif, 1) · 63157 (7589144, Actif, 1)
+              Ce sont des annonces NEUVES, creees apres le rapatriement du 25/09. Elles
+              montrent que l'entretien quotidien est indispensable -- et il n'a jamais
+              tourne (cf G.7). Elles partiront au premier vrai passage.
+
+            ▫ 2 photos sans fichier : anciennes lignes de la couche Console, adresses
               /wa/images/ au lieu de /original/images/, absentes du miroir.
+              ⚠ Ce sont LES MEMES que les « 2 photos hors des 4 index » -- un seul fait,
+                pas deux (verifie le 26/09).
 ```
 
 ⚠ **ET LES PORTAILS (`A.1`) VIENNENT APRES** — ils dependent du contrat, pas de nous.
