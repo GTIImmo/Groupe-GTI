@@ -1314,7 +1314,38 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             ⚠ PAS D'ACCES DNS pour l'instant -> on sert sous le domaine Supabase. Un
               sous-domaine a soi reste une option (plus propre dans un email).
 
-[ ] G.11  LE GENERATEUR DE TAILLES              dormant
+[ ] G.10bis ⛔ PREALABLE DE G.11 : LA LIGNE D'UNE PHOTO NE DOIT PLUS DISPARAITRE
+            Trouve le 26/09 en preparant G.11, PROUVE par un test qui echoue :
+              Console/test_photo_adresse_stable.js   (4 controles rouges)
+
+            ⚠⚠ CE QUI PORTE L'ADRESSE, C'EST L'id DE LA LIGNE app_console_photo.
+            Le plan ecrivait `{app_photo_id}` -- CETTE COLONNE N'EXISTE PAS. La seule
+            identite propre a une photo est son `id` (uuid, cle primaire). Et ce n'est
+            pas nouveau : LE FICHIER SUR LE SERVEUR EST DEJA RANGE SOUS CET id --
+            verifie a l'ecran, annonce 100, photo Hektor « 347 », dossier
+            « 71ff6473-0173-4a47-84d0-221fb05337a4 ». Trois points d'appel :
+            console_job_worker.js:4758, :4816 et rattrapage_photos.js:329.
+            -> l'id de la ligne est DEJA load-bearing. G.11 ne fait que le publier.
+
+            ⛔ OR upsertConsolePhotos (console_job_worker.js:4309) SUPPRIME des lignes :
+               celles dont la photo n'est plus dans images_json, a CHAQUE sync. Deux
+               defauts, tous deux tenus par le test :
+                 ① LA GARDE EST ASYMETRIQUE. `if (rows.length)` protege le depot, PAS
+                    la suppression. Si Hektor rend une liste VIDE (accroc, lecture
+                    partielle, parse rate -- ce projet en a connu), keepIds est vide et
+                    TOUTES les photos de l'annonce sont effacees de l'index.
+                 ② C'EST P-2 A L'ENVERS. L'audit a decide « delete-never » : une photo
+                    retiree chez Hektor se MARQUE, elle ne se supprime pas. Le code fait
+                    l'inverse. Un id supprime ne revient jamais -> l'adresse publiee
+                    tombe, et le derive depose dans gti-photo devient orphelin.
+            ✅ Ce qui TIENT deja, et sur quoi on s'appuie : le depot est un upsert sur
+               (hektor_annonce_id, hektor_photo_id) en merge-duplicates -> une sync
+               normale conserve l'id. Controles (a)-(d) du test, verts.
+            Mesure : 436 524 lignes, 0 sans numero app, 0 sans numero Hektor.
+            ⚠ C'est une modification du CHEMIN VIVANT du run de nuit (pas du dormant) :
+              elle demande un feu vert, et un redemarrage en journee (06 h - 22 h).
+
+[ ] G.11  LE GENERATEUR DE TAILLES              dormant -- APRES G.10bis
             Lit le master sur le serveur, fabrique w400 et w1600, depose dans
             gti-photo, note l'adresse dans la ligne de la photo.
             ⚠ Bibliotheque d'images cote worker (sharp est le standard Node) -- cout
@@ -1348,15 +1379,33 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                   sans danger ici : l'adresse contient le numero de la photo, donc un
                   contenu different a TOUJOURS une adresse differente (cf G.15).
 
-[ ] G.12  CALIBRER SUR 200 PHOTOS
-            Les 40 ko (w400) et 300 ko (w1600) sont des ordres de grandeur, PAS des
-            mesures. A calibrer avant de lancer -- mon calibrage du 25/09 sur 200
-            photos avait sous-estime le poids reel d'un tiers (262 ko annonces, 387 ko
-            mesures sur 436 521 fichiers).
+[x] G.12  CALIBRER SUR 200 PHOTOS               fait le 26/09 -- LE PLAN SURESTIMAIT
+            200 photos de 193 annonces vivantes, tirees au hasard (l'id etant un uuid,
+            l'ordonner suffit a tirer au sort). sharp, withoutEnlargement.
+
+                              plan     MESURE   mediane     p95    projete 74 550
+              w400  jpeg q75  40 ko     18 ko     17 ko    30 ko        1,3 Go
+              w1600 jpeg q82 300 ko    226 ko    189 ko   495 ko       16,1 Go
+                                                          TOTAL       17,4 Go
+
+            ⚠ CORRECTION DE BIAIS : les 200 masters de l'echantillon pesent 655 ko
+              contre 683 ko sur les 74 550 -> l'echantillon est 4,1 % trop leger, donc
+              le vrai total est ~18 Go. (Verifie a 2 000 : +1,8 %. Le tirage par uuid
+              n'a pas de biais -- c'est ce controle qui manquait le 25/09.)
+            ➡ RETENU : JPEG POUR LES DEUX TAILLES. Le webp ne gagne que 8 % et les
+              portails sont des robots -- on ne parie pas sur leur support du webp.
+            ▫ Masters : mediane 1 920 px, max 2 048 px. 49 sur 200 font MOINS de
+              1 600 px -> pour eux w1600 est un simple re-encodage, pas un
+              agrandissement (withoutEnlargement).
+            ▫ Fabrication : 12,8 h en sequentiel, ~3 h a 4 en parallele.
+            ▫ sharp : 2 s d'installation, 8 paquets, 30 Mo, binaire precompile pour
+              node 24 / Windows Server 2025. Le cout d'installation redoute est nul.
+              ⚠ Installe A L'ECART pour la mesure : PAS encore dans Console/.
 
 [ ] G.13  GENERER LES DERIVES DES ANNONCES EN VENTE     une nuit
-            74 550 photos. ~25 Go estimes -> Supabase passerait a 55 Go sur 100 inclus
-            (apres le menage G.3), soit 45 Go de marge.
+            74 550 photos, ~18 Go MESURES (G.12, et non les 25 Go estimes) -> Supabase
+            passerait a ~48 Go sur 100 inclus (apres le menage G.3), soit 52 Go de
+            marge. ~3 h a 4 en parallele.
             ⚠ Les documents grossissent d'environ 1 Go/mois : la marge n'est pas
               eternelle, d'ou l'alerte a 60 Go de G.8.
 
@@ -1379,7 +1428,12 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               cache, un email l'a integree. D'ou le chemin sans AUCUN numero Hektor :
                 gti-photo/{app_dossier_id}/{app_photo_id}/w400.jpg
                 gti-photo/{app_dossier_id}/{app_photo_id}/w1600.jpg
+              ⚠ CORRIGE LE 26/09 : `{app_photo_id}` N'EXISTE PAS comme colonne. Le
+                second segment est l'`id` de la ligne app_console_photo (uuid, cle
+                primaire) -- la seule identite propre a une photo cote app. C'est deja
+                lui qui nomme le dossier du fichier sur le serveur.
               C'est le travail d'identite des 24-26/09 qui le rend possible.
+              ⛔ Et cette adresse ne vaut que si la LIGNE ne disparait pas : G.10bis.
 
 [ ] G.16  LES RESTES CONNUS
             8 013 photos / 583 annonces « Mandat clos » : dans le miroir, dans AUCUN
