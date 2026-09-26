@@ -77,6 +77,46 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 ## 2. Où on en est — *à mettre à jour en fin de session*
 
+> **26/09/2026 — LES PHOTOS : LE SOCLE D'AFFICHAGE EST POSÉ, TOUT EST DORMANT.**
+> Section **10bis** de la liste (`G.1` → `G.16`). Quatre cases cochées aujourd'hui.
+> · **`G.10`** coffre **`gti-photo`** créé — public, images seulement, 10 Mo. Vérifié en
+>   réel : un fichier relu **sans aucune clé**, un PDF **refusé** (400), **0 politique**
+>   posée donc le dépôt reste au worker. Coffre des documents : **privé, intact, 22 926**.
+> · **`G.12`** calibrage sur 200 photos vivantes : **w400 = 18 ko** *(plan : 40)*,
+>   **w1600 = 226 ko** *(plan : 300)* → **~18 Go** et non 25. Biais d'échantillon corrigé
+>   *(−4,1 % ; vérifié à 2 000 : +1,8 %)*. **JPEG** pour les deux : le webp ne gagne que
+>   8 % et les portails sont des robots. `sharp` : **2 s, 30 Mo**, coût redouté **nul**.
+> · **`G.10bis`** ⛔ **trouvé en préparant `G.11`, et c'était bloquant.** L'adresse publique
+>   repose sur l'**`id` de la ligne** `app_console_photo` — le plan parlait d'un
+>   `app_photo_id` **qui n'existe pas** ; et c'est déjà cet id qui nomme le dossier du
+>   fichier **sur le serveur** *(annonce 100, photo Hektor « 347 », dossier `71ff6473-…`)*.
+>   Or `upsertConsolePhotos` **supprimait** : `if (rows.length)` gardait l'ajout mais
+>   **pas** la suppression → une liste vide rendue par Hektor **effaçait toutes les photos
+>   de l'annonce**. Corrigé en **delete-never** *(`present_in_hektor`, patron du ledger)*,
+>   garde symétrique + `console.warn`, retour de photo démarqué, et **les deux lecteurs
+>   filtrent** pour que l'écran ne change pas *(8 avant, 8 après)*.
+> · **`G.11`** `genererDerivesPhoto`, **dormant** *(`CONSOLE_DERIVES_PHOTO_ENABLED`)*.
+>   **Prouvé en réel** sur une photo : w400 = 18 ko/400 px, w1600 = 255 ko/1600 px, relus
+>   **sans clé**, durée de cache posée, **aucun numéro Hektor** dans l'adresse — puis
+>   **tout remis en état**, coffre revenu à **0 fichier**.
+>   ⚠⚠ **DEUX PIÈGES MESURÉS, ET AUCUN DES DEUX NE CRIE** : la durée de cache doit valoir
+>   **exactement `max-age=N`** *(la forme riche est ignorée EN SILENCE → `no-cache`, et
+>   chaque affichage repasse en egress facturé)* · `storageRequest` visait le coffre en dur,
+>   donc un dérivé serait parti dans le coffre **privé**, invisible du front.
+>
+> ⛔ **CE QUI ATTEND FRÉDÉRIC :**
+>   ① **redémarrer les 4 services** *(`HektorConsoleWorker` Actions / Admin / Documents /
+>      SyncLight)*, **en journée 06 h – 22 h** — c'est lui seul qui rend `G.10bis` actif ;
+>      tant qu'il n'est pas fait, le worker **continue de supprimer** ;
+>   ② **pousser** pour déployer le filtre du front *(commité, pas poussé)* ;
+>   ③ avant d'allumer `G.11` : **`npm install sharp`** dans `Console/`.
+>
+> ➡ **SUITE : `G.13`** générer les dérivés des 74 550 vivantes *(~18 Go, ~3 h à 4 en
+> parallèle)*, **`G.14`** le logo, **`G.15`** rebrancher les 48 points avec repli.
+> ⚠ **`G.15` est le seul dont l'échéance est la coupure elle-même.**
+> ⚠ **`MEMORY.md` pèse 32 Ko pour une limite de 24,4** → une partie de l'index n'est plus
+> chargée. À élaguer *(les lignes trop longues, le détail va dans les fichiers)*.
+
 > **24/09/2026 — `L4-c` EST FAIT, `C.9` EST OUVERT (audit fait, AUCUN code écrit).**
 > ➡ `notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md` — lire **§4** *(ce que la seconde
 > passe a réfuté de la première)* et **§5** *(l'ordre C.9-a → C.9-f et le feu vert de chacun)*.
