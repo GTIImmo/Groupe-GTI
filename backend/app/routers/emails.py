@@ -25,7 +25,7 @@ from ..services import email_tokens
 from ..services.email_tracking import EmailTrackingService
 from ..services.estimation_email import render_estimation_email
 from ..services.estimation_sender import EstimationSender
-from ..services.rapprochement_email import BRAND, RapprochementEmailService
+from ..services.rapprochement_email import BRAND, LOGO_URL, RapprochementEmailService
 from ..services.rapprochement_sender import RapprochementSender
 from ..services.supabase_storage import signed_url_for_estimation_pdf
 from ..settings import Settings, get_settings
@@ -55,7 +55,7 @@ def _page(title: str, message: str, *, accent: str = BRAND["magenta"]) -> str:
 <td align="center" valign="middle" style="padding:40px 16px">
   <table role="presentation" width="440" style="max-width:440px;background:#fff;border-radius:14px;padding:32px 28px;text-align:center">
     <tr><td>
-      <img src="https://www.gti-immobilier.fr/images/logoSite.png" width="120" alt="Groupe GTI" style="display:inline-block;border:0;height:auto">
+      <img src="{LOGO_URL}" width="120" alt="Groupe GTI" style="display:inline-block;border:0;height:auto">
       <div style="height:4px;width:48px;background:{accent};border-radius:2px;margin:18px auto"></div>
       <h1 style="color:{BRAND['ink']};font-size:20px;margin:0 0 10px">{title}</h1>
       <p style="color:{BRAND['ink_mute']};font-size:15px;line-height:1.55;margin:0">{message}</p>

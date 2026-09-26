@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import re
 from typing import Any
 
@@ -57,7 +58,28 @@ BRAND = {
 FONT_DISPLAY = "'Playfair Display', Georgia, 'Times New Roman', serif"
 FONT_BODY = "'Helvetica Neue', Helvetica, Arial, sans-serif"
 
-LOGO_URL = "https://www.gti-immobilier.fr/images/logoSite.png"
+# G.14 (26/09/2026) -- LE LOGO DES EMAILS NE VIENT PLUS DE CHEZ HEKTOR.
+#
+# Il pointait sur https://www.gti-immobilier.fr/images/logoSite.png -- le site HEBERGE PAR
+# HEKTOR. A la coupure, tous les emails deja envoyes ET les nouveaux afficheraient une
+# image cassee chez le client.
+#
+# ⚠ POURQUOI UNE URL ET PAS UNE IMAGE EMBARQUEE : le worker, lui, embarque son logo en
+# data URI (Console/assets/gti-logo-cover.png) et n'a donc rien a changer. Pour un EMAIL
+# c'est impossible : la plupart des clients de messagerie bloquent ou suppriment les
+# data URI. Il faut une adresse publique -- et c'est ce que le coffre gti-photo fournit.
+#
+# L'image deposee est IDENTIQUE OCTET POUR OCTET a celle qui servait (556x290, PNG
+# transparent, 31 525 octets) : un email en cours de vie ne change pas d'apparence.
+# C'est un recouvrement, pas un remplacement.
+#
+# ⚠ CETTE ADRESSE NE CHANGERA JAMAIS. Un email part et vit des annees dans une boite ;
+# renommer ce fichier casserait tous les emails deja envoyes. Si le logo change un jour,
+# on depose un NOUVEAU nom, on ne remplace pas celui-ci.
+LOGO_URL = (
+    os.getenv("GTI_LOGO_URL", "").strip()
+    or "https://dwaqxfrinihnychuoptk.supabase.co/storage/v1/object/public/gti-photo/marque/logo-gti.png"
+)
 
 # Mentions légales reprises de mandat-template.html (agence GROUPE GTI).
 LEGAL_LINE = (

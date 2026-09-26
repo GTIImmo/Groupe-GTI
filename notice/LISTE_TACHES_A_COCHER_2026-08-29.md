@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1702)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1738)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1545,11 +1545,47 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             ⚠ Les documents grossissent d'environ 1 Go/mois : la marge n'est pas
               eternelle, d'ou l'alerte a 60 Go de G.8.
 
-[ ] G.14  LE LOGO                               petit, et visible tout de suite
-            console_job_worker.js:6451 et :7248 chargent
-            https://www.gti-immobilier.fr/images/logoSite.png -- le site HEBERGE PAR
-            HEKTOR. A la coupure, les mandats et avis de valeur sortiraient sans logo.
-            A mettre dans gti-photo, avec une adresse fixe.
+[x] G.14  LE LOGO                  FAIT le 26/09 -- ⚠ L'ENONCE ETAIT FAUX
+            ⚠⚠ CE QUE DISAIT CETTE CASE : « les mandats et avis de valeur sortiraient
+              sans logo a la coupure ». C'EST FAUX, verifie le 26/09. Le worker embarque
+              deja son logo en DATA URI :
+                Console/assets/gti-logo-cover.png   32 863 o   depuis le 30/06
+                Console/assets/gti-mark.png          6 346 o
+              et ses trois usages s'ecrivent « ESTIM_MARK || LOGO » : le fichier local
+              gagne TOUJOURS. L'adresse Hektor n'etait qu'un repli mort.
+              -> les PDF du worker etaient deja independants. Rien a y changer.
+
+            ⛔ LE VRAI TROU ETAIT AILLEURS : LES EMAILS DU BACKEND, sans aucun repli.
+                backend/app/routers/emails.py            (adresse en dur)
+                backend/app/services/rapprochement_email.py  LOGO_URL, 2 gabarits
+                backend/app/services/espace_visite.py    (importe LOGO_URL)
+              Ce sont des emails ENVOYES AU CLIENT. A la coupure, les nouveaux ET tous
+              ceux deja partis afficheraient une image cassee dans sa boite.
+
+            ⚠ POURQUOI UNE URL ET PAS UNE IMAGE EMBARQUEE : pour un email, la plupart
+              des clients de messagerie bloquent ou suppriment les data URI. Il faut une
+              adresse PUBLIQUE -- c'est exactement ce que gti-photo fournit depuis G.10.
+
+            ✅ FAIT :
+              · logo depose dans gti-photo/marque/logo-gti.png, IDENTIQUE OCTET POUR
+                OCTET a celui qui servait (556x290, PNG transparent, 31 525 o) : un email
+                en cours de vie ne change pas d'apparence. Recouvrement, pas remplacement.
+              · relu SANS AUCUNE CLE : 200, image/png, cache « public, max-age=31536000 ».
+              · LOGO_URL devient configurable (GTI_LOGO_URL) avec cette adresse par
+                defaut, et emails.py l'IMPORTE au lieu de la recopier -> une seule
+                source de verite pour les quatre points.
+              · 8 controles passes, dont la PAGE RENDUE pour de vrai (pas le source) :
+                l'interpolation a bien lieu dans la f-string, et l'unique image porte
+                l'adresse publique.
+
+            ⚠ CETTE ADRESSE NE CHANGERA JAMAIS. Un email vit des annees dans une boite ;
+              renommer ce fichier casserait tous ceux deja envoyes. Si le logo change, on
+              depose un NOUVEAU nom.
+            ⛔ RESTE : DEPLOYER LE BACKEND (Render). Tant que ce n'est pas fait, les
+              emails partent encore avec l'adresse Hektor. Aucune urgence -- elle repond
+              toujours (verifie : 200, 31 525 o).
+            ▫ Non touche volontairement : le repli mort « || LOGO » du worker. Il ne sert
+              jamais tant que Console/assets existe. A nettoyer un jour, sans urgence.
 
 [ ] G.15  REBRANCHER LES 48 POINTS D'AFFICHAGE  ⚠⚠ LE SEUL DONT L'ECHEANCE EST LA COUPURE
             apps/hektor-v1/src/App.tsx            31   l'app du negociateur
