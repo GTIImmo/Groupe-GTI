@@ -1,4 +1,8 @@
-# ⬛ OÙ ON EN EST — *tenir à jour, 15 lignes, rien de plus*
+# ⬛ OÙ ON EN EST — *la carte, puis les trois fronts. On la RÉÉCRIT, on ne l'empile pas.*
+
+> ⚠ Elle annonçait *« 15 lignes, rien de plus »* et en faisait **192**, arrêtées au
+> 25/09 à 00 h 10. Réécrite le 26/09 : la carte `L0`→`L9` ci-dessous, puis l'état par
+> front. L'historique est dans `notice/JOURNAL_DE_BORD.md`.
 
 > ## 🔑 LE PLAN ET CETTE LISTE NE PARLENT PAS LA MÊME LANGUE — *table posée le 25/09*
 >
@@ -16,13 +20,13 @@
 > L4-b' ✅ les 9 sortants · normalizeMandatContactIds · la qualification
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
->          ⚠ « e3 » = la 3e piece de C.9-e (l. 420) -- codee, ETEINTE
-> L5     E.0-bis (l. 901)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+>          ⚠ « e3 » = la 3e piece de C.9-e (l. 393) -- codee, ETEINTE
+> L5     E.0-bis (l. 1452)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
 >          + C.13 · supprimer une annonce · brouillons · retirer « Ouvrir Hektor »
-> L6     D.0 (l. 881) documents et mandats signes · signature · diffusion · n° mandat
+> L6     D.0 (l. 915) documents et mandats signes · signature · diffusion · n° mandat
 > L7     D.1a · D.1 · D.2 · garder la copie des photos
 > L8     C.4-bis elargi · E.3 · 0.3 / E.1 rattrapages · E.2
 > L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
@@ -30,7 +34,7 @@
 >
 > ⚠⚠ TROIS TRAVAUX ONT UNE DATE DE PEREMPTION, pas seulement une priorite :
 >    · L9        le registre se remplit depuis le MIROIR
->    · C.9-couple (l. 624) seul moment ou l'on peut comparer NOTRE paire a celle
+>    · C.9-couple (l. 890) seul moment ou l'on peut comparer NOTRE paire a celle
 >                 de Hektor
 >    · LA VITRINE ET LES LIENS PUBLICS DE RDV (section 11bis) : les liens deja
 >                 DIFFUSES portent le numero Hektor. Il faut servir l'ancienne ET
@@ -54,141 +58,44 @@
 >                         + les 5 gestes de Frederic                     = 41
 > ```
 
-> **Mis à jour le 25/09/2026 (00 h 10).** Cette page remplace la lecture du document. Le reste est une
-> archive qu'on ouvre **par numéro de ligne**, jamais en entier.
+> **Réécrite le 26/09/2026.** Cette page remplace la lecture du document : le reste est une
+> archive qu'on ouvre **par numéro de ligne**, jamais en entier (6 700 lignes).
+> ⚠ **On la RÉÉCRIT, on ne l'empile pas** — c'est l'empilement qui l'avait portée à 192
+> lignes pour une promesse de 15. L'historique est dans `notice/JOURNAL_DE_BORD.md`.
 
 ```
-OU ON EST, EN TROIS NIVEAUX
+OU ON EST, PAR FRONT -- ils avancent separement
 
-  ETAPE 2       L0 OK  L1 OK  L2 OK  L3 OK  L4 EN COURS   puis L5 L6 L7 L8 L9
-  L4            L4-a OK  L4-b OK  L4-b' OK  L4-c OK  C.9 EN COURS
-  L4-c          (0) OK (1) OK (2) OK (3) OK (4) OK  (5) OK -- BASCULE FAITE 23/09 19h05
-  C.9           a OK  b OK  c OK  e1 OK  e2 OK  e3 OK (eteint) -- ESSAI REEL OK 24/09
-                RUN DE JOUR 12:35 + descente : OK (1 numero des deux cotes, 0 ecart)
-                d OK + D6 OK : PROUVES au RUN DE JOUR 24/09 16:05-18:09 (code 0, 0 403)
-                SECONDE PASSE du build : 1re nuit 25/09 -> « 0 contact a traduire, rien
-                  n'est ecrit » en 1 s (aucun contact neuf chez Hektor cette nuit : le
-                  registre annonce « a numeroter 0 »). Le chemin inerte est prouve ; le cas
-                  AVEC un contact neuf reste a voir en reel (sur copie le 24/09 : 8/8)
-                ORDRE DECIDE 24/09 soir (Frederic : « Oui, d'abord le plan ») :
-                  (1) ✅ FAIT : les rapprochements n'etaient PAS rattaches -> audit
-                      (notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md),
-                      fonction de retraduction des 13 tables satellites + appel de nuit
-                      + sonde ; APPLIQUEE 25/09 00:07 : 72 lignes retraduites, 0
-                      rapprochement sans contact (bloc L4-c-bis ci-dessous)
-                  (2) ✅ FAIT le 25/09 : C.9-f code, 15/15, repete sur copie -> 0 cle
-                      changee ; EN SERVICE a la nuit du 26/09 (le run de 05:00 lit le
-                      fichier). (ancien libelle ci-dessous)
-                  (2) C.9-f : audit -> explication -> code -> repetition sur COPIE
-                      (le carnet EXISTE dans la vraie base depuis le run de 16:05 :
-                      plus besoin d'attendre une nuit). Attendu : 0 cle changee.
-                      Si 0 sur la copie -> en service DES LA NUIT du 25/09, en meme
-                      temps que la seconde passe (chacune sa ligne au journal).
-                  (3) 25/09 matin : controle de la nuit (seconde passe, carnet, D6,
-                      retraduction satellites = les 30 des 8 neufs, sonde
-                      data.contacts_satellites, sondes a 0)
-                  (4) decision de Frederic : allumer e3 pour de bon
-                ➡ notice/AUDIT_C9_ANNONCE_NEE_DANS_APP_2026-09-24.md · detail : bloc C.9
-  L4-c-bis      ✅ CORRIGE 24/09 (code e414fe0 + 23 fiches reparees 15:4x, go de Frederic)
-                repetition sur COPIE de la vraie base : registre -> build -> registre :
-                23 traduits, 5 liens et 4 recherches suivent (cles IDENTIQUES), 0 second
-                numero, controles a 0. Reel : 23 lignes reparees en transaction verifiee ;
-                le build traduira cette nuit (605491 -> 10650346). Sonde data.contacts_
-                identite INSCRITE (critical, prouvee : mal rangee / bloque > 36 h / ok).
-                ✅ VERIFIE au run de jour du 24/09 (16:05-18:09) : dans Supabase, les 10
-                qui y sont (contacts eligibles) sont sous leur identite, 0 sous l'ancien
-                numero, 0 ancienne cle de lien ; les 13 autres n'y ont jamais ete (non
-                eligibles). Regles mal rangee / desaccord : 0 / 0. 8 contacts NEUFS du jour
-                (605514-605521) passent une nuit sous leur n° Hektor -- ⛔ PAS « normal » :
-                ➡ SECONDE PASSE DU BUILD (24/09 soir, « Oui » de Frederic). Le run fait
-                  build -> registre -> push : le registre numerote les contacts neufs
-                  APRES le build, qui les a ecrits sous leur n° Hektor ; ils partaient
-                  vers Supabase sous ce numero et changeaient d'identite le lendemain,
-                  laissant derriere eux ce que l'app leur avait accroche (mesure : 67
-                  rapprochements des contacts L4-c-bis encore sous l'ancien numero ;
-                  30 pour les 8 neufs). Depuis la bascule du 23/09 seulement.
-                  Correctif : le run relance le build APRES le registre, AVANT le push,
-                  avec --seulement-si-contacts-a-traduire (0 -> s'arrete sans rien ecrire).
-                  Non bloquante, 1 essai. ~4 min les jours ou il y a des contacts neufs.
-                  test_seconde_passe_contacts_neufs.py 7/7 ; PREUVE sur cc9010f : echoue.
-                  REPETITION sur COPIE de la vraie base (8 neufs a traduire) : 211 s,
-                  8/8 traduits, leurs 5 recherches gardent LEUR cle, 0 autre lien ni
-                  recherche change, carnet 100 % / 0 conflit ; registre derriere : 0
-                  second numero ; 2e passe : « 0 a traduire », rien ecrit. Vraie base
-                  intacte. EN SERVICE a la nuit du 25/09.
-                  [ ] A COCHER apres la nuit : ligne « [seconde passe] » au journal,
-                      et au run suivant « contacts a traduire » = 0 avant le build.
-                  [x] MESURE (lecture, 24/09 soir) : NON, ils ne sont PAS rattaches.
-                      - app_upsert_one_rapprochement : ON CONFLICT met a jour le score,
-                        JAMAIS hektor_contact_id -> un rapprochement ne sous le n° Hektor
-                        le garde pour toujours.
-                      - app_get_rapprochements_for_dossier : LEFT JOIN contact PAR CE
-                        NUMERO -> ligne affichee SANS nom/email/tel/nego ;
-                        app_count_rapprochements_for_contact : filtre PAR CE NUMERO ->
-                        le compteur « N biens » de la fiche ne les compte pas ;
-                        app_generate_rapprochement_alerts : meme jointure.
-                      - Parc entier : 69 lignes / 5 contacts sous un ANCIEN n° Hektor
-                        (tous eligibles), 0 action de negociateur dessus ; 50 135 bons.
-                        + les 30 des 8 neufs deviendront orphelins CETTE NUIT (traduits).
-                      - C'etait une table « figee » de la bascule du 23/09 (13 tables
-                        traduites a la main, que le build ne refait pas).
-                  [~] REPARATION CODEE 24/09 soir (« Oui ») -- audit complet :
-                      notice/AUDIT_RAPPROCHEMENTS_NUMERO_CONTACT_2026-09-24.md
-                      supabase/patch_retraduire_satellites_2026-09-24.sql : fonction
-                      app_contact_retraduire_satellites(p_appliquer) sur les 13 tables
-                      figees ; a blanc par defaut ; saute+compte ambigus / contradictoires
-                      / collisions (4 index uniques) ; « le compte doit tomber juste »
-                      (ecarts) ; trace app_contact_retraduction_log ; service_role seul.
-                      PREUVE sur copies temporaires annulees (vraies donnees + 6 cas
-                      pieges) : 1re passe a trouve MON defaut (17 lignes ni traduites ni
-                      comptees : app_contact_id VIDE sur 10 fiches -> NULL) ; corrigee ;
-                      2e passe : 74 traduites (69 + 3 compteurs + 2 pieges), 3 sautees,
-                      0 ecart, rejeu = rien, 0 rapprochement sans contact ; prod intacte.
-                      Appel de nuit : propager_numeros_contact.py AVANT la propagation,
-                      protege (fonction absente -> l'etape continue). Sonde
-                      data.contacts_satellites (a blanc : ecart critical, reste warning).
-                      test_retraduire_satellites.py 9/9 ; PREUVE sur cb711df : echoue.
-                      [x] APPLIQUE 24/09 ~23:50 par Frederic (empreinte du corps installe
-                          = celle du fichier, 50c8da99…, aux fins de ligne pres). A blanc :
-                          72 traduisibles, 0 saute, 0 ecart. Pour de bon (00:07, go de
-                          Frederic, l'etape de nuit elle-meme) : 72 traduits (69 + 3).
-                          Apres : 0 rapprochement sans contact sur 50 204, 0 desaccord de
-                          colonnes, rejeu a blanc = 0, trace 1 ligne ; l'ecran du bien
-                          1379038 affiche de nouveau « M. Jeremy KUPKOWSKI » (10650346).
-                      [x] NUIT DU 25/09 (run 05:00-06:55, exit 0) : « retraduction
-                          satellites (applique) : a traduire 30, traduits 30, sautes 0,
-                          ecarts {} » -> 0 rapprochement sans contact sur 50 207 ; sonde
-                          a blanc = 0 ; trace 2 lignes (72 le 24/09, 30 le 25/09).
-                          ⚠ NOTE : la propagation qui suit a rempli 4 app_contact_id (dont
-                            3 rapprochements) -- les DEUX etapes servent, dans cet ordre.
-                      ⚠ HORS PLAN NOTE : 10 fiches de app_contact_current (Supabase) sous
-                        identite ont app_contact_id VIDE (les contacts L4-c-bis) --
-                        pousser_numeros_contact ne les a pas remplies. Non traite.
-                  (ancien) REPARATION a decider par Frederic (ecriture prod = son geste) :
-                      UPDATE app_rapprochement -> identite, via hektor_target_id, APRES
-                      la nuit du 25/09 (couvre 69 + 30). + garde durable a discuter
-                      (le moteur met a jour hektor_contact_id, ou re-traduction des
-                      tables figees apres le push). La seconde passe empeche les
-                      NOUVEAUX cas ; elle ne repare pas les anciens.
-                ⚠ HORS PLAN, trouve en passant : C.16 et le registre se contredisent --
-                  le registre leve chaque nuit les 7 658 marques « disparu » de C.16
-                  (contacts supprimes chez Hektor mais toujours dans la couche), C.16
-                  les repose aussitot : etat final juste, mais la date « absent depuis »
-                  est reecrite chaque nuit. Preexistant (l'ancienne regle faisait pareil).
-  (historique)  TROUVE 24/09 14:35
-                Tout contact cree chez Hektor DEPUIS LA BASCULE reste sous son numero
-                Hektor, indefiniment : 23 au 24/09 (~10 de plus par jour).
-                Cause : registre_contacts.py l. 232 inscrit le n° Hektor dans la colonne
-                hektor_contact_id (qui porte l'IDENTITE depuis le 23/09) et l'identite
-                dans app_contact_id ; build_contacts_layer.py l. 357 ne lit QUE
-                hektor_contact_id -> pour eux cible = identite -> jamais traduits.
-                ⚠ Correctif naif (lire app_contact_id) = la couche passe sous 10650346,
-                  le registre ne la reconnait plus (il cherche 605491) -> SECOND numero :
-                  le mecanisme exact du 294 179 du matin. Registre ET couche d'un geste.
-                ⚠ Le controle de nuit est AVEUGLE a ce cas (il ne cherche que les
-                  doublons) : ajouter « n° d'app attribue mais n° Hektor en identite ».
-                ⚠ Ce matin j'avais dit « decalage de 24 h » : c'etait faux.
+  ① IDENTITE     L4/C.9 l. 882  la bascule contact est faite (23/09) ; une annonce NAIT
+                 (L4-c l. 100)  dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service
+                               la nuit du 26/09.
+                               RESTE : lire la ligne [numero de bien dans la cle] du run ·
+                                 surveiller la 1re annonce reelle d'un negociateur ·
+                                 supprimer les annonces d'essai 63146 et 63147
+
+  ② DOCUMENTS    D.0 l. 915       4 defauts fermes (mandat/annexe, empreinte, frein, ajout
+                 G.1->G.6      autonome dormant). LE RATTRAPAGE TOURNE SEUL : tache « GTI
+                 l. 1132       Rattrapage Documents » a 23 h, lots de 3 000, 0 en erreur.
+                               RESTE : 40 987 annonces (~14 nuits) · G.2 --detect plafonne ·
+                                 G.3 le menage des 3 Go · G.4 l'etat doit suivre ·
+                                 G.5 la RPC d'ajout autonome
+
+  ③ PHOTOS       section 10bis 4 cases cochees le 26/09, TOUT DORMANT : le coffre public
+                 l. 1115       gti-photo · le calibrage (18 ko / 226 ko -> ~18 Go, pas 25) ·
+                               l'adresse qui ne disparait plus (G.10bis) · le generateur.
+                               RESTE : G.13 generer les derives (~3 h) · G.14 le logo ·
+                                 G.15 rebrancher les 48 points avec repli · G.16 les restes
 ```
+
+> ⛔ **LES 5 GESTES DE FRÉDÉRIC** *(détail : `CLAUDE.md` §2)* — ① redémarrer les 4 services
+> *(en journée 06 h – 22 h)* ② pousser ③ `npm install sharp` ④ allumer
+> `-EnqueueConsoleDocuments` **après** le rattrapage ⑤ relancer le rattrapage s'il décroche.
+
+> ⚠⚠ **QUATRE TRAVAUX ONT UNE DATE DE PÉREMPTION** *(la table ci-dessus en listait trois ;
+> `G.15` est le quatrième)* : `L9` · `C.9-couple` · la vitrine et les liens publics de RDV ·
+> et **`G.15`**, parce que les 48 points d'affichage lisent les photos **chez Hektor** — le
+> jour de la coupure elles disparaissent **toutes** de l'écran en même temps, même avec les
+> 169 Go rapatriés. *Rapatrier remplit le coffre ; ça n'a jamais suffi à afficher.*
 
 ## ✅ `L4-c` EST TERMINÉ — la bascule a été jouée le 23/09/2026, services arrêtés
 
