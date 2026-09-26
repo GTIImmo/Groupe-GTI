@@ -66,20 +66,25 @@ const go = (o) => (o / 1073741824).toFixed(1);
   }
   console.log(`annonces en vente          : ${vivantes.size}`);
 
-  // ── la liste a faire, par curseur ───────────────────────────────────────────
+  // ── la liste a faire ────────────────────────────────────────────────────────
+  // ⚠ ON INTERROGE PAR PAQUETS DE NUMEROS D'ANNONCES, pas par curseur sur toute la
+  // table. Mesure du 26/09 : « derives_generes_le is null » vise ~362 000 photos (toutes
+  // les archivees), et filtrer « vivante » en JS obligeait a parcourir 362 pages pour
+  // trouver 3 photos -- six minutes de liste pour trois secondes de travail. Or le
+  // perimetre EST connu d'avance : les 13 438 annonces en vente. On demande donc
+  // directement leurs photos, par paquets de PAQUET numeros.
+  // (Le curseur reste la bonne reponse quand on balaie TOUT -- cf rattrapage_photos.js.
+  //  Ici on ne balaie pas tout : on connait la liste des annonces.)
+  const PAQUET = 200;
+  const numeros = [...vivantes];
   const aFaire = [];
-  let curseur = "00000000-0000-0000-0000-000000000000";
-  for (;;) {
+  for (let d = 0; d < numeros.length && aFaire.length < LIMITE; d += PAQUET) {
+    const tranche = numeros.slice(d, d + PAQUET);
     const lot = await rest(
       "app_console_photo?select=id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,metadata_json,file_size"
       + "&derives_generes_le=is.null&present_in_hektor=is.true"
-      + `&id=gt.${curseur}&order=id&limit=1000`);
-    if (!lot.length) break;
-    curseur = lot[lot.length - 1].id;
-    for (const r of lot) {
-      if (vivantes.has(Number(r.app_dossier_id)) && aFaire.length < LIMITE) aFaire.push(r);
-    }
-    if (aFaire.length >= LIMITE) break;
+      + `&app_dossier_id=in.(${tranche.join(",")})&order=id&limit=5000`);
+    for (const r of lot) if (aFaire.length < LIMITE) aFaire.push(r);
   }
   console.log(`photos sans derives        : ${aFaire.length}`);
 

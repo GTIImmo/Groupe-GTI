@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1663)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1702)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1499,10 +1499,49 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               node 24 / Windows Server 2025. Le cout d'installation redoute est nul.
               ⚠ Installe A L'ECART pour la mesure : PAS encore dans Console/.
 
-[ ] G.13  GENERER LES DERIVES DES ANNONCES EN VENTE     une nuit
-            74 550 photos, ~18 Go MESURES (G.12, et non les 25 Go estimes) -> Supabase
-            passerait a ~48 Go sur 100 inclus (apres le menage G.3), soit 52 Go de
-            marge. ~3 h a 4 en parallele.
+[x] G.13  LES DERIVES SONT FABRIQUES            FAIT le 26/09, 20 h 01 -> 22 h 00
+            ➡ Console/generer_derives_photos.js  (il n'a AUCUNE logique de fabrication :
+              il appelle genererDerivesPhoto du worker, la meme fonction que le run
+              utilisera. Une seule recette, un seul endroit.)
+
+            RESULTAT, tout recoupe :
+              photos avec derives        74 550   restantes : 0
+              fichiers dans gti-photo   149 100   = 74 550 w400 + 74 550 w1600, exact
+              poids du coffre             17,67 Go
+              Supabase                    50,6 Go sur 100 inclus
+              moyenne par photo            249 ko   (calibrage G.12 : 244 ko)
+              duree                     115,8 min a 8 fils, 10,7 photos/s
+              incoherences G.8/G.13            0   (aucune photo a la fois derivee ET
+                                                    marquee hors vitrine)
+
+            AUDIT AVANT DE LANCER : 74 550 masters PRESENTS sur disque, 0 manquant --
+            le rapatriement du 25/09 etait complet. Machine 12 coeurs a 13 % de charge,
+            file des workers vide : aucune contention.
+
+            CALIBRAGE, sur du vrai travail (ces photos-la sont faites, pas jetees) :
+              200 a 4 fils ->  5,0 photos/s = 4,1 h projetees
+              200 a 8 fils -> 10,7 photos/s = 1,9 h  <- retenu
+            Lance a 20 h 01 pour finir AVANT le rattrapage documentaire de 23 h.
+
+            PREUVE EN REEL, sur 3 photos tirees au hasard parmi les 74 550, relues
+            SANS AUCUNE CLE comme le ferait un robot de portail :
+              200 · largeurs 400 et 1600 px · cache-control « public, max-age=31536000 »
+              · AUCUN numero Hektor dans l'adresse
+              ▫ une des trois rend 1 443 px et non 1 600 : son master etait plus petit,
+                withoutEnlargement a joue. C'est voulu.
+
+            ⚠ 3 PHOTOS ONT ECHOUE A LA PREMIERE PASSE (Supabase Storage 504, passager).
+              Elles n'avaient recu QU'UN derive sur deux -- et AUCUNE ligne ne pretendait
+              le contraire : la regle « on note APRES le depot » a tenu. Une relance les
+              a reprises, 0 erreur. C'est la reprenabilite qui a servi, pas un correctif.
+
+            ⚠⚠ ET UNE LENTEUR TROUVEE A LA RELANCE, corrigee : « derives_generes_le is
+              null » vise ~362 000 photos (toutes les archivees). Filtrer « vivante » en
+              JS obligeait donc a parcourir 362 pages pour trouver 3 photos -- six
+              minutes de liste pour trois secondes de travail. On interroge maintenant
+              par PAQUETS DE NUMEROS d'annonces vivantes (le perimetre est connu
+              d'avance). Le curseur reste la bonne reponse quand on balaie TOUT
+              (rattrapage_photos.js) ; ici on ne balaie pas tout.
             ⚠ Les documents grossissent d'environ 1 Go/mois : la marge n'est pas
               eternelle, d'ou l'alerte a 60 Go de G.8.
 
