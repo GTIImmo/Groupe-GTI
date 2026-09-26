@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1558)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1597)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1484,12 +1484,51 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             Le miroir porte 444 390 photos sur 49 050 annonces ; l'index en a 436 524
             sur 48 465. L'ecart se decompose en TROIS, pas deux :
 
-            ▫ 8 013 photos / 583 annonces SANS NUMERO D'APP (confirme au chiffre pres).
-              Elles sont dans le miroir et dans AUCUN des 4 index -> le rapatriement les
-              REFUSE, par construction (il exige notre numero). Ce n'est pas un defaut,
-              c'est la regle qui joue. A TRANCHER PAR FREDERIC : ces annonces
-              doivent-elles exister dans l'app ? Tant que la reponse est non, leurs
-              photos ne seront jamais chez nous -- et apres la coupure, plus jamais.
+            ⛔⛔ 8 013 photos / 583 annonces SANS NUMERO D'APP -- ET CE N'EST PAS UN
+              ARBITRAGE, C'EST UN DEFAUT. Cause trouvee le 26/09 (question de Frederic
+              « 583 sans numero d'apps pourquoi ? ») :
+
+              LE MEME statut_id = 6 PORTE DEUX LIBELLES CHEZ HEKTOR.
+                  statut_id=6  'Clos'         34 009 annonces
+                  statut_id=6  'Mandat clos'     672 annonces
+              Et TOUS les filtres de l'app comparent le LIBELLE, jamais l'identifiant :
+                  courant     archive='0' AND statut IN ('Actif','Sous offre',
+                                                         'Sous compromis','Estimation')
+                  archive     archive='1'
+                  historique  archive='0' AND statut IN ('Vendu','Clos')
+                  registre    REGISTRE_SCOPE_STATUTS = (..., 'Vendu','Clos','Estimation')
+              « Mandat clos » n'est dans aucune liste -> l'annonce tombe entre les
+              QUATRE index, donc pas de numero d'app, donc invisible de l'app.
+              675 annonces au total (672 + 2 'Prochainement disponible' + 1 'Loue').
+
+              ⛔ LE PLUS GRAVE N'EST PAS LES PHOTOS : 643 DE CES ANNONCES PORTENT UN
+                MANDAT, ET SONT ABSENTES DU REGISTRE DES MANDATS. Verifie en base :
+                0 ligne pour 12 annonces echantillonnees. Or le code dit lui-meme
+                « le registre des mandats est un document LEGAL : tout mandat signe
+                doit y figurer ». Et L9 a une DATE DE PEREMPTION (il se remplit depuis
+                le miroir) -> a corriger AVANT la coupure.
+
+              ✅ CE N'EST PAS NOTRE WORKER : setHektorAnnonceStatusValue envoie
+                val: config.hektorValue, c'est-a-dire « 6 ». Le libelle « Mandat clos »
+                de HEKTOR_STATUS_CONFIG ne sert QU'AU JOURNAL. Verifie avant d'accuser.
+
+              ⚠⚠ ET LE LIBELLE EST ARRIVE CE MATIN : le synced_at des 672 vaut
+                2026-09-26 04:25:05 -> 04:25:06, soit UNE SECONDE. Celui des 34 009
+                'Clos' s'etale du 30/04 au 26/09. Hektor a donc change le libelle, et
+                il se propage AU FUR ET A MESURE DES RELECTURES. Les identifiants
+                touches vont de 55119 a 58868, et il n'y en a AUCUN au-dela de 60000
+                -> forte presomption que d'autres basculeront les nuits suivantes.
+              ▫ NON ETABLI : etaient-elles dans le registre AVANT ce matin ? L'etat
+                precedent du miroir a ete ecrase a 04:25, et C:\Hektor\Backups est hors
+                du depot (lecture refusee). C'est la difference entre « une regression
+                qui a commence ce matin » et « un trou ancien ». A demander a Frederic.
+
+              ➡ LE CORRECTIF : comparer sur statut_id, pas sur le libelle. Quatre
+                endroits : ANNONCES_SCOPE_WHERE, SQL_HISTORICAL_ANNONCE_INDEX_BASE et
+                REGISTRE_SCOPE_STATUTS (export_app_payload.py), plus
+                Console/prepare_historical_annonce_detail.py:234.
+              ⚠ Touche le run de nuit ET le registre -> feu vert obligatoire.
+              ⚠ HORS DU CHANTIER PHOTOS : ca se NOTE ici, ca ne s'enchaine pas.
 
             ⛔ 17 photos / 4 annonces QUI ONT un numero d'app et ne sont pas rapatriees :
                  63153 (n° 7589140, Estimation, 10 photos) · 63154 (7589141, brouillon,
