@@ -1358,11 +1358,46 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                ...SyncLight   -- EN JOURNEE (06 h - 22 h), jamais 23 h - 05 h.
                Tant qu'il n'est pas fait, le worker continue de SUPPRIMER.
 
-[ ] G.11  LE GENERATEUR DE TAILLES              dormant -- APRES G.10bis
-            Lit le master sur le serveur, fabrique w400 et w1600, depose dans
-            gti-photo, note l'adresse dans la ligne de la photo.
-            ⚠ Bibliotheque d'images cote worker (sharp est le standard Node) -- cout
-              d'installation sur le serveur NON MESURE.
+[x] G.11  LE GENERATEUR DE TAILLES              FAIT le 26/09 -- DORMANT
+            genererDerivesPhoto : lit le master sur le serveur, fabrique w400 et w1600,
+            depose dans gti-photo, note les chemins dans la ligne de la photo.
+            Interrupteur CONSOLE_DERIVES_PHOTO_ENABLED, ETEINT : rien ne se genere.
+            Exporte, parce que le script de lot de G.13 en aura besoin.
+
+            ✅ PREUVE EN REEL sur une photo (dossier 1361305, master 1920x1440) :
+               w400  ->  18 ko, 400 px    w1600 -> 255 ko, 1600 px
+               relus SANS AUCUNE CLE, octet pour octet, en image/jpeg, duree de cache
+               posee, AUCUN numero Hektor dans l'adresse. Puis TOUT remis en etat :
+               objets retires, ligne restauree, coffre revenu a 0 fichier.
+               (Les poids collent au calibrage G.12 : 18 et 226 de moyenne.)
+
+            ✅ base : derives_json + derives_generes_le + index partiel « sans derives »
+               (pour que G.13 trouve son reste a faire sans balayer 436 524 lignes).
+               derives_generes_le NULL = pas de derives -> repli sur Hektor (G.15).
+               ➡ notice/patch_derives_photo_2026-09-26.sql
+
+            ✅ REFUS par construction : une photo sans app_dossier_id, ou sans id de
+               ligne, fait LEVER au lieu de produire une adresse boiteuse. C'est la
+               regle des deux numeros appliquee a L'ECRITURE -- la leçon du 25/09 (je
+               l'appliquais en inspectant, je l'oubliais en ecrivant).
+
+            ✅ sharp : 2 s, 8 paquets, 30 Mo, binaire precompile node 24 / Windows
+               Server 2025. Le cout redoute est NUL. Chargement PARESSEUX : tant que
+               l'interrupteur est eteint, sharp n'est jamais charge -- donc son absence
+               ne peut pas faire tomber les 4 services.
+            ⛔ RESTE A FAIRE POUR L'ALLUMER : « npm install sharp » dans Console/.
+               (CONSOLE_SHARP_MODULE permet de viser une installation ailleurs -- c'est
+               ce qui a servi a la preuve, sharp n'etant pas encore dans Console/.)
+
+            Garde-fou Console/test_derives_photo.js -- 20 controles, et chacun des SIX
+            defauts possibles a ete POSE dans une copie du worker pour verifier que le
+            test passe au rouge : coffre oublie · duree de cache dans la forme riche ·
+            numero Hektor dans l'adresse · refus retire · interrupteur allume par
+            defaut · ecriture avant le depot.
+            ⚠ Ma 1re avarie « ecriture avant depot » ne changeait qu'un COMMENTAIRE :
+              elle restait verte, et le controle ne regardait que le CONTENU de
+              l'ecriture, pas son ORDRE. Corrige (journal ordonne), puis reprouve avec
+              une avarie fidele. Une avarie qui ne change rien ne prouve rien.
             ⚠ On PRE-GENERE : le redimensionnement a la volee de Supabase existe et
               MARCHE (verifie le 26/09, il repond en image/jpeg), mais il coute
               5 $ / 1 000 images distinctes par cycle, quota Pro = 100 -> ~375 $ le

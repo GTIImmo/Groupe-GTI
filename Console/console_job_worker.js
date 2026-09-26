@@ -22,6 +22,31 @@ const RAW_WORKER_KIND = String(process.env.CONSOLE_WORKER_KIND || process.env.CO
 const WORKER_KINDS = new Set(["actions", "documents", "admin", "matterport", "sync_light", "sync_full", "sync", "all"]);
 const WORKER_KIND = WORKER_KINDS.has(RAW_WORKER_KIND) ? RAW_WORKER_KIND : "actions";
 const STORAGE_BUCKET = process.env.CONSOLE_STORAGE_BUCKET || "hektor-console-documents";
+
+// ── G.11 : LES DERIVES PUBLICS D'UNE PHOTO ────────────────────────── 26/09/2026
+// Le coffre des documents est PRIVE (lecture par URL signee). Les photos, elles,
+// doivent etre lisibles par des robots de portail et par des clients de messagerie :
+// elles vont dans un coffre PUBLIC, a une adresse PERMANENTE.
+//
+// ⚠⚠ ON PRE-GENERE, ON NE REDIMENSIONNE PAS A LA VOLEE. Le service de Supabase
+// existe et repond, mais il coute 5 $ / 1 000 images distinctes par cycle (quota Pro
+// = 100) -> ~375 $ le premier mois sur 74 550 photos, et le compteur repart.
+//
+// Tailles et qualites CALIBREES le 26/09 sur 200 photos vivantes (G.12) :
+//   w400  jpeg q75 -> 18 ko de moyenne (le plan disait 40)
+//   w1600 jpeg q82 -> 226 ko de moyenne (le plan disait 300)
+// JPEG pour les deux : le webp ne gagne que 8 % et les portails sont des robots --
+// on ne parie pas sur leur support du webp.
+const COFFRE_PHOTO_PUBLIC = process.env.CONSOLE_PHOTO_PUBLIC_BUCKET || "gti-photo";
+const DERIVES_PHOTO_TAILLES = [
+  { nom: "w400", largeur: 400, qualite: 75 },
+  { nom: "w1600", largeur: 1600, qualite: 82 },
+];
+// Un an. Sans duree de cache, chaque affichage retraverse Supabase en egress facture.
+// ⚠ La forme est piegeuse : voir le commentaire de storageRequest.
+const CACHE_DERIVE_PHOTO = "max-age=31536000";
+// DORMANT par defaut. Rien ne se genere tant que Frederic n'allume pas.
+const DERIVES_PHOTO_ENABLED = /^(1|true|on|oui)$/i.test(String(process.env.CONSOLE_DERIVES_PHOTO_ENABLED || "").trim());
 const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolve(__dirname, "sessions", `storage_state_${WORKER_KIND}.json`);
 const MATTERPORT_STORAGE_STATE_PATH = process.env.MATTERPORT_STORAGE_STATE_PATH || path.resolve(__dirname, "matterport_storage_state.json");
 const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\Hektor\\HektorConsoleDocuments";
@@ -1533,29 +1558,43 @@ async function marquerRelationProvisoireEnErreur(creationToken, message) {
   }
 }
 
+// ⚠ `bucket` et `cacheControl` ajoutes le 26/09 (G.11), tous deux OPTIONNELS : sans
+// eux le comportement est celui d'avant, et aucun des appels existants ne change.
+//   · bucket       -- le coffre des documents est PRIVE ; les derives de photos vont
+//                     dans un coffre PUBLIC. Sans ce parametre un derive partirait
+//                     dans le coffre prive, invisible du front.
+//   · cacheControl -- ⚠⚠ LA FORME EST PIEGEUSE, mesuree le 26/09 : Supabase parse
+//                     `max-age=N` et REFABRIQUE l'en-tete. Une forme plus riche
+//                     (« public, max-age=N, immutable ») est ignoree EN SILENCE et le
+//                     fichier ressort en `no-cache` -- chaque affichage par un portail
+//                     ou un email retraverserait Supabase en egress facture.
 async function storageRequest(objectPath, options = {}) {
   const baseUrl = requireEnv("SUPABASE_URL", SUPABASE_URL).replace(/\/+$/, "");
-  const response = await fetch(`${baseUrl}/storage/v1/object/${STORAGE_BUCKET}/${storagePathEncode(objectPath)}`, {
+  const coffre = options.bucket || STORAGE_BUCKET;
+  const response = await fetch(`${baseUrl}/storage/v1/object/${coffre}/${storagePathEncode(objectPath)}`, {
     ...options,
     headers: {
       ...restHeaders(options.contentType || null),
       ...(options.upsert ? { "x-upsert": "true" } : {}),
+      ...(options.cacheControl ? { "cache-control": options.cacheControl } : {}),
       ...(options.headers || {}),
     },
   });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(`Supabase Storage ${response.status} on ${objectPath}: ${text || response.statusText}`);
+    throw new Error(`Supabase Storage ${response.status} on ${coffre}/${objectPath}: ${text || response.statusText}`);
   }
   return response;
 }
 
-async function uploadStorageObject(objectPath, buffer, mimeType) {
+async function uploadStorageObject(objectPath, buffer, mimeType, options = {}) {
   await storageRequest(objectPath, {
     method: "POST",
     body: buffer,
     contentType: mimeType || "application/octet-stream",
     upsert: true,
+    ...(options.bucket ? { bucket: options.bucket } : {}),
+    ...(options.cacheControl ? { cacheControl: options.cacheControl } : {}),
   });
 }
 
@@ -5546,6 +5585,87 @@ async function handleSyncHektorPhotos(job) {
     photos_failed: stored.failed,
     photos_bytes: stored.bytes,
   };
+}
+
+// ⚠ Chargement PARESSEUX de la bibliotheque d'images. Le worker tourne en 4 services :
+// un require au sommet du fichier les ferait tous tomber si sharp n'est pas installe.
+// Ici, tant que DERIVES_PHOTO_ENABLED est eteint, sharp n'est jamais charge.
+// CONSOLE_SHARP_MODULE permet de viser une installation ailleurs (mesure, serveur).
+let _sharp = null;
+function chargerSharp() {
+  if (_sharp) return _sharp;
+  const quoi = process.env.CONSOLE_SHARP_MODULE || "sharp";
+  try {
+    // eslint-disable-next-line global-require, import/no-dynamic-require
+    _sharp = require(quoi);
+  } catch (error) {
+    throw new Error(`Bibliotheque d'images introuvable (${quoi}) -- `
+      + `« npm install sharp » dans Console/, ou CONSOLE_SHARP_MODULE. Cause : ${error.message}`);
+  }
+  return _sharp;
+}
+
+// L'ADRESSE PUBLIQUE D'UN DERIVE.
+// ⚠⚠ ELLE NE CHANGERA JAMAIS (P-1 de l'audit) : un portail la met en cache, un email
+// l'integre, un client la garde en favori. Elle ne porte donc AUCUN numero Hektor --
+// uniquement nos deux numeros, ce que le travail d'identite des 24-26/09 a rendu
+// possible. Et la ligne qui porte cet id ne disparait plus (G.10bis).
+function cheminDerivePhoto(appDossierId, photoId, nom) {
+  return `${appDossierId}/${photoId}/${nom}.jpg`;
+}
+
+// Fabrique les derives d'UNE photo et les depose dans le coffre public.
+// Le master n'est JAMAIS touche : il reste sur le serveur, et un derive retire est
+// toujours regenerable a partir de lui (regle G.8, validee par Frederic le 26/09).
+async function genererDerivesPhoto(ligne, options = {}) {
+  if (!DERIVES_PHOTO_ENABLED && !options.force) return { saute: "eteint" };
+
+  // ⚠⚠ LA REGLE DES DEUX NUMEROS, APPLIQUEE A L'ECRITURE. C'est la leçon du 25/09 :
+  // je l'applique quand j'INSPECTE du code, je l'oubliais quand j'en ECRIS. Une
+  // adresse publique sans notre numero serait irreparable -- on REFUSE.
+  const appDossierId = Number(ligne.app_dossier_id);
+  if (!Number.isFinite(appDossierId) || appDossierId <= 0) {
+    throw new Error(`REFUS : photo ${ligne.id} sans app_dossier_id -- une adresse publique`
+      + " ne doit porter aucun numero Hektor, et elle ne se corrige plus apres diffusion");
+  }
+  if (!ligne.id) throw new Error("REFUS : photo sans id -- l'adresse publique repose sur lui");
+
+  const metadata = ligne.metadata_json && typeof ligne.metadata_json === "object" ? ligne.metadata_json : {};
+  const master = metadata.local_archive_path
+    || localPhotoPath(ligne.hektor_annonce_id, ligne.id, ligne.filename);
+  if (!fs.existsSync(master)) return { saute: "master_absent", master };
+
+  const sharp = chargerSharp();
+  const brut = fs.readFileSync(master);
+  const derives = {};
+  for (const taille of DERIVES_PHOTO_TAILLES) {
+    // withoutEnlargement : un master plus petit que la cible n'est PAS agrandi
+    // (49 photos sur 200 font moins de 1 600 px) -- on le re-encode, c'est tout.
+    const buffer = await sharp(brut)
+      .resize({ width: taille.largeur, withoutEnlargement: true })
+      .jpeg({ quality: taille.qualite, mozjpeg: true })
+      .toBuffer();
+    const chemin = cheminDerivePhoto(appDossierId, ligne.id, taille.nom);
+    await uploadStorageObject(chemin, buffer, "image/jpeg", {
+      bucket: COFFRE_PHOTO_PUBLIC,
+      cacheControl: CACHE_DERIVE_PHOTO,
+    });
+    derives[taille.nom] = { chemin, octets: buffer.length };
+  }
+
+  // On note APRES le depot : si le depot echoue, la ligne ne pretend pas avoir des
+  // derives. L'inverse laisserait le front afficher une adresse vide.
+  const maintenant = new Date().toISOString();
+  await supabaseRequest(`app_console_photo?id=eq.${encodeURIComponent(ligne.id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({
+      derives_json: derives,
+      derives_generes_le: maintenant,
+      updated_at: maintenant,
+    }),
+  });
+  return { derives, coffre: COFFRE_PHOTO_PUBLIC };
 }
 
 // Telecharge les binaires des photos d'une annonce.
@@ -19560,4 +19680,8 @@ if (require.main === module) {
 }
 
 // Export pour tests/outils (n'affecte pas le service : lancé via `node console_job_worker.js`).
-module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries, documentContentFingerprint, localPhotoDir, localPhotoPath, safeFilename, storageSafeFilename, extractConsolePhotoEntries };
+module.exports = { estimationAvisValeurHtmlPremium, renderHtmlToPdfBuffer, cadastrePlanHtml, extractModeloDocumentEntries, extractDocumentEntries, adoptExistingImmoSignRows, fetchConsoleDocumentEntries, documentContentFingerprint, localPhotoDir, localPhotoPath, safeFilename, storageSafeFilename, extractConsolePhotoEntries,
+  // G.11 : exposes pour le script de lot de G.13 (les 74 550 derives) et pour la
+  // preuve en reel. genererDerivesPhoto reste DORMANT sans son interrupteur.
+  genererDerivesPhoto, cheminDerivePhoto, COFFRE_PHOTO_PUBLIC, CACHE_DERIVE_PHOTO,
+  DERIVES_PHOTO_TAILLES };
