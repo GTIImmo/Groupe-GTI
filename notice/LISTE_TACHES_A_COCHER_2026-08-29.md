@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1738)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1786)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1598,6 +1598,54 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               Et le vrai compte de TRAVAIL est plus petit encore : la vitrine n'a qu'UNE
               fonction (visible_photos) a rebrancher, pas huit endroits. Compter des
               occurrences et compter des gestes, ce n'est pas la meme chose.
+
+            ══ AUDIT DU 26/09 AU SOIR -- CE QUI COMMANDE LA CONCEPTION ══
+
+            DEUX BESOINS DISTINCTS, pas un seul :
+              photo_url_listing     33 points   LA VIGNETTE : une adresse par annonce
+                                                (App.tsx 24 · vitrine 2 · espace 2 ·
+                                                 RDV 3 · emails 2)
+              images_preview_json   22 points   LA GALERIE : toutes les adresses
+                                                (App.tsx 17 · vitrine 2 · espace 3)
+              images_json            6 points   la liste brute (App.tsx 1 · vitrine 5)
+
+            ⛔⛔ L'OBSTACLE, ET IL EST STRUCTUREL : CES DEUX CHAMPS VIVENT SUR LES LIGNES
+              D'INDEX D'ANNONCE, QUI SONT CONSTRUITES EN LOCAL (export_app_payload.py lit
+              phase2/phase2.sqlite). Or l'adresse d'un derive s'ecrit
+              {app_dossier_id}/{id de la ligne photo}/w400.jpg -- et cet id n'existe
+              NULLE PART en local : app_console_photo est une table SUPABASE SEULEMENT
+              (verifie le 26/09 : aucune table photo dans data/hektor.sqlite).
+              -> LE BUILD NE PEUT PAS CALCULER NOS ADRESSES. Toute conception qui passe
+                 par le build est morte d'avance.
+
+            DEUX CHEMINS, et le choix appartient a Frederic :
+
+              A. UNE FONCTION SUPABASE APRES LE PUSH  (le patron valide a G.8)
+                 Des colonnes soeurs sur les index (photo_url_listing_app,
+                 images_preview_json_app), remplies depuis app_console_photo.derives_json
+                 par une fonction appelee APRES le push de nuit. Le front et le backend
+                 preferent la colonne _app, et retombent sur Hektor si elle est vide.
+                 ✅ aucun changement du build, aucune donnee locale requise
+                 ✅ meme patron que G.8, deja eprouve
+                 ⚠ IL FAUT L'APPELER DANS LE PIPELINE, juste apres le push -- pas a
+                   08 h 30 en pg_cron : sinon les colonnes restent vides ~1 h 30 chaque
+                   nuit et l'affichage retombe sur Hektor. Inoffensif tant que Hektor
+                   vit, INACCEPTABLE apres la coupure.
+                 ⚠ ET LA VITRINE EST UN CAS A PART : export_project_vitrine.py tourne
+                   DANS le pipeline et lit du LOCAL. Pour publier nos adresses, il faut
+                   soit qu'il les relise chez Supabase, soit que l'etape passe apres le
+                   remplissage. A trancher avec le reste.
+
+              B. LE FRONT DEDUIT L'ADRESSE LUI-MEME
+                 Il a app_dossier_id mais PAS l'id de la photo -> il devrait charger
+                 app_console_photo. Acceptable sur une FICHE (une requete), impossible
+                 sur une LISTE de 500 cartes.
+                 ⛔ ne resout donc pas la vignette, qui est le gros du travail (33 points)
+                 -> utilisable au mieux en complement, pas comme reponse principale.
+
+            ➡ RECOMMANDATION : A, avec l'appel dans le pipeline (pas en pg_cron), et la
+              question de la vitrine tranchee en meme temps.
+            ⚠ RIEN N'EST CODE : G.15 modifie du code existant ET deploie -> feu vert.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
             ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en

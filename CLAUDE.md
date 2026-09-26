@@ -137,25 +137,36 @@ L0 ✅   L1 ✅   L2 ✅   L3 ✅   L4 🟡   puis  L5  L6  L7  L8  L9
    de 23 h decroche                          ⚠ NE JAMAIS REJOUER une annonce en erreur
 ```
 
-### ⚠ À CONTRÔLER DEMAIN MATIN — *deux choses tournent pour la 1re fois cette nuit*
+### Le soir du 26/09 — *ce qui a été fait après la première version de cette page*
 
 ```
-23 h 00  GTI Rattrapage Documents   elle a ECHOUE sa 1re nuit (piege PowerShell du
-                                    « C »), corrigee depuis, JAMAIS REUSSIE ENCORE.
-                                    Attendu : un lot de 3 000 pose, puis ~3 000
-                                    empreintes de plus dans la journee.
-                                    -> node Console/enqueue_empreinte_lot.js --scope auto --dry-run
+23 h 00   GTI Rattrapage Documents  ✅ PREMIERE REUSSITE : resultat 0, 3 000 travaux
+                                       empiles, 0 exclu pour erreur. Les workers les
+                                       digerent a ~347/h -> absorbe vers 07 h 40.
+                                       Il reste 13 nuits.
 
-05 h 00  etape photo du pipeline    son chemin etait casse par un RETOUR CHARIOT ;
-         + sonde                    elle n'a donc JAMAIS tourne. Reparee le 26/09.
-                                    Attendu au journal : « START phase2 rattrapage
-                                    photos » puis « START phase2 sonde photos ».
-                                    Elle devrait ramasser les 17 photos des 4 annonces
-                                    neuves (63153, 63154, 63155, 63157).
+G.8   ✅ l'ancre des six mois est posee    colonne + fonction + pg_cron a 08 h 30
+        13 438 vivantes · 74 550 sans ancre · 361 974 marquees · 0 incoherence
+        garde-fou PROUVE au refus · idempotente · l'horloge ne repart pas
+
+G.13  ✅ les 74 550 derives sont fabriques  20 h 01 -> 22 h 00, 10,7 photos/s
+        149 100 fichiers = 74 550 w400 + 74 550 w1600 · 17,67 Go · Supabase a 50,6/100
+        3 echecs 504 passagers, reprises par une relance (la reprenabilite a servi)
+
+G.14  ✅ le logo des emails quitte Hektor   gti-photo/marque/logo-gti.png
+        ⚠ l'enonce de la case etait FAUX : le worker embarquait deja son logo en data
+          URI. Le vrai trou etait les EMAILS du backend, sans aucun repli.
+        ⛔ reste a DEPLOYER LE BACKEND (Render) -- sans urgence, l'adresse Hektor repond
 ```
 
-⚠ **Le moniteur va alerter** sur `GTI Rattrapage Documents` avant ça — il voit l'échec
-de la nuit dernière, qu'il ne surveillait pas jusqu'à aujourd'hui. C'est normal.
+⛔ **CE QUI ATTEND ENCORE FRÉDÉRIC, mis à jour :**
+
+```
+① redemarrer les 4 services      ⚠ SEULEMENT 06 h - 22 h. Rien ne l'exige aujourd'hui :
+                                   G.8, G.13 et G.14 ne touchent pas au worker.
+② deployer le backend (Render)   pour que les emails prennent le logo public
+③ allumer -EnqueueConsoleDocuments  ⛔ APRES les 13 nuits restantes
+```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *pas seulement une priorité*
 
