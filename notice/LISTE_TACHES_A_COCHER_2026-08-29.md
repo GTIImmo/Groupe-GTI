@@ -1205,6 +1205,168 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             ➡ notice/AUDIT_PHOTOS_2026-09-25.md
 ```
 
+## 10bis. FICHIERS — LA LISTE A FAIRE *(arretee le 26/09/2026)*
+
+```
+⚠⚠ LA REGLE D'OR DE CETTE PERIODE : TOUT peut etre CODE maintenant, rien n'attend le
+   rattrapage. Deux contraintes seulement, et elles portent sur le CALENDRIER :
+     · REDEMARRER LES WORKERS EN JOURNEE (06 h - 22 h), JAMAIS entre 23 h et 05 h.
+       Un travail laisse « running » plus de 30 min est marque EN ERREUR par le
+       distributeur (app_console_claim_next_job), et enqueue_empreinte_lot EXCLUT
+       definitivement les annonces en erreur -> un redemarrage pendant un lot coute
+       une annonce, ecartee du rattrapage pour toujours.
+     · NE PAS ALLUMER D.0-g avant la fin du rattrapage : ca doublerait la
+       consommation du quota Hektor.
+```
+
+### LES DOCUMENTS
+
+```
+[~] G.1   LE RATTRAPAGE              40 987 annonces restantes, 14 nuits
+            tache « GTI Rattrapage Documents » a 23 h, lot de 3 000, 0 en erreur.
+            Rien a faire : elle tourne seule. Suivi :
+              node Console/enqueue_empreinte_lot.js --scope auto --dry-run
+
+[ ] G.2   LE PIPELINE APPELLE --detect          PEUT SE FAIRE MAINTENANT
+            run_full_pipeline.ps1:1033 lance --scope daily-cloud SANS --detect : le
+            drapeau ajoute tel quel empilerait TOUT le perimetre chaque nuit.
+            ⚠⚠ Un balayage du parc entier coute 56 867 requetes = 4x le seuil de
+              bannissement -> la detection quotidienne doit rester PLAFONNEE.
+            Et l'etape est BLOQUANTE (throw) alors que ses voisines fragiles sont en
+            Invoke-OptionalStepWithRetry : une session morte tuerait Matterport, les
+            liens publics de RDV, la vitrine et l'export Android.
+            ✅ Son defaut de cookies est FERME (26/09) : l'hote vient de la
+              configuration, les cookies suivent. Verifie en reel : 14 documents lus.
+            DORMANT tant que D.0-g est eteint -> aucun risque a le coder pendant le
+            rattrapage.
+
+[ ] G.3   LE MENAGE DES 3 Go                    ENTRE DEUX NUITS
+            2 318 Mo : 1 749 documents de 98 annonces ARCHIVEES, qui n'ont plus droit
+              au cloud mais que rien n'en redescend ;
+            702 Mo : 902 fichiers ORPHELINS (plus aucune ligne ne les reclame), dont
+              108 temporaires jamais effaces.
+            Sans risque : les fichiers sont sur le serveur, et prepare_document_cloud
+            sait les remonter a la demande. Garde-fou : fichier local present ET
+            sha256 conforme AVANT toute suppression.
+            ⚠ A faire entre deux lots, pas pendant : le rattrapage reindexe des
+              documents d'archives au meme moment (risque de course, faible).
+            ➡ memoire purge-cloud-documents-archives
+
+[ ] G.4   L'ETAT DOIT SUIVRE (ex-D4)            CODER MAINTENANT, REDEMARRER EN JOURNEE
+            nextStatus (console_job_worker.js:4574) ne sait que MONTER : une annonce
+            archivee garde ses fichiers dans le cloud indefiniment. Mesure : 1 691
+            documents / 95 annonces / 2,2 Go, contre 628 Mo le 21/08 -> x4 en 5 semaines.
+            Et rien ne les REMONTE au retour d'archive : apres la coupure, une annonce
+            reactivee s'ouvrirait sans ses documents. ~34 annonces changent d'etat/mois.
+            ⚠ POUR LES PHOTOS, LA REGLE EST DIFFERENTE -- voir G.9.
+
+[ ] G.5   L'AJOUT DEVIENT AUTONOME (lot 2c)     PEUT SE FAIRE MAINTENANT
+            Le socle est POSE et DORMANT (7428303, db5c38c, ec838b2) : notre serveur
+            d'abord, Hektor ensuite ; un echec Hektor ne leve pas ; le repassage existe.
+            ⛔ MANQUE : le front n'a que SELECT sur app_console_document et
+              app_console_photo -- il ne peut creer qu'un TRAVAIL. C'est precisement
+              pourquoi le schema est « Hektor d'abord ».
+            -> RPC SECURITY DEFINER (patron de la signature manuscrite) qui cree la
+               ligne pour le front ET VERIFIE SON ACCES A L'ANNONCE. Sinon n'importe qui
+               depose un document sur n'importe quel bien. A faire de tete reposee.
+            Ne touche pas Hektor -> aucun conflit avec le rattrapage.
+
+[ ] G.6   FREDERIC : allumer -EnqueueConsoleDocuments   ⛔ APRES LE RATTRAPAGE
+            Le seul point qui DOIT attendre.
+```
+
+### LES PHOTOS
+
+```
+[x] G.7   LE COFFRE EST PLEIN                   fait le 25-26/09
+            436 522 photos, 169 Go sur le serveur. Verifie des deux cotes.
+            Et il s'ENTRETIENT depuis le 26/09 : etape dans le run (22 photos ce
+            matin) + sonde de 25 annonces. Mesure decisive : ajouter une photo dans
+            Hektor FAIT BOUGER la date_maj de l'annonce -> pas de balayage necessaire.
+
+[ ] G.8   LA REGLE D'ESPACE                     ⭐ VALIDEE PAR FREDERIC LE 26/09
+            annonce en vente        -> w400 + w1600 presents
+            annonce archivee        -> conserves 6 MOIS, puis retires
+            le master               -> TOUJOURS sur le serveur, jamais retire
+            un derive retire        -> REGENERABLE a la demande (comme « Preparer »)
+            surveillance            -> alerte si le coffre depasse 60 Go
+            Pourquoi 6 mois : au-dela, le portail a retire l'annonce et les emails sont
+            perimes. Et comme le master ne bouge jamais, retirer n'est JAMAIS une perte.
+
+[ ] G.9   L'ETAT DES PHOTOS N'EST PAS CELUI DES DOCUMENTS
+            ⚠ Les documents DESCENDENT du cloud a l'archivage (G.4). Pour les photos ce
+              serait une ERREUR : une adresse deja diffusee (portail, email, favori)
+              pointerait dans le vide. On applique G.8 : 6 mois, puis retrait.
+            Aujourd'hui 0 photo concernee -- parce qu'il n'y en a AUCUNE dans le cloud.
+            La fuite commence le jour ou on y verse les derives.
+
+[ ] G.10  CREER LE COFFRE « gti-photo »         nom arrete par Frederic
+            public = true · images seulement (jpeg/png/webp) · 10 Mo par fichier.
+            ⚠ Un coffre public n'est pas un coffre sans regles : seule la LECTURE est
+              libre, le depot reste reserve au worker. Et limiter les types fait qu'un
+              PDF ne peut PAS y entrer par erreur -- protection par construction.
+            ⚠ PAS D'ACCES DNS pour l'instant -> on sert sous le domaine Supabase. Un
+              sous-domaine a soi reste une option (plus propre dans un email).
+
+[ ] G.11  LE GENERATEUR DE TAILLES              dormant
+            Lit le master sur le serveur, fabrique w400 et w1600, depose dans
+            gti-photo, note l'adresse dans la ligne de la photo.
+            ⚠ Bibliotheque d'images cote worker (sharp est le standard Node) -- cout
+              d'installation sur le serveur NON MESURE.
+            ⚠ On PRE-GENERE : le redimensionnement a la volee de Supabase existe et
+              marche, mais il coute 5 $ / 1 000 images distinctes par cycle, quota Pro
+              = 100 -> ~375 $ le premier mois sur 74 550 photos. Leur propre
+              documentation recommande de pre-generer a ce volume.
+
+[ ] G.12  CALIBRER SUR 200 PHOTOS
+            Les 40 ko (w400) et 300 ko (w1600) sont des ordres de grandeur, PAS des
+            mesures. A calibrer avant de lancer -- mon calibrage du 25/09 sur 200
+            photos avait sous-estime le poids reel d'un tiers (262 ko annonces, 387 ko
+            mesures sur 436 521 fichiers).
+
+[ ] G.13  GENERER LES DERIVES DES ANNONCES EN VENTE     une nuit
+            74 550 photos. ~25 Go estimes -> Supabase passerait a 55 Go sur 100 inclus
+            (apres le menage G.3), soit 45 Go de marge.
+            ⚠ Les documents grossissent d'environ 1 Go/mois : la marge n'est pas
+              eternelle, d'ou l'alerte a 60 Go de G.8.
+
+[ ] G.14  LE LOGO                               petit, et visible tout de suite
+            console_job_worker.js:6451 et :7248 chargent
+            https://www.gti-immobilier.fr/images/logoSite.png -- le site HEBERGE PAR
+            HEKTOR. A la coupure, les mandats et avis de valeur sortiraient sans logo.
+            A mettre dans gti-photo, avec une adresse fixe.
+
+[ ] G.15  REBRANCHER LES 48 POINTS D'AFFICHAGE  ⚠⚠ LE SEUL DONT L'ECHEANCE EST LA COUPURE
+            apps/hektor-v1/src/App.tsx            31   l'app du negociateur
+            Ecrans Android/export_project_vitrine.py  8   la VITRINE PUBLIQUE
+            backend/app/services/espace_client.py    4   l'ESPACE CLIENT
+            backend/app/services/appointment_service.py 3   les RDV / fiche visite
+            backend/app/services/rapprochement_email.py 2   les EMAILS
+            CINQ consommateurs, dont trois publics ou envoyes a l'exterieur.
+            ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
+              Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
+            ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en
+              cache, un email l'a integree. D'ou le chemin sans AUCUN numero Hektor :
+                gti-photo/{app_dossier_id}/{app_photo_id}/w400.jpg
+                gti-photo/{app_dossier_id}/{app_photo_id}/w1600.jpg
+              C'est le travail d'identite des 24-26/09 qui le rend possible.
+
+[ ] G.16  LES RESTES CONNUS
+            8 013 photos / 583 annonces « Mandat clos » : dans le miroir, dans AUCUN
+              des 4 index de l'app -> ecartees. A trancher : ces annonces doivent-elles
+              exister dans l'app ?
+            2 photos sans fichier : anciennes lignes de la couche Console, adresses
+              /wa/images/ au lieu de /original/images/, absentes du miroir.
+```
+
+⚠ **ET LES PORTAILS (`A.1`) VIENNENT APRES** — ils dependent du contrat, pas de nous.
+Mais **c'est eux qui imposent la taille `w1600`** : ce ne sont pas des yeux, ce sont des
+robots qui telechargent l'image a une adresse, et qui y reviennent.
+
+➡ `notice/AUDIT_DEUX_COFFRES_PHOTOS_DOCUMENTS_2026-09-26.md` *(les 10 pieges)*
+➡ `notice/RESTE_A_FAIRE_DOCUMENTS_PHOTOS_2026-09-25.md` *(D1->D8, P1->P8)*
+➡ `notice/AUDIT_ETAPE_PHOTOS_DANS_LE_RUN_2026-09-26.md`
+
 ## 11. FIN DE PLAN
 ```
 [ ] C.13-c  rattraper les 23 715 dates de cloture     avec les 3 regles validees
