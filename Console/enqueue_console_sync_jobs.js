@@ -243,22 +243,39 @@ const RESEAU_BLOQUE = /UND_ERR_CONNECT_TIMEOUT|ECONNREFUSED|ECONNRESET|EAI_AGAIN
 // Session Hektor : on REUTILISE le pot de cookies du worker documents, en LECTURE SEULE.
 // On ne le reecrit jamais et on ne relogue pas ici : si la session est morte, la detection
 // s'arrete proprement et le passage suivant reessaiera.
+// ⚠⚠ LA CONSOLE HEKTOR REPOND SUR DEUX NOMS DE DOMAINE -- constate le 26/09.
+// `groupe-gti-immobilier.la-boite-immo.com` ET `www.gti-immobilier.fr` servent la meme
+// application. Le pot de cookies du worker porte l'un OU l'autre, selon celui qu'il a
+// utilise en dernier : apres l'envoi d'une photo (qui passe par www.gti-immobilier.fr),
+// storage_state_documents.json ne contenait PLUS AUCUN cookie la-boite-immo.com.
+// Un filtre sur un seul domaine rend donc « aucun cookie Hektor » alors que la session
+// est parfaitement valide. On accepte les deux, et on deduit l'adresse de base de celui
+// qui porte effectivement les cookies.
+const HOTES_HEKTOR = ["groupe-gti-immobilier.la-boite-immo.com", "www.gti-immobilier.fr"];
+
 function loadHektorCookieHeader() {
   const fs = require("fs");
   const state = JSON.parse(fs.readFileSync(DETECT_STORAGE_STATE, "utf8"));
-  const cookies = (state.cookies || [])
-    .filter((c) => String(c.domain || "").includes("la-boite-immo.com"))
-    .map((c) => c.name + "=" + c.value);
-  if (!cookies.length) throw new Error("Aucun cookie Hektor dans " + DETECT_STORAGE_STATE);
-  return cookies.join("; ");
+  const toutes = state.cookies || [];
+  for (const hote of HOTES_HEKTOR) {
+    const cookies = toutes
+      .filter((c) => String(c.domain || "").replace(/^\./, "") === hote)
+      .map((c) => c.name + "=" + c.value);
+    // L'adresse de base doit suivre les cookies : un cookie de www.gti-immobilier.fr ne
+    // sera pas envoye a la-boite-immo.com, et Hektor rendrait la page de login.
+    if (cookies.length) return { header: cookies.join("; "), base: "https://" + hote };
+  }
+  throw new Error(`Aucun cookie Hektor dans ${DETECT_STORAGE_STATE} (cherches sur : ${HOTES_HEKTOR.join(", ")})`);
 }
 
-async function fetchDocumentsHtml(hektorAnnonceId, cookieHeader, timeoutMs = 20000) {
+async function fetchDocumentsHtml(hektorAnnonceId, session, timeoutMs = 20000) {
   await freinHektor();
+  const cookieHeader = session.header;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const url = HEKTOR_XMLRPC + "?mode=chargeannonce_Documents&id=" + encodeURIComponent(hektorAnnonceId) + "&lang=fr";
+    const url = session.base + "/admin/xmlrpc.php?mode=chargeannonce_Documents&id="
+      + encodeURIComponent(hektorAnnonceId) + "&lang=fr";
     let response;
     try {
       response = await fetch(url, { signal: controller.signal, headers: { Cookie: cookieHeader, Accept: "text/html,*/*" } });
@@ -339,7 +356,7 @@ async function touchFingerprintChecked(hektorAnnonceId) {
 }
 
 async function runDetection(args) {
-  const cookieHeader = loadHektorCookieHeader();
+  const session = loadHektorCookieHeader();
   const empreintes = await loadFingerprints();
   const suiviSignature = await loadSignatureFollowSet();
 
@@ -383,7 +400,7 @@ async function runDetection(args) {
     if (!connue) { aSynchroniser.push(dossier); stats.sans_empreinte += 1; continue; }
     let html;
     try {
-      html = await fetchDocumentsHtml(id, cookieHeader);
+      html = await fetchDocumentsHtml(id, session);
     } catch (error) {
       // ARRET : le serveur nous ecarte, ou la session est morte. On sort de la boucle --
       // insister prolonge le bannissement. Ce qui a DEJA ete retenu est quand meme empile

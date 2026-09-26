@@ -118,6 +118,22 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $pythonExe = Join-Path $projectRoot ".venv\Scripts\python.exe"
+
+# node.exe, cherche UNE FOIS pour tout le run.
+# ⚠ LE @() AUTOUR DU FILTRE EST INDISPENSABLE -- piege vecu le 25/09 a 23 h : quand
+# Where-Object ne laisse passer QU'UN element, PowerShell rend la CHAINE et [0] donne son
+# PREMIER CARACTERE. La tache a alors tente de lancer une commande nommee « C ».
+# Reproduit le 26/09 : type System.String, .Count = 1 (donc le garde-fou passait), [0] = 'C'.
+$nodeExeGlobal = @(@(
+    $env:CONSOLE_NODE_EXE,
+    "C:\Program Files
+odejs
+ode.exe",
+    "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies
+odein
+ode.exe"
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })[0]
+if (-not $nodeExeGlobal) { $nodeExeGlobal = "node.exe" }
 $logDir = Join-Path $projectRoot ".tmp"
 
 if (-not $GitHubTokenFile) {
@@ -199,7 +215,12 @@ function Invoke-OptionalStepWithRetry {
         [int]$RetryDelaySeconds = 120,
         [switch]$FailOnError,
         [ref]$Succeeded,
-        [string]$WorkerKey = ""
+        [string]$WorkerKey = "",
+        # 26/09/2026 : certaines etapes sont en Node (rattrapage photos, sonde). Plutot
+        # que de dupliquer toute la logique d'essais + sonde, on rend l'executable
+        # parametrable. ADDITIF : sans -Exe, c'est Python, donc les ~30 appels existants
+        # ne changent pas d'un iota.
+        [string]$Exe = ""
     )
 
     if ($Succeeded) {
@@ -208,7 +229,8 @@ function Invoke-OptionalStepWithRetry {
     $attempts = [Math]::Max(1, $MaxAttempts)
     for ($attempt = 1; $attempt -le $attempts; $attempt++) {
         Write-RunLog "START $Label attempt $attempt/$attempts"
-        & $pythonExe @Arguments
+        $exe = if ($Exe) { $Exe } else { $pythonExe }
+        & $exe @Arguments
         $exitCode = $LASTEXITCODE
         if ($exitCode -eq 0) {
             Write-RunLog "DONE  $Label attempt $attempt/$attempts"
@@ -1042,6 +1064,50 @@ if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
     }
     Write-RunLog "DONE  enqueue console documents ($scope)"
 }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LES PHOTOS (26/09/2026)
+# ═══════════════════════════════════════════════════════════════════════════════
+# POURQUOI ICI, et pas ailleurs -- trois contraintes d'ordre :
+#   ① APRES normalize_source (l. 285) : c'est lui qui reecrit
+#      hektor_annonce_detail.images_json. Avant, le miroir porte les photos de la veille.
+#   ② APRES « push upgrade to supabase » (l. 925) : l'etape resout app_dossier_id depuis
+#      les QUATRE index Supabase. Une annonce apparue cette nuit n'y est qu'apres cette
+#      etape -- avant, ses photos seraient ECARTEES faute de numero d'app.
+#   ③ AVANT l'export vitrine (plus bas), pour que le site publie des adresses a jour.
+#
+# ⚠ ELLE NE PARLE JAMAIS A HEKTOR : elle lit le miroir local et Supabase, et telecharge
+#   sur le CDN public. Aucune requete contre le quota -- mesure le 25/09 : 0 refus sur
+#   435 000 telechargements. C'est pourquoi elle est DANS le run, alors que le rattrapage
+#   des documents a sa propre tache a 23 h (lui, il consomme le quota).
+#
+# ⚠ NON BLOQUANTE et PLAFONNEE. Une nuit ordinaire = quelques photos ; le plafond protege
+#   le run si un retard s'est accumule (2 000 a 17 photos/s = 2 minutes).
+$photosOk = $false
+Invoke-OptionalStepWithRetry -Label "phase2 rattrapage photos (CDN, hors quota Hektor)" -Arguments @(
+    (Join-Path $projectRoot "Consoleattrapage_photos.js"),
+    "--appliquer",
+    "--parallele", "8",
+    "--intervalle", "40",
+    "--limite", "2000"
+) -Exe $nodeExeGlobal -MaxAttempts 2 -RetryDelaySeconds 60 -Succeeded ([ref]$photosOk) -WorkerKey "phase2.rattrapage_photos"
+if (-not $photosOk) {
+    Write-RunLog "WARN  Photos non rapatriees cette nuit (echec non bloquant) - voir heartbeat phase2.rattrapage_photos"
+}
+
+# LE REPLI, et c'est une SONDE, pas un balayage.
+# Mesure du 26/09 : ajouter une photo dans Hektor FAIT BOUGER la date_maj de l'annonce
+# (63146 : 24/09 12:10:17 -> 26/09 09:32:51). Le delta du run suffit donc, et aucun
+# balayage n'est necessaire. MAIS cette mesure porte sur l'API AnnonceById, alors que le
+# delta lit le LISTING -- tres probablement le meme champ, pas prouve.
+# Plutot que construire un balayage de 13 437 lectures dont on n'a peut-etre jamais
+# besoin, on tire 20 annonces au sort et on compare le miroir a la Console. Si ca
+# diverge, la date est aveugle et il faudra le balayage -- on le saura AVANT d'avoir
+# perdu des photos. 20 requetes par nuit.
+Invoke-OptionalStepWithRetry -Label "phase2 sonde photos (la date_maj suit-elle ?)" -Arguments @(
+    (Join-Path $projectRoot "Console\sonde_photos_datemaj.js"),
+    "--echantillon", "20"
+) -Exe $nodeExeGlobal -MaxAttempts 1 -WorkerKey "phase2.sonde_photos"
 
 # Matterport = etape non critique (SaaS externe). Un plantage cote Matterport (ex. 500
 # GraphQL transitoire) ne doit PAS tuer le pipeline ni bloquer le heartbeat pipeline.full.
