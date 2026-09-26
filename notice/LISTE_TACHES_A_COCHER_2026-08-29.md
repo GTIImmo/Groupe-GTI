@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1611)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1601)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1483,66 +1483,56 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             Le miroir porte 444 390 photos sur 49 050 annonces ; l'index en a 436 524
             sur 48 465. L'ecart se decompose en TROIS, pas deux :
 
-            ⛔⛔ 8 013 photos / 583 annonces SANS NUMERO D'APP -- ET CE N'EST PAS UN
-              ARBITRAGE, C'EST UN DEFAUT. Cause trouvee le 26/09 (question de Frederic
-              « 583 sans numero d'apps pourquoi ? ») :
+            ▫ 8 013 photos / 583 annonces : CE SONT DES LOCATIONS, ET C'EST TA
+              DECISION DU 26/08 -- PAS UN DEFAUT.
+              (Trouve par Frederic le 26/09 : « verifier le type (transaction, location,
+              commerce) de ces annonces, c'est peut-etre cela ». C'etait cela.)
 
-              LE MEME statut_id = 6 PORTE DEUX LIBELLES CHEZ HEKTOR.
-                  statut_id=6  'Clos'         34 009 annonces
-                  statut_id=6  'Mandat clos'     672 annonces
-              Et TOUS les filtres de l'app comparent le LIBELLE, jamais l'identifiant :
-                  courant     archive='0' AND statut IN ('Actif','Sous offre',
-                                                         'Sous compromis','Estimation')
-                  archive     archive='1'
-                  historique  archive='0' AND statut IN ('Vendu','Clos')
-                  registre    REGISTRE_SCOPE_STATUTS = (..., 'Vendu','Clos','Estimation')
-              « Mandat clos » n'est dans aucune liste -> l'annonce tombe entre les
-              QUATRE index, donc pas de numero d'app, donc invisible de l'app.
-              675 annonces au total (672 + 2 'Prochainement disponible' + 1 'Loue').
+              TYPES_OFFRE_APP = ("0", "10", "6") -- vente, vente immo pro, neuf.
+              Les 672 annonces ecartees ont offre_type = 2 (618) ou 11 (54) : ZERO type
+              admis. Elles sont donc exclues par FILTRE_OFFRE_APP, quel que soit leur
+              statut. Le commentaire du code le dit mot pour mot :
+                « le SERVEUR recevra TOUS les types (il devient le maitre), mais
+                  SUPABASE, LE FRONT ET LES WORKERS n'en recoivent que trois. Les
+                  locations (2 et 11) et le saisonnier (8) restent au serveur :
+                  3 131 annonces qui n'apparaitront PAS dans l'app. »
 
-              ⛔ LE PLUS GRAVE N'EST PAS LES PHOTOS : 643 DE CES ANNONCES PORTENT UN
-                MANDAT, ET SONT ABSENTES DU REGISTRE DES MANDATS. Verifie en base :
-                0 ligne pour 12 annonces echantillonnees. Or le code dit lui-meme
-                « le registre des mandats est un document LEGAL : tout mandat signe
-                doit y figurer ». Et L9 a une DATE DE PEREMPTION (il se remplit depuis
-                le miroir) -> a corriger AVANT la coupure.
+              ⚠⚠ MES DEUX ERREURS DU 26/09, GARDEES PARCE QU'ELLES SE REPETERAIENT :
+              ① J'avais conclu que la cause etait le LIBELLE de statut (« Mandat clos »
+                 absent des listes qui ne connaissent que « Clos »). Le libelle est bien
+                 different, mais ce n'est qu'un SYMPTOME DU TYPE : le module location de
+                 Hektor nomme le statut 6 autrement. Mon correctif (« comparer sur
+                 statut_id ») n'aurait RIEN change : le filtre de type les ecarte de
+                 toute facon. J'ai pris une correlation pour une cause.
+              ② J'avais ecrit que « 643 mandats sont absents du registre LEGAL, donc
+                 c'est grave ». C'EST EXACTEMENT L'INVERSE. filtre_offre_app existe
+                 depuis le 27/08 (LOT A) precisement pour que « les mandats des 3 131
+                 locations ne remontent PAS dans le registre LEGAL affiche par l'app,
+                 alors meme que leurs annonces en sont exclues ». Leur absence EST le
+                 correctif. J'ai cite un commentaire sur « Estimation » et l'ai applique
+                 aux locations, alors que vingt lignes plus loin le code dit le
+                 contraire pour elles.
+              ➡ LEÇON : quand deux commentaires du meme fichier semblent se contredire,
+                 c'est qu'ils ne parlent pas du meme perimetre. Lire les DEUX.
 
-              ✅ CE N'EST PAS NOTRE WORKER : setHektorAnnonceStatusValue envoie
-                val: config.hektorValue, c'est-a-dire « 6 ». Le libelle « Mandat clos »
-                de HEKTOR_STATUS_CONFIG ne sert QU'AU JOURNAL. Verifie avant d'accuser.
-
-              ✅ CE N'EST PAS UNE REGRESSION -- TRANCHE LE 26/09 SUR LES SAUVEGARDES
-                (Frederic a autorise la lecture de C:\Hektor\Backups) :
-                   22/09 11:38   « Mandat clos » = 672   perimetre historique = 8 916
-                   23/09 18:41   « Mandat clos » = 672   perimetre historique = 8 916
-                   26/09         « Mandat clos » = 672
-                Le compte est STABLE. C'est un trou ANCIEN, pas un glissement en cours,
-                et il ne grandit pas. Les identifiants touches (55119-58868, aucun
-                au-dela de 60000) sont une BANDE figee, pas un front qui avance.
-              ⚠ MON ERREUR, ET ELLE VAUT D'ETRE GARDEE : j'avais conclu « le libelle
-                est arrive ce matin » parce que le synced_at des 672 valait
-                04:25:05 -> 04:25:06, soit une seconde. C'etait la trace du RUN qui
-                les relit en lot, pas celle d'un changement. Un horodatage dit QUAND ON
-                A LU, jamais QUAND LA VALEUR A CHANGE. Pour cette question-la, seule
-                une sauvegarde repond.
-
-              ⚠⚠ ET LE NUMERO D'APP EXISTE POURTANT. Verifie dans la sauvegarde du
-                25/09 : les 16 annonces echantillonnees sont TOUTES dans app_dossier
-                (local), avec leur numero, absent_depuis = NULL. Le titre « sans numero
-                d'app » etait donc impropre :
-                   ce qui manque = leur presence dans les 4 INDEX pousses a Supabase
-                   ce qui existe  = leur numero, en local, depuis toujours
-                Il n'y a PAS de table d'identite cote Supabase : seuls les 4 index
-                scopes y montent (61 279 lignes en local contre 58 146 indexees).
-                -> rattrapage_photos.js:221-230 resout le numero depuis ces 4 index
-                   uniquement. D'ou son refus, alors que le numero est connu.
-
-              ➡ LE CORRECTIF : comparer sur statut_id, pas sur le libelle. Quatre
-                endroits : ANNONCES_SCOPE_WHERE, SQL_HISTORICAL_ANNONCE_INDEX_BASE et
-                REGISTRE_SCOPE_STATUTS (export_app_payload.py), plus
-                Console/prepare_historical_annonce_detail.py:234.
-              ⚠ Touche le run de nuit ET le registre -> feu vert obligatoire.
-              ⚠ HORS DU CHANTIER PHOTOS : ca se NOTE ici, ca ne s'enchaine pas.
+              ⛔ CE QUI RESTE VRAI, ET C'EST UN ARBITRAGE POUR FREDERIC :
+                 la doctrine dit « le serveur porte TOUT, inconditionnellement », et la
+                 decision du 26/08 dit « le SERVEUR recevra TOUS les types ». Or le
+                 serveur n'a AUCUNE de ces 8 013 photos -- verifie sur disque pour 5
+                 annonces : aucun dossier de photos.
+                 CAUSE : rattrapage_photos.js:221-230 resout notre numero depuis les
+                 QUATRE INDEX SUPABASE, qui excluent les locations par construction. Le
+                 rapatriement herite donc du filtre de l'app, alors qu'il travaille pour
+                 le SERVEUR. (Le numero, lui, existe : app_dossier local porte 61 279
+                 lignes contre 58 146 indexees.)
+                 DEUX CHEMINS, et le choix t'appartient :
+                   A. on laisse -- l'app n'a pas besoin des locations, et a la coupure
+                      leurs photos sont perdues (le CDN ne sert plus rien) ;
+                   B. on rapatrie SUR LE SERVEUR SEULEMENT -- il faut alors resoudre le
+                      numero depuis app_dossier, et surtout NE PAS creer de ligne
+                      d'index Supabase pour elles, sinon on fait fuir des locations dans
+                      l'app : exactement ce que le filtre du 26/08 empeche.
+                 ⚠ ECHEANCE : la coupure. Apres, le choix ne se pose plus.
 
             ⛔ 17 photos / 4 annonces QUI ONT un numero d'app et ne sont pas rapatriees :
                  63153 (n° 7589140, Estimation, 10 photos) · 63154 (7589141, brouillon,
