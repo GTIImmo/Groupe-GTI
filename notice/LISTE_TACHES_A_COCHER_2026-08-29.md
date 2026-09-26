@@ -1128,6 +1128,33 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
           le SEUL numero Hektor -- defaut trouve par Frederic.
     [x] la fuite a l'ajout       c95cb9b   une photo ajoutee depuis l'app n'etait
           gardee NULLE PART. Explique les 42 photos « en attente ».
+    [x] LE RAPATRIEMENT EST FINI -- 26/09 au matin
+          436 521 photos sur le serveur, 169 Go. Verifie des deux cotes :
+            base   : 436 523 lignes, 436 521 avec fichier, 0 sans notre numero,
+                     0 sans celui de Hektor, 0 sans empreinte, 0 sans chemin serveur
+            disque : 481 527 fichiers / 229,4 Go (documents 60,6 + photos 169)
+                     518 Go encore libres sur 894
+          ▫ 2 exceptions : lignes de l'ancienne couche Console (source hektor_console,
+            adresses /wa/images/ au lieu de /original/images/), absentes du miroir donc
+            jamais candidates. Residu a regarder, sans urgence.
+          ⚠⚠ ET DEUX DEFAUTS DE MOI, TOUS DEUX MUETS, corriges le 26/09 :
+            · pagination sans tri -> 174 433 photos sur 435 126 « en echec » alors que
+              le CDN n'avait rien refuse. 40 % d'un travail de 4 h perdu, sans une seule
+              erreur. Puis, le tri ajoute, le decalage profond faisait EXPIRER la requete.
+              -> pagination PAR CURSEUR, 3 scripts corriges, 13 controles (461a66c).
+            · la tache de 23 h a echoue sur « le terme "C" n'est pas reconnu » : quand
+              Where-Object ne laisse passer qu'UN element, PowerShell rend la CHAINE, et
+              [0] donne son premier caractere. Le meme piege dormait dans 3 autres
+              scripts, qui tenaient PAR CHANCE (deux installations de Node). 4 corriges
+              (21b8ef3). Aucun lot de documents pose cette nuit ; la tache repart ce soir.
+          ⚠ LE POIDS REEL, mesure sur les fichiers -- mon calibrage sous-estimait :
+                                   photos   annonces   poids   moyenne
+              annonces vivantes    74 585    10 215     49 Go   683 ko
+              archives+historique 361 938    38 249    120 Go   348 ko
+            -> P1 coute 49 Go, PAS 29 : Supabase passerait a 82 Go sur 100 inclus.
+               LA MARGE TOMBE A 18 Go, et les documents continuent de grossir.
+               A trancher : tout pousser, ou ne pousser qu'une version reduite.
+    (ancienne ligne)
     [~] LE RAPATRIEMENT           lance le 25/09 au soir, ~7 h
           lot d'essai de 500 : 500/500, 0 echec, 128 Mo, les deux numeros, 0 fichier
           vide, au chemin exact du worker. Reste 434 666.
