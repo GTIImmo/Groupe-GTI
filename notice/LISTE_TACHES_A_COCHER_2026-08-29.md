@@ -1314,7 +1314,7 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             ⚠ PAS D'ACCES DNS pour l'instant -> on sert sous le domaine Supabase. Un
               sous-domaine a soi reste une option (plus propre dans un email).
 
-[ ] G.10bis ⛔ PREALABLE DE G.11 : LA LIGNE D'UNE PHOTO NE DOIT PLUS DISPARAITRE
+[x] G.10bis LA LIGNE D'UNE PHOTO NE DISPARAIT PLUS   code + base FAITS le 26/09
             Trouve le 26/09 en preparant G.11, PROUVE par un test qui echoue :
               Console/test_photo_adresse_stable.js   (4 controles rouges)
 
@@ -1342,8 +1342,21 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                (hektor_annonce_id, hektor_photo_id) en merge-duplicates -> une sync
                normale conserve l'id. Controles (a)-(d) du test, verts.
             Mesure : 436 524 lignes, 0 sans numero app, 0 sans numero Hektor.
-            ⚠ C'est une modification du CHEMIN VIVANT du run de nuit (pas du dormant) :
-              elle demande un feu vert, et un redemarrage en journee (06 h - 22 h).
+            ✅ FAIT le 26/09 (feu vert de Frederic, « les deux ») -- commit 4eeb446 :
+               ① base : present_in_hektor + absent_depuis + index partiel, APPLIQUES.
+                  436 524 lignes a true, ce qui est exact. Patron app_affaire_ledger.
+                  ➡ notice/patch_photo_delete_never_2026-09-26.sql
+               ② upsertConsolePhotos : garde SYMETRIQUE (rien lu = rien touche, et on
+                  le DIT par console.warn), DELETE devenu PATCH, et une photo qui
+                  REVIENT est demarquee par l'upsert.
+               ③ les DEUX lecteurs d'affichage filtrent, pour que rien ne change a
+                  l'ecran : downloadConsolePhotoFiles (sinon on redemande au CDN des
+                  binaires disparus) et le front loadConsolePhotos (8 avant, 8 apres).
+               Garde-fou : 4 controles rouges -> 10 verts. npm run build passe.
+            ⛔ RESTE LE REDEMARRAGE, et lui seul rend le correctif actif :
+               Restart-Service HektorConsoleWorkerActions, ...Admin, ...Documents,
+               ...SyncLight   -- EN JOURNEE (06 h - 22 h), jamais 23 h - 05 h.
+               Tant qu'il n'est pas fait, le worker continue de SUPPRIMER.
 
 [ ] G.11  LE GENERATEUR DE TAILLES              dormant -- APRES G.10bis
             Lit le master sur le serveur, fabrique w400 et w1600, depose dans
