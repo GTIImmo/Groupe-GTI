@@ -140,7 +140,7 @@ select public.app_bascule_identite_contact(false);
 décoratifs)* :
 
 ```powershell
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $e=@{}; Get-Content 'C:\Hektor\Projetpps\hektor-v1\.env' | Where-Object { $_ -match '^\s*[A-Za-z_][A-Za-z0-9_]*\s*=' } | ForEach-Object { $p = $_ -split '=',2; $e[$p[0].Trim()] = $p[1].Trim().Trim('"') }; $u=$e['VITE_SUPABASE_URL'].TrimEnd('/'); $k=$e['SUPABASE_SERVICE_ROLE_KEY']; Invoke-RestMethod -Method Post -Uri "$u/rest/v1/rpc/app_bascule_identite_contact" -Headers @{apikey=$k; Authorization="Bearer $k"} -ContentType 'application/json' -Body '{"p_appliquer": false}' -UserAgent 'GTI-PowerShell/1.0' | ConvertTo-Json -Depth 8
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $e=@{}; Get-Content 'C:\Hektor\Projet\apps\hektor-v1\.env' | Where-Object { $_ -match '^\s*[A-Za-z_][A-Za-z0-9_]*\s*=' } | ForEach-Object { $p = $_ -split '=',2; $e[$p[0].Trim()] = $p[1].Trim().Trim('"') }; $u=$e['VITE_SUPABASE_URL'].TrimEnd('/'); $k=$e['SUPABASE_SERVICE_ROLE_KEY']; Invoke-RestMethod -Method Post -Uri "$u/rest/v1/rpc/app_bascule_identite_contact" -Headers @{apikey=$k; Authorization="Bearer $k"} -ContentType 'application/json' -Body '{"p_appliquer": false}' -UserAgent 'GTI-PowerShell/1.0' | ConvertTo-Json -Depth 8
 ```
 
 | le détail | ce qui arrive sans lui |

@@ -204,7 +204,7 @@ pour être nettoyé. **Une sauvegarde dans un répertoire temporaire est une sau
 perd.** Et c'était la seule copie complète du 22/09 — la plus récente ailleurs date du
 20/09.
 
-> **DÉPLACÉE** vers `C:\Hektorackups`. Le disque a **693 Go libres sur 894** : la garder
+> **DÉPLACÉE** vers `C:\Hektor\Backups`. Le disque a **693 Go libres sur 894** : la garder
 > ne coûte rien, la perdre coûterait un retour arrière. `.tmp` est retombé à **39 Mo**.
 
 ### Les 90 notifications sans destinataire — **la cause est en amont**

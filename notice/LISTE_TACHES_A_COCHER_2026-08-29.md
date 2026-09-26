@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1597)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1596)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1255,9 +1255,8 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               · l'etape a ete ajoutee au pipeline a 11 h 15 CE JOUR-LA -- le run de
                 05 h 00 lui etait anterieur, elle n'avait donc jamais tourne ;
               · et son chemin etait CASSE : « Console » + un RETOUR CHARIOT +
-                « attrapage_photos.js ». Ecrit a travers une chaine Python, ou  est un
-                echappement. Le meme defaut a touche la resolution de node (
- et ).
+                « attrapage_photos.js ». Ecrit a travers une chaine Python, ou \r est un
+                echappement. Le meme defaut a touche la resolution de node (\r et \b).
                 C'est la 2e fois dans ce projet (cf ab94c9d, 21/09) -- et comme l'etape
                 est NON BLOQUANTE, le run aurait fini en « succes » sans une ligne.
             ✅ Les trois litteraux sont repares (au niveau des OCTETS), le fichier passe
@@ -8435,7 +8434,7 @@ Détail complet, avec fichier et ligne pour chaque point :
       Supabase ne sert à rien, le run les remettrait. Il faut **les archiver**, et c'est
       un geste à faire sciemment.
 - [x] **Les 4 Go de `.tmp`** — un seul fichier : la sauvegarde d'avant le décalage,
-      posée dans un dossier fait pour être nettoyé. Déplacée dans `C:\Hektorackups`.
+      posée dans un dossier fait pour être nettoyé. Déplacée dans `C:\Hektor\Backups`.
 
 ---
 
