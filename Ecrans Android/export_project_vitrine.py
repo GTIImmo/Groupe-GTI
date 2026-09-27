@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import sqlite3
 import ssl
 import time
@@ -11,7 +12,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
 from urllib.error import URLError
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urlencode, urljoin
 from urllib.request import Request, urlopen
 
 
@@ -89,6 +90,135 @@ def as_price(value: Any) -> float:
         return float(str(value).replace(",", "."))
     except ValueError:
         return 0
+
+
+# =============================================================================
+# G.15 (27/09/2026) -- LA VITRINE PUBLIQUE PUBLIE NOS ADRESSES DE PHOTOS
+#
+# CE SCRIPT LIT DU LOCAL (app_view_generale dans phase2.sqlite), et nos adresses ne
+# peuvent PAS y etre : l'adresse d'un derive s'ecrit
+#   gti-photo/{app_dossier_id}/{id de la ligne app_console_photo}/w400.jpg
+# et cet id n'existe NULLE PART en local -- app_console_photo est une table Supabase
+# seulement. Le build ne peut donc pas les calculer : il faut les LIRE.
+#
+# ⚠ ORDRE DANS LE RUN, ET IL EST DEJA BON : l'etape « adresses photos » remplit les
+#   colonnes soeurs (ligne 1140 de run_full_pipeline.ps1), l'export vitrine passe apres
+#   (ligne 1184). Si un jour on deplace l'une des deux, le site publierait les adresses
+#   de la veille -- inoffensif tant que Hektor vit, faux apres la coupure.
+#
+# ⚠ AUCUNE PURGE NE MENACE CES IMAGES : la vitrine ne publie que les annonces
+#   non archivees + diffusables + actives/sous offre/sous compromis, et la regle des six
+#   mois (G.8) ne retire les derives que des ARCHIVEES. Mesure du 27/09 : sur les
+#   459 annonces publiees, 0 photo porte une marque de sortie de vitrine.
+#
+# ⚠⚠ SI SUPABASE NE REPOND PAS, ON PUBLIE LES ADRESSES HEKTOR -- JAMAIS RIEN.
+#   Le catalogue de ce site est public : une panne de lecture ne doit pas produire un
+#   catalogue sans photos. Le repli est donc silencieux et total.
+# =============================================================================
+
+VITRINE_ADRESSES_APP = os.environ.get("VITRINE_PHOTOS_APP", "1").strip().lower() not in ("0", "false", "off", "no")
+SUPABASE_ENV_FILES = (ROOT / ".env", ROOT / "apps" / "hektor-v1" / ".env")
+
+
+def charger_env_supabase() -> tuple[str, str]:
+    """Meme patron que push_upgrade_to_supabase.py : deux fichiers, et VITE_ en second."""
+    for chemin in SUPABASE_ENV_FILES:
+        try:
+            if not chemin.exists():
+                continue
+            for ligne in chemin.read_text(encoding="utf-8").splitlines():
+                ligne = ligne.strip()
+                if not ligne or ligne.startswith("#") or "=" not in ligne:
+                    continue
+                cle, valeur = ligne.split("=", 1)
+                cle = cle.strip()
+                if cle and cle not in os.environ:
+                    os.environ[cle] = valeur.strip().strip('"').strip("'")
+        except OSError:
+            continue
+    base = (os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL") or "").strip().rstrip("/")
+    cle = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
+    return base, cle
+
+
+def charger_adresses_chez_nous() -> dict[str, dict[str, Any]]:
+    """Nos adresses, une seule lecture, par CURSEUR -- jamais par offset.
+
+    La pagination par offset a deja fait perdre 174 433 photos EN SILENCE le 25/09 :
+    quand les lignes bougent entre deux pages, l'offset saute des lignes sans rien dire.
+    On avance donc sur hektor_annonce_id croissant.
+    """
+    if not VITRINE_ADRESSES_APP:
+        return {}
+    base, cle = charger_env_supabase()
+    if not base or not cle:
+        print("[vitrine] adresses app : identifiants Supabase absents -> on publie Hektor")
+        return {}
+
+    trouvees: dict[str, dict[str, Any]] = {}
+    apres = -1
+    contexte = ssl.create_default_context()
+    while True:
+        query = urlencode({
+            "select": "hektor_annonce_id,photo_url_listing_app,images_preview_json_app",
+            "archive": "eq.0",
+            "diffusable": "eq.1",
+            "statut_annonce": "in.(Actif,Sous offre,Sous compromis)",
+            "hektor_annonce_id": f"gt.{apres}",
+            "order": "hektor_annonce_id.asc",
+            "limit": "1000",
+        })
+        url = f"{base}/rest/v1/app_dossiers_current?{query}"
+        requete = Request(url, headers={"apikey": cle, "Authorization": f"Bearer {cle}"}, method="GET")
+        try:
+            with urlopen(requete, timeout=60, context=contexte) as reponse:
+                lot = json.loads(reponse.read().decode("utf-8"))
+        except (HTTPError, URLError, OSError, ValueError) as erreur:
+            # Repli TOTAL et silencieux : mieux vaut les adresses Hektor qu'un site sans photos.
+            print(f"[vitrine] adresses app : lecture impossible ({erreur}) -> on publie Hektor")
+            return {}
+        if not isinstance(lot, list) or not lot:
+            break
+        for ligne in lot:
+            numero = ligne.get("hektor_annonce_id")
+            if numero is None:
+                continue
+            trouvees[str(numero)] = ligne
+            try:
+                apres = max(apres, int(numero))
+            except (TypeError, ValueError):
+                pass
+        if len(lot) < 1000:
+            break
+    print(f"[vitrine] adresses app : {len(trouvees)} annonce(s) lues chez nous")
+    return trouvees
+
+
+def photos_chez_nous(adresses: dict[str, dict[str, Any]], numero_hektor: Any, max_photos: int) -> list[str] | None:
+    """NOS adresses pour une annonce, ou None s'il faut garder celles de Hektor.
+
+    ⚠ ON CHOISIT, ON NE CONCATENE PAS. visible_photos dedoublonne par URL, et nos
+      adresses ne ressemblent pas a celles de Hektor : melanger les deux publierait
+      CHAQUE PHOTO DEUX FOIS sur le site.
+    ⚠ Le choix est sans danger, mesure le 27/09 : sur les 459 annonces publiees, 459 ont
+      notre vignette et 458 notre galerie -- la seule sans n'a AUCUNE photo.
+    ⚠ LE FORMAT TOMBE JUSTE SANS CONVERSION : nos entrees sont {url, full, order, legend},
+      et visible_photos lit deja path / pathTumb / url avec order -- donc on la reutilise
+      telle quelle plutot que de reecrire un tri.
+    """
+    if not adresses:
+        return None
+    ligne = adresses.get(str(numero_hektor))
+    if not ligne:
+        return None
+    galerie = ligne.get("images_preview_json_app")
+    vignette = (ligne.get("photo_url_listing_app") or "").strip() or None
+    if isinstance(galerie, list) and galerie:
+        photos = visible_photos(json.dumps(galerie), vignette, max_photos)
+        if photos:
+            return photos
+    # Pas de galerie mais une vignette a nous : elle vaut mieux que rien.
+    return [vignette] if vignette else None
 
 
 def visible_photos(images_json: str | None, listing_photo: str | None, max_photos: int) -> list[str]:
@@ -247,6 +377,8 @@ def build_qr_url(target_url: str) -> str:
 
 
 def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
+    # UNE seule lecture pour tout le catalogue, avant la boucle.
+    adresses_app = charger_adresses_chez_nous()
     conn = connect(PHASE2_DB)
     try:
         sql = """
@@ -325,7 +457,8 @@ def build_items(limit: int | None, max_photos: int) -> list[dict[str, Any]]:
             "offerType": row["offre_type"] or "VENTE",
             "status": "2",
             "state": str(row["statut_annonce"] or "").strip(),
-            "photos": visible_photos(row["images_json"], row["photo_url_listing"], max_photos),
+            "photos": (photos_chez_nous(adresses_app, row["hektor_annonce_id"], max_photos)
+                       or visible_photos(row["images_json"], row["photo_url_listing"], max_photos)),
             "url": listing_url,
             "appointmentUrl": appointment_url,
             "qrUrl": build_qr_url(appointment_url or listing_url),
