@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1891)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1927)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1750,6 +1750,42 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 
             ➡ RECOMMANDATION : A, avec l'appel dans le pipeline (pas en pg_cron), et la
               question de la vitrine tranchee en meme temps.
+
+            ══ SECONDE PASSE D'AUDIT -- 27/09 ══════════════════════════════════════
+
+            ✅ L'HYPOTHESE PORTEUSE EST PROUVEE, PAS SUPPOSEE : une colonne SOEUR survit
+              au push de nuit. Le push ecrit en POST + « Prefer: resolution=
+              merge-duplicates » (push_upgrade_to_supabase.py:473), et PostgREST ne met
+              alors a jour QUE les colonnes presentes dans le payload. Verifie sur une
+              table jetable : colonne reecrite par le push = oui ; colonne absente du
+              payload = PRESERVEE. Sans ce fait, toute la conception A s'effondrait.
+
+            ⭐⭐ ET LA SECONDE PASSE A TROUVE CE QUE LA PREMIERE AVAIT MANQUE :
+               LES ANNONCES ARCHIVEES N'ONT PAS DE GALERIE, SEULEMENT UNE VIGNETTE.
+
+                 app_dossier_current (vivantes)      photo_url_listing + images_preview_json
+                 archive / historique / brouillon    photo_url_listing SEULEMENT
+
+               Consequence : une annonce archivee n'a besoin QUE du derive de sa photo
+               PRINCIPALE -- pas de ses dix photos.
+
+               CE QUE CA CHANGE, chiffre :
+                 361 979 photos non vivantes n'ont aucun derive (38 253 annonces)
+                 si on derivait TOUT, les deux tailles     86,0 Go   ⛔ impossible
+                                                                       (on est a 50,6/100)
+                 si on derivait tout, w400 seul             6,2 Go
+                 LA VIGNETTE DE CHAQUE ANNONCE, w400 seul   0,66 Go  ⭐ 38 253 fichiers
+               Un mur de 86 Go devient une broutille. C'est la difference entre
+               « deriver des PHOTOS » et « deriver ce que l'ECRAN demande ».
+
+            ⚠ SANS CA : apres la coupure, 38 253 annonces archivees s'afficheraient SANS
+              AUCUNE IMAGE dans l'app. Ce n'etait dans aucune case du plan.
+
+            ➡ LE PERIMETRE DE G.15, ARRETE PAR L'AUDIT :
+                vivantes    w400 + w1600   74 550 photos   FAIT (G.13)
+                archivees   w400 de la principale   38 253 vignettes   0,66 Go   A FAIRE
+                colonnes soeurs sur les 4 index, remplies apres le push
+                lecture : le front et le backend preferent la soeur, sinon Hektor
             ⚠ RIEN N'EST CODE : G.15 modifie du code existant ET deploie -> feu vert.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
