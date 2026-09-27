@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1985)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2027)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1840,10 +1840,52 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                  finirait par les voir ; un travail de synchro photo les reglerait tout
                  de suite.
 
-            ⛔ RESTE POUR G.15 : appeler le remplissage DANS le pipeline (apres le push,
-              pas en pg_cron -- sinon les colonnes restent vides ~1 h 30 chaque nuit) ·
-              faire lire la soeur au front et au backend, avec repli sur Hektor ·
-              trancher le cas de la vitrine (elle tourne dans le pipeline et lit du local).
+            ✅ G.15-c  L'ENTRETIEN DES ADRESSES ET L'IMAGE « PAS DE PHOTO »
+               ▫ les 38 251 vignettes d'archives sont faites : 0 erreur, 19 min a 33/s,
+                 0,6 Go, 17 ko de moyenne. Les 2 sautees sont les 2 photos sans fichier
+                 connues de G.16 -- les chiffres se recoupent.
+               ▫ notre image « pas de photo » est dans gti-photo/marque/sans-photo.jpg,
+                 IDENTIQUE OCTET POUR OCTET a celle de Hektor (1920x1080, 38 454 o).
+                 ⚠ TROIS CAS A NE PAS CONFONDRE : annonce avec derives -> vraie adresse ·
+                   annonce avec photos SANS derives -> on laisse NULL (repli Hektor, le
+                   run fabriquera) · annonce SANS AUCUNE photo -> le placeholder. Poser le
+                   placeholder dans le 2e cas remplacerait une vraie photo par « pas de
+                   photo ».
+               ▫ etape « phase2 adresses photos » dans le run, apres les derives et avant
+                 la sonde. Non bloquante, WorkerKey phase2.adresses_photos.
+
+               ⭐ COUVERTURE COMPLETE : 58 147 annonces ont une adresse CHEZ NOUS.
+                    courant     13 439 / 13 439   dont 3 222 « pas de photo »
+                    archive     35 301 / 35 301   dont 5 672
+                    historique   8 922 /  8 922   dont   454
+                    brouillon      485 /    485   dont   331
+                  AUCUNE ne reste sur Hektor.
+
+               ⚠⚠ QUATRE DEFAUTS TROUVES EN EPROUVANT, aucun n'aurait crie :
+                 ① MA FONCTION RECALCULAIT TOUT (4 gros UPDATE, 3 fois le meme distinct
+                    on) : ~20 s, donc EXPIREE par PostgREST (8 s). Une etape de nuit n'a
+                    pas a recalculer 436 000 photos quand une poignee a bouge.
+                 ② LA FENETRE NE SUFFIT PAS A CIBLER : le lendemain d'une grosse
+                    fabrication, TOUT parait « recent ». D'ou un MARQUEUR par annonce
+                    (adresses_app_le) : on ne retraite que ce qui a bouge DEPUIS son
+                    dernier remplissage. Resultat : 0 cible -> 1,7 s.
+                 ③ L'INDEX N'ETAIT PAS COUVRANT : l'agregat lisait 112 832 lignes sur
+                    disque (31 139 blocs) -> 10,5 s. En portant app_dossier_id dans
+                    l'index : 235 ms. Trente fois plus rapide, une colonne de plus.
+                 ④ ET LE PLUS SOURNOIS : process.exit() juste apres un fetch coupe une
+                    poignee reseau en fermeture, node leve une assertion et rend 127.
+                    LE TRAVAIL AVAIT REUSSI, mais le pipeline l'aurait compte pour un
+                    ECHEC, chaque nuit. On pose exitCode et on laisse finir seul.
+               ▫ ET UNE SURCHARGE OUBLIEE : la fonction sans argument coexistait avec la
+                 nouvelle -> « could not choose a best candidate ». Postgres garde les
+                 surcharges ; PostgREST aurait echoue pareil. Ancienne retiree.
+               ✅ DETECTION PROUVEE, pas seulement la vitesse : deux annonces videes a la
+                 main (une vivante, une archivee) -> la passe suivante trouve « cibles: 2 »
+                 et repare les deux, en 1 seconde.
+
+            ⛔ RESTE POUR G.15 : faire lire la soeur au front (41 points) et au backend
+              (9 points), avec repli sur Hektor · trancher le cas de la vitrine (elle
+              tourne dans le pipeline et lit du local).
             ⚠ LE FRONT ET LE BACKEND MODIFIENT DU CODE EXISTANT ET DEPLOIENT -> feu vert.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.

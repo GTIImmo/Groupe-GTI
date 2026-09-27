@@ -1118,6 +1118,32 @@ if (-not $derivesOk) {
     Write-RunLog "WARN  Derives non fabriques cette nuit (echec non bloquant) - voir heartbeat phase2.derives_photos"
 }
 
+# ═══ LES ADRESSES « CHEZ NOUS » DANS LES INDEX (G.15) ═══════════════════════════
+# POURQUOI ICI : juste APRES la fabrication des derives. L'ordre du geste est
+# rapatrier le master -> fabriquer les derives -> ECRIRE LEUR ADRESSE -> controler.
+#
+# ⚠ POURQUOI PAS EN pg_cron : le push de nuit (l. 925) reecrit les lignes d'index vers
+# 06 h 58. Les colonnes soeurs SURVIVENT (PostgREST en merge-duplicates ne touche que
+# les colonnes du payload -- verifie le 27/09 sur table jetable), mais une annonce NEUVE
+# arrive sans adresse. La remplir ici evite qu'elle passe une journee entiere sur Hektor.
+# Inoffensif tant que Hektor vit, INACCEPTABLE apres la coupure.
+#
+# ⚠ INCREMENTALE : elle ne traite que les annonces dont une photo a ete derivee depuis
+# leur dernier remplissage, ou dont l'adresse est vide. Une nuit ordinaire = quelques
+# annonces, ~1 seconde. Mesure du 27/09 : 0 cible -> 1,7 s.
+#
+# ⚠ LE GARDE-FOU EST EN BASE : les deux fonctions REFUSENT d'agir si app_dossier_current
+# est sous son plancher (5 000). Sans lui, un push casse VIDERAIT les adresses de tout le
+# parc et l'app retomberait entierement sur Hektor. Un refus sort en 1 -> heartbeat en
+# erreur -> le moniteur le dit.
+$adressesOk = $false
+Invoke-OptionalStepWithRetry -Label "phase2 adresses photos (colonnes soeurs)" -Arguments @(
+    (Join-Path $projectRoot "Console\remplir_adresses_photos.js")
+) -Exe $nodeExeGlobal -MaxAttempts 2 -RetryDelaySeconds 30 -Succeeded ([ref]$adressesOk) -WorkerKey "phase2.adresses_photos"
+if (-not $adressesOk) {
+    Write-RunLog "WARN  Adresses photos non remplies cette nuit (echec non bloquant) - voir heartbeat phase2.adresses_photos"
+}
+
 # LA SONDE : Hektor a-t-il des photos que nous n'avons pas ?
 # Une question, une reponse. 25 annonces par nuit -- les plus anciennement modifiees,
 # car c'est la qu'un ecart se verrait -- et on compare la galerie de Hektor au miroir.
