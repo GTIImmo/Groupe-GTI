@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 2072)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2156)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1928,10 +1928,94 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                la seconde branche a ete executee seule sur une vraie annonce : elle rend
                bien les 5 adresses Hektor.
 
-            ⛔ RESTE : ④ loadConsolePhotos (url_hd/url_preview) · App.tsx et api.ts ·
-              RechercheAcquereur · le backend (espace client, RDV, emails, ESTIMATION_IMG)
-              · la vitrine (elle tourne dans le pipeline et lit du LOCAL).
-            ⚠ LE FRONT ET LE BACKEND MODIFIENT DU CODE EXISTANT ET DEPLOIENT -> feu vert.
+            ✅ G.15-d ② LE REGISTRE DES MANDATS            27/09 · commit 496509e
+               23 840 / 23 840 lignes portent une vignette chez nous, 0 encore vide,
+               0 pointe encore vers Hektor · 701 galeries (les lignes qui sont des
+               annonces vivantes).
+               ⚠⚠ LE REGISTRE SE JOINT PAR hektor_annonce_id, PAS PAR app_dossier_id.
+                 Son app_dossier_id descend a -281 472 776 635 305 : un hache
+                 synthetique. Seules 746 lignes sur 23 840 portent un vrai numero d'app
+                 (celles deja passees par la bascule d'identite). Joindre par lui ne
+                 touchait que 3 % du registre -- SANS AUCUNE ERREUR VISIBLE, juste 97 %
+                 de vide. Verifie : sur les 746 ou les deux raccordements aboutissent, le
+                 numero Hektor CONCORDE (0 divergence) -- rien n'avait ete mal pose.
+                 ➡ A NOTER HORS PHOTOS : le registre ne porte donc pas encore de vrai
+                   numero d'app. C'est un trou du chantier IDENTITE, pas des photos.
+               ⚠ FONCTION A PART (app_photos_remplir_adresses_registre) : en faire une
+                 cible de la 1re fonction faisait recalculer la photo principale de
+                 23 800 annonces CHAQUE NUIT -- le registre est vide puis reinsere par
+                 push_upgrade, donc ses lignes reviennent toujours sans adresse. PostgREST
+                 expirait a 8 s. Le registre ne CALCULE plus : il RECOPIE les index.
+               ⚠ max(jsonb) N'EXISTE PAS en Postgres (erreur 42883 payee le 27/09).
+               ⚠ L'ETAPE DU RUN DOIT RESTER APRES LE PUSH (l. 1140 vs l. 943) : c'est
+                 cet ordre qui permet au registre de retrouver ses adresses chaque matin.
+               MESURE DE TEMPS : 0,3 s + 0,4 s + 0,1 s en regime etabli. Un premier appel
+               a froid prend 7,1 s -- c'est le demarrage (dotenv, TLS, cache Postgres),
+               PAS le plafond : chaque appel a son propre budget de 8 s.
+
+            ✅ G.15-d ③④ LE FRONT                          27/09 · commit 3ccb1e0
+               L'analyse demandee avant de coder a trouve DEUX sources ignorees par mon
+               compte precedent -- et la seconde etait la plus importante :
+                 ① loadConsolePhotos (url_preview / url_hd)          deja connue
+                 ② photo_url_listing / images_preview_json des vues  deja connue
+                 ③ detail.images_json, DANS LE BLOB DE DETAIL        MANQUAIT, ET IL GAGNAIT
+                 ④ le blob est TEXTE, la colonne soeur est jsonb     MANQUAIT
+               ⚠⚠ LE ③ ETAIT LE VRAI TROU : l'ecran de detail lit le BLOB exporte par le
+                 serveur, pas le dossier normalise, et ce blob est concatene AVANT la
+                 galerie. Mesure : 13 439 payloads sur 13 439 portent des adresses Hektor,
+                 0 porte les notres (370 Mo de texte). Sans le traiter, tout le
+                 rebranchement restait invisible tant que Hektor vit -- et chaque galerie
+                 se serait videe le jour de la coupure.
+               METHODE : la substitution se fait AU PLUS PRES DE LA BASE, jamais dans les
+               ecrans. Une quarantaine de points lisent ces champs ; en oublier un ne se
+               verrait PAS aujourd'hui (l'image s'afficherait, venant encore de Hektor).
+                 · loadConsolePhotos    prefererNosPhotos, adresse construite depuis
+                                        derives_json (l'origine vient de VITE_SUPABASE_URL,
+                                        jamais d'une adresse en dur)
+                 · listes et registre   prefererNosAdressesPhoto sur 7 normalisations
+                 · index legers        dans lightweightIndexRowToDossier : ce sont des
+                                        TABLES, aucune vue ne les recouvre
+                 · fiche vivante       notre galerie deposee DANS le blob
+                 · fiche archivee      AUTRE fonction -- elle m'aurait echappe
+                 · 9 selects explicites colonnes soeurs ajoutees (pas la galerie sur les
+                                        index d'archive : la colonne n'y existe pas, le
+                                        select aurait echoue a l'EXECUTION, pas au build)
+               ⚠ ON CHOISIT, ON NE CONCATENE PAS : le dedoublonnage de l'ecran se fait par
+                 URL, et nos adresses ne ressemblent pas a celles de Hektor -- melanger
+                 afficherait CHAQUE PHOTO DEUX FOIS.
+                 Mesure qui rend le choix sans danger : sur 48 470 annonces a photos,
+                 10 217 ont une galerie COMPLETE et 0 en a une PARTIELLE ; cote vivantes,
+                 les 3 222 sans notre galerie sont EXACTEMENT celles qui n'ont aucune photo.
+               DEFAUT CORRIGE AU PASSAGE : contactEmailPhotoMimeType lisait le NOM avant
+               l'adresse, donc annoncait image/png pour un derive jpeg -- 267 photos sur
+               436 560 portent un nom en .png.
+               DEJA COUVERT SANS RIEN TOUCHER : RapprochementMandat (il lit un objet deja
+               normalise) · safeVisitVoucherPhotoUrl (il acceptait deja supabase.co).
+               CONTROLES : build vert · les 5 selects modifies rejoues contre PostgREST
+               repondent 200 · les 4 adresses servies repondent 200 image/jpeg · les cles
+               de la galerie ({url, full}) sont celles que l'ecran attend · la vignette
+               Hektor reste intacte en base.
+               ⚠⚠ PIEGE DE MESURE, A NE PAS RE-CORRIGER : un HEAD sur le coffre annonce
+                 cache=no-cache, un GET annonce max-age=31536000, et storage.objects
+                 enregistre bien max-age=31536000. LE CACHE VA BIEN -- c'est le HEAD qui
+                 ment. J'ai cru a une regression facturable et perdu du temps dessus.
+
+            ⛔ RESTE, ET IL FAUT L'ACCORD DE FREDERIC (ces deux-la sont lus AUSSI par le
+              backend, donc ils touchent G.15-e sans l'avoir arbitre) :
+              ▫ LE coalesce DANS LES DEUX VUES (app_dossiers_current et
+                app_registre_mandats_current) : un seul endroit, et le backend en
+                profiterait d'un coup (appointment_service, email_tracking, hektor_bridge
+                les LISENT). Verifie : aucun script ne recree ces vues, et le front n'y
+                ecrit jamais (0 update/insert/upsert/delete).
+                ⚠ C'est un CHANGEMENT DE SENS SILENCIEUX : un lecteur qui croit lire
+                  Hektor lirait nos adresses. L'original reste sous _hektor.
+              ▫ LA RPC app_get_rapprochements (d.photo_url_listing -> coalesce avec la
+                soeur). C'est la source du `photo` de l'ecran Recherche Acquereur.
+                ⚠ CREATE OR REPLACE, JAMAIS DROP : un DROP effacerait les GRANT
+                  (memoire renommer-parametre-rpc-supabase-piege).
+            ⛔ RESTE AUSSI : le backend (espace client, RDV, emails, ESTIMATION_IMG) · la
+              vitrine (elle tourne dans le pipeline et lit du LOCAL).
+            ⚠ LE FRONT EST CODE MAIS PAS DEPLOYE. LE BACKEND N'EST PAS COMMENCE -> feu vert.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
             ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en

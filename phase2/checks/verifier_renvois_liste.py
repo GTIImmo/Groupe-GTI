@@ -19,6 +19,17 @@ Sort en 1 si un renvoi est faux (utilisable dans le run). Ne touche a RIEN d'aut
 que les numeros de la page de tete.
 """
 
+# La console Windows de ce poste est en cp1252 : elle ne sait pas ECRIRE les symboles
+# que ce script affiche (le triangle d'avertissement, la coche). Le 27/09 il est mort
+# sur un UnicodeEncodeError en plein controle -- un verificateur qui plante ne verifie
+# rien. On force la sortie en UTF-8 plutot que d'appauvrir les messages.
+import sys
+for flux in (sys.stdout, sys.stderr):
+    try:
+        flux.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import re
 import sys
 from pathlib import Path
