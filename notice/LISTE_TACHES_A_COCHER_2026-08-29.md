@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 2267)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2327)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1692,7 +1692,7 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                    et un derive se refabrique a partir de lui. A trancher un jour : ne
                    plus monter le master des PHOTOS. Sans urgence (1 Mo aujourd'hui).
 
-[ ] G.15  REBRANCHER LES 48 POINTS D'AFFICHAGE  ⚠⚠ LE SEUL DONT L'ECHEANCE EST LA COUPURE
+[x] G.15  REBRANCHER LES POINTS D'AFFICHAGE   ✅ COMPLET LE 27/09 (front, base, backend, vitrine)
             apps/hektor-v1/src/App.tsx            31   l'app du negociateur
             Ecrans Android/export_project_vitrine.py  8   la VITRINE PUBLIQUE
             backend/app/services/espace_client.py    4   l'ESPACE CLIENT
@@ -2126,7 +2126,67 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                 ➡ CE COMMIT EST SON PROPRE CONTROLE : si /health ne le montre pas en ligne,
                   c'est que Render NE SE DEPLOIE PAS TOUT SEUL. On le saura enfin.
 
-            ⛔ RESTE SUR G.15 : la vitrine (elle tourne dans le pipeline et lit du LOCAL).
+            ✅ G.15-f  LA VITRINE PUBLIQUE                   27/09 · commit 4f65ee9
+               Le site exposait 459 annonces et 4 884 photos pointant TOUTES chez Hektor :
+               le jour de la coupure, la vitrine se serait videe de ses images.
+               L'OBSTACLE ETAIT CONNU : ce script lit du LOCAL (app_view_generale dans
+               phase2.sqlite) et nos adresses ne peuvent PAS y etre -- l'adresse d'un
+               derive contient l'id de la ligne app_console_photo, table qui n'existe QUE
+               dans Supabase. Le build ne peut pas les calculer : il faut les LIRE. Une
+               seule lecture par run, avant la boucle, paginee PAR CURSEUR (l'offset a
+               deja fait perdre 174 433 photos en silence le 25/09).
+
+               CE QUE L'AUDIT A TROUVE, ET QUI A DECIDE DE LA FORME :
+                 · L'ORDRE DU RUN ETAIT DEJA BON, et volontairement : l'etape « adresses
+                   photos » (l. 1140) precede l'export vitrine (l. 1184), et le
+                   commentaire de l'etape le disait deja.
+                 · AUCUNE PURGE NE MENACE CES IMAGES : la vitrine ne publie que
+                   non-archive + diffusable + actif/sous offre/sous compromis, et la regle
+                   des six mois (G.8) ne retire les derives que des ARCHIVEES. Mesure :
+                   sur les 459 annonces, 0 photo porte une marque de sortie de vitrine.
+                 · LE FORMAT TOMBE JUSTE SANS CONVERSION : nos entrees sont
+                   {url, full, order, legend} et visible_photos lit deja path / pathTumb /
+                   url avec order -- on la REUTILISE au lieu de reecrire un tri.
+                 · ON CHOISIT, ON NE CONCATENE PAS : visible_photos dedoublonne par URL,
+                   et nos adresses ne ressemblent pas a celles de Hektor -- melanger
+                   publierait CHAQUE PHOTO DEUX FOIS.
+                 · images_json SERT AUSSI AU DPE juste en dessous (dpe_from_raw). Seule la
+                   ligne des photos est touchee ; un remplacement global aurait casse le
+                   DPE du site.
+
+               ⚠⚠ SI SUPABASE NE REPOND PAS, ON PUBLIE HEKTOR -- JAMAIS RIEN. Le catalogue
+                 est public et l'etape est BLOQUANTE dans le run (Invoke-Step) : une panne
+                 de lecture ne doit ni vider le site ni faire echouer la nuit.
+                 Interrupteur VITRINE_PHOTOS_APP=0 pour l'eteindre.
+
+               CONTROLES, tous en ecrivant DANS UN FICHIER A PART (rien touche, rien publie)
+                 · 459 annonces, 4 897 photos : 4 897 CHEZ NOUS, 0 Hektor, 0 sans photo
+                 · interrupteur eteint          -> 484 photos Hektor, 0 chez nous
+                 · Supabase injoignable         -> 484 photos Hektor, 0 chez nous, et le
+                   script NE LEVE PAS. Les deux replis changent le COMPORTEMENT : ils sont
+                   PROUVES, pas supposes.
+                 · 20 adresses echantillonnees sur 4 897 -> 20 servies, 0 en echec
+                 · NON-REGRESSION sur les 459 : memes annonces, AUCUN champ ne change hors
+                   photos (DPE, liens, prix, QR intacts), 0 annonce ne PERD de photo.
+
+               ➡ 3 annonces en GAGNENT (7->16, 12->14, 13->14), et l'ecart est EXPLIQUE :
+                 elles ont 16, 14 et 14 photos chez nous, toutes avec derives, alors que le
+                 catalogue local n'en donnait que 7, 12 et 13.
+                 ⚠ LA BASE LOCALE EST EN RETARD SUR SUPABASE POUR LES PHOTOS. Lire Supabase
+                   publie donc des photos plus FRAICHES. A NOTER HORS SUJET : ce retard du
+                   miroir local merite son propre examen -- il n'est pas traite ici.
+
+               Rien n'est publie par ce commit : la vitrine partira au prochain run de nuit.
+
+            ✅✅ G.15 EST COMPLET : le front, la base, le backend et la vitrine lisent nos
+              photos, chacun avec repli sur Hektor. Le compte de depart (« 48 points »)
+              s'est revele etre 44 occurrences puis SIX gestes : la RPC, les vues, le
+              front, le registre, le backend, la vitrine.
+
+            ⚠ CE QUI N'EST PAS DANS G.15, ET NE DOIT PAS ETRE CONFONDU AVEC : les LIENS que
+              la vitrine fabrique (?ref=hektor_annonce_id, et la fiche visite PDF produite
+              par gti-immobilier.fr/admin/pdf.php). C'est la section 11bis, avec sa propre
+              date de peremption. Ici on n'a touche QUE les photos.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
             ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en

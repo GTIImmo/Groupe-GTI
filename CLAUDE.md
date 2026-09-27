@@ -207,10 +207,10 @@ C.9-couple    seul moment ou l'on peut comparer NOTRE paire a celle de Hektor (c
 vitrine +     les liens PUBLICS deja diffuses (QR, imprimes) portent le n° Hektor ->
 liens RDV     servir l'ancienne ET la nouvelle forme EN PARALLELE. Recouvrement, pas
               remplacement. (section 11bis)
-G.15          les 48 points d'affichage lisent les photos CHEZ HEKTOR. Le jour de la
-              coupure elles disparaissent TOUTES de l'ecran en meme temps -- meme avec
-              les 169 Go rapatries sur le serveur. Rapatrier remplit le coffre ; ca n'a
-              jamais suffi a AFFICHER.
+G.15          ✅ FAIT LE 27/09 -- front, base, backend ET vitrine publique lisent nos
+              photos, chacun avec repli sur Hektor. Le compte de depart (« 48 points »)
+              etait 44 occurrences, puis SIX gestes. Rapatrier remplissait le coffre ;
+              ca n'avait jamais suffi a AFFICHER.
 ```
 
 **Les quatre doivent être finis AVANT la coupure, pas pendant.**
