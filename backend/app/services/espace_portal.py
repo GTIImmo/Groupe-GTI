@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -194,8 +195,25 @@ def _ecartes_teaser(n: int) -> str:
 
 
 # Image marketing du bloc estimation (photo réelle GTI, charge bien). Surchargée si besoin.
-ESTIMATION_IMG = ("https://groupe-gti-immobilier.staticlbi.com/original/images/biens/16/"
-                  "cbce175a4551d953a821702103579263/ee28aa8451ea7d0c6c35f278760f3fbd.jpg")
+#
+# G.15-e ④ (27/09/2026) -- ELLE QUITTE HEKTOR.
+#
+# Cette adresse était écrite EN DUR sur le CDN de Hektor (staticlbi) et servie telle quelle
+# aux clients, dans une page publique. Le jour de la coupure, le bloc estimation de
+# l'espace client se serait affiché sans image -- et rien ne l'aurait annoncé, puisque
+# aucune mesure ne regarde une image d'illustration.
+#
+# Elle vit maintenant dans notre coffre public, rapatriée depuis l'originale :
+# 2000x1500 et 1 106 ko chez Hektor -> 1600x1200 et 398 ko chez nous (64 % de moins,
+# mêmes réglages que nos dérivés de photos : withoutEnlargement, qualité 82, mozjpeg).
+# On ne sert pas un master pour une vignette.
+#
+# ⚠ GTI_ESTIMATION_IMG permet de la changer SANS redéployer, comme GTI_LOGO_URL pour le
+#   logo des emails (G.14). Le repli en dur reste l'adresse de notre coffre, jamais Hektor.
+ESTIMATION_IMG = (
+    os.getenv("GTI_ESTIMATION_IMG", "").strip()
+    or "https://dwaqxfrinihnychuoptk.supabase.co/storage/v1/object/public/gti-photo/marque/estimation.jpg"
+)
 
 
 def _estimation_block(img: str | None = None) -> str:

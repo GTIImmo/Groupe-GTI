@@ -99,7 +99,18 @@ class AppointmentService:
 
     def _read_dossier_by_annonce(self, annonce_id: int) -> dict[str, Any]:
         rows = self._rest_get(
-            "app_dossier_current",
+            # G.15-e (27/09/2026) : LA VUE, PAS LA TABLE.
+            # Les deux noms ne different que d'un « s », et c'est la vue qui porte le
+            # recouvrement des photos : elle rend NOS adresses (coffre gti-photo) sous
+            # photo_url_listing, avec repli sur Hektor, et expose celles de Hektor sous
+            # photo_url_listing_hektor. La table, elle, ne porte que les adresses Hektor
+            # dans cette colonne -- lire la table laisserait donc cet envoi chez Hektor,
+            # et l'image disparaitrait le jour de la coupure.
+            # Verifie le 27/09 : la vue expose TOUTES les colonnes demandees ici (0
+            # manquante) et service_role a bien le droit de la lire.
+            # ⚠ anon peut lire la TABLE mais PAS la vue -- sans consequence ici (ce
+            #   service utilise service_role), mais a savoir avant de reutiliser ce geste.
+            "app_dossiers_current",
             params={
                 "select": "app_dossier_id,hektor_annonce_id,titre_bien,numero_dossier,numero_mandat,ville,prix,type_bien,commercial_id,commercial_nom,negociateur_email,agence_nom,photo_url_listing,adresse_detail,adresse_privee_listing,archive,diffusable,statut_annonce",
                 "hektor_annonce_id": f"eq.{annonce_id}",
@@ -107,7 +118,7 @@ class AppointmentService:
             },
         )
         if not rows:
-            raise HTTPException(status_code=404, detail=f"Annonce {annonce_id} introuvable dans app_dossier_current")
+            raise HTTPException(status_code=404, detail=f"Annonce {annonce_id} introuvable dans app_dossiers_current")
         return rows[0]
 
     def _is_public_appointment_dossier(self, dossier: dict[str, Any]) -> bool:
