@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 2027)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2072)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1883,9 +1883,54 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                  main (une vivante, une archivee) -> la passe suivante trouve « cibles: 2 »
                  et repare les deux, en 1 seconde.
 
-            ⛔ RESTE POUR G.15 : faire lire la soeur au front (41 points) et au backend
-              (9 points), avec repli sur Hektor · trancher le cas de la vitrine (elle
-              tourne dans le pipeline et lit du local).
+            ══ AUDIT COMPLET AVANT G.15-d/e -- 27/09 ═══════════════════════════════
+            Demande de Frederic : « audit a chaque etape, il faut rien oublier, consulte
+            tout le projet ». Balayage du depot entier : 262 occurrences, 48 fichiers.
+            ⚠ MES COMPTES PRECEDENTS (« 44 points, 5 consommateurs ») ETAIENT INCOMPLETS.
+
+            LES QUATRE SOURCES D'ADRESSES -- j'en connaissais DEUX :
+              ① app_dossier_current.photo_url_listing / .images_preview_json   soeurs ✅
+              ② les 3 index d'archives .photo_url_listing                      soeurs ✅
+              ③ app_dossier_detail_current.detail_payload_json->images_json
+                 lue par la RPC app_get_dossier_photos                         ⛔ MANQUEE
+              ④ app_console_photo.url_hd / .url_preview
+                 lues par loadConsolePhotos (panneau photos, pieces jointes,
+                 photo de la fiche visite)                                     ⛔ MANQUEE
+
+            LES CONSOMMATEURS, au complet :
+              App.tsx                    37   l'app
+              api.ts                     24   la couche d'acces
+              types.ts                   10   les types a etendre
+              export_project_vitrine.py   8   la vitrine publique
+              espace_client.py            6   l'espace client
+              appointment_service.py      3   les RDV
+              rapprochement_email.py      3   les emails
+              RechercheAcquereur.tsx      2   ⛔ MANQUE -- via loadDossierPhotos
+              espace_portal.py            1   ⛔ MANQUE -- une image Hektor EN DUR
+
+            MORTS OU HORS SUJET, verifies : mockData.ts · legacy_front · maquettes HTML ·
+            tests · patchs SQL · export_mini_app_html.py (AUCUN appel dans le run).
+
+            LES IMAGES DE MARQUE (rien a voir avec les annonces) :
+              logo des emails        ✅ G.14
+              « pas de photo »       ✅ G.15-c
+              ESTIMATION_IMG         ⛔ espace_portal.py:197, adresse staticlbi EN DUR,
+                                        servie aux clients dans l'espace. A deposer.
+
+            ✅ G.15-d ① LA QUATRIEME SOURCE EST CORRIGEE (SQL seul, aucun deploiement)
+               app_get_dossier_photos rend desormais NOS w1600 quand ils existent, et
+               retombe sur les adresses Hektor sinon.
+               ⚠ ON CORRIGE LA FONCTION, PAS SES APPELANTS : un seul endroit, effet
+                 IMMEDIAT, et le front n'a pas besoin d'etre deploye pour en profiter.
+               CONTROLES : annonce a 87 photos -> 87 adresses rendues, aucune doublee ·
+               et comme AUCUNE annonce n'a d'images sans nos derives, le repli n'est
+               jamais exerce aujourd'hui -- un filet jamais eprouve ne protege rien, donc
+               la seconde branche a ete executee seule sur une vraie annonce : elle rend
+               bien les 5 adresses Hektor.
+
+            ⛔ RESTE : ④ loadConsolePhotos (url_hd/url_preview) · App.tsx et api.ts ·
+              RechercheAcquereur · le backend (espace client, RDV, emails, ESTIMATION_IMG)
+              · la vitrine (elle tourne dans le pipeline et lit du LOCAL).
             ⚠ LE FRONT ET LE BACKEND MODIFIENT DU CODE EXISTANT ET DEPLOIENT -> feu vert.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
