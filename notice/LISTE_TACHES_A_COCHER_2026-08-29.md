@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 2194)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2246)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -2048,12 +2048,64 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                    conclure a tort que le recouvrement est absent -- c'est la mesure de
                    COMPORTEMENT qui tranche, pas la mesure de texte.
 
-            ⛔ RESTE SUR G.15 : le backend lui-meme (espace_portal.py ESTIMATION_IMG en
-              dur, appointment_service, espace_client, rapprochement_email) · la vitrine
-              (elle tourne dans le pipeline et lit du LOCAL) · et DEPLOYER LE BACKEND sur
-              Render, qui attend encore depuis G.14.
-              ⚠ UNE PARTIE DU BACKEND EST DEJA COUVERTE par le recouvrement des vues :
-                mesurer ce qui reste vraiment AVANT de coder.
+            ✅ G.15-e  LE BACKEND                            27/09 · commit e89d6c5
+               Quatre points, autorises par Frederic.
+
+               ①②③ TROIS LECTURES PASSENT DE LA TABLE A LA VUE (les RDV, l'espace client,
+                 les emails de rapprochement).
+                 ⚠⚠ UN SEUL « s » SEPARE LES DEUX NOMS : app_dossier_current (la table,
+                   adresses Hektor) contre app_dossiers_current (la vue, qui porte le
+                   recouvrement). C'est ce « s » qui m'a fait annoncer A TORT que le
+                   recouvrement des vues couvrirait le backend : trois fichiers lisent
+                   bien la vue, mais PAS aux endroits qui servent les photos. Mesurer
+                   lequel est utilise OU, pas seulement chercher le nom.
+                 Deux conditions verifiees avant d'agir : la vue expose TOUTES les colonnes
+                 demandees (0 manquante) et service_role a le droit de la lire.
+                 ⚠ anon peut lire la TABLE mais PAS la vue. Sans consequence ici (ces
+                   services utilisent service_role), mais a savoir avant de reutiliser ce
+                   geste sur un chemin public.
+                 ⚠ CINQ AUTRES LECTURES DE LA TABLE RESTENT, ET C'EST VOULU : aucune ne
+                   demande de photo (negociateur_email, ou le couple des deux numeros). Et
+                   hektor_bridge:126 est une ECRITURE -- elle DOIT rester sur la table, on
+                   n'ecrit pas dans une vue. Un remplacement global l'aurait cassee en
+                   silence.
+
+               ④ L'IMAGE DU BLOC ESTIMATION QUITTE HEKTOR. Son adresse etait ecrite EN DUR
+                 sur le CDN de Hektor et servie telle quelle aux clients, dans une page
+                 publique : a la coupure le bloc se serait affiche sans image, et rien ne
+                 l'aurait annonce puisque aucune mesure ne regarde une image d'illustration.
+                 Rapatriee ET REDUITE : 2000x1500 / 1 106 ko chez Hektor -> 1600x1200 /
+                 398 ko chez nous (64 % de moins), memes reglages que nos derives. On ne
+                 sert pas un master pour une vignette.
+                 GTI_ESTIMATION_IMG la change sans redeployer, comme GTI_LOGO_URL (G.14) ;
+                 le repli en dur est notre coffre, jamais Hektor.
+
+               CONTROLES : les 3 selects rejoues TELS QUELS avec service_role -> 200, 3
+               lignes sur 3 chez nous · la galerie de l'espace client -> 3 annonces,
+               2/5/6 entrees, TOUTES chez nous, JSON valide, toutes en https (l'espace
+               client l'exige) · _estimation_block() rend notre adresse, plus aucune de
+               Hektor, et la surcharge par variable fonctionne · l'image est servie en 200
+               image/jpeg avec cache=max-age=31536000 (verifie par un GET) · plus AUCUNE
+               adresse staticlbi dans le code du backend.
+
+            ⛔ LE BACKEND EST POUSSE MAIS SON DEPLOIEMENT N'EST PAS PROUVE.
+              Je n'ai pas pu le verifier, et il faut le savoir plutot que de le supposer :
+                ▫ pas de render.yaml dans le depot -- le service est configure dans
+                  l'interface Render, donc je ne sais pas s'il se deploie tout seul ;
+                ▫ aucune cle API Render dans l'environnement -> je ne peux ni declencher
+                  ni interroger le deploiement ;
+                ▫ /health rend une version EN DUR (« 0.1.0 ») : elle ne dit pas quel
+                  commit tourne, donc elle ne peut pas servir de preuve ;
+                ▫ l'endpoint public des RDV, qui aurait montre la photo servie, repond
+                  401 -- et je ne fabrique pas d'acces client pour contourner ca ;
+                ▫ gh n'est pas installe sur ce poste.
+              ➡ A FAIRE : Frederic verifie / declenche le deploiement Render. Il emporte
+                CE commit ET G.14 (le logo des emails), qui attend depuis le 26/09.
+              ➡ ET UNE PROPOSITION, petite et additive : faire dire a /health le commit
+                qui tourne. Sans ce marqueur, AUCUN deploiement backend ne sera jamais
+                verifiable -- ni celui-ci, ni les suivants.
+
+            ⛔ RESTE SUR G.15 : la vitrine (elle tourne dans le pipeline et lit du LOCAL).
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
             ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en
