@@ -152,7 +152,9 @@ G.13  ✅ les 74 550 derives fabriques   26/09 20 h 01 -> 22 h 00, 10,7 photos/s
 G.14  ✅ le logo des emails quitte Hektor   gti-photo/marque/logo-gti.png
         ⚠ l'enonce de la case etait FAUX : le worker embarquait deja son logo.
           Le vrai trou etait les EMAILS du backend, sans aucun repli.
-        ⛔ reste a DEPLOYER LE BACKEND (Render) -- sans urgence
+        ✅ DEPLOYE le 27/09 : RENDER SE DEPLOIE TOUT SEUL sur un push vers main.
+          Mesure : commit en ligne 61 s apres le push. La question traînait depuis
+          le 26/09 faute de marqueur -- /health rend maintenant le commit qui tourne.
 
 G.17  ✅ l'entretien du coffre        A le filet + B l'immediat
         A  une etape dans le run, apres le rapatriement (aucun redemarrage)
@@ -181,10 +183,20 @@ tenir a jour.*
 ⛔ **CE QUI ATTEND ENCORE FRÉDÉRIC :**
 
 ```
-① deployer le backend (Render)      pour que les emails prennent le logo public
-② allumer -EnqueueConsoleDocuments  ⛔ APRES les 12,7 nuits restantes
-③ feu vert pour G.15                le seul dont l'echeance est la coupure
+① allumer -EnqueueConsoleDocuments  ⛔ APRES les nuits de rattrapage restantes
 ```
+
+✅ **Les deux autres sont tombés le 27/09** : `G.15` a reçu ses feux verts *(front,
+base, backend — tout est en ligne)*, et **le backend n'attend personne** — voir
+ci-dessous.
+
+> ⚠⚠ **RENDER SE DÉPLOIE TOUT SEUL sur un push vers `main`** — mesuré le 27/09 :
+> **commit en ligne 61 s après le push**. On a cru pendant deux jours qu'un déploiement
+> manuel manquait, uniquement parce que **rien ne permettait de le vérifier** : `/health`
+> rendait une version écrite en dur, pas de `render.yaml` dans le dépôt, aucune clé API
+> Render dans l'environnement. **`/health` rend maintenant le commit qui tourne**, la
+> branche et l'heure de démarrage — donc la question ne se reposera plus.
+> *(Vercel aussi : même mécanisme, `READY` en ~54 s.)*
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *pas seulement une priorité*
 

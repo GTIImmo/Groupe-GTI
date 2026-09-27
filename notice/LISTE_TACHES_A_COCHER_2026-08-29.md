@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 2257)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2267)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -2088,7 +2088,7 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                image/jpeg avec cache=max-age=31536000 (verifie par un GET) · plus AUCUNE
                adresse staticlbi dans le code du backend.
 
-            ⛔ LE BACKEND EST POUSSE MAIS SON DEPLOIEMENT N'EST PAS PROUVE.
+            ✅ LE BACKEND EST DEPLOYE -- ET RENDER SE DEPLOIE TOUT SEUL.
               Je n'ai pas pu le verifier, et il faut le savoir plutot que de le supposer :
                 ▫ pas de render.yaml dans le depot -- le service est configure dans
                   l'interface Render, donc je ne sais pas s'il se deploie tout seul ;
@@ -2099,8 +2099,18 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                 ▫ l'endpoint public des RDV, qui aurait montre la photo servie, repond
                   401 -- et je ne fabrique pas d'acces client pour contourner ca ;
                 ▫ gh n'est pas installe sur ce poste.
-              ➡ A FAIRE : Frederic verifie / declenche le deploiement Render. Il emporte
-                CE commit ET G.14 (le logo des emails), qui attend depuis le 26/09.
+              ✅ REPONSE OBTENUE LE 27/09, PAR LE MARQUEUR LUI-MEME : commit en ligne
+                61 s APRES LE PUSH (22d5426b426a, demarre a 21:37:59 UTC). RENDER SE
+                DEPLOIE TOUT SEUL sur un push vers main -- comme Vercel.
+                ⚠⚠ DONC IL N'Y AVAIT JAMAIS RIEN A DECLENCHER. On a cru pendant deux jours
+                  qu'un deploiement manuel manquait, uniquement parce que RIEN NE
+                  PERMETTAIT DE LE VERIFIER. Les cinq obstacles ci-dessus n'etaient pas
+                  des preuves d'absence : c'etait une absence de preuve.
+                ✅ Verifie que le commit en ligne CONTIENT bien les deux lots :
+                  aa3571b (G.14, le logo des emails) et e89d6c5 (G.15-e) en sont tous deux
+                  ancetres. Les trois images de marque sont servies avec
+                  cache=max-age=31536000 : logo-gti.png, estimation.jpg, sans-photo.jpg.
+                ➡ G.14 EST DONC CLOS AUSSI : son « reste a deployer » n'a plus d'objet.
               ✅ LE MARQUEUR EST POSE (27/09, commit 22d5426) : /health rend desormais
                 le COMMIT qui tourne, la branche et l'heure de demarrage. Render pose
                 RENDER_GIT_COMMIT dans l'environnement de chaque deploiement ; le repli par
