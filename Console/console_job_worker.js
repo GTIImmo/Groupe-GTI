@@ -4854,6 +4854,8 @@ async function persistConsolePhotoFile(dossier, photo, options = {}) {
     }),
   });
 
+  await fabriquerDerivesApresRangement(photo, localPath, cloudWanted);
+
   return { photo_id: photo.id, local_path: localPath, bytes: file.buffer.length, cloud: cloudWanted };
 }
 
@@ -4901,6 +4903,8 @@ async function persistProvidedPhotoFile(photo, buffer, mimeType, options = {}) {
       },
     }),
   });
+
+  await fabriquerDerivesApresRangement(photo, localPath, cloudWanted);
 
   return { local_path: localPath, storage_path: cloudWanted ? storagePath : photo.storage_path,
            bytes: buffer.length, sha256: digest, cloud: cloudWanted };
@@ -5668,6 +5672,49 @@ async function genererDerivesPhoto(ligne, options = {}) {
   return { derives, coffre: COFFRE_PHOTO_PUBLIC };
 }
 
+// ⚠⚠ LE RACCORDEMENT AU WORKER -- 27/09/2026, demande par Frederic.
+//
+// Jusqu'ici genererDerivesPhoto n'etait appelee QUE par le script de lot
+// (generer_derives_photos.js), et celui-ci passe force:true. CONSOLE_DERIVES_PHOTO_ENABLED
+// ne commandait donc RIEN : une serrure posee sur une porte que personne n'empruntait.
+// Trouve en verifiant le 27/09, apres avoir dit le contraire a Frederic.
+//
+// CE QUE CE RACCORDEMENT CHANGE : quand le worker RANGE une photo -- elle descend de
+// Hektor, ou un negociateur l'ajoute depuis l'app -- son derive est fabrique DANS LA
+// MINUTE, au lieu d'attendre le run de nuit.
+//   · l'etape du run (phase2 derives photos) reste LE FILET : elle voit toutes les
+//     photos sans derive, donc rien ne passe a travers ;
+//   · ce raccordement est L'IMMEDIAT. Il devient indispensable A LA COUPURE : ce
+//     jour-la le repli sur Hektor disparait, et une photo ajoutee le matin resterait
+//     invisible jusqu'au lendemain.
+//
+// ⚠⚠ BEST-EFFORT STRICT, ET C'EST LE POINT DELICAT. persistProvidedPhotoFile est dans le
+// chemin d'un AJOUT DEPUIS L'APP. Si on levait ici, le travail serait rejoue -- donc la
+// photo serait RENVOYEE a Hektor, qui en aurait DEUX. Un derive manquant se rattrape la
+// nuit suivante ; un doublon chez Hektor, non. On ne leve JAMAIS.
+//
+// ⚠ LES DEUX NUMEROS : genererDerivesPhoto REFUSE une ligne sans app_dossier_id, parce
+// qu'une adresse publique ne doit porter aucun numero Hektor et ne se corrige plus apres
+// diffusion. Les selects qui alimentent les deux chemins ont donc ete completes le 27/09
+// (ils ne demandaient que les numeros Hektor). Sans ca, ce raccordement aurait refuse
+// chaque photo -- bruyamment, mais sans rien fabriquer.
+async function fabriquerDerivesApresRangement(photo, localPath, cloudWanted) {
+  if (!DERIVES_PHOTO_ENABLED) return;
+  // Les derives sont la VITRINE : seules les annonces vivantes en ont (regle G.8).
+  if (!cloudWanted) return;
+  try {
+    // On impose le chemin du master qu'on VIENT d'ecrire : le metadata_json en memoire
+    // est celui d'AVANT le rangement, il ne porte pas encore local_archive_path.
+    await genererDerivesPhoto({
+      ...photo,
+      metadata_json: { ...(photo.metadata_json || {}), local_archive_path: localPath },
+    });
+  } catch (error) {
+    console.warn(`[derives] photo ${photo && photo.id} : `
+      + `${error && error.message ? error.message : error}`);
+  }
+}
+
 // Telecharge les binaires des photos d'une annonce.
 // IMPORTANT : try/catch PAR PHOTO. La boucle equivalente des documents
 // (persist des documents, plus haut) n'en a pas : la premiere erreur y avorte
@@ -5676,7 +5723,10 @@ async function genererDerivesPhoto(ligne, options = {}) {
 async function downloadConsolePhotoFiles(job, dossier) {
   const cloud = shouldKeepCloud(dossier);
   const params = new URLSearchParams({
-    select: "id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,storage_bucket,storage_path,file_size,metadata_json",
+    // ⚠ app_dossier_id ajoute le 27/09 : NOTRE numero. Sans lui, la fabrication des
+    // derives (fabriquerDerivesApresRangement) refuse la ligne -- une adresse publique ne
+    // doit porter aucun numero Hektor. Cette selection ne demandait que les numeros Hektor.
+    select: "id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,storage_bucket,storage_path,file_size,metadata_json",
     hektor_annonce_id: `eq.${dossier.hektor_annonce_id}`,
     // Depuis G.10bis les photos retirees chez Hektor RESTENT dans l'index (marquees).
     // Sans ce filtre on redemanderait leur binaire au CDN a chaque passage, pour des
@@ -8029,7 +8079,9 @@ async function handleUploadHektorPhoto(job) {
         const lignes = await supabaseRequest(
           `app_console_photo?hektor_annonce_id=eq.${encodeURIComponent(String(dossier.hektor_annonce_id))}`
           + `&hektor_photo_id=eq.${encodeURIComponent(String(neuve.hektor_photo_id))}`
-          + "&select=id,hektor_annonce_id,hektor_photo_id,filename,storage_bucket,storage_path,metadata_json&limit=1",
+          // ⚠ app_dossier_id ajoute le 27/09 : NOTRE numero, exige par la fabrication
+          // des derives. Cette selection ne demandait que les numeros Hektor.
+          + "&select=id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,storage_bucket,storage_path,metadata_json&limit=1",
           { method: "GET" },
         );
         const ligne = Array.isArray(lignes) ? lignes[0] : null;

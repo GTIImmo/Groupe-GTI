@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1786)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1840)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1586,6 +1586,60 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               toujours (verifie : 200, 31 525 o).
             ▫ Non touche volontairement : le repli mort « || LOGO » du worker. Il ne sert
               jamais tant que Console/assets existe. A nettoyer un jour, sans urgence.
+
+[x] G.17  L'ENTRETIEN DU COFFRE              FAIT le 27/09 -- A et B
+            ⚠ POURQUOI : G.13 a rempli le coffre le 26/09, mais c'etait un COUP UNIQUE.
+              La nuit suivante, 36 photos neuves sont arrivees et AUCUNE n'avait de
+              derive : 31 photos vivantes etaient deja sans adresse publique apres UNE
+              nuit. Remplir le coffre n'a jamais suffi a le tenir a jour -- meme lecon
+              que pour les photos elles-memes, d'un cran plus haut.
+
+            ✅ A -- LE FILET : une etape dans le run, apres le rapatriement.
+               run_full_pipeline.ps1, « phase2 derives photos (coffre public) »
+               generer_derives_photos.js --appliquer --parallele 4 --limite 2000
+               Non bloquante, plafonnee, WorkerKey phase2.derives_photos (donc visible du
+               moniteur). Une nuit ordinaire = quelques dizaines de photos, 3 secondes.
+               ⚠ AUCUN REDEMARRAGE : le pipeline est un script, relu a chaque execution.
+               ⚠ 0 caractere de controle verifie -- edite directement, pas via une chaine
+                 Python (la lecon du 26/09, qui avait casse cette meme etape).
+
+            ✅ B -- L'IMMEDIAT : le worker fabrique le derive DES QU'IL RANGE une photo.
+               ⚠⚠ ET D'ABORD UNE CORRECTION : j'avais dit a Frederic que l'interrupteur
+                 CONSOLE_DERIVES_PHOTO_ENABLED « ferait fabriquer les derives quand un
+                 travail de synchro passe ». C'ETAIT FAUX. genererDerivesPhoto n'etait
+                 appelee QUE par le script de lot, qui passe force:true -- l'interrupteur
+                 ne commandait RIEN. Une serrure sur une porte que personne n'empruntait.
+                 C'est ce raccordement qui la rend utile.
+
+               fabriquerDerivesApresRangement, appelee aux DEUX rangements :
+                 persistConsolePhotoFile   la photo DESCEND de Hektor
+                 persistProvidedPhotoFile  elle est AJOUTEE DEPUIS L'APP (et son
+                                           rattrapage differe)
+
+               ⚠⚠ ELLE NE LEVE JAMAIS, et c'est LE point. persistProvidedPhotoFile est
+                 dans le chemin d'un ajout depuis l'app : une exception ferait rejouer le
+                 travail, donc RENVOYER la photo a Hektor, qui en aurait DEUX. Un derive
+                 manquant se rattrape la nuit suivante ; un doublon chez Hektor, non.
+                 -> try/catch + console.warn qui NOMME la photo. Jamais de silence.
+
+               ⚠⚠ LES DEUX NUMEROS -- le piege que Frederic a signale avant que je code :
+                 les selects qui alimentent ces deux chemins ne demandaient QUE les
+                 numeros Hektor. Sans app_dossier_id, genererDerivesPhoto REFUSE (une
+                 adresse publique ne doit porter aucun numero Hektor). Deux selects
+                 completes : console_job_worker.js (descente) et celui du rattrapage
+                 differe. Le troisieme faisait deja select=*.
+
+               Garde-fou Console/test_derives_raccordement_worker.js : 14 controles, et
+               les SIX defauts possibles poses dans une copie pour verifier le rouge --
+               try/catch retire · garde de l'interrupteur retiree · garde « vivante »
+               retiree · notre numero retire du select · un rangement oublie · chemin du
+               master non impose. Les six passent au rouge.
+
+            ▫ Les 31 photos en attente ont ete rattrapees a la main : 0 erreur, 6 s.
+            ⛔ RESTE : REDEMARRER LES 4 SERVICES pour que B prenne effet. L'interrupteur
+              est deja pose (Console/.env, hors git). EN JOURNEE 06 h - 22 h, et pas
+              pendant un lot documentaire.
+              Tant qu'il n'est pas fait : A suffit, avec une nuit de retard au pire.
 
 [ ] G.15  REBRANCHER LES 48 POINTS D'AFFICHAGE  ⚠⚠ LE SEUL DONT L'ECHEANCE EST LA COUPURE
             apps/hektor-v1/src/App.tsx            31   l'app du negociateur

@@ -1091,6 +1091,33 @@ if (-not $photosOk) {
     Write-RunLog "WARN  Photos non rapatriees cette nuit (echec non bloquant) - voir heartbeat phase2.rattrapage_photos"
 }
 
+# ═══ LES DERIVES DU COFFRE PUBLIC (G.13 en entretien) ═══════════════════════════
+# POURQUOI ICI : juste APRES le rapatriement. L'ordre de lecture est celui du geste --
+# on rapatrie le master, on fabrique ses deux derives, puis on controle.
+#
+# ⚠ POURQUOI CETTE ETAPE EXISTE : le 26/09, G.13 a fabrique les 74 550 derives des
+# annonces en vente. Mais c'etait un COUP UNIQUE. La nuit suivante, 36 photos neuves
+# sont arrivees et AUCUNE n'avait de derive : le coffre derivait deja. Remplir le
+# coffre n'a jamais suffi a le tenir a jour -- c'est la meme lecon que pour les photos
+# elles-memes, d'un cran plus haut.
+#
+# ⚠ ELLE NE PARLE NI A HEKTOR NI AU CDN : elle lit les masters sur notre serveur et
+# depose chez Supabase. Aucune requete contre le quota.
+#
+# ⚠ NON BLOQUANTE ET PLAFONNEE. Une nuit ordinaire = quelques dizaines de photos
+# (3 secondes) ; le plafond protege le run si un retard s'accumulait. 4 fils et non 8 :
+# le run fait d'autres choses en meme temps.
+$derivesOk = $false
+Invoke-OptionalStepWithRetry -Label "phase2 derives photos (coffre public, hors quota Hektor)" -Arguments @(
+    (Join-Path $projectRoot "Console\generer_derives_photos.js"),
+    "--appliquer",
+    "--parallele", "4",
+    "--limite", "2000"
+) -Exe $nodeExeGlobal -MaxAttempts 2 -RetryDelaySeconds 60 -Succeeded ([ref]$derivesOk) -WorkerKey "phase2.derives_photos"
+if (-not $derivesOk) {
+    Write-RunLog "WARN  Derives non fabriques cette nuit (echec non bloquant) - voir heartbeat phase2.derives_photos"
+}
+
 # LA SONDE : Hektor a-t-il des photos que nous n'avons pas ?
 # Une question, une reponse. 25 annonces par nuit -- les plus anciennement modifiees,
 # car c'est la qu'un ecart se verrait -- et on compare la galerie de Hektor au miroir.
