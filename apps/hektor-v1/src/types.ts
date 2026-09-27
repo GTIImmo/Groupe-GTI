@@ -9,6 +9,10 @@ export type DashboardSummary = {
 
 export type DossierDetailPayload = {
   matterport_groups_json?: string | null
+  // G.15-d (27/09/2026) : le blob de detail vient de l'export du serveur et porte encore
+  // les adresses Hektor (13 439 payloads sur 13 439, mesure du 27/09). api.ts y depose
+  // NOTRE galerie, lue sur la colonne soeur de l'index, pour que l'ecran la voie.
+  images_preview_json_app?: unknown
   appointment_public_token?: string | null
   appointment_public_url?: string | null
   appointment_negociateur_id?: string | number | null
@@ -157,6 +161,15 @@ export type DossierDetailPayload = {
 export type Dossier = {
   app_dossier_id: number
   hektor_annonce_id: number
+  // G.15-d (27/09/2026) -- LES ADRESSES DE PHOTOS CHEZ NOUS.
+  // photo_url_listing et images_preview_json portent desormais NOS adresses des que nos
+  // derives existent ; les adresses Hektor descendent dans les deux champs _hektor.
+  // La substitution se fait dans api.ts, une seule fois, au plus pres de la base --
+  // les vignettes et les galeries de l'ecran n'ont rien a savoir.
+  photo_url_listing_app?: string | null
+  images_preview_json_app?: unknown
+  photo_url_listing_hektor?: string | null
+  images_preview_json_hektor?: string | null
   // La famille d'offre Hektor : '0' vente, '10' vente immo pro, '6' neuf.
   // L'app ne detient que ces trois-la (les locations sont hors perimetre).
   offre_type?: string | null
@@ -349,6 +362,15 @@ export type HektorAgencyOption = {
 }
 
 export type MandatRecord = {
+  // G.15-d (27/09/2026) -- LES ADRESSES DE PHOTOS CHEZ NOUS.
+  // photo_url_listing et images_preview_json portent desormais NOS adresses des que nos
+  // derives existent ; les adresses Hektor descendent dans les deux champs _hektor.
+  // La substitution se fait dans api.ts, une seule fois, au plus pres de la base --
+  // les vignettes et les galeries de l'ecran n'ont rien a savoir.
+  photo_url_listing_app?: string | null
+  images_preview_json_app?: unknown
+  photo_url_listing_hektor?: string | null
+  images_preview_json_hektor?: string | null
   register_row_id?: string | null
   // C.15 : le vrai sous-type immo pro (Hektor renvoie "Commerce" pour les huit).
   commerce_sous_type?: string | null
@@ -653,6 +675,14 @@ export type ConsolePhoto = {
   synced_at: string | null
   created_at: string | null
   updated_at: string | null
+  // G.15-d (27/09/2026) -- LE RECOUVREMENT DES PHOTOS.
+  // url_preview et url_hd ci-dessus portent desormais NOS adresses des que les derives
+  // existent ; les adresses Hektor d'origine ne sont pas perdues, elles descendent dans
+  // les deux champs _hektor. C'est loadConsolePhotos qui fait la substitution, une fois,
+  // pour que les dix points d'affichage n'aient rien a savoir.
+  derives_json: Record<string, { chemin?: string; largeur?: number; octets?: number }> | null
+  url_preview_hektor?: string | null
+  url_hd_hektor?: string | null
 }
 
 export type ConsoleJobStatus = 'pending' | 'running' | 'done' | 'error'

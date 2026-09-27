@@ -1,6 +1,6 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockRapprochementsForDossier, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
-import { hasSupabaseEnv, supabase } from './supabase'
+import { hasSupabaseEnv, supabase, supabaseUrl } from './supabase'
 import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
@@ -2489,6 +2489,9 @@ type LightweightAnnonceIndexRow = {
   has_local_detail: boolean | number | string | null
   local_detail_updated_at: string | null
   photo_url_listing?: string | null
+  // G.15-d : les index d'archive / historique / brouillon sont des TABLES, aucune vue ne
+  // les recouvre -- c'est donc ici, a la normalisation, que nos adresses doivent gagner.
+  photo_url_listing_app?: string | null
 }
 
 type LightweightDetailCacheRow = {
@@ -2522,11 +2525,67 @@ async function attachLightweightDetailCacheState<T extends Dossier>(
   })
 }
 
+// G.15-d (27/09/2026) -- LES ADRESSES DE PHOTOS PASSENT CHEZ NOUS, EN UN SEUL ENDROIT.
+//
+// Les vues et les index portent deux colonnes soeurs, remplies chaque nuit par l'etape
+// « adresses photos » du run : photo_url_listing_app et images_preview_json_app. Ce
+// helper les fait gagner, et garde les adresses Hektor sous les noms _hektor.
+//
+// ⚠ POURQUOI ICI ET PAS DANS LES ECRANS : une quarantaine de points d'affichage lisent
+//   photo_url_listing / images_preview_json. En oublier un ne se verrait PAS tant que
+//   Hektor vit -- l'image s'afficherait, simplement elle viendrait encore de chez lui.
+//   Le jour de la coupure elle disparaitrait seule, sans que rien ne l'ait annoncee.
+//
+// ⚠ LA GALERIE CHANGE DE TYPE EN ROUTE : images_preview_json est du TEXTE (le front le
+//   passe a parseJson), images_preview_json_app est du jsonb -- Supabase rend donc un
+//   OBJET. Sans JSON.stringify, parseJson recevrait un objet et rendrait [] : la galerie
+//   serait vide, sans erreur.
+//
+// ⚠ ON CHOISIT, ON NE CONCATENE PAS. Le format attendu est { url, full, order, legend },
+//   ce que nos entrees respectent -- mais le dedoublonnage de l'ecran se fait par URL, et
+//   nos adresses ne ressemblent pas a celles de Hektor : melanger les deux afficherait
+//   CHAQUE PHOTO DEUX FOIS.
+//   Mesure du 27/09 qui rend le choix sans danger : sur 48 470 annonces a photos,
+//   10 217 ont une galerie COMPLETE et 0 en a une partielle -- c'est tout ou rien. Et
+//   cote vivantes, les 3 222 qui n'ont pas notre galerie sont EXACTEMENT celles qui n'ont
+//   aucune photo (0 annonce a des photos sans notre galerie). Preferer la notre ne peut
+//   donc jamais amputer une annonce.
+type LignePhotoBrute = {
+  photo_url_listing?: string | null
+  images_preview_json?: string | null
+  photo_url_listing_app?: string | null
+  images_preview_json_app?: unknown
+}
+
+function galerieAppEnTexte(valeur: unknown): string | null {
+  if (valeur == null) return null
+  if (typeof valeur === 'string') return valeur.trim() ? valeur : null
+  if (Array.isArray(valeur)) return valeur.length ? JSON.stringify(valeur) : null
+  return null
+}
+
+function prefererNosAdressesPhoto<T extends LignePhotoBrute>(ligne: T): T {
+  const notreVignette = (ligne.photo_url_listing_app ?? '').trim() || null
+  const notreGalerie = galerieAppEnTexte(ligne.images_preview_json_app)
+  if (!notreVignette && !notreGalerie) return ligne
+  return {
+    ...ligne,
+    photo_url_listing_hektor: ligne.photo_url_listing ?? null,
+    images_preview_json_hektor: ligne.images_preview_json ?? null,
+    photo_url_listing: notreVignette ?? ligne.photo_url_listing ?? null,
+    images_preview_json: notreGalerie ?? ligne.images_preview_json ?? null,
+  }
+}
+
 function lightweightIndexRowToDossier(row: LightweightAnnonceIndexRow): Dossier & { mandants_texte?: string | null } {
   return {
     app_dossier_id: Number(row.app_archive_id ?? row.app_historical_id ?? row.app_brouillon_id ?? row.hektor_annonce_id),
     hektor_annonce_id: Number(row.hektor_annonce_id),
-    photo_url_listing: row.photo_url_listing ?? null,
+    // G.15-d : notre vignette d'abord, celle de Hektor en repli. Les index legers n'ont
+    // pas de galerie du tout -- ni chez Hektor, ni chez nous.
+    photo_url_listing: (row.photo_url_listing_app ?? '').trim() || row.photo_url_listing || null,
+    photo_url_listing_app: row.photo_url_listing_app ?? null,
+    photo_url_listing_hektor: row.photo_url_listing ?? null,
     images_preview_json: null,
     archive: row.archive ?? '1',
     diffusable: row.diffusable ?? null,
@@ -3166,9 +3225,9 @@ export async function loadContactRelations(contactId: string): Promise<AppContac
     const annonceIds = Array.from(new Set(relations.map((r) => String(r.hektor_annonce_id ?? '').trim()).filter(Boolean)))
     if (annonceIds.length) {
       const [dossiersRes, historicalRes, archiveRes] = await Promise.all([
-        supabase.from('app_dossiers_current').select('hektor_annonce_id, photo_url_listing, statut_annonce').in('hektor_annonce_id', annonceIds),
-        supabase.from('app_historical_annonce_index_current').select('hektor_annonce_id, photo_url_listing, statut_annonce').in('hektor_annonce_id', annonceIds),
-        supabase.from('app_archive_annonce_index_current').select('hektor_annonce_id, photo_url_listing, statut_annonce').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_dossiers_current').select('hektor_annonce_id, photo_url_listing, photo_url_listing_app, statut_annonce').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_historical_annonce_index_current').select('hektor_annonce_id, photo_url_listing, photo_url_listing_app, statut_annonce').in('hektor_annonce_id', annonceIds),
+        supabase.from('app_archive_annonce_index_current').select('hektor_annonce_id, photo_url_listing, photo_url_listing_app, statut_annonce').in('hektor_annonce_id', annonceIds),
       ])
       const photoByAnnonce = new Map<string, string>()
       const statutByAnnonce = new Map<string, string>()
@@ -4471,9 +4530,9 @@ export async function loadDossiersPage({
   const requestScope = normalizeFilterValue(filters.requestScope)
   const requestType = normalizeFilterValue(filters.requestType)
   const canUseLightweightIndexes = !requestScope && !requestType && canUseLightweightAnnonceIndexesForFilters(filters)
-  const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,commerce_sous_type,commerce_famille,commerce_activite'
-  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,commerce_sous_type,commerce_famille,commerce_activite'
-  const brouillonIndexSelect = 'hektor_annonce_id,app_brouillon_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing'
+  const archiveIndexSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app,commerce_sous_type,commerce_famille,commerce_activite'
+  const historicalIndexSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app,commerce_sous_type,commerce_famille,commerce_activite'
+  const brouillonIndexSelect = 'hektor_annonce_id,app_brouillon_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app'
   if (filters.archive === brouillonFilterValue) {
     if (!canUseLightweightIndexes) {
       return { rows: [], total: 0, page, pageSize }
@@ -4623,7 +4682,7 @@ export async function loadDossiersPage({
   const { data, error, count } = await query
   if (error || !data) throw new Error(error?.message ?? 'Unable to load dossiers')
   const primaryResult: PageResult<Dossier> = {
-    rows: data as Dossier[],
+    rows: (data as Dossier[]).map(prefererNosAdressesPhoto),
     total: count ?? 0,
     page,
     pageSize,
@@ -4794,8 +4853,26 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
     }
   }
 
+  // G.15-d (27/09/2026) -- LA FICHE D'UNE ANNONCE VIVANTE.
+  //
+  // C'est ici que se joue le cas qui compte le plus : les 13 439 annonces vivantes.
+  // La vue rend deja les colonnes soeurs (select '*'), mais deux choses restent a faire.
+  //
+  // ⚠ 1. L'ECRAN DE DETAIL LIT LE BLOB, PAS LE DOSSIER. Le blob vient de l'export du
+  //   serveur et porte encore les adresses Hektor : 13 439 payloads sur 13 439 en
+  //   contiennent, 0 porte les notres (mesure du 27/09). Sans ce depot, tout le
+  //   rebranchement resterait invisible tant que Hektor vit -- et la galerie de chaque
+  //   fiche se viderait le jour de la coupure, sans prevenir.
+  // ⚠ 2. Les archives passent par une AUTRE fonction (loadArchivedAnnonceDetailCache et
+  //   ses soeurs, qui n'acceptent que les trois index legers). Ne traiter qu'ici aurait
+  //   laisse les annonces archivees sur Hektor.
+  const notreGalerieVivante = galerieAppEnTexte((dossierData as LignePhotoBrute).images_preview_json_app)
+  if (notreGalerieVivante) {
+    detailPayload.images_preview_json_app = (dossierData as LignePhotoBrute).images_preview_json_app
+    detailPayload.images_preview_json = notreGalerieVivante
+  }
   return {
-    ...(dossierData as Dossier),
+    ...prefererNosAdressesPhoto(dossierData as Dossier),
     detail_payload_json: JSON.stringify(detailPayload),
   }
 }
@@ -4840,7 +4917,7 @@ async function loadLightweightAnnonceDetailCache(
   const listing = (payload.listing && typeof payload.listing === 'object' ? payload.listing : {}) as Record<string, unknown>
   const payloadIndex = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
   let currentIndex: Record<string, unknown> = {}
-  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,commerce_sous_type,commerce_famille,commerce_activite`
+  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app,commerce_sous_type,commerce_famille,commerce_activite`
   const { data: indexData, error: indexError } = await supabase
     .from(indexTable)
     .select(indexSelect)
@@ -4884,13 +4961,31 @@ async function loadLightweightAnnonceDetailCache(
   if (!detail.texte_principal_titre && firstText?.titre) detail.texte_principal_titre = firstText.titre
   if (!detail.texte_principal_html && firstText) detail.texte_principal_html = firstText.html ?? firstText.text
   detail.matterport_groups_json = JSON.stringify(await loadMatterportGroupsForAnnonce(hektorAnnonceId))
+  // G.15-d : NOTRE galerie entre dans le blob. L'ecran de detail lit le blob, pas le
+  // dossier normalise -- sans ce depot, le rebranchement resterait invisible et la
+  // galerie se viderait le jour de la coupure.
+  const notreGalerieDetail = galerieAppEnTexte(index.images_preview_json_app)
+  if (notreGalerieDetail) {
+    detail.images_preview_json_app = index.images_preview_json_app
+    detail.images_preview_json = notreGalerieDetail
+  }
   const appDossierId = Number(index.app_dossier_id ?? index[indexIdKey] ?? payload[payloadIdKey] ?? listing.hektor_annonce_id ?? hektorAnnonceId)
   const priceValue = index.prix ?? listing.prix
   const dossier: DetailedDossier = {
     app_dossier_id: Number.isFinite(appDossierId) ? appDossierId : Number(hektorAnnonceId),
     hektor_annonce_id: Number(hektorAnnonceId),
-    photo_url_listing: (detail.photo_url_listing ?? index.photo_url_listing ?? listing.photo ?? null) as string | null,
-    images_preview_json: (detail.images_preview_json ?? index.images_preview_json ?? null) as string | null,
+    // G.15-d : NOS adresses d'abord. Le blob de detail (detail.*) vient de l'export du
+    // serveur et porte encore les adresses Hektor -- mesure du 27/09 : 13 439 payloads
+    // sur 13 439 en contiennent, 0 porte les notres. C'est donc la colonne soeur de
+    // l'index, remplie chaque nuit, qui doit gagner.
+    photo_url_listing: ((index.photo_url_listing_app ?? '') as string).trim()
+      || (detail.photo_url_listing ?? index.photo_url_listing ?? listing.photo ?? null) as string | null,
+    images_preview_json: galerieAppEnTexte(index.images_preview_json_app)
+      ?? (detail.images_preview_json ?? index.images_preview_json ?? null) as string | null,
+    photo_url_listing_app: (index.photo_url_listing_app ?? null) as string | null,
+    images_preview_json_app: index.images_preview_json_app ?? null,
+    photo_url_listing_hektor: (detail.photo_url_listing ?? index.photo_url_listing ?? listing.photo ?? null) as string | null,
+    images_preview_json_hektor: (detail.images_preview_json ?? index.images_preview_json ?? null) as string | null,
     archive: String(index.archive ?? listing.archive ?? defaultArchive),
     diffusable: index.diffusable == null ? (listing.diffusable == null ? null : String(listing.diffusable)) : String(index.diffusable),
     nb_portails_actifs: Number(index.nb_portails_actifs ?? 0),
@@ -5182,7 +5277,7 @@ export async function loadFilterCatalog(scope?: DataScope | null): Promise<Filte
         scope,
       )
       if (error || !data) throw new Error(error?.message ?? 'Unable to load scoped filter catalog dossiers')
-      dossiers.push(...(data as Dossier[]))
+      dossiers.push(...(data as Dossier[]).map(prefererNosAdressesPhoto))
       if (data.length < batchSize) break
       from += batchSize
     }
@@ -5815,7 +5910,7 @@ export async function loadMandatsPage({
   if (error || !data) throw new Error(error?.message ?? 'Unable to load mandats')
   // Calque création optimiste : le listing actif passe par ici (branche directe) -> on y
   // préfixe aussi les provisoires, sinon la ligne "En création" n'apparaîtrait jamais.
-  const rows = await prependProvisionalRows(data as MandatRecord[], page, filters)
+  const rows = await prependProvisionalRows((data as MandatRecord[]).map(prefererNosAdressesPhoto), page, filters)
   return {
     rows,
     total: count ?? 0,
@@ -5923,7 +6018,7 @@ export async function loadMandatRegisterPage({
 
       const { data, error } = await query
       if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat register')
-      rows.push(...withRegisterRowId(data as MandatRecord[]))
+      rows.push(...withRegisterRowId((data as MandatRecord[]).map(prefererNosAdressesPhoto)))
       if (data.length < batchSize) break
       batchFrom += batchSize
     }
@@ -5958,7 +6053,7 @@ export async function loadMandatRegisterPage({
   const { data, error, count } = await query
   if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat register')
   return {
-    rows: withRegisterRowId(data as MandatRecord[]),
+    rows: withRegisterRowId((data as MandatRecord[]).map(prefererNosAdressesPhoto)),
     total: count ?? 0,
     page,
     pageSize,
@@ -6054,7 +6149,7 @@ export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataS
     )
 
     if (error || !data) throw new Error(error?.message ?? 'Unable to load register stats')
-    rows.push(...applyMandatStatutFilter(applyMandateLifecycleFilter(withRegisterRowId(data as MandatRecord[]), filters), filters))
+    rows.push(...applyMandatStatutFilter(applyMandateLifecycleFilter(withRegisterRowId((data as MandatRecord[]).map(prefererNosAdressesPhoto)), filters), filters))
     if (data.length < batchSize) break
     from += batchSize
   }
@@ -6161,8 +6256,8 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
     (historicalListingStatuses.includes(statut) ||
       ((filters.archive === allFilterValue || filters.archive === activeArchiveFilterValue) && (!statut || statut === annonceSearchListingsFilterValue)))
   const primaryStatsSelect = 'app_dossier_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,validation_diffusion_state,offre_id,offre_state,offre_last_proposition_type,compromis_id,compromis_state,vente_id,portails_resume,has_diffusion_error,mandants_texte'
-  const archiveStatsSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte,photo_url_listing'
-  const historicalStatsSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte,photo_url_listing'
+  const archiveStatsSelect = 'hektor_annonce_id,app_archive_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte,photo_url_listing,photo_url_listing_app'
+  const historicalStatsSelect = 'hektor_annonce_id,app_historical_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,commercial_nom,negociateur_email,agence_nom,archive,statut_annonce,diffusable,mandants_texte,photo_url_listing,photo_url_listing_app'
 
   if (includePrimary) {
     let from = 0
@@ -6180,7 +6275,7 @@ export async function loadMandatStats(filters: AppFilters, scope?: DataScope | n
       )
 
       if (error || !data) throw new Error(error?.message ?? 'Unable to load mandat stats')
-      rows.push(...(data as MandatRecord[]))
+      rows.push(...(data as MandatRecord[]).map(prefererNosAdressesPhoto))
       if (data.length < batchSize) break
       from += batchSize
     }
@@ -7345,11 +7440,54 @@ export async function markConsoleDocumentSignedManual(documentId: string, signed
   if (error) throw new Error(error.message)
 }
 
+// G.15-d (27/09/2026) -- LE COFFRE PUBLIC, ADRESSE PAR ADRESSE.
+//
+// Nos derives vivent dans le bucket gti-photo sous <app_dossier_id>/<photo_id>/<taille>.jpg
+// et sont servis avec max-age=31536000. L'adresse se construit, elle ne se stocke pas :
+// derives_json ne porte que le chemin.
+//
+// ⚠ L'origine du coffre vient de VITE_SUPABASE_URL, JAMAIS d'une adresse en dur : sans
+//   cette variable il n'y a de toute facon pas de client Supabase, donc rien a afficher.
+const COFFRE_PHOTO_PUBLIC_BASE = `${String(supabaseUrl ?? '').replace(/\/+$/, '')}/storage/v1/object/public/gti-photo/`
+
+function adressePhotoChezNous(derives: ConsolePhoto['derives_json'], taille: 'w400' | 'w1600'): string | null {
+  const chemin = derives?.[taille]?.chemin
+  return typeof chemin === 'string' && chemin.length > 0 ? `${COFFRE_PHOTO_PUBLIC_BASE}${chemin}` : null
+}
+
+// LE RECOUVREMENT, ET POURQUOI IL EST ICI ET NULLE PART AILLEURS.
+//
+// Dix endroits du front lisent url_preview / url_hd. Les rebrancher un par un, c'etait
+// dix occasions d'en oublier un -- et un oubli ne se verrait pas tant que Hektor vit :
+// l'image s'afficherait, simplement elle viendrait encore de chez lui. Le jour de la
+// coupure elle disparaitrait, seule, sans que rien ne l'ait annonce.
+// Donc la substitution se fait UNE FOIS, ici, au plus pres de la base.
+//
+// ⚠ REPLI, PAS REMPLACEMENT : une photo sans derive garde son adresse Hektor. C'est
+//   ce qui rend le geste sans risque aujourd'hui -- et c'est aussi ce qui fait qu'il ne
+//   dit PAS si la couverture est complete. La couverture se mesure en base, pas ici.
+// ⚠ RIEN N'EST PERDU : les adresses Hektor descendent dans url_preview_hektor /
+//   url_hd_hektor. La regle du projet est de ne jamais ecraser une information.
+function prefererNosPhotos(lignes: ConsolePhoto[]): ConsolePhoto[] {
+  return lignes.map((photo) => {
+    const notreApercu = adressePhotoChezNous(photo.derives_json, 'w400')
+    const notreGrande = adressePhotoChezNous(photo.derives_json, 'w1600')
+    if (!notreApercu && !notreGrande) return photo
+    return {
+      ...photo,
+      url_preview_hektor: photo.url_preview,
+      url_hd_hektor: photo.url_hd,
+      url_preview: notreApercu ?? photo.url_preview,
+      url_hd: notreGrande ?? photo.url_hd,
+    }
+  })
+}
+
 export async function loadConsolePhotos(appDossierId: number): Promise<ConsolePhoto[]> {
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase
     .from('app_console_photo')
-    .select('id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,visible,legend,sort_order,source,source_json,synced_at,created_at,updated_at')
+    .select('id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,visible,legend,sort_order,source,source_json,synced_at,created_at,updated_at,derives_json')
     .eq('app_dossier_id', appDossierId)
     // Depuis le 26/09 (G.10bis) une photo retiree chez Hektor n'est plus SUPPRIMEE :
     // elle est marquee, parce que l'id de sa ligne porte le chemin de son fichier sur
@@ -7360,7 +7498,7 @@ export async function loadConsolePhotos(appDossierId: number): Promise<ConsolePh
     .order('sort_order', { ascending: true })
     .limit(500)
   if (error) throw new Error(error.message)
-  return (data ?? []) as ConsolePhoto[]
+  return prefererNosPhotos((data ?? []) as ConsolePhoto[])
 }
 
 export async function createSyncHektorPhotosJob(input: {
@@ -8350,7 +8488,7 @@ export async function searchOwnerAnnonceOptions(input: {
 }): Promise<OwnerAnnonceSearchOption[]> {
   const search = normalizeSearchTerm(input.search ?? '').replace(/\s+/g, ' ').trim()
   const limit = Math.min(Math.max(input.limit ?? 12, 1), 30)
-  const select = 'app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,adresse_privee_listing,adresse_detail,ville,code_postal,commercial_nom,agence_nom,statut_annonce,archive,photo_url_listing,images_preview_json'
+  const select = 'app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,adresse_privee_listing,adresse_detail,ville,code_postal,commercial_nom,agence_nom,statut_annonce,archive,photo_url_listing,photo_url_listing_app,images_preview_json,images_preview_json_app'
 
   if (!hasSupabaseEnv || !supabase) {
     return filterByNegotiatorEmail(mockDossiers, input.scope)

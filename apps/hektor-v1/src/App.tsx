@@ -11206,6 +11206,10 @@ function ConsolePhotosPanel({
     synced_at: null,
     created_at: null,
     updated_at: null,
+    // Ce repli ne passe PAS par app_console_photo : il fabrique des photos depuis la
+    // galerie du dossier, qui porte deja ses propres adresses. Il n'a donc pas de
+    // derives a lui -- c'est la galerie en amont qui doit venir de chez nous.
+    derives_json: null,
   } satisfies ConsolePhoto))
   const galleryPhotos = sourcePhotos.slice(0, compact ? 6 : 12)
 
@@ -17514,7 +17518,28 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if ((screen === 'suivi' || screen === 'sante') && !isAdmin) setScreen('mandats')
   }, [screen, isAdmin])
   const images = useMemo(() => {
-    const rawImages = [
+    // G.15-d (27/09/2026) -- QUAND NOTRE GALERIE EXISTE, ELLE SERT SEULE.
+    //
+    // ⚠ NE PAS CONCATENER. Le dedoublonnage ci-dessous se fait par URL, et nos adresses
+    //   ne ressemblent pas a celles de Hektor : melanger les deux afficherait CHAQUE
+    //   PHOTO DEUX FOIS. Il faut choisir.
+    // ⚠ ET detail.images_json PASSE DEVANT : il vient du blob exporte par le serveur, qui
+    //   porte encore les adresses Hektor (mesure du 27/09 : 13 439 payloads sur 13 439 en
+    //   contiennent, 0 porte les notres). Ignorer ce blob est donc le seul moyen que nos
+    //   adresses arrivent reellement a l'ecran -- sans quoi le rebranchement serait
+    //   invisible tant que Hektor vit, et la galerie se viderait le jour de la coupure.
+    //
+    // Le choix est sans danger, mesure le 27/09 : sur 48 470 annonces a photos, 10 217 ont
+    // une galerie COMPLETE et 0 en a une partielle. Cote vivantes, les 3 222 qui n'ont pas
+    // notre galerie sont EXACTEMENT celles qui n'ont aucune photo.
+    // api.ts a deja pose NOTRE galerie dans images_preview_json quand elle existe ; le
+    // champ _app ne sert plus qu'a savoir LAQUELLE des deux on tient.
+    const aNotreGalerie = Array.isArray(detail.images_preview_json_app)
+      ? detail.images_preview_json_app.length > 0
+      : Boolean(detail.images_preview_json_app)
+    const rawImages = aNotreGalerie
+      ? parseJson<Array<Record<string, unknown>>>(detail.images_preview_json, [])
+      : [
       ...parseJson<Array<Record<string, unknown>>>(detail.images_json, []),
       ...parseJson<Array<Record<string, unknown>>>(detail.images_preview_json, []),
     ]
@@ -36464,7 +36489,12 @@ function contactEmailPhotoAttachmentFilename(photo: ConsolePhoto, index: number)
 }
 
 function contactEmailPhotoMimeType(photo: ConsolePhoto) {
-  const text = `${photo.filename ?? ''} ${photo.url_hd ?? ''} ${photo.url_preview ?? ''}`.toLowerCase()
+  // G.15-d (27/09/2026) : le type suit L'ADRESSE REELLEMENT JOINTE, le nom d'origine ne
+  // vient qu'en repli. Nos derives sont TOUJOURS des jpeg, meme quand la photo s'appelait
+  // encore .png chez Hektor -- 267 photos sur 436 560 sont dans ce cas (mesure du 27/09).
+  // Lire le nom d'abord annoncait image/png pour un fichier jpeg.
+  const adresse = `${photo.url_hd ?? ''} ${photo.url_preview ?? ''}`.toLowerCase()
+  const text = adresse.trim() ? adresse : `${photo.filename ?? ''}`.toLowerCase()
   if (text.includes('.png')) return 'image/png'
   if (text.includes('.webp')) return 'image/webp'
   if (text.includes('.gif')) return 'image/gif'
