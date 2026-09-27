@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1927)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1985)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1786,7 +1786,65 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                 archivees   w400 de la principale   38 253 vignettes   0,66 Go   A FAIRE
                 colonnes soeurs sur les 4 index, remplies apres le push
                 lecture : le front et le backend preferent la soeur, sinon Hektor
-            ⚠ RIEN N'EST CODE : G.15 modifie du code existant ET deploie -> feu vert.
+            ══ CE QUI EST FAIT -- 27/09 apres-midi ═════════════════════════════════
+
+            ✅ G.15-a  LES VIGNETTES D'ARCHIVES       38 253 · w400 SEUL · 0,66 Go
+               RPC app_photos_vignettes_archives_a_faire(limite, curseur) + mode
+               « --archives » de generer_derives_photos.js.
+               ⚠ TROIS DEFAUTS TROUVES EN CODANT :
+                 ① mon mode archives court-circuitait la MARCHE A BLANC :
+                    « --dry-run --archives » aurait fabrique pour de vrai. Corrige.
+                 ② la selection EXPIRAIT (statement timeout) : le distinct on balaie
+                    361 979 photos. L'index existant ignorait `visible`, premier critere
+                    du tri -> index app_console_photo_principale_idx pose, un lot de
+                    5 000 passe de « expire » a 3,5 s.
+                 ③ pagination PAR CURSEUR sur app_dossier_id, jamais par position
+                    (la lecon des 174 433 photos perdues en silence le 25/09).
+               ⚠⚠ ET LE PIEGE QUE FREDERIC A FAIT VOIR : « une annonce peut passer d'un
+                 index a un autre » -- mesure : 110 PAR JOUR (106 sorties, 4 retours).
+                 Si une vignette d'archive ne portait que w400 et que l'annonce
+                 redevenait vivante, RIEN n'aurait dit qu'il lui manque w1600 :
+                 derives_generes_le est « non nul » dans les deux cas. Elle serait restee
+                 sans grande image POUR TOUJOURS.
+                 -> la selection regarde les CLES de derives_json, pas la date
+                 -> genererDerivesPhoto FUSIONNE derives_json au lieu de le remplacer
+                    (sans ca, une passe w400 effacerait un w1600 deja depose)
+               ▫ La regle des 6 mois desamorce le reste : une annonce archivee garde ses
+                 derives publics 6 mois, une reactivee les retrouve -> AUCUN fichier a
+                 deplacer dans le flux quotidien.
+
+            ✅ G.15-b  LES COLONNES SOEURS ET LEUR REMPLISSAGE
+               photo_url_listing_app   sur les 4 index
+               images_preview_json_app sur app_dossier_current SEULE (les autres n'ont
+                                       pas de galerie)
+               fonction app_photos_remplir_adresses_app(), meme garde-fou de plancher
+               que G.8 : si app_dossier_current est sous 5 000, elle REFUSE -- sinon un
+               run casse VIDERAIT les adresses de tout le parc.
+               ⭐ LA SOEUR A LA MEME FORME QUE L'ORIGINALE ({url, full, order, legend}) :
+                 le code d'affichage n'a pas a changer, seulement la colonne qu'il lit.
+                 ⚠ ET C'EST UN GAIN DE VITESSE INATTENDU : aujourd'hui `url` et `full`
+                   valent TOUS DEUX l'original. L'app telecharge donc 583 ko pour
+                   afficher une vignette. Avec w400 ce sera 18 ko -- 30 fois moins.
+               Premier remplissage : 10 217 vivantes · 10 004 archives · 2 773 historique.
+
+            ⚠ DEUX TROUS TROUVES EN REMPLISSANT, tous deux petits :
+              ① LE PLACEHOLDER « PAS DE PHOTO » VIENT DE CHEZ HEKTOR.
+                 3 218 annonces vivantes (3 135 Estimations + 80 Actives + 3) portent
+                 https://www.gti-immobilier.fr/external/img/admin/diaporama/no_pic.jpg
+                 -- le site HEBERGE PAR HEKTOR. A la coupure, elles afficheraient une
+                 image cassee. ➡ A deposer dans gti-photo, comme le logo (G.14).
+              ② QUATRE ANNONCES ACTIVES N'ONT AUCUNE PHOTO DANS NOTRE INDEX alors que
+                 Hektor leur en montre une : 63100, 62979, 62911, 62910. Leur
+                 images_json est VIDE dans le miroir -- le trou est en amont, la lecture
+                 des photos n'a jamais eu lieu pour elles. La sonde de nuit (25 annonces)
+                 finirait par les voir ; un travail de synchro photo les reglerait tout
+                 de suite.
+
+            ⛔ RESTE POUR G.15 : appeler le remplissage DANS le pipeline (apres le push,
+              pas en pg_cron -- sinon les colonnes restent vides ~1 h 30 chaque nuit) ·
+              faire lire la soeur au front et au backend, avec repli sur Hektor ·
+              trancher le cas de la vitrine (elle tourne dans le pipeline et lit du local).
+            ⚠ LE FRONT ET LE BACKEND MODIFIENT DU CODE EXISTANT ET DEPLOIENT -> feu vert.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
             ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en

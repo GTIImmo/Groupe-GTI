@@ -5641,8 +5641,24 @@ async function genererDerivesPhoto(ligne, options = {}) {
 
   const sharp = chargerSharp();
   const brut = fs.readFileSync(master);
+
+  // ⚠⚠ QUELLES TAILLES -- ajoute le 27/09 pour G.15, et c'est un PIEGE EVITE.
+  // Les annonces ARCHIVEES n'ont pas de galerie dans l'app, seulement une vignette : on
+  // ne leur fabrique donc que w400 (0,66 Go au lieu de 86 Go, mesure du 27/09).
+  // MAIS 4 annonces par jour repassent d'archivee a vivante. Si leur vignette ne portait
+  // que w400 et que le marqueur derives_generes_le suffisait, RIEN ne dirait qu'il leur
+  // manque w1600 -- elles resteraient sans grande image pour toujours.
+  // D'ou deux precautions : ① on peut demander des tailles precises ; ② on FUSIONNE
+  // derives_json au lieu de le remplacer, pour qu'une passe w400 ne puisse jamais
+  // effacer un w1600 deja la. C'est la selection (cote appelant) qui doit regarder les
+  // CLES de derives_json, pas seulement la date.
+  const voulues = Array.isArray(options.tailles) && options.tailles.length
+    ? DERIVES_PHOTO_TAILLES.filter((t) => options.tailles.includes(t.nom))
+    : DERIVES_PHOTO_TAILLES;
+  if (!voulues.length) return { saute: "aucune_taille_demandee" };
+
   const derives = {};
-  for (const taille of DERIVES_PHOTO_TAILLES) {
+  for (const taille of voulues) {
     // withoutEnlargement : un master plus petit que la cible n'est PAS agrandi
     // (49 photos sur 200 font moins de 1 600 px) -- on le re-encode, c'est tout.
     const buffer = await sharp(brut)
@@ -5660,16 +5676,20 @@ async function genererDerivesPhoto(ligne, options = {}) {
   // On note APRES le depot : si le depot echoue, la ligne ne pretend pas avoir des
   // derives. L'inverse laisserait le front afficher une adresse vide.
   const maintenant = new Date().toISOString();
+  // ⚠ ON FUSIONNE, ON NE REMPLACE PAS : une passe qui ne fabrique que w400 (vignette
+  // d'archive) ne doit JAMAIS effacer un w1600 deja depose. Sans ce merge, une annonce
+  // archivee puis reactivee perdrait sa grande image en silence.
+  const fusion = { ...(ligne.derives_json && typeof ligne.derives_json === "object" ? ligne.derives_json : {}), ...derives };
   await supabaseRequest(`app_console_photo?id=eq.${encodeURIComponent(ligne.id)}`, {
     method: "PATCH",
     prefer: "return=minimal",
     body: JSON.stringify({
-      derives_json: derives,
+      derives_json: fusion,
       derives_generes_le: maintenant,
       updated_at: maintenant,
     }),
   });
-  return { derives, coffre: COFFRE_PHOTO_PUBLIC };
+  return { derives, coffre: COFFRE_PHOTO_PUBLIC, tailles: voulues.map((t) => t.nom) };
 }
 
 // ⚠⚠ LE RACCORDEMENT AU WORKER -- 27/09/2026, demande par Frederic.

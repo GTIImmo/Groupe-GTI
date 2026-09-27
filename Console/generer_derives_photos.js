@@ -40,6 +40,9 @@ const APPLIQUER = args.includes("--appliquer");
 const DRY = !APPLIQUER;
 const LIMITE = Number(opt("--limite", "0")) || Infinity;
 const PARALLELE = Math.max(1, Number(opt("--parallele", "4")));
+// --archives : la VIGNETTE (w400) de la photo principale de chaque annonce NON
+// vivante. Les ecrans d'archives n'ont pas de galerie -- cf le commentaire plus bas.
+const ARCHIVES = args.includes("--archives");
 
 function rest(chemin, options = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${chemin}`, {
@@ -54,63 +57,12 @@ function rest(chemin, options = {}) {
 const ko = (o) => (o / 1024).toFixed(0);
 const go = (o) => (o / 1073741824).toFixed(1);
 
-(async () => {
-  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absents");
-
-  // ── qui est VIVANTE ? la meme verite que partout : app_dossier_current ──────
-  const vivantes = new Set();
-  for (let p = 0; ; p += 1000) {
-    const l = await rest(`app_dossier_current?select=app_dossier_id&order=app_dossier_id&limit=1000&offset=${p}`);
-    for (const r of l) vivantes.add(Number(r.app_dossier_id));
-    if (l.length < 1000) break;
-  }
-  console.log(`annonces en vente          : ${vivantes.size}`);
-
-  // ── la liste a faire ────────────────────────────────────────────────────────
-  // ⚠ ON INTERROGE PAR PAQUETS DE NUMEROS D'ANNONCES, pas par curseur sur toute la
-  // table. Mesure du 26/09 : « derives_generes_le is null » vise ~362 000 photos (toutes
-  // les archivees), et filtrer « vivante » en JS obligeait a parcourir 362 pages pour
-  // trouver 3 photos -- six minutes de liste pour trois secondes de travail. Or le
-  // perimetre EST connu d'avance : les 13 438 annonces en vente. On demande donc
-  // directement leurs photos, par paquets de PAQUET numeros.
-  // (Le curseur reste la bonne reponse quand on balaie TOUT -- cf rattrapage_photos.js.
-  //  Ici on ne balaie pas tout : on connait la liste des annonces.)
-  const PAQUET = 200;
-  const numeros = [...vivantes];
-  const aFaire = [];
-  for (let d = 0; d < numeros.length && aFaire.length < LIMITE; d += PAQUET) {
-    const tranche = numeros.slice(d, d + PAQUET);
-    const lot = await rest(
-      "app_console_photo?select=id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,metadata_json,file_size"
-      + "&derives_generes_le=is.null&present_in_hektor=is.true"
-      + `&app_dossier_id=in.(${tranche.join(",")})&order=id&limit=5000`);
-    for (const r of lot) if (aFaire.length < LIMITE) aFaire.push(r);
-  }
-  console.log(`photos sans derives        : ${aFaire.length}`);
-
-  // ── le master est-il bien sur le serveur ? ──────────────────────────────────
-  const cheminMaster = (r) => (r.metadata_json && r.metadata_json.local_archive_path)
-    || worker.localPhotoPath(r.hektor_annonce_id, r.id, r.filename);
-  const presents = [];
-  const absents = [];
-  for (const r of aFaire) (fs.existsSync(cheminMaster(r)) ? presents : absents).push(r);
-  console.log(`  master present sur disque: ${presents.length}`);
-  console.log(`  master ABSENT            : ${absents.length}`
-    + (absents.length ? `   (ex. annonces ${[...new Set(absents.slice(0, 5).map((r) => r.hektor_annonce_id))].join(", ")})` : ""));
-
-  const poidsMasters = presents.reduce((s, r) => s + Number(r.file_size || 0), 0);
-  console.log(`  poids des masters        : ${go(poidsMasters)} Go`);
-
-  if (DRY) {
-    // 18 Go mesures sur 74 550 au calibrage G.12 -> ratio derives/master
-    const ratio = 18 / 49.7;
-    console.log(`\n(marche a blanc) projection : ~${(go(poidsMasters) * ratio).toFixed(1)} Go de derives`);
-    console.log("Rien n'a ete fabrique. Relancer avec --appliquer.");
-    return;
-  }
-
-  // ── on fabrique ─────────────────────────────────────────────────────────────
-  console.log(`\nfabrication, ${PARALLELE} en parallele...\n`);
+// ── LA FABRICATION, partagee par les deux modes ───────────────────────────────
+// `tailles` a null = toutes (vivantes : w400 + w1600) ; ["w400"] = la vignette seule
+// (archives). Une seule boucle, une seule facon de compter, un seul bilan.
+async function fabriquer(aFaire, tailles) {
+  console.log(`\nfabrication, ${PARALLELE} en parallele`
+    + `${tailles ? ` (${tailles.join(", ")} seulement)` : ""}...\n`);
   const t0 = Date.now();
   let faites = 0, sautees = 0, erreurs = 0, octets = 0;
   const parErreur = new Map();
@@ -123,14 +75,15 @@ const go = (o) => (o / 1073741824).toFixed(1);
       try {
         // ⚠ force: true -- l'interrupteur du worker reste ETEINT ; c'est CE script qui
         // decide, pas une variable d'environnement oubliee quelque part.
-        const res = await worker.genererDerivesPhoto(r, { force: true });
+        const res = await worker.genererDerivesPhoto(r,
+          tailles ? { force: true, tailles } : { force: true });
         if (res.saute) { sautees += 1; parErreur.set(res.saute, (parErreur.get(res.saute) || 0) + 1); }
         else {
           faites += 1;
           octets += Object.values(res.derives).reduce((s, d) => s + d.octets, 0);
         }
       } catch (e) {
-        // ⚠ try/catch PAR PHOTO : une photo en echec n'arrete pas les 74 549 autres.
+        // ⚠ try/catch PAR PHOTO : une photo en echec n'arrete pas les autres.
         erreurs += 1;
         const cle = (e && e.message ? e.message : String(e)).slice(0, 70);
         parErreur.set(cle, (parErreur.get(cle) || 0) + 1);
@@ -158,4 +111,126 @@ const go = (o) => (o / 1073741824).toFixed(1);
     for (const [c, n] of [...parErreur].sort((a, b) => b[1] - a[1]).slice(0, 8)) console.log(`  ${String(n).padStart(6)}  ${c}`);
   }
   process.exit(erreurs > faites ? 1 : 0);
+}
+
+(async () => {
+  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absents");
+
+  // ── qui est VIVANTE ? la meme verite que partout : app_dossier_current ──────
+  const vivantes = new Set();
+  for (let p = 0; ; p += 1000) {
+    const l = await rest(`app_dossier_current?select=app_dossier_id&order=app_dossier_id&limit=1000&offset=${p}`);
+    for (const r of l) vivantes.add(Number(r.app_dossier_id));
+    if (l.length < 1000) break;
+  }
+  console.log(`annonces en vente          : ${vivantes.size}`);
+
+  // ── MODE ARCHIVES : une seule vignette par annonce non vivante ──────────────
+  // ⚠ POURQUOI UN MODE A PART, mesure du 27/09 : les ecrans d'archives n'ont PAS de
+  // galerie (app_archive/historical/brouillon_annonce_index_current ne portent que
+  // photo_url_listing). Une annonce archivee n'a donc besoin que du derive de sa photo
+  // PRINCIPALE. Tout deriver aurait coute 86 Go, impossible ; la vignette seule coute
+  // 0,66 Go. C'est la difference entre « deriver des photos » et « deriver ce que
+  // l'ecran demande ».
+  // ⚠ ET SANS CA : apres la coupure, 38 253 annonces archivees s'afficheraient SANS
+  //   AUCUNE IMAGE. Ce n'etait dans aucune case du plan avant le 27/09.
+  if (ARCHIVES) {
+    // ⚠ PAR LOTS, AVEC UN CURSEUR SUR LE NUMERO D'ANNONCE. Demander les 38 253 d'un coup
+    // faisait expirer PostgREST (« statement timeout » : le distinct on balaie 361 979
+    // photos). Un lot de 5 000 prend 3,5 s avec l'index pose le 27/09.
+    // Et c'est un CURSEUR, pas une position -- la lecon des 174 433 photos perdues le
+    // 25/09 : on avance par identifiant, jamais par offset.
+    const lot = [];
+    let curseur = 0;
+    for (;;) {
+      const reste = LIMITE === Infinity ? 5000 : Math.min(5000, LIMITE - lot.length);
+      if (reste <= 0) break;
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/app_photos_vignettes_archives_a_faire`, {
+        method: "POST",
+        headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`,
+                   "Content-Type": "application/json" },
+        body: JSON.stringify({ p_limite: reste, p_apres: curseur }),
+      });
+      if (!r.ok) throw new Error(`RPC vignettes archives ${r.status} : ${(await r.text()).slice(0, 200)}`);
+      const page = await r.json();
+      if (!page.length) break;
+      for (const x of page) {
+        lot.push({
+          id: x.photo_id, app_dossier_id: x.app_dossier_id, hektor_annonce_id: x.hektor_annonce_id,
+          filename: x.filename, metadata_json: x.metadata_json, derives_json: x.derives_json,
+          file_size: null,
+        });
+        curseur = Math.max(curseur, Number(x.app_dossier_id));
+      }
+      process.stdout.write(`\r  liste : ${lot.length}`);
+    }
+    process.stdout.write("\r");
+    console.log(`vignettes d'archives a faire : ${lot.length}   (w400 SEUL)`);
+
+    // ⚠ LA MARCHE A BLANC VAUT AUSSI ICI. Mon premier jet branchait la fabrication
+    // AVANT ce test : « --dry-run --archives » aurait fabrique pour de vrai.
+    const manquants = lot.filter((r) => {
+      const m = (r.metadata_json && r.metadata_json.local_archive_path)
+        || worker.localPhotoPath(r.hektor_annonce_id, r.id, r.filename);
+      return !fs.existsSync(m);
+    });
+    console.log(`  master present sur disque   : ${lot.length - manquants.length}`);
+    console.log(`  master ABSENT               : ${manquants.length}`);
+    if (DRY) {
+      console.log(`\n(marche a blanc) projection : ~${(lot.length * 18 / 1048576).toFixed(2)} Go`);
+      console.log("Rien n'a ete fabrique. Relancer avec --appliquer.");
+      return;
+    }
+    return await fabriquer(lot, ["w400"]);
+  }
+
+  // ── la liste a faire ────────────────────────────────────────────────────────
+  // ⚠ ON INTERROGE PAR PAQUETS DE NUMEROS D'ANNONCES, pas par curseur sur toute la
+  // table. Mesure du 26/09 : « derives_generes_le is null » vise ~362 000 photos (toutes
+  // les archivees), et filtrer « vivante » en JS obligeait a parcourir 362 pages pour
+  // trouver 3 photos -- six minutes de liste pour trois secondes de travail. Or le
+  // perimetre EST connu d'avance : les 13 438 annonces en vente. On demande donc
+  // directement leurs photos, par paquets de PAQUET numeros.
+  // (Le curseur reste la bonne reponse quand on balaie TOUT -- cf rattrapage_photos.js.
+  //  Ici on ne balaie pas tout : on connait la liste des annonces.)
+  const PAQUET = 200;
+  const numeros = [...vivantes];
+  const aFaire = [];
+  for (let d = 0; d < numeros.length && aFaire.length < LIMITE; d += PAQUET) {
+    const tranche = numeros.slice(d, d + PAQUET);
+    const lot = await rest(
+      "app_console_photo?select=id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,metadata_json,file_size"
+      // ⚠ ON SELECTIONNE SUR LES CLES, PAS SUR LA DATE. Une annonce archivee puis
+      // reactivee (4 par jour, mesure du 27/09) porte un w400 SEUL : sa date est non
+      // nulle, mais il lui manque w1600. Filtrer sur derives_generes_le la laisserait
+      // sans grande image pour toujours.
+      + "&or=(derives_json->>w400.is.null,derives_json->>w1600.is.null)"
+      + "&present_in_hektor=is.true"
+      + `&app_dossier_id=in.(${tranche.join(",")})&order=id&limit=5000`);
+    for (const r of lot) if (aFaire.length < LIMITE) aFaire.push(r);
+  }
+  console.log(`photos sans derives        : ${aFaire.length}`);
+
+  // ── le master est-il bien sur le serveur ? ──────────────────────────────────
+  const cheminMaster = (r) => (r.metadata_json && r.metadata_json.local_archive_path)
+    || worker.localPhotoPath(r.hektor_annonce_id, r.id, r.filename);
+  const presents = [];
+  const absents = [];
+  for (const r of aFaire) (fs.existsSync(cheminMaster(r)) ? presents : absents).push(r);
+  console.log(`  master present sur disque: ${presents.length}`);
+  console.log(`  master ABSENT            : ${absents.length}`
+    + (absents.length ? `   (ex. annonces ${[...new Set(absents.slice(0, 5).map((r) => r.hektor_annonce_id))].join(", ")})` : ""));
+
+  const poidsMasters = presents.reduce((s, r) => s + Number(r.file_size || 0), 0);
+  console.log(`  poids des masters        : ${go(poidsMasters)} Go`);
+
+  if (DRY) {
+    // 18 Go mesures sur 74 550 au calibrage G.12 -> ratio derives/master
+    const ratio = 18 / 49.7;
+    console.log(`\n(marche a blanc) projection : ~${(go(poidsMasters) * ratio).toFixed(1)} Go de derives`);
+    console.log("Rien n'a ete fabrique. Relancer avec --appliquer.");
+    return;
+  }
+
+  return await fabriquer(aFaire, null);
 })().catch((e) => { console.error("ERREUR :", e.message); process.exit(1); });
