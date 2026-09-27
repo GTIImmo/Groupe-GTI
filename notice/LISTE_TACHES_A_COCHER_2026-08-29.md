@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 2246)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2257)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -2101,9 +2101,20 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                 ▫ gh n'est pas installe sur ce poste.
               ➡ A FAIRE : Frederic verifie / declenche le deploiement Render. Il emporte
                 CE commit ET G.14 (le logo des emails), qui attend depuis le 26/09.
-              ➡ ET UNE PROPOSITION, petite et additive : faire dire a /health le commit
-                qui tourne. Sans ce marqueur, AUCUN deploiement backend ne sera jamais
-                verifiable -- ni celui-ci, ni les suivants.
+              ✅ LE MARQUEUR EST POSE (27/09, commit 22d5426) : /health rend desormais
+                le COMMIT qui tourne, la branche et l'heure de demarrage. Render pose
+                RENDER_GIT_COMMIT dans l'environnement de chaque deploiement ; le repli par
+                git ne sert qu'en local (une image deployee n'emporte pas .git).
+                ⚠ CALCULE UNE SEULE FOIS, AU CHARGEMENT : un sous-processus a chaque appel
+                  serait un fork paye pour une sonde appelee en boucle, et un git absent
+                  ferait ECHOUER la sonde au lieu de l'informer.
+                ⚠ ADDITIF, et court : ok/service/version restent ; la reponse fait 150
+                  caracteres, sous les 500 que check_gti_health garde pour ses alertes.
+                EPROUVE SUR LE VRAI CODE, 4 situations : en local (git), comme sur Render
+                (la variable gagne, sha coupe a 12), ni l'un ni l'autre (il rend
+                « inconnu » -- il le DIT, il n'invente pas), et la taille.
+                ➡ CE COMMIT EST SON PROPRE CONTROLE : si /health ne le montre pas en ligne,
+                  c'est que Render NE SE DEPLOIE PAS TOUT SEUL. On le saura enfin.
 
             ⛔ RESTE SUR G.15 : la vitrine (elle tourne dans le pipeline et lit du LOCAL).
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
