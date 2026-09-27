@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 2156)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 2195)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -2000,22 +2000,60 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                  enregistre bien max-age=31536000. LE CACHE VA BIEN -- c'est le HEAD qui
                  ment. J'ai cru a une regression facturable et perdu du temps dessus.
 
-            ⛔ RESTE, ET IL FAUT L'ACCORD DE FREDERIC (ces deux-la sont lus AUSSI par le
-              backend, donc ils touchent G.15-e sans l'avoir arbitre) :
-              ▫ LE coalesce DANS LES DEUX VUES (app_dossiers_current et
-                app_registre_mandats_current) : un seul endroit, et le backend en
-                profiterait d'un coup (appointment_service, email_tracking, hektor_bridge
-                les LISENT). Verifie : aucun script ne recree ces vues, et le front n'y
-                ecrit jamais (0 update/insert/upsert/delete).
-                ⚠ C'est un CHANGEMENT DE SENS SILENCIEUX : un lecteur qui croit lire
-                  Hektor lirait nos adresses. L'original reste sous _hektor.
-              ▫ LA RPC app_get_rapprochements (d.photo_url_listing -> coalesce avec la
-                soeur). C'est la source du `photo` de l'ecran Recherche Acquereur.
-                ⚠ CREATE OR REPLACE, JAMAIS DROP : un DROP effacerait les GRANT
-                  (memoire renommer-parametre-rpc-supabase-piege).
-            ⛔ RESTE AUSSI : le backend (espace client, RDV, emails, ESTIMATION_IMG) · la
-              vitrine (elle tourne dans le pipeline et lit du LOCAL).
-            ⚠ LE FRONT EST CODE MAIS PAS DEPLOYE. LE BACKEND N'EST PAS COMMENCE -> feu vert.
+            ✅ G.15-d ⑤ LE RECOUVREMENT EN BASE ET LE DEPLOIEMENT   27/09 · Frederic a
+               donne les trois accords le 27/09 au soir.
+
+               ▫ LES DEUX VUES RECOUVERTES (app_dossiers_current, app_registre_mandats_current)
+                 Elles rendent NOS adresses sous les noms que tout le monde lit deja, et
+                 exposent celles de Hektor a cote sous _hektor. Un seul endroit, donc
+                 aucun angle mort -- et le BACKEND en profite sans une ligne de Python
+                 (appointment_service, email_tracking, hektor_bridge les LISENT).
+                 MESURES : 70 colonnes chacune · 13 439 et 23 840 lignes · 13 439 et
+                 23 840 vignettes CHEZ NOUS · 0 encore chez Hektor · 0 galerie mal formee
+                 · les adresses Hektor restent lisibles a cote.
+                 ⚠ LE TYPE NE CHANGE PAS : images_preview_json est du TEXTE, la colonne
+                   soeur du jsonb -> ::text OBLIGATOIRE. Sans le cast, CREATE OR REPLACE
+                   refuse, et le front recevrait un objet la ou il attend une chaine :
+                   galerie VIDE, sans aucune erreur.
+                 ⚠ AUCUN SCRIPT NE RECREE CES VUES (verifie sur phase2/, backend/,
+                   Console/). Si un jour l'un le faisait, le recouvrement sauterait EN
+                   SILENCE et les photos repasseraient chez Hektor.
+                 ⚠ CHANGEMENT DE SENS ASSUME : une comparaison ecrite avant le 27/09
+                   verrait un faux changement.
+
+               ▫ LA RPC app_get_rapprochements (ecran Recherche Acquereur)
+                 ⚠ ELLE LIT LA TABLE, PAS LA VUE : le recouvrement ci-dessus ne
+                   l'atteignait pas. C'est la SEULE dans ce cas -- verifie sur les
+                   4 fonctions qui mentionnent une adresse de photo.
+                 CONTROLES : 7 biens rendus, 7 photos chez nous, 0 Hektor · GRANT intacts
+                 apres le CREATE OR REPLACE (anon, authenticated, service_role, postgres,
+                 PUBLIC) · appelee avec un p_max_age_minutes enorme pour ne PAS declencher
+                 son effet de bord (elle enfile un recalcul si elle se croit perimee).
+
+               ▫ LE FRONT EST DEPLOYE  21 commits pousses, Vercel READY en 54 s sur
+                 2bf4a20, alias groupe-gti.vercel.app. Verifie dans le bundle SERVI :
+                 photo_url_listing_app, images_preview_json_app, gti-photo, derives_json
+                 et url_preview_hektor y sont.
+
+               LE REPLI S'EXERCE-T-IL ? Oui, sur 3 222 annonces vivantes. Verifie : leur
+               galerie Hektor vaut [{"url":null,...}] -- UNE SEULE ENTREE VIDE. Ces
+               annonces n'ont aucune photo, ni chez nous ni chez Hektor, et l'ecran filtre
+               deja les entrees sans adresse. Comportement identique avant et apres.
+
+               ➡ LE SQL DU JOUR EST CONSIGNE : notice/patch_photos_adresses_app_2026-09-27.sql -- 2 fonctions, 2 vues, 1 RPC. Ces objets ne vivaient QU'EN BASE ;
+                 le depot n'en gardait aucune trace alors que tout le reste du chantier y
+                 est versionne. La reference reste la base.
+                 ⚠ Postgres NORMALISE ce qu'on lui donne : il a retire l'alias `d.` des
+                   expressions. Chercher le texte exact dans pg_get_viewdef fait donc
+                   conclure a tort que le recouvrement est absent -- c'est la mesure de
+                   COMPORTEMENT qui tranche, pas la mesure de texte.
+
+            ⛔ RESTE SUR G.15 : le backend lui-meme (espace_portal.py ESTIMATION_IMG en
+              dur, appointment_service, espace_client, rapprochement_email) · la vitrine
+              (elle tourne dans le pipeline et lit du LOCAL) · et DEPLOYER LE BACKEND sur
+              Render, qui attend encore depuis G.14.
+              ⚠ UNE PARTIE DU BACKEND EST DEJA COUVERTE par le recouvrement des vues :
+                mesurer ce qui reste vraiment AVANT de coder.
             ⚠ AVEC REPLI : si le derive n'existe pas encore, on affiche l'adresse
               Hektor. Ca permet de basculer progressivement, SANS JAMAIS d'ecran vide.
             ⚠ L'ADRESSE D'UNE PHOTO PUBLIEE NE CHANGE JAMAIS. Un portail l'a mise en
