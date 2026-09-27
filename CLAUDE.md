@@ -137,35 +137,53 @@ L0 ✅   L1 ✅   L2 ✅   L3 ✅   L4 🟡   puis  L5  L6  L7  L8  L9
    de 23 h decroche                          ⚠ NE JAMAIS REJOUER une annonce en erreur
 ```
 
-### Le soir du 26/09 — *ce qui a été fait après la première version de cette page*
+### Les 26 et 27/09 — *le chantier des fichiers*
 
 ```
-23 h 00   GTI Rattrapage Documents  ✅ PREMIERE REUSSITE : resultat 0, 3 000 travaux
-                                       empiles, 0 exclu pour erreur. Les workers les
-                                       digerent a ~347/h -> absorbe vers 07 h 40.
-                                       Il reste 13 nuits.
-
-G.8   ✅ l'ancre des six mois est posee    colonne + fonction + pg_cron a 08 h 30
+G.8   ✅ l'ancre des six mois        colonne + fonction + pg_cron a 08 h 30
         13 438 vivantes · 74 550 sans ancre · 361 974 marquees · 0 incoherence
         garde-fou PROUVE au refus · idempotente · l'horloge ne repart pas
+        ⚠ la PURGE reste, mais rien a purger avant mars 2027 (G.9)
 
-G.13  ✅ les 74 550 derives sont fabriques  20 h 01 -> 22 h 00, 10,7 photos/s
-        149 100 fichiers = 74 550 w400 + 74 550 w1600 · 17,67 Go · Supabase a 50,6/100
-        3 echecs 504 passagers, reprises par une relance (la reprenabilite a servi)
+G.13  ✅ les 74 550 derives fabriques   26/09 20 h 01 -> 22 h 00, 10,7 photos/s
+        149 163 fichiers = 2,00 par photo · 17,7 Go · Supabase a 50,6 sur 100
+        3 echecs 504 passagers, reprises par une relance
 
 G.14  ✅ le logo des emails quitte Hektor   gti-photo/marque/logo-gti.png
-        ⚠ l'enonce de la case etait FAUX : le worker embarquait deja son logo en data
-          URI. Le vrai trou etait les EMAILS du backend, sans aucun repli.
-        ⛔ reste a DEPLOYER LE BACKEND (Render) -- sans urgence, l'adresse Hektor repond
+        ⚠ l'enonce de la case etait FAUX : le worker embarquait deja son logo.
+          Le vrai trou etait les EMAILS du backend, sans aucun repli.
+        ⛔ reste a DEPLOYER LE BACKEND (Render) -- sans urgence
+
+G.17  ✅ l'entretien du coffre        A le filet + B l'immediat
+        A  une etape dans le run, apres le rapatriement (aucun redemarrage)
+        B  le worker fabrique des qu'il range -- PROUVE EN REEL le 27/09 a 08 h 37 :
+           travail pris en 3 s, done en 9 s, les deux derives refaits AUX MEMES
+           ADRESSES. ⚠ l'interrupteur ne commandait RIEN avant ce raccordement.
 ```
 
-⛔ **CE QUI ATTEND ENCORE FRÉDÉRIC, mis à jour :**
+⭐ **LE COFFRE PUBLIC EST PLEIN ET IL S'ENTRETIENT.** Ce qui manque n'est plus de le
+remplir, c'est de le **lire** : les 44 points d'affichage pointent toujours chez Hektor.
+
+### La nuit du 26 au 27/09 — *les trois runs*
 
 ```
-① redemarrer les 4 services      ⚠ SEULEMENT 06 h - 22 h. Rien ne l'exige aujourd'hui :
-                                   G.8, G.13 et G.14 ne touchent pas au worker.
-② deployer le backend (Render)   pour que les emails prennent le logo public
-③ allumer -EnqueueConsoleDocuments  ⛔ APRES les 13 nuits restantes
+23 h  rattrapage documents  ✅ PREMIERE REUSSITE : 3 000 empiles, 3 000 FAITS, 0 erreur,
+                               8 h 17. Reste 37 988 annonces -> 12,7 nuits.
+03 h  recherches actives    ✅ resultat 0 (elle avait echoue la veille)
+05 h  quotidien             ✅ resultat 0, et l'etape photo a tourne POUR LA 1re FOIS :
+                               36 photos rapatriees, 0 echec ; sonde : 0 manquante
+```
+
+⚠ **Et une nuit a suffi a ouvrir un trou** : ces 36 photos n'avaient aucun derive.
+`G.13` etait un coup unique -> d'ou `G.17`. *Remplir le coffre n'a jamais suffi a le
+tenir a jour.*
+
+⛔ **CE QUI ATTEND ENCORE FRÉDÉRIC :**
+
+```
+① deployer le backend (Render)      pour que les emails prennent le logo public
+② allumer -EnqueueConsoleDocuments  ⛔ APRES les 12,7 nuits restantes
+③ feu vert pour G.15                le seul dont l'echeance est la coupure
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *pas seulement une priorité*

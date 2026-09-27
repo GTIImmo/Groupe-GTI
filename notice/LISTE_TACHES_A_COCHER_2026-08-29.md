@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1881)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1891)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -45,19 +45,19 @@
 >           C.19 transactions · C.11 menage · B.3 · F.1 (apres la coupure)
 > ```
 >
-> **LE COMPTE, au 26/09** — recompté, pas reporté :
+> **LE COMPTE, au 27/09** — recompté, pas reporté :
 >
 > ```
-> 43   cases ouvertes dans la LISTE VIVANTE (avant « 11. FIN DE PLAN »)
+> 40   cases ouvertes dans la LISTE VIVANTE (avant « 11. FIN DE PLAN »)
 > -11  section 10 (D) : REPRISE par la 10bis -> doublons, bandeau en tete de la section
 > ---
-> 32   reellement ouvertes, plus les 5 gestes de Frederic
+> 29   reellement ouvertes, plus les gestes de Frederic
 >
-> OU ELLES SONT   10bis fichiers 11 · L4-c 8 · C.19 4 · C.9 3 · A.3 2
->                 C.4-bis-0 1 · C.4-bis 1 · C.16 1 · C.11 1        = 32
+> OU ELLES SONT   identite 11 · documents 5 · photos 3 · C.19 4 · A.3 2 · C.4-bis-0 1
+>                 C.4-bis 1 · C.16 1 · C.11 1                          = 29
 >
-> (102 autres cases ouvertes vivent APRES « 11. FIN DE PLAN » : c'est de l'archive
->  repetee, elle ne se traite pas.)
+> 81 cases FAITES dans cette meme liste vivante. Et 102 autres ouvertes APRES
+> « 11. FIN DE PLAN » : archive repetee, elle ne se traite pas.
 > ```
 
 > **Réécrite le 26/09/2026.** Cette page remplace la lecture du document : le reste est une
@@ -66,27 +66,27 @@
 > lignes pour une promesse de 15. L'historique est dans `notice/JOURNAL_DE_BORD.md`.
 
 ```
-OU ON EST, PAR FRONT -- ils avancent separement
+OU ON EST, PAR FRONT -- ils avancent separement          etat au 27/09 au matin
 
-  ① IDENTITE     L4/C.9 l. 884  la bascule contact est faite (23/09) ; une annonce NAIT
-                 (L4-c l. 102)  dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service
-                               la nuit du 26/09.
-                               RESTE : lire la ligne [numero de bien dans la cle] du run ·
-                                 surveiller la 1re annonce reelle d'un negociateur ·
-                                 supprimer les annonces d'essai 63146 et 63147
+  ① IDENTITE     L4/C.9        la bascule contact est faite (23/09) ; une annonce NAIT
+                 (L4-c l. 102) dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service.
+                               RESTE 11 cases : C.9-couple (perissable) · 26bis-3 ·
+                                 supprimer les annonces d'essai 63146/63147 · A.3 · C.16
 
-  ② DOCUMENTS    D.0 l. 944       4 defauts fermes (mandat/annexe, empreinte, frein, ajout
-                 G.1->G.6      autonome dormant). LE RATTRAPAGE TOURNE SEUL : tache « GTI
-                 l. 1187       Rattrapage Documents » a 23 h, lots de 3 000, 0 en erreur.
-                               RESTE : 40 987 annonces (~14 nuits) · G.2 --detect plafonne ·
-                                 G.3 le menage des 3 Go · G.4 l'etat doit suivre ·
-                                 G.5 la RPC d'ajout autonome
+  ② DOCUMENTS    D.0 l. 944    ⚠ LE FRONT LE PLUS EN RETARD : 5 cases sur 6 ouvertes.
+                 G.1->G.6      Le rattrapage TOURNE (nuit 1 reussie : 3 000 faits, 0 en
+                 l. 1132       erreur, 8 h 17) -> 37 988 restantes, 12,7 nuits.
+                               RESTE : G.2 --detect plafonne · G.3 le menage des 3 Go ·
+                                 G.4 l'etat doit suivre · G.5 la RPC d'ajout autonome ·
+                                 G.6 (Frederic, APRES le rattrapage)
 
-  ③ PHOTOS       section 10bis 4 cases cochees le 26/09, TOUT DORMANT : le coffre public
-                 l. 1144       gti-photo · le calibrage (18 ko / 226 ko -> ~18 Go, pas 25) ·
-                               l'adresse qui ne disparait plus (G.10bis) · le generateur.
-                               RESTE : G.13 generer les derives (~3 h) · G.14 le logo ·
-                                 G.15 rebrancher les 48 points avec repli · G.16 les restes
+  ③ PHOTOS       section 10bis ⭐ 8 CASES SUR 10 FAITES en deux jours. Le coffre public
+                 l. 1135       est PLEIN (74 550 photos, 149 163 fichiers, 17,7 Go) et il
+                               S'ENTRETIENT : etape dans le run (le filet) + le worker
+                               fabrique des qu'il range (l'immediat, prouve en reel).
+                               RESTE : G.15 rebrancher les 44 points ⚠ ECHEANCE COUPURE ·
+                                 G.9 la purge (rien a purger avant mars 2027) ·
+                                 G.16 deux photos sans fichier
 ```
 
 > ⛔ **LES 5 GESTES DE FRÉDÉRIC** *(détail : `CLAUDE.md` §2)* — ① redémarrer les 4 services
@@ -1342,12 +1342,22 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               demarrera donc plus tard que la realite -- on garde TROP LONGTEMPS, jamais
               trop peu. C'est le bon sens de l'erreur.
 
-[ ] G.9   L'ETAT DES PHOTOS N'EST PAS CELUI DES DOCUMENTS
+[~] G.9   L'ETAT DES PHOTOS N'EST PAS CELUI DES DOCUMENTS   L'ANCRE EST POSEE,
+                                                            LA PURGE RESTE
             ⚠ Les documents DESCENDENT du cloud a l'archivage (G.4). Pour les photos ce
               serait une ERREUR : une adresse deja diffusee (portail, email, favori)
               pointerait dans le vide. On applique G.8 : 6 mois, puis retrait.
-            Aujourd'hui 0 photo concernee -- parce qu'il n'y en a AUCUNE dans le cloud.
-            La fuite commence le jour ou on y verse les derives.
+            ✅ FAIT le 26/09 (G.8) : l'horloge tourne. hors_vitrine_depuis est posee sur
+              361 974 photos d'annonces non vivantes, et remise a vide si une annonce
+              redevient vivante. pg_cron « app-photo-sortie-vitrine », 08 h 30.
+            ⛔ RESTE LA PURGE ELLE-MEME : retirer du coffre les derives dont
+              hors_vitrine_depuis depasse 6 mois. AUCUNE URGENCE MESURABLE :
+                la plus ancienne ancre date du 26/09/2026
+                -> la premiere purge ne peut rien retirer avant le 26/03/2027.
+              C'est le seul point du chantier photos qui a SIX MOIS d'avance.
+            ⚠ Quand on l'ecrira : elle retire les FICHIERS du coffre et vide
+              derives_json / derives_generes_le, pour que G.17 les refabrique si
+              l'annonce revit. Elle ne touche JAMAIS au master.
 
 [x] G.10  CREER LE COFFRE « gti-photo »         fait le 26/09, VERIFIE EN REEL
             public = true · images seulement (jpeg/png/webp) · 10 Mo par fichier.
