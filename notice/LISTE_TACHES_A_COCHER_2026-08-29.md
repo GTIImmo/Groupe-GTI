@@ -21,7 +21,7 @@
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
 >          ⚠ « e3 » = la 3e piece de C.9-e (l. 395) -- codee, ETEINTE
-> L5     E.0-bis (l. 1840)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+> L5     E.0-bis (l. 1881)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -1636,10 +1636,51 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                master non impose. Les six passent au rouge.
 
             ▫ Les 31 photos en attente ont ete rattrapees a la main : 0 erreur, 6 s.
-            ⛔ RESTE : REDEMARRER LES 4 SERVICES pour que B prenne effet. L'interrupteur
-              est deja pose (Console/.env, hors git). EN JOURNEE 06 h - 22 h, et pas
-              pendant un lot documentaire.
-              Tant qu'il n'est pas fait : A suffit, avec une nuit de retard au pire.
+
+            ✅✅ B EST PROUVE EN SITUATION REELLE -- 27/09 a 08 h 37, apres le redemarrage
+               des 4 services par Frederic (08:23:11-13, soit APRES la modification du
+               fichier a 08:11:26 : ils ont bien charge le nouveau code ; battements de
+               coeur « active » ; et 0 ERREUR dans toute l'histoire de la file, donc le
+               redemarrage n'a rien interrompu).
+
+               L'ESSAI : on ne pouvait pas mettre le master de cote (ACL LocalSystem,
+               refus d'ecriture), mais le worker decide de retelecharger en comparant la
+               taille du fichier a file_size en base. On a donc fausse ce chiffre --
+               reversible PAR CONSTRUCTION, le rangement le reecrit depuis le binaire.
+               Annonce 63157, une photo, statut Actif (donc cloudWanted vrai).
+
+               RESULTAT : travail pris 3 s apres sa creation par
+                 NS31851120:documents:service:v9, done en 9 s, 0 erreur.
+                 derives_generes_le   06:13:25 -> 06:37:47   LE WORKER A FABRIQUE
+                 w400 et w1600        REDEPOSES a 06:37:46-47, AUX MEMES ADRESSES (P-1)
+                 relus sans cle       200 · 400 px et 1516 px · cache max-age=31536000
+               ▫ La RPC officielle a d'abord repondu « job_forbidden » : c'est le
+                 garde-fou qui MARCHE (elle exige un negociateur ayant acces a l'annonce).
+                 Le travail a donc ete insere en tant que service.
+
+            ⚠ DEUX OBSERVATIONS TIREES DE L'ESSAI, aucune n'est un defaut a corriger :
+
+              ① LE WORKER ET LE RATTRAPAGE NE TELECHARGENT PAS LA MEME ADRESSE.
+                 worker     photo.url_hd  ->  /wa/images/...
+                 rattrapage e.path (miroir) -> /original/images/...
+                 J'ai cru a une DEGRADATION (le master est passe de 597 461 a 594 731
+                 octets). MESURE : /original/ et /wa/ font EXACTEMENT 1516x1137, 583 et
+                 581 ko -- meme image, ré-encodage marginal. AUCUNE perte de resolution.
+                 Et pas de bataille entre les deux chemins : le rattrapage saute des que
+                 le fichier EXISTE (rattrapage_photos.js:254, size > 0) sans comparer la
+                 taille, et le worker vient de reecrire file_size a la vraie valeur.
+                 ⚠ /wx200/ (url_preview) est la VIGNETTE, 266x200 : ne jamais s'en servir
+                   comme master.
+
+              ② RANGER UNE PHOTO D'ANNONCE VIVANTE MONTE AUSSI SON MASTER DANS LE COFFRE
+                 DES DOCUMENTS (comportement ANTERIEUR a B, persistConsolePhotoFile).
+                 Etat : 2 masters seulement (1 Mo) contre 436 556 sur le serveur seul --
+                 ce chemin tournait rarement. Avec B actif il tournera plus souvent :
+                 ~600 ko par photo neuve, soit ~22 Mo pour une nuit de 36 photos.
+                 ⚠ ET C'EST REDONDANT depuis G.13 : la vitrine, ce sont les DERIVES. Le
+                   master n'a plus besoin d'etre dans le cloud -- il est sur le serveur,
+                   et un derive se refabrique a partir de lui. A trancher un jour : ne
+                   plus monter le master des PHOTOS. Sans urgence (1 Mo aujourd'hui).
 
 [ ] G.15  REBRANCHER LES 48 POINTS D'AFFICHAGE  ⚠⚠ LE SEUL DONT L'ECHEANCE EST LA COUPURE
             apps/hektor-v1/src/App.tsx            31   l'app du negociateur
