@@ -102,9 +102,18 @@ L0 ✅   L1 ✅   L2 ✅   L3 ✅   L4 🟡   puis  L5  L6  L7  L8  L9
 > **« FINIR L'ANNONCE »**.
 
 ```
-N.1  LA CAMPAGNE DES CHAMPS (A/B/C)      mesure seule, aucun code -- BLOQUANTE
-     A Hektor IGNORE  B il ACCEPTE  C il CALCULE
-     la matiere existe : 68 travaux, ~110 champs, avec base_snapshot
+N.1  LA CAMPAGNE DES CHAMPS              mesure seule, aucun code -- BLOQUANTE
+     !! ELLE RETRECIT : LA CLASSIFICATION EXISTE DEJA, depuis le 19/08.
+        notice/A1_CHAMPS_PROPRIETE_APP_2026-08-19.md -- 189 champs, en COULEURS
+        (VERT l'app est l'auteur / BLEU Hektor produit / ORANGE 3 arbitrages).
+        189 REMESURE dans le worker le 28/09 : 27 + 26 + 136. La carte n'a pas bouge.
+     !! DEUX VOCABULAIRES, DEUX AXES, aucun ne remplace l'autre :
+        COULEURS = qui est l'auteur   -> commandent la DESCENTE (l'import reecrit-il ?)
+        A / B / C = Hektor accepte-t-il -> commandent le PUSH
+        A/B/C a ete fait sur l'AFFAIRE (0.1, close 18/09), JAMAIS sur l'annonce.
+     RESTE (a) l'axe A/B/C sur les 136 champs d'EQUIPEMENT, jamais mesures
+           (b) la correspondance nom du worker <-> colonne, reclamee par A1 §6
+               -- et (b) est un PREALABLE de (a), pas une finition
 N.2  LE VERDICT AU CARNET                les 4 colonnes que l'affaire a deja
 N.3  LE FRONT ECRIT AU CARNET            il ne capte que 3 GESTES, pas les saisies
 N.4  LE CORPS LOCAL PERSISTANT           26bis-3  ⚠ DATE DE PEREMPTION
@@ -126,8 +135,8 @@ génération du numéro de mandat *(`L6`)* · la signature *(`A.2`)* · les pass
 | front | où c'en est | ce qui reste |
 |---|---|---|
 | **① L'IDENTITÉ** *(`L4` / `C.9`)* | la bascule contact est faite *(23/09)*, une annonce **naît dans l'app** depuis le 25/09 *(`e3` allumé)*, `C.9-f` en service la nuit du 26/09 | contrôler la ligne `[numero de bien dans la cle]` du run · surveiller la **1re annonce réelle** d'un négociateur · supprimer les annonces d'essai **63146** et **63147** |
-| **② LES DOCUMENTS** *(`D.0`, l. 959 · `G.1`→`G.6`)* | 4 défauts fermés *(mandat/annexe, empreinte, frein, ajout autonome dormant)*. Le **rattrapage tourne seul** : tâche « GTI Rattrapage Documents » à 23 h, lots de 3 000 | **40 987 annonces**, ~14 nuits. Puis `G.2` `--detect` plafonné · `G.3` le ménage des 3 Go · `G.4` l'état doit suivre · `G.5` la RPC d'ajout |
-| **③ LES PHOTOS** *(section **10bis**, l. 1159)* | **4 cases cochées le 26/09**, tout **dormant** : le coffre, le calibrage, l'adresse qui ne disparaît plus, le générateur | `G.13` générer les dérivés *(~18 Go, ~3 h)* · `G.14` le logo · `G.15` rebrancher les **48 points** avec repli · `G.16` les restes |
+| **② LES DOCUMENTS** *(`D.0`, l. 963 · `G.1`→`G.6`)* | 4 défauts fermés *(mandat/annexe, empreinte, frein, ajout autonome dormant)*. Le **rattrapage tourne seul** : tâche « GTI Rattrapage Documents » à 23 h, lots de 3 000 | **40 987 annonces**, ~14 nuits. Puis `G.2` `--detect` plafonné · `G.3` le ménage des 3 Go · `G.4` l'état doit suivre · `G.5` la RPC d'ajout |
+| **③ LES PHOTOS** *(section **10bis**, l. 1163)* | **4 cases cochées le 26/09**, tout **dormant** : le coffre, le calibrage, l'adresse qui ne disparaît plus, le générateur | `G.13` générer les dérivés *(~18 Go, ~3 h)* · `G.14` le logo · `G.15` rebrancher les **48 points** avec repli · `G.16` les restes |
 
 **Le détail des trois fronts est dans la liste, par numéro de ligne. Pas ici.**
 

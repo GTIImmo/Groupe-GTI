@@ -20,8 +20,8 @@
 > L4-b' ✅ les 9 sortants · normalizeMandatContactIds · la qualification
 > L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
 > L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
->          ⚠ « e3 » = la 3e piece de C.9-e (l. 410) -- codee, ETEINTE
-> L5     E.0-bis (l. 2342)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
+>          ⚠ « e3 » = la 3e piece de C.9-e (l. 414) -- codee, ETEINTE
+> L5     E.0-bis (l. 2346)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
 >          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
 >          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
 >          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
@@ -30,7 +30,11 @@
 > ⭐ FINIR L'ANNONCE — pose le 28/09, plan maitre section « FINIR L'ANNONCE »
 >        Le niveau a atteindre = ce que contact / recherche / transaction ont DEJA.
 >        N.1  LA CAMPAGNE DES CHAMPS (A/B/C)     mesure seule — BLOQUANTE
->             68 travaux + ~110 champs deja enregistres, avec base_snapshot
+>             !! LA CLASSIFICATION EXISTE DEJA : A1_CHAMPS_PROPRIETE_APP_2026-08-19
+>             189 champs en COULEURS (VERT/BLEU/ORANGE), 189 remesure le 28/09.
+>             Les COULEURS commandent la DESCENTE, les LETTRES A/B/C le PUSH.
+>             A/B/C fait sur l'AFFAIRE, jamais sur l'annonce. Reste les 136
+>             champs d'EQUIPEMENT + la correspondance nom worker <-> colonne.
 >        N.2  LE VERDICT AU CARNET               les 4 colonnes de l'affaire
 >        N.3  LE FRONT ECRIT AU CARNET           il ne capte que 3 GESTES
 >        N.4  LE CORPS LOCAL PERSISTANT (26bis-3) ⚠ DATE DE PEREMPTION
@@ -39,7 +43,7 @@
 >           4 sentinelles (un_numero · conflit · partielle · push_bloque), toutes a 0.
 >           data.annonce_partielle detecte deja un champ IGNORE par Hektor = classe A.
 >
-> L6     D.0 (l. 959) documents et mandats signes · signature · diffusion · n° mandat
+> L6     D.0 (l. 963) documents et mandats signes · signature · diffusion · n° mandat
 > L7     D.1a · D.1 · D.2 · garder la copie des photos
 > L8     C.4-bis elargi · E.3 · 0.3 / E.1 rattrapages · E.2
 > L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
@@ -47,7 +51,7 @@
 >
 > ⚠⚠ TROIS TRAVAUX ONT UNE DATE DE PEREMPTION, pas seulement une priorite :
 >    · L9        le registre se remplit depuis le MIROIR
->    · C.9-couple (l. 907) seul moment ou l'on peut comparer NOTRE paire a celle
+>    · C.9-couple (l. 911) seul moment ou l'on peut comparer NOTRE paire a celle
 >                 de Hektor
 >    · LA VITRINE ET LES LIENS PUBLICS DE RDV (section 11bis) : les liens deja
 >                 DIFFUSES portent le numero Hektor. Il faut servir l'ancienne ET
@@ -84,11 +88,11 @@
 OU ON EST, PAR FRONT -- ils avancent separement          etat au 27/09 au matin
 
   ① IDENTITE     L4/C.9        la bascule contact est faite (23/09) ; une annonce NAIT
-                 (L4-c l. 117) dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service.
+                 (L4-c l. 121) dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service.
                                RESTE 11 cases : C.9-couple (perissable) · 26bis-3 ·
                                  supprimer les annonces d'essai 63146/63147 · A.3 · C.16
 
-  ② DOCUMENTS    D.0 l. 959    ⚠ LE FRONT LE PLUS EN RETARD : 5 cases sur 6 ouvertes.
+  ② DOCUMENTS    D.0 l. 963    ⚠ LE FRONT LE PLUS EN RETARD : 5 cases sur 6 ouvertes.
                  G.1->G.6      Le rattrapage TOURNE (nuit 1 reussie : 3 000 faits, 0 en
                  l. 1132       erreur, 8 h 17) -> 37 988 restantes, 12,7 nuits.
                                RESTE : G.2 --detect plafonne · G.3 le menage des 3 Go ·
