@@ -466,13 +466,14 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
             )
             total += len(rows)
             rang += len(rows)
+            demandee = taille          # fige AVANT ajustement -- voir la note plus bas
             poids = getattr(reader, "dernier_poids", 0)
             if poids > POIDS_PAGE_MAX and taille > 50:
                 taille = max(50, taille // 2)
                 print(f"        {distant} : page de {poids // 1048576} Mo -- ramenee a {taille} lignes")
             elif poids and poids < POIDS_PAGE_MAX // 8 and taille < PAGE_SIZE:
                 taille = min(PAGE_SIZE, taille * 2)
-            if len(rows) < taille:
+            if len(rows) < demandee:
                 break
             time.sleep(PAUSE_PAGE)
         rows = []
@@ -518,6 +519,28 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
         # ⚠ ON VISE LE POIDS, PAS LE NOMBRE DE LIGNES. Une table etroite garde ses
         #   1 000 lignes par page ; une table a gros blocs JSON descend d'elle-meme
         #   a 100 ou 50. Aucune liste a tenir : la mesure decide.
+        # ─── LA PAGE EST FINIE ? ON COMPARE A CE QU'ON A DEMANDE ───   28/09/2026
+        #
+        # ⚠ LE TEST PORTAIT SUR `taille` APRES AJUSTEMENT, et c'est ce qui a tronque
+        #   app_dossiers_current le 28/09 : 9 250 lignes lues sur 13 439, la copie
+        #   REFUSEE par le controle de completude (l'ancienne a ete conservee, le
+        #   garde-fou a tenu). Le scenario :
+        #
+        #       on demande 125 lignes  ->  on en recoit 125
+        #       la page est legere     ->  `taille` passe a 250
+        #       « 125 recues < 250 ? » ->  OUI  ->  on croit avoir fini, on sort
+        #
+        #   La condition « j'ai recu moins que demande, donc c'est la derniere page »
+        #   est juste ; ce qui etait faux, c'est de la comparer a une taille QUI VENAIT
+        #   DE CHANGER. On fige donc la taille demandee pour CETTE page, avant tout
+        #   ajustement, et c'est a elle qu'on se compare.
+        #
+        # ⚠ POURQUOI CA NE SE VOYAIT PAS AVANT : sans page lourde, `taille` ne bougeait
+        #   jamais de ses 1 000 lignes -- ni reduction, ni remontee, donc jamais d'ecart
+        #   entre demande et comparaison. Le defaut dormait depuis que l'adaptation au
+        #   poids existe (15/09). Il s'est reveille le jour ou une vue a grossi, et il
+        #   se serait reveille de la meme facon sur n'importe quelle autre table.
+        demandee = taille          # fige AVANT ajustement
         poids = getattr(reader, "dernier_poids", 0)
         if poids > POIDS_PAGE_MAX and taille > 50:
             taille = max(50, taille // 2)
@@ -531,7 +554,7 @@ def copy_table(conn: sqlite3.Connection, reader: SupabaseReader, distant: str,
             # comptes en fin de run signalera l'ecart plutot que de le taire.
             break
         borne = suivante
-        if len(rows) < taille:
+        if len(rows) < demandee:
             break
         # FREIN -- correctif du 22/08. C'est le debit soutenu (2 800 requetes sans pause)
         # qui a sature l'instance jusqu'au redemarrage. Sur ~1 400 pages, 0,3 s ajoutent
