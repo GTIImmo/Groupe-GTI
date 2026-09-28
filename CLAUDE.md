@@ -95,7 +95,43 @@ ETAPE 2 = l'app fait TOUT, sauf trois choses qui restent a Hektor :
 L0 ✅   L1 ✅   L2 ✅   L3 ✅   L4 🟡   puis  L5  L6  L7  L8  L9
 ```
 
-### ⭐ LE FRONT PRINCIPAL — *finir l'annonce* (posé le 28/09)
+### ✅ LE SUJET « ANNONCES » EST CLOS (audit final du 28/09)
+
+> **L'annonce n'est pas au niveau des autres objets : elle est AU-DESSUS.** Tout mesuré
+> dans le code et les deux bases le 28/09 au soir.
+
+```
+                      ANNONCE  contact  recherche  relation  transaction
+gestes du worker           15        6          3         1            4
+tables Supabase            17       12          6         1            9
+RPC optimistes vivantes     6        3          2         2            3
+push partiel detecte       OUI      non        non        --      par champ
+sentinelles                 5       10          8         0            2
+corps durable en local  189/189     oui        oui       oui          oui
+```
+
+⭐ **DEUX CHOSES QU'ELLE SEULE SAIT FAIRE** : detecter un envoi PARTIEL (`partial` +
+`skipped_fields`, 15 colonnes contre 13), et un OEIL dedie (`C.9-b`, 0 ecart sur 13 439).
+
+⚠ **CHIFFRE PERIME CORRIGE** : « 5 workers sur 16 ecrivent d'abord dans l'app » datait du
+29/08. La vraie couverture est **13 sur 16** ; les 3 manquantes sont les SUPPRESSIONS,
+exclues volontairement (arbitrage du 30/08). Les 15 RPC sont appelees par le front.
+
+⚠ **UN TOTAL NE SE COMPARE PAS, IL SE DEPLIE.** « 5 sentinelles contre 10 » disait retard ;
+depliees, elles disent l'inverse : les 3 de base sont des deux cotes, l'annonce en a DEUX
+DE PLUS, et les 7 autres du contact surveillent les doublons et les fiches de couple --
+un probleme qui n'existe pas pour l'annonce.
+
+⛔ **SEULE VRAIE FAIBLESSE, ET ELLE N'EST PAS SUR L'ANNONCE : `RELATION`** -- 1 table,
+0 sentinelle, pas de file d'attente. Notee, PAS enchainee.
+
+**Ce qui reste sur l'annonce** : 2 gestes de confort (photo : supprimer/reordonner ·
+modifier un mandat existant) + les 4 exceptions. **Aucun ne perime.**
+
+➡ **LA SUITE UTILE N'EST PAS L'ANNONCE, C'EST CE QUI PERIME** :
+   `L9` le registre des mandats (3-5 j) · les liens publics (11bis) · `C.9-couple`
+
+### ~~LE FRONT PRINCIPAL~~ — *finir l'annonce* (posé le 28/09, CLOS le soir même)
 
 > **Le niveau à atteindre n'est pas une opinion** : c'est ce que le contact, la recherche et
 > la transaction possèdent **déjà**. Tableau comparatif et détail : plan maître, section
