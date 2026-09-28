@@ -111,9 +111,16 @@ N.1  LA CAMPAGNE DES CHAMPS              mesure seule, aucun code -- BLOQUANTE
         COULEURS = qui est l'auteur   -> commandent la DESCENTE (l'import reecrit-il ?)
         A / B / C = Hektor accepte-t-il -> commandent le PUSH
         A/B/C a ete fait sur l'AFFAIRE (0.1, close 18/09), JAMAIS sur l'annonce.
+     (b) LA CORRESPONDANCE : FAITE le 28/09 -- 189 sur 189, ZERO absent (7acebc6)
+         correspondance_champs_annonce.py, lecture seule.
+         170 un seul / 9 AMBIGUS / 3 par suffixe / 7 a la main.
+         TROIS rangements : 163 colonnes + 134 cles de blob + 216 noms sous
+         un porteur « props » (API) ou « fields » (capture de console).
+         !! LE PIEGE POUR (a) : titre_bien est un COALESCE qui prefere le
+            LISTING au DETAIL -> relire texte_principal_titre, pas titre_bien.
+            Les 9 AMBIGUS sont le meme risque : relire la mauvaise cible rend
+            un verdict faux SANS RIEN SIGNALER.
      RESTE (a) l'axe A/B/C sur les 136 champs d'EQUIPEMENT, jamais mesures
-           (b) la correspondance nom du worker <-> colonne, reclamee par A1 §6
-               -- et (b) est un PREALABLE de (a), pas une finition
 N.2  LE VERDICT AU CARNET                les 4 colonnes que l'affaire a deja
 N.3  LE FRONT ECRIT AU CARNET            il ne capte que 3 GESTES, pas les saisies
 N.4  LE CORPS LOCAL PERSISTANT           26bis-3  ⚠ DATE DE PEREMPTION
