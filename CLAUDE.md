@@ -95,13 +95,39 @@ ETAPE 2 = l'app fait TOUT, sauf trois choses qui restent a Hektor :
 L0 ✅   L1 ✅   L2 ✅   L3 ✅   L4 🟡   puis  L5  L6  L7  L8  L9
 ```
 
+### ⭐ LE FRONT PRINCIPAL — *finir l'annonce* (posé le 28/09)
+
+> **Le niveau à atteindre n'est pas une opinion** : c'est ce que le contact, la recherche et
+> la transaction possèdent **déjà**. Tableau comparatif et détail : plan maître, section
+> **« FINIR L'ANNONCE »**.
+
+```
+N.1  LA CAMPAGNE DES CHAMPS (A/B/C)      mesure seule, aucun code -- BLOQUANTE
+     A Hektor IGNORE  B il ACCEPTE  C il CALCULE
+     la matiere existe : 68 travaux, ~110 champs, avec base_snapshot
+N.2  LE VERDICT AU CARNET                les 4 colonnes que l'affaire a deja
+N.3  LE FRONT ECRIT AU CARNET            il ne capte que 3 GESTES, pas les saisies
+N.4  LE CORPS LOCAL PERSISTANT           26bis-3  ⚠ DATE DE PEREMPTION
+```
+
+Ordre **N.1 → N.2 → N.3** ; **N.4 en parallèle**.
+
+⚠⚠ **NE PAS REDÉCOUVRIR CE QUI EXISTE** *(erreur commise le 28/09 au matin)* : l'annonce a
+**déjà** son œil *(`C.9-b`, `annonce_un_numero` — 0 écart sur 13 439)* et **quatre
+sentinelles** *(un_numero · conflit · partielle · push_bloque)*, toutes à 0. Et
+`data.annonce_partielle` détecte **déjà** un champ ignoré par Hektor — c'est-à-dire la
+classe A, en *critical*, seuil zéro.
+
+**Quand ces quatre-là sont faites, il ne reste que** : le registre des mandats *(`L9`)* · la
+génération du numéro de mandat *(`L6`)* · la signature *(`A.2`)* · les passerelles *(`A.1`)*.
+
 ### Les trois fronts ouverts — *ils avancent séparément*
 
 | front | où c'en est | ce qui reste |
 |---|---|---|
 | **① L'IDENTITÉ** *(`L4` / `C.9`)* | la bascule contact est faite *(23/09)*, une annonce **naît dans l'app** depuis le 25/09 *(`e3` allumé)*, `C.9-f` en service la nuit du 26/09 | contrôler la ligne `[numero de bien dans la cle]` du run · surveiller la **1re annonce réelle** d'un négociateur · supprimer les annonces d'essai **63146** et **63147** |
-| **② LES DOCUMENTS** *(`D.0`, l. 944 · `G.1`→`G.6`)* | 4 défauts fermés *(mandat/annexe, empreinte, frein, ajout autonome dormant)*. Le **rattrapage tourne seul** : tâche « GTI Rattrapage Documents » à 23 h, lots de 3 000 | **40 987 annonces**, ~14 nuits. Puis `G.2` `--detect` plafonné · `G.3` le ménage des 3 Go · `G.4` l'état doit suivre · `G.5` la RPC d'ajout |
-| **③ LES PHOTOS** *(section **10bis**, l. 1144)* | **4 cases cochées le 26/09**, tout **dormant** : le coffre, le calibrage, l'adresse qui ne disparaît plus, le générateur | `G.13` générer les dérivés *(~18 Go, ~3 h)* · `G.14` le logo · `G.15` rebrancher les **48 points** avec repli · `G.16` les restes |
+| **② LES DOCUMENTS** *(`D.0`, l. 959 · `G.1`→`G.6`)* | 4 défauts fermés *(mandat/annexe, empreinte, frein, ajout autonome dormant)*. Le **rattrapage tourne seul** : tâche « GTI Rattrapage Documents » à 23 h, lots de 3 000 | **40 987 annonces**, ~14 nuits. Puis `G.2` `--detect` plafonné · `G.3` le ménage des 3 Go · `G.4` l'état doit suivre · `G.5` la RPC d'ajout |
+| **③ LES PHOTOS** *(section **10bis**, l. 1159)* | **4 cases cochées le 26/09**, tout **dormant** : le coffre, le calibrage, l'adresse qui ne disparaît plus, le générateur | `G.13` générer les dérivés *(~18 Go, ~3 h)* · `G.14` le logo · `G.15` rebrancher les **48 points** avec repli · `G.16` les restes |
 
 **Le détail des trois fronts est dans la liste, par numéro de ligne. Pas ici.**
 
