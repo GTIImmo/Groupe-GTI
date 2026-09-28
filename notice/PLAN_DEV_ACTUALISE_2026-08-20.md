@@ -123,6 +123,65 @@ l'app**, sauf une transaction.
 | **L8** | **Exploitation et bascule** | **C.4-bis** élargi *(création, numéro de mandat, photo, document)* · **E.3** · **0.3 / E.1** rattrapage des recherches, dont **19-R2** la veille · **E.2** | **~1 sem** | Les négociateurs travaillent dans l'app |
 | **L9** | **Le registre électronique des mandats** *(juste avant la coupure)* | **A.3-technique** *(table `app_mandat`, remplissage depuis le miroir, sonde, puis le registre **lit la table**)* · les **trois couches de numérotation** · la **série propre**, à la place de PROTEXA · **C.13-c** *(23 715 dates de clôture)* · le négociateur manquant *(3 318 lignes)* · **A.3-juridique**, étudié le moment venu | **~1 sem** + l'étude | Un mandat neuf s'enregistre sans Hektor — **la 1re des 3 exceptions tombe** |
 
+### 🎯 FINIR L'ANNONCE — *la mettre au niveau du contact, de la recherche et de la transaction*
+
+*Section posée le **28/09/2026**, à la demande de Frédéric : « finir les annonces comme les
+contacts, recherches et transactions pour qu'il reste uniquement le registre des mandats, la
+génération du numéro de mandat, la signature électronique et les passerelles ».*
+
+**Le niveau à atteindre n'est pas une opinion : c'est ce que les trois autres objets ont déjà.**
+Mesuré dans le code et les deux bases le 28/09.
+
+| | contact | recherche | transaction | **annonce** |
+|---|---|---|---|---|
+| naît dans l'app | ✅ | ✅ | ✅ | ✅ *(e3, 25/09)* |
+| **corps local persistant** | ✅ `app_contact_current` *(`CREATE IF NOT EXISTS`)* | ✅ | ✅ `app_affaire_ledger` | ⛔ **`app_view_generale` est `DROP` + `CREATE` chaque nuit** |
+| registre de clés | ✅ | ✅ `app_search_registry` | — | ✅ `app_relation_registry` *(C.9-d)* |
+| **classes A/B/C des champs** | implicite *(3 champs que Hektor ignore)* | sans objet *(porte fermée, C.3)* | ✅ **mesurées** *(campagne 0.1, close 18/09)* | ⛔ **jamais faite** |
+| **carnet des saisies** | — | — | ✅ 10 colonnes | ⚠ 6 colonnes, et **3 gestes seulement** |
+| **verdict sur la saisie** | — | — | ✅ `etat` + valeur d'avant + valeur relue | ⛔ **absent** |
+| écran qui montre la divergence | — | — | ✅ modale affaire | ⛔ absent |
+| l'œil serveur ↔ Supabase | ✅ `registre_couche_desaccord` | ✅ journal des doublures | ✅ journal | ✅ **`annonce_un_numero`** *(C.9-b)* — 0 écart sur 13 439 |
+| sentinelles | ✅ | ✅ | ✅ | ✅ **4** *(un_numero · conflit · partielle · push_bloque)*, toutes à 0 |
+
+> ⚠ **CE QUI EST DÉJÀ FAIT EST PLUS GRAND QUE JE NE L'AI DIT LE 28/09 AU MATIN.** J'ai écrit
+> « personne ne compare l'annonce » et « pas de verdict » : **faux dans les deux cas**.
+> `C.9-b` a posé **l'œil** le 24/09 *(il répond nommément au défaut D4)*, et la sentinelle
+> `data.annonce_partielle` détecte **un champ ignoré par Hektor** — c'est-à-dire la classe A —
+> avec seuil zéro et sévérité *critical*. L'erreur venait de m'être arrêté au premier fichier
+> lu au lieu de balayer un mois de travail.
+
+#### Les quatre tâches qui restent — et rien d'autre
+
+| | quoi | modèle à copier | pourquoi maintenant |
+|---|---|---|---|
+| **N.1** | **LA CAMPAGNE DES CHAMPS D'ANNONCE** — classer en A / B / C. **Mesure, aucun code.** Les données existent déjà : **68 travaux `update_hektor_annonce_fields`**, ~110 champs distincts, et chaque payload porte la valeur envoyée **et** `base_snapshot` *(ce que Hektor portait avant)*, aux **noms Hektor** — donc comparable au miroir sans table de correspondance. | **phase 0** des transactions *(« le cycle complet avait envoyé des valeurs connues, il suffisait de relire ce que Hektor a RETENU »)* | **BLOQUANTE**, comme elle l'était pour les transactions : *« rien ne se code avant cette phase, c'est elle qui décide de la forme des autres »* |
+| **N.2** | **LE VERDICT AU CARNET DE L'ANNONCE** — ajouter à `app_annonce_champ_app` les 4 colonnes que `app_affaire_champ_app` possède déjà : `valeur_hektor_au_moment`, `etat`, `valeur_hektor_relue`, `constate_le` ; le worker les pose après chaque envoi. | `app_affaire_champ_app` + le verdict du 16/09 | sans lui, une saisie qui n'arrive pas **se tait** — c'est ce qui rend la liste de contrat vide *sûre* pour l'affaire, et pas encore pour l'annonce |
+| **N.3** | **LE FRONT ÉCRIT AU CARNET** à chaque modification d'annonce. Aujourd'hui le carnet ne capte que **3 gestes** *(`geste_archiver`, `geste_affecter_negociateur`, `redescente_transaction`)* : quand un négociateur corrige un prix, **rien n'est noté**. | `loadAffaireChampsApp` / la modale affaire | c'est ce qui alimente N.2 |
+| **N.4** | **LE CORPS LOCAL PERSISTANT** — `26bis-(3)`. Le contact a `CREATE IF NOT EXISTS` + upsert ; l'annonce a `DROP TABLE` + `CREATE TABLE AS`. Méthode déjà tranchée le 28/08 : **une ligne de 10 colonnes dans `app_dossier`**, la vue se reconstruit autour. ⚠ **surtout pas `--injecter`** *(163 colonnes réécrites chaque nuit, « réparateur par construction »)* | `app_contact_current` | ⚠ **date de péremption** : le remplissage vient du miroir, il exige que **Hektor vive encore** |
+
+**Ordre : N.1 → N.2 → N.3 → N.4.** N.4 est indépendante des trois premières et peut avancer en
+parallèle ; N.1 commande la forme de N.2 et N.3.
+
+#### Ce qui reste APRÈS, et qui ne fait pas partie de l'annonce
+
+Ce sont les **quatre exceptions** que Frédéric a nommées le 28/09 — elles ne dépendent pas du
+code de l'annonce et gardent leur place dans le plan :
+
+```
+   le registre des mandats            L9 / A.3-technique
+   la generation du numero de mandat  L6  (Hektor le fabrique encore)
+   la signature electronique          A.2 (abonnement Hektor -- ImmoSign)
+   les passerelles de diffusion       A.1
+```
+
+⚠ **Ne pas confondre avec les gestes de `L5`**, qui restent ouverts mais ne bloquent pas
+l'autonomie : prolonger un mandat, les gestes photo *(supprimer, réordonner, choisir la
+principale)*, la fusion de doublons, retirer un mandant, et le ménage des liens « Ouvrir
+Hektor ».
+
+---
+
 **Total : ~3 à 4 mois.**
 
 > ⚠ **CORRECTION DU 21/09, ET ELLE VAUT POUR TOUT LE PLAN.** On écrivait « tout se construit
