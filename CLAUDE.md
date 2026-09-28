@@ -120,7 +120,17 @@ N.1  LA CAMPAGNE DES CHAMPS              mesure seule, aucun code -- BLOQUANTE
             LISTING au DETAIL -> relire texte_principal_titre, pas titre_bien.
             Les 9 AMBIGUS sont le meme risque : relire la mauvaise cible rend
             un verdict faux SANS RIEN SIGNALER.
-     RESTE (a) l'axe A/B/C sur les 136 champs d'EQUIPEMENT, jamais mesures
+     (a) DISSOUTE le 28/09 : AUCUN champ n'est creable sans etre corrigible.
+         HEKTOR_WIZARD_UPDATE_GROUPS existe depuis le 02/06/2026 (a2e8160).
+         Remesure : 177 des 189 couverts par les groupes ; 8 par la voie
+         cleanfield, 3 par applyHektorChauffage. RESTE les 4 mandate_*,
+         qui sont le geste L5 « modifier un mandat existant ».
+         !! Le « 102 champs non modifiables » du plan venait de comparer
+            deux listes ECRITES DANS DEUX LANGUES (creation = vocabulaire
+            Hektor, modification = vocabulaire app) -> ecart de 136.
+            MEME famille d'erreur que « les couleurs ne sont pas des lettres ».
+     ==> N.1 EST CLOSE. La protection ne passe pas par A/B/C mais par le
+         MODELE B : pousser, RELIRE, montrer le verdict. Donc N.2 puis N.3.
 N.2  LE VERDICT AU CARNET                les 4 colonnes que l'affaire a deja
 N.3  LE FRONT ECRIT AU CARNET            il ne capte que 3 GESTES, pas les saisies
 N.4  LE CORPS LOCAL PERSISTANT           26bis-3  ⚠ DATE DE PEREMPTION
