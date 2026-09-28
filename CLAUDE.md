@@ -133,7 +133,22 @@ N.1  LA CAMPAGNE DES CHAMPS              mesure seule, aucun code -- BLOQUANTE
          MODELE B : pousser, RELIRE, montrer le verdict. Donc N.2 puis N.3.
 N.2  LE VERDICT AU CARNET                les 4 colonnes que l'affaire a deja
 N.3  LE FRONT ECRIT AU CARNET            il ne capte que 3 GESTES, pas les saisies
-N.4  LE CORPS LOCAL PERSISTANT           26bis-3  ⚠ DATE DE PEREMPTION
+N.4  LE CORPS LOCAL PERSISTANT           26bis-3
+     !! MESURE 28/09 : POUR UN BIEN VIVANT, LA DOUBLURE EST COMPLETE.
+        189 champs sur 189 presents = 70 colonnes app_dossiers_current
+        + 134 cles du blob + 216 noms sous props/fields.
+        Ce qui trompe, c'est les 70 colonnes : le reste est DANS LE BLOB.
+     !! LE TROU N'EST PAS OUVERT : 0 annonce de la copie manque a la vue
+        (mesure DEUX FOIS, deux chemins). Il s'ouvrira quand Hektor cessera
+        de donner un numero a la naissance -- pas avant.
+     ==> LE VRAI SUJET EST AILLEURS ET PLUS URGENT :
+        le detail des 34 515 ARCHIVES n'existe QU'EN UN EXEMPLAIRE, dans
+        data/hektor.sqlite (3,9 Go). La doublure n'en descend qu'un index
+        de 35 colonnes. Ce n'est pas un oubli (regle « serveur=tout /
+        cloud=biens vivants », et la REGLE 5 protege le miroir).
+        !! MAIS il n'entre PAS dans la sauvegarde auto : niveau 4, --full,
+           « sur demande ». run_backup.ps1 passe --weekly, JAMAIS --full.
+           -> a trancher : l'ajouter, ou confirmer que l'agent OVH le prend.
 ```
 
 Ordre **N.1 → N.2 → N.3** ; **N.4 en parallèle**.
