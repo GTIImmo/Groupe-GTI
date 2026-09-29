@@ -260,9 +260,26 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
           les 24 000. Et il ne bloque RIEN : au moment d'une offre, le worker
           LIT la valeur chez Hektor au lieu de la deduire (correctif du 25/08).
         ⛔ J'AVAIS ECRIT « l'export PROTEXA est bloquant des DEUX phases » :
-          FAUX, c'etait une urgence que j'ai fabriquee. Il reste utile pour la
-          PHASE 2 (clore le registre, expliquer les 23 numeros sans trace).
-          LA PHASE 1 N'EN A PAS BESOIN.
+          FAUX, DEUX FOIS. (1) c'etait une urgence fabriquee ; (2) ce n'est meme
+          pas « un mail » -- PROTEXA a SES PROPRES IDENTIFIANTS, enregistres DANS
+          Hektor (protexa-login / protexa-mdp / protexa-saveProtexa). C'est un
+          compte A TOI, pas un tiers a qui ecrire.
+          ==> il ne sert qu'a UNE chose : savoir OU REPRENDRE LA SERIE le jour ou
+              notre registre remplacera PROTEXA -- donc au DERNIER temps.
+
+   ⭐⭐ LE PRINCIPE, GRAVE PAR FREDERIC LE 29/09 :
+      LE REGISTRE ELECTRONIQUE EST LE DERNIER TEMPS. La phase 1 GARDE le principe
+      actuel sans exception : PROTEXA fabrique le numero, le worker ne change pas,
+      notre table ENREGISTRE et ne decide de rien.
+      -> tout ce qui touche au NUMERO (continuite de la serie, export PROTEXA,
+         compteur verrouille) appartient a ce dernier temps. Pas avant.
+
+   ℹ ET LA DIRECTION ETAIT DEJA PRISE LE 28/08, dans le worker (C.13) :
+      « la cloture du mandat n'ajoute rien de son cote, c'est une ecriture dans
+        SON registre a lui. LE NOTRE DEVIENT LE REGISTRE QUI FAIT FOI. »
+      « ce que ca coute, et c'est assume : tant que Hektor vit, son registre dira
+        le mandat ouvert quand le notre le dira clos. »
+      app_mandat ne fait que donner un CORPS a cette decision.
    F ⛔ (devenue) LA REPARATION est FAITE -> voir plus bas
    F ✅ LA REPARATION, FAITE le 29/09 a 13 h -- ACCORD DE FREDERIC
         push_upgrade_to_supabase.py --rebuild-register-only
