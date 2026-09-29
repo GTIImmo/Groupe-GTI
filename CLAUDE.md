@@ -226,8 +226,30 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
         formule en copie unique (phase2/checks/mandat_disparu.py), patron
         de check_annonce_un_numero. Eprouvee hors du moniteur, sans alerte.
         ⚠ ROUGE DES LE 1er JOUR, et c'est voulu : 80 mandats EN COURS absents.
-   D ⛔ le worker ecrit apres step5 + la doublure  <- REDEMARRAGE DES 4 SERVICES
-   F ⛔ LA REPARATION : reconstruire le registre  <- ACCORD + FENETRE CALME
+   D 🟡 le worker ecrit apres step5  <- la table Supabase est POSEE (53aa132),
+        reste : le push, l'adoption, l'ecriture worker, la doublure
+        ⚠ L'ARCHITECTURE A CHANGE, SUR UNE REMARQUE DE FREDERIC : app_mandat ne
+          vient PAS s'ajouter a cote du registre -- LE REGISTRE DEVIENT SA
+          PROJECTION. Une source, deux robinets (le miroir et l'app), jamais
+          deux copies. C'est le patron de app_affaire_ledger : j'en avais copie
+          la FORME sans copier sa PLACE.
+        audit des 68 colonnes de la vue : 11 seulement viennent du mandat,
+        27 de l'annonce, 15 techniques -> on ne remplace pas la vue, on change
+        la source de ses 11 colonnes.
+   D-bis  LA TAXONOMIE, mesuree le 29/09 (3f99c13)
+        VENTE 23 521 · LOCATION 2 084 · INCONNUE 883 · GESTION 271 · RECHERCHE 63
+        ⚠ `nature` (ce qu'EST le mandat) n'est PAS `famille` (de quel REGISTRE
+          vient le numero : HEKTOR / PROTEXA) -- deux axes, comme les couleurs
+          et les lettres de la carte A1.
+        ✅ LE PERIMETRE EST DEJA JUSTE : les 271 gestion sont toutes sur des
+           annonces de LOCATION (donc dehors), les 63 recherche sur vente ou
+           commerce (donc dedans). Le filtre les separe tout seul.
+        ⚠ la FAMILLE n'est NULLE PART dans le miroir (0 occurrence de PROTEXA
+          dans raw_json, mandats_json, detail) -- elle ne vit que dans l'ecran
+          Hektor (`selectedMandatId` = « 648-PROTEXA »). Je la DEDUIS, donc
+          c'est fragile. L'EXPORT PROTEXA la donnerait de facon certaine.
+   F ⛔ (devenue) LA REPARATION est FAITE -> voir plus bas
+   F ✅ LA REPARATION, FAITE le 29/09 a 13 h -- ACCORD DE FREDERIC
         push_upgrade_to_supabase.py --rebuild-register-only
         elle VIDE le registre puis le refait DEPUIS LE MIROIR ENTIER
         (verifie : dossier_ids=None -> aucun filtre ; c'est elle qui a produit
@@ -235,10 +257,14 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
          rafraichissent du meme coup.
         ⚠ pendant l'operation le registre est VIDE : jamais pendant le run de
           nuit, jamais quand l'agence consulte.
-        ⚠ SANS ELLE, LA SENTINELLE RESTE ROUGE ET TU RECOIS UNE ALERTE PAR JOUR.
-          C'est elle qui fait passer data.mandat_disparu au vert -- et qui prouve
-          la chaine entiere : la table dit vrai, la sentinelle le voit, la
-          reparation corrige, la sentinelle le confirme.
+        RESULTAT : 23 839 -> 24 021 lignes, et PLUS AUCUNE ligne figee au 31/07.
+        77 des 80 mandats en cours recuperes. exit 0.
+        ⭐ ET UNE SECONDE PREUVE DU CORRECTIF DU COPIEUR : la descente de cette
+          table a ajuste sa page deux fois (8 Mo -> 500 lignes, 4 Mo -> 250) --
+          LE SCENARIO EXACT qui le cassait -- et a ramene les 24 021 completes.
+        ⚠ LES 3 « EN COURS » RESTANTS NE SONT PAS DES PERTES : 1 mandat
+          ANTERIEUR sur une annonce qui en a un plus recent, 2 annonces
+          ARCHIVEES dont la date de fin n'est pas encore passee.
 
    LE CHIFFRE, ET IL A ETE CORRIGE TROIS FOIS PAR FREDERIC :
       2 983 absents du registre ... dont 2 348 LOCATIONS, ecartees par sa
