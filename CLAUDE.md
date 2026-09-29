@@ -227,6 +227,18 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
         de check_annonce_un_numero. Eprouvee hors du moniteur, sans alerte.
         ⚠ ROUGE DES LE 1er JOUR, et c'est voulu : 80 mandats EN COURS absents.
    D ⛔ le worker ecrit apres step5 + la doublure  <- REDEMARRAGE DES 4 SERVICES
+   F ⛔ LA REPARATION : reconstruire le registre  <- ACCORD + FENETRE CALME
+        push_upgrade_to_supabase.py --rebuild-register-only
+        elle VIDE le registre puis le refait DEPUIS LE MIROIR ENTIER
+        (verifie : dossier_ids=None -> aucun filtre ; c'est elle qui a produit
+         l'etat du 31/07). Les 635 reviennent ET les 23 091 lignes figees se
+         rafraichissent du meme coup.
+        ⚠ pendant l'operation le registre est VIDE : jamais pendant le run de
+          nuit, jamais quand l'agence consulte.
+        ⚠ SANS ELLE, LA SENTINELLE RESTE ROUGE ET TU RECOIS UNE ALERTE PAR JOUR.
+          C'est elle qui fait passer data.mandat_disparu au vert -- et qui prouve
+          la chaine entiere : la table dit vrai, la sentinelle le voit, la
+          reparation corrige, la sentinelle le confirme.
 
    LE CHIFFRE, ET IL A ETE CORRIGE TROIS FOIS PAR FREDERIC :
       2 983 absents du registre ... dont 2 348 LOCATIONS, ecartees par sa
