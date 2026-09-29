@@ -241,13 +241,28 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
         ⚠ `nature` (ce qu'EST le mandat) n'est PAS `famille` (de quel REGISTRE
           vient le numero : HEKTOR / PROTEXA) -- deux axes, comme les couleurs
           et les lettres de la carte A1.
-        ✅ LE PERIMETRE EST DEJA JUSTE : les 271 gestion sont toutes sur des
-           annonces de LOCATION (donc dehors), les 63 recherche sur vente ou
-           commerce (donc dedans). Le filtre les separe tout seul.
-        ⚠ la FAMILLE n'est NULLE PART dans le miroir (0 occurrence de PROTEXA
-          dans raw_json, mandats_json, detail) -- elle ne vit que dans l'ecran
-          Hektor (`selectedMandatId` = « 648-PROTEXA »). Je la DEDUIS, donc
-          c'est fragile. L'EXPORT PROTEXA la donnerait de facon certaine.
+        ✅ LE PERIMETRE EST DEJA JUSTE, ET FREDERIC L'A CONFIRME JURIDIQUEMENT :
+           les 271 GESTION relevent de la CARTE G (registre-repertoire), pas du
+           registre des mandats de la carte T -- elles doivent donc etre exclues,
+           et elles LE SONT deja : toutes sur des annonces de LOCATION.
+           Les 63 RECHERCHE sont sur vente ou commerce, donc DEDANS. Le filtre
+           sur le type d'offre les separe tout seul, sans le savoir.
+           ➡ RIEN A CHANGER AU PERIMETRE.
+        ✅ LA FAMILLE : C'ETAIT DEJA AUDITE, ET J'AI EU TORT DE LA DIRE FRAGILE.
+           Feuille de route du 24/08 : `params[typeMandat]` vaut « mandat » ou
+           « protexaMandat » -- « faux ami : ce n'est PAS le type juridique mais
+           LA FAMILLE DE REGISTRE ». Et plan l. 1170 : « les deux familles de
+           registre (SIMPLE/EXCLUSIF/ACCORD -> HEKTOR ; libelle francais ->
+           PROTEXA), VERIFIE 10/10 » (25/08).
+           _famille() code EXACTEMENT cette regle. Elle n'est pas inventee.
+        ⚠ Le doute ne porte QUE sur les lignes SANS TYPE : 3 263, dont 2 342
+          locations (hors perimetre, sans importance) et 921 dedans. Pas sur
+          les 24 000. Et il ne bloque RIEN : au moment d'une offre, le worker
+          LIT la valeur chez Hektor au lieu de la deduire (correctif du 25/08).
+        ⛔ J'AVAIS ECRIT « l'export PROTEXA est bloquant des DEUX phases » :
+          FAUX, c'etait une urgence que j'ai fabriquee. Il reste utile pour la
+          PHASE 2 (clore le registre, expliquer les 23 numeros sans trace).
+          LA PHASE 1 N'EN A PAS BESOIN.
    F ⛔ (devenue) LA REPARATION est FAITE -> voir plus bas
    F ✅ LA REPARATION, FAITE le 29/09 a 13 h -- ACCORD DE FREDERIC
         push_upgrade_to_supabase.py --rebuild-register-only
