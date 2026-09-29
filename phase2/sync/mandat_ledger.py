@@ -95,6 +95,15 @@ CREATE TABLE IF NOT EXISTS app_mandat (
     mandants_texte       TEXT,
     note                 TEXT,
     payload_json         TEXT,
+    -- D'OU VIENT LA LIGNE. Deux sources, comme le registre actuel :
+    --   'mandat'  la fiche mandat de Hektor (hektor_mandat) -- complete
+    --   'annonce' le numero porte par l'annonce (hektor_annonce.no_mandat),
+    --             quand AUCUNE fiche mandat n'existe. Type et dates sont vides.
+    -- ⚠ TROUVE PAR LE 4e CONTROLE, le 29/09 : ma premiere version ne lisait que
+    --   hektor_mandat et perdait 2 072 numeros -- dont l'annonce 63003, que le
+    --   registre avait et que la table n'avait pas. Un numero EMIS doit figurer
+    --   au registre, meme si sa fiche n'est jamais redescendue.
+    origine              TEXT,
     -- HORS du ON CONFLICT : protection par omission. L'app possede ce champ
     -- (CHAMPS_APP_MANDAT), le carnet app_mandat_champ_app le porte, et le run
     -- n'a pas a l'ecraser avec ce que Hektor en pense.
@@ -138,8 +147,20 @@ def _famille(type_mandat, numero) -> str:
     return "HEKTOR" if n.isdigit() and len(n) > 6 else "PROTEXA"
 
 
+def _ajouter_colonne_si_absente(con: sqlite3.Connection, nom: str, type_sql: str) -> None:
+    """SQLite n'a pas ADD COLUMN IF NOT EXISTS. On regarde avant d'ajouter.
+
+    Une table qui existe deja ne recoit RIEN de CREATE TABLE IF NOT EXISTS --
+    pas meme une colonne neuve. C'est le piege deja note dans affaire_ledger.py.
+    """
+    colonnes = {r[1] for r in con.execute("PRAGMA table_info(app_mandat)")}
+    if nom not in colonnes:
+        con.execute("ALTER TABLE app_mandat ADD COLUMN %s %s" % (nom, type_sql))
+
+
 def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.executescript(SCHEMA)
+    _ajouter_colonne_si_absente(con, "origine", "TEXT")
     vu = now_iso()
 
     # LE DISTRIBUTEUR. On ignore la moitie haute -- voir la regle 1 en tete.
@@ -192,11 +213,12 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
                 numero_mandat, hektor_mandat_id, famille, type, date_enregistrement,
                 date_debut, date_fin, montant, mandants_texte, note, payload_json,
-                date_cloture, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                date_cloture, first_seen_at, last_seen_at, origine, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'mandat', 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO UPDATE SET
                 app_dossier_id=COALESCE(excluded.app_dossier_id, app_mandat.app_dossier_id),
                 hektor_mandat_id=excluded.hektor_mandat_id,
+                origine='mandat',
                 famille=excluded.famille,
                 type=excluded.type,
                 date_enregistrement=excluded.date_enregistrement,
@@ -218,6 +240,48 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             ),
         )
 
+    # ------------------------------------------------------------------ 2e SOURCE
+    # LE NUMERO PORTE PAR L'ANNONCE, QUAND AUCUNE FICHE MANDAT N'EXISTE.
+    #
+    # C'est ce que fait deja le registre actuel, et c'est ce que ma premiere
+    # version perdait : 2 072 numeros emis dont la fiche n'est jamais redescendue
+    # du detail (le run ne relit pas le detail d'une annonce archivee depuis des
+    # annees). Trouve par le 4e controle : l'annonce 63003 etait au registre et
+    # pas dans la table.
+    #
+    # ⚠ ON N'ECRASE JAMAIS UNE LIGNE VENUE DU MANDAT. La fiche est plus riche
+    #   (type, dates, mandants) ; le numero seul ne doit pas la remplacer. D'ou
+    #   le `DO NOTHING` : la ligne n'est posee que si le couple est inconnu.
+    depuis_annonce = 0
+    for a in con.execute(
+        "SELECT hektor_annonce_id, no_mandat FROM hektor.hektor_annonce"
+        " WHERE TRIM(COALESCE(no_mandat, '')) <> ''"
+    ).fetchall():
+        annonce = str(a["hektor_annonce_id"] or "").strip()
+        numero = str(a["no_mandat"] or "").strip()
+        if not annonce or not numero:
+            continue
+        cle = (annonce, numero)
+        if cle in connus:
+            vus_ce_run.append(cle)
+            continue
+        identifiant = prochain
+        prochain += 1
+        connus.add(cle)
+        depuis_annonce += 1
+        vus_ce_run.append(cle)
+        con.execute(
+            """
+            INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
+                numero_mandat, famille, first_seen_at, last_seen_at, origine,
+                present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'annonce', 1)
+            ON CONFLICT(hektor_annonce_id, numero_mandat) DO NOTHING
+            """,
+            (identifiant, dossiers.get(annonce), annonce, numero,
+             _famille(None, numero), vu, vu),
+        )
+
     sortis = 0
     if full and vus_ce_run:
         con.execute("CREATE TEMP TABLE IF NOT EXISTS _vus(a TEXT, n TEXT)")
@@ -234,7 +298,8 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
 
     con.commit()
     return {"lus": lus, "neufs": neufs, "revus": revus,
-            "sans_numero": sans_numero, "sortis_du_miroir": sortis}
+            "sans_numero": sans_numero, "depuis_annonce": depuis_annonce,
+            "sortis_du_miroir": sortis}
 
 
 def controle(con: sqlite3.Connection) -> None:
@@ -250,6 +315,8 @@ def controle(con: sqlite3.Connection) -> None:
     print("   sortis du miroir (CONSERVES)        : %s" % q("SELECT COUNT(*) FROM app_mandat WHERE present_in_hektor = 0"))
     for famille, n in con.execute("SELECT famille, COUNT(*) FROM app_mandat GROUP BY 1 ORDER BY 2 DESC"):
         print("      famille %-10s              : %s" % (famille, n))
+    for origine, n in con.execute("SELECT origine, COUNT(*) FROM app_mandat GROUP BY 1 ORDER BY 2 DESC"):
+        print("      venu de %-10s              : %s" % (origine, n))
     print("")
     # LE CONTROLE QUI COMPTE : aucun numero ne doit tomber dans la plage de l'app.
     envahis = q("SELECT COUNT(*) FROM app_mandat WHERE app_mandat_id >= %d" % PLAGE_RESERVEE_APP)
@@ -278,7 +345,7 @@ def main() -> int:
         if args.refresh:
             bilan = refresh(con, full=not args.partiel)
             print("REFRESH app_mandat")
-            for k in ("lus", "neufs", "revus", "sans_numero", "sortis_du_miroir"):
+            for k in ("lus", "neufs", "revus", "sans_numero", "depuis_annonce", "sortis_du_miroir"):
                 print("   %-22s : %s" % (k, bilan[k]))
         else:
             con.executescript(SCHEMA)
