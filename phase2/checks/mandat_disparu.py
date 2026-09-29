@@ -1,42 +1,59 @@
 # -*- coding: utf-8 -*-
-"""A.3-tech (29/09/2026) -- UN MANDAT NE DISPARAIT PAS DU REGISTRE. LOCALE.
+"""A.3-tech (29/09/2026) -- UN MANDAT NE DISPARAIT PAS. LOCALE.
 
-CE QU'ELLE SURVEILLE
---------------------
-`app_mandat` est la table DURABLE : elle garde tout, et ne perd rien.
-`app_mandat_register_current` est la VUE de travail, refaite chaque nuit a
-partir des annonces vivantes. Un mandat qui est dans la premiere et pas dans la
-seconde a ete PERDU par le registre.
+CE QU'ELLE SURVEILLE, ET POURQUOI C'EST CELA
+---------------------------------------------
+`app_mandat` est le registre : il garde tout, definitivement. La seule question
+qui compte pour un registre est donc :
 
-POURQUOI ELLE EXISTE
---------------------
-Le mandat etait l'objet le MOINS surveille du projet : UNE sentinelle sur les
-24, et elle regardait autre chose (les biens diffuses sans mandat). Pendant ce
-temps le registre perdait ses lignes depuis le 31/07 sans que rien ne le dise.
-Mesure du 29/09 : 23 091 des 23 840 lignes figees au 31/07, et 635 mandats de
-vente absents -- dont 80 qui courent encore.
+    est-ce qu'il contient toujours TOUT ce qu'on lui a confie ?
 
--- LE FILTRE DES TYPES D'OFFRE N'EST PAS UN DETAIL, C'EST LE COEUR DE LA MESURE.
-   La table porte TOUT, locations comprises (« le serveur recoit tous les
-   types »). Le registre, lui, n'admet que la vente, la vente immo pro et le
-   neuf -- decision de Frederic du 26/08. Compter sans ce filtre annonce
-   2 983 pertes la ou il y en a 635 : le reste est ECARTE VOLONTAIREMENT.
-   C'est exactement l'erreur commise le 29/09, et corrigee par sa question
-   « est-ce que ce ne sont pas des mandats de location ? ».
+-- PREMIERE VERSION, LE MATIN MEME : elle comparait la table au REGISTRE ACTUEL
+   (app_mandat_register_current) et classait les absents en « encore en cours »
+   ou non. Frederic : « je comprends pas en quoi cela nous importe que le mandat
+   soit echu ou non ». DEUX DEFAUTS, et il les a trouves tous les deux.
+
+   1. « ECHU » N'A AUCUN SENS POUR UN REGISTRE. Un mandat de 2019, clos, sur un
+      bien vendu, doit y figurer -- la loi demande dix ans de conservation. Un
+      mandat echu absent est EXACTEMENT le meme trou qu'un mandat en cours
+      absent. Hierarchiser, c'est importer une intuition de metier dans un objet
+      dont la nature est de ne rien hierarchiser.
+
+   2. COMPARER A LA VUE, C'EST MESURER UNE DIFFERENCE VOULUE.
+      app_mandat_register_current est une vue de travail : elle montre le parc,
+      par construction. Qu'elle porte moins que le registre n'est pas un defaut,
+      c'est son role. Et cet ecart DISPARAITRA TOUT SEUL le jour ou la vue lira
+      cette table. Une sentinelle qui surveille une grandeur transitoire ne
+      survit pas a son chantier.
+
+CE QU'ELLE SURVEILLE DONC, ET QUI RESTERA VRAI APRES LA COUPURE
+---------------------------------------------------------------
+    miroir_absents   un mandat du miroir absent de la table   -> la chaine s'est arretee
+    doublons         deux lignes pour un meme couple          -> la cle a cede
+    plage_envahie    un id du run dans la plage de l'app      -> le defaut d'aout
+                                                                 (cinq jours de
+                                                                  creations impossibles)
+
+LE RETARD DE LA VUE EST RENDU EN INFORMATION, JAMAIS EN ALERTE. Il dit « la vue
+est en retard sur la table », ce qui est vrai ET VOULU jusqu'au rebranchement.
 
 CE QU'ELLE REND
 ---------------
-`None` si une des deux tables manque -- et la sonde le DIRA : une mesure
-impossible n'est PAS un zero.
+`None` si une table manque -- et la sonde le DIRA : une mesure impossible n'est
+PAS un zero.
 """
 from __future__ import annotations
 
 import sqlite3
-from datetime import date
 
-# Les trois seuls types d'offre que le registre de l'app admet (26/08).
-# Les locations (2, 11) et le saisonnier (8) restent au serveur.
+# Les trois types d'offre que le registre de l'app admet (decision du 26/08).
+# Ils ne servent QU'A l'information sur le retard de la vue : la table, elle,
+# porte tout, y compris les locations.
 TYPES_ADMIS = ("0", "10", "6")
+
+# La moitie haute est reservee aux mandats nes dans l'app. Le run ne doit JAMAIS
+# y poser un numero -- c'est l'invariant de l'allocateur.
+PLAGE_RESERVEE_APP = 1_000_000
 
 
 def _table_existe(conn: sqlite3.Connection, nom: str) -> bool:
@@ -46,56 +63,78 @@ def _table_existe(conn: sqlite3.Connection, nom: str) -> bool:
 
 
 def mesurer(conn: sqlite3.Connection) -> dict | None:
-    """Les mandats que la table durable a et que le registre n'a pas.
+    """Les trois gardes du registre, plus le retard de la vue en information.
 
-    None si une des deux tables manque : ce n'est PAS un zero.
+    None si app_mandat manque : ce n'est PAS un zero.
     """
     if not _table_existe(conn, "app_mandat"):
         return None
-    if not _table_existe(conn, "app_mandat_register_current"):
-        return None
 
-    au_registre = {
-        (str(a), str(n))
-        for a, n in conn.execute(
-            "SELECT hektor_annonce_id, numero_mandat FROM app_mandat_register_current"
+    lignes = conn.execute("SELECT COUNT(*) FROM app_mandat").fetchone()[0]
+
+    # ① LA CLE A-T-ELLE TENU ?
+    doublons = conn.execute(
+        "SELECT COUNT(*) FROM (SELECT 1 FROM app_mandat"
+        " GROUP BY hektor_annonce_id, numero_mandat HAVING COUNT(*) > 1)"
+    ).fetchone()[0]
+
+    # ② L'ALLOCATEUR A-T-IL TENU ? Le run ne doit rien poser dans la plage de
+    #    l'app. C'est cet invariant qui a cede en aout, cote affaires.
+    plage_envahie = conn.execute(
+        "SELECT COUNT(*) FROM app_mandat WHERE app_mandat_id >= ?",
+        (PLAGE_RESERVEE_APP,),
+    ).fetchone()[0]
+
+    # ③ LA CHAINE A-T-ELLE TOURNE ? Tout mandat du miroir portant une annonce ET
+    #    un numero doit etre dans la table. S'il en manque, l'etape de nuit ne
+    #    passe plus -- et le registre cesse d'etre complet sans rien dire.
+    miroir_absents = None
+    miroir_lu = None
+    try:
+        conn.execute("SELECT 1 FROM hektor.hektor_mandat LIMIT 1")
+        connus = {
+            (str(a), str(n))
+            for a, n in conn.execute(
+                "SELECT hektor_annonce_id, numero_mandat FROM app_mandat")
+        }
+        miroir_absents = 0
+        miroir_lu = 0
+        for annonce, numero in conn.execute(
+            "SELECT hektor_annonce_id, numero FROM hektor.hektor_mandat"
+        ):
+            a = str(annonce or "").strip()
+            n = str(numero or "").strip()
+            if not a or not n:
+                continue          # 94 lignes sans annonce ni numero : ecartees a raison
+            miroir_lu += 1
+            if (a, n) not in connus:
+                miroir_absents += 1
+    except sqlite3.Error:
+        # Le miroir n'est pas attache a cette connexion : on ne devine pas.
+        miroir_absents = None
+
+    # ④ LE RETARD DE LA VUE -- INFORMATION, JAMAIS UNE ALERTE.
+    retard_vue = None
+    if _table_existe(conn, "app_mandat_register_current"):
+        au_registre = {
+            (str(a), str(n))
+            for a, n in conn.execute(
+                "SELECT hektor_annonce_id, numero_mandat FROM app_mandat_register_current")
+        }
+        retard_vue = sum(
+            1
+            for a, n, t in conn.execute(
+                "SELECT hektor_annonce_id, numero_mandat, offre_type FROM app_mandat")
+            if (str(a), str(n)) not in au_registre and str(t or "") in TYPES_ADMIS
         )
-    }
-
-    aujourd_hui = date.today().isoformat()
-    perdus = 0
-    en_cours = 0
-    ecartes = 0
-    sans_type = 0
-    exemples: list[str] = []
-
-    for annonce, numero, type_offre, date_fin in conn.execute(
-        "SELECT hektor_annonce_id, numero_mandat, offre_type, date_fin FROM app_mandat"
-    ):
-        if (str(annonce), str(numero)) in au_registre:
-            continue
-        t = str(type_offre or "")
-        if not t:
-            # Sans type on ne tranche pas : on le COMPTE A PART plutot que de le
-            # ranger d'office du cote des pertes ou des locations.
-            sans_type += 1
-            continue
-        if t not in TYPES_ADMIS:
-            ecartes += 1
-            continue
-        perdus += 1
-        if date_fin and str(date_fin) >= aujourd_hui:
-            en_cours += 1
-            if len(exemples) < 5:
-                exemples.append(f"{annonce}/{numero} jusqu'au {date_fin}")
 
     return {
-        "perdus": perdus,
-        "en_cours": en_cours,
-        "ecartes_locations": ecartes,
-        "sans_type": sans_type,
-        "au_registre": len(au_registre),
-        "exemples": exemples,
+        "lignes": lignes,
+        "doublons": doublons,
+        "plage_envahie": plage_envahie,
+        "miroir_absents": miroir_absents,
+        "miroir_lu": miroir_lu,
+        "retard_vue": retard_vue,
     }
 
 
@@ -107,20 +146,30 @@ if __name__ == "__main__":
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
-    base = Path(__file__).resolve().parents[1] / "phase2.sqlite"
-    cx = sqlite3.connect(f"file:{base.as_posix()}?mode=ro", uri=True)
+    racine = Path(__file__).resolve().parents[2]
+    cx = sqlite3.connect(f"file:{(racine / 'phase2' / 'phase2.sqlite').as_posix()}?mode=ro", uri=True)
+    try:
+        cx.execute("ATTACH DATABASE ? AS hektor", (str(racine / "data" / "hektor.sqlite"),))
+    except sqlite3.Error:
+        pass
     try:
         m = mesurer(cx)
     finally:
         cx.close()
     if m is None:
-        print("NON MESURABLE : une des deux tables manque -- ce n'est pas un zero")
+        print("NON MESURABLE : app_mandat manque -- ce n'est pas un zero")
         raise SystemExit(1)
-    print("UN MANDAT NE DISPARAIT PAS DU REGISTRE")
-    print("   lignes au registre            : %s" % m["au_registre"])
-    print("   PERDUS (types admis)          : %s" % m["perdus"])
-    print("   dont ENCORE EN COURS          : %s" % m["en_cours"])
-    print("   ecartes (locations, voulu)    : %s" % m["ecartes_locations"])
-    print("   sans type d'offre connu       : %s" % m["sans_type"])
-    for e in m["exemples"]:
-        print("      %s" % e)
+    print("UN MANDAT NE DISPARAIT PAS")
+    print("   lignes au registre            : %s" % m["lignes"])
+    print("   doublons sur la cle           : %s   (doit valoir 0)" % m["doublons"])
+    print("   ids dans la plage de l'app    : %s   (doit valoir 0)" % m["plage_envahie"])
+    if m["miroir_absents"] is None:
+        print("   mandats du miroir absents     : NON MESURE (miroir non attache)")
+    else:
+        print("   mandats du miroir absents     : %s sur %s   (doit valoir 0)"
+              % (m["miroir_absents"], m["miroir_lu"]))
+    print("")
+    print("   -- information, jamais une alerte --")
+    print("   retard de la vue de travail   : %s" % m["retard_vue"])
+    print("      (la vue montre le parc ; elle porte moins que le registre,")
+    print("       c'est son role, et cet ecart disparaitra au rebranchement)")

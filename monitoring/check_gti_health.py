@@ -2109,16 +2109,25 @@ class Monitor:
         LA FORMULE N'EST PAS ICI : elle vit dans phase2/checks/mandat_disparu.py,
         seule copie -- meme patron que annonce_un_numero.
 
-        ⚠ LE FILTRE DES TYPES D'OFFRE EST LE COEUR DE LA MESURE. La table porte
-          TOUT, locations comprises ; le registre n'admet que vente, vente immo pro
-          et neuf (decision du 26/08). Compter sans ce filtre annonce 2 983 pertes
-          la ou il y en a 635. L'erreur a ete commise le 29/09 et corrigee par la
-          question de Frederic : « est-ce que ce ne sont pas des locations ? ».
+        ⚠⚠ REECRITE LE JOUR MEME, SUR DEUX QUESTIONS DE FREDERIC.
+          Ma premiere version comparait la table au REGISTRE ACTUEL et classait les
+          absents en « encore en cours » ou non. « Je comprends pas en quoi cela
+          nous importe que le mandat soit echu ou non » -- et il avait raison deux
+          fois : (1) « echu » n'a AUCUN sens pour un registre, qui garde tout
+          pendant dix ans ; un mandat echu absent est le meme trou qu'un mandat en
+          cours absent ; (2) comparer a la VUE, c'est mesurer une difference
+          VOULUE -- elle montre le parc, elle porte moins par construction, et cet
+          ecart disparaitra au rebranchement. Une sentinelle qui surveille une
+          grandeur transitoire ne survit pas a son chantier.
 
-        ⚠ ELLE SERA ROUGE DES LE PREMIER JOUR, ET C'EST VOULU -- meme parti pris que
-          annonce_push_bloque : elle reste rouge tant qu'un humain n'a pas agi. Ici
-          l'action est connue : une reconstruction complete du registre
-          (push_upgrade_to_supabase.py --rebuild-register-only) ramene les 635.
+        ELLE SURVEILLE DONC LES TROIS GARDES DU REGISTRE, qui resteront vraies
+        apres la coupure :
+            miroir_absents  un mandat du miroir absent de la table -> la chaine
+                            de nuit s'est arretee
+            doublons        deux lignes pour un meme couple        -> la cle a cede
+            plage_envahie   un id du run dans la plage de l'app    -> le defaut
+                            d'aout, cinq jours de creations impossibles
+        Le retard de la vue est rendu EN INFORMATION, jamais en alerte.
         """
         db = self.root / "phase2" / "phase2.sqlite"
         try:
@@ -2138,6 +2147,14 @@ class Monitor:
         try:
             conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
             try:
+                # Le miroir porte la garde la plus importante (« aucun mandat du
+                # miroir ne manque »). Sans lui elle serait NON MESUREE -- et une
+                # garde non mesuree n'est pas une garde verte.
+                try:
+                    conn.execute("ATTACH DATABASE ? AS hektor",
+                                 (str(self.root / "data" / "hektor.sqlite"),))
+                except sqlite3.Error:
+                    pass
                 mesure = md.mesurer(conn)
             finally:
                 conn.close()
@@ -2149,17 +2166,30 @@ class Monitor:
             self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "warning",
                      "Mandats disparus : NON MESURABLE (table manquante) -- ce n'est pas un zero",
                      {})
-        elif mesure["en_cours"] > 0:
+        elif mesure["miroir_absents"]:
             self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "critical",
-                     f"Mandats EN COURS absents du registre : {mesure['en_cours']} "
-                     f"(sur {mesure['perdus']} perdus, seuil 0)", mesure)
-        elif mesure["perdus"] > 0:
+                     f"Mandats du miroir absents du registre : {mesure['miroir_absents']} "
+                     f"sur {mesure['miroir_lu']} (seuil 0) -- l'etape de nuit ne passe plus",
+                     mesure)
+        elif mesure["doublons"]:
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "critical",
+                     f"Doublons sur la cle (annonce, numero) : {mesure['doublons']} (seuil 0)",
+                     mesure)
+        elif mesure["plage_envahie"]:
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "critical",
+                     f"Numeros du run dans la plage reservee a l'app : "
+                     f"{mesure['plage_envahie']} (seuil 0) -- le defaut d'aout revient",
+                     mesure)
+        elif mesure["miroir_absents"] is None:
             self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "warning",
-                     f"Mandats absents du registre : {mesure['perdus']} (aucun en cours)", mesure)
+                     f"Registre des mandats : {mesure['lignes']} lignes, cle et plage saines, "
+                     f"mais le miroir n'a PAS ete relu (garde non mesuree)", mesure)
         else:
             self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "ok",
-                     f"Aucun mandat perdu par le registre "
-                     f"({mesure['ecartes_locations']} locations ecartees, c'est voulu)", mesure)
+                     f"Registre des mandats complet : {mesure['lignes']} lignes, "
+                     f"0 manquant sur {mesure['miroir_lu']} du miroir "
+                     f"(vue de travail en retard de {mesure['retard_vue']}, c'est voulu)",
+                     mesure)
 
     def check_contacts_satellites(self) -> None:
         """24/09/2026 -- LES TABLES SATELLITES SUIVENT-ELLES LE CONTACT ? SUPABASE.
