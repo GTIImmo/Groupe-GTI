@@ -1290,8 +1290,13 @@ def main() -> None:
         stale_ids = stale_remote_ids()
 
     # C.9-c : AVANT le frein de securite, et donc avant toute suppression -- les
-    # cinq tables effacees plus bas (fiche, detail, travaux, diffusion, registre)
-    # lisent toutes stale_ids : un seul filtre les couvre.
+    # QUATRE tables effacees plus bas (fiche, detail, travaux, diffusion) lisent
+    # toutes stale_ids : un seul filtre les couvre.
+    # ⚠ ELLES ETAIENT CINQ JUSQU'AU 29/09. Le REGISTRE en est sorti (A.3-tech) :
+    #   un registre CONSERVE, c'est sa definition. Il effacait les mandats des
+    #   annonces vendues ou archivees, et personne ne les reecrivait -- 635
+    #   mandats de vente perdus, dont 80 en cours. Voir le commentaire detaille
+    #   a l'endroit de la suppression.
     stale_ids, annonces_app_epargnees = separer_annonces_app_en_attente(
         stale_ids, fetch_local_app_range_ids())
     if annonces_app_epargnees:
@@ -1574,7 +1579,32 @@ def main() -> None:
             for row in [*current_dossiers, *current_mandat_register_rows]
             if row.get("hektor_annonce_id") is not None
         })
-        register_replace_dossier_ids = sorted(set(stale_ids) | (set(targeted_dossier_ids) if targeted_push else set()))
+        # ⚠⚠ A.3-tech (29/09/2026) -- LE REGISTRE NE SUIT PLUS `stale_ids`.
+        #
+        # CE QUI SE PASSAIT. `stale_ids` porte les annonces qui ont QUITTE le parc
+        # vivant (vendues, archivees). Cette ligne effacait donc leurs lignes de
+        # registre -- et comme elles ne sont plus vivantes, elles ne figurent pas
+        # dans `current_mandat_register_rows` : PERSONNE ne les reecrivait.
+        # Mesure du 29/09 : 23 091 des 23 840 lignes du registre sont figees au
+        # 31/07 (la derniere reconstruction complete), et 635 mandats de VENTE
+        # lui manquent -- dont 80 qui courent ENCORE aujourd'hui.
+        #
+        # POURQUOI LE REGISTRE ETAIT DANS LA LISTE. Le commentaire de C.9-c, plus
+        # haut, dit que « les cinq tables effacees plus bas (fiche, detail,
+        # travaux, diffusion, registre) lisent toutes stale_ids : un seul filtre
+        # les couvre ». C'est juste pour les quatre premieres -- une fiche qui
+        # part en archive n'a plus rien a faire dans les tables du parc vivant.
+        # Ce ne l'est PAS pour la cinquieme : un registre CONSERVE, c'est sa
+        # definition meme. Un mandat signe ne disparait pas parce que le bien
+        # s'est vendu -- c'est precisement a ce moment-la qu'il compte.
+        #
+        # CE QUI RESTE. La suppression par `hektor_annonce_id` juste en dessous
+        # n'est PAS touchee : elle vise les annonces qu'on REECRIT dans la foulee
+        # (elles sont dans `current_mandat_register_rows`), donc pas de doublon.
+        # Et un push cible garde son droit d'effacer les dossiers qu'il vise.
+        #
+        # RETOUR ARRIERE : remettre `set(stale_ids) |` devant. Une seule ligne.
+        register_replace_dossier_ids = sorted(set(targeted_dossier_ids) if targeted_push else set())
         if args.full_rebuild:
             client.delete_all_rows(path="app_mandat_register_current", filter_expr="register_row_id=not.is.null")
         else:
