@@ -1107,6 +1107,7 @@ class Monitor:
             ("sqlite_files", self.check_sqlite_files),
             ("doublures", self.check_doublures),
             ("annonce_un_numero", self.check_annonce_un_numero),
+            ("mandat_disparu", self.check_mandat_disparu),
             ("contacts_identite", self.check_contacts_identite),
             ("contacts_satellites", self.check_contacts_satellites),
             ("local_logs", self.check_local_logs),
@@ -2097,6 +2098,68 @@ class Monitor:
             self.add("data.annonce_un_numero", "data_quality", "annonce", "absolute", "ok",
                      f"Une annonce, un numero : 0 ecart sur {mesure['supabase']} "
                      f"({mesure['en_attente']} en attente de Hektor)", mesure)
+
+    def check_mandat_disparu(self) -> None:
+        """A.3-tech (29/09/2026) -- UN MANDAT NE DISPARAIT PAS DU REGISTRE. LOCALE.
+
+        Le mandat etait l'objet le MOINS surveille du projet : UNE sentinelle sur
+        les 24, et elle regardait autre chose. Pendant ce temps le registre perdait
+        ses lignes depuis le 31/07 sans que rien ne le dise.
+
+        LA FORMULE N'EST PAS ICI : elle vit dans phase2/checks/mandat_disparu.py,
+        seule copie -- meme patron que annonce_un_numero.
+
+        ⚠ LE FILTRE DES TYPES D'OFFRE EST LE COEUR DE LA MESURE. La table porte
+          TOUT, locations comprises ; le registre n'admet que vente, vente immo pro
+          et neuf (decision du 26/08). Compter sans ce filtre annonce 2 983 pertes
+          la ou il y en a 635. L'erreur a ete commise le 29/09 et corrigee par la
+          question de Frederic : « est-ce que ce ne sont pas des locations ? ».
+
+        ⚠ ELLE SERA ROUGE DES LE PREMIER JOUR, ET C'EST VOULU -- meme parti pris que
+          annonce_push_bloque : elle reste rouge tant qu'un humain n'a pas agi. Ici
+          l'action est connue : une reconstruction complete du registre
+          (push_upgrade_to_supabase.py --rebuild-register-only) ramene les 635.
+        """
+        db = self.root / "phase2" / "phase2.sqlite"
+        try:
+            chemin = str(self.root / "phase2" / "checks")
+            if chemin not in sys.path:
+                sys.path.insert(0, chemin)
+            import mandat_disparu as md
+        except Exception as exc:  # pragma: no cover
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "warning",
+                     f"Mesure « un mandat ne disparait pas » introuvable ({type(exc).__name__})", {})
+            return
+        if not db.exists():
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "warning",
+                     "Base phase2 introuvable : mandats disparus non mesurables",
+                     {"path": str(db)})
+            return
+        try:
+            conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                mesure = md.mesurer(conn)
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "warning",
+                     f"Base phase2 illisible pour la mesure ({type(exc).__name__})", {})
+            return
+        if mesure is None:
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "warning",
+                     "Mandats disparus : NON MESURABLE (table manquante) -- ce n'est pas un zero",
+                     {})
+        elif mesure["en_cours"] > 0:
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "critical",
+                     f"Mandats EN COURS absents du registre : {mesure['en_cours']} "
+                     f"(sur {mesure['perdus']} perdus, seuil 0)", mesure)
+        elif mesure["perdus"] > 0:
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "warning",
+                     f"Mandats absents du registre : {mesure['perdus']} (aucun en cours)", mesure)
+        else:
+            self.add("data.mandat_disparu", "data_quality", "mandat", "absolute", "ok",
+                     f"Aucun mandat perdu par le registre "
+                     f"({mesure['ecartes_locations']} locations ecartees, c'est voulu)", mesure)
 
     def check_contacts_satellites(self) -> None:
         """24/09/2026 -- LES TABLES SATELLITES SUIVENT-ELLES LE CONTACT ? SUPABASE.
