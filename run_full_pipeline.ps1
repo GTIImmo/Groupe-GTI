@@ -709,6 +709,42 @@ Invoke-Step -Label "phase2 affaire ledger refresh+push" -Arguments @(
     "--refresh",
     "--push"
 ) -WorkerKey "supabase.affaire_ledger"
+# ============================================================================
+# A.3-tech phase 1 (29/09/2026) -- LE REGISTRE DES MANDATS, CHEZ NOUS.
+#
+# POURQUOI ICI, JUSTE APRES LE LEDGER D'AFFAIRES : meme nature, meme besoin.
+# Les deux lisent le miroir rafraichi par normalize_source, et les mandats ont
+# en plus besoin de l'etape « backfill mandats depuis mandats_json » (bien plus
+# haut) qui remplit hektor_mandat. Les deux conditions sont tenues ici.
+#
+# CE QU'ELLE REPARE. app_mandat_register_current n'est pas un registre mais une
+# vue de travail, effacee et refaite a chaque push, et FILTREE SUR LE STATUT de
+# l'annonce. Une annonce vendue ou archivee en SORT, et rien ne l'y remet.
+# Mesure du 29/09 : 23 091 de ses 23 840 lignes sont figees au 31/07, et
+# 635 mandats de VENTE lui manquent -- dont 80 qui courent encore aujourd'hui.
+# app_mandat, elle, ne perd rien : delete-never, et l'id ne bouge jamais.
+#
+# ETAPE NON BLOQUANTE, deliberement. Elle est NEUVE et PERSONNE ne la lit encore :
+# si elle echoue, le run continue exactement comme avant. On ne peut pas
+# aggraver, seulement ameliorer -- meme raisonnement que la doublure ci-dessus.
+#
+# -- PAS DE DOUBLURE POUR L'INSTANT, ET C'EST VOULU. Le ledger d'affaires fait
+#    descendre app_affaire_ledger avant de s'en servir, parce que l'app y ECRIT
+#    dans la journee. Rien n'ecrit encore dans app_mandat : la table n'existe
+#    meme pas dans Supabase. Ajouter cette descente maintenant ferait echouer une
+#    etape chaque nuit pour rien. Elle viendra AVEC l'ecriture du worker
+#    (phase 1, etape D), pas avant.
+#
+# -- LA TABLE PORTE TOUT, Y COMPRIS LES LOCATIONS. C'est la regle du projet
+#    (« le serveur recoit tous les types »). C'est la VUE qui filtrera, le jour
+#    ou elle lira cette table : publier telle quelle mettrait 2 348 mandats de
+#    location dans un registre qui ne doit pas les contenir.
+# ============================================================================
+Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -Arguments @(
+    "phase2\sync\mandat_ledger.py",
+    "--refresh"
+)
+
 
 # 11/09/2026 -- L'ENTRETIEN DE LA LECTURE CONSOLE DES COMPROMIS.
 #
