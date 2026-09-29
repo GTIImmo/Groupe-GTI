@@ -104,6 +104,15 @@ CREATE TABLE IF NOT EXISTS app_mandat (
     --   registre avait et que la table n'avait pas. Un numero EMIS doit figurer
     --   au registre, meme si sa fiche n'est jamais redescendue.
     origine              TEXT,
+    -- LE TYPE D'OFFRE DE L'ANNONCE, ET IL EST INDISPENSABLE.
+    -- Cette table porte TOUT, locations comprises -- c'est la regle du projet,
+    -- « le serveur recoit tous les types ». Mais le REGISTRE, lui, n'en admet
+    -- que trois (TYPES_OFFRE_APP : 0 vente, 10 vente immo pro, 6 neuf).
+    -- ⚠ SANS CETTE COLONNE ON ANNONCE DES PERTES QUI N'EN SONT PAS : le 29/09
+    --   j'ai compte « 2 983 mandats absents du registre ». Frederic a demande
+    --   si c'etaient des locations. C'ETAIT LE CAS POUR 2 348 D'ENTRE EUX,
+    --   ecartes par sa decision du 26/08. La vraie perte etait 635.
+    offre_type           TEXT,
     -- HORS du ON CONFLICT : protection par omission. L'app possede ce champ
     -- (CHAMPS_APP_MANDAT), le carnet app_mandat_champ_app le porte, et le run
     -- n'a pas a l'ecraser avec ce que Hektor en pense.
@@ -161,7 +170,17 @@ def _ajouter_colonne_si_absente(con: sqlite3.Connection, nom: str, type_sql: str
 def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.executescript(SCHEMA)
     _ajouter_colonne_si_absente(con, "origine", "TEXT")
+    _ajouter_colonne_si_absente(con, "offre_type", "TEXT")
     vu = now_iso()
+
+    # Le type d'offre de chaque annonce, lu une fois. Il ne sert pas a filtrer
+    # ici -- la table porte tout -- mais a ce que le CONTROLE sache distinguer
+    # une perte reelle d'une location volontairement ecartee.
+    offres = {}
+    for a in con.execute(
+        "SELECT hektor_annonce_id, offre_type FROM hektor.hektor_annonce"
+    ):
+        offres[str(a["hektor_annonce_id"])] = str(a["offre_type"] or "")
 
     # LE DISTRIBUTEUR. On ignore la moitie haute -- voir la regle 1 en tete.
     prochain = (con.execute(
@@ -213,11 +232,12 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
                 numero_mandat, hektor_mandat_id, famille, type, date_enregistrement,
                 date_debut, date_fin, montant, mandants_texte, note, payload_json,
-                date_cloture, first_seen_at, last_seen_at, origine, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'mandat', 1)
+                date_cloture, first_seen_at, last_seen_at, offre_type, origine, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'mandat', 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO UPDATE SET
                 app_dossier_id=COALESCE(excluded.app_dossier_id, app_mandat.app_dossier_id),
                 hektor_mandat_id=excluded.hektor_mandat_id,
+                offre_type=excluded.offre_type,
                 origine='mandat',
                 famille=excluded.famille,
                 type=excluded.type,
@@ -237,6 +257,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 _famille(m["type"], numero), m["type"], m["date_enregistrement"],
                 m["date_debut"], m["date_fin"], m["montant"], m["mandants_texte"],
                 m["note"], m["raw_json"], m["date_cloture"], vu, vu,
+                offres.get(annonce),
             ),
         )
 
@@ -264,6 +285,16 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         cle = (annonce, numero)
         if cle in connus:
             vus_ce_run.append(cle)
+            # ⚠ LA LIGNE EXISTE DEJA -- on ne la reecrit PAS (sa source, la fiche,
+            #   est plus riche). Mais le type d'offre, lui, doit etre pose : sans
+            #   lui le controle ne sait pas distinguer une location d'une perte,
+            #   et il a deja annonce « 2 983 perdus » pour 263 reels.
+            con.execute(
+                "UPDATE app_mandat SET offre_type = ?"
+                " WHERE hektor_annonce_id = ? AND numero_mandat = ?"
+                "   AND (offre_type IS NULL OR offre_type = '')",
+                (offres.get(annonce), annonce, numero),
+            )
             continue
         identifiant = prochain
         prochain += 1
@@ -273,13 +304,13 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         con.execute(
             """
             INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
-                numero_mandat, famille, first_seen_at, last_seen_at, origine,
-                present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'annonce', 1)
+                numero_mandat, famille, first_seen_at, last_seen_at, offre_type,
+                origine, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'annonce', 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO NOTHING
             """,
             (identifiant, dossiers.get(annonce), annonce, numero,
-             _famille(None, numero), vu, vu),
+             _famille(None, numero), vu, vu, offres.get(annonce)),
         )
 
     sortis = 0
@@ -300,6 +331,62 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     return {"lus": lus, "neufs": neufs, "revus": revus,
             "sans_numero": sans_numero, "depuis_annonce": depuis_annonce,
             "sortis_du_miroir": sortis}
+
+
+# Les trois seuls types d'offre que le registre de l'app admet. Decision de
+# Frederic du 26/08 : les locations (2, 11) et le saisonnier (8) restent au
+# serveur et n'apparaissent PAS dans l'app.
+TYPES_ADMIS_AU_REGISTRE = ("0", "10", "6")
+
+LIBELLE_OFFRE = {
+    "0": "0  vente", "2": "2  LOCATION", "6": "6  neuf", "8": "8  SAISONNIER",
+    "10": "10 vente immo pro", "11": "11 LOCATION immo pro",
+}
+
+
+def comparer_au_registre(con: sqlite3.Connection) -> None:
+    """Ce que la table a et que le registre n'a pas -- EN SEPARANT LES LOCATIONS.
+
+    ⚠ POURQUOI CETTE SEPARATION EXISTE. Le 29/09 j'ai annonce « 2 983 mandats
+      perdus par le registre ». Frederic : « est-ce que ce ne sont pas des
+      mandats de location ? ». C'etait le cas pour 2 348 d'entre eux -- ecartes
+      par sa propre decision du 26/08, donc PAS des pertes. La vraie perte
+      etait 635. Un total qui melange les deux ne veut rien dire.
+    """
+    try:
+        vue = {(str(a), str(n)) for a, n in con.execute(
+            "SELECT hektor_annonce_id, numero_mandat FROM app_mandat_register_current")}
+    except sqlite3.OperationalError:
+        print("   (registre absent de cette base : comparaison impossible)")
+        return
+
+    import collections
+    from datetime import date
+    aujourd_hui = date.today().isoformat()
+    par_type = collections.Counter()
+    perdus_reels = 0
+    encore_en_cours = 0
+    for a, n, t, fin in con.execute(
+        "SELECT hektor_annonce_id, numero_mandat, offre_type, date_fin FROM app_mandat"
+    ):
+        if (str(a), str(n)) in vue:
+            continue
+        type_offre = str(t or "")
+        par_type[type_offre] += 1
+        if type_offre in TYPES_ADMIS_AU_REGISTRE:
+            perdus_reels += 1
+            if fin and fin >= aujourd_hui:
+                encore_en_cours += 1
+
+    print("")
+    print("ABSENTS DU REGISTRE, par type d'offre de l'annonce :")
+    for t, n in par_type.most_common():
+        admis = "  <- type ADMIS : vraie perte" if t in TYPES_ADMIS_AU_REGISTRE else "  (ecarte volontairement)"
+        print("   %-22s %6s%s" % (LIBELLE_OFFRE.get(t, t or "(inconnu)"), n, admis))
+    print("")
+    print("   TOTAL brut                          : %s" % sum(par_type.values()))
+    print("   PERTE REELLE (types admis)          : %s" % perdus_reels)
+    print("   dont mandats ENCORE EN COURS        : %s" % encore_en_cours)
 
 
 def controle(con: sqlite3.Connection) -> None:
@@ -323,6 +410,8 @@ def controle(con: sqlite3.Connection) -> None:
     print("   DANS LA PLAGE RESERVEE A L'APP      : %s   (doit valoir 0)" % envahis)
     if envahis:
         print("   >> L'ALLOCATEUR EST FAUX. C'est le defaut d'aout, a l'identique.")
+
+    comparer_au_registre(con)
 
 
 def main() -> int:
