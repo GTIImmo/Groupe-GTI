@@ -198,6 +198,51 @@ classe A, en *critical*, seuil zéro.
 **Quand ces quatre-là sont faites, il ne reste que** : le registre des mandats *(`L9`)* · la
 génération du numéro de mandat *(`L6`)* · la signature *(`A.2`)* · les passerelles *(`A.1`)*.
 
+### 🔴 LE CHANTIER SUIVANT — *le registre des mandats* (cadre pose le 29/09)
+
+> **DEUX PHASES, dans l'ordre de Frederic** -- il a corrige le mien : je faisais
+> dependre le petit chantier du gros.
+
+```
+PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE        ~4-5 j   ⚠ PERISSABLE
+   !! HEKTOR ET PROTEXA NE BOUGENT PAS : le numero continue de venir d'eux,
+      par le worker, exactement comme aujourd'hui.
+   1  arreter la perte      le push supprime les lignes des annonces qui
+                            quittent le parc (stale_ids) et ne les remet pas
+   2  app_mandat + app_mandat_id   plage reservee, delete-never
+   3  rattrapage des 24 995 mandats du miroir
+                            cle = couple (annonce, mandat), VERIFIEE unique
+   4  le worker ecrit AUSSI chez nous apres step5  -> les deux sens
+   5  une sentinelle mandat_disparu  (le mandat n'en a qu'UNE sur 24)
+   ==> AUCUN RISQUE JURIDIQUE : tant que PROTEXA fait le numero, c'est LUI
+       le registre legal. Le notre n'est qu'un outil de travail.
+
+PHASE 2  LE REGISTRE ELECTRONIQUE LEGAL         ~3-4 sem.  ⛔ CONFORMITE
+   decret 72-678 art. 65 : « cote sans discontinuite », le numero « reporte
+   sur l'exemplaire qui reste en la possession du mandant », forme
+   electronique permise « dans les conditions des articles 1365 et suivants
+   du code civil » (depuis le decret du 21/10/2005).
+   !! AUCUNE regle technique dans les textes : le code civil exige
+      (1) identifier de facon certaine l'auteur  (2) garantir l'INTEGRITE
+      -> c'est une obligation de PREUVE, pas une liste a cocher.
+   !! TROIS CORRECTIONS imposees par la recherche du 29/09 :
+      · le prefixe « RE- » est probablement INTERDIT (« ni prefixe ni suffixe »)
+      · repartir de 1 est risque -> CONTINUER la serie ou PROTEXA s'arrete
+      · l'horodatage tiers n'est PAS optionnel : sans date certaine,
+        LE MANDAT EST NUL
+   Sanctions : 2 ans + 3 000 € + retrait de carte + mandat nul (pas d'honoraires)
+```
+
+⭐ **CE QU'IL NE FAUT PAS TOUCHER** : les 5 etapes du worker SONT l'assistant
+PROTEXA, rejoue faute d'API. La note du 18/05 : la separation est VOLONTAIRE,
+« Hektor consomme un vrai numero a la validation ». **Et la porte unique existe
+deja** : le front appelle UNE RPC, envoie la description du mandat, et ne recoit
+JAMAIS de numero -> le jour de la bascule, le front ne change pas d'une ligne.
+
+⛔ **NE DEPEND PAS DE MOI** : l'export de la serie PROTEXA (un mail, bloquant --
+23 numeros sans trace chez nous) · la validation par un juriste · le choix du
+tiers d'horodatage.
+
 ### Les trois fronts ouverts — *ils avancent séparément*
 
 | front | où c'en est | ce qui reste |
