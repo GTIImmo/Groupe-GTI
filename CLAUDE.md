@@ -204,16 +204,35 @@ génération du numéro de mandat *(`L6`)* · la signature *(`A.2`)* · les pass
 > dependre le petit chantier du gros.
 
 ```
-PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE        ~4-5 j   ⚠ PERISSABLE
-   !! HEKTOR ET PROTEXA NE BOUGENT PAS : le numero continue de venir d'eux,
-      par le worker, exactement comme aujourd'hui.
-   1  arreter la perte      le push supprime les lignes des annonces qui
-                            quittent le parc (stale_ids) et ne les remet pas
-   2  app_mandat + app_mandat_id   plage reservee, delete-never
-   3  rattrapage des 24 995 mandats du miroir
-                            cle = couple (annonce, mandat), VERIFIEE unique
-   4  le worker ecrit AUSSI chez nous apres step5  -> les deux sens
-   5  une sentinelle mandat_disparu  (le mandat n'en a qu'UNE sur 24)
+PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
+   !! HEKTOR ET PROTEXA NE BOUGENT PAS : le numero vient toujours d'eux.
+
+   A ✅ app_mandat, table durable, DORMANTE            ffee94d · 7183934 · 39374bf
+        26 822 lignes = 24 750 fiches mandat + 2 072 numeros portes par
+        l'annonce (2e source, trouvee par le 4e controle : le registre en a
+        DEUX, je n'en lisais qu'une).
+        CLE = (annonce, numero_mandat). ⚠ PAS hektor_mandat_id : Hektor range
+        le MEME mandat sous plusieurs ids (annonce 1972/n° 17925 -> 3 ids).
+        Controles : 0 doublon · 0 trou · 0 dans la plage reservee ·
+        REJEU a empreinte identique (d96c01ec...).
+   B ✅ branchee dans le run                                        e26b2e4
+        UNE etape neuve, non bloquante, apres le ledger d'affaires.
+        ⚠ PAS de doublure pour l'instant : rien n'ecrit encore dans
+          app_mandat cote Supabase -- elle viendra AVEC l'etape D.
+   C ✅ le registre ne suit plus stale_ids -- il CONSERVE            6c790eb
+        LA SEULE modification d'existant. Les QUATRE autres tables la suivent
+        toujours. Retour arriere : remettre `set(stale_ids) |`, un jeton.
+   E ✅ la sentinelle data.mandat_disparu                           40edc35
+        formule en copie unique (phase2/checks/mandat_disparu.py), patron
+        de check_annonce_un_numero. Eprouvee hors du moniteur, sans alerte.
+        ⚠ ROUGE DES LE 1er JOUR, et c'est voulu : 80 mandats EN COURS absents.
+   D ⛔ le worker ecrit apres step5 + la doublure  <- REDEMARRAGE DES 4 SERVICES
+
+   LE CHIFFRE, ET IL A ETE CORRIGE TROIS FOIS PAR FREDERIC :
+      2 983 absents du registre ... dont 2 348 LOCATIONS, ecartees par sa
+      decision du 26/08 -> LA VRAIE PERTE EST 635, dont 80 EN COURS.
+      ⚠ la table porte TOUT ; c'est la VUE qui filtre. Publier la table telle
+        quelle mettrait 2 348 locations dans un registre qui les exclut.
    ==> AUCUN RISQUE JURIDIQUE : tant que PROTEXA fait le numero, c'est LUI
        le registre legal. Le notre n'est qu'un outil de travail.
 
