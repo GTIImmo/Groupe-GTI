@@ -104,6 +104,17 @@ CREATE TABLE IF NOT EXISTS app_mandat (
     --   registre avait et que la table n'avait pas. Un numero EMIS doit figurer
     --   au registre, meme si sa fiche n'est jamais redescendue.
     origine              TEXT,
+    -- LA NATURE DU MANDAT -- LUE, JAMAIS DEVINEE.
+    -- ⚠ A NE PAS CONFONDRE AVEC `famille`, ET C'EST TOUT L'ENJEU : deux axes
+    --   differents, comme les « couleurs » et les « lettres » de la carte A1.
+    --      famille = DE QUEL REGISTRE vient le numero   (HEKTOR / PROTEXA)
+    --      nature  = CE QU'EST le mandat                (VENTE / GESTION / ...)
+    -- Mesure du 29/09 : 23 559 VENTE · 260 GESTION · 38 RECHERCHE · 1 LOCATION,
+    -- et 2 960 sans indice -- dont 2 342 sur des annonces de location.
+    -- ⚠ LES « INCONNUE » RESTENT INCONNUES. Les ranger d'office en VENTE serait
+    --   exactement l'erreur que Frederic a corrigee trois fois le 29/09 :
+    --   compter comme perdu ce qui etait ecarte volontairement.
+    nature               TEXT,
     -- LE TYPE D'OFFRE DE L'ANNONCE, ET IL EST INDISPENSABLE.
     -- Cette table porte TOUT, locations comprises -- c'est la regle du projet,
     -- « le serveur recoit tous les types ». Mais le REGISTRE, lui, n'en admet
@@ -143,6 +154,37 @@ def _open_local() -> sqlite3.Connection:
     return con
 
 
+# Les types d'offre qui designent une LOCATION (ou du saisonnier). Ils ne sont
+# pas dans le registre de l'app, mais la table les porte -- et leur nature doit
+# etre nommee plutot que laissee « inconnue ».
+TYPES_LOCATION = ("2", "11", "8")
+
+
+def _nature(type_mandat, note, offre_type) -> str:
+    """CE QU'EST le mandat. L'ordre compte, et il est justifie ligne a ligne.
+
+    La note porte « Objet mandat : ... » -- c'est la seule source qui nomme un
+    mandat de gestion ou de recherche. Elle passe donc AVANT le type d'offre :
+    les 260 mandats de gestion portent tous sur un bien en location, et leur
+    nature est GESTION, pas LOCATION.
+    """
+    n = (note or "").upper()
+    if "MANDAT DE GESTION" in n or "MANDAT DE GERANCE" in n:
+        return "GESTION"
+    if "MANDAT DE RECHERCHE" in n:
+        return "RECHERCHE"
+    t = (type_mandat or "").strip().upper()
+    if t in ("SIMPLE", "EXCLUSIF", "ACCORD") or "VENTE" in t:
+        return "VENTE"
+    if str(offre_type or "") in TYPES_LOCATION:
+        return "LOCATION"
+    if "MANDAT DE LOCATION" in n:
+        return "LOCATION"
+    if "MANDAT DE VENTE" in n:
+        return "VENTE"
+    return "INCONNUE"
+
+
 def _famille(type_mandat, numero) -> str:
     """HEKTOR ou PROTEXA. Le type tranche ; le numero confirme."""
     t = (type_mandat or "").strip().upper()
@@ -171,6 +213,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.executescript(SCHEMA)
     _ajouter_colonne_si_absente(con, "origine", "TEXT")
     _ajouter_colonne_si_absente(con, "offre_type", "TEXT")
+    _ajouter_colonne_si_absente(con, "nature", "TEXT")
     vu = now_iso()
 
     # Le type d'offre de chaque annonce, lu une fois. Il ne sert pas a filtrer
@@ -232,12 +275,13 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
                 numero_mandat, hektor_mandat_id, famille, type, date_enregistrement,
                 date_debut, date_fin, montant, mandants_texte, note, payload_json,
-                date_cloture, first_seen_at, last_seen_at, offre_type, origine, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'mandat', 1)
+                date_cloture, first_seen_at, last_seen_at, offre_type, nature, origine, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'mandat', 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO UPDATE SET
                 app_dossier_id=COALESCE(excluded.app_dossier_id, app_mandat.app_dossier_id),
                 hektor_mandat_id=excluded.hektor_mandat_id,
                 offre_type=excluded.offre_type,
+                nature=excluded.nature,
                 origine='mandat',
                 famille=excluded.famille,
                 type=excluded.type,
@@ -258,6 +302,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 m["date_debut"], m["date_fin"], m["montant"], m["mandants_texte"],
                 m["note"], m["raw_json"], m["date_cloture"], vu, vu,
                 offres.get(annonce),
+                _nature(m["type"], m["note"], offres.get(annonce)),
             ),
         )
 
@@ -290,10 +335,11 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             #   lui le controle ne sait pas distinguer une location d'une perte,
             #   et il a deja annonce « 2 983 perdus » pour 263 reels.
             con.execute(
-                "UPDATE app_mandat SET offre_type = ?"
-                " WHERE hektor_annonce_id = ? AND numero_mandat = ?"
-                "   AND (offre_type IS NULL OR offre_type = '')",
-                (offres.get(annonce), annonce, numero),
+                "UPDATE app_mandat SET offre_type = COALESCE(NULLIF(offre_type,''), ?),"
+                "                       nature = COALESCE(NULLIF(nature,''), ?)"
+                " WHERE hektor_annonce_id = ? AND numero_mandat = ?",
+                (offres.get(annonce), _nature(None, None, offres.get(annonce)),
+                 annonce, numero),
             )
             continue
         identifiant = prochain
@@ -305,12 +351,13 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             """
             INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
                 numero_mandat, famille, first_seen_at, last_seen_at, offre_type,
-                origine, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'annonce', 1)
+                nature, origine, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'annonce', 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO NOTHING
             """,
             (identifiant, dossiers.get(annonce), annonce, numero,
-             _famille(None, numero), vu, vu, offres.get(annonce)),
+             _famille(None, numero), vu, vu, offres.get(annonce),
+             _nature(None, None, offres.get(annonce))),
         )
 
     sortis = 0
@@ -404,6 +451,8 @@ def controle(con: sqlite3.Connection) -> None:
         print("      famille %-10s              : %s" % (famille, n))
     for origine, n in con.execute("SELECT origine, COUNT(*) FROM app_mandat GROUP BY 1 ORDER BY 2 DESC"):
         print("      venu de %-10s              : %s" % (origine, n))
+    for nature, n in con.execute("SELECT nature, COUNT(*) FROM app_mandat GROUP BY 1 ORDER BY 2 DESC"):
+        print("      nature  %-10s              : %s" % (nature, n))
     print("")
     # LE CONTROLE QUI COMPTE : aucun numero ne doit tomber dans la plage de l'app.
     envahis = q("SELECT COUNT(*) FROM app_mandat WHERE app_mandat_id >= %d" % PLAGE_RESERVEE_APP)
