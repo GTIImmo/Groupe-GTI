@@ -226,6 +226,32 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
         formule en copie unique (phase2/checks/mandat_disparu.py), patron
         de check_annonce_un_numero. Eprouvee hors du moniteur, sans alerte.
         ⚠ ROUGE DES LE 1er JOUR, et c'est voulu : 80 mandats EN COURS absents.
+   G ✅ LA TABLE SAIT REFAIRE LE REGISTRE                30/09  cccaeac · 0522f4a · 2bc628d
+        4 colonnes neuves -- versions_json / version_count / avenants_json /
+        avenant_count -- parce que L'ECRAN LES LIT DEJA (« +N versions »,
+        les avenants). Sans elles la bascule ferait perdre deux fonctions.
+        ⚠⚠ ET LA SOURCE ETAIT FAUSSE, l'outil de controle l'a montre :
+           app_mandat lisait hektor_mandat, qui ACCUMULE ; le registre lit le
+           tableau `mandats` du DETAIL (« les mandats de CE bien, MAINTENANT »).
+           Sur 28 couples la table voyait deux VERSIONS la ou il y a deux
+           MANDATS DIFFERENTS partageant un numero (n° 14856 : 2011/59 000 EUR
+           et 2022/160 000 EUR) -- et choisissait entre deux dossiers etrangers.
+        TROIS SOURCES, de la plus riche a la plus pauvre, la pauvre ne COMBLE :
+           detail 24 666 · hektor_mandat 88 (ce que le detail a oublie) ·
+           no_mandat 2 072 = 26 826 lignes, 0 neuf, 0 renumerotation.
+        ⚠ « 0 » VAUT VIDE (171 montants, 189 dans l'historique) -- piege du DPE.
+          MAIS LE NETTOYAGE NE VOTE PAS : nettoyer avant le score changeait le
+          CLASSEMENT donc la version retenue (annonce 59279). Le score note la
+          matiere brute, le « 0 » ne tombe qu'a l'ecriture.
+        MESURE, registre_depuis_app_mandat.py sur les 24 025 lignes :
+           ce qu'on PERDRAIT 0 · le GAIN 453 · ecart sur 13 colonnes / 14 : 0
+           la 14e (historique) : 189 ecarts, 189 sur 189 sont « 0 » -> vide
+        sentinelle inchangee : doublons 0 · plage 0 · miroir_absents 0
+        ==> IL RESTE : le push (⛔), l'oeil serveur<->cloud, la bascule des
+            11 colonnes de la vue (⛔), la doublure, l'ecriture worker (⛔).
+            LA VUE ET SES 4 FONCTIONS NE SONT PAS TOUCHEES : elle lit UNE
+            table, on change seulement d'ou le fabricant tire ses colonnes.
+
    D 🟡 le worker ecrit apres step5  <- la table Supabase est POSEE (53aa132),
         reste : le push, l'adoption, l'ecriture worker, la doublure
         ⚠ L'ARCHITECTURE A CHANGE, SUR UNE REMARQUE DE FREDERIC : app_mandat ne
