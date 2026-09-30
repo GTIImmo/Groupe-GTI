@@ -548,9 +548,66 @@ OUVERTES : Q2 acquereurs (projection recommandee) · Q4 mandants d'affaire
        alors que le SERVEUR en connait 58 598 sur 58 604. Index incomplet,
        pas une perte. A TRAITER A PART.
 
-RESTE : le worker ecrit un lien durable (⛔ + redemarrage) · « retirer un
-mandant », le geste qui n'existe nulle part · la projection des acquereurs ·
-l'index des 3 136 biens.
+CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
+   A ⛔ LE REGISTRE DISTINGUE DEUX ABSENCES -- le plus urgent, et c'est MOI
+        qui l'ai ouvert : « Hektor ne le montre plus » n'est PAS « on l'a
+        supprime ». Quatre chemins effacent un lien (worker : annonce, contact ;
+        serveur : delete_local_annonce, delete_local_contact) et AUCUN ne
+        connait app_relation. Ma vue ne filtre pas sur present_in_hektor :
+        elle montrerait un lien supprime. 0 degat aujourd'hui, le 1er contact
+        supprime le produit.
+
+   B ⛔ LE NUMERO HEKTOR DE LA PERSONNE -- DATE DE PEREMPTION
+        Les autres registres portent les DEUX numeros de CHAQUE objet qu'ils
+        nomment. app_relation nomme deux objets et n'a celui de Hektor que
+        pour le BIEN. (Trouve par Frederic, 30/09.)
+        Mesure : 96 070 contacts au registre, 45 088 encore traduisibles.
+        Le run LIT ce numero chaque nuit puis le JETTE. Il ne manque pas parce
+        qu'on ne l'a pas : parce qu'on le jette.
+
+   C 🔺 LA PROJECTION DES ACQUEREURS -- REMONTEE, mon refus reposait sur un
+        chiffre FAUX. J'avais annonce « projeter perdrait 791 lignes ».
+        ⛔⛔ TROIS ERREURS DANS MA MESURE, dont une grosse :
+          `acquereurs_json` est tantot une LISTE, tantot un OBJET SEUL, et mon
+          code faisait `if not isinstance(items, list): continue` -- il
+          SAUTAIT EN SILENCE 11 151 affaires sur 30 358 (37 %).
+          parties lues 23 798 -> 34 949 en realite.
+        LE VRAI CHIFFRE : le ledger connait 16 080 des 16 253 couples (98,9 %),
+        CO-ACQUEREURS COMPRIS (affaires a 2, 3, 4, 5 et 6 acquereurs).
+        RESTE 180 couples, TOUS des compromis -- non compris a ce jour.
+        ⚠ ET LA TRADUCTION S'ENRICHIT : le ledger connait des correspondances
+          que app_contact_identite_app ignore (ex. 458 -> 10000231).
+          62 038 -> 63 222 ; non traduisibles 828 -> 189.
+        ➡ LECON : « un total ne se compare pas, il se DEPLIE ». J'ai compare
+          23 798 a 34 925, vu un ecart, et conclu -- sans deplier d'ou il
+          venait. Il venait de MON code.
+
+   D ⬜ LES 45 LIENS « APP SEULE » Y ENTRENT (app_relation_app_seule, le filet
+        existe et dit lui-meme « jamais reinjectes »).
+
+   E ⬜ LES 3 FONCTIONS RESTANTES AU DEPOT (app_update_mandant_contact_optimistic
+        + les 2 fabriques de travail) -- elles n'existent qu'EN PRODUCTION.
+
+⭐ AJOUTE PAR FREDERIC LE 30/09 -- « CREER UN CONTACT ET LE RATTACHER »
+   « Ajouter un mandant est un worker qui doit AUSSI fonctionner. »
+   ETAT MESURE :
+      le worker SAIT le faire           case create_hektor_mandant_contact  ✅
+      la RPC pose le travail            app_create_mandant_contact_optimistic ✅
+      la ligne DURABLE                  ❌ RIEN -- « ni contact ni lien avant
+                                           Hektor » (audit relations, geste 2)
+   POURQUOI : a l'instant du geste, le contact n'a AUCUN numero -- ni le notre
+   ni celui de Hektor. Il n'y a rien a quoi rattacher.
+   ⭐ ET LA PIECE MANQUANTE EXISTE DEJA : `app_create_contact_optimistic` fait
+     NAITRE un contact dans l'app avec NOTRE numero (L4-b, prouve en reel deux
+     fois le 21/09 -- identite 10 000 002). Le geste mandant ne s'en sert pas.
+   LE CHANTIER : que app_create_mandant_contact_optimistic fasse NAITRE le
+   contact d'abord (notre numero), PUIS pose le lien durable avec ce numero,
+   PUIS le travail pour le worker -- qui ne change pas d'une ligne.
+   ⚠ ORDRE IMPOSE : le contact AVANT le lien. Un lien ne se pose pas sur
+     quelqu'un qui n'existe pas encore.
+   ⚠ ET « RETIRER UN MANDANT » N'EXISTE TOUJOURS NULLE PART -- c'est un ecran
+     a faire, pas une table. Frederic a tranche le 30/09 : le retrait PART chez
+     Hektor tant qu'il vit, et la ligne RESTE chez nous, datee.
 ```
 
 ### Les trois fronts ouverts — *ils avancent séparément*
