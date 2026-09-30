@@ -95,6 +95,7 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | **24/09** | ⛔→✅ **Un contact neuf passait une nuit sous son numéro Hektor** (question de Frédéric : « POURQUOI ??? ») : le registre le numérote APRÈS le build, et le push l'envoyait sous l'ancien numéro — ce que l'app lui accrochait le jour même restait derrière (67 rapprochements mesurés). **Seconde passe du build** après le registre, avant le push, seulement s'il y a des contacts à traduire. Répétée sur copie : 8/8 traduits, 0 autre clé changée, 0 second numéro. J'avais écrit « normal » : c'était un défaut toléré, pas une règle |
 | **24/09** | ✅ **D6 CODÉ** : `contacts_app_seuls.py` pose désormais `absent_depuis` sur ce qui n'est plus « connu de l'app seule » — seulement après une relecture complète et pleine (planchers côté app). Aucun lecteur ne s'en sert : observation pure. Répété sur base jetable : 26 lignes périmées marquées, 0 objet « app seule » ce jour |
 | **24/09** | ✅ **C.9-d CODÉ — le carnet des liens** (`app_relation_registry`, dans le build complet, SAVEPOINT) : chaque lien noté avec **la recette exacte de son identifiant**, prise avant la réécriture du rôle. Doublure, lu par personne avant C.9-f. Répétition sur copie : **167 486 / 167 486 recettes refabriquent leur clé**, 0 conflit, 9 sans n° de bien. **D6 (expiration du recensement) reste à faire, go séparé** |
+| **30/09** | ⛔ **LA RELATION EST LE SEUL OBJET À UN SEUL ROBINET** *(audit en lecture seule, parti d'un bug : fiche contact vide ouverte depuis une annonce)*. Le lien a son **identité** chez nous (C.9-d/f) mais pas son **existence** : la table est refaite chaque nuit depuis 6 sources Hektor, l'app n'écrit qu'une ligne provisoire, aucun contrat d'autorité, 0 sentinelle. **Exigence de Frédéric** : *un registre des relations autonome, mis à jour selon un contrat d'autorité entre le run de nuit Hektor et les workers de l'app* (ajouter un mandant, un acquéreur, un mandant depuis le registre des affaires). **L2 « relations » était surestimé.** ➡ section **« LE REGISTRE DES RELATIONS DEVIENT AUTONOME »** + `notice/AUDIT_REGISTRE_RELATIONS_AUTONOME_2026-09-30.md` · ⏳ **5 questions à trancher avant tout code** |
 
 ---
 
@@ -112,12 +113,12 @@ l'app**, sauf une transaction.
 |---|---|---|---|---|
 | **L0** ✅ | **Ne plus rien perdre** *(fait le 20/09)* | **C.1'** la relecture efface une saisie en conflit *(`push_single_annonce_to_supabase.py`, ligne 582)* · le renvoi partiel sans fin · **C.4** supprimer un contact laisse ses rapprochements · **C.17-ter** 13 étapes du run sans sonde, sonde « IP bannie », script de reprise versionné | **~3 j** | Aucune saisie ne disparaît sans trace, et un arrêt se voit |
 | **L1** ✅ | **Les numéros à la naissance** *(fait le 21/09, option B — voir le journal)* | **5b** bascule de la clé des contacts · **4-suite** clé des recherches · clé des relations sur les numéros app · **E.4 / 6.1-6.3** le distributeur, dans Supabase · la case « numéro app » dans les tables de création | **1,5–2,5 sem** | Un contact, une recherche, un bien naissent dans l'app avec leur numéro |
-| **L2** ✅ | **Les corps chez l'app** ⚠ *dernière chance* — **fait le 21/09** : contacts, relations, couples, inventaire, **et 26bis-RECHERCHES** *(trouvée le jour même par l'audit d'autonomie)* ; **26bis-3** rejoint L3 ; ⚠ **le filet couvre désormais les quatre objets** — l'audit d'autonomie des recherches a trouvé que le filet existe pour l'annonce, le contact et la relation, **pas pour la recherche** *(notice/AUDIT_RECHERCHES_AUTONOMIE_2026-09-21.md)* | **26bis-3** · **26bis-CONTACTS** · **26bis-RELATIONS** · **26bis-COUPLES** · **INVENTAIRE** *(les 16 tables refaites chaque nuit)* | **2–3 sem** | Le serveur tient un objet que le miroir ignore |
+| **L2** ✅ | **Les corps chez l'app** ⚠ *dernière chance* — **fait le 21/09** : contacts, relations *(⚠ **CORRIGÉ LE 30/09 : pour la relation, seul un OBSERVATEUR a été livré** — son identité est venue avec C.9-d/f, son EXISTENCE reste au miroir ; voir « LE REGISTRE DES RELATIONS DEVIENT AUTONOME »)*, couples, inventaire, **et 26bis-RECHERCHES** *(trouvée le jour même par l'audit d'autonomie)* ; **26bis-3** rejoint L3 ; ⚠ **le filet couvre désormais les quatre objets** — l'audit d'autonomie des recherches a trouvé que le filet existe pour l'annonce, le contact et la relation, **pas pour la recherche** *(notice/AUDIT_RECHERCHES_AUTONOMIE_2026-09-21.md)* | **26bis-3** · **26bis-CONTACTS** · **26bis-RELATIONS** · **26bis-COUPLES** · **INVENTAIRE** *(les 16 tables refaites chaque nuit)* | **2–3 sem** | Le serveur tient un objet que le miroir ignore |
 | **L3** ✅ | **La règle de récence, par CHAMP** *(fait le 21/09)* *(renommé le 21/09 : ce n'est pas un interrupteur)* | **26bis-3** la carte des champs *(où vit la valeur de chacun : 5 en colonne, 38 dans le grand bloc, 9 à vérifier)* · **la protection par CHAMP** au lieu du bien entier · **Chantier 2** *(2.3, 2.4)* la même règle dans le run de nuit · la relecture à l'ouverture · **C.16** *(825 contacts disparus)* | **1–2 sem** | Le run de nuit **confirme**, il n'écrase plus |
 | **L4-b′** | **FERMER LA PORTE** *(décidé le 22/09, **avant L4-c et avant C.9**)* — l'audit a trouvé **9 sortants qui envoient un numéro à Hektor sans passer par `cibleHektorContact`**, dont 5 sans aucun garde-fou. ⚠ **C'est un problème de C.9, pas de L4-c** : ce sont exactement les chemins qu'emprunte une annonce créée depuis l'app *(mandants, acquéreurs, mandat)* | les 9 sortants traduisent · `normalizeMandatContactIds` **traduit** au lieu d'écarter *(l. 14130 — « le contact rejoindra la liste » : rien ne le fait rejoindre)* · la traduction de la qualification cesse d'être **jetée** *(l. 13390)* | **~1 j** | Aucun numéro d'app ne peut partir chez Hektor |
 | **L4-c** | **UNE PERSONNE, UN NUMÉRO** *(décidé le 21/09, **avant C.9**)* — la doublure `app_contact_id` devient l'identité du contact, comme `app_dossier_id` l'est pour l'annonce depuis le 19/08. ⚠ **Le registre des recherches bouge DANS LE MÊME GESTE**. ⚠ **ET TOUT CE QUE L'AUDIT DU 22/09 A RÉVÉLÉ EN FAIT PARTIE** *(exigence de Frédéric, 22/09 — liste ci-dessous)* | ① L4-b′ d'abord · ② répétition sur **copie** + un run par-dessus + le compte des orphelins · ③ passage réel, **code et données la même nuit** · ④ **les 3 dépendances hors base** *(jetons signés 60 j, numéro figé dans le JSON d'agenda, lien « Ouvrir Hektor » hors job)* · ⑤ **les 12 endroits ambigus**, dont le garde-fou `isdigit()` qui ne distinguera plus rien, le nom `hektor_contact_id` **paramètre public de l'API**, et les sentinelles `''` / `'invite'` / une adresse email · ⑥ la 3ᵉ empreinte `duplicate_group_id` · puis la clé de la recherche elle-même | **~2 j** *(hors ④⑤ à chiffrer)* | Un contact porte un seul numéro, et il survivra à Hektor |
 | **L4** 🟡 | **La création part de l'app** — **le contact y arrive**, prouvé deux fois en réel le 21/09 *(36 s puis 51 s de bout en bout ; identité 10 000 002, case cible 605 453, une seule fiche)* | **L4-a** ✅ distributeurs et plages · **L4-b** ✅ le contact naît dans l'app *(case cible `4e82f25` · substitution d'identité dans le build + sonde « une personne, une fiche »)* · **C.9** l'annonce ✅ *(a→f codés, e3 allumé le 25/09)* · **C.9-couple** ⚠ **DATE DE PÉREMPTION : à écrire pendant que Hektor vit — son 1er pas est une mesure d'1 h (une fiche ou deux ?)** · **26bis-TRANSACTIONS** · **4.3** *(contact + recherche + mandant d'un coup)* | **1,5–2 sem** | On crée **sans attendre Hektor** ; il reçoit ensuite, et **une personne = une fiche** |
-| **L5** | **Les gestes manquants** | **E.0-bis** *(mandat existant, photos, fusion de doublons)* · ⛔ ~~**RENDRE MODIFIABLE CE QU'ON NE SAIT QUE CREER**~~ **— MESURE REFUTEE LE 25/09** : **0 champ creable sans etre corrigible** (annonce : 178 creables, 182 modifiables, 173 communs ; les 5 restants ont tous un chemin propre — contact : 8 / 24 / 0). La modification par groupes existe depuis le **02/06/2026**. Le chiffre du 21/09 venait d'une comparaison entre deux listes incompletes ecrites en deux vocabulaires. ➡ `notice/AUDIT_L5_GESTES_MANQUANTS_2026-09-25.md`. *(mesure d'origine du 21/09 : **102 champs d'annonce, 40 de contact** -- creables, jamais corrigibles depuis l'app. **PAS la recherche** : ajout et archivage seuls passent par Hektor, le reste est autonome depuis le 20/08)* · **C.13** clôture du mandat · supprimer une annonce · contrôle de baisse de prix et validation **lus dans l'app** · reprise des brouillons · retirer les liens « Ouvrir Hektor » | ~~2–3 sem~~ **6–10 j** *(revu le 25/09 : son gros morceau n'existait pas)* | Plus aucun écran ne renvoie vers Hektor |
+| **L5** | **Les gestes manquants** | **E.0-bis** *(mandat existant, photos, fusion de doublons)* · ⛔ ~~**RENDRE MODIFIABLE CE QU'ON NE SAIT QUE CREER**~~ **— MESURE REFUTEE LE 25/09** : **0 champ creable sans etre corrigible** (annonce : 178 creables, 182 modifiables, 173 communs ; les 5 restants ont tous un chemin propre — contact : 8 / 24 / 0). La modification par groupes existe depuis le **02/06/2026**. Le chiffre du 21/09 venait d'une comparaison entre deux listes incompletes ecrites en deux vocabulaires. ➡ `notice/AUDIT_L5_GESTES_MANQUANTS_2026-09-25.md`. *(mesure d'origine du 21/09 : **102 champs d'annonce, 40 de contact** -- creables, jamais corrigibles depuis l'app. **PAS la recherche** : ajout et archivage seuls passent par Hektor, le reste est autonome depuis le 20/08)* · ⭐ **LE MANDAT, MESURÉ LE 30/09 APRÈS `A.3-technique`** : son registre est désormais au niveau de l'annonce sur la **mémoire** *(corps durable 26 826 lignes, copie cloud + doublure, 2 sentinelles sur 2 axes, le numéro entre au registre à la seconde)* — **et très en retard sur les GESTES** : **2 gestes de worker contre 9** pour l'annonce et 9 pour le contact, **1 RPC contre 9 et 17**, **2 sentinelles contre 5 et 11**, et le carnet `app_mandat_champ_app` ne porte **qu'un seul champ, 2 lignes** *(`mandat_date_cloture`)*. On sait **créer** un mandat, pas le **corriger** : type, dates, montant, mandants ne sont modifiables depuis aucun écran — l'avenant ne sait changer **que le prix**. ⚠ **Pas de chaîne optimiste** non plus *(ni `_conflit` ni `_push_bloque`)*, parce qu'aucune valeur de mandat ne remonte chez Hektor. ⛔ **À ne pas confondre avec `L9`** : le **numéro** vient toujours de PROTEXA, et c'est une décision de Frédéric du 29/09, pas un manque · **C.13** clôture du mandat · supprimer une annonce · contrôle de baisse de prix et validation **lus dans l'app** · reprise des brouillons · retirer les liens « Ouvrir Hektor » | ~~2–3 sem~~ **6–10 j** *(revu le 25/09 : son gros morceau n'existait pas)* | Plus aucun écran ne renvoie vers Hektor |
 | **L6** | **Ce que Hektor fait remonter** | **D.0** documents et mandats signés · état de la signature · état de la diffusion · numéro de mandat | **1–1,5 sem** | Les trois exceptions remontent proprement, le reste ne remonte plus |
 | **L7** | **Les fichiers chez l'app** | **D.1a** · **D.1** · **D.2** · garder la copie de chaque photo ajoutée | **1–2 sem** | Afficher un document ou une photo ne dépend plus de Hektor |
 | **L8** | **Exploitation et bascule** | **C.4-bis** élargi *(création, numéro de mandat, photo, document)* · **E.3** · **0.3 / E.1** rattrapage des recherches, dont **19-R2** la veille · **E.2** | **~1 sem** | Les négociateurs travaillent dans l'app |
@@ -134,7 +135,7 @@ Mesuré dans le code et les deux bases le 28/09.
 
 | | contact | recherche | transaction | **annonce** |
 |---|---|---|---|---|
-| naît dans l'app | ✅ | ✅ | ✅ | ✅ *(e3, 25/09)* |
+| naît dans l'app | ✅ *(par l'annuaire)* · ⛔ *créé comme mandant : NON (30/09)* | ⚠ *la RPC n'écrit qu'une ligne PROVISOIRE (30/09) — à confirmer* | ✅ | ✅ *(e3, 25/09)* |
 | **corps local persistant** | ✅ `app_contact_current` *(`CREATE IF NOT EXISTS`)* | ✅ | ✅ `app_affaire_ledger` | ⛔ **`app_view_generale` est `DROP` + `CREATE` chaque nuit** |
 | registre de clés | ✅ | ✅ `app_search_registry` | — | ✅ `app_relation_registry` *(C.9-d)* |
 | **classes A/B/C des champs** | implicite *(3 champs que Hektor ignore)* | sans objet *(porte fermée, C.3)* | ✅ **mesurées** *(campagne 0.1, close 18/09)* | ⛔ **jamais faite** |
@@ -172,9 +173,9 @@ Mesuré dans le code et les deux bases le 28/09.
 | | ✅ **CE QUI N'EST PAS À FAIRE, ET QUE J'AI FAILLI CASSER.** J'ai proposé de *« sortir le numéro du worker et le mettre derrière une porte unique »*. **Frédéric : « s'il y a 5 portes, il y a sûrement une raison ».** Il avait raison : **les 5 étapes SONT l'assistant PROTEXA**, rejoué pas à pas faute d'API — et la note du **18/05** dit que la séparation est **volontaire** : *« Hektor **consomme un vrai numéro** au moment de la validation »*, *« si aucun mandant n'est détecté, le job passe en erreur **sans consommer de numéro** »*. | ⭐ **ET LA PORTE UNIQUE EXISTE DÉJÀ, DEPUIS MAI** : le front appelle **une seule RPC** *(`app_console_create_mandat_auto_number_job`)*, envoie la **description** du mandat *(type, dates, durée, mandants, négociateur)* et **ne reçoit jamais de numéro**. ➡ **le jour de la bascule, le front ne change pas d'une ligne.** L'anticipation demandée est faite par construction |
 | | ⛔ **CE QUI NE DÉPEND PAS DE MOI, ET QUI BLOQUE LA PHASE 2** : ① **demander à PROTEXA l'export complet de sa série** *(un mail)* — bloquant, et c'est le seul moyen de savoir **où reprendre la numérotation** ; **23 numéros de la série n'ont aucune trace chez nous** *(mesuré le 28/09)* ; ② **faire valider la forme légale par un juriste** — elle dimensionne l'inaltérabilité et l'horodatage ; ③ **choisir le tiers d'horodatage** *(un abonnement)*. | ⏳ **Les lots de la phase 1 n'attendent aucune des trois.** Ils peuvent commencer tout de suite |
 | **AUDIT FINAL** ✅ | ⭐ **L'ANNONCE N'EST PAS AU NIVEAU DES AUTRES OBJETS : ELLE EST AU-DESSUS** *(28/09, tout mesuré dans le code et les deux bases)*. **gestes du worker 15** *(contact 6 · recherche 3 · relation 1 · transaction 4)* · **tables Supabase 17** *(12 · 6 · 1 · 9)* · **RPC optimistes vivantes 6** *(3 · 2 · 2 · 3)* · corps durable en local **189/189**. | ✅ **DEUX CHOSES QU'ELLE SEULE SAIT FAIRE** : ① **détecter un envoi partiel** — sa file porte `partial` + `skipped_fields`, **15 colonnes contre 13** pour le contact et la recherche ; ② **un œil dédié** *(`annonce_un_numero`, `C.9-b`)*, 0 écart sur 13 439 |
-| | ⚠⚠ **CHIFFRE PÉRIMÉ CORRIGÉ : « 5 workers sur 16 écrivent d'abord dans l'app » DATAIT DU 29/08.** Sept RPC optimistes ont été construites depuis *(archiver, restaurer, affecter le négociateur, créer un contact, créer un mandant, mettre à jour un mandant, créer une recherche)*. **Vérifié qu'aucune n'est dormante : les 15 sont appelées par le front.** ➡ **la vraie couverture est 13 SUR 16**. | ✅ **Et les 3 manquantes sont VOLONTAIRES** : ce sont les trois **suppressions**, exclues par l'arbitrage du 30/08 — *« une suppression n'est pas une correction, c'est un événement : l'annonce s'en va, il n'y a plus rien à comparer »* |
+| | ⚠⚠ **CHIFFRE PÉRIMÉ CORRIGÉ : « 5 workers sur 16 écrivent d'abord dans l'app » DATAIT DU 29/08.** Sept RPC optimistes ont été construites depuis *(archiver, restaurer, affecter le négociateur, créer un contact, créer un mandant, mettre à jour un mandant, créer une recherche)*. **Vérifié qu'aucune n'est dormante : les 15 sont appelées par le front.** ➡ **la vraie couverture est 13 SUR 16**. ⚠ **NUANCE DU 30/09** : « créer un mandant » et « rattacher un mandant » n'écrivent qu'une ligne **PROVISOIRE** de lien, jamais la ligne durable — pour la relation, « écrire d'abord » n'est pas atteint. | ✅ **Et les 3 manquantes sont VOLONTAIRES** : ce sont les trois **suppressions**, exclues par l'arbitrage du 30/08 — *« une suppression n'est pas une correction, c'est un événement : l'annonce s'en va, il n'y a plus rien à comparer »* |
 | | ✅ **LES 5 SENTINELLES NE SONT PAS UN RETARD SUR LES 10 DU CONTACT — il faut les déplier** : les **3 de base** *(conflit · push_bloqué · sans_numéro)* sont là des deux côtés ; l'annonce en a **deux de plus** *(partielle · un_numéro)* que le contact n'a pas ; et les **7 supplémentaires du contact** surveillent les **doublons et les fiches de couple** — un problème qui **n'existe pas** pour l'annonce. | ➡ même famille d'erreur que le reste de la journée : **un total ne se compare pas, il se déplie**. Comparés tels quels, 5 contre 10 disait « retard » ; dépliés, ils disent **l'inverse** |
-| | ⚠ **LA SEULE VRAIE FAIBLESSE TROUVÉE, ET ELLE N'EST PAS SUR L'ANNONCE : `RELATION`.** **1 table** *(`app_relation_provisional`)*, **0 sentinelle**, **pas de file d'attente**. Un lien mandant se crée par RPC optimiste *(`app_link_mandant_optimistic`, vivante)*, mais **personne ne surveille qu'il arrive chez Hektor**. | ⚠ **NOTÉ, PAS ENCHAÎNÉ** — c'est hors du sujet « annonces » *(règle « rester sur le plan d'autonomie »)*. ⏳ à reprendre après `L9` |
+| | ⚠ **LA SEULE VRAIE FAIBLESSE TROUVÉE, ET ELLE N'EST PAS SUR L'ANNONCE : `RELATION`.** **1 table** *(`app_relation_provisional`)*, **0 sentinelle**, **pas de file d'attente**. Un lien mandant se crée par RPC optimiste *(`app_link_mandant_optimistic`, vivante)*, mais **personne ne surveille qu'il arrive chez Hektor**. | ⚠ **NOTÉ, PAS ENCHAÎNÉ** — c'est hors du sujet « annonces » *(règle « rester sur le plan d'autonomie »)*. ⏳ à reprendre après `L9` · ➡ **AUDITÉE EN PROFONDEUR LE 30/09 — voir « LE REGISTRE DES RELATIONS DEVIENT AUTONOME »** : le trou est plus large qu'une sentinelle, le lien n'existe que par le miroir |
 | | ✅✅ **CONCLUSION : LE SUJET « ANNONCES » PEUT ÊTRE CLOS.** Il y reste **deux gestes de confort** *(supprimer/réordonner une photo · modifier un mandat existant)*, qui **ne périment pas**, et les **quatre exceptions** connues. | ➡ **la suite utile n'est pas l'annonce, c'est ce qui PÉRIME** : `L9` le registre des mandats · les liens publics *(11bis)* · `C.9-couple` |
 | **N.4** ⚠ | ✅✅ **MESURÉ LE 28/09, ET LE RÉSULTAT EST MEILLEUR QUE L'ÉNONCÉ : POUR UN BIEN VIVANT, LA DOUBLURE EST **COMPLÈTE**.** Les **189** champs du worker sont **tous** présents dans la copie descendue de Supabase — **189 présents, 0 absent**. Répartition : **70** colonnes `app_dossiers_current` *(la façade)* + **134** clés de `detail_payload_json` + **216** noms sous `props` / `fields`. | ⚠ **CE QUI TROMPE, C'EST LES 70 COLONNES** : on regarde la façade en croyant voir la maison. Équipements, diagnostics, terrain, copropriété, textes vivent **dans le blob**, à trois niveaux. Même piège que le « 180 absents » de `N.1-(b)` le matin même |
 | | ✅ **ET LE TROU DE `N.4` N'EST PAS OUVERT AUJOURD'HUI — mesuré DEUX FOIS, par deux chemins indépendants** *(jointure SQL, puis comparaison par ensembles)* : **0 annonce de la copie manque à la vue**, sur 13 439. Et ce ne peut pas être autrement tant que **chaque annonce reçoit un numéro Hektor à la naissance** *(vérifié : 0 sur 13 439 sans numéro)*. ➡ **le trou s'ouvrira le jour où Hektor cessera d'en donner, pas avant.** | *(La vue porte 61 286 et la copie 13 439 : la vue garde tout depuis l'origine, la copie ne porte que les vivantes. Les 47 847 d'écart sont les archives, qui ont leurs propres tables.)* |
@@ -251,6 +252,173 @@ suppression d'annonce, reprise d'un brouillon : tout dans l'app ou exception adm
 **RDV et visites** *(audit fait le 19/09 : tout est construit, presque rien n'est utilisé ;
 les visites Hektor ne sont importées nulle part)* · **le rapprochement automatique**
 *(automatique pur ou validé en un clic · seuil 75 ou 80 · base RGPD · relances)*.
+
+---
+
+## 🔗 LE REGISTRE DES RELATIONS DEVIENT AUTONOME — *audité le 30/09, AUCUN CODE*
+
+> **Pour le chat de chantier : lire CETTE section, puis la note complète**
+> `notice/AUDIT_REGISTRE_RELATIONS_AUTONOME_2026-09-30.md` *(mesures, lignes de code,
+> historique)*. **Rien n'est décidé tant que Frédéric n'a pas répondu aux 5 questions du
+> point ⑦.** Audit limité à l'objet RELATION ; les autres objets ne sont pas mesurés.
+
+### ① Le point de départ — un bug à l'écran
+
+Fiche contact de **Julien SAURA** ouverte depuis l'annonce V790062411 : *« Aucune annonce
+liée »*, alors que l'annonce le montre mandant. **Les données sont justes** (3 liens sous son
+identité `10058265`). La fiche annonce passe le **n° Hektor** `110090` ; `loadContactById`
+cherche sous les deux numéros, **`loadContactRelations` et `loadContactSearches` non**
+(`App.tsx:13060`). C'est la décision **G-6 du 23/09** (« cohérentes par construction »),
+**jamais vérifiée sur ce chemin** et **figée par un test** (`test_genants_front.cjs:83`).
+En tirant ce fil, on a trouvé le vrai sujet :
+
+### ② La situation, en simple
+
+```
+LE LIEN A SON NUMERO CHEZ NOUS            OUI  carnet app_relation_registry (C.9-d, C.9-f)
+LE LIEN EXISTE PARCE QUE NOUS LE DISONS   NON  la table est VIDEE puis REFAITE chaque nuit
+                                               depuis 6 sources Hektor
+L'APP ECRIT UN LIEN DURABLE               NON  une ligne PROVISOIRE, purgee sous 24 h
+LE WORKER ECRIT UN LIEN DURABLE           NON  il sait seulement EFFACER (suppression)
+CONTRAT D'AUTORITE HEKTOR <-> APP         AUCUN
+SENTINELLE                                AUCUNE
+LA FICHE ANNONCE LIT LE REGISTRE          NON  elle lit proprietaires_json (copie Hektor)
+```
+
+**Un lien naît toujours chez Hektor.** Quand un négociateur ajoute un mandant : étiquette
+provisoire → le worker crée le lien chez Hektor → la nuit, le run recopie Hektor → alors
+seulement le lien existe chez nous. **Le jour de la coupure, plus rien n'arrive** : le plan
+l'avait écrit dès le **03/09** (révision du 03/09, bloc « 26bis-relations n'avait jamais été décrit » : *« ce patron meurt à la coupure »*).
+
+**C'est le seul objet à un seul robinet.** L'annonce, le contact et la transaction ont les
+deux (le run ET l'app) ; le mandat les aura avec l'étape D.
+
+### ③ Ce que contient le registre aujourd'hui *(mesuré le 30/09)*
+
+```
+serveur   167 547 liens · 109 605 contacts · 58 622 biens      (6 sources, toutes Hektor)
+          carnet 167 583 cles, 36 absentes (jamais effacees) · 45 « app seule », jamais reinjectees
+Supabase   81 379 = les biens ACTIFS seulement (push : WHERE is_active_annonce = 1)
+          contacts nes dans l'app (>= 20 M) : 0 — le compteur est encore a 20 000 000
+
+mandant       74 166   (fiche annonce 45 134 · lien annonce-contact 24 617 · fiche contact 4 415)
+proprietaire  58 456   (fiche annonce 30 409 · lien annonce-contact 25 977 · fiche contact 2 070)
+acquereur     34 925   (compromis 13 269 · offre 11 145 · vente 10 511)
+```
+
+**TROIS FAITS QUI COMMANDENT LA CONCEPTION :**
+
+- **« Mandant » et « propriétaire » sont UN SEUL fait Hektor** (« propriétaire du bien »).
+  Le build réécrit le rôle **après** le calcul de la clé : `mandant` si l'annonce a un n° de
+  mandat, sinon `proprietaire` (`build_contacts_layer.py:1337`). ➡ le registre stocke le
+  **fait brut**, le libellé se **dérive** — sinon chaque mandat signé change l'identité du lien.
+- **Le même lien arrive par trois fenêtres de Hektor** (fiche annonce, lien annonce-contact,
+  fiche contact) : même clé, la dernière lue gagne.
+- **Les acquéreurs sont DÉJÀ tenus chez nous**, durablement et à deux robinets, dans
+  `app_affaire_ledger` (30 364 sur 31 017 avec l'acquéreur). Les 34 925 liens acquéreurs sont
+  une **seconde copie** venue du miroir.
+
+### ④ Les gestes — objets × gestes, pour la relation
+
+| geste | où | ce qui reste DANS L'APP |
+|---|---|---|
+| rattacher un mandant existant | fiche annonce | provisoire ; **aucun** rafraîchissement du contact → le lien n'arrive qu'au run de nuit |
+| créer un contact comme mandant | fiche annonce | provisoire ; **ni contact ni lien** avant Hektor *(≠ création par l'annuaire, qui naît dans l'app)* |
+| modifier un mandant | carte mandant | le contact oui, le lien ne change pas |
+| **retirer un mandant** | — | **LE GESTE N'EXISTE PAS** |
+| mandant à la création d'annonce | assistant | **rien**, pas même un provisoire |
+| propriétaire à la création d'un contact | annuaire | le contact oui, le lien non |
+| acquéreurs d'une offre / compromis / vente | modale transaction | **durable dans `app_affaire_ledger`** à la création ; en modification, seul ce que Hektor relit |
+| mandants d'une affaire (`mandantsVoulus`) | modale transaction | **rien de durable** |
+| supprimer un contact / une annonce | fiches | le worker **efface** ses liens dans Supabase |
+| lire — fiche contact | | registre, n° app ✅ *(bug ①)* |
+| lire — fiche annonce | | `proprietaires_json`, n° Hektor ❌ |
+| co-mandant / conjoint | | aucun geste |
+
+⚠ **Les fonctions SQL des gestes mandant** (`app_link_mandant_optimistic`,
+`app_create_mandant_contact_optimistic`, `app_update_mandant_contact_optimistic`) **ne sont
+versionnées nulle part** dans `supabase/` — elles n'existent qu'en production.
+
+### ⑤ Le contrat d'autorité : ce que les autres registres ont déjà
+
+| | annonce | contact | transaction | mandat | **relation** |
+|---|---|---|---|---|---|
+| numéro frappé par une séquence | ✅ | ✅ | ✅ | ✅ | ❌ haché calculé en Python |
+| l'app écrit la ligne durable au geste | ✅ | ✅ annuaire / ❌ mandant | ✅ | 🟡 D | ❌ |
+| le run **adopte** ce que l'app a créé | ✅ | ✅ | ✅ | ✅ | ❌ |
+| le run **ne supprime jamais** | ✅ | ✅ | ✅ | ✅ | ❌ DELETE + INSERT |
+| saisie en attente protégée au push | ✅ | ✅ | ✅ | ✅ | ❌ |
+| suppression ordonnée par l'app, journalisée | — | — | ✅ | — | ❌ |
+| sentinelles | 4 | 4+ | ✅ | ✅ | **0** |
+
+**La règle existe, écrite le 21/09** (journal) : *pas d'interrupteur, la règle est permanente
+et symétrique ; l'arbitre est la RÉCENCE ; Hektor confirme, il n'écrase pas.* Codée pour
+l'annonce (`app_annonce_reappliquer_saisies`), le contact (`push_contacts_to_supabase.py:451-504`)
+et la transaction (`affaire_ledger.py:763-903`, « le silence ne gagne pas »). **Jamais pour la
+relation**, faute de ligne durable à protéger.
+
+### ⑥ La piste — le patron déjà appliqué trois fois *(à valider, PAS une décision)*
+
+1. **Un numéro de lien FRAPPÉ** par une séquence, jamais calculé — la leçon que les
+   transactions ont reçue le 03/09 en citant la relation (LISTE, registre des transactions, tâche 1.1 « LE LIEN ENTRE LES ÉTAPES »). **Clé d'adoption** :
+   (identité du contact, `app_dossier_id`, famille de rôle). Le haché actuel reste en doublure
+   le temps de la transition (le carnet C.9-d le permet).
+2. **Deux robinets, une table** :
+   - **l'app** — la RPC du geste écrit la ligne durable **tout de suite**, avec son numéro,
+     comme `app_create_contact_optimistic` pour le contact ;
+   - **le run** — il **adopte** par la clé métier, ne crée que l'inconnu, **ne supprime
+     jamais** (`absent_depuis` / `present_in_hektor`), et laisse gagner une saisie app en
+     attente.
+3. **Le fait brut, pas le libellé** : « propriétaire du bien » est stocké, « mandant » se dérive.
+4. **Les acquéreurs ne se recopient pas** : le registre les **projette** depuis
+   `app_affaire_ledger`.
+5. **Retirer devient un geste**, journalisé comme `app_affaire_supprimee`.
+6. **Les deux fiches lisent la même table** ; `proprietaires_json` reste en secours derrière
+   un interrupteur.
+7. **Sentinelles** : lien app non adopté après N jours · lien disparu · œil serveur ↔ Supabase.
+8. **Versionner** les fonctions SQL des gestes mandant.
+
+### ⑦ Les 5 questions à Frédéric — AVANT toute ligne de code
+
+1. Supabase porte-t-il **tous** les liens (167 547, archives comprises) ou seulement ceux des
+   biens actifs, comme aujourd'hui (81 379) ?
+2. Acquéreurs : **projection** depuis `app_affaire_ledger` (recommandé) ou copie ?
+3. « Retirer un mandant » part-il chez Hektor tant qu'il vit ?
+4. Les mandants choisis dans une affaire sont-ils des **liens au bien**, ou seulement des
+   **parties de la transaction** ?
+5. Ordre : les 5 défauts du point ⑧ d'abord, ou directement le registre ?
+
+### ⑧ Les défauts trouvés en chemin — petits, indépendants du registre
+
+- [ ] **R-1** fiche contact vide quand on l'ouvre depuis une annonce *(bug ①)*. Correctif :
+      traduire le numéro reçu **avant** de charger liens et recherches — et corriger le test
+      qui fige l'erreur.
+- [ ] **R-2** `update_hektor_mandant_contact` rafraîchit le contact avec la **cible** au lieu
+      de l'identité (`console_job_worker.js:17439`) — le défaut décrit par C-12 (l. 4138).
+- [ ] **R-3** un lien en attente est **invisible** hors de `DossierDetailLayoutBase` : ni dans
+      le cockpit (`App.tsx:28515`), ni sur mobile (`:33833`), ni sur un bien sans mandant (`:29862`).
+- [ ] **R-4** `constaterLesPersonnes` range un n° Hektor dans
+      `app_affaire_personne_ecart.contact_id` puis cherche le nom par identité : le bandeau peut
+      afficher un numéro.
+- [ ] **R-5** `link_hektor_mandant` et les mandants de création d'annonce ne rafraîchissent pas
+      le contact : même confirmé, le lien attend la nuit.
+
+### ⑨ Pourquoi le plan ne l'a pas vu — à retenir pour les prochains audits
+
+- **03/09** : la conséquence est écrite (« meurt à la coupure »), la solution est donnée aux
+  transactions… **pas à la relation**.
+- **21/09** : **L2 marqué ✅ « relations »** alors que le livrable (`bc359b6`) est un
+  **observateur**. La case `26bis-RELATIONS` de la liste est restée `[ ]` — la liste disait vrai,
+  le résumé non.
+- **24-25/09** : C.9-d / C.9-f règlent l'**identité** du lien, pas son **existence**.
+- **28/09** : « seule vraie faiblesse » — notée, pas enchaînée.
+- **Leçon** : un audit de bascule doit **essayer chaque CHEMIN D'ENTRÉE** vers un écran, pas
+  seulement lire les fonctions ; et « cohérent par construction » est une **supposition**
+  tant qu'aucun appel réel ne l'a montré.
+
+*Non mesuré : le détail de `delete_hektor_compromis`, la partie Protexa de
+`create_hektor_mandat_auto_number`, le chemin « passage en acquéreur » de la recherche
+(`d7a3586`).*
 
 ---
 

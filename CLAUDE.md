@@ -198,7 +198,37 @@ classe A, en *critical*, seuil zéro.
 **Quand ces quatre-là sont faites, il ne reste que** : le registre des mandats *(`L9`)* · la
 génération du numéro de mandat *(`L6`)* · la signature *(`A.2`)* · les passerelles *(`A.1`)*.
 
-### 🔴 LE CHANTIER SUIVANT — *le registre des mandats* (cadre pose le 29/09)
+### ✅ A.3-TECHNIQUE EST CLOS — *30/09/2026* (c'est `L9`, pas `L6` : j'ai mal
+###    etiquete mes messages toute la session, le plan fait foi)
+
+```
+A ✅ 26 826 mandats dans le cloud + doublure     de7c57b · c560955
+B ✅ deux sentinelles, DEUX AXES                 44c2e9b
+     mandat_disparu   serveur <-> Hektor    mandat_un_numero  serveur <-> cloud
+C ✅ le registre tire sa matiere de app_mandat   f4c4f5a · 2ed0538
+     24 025 -> 24 478 lignes, +451 murs commerciaux, SANS vider la table
+D ✅ le mandat entre au registre A LA SECONDE    b45f36a
+     4 services redemarres 09:25, verifies par la date des PROCESSUS
+```
+
+⚠ **CE QUI RESTE DE `L9` N'EST PAS TECHNIQUE** : les trois couches de
+numerotation et la serie propre appartiennent a la PHASE 2 (registre
+electronique legal) -- juriste + horodatage tiers. Le numero vient toujours de
+PROTEXA, et c'est la decision de Frederic du 29/09.
+
+⭐ **ET LE MANDAT N'EST PAS AU NIVEAU DE L'ANNONCE, mesure du 30/09** : il l'a
+rattrapee sur la MEMOIRE, il est loin derriere sur les GESTES.
+```
+                    ANNONCE  contact  MANDAT
+gestes du worker          9        9       2
+RPC du front              9       17       1
+sentinelles               5       11       2
+carnet de champs app     oui      oui   1 champ, 2 lignes
+```
+On sait CREER un mandat, pas le CORRIGER. C'est `L5` / `E.0-bis`, ou le geste
+est deja inscrit -- la mesure y a ete ajoutee le 30/09, la ligne PAS dupliquee.
+
+### 🗄 L'ANCIEN CADRE DU CHANTIER — *pose le 29/09, garde pour le pourquoi*
 
 > **DEUX PHASES, dans l'ordre de Frederic** -- il a corrige le mien : je faisais
 > dependre le petit chantier du gros.
