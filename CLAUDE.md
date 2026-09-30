@@ -593,6 +593,25 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
           23 798 a 34 925, vu un ecart, et conclu -- sans deplier d'ou il
           venait. Il venait de MON code.
 
+   ✅ LA RPC POSE LE LIEN DURABLE -- EN LIGNE le 30/09      5294c2f
+        app_link_mandant_optimistic, version 2. Le WORKER NE BOUGE PAS :
+        travail, garde-fou et etiquette provisoire intacts, verifie apres
+        collage (2 155 -> 4 542 caracteres, toutes les parties d'origine la).
+        ⚠ LA VERSION 1 ETAIT PERIMEE AVANT D'ETRE COLLEE : ecrite avant la
+          colonne hektor_contact_id, elle aurait creuse le trou a l'endroit
+          meme ou on venait de le boucher. Verifie avant de le dire --
+          Frederic croyait l'avoir collee, il ne l'avait pas fait.
+        UNE SEULE LECTURE REND LES DEUX NUMEROS (app_contact_current porte
+        les deux). Eprouve : 603953 -> 10354641+603953 · 10000023 ->
+        10000023+41 (retrouve) · inconnu -> AUCUNE ligne.
+        ⚠ La ligne neuve porte present_in_hektor = false : la VUE ne la montre
+          pas encore. On MONTRE ce qui est etabli, on GARDE ce qui est en
+          cours -- l'affichage immediat reste a l'etiquette provisoire.
+        ⚠ ATTENDU, PAS UN BUG : `nees_dans_l_app` reste a 0 jusqu'au premier
+          mandant rattache, et `adoptes_du_cloud` passe a 1 au run suivant.
+          C'est ainsi qu'on saura que la chaine complete tourne.
+        ⛔ AUCUN REDEMARRAGE DE SERVICE : le worker n'a pas change.
+
    D ⬜ LES 45 LIENS « APP SEULE » Y ENTRENT (app_relation_app_seule, le filet
         existe et dit lui-meme « jamais reinjectes »).
 
