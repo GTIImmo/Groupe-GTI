@@ -32,6 +32,38 @@ et la transaction en ont deux (le run ET l'app). Le mandat en aura deux (étape 
 
 ---
 
+## 0-quinquies. LA TABLE DURABLE EXISTE — *30/09* — `fc07443`, ÉPROUVÉE SUR COPIE
+
+```
+DEUX PASSES SUR UNE COPIE DE LA BASE (5,7 Go) -- la production n'a pas ete touchee
+
+1re passe    132 622 lignes posees · 0 doublon · 0 numero hors plage app
+             0 dans la plage reservee a l'app · 9 sans notre numero de bien
+             (gardees : leur annonce n'existe NI au miroir NI chez nous)
+             VERROU D'ECRITURE : 2,0 s
+
+2e passe     neufs 0 · revus 132 622   -> AUCUNE RENUMEROTATION, rejeu idempotent
+             VERROU D'ECRITURE : 1,3 s
+
+pour memoire, la version d'avant : 510 s de verrou, ET COUPEE AVANT LE COMMIT
+```
+
+**LE CHIFFRE QUI JUSTIFIE TOUT LE CHANTIER :**
+
+```
+le cloud porte aujourd'hui       50 236 liens mandant/proprietaire
+la table durable en porte       132 622
+                                ────────
+ce qu'un bien vendu emportait    82 386 liens
+```
+
+**Le jour où un bien se vend, 82 386 fois, on a cessé de savoir qui en était le
+mandant.** C'est cela que la table répare.
+
+⛔ **PAS ENCORE EXECUTEE SUR LA BASE DE PRODUCTION** — accord de Frédéric requis.
+
+---
+
 ## 0-quater. LE BUG ① EST RÉPARÉ — *30/09, fin de journée* — `93cc01b`
 
 ```
