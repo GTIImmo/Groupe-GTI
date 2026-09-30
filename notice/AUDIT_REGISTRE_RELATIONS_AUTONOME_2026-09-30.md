@@ -36,13 +36,31 @@ et la transaction en ont deux (le run ET l'app). Le mandat en aura deux (étape 
 
 ```
 Q1  Le cloud porte-t-il TOUS les liens, ou seulement ceux des biens actifs ?
-    ➡ « COMME AUJOURD'HUI » = les BIENS ACTIFS seulement.
-       81 379 dans le cloud, 167 547 sur le serveur. Le serveur garde tout,
-       le cloud porte le parc. C'est la regle « serveur = tout / cloud = biens
-       vivants », deja posee pour les documents et les photos.
-       ⚠ CONSEQUENCE A NE PAS OUBLIER : le registre durable vivra SUR LE
-         SERVEUR, et le cloud en recevra la PROJECTION du parc. Ce n'est PAS
-         le montage du mandat (ou les 26 826 lignes montent entieres).
+    ➡ TOUT MONTE. « Il faut tout monter pour avoir le registre des liens
+       entier. » (reponse CORRIGEE le 30/09 : la premiere reponse disait
+       « comme aujourd'hui » ; elle est remplacee, pas empilee.)
+    ⭐ ET C'EST PLUS COHERENT QUE MA PROPOSITION : c'est exactement le montage
+       du mandat, decide ce matin -- LE REGISTRE PORTE TOUT, LES ECRANS
+       FILTRENT. app_mandat monte ses 26 826 lignes, locations comprises, et
+       c'est la VUE qui n'en admet que trois types d'offre. La regle
+       « serveur = tout / cloud = biens vivants » vaut pour les FICHIERS
+       (documents, photos), pas pour un REGISTRE.
+    CE QUE CELA COUTE, mesure le 30/09 :
+       aujourd'hui      81 379 lignes    105 Mo   (1 346 octets par ligne)
+       si tout monte   167 547 lignes   ~221 Mo   soit +86 168 lignes, +116 Mo
+       base Supabase entiere            3 646 Mo -> ~3 762 Mo
+    CE QUE CELA APPORTE -- les 86 168 en plus, par role :
+       mandant              49 942
+       proprietaire         32 444     -> 95 % sont des liens mandant/proprietaire
+       acquereur (3 types)   3 782        sur des biens vendus ou archives,
+                                          c'est-a-dire EXACTEMENT ce qu'un
+                                          registre doit conserver
+    ⚠ LE SEUL VRAI RISQUE EST LA DESCENTE, PAS LE POIDS. La descente a deja mis
+      Supabase par terre une fois (1 659 Mo par nuit, 28 Mo par reponse tuaient
+      les fils de PostgREST -> 503 pour toute l'agence de 07:30 a 09:15).
+      Doubler cette table ajoute ~116 Mo a la descente de nuit. Le correctif du
+      copieur (ajustement de la taille de page) a deja tenu deux fois -- il
+      faudra le VERIFIER sur cette table-la, pas le supposer.
 
 Q3  « Retirer un mandant » part-il chez Hektor tant qu'il vit ?
     ➡ OUI. Le geste n'existe nulle part aujourd'hui ; quand il existera, il
