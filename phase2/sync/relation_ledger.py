@@ -150,8 +150,22 @@ CREATE TABLE IF NOT EXISTS app_relation (
     first_seen_at        TEXT,
     last_seen_at         TEXT,
     -- delete-never : marque, jamais supprime.
+    -- « HEKTOR NE LE MONTRE PLUS » -- le miroir ne l'a pas ramene ce coup-ci.
     present_in_hektor    INTEGER NOT NULL DEFAULT 1,
     absent_depuis        TEXT,
+    -- ⚠⚠ « ON L'A SUPPRIME » -- ET CE N'EST PAS LA MEME CHOSE. Distinction posee
+    --   le 30/09 apres un trou que j'avais ouvert le matin meme : quatre chemins
+    --   effacent un lien (le worker quand une annonce ou un contact est
+    --   supprime, et delete_local_annonce / delete_local_contact cote serveur)
+    --   et AUCUN ne connaissait cette table. Ma vue les aurait affiches.
+    --   `delete-never` protege contre un miroir qui se tait. Il ne doit PAS
+    --   proteger contre une suppression VOULUE par un negociateur.
+    -- DORMANTES pour l'instant : la vue exclut deja `present_in_hektor = 0`,
+    -- ce qui ferme le trou des le run suivant. Ces colonnes serviront a fermer
+    -- la FENETRE (jusqu'a 19 h entre le geste et le run), quand les quatre
+    -- chemins les ecriront.
+    retire_le            TEXT,
+    retire_par           TEXT,
     UNIQUE (app_contact_id, hektor_annonce_id)
 );
 CREATE INDEX IF NOT EXISTS idx_app_relation_contact ON app_relation (app_contact_id);
@@ -173,8 +187,18 @@ def _open_local() -> sqlite3.Connection:
     return con
 
 
+def _ajouter_colonne_si_absente(con: sqlite3.Connection, nom: str, type_sql: str) -> None:
+    """SQLite n'a pas ADD COLUMN IF NOT EXISTS, et CREATE TABLE IF NOT EXISTS ne
+    donne RIEN a une table qui existe deja -- pas meme une colonne neuve."""
+    colonnes = {r[1] for r in con.execute("PRAGMA table_info(app_relation)")}
+    if nom not in colonnes:
+        con.execute("ALTER TABLE app_relation ADD COLUMN %s %s" % (nom, type_sql))
+
+
 def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.executescript(SCHEMA)
+    _ajouter_colonne_si_absente(con, "retire_le", "TEXT")
+    _ajouter_colonne_si_absente(con, "retire_par", "TEXT")
     vu = now_iso()
 
     # LE DISTRIBUTEUR. On ignore la moitie haute -- voir la regle 1 en tete.
@@ -340,6 +364,7 @@ def controle(con: sqlite3.Connection) -> None:
     print("   SANS notre numero de bien           : %s   (leur annonce n'existe nulle part)"
           % q("SELECT COUNT(*) FROM app_relation WHERE app_dossier_id IS NULL"))
     print("   sortis du miroir (CONSERVES)        : %s" % q("SELECT COUNT(*) FROM app_relation WHERE present_in_hektor = 0"))
+    print("   RETIRES volontairement (CONSERVES)  : %s" % q("SELECT COUNT(*) FROM app_relation WHERE retire_le IS NOT NULL"))
     for role, n in con.execute("SELECT role_hektor, COUNT(*) FROM app_relation GROUP BY 1 ORDER BY 2 DESC"):
         print("      dernier libelle Hektor %-12s %s" % (role, n))
     print("")
@@ -395,6 +420,7 @@ COLONNES_POUSSEES = (
     "app_relation_id", "app_contact_id", "app_dossier_id", "hektor_annonce_id",
     "fait", "role_hektor", "source", "relation_key",
     "first_seen_at", "last_seen_at", "present_in_hektor", "absent_depuis",
+    "retire_le", "retire_par",
 )
 
 
