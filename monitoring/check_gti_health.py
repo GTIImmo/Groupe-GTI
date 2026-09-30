@@ -1108,6 +1108,7 @@ class Monitor:
             ("doublures", self.check_doublures),
             ("annonce_un_numero", self.check_annonce_un_numero),
             ("mandat_disparu", self.check_mandat_disparu),
+            ("mandat_un_numero", self.check_mandat_un_numero),
             ("contacts_identite", self.check_contacts_identite),
             ("contacts_satellites", self.check_contacts_satellites),
             ("local_logs", self.check_local_logs),
@@ -2189,6 +2190,81 @@ class Monitor:
                      f"Registre des mandats complet : {mesure['lignes']} lignes, "
                      f"0 manquant sur {mesure['miroir_lu']} du miroir "
                      f"(vue de travail en retard de {mesure['retard_vue']}, c'est voulu)",
+                     mesure)
+
+
+    def check_mandat_un_numero(self) -> None:
+        """A.3-tech etape B (30/09/2026) -- UN MANDAT, UN NUMERO. LOCALE.
+
+        L'OEIL DU REGISTRE DES MANDATS, pendant exact de `annonce_un_numero`
+        (C.9-b). Il compare la table du serveur a SA DOUBLURE -- l'image de
+        Supabase descendue par pull_from_supabase sous `app_mandat__sb`.
+
+        ⚠ CE N'EST PAS LA MEME GARDE QUE data.mandat_disparu, et les deux sont
+          necessaires :
+            mandat_disparu    le serveur a-t-il tout ce que le MIROIR lui a
+                              confie ?            (serveur <-> Hektor)
+            mandat_un_numero  le serveur et le CLOUD disent-ils la meme chose ?
+                                                  (serveur <-> Supabase)
+          Le premier ne verrait jamais un push qui ne passe pas ; le second ne
+          verrait jamais une etape de nuit qui s'arrete.
+
+        LA FORMULE N'EST PAS ICI : phase2/checks/mandat_un_numero.py, seule
+        copie -- deux copies d'une meme regle divergent tot ou tard.
+
+        ⚠ ROUGE TANT QUE LE PUSH N'A PAS EU LIEU, et c'est voulu : `absents_du_
+          cloud` vaut alors le nombre de lignes du serveur. Meme parti pris que
+          `mandat_disparu` a sa naissance -- une sentinelle qui naitrait verte
+          sur un etat faux n'apprendrait rien le jour ou il devient vrai.
+        """
+        db = self.root / "phase2" / "phase2.sqlite"
+        try:
+            chemin = str(self.root / "phase2" / "checks")
+            if chemin not in sys.path:
+                sys.path.insert(0, chemin)
+            import mandat_un_numero as mun
+        except Exception as exc:  # pragma: no cover
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "warning",
+                     f"Mesure « un mandat, un numero » introuvable ({type(exc).__name__})", {})
+            return
+        if not db.exists():
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "warning",
+                     "Base phase2 introuvable : accord serveur/Supabase non mesurable",
+                     {"path": str(db)})
+            return
+        try:
+            conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                mesure = mun.mesurer(conn)
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "warning",
+                     f"Base phase2 illisible pour la mesure ({type(exc).__name__})", {})
+            return
+        if mesure is None:
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "warning",
+                     "Accord serveur/Supabase : NON MESURABLE (la doublure app_mandat__sb "
+                     "manque) -- ce n'est pas un zero", {})
+        elif mesure["deux_numeros"] or mesure["croisements"]:
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "critical",
+                     f"Identite du mandat rompue : {mesure['deux_numeros']} couple(s) a deux "
+                     f"numeros, {mesure['croisements']} numero(s) sur deux couples (seuil 0)",
+                     mesure)
+        elif mesure["plage_envahie"]:
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "critical",
+                     f"Numeros du run dans la plage reservee a l'app : "
+                     f"{mesure['plage_envahie']} (seuil 0) -- le defaut d'aout revient",
+                     mesure)
+        elif mesure["absents_du_cloud"]:
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "critical",
+                     f"Mandats du serveur absents de Supabase : {mesure['absents_du_cloud']} "
+                     f"sur {mesure['serveur']} (seuil 0) -- le push n'est pas passe",
+                     mesure)
+        else:
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "ok",
+                     f"Un mandat, un numero : 0 ecart sur {mesure['supabase']} "
+                     f"({mesure['en_attente']} ne(s) dans l'app, pas encore chez Hektor)",
                      mesure)
 
     def check_contacts_satellites(self) -> None:
