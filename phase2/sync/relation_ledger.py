@@ -134,6 +134,18 @@ CREATE TABLE IF NOT EXISTS app_relation (
     -- app_mandat. Elle sert aussi de cle technique tant que tout lien nait
     -- chez Hektor (voir « LA CLE, ET SA LIMITE » en tete).
     hektor_annonce_id    TEXT NOT NULL,
+    -- ⚠⚠ LE NUMERO HEKTOR DE LA PERSONNE -- trouve manquant par Frederic le 30/09.
+    --   « Est-ce que mon registre des liens genere bien deux numeros, celui de
+    --     Hektor et celui de mon app, pour anticiper la coupure ? »
+    --   Il avait raison : un lien nomme DEUX objets, il faut donc QUATRE numeros.
+    --   On avait les deux du bien et un seul de la personne.
+    --   Les autres registres, eux, les portent tous (app_affaire_ledger a
+    --   hektor_acquereur_id ; app_mandat a hektor_mandat_id).
+    -- A QUOI IL SERT : a PARLER a Hektor de cette personne -- « retire M. X des
+    --   mandants de ce bien ». Notre numero ne lui dit rien.
+    -- ⚠ ET IL PERIME : le run le voit chaque nuit dans le miroir et le jette.
+    --   Apres la coupure, plus personne ne pourra le donner.
+    hektor_contact_id    TEXT,
     -- ⚠ LE FAIT BRUT, PAS LE LIBELLE. Hektor ne connait que « proprietaire du
     --   bien » ; `mandant` et `proprietaire` sont deux affichages du meme fait,
     --   choisis selon que l'annonce porte un numero de mandat. Mesure du 30/09 :
@@ -197,6 +209,7 @@ def _ajouter_colonne_si_absente(con: sqlite3.Connection, nom: str, type_sql: str
 
 def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.executescript(SCHEMA)
+    _ajouter_colonne_si_absente(con, "hektor_contact_id", "TEXT")
     _ajouter_colonne_si_absente(con, "retire_le", "TEXT")
     _ajouter_colonne_si_absente(con, "retire_par", "TEXT")
     vu = now_iso()
@@ -206,6 +219,33 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         "SELECT COALESCE(MAX(app_relation_id), 0) FROM app_relation WHERE app_relation_id < ?",
         (PLAGE_RESERVEE_APP,),
     ).fetchone()[0]) + 1
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # LA CORRESPONDANCE COMPLETE -- ET ELLE N'EST PAS OU JE LA CHERCHAIS.
+    #
+    # J'ai d'abord pris `app_contact_identite_app` (62 038 lignes) et conclu que
+    # « 50 982 contacts sur 96 070 ne sont plus traduisibles ». FAUX : cette
+    # table est le JOURNAL DE LA BASCULE, pas la correspondance.
+    # La correspondance vit dans app_contact_current, cote SERVEUR : 356 270
+    # contacts, dont `hektor_contact_id` porte NOTRE numero (tous >= 10 000 000)
+    # et `hektor_target_id` celui de HEKTOR (tous < 10 000 000).
+    # Mesure du 30/09 : 96 070 sur 96 070 traduisibles -- 100 %.
+    # ➡ LECON : avant de conclure a une perte, verifier qu'on a interroge LA
+    #   BONNE TABLE. Une absence mesuree sur la mauvaise source n'est pas une
+    #   absence, c'est une erreur de lecture.
+    # ══════════════════════════════════════════════════════════════════════════
+    numero_hektor: dict[int, str] = {}
+    try:
+        for r in con.execute(
+            "SELECT hektor_contact_id, hektor_target_id FROM app_contact_current"
+            " WHERE hektor_target_id IS NOT NULL"
+        ):
+            notre = str(r["hektor_contact_id"] or "").strip()
+            chez_lui = str(r["hektor_target_id"] or "").strip()
+            if notre.isdigit() and chez_lui:
+                numero_hektor[int(notre)] = chez_lui
+    except sqlite3.OperationalError:
+        pass
 
     connus = {(int(r["app_contact_id"]), str(r["hektor_annonce_id"]))
               for r in con.execute(
@@ -292,11 +332,13 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         con.execute(
             """
             INSERT INTO app_relation(app_relation_id, app_contact_id, app_dossier_id,
-                hektor_annonce_id, fait, role_hektor, source, relation_key,
-                first_seen_at, last_seen_at, present_in_hektor, absent_depuis)
-            VALUES (?, ?, ?, ?, 'proprietaire_du_bien', ?, ?, ?, ?, ?, 1, NULL)
+                hektor_annonce_id, hektor_contact_id, fait, role_hektor, source,
+                relation_key, first_seen_at, last_seen_at, present_in_hektor, absent_depuis)
+            VALUES (?, ?, ?, ?, ?, 'proprietaire_du_bien', ?, ?, ?, ?, ?, 1, NULL)
             ON CONFLICT(app_contact_id, hektor_annonce_id) DO UPDATE SET
                 app_dossier_id=COALESCE(excluded.app_dossier_id, app_relation.app_dossier_id),
+                -- on COMBLE, on n'ecrase jamais : si on l'avait deja, on le garde
+                hektor_contact_id=COALESCE(app_relation.hektor_contact_id, excluded.hektor_contact_id),
                 role_hektor=excluded.role_hektor,
                 source=excluded.source,
                 relation_key=excluded.relation_key,
@@ -304,7 +346,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 present_in_hektor=1,
                 absent_depuis=NULL
             """,
-            (identifiant, contact, dossier, annonce,
+            (identifiant, contact, dossier, annonce, numero_hektor.get(contact),
              r["role_contact"], r["relation_source"], r["relation_key"], vu, vu),
         )
 
@@ -365,6 +407,8 @@ def controle(con: sqlite3.Connection) -> None:
           % q("SELECT COUNT(*) FROM app_relation WHERE app_dossier_id IS NULL"))
     print("   sortis du miroir (CONSERVES)        : %s" % q("SELECT COUNT(*) FROM app_relation WHERE present_in_hektor = 0"))
     print("   RETIRES volontairement (CONSERVES)  : %s" % q("SELECT COUNT(*) FROM app_relation WHERE retire_le IS NOT NULL"))
+    print("   avec le numero HEKTOR de la personne: %s" % q("SELECT COUNT(*) FROM app_relation WHERE hektor_contact_id IS NOT NULL"))
+    print("   SANS ce numero                      : %s   (doit tendre vers 0)" % q("SELECT COUNT(*) FROM app_relation WHERE hektor_contact_id IS NULL"))
     for role, n in con.execute("SELECT role_hektor, COUNT(*) FROM app_relation GROUP BY 1 ORDER BY 2 DESC"):
         print("      dernier libelle Hektor %-12s %s" % (role, n))
     print("")
@@ -419,8 +463,8 @@ def controle(con: sqlite3.Connection) -> None:
 COLONNES_POUSSEES = (
     "app_relation_id", "app_contact_id", "app_dossier_id", "hektor_annonce_id",
     "fait", "role_hektor", "source", "relation_key",
-    "first_seen_at", "last_seen_at", "present_in_hektor", "absent_depuis",
-    "retire_le", "retire_par",
+    "hektor_contact_id", "first_seen_at", "last_seen_at", "present_in_hektor",
+    "absent_depuis", "retire_le", "retire_par",
 )
 
 
