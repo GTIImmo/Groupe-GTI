@@ -139,6 +139,41 @@ BEGIN
   END IF;
 END $$;
 
+-- ─── ET LE DERNIER RESTE, QUI PASSE AVANT LA CARTE ──────────────────────────────
+-- ⚠ `app_diffusion_target` porte des cibles PAR BIEN, et `_run_apply` les lit
+--   EN PREMIER : si un bien en a, la carte des agences n'est meme pas consultee.
+--   Corriger la carte sans corriger celles-ci laisserait une porte ouverte.
+--
+-- 5 lignes leboncoinDirect y subsistent, des essais d'avril/mai :
+--     4 sur des biens qui ne sont plus au parc, toutes en `disabled` -> inoffensives
+--     1 SUR UN BIEN VIVANT : V670062151 (Tence), passerelle 43, etat « enabled »
+--       -> elle enverrait ce bien sur une passerelle MORTE, malgre la carte corrigee
+--
+-- On ne touche QUE les lignes dont l'agence est connue ET le numero perime.
+UPDATE public.app_diffusion_target t
+   SET hektor_broadcast_id = r.numero,
+       updated_at = now()
+  FROM public.app_dossiers_current d, releve_lbc r
+ WHERE d.app_dossier_id = t.app_dossier_id
+   AND r.agence = d.agence_nom
+   AND t.portal_key = 'leboncoinDirect'
+   AND t.hektor_broadcast_id IS DISTINCT FROM r.numero;
+
+-- ⛔ GARDE-FOU 4 : plus aucune cible VIVANTE ne doit pointer hors du releve.
+DO $$
+DECLARE restants text;
+BEGIN
+  SELECT string_agg(d.numero_dossier || ' (n° ' || t.hektor_broadcast_id || ')', ', ')
+    INTO restants
+    FROM public.app_diffusion_target t
+    JOIN public.app_dossiers_current d ON d.app_dossier_id = t.app_dossier_id
+   WHERE t.portal_key = 'leboncoinDirect'
+     AND t.hektor_broadcast_id NOT IN (SELECT numero FROM releve_lbc);
+  IF restants IS NOT NULL THEN
+    RAISE EXCEPTION 'Cibles par bien encore sur une passerelle perimee : %', restants;
+  END IF;
+END $$;
+
 COMMIT;
 
 -- ─── A LIRE APRES LE COMMIT (doit rendre 17 lignes, toutes differentes) ────────
