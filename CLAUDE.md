@@ -465,6 +465,60 @@ JAMAIS de numero -> le jour de la bascule, le front ne change pas d'une ligne.
 23 numeros sans trace chez nous) · la validation par un juriste · le choix du
 tiers d'horodatage.
 
+### 🔗 LE REGISTRE DES LIENS — *chantier ouvert le 30/09, 1re pierre posee*
+
+```
+L'AUDIT, DEUX PASSES               notice/AUDIT_REGISTRE_RELATIONS_AUTONOME_2026-09-30.md
+  ⭐ LA DONNEE EST DEJA SUR NOS NUMEROS, et personne ne le savait :
+     app_contact_relation_current.hektor_contact_id -> 167 547 sur 167 547 dans
+     la plage app, 0 de style Hektor. LE NOM DE LA COLONNE MENT
+     (build_contacts_layer.py:1093 fait identite_app() AVANT de la remplir).
+     C'est ce mensonge qui a cache le bug pendant une semaine.
+
+✅ LE BUG « Aucune annonce liee » EST REPARE          93cc01b   ⛔ PAS DEPLOYE
+   La fiche annonce transmettait un numero HEKTOR. On ne change pas ce qu'elle
+   LIT, on corrige le numero qu'elle TRANSMET : charger la fiche d'abord, puis
+   lire ses liens sous SON numero. api.ts interdit d'elargir le filtre ; sa
+   consigne SUPPOSE un contact deja charge -- on rend la supposition vraie.
+   2e appelant corrige : le bon de visite (1 numero Hektor sur 11 dans
+   app_google_calendar_event_link). Un CONTROLE NEUF verifie la supposition,
+   et il a une preuve : il echoue sur la version d'avant.
+   ⛔ « ajouter app_contact_id a la vue » etait INUTILE : la vue expose deja
+     hektor_contact_id, qui CONTIENT notre numero. Aucun SQL de production.
+
+✅ LA TABLE DURABLE app_relation EST POSEE            fc07443 · d2bada5
+   EN PRODUCTION le 30/09 : 132 622 lignes, verrou 3,5 s, integrite ok,
+   0 doublon · 0 hors plage app · 0 dans la plage reservee · 9 sans notre
+   numero de bien (gardees, leur annonce n'existe nulle part).
+   Rejeu sur copie : neufs 0, revus 132 622 -> AUCUNE renumerotation.
+   ⭐ LE CHIFFRE : le cloud porte 50 236 liens, la table 132 622.
+      82 386 LIENS QU'UN BIEN VENDU EMPORTAIT. C'est cela qu'elle repare.
+   ELLE PORTE mandant + proprietaire. Elle NE PORTE PAS les acquereurs
+   (34 925) : un acquereur n'est pas un lien au bien, il existe PARCE QU'IL A
+   FAIT UNE OFFRE -- app_affaire_ledger le tient deja. Elle les PROJETTERA.
+   Elle stocke LE FAIT (« proprietaire du bien »), pas le libelle : sur
+   132 622 couples, ZERO ne porte les deux roles -- deux noms d'une chose.
+
+⚠⚠ ET UN INCIDENT QUE J'AI CAUSE, A NE PAS OUBLIER
+   Ma 1re version du delete-never a tenu un VERROU D'ECRITURE 8 min 30 sur
+   phase2.sqlite (132 000 x 132 000 comparaisons sur une table temporaire sans
+   index), puis a ete coupee AVANT le commit : zero ligne, huit minutes de base
+   bloquee pour rien. Diagnostic pose par une autre session.
+   ⛔ LA FAUTE N'EST PAS LE DEFAUT, C'EST LA METHODE : j'ai ecrit en production
+     sans repetition sur copie, en me disant « la table est neuve, rien ne la
+     lit ». Vrai pour la TABLE, faux pour le VERROU. J'avais meme LANCE une
+     copie et je l'ai ANNULEE pour aller plus vite.
+   ➡ memoire `phase2-sqlite-verrou-ecriture-long`
+
+REPONSES DE FREDERIC (30/09) : Q1 TOUT MONTE (registre entier, +116 Mo) ·
+Q3 « retirer un mandant » PART chez Hektor et la ligne reste datee.
+OUVERTES : Q2 acquereurs (projection recommandee) · Q4 mandants d'affaire
+(les deux, ce ne sont pas le meme fait) · Q5 l'ordre.
+
+RESTE : la sentinelle · l'etape dans le run · Supabase + push (⛔) ·
+la bascule (l'ecran lit la table) · le worker ecrit (⛔ + redemarrage).
+```
+
 ### Les trois fronts ouverts — *ils avancent séparément*
 
 | front | où c'en est | ce qui reste |
