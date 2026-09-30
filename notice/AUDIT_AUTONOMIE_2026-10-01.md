@@ -117,36 +117,51 @@ transaction  geste · modifier · editer
 | RDV | 5 + 2 | 2 235 + 11 | 🟡 |
 | diffusion | 4 + 1 | 1 388 | ⛔ contenu du 07/07 |
 
-### ⛔⛔ LE RISQUE LE PLUS LOURD DE TOUT L'AUDIT — et il n'est dans aucun plan
+### ✅ LA SAUVEGARDE — j'avais tiré une alarme FAUSSE, Frédéric m'a fait revérifier
 
-**`data/hektor.sqlite` (3,9 Go) n'a AUCUNE sauvegarde. Pas une seule, jamais.**
-
-Vérifié en regardant le dossier `C:\Hektor\Backups` lui-même, pas le code :
-
-```
-critical/   quotidien     32 Mo/jour, dernier le 30/09   ✅ tourne
-phase2/     hebdomadaire  597 Mo,     dernier le 27/09   ✅ tourne
-documents/  desactive le 18/08                            (assume)
-hektor.sqlite (3,9 Go)    AUCUN FICHIER, AUCUNE DATE     ⛔⛔
-```
-
-`run_backup.ps1` passe `--weekly` (ligne 41) et **jamais `--full`** — or le
-niveau 4, seul à copier le miroir, est marqué *« sur demande »*. Personne ne l'a
-jamais demandé.
-
-**Ce que ce fichier est seul à porter, mesuré :**
+**Ma première conclusion était : « `hektor.sqlite` (3,9 Go) n'a aucune
+sauvegarde ». C'EST FAUX.** Je n'avais regardé que `backup_critical.py` et le
+dossier `C:\Hektor\Backups`. Il existe un second mécanisme, et il couvre tout.
 
 ```
-34 520 annonces ARCHIVEES avec leur detail complet
-       -> phase2 n'en garde qu'un INDEX de 35 colonnes (35 305 + 8 924)
-       -> le « cache de detail » de phase2 contient SEPT lignes
-470 037 reponses brutes de l'API Hektor
-       -> c'est la matiere qui permet de TOUT refabriquer
+VEEAM AGENT -> OVH CLOUD          vspc-cgw31.prod01.eu-west-rbx.backup.ovhcloud.com
+   Backup mode: entire computer   ExcludeMasks : <vide>, aucune exclusion
+   30/09 22:23  status: Success   894,5 Go / 894,5 Go
+   retention 14 jours             snapshot VSS actif
 ```
 
-**Un disque qui lâche, et vingt ans d'archives de l'agence disparaissent** — avec
-la seule matière qui permettrait de les reconstruire. Aucune sentinelle, aucune
-ligne de plan ne le dit.
+**La machine entière part chaque nuit.** `data/hektor.sqlite` est dedans. La
+question ouverte du plan — *« à trancher : l'ajouter à --full, ou confirmer que
+l'agent OVH le prend »* — **a sa réponse : l'agent le prend.**
+
+**Les deux mécanismes sont complémentaires, et le partage est cohérent :**
+
+```
+backup_critical.py   18 tables NON re-telechargeables, chaque jour 08:15, 32 Mo
+                     + instantane phase2 hebdomadaire (597 Mo, dernier 27/09)
+                     -> restauration CHIRURGICALE, granularite table
+Veeam / OVH          la machine entiere, chaque nuit 22:00, 14 jours
+                     -> restauration COMPLETE, granularite machine
+```
+
+**Ce qui reste vrai, et qui est plus petit mais réel :**
+
+```
+⚠ 14 JOURS DE RETENTION      une corruption decouverte au-dela est irrecuperable
+⚠ AUCUNE RESTAURATION TESTEE  ni Veeam ni backup_critical n'ont jamais ete
+                              eprouves en restauration. Une sauvegarde jamais
+                              restauree est une sauvegarde supposee.
+⚠ app_relation ET app_mandat  les deux registres nes le 30/09 ne sont PAS dans
+                              CRITICAL_TABLES -- couverts seulement par l'hebdo
+                              et Veeam, donc jusqu'a 7 jours d'exposition sur le
+                              chemin chirurgical. C'est exactement le raisonnement
+                              qui avait fait ajouter app_affaire_ledger en aout.
+```
+
+➡ **Leçon pour moi, et c'est la sixième fois aujourd'hui** : j'ai conclu sur
+**une** source *(le script de sauvegarde)* sans chercher s'il en existait une
+autre. « Il n'y a pas de sauvegarde » et « je n'ai pas trouvé de sauvegarde » ne
+sont pas la même phrase.
 
 ---
 
@@ -239,8 +254,8 @@ portails. Elle est **déjà là**. Ce qui reste à obtenir n'est pas du code, ce
 
 ```
 ① une saisie de recherche bloquee depuis 8 jours, INVISIBLE des gardes
-② la base miroir (3,9 Go) n'a AUCUNE sauvegarde -- 34 520 archives
-   et 470 037 reponses brutes tiennent sur un seul disque
+② app_relation et app_mandat absents de la liste de sauvegarde quotidienne
+   (la sauvegarde globale existe : Veeam -> OVH, machine entiere, verifie)
 ③ les passerelles ne sont PAS une exception technique -- l'API existe
 ④ document / photo / RDV : ZERO sentinelle
 ⑤ 5 genres de travaux worker jamais exerces en reel
@@ -260,5 +275,99 @@ portails. Elle est **déjà là**. Ce qui reste à obtenir n'est pas du code, ce
 6. les documents             tournent seuls, ~10,6 nuits
 ```
 
-> **Le code n'est plus le frein.** Ce qui reste est : **une sauvegarde qui n'existe pas**, **quatre gestes à écrire**, **trois gardes à poser** — et deux
+> **Le code n'est plus le frein.** Ce qui reste est : **une restauration jamais éprouvée**, **quatre gestes à écrire**, **trois gardes à poser** — et deux
 > choses qui ne dépendent pas de moi : un juriste, et des contrats de diffusion.
+
+---
+
+# 10. LES CONTRÔLES PASSÉS EN RÉEL — 01/10, 00h30
+
+*Tous lancés, aucun supposé.*
+
+## Les quatre sentinelles de fond : **vertes**
+
+```
+mandat_un_numero     deux_numeros 0 · croisements 0 · absents 0 · plage 0
+annonce_un_numero    deux_numeros 0 · croisements 0 · inconnus 0 · plage 0
+mandat_disparu       0 absents sur 24 909
+relation_disparue    doublons 0 · hors plage 0 · plage envahie 0
+```
+
+## Les 7 tâches planifiées : **toutes à 0**
+
+```
+GTI Quotidien             30/09 05:00   0     prochaine 01/10 05:00
+GTI Descente              30/09 07:30   0
+GTI Recherches Actives    30/09 03:00   0
+GTI Rattrapage Documents  30/09 23:00   0
+GTI Sauvegarde            30/09 08:15   0
+GTI Relances Email        01/10 00:00   0
+GTI Health Monitor        30/09 23:48   0     toutes les 2 h
+```
+
+## L'état de santé réel : **1 critique, 5 alertes**
+
+```
+⛔ data.travaux_en_erreur        2 (seuil 0)   -- ROUGE DEPUIS LE 28/09
+⚠ cron app_contact_push_due     dernier run en echec
+⚠ data.ecart_statut_regle       6 (seuil 4)
+⚠ data.notif_non_lues           1 433 (seuil 300)
+⚠ data.notif_orphelines         148 (seuil 20)
+⚠ data.orphelins_recherche      1 (seuil 0)
+⚠ data.recherche_disparue       1 (seuil 0)
+```
+
+---
+
+# 11. TROIS INCIDENTS RÉELS, NOMMÉS
+
+## ① Une saisie de négociateur perdue depuis le 23/09 — **huit jours**
+
+```
+contact 10355711 · recherche Firminy, appartement
+   dans l'app     prix_max = 255 000
+   chez Hektor    l'ancienne valeur
+   app_search_pending : push_search = NULL, push_attempts = 0
+```
+
+**Et ce n'est pas un trou de surveillance — c'est un trou de LECTURE.** Trois
+gardes en voient chacune une facette, aucune ne nomme l'incident :
+
+```
+data.recherche_divergente    critical, seuil 0   -> la voit
+data.recherche_disparue      warning, 1          -> la voit
+data.orphelins_recherche     warning, 1          -> la voit
+data.recherche_push_bloque   ne se declenche qu'a push_attempts >= 3
+                             -> une ligne JAMAIS TENTEE lui est invisible
+```
+
+⚠ **Et la mémoire du projet explique pourquoi personne n'a réagi** :
+`recherche_divergente` est connue pour crier faux entre le run de nuit et la
+Descente de 07:30. **Le bruit d'une garde a masqué une vraie perte.**
+
+## ② Deux travaux en erreur depuis le 28/09 — l'alarme critique
+
+```
+refresh_console_data sur les annonces 63157 (BRIOUDE) et 54673 (COURPIERE)
+   sqlite3.OperationalError: database is locked
+   dans bootstrap_phase2.ensure_schema, appele par push_single_annonce
+```
+
+L'appelant pose pourtant `timeout=30` : **le verrou a donc tenu plus de 30
+secondes**, à 08:54 le 28/09. *(L'écrivain qui le tenait n'est pas identifié —
+non mesuré.)*
+
+✅ **Conséquence limitée** : les deux annonces sont bien dans Supabase, actives.
+Le run de nuit les a rattrapées. **Mais l'alarme reste rouge trois jours après**,
+parce qu'un travail en erreur n'est jamais rejoué *(règle assumée)* et que rien
+ne l'éteint.
+
+## ③ Une sentinelle compare la mauvaise paire
+
+`relation_disparue` affiche « retard du cloud : 82 392 ». Elle compare le
+registre **neuf** (`app_relation`, 132 628) à la doublure de l'**ancienne** table
+(`app_contact_relation_current__sb`). La doublure `app_relation__sb` n'existe pas
+encore côté serveur — elle descendra au prochain run.
+
+C'est marqué *« information, jamais une alerte »*, donc rien ne casse. **Mais le
+chiffre est faux et personne ne peut le savoir en le lisant.**
