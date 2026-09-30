@@ -267,12 +267,17 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
           deux cotes d'une jointure ecarte TOUT index -- la sonde tournait plus
           de DEUX MINUTES et finissait coupee. 0,209 s desormais.
 
-   D 🟡 LE MANDAT NE DANS L'APP -- CODE FAIT, 2 GESTES A FREDERIC   b45f36a
-        ① coller supabase/patch_app_mandat_naissance_app_2026-09-30.sql
-          UNE ligne : app_mandat_id prend nextval() en DEFAUT (pas d'RPC : le
-          worker n'a rien a calculer). Eprouve en BEGIN/ROLLBACK :
-             sans numero (worker) -> 1 000 001   avec numero (run) -> 999 001
-        ② REDEMARRER LES 4 SERVICES (journee 06h-22h, JAMAIS 23h-05h)
+   D ✅ LE MANDAT NAIT DANS L'APP -- EN SERVICE LE 30/09 a 09h25   b45f36a
+        ① patch COLLE : le defaut vaut nextval('app_mandat_id_app_seq'),
+          sequence a 1 000 001. Eprouve avant : sans numero -> plage app,
+          avec numero -> conserve tel quel.
+        ② 4 SERVICES REDEMARRES le 30/09 a 09:25:45-47 -- et VERIFIE autrement
+          que par « Running » : date de creation des 4 processus (CIM), toutes
+          POSTERIEURES a la modification du fichier (09:17:42). Les quatre
+          rendent `idle`, sans erreur, battement a la minute.
+          ⚠ « Running » ne prouve RIEN sur le code charge : un service jamais
+            redemarre est Running lui aussi. C'est l'heure du PROCESSUS qui
+            prouve, pas l'etat du service.
         ⭐ L'ADOPTION est posee, et sans elle LE RUN S'ARRETERAIT : le run
           reprend le numero du cloud au lieu d'en fabriquer un second pour le
           meme couple (l'arret sur index unique des 01 et 02/09).
