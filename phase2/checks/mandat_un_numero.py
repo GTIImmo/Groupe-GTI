@@ -61,37 +61,26 @@ BASE = RACINE / "phase2" / "phase2.sqlite"
 PLAGE = 1_000_000
 GRAVES = ("deux_numeros", "croisements", "absents_du_cloud", "plage_envahie")
 
-# Le CAST est du cote de la DOUBLURE seulement : cote serveur les colonnes
-# restent nues, pour que SQLite se serve de la cle primaire et de l'index UNIQUE.
-_S_ID = "CAST(s.app_mandat_id AS INTEGER)"
-_S_AN = "CAST(s.hektor_annonce_id AS TEXT)"
-_S_NU = "CAST(s.numero_mandat AS TEXT)"
+# ⚠ LA MESURE SE FAIT EN MEMOIRE, PAS EN SQL, ET C'EST UN CORRECTIF DU 30/09.
+# La premiere version comparait les deux tables en SQL, avec un CAST des deux
+# cotes de la jointure. Un CAST sur une colonne de jointure ecarte TOUT index :
+# la sonde a tourne plus de deux minutes sur 26 826 lignes, et une sonde de sante
+# qui met deux minutes ne tourne pas -- elle finit par etre coupee.
+# 26 826 lignes tiennent dans un dictionnaire sans peine. On lit une fois chaque
+# table, on compare des ensembles, et la mesure prend moins d'une seconde.
 
-REQUETES = {
-    "deux_numeros": f"""
-        SELECT COUNT(*) FROM app_mandat__sb s
-          JOIN app_mandat m ON m.hektor_annonce_id = {_S_AN}
-                           AND m.numero_mandat    = {_S_NU}
-         WHERE m.app_mandat_id <> {_S_ID}""",
-    "croisements": f"""
-        SELECT COUNT(*) FROM app_mandat__sb s
-          JOIN app_mandat m ON m.app_mandat_id = {_S_ID}
-         WHERE m.hektor_annonce_id <> {_S_AN}
-            OR m.numero_mandat    <> {_S_NU}""",
-    "absents_du_cloud": """
-        SELECT COUNT(*) FROM app_mandat m
-         WHERE NOT EXISTS (
-               SELECT 1 FROM app_mandat__sb s
-                WHERE CAST(s.hektor_annonce_id AS TEXT) = m.hektor_annonce_id
-                  AND CAST(s.numero_mandat AS TEXT)     = m.numero_mandat)""",
-    "en_attente": f"""
-        SELECT COUNT(*) FROM app_mandat__sb s
-         WHERE {_S_ID} >= {PLAGE}
-           AND NOT EXISTS (
-               SELECT 1 FROM app_mandat m
-                WHERE m.hektor_annonce_id = {_S_AN}
-                  AND m.numero_mandat     = {_S_NU})""",
-}
+
+def _lire(conn: sqlite3.Connection, table: str) -> dict:
+    """{(annonce, numero): numero d'app} -- les deux colonnes ramenees au texte."""
+    sortie = {}
+    for app_id, annonce, numero in conn.execute(
+        f"SELECT app_mandat_id, hektor_annonce_id, numero_mandat FROM {table}"
+    ):
+        a = str(annonce or "").strip()
+        n = str(numero or "").strip()
+        if a and n:
+            sortie[(a, n)] = int(app_id) if app_id is not None else None
+    return sortie
 
 
 def _table_existe(conn: sqlite3.Connection, nom: str) -> bool:
@@ -106,14 +95,44 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
     """
     if not _table_existe(conn, "app_mandat") or not _table_existe(conn, "app_mandat__sb"):
         return None
-    comptes = {cle: conn.execute(sql).fetchone()[0] for cle, sql in REQUETES.items()}
+    serveur = _lire(conn, "app_mandat")
+    cloud = _lire(conn, "app_mandat__sb")
+
+    # ① LE COUPLE PORTE-T-IL LE MEME NUMERO DES DEUX COTES ?
+    deux_numeros = sum(1 for cle, ident in cloud.items()
+                       if cle in serveur and serveur[cle] != ident)
+
+    # ② UN NUMERO VISE-T-IL DEUX COUPLES ? On retourne les deux tables : si un
+    #    meme numero d'app pointe ici et la-bas sur des couples differents,
+    #    l'identite du mandat est rompue.
+    par_id_serveur = {}
+    for cle, ident in serveur.items():
+        if ident is not None:
+            par_id_serveur[ident] = cle
+    croisements = sum(1 for cle, ident in cloud.items()
+                      if ident in par_id_serveur and par_id_serveur[ident] != cle)
+
+    # ③ LE PUSH EST-IL PASSE ?
+    absents_du_cloud = sum(1 for cle in serveur if cle not in cloud)
+
+    # ④ CE QUE SEUL LE CLOUD PORTE, dans la plage de l'app : un mandat NE DANS
+    #    L'APP que le miroir n'a pas encore ramene. Normal, compte a part.
+    en_attente = sum(1 for cle, ident in cloud.items()
+                     if cle not in serveur and (ident or 0) >= PLAGE)
+
+    comptes = {
+        "deux_numeros": deux_numeros,
+        "croisements": croisements,
+        "absents_du_cloud": absents_du_cloud,
+        "en_attente": en_attente,
+    }
     # Le run ne distribue que SOUS la plage. Un numero au-dessus, cote serveur,
     # veut dire que l'allocateur a regarde le MAX global -- le defaut d'aout.
-    comptes["plage_envahie"] = conn.execute(
-        f"SELECT COUNT(*) FROM app_mandat WHERE app_mandat_id >= {PLAGE}").fetchone()[0]
+    comptes["plage_envahie"] = sum(1 for ident in serveur.values()
+                                   if (ident or 0) >= PLAGE)
     comptes["graves"] = sum(comptes[c] for c in GRAVES)
-    comptes["serveur"] = conn.execute("SELECT COUNT(*) FROM app_mandat").fetchone()[0]
-    comptes["supabase"] = conn.execute("SELECT COUNT(*) FROM app_mandat__sb").fetchone()[0]
+    comptes["serveur"] = len(serveur)
+    comptes["supabase"] = len(cloud)
     return comptes
 
 
