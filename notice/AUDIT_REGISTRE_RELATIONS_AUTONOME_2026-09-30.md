@@ -32,6 +32,42 @@ et la transaction en ont deux (le run ET l'app). Le mandat en aura deux (étape 
 
 ---
 
+## 0-quater. LE BUG ① EST RÉPARÉ — *30/09, fin de journée* — `93cc01b`
+
+```
+CE QU'IL FALLAIT FAIRE           ce qu'on a fait
+A  ajouter app_contact_id        ⛔ INUTILE, et c'est une bonne nouvelle : la vue
+   a la vue                         expose deja hektor_contact_id, qui CONTIENT
+                                    notre numero. Aucun SQL de production.
+B  la fiche annonce lit le       ✅ FAIT, mais AUTREMENT : on ne change pas ce
+   registre                         que la fiche LIT, on corrige le numero
+                                    qu'elle TRANSMET.
+```
+
+**La correction, et pourquoi celle-là :** `api.ts` interdit explicitement d'élargir
+le filtre de `loadContactRelations` (*« élargir leur filtre n'ajouterait que du
+risque »*). Sa consigne **suppose un contact déjà chargé** — et c'est cette
+supposition qui était fausse. **On la rend vraie au lieu de la contourner** : on
+charge la fiche d'abord (`loadContactById` cherche bien sous les deux numéros),
+puis on lit ses liens sous son numéro.
+
+**Deux appelants corrigés**, les deux mesurés :
+- la fiche contact ouverte depuis l'annonce — le cas signalé
+- le bon de visite depuis un RDV — `app_google_calendar_event_link` porte
+  **1 numéro Hektor sur 11**, c'est la « dépendance hors base » déjà notée en L4-c
+
+⚠ **Et le test figeait la justification fausse.** `test_genants_front.cjs` G-6
+vérifiait que le filtre n'avait pas été élargi — bonne règle, **gardée**. Mais son
+commentaire affirmait une supposition **sur l'appelant**, jamais vérifiée. Le
+commentaire est corrigé, et **un contrôle neuf vérifie la supposition elle-même**
+— avec une preuve : il échoue sur la version d'avant.
+
+**Preuve de bout en bout, en base :** `41` → la fiche rend `10000023` → **3 liens**.
+
+⛔ **RESTE À DÉPLOYER** : le correctif est commité, pas poussé.
+
+---
+
 ## 0-ter. LES RÉPONSES DE FRÉDÉRIC — *30/09, après-midi* — ELLES FONT FOI
 
 ```
