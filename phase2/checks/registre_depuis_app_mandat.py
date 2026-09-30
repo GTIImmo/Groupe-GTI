@@ -208,8 +208,8 @@ def main() -> int:
             print("      -- %s --" % colonne)
             for (a, n), vue_v, table_v in liste:
                 print("         annonce %-7s n° %-9s" % (a, n))
-                print("            la VUE   : %s" % (vue_v[:110] if vue_v else "(vide)"))
-                print("            la TABLE : %s" % (table_v[:110] if table_v else "(vide)"))
+                print("            la VUE   : %s" % (str(vue_v)[:110] if vue_v != "" else "(vide)"))
+                print("            la TABLE : %s" % (str(table_v)[:110] if table_v != "" else "(vide)"))
     print("")
     print("   -- compte a part, c'est une DECISION du 28/08 --")
     print("   mandat_date_cloture different       : %s" % m["cloture_ecart"])

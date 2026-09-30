@@ -277,8 +277,6 @@ def _version_depuis_ligne(ligne) -> dict:
         try:
             objet = json.loads(brut)
             if isinstance(objet, dict) and objet:
-                # meme nettoyage sur la photocopie : le score se calcule dessus
-                objet["montant"] = _montant(objet.get("montant"))
                 return objet
         except Exception:
             pass
@@ -364,63 +362,12 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     lus = neufs = revus = sans_numero = 0
     vus_ce_run = []
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # ON GROUPE PAR COUPLE AVANT D'ECRIRE -- ET C'EST LE CORRECTIF DU 30/09.
-    #
-    # Le miroir porte 25 003 lignes pour 24 754 couples : 147 couples ont
-    # PLUSIEURS versions du meme mandat. La premiere version de ce script les
-    # ecrivait a la file, donc LA DERNIERE LUE GAGNAIT -- un ordre qui ne veut
-    # rien dire. Le registre, lui, choisit LA PLUS COMPLETE depuis toujours
-    # (compute_mandat_version_score). Mesure du 30/09 : les deux choix se
-    # rejoignent sur 141 couples et DIVERGENT SUR 6.
-    #
-    # Les 6, et ce ne sont pas des nuances d'affichage :
-    #     n° 4069   158 685 EUR (2012)  au lieu de   76 230 EUR (2020)
-    #     n° 3958   168 000 EUR (2012)  au lieu de  244 900 EUR (2020)
-    #     n° 4425    52 000 EUR (2012)  au lieu de  149 000 EUR (2021)
-    #     n° 4141   SIMPLE               au lieu de  ACCORD
-    #     n° 3838   EXCLUSIF             au lieu de  SIMPLE
-    #     n° 17195  date de fin decalee d'un jour
-    # « Un mandat simple presente comme exclusif n'est pas une nuance
-    #   d'affichage : les deux n'ont pas les memes effets juridiques. »
-    #
-    # ⚠ LA FORMULE EST IMPORTEE, PAS RECOPIEE. Une deuxieme copie qui derive est
-    #   exactement ce que le projet a paye sur les vues et sur les renvois.
-    # ══════════════════════════════════════════════════════════════════════════
-    groupes: dict[tuple[str, str], list[sqlite3.Row]] = {}
-    for m in con.execute(
-        "SELECT hektor_mandat_id, hektor_annonce_id, numero, type, date_enregistrement,"
-        " date_debut, date_fin, date_cloture, montant, mandants_texte, note, raw_json"
-        " FROM hektor.hektor_mandat"
-    ).fetchall():
-        lus += 1
-        annonce = str(m["hektor_annonce_id"] or "").strip()
-        numero = str(m["numero"] or "").strip()
-        if not annonce or not numero:
-            sans_numero += 1
-            continue
-        groupes.setdefault((annonce, numero), []).append(m)
-
-    multi_versions = 0
-    for (annonce, numero), rangee in groupes.items():
-        # Les versions, telles que le registre les voit : le raw_json de chaque
-        # ligne EST l'objet version (memes cles : id/numero/type/debut/fin/
-        # cloture/montant/mandants/note/avenants). Verifie le 30/09.
-        versions = []
-        for ligne in rangee:
-            item = _version_depuis_ligne(ligne)
-            if item:
-                versions.append(item)
-        versions.sort(key=compute_mandat_version_score, reverse=True)
-        if len(rangee) > 1:
-            multi_versions += 1
-        # La ligne du miroir qui PORTE la version retenue -- on garde son
-        # hektor_mandat_id, sa date de cloture et son raw_json.
+    def _poser(annonce: str, numero: str, versions: list[dict], origine: str,
+               repli=None) -> None:
+        """Ecrit UNE ligne de registre. `versions` est deja trie, meilleure en tete."""
+        nonlocal prochain, neufs, revus
         courante = versions[0] if versions else {}
-        m = _ligne_de_la_version(rangee, courante)
-
         avenants = normalize_embedded_avenants(versions) if versions else []
-
         cle = (annonce, numero)
         if cle in connus:
             identifiant = None
@@ -431,6 +378,13 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             connus.add(cle)
             neufs += 1
         vus_ce_run.append(cle)
+        plat = repli if repli is not None else {}
+
+        def _du_plat(colonne):
+            try:
+                return plat[colonne]
+            except Exception:
+                return None
 
         con.execute(
             """
@@ -440,13 +394,13 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 date_cloture, first_seen_at, last_seen_at, offre_type, nature,
                 versions_json, version_count, avenants_json, avenant_count,
                 origine, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'mandat', 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO UPDATE SET
                 app_dossier_id=COALESCE(excluded.app_dossier_id, app_mandat.app_dossier_id),
                 hektor_mandat_id=excluded.hektor_mandat_id,
                 offre_type=excluded.offre_type,
                 nature=excluded.nature,
-                origine='mandat',
+                origine=excluded.origine,
                 famille=excluded.famille,
                 type=excluded.type,
                 date_enregistrement=excluded.date_enregistrement,
@@ -465,27 +419,126 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             """,
             (
                 identifiant, dossiers.get(annonce), annonce, numero,
-                str(m["hektor_mandat_id"] or "") or None,
+                _texte(courante.get("id")) or _texte(_du_plat("hektor_mandat_id")),
                 _famille(courante.get("type"), numero),
                 _texte(courante.get("type")),
-                _texte(courante.get("dateEnregistrement")) or m["date_enregistrement"],
-                _texte(courante.get("debut")) or m["date_debut"],
-                _texte(courante.get("fin")) or m["date_fin"],
-                _montant(courante.get("montant")) or _montant(m["montant"]),
-                _texte(courante.get("mandants")) or m["mandants_texte"],
-                _texte(courante.get("note")) or m["note"],
-                m["raw_json"], m["date_cloture"], vu, vu,
+                _texte(courante.get("dateEnregistrement")) or _texte(_du_plat("date_enregistrement")),
+                _texte(courante.get("debut")) or _texte(_du_plat("date_debut")),
+                _texte(courante.get("fin")) or _texte(_du_plat("date_fin")),
+                _montant(courante.get("montant")) or _montant(_du_plat("montant")),
+                _texte(courante.get("mandants")) or _texte(_du_plat("mandants_texte")),
+                _texte(courante.get("note")) or _texte(_du_plat("note")),
+                json.dumps(courante, ensure_ascii=True, separators=(",", ":")) if courante else None,
+                _texte(courante.get("cloture")) or _texte(_du_plat("date_cloture")),
+                vu, vu,
                 offres.get(annonce),
-                _nature(courante.get("type"), courante.get("note") or m["note"],
+                _nature(courante.get("type"),
+                        courante.get("note") or _du_plat("note"),
                         offres.get(annonce)),
-                json.dumps(versions, ensure_ascii=True, separators=(",", ":")),
+                json.dumps([dict(v, montant=_montant(v.get("montant"))) for v in versions],
+                           ensure_ascii=True, separators=(",", ":")),
                 len(versions),
                 json.dumps(avenants, ensure_ascii=True, separators=(",", ":")),
                 len(avenants),
+                origine,
             ),
         )
 
-    # ------------------------------------------------------------------ 2e SOURCE
+    # =========================================================================
+    # 1re SOURCE -- LE DETAIL DE L'ANNONCE. C'EST CELLE DU REGISTRE.
+    #
+    # CORRECTION DU 30/09, ET ELLE ANNULE MON PREMIER JET. J'avais pris
+    # `hektor_mandat` pour source. C'est la mauvaise, et l'outil de controle
+    # (registre_depuis_app_mandat.py) l'a montre : sur 28 couples la table
+    # croyait voir deux VERSIONS d'un mandat la ou il y a deux MANDATS
+    # DIFFERENTS qui partagent un numero --
+    #     n° 14856   2011 -> 59 000 EUR   ET   2022 -> 160 000 EUR
+    #     n° 4028    04/08 -> 106 000     ET   06/08 -> 13 800
+    # -- et choisissait « la plus complete » entre deux dossiers etrangers.
+    #
+    # LA DIFFERENCE TIENT A LA QUESTION POSEE :
+    #     le detail       « quels sont les mandats de CE bien, MAINTENANT »
+    #     hektor_mandat   accumule tout ce qui est passe
+    # Le registre lit le detail (SQL_REGISTER_RAW_BASE : hektor_annonce_detail).
+    # La table doit lire la meme chose, sans quoi elle ne peut pas le refaire.
+    #
+    # Mesure du 30/09 : le detail porte 24 666 couples, hektor_mandat 24 754 ;
+    # le detail n'a RIEN que le miroir n'ait (0), et le miroir garde 88 couples
+    # que le detail a oublies -- d'ou la 2e source, plus bas.
+    # =========================================================================
+    par_couple: dict = {}
+    for d in con.execute(
+        "SELECT hektor_annonce_id, mandats_json FROM hektor.hektor_annonce_detail"
+        " WHERE TRIM(COALESCE(mandats_json, '')) NOT IN ('', '[]')"
+    ).fetchall():
+        annonce = str(d["hektor_annonce_id"] or "").strip()
+        if not annonce:
+            continue
+        try:
+            items = json.loads(d["mandats_json"])
+        except Exception:
+            continue
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            lus += 1
+            numero = _texte(item.get("numero"))
+            if not numero:
+                sans_numero += 1
+                continue
+            # ⚠ ON NE NETTOIE PAS ICI. Mesure du 30/09 : nettoyer le montant
+            #   AVANT compute_mandat_version_score change le classement, donc
+            #   LA VERSION RETENUE (annonce 59279 : le registre garde la ligne
+            #   close a 0 EUR, la table prenait l'ouverte a 172 500). Ce n'est
+            #   pas au nettoyage d'affichage d'arbitrer quel mandat fait foi.
+            #   Le score se calcule sur la matiere brute -- exactement comme le
+            #   registre. Le « 0 » ne disparait qu'A L'ECRITURE.
+            par_couple.setdefault((annonce, numero), []).append(item)
+
+    multi_versions = 0
+    for (annonce, numero), versions in par_couple.items():
+        versions.sort(key=compute_mandat_version_score, reverse=True)
+        if len(versions) > 1:
+            multi_versions += 1
+        _poser(annonce, numero, versions, "detail")
+
+    # =========================================================================
+    # 2e SOURCE -- LE MIROIR, POUR CE QUE LE DETAIL A OUBLIE (88 couples).
+    #
+    # ON N'ECRASE JAMAIS CE QUE LE DETAIL A POSE. Un mandat que le detail
+    # connait est a jour ; celui du miroir peut dater. Le miroir ne sert donc
+    # qu'a COMBLER -- la regle « la source la plus riche gagne, la plus pauvre
+    # ne fait que combler », deja appliquee a la source `no_mandat`.
+    #
+    # Et parce qu'on ne prend ici QUE des couples inconnus du detail, le
+    # melange de deux mandats homonymes ne peut plus se produire : il n'y a
+    # qu'une seule reponse possible par couple.
+    # =========================================================================
+    depuis_miroir = 0
+    groupes: dict = {}
+    for m in con.execute(
+        "SELECT hektor_mandat_id, hektor_annonce_id, numero, type, date_enregistrement,"
+        " date_debut, date_fin, date_cloture, montant, mandants_texte, note, raw_json"
+        " FROM hektor.hektor_mandat"
+    ).fetchall():
+        annonce = str(m["hektor_annonce_id"] or "").strip()
+        numero = str(m["numero"] or "").strip()
+        if not annonce or not numero:
+            continue
+        if (annonce, numero) in par_couple:
+            continue                      # le detail a deja repondu
+        groupes.setdefault((annonce, numero), []).append(m)
+
+    for (annonce, numero), rangee in groupes.items():
+        versions = [v for v in (_version_depuis_ligne(l) for l in rangee) if v]
+        versions.sort(key=compute_mandat_version_score, reverse=True)
+        plat = _ligne_de_la_version(rangee, versions[0] if versions else {})
+        depuis_miroir += 1
+        _poser(annonce, numero, versions, "miroir", repli=plat)
+
+    # ------------------------------------------------------------------ 3e SOURCE
     # LE NUMERO PORTE PAR L'ANNONCE, QUAND AUCUNE FICHE MANDAT N'EXISTE.
     #
     # C'est ce que fait deja le registre actuel, et c'est ce que ma premiere
@@ -513,11 +566,28 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             #   est plus riche). Mais le type d'offre, lui, doit etre pose : sans
             #   lui le controle ne sait pas distinguer une location d'une perte,
             #   et il a deja annonce « 2 983 perdus » pour 263 reels.
+            # ⚠ ET LA VERSION DE REPLI AUSSI, SI LA LIGNE N'EN A AUCUNE.
+            #   Une ligne posee par un run anterieur, avant que les colonnes de
+            #   version existent, reste sinon a zero version -- alors que le
+            #   registre en compte UNE. Mesure du 30/09 : annonces 62038 et
+            #   63003. Le COALESCE/NULLIF garantit qu'on ne remplace JAMAIS une
+            #   version venue du detail : on ne fait que combler du vide.
             con.execute(
                 "UPDATE app_mandat SET offre_type = COALESCE(NULLIF(offre_type,''), ?),"
-                "                       nature = COALESCE(NULLIF(nature,''), ?)"
+                "                       nature = COALESCE(NULLIF(nature,''), ?),"
+                "                       versions_json = COALESCE(NULLIF(versions_json,''), ?),"
+                "                       version_count = CASE"
+                "                            WHEN COALESCE(versions_json,'') IN ('', '[]')"
+                "                            THEN 1 ELSE version_count END,"
+                "                       avenants_json = COALESCE(NULLIF(avenants_json,''), '[]'),"
+                "                       avenant_count = COALESCE(avenant_count, 0)"
                 " WHERE hektor_annonce_id = ? AND numero_mandat = ?",
                 (offres.get(annonce), _nature(None, None, offres.get(annonce)),
+                 json.dumps([{
+                     "id": None, "numero": numero, "type": None, "debut": None,
+                     "fin": None, "cloture": None, "montant": None,
+                     "mandants": None, "note": None, "avenants": [],
+                 }], ensure_ascii=True, separators=(",", ":")),
                  annonce, numero),
             )
             continue
@@ -526,17 +596,29 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         connus.add(cle)
         depuis_annonce += 1
         vus_ce_run.append(cle)
+        # UNE VERSION DE REPLI, EXACTEMENT COMME LE REGISTRE EN FABRIQUE UNE.
+        # Le registre, quand aucune fiche n'existe, pose une version vide
+        # portant le seul numero -- et compte donc UNE version, pas zero.
+        # Sans elle, `register_version_count` vaut 1 a l'ecran et NULL dans la
+        # table : mesure du 30/09, deux lignes (annonces 62038 et 63003).
+        version_repli = [{
+            "id": None, "numero": numero, "type": None, "debut": None,
+            "fin": None, "cloture": None, "montant": None, "mandants": None,
+            "note": None, "avenants": [],
+        }]
         con.execute(
             """
             INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
                 numero_mandat, famille, first_seen_at, last_seen_at, offre_type,
-                nature, origine, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'annonce', 1)
+                nature, versions_json, version_count, avenants_json, avenant_count,
+                origine, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, '[]', 0, 'annonce', 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO NOTHING
             """,
             (identifiant, dossiers.get(annonce), annonce, numero,
              _famille(None, numero), vu, vu, offres.get(annonce),
-             _nature(None, None, offres.get(annonce))),
+             _nature(None, None, offres.get(annonce)),
+             json.dumps(version_repli, ensure_ascii=True, separators=(",", ":"))),
         )
 
     sortis = 0
@@ -555,7 +637,8 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
 
     con.commit()
     return {"lus": lus, "neufs": neufs, "revus": revus,
-            "sans_numero": sans_numero, "depuis_annonce": depuis_annonce,
+            "sans_numero": sans_numero, "multi_versions": multi_versions,
+            "depuis_miroir": depuis_miroir, "depuis_annonce": depuis_annonce,
             "sortis_du_miroir": sortis}
 
 
@@ -671,7 +754,8 @@ def main() -> int:
         if args.refresh:
             bilan = refresh(con, full=not args.partiel)
             print("REFRESH app_mandat")
-            for k in ("lus", "neufs", "revus", "sans_numero", "depuis_annonce", "sortis_du_miroir"):
+            for k in ("lus", "neufs", "revus", "sans_numero", "multi_versions",
+                      "depuis_miroir", "depuis_annonce", "sortis_du_miroir"):
                 print("   %-22s : %s" % (k, bilan[k]))
         else:
             con.executescript(SCHEMA)
