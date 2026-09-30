@@ -576,6 +576,26 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
           puis alerter sur un chiffre que mon propre code avait fabrique.
           memoire `mesurer-sur-la-bonne-source`.
 
+   ⚠⚠ DEUX CORRECTIFS D'URGENCE LE 30/09 AU SOIR -- LA VUE ETAIT INUTILISABLE
+      cf3e63b  index d'expression   985 ms -> 4 ms
+      d5c09bb  LATERAL au lieu du CTE  7 586 ms -> 7 ms
+      J'AVAIS RENDU LA VUE 100 A 280 FOIS PLUS LENTE ET JE NE L'AVAIS PAS
+      MESURE. J'avais verifie le NOMBRE de lignes, le contenu, l'absence de
+      perte -- et PAS UNE FOIS LE TEMPS.
+      ⛔ ET MON 1er CORRECTIF NE PROUVAIT RIEN : mesure sur un contact SANS
+        lien, ou Postgres n'execute jamais la partie couteuse (« never
+        executed »). J'ai mesure LE CAS OU IL N'Y A RIEN A FAIRE.
+      LES DEUX DEFAUTS, a reconnaitre dans un plan :
+        · « Seq Scan, Rows Removed by Filter: 132628 » alors qu'un index
+          existe -> la vue CONVERTIT LA COLONNE (app_contact_id::text) et le
+          rend inutilisable -> index D'EXPRESSION
+        · « Sort Method: external merge Disk » sur un CTE -> il MATERIALISE
+          57 682 lignes a chaque requete -> LATERAL, et convertir LE PETIT
+          COTE de la jointure, jamais la colonne indexee d'en face
+      VERIFIE SUR 7 PROFILS : 76 liens 7,2 ms · 72 -> 1,9 · 50 -> 1,7 ·
+      3 -> 1,1 · 1 -> 0,1. Contenu inchange : 163 765, 0 perdue, 0 ajoutee.
+      ➡ memoire `mesurer-le-temps-pas-seulement-le-resultat`
+
    C 🔺 LA PROJECTION DES ACQUEREURS -- REMONTEE, mon refus reposait sur un
         chiffre FAUX. J'avais annonce « projeter perdrait 791 lignes ».
         ⛔⛔ TROIS ERREURS DANS MA MESURE, dont une grosse :
@@ -585,7 +605,15 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
           parties lues 23 798 -> 34 949 en realite.
         LE VRAI CHIFFRE : le ledger connait 16 080 des 16 253 couples (98,9 %),
         CO-ACQUEREURS COMPRIS (affaires a 2, 3, 4, 5 et 6 acquereurs).
-        RESTE 180 couples, TOUS des compromis -- non compris a ce jour.
+        ⭐ ET LES 180 N'EXISTAIENT PAS NON PLUS : encore la mauvaise table de
+          traduction. Avec app_contact_current (356 270) : le miroir en plus = 0,
+          le ledger en plus = 14. LA PROJECTION NE PERD RIEN.
+        MESURE COTE CLOUD : 32 979 parties traduisibles sur 34 949 (le cloud n'a
+        que 62 059 contacts) -> 0 PERDUE, +1 778 GAGNEES par rapport a l'ecran
+        d'aujourd'hui. Les 1 970 intraduisibles sont des contacts absents du
+        cloud, donc pas affichables aujourd'hui non plus.
+        ⛔ SUSPENDUE : sa 1re version met 7,6 s -- le meme defaut que celui
+          repare ci-dessus. A reprendre AVEC UN LATERAL.
         ⚠ ET LA TRADUCTION S'ENRICHIT : le ledger connait des correspondances
           que app_contact_identite_app ignore (ex. 458 -> 10000231).
           62 038 -> 63 222 ; non traduisibles 828 -> 189.
