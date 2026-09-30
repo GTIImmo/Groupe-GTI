@@ -1109,6 +1109,7 @@ class Monitor:
             ("annonce_un_numero", self.check_annonce_un_numero),
             ("mandat_disparu", self.check_mandat_disparu),
             ("mandat_un_numero", self.check_mandat_un_numero),
+            ("relation_disparue", self.check_relation_disparue),
             ("contacts_identite", self.check_contacts_identite),
             ("contacts_satellites", self.check_contacts_satellites),
             ("local_logs", self.check_local_logs),
@@ -2266,6 +2267,76 @@ class Monitor:
                      f"Un mandat, un numero : 0 ecart sur {mesure['supabase']} "
                      f"({mesure['en_attente']} ne(s) dans l'app, pas encore chez Hektor)",
                      mesure)
+
+    def check_relation_disparue(self) -> None:
+        """UN LIEN NE DISPARAIT PAS. LOCALE.                    30/09/2026
+
+        La relation etait le SEUL objet principal sans aucune sentinelle -- et
+        le seul a un seul robinet. Pendant ce temps, un bien qui sortait du parc
+        emportait ses liens hors du cloud : 82 386 liens mandant/proprietaire
+        dans ce cas le 30/09.
+
+        LA FORMULE N'EST PAS ICI : phase2/checks/relation_disparue.py, seule
+        copie -- meme patron que mandat_disparu et annonce_un_numero.
+
+        ⚠ ELLE MESURE EN MEMOIRE, PAS EN SQL, et c'est une lecon payee le matin
+          meme : un NOT EXISTS sur une table sans index a tenu un verrou
+          d'ecriture 8 min 30 sur phase2.sqlite, et la sonde du mandat, ecrite
+          de la meme facon, tournait plus de DEUX MINUTES avant d'etre coupee.
+          Une garde qui ne tourne pas n'est pas une garde. Ici : 0,5 s.
+
+        LE RETARD DU CLOUD EST RENDU EN INFORMATION, JAMAIS EN ALERTE : il porte
+        les biens du parc, la table porte tout. Frederic a tranche le 30/09 --
+        tout montera, et l'ecart disparaitra de lui-meme.
+        """
+        db = self.root / "phase2" / "phase2.sqlite"
+        try:
+            chemin = str(self.root / "phase2" / "checks")
+            if chemin not in sys.path:
+                sys.path.insert(0, chemin)
+            import relation_disparue as rd
+        except Exception as exc:  # pragma: no cover
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "warning",
+                     f"Mesure « un lien ne disparait pas » introuvable ({type(exc).__name__})", {})
+            return
+        if not db.exists():
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "warning",
+                     "Base phase2 introuvable : liens disparus non mesurables", {"path": str(db)})
+            return
+        try:
+            conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                mesure = rd.mesurer(conn)
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "warning",
+                     f"Base phase2 illisible pour la mesure ({type(exc).__name__})", {})
+            return
+        if mesure is None:
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "warning",
+                     "Liens disparus : NON MESURABLE (app_relation manquante) -- ce n'est pas un zero", {})
+        elif mesure["source_absents"]:
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "critical",
+                     f"Liens de la couche absents du registre : {mesure['source_absents']} "
+                     f"sur {mesure['source_lus']} (seuil 0) -- l'etape de nuit ne passe plus",
+                     mesure)
+        elif mesure["doublons"]:
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "critical",
+                     f"Doublons sur la cle (contact, bien) : {mesure['doublons']} (seuil 0)", mesure)
+        elif mesure["hors_plage_app"]:
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "critical",
+                     f"Numeros de contact hors plage app : {mesure['hors_plage_app']} (seuil 0) -- "
+                     "la substitution d'identite n'a pas eu lieu", mesure)
+        elif mesure["plage_envahie"]:
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "critical",
+                     f"Numeros du run dans la plage reservee a l'app : {mesure['plage_envahie']} "
+                     "(seuil 0) -- le defaut d'aout revient", mesure)
+        else:
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "ok",
+                     f"Registre des liens complet : {mesure['lignes']} liens, 0 manquant sur "
+                     f"{mesure['source_lus']} de la couche "
+                     f"(cloud en retard de {mesure['retard_cloud']}, c'est voulu)", mesure)
 
     def check_contacts_satellites(self) -> None:
         """24/09/2026 -- LES TABLES SATELLITES SUIVENT-ELLES LE CONTACT ? SUPABASE.

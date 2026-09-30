@@ -745,6 +745,38 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -
     "--refresh"
 )
 
+# ============================================================================
+# LE REGISTRE DES LIENS (app_relation)                            30/09/2026
+# ----------------------------------------------------------------------------
+# UNE etape neuve, NON BLOQUANTE, qui ne touche a RIEN d'existant. Elle lit la
+# couche des liens (deja construite plus haut, « build contacts layer seconde
+# passe ») et accumule dans app_relation, en delete-never.
+#
+# -- POURQUOI ELLE EXISTE. app_contact_relation_current est EFFACEE ET REFAITE
+#    chaque nuit depuis six fenetres de Hektor. Un bien qui sort du parc emporte
+#    ses liens hors du cloud : 82 386 liens mandant/proprietaire dans ce cas le
+#    30/09. Le jour ou un bien se vend, ON NE SAIT PLUS QUI EN ETAIT LE MANDANT.
+#
+# -- SA PLACE EST APRES LA COUCHE, et c'est necessaire : placee avant, elle
+#    lirait la table de la VEILLE et le registre aurait un jour de retard.
+#
+# -- ELLE NE PORTE PAS LES ACQUEREURS (34 925). Un acquereur n'est pas un lien
+#    au bien : il existe parce qu'il a fait une offre, et app_affaire_ledger le
+#    tient deja durablement. Le registre les PROJETTERA. Deux copies finissent
+#    toujours par dire deux choses.
+#
+# -- DUREE MESUREE : 4,2 s, dont 3,5 s de verrou d'ecriture.
+#    ⚠ CE CHIFFRE COMPTE PLUS QUE LA DUREE TOTALE. Une premiere version tenait
+#      ce verrou 8 min 30 (132 000 x 132 000 comparaisons sur une table
+#      temporaire sans index) -- pendant lesquelles les autres ecrivains de
+#      phase2 attendent puis abandonnent. La difference se fait desormais en
+#      memoire, pas en SQL.
+# ============================================================================
+Invoke-OptionalStepWithRetry -Label "phase2 registre des liens (app_relation)" -Arguments @(
+    "phase2\syncelation_ledger.py",
+    "--refresh"
+)
+
 
 # 11/09/2026 -- L'ENTRETIEN DE LA LECTURE CONSOLE DES COMPROMIS.
 #
