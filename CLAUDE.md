@@ -252,18 +252,39 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
             LA VUE ET SES 4 FONCTIONS NE SONT PAS TOUCHEES : elle lit UNE
             table, on change seulement d'ou le fabricant tire ses colonnes.
 
-   A 🟡 LE PUSH -- CODE FAIT, BLOQUE SUR UN COLLAGE SQL           30/09  de7c57b
+   A ✅ LE PUSH -- FAIT LE 30/09                          de7c57b · c560955
         mandat_ledger.py --push (delete-never) + --push-a-blanc.
         ⛔ GARDE-FOU DANS LE CODE : --push sans --refresh est REFUSE (lecon du
           07/09, ledger d'affaires : un push seul a efface une annulation de
           compromis faite une heure plus tot). Levable, assume.
         Essai a blanc sur la table reelle : 26 826 lignes, 25 colonnes remplies.
-        ⛔ CE QUI MANQUE, ET C'EST A FREDERIC :
-           supabase/patch_app_mandat_versions_2026-09-30.sql -- 5 colonnes
-           (nature, versions_json, version_count, avenants_json, avenant_count).
-           Eprouve en BEGIN/ROLLBACK (20 -> 25, annulation propre). L'outil
-           refuse l'ecriture en production : c'est le protocole du projet.
-           Ensuite :  python phase2/sync/mandat_ledger.py --refresh --push
+        PATCH COLLE PAR FREDERIC : 25 colonnes, les 5 presentes.
+        POUSSE : 26 826 lignes, verifiees EN LIGNE -- numeros distincts 26 826,
+        plage envahie 0, sans versions_json 0, plusieurs versions 121, avenant 1.
+        DOUBLURE descendue en 16 s (app_mandat__sb), sans une ligne de code.
+        LES DEUX SENTINELLES SONT VERTES.
+        ⚠ CORRECTIF DANS L'OEIL : mesure EN MEMOIRE, plus en SQL. Un CAST des
+          deux cotes d'une jointure ecarte TOUT index -- la sonde tournait plus
+          de DEUX MINUTES et finissait coupee. 0,209 s desormais.
+
+   D 🟡 LE MANDAT NE DANS L'APP -- CODE FAIT, 2 GESTES A FREDERIC   b45f36a
+        ① coller supabase/patch_app_mandat_naissance_app_2026-09-30.sql
+          UNE ligne : app_mandat_id prend nextval() en DEFAUT (pas d'RPC : le
+          worker n'a rien a calculer). Eprouve en BEGIN/ROLLBACK :
+             sans numero (worker) -> 1 000 001   avec numero (run) -> 999 001
+        ② REDEMARRER LES 4 SERVICES (journee 06h-22h, JAMAIS 23h-05h)
+        ⭐ L'ADOPTION est posee, et sans elle LE RUN S'ARRETERAIT : le run
+          reprend le numero du cloud au lieu d'en fabriquer un second pour le
+          meme couple (l'arret sur index unique des 01 et 02/09).
+        Le worker n'ecrit QUE annonce/numero/type/date -- famille et nature sont
+        des regles Python, les recopier en JS en ferait une copie qui derive.
+
+   ⛔ ET UNE OPERATION QUI ATTEND SON HEURE : la reconstruction du registre.
+      Les +453 de l'etape C n'apparaitront pas toutes seules -- le push de nuit
+      ne remplace que les annonces qu'il vise (correctif C, 6c790eb). Il faut
+      push_upgrade_to_supabase.py --rebuild-register-only, qui VIDE le registre
+      puis le refait. « Jamais pendant le run de nuit, jamais quand l'agence
+      consulte. » -> a lancer en soiree, sur un mot de Frederic.
 
    B ✅ L'OEIL SERVEUR <-> SUPABASE                               30/09  44c2e9b
         phase2/checks/mandat_un_numero.py + data.mandat_un_numero dans la sonde.
