@@ -37,6 +37,7 @@ SORTIE
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import sqlite3
@@ -120,7 +121,69 @@ def annuaire() -> tuple[dict, dict]:
     return nego_vers_agence, agences
 
 
-def notre_carte() -> list[dict]:
+def cles_supabase() -> tuple[str, str]:
+    """L'adresse et la cle de service Supabase.
+
+    Elles ne sont NI dans l'environnement NI dans le .env racine : elles vivent
+    dans `apps/hektor-v1/.env` (VITE_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY),
+    comme le lisent deja sync_matterport_models.py et enqueue_delete_drafts.py.
+    On ne les affiche JAMAIS -- seulement le fait qu'elles ont ete trouvees.
+    """
+    url = (os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL") or "").strip()
+    cle = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
+    if url and cle:
+        return url, cle
+    chemin = os.path.join("apps", "hektor-v1", ".env")
+    if not os.path.exists(chemin):
+        return url, cle
+    try:
+        with io.open(chemin, encoding="utf-8") as fichier:
+            for ligne in fichier:
+                ligne = ligne.strip()
+                if not ligne or ligne.startswith("#") or "=" not in ligne:
+                    continue
+                nom, _, valeur = ligne.partition("=")
+                nom = nom.strip()
+                valeur = valeur.strip().strip('"').strip("'")
+                if not url and nom in ("SUPABASE_URL", "VITE_SUPABASE_URL"):
+                    url = valeur
+                elif not cle and nom == "SUPABASE_SERVICE_ROLE_KEY":
+                    cle = valeur
+    except OSError:
+        pass
+    return url, cle
+
+
+def notre_carte() -> tuple[list[dict], str]:
+    """La carte de routage -- ET D'OU ELLE VIENT.
+
+    ⚠⚠ CETTE FONCTION RENVOIE SA SOURCE, ET CE N'EST PAS UN DETAIL.
+      Le 30/09 a 18h20, ce controle a annonce « 17 lignes a corriger » ALORS QUE
+      LE CORRECTIF VENAIT D'ETRE APPLIQUE. Il comparait la copie LOCALE
+      (phase2/phase2.sqlite, rafraichie seulement au run) au lieu de la carte de
+      PRODUCTION, qui vit dans Supabase et que le backend lit a chaque diffusion.
+      Un controle qui ne dit pas quelle source il a lue peut affirmer le
+      contraire de la verite sans jamais se tromper de calcul.
+      C'est la troisieme fois de la journee que je mesure sur la mauvaise source.
+
+    On lit Supabase quand on en a les cles, la copie locale sinon -- et on le DIT.
+    """
+    url, cle = cles_supabase()
+    if url and cle:
+        try:
+            import requests
+            reponse = requests.get(
+                "%s/rest/v1/app_diffusion_agency_target" % url.rstrip("/"),
+                headers={"apikey": cle, "Authorization": "Bearer %s" % cle},
+                params={"select": "agence_nom,portal_key,hektor_broadcast_id", "is_active": "eq.1"},
+                timeout=30,
+            )
+            reponse.raise_for_status()
+            return list(reponse.json() or []), "SUPABASE (la carte de production)"
+        except Exception as erreur:
+            print("[carte] lecture Supabase impossible (%s) -- repli sur la copie locale"
+                  % str(erreur)[:80], file=sys.stderr)
+
     conn = sqlite3.connect("file:%s?mode=ro" % CHEMIN_CARTE, uri=True)
     conn.row_factory = sqlite3.Row
     lignes = [
@@ -131,7 +194,7 @@ def notre_carte() -> list[dict]:
         )
     ]
     conn.close()
-    return lignes
+    return lignes, "COPIE LOCALE %s -- ⚠ PAS la carte de production" % CHEMIN_CARTE
 
 
 # ------------------------------------------------------------------ l'epreuve
@@ -220,14 +283,17 @@ def main() -> int:
 
     if args.par_agence:
         bilan = par_agence(settings, portail=args.par_agence)
+        lignes_carte, source_carte = notre_carte()
         carte = {sans_accent(l["agence_nom"]): str(l["hektor_broadcast_id"] or "").strip()
-                 for l in notre_carte() if l["portal_key"] == args.par_agence}
+                 for l in lignes_carte if l["portal_key"] == args.par_agence}
         if args.json:
             print(json.dumps(bilan, ensure_ascii=False, indent=2))
         else:
             print("=" * 84)
             print("HEKTOR REPOND, AGENCE PAR AGENCE  --  portail %s" % args.par_agence)
             print("=" * 84)
+            print("   carte comparee : %s" % source_carte)
+            print()
             print("   %-36s %-7s %-12s %-9s %s"
                   % ("agence", "numero", "identifiant", "notre carte", "verdict"))
             for agence in sorted(bilan["agences"]):
@@ -285,7 +351,8 @@ def main() -> int:
         }
 
     verdicts = []
-    for ligne in notre_carte():
+    lignes_carte, source_carte = notre_carte()
+    for ligne in lignes_carte:
         agence = str(ligne["agence_nom"] or "")
         portail = str(ligne["portal_key"] or "")
         numero = str(ligne["hektor_broadcast_id"] or "").strip()
@@ -336,7 +403,7 @@ def main() -> int:
             })
 
     # les passerelles vivantes que notre carte ignore
-    connus = {str(l["hektor_broadcast_id"] or "").strip() for l in notre_carte()}
+    connus = {str(l["hektor_broadcast_id"] or "").strip() for l in lignes_carte}
     orphelines = [
         {"numero": p, "portail": v["portail"], "annonces": v["annonces"], "agences": v["noms"]}
         for p, v in vivantes.items() if p not in connus
