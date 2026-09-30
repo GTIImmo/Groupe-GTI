@@ -80,11 +80,31 @@ const controles = [
     // LA MOITIE QUI NE DOIT PAS BOUGER. Ces deux fonctions recoivent le numero
     // d'un contact DEJA CHARGE : les deux cotes basculent ensemble. Elargir leur
     // filtre serait du bruit, et du risque.
+    //
+    // ⚠⚠ SA JUSTIFICATION ETAIT A MOITIE FAUSSE, ET CE CONTROLE L'A FIGEE.
+    //    « Un contact DEJA CHARGE » est une SUPPOSITION SUR L'APPELANT, pas une
+    //    propriete de ces fonctions. Le 30/09 on a trouve un appelant ou elle
+    //    etait fausse : la fiche contact ouverte depuis une ANNONCE recevait un
+    //    NUMERO HEKTOR (derive de proprietaires_json), alors que la table ne
+    //    contient QUE des numeros d'app depuis le 23/09 -> « Aucune annonce
+    //    liee » sur un contact qui en a trois.
+    //    La regle reste BONNE ; c'est l'appelant qu'on a corrige, pas le filtre.
+    //    Le controle suivant verifie desormais la supposition elle-meme.
     nom: "les fonctions coherentes par construction n'ont PAS ete elargies",
     fichier: API,
     ok: (s) => /loadContactRelations[\s\S]{0,400}\.eq\('hektor_contact_id', contactId\.trim\(\)\)/.test(s)
             && /loadContactSearches[\s\S]{0,400}\.eq\('hektor_contact_id', contactId\.trim\(\)\)/.test(s),
     pasDePreuve: true, // elle passe AUSSI sur la version d'avant, et c'est voulu
+  },
+  {
+    // LE CONTROLE QUI MANQUAIT -- 30/09/2026.
+    // La regle ci-dessus n'est vraie que si l'APPELANT charge la fiche AVANT de
+    // demander ses liens. Ici on le verifie sur le chemin qui etait casse :
+    // la fiche contact ouverte par-dessus une annonce.
+    nom: "l'appelant charge la fiche AVANT d'en lire les liens (annonce -> contact)",
+    fichier: APP,
+    ok: (s) => /const contact = await loadContactById\(id\)[\s\S]{0,300}loadContactRelations\(notreNumero\)/.test(s)
+            && /loadContactSearches\(notreNumero\)/.test(s),
   },
 ];
 

@@ -13057,8 +13057,37 @@ export default function App() {
     const id = String(annonceContactId ?? '').trim()
     if (!id) { setAnnonceContact(null); setAnnonceContactRelations([]); setAnnonceContactSearches([]); return }
     let cancelled = false
-    Promise.all([loadContactById(id), loadContactRelations(id), loadContactSearches(id)])
-      .then(([contact, relations, searches]) => {
+    // ⚠ ON CHARGE LA FICHE D'ABORD, PUIS SES LIENS SOUS SON NUMERO -- correctif
+    //   du 30/09/2026, et ce n'est pas un detail de style.
+    //
+    //   `id` vient d'ici de la FICHE ANNONCE, qui derive ses mandants de
+    //   `proprietaires_json` -- la copie Hektor, donc un NUMERO HEKTOR.
+    //   Or `app_contact_relation_current.hektor_contact_id` ne contient plus
+    //   AUCUN numero Hektor depuis la bascule du 23/09 : mesure du 30/09,
+    //   167 547 lignes sur 167 547 dans la plage de l'app, 0 de style Hektor.
+    //   (le nom de la colonne ment : build_contacts_layer.py:1093 fait
+    //    `contact_id = identite_app(contact_id)` AVANT de la remplir.)
+    //   -> la recherche ne trouvait rien, et l'ecran affichait « Aucune annonce
+    //      liee » sur un contact qui en a. Reproduit le 30/09 : contact
+    //      10000023 / n° Hektor 41 -> 3 liens sous le notre, 0 sous celui de
+    //      Hektor.
+    //
+    //   ⛔ ON N'ELARGIT PAS LE FILTRE de loadContactRelations : api.ts l'interdit
+    //     explicitement (« elargir leur filtre n'ajouterait que du risque »).
+    //     Sa consigne suppose un contact DEJA CHARGE -- c'est cette supposition
+    //     qui etait fausse ici. On la rend vraie au lieu de la contourner.
+    //     loadContactById, lui, cherche bien sous LES DEUX numeros.
+    const chargerFicheEtLiens = async () => {
+      const contact = await loadContactById(id)
+      const notreNumero = String(contact?.hektor_contact_id ?? '').trim() || id
+      const [relations, searches] = await Promise.all([
+        loadContactRelations(notreNumero),
+        loadContactSearches(notreNumero),
+      ])
+      return { contact, relations, searches }
+    }
+    chargerFicheEtLiens()
+      .then(({ contact, relations, searches }) => {
         if (cancelled) return
         setAnnonceContact(contact ?? null)
         setAnnonceContactRelations(relations)
@@ -20269,7 +20298,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             const printWindow = window.open('', '_blank')
             writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml())
             try {
-              const [acquereur, relations] = await Promise.all([loadContactById(cid), loadContactRelations(cid)])
+              // Meme correctif qu'a la fiche contact ouverte depuis l'annonce : le
+              // numero porte par un RDV peut etre celui de Hektor (mesure du
+              // 30/09 : 1 sur 11 dans app_google_calendar_event_link -- c'est la
+              // « dependance hors base » deja notee en L4-c). On charge la fiche,
+              // puis on lit ses liens SOUS SON NUMERO.
+              const acquereur = await loadContactById(cid)
+              const relations = acquereur
+                ? await loadContactRelations(String(acquereur.hektor_contact_id ?? '').trim() || cid)
+                : []
               if (!acquereur) { writeVisitVoucherWindow(printWindow, visitVoucherLoadingHtml()); return }
               let photoUrl: string | null = null
               try { photoUrl = await loadVisitVoucherPhotoUrl(event, relations) } catch { /* photo best-effort */ }
