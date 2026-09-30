@@ -371,3 +371,109 @@ encore côté serveur — elle descendra au prochain run.
 
 C'est marqué *« information, jamais une alerte »*, donc rien ne casse. **Mais le
 chiffre est faux et personne ne peut le savoir en le lisant.**
+
+
+---
+
+# 12. ⛔ CORRECTIONS — RDV, PHOTOS, DOCUMENTS
+
+**Frédéric m'a arrêté : « tu te trompes pour le RDV, l'adresse n'est pas la
+bonne, vérifie mes codes, mon historique ».** Il avait raison. Trois fois.
+
+## ① LE RDV FONCTIONNE — j'avais testé la mauvaise adresse
+
+J'ai testé `groupe-gti.vercel.app/rdv/annonce/{token}` et conclu « 404, la page
+n'existe pas ». **La vraie adresse est ailleurs, et elle est écrite dans le
+projet depuis le 25/09 :**
+
+```
+https://gtiimmo.github.io/vitrine/rdv/index.html?ref=<hektor_annonce_id>
+   un site STATIQUE dedie : apps/rdv-public/ (index, estimation, app.js, styles)
+   publie sur GITHUB PAGES, depot GTIImmo/vitrine
+   ⚠ le parametre est ?ref= , PAS un segment de chemin
+```
+
+**Éprouvé en vrai, page ouverte le 01/10 :** elle charge le bien *(Appartement,
+50 000 €, réf. 63158)*, l'agence, le négociateur *(Mélanie LEGRAND, tél, mail)*,
+**le calendrier d'octobre avec ses créneaux**, la fiche contact, les quatre
+actions *(Visiter · Télécharger · Contacter · Estimer)*. Assets 200, aucune
+erreur bloquante.
+
+**Et la chaîne a produit de vrais rendez-vous :**
+
+```
+82 emails de rapprochement envoyes (80 reels) · 29 ouverts · 6 cliques
+2 RENDEZ-VOUS PRIS          dernier envoi le 24/07
+```
+
+➡ **Ce que je prenais pour une panne était une adresse que je n'avais pas
+cherchée.** J'avais dans les mains l'audit du 25/09 qui donne l'URL exacte, et
+je ne l'ai ouvert qu'après m'être trompé. **`notice/` avant le navigateur.**
+
+**Ce qui reste vrai sur le RDV — et c'est son propre audit qui le dit :**
+
+```
+⏳ le `ref` est le NUMERO HEKTOR, pas le jeton
+   -> a la coupure, TOUS les QR et affiches deja imprimes meurent
+   -> le jeton existe deja pour les 2 235 liens : il suffit de l'exporter
+   (point ① de notice/AUDIT_VITRINE_ET_RDV_2026-09-25.md, toujours ouvert)
+⏳ la fiche visite PDF pointe sur admin/pdf.php de HEKTOR -> meurt aussi
+⚠ app_appointment_request = 0 alors que 2 RDV ont ete pris par email
+   -> les deux chemins ne partagent peut-etre pas la meme table. NON MESURE.
+```
+
+ℹ **Une piste écartée, et c'est une bonne nouvelle** : 12 agences affichent la
+boîte mail d'une autre *(Saint-Étienne → firminy@, Issoire → brioude@…)*. Ce
+n'est **pas** un défaut : les paires sont **exactement** les 8 regroupements
+d'agences des anciennes passerelles. Une boîte et un téléphone par binôme —
+c'est l'organisation réelle du réseau, et c'est pourquoi Hektor avait groupé ses
+passerelles ainsi.
+
+## ② LES DOCUMENTS — mon « 48 % » était trompeur
+
+```
+PARC VIVANT           20 162 / 20 345 documents au coffre   = 99,1 %  ✅
+                      13 059 / 13 453 annonces scannees     = 97,1 %  ✅
+HORS PARC (archives)   1 796 / 33 583                        =  5,3 %
+```
+
+**Le 48 % mélangeait le parc et les archives.** Or la règle du projet est
+explicite : *« serveur = tout / cloud = biens vivants »*. Les archives **ne
+doivent pas** monter au cloud. **Le périmètre qui compte est à 99 %.**
+
+```
+⬜ 394 annonces du parc pas encore scannees
+⬜ le rattrapage des ARCHIVES continue, ~10,6 nuits, tourne seul
+⛔ ZERO sentinelle document dans check_gti_health
+```
+
+## ③ LES PHOTOS — le parc vivant est complet
+
+```
+10 229 / 13 453 annonces du parc ont des photos
+74 786 / 74 786 de leurs photos ont leurs derives   = 100 %  ✅
+derives entretenus par le run (dernier : 30/09 05:08)
+coffre public EPROUVE en vrai : w400.jpg servi, 400x534
+```
+
+```
+⛔ la sonde photo tourne DANS LE RUN mais n'est branchee sur AUCUNE alerte
+   (check_photo_listing_push.py n'est pas dans check_gti_health)
+   -> si elle rougit, seul le journal le sait
+⬜ gestes manquants : supprimer une photo, reordonner
+⬜ 3 224 annonces du parc sans aucune photo -- NON MESURE si c'est normal
+```
+
+## ⚠ Ce que ces trois corrections m'apprennent
+
+**Sept fois en 24 h j'ai conclu sur une source incomplète.** Le motif est
+toujours le même : *j'ai mesuré ce que j'avais sous la main, pas ce que l'écran
+ou le client voit réellement.*
+
+```
+la sauvegarde     j'ai lu le script, pas les services de la machine
+le RDV            j'ai teste une URL que j'avais deduite, pas celle du projet
+les documents     j'ai divise par le total, sans separer parc et archives
+```
+
+➡ **Avant de déclarer une panne : ouvrir `notice/`, et tester l'adresse RÉELLE.**
