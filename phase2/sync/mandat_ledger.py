@@ -358,6 +358,42 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     for r in con.execute("SELECT hektor_annonce_id, numero_mandat FROM app_mandat"):
         connus.add((str(r["hektor_annonce_id"]), str(r["numero_mandat"])))
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # L'ADOPTION -- ET SANS ELLE, LE PUSH S'ARRETERAIT
+    #
+    # Le worker ecrit un mandat NE DANS L'APP directement chez Supabase, avec un
+    # numero de la plage haute (>= 1 000 000, distribue par app_mandat_id_app_seq).
+    # Le miroir ne le connait pas encore. Au run suivant, Hektor le redescend :
+    # ce script verrait un couple INCONNU, lui donnerait un numero de la serie
+    # LOCALE, et le push tenterait d'inserer une deuxieme ligne pour le meme
+    # couple -> violation de app_mandat_couple_unique.
+    #
+    # ⚠ ET LE DEGAT NE SERAIT PAS LE CONFLIT, CE SERAIT L'ARRET. Les 01 et
+    #   02/09/2026, deux nuits de suite, le push du ledger d'affaires a heurte un
+    #   index unique et LE RUN S'EST ARRETE LA -- tout ce qui suivait n'a pas
+    #   tourne, et l'app est restee dix-huit heures en arriere sans que rien ne
+    #   le dise.
+    #
+    # ON ADOPTE DONC : si la doublure porte deja ce couple, on reprend SON numero
+    # au lieu d'en fabriquer un. C'est la regle du projet -- « un numero ne se
+    # perd jamais », et c'est le serveur qui s'aligne, pas le cloud.
+    # ══════════════════════════════════════════════════════════════════════════
+    adoptes: dict[tuple[str, str], int] = {}
+    try:
+        for r in con.execute(
+            "SELECT app_mandat_id, hektor_annonce_id, numero_mandat FROM app_mandat__sb"
+            " WHERE app_mandat_id >= ?", (PLAGE_RESERVEE_APP,)
+        ):
+            cle_sb = (str(r["hektor_annonce_id"] or "").strip(),
+                      str(r["numero_mandat"] or "").strip())
+            if cle_sb[0] and cle_sb[1] and cle_sb not in connus:
+                adoptes[cle_sb] = int(r["app_mandat_id"])
+    except sqlite3.OperationalError:
+        # La doublure n'a jamais ete descendue. On ne devine pas -- et tant que
+        # rien n'ecrit depuis l'app, il n'y a rien a adopter.
+        pass
+    adoptes_au_depart = len(adoptes)
+
     # Notre numero d'annonce, pour que la ligne porte NOTRE identite et pas
     # seulement celle de Hektor.
     dossiers = {}
@@ -379,6 +415,11 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         if cle in connus:
             identifiant = None
             revus += 1
+        elif cle in adoptes:
+            # NE DANS L'APP : on reprend son numero, on n'en fabrique pas un autre.
+            identifiant = adoptes.pop(cle)
+            connus.add(cle)
+            neufs += 1
         else:
             identifiant = prochain
             prochain += 1
@@ -598,8 +639,11 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                  annonce, numero),
             )
             continue
-        identifiant = prochain
-        prochain += 1
+        if cle in adoptes:
+            identifiant = adoptes.pop(cle)
+        else:
+            identifiant = prochain
+            prochain += 1
         connus.add(cle)
         depuis_annonce += 1
         vus_ce_run.append(cle)
@@ -628,6 +672,8 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
              json.dumps(version_repli, ensure_ascii=True, separators=(",", ":"))),
         )
 
+    adoptes_faits = adoptes_au_depart - len(adoptes)
+
     sortis = 0
     if full and vus_ce_run:
         con.execute("CREATE TEMP TABLE IF NOT EXISTS _vus(a TEXT, n TEXT)")
@@ -644,6 +690,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
 
     con.commit()
     return {"lus": lus, "neufs": neufs, "revus": revus,
+            "adoptes_du_cloud": adoptes_faits,
             "sans_numero": sans_numero, "multi_versions": multi_versions,
             "depuis_miroir": depuis_miroir, "depuis_annonce": depuis_annonce,
             "sortis_du_miroir": sortis}
@@ -851,7 +898,7 @@ def main() -> int:
         if args.refresh:
             bilan = refresh(con, full=not args.partiel)
             print("REFRESH app_mandat")
-            for k in ("lus", "neufs", "revus", "sans_numero", "multi_versions",
+            for k in ("lus", "neufs", "revus", "adoptes_du_cloud", "sans_numero", "multi_versions",
                       "depuis_miroir", "depuis_annonce", "sortis_du_miroir"):
                 print("   %-22s : %s" % (k, bilan[k]))
         elif not (args.push or args.push_a_blanc):

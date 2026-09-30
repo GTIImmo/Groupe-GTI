@@ -12926,6 +12926,88 @@ const CLOTURE_MANDAT_CHEZ_HEKTOR =
 //
 // Hektor n'est toujours PAS informe, et c'est voulu : il apprend la vente ou le
 // changement de statut, cela suffit.
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// A.3-tech etape D -- LE NUMERO ENTRE A NOTRE REGISTRE DES LA CREATION
+// ═══════════════════════════════════════════════════════════════════════════════
+// 30/09/2026.
+//
+// CE QUE CA CHANGE, ET CE QUE CA NE CHANGE PAS
+// Les cinq etapes PROTEXA ne bougent pas d'une ligne : c'est TOUJOURS Hektor qui
+// fabrique le numero, a valideStep1. Le registre electronique legal est le
+// DERNIER temps du chantier, pas celui-ci.
+// Ce qui change : jusqu'ici, un mandat cree a 10 h n'entrait dans NOTRE registre
+// qu'au run de la nuit. Entre les deux, le numero n'existait que chez Hektor.
+// « Un numero ne se perd jamais » est la regle 1 du projet ; elle ne peut pas
+// souffrir une fenetre de quatorze heures.
+//
+// POURQUOI L'ECRITURE N'A PAS DE NUMERO D'APP
+// La colonne app_mandat_id a pour DEFAUT nextval('app_mandat_id_app_seq') --
+// patch_app_mandat_naissance_app_2026-09-30.sql. On ecrit donc une ligne
+// ORDINAIRE, sans numero, et Postgres lui en donne un de la plage reservee a
+// l'app (>= 1 000 000). Rien a calculer ici, donc aucune regle recopiee.
+//
+// ET C'EST LE RUN QUI COMPLETE. On n'ecrit QUE ce que le worker sait de source
+// sure : l'annonce, le numero, le type, la date de debut. Ni `famille`, ni
+// `nature`, ni `versions_json` -- ce sont des regles qui vivent en Python
+// (mandat_ledger.py), et les recopier en JavaScript serait en faire une seconde
+// copie qui derive. Le run les posera quand le miroir ramenera le mandat, et
+// `adoptes_du_cloud` reprendra CE numero-ci au lieu d'en fabriquer un second.
+//
+// ⚠ BEST EFFORT, TOUJOURS. Cette ecriture ne doit JAMAIS faire echouer une
+//   creation de mandat : le mandat est deja chez Hektor a ce stade, et le faire
+//   passer pour rate serait pire que le retard qu'on repare. On attrape tout, on
+//   journalise, et on rend la main.
+async function enregistrerMandatAuRegistreApp(job, annonceId, numeroMandat, mandat, appDossierId) {
+  const numero = String(numeroMandat || "").trim();
+  if (!numero) return { status: "skipped", reason: "numero_mandat_absent" };
+  const maintenant = new Date().toISOString();
+  try {
+    const ecrites = await supabaseRequest("app_mandat", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates,return=representation",
+      // Le corps doit etre du TEXTE -- un objet donne « Empty or invalid json »
+      // (erreur du 28/08 au matin, meme piege que la cloture locale).
+      body: JSON.stringify([{
+        hektor_annonce_id: String(annonceId),
+        numero_mandat: numero,
+        app_dossier_id: appDossierId || null,
+        type: mandat && mandat.typeMandat ? String(mandat.typeMandat) : null,
+        date_debut: mandat && mandat.dateDebut ? String(mandat.dateDebut) : null,
+        origine: "app",
+        first_seen_at: maintenant,
+        last_seen_at: maintenant,
+        present_in_hektor: true,
+      }]),
+    });
+    // LA VERIFICATION. Sans elle, « done » ne veut rien dire -- c'est le silence
+    // qu'on a supprime partout ailleurs dans ce fichier.
+    if (!Array.isArray(ecrites) || ecrites.length === 0) {
+      throw new Error("aucune ligne ecrite dans app_mandat");
+    }
+    const pose = ecrites[0] || {};
+    await logJob(job.id, "mandat_registre_app", "done",
+      "Mandat enregistre a notre registre", {
+        hektor_annonce_id: String(annonceId),
+        numero_mandat: numero,
+        app_mandat_id: pose.app_mandat_id,
+        origine: pose.origine,
+      });
+    return { status: "enregistre", app_mandat_id: pose.app_mandat_id };
+  } catch (erreur) {
+    // On le DIT, fort. Une ecriture manquee en silence, c'est un registre
+    // incomplet qui se fait passer pour un registre a jour.
+    await logJob(job.id, "mandat_registre_app", "error",
+      `Mandat NON enregistre a notre registre : ${erreur && erreur.message ? erreur.message : erreur}`, {
+        hektor_annonce_id: String(annonceId),
+        numero_mandat: numero,
+        rattrapage: "le run de nuit le posera -- mais le numero n'est a nous qu'a partir de la",
+      });
+    return { status: "failed", reason: String(erreur && erreur.message ? erreur.message : erreur) };
+  }
+}
+
+
 async function cloturerMandatLocalement(job, annonceId, payload, dateCloture) {
   const numero = String(payload.numero_mandat || payload.numeroMandat || "").trim();
   if (!numero) {
@@ -15132,6 +15214,12 @@ async function handleCreateHektorMandatAutoNumber(job) {
     response_preview: step5.text.slice(0, 500),
   });
 
+  // A.3-tech etape D : le numero entre a NOTRE registre tout de suite, pas au
+  // run de la nuit. Best effort -- le mandat est deja chez Hektor, cette
+  // ecriture ne doit jamais le faire passer pour rate.
+  const registreApp = await enregistrerMandatAuRegistreApp(
+    job, annonceId, numeroMandat, mandat, dossier && dossier.app_dossier_id);
+
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "create_hektor_mandat_auto_number",
     priority: 70,
@@ -15139,6 +15227,7 @@ async function handleCreateHektorMandatAutoNumber(job) {
 
   return {
     status: "mandat_created",
+    registre_app: registreApp,
     hektor_annonce_id: annonceId,
     numero_mandat: numeroMandat,
     mandat_contact_ids: mandantIds,
