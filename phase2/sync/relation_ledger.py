@@ -89,6 +89,7 @@ touche a RIEN d'existant. Il est DORMANT : rien ne le lance, rien ne le lit.
 from __future__ import annotations
 
 import argparse
+import json
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -234,6 +235,17 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     #   BONNE TABLE. Une absence mesuree sur la mauvaise source n'est pas une
     #   absence, c'est une erreur de lecture.
     # ══════════════════════════════════════════════════════════════════════════
+    # NOTRE numero de bien, pour les lignes qui n'arrivent pas par la couche
+    # (celle-ci le porte deja). Meme lecture que mandat_ledger.
+    dossiers: dict[str, int] = {}
+    try:
+        for r in con.execute(
+            "SELECT id, hektor_annonce_id FROM app_dossier WHERE hektor_annonce_id IS NOT NULL"
+        ):
+            dossiers[str(r["hektor_annonce_id"])] = r["id"]
+    except sqlite3.OperationalError:
+        pass
+
     numero_hektor: dict[int, str] = {}
     try:
         for r in con.execute(
@@ -351,6 +363,80 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         )
 
     # ══════════════════════════════════════════════════════════════════════════
+    # ══════════════════════════════════════════════════════════════════════════
+    # 2e SOURCE -- CE QUE L'APP TIENT ET QUE LE MIROIR IGNORE
+    #
+    # `app_relation_app_seule` est le FILET pose le 21/09 (26bis-RELATIONS) : il
+    # recense les liens que Supabase porte et que le serveur ne connait pas. Sa
+    # note dit elle-meme qu'ils ne sont « JAMAIS REINJECTES » -- il observait,
+    # faute d'une table durable ou les verser. Elle existe maintenant.
+    #
+    # MESURE DU 30/09 : 45 lignes, dont 11 VIVANTES (les 34 autres ont disparu
+    # de Supabase aussi, et gardent leur `absent_depuis`). Sur ces 11 :
+    #     leur contact existe cote serveur        11 / 11
+    #     leur annonce existe au miroir           11 / 11
+    #     elles sont absentes de app_relation     11 / 11
+    #     ET 3 SONT APPARUES LE 30/09 -- ce n'est pas du vieux bruit, c'est vivant.
+    #
+    # ⚠ LEUR `hektor_contact_id` PORTE DEJA NOTRE NUMERO (>= 10 000 000). Le nom
+    #   de la colonne ment, comme partout depuis la bascule du 23/09. On ne
+    #   traduit donc pas : on verifie la plage, et on ecarte ce qui n'y est pas.
+    #
+    # ⚠ DO NOTHING : la 1re source (la couche) est plus riche. Ce filet ne fait
+    #   que COMBLER -- il ne reecrit jamais une ligne connue.
+    #
+    # ⚠ present_in_hektor = 0 : par definition, le miroir ne les montre pas.
+    #   La vue ne les affichera donc pas encore -- mais le registre les GARDE,
+    #   et c'est tout ce qu'on lui demande. Le jour ou Hektor les redescend, la
+    #   1re source les reprend et les passe a 1.
+    # ══════════════════════════════════════════════════════════════════════════
+    depuis_app_seule = 0
+    illisibles = 0
+    try:
+        lignes_app = con.execute(
+            "SELECT hektor_contact_id, hektor_annonce_id, donnees_json"
+            "  FROM app_relation_app_seule WHERE absent_depuis IS NULL").fetchall()
+    except sqlite3.OperationalError:
+        lignes_app = []
+    for r in lignes_app:
+        brut = str(r["hektor_contact_id"] or "").strip()
+        annonce = str(r["hektor_annonce_id"] or "").strip()
+        if not brut.isdigit() or int(brut) < 10_000_000 or not annonce:
+            ecartes += 1
+            continue
+        contact = int(brut)
+        cle = (contact, annonce)
+        vus_ce_run.append(cle)
+        if cle in connus:
+            continue
+        # ⚠ ON NE GOBE PLUS L'ERREUR EN SILENCE. Ma premiere version faisait
+        #   `except Exception: donnees = {}` -- et `json` n'etait pas importe.
+        #   Le NameError a ete avale, les 6 lignes sont parties SANS leur role
+        #   ni leur cle, et RIEN NE L'A DIT. C'est la faute meme que j'avais
+        #   notee en memoire le matin : « compter ce qu'on ecarte, toujours ».
+        try:
+            donnees = json.loads(r["donnees_json"] or "{}")
+        except (ValueError, TypeError):
+            donnees = {}
+            illisibles += 1
+        identifiant = adoptes.pop(cle) if cle in adoptes else prochain
+        if cle not in adoptes and identifiant == prochain:
+            prochain += 1
+        connus.add(cle)
+        depuis_app_seule += 1
+        con.execute(
+            """
+            INSERT INTO app_relation(app_relation_id, app_contact_id, app_dossier_id,
+                hektor_annonce_id, hektor_contact_id, fait, role_hektor, source,
+                relation_key, first_seen_at, last_seen_at, present_in_hektor, absent_depuis)
+            VALUES (?, ?, ?, ?, ?, 'proprietaire_du_bien', ?, 'app_seule', ?, ?, ?, 0, NULL)
+            ON CONFLICT(app_contact_id, hektor_annonce_id) DO NOTHING
+            """,
+            (identifiant, contact, dossiers.get(annonce),
+             annonce, numero_hektor.get(contact),
+             donnees.get("role_contact"), donnees.get("relation_key"), vu, vu),
+        )
+
     # delete-never : ce que le miroir ne montre plus est MARQUE, jamais efface.
     #
     # ⚠⚠ CETTE ETAPE A ETE REECRITE LE 30/09, APRES UN INCIDENT QUE J'AI CAUSE.
@@ -392,6 +478,8 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.commit()
     return {"lus": lus, "neufs": neufs, "revus": revus, "ecartes": ecartes,
             "adoptes_du_cloud": adoptes_au_depart - len(adoptes),
+            "depuis_app_seule": depuis_app_seule,
+            "app_seule_illisibles": illisibles,
             "sans_notre_numero_de_bien": sans_bien, "sortis_du_miroir": sortis}
 
 
@@ -532,7 +620,7 @@ def main() -> int:
         if args.refresh:
             bilan = refresh(con, full=not args.partiel)
             print("REFRESH app_relation")
-            for k in ("lus", "neufs", "revus", "adoptes_du_cloud", "ecartes",
+            for k in ("lus", "neufs", "revus", "adoptes_du_cloud", "depuis_app_seule", "app_seule_illisibles", "ecartes",
                       "sans_notre_numero_de_bien", "sortis_du_miroir"):
                 print("   %-28s : %s" % (k, bilan[k]))
         elif not (args.push or args.push_a_blanc):
