@@ -95,6 +95,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
+    DEFAULT_ENV_FILES,
+    SupabaseRestClient,
+    load_env_files,
+)
+
+import os  # noqa: E402
+
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 
 TABLE = "app_relation"
@@ -315,6 +326,69 @@ def controle(con: sqlite3.Connection) -> None:
         print("   (doublure absente : comparaison au cloud impossible)")
 
 
+
+# =============================================================================
+# LE PUSH VERS SUPABASE                                            30/09/2026
+#
+# delete-never : on UPSERT, on n'efface jamais. Une ligne que le miroir ne
+# montre plus porte present_in_hektor = 0 et RESTE. C'est ce qui distingue ce
+# registre de `app_contact_relation_current`, videe et refaite a chaque nuit --
+# et c'est la raison d'etre de toute la table : 82 386 liens qu'un bien vendu
+# emportait hors du cloud.
+#
+# ⛔ `--push` NE SE LANCE JAMAIS SEUL. Lecon du 07/09/2026, payee sur le ledger
+#    d'affaires : un push lance a la main a 07:52 a efface une annulation de
+#    compromis faite a 06:38, parce qu'il envoyait l'etat du miroir LOCAL, fige
+#    au run de 04:18. « La cause n'est pas le push, c'est l'ordre. Pousser sans
+#    rafraichir revient a affirmer un etat qu'on n'a pas relu. »
+#    Le garde-fou est dans le code, pas seulement en commentaire.
+#
+# ⚠ TOUT MONTE -- decision de Frederic du 30/09 : « il faut tout monter pour
+#   avoir le registre des liens entier ». On n'applique donc AUCUN filtre sur
+#   le parc ici. C'est le montage du mandat : le registre porte tout, les
+#   ecrans filtrent.
+# =============================================================================
+
+# Les colonnes sont NOMMEES une a une : une colonne locale inconnue de Supabase
+# ferait tomber le lot entier (« column ... does not exist »).
+COLONNES_POUSSEES = (
+    "app_relation_id", "app_contact_id", "app_dossier_id", "hektor_annonce_id",
+    "fait", "role_hektor", "source", "relation_key",
+    "first_seen_at", "last_seen_at", "present_in_hektor", "absent_depuis",
+)
+
+
+def lignes_a_pousser(con: sqlite3.Connection) -> list[dict]:
+    lignes = []
+    for r in con.execute("SELECT * FROM app_relation"):
+        d = {c: r[c] for c in COLONNES_POUSSEES if c in r.keys()}
+        # SQLite garde 0/1 ; Supabase attend un booleen. Sans cette ligne,
+        # PostgREST recoit 1 pour un champ boolean et refuse le lot entier.
+        d["present_in_hektor"] = bool(d.get("present_in_hektor"))
+        lignes.append(d)
+    return lignes
+
+
+def pousser(con: sqlite3.Connection, taille_lot: int = 500, a_blanc: bool = False) -> dict:
+    lignes = lignes_a_pousser(con)
+    if a_blanc:
+        return {"a_blanc": True, "lignes": len(lignes),
+                "colonnes": len(COLONNES_POUSSEES),
+                "exemple": dict(lignes[0]) if lignes else {}}
+
+    load_env_files(DEFAULT_ENV_FILES)
+    url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
+    cle = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not (url and cle):
+        raise RuntimeError("SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis")
+    client = SupabaseRestClient(base_url=url, service_role_key=cle)
+    if not client.table_available(TABLE):
+        raise RuntimeError(
+            "app_relation n'existe pas cote Supabase. Appliquer d'abord "
+            "supabase/patch_app_relation_2026-09-30.sql.")
+    client.upsert_rows(path=TABLE, rows=lignes, batch_size=taille_lot)
+    return {"lignes_poussees": len(lignes)}
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Le registre des liens, en local. DORMANT.")
@@ -322,9 +396,26 @@ def main() -> int:
     parser.add_argument("--controle", action="store_true", help="Affiche les controles, sans rien ecrire.")
     parser.add_argument("--partiel", action="store_true",
                         help="N'applique pas present_in_hektor=0 aux lignes non revues.")
+    parser.add_argument("--push", action="store_true",
+                        help="UPSERT vers Supabase (delete-never). Exige --refresh.")
+    parser.add_argument("--push-a-blanc", action="store_true",
+                        help="Compte ce qui serait pousse, sans rien envoyer.")
+    parser.add_argument("--push-seul-je-sais", action="store_true",
+                        help="Lever le garde-fou et pousser SANS rafraichir.")
+    parser.add_argument("--taille-lot", type=int, default=500)
     args = parser.parse_args()
-    if not args.refresh and not args.controle:
-        parser.error("choisir --refresh ou --controle")
+    if not (args.refresh or args.controle or args.push or args.push_a_blanc):
+        parser.error("choisir --refresh, --controle, --push ou --push-a-blanc")
+
+    # ⛔ LE GARDE-FOU DU 07/09. Pousser sans rafraichir, c'est affirmer un etat
+    #    qu'on n'a pas relu : le push envoie le miroir LOCAL, qui date du dernier
+    #    run, et ecrase en ligne tout geste fait depuis.
+    if args.push and not args.refresh and not args.push_seul_je_sais:
+        parser.error(
+            "--push sans --refresh est refuse : le push enverrait l'etat du miroir "
+            "LOCAL, qui date du dernier run, et ecraserait en ligne tout geste fait "
+            "depuis (lecon du 07/09/2026, ledger d'affaires). Utiliser "
+            "`--refresh --push`, ou assumer avec --push-seul-je-sais.")
 
     con = _open_local()
     try:
@@ -334,9 +425,22 @@ def main() -> int:
             for k in ("lus", "neufs", "revus", "ecartes",
                       "sans_notre_numero_de_bien", "sortis_du_miroir"):
                 print("   %-28s : %s" % (k, bilan[k]))
-        else:
+        elif not (args.push or args.push_a_blanc):
             con.executescript(SCHEMA)
-        controle(con)
+        if args.push_a_blanc:
+            bilan = pousser(con, a_blanc=True)
+            print("")
+            print("PUSH A BLANC -- rien n'est envoye")
+            print("   lignes qui partiraient  : %s" % bilan["lignes"])
+            print("   colonnes envoyees       : %s" % bilan["colonnes"])
+            for k, v in sorted(bilan["exemple"].items()):
+                print("      %-20s = %r" % (k, v))
+        elif args.push:
+            bilan = pousser(con, taille_lot=args.taille_lot)
+            print("")
+            print("PUSH app_relation -> Supabase : %s lignes" % bilan["lignes_poussees"])
+        if args.refresh or args.controle:
+            controle(con)
     finally:
         con.close()
     return 0
