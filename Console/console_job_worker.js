@@ -17359,6 +17359,44 @@ async function executerCreationMandantContact(job) {
         hektor_contact_id: created.contactId, resultat: lienProvisoire.status });
   }
 
+  // ══ LA CASE CIBLE DU CONTACT NE DANS L'APP ══════════════════════════════
+  // 30/09/2026. AJOUT, RIEN N'EST MODIFIE AU-DESSUS.
+  //
+  // CE QUI MANQUAIT, ET C'ETAIT UNE ADRESSE, PAS UN MECANISME. Ce geste
+  // RAMENAIT DEJA le numero de Hektor -- il le posait sur l'etiquette
+  // provisoire (lierRelationProvisoire, juste au-dessus). Mais il ne le posait
+  // pas dans LA CASE DU CONTACT, parce qu'il n'y avait pas de contact : la
+  // fiche annonce ne creait rien de durable.
+  // Desormais la RPC fait NAITRE le contact avec NOTRE numero et nous passe son
+  // identite. Il ne reste qu'a livrer le numero de Hektor a la bonne adresse.
+  //
+  // ⚠ CE BLOC EST COPIE DU GESTE VOISIN (creation de contact globale), qui le
+  //   fait depuis le 21/09 -- y compris son piege deja paye : n'envoyer QUE la
+  //   case cible. Un PATCH qui ajoutait `updated_at` (colonne inexistante) a
+  //   ete rejete en 400 ET LA CASE EST RESTEE VIDE.
+  //
+  // ⚠ SANS CETTE CASE, le contact reste « inconnu de Hektor » pour toujours :
+  //   la porte de sortie refuse d'envoyer un numero de notre plage, et TOUS SES
+  //   GESTES SUIVANTS ATTENDENT. Genant, jamais destructeur -- d'ou le best
+  //   effort : le contact et le lien EXISTENT chez Hektor, c'est l'essentiel.
+  const identiteApp = cleanString(payload.app_identite || payload.app_identity || "");
+  if (identiteApp && created && created.contactId) {
+    try {
+      await supabaseRequest(
+        `app_contact_current?hektor_contact_id=eq.${encodeURIComponent(identiteApp)}`,
+        { method: "PATCH", prefer: "return=minimal",
+          body: JSON.stringify({ hektor_target_id: String(created.contactId) }) });
+      await logJob(job.id, "contact_cible_hektor", "done",
+        "Le mandant ne dans l'app a recu son numero Hektor dans la case cible", {
+          app_identite: identiteApp, hektor_target_id: String(created.contactId),
+          hektor_annonce_id: annonceId });
+    } catch (err) {
+      await logJob(job.id, "contact_cible_hektor", "error",
+        `Case cible non posee : ${err && err.message ? err.message : err}`,
+        { app_identite: identiteApp, hektor_annonce_id: annonceId });
+    }
+  }
+
   return {
     status: "created_and_linked",
     hektor_annonce_id: annonceId,
