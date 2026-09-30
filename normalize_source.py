@@ -6,7 +6,7 @@ import json
 import sqlite3
 import sys
 import time
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, Optional
 
 from hektor_pipeline.common import Settings, connect_db, fetch_latest_raw_payloads, init_db, json_dumps, now_utc_iso
 from phase2.sync.manual_mandat_corrections import get_manual_mandat_correction, inject_manual_mandat_if_missing
@@ -62,14 +62,76 @@ VENTE_ENDPOINTS = ("list_ventes", "list_ventes_update")
 NEGO_LISTING_ENDPOINTS = ("list_negos", "list_negos_inactive")
 
 
-def iter_listing_items(rows: Iterable[sqlite3.Row]) -> Iterable[Dict[str, Any]]:
+def iter_listing_items(
+    rows: Iterable[sqlite3.Row],
+    wrapper_key: Optional[str] = None,
+    bilan: Optional[Dict[str, Any]] = None,
+) -> Iterable[Dict[str, Any]]:
+    """Deballe les elements d'un listing brut.
+
+    27 endpoints sur 28 rendent `data` sous forme de LISTE : ce chemin-la n'a pas
+    change. `list_broadcasts` rend depuis le 07/07/2026 un CARTON
+    (`{"platforms": [...]}`), et l'ancienne version -- qui testait `isinstance(data,
+    list)` et rien d'autre -- rendait ZERO element SANS RIEN DIRE. Trois mois de
+    donnees de passerelles figees, et aucune trace nulle part.
+
+    ⚠ LE VRAI CORRECTIF N'EST PAS D'OUVRIR CE CARTON-LA, C'EST `bilan`. Un carton
+    dont la cle n'est pas celle attendue est COMPTE, jamais rabattu sur `or []` --
+    sinon il redevient indiscernable d'une reponse vide, et le prochain changement
+    de forme de Hektor repartirait pour trois mois de silence.
+    """
     for row in rows:
         payload = json.loads(row["payload_json"])
         data = payload.get("data") or []
+
+        if isinstance(data, dict):
+            contenu = data.get(wrapper_key) if wrapper_key else None
+            if isinstance(contenu, list):
+                data = contenu
+            else:
+                if bilan is not None:
+                    bilan["payloads_illisibles"] = bilan.get("payloads_illisibles", 0) + 1
+                    bilan.setdefault("formes_vues", set()).add(
+                        "dict(" + ",".join(sorted(data)[:4]) + ")"
+                    )
+                continue
+
         if isinstance(data, list):
             for item in data:
                 if isinstance(item, dict):
                     yield item
+                elif bilan is not None:
+                    bilan["elements_ecartes"] = bilan.get("elements_ecartes", 0) + 1
+        elif bilan is not None:
+            bilan["payloads_illisibles"] = bilan.get("payloads_illisibles", 0) + 1
+            bilan.setdefault("formes_vues", set()).add(type(data).__name__)
+
+
+# `list_broadcasts` est le SEUL listing emballe. Une constante plutot qu'une
+# chaine repetee sur les trois points d'appel : le jour ou Hektor rechange de
+# forme, il y a UN endroit a corriger.
+BROADCAST_WRAPPER_KEY = "platforms"
+BROADCAST_BILAN: Dict[str, Any] = {}
+
+
+def iter_broadcast_platforms(conn: sqlite3.Connection) -> list[Dict[str, Any]]:
+    """Les passerelles du brut `list_broadcasts`, carton ouvert et ecarts comptes."""
+    items = list(
+        iter_listing_items(
+            fetch_latest_raw_payloads(conn, "list_broadcasts"),
+            wrapper_key=BROADCAST_WRAPPER_KEY,
+            bilan=BROADCAST_BILAN,
+        )
+    )
+    illisibles = BROADCAST_BILAN.get("payloads_illisibles", 0)
+    if illisibles:
+        print(
+            "[normalize] ATTENTION list_broadcasts : %s reponse(s) de forme inconnue "
+            "ignoree(s) -- formes vues : %s"
+            % (illisibles, sorted(BROADCAST_BILAN.get("formes_vues", set()))),
+            file=sys.stderr,
+        )
+    return items
 
 
 def latest_detail_map(rows: Iterable[sqlite3.Row]) -> Dict[str, Dict[str, Any]]:
@@ -1497,7 +1559,7 @@ def upsert_ventes(conn: sqlite3.Connection) -> None:
 
 
 def upsert_broadcasts(conn: sqlite3.Connection) -> None:
-    for item in iter_listing_items(fetch_latest_raw_payloads(conn, "list_broadcasts")):
+    for item in iter_broadcast_platforms(conn):
         conn.execute(
             """
             INSERT INTO hektor_broadcast(hektor_broadcast_id, nom, count, listings_json, raw_json, synced_at)
@@ -1531,7 +1593,7 @@ def derive_broadcast_state(export_status: Any) -> tuple[str, int, int]:
 
 
 def upsert_broadcast_portals(conn: sqlite3.Connection) -> None:
-    for item in iter_listing_items(fetch_latest_raw_payloads(conn, "list_broadcasts")):
+    for item in iter_broadcast_platforms(conn):
         broadcast_id = str(item.get("id") or "").strip()
         if not broadcast_id:
             continue
@@ -1562,7 +1624,33 @@ def upsert_broadcast_portals(conn: sqlite3.Connection) -> None:
 
 
 def upsert_broadcast_listings(conn: sqlite3.Connection) -> None:
-    for item in iter_listing_items(fetch_latest_raw_payloads(conn, "list_broadcasts")):
+    """La diffusion est un ETAT, pas une identite : cette table doit etre un
+    INSTANTANE de ce que Hektor diffuse MAINTENANT.
+
+    ⚠ L'UPSERT SEUL NE SUFFIT PAS, et l'essai du 30/09 l'a montre : il ajoute et
+    corrige, il n'enleve jamais. Une annonce retiree d'un portail gardait sa ligne
+    -- 208 diffusions fantomes au 30/09, et le deballeur repare seul les faisait
+    passer a 2 703 lignes pour 1 677 vraies.
+
+    ON EFFACE DONC LES PASSERELLES QUE HEKTOR VIENT DE REDIRE, ET ELLES SEULES.
+    Pas un `DELETE FROM` global : le jour ou Hektor repond partiellement (une page,
+    une panne), un effacement total emporterait des diffusions bien vivantes.
+    Une passerelle absente de la reponse GARDE ses lignes -- c'est la meme prudence
+    que le delete-never des photos et des liens, appliquee au bon grain.
+    """
+    items = iter_broadcast_platforms(conn)
+    rafraichies = [
+        str(item.get("id") or "").strip()
+        for item in items
+        if str(item.get("id") or "").strip() and isinstance(item.get("listings"), list)
+    ]
+    if rafraichies:
+        conn.executemany(
+            "DELETE FROM hektor_broadcast_listing WHERE hektor_broadcast_id = ?",
+            [(value,) for value in rafraichies],
+        )
+
+    for item in items:
         broadcast_id = str(item.get("id") or "").strip()
         passerelle = item.get("nom")
         listings = item.get("listings") or []
