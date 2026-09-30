@@ -248,41 +248,50 @@ const localDiffusionRequestEventsKey = 'hektor-v1-diffusion-request-events'
 const backendApiBaseUrl = (
   import.meta.env.VITE_BACKEND_API_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:8010' : '')
 ).trim().replace(/\/+$/, '')
+// ⚠ COPIE DE SECOURS DE LA CARTE AGENCE -> PASSERELLE.
+// Elle ne sert QUE si `app_diffusion_agency_target` ne rend rien pour l'agence.
+// ⛔ C'EST UN PIEGE : elle vit dans le paquet DEPLOYE, donc corriger Supabase ne
+//   la corrige PAS -- il faut un deploiement. Elle a porte la passerelle n° 37
+//   (morte depuis le 03/04/2026) jusqu'au 30/09.
+// Les 17 numeros leboncoinDirect ont ete releves CHEZ HEKTOR le 30/09/2026
+// (ListPasserelles, une agence a la fois) apres la bascule « une passerelle par
+// agence » : 17 agences, 17 numeros distincts. bienicidirect n'a pas bouge.
+// Le controle qui le reverifie : phase2/checks/passerelle_par_agence.py --par-agence
 const defaultDiffusionAgencyTargets = [
   { agence_nom: 'Groupe GTI Ambert', portal_key: 'bienicidirect', hektor_broadcast_id: '2' },
-  { agence_nom: 'Groupe GTI Ambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '35' },
+  { agence_nom: 'Groupe GTI Ambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '45' },
   { agence_nom: 'Groupe GTI ANNONAY', portal_key: 'bienicidirect', hektor_broadcast_id: '3' },
-  { agence_nom: 'Groupe GTI ANNONAY', portal_key: 'leboncoinDirect', hektor_broadcast_id: '36' },
+  { agence_nom: 'Groupe GTI ANNONAY', portal_key: 'leboncoinDirect', hektor_broadcast_id: '47' },
   { agence_nom: 'Groupe GTI BRIOUDE', portal_key: 'bienicidirect', hektor_broadcast_id: '4' },
-  { agence_nom: 'Groupe GTI BRIOUDE', portal_key: 'leboncoinDirect', hektor_broadcast_id: '41' },
+  { agence_nom: 'Groupe GTI BRIOUDE', portal_key: 'leboncoinDirect', hektor_broadcast_id: '54' },
   { agence_nom: 'Groupe GTI Craponne-sur-Arzon', portal_key: 'bienicidirect', hektor_broadcast_id: '5' },
-  { agence_nom: 'Groupe GTI Craponne-sur-Arzon', portal_key: 'leboncoinDirect', hektor_broadcast_id: '42' },
+  { agence_nom: 'Groupe GTI Craponne-sur-Arzon', portal_key: 'leboncoinDirect', hektor_broadcast_id: '56' },
   { agence_nom: 'Groupe GTI Yssingeaux', portal_key: 'bienicidirect', hektor_broadcast_id: '6' },
-  { agence_nom: 'Groupe GTI Yssingeaux', portal_key: 'leboncoinDirect', hektor_broadcast_id: '38' },
+  { agence_nom: 'Groupe GTI Yssingeaux', portal_key: 'leboncoinDirect', hektor_broadcast_id: '61' },
   { agence_nom: 'Groupe GTI Montbrison', portal_key: 'bienicidirect', hektor_broadcast_id: '7' },
-  { agence_nom: 'Groupe GTI Montbrison', portal_key: 'leboncoinDirect', hektor_broadcast_id: '37' },
+  { agence_nom: 'Groupe GTI Montbrison', portal_key: 'leboncoinDirect', hektor_broadcast_id: '50' },
   { agence_nom: 'Groupe GTI Saint-Just-Saint-Rambert', portal_key: 'bienicidirect', hektor_broadcast_id: '8' },
-  { agence_nom: 'Groupe GTI Saint-Just-Saint-Rambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '37' },
+  { agence_nom: 'Groupe GTI Saint-Just-Saint-Rambert', portal_key: 'leboncoinDirect', hektor_broadcast_id: '51' },
   { agence_nom: 'Groupe GTI Issoire', portal_key: 'bienicidirect', hektor_broadcast_id: '9' },
-  { agence_nom: 'Groupe GTI Issoire', portal_key: 'leboncoinDirect', hektor_broadcast_id: '41' },
+  { agence_nom: 'Groupe GTI Issoire', portal_key: 'leboncoinDirect', hektor_broadcast_id: '55' },
   { agence_nom: 'Groupe GTI Saint-Bonnet-le-Château', portal_key: 'bienicidirect', hektor_broadcast_id: '10' },
-  { agence_nom: 'Groupe GTI Saint-Bonnet-le-Château', portal_key: 'leboncoinDirect', hektor_broadcast_id: '42' },
+  { agence_nom: 'Groupe GTI Saint-Bonnet-le-Château', portal_key: 'leboncoinDirect', hektor_broadcast_id: '57' },
   { agence_nom: 'Groupe GTI COURPIERE', portal_key: 'bienicidirect', hektor_broadcast_id: '11' },
-  { agence_nom: 'Groupe GTI COURPIERE', portal_key: 'leboncoinDirect', hektor_broadcast_id: '35' },
+  { agence_nom: 'Groupe GTI COURPIERE', portal_key: 'leboncoinDirect', hektor_broadcast_id: '46' },
   { agence_nom: 'Groupe GTI Monistrol sur Loire', portal_key: 'bienicidirect', hektor_broadcast_id: '13' },
-  { agence_nom: 'Groupe GTI Monistrol sur Loire', portal_key: 'leboncoinDirect', hektor_broadcast_id: '40' },
+  { agence_nom: 'Groupe GTI Monistrol sur Loire', portal_key: 'leboncoinDirect', hektor_broadcast_id: '58' },
   { agence_nom: 'Groupe GTI Saint-Didier-en-Velay', portal_key: 'bienicidirect', hektor_broadcast_id: '14' },
-  { agence_nom: 'Groupe GTI Saint-Didier-en-Velay', portal_key: 'leboncoinDirect', hektor_broadcast_id: '40' },
+  { agence_nom: 'Groupe GTI Saint-Didier-en-Velay', portal_key: 'leboncoinDirect', hektor_broadcast_id: '59' },
   { agence_nom: 'Groupe GTI Firminy', portal_key: 'bienicidirect', hektor_broadcast_id: '15' },
-  { agence_nom: 'Groupe GTI Firminy', portal_key: 'leboncoinDirect', hektor_broadcast_id: '39' },
+  { agence_nom: 'Groupe GTI Firminy', portal_key: 'leboncoinDirect', hektor_broadcast_id: '48' },
   { agence_nom: 'Groupe GTI Saint-Etienne', portal_key: 'bienicidirect', hektor_broadcast_id: '16' },
-  { agence_nom: 'Groupe GTI Saint-Etienne', portal_key: 'leboncoinDirect', hektor_broadcast_id: '39' },
+  { agence_nom: 'Groupe GTI Saint-Etienne', portal_key: 'leboncoinDirect', hektor_broadcast_id: '49' },
   { agence_nom: 'Groupe GTI Dunières', portal_key: 'bienicidirect', hektor_broadcast_id: '17' },
-  { agence_nom: 'Groupe GTI Dunières', portal_key: 'leboncoinDirect', hektor_broadcast_id: '43' },
+  { agence_nom: 'Groupe GTI Dunières', portal_key: 'leboncoinDirect', hektor_broadcast_id: '52' },
   { agence_nom: 'Groupe GTI Tence', portal_key: 'bienicidirect', hektor_broadcast_id: '22' },
-  { agence_nom: 'Groupe GTI Tence', portal_key: 'leboncoinDirect', hektor_broadcast_id: '43' },
+  { agence_nom: 'Groupe GTI Tence', portal_key: 'leboncoinDirect', hektor_broadcast_id: '53' },
   { agence_nom: 'Groupe Gti Le Puy en Velay', portal_key: 'bienicidirect', hektor_broadcast_id: '23' },
-  { agence_nom: 'Groupe Gti Le Puy en Velay', portal_key: 'leboncoinDirect', hektor_broadcast_id: '38' },
+  { agence_nom: 'Groupe Gti Le Puy en Velay', portal_key: 'leboncoinDirect', hektor_broadcast_id: '60' },
 ] as const
 
 function displayCommercialLabel(value: { commercial_nom?: string | null; agence_nom?: string | null }) {
