@@ -234,6 +234,32 @@ def _texte(valeur) -> str | None:
     return s or None
 
 
+def _montant(valeur) -> str | None:
+    """UN MONTANT DE ZERO EST UN MONTANT VIDE -- et c'est une regle du projet.
+
+    Mesure du 30/09 : 171 lignes portaient « 0 » la ou le registre n'affiche
+    rien. La colonne plate du miroir met 0 quand la fiche ne dit rien ; le
+    tableau `mandats` du detail, lui, ne met rien du tout. Garder « 0 » ferait
+    apparaitre « 0 EUR » sur 171 lignes d'un registre ou la case est vide
+    aujourd'hui.
+
+    C'est le meme piege que le DPE, deja paye une fois : « vide » y vaut la
+    chaine "0", qui est vraie pour l'ordinateur et fausse pour l'agence. La
+    regle du projet est d'exiger un nombre STRICTEMENT POSITIF.
+
+    ⚠ ET CE N'EST PAS QU'UN AFFICHAGE : compute_mandat_version_score compte les
+      champs remplis. Un « 0 » compte comme rempli et peut faire gagner la
+      mauvaise version. On nettoie donc AVANT de noter, pas apres.
+    """
+    s = _texte(valeur)
+    if not s:
+        return None
+    try:
+        return None if float(s.replace(",", ".")) == 0 else s
+    except ValueError:
+        return s
+
+
 def _version_depuis_ligne(ligne) -> dict:
     """LE raw_json D'UNE LIGNE DU MIROIR **EST** UN OBJET VERSION.
 
@@ -251,6 +277,8 @@ def _version_depuis_ligne(ligne) -> dict:
         try:
             objet = json.loads(brut)
             if isinstance(objet, dict) and objet:
+                # meme nettoyage sur la photocopie : le score se calcule dessus
+                objet["montant"] = _montant(objet.get("montant"))
                 return objet
         except Exception:
             pass
@@ -261,7 +289,7 @@ def _version_depuis_ligne(ligne) -> dict:
         "debut": _texte(ligne["date_debut"]),
         "fin": _texte(ligne["date_fin"]),
         "cloture": _texte(ligne["date_cloture"]),
-        "montant": _texte(ligne["montant"]),
+        "montant": _montant(ligne["montant"]),
         "mandants": _texte(ligne["mandants_texte"]),
         "note": _texte(ligne["note"]),
         "dateEnregistrement": _texte(ligne["date_enregistrement"]),
@@ -443,7 +471,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 _texte(courante.get("dateEnregistrement")) or m["date_enregistrement"],
                 _texte(courante.get("debut")) or m["date_debut"],
                 _texte(courante.get("fin")) or m["date_fin"],
-                _texte(courante.get("montant")) or m["montant"],
+                _montant(courante.get("montant")) or _montant(m["montant"]),
                 _texte(courante.get("mandants")) or m["mandants_texte"],
                 _texte(courante.get("note")) or m["note"],
                 m["raw_json"], m["date_cloture"], vu, vu,
