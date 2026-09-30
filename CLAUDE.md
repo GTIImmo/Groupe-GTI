@@ -663,7 +663,7 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
           · une fabrique pose le numero SOUS DEUX CLES (hektor_contact_id ET
             contact_id) : a NE PAS « nettoyer », le doublon est intentionnel
 
-⭐ AJOUTE PAR FREDERIC LE 30/09 -- « CREER UN CONTACT ET LE RATTACHER »
+✅ F -- « CREER UN CONTACT ET LE RATTACHER » : EN SERVICE 30/09 17h33   e926a53
    « Ajouter un mandant est un worker qui doit AUSSI fonctionner. »
    ETAT MESURE :
       le worker SAIT le faire           case create_hektor_mandant_contact  ✅
@@ -675,11 +675,23 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
    ⭐ ET LA PIECE MANQUANTE EXISTE DEJA : `app_create_contact_optimistic` fait
      NAITRE un contact dans l'app avec NOTRE numero (L4-b, prouve en reel deux
      fois le 21/09 -- identite 10 000 002). Le geste mandant ne s'en sert pas.
-   LE CHANTIER : que app_create_mandant_contact_optimistic fasse NAITRE le
-   contact d'abord (notre numero), PUIS pose le lien durable avec ce numero,
-   PUIS le travail pour le worker -- qui ne change pas d'une ligne.
-   ⚠ ORDRE IMPOSE : le contact AVANT le lien. Un lien ne se pose pas sur
-     quelqu'un qui n'existe pas encore.
+   FAIT. ⚠ ET L'ORDRE REEL EST L'INVERSE DE CE QUE J'AVAIS ECRIT : LE TRAVAIL
+   D'ABORD, parce que c'est LUI qui porte les garde-fous (nom, email,
+   permission). S'il refuse, rien ne s'ecrit -- l'exception annule tout.
+   Puis le contact durable, puis le lien, puis l'etiquette provisoire INCHANGEE.
+   ⛔ ON NE POUVAIT PAS ENCHAINER DEUX FONCTIONS : app_create_contact_optimistic
+     pose AUSSI un travail « cree ce contact chez Hektor ». Enchainee au geste
+     mandant, HEKTOR LE CREERAIT DEUX FOIS. Un seul travail : celui du mandant.
+   ⚠⚠ ET FREDERIC AVAIT RAISON : « il y a deja un worker qui fait cela ».
+     J'avais conclu sur un GREP que le worker ne savait pas ou ranger le numero.
+     En lisant la fonction EN ENTIER : il le RAPPORTE DEJA, sur l'etiquette
+     provisoire. Ce qui manquait n'etait pas un mecanisme, C'ETAIT UNE ADRESSE.
+     ~15 lignes copiees du geste voisin au lieu du gros chantier annonce.
+     ➡ LIRE LA FONCTION, PAS LE GREP.
+   EPROUVE : contact 20000002, lien n° 1 000 007, present_in_hektor = false
+   (la vue attend la confirmation de Hektor -- voulu ; l'affichage immediat
+   reste a l'etiquette provisoire). Le CONTACT, lui, existe tout de suite.
+   4 services redemarres le 30/09 a 17:33, verifie par la date des PROCESSUS.
    ⚠ ET « RETIRER UN MANDANT » N'EXISTE TOUJOURS NULLE PART -- c'est un ecran
      a faire, pas une table. Frederic a tranche le 30/09 : le retrait PART chez
      Hektor tant qu'il vit, et la ligne RESTE chez nous, datee.
