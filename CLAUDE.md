@@ -284,12 +284,25 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
         Le worker n'ecrit QUE annonce/numero/type/date -- famille et nature sont
         des regles Python, les recopier en JS en ferait une copie qui derive.
 
-   ⛔ ET UNE OPERATION QUI ATTEND SON HEURE : la reconstruction du registre.
-      Les +453 de l'etape C n'apparaitront pas toutes seules -- le push de nuit
-      ne remplace que les annonces qu'il vise (correctif C, 6c790eb). Il faut
-      push_upgrade_to_supabase.py --rebuild-register-only, qui VIDE le registre
-      puis le refait. « Jamais pendant le run de nuit, jamais quand l'agence
-      consulte. » -> a lancer en soiree, sur un mot de Frederic.
+   ⭐ LE REGISTRE EST POSE -- 30/09 a 09h42, EN PLEINE JOURNEE      2ed0538
+      registre_mandats_upsert.py, et le choix de l'outil EST le sujet :
+      `--rebuild-register-only` VIDE la table puis la refait (« jamais quand
+      l'agence consulte »). Or register_row_id est la CLE PRIMAIRE : un UPSERT
+      fait le meme travail sans fenetre noire -- 453 en INSERT, 24 025 en
+      UPDATE, et a aucun instant le registre n'est vide.
+      Ce qui l'autorise est MESURE : « vue locale MOINS fabricant = 0 », aucune
+      ligne orpheline, donc rien a supprimer.
+      ⚠ NE REMPLACE PAS la reconstruction : elle reste la bonne reponse quand le
+        registre est CORROMPU -- seule une table videe garantit qu'il ne reste
+        rien de l'ancien etat.
+      AVANT -> APRES, en ligne :
+         lignes         24 025 -> 24 478    offre_type 10   74 -> 525
+         montant « 0 »     171 ->      0    « 0 » en historique -> 0
+         sans search_text          0        cles distinctes 24 478
+      LA VUE DU FRONT : 24 478 lignes, 121 a plusieurs versions, 1 avenant,
+      groupes de tri 0 et 1. Ses 70 colonnes et ses 4 fonctions n'ont pas bouge.
+      ℹ La copie LOCALE du registre reste a 24 025 : elle se realignera au run.
+        Seul registre_depuis_app_mandat.py la lit -- sans consequence.
 
    B ✅ L'OEIL SERVEUR <-> SUPABASE                               30/09  44c2e9b
         phase2/checks/mandat_un_numero.py + data.mandat_un_numero dans la sonde.
