@@ -32,6 +32,31 @@ et la transaction en ont deux (le run ET l'app). Le mandat en aura deux (étape 
 
 ---
 
+## 0-ter. LES RÉPONSES DE FRÉDÉRIC — *30/09, après-midi* — ELLES FONT FOI
+
+```
+Q1  Le cloud porte-t-il TOUS les liens, ou seulement ceux des biens actifs ?
+    ➡ « COMME AUJOURD'HUI » = les BIENS ACTIFS seulement.
+       81 379 dans le cloud, 167 547 sur le serveur. Le serveur garde tout,
+       le cloud porte le parc. C'est la regle « serveur = tout / cloud = biens
+       vivants », deja posee pour les documents et les photos.
+       ⚠ CONSEQUENCE A NE PAS OUBLIER : le registre durable vivra SUR LE
+         SERVEUR, et le cloud en recevra la PROJECTION du parc. Ce n'est PAS
+         le montage du mandat (ou les 26 826 lignes montent entieres).
+
+Q3  « Retirer un mandant » part-il chez Hektor tant qu'il vit ?
+    ➡ OUI. Le geste n'existe nulle part aujourd'hui ; quand il existera, il
+       partira chez Hektor comme les autres gestes sortants, ET la ligne
+       RESTERA chez nous, datee. Un registre ne perd pas une ligne.
+       ⚠ C'est l'inverse de la cloture de mandat, qui est app-only assumee
+         (« tant que Hektor vit, son registre dira le mandat ouvert quand le
+         notre le dira clos », 28/08). Ici, Hektor doit savoir.
+
+Q2, Q4, Q5  toujours ouvertes.
+```
+
+---
+
 ## 0-bis. SECONDE PASSE, demandée par Frédéric le 30/09 après-midi
 
 > *« Les liens sont toujours créés dans Hektor jusqu'à la coupure. Tu dois voir ce registre
