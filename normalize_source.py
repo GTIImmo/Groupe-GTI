@@ -115,7 +115,14 @@ BROADCAST_BILAN: Dict[str, Any] = {}
 
 
 def iter_broadcast_platforms(conn: sqlite3.Connection) -> list[Dict[str, Any]]:
-    """Les passerelles du brut `list_broadcasts`, carton ouvert et ecarts comptes."""
+    """Les passerelles du brut `list_broadcasts`, carton ouvert et ecarts comptes.
+
+    ⚠ Le bilan est REMIS A ZERO a chaque passage. Il est lu plusieurs fois par
+      run (trois upserts + le controle de completude) : cumule, il annoncait
+      « 3 reponses illisibles » pour UNE SEULE. Un compteur qui exagere est un
+      compteur qui ment -- et c'est precisement contre ca qu'il a ete ecrit.
+    """
+    BROADCAST_BILAN.clear()
     items = list(
         iter_listing_items(
             fetch_latest_raw_payloads(conn, "list_broadcasts"),
@@ -132,6 +139,37 @@ def iter_broadcast_platforms(conn: sqlite3.Connection) -> list[Dict[str, Any]]:
             file=sys.stderr,
         )
     return items
+
+
+def broadcast_reponse_complete(conn: sqlite3.Connection) -> bool:
+    """La reponse `list_broadcasts` est-elle DIGNE DE FAIRE AUTORITE ?
+
+    ⚠ TOUT LE MENAGE DES PASSERELLES DISPARUES REPOSE SUR CETTE QUESTION.
+      Effacer les lignes d'une passerelle que Hektor ne cite plus n'est juste
+      QUE si sa reponse est entiere. Si elle est tronquee (une page manquante,
+      une panne), les passerelles absentes sont bien vivantes -- et on effacerait
+      des diffusions reelles.
+
+    On exige TROIS choses, et la troisieme est le vrai filet :
+      · aucune reponse ne porte d'erreur
+      · aucune ne declare une page suivante qu'on n'aurait pas lue
+      · il reste AU MOINS UNE passerelle -- une reponse vide ne doit jamais
+        pouvoir vider la table.
+    """
+    lignes = list(fetch_latest_raw_payloads(conn, "list_broadcasts"))
+    if not lignes:
+        return False
+    for ligne in lignes:
+        try:
+            payload = json.loads(ligne["payload_json"])
+        except (ValueError, TypeError):
+            return False
+        if payload.get("error"):
+            return False
+        meta = payload.get("metadata") or {}
+        if meta.get("nextPage") is not None:
+            return False
+    return bool(iter_broadcast_platforms(conn))
 
 
 def latest_detail_map(rows: Iterable[sqlite3.Row]) -> Dict[str, Dict[str, Any]]:
@@ -1648,6 +1686,24 @@ def upsert_broadcast_listings(conn: sqlite3.Connection) -> None:
         conn.executemany(
             "DELETE FROM hektor_broadcast_listing WHERE hektor_broadcast_id = ?",
             [(value,) for value in rafraichies],
+        )
+
+    # ⚠ ET LES PASSERELLES QUE HEKTOR NE CITE PLUS DU TOUT.
+    #   L'effacement ci-dessus ne touche QUE ce que Hektor vient de redire : une
+    #   passerelle SUPPRIMEE gardait donc ses lignes pour toujours. Mesure du
+    #   30/09 : la bascule LeBonCoin a fait disparaitre 8 passerelles d'un coup,
+    #   et le run aurait laisse 308 lignes de diffusions mortes -- 142 annonces
+    #   affichees comme diffusees alors qu'elles ne le sont plus.
+    #   On ne le fait QUE si la reponse fait autorite (voir la fonction) : sur une
+    #   reponse tronquee, une passerelle absente est vivante, pas supprimee.
+    #   ⭐ La ligne de `hektor_broadcast`, elle, RESTE : c'est sa date de derniere
+    #      vue qui a permis de dater la mort de la n° 37 au 03/04. On efface
+    #      l'ETAT, jamais la TRACE.
+    if rafraichies and broadcast_reponse_complete(conn):
+        marques = ",".join("?" * len(rafraichies))
+        conn.execute(
+            "DELETE FROM hektor_broadcast_listing WHERE hektor_broadcast_id NOT IN (%s)" % marques,
+            rafraichies,
         )
 
     for item in items:
