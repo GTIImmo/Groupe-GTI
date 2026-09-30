@@ -475,7 +475,7 @@ L'AUDIT, DEUX PASSES               notice/AUDIT_REGISTRE_RELATIONS_AUTONOME_2026
      (build_contacts_layer.py:1093 fait identite_app() AVANT de la remplir).
      C'est ce mensonge qui a cache le bug pendant une semaine.
 
-✅ LE BUG « Aucune annonce liee » EST REPARE          93cc01b   ⛔ PAS DEPLOYE
+✅ LE BUG « Aucune annonce liee » EST REPARE          93cc01b   DEPLOYE 30/09
    La fiche annonce transmettait un numero HEKTOR. On ne change pas ce qu'elle
    LIT, on corrige le numero qu'elle TRANSMET : charger la fiche d'abord, puis
    lire ses liens sous SON numero. api.ts interdit d'elargir le filtre ; sa
@@ -515,8 +515,42 @@ Q3 « retirer un mandant » PART chez Hektor et la ligne reste datee.
 OUVERTES : Q2 acquereurs (projection recommandee) · Q4 mandants d'affaire
 (les deux, ce ne sont pas le meme fait) · Q5 l'ordre.
 
-RESTE : la sentinelle · l'etape dans le run · Supabase + push (⛔) ·
-la bascule (l'ecran lit la table) · le worker ecrit (⛔ + redemarrage).
+✅ LA SENTINELLE data.relation_disparue                bebd16f
+   4 gardes, seuil zero : source_absents · doublons · hors_plage_app ·
+   plage_envahie. Le retard du cloud en INFORMATION, jamais en alerte.
+   MESURE EN MEMOIRE, PAS EN SQL : 0,514 s (la version SQL de la sonde du
+   mandat tournait 2 min avant d'etre coupee -- une garde qui ne tourne pas
+   n'est pas une garde).
+
+✅ L'ETAPE DE NUIT                                     bebd16f
+   ⚠ SA PLACE EST APRES « build contacts layer seconde passe » : avant, elle
+     lirait la couche de LA VEILLE. 4,2 s dont 3,5 s de verrou.
+
+✅ SUPABASE + LE PUSH                                  543fac2
+   132 622 lignes en ligne, identiques au serveur. TOUT MONTE (decision du
+   30/09) : le registre porte tout, les ecrans filtrent.
+
+✅ LA BASCULE -- L'ECRAN LIT LE REGISTRE                ff2b98c
+   app_contact_relations_current : 81 379 -> 163 765 lignes, +82 386.
+   ⭐ LE FRONT N'A PAS BOUGE D'UNE LIGNE : meme nom de vue, memes 18 colonnes.
+   TROIS ESSAIS, et les deux rates valent d'etre gardes :
+     ① deriver le role du SEUL numero de mandat changeait 4 961 etiquettes,
+       toutes mandant -> proprietaire, parce que l'index d'archive a oublie le
+       numero. Un homme qui a signe en 2019 EST le mandant de ce bien-la.
+       -> repli sur role_hektor : 0 etiquette changee.
+     ② PROJETER les acquereurs depuis app_affaire_ledger perdait 791 lignes :
+       le ledger ne porte qu'UN app_contact_id par affaire, les CO-ACQUEREURS
+       vivent dans acquereurs_json, encore sur numeros HEKTOR. 2 450 affaires
+       ont plusieurs acquereurs.
+       -> ils restent lus dans la table de nuit jusqu'a ce que ce blob passe
+          sur nos numeros. ZERO perte de fonction.
+     ③ 6 433 liens sans titre : 3 136 biens qu'aucun index du CLOUD ne nomme,
+       alors que le SERVEUR en connait 58 598 sur 58 604. Index incomplet,
+       pas une perte. A TRAITER A PART.
+
+RESTE : le worker ecrit un lien durable (⛔ + redemarrage) · « retirer un
+mandant », le geste qui n'existe nulle part · la projection des acquereurs ·
+l'index des 3 136 biens.
 ```
 
 ### Les trois fronts ouverts — *ils avancent séparément*
