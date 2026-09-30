@@ -588,7 +588,48 @@ def main() -> int:
         contact_where = "WHERE archive = 0 OR supabase_sync_eligible = 1"
     else:
         contact_where = ""
-    relation_where = "" if args.include_archived_relations else "WHERE is_active_annonce = 1"
+    # ══════════════════════════════════════════════════════════════════════════
+    # LES LIENS ACQUEREUR MONTENT TOUJOURS, MEME SUR UN BIEN SORTI DU PARC
+    #                                                            30/09/2026
+    # LE DEFAUT. Ce filtre disait « n'envoie que les liens des biens encore au
+    # parc ». Ce n'etait pas absurde -- un lien vers un bien vendu semblait sans
+    # objet. MAIS C'EST FAUX POUR L'ACQUEREUR : c'est justement au moment ou il
+    # achete que le lien compte, et c'est justement a ce moment-la qu'il
+    # disparaissait.
+    #
+    #     un acquereur fait une offre  -> le bien est au parc -> le lien monte
+    #     la vente se fait             -> le bien en sort     -> le lien cesse
+    #                                                            de monter
+    #
+    # PLUS LA TRANSACTION VA AU BOUT, PLUS SUREMENT LE LIEN SE PERD. Ceux qu'on
+    # voit a l'ecran sont surtout ceux qui n'ont PAS abouti -- d'ou le fait que
+    # rien ne paraissait manquer.
+    #
+    # MESURE DU 30/09 :
+    #     le serveur connait   34 925 liens acquereur
+    #     le cloud en portait  31 143
+    #     retenus au depart     3 782  -- dont 1 704 offres, 1 606 COMPROMIS
+    #                                    SIGNES et 472 ACHETEURS
+    #     verifie sur des cas reels : RAGACHE, « Maison de ville Langeac »,
+    #     achetee le 25/02/2026 pour 110 000 EUR -- absente de sa fiche.
+    #     ⚠ ET AUCUNE LOCATION : 3 727 en type 0 (vente) + 55 en type 10
+    #       (vente immo pro), 0 en type 2/8/11. La decision du 26/08 (les
+    #       locations restent au serveur) n'est pas entamee.
+    #
+    # ⚠ ON NE LEVE LE FILTRE QUE POUR LES ACQUEREURS, ET C'EST DELIBERE.
+    #   Les mandants et proprietaires sont desormais servis par `app_relation`
+    #   (le registre durable, 132 628 lignes, pose le 30/09). Les pousser en
+    #   plus dans cette table ajouterait 86 168 lignes REDONDANTES.
+    #
+    # ⭐ C'EST LE MEME GESTE QUE CELUI DE L'APRES-MIDI, sur l'autre moitie :
+    #   la bascule du registre des liens a rendu 82 386 liens mandant /
+    #   proprietaire qu'un bien vendu emportait. Ici, les 3 782 acquereurs.
+    # ══════════════════════════════════════════════════════════════════════════
+    if args.include_archived_relations:
+        relation_where = ""
+    else:
+        relation_where = ("WHERE is_active_annonce = 1"
+                          "   OR role_contact LIKE 'acquereur%'")
     # Le perimetre des recherches suit celui des CONTACTS (21/08/2026). Sans cela,
     # --include-archived-searches poussait les 72 869 recherches locales, dont 66 095
     # portees par des contacts absents de Supabase -- un perimetre que rien ne justifie
