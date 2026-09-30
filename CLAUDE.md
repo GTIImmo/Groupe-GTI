@@ -198,6 +198,96 @@ classe A, en *critical*, seuil zéro.
 **Quand ces quatre-là sont faites, il ne reste que** : le registre des mandats *(`L9`)* · la
 génération du numéro de mandat *(`L6`)* · la signature *(`A.2`)* · les passerelles *(`A.1`)*.
 
+### 📡 A.1 LES PASSERELLES PUB — *ouvert ET la bascule LeBonCoin a eu lieu, 30/09*
+
+> ⚠⚠ **HEKTOR A BASCULE LEBONCOIN LE 30/09, PENDANT LA SESSION** — entre le run de
+> nuit (04:21) et 16h45. Les **9 passerelles groupees sont remplacees par 17
+> individuelles (45 a 61)**, une par agence. Seule la 35 survit, en train de se vider.
+
+```
+⛔ LE DEBALLEUR RENDAIT ZERO DEPUIS LE 07/07          -> REPARE  02c2c7c
+   Hektor a change la forme : `data` liste -> {"platforms": [...]}.
+   iter_listing_items testait isinstance(data, list) et rien d'autre.
+   list_broadcasts est LE SEUL des 28 listings emballe.
+   ⚠ LE PIEGE QUI A FAIT DURER 3 MOIS : la lecture a la volee RECOPIAIT le
+     contenu de juillet EN Y TAMPONNANT LA DATE DU JOUR. Tout controle de
+     fraicheur disait vert.
+   ⭐ LE VRAI CORRECTIF N'EST PAS D'OUVRIR CE CARTON, C'EST `bilan` : un carton
+     a la mauvaise cle est COMPTE, jamais rabattu sur `or []`.
+
+⛔ LA TABLE ACCUMULAIT                                 -> REPARE  02c2c7c · 96451dc
+   L'upsert ajoute et corrige, il n'enleve jamais -> 208 diffusions fantomes.
+   Et l'effacement CIBLE ne suffisait pas : les 8 passerelles SUPPRIMEES
+   gardaient leurs lignes (308 lignes mortes au run du soir).
+   On efface donc aussi les absentes, MAIS seulement si la reponse fait
+   autorite (pas d'erreur, pas de page suivante, au moins une passerelle).
+   ⭐ ON EFFACE L'ETAT, JAMAIS LA TRACE : la ligne de hektor_broadcast reste --
+     c'est sa date de derniere vue qui a permis de dater la mort de la n° 37.
+   4 FILETS EPROUVES CONTRE UN CAS QUI DOIT ECHOUER : tronquee / erreur /
+   vide / carton inconnu -> dans les 4 cas, on ne touche a rien.
+   MESURE : 2 046 -> 1 660 lignes, 412 annonces, 0 fantome, 0 manquante, rejeu +0.
+
+⛔ LA CARTE AGENCE -> PASSERELLE ETAIT FAUSSE          -> COLLE 18:16  d629257 · 11e1a71
+   ⚠ ET UNE PANNE TOURNAIT DEPUIS SIX MOIS : la n° 37 (Montbrison + Saint-Just)
+     n'existait plus depuis le 03/04, renumerotee 44. 1 795 annonces (13 % du
+     parc) routees dans le vide, en silence. C'etait le PREMIER cas de la serie.
+   QUATRE endroits portaient les vieux numeros, pas un :
+     ① app_diffusion_agency_target (Supabase)        -> patch, 17 lignes
+     ② app_diffusion_target, cibles PAR BIEN
+        ⚠ ELLES PASSENT AVANT LA CARTE (_run_apply les lit en 1er)
+        1 sur un bien VIVANT : V670062151 Tence 43 -> 53  -> patch
+     ③ les tables miroir                             -> le run
+     ④ UNE COPIE ECRITE EN DUR DANS LE FRONT (lib/api.ts)
+        ⛔ elle vit dans le paquet DEPLOYE : corriger Supabase ne la corrige PAS
+        -> 5963b59, deploye le 30/09
+
+✅ L'EPREUVE, DEUX NIVEAUX                             f6c3377 · 0ada1ee · 7a38043
+   phase2/checks/passerelle_par_agence.py
+   · par defaut : DEDUIT (passerelle -> negociateurs -> agence). A TROUVE la panne.
+   · --par-agence : HEKTOR REPOND (ListPasserelles, un appel par agence). L'a PROUVEE.
+   RESULTAT : 17 agences · 17 repondues · 0 muette · 17 numeros ET 17 identifiants
+   DISTINCTS -> « un numero par agence » est MESURE, pas suppose.
+   ⭐ Firminy 48 et Saint-Etienne 49 sont SEPARES (ils partageaient la 39) --
+     Frederic l'avait pressenti, la mesure le confirme.
+   bienicidirect : 17 sur 17 JUSTES, aucune correction.
+   ⚠ DEUX PIEGES : ListPasserelles n'ouvre que sur un bien DIFFUSABLE (18 agences
+     sur 19 ont d'abord repondu vide) ; et LE TEMOIN NE DOIT PAS VENIR DU PORTAIL
+     MESURE, sinon la reponse est fabriquee par la question.
+
+⚠ LE WORKER N'EST PAS CONCERNE, ET C'EST MESURE
+   41 genres de travaux, 0 pour la diffusion. `idPasserelle` : 0 occurrence.
+   67 610 travaux en base, 0 de ce type.
+   MAIS il fait bien « activer la publication » : change_hektor_annonce_status
+   envoie `diffusable=1` avec le statut Actif (et 0 pour Mandat clos).
+   ⭐ POURQUOI PAS DE WORKER : Hektor a DEUX PORTES. Le worker pilote l'interface
+     web (xmlrpc + cookies) faute d'API. Les passerelles, elles, ONT une vraie
+     API d'ecriture (PUT addAnnonceToPasserelle / DELETE remove). C'est la SEULE
+     famille de gestes ou l'app ecrit chez Hektor SANS worker.
+   ⚠ Le nom trompe : la modale s'appelle « Console passerelles » et dit « la
+     console enverra » -- ce n'est PAS le worker Console.
+
+CE QUI RESTE
+   ⬜ l'etat enregistre = le SOUHAIT, pas la CONFIRMATION
+      handleCommitDiffusionTargets ecrit portails_resume depuis les cases cochees.
+      Si Hektor refuse, la modale montre « Erreurs 1 » MAIS la fiche dit diffuse.
+      ⭐ LA BONNE VERSION EXISTE ET DORT : handleApplyDiffusionTargetsOnHektor
+        lit result.applied -- definie, JAMAIS branchee. Correctif = 1 ligne.
+   ⬜ UNE SENTINELLE carte <-> passerelles vivantes -- le vrai remede de fond
+   ⬜ la copie LOCALE de la carte (phase2/phase2.sqlite) reste perimee (chemin dev)
+   ⬜ hektor_annonce_broadcast_target : 0 ligne, code mort
+   ⬜ idPasserelle = le NOM du portail quand aucun numero n'est trouve
+      (3 lignes en base : superimmo, etreproprio, paper) -- sans effet, mais muet
+
+⚠⚠ ET LE CONTROLE LUI-MEME A MENTI UNE FOIS : a 18h20, juste apres le patch, il
+   a dit « 17 a corriger » -- il lisait la COPIE LOCALE, pas Supabase. Calcul
+   juste, SOURCE fausse. Troisieme fois de la journee.
+   ➡ LA REPARATION N'EST PAS « changer de table » : la fonction RENVOIE SA
+     SOURCE et le controle l'IMPRIME. Un controle qui ne dit pas ce qu'il a lu
+     peut affirmer le contraire de la verite sans se tromper d'un chiffre.
+
+L'AUDIT ENTIER : notice/AUDIT_PASSERELLES_PUB_2026-09-30.md
+```
+
 ### ✅ A.3-TECHNIQUE EST CLOS — *30/09/2026* (c'est `L9`, pas `L6` : j'ai mal
 ###    etiquete mes messages toute la session, le plan fait foi)
 
