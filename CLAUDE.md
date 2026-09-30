@@ -252,6 +252,44 @@ PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
             LA VUE ET SES 4 FONCTIONS NE SONT PAS TOUCHEES : elle lit UNE
             table, on change seulement d'ou le fabricant tire ses colonnes.
 
+   A 🟡 LE PUSH -- CODE FAIT, BLOQUE SUR UN COLLAGE SQL           30/09  de7c57b
+        mandat_ledger.py --push (delete-never) + --push-a-blanc.
+        ⛔ GARDE-FOU DANS LE CODE : --push sans --refresh est REFUSE (lecon du
+          07/09, ledger d'affaires : un push seul a efface une annulation de
+          compromis faite une heure plus tot). Levable, assume.
+        Essai a blanc sur la table reelle : 26 826 lignes, 25 colonnes remplies.
+        ⛔ CE QUI MANQUE, ET C'EST A FREDERIC :
+           supabase/patch_app_mandat_versions_2026-09-30.sql -- 5 colonnes
+           (nature, versions_json, version_count, avenants_json, avenant_count).
+           Eprouve en BEGIN/ROLLBACK (20 -> 25, annulation propre). L'outil
+           refuse l'ecriture en production : c'est le protocole du projet.
+           Ensuite :  python phase2/sync/mandat_ledger.py --refresh --push
+
+   B ✅ L'OEIL SERVEUR <-> SUPABASE                               30/09  44c2e9b
+        phase2/checks/mandat_un_numero.py + data.mandat_un_numero dans la sonde.
+        Pendant exact de annonce_un_numero (C.9-b).
+        ⚠ PAS LA MEME GARDE QUE mandat_disparu, et les deux servent :
+             mandat_disparu    serveur <-> Hektor (l'etape de nuit passe-t-elle ?)
+             mandat_un_numero  serveur <-> Supabase (le push passe-t-il ?)
+        ROUGE tant que le push n'a pas eu lieu -- voulu, comme mandat_disparu.
+        ⭐ LA DOUBLURE NE DEMANDE AUCUN CODE : pull_from_supabase lit le SCHEMA
+          et descend tout ; app_mandat -> app_mandat__sb. La tache n'existait pas.
+
+   C ✅ LE REGISTRE PREND SA MATIERE DANS app_mandat              30/09  f4c4f5a
+        LA VUE N'EST PAS TOUCHEE -- elle lit UNE table et ignore d'ou vient la
+        donnee. Ses 70 colonnes et ses 4 fonctions front ne changent pas.
+        LE DEFAUT REPARE : le fabricant filtrait sur le STATUT de l'annonce ; une
+        annonce sans detail sortait du registre AVEC SON MANDAT.
+        GAIN +453, dont 451 MURS COMMERCIAUX (offre 10 / idtype 23), avec prix et
+        numero -- 452 des 453 annonces archivees ET sans detail.
+        MESURE des deux constructions : 24 025 -> 24 478, 0 PERDUE ; les seules
+        colonnes qui bougent sont celles ou « 0 EUR » devient vide (171 + 189 +
+        189, la meme regle trois fois). Aucune identite, version ni tri ne change.
+        DEUX PIEGES FERMES : le push CIBLE emprunte le meme socle (sinon il
+        effacait en journee ce que la nuit gagnait) ; le fabricant RETRIAIT des
+        versions deja triees, et le nettoyage se remettait a voter.
+        INTERRUPTEUR APP_REGISTRE_DEPUIS_APP_MANDAT=0 pour revenir en arriere.
+
    D 🟡 le worker ecrit apres step5  <- la table Supabase est POSEE (53aa132),
         reste : le push, l'adoption, l'ecriture worker, la doublure
         ⚠ L'ARCHITECTURE A CHANGE, SUR UNE REMARQUE DE FREDERIC : app_mandat ne
