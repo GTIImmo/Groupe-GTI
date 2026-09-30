@@ -759,6 +759,110 @@ ORDER BY CAST(ann.hektor_annonce_id AS INTEGER), ann.no_mandat
 """
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# A.3-tech etape C -- LE REGISTRE PREND SES COLONNES DE MANDAT DANS app_mandat
+# ═══════════════════════════════════════════════════════════════════════════════
+# 30/09/2026. DERRIERE UN INTERRUPTEUR, et par defaut ETEINT tant que la
+# comparaison des deux constructions n'a pas ete faite sur les donnees reelles.
+#
+#     APP_REGISTRE_DEPUIS_APP_MANDAT=1    le registre lit app_mandat
+#     (absent ou 0)                       comportement d'avant, inchange
+#
+# ─── CE QUE CELA CHANGE, ET POURQUOI ───────────────────────────────────────────
+# La vue `app_registre_mandats_current` N'EST PAS TOUCHEE : elle lit UNE table et
+# ne sait pas d'ou vient la donnee. Ses 70 colonnes, ses 4 fonctions cote front
+# (loadMandatRegisterPage, loadMandatRegisterStats, loadMandatFilterCatalog,
+# loadRegisterCycleAffaires) ne changent pas d'une ligne. On change seulement
+# l'endroit ou le FABRICANT va chercher la matiere.
+#
+# ─── LE GAIN MESURE : 453 MANDATS ──────────────────────────────────────────────
+# Le fabricant filtre sur le STATUT de l'annonce :
+#     WHERE COALESCE(det.statut_name,'') IN ('Actif','Sous offre','Sous compromis',
+#                                            'Vendu','Clos','Estimation')
+# Une annonce SANS DETAIL (statut '') ou dans un autre statut sort du registre
+# AVEC SON MANDAT. Mesure du 30/09 : 453 mandats de vente manquants, dont
+#     371  le numero est porte par l'annonce (no_mandat) sans fiche
+#      82  l'annonce n'est meme pas LUE par la requete
+# Et le fichier porte deja la phrase qui condamne ce filtre, ecrite le 21/07
+# quand « Estimation » a du etre ajoute a la liste :
+#     « Le registre des mandats est un document legal : tout mandat signe doit y
+#       figurer, quel que soit le statut commercial de l'annonce. »
+# Ajouter un statut de plus ne reglait qu'un cas ; lire app_mandat les regle tous,
+# parce que la table, elle, ne perd jamais une ligne.
+#
+# ⚠ LE FILTRE DES TYPES D'OFFRE RESTE, ET IL EST INDISPENSABLE. app_mandat porte
+#   TOUT (26 826 lignes, locations comprises) ; le registre n'admet que 0, 10 et
+#   6 -- decision du 26/08. Sans ce filtre on ferait entrer 2 348 locations dans
+#   un registre qui les exclut.
+#
+# ⚠ ON NE TOUCHE PAS AU FILTRE `archive`, NI A LA PORTEE DES 57 COLONNES
+#   D'ANNONCE : elles continuent de venir d'ou elles venaient.
+# ═══════════════════════════════════════════════════════════════════════════════
+# ⭐ ALLUME PAR DEFAUT LE 30/09, APRES LA COMPARAISON DES DEUX CONSTRUCTIONS SUR
+#   LES DONNEES REELLES : +453 lignes, 0 PERDUE, et les seules colonnes qui
+#   bougent sur les 24 025 lignes communes sont celles ou « 0 EUR » devient vide
+#   (171 montants, 189 historiques, 189 details -- la meme regle, trois fois).
+#   Aucune identite, aucune version, aucun tri ne change.
+# RETOUR ARRIERE : APP_REGISTRE_DEPUIS_APP_MANDAT=0 dans l'environnement du run.
+REGISTRE_DEPUIS_APP_MANDAT = os.environ.get("APP_REGISTRE_DEPUIS_APP_MANDAT", "1") == "1"
+
+# Les seuls types d'offre que le registre de l'app admet (decision du 26/08).
+TYPES_ADMIS_AU_REGISTRE = ("0", "10", "6")
+
+# Le meme socle, mais la porte n'est plus le statut : c'est « cette annonce
+# porte-t-elle un mandat au registre ? ». On lit donc exactement les annonces
+# dont app_mandat a besoin, ni plus ni moins.
+SQL_REGISTER_RAW_DEPUIS_APP_MANDAT = SQL_REGISTER_RAW_BASE.replace(
+    f"WHERE COALESCE(det.statut_name, '') IN ({REGISTRE_SCOPE_SQL})",
+    "WHERE CAST(ann.hektor_annonce_id AS TEXT) IN ("
+    "      SELECT hektor_annonce_id FROM app_mandat"
+    "       WHERE COALESCE(offre_type,'') IN ("
+    + ",".join("'%s'" % t for t in TYPES_ADMIS_AU_REGISTRE) + "))",
+)
+
+
+def charger_mandats_depuis_app_mandat(
+    con: sqlite3.Connection, annonces: set[str] | None = None
+) -> dict[str, dict[str, list[dict[str, object]]]]:
+    """LE REGISTRE, TEL QUE app_mandat LE PORTE : {annonce: {numero: [versions]}}.
+
+    Les versions sortent de `versions_json`, deja triees LA MEILLEURE EN TETE par
+    compute_mandat_version_score -- la formule du registre, importee par
+    mandat_ledger.py et non recopiee. Le tri est refait plus bas de toute facon :
+    il est idempotent, et le refaire coute moins que de supposer.
+
+    ⚠ UNE LIGNE SANS VERSION N'EST PAS UNE LIGNE VIDE. Les numeros emis dont
+      aucune fiche n'est redescendue (origine 'annonce', 2 072 le 30/09) portent
+      une version de repli ne contenant que le numero -- exactement ce que le
+      fabricant fabriquait lui-meme quand `mandats_json` etait vide. On la
+      refabrique ici si elle manque, plutot que de perdre la ligne.
+    """
+    par_annonce: dict[str, dict[str, list[dict[str, object]]]] = defaultdict(dict)
+    places = ",".join("'%s'" % t for t in TYPES_ADMIS_AU_REGISTRE)
+    for ligne in con.execute(
+        "SELECT hektor_annonce_id, numero_mandat, versions_json FROM app_mandat"
+        f" WHERE COALESCE(offre_type,'') IN ({places})"
+    ):
+        annonce = normalize_text(ligne[0])
+        numero = normalize_text(ligne[1])
+        if not annonce or not numero:
+            continue
+        if annonces is not None and annonce not in annonces:
+            continue
+        versions = safe_json_loads(ligne[2], [])
+        if not isinstance(versions, list):
+            versions = []
+        versions = [v for v in versions if isinstance(v, dict)]
+        if not versions:
+            versions = [{
+                "id": None, "numero": numero, "type": None, "debut": None,
+                "fin": None, "cloture": None, "montant": None, "mandants": None,
+                "note": None, "avenants": [],
+            }]
+        par_annonce[annonce][numero] = versions
+    return par_annonce
+
+
 SQL_REGISTER_BROADCAST_AGG = """
 SELECT
     s.hektor_annonce_id,
@@ -1759,15 +1863,28 @@ def build_mandat_register_rows(
         dossiers_by_annonce[a_id] = list(dossiers)  # _mandats deja retire ci-dessus
 
     register_rows: list[dict[str, object]] = []
+    socle = (SQL_REGISTER_RAW_DEPUIS_APP_MANDAT if REGISTRE_DEPUIS_APP_MANDAT
+             else SQL_REGISTER_RAW_BASE)
     if dossier_ids is not None and target_annonce_ids:
+        # ⚠ LE MEME SOCLE QUE LE RUN COMPLET, ET C'EST INDISPENSABLE.
+        #   Ce chemin est le push CIBLE d'une annonce : il EFFACE les lignes de
+        #   registre de cette annonce, puis repose ce qu'il fabrique. S'il
+        #   fabriquait avec l'ancienne requete -- filtree sur le statut --
+        #   pendant que le run complet fabrique avec la nouvelle, une annonce
+        #   hors statut verrait ses lignes effacees et JAMAIS reposees.
+        #   Le registre perdrait en journee ce que la nuit vient de gagner.
         placeholders = ",".join("?" for _ in target_annonce_ids)
         raw_rows = fetch_rows(
             con,
-            f"SELECT * FROM ({SQL_REGISTER_RAW_BASE}) AS base WHERE CAST(hektor_annonce_id AS TEXT) IN ({placeholders})",
+            f"SELECT * FROM ({socle}) AS base WHERE CAST(hektor_annonce_id AS TEXT) IN ({placeholders})",
             tuple(sorted(target_annonce_ids)),
         )
     else:
-        raw_rows = fetch_rows(con, build_limited_sql(SQL_REGISTER_RAW_BASE, None))
+        raw_rows = fetch_rows(con, build_limited_sql(socle, None))
+    # A.3-tech etape C : la matiere du mandat vient de NOTRE registre, qui ne
+    # perd jamais une ligne -- au lieu du tableau `mandats` du detail, qui
+    # disparait avec l'annonce des que son statut sort de la liste.
+    mandats_app = charger_mandats_depuis_app_mandat(con) if REGISTRE_DEPUIS_APP_MANDAT else None
     price_change_by_annonce = build_price_change_by_annonce(
         con,
         [normalize_text(row.get("hektor_annonce_id")) for row in raw_rows if normalize_text(row.get("hektor_annonce_id"))],
@@ -1804,12 +1921,20 @@ def build_mandat_register_rows(
                     "avenants": [],
                 }
             )
-        if not mandate_entries:
+        if not mandate_entries and mandats_app is None:
             continue
 
         grouped_entries: dict[str, list[dict[str, object]]] = defaultdict(list)
         for item in mandate_entries:
             grouped_entries[normalize_text(item.get("numero"))].append(item)
+        if mandats_app is not None:
+            # NOTRE registre fait foi pour le mandat. S'il ne connait pas cette
+            # annonce, on ne fabrique rien : une ligne de registre sans mandat
+            # au registre serait une ligne inventee.
+            depuis_nous = mandats_app.get(annonce_id)
+            if not depuis_nous:
+                continue
+            grouped_entries = defaultdict(list, {n: list(v) for n, v in depuis_nous.items()})
 
         annonce_raw = safe_json_loads(raw.get("annonce_raw_json"), {})
         localite = safe_json_loads(raw.get("localite_json"), {})
@@ -1830,11 +1955,21 @@ def build_mandat_register_rows(
         price_change_summary = price_change_by_annonce.get(annonce_id, {})
 
         for numero, versions in grouped_entries.items():
-            versions_sorted = sorted(
-                versions,
-                key=lambda item: compute_mandat_version_score(item),
-                reverse=True,
-            )
+            if mandats_app is not None:
+                # ⚠ ON NE RETRIE PAS. versions_json est DEJA classe, et il l'a
+                #   ete sur la matiere BRUTE -- avant que « 0 » ne devienne vide.
+                #   Retrier ici, c'est noter des montants deja nettoyes : le
+                #   classement change, donc la version retenue (annonce 59279,
+                #   n° 18259 : le registre garde la ligne close, le retri prenait
+                #   l'ouverte). Un nettoyage d'affichage ne vote pas -- et il ne
+                #   doit pas voter une etape plus loin non plus.
+                versions_sorted = list(versions)
+            else:
+                versions_sorted = sorted(
+                    versions,
+                    key=lambda item: compute_mandat_version_score(item),
+                    reverse=True,
+                )
             current_version = versions_sorted[0]
             active_exact = active_by_key.get((annonce_id, numero))
             source_row = active_exact or active_any
