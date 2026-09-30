@@ -612,11 +612,28 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
           C'est ainsi qu'on saura que la chaine complete tourne.
         ⛔ AUCUN REDEMARRAGE DE SERVICE : le worker n'a pas change.
 
-   D ⬜ LES 45 LIENS « APP SEULE » Y ENTRENT (app_relation_app_seule, le filet
-        existe et dit lui-meme « jamais reinjectes »).
+   D ✅ LES LIENS « APP SEULE » Y ENTRENT -- FAIT 30/09        f8ebc71
+        45 au filet, 11 VIVANTES, 5 deja connues, 6 VERSEES. Et 3 des 45 sont
+        apparues LE 30/09 : ce n'est pas du vieux bruit.
+        ⚠ Ma mesure de « 11 absentes » etait FAUSSE : je cherchais avec une
+          cle nulle, la requete rendait 0 pour toutes.
+        ⛔⛔ ET UNE FAUTE EXEMPLAIRE DANS LE MEME GESTE : `json` n'etait pas
+          importe ; mon `except Exception` a avale le NameError et les 6 lignes
+          sont parties SANS LEUR ROLE NI LEUR CLE -- et RIEN NE L'A DIT.
+          C'est la faute que j'avais notee en memoire LE MATIN MEME.
+          Corrige : except (ValueError, TypeError), et un compteur
+          `app_seule_illisibles` au bilan. Un except large est un mensonge
+          en puissance.
 
-   E ⬜ LES 3 FONCTIONS RESTANTES AU DEPOT (app_update_mandant_contact_optimistic
-        + les 2 fabriques de travail) -- elles n'existent qu'EN PRODUCTION.
+   E ✅ LES 4 FONCTIONS DES GESTES MANDANT AU DEPOT -- FAIT     814f81f
+        supabase/fonctions_gestes_mandant_ETAT_2026-09-30.sql, copie fidele.
+        La 5e est versionnee dans son propre patch.
+        ET L'ECRITURE A FAIT VOIR TROIS CHOSES :
+          · les `_optimistic` ne re-valident PAS, elles s'appuient sur les
+            garde-fous des `_job` par recouvrement -- volontaire
+          · un contact sans NOM ou sans EMAIL est REFUSE des la fabrique
+          · une fabrique pose le numero SOUS DEUX CLES (hektor_contact_id ET
+            contact_id) : a NE PAS « nettoyer », le doublon est intentionnel
 
 ⭐ AJOUTE PAR FREDERIC LE 30/09 -- « CREER UN CONTACT ET LE RATTACHER »
    « Ajouter un mandant est un worker qui doit AUSSI fonctionner. »
