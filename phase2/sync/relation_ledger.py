@@ -187,6 +187,40 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
               for r in con.execute(
                   "SELECT app_contact_id, hektor_annonce_id FROM app_relation")}
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # L'ADOPTION -- ET SANS ELLE, LE PUSH S'ARRETERAIT
+    #
+    # Quand l'app rattache un mandant, sa RPC pose la ligne durable TOUT DE
+    # SUITE, avec un numero de la plage haute (>= 1 000 000). Le miroir ne la
+    # connait pas encore. Au run suivant, Hektor redescend le lien : ce script
+    # verrait un couple INCONNU, lui donnerait un numero de la serie LOCALE, et
+    # le push tenterait une deuxieme ligne pour le meme couple -> violation de
+    # app_relation_couple_unique.
+    #
+    # ⚠ ET LE DEGAT NE SERAIT PAS LE CONFLIT, CE SERAIT L'ARRET. Les 01 et
+    #   02/09/2026, deux nuits de suite, le push du ledger d'affaires a heurte un
+    #   index unique et LE RUN S'EST ARRETE LA -- dix-huit heures de retard sans
+    #   que rien ne le dise.
+    #
+    # ON ADOPTE DONC : si la doublure porte deja ce couple, on reprend SON
+    # numero. C'est le serveur qui s'aligne sur le cloud, jamais l'inverse.
+    # ══════════════════════════════════════════════════════════════════════════
+    adoptes: dict[tuple[int, str], int] = {}
+    try:
+        for r in con.execute(
+            "SELECT app_relation_id, app_contact_id, hektor_annonce_id"
+            "  FROM app_relation__sb WHERE app_relation_id >= ?",
+            (PLAGE_RESERVEE_APP,)
+        ):
+            cle_sb = (int(r["app_contact_id"]), str(r["hektor_annonce_id"] or "").strip())
+            if cle_sb[1] and cle_sb not in connus:
+                adoptes[cle_sb] = int(r["app_relation_id"])
+    except (sqlite3.OperationalError, TypeError, ValueError):
+        # La doublure n'a jamais ete descendue, ou elle est vide. On ne devine
+        # pas -- et tant que rien n'ecrit depuis l'app, il n'y a rien a adopter.
+        pass
+    adoptes_au_depart = len(adoptes)
+
     places = ",".join("?" for _ in ROLES_DU_BIEN)
     lignes = con.execute(
         "SELECT hektor_contact_id, hektor_annonce_id, app_dossier_id, role_contact,"
@@ -219,6 +253,11 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         if cle in connus:
             identifiant = None
             revus += 1
+        elif cle in adoptes:
+            # NE DANS L'APP : on reprend son numero, on n'en fabrique pas un autre.
+            identifiant = adoptes.pop(cle)
+            connus.add(cle)
+            neufs += 1
         else:
             identifiant = prochain
             prochain += 1
@@ -286,6 +325,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
 
     con.commit()
     return {"lus": lus, "neufs": neufs, "revus": revus, "ecartes": ecartes,
+            "adoptes_du_cloud": adoptes_au_depart - len(adoptes),
             "sans_notre_numero_de_bien": sans_bien, "sortis_du_miroir": sortis}
 
 
@@ -422,7 +462,7 @@ def main() -> int:
         if args.refresh:
             bilan = refresh(con, full=not args.partiel)
             print("REFRESH app_relation")
-            for k in ("lus", "neufs", "revus", "ecartes",
+            for k in ("lus", "neufs", "revus", "adoptes_du_cloud", "ecartes",
                       "sans_notre_numero_de_bien", "sortis_du_miroir"):
                 print("   %-28s : %s" % (k, bilan[k]))
         elif not (args.push or args.push_a_blanc):
