@@ -70,6 +70,13 @@ from phase2.sync.export_app_payload import (  # noqa: E402
     compute_mandat_version_score,
     normalize_embedded_avenants,
 )
+from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
+    DEFAULT_ENV_FILES,
+    SupabaseRestClient,
+    load_env_files,
+)
+
+import os  # noqa: E402
 
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
@@ -734,6 +741,78 @@ def controle(con: sqlite3.Connection) -> None:
     comparer_au_registre(con)
 
 
+
+# =============================================================================
+# LE PUSH VERS SUPABASE -- A.3-tech, etape A (30/09/2026)
+#
+# delete-never : on UPSERT, on n'efface jamais. Une ligne que le miroir ne
+# montre plus porte present_in_hektor = 0 et RESTE. C'est ce qui distingue ce
+# registre de la vue de travail, qui est videe et refaite a chaque push.
+#
+# ⛔ `--push` NE SE LANCE JAMAIS SEUL. Lecon du 07/09/2026, payee sur le ledger
+#    d'affaires, et elle vaut mot pour mot ici :
+#        06:38  un geste est fait depuis l'app -> le worker l'ecrit chez Supabase
+#        07:52  `--push` lance a la main -> il pousse l'etat du MIROIR LOCAL,
+#               qui date du run de 04:18 -> LE GESTE EST EFFACE
+#    « La cause n'est pas le push, c'est l'ordre. Pousser sans rafraichir revient
+#      a affirmer un etat qu'on n'a pas relu. »
+#    Le garde-fou est donc dans le code, pas seulement dans un commentaire :
+#    main() refuse --push sans --refresh, sauf --push-seul-je-sais assume.
+#
+# ⚠ TOUT RESTE EN `text` COTE SUPABASE, y compris versions_json et avenants_json.
+#   C'est delibere : l'autre piege, ecrit dans affaire_ledger.py, est qu'une
+#   colonne jsonb recevant une CHAINE de JSON accepte sans erreur et range du
+#   texte dans du jsonb -- invisible. En restant en text on ne peut pas y tomber.
+# =============================================================================
+
+# Les colonnes de la table LOCALE qui n'existent pas cote Supabase seraient
+# refusees par PostgREST (« column ... does not exist », et tout le lot tombe).
+# On envoie donc EXACTEMENT les colonnes connues, nommees ici.
+COLONNES_POUSSEES = (
+    "app_mandat_id", "app_dossier_id", "hektor_annonce_id", "numero_mandat",
+    "hektor_mandat_id", "famille", "type", "date_enregistrement", "date_debut",
+    "date_fin", "montant", "mandants_texte", "note", "payload_json", "origine",
+    "offre_type", "nature", "date_cloture", "versions_json", "version_count",
+    "avenants_json", "avenant_count", "first_seen_at", "last_seen_at",
+    "present_in_hektor",
+)
+
+
+def lignes_a_pousser(con: sqlite3.Connection) -> list[dict]:
+    lignes = []
+    for r in con.execute("SELECT * FROM app_mandat"):
+        d = {c: r[c] for c in COLONNES_POUSSEES if c in r.keys()}
+        # SQLite garde 0/1 ; Supabase attend un booleen. Sans cette ligne,
+        # PostgREST reçoit 1 pour un champ boolean et refuse le lot entier.
+        d["present_in_hektor"] = bool(d.get("present_in_hektor"))
+        lignes.append(d)
+    return lignes
+
+
+def pousser(con: sqlite3.Connection, taille_lot: int = 200, a_blanc: bool = False) -> dict:
+    lignes = lignes_a_pousser(con)
+    if a_blanc:
+        exemple = dict(lignes[0]) if lignes else {}
+        for cle in ("payload_json", "versions_json", "avenants_json"):
+            if exemple.get(cle):
+                exemple[cle] = str(exemple[cle])[:60] + " ..."
+        return {"a_blanc": True, "lignes": len(lignes),
+                "colonnes": len(COLONNES_POUSSEES), "exemple": exemple}
+
+    load_env_files(DEFAULT_ENV_FILES)
+    url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
+    cle = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not (url and cle):
+        raise RuntimeError("SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis")
+    client = SupabaseRestClient(base_url=url, service_role_key=cle)
+    if not client.table_available(TABLE):
+        raise RuntimeError(
+            "app_mandat n'existe pas cote Supabase. Appliquer d'abord "
+            "supabase/patch_app_mandat_2026-09-29.sql puis "
+            "supabase/patch_app_mandat_versions_2026-09-30.sql.")
+    client.upsert_rows(path=TABLE, rows=lignes, batch_size=taille_lot)
+    return {"lignes_poussees": len(lignes)}
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="A.3-tech phase 1 : remplit app_mandat depuis le miroir. LOCAL, dormant.")
@@ -741,9 +820,27 @@ def main() -> int:
     parser.add_argument("--controle", action="store_true", help="Affiche les controles, sans rien ecrire.")
     parser.add_argument("--partiel", action="store_true",
                         help="N'applique pas present_in_hektor=0 aux lignes non revues.")
+    parser.add_argument("--push", action="store_true",
+                        help="UPSERT vers Supabase (delete-never). Exige --refresh.")
+    parser.add_argument("--push-a-blanc", action="store_true",
+                        help="Compte et montre ce qui serait pousse, sans rien envoyer.")
+    parser.add_argument("--push-seul-je-sais", action="store_true",
+                        help="Lever le garde-fou et pousser SANS rafraichir. Voir sa raison.")
+    parser.add_argument("--taille-lot", type=int, default=200)
     args = parser.parse_args()
-    if not args.refresh and not args.controle:
-        parser.error("choisir --refresh ou --controle")
+    if not (args.refresh or args.controle or args.push or args.push_a_blanc):
+        parser.error("choisir --refresh, --controle, --push ou --push-a-blanc")
+
+    # ⛔ LE GARDE-FOU DU 07/09. Pousser sans rafraichir, c'est affirmer un etat
+    #    qu'on n'a pas relu : le push envoie le miroir LOCAL, qui date du dernier
+    #    run, et ecrase en ligne tout geste fait depuis. Sur le ledger d'affaires
+    #    cela a efface l'annulation d'un compromis faite une heure plus tot.
+    if args.push and not args.refresh and not args.push_seul_je_sais:
+        parser.error(
+            "--push sans --refresh est refuse : le push enverrait l'etat du miroir "
+            "LOCAL, qui date du dernier run, et ecraserait en ligne tout geste fait "
+            "depuis (lecon du 07/09/2026, ledger d'affaires). Utiliser "
+            "`--refresh --push`, ou assumer avec --push-seul-je-sais.")
 
     if not HEKTOR_DB.exists():
         print("miroir introuvable : %s" % HEKTOR_DB, file=sys.stderr)
@@ -757,9 +854,22 @@ def main() -> int:
             for k in ("lus", "neufs", "revus", "sans_numero", "multi_versions",
                       "depuis_miroir", "depuis_annonce", "sortis_du_miroir"):
                 print("   %-22s : %s" % (k, bilan[k]))
-        else:
+        elif not (args.push or args.push_a_blanc):
             con.executescript(SCHEMA)
-        controle(con)
+        if args.push_a_blanc:
+            bilan = pousser(con, a_blanc=True)
+            print("")
+            print("PUSH A BLANC -- rien n'est envoye")
+            print("   lignes qui partiraient  : %s" % bilan["lignes"])
+            print("   colonnes envoyees       : %s" % bilan["colonnes"])
+            for k, v in sorted(bilan["exemple"].items()):
+                print("      %-22s = %r" % (k, v))
+        elif args.push:
+            bilan = pousser(con, taille_lot=args.taille_lot)
+            print("")
+            print("PUSH app_mandat -> Supabase : %s lignes" % bilan["lignes_poussees"])
+        if args.refresh or args.controle:
+            controle(con)
     finally:
         con.close()
     return 0
