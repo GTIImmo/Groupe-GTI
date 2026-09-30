@@ -549,7 +549,8 @@ OUVERTES : Q2 acquereurs (projection recommandee) · Q4 mandants d'affaire
        pas une perte. A TRAITER A PART.
 
 CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
-   A ⛔ LE REGISTRE DISTINGUE DEUX ABSENCES -- le plus urgent, et c'est MOI
+   A ✅ LE REGISTRE DISTINGUE DEUX ABSENCES -- FAIT 30/09  e1d9d59
+        C'etait MOI
         qui l'ai ouvert : « Hektor ne le montre plus » n'est PAS « on l'a
         supprime ». Quatre chemins effacent un lien (worker : annonce, contact ;
         serveur : delete_local_annonce, delete_local_contact) et AUCUN ne
@@ -557,13 +558,23 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
         elle montrerait un lien supprime. 0 degat aujourd'hui, le 1er contact
         supprime le produit.
 
-   B ⛔ LE NUMERO HEKTOR DE LA PERSONNE -- DATE DE PEREMPTION
+   B ✅ LE NUMERO HEKTOR DE LA PERSONNE -- FAIT 30/09  a574344
         Les autres registres portent les DEUX numeros de CHAQUE objet qu'ils
         nomment. app_relation nomme deux objets et n'a celui de Hektor que
         pour le BIEN. (Trouve par Frederic, 30/09.)
-        Mesure : 96 070 contacts au registre, 45 088 encore traduisibles.
-        Le run LIT ce numero chaque nuit puis le JETTE. Il ne manque pas parce
-        qu'on ne l'a pas : parce qu'on le jette.
+        ⛔⛔ ET J'AVAIS ANNONCE UNE PERTE QUI N'EXISTE PAS : « 50 982 sur
+          96 070 ne sont plus traduisibles ». FAUX -- j'interrogeais
+          app_contact_identite_app (62 038), LE JOURNAL DE LA BASCULE.
+          La correspondance complete est dans app_contact_current COTE SERVEUR :
+          356 270 contacts, hektor_contact_id = LE NOTRE (tous >= 10 M),
+          hektor_target_id = CELUI DE HEKTOR (tous < 10 M).
+          MESURE : 96 070 sur 96 070. 100 %.
+        REMPLI ET VERIFIE : 132 622 lignes sur 132 622, 0 sans numero.
+        Le run COMBLE, il n'ecrase jamais. La RPC l'ecrira aussi -- elle recoit
+        deja ce numero du front (mesure : contact_id = 603953).
+        ➡ TROIS FOIS LA MEME FAUTE LE 30/09 : mesurer sur la MAUVAISE SOURCE,
+          puis alerter sur un chiffre que mon propre code avait fabrique.
+          memoire `mesurer-sur-la-bonne-source`.
 
    C 🔺 LA PROJECTION DES ACQUEREURS -- REMONTEE, mon refus reposait sur un
         chiffre FAUX. J'avais annonce « projeter perdrait 791 lignes ».
