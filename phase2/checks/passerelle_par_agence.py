@@ -137,14 +137,128 @@ def notre_carte() -> list[dict]:
 # ------------------------------------------------------------------ l'epreuve
 
 
+def par_agence(settings: Settings, portail: str = "leboncoinDirect", essais: int = 6) -> dict:
+    """LA PREUVE DIRECTE : on DEMANDE a Hektor, agence par agence.
+
+    ⚠ POURQUOI CE MODE EXISTE, ALORS QUE LE MODE PAR DEFAUT REPOND DEJA
+        Le mode par defaut DEDUIT (passerelle -> negociateurs -> agence). Il a
+        suffi a trouver la panne, mais il ne peut pas prouver « un numero par
+        agence » : deux agences peuvent partager une passerelle sans qu'on le
+        voie, et un negociateur pose une annonce hors de son agence (c'est ce qui
+        m'a fait douter de la n° 54). Ici, Hektor REPOND.
+
+    ⚠ DEUX PIEGES, ET ILS ONT FAIT RATER LES DEUX PREMIERS ESSAIS
+        ① `ListPasserelles` ne rend la configuration que pour un bien DIFFUSABLE.
+           Une annonce prise au hasard rend `data: []` -- 18 agences sur 19 ont
+           repondu vide au premier essai, ce qui ressemblait a une absence de
+           passerelle alors que c'etait un mauvais temoin.
+        ② LE TEMOIN NE DOIT PAS ETRE CHOISI SUR LE PORTAIL QU'ON MESURE, sinon la
+           reponse est fabriquee par la question. On prend donc un bien diffuse
+           sur un AUTRE portail (bienici, etreproprio, paper, superimmo).
+    """
+    client = HektorClient(settings)
+    payload = client.get_json(ROUTE, params={"version": settings.api_version, "page": 0})
+    plateformes = deballer(payload)
+
+    conn = sqlite3.connect("file:%s?mode=ro" % CHEMIN_MIROIR, uri=True)
+    annonce_vers_agence = {
+        str(r[0]): r[1]
+        for r in conn.execute(
+            "SELECT a.hektor_annonce_id, ag.nom FROM hektor_annonce a "
+            "JOIN hektor_agence ag ON ag.hektor_agence_id = a.hektor_agence_id"
+        )
+    }
+    conn.close()
+
+    temoins: Dict[str, list] = {}
+    for plateforme in plateformes:
+        if plateforme.get("nom") == portail:
+            continue  # ② jamais un temoin pris sur le portail mesure
+        for listing in plateforme.get("listings") or []:
+            identifiant = str(listing.get("annonce_id") or "") if isinstance(listing, dict) else ""
+            agence = annonce_vers_agence.get(identifiant)
+            if agence and identifiant not in temoins.setdefault(agence, []):
+                temoins[agence].append(identifiant)
+
+    resultat, muettes = {}, []
+    for agence in sorted(temoins):
+        for annonce in temoins[agence][:essais]:
+            reponse = client.get_json(
+                "/Api/Annonce/ListPasserelles/",
+                params={"idAnnonce": annonce, "version": settings.api_version},
+            )
+            trouvees = [
+                x for x in (reponse.get("data") or [])
+                if isinstance(x, dict) and x.get("passerelle") == portail
+            ]
+            if trouvees:
+                resultat[agence] = {
+                    "numero": str(trouvees[0].get("id")),
+                    "identifiant": str(trouvees[0].get("identifiant") or ""),
+                    "actif": str(trouvees[0].get("actif") or ""),
+                    "nb_annonces": str(trouvees[0].get("nbAnnonces") or ""),
+                    "temoin": annonce,
+                }
+                break
+        else:
+            muettes.append(agence)
+    return {"portail": portail, "agences": resultat, "muettes": muettes,
+            "attendues": len(temoins)}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--hors-ligne", action="store_true",
                         help="Lire le brut deja descendu au lieu d'appeler Hektor.")
     parser.add_argument("--json", action="store_true", help="Sortie machine.")
+    parser.add_argument("--par-agence", metavar="PORTAIL", nargs="?", const="leboncoinDirect",
+                        help="LA PREUVE DIRECTE : Hektor repond agence par agence "
+                             "(defaut leboncoinDirect). Un appel par agence.")
     args = parser.parse_args()
 
     settings = Settings.from_env()
+
+    if args.par_agence:
+        bilan = par_agence(settings, portail=args.par_agence)
+        carte = {sans_accent(l["agence_nom"]): str(l["hektor_broadcast_id"] or "").strip()
+                 for l in notre_carte() if l["portal_key"] == args.par_agence}
+        if args.json:
+            print(json.dumps(bilan, ensure_ascii=False, indent=2))
+        else:
+            print("=" * 84)
+            print("HEKTOR REPOND, AGENCE PAR AGENCE  --  portail %s" % args.par_agence)
+            print("=" * 84)
+            print("   %-36s %-7s %-12s %-9s %s"
+                  % ("agence", "numero", "identifiant", "notre carte", "verdict"))
+            for agence in sorted(bilan["agences"]):
+                v = bilan["agences"][agence]
+                notre = carte.get(sans_accent(agence), "-")
+                verdict = "OK" if notre == v["numero"] else "A CORRIGER (%s -> %s)" % (notre, v["numero"])
+                print("   %-36s %-7s %-12s %-9s %s"
+                      % (agence[:36], v["numero"], v["identifiant"], notre, verdict))
+            for agence in bilan["muettes"]:
+                print("   %-36s %-7s %s" % (agence[:36], "?", "AUCUN temoin n'ouvre ce portail -- non mesure"))
+            numeros = [v["numero"] for v in bilan["agences"].values()]
+            ident = [v["identifiant"] for v in bilan["agences"].values()]
+            print()
+            print("   agences attendues %s | repondues %s | muettes %s"
+                  % (bilan["attendues"], len(bilan["agences"]), len(bilan["muettes"])))
+            print("   numeros distincts %s | identifiants distincts %s"
+                  % (len(set(numeros)), len(set(ident))))
+            if bilan["muettes"]:
+                print("   -> COUVERTURE INCOMPLETE : on ne conclut pas sur les agences muettes.")
+            elif len(numeros) == len(set(numeros)):
+                print("   -> UN NUMERO PAR AGENCE : CONFIRME sur les %s agences." % len(numeros))
+            else:
+                from collections import Counter
+                partages = {k: v for k, v in Counter(numeros).items() if v > 1}
+                print("   -> NUMEROS ENCORE PARTAGES : %s" % partages)
+            a_corriger = sum(1 for a, v in bilan["agences"].items()
+                             if carte.get(sans_accent(a), "-") != v["numero"])
+            print("   lignes de carte a corriger : %s" % a_corriger)
+        return 1 if any(carte.get(sans_accent(a), "-") != v["numero"]
+                        for a, v in bilan["agences"].items()) else 0
+
     items = passerelles_hors_ligne() if args.hors_ligne else passerelles_en_direct(settings)
     nego_vers_agence, agences = annuaire()
 
