@@ -149,7 +149,31 @@ def comparer(conn: sqlite3.Connection, doublure: str, cle: tuple[str, ...]) -> d
 
 
 def recherches_divergentes(conn: sqlite3.Connection) -> int | None:
-    """L'ALARME : recherches presentes des deux cotes dont les criteres different."""
+    """L'ALARME : recherches presentes des deux cotes dont les criteres different.
+
+    ⚠⚠ ELLE ECARTE LES RECHERCHES QUE L'APP S'EST APPROPRIEES, ET C'EST LE COEUR
+      DU CORRECTIF DU 01/10/2026.
+
+      Depuis C.3 (24/08), modifier une recherche NE PART PLUS chez Hektor :
+      `push_search` vaut `null` dans les DEUX fonctions d'edition (negociateur et
+      espace client). Le serveur, lui, reconstruit sa couche depuis le miroir de
+      Hektor -- il porte donc l'ANCIENNE valeur, pendant que le cloud porte celle
+      du negociateur. LES DEUX DIVERGENT POUR TOUJOURS, ET C'EST VOULU.
+
+      Sans cet ecart, l'alarme sonnait en CRITIQUE des qu'un negociateur modifiait
+      une recherche -- c'est-a-dire a chaque fois que le systeme FONCTIONNE. Et
+      l'en-tete de ce fichier dit deja la regle : « une sentinelle qui sonne
+      toujours ne protege de rien ». Celle-ci est restee rouge huit jours sans que
+      personne ne la regarde, parce qu'elle avait appris a mentir.
+
+      `app_search_pending` est le marqueur de cette appropriation : tant qu'une
+      ligne y figure, le push EPARGNE la recherche (fetch_dirty_search_pairs) et
+      la saisie du negociateur est protegee. C'est donc exactement la liste des
+      divergences legitimes.
+
+      CE QUI RESTE SURVEILLE, et qui a toujours du sens : une recherche qui
+      diverge SANS etre marquee -- la, personne ne l'a voulu.
+    """
     natif, doublure = "app_contact_search_current", "app_contact_search_current__sb"
     if not existe(conn, natif) or not existe(conn, doublure):
         return None
@@ -159,10 +183,17 @@ def recherches_divergentes(conn: sqlite3.Connection) -> int | None:
         return None
     ecart = " OR ".join(
         'COALESCE(h."%s",\'\') <> COALESCE(s."%s",\'\')' % (c, c) for c in champs)
+    epargne = ""
+    if existe(conn, "app_search_pending"):
+        epargne = (
+            ' AND NOT EXISTS (SELECT 1 FROM "app_search_pending" p'
+            '   WHERE p.hektor_contact_id = s.hektor_contact_id'
+            '     AND p.search_index = s.search_index)'
+        )
     return conn.execute(
         'SELECT count(*) FROM "%s" s JOIN "%s" h '
         'ON h.hektor_contact_id = s.hektor_contact_id AND h.search_index = s.search_index '
-        'WHERE %s' % (doublure, natif, ecart)
+        'WHERE (%s)%s' % (doublure, natif, ecart, epargne)
     ).fetchone()[0]
 
 
@@ -217,7 +248,8 @@ def _relever(args) -> int:
     print()
     print(f"ALARME  recherches dont les CRITERES different : "
           f"{divergentes if divergentes is not None else 'non mesurable'}")
-    print("        (0 attendu : toute autre valeur = une saisie que Hektor n'a pas recue)")
+    print("        (hors celles que l'app s'est appropriees -- app_search_pending.")
+    print("         Une recherche qui diverge SANS ce marqueur : personne ne l'a voulu.)")
 
     if args.dry_run:
         print("\n[dry-run] le journal n'a pas ete ecrit")
