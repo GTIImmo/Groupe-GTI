@@ -1,5 +1,5 @@
-# Tache planifiee : RATTRAPAGE DES DOCUMENTS (23:00) — un lot de 3 000 par nuit.
-#                                                                        25/09/2026
+# Tache planifiee : RATTRAPAGE DES DOCUMENTS (22:00) — un lot de 2 500 par nuit.
+#                                           25/09/2026, revise le 01/10/2026
 # POURQUOI : au 25/09, 40 612 annonces sur 58 140 n'ont jamais ete regardees pour leurs
 # documents. Le rattrapage avait tourne du 18 au 23/08 puis s'etait ARRETE (pas echoue :
 # 0 en erreur) -- le 20/08, notre IP avait ete bannie et le frein avait ete pose.
@@ -8,10 +8,26 @@
 #
 # CE QU'ELLE FAIT : elle POSE un lot de travaux, c'est tout. Elle ne parle pas a Hektor.
 # C'est le worker `documents` qui travaille ensuite, a SA cadence (1 s entre requetes,
-# +60 s toutes les 100, +300 s toutes les 2 000). Un lot de 3 000 prend 2 h 30 a 5 h :
-# lance a 23:00, il finit largement avant le run quotidien de 05:00.
+# +60 s toutes les 100, +300 s toutes les 2 000).
 #
-# 23:00 est un choix de Frederic : hors des heures d'agence, et loin du run de nuit.
+# ⚠⚠ CORRIGE LE 01/10/2026 -- LA PHRASE CI-DESSOUS ETAIT FAUSSE, ET ELLE A COUTE.
+#    Elle disait : « un lot de 3 000 prend 2 h 30 a 5 h : lance a 23:00, il finit
+#    largement avant le run quotidien de 05:00 ». MESURE la nuit du 30/09 au
+#    01/10 : 2 860 travaux en ~8 h, soit ~358/h. Le lot finissait vers 07:00,
+#    EN PLEIN RUN QUOTIDIEN. Quatre degats la meme nuit :
+#      · l'etape chauffage a REFUSE de tourner (elle s'interdit de demarrer s'il
+#        reste un travail console en attente -- les deux pilotent la meme session)
+#      · les etapes « entretien compromis » et « entretien ventes » ont echoue
+#      · 13 travaux documents sont MORTS sur un 500 de Supabase, pendant que le
+#        push du run (07:01-07:25) chargeait PostgREST. Un travail en erreur
+#        n'est JAMAIS rejoue : ces 13 annonces ne seront jamais scannees.
+#
+# REGLAGE RETENU PAR FREDERIC : 22:00 et un lot de 2 500.
+#    A 358/h, 2 500 travaux prennent ~7 h -> fin vers 05:00, avec de la marge
+#    meme si une nuit est plus lente. Cout : ~13 nuits de rattrapage au lieu de
+#    ~10,6. On echange de la vitesse contre des annonces qu'on ne perd pas.
+#
+# 22:00 reste hors des heures d'agence.
 #
 # ⚠ ELLE S'ARRETE TOUTE SEULE dans trois cas, et c'est le coeur du dispositif :
 #   - plus rien a faire            -> succes, elle ne pose rien (on peut la desactiver)
@@ -56,7 +72,7 @@ try {
     $script = Join-Path $root "Console\enqueue_empreinte_lot.js"
     if (-not (Test-Path -LiteralPath $script)) { throw "Script introuvable : $script" }
 
-    & $nodeExe $script "--scope" "auto" "--limit" "3000" "--exiger-file-vide" "--max-erreurs-recentes" "20"
+    & $nodeExe $script "--scope" "auto" "--limit" "2500" "--exiger-file-vide" "--max-erreurs-recentes" "20"
     $code = $LASTEXITCODE
 
     switch ($code) {
