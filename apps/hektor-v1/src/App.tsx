@@ -6618,11 +6618,23 @@ function metricDrilldownFilters(current: AppFilters, action: HeaderMetricItem['a
         : action === 'mandat_non_diffuse'
           ? 'non_diffusable'
           : baseFilters.diffusable,
+    // ⚠ LA VALEUR ENVOYEE EST CELLE QUE PORTE LA DONNEE, pas un libelle.
+    //   `portails_resume` ne contient que cinq valeurs, telles que Hektor les
+    //   nomme : bienicidirect · leboncoinDirect · etreproprio · paper · superimmo.
+    //   Avant le 01/10/2026 la tuile Bien'ici envoyait "bien'ici" -- avec une
+    //   apostrophe que la donnee n'a jamais eue : le clic rendait une page vide,
+    //   alors que le compteur de la meme tuile etait juste (il cherche 'bienici'
+    //   DANS le texte). Un chiffre juste a cote d'un filtre qui ne trouve rien.
+    //   ⚠ Et LeBonCoin ne marchait que PAR CHANCE : 'leboncoin' est le debut de
+    //     'leboncoinDirect', donc le `ilike %...%` tombait juste. Le jour ou
+    //     Hektor nomme un portail 'leboncoinXXX', il en ramasserait deux.
+    //   Les valeurs exactes tombent juste sur LES DEUX chemins : le `ilike` cote
+    //   Supabase ET l'egalite stricte du filtre local (portails.includes).
     passerelle:
       action === 'leboncoin'
-        ? 'leboncoin'
+        ? 'leboncoinDirect'
         : action === 'bienici'
-          ? "bien'ici"
+          ? 'bienicidirect'
           : baseFilters.passerelle,
   }
 }
