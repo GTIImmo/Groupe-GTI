@@ -196,6 +196,34 @@ class SupabaseReader:
                     time.sleep((6.0 if exc.code >= 520 else 1.5) * attempt)
                     continue
                 raise RuntimeError(f"Supabase GET {path} -> HTTP {exc.code}: {detail[:500]}") from exc
+            except json.JSONDecodeError as exc:
+                # ⚠⚠ UNE COUPURE DE PASSERELLE QUI SE DEGUISE EN SUCCES -- 01/10/2026.
+                #   Le bloc HTTPError au-dessus reessaye les coupures qui S'ANNONCENT
+                #   (520-524). Celle-ci arrive en HTTP 200 avec un corps TRONQUE : ce
+                #   n'est donc pas une HTTPError, elle tombait dans json.loads et
+                #   remontait AUSSITOT, sans un seul reessai.
+                #
+                #   VECU LE 01/10 AU SOIR : app_console_photo, 437 044 lignes, morte sur
+                #     « Unterminated string starting at: line 672 column 8 (char 1048248) »
+                #   1 048 248, c'est 1 Mio moins 328 octets. La reponse a ete coupee a un
+                #   seuil ROND -- pas par manque de donnees, mais par la passerelle,
+                #   parce que l'origine repondait trop lentement (Supabase etait sature
+                #   par la descente elle-meme).
+                #
+                #   ⭐ ET LA TABLE AVAIT REUSSI LE MATIN MEME. La coupure est donc
+                #     INTERMITTENTE -- exactement le cas qu'un reessai sauve. Sans lui,
+                #     l'echec laisse `lignes = NULL` dans sb_pull_state, ce qui INTERDIT
+                #     le delta (delta_possible) : une table peut rester bloquee en copie
+                #     complete indefiniment, a cause d'un accroc d'une seconde.
+                #
+                #   On la traite donc comme un 52x : meme attente longue, meme nombre
+                #   d'essais. Et on garde le POIDS recu dans le message : c'est lui qui
+                #   dit si la page est trop grosse (cf POIDS_PAGE_MAX et --page-size).
+                last = RuntimeError(
+                    f"reponse tronquee/illisible a {self.dernier_poids} octets : {exc}")
+                if attempt >= self.max_retries:
+                    break
+                time.sleep(6.0 * attempt)
             except (TimeoutError, urllib.error.URLError) as exc:
                 last = exc
                 if attempt >= self.max_retries:
@@ -345,6 +373,38 @@ DELTA_HORODATAGE: dict[str, str] = {
     "app_console_job_log": "created_at",
     "app_affaire_console": "lu_le",
     "app_affaire_repartition": "ecrit_le",
+    # ─── 01/10/2026 ─────────────────────────────────────────────────────────────
+    # app_console_photo : 437 044 lignes, 964 Mo, 30 % du volume de la descente --
+    # pour ~219 modifications par jour (mesure du 01/10 : 219 · 92 · 192 les trois
+    # derniers jours). C'est elle qui a sature Supabase le 01/10 au soir, et c'est
+    # la SEULE table qui a echoue : sa reponse a ete coupee a 1 Mio.
+    #
+    # ⚠⚠ ELLE NE RESPECTE PAS LA CONDITION CI-DESSUS PAR ELLE-MEME, et c'est
+    #    pourquoi un DECLENCHEUR a ete pose. Audit des quatre ecrivains, 01/10 :
+    #        worker upsertConsolePhotos      tamponne updated_at   (l. 4362)
+    #        worker derives (PATCH)          tamponne updated_at   (l. 5689)
+    #        rattrapage_photos.js            tamponne updated_at
+    #        app_photo_marquer_sortie_vitrine   ⛔ NE LE TAMPONNE PAS
+    #    La derniere est la tache pg_cron de 08:30 qui pose `hors_vitrine_depuis`,
+    #    L'ANCRE DES SIX MOIS (G.8). Sans garantie, le delta aurait rate CHAQUE
+    #    sortie de vitrine -- en silence, ce que la note ci-dessus interdit.
+    #
+    # ⭐ LA GARANTIE NE VIENT DONC PAS DE L'ECRIVAIN, MAIS DE LA BASE :
+    #        trg_app_console_photo_updated_at  BEFORE INSERT OR UPDATE
+    #        -> UPDATE : updated_at := now(), toujours
+    #    supabase/patch_declencheur_photo_updated_at_2026-10-01.sql
+    #
+    # ⛔ SI CE DECLENCHEUR EST RETIRE, RETIRER CETTE LIGNE DANS LE MEME GESTE.
+    #    Le code ne peut pas le verifier seul : PostgREST n'expose pas le catalogue
+    #    de Postgres. Le controle est donc humain -- comme pour les quatre au-dessus.
+    #    Pour verifier a la main :
+    #      SELECT tgname FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+    #       WHERE c.relname='app_console_photo' AND NOT t.tgisinternal;
+    #
+    # ℹ LE PREMIER RUN APRES CETTE LIGNE FERA UNE COPIE COMPLETE, et c'est voulu :
+    #   `delta_possible` refuse le delta tant que `derniere_complete` est inconnue.
+    #   Le gain n'apparait qu'au run SUIVANT.
+    "app_console_photo": "updated_at",
 }
 # Au-dela, le delta n'a plus d'interet : la copie complete est plus sure.
 DELTA_PLAFOND = 50_000
@@ -856,14 +916,47 @@ class VerrouUnique:
 
 
 def main() -> int:
+    # ⚠ `global` doit precéder TOUTE lecture de PAGE_SIZE dans cette fonction --
+    #   le texte d'aide de --page-size en lit la valeur par defaut.
+    global PAGE_SIZE
     parser = argparse.ArgumentParser(
         description="Descend les tables Supabase dans la base locale (tache B.1).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Affiche le plan sans rien ecrire.")
     parser.add_argument("--table", action="append", default=[],
                         help="Ne descendre que cette table (repetable).")
+    parser.add_argument("--page-size", type=int, default=None,
+                        help="Lignes par page (defaut %d). A BAISSER quand une table "
+                             "rend des reponses trop lourdes : c'est le POIDS par "
+                             "reponse qui casse, pas le nombre de requetes."
+                             % PAGE_SIZE)
     parser.add_argument("--phase2-db", type=Path, default=PHASE2_DB)
     args = parser.parse_args()
+
+    # ─── --page-size ─────────────────────────────────────────────   01/10/2026
+    # POURQUOI CETTE OPTION EXISTE. app_console_photo pese 2 311 octets PAR LIGNE :
+    # une page de 1 000 lignes fait donc 2,2 Mo. Or la passerelle a coupe sa reponse
+    # a 1 Mio le 01/10 au soir -> echec de la table entiere.
+    #
+    # ⚠⚠ ET LE GARDE-FOU EXISTANT NE POUVAIT PAS LA SAUVER : POIDS_PAGE_MAX vaut
+    #    4 Mo, donc la division automatique de la page ne se declenche qu'au-dela
+    #    de 4 Mo -- alors que la rupture est a 1 Mio. LE SEUIL DE PROTECTION ETAIT
+    #    PLUS HAUT QUE LE POINT DE CASSE. Un mecanisme juste, mal calibre pour
+    #    cette table-la.
+    #
+    # Reglage mesure : 1 Mio / 2 311 octets = 453 lignes maximum.
+    #   --page-size 300  ->  ~677 ko par reponse, marge confortable.
+    #
+    # ⛔ ON NE BAISSE PAS POIDS_PAGE_MAX GLOBALEMENT ICI : ce serait changer le
+    #    comportement des 149 autres tables sans l'avoir mesure. Une option par
+    #    appel reste reversible et ne touche personne d'autre.
+    if args.page_size is not None:
+        if not 1 <= args.page_size <= 1000:
+            # PostgREST plafonne toute reponse a 1 000 lignes (verifie le 22/08) :
+            # demander plus serait un reglage qui ment.
+            raise SystemExit("--page-size doit etre entre 1 et 1000")
+        PAGE_SIZE = args.page_size
+        print(f"  page reglee a {PAGE_SIZE} lignes (defaut 1000)")
 
     for env_file in DEFAULT_ENV_FILES:
         load_env_file(env_file)
