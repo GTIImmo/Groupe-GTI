@@ -477,3 +477,87 @@ les documents     j'ai divise par le total, sans separer parc et archives
 ```
 
 ➡ **Avant de déclarer une panne : ouvrir `notice/`, et tester l'adresse RÉELLE.**
+
+---
+
+# 13. `app_contact_relation_current` — LA RÉPONSE CERTAINE
+
+**01/10/2026.** J'avais annoncé : *« elle est déjà remplacée, 85 173 lignes poussées
+pour rien — le gain le plus facile du projet »*. **C'était faux.** Frédéric a
+demandé une vérification à fond, puis une réponse **certaine**. La voici.
+
+## La méthode : on ne cherche pas où l'on pense
+
+Balayage de **toutes** les couches, y compris celles que je n'avais pas ouvertes :
+vues · fonctions · **politiques RLS** · déclencheurs · worker · backend · phase2 ·
+front · tâches planifiées.
+
+## Les lecteurs, tous, et ce qu'ils risquent
+
+| # | lecteur | ce qu'il fait | si les liens disparaissent |
+|---|---|---|---|
+| **1** | **politique RLS** `app_contact_current_select_scoped` | **qui peut VOIR un contact** | ⛔⛔ un négociateur **ne voit plus** les propriétaires de ses propres biens |
+| **2** | fonction `app_console_can_request_contact_job` | **qui peut AGIR sur un contact** | ⛔⛔ il **perd le droit** de modifier ces contacts |
+| **3** | worker `console_job_worker.js` l. 2107 | retrouve les biens d'un contact (5 max) | ⛔ le geste se fait sans contexte |
+| **4** | vue `app_contact_relations_current` | **les ACQUÉREURS** (ce que l'écran affiche) | ⛔ 34 926 liens disparaissent de l'écran |
+| 5 | worker `cleanupSupabaseAnnonceRows` | ménage à la suppression d'une annonce | 🟡 sans objet |
+| 6 | fonction `app_contact_id_propager` | propage notre numéro sur 18 tables, **chaque nuit** | 🟡 générique |
+| 7 | fonction `app_decaler_doublure` | décale la doublure sur une liste de tables | 🟡 générique |
+| 8 | fonctions `app_bascule_identite_contact` (+ annuler) | la bascule d'identité | 🟡 ponctuelle, faite |
+| 9 | vue `app_contacts_sans_numero` | diagnostic sur 18 tables | 🟡 |
+| — | `contact_sync_status` · `relation_disparue` · `photo_avant_c15` · `comparer_doublures` | contrôles phase2 | 🟡 |
+| ✅ | **le front** | **ne l'interroge JAMAIS en direct** | — les 2 occurrences du code sont des **commentaires** |
+
+## La politique RLS, mot pour mot
+
+```sql
+-- QUI PEUT VOIR UN CONTACT
+   is_app_global_reader()                                   OU
+   can_access_negotiator_email(negociateur_email)           OU
+   EXISTS (SELECT 1 FROM app_contact_relation_current r
+           WHERE r.hektor_contact_id = app_contact_current.hektor_contact_id
+             AND r.app_dossier_id IS NOT NULL
+             AND can_access_current_dossier(r.app_dossier_id))
+```
+
+**Ce sont exactement les 50 247 liens mandant/propriétaire que je proposais de ne
+plus pousser.** Les retirer aurait coupé la visibilité des négociateurs sur les
+propriétaires de leurs biens — **silencieusement**, et ça aurait ressemblé à un
+bug de droits, jamais à une régression de push.
+
+## Le verdict
+
+```
+85 173 lignes poussees chaque nuit
+   34 926 acquereurs       -> SERVIS par la vue du front
+   50 247 mandant/proprio  -> SERVIS par les DROITS (voir + agir)
+----------------------------------------------------------------
+        0 ligne inutile
+```
+
+**Il n'y a aucun gain gratuit ici.** Il y a un chemin, en trois temps, et chacun
+doit être prouvé avant le suivant :
+
+```
+1. la politique RLS et le garde-fou lisent app_relation au lieu de la vieille
+   table. Le registre porte les MEMES liens, avec le MEME app_dossier_id.
+   ⚠ la cle n'est pas la meme : la vieille table met NOTRE numero dans une
+     colonne nommee `hektor_contact_id` ; app_relation a `app_contact_id`.
+2. le worker (l. 2107) fait de meme.
+3. ALORS SEULEMENT la vieille table se reduit aux acquereurs : 85 173 -> 34 926.
+   Et elle ne disparait pas : les ACQUEREURS n'ont pas encore de registre.
+```
+
+## ⚠ La leçon, et c'est la troisième fois dans la même journée
+
+```
+la sauvegarde   « aucune sauvegarde »  -> Veeam sauvegardait la machine entiere
+le RDV          « la page n'existe pas » -> elle etait a une adresse que je
+                                            n'avais pas cherchee
+cette table     « plus personne ne la lit » -> deux politiques de DROITS en vivent
+```
+
+➡ **Avant de déclarer qu'une donnée ne sert plus : chercher TOUS ses lecteurs —
+vues, fonctions, POLITIQUES RLS, déclencheurs, worker, étapes de nuit — pas
+seulement l'écran.** Les lecteurs les plus critiques sont les plus silencieux :
+une politique RLS ne s'appelle nulle part, elle s'applique.
