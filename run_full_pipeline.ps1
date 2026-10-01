@@ -740,9 +740,18 @@ Invoke-Step -Label "phase2 affaire ledger refresh+push" -Arguments @(
 #    ou elle lira cette table : publier telle quelle mettrait 2 348 mandats de
 #    location dans un registre qui ne doit pas les contenir.
 # ============================================================================
+# ⚠ `--push` AJOUTE LE 01/10/2026, ET IL MANQUAIT DEPUIS LE 30/09.
+#    Le commentaire ci-dessus disait, le 29/09 : « la table n'existe meme pas
+#    dans Supabase ; la descente viendra AVEC l'ecriture du worker (etape D) ».
+#    L'ETAPE D A ETE FAITE LE 30/09 -- la condition etait levee, et je ne suis
+#    pas revenu changer la ligne. Mesure du 01/10 : 26 828 mandats en local
+#    contre 26 826 au cloud. Sans ce `--push`, l'ecart grandit chaque nuit.
+#    ⭐ C'est le meme couple que le ledger d'affaires, trois etapes plus haut.
+#    ⚠ Le garde-fou du script tient : `--push` SANS `--refresh` est REFUSE.
 Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -Arguments @(
     "phase2\sync\mandat_ledger.py",
-    "--refresh"
+    "--refresh",
+    "--push"
 )
 
 # ============================================================================
@@ -785,9 +794,17 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -
 #      d'echappement, donc rien a reinterpreter.
 #    ➡ NE JAMAIS REECRIRE CETTE LIGNE A TRAVERS PYTHON, SED, OU UN HEREDOC.
 #      Le piege est SELECTIF : `\s` survit, `\r` `\n` `\b` `\f` `\v` non.
+# ⚠ `--push` AJOUTE LE 01/10/2026, meme oubli que pour les mandats : le registre
+#    se rafraichissait chaque nuit SANS jamais monter au cloud. Le 01/10 il a
+#    fallu pousser a la main les 11 liens de la nuit.
+#    ⚠ C'EST LE PLUS GROS ENVOI DU RUN : 132 639 lignes. Le ledger d'affaires met
+#      ~10 min pour 31 019 -> compter 30 a 40 min ici. A MESURER au premier run,
+#      et a deplacer si ca pese. Il n'est plus dans la fenetre des 500 : celle-ci
+#      venait du rattrapage documents, decale a 22:00 le 01/10.
 Invoke-OptionalStepWithRetry -Label "phase2 registre des liens (app_relation)" -Arguments @(
     "phase2\sync\relation_ledger.py",
-    "--refresh"
+    "--refresh",
+    "--push"
 )
 
 
