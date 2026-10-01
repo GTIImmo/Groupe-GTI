@@ -772,8 +772,21 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -
 #      phase2 attendent puis abandonnent. La difference se fait desormais en
 #      memoire, pas en SQL.
 # ============================================================================
+# ⚠⚠ LE CHEMIN CI-DESSOUS A ETE DETRUIT, ET L'ETAPE N'A JAMAIS TOURNE.
+#    Ecrit le 30/09 a travers un script Python, le `\r` de `\relation_ledger.py`
+#    est devenu un RETOUR CHARIOT : la ligne portait `phase2\sync` + CR +
+#    `elation_ledger.py`. Python sortait en code 2 (fichier introuvable) en zero
+#    seconde ; l'etape etant « non bloquante », le pipeline continuait ET RIEN NE
+#    LE DISAIT. Trouve le 01/10 par la sentinelle relation_disparue : 11 liens de
+#    la couche absents du registre.
+#    ⚠ Repare une premiere fois AVEC SED le 01/10 : sed a detruit la ligne a son
+#      tour (il interprete \r dans son texte de remplacement). La seule methode
+#      sure est de construire la barre oblique par chr(92) -- aucune sequence
+#      d'echappement, donc rien a reinterpreter.
+#    ➡ NE JAMAIS REECRIRE CETTE LIGNE A TRAVERS PYTHON, SED, OU UN HEREDOC.
+#      Le piege est SELECTIF : `\s` survit, `\r` `\n` `\b` `\f` `\v` non.
 Invoke-OptionalStepWithRetry -Label "phase2 registre des liens (app_relation)" -Arguments @(
-    "phase2\syncelation_ledger.py",
+    "phase2\sync\relation_ledger.py",
     "--refresh"
 )
 
