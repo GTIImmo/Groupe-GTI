@@ -26263,9 +26263,39 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     let acq: CkAffaireParty | null = null, acqCtx = ''
     const cState = String(d?.compromis?.state ?? '').toLowerCase()
     const oState = String(d?.offre?.state ?? '').toLowerCase()
+    // ⛔ L'ACQUEREUR COURANT DISPARAISSAIT DES QU'IL Y AVAIT PLUSIEURS DOSSIERS.
+    //    Signale par Frederic le 02/10 sur le mandat 18374, et MESURE : 472 mandats
+    //    sur 7 916 (6 %).
+    //
+    //    CE QUI SE PASSE. Quand une affaire porte plusieurs acquereurs -- typiquement
+    //    une offre REFUSEE puis une autre acceptee -- le constructeur range la matiere
+    //    dans `dossiers[]` et laisse les champs de TETE a null :
+    //        offre.acquereur     = null        offre     : accepted
+    //        compromis.acquereur = null        compromis : active
+    //        dossiers[0]  courante=true   M. Nicolas Drouet
+    //        dossiers[1]  courante=false  M. Marc FERIES   (offre refusee)
+    //
+    //    ⚠ ET LE RESULTAT ETAIT EXACTEMENT A L'ENVERS : les trois tests ci-dessous
+    //      ne lisaient que la tete -> aucune carte « Acquereur », pendant que le bloc
+    //      « Dossiers abandonnes », lui, lit bien `dossiers` -> il affichait le
+    //      REFUSE. On montrait celui qui est parti et on cachait celui qui achete.
+    //
+    //    LE REPLI, en DERNIER : on ne touche a aucun chemin existant. Il ne sert que
+    //    la ou la tete est vide, et il reprend la regle du bloc des abandonnes --
+    //    `courante === true` -- donc les deux blocs lisent enfin la meme verite.
+    const dossierCourant = (d?.dossiers ?? []).find((x) => x && x.courante === true) ?? null
     if (d?.vente?.acquereur) { acq = d.vente.acquereur; acqCtx = ['Vente', eur(d.vente.prix)].filter(Boolean).join(' · ') }
     else if (d?.compromis?.acquereur && cState !== 'cancelled') { acq = d.compromis.acquereur; acqCtx = ['Compromis', eur(d.compromis.prix_public)].filter(Boolean).join(' · ') }
     else if (d?.offre?.acquereur && oState !== 'refused') { acq = d.offre.acquereur; acqCtx = ['Offre', d.offre.state ?? '', eur(d.offre.montant)].filter(Boolean).join(' · ') }
+    else if (dossierCourant?.acquereur) {
+      acq = dossierCourant.acquereur
+      // Le dossier porte SA chaine complete : on nomme l'etape la plus avancee.
+      acqCtx = dossierCourant.vente
+        ? ['Vente', eur(dossierCourant.vente.montant)].filter(Boolean).join(' · ')
+        : dossierCourant.compromis
+          ? ['Compromis', eur(dossierCourant.compromis.montant)].filter(Boolean).join(' · ')
+          : ['Offre', dossierCourant.offre?.state ?? '', eur(dossierCourant.offre?.montant)].filter(Boolean).join(' · ')
+    }
     if (acq && ckPartyName(acq)) cards.push({ party: acq, role: 'Acquéreur', ctx: acqCtx, kind: 'buy' })
     let man: CkAffaireParty | null = d?.vente?.mandant ?? d?.compromis?.mandant ?? null
     let manCtx = ''
@@ -27173,7 +27203,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             ?? (fcOwner ? { id: fcOwner.sourceId ?? null, civilite: fcOwner.civility ?? null, nom: (fcOwner.lastName ?? fcOwner.name) ?? null, prenom: fcOwner.firstName ?? null, coordonnees: { email: fcOwner.email, tel: fcOwner.phone } }
             : (h.mandants ? { nom: h.mandants } : null))
           pushParty(fcMandant, 'Mandant · vendeur', 'sell')
-          pushParty(ven?.acquereur ?? com?.acquereur ?? off?.acquereur, 'Acquéreur', 'buy')
+          // ⛔ MEME ANGLE MORT QU'AU-DESSUS (02/10) : quand l'affaire porte plusieurs
+          //    acquereurs, la matiere est dans `dossiers[]` et la TETE est a null --
+          //    472 mandats sur 7 916. Ce bloc ne lisait que la tete, donc il n'affichait
+          //    AUCUN acquereur, alors que `fcAbandon` (juste en dessous) montrait bien le
+          //    dossier abandonne. Meme repli, meme regle `courante === true`.
+          const fcDossierCourant = (detail?.dossiers ?? []).find((x) => x && x.courante === true) ?? null
+          pushParty(ven?.acquereur ?? com?.acquereur ?? off?.acquereur ?? fcDossierCourant?.acquereur, 'Acquéreur', 'buy')
           pushParty(ven?.notaire, 'Notaire', 'not')
           const fcAbandon: CkAffaireDossier[] = (detail?.dossiers ?? []).filter((d) => d && d.courante === false && ckPartyName(d.acquereur))
           return (
