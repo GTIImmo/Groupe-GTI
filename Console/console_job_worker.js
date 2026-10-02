@@ -14933,6 +14933,178 @@ async function linkHektorMandantContact(job, annonceId, contactId, step = "hekto
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ④c  RETIRER UN MANDANT D'UN BIEN                                   02/10/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+// Miroir exact de linkHektorMandantContact, juste au-dessus. L'appel a ete RELEVE
+// A L'ECRAN le 02/10 sur le bien 63112 (menu a trois points de la ligne du mandant,
+// entree « Detacher le contact ») :
+//     degroupproprioForAnnonce(id, idann)
+//       -> $j.ajax({ url:'xmlrpc.php',
+//                    data:{ mode:'degroupproprio', id:<contact>, idann:<annonce> } })
+// MEMES PARAMETRES que le rattachement (mode=selectnouveauproprio_sup&id=&idann=).
+// Rien n'a ete execute chez Hektor pour l'etablir : tout vient de la lecture du
+// `onclick` puis du corps de la fonction.
+//
+// ⚠⚠ HEKTOR NE DEMANDE AUCUNE CONFIRMATION (`confirm()` absent de sa fonction) et
+//    NE CONFIRME RIEN NON PLUS. D'ou l'attente ci-dessous : on ne croit pas l'appel
+//    sur parole, on va VERIFIER que le lien a disparu.
+// ⚠⚠ `visibleAvant` N'EST PAS UN CONFORT, C'EST LA CONDITION DE LA PREUVE.
+//
+// Confirmer un retrait par l'ABSENCE du lien suppose que sa PRESENCE etait visible
+// avant. Or la console de Hektor est filtree par agence (memoire du projet :
+// « le scrape ne montre que les biens de l'agence ») : sur un contact d'une autre
+// agence elle ne montre RIEN, ni avant ni apres.
+//
+// Sans cette garde, l'enchainement serait :
+//     API « inconnu » -> on ne court-circuite pas -> on appelle degroupproprio
+//     console aveugle -> « absent » des le 1er essai -> ON CONFIRME
+// ... un retrait qui n'a peut-etre jamais eu lieu, annonce comme fait.
+//
+// Donc : si le lien n'etait PAS visible avant, la console ne peut rien prouver, et
+// SEULE l'API fait foi. Son silence (« inconnu ») devient alors un ECHEC, jamais un
+// oui -- c'est la meme severite que le rattachement, qui refuse de conclure quand
+// il ne peut pas prouver.
+async function waitForHektorMandantUnlink(job, annonceId, contactId, step, options = {}) {
+  const attempts = Number(options.attempts || 4);
+  const intervalMs = Number(options.intervalMs || 650);
+  const visibleAvant = options.visibleAvant === true;
+
+  if (visibleAvant) {
+    for (let index = 0; index < attempts; index += 1) {
+      const list = await fetchHektorProspectsList(annonceId);
+      if (!hektorProspectLinkedInHtml(list.text, contactId, annonceId)) {
+        return { status: "confirmed", waitAttempts: index + 1, source: "console" };
+      }
+      if (index < attempts - 1) await sleep(intervalMs);
+    }
+  }
+
+  // L'API tranche : soit parce que la console n'a rien pu montrer (aveugle), soit
+  // parce qu'elle montre encore le lien apres toutes les tentatives.
+  const ultime = await lienMandantSelonApi(job, annonceId, contactId, "hektor_mandant_retrait_preuve");
+  if (ultime.verdict === "non_lie") {
+    return { status: "confirmed", waitAttempts: visibleAvant ? attempts : 0, source: "api" };
+  }
+  if (ultime.verdict === "lie") {
+    throw new Error(`Retrait du mandant NON effectif : contact ${contactId} toujours lie a l'annonce ${annonceId}`);
+  }
+  // verdict « inconnu » -> ON NE CONCLUT PAS. Mieux vaut un travail en erreur, qui
+  // defait le retrait optimiste et fait reapparaitre le mandant, qu'un retrait
+  // annonce et jamais effectue.
+  throw new Error(
+    `Retrait du mandant NON PROUVE pour le contact ${contactId} sur l'annonce ${annonceId}`
+    + ` (API : ${ultime.raison || "sans reponse"}${visibleAvant ? "" : ", et la console ne voyait pas ce lien"})`,
+  );
+}
+
+async function unlinkHektorMandantContact(job, annonceId, contactId, step = "hektor_mandant_retrait") {
+  // Court-circuit « c'est deja fait ». Rejouer un detachement deja pose n'abime
+  // rien, mais le dire evite un appel inutile chez Hektor -- et le quota compte.
+  const dejaSelonApi = await lienMandantSelonApi(job, annonceId, contactId, step);
+  if (dejaSelonApi.verdict === "non_lie") {
+    return { status: "already_unlinked", hektor_annonce_id: annonceId, hektor_contact_id: contactId, source: "api" };
+  }
+
+  // ⚠ ON REGARDE AVANT D'AGIR. Ce que la console montre MAINTENANT decide de ce que
+  //   son silence vaudra APRES -- voir waitForHektorMandantUnlink.
+  const avant = await fetchHektorProspectsList(annonceId);
+  const visibleAvant = hektorProspectLinkedInHtml(avant.text, contactId, annonceId);
+
+  await logJob(job.id, step, "running", "Detachement du mandant dans Hektor", {
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: contactId,
+    visible_dans_la_console_avant: visibleAvant,
+  });
+
+  await hektorFetch(`${XMLRPC_URL}?mode=degroupproprio&id=${encodeURIComponent(contactId)}&idann=${encodeURIComponent(annonceId)}`);
+  const confirmed = await waitForHektorMandantUnlink(job, annonceId, contactId, `${step}_confirm`, { visibleAvant });
+  return {
+    status: "unlinked",
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: contactId,
+    waitAttempts: confirmed.waitAttempts,
+  };
+}
+
+// ⛔ LE CHEMIN DE RETOUR -- LA PIECE LA PLUS DELICATE DU GESTE.
+//
+// La RPC a deja pose retire_le AVANT que le worker ne parle a Hektor : c'est ce qui
+// fait disparaitre la ligne de l'ecran a la seconde (la vue filtre sur
+// `retire_le IS NULL`). Si Hektor REFUSE, ce retrait optimiste devient un MENSONGE :
+// le mandant est toujours lie chez Hektor, et invisible chez nous. POUR TOUJOURS,
+// puisque rien d'autre ne l'effacerait.
+//
+// ⚠ ON NE LAISSE DONC JAMAIS UN ECHEC SANS DEFAIRE. Et on ne se tait pas : un
+//   retour arriere qui echoue lui aussi doit s'ecrire dans le journal du travail --
+//   c'est le seul cas ou un humain doit repasser derriere.
+async function annulerRetraitOptimiste(job, appContactId, annonceId, cause) {
+  if (!appContactId || !annonceId) return { annule: false, raison: "identifiants manquants" };
+  try {
+    await supabaseRequest(
+      `app_relation?app_contact_id=eq.${encodeURIComponent(String(appContactId))}`
+      + `&hektor_annonce_id=eq.${encodeURIComponent(String(annonceId))}`,
+      { method: "PATCH", prefer: "return=minimal",
+        body: JSON.stringify({ retire_le: null, retire_par: null }) },
+    );
+    await logJob(job.id, "retrait_annule", "done",
+      "Hektor a refuse le detachement : le retrait a ete DEFAIT, le mandant reapparait",
+      { app_contact_id: String(appContactId), hektor_annonce_id: String(annonceId), cause: String(cause).slice(0, 300) });
+    return { annule: true };
+  } catch (erreur) {
+    // ⛔ LE PIRE CAS : Hektor a refuse ET on n'a pas pu defaire. Le mandant est
+    //   invisible a l'ecran alors qu'il est toujours lie. Ca doit CRIER.
+    await logJob(job.id, "retrait_annule", "error",
+      "⛔ Hektor a refuse ET le retrait n'a PAS pu etre defait -- le mandant est "
+      + "invisible a l'ecran alors qu'il reste lie chez Hektor. A REPRENDRE A LA MAIN.",
+      { app_contact_id: String(appContactId), hektor_annonce_id: String(annonceId),
+        cause: String(cause).slice(0, 300), erreur_annulation: String(erreur).slice(0, 300) });
+    return { annule: false, raison: String(erreur).slice(0, 300) };
+  }
+}
+
+async function executerRetraitMandant(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  // ⚠⚠ LE 403. Les droits Hektor sont PAR NEGOCIATEUR, pas par agence -- prouve a
+  //    l'ecran le 02/10 : sur le bien d'un autre, la page affiche « Vous n'avez pas
+  //    le droit de modifier ce bien » ET LE MENU A TROIS POINTS N'EXISTE PAS. Sans
+  //    ce contexte, l'appel partirait sous le mauvais compte.
+  //    `required: true` : pas de contexte -> PAS D'ECRITURE.
+  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  // Deux numeros, deux variables -- la lecon du 22/09.
+  const identite = String(payload.contact_id || payload.hektor_contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
+  const appContactId = payload.app_contact_id || null;   // le NOTRE, pour defaire
+  const contactId = await cibleHektorContact(identite, { contexte: "unlink_hektor_mandant" });
+  const annonceId = String(dossier.hektor_annonce_id);
+
+  let resultat;
+  try {
+    resultat = await unlinkHektorMandantContact(job, annonceId, contactId);
+  } catch (erreur) {
+    await annulerRetraitOptimiste(job, appContactId, annonceId, erreur && erreur.message ? erreur.message : erreur);
+    throw erreur;   // le travail reste en ERREUR : on ne masque pas l'echec
+  }
+
+  // Le mandant est detache chez Hektor a partir d'ici : tout ce qui suit est
+  // best-effort et ne doit PAS faire echouer le travail.
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
+    reason: "unlink_hektor_mandant",
+    priority: 80,
+  });
+
+  return {
+    status: resultat.status,
+    hektor_annonce_id: annonceId,
+    hektor_contact_id: contactId,
+    app_contact_id: appContactId,
+    wait_attempts: resultat.waitAttempts,
+    refresh_job_id: syncJob ? syncJob.id : null,
+  };
+}
+
 function cleanString(value) {
   const text = String(value || "").trim();
   return text || null;
@@ -19716,6 +19888,9 @@ async function runHandler(job) {
       return handlePrepareHistoricalAnnonceDetail(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
+    // ④c 02/10/2026 : le geste jumeau -- retirer un mandant d'un bien.
+    case "unlink_hektor_mandant":
+      return executerRetraitMandant(job);
     case "create_hektor_contact":
       return handleCreateHektorContact(job);
     case "update_hektor_contact":
