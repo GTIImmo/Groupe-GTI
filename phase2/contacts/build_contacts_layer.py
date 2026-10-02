@@ -248,6 +248,52 @@ def json_array(value: Any) -> str:
     return json.dumps(value or [], ensure_ascii=False, separators=(",", ":"))
 
 
+def commentaire_du_contact(raw_json: Any) -> str | None:
+    """Le commentaire que Hektor porte sur un contact, tire de son blob brut.
+
+    ═══════════════════════════════════════════════════════════════════════════
+    POURQUOI CETTE FONCTION EXISTE                                  02/10/2026
+    ═══════════════════════════════════════════════════════════════════════════
+    La rubrique « Contact » d'une annonce doit lire NOTRE registre
+    (app_contact_relations_current) au lieu de `proprietaires_json`, la copie du
+    detail Hektor. Audit du 02/10, champ par champ : sur les 13 que l'ecran
+    construit, DOUZE existent deja dans app_contact_current. Le treizieme est le
+    commentaire -- et 18,8 % des mandants en ont un (439 sur 2 336 mesures).
+    Basculer sans lui perdrait l'information pour pres d'un mandant sur cinq.
+
+    ⭐ ET LE SERVEUR L'AVAIT DEJA. Il dort dans hektor_contact.raw_json, un blob
+      que ce fichier LIT DEJA (il le porte sur ContactRow depuis toujours) et dont
+      personne n'avait ouvert cette cle. 61,5 % des contacts en portent un
+      (24 610 sur 40 000 examines). Rien a demander a Hektor.
+
+    ⚠ ON NE TRONQUE PAS, et c'est mesure : moyenne 153 caracteres, mediane 49,
+      95e percentile 582, MAXIMUM 12 036. Meme un blob de 12 000 caracteres ne
+      pese que 12 ko dans un lot de 300 lignes qui en fait 600 -- le poids est
+      tenu par la taille du lot (--batch-size 300, pose le meme jour), pas en
+      mutilant la donnee.
+
+    ⚠ TOUTE FORME INATTENDUE REND None, JAMAIS UNE EXCEPTION. Un contact dont le
+      blob est illisible ne doit pas faire tomber la construction des 356 000
+      autres. (Lecon du 30/09 : un `except Exception` trop large avait avale un
+      NameError et laisse partir 6 lignes sans leur role, EN SILENCE. Ici on
+      n'avale que ce qui vient du decodage, et on ne masque aucun appel.)
+    """
+    if not raw_json:
+        return None
+    try:
+        donnees = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(donnees, dict):
+        return None
+    valeur = donnees.get("commentaires")
+    # Hektor rend parfois un nombre ou un booleen la ou on attend du texte.
+    if valeur is None or isinstance(valeur, (list, dict)):
+        return None
+    texte = str(valeur).strip()
+    return texte or None
+
+
 def parse_json_value(value: Any, fallback: Any) -> Any:
     if isinstance(value, (dict, list)):
         return value
@@ -496,6 +542,10 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
     }
     if colonnes_contact and "hektor_target_id" not in colonnes_contact:
         conn.execute("ALTER TABLE app_contact_current ADD COLUMN hektor_target_id TEXT")
+    # 02/10/2026 -- meme rattrapage, meme raison : la table posee avant ce jour n'a
+    # pas la colonne, et l'INSERT la demanderait. Idempotent.
+    if colonnes_contact and "commentaires" not in colonnes_contact:
+        conn.execute("ALTER TABLE app_contact_current ADD COLUMN commentaires TEXT")
 
     conn.executescript(
         """
@@ -541,6 +591,14 @@ def init_contacts_schema(conn: sqlite3.Connection) -> None:
             duplicate_max_severity TEXT,
             duplicate_primary_candidate_id TEXT,
             completeness_score INTEGER NOT NULL DEFAULT 0,
+            -- 02/10/2026 : LE COMMENTAIRE DU CONTACT CHEZ HEKTOR.
+            -- Pose pour que la rubrique « Contact » d'une annonce puisse lire NOTRE
+            -- registre (app_contact_relations_current) au lieu de proprietaires_json,
+            -- la copie du detail Hektor, SANS perdre ce champ -- 18,8 % des mandants
+            -- en ont un. C'est le SEUL des 13 champs de l'ecran qui manquait.
+            -- Il dormait deja dans hektor_contact.raw_json : rien a aller chercher
+            -- chez Hektor, on ouvre un blob qu'on lisait deja.
+            commentaires TEXT,
             source_hash TEXT NOT NULL,
             refreshed_at TEXT NOT NULL
         );
@@ -1730,6 +1788,9 @@ def build_contact_rows(
             "duplicate_max_severity": duplicate.get("severity") if duplicate else None,
             "duplicate_primary_candidate_id": duplicate.get("primary_candidate_hektor_contact_id") if duplicate else None,
             "completeness_score": contact.completeness_score,
+            # 02/10 : le 13e champ de la rubrique « Contact ». Voir
+            # commentaire_du_contact() -- il ouvre une cle d'un blob deja porte.
+            "commentaires": commentaire_du_contact(contact.raw_json),
         }
         payload["source_hash"] = stable_hash({key: value for key, value in payload.items() if key != "source_hash"})
         rows.append(payload)

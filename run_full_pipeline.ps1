@@ -1064,9 +1064,39 @@ Invoke-Step -Label "phase2 push hektor directory to supabase" -Arguments @(
 
 if ($PushContactsToSupabase) {
     $contactsScope = if ($ContactsEligibleOnly) { "eligible" } else { "active_or_eligible" }
+    # ═══ LE LOT EST RAMENE A 300 -- LA PROTECTION AVANT LA CHARGE ═══  02/10/2026
+    #
+    # Le defaut du script est 500. MESURE du 02/10, sur 3 000 lignes reelles :
+    #     une ligne de contact en JSON       1 419 octets  (la plus lourde : 1 736)
+    #     un lot de 500                        693 ko      -> sous 1 Mio, ca passe
+    #
+    # ⚠ MAIS L'EXTRACTION DU COMMENTAIRE VA L'ALOURDIR (etape ②b, le meme jour) :
+    #     61,5 % des contacts en ont un ; moyenne 153 car., 95e percentile 582,
+    #     MAXIMUM 12 036.
+    #     -> en moyenne      1 572 o/ligne  ->  lot de 500 = 786 ko   ca va
+    #     -> au 95e perc.    2 001          ->  lot de 500 = 977 ko   ⚠ 4 % de marge
+    #     -> et UN SEUL commentaire de 12 000 caracteres dans le lot le fait DEPASSER
+    #
+    # ⛔ OR 1 Mio EST LE POINT DE RUPTURE MESURE LA VEILLE : c'est exactement la ou
+    #   la passerelle a coupe la reponse d'app_console_photo le 01/10 au soir, tuant
+    #   la table et bloquant son delta. On ne rejoue pas ce defaut du cote montant.
+    #
+    #     lot 500   977 ko au 95e perc.   ⚠  4 % de marge
+    #     lot 400   800 ko                ✅ 24 %
+    #     lot 300   600 ko                ✅ 41 %   <- retenu
+    #
+    # COUT : 198 requetes au lieu de 119 pour les 59 315 contacts eligibles. C'est le
+    # bon echange -- la mesure du 01/10 est sans ambiguite : CE QUI CASSE EST LE POIDS
+    # PAR REQUETE, PAS LEUR NOMBRE (964 Mo sont passes sans gener personne en pages de
+    # 677 ko, apres avoir mis l'agence dehors en pages de 2,2 Mo).
+    #
+    # ⚠ A POSER AVANT ②b, jamais apres : la premiere nuit qui suit l'extraction est
+    #   aussi celle du push COMPLET (le hache de tous les contacts change), donc celle
+    #   ou les lots seraient les plus nombreux a tester la limite.
     $contactsPushArgs = @(
         "phase2\sync\push_contacts_to_supabase.py",
         "--push-mode", "update",
+        "--batch-size", "300",
         "--contacts-scope", $contactsScope
     )
     if ($IncludeArchivedContactRelations) {
