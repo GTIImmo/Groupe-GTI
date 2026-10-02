@@ -236,6 +236,12 @@ const contactsListingSelect = [
   'duplicate_max_severity',
   'duplicate_primary_candidate_id',
   'completeness_score',
+  // 02/10/2026 : le commentaire que Hektor porte sur le contact. Pose pour que la
+  // rubrique « Contact » d'une annonce puisse lire NOTRE registre au lieu de
+  // `proprietaires_json` sans perdre ce champ -- 18,8 % des mandants en ont un.
+  // C'etait le SEUL des 15 champs de l'ecran qui manquait ; les 14 autres etaient
+  // deja dans cette liste. (Table + vue : patchs du meme jour.)
+  'commentaires',
   'refreshed_at',
 ].join(',')
 const activeContactSearchFilterValue = '__active_search__'
@@ -8699,6 +8705,146 @@ export async function loadAnnonceContactInvitees(input: {
       ...contact,
       role_contact: relation.role_contact,
       relation_source: relation.relation_source,
+    }
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ③ LA RUBRIQUE « CONTACT » D'UNE ANNONCE LIT NOTRE REGISTRE      02/10/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+// Jusqu'ici elle affichait `proprietaires_json` -- la copie du detail Hektor, dans
+// NOTRE base, mais rafraichie seulement quand le run detecte un changement. Une
+// saisie n'y apparaissait donc qu'au matin suivant, d'ou le bandeau « En creation… »
+// (MandantsEnCreation) qui existe pour combler ce trou.
+//
+// ⭐ POURQUOI LE REGISTRE EST MEILLEUR -- mesure du 02/10, sur 3 000 biens :
+//      0 ligne PERDUE, +19 GAGNEES. Le registre construit le lien DANS LES DEUX
+//      SENS (par le bien ET par le contact), donc il rattrape ce que la fiche du
+//      bien oublie : vu sur le bien 63202, dont `proprietaires_json` vaut « null »
+//      alors que le proprietaire existe bel et bien.
+//    Et il porte `hektor_target_id` -- le numero HEKTOR dont le worker a besoin
+//    pour detacher un mandant (verifie : 10215521 -> 414472, le meme que l'ecran).
+//
+// ⚠ LE FILTRE DE ROLE N'EST PAS UN DETAIL. La vue porte AUSSI les acquereurs :
+//      mandant 74 188 · proprietaire 58 463
+//      acquereur_compromis 13 267 · acquereur_offre 11 147 · acquereur_vente 10 517
+//    Sans ce filtre, la rubrique « Contact » se remplirait d'acquereurs.
+//
+// DEUX REQUETES, pas une jointure : la vue des relations n'a pas de cle etrangere
+// vers les contacts (c'est une vue), donc PostgREST ne sait pas les imbriquer. On
+// reprend le patron deja eprouve de loadAnnonceContactInvitees, juste au-dessus.
+const ROLES_DU_BIEN = ['mandant', 'proprietaire'] as const
+
+export type AnnonceMandantRow = {
+  hektor_contact_id: string
+  hektor_target_id: string | null
+  role_contact: string | null
+  relation_source: string | null
+  civilite: string | null
+  nom: string | null
+  prenom: string | null
+  display_name: string | null
+  email: string | null
+  phone_primary: string | null
+  phone_secondary: string | null
+  adresse: string | null
+  code_postal: string | null
+  ville: string | null
+  commentaires: string | null
+  archive: unknown
+  date_enregistrement: string | null
+  date_maj: string | null
+  hektor_negociateur_id: string | null
+  hektor_couple_contact_id: string | null
+  couple_role: string | null
+  typologies_json: string | null
+}
+
+export async function loadAnnonceMandants(input: {
+  appDossierId?: number | null
+  hektorAnnonceId?: number | string | null
+}): Promise<AnnonceMandantRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+
+  const appDossierId = Number(input.appDossierId ?? 0)
+  const hektorAnnonceId = String(input.hektorAnnonceId ?? '').trim()
+  if ((!Number.isFinite(appDossierId) || appDossierId <= 0) && !hektorAnnonceId) return []
+
+  let relationQuery = supabase
+    .from(contactRelationsCurrentView)
+    .select('hektor_contact_id,role_contact,relation_source,last_seen_at')
+    .in('role_contact', ROLES_DU_BIEN as unknown as string[])
+    .order('last_seen_at', { ascending: false, nullsFirst: false })
+
+  relationQuery = Number.isFinite(appDossierId) && appDossierId > 0
+    ? relationQuery.eq('app_dossier_id', appDossierId)
+    : relationQuery.eq('hektor_annonce_id', hektorAnnonceId)
+
+  const { data: relationRows, error: relationError } = await relationQuery
+  // ⚠ ON JETTE, ON NE REND PAS VIDE. Une liste vide serait indistinguable d'un bien
+  //   sans mandant -- l'ecran afficherait « aucun mandant » sur une panne de lecture.
+  //   L'appelant decide quoi en faire (ici : revenir a proprietaires_json).
+  if (relationError) throw new Error(relationError.message ?? 'Unable to load annonce mandants')
+  if (!relationRows || relationRows.length === 0) return []
+
+  const roleParContact = new Map<string, { role_contact: string | null; relation_source: string | null }>()
+  const ordre: string[] = []
+  for (const relation of relationRows as AppContactRelation[]) {
+    const contactId = String(relation.hektor_contact_id ?? '').trim()
+    if (!contactId || roleParContact.has(contactId)) continue
+    roleParContact.set(contactId, {
+      role_contact: relation.role_contact ?? null,
+      relation_source: relation.relation_source ?? null,
+    })
+    ordre.push(contactId)
+  }
+  if (ordre.length === 0) return []
+
+  const { data: contactRows, error: contactError } = await supabase
+    .from(contactsCurrentView)
+    .select(contactsListingSelect)
+    .in('hektor_contact_id', ordre)
+  if (contactError) throw new Error(contactError.message ?? 'Unable to load annonce mandant contacts')
+
+  const ficheParContact = new Map<string, Record<string, unknown>>()
+  for (const row of (contactRows ?? []) as unknown as Record<string, unknown>[]) {
+    ficheParContact.set(String(row.hektor_contact_id ?? '').trim(), row)
+  }
+
+  // ⚠ UN LIEN SANS FICHE N'EST PAS JETE. Le registre porte des liens vers des
+  //   contacts que le cloud n'a pas encore (il n'en detient qu'un sous-ensemble).
+  //   Les ecarter ferait disparaitre des mandants de l'ecran EN SILENCE -- on rend
+  //   donc la ligne avec ce qu'on a, et l'appelant la reconnait a son nom vide.
+  return ordre.map((contactId) => {
+    const fiche = ficheParContact.get(contactId) ?? {}
+    const lien = roleParContact.get(contactId) ?? { role_contact: null, relation_source: null }
+    const texte = (cle: string) => {
+      const v = fiche[cle]
+      return v === null || v === undefined ? null : String(v)
+    }
+    return {
+      hektor_contact_id: contactId,
+      hektor_target_id: texte('hektor_target_id'),
+      role_contact: lien.role_contact,
+      relation_source: lien.relation_source,
+      civilite: texte('civilite'),
+      nom: texte('nom'),
+      prenom: texte('prenom'),
+      display_name: texte('display_name'),
+      email: texte('email'),
+      phone_primary: texte('phone_primary'),
+      phone_secondary: texte('phone_secondary'),
+      adresse: texte('adresse'),
+      code_postal: texte('code_postal'),
+      ville: texte('ville'),
+      commentaires: texte('commentaires'),
+      archive: fiche.archive ?? null,
+      date_enregistrement: texte('date_enregistrement'),
+      date_maj: texte('date_maj'),
+      hektor_negociateur_id: texte('hektor_negociateur_id'),
+      hektor_couple_contact_id: texte('hektor_couple_contact_id'),
+      couple_role: texte('couple_role'),
+      typologies_json: texte('typologies_json'),
     }
   })
 }
