@@ -208,6 +208,86 @@ def _ajouter_colonne_si_absente(con: sqlite3.Connection, nom: str, type_sql: str
         con.execute("ALTER TABLE app_relation ADD COLUMN %s %s" % (nom, type_sql))
 
 
+def lire_ecritures_de_l_app() -> dict | None:
+    """Ce que l'APP a ecrit dans le cloud et que le serveur ignore encore.
+
+    Rend None si le cloud est injoignable -- l'appelant garde alors le comportement
+    d'avant, qui lit la doublure. On ne devine jamais.
+
+    ══════════════════════════════════════════════════════════════════════════════
+    POURQUOI ON INTERROGE LE CLOUD ET PAS LA DOUBLURE            02/10/2026
+    ══════════════════════════════════════════════════════════════════════════════
+    L'adoption lisait `app_relation__sb`, la copie locale de Supabase. Mesure du
+    02/10, sur les journaux :
+
+        07:00:14 -> 07:01:00   relation_ledger --refresh --push     LE PUSH
+        08:00:03               app_relation__sb rafraichie          LA DOUBLURE
+
+    ⛔ LE PUSH PASSE AVANT. Au moment ou l'adoption lit la doublure, celle-ci date
+      de la descente de LA VEILLE -- environ 23 heures de retard. Donc :
+
+        jour 1  14:00   l'app ecrit dans le cloud (numero >= 1 000 000, ou retire_le)
+        jour 2  07:01   l'adoption lit une doublure du jour 1 a 08:00 : elle ne voit RIEN
+                        -> pour un NUMERO : la reconstruction en frappe un autre pour le
+                           meme couple, et le push heurte app_relation_couple_unique
+                        -> pour un RETRAIT : le push renvoie NULL et l'EFFACE
+
+    ⚠ ET LE PREMIER CAS N'EST PAS THEORIQUE. Le commentaire de l'adoption le dit :
+      « les 01 et 02/09, deux nuits de suite, le push du ledger d'affaires a heurte un
+      index unique et LE RUN S'EST ARRETE LA -- dix-huit heures de retard sans que rien
+      ne le dise. » Le garde-fou existait, mais il regardait une photo de la veille.
+      Il n'a jamais ete pris en defaut parce que l'app n'a encore cree aucun lien
+      (`nees_dans_l_app` = 0 au 02/10).
+
+    ⭐ LA CORRECTION N'EST PAS DE DEPLACER LA DESCENTE. Son heure est justifiee
+      ailleurs (elle doit lire Supabase APRES le push du run, et APRES la sauvegarde
+      -- cf. l'en-tete de scheduled/run_descente.ps1). On lit donc le cloud
+      DIRECTEMENT, juste avant de pousser : toujours frais, et une seule requete.
+
+    CE QU'ELLE RAMENE : uniquement les lignes qui comptent, soit aujourd'hui ZERO.
+        app_relation_id >= 1 000 000   les liens nes dans l'app
+        retire_le IS NOT NULL          les retraits decides dans l'app
+    """
+    load_env_files(DEFAULT_ENV_FILES)
+    url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
+    cle = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not (url and cle):
+        return None
+    try:
+        client = SupabaseRestClient(base_url=url, service_role_key=cle)
+        if not client.table_available(TABLE):
+            return None
+        lignes = client.fetch_rows_where(
+            path=TABLE,
+            select="app_relation_id,app_contact_id,hektor_annonce_id,retire_le,retire_par",
+            filtres={"or": "(app_relation_id.gte.%d,retire_le.not.is.null)"
+                           % PLAGE_RESERVEE_APP},
+            order="app_relation_id.asc",
+        )
+    except Exception as exc:                                          # noqa: BLE001
+        # ⛔ ON N'ARRETE JAMAIS LE RUN POUR CA. Un cloud injoignable doit couter
+        #   une ligne de journal, pas dix-huit heures de retard. L'appelant
+        #   retombe sur la doublure, c'est-a-dire sur le comportement d'avant.
+        print("   !! cloud injoignable pour l'adoption (%s) -- on garde la doublure"
+              % str(exc)[:120])
+        return None
+
+    numeros: dict[tuple[int, str], int] = {}
+    retraits: dict[tuple[int, str], tuple[str, str | None]] = {}
+    for r in lignes or []:
+        annonce = str(r.get("hektor_annonce_id") or "").strip()
+        contact = r.get("app_contact_id")
+        if not annonce or contact is None:
+            continue
+        cle_couple = (int(contact), annonce)
+        numero = r.get("app_relation_id")
+        if numero is not None and int(numero) >= PLAGE_RESERVEE_APP:
+            numeros[cle_couple] = int(numero)
+        if r.get("retire_le"):
+            retraits[cle_couple] = (str(r["retire_le"]), r.get("retire_par"))
+    return {"numeros": numeros, "retraits": retraits}
+
+
 def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.executescript(SCHEMA)
     _ajouter_colonne_si_absente(con, "hektor_contact_id", "TEXT")
@@ -295,6 +375,20 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         # La doublure n'a jamais ete descendue, ou elle est vide. On ne devine
         # pas -- et tant que rien n'ecrit depuis l'app, il n'y a rien a adopter.
         pass
+
+    # ─── LE CLOUD PAR-DESSUS LA DOUBLURE ─────────────────────────   02/10/2026
+    # La doublure ci-dessus a jusqu'a 23 h de retard sur le cloud (le push passe a
+    # 07:01, la descente la rafraichit a 08:15) : elle ne peut donc PAS voir un lien
+    # cree dans l'app depuis hier matin. Voir lire_ecritures_de_l_app().
+    # On garde la lecture de la doublure comme REPLI -- si le cloud ne repond pas,
+    # le comportement reste exactement celui d'avant ce correctif.
+    ecritures_app = lire_ecritures_de_l_app()
+    retraits_du_cloud: dict[tuple[int, str], tuple[str, str | None]] = {}
+    if ecritures_app is not None:
+        retraits_du_cloud = ecritures_app["retraits"]
+        for cle_couple, numero in ecritures_app["numeros"].items():
+            if cle_couple not in connus:
+                adoptes[cle_couple] = numero     # le cloud est frais : il gagne
     adoptes_au_depart = len(adoptes)
 
     places = ",".join("?" for _ in ROLES_DU_BIEN)
@@ -475,12 +569,61 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 [(vu, c, a) for c, a in a_marquer])
         sortis = len(a_marquer)
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # LES RETRAITS DECIDES DANS L'APP            02/10/2026
+    #
+    # Ta decision du 30/09 : « retirer un mandant PART chez Hektor et la ligne RESTE
+    # chez nous, datee ». Les colonnes existent, le push les envoie -- mais le serveur
+    # n'allait jamais les CHERCHER. Resultat, sans ce bloc :
+    #
+    #   lundi 14:00   l'app note le retrait dans le cloud -> le lien disparait de
+    #                 l'ecran, car la vue filtre dessus :
+    #                 WHERE (r.present_in_hektor AND (r.retire_le IS NULL))
+    #   mardi 07:00   le serveur reconstruit depuis HEKTOR, qui ignore le retrait
+    #   mardi 07:01   il POUSSE sa liste entiere -> il ecrase la note
+    #                 ⛔ LE LIEN REAPPARAIT, et le run dit « reussi »
+    #
+    # ⚠ ON POSE, ON NE RETIRE PAS -- et c'est deliberé.
+    #   La regle « on comble, on n'ecrase jamais » (celle de hektor_contact_id) serait
+    #   FAUSSE ici : un negociateur qui retire puis RATTACHE le meme mandant verrait
+    #   le lien cache pour toujours. Un retrait est un etat REVERSIBLE, pas une
+    #   identite.
+    #   Mais l'inverse est pire : effacer un retrait a tort fait REAPPARAITRE un lien
+    #   a l'ecran. Tant que le geste de rattachement n'existe pas dans le front, on
+    #   ne fait donc qu'AJOUTER ce que le cloud affirme, et on SIGNALE les divergences
+    #   sans y toucher. Le jour ou le rattachement existera, c'est ici que son
+    #   complement se posera -- avec de vraies donnees pour l'eprouver.
+    retraits_poses = 0
+    retraits_divergents = 0
+    if retraits_du_cloud:
+        for (contact, annonce), (quand, par) in retraits_du_cloud.items():
+            cur = con.execute(
+                "UPDATE app_relation SET retire_le = ?, retire_par = ?"
+                " WHERE app_contact_id = ? AND hektor_annonce_id = ?"
+                "   AND retire_le IS NULL",
+                (quand, par, contact, annonce))
+            retraits_poses += cur.rowcount or 0
+    # divergence : le SERVEUR porte un retrait que le cloud ne porte pas (plus).
+    # On ne tranche pas -- on compte, et le bilan du run le dira.
+    if ecritures_app is not None:
+        for r in con.execute(
+            "SELECT app_contact_id, hektor_annonce_id FROM app_relation"
+            " WHERE retire_le IS NOT NULL"
+        ):
+            cle_couple = (int(r["app_contact_id"]),
+                          str(r["hektor_annonce_id"] or "").strip())
+            if cle_couple not in retraits_du_cloud:
+                retraits_divergents += 1
+
     con.commit()
     return {"lus": lus, "neufs": neufs, "revus": revus, "ecartes": ecartes,
             "adoptes_du_cloud": adoptes_au_depart - len(adoptes),
             "depuis_app_seule": depuis_app_seule,
             "app_seule_illisibles": illisibles,
-            "sans_notre_numero_de_bien": sans_bien, "sortis_du_miroir": sortis}
+            "sans_notre_numero_de_bien": sans_bien, "sortis_du_miroir": sortis,
+            "cloud_lu": ecritures_app is not None,
+            "retraits_adoptes": retraits_poses,
+            "retraits_divergents": retraits_divergents}
 
 
 def controle(con: sqlite3.Connection) -> None:
@@ -621,8 +764,20 @@ def main() -> int:
             bilan = refresh(con, full=not args.partiel)
             print("REFRESH app_relation")
             for k in ("lus", "neufs", "revus", "adoptes_du_cloud", "depuis_app_seule", "app_seule_illisibles", "ecartes",
-                      "sans_notre_numero_de_bien", "sortis_du_miroir"):
+                      "sans_notre_numero_de_bien", "sortis_du_miroir",
+                      # 02/10 : l'adoption lit desormais le CLOUD, pas la doublure
+                      "cloud_lu", "retraits_adoptes", "retraits_divergents"):
                 print("   %-28s : %s" % (k, bilan[k]))
+            if not bilan["cloud_lu"]:
+                print("   !! CLOUD NON LU -- l'adoption est retombee sur la doublure,")
+                print("      qui a jusqu'a 23 h de retard. Un lien cree dans l'app depuis")
+                print("      hier matin ne serait pas vu, et le push pourrait heurter")
+                print("      app_relation_couple_unique (arret du run, cf. 01-02/09).")
+            if bilan["retraits_divergents"]:
+                print("   !! %s retrait(s) que le SERVEUR porte et le cloud non."
+                      % bilan["retraits_divergents"])
+                print("      On n'y touche pas : effacer un retrait a tort fait REAPPARAITRE")
+                print("      le lien a l'ecran. A regarder a la main.")
         elif not (args.push or args.push_a_blanc):
             con.executescript(SCHEMA)
         if args.push_a_blanc:
