@@ -2704,3 +2704,22 @@
 }
 .fa-ck-chaine-lignes li + li { border-top: 1px solid #efe9db; }
 .fa-ck-chaine-lignes b { color: #2f2b20; font-weight: 600; }
+
+/* ④d (02/10/2026) — RETIRER UN MANDANT D'UN BIEN.
+   Le geste est irreversible cote Hektor (il faut rattacher a nouveau pour revenir),
+   donc il ne ressemble PAS a « Modifier » : teinte sobre au repos, rouge seulement
+   quand on confirme. Un bouton destructeur qui crie en permanence finit par ne plus
+   etre lu. */
+.fa-ck-ct-retrait { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.fa-ck-ct-retrait-b { font: inherit; font-size: 12.5px; font-weight: 700; color: #8a3b3b; background: #fff; border: 1px solid #e2c9c9; border-radius: 10px; padding: 7px 13px; cursor: pointer; transition: .15s; align-self: flex-start; }
+.fa-ck-ct-retrait-b:hover:not(:disabled) { background: #fdf3f3; border-color: #d4a5a5; }
+.fa-ck-ct-retrait-b:disabled { color: #9aa0a6; border-color: #e6e8ea; background: #f6f7f8; cursor: not-allowed; }
+.fa-ck-ct-retrait-b.is-go { color: #fff; background: linear-gradient(150deg, #b14a4a, #8a3b3b); border-color: #8a3b3b; }
+/* La raison du refus se lit SANS survol : une explication cachee n'explique rien. */
+.fa-ck-ct-retrait-why { font-size: 12px; color: var(--fa-muted); line-height: 1.45; }
+.fa-ck-ct-retrait-ask { border: 1px solid #e2c9c9; background: #fdf7f7; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.fa-ck-ct-retrait-ask strong { font-size: 13px; color: #8a3b3b; }
+.fa-ck-ct-retrait-ask span { font-size: 12.5px; color: var(--fa-ink); line-height: 1.5; }
+.fa-ck-ct-retrait-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.fa-ck-ct-retrait-err { font-size: 12.5px; color: #8a3b3b; background: #fdf3f3; border: 1px solid #e2c9c9; border-radius: 10px; padding: 8px 12px; line-height: 1.45; }
+.fa-ck-ct-retrait.is-done { font-size: 12.5px; color: #2f6b45; background: #f1f8f3; border: 1px solid #cfe5d7; border-radius: 10px; padding: 9px 13px; }

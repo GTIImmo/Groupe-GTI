@@ -8128,6 +8128,63 @@ export async function createLinkHektorMandantJobOptimistic(input: {
   return data as ConsoleJob
 }
 
+// ④d (02/10/2026) -- RETIRER UN MANDANT D'UN BIEN.
+//
+// Jumelle exacte de createLinkHektorMandantJobOptimistic ci-dessus. La RPC pose le
+// travail ET le retrait optimiste (retire_le) : la vue filtre sur `retire_le IS NULL`,
+// donc la ligne disparait de l'ecran a la seconde. Le worker confirme chez Hektor
+// (mode=degroupproprio), et DEFAIT le retrait si Hektor refuse.
+//
+// ⚠ `contactId` EST LE NUMERO HEKTOR (c.sourceId a l'ecran, hektor_target_id en base),
+//   parce que c'est celui que degroupproprio exige. La RPC le traduit en NOTRE numero
+//   pour viser app_relation. Passer le mauvais viserait la mauvaise ligne -- ou aucune.
+//
+// LES REFUS QUE LA RPC PEUT RENDRE, et ils sont tous VOLONTAIRES :
+//   mandat_numerote_<n>   la regle de Frederic : un numero de mandat a ete genere
+//   forbidden_unlink...   le negociateur n'a pas le droit sur ce bien
+//   lien_introuvable...   le lien n'existe pas, ou il est deja retire
+//   contact_introuvable   le numero ne correspond a aucune fiche
+export async function createUnlinkHektorMandantJobOptimistic(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
+  contactId: string
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const { data, error } = await supabase.rpc('app_unlink_mandant_optimistic', {
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    target_contact_id: cleanContactId,
+    job_priority: input.priority ?? 18,
+  })
+  if (error || !data) {
+    // ⚠ ON TRADUIT LE REFUS, ON NE LE MASQUE PAS. Un « mandat_numerote_18912 » brut
+    //   ne dit rien a un negociateur ; mais il porte LE NUMERO, et c'est justement
+    //   ce qu'il faut lui montrer pour qu'il comprenne -- et puisse contester.
+    const brut = error?.message ?? 'Unable to create Hektor mandant unlink job'
+    const numero = /mandat_numerote_(\S+)/.exec(brut)?.[1]
+    if (numero) {
+      throw new Error(
+        `Retrait impossible : le mandat n° ${numero} a été généré pour ce bien. `
+        + `Un mandant ne peut plus être retiré une fois le mandat numéroté.`,
+      )
+    }
+    if (brut.includes('forbidden_unlink')) {
+      throw new Error("Retrait impossible : tu n'as pas les droits sur ce bien chez Hektor.")
+    }
+    if (brut.includes('lien_introuvable_ou_deja_retire')) {
+      throw new Error('Ce mandant est déjà retiré, ou le lien n’existe pas.')
+    }
+    if (brut.includes('contact_introuvable')) {
+      throw new Error("Ce contact n'a pas été retrouvé dans l'application.")
+    }
+    throw new Error(brut)
+  }
+  return data as ConsoleJob
+}
+
 export type HektorMandantContactInput = {
   civility?: string | null
   lastName: string

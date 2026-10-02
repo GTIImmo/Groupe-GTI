@@ -109,6 +109,7 @@ import {
   createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
   createLinkHektorMandantJobOptimistic,
+  createUnlinkHektorMandantJobOptimistic,
   loadActionStatus,
   loadAffaireChampsApp,
   loadAffaireCarnetEtats,
@@ -3499,6 +3500,103 @@ function HektorMandantContactForm(props: {
           </div>
         </div>
       ) : null}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ④d  RETIRER UN MANDANT D'UN BIEN                                   02/10/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+// Le geste jumeau de « Rattacher un mandant existant », juste au-dessus.
+//
+// ⭐ LA REGLE DE FREDERIC : « si un numero de mandat a ete genere, impossible de
+//   retirer des mandants ». Elle est verifiee DEUX FOIS, et c'est voulu :
+//     ici, pour que le bouton soit GRISE et que personne ne tente le geste ;
+//     dans la RPC, parce qu'un ecran ne protege rien -- il informe.
+//   Mesure du 02/10 : elle bloque 715 biens vivants, en laisse 12 747 (94,7 %).
+//
+// ⚠⚠ L'AVERTISSEMENT N'EST PAS UN CONFORT. Releve a l'ecran le 02/10 : la fonction
+//    de Hektor n'a AUCUN `confirm()` -- un clic et le contact est detache, sans un
+//    mot. Notre app est donc le SEUL endroit ou le negociateur peut se raviser.
+//
+// ⚠ ON DEMANDE EN DEUX TEMPS, pas une boite de dialogue du navigateur : elle se
+//   clique par reflexe, et on ne peut pas y ecrire ce qui va se passer.
+function RetirerMandantBouton(props: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email' | 'numero_mandat'>
+  contact: DetailContact
+  onJobCreated?: (job: ConsoleJob) => void
+}) {
+  const [confirme, setConfirme] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
+  const [fait, setFait] = useState(false)
+
+  const numeroMandat = String(props.dossier.numero_mandat ?? '').trim()
+  const bloque = numeroMandat.length > 0
+  // Le numero HEKTOR : c'est lui que degroupproprio exige.
+  const contactHektor = String(props.contact.sourceId ?? '').trim()
+
+  if (fait) {
+    return (
+      <div className="fa-ck-ct-retrait is-done">
+        Mandant retiré. Hektor est prévenu ; s’il refuse, le mandant réapparaîtra.
+      </div>
+    )
+  }
+  if (!contactHektor || !/^\d+$/.test(contactHektor)) return null
+
+  if (bloque) {
+    return (
+      <div className="fa-ck-ct-retrait is-locked">
+        <button type="button" className="fa-ck-ct-retrait-b" disabled>Retirer ce mandant</button>
+        <span className="fa-ck-ct-retrait-why">
+          Impossible : le mandat n° {numeroMandat} a été généré pour ce bien.
+        </span>
+      </div>
+    )
+  }
+
+  const retirer = async () => {
+    setPending(true); setErreur(null)
+    try {
+      const job = await createUnlinkHektorMandantJobOptimistic({
+        dossier: props.dossier,
+        contactId: contactHektor,
+      })
+      props.onJobCreated?.(job)
+      setFait(true)
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Le retrait a échoué.')
+      setConfirme(false)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="fa-ck-ct-retrait">
+      {!confirme ? (
+        <button type="button" className="fa-ck-ct-retrait-b" onClick={() => { setErreur(null); setConfirme(true) }}>
+          Retirer ce mandant
+        </button>
+      ) : (
+        <div className="fa-ck-ct-retrait-ask">
+          <strong>Retirer {props.contact.name} de ce bien ?</strong>
+          <span>
+            Le lien part aussi chez Hektor. La trace est conservée chez nous, datée et
+            nominative. Pour revenir en arrière, il faudra rattacher le mandant à nouveau.
+          </span>
+          <div className="fa-ck-ct-retrait-acts">
+            <button type="button" className="fa-ck-ct-retrait-b is-go" onClick={retirer} disabled={pending}>
+              {pending ? 'Envoi…' : 'Oui, retirer'}
+            </button>
+            <button type="button" className="fa-ck-ct-retrait-b" onClick={() => setConfirme(false)} disabled={pending}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+      {erreur ? <div className="fa-ck-ct-retrait-err">{erreur}</div> : null}
     </div>
   )
 }
@@ -28655,7 +28753,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           ) : activeTab === 'contact' ? (
             <div className="fa-ck-rub fa-ck-contact">
               <div className="fa-ck-ct-toolbar">
-                <span className="fa-ck-ct-strip">Source <b>API AnnonceById</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
+                {/* ③c 02/10/2026 : l'etiquette disait « API AnnonceById » -- c'etait
+                    vrai tant que la rubrique lisait proprietaires_json. Elle lit
+                    desormais NOTRE registre. Un bandeau qui nomme sa source doit la
+                    nommer JUSTE, sinon il trompe plus qu'il n'informe. */}
+                <span className="fa-ck-ct-strip">Source <b>Registre des liens</b> · <b>{props.contacts.length} mandant{props.contacts.length > 1 ? 's' : ''}</b>{props.contacts.length > 0 ? ` · ${props.contacts.slice(0, 3).map((c) => c.name || `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()).filter(Boolean).join(', ')}` : ''}</span>
                 {ckSelectedNumero !== 'ALL' && ckSelectedNumero !== ckCurrentNumero ? (
                   <span style={{ fontSize: 11.5, color: 'rgba(34,35,35,.5)', marginLeft: 8 }}>Contacts actuels — non historisés par cycle</span>
                 ) : null}
@@ -28724,6 +28826,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                               compact
                               onJobCreated={props.onHektorActionJobCreated}
                               onMissingNegotiator={props.onMissingNegotiator}
+                            />
+                            {/* ④d 02/10/2026 : le geste jumeau du rattachement. Grise
+                                des que le bien porte un numero de mandat (regle de
+                                Frederic), et il DIT pourquoi -- un refus muet se
+                                conteste, un refus explique s'accepte. */}
+                            <RetirerMandantBouton
+                              dossier={dossier}
+                              contact={c}
+                              onJobCreated={props.onHektorActionJobCreated}
                             />
                           </div>
                         ) : null}
