@@ -401,32 +401,6 @@ class SupabaseRestClient:
             offset += FETCH_PAGE_SIZE
         return rows
 
-    def fetch_rows_where(self, *, path: str, select: str, filtres: dict[str, str],
-                         order: str, limite: int = FETCH_PAGE_SIZE) -> list[dict[str, object]]:
-        """Les lignes qui passent un FILTRE PostgREST. Additif -- 02/10/2026.
-
-        `fetch_all_rows` ne sait pas filtrer : elle construit sa requete elle-meme,
-        et un filtre glisse dans `path` serait coupe par le `?` de l'urlencode.
-        Pose pour l'adoption de relation_ledger, qui a besoin des SEULES lignes
-        ecrites par l'app -- aujourd'hui zero sur 132 664.
-
-        `filtres` = {"or": "(app_relation_id.gte.1000000,retire_le.not.is.null)"}
-        Une seule page : l'appelant doit viser un ENSEMBLE PETIT. Si la reponse
-        atteint `limite`, on le DIT au lieu de rendre une liste tronquee en silence
-        -- un sous-ensemble pris pour un tout est la pire des reponses.
-        """
-        query = {"select": select, "order": order, "limit": str(limite)}
-        query.update(filtres)
-        lignes = self._request(method="GET", path=path, query=query)
-        if not isinstance(lignes, list):
-            return []
-        if len(lignes) >= limite:
-            raise RuntimeError(
-                "fetch_rows_where(%s) a rendu %d lignes = la limite : l'ensemble est "
-                "plus grand que prevu, il faut paginer avant de s'y fier."
-                % (path, len(lignes)))
-        return lignes
-
     def fetch_first_row(self, *, path: str, select: str, order: str) -> dict[str, object] | None:
         rows = self._request(
             method="GET",
