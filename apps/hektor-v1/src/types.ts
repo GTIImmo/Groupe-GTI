@@ -85,6 +85,11 @@ export type DossierDetailPayload = {
   localite_json?: string | null
   mandats_json?: string | null
   proprietaires_json?: string | null
+  /** ③c (02/10/2026) -- les mandants vus par NOTRE registre, poses par
+   *  loadDossierDetail. ABSENT = repli sur `proprietaires_json` (interrupteur
+   *  eteint, ou registre muet). Une liste VIDE n'est pas une absence : elle dit
+   *  « ce bien n'a aucun mandant au registre », et l'ecran la respecte. */
+  mandants_registre_json?: string | null
   honoraires_json?: string | null
   notes_json?: string | null
   zones_json?: string | null

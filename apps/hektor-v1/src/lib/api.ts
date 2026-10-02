@@ -254,6 +254,27 @@ const localDiffusionRequestEventsKey = 'hektor-v1-diffusion-request-events'
 const backendApiBaseUrl = (
   import.meta.env.VITE_BACKEND_API_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:8010' : '')
 ).trim().replace(/\/+$/, '')
+
+/** ③c (02/10/2026) -- la rubrique « Contact » d'une annonce lit-elle NOTRE registre ?
+ *
+ *  ALLUME PAR DEFAUT. Mis a '0', l'ecran revient a `proprietaires_json` -- la copie
+ *  du detail Hektor -- sans toucher au code.
+ *
+ *  ⚠ IL EXISTE PARCE QUE ③c EST LE SEUL GESTE DU LOT QUI REMPLACE UN AFFICHAGE QUI
+ *    MARCHE. Tout le reste (la colonne, la vue, le chargeur) etait additif. La regle
+ *    du projet est « additif et derriere un interrupteur quand c'est possible » : ici
+ *    c'est possible, donc on le fait.
+ *
+ *  CE QUE LA MESURE DIT, sur 2 265 biens compares le 02/10 :
+ *      0 ligne perdue · +341 personnes retrouvees · 1 SEUL menage non fusionne
+ *  Le dernier chiffre est la raison d'etre de l'interrupteur : la fusion des menages
+ *  change de source (refCouple du blob -> hektor_couple_contact_id de la fiche), et
+ *  la migration des couples n'est pas finie (2 758 non traduits). Frederic : « les
+ *  couples sont un autre point du dev ».
+ */
+function rubriqueContactLitLeRegistre(): boolean {
+  return String(import.meta.env.VITE_RUBRIQUE_CONTACT_REGISTRE ?? '1').trim() !== '0'
+}
 // ⚠ COPIE DE SECOURS DE LA CARTE AGENCE -> PASSERELLE.
 // Elle ne sert QUE si `app_diffusion_agency_target` ne rend rien pour l'agence.
 // ⛔ C'EST UN PIEGE : elle vit dans le paquet DEPLOYE, donc corriger Supabase ne
@@ -4850,6 +4871,36 @@ export async function loadDossierDetail(appDossierId: number): Promise<DetailedD
   const detailPayload = parseJsonObject((detailData as DossierDetail | null)?.detail_payload_json ?? null)
 
   detailPayload.matterport_groups_json = JSON.stringify(await loadMatterportGroupsForAnnonce(dossierData.hektor_annonce_id))
+
+  // ═══ ③c : LES MANDANTS VIENNENT DU REGISTRE, PLUS DU DETAIL HEKTOR ═══  02/10/2026
+  //
+  // On enrichit le payload comme on le fait deja pour matterport : l'ecran n'a aucun
+  // hook a ajouter, il lit un champ de plus. Et le REPLI est ici, au plus pres de la
+  // lecture : si le registre ne repond pas, on n'attache rien et la rubrique retombe
+  // sur `proprietaires_json`, exactement comme avant ce jour.
+  //
+  // ⚠ ON NE TOMBE JAMAIS SUR UNE PANNE DE CE CHARGEUR. Le detail d'un bien porte
+  //   quarante autres choses ; qu'une liste de mandants manque ne doit pas priver le
+  //   negociateur de sa fiche. D'ou le try/catch -- et il ECRIT, il ne se tait pas.
+  //
+  // ⚠ L'INTERRUPTEUR. VITE_RUBRIQUE_CONTACT_REGISTRE = '0' revient a l'ancien
+  //   affichage sans redeployer de code : on remet la variable et on rebatit. Pose
+  //   parce que ③c est le SEUL geste de ce lot qui REMPLACE un affichage qui marche.
+  if (rubriqueContactLitLeRegistre()) {
+    try {
+      const mandants = await loadAnnonceMandants({
+        appDossierId,
+        hektorAnnonceId: dossierData.hektor_annonce_id,
+      })
+      // Une liste VIDE est une reponse : ce bien n'a pas de mandant au registre. On
+      // l'attache telle quelle -- sinon l'ecran retomberait sur le detail Hektor et
+      // montrerait des mandants que le registre dit absents.
+      detailPayload.mandants_registre_json = JSON.stringify(mandants)
+    } catch (erreur) {
+      // Pas de champ attache -> la rubrique reprend proprietaires_json d'elle-meme.
+      console.warn('[rubrique contact] registre illisible, repli sur proprietaires_json :', erreur)
+    }
+  }
 
   if (canUseBackendApi()) {
     try {

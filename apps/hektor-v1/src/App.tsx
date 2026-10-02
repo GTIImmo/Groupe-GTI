@@ -7017,6 +7017,77 @@ function buildDetailContactsFromProprietaires(value: string | null | undefined, 
   return Array.from(contacts.values())
 }
 
+// ═══ ③c : LES MANDANTS DEPUIS NOTRE REGISTRE ═══                    02/10/2026
+//
+// Pendant exact de buildDetailContactsFromProprietaires, meme forme en sortie, MEME
+// FUSION DE MENAGE (contactMergeKey + mergeDetailContacts). Seule la SOURCE change :
+// les lignes viennent de app_contact_relations_current + app_contacts_current, posees
+// sur le payload par loadDossierDetail, au lieu du blob `proprietaires_json`.
+//
+// MESURE, 2 265 biens compares le 02/10 :
+//     0 ligne PERDUE · +341 personnes retrouvees · 1 SEUL menage non fusionne
+//
+// ⚠ LA FUSION CHANGE DE SOURCE, et c'est le point a surveiller :
+//     avant : refCouple, la reference de Hektor portee par le blob
+//     apres : hektor_couple_contact_id, portee par la fiche
+//   Les deux designent le meme menage, mais PAS AVEC LE MEME NUMERO -- la colonne
+//   porte NOS numeros a 94 % (37 736 sur 40 176) malgre son nom. Verifie : les
+//   references se resolvent par notre numero dans 37 424 cas, par celui de Hektor
+//   dans ZERO, et AUCUNE n'est ambigue. Les 2 752 introuvables sont les menages
+//   orphelins -- que l'ancien affichage ne fusionnait pas davantage.
+//
+// ⛔ ON NE REECRIT PAS LA FUSION. Elle est deja juste ; lui donner une seconde
+//   implementation, c'est se garantir qu'elles divergeront.
+function buildDetailContactsFromRegistre(value: string | null | undefined, idPrefix = 'registre-contact') {
+  const contacts = new Map<string, DetailContact>()
+  const lignes = parseJson<Array<Record<string, unknown>>>(value, [])
+
+  lignes.forEach((ligne, index) => {
+    const civility = safeText(ligne.civilite)
+    const firstName = safeText(ligne.prenom)
+    const lastName = safeText(ligne.nom)
+    // Le role vient du LIEN (mandant / proprietaire), pas des typologies du contact :
+    // c'est ce que la rubrique nomme, et le registre le porte deja.
+    const roleDuLien = safeText(ligne.role_contact)
+    // ⚠ sourceId = LE NUMERO DE HEKTOR. C'est lui que les ecrans passent a Hektor, et
+    //   c'est lui que le worker exigera pour detacher un mandant (mode=degroupproprio).
+    //   hektor_contact_id, lui, est NOTRE numero -- les confondre casserait le geste.
+    const sourceId = safeText(ligne.hektor_target_id) || safeText(ligne.hektor_contact_id)
+    const contact: DetailContact = {
+      id: `${idPrefix}-${index}-${sourceId || normalizeContactText([firstName, lastName].filter(Boolean).join(' '))}`,
+      name: [civility, firstName, lastName].filter(Boolean).join(' ')
+        || safeText(ligne.display_name)
+        || `Contact ${index + 1}`,
+      role: roleDuLien ? contactRoleLabel([roleDuLien]) : contactRoleLabel(contactTypologies(ligne)),
+      phone: safeText(ligne.phone_primary) || safeText(ligne.phone_secondary),
+      email: safeText(ligne.email),
+      address: safeText(ligne.adresse),
+      postalCode: safeText(ligne.code_postal),
+      city: safeText(ligne.ville),
+      civility,
+      firstName,
+      lastName,
+      comment: sanitizeContactComment(ligne.commentaires as string | null | undefined),
+      sourceId,
+      sourceIds: sourceId ? [sourceId] : [],
+      refCouple: safeText(ligne.hektor_couple_contact_id),
+      archive: safeText(ligne.archive),
+      dateCreated: safeText(ligne.date_enregistrement),
+      dateUpdated: safeText(ligne.date_maj),
+      negotiatorId: safeText(ligne.hektor_negociateur_id),
+    }
+    // ⚠ ON NE FILTRE PAS SUR « A-T-IL DES DONNEES ». L'ancien bâtisseur devait le
+    //   faire : Hektor glisse dans le blob une seconde fiche VIDE pour le second
+    //   membre d'un menage. Le registre, lui, ne porte que des liens etablis -- une
+    //   ligne sans nom y signifie « le cloud n'a pas encore cette fiche », et
+    //   l'ecarter ferait disparaitre un mandant EN SILENCE.
+    const key = contactMergeKey(contact)
+    const existing = contacts.get(key)
+    contacts.set(key, existing ? mergeDetailContacts(existing, contact) : contact)
+  })
+  return Array.from(contacts.values())
+}
+
 function boolLabel(value: boolean | number | string | null | undefined) {
   if (value === null || value === undefined || value === '') return '-'
   if (value === true || value === 1 || value === '1' || value === 'true') return 'Oui'
@@ -17593,6 +17664,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       .filter((item) => item.url && !seen.has(item.url) && seen.add(item.url))
   }, [detail])
   const contacts = useMemo(() => {
+    // ③c (02/10/2026) : NOTRE REGISTRE D'ABORD, le detail Hektor en repli.
+    //
+    // `mandants_registre_json` est pose par loadDossierDetail quand l'interrupteur
+    // VITE_RUBRIQUE_CONTACT_REGISTRE est allume ET que la lecture a reussi. Son
+    // ABSENCE est donc le signal du repli -- interrupteur eteint, ou registre muet.
+    //
+    // ⚠ UNE LISTE VIDE N'EST PAS UNE ABSENCE : elle veut dire « ce bien n'a aucun
+    //   mandant au registre », et on la respecte. Retomber sur le blob dans ce cas
+    //   afficherait des mandants que le registre dit absents -- et le jour ou l'on
+    //   en retire un, il reapparaitrait.
+    const duRegistre = detail.mandants_registre_json
+    if (duRegistre !== null && duRegistre !== undefined) {
+      return buildDetailContactsFromRegistre(duRegistre, 'detail-contact')
+    }
     return buildDetailContactsFromProprietaires(detail.proprietaires_json, 'detail-contact')
   }, [detail])
   const notes = useMemo(() => {
