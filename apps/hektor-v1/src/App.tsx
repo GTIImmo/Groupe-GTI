@@ -238,6 +238,18 @@ type DetailContact = {
   comment: string
   sourceId?: string
   sourceIds?: string[]
+  // ⚠⚠ LE ROLE BRUT DU LIEN, A COTE DU LIBELLE -- ET CE N'EST PAS UN DOUBLON.
+  //   `role` ci-dessus est passe dans contactRoleLabel() : c'est un texte D'AFFICHAGE,
+  //   qui vaut meme « mandants maries » pour un couple (mergeDetailContacts).
+  //   Batir la protection du retrait sur ce texte la ferait sauter au premier
+  //   changement de libelle. On garde donc la valeur telle que le registre la donne.
+  //   MESURE DU 02/10, sur les 132 651 liens vivants : `role_contact` est un
+  //   predicteur PARFAIT du verdict du serveur -- mandant => refus 74 188/74 188,
+  //   proprietaire => accord 58 463/58 463. C'est la MEILLEURE source disponible.
+  //   ⚠ Rempli par le seul chemin REGISTRE. Par le chemin Hektor (proprietaires_json)
+  //     il reste indefini : le bouton doit donc savoir se passer de lui.
+  roleLien?: string
+  numeroMandatLien?: string
   refCouple?: string
   members?: DetailContact[]
   archive?: string
@@ -3531,15 +3543,32 @@ function RetirerMandantBouton(props: {
   const [erreur, setErreur] = useState<string | null>(null)
   const [fait, setFait] = useState(false)
 
+  // ⚠⚠ TROIS SOURCES, ET LA PLUS PRUDENTE GAGNE -- parce qu'une seule MENTAIT.
+  //   Mesure du 02/10 sur les 132 651 liens vivants : en ne lisant que
+  //   dossier.numero_mandat, ce bouton s'affichait ACTIF sur 72 474 liens de vrais
+  //   mandants (26 036 annonces), alors que la RPC les refuse tous. La regle tenait
+  //   -- rien ne partait chez Hektor -- mais l'ecran PROMETTAIT un geste impossible,
+  //   et il le promettait a 97,7 % des mandants : le dossier ne connait le numero que
+  //   pour 713 annonces sur 26 749. L'ecran doit grisir OU LE SERVEUR REFUSE, pas
+  //   ailleurs.
+  //   · le role du lien   = predicteur PARFAIT du verdict (74 188/74 188 et 58 463/58 463)
+  //   · le numero du lien = connu dans 69 227 cas sur 74 188 -> sert a DIRE la raison
+  //   · le numero du dossier = la source d'origine, gardee (chemin Hektor, roleLien absent)
+  const roleLien = String(props.contact.roleLien ?? '').trim().toLowerCase()
   const numeroMandat = String(props.dossier.numero_mandat ?? '').trim()
-  const bloque = numeroMandat.length > 0
+    || String(props.contact.numeroMandatLien ?? '').trim()
+  const bloque = numeroMandat.length > 0 || roleLien === 'mandant'
+  // ⚠ LE MOT JUSTE : « mandant » est FAUX sur 58 463 liens, qui sont des
+  //   proprietaires -- un bien sans mandat n'a pas de mandant (regle du 24/07 :
+  //   mandant = lie a une annonce AVEC un numero, proprietaire = SANS).
+  const leContact = roleLien === 'proprietaire' ? 'ce propriétaire' : 'ce mandant'
   // Le numero HEKTOR : c'est lui que degroupproprio exige.
   const contactHektor = String(props.contact.sourceId ?? '').trim()
 
   if (fait) {
     return (
       <div className="fa-ck-ct-retrait is-done">
-        Mandant retiré. Hektor est prévenu ; s’il refuse, le mandant réapparaîtra.
+        Retiré du bien. Hektor est prévenu ; s’il refuse, le lien réapparaîtra.
       </div>
     )
   }
@@ -3548,9 +3577,15 @@ function RetirerMandantBouton(props: {
   if (bloque) {
     return (
       <div className="fa-ck-ct-retrait is-locked">
-        <button type="button" className="fa-ck-ct-retrait-b" disabled>Retirer ce mandant</button>
+        <button type="button" className="fa-ck-ct-retrait-b" disabled>Retirer {leContact}</button>
         <span className="fa-ck-ct-retrait-why">
-          Impossible : le mandat n° {numeroMandat} a été généré pour ce bien.
+          {/* ⚠ UN REFUS DOIT S'EXPLIQUER, avec le numero quand on l'a. Sans numero on
+              ne se tait PAS : le lien est etiquete mandant, donc un mandat existe
+              meme si l'index d'archive en a perdu le numero (4 961 liens dans ce
+              cas, tous confirmes par app_mandat). */}
+          {numeroMandat
+            ? <>Impossible : le mandat n° {numeroMandat} a été généré pour ce bien.</>
+            : <>Impossible : un mandat a été signé pour ce bien.</>}
         </span>
       </div>
     )
@@ -3577,7 +3612,7 @@ function RetirerMandantBouton(props: {
     <div className="fa-ck-ct-retrait">
       {!confirme ? (
         <button type="button" className="fa-ck-ct-retrait-b" onClick={() => { setErreur(null); setConfirme(true) }}>
-          Retirer ce mandant
+          Retirer {leContact}
         </button>
       ) : (
         <div className="fa-ck-ct-retrait-ask">
@@ -7036,6 +7071,16 @@ function mergeDetailContacts(current: DetailContact, incoming: DetailContact): D
     comment: mergeContactComments(primary.comment, secondary.comment),
     sourceId: primary.sourceId || secondary.sourceId,
     sourceIds,
+    // ⚠⚠ ICI LA PLUS PRUDENTE GAGNE, et ce n'est pas `firstNonEmpty`. C'est la
+    //   doctrine deja ecrite dans la RPC (« les DEUX sources, la plus prudente
+    //   gagne ») : si L'UN des deux membres du menage est mandant, le bien porte un
+    //   mandat, donc on bloque pour LES DEUX. Prendre « le premier non vide »
+    //   laisserait passer le retrait d'un conjoint selon l'ordre de fusion -- une
+    //   protection qui depend du tri n'est pas une protection.
+    roleLien: [primary.roleLien, secondary.roleLien].includes('mandant')
+      ? 'mandant'
+      : firstNonEmpty(primary.roleLien, secondary.roleLien),
+    numeroMandatLien: firstNonEmpty(primary.numeroMandatLien, secondary.numeroMandatLien),
     members,
     refCouple,
     archive: firstNonEmpty(primary.archive, secondary.archive),
@@ -7168,6 +7213,9 @@ function buildDetailContactsFromRegistre(value: string | null | undefined, idPre
       comment: sanitizeContactComment(ligne.commentaires as string | null | undefined),
       sourceId,
       sourceIds: sourceId ? [sourceId] : [],
+      // La valeur BRUTE, normalisee en minuscules : c'est elle qui commande le retrait.
+      roleLien: roleDuLien.toLowerCase(),
+      numeroMandatLien: safeText(ligne.numero_mandat),
       refCouple: safeText(ligne.hektor_couple_contact_id),
       archive: safeText(ligne.archive),
       dateCreated: safeText(ligne.date_enregistrement),

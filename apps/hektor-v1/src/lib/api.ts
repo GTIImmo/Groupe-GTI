@@ -8848,6 +8848,11 @@ export type AnnonceMandantRow = {
   hektor_target_id: string | null
   role_contact: string | null
   relation_source: string | null
+  // ⚠ LE NUMERO DE MANDAT PORTE PAR LE LIEN, et il n'est pas un confort : c'est lui
+  //   qui permet a l'ecran de GRISER le retrait et d'en DIRE la raison. Mesure du
+  //   02/10 : le lien le connait dans 69 227 cas sur 74 188, alors que le dossier ne
+  //   le connait que pour 713 annonces sur 26 749.
+  numero_mandat: string | null
   civilite: string | null
   nom: string | null
   prenom: string | null
@@ -8880,7 +8885,7 @@ export async function loadAnnonceMandants(input: {
 
   let relationQuery = supabase
     .from(contactRelationsCurrentView)
-    .select('hektor_contact_id,role_contact,relation_source,last_seen_at')
+    .select('hektor_contact_id,role_contact,relation_source,numero_mandat,last_seen_at')
     .in('role_contact', ROLES_DU_BIEN as unknown as string[])
     .order('last_seen_at', { ascending: false, nullsFirst: false })
 
@@ -8895,7 +8900,7 @@ export async function loadAnnonceMandants(input: {
   if (relationError) throw new Error(relationError.message ?? 'Unable to load annonce mandants')
   if (!relationRows || relationRows.length === 0) return []
 
-  const roleParContact = new Map<string, { role_contact: string | null; relation_source: string | null }>()
+  const roleParContact = new Map<string, { role_contact: string | null; relation_source: string | null; numero_mandat: string | null }>()
   const ordre: string[] = []
   for (const relation of relationRows as AppContactRelation[]) {
     const contactId = String(relation.hektor_contact_id ?? '').trim()
@@ -8903,6 +8908,7 @@ export async function loadAnnonceMandants(input: {
     roleParContact.set(contactId, {
       role_contact: relation.role_contact ?? null,
       relation_source: relation.relation_source ?? null,
+      numero_mandat: relation.numero_mandat ?? null,
     })
     ordre.push(contactId)
   }
@@ -8925,7 +8931,7 @@ export async function loadAnnonceMandants(input: {
   //   donc la ligne avec ce qu'on a, et l'appelant la reconnait a son nom vide.
   return ordre.map((contactId) => {
     const fiche = ficheParContact.get(contactId) ?? {}
-    const lien = roleParContact.get(contactId) ?? { role_contact: null, relation_source: null }
+    const lien = roleParContact.get(contactId) ?? { role_contact: null, relation_source: null, numero_mandat: null }
     const texte = (cle: string) => {
       const v = fiche[cle]
       return v === null || v === undefined ? null : String(v)
@@ -8935,6 +8941,7 @@ export async function loadAnnonceMandants(input: {
       hektor_target_id: texte('hektor_target_id'),
       role_contact: lien.role_contact,
       relation_source: lien.relation_source,
+      numero_mandat: lien.numero_mandat,
       civilite: texte('civilite'),
       nom: texte('nom'),
       prenom: texte('prenom'),
