@@ -36,6 +36,68 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 $stamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $log = Join-Path $logDir "descente_$stamp.log"
 Start-Transcript -Path $log -Append | Out-Null
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ⚠⚠ LA DESCENTE NE DEMARRE PAS SI LE RUN QUOTIDIEN TOURNE ENCORE   03/10/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# VECU LE 03/10 : le run a deborde jusqu'a 08:21 (une etape passee de 46 s a 79 min),
+# la descente a demarre a 08:15, et trois etapes du run sont tombees l'une apres
+# l'autre -- la troisieme a ARRETE le run. 17 etapes jamais demarrees, dont TOUTES
+# les montees vers le cloud : l'app est restee sur les donnees de la veille.
+#
+# ⭐ UN VERROU EXISTE DEJA (VerrouUnique / pull_from_supabase.lock, 22/08) ET IL A
+#   FONCTIONNE : l'etape « redescente des lectures console » appelle justement
+#   pull_from_supabase.py, elle a trouve le verrou tenu et elle est sortie en code 2
+#   -- « un chevauchement n'est pas un bogue », c'est ecrit dans le script.
+#   MAIS il ne couvre que les 6 etapes du run qui le prennent, sur 54. Les deux
+#   autres etapes tombees ne le prennent pas.
+#
+# ⛔ POURQUOI PAS SIMPLEMENT FAIRE PRENDRE CE VERROU A TOUT LE RUN : il n'est pas
+#   reentrant. Le wrapper le tiendrait, et les 6 etapes qui le demandent ensuite
+#   -- processus FILS, donc autres PID -- se bloqueraient elles-memes.
+#   On garde donc le verrou pour ce qu'il fait bien, et on ajoute ICI la seule
+#   chose qu'il ne sait pas faire : regarder si LE RUN ENTIER tourne.
+#
+# ON PATIENTE PLUTOT QUE DE RENONCER : sauter une descente laisse les doublures
+# d'hier, et la garde de fraicheur de relation_ledger crie le lendemain. Le 03/10,
+# 45 minutes auraient absorbe le debordement en entier (08:21, soit +40 min).
+# Au-dela, c'est que quelque chose ne va pas : on renonce, et BRUYAMMENT (exit 1,
+# pour que le Planificateur l'enregistre -- lecon du 19/08, un exit 0 menteur avait
+# cache 18 jours de lots en echec).
+function Test-QuotidienEnCours {
+    # ① l'etat de la tache -- fait autorite pour le cas qui compte : les deux
+    #    taches planifiees qui se croisent la nuit.
+    try {
+        if ((Get-ScheduledTask -TaskName "GTI Quotidien" -ErrorAction Stop).State -eq 'Running') { return $true }
+    } catch { }
+    # ② le journal -- ⚠ INDISPENSABLE : un lancement MANUEL (ou une reprise
+    #    -StartAtLabel) n'allume PAS l'etat de la tache. Vecu le 03/10 a 09:50.
+    #    Un journal ecrit il y a moins de 3 min ET sans ligne de fin = ca tourne.
+    $dernier = Get-ChildItem $logDir -Filter "quotidien_*.log" -ErrorAction SilentlyContinue |
+               Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($dernier -and ((Get-Date) - $dernier.LastWriteTime).TotalMinutes -lt 3) {
+        if (-not (Select-String -Path $dernier.FullName -Pattern "Run quotidien termine|ERREUR run quotidien" -Quiet -ErrorAction SilentlyContinue)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+$attenteMaxMinutes = 45
+$debutAttente = Get-Date
+while (Test-QuotidienEnCours) {
+    $ecoule = [math]::Round(((Get-Date) - $debutAttente).TotalMinutes)
+    if ($ecoule -ge $attenteMaxMinutes) {
+        Write-Output "=== DESCENTE ANNULEE : le run quotidien tourne encore apres $attenteMaxMinutes min ==="
+        Write-Output "    On ne descend PAS par-dessus lui -- c'est ce qui a casse le run le 03/10."
+        Write-Output "    Les doublures resteront celles d'hier ; la garde de fraicheur le dira."
+        Stop-Transcript | Out-Null
+        exit 1
+    }
+    Write-Output "--- le run quotidien tourne encore, on patiente ($ecoule/$attenteMaxMinutes min) ---"
+    Start-Sleep -Seconds 60
+}
+
 $runFailed = $false
 try {
     Write-Output "=== Descente demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
