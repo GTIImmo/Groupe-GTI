@@ -495,9 +495,57 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
    (la vue attend la confirmation de Hektor -- voulu ; l'affichage immediat
    reste a l'etiquette provisoire). Le CONTACT, lui, existe tout de suite.
    4 services redemarres le 30/09 a 17:33, verifie par la date des PROCESSUS.
-   ⚠ ET « RETIRER UN MANDANT » N'EXISTE TOUJOURS NULLE PART -- c'est un ecran
-     a faire, pas une table. Frederic a tranche le 30/09 : le retrait PART chez
-     Hektor tant qu'il vit, et la ligne RESTE chez nous, datee.
+   ⚠ ~~ET « RETIRER UN MANDANT » N'EXISTE TOUJOURS NULLE PART~~ -> FAIT LE 03/10.
+
+✅ G -- « RETIRER UN MANDANT » EST EN SERVICE ET PROUVE CHEZ HEKTOR   03/10/2026
+   Le geste de Frederic du 30/09 : « le retrait PART chez Hektor tant qu'il vit,
+   et la ligne RESTE chez nous, datee. » C'est ce qui tourne.
+   LA CHAINE, prouvee de bout en bout a 20:22 et 20:23 :
+      bouton -> RPC -> travail -> worker -> Hektor -> preuve -> registre -> ecran
+      worker : {"status": "unlinked"}, 0 erreur · Hektor : ids [] sur 62963 ET 62964
+      registre : retire_le + retire_par, DATE ET NOMINATIF · vue : 0 ligne
+   LA REGLE TIENT : mandat genere -> bouton GRISE avec son motif (vu sur 18882,
+   « le mandat n° 18882 a ete genere pour ce bien ») ; sans mandat -> actif.
+
+   ⭐⭐ ET LES DEUX GESTES SONT MAINTENANT IMMEDIATS, DANS LES DEUX SENS.
+      La vue exigeait `present_in_hektor` pour MONTRER un lien, mais n'exigeait
+      rien pour le CACHER quand il etait retire -- deux poids, deux mesures dans
+      la meme ligne de SQL. Un mandant qu'on venait de rattacher n'etait donc pas
+      retirable avant le run de NUIT.
+      Question de Frederic : « pourquoi 20 secondes ? Normalement c'est instantane
+      si on ecrit chez nous. » -> la vue montre desormais aussi les liens nes dans
+      l'app, et le worker les DEFAIT si Hektor refuse (annulerRattachementOptimiste,
+      miroir exact de annulerRetraitOptimiste).
+
+   ⛔ QUATRE DEFAUTS QUE SEUL L'ESSAI REEL POUVAIT TROUVER :
+      · `unlink_hektor_mandant` n'etait reclame par AUCUNE file -- et il y a DEUX
+        cartes, une en JS et une dans app_console_claim_next_job. Le travail serait
+        reste « pending » A VIE, SANS erreur, pendant que l'ecran disait « retire ».
+      · la preuve DEFAISAIT un retrait REUSSI : Hektor dit « aucun proprietaire »
+        avec `"proprietaires": null` (cle PRESENTE, valeur nulle) et le script
+        lisait ca comme « reponse illisible ».
+      · le filet du rattachement ne couvrait QUE l'appel a Hektor -- le contexte
+        negociateur (403) et la cible du contact passaient a cote.
+      · la RPC ecrivait `role_hektor = 'mandant'` EN DUR : un lien sans mandat
+        etait grise a tort. Corrige a la SOURCE -- role_hektor = null, et la vue
+        derive le mot du numero de mandat (taxonomie du 24/07, un seul endroit).
+
+   ⚠ CE QUI N'EST PAS PROUVE : le filet du RATTACHEMENT n'a jamais ete declenche
+     en vrai. Celui du RETRAIT, si -- Hektor a refuse a 17:05, le lien est revenu.
+
+✅ LE CONTRAT D'AUTORITE CESSE D'ETRE TACITE                        03/10  e284360
+   Exigence du plan depuis le 30/09. Il EXISTAIT EN FAIT (l'adoption de retire_le
+   depuis la doublure) mais PAS EN DROIT : rien ne verifiait qu'il tenait, et
+   `doublure_du` n'etait QU'IMPRIME dans un bilan.
+   LA REGLE, ECRITE : `retire_le`/`retire_par` APPARTIENNENT A L'APP -- le miroir
+   ne peut pas les produire ; Hektor cesse de montrer un lien, il ne dit jamais
+   « retire le 3 a 16h43 par Frederic ».
+   DEUX GARDES AJOUTEES A LA SENTINELLE QUI EXISTAIT (relation_disparue.py) :
+      ⑤ retraits_perdus    le cloud a un retrait que le serveur ignore
+      ⑥ doublure_perimee   LA GARDE DE LA GARDE -- sans elle, ⑤ vaut zero EN MENTANT
+   Eprouvees A L'ENVERS : 3 cas, dont 2 ou elles DOIVENT tomber.
+   ⛔ Elles SURVEILLENT, elles n'ARBITRENT pas : le trio magasin/contrat/
+     applicateur des trois autres objets n'existe toujours pas pour la relation.
 ```
 
 ### Les trois fronts ouverts — *ils avancent séparément*
