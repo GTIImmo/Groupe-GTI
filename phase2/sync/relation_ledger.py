@@ -522,6 +522,56 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             "SELECT derniere_descente FROM sb_pull_state"
             " WHERE table_name = 'app_relation__sb'").fetchone()
         doublure_du = doublure_du[0] if doublure_du else None
+
+        # ══════════════════════════════════════════════════════════════════════
+        # ⚠⚠ LA QUESTION LA MOINS CHERE D'ABORD            corrige le 03/10/2026
+        # ══════════════════════════════════════════════════════════════════════
+        # CE QUE CA A COUTE, et c'est mesure, pas estime :
+        #     01/10  50 s   ·   02/10  46 s   ·   03/10  79 MINUTES  (x103)
+        # Le run de nuit a fini a 08:21 au lieu de 07:41, il est donc tombe DANS
+        # la descente de 08:15, et les trois etapes suivantes -- qui ecrivent dans
+        # CETTE base -- ont echoue. 17 etapes n'ont jamais demarre, dont TOUTES
+        # les montees vers le cloud.
+        #
+        # POURQUOI : l'UPDATE ci-dessous demande, pour CHACUNE des 132 683 lignes,
+        # « la doublure contient-elle ce couple ? ». app_relation__sb n'a AUCUN
+        # index -- la descente recopie les donnees, jamais les index, et elle
+        # termine par DROP TABLE + RENAME (pull_from_supabase.py:681), donc tout
+        # index pose y est detruit chaque nuit. Plan reel : SCAN app_relation +
+        # deux CORRELATED SCALAR SUBQUERY -> SCAN s. Soit ~17,6 milliards de
+        # lectures de ligne, trois fois.
+        #
+        # ⛔ ET TOUT CELA POUR RIEN : la doublure portait 0 retrait, le serveur
+        #   aussi. Mon propre message de commit du 02/10 le disait -- « ZERO EFFET
+        #   AUJOURD'HUI : aucune RPC ni aucun ecran ne sait ecrire retire_le » --
+        #   et je ne m'en suis pas servi pour mesurer le COUT. Deuxieme fois en
+        #   quatre jours : le 30/09 j'avais rendu une vue 100 a 280 fois plus
+        #   lente en verifiant son contenu et jamais son temps.
+        #
+        # ⭐ L'ORDRE EST LE CORRECTIF. On demande d'abord s'il y a quelque chose a
+        #   adopter : un seul passage, qui s'arrete au premier retrait trouve. Les
+        #   nuits normales ne paient meme pas la construction de l'index.
+        #
+        # ⚠ LE SENS EST RIGOUREUSEMENT CONSERVE : si la doublure ne porte AUCUN
+        #   retrait, alors tout retrait du serveur est par definition divergent --
+        #   le COUNT ci-dessous dit donc exactement ce que disait le NOT EXISTS.
+        if con.execute("SELECT 1 FROM app_relation__sb"
+                       " WHERE retire_le IS NOT NULL LIMIT 1").fetchone() is None:
+            retraits_poses = 0
+            retraits_divergents = con.execute(
+                "SELECT COUNT(*) FROM app_relation"
+                " WHERE retire_le IS NOT NULL").fetchone()[0]
+            con.commit()
+            return _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart,
+                                    adoptes, depuis_app_seule, illisibles, sans_bien,
+                                    sortis, doublure_du, retraits_poses,
+                                    retraits_divergents)
+
+        # Il y a du travail : on pose l'index AVANT de s'en servir. Sans lui, les
+        # sous-requetes correlees relisent la doublure entiere a chaque ligne.
+        con.execute("CREATE INDEX IF NOT EXISTS idx_app_relation_sb_couple"
+                    " ON app_relation__sb (app_contact_id, hektor_annonce_id)")
+
         cur = con.execute(
             "UPDATE app_relation SET"
             "   retire_le  = (SELECT s.retire_le  FROM app_relation__sb s"
@@ -551,6 +601,21 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         print("   !! retraits non lus (%s)" % str(exc)[:100])
 
     con.commit()
+    return _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,
+                            depuis_app_seule, illisibles, sans_bien, sortis,
+                            doublure_du, retraits_poses, retraits_divergents)
+
+
+def _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,
+                     depuis_app_seule, illisibles, sans_bien, sortis,
+                     doublure_du, retraits_poses, retraits_divergents) -> dict:
+    """LE bilan, en UN seul endroit.
+
+    ⚠ IL EXISTE PARCE QU'IL Y A DEUX SORTIES : le raccourci « rien a adopter » et
+      le chemin complet. Deux dictionnaires recopies a la main auraient derive au
+      premier champ ajoute -- et une cle manquante ne se verrait PAS : le run
+      afficherait un bilan incomplet sans rien signaler.
+    """
     return {"lus": lus, "neufs": neufs, "revus": revus, "ecartes": ecartes,
             "adoptes_du_cloud": adoptes_au_depart - len(adoptes),
             "depuis_app_seule": depuis_app_seule,
