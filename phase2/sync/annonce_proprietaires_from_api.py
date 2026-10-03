@@ -77,12 +77,35 @@ def main() -> int:
     # `proprietaires` est la liste que le miroir range dans proprietaires_json
     # (voir refresh_single_annonce.py). Chaque entrée porte : id, nom, prenom,
     # civilite, agence, id_negociateur, archive...
-    bruts = annonce.get("proprietaires")
-    if bruts is None:
-        # Distinguer « pas de propriétaire » de « la clé n'est pas là » : dans le
-        # doute on ne prétend pas que l'annonce n'en a aucun.
+    # ══════════════════════════════════════════════════════════════════════════
+    # « AUCUN PROPRIETAIRE » SE DIT `null`, ET LA CLE EST TOUJOURS LA  03/10/2026
+    # ══════════════════════════════════════════════════════════════════════════
+    # La version d'avant testait `is None`, ce qui confondait DEUX choses très
+    # différentes : la clé ABSENTE (réponse dégradée, on ne sait pas) et la clé
+    # PRESENTE à `null` (Hektor dit : cette annonce n'a aucun propriétaire).
+    #
+    # CE QUE CA A COUTE, le 03/10 au premier essai réel du retrait : Hektor AVAIT
+    # bien détaché le mandant -- son écran disait « Aucun propriétaire n'a été
+    # rattaché à ce bien » -- mais la preuve rendait `_error`, le worker a conclu
+    # « retrait NON PROUVE » et il a DEFAIT un retrait qui avait REUSSI. L'app
+    # affichait le lien, Hektor ne l'avait plus : la divergence, à l'envers.
+    #
+    # MESURE SUR TROIS ANNONCES REELLES, le 03/10 :
+    #     62964  aucun proprietaire   ->  "proprietaires": null
+    #     62963  un proprietaire      ->  "proprietaires": [ {...} ]
+    #     18882  trois mandants       ->  "proprietaires": [ {...}, ... ]
+    # La clé est TOUJOURS presente ; c'est sa VALEUR qui porte le sens.
+    #
+    # ⚠ LA PRUDENCE DU 02/10 EST CONSERVEE LA OU ELLE SERT : une clé réellement
+    #   ABSENTE reste un `_error`. On ne conclut « aucun » que sur un `null`
+    #   EXPLICITE, c'est-à-dire sur une affirmation de Hektor, jamais sur un
+    #   silence. C'est exactement la distinction qui manquait.
+    if "proprietaires" not in annonce:
         print(json.dumps({"_error": "cle proprietaires absente de la reponse"}))
         return 0
+    bruts = annonce.get("proprietaires")
+    if bruts is None:
+        bruts = []
     if not isinstance(bruts, list):
         print(json.dumps({"_error": "proprietaires n'est pas une liste"}))
         return 0
