@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import sqlite3
 import sys
+from datetime import date
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -65,7 +66,33 @@ PLAGE_CONTACT_APP = 10_000_000
 # Les deux libelles du MEME fait Hektor (« proprietaire du bien »).
 ROLES_DU_BIEN = ("mandant", "proprietaire")
 
-GRAVES = ("source_absents", "doublons", "hors_plage_app", "plage_envahie")
+# ⑤ et ⑥ ajoutees le 03/10/2026 -- LE CONTRAT D'AUTORITE DE LA RELATION.
+#
+# POURQUOI ELLES MANQUAIENT, ET CE QU'ELLES GARDENT.
+#   Le plan reclame depuis le 30/09 « un registre des relations autonome, mis a jour
+#   selon un CONTRAT D'AUTORITE entre le run de nuit Hektor et les workers de l'app ».
+#   Ce contrat EXISTE EN FAIT -- l'adoption de `retire_le` depuis la doublure, dans
+#   relation_ledger.refresh() -- mais PAS EN DROIT : rien ne verifiait qu'il tenait.
+#
+#   LA REGLE, et elle est simple : `retire_le` / `retire_par` APPARTIENNENT A L'APP.
+#   Le miroir Hektor ne peut PAS les produire : quand un negociateur retire un
+#   mandant, Hektor se contente de ne plus montrer le lien -- il ne dit jamais
+#   « celui-ci a ete retire le 3 a 16h43 par Frederic ». Seule l'app le sait.
+#
+#   CE QUE CA COUTE QUAND LE CONTRAT LACHE, et c'est mesure : le run reconstruit sa
+#   table depuis le miroir, n'y voit aucun retrait, et POUSSE sa liste entiere --
+#   retire_le = NULL compris. LE LIEN REAPPARAIT A L'ECRAN, et le run dit « reussi ».
+#
+# ⑤ `retraits_perdus` : le cloud porte un retrait que le serveur ignore.
+#    C'est l'etat EXACT d'avant l'ecrasement. Zero exige.
+# ⑥ `doublure_perimee` : la doublure n'est pas du jour.
+#    ⚠ C'EST LA GARDE DE LA GARDE. L'adoption lit la doublure ; si elle date, elle
+#      ne voit pas le retrait d'hier apres-midi et ⑤ reste a zero EN MENTANT.
+#      `doublure_du` etait deja rendu dans le bilan du ledger -- mais il n'etait
+#      QU'IMPRIME. Rien n'en faisait une alerte. Une mesure que personne ne lit
+#      n'est pas une garde.
+GRAVES = ("source_absents", "doublons", "hors_plage_app", "plage_envahie",
+          "retraits_perdus", "doublure_perimee")
 
 
 def _table_existe(conn: sqlite3.Connection, nom: str) -> bool:
@@ -129,6 +156,30 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         ).fetchone()[0]
         retard_cloud = lignes - au_cloud
 
+    # ─── ⑤ ET ⑥ : LE CONTRAT D'AUTORITE SUR `retire_le` ───────────────────────
+    #   La doublure est le temoin local du cloud. Si elle manque, on ne MESURE pas,
+    #   on le DIT -- None, jamais zero : « non mesure » et « rien a signaler » ne
+    #   sont pas la meme chose, et les confondre est la panne la plus chere d'ici.
+    retraits_perdus = None
+    doublure_perimee = None
+    doublure_du = None
+    if _table_existe(conn, "app_relation__sb"):
+        # ⑤ le cloud a un retrait, le serveur l'ignore -> le prochain push l'efface
+        retraits_perdus = conn.execute(
+            "SELECT COUNT(*) FROM app_relation__sb s"
+            " WHERE s.retire_le IS NOT NULL"
+            "   AND EXISTS (SELECT 1 FROM app_relation r"
+            "                WHERE r.app_contact_id = s.app_contact_id"
+            "                  AND r.hektor_annonce_id = s.hektor_annonce_id"
+            "                  AND r.retire_le IS NULL)").fetchone()[0]
+        # ⑥ la doublure est-elle du jour ? Sans ca, ⑤ vaut zero en mentant.
+        ligne = conn.execute(
+            "SELECT derniere_descente FROM sb_pull_state"
+            " WHERE table_name = 'app_relation__sb'").fetchone()
+        doublure_du = ligne[0] if ligne and ligne[0] else None
+        if doublure_du:
+            doublure_perimee = 0 if str(doublure_du)[:10] == date.today().isoformat() else 1
+
     comptes = {
         "lignes": lignes,
         "doublons": doublons,
@@ -137,6 +188,9 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         "source_absents": source_absents,
         "source_lus": source_lus,
         "retard_cloud": retard_cloud,
+        "retraits_perdus": retraits_perdus,
+        "doublure_perimee": doublure_perimee,
+        "doublure_du": doublure_du,
         "marques_absents": conn.execute(
             "SELECT COUNT(*) FROM app_relation WHERE present_in_hektor = 0").fetchone()[0],
     }
@@ -168,6 +222,16 @@ def main() -> int:
         print("   liens de la couche absents    : %s sur %s   (doit valoir 0)"
               % (m["source_absents"], m["source_lus"]))
     print("   marques sortis (CONSERVES)    : %s" % m["marques_absents"])
+    print("")
+    print("   -- le contrat d'autorite : retire_le appartient a l'APP --")
+    if m["retraits_perdus"] is None:
+        print("   retraits perdus               : NON MESURE (doublure absente)")
+        print("   doublure du                   : NON MESUREE")
+    else:
+        print("   retraits perdus               : %s   (doit valoir 0)" % m["retraits_perdus"])
+        print("   doublure du                   : %s%s"
+              % (m["doublure_du"],
+                 "   ⚠ PAS DU JOUR" if m["doublure_perimee"] else ""))
     print("")
     print("   -- information, jamais une alerte --")
     print("   retard du cloud               : %s" % m["retard_cloud"])
