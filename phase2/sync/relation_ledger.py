@@ -567,37 +567,68 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                                     sortis, doublure_du, retraits_poses,
                                     retraits_divergents)
 
-        # Il y a du travail : on pose l'index AVANT de s'en servir. Sans lui, les
-        # sous-requetes correlees relisent la doublure entiere a chaque ligne.
-        con.execute("CREATE INDEX IF NOT EXISTS idx_app_relation_sb_couple"
-                    " ON app_relation__sb (app_contact_id, hektor_annonce_id)")
+        # ══════════════════════════════════════════════════════════════════════
+        # ⛔⛔ POSER UN INDEX SUR LA DOUBLURE NE SUFFIT PAS -- mesure du 03/10
+        # ══════════════════════════════════════════════════════════════════════
+        # Ma 1re version de ce correctif creait un index sur app_relation__sb et
+        # gardait les sous-requetes correlees. EPROUVE SUR LES VRAIES DONNEES : le
+        # plan ne bouge PAS d'un iota, avant comme apres l'index :
+        #     SCAN app_relation / CORRELATED SCALAR SUBQUERY -> SCAN s
+        # Donc le chemin cher restait aussi lent qu'avant, et je ne l'aurais JAMAIS
+        # vu en relisant le code -- seule l'execution sur une copie fidele l'a dit.
+        #
+        # POURQUOI. La descente cree les colonnes de la doublure SANS TYPE DECLARE
+        # (PRAGMA table_info rend ''), donc sans affinite. Face a app_relation,
+        # dont app_contact_id est INTEGER, SQLite n'utilise pas l'index :
+        #     · egalite avec une CONSTANTE entiere -> SEARCH ... USING INDEX  ✔
+        #     · sous-requete correlee sur colonne  -> SCAN s                  ✘
+        #
+        # ⭐ LA BONNE REPARATION N'EST PAS DE FORCER L'OPTIMISEUR, C'EST DE RENDRE
+        #   LA TABLE INTERIEURE PETITE. Un retrait est un GESTE HUMAIN : il y en a
+        #   0 aujourd'hui et il y en aura une poignee. On extrait donc d'abord les
+        #   seuls retraits dans une table TYPEE, puis on pilote la mise a jour
+        #   DEPUIS elle. Le cout devient proportionnel au NOMBRE DE RETRAITS, plus
+        #   au carre du registre -- et il le reste meme si l'optimiseur choisit mal.
+        con.execute("DROP TABLE IF EXISTS temp.retraits_doublure")
+        con.execute("CREATE TEMP TABLE retraits_doublure ("
+                    " app_contact_id INTEGER, hektor_annonce_id TEXT,"
+                    " retire_le TEXT, retire_par TEXT)")
+        con.execute("INSERT INTO temp.retraits_doublure"
+                    " SELECT app_contact_id, hektor_annonce_id, retire_le, retire_par"
+                    "   FROM app_relation__sb WHERE retire_le IS NOT NULL")
+        con.execute("CREATE INDEX temp.idx_retraits_doublure"
+                    " ON retraits_doublure (app_contact_id, hektor_annonce_id)")
 
+        # UPDATE..FROM : SQLite >= 3.33 (ici 3.50.4, cote .venv du run aussi). Il
+        # pilote depuis la PETITE table et retrouve chaque ligne du registre par sa
+        # cle unique -- SEARCH r USING sqlite_autoindex_app_relation_1.
         cur = con.execute(
-            "UPDATE app_relation SET"
-            "   retire_le  = (SELECT s.retire_le  FROM app_relation__sb s"
-            "                  WHERE s.app_contact_id = app_relation.app_contact_id"
-            "                    AND s.hektor_annonce_id = app_relation.hektor_annonce_id),"
-            "   retire_par = (SELECT s.retire_par FROM app_relation__sb s"
-            "                  WHERE s.app_contact_id = app_relation.app_contact_id"
-            "                    AND s.hektor_annonce_id = app_relation.hektor_annonce_id)"
-            " WHERE retire_le IS NULL"
-            "   AND EXISTS (SELECT 1 FROM app_relation__sb s"
-            "                WHERE s.app_contact_id = app_relation.app_contact_id"
-            "                  AND s.hektor_annonce_id = app_relation.hektor_annonce_id"
-            "                  AND s.retire_le IS NOT NULL)")
+            "UPDATE app_relation SET retire_le = s.retire_le, retire_par = s.retire_par"
+            "  FROM temp.retraits_doublure s"
+            " WHERE app_relation.app_contact_id    = s.app_contact_id"
+            "   AND app_relation.hektor_annonce_id = s.hektor_annonce_id"
+            "   AND app_relation.retire_le IS NULL")
         retraits_poses = cur.rowcount or 0
         # divergence : le SERVEUR porte un retrait que la doublure ne porte pas.
         # On ne tranche pas -- on compte, et le bilan du run le dira.
         retraits_divergents = con.execute(
             "SELECT COUNT(*) FROM app_relation r"
             " WHERE r.retire_le IS NOT NULL"
-            "   AND NOT EXISTS (SELECT 1 FROM app_relation__sb s"
+            "   AND NOT EXISTS (SELECT 1 FROM temp.retraits_doublure s"
             "                    WHERE s.app_contact_id = r.app_contact_id"
-            "                      AND s.hektor_annonce_id = r.hektor_annonce_id"
-            "                      AND s.retire_le IS NOT NULL)").fetchone()[0]
+            "                      AND s.hektor_annonce_id = r.hektor_annonce_id)").fetchone()[0]
+        con.execute("DROP TABLE IF EXISTS temp.retraits_doublure")
     except (sqlite3.OperationalError, TypeError, ValueError) as exc:
         # La doublure n'existe pas encore (descente jamais passee). On ne devine
         # pas, et on NE CASSE PAS LE RUN : le bilan rendra doublure_du = None.
+        #
+        # ⛔ ET IL FAUT L'EFFACER ICI -- defaut trouve le 03/10 en eprouvant le cas
+        #   « doublure absente ». `doublure_du` est lu AVANT l'adoption, depuis
+        #   sb_pull_state. Si la table a disparu mais que l'etat garde sa date, le
+        #   bilan annoncait une doublure FRAICHE alors que RIEN n'avait ete adopte
+        #   -- le garde-fou de fraicheur restait donc muet, exactement la panne
+        #   qu'il existe pour empecher. Le code contredisait son propre commentaire.
+        doublure_du = None
         print("   !! retraits non lus (%s)" % str(exc)[:100])
 
     con.commit()
