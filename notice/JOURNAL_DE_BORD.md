@@ -582,3 +582,348 @@ phase2/checks/test_chainage_vente_ferme.py     le correctif du run, sur registre
 > sans rapport, l. 340.
 
 ---
+
+---
+
+## Descendus du §2 de CLAUDE.md le 03/10/2026
+
+> Le §2 avait regrossi a **832 lignes sur 989** -- la maladie exacte contre laquelle
+> sa propre regle a ete ecrite. Ces blocs sont CLOS ou portaient deja la mention
+> *« ancien cadre, garde pour le pourquoi »* : c'est la definition de ce journal.
+> On l'ouvre pour comprendre **un pourquoi**, jamais pour savoir quoi faire.
+
+### ~~LE FRONT PRINCIPAL~~ — *finir l'annonce* (posé le 28/09, CLOS le soir même)
+
+> **Le niveau à atteindre n'est pas une opinion** : c'est ce que le contact, la recherche et
+> la transaction possèdent **déjà**. Tableau comparatif et détail : plan maître, section
+> **« FINIR L'ANNONCE »**.
+
+```
+N.1  LA CAMPAGNE DES CHAMPS              mesure seule, aucun code -- BLOQUANTE
+     !! ELLE RETRECIT : LA CLASSIFICATION EXISTE DEJA, depuis le 19/08.
+        notice/A1_CHAMPS_PROPRIETE_APP_2026-08-19.md -- 189 champs, en COULEURS
+        (VERT l'app est l'auteur / BLEU Hektor produit / ORANGE 3 arbitrages).
+        189 REMESURE dans le worker le 28/09 : 27 + 26 + 136. La carte n'a pas bouge.
+     !! DEUX VOCABULAIRES, DEUX AXES, aucun ne remplace l'autre :
+        COULEURS = qui est l'auteur   -> commandent la DESCENTE (l'import reecrit-il ?)
+        A / B / C = Hektor accepte-t-il -> commandent le PUSH
+        A/B/C a ete fait sur l'AFFAIRE (0.1, close 18/09), JAMAIS sur l'annonce.
+     (b) LA CORRESPONDANCE : FAITE le 28/09 -- 189 sur 189, ZERO absent (7acebc6)
+         correspondance_champs_annonce.py, lecture seule.
+         170 un seul / 9 AMBIGUS / 3 par suffixe / 7 a la main.
+         TROIS rangements : 163 colonnes + 134 cles de blob + 216 noms sous
+         un porteur « props » (API) ou « fields » (capture de console).
+         !! LE PIEGE POUR (a) : titre_bien est un COALESCE qui prefere le
+            LISTING au DETAIL -> relire texte_principal_titre, pas titre_bien.
+            Les 9 AMBIGUS sont le meme risque : relire la mauvaise cible rend
+            un verdict faux SANS RIEN SIGNALER.
+     (a) DISSOUTE le 28/09 : AUCUN champ n'est creable sans etre corrigible.
+         HEKTOR_WIZARD_UPDATE_GROUPS existe depuis le 02/06/2026 (a2e8160).
+         Remesure : 177 des 189 couverts par les groupes ; 8 par la voie
+         cleanfield, 3 par applyHektorChauffage. RESTE les 4 mandate_*,
+         qui sont le geste L5 « modifier un mandat existant ».
+         !! Le « 102 champs non modifiables » du plan venait de comparer
+            deux listes ECRITES DANS DEUX LANGUES (creation = vocabulaire
+            Hektor, modification = vocabulaire app) -> ecart de 136.
+            MEME famille d'erreur que « les couleurs ne sont pas des lettres ».
+     ==> N.1 EST CLOSE. La protection ne passe pas par A/B/C mais par le
+         MODELE B : pousser, RELIRE, montrer le verdict. Donc N.2 puis N.3.
+N.2  LE VERDICT AU CARNET                les 4 colonnes que l'affaire a deja
+N.3  LE FRONT ECRIT AU CARNET            il ne capte que 3 GESTES, pas les saisies
+N.4  LE CORPS LOCAL PERSISTANT           26bis-3
+     !! MESURE 28/09 : POUR UN BIEN VIVANT, LA DOUBLURE EST COMPLETE.
+        189 champs sur 189 presents = 70 colonnes app_dossiers_current
+        + 134 cles du blob + 216 noms sous props/fields.
+        Ce qui trompe, c'est les 70 colonnes : le reste est DANS LE BLOB.
+     !! LE TROU N'EST PAS OUVERT : 0 annonce de la copie manque a la vue
+        (mesure DEUX FOIS, deux chemins). Il s'ouvrira quand Hektor cessera
+        de donner un numero a la naissance -- pas avant.
+     ==> LE VRAI SUJET EST AILLEURS ET PLUS URGENT :
+        le detail des 34 515 ARCHIVES n'existe QU'EN UN EXEMPLAIRE, dans
+        data/hektor.sqlite (3,9 Go). La doublure n'en descend qu'un index
+        de 35 colonnes. Ce n'est pas un oubli (regle « serveur=tout /
+        cloud=biens vivants », et la REGLE 5 protege le miroir).
+        !! MAIS il n'entre PAS dans la sauvegarde auto : niveau 4, --full,
+           « sur demande ». run_backup.ps1 passe --weekly, JAMAIS --full.
+           -> a trancher : l'ajouter, ou confirmer que l'agent OVH le prend.
+```
+
+Ordre **N.1 → N.2 → N.3** ; **N.4 en parallèle**.
+
+⚠⚠ **NE PAS REDÉCOUVRIR CE QUI EXISTE** *(erreur commise le 28/09 au matin)* : l'annonce a
+**déjà** son œil *(`C.9-b`, `annonce_un_numero` — 0 écart sur 13 439)* et **quatre
+sentinelles** *(un_numero · conflit · partielle · push_bloque)*, toutes à 0. Et
+`data.annonce_partielle` détecte **déjà** un champ ignoré par Hektor — c'est-à-dire la
+classe A, en *critical*, seuil zéro.
+
+**Quand ces quatre-là sont faites, il ne reste que** : le registre des mandats *(`L9`)* · la
+génération du numéro de mandat *(`L6`)* · la signature *(`A.2`)* · les passerelles *(`A.1`)*.
+
+
+### ✅ A.3-TECHNIQUE EST CLOS — *30/09/2026* (c'est `L9`, pas `L6` : j'ai mal
+###    etiquete mes messages toute la session, le plan fait foi)
+
+```
+A ✅ 26 826 mandats dans le cloud + doublure     de7c57b · c560955
+B ✅ deux sentinelles, DEUX AXES                 44c2e9b
+     mandat_disparu   serveur <-> Hektor    mandat_un_numero  serveur <-> cloud
+C ✅ le registre tire sa matiere de app_mandat   f4c4f5a · 2ed0538
+     24 025 -> 24 478 lignes, +451 murs commerciaux, SANS vider la table
+D ✅ le mandat entre au registre A LA SECONDE    b45f36a
+     4 services redemarres 09:25, verifies par la date des PROCESSUS
+```
+
+⚠ **CE QUI RESTE DE `L9` N'EST PAS TECHNIQUE** : les trois couches de
+numerotation et la serie propre appartiennent a la PHASE 2 (registre
+electronique legal) -- juriste + horodatage tiers. Le numero vient toujours de
+PROTEXA, et c'est la decision de Frederic du 29/09.
+
+⭐ **ET LE MANDAT N'EST PAS AU NIVEAU DE L'ANNONCE, mesure du 30/09** : il l'a
+rattrapee sur la MEMOIRE, il est loin derriere sur les GESTES.
+```
+                    ANNONCE  contact  MANDAT
+gestes du worker          9        9       2
+RPC du front              9       17       1
+sentinelles               5       11       2
+carnet de champs app     oui      oui   1 champ, 2 lignes
+```
+On sait CREER un mandat, pas le CORRIGER. C'est `L5` / `E.0-bis`, ou le geste
+est deja inscrit -- la mesure y a ete ajoutee le 30/09, la ligne PAS dupliquee.
+
+### 🗄 L'ANCIEN CADRE DU CHANTIER — *pose le 29/09, garde pour le pourquoi*
+
+> **DEUX PHASES, dans l'ordre de Frederic** -- il a corrige le mien : je faisais
+> dependre le petit chantier du gros.
+
+```
+PHASE 1  NOTRE REGISTRE, LA DONNEE SEULE     4 etapes sur 5 FAITES le 29/09
+   !! HEKTOR ET PROTEXA NE BOUGENT PAS : le numero vient toujours d'eux.
+
+   A ✅ app_mandat, table durable, DORMANTE            ffee94d · 7183934 · 39374bf
+        26 822 lignes = 24 750 fiches mandat + 2 072 numeros portes par
+        l'annonce (2e source, trouvee par le 4e controle : le registre en a
+        DEUX, je n'en lisais qu'une).
+        CLE = (annonce, numero_mandat). ⚠ PAS hektor_mandat_id : Hektor range
+        le MEME mandat sous plusieurs ids (annonce 1972/n° 17925 -> 3 ids).
+        Controles : 0 doublon · 0 trou · 0 dans la plage reservee ·
+        REJEU a empreinte identique (d96c01ec...).
+   B ✅ branchee dans le run                                        e26b2e4
+        UNE etape neuve, non bloquante, apres le ledger d'affaires.
+        ⚠ PAS de doublure pour l'instant : rien n'ecrit encore dans
+          app_mandat cote Supabase -- elle viendra AVEC l'etape D.
+   C ✅ le registre ne suit plus stale_ids -- il CONSERVE            6c790eb
+        LA SEULE modification d'existant. Les QUATRE autres tables la suivent
+        toujours. Retour arriere : remettre `set(stale_ids) |`, un jeton.
+   E ✅ la sentinelle data.mandat_disparu                           40edc35
+        formule en copie unique (phase2/checks/mandat_disparu.py), patron
+        de check_annonce_un_numero. Eprouvee hors du moniteur, sans alerte.
+        ⚠ ROUGE DES LE 1er JOUR, et c'est voulu : 80 mandats EN COURS absents.
+   G ✅ LA TABLE SAIT REFAIRE LE REGISTRE                30/09  cccaeac · 0522f4a · 2bc628d
+        4 colonnes neuves -- versions_json / version_count / avenants_json /
+        avenant_count -- parce que L'ECRAN LES LIT DEJA (« +N versions »,
+        les avenants). Sans elles la bascule ferait perdre deux fonctions.
+        ⚠⚠ ET LA SOURCE ETAIT FAUSSE, l'outil de controle l'a montre :
+           app_mandat lisait hektor_mandat, qui ACCUMULE ; le registre lit le
+           tableau `mandats` du DETAIL (« les mandats de CE bien, MAINTENANT »).
+           Sur 28 couples la table voyait deux VERSIONS la ou il y a deux
+           MANDATS DIFFERENTS partageant un numero (n° 14856 : 2011/59 000 EUR
+           et 2022/160 000 EUR) -- et choisissait entre deux dossiers etrangers.
+        TROIS SOURCES, de la plus riche a la plus pauvre, la pauvre ne COMBLE :
+           detail 24 666 · hektor_mandat 88 (ce que le detail a oublie) ·
+           no_mandat 2 072 = 26 826 lignes, 0 neuf, 0 renumerotation.
+        ⚠ « 0 » VAUT VIDE (171 montants, 189 dans l'historique) -- piege du DPE.
+          MAIS LE NETTOYAGE NE VOTE PAS : nettoyer avant le score changeait le
+          CLASSEMENT donc la version retenue (annonce 59279). Le score note la
+          matiere brute, le « 0 » ne tombe qu'a l'ecriture.
+        MESURE, registre_depuis_app_mandat.py sur les 24 025 lignes :
+           ce qu'on PERDRAIT 0 · le GAIN 453 · ecart sur 13 colonnes / 14 : 0
+           la 14e (historique) : 189 ecarts, 189 sur 189 sont « 0 » -> vide
+        sentinelle inchangee : doublons 0 · plage 0 · miroir_absents 0
+        ==> IL RESTE : le push (⛔), l'oeil serveur<->cloud, la bascule des
+            11 colonnes de la vue (⛔), la doublure, l'ecriture worker (⛔).
+            LA VUE ET SES 4 FONCTIONS NE SONT PAS TOUCHEES : elle lit UNE
+            table, on change seulement d'ou le fabricant tire ses colonnes.
+
+   A ✅ LE PUSH -- FAIT LE 30/09                          de7c57b · c560955
+        mandat_ledger.py --push (delete-never) + --push-a-blanc.
+        ⛔ GARDE-FOU DANS LE CODE : --push sans --refresh est REFUSE (lecon du
+          07/09, ledger d'affaires : un push seul a efface une annulation de
+          compromis faite une heure plus tot). Levable, assume.
+        Essai a blanc sur la table reelle : 26 826 lignes, 25 colonnes remplies.
+        PATCH COLLE PAR FREDERIC : 25 colonnes, les 5 presentes.
+        POUSSE : 26 826 lignes, verifiees EN LIGNE -- numeros distincts 26 826,
+        plage envahie 0, sans versions_json 0, plusieurs versions 121, avenant 1.
+        DOUBLURE descendue en 16 s (app_mandat__sb), sans une ligne de code.
+        LES DEUX SENTINELLES SONT VERTES.
+        ⚠ CORRECTIF DANS L'OEIL : mesure EN MEMOIRE, plus en SQL. Un CAST des
+          deux cotes d'une jointure ecarte TOUT index -- la sonde tournait plus
+          de DEUX MINUTES et finissait coupee. 0,209 s desormais.
+
+   D ✅ LE MANDAT NAIT DANS L'APP -- EN SERVICE LE 30/09 a 09h25   b45f36a
+        ① patch COLLE : le defaut vaut nextval('app_mandat_id_app_seq'),
+          sequence a 1 000 001. Eprouve avant : sans numero -> plage app,
+          avec numero -> conserve tel quel.
+        ② 4 SERVICES REDEMARRES le 30/09 a 09:25:45-47 -- et VERIFIE autrement
+          que par « Running » : date de creation des 4 processus (CIM), toutes
+          POSTERIEURES a la modification du fichier (09:17:42). Les quatre
+          rendent `idle`, sans erreur, battement a la minute.
+          ⚠ « Running » ne prouve RIEN sur le code charge : un service jamais
+            redemarre est Running lui aussi. C'est l'heure du PROCESSUS qui
+            prouve, pas l'etat du service.
+        ⭐ L'ADOPTION est posee, et sans elle LE RUN S'ARRETERAIT : le run
+          reprend le numero du cloud au lieu d'en fabriquer un second pour le
+          meme couple (l'arret sur index unique des 01 et 02/09).
+        Le worker n'ecrit QUE annonce/numero/type/date -- famille et nature sont
+        des regles Python, les recopier en JS en ferait une copie qui derive.
+
+   ⭐ LE REGISTRE EST POSE -- 30/09 a 09h42, EN PLEINE JOURNEE      2ed0538
+      registre_mandats_upsert.py, et le choix de l'outil EST le sujet :
+      `--rebuild-register-only` VIDE la table puis la refait (« jamais quand
+      l'agence consulte »). Or register_row_id est la CLE PRIMAIRE : un UPSERT
+      fait le meme travail sans fenetre noire -- 453 en INSERT, 24 025 en
+      UPDATE, et a aucun instant le registre n'est vide.
+      Ce qui l'autorise est MESURE : « vue locale MOINS fabricant = 0 », aucune
+      ligne orpheline, donc rien a supprimer.
+      ⚠ NE REMPLACE PAS la reconstruction : elle reste la bonne reponse quand le
+        registre est CORROMPU -- seule une table videe garantit qu'il ne reste
+        rien de l'ancien etat.
+      AVANT -> APRES, en ligne :
+         lignes         24 025 -> 24 478    offre_type 10   74 -> 525
+         montant « 0 »     171 ->      0    « 0 » en historique -> 0
+         sans search_text          0        cles distinctes 24 478
+      LA VUE DU FRONT : 24 478 lignes, 121 a plusieurs versions, 1 avenant,
+      groupes de tri 0 et 1. Ses 70 colonnes et ses 4 fonctions n'ont pas bouge.
+      ℹ La copie LOCALE du registre reste a 24 025 : elle se realignera au run.
+        Seul registre_depuis_app_mandat.py la lit -- sans consequence.
+
+   B ✅ L'OEIL SERVEUR <-> SUPABASE                               30/09  44c2e9b
+        phase2/checks/mandat_un_numero.py + data.mandat_un_numero dans la sonde.
+        Pendant exact de annonce_un_numero (C.9-b).
+        ⚠ PAS LA MEME GARDE QUE mandat_disparu, et les deux servent :
+             mandat_disparu    serveur <-> Hektor (l'etape de nuit passe-t-elle ?)
+             mandat_un_numero  serveur <-> Supabase (le push passe-t-il ?)
+        ROUGE tant que le push n'a pas eu lieu -- voulu, comme mandat_disparu.
+        ⭐ LA DOUBLURE NE DEMANDE AUCUN CODE : pull_from_supabase lit le SCHEMA
+          et descend tout ; app_mandat -> app_mandat__sb. La tache n'existait pas.
+
+   C ✅ LE REGISTRE PREND SA MATIERE DANS app_mandat              30/09  f4c4f5a
+        LA VUE N'EST PAS TOUCHEE -- elle lit UNE table et ignore d'ou vient la
+        donnee. Ses 70 colonnes et ses 4 fonctions front ne changent pas.
+        LE DEFAUT REPARE : le fabricant filtrait sur le STATUT de l'annonce ; une
+        annonce sans detail sortait du registre AVEC SON MANDAT.
+        GAIN +453, dont 451 MURS COMMERCIAUX (offre 10 / idtype 23), avec prix et
+        numero -- 452 des 453 annonces archivees ET sans detail.
+        MESURE des deux constructions : 24 025 -> 24 478, 0 PERDUE ; les seules
+        colonnes qui bougent sont celles ou « 0 EUR » devient vide (171 + 189 +
+        189, la meme regle trois fois). Aucune identite, version ni tri ne change.
+        DEUX PIEGES FERMES : le push CIBLE emprunte le meme socle (sinon il
+        effacait en journee ce que la nuit gagnait) ; le fabricant RETRIAIT des
+        versions deja triees, et le nettoyage se remettait a voter.
+        INTERRUPTEUR APP_REGISTRE_DEPUIS_APP_MANDAT=0 pour revenir en arriere.
+
+   D 🟡 le worker ecrit apres step5  <- la table Supabase est POSEE (53aa132),
+        reste : le push, l'adoption, l'ecriture worker, la doublure
+        ⚠ L'ARCHITECTURE A CHANGE, SUR UNE REMARQUE DE FREDERIC : app_mandat ne
+          vient PAS s'ajouter a cote du registre -- LE REGISTRE DEVIENT SA
+          PROJECTION. Une source, deux robinets (le miroir et l'app), jamais
+          deux copies. C'est le patron de app_affaire_ledger : j'en avais copie
+          la FORME sans copier sa PLACE.
+        audit des 68 colonnes de la vue : 11 seulement viennent du mandat,
+        27 de l'annonce, 15 techniques -> on ne remplace pas la vue, on change
+        la source de ses 11 colonnes.
+   D-bis  LA TAXONOMIE, mesuree le 29/09 (3f99c13)
+        VENTE 23 521 · LOCATION 2 084 · INCONNUE 883 · GESTION 271 · RECHERCHE 63
+        ⚠ `nature` (ce qu'EST le mandat) n'est PAS `famille` (de quel REGISTRE
+          vient le numero : HEKTOR / PROTEXA) -- deux axes, comme les couleurs
+          et les lettres de la carte A1.
+        ✅ LE PERIMETRE EST DEJA JUSTE, ET FREDERIC L'A CONFIRME JURIDIQUEMENT :
+           les 271 GESTION relevent de la CARTE G (registre-repertoire), pas du
+           registre des mandats de la carte T -- elles doivent donc etre exclues,
+           et elles LE SONT deja : toutes sur des annonces de LOCATION.
+           Les 63 RECHERCHE sont sur vente ou commerce, donc DEDANS. Le filtre
+           sur le type d'offre les separe tout seul, sans le savoir.
+           ➡ RIEN A CHANGER AU PERIMETRE.
+        ✅ LA FAMILLE : C'ETAIT DEJA AUDITE, ET J'AI EU TORT DE LA DIRE FRAGILE.
+           Feuille de route du 24/08 : `params[typeMandat]` vaut « mandat » ou
+           « protexaMandat » -- « faux ami : ce n'est PAS le type juridique mais
+           LA FAMILLE DE REGISTRE ». Et plan l. 1170 : « les deux familles de
+           registre (SIMPLE/EXCLUSIF/ACCORD -> HEKTOR ; libelle francais ->
+           PROTEXA), VERIFIE 10/10 » (25/08).
+           _famille() code EXACTEMENT cette regle. Elle n'est pas inventee.
+        ⚠ Le doute ne porte QUE sur les lignes SANS TYPE : 3 263, dont 2 342
+          locations (hors perimetre, sans importance) et 921 dedans. Pas sur
+          les 24 000. Et il ne bloque RIEN : au moment d'une offre, le worker
+          LIT la valeur chez Hektor au lieu de la deduire (correctif du 25/08).
+        ⛔ J'AVAIS ECRIT « l'export PROTEXA est bloquant des DEUX phases » :
+          FAUX, DEUX FOIS. (1) c'etait une urgence fabriquee ; (2) ce n'est meme
+          pas « un mail » -- PROTEXA a SES PROPRES IDENTIFIANTS, enregistres DANS
+          Hektor (protexa-login / protexa-mdp / protexa-saveProtexa). C'est un
+          compte A TOI, pas un tiers a qui ecrire.
+          ==> il ne sert qu'a UNE chose : savoir OU REPRENDRE LA SERIE le jour ou
+              notre registre remplacera PROTEXA -- donc au DERNIER temps.
+
+   ⭐⭐ LE PRINCIPE, GRAVE PAR FREDERIC LE 29/09 :
+      LE REGISTRE ELECTRONIQUE EST LE DERNIER TEMPS. La phase 1 GARDE le principe
+      actuel sans exception : PROTEXA fabrique le numero, le worker ne change pas,
+      notre table ENREGISTRE et ne decide de rien.
+      -> tout ce qui touche au NUMERO (continuite de la serie, export PROTEXA,
+         compteur verrouille) appartient a ce dernier temps. Pas avant.
+
+   ℹ ET LA DIRECTION ETAIT DEJA PRISE LE 28/08, dans le worker (C.13) :
+      « la cloture du mandat n'ajoute rien de son cote, c'est une ecriture dans
+        SON registre a lui. LE NOTRE DEVIENT LE REGISTRE QUI FAIT FOI. »
+      « ce que ca coute, et c'est assume : tant que Hektor vit, son registre dira
+        le mandat ouvert quand le notre le dira clos. »
+      app_mandat ne fait que donner un CORPS a cette decision.
+   F ⛔ (devenue) LA REPARATION est FAITE -> voir plus bas
+   F ✅ LA REPARATION, FAITE le 29/09 a 13 h -- ACCORD DE FREDERIC
+        push_upgrade_to_supabase.py --rebuild-register-only
+        elle VIDE le registre puis le refait DEPUIS LE MIROIR ENTIER
+        (verifie : dossier_ids=None -> aucun filtre ; c'est elle qui a produit
+         l'etat du 31/07). Les 635 reviennent ET les 23 091 lignes figees se
+         rafraichissent du meme coup.
+        ⚠ pendant l'operation le registre est VIDE : jamais pendant le run de
+          nuit, jamais quand l'agence consulte.
+        RESULTAT : 23 839 -> 24 021 lignes, et PLUS AUCUNE ligne figee au 31/07.
+        77 des 80 mandats en cours recuperes. exit 0.
+        ⭐ ET UNE SECONDE PREUVE DU CORRECTIF DU COPIEUR : la descente de cette
+          table a ajuste sa page deux fois (8 Mo -> 500 lignes, 4 Mo -> 250) --
+          LE SCENARIO EXACT qui le cassait -- et a ramene les 24 021 completes.
+        ⚠ LES 3 « EN COURS » RESTANTS NE SONT PAS DES PERTES : 1 mandat
+          ANTERIEUR sur une annonce qui en a un plus recent, 2 annonces
+          ARCHIVEES dont la date de fin n'est pas encore passee.
+
+   LE CHIFFRE, ET IL A ETE CORRIGE TROIS FOIS PAR FREDERIC :
+      2 983 absents du registre ... dont 2 348 LOCATIONS, ecartees par sa
+      decision du 26/08 -> LA VRAIE PERTE EST 635, dont 80 EN COURS.
+      ⚠ la table porte TOUT ; c'est la VUE qui filtre. Publier la table telle
+        quelle mettrait 2 348 locations dans un registre qui les exclut.
+   ==> AUCUN RISQUE JURIDIQUE : tant que PROTEXA fait le numero, c'est LUI
+       le registre legal. Le notre n'est qu'un outil de travail.
+
+PHASE 2  LE REGISTRE ELECTRONIQUE LEGAL         ~3-4 sem.  ⛔ CONFORMITE
+   decret 72-678 art. 65 : « cote sans discontinuite », le numero « reporte
+   sur l'exemplaire qui reste en la possession du mandant », forme
+   electronique permise « dans les conditions des articles 1365 et suivants
+   du code civil » (depuis le decret du 21/10/2005).
+   !! AUCUNE regle technique dans les textes : le code civil exige
+      (1) identifier de facon certaine l'auteur  (2) garantir l'INTEGRITE
+      -> c'est une obligation de PREUVE, pas une liste a cocher.
+   !! TROIS CORRECTIONS imposees par la recherche du 29/09 :
+      · le prefixe « RE- » est probablement INTERDIT (« ni prefixe ni suffixe »)
+      · repartir de 1 est risque -> CONTINUER la serie ou PROTEXA s'arrete
+      · l'horodatage tiers n'est PAS optionnel : sans date certaine,
+        LE MANDAT EST NUL
+   Sanctions : 2 ans + 3 000 € + retrait de carte + mandat nul (pas d'honoraires)
+```
+
+⭐ **CE QU'IL NE FAUT PAS TOUCHER** : les 5 etapes du worker SONT l'assistant
+PROTEXA, rejoue faute d'API. La note du 18/05 : la separation est VOLONTAIRE,
+« Hektor consomme un vrai numero a la validation ». **Et la porte unique existe
+deja** : le front appelle UNE RPC, envoie la description du mandat, et ne recoit
+JAMAIS de numero -> le jour de la bascule, le front ne change pas d'une ligne.
+
+⛔ **NE DEPEND PAS DE MOI** : l'export de la serie PROTEXA (un mail, bloquant --
+23 numeros sans trace chez nous) · la validation par un juriste · le choix du
+tiers d'horodatage.
+
