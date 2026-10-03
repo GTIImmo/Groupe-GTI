@@ -14846,22 +14846,35 @@ async function handleLinkHektorMandant(job) {
 async function executerRattachementMandant(job) {
   const payload = safeJsonParse(job.payload_json);
   const dossier = await loadDossier(job);
-  await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
 
+  // ⚠⚠ CE QUE LE FILET EXIGE, CALCULE EN PREMIER.             corrige le 03/10/2026
+  //   Ma 1re version ne mettait sous filet QUE l'appel a Hektor. Or la ligne est
+  //   DEJA affichee a l'ecran quand le worker demarre, et TROIS echecs survenaient
+  //   AVANT ce filet -- le lien serait alors reste visible POUR TOUJOURS :
+  //     · ensureHektorExecutionContext (negociateur inactif / 403) -- PAS theorique :
+  //       c'est le cas du compte formation non rattache a l'agence, documente depuis
+  //       le 31/08, et c'est justement par la que j'allais eprouver le filet ;
+  //     · cibleHektorContact (contact invisible depuis ce compte) ;
+  //     · le contact_id non numerique.
+  //   `identite` et `annonceId` ne demandent que le payload et le dossier : on les
+  //   prend donc AVANT, pour que le filet puisse defaire quoi qu'il arrive ensuite.
+  //
   // L4-c ② 22/09 : deux numeros, deux variables.
   const identite = String(payload.contact_id || payload.hektor_contact_id || "").trim();
-  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
-  // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
-  const contactId = await cibleHektorContact(identite, { contexte: "link_hektor_mandant" });
-
   const annonceId = String(dossier.hektor_annonce_id);
-  // ⚠ LE RATTACHEMENT EST OPTIMISTE : la ligne est DEJA affichee a l'ecran quand on
-  //   arrive ici. S'il echoue, il faut la defaire -- sinon on montre un lien que
-  //   Hektor n'a pas. Meme patron que le retrait (executerRetraitMandant).
+
+  let contactId = null;
   let linkResult;
   try {
+    if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
+    await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true });
+    // 5b 21/09 : on vise Hektor par sa case cible, jamais par l'identite de l'app.
+    contactId = await cibleHektorContact(identite, { contexte: "link_hektor_mandant" });
     linkResult = await linkHektorMandantContact(job, annonceId, contactId, "hektor_mandant");
   } catch (erreur) {
+    // ⚠ identite peut etre vide (payload abime) : annulerRattachementOptimiste le
+    //   voit et ne touche alors a rien -- mieux vaut ne rien defaire que defaire au
+    //   hasard sur une cle vide.
     await annulerRattachementOptimiste(job, annonceId, identite,
       erreur && erreur.message ? erreur.message : String(erreur));
     throw erreur;
