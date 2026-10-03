@@ -54,6 +54,19 @@ const PROJECT_ROOT = path.resolve(__dirname, "..");
 const PYTHON_EXE = process.env.CONSOLE_PYTHON_EXE || path.resolve(PROJECT_ROOT, ".venv", "Scripts", "python.exe");
 const ACTION_JOB_TYPES = new Set([
   "link_hektor_mandant",
+  // ⛔⛔ OUBLIE JUSQU'AU 03/10/2026, ET TROUVE PAR LE PREMIER ESSAI REEL.
+  //   Le geste existait en entier -- la RPC, le case du repartiteur (l. ~19892),
+  //   l'implementation, le chemin de retour -- mais le type n'etait dans AUCUNE
+  //   liste de file. Resultat : le travail restait « pending » POUR TOUJOURS,
+  //   worker_id null, attempt_count 0, SANS la moindre erreur.
+  //   ⚠ Et l'app, elle, avait deja date le retrait et cache le lien : l'ecran
+  //     disait « retire », Hektor ne l'apprenait jamais. La divergence muette.
+  //   ⭐ Le commentaire de ADMIN_JOB_TYPES, juste en dessous, annoncait MOT POUR
+  //     MOT cette panne : « Oublier cette liste = un travail qui reste en attente
+  //     indefiniment, SANS erreur : aucun service ne le reclame. »
+  //   Sa place est ICI, collee a son jumeau link_hektor_mandant : meme session
+  //   negociateur, meme objet, meme famille de geste.
+  "unlink_hektor_mandant",
   "create_hektor_contact",
   "update_hektor_contact",
   "add_hektor_contact_search",
