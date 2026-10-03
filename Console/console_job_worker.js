@@ -14855,7 +14855,17 @@ async function executerRattachementMandant(job) {
   const contactId = await cibleHektorContact(identite, { contexte: "link_hektor_mandant" });
 
   const annonceId = String(dossier.hektor_annonce_id);
-  const linkResult = await linkHektorMandantContact(job, annonceId, contactId, "hektor_mandant");
+  // ⚠ LE RATTACHEMENT EST OPTIMISTE : la ligne est DEJA affichee a l'ecran quand on
+  //   arrive ici. S'il echoue, il faut la defaire -- sinon on montre un lien que
+  //   Hektor n'a pas. Meme patron que le retrait (executerRetraitMandant).
+  let linkResult;
+  try {
+    linkResult = await linkHektorMandantContact(job, annonceId, contactId, "hektor_mandant");
+  } catch (erreur) {
+    await annulerRattachementOptimiste(job, annonceId, identite,
+      erreur && erreur.message ? erreur.message : String(erreur));
+    throw erreur;
+  }
 
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonceId, {
     reason: "link_hektor_mandant",
@@ -15116,6 +15126,53 @@ async function annulerRetraitOptimiste(job, appContactId, annonceId, cause) {
       "⛔ Hektor a refuse ET le retrait n'a PAS pu etre defait -- le mandant est "
       + "invisible a l'ecran alors qu'il reste lie chez Hektor. A REPRENDRE A LA MAIN.",
       { app_contact_id: String(appContactId), hektor_annonce_id: String(annonceId),
+        cause: String(cause).slice(0, 300), erreur_annulation: String(erreur).slice(0, 300) });
+    return { annule: false, raison: String(erreur).slice(0, 300) };
+  }
+}
+
+// ⭐ LE MIROIR EXACT DE annulerRetraitOptimiste, pour le geste jumeau.  03/10/2026
+//
+// POURQUOI IL FAUT CELUI-CI AVANT D'OUVRIR LA VUE. Le rattachement devient
+// OPTIMISTE : le lien s'affiche des le clic, sans attendre Hektor -- comme le
+// retrait le fait deja. Mais un geste optimiste n'est honnete QUE s'il sait se
+// defaire : sans ce filet, un lien que Hektor REFUSE resterait affiche a tort,
+// et ce serait pire que les 20 secondes d'attente qu'on supprime.
+//
+// ⚠ ON NE SUPPRIME PAS LA LIGNE -- « on efface l'etat, jamais la trace ». On pose
+//   `absent_depuis`, dont c'est deja le sens dans ce registre : Hektor ne l'a pas.
+//   present_in_hektor repasse a false. La vue ecarte alors la ligne, mais on garde
+//   la preuve que quelqu'un a essaye, et quand.
+//
+// ⚠ `source=eq.app` EST UNE SECURITE, PAS UN DETAIL : on ne touche QUE les liens
+//   nes dans l'app. Un lien venu du miroir Hektor n'a rien a faire ici, et une
+//   erreur de cle ne doit jamais pouvoir en effacer un.
+async function annulerRattachementOptimiste(job, annonceId, hektorContactId, cause) {
+  if (!annonceId || !hektorContactId) return { annule: false, raison: "identifiants manquants" };
+  const maintenant = new Date().toISOString();
+  try {
+    const touchees = await supabaseRequest(
+      `app_relation?hektor_annonce_id=eq.${encodeURIComponent(String(annonceId))}`
+      + `&hektor_contact_id=eq.${encodeURIComponent(String(hektorContactId))}`
+      + `&source=eq.app&retire_le=is.null`,
+      { method: "PATCH", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ present_in_hektor: false, absent_depuis: maintenant }) },
+    );
+    const nb = Array.isArray(touchees) ? touchees.length : 0;
+    await logJob(job.id, "rattachement_annule", "done",
+      nb > 0
+        ? "Hektor a refuse le rattachement : le lien a ete RETIRE de l'ecran, la trace reste"
+        : "Hektor a refuse le rattachement, mais aucune ligne de l'app n'etait a defaire",
+      { hektor_annonce_id: String(annonceId), hektor_contact_id: String(hektorContactId),
+        lignes_defaites: nb, cause: String(cause).slice(0, 300) });
+    return { annule: nb > 0 };
+  } catch (erreur) {
+    // ⛔ LE PIRE CAS, symetrique de celui du retrait : Hektor a refuse ET on n'a pas
+    //   pu defaire. Le lien est AFFICHE alors que Hektor ne l'a pas. Ca doit CRIER.
+    await logJob(job.id, "rattachement_annule", "error",
+      "⛔ Hektor a refuse ET le rattachement n'a PAS pu etre defait -- le lien est "
+      + "AFFICHE alors que Hektor ne l'a pas. A REPRENDRE A LA MAIN.",
+      { hektor_annonce_id: String(annonceId), hektor_contact_id: String(hektorContactId),
         cause: String(cause).slice(0, 300), erreur_annulation: String(erreur).slice(0, 300) });
     return { annule: false, raison: String(erreur).slice(0, 300) };
   }
