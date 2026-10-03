@@ -14863,6 +14863,51 @@ async function executerRattachementMandant(job) {
   });
 
   // Le lien EXISTE chez Hektor a partir d'ici : tout ce qui suit est best-effort.
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LE LIEN EST ETABLI -> ON LE DIT TOUT DE SUITE AU REGISTRE     03/10/2026
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ⛔ SANS CA, LE MANDANT N'ETAIT PAS RETIRABLE AVANT LE LENDEMAIN -- constate a
+  //   l'ecran le 03/10, et c'est l'inverse de l'autonomie qu'on construit.
+  //   La RPC pose la ligne avec present_in_hektor = false (« on montre ce qui est
+  //   ETABLI, on garde ce qui est EN COURS », 30/09) ; la vue filtre dessus ; donc
+  //   l'ecran ne montrait pas le lien, donc le bouton « Retirer » n'existait pas.
+  //   Seul le run de NUIT remettait le drapeau a 1, en relisant le miroir Hektor.
+  //
+  // ⭐ OR CE DRAPEAU VEUT DIRE « HEKTOR L'A » -- et a cet instant precis, c'est le
+  //   worker qui le SAIT : linkHektorMandantContact vient de le faire confirmer par
+  //   l'API (verdict « lie ») ou par la console. Attendre la nuit, c'est attendre
+  //   qu'un autre redecouvre ce qu'on vient d'etablir.
+  //   Le worker fait DEJA exactement cela pour les photos et pour les affaires ;
+  //   app_relation etait la seule table ou il ne le faisait pas.
+  //
+  // ⚠ BEST-EFFORT, et deliberement : le lien EXISTE chez Hektor quoi qu'il arrive
+  //   ici. Si ce marquage echoue, on ne casse pas le travail -- le run de nuit
+  //   reposera le drapeau comme avant. On journalise, on ne jette pas.
+  // ⚠ ON NE TOUCHE QUE LES LIGNES A false : on ne reecrit jamais une ligne deja
+  //   etablie, et on ne reveille JAMAIS une ligne retiree (retire_le non nul).
+  try {
+    const cible = `app_relation?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`
+      + `&hektor_contact_id=eq.${encodeURIComponent(identite)}`
+      + `&present_in_hektor=is.false&retire_le=is.null`;
+    const marquees = await supabaseRequest(cible, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ present_in_hektor: true, absent_depuis: null }),
+    });
+    const nb = Array.isArray(marquees) ? marquees.length : 0;
+    await logJob(job.id, "relation_etablie", "done",
+      nb > 0
+        ? "Le registre porte le lien comme ETABLI : il est visible, et retirable, tout de suite"
+        : "Aucune ligne a marquer (deja etablie, ou posee sous une autre cle)",
+      { hektor_annonce_id: annonceId, hektor_contact_id: identite, lignes_marquees: nb });
+  } catch (erreur) {
+    await logJob(job.id, "relation_etablie", "error",
+      "Lien pose chez Hektor mais le registre n'a pas pu etre marque -- le run de nuit le fera",
+      { hektor_annonce_id: annonceId, hektor_contact_id: identite,
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+  }
+
   const jetonRelation = cleanString(payload.creation_token || payload.creationToken || "");
   let lienProvisoire = null;
   if (jetonRelation) {
