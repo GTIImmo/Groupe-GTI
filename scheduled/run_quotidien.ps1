@@ -9,6 +9,19 @@
 # sur sa cle -- propositions, relances, retours acquereur, rapprochements -- devenait
 # orphelin. Desormais elle reste, marquee inactive. Le moteur de rapprochement ne la
 # calcule plus (verrou pose le meme jour) et le front ne la liste plus.
+#
+# -StartAtLabel (03/10/2026) : RATTRAPER un run interrompu, sans rien recopier.
+#   Le 03/10 le run s'est arrete a 08:21 ; 17 etapes n'ont jamais demarre, dont
+#   toutes les montees vers le cloud. On relance ALORS CETTE MEME ENVELOPPE, avec
+#   LES MEMES drapeaux ci-dessous, en ajoutant seulement l'etiquette de reprise :
+#     .\scheduled\run_quotidien.ps1 -StartAtLabel "phase2 perimetre contacts cites par la console"
+#   ⛔ Ne remplace pas un run complet : suppose que les etapes sautees ont deja
+#     tourne le jour meme. Si l'etiquette n'existe pas, le pipeline LEVE une erreur
+#     au lieu de dire « reussi » sans rien faire.
+param(
+    [string]$StartAtLabel = ""
+)
+
 $ErrorActionPreference = "Continue"
 $root = "C:\Hektor\Projet"
 $logDir = Join-Path $root "logs\scheduled"
@@ -19,7 +32,11 @@ Start-Transcript -Path $log -Append | Out-Null
 $runFailed = $false
 try {
     Write-Output "=== Run quotidien demarre $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
-    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes -IncludeArchivedContactSearches
+    # ⚠ UN SEUL CHEMIN, et c'est volontaire : on transmet TOUJOURS -StartAtLabel.
+    #   Vide, il ne change rien (c'est le defaut du pipeline). Deux invocations
+    #   differentes selon le cas finiraient par diverger sur un drapeau -- et la
+    #   nuit ne passerait plus par la ligne qu'on a eprouvee le jour.
+    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes -IncludeArchivedContactSearches -StartAtLabel $StartAtLabel
     Write-Output "=== Run quotidien termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $LASTEXITCODE) ==="
 } catch {
     Write-Output "=== ERREUR run quotidien : $_ ==="

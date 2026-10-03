@@ -111,7 +111,36 @@
     [string]$GitHubRepo = "vitrine",
     [string]$GitHubBranch = "main",
     [string]$GitHubPath = "exports/catalogue_vitrine.json",
-    [string]$GitHubTokenFile = ""
+    [string]$GitHubTokenFile = "",
+    # ═══ LA REPRISE ═══════════════════════════════════════════════════  03/10/2026
+    # Saute toutes les etapes JUSQU'A cette etiquette, puis deroule normalement.
+    #
+    # POURQUOI ELLE EXISTE. Le 03/10 le run s'est arrete a 08:21 sur « phase2
+    # perimetre contacts cites par la console » : 17 etapes n'ont jamais demarre,
+    # dont TOUTES les montees vers le cloud. Il n'existait aucune reprise -- la
+    # seule option etait de rejouer 3 h 21 en pleine journee, agence ouverte.
+    #
+    # ⭐ ET SURTOUT : la seule autre facon de rattraper etait de RECOPIER A LA MAIN
+    #   les commandes des etapes manquantes. Or les arguments sont CALCULES
+    #   ($supabaseArgs depend de FullRebuildSupabase / SupabaseSinceWatermark /
+    #   AllowStaleSupabaseDeletes ; $contactsPushArgs de ContactsEligibleOnly).
+    #   Une recopie peut pousser un --full-rebuild au lieu d'un delta, ou perdre
+    #   --skip-stale-deletes. Sur une montee vers la PRODUCTION, ce n'est pas un
+    #   risque acceptable. Ici le script execute SES PROPRES commandes : il
+    #   traverse tout le fichier, calcule toutes ses variables, et ne saute que
+    #   l'EXECUTION des etapes deja faites. Zero recopie.
+    #
+    # ⚠ CE QUI A ETE VERIFIE AVANT DE LA POSER, et qui la rend sure :
+    #   · tout le travail passe par Invoke-Step / Invoke-OptionalStepWithRetry --
+    #     un seul bloc y echappe (enqueue console documents, l. ~1185) et il est
+    #     derriere un interrupteur qui n'est pas allume ;
+    #   · aucun resultat d'etape ($contactDetailsOk, $chauffageOk) n'est consomme
+    #     plus loin que juste apres sa propre etape, donc sauter n'en fausse aucun.
+    #
+    # ⛔ ELLE NE REMPLACE PAS UN RUN COMPLET : elle suppose que les etapes sautees
+    #   ont DEJA tourne et laisse leur etat sur le disque. A n'utiliser que pour
+    #   rattraper un run interrompu, le jour meme.
+    [string]$StartAtLabel = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -181,6 +210,24 @@ function Send-Heartbeat {
     }
 }
 
+# ⚠⚠ LE GARDE-FOU QUI COMPTE : une etiquette MAL ORTHOGRAPHIEE ferait sauter TOUT
+#   le pipeline en silence, et le run dirait « reussi » sans avoir rien fait. C'est
+#   la famille de panne la plus chere de ce projet. Le drapeau reste donc leve si
+#   l'etiquette n'a jamais ete rencontree, et la fin du script LEVE UNE ERREUR.
+$script:repriseEnAttente = [bool]$StartAtLabel
+
+function Test-RepriseAtteinte {
+    param([string]$Label)
+    if (-not $script:repriseEnAttente) { return $true }
+    if ($Label -eq $StartAtLabel) {
+        $script:repriseEnAttente = $false
+        Write-RunLog "REPRISE a partir de : $Label"
+        return $true
+    }
+    Write-RunLog "SAUTEE (reprise)  $Label"
+    return $false
+}
+
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)]
@@ -190,6 +237,7 @@ function Invoke-Step {
         [string]$WorkerKey = ""
     )
 
+    if (-not (Test-RepriseAtteinte $Label)) { return }
     Write-RunLog "START $Label"
     & $pythonExe @Arguments
     $stepExit = $LASTEXITCODE
@@ -221,6 +269,15 @@ function Invoke-OptionalStepWithRetry {
 
     if ($Succeeded) {
         $Succeeded.Value = $false
+    }
+    # ⚠ ON REND $true A UNE ETAPE SAUTEE, et ce n'est pas un mensonge de confort :
+    #   une reprise affirme que l'etape a DEJA tourne dans le run precedent. Laisser
+    #   $false ferait prendre aux `if (-not $xOk)` d'en face la branche « ca a rate »
+    #   et fabriquerait de fausses alertes sur un rattrapage qui se passe bien.
+    #   La ligne « SAUTEE (reprise) » reste au journal : rien n'est masque.
+    if (-not (Test-RepriseAtteinte $Label)) {
+        if ($Succeeded) { $Succeeded.Value = $true }
+        return
     }
     $attempts = [Math]::Max(1, $MaxAttempts)
     for ($attempt = 1; $attempt -le $attempts; $attempt++) {
@@ -1325,6 +1382,17 @@ if (-not $SkipAndroid) {
 }
 else {
     Write-RunLog "SKIP android vitrine export and push"
+}
+
+# ⛔ UNE ETIQUETTE JAMAIS RENCONTREE N'EST PAS UN SUCCES. Sans ce controle, une
+#   faute de frappe dans -StartAtLabel ferait sauter les ~50 etapes l'une apres
+#   l'autre et le run se terminerait en disant « finished successfully » : un
+#   rattrapage qui n'a RIEN rattrape, et personne pour le dire. On echoue fort.
+if ($script:repriseEnAttente) {
+    Send-Heartbeat -WorkerKey "pipeline.full" -Status "error"
+    throw ("Reprise impossible : l'etiquette '$StartAtLabel' n'existe dans aucune " +
+           "etape. AUCUNE etape n'a ete executee. Verifier l'orthographe exacte " +
+           "dans le journal du run interrompu (les lignes START).")
 }
 
 Send-Heartbeat -WorkerKey "pipeline.full" -Status "success"
