@@ -215,17 +215,45 @@ function Send-Heartbeat {
 #   la famille de panne la plus chere de ce projet. Le drapeau reste donc leve si
 #   l'etiquette n'a jamais ete rencontree, et la fin du script LEVE UNE ERREUR.
 $script:repriseEnAttente = [bool]$StartAtLabel
+$script:repriseVientDAccrocher = $false
 
+# ⛔⛔ CETTE FONCTION NE DOIT RIEN ECRIRE SUR LE FLUX DE SORTIE -- defaut vecu le
+#   03/10, en reel, et il a fait repartir le run DU DEBUT.
+#
+#   Ma 1re version appelait Write-RunLog ici. Or Write-RunLog fait `Write-Output`
+#   (l. 184), et EN POWERSHELL TOUT CE QU'UNE FONCTION ECRIT SUR LE FLUX DE SORTIE
+#   FAIT PARTIE DE SA VALEUR DE RETOUR. La fonction rendait donc le TABLEAU
+#   @("[...] SAUTEE (reprise) X", $false) -- et `-not` d'un tableau NON VIDE vaut
+#   $false. Le garde laissait donc passer TOUTES les etapes.
+#
+#   ⚠ LA PANNE ETAIT SILENCIEUSE DANS LE BON SENS (on execute tout au lieu de tout
+#     sauter), mais le 03/10 a 09:46 elle a relance `phase1 sync_raw update` --
+#     79 minutes de lecture Hektor -- en pleine matinee. Arretee en 90 secondes
+#     parce que le journal a ete lu TOUT DE SUITE apres le lancement.
+#
+#   ⚠⚠ ET MON EPREUVE D'HIER NE POUVAIT PAS LE VOIR : elle accumulait les lignes
+#     dans une variable (`$journal += ...`) au lieu d'appeler un journal qui fait
+#     Write-Output, et elle definissait la fonction DANS une autre. Elle testait
+#     une imitation, pas le vrai code. ➡ eprouver, c'est executer LE code.
 function Test-RepriseAtteinte {
     param([string]$Label)
     if (-not $script:repriseEnAttente) { return $true }
     if ($Label -eq $StartAtLabel) {
         $script:repriseEnAttente = $false
-        Write-RunLog "REPRISE a partir de : $Label"
+        $script:repriseVientDAccrocher = $true
         return $true
     }
-    Write-RunLog "SAUTEE (reprise)  $Label"
     return $false
+}
+
+# Le journal, lui, est ecrit par les APPELANTS -- ou il ne peut rien polluer.
+function Write-JournalReprise {
+    param([string]$Label, [bool]$Sautee)
+    if ($Sautee) { Write-RunLog "SAUTEE (reprise)  $Label"; return }
+    if ($script:repriseVientDAccrocher) {
+        $script:repriseVientDAccrocher = $false
+        Write-RunLog "REPRISE a partir de : $Label"
+    }
 }
 
 function Invoke-Step {
@@ -237,7 +265,8 @@ function Invoke-Step {
         [string]$WorkerKey = ""
     )
 
-    if (-not (Test-RepriseAtteinte $Label)) { return }
+    if (-not (Test-RepriseAtteinte $Label)) { Write-JournalReprise $Label $true; return }
+    Write-JournalReprise $Label $false
     Write-RunLog "START $Label"
     & $pythonExe @Arguments
     $stepExit = $LASTEXITCODE
@@ -276,9 +305,11 @@ function Invoke-OptionalStepWithRetry {
     #   et fabriquerait de fausses alertes sur un rattrapage qui se passe bien.
     #   La ligne « SAUTEE (reprise) » reste au journal : rien n'est masque.
     if (-not (Test-RepriseAtteinte $Label)) {
+        Write-JournalReprise $Label $true
         if ($Succeeded) { $Succeeded.Value = $true }
         return
     }
+    Write-JournalReprise $Label $false
     $attempts = [Math]::Max(1, $MaxAttempts)
     for ($attempt = 1; $attempt -le $attempts; $attempt++) {
         Write-RunLog "START $Label attempt $attempt/$attempts"
