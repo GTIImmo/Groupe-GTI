@@ -889,6 +889,36 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -
 #      ~10 min pour 31 019 -> compter 30 a 40 min ici. A MESURER au premier run,
 #      et a deplacer si ca pese. Il n'est plus dans la fenetre des 500 : celle-ci
 #      venait du rattrapage documents, decale a 22:00 le 01/10.
+# ═══════════════════════════════════════════════════════════════════════════════
+# LA DOUBLURE DU REGISTRE DES LIENS, RAFRAICHIE JUSTE AVANT     03/10/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# ⛔ SANS ELLE, LE RUN EFFACE LES RETRAITS DE LA VEILLE. L'etape suivante adopte
+#   `retire_le` depuis app_relation__sb -- la copie locale du cloud -- puis POUSSE
+#   sa liste entiere. Si la copie est perimee, elle ne voit pas le retrait et envoie
+#   retire_le = NULL : LE LIEN REAPPARAIT A L'ECRAN, et le run dit « reussi ».
+#
+# LE RETARD EST MESURE, pas suppose (journaux du 03/10) :
+#     run de 06:48  ->  doublure du 02/10 a 18:45   =  12 HEURES de retard
+#   La descente ne passe qu'a 08:15, soit APRES ce push. Un retrait fait lundi
+#   apres-midi serait donc invisible mardi matin, le lien reviendrait pour la
+#   journee, et ne repartirait que mercredi. Une journee de confusion pour le
+#   negociateur, sur un geste qu'il a fait lui-meme.
+#
+# ⚠ SA PLACE EST ICI ET NULLE PART AILLEURS : immediatement avant l'etape qui la
+#   LIT. Plus haut, une ecriture de l'app survenue entre-temps serait encore manquee.
+#
+# ⚠ NON BLOQUANTE, et c'est delibere : si Supabase est injoignable, on ne sacrifie
+#   pas le reste du run. La garde de fraicheur de relation_ledger (doublure_du) dira
+#   alors que la copie date -- c'est elle qui empeche le silence.
+#
+# COUT ANNONCE au 02/10 : 132 664 lignes, 744 o/ligne -> 727 ko par page, SOUS le
+# point de rupture de 1 Mio ; ~133 pages a 0,3 s -> 2 a 3 min. A VERIFIER au premier
+# run reel, et a deplacer si ca pese.
+Invoke-OptionalStepWithRetry -Label "phase2 doublure du registre des liens" -Arguments @(
+    "phase2\sync\pull_from_supabase.py",
+    "--table", "app_relation"
+) -WorkerKey "phase2.doublure_relation"
+
 Invoke-OptionalStepWithRetry -Label "phase2 registre des liens (app_relation)" -Arguments @(
     "phase2\sync\relation_ledger.py",
     "--refresh",
