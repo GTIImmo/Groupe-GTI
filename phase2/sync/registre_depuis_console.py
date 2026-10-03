@@ -179,6 +179,11 @@ def main() -> int:
     args = ap.parse_args()
 
     con = sqlite3.connect(args.db)
+    # ⚠ phase2 a plusieurs ecrivains ; sans ce reglage, Python s'arrete au bout de
+    #   5 s au lieu de patienter. CETTE ETAPE A ECHOUE POUR CA le 03/10 a 08:20,
+    #   pendant que la descente ecrivait dans la meme base. Voir le commentaire
+    #   detaille dans pull_from_supabase.py. 60 s : 30 n'ont pas suffi ce jour-la.
+    con.execute("PRAGMA busy_timeout = 60000")
     con.row_factory = sqlite3.Row
     try:
         colonnes = {r[1] for r in con.execute(f"PRAGMA table_info({LEDGER})")}

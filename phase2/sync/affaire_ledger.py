@@ -356,6 +356,11 @@ def now_iso() -> str:
 
 def _open_local() -> sqlite3.Connection:
     con = sqlite3.connect(PHASE2_DB)
+    # ⚠ phase2 a plusieurs ecrivains ; le defaut de Python (5 s) fait ECHOUER au lieu
+    #   d'attendre. Voir pull_from_supabase.py pour l'incident du 03/10. 60 s.
+    #   ⚠ Ce script ATTACHE aussi hektor.sqlite : il peut donc croiser DEUX etapes
+    #     differentes du run, pas une.
+    con.execute("PRAGMA busy_timeout = 60000")
     con.row_factory = sqlite3.Row
     con.execute("ATTACH DATABASE ? AS hektor", (str(HEKTOR_DB),))
     return con

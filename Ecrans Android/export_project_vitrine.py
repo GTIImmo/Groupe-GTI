@@ -58,6 +58,10 @@ PROPERTY_TYPE_LABELS = {
 
 def connect(path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(path))
+    # ⚠ phase2 a plusieurs ecrivains ; sans ce reglage, Python s'arrete au bout de 5 s
+    #   au lieu de patienter. Voir pull_from_supabase.py pour l'incident du 03/10.
+    #   ⭐ POSE ICI, dans l'ouvre-base commun : tous les appelants en profitent.
+    conn.execute("PRAGMA busy_timeout = 60000")
     conn.row_factory = sqlite3.Row
     return conn
 

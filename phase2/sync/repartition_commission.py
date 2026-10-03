@@ -366,6 +366,12 @@ def main() -> int:
     args = ap.parse_args()
 
     con = sqlite3.connect(f"file:{PHASE2_DB.as_posix()}?mode=ro", uri=True)
+    # ⚠ MEME EN LECTURE SEULE. Un lecteur n'ecrit pas, mais il peut etre BLOQUE par un
+    #   ecrivain -- et le defaut de Python (5 s) le fait alors echouer au lieu
+    #   d'attendre. Voir pull_from_supabase.py pour l'incident du 03/10.
+    #   ⚠ Cette etape-ci avait REUSSI ce matin-la : on la garde par coherence du lot,
+    #     pas sur une preuve. C'est une precaution, et elle est dite comme telle.
+    con.execute("PRAGMA busy_timeout = 60000")
     try:
         lignes, compte = calculer(con)
         en_ligne = None if args.tout else deja_en_ligne(con)

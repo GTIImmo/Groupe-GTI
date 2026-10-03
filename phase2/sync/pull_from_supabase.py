@@ -967,6 +967,26 @@ def main() -> int:
 
     reader = SupabaseReader(base_url, key)
     conn = sqlite3.connect(str(args.phase2_db))
+    # ⚠⚠ PHASE2 A PLUSIEURS ECRIVAINS, ET CE SCRIPT EST LE PLUS GROS D'ENTRE EUX.
+    #   Sans ce reglage, Python applique son defaut de 5 SECONDES : passe ce delai,
+    #   l'ecriture ne patiente pas, elle ECHOUE.
+    #
+    #   VECU LE 03/10/2026. Le run de nuit a deborde jusqu'a 08:21 et la descente a
+    #   demarre a 08:15 -- donc DEUX INSTANCES DE CE MEME SCRIPT ecrivaient dans
+    #   phase2.sqlite en meme temps (l'etape « redescente des lectures console »
+    #   l'appelle avec --table app_affaire_console). Elle a echoue, « registre depuis
+    #   console » juste apres, puis l'etape suivante a arrete le run : 17 etapes
+    #   jamais demarrees, dont TOUTES les montees vers le cloud.
+    #   ⭐ LA PREUVE PAR L'INVERSE : rejouees l'apres-midi, descente a l'arret, ces
+    #     memes etapes ont pris NEUF SECONDES a elles trois.
+    #
+    #   60 s, comme relation_ledger.py et mandat_ledger.py. ⚠ 30 s NE SUFFIT PAS :
+    #   elargir_perimetre_console.py les avait, et il a echoue quand meme ce matin-la.
+    #
+    # ⛔ CE N'EST QU'UN FILET, PAS LA REPARATION. Le vrai remede est que la descente
+    #   ne demarre pas tant que le quotidien tourne -- un verrou qui dure plus d'une
+    #   minute reste une panne, il sera seulement moins brutal.
+    conn.execute("PRAGMA busy_timeout = 60000")
     ensure_state_table(conn)
 
     schema = reader.schema()
