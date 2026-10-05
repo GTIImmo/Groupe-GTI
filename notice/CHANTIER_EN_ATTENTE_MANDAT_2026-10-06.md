@@ -144,8 +144,18 @@ function getThisInfoMandat(idMandat, idAnnonce, reloadHistory = false) {
 1. **lire la fonction ENTIÈRE** dans la page déjà sauvegardée
    (`Console/exports/mandatprix_61811_mode_chargeannonce_MandatPrix.html`) — elle y est en
    clair, donc on confirme qu'elle ne fait que lire **sans toucher à Hektor** ;
-2. puis, **avec l'accord de Frédéric**, l'appeler sur **UNE SEULE** annonce (61811 : affiche
-   `95 000` pour un bien à `71 000`) et regarder si le vrai montant y est ;
+2. puis, **avec l'accord de Frédéric**, l'appeler sur **UNE SEULE** annonce : **61811**.
+   ⭐ **C'est le témoin parfait, parce qu'on sait déjà ce que la réponse NE DOIT PAS
+   contenir** — la trace complète du 05/10 :
+
+   ```
+   annonce 182   mandat 15943 (2023) : prix 95 000 · montant 95 000 · LANGLADE   <- COHERENT
+   annonce 61811 mandat 18466 (2026) : prix 71 000 · montant 95 000 · ASTIER     <- RECOPIE
+   les deux partagent l'identifiant Hektor 49
+   ```
+
+   **Si `getInfoMandat` rend 95 000, l'écran web est contaminé lui aussi et la voie est
+   morte. S'il rend autre chose, c'est le vrai montant de 18466 ;**
 3. si oui → **rattrapage console sur le modèle du chauffage** : un travail par annonce, sur
    **`WorkerAdmin` ou `WorkerActions`** — ⛔ **jamais** la file des documents. **Deux appels
    par annonce** : l'onglet pour l'identifiant PROTEXA, puis la lecture.
@@ -154,6 +164,48 @@ function getThisInfoMandat(idMandat, idAnnonce, reloadHistory = false) {
 supprime), ni les `step1`/`step2` du geste de génération** : ils créent un mandat et
 **brûlent un numéro NON ANNULABLE** — c'est PROTEXA qui le fabrique, mention légale,
 série cotée sans discontinuité.
+
+## ①bis ⚠ RESSERRER LE CRITÈRE — il marque 454 lignes, 91 seulement sont contaminées
+
+**Mesuré le 05/10 au soir, en comparant chaque ligne fabriquée à son jumeau, champ par
+champ :**
+
+```
+sur les 454 lignes fabriquees, ce qui est RECOPIE du jumeau :
+   date_debut :   0 sur 454  (  0 %)   -> les dates sont PROPRES
+   date_fin   :   0 sur 454  (  0 %)
+   type       :   0 sur 454  (  0 %)   -> le type est PROPRE
+   note       :  23 sur 454  (  5 %)
+   montant    :  91 sur 454  ( 20 %)   <- LA CONTAMINATION
+   mandants   :  91 sur 454  ( 20 %)
+```
+
+⭐ **Et la correspondance est parfaite : 91 = 91 = 91.**
+
+```
+454 lignes fabriquees
+    91 portent un montant  ->  ce sont EXACTEMENT les 91 dont le corps est RECOPIE
+   363 n'en portent aucun  ->  Hektor n'en donne pas : RIEN A MASQUER
+```
+
+**Donc l'ampleur réelle est de 91 mandats contaminés, dont 31 encore visibles** (rubrique
+Mandat V3). Les 31 ne sont pas le problème : ils en sont la **partie encore visible**.
+
+### Le coût de la largeur, que je n'avais pas vu
+
+Sur les 363 non contaminées :
+- masquer le montant **ne change rien** (il n'y en a pas) — inoffensif ;
+- ⛔ mais **retirer le texte de Hektor de `search_text` leur enlève des adresses
+  cherchables pour rien** : leurs mandants sont **les leurs**, pas ceux du jumeau.
+
+### À faire
+
+Dans `charger_corps_suspects()`, ajouter au critère : **le corps doit être effectivement
+recopié** — `montant` **et** `mandants_texte` identiques à ceux du jumeau au plus petit
+numéro. Résultat attendu : **91** au lieu de 454, et les 363 gardent leur recherche.
+
+⚠ **Et refaire le contrôle à blanc** : les lignes qui *regagnent* leur texte dans
+`search_text` doivent être exactement 363, et aucun montant ne doit réapparaître.
 
 ## ② RENDRE LA MODALE DU REGISTRE AUTONOME — **la plus importante**
 
