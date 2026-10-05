@@ -1,94 +1,129 @@
-# CHANTIER EN ATTENTE — registre des mandats · fiche mandat · édition du PDF
+# CHANTIER EN ATTENTE — mandats : registre · fiche · édition du PDF
 
-**Écrit le 05/10/2026 au soir, pour la reprise du 06/10.**
-Audit complet : `notice/AUDIT_REGISTRE_MANDATS_2026-10-05.md` (13 sections).
-Sentinelle : `phase2/checks/mandat_corps_recopie.py`.
+**Écrit le 05/10/2026 au soir pour la reprise du 06/10. Réécrit en fin de session après
+relecture de tout l'échange.**
+
+| | |
+|---|---|
+| l'audit complet | `notice/AUDIT_REGISTRE_MANDATS_2026-10-05.md` — 13 sections |
+| l'audit des mandants | `notice/AUDIT_MANDANTS_REGISTRE_MANDATS_2026-10-04.md` |
+| le précédent de 2026-08 | `notice/NOTE_CHAINE_DES_MANDATS_2026-08-25.md` — §5 et §6, **à relire** |
+| la sentinelle | `phase2/checks/mandat_corps_recopie.py` |
+| les sondes | `Console/sonde_*.js` — **diagnostic, jamais appelées par le run** |
 
 ---
 
-## CE QUI EST DÉJÀ EN PRODUCTION — ne pas le refaire
+# PARTIE 1 — CE QUI EST EN PRODUCTION. NE PAS LE REFAIRE.
 
 | | mesure |
 |---|---|
-| les mandants du registre viennent de **notre registre des liens** | 24 451 / 24 487 · **607** lignes comblées, 31 restent vides |
-| le montant d'un autre mandat n'est plus affiché **au registre** | **454** lignes masquées (91 montraient un chiffre) |
-| la recherche ne remonte plus un nom étranger | « BANO » ne ramène plus le bien de SOUVIGNET |
-| la sentinelle veille | 3 gardes : corps recopié **91** · couples à deux mandats **31** · deux numéros le même jour **2** |
+| les mandants du registre viennent de **notre registre des liens** | 24 451 / 24 487 · **607** lignes comblées, **31** restent vides |
+| colonne `mandants_json` (nos **deux** identifiants par personne) | patch SQL collé, table **et** vue |
+| notre liste est **prioritaire**, Hektor en repli | 23 640 lignes affichent désormais notre forme |
+| `search_text` assaini | « BANO » ne ramène plus le bien de SOUVIGNET |
+| `mandat_montant` masqué **au registre** | **454** lignes — ⚠ mais le front **ne lit pas** cette colonne |
+| la sentinelle | corps recopié **91** · couples à deux mandats **31** · deux numéros le même jour **2** |
 | le filet de colonne absente | `colonne_disponible()` + `adapter_registre_au_schema()` |
-| l'identité du registre | 7 contrôles, 7 zéros · 2 072 mandats portent notre numéro sans celui de Hektor |
+| la fiche mandat affiche les bons noms | commit `e3c1e2b` — **attend le push** pour être déployé |
+| la régression du 05/10 | **corrigée** `3607d29` — voir Partie 5 |
 
-⭐ **Et tout cela est autonome** : 0 appel Hektor dans `export_app_payload` /
-`push_upgrade` / `registre_mandats_upsert`. Le critère se calcule sur le miroir local.
+⭐ **Et tout est autonome** : 0 appel Hektor dans `export_app_payload` /
+`push_upgrade_to_supabase` / `registre_mandats_upsert`. Le critère se calcule sur le
+miroir **local** ; Hektor éteint, le masquage fonctionne à l'identique.
+
+### L'identité du registre est saine — 7 contrôles, 7 zéros
+
+```
+app_mandat : 26 835 · app_mandat_id nul 0 · en doublon 0 · couple (annonce,numero)
+             en doublon 0 · numero vide 0 · plage de l'app envahie 0 ·
+             present_in_hektor=0 -> 0 · lignes du registre absentes de app_mandat 0
+2 072 mandats portent NOTRE numero sans celui de Hektor
+```
+
+### ⭐ La clé (annonce, numéro) a tenu, et c'est mesuré
+
+Sur les cas où l'identifiant Hektor est partagé : **182 lignes du miroir → 182 de nos
+lignes, aucune fusion**, et la bonne ligne gardée **31 fois sur 31**. Avec une clé sur
+l'identifiant de Hektor, **91 mandats auraient disparu**.
 
 ---
 
-## LA CAUSE, ÉTABLIE — ce n'est pas un recyclage
+# PARTIE 2 — LA CAUSE, ÉTABLIE. Ce n'est PAS un recyclage.
 
-L'identifiant complet d'un mandat chez Hektor est **`<id>-<FAMILLE>`** — le projet
-l'avait déjà écrit le 25/08 (`notice/NOTE_CHAINE_DES_MANDATS_2026-08-25.md` §6) :
+L'identifiant complet d'un mandat chez Hektor est **`<id>-<FAMILLE>`** — le projet l'avait
+déjà écrit le **25/08** (`NOTE_CHAINE_DES_MANDATS` §6) :
 
 > *« Hektor n'attend pas un numéro mais un couple `<id>-<FAMILLE>` — `648-PROTEXA` ou
 > `9887-HEKTOR` — et une valeur amputée est ignorée sans erreur. »*
 
-L'agence est passée aux mandats **PROTEXA** en mars 2026, et PROTEXA numérote depuis 1.
-`10-PROTEXA` et `10-HEKTOR` sont **deux mandats différents** : sur 449 identifiants nus
-partagés, **446 portent les deux familles**.
+L'agence est passée aux mandats **PROTEXA en mars 2026**, et PROTEXA numérote **depuis 1** :
+`10-PROTEXA` et `10-HEKTOR` sont **deux mandats différents**. Sur 449 identifiants nus
+partagés, **446 portent les deux familles**. Les 454 lignes marquées sont **PROTEXA à 100 %**.
 
-⛔ **Mais la lecture résout sur l'identifiant NU.** Vérifié :
-`getMandatById("10")`, `("10-PROTEXA")` et `("10-HEKTOR")` rendent **tous les trois** le
-mandat HEKTOR 16564 de 2024. Le bloc mandat de la fiche annonce fait pareil : il renvoie
-**le montant et les mandants du mandat HEKTOR** sous **le numéro et les dates du mandat
-PROTEXA**.
+⛔ **Mais la lecture résout sur l'identifiant NU** :
 
-⭐ Donc **la donnée existe chez eux** — ce sont ses dates de 2026 qui nous parviennent.
-C'est sa **résolution** qui échoue. Le jour où ils corrigent, le montant revient au run
-suivant et notre masque se lève seul.
+```
+getMandatById("10")          -> numero 16564, 2024, 82 000  (HEKTOR)
+getMandatById("10-PROTEXA")  -> LE MEME
+getMandatById("10-HEKTOR")   -> LE MEME
+```
+
+Le bloc mandat de la fiche annonce fait pareil : il renvoie **le montant et les mandants
+du mandat HEKTOR** sous **le numéro et les dates du mandat PROTEXA**.
+
+⭐ **La donnée existe chez eux** — ce sont ses dates de 2026 qui nous parviennent. C'est sa
+**résolution** qui échoue. Le jour où ils corrigent, le montant revient au run suivant et
+notre masque **se lève seul** (il se déclenche sur la collision d'identifiant nu).
+
+### La preuve que le critère est le bon — 1 % contre 99 %
+
+```
+PROTEXA AVEC jumeau HEKTOR  (446 masques)  : montant == prix sur   1 des  88  (  1 %)
+PROTEXA SANS jumeau       (1 216 epargnes) : montant == prix sur 522 des 526  ( 99 %)
+```
+
+Il ne sur-masque pas et ne sous-masque pas. Et il est **complet par construction** : la
+série HEKTOR va de 1 à 79 720, la PROTEXA de 3 à 26 047 — un nouveau mandat PROTEXA
+collisionne **forcément**, donc il sera marqué sans intervention.
 
 ---
 
-# ⬜ CE QUI RESTE À FAIRE — par ordre
+# PARTIE 3 — DEMAIN, DANS L'ORDRE
 
-## ① L'ÉPREUVE : l'écran web porte-t-il le vrai montant ?
+## ⓿ Vérifier la nuit — 5 minutes, lecture seule
 
 ```bash
-node Console/sonde_mandat_prix_web.js 61811
+python phase2/checks/mandat_corps_recopie.py
 ```
 
-Deux GET que le worker connaît déjà (`chargeannonce_MandatPrix`, `protexa-mandat`),
-**en lecture seule**.
+| quoi | attendu |
+|---|---|
+| le **rattrapage documents** a drainé | 2 211 pending → 0, fin vers **04:10** (rythme mesuré ~5,8/min) |
+| ⭐ **ma régression est bien réparée** | **0 erreur `refresh_console_data`** après 21h — c'est LA vérification du jour |
+| le **quotidien** (05:00) et la **descente** (08:15) | 54 étapes, exit 0 |
+| la sentinelle | 91 · 31 · 2 — si un chiffre **monte**, le défaut de Hektor s'aggrave |
 
-⛔⛔ **JAMAIS les POST qui suivent** dans le geste du worker (`step1`, `step2`) : ils
-**créent** un mandat et **brûlent un numéro non annulable** (c'est PROTEXA qui le
-fabrique, mention légale, série cotée sans discontinuité).
+## ① L'ÉPREUVE DE L'IDÉE DE FRÉDÉRIC — la porte est trouvée
 
-Le cas témoin : annonce **61811**, qui affiche `95 000` pour un bien à `71 000`.
-
-- **si le vrai montant y est** → rattrapage console sur le modèle du chauffage, un
-  travail par annonce, sur `WorkerAdmin` ou `WorkerActions` (**pas** la file des
-  documents), et les 454 se remplissent avec la **vraie** valeur, sans La Boîte Immo ;
-- **sinon** → il ne reste que l'export « liste mandat » de mars à aujourd'hui.
-
-### ⭐ L'ÉPREUVE A ÉTÉ TENTÉE LE 05/10 AU SOIR — et elle a trouvé la porte
-
-**Ce qui marche :**
+**Ce qui a déjà été fait le 05/10 au soir, en lecture seule :**
 
 ```
 session : les cookies du depot ont EXPIRE le 29/06 -> 403 sur les deux GET.
           Le worker garde une session FRAICHE par service :
-          Console/sessions/storage_state_<kind>.json  (sync_light a 21:59)
+             Console/sessions/storage_state_<kind>.json     (sync_light a 21:59)
           -> la sonde prend la plus recente en EVITANT celle du worker Documents.
 
-mode=chargeannonce_MandatPrix&id=61811   HTTP 200,  84 294 car.
-mode=protexa-mandat&mandat=0&idann=61811 HTTP 200, 293 088 car.
+mode=chargeannonce_MandatPrix&id=61811    HTTP 200,  84 294 car.
+   -> un ONGLET : « Mandat N° 18466 » avec rel="49|0"
+   -> 49 est l'IDENTIFIANT PROTEXA du mandat
+   -> la page porte 71 000 (le prix) et 65 000, PAS le faux 95 000
+
+mode=protexa-mandat&mandat=0&idann=61811  HTTP 200, 293 088 car.
+   -> le formulaire de CREATION ; mandat=49 rend la MEME page. Ce n'est pas un lecteur.
+
+⭐ les DEUX pages contiennent ASTIER -- le mandant que NOS LIENS donnent -- et PAS
+  « LANGLADE » que le miroir porte. Une confirmation de plus que nos mandants sont justes.
 ```
-
-**Ce que les deux pages donnent — et ne donnent pas :**
-
-| | |
-|---|---|
-| `chargeannonce_MandatPrix` | un **onglet de navigation** : `Mandat N° 18466` avec `rel="49|0"` → **49 est l'identifiant PROTEXA du mandat**. La page porte `71 000` (le prix) et `65 000`, **PAS** le faux `95 000` |
-| `protexa-mandat` | le **formulaire de création** (`numeroMandatProtexa` vide). `mandat=49` rend la même page que `mandat=0` : ce n'est pas un lecteur |
-| ⭐ les deux | contiennent **ASTIER** — le mandant que **nos liens** donnent — et **pas** « LANGLADE » que le miroir porte. **Une confirmation de plus que nos mandants sont justes** |
 
 **⭐⭐ LA PORTE DE LECTURE, trouvée dans le JS de la page :**
 
@@ -96,7 +131,7 @@ mode=protexa-mandat&mandat=0&idann=61811 HTTP 200, 293 088 car.
 function getThisInfoMandat(idMandat, idAnnonce, reloadHistory = false) {
   var dataSend = {
     mode: 'contacts-contactProfile-mandat-getInfoMandat',
-    idMandat: idMandat,      // 49   <- l'identifiant PROTEXA, lu dans rel="ID|0"
+    idMandat: idMandat,      // 49    <- lu dans rel="ID|0" de l'onglet
     idAnnonce: idAnnonce,    // 61811
     reloadHistory: reloadHistory
   };
@@ -104,25 +139,23 @@ function getThisInfoMandat(idMandat, idAnnonce, reloadHistory = false) {
 }
 ```
 
-⚠⚠ **C'EST UN POST, ET JE NE L'AI PAS DÉCLENCHÉ.** Son nom dit `getInfoMandat`, donc
-c'est très probablement une lecture — mais « très probablement » ne suffit pas : la même
-page cite **`mandat-postMandatVente`** (qui enregistre) et **`mandat-supprime`** (qui
-supprime). Un mauvais appel dans cette famille écrit ou détruit un mandat.
+**À FAIRE, dans cet ordre strict :**
 
-**DONC DEMAIN, DANS CET ORDRE :**
+1. **lire la fonction ENTIÈRE** dans la page déjà sauvegardée
+   (`Console/exports/mandatprix_61811_mode_chargeannonce_MandatPrix.html`) — elle y est en
+   clair, donc on confirme qu'elle ne fait que lire **sans toucher à Hektor** ;
+2. puis, **avec l'accord de Frédéric**, l'appeler sur **UNE SEULE** annonce (61811 : affiche
+   `95 000` pour un bien à `71 000`) et regarder si le vrai montant y est ;
+3. si oui → **rattrapage console sur le modèle du chauffage** : un travail par annonce, sur
+   **`WorkerAdmin` ou `WorkerActions`** — ⛔ **jamais** la file des documents. **Deux appels
+   par annonce** : l'onglet pour l'identifiant PROTEXA, puis la lecture.
 
-1. **lire d'abord** la suite de `getThisInfoMandat` dans la page sauvegardée
-   (`Console/exports/mandatprix_61811_mode_chargeannonce_MandatPrix.html`) pour confirmer
-   qu'il n'écrit rien — la fonction entière y est ;
-2. puis, **avec ton accord**, l'appeler sur **une seule** annonce et regarder si le vrai
-   montant y est ;
-3. si oui → rattrapage console sur le modèle du chauffage, **sur `WorkerAdmin` ou
-   `WorkerActions`**, jamais la file des documents. L'identifiant PROTEXA se lit dans le
-   `rel="ID|0"` de l'onglet, donc **deux appels par annonce** : l'onglet puis la lecture.
+⛔⛔ **JAMAIS `mandat-postMandatVente` (qui enregistre) ni `mandat-supprime` (qui
+supprime), ni les `step1`/`step2` du geste de génération** : ils créent un mandat et
+**brûlent un numéro NON ANNULABLE** — c'est PROTEXA qui le fabrique, mention légale,
+série cotée sans discontinuité.
 
-⛔ **Et JAMAIS `mandat-postMandatVente` ni `mandat-supprime`.**
-
-## ② RENDRE LA MODALE DU REGISTRE AUTONOME — *la plus importante*
+## ② RENDRE LA MODALE DU REGISTRE AUTONOME — **la plus importante**
 
 Le motif existe et fonctionne **sur la fiche annonce** depuis le 02/10 :
 
@@ -147,39 +180,41 @@ editorPartialContacts (~23557) <- proprietaires_json du registre          0 / 24
 texte **brut de Hektor**, intact dans le payload. Sur une ligne contaminée, le document
 imprimerait **BANO au lieu de SOUVIGNET**.
 
-À faire, trois endroits :
+Trois endroits :
 1. `editorFullContacts` ← `mandants_registre_json` d'abord, `proprietaires_json` en repli ;
 2. `editorPartialContacts` ← `selectedDetail.mandants_json` (24 451 lignes l'ont) ;
 3. `mandantsLibelle` (App.tsx ~4440) ← la **liste de contacts** avant `detail.mandants_texte`.
 
+⚠ `VITE_RUBRIQUE_CONTACT_REGISTRE` vaut `'1'` par défaut — l'interrupteur est **allumé**.
+
 ## ③ MASQUER `mandat_montant` DANS LE DÉTAIL DU DOSSIER
 
-Mon masquage porte sur `app_mandat_register_current.mandat_montant` — **que le front ne
-lit pas**. Les deux usages réels lisent le **détail du dossier** :
+Mon masquage porte sur `app_mandat_register_current.mandat_montant` — **que le front ne lit
+pas**. Les deux usages réels lisent le **détail du dossier** :
 
 ```
-App.tsx ~17978  detail.mandat_montant -> rubrique Mandat V3   (V3 est ALLUMÉ)
-App.tsx ~4447   detail.mandat_montant -> dernier recours des HONORAIRES du PDF
+App.tsx ~17978  detail.mandat_montant -> rubrique Mandat V3   (⚠ V3 est ALLUME)
+App.tsx  ~4447  detail.mandat_montant -> dernier recours des HONORAIRES du PDF
 ```
 
 **31 fiches** portent encore un montant faux, dont **5** sans aucun autre honoraire —
 celles-là pourraient l'imprimer sur un document contractuel :
 
 ```
-61811:18466  17/03  Actif       prix  71 000  -> montant affiche  95 000
-62049:18602  13/05  Sous offre  prix 160 000  -> montant affiche  45 000
-62567:18718  24/06  Actif       prix 275 000  -> montant affiche  55 000
-62001:18749  07/07  Actif       prix 665 000  -> montant affiche 130 000
-24113:18787  28/07  Actif       prix 128 787  -> montant affiche  69 000
+61811:18466  17/03  Actif       prix  71 000  ->  95 000
+62049:18602  13/05  Sous offre  prix 160 000  ->  45 000
+62567:18718  24/06  Actif       prix 275 000  ->  55 000
+62001:18749  07/07  Actif       prix 665 000  -> 130 000
+24113:18787  28/07  Actif       prix 128 787  ->  69 000
 ```
 
-Le marqueur existe : `charger_corps_suspects()` dans `export_app_payload.py`. Il suffit
-de l'appliquer dans `build_trimmed_detail_payload` / `build_dossier_details`, qui
-disposent de `hektor_annonce_id`.
+Le marqueur existe : `charger_corps_suspects()` dans `export_app_payload.py`. À appliquer
+dans `build_trimmed_detail_payload` / `build_dossier_details`, qui disposent de
+`hektor_annonce_id`.
 
-⚠ **Fenêtre fermée** : les 31 vont de **mars à juillet 2026**, rien après — depuis août
-Hektor ne donne plus de montant du tout (363 des 454 étaient déjà vides). C'est un
-**stock fixe**, pas une hémorragie.
+⚠ **Fenêtre FERMÉE** : les 31 vont de **mars à juillet 2026**, rien après — depuis août
+Hektor ne donne plus de montant du tout (363 des 454 étaient déjà vides). **Stock fixe,
+pas hémorragie.** Statuts : 17 Actif · 9 Sous compromis · 3 Sous offre · 2 Estimation.
 
 ## ④ RETIRER `detail.mandat_montant` DE LA CHAÎNE DES HONORAIRES
 
@@ -193,18 +228,18 @@ const rawHonoraires = firstNonEmpty(
 )
 ```
 
-Un **montant de mandat n'est pas un honoraire** : repli douteux par nature, même sans ce
-bug.
+Un **montant de mandat n'est pas un honoraire** : repli douteux par nature, même sans ce bug.
 
-## ⑤ POUSSER LES 18 COMMITS
+## ⑤ VALIDER LE FRONT ET POUSSER
 
 ```bash
+cd apps\hektor-v1 ; npm run build
 cd C:\Hektor\Projet ; git push origin main
 ```
 
-⚠ Le hook exige `GTI_ALLOW_PUSH=1`. Parmi les 18 : **le correctif de la régression du
-05/10** (voir plus bas). ⚠ Ne pas stager `.gitignore` ni les deux
-`phase2/docs/RAPPORT_*.md` — ils sont réécrits par le run.
+**19 commits.** ⚠ Le hook exige `GTI_ALLOW_PUSH=1`. Rien n'est sauvegardé hors de cette
+machine, et parmi eux il y a **le correctif de la régression**. ⚠ **Ne pas stager**
+`.gitignore` ni les deux `phase2/docs/RAPPORT_*.md` — ils sont réécrits par le run.
 
 ## ⑥ LE PUSH DU REGISTRE VERS SUPABASE *(différé du 05/10 au soir)*
 
@@ -213,8 +248,7 @@ cd C:\Hektor\Projet ; git push origin main
 ```
 
 24 487 lignes, ~90 s, **UPSERT seul, aucune suppression** — faisable pendant que l'agence
-travaille. Différé seulement pour ne pas charger Supabase pendant le drainage des
-documents.
+travaille. Différé seulement pour ne pas charger Supabase pendant le drainage.
 
 ## ⑦ LE SIGNALEMENT À LA BOÎTE IMMO
 
@@ -223,12 +257,45 @@ documents.
 > rendent **tous les trois** le mandat HEKTOR 16564 de 2024. Votre fiche annonce fait de
 > même : elle renvoie **le montant et les mandants du mandat HEKTOR** sous **le numéro et
 > les dates du mandat PROTEXA**. **454 mandats** concernés depuis mars 2026.
+> Reproductible chez vous en cinq minutes.
+
+**Et dans le même message, la demande d'export** « liste mandat » du **01/03/2026 à
+aujourd'hui** : c'est la seule source qui ait jamais porté ces montants. Le lecteur existe
+déjà (`phase2/sync/manual_mandat_corrections.py`, qui lit le fichier de **février**).
+⚠ Il faudra l'autoriser à **corriger** un corps faux, pas seulement à **combler** un vide
+(`if (mandats) return data` renonce dès qu'un mandat existe).
 
 ---
 
-# ⚠⚠ LA RÉGRESSION DU 05/10 — à vérifier au réveil
+# PARTIE 4 — NE PAS CONFONDRE : LES DEUX GROUPES DE 31
 
-J'avais cassé le **chemin immédiat du worker** pendant neuf heures :
+```
+groupe A : 31 lignes SANS MANDANT au registre
+groupe B : 31 fiches dont le DETAIL porte un montant faux
+en commun : 0        <- le meme chiffre par pure coincidence
+```
+
+**Le groupe A n'a rien à corriger :**
+
+```
+annees : 2011 (3) · 2012 (3) · 2013 (7) · 2014 (2) · 2016 (11) · 2017 (1) · 2021 (1)
+statut : 29 « Clos » · 1 « Vendu » · 1 « Estimation »   ·   29 sur 31 archivees
+avec un mandants_json quand meme : 0   -> PERSONNE ne les connait
+la plus recente : 2021-05-04
+```
+
+⭐ Et **10 des 31 portent le même numéro `10249` du 15/03/2016** — annonces 36027 à 36036,
+« PROGRAMME NEUF », « TYPE 2 DE 39M² »… **C'est un programme neuf : un seul mandat couvrant
+dix lots**, et le mandant est chez le promoteur. C'est le cas légitime que la sentinelle
+compte à part (117 identifiants).
+
+**Les 39 annonces à plusieurs lignes au registre sont elles aussi légitimes** : 24
+renouvellements (années différentes) + 13 dans l'année + **2** vrais doublons (deux numéros
+émis le même jour par PROTEXA, à clôturer chez Hektor).
+
+---
+
+# PARTIE 5 — ⚠⚠ LA RÉGRESSION DU 05/10, à vérifier au réveil
 
 ```
 TypeError: tuple indices must be integers or slices, not str
@@ -237,49 +304,64 @@ TypeError: tuple indices must be integers or slices, not str
 
 La fonction lisait les colonnes **par nom**, ce qui exige `row_factory = sqlite3.Row`.
 `registre_mandats_upsert.py` le pose, mes contrôles aussi — **`push_single_annonce_to_supabase.py`
-NON**. `refresh_console_data` a échoué **9 fois** entre 13:10 et 16:34 : une modification
-d'annonce n'était plus poussée en ~1 min, et **rien ne le disait à l'écran**.
+NON**. `refresh_console_data` a échoué **9 fois** entre 13:10 et 16:34 (annonces 63158,
+61895, 63081, 63156) : une modification d'annonce n'était plus poussée en ~1 min, et **rien
+ne le disait à l'écran**. C'est exactement le chemin de l'autonomie.
 
-Corrigé (`3607d29`) par un **accès par position**, éprouvé dans la condition qui
-échouait. **À vérifier demain : 0 nouvelle erreur `refresh_console_data` après 21h.**
+Corrigé `3607d29` par un **accès par position**, éprouvé dans la condition qui échouait
+(58 594 annonces lues sans `row_factory`, résultat identique avec).
 
-➡ La leçon : **une fonction appelée par plusieurs chemins ne suppose pas la forme des
-lignes.** J'avais éprouvé trois fois — toujours par le chemin qui pose `row_factory`.
-
----
-
-# CE QUI RESTE NOTÉ, SANS URGENCE
-
-- **2 numéros brûlés le même jour** à clôturer chez Hektor : 63073 (18883/18884, 18/09) ·
-  63132 (18894/18895, 22/09). Un numéro émis ne disparaît pas d'un registre : la clôture
-  se fait chez eux.
-- **1 mandat du miroir sans annonce** (sur 94 lignes, 93 sont des doublons de la vague du
-  27/08).
-- **le lien MARULAZ** : `mandants(idAnnonce: 48100)` de Hektor connaît Sylvain MARULAZ
-  (603108) comme mandant, et notre registre des liens ne l'a pas. Piste : lire les
-  mandants par cette API plutôt que les déduire.
-- **687+ contacts** dont le `display_name` porte la raison sociale à la place du nom de
-  famille (SCI, Indivision). Phénomène **ancien** (5-7 % sur 2011-2014, 1 % depuis).
-  Touche l'annuaire, la recherche, les documents. Voir mémoire
-  `contacts-nom-famille-remplace-par-raison-sociale`.
-- `busy_timeout` sur `pull_from_supabase.py` · le garde-fou d'ordonnancement
-  descente / quotidien.
+➡ **La leçon, écrite dans le code** : une fonction appelée par **plusieurs chemins** ne
+suppose pas la forme des lignes. J'avais éprouvé trois fois — toujours par le chemin qui
+pose `row_factory`.
 
 ---
 
-# LES OUTILS DE DIAGNOSTIC ÉCRITS LE 05/10
-
-⛔ **Aucun n'est appelé par le run** — ce sont des sondes, en lecture seule.
+# PARTIE 6 — CE QUI RESTE NOTÉ, SANS URGENCE
 
 | | |
 |---|---|
-| `Console/introspect_mandats_query.js` | l'introspection GraphQL (coupée chez Hektor) |
+| **2 numéros brûlés** | 63073 (18883/18884, 18/09) · 63132 (18894/18895, 22/09) — la clôture se fait **chez Hektor** : un numéro émis ne disparaît pas d'un registre |
+| **1 mandat du miroir sans annonce** | sur 94 lignes sans annonce, 93 sont des doublons de la vague du 27/08 ; le vrai manque est **1** |
+| **le lien MARULAZ** | `mandants(idAnnonce: 48100)` connaît Sylvain MARULAZ (603108) et notre registre des liens ne l'a pas → ⭐ **piste : lire les mandants par cette API** plutôt que les déduire, ce qui comblerait les liens manquants |
+| **687+ contacts** | le `display_name` porte la raison sociale à la place du nom (SCI, Indivision). **Ancien** : 5-7 % sur 2011-2014, 1 % depuis. Touche annuaire, recherche, documents. Mémoire `contacts-nom-famille-remplace-par-raison-sociale` |
+| **les mandants cliquables** | `mandants_json` porte déjà les deux identifiants par personne — il ne reste que l'écran. Chantier séparé |
+| ⛔ **les GESTES du mandat** | **2** gestes worker contre **9** pour l'annonce · **0** RPC optimiste · « Modifier le montant » / « Annuler » / « Résilier » ne font qu'un `INSERT` dans `app_diffusion_request`. **C'est le vrai retard d'autonomie du mandat** |
+| **`app_mandat_mandant`** | une table mandat × contact serait la réponse de fond pour un historique fidèle. **Écartée** : 99,7 % des annonces n'ont qu'un mandat, les divergences valent 0,8 %. À ne rouvrir que si le besoin apparaît |
+| **la reconstruction du montant** | **testée et écartée** : 80 % de justesse même quand le prix n'a pas bougé, et l'historique de prix ne démarre qu'au 05/06/2026 (303 lignes). Inacceptable pour une mention contractuelle |
+| **les restes du run** | `busy_timeout` sur `pull_from_supabase.py` · le garde-fou d'ordonnancement descente / quotidien |
+
+---
+
+# PARTIE 7 — CE QUI EST VÉRIFIÉ ET N'A PAS BESOIN D'ÊTRE REVU
+
+| | mesure |
+|---|---|
+| le **prix du listing** est bien celui de l'annonce | et c'est **le dernier** : 206 / 206 égaux à la dernière valeur de l'historique |
+| la **fonction qui suit les prix** tourne | 303 événements du 05/06 au 04/10 · 207 lignes avec historique |
+| les **doublons** dus aux identifiants Hektor | **résolus** : 0 doublon technique |
+| le **bon mandat est lié** aux 454 | 436 / 454 ont `numéro == no_mandat de l'annonce` ; les 18 autres sont les annonces à plusieurs mandats |
+| les **31** du groupe B ont tout bon au registre | mandant **31/31** · json **31/31** · id annonce **31/31** · date **31/31** · **prix 31/31** |
+| le **worker ne passe pas par Render** | 0 occurrence — un `git push` ne coupe pas son drainage |
+| les **4 services** sont des services **Windows locaux** | ils tournent depuis l'arbre de travail : un push ne les redémarre pas |
+| une **session Hektor en parallèle** ne gêne pas le worker | mesuré : 0 erreur sur 578 running + 288 done pendant mes sondes |
+
+---
+
+# LES OUTILS ÉCRITS LE 05/10
+
+⛔ **Aucun n'est appelé par le run.** Lecture seule, diagnostic.
+
+| | |
+|---|---|
+| `Console/introspect_mandats_query.js` | l'introspection GraphQL — **coupée** chez Hektor |
 | `Console/sonde_mandats_graphql.js` | trouve les champs par les messages d'erreur du serveur |
 | `Console/sonde_mandants_annonce.js` | `mandants(idAnnonce)` — la requête **dédiée**, qui marche |
 | `Console/comparer_mandants_api_vs_liens.js` | leur API contre notre registre : **5 cas contaminés sur 5**, elle confirme nos noms |
-| `Console/sonde_getmandatbyid.js` | `getMandatById` — c'est elle qui a prouvé la cause |
-| `Console/sonde_mandat_prix_web.js` | **l'épreuve ① de demain** |
+| `Console/sonde_getmandatbyid.js` | c'est elle qui a prouvé la cause |
+| `Console/sonde_mandat_prix_web.js` | **l'épreuve ① de demain** — prend la session fraîche du worker |
 
-⚠ Le jeton valide est dans `Console/token_dump.json` (celui de `storage_state.json` a
-expiré le 29/06). L'endpoint exige un en-tête `Authorization` — les cookies ne suffisent
-pas.
+⚠ Le jeton GraphQL valide est dans `Console/token_dump.json` (celui de
+`storage_state.json` a expiré le 29/06). L'endpoint exige un en-tête `Authorization` — les
+cookies ne suffisent pas. Les **cookies** web, eux, sont dans
+`Console/sessions/storage_state_<kind>.json`, rafraîchis par chaque service.
