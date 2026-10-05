@@ -51,17 +51,30 @@ auraient disparu et deux annonces se seraient écrasées l'une l'autre à chaque
 
 # 3. LES DEUX ÉCARTS DE COMPLÉTUDE — MESURÉS ET EXPLIQUÉS
 
-### ⚠ 94 mandats du miroir ne sont nulle part chez nous
+### ⚠ 94 lignes du miroir sans annonce — mais UN SEUL vrai manque
 
 ```
 annonce (VIDE)   numero 16485   debut 2023-12-08   hektor_id 569
 annonce (VIDE)   numero 14558   debut 2022-04-25   hektor_id 616
 ```
 
-**Leur `hektor_annonce_id` est vide.** La clé du ledger étant le couple
-(annonce, numéro), ils ne peuvent pas être placés — et on ne va pas inventer une
-annonce. Le comportement est juste ; le fait reste : **94 mandats existent chez
-Hektor et n'existent pas chez nous.** À traiter séparément.
+Leur `hektor_annonce_id` est vide, donc la clé (annonce, numéro) ne peut pas les
+placer. **MAIS CE NE SONT PAS 94 MANDATS PERDUS** — mesuré le 05/10 :
+
+```
+sur les 94 : le MEME numero existe AUSSI avec son annonce : 91
+             vraiment orphelins                           :  3
+numeros presents dans app_mandat                          : 93 sur 94
+numeros presents au registre                              : 92 sur 94
+```
+
+⚠ **91 des 94 viennent d'UNE SEULE vague, le 27/08/2026** (116 lignes écrites ce
+jour-là) : des doublons posés sans identifiant d'annonce. Le mandat, lui, est bien
+chez nous sous son annonce.
+
+➡ **Le vrai manque est de 1 mandat dans `app_mandat`, 2 au registre.** J'avais
+annoncé 94 : c'était ma cinquième erreur de comptage de la journée sur ce dossier
+(voir le journal des erreurs en §7).
 
 ### ✔ 2 348 mandats de `app_mandat` ne sont pas au registre — tous expliqués
 
