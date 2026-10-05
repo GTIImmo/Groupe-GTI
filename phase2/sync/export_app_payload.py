@@ -1867,10 +1867,19 @@ def charger_mandants_du_registre_des_liens(
 
     vus: dict[str, set[str]] = {}
     roles_ecartes: dict[str, int] = {}
-    for ligne in lignes:
-        annonce = normalize_text(ligne["ann"])
-        nom = normalize_text(ligne["nom"])
-        role = (normalize_text(ligne["role"]) or "").lower()
+    # ⛔⛔ ACCES PAR POSITION, JAMAIS PAR NOM -- ET C'EST UNE PANNE VECUE.
+    #   Ma 1re version lisait ligne["ann"], ce qui exige con.row_factory =
+    #   sqlite3.Row. registre_mandats_upsert.py le pose, mes controles aussi --
+    #   mais push_single_annonce_to_supabase.py NON. Resultat le 05/10 : le chemin
+    #   IMMEDIAT du worker (refresh_console_data, ~1 min) a echoue 9 fois en 9
+    #   heures sur « TypeError: tuple indices must be integers », et l'app est
+    #   restee sur les donnees de la veille sans que rien ne le dise a l'ecran.
+    #   ⚠ Une fonction appelee par PLUSIEURS chemins ne suppose pas la forme des
+    #     lignes : la position marche dans les deux cas.
+    for annonce_brute, app_id, hektor_id, role_brut, nom_brut in lignes:
+        annonce = normalize_text(annonce_brute)
+        nom = normalize_text(nom_brut)
+        role = (normalize_text(role_brut) or "").lower()
         # ⚠ LE REGISTRE DES LIENS NE PORTE PAS QUE DES MANDANTS. Mesure du 05/10 :
         #     mandant 74 200 · proprietaire 58 479 · acquereur_compromis 4
         #   Les deux premiers sont LE MEME GESTE (`fait = proprietaire_du_bien`
@@ -1891,8 +1900,8 @@ def charger_mandants_du_registre_des_liens(
             continue
         vus[annonce].add(cle)
         entree: dict[str, object] = {
-            "app_contact_id": ligne["app_id"],
-            "hektor_contact_id": normalize_text(ligne["hektor_id"]) or None,
+            "app_contact_id": app_id,
+            "hektor_contact_id": normalize_text(hektor_id) or None,
             "nom": nom,
         }
         if _nom_est_muet(nom):
