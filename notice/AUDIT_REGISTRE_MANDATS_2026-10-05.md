@@ -496,3 +496,68 @@ annonce 63073  (id unique)  ->  pointeurs 738, 740  ->  mandats de 2022
 
 Chaque annonce est interrogée seule, avec son identifiant propre. Le mélange est
 **dans la réponse de Hektor pour cette annonce**, pas dans notre extraction.
+
+---
+
+# 11. ⚠ CORRECTION DU §9 ET DU §10 — LE MONTANT EXISTE CHEZ HEKTOR
+
+Question de Frédéric : *« on ne peut pas y trouver une logique ? »*. Si, et elle
+renverse ma conclusion.
+
+## La logique : la séquence d'identifiants a redémarré à 1
+
+```
+mars 2026    : numero 18420 -> id   3     ecart 18417
+             : numero 18421 -> id   4     ecart 18417  (constant)
+octobre 2026 : numero 18917 -> id 806     ecart 18111
+
+identifiants 3 -> 806 pour les numeros 18420 -> 18917
+470 identifiants pour 497 numeros, 313 trous  -> ~1,6 identifiant par mandat
+```
+
+Un identifiant est attribué **à la création**. Donc ces mandats **ont un
+enregistrement chez Hektor**.
+
+## La preuve : la fiche annonce mélange DEUX enregistrements
+
+```
+annonce 39707   ce que Hektor rend : num 18523  2026-04-10 -> 2027-05-09  62 000  BANO
+                le VIEUX           : num 14898  2022-07-20 -> 2024-07-20  62 000  BANO
+                -> DATES du NEUF + MONTANT du VIEUX + MANDANTS du VIEUX
+```
+
+Idem sur 61650, 61794, 48100. **Les dates reçues sont celles de 2026** : elles ne
+peuvent pas venir d'un enregistrement de 2022.
+
+➡ **CE QUE J'AVAIS ÉCRIT AU §9 ET §10 EST FAUX** : le montant n'a pas « jamais
+existé ». Il existe, et c'est la **résolution de l'identifiant** chez Hektor qui nous
+sert le mauvais des deux enregistrements qui le partagent.
+
+## Ce que ça change
+
+| | avant cette correction | après |
+|---|---|---|
+| nature du défaut | donnée absente chez Hektor | **ambiguïté de résolution** chez Hektor |
+| réparable ? | non | **oui, par eux** — et sans travail chez nous |
+| le signalement | « vos mandats n'ont pas d'enregistrement » | « votre fiche annonce et `getMandatById` résolvent l'identifiant vers l'ANCIEN mandat » |
+
+⭐ **Et notre masque se lèvera de lui-même** : il se déclenche sur « identifiant
+partagé ». Le jour où Hektor servira le bon enregistrement, les nouveaux mandats ne
+seront plus marqués et le montant reviendra au prochain run, sans migration.
+
+⚠ Avec une réserve honnête : les 470 lignes **déjà stockées** gardent leur identifiant
+bas dans notre miroir (qui n'efface jamais). Pour elles, il faudra que Hektor nous
+redonne la ligne avec le bon identifiant — ce que la descente fera naturellement,
+puisqu'une nouvelle paire (annonce, identifiant) crée une nouvelle ligne et que
+`app_mandat` garde la plus récente.
+
+## Le cas 63132 montre que le mélange n'est pas uniforme
+
+```
+ce que Hektor rend : num 18894  2026-09-22 -> 2027-09-21  montant None  « HERRMANN Alexander »
+le VIEUX (id 760)  : num 13497  2021-04-15 -> 2023-04-15  montant 245 000  « Paulette SABY »
+```
+
+Ici les **mandants sont les bons** (HERRMANN) et seul le montant manque. Donc selon le
+cas, ce sont le montant seul, ou le montant **et** les mandants, qui fuient de
+l'ancien enregistrement.
