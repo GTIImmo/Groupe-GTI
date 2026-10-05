@@ -427,3 +427,72 @@ jamais appelés par le run.
 
 ⛔ **Ce qui reste, et qui n'est pas réparable chez nous** : le montant de ces mandats.
 À porter à La Boîte Immo — c'est la cause unique de tout ce dossier.
+
+---
+
+# 10. LA DATE DE LA PANNE CHEZ HEKTOR — fin février 2026
+
+Question de Frédéric : *« Hektor nous retourne bien le numéro de mandat en plus de
+l'id mandat, donc on peut bien retrouver ? »*
+
+**Le numéro, oui, on l'a, et il est juste.** Ce qui manque, c'est l'enregistrement
+derrière. Mesuré par l'API :
+
+```
+getMandatById(79720) -> numero 18285, 2026-01-08, 55 750   <- un VRAI enregistrement
+getMandatById(79800) -> null
+getMandatById(80000) -> null        la sequence d'identifiants S'ARRETE a 79 720
+getMandatById(80500) -> null
+```
+
+## La bascule, par tranche de numéros
+
+```
+numeros 18200-18299 :  84 des 103 ont un identifiant HAUT  (jusqu'au 14/01/2026)
+numeros 18300-18399 :  40 des 100                           (jusqu'au 22/02/2026)
+numeros 18400-18499 :   0 sur  93                           <- plus AUCUN
+numeros 18500+      :   0                                      enregistrement propre
+```
+
+```
+dernier identifiant HAUT : 79 720, le 2026-01-30, numero 18339
+premier identifiant BAS  :      3, le 2026-01-28, numero 18420
+les 470 mandats a identifiant bas : du 2026-01-28 au 2026-11-16
+les  63 a identifiant haut        : tous en JANVIER 2026
+```
+
+➡ **Vers la fin février 2026, Hektor a cessé de créer des enregistrements de mandat.**
+Depuis, chaque nouveau mandat reçoit un **pointeur bas et déjà utilisé**, et la fiche
+annonce habille le vieux mandat du numéro et des dates du neuf.
+
+## Et aucune porte ne prend le numéro
+
+```
+getMandatByNumero · mandatByNumero · mandatsByNumero · mandatsListing · getMandats
+   -> « Cannot query field »
+mandats(idAnnonce)        -> rend [] partout
+rechercheMandants(search) -> rend des [Prospect] : c'est une recherche de PERSONNES
+lastMandants(idUser)      -> des Prospect aussi
+getMandatById(id)         -> le vieux mandat, et null au-dela de 79 720
+```
+
+⛔ **Donc on ne peut pas retrouver le montant : il n'est stocké nulle part chez
+Hektor.** La seule source qui l'ait jamais porté est l'**export « liste mandat »**
+(un rapport, pas l'API) — et c'est très probablement pour cette raison que
+`liste mandat du 02_02_2026 au 28_02_2026.xlsx` existe dans le dépôt : février est
+le mois où la panne a commencé.
+
+## ⚠ Et ce n'est PAS une histoire d'id annonce
+
+Les identifiants d'annonce, chez Hektor comme chez nous, ne sont jamais en double —
+c'est vrai, et c'est sans rapport. Le doublon est sur le **pointeur de mandat** que
+l'annonce porte :
+
+```
+annonce 39707  (id unique)  ->  pointeur 105  ->  mandat de 2022 (annonce 454)
+annonce 63132  (id unique)  ->  pointeurs 760, 762  ->  mandats de 2021
+annonce 63073  (id unique)  ->  pointeurs 738, 740  ->  mandats de 2022
+```
+
+Chaque annonce est interrogée seule, avec son identifiant propre. Le mélange est
+**dans la réponse de Hektor pour cette annonce**, pas dans notre extraction.
