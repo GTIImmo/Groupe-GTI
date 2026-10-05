@@ -631,3 +631,57 @@ du numéro et des dates du mandat PROTEXA.
 ➡ **La donnée existe. C'est sa résolution qui échoue.** Et la solution d'époque
 (« la fiche annonce tranche ») n'était pas fausse : elle a cessé d'être vraie le jour
 où une seconde famille de mandats est apparue.
+
+---
+
+# 13. LA PREUVE QUE LE CRITÈRE EST LE BON — 1 % contre 99 %
+
+Question de Frédéric : *« si La Boîte Immo ne corrige pas, notre projet gère
+maintenant ? »*. Oui, et voici la mesure qui le montre.
+
+Le critère sépare les mandats PROTEXA selon qu'un **jumeau HEKTOR** porte le même
+identifiant nu. On compare alors le montant du mandat au prix de l'annonce :
+
+```
+PROTEXA AVEC jumeau HEKTOR  (les 446 masques)
+   montant == prix de l'annonce :   1 sur  88 comparables  (  1 %)
+   montant != prix              :  87
+   sans montant                 : 357
+
+PROTEXA SANS jumeau          (les 1 216 non masques)
+   montant == prix de l'annonce : 522 sur 526 comparables  ( 99 %)
+   montant != prix              :   4
+   sans montant                 :  68
+```
+
+⭐ **1 % contre 99 %.** Les lignes masquées ont un montant qui ne correspond
+**jamais** au bien — parce qu'il vient d'un autre. Celles qu'on épargne
+correspondent **toujours**. Le critère ne sur-masque pas et ne sous-masque pas.
+
+## Et le mécanisme est complet par construction
+
+```
+plage des identifiants HEKTOR  : 1 a 79 720   (23 023 mandats)
+plage des identifiants PROTEXA : 3 a 26 047   ( 1 662 mandats)
+```
+
+Un nouveau mandat PROTEXA reçoit un identifiant bas, qui **collisionne forcément**
+avec la série HEKTOR : il sera donc marqué au prochain run, **sans intervention**. Et
+s'il n'y a pas de collision, il n'y a pas de fuite non plus — rien à masquer.
+
+➡ Ce n'est pas une liste figée de 454 lignes, c'est une **règle recalculée à chaque
+run sur le miroir local**.
+
+## Ce que le projet gère sans eux, et ce qu'il ne peut pas
+
+| | |
+|---|---|
+| mandants | ✔ justes (registre des liens, confirmé par leur API 5/5) |
+| montant faux | ✔ plus affiché (454 lignes, dont 91 montraient un chiffre) |
+| recherche | ✔ plus de nom étranger |
+| un mandat PROTEXA demain | ✔ détecté et masqué automatiquement |
+| aggravation | ✔ la sentinelle alerte |
+| Hektor coupé | ✔ 0 appel dans la chaîne |
+| **le montant lui-même** | ⛔ **absent** — ni reconstructible (80 % de justesse, écarté), ni accessible par API |
+
+**Vide et honnête plutôt que rempli et faux.** C'est tenable indéfiniment.
