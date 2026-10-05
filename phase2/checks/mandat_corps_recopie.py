@@ -57,6 +57,9 @@ MIROIR = ROOT / "data" / "hektor.sqlite"
 # Le seuil n'est PAS un reglage de confort : c'est l'etat connu au 05/10/2026.
 # Il doit BAISSER quand Hektor corrige, jamais monter en silence.
 CONNU_AU_05_10 = 91
+# Le second defaut : un couple (annonce, numero) qui porte DEUX mandats de dates
+# differentes. 31 au 05/10 (22 ou l'on garde le plus ancien, 9 le plus recent).
+COUPLES_A_DEUX_MANDATS_AU_05_10 = 31
 
 # Les deux formes de partage d'identifiant, qu'il ne faut JAMAIS confondre :
 #   meme corps + meme numero  -> UN mandat qui couvre plusieurs lots. NORMAL.
@@ -114,16 +117,61 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         "  GROUP BY 1 ORDER BY 1 DESC"
     ).fetchall()
 
+    # ═══ LE SECOND DEFAUT, TROUVE LE 05/10 EN REPONDANT A FREDERIC ═══
+    #
+    # « On avait cree une cle speciale numero de mandat + id annonce, donc pourquoi
+    #   mon projet ne voit pas la difference et dit doublons ? »
+    #
+    # ⭐ LA CLE TIENT : `app_mandat` n'a AUCUN couple en doublon. Mais chez Hektor le
+    #   couple (annonce, numero) n'est PAS UNIQUE NON PLUS -- 149 cas -- parce que sa
+    #   cle primaire porte sur (hektor_annonce_id, hektor_mandat_id). Un meme numero
+    #   de mandat se retrouve donc sur la meme annonce avec DEUX identifiants.
+    #
+    # ⚠ ET NOTRE FUSION EN GARDE UN SEUL. Mesure du 05/10 sur les 149 :
+    #       116  les deux lignes ont la MEME date -> le meme mandat vu deux fois,
+    #            la fusion est JUSTE, rien a signaler
+    #        22  deux mandats DIFFERENTS et on garde le PLUS ANCIEN
+    #             -> le mandat en cours est perdu   (annonce 1032 numero 4069 :
+    #                on garde BOURGEAT 2012 / 158 685, on perd TISSIER 2020 / 76 230)
+    #         9  deux mandats differents, on garde le plus recent
+    #   Les mandats perdus datent de 2020 (10), 2021 (8), 2022 (2), 2025 (2) :
+    #   RIEN depuis janvier 2025. C'est un defaut ancien, pas une degradation.
+    #
+    # ⛔ POURQUOI PERSONNE NE LE DISAIT. Le controle existant verifie que NOTRE cle
+    #   est respectee (0 doublon) -- et c'est ce zero qui masquait les 157 lignes du
+    #   miroir que la fusion absorbe. Verifier qu'une cle est respectee ne dit pas
+    #   qu'elle ne confond pas deux choses.
+    couples_a_deux_mandats = conn.execute(
+        "WITH doublons AS ("
+        "   SELECT hektor_annonce_id, numero FROM hektor_mandat"
+        "    GROUP BY 1, 2 HAVING COUNT(*) > 1)"
+        " SELECT COUNT(*) FROM ("
+        "   SELECT m.hektor_annonce_id, m.numero"
+        "     FROM hektor_mandat m"
+        "     JOIN doublons d ON d.hektor_annonce_id = m.hektor_annonce_id"
+        "                    AND d.numero = m.numero"
+        "    GROUP BY 1, 2"
+        "   HAVING COUNT(DISTINCT COALESCE(m.date_debut, '')) > 1)"
+    ).fetchone()[0]
+    lignes_absorbees = conn.execute(
+        "SELECT COALESCE(SUM(n - 1), 0) FROM ("
+        "   SELECT COUNT(*) AS n FROM hektor_mandat"
+        "    GROUP BY hektor_annonce_id, numero HAVING COUNT(*) > 1)"
+    ).fetchone()[0]
+
     comptes = {
         "corps_recopie": corps_recopie,
         "lignes_atteintes": lignes_atteintes,
         "un_mandat_plusieurs_lots": un_mandat_plusieurs_lots,
+        "couples_a_deux_mandats": couples_a_deux_mandats,
+        "lignes_absorbees": lignes_absorbees,
         "par_annee": par_annee,
         # L'AGGRAVATION EST L'ALERTE, pas le niveau : 91 est l'etat connu et subi.
         # Ce qui doit reveiller, c'est qu'il MONTE.
         "aggravation": max(0, corps_recopie - CONNU_AU_05_10),
+        "aggravation_couples": max(0, couples_a_deux_mandats - COUPLES_A_DEUX_MANDATS_AU_05_10),
     }
-    comptes["graves"] = comptes["aggravation"]
+    comptes["graves"] = comptes["aggravation"] + comptes["aggravation_couples"]
     return comptes
 
 
@@ -175,6 +223,14 @@ def main() -> int:
         print("      dont montant != prix annonce     : %s sur %s   (9 %% sur les lignes saines)"
               % (ecart, total))
     print("   un mandat sur plusieurs lots (NORMAL): %s" % m["un_mandat_plusieurs_lots"])
+    print("")
+    print("   -- et la ou NOTRE cle confond deux mandats --")
+    print("   couples portant DEUX mandats de dates")
+    print("   differentes                         : %s   (connu au 05/10 : %s)"
+          % (m["couples_a_deux_mandats"], COUPLES_A_DEUX_MANDATS_AU_05_10))
+    print("      lignes du miroir absorbees        : %s" % m["lignes_absorbees"])
+    print("      (la cle (annonce, numero) en garde UNE : sur 22 cas c'est la plus")
+    print("       ancienne, donc le mandat en cours est perdu. Rien depuis 01/2025.)")
     print("")
     print("   -- la pression : part d'identifiants Hektor deja pris --")
     for an, total, part in m["par_annee"]:
