@@ -1940,46 +1940,57 @@ def charger_corps_suspects(con: sqlite3.Connection) -> set[tuple[str, str]]:
     rend, pour le mandat NEUF, le corps de l'ANCIEN. 91 cas, 89 en 2026.
     Voir notice/AUDIT_REGISTRE_MANDATS_2026-10-05.md.
 
-    ⚠ LE CRITERE EST CELUI DE LA SENTINELLE, ET IL DOIT RESTER LE MEME :
-        meme identifiant Hektor sur plusieurs annonces
-      + MEME texte de mandants
-      + numeros DIFFERENTS                 <- ce qui ecarte le cas legitime
-    Le cas ecarte (117) est UN mandat qui couvre PLUSIEURS LOTS : meme corps ET
-    meme numero. Celui-la est juste, et on n'y touche pas.
+    ⭐ LE CRITERE, ET IL A ETE VALIDE CONTRE L'API DE HEKTOR (8 cas sur 8).
+      Un identifiant partage par plusieurs mandats de NUMEROS DIFFERENTS porte un
+      seul vrai enregistrement, et `getMandatById(id)` rend TOUJOURS celui dont le
+      NUMERO EST LE PLUS PETIT :
+          id  3 : nos lignes 16767 (2024) / 18420 (2026)      -> l'API rend 16767
+          id  7 : nos lignes 16635 (2024) / 18424 (sans date) -> l'API rend 16635
+          id 10 : nos lignes 16564 (2024) / 18427 (2026)      -> l'API rend 16564
+      Donc : le plus petit numero est le VRAI mandat, et les autres lignes sont
+      FABRIQUEES par la fiche annonce (numero et dates de l'annonce + corps du vieux
+      mandat). On ne marque QUE les fabriquees -- masquer le vrai cacherait un
+      montant juste.
 
-    ⭐ CE QUE CETTE LISTE SERT A FAIRE, ET CE QU'ELLE NE FAIT PAS.
-      Elle ne repare rien -- le vrai montant n'existe nulle part chez nous. Elle
-      permet seulement de NE PLUS AFFICHER une valeur fausse, et de ne plus donner
-      un nom etranger a la recherche. La valeur de Hektor reste intacte dans le
-      payload embarque : rien n'est detruit.
+    ⚠ ON TRIE SUR LE NUMERO, PAS SUR LA DATE. L'identifiant 7 porte une ligne SANS
+      date : un tri par date la ferait passer en tete et accuserait le vrai mandat.
+      Le numero, lui, est toujours present et croit avec le temps.
+
+    ⛔ CE QUE CETTE LISTE NE FAIT PAS : elle ne repare rien. Le montant du mandat
+      fabrique n'existe NULLE PART -- ni chez nous, ni chez Hektor : `getMandatById`
+      ne connait que le vieux mandat, et `mandats(idAnnonce)` rend []. Elle permet
+      seulement de ne plus AFFICHER une valeur fausse, et de ne plus donner un nom
+      etranger a la recherche. La valeur de Hektor reste dans le payload embarque.
     """
     try:
         lignes = con.execute(
             "WITH partages AS ("
             "   SELECT hektor_mandat_id FROM hektor.hektor_mandat"
-            "    GROUP BY 1 HAVING COUNT(DISTINCT hektor_annonce_id) > 1),"
-            " groupes AS ("
+            "    WHERE TRIM(COALESCE(CAST(hektor_annonce_id AS TEXT), '')) <> ''"
+            "    GROUP BY 1 HAVING COUNT(DISTINCT COALESCE(numero, '')) > 1),"
+            # Le VRAI mandat de chaque identifiant : le plus petit numero.
+            " vrais AS ("
             "   SELECT hektor_mandat_id,"
-            "          COUNT(DISTINCT COALESCE(mandants_texte, '')) AS nb_mandants,"
-            "          COUNT(DISTINCT COALESCE(numero, ''))         AS nb_numeros"
+            "          MIN(CAST(numero AS INTEGER)) AS numero_vrai"
             "     FROM hektor.hektor_mandat"
             "    WHERE hektor_mandat_id IN (SELECT hektor_mandat_id FROM partages)"
+            "      AND numero GLOB '[0-9]*'"
             "    GROUP BY 1)"
             " SELECT CAST(m.hektor_annonce_id AS TEXT), CAST(m.numero AS TEXT)"
             "   FROM hektor.hektor_mandat m"
-            "  WHERE m.hektor_mandat_id IN"
-            "        (SELECT hektor_mandat_id FROM groupes"
-            "          WHERE nb_mandants = 1 AND nb_numeros > 1)"
-            "    AND TRIM(COALESCE(CAST(m.hektor_annonce_id AS TEXT), '')) <> ''"
+            "   JOIN vrais v ON v.hektor_mandat_id = m.hektor_mandat_id"
+            "  WHERE TRIM(COALESCE(CAST(m.hektor_annonce_id AS TEXT), '')) <> ''"
+            "    AND (m.numero NOT GLOB '[0-9]*'"
+            "         OR CAST(m.numero AS INTEGER) <> v.numero_vrai)"
         ).fetchall()
     except sqlite3.OperationalError:
-        # Le miroir n'est pas attache (environnement reduit) : on ne devine pas,
-        # on ne marque rien -- le registre garde exactement son comportement.
+        # Le miroir n'est pas attache (environnement reduit) : on ne devine pas, on
+        # ne marque rien -- le registre garde exactement son comportement.
         return set()
     suspects = {(normalize_text(a) or "", normalize_text(n) or "") for a, n in lignes}
     suspects.discard(("", ""))
     if suspects:
-        print("[registre des mandats] lignes au corps suspect (Hektor a recycle son "
+        print("[registre des mandats] lignes au corps FABRIQUE (Hektor a recycle son "
               "identifiant de mandat) : %d -- montant masque, texte retire de la "
               "recherche" % len(suspects), file=sys.stderr)
     return suspects
