@@ -258,3 +258,80 @@ sait déjà désigner).
 
 ⛔ **À ne pas faire sans l'export** : sans lui, « corriger » n'aurait aucune source
 et ne ferait qu'effacer.
+
+---
+
+# 8. LE NUMÉRO DE MANDAT N'EST PAS UNE SÉRIE UNIQUE — ET IL A UN LIBELLÉ
+
+Frédéric : *« si il faut regarder devant il y a hektor ou protexa en libellé »*.
+Exact, et c'est la pièce qui explique une grande partie des collisions.
+
+```
+app_mandat.famille :  HEKTOR 23 132  ·  PROTEXA 3 703
+```
+
+**Deux registres, donc deux séries de numéros.** `mandat_ledger.py` le dit déjà :
+`famille = DE QUEL REGISTRE vient le numéro`.
+
+## L'ampleur de la réutilisation
+
+```
+numeros de mandat servant UNE annonce        : 13 941
+numeros servant PLUSIEURS annonces           :  4 268   (jusqu'a 10 annonces)
+   un mandat couvrant plusieurs lots (normal):    143   ( 3 %)
+   reutilisation du numero                   :  4 120   (97 %)
+
+sur les 4 458 numeros multi-annonces de app_mandat :
+   les FAMILLES different                    :  1 536   -> deux series, PAS une collision
+   une seule famille                         :  2 922   -> vraie reutilisation dans la serie
+```
+
+```
+numero « 1 »   : PROTEXA LOCATION (55776, 58109) + HEKTOR VENTE (23485 2011,
+                 40503 2014, 24113 2021)
+numero « 10 »  : HEKTOR 2011 MENDOLA  +  PROTEXA 2014 CARROT
+numero « 1003 »: 2011 CYRIL DENIS · 2015 REYROLLE · 2016 MAILLET
+```
+
+⚠ **Pour un registre des mandats, c'est un fait lourd** : le numéro est une mention
+légale censée former une série cotée sans discontinuité. Chez Hektor il repart de
+bas au moins trois fois (2014-2016, puis 2026).
+
+## ⭐ MAIS LA CLÉ DU PROJET RÉSISTE, ET C'EST MESURÉ
+
+```
+couples (annonce, numero) portant DEUX familles chez nous : 0
+```
+
+La clé est **par annonce**, donc la réutilisation d'un numéro sur une *autre*
+annonce ne la gêne pas. Et aucune annonce ne porte le même numéro dans deux
+familles. **`famille` n'a donc pas besoin d'entrer dans la clé** — elle reste utile
+à l'affichage et au tri, pas à l'identité.
+
+## Le cas 1020 / 1032 — le registre ne mélange rien
+
+```
+champ                    annonce 1020              annonce 1032
+register_row_id          1020:4613                 1032:4069
+numero_dossier           VA22690                   VA22914
+numero_mandat            4613                      4069
+titre_bien               ENTRE CARNOT ET MONTAUD   bel appartement renove secteur carnot
+prix                     152 000                   158 685
+mandat_source_id         219                       231
+mandat_date_debut        2012-04-20                2012-04-26
+mandat_montant           152 000                   158 685
+adresse_privee_listing   16 BLD ALBERT PREMIER     16 boulevard albert1er
+```
+
+**Dix champs diffèrent.** La seule chose commune est le mandant — et
+`mandants(idAnnonce)` de Hektor rend **les deux mêmes mandants pour les deux
+annonces** : `M. THIERRY BOURGEAT (258606)` et `Mr./Mme (530218)`. C'est donc la
+donnée de l'agence : le même propriétaire possédait les deux biens en 2012, à
+Saint-Étienne, et son adresse est la même sur les deux fiches.
+
+⚠ Et deux faits à savoir pour ne pas crier au loup :
+- les **photos sont différentes** (je les avais crues identiques : préfixe Supabase
+  commun, troncature à 32 caractères) ;
+- `app_dossier_id` **négatif** sur les 23 742 lignes `historique` et positif sur les
+  745 `actif` : c'est l'identifiant de substitution des annonces sans dossier dans
+  l'app, **pas** un défaut.
