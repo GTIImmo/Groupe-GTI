@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import sys
 import time
 from datetime import datetime, timezone
 import urllib.error
@@ -254,6 +255,8 @@ MANDAT_REGISTER_NULLABLE_KEYS = (
     "mandat_date_cloture",
     "mandat_montant",
     "mandants_texte",
+    # 04/10/2026 : la LISTE des mandants, avec nos deux numeros.
+    "mandants_json",
     "mandat_note",
     "price_change_event_count",
     "price_change_last_source_kind",
@@ -275,6 +278,11 @@ MANDAT_REGISTER_NULLABLE_KEYS = (
     "register_detail_payload_json",
     "affaires_detail_json",
 )
+
+# Les colonnes du registre posees recemment, donc celles qui peuvent manquer
+# la-haut si le patch SQL n'a pas encore ete colle. On ne sonde QUE celles-la :
+# une sonde par colonne, et il n'y a aucune raison de sonder les 65.
+COLONNES_REGISTRE_RECENTES = ("mandants_json",)
 
 ARCHIVE_INDEX_NULLABLE_KEYS = (
     "numero_dossier",
@@ -494,6 +502,26 @@ class SupabaseRestClient:
                 return False
             raise
 
+    def colonne_disponible(self, path: str, colonne: str) -> bool:
+        """La colonne existe-t-elle DEJA la-haut ? La soeur de `table_available`.
+
+        ⚠ POURQUOI ELLE EXISTE                                        05/10/2026
+          PostgREST refuse TOUT LE LOT des qu'une seule colonne lui est inconnue
+          (PGRST204). Une colonne ajoutee au code AVANT son patch SQL ne degrade
+          donc pas le registre : elle le fait TOMBER EN ENTIER, la nuit, pendant
+          que personne ne regarde. C'est la panne que cette sonde supprime.
+        """
+        try:
+            self._request(method="GET", path=path, query={"select": colonne, "limit": "1"})
+            return True
+        except RuntimeError as exc:
+            message = str(exc)
+            if "PGRST204" in message or "42703" in message or "does not exist" in message:
+                return False
+            if "PGRST205" in message or "Could not find the table" in message or "404" in message:
+                return False
+            raise
+
 
 def build_current_dossiers(dossiers: list[dict[str, object]]) -> list[dict[str, object]]:
     rows_by_id: dict[int, dict[str, object]] = {}
@@ -642,6 +670,35 @@ def build_current_filter_catalog(filter_catalog: list[dict[str, object]]) -> lis
     return rows
 
 
+def adapter_registre_au_schema(
+    client: "SupabaseRestClient",
+    rows: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Retire du registre les colonnes que le cloud ne connait pas ENCORE.
+
+    ⭐ L'ORDRE NORMAL EST : patch SQL d'abord, code ensuite. Cette fonction est le
+      filet pour la nuit ou les deux se croisent -- elle ne remplace pas le patch,
+      elle empeche seulement le registre ENTIER de tomber en l'attendant.
+    ⚠ ET ELLE NE SE TAIT PAS : une colonne retiree est ECRITE sur stderr. Un
+      filet silencieux finit par cacher ce qu'il rattrape (lecon `list_broadcasts`,
+      3 mois de silence).
+    """
+    if not rows:
+        return rows
+    manquantes = [
+        c for c in COLONNES_REGISTRE_RECENTES
+        if c in rows[0] and not client.colonne_disponible("app_mandat_register_current", c)
+    ]
+    if not manquantes:
+        return rows
+    print(
+        "[registre des mandats] colonnes absentes du cloud, RETIREES de ce push : %s"
+        "  -- le patch SQL n'est pas encore passe." % ", ".join(manquantes),
+        file=sys.stderr,
+    )
+    return [{k: v for k, v in row.items() if k not in manquantes} for row in rows]
+
+
 def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     current_rows: list[dict[str, object]] = []
     for row in rows:
@@ -688,6 +745,7 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
             "mandat_date_cloture": normalized.get("mandat_date_cloture"),
             "mandat_montant": normalize_numeric(normalized.get("mandat_montant")),
             "mandants_texte": normalized.get("mandants_texte"),
+            "mandants_json": normalized.get("mandants_json"),
             "mandat_note": normalized.get("mandat_note"),
             "price_change_event_count": int(normalized.get("price_change_event_count") or 0),
             "price_change_last_source_kind": normalized.get("price_change_last_source_kind"),
@@ -1171,6 +1229,7 @@ def main() -> None:
     if args.rebuild_register_only:
         register_payload = build_payload(limit=None, dossier_ids=None, include_filter_catalog=False)
         current_mandat_register_rows = build_current_mandat_register_rows(register_payload.get("mandat_register_rows", []))
+        current_mandat_register_rows = adapter_registre_au_schema(client, current_mandat_register_rows)
         delta_run_id = client.insert_delta_run(
             mode="upgrade",
             notes={
@@ -1331,6 +1390,7 @@ def main() -> None:
     current_details = build_current_details(payload["dossier_details"], source_updated_at_by_id)
     current_work_items = build_current_work_items(payload["work_items"])
     current_mandat_register_rows = build_current_mandat_register_rows(register_payload.get("mandat_register_rows", []))
+    current_mandat_register_rows = adapter_registre_au_schema(client, current_mandat_register_rows)
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
 
     # Tier 2 dirty-skip : preserver les dossiers en cours d'edition optimiste (pending)

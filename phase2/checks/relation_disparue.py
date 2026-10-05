@@ -92,7 +92,7 @@ ROLES_DU_BIEN = ("mandant", "proprietaire")
 #      QU'IMPRIME. Rien n'en faisait une alerte. Une mesure que personne ne lit
 #      n'est pas une garde.
 GRAVES = ("source_absents", "doublons", "hors_plage_app", "plage_envahie",
-          "retraits_perdus", "doublure_perimee")
+          "retraits_perdus", "doublure_perimee", "registre_sans_mandant")
 
 
 def _table_existe(conn: sqlite3.Connection, nom: str) -> bool:
@@ -180,6 +180,36 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         if doublure_du:
             doublure_perimee = 0 if str(doublure_du)[:10] == date.today().isoformat() else 1
 
+    # ─── ⑦ LE REGISTRE DES MANDATS SAIT-IL CE QUE LES LIENS SAVENT ? ─────────
+    #   Signale par Frederic le 04/10 : des lignes du registre n'affichent AUCUN
+    #   mandant alors que la fiche annonce et le registre des relations les ont.
+    #   638 lignes sans mandant, dont 607 que NOS liens connaissent -- parce que
+    #   `mandants_texte` etait la seule colonne du registre restee un TEXTE
+    #   recopie de Hektor, sans repli quand Hektor se tait (bien vendu, archive).
+    #   ⭐ CETTE GARDE VAUT 607 LE JOUR OU ELLE EST POSEE, ET DOIT VALOIR 0 DES
+    #     LE PREMIER PUSH QUI SUIT LE PATCH. C'est elle qui dira que le correctif
+    #     tient -- et, plus tard, que personne ne l'a defait.
+    #   ⚠ LES DEUX CASTS NE SONT PAS DECORATIFS : `hektor_annonce_id` est un
+    #     INTEGER au registre et un TEXT dans les liens. Sans eux la jointure est
+    #     muette et la garde rend 0 EN MENTANT (mesure du 05/10 : 0 sans cast,
+    #     607 avec). Meme famille que l'affinite qui a coute 79 minutes le 03/10.
+    registre_sans_mandant = None
+    registre_sans_mandant_total = None
+    if _table_existe(conn, "app_mandat_register_current") and _table_existe(conn, "app_contact_current"):
+        registre_sans_mandant_total = conn.execute(
+            "SELECT COUNT(*) FROM app_mandat_register_current"
+            " WHERE TRIM(COALESCE(mandants_texte, '')) = ''").fetchone()[0]
+        registre_sans_mandant = conn.execute(
+            "SELECT COUNT(*) FROM app_mandat_register_current g"
+            " WHERE TRIM(COALESCE(g.mandants_texte, '')) = ''"
+            "   AND EXISTS (SELECT 1 FROM app_relation r"
+            "                 JOIN app_contact_current c"
+            "                   ON c.hektor_contact_id = CAST(r.app_contact_id AS TEXT)"
+            "                WHERE CAST(r.hektor_annonce_id AS TEXT) = CAST(g.hektor_annonce_id AS TEXT)"
+            "                  AND r.retire_le IS NULL"
+            "                  AND r.role_hektor IN ('mandant', 'proprietaire')"
+            "                  AND TRIM(COALESCE(c.display_name, '')) <> '')").fetchone()[0]
+
     comptes = {
         "lignes": lignes,
         "doublons": doublons,
@@ -191,6 +221,8 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         "retraits_perdus": retraits_perdus,
         "doublure_perimee": doublure_perimee,
         "doublure_du": doublure_du,
+        "registre_sans_mandant": registre_sans_mandant,
+        "registre_sans_mandant_total": registre_sans_mandant_total,
         "marques_absents": conn.execute(
             "SELECT COUNT(*) FROM app_relation WHERE present_in_hektor = 0").fetchone()[0],
     }
@@ -233,13 +265,24 @@ def main() -> int:
               % (m["doublure_du"],
                  "   ⚠ PAS DU JOUR" if m["doublure_perimee"] else ""))
     print("")
+    print("   -- le registre des mandats sait-il ce que les liens savent ? --")
+    if m["registre_sans_mandant"] is None:
+        print("   lignes sans mandant           : NON MESURE (registre absent)")
+    else:
+        print("   lignes sans mandant           : %s au total" % m["registre_sans_mandant_total"])
+        print("      dont les liens les savent  : %s   (doit valoir 0)"
+              % m["registre_sans_mandant"])
+    print("")
     print("   -- information, jamais une alerte --")
     print("   retard du cloud               : %s" % m["retard_cloud"])
     print("      (le cloud porte les biens du parc, la table porte tout ;")
     print("       Frederic a tranche le 30/09 : tout montera)")
     if m["graves"]:
         print("")
-        print("GRAVE : %s ecart(s) -- un lien ne disparait pas." % m["graves"])
+        # ⚠ Le total melange DEUX familles depuis le 05/10 : les liens perdus et
+        #   les lignes du registre qui ignorent un mandant connu. Le detail
+        #   au-dessus dit laquelle a bouge ; ce total dit seulement « regarde ».
+        print("GRAVE : %s ecart(s) -- voir le detail ci-dessus." % m["graves"])
         return 1
     return 0
 

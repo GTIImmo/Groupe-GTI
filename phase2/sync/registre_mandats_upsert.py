@@ -52,6 +52,7 @@ from push_upgrade_to_supabase import (  # noqa: E402
     DEFAULT_ENV_FILES,
     SupabaseRestClient,
     build_current_mandat_register_rows,
+    adapter_registre_au_schema,
     load_env_files,
 )
 
@@ -98,6 +99,7 @@ def main() -> int:
     if not (url and cle):
         raise RuntimeError("SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis")
     client = SupabaseRestClient(base_url=url, service_role_key=cle)
+    lignes = adapter_registre_au_schema(client, lignes)
 
     t1 = time.time()
     # UPSERT SEUL. Pas de delete_all_rows, pas de delete_rows_by_ids : c'est

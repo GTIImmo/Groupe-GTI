@@ -156,3 +156,78 @@ worker, aucun ne touche Hektor**.
 - ⚠ **`origine = 'app'` : 0 mandat.** Le mécanisme de naissance dans l'app est en
   service depuis le 30/09 et **n'a jamais servi**. Tout ce qui précède sur ce chemin
   est lu dans le code, **pas observé**.
+
+---
+
+# CE QUI A ETE FAIT — 05/10/2026
+
+Les quatre gestes du plan sont poses. **Le patch SQL reste a coller** ; tant qu'il
+ne l'est pas, le code se retire tout seul (voir le filet plus bas).
+
+## ① Le patch SQL — `supabase/patch_mandants_json_registre_mandats_2026-10-05.sql`
+
+La colonne `mandants_json` (`text`, comme toutes ses sœurs) **et la vue**
+`app_registre_mandats_current`, qui enumere ses colonnes : sans le second ordre
+la colonne existerait et resterait invisible au front — le bug se deplacerait.
+Elle est ajoutee **en fin de liste** : `CREATE OR REPLACE VIEW` n'accepte que
+cela, et cela preserve les droits (un `DROP` les perdrait).
+
+## ② Le code — `export_app_payload.py`
+
+Une seule source (`build_mandat_register_rows`), donc **les trois chemins** en
+profitent : push de nuit, push par annonce (~1 min) et `registre_mandats_upsert`.
+
+⚠ **Trois pieges que seule la mesure a montres** :
+
+| ce que le code naif aurait fait | ce que la mesure a dit |
+|---|---|
+| lire **tous** les liens | le registre des liens porte **3 roles** : mandant 74 200 · proprietaire 58 479 · **acquereur_compromis 4**. Un acquereur serait devenu mandant. → liste blanche `{mandant, proprietaire}`, et les ecartes sont **comptes** sur stderr |
+| joindre le contact par `hektor_contact_id` | **0 nom** sur 20 000. `app_contact_current.hektor_contact_id` porte **notre** identifiant (serie 10 000 001+) — la substitution d'identite du build. Par `app_contact_id` : **20 000 / 20 000** |
+| afficher tous les noms | **11 857 liens vivants** pointent une fiche **muette** (« Contact 10309272 ») — 199 sur les 607. Un nom affiche sur cinq. → ecartes du **texte**, gardes dans le **JSON** avec leurs identifiants. Et les jeter **ne coute rien** : 0 ligne redevient vide, 196 perdent un nom sur plusieurs, le conjoint est nomme |
+
+## ③ Le controle a blanc — **vert**
+
+Le registre est construit **deux fois avec le meme code**, une fois le repli
+neutralise (= l'ancien comportement exact), une fois tel quel, puis compare :
+
+```
+lignes au registre          :  24487
+COMBLEES                    :    607   (attendu 607)      ✔
+DEJA REMPLIES MODIFIEES     :      0   (doit valoir 0)    ✔
+encore vides apres coup     :     31   (attendu 31)       ✔
+lignes avec mandants_json   :  24451
+```
+
+`search_text` inclut deja `mandants_texte` : ces 607 mandats deviennent
+**trouvables par le nom du mandant** sans une ligne de code en plus.
+
+## ④ La garde — `phase2/checks/relation_disparue.py`
+
+```
+   -- le registre des mandats sait-il ce que les liens savent ? --
+   lignes sans mandant           : 638 au total
+      dont les liens les savent  : 607   (doit valoir 0)
+```
+
+⚠ **Les deux CAST ne sont pas decoratifs** : `hektor_annonce_id` est un `INTEGER`
+au registre et un `TEXT` dans les liens. Sans eux la jointure est muette et la
+garde **rend 0 en mentant** (mesure : 0 sans cast, 607 avec). Meme famille que
+l'affinite qui a coute 79 minutes le 03/10.
+
+## ⑤ EN PLUS DU PLAN — le filet qui empeche la nuit de tomber
+
+PostgREST refuse **tout le lot** des qu'une colonne lui est inconnue (PGRST204).
+Le code etant sur le disque **avant** que le patch soit colle, le push du
+registre serait tombe **en entier** cette nuit. `colonne_disponible()` (la sœur
+de `table_available()`, deja dans le fichier) et `adapter_registre_au_schema()`
+retirent la colonne absente **et le disent** sur stderr. Eprouve contre le cloud
+reel ce matin :
+
+```
+colonne mandants_texte (existe)  : True
+colonne mandants_json  (absente) : False
+[registre des mandats] colonnes absentes du cloud, RETIREES de ce push :
+    mandants_json  -- le patch SQL n'est pas encore passe.
+```
+
+➡ **Le registre ne peut plus tomber a cause de ce chantier, patch ou pas.**

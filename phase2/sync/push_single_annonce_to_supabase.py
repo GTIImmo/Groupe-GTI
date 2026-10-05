@@ -31,6 +31,7 @@ from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
     build_current_dossiers,
     build_current_historical_index_rows,
     build_current_mandat_register_rows,
+    adapter_registre_au_schema,
     build_current_work_items,
     load_env_file,
     normalize_broadcast_rows,
@@ -604,6 +605,7 @@ def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossie
     current_work_items = build_current_work_items(payload["work_items"])
     current_broadcasts = normalize_broadcast_rows(payload.get("broadcasts", []))
     current_mandat_register_rows = build_current_mandat_register_rows(payload.get("mandat_register_rows", []))
+    current_mandat_register_rows = adapter_registre_au_schema(client, current_mandat_register_rows)
 
     delete_target_remote(
         client,

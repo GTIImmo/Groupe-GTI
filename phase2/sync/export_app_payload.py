@@ -4,7 +4,10 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
+import sys
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
@@ -1759,6 +1762,168 @@ def build_register_detail_payload(
     return json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
 
 
+# Les deux etiquettes du MEME geste (lien vers le bien). Voir le commentaire
+# dans charger_mandants_du_registre_des_liens.
+ROLES_MANDANT = frozenset({"mandant", "proprietaire"})
+
+# « Contact 10309272 », « Mr./Mme 276250_01 » : une civilite et un NUMERO, pas un
+# nom. Ce sont les FICHES MUETTES du magasin de contacts (36 463 sur 356 342) :
+# Hektor cree une seconde fiche pour le menage et n'y met pas de nom, le nom vit
+# sur la fiche du conjoint.
+# Mesure du 05/10 : 11 857 liens vivants pointent une fiche muette, dont 199 sur
+# les 607 lignes a combler -- un nom affiche sur cinq aurait ete « Contact ... ».
+# ⭐ ET LES JETER NE COUTE RIEN : sur les 607, ZERO ligne redevient vide, 196
+#   perdent seulement un nom sur plusieurs. Le conjoint, lui, est nomme.
+# ⚠ « Mr./Mme REYMONDON » n'est PAS muet : il faut des CHIFFRES SEULS apres la
+#   civilite. Le motif l'exige.
+_NOM_MUET = re.compile(r"^(?:contact|mr\.?/mme|m\.?/mme)\s*\d+(?:_\d+)?$", re.IGNORECASE)
+
+
+def _nom_est_muet(nom: str) -> bool:
+    return bool(_NOM_MUET.match((nom or "").strip()))
+
+
+
+def _cle_de_nom(nom: str) -> str:
+    """Le nom NU : sans civilite, sans accents, sans casse -- pour reperer un doublon.
+
+    ⚠ IL EN FAUT UNE, ET C'EST LA MESURE QUI L'A IMPOSEE (04/10). Sur les 607
+      annonces a combler, le registre des liens rend 1 241 personnes -- dont 267
+      sont la MEME entite vue deux fois (974 apres nettoyage, -22 %).
+      Exemple releve : « M. SCI JCL » et « Mr./Mme SCI JCL ».
+      C'est le probleme connu des FICHES DE COUPLE : Hektor cree une seconde fiche
+      pour le menage, et notre registre porte les deux A JUSTE TITRE -- c'est
+      l'AFFICHAGE qui ne doit pas les repeter.
+    """
+    s = unicodedata.normalize("NFD", nom or "")
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn").lower()
+    s = re.sub(r"\b(m|mme|mr|mlle|monsieur|madame|m\.)\b", " ", s)
+    s = re.sub(r"[^a-z0-9]+", " ", s).strip()
+    return s
+
+
+def charger_mandants_du_registre_des_liens(
+    con: sqlite3.Connection,
+) -> dict[str, list[dict[str, object]]]:
+    """Les mandants que NOTRE registre des liens connait, par annonce.
+
+    ══════════════════════════════════════════════════════════════════════════════
+    POURQUOI CETTE SOURCE EXISTE                                     04/10/2026
+    ══════════════════════════════════════════════════════════════════════════════
+    SIGNALE PAR FREDERIC : des lignes du registre des mandats n'affichent AUCUN
+    mandant, alors que la fiche annonce et le registre des relations les ont.
+
+    MESURE : 638 lignes sans mandant sur 24 487, dont 607 que notre registre des
+    liens connait parfaitement. Il couvre 24 451 des 24 487 lignes (99,9 %).
+
+    LA CAUSE N'EST PAS LA LIGNEE DU REGISTRE -- il est AUTONOME (app_mandat est
+    notre table durable : 26 835 mandats, plage d'identifiants propre, doublure,
+    2 sentinelles, le worker y ecrit a la naissance). Le defaut porte sur UNE
+    COLONNE SUR 25 : `mandants_texte`, la seule restee un texte recopie de Hektor,
+    sans identifiant et sans chemin pour se remplir depuis chez nous.
+        view_generale.py:338 -> COALESCE(mandat Hektor, detail Hektor)
+        « app_relation » : ZERO occurrence dans ce fichier.
+    Quand Hektor ne fournit plus ce texte -- bien VENDU, ARCHIVE, fiche mandat
+    incomplete -- RIEN ne prend le relais. Or ce sont exactement les liens que le
+    registre des relations a ete cree pour garder (les 82 386 qu'un bien vendu
+    emportait) : 635 des 638 trous sont des biens sans fiche dans l'app.
+
+    ⚠ ON NE LIT QUE LES LIENS VIVANTS (`retire_le IS NULL`) : un mandant retire le
+      03/10 ne doit pas reapparaitre ici par la bande.
+
+    ⭐ ET SA PLACE DANS LE RUN EST LE POINT DELICAT. Cette fonction est appelee par
+      build_mandat_register_rows, donc au MOMENT DU PUSH :
+         l. 839  registre des mandats (app_mandat)   <- lirait les liens DE LA VEILLE
+         l. 922  registre des liens (app_relation)      rafraichi ici
+         l.1159  push upgrade -> ECRIT le registre    <- NOUS SOMMES ICI, c'est frais
+      Corriger dans mandat_ledger.py aurait reintroduit l'erreur classique du
+      projet : lire la couche de la veille.
+      ⭐ Et le meme constructeur sert push_single_annonce_to_supabase.py -- donc le
+        chemin IMMEDIAT du worker (~1 min) en profite aussi, sans code en plus.
+    """
+    mandants: dict[str, list[dict[str, object]]] = {}
+    try:
+        lignes = con.execute(
+            # ⭐ LE NOM SE LIT PAR NOTRE NUMERO, PAS PAR CELUI DE HEKTOR.
+            #   `app_contact_current.hektor_contact_id` porte EN FAIT l'identifiant
+            #   de l'app (serie 10 000 001+) -- la substitution d'identite du build.
+            #   Mesure du 05/10 sur 20 000 liens vivants :
+            #       JOIN sur app_contact_id     -> 20 000 noms
+            #       JOIN sur hektor_contact_id  ->      0 nom
+            "SELECT r.hektor_annonce_id AS ann,"
+            "       r.app_contact_id    AS app_id,"
+            "       r.hektor_contact_id AS hektor_id,"
+            "       r.role_hektor       AS role,"
+            "       COALESCE(NULLIF(TRIM(c.display_name), ''), '') AS nom"
+            "  FROM app_relation r"
+            "  LEFT JOIN app_contact_current c"
+            "         ON c.hektor_contact_id = CAST(r.app_contact_id AS TEXT)"
+            " WHERE r.retire_le IS NULL"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        # Le registre des liens n'existe pas encore (environnement neuf). On ne
+        # devine pas : on rend vide, et le COALESCE d'en face garde Hektor.
+        return {}
+
+    vus: dict[str, set[str]] = {}
+    roles_ecartes: dict[str, int] = {}
+    for ligne in lignes:
+        annonce = normalize_text(ligne["ann"])
+        nom = normalize_text(ligne["nom"])
+        role = (normalize_text(ligne["role"]) or "").lower()
+        # ⚠ LE REGISTRE DES LIENS NE PORTE PAS QUE DES MANDANTS. Mesure du 05/10 :
+        #     mandant 74 200 · proprietaire 58 479 · acquereur_compromis 4
+        #   Les deux premiers sont LE MEME GESTE (`fait = proprietaire_du_bien`
+        #   pour 100 % des lignes) : « proprietaire » devient « mandant » quand un
+        #   numero de mandat existe (taxonomie du 24/07). Le troisieme est un
+        #   geste DIFFERENT : un acquereur n'est jamais un mandant.
+        #   ⭐ LISTE BLANCHE, PAS LISTE NOIRE -- et COMPTEE : une forme inconnue
+        #     ne se taira pas (lecon de `list_broadcasts`, 3 mois de silence).
+        if role not in ROLES_MANDANT:
+            roles_ecartes[role or "(vide)"] = roles_ecartes.get(role or "(vide)", 0) + 1
+            continue
+        if not annonce or not nom:
+            # Sans nom, on n'a rien a AFFICHER. La ligne reste au registre des
+            # liens (elle y a sa place), elle n'entre simplement pas ici.
+            continue
+        cle = _cle_de_nom(nom)
+        if not cle or cle in vus.setdefault(annonce, set()):
+            continue
+        vus[annonce].add(cle)
+        entree: dict[str, object] = {
+            "app_contact_id": ligne["app_id"],
+            "hektor_contact_id": normalize_text(ligne["hektor_id"]) or None,
+            "nom": nom,
+        }
+        if _nom_est_muet(nom):
+            # ⭐ LE LIEN RESTE DANS LA LISTE -- la personne EST mandante, et ses deux
+            #   numeros sont vrais : la fiche cliquable a venir saura la retrouver.
+            #   C'est seulement son NOM qu'on n'affiche pas.
+            entree["muet"] = True
+        mandants.setdefault(annonce, []).append(entree)
+    if roles_ecartes:
+        print(
+            "[registre des liens] roles ecartes : "
+            + ", ".join("%s=%d" % (k, v) for k, v in sorted(roles_ecartes.items())),
+            file=sys.stderr,
+        )
+    return mandants
+
+
+def texte_des_mandants(mandants: list[dict[str, object]]) -> str:
+    """Le meme separateur que Hektor (« Petra COSTE | Guy COSTE »), pour que le
+    listing et la recherche ne voient aucune difference de forme.
+
+    ⚠ Les fiches MUETTES sont ecartees ICI, et seulement ici : elles restent dans
+      `mandants_json` avec leurs identifiants. Voir `_nom_est_muet`.
+    """
+    return " | ".join(
+        str(m.get("nom") or "").strip()
+        for m in mandants
+        if str(m.get("nom") or "").strip() and not m.get("muet")
+    )
+
+
 def build_mandat_register_rows(
     con: sqlite3.Connection,
     *,
@@ -1797,6 +1962,11 @@ def build_mandat_register_rows(
         normalize_text(row.get("hektor_annonce_id")): row
         for row in fetch_rows(con, build_limited_sql(SQL_REGISTER_BROADCAST_AGG, None))
     }
+
+    # ⚠ UNE SEULE LECTURE POUR TOUT LE LOT, pas une par ligne : 132 683 liens et
+    #   356 344 contacts -- une requete par mandat ferait 24 487 allers-retours.
+    #   Meme patron que les autres dictionnaires de ce constructeur.
+    mandants_par_annonce = charger_mandants_du_registre_des_liens(con)
 
     # Lot B : affaire (offre/compromis/vente) PAR cycle, clé (annonce, hektor_mandat_id).
     affaires_by_mandat: dict[tuple[str, str], dict[str, object]] = {}
@@ -1986,6 +2156,8 @@ def build_mandat_register_rows(
             source_updated_at = (
                 normalize_text(source_row.get("date_maj")) if source_row else ""
             ) or normalize_text(raw.get("date_maj")) or normalize_text(raw.get("detail_synced_at")) or normalize_text(raw.get("annonce_synced_at")) or None
+            # Ce que NOTRE registre des liens sait de ce bien (deja dedoublonne).
+            mandants_du_bien = mandants_par_annonce.get(annonce_id) or []
             row = {
                 "register_row_id": f"{annonce_id}:{numero}",
                 "app_dossier_id": synthetic_app_dossier_id,
@@ -2036,7 +2208,22 @@ def build_mandat_register_rows(
                 "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
                 "mandat_date_cloture": normalize_text(current_version.get("cloture") or current_version.get("dateCloture") or current_version.get("date_cloture")) or None,
                 "mandat_montant": normalize_text(current_version.get("montant")) or None,
-                "mandants_texte": normalize_text(current_version.get("mandants")) or None,
+                # ─── LES MANDANTS ────────────────────────────────── 04/10/2026
+                # `mandants_json` : NOTRE liste, avec les DEUX numeros de chaque
+                #   personne. Elle est posee des qu'on la connait -- c'est elle
+                #   qui permettra des fiches CLIQUABLES (chantier suivant), et
+                #   elle porte le MULTIPLE : 81 % des mandats ont plusieurs
+                #   mandants (jusqu'a 7 apres dedoublonnage). Un texte unique ne
+                #   savait pas les distinguer.
+                # `mandants_texte` : INCHANGE quand Hektor l'a fourni. Le repli
+                #   n'intervient QU'EN DERNIER RECOURS -- les 23 849 lignes deja
+                #   remplies ne doivent pas bouger d'un caractere.
+                "mandants_json": json.dumps(mandants_du_bien, ensure_ascii=False) if mandants_du_bien else None,
+                "mandants_texte": (
+                    normalize_text(current_version.get("mandants"))
+                    or texte_des_mandants(mandants_du_bien)
+                    or None
+                ),
                 "mandat_note": normalize_text(current_version.get("note")) or None,
                 "price_change_event_count": price_change_summary.get("price_change_event_count", 0),
                 "price_change_last_source_kind": price_change_summary.get("price_change_last_source_kind"),
