@@ -346,6 +346,39 @@ prix            = le prix de l'ANNONCE   -> ON L'A DEJA, et c'est le DERNIER (20
 mandat_montant  = le montant du MANDAT   -> c'est LUI qui manque sur les 454
 ```
 
+**LES DEUX MOITIÉS DE LA QUESTION, MESURÉES** *(la question est revenue deux fois — ma
+formulation initiale était mauvaise)* :
+
+```
+① « il n'y a pas de montant sur les mandats »   -> FAUX
+   app_mandat : 26 835 mandats, AVEC un montant 24 186, sans 2 649
+   `app_mandat.montant` est un champ PROPRE au mandat, rempli depuis le debut.
+
+② « le prix de l'annonce est faux sur les 31 »  -> FAUX
+   lignes comparables 373 | prix du registre == prix chez Hektor : 373 (100 %) | different : 0
+   (+ deja verifie sous un autre angle : 206/206 egal a la derniere valeur de l'historique)
+```
+
+➡ **Aucun prix d'annonce n'est à récupérer.** Ce que le rattrapage irait chercher, c'est
+**`app_mandat.montant`** — le montant contractuel du mandat, celui de l'écran `mandat-prix`
+et du document signé.
+
+```
+l'ecran web (getInfoMandat)  ->  app_mandat.montant
+                                      |
+                        +-------------+-------------+
+                        v                           v
+            le REGISTRE des mandats         le DETAIL du dossier
+            (mandat_montant de la ligne)    -> rubrique Mandat V3 + le PDF
+```
+
+⭐ **Un seul endroit à remplir, et les deux écrans le voient au push suivant** — c'est
+exactement la forme du rattrapage chauffage.
+
+⭐⭐ **ET SI L'ÉPREUVE ① RÉUSSIT, LE CORRECTIF ③ DEVIENT INUTILE** : plus besoin de masquer
+le montant dans le détail du dossier, puisqu'il sera **juste**. On remplace un masque par
+la vraie valeur. **C'est pour cela que ① passe avant ③.**
+
 **Ce qui est écarté, c'est de DEVINER le second à partir du premier** (80 % de justesse).
 **Aller chercher le vrai montant reste entièrement ouvert**, et c'est même la priorité ① :
 
