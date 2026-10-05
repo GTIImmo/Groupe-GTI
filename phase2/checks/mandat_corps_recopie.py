@@ -61,6 +61,9 @@ CONNU_AU_05_10 = 91
 # dates differentes. 31 au 05/10 -- et la fusion garde la BONNE dans 31 cas sur 31.
 # Ce n'est donc pas une perte, c'est un temoin : s'il monte, la fusion a change.
 COUPLES_A_DEUX_MANDATS_AU_05_10 = 31
+# Deux numeros de mandat emis le MEME JOUR sur la meme annonce : 2 au 05/10, tous
+# deux en septembre 2026 et de famille PROTEXA. Un numero brule par correction.
+DEUX_LE_MEME_JOUR_AU_05_10 = 2
 
 # Les deux formes de partage d'identifiant, qu'il ne faut JAMAIS confondre :
 #   meme corps + meme numero  -> UN mandat qui couvre plusieurs lots. NORMAL.
@@ -160,19 +163,58 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         "    GROUP BY hektor_annonce_id, numero HAVING COUNT(*) > 1)"
     ).fetchone()[0]
 
+    # ═══ LE TROISIEME CAS, TROUVE PAR FREDERIC LE 05/10 : DEUX NUMEROS LE MEME JOUR
+    #
+    # « donc pourquoi il y a un doublon dans le registre ». Il en avait un sous les
+    # yeux, et c'en etait un vrai :
+    #     annonce 63073 : num 18883 et 18884, le 2026-09-18, memes mandants
+    #                     (seule la date de FIN differe : 2027-09-17 / 2027-10-17)
+    #     annonce 63132 : num 18894 et 18895, le 2026-09-22, strictement identiques
+    #
+    # ⭐ CE SONT LES SEULS. Sur les 39 annonces portant plusieurs lignes au registre :
+    #       24  annees differentes -> VRAI second mandat (renouvellement). Legitime,
+    #           un registre doit porter l'historique.
+    #       13  meme annee, dates ecartees -> renouvellement dans l'annee (59498 :
+    #           fevrier 181 000 puis juillet 49 000, baisse de prix). Legitime.
+    #        2  LE MEME JOUR -> deux numeros brules pour un seul mandat.
+    #
+    # LA CAUSE, deja etablie par le projet : il n'existe PAS de numero de mandat
+    # provisoire, et le numero est NON ANNULABLE (c'est PROTEXA qui le fabrique).
+    # Corriger un mandat consomme donc un numero de plus, et l'ancien reste. Les
+    # identifiants Hektor sautent de 2 en 2 (738->740, 760->762) : un numero
+    # intermediaire est brule aussi. Les deux cas sont de famille PROTEXA.
+    #
+    # ⛔ ET LE REGISTRE A RAISON DE LES MONTRER : un numero emis ne doit pas
+    #   disparaitre d'un registre. La correction est chez Hektor -- cloturer le
+    #   numero en trop -- pas chez nous.
+    deux_le_meme_jour = conn.execute(
+        "SELECT COUNT(*) FROM ("
+        "   SELECT hektor_annonce_id, date_debut FROM hektor_mandat"
+        "    WHERE COALESCE(date_debut, '') <> ''"
+        # ⚠ SANS CE FILTRE LA MESURE REND 9 AU LIEU DE 2. Les 94 lignes du miroir
+        #   dont l'annonce est VIDE (la vague du 27/08) se retrouvent TOUTES dans le
+        #   meme groupe '' et se comptent entre elles : 7 faux cas, de 2020 a 2024.
+        #   Une mesure qui regroupe des lignes sans cle n'est pas une mesure.
+        "      AND TRIM(COALESCE(CAST(hektor_annonce_id AS TEXT), '')) <> ''"
+        "    GROUP BY 1, 2 HAVING COUNT(DISTINCT numero) > 1)"
+    ).fetchone()[0]
+
     comptes = {
         "corps_recopie": corps_recopie,
         "lignes_atteintes": lignes_atteintes,
         "un_mandat_plusieurs_lots": un_mandat_plusieurs_lots,
         "couples_a_deux_mandats": couples_a_deux_mandats,
+        "deux_le_meme_jour": deux_le_meme_jour,
         "lignes_absorbees": lignes_absorbees,
         "par_annee": par_annee,
         # L'AGGRAVATION EST L'ALERTE, pas le niveau : 91 est l'etat connu et subi.
         # Ce qui doit reveiller, c'est qu'il MONTE.
         "aggravation": max(0, corps_recopie - CONNU_AU_05_10),
         "aggravation_couples": max(0, couples_a_deux_mandats - COUPLES_A_DEUX_MANDATS_AU_05_10),
+        "aggravation_meme_jour": max(0, deux_le_meme_jour - DEUX_LE_MEME_JOUR_AU_05_10),
     }
-    comptes["graves"] = comptes["aggravation"] + comptes["aggravation_couples"]
+    comptes["graves"] = (comptes["aggravation"] + comptes["aggravation_couples"]
+                         + comptes["aggravation_meme_jour"])
     return comptes
 
 
@@ -224,6 +266,12 @@ def main() -> int:
         print("      dont montant != prix annonce     : %s sur %s   (9 %% sur les lignes saines)"
               % (ecart, total))
     print("   un mandat sur plusieurs lots (NORMAL): %s" % m["un_mandat_plusieurs_lots"])
+    print("")
+    print("   deux numeros emis le MEME JOUR sur la")
+    print("   meme annonce (un numero brule)      : %s   (connu au 05/10 : %s)"
+          % (m["deux_le_meme_jour"], DEUX_LE_MEME_JOUR_AU_05_10))
+    print("      le registre a RAISON de les montrer : un numero emis ne disparait")
+    print("      pas d'un registre. La cloture se fait chez Hektor.")
     print("")
     print("   -- l'accumulation du miroir, absorbee par notre cle --")
     print("   couples portant DEUX mandats de dates")
