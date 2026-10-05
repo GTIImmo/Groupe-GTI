@@ -335,3 +335,95 @@ Saint-Étienne, et son adresse est la même sur les deux fiches.
 - `app_dossier_id` **négatif** sur les 23 742 lignes `historique` et positif sur les
   745 `actif` : c'est l'identifiant de substitution des annonces sans dossier dans
   l'app, **pas** un défaut.
+
+---
+
+# 9. LA CAUSE RACINE, TROUVÉE PAR L'API — LES MANDATS DE 2026 N'EXISTENT PAS CHEZ HEKTOR
+
+Frédéric : *« mon projet extrait le registre à partir des id annonces, donc fait des
+appels à partir des id annonces qui sont forcément différents »*. Raisonnement juste,
+et il mène à la cause exacte : **ce n'est pas nous qui mélangeons**, puisqu'on
+interroge annonce par annonce.
+
+## Ce que les sondes GraphQL établissent
+
+Le type est `HektorMandat` ; ses champs, trouvés un par un (introspection coupée) :
+`id · numero · type · dateDebut · dateFin · montant · mandants · note · user`.
+
+```
+getMandatById(105) -> numero 14898, 2022-07-20, 62000,  « Marie-Jose BANO »
+getMandatById(760) -> numero 13497, 2021-04-15, 245000, « Paulette SABY »
+getMandatById(738) -> numero 15038, 2022-09-29, 190000, « Aline ROCHE ... »
+```
+
+⭐ **Les mandats de 2026 n'existent pas comme enregistrements chez Hektor.** Leurs
+identifiants pointent TOUS sur de vieux mandats. La fiche annonce **fabrique** sa
+ligne : le numéro et les dates viennent de l'**annonce**, le corps (montant +
+mandants) vient du **vieux mandat** que son pointeur désigne.
+
+➡ **Aucun appel API ne peut rendre ce montant : il n'a jamais existé.**
+`getMandatById` rend le vieux mandat · `mandats(idAnnonce)` rend `[]` · l'export ne
+couvre que février.
+
+## Le critère, validé 8 fois sur 8
+
+`getMandatById(id)` rend toujours le mandat dont le **numéro est le plus petit**.
+Donc, par identifiant partagé, **le plus petit numéro est le vrai**, les autres sont
+fabriqués.
+
+```
+id  3 : nos lignes 16767 (2024) / 18420 (2026)      -> l'API rend 16767
+id  7 : nos lignes 16635 (2024) / 18424 (sans date) -> l'API rend 16635
+id 10 : nos lignes 16564 (2024) / 18427 (2026)      -> l'API rend 16564
+```
+
+⚠ **On trie sur le NUMÉRO, pas sur la date** : l'identifiant 7 porte une ligne sans
+date, qu'un tri par date ferait passer en tête — et qui accuserait le vrai mandat.
+
+## L'ampleur réelle : 454 lignes, pas 182
+
+```
+annee  mandats   dont identifiant < 2000
+2019    1 452         111
+2021    1 216         152
+2023    1 095         178
+2025      911          73
+2026      533         470    <-- 88 %, la rupture
+```
+
+Mon premier critère (même corps exigé) n'en voyait que **182, soit 20 %**.
+
+## Ce qui est posé en production
+
+```
+lignes marquees FABRIQUEES      : 454     montant vide : 454
+   dont elles AFFICHAIENT un montant : 91 (363 etaient deja vides chez Hektor)
+recherche assainie              : 453
+lignes NON marquees qui bougent :   0     mandants modifies : 0
+
+montant vide en ligne : 929 (sans masquage) -> 1 111 (critere etroit, A TORT)
+                            -> 1 020 (critere valide : +91, uniquement les fabriques)
+454:14898   (LE VRAI)  garde son montant 62 000 et reste cherchable
+39707:18523 (fabrique) masque, « bano » parti
+```
+
+⚠ **Fait d'exploitation** : sur les **611** lignes de 2026, seules **133** portent un
+montant. 78 % des mandats de l'année n'en ont pas — et ce n'est pas une perte de
+notre côté, Hektor ne leur a jamais créé d'enregistrement.
+
+## ⭐ Et tout cela reste autonome
+
+```
+export_app_payload.py        appels Hektor : 0   modules reseau importes : 0
+push_upgrade_to_supabase.py  appels Hektor : 0   (ses urllib pointent sur SUPABASE_URL)
+registre_mandats_upsert.py   appels Hektor : 0   modules reseau importes : 0
+charger_corps_suspects()     lit hektor.hektor_mandat = LE MIROIR LOCAL
+```
+
+Le critère se calcule **entièrement en local**. Hektor éteint, le masquage fonctionne
+à l'identique, et chaque nuit un nouveau mandat au pointeur recyclé est marqué sans
+intervention. Les sondes (`Console/sonde_*.js`) sont des **outils de diagnostic**,
+jamais appelés par le run.
+
+⛔ **Ce qui reste, et qui n'est pas réparable chez nous** : le montant de ces mandats.
+À porter à La Boîte Immo — c'est la cause unique de tout ce dossier.
