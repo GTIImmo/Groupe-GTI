@@ -7181,6 +7181,65 @@ function buildDetailContactsFromProprietaires(value: string | null | undefined, 
 //
 // ⛔ ON NE REECRIT PAS LA FUSION. Elle est deja juste ; lui donner une seconde
 //   implementation, c'est se garantir qu'elles divergeront.
+// ═══ LES MANDANTS DE LA FICHE MANDAT, DEPUIS NOTRE REGISTRE DES LIENS ═══  05/10/2026
+//
+// POURQUOI CE TROISIEME BATISSEUR. La modale du registre lisait
+// `payload.proprietaires_json` -- ABSENT DES 24 487 LIGNES (mesure du 05/10, 0 sur
+// 24 487). Sa liste etait donc TOUJOURS vide, et le bloc retombait sur le texte :
+// il annoncait « Mandant · 1 » MEME A QUATRE, alors que 81 % des mandats ont
+// plusieurs mandants. `mandants_json`, pose le meme jour, est la source qui
+// manquait.
+//
+// ⚠⚠ L'INVERSE DU BLOB DU REGISTRE, ET C'EST UN PIEGE A NE PAS MANQUER.
+//   Dans `proprietaires_json` du registre, `hektor_contact_id` designe NOTRE
+//   numero. Dans `mandants_json`, les deux champs disent ce qu'ils nomment :
+//       app_contact_id    = le notre      (serie 10 000 001+)
+//       hektor_contact_id = celui de Hektor
+//   `sourceId` doit porter CELUI DE HEKTOR : c'est lui que le worker exige pour
+//   detacher un mandant (mode=degroupproprio). Les confondre casserait le geste.
+//
+// ⛔ CE BATISSEUR NE PORTE QUE L'IDENTITE -- nom et les deux numeros. Pas de
+//   telephone, pas d'e-mail, pas d'adresse : `mandants_json` ne les contient pas.
+//   Les blocs « appeler / ecrire / adresse » de la modale ne s'afficheront donc
+//   pas, et c'est voulu : afficher LES BONS NOMS etait la demande.
+function buildDetailContactsFromMandantsJson(value: string | null | undefined, idPrefix = 'mandant-lien') {
+  const lignes = parseJson<Array<Record<string, unknown>>>(value, [])
+  const contacts: DetailContact[] = []
+  lignes.forEach((ligne, index) => {
+    // ⚠ LA FICHE MUETTE RESTE MUETTE. « Contact 10309272 » n'est pas un nom : la
+    //   fiche existe (c'est le second membre d'un menage) mais son nom vit sur la
+    //   fiche du conjoint, qui est dans la meme liste. L'exporteur l'a deja marquee.
+    if (ligne.muet) return
+    const name = safeText(ligne.nom)
+    if (!name) return
+    const sourceId = safeText(ligne.hektor_contact_id)
+    contacts.push({
+      id: `${idPrefix}-${safeText(ligne.app_contact_id) || index}`,
+      name,
+      // Vide a dessein : la modale affiche alors son propre libelle de repli.
+      role: '',
+      phone: '',
+      email: '',
+      address: '',
+      postalCode: '',
+      city: '',
+      civility: '',
+      firstName: '',
+      lastName: '',
+      comment: '',
+      sourceId,
+      sourceIds: sourceId ? [sourceId] : [],
+      // ⭐ LA VALEUR PRUDENTE. Une ligne du registre des mandats a, par definition,
+      //   un numero de mandat : ses contacts sont donc des MANDANTS (taxonomie du
+      //   24/07), et la regle « mandat genere => retrait impossible » doit tenir si
+      //   un jour un bouton de retrait atterrit dans cet ecran.
+      roleLien: 'mandant',
+    })
+  })
+  return contacts
+}
+
+
 function buildDetailContactsFromRegistre(value: string | null | undefined, idPrefix = 'registre-contact') {
   const contacts = new Map<string, DetailContact>()
   const lignes = parseJson<Array<Record<string, unknown>>>(value, [])
@@ -23434,7 +23493,14 @@ function MandatRegisterScreen(props: {
   const selectedAvenants = selectedDetail ? parseRegisterAvenants(selectedDetail) : []
   const selectedImages = parseJson<Array<Record<string, unknown>>>(String(selectedDetailPayload.images_preview_json ?? selectedDetail?.images_preview_json ?? '[]'), [])
   const selectedImageUrl = selectedImages.find((item) => safeText(item.url))?.url as string | undefined
-  const selectedContactItems = buildDetailContactsFromProprietaires(String(selectedDetailPayload.proprietaires_json ?? '[]'), 'register-contact')
+  // Hektor d'abord s'il a fourni le blob riche ; sinon NOTRE registre des liens.
+  // Mesure du 05/10 : `proprietaires_json` est absent des 24 487 lignes, donc
+  // c'est le second terme qui sert TOUJOURS aujourd'hui -- le premier reste pour
+  // le jour ou le payload le portera, et parce qu'il apporte les coordonnees.
+  const contactsDepuisHektor = buildDetailContactsFromProprietaires(String(selectedDetailPayload.proprietaires_json ?? '[]'), 'register-contact')
+  const selectedContactItems = contactsDepuisHektor.length > 0
+    ? contactsDepuisHektor
+    : buildDetailContactsFromMandantsJson(selectedDetail?.mandants_json as string | null | undefined)
   const selectedMandateLines = selectedDetail ? [
     ['Numero', selectedDetail.numero_mandat ?? '-'] as [string, string],
     ['Type', selectedDetail.mandat_type ?? selectedDetail.mandat_type_source ?? '-'] as [string, string],

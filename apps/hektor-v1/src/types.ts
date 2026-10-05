@@ -414,6 +414,9 @@ export type MandatRecord = {
   mandat_date_cloture?: string | null
   mandat_montant?: number | string | null
   mandants_texte?: string | null
+  // 05/10/2026 : la LISTE des mandants, avec nos deux numeros par personne
+  // (app_contact_id / hektor_contact_id) et "muet":true pour une fiche sans nom.
+  mandants_json?: string | null
   price_change_event_count?: number | null
   price_change_last_source_kind?: string | null
   price_change_last_old_value?: number | string | null
