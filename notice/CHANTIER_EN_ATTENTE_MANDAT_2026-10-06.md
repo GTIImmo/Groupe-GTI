@@ -328,8 +328,36 @@ pose `row_factory`.
 | **les mandants cliquables** | `mandants_json` porte déjà les deux identifiants par personne — il ne reste que l'écran. Chantier séparé |
 | ⛔ **les GESTES du mandat** | **2** gestes worker contre **9** pour l'annonce · **0** RPC optimiste · « Modifier le montant » / « Annuler » / « Résilier » ne font qu'un `INSERT` dans `app_diffusion_request`. **C'est le vrai retard d'autonomie du mandat** |
 | **`app_mandat_mandant`** | une table mandat × contact serait la réponse de fond pour un historique fidèle. **Écartée** : 99,7 % des annonces n'ont qu'un mandat, les divergences valent 0,8 %. À ne rouvrir que si le besoin apparaît |
-| **la reconstruction du montant** | **testée et écartée** : 80 % de justesse même quand le prix n'a pas bougé, et l'historique de prix ne démarre qu'au 05/06/2026 (303 lignes). Inacceptable pour une mention contractuelle |
+| **DÉDUIRE le montant du mandat à partir du prix** | **testée et écartée** : 80 % de justesse même quand le prix n'a pas bougé, et l'historique de prix ne démarre qu'au 05/06/2026 (303 lignes). Inacceptable pour une mention contractuelle. ⚠ **Écarter la DÉDUCTION n'écarte pas la RÉCUPÉRATION** — voir l'encadré ci-dessous |
 | **les restes du run** | `busy_timeout` sur `pull_from_supabase.py` · le garde-fou d'ordonnancement descente / quotidien |
+
+---
+
+### ⚠⚠ NE PAS CONFONDRE « LE PRIX » ET « LE MONTANT DU MANDAT »
+
+Ce sont **deux champs différents** sur la même ligne du registre, et une phrase mal
+tournée de ma part le 05/10 a brouillé les deux.
+
+```
+prix            = le prix de l'ANNONCE   -> ON L'A DEJA, et c'est le DERNIER (206/206)
+                  le suivi des baisses tourne : 303 evenements, 207 lignes avec historique
+                  -> RIEN A RECUPERER
+
+mandat_montant  = le montant du MANDAT   -> c'est LUI qui manque sur les 454
+```
+
+**Ce qui est écarté, c'est de DEVINER le second à partir du premier** (80 % de justesse).
+**Aller chercher le vrai montant reste entièrement ouvert**, et c'est même la priorité ① :
+
+| | |
+|---|---|
+| ⭐ **l'écran web de Hektor** (`getInfoMandat`) | la porte est **trouvée** — rattrapage console sur le modèle du chauffage. **La voie n°1** |
+| **l'export « liste mandat »** mars → aujourd'hui | la vraie valeur, et le lecteur existe déjà |
+| **leur correctif** | le montant revient seul au run suivant |
+
+⚠ Et `app_mandat_mandant` n'avait **rien à voir avec le montant** : c'était une table pour
+garder **quels mandants ont signé quel mandat**. Écartée parce que 99,7 % des annonces
+n'ont qu'un seul mandat — le registre des liens suffit.
 
 ---
 
