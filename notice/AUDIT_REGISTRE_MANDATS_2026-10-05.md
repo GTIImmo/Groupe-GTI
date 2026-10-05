@@ -185,3 +185,63 @@ parfaitement, c'est mesuré. Mais une étiquette juste sur la boîte ne dit pas 
 qu'il y a dans la boîte. **La vérification de ce qu'on reçoit était la seule pièce
 absente de cette chaîne**, qui est par ailleurs la mieux construite du projet.
 C'est désormais le rôle de la sentinelle.
+
+---
+
+# 7. LA RÉPARATION EXISTE — Frédéric avait raison sur la cause
+
+> *« si on récupère les éléments du mandat dans Hektor à l'aide de l'id annonce
+> c'est pour cela que je te dis qu'il y a un problème »*
+
+**Exact, et c'est l'énoncé juste du défaut.** La seule porte que le projet utilise
+est `AnnonceById.mandats` : on demande les mandats **par l'annonce**, donc on hérite
+de la jointure que Hektor fait chez lui — celle qui se trompe.
+
+## ⭐ Mais une deuxième porte existe déjà, et elle est déjà codée
+
+`phase2/sync/manual_mandat_corrections.py` lit un **export Hektor « liste mandat »**
+(.xlsx), **indexé par NUMÉRO DE MANDAT** — pas par annonce. Il en tire exactement
+les champs contaminés :
+
+```
+mandate_number · contact_full_name · contact_full_address
+date_start · date_end · fees · linked_product_ref (prix) · exclusivity
+```
+
+Fichier présent : `liste mandat du 02_02_2026 au 28_02_2026.xlsx` — **80 mandats,
+numéros 18340 à 18419**. Lu par `.venv` (openpyxl y est ; le python système ne l'a
+pas).
+
+## Ce qu'il manque, précisément
+
+```
+les 89 mandats atteints : numeros 18420 -> 18842
+                          du 2026-03-02 au 2026-08-28
+   mars    30     juin     9
+   avril   23     juillet 11
+   mai     15     aout     1
+
+l'export dont on dispose (fevrier, 18340-18419) couvre 0 des 89
+```
+
+➡ **Demander à Hektor l'export « liste mandat » du 01/03/2026 au 31/08/2026.**
+Il porte le vrai mandant **et le vrai montant**, par numéro de mandat, hors de la
+jointure fautive.
+
+## ⚠ Et une ligne de code à changer
+
+`inject_manual_mandat_if_missing()` ne remplit que si le détail n'a **aucun**
+mandat :
+
+```python
+if isinstance(mandats, list) and mandats:
+    return data        # <- il renonce des qu'un mandat existe, meme contamine
+```
+
+Pour réparer les 89 il doit pouvoir **corriger** un corps suspect, pas seulement
+combler un vide. La condition est à étendre : corriger quand le numéro figure dans
+l'export **et** que le corps vient d'un identifiant partagé (ce que la sentinelle
+sait déjà désigner).
+
+⛔ **À ne pas faire sans l'export** : sans lui, « corriger » n'aurait aucune source
+et ne ferait qu'effacer.
