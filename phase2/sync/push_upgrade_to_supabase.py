@@ -818,8 +818,16 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
         #   plus (illisible, et FIGE : un mandant retire n'en sortirait jamais), mais
         #   on continue de le donner a la recherche. Il n'est detruit nulle part : le
         #   payload embarque le garde tel quel, sur 23 849 lignes.
+        # ⛔ SAUF SI LE CORPS EST SUSPECT. Sur ces lignes le texte de Hektor nomme
+        #   quelqu'un d'AUTRE : le donner a la recherche faisait remonter le bien de
+        #   SOUVIGNET quand on cherchait « BANO » (verifie le 05/10 sur 39707:18523).
+        #   C'est le defaut que mon propre correctif du matin avait introduit.
+        #   `corps_suspect` est pose par l'exporteur et s'arrete ici : il n'est pas
+        #   dans les colonnes envoyees a Supabase.
         current_row["search_text"] = build_search_text(
-            current_row, extra=[texte_mandants_de_hektor(normalized.get("register_detail_payload_json"))])
+            current_row,
+            extra=([] if normalized.get("corps_suspect")
+                   else [texte_mandants_de_hektor(normalized.get("register_detail_payload_json"))]))
         current_row["source_hash"] = stable_hash(current_row)
         current_rows.append(current_row)
     return current_rows

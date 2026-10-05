@@ -1924,6 +1924,67 @@ def texte_des_mandants(mandants: list[dict[str, object]]) -> str:
     )
 
 
+def charger_corps_suspects(con: sqlite3.Connection) -> set[tuple[str, str]]:
+    """Les (annonce, numero) dont le CORPS vient d'un autre mandat.       05/10/2026
+
+    ══════════════════════════════════════════════════════════════════════════════
+    LE DEFAUT, ETABLI SUR LA REPONSE BRUTE DE HEKTOR
+    ══════════════════════════════════════════════════════════════════════════════
+        hektor_mandat_id = 105 sert DEUX annonces, avec le MEME corps
+           annonce   454  numero 14898  2022-07-20  montant 62000  « Marie-Jose BANO »
+           annonce 39707  numero 18523  2026-04-10  montant 62000  « Marie-Jose BANO »
+        l'annonce 39707 vaut 112 500, et ses proprietaires sont SOUVIGNET.
+
+    Hektor a RECOMMENCE sa numerotation de mandats a 3 : les mandats de 2026 ont
+    recu des identifiants DEJA PRIS, et son point d'entree « detail de l'annonce »
+    rend, pour le mandat NEUF, le corps de l'ANCIEN. 91 cas, 89 en 2026.
+    Voir notice/AUDIT_REGISTRE_MANDATS_2026-10-05.md.
+
+    ⚠ LE CRITERE EST CELUI DE LA SENTINELLE, ET IL DOIT RESTER LE MEME :
+        meme identifiant Hektor sur plusieurs annonces
+      + MEME texte de mandants
+      + numeros DIFFERENTS                 <- ce qui ecarte le cas legitime
+    Le cas ecarte (117) est UN mandat qui couvre PLUSIEURS LOTS : meme corps ET
+    meme numero. Celui-la est juste, et on n'y touche pas.
+
+    ⭐ CE QUE CETTE LISTE SERT A FAIRE, ET CE QU'ELLE NE FAIT PAS.
+      Elle ne repare rien -- le vrai montant n'existe nulle part chez nous. Elle
+      permet seulement de NE PLUS AFFICHER une valeur fausse, et de ne plus donner
+      un nom etranger a la recherche. La valeur de Hektor reste intacte dans le
+      payload embarque : rien n'est detruit.
+    """
+    try:
+        lignes = con.execute(
+            "WITH partages AS ("
+            "   SELECT hektor_mandat_id FROM hektor.hektor_mandat"
+            "    GROUP BY 1 HAVING COUNT(DISTINCT hektor_annonce_id) > 1),"
+            " groupes AS ("
+            "   SELECT hektor_mandat_id,"
+            "          COUNT(DISTINCT COALESCE(mandants_texte, '')) AS nb_mandants,"
+            "          COUNT(DISTINCT COALESCE(numero, ''))         AS nb_numeros"
+            "     FROM hektor.hektor_mandat"
+            "    WHERE hektor_mandat_id IN (SELECT hektor_mandat_id FROM partages)"
+            "    GROUP BY 1)"
+            " SELECT CAST(m.hektor_annonce_id AS TEXT), CAST(m.numero AS TEXT)"
+            "   FROM hektor.hektor_mandat m"
+            "  WHERE m.hektor_mandat_id IN"
+            "        (SELECT hektor_mandat_id FROM groupes"
+            "          WHERE nb_mandants = 1 AND nb_numeros > 1)"
+            "    AND TRIM(COALESCE(CAST(m.hektor_annonce_id AS TEXT), '')) <> ''"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        # Le miroir n'est pas attache (environnement reduit) : on ne devine pas,
+        # on ne marque rien -- le registre garde exactement son comportement.
+        return set()
+    suspects = {(normalize_text(a) or "", normalize_text(n) or "") for a, n in lignes}
+    suspects.discard(("", ""))
+    if suspects:
+        print("[registre des mandats] lignes au corps suspect (Hektor a recycle son "
+              "identifiant de mandat) : %d -- montant masque, texte retire de la "
+              "recherche" % len(suspects), file=sys.stderr)
+    return suspects
+
+
 def build_mandat_register_rows(
     con: sqlite3.Connection,
     *,
@@ -1967,6 +2028,7 @@ def build_mandat_register_rows(
     #   356 344 contacts -- une requete par mandat ferait 24 487 allers-retours.
     #   Meme patron que les autres dictionnaires de ce constructeur.
     mandants_par_annonce = charger_mandants_du_registre_des_liens(con)
+    corps_suspects = charger_corps_suspects(con)
 
     # Lot B : affaire (offre/compromis/vente) PAR cycle, clé (annonce, hektor_mandat_id).
     affaires_by_mandat: dict[tuple[str, str], dict[str, object]] = {}
@@ -2158,8 +2220,16 @@ def build_mandat_register_rows(
             ) or normalize_text(raw.get("date_maj")) or normalize_text(raw.get("detail_synced_at")) or normalize_text(raw.get("annonce_synced_at")) or None
             # Ce que NOTRE registre des liens sait de ce bien (deja dedoublonne).
             mandants_du_bien = mandants_par_annonce.get(annonce_id) or []
+            # ⚠ LE CORPS DE CETTE LIGNE VIENT-IL D'UN AUTRE MANDAT ? Voir
+            #   charger_corps_suspects : Hektor recycle ses identifiants de mandat et
+            #   sert, pour le mandat neuf, le corps de l'ancien (montant + mandants).
+            corps_suspect = (annonce_id, numero) in corps_suspects
             row = {
                 "register_row_id": f"{annonce_id}:{numero}",
+                # ⚠ MARQUEUR INTERNE, JAMAIS ENVOYE : build_current_mandat_register_rows
+                #   enumere ses colonnes une par une, donc celle-ci s'arrete au push.
+                #   Elle y sert a retirer le texte de Hektor de `search_text`.
+                "corps_suspect": 1 if corps_suspect else 0,
                 "app_dossier_id": synthetic_app_dossier_id,
                 "hektor_annonce_id": int(annonce_id),
                 "photo_url_listing": photo_url_listing,
@@ -2207,7 +2277,16 @@ def build_mandat_register_rows(
                 "mandat_date_debut": normalize_text(current_version.get("debut")) or None,
                 "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
                 "mandat_date_cloture": normalize_text(current_version.get("cloture") or current_version.get("dateCloture") or current_version.get("date_cloture")) or None,
-                "mandat_montant": normalize_text(current_version.get("montant")) or None,
+                # ⛔ MASQUE SI LE CORPS EST SUSPECT. On n'affiche pas le montant
+                #   d'un AUTRE bien sur une mention contractuelle : 62 000 pour un
+                #   bien a 112 500 (annonce 39707). Mesure : sur les lignes atteintes,
+                #   montant != prix de l'annonce dans 92 % des cas, contre 9 % ailleurs.
+                #   ⭐ RIEN N'EST DETRUIT : le payload embarque garde la valeur de
+                #     Hektor telle quelle, et la sentinelle designe les lignes.
+                "mandat_montant": (
+                    None if corps_suspect
+                    else normalize_text(current_version.get("montant")) or None
+                ),
                 # ─── LES MANDANTS ────────────────────────────────── 04/10/2026
                 # `mandants_json` : NOTRE liste, avec les DEUX numeros de chaque
                 #   personne. Elle est posee des qu'on la connait -- c'est elle
