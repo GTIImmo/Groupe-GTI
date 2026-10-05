@@ -231,3 +231,63 @@ colonne mandants_json  (absente) : False
 ```
 
 ➡ **Le registre ne peut plus tomber a cause de ce chantier, patch ou pas.**
+
+---
+
+# EN SERVICE ET PROUVE EN PRODUCTION — 05/10/2026, 09:0x
+
+Patch colle par Frederic apres la descente (terminee 08:47:26, 3 etapes `exit 0`),
+puis `registre_mandats_upsert.py` — **UPSERT seul, aucune suppression**, donc sans
+fenetre noire pour l'agence :
+
+```
+fabrique : 24487 lignes en 28 s
+pose     : 24487 lignes en 102 s -- AUCUNE suppression
+[registre des liens] roles ecartes : acquereur_compromis=4
+```
+
+## Le resultat, mesure sur le cloud
+
+```
+                        AVANT        APRES
+lignes                  24 487       24 487
+sans mandant               638           31      <- les 607 comblees
+avec mandants_json           0       24 451
+```
+
+## La garde est passee au vert
+
+```
+   -- le registre des mandats sait-il ce que les liens savent ? --
+   lignes sans mandant           : 31 au total
+      dont les liens les savent  : 0   (doit valoir 0)
+code de sortie : 0
+```
+
+⚠ **Elle lit la copie LOCALE** : il a fallu redescendre la table
+(`pull_from_supabase.py --table app_mandat_register_current`, 74 s) pour qu'elle
+voie l'etat neuf. Sans ca elle aurait dit 607 en ayant raison sur une photo
+perimee — [[mesurer-sur-la-bonne-source]].
+
+## Les trois regles, verifiees sur de VRAIES lignes du cloud
+
+| annonce | ce qu'on voit | ce que ca prouve |
+|---|---|---|
+| 63132 mandat **18895** | `Alexander HERRMANN \| Laura HERRMANN` + les 2 × 2 numeros dans le JSON | le repli remplit, avec les identites |
+| 63132 mandat **18894** | `HERRMANN Alexander - 11 chemin des suzettes 1232 confignon` — **intact** | ⛔ **jamais d'ecrasement** : deux mandats sur la meme annonce, un seul comble |
+| 36284 | texte = `Nicole DIGONNET` seule ; JSON = `{"nom":"Contact 10324392","muet":true}` **+** Nicole | la fiche muette est **gardee** avec ses numeros et **tue** a l'affichage |
+
+Et `search_text` s'est recalcule : ces mandats sont desormais **trouvables par le
+nom du mandant**, ce qu'ils n'etaient pas.
+
+## Les 31 qui restent sont les bonnes
+
+Toutes `Clos`/archivees (une `Estimation`), et `mandants_json` y est **NULL aussi** :
+nos liens ne connaissent personne pour elles. Il n'y a rien a y mettre.
+
+## Ce qui reste du chantier
+
+⛔ Les mandants sont **affiches, pas cliquables** : `mandants_json` porte les deux
+numeros par personne, l'ecran du registre et la fiche mandat restent a reprendre.
+⛔ Et les **gestes** du mandat restent le vrai retard (2 gestes worker contre 9,
+0 RPC optimiste) — voir le tableau plus haut.
