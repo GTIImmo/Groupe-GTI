@@ -2215,13 +2215,35 @@ def build_mandat_register_rows(
                 #   elle porte le MULTIPLE : 81 % des mandats ont plusieurs
                 #   mandants (jusqu'a 7 apres dedoublonnage). Un texte unique ne
                 #   savait pas les distinguer.
-                # `mandants_texte` : INCHANGE quand Hektor l'a fourni. Le repli
-                #   n'intervient QU'EN DERNIER RECOURS -- les 23 849 lignes deja
-                #   remplies ne doivent pas bouger d'un caractere.
+                # ═══ `mandants_texte` : NOTRE LISTE D'ABORD ═══  change le 05/10
+                #
+                # ⚠ L'INVERSE DE CE QUE J'AVAIS POSE LE MATIN MEME, et c'est la
+                #   MESURE qui l'a impose. « Jamais d'ecrasement » etait une regle
+                #   de prudence prise avant de savoir ce que notre liste valait.
+                #
+                #   Ce qu'ecraser coute, mesure sur les 24 451 lignes remplies :
+                #       personnes que Hektor nomme et que nous perdrions :  0
+                #   (ma premiere mesure disait 7 503 : je comparais des FICHES, pas
+                #    des PERSONNES -- les doubles fiches de couple, deja fusionnees
+                #    par le dedoublonnage. Avec la vraie cle : zero.)
+                #
+                # ⭐ ET L'ARGUMENT QUI TRANCHE : depuis le 03/10 on sait RETIRER un
+                #   mandant. Notre liste se met a jour ; le texte de Hektor, FIGE,
+                #   ne le fera jamais. Le garder prioritaire, c'etait s'engager a
+                #   afficher indefiniment un mandant qu'on vient de retirer.
+                #
+                # ⛔ RIEN N'EST DETRUIT. Le texte de Hektor reste tel quel dans le
+                #   payload embarque (`build_trimmed_detail_payload`, qui lit la
+                #   valeur brute), et le push le redonne a `search_text` : les
+                #   adresses collees aux noms (62 % des lignes) restent CHERCHABLES
+                #   sans etre affichees.
+                #
+                # Hektor redevient le repli, pour le jour ou nos liens ne savent
+                # personne (31 lignes aujourd'hui).
                 "mandants_json": json.dumps(mandants_du_bien, ensure_ascii=False) if mandants_du_bien else None,
                 "mandants_texte": (
-                    normalize_text(current_version.get("mandants"))
-                    or texte_des_mandants(mandants_du_bien)
+                    texte_des_mandants(mandants_du_bien)
+                    or normalize_text(current_version.get("mandants"))
                     or None
                 ),
                 "mandat_note": normalize_text(current_version.get("note")) or None,

@@ -125,7 +125,18 @@ def normalize_numeric(value: object) -> object:
     return value
 
 
-def build_search_text(row: dict[str, object]) -> str | None:
+def build_search_text(row: dict[str, object], extra: list[object] | None = None) -> str | None:
+    """`extra` : des textes a rendre CHERCHABLES sans les afficher.
+
+    ⭐ POURQUOI IL EXISTE                                             05/10/2026
+      Le registre des mandats affiche desormais NOTRE liste de mandants, propre et
+      tenue a jour, a la place du texte figé de Hektor. Mais ce texte-la collait
+      l'ADRESSE au nom sur 62 % des lignes (« Hanifi SAGIR103 avenue de Lyon »), et
+      cette adresse etait cherchable. La retirer de l'affichage sans la retirer de
+      la recherche : c'est tout le role de ce parametre.
+      ⚠ Les quatre autres appelants ne le passent pas -- leur `search_text` ne
+        change pas d'un caractere.
+    """
     parts = [
         row.get("numero_dossier"),
         row.get("numero_mandat"),
@@ -136,8 +147,19 @@ def build_search_text(row: dict[str, object]) -> str | None:
         row.get("agence_nom"),
         row.get("mandants_texte"),
     ]
+    if extra:
+        parts.extend(extra)
     text = " ".join(str(part).strip() for part in parts if str(part or "").strip())
-    return " ".join(text.split()) or None
+    # Un mot deux fois ne sert a rien et double la colonne : on garde le premier.
+    vus: set[str] = set()
+    mots: list[str] = []
+    for mot in text.split():
+        cle = mot.lower()
+        if cle in vus:
+            continue
+        vus.add(cle)
+        mots.append(mot)
+    return " ".join(mots) or None
 
 
 def normalize_row(row: dict[str, object], nullable_keys: tuple[str, ...]) -> dict[str, object]:
@@ -699,6 +721,27 @@ def adapter_registre_au_schema(
     return [{k: v for k, v in row.items() if k not in manquantes} for row in rows]
 
 
+def texte_mandants_de_hektor(payload_json: object) -> str | None:
+    """Le texte de mandants tel que Hektor l'a ecrit, lu dans le payload embarque.
+
+    ⚠ ON NE LE RECONSTRUIT PAS : il est deja la, recopie a l'identique par
+      l'exporteur (`normalize_text(current_version.get("mandants"))`), et mon
+      correctif du 05/10 ne le touche pas. Si un jour il disparaissait du payload,
+      cette fonction rendrait None et la recherche perdrait les adresses -- sans
+      rien casser d'autre.
+    """
+    if not payload_json:
+        return None
+    try:
+        payload = json.loads(str(payload_json))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    valeur = payload.get("mandants_texte")
+    return str(valeur).strip() or None if valeur else None
+
+
 def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     current_rows: list[dict[str, object]] = []
     for row in rows:
@@ -770,7 +813,13 @@ def build_current_mandat_register_rows(rows: list[dict[str, object]]) -> list[di
             "register_detail_payload_json": normalized.get("register_detail_payload_json"),
             "affaires_detail_json": normalized.get("affaires_detail_json"),
         }
-        current_row["search_text"] = build_search_text(current_row)
+        # ⭐ LE TEXTE DE HEKTOR RESTE CHERCHABLE SANS ETRE AFFICHE.
+        #   Il colle l'adresse du mandant au nom sur 62 % des lignes. On ne l'affiche
+        #   plus (illisible, et FIGE : un mandant retire n'en sortirait jamais), mais
+        #   on continue de le donner a la recherche. Il n'est detruit nulle part : le
+        #   payload embarque le garde tel quel, sur 23 849 lignes.
+        current_row["search_text"] = build_search_text(
+            current_row, extra=[texte_mandants_de_hektor(normalized.get("register_detail_payload_json"))])
         current_row["source_hash"] = stable_hash(current_row)
         current_rows.append(current_row)
     return current_rows
