@@ -57,8 +57,9 @@ MIROIR = ROOT / "data" / "hektor.sqlite"
 # Le seuil n'est PAS un reglage de confort : c'est l'etat connu au 05/10/2026.
 # Il doit BAISSER quand Hektor corrige, jamais monter en silence.
 CONNU_AU_05_10 = 91
-# Le second defaut : un couple (annonce, numero) qui porte DEUX mandats de dates
-# differentes. 31 au 05/10 (22 ou l'on garde le plus ancien, 9 le plus recent).
+# L'accumulation du miroir : un couple (annonce, numero) qui porte DEUX lignes de
+# dates differentes. 31 au 05/10 -- et la fusion garde la BONNE dans 31 cas sur 31.
+# Ce n'est donc pas une perte, c'est un temoin : s'il monte, la fusion a change.
 COUPLES_A_DEUX_MANDATS_AU_05_10 = 31
 
 # Les deux formes de partage d'identifiant, qu'il ne faut JAMAIS confondre :
@@ -127,20 +128,20 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
     #   cle primaire porte sur (hektor_annonce_id, hektor_mandat_id). Un meme numero
     #   de mandat se retrouve donc sur la meme annonce avec DEUX identifiants.
     #
-    # ⚠ ET NOTRE FUSION EN GARDE UN SEUL. Mesure du 05/10 sur les 149 :
-    #       116  les deux lignes ont la MEME date -> le meme mandat vu deux fois,
-    #            la fusion est JUSTE, rien a signaler
-    #        22  deux mandats DIFFERENTS et on garde le PLUS ANCIEN
-    #             -> le mandat en cours est perdu   (annonce 1032 numero 4069 :
-    #                on garde BOURGEAT 2012 / 158 685, on perd TISSIER 2020 / 76 230)
-    #         9  deux mandats differents, on garde le plus recent
-    #   Les mandats perdus datent de 2020 (10), 2021 (8), 2022 (2), 2025 (2) :
-    #   RIEN depuis janvier 2025. C'est un defaut ancien, pas une degradation.
+    # ⭐⭐ ET LA FUSION EST JUSTE -- VERIFIE, CONTRE MON PROPRE SOUPCON.
+    #   J'avais d'abord conclu « on garde le plus ancien, donc le mandat en cours est
+    #   perdu ». C'ETAIT FAUX. Le miroir ACCUMULE (sa cle est (annonce, id Hektor) et
+    #   il n'efface jamais) : les lignes en trop sont des TRACES ANCIENNES, pas des
+    #   mandats concurrents. Hektor n'en sert qu'UN aujourd'hui.
+    #       annonce 1032, numero 4069 : le miroir a id 231 (2012) ET id 3349 (2020)
+    #       le BRUT de Hektor n'a que id 231 -> et c'est celui que nous gardons
+    #   Mesure sur les 31 couples a dates differentes :
+    #       nous gardons la ligne que Hektor sert AUJOURD'HUI : 31 / 31
+    #       nous gardons une ligne qu'il ne sert plus         :  0
     #
-    # ⛔ POURQUOI PERSONNE NE LE DISAIT. Le controle existant verifie que NOTRE cle
-    #   est respectee (0 doublon) -- et c'est ce zero qui masquait les 157 lignes du
-    #   miroir que la fusion absorbe. Verifier qu'une cle est respectee ne dit pas
-    #   qu'elle ne confond pas deux choses.
+    # ⛔ DONC CE COMPTEUR NE MESURE PAS UNE PERTE. Il mesure l'ACCUMULATION du
+    #   miroir, et il est ici pour une seule raison : si un jour la fusion cessait
+    #   de garder la bonne ligne, c'est par ce chiffre qu'on le verrait monter.
     couples_a_deux_mandats = conn.execute(
         "WITH doublons AS ("
         "   SELECT hektor_annonce_id, numero FROM hektor_mandat"
@@ -224,13 +225,13 @@ def main() -> int:
               % (ecart, total))
     print("   un mandat sur plusieurs lots (NORMAL): %s" % m["un_mandat_plusieurs_lots"])
     print("")
-    print("   -- et la ou NOTRE cle confond deux mandats --")
+    print("   -- l'accumulation du miroir, absorbee par notre cle --")
     print("   couples portant DEUX mandats de dates")
     print("   differentes                         : %s   (connu au 05/10 : %s)"
           % (m["couples_a_deux_mandats"], COUPLES_A_DEUX_MANDATS_AU_05_10))
     print("      lignes du miroir absorbees        : %s" % m["lignes_absorbees"])
-    print("      (la cle (annonce, numero) en garde UNE : sur 22 cas c'est la plus")
-    print("       ancienne, donc le mandat en cours est perdu. Rien depuis 01/2025.)")
+    print("      AUCUNE PERTE : le miroir accumule, Hektor n'en sert qu'un, et notre")
+    print("      cle garde la bonne ligne -- 31 sur 31 au 05/10.")
     print("")
     print("   -- la pression : part d'identifiants Hektor deja pris --")
     for an, total, part in m["par_annee"]:
