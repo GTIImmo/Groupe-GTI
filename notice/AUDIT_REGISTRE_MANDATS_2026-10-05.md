@@ -561,3 +561,73 @@ le VIEUX (id 760)  : num 13497  2021-04-15 -> 2023-04-15  montant 245 000  « Pa
 Ici les **mandants sont les bons** (HERRMANN) et seul le montant manque. Donc selon le
 cas, ce sont le montant seul, ou le montant **et** les mandants, qui fuient de
 l'ancien enregistrement.
+
+---
+
+# 12. ⭐ LA VRAIE CAUSE — ET LE PROJET L'AVAIT DÉJÀ ÉCRITE LE 25/08
+
+Frédéric : *« on avait déjà eu ce problème, les id mandats de Hektor ne sont pas
+fiables, et le projet avait trouvé des solutions quand le registre était une vue des
+annonces. Cherche mon historique. »* **Il avait raison, et la note existe.**
+
+## Ce que `notice/NOTE_CHAINE_DES_MANDATS_2026-08-25.md` disait déjà
+
+**§6 — « Un identifiant de mandat ne vaut RIEN seul »** : 342 identifiants partagés
+(454 aujourd'hui). Règle posée : *toujours interroger par le couple (annonce, numéro),
+jamais par l'identifiant seul* — et c'est exactement la clé de `app_mandat`.
+
+**§5 — « Et la fiche annonce, elle, tranche — 24 fois sur 24 »** : `app_view_generale`
+prenait le mandat que **l'annonce elle-même désigne** (`src.mandat_id` / `src.no_mandat`).
+C'était la solution du temps où le registre était une vue. ⚠ **Et c'est précisément ce
+mécanisme qui échoue depuis mars 2026** — le pointeur de l'annonce est devenu ambigu.
+
+⭐ **Et la note du soir du 25/08 contient la clé que je cherchais :**
+
+> *« Sur le formulaire d'offre, Hektor n'attend pas un numéro mais un couple
+> **`<id>-<FAMILLE>`** — `648-PROTEXA` ou `9887-HEKTOR` — et une valeur amputée est
+> **ignorée sans erreur**. »*
+
+## Donc il n'y a JAMAIS eu de recyclage
+
+L'identifiant complet d'un mandat est **`<id>-<FAMILLE>`**. L'agence est passée aux
+mandats **PROTEXA** en mars 2026, et PROTEXA numérote **depuis 1** :
+
+```
+id 10  : annonce 29    num 16564  famille HEKTOR   2024  82 000
+         annonce 61650 num 18427  famille PROTEXA  2026  82 000
+id 101 : annonce 447   num 14813  famille HEKTOR   2022  67 000
+         annonce 61794 num 18519  famille PROTEXA  2026  67 000
+
+449 identifiants nus partages  ->  446 portent LES DEUX familles
+les 454 lignes que notre critere marque : PROTEXA a 100 %
+les lignes non marquees de ces identifiants : HEKTOR 448 (+ 2 PROTEXA)
+```
+
+`10-PROTEXA` et `10-HEKTOR` sont **deux mandats différents**. « Recyclage » était un
+mauvais mot — le mien, et je l'ai corrigé dans le code.
+
+## ⛔ Mais la lecture, elle, résout sur l'identifiant NU
+
+```
+getMandatById("10")          -> numero 16564, 2024, 82 000, « Carla ACAR »   (HEKTOR)
+getMandatById("10-PROTEXA")  -> LE MEME
+getMandatById("10-HEKTOR")   -> LE MEME
+```
+
+Le suffixe est **silencieusement ignoré en lecture** — le symétrique exact du piège de
+l'offre décrit le 25/08. La fiche annonce fait pareil : elle résout `10`, tombe sur
+l'enregistrement HEKTOR, et nous renvoie **son** montant et **ses** mandants, habillés
+du numéro et des dates du mandat PROTEXA.
+
+## Ce que ça change pour le signalement
+
+| | |
+|---|---|
+| ce n'est pas | « vous avez recyclé vos identifiants » |
+| c'est | **« votre lecture ignore la famille »** — vous l'exigez à l'écriture (formulaire d'offre), vous ne l'utilisez pas à la lecture (`getMandatById`, bloc mandat de la fiche annonce) |
+| réparable par eux ? | **oui, et sans rien changer chez nous** |
+| et notre masque ? | il se lèvera seul : il se déclenche sur la collision d'identifiant nu |
+
+➡ **La donnée existe. C'est sa résolution qui échoue.** Et la solution d'époque
+(« la fiche annonce tranche ») n'était pas fausse : elle a cessé d'être vraie le jour
+où une seconde famille de mandats est apparue.

@@ -1935,9 +1935,28 @@ def charger_corps_suspects(con: sqlite3.Connection) -> set[tuple[str, str]]:
            annonce 39707  numero 18523  2026-04-10  montant 62000  « Marie-Jose BANO »
         l'annonce 39707 vaut 112 500, et ses proprietaires sont SOUVIGNET.
 
-    Hektor a RECOMMENCE sa numerotation de mandats a 3 : les mandats de 2026 ont
-    recu des identifiants DEJA PRIS, et son point d'entree « detail de l'annonce »
-    rend, pour le mandat NEUF, le corps de l'ANCIEN. 91 cas, 89 en 2026.
+    ⭐⭐ LA VRAIE CAUSE, ET CE N'EST PAS UN « RECYCLAGE ». Le projet l'avait deja
+      etablie le 25/08 (notice/NOTE_CHAINE_DES_MANDATS_2026-08-25.md, §6) :
+          « Hektor n'attend pas un numero mais un couple <id>-<FAMILLE> --
+            648-PROTEXA ou 9887-HEKTOR -- et une valeur amputee est IGNOREE
+            SANS ERREUR. »
+      L'identifiant complet d'un mandat est donc `<id>-<FAMILLE>`. L'agence est
+      passee aux mandats PROTEXA en mars 2026, et PROTEXA numerote DEPUIS 1 :
+      `10-PROTEXA` et `10-HEKTOR` sont deux mandats DIFFERENTS, pas un recyclage.
+      Mesure du 05/10 : sur 449 identifiants nus partages, 446 portent les DEUX
+      familles. Et les 454 lignes marquees ici sont PROTEXA a 100 %.
+
+      ⛔ MAIS LA FICHE ANNONCE ET getMandatById RESOLVENT SUR L'IDENTIFIANT NU.
+        Ils tombent donc sur l'enregistrement HEKTOR de meme numero, et nous
+        renvoient SON montant et SES mandants -- avec le numero et les dates du
+        mandat PROTEXA. Le suffixe ne sert a rien en lecture : verifie le 05/10,
+        getMandatById("10"), ("10-PROTEXA") et ("10-HEKTOR") rendent TOUS les trois
+        le mandat HEKTOR 16564 de 2024.
+
+    ⭐ DONC LA DONNEE EXISTE CHEZ HEKTOR : l'enregistrement PROTEXA est bien la (ses
+      DATES nous parviennent, 2026->2027, elles ne peuvent pas venir du HEKTOR de
+      2022). C'est sa RESOLUTION qui echoue. Le jour ou Hektor tiendra compte de la
+      famille, le montant reviendra tout seul au prochain run.
     Voir notice/AUDIT_REGISTRE_MANDATS_2026-10-05.md.
 
     ⭐ LE CRITERE, ET IL A ETE VALIDE CONTRE L'API DE HEKTOR (8 cas sur 8).
@@ -1990,9 +2009,10 @@ def charger_corps_suspects(con: sqlite3.Connection) -> set[tuple[str, str]]:
     suspects = {(normalize_text(a) or "", normalize_text(n) or "") for a, n in lignes}
     suspects.discard(("", ""))
     if suspects:
-        print("[registre des mandats] lignes au corps FABRIQUE (Hektor a recycle son "
-              "identifiant de mandat) : %d -- montant masque, texte retire de la "
-              "recherche" % len(suspects), file=sys.stderr)
+        print("[registre des mandats] lignes dont le corps vient d'un AUTRE mandat "
+              "(l'identifiant nu est ambigu entre les familles HEKTOR et PROTEXA) : "
+              "%d -- montant masque, texte retire de la recherche" % len(suspects),
+              file=sys.stderr)
     return suspects
 
 

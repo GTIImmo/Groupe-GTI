@@ -86,9 +86,15 @@ function jetonHektor() {
   //   la seule facon de lire un schema dont l'introspection est coupee.
   // Les champs du type HektorMandat, trouves par sondage :
   //    id · numero · montant · mandants · dateDebut · dateFin · type · note · user
+  // ⭐ LA NOTE DU 25/08 : « Hektor n'attend pas un numero mais un couple
+  //   <id>-<FAMILLE> -- 648-PROTEXA ou 9887-HEKTOR -- et une valeur amputee est
+  //   IGNOREE SANS ERREUR ». Les mandats depuis mars 2026 sont PROTEXA, les anciens
+  //   HEKTOR : l'identifiant nu est donc ambigu. On essaie les deux formes.
   for (const id of CIBLES) {
-    await demande(`getMandatById(${id})`,
-      `query { getMandatById(idMandat: ${id}) { id numero type dateDebut dateFin montant mandants } }`);
+    for (const forme of [id, `${id}-PROTEXA`, `${id}-HEKTOR`]) {
+      await demande(`getMandatById("${forme}")`,
+        `query { getMandatById(idMandat: "${forme}") { id numero type dateDebut dateFin montant mandants } }`);
+    }
   }
   await browser.close();
 })().catch((e) => {
