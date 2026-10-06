@@ -5,7 +5,67 @@
 > MESURE. Les chiffres que j'ai annonces puis retires sont nommes, pour qu'on ne les
 > ressorte pas.
 >
-> **Rien n'est lance.** Le LOT 0 attend le « vas-y » de Frederic.
+> ~~**Rien n'est lance.** Le LOT 0 attend le « vas-y » de Frederic.~~
+
+---
+
+## ⭐ ETAT AU 06/10 AU SOIR — QUATRE LOTS FAITS ET EPROUVES
+
+```
+4ec2e2d  LOT 1  la fiche annonce reprend ses MANDANTS chez nous
+87364c1  LOT 2  le registre dit le PRIX la ou il ecrivait un montant -- MASQUE RETIRE
+6e76d17  LOT 2b sans prix ET corps emprunte -> on ne dit rien (1 regression rattrapee)
+308fb70  LOT 3  app_mandat perd `montant` -- LE CODE SEUL, les 2 ALTER TABLE restent
+037d956  LOT 4  la fiche annonce cesse d'afficher un montant emprunte
+```
+
+**CE QUE LES MESURES ONT CORRIGE DANS MES PROPRES CHIFFRES** *(la 6e et la 7e fois)*
+
+```
+« 456 mandants empruntes »         -> 87. J'avais compte les entrees qui PORTENT
+                                      un mandant, pas celles qui portent le nom
+                                      d'un AUTRE. Sur 457 couples suspects, 370
+                                      designent LA MEME personne, ecrite autrement,
+                                      et le texte de Hektor y est PLUS RICHE
+                                      (adresse, parfois un co-mandant).
+                                      PROUVE PAR UNE 3e SOURCE : le bloc
+                                      `proprietaires` DE L'ANNONCE confirme notre
+                                      nom 86 fois sur 86, celui de `mandats[]` 0.
+
+« etendre le masque »             -> REFUSE PAR FREDERIC, et il avait raison :
+                                      « un masque, ce n'est pas une rustine ? »
+                                      Si. On a mis LA VRAIE VALEUR a la place.
+```
+
+**LES REGLES RETENUES, et pourquoi elles DIFFERENT d'un ecran a l'autre**
+
+```
+LE REGISTRE   colonne de NOMS SEULS -> notre liste gagne, rien n'est perdu
+LA FICHE      texte qui porte AUSSI l'adresse -> on ne remplace QUE si nos noms
+              n'ont AUCUN nom en commun avec celui de Hektor
+LE MONTANT    mandat COURANT + un prix -> le prix du bien
+              mandat ANCIEN, ou pas de prix -> on EFFACE (un prix d'aujourd'hui
+              ne dit rien d'un mandat signe autrefois)
+```
+
+**CE QUI RESTE, ET C'EST POUR FREDERIC**
+
+```
+⬜ les 2 ALTER TABLE du LOT 3 : local + supabase/patch_app_mandat_sans_montant_2026-10-06.sql
+   l'outil a refuse l'ALTER TABLE en production (« irreversible »). Repete sur
+   copie de 5,9 Go : 1,35 s, 0 ligne perdue, 3 index intacts, quick_check ok.
+   Filet : notice/filet_montants_app_mandat_2026-10-06.json (26 839 triplets).
+⬜ pousser les 5 commits
+⬜ rien n'est a l'ecran avant le run de nuit (ou la prochaine sauvegarde d'une fiche)
+```
+
+**LES CONTROLES, tous eprouves A L'ENVERS** *(ils echouent sur la version d'avant)*
+
+```
+phase2/checks/fiche_annonce_mandants.py        mandants + montants de la fiche
+phase2/checks/registre_montant_est_le_prix.py  les 3 chemins du registre
+phase2/checks/chemin_immediat_paquet.py        non-regression du chemin immediat
+```
 
 ---
 
