@@ -176,29 +176,50 @@ notres, donc on les ECARTE. **Mesure sur les 48 :**
          -> 25 lignes a 2 noms ou plus = le seul vrai sujet
 ```
 
-**Et sur ces 25, ecarter rend la ligne PIRE :**
+⚠⚠ **ET MA PREMIERE RAISON DE LE REFUSER ETAIT FAUSSE.** J'avais ecrit : *« sur
+l'annonce 8377, ecarter FERNANDEZ laisserait "Contact 10348368", un nom muet »*.
+**Je lisais la liste BRUTE, pas l'affichage** : `texte_des_mandants()` filtre les noms
+muets depuis le 04/10.
 ```
-ann 8377   nos relations : ['Julien FERNANDEZ', 'Contact 10348368']
-           l'autre mandat dit : « M. FERNANDEZ Julien... »
-   -> ECARTER FERNANDEZ laisserait « Contact 10348368 », un NOM MUET.
+ann 8377   liste BRUTE   : ['Julien FERNANDEZ', 'Contact 10348368']
+           ce qui S'AFFICHE : « Julien FERNANDEZ »
 ```
-⭐ « Il ecarte, il n'ajoute jamais » etait vrai -- mais **ecarter peut ne laisser que
-du dechet**. Le trieur est donc ecarte, et ce n'est pas un report : c'est un refus.
 
-### Ce qu'on fait a la place, sur les 25
+### ⛔ LA VRAIE RAISON DU REFUS, et elle est de principe
 
-**Rien d'astucieux. On donne la liste entiere, et ON LE DIT.** La donnee pour decouper
-n'existe pas : nos relations ne portent aucune reference de mandat *(decision du 30/09 :
-le fait est « proprietaire du bien »)*, et les textes de Hektor sur ces lignes-la sont
-precisement ceux qui ne sont pas fiables.
+```
+sur les 39 annonces a plusieurs mandats, 10 portent LE MEME mandant sur TOUS :
+   ann 61800   n° 18497 -> SERVAT Patrick     n° 18837 -> SERVAT Patrick
+```
 
-⭐ C'est la regle de la methode, §0 : *« Une case qu'on ne sait pas remplir se DIT, elle
-ne se saute pas. »* -> ces 25 lignes portent **les mandants DU BIEN**, pas ceux de ce
-mandat-la, et l'ecran doit l'ecrire.
+**Une personne peut etre mandante de DEUX mandats du meme bien** -- elle a renouvele.
+Donc « ecarter ce que l'autre mandat nomme » est **faux en principe** : sur l'annonce
+8377, l'autre mandat nomme FERNANDEZ et notre liste affichee EST FERNANDEZ. Le trieur
+la viderait.
 
-⚠ **Et un contre-exemple qui montre que c'est le bon choix** : annonce 62055, les DEUX
-textes de Hektor sont faux (MOREAUX et GRANGE), nos relations disent MIQUEL, **et l'API
-de Hektor confirme MIQUEL**. Un trieur base sur ses textes aurait suivi le faux.
+⚠ **Et un contre-exemple qui confirme** : annonce 62055, les DEUX textes de Hektor sont
+faux (MOREAUX et GRANGE), nos relations disent MIQUEL, **et l'API de Hektor confirme
+MIQUEL**. Un trieur base sur ses textes aurait suivi le faux.
+
+### Ce qu'on fait sur les 48 : RIEN de special
+
+**Et je retire aussi ma proposition de « marquer la ligne comme mandants DU BIEN ».**
+Elle supposait un defaut qui n'en est pas un.
+
+```
+apres filtrage des muets, sur les 48 :
+   25 lignes affichent UN seul nom
+   23 lignes en affichent plusieurs
+```
+
+⭐ **Et plusieurs mandants n'est PAS une anomalie : c'est le cas de 47,5 % du registre.**
+```
+24 491 lignes :  UN mandant 12 823 (52,4 %)  ·  PLUSIEURS 11 637 (47,5 %)
+```
+Un couple, une fratrie, une indivision. `62055 -> MIQUEL | MIQUEL` est un couple
+confirme par l'API ; `30911 -> Muriel | Cecile | patricia | Eric Andriollo` une famille.
+
+➡ **Le recours standard suffit. Aucun traitement particulier pour les 48.**
 
 ---
 
@@ -258,9 +279,10 @@ OU  phase2/sync/mandat_ledger.py , _poser()
          258 vides (societes) -> 228 reparees, le correctif societes EST deja la
   ③  si nos relations ne savent pas -> VIDE + sortie en LISTE                 (30)
   ⚠ LOCATION / GESTION / INCONNUE : on ne touche a rien (decision du 26/08)
-  ⛔ PAS DE TRIEUR : abandonne apres l'audit du 06/10 (il laisserait un nom MUET
-     sur l'annonce 8377). Les 25 lignes concernees portent les mandants DU BIEN,
-     et l'ecran doit l'ECRIRE au lieu de faire semblant.
+  ⛔ PAS DE TRIEUR, et AUCUN traitement special pour les 48 : refuse par principe
+     (une personne peut etre mandante de DEUX mandats du meme bien -- 10 cas sur 39).
+     Les noms muets sont deja filtres, et plusieurs mandants est le cas de 47,5 %
+     du registre. Le recours standard suffit.
   ⭐ ET ON PRIORISE : les 457 d'abord (un nom FAUX s'affiche aujourd'hui),
      les 258 ensuite (un vide, pas un mensonge).
 
@@ -316,6 +338,9 @@ depuis lui deplacerait le defaut au lieu de le corriger.
     montants (59 000 / 53 000), meme date. Le registre a pris Annette / 53 000,
     rien ne prouve que c'est le bon.
 ⬜  2 numeros brules chez Hektor : 63073, 63132
+⬜  UN CONTACT DE TEST dans les mandants de l'annonce 24113 : « Mme. CLAUDE
+    TESTCLAUDE » (603953, l'essai L4-b du 21/09). Ce n'est pas un defaut de mandat :
+    c'est un contact d'essai a nettoyer, comme les annonces 63146 et 63147.
 ⬜  le defaut de Hektor continue : ~60 lignes/mois. MAIS depuis septembre elles
     arrivent en montant VIDE, plus jamais emprunte (41 % en mars -> 0 % en septembre),
     et apres le LOT 1 elles recoivent leurs mandants seules, sans intervention.
