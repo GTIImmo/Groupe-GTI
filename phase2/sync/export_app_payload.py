@@ -2565,6 +2565,12 @@ def enrich_offer_transaction_fields(con: sqlite3.Connection, rows: list[dict[str
 # ⚠ `mandats_json` est tantot une LISTE, tantot un OBJET SEUL (memoire
 #   `blob-json-liste-ou-objet-seul`) : les deux formes sont traitees.
 #
+# ─── ET LE MONTANT AUSSI (lot 4, le meme jour) ────────────────────────────────
+#   La fiche annonce affichait AUSSI le montant emprunte, sur 88 entrees :
+#   « 147 000 » sur un bien a 49 000 (annonce 59559), « 80 000 » sur un bien a
+#   40 500 (annonce 61740). Le registre a ete repare au lot 2 ; ici c'est le
+#   meme geste, au meme endroit, derriere le meme interrupteur.
+#
 # RETOUR ARRIERE : APP_DETAIL_MANDANTS_DEPUIS_NOS_LIENS=0 dans l'environnement.
 # ═══════════════════════════════════════════════════════════════════════════════
 DETAIL_MANDANTS_DEPUIS_NOS_LIENS = (
@@ -2595,48 +2601,67 @@ def jetons_de_nom(valeur: object) -> set[str]:
     return {mot for mot in mots if len(mot) > 2 and mot not in _MOTS_SANS_NOM}
 
 
-def mandats_json_avec_nos_mandants(
+def mandats_json_corrige(
     valeur: object,
     mandants_du_bien: list[dict[str, object]] | None,
     numeros_suspects: set[str] | None,
-) -> tuple[object, int]:
-    """Rend (le blob, le nombre d'entrees reecrites).
+    prix_annonce: object = None,
+    numero_courant: object = None,
+) -> tuple[object, int, int]:
+    """Rend (le blob, mandants reecrits, montants corriges).
 
-    Ne change rien tant que les deux conditions ne tiennent pas : le numero est
-    un corps emprunte, ET nos noms ne figurent pas dans le texte de Hektor.
-    Un texte n'est JAMAIS vide : sans mandant chez nous, on ne touche a rien.
+    DEUX CORRECTIONS, et elles ne portent QUE sur les entrees a corps emprunte.
+
+    ① LES MANDANTS -- on ne remplace que si nos noms n'ont AUCUN nom en commun
+      avec le texte de Hektor. Sinon on garde le sien, qui est plus riche (il
+      porte l'adresse, parfois un co-mandant). Un texte n'est JAMAIS vide.
+
+    ② LE MONTANT (06/10, lot 4) -- il est emprunte a un autre bien : mesure sur
+      88 entrees, « 147 000 » affiche sur un bien a 49 000 (annonce 59559).
+      Quand l'entree est LE MANDAT COURANT du bien, on met le prix de l'annonce,
+      comme le registre le fait depuis le lot 2. Sinon on EFFACE : l'annonce n'a
+      qu'un prix, celui d'aujourd'hui, et il ne dit rien d'un mandat ancien.
+      Mesure du 06/10 : 87 des 88 sont le mandat courant, 1 est un mandat
+      ancien, et 1 des 87 porte sur une annonce sans prix -> effaces tous deux.
+      ⚠ UN MONTANT EFFACE N'EST PAS UNE PERTE : il n'etait pas celui de ce bien.
     """
     if not numeros_suspects:
-        return valeur, 0
-    nos_noms = texte_des_mandants(mandants_du_bien or [])
-    if not nos_noms:
-        return valeur, 0
+        return valeur, 0, 0
     items = safe_json_loads(valeur, None)
     if isinstance(items, dict):
         items = [items]
     if not isinstance(items, list):
-        return valeur, 0
-    nos_jetons = jetons_de_nom(nos_noms)
+        return valeur, 0, 0
+    nos_noms = texte_des_mandants(mandants_du_bien or [])
+    nos_jetons = jetons_de_nom(nos_noms) if nos_noms else set()
+    prix = normalize_text(prix_annonce) or ""
+    courant = normalize_text(numero_courant) or ""
     sortie: list[object] = []
-    reecrites = 0
+    mandants_reecrits = montants_corriges = 0
     for item in items:
         if not isinstance(item, dict):
             sortie.append(item)
             continue
         numero = normalize_text(item.get("numero")) or ""
-        ancien = str(item.get("mandants") or "").strip()
-        if numero not in numeros_suspects or (
-            ancien and jetons_de_nom(ancien) & nos_jetons
-        ):
-            sortie.append(item)          # ① pas suspect, ou ② la meme personne
+        if numero not in numeros_suspects:
+            sortie.append(item)
             continue
         suivant = dict(item)
-        suivant["mandants"] = nos_noms
+        ancien = str(item.get("mandants") or "").strip()
+        # ① la meme personne ecrite autrement -> on garde le texte de Hektor
+        if nos_noms and not (ancien and jetons_de_nom(ancien) & nos_jetons):
+            suivant["mandants"] = nos_noms
+            mandants_reecrits += 1
+        if normalize_text(item.get("montant")):
+            attendu = prix if (numero and numero == courant and prix) else ""
+            if (normalize_text(item.get("montant")) or "") != attendu:
+                suivant["montant"] = attendu or None
+                montants_corriges += 1
         sortie.append(suivant)
-        reecrites += 1
-    if not reecrites:
-        return valeur, 0
-    return json.dumps(sortie, ensure_ascii=False), reecrites
+    if not (mandants_reecrits or montants_corriges):
+        return valeur, 0, 0
+    return (json.dumps(sortie, ensure_ascii=False),
+            mandants_reecrits, montants_corriges)
 
 
 def build_trimmed_detail_payload(
@@ -2658,10 +2683,12 @@ def build_trimmed_detail_payload(
     )
     if DETAIL_MANDANTS_DEPUIS_NOS_LIENS and mandants_par_annonce is not None:
         annonce = normalize_text(row.get("hektor_annonce_id")) or ""
-        blob, _ = mandats_json_avec_nos_mandants(
+        blob, _, _ = mandats_json_corrige(
             detail_payload.get("mandats_json"),
             mandants_par_annonce.get(annonce),
             (suspects_par_annonce or {}).get(annonce),
+            prix_annonce=row.get("prix"),
+            numero_courant=row.get("numero_mandat"),
         )
         detail_payload["mandats_json"] = blob
     return detail_payload
@@ -2878,7 +2905,7 @@ def build_payload(
         dossier_rows = attach_console_missing_fields(con, dossier_rows)
         dossiers = attach_detail_payload(dossier_rows)
         # 06/10 : la fiche annonce reprend ses mandants chez nous sur les seuls corps
-        # empruntes (voir le bloc au-dessus de `mandats_json_avec_nos_mandants`).
+        # empruntes (voir le bloc au-dessus de `mandats_json_corrige`).
         # Cout mesure le 06/10 : 3,3 s pour la carte des liens.
         # ⚠ L'ORDRE N'EST PAS INDIFFERENT. Les corps empruntes coutent 0,09 s, la
         #   carte des liens 2,82 s (mesure du 06/10). Le CHEMIN IMMEDIAT appelle

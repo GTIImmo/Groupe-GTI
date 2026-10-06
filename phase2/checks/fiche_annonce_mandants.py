@@ -22,7 +22,9 @@ CE QUI DOIT ETRE VRAI POUR QUE LE LOT SOIT BON
        (il porte l'adresse, et parfois un co-mandant que notre texte perdrait)
     ③ ni suspect, ni mandant chez nous       : rien ne bouge
     ④ aucune entree ne perd son texte -- le compteur `videes` doit valoir 0
-    ⑤ interrupteur a 0 : AUCUNE difference (preuve du retour arriere)
+    ⑤ le MONTANT emprunte devient le prix du bien quand l'entree est le mandat
+      COURANT, et s'efface sinon ; hors corps emprunte il ne bouge JAMAIS
+    ⑥ interrupteur a 0 : AUCUNE difference (preuve du retour arriere)
 """
 from __future__ import annotations
 
@@ -46,7 +48,7 @@ from phase2.sync.export_app_payload import (  # noqa: E402  -- IMPORTEES, JAMAIS
     charger_mandants_du_registre_des_liens,
     fetch_rows_by_ids,
     jetons_de_nom,
-    mandats_json_avec_nos_mandants,
+    mandats_json_corrige,
     normalize_text,
     safe_json_loads,
     sqlite_read_connection,
@@ -83,6 +85,15 @@ def main() -> int:
     for annonce_suspecte, numero_suspect in charger_corps_suspects(con):
         suspects_par_annonce.setdefault(annonce_suspecte, set()).add(numero_suspect)
     annonces_suspectes = set(suspects_par_annonce)
+    # Le prix du bien et son mandat COURANT -- ce que le lot 4 met a la place
+    # du montant emprunte. Meme source que le payload : la vue generale.
+    prix_par_annonce: dict[str, object] = {}
+    numero_par_annonce: dict[str, object] = {}
+    for a_id, p_val, n_val in con.execute(
+            'SELECT hektor_annonce_id, prix, numero_mandat FROM app_view_generale'):
+        c = normalize_text(a_id) or ''
+        prix_par_annonce[c] = p_val
+        numero_par_annonce[c] = n_val
 
     # ── LES TEMOINS ───────────────────────────────────────────────────────────
     # On les choisit DANS LE PERIMETRE DE L'APP, en interrogeant la meme base
@@ -173,12 +184,14 @@ def main() -> int:
         return 1 if echecs else 0
 
     # ── LE BILAN SUR TOUTES LES FICHES ────────────────────────────────────────
-    # Il appelle `mandats_json_avec_nos_mandants`, la fonction du run. Il ne
+    # Il appelle `mandats_json_corrige`, la fonction du run. Il ne
     # REJOUE pas la regle : une epreuve qui recode ce qu'elle mesure peut etre
     # verte alors que le code est faux (memoire `eprouver-c-est-executer-le-code`).
     print("BILAN sur toutes les fiches d'annonce")
-    total = reecrites = videes = 0
+    total = reecrites = videes = montants_corriges = 0
     susp_total = susp_reecrites = susp_intactes = susp_sans_recours = 0
+    montants_mis_au_prix = montants_effaces = 0
+    montants_en_defaut = montants_hors_perimetre = 0
     for annonce_id, blob in con.execute(
         "SELECT hektor_annonce_id, mandats_json FROM hektor.hektor_annonce_detail"
         " WHERE COALESCE(mandats_json,'') <> ''"
@@ -190,17 +203,41 @@ def main() -> int:
         total += len(avant_items)
         numeros = suspects_par_annonce.get(cle) or set()
         nos = carte.get(cle) or []
-        apres_blob, n = mandats_json_avec_nos_mandants(blob, nos, numeros)
+        apres_blob, n, nm = mandats_json_corrige(
+            blob, nos, numeros,
+            prix_annonce=prix_par_annonce.get(cle),
+            numero_courant=numero_par_annonce.get(cle))
         reecrites += n
+        montants_corriges += nm
         apres_items = entrees(apres_blob)
         if len(apres_items) != len(avant_items):
             print("   ⛔ annonce %s : %d entrees -> %d"
                   % (cle, len(avant_items), len(apres_items)))
+        prix_bien = normalize_text(prix_par_annonce.get(cle)) or ""
+        num_courant = normalize_text(numero_par_annonce.get(cle)) or ""
         for a, p in zip(avant_items, apres_items):
             if texte(a) and not texte(p):
                 videes += 1
-            if (normalize_text(a.get("numero")) or "") not in numeros:
+            numero_a = normalize_text(a.get("numero")) or ""
+            if numero_a not in numeros:
+                # ⚠ LA GARDE LA PLUS IMPORTANTE DU LOT 4 : hors corps emprunte,
+                #   le montant de Hektor ne doit PAS bouger d'un caractere.
+                if (normalize_text(a.get("montant")) or "") != (normalize_text(p.get("montant")) or ""):
+                    montants_hors_perimetre += 1
+                    print("      ⛔ annonce %s n %s n'est pas suspecte, et son"
+                          " montant a change" % (cle, numero_a))
                 continue
+            if normalize_text(a.get("montant")):
+                apres_m = normalize_text(p.get("montant")) or ""
+                attendu = prix_bien if (numero_a == num_courant and prix_bien) else ""
+                if apres_m != attendu:
+                    montants_en_defaut += 1
+                    print("      ⛔ annonce %s n %s : montant=%r, attendu %r"
+                          % (cle, numero_a, apres_m, attendu))
+                elif apres_m:
+                    montants_mis_au_prix += 1
+                else:
+                    montants_effaces += 1
             susp_total += 1
             if texte(a) != texte(p):
                 susp_reecrites += 1
@@ -209,7 +246,14 @@ def main() -> int:
             else:
                 susp_intactes += 1
     print("   entrees de mandat dans les fiches          : %d" % total)
-    print("   REECRITES depuis notre registre            : %d" % reecrites)
+    print("   mandants REECRITS depuis notre registre    : %d" % reecrites)
+    print("   montants empruntes CORRIGES                : %d" % montants_corriges)
+    print("      -> remplaces par le prix du bien        : %d" % montants_mis_au_prix)
+    print("      -> effaces (mandat ancien, ou sans prix): %d" % montants_effaces)
+    print("      -> EN DEFAUT                            : %d   %s"
+          % (montants_en_defaut, "OK" if montants_en_defaut == 0 else "INTERDIT"))
+    print("   montants changes HORS corps emprunte       : %d   %s"
+          % (montants_hors_perimetre, "OK" if montants_hors_perimetre == 0 else "INTERDIT"))
     print("   entrees VIDEES par le correctif            : %d   %s"
           % (videes, "OK" if videes == 0 else "INTERDIT"))
     print()
@@ -219,6 +263,7 @@ def main() -> int:
     print("      -> sans recours (nos liens muets)       : %d" % susp_sans_recours)
     if videes:
         echecs += 1
+    echecs += montants_en_defaut + montants_hors_perimetre
 
     print()
     print(("ECHEC -- %d probleme(s)" % echecs) if echecs else "OK -- AUCUN ECHEC")
