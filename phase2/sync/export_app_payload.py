@@ -2454,7 +2454,126 @@ def enrich_offer_transaction_fields(con: sqlite3.Connection, rows: list[dict[str
     return enriched
 
 
-def build_trimmed_detail_payload(row: dict[str, object]) -> dict[str, object]:
+# ═══════════════════════════════════════════════════════════════════════════════
+# LA FICHE ANNONCE PREND SES MANDANTS CHEZ NOUS                      06/10/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# Le registre des mandats a ete repare le 05/10 : ses mandants viennent de NOTRE
+# registre des liens. LA FICHE ANNONCE, ELLE, N'A JAMAIS ETE TOUCHEE -- elle lit
+# `mandats_json`, c'est-a-dire la reponse brute de Hektor.
+#
+# ─── CE QUE LA MESURE DIT VRAIMENT, ET ELLE A CORRIGE UN CHIFFRE DE LA VEILLE ──
+# Compter les entrees qui PORTENT un texte de mandant n'est pas compter celles
+# qui portent le nom D'UN AUTRE. Sur les 457 couples a corps emprunte :
+#       370  Hektor et nous designons LA MEME PERSONNE, ecrite autrement
+#            (« M. CLEMENT Pascal - bonarme Sermentizon (63120) » contre
+#             « M. Pascal CLEMENT ») -- et le texte de Hektor est PLUS RICHE :
+#            il porte l'adresse, et parfois un co-mandant que notre texte perd.
+#        86  AUCUN nom en commun : la, c'est vraiment le nom d'un autre bien
+#         1  Hektor n'a pas de texte
+#         0  sans recours chez nous
+#
+# ⭐ LES 86 SONT PROUVES PAR UNE TROISIEME SOURCE, independante des deux autres :
+#   le bloc `proprietaires` DE L'ANNONCE, que Hektor rend par annonce et non par
+#   identifiant de mandat. Mesure : il confirme NOTRE nom 86 fois sur 86, et
+#   celui de `mandats[]` ZERO fois.
+#
+# ─── LA REGLE, PLUS ETROITE QUE CELLE DU REGISTRE -- ET C'EST VOULU ────────────
+#   Le registre porte une colonne de NOMS SEULS : y preferer notre liste ne perd
+#   rien. La fiche annonce, elle, affiche un texte qui porte AUSSI l'adresse.
+#   On ne remplace donc QUE si les deux conditions tiennent :
+#       ① le couple (annonce, numero) est un corps emprunte  -- critere du 05/10,
+#         valide contre l'API de Hektor 8 fois sur 8
+#       ② et nos noms n'ont AUCUN nom en commun avec le texte de Hektor
+#   Sinon on ne touche a rien. 86 entrees reecrites, 370 laissees intactes.
+#
+# ⚠ NOS MANDANTS SONT CONNUS PAR ANNONCE, PAS PAR MANDAT -- comme au registre,
+#   qui applique deja la meme liste a tous les mandats d'un bien (ligne 2262).
+#
+# ⚠ ON NE TOUCHE PAS AU MIROIR. `hektor_annonce_detail.mandats_json` garde la
+#   reponse de Hektor telle quelle : la reecriture n'a lieu que dans le PAYLOAD.
+#
+# ⚠ `mandats_json` est tantot une LISTE, tantot un OBJET SEUL (memoire
+#   `blob-json-liste-ou-objet-seul`) : les deux formes sont traitees.
+#
+# RETOUR ARRIERE : APP_DETAIL_MANDANTS_DEPUIS_NOS_LIENS=0 dans l'environnement.
+# ═══════════════════════════════════════════════════════════════════════════════
+DETAIL_MANDANTS_DEPUIS_NOS_LIENS = (
+    os.environ.get("APP_DETAIL_MANDANTS_DEPUIS_NOS_LIENS", "1") == "1"
+)
+
+# Les mots qui ne designent personne : civilites et liaisons. Ils ne doivent pas
+# faire croire a un nom commun entre deux textes (« M. » est partout).
+_MOTS_SANS_NOM = {
+    "MONSIEUR", "MADAME", "MLLE", "MME", "MR", "ETS", "SARL", "SCI",
+    "ET", "DE", "DU", "DES", "LA", "LE", "LES", "BIS", "TER", "RUE",
+}
+
+
+def jetons_de_nom(valeur: object) -> set[str]:
+    """Les noms d'un texte, sans accent, sans ponctuation, sans civilite.
+
+    Sert UNIQUEMENT a repondre a « ces deux textes parlent-ils de la meme
+    personne ? ». On ne compare donc pas des chaines : « M. CLEMENT Pascal -
+    bonarme Sermentizon » et « M. Pascal CLEMENT » doivent se reconnaitre.
+    """
+    sans_accent = (
+        unicodedata.normalize("NFKD", str(valeur or ""))
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    mots = re.sub(r"[^A-Za-z]+", " ", sans_accent).upper().split()
+    return {mot for mot in mots if len(mot) > 2 and mot not in _MOTS_SANS_NOM}
+
+
+def mandats_json_avec_nos_mandants(
+    valeur: object,
+    mandants_du_bien: list[dict[str, object]] | None,
+    numeros_suspects: set[str] | None,
+) -> tuple[object, int]:
+    """Rend (le blob, le nombre d'entrees reecrites).
+
+    Ne change rien tant que les deux conditions ne tiennent pas : le numero est
+    un corps emprunte, ET nos noms ne figurent pas dans le texte de Hektor.
+    Un texte n'est JAMAIS vide : sans mandant chez nous, on ne touche a rien.
+    """
+    if not numeros_suspects:
+        return valeur, 0
+    nos_noms = texte_des_mandants(mandants_du_bien or [])
+    if not nos_noms:
+        return valeur, 0
+    items = safe_json_loads(valeur, None)
+    if isinstance(items, dict):
+        items = [items]
+    if not isinstance(items, list):
+        return valeur, 0
+    nos_jetons = jetons_de_nom(nos_noms)
+    sortie: list[object] = []
+    reecrites = 0
+    for item in items:
+        if not isinstance(item, dict):
+            sortie.append(item)
+            continue
+        numero = normalize_text(item.get("numero")) or ""
+        ancien = str(item.get("mandants") or "").strip()
+        if numero not in numeros_suspects or (
+            ancien and jetons_de_nom(ancien) & nos_jetons
+        ):
+            sortie.append(item)          # ① pas suspect, ou ② la meme personne
+            continue
+        suivant = dict(item)
+        suivant["mandants"] = nos_noms
+        sortie.append(suivant)
+        reecrites += 1
+    if not reecrites:
+        return valeur, 0
+    return json.dumps(sortie, ensure_ascii=False), reecrites
+
+
+def build_trimmed_detail_payload(
+    row: dict[str, object],
+    mandants_par_annonce: dict[str, list[dict[str, object]]] | None = None,
+    suspects_par_annonce: dict[str, set[str]] | None = None,
+) -> dict[str, object]:
     detail_payload = {field: row.get(field, None) for field in DETAIL_PAYLOAD_FIELD_ORDER}
     for field, value in extract_api_detail_groups(detail_payload.get("detail_raw_json")).items():
         if compact_json_field(detail_payload.get(field)) is None:
@@ -2467,6 +2586,14 @@ def build_trimmed_detail_payload(row: dict[str, object]) -> dict[str, object]:
         detail_payload.get("images_preview_json"),
         limit=MAX_EXPORTED_IMAGES,
     )
+    if DETAIL_MANDANTS_DEPUIS_NOS_LIENS and mandants_par_annonce is not None:
+        annonce = normalize_text(row.get("hektor_annonce_id")) or ""
+        blob, _ = mandats_json_avec_nos_mandants(
+            detail_payload.get("mandats_json"),
+            mandants_par_annonce.get(annonce),
+            (suspects_par_annonce or {}).get(annonce),
+        )
+        detail_payload["mandats_json"] = blob
     return detail_payload
 
 
@@ -2500,10 +2627,16 @@ def attach_detail_payload(rows: list[dict[str, object]]) -> list[dict[str, objec
     return enriched
 
 
-def build_dossier_details(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def build_dossier_details(
+    rows: list[dict[str, object]],
+    mandants_par_annonce: dict[str, list[dict[str, object]]] | None = None,
+    suspects_par_annonce: dict[str, set[str]] | None = None,
+) -> list[dict[str, object]]:
     details: list[dict[str, object]] = []
     for row in rows:
-        detail_payload = build_trimmed_detail_payload(row)
+        detail_payload = build_trimmed_detail_payload(
+            row, mandants_par_annonce, suspects_par_annonce
+        )
         details.append(
             {
                 "app_dossier_id": row["app_dossier_id"],
@@ -2674,7 +2807,29 @@ def build_payload(
         dossier_rows = attach_price_change_summary(con, dossier_rows)
         dossier_rows = attach_console_missing_fields(con, dossier_rows)
         dossiers = attach_detail_payload(dossier_rows)
-        dossier_details = build_dossier_details(dossier_rows)
+        # 06/10 : la fiche annonce reprend ses mandants chez nous sur les seuls corps
+        # empruntes (voir le bloc au-dessus de `mandats_json_avec_nos_mandants`).
+        # Cout mesure le 06/10 : 3,3 s pour la carte des liens.
+        # ⚠ L'ORDRE N'EST PAS INDIFFERENT. Les corps empruntes coutent 0,09 s, la
+        #   carte des liens 2,82 s (mesure du 06/10). Le CHEMIN IMMEDIAT appelle
+        #   cette fonction pour UNE annonce apres chaque saisie : lui imposer
+        #   2,8 s pour une carte dont il n'a presque jamais besoin serait une
+        #   regression ressentie. On ne la charge donc que si au moins une des
+        #   annonces servies porte un corps emprunte.
+        mandants_fiche: dict[str, list[dict[str, object]]] | None = None
+        suspects_fiche: dict[str, set[str]] | None = None
+        if DETAIL_MANDANTS_DEPUIS_NOS_LIENS:
+            suspects_fiche = defaultdict(set)
+            for annonce_suspecte, numero_suspect in charger_corps_suspects(con):
+                suspects_fiche[annonce_suspecte].add(numero_suspect)
+            if any(
+                (normalize_text(row.get("hektor_annonce_id")) or "") in suspects_fiche
+                for row in dossier_rows
+            ):
+                mandants_fiche = charger_mandants_du_registre_des_liens(con)
+        dossier_details = build_dossier_details(
+            dossier_rows, mandants_fiche, suspects_fiche
+        )
         work_items = fetch_rows_by_ids(
             con,
             base_sql=SQL_WORK_ITEMS_BASE,
