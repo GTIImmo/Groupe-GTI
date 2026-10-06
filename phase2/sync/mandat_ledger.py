@@ -113,7 +113,17 @@ CREATE TABLE IF NOT EXISTS app_mandat (
     date_enregistrement  TEXT,
     date_debut           TEXT,
     date_fin             TEXT,
-    montant              TEXT,
+    -- ⛔ PLUS DE COLONNE `montant` -- RETIREE LE 06/10/2026.
+    -- Elle etait une RECOPIE EXACTE de versions_json[0].montant : mesure sur les
+    -- 26 839 lignes, 26 839 identiques, 0 remplie d'un seul cote, 0 divergente.
+    -- Et personne ne la lisait : le registre prend ses versions dans le blob
+    -- (export_app_payload.charger_mandats_depuis_app_mandat ne SELECTe que
+    -- hektor_annonce_id, numero_mandat et versions_json), le front n'interroge
+    -- jamais cette table, aucun index ni aucune vue ne la nomme.
+    -- Et depuis le 06/10 le registre n'affiche plus de montant de mandat du tout :
+    -- il affiche LE PRIX DE L'ANNONCE (voir normalize_history_version).
+    -- ⚠ RIEN N'EST PERDU ET LE RETOUR EST SIMPLE : le chiffre reste dans
+    --   `versions_json`. Reposer la colonne = ADD COLUMN + un `--refresh`.
     mandants_texte       TEXT,
     note                 TEXT,
     payload_json         TEXT,
@@ -529,11 +539,11 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             """
             INSERT INTO app_mandat(app_mandat_id, app_dossier_id, hektor_annonce_id,
                 numero_mandat, hektor_mandat_id, famille, type, date_enregistrement,
-                date_debut, date_fin, montant, mandants_texte, note, payload_json,
+                date_debut, date_fin, mandants_texte, note, payload_json,
                 date_cloture, first_seen_at, last_seen_at, offre_type, nature,
                 versions_json, version_count, avenants_json, avenant_count,
                 origine, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, numero_mandat) DO UPDATE SET
                 app_dossier_id=COALESCE(excluded.app_dossier_id, app_mandat.app_dossier_id),
                 hektor_mandat_id=excluded.hektor_mandat_id,
@@ -545,7 +555,6 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 date_enregistrement=excluded.date_enregistrement,
                 date_debut=excluded.date_debut,
                 date_fin=excluded.date_fin,
-                montant=excluded.montant,
                 mandants_texte=excluded.mandants_texte,
                 note=excluded.note,
                 payload_json=excluded.payload_json,
@@ -564,7 +573,6 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 _texte(courante.get("dateEnregistrement")) or _texte(_du_plat("date_enregistrement")),
                 _texte(courante.get("debut")) or _texte(_du_plat("date_debut")),
                 _texte(courante.get("fin")) or _texte(_du_plat("date_fin")),
-                _montant(courante.get("montant")) or _montant(_du_plat("montant")),
                 mandants_ligne,
                 _texte(courante.get("note")) or _texte(_du_plat("note")),
                 json.dumps(courante, ensure_ascii=True, separators=(",", ":")) if courante else None,
@@ -915,7 +923,9 @@ def controle(con: sqlite3.Connection) -> None:
 COLONNES_POUSSEES = (
     "app_mandat_id", "app_dossier_id", "hektor_annonce_id", "numero_mandat",
     "hektor_mandat_id", "famille", "type", "date_enregistrement", "date_debut",
-    "date_fin", "montant", "mandants_texte", "note", "payload_json", "origine",
+    # ⛔ `montant` RETIRE LE 06/10 : la colonne n'existe plus en local. La colonne
+    #   Supabase est retiree par supabase/patch_app_mandat_sans_montant_2026-10-06.sql.
+    "date_fin", "mandants_texte", "note", "payload_json", "origine",
     "offre_type", "nature", "date_cloture", "versions_json", "version_count",
     "avenants_json", "avenant_count", "first_seen_at", "last_seen_at",
     "present_in_hektor",

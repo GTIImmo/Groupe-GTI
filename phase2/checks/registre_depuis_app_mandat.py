@@ -16,6 +16,14 @@ CE QU'ELLE COMPARE
 Les 14 colonnes du registre qui viennent du mandat, ligne par ligne, sur le
 couple (annonce, numero) -- la cle des deux cotes.
 
+CE QU'ELLE NE COMPARE PLUS -- `mandat_montant`, retire le 06/10/2026
+---------------------------------------------------------------------
+La colonne `montant` de app_mandat n'existe plus (recopie exacte de
+versions_json[0].montant, 26 839 lignes sur 26 839, et aucun lecteur), et le
+registre n'affiche plus de montant de mandat : il affiche LE PRIX DE L'ANNONCE.
+Comparer ce champ entre deux constructions de MANDAT n'a donc plus d'objet.
+Il reste 13 colonnes comparees.
+
 CE QU'ELLE NE COMPTE PAS COMME UN ECART, ET C'EST MOTIVE
 ---------------------------------------------------------
 `mandat_date_cloture` : la table la PROTEGE PAR OMISSION -- l'app la possede
@@ -100,7 +108,6 @@ def depuis_app_mandat(ligne: sqlite3.Row) -> dict:
         "mandat_type_source": _texte(ligne["type"]),
         "mandat_date_debut": _texte(ligne["date_debut"]),
         "mandat_date_fin": _texte(ligne["date_fin"]),
-        "mandat_montant": _texte(ligne["montant"]),
         "mandants_texte": _texte(ligne["mandants_texte"]),
         "mandat_note": _texte(ligne["note"]),
         "register_version_count": int(ligne["version_count"] or 0),
@@ -115,7 +122,7 @@ def depuis_la_vue(ligne: sqlite3.Row) -> dict:
     for colonne in (
         "numero_mandat", "mandat_numero_reference", "mandat_source_id",
         "mandat_type", "mandat_type_source", "mandat_date_debut",
-        "mandat_date_fin", "mandat_montant", "mandants_texte", "mandat_note",
+        "mandat_date_fin", "mandants_texte", "mandat_note",
     ):
         sortie[colonne] = _texte(ligne[colonne])
     sortie["register_version_count"] = int(ligne["register_version_count"] or 0)
@@ -136,7 +143,7 @@ def mesurer(con: sqlite3.Connection) -> dict | None:
     table = {}
     for r in con.execute(
         "SELECT hektor_annonce_id, numero_mandat, hektor_mandat_id, type, date_debut,"
-        " date_fin, date_cloture, montant, mandants_texte, note, versions_json,"
+        " date_fin, date_cloture, mandants_texte, note, versions_json,"
         " version_count, avenants_json, avenant_count, offre_type"
         " FROM app_mandat"
     ):
