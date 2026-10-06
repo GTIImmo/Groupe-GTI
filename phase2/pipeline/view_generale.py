@@ -334,8 +334,65 @@ SELECT
     m.numero AS mandat_numero_source,
     __SQL_NORMALIZE_M_TYPE__ AS mandat_type_source,
     m.date_enregistrement AS mandat_date_enregistrement,
-    m.montant AS mandat_montant,
-    COALESCE(NULLIF(TRIM(m.mandants_texte), ''), NULLIF(TRIM(det.proprietaires_resume), '')) AS mandants_texte,
+    -- ⭐ LA SOURCE PORTEE PAR L'ANNONCE D'ABORD, LE BLOC RESOLU PAR L'ID EN SECOURS.
+    --                                                            (06/10/2026)
+    -- C'est la regle que cette vue applique deja a `mandat_date_cloture`. Deux champs
+    -- seulement y echappaient -- `mandat_montant` et `mandants_texte` -- et ce sont
+    -- EXACTEMENT les deux qui etaient faux. Ce n'est pas une coincidence.
+    --
+    -- LE DEFAUT, MESURE LE 06/10 SUR 454 LIGNES. Le referentiel mandats de Hektor est
+    -- fige au n 18339 / 30-01-2026 (ses TROIS routes s'arretent ensemble -- voir
+    -- sync_raw.py et refresh_single_annonce.py, verifie par appels reels le 21/07).
+    -- Au-dela de ce numero, deux cas, et ils se mesurent :
+    --   · 363 lignes : Hektor ne trouve AUCUN enregistrement. Il n'a donc pas de
+    --     montant a donner (champ STOCKE), mais il sait encore nommer les mandants
+    --     parce qu'il les DERIVE des proprietaires de l'annonce -> noms justes,
+    --     montant VIDE.
+    --   ·  83 lignes : l'identifiant nu tombe sur un VIEUX mandat (les ids PROTEXA
+    --     repartent de 1, 453 des 469 collisionnent). Hektor sert alors le CORPS
+    --     ENTIER de ce vieux mandat -> montant ET mandants d'un AUTRE bien.
+    --     Exemple : annonce 61693 n 18507 -> montant 140 000 et « THEVENOT », quand
+    --     mandat_infofi.prix dit 365 000 et proprietaires[] dit « TOUBI », DANS LE
+    --     MEME DOCUMENT. Hektor se contredit lui-meme ; nous lisions le mauvais bloc.
+    --
+    -- ⚠ ET CE N'ETAIT PAS « UN PROBLEME CHEZ HEKTOR SUR LEQUEL ON NE PEUT RIEN » :
+    --   la bonne valeur arrive dans la MEME reponse. Pour les mandants la roue de
+    --   secours etait deja la, mais en SECOND -- donc elle ne servait jamais, le bloc
+    --   n'etant jamais vide. Pour le montant elle n'etait pas branchee du tout.
+    --
+    -- src.prix EST le prix de l'annonce : identique a hektor_annonce.prix sur 61 345
+    -- lignes, 0 divergence (mesure du 06/10). Et le montant du mandat EST ce prix,
+    -- gele a la signature : egal au centime sur 23 934 des 24 186 comparables (99,0 %).
+    -- On accepte donc de perdre le prix de signature sur les 162 cas ou il differe
+    -- (ecart median 9 %, une baisse depuis la signature) : la trace legale de ce
+    -- montant-la est le PDF SIGNE, que le projet stocke, pas une colonne de miroir.
+    --
+    -- ⛔ A DEPLOYER AVEC App.tsx (chaine des honoraires) : `mandat_montant` passe de
+    --   « null sur 1 020 lignes » a « rempli presque partout », et la chaine des
+    --   honoraires le prend en DERNIER RECOURS -> sans ce retrait, 87 PDF fautifs
+    --   deviendraient 3 310.
+    --
+    -- FORME : src.prix est un REAL, donc CAST direct rendrait « 365000.0 ». On rend
+    -- l'entier quand c'en est un (61 347 cas sur 61 350) et la decimale sinon (3 cas).
+    -- Et UN PRIX A ZERO EST UN PRIX VIDE -- regle du projet, deja appliquee par
+    -- _montant() dans mandat_ledger.py : on retombe alors sur m.montant, ce qui est
+    -- le bon choix pour les milliers d'annonces vendues dont le prix a ete remis a 0
+    -- et dont le montant de mandat, lui, reste juste.
+    COALESCE(
+        NULLIF(
+            CASE
+                WHEN src.prix IS NULL OR CAST(src.prix AS REAL) = 0 THEN ''
+                WHEN CAST(src.prix AS REAL) = CAST(src.prix AS INTEGER)
+                    THEN CAST(CAST(src.prix AS INTEGER) AS TEXT)
+                ELSE CAST(src.prix AS TEXT)
+            END,
+        ''),
+        m.montant
+    ) AS mandat_montant,
+    -- ⚠ ON GARDE UN COALESCE, PAS UNE SUBSTITUTION : 97 lignes ont un
+    --   `m.mandants_texte` sans `proprietaires_resume` -- une substitution seche leur
+    --   ferait perdre leur texte. Mesure du 06/10.
+    COALESCE(NULLIF(TRIM(det.proprietaires_resume), ''), NULLIF(TRIM(m.mandants_texte), '')) AS mandants_texte,
     m.note AS mandat_note,
     __SQL_VALIDATION_DIFFUSION_GENERALE__ AS validation_diffusion_state,
     __SQL_ETAT_VISIBILITE__ AS etat_visibilite,

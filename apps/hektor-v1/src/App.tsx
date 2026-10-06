@@ -4439,12 +4439,27 @@ function buildMandatDocumentDraft(
     .join(' et ')
   const mandantsLibelle = firstNonEmpty(detail.mandants_texte, contactLabel, detail.proprietaires_resume)
   const mandants = buildMandatDocumentMandants(contacts, mandantsLibelle)
+  // ⛔ `detail.mandat_montant` A ETE RETIRE DE CETTE CHAINE LE 06/10/2026.
+  //
+  // Ce n'est PAS un honoraire : c'est le PRIX DE VENTE du bien. Mesure du 06/10 :
+  // 3 312 annonces n'ont ni HONORAIRES, ni honoraires_json, ni honoraires_resume ;
+  // sur les 87 qui portaient en plus un `mandat_montant`, le PDF du mandat imprimait
+  // donc le prix du bien dans la case « honoraires d'agence » -- sur un document
+  // signe par le mandant.
+  //
+  // ⚠ ET LE RETRAIT EST DEVENU URGENT le meme jour : view_generale.py remplit
+  //   desormais `mandat_montant` depuis le prix de l'annonce (il etait null sur
+  //   1 020 lignes, il est maintenant rempli presque partout). Sans ce retrait,
+  //   les 87 PDF fautifs seraient devenus 3 310.
+  //
+  // Un honoraire ABSENT doit rester absent : l'onglet « Controle » de l'editeur le
+  // signale deja (`!draft.honorairesTtc ? 'honoraires' : ''`), et un champ vide
+  // signale au negociateur vaut mieux qu'un faux chiffre signe par le mandant.
   const rawHonoraires = firstNonEmpty(
     rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES'),
     rawDetailProp(detail, 'mandat_infofi', 'HONORAIRES_ACQUEREUR'),
     valueFromJsonList(detail.honoraires_json, ['montant_ttc', 'montant', 'honoraires', 'value']),
     detail.honoraires_resume,
-    detail.mandat_montant,
   )
   return {
     numeroMandat: firstNonEmpty(dossier.numero_mandat, detail.mandat_numero_source),
