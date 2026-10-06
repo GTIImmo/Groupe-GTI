@@ -23,7 +23,8 @@ CE QUI DOIT ETRE VRAI
       son annonce a un prix -- le masque est bien retire
     ③ une version PASSEE garde son montant d'epoque : on ne reecrit que la
       version courante
-    ④ aucun des 88 montants empruntes ne subsiste
+    ④ aucun des 88 montants empruntes ne subsiste -- y compris sur les lignes
+      SANS prix, ou le repli ne doit PAS reprendre le corps emprunte
 """
 from __future__ import annotations
 
@@ -66,6 +67,7 @@ def main() -> int:
     masques_restants = 0
     versions_passees_gardees = 0
     suspects_vus = suspects_au_prix = suspects_en_defaut = 0
+    sans_prix_en_defaut = 0
     exemples: list[str] = []
 
     for ligne in lignes:
@@ -78,8 +80,28 @@ def main() -> int:
             suspects_vus += 1
         if not prix:
             sans_prix += 1
-            if est_suspect and ligne.get("mandat_montant") is None:
-                pass            # pas de prix a mettre : rien a reprocher
+            # ⚠ LE CAS QUI A REGRESSE LE 06/10 : sans prix, le repli reprenait le
+            #   montant du corps -- donc celui d'un AUTRE bien. Une ligne etait
+            #   concernee (annonce 8482, n° 18513, 69 000). Ici on EXIGE le vide.
+            if est_suspect:
+                for champ, valeur in (
+                    ("mandat_montant", ligne.get("mandat_montant")),
+                    ("payload embarque",
+                     (safe_json_loads(ligne.get("register_detail_payload_json"), {}) or {})
+                     .get("mandat_montant")),
+                ):
+                    if normalize_text(valeur):
+                        sans_prix_en_defaut += 1
+                        print("      ⛔ annonce %s n %s : pas de prix, et %s = %r"
+                              % (cle[0], cle[1], champ, normalize_text(valeur)))
+                histo_sp = safe_json_loads(ligne.get("register_history_json"), [])
+                for version in histo_sp if isinstance(histo_sp, list) else []:
+                    if (isinstance(version, dict) and version.get("is_current")
+                            and normalize_text(version.get("montant"))):
+                        sans_prix_en_defaut += 1
+                        print("      ⛔ annonce %s n %s : pas de prix, et l'historique"
+                              " dit %r" % (cle[0], cle[1],
+                                           normalize_text(version.get("montant"))))
             continue
 
         montant = normalize_text(ligne.get("mandat_montant")) or ""
@@ -130,8 +152,11 @@ def main() -> int:
     print("   au prix de l'annonce                      : %d" % suspects_au_prix)
     print("   encore en defaut                          : %d" % suspects_en_defaut)
     print("   encore MASQUEES (montant None)            : %d" % masques_restants)
+    print("   SANS prix mais portant encore un montant  : %d   %s"
+          % (sans_prix_en_defaut, "OK" if sans_prix_en_defaut == 0 else "INTERDIT"))
 
-    echecs = ecart_montant + ecart_histo + ecart_payload + masques_restants + suspects_en_defaut
+    echecs = (ecart_montant + ecart_histo + ecart_payload + masques_restants
+              + suspects_en_defaut + sans_prix_en_defaut)
     print()
     print(("ECHEC -- %d probleme(s)" % echecs) if echecs else "OK -- AUCUN ECHEC")
     return 1 if echecs else 0

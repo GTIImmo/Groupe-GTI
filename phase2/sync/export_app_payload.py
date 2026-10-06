@@ -1677,10 +1677,15 @@ def normalize_history_version(
     is_current: bool,
     index: int,
     prix_annonce: object = None,
+    corps_suspect: bool = False,
 ) -> dict[str, object]:
     montant = normalize_text(item.get("montant")) or None
     if is_current:
-        montant = normalize_text(prix_annonce) or montant
+        # ⚠ PAS DE REPLI SUR LE CORPS QUAND IL EST EMPRUNTE. Mesure du 06/10 :
+        #   une ligne (annonce 8482, n° 18513) n'a AUCUN prix et portait 69 000
+        #   venus d'un autre bien -- le repli l'aurait reaffichee alors que le
+        #   masque la cachait. Sans prix et corps emprunte : on ne dit rien.
+        montant = normalize_text(prix_annonce) or (None if corps_suspect else montant)
     return {
         "history_id": f"{normalize_text(item.get('numero'))}:{normalize_text(item.get('id')) or index}",
         "label": "Version courante" if is_current else f"Version {index + 1}",
@@ -1755,6 +1760,7 @@ def build_register_detail_payload(
     detail_available: bool,
     price_change_summary: dict[str, object] | None = None,
     prix_annonce: object = None,
+    corps_suspect: bool = False,
 ) -> str:
     localite = safe_json_loads(raw_row.get("localite_json"), {})
     textes = safe_json_loads(raw_row.get("textes_json"), [])
@@ -1781,7 +1787,7 @@ def build_register_detail_payload(
         "surface_habitable_detail": active_row.get("surface_habitable_detail") if active_row else (raw_detail.get("ag_interieur", {}).get("props", {}).get("surfappart", {}).get("value") if isinstance(raw_detail, dict) else None),
         "nb_pieces": active_row.get("nb_pieces") if active_row else (raw_detail.get("ag_interieur", {}).get("props", {}).get("nbpieces", {}).get("value") if isinstance(raw_detail, dict) else None),
         "nb_chambres": active_row.get("nb_chambres") if active_row else (raw_detail.get("ag_interieur", {}).get("props", {}).get("NB_CHAMBRES", {}).get("value") if isinstance(raw_detail, dict) else None),
-        "mandat_history_json": json.dumps([normalize_history_version(item, is_current=index == 0, index=index, prix_annonce=prix_annonce) for index, item in enumerate(versions)], ensure_ascii=True, separators=(",", ":")),
+        "mandat_history_json": json.dumps([normalize_history_version(item, is_current=index == 0, index=index, prix_annonce=prix_annonce, corps_suspect=corps_suspect) for index, item in enumerate(versions)], ensure_ascii=True, separators=(",", ":")),
         "mandat_avenants_json": json.dumps(embedded_avenants, ensure_ascii=True, separators=(",", ":")),
         "mandat_type": normalize_register_mandat_type(current_version.get("type")),
         "mandat_type_source": normalize_text(current_version.get("type")) or None,
@@ -1789,10 +1795,12 @@ def build_register_detail_payload(
         "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
         "mandat_date_cloture": normalize_text(current_version.get("cloture")) or None,
         # 06/10 : le prix de l'annonce, pas le montant resolu sur l'identifiant nu.
+        # Sans prix ET corps emprunte, on ne dit rien plutot que de reprendre le
+        # chiffre d'un autre bien.
         "mandat_montant": (
             normalize_text(prix_annonce)
-            or normalize_text(current_version.get("montant"))
-            or None
+            or (None if corps_suspect
+                else normalize_text(current_version.get("montant")) or None)
         ),
         "mandants_texte": normalize_text(current_version.get("mandants")) or None,
         "mandat_note": normalize_text(current_version.get("note")) or None,
@@ -2378,8 +2386,8 @@ def build_mandat_register_rows(
                 # la ligne porte -- meme variable, donc jamais de divergence.
                 "mandat_montant": (
                     normalize_text(prix_ligne)
-                    or normalize_text(current_version.get("montant"))
-                    or None
+                    or (None if corps_suspect
+                        else normalize_text(current_version.get("montant")) or None)
                 ),
                 # ─── LES MANDANTS ────────────────────────────────── 04/10/2026
                 # `mandants_json` : NOTRE liste, avec les DEUX numeros de chaque
@@ -2446,7 +2454,8 @@ def build_mandat_register_rows(
                 "register_history_json": json.dumps(
                     [
                         normalize_history_version(
-                            item, is_current=index == 0, index=index, prix_annonce=prix_ligne
+                            item, is_current=index == 0, index=index,
+                            prix_annonce=prix_ligne, corps_suspect=corps_suspect,
                         )
                         for index, item in enumerate(versions_sorted)
                     ],
@@ -2464,6 +2473,7 @@ def build_mandat_register_rows(
                     detail_available=detail_available,
                     price_change_summary=price_change_summary,
                     prix_annonce=prix_ligne,
+                    corps_suspect=corps_suspect,
                 ),
             }
             register_rows.append(row)
