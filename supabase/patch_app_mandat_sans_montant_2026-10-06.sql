@@ -34,6 +34,16 @@
 --   DROP COLUMN ne touche pas aux GRANT de la table -- verifier quand meme
 --   apres coup que anon / authenticated / service_role sont intacts.
 -- ============================================================================
+-- ⭐ APPLIQUE LE 06/10/2026 -- migration `app_mandat_sans_montant_2026_10_06`
+--    AVANT  : 26 839 lignes · 24 182 montants remplis · 0 divergence avec le blob
+--    APRES  : 26 839 lignes · 24 colonnes · `montant` absente
+--             le chiffre toujours dans versions_json sur 24 182 lignes
+--    GRANT  : anon / authenticated / service_role / postgres INTACTS, verifie
+-- ⚠ LE COTE LOCAL N'EST PAS FAIT : l'ALTER TABLE sur phase2.sqlite a ete refuse
+--   a l'assistant (garde-fou « irreversible »). La colonne locale rancit sans
+--   consequence -- le push ne l'envoie plus (COLONNES_POUSSEES) et rien ne la lit.
+--   La commande est dans la reponse du 06/10 au soir.
+-- ============================================================================
 
 -- ── 1. L'ETAT AVANT, a lire et a garder ────────────────────────────────────
 select count(*) as lignes,
