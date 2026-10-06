@@ -67,8 +67,11 @@ if str(ROOT) not in sys.path:
 #   choisissent la bonne version d'un mandat et depouillent ses avenants. Une
 #   deuxieme copie qui derive est precisement ce que le projet a deja paye.
 from phase2.sync.export_app_payload import (  # noqa: E402
+    charger_corps_suspects,
+    charger_mandants_du_registre_des_liens,
     compute_mandat_version_score,
     normalize_embedded_avenants,
+    texte_des_mandants,
 )
 from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
     DEFAULT_ENV_FILES,
@@ -402,6 +405,56 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     ):
         dossiers[str(r["hektor_annonce_id"])] = r["id"]
 
+    # ═════════════════════════════════════════════════════════════════════════
+    # LES MANDANTS : NOTRE REGISTRE DES LIENS EN RECOURS.          06/10/2026
+    # ═════════════════════════════════════════════════════════════════════════
+    # LE DEFAUT, MESURE LE 06/10. Le registre des ANNONCES a un recours que
+    # celui des mandats n'a pas -- et c'est TOUTE la difference :
+    #
+    #   view_generale   COALESCE( m.mandants_texte , det.proprietaires_resume )
+    #                                                ^^^ un deuxieme recours
+    #   ici (avant)     courante["mandants"]  or  le plat du MEME bloc
+    #                   -> deux recours qui puisent au MEME endroit. Aucun ailleurs.
+    #
+    # Le 29/09, cette table a copie la SOURCE du registre -- et son commit disait
+    # juste : « la table doit lire la MEME CHOSE ». Mais la VALEUR du registre ne
+    # vient pas de la source seule : elle passe par le COALESCE de la vue. On avait
+    # copie la source, pas la recette. D'ou 255 lignes plus pauvres que la vue.
+    #
+    # CE QUE LE BLOC « mandats » DE HEKTOR DONNE, au-dela du n 18339 (son
+    # referentiel est gele au 30-01-2026, ses trois routes s'arretent ensemble) :
+    #     457 lignes  un corps EMPRUNTE a un autre bien (montant ET mandants)
+    #     258 lignes  de VENTE, le champ est VIDE -- presque toutes des SOCIETES
+    #                 (« SCI JCL », « SCAM », « MAISON EN FRANCE »)
+    #
+    # LA REGLE, ET ELLE DISTINGUE DEUX CHOSES QUI NE SE RESSEMBLENT PAS :
+    #   ① corps SUSPECT  -> on remplace, QUELLE QUE SOIT LA NATURE.
+    #        Un corps emprunte est FAUX, pas incomplet : le restreindre aux ventes
+    #        laisserait une ligne fausse pour rien (mesure : 456 VENTE + 1 INCONNUE).
+    #   ② champ VIDE et nature = VENTE  -> on comble.
+    #   ③ champ VIDE et nature != VENTE -> ON NE TOUCHE A RIEN.
+    #        Arbitrage de Frederic du 06/10, qui prolonge sa decision du 26/08 :
+    #        les 2 073 lignes de LOCATION / nature inconnue restent ECARTEES.
+    #        « il faut pas les rajouter, les garder exclus ».
+    #   ④ sinon -> le texte de Hektor, inchange (24 022 lignes).
+    #
+    # ⚠ ET ON NE TRIE PAS les noms par mandat. Tentation ecartee le 06/10 apres
+    #   mesure : une personne peut etre mandante de DEUX mandats du meme bien
+    #   (10 cas sur 39 -- elle a renouvele), donc « ecarter ce que l'autre mandat
+    #   nomme » est faux EN PRINCIPE. Et plusieurs mandants n'est pas une anomalie :
+    #   c'est le cas de 47,5 % du registre (un couple, une fratrie, une indivision).
+    #
+    # ⚠ L'ORDRE DANS LE RUN COMPTE : app_relation doit etre construit AVANT cette
+    #   etape, sinon on lit les liens de la VEILLE. Voir run_full_pipeline.ps1.
+    #
+    # ⭐ IMPORTEES, JAMAIS RECOPIEES -- meme regle que les deux formules du haut.
+    #   UNE SEULE lecture pour tout le lot (132 697 liens, 2,66 s mesure), jamais
+    #   une requete par mandat.
+    mandants_app = charger_mandants_du_registre_des_liens(con)
+    corps_suspects = charger_corps_suspects(con)
+    mandants_remplaces = mandants_combles = mandants_sans_recours = 0
+    sans_recours_exemples: list[tuple[str, str]] = []
+
     lus = neufs = revus = sans_numero = 0
     vus_ce_run = []
 
@@ -433,6 +486,44 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 return plat[colonne]
             except Exception:
                 return None
+
+        # LA NATURE EST CALCULEE ICI, et non plus dans la liste des parametres :
+        # la regle des mandants en a besoin pour decider. Meme formule, meme ordre
+        # d'arguments -- rien ne change pour la colonne `nature` elle-meme.
+        nature_ligne = _nature(
+            courante.get("type"),
+            courante.get("note") or _du_plat("note"),
+            offres.get(annonce),
+        )
+
+        # ── LES MANDANTS : voir le bloc commente au-dessus de _poser ──
+        nonlocal mandants_remplaces, mandants_combles, mandants_sans_recours
+        mandants_hektor = _texte(courante.get("mandants")) or _texte(_du_plat("mandants_texte"))
+        corps_suspect = (annonce, numero) in corps_suspects
+        nos_mandants = texte_des_mandants(mandants_app.get(annonce) or []) or None
+
+        if corps_suspect:
+            # ① un corps emprunte est FAUX : on le remplace, quelle que soit la nature.
+            #   ⚠ et s'il n'y a RIEN chez nous, on prefere le VIDE au nom d'un autre bien.
+            mandants_ligne = nos_mandants
+            if nos_mandants:
+                mandants_remplaces += 1
+            else:
+                mandants_sans_recours += 1
+                if len(sans_recours_exemples) < 40:
+                    sans_recours_exemples.append((annonce, numero))
+        elif not mandants_hektor and nature_ligne == "VENTE":
+            # ② un vide sur une VENTE : on comble.
+            mandants_ligne = nos_mandants
+            if nos_mandants:
+                mandants_combles += 1
+            else:
+                mandants_sans_recours += 1
+                if len(sans_recours_exemples) < 40:
+                    sans_recours_exemples.append((annonce, numero))
+        else:
+            # ③ et ④ : LOCATION / GESTION / nature inconnue, ou un texte deja bon.
+            mandants_ligne = mandants_hektor
 
         con.execute(
             """
@@ -474,15 +565,13 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 _texte(courante.get("debut")) or _texte(_du_plat("date_debut")),
                 _texte(courante.get("fin")) or _texte(_du_plat("date_fin")),
                 _montant(courante.get("montant")) or _montant(_du_plat("montant")),
-                _texte(courante.get("mandants")) or _texte(_du_plat("mandants_texte")),
+                mandants_ligne,
                 _texte(courante.get("note")) or _texte(_du_plat("note")),
                 json.dumps(courante, ensure_ascii=True, separators=(",", ":")) if courante else None,
                 _texte(courante.get("cloture")) or _texte(_du_plat("date_cloture")),
                 vu, vu,
                 offres.get(annonce),
-                _nature(courante.get("type"),
-                        courante.get("note") or _du_plat("note"),
-                        offres.get(annonce)),
+                nature_ligne,
                 json.dumps([dict(v, montant=_montant(v.get("montant"))) for v in versions],
                            ensure_ascii=True, separators=(",", ":")),
                 len(versions),
@@ -689,11 +778,19 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         sortis = cur.rowcount or 0
 
     con.commit()
+    # ⚠ LE BILAN DOIT DIRE CE QU'IL A FAIT. Une reparation muette ne se mesure pas,
+    #   et c'est ainsi que le deballeur de la diffusion a rendu zero trois mois
+    #   (`deballeur-forme-inconnue-silence`) : le correctif n'est pas le carton,
+    #   c'est LE COMPTEUR.
     return {"lus": lus, "neufs": neufs, "revus": revus,
             "adoptes_du_cloud": adoptes_faits,
             "sans_numero": sans_numero, "multi_versions": multi_versions,
             "depuis_miroir": depuis_miroir, "depuis_annonce": depuis_annonce,
-            "sortis_du_miroir": sortis}
+            "sortis_du_miroir": sortis,
+            "mandants_remplaces": mandants_remplaces,
+            "mandants_combles": mandants_combles,
+            "mandants_sans_recours": mandants_sans_recours,
+            "mandants_sans_recours_exemples": sans_recours_exemples}
 
 
 # Les trois seuls types d'offre que le registre de l'app admet. Decision de
@@ -901,6 +998,23 @@ def main() -> int:
             for k in ("lus", "neufs", "revus", "adoptes_du_cloud", "sans_numero", "multi_versions",
                       "depuis_miroir", "depuis_annonce", "sortis_du_miroir"):
                 print("   %-22s : %s" % (k, bilan[k]))
+            # LES MANDANTS, DITS A VOIX HAUTE (06/10/2026).
+            print("   --- mandants, notre registre des liens en recours ---")
+            print("   %-22s : %s   (corps emprunte a un autre bien)"
+                  % ("remplaces", bilan["mandants_remplaces"]))
+            print("   %-22s : %s   (champ vide sur une VENTE)"
+                  % ("combles", bilan["mandants_combles"]))
+            print("   %-22s : %s   (ni Hektor ni nous ne les connaissent)"
+                  % ("sans recours", bilan["mandants_sans_recours"]))
+            exemples = bilan.get("mandants_sans_recours_exemples") or []
+            if exemples:
+                # ⚠ ON LES NOMME. « 30 lignes restent vides » n'est pas actionnable ;
+                #   une liste d'annonces a corriger dans nos liens, si.
+                print("      a corriger dans app_relation :")
+                for annonce, numero in exemples[:20]:
+                    print("         annonce %-8s n° %s" % (annonce, numero))
+                if len(exemples) > 20:
+                    print("         ... et %d autres" % (len(exemples) - 20))
         elif not (args.push or args.push_a_blanc):
             con.executescript(SCHEMA)
         if args.push_a_blanc:

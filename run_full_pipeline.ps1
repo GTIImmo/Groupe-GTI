@@ -836,11 +836,17 @@ Invoke-Step -Label "phase2 affaire ledger refresh+push" -Arguments @(
 #    contre 26 826 au cloud. Sans ce `--push`, l'ecart grandit chaque nuit.
 #    ⭐ C'est le meme couple que le ledger d'affaires, trois etapes plus haut.
 #    ⚠ Le garde-fou du script tient : `--push` SANS `--refresh` est REFUSE.
-Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -Arguments @(
-    "phase2\sync\mandat_ledger.py",
-    "--refresh",
-    "--push"
-)
+# ⚠⚠ CETTE ETAPE A ETE DEPLACEE PLUS BAS LE 06/10/2026, APRES app_relation.
+#    MOTIF : depuis le 06/10, mandat_ledger lit NOTRE registre des liens en
+#    recours pour les mandants (457 corps empruntes + 258 vides de VENTE). Si
+#    elle tournait ici, elle lirait les liens de LA VEILLE -- un jour de retard
+#    sur chaque mandant neuf, et personne ne l'aurait vu.
+#    VERIFIE AVANT DE DEPLACER : rien entre les deux positions ne lit app_mandat.
+#    `relation_ledger.py` ne le cite QUE dans ses commentaires (« meme montage
+#    que app_mandat ») -- aucune dependance reelle.
+#    ⭐ Et c'est la meme lecon que la place de la sentinelle des liens, le 30/09 :
+#      « SA PLACE EST APRES build contacts layer seconde passe : avant, elle
+#        lirait la couche de LA VEILLE. »
 
 # ============================================================================
 # LE REGISTRE DES LIENS (app_relation)                            30/09/2026
@@ -921,6 +927,24 @@ Invoke-OptionalStepWithRetry -Label "phase2 doublure du registre des liens" -Arg
 
 Invoke-OptionalStepWithRetry -Label "phase2 registre des liens (app_relation)" -Arguments @(
     "phase2\sync\relation_ledger.py",
+    "--refresh",
+    "--push"
+)
+
+# ============================================================================
+# LE REGISTRE DES MANDATS (app_mandat)      DEPLACE ICI LE 06/10/2026
+# ----------------------------------------------------------------------------
+# IL ETAIT PLUS HAUT, AVANT app_relation. Il a ete deplace parce qu'il lit
+# desormais NOTRE registre des liens en recours pour les mandants :
+#     457 lignes dont le corps vient d'un AUTRE mandat (identifiant ambigu,
+#         referentiel de Hektor gele au n 18339)
+#     258 lignes de VENTE que Hektor laisse VIDES (presque toutes des societes)
+# A son ancienne place, il aurait lu les liens de LA VEILLE.
+#
+# ⚠ `--push` : voir le commentaire du 01/10 a son ancienne place. Le garde-fou
+#   du script tient : `--push` SANS `--refresh` est REFUSE.
+Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -Arguments @(
+    "phase2\sync\mandat_ledger.py",
     "--refresh",
     "--push"
 )
