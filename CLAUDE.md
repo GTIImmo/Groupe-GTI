@@ -548,6 +548,57 @@ CE QUI RESTE -- LES CINQ POINTS, dans l'ordre
      applicateur des trois autres objets n'existe toujours pas pour la relation.
 ```
 
+### L9 LE REGISTRE DES MANDATS — *cinq lots le 06/10, tous eprouves A L'ENVERS*
+
+```
+LE DEFAUT, UN SEUL, TRAVERSANT CINQ ENDROITS
+  Hektor resout `mandats[]` sur l'identifiant NU du mandat, ambigu entre les
+  familles HEKTOR et PROTEXA (referentiel gele au n 18339). Il sert donc le
+  corps d'un AUTRE mandat : 457 couples (annonce, numero) atteints.
+
+4ec2e2d  LOT 1  la fiche annonce reprend ses MANDANTS chez nous          87
+87364c1  LOT 2  le registre dit le PRIX la ou il ecrivait un montant   0 ecart/24 491
+6e76d17  LOT 2b sans prix ET corps emprunte -> on ne dit rien    1 regression rattrapee
+308fb70  LOT 3  app_mandat perd `montant`  -- le code
+d946cb3         + Supabase (migration app_mandat_sans_montant_2026_10_06)
+                + le local, fait par Frederic : 24 colonnes, 26 839 lignes, ok
+037d956  LOT 4  le montant emprunte quitte la fiche annonce             88
+829f86a         la note de chantier porte l'etat du soir
+AUCUN deploiement front : tout se joue dans le PAYLOAD, React n'a pas bouge.
+
+DEUX DE MES CHIFFRES SONT TOMBES SOUS LA MESURE -- a ne pas ressortir
+  « 456 mandants empruntes » -> 87. J'avais compte les entrees qui PORTENT un
+     mandant, pas celles qui portent le nom d'un AUTRE. 370 designent LA MEME
+     personne ecrite autrement, et le texte de Hektor y est PLUS RICHE (adresse,
+     parfois un co-mandant). PROUVE PAR UNE 3e SOURCE, le bloc `proprietaires`
+     DE L'ANNONCE : il confirme notre nom 86 fois sur 86, celui de `mandats[]` 0.
+  « etendre le masque » -> REFUSE par Frederic : « un masque, ce n'est pas une
+     rustine ? » Si. Un masque cache sans reparer, et il faut le reposer a chaque
+     nouvel endroit qui lit -- celui du 05/10 laissait deja passer deux chemins.
+     On a mis LA VRAIE VALEUR a la place : le prix de l'annonce.
+
+LA REGLE N'EST PAS LA MEME D'UN ECRAN A L'AUTRE, ET C'EST VOULU
+  LE REGISTRE porte une colonne de NOMS SEULS -> notre liste gagne, rien n'est perdu
+  LA FICHE    porte un texte qui contient AUSSI l'adresse -> on ne remplace QUE si
+              nos noms n'ont AUCUN nom en commun avec celui de Hektor
+  LE MONTANT  mandat COURANT + un prix -> le prix du bien ; mandat ANCIEN ou pas
+              de prix -> on EFFACE (un prix d'aujourd'hui ne dit rien d'un mandat
+              signe autrefois, et un montant efface n'etait pas celui de ce bien)
+
+LES CONTROLES, tous eprouves A L'ENVERS (ils ECHOUENT sur la version d'avant)
+  phase2/checks/fiche_annonce_mandants.py        mandants + montants de la fiche
+  phase2/checks/registre_montant_est_le_prix.py  les 3 chemins du registre
+  phase2/checks/chemin_immediat_paquet.py        non-regression du chemin immediat
+
+CE QUI RESTE, hors serie
+  [ ] 30 lignes dont personne ne connait les mandants
+  [ ] mandat n 17842 de l'annonce 41629 : deux CHARBONNIER, 59 000 contre 53 000,
+      meme date -- decision HUMAINE
+  [ ] le contact d'essai 603953 pollue les mandants de l'annonce 24113
+  [ ] rien n'est a l'ecran avant le run de nuit
+LE DETAIL : notice/CHANTIER_REGISTRE_MANDATS_2026-10-06.md
+```
+
 ### Les trois fronts ouverts — *ils avancent séparément*
 
 | front | où c'en est | ce qui reste |
@@ -675,7 +726,9 @@ ci-dessous.
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *pas seulement une priorité*
 
 ```
-L9            le registre des mandats se remplit DEPUIS LE MIROIR -- impossible apres
+L9            ~~le registre se remplit DEPUIS LE MIROIR~~ -> FAIT : il lit app_mandat
+              (interrupteur allume le 30/09), et le 06/10 ses MANDANTS et son MONTANT
+              ont quitte Hektor. Voir la section L9 plus haut.
 C.9-couple    seul moment ou l'on peut comparer NOTRE paire a celle de Hektor (c'est
               HEKTOR qui cree la 2e fiche du couple ; apres, personne ne le fera)
 vitrine +     les liens PUBLICS deja diffuses (QR, imprimes) portent le n° Hektor ->
