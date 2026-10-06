@@ -90,20 +90,52 @@ deux faces d'un seul `COALESCE` : mal ordonne dans la vue, absent dans app_manda
 
 ---
 
-## 2. LE PERIMETRE REEL — 715 lignes, pas 2 777
+## 2. LE PERIMETRE REEL — DEUX POPULATIONS, PAS UN TOTAL
 
+⚠ **« 715 lignes suspectes » est une formule FAUSSE, et c'est moi qui l'ai employee.**
+« Suspect » ne vaut que pour les 457. Les 258 ne sont pas suspectes : elles sont VIDES.
+Ce sont deux problemes de gravite differente, et il ne faut pas les additionner.
+
+### A — 457 lignes : UN NOM FAUX S'AFFICHE  ⛔ le cas grave
+Elles ONT un texte de mandant, mais c'est celui d'un **autre bien**. Toutes de 2026,
+toutes au-dela du n° 18339.
 ```
-  457  corps empruntes (montant ET mandants d'un autre bien)      -> A REPARER
-  258  nature=VENTE, origine=detail, sans mandant                 -> A REPARER
-   29  LOCATION/INCONNUE/GESTION origine=detail                   -> a trancher
-2 073  LOCATION / INCONNUE, origine=annonce                       -> RESTENT EXCLUES
-                                              (decision de Frederic du 26/08)
-   40  personne ne connait leurs mandants                         -> LISTE a corriger
+ann 59559  n° 18476  mars 2026   affiche : « Michel NUNEZ21 rue Francis garnier »
+ann 24113  n° 18787  juil. 2026  affiche : « M. QUETANT Laurent78 bis rue de Coullons »
+ann 61740  n° 18445  mars 2026   affiche : « Isabelle HUMBERT2 chemin du presbytere »
+```
+**Un nom de personne etrangere sur un document de mandat.** Reparables par nos
+relations : **457 sur 457**.
+
+### B — 258 lignes : AUCUN NOM NE S'AFFICHE  ⚠ genant, pas dangereux
+L'entree de Hektor est **vide**. Pas de faux : du rien. Toutes anciennes (2012-2020),
+et **presque toutes des SOCIETES**.
+```
+ann 1053   n° 3653  2012   (vide)      ann 38002  n° 2406  2017   (vide)
+ann 38569  n° 7948  2014   (vide)      ann 38631  n° 7540  2014   (vide)
+```
+
+⭐⭐ **ET LE CORRECTIF SOCIETES EXISTE DEJA — c'est le registre des relations lui-meme.**
+Rappel de Frederic, 06/10. Nos relations viennent du bloc `proprietaires`, qui NOMME la
+societe. Aucun traitement particulier n'est necessaire :
+```
+ann 1053   -> « M. SCI JCL »            ann 38569  -> « MAISON EN FRANCE »
+ann 38002  -> « SCAM »                  ann 38631  -> « PORTE | M. Service Tutelaire ARHM »
+```
+Reparables : **228 sur 258**, 30 restent inconnues.
+
+### Et ce qui reste EXCLU, par decision
+```
+2 073  LOCATION / INCONNUE, origine=annonce   -> decision de Frederic du 26/08
+   29  LOCATION/GESTION/INCONNUE origine=detail -> a trancher
 ```
 
 ⚠ **Correction de Frederic, 06/10** : j'annoncais « 2 320 trous a combler ». **Faux** --
-ce sont des LOCATIONS et des natures inconnues lues sur l'index, deja ecartees par sa
-decision. Le perimetre est **715**.
+ce sont des LOCATIONS et des natures inconnues lues sur l'index, deja ecartees.
+
+```
+BILAN : 457 + 228 = 685 lignes reparables · 30 restent vides
+```
 
 ---
 
@@ -129,7 +161,44 @@ le mandat affiche**.
 ⚠ **Et j'avais invente un « trieur » pour un probleme qui n'existe pas.** Le risque
 « tous les proprietaires du bien » n'existe QUE sur l'intersection :
 **48 lignes sur 715** (une ligne en recours, sur une annonce a plusieurs mandats).
-Le trieur devient donc une **option mesuree**, pas une piece du chantier.
+
+### ⛔ LE TRIEUR EST ABANDONNE — l'audit du 06/10 le condamne
+
+L'idee etait : le texte des AUTRES mandats du bien dit quels noms ne sont pas les
+notres, donc on les ECARTE. **Mesure sur les 48 :**
+
+```
+ 1 nom  : 23 lignes   -> RIEN A TRIER, aucun risque de surplus
+ 2 noms : 17
+ 3 noms :  4
+ 4 noms :  3
+ 5 noms :  1
+         -> 25 lignes a 2 noms ou plus = le seul vrai sujet
+```
+
+**Et sur ces 25, ecarter rend la ligne PIRE :**
+```
+ann 8377   nos relations : ['Julien FERNANDEZ', 'Contact 10348368']
+           l'autre mandat dit : « M. FERNANDEZ Julien... »
+   -> ECARTER FERNANDEZ laisserait « Contact 10348368 », un NOM MUET.
+```
+⭐ « Il ecarte, il n'ajoute jamais » etait vrai -- mais **ecarter peut ne laisser que
+du dechet**. Le trieur est donc ecarte, et ce n'est pas un report : c'est un refus.
+
+### Ce qu'on fait a la place, sur les 25
+
+**Rien d'astucieux. On donne la liste entiere, et ON LE DIT.** La donnee pour decouper
+n'existe pas : nos relations ne portent aucune reference de mandat *(decision du 30/09 :
+le fait est « proprietaire du bien »)*, et les textes de Hektor sur ces lignes-la sont
+precisement ceux qui ne sont pas fiables.
+
+⭐ C'est la regle de la methode, §0 : *« Une case qu'on ne sait pas remplir se DIT, elle
+ne se saute pas. »* -> ces 25 lignes portent **les mandants DU BIEN**, pas ceux de ce
+mandat-la, et l'ecran doit l'ecrire.
+
+⚠ **Et un contre-exemple qui montre que c'est le bon choix** : annonce 62055, les DEUX
+textes de Hektor sont faux (MOREAUX et GRANGE), nos relations disent MIQUEL, **et l'API
+de Hektor confirme MIQUEL**. Un trieur base sur ses textes aurait suivi le faux.
 
 ---
 
@@ -184,10 +253,16 @@ C'est aussi le **n° 2 et le n° 1** de la note de la session « Biens invisible
 ```
 OU  phase2/sync/mandat_ledger.py , _poser()
   ①  SON entree a des mandants ET le corps n'est pas suspect -> on garde  (24 022)
-  ②  SINON, et SEULEMENT si nature = VENTE -> NOS relations                  (715)
-  ③  si nos relations ne savent pas -> VIDE + sortie en LISTE                 (40)
-  ⚠ LOCATION / GESTION / INCONNUE : on ne touche a rien
-  OPTION : le trieur sur les 48 lignes de l'intersection (ECARTE, n'AJOUTE jamais)
+  ②  SINON, et SEULEMENT si nature = VENTE -> NOS relations
+         457 corps empruntes  -> 457 reparees
+         258 vides (societes) -> 228 reparees, le correctif societes EST deja la
+  ③  si nos relations ne savent pas -> VIDE + sortie en LISTE                 (30)
+  ⚠ LOCATION / GESTION / INCONNUE : on ne touche a rien (decision du 26/08)
+  ⛔ PAS DE TRIEUR : abandonne apres l'audit du 06/10 (il laisserait un nom MUET
+     sur l'annonce 8377). Les 25 lignes concernees portent les mandants DU BIEN,
+     et l'ecran doit l'ECRIRE au lieu de faire semblant.
+  ⭐ ET ON PRIORISE : les 457 d'abord (un nom FAUX s'affiche aujourd'hui),
+     les 258 ensuite (un vide, pas un mensonge).
 
 ⚠ DEPLACEMENT DANS LE RUN : aujourd'hui l. 839 app_mandat PUIS l. 922 app_relation
   -> deplacer app_mandat APRES app_relation.
