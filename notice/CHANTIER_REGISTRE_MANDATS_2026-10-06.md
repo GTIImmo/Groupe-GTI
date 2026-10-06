@@ -270,6 +270,73 @@ emportait*.
 ```
 C'est aussi le **n° 2 et le n° 1** de la note de la session « Biens invisibles ».
 
+### ⚠ LOT 0 — ETAT AU 06/10, ET UNE DETTE LAISSEE SCIEMMENT
+
+```
+0a  ✅ FAIT  phase2/checks/chemin_immediat_paquet.py   (113596c)
+    eprouve DANS LES DEUX SENS : vert sur le code sain (4 temoins sur 4),
+    ROUGE sur le bug du 05/10 remis en memoire (« TypeError: tuple indices
+    must be integers or slices, not str », le message exact).
+    ⛔ IL N'EST BRANCHE PAR RIEN. A lancer a la main avant tout changement de
+      export_app_payload.py / push_upgrade_to_supabase.py.
+
+0b  ⛔ PAS FAIT, et la sentinelle EXISTAIT DEJA :
+       "key": "data.travaux_en_erreur" · table app_console_job
+       "params": {"status": "eq.error"} · absolute · max 0 · CRITICAL
+    POURQUOI ELLE N'A PAS SONNE LE 05/10 -- la deduplication porte sur l'ETAT,
+    pas sur le NOMBRE :
+       newly_critical = [r for r in criticals
+                         if previous_status.get(r.status_key) != "critical"]
+       03/10  1 erreur -> la cle devient critical -> UNE alerte part
+       05/10  13 erreurs NEUVES, meme cle -> newly_critical VIDE -> SILENCE
+    ⭐ Un critical qui RESTE critical ne realerte jamais, meme si le probleme
+      grossit treize fois.
+    Le compte precedent est pourtant lisible (_previous_sentinel_count).
+    ⚠ MAIS le corriger touche la deduplication de TOUTES les sentinelles, et le
+      moniteur tourne toutes les 2 h -> risque de spam. Il faut un garde-fou, et
+      c'est une decision sur le systeme d'alerte entier. Arbitrage de Frederic
+      du 06/10 : on ne le fait pas maintenant.
+
+0c  ⛔ PAS FAIT (brancher les 3 sentinelles orphelines = editer le run de nuit)
+
+⛔⛔ LA DETTE, A CONNAITRE : TANT QUE LA FILE N'EST PAS VIDE, L'ALERTE SUR LES
+   TRAVAUX EST ETEINTE -- pour TOUT, pas seulement le mandat. Elle l'est depuis
+   le 01/10. 15 travaux en erreur, par cause reelle :
+      12  le bug du 05/10 (TypeError)  -- cause CORRIGEE par 3607d29
+           annonces 63158 (x7) · 63156 (x2) · 61895 · 63099 · 63081
+       2  « database is locked »        -- annonces 63208 (05/10 06:44), 63158 (01/10)
+       1  « Retrait du mandant NON PROUVE pour le contact 603953 » -- le contact
+          de TEST, le meme qui pollue les mandants de l'annonce 24113
+```
+
+#### Et le diagnostic des 2 « database is locked », mesure le 06/10
+
+```
+⛔ CE N'EST PAS UN busy_timeout MANQUANT : il est deja la, timeout=30 (ligne 669),
+  avec un commentaire qui documente deja cette panne.
+
+CE QUI TENAIT LE VERROU le 05/10 a 06:44 -- une CHAINE de courtes ecritures :
+   06:43:35 -> 06:44:28   registre des liens (app_relation)   53 s
+   06:44:28  entretien compromis · 06:44:32 entretien ventes
+   06:44:35  redescente des lectures · 06:44:38 registre depuis console
+   06:44:39  repartition de commission
+   -> chaque etape relache et la suivante reprend. `executescript` a besoin d'une
+      fenetre EXCLUSIVE : il ne l'a jamais eue. Allonger les 30 s ne sauverait rien.
+
+⭐ LA VRAIE CAUSE EST EN AMONT : ensure_schema() prend un verrou d'ecriture a
+  CHAQUE appel -- 2 465 fois mesurees -- alors qu'il n'a rien a creer. Son script
+  (339 lignes, 12 CREATE TABLE IF NOT EXISTS, 14 CREATE INDEX IF NOT EXISTS) coute
+  0,000 s quand tout existe, MAIS il contient un INSERT OR REPLACE : il ecrit donc
+  toujours.
+
+CORRECTIF IDENTIFIE, NON FAIT (arbitrage du 06/10) :
+  ensure_schema(con, seulement_si_manquant=True) sur le SEUL chemin immediat
+  -> un controle en LECTURE ; si les 12 tables et 14 index sont la, aucun verrou.
+  ⚠ fonction PARTAGEE, 5 appelants -> un PARAMETRE, jamais un changement par defaut.
+  ⚠ et les 2 lignes de donnees de reference ne seraient plus reposees a chaque
+    retour de fiche (le run de nuit les repose par bootstrap_phase2.py:314).
+```
+
 ### LOT 1 — les mandants du registre des mandats
 ```
 OU  phase2/sync/mandat_ledger.py , _poser()
