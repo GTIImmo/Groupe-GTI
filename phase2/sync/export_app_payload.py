@@ -1640,7 +1640,47 @@ def compute_mandat_version_score(item: dict[str, object]) -> tuple[int, int]:
     return score, numeric_id
 
 
-def normalize_history_version(item: dict[str, object], *, is_current: bool, index: int) -> dict[str, object]:
+# ═══════════════════════════════════════════════════════════════════════════════
+# LE REGISTRE DIT « MONTANT » ET IL DIT LE PRIX DE L'ANNONCE          06/10/2026
+# ═══════════════════════════════════════════════════════════════════════════════
+# Le montant que Hektor rend dans `mandats[]` est resolu sur l'identifiant NU du
+# mandat, qui est ambigu entre les familles HEKTOR et PROTEXA : 88 lignes portent
+# le montant d'un AUTRE bien (62 000 EUR sur un bien a 112 500).
+#
+# ⛔ LE 05/10 ON AVAIT MASQUE CE CHIFFRE. C'ETAIT UNE RUSTINE, et elle a fait ce
+#   que font les rustines : elle couvrait `mandat_montant` et laissait passer
+#   `register_history_json` et `register_detail_payload_json`. Un masque cache,
+#   il ne repare pas -- et il faut le reposer a chaque nouvel endroit qui lit.
+#
+# ─── LA REPARATION : ON MET LA VRAIE VALEUR, ON NE CACHE PLUS ──────────────────
+# Le montant d'un mandat EST le prix du bien. Le registre le sait deja partout
+# ailleurs -- le listing, la fiche, le €/m² et meme la branche de repli de la
+# modale « Historique des versions » (App.tsx:24035) affichent `prix`.
+# On prend donc le MEME `prix` que la ligne de registre porte deja, sans le
+# reformater : un seul chiffre, une seule source, aucune divergence possible.
+#
+# MESURE QUI REND LA REPARATION SURE -- les 457 lignes a corps emprunte portent
+#   TOUTES UNE SEULE VERSION, et leurs 88 montants sont tous sur la version
+#   COURANTE : ZERO sur une version passee. Il n'y a donc rien d'ancien a perdre.
+#   Les 112 montants de versions passees du reste du registre ne sont pas touches.
+#
+# ⚠ SEULE LA VERSION COURANTE PREND LE PRIX. Une version PASSEE garde son montant
+#   d'epoque : l'annonce n'a qu'UN prix, celui d'aujourd'hui, et elle ne peut pas
+#   dire a combien un mandat de 2022 avait ete signe.
+#
+# ⚠ LA PART « RECHERCHE » DU CORPS SUSPECT RESTE EN PLACE : retirer un texte
+#   emprunte de la recherche n'est pas masquer un chiffre, et elle, elle sert.
+# ═══════════════════════════════════════════════════════════════════════════════
+def normalize_history_version(
+    item: dict[str, object],
+    *,
+    is_current: bool,
+    index: int,
+    prix_annonce: object = None,
+) -> dict[str, object]:
+    montant = normalize_text(item.get("montant")) or None
+    if is_current:
+        montant = normalize_text(prix_annonce) or montant
     return {
         "history_id": f"{normalize_text(item.get('numero'))}:{normalize_text(item.get('id')) or index}",
         "label": "Version courante" if is_current else f"Version {index + 1}",
@@ -1651,7 +1691,7 @@ def normalize_history_version(item: dict[str, object], *, is_current: bool, inde
         "date_debut": normalize_text(item.get("debut")) or None,
         "date_fin": normalize_text(item.get("fin")) or None,
         "date_cloture": normalize_text(item.get("cloture")) or None,
-        "montant": normalize_text(item.get("montant")) or None,
+        "montant": montant,
         "mandants_texte": normalize_text(item.get("mandants")) or None,
         "note": normalize_text(item.get("note")) or None,
         "is_current": is_current,
@@ -1714,6 +1754,7 @@ def build_register_detail_payload(
     active_row: dict[str, object] | None,
     detail_available: bool,
     price_change_summary: dict[str, object] | None = None,
+    prix_annonce: object = None,
 ) -> str:
     localite = safe_json_loads(raw_row.get("localite_json"), {})
     textes = safe_json_loads(raw_row.get("textes_json"), [])
@@ -1740,14 +1781,19 @@ def build_register_detail_payload(
         "surface_habitable_detail": active_row.get("surface_habitable_detail") if active_row else (raw_detail.get("ag_interieur", {}).get("props", {}).get("surfappart", {}).get("value") if isinstance(raw_detail, dict) else None),
         "nb_pieces": active_row.get("nb_pieces") if active_row else (raw_detail.get("ag_interieur", {}).get("props", {}).get("nbpieces", {}).get("value") if isinstance(raw_detail, dict) else None),
         "nb_chambres": active_row.get("nb_chambres") if active_row else (raw_detail.get("ag_interieur", {}).get("props", {}).get("NB_CHAMBRES", {}).get("value") if isinstance(raw_detail, dict) else None),
-        "mandat_history_json": json.dumps([normalize_history_version(item, is_current=index == 0, index=index) for index, item in enumerate(versions)], ensure_ascii=True, separators=(",", ":")),
+        "mandat_history_json": json.dumps([normalize_history_version(item, is_current=index == 0, index=index, prix_annonce=prix_annonce) for index, item in enumerate(versions)], ensure_ascii=True, separators=(",", ":")),
         "mandat_avenants_json": json.dumps(embedded_avenants, ensure_ascii=True, separators=(",", ":")),
         "mandat_type": normalize_register_mandat_type(current_version.get("type")),
         "mandat_type_source": normalize_text(current_version.get("type")) or None,
         "mandat_date_debut": normalize_text(current_version.get("debut")) or None,
         "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
         "mandat_date_cloture": normalize_text(current_version.get("cloture")) or None,
-        "mandat_montant": normalize_text(current_version.get("montant")) or None,
+        # 06/10 : le prix de l'annonce, pas le montant resolu sur l'identifiant nu.
+        "mandat_montant": (
+            normalize_text(prix_annonce)
+            or normalize_text(current_version.get("montant"))
+            or None
+        ),
         "mandants_texte": normalize_text(current_version.get("mandants")) or None,
         "mandat_note": normalize_text(current_version.get("note")) or None,
         "nb_images": len(preview_images) if isinstance(preview_images, list) else 0,
@@ -2020,7 +2066,9 @@ def charger_corps_suspects(con: sqlite3.Connection) -> set[tuple[str, str]]:
     if suspects:
         print("[registre des mandats] lignes dont le corps vient d'un AUTRE mandat "
               "(l'identifiant nu est ambigu entre les familles HEKTOR et PROTEXA) : "
-              "%d -- montant masque, texte retire de la recherche" % len(suspects),
+              "%d -- mandants repris chez nous, texte retire de la recherche "
+              "(le montant, lui, n'est plus masque : c'est le prix de l'annonce)"
+              % len(suspects),
               file=sys.stderr)
     return suspects
 
@@ -2264,6 +2312,11 @@ def build_mandat_register_rows(
             #   charger_corps_suspects : Hektor recycle ses identifiants de mandat et
             #   sert, pour le mandat neuf, le corps de l'ancien (montant + mandants).
             corps_suspect = (annonce_id, numero) in corps_suspects
+            # LE PRIX DU BIEN, calcule UNE fois : il sert a la colonne `prix`, au
+            # montant de la ligne, a celui du payload embarque et a la version
+            # courante de l'historique. Une seule variable = aucune divergence
+            # possible entre ce que le listing affiche et ce que la fiche affiche.
+            prix_ligne = (source_row.get("prix") if source_row else None) or raw.get("prix")
             row = {
                 "register_row_id": f"{annonce_id}:{numero}",
                 # ⚠ MARQUEUR INTERNE, JAMAIS ENVOYE : build_current_mandat_register_rows
@@ -2303,7 +2356,7 @@ def build_mandat_register_rows(
                 # C.15 : la famille d'offre, pour que le registre sache distinguer
                 # une vente d'un local professionnel sans deviner d'apres le type.
                 "offre_type": (source_row.get("offre_type") if source_row else None) or normalize_text(raw.get("offre_type")) or None,
-                "prix": (source_row.get("prix") if source_row else None) or raw.get("prix"),
+                "prix": prix_ligne,
                 "commercial_id": (source_row.get("commercial_id") if source_row else None) or normalize_text(raw.get("hektor_negociateur_id")) or None,
                 "commercial_nom": commercial_nom,
                 "negociateur_email": (source_row.get("negociateur_email") if source_row else None) or normalize_text(raw.get("negociateur_email")) or None,
@@ -2317,15 +2370,16 @@ def build_mandat_register_rows(
                 "mandat_date_debut": normalize_text(current_version.get("debut")) or None,
                 "mandat_date_fin": normalize_text(current_version.get("fin")) or None,
                 "mandat_date_cloture": normalize_text(current_version.get("cloture") or current_version.get("dateCloture") or current_version.get("date_cloture")) or None,
-                # ⛔ MASQUE SI LE CORPS EST SUSPECT. On n'affiche pas le montant
-                #   d'un AUTRE bien sur une mention contractuelle : 62 000 pour un
-                #   bien a 112 500 (annonce 39707). Mesure : sur les lignes atteintes,
-                #   montant != prix de l'annonce dans 92 % des cas, contre 9 % ailleurs.
-                #   ⭐ RIEN N'EST DETRUIT : le payload embarque garde la valeur de
-                #     Hektor telle quelle, et la sentinelle designe les lignes.
+                # ─── LE MONTANT EST LE PRIX DE L'ANNONCE ─────────── 06/10/2026
+                # Le masque du 05/10 (« None si corps_suspect ») est RETIRE : il
+                # cachait un chiffre faux sans en mettre un vrai, et il laissait
+                # passer deux autres chemins. Voir le bloc au-dessus de
+                # `normalize_history_version`. On prend EXACTEMENT le `prix` que
+                # la ligne porte -- meme variable, donc jamais de divergence.
                 "mandat_montant": (
-                    None if corps_suspect
-                    else normalize_text(current_version.get("montant")) or None
+                    normalize_text(prix_ligne)
+                    or normalize_text(current_version.get("montant"))
+                    or None
                 ),
                 # ─── LES MANDANTS ────────────────────────────────── 04/10/2026
                 # `mandants_json` : NOTRE liste, avec les DEUX numeros de chaque
@@ -2390,7 +2444,12 @@ def build_mandat_register_rows(
                 "register_version_count": len(versions_sorted),
                 "register_embedded_avenant_count": len(embedded_avenants),
                 "register_history_json": json.dumps(
-                    [normalize_history_version(item, is_current=index == 0, index=index) for index, item in enumerate(versions_sorted)],
+                    [
+                        normalize_history_version(
+                            item, is_current=index == 0, index=index, prix_annonce=prix_ligne
+                        )
+                        for index, item in enumerate(versions_sorted)
+                    ],
                     ensure_ascii=True,
                     separators=(",", ":"),
                 ),
@@ -2404,6 +2463,7 @@ def build_mandat_register_rows(
                     active_row=source_row,
                     detail_available=detail_available,
                     price_change_summary=price_change_summary,
+                    prix_annonce=prix_ligne,
                 ),
             }
             register_rows.append(row)
