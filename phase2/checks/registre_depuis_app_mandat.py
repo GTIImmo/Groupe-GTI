@@ -57,6 +57,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from phase2.sync.export_app_payload import (  # noqa: E402
+    attach_hektor_read,
+    charger_corps_suspects,
     normalize_history_version,
     normalize_register_mandat_type,
     normalize_text,
@@ -79,7 +81,7 @@ def _texte(valeur) -> str:
     return normalize_text(valeur) or ""
 
 
-def depuis_app_mandat(ligne: sqlite3.Row) -> dict:
+def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool = False) -> dict:
     """Les colonnes de mandat du registre, telles que la table les rendrait.
 
     ⚠ MEMES FORMULES QUE LE REGISTRE, IMPORTEES. `normalize_register_mandat_type`
@@ -96,8 +98,15 @@ def depuis_app_mandat(ligne: sqlite3.Row) -> dict:
     except Exception:
         avenants = []
 
+    # ⚠ LE PRIX ET LE DRAPEAU SONT INDISPENSABLES DEPUIS LE 06/10 (lot 2) : la
+    #   version COURANTE de l'historique porte LE PRIX DE L'ANNONCE, plus le
+    #   montant du mandat. Sans les passer, ce comparateur annoncerait un ecart
+    #   sur `register_history_json` pour CHAQUE ligne ayant un prix -- soit
+    #   ~24 000 fausses alertes, et un controle qui crie au loup ne sert a rien.
     historique = [
-        normalize_history_version(item, is_current=(i == 0), index=i)
+        normalize_history_version(item, is_current=(i == 0), index=i,
+                                  prix_annonce=prix_annonce,
+                                  corps_suspect=corps_suspect)
         for i, item in enumerate(versions)
     ]
     return {
@@ -162,8 +171,13 @@ def mesurer(con: sqlite3.Connection) -> dict | None:
     ecarts = collections.Counter()
     exemples = collections.defaultdict(list)
     cloture_ecart = 0
+    suspects = charger_corps_suspects(con)
     for cle in communs:
-        attendu = depuis_app_mandat(table[cle])
+        attendu = depuis_app_mandat(
+            table[cle],
+            prix_annonce=vue[cle]["prix"],
+            corps_suspect=cle in suspects,
+        )
         actuel = depuis_la_vue(vue[cle])
         for colonne, valeur in attendu.items():
             if valeur != actuel[colonne]:
@@ -187,6 +201,11 @@ def mesurer(con: sqlite3.Connection) -> dict | None:
 
 def main() -> int:
     con = sqlite3.connect("file:%s?mode=ro" % PHASE2_DB.as_posix(), uri=True)
+    # ⚠ LE MIROIR DOIT ETRE ATTACHE : `charger_corps_suspects` rend un ensemble
+    #   VIDE EN SILENCE sans lui (c'est documente dans la fonction, et ce silence
+    #   m'a fait annoncer trois chiffres contradictoires le 05/10). Sans le miroir,
+    #   ce comparateur serait aveugle aux corps empruntes.
+    attach_hektor_read(con)   # la forme du projet, eprouvee
     try:
         m = mesurer(con)
     finally:
