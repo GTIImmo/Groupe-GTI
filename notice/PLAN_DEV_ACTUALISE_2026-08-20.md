@@ -3,7 +3,9 @@
 Remplace le plan du 18/08. Établi après quatre audits mesurés :
 identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (20/08).
 
-> **Dernière mise à jour : 20/09/2026** — la CHARTE DE L'ÉTAPE 2, le JOURNAL DES
+> **Dernière mise à jour : 07/10/2026** — l'AUDIT COMPLET est intégré : section
+> « 🔎 L'AUDIT COMPLET DU 07/10 » sous les lots, L1 et L2 rouverts, lot **L10** créé.
+> *(Mise à jour précédente : 20/09/2026)* — la CHARTE DE L'ÉTAPE 2, le JOURNAL DES
 > DÉCISIONS et LES DIX LOTS ouvrent ce document.
 > *(Mise à jour précédente : 18/09/2026)* — « MISE À JOUR DU 18/09 » ci-dessous : la liste ① relue contre le code.
 > *(Mise à jour précédente : 03/09/2026.)* C.19-d requalifié en **« LE REGISTRE DES
@@ -96,6 +98,8 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | **24/09** | ✅ **D6 CODÉ** : `contacts_app_seuls.py` pose désormais `absent_depuis` sur ce qui n'est plus « connu de l'app seule » — seulement après une relecture complète et pleine (planchers côté app). Aucun lecteur ne s'en sert : observation pure. Répété sur base jetable : 26 lignes périmées marquées, 0 objet « app seule » ce jour |
 | **24/09** | ✅ **C.9-d CODÉ — le carnet des liens** (`app_relation_registry`, dans le build complet, SAVEPOINT) : chaque lien noté avec **la recette exacte de son identifiant**, prise avant la réécriture du rôle. Doublure, lu par personne avant C.9-f. Répétition sur copie : **167 486 / 167 486 recettes refabriquent leur clé**, 0 conflit, 9 sans n° de bien. **D6 (expiration du recensement) reste à faire, go séparé** |
 | **30/09** | ⛔ **LA RELATION EST LE SEUL OBJET À UN SEUL ROBINET** *(audit en lecture seule, parti d'un bug : fiche contact vide ouverte depuis une annonce)*. Le lien a son **identité** chez nous (C.9-d/f) mais pas son **existence** : la table est refaite chaque nuit depuis 6 sources Hektor, l'app n'écrit qu'une ligne provisoire, aucun contrat d'autorité, 0 sentinelle. **Exigence de Frédéric** : *un registre des relations autonome, mis à jour selon un contrat d'autorité entre le run de nuit Hektor et les workers de l'app* (ajouter un mandant, un acquéreur, un mandant depuis le registre des affaires). **L2 « relations » était surestimé.** ➡ section **« LE REGISTRE DES RELATIONS DEVIENT AUTONOME »** + `notice/AUDIT_REGISTRE_RELATIONS_AUTONOME_2026-09-30.md` · ⏳ **5 questions à trancher avant tout code** |
+| **07/10** | ⛔ **AUDIT COMPLET : L'ÉTAPE 2 N'EST PAS TERMINÉE.** *(10 dimensions, chaque constat grave remesuré par un contradicteur, puis un contrôle de complétude ; lecture seule)*. La fondation est vraie : nos numéros, nos registres, la mémoire, et la chaîne « l'app écrit d'abord » pour les **modifications**. Mais la liste « il ne reste que documents + n° de mandat + signature + passerelles » est **incomplète d'une vingtaine de chantiers**, dont ceux-ci : une annonce née après la coupure serait **orpheline** (n° Hektor `NOT NULL` dans 16 tables, 8 fonctions qui refusent sans lui) ; créer reste suspendu à Hektor (recherche provisoire **effacée en 24 h**) ; mise sous mandat et clôture passent par Hektor ; le drapeau **diffusable**, qui commande le rapprochement, n'est posé que par Hektor ; les bons de visite sont faits par Hektor ; le **DNS** de gti-immobilier.fr est servi par La Boîte Immo ; le canal des **leads** est inconnu depuis le 01/02. ➡ `notice/AUDIT_AUTONOMIE_COMPLET_2026-10-07.md` |
+| **07/10** | **L'AUDIT S'INTÈGRE AU PLAN, PAS DE CHANTIER À PART** *(Frédéric : « va s'y »)*. Les points connus complètent leur case existante. **L1 et L2 sont rouverts** : leur énoncé n'est pas couvert (règle CLAUDE.md §4). Les points sans place vont dans un **lot neuf `L10` « Préparer la coupure »**, et les points hors code dans la section 12 de la liste (**A.4** DNS et site web, **A.5** leads). Méthode inchangée : une tâche de code à la fois, chacune **ré-auditée au moment d'y entrer** (l'audit est une carte, pas la vérité). |
 
 ---
 
@@ -112,8 +116,8 @@ l'app**, sauf une transaction.
 | Lot | Objectif | Contenu *(identifiants d'origine)* | Durée | Fini quand |
 |---|---|---|---|---|
 | **L0** ✅ | **Ne plus rien perdre** *(fait le 20/09)* | **C.1'** la relecture efface une saisie en conflit *(`push_single_annonce_to_supabase.py`, ligne 582)* · le renvoi partiel sans fin · **C.4** supprimer un contact laisse ses rapprochements · **C.17-ter** 13 étapes du run sans sonde, sonde « IP bannie », script de reprise versionné | **~3 j** | Aucune saisie ne disparaît sans trace, et un arrêt se voit |
-| **L1** ✅ | **Les numéros à la naissance** *(fait le 21/09, option B — voir le journal)* | **5b** bascule de la clé des contacts · **4-suite** clé des recherches · clé des relations sur les numéros app · **E.4 / 6.1-6.3** le distributeur, dans Supabase · la case « numéro app » dans les tables de création | **1,5–2,5 sem** | Un contact, une recherche, un bien naissent dans l'app avec leur numéro |
-| **L2** ✅ | **Les corps chez l'app** ⚠ *dernière chance* — **fait le 21/09** : contacts, relations *(⚠ **CORRIGÉ LE 30/09 : pour la relation, seul un OBSERVATEUR a été livré** — son identité est venue avec C.9-d/f, son EXISTENCE reste au miroir ; voir « LE REGISTRE DES RELATIONS DEVIENT AUTONOME »)*, couples, inventaire, **et 26bis-RECHERCHES** *(trouvée le jour même par l'audit d'autonomie)* ; **26bis-3** rejoint L3 ; ⚠ **le filet couvre désormais les quatre objets** — l'audit d'autonomie des recherches a trouvé que le filet existe pour l'annonce, le contact et la relation, **pas pour la recherche** *(notice/AUDIT_RECHERCHES_AUTONOMIE_2026-09-21.md)* | **26bis-3** · **26bis-CONTACTS** · **26bis-RELATIONS** · **26bis-COUPLES** · **INVENTAIRE** *(les 16 tables refaites chaque nuit)* | **2–3 sem** | Le serveur tient un objet que le miroir ignore |
+| **L1** 🟡 *(rouvert le 07/10 : la RECHERCHE ne naît pas dans l'app — distributeur `app_search_id_app_seq` jamais appelé, ligne provisoire effacée en 24 h ; reprise en `L10-2`)* | **Les numéros à la naissance** *(fait le 21/09 pour le contact et l'annonce, option B — voir le journal)* | **5b** bascule de la clé des contacts · **4-suite** clé des recherches · clé des relations sur les numéros app · **E.4 / 6.1-6.3** le distributeur, dans Supabase · la case « numéro app » dans les tables de création | **1,5–2,5 sem** | Un contact, une recherche, un bien naissent dans l'app avec leur numéro |
+| **L2** 🟡 *(rouvert le 07/10 : le corps de l'ANNONCE est refait chaque nuit depuis le miroir — 26bis-3 = N.4 ouvert — et le serveur ne tient une TRANSACTION qu'une fois revue de Hektor — 26bis-TRANSACTIONS ouvert)* | **Les corps chez l'app** ⚠ *dernière chance* — **fait le 21/09** : contacts, relations *(⚠ **CORRIGÉ LE 30/09 : pour la relation, seul un OBSERVATEUR a été livré** — son identité est venue avec C.9-d/f, son EXISTENCE reste au miroir ; voir « LE REGISTRE DES RELATIONS DEVIENT AUTONOME »)*, couples, inventaire, **et 26bis-RECHERCHES** *(trouvée le jour même par l'audit d'autonomie)* ; **26bis-3** rejoint L3 ; ⚠ **le filet couvre désormais les quatre objets** — l'audit d'autonomie des recherches a trouvé que le filet existe pour l'annonce, le contact et la relation, **pas pour la recherche** *(notice/AUDIT_RECHERCHES_AUTONOMIE_2026-09-21.md)* | **26bis-3** · **26bis-CONTACTS** · **26bis-RELATIONS** · **26bis-COUPLES** · **INVENTAIRE** *(les 16 tables refaites chaque nuit)* | **2–3 sem** | Le serveur tient un objet que le miroir ignore |
 | **L3** ✅ | **La règle de récence, par CHAMP** *(fait le 21/09)* *(renommé le 21/09 : ce n'est pas un interrupteur)* | **26bis-3** la carte des champs *(où vit la valeur de chacun : 5 en colonne, 38 dans le grand bloc, 9 à vérifier)* · **la protection par CHAMP** au lieu du bien entier · **Chantier 2** *(2.3, 2.4)* la même règle dans le run de nuit · la relecture à l'ouverture · **C.16** *(825 contacts disparus)* | **1–2 sem** | Le run de nuit **confirme**, il n'écrase plus |
 | **L4-b′** | **FERMER LA PORTE** *(décidé le 22/09, **avant L4-c et avant C.9**)* — l'audit a trouvé **9 sortants qui envoient un numéro à Hektor sans passer par `cibleHektorContact`**, dont 5 sans aucun garde-fou. ⚠ **C'est un problème de C.9, pas de L4-c** : ce sont exactement les chemins qu'emprunte une annonce créée depuis l'app *(mandants, acquéreurs, mandat)* | les 9 sortants traduisent · `normalizeMandatContactIds` **traduit** au lieu d'écarter *(l. 14130 — « le contact rejoindra la liste » : rien ne le fait rejoindre)* · la traduction de la qualification cesse d'être **jetée** *(l. 13390)* | **~1 j** | Aucun numéro d'app ne peut partir chez Hektor |
 | **L4-c** | **UNE PERSONNE, UN NUMÉRO** *(décidé le 21/09, **avant C.9**)* — la doublure `app_contact_id` devient l'identité du contact, comme `app_dossier_id` l'est pour l'annonce depuis le 19/08. ⚠ **Le registre des recherches bouge DANS LE MÊME GESTE**. ⚠ **ET TOUT CE QUE L'AUDIT DU 22/09 A RÉVÉLÉ EN FAIT PARTIE** *(exigence de Frédéric, 22/09 — liste ci-dessous)* | ① L4-b′ d'abord · ② répétition sur **copie** + un run par-dessus + le compte des orphelins · ③ passage réel, **code et données la même nuit** · ④ **les 3 dépendances hors base** *(jetons signés 60 j, numéro figé dans le JSON d'agenda, lien « Ouvrir Hektor » hors job)* · ⑤ **les 12 endroits ambigus**, dont le garde-fou `isdigit()` qui ne distinguera plus rien, le nom `hektor_contact_id` **paramètre public de l'API**, et les sentinelles `''` / `'invite'` / une adresse email · ⑥ la 3ᵉ empreinte `duplicate_group_id` · puis la clé de la recherche elle-même | **~2 j** *(hors ④⑤ à chiffrer)* | Un contact porte un seul numéro, et il survivra à Hektor |
@@ -123,6 +127,77 @@ l'app**, sauf une transaction.
 | **L7** | **Les fichiers chez l'app** | **D.1a** · **D.1** · **D.2** · garder la copie de chaque photo ajoutée | **1–2 sem** | Afficher un document ou une photo ne dépend plus de Hektor |
 | **L8** | **Exploitation et bascule** | **C.4-bis** élargi *(création, numéro de mandat, photo, document)* · **E.3** · **0.3 / E.1** rattrapage des recherches, dont **19-R2** la veille · **E.2** | **~1 sem** | Les négociateurs travaillent dans l'app |
 | **L9** | **Le registre électronique des mandats** *(juste avant la coupure)* | **A.3-technique** *(table `app_mandat`, remplissage depuis le miroir, sonde, puis le registre **lit la table**)* · les **trois couches de numérotation** · la **série propre**, à la place de PROTEXA · **C.13-c** *(23 715 dates de clôture)* · le négociateur manquant *(3 318 lignes)* · **A.3-juridique**, étudié le moment venu | **~1 sem** + l'étude | Un mandat neuf s'enregistre sans Hektor — **la 1re des 3 exceptions tombe** |
+| **L10** ⬜ *(créé le 07/10)* | **Préparer la coupure** — tout ce que l'audit complet du 07/10 a trouvé et qui n'avait **aucune place** dans L0→L9 | **L10-1** le numéro Hektor de l'annonce devient facultatif · **L10-2** créer sans Hektor · **L10-3** les statuts chez nous (mise sous mandat, clôture, archiver) · **L10-4** le drapeau diffusable à l'app · **L10-5** la baisse de prix lue dans l'app · **L10-6** interrupteur et ordre d'extinction · **L10-7** le run d'après · **L10-8** les planchers « Hektor répond vide » · **L10-9** la sauvegarde d'après · **L10-10** la surveillance d'après · **L10-11** les négociateurs (droits, comptes, annuaire) · **L10-12** visites et documents-modèles · **L10-13** ce que Hektor envoie aux clients · **L10-14** le numéro de dossier · **L10-15** le côté public · **L10-16** sécurité *(détail : section « 🔎 L'AUDIT COMPLET DU 07/10 » ci-dessous, et section 13 de la liste)* | à chiffrer tâche par tâche | Le serveur et l'app **vivent une semaine sans Hektor** sur une copie, sans perte ni alerte fausse |
+
+### 🔎 L'AUDIT COMPLET DU 07/10 — *ce qu'il change au plan*
+
+> ➡ Le détail, les preuves et les mesures : `notice/AUDIT_AUTONOMIE_COMPLET_2026-10-07.md`
+> (§0 à §12, plus le §13 du contrôle de complétude). **Cette section ne recopie pas l'audit :
+> elle dit OÙ chaque point vit désormais dans le plan et la liste.**
+> ⚠ L'audit est une **carte du 07/10**, pas la vérité : chaque tâche est **ré-auditée dans le
+> code au moment d'y entrer** (CLAUDE.md §0, étape 1).
+
+**Le verdict.** La fondation est vraie : la mémoire est à nous, ainsi que les numéros, les
+registres, et la chaîne « l'app écrit d'abord » pour **modifier**. Mais **l'étape 2 n'est pas
+terminée**. Créer, mettre sous mandat, ajouter un fichier, valider pour la diffusion : tout cela
+dépend encore de Hektor. Et **personne ne saisit encore dans l'app** : 0 travail demandé par un
+commercial en 120 jours, 0 annonce née dans l'app depuis le 25/09.
+
+#### Où va chaque point
+
+| point de l'audit | va dans | état |
+|---|---|---|
+| rattrapage des documents (≈ 10 650 annonces, ≥ 6 nuits) · les 508 brouillons **échoueront** (`loadDossier` sans branche brouillon) · le parc vivant n'est **plus relu depuis le 20/08** · le relais G.6 ne s'allume pas tel quel | liste **G.1**, **G.2**, **G.6** (section 10bis) | complété |
+| ajouter un document, une photo, un PDF généré : Hektor d'abord | liste **G.5** (devient bloquant) | complété |
+| corps de l'annonce refait depuis le miroir | **N.4** = liste **26bis-3** → **L2 rouvert** | complété |
+| la recherche ne naît pas dans l'app | **L1 rouvert** → **L10-2** | neuf |
+| C.9-couple : la sonde existe depuis le 07/10 (`033e946`) | liste **C.9-couple** : reste le geste humain | complété |
+| gestes manquants (photos, mandat existant, fusion, brouillon, suppressions) | liste **E.0-bis** | complété |
+| dates de clôture des mandats | liste **C.13-c** | inchangé, date de péremption |
+| registre légal : série, inaltérabilité, export, avenants et mandats de recherche dans la même série, 25 trous, 2 défauts dormants de l'étape D | liste **A.3** (sections 9 et 12) | complété |
+| signature : 50 procédures en cours, bouton sur l'ancien domaine | liste **A.2** | complété |
+| passerelles : il faut aussi un flux à nous (0 ligne) | liste **A.1** | complété |
+| liens publics : **le jeton RDV n'est pas stable** | liste **11bis ①** | ⚠ recette à corriger |
+| droits des commerciaux, comptes, F.1 **avant** E.2 | liste **E.2** / **F.1** → **L10-11** | complété |
+| agenda des visites, 230 documents sans fichier, 111 documents de fin de vie, signatures en cours | liste **E.1** | complété |
+| zone DNS et site web chez La Boîte Immo | liste **A.4** (neuf, hors code) | neuf |
+| leads : canal inconnu depuis le 01/02 (module Leads de Hektor ?) | liste **A.5** (neuf, hors code) | neuf |
+| tout le reste | **L10-1 → L10-16** (section 13 de la liste) | neuf |
+
+#### Les questions à Frédéric — *à trancher avant d'entrer dans les tâches concernées*
+
+1. **Registre des mandats** : continuer la série PROTEXA, ou repartir de 0 ? *(le plan
+   recommande de continuer — « TROIS CORRECTIONS QUE LA RECHERCHE IMPOSE », section FINIR
+   L'ANNONCE ; la mémoire du 28/09 dit l'inverse ; rien n'est au journal des décisions)*
+2. **Visites** : importer l'agenda de Hektor, ou y renoncer ? Faire **notre** bon de visite
+   (numéroté, archivé, plusieurs biens) ?
+3. **Droits** : que peut faire un négociateur seul ? *(aujourd'hui il peut créer une annonce,
+   mais ne peut plus la modifier ensuite)*
+4. **Après la coupure** : suppressions et fusion de doublons dans l'app, ou réservées à l'admin ?
+5. **Numéro de dossier EM/VA** : continuer les séries, ou passer à notre numéro ?
+6. **Validation pour la diffusion** : qui pose « diffusable » quand Hektor n'existe plus ?
+7. **Locations et gestion** : les 2 locations vivantes (62309, 62504) et la carte G ?
+8. **Questions de fait**, que seul Frédéric peut dire : par où arrivent les leads ? Les
+   négociateurs utilisent-ils les SMS, les tâches et rappels, l'envoi de fiches de Hektor ? Les
+   automatismes CRM (nouveau mandat, échéance, anniversaire) sont-ils allumés ? Properstar
+   diffuse-t-il nos biens ?
+
+#### L'ordre proposé *(proposé le 07/10, PAS décidé)*
+
+```
+0. HORS CODE, DÈS MAINTENANT   A.4 zone DNS et site · A.5 leads · export PROTEXA ·
+                               contrats A.1 / A.2 · les 8 questions ci-dessus
+1. CE QUI PÉRIME               G.1 réparer les brouillons AVANT que le rattrapage les
+                               atteigne · G.2 puis G.6 rebalayer le parc vivant ·
+                               C.9-couple · C.13-c · solder les signatures en cours
+2. CE QUI PROTÈGE DÈS MAINTENANT   L10-8 les planchers « Hektor répond vide »
+                                   (l'index des archives peut tomber sur un simple hoquet)
+3. LA NAISSANCE AUTONOME       L10-1 · L10-2 · L10-3 · L10-4 · G.5 · L10-6
+4. LA RÉPÉTITION GÉNÉRALE      L10-11 droits et comptes → quelques négociateurs pilotes
+                               travaillent DANS L'APP pendant que Hektor vit (= E.2)
+5. LES 3 EXCEPTIONS            A.3 registre légal · A.2 signature · A.1 flux, en parallèle
+6. LE JOUR J PRÉPARÉ           L10-7 le run d'après · L10-9 · L10-10 · ordre d'extinction
+```
 
 ### 🎯 FINIR L'ANNONCE — *la mettre au niveau du contact, de la recherche et de la transaction*
 

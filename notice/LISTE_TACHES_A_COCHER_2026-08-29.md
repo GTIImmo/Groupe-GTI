@@ -1,122 +1,77 @@
-# ⬛ OÙ ON EN EST — *la carte, puis les trois fronts. On la RÉÉCRIT, on ne l'empile pas.*
+# ⬛ OÙ ON EN EST — *la carte, puis les fronts. On la RÉÉCRIT, on ne l'empile pas.*
 
-> ⚠ Elle annonçait *« 15 lignes, rien de plus »* et en faisait **192**, arrêtées au
-> 25/09 à 00 h 10. Réécrite le 26/09 : la carte `L0`→`L9` ci-dessous, puis l'état par
-> front. L'historique est dans `notice/JOURNAL_DE_BORD.md`.
+> **Réécrite le 07/10/2026**, après l'audit complet
+> (`notice/AUDIT_AUTONOMIE_COMPLET_2026-10-07.md`). L'ancienne page (état au 27/09) est
+> descendue dans `notice/JOURNAL_DE_BORD.md`. Le reste de ce document est une archive qu'on
+> ouvre **par numéro de ligne**, jamais en entier.
+> ⚠ Après toute édition : `python phase2/checks/verifier_renvois_liste.py` (puis `--reparer`).
 
-> ## 🔑 LE PLAN ET CETTE LISTE NE PARLENT PAS LA MÊME LANGUE — *table posée le 25/09*
->
-> Le **plan** raisonne en **lots** `L0`…`L9`. Cette **liste** raisonne en **tâches**
-> `C.9`, `D.0`, `E.0-bis`, `A.2`… Aucun des deux ne portait la correspondance : d'où la
-> question de Frédéric, *« mais e3 et L5 ne sont pas dans le plan ? »* — ils y sont, sous
-> d'autres noms. ➡ audit : `notice/AUDIT_CORRESPONDANCE_PLAN_LISTE_2026-09-25.md`
->
-> ```
-> L0 ✅  C.1' la relecture · le renvoi partiel · C.4 · C.17-ter
-> L1 ✅  5b · 4-suite · cle des relations · E.4/6.1-6.3 le distributeur
->        (« E.4 le jour J » reste ouvert : c'est un GESTE, pas du code)
-> L2 ✅  26bis-CONTACTS · -RELATIONS · -COUPLES · -RECHERCHES · INVENTAIRE
-> L3 ✅  la carte des champs · protection par champ · chantier 2 · C.16
-> L4-b' ✅ les 9 sortants · normalizeMandatContactIds · la qualification
-> L4-c  ✅ la bascule d'identite du contact (jouee le 23/09)
-> L4 🟡  L4-a · L4-b · C.9 (a->f CODES) · C.9-couple · 26bis-TRANSACTIONS · 4.3
->          ⚠ « e3 » = la 3e piece de C.9-e (l. 414) -- codee, ETEINTE
-> L5     E.0-bis (l. 2346)   ⛔ les « 102 champs d'annonce et 40 de contact » = MESURE
->          REFUTEE le 25/09 : 0 creable sans etre corrigible (audit AUDIT_L5_...)
->          reste EN VRAI : mandat existant · photos (suppr/reordonner/principale) ·
->          fusion de doublons -> 6 a 10 j, pas 2-3 sem.
->          + C.13 · supprimer une annonce · brouillons · retirer « Ouvrir Hektor »
->
-> ⭐ FINIR L'ANNONCE — pose le 28/09, plan maitre section « FINIR L'ANNONCE »
->        Le niveau a atteindre = ce que contact / recherche / transaction ont DEJA.
->        N.1  LA CAMPAGNE DES CHAMPS (A/B/C)     mesure seule — BLOQUANTE
->             !! LA CLASSIFICATION EXISTE DEJA : A1_CHAMPS_PROPRIETE_APP_2026-08-19
->             189 champs en COULEURS (VERT/BLEU/ORANGE), 189 remesure le 28/09.
->             Les COULEURS commandent la DESCENTE, les LETTRES A/B/C le PUSH.
->             A/B/C fait sur l'AFFAIRE, jamais sur l'annonce. Reste les 136
->             champs d'EQUIPEMENT + la correspondance nom worker <-> colonne.
->        N.2  LE VERDICT AU CARNET               les 4 colonnes de l'affaire
->        N.3  LE FRONT ECRIT AU CARNET           il ne capte que 3 GESTES
->        N.4  LE CORPS LOCAL PERSISTANT (26bis-3) ⚠ DATE DE PEREMPTION
->        Ordre N.1 -> N.2 -> N.3 ; N.4 en parallele.
->        ✅ DEJA FAIT et souvent oublie : l'OEIL (C.9-b, 0 ecart sur 13 439) et les
->           4 sentinelles (un_numero · conflit · partielle · push_bloque), toutes a 0.
->           data.annonce_partielle detecte deja un champ IGNORE par Hektor = classe A.
->
-> L6     D.0 (l. 963) documents et mandats signes · signature · diffusion · n° mandat
-> L7     D.1a · D.1 · D.2 · garder la copie des photos
-> L8     C.4-bis elargi · E.3 · 0.3 / E.1 rattrapages · E.2
-> L9     A.3-technique · les 3 couches de numerotation · C.13-c   ⚠ AVANT la coupure
->        (il se remplit depuis le MIROIR : impossible apres)
->
-> ⚠⚠ TROIS TRAVAUX ONT UNE DATE DE PEREMPTION, pas seulement une priorite :
->    · L9        le registre se remplit depuis le MIROIR
->    · C.9-couple (l. 911) seul moment ou l'on peut comparer NOTRE paire a celle
->                 de Hektor
->    · LA VITRINE ET LES LIENS PUBLICS DE RDV (section 11bis) : les liens deja
->                 DIFFUSES portent le numero Hektor. Il faut servir l'ancienne ET
->                 la nouvelle forme EN PARALLELE pendant que Hektor vit --
->                 un recouvrement, pas un remplacement.
->    · N.4 (26bis-3) LE CORPS LOCAL DE L'ANNONCE : son remplissage vient du
->                 MIROIR, donc il exige que Hektor vive encore.
->    Ils doivent etre finis AVANT la coupure, pas pendant.
-> hors lot  A.1 portails · A.2 signature · A.3 juridique  -> FIXENT LA DATE, a zero
->           C.19 transactions · C.11 menage · B.3 · F.1 (apres la coupure)
-> ```
->
-> **LE COMPTE, au 27/09** — recompté, pas reporté :
->
-> ```
-> 40   cases ouvertes dans la LISTE VIVANTE (avant « 11. FIN DE PLAN »)
-> -11  section 10 (D) : REPRISE par la 10bis -> doublons, bandeau en tete de la section
-> ---
-> 29   reellement ouvertes, plus les gestes de Frederic
->
-> OU ELLES SONT   identite 11 · documents 5 · photos 3 · C.19 4 · A.3 2 · C.4-bis-0 1
->                 C.4-bis 1 · C.16 1 · C.11 1                          = 29
->
-> 81 cases FAITES dans cette meme liste vivante. Et 102 autres ouvertes APRES
-> « 11. FIN DE PLAN » : archive repetee, elle ne se traite pas.
-> ```
-
-> **Réécrite le 26/09/2026.** Cette page remplace la lecture du document : le reste est une
-> archive qu'on ouvre **par numéro de ligne**, jamais en entier (6 700 lignes).
-> ⚠ **On la RÉÉCRIT, on ne l'empile pas** — c'est l'empilement qui l'avait portée à 192
-> lignes pour une promesse de 15. L'historique est dans `notice/JOURNAL_DE_BORD.md`.
+## 🔑 LE VERDICT DU 07/10
 
 ```
-OU ON EST, PAR FRONT -- ils avancent separement          etat au 27/09 au matin
-
-  ① IDENTITE     L4/C.9        la bascule contact est faite (23/09) ; une annonce NAIT
-                 (L4-c l. 121) dans l'app depuis le 25/09 (e3 allume) ; C.9-f en service.
-                               RESTE 11 cases : C.9-couple (perissable) · 26bis-3 ·
-                                 supprimer les annonces d'essai 63146/63147 · A.3 · C.16
-
-  ② DOCUMENTS    D.0 l. 963    ⚠ LE FRONT LE PLUS EN RETARD : 5 cases sur 6 ouvertes.
-                 G.1->G.6      Le rattrapage TOURNE (nuit 1 reussie : 3 000 faits, 0 en
-                 l. 1132       erreur, 8 h 17) -> 37 988 restantes, 12,7 nuits.
-                               RESTE : G.2 --detect plafonne · G.3 le menage des 3 Go ·
-                                 G.4 l'etat doit suivre · G.5 la RPC d'ajout autonome ·
-                                 G.6 (Frederic, APRES le rattrapage)
-
-  ③ PHOTOS       section 10bis ⭐ 8 CASES SUR 10 FAITES en deux jours. Le coffre public
-                 l. 1135       est PLEIN (74 550 photos, 149 163 fichiers, 17,7 Go) et il
-                               S'ENTRETIENT : etape dans le run (le filet) + le worker
-                               fabrique des qu'il range (l'immediat, prouve en reel).
-                               RESTE : G.15 rebrancher les 44 points ⚠ ECHEANCE COUPURE ·
-                                 G.9 la purge (rien a purger avant mars 2027) ·
-                                 G.16 deux photos sans fichier
+L'ETAPE 2 N'EST PAS TERMINEE.
+  vrai   la memoire est a nous : numeros, registres, et l'app ecrit d'abord quand
+         on MODIFIE une annonce, un contact, une transaction, un mandant
+  faux   « il ne reste que documents + n° de mandat + signature + passerelles » :
+         une vingtaine de chantiers de plus -- ranges dans la carte ci-dessous
+  fait   personne ne saisit encore dans l'app : 0 travail demande par un commercial
+         en 120 jours, 0 annonce nee dans l'app depuis le 25/09
 ```
 
-> ⛔ **LES 5 GESTES DE FRÉDÉRIC** *(détail : `CLAUDE.md` §2)* — ① redémarrer les 4 services
-> *(en journée 06 h – 22 h)* ② pousser ③ `npm install sharp` ④ allumer
-> `-EnqueueConsoleDocuments` **après** le rattrapage ⑤ relancer le rattrapage s'il décroche.
+## LA CARTE — les lots du plan, les tâches de cette liste
 
-> ⚠⚠ **QUATRE TRAVAUX ONT UNE DATE DE PÉREMPTION** *(la table ci-dessus en listait trois ;
-> `G.15` est le quatrième)* : `L9` · `C.9-couple` · la vitrine et les liens publics de RDV ·
-> et **`G.15`**, parce que les 48 points d'affichage lisent les photos **chez Hektor** — le
-> jour de la coupure elles disparaissent **toutes** de l'écran en même temps, même avec les
-> 169 Go rapatriés. *Rapatrier remplit le coffre ; ça n'a jamais suffi à afficher.*
+```
+L0 ✅    C.1' · le renvoi partiel · C.4 · C.17-ter
+         ⚠ « une saisie ne se perd jamais » ne couvre pas les CREATIONS -> L10-2
+L1 🟡    ROUVERT 07/10 : la recherche ne nait pas dans l'app -> L10-2
+L2 🟡    ROUVERT 07/10 : 26bis-3 (= N.4) · 26bis-TRANSACTIONS
+L3 ✅    la recence par champ (le run « ecrase puis repose » : l'enonce est a reecrire)
+L4-b' ✅ L4-c ✅ (L4-c l. 76)
+L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 369) ; 0 creation reelle depuis le 25/09
+         C.9-couple (l. 866) : la sonde existe (033e946), reste le geste humain
+         26bis-TRANSACTIONS · 4.3
+L5 ⛔    E.0-bis (l. 2378) : photos, mandat existant, fusion, brouillon, suppressions,
+         16 « Ouvrir Hektor » vivants (sur l'ancien domaine)
+L6 ⛔    D.0 (l. 948) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
+L7 🟡    afficher ✅ · ajouter ⛔ (G.5, devenu bloquant)
+L8 ⛔    E.2 pas jouable avec les droits actuels : F.1 AVANT E.2 -> L10-11
+L9 🟡    phase 1 ✅ ; registre legal, C.13-c, export PROTEXA, 2 defauts dormants (section 9)
+L10 ⬜   NEUF -- PREPARER LA COUPURE : 16 taches, section 13
+hors     A.1 portails · A.2 signature · A.3 registre · A.4 DNS et site · A.5 leads
+code     (section 12)
+```
+
+## ⛔ CE QUI ATTEND FRÉDÉRIC
+
+```
+① HORS CODE, sans attendre   A.4 la zone DNS (export a La Boite Immo, puis OVH)
+                             A.5 ou arrivent les leads depuis fevrier ?
+                             l'export PROTEXA · les contrats A.1 et A.2 · le juriste
+② LES 8 QUESTIONS            plan, section « 🔎 L'AUDIT COMPLET DU 07/10 »
+③ C.9-couple                 creer un menage d'essai (la sonde est prete)
+④ POUSSER                    les commits locaux -- pousser = deployer (Render, Vercel)
+⑤ G.6                        NE PAS allumer tel quel : G.2 d'abord
+```
+
+## ⚠⚠ CE QUI A UNE DATE DE PÉREMPTION — *à finir tant que Hektor vit*
+
+```
+G.1-b    les 508 brouillons : a reparer AVANT que le rattrapage les atteigne
+G.2      rebalayer le PARC VIVANT (fige depuis le 20/08)
+L10-8    les planchers « Hektor repond vide » -- ils protegent aussi DES MAINTENANT
+C.9-couple · C.13-c · N.4 (26bis-3) · E.1 (recherches, visites, documents, signatures)
+A.3      l'export PROTEXA     ·     A.4 la zone DNS, AVANT le preavis
+```
+
+## LE COMPTE — *mesuré le 07/10, pas reporté*
+
+```
+86 cases [ ] entre « ① CE QUI RESTE » et « ③ CE QUI EST FAIT », sous-cases comprises
+   dont 16 du lot L10 (section 13) et 5 gestes de Frederic (section ②)
+ 6 en cours [~]   ·   56 faites [x], dans la meme partie
+(mesure : grep des cases sur cette plage de lignes -- l'ancien compte « 40 » portait
+ sur une autre plage, il ne se compare pas)
+```
 
 ## ✅ `L4-c` EST TERMINÉ — la bascule a été jouée le 23/09/2026, services arrêtés
 
@@ -915,8 +870,21 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
              PERSONNE ne le fera. L'app doit donc savoir produire la PAIRE.
              ⚠ A ecrire PENDANT QUE HEKTOR VIT : c'est le seul moment ou l'on
                peut comparer notre paire a la sienne. Voir 26bis-COUPLES.
+             ↳ 07/10 : LA SONDE EXISTE (033e946, phase2/checks/sonde_paire_de_menage.py,
+               lecture seule, ContactById seul). Sur une paire reelle (10872 -> 10871)
+               elle a etabli que la PORTEUSE se designe elle-meme (refCouple = soi).
+               RESTE LE GESTE HUMAIN : creer un menage d'essai sur une cible choisie
+               par Frederic, puis lancer la sonde. Aucun code de la PAIRE n'existe encore.
 [ ] 26bis-3  le serveur tient une annonce que le miroir ignore
              -> trancher les 46 colonnes (37 dans un seul blob)   collee a C.9
+             ↳ 07/10 (audit complet) : c'est le N.4 du plan -> L2 ROUVERT.
+               Le corps serveur (app_view_generale) est DROP + CREATE chaque nuit
+               depuis le MIROIR (view_generale.py:35-37). La copie du cloud descend
+               chaque matin (13 463 annonces, 189 champs) mais n'est la SOURCE de rien :
+               le BRANCHEMENT manque, pas la donnee. Et le serveur n'adopte une annonce
+               nee dans l'app que si le miroir la connait (descendre_correspondance_annonces).
+               Une annonce nee dans l'app n'a que 11 champs metier au cloud ; le reste vit
+               dans le payload du travail Hektor -> voir L10-2.
 ```
 
 ## 8. C.11 — MÉNAGE
@@ -929,6 +897,23 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
 [ ] un vrai registre, plus une vue des annonces    1 105 mandats invisibles
 [ ] trois couches de numerotation                  Hektor / Protexa / la tienne
                                                    3 a 5 j, TANT QUE HEKTOR VIT
+↳ 07/10 (audit complet, §4.2) -- ce qu'un « registre electronique perso » doit EN PLUS :
+   · une SERIE LEGALE continue : app_mandat_id n'en est pas une (2 numeros deja brules)
+   · l'INALTERABILITE : 0 declencheur, 0 journal ; le run REECRIT type, dates et mandants
+     chaque nuit depuis le miroir (mandat_ledger.py:546-566)
+   · un EXPORT / une impression : l'ecran du registre n'en a aucun
+   · se DETACHER du miroir : construit FROM hektor.hektor_annonce (export_app_payload.py:747),
+     cle UNIQUE (hektor_annonce_id, numero_mandat) -> un mandat sur une annonce nee apres
+     la coupure ne trouve pas sa place (voir L10-1)
+   · les AVENANTS et les MANDATS DE RECHERCHE prennent leur numero dans LA MEME serie
+     PROTEXA (18500 = avenant ; 18267, 18747 = recherche) : l'app n'a aucun chemin pour eux
+   · 28 numeros 2026 absents, 3 expliques par nos donnees -> 25 a faire expliquer par
+     l'EXPORT PROTEXA (a obtenir AVANT la coupure)
+   ⛔ DEUX DEFAUTS DORMANTS dans l'etape D (b45f36a, jamais exercee en reel) :
+     ① la doublure app_mandat__sb n'est pas rafraichie avant l'etape du registre
+       (run_full_pipeline.ps1:819-824) -> le 1er mandat ne dans l'app ferait REFUSER
+       le push nocturne de app_mandat, chaque nuit (contrainte app_mandat_couple_unique)
+     ② la date de debut est ecrite en JJ-MM-AAAA ; les 24 768 lignes existantes sont en ISO
 ```
 
 ## 10. D — RAPATRIER LES FICHIERS *(irréversible)*
@@ -1207,6 +1192,23 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             tache « GTI Rattrapage Documents » a 23 h, lot de 3 000, 0 en erreur.
             Rien a faire : elle tourne seule. Suivi :
               node Console/enqueue_empreinte_lot.js --scope auto --dry-run
+            ↳ 07/10 (audit complet, §4.1) -- ETAT REEL, mesure (Supabase) :
+                archive 1 250 / 35 317 · historique (VENTES) 8 895 / 8 937 ·
+                brouillons 508 / 508  ->  ≈ 10 650 annonces, PAS « une nuit »
+              (CLAUDE.md lisait le CURSEUR « balayees / deja marquees » comme un total)
+              · tache a 21 h depuis le 05/10, lots de 2 500, UN seul perimetre par nuit
+              · ventes ≈ 24 documents/annonce (2,7 pour les archives) : un lot de 2 500
+                ventes = 20 a 36 h (est.) -> fin plutot fin octobre ; +137 a +273 Go
+            [ ] G.1-b  ⛔ LES 508 BROUILLONS ECHOUERONT TOUS   A FAIRE AVANT QU'IL LES ATTEIGNE
+                  loadDossier (console_job_worker.js:1877-1929) ne cherche pas dans
+                  app_brouillon_annonce_index_current -> « Dossier introuvable » x 508,
+                  puis refus (>= 20 erreurs), puis EXCLUSION DEFINITIVE (« ne jamais rejouer »)
+                  et le --dry-run dira « rien_a_faire ». Touche le worker : « vas-y » +
+                  redemarrage des 4 services EN JOURNEE.
+            [ ] G.1-c  111 annonces lues en aout VIVANTES puis vendues : leurs pieces de fin
+                  de vie (compromis, acte) ne seront JAMAIS relues (empreinte deja posee)
+            [ ] G.1-d  230 documents indexes SANS fichier (synchros tuees par le
+                  bannissement du 20/08, dont des mandats et un avenant) : seul Hektor les a
 
 [ ] G.2   LE PIPELINE APPELLE --detect          PEUT SE FAIRE MAINTENANT
             run_full_pipeline.ps1:1033 lance --scope daily-cloud SANS --detect : le
@@ -1220,6 +1222,15 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               configuration, les cookies suivent. Verifie en reel : 14 documents lus.
             DORMANT tant que D.0-g est eteint -> aucun risque a le coder pendant le
             rattrapage.
+            ↳ 07/10 : G.2 EST LE PREALABLE DE G.6, ET IL PRESSE. Le PARC VIVANT n'est plus
+              relu depuis le 19-20/08 : 13 036 empreintes sur 13 037 datent d'aout, 13
+              documents synchronises sur 19 874 en 30 jours, 132 biens en vente JAMAIS
+              lus (dont 97 crees apres le 20/08, ~2 par jour). Bons de visite, mandats,
+              compromis deposes dans Hektor depuis le 20/08 : absents de chez nous.
+              Cible : une detection limitee aux ~724 biens en vente + le suivi de
+              signature ; les estimations en rotation lente ; etape NON bloquante.
+              ⚠ La vraie limite n'est plus le seuil de bannissement (≈ 18 000 req/nuit
+                depuis 12 nuits, 0 ban) mais le TEMPS : ≈ 1,8 s par requete.
 
 [ ] G.3   LE MENAGE DES 3 Go                    ENTRE DEUX NUITS
             2 318 Mo : 1 749 documents de 98 annonces ARCHIVEES, qui n'ont plus droit
@@ -1259,9 +1270,18 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                ligne pour le front ET VERIFIE SON ACCES A L'ANNONCE. Sinon n'importe qui
                depose un document sur n'importe quel bien. A faire de tete reposee.
             Ne touche pas Hektor -> aucun conflit avec le rattrapage.
+            ↳ 07/10 : DEVIENT BLOQUANT POUR LA COUPURE. Les 3 PDF que NOUS generons
+              (avis de valeur, mandat, cadastre) passent eux aussi par
+              upload_document_to_hektor : sans Hektor, le PDF reste dans temp/ sans
+              ligne, invisible. Meme chose pour la PHOTO (chemin differe DORMANT,
+              console_job_worker.js:8071). Le plan 6.5 « les 3 PDF continuent tels
+              quels » est donc faux.
 
 [ ] G.6   FREDERIC : allumer -EnqueueConsoleDocuments   ⛔ APRES LE RATTRAPAGE
             Le seul point qui DOIT attendre.
+            ↳ 07/10 : ⛔ PAS « TEL QUEL ». Allume aujourd'hui, il empilerait les 13 463
+              annonces vivantes CHAQUE NUIT (> 27 h de travail) : la file ne se viderait
+              jamais et --exiger-file-vide ferait sauter le rattrapage. G.2 D'ABORD.
 ```
 
 ### LES PHOTOS
@@ -2303,6 +2323,11 @@ robots qui telechargent l'image a une adresse, et qui y reviennent.
 ## 11. FIN DE PLAN
 ```
 [ ] C.13-c  rattraper les 23 715 dates de cloture     avec les 3 regles validees
+        ↳ 07/10 : toujours 118 dates sur 24 494 lignes du registre. DATE DE PEREMPTION
+          (se remplit depuis le miroir). ⚠ Et la case C.13 « la cloture ne passe plus
+          par Hektor » n'est vraie que pour la FICHE de cloture : le STATUT « Mandat
+          clos » est pose chez Hektor D'ABORD (console_job_worker.js:13121-13135),
+          la cloture locale ne vient qu'apres -> voir L10-3.
 [ ] 0.3  ->  DEPLACE EN RATTRAPAGE DE COUPURE le 25/09 (decision de Frederic)
         ⭐ POURQUOI ON NE LE FAIT PLUS MAINTENANT : le trou est FERME depuis le 20/09.
           Le run detecte les contacts qui DEVIENNENT acquereurs chez Hektor (carnet
@@ -2343,6 +2368,13 @@ robots qui telechargent l'image a une adresse, et qui y reviennent.
           [ ] les PHOTOS -- ~318 000, ~125 Go (voir bloc D.2)
           [ ] les DOCUMENTS restants (voir D.0 / D.1)
         ⚠ APRES LA COUPURE, CE QUI N'A PAS ETE RAPATRIE N'EXISTE PLUS NULLE PART.
+        ↳ 07/10 (audit complet) -- A AJOUTER A LA FENETRE :
+          [ ] l'AGENDA DES VISITES de Hektor (qui, quand, quel bien) : importe nulle
+              part -- DECISION de Frederic (importer ou renoncer)
+          [ ] les 230 documents indexes sans fichier (G.1-d) et les 111 de fin de vie (G.1-c)
+          [ ] SOLDER les 50 procedures de signature en cours (48 mandats, 2 bons de
+              visite) : une procedure non soldee devient orpheline
+          [ ] l'EXPORT de la serie PROTEXA (A.3)
 [ ] E.0-bis LES GESTES QUE L'APP NE SAIT TOUJOURS PAS FAIRE   audit du 18/09, en lisant le
             code -- E.0 (25/08) concluait « aucun manque n'est du code », c'est faux :
               modifier un MANDAT existant (dates, duree, avenant qui prolonge) -- seuls
@@ -2351,6 +2383,20 @@ robots qui telechargent l'image a une adresse, et qui y reviennent.
               FUSIONNER des doublons de contacts (le bouton ouvre Hektor) 2-4 j
                 OU reserve a l'admin -- a trancher par Frederic
             Ce sont eux qui, avec D.0 et A.2, obligeraient un negociateur a ouvrir Hektor.
+            ↳ 07/10 (audit complet) -- LA LISTE S'ALLONGE, mesuree dans le code :
+              · les SUPPRESSIONS (annonce, contact, document) sont « Hektor d'abord »
+                par decision du 30/08 : A INVERSER pour le jour J, et impossibles sur
+                une annonce sans numero Hektor (missing_hektor_annonce_id)
+              · « Reprendre la saisie de ce brouillon dans Hektor » (App.tsx:22967)
+              · 350 photos RETIREES dans Hektor sont encore affichees chez nous, et 33
+                biens en vente ont une autre photo principale : rien ne remonte le
+                retrait ni l'ordre (rattrapage_photos.js ne fait qu'AJOUTER)
+              · les mandants : se corrigent bien depuis le 03/10 (rattacher / retirer)
+              · 16 points « Ouvrir Hektor » vivants -- et le paquet en ligne vise
+                l'ANCIEN domaine la-boite-immo (VITE_HEKTOR_BASE_URL absent de Vercel),
+                qui n'authentifie plus depuis le 11/09 : probablement deja morts
+              ➡ archiver / restaurer / negociateur, mise sous mandat, cloture : L10-3
+              ➡ controle de baisse de prix lu chez Hektor : L10-5
 [ ] PETITS DEFAUTS D'ECRAN -- releves le 25/09, aucun ne bloque, tous VERIFIES
         [ ] LE CHAMP DE RECHERCHE DE L'ACCUEIL EST UN DECOR. App.tsx l. 22126 :
             <input readOnly value="" placeholder="Rechercher un bien, un contact,
@@ -2371,9 +2417,22 @@ robots qui telechargent l'image a une adresse, et qui y reviennent.
           limitee aux actives / offres / compromis ; il faut cliquer « Etendre aux
           archives, vendus et clos ». Peut donner l'impression qu'un bien manque.
 [ ] E.2     bascule des negociateurs sur l'app        decision d'organisation
+        ↳ 07/10 : PAS JOUABLE AVEC LES DROITS ACTUELS. 8 comptes, 7 profils
+          (3 admin et 2 commerciaux actifs) contre ~30-39 negociateurs ; 0 travail
+          demande par un commercial en 120 j. Un commercial peut CREER une annonce,
+          puis ne peut plus la MODIFIER (app_console_can_request_job ne lui ouvre que
+          7 types : documents et signature) -> F.1 doit passer AVANT E.2 : L10-11.
 [ ] E.3     les workers deviennent invisibles
 [ ] E.4     le jour J                                 distributeur a 100 000
+        ↳ 07/10 : ecrire l'ORDRE D'EXTINCTION -- desactiver les 3 taches qui
+          appellent Hektor (Quotidien, Recherches Actives, Rattrapage Documents) et
+          les 4 services AVANT la fin de l'acces : un compte qui repond « 200 vide »
+          ferait purger le miroir la nuit meme -> L10-6 et L10-8.
 [ ] F.1     utilisateurs, roles et droits             APRES la coupure
+        ↳ 07/10 : ⛔ ORDRE A CORRIGER -- doit passer AVANT E.2 (voir L10-11).
+          Les roles de la base (admin, manager, commercial, lecture) ne sont pas
+          ceux du plan (admin, commercial, administratif) ; manager et lecture
+          n'ont aucun titulaire.
 ```
 
 ## 11bis. LA VITRINE PUBLIQUE ET LES DEUX SYSTEMES DE RENDEZ-VOUS
@@ -2396,6 +2455,16 @@ CE QUI CASSERA A LA COUPURE
        export_project_vitrine.py, build_appointment_url() :
        .../vitrine/rdv/index.html?ref={hektor_annonce_id}
        ➡ exporter le JETON a la place. Il existe deja pour les 2 227 liens.  petit
+       ⛔ 07/10 : NE PAS FAIRE TEL QUEL -- LE JETON N'EST PAS STABLE. Quand une
+         annonce sort de la vitrine une nuit, son lien est desactive ; a son retour
+         un NOUVEAU jeton est cree et l'ancien repond 404 (backfill_appointment_
+         public_links.py:58-92, appointment_service.py:150-201). 81 annonces ont eu
+         plusieurs jetons (jusqu'a 9), 34 actives ont un jeton mort. Un QR au jeton
+         MOURRAIT. D'abord rendre le jeton stable (reactiver l'ancien lien).
+         Aujourd'hui « ?ref=<n° Hektor> » est la forme la plus DURABLE : elle se
+         resout dans NOTRE table, les QR deja imprimes ne meurent pas seuls.
+         ⚠ A relativiser : 0 demande enregistree par cette page depuis le 29/04.
+         ⚠ Et la vitrine filtre aussi sur DIFFUSABLE (voir L10-4).
 [ ] ② LE SERVICE DE RDV RETOMBE SUR HEKTOR AU DERNIER MOMENT
        appointment_service.py l. 192-201 : le jeton est bien reconnu, mais le bien
        est ensuite relu par hektor_annonce_id. Une annonce NEE DANS L'APP ne serait
@@ -2427,14 +2496,182 @@ NON MESURE
 ## 12. CE QUI NE DÉPEND PAS DU CODE — et qui bloque la coupure
 ```
 [ ] A.1  PORTAILS      sortie en nom propre + reprise des ~350 annonces en ligne
+         ↳ 07/10 : ET DU CODE -- l'« API qui existe deja » (audit du 01/10) est celle
+           de HEKTOR. Il faut un FLUX a nous vers le diffuseur (0 ligne aujourd'hui),
+           des references stables, un suivi de ce qui est publie. 346 annonces,
+           1 523 diffusions, 5 portails. La logique d'appel a l'API Hektor existe en
+           4 copies, toutes a retirer (hektor_bridge.py, fonction Edge hektor-diffusion,
+           hektor_diffusion_writeback.py, test_annonce_passerelles.py).
 [ ] A.2  SIGNATURE     ton propre contrat (ImmoSign appartient a Hektor)
          ⚠ ET POUR L'ETAPE 2 (plan §5.2) : l'app ne sait pas LANCER une signature -- le
            bouton ouvre Hektor. Soit un travail worker ImmoSign (2-4 j + essai, Frederic
            seul signataire), soit une EXCEPTION assumee a l'etape 2. A trancher.
+         ↳ 07/10 : 0 ligne de code pour un prestataire direct ; les scripts
+           Console/immosign_*.js (16) ne sont PAS dans git et lisent le jeton dans
+           l'iframe Hektor. 50 procedures en cours a solder avant la coupure.
+           299 mandats signes sur 300 ont leur ZIP de preuves : bon.
 [ ] A.3  REGISTRE      obligation legale, aujourd'hui adosse a Hektor
+         ↳ 07/10 : le detail est en section 9 (serie legale, inalterabilite, export,
+           avenants et mandats de recherche, 25 trous, 2 defauts dormants). HORS CODE :
+           l'export PROTEXA, le juriste, l'horodatage tiers, et l'ARBITRAGE ecrit
+           « continuer la serie PROTEXA ou repartir de 0 » (aucun n'est au journal).
+[ ] A.4  DNS ET SITE   ⛔ NEUF 07/10 -- la ZONE DNS de gti-immobilier.fr est servie par
+         ns1/ns2.la-boite-immo.fr. Le domaine est a GTI (OVH, expire le 18/03/2028),
+         mais la zone porte les MX Google de TOUTE la messagerie, le SPF/DKIM/DMARC
+         des emails de l'app, et le site www (meme machine que l'admin Hektor).
+         ➡ demander l'EXPORT COMPLET de la zone a La Boite Immo, la recreer chez OVH
+           a l'identique, puis basculer les serveurs DNS. ⚠ GARDER l'adresse de www :
+           l'admin Hektor et le WORKER passent par www.gti-immobilier.fr depuis le
+           11/09. Puis decider ou heberger le site public.
+[ ] A.5  LEADS         ⛔ NEUF 07/10 -- les demandes des portails ne sont plus ecrites
+         dans les commentaires des contacts depuis le 01/02/2026 (1 563 LBC, 355
+         Bien'ici jusque-la). Canal actuel INCONNU. Piste : le module Leads de Hektor
+         (« Demandes en attente », API listLeads documentee) que nous ne lisons pas.
+         ➡ demander aux negociateurs ou ils voient une demande LBC aujourd'hui.
 ```
 > **Aucun travail technique ne permet de couper Hektor tant que A.1 et A.2 ne sont pas réglés.**
 > Ils sont **à zéro**, et chaque semaine de retard s'ajoute intégralement à la date de coupure.
+
+## 13. L10 — PRÉPARER LA COUPURE *(créé le 07/10/2026 par l'audit complet)*
+
+> Ce qui n'avait **aucune place** dans L0→L9. Preuves et mesures :
+> `notice/AUDIT_AUTONOMIE_COMPLET_2026-10-07.md` (le § est indiqué pour chaque case).
+> ⚠ **Chaque case est ré-auditée dans le code au moment d'y entrer** : c'est une carte du
+> 07/10, pas une spécification. Une seule tâche en code à la fois.
+
+```
+[ ] L10-1  LE NUMERO HEKTOR DE L'ANNONCE DEVIENT FACULTATIF            §5 B1   moyen-gros
+           16 tables le declarent NOT NULL, 4 cles uniques reposent dessus (lien,
+           mandat, photo, document), 8 fonctions levent missing_hektor_annonce_id.
+           Une annonce nee apres la coupure n'aurait ni mandant, ni mandat, ni photo,
+           ni document, ni diffusion, ni lien RDV ; ses transactions ne se chaineraient
+           pas (app_chaine_pour cherche par n° Hektor).
+           LE PATRON EXISTE : l'option B du contact (identite / cible, 21/09).
+             · la BARRIERE d'attente pour l'annonce (copie de patch_5b_barriere_attente) :
+               app_annonce_enqueue_due_pushes n'en a PAS (verifie le 07/10)
+             · une porte unique cote worker pour la cible annonce (36 lectures de
+               job.hektor_annonce_id) ; le piege String(null) = « null » (api.ts:8122)
+               et les chemins de stockage annonces/${hektor_annonce_id}/
+             · les cles basculent sur app_dossier_id LA MEME NUIT que les ON CONFLICT
+               du run (relation_ledger, mandat_ledger, photos, documents) -- repetition
+               sur copie, comme la bascule contact du 22-23/09
+           Le worker continue de marcher (il charge deja par app_dossier_id, l.1883).
+
+[ ] L10-2  CREER SANS HEKTOR                                           §5 B2   moyen
+           · RECHERCHE : ligne provisoire seule, effacee 24 h apres (cron 9,
+             app_sweep_stale_provisionals), jamais rapprochee, pas rejouee ;
+             distributeur app_search_id_app_seq jamais appele  (-> L1 rouvert)
+           · ANNONCE : 11 champs metier au cloud, le corps dans le payload du travail
+           · MANDANTS saisis a la creation d'une annonce : chez Hektor seulement
+             (console_job_worker.js:19761-19862)
+           · « une saisie ne se perd jamais » doit couvrir les CREATIONS (*_provisional)
+
+[ ] L10-3  LES STATUTS CHEZ NOUS                                    §5 B4, §13 C2   moyen
+           · Estimation -> Actif (MISE SOUS MANDAT, ~60/mois) n'ecrit RIEN chez nous ;
+             admin seul ; 1 seule faite depuis l'app
+           · « Mandat clos » pose chez Hektor D'ABORD, cloture locale APRES
+           · archiver / restaurer / changer de negociateur : le carnet
+             app_annonce_champ_app n'est applique par PERSONNE (contrat annonce vide) ;
+             le MOTIF d'archivage n'est garde dans aucun champ
+
+[ ] L10-4  LE DRAPEAU « DIFFUSABLE » DEVIENT UN CHAMP DE L'APP             §13 C1   moyen
+           Le rapprochement (8 fonctions + trg_dossier_dirty), les alertes acquereurs
+           (473 en 30 j), la vitrine et les liens RDV filtrent sur diffusable='1'.
+           Aucune fonction ne l'ecrit ; les 3 ecrivains recopient Hektor. Une annonce
+           nee dans l'app a diffusable NULL. ⚠ GARDER le filtre (152 Actif non
+           diffusables n'ont pas de mandat) : il faut un PROPRIETAIRE et un geste
+           « valide pour diffusion » dans l'app. Question 6 a Frederic.
+
+[ ] L10-5  LA BAISSE DE PRIX CONTROLEE SUR LE PRIX DE L'APP                §5 B5   petit
+           hektor_bridge.py:410-495 lit le prix CHEZ HEKTOR ; Hektor injoignable =
+           faux motif « Prix different Hektor », seuls boutons Fermer / Lien Hektor.
+
+[ ] L10-6  INTERRUPTEUR DE COUPURE ET ORDRE D'EXTINCTION         §5 B13, §13 C5   petit
+           CONSOLE_WORKER_ENABLE_HEKTOR_ACTIONS est code en dur « true » dans le
+           service (HektorConsoleWorkerService.cs:209) et coupe AUSSI les PDF et
+           « Preparer » (79 % des documents ne s'ouvrent que par lui). Les 4 crons et
+           les RPC continuent de fabriquer des travaux Hektor. ECRIRE l'ordre :
+           taches et services eteints AVANT la fin de l'acces a Hektor.
+
+[ ] L10-7  LE RUN D'APRES LA COUPURE                                   §5 B6   moyen
+           La 1re etape (sync_raw) et l'annuaire sont BLOQUANTS. La vitrine est faite
+           depuis le MIROIR (prix, statut, diffusable) ; liens RDV, derives et adresses
+           photos, registres, Matterport n'ont pas d'autre declencheur. Le plan 6.4
+           « eteint l'aspirateur » sans dire qui fait ces taches ensuite.
+
+[ ] L10-8  LES PLANCHERS « HEKTOR REPOND VIDE »                       §13 C5   petit-moyen
+           ⛔ UTILE DES MAINTENANT. Un « 200 + liste vide » (ou un objet au lieu d'une
+           liste) : sync_raw efface 3 064 pages brutes AVANT tout controle ;
+           normalize_source vide 9 tables du miroir + 24 925 mandats SANS plancher
+           (normalize_source.py:658-726) ; affaire_ledger masque ~30 700 affaires ;
+           relation_ledger masque des mandants. Si SEULES les archives reviennent vides
+           (une page vide en plein balayage), l'index des 35 317 archives de Supabase
+           est efface sans plancher -- possible sur un simple hoquet. Le plancher de
+           50 % existe mais au MAUVAIS ETAGE. Le payload porte metadata.total : plancher
+           gratuit. Le detail d'annonce est aussi ecrit AVANT d'etre valide.
+
+[ ] L10-9  LA SAUVEGARDE D'APRES                                         §6.1   petit
+           · 51 fonctions Supabase sur 141 hors git (dont le MOTEUR DE RAPPROCHEMENT),
+             6 crons sans horaire versionne, ni pg_dump ni psql sur la machine
+           · app_relation, app_mandat et leurs carnets absents de CRITICAL_TABLES
+           · data/hektor.sqlite : seulement Veeam (14 j, jamais restaure)
+           · la doctrine s'INVERSE : apres la coupure la source est Supabase, sa copie
+             locale (la descente) n'est dans aucune sauvegarde quotidienne, et la
+             sauvegarde de 08:00 passe AVANT la descente de 08:15
+           · eprouver une vraie restauration (phase2, miroir, Supabase)
+
+[ ] L10-10 LA SURVEILLANCE D'APRES                                       §6.2   petit
+           · data.travaux_en_erreur FIGEE au rouge depuis le 01/10 : elle a MASQUE la
+             panne du 05/10 (9 h) -- solder les 15 erreurs, alerter sur la HAUSSE
+           · la sentinelle cron dit « ok » quand elle ne mesure pas (56 % des passages)
+           · 0 sentinelle document / photo / RDV ; 7 heartbeats dans le vide
+           · plantages des workers (0xC0000409, tous les 2-4 j) non surveilles
+           · pas de temoin exterieur ; pas de sonde disque (61 -> 327 Go en 12 j)
+           · sentinelles AVEUGLES depuis la bascule (contacts_sans_cible,
+             plages_numeros) et sentinelles qui crieront a tort apres la coupure
+             (annonces_sans_numero_hektor)
+
+[ ] L10-11 LES NEGOCIATEURS : DROITS, COMPTES, ANNUAIRE             §5 B11   moyen + orga
+           · droits ecrits en « types de travaux Hektor » : un commercial cree une
+             annonce puis ne peut plus la modifier -> reecrire F.1 AVANT E.2
+           · comptes pour ~30 negociateurs (8 comptes aujourd'hui)
+           · annuaire recopie de Hektor chaque nuit (etape BLOQUANTE, purge SANS
+             plancher) ; un nouveau collaborateur se cree dans Hektor ; creneaux RDV,
+             commissions et Google Agenda ranges sous le n° Hektor du negociateur
+
+[ ] L10-12 VISITES ET DOCUMENTS-MODELES                                §13 C3   moyen
+           · le BON DE VISITE (~115/mois, preuve des honoraires) est fait par le modele
+             Hektor ; celui de l'app imprime sans archiver, sans serie, un seul bien,
+             et n'a jamais servi en production
+           · l'OFFRE D'ACHAT n'a aucun generateur ; l'AVENANT de l'app ne change que
+             le prix (0 usage, ~8/mois chez Hektor)
+           · la VISITE n'existe comme objet nulle part. Questions 2 a Frederic.
+
+[ ] L10-13 CE QUE HEKTOR ENVOIE AUX CLIENTS                            §13 C4   a cadrer
+           · l'email RGPD / « Espace personnel » d'un nouveau contact (_email_rgpd=1)
+           · les automatismes CRM : nouveau mandat, echeance, anniversaire
+           · taches et rappels, reporting, envoi de fiches : usage non mesure
+             -> questions de fait a Frederic (SMS ? taches ? automatismes allumes ?)
+
+[ ] L10-14 LE NUMERO DE DOSSIER EM/VA                                  §5 B12   petit-moyen
+           Fabrique par Hektor, plusieurs series (EM 8 841, EA 2 449, ET 512,
+           EI 255, V7, V3, VM...). Question 5 a Frederic.
+
+[ ] L10-15 LE COTE PUBLIC                                              §5 B8    petit
+           · rendre le JETON RDV stable AVANT 11bis ① (voir la note sous ①)
+           · fiche visite PDF a nous (11bis ③)
+           · vignettes DPE/GES servies par staticlbi, y compris dans l'ESPACE CLIENT
+             (adresses fabriquees par NOTRE code, export_app_payload.py:24) ;
+             0 etiquette DPE dans la vitrine (449 biens) -- obligation legale a verifier
+           · logo du PDF de mandat charge sur www.gti-immobilier.fr (G.14 l'avait rate) ;
+             avis de valeur PDF avec les photos de Hektor
+
+[ ] L10-16 SECURITE -- vue en passant, HORS PLAN mais a ne pas laisser     §6.4, §13 C6
+           · fonction Edge hektor-diffusion ACTIVE (v14), sans controle de role
+           · 9 fonctions d'ecriture executables SANS connexion (role anon), ex.
+             app_set_bien_statut, app_record_proposition, app_create_relance_for_contact
+           · les cibles de diffusion modifiables par tout compte actif, sur toute annonce
+```
 
 ---
 
