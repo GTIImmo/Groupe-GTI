@@ -187,12 +187,32 @@ detail_enrich AS (
         json_extract(det.raw_json, '$.terrain.props.surfterrain.value') AS surface_terrain_detail,
         json_extract(det.raw_json, '$.copropriete.props.copropriete.value') AS copropriete_detail,
         json_extract(det.raw_json, '$.equipements.props.ASCENSEUR.value') AS ascenseur_detail,
+        -- ═══ UNE BARRE QUI PEND N'EST PAS UN NOM ═══════════════ 07/10/2026
+        -- GROUP_CONCAT garde les chaines VIDES. Un proprietaire sans prenom NI nom
+        -- -- les fiches de couple MUETTES, 133 343 contacts sans nom dans ce projet
+        -- -- produisait '' et le separateur restait : « Emmanuel MILAGRO | »
+        -- (annonce 63198, signale par Frederic). MESURE DU 07/10 : 6 596 fiches
+        -- sur 12 687 renseignees, soit plus d'UNE SUR DEUX.
+        --
+        -- ⛔ ET C'EST MOI QUI L'AI RENDU VISIBLE : jusqu'au 06/10 la fiche lisait
+        --   le texte de Hektor d'abord (COALESCE(m.mandants_texte, ...)) ; e060bb5
+        --   a inverse l'ordre pour que NOS mandants gagnent -- ce qui etait juste --
+        --   et a du meme coup promu ce resume mal forme au premier rang.
+        --
+        -- ⭐ LA REGLE EST CELLE DU REGISTRE, PAS UNE NOUVELLE : `texte_des_mandants`
+        --   (export_app_payload) ecarte deja les noms muets, et c'est pour cela que
+        --   le registre n'a AUCUNE barre qui pend sur ses 24 462 lignes.
+        -- ⚠ EFFET DE BORD VOULU : si TOUS les proprietaires sont muets, le resume
+        --   devient VIDE, donc le COALESCE de `mandants_texte` retombe sur le texte
+        --   de Hektor -- mieux qu'une barre toute seule.
         (
             SELECT GROUP_CONCAT(
                 TRIM(COALESCE(json_extract(j.value, '$.prenom'), '') || ' ' || COALESCE(json_extract(j.value, '$.nom'), '')),
                 ' | '
             )
             FROM json_each(det.proprietaires_json) j
+            WHERE TRIM(COALESCE(json_extract(j.value, '$.prenom'), '') || ' ' ||
+                       COALESCE(json_extract(j.value, '$.nom'), '')) <> ''
         ) AS proprietaires_resume,
         (
             SELECT GROUP_CONCAT(
@@ -209,6 +229,11 @@ detail_enrich AS (
                 ' | '
             )
             FROM json_each(det.proprietaires_json) j
+            -- MEME DEFAUT, MEME REGLE (07/10) : un proprietaire sans portable NI
+            -- email laissait une barre qui pend. MESURE : 7 112 fiches sur 12 124
+            -- renseignees -- PLUS QUE pour les noms.
+            WHERE TRIM(COALESCE(json_extract(j.value, '$.coordonnees.portable'), '') ||
+                       COALESCE(json_extract(j.value, '$.coordonnees.email'), '')) <> ''
         ) AS proprietaires_contacts,
         (
             SELECT GROUP_CONCAT(
