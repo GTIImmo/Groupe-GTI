@@ -59,6 +59,8 @@ if str(ROOT) not in sys.path:
 from phase2.sync.export_app_payload import (  # noqa: E402
     attach_hektor_read,
     charger_corps_suspects,
+    charger_mandants_du_registre_des_liens,
+    texte_des_mandants,
     normalize_history_version,
     normalize_register_mandat_type,
     normalize_text,
@@ -81,7 +83,8 @@ def _texte(valeur) -> str:
     return normalize_text(valeur) or ""
 
 
-def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool = False) -> dict:
+def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool = False,
+                      nos_mandants: list | None = None) -> dict:
     """Les colonnes de mandat du registre, telles que la table les rendrait.
 
     ⚠ MEMES FORMULES QUE LE REGISTRE, IMPORTEES. `normalize_register_mandat_type`
@@ -117,7 +120,12 @@ def depuis_app_mandat(ligne: sqlite3.Row, prix_annonce=None, corps_suspect: bool
         "mandat_type_source": _texte(ligne["type"]),
         "mandat_date_debut": _texte(ligne["date_debut"]),
         "mandat_date_fin": _texte(ligne["date_fin"]),
-        "mandants_texte": _texte(ligne["mandants_texte"]),
+        # ⚠ LA MEME REGLE QUE LE REGISTRE (export_app_payload, lot du 05/10) :
+        #   NOTRE liste de mandants d'abord, le texte de Hektor en repli. Sans
+        #   cela le comparateur annoncait 23 570 ecarts -- 96 % -- en comparant
+        #   deux choses qui ne viennent plus de la meme source.
+        "mandants_texte": (texte_des_mandants(nos_mandants or [])
+                           or _texte(ligne["mandants_texte"])),
         "mandat_note": _texte(ligne["note"]),
         "register_version_count": int(ligne["version_count"] or 0),
         "register_embedded_avenant_count": int(ligne["avenant_count"] or 0),
@@ -172,11 +180,19 @@ def mesurer(con: sqlite3.Connection) -> dict | None:
     exemples = collections.defaultdict(list)
     cloture_ecart = 0
     suspects = charger_corps_suspects(con)
+    mandants = charger_mandants_du_registre_des_liens(con)
+    # ⚠ LE PRIX SE LIT DANS LE MIROIR, PAS DANS LA COLONNE DE LA VUE : la colonne
+    #   est stockee en REAL et ressort « 65700.0 », alors que le registre lit
+    #   `ann.prix` du miroir et ecrit « 65700 ». La difference etait de FORME,
+    #   pas de valeur, et elle produisait a elle seule 23 602 faux ecarts.
+    prix_miroir = {str(a): p for a, p in con.execute(
+        "SELECT hektor_annonce_id, prix FROM hektor.hektor_annonce")}
     for cle in communs:
         attendu = depuis_app_mandat(
             table[cle],
-            prix_annonce=vue[cle]["prix"],
+            prix_annonce=prix_miroir.get(cle[0], vue[cle]["prix"]),
             corps_suspect=cle in suspects,
+            nos_mandants=mandants.get(cle[0]),
         )
         actuel = depuis_la_vue(vue[cle])
         for colonne, valeur in attendu.items():
@@ -207,6 +223,11 @@ def main() -> int:
     #   ce comparateur serait aveugle aux corps empruntes.
     attach_hektor_read(con)   # la forme du projet, eprouvee
     try:
+        fraicheur = con.execute(
+            "SELECT substr(MIN(refreshed_at),1,10), substr(MAX(refreshed_at),1,10),"
+            " SUM(CASE WHEN substr(refreshed_at,1,10) < date('now','-2 day')"
+            "          THEN 1 ELSE 0 END), COUNT(*)"
+            " FROM app_mandat_register_current").fetchone()
         m = mesurer(con)
     finally:
         con.close()
@@ -216,6 +237,19 @@ def main() -> int:
 
     print("LA TABLE SAIT-ELLE REFAIRE LE REGISTRE ?")
     print("")
+    # ⚠⚠ CE QUE CE CONTROLE LIT, DIT A VOIX HAUTE -- sans cette ligne il ressemble
+    #   a une alarme alors qu'il mesure surtout un RETARD. `app_mandat_register_current`
+    #   est une table de TRAVAIL LOCALE : le run ne reecrit que ses lignes du
+    #   perimetre ACTIF (735 sur 24 493). Les autres datent du jour ou le registre a
+    #   ete pose. Un ecart sur une ligne perimee ne dit RIEN de l'application, qui
+    #   lit Supabase -- et Supabase se remet a jour avec
+    #   `python phase2/sync/registre_mandats_upsert.py`.
+    if fraicheur and fraicheur[3]:
+        print("   CE QUE JE COMPARE -- la table de travail LOCALE")
+        print("      ecrite entre le %s et le %s" % (fraicheur[0], fraicheur[1]))
+        print("      dont %d lignes sur %d ont plus de deux jours  <- leurs ecarts"
+              " sont du RETARD, pas une avarie" % (fraicheur[2] or 0, fraicheur[3]))
+        print("")
     print("   couples des DEUX cotes (compares)   : %s" % m["communs"])
     print("   TABLE SEULE (le gain, types admis)  : %s" % m["table_seule"])
     print("   VUE SEULE  (ce qu'on PERDRAIT)      : %s   <- doit valoir 0" % m["vue_seule"])
