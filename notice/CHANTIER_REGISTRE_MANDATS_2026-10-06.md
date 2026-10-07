@@ -19,6 +19,52 @@
 037d956  LOT 4  la fiche annonce cesse d'afficher un montant emprunte
 ```
 
+## ✅ 07/10 — TOUT EST EN LIGNE, ET TROIS PIEGES PAYES AU PASSAGE
+
+```
+ETAT FINAL MESURE A 09:56
+   registre               24 494 lignes · montant <> prix 0 · historique <> prix 0
+   fiches actives         13 904 lignes · barre qui pend 0 · 0 doublon
+   index archive          35 317 · barre 0      index historique  8 937 · barre 0
+   temoin 63198           la fiche dit « Emmanuel MILAGRO » (plus de barre)
+```
+
+**LES QUATRE COMMANDES, DANS L'ORDRE REELLEMENT PASSE** *(Frederic a inverse les
+deux dernieres ; mesure apres coup : AUCUN degat, le registre est reste a 24 494
+et a 0 ecart, parce que le push ne remplace que les 736 lignes qu'il reecrit)*
+
+```
+refresh_views.py                                  33 725 barres retirees en local
+registre_mandats_upsert.py                        pose 24 494 lignes en 68 s,
+                                                  AUCUNE suppression
+push_upgrade_to_supabase.py --all-local-current   8 946 fiches, baseline false
+```
+
+**⛔ PIEGE 1 — UN PUSH QUI REUSSIT EN N'ENVOYANT RIEN.** Lance sans drapeau, il
+a repondu `exit 0` et un bilan d'apparence normale avec `"details_upserted": 0`
+et `"baseline_adopted": true` : faute de repere de fraicheur exploitable il
+ADOPTE LA LIGNE DE BASE et saute les fiches. Les deux index, eux, passent (ils
+comparent des empreintes). Le drapeau qui force est `--all-local-current` ;
+`--full-rebuild` force aussi mais VIDE le registre -- a ne pas utiliser.
+
+**⛔ PIEGE 2 — `--rebuild-register-only` N'ETAIT PAS LE BON OUTIL.** Elle vide la
+table avant de la refaire, et son propre en-tete l'interdit en journee. Le bon
+existe depuis le 30/09 et je l'avais manque : `registre_mandats_upsert.py`,
+UPSERT seul, le registre n'est JAMAIS vide.
+
+**⛔ PIEGE 3 — J'AI COMPARE LA MAUVAISE TABLE, POUR LA TROISIEME FOIS DE LA
+JOURNEE.** Le cloud affichait 13 904 fiches et j'ai cru a une anomalie parce que
+`app_dossiers_current` en compte 13 463. Ce sont DEUX PERIMETRES DIFFERENTS : le
+push lit `app_view_generale WHERE ANNONCES_SCOPE_WHERE`, qui rend exactement
+13 904 avec la meme repartition (Estimation 12 955, Actif 813, compromis 85,
+offre 51). Le cloud est JUSTE.
+   ⭐ ET CELA A REVELE UN TROU REEL : le cloud lui manquait 441 annonces de son
+     PROPRE perimetre, que le push incrementiel de la nuit n'avait jamais
+     portees. `--all-local-current` les a comblees. A SURVEILLER : si l'ecart
+     revient, c'est le detecteur de fraicheur du push qu'il faut regarder.
+
+---
+
 **CE QUE LES MESURES ONT CORRIGE DANS MES PROPRES CHIFFRES** *(la 6e et la 7e fois)*
 
 ```
