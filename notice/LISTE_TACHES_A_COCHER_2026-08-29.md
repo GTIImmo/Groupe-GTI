@@ -18,6 +18,21 @@ L'ETAPE 2 N'EST PAS TERMINEE.
          en 120 jours, 0 annonce nee dans l'app depuis le 25/09
 ```
 
+## 🧭 LA FEUILLE DE ROUTE — 46 chapitres, *proposés le 07/10, à valider par Frédéric*
+
+```
+La liste qu'on SUIT, un chapitre apres l'autre : plan, section « 🧭 LES 46 CHAPITRES »
+(le detail de chacun : notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md)
+  ch.1   le rattrapage tient dans la nuit       ⛔ G.1-e AVANT LE 08/10 A 21:00
+  ch.2   une seule fenetre de redemarrage du worker (brouillons, purge, etape D)
+  ch.3   EN PARALLELE : mesurer ce qui perime (leads, RGPD, agenda, menage, signatures)
+  ch.4   relire le parc vivant (G.2 -> G.6)   ·   ch.5  les planchers « Hektor repond vide »
+  ch.6   sauvegarde/surveillance   ·   ch.7  securite   ·   ch.8-9  filets, droits, comptes
+  ch.10  ▶ LE PILOTE : quelques negociateurs dans l'app pendant que Hektor vit
+  ch.11-46  statuts, fichiers, bascule du n° Hektor, registre legal, signature,
+            diffusion, leads... jusqu'au JOUR J (ch.46)
+```
+
 ## LA CARTE — les lots du plan, les tâches de cette liste
 
 ```
@@ -26,13 +41,13 @@ L0 ✅    C.1' · le renvoi partiel · C.4 · C.17-ter
 L1 🟡    ROUVERT 07/10 : la recherche ne nait pas dans l'app -> L10-2
 L2 🟡    ROUVERT 07/10 : 26bis-3 (= N.4) · 26bis-TRANSACTIONS
 L3 ✅    la recence par champ (le run « ecrase puis repose » : l'enonce est a reecrire)
-L4-b' ✅ L4-c ✅ (L4-c l. 76)
-L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 369) ; 0 creation reelle depuis le 25/09
-         C.9-couple (l. 866) : la sonde existe (033e946), reste le geste humain
+L4-b' ✅ L4-c ✅ (L4-c l. 91)
+L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 384) ; 0 creation reelle depuis le 25/09
+         C.9-couple (l. 881) : la sonde existe (033e946), reste le geste humain
          26bis-TRANSACTIONS · 4.3
-L5 ⛔    E.0-bis (l. 2378) : photos, mandat existant, fusion, brouillon, suppressions,
+L5 ⛔    E.0-bis (l. 2393) : photos, mandat existant, fusion, brouillon, suppressions,
          16 « Ouvrir Hektor » vivants (sur l'ancien domaine)
-L6 ⛔    D.0 (l. 948) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
+L6 ⛔    D.0 (l. 963) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
 L7 🟡    afficher ✅ · ajouter ⛔ (G.5, devenu bloquant)
 L8 ⛔    E.2 pas jouable avec les droits actuels : F.1 AVANT E.2 -> L10-11
 L9 🟡    phase 1 ✅ ; registre legal, C.13-c, export PROTEXA, 2 defauts dormants (section 9)

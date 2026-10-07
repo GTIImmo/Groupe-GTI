@@ -182,22 +182,122 @@ commercial en 120 jours, 0 annonce née dans l'app depuis le 25/09.
    automatismes CRM (nouveau mandat, échéance, anniversaire) sont-ils allumés ? Properstar
    diffuse-t-il nos biens ?
 
-#### L'ordre proposé *(proposé le 07/10, PAS décidé)*
+#### 🧭 LES 46 CHAPITRES — *la liste que le dev suit, un chapitre après l'autre*
+
+> **Proposée le 07/10, EN ATTENTE DE LA VALIDATION de Frédéric.** Construite à partir de 110
+> sous-tâches mesurées dans le code, de trois ordonnancements (péremption, usage, fondations),
+> d'un jury et d'un contradicteur (« la séquence tient, aucun problème bloquant »).
+> ➡ **Le détail de chaque chapitre** (ordre interne, fichier:ligne, prérequis, feu vert,
+> critère de fin, vérification, gestes de Frédéric) :
+> `notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md`.
+> **Règles** : une tâche de code à la fois · chaque chapitre est **ré-audité en entrant** ·
+> chaque redémarrage du worker se fait **l'après-midi, file documents VIDE** · tout ce qui
+> inverserait le courant reste derrière un réglage éteint tant que les commerciaux saisissent
+> dans Hektor · **aucun push hors de `run_full_pipeline.ps1`** sans
+> `APP_BROUILLON_BUCKET_ENABLED=1` (incident du 07/10, `38ad468`).
+> **Volume** : environ 145 à 215 jours de code. Pilote vers la 2e quinzaine de novembre si les
+> décisions suivent. Coupure réaliste **au plus tôt au printemps 2027**.
 
 ```
-0. HORS CODE, DÈS MAINTENANT   A.4 zone DNS et site · A.5 leads · export PROTEXA ·
-                               contrats A.1 / A.2 · les 8 questions ci-dessus
-1. CE QUI PÉRIME               G.1 réparer les brouillons AVANT que le rattrapage les
-                               atteigne · G.2 puis G.6 rebalayer le parc vivant ·
-                               C.9-couple · C.13-c · solder les signatures en cours
-2. CE QUI PROTÈGE DÈS MAINTENANT   L10-8 les planchers « Hektor répond vide »
-                                   (l'index des archives peut tomber sur un simple hoquet)
-3. LA NAISSANCE AUTONOME       L10-1 · L10-2 · L10-3 · L10-4 · G.5 · L10-6
-4. LA RÉPÉTITION GÉNÉRALE      L10-11 droits et comptes → quelques négociateurs pilotes
-                               travaillent DANS L'APP pendant que Hektor vit (= E.2)
-5. LES 3 EXCEPTIONS            A.3 registre légal · A.2 signature · A.1 flux, en parallèle
-6. LE JOUR J PRÉPARÉ           L10-7 le run d'après · L10-9 · L10-10 · ordre d'extinction
+ N°  CHAPITRE                                              CONTENU                         TAILLE   PÉRIME
+ ──  ────────────────────────────────────────────────────  ──────────────────────────────  ───────  ──────
+ 1   Le rattrapage tient dans la nuit, ses erreurs se       G.1-e ⛔ AVANT LE 08/10 21:00 ·   2-3,5 j   oui
+     voient                                                G.1-b-1 · L10-10a · L10-8c ·
+                                                           L10-10e (disque, plantages)
+ 2   Une seule fenêtre de redémarrage du worker            G.1-b-2 · G.5-a · A.3-a          1,3-2 j   oui
+ 3   EN PARALLÈLE des ch.1-10 : mesurer ce qui périme      L10-6a · E.4a · L10-7a · A.5-a ·  3-5 j     oui
+     (pas de code de prod)                                 L10-13-a · E.1b · C.9-couple-a ·
+                                                           E.1c
+ 4   Relire le parc vivant chaque nuit                     L10-10c · G.2 · G.6 · G.1-c ·     2,5-3,5 j oui
+                                                           G.1-d
+ 5   Les planchers « Hektor répond vide »                  L10-8a/b/d/f · L10-8e (annuaire,  3-4 j     non
+                                                           vitrine)
+ 6   Sauvegarde et surveillance d'aujourd'hui              L10-9a/b/c · 35 docs cloud seul · 3,5-5,5 j non
+                                                           L10-10b/d
+ 7   Fermer les portes ouvertes (sécurité)                 L10-16a/b/c                       1,8-2,5 j non
+ 8   Les filets du pilote, un seul déploiement du front    L10-2a · L10-1a · E.0-bis-a ·     2,6-4,1 j non
+                                                           L10-15-a · A.3-b (export registre)
+ 9   Les droits en gestes métier, comptes des pilotes      L10-11-a · L10-11-b (pilotes)     2,5-3,5 j non
+ 10  ▶ LE PILOTE S'OUVRE : quelques négociateurs dans      E.2 (ouverture)                   1-2 j +   oui
+     l'app pendant que Hektor vit                                                            2-4 sem.
+ 11  Les statuts chez nous d'abord                         L10-3-0 « LE CARNET CÈDE » ⚠ ·    5,5-8 j   non
+                                                           L10-3a/b/c/d
+ 12  Documents et photos chez nous d'abord                 claim_next_job ouvert ⚠ · G.5-b · 5-7,5 j   oui
+                                                           G.5-c · G.5-e · E.0-bis-c1
+ 13  Les 3 PDF naissent chez nous                          G.5-d · L10-15-c · logos worker ⚠ 1,5-2 j   non
+ 14  Bilan du pilote, puis tous les négociateurs           E.2 · L10-11-b (tous)             1-3 j     oui
+ 15  Les mandats existants vivent chez nous                applicateur par mandat ⚠ ·        4-6 j     oui
+                                                           C.13-c · E.0-bis-d1
+ 16  Capturer ce qui ne vit que chez Hektor                E.0-bis-f(1) · RGPD · E.1b ·      1,5-7 j   oui
+                                                           A.5-b (historique)
+ 17  Comparer tant que Hektor vit : corps et ménage        26bis-3b · C.9-couple-b           3,5-5 j   oui
+ 18  Une seule porte vers Hektor (dormante)                L10-1b · L10-1c · L10-6b/c/d      4-5,5 j   non
+ 19  Le corps de l'annonce née dans l'app chez nous        L10-2d · 26bis-3a                 3-4,5 j   non
+ 20  ⚠ LA NUIT DE BASCULE : n° Hektor facultatif           L10-1d (17 tables, 7 clés)        3-5 j     non
+ 21  Gestes et transactions sans n° Hektor                 L10-1e · 26bis-TRANSACTIONS       3-4,5 j   non
+ 22  N° de dossier, fichiers sans n° Hektor                L10-14 · G.5-f                    2-4 j     non
+ 23  Diffusable et baisse de prix sur les valeurs app      L10-4 · L10-5                     3-4 j     non
+ 24  La recherche naît chez nous                           4-suite · L10-2b                  3-5 j +   non
+ 25  Les mandants naissent chez nous                       registre des relations · L10-2c   1-2 j +   non
+ 26  L'annuaire des négociateurs devient le nôtre          L10-11-c                          3-5 j     non
+ 27  Le côté public stable                                 11bis-2 · 11bis-1a/1b · L10-8e    3,5-4,5 j oui
+                                                           (RDV) · L10-15-b (DPE)
+ 28  Le registre lit nos tables, mandat complet            A.3-c · A.3-d                     5-8 j     oui
+ 29  La série légale des numéros, l'avenant complet        A.3-e · L10-12-c                  6-9 j     oui
+ 30  L'inaltérabilité du registre                          A.3-f                             3-5 j     non
+ 31  Notre bon de visite, l'offre d'achat                  L10-12-a · L10-12-b               6-9 j     non
+ 32  Signature en propre (1/2) : envoyer, suivre           A.2 (partie 1)                    4-8 j     non
+ 33  Signature (2/2), prolonger un mandat                  A.2 (partie 2) · E.0-bis-d2       6-10 j    non
+ 34  Diffusion (1/2) : notre flux d'annonces               A.1 (partie 1)                    5-10 j    non
+ 35  Diffusion (2/2) : reprise des 346, retrait API        A.1 (partie 2)                    5-10 j    oui
+ 36  Les leads entrent dans l'app                          A.5-b                             3-5 j     non
+ 37  Gérer les photos dans l'app                           E.0-bis-c2                        3-5 j     non
+ 38  Reprendre un brouillon, supprimer « app d'abord »     E.0-bis-f(2) · E.0-bis-g          4-6 j     non
+ 39  Fusionner les doublons                                E.0-bis-e (peut glisser)          4-6 j     non
+ 40  Ce que Hektor envoyait aux clients                    L10-13-b · L10-13-c (si Q8)       1-7 j     non
+ 41  Vitrine depuis Supabase, corps serveur prêt           L10-7c · 26bis-3c                 3,5-5 j   oui
+ 42  Le run d'après, notre fiche visite                    L10-7b · L10-15-d                 3,5-5 j   non
+ 43  Sauvegarde et surveillance de l'après                 L10-9d/e/f · L10-10f/g            4-6,5 j   non
+ 44  L'écran sans Hektor                                   E.3 · E.0-bis-b                   2,5-3,5 j non
+ 45  La fenêtre finale                                     E.1d · E.4a · E.1a · E.1c ·       1-2 j +   oui
+                                                           copie figée du miroir             sessions
+ 46  ▶ LE JOUR J : répétition sur copie, puis la coupure   E.4b                              1-2 j +   oui
+                                                                                             1 sem.
+REPORTÉS APRÈS LA COUPURE (à confirmer) : G.3 (purge cloud), G.4 (état cloud qui suit
+l'annonce). PEUVENT GLISSER : E.0-bis-e (fusion), L10-12-b (offre d'achat). CONDITIONNEL :
+L10-13-c (si la question 8 dit que les automatismes servent).
 ```
+
+**⚠ Les 3 corrections du contradicteur, intégrées ci-dessus** (marquées ⚠) :
+1. **Ch.11 — « le carnet cède » est une TÂCHE, pas une vérification** (1-2 j, en tête du
+   chapitre). Rien ne fait céder `app_annonce_champ_app` ni `app_mandat_champ_app` quand Hektor
+   confirme. Sans elle, une valeur posée une fois dans l'app écraserait Hektor chaque nuit. C'est
+   la condition d'allumage de L10-3, de l'application de C.13-c, de E.0-bis-d1 et de L10-4. Patron :
+   `nettoyer_carnet_affaire.py` et le retrait à chaud `prouverTransactionModifiee` des affaires.
+2. **Ch.15 — l'applicateur des mandats choisit par ANNONCE, pas par MANDAT**
+   (`appliquer_contrat_mandat.py`). 39 annonces ont plusieurs mandats. Il faut le corriger
+   **avant** d'écrire en masse les ~23 600 dates de C.13-c.
+3. **Ch.12 — `app_console_claim_next_job` exige le fichier temporaire** des envois de document
+   ou de photo. Un envoi « chez nous d'abord » resterait `pending` pour toujours, sans erreur. Il
+   faut l'ouvrir dans le même patch que G.5-c.
+
+**Corrections mineures, également retenues :**
+- **G.1-e** = changer seulement `--limit 2500` dans `run_rattrapage_documents.ps1:75`, pas de
+  nouvelle option ; et corriger le commentaire « 22:00 » (la tâche part à 21:00).
+- **Ch.4** ne dépend que de G.1-e, pas du ch.2.
+- **Ch.13** : les logos de l'avis de valeur et du plan cadastral (`console_job_worker.js:6679`,
+  `:7476`). Et **le site www ne déménage pas avant la coupure** : l'admin Hektor, le worker et
+  `pdf.php` passent par ce nom.
+- **L10-10a** : ne jamais solder de `sync_console_documents` en erreur, car c'est la liste
+  « ne jamais rejouer » du rattrapage.
+- **L10-6b** : l'essai demande une option `--job-id`. `--once` réclame le prochain travail de
+  prod.
+- **Ch.5, 10 et 14** : critères rendus mesurables. Comparaison aux 30 dernières nuits ; chaque
+  geste du journal des pilotes est retrouvé dans `app_console_job` ou un carnet.
+
+**⛔ La seule heure limite : avant le 08/10 à 21:00**, Frédéric fixe la taille du lot des VENTES
+(proposition : 400 la première nuit, puis 400 à 600 selon la durée mesurée) et dit « vas-y » pour
+G.1-e. À défaut : désactiver la tâche « GTI Rattrapage Documents » une nuit.
 
 ### 🎯 FINIR L'ANNONCE — *la mettre au niveau du contact, de la recherche et de la transaction*
 

@@ -98,7 +98,8 @@ Personne ne saisit dans l'app : 0 travail demande par un commercial en 120 jours
 
 | où | quoi |
 |---|---|
-| plan, section « 🔎 L'AUDIT COMPLET DU 07/10 » | où va chaque point · **les 8 questions à Frédéric** · l'ordre proposé |
+| plan, section « 🔎 L'AUDIT COMPLET DU 07/10 » | où va chaque point · **les 8 questions à Frédéric** · **🧭 LES 46 CHAPITRES**, la liste que le dev suit *(proposée le 07/10, à valider)* |
+| `notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md` | le détail de chaque chapitre (ordre interne, prérequis, feu vert, critère de fin) |
 | plan, lots | **L1 et L2 rouverts** · lot **`L10` « Préparer la coupure »** créé |
 | liste, section 13 | les 16 tâches de `L10` |
 | liste, section 12 | hors code : A.1 → A.5 *(A.4 DNS et site, A.5 leads : neufs)* |
@@ -109,14 +110,17 @@ Personne ne saisit dans l'app : 0 travail demande par un commercial en 120 jours
 | front | où c'en est | ce qui reste |
 |---|---|---|
 | **① IDENTITÉ / NAISSANCE** *(L4 · L10-1 · L10-2)* | le stock est 100 % sous nos numéros ; contact et annonce savent naître (e3 allumé) | n° Hektor de l'annonce `NOT NULL` dans 16 tables ; recherche seulement provisoire ; C.9-couple : sonde prête, geste humain |
-| **② LES DOCUMENTS** *(`D.0`, l. 948 · G.1→G.6)* | rattrapage à 21 h, lots de 2 500, 0 erreur | ≈ 10 650 annonces (≥ 6 nuits) ; **G.1-b les brouillons échoueront** ; parc vivant figé depuis le 20/08 (G.2 puis G.6) ; G.5 devenu bloquant |
-| **③ LES PHOTOS** *(section **10bis**, l. 1148)* | affichage 100 % chez nous (74 992 photos du parc vivant) | ajouter / retirer / réordonner chez nous (G.5, E.0-bis) ; 350 retraits faits dans Hektor non remontés |
+| **② LES DOCUMENTS** *(`D.0`, l. 963 · G.1→G.6)* | rattrapage à 21 h, lots de 2 500, 0 erreur | ≈ 10 650 annonces (≥ 6 nuits) ; **G.1-b les brouillons échoueront** ; parc vivant figé depuis le 20/08 (G.2 puis G.6) ; G.5 devenu bloquant |
+| **③ LES PHOTOS** *(section **10bis**, l. 1163)* | affichage 100 % chez nous (74 992 photos du parc vivant) | ajouter / retirer / réordonner chez nous (G.5, E.0-bis) ; 350 retraits faits dans Hektor non remontés |
 | **④ LE REGISTRE DES MANDATS** *(L9, liste section 9)* | phase 1 faite ; mandants et prix chez nous depuis le 06/10 | série légale, inaltérabilité, export, avenants et mandats de recherche, export PROTEXA, 2 défauts dormants de l'étape D |
 | **⑤ LA COUPURE** *(L10, liste section 13)* | ouvert le 07/10 | 16 tâches ; ordre proposé dans le plan, **pas décidé** |
 
 ### ⛔ Ce qui attend Frédéric
 
 ```
+⓪ AVANT LE 08/10 A 21:00     fixer la taille du lot des VENTES (proposition 400) et
+                             dire « vas-y » pour G.1-e (ch.1) -- sinon un lot de 2 500
+                             ventes (20 a 36 h) fait refuser le run du matin
 ① HORS CODE, sans attendre   A.4 la zone DNS de gti-immobilier.fr est servie par
                              La Boite Immo (MX Google de toute l'agence) : export
                              de la zone, puis OVH -- GARDER l'adresse de www
