@@ -943,6 +943,41 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des liens (app_relation)" -
 #
 # ⚠ `--push` : voir le commentaire du 01/10 a son ancienne place. Le garde-fou
 #   du script tient : `--push` SANS `--refresh` est REFUSE.
+# ─── LA DOUBLURE, AVANT DE RECONSTRUIRE ───   5c, 08/10/2026
+#
+# POURQUOI ELLE MANQUAIT, ET CE QUE CA COUTE. Le commentaire plus haut (29/09)
+# disait « PAS DE DOUBLURE POUR L'INSTANT, ET C'EST VOULU : rien n'ecrit encore
+# dans app_mandat ». C'etait vrai ce jour-la. L'ETAPE D EST ARRIVEE DEPUIS : le
+# worker ecrit NOTRE ligne de registre dans Supabase des qu'il a le numero
+# (enregistrerMandatAuRegistreApp), avec un id de la plage reservee a l'app
+# (app_mandat_id_app_seq, a 1 000 001). La descente, elle, n'a pas suivi.
+#
+# CE QUI SE PASSE SANS CETTE LIGNE. `refresh` sait ADOPTER l'id pose par l'app
+# (mandat_ledger.py l. 394-405, « c'est le serveur qui s'aligne, pas le cloud »),
+# mais il lit `app_mandat__sb` -- rafraichie par GTI Descente a 08:15, alors que
+# ce run passe a 05:00. Il consulte donc la copie de la VEILLE :
+#     jour D   10:00  un negociateur demande un numero -> id 1 000 001 en ligne
+#     jour D+1 05:00  le run ne le voit pas -> il refabrique un SECOND id
+#                     -> le push (merge-duplicates SANS on_conflict, donc resolu
+#                        sur la cle primaire) INSERE et heurte
+#                        UNIQUE (hektor_annonce_id, numero_mandat) -> LE LOT CASSE
+#     jour D+1 08:15  la descente le rapporte enfin
+#     jour D+2 05:00  le run l'adopte -> tout rentre dans l'ordre
+# Une seule nuit de registre perdue, donc -- mais en silence, l'etape etant non
+# bloquante. Mesure du 08/10 : 0 ligne `origine='app'` aujourd'hui, le piege est
+# arme pour le PREMIER numero demande depuis l'app.
+#
+# C'EST LE MEME GESTE QUE POUR LES TROIS AUTRES, ET RIEN D'AUTRE : la doublure
+# existe deja (26 847 lignes), on la rafraichit juste au bon moment -- comme
+# app_affaire_ledger (l. 786), app_relation (l. 923) et app_affaire_console (l. 1073).
+#
+# COUT : 26 847 lignes. Pour comparer, la console fait 18 442 lignes en 12 s et
+# le registre des liens 132 664 en 2 a 3 min. A CHRONOMETRER au premier run.
+Invoke-OptionalStepWithRetry -Label "phase2 doublure du registre des mandats" -Arguments @(
+    "phase2\sync\pull_from_supabase.py",
+    "--table", "app_mandat"
+) -WorkerKey "phase2.doublure_mandat"
+
 Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -Arguments @(
     "phase2\sync\mandat_ledger.py",
     "--refresh",

@@ -614,3 +614,75 @@ défaut. `node --check` ✔.
 
 ⚠ **Toujours DORMANT** : actif seulement après redémarrage des **quatre** services worker.
 **Retour arrière** : `CONSOLE_DETAIL_LEGER_EXTRACTION=1` + redémarrage, aucun code à toucher.
+
+---
+
+## 5c — LE PREMIER NUMÉRO DE MANDAT DEMANDÉ DEPUIS L'APP
+
+### Étape 1 — Audit du 08/10 · **confirmé, moins grave qu'annoncé, et un point FAUX**
+
+**Le geste marche.** 3 numéros demandés depuis l'app (28/07, 25/08, 28/08), **3 réussis**, les
+cinq étapes Hektor jusqu'au bout.
+
+**FAUX — la date.** L'audit du 08/10 soupçonnait le format `JJ-MM-AAAA` (`inputDateToFrench`).
+Mesuré sur les trois usages réels : date envoyée `28-08-2026`, étape des dates `done`, et les
+dates **enregistrées sont exactes** (2026-08-25, 2026-08-28, 2026-07-28). **Pas un défaut.**
+
+**CONFIRMÉ — l'enchaînement.** Depuis l'étape D, le worker écrit notre ligne dans Supabase
+`app_mandat` dès qu'il a le numéro (`enregistrerMandatAuRegistreApp`), avec un id de la **plage
+réservée à l'app** (`app_mandat_id_app_seq` = 1 000 001). Le `refresh` du run sait **adopter**
+cet id (mandat_ledger l. 394-405) en lisant `app_mandat__sb`.
+
+**⚠ CORRECTION DE MA PREMIÈRE ANALYSE.** J'avais écrit « la doublure n'est jamais descendue »,
+en me fiant à un commentaire du code. **C'est faux, mesuré** : `app_mandat__sb` existe en
+local avec ses **26 847 lignes** (= le compte Supabase). Il y a **15 doublures `__sb`**,
+rafraîchies chaque jour par **GTI Descente**. Le vrai décalage est horaire :
+
+| tâche Windows | heure réelle |
+|---|---|
+| **GTI Quotidien** (le run qui reconstruit et pousse) | **05:00** |
+| **GTI Descente** (qui rafraîchit les 15 doublures) | **08:15** |
+
+Le run lit donc une doublure vieille de ~21 h :
+
+```
+jour D   10:00  demande d'un numero -> id 1 000 001 en ligne
+jour D+1 05:00  le run ne le voit pas -> SECOND id -> le push INSERE et heurte
+                UNIQUE (hektor_annonce_id, numero_mandat) -> LE LOT CASSE
+jour D+1 08:15  la descente le rapporte
+jour D+2 05:00  le run l'adopte -> tout rentre dans l'ordre
+```
+
+**UNE nuit de registre perdue, pas « chaque nuit »** — et en silence (étape non bloquante).
+Mesure : **0 ligne `origine='app'`** aujourd'hui, les 3 demandes datent d'avant l'étape D
+(leurs journaux n'ont pas l'étape « registre app »). **Le piège est armé pour le prochain numéro.**
+
+**Et c'était prévu.** Le run fait déjà exactement ce geste **trois fois** —
+`app_affaire_ledger` (l. 786), `app_relation` (l. 923), `app_affaire_console` (l. 1073) — avec
+la raison écrite : *« la doublure passe à 07h30, or ce run passe à 05h30 »*. Le registre des
+mandats avait été laissé de côté **exprès**, raison écrite elle aussi : *« rien n'écrit encore
+dans app_mandat… elle viendra AVEC l'écriture du worker (étape D), pas avant »*.
+L'étape D est arrivée, la descente n'a pas suivi. **Un oubli d'enchaînement, pas un trou de
+conception.**
+
+**Non mesuré** : « un numéro est brûlé si les étapes 2 à 5 échouent » — vrai par construction,
+jamais observé (3 sur 3 réussis).
+
+### Étapes 2 et 3 — Correctif (option A, « vas-y » du 08/10)
+
+Une seule étape ajoutée dans `run_full_pipeline.ps1`, **juste avant** celle du registre, copiée
+sur les trois autres : `pull_from_supabase.py --table app_mandat`, en
+`Invoke-OptionalStepWithRetry` (**non bloquante**), clé `phase2.doublure_mandat`. Ça ne crée
+pas une doublure : ça rafraîchit celle qui existe, au bon moment.
+
+Encodage vérifié (CRLF + BOM conservés) et **syntaxe PowerShell validée par le parseur**.
+
+**Ce que ça pourrait casser ailleurs** : `pull_from_supabase` écrit **à côté**, sous `__sb` —
+la table locale `app_mandat` n'est pas touchée ; aucune écriture dans Supabase (c'est une
+lecture) ; trois fichiers seulement lisent `app_mandat__sb` et tous l'attendent
+(`mandat_ledger.py`, `phase2/checks/mandat_un_numero.py`, `monitoring/check_gti_health.py`) ;
+l'étape est non bloquante, donc un échec laisse le run exactement comme aujourd'hui.
+**Coût non mesuré** : 26 847 lignes (comparaison : 18 442 lignes en 12 s pour la console,
+2-3 min pour les 132 664 du registre des liens) — à chronométrer au premier run.
+
+**Retour arrière** : retirer les deux lignes de l'étape. Rien d'autre.
