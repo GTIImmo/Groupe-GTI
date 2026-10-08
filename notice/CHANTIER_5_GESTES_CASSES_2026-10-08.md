@@ -1150,3 +1150,33 @@ et le moniteur la lit par sa clé** — une seule copie de la règle.
 
 **Éprouvé** : `run_quality_checks.py` passe et le rapport porte
 `contact_sans_numero_hektor : 0 | attente : 0`.
+
+### 5g — ESSAI RÉEL : **tout est parti, des deux côtés** (08/10, ~19:00)
+
+Contact d'essai **« M. Test CLOTURE »** (identité 10355757, cible Hektor 605075), supprimé
+depuis l'annuaire de l'app. *(Il portait 2 liens : celui que j'avais rattaché au bien 62774
+pour éprouver 5d, et un lien venu de Hektor sur le bien 62966 — l'essai défait donc aussi ma
+manipulation de l'après-midi.)*
+
+La phrase de confirmation demandée est **« SUPPRIMER CONTACT 10355757 »** — l'**identité**,
+pas la cible : le correctif du 21/09 tient.
+
+**Travail : `done` en 14 s**, et son journal porte la nouvelle étape :
+`claim | hektor_context | hektor_contact_delete | sync_queue ×3 | local_cleanup |
+`**`registre_des_liens`**` | finish`.
+
+| | avant | après |
+|---|---|---|
+| **miroir** `hektor_contact` (clé Hektor 605075) | 1 | **0** ✔ *(c'était le trou : il ne partait pas)* |
+| **miroir** `sync_contact_state` | 1 | **0** ✔ |
+| **miroir** `sync_annonce_contact_link` | 2 | **0** ✔ |
+| **couche** `app_contact_current` (clé identité) | 1 | **0** ✔ |
+| **couche** `app_relation` | 1 | **0** ✔ |
+| **couche** `app_contact_relation_current` | 4 | **0** ✔ |
+| **en ligne** contact · registre · couche | 1 · 2 · 4 | **0 · 0 · 0** ✔ |
+
+**Les deux moitiés du correctif sont prouvées** : le miroir reçoit enfin le bon numéro (sans
+quoi le build aurait remis le contact), et le registre des liens est **physiquement effacé**
+des deux côtés — donc le push de nuit ne les remettra pas.
+
+**5g est fini.**
