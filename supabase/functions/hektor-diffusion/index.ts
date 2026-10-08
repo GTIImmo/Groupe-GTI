@@ -88,6 +88,35 @@ async function assertAuthenticatedUser(userClient: ReturnType<typeof createClien
   return data.user
 }
 
+// Chantier ① securite (08/10/2026) : le meme controle que le chemin normal (backend Render,
+// supabase_admin.py assert_admin) -- un compte connecte ne suffit pas, il faut un profil
+// ACTIF et admin ou manager. Sans lui, ce chemin de secours laissait n'importe quel compte,
+// meme desactive, rendre une annonce diffusable chez Hektor.
+async function isActiveAdminOrManager(
+  adminClient: ReturnType<typeof createClient>,
+  user: { id: string; email?: string | null },
+) {
+  const { data: byId, error: byIdError } = await adminClient
+    .from('app_user_profile')
+    .select('id,email,role,is_active')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (byIdError) throw new Error(byIdError.message)
+  let profile = byId
+  if (!profile && user.email) {
+    const { data: byEmail, error: byEmailError } = await adminClient
+      .from('app_user_profile')
+      .select('id,email,role,is_active')
+      .ilike('email', user.email)
+      .limit(1)
+      .maybeSingle()
+    if (byEmailError) throw new Error(byEmailError.message)
+    profile = byEmail
+  }
+  if (!profile) return false
+  return profile.is_active === true && ['admin', 'manager'].includes(String(profile.role ?? ''))
+}
+
 async function loadDossier(adminClient: ReturnType<typeof createClient>, appDossierId: number) {
   const { data, error } = await adminClient
     .from('app_dossiers_current')
@@ -420,6 +449,9 @@ Deno.serve(async (request) => {
     const authHeader = request.headers.get('Authorization')
     const { userClient, adminClient } = await createClients(authHeader)
     const user = await assertAuthenticatedUser(userClient)
+    if (!(await isActiveAdminOrManager(adminClient, user))) {
+      return jsonResponse({ ok: false, error: 'Acces admin refuse' }, { status: 403 })
+    }
 
     const body = await request.json().catch(() => ({}))
     const action = String(body?.action ?? '').trim()

@@ -1,6 +1,8 @@
 # CHANTIER ① — SÉCURITÉ : ce que la clé publique peut atteindre — 08/10/2026
 
-*Étape 2 · chantier ① · étape 1 (audit) faite, étape 2 (explication) faite, **attend « vas-y »**.
+*Étape 2 · chantier ① · audit fait · explication faite · « vas-y » de Frédéric le 08/10 (patch : oui ;
+`hektor-diffusion` : option (a) ; supprimer les 3 comptes : **non**) · **code écrit, attend la répétition puis
+l'application par Frédéric**.
 Audit en lecture seule : catalogue Supabase, `git grep` des appelants, conseiller de sécurité
 Supabase. Rien n'a été modifié.*
 
@@ -142,3 +144,44 @@ Journaux Supabase : **0 appel en 24 h** (fenêtre maximale consultable).
   n'est plus configuré un jour, le bouton échouerait au lieu de basculer) ;
 - **(c)** ne rien faire : le risque est limité aux 8 comptes existants, dont 3 désactivés ou sans
   profil qui peuvent encore se connecter.
+
+## Le code écrit (08/10, après le « vas-y »)
+
+### Le patch SQL — 3 fichiers dans `supabase/`
+
+| Fichier | Rôle |
+|---|---|
+| `patch_chantier1_fermer_anon_2026-10-08.sql` | **le patch**, en une transaction : garde-fou d'entrée → **photo d'avant** (`app_securite_droits_avant_20261008`, 2 546 lignes prévues) → lots A à E → **contrôle de sortie** (une seule erreur = tout est annulé) |
+| `patch_chantier1_fermer_anon_2026-10-08_INVERSE.sql` | le retour arrière : relit la photo d'avant et rend chaque droit à l'identique, remet les défauts et la RLS d'avant |
+| `patch_chantier1_fermer_anon_2026-10-08_REPETITION.sql` | **la répétition** : joue le VRAI patch puis le VRAI inverse, puis lève une erreur volontaire → **rien ne change**. Résultat attendu : « ESSAI ANNULE » avec, après patch, `anon_fonctions=31` (pg_trgm), `auth_fonctions=135`, `photo=2546` ; après inverse, `anon_fonctions=136`, `auth_fonctions=155` |
+
+**Pourquoi une répétition par Frédéric** : le garde-fou de la session a refusé que je l'exécute
+moi-même (même annulée), comme le 24/09. Je ne le contourne pas.
+
+**Éprouvé en lecture (08/10)** : lot A vise 141 fonctions ; lot B en trouve 20/20 ; l'app
+connectée en gardera 104 (= le contrôle de sortie) ; 17/17 objets nommés existent ; 0 objet du
+schéma n'appartient à un autre rôle que postgres ; PostgreSQL 17.6 (le droit `MAINTAIN` existe) ;
+aucune fonction de l'app hors du schéma `public` (le retrait global de PUBLIC sur les fonctions
+futures ne touche donc rien d'autre).
+
+### La fonction Edge `hektor-diffusion` — option (a)
+
+- **Ajouté** : `isActiveAdminOrManager` — le même contrôle que le chemin Render
+  (`supabase_admin.py:216-224`) : profil trouvé par id puis par e-mail, **actif** et **admin ou
+  manager**, sinon réponse 403 « Acces admin refuse ». Additif : 32 lignes, rien d'autre ne bouge.
+- **Syntaxe vérifiée** (compilateur TypeScript 5.9.3 du front : 0 erreur). Deno n'est pas
+  installé : pas de vérification de types complète.
+- ⚠ **Trouvé en vérifiant la version déployée** : la fonction en ligne (v14) date du **07/04** ;
+  le dépôt a une ligne de plus, du **21/04** (`881500b`, « validation = 1 ou true vaut acceptée »,
+  comme Render). La redéployer apportera **les deux** changements.
+- **Pas encore déployée** : un déploiement demande l'accord de Frédéric.
+
+### Ce qui reste pour clore le chantier ①
+
+1. Frédéric colle la **répétition** dans l'éditeur SQL → me recopie le message.
+2. Si le message est celui attendu : Frédéric colle **le patch**.
+3. Accord pour **déployer** la fonction Edge.
+4. **Contrôle du résultat** : droits relus en base ; appel avec la clé publique seule → refus ;
+   l'app connectée (annonce, contact, rapprochements, registre, cockpit) sans erreur console ;
+   en navigation privée : une photo de vitrine, une page d'espace client, la page de RDV ; la
+   nuit suivante, run et crons sans échec ; conseiller de sécurité relu.
