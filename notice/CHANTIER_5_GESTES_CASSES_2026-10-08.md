@@ -1180,3 +1180,79 @@ quoi le build aurait remis le contact), et le registre des liens est **physiquem
 des deux côtés — donc le push de nuit ne les remettra pas.
 
 **5g est fini.**
+
+---
+
+## 5i — LE CONFLIT CAUSÉ PAR L'APP ELLE-MÊME
+
+### Étape 1 — Audit du 08/10
+
+Quand un négociateur corrige un champ, la saisie attend **10 minutes** (le temps qu'il finisse
+de taper), avec une **photo de l'heure de dernière modification chez Hektor** prise au clic.
+Dix minutes plus tard, avant d'écrire, le worker vérifie que Hektor n'a pas bougé. S'il a
+bougé : **il gagne**, et la saisie était **soldée** — jetée, archivée au journal des
+résolutions, **et aucun bandeau**.
+
+**Le défaut : le garde-fou regarde une HEURE, pas une signature.** Or l'app écrit aussi chez
+Hektor :
+
+```
+14:00  le negociateur corrige le prix       -> en attente, photo de l'heure Hektor
+14:03  LE MEME negociateur change le statut -> ce geste part TOUT DE SUITE chez Hektor
+14:10  le worker : « Hektor a bouge »       -> la correction du prix est JETEE
+```
+
+Personne n'a rien tranché, et le bandeau « saisie en conflit » — qui existe pourtant, avec ses
+deux boutons — **ne s'affiche pas**, puisque la ligne est supprimée et non gardée.
+
+**Jamais arrivé** : **0** résolution pour cause `hektor_plus_recent` (le journal n'en porte que
+2, et ce sont des gestes de transaction) ; 0 saisie en attente aujourd'hui.
+
+### ⭐ La remarque de Frédéric qui donne la règle
+
+> *« Ce ne sont pas vraiment les mêmes demandes, sinon elles seraient réunies pendant les
+> 10 minutes, non ? »*
+
+**Exact, et vérifié** — ce sont **deux circuits** :
+
+| | circuit **débouncé** | circuit **immédiat** |
+|---|---|---|
+| porte | les **champs** (prix, surfaces, textes) | les **gestes d'état** (statut, archiver, négociateur, transactions) |
+| part | après 10 min, et **fusionne** : une ligne par bien | **tout de suite**, un travail par geste |
+
+Et `app_edit_annonce_optimistic` ne touche **ni le statut, ni l'archivage, ni le négociateur**
+(relu dans son code). **Deux tiroirs séparés : aucun champ commun possible.** Mesure :
+68 travaux d'édition de champs, dont **43 débouncés** et **25 directs**.
+
+### Étapes 2 et 3 — Codé
+
+```
+Hektor a bouge depuis la photo. QUI ?
+  un de NOS gestes d'etat    -> aucun champ commun -> ON POUSSE la saisie
+  tout le reste (autre edition de champs, un humain dans Hektor, ou on ne sait pas)
+                             -> ON NE JETTE RIEN : la saisie reste EN CONFLIT,
+                                le bandeau s'affiche, le negociateur tranche
+```
+
+**Plus jamais de saisie jetée en silence**, dans aucune des deux branches.
+
+**Vérifié avant de coder, comme promis** : marquer la saisie en conflit **fait bien apparaître
+un bandeau** — `app_annonce_edit_status` rend `conflict`, et `AnnonceEditStatusBanner` l'affiche
+avec ses deux boutons (« j'ai refait » / « j'abandonne »).
+
+> ⚠ **Ceci modifie la décision du 20/09** (« Hektor plus récent → il gagne, on solde »). Elle
+> valait quand l'autre écrivain était un humain dans Hektor : il avait vraiment tranché. Elle
+> ne vaut pas quand l'autre écrivain, c'est nous. `app_annonce_pending_solder_hektor` n'est
+> **plus appelée ici** — elle reste en place, elle n'est pas supprimée.
+
+> ⚠ **On ne compare jamais l'heure de Hektor à la nôtre** : l'une est locale, l'autre en UTC,
+> deux heures d'écart suffiraient à tout fausser. On compare **nos deux dates entre elles** —
+> `dirty_at` (l'heure de la saisie) et `finished_at` (la fin du travail), toutes deux écrites
+> par nous.
+
+> ⚠ **Si la question ne peut pas être posée** (lecture impossible), on répond « je ne sais
+> pas » et on retombe sur le cas prudent : conflit et bandeau.
+
+`node --check` ✔, CRLF conservés. ⚠ **DORMANT** : actif après redémarrage des 4 services.
+**Non éprouvé en réel** : il faudrait provoquer la séquence « corriger un champ puis changer le
+statut dans les 10 minutes » sur un bien d'essai — faisable, à faire si Frédéric le veut.

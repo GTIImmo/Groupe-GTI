@@ -10564,34 +10564,26 @@ async function handleUpdateHektorAnnonceFields(job) {
       const freshDateMaj = await fetchAnnonceDateMajFromApi(job, annonceId, "annonce_overwrite_guard");
       if (freshDateMaj && freshDateMaj > baseDateMaj) {
         const conflictDossierId = job.app_dossier_id || payload.app_dossier_id || (dossier && dossier.app_dossier_id) || null;
-        // 20/09 : HEKTOR EST PLUS RECENT -> IL GAGNE, ET ON SOLDE LA SAISIE.
-        // La regle de Frederic : l'ecriture de l'app est protegee « sauf en cas
-        // d'ecriture plus recente chez Hektor ». Ici c'en est une : garder la ligne
-        // ne servirait qu'a demander au negociateur de trancher quelque chose qui
-        // est deja tranche. On ne l'EFFACE pas pour autant -- la saisie part au
-        // journal des resolutions avec sa valeur, son auteur et son heure.
-        // Si le solde echoue, on retombe sur l'ancien comportement (ligne gardee en
-        // conflit) : ne jamais perdre la saisie prime sur la proprete de l'etat.
-        try {
-          await supabaseRequest("rpc/app_annonce_pending_solder_hektor", {
-            method: "POST",
-            body: JSON.stringify({
-              target_dossier_id: Number(conflictDossierId),
-              detail: { base_date_maj: baseDateMaj, fresh_date_maj: freshDateMaj, hektor_annonce_id: annonceId },
-            }),
-          });
-        } catch (errSolde) {
+        // ⭐ 5i (08/10/2026) -- AVANT DE TRANCHER, ON DEMANDE QUI A FAIT BOUGER HEKTOR.
+        //   Voir notreGesteDEtatDepuisLaSaisie et son commentaire : deux circuits,
+        //   aucun champ commun entre un geste d'etat et une edition de champs.
+        const leNotre = conflictDossierId
+          ? await notreGesteDEtatDepuisLaSaisie(job, annonceId, conflictDossierId)
+          : null;
+        if (leNotre) {
+          await logJob(job.id, "annonce_overwrite_guard", "done",
+            "Hektor a bouge, mais c'est NOTRE geste d'etat : aucun champ commun, la saisie part",
+            { hektor_annonce_id: annonceId, base_date_maj: baseDateMaj, fresh_date_maj: freshDateMaj,
+              notre_travail: leNotre.job_type, fini_le: leNotre.finished_at });
+          // on ne bloque pas : la suite de la fonction ecrit chez Hektor
+        } else {
+          // On ne jette plus en silence : la saisie reste, et le bandeau previent.
           await markAnnoncePendingConflict(conflictDossierId, "hektor_plus_recent");
-          await logJob(job.id, "annonce_overwrite_guard", "error",
-            `Solde impossible, la saisie est gardee en conflit : ${errSolde && errSolde.message ? errSolde.message : errSolde}`,
-            { hektor_annonce_id: annonceId });
+          await logJob(job.id, "annonce_overwrite_guard", "done",
+            "Bien modifie dans Hektor depuis l'edition : ecriture bloquee, la saisie est GARDEE et le negociateur doit trancher",
+            { hektor_annonce_id: annonceId, base_date_maj: baseDateMaj, fresh_date_maj: freshDateMaj });
+          return { status: "held_conflict", hektor_annonce_id: annonceId, reason: "bien_modifie_dans_hektor_depuis_edition" };
         }
-        await logJob(job.id, "annonce_overwrite_guard", "done", "Bien modifié dans Hektor depuis l'édition : écriture bloquée (anti-écrasement)", {
-          hektor_annonce_id: annonceId,
-          base_date_maj: baseDateMaj,
-          fresh_date_maj: freshDateMaj,
-        });
-        return { status: "held_conflict", hektor_annonce_id: annonceId, reason: "bien_modifie_dans_hektor_depuis_edition" };
       }
     }
   }
@@ -17325,6 +17317,76 @@ async function clearAnnoncePending(appDossierId) {
 //                        un BUG entre Hektor et l'app. On garde, on reessaie (6 h),
 //                        et c'est FREDERIC qu'on alerte, pas le negociateur -- il
 //                        ne peut rien y faire.
+// ⭐ 5i (08/10/2026) -- QUI A FAIT BOUGER HEKTOR ?
+//
+// LE GARDE-FOU anti-ecrasement regarde une HEURE, pas une signature : si Hektor a
+// bouge depuis la photo prise au clic, il conclut « quelqu'un d'autre a modifie » et
+// la saisie etait SOLDEE (jetee, archivee au journal des resolutions, AUCUN bandeau).
+// Or l'app elle-meme ecrit chez Hektor. Un negociateur qui corrige un prix a 14:00
+// puis change le statut a 14:03 perdait sa correction a 14:10, sans rien voir.
+//
+// ⭐ REMARQUE DE FREDERIC, 08/10, et c'est elle qui donne la regle : « ce ne sont pas
+//   vraiment les memes demandes, sinon elles seraient reunies pendant les 10 minutes ».
+//   Exact : DEUX CIRCUITS. Les CHAMPS passent par la file debouncee (ils fusionnent,
+//   une ligne par bien) ; les GESTES D'ETAT partent tout de suite, un travail chacun.
+//   Verifie dans le code : app_edit_annonce_optimistic ne touche NI le statut, NI
+//   l'archivage, NI le negociateur. Deux tiroirs separes, donc aucun champ commun.
+//
+// LA REGLE QUI EN DECOULE :
+//   . Hektor a bouge a cause d'un de NOS gestes d'etat  -> aucun champ commun
+//     possible -> ON POUSSE la saisie ;
+//   . tout le reste (une autre edition de champs, un humain dans Hektor, ou on ne
+//     sait pas) -> ON NE JETTE RIEN : la saisie reste EN CONFLIT, le bandeau
+//     s'affiche et le negociateur tranche lui-meme.
+//   Dans les deux cas, plus jamais de saisie jetee en silence.
+//
+// ⚠ CECI MODIFIE LA DECISION DU 20/09 (« Hektor plus recent -> il gagne, on solde »).
+//   Elle valait quand l'autre ecrivain etait un humain dans Hektor : il avait
+//   vraiment tranche. Elle ne vaut pas quand l'autre ecrivain, c'est nous.
+//   app_annonce_pending_solder_hektor n'est plus appelee ici -- elle reste en place,
+//   elle n'est pas supprimee.
+//
+// ⚠ ON NE COMPARE JAMAIS L'HEURE DE HEKTOR A LA NOTRE : l'une est locale, l'autre
+//   en UTC, et deux heures d'ecart suffiraient a tout fausser. On compare NOS deux
+//   dates entre elles -- `dirty_at` (l'heure de la saisie) et `finished_at` (l'heure
+//   de fin du travail), toutes deux ecrites par nous.
+const GESTES_D_ETAT_SANS_CHAMP = [
+  "archive_hektor_annonce",
+  "restore_hektor_annonce",
+  "change_hektor_annonce_status",
+  "assign_hektor_annonce_negotiator",
+  "change_hektor_offre_status",
+  "cancel_hektor_compromis",
+  "delete_hektor_compromis",
+  "delete_hektor_vente",
+  "link_hektor_mandant",
+  "unlink_hektor_mandant",
+];
+
+async function notreGesteDEtatDepuisLaSaisie(job, annonceId, appDossierId) {
+  try {
+    const attente = await supabaseRequest(
+      `app_annonce_pending?app_dossier_id=eq.${Number(appDossierId)}&select=dirty_at`, { method: "GET" });
+    const depuis = Array.isArray(attente) && attente[0] ? attente[0].dirty_at : null;
+    if (!depuis) return null;
+    const types = GESTES_D_ETAT_SANS_CHAMP.map((t) => `"${t}"`).join(",");
+    const trouves = await supabaseRequest(
+      `app_console_job?hektor_annonce_id=eq.${encodeURIComponent(String(annonceId))}`
+      + `&job_type=in.(${encodeURIComponent(types)})&status=eq.done`
+      + `&finished_at=gt.${encodeURIComponent(String(depuis))}`
+      + `&select=id,job_type,finished_at&order=finished_at.desc&limit=1`, { method: "GET" });
+    return (Array.isArray(trouves) && trouves[0]) ? trouves[0] : null;
+  } catch (erreur) {
+    // On ne devine pas : si la question ne peut pas etre posee, on repond « je ne
+    // sais pas » -- et l'appelant retombe sur le cas prudent (conflit, bandeau).
+    await logJob(job.id, "annonce_overwrite_guard", "running",
+      "Impossible de savoir qui a modifie Hektor -- on garde la saisie en conflit",
+      { hektor_annonce_id: String(annonceId),
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+    return null;
+  }
+}
+
 async function markAnnoncePendingConflict(appDossierId, cause = "envoi_impossible") {
   if (appDossierId == null) return;
   try {
