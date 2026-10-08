@@ -780,3 +780,42 @@ notre numéro : la RPC accepte les deux.)*
 
 `node --check` ✔. ⚠ **DORMANT** : actif après redémarrage des 4 services worker.
 **Retour arrière** : remettre `identite` aux deux endroits.
+
+### Étape 5 — ESSAI RÉEL, 5d est **PROUVÉ** (08/10, ~15:25, workers redémarrés)
+
+Rattachement du mandant d'essai **« M. Test CLOTURE »** (identité 10355757, cible Hektor
+605075) à l'annonce d'essai **62774**. *(Il a fallu un contact du MÊME négociateur que le
+bien : la recherche de l'écran est filtrée par négociateur — « Aucun contact trouvé pour ce
+négociateur » sinon. Recherche par l'identifiant Hektor `605075`, le champ l'accepte.)*
+
+**La ligne posée par la RPC, au clic** — et elle confirme toute l'analyse de la clé :
+
+```
+app_relation_id    1000010      <- la plage reservee a l'app
+app_contact_id     10355757     <- NOTRE numero
+hektor_contact_id  605075       <- celui de HEKTOR  (c'est bien ca, la colonne)
+source             app          role_hektor  null    present_in_hektor  false
+```
+
+**Puis le worker, 28 secondes plus tard :**
+
+```
+relation_etablie : done
+   « Le registre porte le lien comme ETABLI : il est visible, et retirable, tout de suite »
+present_in_hektor -> TRUE
+```
+
+**C'est la première fois que cette étape tourne**, et elle trouve sa ligne. Avant le
+correctif elle aurait dit « Aucune ligne à marquer ». Le mandant est donc **retirable tout de
+suite**, et non le lendemain.
+
+**Bonus constaté à l'écran** : la carte de Sophie TEST MANDANT 25-08 affiche
+« 3 rue de la Chaine, **Saint-Étienne** » — la correction de 5b, redescendue et visible.
+
+**À savoir, et je le dis** : ce 4e mandant **restera attaché** au bien d'essai. Le bouton
+« Retirer ce mandant » est grisé dès qu'un numéro de mandat existe (règle de Frédéric), et
+62774 porte le mandat n° 18836. Sans conséquence sur une annonce d'essai.
+
+**Non éprouvé** : le filet du **refus** (Hektor qui refuse le rattachement). Je ne sais pas le
+provoquer proprement ; le correctif est le même et porte sur la même clé, mais il reste
+non éprouvé en réel.
