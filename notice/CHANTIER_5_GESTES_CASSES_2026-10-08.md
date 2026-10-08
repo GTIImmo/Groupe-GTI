@@ -204,3 +204,55 @@ vivant est intact, les refus tiennent (numéro inconnu, sans connexion), les dro
 l'app**. Le chaînon « bouton → numéro envoyé » est vérifié dans le code (`api.ts:2618`,
 `App.tsx:13857`) mais pas en réel. Un vrai clic crée un travail que le worker envoie à Hektor :
 cela demande l'accord de Frédéric **et une annonce archivée choisie par lui**.
+
+### 5a bis — LE BOUTON N'EXISTAIT POUR AUCUNE ARCHIVE (trouvé le 08/10 pendant l'essai réel)
+
+**Ce qui s'est passé.** Essai sur VA2380 (bien Hektor 78, `app_archive_id` 1107157) dans l'app
+connectée. La fiche s'ouvre — et **aucun bouton « Désarchiver »**, ni dans la page, ni dans le
+menu « ••• » (relevé de tous les boutons de la page, pas une impression d'écran).
+
+**Pourquoi.** Dans le cockpit (`CockpitDetail`), deux conditions se fermaient l'une l'autre :
+
+```
+if (props.onRestoreAnnonce && !isLightweightDetail && estArchive)      <- App.tsx:27744
+      estArchive          = /archiv/i.test(statut_annonce)
+      isLightweightDetail = vrai des que archive === '1'
+```
+
+- `estArchive` lit le **statut**. Or une archive porte « Clos » (33 878), « (vide) » (785),
+  « Vendu » (423), « Actif » (199), « Estimation » (30), « Sous offre » (2) — **jamais
+  « Archivé » : 0 sur 35 317** (mesure en base du 08/10).
+- `isLightweightDetail` est **toujours vrai** pour une archive (il rend vrai dès `archive='1'`).
+
+Le bouton du bandeau de lecture seule (`:27968`) était bloqué pareil : il exigeait
+`ckStage === 'archive'`, or le statut prime dans le calcul du cran — une archive « Clos »
+tombe sur le cran « clos ».
+
+**Correctif (« vas-y » de Frédéric, 08/10)** — deux conditions, dans `CockpitDetail` :
+le menu et le bouton visible regardent désormais **le champ `archive`**
+(`isArchivedAnnonceRecord`) en plus du statut, et ne se ferment plus sur
+`!isLightweightDetail` : désarchiver est justement l'action qu'une fiche en lecture seule doit
+offrir. `npm run build` ✔ (6,09 s). Le mobile (`:34063`) regardait déjà le bon champ.
+**Attend un déploiement** (pousser = déployer).
+
+### 5a ter — la préparation du détail d'archive appelle Hektor (audit du 08/10)
+
+Frédéric : *« on n'a pas besoin de faire appel à Hektor, normalement le serveur a déjà tout »*.
+Mesuré, il a raison pour la fiche, pas pour le bloc console :
+
+| mesure (base locale `data/hektor.sqlite`, lecture seule) | |
+|---|---|
+| annonces archivées | 37 773 |
+| **avec le détail complet en local** | **34 532 (91 %)** |
+| avec le bloc **console** en local | **35** |
+| bloc console en local, toutes annonces confondues | 164 |
+
+Le travail `prepare_archived_annonce_detail` fait donc deux choses : il **appelle Hektor**
+(`sync_console_missing_fields.py`, 20,4 s sur le bien 78) pour ramener le bloc console
+(secteur, chauffage, diagnostics, honoraires détail, pièces, images DPE/GES), **puis** il
+reconstruit la fiche **depuis la base locale** (60 119 octets).
+
+**Et il rappelle Hektor même quand la donnée est déjà là** : dans
+`phase2/sync/sync_console_missing_fields.py` l. 214-217, un identifiant passé explicitement
+vaut `reason = "explicit"` — le cache local n'est même pas regardé. Rouvrir deux fois la même
+archive, c'est deux extractions.

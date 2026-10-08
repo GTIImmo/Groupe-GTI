@@ -27741,7 +27741,14 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   if (props.onArchiveAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Archiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9M9 15h6"/>', onClick: () => props.onArchiveAnnonce?.(dossier) })
   // Régression corrigée (audit §5 bis #11) : le désarchivage existait dans l'ancienne fiche
   // et n'avait pas été repris — une annonce archivée devenait donc irrécupérable ici.
-  if (props.onRestoreAnnonce && !isLightweightDetail && estArchive) ckMoreItems.push({ label: 'Désarchiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9"/><path d="M12 18v-6M9 15l3-3 3 3"/>', onClick: () => props.onRestoreAnnonce?.(dossier) })
+  // 5a (08/10/2026) — LE BOUTON N'APPARAISSAIT POUR AUCUNE DES 35 317 ARCHIVES.
+  // Deux conditions se fermaient l'une l'autre : `estArchive` lit le STATUT, or une archive
+  // porte « Clos » (33 878), « (vide) » (785), « Vendu » (423)... jamais « Archivé » — zéro
+  // sur 35 317 (mesure en base du 08/10) ; et `isLightweightDetail` est TOUJOURS vrai pour
+  // une archive (il rend vrai dès `archive === '1'`). Ce qui marque une archive, c'est le
+  // champ `archive`, pas le mot du statut. Désarchiver est justement l'action qu'une fiche
+  // en lecture seule doit offrir — c'est elle qui rouvre tout le reste.
+  if (props.onRestoreAnnonce && (estArchive || isArchivedAnnonceRecord(dossier))) ckMoreItems.push({ label: 'Désarchiver', ico: '<path d="M3 7h18v4H3zM5 11v9h14v-9"/><path d="M12 18v-6M9 15l3-3 3 3"/>', onClick: () => props.onRestoreAnnonce?.(dossier) })
   ckMoreItems.push({ label: 'Ouvrir dans Hektor ↗', ico: '<path d="M14 3h7v7M21 3l-9 9M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/>', onClick: () => openHektorAnnonce(String(dossier.hektor_annonce_id)) })
   if (props.onDeleteAnnonce && !isLightweightDetail) ckMoreItems.push({ label: 'Supprimer', ico: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>', danger: true, onClick: () => props.onDeleteAnnonce?.(dossier) })
   // Horodatage relatif du fil d'activité.
@@ -27965,7 +27972,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
                     </span>
                     <span className="fa-ck-pa-ro-tx">{ckStageDef.roban}</span>
-                    {ckStage === 'archive' && props.onRestoreAnnonce && !isLightweightDetail ? (
+                    {/* 5a (08/10/2026) : le bouton VISIBLE du bandeau de lecture seule, même
+                        raison que l'entrée du menu « ••• ». Une archive tombe sur le cran
+                        « vendu » ou « clos » (le statut prime), jamais sur « archive » : il
+                        fallait aussi regarder le champ `archive`. */}
+                    {(ckStage === 'archive' || isArchivedAnnonceRecord(dossier)) && props.onRestoreAnnonce ? (
                       <button type="button" className="fa-ck-rep-btn" onClick={() => props.onRestoreAnnonce?.(dossier)}>Désarchiver</button>
                     ) : null}
                   </div>
