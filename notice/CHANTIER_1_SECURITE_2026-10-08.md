@@ -188,3 +188,37 @@ futures ne touche donc rien d'autre).
    l'app connectée (annonce, contact, rapprochements, registre, cockpit) sans erreur console ;
    en navigation privée : une photo de vitrine, une page d'espace client, la page de RDV ; la
    nuit suivante, run et crons sans échec ; conseiller de sécurité relu.
+
+## Le contrôle du résultat (08/10, après l'application par Frédéric à 08:22)
+
+**En base (lecture)** : photo d'avant 2 546 lignes · fonctions de l'app ouvertes à `anon` **0**
+(136 avant) · tables, vues, séquences ouvertes à `anon` **0** · fonctions gardées par l'app
+connectée **104** · par le serveur **141** · bascule des contacts : serveur seul · registre :
+lecture oui, modification non pour l'app · RLS active sur `app_rapprochement_search_state` ·
+défaut des fonctions neuves = `postgres, authenticated, service_role` (plus `anon`).
+
+**Vrais appels avec la clé publique seule** : 6/6 **refusés** (401, `42501 permission denied`) :
+`app_bascule_identite_contact_annuler` (mode à blanc), `app_get_rapprochement_stats`, vues
+`app_registre_mandats_current` et `app_contact_relations_current`, tables
+`app_rapprochement_search_state` et `app_dossier_current`.
+
+**Ce que les internautes voient toujours** (sans clé, sans connexion) : photo du coffre public
+200 `image/jpeg` · vitrine 200 · son catalogue JSON 200 (1,2 Mo) · page RDV publique 200 ·
+Render `/health` 200 · données d'un bien pour le RDV (`/public/appointments/annonce/63028/bootstrap`,
+Render → base en clé de service) 200, 181 Ko. L'espace client n'a **pas** été ouvert : ses liens
+sont nominatifs et l'ouverture est tracée (elle aurait signalé une fausse visite au négociateur) ;
+il passe par le même chemin que le RDV (Render, clé de service).
+
+**La page de connexion de l'app** fait 2 appels AVANT la connexion, que l'audit n'avait pas vus,
+tous deux désormais refusés (401) — **sans régression** :
+- `app_condition_catalogue` (`api.ts:1672`) : sa règle RLS est réservée à `authenticated`, un
+  visiteur recevait déjà une liste vide ; le chargeur rend `[]` sur erreur. *Défaut ANTÉRIEUR
+  noté au passage : chargé une seule fois au montage de `App` (`App.tsx:15279`) — après une
+  connexion par mot de passe sans rechargement, le catalogue reste vide jusqu'au rechargement.*
+- `app_searches_to_complete` (`api.ts:3580`) : **renvoyait les recherches à compléter (avec les
+  e-mails des négociateurs) à N'IMPORTE QUEL VISITEUR** — fuite fermée. Le tableau de bord qui
+  l'appelle (`HomeDashboardScreen`) est démonté sur l'écran de connexion (`App.tsx:18052`) et
+  remonté après : l'appel repart connecté.
+
+**Reste à contrôler** : l'app connectée (Frédéric se connecte dans le panneau du navigateur) ;
+la nuit du 08 au 09/10 (run, crons, worker) ; le déploiement de `hektor-diffusion` (accord).
