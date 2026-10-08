@@ -1,6 +1,11 @@
 -- =====================================================================
--- REPETITION du POINT 5b -- NE CHANGE RIEN A LA BASE
+-- REPETITION du POINT 5b -- NE CHANGE RIEN A LA BASE  (version 2)
 -- Date : 2026-10-08 · Detail : notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md
+--
+-- ⚠ VERSION 2. La v1 a echoue sur `missing_contact_email` : ma charge d'essai n'avait
+--   pas d'e-mail, et le garde-fou d'origine (app_console_create_update_mandant_contact_job)
+--   l'exige, comme il exige un nom. Il a donc fait son travail. La charge est desormais
+--   construite DEPUIS LA BASE -- aucun e-mail de client n'est ecrit dans ce fichier.
 --
 -- Elle joue LE VRAI patch (patch_5b_mandant_identite_2026-10-08.sql, recopie sans son
 -- BEGIN/COMMIT ni son garde-fou), essaie le geste AVANT et APRES, PUIS joue le vrai
@@ -65,14 +70,20 @@ INSERT INTO pg_temp._e5b SELECT 4,'avant_ville', coalesce(ville,'(vide)')
 -- 2. LE BUG, REPRODUIT : on joue le geste tel que l'ecran l'envoie (cible 48422)
 -- ---------------------------------------------------------------------
 DO $$
-DECLARE j public.app_console_job; info text; v_ville text; v_attente int;
+DECLARE j public.app_console_job; info text; v_ville text; v_attente int; v_charge jsonb;
 BEGIN
+  -- La charge est construite DEPUIS LA BASE : nom et e-mail reels (le garde-fou les
+  -- exige), sans qu'aucune donnee de client ne figure dans ce fichier.
+  SELECT jsonb_build_object(
+           'hektor_contact_id','48422', 'contact_id','48422',
+           'last_name', coalesce(nullif(trim(c.nom),''),  'MANDANT ESSAI'),
+           'email',     coalesce(nullif(trim(c.email),''),'essai-5b@gti-immobilier.fr'),
+           'city',      'ESSAI 5B')
+    INTO v_charge
+    FROM public.app_contact_current c WHERE c.hektor_contact_id='10025872';
+
   BEGIN
-    j := public.app_update_mandant_contact_optimistic(
-           7589229::bigint, '63244', '48422',
-           jsonb_build_object('hektor_contact_id','48422','contact_id','48422',
-                              'last_name','MARTINS FERNANDES','city','ESSAI 5B'),
-           16);
+    j := public.app_update_mandant_contact_optimistic(7589229::bigint, '63244', '48422', v_charge, 16);
     SELECT coalesce(ville,'(vide)') INTO v_ville FROM public.app_contact_current WHERE hektor_contact_id='10025872';
     SELECT count(*) INTO v_attente FROM public.app_contact_pending WHERE hektor_contact_id='10025872';
     info := 'travail cree=' || CASE WHEN j.id IS NULL THEN 'non' ELSE 'oui' END
@@ -171,14 +182,18 @@ $function$;
 -- 4. LE MEME GESTE, APRES LE PATCH -- puis annule tout de suite.
 -- ---------------------------------------------------------------------
 DO $$
-DECLARE j public.app_console_job; info text; v_ville text; v_attente int; v_designe int;
+DECLARE j public.app_console_job; info text; v_ville text; v_attente int; v_designe int; v_charge jsonb;
 BEGIN
+  SELECT jsonb_build_object(
+           'hektor_contact_id','48422', 'contact_id','48422',
+           'last_name', coalesce(nullif(trim(c.nom),''),  'MANDANT ESSAI'),
+           'email',     coalesce(nullif(trim(c.email),''),'essai-5b@gti-immobilier.fr'),
+           'city',      'ESSAI 5B')
+    INTO v_charge
+    FROM public.app_contact_current c WHERE c.hektor_contact_id='10025872';
+
   BEGIN
-    j := public.app_update_mandant_contact_optimistic(
-           7589229::bigint, '63244', '48422',
-           jsonb_build_object('hektor_contact_id','48422','contact_id','48422',
-                              'last_name','MARTINS FERNANDES','city','ESSAI 5B'),
-           16);
+    j := public.app_update_mandant_contact_optimistic(7589229::bigint, '63244', '48422', v_charge, 16);
     SELECT coalesce(ville,'(vide)') INTO v_ville FROM public.app_contact_current WHERE hektor_contact_id='10025872';
     SELECT count(*) INTO v_attente FROM public.app_contact_pending WHERE hektor_contact_id='10025872';
     SELECT count(*) INTO v_designe FROM public.app_contact_pending
@@ -195,14 +210,18 @@ END $$;
 
 -- Le repli : si l'appelant envoie deja NOTRE numero, ca doit marcher aussi.
 DO $$
-DECLARE j public.app_console_job; info text; v_ville text;
+DECLARE j public.app_console_job; info text; v_ville text; v_charge jsonb;
 BEGIN
+  SELECT jsonb_build_object(
+           'hektor_contact_id','10025872', 'contact_id','10025872',
+           'last_name', coalesce(nullif(trim(c.nom),''),  'MANDANT ESSAI'),
+           'email',     coalesce(nullif(trim(c.email),''),'essai-5b@gti-immobilier.fr'),
+           'city',      'ESSAI 5B BIS')
+    INTO v_charge
+    FROM public.app_contact_current c WHERE c.hektor_contact_id='10025872';
+
   BEGIN
-    j := public.app_update_mandant_contact_optimistic(
-           7589229::bigint, '63244', '10025872',
-           jsonb_build_object('hektor_contact_id','10025872','contact_id','10025872',
-                              'last_name','MARTINS FERNANDES','city','ESSAI 5B BIS'),
-           16);
+    j := public.app_update_mandant_contact_optimistic(7589229::bigint, '63244', '10025872', v_charge, 16);
     SELECT coalesce(ville,'(vide)') INTO v_ville FROM public.app_contact_current WHERE hektor_contact_id='10025872';
     info := 'ville apres=' || v_ville;
     RAISE EXCEPTION 'ANNULATION_INTERNE';

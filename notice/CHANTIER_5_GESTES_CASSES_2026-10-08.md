@@ -514,3 +514,17 @@ la cible. Trois fichiers, `supabase/patch_5b_mandant_identite_2026-10-08*` :
 Empreinte attendue après le patch : **`c0fe0f30a3dc1b2d4cdceea156800092`**.
 Les **noms de paramètres sont inchangés** (Postgres refuse un renommage par
 `create or replace`). Aucune ligne de front, aucun déploiement, aucun redémarrage.
+
+### Étape 4 — Répétition v1 : ARRÊTÉE par un garde-fou d'origine (08/10, ~11:20)
+
+Collée par Frédéric. Les trois essais ont rendu **`ERREUR 22023/missing_contact_email`** :
+ma charge d'essai n'avait pas d'e-mail, et `app_console_create_update_mandant_contact_job`
+en exige un (comme il exige un nom, un numéro d'annonce, un identifiant numérique et le droit).
+**Le garde-fou a fait son travail** ; le défaut était dans mon essai, pas dans le patch.
+
+Tout le reste de la répétition est conforme : empreinte d'avant
+`b8a89ff72095acb00dccbf3c857e90ab`, 9 travaux, 0 ligne d'attente, ville inchangée, droits
+`anon=non`, et **empreinte après inverse identique à l'avant** — la base n'a pas bougé.
+
+**Répétition v2** : la charge est construite **depuis la base** (nom et e-mail réels lus au
+moment de l'essai), donc aucune donnée de client n'est écrite dans le fichier.
