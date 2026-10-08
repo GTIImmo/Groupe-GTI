@@ -720,3 +720,63 @@ part sans erreur.
 **Observé au passage, à ne pas perdre** : pendant la recherche étendue, l'app a affiché un
 bandeau **« canceling statement due to statement timeout »** — une requête Supabase expirée,
 remontée à l'écran. À verser au **chantier ④**.
+
+---
+
+## 5d — LE FILET DU RATTACHEMENT VISAIT LA MAUVAISE CLÉ
+
+### Étape 1 — Audit du 08/10 · **CONFIRMÉ, et c'est DEUX endroits**
+
+**La racine : une colonne du même nom, au contenu inverse selon la table.** Vérifié par la
+**plage des numéros** — qui ne dépend d'aucun nom — et recoupé avec le **miroir Hektor**, qui
+ne connaît par construction que les numéros de Hektor (1 … 605 744) :
+
+| table · colonne | plage réelle | contient |
+|---|---|---|
+| contacts · `hektor_contact_id` | 10 000 003 … 10 650 596 | **NOTRE numéro** *(le nom ment)* |
+| contacts · `hektor_target_id` | 3 … 605 743 | Hektor |
+| registre des liens · `app_contact_id` | 10 000 026 … 10 650 596 | **nous**, 132 713 / 132 713 |
+| registre des liens · `hektor_contact_id` | **47 … 605 743** | **Hektor**, 132 713 / 132 713 |
+
+*(Frédéric l'avait en mémoire et a demandé deux fois de revérifier : « un id app portait encore
+hektor id comme libellé ». Il avait raison.)*
+
+**Le worker y cherchait NOTRE numéro, à deux endroits :**
+
+1. **le filet d'échec** (l. 14919) : `annulerRattachementOptimiste(job, annonceId, identite, …)`
+   — la fonction filtre sur `hektor_contact_id`. Zéro ligne → **un rattachement refusé par
+   Hektor restait affiché, pour toujours** ;
+2. **le marquage de réussite** (l. 14954) : `hektor_contact_id=eq.<identite>` → zéro ligne → le
+   lien restait `present_in_hektor = false`, donc **non retirable jusqu'au run du lendemain** —
+   exactement ce que ce bloc du 03/10 voulait supprimer. Son propre journal le soupçonnait :
+   *« Aucune ligne à marquer (déjà établie, **ou posée sous une autre clé**) »*.
+
+**Ce que `cef0ed2` (03/10) avait vraiment fait** : élargir la **portée** du filet aux étapes
+précédentes. Il n'a pas touché à la clé.
+
+**Jamais déclenché à ce jour** : 3 rattachements, tous **acceptés** (dernier le 03/10), donc le
+filet d'échec n'a jamais servi ; et le marquage **n'a jamais tourné** (ces travaux n'ont pas
+l'étape `relation_etablie`, le code étant postérieur — les workers n'ont redémarré
+qu'aujourd'hui). Trace : les 2 lignes `source='app'` sont encore `present_in_hektor = false`.
+
+### Étapes 2 et 3 — Correctif (option A, « vas-y » du 08/10)
+
+Utiliser la **cible Hektor que le worker calcule déjà** trois lignes plus haut
+(`contactId = await cibleHektorContact(identite)`), aux deux endroits. Et **ne jamais deviner** :
+si la traduction elle-même a échoué (`contactId` nul), on ne filtre pas au hasard — on **crie**
+dans le journal « à reprendre à la main », comme le fait le geste jumeau. Les journaux nomment
+désormais **les deux numéros** (`hektor_contact_id` et `identite_app`), pour que le prochain
+lecteur n'ait pas à deviner.
+
+**Vérifié avant de coder, comme annoncé** : les trois filtres du worker sur `app_relation` —
+le troisième, `annulerRetraitOptimiste`, filtre sur `app_contact_id` (notre numéro, fourni par
+le front dans `payload.app_contact_id`) : **il est juste, je n'y touche pas** ; le garde-fou
+`source=eq.app` (on ne touche qu'aux liens nés dans l'app) : **conservé** ; `retire_le=is.null`
+(on ne réveille jamais un lien retiré) : **conservé**.
+
+*(Option B — tout aligner sur `app_contact_id` — écartée : le payload du rattachement ne porte
+pas `app_contact_id`, contrairement à celui du retrait, et `identite` n'est pas garanti d'être
+notre numéro : la RPC accepte les deux.)*
+
+`node --check` ✔. ⚠ **DORMANT** : actif après redémarrage des 4 services worker.
+**Retour arrière** : remettre `identite` aux deux endroits.

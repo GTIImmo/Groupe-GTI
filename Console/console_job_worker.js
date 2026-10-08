@@ -14913,11 +14913,31 @@ async function executerRattachementMandant(job) {
     contactId = await cibleHektorContact(identite, { contexte: "link_hektor_mandant" });
     linkResult = await linkHektorMandantContact(job, annonceId, contactId, "hektor_mandant");
   } catch (erreur) {
-    // ⚠ identite peut etre vide (payload abime) : annulerRattachementOptimiste le
-    //   voit et ne touche alors a rien -- mieux vaut ne rien defaire que defaire au
-    //   hasard sur une cle vide.
-    await annulerRattachementOptimiste(job, annonceId, identite,
-      erreur && erreur.message ? erreur.message : String(erreur));
+    // ⛔ 5d (08/10/2026) — C'EST LA CIBLE HEKTOR QU'IL FAUT, PAS NOTRE IDENTITE.
+    //   Ce filet passait `identite`. Or annulerRattachementOptimiste filtre le
+    //   registre sur `hektor_contact_id`, et cette colonne-la porte LE NUMERO DE
+    //   HEKTOR -- mesure du 08/10 sur 132 713 liens vivants :
+    //       app_relation.app_contact_id      10 000 026 .. 10 650 596  (nous)
+    //       app_relation.hektor_contact_id           47 ..    605 743  (Hektor)
+    //   (⚠ et dans app_contact_current, la colonne du MEME NOM porte NOTRE numero :
+    //    le nom ne dit pas le contenu, seule la plage le dit.)
+    //   Le filtre ne trouvait donc JAMAIS rien : un rattachement refuse par Hektor
+    //   restait affiche, pour toujours.
+    //
+    // ⚠ SI LA CIBLE EST INCONNUE, ON NE DEVINE PAS. `contactId` est nul quand la
+    //   traduction elle-meme a echoue. Defaire au hasard sur une mauvaise cle serait
+    //   pire que ne rien defaire : on CRIE dans le journal, comme le fait le geste
+    //   jumeau (annulerRetraitOptimiste).
+    const causeEchec = erreur && erreur.message ? erreur.message : String(erreur);
+    if (contactId) {
+      await annulerRattachementOptimiste(job, annonceId, contactId, causeEchec);
+    } else {
+      await logJob(job.id, "rattachement_annule", "error",
+        "⛔ Hektor a refuse ET la cible Hektor du contact est inconnue : le lien reste "
+        + "AFFICHE alors que Hektor ne l'a pas. A REPRENDRE A LA MAIN.",
+        { hektor_annonce_id: String(annonceId), identite_app: identite,
+          cause: String(causeEchec).slice(0, 300) });
+    }
     throw erreur;
   }
 
@@ -14951,8 +14971,16 @@ async function executerRattachementMandant(job) {
   // ⚠ ON NE TOUCHE QUE LES LIGNES A false : on ne reecrit jamais une ligne deja
   //   etablie, et on ne reveille JAMAIS une ligne retiree (retire_le non nul).
   try {
+    // ⛔ 5d (08/10/2026) — MEME CORRECTION QUE LE FILET D'ECHEC, MEME RAISON.
+    //   On cherchait `hektor_contact_id = identite`, c'est-a-dire NOTRE numero dans
+    //   une colonne qui porte celui de HEKTOR (132 713 lignes sur 132 713, mesure du
+    //   08/10). Zero ligne marquee, a tous les coups -- et le mandant restait
+    //   NON RETIRABLE jusqu'au run du lendemain, exactement ce que ce bloc voulait
+    //   supprimer. Le journal le soupconnait deja : « ou posee sous une autre cle ».
+    //   `contactId` est la cible Hektor, calculee plus haut et forcement connue ici
+    //   (on est apres un rattachement reussi).
     const cible = `app_relation?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`
-      + `&hektor_contact_id=eq.${encodeURIComponent(identite)}`
+      + `&hektor_contact_id=eq.${encodeURIComponent(String(contactId))}`
       + `&present_in_hektor=is.false&retire_le=is.null`;
     const marquees = await supabaseRequest(cible, {
       method: "PATCH",
@@ -14964,11 +14992,11 @@ async function executerRattachementMandant(job) {
       nb > 0
         ? "Le registre porte le lien comme ETABLI : il est visible, et retirable, tout de suite"
         : "Aucune ligne a marquer (deja etablie, ou posee sous une autre cle)",
-      { hektor_annonce_id: annonceId, hektor_contact_id: identite, lignes_marquees: nb });
+      { hektor_annonce_id: annonceId, hektor_contact_id: String(contactId), identite_app: identite, lignes_marquees: nb });
   } catch (erreur) {
     await logJob(job.id, "relation_etablie", "error",
       "Lien pose chez Hektor mais le registre n'a pas pu etre marque -- le run de nuit le fera",
-      { hektor_annonce_id: annonceId, hektor_contact_id: identite,
+      { hektor_annonce_id: annonceId, hektor_contact_id: String(contactId), identite_app: identite,
         error: erreur && erreur.message ? erreur.message : String(erreur) });
   }
 
