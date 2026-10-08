@@ -903,3 +903,31 @@ Patch collé par Frédéric. Contrôle en base, lecture seule :
 1. retirer puis rattacher un mandant sur un bien d'essai **sans numéro de mandat** (62963 ou
    62964 — sur 62774 le retrait est grisé) et vérifier qu'il **réapparaît au clic** ;
 2. vérifier le **lendemain matin** qu'il est **toujours là** — c'est ce qui prouve le morceau B.
+
+### Étape 5 (suite) — ESSAI RÉEL : **le geste marche au clic** (08/10, ~17:40)
+
+Bien d'essai **62963** (« TEST C15 entrepot », **sans numéro de mandat**), mandant
+**Sophie TEST MANDANT 25-08** (cible Hektor 605030), **retiré le 03/10 à 18:22**.
+
+**Preuve d'atteignabilité, au passage** : la fiche affichait « Source Registre des liens ·
+**0 mandant** » et « Aucun contact lié », et la recherche de rattachement a pourtant **proposé
+ce contact retiré, sans le moindre avertissement**. Le scénario n'est pas théorique.
+
+```
+au clic   app_relation_id 1000008  (LE MEME -- la ligne n'est pas renumerotee)
+          retire_le    2026-10-03  ->  NULL
+          retire_par                  ->  NULL
+          source       app  (inchange)
+          liens visibles du bien :  0  ->  1
++35 s     le worker : done, et l'etape de 5d dit
+          « Le registre porte le lien comme ETABLI : il est visible, et retirable,
+            tout de suite »
+          present_in_hektor  ->  TRUE
+```
+
+**Les deux correctifs de la journée s'enchaînent** : 5e efface le retrait, ce qui rend la ligne
+éligible au marquage réparé en 5d, qui la bascule 35 secondes plus tard. Avant ce matin, aucun
+des deux n'aurait joué.
+
+**Reste à voir demain matin** : que le run de 05:00 **ne repose pas** le retrait — c'est le
+morceau B (`relation_ledger.py`), et c'est le seul contrôle qui manque à 5e.
