@@ -590,3 +590,27 @@ négociateur propriétaire du bien est inactif — repli prévu, journalisé, qu
 - le `exception when others then null` efface toujours la trace d'un échec → **chantier ④** ;
 - l'écran, lui, affiche bien l'erreur si la RPC échoue (`App.tsx:13869`), ce n'est donc pas
   un silence complet côté utilisateur.
+
+### 5a ter (suite) — LE JUMEAU « VENDU / CLOS » reçoit le même traitement (08/10)
+
+Frédéric : *« même traitement si les problèmes sont similaires »*. Mesuré, ils le sont — et le
+cas est encore plus net que pour les archives :
+
+| périmètre « historique » (Vendu / Clos, non archivé) | |
+|---|---|
+| annonces | 9 687 |
+| **avec le détail complet en local** | **9 616 — 99,3 %** |
+| avec le bloc console en local | **21** |
+| avec le chauffage en local | 8 868 (91,5 %) |
+
+`prepare_historical_annonce_detail.py` lit la même base locale (`data/hektor.sqlite`) et la
+même table `hektor_annonce_console_detail` que son jumeau. Le handler du worker appelait
+`runTargetedConsoleMissingFields` exactement pareil.
+
+**Codé** : un **seul interrupteur pour les deux**, renommé
+`CONSOLE_DETAIL_LEGER_EXTRACTION` (l'ancien nom disait « ARCHIVE » et aurait trompé le lecteur
+sur le chemin Vendu/Clos ; rien n'était encore actif, le renommage ne coûte rien). Éteint par
+défaut. `node --check` ✔.
+
+⚠ **Toujours DORMANT** : actif seulement après redémarrage des **quatre** services worker.
+**Retour arrière** : `CONSOLE_DETAIL_LEGER_EXTRACTION=1` + redémarrage, aucun code à toucher.
