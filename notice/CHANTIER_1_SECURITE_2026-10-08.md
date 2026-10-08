@@ -64,6 +64,24 @@ protection (RLS) : si elle ne vérifie pas elle-même qui l'appelle, elle est gr
 
 **Personne n'a besoin du rôle `anon` sans être connecté.**
 
+### Ce que les internautes doivent continuer de voir *(question de Frédéric, 08/10)* — vérifié
+
+| Ce que voit l'internaute | Par où ça passe | Touché par le patch ? |
+|---|---|---|
+| **Photos** (vitrine, e-mails, espace client) | coffre `gti-photo` **public** de Supabase Storage : adresse `…/storage/v1/object/public/gti-photo/…`, lue sans aucun rôle de la base | **non** — le patch ne touche que le schéma `public` (fonctions, 15 vues, 2 tables), pas le stockage |
+| **Vitrine** (`vitrine-main`) | page statique hébergée à part ; elle lit **un fichier JSON** (`exports/catalogue_vitrine.json`) fabriqué la nuit par le run avec la clé de service (`script.js:539-546`) ; aucun appel à Supabase depuis le navigateur | **non** |
+| **Espace client** (`/espace/{token}`, avis ❤/✕, message, visite, recherche) | pages fabriquées par le **backend Render**, qui lit la base avec la **clé de service** (`espace_client.py:726-730`) ; le navigateur ne parle qu'au backend (`espace_portal.py:492, 527, 651`) | **non** |
+| **Prise de RDV et estimation publiques** (`apps/rdv-public`) | appels au backend `/public/appointments/…` (`app.js:668-753`), clé de service côté backend (`appointment_service.py:52`) | **non** |
+| **Liens des e-mails** (`/r/feedback/{token}`, `/visite/{token}`) | backend, clé de service (`emails.py`, `visite.py`) | **non** |
+| **Documents** (coffre privé) | lecture par un utilisateur **connecté** (règles `storage` en `authenticated`) | **non** (`authenticated` est gardé) |
+
+### Détail technique qui change le patch
+
+Pour **121 des 136** fonctions, `anon` reçoit son droit **deux fois** : en direct **et** via le
+droit « tout le monde » (`PUBLIC`). Retirer `anon` seul ne suffirait donc pas : le patch retire
+aussi `PUBLIC`. C'est sans risque : `authenticated` et `service_role` ont leur droit **explicite
+sur les 136** (mesuré), ils ne dépendent pas de `PUBLIC`.
+
 ## Les correctifs proposés (en attente du « vas-y » et de l'accord base de production)
 
 Un patch SQL `supabase/patch_chantier1_fermer_anon_2026-10-08.sql`, versionné, que Frédéric
