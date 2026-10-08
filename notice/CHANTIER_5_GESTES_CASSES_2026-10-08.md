@@ -7,7 +7,7 @@
 
 ## Les points et leur état
 
-**État au 08/10 au soir : les 9 points sont traités. Le chantier est FINI.**
+**État au 08/10 au soir : les 9 points sont traités, 7 prouvés par un geste réel. Le chantier est FINI.**
 
 | # | Le geste cassé | Objet | État |
 |---|---|---|---|
@@ -19,7 +19,7 @@
 | 5f | Retour d'état après un échec passager (offre / compromis) | Transaction | ✅ actif, **éprouvé hors ligne 6/6** — c'était la seconde moitié de C.4-bis (29/08). Reste : l'abandon RÉEL (5 tentatives ou « abandon » humain) → chantier ④ |
 | 5g | Supprimer un contact : le nettoyage local rate sa cible | Contact | ✅ **prouvé en réel** (contact 10355757, liens physiquement effacés des deux côtés) |
 | 5h | Mandant créé en échec : rien n'est défait | Mandant | ✅ sentinelle `contact_sans_numero_hektor` posée, lue par le moniteur, **verte** · options B/C (marqueur à l'écran, bouton « réessayer ») non faites |
-| 5i | Conflit causé par l'app elle-même | Annonce | 🔧 codé, `node --check` ✔ — **DORMANT** jusqu'au redémarrage des 4 workers, **non éprouvé en réel** (mode opératoire en fin de note) |
+| 5i | Conflit causé par l'app elle-même | Annonce | ✅ **PROUVÉ EN RÉEL le 08/10 au soir** (bien 62963) — voir la section de clôture |
 
 ---
 
@@ -1265,8 +1265,8 @@ statut dans les 10 minutes » sur un bien d'essai — faisable, à faire si Fré
 
 ### Ce qui a été réparé, et comment on le sait
 
-9 points, **6 prouvés par un geste réel en production** (5a, 5a ter, 5b, 5d, 5e-A, 5g),
-1 sentinelle posée et lue (5h), 1 éprouvé hors ligne et actif (5f), 1 codé et dormant (5i).
+9 points, **7 prouvés par un geste réel en production** (5a, 5a ter, 5b, 5d, 5e-A, 5g, 5i),
+1 sentinelle posée et lue (5h), 1 éprouvé hors ligne et actif (5f).
 **4 patchs SQL** appliqués par Frédéric après répétition (5a, 5b, 5e, et le correctif de la
 garde de retour arrière), **1 déploiement front** (le bouton de désarchivage, `78e6574`),
 **3 fichiers serveur** touchés (`console_job_worker.js`, `relation_ledger.py`,
@@ -1291,17 +1291,15 @@ code au lieu de mesurer la base. La hiérarchie est **la base > le code > les no
 
 1. **Le run du 09/10** — la liste détaillée est dans la section
    « ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 » ci-dessus (5c et 5e-B).
-2. **Allumer 5i** : redémarrer les 4 services worker (accord de Frédéric, en journée, file
-   des documents vide), puis l'essai réel ci-dessous.
-3. **Le marqueur à l'écran et le bouton « réessayer » de 5h** (options B et C) — pas faits,
+2. **Le marqueur à l'écran et le bouton « réessayer » de 5h** (options B et C) — pas faits,
    ils relèvent du chantier ④ « aucun échec silencieux ».
-4. **L'abandon réel de 5f** (rendre l'état quand le filet a vraiment renoncé : 5 tentatives
+3. **L'abandon réel de 5f** (rendre l'état quand le filet a vraiment renoncé : 5 tentatives
    ou « abandon » humain) — touche 2 fonctions SQL, chantier ④.
-5. **Les ~25 champs que l'API de Hektor ne rend jamais** (chauffage mis à part : il a sa
+4. **Les ~25 champs que l'API de Hektor ne rend jamais** (chauffage mis à part : il a sa
    source `chauffage_console_json`) : 5 textes de secteur, 2 images DPE/GES, le détail de la
    grille d'honoraires — **chantier ⑥**, pas celui-ci.
 
-### Le mode opératoire de l'essai réel de 5i (à faire après le redémarrage)
+### ✅ L'ESSAI RÉEL DE 5i — fait le 08/10 au soir, concluant
 
 Ce que 5i change ne se voit **que** si l'app elle-même fait bouger Hektor pendant les
 10 minutes d'attente d'une saisie. La séquence :
@@ -1323,3 +1321,24 @@ Ce que 5i change ne se voit **que** si l'app elle-même fait bouger Hektor penda
 ```
 
 ⚠ **À ne pas faire sur une vraie annonce** : l'essai écrit chez Hektor.
+
+**CE QUI A ÉTÉ FAIT ET MESURÉ, le 08/10 au soir** *(bien 62963 « TEST C15 entrepôt »,
+`app_dossier_id` 5880239)* :
+
+| étape | mesure |
+|---|---|
+| le réveil | les 4 processus worker sont partis à **20:39:2x**, le fichier avait été modifié à **19:15:37** — donc 5i était bien actif |
+| la saisie | `app_annonce_pending`, `push_fields = {"corps": "ESSAI 5i…"}`, `dirty_at` **18:46:22 UTC**, envoi prévu **18:56:22**, photo de Hektor `_date_maj` **03/10 16:40:32** |
+| le geste d'état | `change_hektor_annonce_status` (statut Actif, le seul qui ne crée aucune transaction), créé **18:48:23**, **done 18:49:00** — donc après la saisie |
+| le push | `update_hektor_annonce_fields` créé **18:57:00**, done **18:57:16** |
+| ⭐ **la preuve** | journal `annonce_overwrite_guard` : **« Hektor a bouge, mais c'est NOTRE geste d'etat : aucun champ commun, la saisie part »**, avec `base_date_maj 2026-10-03 16:40:32`, `fresh_date_maj 2026-10-08 20:48:43`, `notre_travail change_hektor_annonce_status`, `fini_le 18:49:00` |
+| l'écriture chez Hektor | `hektor_annonce_update` « Sauvegarde texte principal », champ `description`, réponse de Hektor **`result: 1`** ; bilan du travail `status: updated`, **`skipped_fields` vide** |
+| après | la saisie est **effacée** (elle ne l'est que si tout est passé), **0 conflit** dans toute la table, le statut reste **Actif**, et le texte **revient à l'écran par la resynchro** (`refresh_console_data` done 18:57:52) — donc Hektor le porte vraiment |
+
+**Avant le correctif**, ce même enchaînement aurait rendu `held_conflict` : la saisie aurait été
+soldée au journal des résolutions et **Hektor n'aurait jamais reçu le texte**.
+
+**Vérifié au passage, rien d'autre n'a bougé** : la relation `app_relation_id 1000008` du bien
+est intacte (`present_in_hektor` vrai, `retire_le` NULL, `last_seen_at` toujours 03/10). Le
+panneau de gauche affiche « Aucun mandant » parce que ce contact est **propriétaire** et que
+le bien n'a pas de numéro de mandat — ce n'est pas une perte.
