@@ -124,6 +124,39 @@ FROM (
 """,
         expectation="surveiller, indicateur borne a 5000 pour detecter les cas type 59449/44506",
     ),
+    # ⭐ 5h (08/10/2026) -- UN CONTACT NE DANS L'APP ET JAMAIS CREE CHEZ HEKTOR.
+    #
+    # LE GESTE. « Creer un mandant » ecrit le contact DURABLEMENT chez nous des le
+    # clic (C.1' : une saisie ne se perd jamais), puis envoie la creation a Hektor.
+    # Si l'envoi echoue, le LIEN provisoire est bien marque en erreur -- mais le
+    # CONTACT reste, avec notre numero et SANS numero Hektor, indiscernable d'un
+    # vrai. Et rien ne le rattrape : le filet de rejeu EXCLUT les creations
+    # (decision du 29/08 : « rejouer une creation la DOUBLE »), le push de nuit ne
+    # supprime que ce qu'il a lui-meme envoye, et le build travaille depuis le
+    # miroir, ou ce contact n'existe pas.
+    #
+    # ⚠ GARDER LE CONTACT EST VOULU -- on ne jette pas la saisie d'un negociateur.
+    #   Ce qui manquait, c'est de LE SAVOIR. Cette sentinelle ne repare rien : elle
+    #   compte. « Une mesure que personne ne lit n'est pas une garde. »
+    #
+    # ⚠ ELLE LIT LA DOUBLURE, PAS NOTRE COUCHE -- et c'est tout le sujet. Le contact
+    #   orphelin n'existe QUE dans Supabase : notre couche locale est une projection
+    #   du miroir Hektor, elle ne le verra jamais. `app_contact_current__sb` est la
+    #   copie de Supabase descendue chaque jour a 08:15 (62 162 lignes au 08/10).
+    #   Une sentinelle posee sur la couche locale aurait rendu 0 EN MENTANT.
+    #
+    # ZERO ATTENDU. Mesure du 08/10 : 0 -- le defaut est arme depuis la bascule du
+    # 23/09 mais n'a jamais servi (17 creations de mandant, 0 en erreur).
+    QualityCheck(
+        key="contact_sans_numero_hektor",
+        label="Contacts de l'app que Hektor ne connait pas (creation jamais aboutie)",
+        sql="""
+SELECT COUNT(*) AS value
+FROM app_contact_current__sb
+WHERE NULLIF(TRIM(COALESCE(hektor_target_id, '')), '') IS NULL
+""",
+        expectation="0 attendu -- au-dessus, une creation de contact n'a jamais abouti chez Hektor",
+    ),
 )
 
 

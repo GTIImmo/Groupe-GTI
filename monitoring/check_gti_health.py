@@ -1111,6 +1111,7 @@ class Monitor:
             ("mandat_un_numero", self.check_mandat_un_numero),
             ("relation_disparue", self.check_relation_disparue),
             ("contacts_identite", self.check_contacts_identite),
+            ("contacts_sans_hektor", self.check_contacts_sans_hektor),
             ("contacts_satellites", self.check_contacts_satellites),
             ("local_logs", self.check_local_logs),
             ("playwright_sessions", self.check_playwright_sessions),
@@ -2390,6 +2391,59 @@ class Monitor:
         else:
             self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "ok",
                      "Les tables satellites suivent leur contact (0 ancien numero)", mesure)
+
+    def check_contacts_sans_hektor(self) -> None:
+        """5h (08/10/2026) -- UN CONTACT QUE HEKTOR NE CONNAIT PAS.
+
+        « Creer un mandant » ecrit le contact chez nous des le clic (C.1' : une
+        saisie ne se perd jamais). Si la creation echoue chez Hektor, le LIEN est
+        bien marque en erreur -- mais le CONTACT reste, sans numero Hektor, et rien
+        ne le rattrape : le filet de rejeu exclut les creations, le push ne
+        supprime que ce qu'il a envoye, le build ne voit que le miroir.
+
+        GARDER LE CONTACT EST VOULU. Ce qui manquait, c'est de LE SAVOIR.
+
+        ⚠ LA FORMULE N'EST PAS ICI : c'est le controle `contact_sans_numero_hektor`
+          de phase2/checks/quality_checks.py, lu par sa cle -- une seule copie de
+          la regle, comme pour les deux controles d'identite ci-dessous.
+        ⚠ IL LIT LA DOUBLURE `app_contact_current__sb` : le contact orphelin
+          n'existe QUE dans Supabase. Une sonde posee sur notre couche locale
+          rendrait 0 EN MENTANT.
+        """
+        db = self.root / "phase2" / "phase2.sqlite"
+        cle = "contact_sans_numero_hektor"
+        try:
+            if str(self.root) not in sys.path:
+                sys.path.insert(0, str(self.root))
+            from phase2.checks.quality_checks import CHECKS
+            requete = next((c.sql for c in CHECKS if c.key == cle), None)
+        except Exception as exc:  # pragma: no cover
+            requete = None
+            self.add("data.contacts_sans_hektor", "data_quality", "contact", "absolute", "warning",
+                     f"Controle des contacts sans numero Hektor introuvable ({type(exc).__name__})", {})
+            return
+        if not requete or not db.exists():
+            self.add("data.contacts_sans_hektor", "data_quality", "contact", "absolute", "warning",
+                     "Contacts sans numero Hektor : NON MESURABLE (controle ou base absents)", {})
+            return
+        try:
+            conn = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                combien = conn.execute(requete).fetchone()[0]
+            finally:
+                conn.close()
+        except sqlite3.Error as exc:
+            self.add("data.contacts_sans_hektor", "data_quality", "contact", "absolute", "warning",
+                     f"Doublure des contacts illisible ({type(exc).__name__}) -- la descente est-elle passee ?", {})
+            return
+        if combien > 0:
+            self.add("data.contacts_sans_hektor", "data_quality", "contact", "absolute", "critical",
+                     f"Contacts que Hektor ne connait pas : {combien} -- une creation n'a jamais abouti, "
+                     f"la fiche existe chez nous seulement (seuil 0)", {"contacts_sans_hektor": combien})
+        else:
+            self.add("data.contacts_sans_hektor", "data_quality", "contact", "absolute", "ok",
+                     "Chaque contact de l'app existe aussi chez Hektor (seuil 0)",
+                     {"contacts_sans_hektor": 0})
 
     def check_contacts_identite(self) -> None:
         """L4-c-bis (24/09/2026) -- UN CONTACT NUMEROTE DOIT PORTER SON IDENTITE. LOCALE.

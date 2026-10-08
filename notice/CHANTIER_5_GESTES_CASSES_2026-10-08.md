@@ -1098,3 +1098,55 @@ a cassé 5b, 5d et 5g** — trois points sur six, la même racine.
 
 `node --check` ✔, `ast.parse` ✔, CRLF conservés. ⚠ **DORMANT** : actif après redémarrage des
 4 services. **Retour arrière** : retirer l'argument et le bloc du registre.
+
+---
+
+## 5h — CRÉER UN MANDANT QUI ÉCHOUE
+
+### Étape 1 — Audit du 08/10 · **confirmé, mais la moitié du geste va déjà bien**
+
+Le clic « créer un mandant » (`app_create_mandant_contact_optimistic`) écrit **le contact
+durablement** dans `app_contact_current` — avec notre numéro et **sans numéro Hektor** — et
+**le lien en provisoire**, avec un jeton.
+
+**Si le worker échoue** : la ligne provisoire du **lien** est marquée en erreur, le bandeau
+l'affiche en rouge, elle est purgée à 24 h. **Cette moitié fonctionne.**
+
+**Ce qui reste : le contact.** Il demeure dans l'annuaire, indiscernable d'un vrai. Et **rien
+ne le rattrape** — vérifié, pas supposé :
+
+| | |
+|---|---|
+| le **filet de rejeu** | **exclut les créations** — décision du 29/08, « rejouer une création la DOUBLE » |
+| le **push de nuit** | ne supprime que ce qu'il a **lui-même envoyé** (il compare à son propre état d'envoi). Un contact né seulement dans Supabase n'y figure pas : jamais déclaré disparu, jamais effacé |
+| le **build** | travaille depuis le miroir : il ne le voit pas, et ne lui donnera jamais de numéro |
+
+**Dormant** : **0** contact sans numéro Hektor aujourd'hui ; 17 créations de mandant, **0 en
+erreur**, la dernière le 25/08. Le défaut est armé depuis la bascule du 23/09.
+
+**⚠ Et garder le contact est VOULU** : c'est C.1', *« une saisie ne se perd jamais »*. Jeter le
+nom, l'adresse et le téléphone qu'un négociateur vient de taper parce que Hektor a eu un hoquet
+serait pire. **Le défaut n'est pas qu'il reste : c'est qu'on ne le dit pas.**
+
+### Étapes 2 et 3 — Option A : une sentinelle *(choix de Frédéric)*
+
+**D'abord vérifié qu'il n'y en avait pas déjà une** *(à sa demande)* : les 8 contrôles de
+`quality_checks.py` sont `registre_couche_desaccord`, `registre_identite_mal_rangee`,
+`vue_generale_total`, `demandes_total`, `missing_titles`, `view_generale_without_dossier`,
+`demandes_without_view_generale`, `mandat_numero_id_collision`. **Aucun ne couvre ce cas.**
+
+**Ajoutée** : `contact_sans_numero_hektor`, **zéro attendu**. Pas de nouvelle colonne, pas de
+migration : l'absence de `hektor_target_id` **est** la signature.
+
+> ⚠ **Elle lit la DOUBLURE `app_contact_current__sb`, pas notre couche locale** — et c'est tout
+> le sujet : le contact orphelin n'existe **que** dans Supabase ; notre couche est une
+> projection du miroir Hektor et ne le verra jamais. **Une sentinelle posée sur la couche
+> locale aurait rendu 0 en mentant.**
+
+**Et elle est LUE** — sinon ce n'est pas une garde. Ajoutée au moniteur de santé
+(`check_gti_health.py`, sonde `data.contacts_sans_hektor`, seuil 0, **critique** au-dessus),
+sur le patron exact des deux contrôles d'identité : **la formule reste dans `quality_checks.py`
+et le moniteur la lit par sa clé** — une seule copie de la règle.
+
+**Éprouvé** : `run_quality_checks.py` passe et le rapport porte
+`contact_sans_numero_hektor : 0 | attente : 0`.
