@@ -966,3 +966,73 @@ registre des liens s'affiche dans la sortie de l'étape « registre des liens (a
 - le bien **78 (VA2380)** doit être revenu dans le parc vivant après la descente : il était
   sorti des archives sans y entrer (`ni archives ni parc vivant` le 08/10 à 10:47).
   `select count(*) from app_dossier_current where hektor_annonce_id=78` → **1 attendu**.
+
+---
+
+## 5f — L'ÉCHEC PASSAGER SUR UNE TRANSACTION
+
+### Étape 1 — Audit · **ce n'est pas un défaut à corriger : c'est une décision à moitié appliquée**
+
+Frédéric : *« cherche s'il y a une explication dans les notes avant de changer, le worker a été
+testé de nombreuses fois et normalement tout avait été prévu »*. **Il avait raison.**
+
+**① Pourquoi le worker restaure** — commit `c484c28` du 29/08 :
+> *« Sans l'état précédent dans le payload, le worker ne saurait pas quoi restaurer si Hektor
+> refuse — et l'app afficherait "offre refusée" alors qu'elle ne l'est pas, **indéfiniment**.
+> C'est exactement le mensonge silencieux que ce projet chasse. »*
+
+Décision délibérée : à l'époque, **il n'y avait pas de filet de rejeu**, restaurer était la
+seule façon de ne pas mentir.
+
+**② Et la suite était décidée le même jour** — plan, tâche C.4-bis :
+> ⚠ *UN CHOIX DE CONCEPTION, TRANCHÉ PAR FRÉDÉRIC LE 29/08 : aujourd'hui, quand Hektor refuse,
+> le worker remet l'état d'avant. **Avec un rejeu, ce sera l'inverse — on garde l'état affiché
+> et on réessaie en arrière-plan**, comme une édition qui attend. Contrepartie assumée :
+> pendant **jusqu'à 25 minutes**, l'app peut montrer un état que Hektor n'a pas encore.*
+
+**③ Ce qui s'est passé** : le filet a été construit les 29-30/08 (cron `app-action-retry-due`,
+chaque minute, **actif**, et il couvre bien les quatre gestes) — **la bascule du comportement
+ne l'a jamais suivi**. Le `catch` attrape TOUT (réseau, session expirée, délai de 60 s) et
+traitait un incident passager comme un refus, en écrivant « Hektor a refusé », ce qu'on ne sait
+pas. Puis le filet rejouait, le rejeu réussissait, et rien ne reposait l'état chez nous.
+
+**Jamais arrivé** : 47 travaux de transaction, **0 en erreur**, le dernier le 18/09. Mais le
+filet, lui, a déjà servi : 3 travaux menés à bien à la 2ᵉ tentative, 2 à la 4ᵉ.
+
+### Le périmètre, vérifié à la demande de Frédéric (« il ne faut rien casser »)
+
+| ce que fait l'écran | crée un travail Hektor ? | concerné par ce chemin ? |
+|---|---|---|
+| `app_edit_affaire_optimistic` — prix, dates, séquestre | **non** | **non** |
+| `app_repartition_commission_set` — répartition de commission | **non** | **non** |
+| `app_geste_affaire_optimistic` — les 4 gestes d'état | **oui**, avec l'état précédent | **oui** |
+
+Les huit appels à la restauration appartiennent à **quatre handlers seulement** : offre,
+annulation de compromis, suppression de compromis, suppression de vente. Le **changement de
+statut d'annonce** n'appelle pas `restaurerEtatAffaire` : il n'est pas touché.
+**Une répartition de commission ne peut pas passer par ici** — elle ne crée aucun travail.
+
+### Étapes 2 et 3 — Codé : appliquer la décision du 29/08
+
+Un garde-fou `leFiletVaRejouer(job)` **dont les seuils sont copiés du filet, pas inventés**
+(types rejouables, tentatives 1 à 4, 24 h). Si le filet va rejouer, on **conserve l'état
+affiché** et le journal dit « envoi échoué — l'état affiché est CONSERVÉ, le filet rejouera ».
+Sinon, on restaure comme avant.
+
+**Éprouvé hors ligne, 6 cas sur 6** (banc monté sur le code réel extrait du worker) :
+
+```
+  CONSERVE   geste d'etat, 1re tentative, recent
+  CONSERVE   geste d'etat, 4e tentative, recent
+  RESTAURE   geste d'etat, 5e tentative -- le filet s'arrete
+  RESTAURE   geste d'etat vieux de 30 h -- hors fraicheur
+  RESTAURE   geste NON rejouable (creation)
+  RESTAURE   payload abime : pas de date
+```
+
+`node --check` ✔, CRLF conservés. ⚠ **DORMANT** : actif après redémarrage des 4 services.
+**Retour arrière** : retirer le `if` en tête de `restaurerEtatAffaire`.
+
+**Pas fait, et c'est volontaire** : remettre l'état quand le geste est **vraiment abandonné**
+(5 tentatives, ou « abandon » choisi dans le bandeau — `app_action_resolve` ne restaure rien
+aujourd'hui). C'est la suite logique, elle touche deux fonctions SQL : **à décider séparément**.

@@ -18743,7 +18743,65 @@ async function restaurerStatutRedescendu(job, categorie, payload) {
   }
 }
 
+// ⭐ 5f -- LA SECONDE MOITIE DE C.4-bis, DECISION DE FREDERIC DU 29/08/2026
+//
+// « Aujourd'hui, quand Hektor refuse, le worker remet l'etat d'avant. AVEC UN
+//   REJEU, CE SERA L'INVERSE -- on garde l'etat affiche et on reessaie en
+//   arriere-plan, comme une edition qui attend. Contrepartie assumee : pendant
+//   jusqu'a 25 minutes, l'app peut montrer un etat que Hektor n'a pas encore.
+//   C'est le prix de "rien ne se perd". »  (plan, tache C.4-bis)
+//
+// LE FILET A ETE CONSTRUIT les 29 et 30/08 -- cron app-action-retry-due, chaque
+// minute, actif, et il couvre bien ces quatre gestes. LA BASCULE DU COMPORTEMENT
+// N'A JAMAIS ETE FAITE : le `catch` restaurait encore, et comme il attrape TOUT
+// (reseau, session expiree, delai de 60 s), il traitait un incident passager
+// comme un refus definitif -- en ecrivant « Hektor a refuse », ce qu'on ne sait
+// pas. Puis le filet rejouait, le rejeu reussissait chez Hektor, et RIEN ne
+// reposait l'etat chez nous : l'ecran montrait l'ancien jusqu'au run de nuit.
+//
+// ⚠ PERIMETRE VERIFIE LE 08/10, a la demande de Frederic (« il ne faut rien
+//   casser »). Ce chemin ne concerne QUE les quatre gestes d'etat -- les seuls
+//   qui creent un travail Hektor ET portent un etat precedent :
+//       app_edit_affaire_optimistic     (prix, dates, sequestre)  -> AUCUN travail
+//       app_repartition_commission_set  (repartition commission)  -> AUCUN travail
+//       app_geste_affaire_optimistic    (les 4 gestes d'etat)     -> travail + etat_avant
+//   Une correction de valeur ou une repartition de commission ne peut donc PAS
+//   passer par ici. Le changement de statut d'annonce non plus : il n'appelle pas
+//   restaurerEtatAffaire -- seule restaurerStatutRedescendu le fait, depuis ici.
+//
+// ⚠ LES SEUILS SONT COPIES DU FILET, pas inventes : types rejouables, 1 a 4
+//   tentatives (il s'arrete a 5), 24 h de fraicheur.
+// ⚠ ET SI LE FILET NE REJOUE PAS MALGRE TOUT ? Sa derniere condition ecarte un
+//   travail qu'un geste PLUS RECENT du meme type a deja mene a bien. Dans ce cas
+//   l'etat affiche est celui du geste recent : restaurer l'ancien serait FAUX de
+//   toute facon. Ne rien faire reste le bon choix.
+const GESTES_REJOUES_PAR_LE_FILET = new Set([
+  "change_hektor_offre_status",
+  "cancel_hektor_compromis",
+  "delete_hektor_compromis",
+  "delete_hektor_vente",
+]);
+const FILET_MAX_TENTATIVES = 5;
+const FILET_FRAICHEUR_MS = 24 * 60 * 60 * 1000;
+
+function leFiletVaRejouer(job) {
+  if (!job || !GESTES_REJOUES_PAR_LE_FILET.has(String(job.job_type || ""))) return false;
+  const tentatives = Number(job.attempt_count || 0);
+  if (!(tentatives >= 1 && tentatives <= FILET_MAX_TENTATIVES - 1)) return false;
+  const demande = Date.parse(job.requested_at || "");
+  if (!Number.isFinite(demande)) return false;
+  return (Date.now() - demande) < FILET_FRAICHEUR_MS;
+}
+
 async function restaurerEtatAffaire(job, categorie, payload) {
+  if (leFiletVaRejouer(job)) {
+    await logJob(job.id, categorie, "running",
+      "Envoi echoue -- l'etat affiche est CONSERVE, le filet rejouera (C.4-bis, decision du 29/08)",
+      { app_affaire_id: (payload && payload.app_affaire_id) || null,
+        job_type: job.job_type, tentative: Number(job.attempt_count || 0),
+        max_tentatives: FILET_MAX_TENTATIVES });
+    return { status: "conserve", raison: "le_filet_rejouera" };
+  }
   await restaurerStatutRedescendu(job, categorie, payload);
   const affaireId = payload && payload.app_affaire_id;
   if (!affaireId) {
