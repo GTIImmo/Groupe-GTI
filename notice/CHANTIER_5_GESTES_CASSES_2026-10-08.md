@@ -555,3 +555,38 @@ apres_inverse_empreinte=b8a89ff72095acb00dccbf3c857e90ab                      <-
 **Pas encore prouvé** : le geste n'a pas été fait depuis l'écran. Le chaînon « crayon → numéro
 envoyé » est vérifié dans le code, pas en réel — il faut un mandant choisi par Frédéric
 (le geste écrit chez Hektor).
+
+### Étape 5 (suite) — ESSAI RÉEL RÉUSSI, cycle complet (08/10, 13:06) · **5b est fini**
+
+Choix de Frédéric : une vraie correction sur une annonce d'essai. Bien **62774
+« TEST C4 du 25-08 Villa Bellecour »**, mandant **« Sophie TEST MANDANT 25-08 »**
+(identité 10355712, cible Hektor 605030), dont la **ville était vide**. Saisie :
+`Saint-Étienne`.
+
+```
+13:06:04  clic  -> ville chez nous = Saint-Étienne  IMMEDIATEMENT
+                   app_contact_pending : 1 ligne, push_job_id POSE (le verrou),
+                   app_contact_id = 10355712 (notre numero voyage avec la saisie),
+                   push_fields = city, email, phone, address, last_name, first_name
+13:06:06  le worker « actions » prend le travail
+          session Hektor : admin -> contexte AGENCE (le negociateur du bien est inactif)
+          hektor_mandant_update sur le contact 605030  -> « status: updated »
+13:06:32  done en 26 s, et DEUX rafraichissements enfiles tout seuls
+          (refresh_console_data 62774 + refresh_console_contact_data 605030)
+13:0x     les deux done -> la ville revient de Hektor : toujours Saint-Étienne
+          app_contact_pending : 0 ligne -- le balayage l'a retiree, le travail etant fait
+```
+
+**Tout ce que la répétition annonçait s'est produit en vrai** : la valeur chez nous tout de
+suite, le travail désigné (pas de double envoi), Hektor modifié, la redescente qui confirme,
+la file qui se vide. Travaux mandant : 9 → **10**, le premier depuis le 31/08. Les 3 liens du
+bien sont intacts, le registre n'a pas bougé.
+
+**Note utile pour la suite** : le worker a basculé en **contexte AGENCE** parce que le
+négociateur propriétaire du bien est inactif — repli prévu, journalisé, qui a fonctionné.
+
+### Ce qui reste ouvert sur 5b *(pas de ce point)*
+
+- le `exception when others then null` efface toujours la trace d'un échec → **chantier ④** ;
+- l'écran, lui, affiche bien l'erreur si la RPC échoue (`App.tsx:13869`), ce n'est donc pas
+  un silence complet côté utilisateur.
