@@ -528,3 +528,30 @@ Tout le reste de la répétition est conforme : empreinte d'avant
 
 **Répétition v2** : la charge est construite **depuis la base** (nom et e-mail réels lus au
 moment de l'essai), donc aucune donnée de client n'est écrite dans le fichier.
+
+### Étape 4 (v2) et 5 — répétition EXACTE, patch **APPLIQUÉ** (08/10, ~11:35)
+
+La répétition v2 a rendu **13 lignes sur 13 conformes** :
+
+```
+AVANT_PATCH = travail cree=oui | ville apres=Saint-André-le-Puy | attente=0   <- le bug
+APRES_PATCH = travail cree=oui | ville apres=ESSAI 5B | attente=1 | travail designe=oui
+APRES_PATCH_identite_directe = ville apres=ESSAI 5B BIS                       <- le repli
+apres_travaux_mandant=9  apres_lignes_attente=0  apres_ville=Saint-André-le-Puy
+apres_droits=anon=non authenticated=oui service_role=oui
+apres_inverse_empreinte=b8a89ff72095acb00dccbf3c857e90ab                      <- = l'avant
+```
+
+**Patch appliqué par Frédéric.** Contrôle en base, lecture seule :
+
+| contrôle | mesure |
+|---|---|
+| empreinte normalisée | **`c0fe0f30a3dc1b2d4cdceea156800092`** = la valeur annoncée avant d'appliquer |
+| la traduction est dans le code | `hektor_target_id = target_contact_id` ✔ et la variable `v_identite` ✔ |
+| nature | `SECURITY DEFINER`, `search_path=public`, même signature ✔ |
+| droits (chantier ①) | `anon=non` · `authenticated=oui` · `service_role=oui` ✔ |
+| rien écrit au passage | 9 travaux mandant, 0 ligne d'attente, ville témoin inchangée ✔ |
+
+**Pas encore prouvé** : le geste n'a pas été fait depuis l'écran. Le chaînon « crayon → numéro
+envoyé » est vérifié dans le code, pas en réel — il faut un mandant choisi par Frédéric
+(le geste écrit chez Hektor).
