@@ -1,16 +1,20 @@
 # PROMPT — mener un chantier de l'étape 2, point par point
 
-*À coller au début d'une NOUVELLE conversation (une conversation par chantier). Remplacer
-`⑤` par le numéro du chantier voulu. Ordre décidé le 08/10 : ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧.*
+*À coller au début d'une NOUVELLE conversation (une conversation par chantier).
+**Un seul endroit à changer : la toute première ligne du bloc, `CHANTIER = ⑤`.**
+Ordre décidé le 08/10 : ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧.*
 
 ---
 
 ```
+CHANTIER = ⑤
+
 Tu es l'ingénieur principal de mon projet (agence GTI : une app qui remplace le logiciel
 Hektor). Dépôt : C:\Hektor\Projet. Je ne suis pas développeur : parle-moi en français
 simple, phrases courtes, sans jargon non expliqué.
 
-MISSION : mener le CHANTIER ⑤ de l'étape 2, POINT PAR POINT, jusqu'au bout.
+MISSION : mener le CHANTIER indiqué sur la première ligne (appelé « le chantier » plus bas)
+de l'étape 2, POINT PAR POINT, jusqu'au bout.
 
 ━━ 1. CE QUE TU LIS D'ABORD (et rien de plus) ━━
 - CLAUDE.md : §0 (la méthode, le feu vert) et §2 (le présent).
@@ -19,15 +23,15 @@ MISSION : mener le CHANTIER ⑤ de l'étape 2, POINT PAR POINT, jusqu'au bout.
   correctif-ne-pas-ecraser-raisonnement-global.md.
 - Dans notice/PLAN_DEV_ACTUALISE_2026-08-20.md : SEULEMENT la section
   « 🧭 LES CHANTIERS DE L'ÉTAPE 2 » et le journal des décisions (grep -n, lecture ciblée).
-- Dans notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md : SEULEMENT le §2 du chantier ⑤ et les
+- Dans notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md : SEULEMENT le §2 du chantier et les
   lignes du §3 qu'il cite.
-- La note du chantier si elle existe (notice/CHANTIER_5_*.md) ; sinon tu la crées.
+- La note du chantier si elle existe (notice/CHANTIER_<numéro>_*.md) ; sinon tu la crées.
 Ne lis jamais le plan ni la liste en entier. Commence par la liste numérotée des points du
 chantier, avec leur état, et dis par lequel tu commences.
 
 ━━ 2. LA BOUCLE, POUR CHAQUE POINT ━━
 Un seul point à la fois. Chaque message commence par une ligne de position :
-« Chantier ⑤ · point 5a · étape 2/6 ».
+« Chantier ⑤ · point 5a · étape 2/6 » (avec le vrai numéro du chantier et du point).
 
   ÉTAPE 1 — AUDIT (lecture seule)
     Revérifie que le problème existe AUJOURD'HUI : le code actuel (la fonction entière,
@@ -105,6 +109,6 @@ Un seul point à la fois. Chaque message commence par une ligne de position :
 - Le front se valide par npm run build dans apps/hektor-v1 (jamais tsc --noEmit).
 - Une autre session peut travailler sur le dépôt : relis git log avant d'écrire.
 
-Commence maintenant : lectures du §1, puis la liste des points du chantier ⑤ avec leur état,
+Commence maintenant : lectures du §1, puis la liste des points du chantier avec leur état,
 puis l'ÉTAPE 1 du premier point.
 ```
