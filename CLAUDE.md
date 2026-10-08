@@ -15,6 +15,9 @@
 >    desaccord, le code gagne.
 > 2. **EXPLIQUER** clairement et simplement : ce que j'ai trouve, ce que je vais faire,
 >    ce que ca touche, comment on revient en arriere, comment on verifiera.
+>    ⚠ **Et TOUJOURS « ce que ca pourrait casser ailleurs »** *(Frederic, 08/10)* : avant de
+>    corriger, controler que le correctif n'ecrase pas un RAISONNEMENT GLOBAL de l'app --
+>    tous les appelants, les chemins de secours, les usages publics, les decisions ecrites.
 > 3. **CODER**, en additif, derriere un interrupteur quand c'est possible.
 > 4. **CONTROLER** : essais hors ligne, puis preuve en reel si necessaire. Dire aussi
 >    ce qui a rate.

@@ -98,8 +98,8 @@ colle (écriture prod), **en quatre lots** :
 - **Lot D — les 2 tables sans RLS** : retirer `anon` et `authenticated`, activer la RLS (le
   worker passe en `service_role`, les fonctions en postgres : non concernés).
 
-**Hors patch, à décider** : la fonction Edge `hektor-diffusion` (la retirer si elle ne sert
-plus, ou lui ajouter le contrôle « compte actif + admin ») ; les 3 comptes désactivés ou sans
+**Hors patch, à décider** : la fonction Edge `hektor-diffusion` (voir ci-dessous : **ce n'est
+PAS une fonction morte**, c'est un chemin de secours) ; les 3 comptes désactivés ou sans
 profil qui peuvent encore se connecter. **Après le patch, il restera** que tout utilisateur
 **connecté** peut appeler les 33 fonctions de lecture/écriture du front sans contrôle de rôle :
 c'est le chantier ② (droits).
@@ -109,3 +109,36 @@ c'est le chantier ② (droits).
 **Contrôle prévu** : avant/après en base (`has_function_privilege`) ; appel réel avec la clé
 publique seule → refus ; l'app connectée (annonce, contact, rapprochements, registre, cockpit)
 sans erreur dans la console ; une nuit de run sans échec ; conseiller de sécurité relu.
+
+## La fonction Edge `hektor-diffusion` — ce qu'elle est *(08/10, à la demande de Frédéric)*
+
+**Ce qu'elle fait.** C'est le geste « **mettre une annonce en diffusion** » : rendre l'annonce
+diffusable chez Hektor (`ensureDiffusable`), puis poser ses portails (`app_diffusion_target`,
+remis aux portails par défaut de l'agence pour l'action `accept`). C'est le même geste que
+l'acceptation d'une « Validation » par la direction (mémoire `validation-diffusion-flux`).
+
+**Son histoire.** Créée le **07/04/2026** (`4ca9544`), le jour même où naissait le serveur
+Python (`f0fc6a3`). Le serveur Render a repris le même geste dès le **08/04** (`d2fe0d3`,
+`backend/app/routers/hektor_diffusion.py`). Dernière modification de la fonction Edge le 21/04.
+
+**⚠ Elle n'est pas morte : c'est un chemin de SECOURS.** Le front (`api.ts:7093-7128` pour
+`apply`, `:7204-7238` pour `accept`) choisit **dans cet ordre** :
+1. le serveur Render, si son adresse est configurée (`VITE_BACKEND_API_URL`) — cas normal ;
+2. **sinon la fonction Edge** ;
+3. sinon le serveur local de développement.
+Journaux Supabase : **0 appel en 24 h** (fenêtre maximale consultable).
+
+**La différence de sécurité entre les deux chemins :**
+
+| | serveur Render (chemin normal) | fonction Edge (secours) |
+|---|---|---|
+| exige une connexion | oui | oui |
+| exige un compte **actif** et **admin ou manager** | **oui** (`assert_admin`, `supabase_admin.py:216-224`) | **non** : tout compte connecté, même désactivé |
+
+**Correctifs possibles (à décider par Frédéric, PAS dans le patch SQL) :**
+- **(a)** lui ajouter le même contrôle que Render (compte actif + admin ou manager) et la
+  redéployer : le secours reste, il devient aussi sûr que le chemin normal ;
+- **(b)** la retirer : alors il faut aussi retirer le secours dans le front (sinon, si Render
+  n'est plus configuré un jour, le bouton échouerait au lieu de basculer) ;
+- **(c)** ne rien faire : le risque est limité aux 8 comptes existants, dont 3 désactivés ou sans
+  profil qui peuvent encore se connecter.

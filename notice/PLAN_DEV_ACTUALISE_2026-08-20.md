@@ -206,7 +206,7 @@ commercial en 120 jours, 0 annonce née dans l'app depuis le 25/09.
 > puis contrôle du résultat du travail »)* :
 > **① audit du sujet** (le code et la base d'aujourd'hui, plus l'historique : rien n'est
 > refait de ce qui l'est déjà) → **② explication des correctifs proposés** (ce que ça touche,
-> retour arrière, vérification) → **③ « vas-y » de Frédéric** (accord obligatoire pour la
+> retour arrière, vérification, et **« ce que ça pourrait casser ailleurs »** : le correctif ne doit pas écraser un raisonnement global de l'app — appelants, chemins de secours, usages publics, décisions écrites, *règle de Frédéric du 08/10*) → **③ « vas-y » de Frédéric** (accord obligatoire pour la
 > base de production, un redémarrage, un déploiement) → **④ code** → **⑤ contrôle du
 > résultat** (dire aussi ce qui a raté) → **⑥ plan, liste et CLAUDE.md à jour**.
 >
