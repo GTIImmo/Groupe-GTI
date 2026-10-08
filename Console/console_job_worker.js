@@ -47,6 +47,19 @@ const DERIVES_PHOTO_TAILLES = [
 const CACHE_DERIVE_PHOTO = "max-age=31536000";
 // DORMANT par defaut. Rien ne se genere tant que Frederic n'allume pas.
 const DERIVES_PHOTO_ENABLED = /^(1|true|on|oui)$/i.test(String(process.env.CONSOLE_DERIVES_PHOTO_ENABLED || "").trim());
+// 5a ter (08/10/2026, decision de Frederic : option A) — OUVRIR UNE ARCHIVE N'APPELLE PLUS HEKTOR.
+//
+// La preparation du detail d'une archive lancait d'abord une extraction console ciblee
+// (20,4 s, une session Hektor), AVANT de reconstruire la fiche depuis la base locale. Mesure
+// du 08/10 sur les 58 058 blobs de l'API (instr, sensible a la casse) : l'API rend TOUT ce
+// qui est rempli, equipements compris (38,7 % des annonces recentes). Ce que l'extraction
+// ajoutait vraiment : les 5 textes de secteur, les 2 images DPE/GES et le detail des grilles
+// d'honoraires. Le chauffage, lui, a sa propre tache de nuit. Et l'appel repartait meme quand
+// la donnee etait deja en cache (deux extractions du bien 78 a 22 minutes d'ecart).
+//
+// Interrupteur : poser CONSOLE_ARCHIVE_DETAIL_EXTRACTION=1 pour rallumer l'ancien
+// comportement, sans toucher au code.
+const ARCHIVE_DETAIL_EXTRACTION_HEKTOR = /^(1|true|on|oui)$/i.test(String(process.env.CONSOLE_ARCHIVE_DETAIL_EXTRACTION || "").trim());
 const STORAGE_STATE_PATH = process.env.CONSOLE_STORAGE_STATE_PATH || path.resolve(__dirname, "sessions", `storage_state_${WORKER_KIND}.json`);
 const MATTERPORT_STORAGE_STATE_PATH = process.env.MATTERPORT_STORAGE_STATE_PATH || path.resolve(__dirname, "matterport_storage_state.json");
 const LOCAL_ARCHIVE_ROOT = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT || "C:\\Hektor\\HektorConsoleDocuments";
@@ -4236,7 +4249,18 @@ async function handlePrepareArchivedAnnonceDetail(job) {
   if (job.requested_by) {
     args.push("--requested-by", String(job.requested_by));
   }
-  await runTargetedConsoleMissingFields(job, hektorAnnonceId, "prepare_archived_annonce_detail");
+  // 5a ter (08/10/2026) : plus d'appel a Hektor par defaut — voir
+  // ARCHIVE_DETAIL_EXTRACTION_HEKTOR en tete de fichier. La fiche se reconstruit depuis la
+  // base locale, qui porte le detail de 34 532 archives sur 37 773.
+  if (ARCHIVE_DETAIL_EXTRACTION_HEKTOR) {
+    await runTargetedConsoleMissingFields(job, hektorAnnonceId, "prepare_archived_annonce_detail");
+  } else {
+    await logJob(job.id, "console_missing_fields", "done", "Extraction console NON faite : la fiche se reconstruit depuis la base locale (5a ter, 08/10)", {
+      hektor_annonce_id: hektorAnnonceId,
+      interrupteur: "CONSOLE_ARCHIVE_DETAIL_EXTRACTION",
+      etat: "eteint",
+    });
+  }
   const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
   const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
   const result = safeJsonParse(lastLine);

@@ -319,3 +319,134 @@ Rien d'autre.
 
 **Le gaspillage, prouvé en direct aujourd'hui** : deux extractions pour le bien 78, à 08:22
 puis **08:44** UTC — 22 minutes d'écart, alors que la donnée était en cache depuis la première.
+
+### 5a ter (fin) — LA MÉTHODE EXISTE : trois étages, et le vrai trou fait ~25 champs, pas 157
+
+Question de Frédéric : *« mon projet doit avoir une méthode, sinon tous ces champs seraient
+vides sur les annonces puisque seulement 35 ? »* — il a raison, et ma présentation précédente
+était trompeuse. Mesuré :
+
+**Étage 1 — l'API Hektor fait l'essentiel, et elle ne rend QUE LE RENSEIGNÉ.**
+Le blob `detail_raw_json` porte les mêmes groupes que les écrans de la console
+(`ag_interieur`, `ag_exterieur`, `terrain`, `equipements`, `diagnostiques`, `copropriete`,
+`mandat_infofi`, `mandat_mandatdispo`) plus `honoraires`, `textes`, `images`, `mandats`,
+`proprietaires`, `localite`, `zones`. **Elle n'envoie pas les cases vides** — preuve sur
+400 annonces vivantes :
+
+| groupe | noms de champs vus | toujours présents |
+|---|---|---|
+| `ag_interieur` | 12 | 3 |
+| `ag_exterieur` | 18 | 4 |
+| `diagnostiques` | 16 | 1 |
+| `mandat_infofi` | 12 | 4 |
+| `copropriete` | 4 | 1 |
+| **`equipements`** | **1** | **1 (`ASCENSEUR`)** |
+
+Un champ « absent » du blob veut donc dire **vide chez Hektor**, pas « perdu ». C'est pour ça
+que les fiches ne sont pas vides, et c'est ce que mon comparatif du bien 78 (« 103 champs en
+plus côté console ») laissait croire à tort : ce bien est une vieille archive presque vide.
+
+**Étage 2 — le run chauffage, chaque nuit, parce que l'API ne rend pas les équipements.**
+Une seule exception au tableau ci-dessus, et elle est structurelle : `equipements` ne rend
+**jamais** autre chose qu'`ASCENSEUR`. Le chauffage a donc sa tâche dédiée — et une autre
+raison d'exister : l'API ne donnerait qu'une valeur, alors qu'un bien peut avoir **plusieurs
+chauffages** (le relevé rend la liste : format / type / énergie par ligne). 57 092 lignes.
+
+**Étage 3 — le run console, éteint : le reste du bloc équipements, et quelques détails.**
+En retirant ce que l'API donne déjà et ce que le chauffage couvre, ce qui ne redescend
+**jamais** chez nous se réduit à ceci :
+
+- **le bloc équipements moins ascenseur et chauffage (~20 champs)** : EAU, ASSAINISSEMENT,
+  DISTRIBUTION_EAU, ENERGIE_EAU, cheminee, climatisation (+ spec), double_vitrage,
+  triple_vitrage, volets_elctriques, porte_blindee, interphone, visiophone, alarme, digicode,
+  detecteur_fumee, gardien, cable, ACCES_HANDI ;
+- **organiser la visite (2)** : `CLES`, `moyens_visite` ;
+- **secteur (texte)** : `TRANSPORT`, `PROXIMITE`, `ENVIRONNEMENT`, `immeuble`, `irisAnnonce` ;
+- **les images DPE et GES** (`dpe_image_url`, `ges_image_url`) ;
+- **le détail des grilles d'honoraires** (`_detailHonoraire2/3`, `_idGrille2/3`…) — l'API rend
+  déjà la liste `honoraires` (taux, à charge de) ;
+- **la composition détaillée des pièces** (`pieces` existe dans le blob mais souvent `null`).
+
+**L'asymétrie à retenir** : l'app sait **écrire** plusieurs de ces champs chez Hektor — ils sont
+dans l'assistant de création (`App.tsx:1536-1550` : Assainissement, Double vitrage, Porte
+blindée, Détecteur fumée…) et dans la lecture OCR d'une fiche scannée — mais elle ne sait pas
+les **relire**. Un aller sans retour. C'est un sujet de **chantier ⑥** (« ce qui ne redescend
+pas »), pas du point 5a.
+
+**Correction de ce que j'ai dit plus tôt** : le trou n'est pas de 157 champs, mais d'environ
+**25**, et il concerne **tout le parc**, pas seulement les archives.
+
+### 5a ter (correction) — NON, CES CHAMPS NE SONT PAS VIDES. Deux erreurs de mesure.
+
+Frédéric : *« vérifie que tous ces champs sont vides dans ma data actuelle »*. Vérifié :
+**ils ne le sont pas**, et mes deux conclusions précédentes venaient de deux pièges de mesure.
+
+**Piège 1 — `LIKE` en SQLite.** Il **ignore la casse** et **`_` y est un joker**.
+`LIKE '%ASSAINISSEMENT%'` rendait **53 546** blobs : il attrapait le mot « assainissement »
+dans le TEXTE des annonces. La bonne mesure, `instr(detail_raw_json, '"ASSAINISSEMENT"')>0` :
+**589**.
+
+**Piège 2 — `limit 400` sans `ORDER BY`.** SQLite rend alors les lignes les plus ANCIENNES.
+Mon échantillon n'était fait que de vieux biens vides, d'où ma conclusion fausse « l'API ne
+rend jamais le bloc équipements ». Elle le rend très bien.
+
+**Mesure exacte, sur les 58 058 blobs (`instr`, sensible à la casse) :**
+
+| | total | parc vivant |
+|---|---|---|
+| au moins un champ d'équipement | — | **710 (3,0 %)** |
+| **sur les annonces récentes (n° > 60 000)** | — | **597 sur 1 544 — 38,7 %** |
+| `ASCENSEUR` | 14 004 | 4 974 (21,1 %) |
+| `ASSAINISSEMENT` | 589 | 532 |
+| `double_vitrage` | 655 | — |
+| `CLES` | 4 475 | 1 826 |
+| `moyens_visite` | 12 898 | 3 962 |
+| `terrain_ref_cadastr` | 1 549 | 516 |
+
+Exemple complet (bien 63237) : l'API rend `ACCES_HANDI`, `climatisation`, `EAU`,
+`ASSAINISSEMENT`, `DISTRIBUTION_EAU`, `ENERGIE_EAU`, `cheminee`, `ARROSAGE`, `BARBECUE`…
+**L'API rend tout ce qui est rempli.** Si un champ manque, c'est qu'il est vide CHEZ HEKTOR —
+et le parc ancien est vide parce que personne ne l'a saisi, pas parce qu'on l'a perdu.
+
+**CE QUI N'EST VRAIMENT JAMAIS RENDU — 0 sur 58 058 :**
+
+| | pourquoi ça compte |
+|---|---|
+| `formatChauff`, `typeChauff`, `energieChauff` | **c'est la raison d'être du run chauffage de la nuit** — et lui rend la LISTE (un bien peut en avoir plusieurs) |
+| `TRANSPORT`, `PROXIMITE`, `ENVIRONNEMENT`, `immeuble`, `irisAnnonce` | les textes de secteur — affichés par la fiche (`App.tsx:29416`) |
+| `dpe_image_url`, `ges_image_url` | les images DPE/GES — affichées (`App.tsx:6206-6209`, `:9840`) |
+| `_detailHonoraire2/3`, `_idGrille2/3` | le détail des grilles ; l'API rend déjà la liste `honoraires` (taux, à charge de) |
+
+**Donc le trou réel, ce n'est ni 157 champs ni 25 : c'est le chauffage (déjà couvert par sa
+propre tâche de nuit) + 5 textes de secteur + 2 images + le détail des grilles d'honoraires.**
+Tout le reste de la fiche vient de l'API et est déjà chez nous.
+
+**Conséquence pour la décision 5a ter** : l'appel à Hektor au moment d'ouvrir une archive ne
+rapporte, en pratique, que ces quatre choses-là. L'option A (couper l'appel) coûte donc bien
+moins cher que ce que j'avais annoncé. Décision à Frédéric.
+
+### 5a ter — CODÉ (option A, choisie par Frédéric le 08/10)
+
+`Console/console_job_worker.js` :
+- l. 51-62 : un interrupteur **`CONSOLE_ARCHIVE_DETAIL_EXTRACTION`**, éteint par défaut, avec
+  la mesure qui justifie la décision écrite juste au-dessus ;
+- l. 4252-4263 : `handlePrepareArchivedAnnonceDetail` n'appelle plus Hektor ; il écrit à la
+  place une ligne de journal « extraction console NON faite ». Le reste du travail est
+  inchangé : la fiche se reconstruit depuis la base locale.
+
+`node --check` ✔. **Le code ne prend effet qu'après redémarrage des QUATRE services worker**
+(ils partagent ce fichier) — accord de Frédéric nécessaire, file documents vide.
+
+**Ce que ça pourrait casser ailleurs** — les trois autres appelants de
+`runTargetedConsoleMissingFields` ne sont **pas touchés** : `refresh_console_data` (l. 3977,
+il veut justement du frais après un changement), le rafraîchissement des caches légers
+(l. 4036) et le **jumeau `prepare_historical_annonce_detail`** (l. 4272, pour les Vendu/Clos
+non archivés). ⚠ **Question ouverte à Frédéric** : faut-il appliquer la même chose au jumeau ?
+Je ne l'ai pas décidé seul.
+
+**Retour arrière** : poser `CONSOLE_ARCHIVE_DETAIL_EXTRACTION=1` dans l'environnement des
+services et redémarrer — aucun code à modifier.
+
+**Contrôle prévu** : après redémarrage, ouvrir une archive jamais extraite et vérifier dans
+`app_console_job_log` qu'il n'y a plus d'étape `console_missing_fields` en `running`, que le
+travail finit en quelques secondes au lieu de ~22 s, et que la fiche s'affiche.
