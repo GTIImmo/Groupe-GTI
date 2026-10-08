@@ -33,7 +33,7 @@ A CHAQUE CHANTIER : audit du sujet -> explication des correctifs -> « vas-y » 
   ⑥  ce qui ne redescend pas de Hektor (G.1-b, G.2 -> G.6, photos, agenda)
   ⑦  les gestes qui manquent (prolonger un mandat, ordre des photos)
   ⑧  garde chez nous en entier (contact, archives, sauvegarde)
-ORDRE propose ① ⑤ ④ ② -- a valider par Frederic
+ORDRE decide par Frederic le 08/10 : ① (fait) puis ⑤ ④ ② ③ ⑥ ⑦ ⑧
 Etape 3 (registre legal, signature, pub, site, DNS, e-mail) : PAS ici
 ```
 *(Les 46 chapitres du 07/10 sont refusés : ils mélangeaient l'étape 2 et l'étape 3.)*

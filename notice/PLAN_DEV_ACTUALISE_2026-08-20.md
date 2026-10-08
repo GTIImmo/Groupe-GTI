@@ -106,6 +106,7 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | 07/10 | **Le rattrapage des documents garde son lot de 2 500 et son périmètre** *(Frédéric)*. G.2 se fera sur **toutes les annonces vivantes, estimations comprises**. Un périmètre, une taille ou un ordre ne se décident jamais sans Frédéric |
 | **08/10** | **LES DEUX ÉTAPES, DÉFINIES PAR FRÉDÉRIC.** *Étape 2* : « on utilise encore Hektor pour générer les id afin de faire fonctionner les workers ». *Étape 3* : notre registre électronique des mandats (nos numéros), puis la signature, puis la pub — « tant que les 3 ne sont pas chez nous, impossible de couper Hektor » — plus site web, DNS, e-mail. ➡ **Les 46 chapitres du 07/10 sont refusés** : ils mélangeaient les deux étapes |
 | **08/10** | ⛔ **AUDIT PAR OBJET : l'audit du 07/10 se trompait sur plusieurs objets** (11 champs de l'annonce, recherche « effacée en 24 h », transaction « fabriquée chez Hektor », bon de visite). Refait en lecture seule, objet par objet, contre le code ET l'historique → `notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md`. **Le socle tient** ; les trous sont les droits, des gestes encore « Hektor d'abord », des échecs silencieux, des bugs précis (désarchiver est impossible depuis le 30/08), et **6 fonctions ouvertes à un visiteur non connecté** |
+| **08/10** | **L'ORDRE DES CHANTIERS, décidé par Frédéric** : ① (fait) puis **⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** — réparer ce qui est cassé, ne plus rien perdre en silence, ouvrir aux négociateurs, changer les flux, compléter. « Il faut bien tous les faire » : aucun n'est abandonné |
 | **08/10** | **LA MÉTHODE PAR CHANTIER** *(Frédéric : « chantier par chantier mais avec à chaque fois audit sur le sujet pour revérifier puis explication des correctifs proposés puis contrôle du résultat du travail »)*. Les 8 chantiers et leur suivi : section « 🧭 LES CHANTIERS DE L'ÉTAPE 2 ». Ordre proposé ① ⑤ ④ ②, **à valider** |
 
 ---
@@ -210,8 +211,8 @@ commercial en 120 jours, 0 annonce née dans l'app depuis le 25/09.
 > base de production, un redémarrage, un déploiement) → **④ code** → **⑤ contrôle du
 > résultat** (dire aussi ce qui a raté) → **⑥ plan, liste et CLAUDE.md à jour**.
 >
-> **L'ORDRE est une décision de Frédéric.** Ordre proposé le 08/10 : ① puis ⑤ puis ④ puis ②
-> (qui attend d'abord sa décision sur les droits), puis le reste. Les points marqués ⏳ ont
+> **L'ORDRE, décidé par Frédéric le 08/10** : ① puis **⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** (tous seront
+> faits ; ② attend d'abord sa décision sur les droits). Les points marqués ⏳ ont
 > une **date de péremption** : ils doivent se faire tant que Hektor vit.
 
 **LE SUIVI** — *une ligne par chantier, mise à jour à chaque étape. Légende : ⬜ pas commencé

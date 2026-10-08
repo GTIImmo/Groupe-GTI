@@ -127,13 +127,13 @@ chaque étape.
 | ⑦ | les gestes qui manquent | ⬜ |
 | ⑧ | gardé chez nous en entier | ⬜ |
 
-**Ordre proposé ① ⑤ ④ ②, À VALIDER par Frédéric.** Un périmètre, une taille, un ordre ou un
-report ne se décident jamais sans lui.
+**Ordre DÉCIDÉ par Frédéric le 08/10 : ① puis ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** (tous seront faits).
+Un périmètre, une taille, un ordre ou un report ne se décident jamais sans lui.
 
 ### ⛔ Ce qui attend Frédéric
 
 ```
-① VALIDER L'ORDRE des chantiers ; DECIDER les droits du negociateur (chantier ②)
+① DECIDER les droits du negociateur (chantier ②, 3e dans l'ordre)
 ② QUESTIONS DE FAIT   les negociateurs saisissent-ils encore leurs visites dans Hektor ?
                       pourquoi 62 000 contacts seulement au cloud sur 356 000 ?
 ③ HORS CODE (etape 3, mais a ne pas oublier) : A.4 zone DNS (La Boite Immo -> OVH, garder
