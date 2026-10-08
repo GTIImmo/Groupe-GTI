@@ -880,3 +880,26 @@ repousserait. Les deux vont ensemble.
 
 `ast.parse` ✔, CRLF et BOM conservés. ⚠ B n'agit qu'au **prochain run de nuit** ; A attend la
 répétition puis ton application.
+
+### Étape 5 — répétition exacte (7/7) et patch **APPLIQUÉ** (08/10, ~17:10)
+
+```
+AVANT_PATCH = travail cree=oui | retire_le APRES=TOUJOURS POSE   <- le bug
+APRES_PATCH = travail cree=oui | retire_le APRES=EFFACE          <- repare
+apres_retrait = pose le 2026-10-03 (inchange)  ·  apres_inverse_empreinte = l'avant
+```
+
+Patch collé par Frédéric. Contrôle en base, lecture seule :
+
+| contrôle | mesure |
+|---|---|
+| empreinte normalisée | **`f39e01658e438ab085710a6ecae1a6f2`** = la valeur annoncée avant d'appliquer |
+| la clause a bien changé | `on conflict … do update` **posée** ; plus **aucune** clause `do nothing` (l'unique occurrence du texte est dans un commentaire) |
+| `app_relation_id` hors du SET | ✔ on ne renumérote jamais |
+| nature et droits | `SECURITY DEFINER`, `anon=non`, `authenticated=oui` ✔ |
+| rien écrit au passage | 3 retraits toujours en place, 4 travaux de rattachement (les 3 d'avant + l'essai de 5d) ✔ |
+
+**Reste à éprouver en réel**, et ça demande deux temps :
+1. retirer puis rattacher un mandant sur un bien d'essai **sans numéro de mandat** (62963 ou
+   62964 — sur 62774 le retrait est grisé) et vérifier qu'il **réapparaît au clic** ;
+2. vérifier le **lendemain matin** qu'il est **toujours là** — c'est ce qui prouve le morceau B.
