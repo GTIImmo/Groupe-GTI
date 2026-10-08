@@ -1036,3 +1036,57 @@ Sinon, on restaure comme avant.
 **Pas fait, et c'est volontaire** : remettre l'état quand le geste est **vraiment abandonné**
 (5 tentatives, ou « abandon » choisi dans le bandeau — `app_action_resolve` ne restaure rien
 aujourd'hui). C'est la suite logique, elle touche deux fonctions SQL : **à décider séparément**.
+
+---
+
+## 5g — SUPPRIMER UN CONTACT
+
+### Étape 1 — Audit du 08/10 · **CONFIRMÉ, troisième fois la même racine**
+
+Supprimer un contact nettoie **trois endroits** : Supabase, notre couche locale, et le miroir
+Hektor. Les deux derniers sont nettoyés par un seul script, qui ne recevait **qu'un numéro**.
+
+| base locale | plage de `hektor_contact_id` | c'est donc |
+|---|---|---|
+| miroir `data/hektor.sqlite` | **1 … 605 744** | le numéro **de Hektor** |
+| notre couche `phase2.sqlite` | **10 000 001 … 10 650 597** | **notre** numéro |
+
+Le worker envoyait **notre** numéro aux deux. Donc :
+Supabase nettoyé ✔ · notre couche nettoyée ✔ · **le miroir : rien**.
+
+**Et c'est le miroir qui recompose notre couche** : 356 416 contacts dans le miroir,
+**356 416** dans notre couche — une projection ligne à ligne. **Le build suivant remettait le
+contact.** Muet, en plus : le journal écrivait « caches locaux nettoyés » sans avoir rien
+nettoyé.
+
+**Dormant, et daté** : 12 suppressions en tout, la dernière le **21/09** — avant la bascule du
+23/09, quand les deux numéros étaient encore égaux. **Le défaut est né le 23/09 et n'a jamais
+servi.**
+
+**⚠ Une mesure que je me suis interdit d'utiliser** : 63 234 liens vivants pointent un contact
+absent de `app_contact_current`. **Ce n'est pas un symptôme de ce défaut** — c'est le périmètre
+cloud connu (62 162 contacts sur 356 416).
+
+### Étapes 2 et 3 — Codé (décision de Frédéric du 08/10)
+
+**① Les deux numéros au script.** `delete_local_contact.py` prend un `--cible-hektor`
+optionnel : notre numéro pour `phase2.sqlite`, celui de Hektor pour le miroir. **Rétrocompatible**
+— sans l'argument, comportement d'avant. Le worker, qui connaît déjà les deux, les passe.
+
+**② Le registre des liens suit la suppression.** *Décision de Frédéric : « si on supprime un
+contact, il faut aussi mettre à jour le registre des relations pour effacer ce contact ».*
+Les liens vivants du contact sont **marqués absents** (`present_in_hektor = false`,
+`absent_depuis` daté) : ils disparaissent de tous les écrans à la seconde, puisque la vue exige
+`present_in_hektor OR (source='app' AND absent_depuis IS NULL)`.
+
+> **Pourquoi marquer et non supprimer la ligne** : la règle du registre est **DELETE-NEVER**,
+> « on efface l'état, jamais la trace ». Le contact disparaît partout, et la preuve qu'un lien
+> a existé reste, datée. **Si Frédéric veut la suppression physique des lignes, c'est un mot
+> à dire** — c'est un changement de règle, pas un détail d'implémentation.
+
+La clé utilisée est **`app_contact_id`**, notre numéro : dans `app_relation`, la colonne
+`hektor_contact_id` porte celui de Hektor (132 713 sur 132 713). **C'est la même confusion qui
+a cassé 5b, 5d et 5g** — trois points sur six, la même racine.
+
+`node --check` ✔, `ast.parse` ✔, CRLF conservés. ⚠ **DORMANT** : actif après redémarrage des
+4 services. **Retour arrière** : retirer l'argument et le bloc du registre.

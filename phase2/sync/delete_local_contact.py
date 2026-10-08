@@ -119,17 +119,41 @@ def cleanup_phase2_db(hektor_contact_id: str) -> dict[str, int]:
 
 
 def main() -> None:
+    # ⭐ 5g (08/10/2026) -- DEUX BASES, DEUX NUMEROS. C'est la meme personne, mais
+    #   les deux bases locales ne la rangent PAS sous le meme numero (mesure du
+    #   08/10) :
+    #       data/hektor.sqlite   hektor_contact_id  de 1 a 605 744      -> HEKTOR
+    #       phase2/phase2.sqlite hektor_contact_id  de 10 000 001 a ... -> NOUS
+    #   Le worker n'envoyait qu'un seul numero -- le NOTRE -- aux deux. Le miroir
+    #   n'effacait donc RIEN, et comme notre couche est une projection ligne a
+    #   ligne du miroir (356 416 contre 356 416 le 08/10), LE BUILD SUIVANT
+    #   REMETTAIT LE CONTACT. Muet, en plus : le journal disait « caches locaux
+    #   nettoyes » sans avoir rien nettoye.
+    #   Avant la bascule du 23/09 les deux numeros etaient egaux : ca marchait.
+    #   Les 12 suppressions faites a ce jour sont toutes anterieures au 21/09.
+    #
+    # ⚠ RETROCOMPATIBLE : sans --cible-hektor, on garde le comportement d'avant
+    #   (le meme numero pour les deux), pour qu'un appel ancien ne casse pas.
     parser = argparse.ArgumentParser(description="Remove a deleted Hektor contact from local SQLite caches.")
-    parser.add_argument("--contact-id", required=True)
+    parser.add_argument("--contact-id", required=True,
+                        help="NOTRE numero (l'identite) -- pour phase2.sqlite")
+    parser.add_argument("--cible-hektor", default=None,
+                        help="Le numero de HEKTOR (la cible) -- pour le miroir data/hektor.sqlite")
     args = parser.parse_args()
 
     contact_id = str(args.contact_id).strip()
     if not contact_id.isdigit():
         raise SystemExit("--contact-id must be numeric")
 
+    cible = str(args.cible_hektor).strip() if args.cible_hektor is not None else ""
+    if cible and not cible.isdigit():
+        raise SystemExit("--cible-hektor must be numeric")
+    cible = cible or contact_id
+
     result = {
         "hektor_contact_id": contact_id,
-        "hektor_db": cleanup_hektor_db(contact_id),
+        "cible_hektor": cible,
+        "hektor_db": cleanup_hektor_db(cible),
         "phase2_db": cleanup_phase2_db(contact_id),
     }
     print(json.dumps(result, ensure_ascii=False))

@@ -18129,8 +18129,19 @@ async function runDeletedAnnonceLocalCleanup(job, hektorAnnonceId, appDossierId)
   return parsed;
 }
 
-async function runDeletedContactLocalCleanup(job, hektorContactId) {
-  const output = await runProjectPythonScript(["phase2/sync/delete_local_contact.py", "--contact-id", String(hektorContactId)]);
+// ⭐ 5g (08/10/2026) -- DEUX BASES LOCALES, DEUX NUMEROS.
+//   phase2.sqlite est rangee sous NOTRE numero (10 000 001 et plus), le miroir
+//   data/hektor.sqlite sous celui de HEKTOR (1 a 605 744) -- mesure du 08/10.
+//   On n'envoyait que le notre : le miroir n'effacait RIEN, et comme notre couche
+//   est une projection ligne a ligne du miroir (356 416 contre 356 416), LE BUILD
+//   SUIVANT REMETTAIT LE CONTACT. Muet en plus : le journal disait « caches locaux
+//   nettoyes » sans avoir rien nettoye. Depuis la bascule du 23/09 seulement --
+//   avant, les deux numeros etaient egaux, et les 12 suppressions faites a ce jour
+//   sont toutes anterieures au 21/09.
+async function runDeletedContactLocalCleanup(job, identite, cibleHektor) {
+  const args = ["phase2/sync/delete_local_contact.py", "--contact-id", String(identite)];
+  if (cibleHektor) args.push("--cible-hektor", String(cibleHektor));
+  const output = await runProjectPythonScript(args);
   let parsed = null;
   try {
     parsed = JSON.parse(output.stdout || "{}");
@@ -18316,10 +18327,47 @@ async function handleDeleteHektorContact(job) {
   }
   try {
     // L4-c ② : notre base locale -> identite.
-    cleanup.local = await runDeletedContactLocalCleanup(job, numeroDemande);
+    cleanup.local = await runDeletedContactLocalCleanup(job, numeroDemande, contactId);
   } catch (error) {
     cleanup.errors.push({ step: "local", error: error && error.message ? error.message : String(error) });
   }
+  // ⭐ 5g (08/10/2026) -- LE REGISTRE DES LIENS SUIT LA SUPPRESSION.
+  //   Decision de Frederic : « si on supprime un contact, il faut aussi mettre a
+  //   jour le registre des relations pour effacer ce contact ». Sans ca, des liens
+  //   vivants continuaient de pointer une personne qui n'existe plus -- c'est le
+  //   symptome qui avait lance l'audit du 30/09 (fiche contact vide ouverte depuis
+  //   une annonce).
+  // ⚠ ON MARQUE, ON NE SUPPRIME PAS LA LIGNE : « on efface l'etat, jamais la
+  //   trace » (regle du registre, relation_ledger.py : DELETE-NEVER). Le lien
+  //   disparait de tous les ecrans a la seconde -- la vue exige
+  //   `present_in_hektor OR (source='app' AND absent_depuis IS NULL)` -- et la
+  //   preuve qu'il a existe reste, datee.
+  // ⚠ LA CLE EST app_contact_id, NOTRE numero : dans app_relation la colonne
+  //   `hektor_contact_id` porte celui de HEKTOR (132 713 lignes sur 132 713,
+  //   mesure du 08/10). C'est la meme confusion qui a casse 5b, 5d et ce point-ci.
+  try {
+    const maintenant = new Date().toISOString();
+    const liens = await supabaseRequest(
+      `app_relation?app_contact_id=eq.${encodeURIComponent(String(numeroDemande))}`
+      + `&present_in_hektor=is.true`,
+      { method: "PATCH", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ present_in_hektor: false, absent_depuis: maintenant }) });
+    const nb = Array.isArray(liens) ? liens.length : 0;
+    cleanup.registre_des_liens = { status: "done", lignes_marquees: nb };
+    await logJob(job.id, "registre_des_liens", "done",
+      nb > 0
+        ? `Le contact est efface du registre des liens : ${nb} lien(s) marque(s) absent(s)`
+        : "Aucun lien vivant a marquer dans le registre",
+      { app_contact_id: numeroDemande, lignes_marquees: nb });
+  } catch (erreur) {
+    cleanup.errors.push({ step: "registre_des_liens",
+      error: erreur && erreur.message ? erreur.message : String(erreur) });
+    await logJob(job.id, "registre_des_liens", "error",
+      "Contact supprime mais le registre des liens n'a PAS pu etre mis a jour -- des liens pointent une personne qui n'existe plus",
+      { app_contact_id: numeroDemande,
+        error: erreur && erreur.message ? erreur.message : String(erreur) });
+  }
+
   cleanup.build = { status: "skipped", reason: "contact_delete_cleanup_is_already_scoped" };
   cleanup.push = { status: "skipped", reason: "contact_delete_cleanup_is_already_scoped" };
 
