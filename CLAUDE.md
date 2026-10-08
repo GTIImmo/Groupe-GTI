@@ -122,7 +122,7 @@ chaque étape.
 | ② | les droits du négociateur — **attend la décision de Frédéric** | ⬜ |
 | ③ | Hektor d'abord → chez nous d'abord (statuts, clôture, fichiers) | ⬜ |
 | ④ | aucun échec silencieux | ⬜ |
-| ⑤ | les gestes cassés (5a → 5i) *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | 🔧 en cours · **5a désarchiver : patch APPLIQUÉ le 08/10 ~09:55**, contrôlé en base (empreinte conforme, `anon=non`, rien d'écrit au passage) ; reste l'essai à l'écran sur une archive choisie par Frédéric · 5b → 5i ⬜ |
+| ⑤ | les gestes cassés (5a → 5i) *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | 🔧 en cours · ✅ **5a désarchiver FINI le 08/10** : patch SQL appliqué 09:55 **+ le bouton qui n'existait pour aucune archive** (corrigé, déployé `78e6574`) ; essai réel VA2380 réussi en 43 s, Hektor confirme — premier désarchivage depuis 39 jours. À surveiller : le bien reste invisible chez nous jusqu'à la descente · **à décider : l'appel Hektor de `prepare_archived_annonce_detail`** (le bloc console n'est local que pour 35 archives sur 35 317 ; le chauffage, lui, l'est pour 34 532) · 5b → 5i ⬜ |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
 | ⑦ | les gestes qui manquent | ⬜ |
 | ⑧ | gardé chez nous en entier | ⬜ |

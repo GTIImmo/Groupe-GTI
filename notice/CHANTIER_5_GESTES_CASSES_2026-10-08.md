@@ -256,3 +256,66 @@ reconstruit la fiche **depuis la base locale** (60 119 octets).
 `phase2/sync/sync_console_missing_fields.py` l. 214-217, un identifiant passé explicitement
 vaut `reason = "explicit"` — le cache local n'est même pas regardé. Rouvrir deux fois la même
 archive, c'est deux extractions.
+
+### Étape 5 (suite) — L'ESSAI RÉEL A RÉUSSI (08/10, 10:45) · **5a est fini**
+
+Déploiement Vercel du commit `78e6574` : **READY** en production (vérifié par l'API Vercel).
+Fiche VA2380 rouverte dans l'app connectée : **les deux boutons « Désarchiver » sont là**
+(le visible, dans le bandeau de lecture seule, et l'entrée du menu « ••• »). Clic.
+
+```
+08:45:44 UTC  travail cree   app_dossier_id = NULL   hektor_annonce_id = 78
+                             cible_source = index_archives   numero = VA2380   priorite = 8
+08:45:48      pris par le worker
+08:46:31      done en 43 s -- Hektor a confirme archive=0 (le worker refuse de conclure sans
+                             relecture par l'API : console_job_worker.js:18427-18436)
+08:46:31      refresh_console_data enfile tout seul -> done a 08:46:56
+```
+
+**Le premier désarchivage depuis 39 jours** : le précédent datait du 30/08 à 07:42 UTC, celui-là
+même qui précédait d'une minute le commit qui a cassé le geste. Travaux de désarchivage :
+15 → **16**. Carnet : 3 lignes, inchangé (normal, une archive n'a pas de numéro de dossier
+chez nous). Le bien est sorti de l'index des archives : 35 317 → **35 316**.
+
+**CE QUI RESTE À SURVEILLER, dit franchement.** Le bien 78 n'est, à cette minute,
+**ni dans les archives, ni dans le parc vivant** (0 et 0 ; parc toujours 13 467). Hektor est à
+jour, mais chez nous l'index actif n'est reconstruit que par la descente : **le bien est
+invisible dans l'app jusqu'au run de cette nuit**. À vérifier demain matin ; si ça se confirme
+comme un trou de quelques heures après chaque désarchivage, c'est un point à ouvrir.
+
+### 5a ter (suite) — POURQUOI SEULEMENT 35 ARCHIVES ONT LE BLOC CONSOLE
+
+Question de Frédéric : *« c'est sûrement lié au run chauffage/DPE quotidien... mais alors
+pourquoi seulement 35 ? »* Mesuré :
+
+**1. L'extraction console ne tourne JAMAIS la nuit.** Dans `run_full_pipeline.ps1` l. 716 elle
+est derrière un interrupteur `-RunConsoleMissingFields` (interrupteur éteint par défaut,
+l. 86) — et le run de nuit ne le passe pas : `scheduled/run_quotidien.ps1` l. 39 n'envoie que
+`-PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes
+-IncludeArchivedContactSearches`. Sa limite par défaut serait de toute façon **25 par passage**.
+
+**2. D'où viennent les 164 lignes** (dates d'extraction) : **135 en juin** (une campagne à la
+main), puis 15 en juillet, 6 en août, 4 en septembre, **4 en octobre** — c'est-à-dire une par
+une, posées par ce geste-ci et ses voisins. D'où les **35 archives seulement**.
+
+**3. Ce qui tourne vraiment la nuit, c'est le CHAUFFAGE — une AUTRE extraction, une autre
+table.** `-SkipHektorChauffage` n'est pas passé, scope `current`, **50 par nuit maximum**
+(`run_full_pipeline.ps1` l. 70-81 et 351). Et elle, elle est bien remplie :
+
+| `hektor_annonce_chauffage_detail` | |
+|---|---|
+| lignes | **57 092** |
+| sur annonces vivantes | 22 560 |
+| **sur archives** | **34 532** |
+
+Donc l'intuition de Frédéric est juste sur le principe — il y a bien un rattrapage de champs
+manquants chaque nuit — mais c'est le **chauffage**, pas le bloc console. Et
+`prepare_archived_annonce_detail.py` lit le chauffage dans **sa propre table locale**
+(l. 170-177) : le chauffage est déjà servi sans appeler Hektor.
+
+**Ce que l'appel à Hektor apporte donc vraiment, pour une archive** : secteur, contacts des
+diagnostics, détail des honoraires, rendement locatif, détail des pièces, images DPE/GES.
+Rien d'autre.
+
+**Le gaspillage, prouvé en direct aujourd'hui** : deux extractions pour le bien 78, à 08:22
+puis **08:44** UTC — 22 minutes d'écart, alors que la donnée était en cache depuis la première.
