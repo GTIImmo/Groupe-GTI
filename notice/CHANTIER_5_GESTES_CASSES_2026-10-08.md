@@ -931,3 +931,38 @@ des deux n'aurait joué.
 
 **Reste à voir demain matin** : que le run de 05:00 **ne repose pas** le retrait — c'est le
 morceau B (`relation_ledger.py`), et c'est le seul contrôle qui manque à 5e.
+
+---
+
+## ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 (05:00) — la liste, dans l'ordre
+
+Trois choses sont en attente de ce run. Le journal du run est dans `logs/` ; le bilan du
+registre des liens s'affiche dans la sortie de l'étape « registre des liens (app_relation) ».
+
+**① 5c — la doublure du registre des mandats** *(étape neuve dans `run_full_pipeline.ps1`)*
+- l'étape **« phase2 doublure du registre des mandats »** apparaît dans le journal,
+  **avant** « phase2 registre des mandats (app_mandat) » ;
+- sa durée est de l'ordre de **28 s** (mesure du 08/10 : 26 847 lignes, 27 appels) ;
+- l'étape du registre qui suit finit **sans erreur** ;
+- en base locale : `app_mandat__sb` porte le nombre de lignes de `app_mandat` en ligne.
+- ⚠ Si l'étape **allonge trop le run** (il doit finir avant 08:15, sinon il tombe dans la
+  descente — incident du 03/10), le dire : on la déplacera.
+
+**② 5e-B — le registre de nuit lève-t-il le retrait ?** *(le contrôle qui manque à 5e)*
+- dans le bilan du registre des liens, le compte **`retraits_leves`** doit valoir **1**
+  *(le lien 1000008, Sophie TEST MANDANT 25-08 sur le bien 62963, rattaché le 08/10 à 17:40)* ;
+- et en base : `select retire_le, present_in_hektor from app_relation where app_relation_id=1000008`
+  → **`retire_le` NULL** et **`present_in_hektor` vrai**.
+- ⛔ **Si `retire_le` est de nouveau posé**, le morceau B n'a pas joué : regarder d'abord
+  `doublure_du` dans le bilan (la garde de fraîcheur refuse de lever si la doublure n'est pas
+  **du jour**), et le message « retraits NON leves : la doublure est du … ».
+
+**③ Rien d'autre n'a bougé**
+- durée totale du run comparable aux nuits précédentes ;
+- aucune étape en erreur qui ne l'était pas avant ;
+- la sentinelle `relation_disparue.py` : `retraits_perdus` = 0 et `doublure_perimee` = 0.
+
+**④ 5a — le bien désarchivé du 08/10** *(point resté ouvert)*
+- le bien **78 (VA2380)** doit être revenu dans le parc vivant après la descente : il était
+  sorti des archives sans y entrer (`ni archives ni parc vivant` le 08/10 à 10:47).
+  `select count(*) from app_dossier_current where hektor_annonce_id=78` → **1 attendu**.

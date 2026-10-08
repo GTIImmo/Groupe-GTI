@@ -130,6 +130,18 @@ chaque étape.
 **Ordre DÉCIDÉ par Frédéric le 08/10 : ① puis ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** (tous seront faits).
 Un périmètre, une taille, un ordre ou un report ne se décident jamais sans lui.
 
+### ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 — *la liste détaillée est dans `notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`*
+
+```
+1. 5c   l'etape neuve « doublure du registre des mandats » tourne (~28 s), avant celle
+        du registre, et le registre part sans erreur -- et le run finit AVANT 08:15
+2. 5e-B le bilan du registre des liens doit porter retraits_leves = 1, et la ligne
+        app_relation_id 1000008 doit garder retire_le NULL + present_in_hektor vrai
+3.      rien d'autre n'a bouge : duree du run, etapes en erreur, sentinelle
+        relation_disparue (retraits_perdus = 0, doublure_perimee = 0)
+4. 5a   le bien 78 (VA2380), desarchive le 08/10, doit etre revenu au parc vivant
+```
+
 ### ⛔ Ce qui attend Frédéric
 
 ```
