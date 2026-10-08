@@ -178,7 +178,10 @@ futures ne touche donc rien d'autre).
 
 ### Ce qui reste pour clore le chantier ①
 
-1. Frédéric colle la **répétition** dans l'éditeur SQL → me recopie le message.
+1. ✅ **Répétition faite par Frédéric le 08/10** : « ESSAI ANNULE -- APRES PATCH: anon_fonctions=31
+   auth_fonctions=135 photo=2546 lignes || APRES INVERSE: anon_fonctions=136 auth_fonctions=155
+   anon_lit_registre=t auth_modifie_registre=t rls_search_state=f » = **exactement l'attendu**, sur
+   les deux sens. Relu ensuite en base : rien n'a bougé (photo absente, 136 fonctions anon, RLS off).
 2. Si le message est celui attendu : Frédéric colle **le patch**.
 3. Accord pour **déployer** la fonction Edge.
 4. **Contrôle du résultat** : droits relus en base ; appel avec la clé publique seule → refus ;
