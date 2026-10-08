@@ -220,5 +220,15 @@ tous deux désormais refusés (401) — **sans régression** :
   l'appelle (`HomeDashboardScreen`) est démonté sur l'écran de connexion (`App.tsx:18052`) et
   remonté après : l'appel repart connecté.
 
-**Reste à contrôler** : l'app connectée (Frédéric se connecte dans le panneau du navigateur) ;
+**L'app connectée** (session Chrome de Frédéric, lecture seule, 08/10 ~08:30) : accueil, Mandats
+(50 lignes), Contacts (50 lignes) — **158 appels réussis sur 160**. Les 2 échecs sont sur
+`app_console_request_annonce_refresh` et sont **ANTÉRIEURS au patch** : un 500 = dépassement de
+temps (la requête fouille `app_console_job` par `coalesce(hektor_annonce_id, payload…)`, sans index ;
+la descente de 08:15 tournait — Frédéric l'a confirmé ; même erreur hier à 10 h) ; un 403 = le
+refus PRÉVU par la fonction (« forbidden » quand la fiche n'est pas parmi les vivantes ; 7 fois
+hier). Journaux Postgres depuis 08:20 : **aucun** « permission denied » venant de l'app connectée
+(les seuls sont mes 6 essais à la clé publique et les 2 appels d'avant connexion).
+*À noter pour plus tard (hors chantier ①) : la relecture d'une annonce est lente sous charge.*
+
+**Reste à contrôler** :
 la nuit du 08 au 09/10 (run, crons, worker) ; le déploiement de `hektor-diffusion` (accord).
