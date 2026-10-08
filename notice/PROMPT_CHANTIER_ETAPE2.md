@@ -1,13 +1,16 @@
 # PROMPT — mener un chantier de l'étape 2, point par point
 
 *À coller au début d'une NOUVELLE conversation (une conversation par chantier).
-**Un seul endroit à changer : la toute première ligne du bloc, `CHANTIER = ⑤`.**
-Ordre décidé le 08/10 : ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧.*
+**Un seul endroit à changer : la toute première ligne du bloc, `CHANTIER = ④`.**
+Ordre décidé le 08/10 : ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧.
+✅ **① fait** (sécurité, 08/10) · ✅ **⑤ fait** (les 9 gestes cassés, 08/10) → **le prochain est ④**.
+⚠ La ligne `CHANTIER = …` et le § 6 « ce qui est déjà appris » se mettent à jour à la fin de
+chaque chantier — c'est ainsi que la conversation suivante hérite du travail précédent.*
 
 ---
 
 ```
-CHANTIER = ⑤
+CHANTIER = ④
 
 Tu es l'ingénieur principal de mon projet (agence GTI : une app qui remplace le logiciel
 Hektor). Dépôt : C:\Hektor\Projet. Je ne suis pas développeur : parle-moi en français
@@ -108,6 +111,68 @@ Un seul point à la fois. Chaque message commence par une ligne de position :
   python phase2/checks/verifier_renvois_liste.py --reparer, puis sans --reparer.
 - Le front se valide par npm run build dans apps/hektor-v1 (jamais tsc --noEmit).
 - Une autre session peut travailler sur le dépôt : relis git log avant d'écrire.
+
+━━ 6. CE QUI EST DÉJÀ APPRIS — ne le redécouvre pas, vérifie-le ━━
+*(chantiers ① et ⑤, 08/10. Le détail chiffré : journal des décisions du plan, lignes du 08/10,
+et notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md)*
+
+LES NUMÉROS
+- Deux numéros par objet depuis le 23/09, et **le nom d'une colonne MENT** :
+  `app_contact_current.hektor_contact_id` porte LE NÔTRE, `app_relation.hektor_contact_id`
+  porte celui de HEKTOR. **Reconnais par la PLAGE** : contacts < 10 000 000 = Hektor,
+  ≥ 10 000 000 = nous ; `app_relation_id` / `app_mandat_id` ≥ 1 000 000 = posé par l'app.
+  C'était la cause commune de TROIS bugs du chantier ⑤. Mesure min/max des deux côtés avant
+  d'écrire une jointure qui mêle les deux mondes.
+
+MESURER
+- **La base > le code > les notes.** Un commentaire dit l'intention du jour où il a été écrit :
+  deux commentaires m'ont fait affirmer qu'une table « n'était jamais descendue » alors
+  qu'elle a 26 847 lignes.
+- **Les horaires se lisent dans les tâches planifiées Windows**, pas dans les commentaires
+  (qui disent 05:30 / 07:30, c'est faux) : run **05:00**, sauvegarde 08:00, descente des
+  doublures **08:15**, rattrapage documents 21:00, recherches actives 03:00. Le run PRÉCÈDE
+  la descente : une étape du run qui lit une doublure lit celle de la VEILLE — d'où les
+  descentes ciblées `pull_from_supabase.py --table <table>` au début du run.
+- SQLite : `LIKE` ignore la casse et `_` est un joker → utilise `instr(col, '"clé"')`.
+  `LIMIT` sans `ORDER BY` rend les lignes les plus VIEILLES. 15 doublures `__sb` existent.
+
+CHERCHER LE POURQUOI AVANT DE CORRIGER
+- Deux fois sur neuf, le « défaut » était une **décision déjà prise et à moitié appliquée**
+  (C.4-bis du 29/08) ou une **règle à amender** (le garde-fou du 20/09), pas une négligence.
+  Frédéric l'a exigé : « analyse pourquoi nous avons agi comme cela, cherche s'il y a une
+  explication dans les notes avant de changer ». `git log -S`, le journal des décisions,
+  la mémoire projet.
+
+LES DEUX CIRCUITS D'ÉCRITURE VERS HEKTOR — aucun champ commun, ne les confonds jamais
+- **Édition de champs** → `app_annonce_pending` : groupée, envoyée 10 minutes plus tard, et un
+  second coup de crayon FUSIONNE dans la même saisie.
+- **Gestes d'état** (statut, archive, négociateur, offre/compromis/vente, mandant) → un
+  **travail tout de suite**, qui ne passe pas par le pending.
+- `app_edit_affaire_optimistic` et `app_repartition_commission_set` ne créent **AUCUN** travail
+  Hektor : les répartitions de commission ne partent pas chez Hektor *(exigence de Frédéric :
+  « il faut rien casser »)*.
+- Le **filet de rejeu C.4-bis** (`app_console_action_enqueue_due_retries`, cron jobid 13,
+  chaque minute) rejoue un travail en erreur jusqu'à 5 fois en 24 h — mais **jamais une
+  création** : la rejouer la DOUBLERAIT.
+- `delete-never` dans les registres, **une seule exception** : la suppression **délibérée**
+  d'un contact efface physiquement ses liens, des deux côtés.
+
+LES PATCHS SQL
+- Empreinte d'une fonction : compare toujours
+  `md5(replace(pg_get_functiondef(…), chr(13), ''))` — un collage depuis Windows met le corps
+  en CRLF et l'empreinte brute ne correspond jamais.
+- Patron de répétition qui marche : le vrai patch + le vrai inverse + une
+  `RAISE EXCEPTION 'ESSAI ANNULE -- …'` finale qui agrège les mesures d'une table temporaire.
+  Une écriture interne réussie s'annule par savepoint (`RAISE EXCEPTION 'ANNULATION_INTERNE'`
+  rattrapée par le bloc englobant ; les variables PL/pgSQL survivent).
+
+L'APP EN RÉEL
+- Le navigateur intégré est capricieux : le premier clic après un `navigate` est avalé, la
+  barre de recherche de l'accueil ignore souvent la frappe. Clique deux fois dans le menu de
+  gauche, passe par la barre de la page Annonces, utilise `find` + les refs, et `form_input`
+  pour les champs de formulaire.
+- Biens d'essai déjà utilisés : 62774, 62963, VA2380 (bien 78) · contact d'essai 10355757.
+
 
 Commence maintenant : lectures du §1, puis la liste des points du chantier avec leur état,
 puis l'ÉTAPE 1 du premier point.

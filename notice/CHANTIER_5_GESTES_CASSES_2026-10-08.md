@@ -7,17 +7,19 @@
 
 ## Les points et leur état
 
+**État au 08/10 au soir : les 9 points sont traités. Le chantier est FINI.**
+
 | # | Le geste cassé | Objet | État |
 |---|---|---|---|
-| 5a | Désarchiver une annonce | Annonce | 🔎 audit refait le 08/10 — **confirmé** |
-| 5b | Modifier un mandant depuis sa carte | Mandant | ⬜ |
-| 5c | Premier n° de mandat demandé depuis l'app (dormant) | Mandat | ⬜ |
-| 5d | Filet du rattachement sur la mauvaise clé | Mandant | ⬜ |
-| 5e | Retirer puis rattacher le même mandant | Mandant | ⬜ |
-| 5f | Retour d'état après un échec passager (offre / compromis) | Transaction | ⬜ |
-| 5g | Supprimer un contact : le nettoyage local rate sa cible | Contact | ⬜ |
-| 5h | Mandant créé en échec : rien n'est défait | Mandant | ⬜ |
-| 5i | Conflit causé par l'app elle-même | Annonce | ⬜ |
+| 5a | Désarchiver une annonce | Annonce | ✅ **prouvé en réel** (VA2380, done en 43 s) — + **5a bis** le bouton, déployé · + **5a ter** ouvrir une archive sans Hektor (2 s) |
+| 5b | Modifier un mandant depuis sa carte | Mandant | ✅ **prouvé en réel** (bien 62774, Hektor modifié en 26 s) |
+| 5c | Premier n° de mandat demandé depuis l'app | Mandat | 🧪 la date était un **FAUX** de l'audit ; vrai défaut = décalage d'horaire, étape de descente ajoutée (28 s) — **attend le run du 09/10** |
+| 5d | Filet du rattachement sur la mauvaise clé | Mandant | ✅ **prouvé en réel** (`relation_etablie: done` en 28 s) ; le filet du REFUS reste non éprouvé |
+| 5e | Retirer puis rattacher le même mandant | Mandant | ✅ morceau A **prouvé en réel** (`retire_le` → NULL sans renuméroter) · 🧪 morceau B (le run ne doit pas reposer le retrait) **attend le run du 09/10** |
+| 5f | Retour d'état après un échec passager (offre / compromis) | Transaction | ✅ actif, **éprouvé hors ligne 6/6** — c'était la seconde moitié de C.4-bis (29/08). Reste : l'abandon RÉEL (5 tentatives ou « abandon » humain) → chantier ④ |
+| 5g | Supprimer un contact : le nettoyage local rate sa cible | Contact | ✅ **prouvé en réel** (contact 10355757, liens physiquement effacés des deux côtés) |
+| 5h | Mandant créé en échec : rien n'est défait | Mandant | ✅ sentinelle `contact_sans_numero_hektor` posée, lue par le moniteur, **verte** · options B/C (marqueur à l'écran, bouton « réessayer ») non faites |
+| 5i | Conflit causé par l'app elle-même | Annonce | 🔧 codé, `node --check` ✔ — **DORMANT** jusqu'au redémarrage des 4 workers, **non éprouvé en réel** (mode opératoire en fin de note) |
 
 ---
 
@@ -1256,3 +1258,68 @@ avec ses deux boutons (« j'ai refait » / « j'abandonne »).
 `node --check` ✔, CRLF conservés. ⚠ **DORMANT** : actif après redémarrage des 4 services.
 **Non éprouvé en réel** : il faudrait provoquer la séquence « corriger un champ puis changer le
 statut dans les 10 minutes » sur un bien d'essai — faisable, à faire si Frédéric le veut.
+
+---
+
+## ✅ LE CHANTIER EST FINI — bilan du 08/10, et ce qui reste
+
+### Ce qui a été réparé, et comment on le sait
+
+9 points, **6 prouvés par un geste réel en production** (5a, 5a ter, 5b, 5d, 5e-A, 5g),
+1 sentinelle posée et lue (5h), 1 éprouvé hors ligne et actif (5f), 1 codé et dormant (5i).
+**4 patchs SQL** appliqués par Frédéric après répétition (5a, 5b, 5e, et le correctif de la
+garde de retour arrière), **1 déploiement front** (le bouton de désarchivage, `78e6574`),
+**3 fichiers serveur** touchés (`console_job_worker.js`, `relation_ledger.py`,
+`delete_local_contact.py`), **1 étape ajoutée au run**, **1 sentinelle** de plus.
+
+### La racine commune, qu'il faut retenir
+
+**Trois des neuf bugs (5b, 5d, 5g) venaient de la même chose** : une colonne nommée
+`hektor_contact_id` qui ne contient pas la même chose selon la table. Le nom ment, la
+**plage** dit la vérité. Tant que les deux numéros coexistent (jusqu'à `L4-c`), **tout code
+qui mêle les deux mondes est suspect** : il faut mesurer min/max des deux côtés avant
+d'écrire une jointure ou un filtre.
+
+**Deux autres (5f, 5i) n'étaient pas des négligences mais des décisions à moitié
+appliquées** : 5f était la seconde moitié de C.4-bis (29/08), 5i amende la règle du 20/09.
+On ne l'a su que parce que Frédéric a exigé de chercher le *pourquoi* avant de changer.
+
+**Un sur neuf (5c) était un faux** de l'audit par objet : j'avais conclu d'un commentaire de
+code au lieu de mesurer la base. La hiérarchie est **la base > le code > les notes**.
+
+### ⏰ Ce qui reste à faire, dans l'ordre
+
+1. **Le run du 09/10** — la liste détaillée est dans la section
+   « ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 » ci-dessus (5c et 5e-B).
+2. **Allumer 5i** : redémarrer les 4 services worker (accord de Frédéric, en journée, file
+   des documents vide), puis l'essai réel ci-dessous.
+3. **Le marqueur à l'écran et le bouton « réessayer » de 5h** (options B et C) — pas faits,
+   ils relèvent du chantier ④ « aucun échec silencieux ».
+4. **L'abandon réel de 5f** (rendre l'état quand le filet a vraiment renoncé : 5 tentatives
+   ou « abandon » humain) — touche 2 fonctions SQL, chantier ④.
+5. **Les ~25 champs que l'API de Hektor ne rend jamais** (chauffage mis à part : il a sa
+   source `chauffage_console_json`) : 5 textes de secteur, 2 images DPE/GES, le détail de la
+   grille d'honoraires — **chantier ⑥**, pas celui-ci.
+
+### Le mode opératoire de l'essai réel de 5i (à faire après le redémarrage)
+
+Ce que 5i change ne se voit **que** si l'app elle-même fait bouger Hektor pendant les
+10 minutes d'attente d'une saisie. La séquence :
+
+```
+1. REDEMARRER les 4 workers  (admin, file documents vide, accord de Frederic)
+       Get-Service HektorConsoleWorker* | Restart-Service -Force
+2. Sur un bien d'essai SANS numero de mandat (62963 ou 62965) :
+       a. corriger un champ de texte  ->  cree la ligne app_annonce_pending (10 min)
+       b. DANS LA MEME MINUTE, changer le statut  ->  part tout de suite en travail
+3. Attendre que les 10 minutes s'ecoulent, puis lire :
+       - app_annonce_pending : la ligne doit etre PARTIE (push_job_id renseigne, pas de
+         conflit « hektor_plus_recent »)
+       - le journal du worker : « annonce_overwrite_guard » doit dire que le mouvement de
+         Hektor vient de NOUS (le geste d'etat), et laisser passer la saisie
+       - chez Hektor : le champ corrige DOIT porter la nouvelle valeur
+4. AVANT le correctif, la saisie aurait ete SOLDEE au journal des resolutions (perdue pour
+   Hektor) : c'est exactement ce qu'on veut ne plus voir.
+```
+
+⚠ **À ne pas faire sur une vraie annonce** : l'essai écrit chez Hektor.

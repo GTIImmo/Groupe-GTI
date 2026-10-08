@@ -122,12 +122,12 @@ chaque étape.
 | ② | les droits du négociateur — **attend la décision de Frédéric** | ⬜ |
 | ③ | Hektor d'abord → chez nous d'abord (statuts, clôture, fichiers) | ⬜ |
 | ④ | aucun échec silencieux | ⬜ |
-| ⑤ | les gestes cassés (5a → 5i) *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | 🧪 **LES 9 POINTS TRAITÉS le 08/10** · ✅ prouvés en réel : **5a** désarchiver (+ le bouton qui n'existait pour aucune archive, déployé) · **5b** modifier un mandant · **5d** le filet du rattachement · **5e** rattacher après un retrait · **5g** supprimer un contact · **5a ter** ouvrir une archive sans Hektor (2 s au lieu de 13-22 s) · ✅ **5h** sentinelle posée et lue · 🔧 éprouvés hors ligne, actifs : **5f** · 🔧 **5i** codé, **dormant** jusqu'au prochain redémarrage des workers · 🧪 **5c** et **5e-B** attendent le run du 09/10 (voir la liste ci-dessus) |
+| ⑤ | les gestes cassés (5a → 5i) *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 08/10, les 9 points** · 6 prouvés en réel (désarchiver, modifier un mandant, le filet du rattachement, rattacher après un retrait, supprimer un contact, ouvrir une archive sans Hektor) · sentinelle 5h verte · **reste** : le run du 09/10 (5c, 5e-B) et **5i dormant** jusqu'au prochain redémarrage des 4 workers |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
 | ⑦ | les gestes qui manquent | ⬜ |
 | ⑧ | gardé chez nous en entier | ⬜ |
 
-**Ordre DÉCIDÉ par Frédéric le 08/10 : ① puis ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** (tous seront faits).
+**Ordre DÉCIDÉ par Frédéric le 08/10 : ① puis ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** (tous seront faits). ① et ⑤ sont **faits** → **le prochain chantier est ④ (aucun échec silencieux)**. Le prompt de reprise est prêt : `notice/PROMPT_CHANTIER_ETAPE2.md` (une seule ligne à changer).
 Un périmètre, une taille, un ordre ou un report ne se décident jamais sans lui.
 
 ### ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 — *la liste détaillée est dans `notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`*
@@ -150,8 +150,11 @@ Un périmètre, une taille, un ordre ou un report ne se décident jamais sans lu
                       pourquoi 62 000 contacts seulement au cloud sur 356 000 ?
 ③ HORS CODE (etape 3, mais a ne pas oublier) : A.4 zone DNS (La Boite Immo -> OVH, garder
    www) · A.5 les leads · l'export PROTEXA · contrats A.1 et A.2
-④ C.9-couple          creer un menage d'essai (la sonde est prete)
-⑤ POUSSER             git push origin main -- ⚠ pousser = DEPLOYER (Render et Vercel)
+④ REDEMARRER          les 4 workers, pour ALLUMER 5i (en journee, file documents vide),
+                      puis son essai reel : corriger un champ, puis changer le statut
+                      dans les 10 minutes
+⑤ C.9-couple          creer un menage d'essai (la sonde est prete)
+⑥ POUSSER             git push origin main -- ⚠ pousser = DEPLOYER (Render et Vercel)
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
