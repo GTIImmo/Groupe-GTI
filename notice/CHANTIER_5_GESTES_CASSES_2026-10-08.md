@@ -686,3 +686,37 @@ l'étape est non bloquante, donc un échec laisse le run exactement comme aujour
 2-3 min pour les 132 664 du registre des liens) — à chronométrer au premier run.
 
 **Retour arrière** : retirer les deux lignes de l'étape. Rien d'autre.
+
+### Étape 5 — CONTRÔLES DU 08/10 APRÈS-MIDI (workers redémarrés par Frédéric)
+
+**Les 4 services** : `Running` tous les quatre.
+
+**5a ter est ACTIF, et mesuré en production.** Préparation du détail de l'archive VA2362
+(bien 70), déclenchée depuis l'app :
+
+| | avant (bien 78, ce matin) | après (bien 70, 13:52) |
+|---|---|---|
+| étape `console_missing_fields` | « Extraction console ciblée » → **appel à Hektor** | **« Extraction console NON faite : la fiche se reconstruit depuis la base locale (5a ter, 08/10) »** |
+| durée du travail | 22 s puis 13 s | **2 s** |
+
+Et la fiche reconstruite tient debout : **22 573 octets**, avec le bloc intérieur, les
+diagnostics et le chauffage. Il lui manque les **images DPE/GES** — exactement le coût connu
+et accepté de l'option A, rien de plus.
+
+**5c — la descente ciblée, chronométrée** (option ①, accord de Frédéric) :
+
+```
+.venv\Scripts\python.exe phase2\sync\pull_from_supabase.py --table app_mandat
+  -> app_mandat (le nom local est pris) -> app_mandat__sb
+  -> 26 847 lignes en 28 s, 27 appels API
+```
+
+Relecture locale : `app_mandat__sb` = **26 847 lignes**, dont **0** dans la plage de l'app
+(≥ 1 000 000) — normal, aucun numéro n'a encore été demandé depuis l'app. Le coût se place
+bien entre la console (12 s) et le registre des liens (2-3 min), comme annoncé.
+**Reste à voir au run de 05:00 demain** : l'étape apparaît dans le journal et le registre
+part sans erreur.
+
+**Observé au passage, à ne pas perdre** : pendant la recherche étendue, l'app a affiché un
+bandeau **« canceling statement due to statement timeout »** — une requête Supabase expirée,
+remontée à l'écran. À verser au **chantier ④**.
