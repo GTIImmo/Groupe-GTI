@@ -18,36 +18,43 @@ L'ETAPE 2 N'EST PAS TERMINEE.
          en 120 jours, 0 annonce nee dans l'app depuis le 25/09
 ```
 
-## 🧭 LA FEUILLE DE ROUTE — 46 chapitres, *proposés le 07/10, à valider par Frédéric*
+## 🧭 LES CHANTIERS DE L'ÉTAPE 2 — *posés le 08/10, ils remplacent les 46 chapitres*
 
 ```
-La liste qu'on SUIT, un chapitre apres l'autre : plan, section « 🧭 LES 46 CHAPITRES »
-(le detail de chacun : notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md)
-  ch.1   le rattrapage tient dans la nuit       ⛔ G.1-e AVANT LE 08/10 A 21:00
-  ch.2   une seule fenetre de redemarrage du worker (brouillons, purge, etape D)
-  ch.3   EN PARALLELE : mesurer ce qui perime (leads, RGPD, agenda, menage, signatures)
-  ch.4   relire le parc vivant (G.2 -> G.6)   ·   ch.5  les planchers « Hektor repond vide »
-  ch.6   sauvegarde/surveillance   ·   ch.7  securite   ·   ch.8-9  filets, droits, comptes
-  ch.10  ▶ LE PILOTE : quelques negociateurs dans l'app pendant que Hektor vit
-  ch.11-46  statuts, fichiers, bascule du n° Hektor, registre legal, signature,
-            diffusion, leads... jusqu'au JOUR J (ch.46)
+Audit par objet du 08/10 : notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md
+Le suivi (une ligne par chantier) : plan, section « 🧭 LES CHANTIERS DE L'ETAPE 2 »
+A CHAQUE CHANTIER : audit du sujet -> explication des correctifs -> « vas-y » ->
+                    code -> controle du resultat -> plan a jour
+  ①  securite : 6 fonctions ouvertes a un visiteur non connecte
+  ②  les droits du negociateur (attend la decision de Frederic)
+  ③  Hektor d'abord -> chez nous d'abord (statuts, cloture, fichiers)
+  ④  aucun echec silencieux (creations non rejouees, alarme figee a 15)
+  ⑤  les gestes casses (desarchiver, modifier un mandant, n° de mandat...)
+  ⑥  ce qui ne redescend pas de Hektor (G.1-b, G.2 -> G.6, photos, agenda)
+  ⑦  les gestes qui manquent (prolonger un mandat, ordre des photos)
+  ⑧  garde chez nous en entier (contact, archives, sauvegarde)
+ORDRE propose ① ⑤ ④ ② -- a valider par Frederic
+Etape 3 (registre legal, signature, pub, site, DNS, e-mail) : PAS ici
 ```
+*(Les 46 chapitres du 07/10 sont refusés : ils mélangeaient l'étape 2 et l'étape 3.)*
 
 ## LA CARTE — les lots du plan, les tâches de cette liste
 
 ```
 L0 ✅    C.1' · le renvoi partiel · C.4 · C.17-ter
          ⚠ « une saisie ne se perd jamais » ne couvre pas les CREATIONS -> L10-2
-L1 🟡    ROUVERT 07/10 : la recherche ne nait pas dans l'app -> L10-2
+L1 🟡    ROUVERT 07/10 : la recherche ne nait pas sous NOTRE numero (etape 3) ;
+         ↳ 08/10 : elle est bien creee et rapprochee en 30-40 s ; seul l'ECHEC
+         n'est pas rejoue -> chantier ④
 L2 🟡    ROUVERT 07/10 : 26bis-3 (= N.4) · 26bis-TRANSACTIONS
 L3 ✅    la recence par champ (le run « ecrase puis repose » : l'enonce est a reecrire)
-L4-b' ✅ L4-c ✅ (L4-c l. 91)
-L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 384) ; 0 creation reelle depuis le 25/09
-         C.9-couple (l. 881) : la sonde existe (033e946), reste le geste humain
+L4-b' ✅ L4-c ✅ (L4-c l. 98)
+L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 391) ; 0 creation reelle depuis le 25/09
+         C.9-couple (l. 888) : la sonde existe (033e946), reste le geste humain
          26bis-TRANSACTIONS · 4.3
-L5 ⛔    E.0-bis (l. 2393) : photos, mandat existant, fusion, brouillon, suppressions,
+L5 ⛔    E.0-bis (l. 2400) : photos, mandat existant, fusion, brouillon, suppressions,
          16 « Ouvrir Hektor » vivants (sur l'ancien domaine)
-L6 ⛔    D.0 (l. 963) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
+L6 ⛔    D.0 (l. 970) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
 L7 🟡    afficher ✅ · ajouter ⛔ (G.5, devenu bloquant)
 L8 ⛔    E.2 pas jouable avec les droits actuels : F.1 AVANT E.2 -> L10-11
 L9 🟡    phase 1 ✅ ; registre legal, C.13-c, export PROTEXA, 2 defauts dormants (section 9)
@@ -2576,7 +2583,14 @@ NON MESURE
            · RECHERCHE : ligne provisoire seule, effacee 24 h apres (cron 9,
              app_sweep_stale_provisionals), jamais rapprochee, pas rejouee ;
              distributeur app_search_id_app_seq jamais appele  (-> L1 rouvert)
+             ↳ 08/10 FAUX dans le cas normal : la vraie recherche arrive en 30-40 s
+               et elle est rapprochee la minute suivante (87/90 recentes) ; la ligne
+               provisoire n'est qu'un affichage. VRAI : un ECHEC n'est jamais rejoue
+               (add_hektor_contact_search absent de types_rejouables) -> chantier ④.
+               Le numero app de naissance = etape 3.
            · ANNONCE : 11 champs metier au cloud, le corps dans le payload du travail
+             ↳ 08/10 PAS une anomalie de l'etape 2 : la fiche complete revient en
+               ~1 min, 13 463/13 463 vivantes l'ont. Etape 3 (naitre sans Hektor).
            · MANDANTS saisis a la creation d'une annonce : chez Hektor seulement
              (console_job_worker.js:19761-19862)
            · « une saisie ne se perd jamais » doit couvrir les CREATIONS (*_provisional)

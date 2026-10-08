@@ -14,6 +14,90 @@
 
 ---
 
+## 08/10/2026 — *l'ancien §2 de `CLAUDE.md` (état du 07/10 : audit complet, 46 chapitres)*
+
+> ⚠ **Cette section porte LE PRÉSENT, et rien d'autre.** Règle : en fin de session, on la
+> **RÉÉCRIT**, on ne l'empile pas ; ce qui en sort descend dans **`notice/JOURNAL_DE_BORD.md`**
+> *(l'état du 03/10 au 06/10 y est descendu le 07/10 : run réparé, retirer un mandant, L9…)*.
+
+**Réécrit le 07/10/2026, après l'audit complet** —
+`notice/AUDIT_AUTONOMIE_COMPLET_2026-10-07.md` *(10 dimensions, chaque constat grave remesuré
+par un contradicteur, puis un contrôle de complétude ; lecture seule)*.
+
+### Le verdict, en quatre lignes
+
+```
+L0 ✅  L1 🟡  L2 🟡  L3 ✅  L4 🟡  L5 ⛔  L6 ⛔  L7 🟡  L8 ⛔  L9 🟡  L10 ⬜
+L'ETAPE 2 N'EST PAS TERMINEE. La memoire est a nous, et MODIFIER marche sans Hektor.
+CREER, mettre sous mandat, ajouter un fichier, valider pour la diffusion : encore Hektor.
+Personne ne saisit dans l'app : 0 travail demande par un commercial en 120 jours.
+```
+
+### Le chantier : l'audit est DANS le plan, pas à côté *(décision du 07/10)*
+
+| où | quoi |
+|---|---|
+| plan, section « 🔎 L'AUDIT COMPLET DU 07/10 » | où va chaque point · **les 8 questions à Frédéric** · **🧭 LES 46 CHAPITRES**, la liste que le dev suit *(proposée le 07/10, à valider)* |
+| `notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md` | le détail de chaque chapitre (ordre interne, prérequis, feu vert, critère de fin) |
+| plan, lots | **L1 et L2 rouverts** · lot **`L10` « Préparer la coupure »** créé |
+| liste, section 13 | les 16 tâches de `L10` |
+| liste, section 12 | hors code : A.1 → A.5 *(A.4 DNS et site, A.5 leads : neufs)* |
+| liste, cases existantes | G.1→G.6, 26bis-3, C.9-couple, C.13-c, E.0-bis, E.1, E.2, F.1, 11bis ①, A.3 : annotées « ↳ 07/10 » |
+
+### Les fronts
+
+| front | où c'en est | ce qui reste |
+|---|---|---|
+| **① IDENTITÉ / NAISSANCE** *(L4 · L10-1 · L10-2)* | le stock est 100 % sous nos numéros ; contact et annonce savent naître (e3 allumé) | n° Hektor de l'annonce `NOT NULL` dans 16 tables ; recherche seulement provisoire ; C.9-couple : sonde prête, geste humain |
+| **② LES DOCUMENTS** *(`D.0`, l. 963 · G.1→G.6)* | rattrapage à 21 h, lots de 2 500, 0 erreur | ≈ 10 650 annonces (≥ 6 nuits) ; **G.1-b les brouillons échoueront** ; parc vivant figé depuis le 20/08 (G.2 puis G.6) ; G.5 devenu bloquant |
+| **③ LES PHOTOS** *(section **10bis**, l. 1163)* | affichage 100 % chez nous (74 992 photos du parc vivant) | ajouter / retirer / réordonner chez nous (G.5, E.0-bis) ; 350 retraits faits dans Hektor non remontés |
+| **④ LE REGISTRE DES MANDATS** *(L9, liste section 9)* | phase 1 faite ; mandants et prix chez nous depuis le 06/10 | série légale, inaltérabilité, export, avenants et mandats de recherche, export PROTEXA, 2 défauts dormants de l'étape D |
+| **⑤ LA COUPURE** *(L10, liste section 13)* | ouvert le 07/10 | 16 tâches ; ordre proposé dans le plan, **pas décidé** |
+
+### ⛔ Ce qui attend Frédéric
+
+```
+⓪ AVANT LE 08/10 A 21:00     fixer la taille du lot des VENTES (proposition 400) et
+                             dire « vas-y » pour G.1-e (ch.1) -- sinon un lot de 2 500
+                             ventes (20 a 36 h) fait refuser le run du matin
+① HORS CODE, sans attendre   A.4 la zone DNS de gti-immobilier.fr est servie par
+                             La Boite Immo (MX Google de toute l'agence) : export
+                             de la zone, puis OVH -- GARDER l'adresse de www
+                             (l'admin Hektor et le worker passent par elle)
+                             A.5 ou arrivent les leads depuis le 01/02 ?
+                             l'export PROTEXA · les contrats A.1 et A.2 · le juriste
+② LES 8 QUESTIONS            plan, section « 🔎 L'AUDIT COMPLET DU 07/10 »
+③ C.9-couple                 creer un menage d'essai sur une cible choisie (sonde prete)
+④ POUSSER                    git push origin main -- ⚠ pousser = DEPLOYER (Render et
+                             Vercel se deploient seuls, ~1 min)
+⑤ G.6                        NE PAS allumer -EnqueueConsoleDocuments tel quel : G.2 d'abord
+```
+
+### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
+
+```
+G.1-b    les 508 brouillons du rattrapage -- AVANT qu'il les atteigne
+G.2      rebalayer le PARC VIVANT, fige depuis le 20/08
+L10-8    les planchers « Hektor repond vide » (l'index des archives peut tomber sur
+         un simple hoquet : ils protegent DES MAINTENANT)
+C.9-couple · C.13-c · N.4 (26bis-3) · E.1 (recherches, visites, documents, signatures)
+A.3      l'export PROTEXA     ·     A.4 la zone DNS, AVANT tout preavis
+```
+
+### Ce qui reste vrai de l'exploitation
+
+- **Le run de nuit** a été réparé le 03/10 (l'étape des liens : 79 min → 46 s). Le
+  `busy_timeout` de la descente (`a86a800`) et la garde d'ordonnancement (`5cfd576`) sont
+  **faits et poussés**. Nuit du 07/10 : 54 étapes sur 54, 05:00 → 07:20.
+- **Reprise** : `.\scheduled\run_quotidien.ps1 -StartAtLabel "<étiquette exacte>"`. Lire le
+  journal dans les 30 s : chercher `REPRISE a partir de`, compter les `SAUTEE (reprise)`.
+- **Render et Vercel se déploient seuls** sur un push vers `main` : `/health` rend le commit
+  qui tourne.
+- **Une autre session** travaille parfois en parallèle sur le même dépôt (07/10 : la sonde
+  C.9-couple). Relire `git log` avant d'écrire dans les documents.
+
+---
+
 ## 07/10/2026 — *l'ancien §2 de `CLAUDE.md` (état du 03/10 au 06/10)*
 
 > Descendu le 07/10/2026, quand le §2 a été réécrit après l'audit complet

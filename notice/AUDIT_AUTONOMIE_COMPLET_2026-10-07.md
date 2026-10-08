@@ -1,5 +1,15 @@
 # AUDIT COMPLET — L'AUTONOMIE VIS-À-VIS DE HEKTOR, CONFRONTÉE AU CODE
 
+> ⚠ **CORRIGÉ LE 08/10 — lire d'abord `notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md`.**
+> Cet audit mélangeait l'étape 2 (Hektor fournit encore les numéros) et l'étape 3 (registre
+> électronique, signature, pub, site, DNS, e-mail), et il s'est trompé sur plusieurs objets :
+> l'annonce « née avec 11 champs » (fiche complète en ~1 min : étape 3), la recherche « effacée
+> en 24 h et jamais rapprochée » (faux dans le cas normal), la transaction « fabriquée chez
+> Hektor » (faux), le bon de visite « dépendant de Hektor » (faux), le mandant « ligne durable
+> ✅ » (trop optimiste). Il n'avait pas vu le désarchivage impossible, la modification d'un
+> mandant cassée, ni les 6 fonctions ouvertes à `anon`. Détail : audit du 08/10, §5.
+> Ce document reste utile pour l'étape 3 (§4 points historiques, §13 C1–C6, DNS, leads).
+
 **Mercredi 07/10/2026.** Audit demandé par Frédéric : *« vérifie que mon projet et mes codes
 actuels correspondent au plan d'autonomie — identité, contenu, lecture, worker, data… Travail
 d'expert, ne code rien, lecture seule, rapport détaillé mais explicatif. »*

@@ -3,7 +3,10 @@
 Remplace le plan du 18/08. Établi après quatre audits mesurés :
 identifiants (19/08), workers (20/08), diffusion (20/08), contacts et modales (20/08).
 
-> **Dernière mise à jour : 07/10/2026** — l'AUDIT COMPLET est intégré : section
+> **Dernière mise à jour : 08/10/2026** — **AUDIT PAR OBJET** refait
+> (`notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md`) et section **« 🧭 LES CHANTIERS DE L'ÉTAPE 2 »**
+> (8 chantiers, avec leur suivi), qui remplace les 46 chapitres.
+> *(Mise à jour précédente : 07/10/2026)* — l'AUDIT COMPLET est intégré : section
 > « 🔎 L'AUDIT COMPLET DU 07/10 » sous les lots, L1 et L2 rouverts, lot **L10** créé.
 > *(Mise à jour précédente : 20/09/2026)* — la CHARTE DE L'ÉTAPE 2, le JOURNAL DES
 > DÉCISIONS et LES DIX LOTS ouvrent ce document.
@@ -100,6 +103,10 @@ question semble revenir, c'est ici qu'on regarde avant de la reposer.*
 | **30/09** | ⛔ **LA RELATION EST LE SEUL OBJET À UN SEUL ROBINET** *(audit en lecture seule, parti d'un bug : fiche contact vide ouverte depuis une annonce)*. Le lien a son **identité** chez nous (C.9-d/f) mais pas son **existence** : la table est refaite chaque nuit depuis 6 sources Hektor, l'app n'écrit qu'une ligne provisoire, aucun contrat d'autorité, 0 sentinelle. **Exigence de Frédéric** : *un registre des relations autonome, mis à jour selon un contrat d'autorité entre le run de nuit Hektor et les workers de l'app* (ajouter un mandant, un acquéreur, un mandant depuis le registre des affaires). **L2 « relations » était surestimé.** ➡ section **« LE REGISTRE DES RELATIONS DEVIENT AUTONOME »** + `notice/AUDIT_REGISTRE_RELATIONS_AUTONOME_2026-09-30.md` · ⏳ **5 questions à trancher avant tout code** |
 | **07/10** | ⛔ **AUDIT COMPLET : L'ÉTAPE 2 N'EST PAS TERMINÉE.** *(10 dimensions, chaque constat grave remesuré par un contradicteur, puis un contrôle de complétude ; lecture seule)*. La fondation est vraie : nos numéros, nos registres, la mémoire, et la chaîne « l'app écrit d'abord » pour les **modifications**. Mais la liste « il ne reste que documents + n° de mandat + signature + passerelles » est **incomplète d'une vingtaine de chantiers**, dont ceux-ci : une annonce née après la coupure serait **orpheline** (n° Hektor `NOT NULL` dans 16 tables, 8 fonctions qui refusent sans lui) ; créer reste suspendu à Hektor (recherche provisoire **effacée en 24 h**) ; mise sous mandat et clôture passent par Hektor ; le drapeau **diffusable**, qui commande le rapprochement, n'est posé que par Hektor ; les bons de visite sont faits par Hektor ; le **DNS** de gti-immobilier.fr est servi par La Boîte Immo ; le canal des **leads** est inconnu depuis le 01/02. ➡ `notice/AUDIT_AUTONOMIE_COMPLET_2026-10-07.md` |
 | **07/10** | **L'AUDIT S'INTÈGRE AU PLAN, PAS DE CHANTIER À PART** *(Frédéric : « va s'y »)*. Les points connus complètent leur case existante. **L1 et L2 sont rouverts** : leur énoncé n'est pas couvert (règle CLAUDE.md §4). Les points sans place vont dans un **lot neuf `L10` « Préparer la coupure »**, et les points hors code dans la section 12 de la liste (**A.4** DNS et site web, **A.5** leads). Méthode inchangée : une tâche de code à la fois, chacune **ré-auditée au moment d'y entrer** (l'audit est une carte, pas la vérité). |
+| 07/10 | **Le rattrapage des documents garde son lot de 2 500 et son périmètre** *(Frédéric)*. G.2 se fera sur **toutes les annonces vivantes, estimations comprises**. Un périmètre, une taille ou un ordre ne se décident jamais sans Frédéric |
+| **08/10** | **LES DEUX ÉTAPES, DÉFINIES PAR FRÉDÉRIC.** *Étape 2* : « on utilise encore Hektor pour générer les id afin de faire fonctionner les workers ». *Étape 3* : notre registre électronique des mandats (nos numéros), puis la signature, puis la pub — « tant que les 3 ne sont pas chez nous, impossible de couper Hektor » — plus site web, DNS, e-mail. ➡ **Les 46 chapitres du 07/10 sont refusés** : ils mélangeaient les deux étapes |
+| **08/10** | ⛔ **AUDIT PAR OBJET : l'audit du 07/10 se trompait sur plusieurs objets** (11 champs de l'annonce, recherche « effacée en 24 h », transaction « fabriquée chez Hektor », bon de visite). Refait en lecture seule, objet par objet, contre le code ET l'historique → `notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md`. **Le socle tient** ; les trous sont les droits, des gestes encore « Hektor d'abord », des échecs silencieux, des bugs précis (désarchiver est impossible depuis le 30/08), et **6 fonctions ouvertes à un visiteur non connecté** |
+| **08/10** | **LA MÉTHODE PAR CHANTIER** *(Frédéric : « chantier par chantier mais avec à chaque fois audit sur le sujet pour revérifier puis explication des correctifs proposés puis contrôle du résultat du travail »)*. Les 8 chantiers et leur suivi : section « 🧭 LES CHANTIERS DE L'ÉTAPE 2 ». Ordre proposé ① ⑤ ④ ②, **à valider** |
 
 ---
 
@@ -182,9 +189,53 @@ commercial en 120 jours, 0 annonce née dans l'app depuis le 25/09.
    automatismes CRM (nouveau mandat, échéance, anniversaire) sont-ils allumés ? Properstar
    diffuse-t-il nos biens ?
 
-#### 🧭 LES 46 CHAPITRES — *la liste que le dev suit, un chapitre après l'autre*
+### 🧭 LES CHANTIERS DE L'ÉTAPE 2 — *posés le 08/10, ils remplacent les 46 chapitres*
 
-> **Proposée le 07/10, EN ATTENTE DE LA VALIDATION de Frédéric.** Construite à partir de 110
+> **D'où ils viennent.** Frédéric a refusé les 46 chapitres : ils mélangeaient l'étape 2 et
+> l'étape 3, et traitaient des détails avant les grosses anomalies. Un **audit par objet**
+> a été refait le 08/10, en lecture seule, avec la bonne grille :
+> ➡ **`notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md`** (tableau, détail par objet, preuves).
+>
+> **La grille.** *Étape 2* : l'app fait tout le travail quotidien ; Hektor vit, **il fournit
+> les numéros**, les workers lui envoient les mises à jour. *Étape 3* : registre
+> électronique des mandats (nos numéros), puis signature, puis passerelles, plus site, DNS,
+> e-mail. Ce qui ne compte qu'après la coupure n'entre pas ici.
+>
+> **LA MÉTHODE, À CHAQUE CHANTIER** *(Frédéric, 08/10 : « chantier par chantier mais avec
+> à chaque fois audit sur le sujet pour revérifier puis explication des correctifs proposés
+> puis contrôle du résultat du travail »)* :
+> **① audit du sujet** (le code et la base d'aujourd'hui, plus l'historique : rien n'est
+> refait de ce qui l'est déjà) → **② explication des correctifs proposés** (ce que ça touche,
+> retour arrière, vérification) → **③ « vas-y » de Frédéric** (accord obligatoire pour la
+> base de production, un redémarrage, un déploiement) → **④ code** → **⑤ contrôle du
+> résultat** (dire aussi ce qui a raté) → **⑥ plan, liste et CLAUDE.md à jour**.
+>
+> **L'ORDRE est une décision de Frédéric.** Ordre proposé le 08/10 : ① puis ⑤ puis ④ puis ②
+> (qui attend d'abord sa décision sur les droits), puis le reste. Les points marqués ⏳ ont
+> une **date de péremption** : ils doivent se faire tant que Hektor vit.
+
+**LE SUIVI** — *une ligne par chantier, mise à jour à chaque étape. Légende : ⬜ pas commencé
+· 🔎 audit · 💬 expliqué, attend « vas-y » · 🔧 en code · 🧪 contrôle · ✅ fini (avec sa mesure)*
+
+| # | Chantier | Ce qu'il couvre *(détail : audit du 08/10, §2)* | État |
+|---|---|---|---|
+| **①** | **Sécurité** | 6 fonctions `SECURITY DEFINER` exécutables par `anon` sans contrôle de rôle (dont `app_bascule_identite_contact_annuler`) · la vue `app_contact_relations_current` lisible sans connexion · *(L10-16)* | ⬜ |
+| **②** | **Les droits du négociateur** | annonce (modifier, statut, archiver, négociateur) · mandant (tout) · transaction (tout, aucun circuit de demande) · documents et photos (générer, ajouter) · numéro de mandat · comptes (2 commerciaux contre 39 négociateurs) · *(L10-11, F.1)* — **attend d'abord la décision de Frédéric : que fait un négociateur seul, que demande-t-il ?** | ⬜ |
+| **③** | **Hektor d'abord → chez nous d'abord** | mise sous mandat et « Mandat clos » · archiver et changer de négociateur (le carnet n'est lu par personne) · clôture d'un mandat (la date n'arrive pas au registre) · ajout de document et de photo (G.5 dort) · suppression d'un document (notre copie détruite) · *(L10-3, G.5)* | ⬜ |
+| **④** | **Aucun échec silencieux** | suite de la création d'une annonce marquée « réussie » malgré l'échec · créations (annonce, contact, recherche), dépôts et gestes mandant jamais rejoués · « Annonce en création » sans marque d'erreur · photos de création dans la mémoire du navigateur · alarme « travaux en erreur » figée à 15 · gestes de transaction sans notification · *(L10-10)* | ⬜ |
+| **⑤** | **Les gestes cassés** | 5a désarchiver impossible · 5b modifier un mandant depuis sa carte · 5c premier numéro de mandat depuis l'app (dormant) · 5d filet du rattachement sur la mauvaise clé · 5e retirer puis rattacher · 5f retour d'état sur échec passager (contraire au 29/08) · 5g suppression d'un contact · 5h mandant créé en échec · 5i conflit causé par l'app | ⬜ |
+| **⑥** | **Ce qui ne redescend pas de Hektor** | ⏳ documents du parc vivant figés depuis le 20/08 (**G.2 puis G.6**, après le rattrapage, périmètre = toutes les vivantes) · ⏳ **G.1-b** les brouillons du rattrapage · photos : retraits et ordre · ⏳ agenda des visites Hektor *(question à Frédéric)* · recherche créée dans Hektor (carnet aveugle) · 2 recherches disparues · RDV déplacé dans Google | ⬜ |
+| **⑦** | **Les gestes qui manquent** | modifier ou prolonger un mandat · photos : ordre, principale, visible, retirer (E.0-bis) · renommer un document · *(L5)* | ⬜ |
+| **⑧** | **Gardé chez nous en entier** | contact : 6 champs à la création, 12 à la modification · périmètre cloud 62 000 sur 356 000 *(question à Frédéric)* · corps des archives seulement dans le miroir · sauvegarde quotidienne (`app_relation`, `app_mandat`, carnets) · bon de visite non archivé · document retiré dans Hektor supprimé sans trace · ⏳ C.9-couple (geste humain) | ⬜ |
+
+**Ce qui n'est PAS ici** *(étape 3, audit du 08/10 §4)* : numéro Hektor obligatoire dans 16
+tables (L10-1), corps serveur refait depuis le miroir (N.4, 26bis), `diffusable`, numéro de
+dossier, série légale et registre électronique (L9), signature, diffusion, DNS et site (A.4),
+interrupteur et run d'après (L10-6, L10-7).
+
+#### 🧭 LES 46 CHAPITRES — *⚠ REMPLACÉS le 08/10 par « LES CHANTIERS DE L'ÉTAPE 2 » ci-dessus, gardés pour mémoire*
+
+> **Proposée le 07/10, refusée par Frédéric le 08/10** (mélange des étapes 2 et 3). Construite à partir de 110
 > sous-tâches mesurées dans le code, de trois ordonnancements (péremption, usage, fondations),
 > d'un jury et d'un contradicteur (« la séquence tient, aucun problème bloquant »).
 > ➡ **Le détail de chaque chapitre** (ordre interne, fichier:ligne, prérequis, feu vert,
