@@ -578,6 +578,18 @@ versionnées nulle part** dans `supabase/` — elles n'existent qu'en production
 | suppression ordonnée par l'app, journalisée | — | — | ✅ | — | ❌ |
 | sentinelles | 4 | 4+ | ✅ | ✅ | **0** |
 
+> ⚠ **MESURE DU 08/10 : CE TABLEAU EST PÉRIMÉ SUR DEUX LIGNES** *(vérifié dans le code et en base,
+> chantier ⑤ point 5b)*. Depuis les 02-03/10, `app_link_mandant_optimistic` **écrit bien la ligne
+> durable** au registre, et `relation_ledger.py` porte les trois règles des registres qui marchent :
+> **deux distributeurs, deux plages** (le run prend `MAX(id) WHERE id < 1 000 000`, l'app sa séquence
+> `app_relation_id_app_seq` — mesuré le 08/10 : run à 132 714, app à 1 000 009, elles ne se croisent
+> pas) · **on ne renumérote jamais une ligne connue** · **DELETE-NEVER** (un lien que le miroir ne
+> montre plus est MARQUÉ `present_in_hektor = 0` + `absent_depuis`, jamais supprimé : 4 marquées).
+> Une ligne née dans l'app porte `present_in_hektor = false` et **le run ne la marque pas sortie**
+> (le balayage ne vise que les lignes à 1) : Hektor ne contredit pas une saisie qu'il ne connaît pas
+> encore. Et les **retraits décidés dans l'app** sont respectés (décision du 30/09, codée le 02/10).
+> **Les 5 questions du point ⑦ restent ouvertes** : ce qui précède décrit ce qui EXISTE, pas une décision.
+
 **La règle existe, écrite le 21/09** (journal) : *pas d'interrupteur, la règle est permanente
 et symétrique ; l'arbitre est la RÉCENCE ; Hektor confirme, il n'écrase pas.* Codée pour
 l'annonce (`app_annonce_reappliquer_saisies`), le contact (`push_contacts_to_supabase.py:451-504`)

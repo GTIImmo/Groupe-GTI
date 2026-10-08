@@ -450,3 +450,67 @@ services et redémarrer — aucun code à modifier.
 **Contrôle prévu** : après redémarrage, ouvrir une archive jamais extraite et vérifier dans
 `app_console_job_log` qu'il n'y a plus d'étape `console_missing_fields` en `running`, que le
 travail finit en quelques secondes au lieu de ~22 s, et que la fiche s'affiche.
+
+---
+
+## 5b — MODIFIER UN MANDANT DEPUIS SA CARTE
+
+### Étape 1 — Audit du 08/10 · verdict : **CONFIRMÉ, 100 % des cas depuis le 23/09**
+
+Le crayon « Modifier » (`HektorMandantContactEditForm`) existe à **5 endroits**, tous sur une
+annonce existante : cockpit onglet « Contact » (`App.tsx:28963`), ancienne fiche (`:30216`,
+`:30275`), popup d'édition (`:30778`), mobile (`:34287`). **Pas dans la création d'annonce** :
+elle passe par `createLinkHektorMandantJobOptimistic` et `createHektorMandantContactJob`.
+
+La RPC `app_update_mandant_contact_optimistic` fait trois choses : ① le travail pour Hektor
+(marche), ② l'écriture chez nous, ③ la désignation du travail au balayage. ② et ③ sont dans un
+même bloc terminé par `exception when others then null`.
+
+**② échoue toujours.** L'écran envoie `hektor_target_id` = **le numéro de Hektor**
+(`App.tsx:7272`, et c'est le bon pour détacher un mandant). `app_edit_contact_optimistic`
+cherche par `hektor_contact_id`, qui porte **notre** numéro depuis la bascule du 23/09 :
+
+| mesure du 08/10 sur `app_contact_current` | |
+|---|---|
+| contacts | 62 162 |
+| où cible = identité | **0** |
+| où les deux diffèrent | **62 162** |
+| où `hektor_contact_id` vaut bien notre `app_contact_id` | 62 154 |
+
+Donc `contact_not_found` à tous les coups, avalé. **③ non plus n'est jamais atteinte** : elle
+protège du double envoi et fait réessayer au bout de 30 min (5 fois) — ce filet n'existe pas
+pour un mandant. 9 travaux `update_hektor_mandant_contact`, tous réussis, le dernier le 31/08
+— avant la bascule. La fiche contact, elle, marche : elle passe l'identité (`api.ts:9146`).
+
+**Ce que l'audit du 08/10 disait de trop** : la modification **arrive bien chez Hektor**. Ce
+qui est perdu, c'est le « chez nous d'abord ».
+
+### Les registres — vérifié avant de coder *(question de Frédéric)*
+
+- `app_relation` ne porte **aucune** copie de l'identité → rien à mettre à jour ; l'écran lit
+  le registre pour les identifiants puis joint les contacts en direct (`api.ts:8770-8800`).
+- Le registre des mandats est **refait à chaque push** depuis les liens vivants
+  (`charger_mandants_du_registre_des_liens`) : la copie du nom suit toute seule.
+- Le **rôle du lien dit si le bien a un mandat numéroté** : mandant → 26 763 biens dont
+  **24 424 au registre** ; propriétaire → 31 872 biens dont **0**. Jamais les deux rôles sur un
+  même bien. Un mandant sur une annonce sans numéro ne touche donc que le registre des liens.
+- Le **contrat d'autorité existe** pour les relations depuis les 02-03/10 (deux distributeurs
+  et deux plages — run à 132 714, app à 1 000 009 ; jamais de renumérotation ; DELETE-NEVER ;
+  une ligne née dans l'app porte `present_in_hektor = false` et le run ne la marque pas sortie).
+  `app_link_mandant_optimistic` le respecte. **5b n'y touche pas.** Encadré daté ajouté au plan.
+
+### Étape 2 et 3 — Correctif codé (option A, « vas-y » du 08/10)
+
+Traduire la cible en identité, une fois, juste avant l'écriture ; le travail pour Hektor garde
+la cible. Trois fichiers, `supabase/patch_5b_mandant_identite_2026-10-08*` :
+
+- le patch (garde-fou d'entrée : les 2 colonnes de numéro, la signature, **et l'empreinte
+  `b8a89ff72095acb00dccbf3c857e90ab`** — si la fonction a bougé depuis la mesure, il refuse) ;
+- l'inverse : corps **vérifié hors ligne contre `pg_proc.prosrc`**, md5
+  `0d6d48371f09ca3626c2fad404a27d5b`, identique au bit près ;
+- la répétition : le bug reproduit, le geste réparé, le repli, puis l'inverse, puis l'erreur
+  volontaire. Cas d'essai réel : annonce 63244, mandant identité 10025872 / cible 48422.
+
+Empreinte attendue après le patch : **`c0fe0f30a3dc1b2d4cdceea156800092`**.
+Les **noms de paramètres sont inchangés** (Postgres refuse un renommage par
+`create or replace`). Aucune ligne de front, aucun déploiement, aucun redémarrage.
