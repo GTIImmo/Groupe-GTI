@@ -161,6 +161,21 @@ parc vivant. Tous les usages mesurés viennent d'un admin. *(Déjà noté L10-11
 | 5h | **Créer un mandant qui échoue** : le contact et le lien restent affichés comme réels, avec un contact sans numéro Hektor. | Mandant | 🟠 | |
 | 5i | **Conflit causé par l'app elle-même** : si un autre geste de l'app touche le bien chez Hektor pendant les 10 min d'attente d'une modification, la saisie est soldée « Hektor plus récent » sans prévenir. Jamais arrivé. | Annonce | 🟠 | `app_annonce_pending_solder_hektor` |
 
+> ⚠⚠ **CE QUE CE TABLEAU DIT DE FAUX — corrections mesurées le 08/10 pendant les travaux**
+> *(le chantier ⑤ a repris chaque point un par un ; détail et preuves :
+> `notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)*
+>
+> | | ce que l'audit disait | ce qui est vrai, mesuré |
+> |---|---|---|
+> | **5a** | « `app_restore_annonce_optimistic` lève `dossier_not_found` » | **Juste, mais il manquait la moitié du bug** : même réparée, la fonction était inappelable — le **bouton « Désarchiver » n'apparaissait pour AUCUNE des 35 317 archives** (il se fiait au *statut*, qui ne dit jamais « Archivé » : 0 sur 35 317). ✅ les deux corrigés, essai réel le 08/10 |
+> | **5b** | « ni valeur chez nous, ni file d'attente, ni nouvel essai » | **Juste.** Mais l'audit laissait croire que le geste se perdait : **la modification arrivait bien chez Hektor** (9 travaux, tous réussis). Ce qui manquait, c'était le « chez nous d'abord ». ✅ corrigé, essai réel le 08/10 |
+> | **5c** | « la date est au format `JJ-MM-AAAA` (`inputDateToFrench`) » | **FAUX.** Mesuré sur les 3 usages réels : date envoyée `28-08-2026`, étape « dates » *done*, et les dates **enregistrées sont exactes** (2026-08-25, 2026-08-28, 2026-07-28). Pas un défaut |
+> | **5c** | « pas de copie fraîche avant `mandat_ledger.py` » | **Juste, mais pas pour la raison écrite.** La doublure `app_mandat__sb` **existe** (26 847 lignes) et les 15 doublures sont rafraîchies chaque jour. Le défaut est un **décalage d'horaire** : le run passe à **05:00**, la descente à **08:15** — donc **UNE** nuit de registre perdue après une demande, pas « chaque nuit ». ✅ étape de descente ciblée ajoutée au run (comme pour les 3 autres registres) |
+>
+> **La leçon, pour les audits suivants** : ces trois erreurs viennent toutes de la même
+> cause — avoir lu un **commentaire** ou un **extrait de code** au lieu de mesurer dans la
+> base. La hiérarchie du projet est **la base > le code > les notes**.
+
 ### ⑥ CE QUI NE REDESCEND PAS DE HEKTOR (🔴 / 🟠)
 
 - **Documents des 724 biens en vente** : aucun relu depuis le 20/08, 132 jamais lus. Connu :
