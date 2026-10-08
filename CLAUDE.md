@@ -118,7 +118,7 @@ chaque étape.
 
 | # | chantier | état |
 |---|---|---|
-| ① | sécurité : 136 fonctions et 15 vues ouvertes à la clé publique *(`notice/CHANTIER_1_SECURITE_2026-10-08.md`)* | 🧪 patch APPLIQUÉ le 08/10 08:22, contrôlé (0 ouverture publique) ; reste : app connectée, nuit du 09/10, déploiement `hektor-diffusion` |
+| ① | sécurité : 136 fonctions et 15 vues ouvertes à la clé publique *(`notice/CHANTIER_1_SECURITE_2026-10-08.md`)* | 🧪 patch APPLIQUÉ le 08/10 08:22, contrôlé (0 ouverture publique, app connectée OK) ; `hektor-diffusion` v15 déployée ; reste : la nuit du 09/10 |
 | ② | les droits du négociateur — **attend la décision de Frédéric** | ⬜ |
 | ③ | Hektor d'abord → chez nous d'abord (statuts, clôture, fichiers) | ⬜ |
 | ④ | aucun échec silencieux | ⬜ |

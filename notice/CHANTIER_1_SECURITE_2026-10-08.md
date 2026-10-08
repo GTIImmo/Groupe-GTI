@@ -232,3 +232,25 @@ hier). Journaux Postgres depuis 08:20 : **aucun** « permission denied » venant
 
 **Reste à contrôler** :
 la nuit du 08 au 09/10 (run, crons, worker) ; le déploiement de `hektor-diffusion` (accord).
+
+## Le déploiement de `hektor-diffusion` (08/10, accord de Frédéric : « oui déploie »)
+
+- **Version 15 en ligne** (était la v14 du 07/04), `verify_jwt` gardé à vrai.
+- **Code en ligne relu** : identique au fichier du dépôt (seule différence d'écriture : la plage
+  `̀-ͯ` de la fonction qui retire les accents apparaît en caractères au lieu de codes —
+  strictement équivalent pour JavaScript). Il porte aussi la ligne du 21/04 (`881500b`).
+- **Essais réels** : pré-requête navigateur `OPTIONS` → 200 « ok » (la fonction démarre) ; sans
+  jeton → 401 ; avec la clé publique seule → 500 « Utilisateur non authentifie » (98 s : la descente
+  saturait la base). Le nouveau contrôle (compte actif, admin ou manager) n'a pas pu être essayé avec
+  un vrai compte désactivé : il faudrait ses identifiants.
+- **À revérifier après la descente** : la vue `app_dossiers_current` que la fonction lit (la base ne
+  répondait plus pendant la descente ; sujet antérieur, indépendant de la modification).
+
+## Notés au passage, HORS chantier ① (à ranger dans le bon chantier)
+
+- La relecture d'une annonce à l'ouverture (`app_console_request_annonce_refresh`) dépasse le temps
+  autorisé sous charge : sa recherche dans `app_console_job` n'a pas d'index adapté.
+- Le catalogue des conditions suspensives est chargé une seule fois au démarrage de l'app : après une
+  connexion par mot de passe sans rechargement, il reste vide.
+- La descente du matin sature la base au point de faire expirer les connexions (déjà connu :
+  mémoire `descente-met-supabase-par-terre`).
