@@ -819,3 +819,64 @@ suite**, et non le lendemain.
 **Non éprouvé** : le filet du **refus** (Hektor qui refuse le rattachement). Je ne sais pas le
 provoquer proprement ; le correctif est le même et porte sur la même clé, mais il reste
 non éprouvé en réel.
+
+---
+
+## 5e — RETIRER PUIS RATTACHER LE MÊME MANDANT
+
+### Étape 1 — Audit du 08/10, **refait à la demande de Frédéric** · 5 vérifications
+
+| affirmation | vérifiée où | verdict |
+|---|---|---|
+| la RPC finit par `ON CONFLICT … DO NOTHING` | définition relue **dans la base** | ✔ |
+| la vue exige `retire_le IS NULL` | `WHERE (present_in_hektor OR source='app' AND absent_depuis IS NULL) AND retire_le IS NULL` | ✔ |
+| **l'écran propose un contact retiré** | la recherche de rattachement interroge la table des **contacts**, jamais les liens (`api.ts:8967`) | ✔ **atteignable sans avertissement** |
+| le run de nuit n'efface jamais un retrait | `UPDATE … WHERE app_relation.retire_le IS NULL` — il ne sait que **poser** | ✔ |
+| et il **pousse** `retire_le` | `COLONNES_POUSSEES` le contient | ✔ |
+
+**Ce que verrait le négociateur** (plus grave que ce que l'audit du 08/10 décrivait) :
+
+```
+au clic        un bandeau « mandant en creation » s'affiche
+~30 s apres    le worker recree le lien CHEZ HEKTOR, pour de vrai
+puis           le mandant ne rejoint JAMAIS la liste reelle
+24 h apres     la ligne provisoire est purgee (status 'linked' > 24 h)
+               -> le mandant DISPARAIT, alors qu'il est lie chez Hektor
+```
+
+**Cas réel en base** : contact 10355712 sur 62963 et 62964, `retire_le` au 03/10. Hektor n'a
+plus ces liens non plus aujourd'hui : **rien ne ment en ce moment**, le piège se referme au
+prochain rattachement.
+
+**Et le code avait écrit la condition** (`relation_ledger.py`, 03/10) : *« Tant que le
+rattachement n'existe pas dans le front […]. Le complément se posera ICI. »* Le rattachement
+existe depuis le 03/10 — **joué en réel aujourd'hui pour 5d**. La condition est levée.
+
+**La règle qui autorise le correctif**, déjà écrite et surveillée (`relation_disparue.py` l. 77) :
+*« `retire_le` / `retire_par` APPARTIENNENT À L'APP. Le miroir Hektor ne peut pas les
+produire. »* Le cloud fait autorité — dans les deux sens.
+
+### Étapes 2 et 3 — Correctif en DEUX morceaux indissociables
+
+**A · la RPC** (`supabase/patch_5e_rattacher_apres_retrait_2026-10-08*`) : `do nothing` devient
+`do update set retire_le = null, retire_par = null, absent_depuis = null`. `app_relation_id`
+reste **hors du SET** (on ne renumérote jamais), `present_in_hektor` et `source` ne sont pas
+touchés. Empreinte attendue après patch : **`f39e01658e438ab085710a6ecae1a6f2`**.
+
+> Le corps de l'inverse a été **récupéré encodé en base64 depuis la base**, puis décodé :
+> md5 `a7213743cbede951bd13ce9e47f3cd14`, 4 569 caractères — **pas une lettre retapée à la
+> main** (le corps est en CRLF, le recopier était trop risqué).
+
+**B · le registre de nuit** (`phase2/sync/relation_ledger.py`) : il sait maintenant **lever**
+un retrait que la doublure fraîche ne porte plus. Trois gardes :
+**fraîcheur** (si la doublure n'est pas du jour on ne lève RIEN, et on le dit — même règle que
+la sentinelle ⑥) · **on pilote depuis la petite table** (3 retraits locaux, jamais les 132 713
+liens : la leçon des 79 minutes du 03/10) · **on n'efface que ce que la doublure contredit
+explicitement** (le couple doit y être ET y porter `retire_le IS NULL`). Le compte
+`retraits_leves` entre au bilan du run.
+
+⚠ **A sans B ne tient qu'une journée** : le serveur garderait l'ancien retrait et le
+repousserait. Les deux vont ensemble.
+
+`ast.parse` ✔, CRLF et BOM conservés. ⚠ B n'agit qu'au **prochain run de nuit** ; A attend la
+répétition puis ton application.

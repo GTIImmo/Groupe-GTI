@@ -516,12 +516,74 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     #   toucher. Le complement se posera ICI, avec de vraies donnees pour l'eprouver.
     retraits_poses = 0
     retraits_divergents = 0
+    retraits_leves = 0
     doublure_du = None
     try:
         doublure_du = con.execute(
             "SELECT derniere_descente FROM sb_pull_state"
             " WHERE table_name = 'app_relation__sb'").fetchone()
         doublure_du = doublure_du[0] if doublure_du else None
+
+        # ══════════════════════════════════════════════════════════════════════
+        # ⭐ 5e (08/10/2026) -- LA SYMETRIE QUI MANQUAIT : EFFACER UN RETRAIT LEVE
+        # ══════════════════════════════════════════════════════════════════════
+        # CE BLOC ETAIT ANNONCE ICI MEME, et sa condition est remplie :
+        #   « Tant que le rattachement n'existe pas dans le front, on AJOUTE ce que
+        #     la doublure affirme [...]. Le complement se posera ICI, avec de vraies
+        #     donnees pour l'eprouver. »
+        #   Le rattachement existe dans l'ecran depuis le 03/10 -- joue en reel le
+        #   08/10. Sans ce bloc, la RPC a beau effacer le retrait au clic : le
+        #   serveur garde l'ancien et LE REPOUSSE des le lendemain, le mandant
+        #   redisparait. A NE JAMAIS SEPARER du patch
+        #   supabase/patch_5e_rattacher_apres_retrait_2026-10-08.sql.
+        #
+        # ⚠ LA REGLE QUI AUTORISE CE BLOC : `retire_le` / `retire_par` APPARTIENNENT
+        #   A L'APP (relation_disparue.py l. 77). Le miroir Hektor ne peut pas les
+        #   produire -- Hektor se contente de ne plus montrer le lien. Le cloud fait
+        #   donc autorite, et le serveur s'y aligne DANS LES DEUX SENS.
+        #
+        # ⚠ GARDE DE FRAICHEUR, la meme que la sentinelle ⑥ : si la doublure n'est
+        #   pas DU JOUR, on ne leve RIEN. Lever depuis une copie d'hier ferait
+        #   REAPPARAITRE un lien retire hier apres-midi -- l'erreur inverse, et plus
+        #   grave. On s'abstient, et on le DIT.
+        #
+        # ⚠ ON PILOTE DEPUIS LA PETITE TABLE (les retraits LOCAUX : 3 lignes au
+        #   08/10), jamais depuis les 132 713 liens -- la lecon des 79 minutes du
+        #   03/10.
+        #
+        # ⚠ ON N'EFFACE QUE CE QUE LA DOUBLURE CONTREDIT EXPLICITEMENT : le couple
+        #   doit ETRE dans la doublure ET y porter `retire_le IS NULL`. Un couple
+        #   absent ne prouve rien -- on le laisse.
+        if doublure_du and str(doublure_du)[:10] == datetime.now().date().isoformat():
+            con.execute("DROP TABLE IF EXISTS temp.retraits_locaux")
+            con.execute(
+                "CREATE TEMP TABLE retraits_locaux AS"
+                " SELECT app_contact_id, hektor_annonce_id FROM app_relation"
+                "  WHERE retire_le IS NOT NULL")
+            con.execute("CREATE INDEX temp.idx_retraits_locaux"
+                        " ON retraits_locaux (app_contact_id, hektor_annonce_id)")
+            con.execute("DROP TABLE IF EXISTS temp.retraits_leves")
+            con.execute(
+                "CREATE TEMP TABLE retraits_leves AS"
+                " SELECT l.app_contact_id, l.hektor_annonce_id"
+                "   FROM temp.retraits_locaux l"
+                "   JOIN app_relation__sb s"
+                "     ON s.app_contact_id    = l.app_contact_id"
+                "    AND s.hektor_annonce_id = l.hektor_annonce_id"
+                "  WHERE s.retire_le IS NULL")
+            cur_lev = con.execute(
+                "UPDATE app_relation SET retire_le = NULL, retire_par = NULL"
+                "  FROM temp.retraits_leves v"
+                " WHERE app_relation.app_contact_id    = v.app_contact_id"
+                "   AND app_relation.hektor_annonce_id = v.hektor_annonce_id"
+                "   AND app_relation.retire_le IS NOT NULL")
+            retraits_leves = cur_lev.rowcount or 0
+            con.execute("DROP TABLE IF EXISTS temp.retraits_leves")
+            con.execute("DROP TABLE IF EXISTS temp.retraits_locaux")
+        elif doublure_du:
+            print("   !! retraits NON leves : la doublure est du %s, pas du jour"
+                  % str(doublure_du)[:10])
+
 
         # ══════════════════════════════════════════════════════════════════════
         # ⚠⚠ LA QUESTION LA MOINS CHERE D'ABORD            corrige le 03/10/2026
@@ -565,7 +627,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
             return _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart,
                                     adoptes, depuis_app_seule, illisibles, sans_bien,
                                     sortis, doublure_du, retraits_poses,
-                                    retraits_divergents)
+                                    retraits_divergents, retraits_leves)
 
         # ══════════════════════════════════════════════════════════════════════
         # ⛔⛔ POSER UN INDEX SUR LA DOUBLURE NE SUFFIT PAS -- mesure du 03/10
@@ -634,12 +696,14 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     con.commit()
     return _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,
                             depuis_app_seule, illisibles, sans_bien, sortis,
-                            doublure_du, retraits_poses, retraits_divergents)
+                            doublure_du, retraits_poses, retraits_divergents,
+                            retraits_leves)
 
 
 def _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,
                      depuis_app_seule, illisibles, sans_bien, sortis,
-                     doublure_du, retraits_poses, retraits_divergents) -> dict:
+                     doublure_du, retraits_poses, retraits_divergents,
+                     retraits_leves=0) -> dict:
     """LE bilan, en UN seul endroit.
 
     ⚠ IL EXISTE PARCE QU'IL Y A DEUX SORTIES : le raccourci « rien a adopter » et
@@ -654,7 +718,8 @@ def _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,
             "sans_notre_numero_de_bien": sans_bien, "sortis_du_miroir": sortis,
             "doublure_du": doublure_du,
             "retraits_adoptes": retraits_poses,
-            "retraits_divergents": retraits_divergents}
+            "retraits_divergents": retraits_divergents,
+            "retraits_leves": retraits_leves}
 
 
 def controle(con: sqlite3.Connection) -> None:
