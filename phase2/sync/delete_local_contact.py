@@ -97,6 +97,30 @@ def cleanup_phase2_db(hektor_contact_id: str) -> dict[str, int]:
             if count:
                 removed[table] = count
 
+        # ⭐ 5g (08/10/2026) -- LE REGISTRE DES LIENS PART AUSSI, ICI COMME EN LIGNE.
+        #   Decision de Frederic : « si on supprime un contact il faut aussi mettre a
+        #   jour le registre des relations pour effacer ce contact », et « je veux que
+        #   les lignes soient physiquement effacees -- Hektor fera de meme tout seul ».
+        #   C'est une EXCEPTION ASSUMEE au DELETE-NEVER du registre : cette regle
+        #   protege d'un SILENCE de Hektor, pas d'une suppression voulue par un humain
+        #   dans notre app.
+        #
+        # ⚠ IL FAUT LES DEUX COTES. Effacer en ligne sans effacer ici ne tiendrait pas
+        #   une nuit : relation_ledger pousse la table LOCALE (upsert), donc le run
+        #   remettrait les lignes en ligne des le lendemain. Meme piege qu'au point 5e.
+        #
+        # ⚠ LA CLE EST app_contact_id -- NOTRE numero. Dans app_relation la colonne
+        #   `hektor_contact_id` porte celui de HEKTOR (132 713 sur 132 713, 08/10).
+        #
+        # ⚠ ET L'ORDRE COMPTE POUR LA SENTINELLE : relation_disparue exige que tout
+        #   lien de `app_contact_relation_current` soit dans `app_relation`
+        #   (`source_absents`, zero exige). Les deux sont effaces dans la meme
+        #   transaction, juste au-dessus et ici : la garde reste a zero.
+        if table_exists(con, "app_relation"):
+            count = delete_where(con, "app_relation", "app_contact_id", hektor_contact_id)
+            if count:
+                removed["app_relation"] = count
+
         if table_exists(con, "app_contact_duplicate_group_current") and table_exists(con, "app_contact_duplicate_member_current"):
             before = con.total_changes
             con.execute(

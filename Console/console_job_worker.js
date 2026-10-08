@@ -18332,38 +18332,41 @@ async function handleDeleteHektorContact(job) {
     cleanup.errors.push({ step: "local", error: error && error.message ? error.message : String(error) });
   }
   // ⭐ 5g (08/10/2026) -- LE REGISTRE DES LIENS SUIT LA SUPPRESSION.
-  //   Decision de Frederic : « si on supprime un contact, il faut aussi mettre a
-  //   jour le registre des relations pour effacer ce contact ». Sans ca, des liens
-  //   vivants continuaient de pointer une personne qui n'existe plus -- c'est le
-  //   symptome qui avait lance l'audit du 30/09 (fiche contact vide ouverte depuis
-  //   une annonce).
-  // ⚠ ON MARQUE, ON NE SUPPRIME PAS LA LIGNE : « on efface l'etat, jamais la
-  //   trace » (regle du registre, relation_ledger.py : DELETE-NEVER). Le lien
-  //   disparait de tous les ecrans a la seconde -- la vue exige
-  //   `present_in_hektor OR (source='app' AND absent_depuis IS NULL)` -- et la
-  //   preuve qu'il a existe reste, datee.
-  // ⚠ LA CLE EST app_contact_id, NOTRE numero : dans app_relation la colonne
-  //   `hektor_contact_id` porte celui de HEKTOR (132 713 lignes sur 132 713,
-  //   mesure du 08/10). C'est la meme confusion qui a casse 5b, 5d et ce point-ci.
+  //   Decision de Frederic : « si on supprime un contact il faut aussi mettre a
+  //   jour le registre des relations pour effacer ce contact », et « je veux que
+  //   les lignes soient physiquement effacees -- Hektor fera de meme tout seul ».
+  //   Sans ca, des liens vivants pointaient une personne qui n'existe plus : c'est
+  //   le symptome qui avait lance l'audit du 30/09 (fiche contact vide ouverte
+  //   depuis une annonce).
+  //
+  // ⚠ C'EST UNE EXCEPTION ASSUMEE AU DELETE-NEVER DU REGISTRE. Cette regle existe
+  //   pour qu'un SILENCE de Hektor n'efface rien ; elle ne vise pas une suppression
+  //   VOULUE par un humain dans notre app. La trace reste dans le journal du
+  //   travail et dans app_deleted_contact_log, pas dans le registre.
+  //
+  // ⚠ IL FAUT LES DEUX COTES, et c'est la lecon du point 5e : effacer en ligne
+  //   sans effacer en local ne tiendrait pas une nuit -- relation_ledger pousse la
+  //   table LOCALE en upsert, le run remettrait les lignes. Le cote local est fait
+  //   par delete_local_contact.py, dans la meme suppression.
+  //
+  // ⚠ LA CLE EST app_contact_id -- NOTRE numero : dans app_relation la colonne
+  //   `hektor_contact_id` porte celui de HEKTOR (132 713 sur 132 713, mesure 08/10).
   try {
-    const maintenant = new Date().toISOString();
     const liens = await supabaseRequest(
-      `app_relation?app_contact_id=eq.${encodeURIComponent(String(numeroDemande))}`
-      + `&present_in_hektor=is.true`,
-      { method: "PATCH", headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ present_in_hektor: false, absent_depuis: maintenant }) });
+      `app_relation?app_contact_id=eq.${encodeURIComponent(String(numeroDemande))}`,
+      { method: "DELETE", headers: { Prefer: "return=representation" } });
     const nb = Array.isArray(liens) ? liens.length : 0;
-    cleanup.registre_des_liens = { status: "done", lignes_marquees: nb };
+    cleanup.registre_des_liens = { status: "done", lignes_effacees: nb };
     await logJob(job.id, "registre_des_liens", "done",
       nb > 0
-        ? `Le contact est efface du registre des liens : ${nb} lien(s) marque(s) absent(s)`
-        : "Aucun lien vivant a marquer dans le registre",
-      { app_contact_id: numeroDemande, lignes_marquees: nb });
+        ? `Le contact est efface du registre des liens : ${nb} lien(s) supprime(s)`
+        : "Aucun lien a effacer dans le registre",
+      { app_contact_id: numeroDemande, lignes_effacees: nb });
   } catch (erreur) {
     cleanup.errors.push({ step: "registre_des_liens",
       error: erreur && erreur.message ? erreur.message : String(erreur) });
     await logJob(job.id, "registre_des_liens", "error",
-      "Contact supprime mais le registre des liens n'a PAS pu etre mis a jour -- des liens pointent une personne qui n'existe plus",
+      "Contact supprime mais le registre des liens n'a PAS pu etre efface -- des liens pointent une personne qui n'existe plus",
       { app_contact_id: numeroDemande,
         error: erreur && erreur.message ? erreur.message : String(erreur) });
   }

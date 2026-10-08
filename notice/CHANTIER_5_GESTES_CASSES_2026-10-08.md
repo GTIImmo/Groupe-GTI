@@ -1073,16 +1073,24 @@ cloud connu (62 162 contacts sur 356 416).
 optionnel : notre numéro pour `phase2.sqlite`, celui de Hektor pour le miroir. **Rétrocompatible**
 — sans l'argument, comportement d'avant. Le worker, qui connaît déjà les deux, les passe.
 
-**② Le registre des liens suit la suppression.** *Décision de Frédéric : « si on supprime un
-contact, il faut aussi mettre à jour le registre des relations pour effacer ce contact ».*
-Les liens vivants du contact sont **marqués absents** (`present_in_hektor = false`,
-`absent_depuis` daté) : ils disparaissent de tous les écrans à la seconde, puisque la vue exige
-`present_in_hektor OR (source='app' AND absent_depuis IS NULL)`.
+**② Le registre des liens suit la suppression — lignes PHYSIQUEMENT EFFACÉES.**
+*Décision de Frédéric, 08/10 : « si on supprime un contact il faut aussi mettre à jour le
+registre des relations pour effacer ce contact », puis « je veux que les lignes soient
+physiquement effacées, en plus normalement Hektor fera tout seul de même ».*
 
-> **Pourquoi marquer et non supprimer la ligne** : la règle du registre est **DELETE-NEVER**,
-> « on efface l'état, jamais la trace ». Le contact disparaît partout, et la preuve qu'un lien
-> a existé reste, datée. **Si Frédéric veut la suppression physique des lignes, c'est un mot
-> à dire** — c'est un changement de règle, pas un détail d'implémentation.
+> **C'est une exception assumée au DELETE-NEVER du registre.** Cette règle existe pour qu'un
+> **silence de Hektor** n'efface rien ; elle ne vise pas une suppression **voulue** par un
+> humain dans notre app. La trace reste au journal du travail et dans
+> `app_deleted_contact_log` — pas dans le registre.
+
+**Et il faut les DEUX côtés, c'est la leçon du point 5e** : effacer en ligne sans effacer en
+local ne tiendrait pas une nuit — `relation_ledger` pousse la table **locale** en upsert, le run
+remettrait les lignes. Le worker efface en ligne, `delete_local_contact.py` efface en local,
+dans la même suppression.
+
+**L'ordre compte pour la sentinelle** : `relation_disparue` exige que tout lien de
+`app_contact_relation_current` soit dans `app_relation` (`source_absents`, **zéro exigé**). Le
+script efface les deux tables dans la même transaction : la garde reste à zéro.
 
 La clé utilisée est **`app_contact_id`**, notre numéro : dans `app_relation`, la colonne
 `hektor_contact_id` porte celui de Hektor (132 713 sur 132 713). **C'est la même confusion qui
