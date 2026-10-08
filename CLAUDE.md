@@ -115,7 +115,7 @@ chaque étape.
 
 | # | chantier | état |
 |---|---|---|
-| ① | sécurité : 6 fonctions `anon` sans contrôle de rôle, une vue lisible sans connexion | ⬜ |
+| ① | sécurité : 136 fonctions et 15 vues ouvertes à la clé publique *(`notice/CHANTIER_1_SECURITE_2026-10-08.md`)* | 💬 audit fait, attend « vas-y » |
 | ② | les droits du négociateur — **attend la décision de Frédéric** | ⬜ |
 | ③ | Hektor d'abord → chez nous d'abord (statuts, clôture, fichiers) | ⬜ |
 | ④ | aucun échec silencieux | ⬜ |
