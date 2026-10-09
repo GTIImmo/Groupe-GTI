@@ -11,7 +11,7 @@
 
 | # | Le point | État |
 |---|---|---|
-| **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | 🧪 **audit fait, code écrit, 19/19 hors ligne** · attend la répétition SQL puis le patch |
+| **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | 🧪 **patch SQL APPLIQUÉ et contrôlé le 09/10** (empreinte `e2c015e1…`, 0 ligne, droits intacts) · épreuve hors ligne **19/19** · **reste le redémarrage du worker** pour l'avertissement |
 | **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | ⬜ |
 | **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | ⬜ |
 | **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ⬜ |
@@ -193,6 +193,23 @@ acl_retour=IDENTIQUE       commentaire_retour=vide
 **rien n'a été écrit**. L'empreinte d'après a été inscrite dans le patch comme **contrôle de
 sortie** : un patch qui ne donnerait pas `e2c015e16d1339fee080b6b2cc7bcb2b` refuse de
 s'enregistrer.
+
+### ✅ LE PATCH EST APPLIQUÉ — *par Frédéric le 09/10, contrôlé en base*
+
+| Contrôlé | Attendu | Mesuré |
+|---|---|---|
+| empreinte de la vue | `e2c015e16d1339fee080b6b2cc7bcb2b` *(celle de la répétition)* | **identique** ✅ |
+| 7 colonnes, **dans l'ordre** | `objet, reference, libelle, nature, cause, tentatives, depuis` | **identique** ✅ |
+| lignes de la vue | 0 | **0** (branche 1 : 0 · branche 2 : 0) ✅ |
+| droits *(chantier ①)* | `postgres` + `service_role`, ni `anon` ni `authenticated` | **identique** ✅ |
+| commentaire de la vue | posé | **oui** ✅ |
+| rien d'autre n'a bougé | 79 créations toutes « done » · 2 gestes soldés · 0 source pour la branche 1 | **identique** ✅ |
+
+La vue installée est **au caractère près** celle que la répétition a jouée (même empreinte).
+**Ce que le contrôle ne prouve pas** : la branche rend 0 ligne *aujourd'hui*, et c'est normal
+(les 4 cas sont hors de la fenêtre de 30 jours, les 2 créations récentes ont réussi). La preuve
+qu'elle **trouve** reste `branche2_sans_fenetre = 4` de la répétition. Aucun faux échec n'a été
+fabriqué en production pour l'afficher.
 
 ## ⑤ CE QU'IL RESTE À FAIRE — *au 09/10*
 
