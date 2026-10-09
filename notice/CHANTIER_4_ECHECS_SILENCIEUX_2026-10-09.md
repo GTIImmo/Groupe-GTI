@@ -211,6 +211,37 @@ La vue installée est **au caractère près** celle que la répétition a jouée
 qu'elle **trouve** reste `branche2_sans_fenetre = 4` de la répétition. Aucun faux échec n'a été
 fabriqué en production pour l'afficher.
 
+### Le moniteur, passé en lecture seule après le patch *(`--no-alerts --dry-run`)*
+
+**71 contrôles. La cible est VERTE :**
+```
+data.geste_abandonne   ok   « Gestes abandonnes en attente d'un humain: 0 (seuil 0) »
+```
+→ le moniteur **lit toujours la vue** à travers l'API, avec la clé de service : le patch n'a
+cassé ni l'accès ni la lecture. `data.envois_en_attente_hektor` : ok également.
+
+**11 contrôles non verts, AUCUN causé par 4a** — vérifié un par un :
+`scheduledtasks:gti_descente` (code 1, déjà connu les 08 et 09/10) · **`data.travaux_en_erreur`
+17 (seuil 0)** → c'est le point **4f** · `data.mandat_disparu` **1 sur 27 004** *(était 0 au run
+du 09/10 — nouveau, à signaler, hors chantier ④)* · `data.recherche_disparue` 3 ·
+`data.ecart_statut_regle` **illisible (délai dépassé)** · `data.notif_orphelines` 154 ·
+`data.notif_non_lues` 1 527 (seuil 300) · `data.orphelins_recherche` 8 · `console.jobs.errors` 2.
+
+### ⭐ MESURE D'AVANCE POUR 4f *(prise au passage, le 09/10)*
+
+Les **17** travaux en erreur, par genre — **aucune création, aucun d'aujourd'hui** (donc 4a n'en
+a ajouté aucun) :
+```
+refresh_console_data        14   du 01/10 au 05/10   tentatives max = 1
+sync_console_documents       1      08/10            tentatives max = 1
+refresh_console_contact_data 1      08/10            tentatives max = 1
+unlink_hektor_mandant        1      03/10            tentatives max = 1
+```
+⚠ **`tentatives max = 1` PARTOUT** : cela confirme, chiffres en main, ce que l'audit du 08/10
+annonçait pour 4f — **aucun geste n'atteint jamais 5 tentatives**, donc **aucun n'entre jamais
+dans `geste_abandonne`**. L'alarme `travaux_en_erreur`, elle, est saturée (17 au lieu de 15 le
+08/10) : un échec neuf s'y noie.
+
 ## ⑤ CE QU'IL RESTE À FAIRE — *au 09/10*
 
 1. Frédéric colle **la répétition** → il me recopie le message `ESSAI ANNULE -- 4a` ; je compare
