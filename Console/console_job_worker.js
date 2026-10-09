@@ -17251,6 +17251,118 @@ async function notifyJobFailureBestEffort(job, errorMessage) {
   }
 }
 
+// --- 4a : LA SUITE DE LA CREATION A RATE, ET PERSONNE N'ETAIT PREVENU ---------
+// (chantier 4 « aucun echec silencieux », 09/10/2026)
+//
+// LE DEFAUT. La creation d'une annonce fait TROIS choses : creer chez Hektor,
+// remplir la fiche, rattacher le mandant. Les deux dernieres sont attrapees par
+// un `catch` -- a raison -- et le travail CONTINUE : il finit donc « done ».
+// Or `notifyJobFailureBestEffort` n'est appele que dans le `catch` du lanceur
+// (processOnce) : un travail qui ne tombe pas ne previent PERSONNE. Mesure du
+// 09/10 sur 79 creations : 3 fiches perdues en entier (07/06, 07/07, 08/07) et
+// 1 faux negatif de mandant (28/08) -- aucun avertissement, jamais, et le seul
+// lecteur du compte rendu est un script d'inventaire hors ligne.
+//
+// ⚠ ON NE FAIT PAS TOMBER LE TRAVAIL, ET C'EST TOUT LE POINT :
+//   1) l'annonce EXISTE deja chez Hektor -- la decision du 22/09 (voir le
+//      commentaire du rattachement initial) refuse de faire retomber le lot ;
+//   2) l'enveloppe ...WithProvisional marque « Erreur de creation » des que le
+//      travail jette : on afficherait une erreur sur une annonce bien creee ;
+//   3) rejouer une CREATION la DOUBLERAIT (regle C.4-bis) -- et ce type de
+//      travail est d'ailleurs absent de `types_rejouables`, verifie en base.
+// On n'ajoute donc QUE la parole : un message dans la cloche du negociateur.
+// La surveillance, elle, passe par la branche ajoutee a app_en_attente_humain
+// (meme chantier, patch SQL) : la sentinelle `geste_abandonne` sonne seule.
+const ALERTE_SUITE_CREATION = String(process.env.CONSOLE_ALERTE_SUITE_CREATION || "true").toLowerCase() !== "false";
+
+// Ce que le negociateur doit lire : ce qui est ACQUIS d'abord (l'annonce existe),
+// ce qui MANQUE ensuite. Jamais un message technique.
+const SUITE_CREATION_LIBELLES = {
+  champs: "les champs saisis a la creation n'ont pas ete enregistres",
+  mandant_cree: "le mandant saisi a la creation n'a pas ete rattache",
+  mandant_lie: "le mandant choisi n'a pas pu etre rattache",
+};
+
+function bilanSuiteCreationIncomplete(resultat) {
+  if (!resultat || typeof resultat !== "object") return null;
+  const manques = [];
+  const details = {};
+  const champs = resultat.initial_fields_update;
+  if (champs && (champs.status === "error" || champs.status === "partial")) {
+    manques.push("champs");
+    details.champs = { status: champs.status, error: champs.error || null };
+  }
+  const mandantCree = resultat.initial_mandant_create;
+  if (mandantCree && mandantCree.status === "error") {
+    manques.push("mandant_cree");
+    details.mandant_cree = { status: mandantCree.status, error: mandantCree.error || null };
+  }
+  const mandantLie = resultat.initial_mandant_links;
+  if (mandantLie && mandantLie.status === "partial_error") {
+    manques.push("mandant_lie");
+    details.mandant_lie = {
+      status: mandantLie.status,
+      erreurs: (Array.isArray(mandantLie.links) ? mandantLie.links : [])
+        .filter((lien) => lien && lien.status === "error")
+        .map((lien) => ({ hektor_contact_id: lien.hektor_contact_id || null, error: lien.error || null })),
+    };
+  }
+  if (!manques.length) return null;
+  return { manques, details };
+}
+
+async function avertirSuiteCreationIncompleteBestEffort(job, payload, resultat) {
+  try {
+    if (!ALERTE_SUITE_CREATION) return;
+    const bilan = bilanSuiteCreationIncomplete(resultat);
+    if (!bilan) return;
+
+    const repere = cleanString(
+      (resultat && resultat.folder_number)
+      || payload.numero_dossier
+      || payload.titre_bien
+      || payload.title
+      || (resultat && resultat.hektor_annonce_id)
+      || "",
+    );
+    const quoi = bilan.manques.map((cle) => SUITE_CREATION_LIBELLES[cle] || cle).join(", et ");
+
+    // UNE SEULE LIGNE DANS LE JOURNAL, QUI RESUME. Les lignes par etape existent
+    // deja (hektor_annonce_initial_fields, hektor_mandant_create...) ; celle-ci
+    // sert a retrouver le cas d'un coup d'oeil.
+    await logJob(job.id, "suite_creation_incomplete", "error",
+      "Annonce creee chez Hektor, mais la SUITE n'a pas abouti -- le travail reste « done » (l'annonce existe)",
+      { hektor_annonce_id: resultat && resultat.hektor_annonce_id ? String(resultat.hektor_annonce_id) : null,
+        manques: bilan.manques, details: bilan.details });
+
+    const email = await resolveJobFailureRecipient(job, payload);
+    if (!email) return;
+    await supabaseRequest("app_notification", {
+      method: "POST",
+      prefer: "return=minimal,resolution=ignore-duplicates",
+      body: JSON.stringify([{
+        negociateur_email: email,
+        type: "creation_suite_incomplete",
+        title: "Annonce creee, mais a completer",
+        body: repere
+          ? `L'annonce ${repere} est bien creee dans Hektor, mais ${quoi}. Rouvrez la fiche pour verifier.`
+          : `L'annonce est bien creee dans Hektor, mais ${quoi}. Rouvrez la fiche pour verifier.`,
+        app_dossier_id: job.app_dossier_id ?? payload.app_dossier_id ?? null,
+        payload: {
+          source: "suite_creation_incomplete",
+          job_id: job.id,
+          job_type: job.job_type,
+          hektor_annonce_id: resultat && resultat.hektor_annonce_id ? String(resultat.hektor_annonce_id) : null,
+          manques: bilan.manques,
+        },
+      }]),
+    });
+  } catch (_) {
+    // best-effort, comme notifyJobFailureBestEffort : avertir ne doit JAMAIS
+    // faire echouer une creation qui, elle, a reussi chez Hektor.
+  }
+}
+
 async function notifyNegoSearchConflict(job, contactId, payload, opts = {}) {
   try {
     const negoEmail = cleanString(opts.negoEmail || payload.contact_negociateur_email || payload.hektor_user_email || payload.target_hektor_user_email);
@@ -20127,6 +20239,17 @@ async function handleCreateHektorDraftAnnonce(job) {
     total_ms: Date.now() - startedAtMs,
   };
   await logJob(job.id, "hektor_annonce_timing", "done", "Chronometrage creation annonce (ms par etape)", timingsMs);
+
+  // 4a (09/10/2026) : LA SUITE A-T-ELLE ABOUTI ? Si non, on le DIT -- et on ne
+  // fait surtout pas tomber le travail (l'annonce existe deja chez Hektor).
+  // Voir le long commentaire d'avertirSuiteCreationIncompleteBestEffort.
+  await avertirSuiteCreationIncompleteBestEffort(job, payload, {
+    hektor_annonce_id: String(created.id),
+    folder_number: created.folderNumber || null,
+    initial_fields_update: initialFieldsUpdate,
+    initial_mandant_links: initialMandantLinks,
+    initial_mandant_create: initialMandantCreate,
+  });
 
   return {
     hektor_annonce_id: String(created.id),
