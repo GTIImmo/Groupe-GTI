@@ -130,17 +130,27 @@ chaque étape.
 **Ordre DÉCIDÉ par Frédéric le 08/10 : ① puis ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** (tous seront faits). ① et ⑤ sont **faits** → **le prochain chantier est ④ (aucun échec silencieux)**. Le prompt de reprise est prêt : `notice/PROMPT_CHANTIER_ETAPE2.md` (une seule ligne à changer).
 Un périmètre, une taille, un ordre ou un report ne se décident jamais sans lui.
 
-### ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 — *la liste détaillée est dans `notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`*
+### ✅ LE RUN DU 09/10 EST PASSÉ — *détail : `notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`*
 
 ```
-1. 5c   l'etape neuve « doublure du registre des mandats » tourne (~28 s), avant celle
-        du registre, et le registre part sans erreur -- et le run finit AVANT 08:15
-2. 5e-B le bilan du registre des liens doit porter retraits_leves = 1, et la ligne
-        app_relation_id 1000008 doit garder retire_le NULL + present_in_hektor vrai
-3.      rien d'autre n'a bouge : duree du run, etapes en erreur, sentinelle
-        relation_disparue (retraits_perdus = 0, doublure_perimee = 0)
-4. 5a   le bien 78 (VA2380), desarchive le 08/10, doit etre revenu au parc vivant
+Run 05:00:02 -> 07:34:16 « finished successfully », 50 etapes, 4 sautees, 0 plantage.
+5c   OK  l'etape neuve « doublure du registre des mandats » : 19 s, 26 847 lignes,
+         juste AVANT celle du registre, qui finit sans erreur
+5e-B OK  app_relation_id 1000008 : retire_le NULL, present_in_hektor vrai,
+         revu par le run a 05:05 -- le retrait n'a PAS ete repose
+5a   OK  le bien 78 (VA2380) est dans l'index des VENDUS/CLOS, pas au parc vivant :
+         son statut est « Clos », et le parc vivant ne prend que Actif / Sous offre /
+         Sous compromis / Estimation. MON CONTROLE ETAIT FAUX, pas le code.
+5h   OK  sentinelle contacts_sans_hektor verte, comme annonce_conflit / partielle /
+         push_bloque (0) et mandat_disparu (0 manquant)
 ```
+
+**Quatre suites, aucune bloquante** *(ordre à décider par Frédéric)* : ① le mot `retraits_leves`
+oublié dans l'affichage du bilan *(`phase2/sync/relation_ledger.py` l. 865)* · ② le contrôle
+« L'ALLOCATEUR EST FAUX », périmé depuis que l'app crée des liens *(l. 747)* · ③ la **collision
+d'horaires** : le rattrapage des documents de 21 h tenait encore 777 travaux à 07:07, ce qui a
+fait **sauter 2 étapes** du run (entretien compromis / ventes) · ④ « GTI Descente » du 08/10 a
+fini avec le **code 1**.
 
 ### ⛔ Ce qui attend Frédéric
 

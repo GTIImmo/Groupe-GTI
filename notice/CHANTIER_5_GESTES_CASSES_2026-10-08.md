@@ -936,38 +936,78 @@ morceau B (`relation_ledger.py`), et c'est le seul contrôle qui manque à 5e.
 
 ---
 
-## ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 (05:00) — la liste, dans l'ordre
+## ✅ LE RUN DU 09/10 A TRANCHÉ — résultats, dans l'ordre
 
-Trois choses sont en attente de ce run. Le journal du run est dans `logs/` ; le bilan du
-registre des liens s'affiche dans la sortie de l'étape « registre des liens (app_relation) ».
+Run du 09/10 : démarré **05:00:02**, **fini 07:34:16** (« Pipeline finished successfully »),
+**50 étapes faites, 4 sautées, 0 plantage** — et bien avant la descente de 08:15. Les nuits
+précédentes finissaient à 07:15-07:20 : l'étape neuve n'y est pour rien (19 s).
 
-**① 5c — la doublure du registre des mandats** *(étape neuve dans `run_full_pipeline.ps1`)*
-- l'étape **« phase2 doublure du registre des mandats »** apparaît dans le journal,
-  **avant** « phase2 registre des mandats (app_mandat) » ;
-- sa durée est de l'ordre de **28 s** (mesure du 08/10 : 26 847 lignes, 27 appels) ;
-- l'étape du registre qui suit finit **sans erreur** ;
-- en base locale : `app_mandat__sb` porte le nombre de lignes de `app_mandat` en ligne.
-- ⚠ Si l'étape **allonge trop le run** (il doit finir avant 08:15, sinon il tombe dans la
-  descente — incident du 03/10), le dire : on la déplacera.
+**① 5c ✅** — « phase2 doublure du registre des mandats » a tourné de **07:06:10 à 07:06:30**
+(**19 s**, 26 847 lignes, 27 appels), **juste avant** « registre des mandats (app_mandat) »
+(07:06:30 → 07:07:30, sans erreur). La sentinelle confirme : *« Registre des mandats complet :
+26 847 lignes, 0 manquant sur 24 929 du miroir »*.
+⚠ Le bilan du registre dit `adoptes_du_cloud : 0` — **c'est normal** : aucun numéro de mandat
+n'a été posé par l'app cette nuit-là, le mécanisme n'avait rien à adopter. **Il reste à le voir
+travailler le jour où un mandat naîtra vraiment depuis l'app.**
 
-**② 5e-B — le registre de nuit lève-t-il le retrait ?** *(le contrôle qui manque à 5e)*
-- dans le bilan du registre des liens, le compte **`retraits_leves`** doit valoir **1**
-  *(le lien 1000008, Sophie TEST MANDANT 25-08 sur le bien 62963, rattaché le 08/10 à 17:40)* ;
-- et en base : `select retire_le, present_in_hektor from app_relation where app_relation_id=1000008`
-  → **`retire_le` NULL** et **`present_in_hektor` vrai**.
-- ⛔ **Si `retire_le` est de nouveau posé**, le morceau B n'a pas joué : regarder d'abord
-  `doublure_du` dans le bilan (la garde de fraîcheur refuse de lever si la doublure n'est pas
-  **du jour**), et le message « retraits NON leves : la doublure est du … ».
+**② 5e-B ✅** — `app_relation_id 1000008` : `retire_le` **NULL**, `retire_par` NULL,
+`absent_depuis` NULL, `present_in_hektor` **vrai**, et `last_seen_at = 2026-10-09 05:05:20` :
+le run l'a **revue** et **n'a pas reposé le retrait**. Les deux retraits volontaires du 03/10
+(107233 et 1000009) sont conservés, comme le veut le `delete-never`.
+⚠ **Mon compte `retraits_leves` n'était pas lisible.** Je l'ai bien calculé et renvoyé dans
+`relation_ledger.py`, mais **j'ai oublié de l'ajouter à la liste des lignes imprimées**
+(l. 865, le tuple qui s'arrête à `retraits_divergents`). Le contrôle écrit ici était donc
+impossible à faire tel quel ; je l'ai fait en base. **À corriger : un mot dans un tuple.**
 
-**③ Rien d'autre n'a bougé**
-- durée totale du run comparable aux nuits précédentes ;
-- aucune étape en erreur qui ne l'était pas avant ;
-- la sentinelle `relation_disparue.py` : `retraits_perdus` = 0 et `doublure_perimee` = 0.
+**③ 5a ✅ — le bien 78 est bien revenu, mais PAS où je l'attendais : mon contrôle était faux.**
+Mesuré dans la base locale `app_view_generale` : bien 78, `archive = '0'` — il est donc
+réellement désarchivé — mais `statut_annonce = detail_statut_name = `**`Clos`**.
+Or le parc vivant, c'est `ANNONCES_SCOPE_WHERE` *(`phase2/sync/export_app_payload.py` l. 95)* :
+`archive='0'` **ET** statut dans *Actif · Sous offre · Sous compromis · Estimation*. « Clos »
+n'en fait pas partie. Le bien est donc allé là où il devait aller :
+**`app_historical_annonce_index_current`** — l'index des **vendus / clos**, que le front lit
+déjà *(`apps/hektor-v1/src/lib/api.ts` l. 3258 : « biens vendus / clos (encore actifs) »)*, et
+que le bouton « Étendre aux archives, vendus et clos » de la page Annonces interroge.
+➡ **Le désarchivage fonctionne de bout en bout** : `archive=0` chez Hektor, sorti de l'index
+des archives chez nous, entré dans l'index des historiques avec son vrai statut. Ce qui était
+faux, c'est la phrase que j'avais écrite (« il doit revenir au parc vivant ») : un bien clos
+ne revient pas au parc vivant, et c'est voulu.
 
-**④ 5a — le bien désarchivé du 08/10** *(point resté ouvert)*
-- le bien **78 (VA2380)** doit être revenu dans le parc vivant après la descente : il était
-  sorti des archives sans y entrer (`ni archives ni parc vivant` le 08/10 à 10:47).
-  `select count(*) from app_dossier_current where hektor_annonce_id=78` → **1 attendu**.
+**④ CE QUI A BOUGÉ PAR AILLEURS — trois choses à traiter, aucune bloquante**
+
+*a) Deux étapes sautées à cause de la file des documents.* « phase2 entretien compromis
+console » et « phase2 entretien ventes console » ont refusé de démarrer à 07:07 :
+`RuntimeError: Travaux console en cours`. Ce n'est **pas** un refus de droits (le patch de
+sécurité n'y est pour rien, l'erreur est lue) : c'est leur **garde-fou**, qui interdit de
+tourner tant qu'un travail console est en cours. Le rattrapage des documents de 21 h avait
+encore **777 travaux en attente** à cette heure-là. La file est saine (56 traités dans la
+dernière demi-heure, **0 erreur**) : elle est simplement **plus lente que la nuit**, le lot de
+2 500 met ~19 h à s'écouler et déborde sur le run. Les 6, 7 et 8 ces étapes passaient
+(elles tournaient à 06:50, pas 07:07). **C'est une collision d'horaires, pas une panne.**
+
+*b) Une alarme périmée qui crie, pour la première fois cette nuit.* Le bilan du registre des
+liens affiche *« DANS LA PLAGE RÉSERVÉE À L'APP : 1 (doit valoir 0) >> L'ALLOCATEUR EST FAUX »*
+*(`relation_ledger.py` l. 747-750)*. Le contrôle compte
+`app_relation_id >= PLAGE_RESERVEE_APP` et considère que c'est forcément un bug — il date
+d'**avant** que l'app puisse créer des liens. Aujourd'hui c'est l'inverse : un
+`app_relation_id ≥ 1 000 000`, **c'est NOTRE numéro**, exactement comme `app_mandat_id`
+*(voir « deux numéros, reconnaître par la plage »)*. Il s'est déclenché cette nuit parce que
+le run a **adopté pour la première fois** la ligne 1000008 créée par l'app
+(`adoptes_du_cloud : 1`). Autrement dit : **c'est 5e qui marche qui fait crier un contrôle
+obsolète.** Zéro occurrence les 5, 6, 7 et 8 octobre — vérifié.
+
+*c) La tâche « GTI Descente » du 08/10 a fini avec le code 1* (toutes les autres rendent 0).
+Pas regardé encore.
+
+**⑤ LA SURVEILLANCE** — sonde de santé de 05:48 : 72 sondes, 12 non vertes. Les nôtres sont
+toutes vertes : `contacts_sans_hektor` (5h), `annonce_conflit` 0, `annonce_partielle` 0,
+`annonce_push_bloque` 0, `mandat_disparu` 0 manquant, `annonce_un_numero` 0 écart.
+`data.relation_disparue` est **critical** (1 lien sur 132 749) **mais la sonde a tourné à
+05:48, avant l'étape des liens de 07:04** : c'est la fausse alerte d'horaire déjà connue,
+à re-mesurer après le run. Même chose pour `doublure_journal` (« pas fait aujourd'hui »).
+Les **16 travaux console en erreur** sont tous antérieurs : 14 `refresh_console_data` du 1er au
+5 octobre, 1 `refresh_console_contact_data` du 08, 1 `unlink_hektor_mandant` du 03. **Rien de
+cette nuit.**
 
 ---
 
@@ -1289,8 +1329,10 @@ code au lieu de mesurer la base. La hiérarchie est **la base > le code > les no
 
 ### ⏰ Ce qui reste à faire, dans l'ordre
 
-1. **Le run du 09/10** — la liste détaillée est dans la section
-   « ⏰ À VÉRIFIER APRÈS LE RUN DU 09/10 » ci-dessus (5c et 5e-B).
+1. ✅ **Le run du 09/10 est passé** : 5c, 5e-B et 5a sont verts (section ci-dessus).
+   Restent quatre petites suites, aucune bloquante : le mot `retraits_leves` à ajouter
+   à l'affichage du bilan, le contrôle périmé de l'allocateur, la collision d'horaires du
+   rattrapage des documents, et le code 1 de « GTI Descente ».
 2. **Le marqueur à l'écran et le bouton « réessayer » de 5h** (options B et C) — pas faits,
    ils relèvent du chantier ④ « aucun échec silencieux ».
 3. **L'abandon réel de 5f** (rendre l'état quand le filet a vraiment renoncé : 5 tentatives
