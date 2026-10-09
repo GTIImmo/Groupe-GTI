@@ -744,8 +744,38 @@ def controle(con: sqlite3.Connection) -> None:
     print("   doublons sur la cle                 : %s   (doit valoir 0)" % doublons)
     hors = q("SELECT COUNT(*) FROM app_relation WHERE app_contact_id < 10000000")
     print("   numeros de contact hors plage app   : %s   (doit valoir 0)" % hors)
-    envahis = q("SELECT COUNT(*) FROM app_relation WHERE app_relation_id >= %d" % PLAGE_RESERVEE_APP)
-    print("   DANS LA PLAGE RESERVEE A L'APP      : %s   (doit valoir 0)" % envahis)
+    # ⚠ 09/10/2026 -- CE CONTROLE MESURAIT TROP LARGE, ET IL A CRIE POUR RIEN.
+    #   Il comptait TOUTES les lignes de la plage de l'app. Or le 30/09, une heure
+    #   apres l'avoir ecrit, on a ajoute l'ADOPTION (commit b8f1276) : le run
+    #   reprend le numero pose par l'app au lieu d'en inventer un second, sinon le
+    #   push heurte l'index unique du couple et LE RUN S'ARRETE LA (incident des
+    #   01-02/09, 18 h perdues). Les deux pieces se contredisaient depuis ce
+    #   jour-la sans que ca se voie : l'adoption n'a servi pour la premiere fois
+    #   que le 09/10 (adoptes_du_cloud = 1), et le controle a aussitot crie pour
+    #   une ligne parfaitement saine.
+    #   CE QU'ON VEUT VRAIMENT SAVOIR : le run a-t-il INVENTE un numero dans la
+    #   plage de l'app ? Une ligne adoptee porte le numero de la DOUBLURE ; une
+    #   ligne inventee par le run n'y figure pas. C'est le discriminant.
+    #   ⚠ Doublure illisible : on NE SE TAIT PAS, on retombe sur l'ancien compte,
+    #     quitte a crier a tort. Un silence couterait plus cher.
+    dans_plage = q("SELECT COUNT(*) FROM app_relation WHERE app_relation_id >= %d"
+                   % PLAGE_RESERVEE_APP)
+    try:
+        adoptees = q("SELECT COUNT(*) FROM app_relation r"
+                     " WHERE r.app_relation_id >= %d"
+                     "   AND EXISTS (SELECT 1 FROM app_relation__sb s"
+                     "               WHERE s.app_relation_id = r.app_relation_id)"
+                     % PLAGE_RESERVEE_APP)
+        envahis = dans_plage - adoptees
+        doublure_lue = True
+    except sqlite3.OperationalError:
+        envahis, doublure_lue = dans_plage, False
+    print("   dans la plage de l'app              : %s   (posees par l'app : normal)"
+          % dans_plage)
+    if not doublure_lue:
+        print("   !! DOUBLURE app_relation__sb ILLISIBLE -- impossible de dire")
+        print("      lesquelles viennent de l'app. On compte tout.")
+    print("   dont INVENTEES PAR LE RUN           : %s   (doit valoir 0)" % envahis)
     if envahis:
         print("   >> L'ALLOCATEUR EST FAUX. C'est le defaut d'aout, a l'identique.")
 
@@ -862,7 +892,11 @@ def main() -> int:
             for k in ("lus", "neufs", "revus", "adoptes_du_cloud", "depuis_app_seule", "app_seule_illisibles", "ecartes",
                       "sans_notre_numero_de_bien", "sortis_du_miroir",
                       # 02/10 : les retraits decides dans l'app
-                      "doublure_du", "retraits_adoptes", "retraits_divergents"):
+                      # 09/10 : retraits_leves manquait ici -- il etait calcule et
+                      # renvoye, mais JAMAIS imprime. Le controle ecrit pour 5e-B
+                      # etait donc impossible a faire.
+                      "doublure_du", "retraits_adoptes", "retraits_divergents",
+                      "retraits_leves"):
                 print("   %-28s : %s" % (k, bilan[k]))
             # ⚠ UNE DOUBLURE PERIMEE NE SE VOIT PAS : elle rend des chiffres, ils
             #   sont juste vieux. Sans ce controle, un retrait d'hier apres-midi

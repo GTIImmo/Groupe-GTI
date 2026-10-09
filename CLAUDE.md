@@ -145,12 +145,13 @@ Run 05:00:02 -> 07:34:16 « finished successfully », 50 etapes, 4 sautees, 0 pl
          push_bloque (0) et mandat_disparu (0 manquant)
 ```
 
-**Quatre suites, aucune bloquante** *(ordre à décider par Frédéric)* : ① le mot `retraits_leves`
-oublié dans l'affichage du bilan *(`phase2/sync/relation_ledger.py` l. 865)* · ② le contrôle
-« L'ALLOCATEUR EST FAUX », périmé depuis que l'app crée des liens *(l. 747)* · ③ la **collision
-d'horaires** : le rattrapage des documents de 21 h tenait encore 777 travaux à 07:07, ce qui a
-fait **sauter 2 étapes** du run (entretien compromis / ventes) · ④ « GTI Descente » du 08/10 a
-fini avec le **code 1**.
+**Les suites** — ✅ **① et ② faits le 09/10** *(commit `allocateur`)* : le compte
+`retraits_leves` s'affiche enfin, et le contrôle de l'allocateur ne compte plus que les
+numéros que le run a **inventés** dans la plage de l'app — corrigé aux **quatre** endroits
+(les deux registres et leurs deux sentinelles), 12 épreuves vertes hors ligne.
+⏳ **Restent** : ③ la **collision d'horaires** — le rattrapage des documents de 21 h tenait
+encore 777 travaux à 07:07, ce qui a fait **sauter 2 étapes** du run (entretien compromis /
+ventes) · ④ « GTI Descente » du 08/10 a fini avec le **code 1**.
 
 ### ⛔ Ce qui attend Frédéric
 

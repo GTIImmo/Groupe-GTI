@@ -985,7 +985,7 @@ dernière demi-heure, **0 erreur**) : elle est simplement **plus lente que la nu
 2 500 met ~19 h à s'écouler et déborde sur le run. Les 6, 7 et 8 ces étapes passaient
 (elles tournaient à 06:50, pas 07:07). **C'est une collision d'horaires, pas une panne.**
 
-*b) Une alarme périmée qui crie, pour la première fois cette nuit.* Le bilan du registre des
+*b) Une alarme qui crie à tort, pour la première fois cette nuit* — ✅ **corrigée le 09/10, voir la section « SUITE ② » en fin de note.* Le bilan du registre des
 liens affiche *« DANS LA PLAGE RÉSERVÉE À L'APP : 1 (doit valoir 0) >> L'ALLOCATEUR EST FAUX »*
 *(`relation_ledger.py` l. 747-750)*. Le contrôle compte
 `app_relation_id >= PLAGE_RESERVEE_APP` et considère que c'est forcément un bug — il date
@@ -1384,3 +1384,88 @@ soldée au journal des résolutions et **Hektor n'aurait jamais reçu le texte**
 est intacte (`present_in_hektor` vrai, `retire_le` NULL, `last_seen_at` toujours 03/10). Le
 panneau de gauche affiche « Aucun mandant » parce que ce contact est **propriétaire** et que
 le bien n'a pas de numéro de mandat — ce n'est pas une perte.
+
+---
+
+## ✅ SUITE ② (09/10) — LE CONTRÔLE DE L'ALLOCATEUR MESURAIT TROP LARGE
+
+### Ce que l'audit a vraiment montré *(2ᵉ passage, à la demande de Frédéric)*
+
+Ma première explication — « un contrôle périmé, écrit avant que l'app crée des liens » —
+**était fausse**. Les mesures :
+
+| | |
+|---|---|
+| `adoptes_du_cloud` les nuits du **04 au 08/10** | **0** — l'adoption n'avait **jamais** servi |
+| la même mesure le **09/10** | **1** — premier cas réel |
+| la ligne en cause | `1000008`, `first_seen_at = last_seen_at = 2026-10-09 05:05:20` dans la base **locale** : créée cette nuit par l'adoption |
+| le contrôle | commit `fc07443`, **30/09 à 11:42** |
+| l'adoption | commit `b8f1276`, **30/09 à 12:59** — **1 h 17 plus tard, le même jour** |
+
+Ce n'est donc pas un vieux reste : c'est **une contradiction née le 30 septembre**, restée
+invisible neuf jours parce que la pièce qu'elle contredit n'avait jamais tourné.
+
+### Pourquoi l'adoption existe — et ce qu'elle a évité cette nuit
+
+Le message du commit `b8f1276` le dit : *« La RPC pose la ligne avec un numero de la plage
+app ; le miroir ne la connait pas. Au run suivant, le script verrait un couple inconnu, lui
+donnerait un numero LOCAL, et le push tenterait une 2e ligne → violation de
+app_relation_couple_unique. **LE DEGAT NE SERAIT PAS LE CONFLIT, CE SERAIT L'ARRET** : les 01 et
+02/09, le push du ledger d'affaires a heurte un index unique et LE RUN S'EST ARRETE LA —
+dix-huit heures de retard sans que rien ne le dise. »*
+
+Vérifié : l'index **`app_relation_couple_unique (app_contact_id, hektor_annonce_id)` existe**
+bien ; après le run, **0 doublon** sur la clé et le couple (10355712, 62963) apparaît **une
+seule fois** ; le distributeur du run est à **132 718**, très loin de 1 000 000.
+➡ **Cette nuit, l'adoption a sauvé le run.** Et c'est le rattachement de mandant de 5e, la
+veille à 17:40, qui a créé le premier cas.
+
+### Le correctif — on corrige la MESURE, pas le message
+
+Le message du monitoring était juste : *« Numeros **du run** dans la plage reservee a l'app »*.
+Seule la mesure était trop large. **Le discriminant** : une ligne de la plage app **présente
+dans la doublure** (`app_relation__sb` / `app_mandat__sb`) vient de l'app ; une ligne
+**absente** de la doublure, c'est le run qui l'a inventée — et ça, c'est le défaut d'août.
+**Doublure illisible : on recompte tout et on crie**, jamais de silence.
+
+Corrigé aux **quatre** endroits, car la paire était copiée à l'identique côté mandats — où
+elle était **armée mais pas encore tirée**, la doublure `app_mandat__sb` ne descendant que
+depuis 5c :
+
+| fichier | ce qui change |
+|---|---|
+| `phase2/sync/relation_ledger.py` | le contrôle imprimé **+** le mot `retraits_leves` ajouté au tuple d'affichage (il était calculé et renvoyé, jamais imprimé) |
+| `phase2/sync/mandat_ledger.py` | le contrôle imprimé |
+| `phase2/checks/relation_disparue.py` | la mesure `plage_envahie`, lue par le monitoring |
+| `phase2/checks/mandat_disparu.py` | la mesure `plage_envahie`, lue par le monitoring |
+
+⚠ **`phase2/checks/mandat_un_numero.py` n'est PAS touché** : il calcule aussi un
+`plage_envahie`, mais **depuis une autre source** (`serveur.values()`, pas la base locale).
+Je ne l'ai pas mesuré, donc je n'y touche pas.
+
+### Les épreuves — 12 vertes, 0 rouge, aucune écriture
+
+Base locale ouverte en **lecture seule**, cas fabriqués **en mémoire** :
+
+```
+la vraie base   ancienne mesure = 1  ->  apres correctif plage_envahie = 0
+                doublons 0, hors_plage_app 0 : rien d'autre n'a bouge
+cas fabriques   A. ligne de l'app PRESENTE dans la doublure  -> 0  (adoptee)
+                B. ligne ABSENTE de la doublure              -> 1  (inventee par le run)
+                C. pas de doublure du tout                   -> 1  (on compte tout, on crie)
+                les trois memes cas cote mandats             -> 0 / 1 / 1
+le bilan        les 13 cles sont presentes, retraits_leves compris : plus de KeyError
+le journal      « dans la plage de l'app : 1 (posees par l'app : normal) »
+                « dont INVENTEES PAR LE RUN : 0 (doit valoir 0) »  -- plus d'alarme
+```
+
+### Retour arrière et contrôle restant
+
+`git revert` d'un seul commit. Aucune écriture en base, aucun déploiement, rien chez Hektor,
+aucun service à redémarrer.
+⏰ **À vérifier demain 10/10** : la sonde de 05:48 doit donner `data.relation_disparue`
+**verte** (elle serait passée au rouge sans ce correctif), et le journal du run doit porter
+les deux nouvelles lignes **plus** `retraits_leves`.
+
+---
+

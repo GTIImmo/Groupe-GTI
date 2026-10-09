@@ -78,12 +78,30 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         " GROUP BY hektor_annonce_id, numero_mandat HAVING COUNT(*) > 1)"
     ).fetchone()[0]
 
-    # ② L'ALLOCATEUR A-T-IL TENU ? Le run ne doit rien poser dans la plage de
+    # ② L'ALLOCATEUR A-T-IL TENU ? Le run ne doit rien INVENTER dans la plage de
     #    l'app. C'est cet invariant qui a cede en aout, cote affaires.
-    plage_envahie = conn.execute(
-        "SELECT COUNT(*) FROM app_mandat WHERE app_mandat_id >= ?",
-        (PLAGE_RESERVEE_APP,),
-    ).fetchone()[0]
+    #    ⚠ 09/10/2026 : un numero de cette plage n'est plus une avarie en soi. Le
+    #      run ADOPTE ceux que l'app y pose (mandat_ledger lit app_mandat__sb),
+    #      sinon il en inventerait un second et le push s'arreterait sur l'index
+    #      unique. Reste une avarie : un numero que la DOUBLURE ignore.
+    #      Doublure absente -> on recompte tout : on crie, on ne se tait pas.
+    ids_plage_app = [
+        int(r[0]) for r in conn.execute(
+            "SELECT app_mandat_id FROM app_mandat WHERE app_mandat_id >= ?",
+            (PLAGE_RESERVEE_APP,))
+    ]
+    plage_envahie = len(ids_plage_app)
+    if ids_plage_app:
+        try:
+            places = ",".join("?" for _ in ids_plage_app)
+            adoptes = {
+                int(r[0]) for r in conn.execute(
+                    "SELECT app_mandat_id FROM app_mandat__sb"
+                    " WHERE app_mandat_id IN (%s)" % places, ids_plage_app)
+            }
+            plage_envahie = sum(1 for i in ids_plage_app if i not in adoptes)
+        except sqlite3.OperationalError:
+            pass   # doublure absente : on garde le compte large
 
     # ③ LA CHAINE A-T-ELLE TOURNE ? Tout mandat du miroir portant une annonce ET
     #    un numero doit etre dans la table. S'il en manque, l'etape de nuit ne

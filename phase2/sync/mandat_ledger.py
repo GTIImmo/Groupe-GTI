@@ -884,9 +884,42 @@ def controle(con: sqlite3.Connection) -> None:
               "   AND (versions_json IS NULL OR versions_json IN ('', '[]'))"))
 
     print("")
-    # LE CONTROLE QUI COMPTE : aucun numero ne doit tomber dans la plage de l'app.
-    envahis = q("SELECT COUNT(*) FROM app_mandat WHERE app_mandat_id >= %d" % PLAGE_RESERVEE_APP)
-    print("   DANS LA PLAGE RESERVEE A L'APP      : %s   (doit valoir 0)" % envahis)
+    # LE CONTROLE QUI COMPTE : le run ne doit INVENTER aucun numero dans la plage
+    # de l'app. Ceux que l'app y pose sont normaux -- le run les adopte (lecture de
+    # app_mandat__sb plus haut).
+    # ⚠ 09/10/2026 -- MEME CORRECTION QUE LE REGISTRE DES LIENS, et ici la paire
+    #   etait ARMEE mais pas encore tiree : la doublure app_mandat__sb ne descend
+    #   que depuis le 09/10, donc aucun mandat de l'app n'a encore ete adopte.
+    #   Il comptait TOUTES les lignes de la plage de l'app. Or le 30/09, une heure
+    #   apres l'avoir ecrit, on a ajoute l'ADOPTION (commit b8f1276) : le run
+    #   reprend le numero pose par l'app au lieu d'en inventer un second, sinon le
+    #   push heurte l'index unique du couple et LE RUN S'ARRETE LA (incident des
+    #   01-02/09, 18 h perdues). Les deux pieces se contredisaient depuis ce
+    #   jour-la sans que ca se voie : l'adoption n'a servi pour la premiere fois
+    #   que le 09/10 (adoptes_du_cloud = 1), et le controle a aussitot crie pour
+    #   une ligne parfaitement saine.
+    #   CE QU'ON VEUT VRAIMENT SAVOIR : le run a-t-il INVENTE un numero dans la
+    #   plage de l'app ? Une ligne adoptee porte le numero de la DOUBLURE ; une
+    #   ligne inventee par le run n'y figure pas. C'est le discriminant.
+    #   ⚠ Doublure illisible : on NE SE TAIT PAS, on retombe sur l'ancien compte,
+    #     quitte a crier a tort. Un silence couterait plus cher.
+    dans_plage = q("SELECT COUNT(*) FROM app_mandat WHERE app_mandat_id >= %d"
+                   % PLAGE_RESERVEE_APP)
+    try:
+        adoptes_app = q("SELECT COUNT(*) FROM app_mandat m"
+                        " WHERE m.app_mandat_id >= %d"
+                        "   AND EXISTS (SELECT 1 FROM app_mandat__sb s"
+                        "               WHERE s.app_mandat_id = m.app_mandat_id)"
+                        % PLAGE_RESERVEE_APP)
+        envahis = dans_plage - adoptes_app
+        doublure_lue = True
+    except sqlite3.OperationalError:
+        envahis, doublure_lue = dans_plage, False
+    print("   dans la plage de l'app              : %s   (poses par l'app : normal)"
+          % dans_plage)
+    if not doublure_lue:
+        print("   !! DOUBLURE app_mandat__sb ILLISIBLE -- on compte tout.")
+    print("   dont INVENTES PAR LE RUN            : %s   (doit valoir 0)" % envahis)
     if envahis:
         print("   >> L'ALLOCATEUR EST FAUX. C'est le defaut d'aout, a l'identique.")
 

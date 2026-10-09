@@ -110,7 +110,7 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
     connus = set()
     doublons = 0
     hors_plage_app = 0
-    plage_envahie = 0
+    ids_plage_app = []
     for contact, annonce, ident in conn.execute(
         "SELECT app_contact_id, hektor_annonce_id, app_relation_id FROM app_relation"
     ):
@@ -121,7 +121,25 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         if int(contact) < PLAGE_CONTACT_APP:
             hors_plage_app += 1
         if int(ident) >= PLAGE_RESERVEE_APP:
-            plage_envahie += 1
+            ids_plage_app.append(int(ident))
+
+    # ⚠ 09/10/2026 -- UN NUMERO DANS LA PLAGE DE L'APP N'EST PLUS UNE AVARIE.
+    #   Depuis le 30/09 le run ADOPTE le numero pose par l'app (relation_ledger lit
+    #   app_relation__sb) au lieu d'en inventer un second : sans ca le push heurte
+    #   l'index unique du couple et le run s'arrete. La premiere adoption a eu lieu
+    #   le 09/10, et cette sentinelle serait passee au ROUGE pour une ligne saine.
+    #   Reste une avarie : un numero de cette plage que la DOUBLURE ne connait pas
+    #   -- celui-la, c'est le run qui l'a invente. Doublure absente : on recompte
+    #   tout, on crie, on ne se tait pas.
+    plage_envahie = len(ids_plage_app)
+    if ids_plage_app and _table_existe(conn, "app_relation__sb"):
+        places = ",".join("?" for _ in ids_plage_app)
+        adoptes = {
+            int(r[0]) for r in conn.execute(
+                "SELECT app_relation_id FROM app_relation__sb"
+                " WHERE app_relation_id IN (%s)" % places, ids_plage_app)
+        }
+        plage_envahie = sum(1 for i in ids_plage_app if i not in adoptes)
 
     # ① LA CHAINE A-T-ELLE TOURNE ? Tout lien de la couche doit etre dans la
     #    table. S'il en manque, l'etape de nuit ne passe plus -- et le registre
