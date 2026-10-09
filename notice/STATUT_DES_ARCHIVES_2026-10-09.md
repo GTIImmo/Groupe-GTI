@@ -226,7 +226,7 @@ Témoins **36280 / 36281 / 36426** : `<<vide>>` → **« Clos »** partout, et H
 1. sync_archived_annonce_details.py --limit N      ~1,0 s par annonce
 2. .venv\Scripts\python.exe normalize_source.py    2 min   (quel que soit N)
 3. .venv\Scripts\python.exe build_case_index.py    5 min 37 (quel que soit N)
-4. .venv\Scripts\python.exe phase2efresh_views.py 34 s   (quel que soit N)
+4. .venv\Scripts\python.exe phase2\refresh_views.py 34 s   (quel que soit N)
 5. le push vers Supabase  ->  NON FAIT, c'est le run de nuit qui l'emporte
 ```
 
