@@ -341,3 +341,42 @@ au palier **avec** normalisation, avait bien disparu de la liste.
 **Correction** : on normalise à **chaque** lot (le défaut de l'outil), et ça sert aussi de
 frein. **Leçon** : le script v2 affiche **le nombre de candidates restantes après chaque lot**
 — c'est ce contrôle-là qui manquait, et il aurait montré le problème dès le deuxième lot.
+
+---
+
+## 11. LE PUSH — 09/10, 17 h 34 *(accord de Frédéric)*
+
+Lancé avec les réglages du run de nuit **plus `--skip-stale-deletes`** : un push en pleine
+journée ne doit supprimer aucune ligne en ligne, seulement mettre à jour. Résultat :
+`archive_index_upserted: 948`, `archive_index_deleted: 0`, `deleted_dossiers: 0`.
+
+### ✅ Le résultat
+
+| index de l'app | ce matin | maintenant |
+|---|---|---|
+| **archives** | 35 317 dont **785 sans statut** | **35 317 dont 0 sans statut** |
+| vendus / clos | 8 939 | 8 939 *(inchangé)* |
+| brouillons | 515 | 515 *(inchangé)* |
+| parc vivant | 13 471 | **13 919** *(+448)* |
+
+✅ **0 annonce présente dans deux index à la fois.**
+✅ À l'écran : « Archives » + statut « Tous » montre désormais **35 288** lignes (35 317 moins
+les 29 estimations, exclues volontairement) au lieu de 34 502.
+
+### ⚠ LE PARC VIVANT A GAGNÉ 448 LIGNES — ce que j'ai prouvé, et ce que je n'ai pas prouvé
+
+L'écran est passé de **728 à 956 annonces actives**. Vérifications faites :
+
+- le **périmètre local** dit 13 919, dont 956 actives (820 Actif + 88 Sous compromis +
+  48 Sous offre) — **Supabase correspond maintenant exactement au serveur** ;
+- **rien n'a été retiré nulle part** : vendus/clos, archives et brouillons sont **inchangés**.
+  Les 448 sont donc des annonces qui n'étaient dans **aucun** index ;
+- **4 actives tirées au hasard** (53398, 5666, 11843, 61789) : Hektor répond
+  `statut = Actif, archive = 0` pour les quatre. Elles sont légitimes.
+
+⚠ **Ce que je n'ai PAS prouvé** : pourquoi Supabase était en retard de 448 lignes sur le
+serveur. L'explication la plus probable est que mes passages de `normalize_source` et
+`build_case_index` ont recalculé la base depuis les réponses brutes (le `normalize_source` a
+d'ailleurs retiré 5 offres, 10 compromis et 1 vente périmés du miroir), mais **je ne l'ai pas
+démontré**. ⏰ **À surveiller au run du 10/10** : le compte doit rester à 13 919, pas
+retomber à 13 471 ni repartir à la hausse.
