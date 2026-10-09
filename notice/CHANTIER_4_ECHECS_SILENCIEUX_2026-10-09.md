@@ -11,7 +11,7 @@
 
 | # | Le point | État |
 |---|---|---|
-| **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | 🧪 **patch SQL APPLIQUÉ et contrôlé le 09/10** (empreinte `e2c015e1…`, 0 ligne, droits intacts) · épreuve hors ligne **19/19** · **reste le redémarrage du worker** pour l'avertissement |
+| **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | ✅ **FINI le 09/10** — patch appliqué et contrôlé (empreinte `e2c015e1…`, 0 ligne, droits intacts, moniteur vert) · épreuve hors ligne **19/19** · **les 4 workers redémarrés à 17:30:49** (battement `startup` en base) |
 | **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | ⬜ |
 | **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | ⬜ |
 | **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ⬜ |
@@ -267,12 +267,22 @@ un `Console/test_*.js` qui découpe le bloc et le fait tourner avec un faux Supa
 CRLF. Le dépôt n'a jamais été touché — `core.autocrlf = true`, les blobs commités sont en LF ;
 seule ma copie de travail l'était, et c'est réparé.)*
 
-## ⑤ CE QU'IL RESTE À FAIRE — *au 09/10*
+## ⑤ ✅ 4a EST CLOS — *09/10/2026*
 
-1. Frédéric colle **la répétition** → il me recopie le message `ESSAI ANNULE -- 4a` ; je compare
-   aux valeurs attendues (écrites en tête du fichier) ;
-2. si c'est le bon : il colle **le vrai patch** → je relis la vue (0 ligne), les 7 colonnes, les
-   droits, et je fais tourner le moniteur (`geste_abandonne` doit rester **verte**) ;
-3. **redémarrage des 4 workers** (en journée, file documents vide, avec son accord) pour la
-   moitié 1 — `console_job_worker.js` est partagé par les quatre services ;
-4. aucun déploiement : ni front, ni Render, ni Vercel.
+```
+moitie 2 (la surveillance)  patch applique, empreinte e2c015e1... conforme a la
+                            repetition, 7 colonnes, 0 ligne, droits inchanges,
+                            moniteur vert (data.geste_abandonne ok, 0 / seuil 0)
+moitie 1 (l'avertissement)  les 4 workers REDEMARRES par Frederic a 17:30:49-51
+                            (fichier modifie a 14:50:57 -> les quatre processus
+                            sont posterieurs) + battement « startup » en base
+                            a 15:30:49-51 UTC pour les quatre
+```
+
+**Aucun déploiement** : ni front, ni Render, ni Vercel. Rien n'a été poussé.
+
+**Ce qui n'est PAS prouvé, et ne le sera pas** : l'avertissement n'a jamais été vu en réel. Il
+faudrait un vrai échec de création, donc salir Hektor. Ce qui est prouvé : les vraies fonctions
+du worker rendent le bon message (19/19 hors ligne), et les processus qui tournent portent bien
+ce code (dates mesurées). **Le premier échec réel sera la preuve** — et il laissera deux traces :
+la cloche du négociateur, et une ligne dans `app_en_attente_humain` que la sentinelle verra.
