@@ -1999,9 +1999,20 @@ async function cibleHektorContact(identite, { contexte = "" } = {}) {
     // marchait hier -- MAIS elle ne doit pas non plus nous faire viser a
     // l'aveugle. Un numero de Hektor se vise lui-meme, comme avant le 21/09.
     if (!dansLaPlageDeLApp) return brut;
+    // 4b (09/10/2026) : CE MESSAGE NE PROMET PLUS UNE REPRISE QUI N'EXISTE PAS.
+    //   Il disait « le travail sera repris ». Faux pour 10 des 11 appelants de
+    //   cette fonction : seul `delete_hektor_contact` figure dans les 10 types
+    //   rejouables de app_console_action_enqueue_due_retries (liste relue en
+    //   base le 09/10 -- ce sont tous des gestes d'ETAT, absolus donc surs a
+    //   rejouer). Rattacher ou retirer un mandant, modifier un contact, ajouter
+    //   une recherche : rien ne les rejoue, jamais.
+    //   On reprend donc la formule du garde-fou des 30 minutes
+    //   (app_console_claim_next_job) : elle ne promet rien et elle dit quoi faire.
+    //   Pour `delete_hektor_contact` le filet rejoue en plus, en silence : la
+    //   phrase reste vraie, elle est seulement prudente.
     throw new Error(
       `Contact ${brut} : cible Hektor illisible (Supabase muet)${contexte ? ` (${contexte})` : ""}. ` +
-      "On n'envoie pas un numero de l'app a Hektor : le travail sera repris.");
+      "On n'envoie pas un numero de l'app a Hektor. Relancer la demande si necessaire.");
   }
 
   if (dansLaPlageDeLApp) {
@@ -2009,7 +2020,8 @@ async function cibleHektorContact(identite, { contexte = "" } = {}) {
     // encore. Le travail echoue proprement au lieu de partir a l'aveugle.
     throw new Error(
       `Contact ${brut} pas encore cree chez Hektor : rien a viser${contexte ? ` (${contexte})` : ""}. ` +
-      "Le travail sera repris quand le numero Hektor sera rapporte.");
+      // 4b : voir le commentaire du `throw` precedent -- on ne promet plus une reprise.
+      "Relancer la demande quand le numero Hektor sera rapporte.");
   }
   // Pas de cible posee, mais l'identite est dans la plage de Hektor : c'est une
   // fiche d'avant la recopie, ou une fiche que le declencheur n'a pas vue. Elle
@@ -2053,7 +2065,8 @@ async function ciblesHektorContacts(ids, { contexte = "" } = {}) {
   if (enAttente.length) {
     throw new Error(
       `${enAttente.length} contact(s) pas encore cree(s) chez Hektor : ${enAttente.join(", ")}` +
-      `${contexte ? ` (${contexte})` : ""}. Le travail sera repris quand leurs numeros seront rapportes.`);
+      // 4b : voir le commentaire du `throw` de cibleHektorContact -- aucune promesse.
+      `${contexte ? ` (${contexte})` : ""}. Relancer la demande quand leurs numeros seront rapportes.`);
   }
   return cibles;
 }
@@ -7817,8 +7830,16 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
         updated_at: maintenant,
       }),
     });
+    // 4b (09/10/2026) : il disait « sera repris ». LE REPRENEUR EXISTE
+    //   (Console/reprendre_envois_hektor.js, teste, il relit
+    //   envoi_hektor_statut in (a_envoyer, echec)) MAIS IL EST ORPHELIN :
+    //   aucune des 12 taches planifiees Windows ne l'appelle (verifie le 09/10 ;
+    //   deja ecrit le 25/09, point D3 de
+    //   notice/RESTE_A_FAIRE_DOCUMENTS_PHOTOS_2026-09-25.md).
+    //   Tant qu'il n'est pas branche, la ligne reste marquee « echec » et PERSONNE
+    //   ne la reprend. Le mot « repris » revient le jour ou le repreneur tourne.
     await logJob(job.id, "upload_document_to_hektor", "running",
-      "Document garde chez nous, envoi Hektor en echec -- sera repris", {
+      "Document garde chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)", {
         app_document_id: ligne.id,
         hektor_annonce_id: String(dossier.hektor_annonce_id),
         erreur: motif,
@@ -8083,8 +8104,9 @@ async function completerEnvoiPhotoDifferee(job, dossier, payload) {
         updated_at: maintenant,
       }),
     });
+    // 4b : meme chose que pour le document ci-dessus -- le repreneur est orphelin.
     await logJob(job.id, "upload_hektor_photo", "running",
-      "Photo gardee chez nous, envoi Hektor en echec -- sera repris", {
+      "Photo gardee chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)", {
         app_photo_id: ligne.id,
         hektor_annonce_id: String(dossier.hektor_annonce_id),
         erreur: motif,

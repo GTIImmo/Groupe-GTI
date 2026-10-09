@@ -12,7 +12,7 @@
 | # | Le point | État |
 |---|---|---|
 | **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | ✅ **FINI le 09/10** — patch appliqué et contrôlé (empreinte `e2c015e1…`, 0 ligne, droits intacts, moniteur vert) · épreuve hors ligne **19/19** · **les 4 workers redémarrés à 17:30:49** (battement `startup` en base) |
-| **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | ⬜ |
+| **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | 🧪 **audit fait (PARTIEL)** · **option A codée le 09/10**, 11/11 hors ligne : les **5 messages** ne promettent plus · attend le redémarrage du worker · ⏳ **options B et C en question** (brancher le repreneur, prévenir) |
 | **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | ⬜ |
 | **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ⬜ |
 | **4e** | les **photos de la création** attendent dans la mémoire du navigateur → onglet fermé = perdues | ⬜ |
@@ -286,3 +286,117 @@ faudrait un vrai échec de création, donc salir Hektor. Ce qui est prouvé : le
 du worker rendent le bon message (19/19 hors ligne), et les processus qui tournent portent bien
 ce code (dates mesurées). **Le premier échec réel sera la preuve** — et il laissera deux traces :
 la cloche du négociateur, et une ligne dans `app_en_attente_humain` que la sentinelle verra.
+
+
+---
+
+# POINT 4b — AUCUN NOUVEL ESSAI, ET CINQ MESSAGES QUI MENTAIENT
+
+## ① AUDIT — *09/10/2026, lecture seule.* Verdict : **PARTIEL**
+
+L'audit du 08/10 avait raison sur le fond, mais il mêlait **une décision juste** et
+**cinq messages faux**.
+
+### A. Ce qui est rejoué : 10 types, et le choix est le bon
+
+`app_console_action_enqueue_due_retries`, relue en base — la liste complète :
+```
+archiver · desarchiver · supprimer l'annonce · supprimer le contact · changer le statut
+affecter le negociateur · statut d'offre · annuler le compromis · supprimer la vente
+supprimer le compromis  (ajoute le 17/09)
+```
+**Les dix sont des gestes d'état « absolus »** : les refaire donne le même résultat final.
+Les créations, les dépôts et les gestes mandant en sont absents **à dessein** (C.4-bis du
+29/08 : rejouer une création la **doublerait**).
+
+**Et le filet marche quand il s'applique** : **19** travaux ont eu ≥ 2 tentatives, **tous
+finis « réussi »** — dont 9 changements de statut (jusqu'à 4 tentatives, 13/09).
+
+### B. Le message qui mentait : CONFIRMÉ — mais jamais lu par personne
+
+Trois messages promettaient une reprise (`console_job_worker.js:2004`, `:2012`, `:2056`,
+dans `cibleHektorContact`). Leurs **11 appelants** relevés : **un seul**
+(`delete_hektor_contact`) est réellement rejouable → la promesse était fausse **10 fois
+sur 11** (rattacher ou retirer un mandant, modifier un contact, ajouter une recherche,
+modifier un mandant, la suite d'une création).
+
+**Mesuré : 0 occurrence** — jamais dans `app_console_job.error_message`, jamais au journal,
+jamais en notification. Défaut **latent**.
+
+### C. Ce que l'audit n'avait pas vu — deux promesses de plus, et la structure de 4a
+
+`:7821` (document) et `:8087` (photo) : *« gardé chez nous, envoi Hektor en échec — sera
+repris »*, suivi de **« PAS DE LEVÉE »** → le travail finit **« réussi »**, donc **aucun
+avertissement**. Exactement 4a, sur un autre objet.
+
+Le repreneur **existe et est testé** (`Console/reprendre_envois_hektor.js`, il relit
+`envoi_hektor_statut in (a_envoyer, echec)`) **mais il est orphelin** :
+```
+12 taches planifiees Windows listees le 09/10 -> AUCUNE ne l'appelle
+deja ecrit le 25/09 : notice/RESTE_A_FAIRE_DOCUMENTS_PHOTOS_2026-09-25.md, point D3
+   « existe et est teste -- aucun run ne l'appelle. A brancher »
+```
+Même motif que **4i** (`--missing-only` sans appelant) et que les archives du 09/10 :
+*l'outil existe, il n'est branché nulle part.*
+**Mesuré : 0 ligne** porte un statut d'envoi (ni « échec » ni « envoyé ») sur les deux
+tables — le chemin n'a **jamais** servi, **rien n'est perdu**.
+
+### D. Une bonne nouvelle : le piège du « pending à vie » est fermé
+
+C'est le bug du 03/10 (`unlink_hektor_mandant` réclamé par personne, **sans erreur**).
+Trois listes comparées :
+```
+42 types traites par le repartiteur du worker
+42 types presents dans les 6 files JS
+42 types distribues par app_console_claim_next_job (SQL, relue en base)
+-> AUCUN ECART, dans les deux sens
+```
+
+### E. Une alerte à nuancer, et ce qui n'est pas mesuré
+
+Trois créations portent jusqu'à **6 tentatives** — ce qui contredirait « jamais rejoué ».
+Elles datent du **15-16/05**, les premiers jours du geste, bien avant C.4-bis : « TEST »,
+aucun numéro retenu, 0 ou 1 finalisation → **aucune annonce n'a été doublée**. Aujourd'hui,
+les **24** travaux en erreur de types non rejouables portent tous **1 seule** tentative.
+
+**Non mesuré** : par quel chemin `refresh_console_data` (10/09) et `update_hektor_contact`
+(24/06) ont atteint 2 tentatives sans être rejouables ; le comportement réel à l'écran.
+
+## ② LE CORRECTIF — *« A » choisie par Frédéric le 09/10*
+
+> **On ne touche à aucune logique. On arrête seulement de promettre.**
+
+Les **5 messages** reprennent la formule **déjà employée** par le garde-fou des 30 minutes
+(`app_console_claim_next_job`) : *« Relancer la demande si nécessaire »* — elle ne promet
+rien et elle dit quoi faire. Les deux messages de dépôt disent
+*« A REPRENDRE (le repreneur n'est pas branché) »*.
+**27 lignes ajoutées, 5 retirées** — les 5 retirées sont exactement les 5 messages.
+
+### Ce que ça pourrait casser ailleurs — vérifié
+
+| Ce que ça touche | Vérifié | Preuve |
+|---|---|---|
+| le filet C.4-bis (cron 13) | **intact** : ni la liste SQL ni le cron ne sont touchés, et le worker ne recopie pas la liste | contrôle (4a) de l'épreuve |
+| la cloche du négociateur | `notifyJobFailureBestEffort` recopie le motif dans le corps du message → **elle dira la vérité elle aussi**, c'est le but | l. 17244-17251 |
+| les lecteurs de ces textes | **aucun** : `sera repris` n'existait que dans le worker et ses tests — aucun front, aucune fonction SQL, aucun script | grep complet |
+| `delete_hektor_contact` *(le seul vraiment rejouable)* | la nouvelle phrase reste **vraie**, seulement prudente : le filet rejoue en plus, en silence | liste des 10 types |
+| le front, les pages publiques | **rien**, aucune ligne, aucun déploiement | — |
+
+### L'épreuve, hors ligne : **11 contrôles, 11 verts**
+`node Console/test_aucune_fausse_promesse.js`. Il lit le source **et** fait tourner la vraie
+`cibleHektorContact` avec un faux Supabase. ⭐ Son contrôle **(2c)** est un garde-fou pour
+plus tard : **il tombera en échec le jour où le repreneur sera branché**, pour rappeler de
+remettre le mot « repris » dans les deux messages de dépôt.
+
+### Retour arrière
+`git revert` du commit, puis redémarrage du worker. Aucun patch SQL, aucun déploiement.
+
+## ③ CE QU'IL RESTE — *au 09/10*
+
+1. **le redémarrage du worker** pour que les nouveaux messages sortent *(les 5 messages
+   touchent les files `actions` et `documents` — donc **deux** services au minimum)* ;
+2. ⏳ **les options B et C attendent la décision de Frédéric** :
+   **B** brancher `reprendre_envois_hektor.js` — *où et à quelle fréquence ?* — pour que la
+   promesse des documents et des photos devienne vraie ;
+   **C** prévenir le négociateur quand un envoi échoue, comme en 4a *(n'a d'intérêt que si B
+   est fait, sinon on avertit sans pouvoir réparer)*.
