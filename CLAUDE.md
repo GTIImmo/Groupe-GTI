@@ -149,9 +149,14 @@ Run 05:00:02 -> 07:34:16 « finished successfully », 50 etapes, 4 sautees, 0 pl
 `retraits_leves` s'affiche enfin, et le contrôle de l'allocateur ne compte plus que les
 numéros que le run a **inventés** dans la plage de l'app — corrigé aux **quatre** endroits
 (les deux registres et leurs deux sentinelles), 12 épreuves vertes hors ligne.
-⏳ **Restent** : ③ la **collision d'horaires** — le rattrapage des documents de 21 h tenait
-encore 777 travaux à 07:07, ce qui a fait **sauter 2 étapes** du run (entretien compromis /
-ventes) · ④ « GTI Descente » du 08/10 a fini avec le **code 1**.
+✅ **③ fait le 09/10** : le rattrapage des documents a fini les **35 317 archives** et est
+entré dans les **vendus/clos**, qui portent **8,60 documents par annonce au lieu de 2,45**
+(21,9 s par annonce au lieu de 10,2) — le lot de 2 500 demandait ~16 h et a bloqué **TROIS**
+étapes du run (chauffage delta, entretien compromis, entretien ventes). **Rien n'est perdu** :
+les trois se rattrapent seules (chauffage à 30 jours, entretien « ce qui manque »). **Le lot
+passe à 1 000** *(décision de Frédéric)* : ~6 h, file vide avant le run — **à remettre à
+2 500 quand les vendus/clos seront finis**.
+⏳ **Reste** : ④ « GTI Descente » finit avec le **code 1** — le **08/10 ET le 09/10**.
 
 ### ⛔ Ce qui attend Frédéric
 
@@ -168,7 +173,8 @@ ventes) · ④ « GTI Descente » du 08/10 a fini avec le **code 1**.
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
 
 ```
-G.1-b    les 508 brouillons du rattrapage -- AVANT qu'il les atteigne (~12-13/10)
+G.1-b    les 515 brouillons (mesure du 09/10) -- AVANT que le rattrapage les atteigne :
+         la NUIT DU 15 AU 16/10 avec le lot ramene a 1 000 (c'etait le 11/10 a 2 500)
 G.2      rebalayer le PARC VIVANT, fige depuis le 20/08 (apres le rattrapage ; perimetre =
          toutes les vivantes, estimations comprises -- decision de Frederic)
 C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 · A.4

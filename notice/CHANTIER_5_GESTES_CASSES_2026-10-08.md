@@ -1469,3 +1469,79 @@ les deux nouvelles lignes **plus** `retraits_leves`.
 
 ---
 
+---
+
+## ✅ SUITE ③ (09/10) — LE RATTRAPAGE DES DOCUMENTS DÉBORDAIT SUR LE RUN
+
+### Ce que c'était vraiment : un changement de population, pas une panne
+
+| nuit | documents par annonce | secondes par travail | lot fini à |
+|---|---|---|---|
+| 05/10 | 2,45 | 10,2 | 02:10 |
+| 06/10 | 3,66 | 13,0 | 04:10 |
+| 07/10 (1 250) | 2,15 | 9,4 | 22:19 |
+| **08/10** | **8,60** | **21,9** | **pas avant ~13 h le lendemain** |
+
+Le rattrapage a **fini les 35 317 archives** et est entré dans les **vendus/clos**, bien plus
+chargés en documents : 16 322 documents rapportés en une nuit contre 6 122 et 9 158 avant.
+Le lot de 2 500 est passé de 7-9 h à **~16 h**.
+
+**Écarté par la mesure** : ce n'est ni le patch de sécurité, ni le redémarrage des workers, ni
+le run — le débit a été **le meilleur de la nuit pendant le run** (324 travaux à 04 h UTC
+contre 94 à 19 h), et le journal de chaque travail a exactement la même forme qu'avant
+(`claim` → `hektor` → `finish`, aucune reprise, **0 erreur sur 1 941**).
+
+### TROIS étapes bloquées, pas deux — et le garde-fou avait raison
+
+`hektor chauffage delta`, `phase2 entretien compromis console`, `phase2 entretien ventes
+console`. Même cause, lue dans la trace :
+`RuntimeError: Jobs console pending/running presents: [... "sync_console_documents" ...]`.
+
+Ce garde-fou n'est pas trop large, il nous protège. L'en-tête du script le dit :
+*« LA CADENCE EST CELLE DU RUN CHAUFFAGE, et c'est délibéré : 56 926 lectures sans un seul
+bannissement. **Le rattrapage des DOCUMENTS, lui, a fait bannir notre IP** par le débit et des
+403 répétés. »* Lire la console pendant que le rattrapage la martèle, c'est exactement ce qui
+nous a déjà coûté un bannissement. **Non touché.**
+
+### Rien n'est perdu — vérifié pour les trois
+
+| étape | pourquoi elle se rattrape seule |
+|---|---|
+| chauffage delta | *« rattrapage automatique à 30 jours »* : 50 annonces par nuit, choisies parce que leur chauffage date de plus de 30 jours |
+| entretien compromis | la sélection dit **« ce qui manque »** (commission à 0, notaire absent), pas « ce qui a changé ». Le code : *« CE FILTRE REND LE TROU AUTO-RÉPARABLE … l'entretien du lendemain les reprend tout seul »* — écrit après l'incident du 15/09 (880 ventes sans commission) |
+| entretien ventes | même script, même sélection |
+
+Coût réel : ~50 chauffages et ~15 transactions **décalés d'un jour**.
+
+### Ce qui reste à rattraper, mesuré le 09/10
+
+| population | total | déjà faites | restent |
+|---|---|---|---|
+| archives | 35 317 | **35 317** | **0** ✅ |
+| vendus / clos | 8 939 | 1 955 | **6 395** |
+| brouillons | 515 | 0 | **515** |
+| | | **total** | **6 910** |
+
+### La décision de Frédéric : le lot passe de 2 500 à **1 000**
+
+`scheduled/run_rattrapage_documents.ps1` — une seule ligne, la tâche Windows ne passe aucun
+argument. Parseur PowerShell vérifié, BOM conservé.
+
+```
+1 000 x 21,9 s = 6 h 05  ->  pose a 21 h, fini vers 03 h : la file est VIDE quand le run
+                             arrive, les trois etapes repartent des ce soir.
+6 910 annonces / 1 000   ->  ~7 nuits au lieu de ~3 : fin du rattrapage vers le 16-17/10.
+```
+
+⚠ **À REMETTRE À 2 500** quand les vendus/clos seront finis : la population redeviendra
+légère (les brouillons), et 1 000 serait alors inutilement lent.
+
+⚠⚠ **CONSÉQUENCE SUR UNE DATE DE PÉREMPTION** : les **515 brouillons** (G.1-b) ne seront
+atteints que dans la **nuit du 15 au 16/10** au lieu du **11/10**. Frédéric gagne quatre jours
+pour décider ce qu'il en fait — CLAUDE.md §2 est à jour.
+
+### Ce qu'il reste à contrôler
+
+Demain matin : la file des documents doit être **vide avant 05 h**, et les trois étapes
+(`chauffage delta`, `entretien compromis`, `entretien ventes`) doivent être **DONE** dans le
+journal du run.

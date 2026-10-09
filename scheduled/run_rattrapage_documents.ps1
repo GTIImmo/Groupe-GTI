@@ -1,4 +1,4 @@
-# Tache planifiee : RATTRAPAGE DES DOCUMENTS (22:00) — un lot de 2 500 par nuit.
+﻿# Tache planifiee : RATTRAPAGE DES DOCUMENTS (22:00) — un lot de 2 500 par nuit.
 #                                           25/09/2026, revise le 01/10/2026
 # POURQUOI : au 25/09, 40 612 annonces sur 58 140 n'ont jamais ete regardees pour leurs
 # documents. Le rattrapage avait tourne du 18 au 23/08 puis s'etait ARRETE (pas echoue :
@@ -72,7 +72,19 @@ try {
     $script = Join-Path $root "Console\enqueue_empreinte_lot.js"
     if (-not (Test-Path -LiteralPath $script)) { throw "Script introuvable : $script" }
 
-    & $nodeExe $script "--scope" "auto" "--limit" "2500" "--exiger-file-vide" "--max-erreurs-recentes" "20"
+    # LE LOT PASSE DE 2 500 A 1 000                                  09/10/2026
+    # Decision de Frederic. Mesure du 09/10 : le rattrapage a fini les 35 317
+    # ARCHIVES et il est entre dans les VENDUS/CLOS, qui portent 8,60 documents
+    # par annonce au lieu de 2,45 -- donc 21,9 s par annonce au lieu de 10,2.
+    # Un lot de 2 500 demandait ~16 h : pose a 21 h, il tournait encore a 13 h,
+    # et la file pleine a BLOQUE TROIS etapes du run du 09/10 (chauffage delta,
+    # entretien compromis, entretien ventes). Leur garde-fou a bien fait son
+    # travail : c est le rattrapage des documents qui a deja fait bannir notre IP,
+    # on ne lit pas la console pendant qu il la martele.
+    #   1 000 x 21,9 s = 6 h 05 : pose a 21 h, fini vers 03 h, la file est vide
+    #   quand le run arrive. Il reste 6 910 annonces -> ~7 nuits au lieu de ~3.
+    # A REMETTRE A 2 500 quand les vendus/clos seront finis (population legere).
+    & $nodeExe $script "--scope" "auto" "--limit" "1000" "--exiger-file-vide" "--max-erreurs-recentes" "20"
     $code = $LASTEXITCODE
 
     switch ($code) {
