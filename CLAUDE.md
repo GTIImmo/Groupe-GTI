@@ -158,6 +158,28 @@ passe à 1 000** *(décision de Frédéric)* : ~6 h, file vide avant le run — 
 2 500 quand les vendus/clos seront finis**.
 ⏳ **Reste** : ④ « GTI Descente » finit avec le **code 1** — le **08/10 ET le 09/10**.
 
+### ⏸ EN PAUSE — LE STATUT DES ARCHIVES *(note complète : `notice/STATUT_DES_ARCHIVES_2026-10-09.md`)*
+
+Signalé le 09/10 : « plus que 201 annonces dans l'index archivé ». **La base n'a rien perdu**
+(35 317) — c'était le filtre STATUT resté sur « Actif / offre / compromis ». Mais la vérification
+a trouvé **deux vrais défauts, mesurés, non corrigés** :
+
+```
+785 archives SANS STATUT -> invisibles quoi qu'on fasse : l'ecran exclut toujours
+    « Estimation », et en SQL « different de » rejette aussi les cases VIDES.
+5 246 fiches detail d'archive a rattraper (3 241 absentes + ~2 005 perimees) :
+    le statut ne vit QUE dans la fiche detail, et les variantes « archived » du
+    balayage ne la telechargent JAMAIS (sync_details: False, decision du 24/08).
+    -> une archive modifiee chez Hektor n'est jamais actualisee chez nous.
+L'OUTIL EXISTE DEJA et fait les deux : sync_archived_annonce_details.py,
+    branche NULLE PART. Cout du maintien : ~2 appels par nuit (mesure).
+Le trou est LIMITE AUX ARCHIVES : parc vivant 0, vendus/clos 0 (ils portent
+    archive=0, donc les variantes « active » lisent bien leur detail).
+```
+
+**Rien n'est corrigé, tout est chiffré.** Prochaine marche : un **palier de 50**
+(`--limit 50`), hors des heures du rattrapage des documents. Puis le filet côté écran.
+
 ### ⛔ Ce qui attend Frédéric
 
 ```
