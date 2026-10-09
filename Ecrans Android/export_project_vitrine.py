@@ -207,8 +207,11 @@ def photos_chez_nous(adresses: dict[str, dict[str, Any]], numero_hektor: Any, ma
     ⚠ Le choix est sans danger, mesure le 27/09 : sur les 459 annonces publiees, 459 ont
       notre vignette et 458 notre galerie -- la seule sans n'a AUCUNE photo.
     ⚠ LE FORMAT TOMBE JUSTE SANS CONVERSION : nos entrees sont {url, full, order, legend},
-      et visible_photos lit deja path / pathTumb / url avec order -- donc on la reutilise
+      et visible_photos lit path / pathTumb / url avec order -- donc on la reutilise
       telle quelle plutot que de reecrire un tri.
+    ⛔ CORRIGE LE 09/10 : chez nous url = vignette w400, full = grande image w1600. Lire
+      url publiait des images de 400 px sur les ecrans depuis le 27/09 ; visible_photos
+      lit desormais full en premier.
     """
     if not adresses:
         return None
@@ -218,7 +221,11 @@ def photos_chez_nous(adresses: dict[str, dict[str, Any]], numero_hektor: Any, ma
     galerie = ligne.get("images_preview_json_app")
     vignette = (ligne.get("photo_url_listing_app") or "").strip() or None
     if isinstance(galerie, list) and galerie:
-        photos = visible_photos(json.dumps(galerie), vignette, max_photos)
+        # 09/10 : PAS de vignette ici. Elle est en w400 quand la galerie est en w1600 :
+        # les deux adresses different, le dedoublonnage ne la reconnaissait pas, et la
+        # photo principale reapparaissait en petit en fin de galerie (396 annonces).
+        # Elle reste le repli juste en dessous si la galerie ne donne rien.
+        photos = visible_photos(json.dumps(galerie), None, max_photos)
         if photos:
             return photos
     # Pas de galerie mais une vignette a nous : elle vaut mieux que rien.
@@ -245,7 +252,10 @@ def visible_photos(images_json: str | None, listing_photo: str | None, max_photo
         for img in ordered:
             if str(img.get("visible", "1")).strip() == "0":
                 continue
-            add(img.get("path") or img.get("pathTumb") or img.get("url"))
+            # 09/10 : « full » d'abord. Nos adresses (G.15) portent url = vignette w400 et
+            # full = grande image w1600 ; la vitrine publiait les w400 depuis le 27/09.
+            # Chez Hektor, full = url = l'original : le repli ne change pas.
+            add(img.get("full") or img.get("path") or img.get("pathTumb") or img.get("url"))
             if len(photos) >= max_photos:
                 return photos
 
