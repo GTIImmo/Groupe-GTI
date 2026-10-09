@@ -174,6 +174,23 @@ L'APP EN RÉEL
 - Biens d'essai déjà utilisés : 62774, 62963, VA2380 (bien 78) · contact d'essai 10355757.
 
 
+AJOUTÉ LE 09/10 — quatre pièges payés dans la journée
+- **Les variables du run.** `run_full_pipeline.ps1` pose des `$env:` que ton shell n'a pas.
+  Sans `APP_BROUILLON_BUCKET_ENABLED`, un push à la main fait entrer les brouillons dans le
+  parc vivant — **441 le 07/10, 448 le 09/10**. Le défaut est corrigé depuis, mais la règle
+  reste : avant toute commande `phase2/`, chercher les `$env:` qu'elle pose. Et il faut
+  **le python du venv** pour les scripts du run (`openpyxl`), **celui du système** pour le
+  monitoring — les deux ne portent pas les mêmes paquets.
+- **Ne jamais prouver une mesure par une autre faite dans le même environnement.** « Le local
+  dit 13 919 et Supabase aussi, donc c'est bon » : les deux étaient faux de la même façon.
+  Deux mesures fausses pareil s'accordent toujours.
+- **Un échantillon doit être tiré dans la population SUSPECTE, et avoir un témoin.** J'ai
+  conclu « Hektor refuse les contacts archivés » sur un seul cas ; quatre archivés et deux
+  actifs testés ensuite ont tous répondu. C'était faux.
+- **Lire une base SQLite sans `immutable=1`** : ce drapeau sert un instantané figé, on croit
+  que rien n'a bougé. Et un outil peut dire « synced 50/50 » sans que rien ne soit
+  exploitable tant que `normalize_source` n'est pas passé.
+
 Commence maintenant : lectures du §1, puis la liste des points du chantier avec leur état,
 puis l'ÉTAPE 1 du premier point.
 ```

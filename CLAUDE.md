@@ -82,12 +82,10 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 
 > ⚠ **Cette section porte LE PRÉSENT, et rien d'autre.** Règle : en fin de session, on la
 > **RÉÉCRIT**, on ne l'empile pas ; ce qui en sort descend dans **`notice/JOURNAL_DE_BORD.md`**
-> *(l'état du 07/10, audit complet et 46 chapitres, y est descendu le 08/10)*.
+> *(l'état du 08/10 et la journée du 09/10 y sont descendus le 09/10 — elle avait fait passer
+> cette page de 60 à 160 lignes)*.
 
-**Réécrit le 08/10/2026, après l'AUDIT PAR OBJET** —
-`notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md` *(9 objets × 8 critères, vert / orange / rouge,
-lecture seule, contre le code ET l'historique)*. L'audit du 07/10 mélangeait les étapes et se
-trompait sur plusieurs objets : il porte désormais un avertissement en tête.
+**Réécrit le 09/10/2026, à la clôture du chantier ⑤.**
 
 ### Les deux étapes — *définies par Frédéric le 08/10*
 
@@ -99,128 +97,67 @@ ETAPE 3   notre registre electronique des mandats (nos numeros) -> la signature 
           plus site web, DNS, e-mail
 ```
 
-### Le verdict de l'audit par objet
+### Les 8 chantiers *(plan, section « 🧭 LES CHANTIERS DE L'ÉTAPE 2 »)*
 
-```
-LE SOCLE TIENT : annonce, recherche, transaction naissent chez nous, s'affichent sans
-Hektor, et ce qui redescend n'ecrase pas une saisie de l'app.
-LES TROUS : les DROITS du negociateur · des gestes encore « Hektor d'abord » · des ECHECS
-SILENCIEUX · des BUGS precis (desarchiver impossible depuis le 30/08...) · et 6 fonctions
-ouvertes a un visiteur non connecte.
-```
-
-### Le chantier : 8 chantiers, un par un *(plan, section « 🧭 LES CHANTIERS DE L'ÉTAPE 2 »)*
-
-**La méthode, à chaque chantier** *(Frédéric, 08/10)* : **audit du sujet** (revérifier) →
-**explication des correctifs proposés** → « vas-y » → code → **contrôle du résultat** → plan,
-liste et cette page à jour. Le **tableau de suivi** est dans le plan : on le met à jour à
-chaque étape.
+**La méthode, à chaque chantier** : **audit du sujet** (revérifier) → **explication des
+correctifs**, avec « ce que ça pourrait casser ailleurs » → « vas-y » → code → **contrôle du
+résultat** → plan, liste et cette page à jour. Le prompt de reprise est prêt :
+**`notice/PROMPT_CHANTIER_ETAPE2.md`** (une seule ligne à changer, et un § 6 « déjà appris »).
 
 | # | chantier | état |
 |---|---|---|
-| ① | sécurité : 136 fonctions et 15 vues ouvertes à la clé publique *(`notice/CHANTIER_1_SECURITE_2026-10-08.md`)* | 🧪 patch APPLIQUÉ le 08/10 08:22, contrôlé (0 ouverture publique, app connectée OK) ; `hektor-diffusion` v15 déployée ; reste : la nuit du 09/10 |
-| ② | les droits du négociateur — **attend la décision de Frédéric** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | 🔎 **09/10 audit fait, CONFIRMÉ** : il n'y a que **5 portes**, et la 1re (`app_console_can_request_job`) commande **16 RPC + la règle RLS d'écriture** des travaux · la **lecture est déjà cloisonnée**, le trou est à l'écriture · **43** négociateurs portent le parc, **4** ont un compte · **0 travail demandé par un commercial, jamais** · le circuit de demande dort (9 demandes, toutes d'un admin) · 💬 **attend 3 réponses** : que fait un négociateur seul · le rôle manager · pilote ou 39 comptes |
+| ① | sécurité : 136 fonctions ouvertes à la clé publique *(`notice/CHANTIER_1_SECURITE_2026-10-08.md`)* | ✅ **FINI** — patch appliqué le 08/10, et la nuit du 09/10 est passée sans refus de droits |
+| ② | les droits du négociateur | ⬜ **attend la décision de Frédéric** |
 | ③ | Hektor d'abord → chez nous d'abord (statuts, clôture, fichiers) | ⬜ |
-| ④ | aucun échec silencieux — **9 points, 4a → 4i** *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | 🔧 **09/10 : 4a audité (CONFIRMÉ comme structure, éteint comme panne)** — 79 créations **toutes « done »**, 4 échecs cachés, et **toute la fiche (167 champs) perdue** à chaque fois ; **aucun dégât réel** (annonces d'essai ; le mandant du 28/08 était un **faux négatif**) ; ⭐ **les 4 causes sont déjà bouchées** (09/06, 10/07, 31/08) → **le trou est LE SILENCE** · **« option A » de Frédéric** : on n'ajoute **que la parole**, sans faire tomber le travail (l'annonce existe chez Hektor) — ① avertissement au négociateur (`creation_suite_incomplete`, interrupteur `CONSOLE_ALERTE_SUITE_CREATION`, +123 lignes, 0 suppression, **épreuve 19/19**) ② branche `UNION ALL` dans `app_en_attente_humain` → la sentinelle `geste_abandonne` voit seule (**4 lignes au total, 0 sur 30 jours → verte**) · ✅ **répétition exacte (13 mesures) puis patch APPLIQUÉ le 09/10**, contrôlé : empreinte `e2c015e1…` conforme, 7 colonnes, **0 ligne**, droits inchangés (chantier ① intact) · ✅ **4a FINI le 09/10** : 4 workers redémarrés à 17:30:49 (battement `startup` en base), moniteur vert, aucun déploiement · 🔧 **4b audité le 09/10 (PARTIEL)** : l'absence de rejeu des créations est une **décision juste** ; le défaut, ce sont **5 messages** qui promettaient une reprise — dont **2 que l'audit n'avait pas vus** (document, photo), avec la structure de 4a et un repreneur **orphelin** (D3 du 25/09) · **0 occurrence réelle** · ⭐ le piège du « pending à vie » est **fermé** (42 = 42 = 42) · ✅ **option A codée, 11/11**, attend un redémarrage · ⏳ **B et C attendent ta décision** |
-| ⑤ | les gestes cassés (5a → 5i) *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 08/10, les 9 points** · 6 prouvés en réel (désarchiver, modifier un mandant, le filet du rattachement, rattacher après un retrait, supprimer un contact, ouvrir une archive sans Hektor) · sentinelle 5h verte · **5i prouvé en réel le 08/10 au soir**, après redémarrage des 4 workers (bien 62963 : « c'est NOTRE geste d'état, la saisie part » — Hektor écrit, 0 conflit) · **reste** : le run du 09/10 (5c, 5e-B) |
+| ④ | **aucun échec silencieux** — **EN COURS**, 9 points 4a → 4i *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | 🔧 **4a FINI** le 09/10 (la suite d'une création qui rate : avertissement + sentinelle ; patch appliqué, 4 workers redémarrés) · **4b option A codée** (5 messages ne promettent plus une reprise inexistante, 11/11 hors ligne, **attend un redémarrage**) ; **B et C reportés** par Frédéric · **4c en cours** · la matière du 09/10 est plus bas |
+| ⑤ | les gestes cassés (5a → 5i) *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** — 9 points, **7 prouvés en réel**, et le run du 09/10 a validé les 3 derniers |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
 | ⑦ | les gestes qui manquent | ⬜ |
 | ⑧ | gardé chez nous en entier | ⬜ |
 
-**Ordre DÉCIDÉ par Frédéric le 08/10 : ① puis ⑤ → ④ → ② → ③ → ⑥ → ⑦ → ⑧** (tous seront faits). ① et ⑤ sont **faits** → **le prochain chantier est ④ (aucun échec silencieux)**. Le prompt de reprise est prêt : `notice/PROMPT_CHANTIER_ETAPE2.md` (une seule ligne à changer).
-Un périmètre, une taille, un ordre ou un report ne se décident jamais sans lui.
+**Ordre décidé par Frédéric : ① ⑤ puis ④ → ② → ③ → ⑥ → ⑦ ⑧.** Un périmètre, une taille,
+un ordre ou un report ne se décident jamais sans lui.
 
-### ✅ LE RUN DU 09/10 EST PASSÉ — *détail : `notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`*
-
-```
-Run 05:00:02 -> 07:34:16 « finished successfully », 50 etapes, 4 sautees, 0 plantage.
-5c   OK  l'etape neuve « doublure du registre des mandats » : 19 s, 26 847 lignes,
-         juste AVANT celle du registre, qui finit sans erreur
-5e-B OK  app_relation_id 1000008 : retire_le NULL, present_in_hektor vrai,
-         revu par le run a 05:05 -- le retrait n'a PAS ete repose
-5a   OK  le bien 78 (VA2380) est dans l'index des VENDUS/CLOS, pas au parc vivant :
-         son statut est « Clos », et le parc vivant ne prend que Actif / Sous offre /
-         Sous compromis / Estimation. MON CONTROLE ETAIT FAUX, pas le code.
-5h   OK  sentinelle contacts_sans_hektor verte, comme annonce_conflit / partielle /
-         push_bloque (0) et mandat_disparu (0 manquant)
-```
-
-**Les suites** — ✅ **① et ② faits le 09/10** *(commit `allocateur`)* : le compte
-`retraits_leves` s'affiche enfin, et le contrôle de l'allocateur ne compte plus que les
-numéros que le run a **inventés** dans la plage de l'app — corrigé aux **quatre** endroits
-(les deux registres et leurs deux sentinelles), 12 épreuves vertes hors ligne.
-✅ **③ fait le 09/10** : le rattrapage des documents a fini les **35 317 archives** et est
-entré dans les **vendus/clos**, qui portent **8,60 documents par annonce au lieu de 2,45**
-(21,9 s par annonce au lieu de 10,2) — le lot de 2 500 demandait ~16 h et a bloqué **TROIS**
-étapes du run (chauffage delta, entretien compromis, entretien ventes). **Rien n'est perdu** :
-les trois se rattrapent seules (chauffage à 30 jours, entretien « ce qui manque »). **Le lot
-passe à 1 000** *(décision de Frédéric)* : ~6 h, file vide avant le run — **à remettre à
-2 500 quand les vendus/clos seront finis**.
-⏳ **Reste** : ④ « GTI Descente » finit avec le **code 1** — le **08/10 ET le 09/10**.
-
-### ⏸ EN PAUSE — LE STATUT DES ARCHIVES *(note complète : `notice/STATUT_DES_ARCHIVES_2026-10-09.md`)*
-
-Signalé le 09/10 : « plus que 201 annonces dans l'index archivé ». **La base n'a rien perdu**
-(35 317) — c'était le filtre STATUT resté sur « Actif / offre / compromis ». Mais la vérification
-a trouvé **deux vrais défauts, mesurés, non corrigés** :
+### Ce que la journée du 09/10 a laissé — *trois notes, à lire au chantier ④*
 
 ```
-785 archives SANS STATUT -> invisibles quoi qu'on fasse : l'ecran exclut toujours
-    « Estimation », et en SQL « different de » rejette aussi les cases VIDES.
-5 246 fiches detail d'archive a rattraper (3 241 absentes + ~2 005 perimees) :
-    le statut ne vit QUE dans la fiche detail, et les variantes « archived » du
-    balayage ne la telechargent JAMAIS (sync_details: False, decision du 24/08).
-    -> une archive modifiee chez Hektor n'est jamais actualisee chez nous.
-L'OUTIL EXISTE DEJA et fait les deux : sync_archived_annonce_details.py,
-    branche NULLE PART. Cout du maintien : ~2 appels par nuit (mesure).
-Le trou est LIMITE AUX ARCHIVES : parc vivant 0, vendus/clos 0 (ils portent
-    archive=0, donc les variantes « active » lisent bien leur detail).
-```
+notice/STATUT_DES_ARCHIVES_2026-10-09.md
+   785 archives sans statut etaient INVISIBLES (« <> Estimation » rejette le vide) -> filet
+   code, PAS deploye. 5 196 fiches detail rattrapees, 0 archive sans statut. L'outil est
+   branche dans le run (~2 appels/nuit). Le defaut de l'interrupteur brouillon est INVERSE.
 
-✅ **09/10 : l'outil est BRANCHÉ DANS LE RUN** (option A) — étape optionnelle entre
-`sync_raw` et `normalize_source`, limite 50 (convention du projet), ~2 appels/nuit ; une
-archive modifiée chez Hektor redeviendra à jour dès la nuit suivante. ⏰ à contrôler au
-run du 10/10.
-✅ **09/10 : LE RATTRAPAGE EST FINI** — 5 196 fiches lues à 2 293 lectures/h (12:40 → 15:05).
-**Archives sans fiche détail : 3 241 → 0.** `app_view_generale`, archives sans statut :
-**3 241 → 0**. Les 37 773 archives portent un statut (Clos 34 780, Mandat clos 2 456,
-Vendu 425, Actif 83, Estimation 29).
-⏳ **Reste le PUSH vers Supabase** pour que l'index de l'app le reçoive — le run de nuit
-le fait seul. ✅ Le filet côté écran est **codé** (`933286a`) mais **pas déployé** ; il n'est
-plus ce qui débloque, puisque les statuts ne seront plus vides.
+notice/ALERTES_MUETTES_2026-10-09.md
+   AUCUNE alerte n'etait partie depuis au moins un mois (19 tentatives, 0 succes). La
+   surveillance passe desormais par la cle de service Workspace, comme le backend.
+   ⚠ RESTE : un seul canal -- WHATSAPP_ALERT_WEBHOOK n'a jamais ete pose.
 
-### 🔔 LES ALERTES NE PARTAIENT PLUS — corrigé le 09/10 *(`notice/ALERTES_MUETTES_2026-10-09.md`)*
-
-```
-360 sondes conservees sur un mois : 19 tentatives d'alerte, 0 PARTIE.
-Cause : le mot de passe d'application Gmail est mort -- Gmail raccroche sur AUTH.
-SOLUTION (idee de Frederic) : la cle de service Workspace, DEJA en place et deja
-utilisee par le backend. La surveillance etait la seule restee sur SMTP.
--> check_gti_health.py essaie Workspace d'abord, SMTP en repli. Email d'essai PARTI.
-RESTE : WHATSAPP_ALERT_WEBHOOK n'a JAMAIS ete pose -> un seul canal, sa panne =
-        silence total. C'est ce qui vient de durer un mois.
+le contact fantome (audit du 09/10, pas de note dediee)
+   Un geste a echoue 5 fois cet apres-midi : le contact 145561 n'existe PLUS chez Hektor,
+   alors que nous le croyons present. Le contact est le SEUL objet sans filet d'absence,
+   et c'est structurel : son balayage est un delta, jamais complet (23 760 pages sinon).
+   3 pistes mesurees : A ne pas envoyer de geste quand RIEN n'a change (le plus rentable,
+   7 champs identiques ce jour-la) · C ne pas rejouer 5 fois l'irreparable · D1 marquer le
+   contact absent quand un 404 l'apprend. Frederic : « je prefere voir plus tard ».
 ```
 
 ### ⛔ Ce qui attend Frédéric
 
 ```
-① DECIDER les droits du negociateur -- AUDIT FAIT le 09/10, 3 questions precises :
-   que fait un negociateur seul sur SES biens (tout sauf supprimer / le quotidien plus
-   une demande pour les gestes graves / rien de plus qu'aujourd'hui) · garde-t-on le
-   role « manager » (0 compte) · un pilote de 2-3 negociateurs ou les 39 comptes ?
+① DECIDER les droits du negociateur (chantier ②)
 ② QUESTIONS DE FAIT   les negociateurs saisissent-ils encore leurs visites dans Hektor ?
                       pourquoi 62 000 contacts seulement au cloud sur 356 000 ?
-③ HORS CODE (etape 3, mais a ne pas oublier) : A.4 zone DNS (La Boite Immo -> OVH, garder
-   www) · A.5 les leads · l'export PROTEXA · contrats A.1 et A.2
+③ HORS CODE (etape 3) : A.4 zone DNS (La Boite Immo -> OVH, garder www) · A.5 les leads ·
+   l'export PROTEXA · contrats A.1 et A.2
 ④ C.9-couple          creer un menage d'essai (la sonde est prete)
-⑤ POUSSER             git push origin main -- ⚠ pousser = DEPLOYER (Render et Vercel)
+⑤ POUSSER             git push origin main -- ⚠ pousser = DEPLOYER (Render et Vercel).
+                      Le filet « statut vide » attend ce push ; le reste est deja actif.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
 
 ```
-G.1-b    les 515 brouillons (mesure du 09/10) -- AVANT que le rattrapage les atteigne :
-         la NUIT DU 15 AU 16/10 avec le lot ramene a 1 000 (c'etait le 11/10 a 2 500)
+G.1-b    les 515 brouillons -- AVANT que le rattrapage les atteigne : la NUIT DU 15 AU 16/10
+         (lot ramene a 1 000 le 09/10 ; c'etait le 11/10 a 2 500)
 G.2      rebalayer le PARC VIVANT, fige depuis le 20/08 (apres le rattrapage ; perimetre =
          toutes les vivantes, estimations comprises -- decision de Frederic)
 C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 · A.4
@@ -228,14 +165,13 @@ C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 
 
 ### Ce qui reste vrai de l'exploitation
 
-- **Le rattrapage des documents** tourne à 21 h, lots de 2 500 (décision de Frédéric) : nuit du
-  07/10, 1 250 archives, 0 erreur ; ensuite les ventes, puis les historiques, puis les brouillons.
-- **Le run de nuit** : 54 étapes. Reprise : `.\scheduled\run_quotidien.ps1 -StartAtLabel
-  "<étiquette exacte>"`, puis lire le journal (`REPRISE a partir de`, `SAUTEE (reprise)`).
+- **Le rattrapage des documents** tourne à 21 h, **lots de 1 000** *(ramené de 2 500 le 09/10 :
+  les vendus/clos portent 8,6 documents par annonce au lieu de 2,45)*. Reste ~6 900 annonces,
+  fin vers le **16-17/10**. ⚠ **À remettre à 2 500** quand les vendus/clos seront finis.
+- **Le run de nuit** : 55 étapes, ~2 h 35 (05:00 → 07:35). Reprise :
+  `.\scheduled\run_quotidien.ps1 -StartAtLabel "<étiquette exacte>"`.
 - **Render et Vercel se déploient seuls** sur un push vers `main` : `/health` rend le commit.
 - **Une autre session** travaille parfois en parallèle : relire `git log` avant d'écrire.
-
----
 
 ## 3. Avant de coder — la liste de relecture *(plan, l. 1037 « ⛔ AVANT DE COMMENCER UN CHANTIER »)*
 
