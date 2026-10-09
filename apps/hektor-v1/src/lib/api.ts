@@ -2384,7 +2384,13 @@ function applyDossierFiltersToQuery(baseQuery: any, filters: AppFilters) {
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
-  else query = query.neq('statut_annonce', 'Estimation')
+  // 09/10/2026 -- UNE CASE VIDE N'EST PAS UNE « Estimation ».
+  //   `neq` se traduit par « statut <> 'Estimation' », et en SQL cette comparaison rend
+  //   NULL sur une case vide : la ligne est donc REJETEE. Mesure du 09/10 : 785 archives
+  //   sans statut etaient ainsi INVISIBLES quoi qu'on fasse -- aucun filtre ne les
+  //   affichait, et la recherche passe par le meme chemin (34 502 montrees sur 35 317).
+  //   On garde l'exclusion des estimations ET les cases vides.
+  else query = query.or('statut_annonce.is.null,statut_annonce.neq.Estimation')
   if (validationDiffusion === '__validated__') {
     query = query.or(
       [
@@ -2741,7 +2747,13 @@ function applyArchiveIndexFiltersToQuery(baseQuery: any, filters: AppFilters, sc
   if (statut === activeListingsFilterValue) query = query.in('statut_annonce', activeListingStatuses)
   else if (statut === annonceSearchListingsFilterValue) query = query.neq('statut_annonce', 'Estimation')
   else if (statut) query = query.eq('statut_annonce', statut)
-  else query = query.neq('statut_annonce', 'Estimation')
+  // 09/10/2026 -- UNE CASE VIDE N'EST PAS UNE « Estimation ».
+  //   `neq` se traduit par « statut <> 'Estimation' », et en SQL cette comparaison rend
+  //   NULL sur une case vide : la ligne est donc REJETEE. Mesure du 09/10 : 785 archives
+  //   sans statut etaient ainsi INVISIBLES quoi qu'on fasse -- aucun filtre ne les
+  //   affichait, et la recherche passe par le meme chemin (34 502 montrees sur 35 317).
+  //   On garde l'exclusion des estimations ET les cases vides.
+  else query = query.or('statut_annonce.is.null,statut_annonce.neq.Estimation')
   if (mandatNumber) query = query.ilike('numero_mandat', `%${mandatNumber}%`)
   if (mandantName) query = query.ilike('mandants_texte', `%${mandantName}%`)
 
