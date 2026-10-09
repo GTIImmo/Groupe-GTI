@@ -242,6 +242,31 @@ annonçait pour 4f — **aucun geste n'atteint jamais 5 tentatives**, donc **auc
 dans `geste_abandonne`**. L'alarme `travaux_en_erreur`, elle, est saturée (17 au lieu de 15 le
 08/10) : un échec neuf s'y noie.
 
+### ⚠ INCIDENT DE MA PART, SANS CONSÉQUENCE — *09/10, 15:16*
+
+J'ai tapé `node Console/console_job_worker.js --help` pour lire ses options : **il n'y a pas
+d'option `--help`, cette commande LANCE un worker**. Un **cinquième** processus a tourné
+2 min 30 (PID 13008), en genre `actions`, avant que je l'arrête.
+
+**Ce qu'il a fait : rien**, mesuré point par point —
+```
+0 travail reclame       0 ligne de app_console_job_log entre 13:14 et 13:26 UTC
+0 travail modifie       0 travail « pending » dans toute la file
+Hektor NON APPELE       storage_state_actions.json date de 15:02, AVANT le lancement
+les 4 services intacts  verrous v9 retouches a 15:19, battement « idle » a 13:20 UTC
+```
+Il a créé son **propre** verrou (`console_worker_actions_manual.lock`, génération `manual`),
+donc il n'a **pas** touché celui des services (`..._v9`). Il reste ce fichier de verrou avec un
+PID mort : inoffensif *(le code remplace un verrou périmé tout seul)*, à retirer sur demande.
+
+⚠ **La leçon, pour les prochaines fois : `console_job_worker.js` ne se lance JAMAIS pour
+l'inspecter.** Pour lire ses options ou ses listes : `grep`. Pour éprouver une fonction :
+un `Console/test_*.js` qui découpe le bloc et le fait tourner avec un faux Supabase.
+
+*(Et une alerte que j'ai criée trop fort : mon écriture Python avait mis CLAUDE.md et la note en
+CRLF. Le dépôt n'a jamais été touché — `core.autocrlf = true`, les blobs commités sont en LF ;
+seule ma copie de travail l'était, et c'est réparé.)*
+
 ## ⑤ CE QU'IL RESTE À FAIRE — *au 09/10*
 
 1. Frédéric colle **la répétition** → il me recopie le message `ESSAI ANNULE -- 4a` ; je compare
