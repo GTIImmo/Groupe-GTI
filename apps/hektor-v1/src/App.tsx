@@ -5231,12 +5231,58 @@ function MandatDocumentEditor(props: {
     }) && (props.mandatValidated ?? true) ? 'avenant' : 'mandat',
   )
 
+  // 09/10 (Frédéric) : la modale ne se ferme plus sur un simple rechargement de fond.
+  // Avant, CHAQUE rechargement de la fiche (fin d'un travail du worker, même d'un collègue,
+  // relecture à l'ouverture) recréait `initialDraft` -> fermeture + saisie écrasée.
+  // Désormais :
+  //   - autre annonce ou autre numéro de mandat -> on repart de zéro (fermée) ;
+  //   - modale fermée -> le brouillon suit la fiche en silence ;
+  //   - modale ouverte -> la saisie est GARDÉE ; si la fiche a réellement changé, un
+  //     bandeau propose de recharger (le négociateur choisit).
+  const draftIdentity = `${props.dossier.app_dossier_id}|${String(props.dossier.numero_mandat ?? '').trim()}`
+  const draftBaselineRef = useRef<string>(JSON.stringify(initialDraft))
+  const [draftStale, setDraftStale] = useState(false)
+  const openRef = useRef(open)
+  openRef.current = open
+
   useEffect(() => {
     setDraft(initialDraft)
+    draftBaselineRef.current = JSON.stringify(initialDraft)
+    setDraftStale(false)
     setOpen(false)
     setActiveTab('mandants')
     setMessage(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftIdentity])
+
+  useEffect(() => {
+    const next = JSON.stringify(initialDraft)
+    if (next === draftBaselineRef.current) return
+    if (openRef.current) {
+      setDraftStale(true)
+      return
+    }
+    setDraft(initialDraft)
+    draftBaselineRef.current = next
+    setDraftStale(false)
   }, [initialDraft])
+
+  const reloadDraftFromFiche = () => {
+    setDraft(initialDraft)
+    draftBaselineRef.current = JSON.stringify(initialDraft)
+    setDraftStale(false)
+  }
+  // « Garder ma saisie » prend acte de la nouvelle version de la fiche : le bandeau ne
+  // revient pas au rechargement suivant si rien d'autre n'a changé.
+  const keepDraftDespiteUpdate = () => {
+    draftBaselineRef.current = JSON.stringify(initialDraft)
+    setDraftStale(false)
+  }
+  // Modale refermée alors que la fiche avait changé : le brouillon se recale sur la fiche.
+  useEffect(() => {
+    if (!open && draftStale) reloadDraftFromFiche()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -5458,6 +5504,13 @@ function MandatDocumentEditor(props: {
             {editorHead(true)}
             <div className={`mandat-document-editor-body ${showDocPreview ? 'has-doc-preview' : 'no-doc-preview'}`}>
               <div className="mandat-document-form">
+            {draftStale ? (
+              <p className="mandat-document-message" role="status">
+                La fiche a été mise à jour pendant votre saisie.{' '}
+                <button type="button" className="ghost-button button-subtle" onClick={reloadDraftFromFiche}>Recharger les données</button>
+                {' '}<button type="button" className="ghost-button button-subtle" onClick={keepDraftDespiteUpdate}>Garder ma saisie</button>
+              </p>
+            ) : null}
             {hasActiveMandate ? (
               <div className="mandat-doc-type-switch" role="tablist" aria-label="Type de document">
                 <button type="button" className={!isAvenant ? 'is-active' : ''} onClick={() => setDocMode('mandat')}>Mandat de vente</button>
