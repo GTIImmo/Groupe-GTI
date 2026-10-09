@@ -395,8 +395,14 @@ remettre le mot « repris » dans les deux messages de dépôt.
 
 1. **le redémarrage du worker** pour que les nouveaux messages sortent *(les 5 messages
    touchent les files `actions` et `documents` — donc **deux** services au minimum)* ;
-2. ⏳ **les options B et C attendent la décision de Frédéric** :
-   **B** brancher `reprendre_envois_hektor.js` — *où et à quelle fréquence ?* — pour que la
-   promesse des documents et des photos devienne vraie ;
-   **C** prévenir le négociateur quand un envoi échoue, comme en 4a *(n'a d'intérêt que si B
-   est fait, sinon on avertit sans pouvoir réparer)*.
+2. ⏳ **B et C sont REPORTÉS — décision de Frédéric du 09/10** (« on ne fait pas b et c et on
+   passe a 4c »). **Reportés, pas abandonnés** :
+   **B** brancher `reprendre_envois_hektor.js` — il reste **orphelin**, donc un envoi de document
+   ou de photo en échec **n'est repris par personne**. Risque aujourd'hui **nul** (0 ligne porte un
+   statut d'envoi), réel le jour où les négociateurs déposeront des pièces depuis l'app. Il faudra
+   décider **où** (run de nuit ou tâche Windows) et **à quelle fréquence**.
+   **C** prévenir le négociateur quand un envoi échoue — à ne faire **qu'après B** (sinon on
+   avertit sans pouvoir réparer).
+   ⭐ Le message du worker **dit désormais la vérité** (« A REPRENDRE »), et le contrôle **(2c)** de
+   l'épreuve **tombera en échec** dès qu'on branchera le repreneur : le report est **gardé par le
+   code**, il ne peut pas se perdre.
