@@ -2,6 +2,9 @@
     [switch]$PushAndroidFront,
     [switch]$SkipAndroid,
     [switch]$SkipContactDetails,
+    # 09/10/2026 : les fiches detail des annonces ARCHIVEES (voir l'etape plus bas).
+    [switch]$SkipArchivedDetails,
+    [int]$ArchivedDetailLimit = 50,
     [int]$DailyRawMaxPages = 0,
     # ─── PERIMETRE DES TRANSACTIONS (07/09/2026) ───
     #
@@ -387,6 +390,56 @@ Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "--vente-date-start", $VenteDateStart,
     "--missing-only"
 ) -WorkerKey "phase1.sync_raw"
+
+# ─── LES FICHES DETAIL DES ARCHIVES                                09/10/2026 ───
+#
+# POURQUOI. Le statut d'une annonce ne vit QUE dans sa fiche detail : build_case_index
+# (l. 169) ne fait que la recopier, et le listing de Hektor n'en porte AUCUN -- 19 champs
+# verifies sur la reponse brute de l'annonce 63053. Or les 5 variantes « archived » du
+# balayage ne telechargent jamais le detail (sync_details: False, decision ecrite du
+# 24/08 pour le debit). Mesure du 09/10 : 785 archives sans statut dans l'index de l'app
+# -- INVISIBLES a l'ecran -- et toute archive modifiee chez Hektor restait figee chez nous.
+#
+# L'OUTIL N'EST PAS NEUF. sync_archived_annonce_details.py (20/05) a fait le grand
+# rattrapage des archives, et il reutilise sync_annonce_details_with_mandats, la fonction
+# meme que sync_raw emploie pour les actives -- meme lecture, meme ecriture, meme frein
+# integre de 0,1 s. Sa selection couvre les DEUX cas : fiche ABSENTE, et fiche PERIMEE
+# (date_maj chez Hektor posterieure a notre derniere lecture).
+#
+# ⚠ LE PLACEMENT N'EST PAS LIBRE. Il est ICI, et pas ailleurs :
+#   . APRES sync_raw : le listing archive vient d'etre balaye, donc les candidates sont
+#     justes et --skip-listing-refresh est legitime (aucun appel gaspille) ;
+#   . AVANT normalize_source : l'outil ne stocke que la reponse BRUTE, c'est
+#     normalize_source qui en fait une fiche. Sans lui le compteur ne bouge pas, alors
+#     que l'outil annonce quand meme « synced N/N » -- piege paye le 09/10 ;
+#   . donc AVANT build_case_index, qui recopie le statut dans la table du listing.
+#   Le normalize_source juste en dessous est un Invoke-Step : il tourne TOUJOURS. Placer
+#   l'etape pres de « contact details delta » l'aurait fait dependre du
+#   « normalize_source after contact details », qui lui est CONDITIONNEL.
+#
+# COUT MESURE le 09/10 : 1 archive modifiee en 24 h, 14 en 7 jours -> ~2 appels par nuit,
+# quelques secondes. Et aucun risque de lecture de masse : les 37 773 archives ont deja
+# leur marqueur de date a jour dans sync_annonce_state, 0 divergence.
+#
+# LA LIMITE DE 50 EST LA CONVENTION DU PROJET, pas un choix : « limite a un seul lot (50)
+# comme le chauffage ; les gros rattrapages passent par la commande dediee en vagues ».
+# Meme safety stop que pour les champs manquants du contact.
+# ETAPE OPTIONNELLE : si Hektor refuse, le run CONTINUE -- ce n'est qu'un enrichissement.
+if (-not $SkipArchivedDetails -and $ArchivedDetailLimit -gt 0) {
+    if ($ArchivedDetailLimit -gt 50) {
+        throw "Safety stop: le quotidien des fiches detail d archives est limite a 50 (rattrapage en vagues via run_archived_annonce_details.ps1)."
+    }
+    Invoke-OptionalStepWithRetry -Label "hektor fiches detail des archives" -Arguments @(
+        "sync_archived_annonce_details.py",
+        "--limit", [string]$ArchivedDetailLimit,
+        "--batch-size", [string]$ArchivedDetailLimit,
+        "--skip-listing-refresh",
+        "--no-normalize"
+    ) -MaxAttempts 2 -RetryDelaySeconds 60 -WorkerKey "phase1.archived_details"
+}
+else {
+    Write-RunLog "SKIP hektor fiches detail des archives"
+}
 
 Invoke-Step -Label "normalize_source" -Arguments @(
     "normalize_source.py"

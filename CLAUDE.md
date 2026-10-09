@@ -177,6 +177,10 @@ Le trou est LIMITE AUX ARCHIVES : parc vivant 0, vendus/clos 0 (ils portent
     archive=0, donc les variantes « active » lisent bien leur detail).
 ```
 
+✅ **09/10 : l'outil est BRANCHÉ DANS LE RUN** (option A) — étape optionnelle entre
+`sync_raw` et `normalize_source`, limite 50 (convention du projet), ~2 appels/nuit ; une
+archive modifiée chez Hektor redeviendra à jour dès la nuit suivante. ⏰ à contrôler au
+run du 10/10.
 ✅ **09/10 : le filet côté écran est CODÉ** (`933286a`, build vert) — **pas déployé**, il
 part au prochain push. ✅ **Le palier de 50 est passé** : 50 fiches en 51 s, chaîne prouvée
 jusqu'à `app_view_generale` (3 241 → 3 191 archives sans statut). **Reste 5 196 fiches**,

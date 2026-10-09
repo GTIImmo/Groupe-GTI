@@ -245,3 +245,59 @@ gros lot puis une seule passe de chaîne est donc bien plus efficace que des pal
 ⚠ **Le palier a tourné à ~3 500 lectures/heure, au-dessus de la cadence prouvée sûre
 (2 300/h du run chauffage).** Pour le gros lot, il faut **freiner** — c'est ce débit qui a
 déjà fait bannir notre IP.
+
+---
+
+## 9. FAIT LE 09/10 — LE CORRECTIF ③ : L'OUTIL EST BRANCHÉ DANS LE RUN *(option A)*
+
+`run_full_pipeline.ps1` — parseur PowerShell vérifié, BOM et CRLF conservés.
+
+```powershell
+if (-not $SkipArchivedDetails -and $ArchivedDetailLimit -gt 0) {
+    if ($ArchivedDetailLimit -gt 50) { throw "Safety stop: ... limite a 50 ..." }
+    Invoke-OptionalStepWithRetry -Label "hektor fiches detail des archives" -Arguments @(
+        "sync_archived_annonce_details.py",
+        "--limit", [string]$ArchivedDetailLimit,
+        "--batch-size", [string]$ArchivedDetailLimit,
+        "--skip-listing-refresh",
+        "--no-normalize"
+    ) -MaxAttempts 2 -RetryDelaySeconds 60 -WorkerKey "phase1.archived_details"
+}
+else { Write-RunLog "SKIP hektor fiches detail des archives" }
+```
+
+### ⚠ LE PLACEMENT, et pourquoi il n'est pas libre
+
+L'étape est **entre `sync_raw` et `normalize_source`**, et nulle part ailleurs :
+
+- **après `sync_raw`** : le listing archivé vient d'être balayé, donc les candidates sont
+  justes et `--skip-listing-refresh` est légitime — aucun appel gaspillé ;
+- **avant `normalize_source`** : l'outil ne stocke que la réponse **brute** ; c'est
+  `normalize_source` qui en fait une fiche. Sans lui, le compteur ne bouge pas **alors que
+  l'outil annonce quand même « synced N/N »** — piège payé le 09/10 ;
+- donc **avant `build_case_index`**, qui recopie le statut dans la table du listing ;
+- ⭐ et le `normalize_source` juste en dessous est un **`Invoke-Step`** : il tourne
+  **toujours**. Placer l'étape à côté de « contact details delta » l'aurait fait dépendre du
+  « normalize_source after contact details », qui est **conditionnel** (`if ($contactDetailsOk)`).
+
+### Les trois choix, et aucun n'est arbitraire
+
+| choix | d'où il vient |
+|---|---|
+| **étape optionnelle** (`Invoke-OptionalStepWithRetry`, 2 essais) | c'est un **enrichissement** : si Hektor refuse, le run doit continuer. Même forme que `contact details delta` et `hektor chauffage delta` |
+| **limite 50 + safety stop** | **convention écrite du projet** : *« limite a un seul lot (50) comme le chauffage ; les gros rattrapages passent par la commande dediee en vagues »* |
+| **`--skip-listing-refresh --no-normalize`** | copiés sur `contact details delta`, son jumeau pour les contacts |
+
+### Ce que ça change, chiffré
+
+```
+cout        ~2 appels par nuit (1 archive modifiee en 24 h, 14 en 7 jours)
+risque      aucune lecture de masse : 37 773 marqueurs de date a jour, 0 divergence
+effet       une archive modifiee chez Hektor redevient a jour chez nous des la nuit
+            suivante, et une archive sans fiche detail finit par en avoir une
+reglages    -SkipArchivedDetails  pour l'eteindre
+            -ArchivedDetailLimit  pour changer la taille (plafonnee a 50)
+```
+
+⏰ **À contrôler au run du 10/10** : l'étape « hektor fiches detail des archives »
+apparaît dans le journal, entre `sync_raw` et `normalize_source`, et dure quelques secondes.
