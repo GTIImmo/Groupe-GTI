@@ -133,7 +133,7 @@ COMMENT ON VIEW public.app_en_attente_humain IS
 -- 2. CONTROLE DE SORTIE : les 7 colonnes et les droits sont intacts.
 -- ---------------------------------------------------------------------
 DO $$
-DECLARE n int; v_acl text;
+DECLARE n int; v_acl text; v_empreinte text;
 BEGIN
   SELECT count(*) INTO n FROM information_schema.columns
    WHERE table_name = 'app_en_attente_humain'
@@ -143,6 +143,13 @@ BEGIN
    WHERE ns.nspname='public' AND c.relname='app_en_attente_humain';
   IF v_acl LIKE '%anon=%' OR v_acl LIKE '%authenticated=%' THEN
     RAISE EXCEPTION 'STOP : la vue vient de se rouvrir a anon/authenticated (%) -- chantier ①', v_acl;
+  END IF;
+  -- L'EMPREINTE RELEVEE PAR LA REPETITION DU 09/10 : le patch applique doit
+  -- donner la vue EXACTEMENT repetee, pas une variante.
+  SELECT md5(replace(pg_get_viewdef('public.app_en_attente_humain'::regclass, true), chr(13), ''))
+    INTO v_empreinte;
+  IF v_empreinte <> 'e2c015e16d1339fee080b6b2cc7bcb2b' THEN
+    RAISE EXCEPTION 'STOP : la vue obtenue n''est pas celle de la repetition (empreinte %, attendue e2c015e16d1339fee080b6b2cc7bcb2b)', v_empreinte;
   END IF;
 END $$;
 

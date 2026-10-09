@@ -174,6 +174,26 @@ et le libellé retombe sur le titre demandé quand l'annonce n'est plus au parc 
 **Ce qui ne sera PAS prouvé en réel** : je ne peux pas provoquer un vrai échec de création sans
 salir Hektor. 4a reste prouvé **hors ligne et par la mesure**, pas par un essai réel.
 
+### La répétition — *jouée par Frédéric le 09/10, EXACTE sur les 13 mesures*
+
+```
+empreinte_avant=2ef0749361e2bb309df7cb7cdab9cbec   lignes_avant=0   colonnes_avant=7
+acl_avant={postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}   <- ni anon ni authenticated
+empreinte_apres=e2c015e16d1339fee080b6b2cc7bcb2b   <- LA NOUVELLE REFERENCE
+lignes_apres=0  branche1_apres=0  branche2_apres=0  colonnes_apres=7
+acl_apres=IDENTIQUE        commentaire_pose=oui
+branche2_sans_fenetre=4    <- LA PREUVE : la branche neuve retrouve les 4 cas
+exemple=annonce 62657 -> annonce creee chez Hektor, mais : champs saisis a la creation
+empreinte_retour=2ef0749361e2bb309df7cb7cdab9cbec  <- le retour arriere rend la vue au caractere pres
+acl_retour=IDENTIQUE       commentaire_retour=vide
+```
+
+`lignes_apres = 0` est **voulu** : les 4 cas datent du 07/06 au 28/08, hors de la fenêtre de
+30 jours — d'où la mesure sans fenêtre. L'erreur finale était bien `P0001 ESSAI ANNULE` :
+**rien n'a été écrit**. L'empreinte d'après a été inscrite dans le patch comme **contrôle de
+sortie** : un patch qui ne donnerait pas `e2c015e16d1339fee080b6b2cc7bcb2b` refuse de
+s'enregistrer.
+
 ## ⑤ CE QU'IL RESTE À FAIRE — *au 09/10*
 
 1. Frédéric colle **la répétition** → il me recopie le message `ESSAI ANNULE -- 4a` ; je compare
