@@ -26679,7 +26679,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     // Crans du mandat AVANT validation : le verbe suit la position du document (§1).
     : !pMandatOk ? (mandatSig === 'to_send' ? 'man_edite'
       : mandatSig === 'pending' ? 'man_signature'
-      : 'man_valider')
+      // 09/10 (Frédéric) : même règle que la rubrique Mandat V3 (mv3Mode) — seul un
+      // document SIGNÉ mène à « faire valider » ; numéro attribué sans état de signature
+      // connu (aucun document de mandat, ou document sans procédure) = « à éditer ».
+      : mandatSig === 'signed' ? 'man_valider'
+      : 'man_editer')
     // Cycle avenant (miroir du mandat) : prioritaire sur l'état de diffusion tant
     // que la baisse n'est pas validée par la direction.
     : avenantEnCours ? (avenantSig === 'to_send' ? 'av_edite'
@@ -26701,7 +26705,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     man_creer: { sub: "Mandat à créer · suivi propriétaire", sc: [{ label: "Créer le mandat", rubKey: 'mandat' }, { label: "Reporting au vendeur", rubKey: 'reporting' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Créer le mandat', led: '#f0a935',
       desc: 'Annonce active mais mandat manquant.',
       btns: [{ label: 'Créer le mandat', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
-    // ── Crans du document (§1) : édité → Envoyer · envoyé → Relancer · signé → Valider
+    // ── Crans du document (§1) : numéro → Éditer · édité → Envoyer · envoyé → Relancer · signé → Valider
+    man_editer: { sub: "Mandat à éditer · suivi propriétaire", sc: [{ label: "Éditer le mandat", rubKey: 'mandat' }, { label: "Planifier la signature", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Numéro attribué — à éditer', led: '#f0a935',
+      desc: 'Le numéro de mandat est attribué : éditez le mandat, puis envoyez-le à la signature.',
+      btns: [{ label: 'Éditer le mandat', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
     man_edite: { sub: "Mandat édité · à envoyer", sc: [{ label: "Envoyer à la signature", rubKey: 'mandat' }, { label: "Planifier la signature", rubKey: 'rendezvous' }, { label: "Écrire au mandant", rubKey: 'contact' }], label: 'Mandat édité — à envoyer', led: '#1f63b8',
       desc: 'Document rédigé, envoyez-le à la signature (ImmoSign).',
       btns: [{ label: 'Envoyer le mandat à la signature', rubKey: 'mandat' }, { label: 'Préparer les documents', rubKey: 'documents' }] },
