@@ -407,8 +407,29 @@ ORDER BY
 """
 
 
-# --- Panier Brouillon (isDraft) : OFF par defaut, inerte tant que le drapeau n'est pas active ---
-BROUILLON_BUCKET_ENABLED = os.environ.get("APP_BROUILLON_BUCKET_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+# --- Panier Brouillon (isDraft) ---
+# 09/10/2026 : LE DEFAUT EST INVERSE -- on EXCLUT les brouillons par defaut.
+#
+# Il etait OFF (« inerte tant que le drapeau n'est pas active »), et c'etait JUSTE
+# pendant le deploiement de la feature « annonces en creation » (22/06) : tant qu'elle
+# n'etait pas prete, le code devait se comporter comme avant. Mais elle est ALLUMEE EN
+# PRODUCTION depuis ce jour-la -- run_full_pipeline.ps1 pose "1" -- et le defaut OFF ne
+# mordait plus que les lancements A LA MAIN, ou le perimetre actif reprenait les
+# brouillons sans que rien ne le signale.
+#
+# QUATRE INCIDENTS SUR CETTE SEULE CAUSE :
+#   19/08   357 brouillons entres dans le perimetre actif (13 220 -> 13 577)
+#   24/09   faux « trou » de 417 annonces absentes de Supabase (en realite 417 brouillons)
+#   07/10   441 brouillons entres, ecran 724 -> 949 annonces actives
+#   09/10   448 brouillons entres, ecran 728 -> 956
+# A chaque fois : exit 0, bilan d'apparence normale, et c'est Frederic qui l'a vu.
+#
+# CE QUE CA CHANGE : rien en production (le run pose deja "1"). Tout pour les
+# lancements a la main : ils font enfin la meme chose que le run.
+# POUR REVENIR A L'ANCIEN COMPORTEMENT, il faut le demander explicitement :
+#   APP_BROUILLON_BUCKET_ENABLED=0   (ou false / no / off)
+_BROUILLON_FLAG = os.environ.get("APP_BROUILLON_BUCKET_ENABLED", "1").strip().lower()
+BROUILLON_BUCKET_ENABLED = _BROUILLON_FLAG not in ("0", "false", "no", "off")
 
 
 def brouillon_active_exclusion_sql() -> str:

@@ -447,3 +447,58 @@ serveur. L'explication la plus probable est que mes passages de `normalize_sourc
 d'ailleurs retiré 5 offres, 10 compromis et 1 vente périmés du miroir), mais **je ne l'ai pas
 démontré**. ⏰ **À surveiller au run du 10/10** : le compte doit rester à 13 919, pas
 retomber à 13 471 ni repartir à la hausse.
+
+---
+
+## 13. LA CAUSE EST FERMÉE — le défaut de l'interrupteur brouillon est inversé
+
+*(décision de Frédéric le 09/10 — et c'est bien **sa** décision seule : il n'y a pas d'autre
+dev actif depuis le 18/07, contrairement à ce que j'avais dit.)*
+
+### Ce qui change, en une ligne
+
+```python
+# avant : on exclut les brouillons SEULEMENT si on le demande
+BROUILLON_BUCKET_ENABLED = os.environ.get("APP_BROUILLON_BUCKET_ENABLED", "") in ("1","true","yes","on")
+
+# apres : on exclut les brouillons SAUF si on demande le contraire
+_BROUILLON_FLAG = os.environ.get("APP_BROUILLON_BUCKET_ENABLED", "1").strip().lower()
+BROUILLON_BUCKET_ENABLED = _BROUILLON_FLAG not in ("0", "false", "no", "off")
+```
+
+L'interrupteur était OFF par défaut — *« inerte tant que le drapeau n'est pas activé »* — et
+c'était **juste** pendant le déploiement de la feature « annonces en création » (22/06).
+Mais elle est **allumée en production depuis ce jour-là** (`run_full_pipeline.ps1:352` pose
+`"1"`), et le défaut OFF ne mordait plus que les lancements **à la main**.
+
+### Quatre incidents sur cette seule cause
+
+```
+19/08   357 brouillons entres dans le perimetre actif (13 220 -> 13 577)
+24/09   faux « trou » de 417 annonces absentes de Supabase (en realite 417 brouillons)
+07/10   441 brouillons entres, ecran 724 -> 949 annonces actives
+09/10   448 brouillons entres, ecran 728 -> 956
+```
+
+À chaque fois : `exit 0`, bilan d'apparence normale, **et c'est Frédéric qui l'a vu**.
+
+### L'épreuve — les trois cas
+
+```
+SANS variable   interrupteur=True    perimetre = 13 471   <- le bon, enfin par defaut
+avec =1         interrupteur=True    perimetre = 13 471   <- le run, inchange
+avec =0         interrupteur=False   perimetre = 13 919   <- l'ancien, accessible exprès
+```
+
+Et le contrôle déjà en place `test_c9c_push_epargne.py` (*« n'écrit rien, nulle part »*)
+passe **tout vert**, avec *« vue locale 13471 · Supabase 13471 »*.
+
+### ⚠ Ce que ça touche d'autre, vérifié
+
+Deux autres choses s'allument par défaut, et c'est **voulu** : `build_brouillon_annonce_index`
+construit l'index des brouillons au lieu de rendre une liste vide, et le push entretient
+`app_brouillon_annonce_index_current`. **C'est exactement ce que fait le run chaque nuit** :
+un lancement à la main se comporte désormais comme lui, au lieu de modifier le périmètre
+actif en laissant l'index des brouillons périmé.
+
+**En production, rien ne change** : le run posait déjà `"1"`.
