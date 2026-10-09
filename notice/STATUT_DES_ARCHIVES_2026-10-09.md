@@ -301,3 +301,43 @@ reglages    -SkipArchivedDetails  pour l'eteindre
 
 ⏰ **À contrôler au run du 10/10** : l'étape « hektor fiches detail des archives »
 apparaît dans le journal, entre `sync_raw` et `normalize_source`, et dure quelques secondes.
+
+---
+
+## 10. LE RATTRAPAGE EST FINI — 09/10, 15 h 05
+
+```
+RATTRAPAGE TERMINE : 5 196 fiches lues, 0 candidate restante
+   11 lots de 500 (le dernier de 196), 12:40 -> 14:56
+   500 lectures toutes les 13 min 05  ->  2 293 lectures/heure
+   (cadence sure = 2 300/h, celle du run chauffage)
+```
+
+| mesure | ce matin | maintenant |
+|---|---|---|
+| fiches détail au total | 58 068 | **61 309** |
+| **archives sans fiche détail** | 3 241 | **0** |
+| `case_dossier_source` sans statut | 3 313 | **72** *(les 72 non archivées, hors sujet)* |
+| **`app_view_generale`, archives sans statut** | 3 241 | **0** |
+
+Les 37 773 archives portent désormais un statut :
+`Clos 34 780 · Mandat clos 2 456 · Vendu 425 · Actif 83 · Estimation 29` — **aucune vide**.
+
+⚠ **IL RESTE LE PUSH VERS SUPABASE** pour que l'index des archives de l'app reçoive ces
+statuts. Le run de nuit le fait tout seul (étape « phase2 push upgrade to supabase », ~6 min).
+
+### ⚠⚠ L'ERREUR QUE J'AI FAITE, ET LE CONTRÔLE QUI MANQUAIT
+
+La **première** version du script de rattrapage passait `--no-normalize` à chaque lot, pour ne
+normaliser qu'une fois à la fin. **C'était faux** : l'outil choisit ses candidates par
+« archive **sans fiche détail** », or la fiche n'existe qu'**après** la normalisation. Les
+annonces lues restaient donc candidates, et **chaque lot relisait les 500 mêmes**.
+
+Preuve mesurée : après 1 000 appels, les candidates n'avaient pas bougé (5 196), et l'annonce
+23452, lue à 10:35, était toujours en tête de liste avec `fiche = 0` — tandis que 36280, lue
+au palier **avec** normalisation, avait bien disparu de la liste.
+
+**Coût** : ~500 appels Hektor gaspillés. Rien de perdu ni d'abîmé.
+**Correction** : on normalise à **chaque** lot (le défaut de l'outil), et ça sert aussi de
+frein. **Leçon** : le script v2 affiche **le nombre de candidates restantes après chaque lot**
+— c'est ce contrôle-là qui manquait, et il aurait montré le problème dès le deuxième lot.

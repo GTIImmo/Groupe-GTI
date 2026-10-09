@@ -181,10 +181,13 @@ Le trou est LIMITE AUX ARCHIVES : parc vivant 0, vendus/clos 0 (ils portent
 `sync_raw` et `normalize_source`, limite 50 (convention du projet), ~2 appels/nuit ; une
 archive modifiée chez Hektor redeviendra à jour dès la nuit suivante. ⏰ à contrôler au
 run du 10/10.
-✅ **09/10 : le filet côté écran est CODÉ** (`933286a`, build vert) — **pas déployé**, il
-part au prochain push. ✅ **Le palier de 50 est passé** : 50 fiches en 51 s, chaîne prouvée
-jusqu'à `app_view_generale` (3 241 → 3 191 archives sans statut). **Reste 5 196 fiches**,
-~2 h 15 à cadence sûre + 8 min de chaîne — **attend le feu vert de Frédéric**.
+✅ **09/10 : LE RATTRAPAGE EST FINI** — 5 196 fiches lues à 2 293 lectures/h (12:40 → 15:05).
+**Archives sans fiche détail : 3 241 → 0.** `app_view_generale`, archives sans statut :
+**3 241 → 0**. Les 37 773 archives portent un statut (Clos 34 780, Mandat clos 2 456,
+Vendu 425, Actif 83, Estimation 29).
+⏳ **Reste le PUSH vers Supabase** pour que l'index de l'app le reçoive — le run de nuit
+le fait seul. ✅ Le filet côté écran est **codé** (`933286a`) mais **pas déployé** ; il n'est
+plus ce qui débloque, puisque les statuts ne seront plus vides.
 
 ### ⛔ Ce qui attend Frédéric
 
