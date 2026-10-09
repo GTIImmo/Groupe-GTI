@@ -374,6 +374,73 @@ L'écran est passé de **728 à 956 annonces actives**. Vérifications faites :
 - **4 actives tirées au hasard** (53398, 5666, 11843, 61789) : Hektor répond
   `statut = Actif, archive = 0` pour les quatre. Elles sont légitimes.
 
+---
+
+## 12. LES 448 ÉTAIENT DES BROUILLONS — ma faute, et la **deuxième fois en deux jours**
+
+**Frédéric s'en est souvenu avant moi** : *« nous avons déjà eu ce problème il y a quelques
+jours, je crois que c'était dû aux brouillons »*. Il avait raison.
+
+| | 07/10 | 09/10 |
+|---|---|---|
+| brouillons entrés | **441** | **448** |
+| écran, annonces actives | 724 → **949** | 728 → **956** |
+
+`run_full_pipeline.ps1:352` pose `$env:APP_BROUILLON_BUCKET_ENABLED = "1"`. **Un shell
+ordinaire ne l'a pas** → `brouillon_active_exclusion_sql()` rend une chaîne vide → le
+périmètre actif **contient les brouillons**. Mesuré :
+
+```
+perimetre AVEC l'interrupteur  : 13 471   <- le bon
+perimetre SANS (ce que j'ai pousse) : 13 919
+                                       -----
+                                         448 brouillons
+```
+
+Et je n'ai pas lancé que le push sans la variable : aussi `normalize_source`,
+`build_case_index`, `refresh_views` et le rattrapage lui-même.
+
+### ⚠⚠ LE PIÈGE DE LA VÉRIFICATION, et c'est lui le vrai sujet
+
+J'avais « prouvé » que tout allait bien avec **deux contrôles sans valeur** :
+
+1. *« le périmètre local dit 13 919, donc Supabase correspond au serveur »* — **circulaire** :
+   les deux étaient calculés **sans l'interrupteur**. Deux mesures fausses de la même façon
+   s'accordent toujours.
+2. *« 4 actives tirées au hasard sont bien Actif chez Hektor »* — **mauvaise population** :
+   tirées dans TOUTES les actives, pas dans les 448 nouvelles. Et un brouillon porte très
+   bien le statut « Actif » : le test ne pouvait **rien** détecter.
+
+**Le seul contrôle qui marche** après un push fait à la main :
+
+```sql
+select count(*) from app_dossier_current d
+ where d.hektor_annonce_id::text in
+       (select hektor_annonce_id::text from app_brouillon_annonce_index_current);
+-- 0 attendu
+```
+
+### La réparation — faite à 17:44, avec l'accord de Frédéric
+
+Le même push **avec** la variable et **sans** `--skip-stale-deletes` (la suppression est le
+remède) : `deleted_dossiers = 448`.
+
+| | pollué | réparé |
+|---|---|---|
+| parc vivant | 13 919 | **13 471** |
+| brouillons dedans | 448 | **0** |
+| détail du parc vivant | 448 brouillons | **0** |
+| écran, annonces actives | 956 | **729** *(728 ce matin, +1 légitime)* |
+| **archives** | 35 317, 0 sans statut | **35 317, 0 sans statut** — **intactes** |
+| vendus / clos, brouillons | 8 939 / 515 | **8 939 / 515** — intacts |
+
+⭐ **Le travail de la journée n'a pas été emporté** : le push de réparation a fait
+`archive_index_upserted: 0, archive_index_deleted: 0`.
+
+Mémoire renforcée : `push-a-la-main-interrupteur-brouillon`.
+
+---
+
 ⚠ **Ce que je n'ai PAS prouvé** : pourquoi Supabase était en retard de 448 lignes sur le
 serveur. L'explication la plus probable est que mes passages de `normalize_source` et
 `build_case_index` ont recalculé la base depuis les réponses brutes (le `normalize_source` a
