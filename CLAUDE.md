@@ -119,7 +119,7 @@ chaque étape.
 | # | chantier | état |
 |---|---|---|
 | ① | sécurité : 136 fonctions et 15 vues ouvertes à la clé publique *(`notice/CHANTIER_1_SECURITE_2026-10-08.md`)* | 🧪 patch APPLIQUÉ le 08/10 08:22, contrôlé (0 ouverture publique, app connectée OK) ; `hektor-diffusion` v15 déployée ; reste : la nuit du 09/10 |
-| ② | les droits du négociateur — **attend la décision de Frédéric** | ⬜ |
+| ② | les droits du négociateur — **attend la décision de Frédéric** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | 🔎 **09/10 audit fait, CONFIRMÉ** : il n'y a que **5 portes**, et la 1re (`app_console_can_request_job`) commande **16 RPC + la règle RLS d'écriture** des travaux · la **lecture est déjà cloisonnée**, le trou est à l'écriture · **43** négociateurs portent le parc, **4** ont un compte · **0 travail demandé par un commercial, jamais** · le circuit de demande dort (9 demandes, toutes d'un admin) · 💬 **attend 3 réponses** : que fait un négociateur seul · le rôle manager · pilote ou 39 comptes |
 | ③ | Hektor d'abord → chez nous d'abord (statuts, clôture, fichiers) | ⬜ |
 | ④ | aucun échec silencieux | ⬜ |
 | ⑤ | les gestes cassés (5a → 5i) *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 08/10, les 9 points** · 6 prouvés en réel (désarchiver, modifier un mandant, le filet du rattachement, rattacher après un retrait, supprimer un contact, ouvrir une archive sans Hektor) · sentinelle 5h verte · **5i prouvé en réel le 08/10 au soir**, après redémarrage des 4 workers (bien 62963 : « c'est NOTRE geste d'état, la saisie part » — Hektor écrit, 0 conflit) · **reste** : le run du 09/10 (5c, 5e-B) |
@@ -189,7 +189,10 @@ jusqu'à `app_view_generale` (3 241 → 3 191 archives sans statut). **Reste 5 1
 ### ⛔ Ce qui attend Frédéric
 
 ```
-① DECIDER les droits du negociateur (chantier ②, 3e dans l'ordre)
+① DECIDER les droits du negociateur -- AUDIT FAIT le 09/10, 3 questions precises :
+   que fait un negociateur seul sur SES biens (tout sauf supprimer / le quotidien plus
+   une demande pour les gestes graves / rien de plus qu'aujourd'hui) · garde-t-on le
+   role « manager » (0 compte) · un pilote de 2-3 negociateurs ou les 39 comptes ?
 ② QUESTIONS DE FAIT   les negociateurs saisissent-ils encore leurs visites dans Hektor ?
                       pourquoi 62 000 contacts seulement au cloud sur 356 000 ?
 ③ HORS CODE (etape 3, mais a ne pas oublier) : A.4 zone DNS (La Boite Immo -> OVH, garder
