@@ -175,3 +175,73 @@ notre IP.
 1. Relire cette note (elle contient toutes les mesures, rien à refaire).
 2. Décider l'ordre entre ①②③④ ci-dessus.
 3. Commencer par le **palier de 50**, hors des heures du rattrapage des documents.
+
+---
+
+## 8. FAIT LE 09/10 — LE CORRECTIF ① ET LE PALIER DE 50
+
+### ① Le filet côté écran — **codé, build vert, PAS déployé** *(commit `933286a`)*
+
+```
+avant :  query.neq('statut_annonce', 'Estimation')
+apres :  query.or('statut_annonce.is.null,statut_annonce.neq.Estimation')
+```
+
+Aux **deux** branches par défaut : `applyDossierFiltersToQuery` (parc vivant) et
+`applyArchiveIndexFiltersToQuery` (archives). `npm run build` vert en **5,77 s**.
+⚠ **Les deux branches jumelles `annonceSearchListingsFilterValue` portent le même défaut**
+et ne sont **pas** touchées — périmètre à décider par Frédéric.
+⚠ **Rien n'est en ligne tant que le push n'est pas fait** (pousser = déployer).
+
+### ② Le palier de 50 — **réussi, chaîne prouvée de bout en bout**
+
+```
+sync_archived_annonce_details.py --limit 50 --batch-size 50 --skip-listing-refresh
+     50 fiches en 51 s   (~1,0 s par annonce)
+```
+
+| étape | avant | après |
+|---|---|---|
+| `hektor_annonce_detail` | 58 068 | **58 118** (+50) |
+| archives sans fiche détail | 3 241 | **3 191** (−50) |
+| `case_dossier_source` sans statut | 3 313 | **3 263** (−50) |
+| `app_view_generale`, archives sans statut | 3 241 | **3 191** (−50) |
+
+Témoins **36280 / 36281 / 36426** : `<<vide>>` → **« Clos »** partout, et Hektor confirme
+« Clos » par appel direct.
+
+**⚠ DEUX PIÈGES PAYÉS, à ne pas repayer :**
+1. **`--no-normalize` ne stocke rien d'exploitable.** L'outil rapporte bien les fiches (réponses
+   brutes HTTP 200, 12 774 octets) mais c'est `normalize_source.py` qui les transforme en
+   `hektor_annonce_detail`. Sans lui, le compteur ne bouge pas et l'outil dit quand même
+   « synced 50/50 ».
+2. **Il faut le python du VENV** : `.\.venv\Scripts\python.exe`. Le python global n'a pas
+   `openpyxl` et `normalize_source.py` s'arrête dessus.
+3. Et lire le miroir **sans `immutable=1`** : ce drapeau sert un instantané figé, on croit
+   que rien n'a bougé.
+
+**LA CHAÎNE COMPLÈTE, dans l'ordre**, avec ses temps mesurés :
+
+```
+1. sync_archived_annonce_details.py --limit N      ~1,0 s par annonce
+2. .venv\Scripts\python.exe normalize_source.py    2 min   (quel que soit N)
+3. .venv\Scripts\python.exe build_case_index.py    5 min 37 (quel que soit N)
+4. .venv\Scripts\python.exe phase2efresh_views.py 34 s   (quel que soit N)
+5. le push vers Supabase  ->  NON FAIT, c'est le run de nuit qui l'emporte
+```
+
+⭐ **Les étapes 2 à 4 coûtent ~8 minutes quel que soit le nombre de fiches.** Faire un seul
+gros lot puis une seule passe de chaîne est donc bien plus efficace que des paliers répétés.
+
+### Ce qui reste du rattrapage
+
+```
+5 196 fiches encore a lire  (5 246 - 50)
+      a 1,0 s/fiche          1 h 28
+      a la cadence SURE de 2 300 lectures/h  ->  ~2 h 15 avec des pauses
+      + ~8 min de chaine, UNE seule fois
+```
+
+⚠ **Le palier a tourné à ~3 500 lectures/heure, au-dessus de la cadence prouvée sûre
+(2 300/h du run chauffage).** Pour le gros lot, il faut **freiner** — c'est ce débit qui a
+déjà fait bannir notre IP.
