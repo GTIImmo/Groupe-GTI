@@ -943,6 +943,13 @@ class SupabaseClient:
         )
 
 
+# Le droit Gmail demande a la cle de service. Meme valeur que GMAIL_SEND_SCOPE dans
+# backend/app/services/google_workspace_service.py -- on ne duplique pas le code du
+# backend (la surveillance doit tourner meme si le backend est casse), seulement
+# cette chaine.
+GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
+
+
 class Alerter:
     """Canal d'alerte sortant : previent Frederic (email + WhatsApp) sur bascule vers critical.
 
@@ -966,6 +973,21 @@ class Alerter:
         self.smtp_from = (os.getenv("SMTP_FROM", "").strip() or self.smtp_user)
         self.smtp_secure = (os.getenv("SMTP_SECURE", "") or "").strip().lower()
         self.timeout = 20
+        # 09/10/2026 : LA CLE DE SERVICE WORKSPACE, comme le backend.
+        #   Le backend envoie par elle depuis longtemps (notification_service l. 185) ;
+        #   la surveillance, elle, etait restee sur SMTP + mot de passe d application.
+        #   Ce mot de passe est mort, et pendant AU MOINS UN MOIS aucune alerte n est
+        #   partie : 19 tentatives, 19 echecs, 0 succes (mesure du 09/10 sur les 360
+        #   sondes conservees). La panne est a l etape AUTH -- Gmail raccroche.
+        #   La cle de service ne depend d AUCUN mot de passe utilisateur : elle survit
+        #   aux changements et se revoque depuis la console d administration.
+        self.gw_service_account_file = os.getenv("GOOGLE_WORKSPACE_SERVICE_ACCOUNT_FILE", "").strip()
+        self.gw_subject = os.getenv("GOOGLE_WORKSPACE_SUBJECT_EMAIL", "").strip()
+        self.gw_scopes = [
+            scope.strip()
+            for scope in (os.getenv("GOOGLE_WORKSPACE_SCOPES", "") or "").split(",")
+            if scope.strip()
+        ]
 
     def compose(self, critical_results: list["CheckResult"], kind: str = "critical") -> tuple[str, str]:
         host = socket.gethostname()
@@ -994,7 +1016,65 @@ class Alerter:
         self._send_email(subject, body)
         self._send_whatsapp(f"{subject}\n{body}")
 
+    def _has_google_workspace(self) -> bool:
+        """Meme condition que le backend : delegation complete + droit gmail.send."""
+        return bool(
+            self.gw_service_account_file
+            and os.path.exists(self.gw_service_account_file)
+            and self.gw_subject
+            and GMAIL_SEND_SCOPE in self.gw_scopes
+        )
+
+    def _send_via_workspace(self, subject: str, body: str) -> bool:
+        """Envoie par l API Gmail avec la cle de service. Rend True si c est parti.
+
+        Meme technique que backend/app/services/google_workspace_service.py : un POST
+        `requests`, pas de bibliotheque supplementaire. Les trois imports sont presents
+        dans le python du systeme, celui qu utilise la tache planifiee (verifie le 09/10).
+        """
+        try:
+            import base64
+            import requests
+            from email.message import EmailMessage
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request as GoogleRequest
+
+            creds = service_account.Credentials.from_service_account_file(
+                self.gw_service_account_file, scopes=[GMAIL_SEND_SCOPE]
+            ).with_subject(self.gw_subject)
+            creds.refresh(GoogleRequest())
+
+            message = EmailMessage()
+            message["From"] = self.gw_subject
+            message["To"] = self.email_to
+            message["Subject"] = subject
+            message.set_content(body)
+            brut = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
+
+            reponse = requests.post(
+                "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                headers={"Authorization": f"Bearer {creds.token}"},
+                json={"raw": brut},
+                timeout=self.timeout,
+            )
+            if reponse.status_code >= 400:
+                print(
+                    f"[alert] workspace refuse ({reponse.status_code}): {reponse.text[:200]}",
+                    file=sys.stderr,
+                )
+                return False
+            return True
+        except Exception as exc:
+            # On ne casse jamais le monitor : on dit pourquoi, et on tentera SMTP.
+            print(f"[alert] workspace echoue: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return False
+
     def _send_email(self, subject: str, body: str) -> None:
+        # 09/10/2026 : Workspace D ABORD, SMTP en repli -- l ordre exact du backend.
+        if self.email_to and self._has_google_workspace():
+            if self._send_via_workspace(subject, body):
+                return
+            print("[alert] repli sur SMTP", file=sys.stderr)
         if not (self.smtp_host and self.email_to and self.smtp_from):
             print("[alert] email ignore: SMTP non configure", file=sys.stderr)
             return

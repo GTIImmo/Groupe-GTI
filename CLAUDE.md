@@ -189,6 +189,18 @@ Vendu 425, Actif 83, Estimation 29).
 le fait seul. ✅ Le filet côté écran est **codé** (`933286a`) mais **pas déployé** ; il n'est
 plus ce qui débloque, puisque les statuts ne seront plus vides.
 
+### 🔔 LES ALERTES NE PARTAIENT PLUS — corrigé le 09/10 *(`notice/ALERTES_MUETTES_2026-10-09.md`)*
+
+```
+360 sondes conservees sur un mois : 19 tentatives d'alerte, 0 PARTIE.
+Cause : le mot de passe d'application Gmail est mort -- Gmail raccroche sur AUTH.
+SOLUTION (idee de Frederic) : la cle de service Workspace, DEJA en place et deja
+utilisee par le backend. La surveillance etait la seule restee sur SMTP.
+-> check_gti_health.py essaie Workspace d'abord, SMTP en repli. Email d'essai PARTI.
+RESTE : WHATSAPP_ALERT_WEBHOOK n'a JAMAIS ete pose -> un seul canal, sa panne =
+        silence total. C'est ce qui vient de durer un mois.
+```
+
 ### ⛔ Ce qui attend Frédéric
 
 ```
