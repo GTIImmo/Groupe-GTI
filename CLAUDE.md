@@ -193,6 +193,8 @@ C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 
 - **Render et Vercel se déploient seuls** sur un push vers `main` : `/health` rend le commit.
 - **Une autre session** travaille parfois en parallèle : relire `git log` avant d'écrire.
 
+---
+
 ## 3. Avant de coder — la liste de relecture *(plan, l. 1037 « ⛔ AVANT DE COMMENCER UN CHANTIER »)*
 
 Elle existe *« parce que le 20/08 j'ai oublié trois fois un point déjà documenté »*.
