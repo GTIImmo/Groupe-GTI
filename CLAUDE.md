@@ -198,7 +198,18 @@ lui-même** → un nouveau badge est forcément une nouvelle ligne, **ce carnet 
 doubler**. Le carnet des recherches, lui, a pour clé `app_search_id` (un numéro **frappé**) et
 garde sa clé calculée dans une COLONNE : il ne peut pas doubler. ➡ C'est le **point ⑥.1** du
 chantier « le registre des relations devient autonome » — *« un numéro de lien FRAPPÉ, jamais
-calculé »*. **Décision de Frédéric, non prise.**
+calculé »*.
+
+⭐ **Et le numéro frappé EXISTE DÉJÀ** : `app_relation.app_relation_id`, 132 727 lignes, deux
+distributeurs, deux plages — comme `app_dossier.id`, `app_contact_id`, `app_affaire_id`,
+`app_mandat_id`, `app_search_id`. **Il n'est simplement pas utilisé là où ça compte** : ce sont
+`app_contact_relation_current` *(ce que l'app lit et ce qui monte au cloud)* et
+`app_relation_registry` qui ont pour clé `relation_key`. **La réparation serait d'inverser les
+deux** : identifier le lien par son numéro, et laisser le badge calculé comme simple colonne.
+
+⬜ **NOTÉ ET REPORTÉ** — *Frédéric, 10/10 : « note-le mais on le corrigera plus tard si
+nécessaire »*. **Ne pas le relancer de soi-même.** Le filet trié tient en attendant ; ce qu'il
+faut surveiller, c'est qu'une ancre ambiguë ne réapparaisse *(journal du run : « 0 ambigues »)*.
 
 ⬜ **Et le repli lui-même n'est pas corrigé.** Frédéric a choisi l'**option 3** : un garde-fou qui
 se déclenche doit **s'arrêter et crier**, pas réécrire le parc avec une autre règle. ⚠ Mais
