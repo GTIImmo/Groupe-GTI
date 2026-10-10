@@ -155,10 +155,56 @@ parc vivant 13 475, 0 brouillon dedans · registre des mandats 0 manquant
 l'utilisateur, donc ni `requests` ni `google.auth`. Corrigé le 10/10 — le lanceur préfère
 le **venv du projet**, et un email d'essai est **parti depuis l'environnement exact de la
 tâche**. ⏰ La vraie preuve sera la prochaine bascule vers critical.
-⚠ **Un refus de garde-fou** (`contacts connus de l'app seule`) : décalage d'horaire, le
-garde-fou passe à 06:36 et la couche cloud n'est rafraîchie qu'à 06:39. Sans impact
-*(« aucun lecteur ne s'en sert »)* ; 40 clés sur 40 s'accordent désormais, ça devrait passer
-seul. ⚠ Et **3 mandats du serveur absents de Supabase** — à revoir demain.
+⚠ **Un refus de garde-fou** (`contacts connus de l'app seule`, code 4). ❌ **J'avais écrit
+« décalage d'horaire » : c'EST FAUX.** Le vrai motif est dans le journal — *« 85 074 lignes
+sur 85 256 inconnues de la couche locale […] les deux côtés ne parlent probablement pas la
+même série de numéros (bascule en cours ?) »*. **Il y avait bel et bien une bascule** : celle
+des étiquettes de liens (voir le bloc suivant). ⭐ **Ce garde-fou a bien fait son travail** —
+il a refusé de recenser un parc entier comme « né dans l'app ». Mesuré depuis : la doublure
+et la couche s'accordent à nouveau (0 étiquette inconnue), **ça passera cette nuit**.
+✅ Et les **3 mandats du serveur absents de Supabase** sont résorbés : 26 851 = 26 851, 0 absent.
+
+### 🔴 LE CARNET DES LIENS — la nuit du 09→10, et le tri du 10/10 au soir
+
+**Mon rattrapage de 5 196 fiches d'archives a fait changer de rôle 6 259 liens.** Le rôle entre
+dans la recette du badge → 6 308 badges menacés → **le garde-fou de C.9-f s'est déclenché, et
+son repli était CASSÉ** : `substituer=False` met `_CLES_FIGEES = {}`, et le test de la l. 1166
+était `is not None` — **qu'un dict vide passe**. Le repli a donc écrit NOTRE numéro au lieu de
+celui de Hektor : **167 483 badges refaits en une nuit**, la bascule même qu'il devait empêcher
+*(la mesure du 25/09 en redoutait 167 487)*. ✅ **Aucune donnée perdue** — 34 liens d'écart sur
+167 703, et le compte des relations identique avant/après le push.
+
+**Conséquence qui restait** : deux badges par ancre → `charger_cles_figees` ne reprend RIEN pour
+une ancre ambiguë → **le filet ne protégeait plus que 3,9 % du parc**.
+
+✅ **TRIÉ LE 10/10 à 19:05, accord de Frédéric** — le patron du projet *(sauvegarder dans une
+table datée, puis nettoyer)*, appliqué cinq fois avant :
+
+```
+app_relation_registry_avant_tri_20261010   335 249 lignes  = LE CARNET ENTIER, intact
+supprimees du carnet de travail            161 204 badges REMPLACES
+                                           (proprietaire 126 084 · acquereurs 34 905 · mandant 215)
+gardees                                      6 376 barrees sans equivalent vivant
+                                           (6 284 roles bascules + 92 vraies disparitions)
+AVANT  ambigues 161 204  ->  proteges   6 456 (  3,9 %)
+APRES  ambigues       0  ->  proteges 167 660 (100,0 %)
+charger_cles_figees() : 174 036 ancres, 0 ambigue, 174 036 FIGENT un numero
+```
+
+**AUCUN changement de code.** Script + retour arrière : `phase2/identite/trier_carnet_des_liens_2026-10-10.py`.
+
+⚠ **LA CAUSE RACINE RESTE OUVERTE** : `app_relation_registry` a pour clé primaire **le badge
+lui-même** → un nouveau badge est forcément une nouvelle ligne, **ce carnet est construit pour
+doubler**. Le carnet des recherches, lui, a pour clé `app_search_id` (un numéro **frappé**) et
+garde sa clé calculée dans une COLONNE : il ne peut pas doubler. ➡ C'est le **point ⑥.1** du
+chantier « le registre des relations devient autonome » — *« un numéro de lien FRAPPÉ, jamais
+calculé »*. **Décision de Frédéric, non prise.**
+
+⬜ **Et le repli lui-même n'est pas corrigé.** Frédéric a choisi l'**option 3** : un garde-fou qui
+se déclenche doit **s'arrêter et crier**, pas réécrire le parc avec une autre règle. ⚠ Mais
+« crier » n'a **aucune destination** aujourd'hui : cette nuit, **2 étapes ont échoué et le run a
+conclu « Pipeline finished successfully », exit 0** — la sonde n'a donc rien vu. **➡ À porter au
+chantier ④ « aucun échec silencieux ».**
 
 ### ⛔ Ce qui attend Frédéric
 
