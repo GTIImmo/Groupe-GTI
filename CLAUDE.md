@@ -140,6 +140,26 @@ le contact fantome (audit du 09/10, pas de note dediee)
    contact absent quand un 404 l'apprend. Frederic : « je prefere voir plus tard ».
 ```
 
+### ✅ LE RUN DU 10/10 — tout ce qu'on a posé le 09/10 tient
+
+```
+05:00:02 -> 07:18:40, 55 etapes (50 la veille), 2 sautees (4 la veille)
+l'etape neuve « fiches detail des archives » : 2 secondes, bien placee
+les 3 etapes bloquees la veille ont TOUTES tourne (lot des documents a 1 000)
+retraits_leves enfin imprime · plus aucune alarme « L'ALLOCATEUR EST FAUX »
+sentinelle relation_disparue VERTE · archives 35 318, 0 sans statut
+parc vivant 13 475, 0 brouillon dedans · registre des mandats 0 manquant
+```
+
+❌ **Mon correctif des alertes ne marchait pas** : la tâche ne voit pas le site-packages de
+l'utilisateur, donc ni `requests` ni `google.auth`. Corrigé le 10/10 — le lanceur préfère
+le **venv du projet**, et un email d'essai est **parti depuis l'environnement exact de la
+tâche**. ⏰ La vraie preuve sera la prochaine bascule vers critical.
+⚠ **Un refus de garde-fou** (`contacts connus de l'app seule`) : décalage d'horaire, le
+garde-fou passe à 06:36 et la couche cloud n'est rafraîchie qu'à 06:39. Sans impact
+*(« aucun lecteur ne s'en sert »)* ; 40 clés sur 40 s'accordent désormais, ça devrait passer
+seul. ⚠ Et **3 mandats du serveur absents de Supabase** — à revoir demain.
+
 ### ⛔ Ce qui attend Frédéric
 
 ```

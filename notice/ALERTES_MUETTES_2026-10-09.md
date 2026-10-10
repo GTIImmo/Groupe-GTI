@@ -97,3 +97,70 @@ réellement parti** — aucun message d'erreur, `_has_google_workspace()` rend `
   mais il reste le filet, donc rien ne presse.
 - ⚠ **La leçon de fond** : une garde qu'on n'a jamais vue se déclencher n'est pas une garde.
   Personne n'avait jamais vérifié qu'une alerte **arrivait**.
+
+---
+
+## 6. 10/10 — LE CORRECTIF NE MARCHAIT PAS, ET POURQUOI
+
+Le run du 10/10 l'a dit tout de suite :
+
+```
+[alert] workspace echoue: ModuleNotFoundError: No module named 'requests'
+[alert] repli sur SMTP
+[alert] email echoue: Connection unexpectedly closed
+```
+
+⭐ **Le repli a bien joué** — la mécanique était juste. C'est l'environnement qui manquait.
+
+### Mon erreur : j'ai vérifié le mauvais interpréteur
+
+J'avais écrit *« vérifié dans le python du SYSTÈME »*. J'avais testé
+`C:\Python314\python.exe` **depuis ma session**, qui voit le site-packages de
+l'**utilisateur** (`AppData\Roaming\Python\Python314\site-packages`). **La tâche planifiée
+ne le voit pas.** Reproduit avec `python -s` (= le contexte de la tâche) :
+
+```
+requests                        NON
+google.oauth2.service_account   NON
+google.auth.transport.requests  NON
+urllib.request / json / base64  OUI   (bibliotheque standard seulement)
+```
+
+**Rien de Google n'était disponible.** Et on ne peut pas s'en passer : signer le jeton
+demande du RSA, que la bibliothèque standard n'a pas.
+
+### Le correctif : le lanceur préfère le venv du projet
+
+`monitoring/run_gti_health.ps1` — **même patron que `run_archived_annonce_details.ps1`** :
+
+```powershell
+$Python = $env:GTI_MONITOR_PYTHON          # garde la priorite
+if (-not $Python) {
+    $VenvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $VenvPython) { $Python = $VenvPython }
+}
+if (-not $Python) { ...l'ancien comportement, mot pour mot... }
+```
+
+### Les épreuves
+
+```
+parseur PowerShell OK, BOM et CRLF conserves
+le venv, avec -s : requests + google.oauth2 + google.auth.transport  ->  TOUS presents
+la sonde entiere lancee par le venv, --no-alerts --dry-run : 70 controles, 0 « unknown »
+   comparee controle par controle a la tache de 07:48 : un seul ecart, la sonde des
+   taches planifiees -- et il vient de MON mode de lancement, pas du venv
+le LANCEUR relance en vrai a 08:23 : « interpreteur : ...\.venv\Scripts\python.exe »,
+   71 controles, AUCUNE ligne [alert]
+UN EMAIL d'essai envoye depuis l'environnement EXACT de la tache (venv + -s) : PARTI,
+   aucune erreur, `_has_google_workspace()` rend True
+```
+
+⏰ **La vraie preuve reste la prochaine bascule vers critical** : l'alerte ne part que sur un
+changement d'état, pas à chaque sonde.
+
+### La leçon, et elle est générale
+
+**Vérifier une dépendance, c'est la vérifier dans l'interpréteur ET le contexte de celui qui
+l'exécutera.** `python -c "import X"` depuis une session interactive ne prouve rien pour une
+tâche planifiée : `python -s -c "import X"` si.

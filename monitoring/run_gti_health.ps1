@@ -1,4 +1,4 @@
-param(
+﻿param(
     [int]$RetentionDays = 30
 )
 
@@ -9,6 +9,25 @@ $LogDir = Join-Path $PSScriptRoot "logs"
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
 $Python = $env:GTI_MONITOR_PYTHON
+if (-not $Python) {
+    # 10/10/2026 -- LE VENV DU PROJET D ABORD. Meme patron que
+    # run_archived_annonce_details.ps1.
+    #
+    # POURQUOI. Le python du PATH est bien C:\Python314, mais ses bibliotheques
+    # (requests, google-auth) sont installees dans le site-packages de l UTILISATEUR,
+    # que la tache planifiee ne voit pas. Resultat mesure le 10/10 : l envoi de
+    # l alerte par la cle Workspace echouait sur « No module named requests », et
+    # l alerte retombait sur le SMTP dont le mot de passe est mort -- donc rien ne
+    # partait. Reproduit avec `python -s` (= le contexte de la tache) : requests,
+    # google.oauth2 et google.auth.transport sont TOUS absents ; le venv les a.
+    #
+    # GTI_MONITOR_PYTHON garde la priorite, et si le venv disparait l ancien
+    # comportement reprend mot pour mot.
+    $VenvPython = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $VenvPython) {
+        $Python = $VenvPython
+    }
+}
 if (-not $Python) {
     $PythonCommand = Get-Command python.exe -ErrorAction SilentlyContinue
     if ($PythonCommand) {
