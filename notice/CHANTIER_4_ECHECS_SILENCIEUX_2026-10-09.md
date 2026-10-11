@@ -18,7 +18,7 @@
 | **4e** | les **photos de la création** attendent dans la mémoire du navigateur | 🧪 **audit fait — BEAUCOUP plus petit qu'annoncé** *(fermer la modale ne perd rien)* · **« informer » codé le 11/10** : compte dans la vignette + avertissement avant fermeture/rechargement + confirmation modale · build vert, app démarrée sans erreur · ⏳ **attend un déploiement** |
 | **4f** | l'alarme « travaux en erreur » figée au rouge ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction non notifiés | ✅ **CLOS le 11/10 SANS CORRECTIF** *(décision de Frédéric)* — l'alarme n'était **pas cassée** : seuil 0 **voulu**, et l'humain a tranché **deux fois** en écrivant pourquoi (01/10, 11/10) · **0 geste de transaction n'a jamais échoué** · **rien n'est perdu**, seulement du bruit |
 | **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** ne rend pas l'état | 🔎 **audité le 11/10, NOTÉ NON FAIT** *(décision de Frédéric)* — **auto-réparant** : le registre des affaires est refait chaque nuit depuis Hektor (31 040/31 058 aujourd'hui), donc ≤ 24 h · jamais déclenché par le filet (max **4** tentatives), **2 fois à la main** en 5 mois sur un bien d'essai · ⚠ **et « rendre l'état d'avant » serait DEVINER** : le bon geste est **relire chez Hektor** |
-| **4h** | *(reste de ⑤ : 5h B/C)* **marqueur à l'écran** et **bouton « réessayer »** pour un mandant créé en échec | ⬜ |
+| **4h** | *(reste de ⑤ : 5h B/C)* **marqueur à l'écran** et **bouton « réessayer »** pour un mandant créé en échec | 🔎 **audité le 11/10, NOTÉ NON FAIT** *(décision de Frédéric)* — le scénario n'est **jamais arrivé** (17 créations de mandant, **0 en erreur** ; **0 contact sans numéro Hektor** sur 62 189) et la **sentinelle de l'option A alerte le jour même** · **B** la pastille = ~10 lignes, un **confort** · ⛔ **C le bouton « réessayer » : NON**, il **doublerait le contact** chez Hektor |
 | **4i** | `--missing-only`, passé **chaque soir par le run**, est **sans appelant depuis le 21/07** : l'option ne fait rien, et personne ne le dit *(journal des décisions, 09/10)* | ⬜ |
 
 **Ordre retenu** : celui de l'audit (4a → 4f), puis les deux restes de ⑤ (4g, 4h), qui touchent
@@ -1126,3 +1126,64 @@ un travail **`refresh_console_data`** sur l'annonce concernée. La fenêtre de m
 
 **⏳ NOTÉ, NON FAIT** — à reprendre avec les autres rangements de fin de chantier *(le `timeout`
 de 4f, les 5 gestes de transaction à notifier)*.
+
+---
+
+# POINT 4h — LE MARQUEUR ET LE BOUTON « RÉESSAYER » *(reste du chantier ⑤ : 5h, options B et C)*
+
+## ① AUDIT — *11/10/2026, lecture seule.* Verdict : **le scénario n'est JAMAIS arrivé**
+
+*Décision de Frédéric le 11/10 : **on note 4h** et on finit le chantier avec 4i.*
+
+### Le geste, en clair
+
+Quand on ajoute un mandant depuis l'app, **deux choses sont écrites tout de suite** : le
+**contact**, durablement, avec notre numéro ; et le **lien**, en provisoire. Puis l'app demande à
+Hektor de créer le contact et de rendre **son numéro**.
+
+```
+si Hektor echoue :
+   le LIEN     passe en ROUGE a l'ecran        -> cette moitie FONCTIONNE
+   le CONTACT  reste dans l'annuaire, comme un vrai -> et PERSONNE ne dit qu'il est orphelin
+```
+
+⚠ **Garder le contact est VOULU** (C.1', *« une saisie ne se perd jamais »*). **Le défaut n'est
+pas qu'il reste : c'est qu'on ne le dit pas.**
+
+### Les chiffres — le cas ne s'est jamais produit
+
+```
+contacts sans numero Hektor aujourd'hui :  0   sur 62 189
+creations de MANDANT  17  -> 0 en erreur, JAMAIS (verifie aussi dans l'archive)
+creations de CONTACT  16  -> 2 en erreur, toutes deux le 29/05 :
+      l'une un STOP volontaire de Frederic pendant l'episode du bannissement d'IP,
+      l'autre « contact_id Hektor numerique requis »
+      -> les deux AVANT que le contact soit garde durablement (bascule du 23/09)
+derniere creation : 21/09
+```
+
+### Ce qui couvre déjà le cas
+
+- **L'option A est faite** *(08/10)* : la sentinelle `contact_sans_numero_hektor`, **lue par le
+  moniteur**, seuil 0, **critique** — Frédéric serait averti **le jour même**. Elle lit la
+  **doublure Supabase** : une sentinelle posée sur la couche locale aurait rendu 0 **en mentant**.
+- **Le négociateur serait prévenu aussi, mais tard et de biais** : chaque geste suivant sur ce
+  contact échouerait, avec le message de 4b *(« pas encore créé chez Hektor : rien à viser »)*.
+
+**Et le marqueur n'existe toujours pas** : vérifié dans le front, **aucun affichage** ne distingue
+un contact sans numéro Hektor — alors que l'information est là, `hektor_target_id` vide **est** la
+signature *(pas de colonne, pas de migration)*.
+
+## ② CE QU'IL FAUDRAIT — *et ce qu'il ne faut surtout pas faire*
+
+**B — la pastille « en attente de Hektor »** : ~10 lignes de front, aucune donnée nouvelle, aucun
+risque. Elle transforme un échec **tardif et de biais** en information **immédiate**.
+➡ **Un confort utile, pas une réparation** — 0 occurrence, sentinelle critique déjà en place.
+
+**C — le bouton « réessayer » : NON.** Rejouer une création **doublerait le contact chez Hektor**
+(règle C.4-bis). Pour le faire sans danger il faudrait d'abord **demander à l'API de Hektor si le
+contact existe déjà** *(le patron du mandant, 31/08)* : cher, risqué, pour un cas jamais survenu.
+**Je ne le propose pas.**
+
+**⏳ NOTÉ, NON FAIT** — à reprendre avec les autres rangements de fin de chantier *(le `timeout`
+de 4f, le « relire » de 4g, les 5 gestes de transaction à notifier)*.
