@@ -911,7 +911,7 @@ Trois ajouts, **84 lignes ajoutées, 0 supprimée** dans `App.tsx` + **10 lignes
 ### ✅ 4e-bis — *PLUSIEURS PHOTOS SUR LA FICHE ANNONCE, codé le 11/10*
 
 Frédéric : « **fais 2** ». Le formulaire de la fiche annonce ne prenait qu'**un** fichier
-() ; il accepte maintenant **plusieurs photos**, **jusqu'à 20**, avec **le même tri que
+(`files[0]`) ; il accepte maintenant **plusieurs photos**, **jusqu'à 20**, avec **le même tri que
 la création** (mêmes formats, même plafond, mêmes messages) — pour que les deux écrans refusent
 la même chose.
 
@@ -921,7 +921,7 @@ est comptée, et un envoi partiel est annoncé comme tel *(« 3 photo(s) envoyé
 pu être préparée : salon.jpg »)* — **leçon de 4a**.
 
 **Épreuve** : build vert, et **vérifié à l'écran** en mode local sur une vraie fiche — le libellé
-dit « Choisir une ou plusieurs photos » et le champ porte bien  (lu dans le
+dit « Choisir une ou plusieurs photos » et le champ porte bien `multiple: true` (lu dans le
 navigateur). Aucune erreur nouvelle.
 
 ## ③ CE QU'IL RESTE
