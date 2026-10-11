@@ -13950,6 +13950,16 @@ button.metric-card.is-active {
   font-weight: 650;
   overflow-wrap: anywhere;
 }
+/* 4e (11/10/2026) : les photos encore en memoire. C'est un AVERTISSEMENT, pas un
+   detail : il doit se distinguer de la ligne d'etat juste au-dessus, qui est grise. */
+.hektor-action-popup-main .hektor-action-popup-photos-attente {
+  margin-top: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #fff4e5;
+  color: #8a4b00;
+  font-weight: 750;
+}
 .hektor-action-steps {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

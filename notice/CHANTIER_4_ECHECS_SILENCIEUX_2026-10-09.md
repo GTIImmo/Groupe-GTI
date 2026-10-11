@@ -15,7 +15,7 @@
 | **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | 🧪 **audit fait (PARTIEL)** · ✅ **FINI** : option A codée le 09/10 (11/11 hors ligne), **4 workers redémarrés le 11/10 à 15:37** → les 5 messages ne promettent plus rien · **B et C reportés** par Frédéric |
 | **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | 🧪 **audit fait (CONFIRMÉ)** · **A1 codée le 11/10**, épreuve **21/21** : la sentinelle qui existait déjà sait enfin juger · aucune écriture, aucun déploiement |
 | **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ✅ **FINI le 11/10 (A et B)** : patch appliqué et contrôlé — empreintes `8ae7e3ab…` (vue) et `6a9c2efe…` (balayage) conformes à la répétition, 7 colonnes, 0 ligne, droits intacts, **4×7 jours / 4×24 h / 4×15 min**, cron 9 actif |
-| **4e** | les **photos de la création** attendent dans la mémoire du navigateur → onglet fermé = perdues | ⬜ |
+| **4e** | les **photos de la création** attendent dans la mémoire du navigateur | 🧪 **audit fait — BEAUCOUP plus petit qu'annoncé** *(fermer la modale ne perd rien)* · **« informer » codé le 11/10** : compte dans la vignette + avertissement avant fermeture/rechargement + confirmation modale · build vert, app démarrée sans erreur · ⏳ **attend un déploiement** |
 | **4f** | l'alarme **« travaux en erreur » figée au rouge à 15** ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction absents de `JOB_TYPES_A_NOTIFIER` | ⬜ |
 | **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** (5 tentatives ou abandon humain) ne rend pas l'état — 2 fonctions SQL | ⬜ |
 | **4h** | *(reste de ⑤ : 5h B/C)* **marqueur à l'écran** et **bouton « réessayer »** pour un mandant créé en échec | ⬜ |
@@ -746,3 +746,174 @@ de la répétition. Aucun faux échec n'a été fabriqué en production.
 4. ⏳ **Le bouton « réessayer »** (option C, écartée le 11/10) : il demande d'abord de **demander à
    l'API de Hektor si la recherche existe déjà**, sinon on la double. Patron connu : celui du
    mandant, 31/08.
+
+---
+
+# POINT 4e — LES PHOTOS DE LA CRÉATION DANS LA MÉMOIRE DU NAVIGATEUR
+
+## ① AUDIT — *11/10/2026, lecture seule.* Verdict : **CONFIRMÉ, mais BEAUCOUP plus petit que l'audit ne le disait**
+
+### Où vivent les photos — deux moments, deux comportements
+
+```
+AVANT de valider la creation   ->  memoire de la MODALE
+                                   fermer la modale = efface (volontaire)
+APRES avoir valide             ->  memoire de L'APPLICATION, rangee sous le
+                                   numero du travail de creation
+                                   fermer la modale = AUCUN EFFET
+```
+
+Et la modale **refuse même de se fermer** pendant l'envoi (`closeDraftAnnonceModal` :
+`if (draftAnnoncePending || draftAnnonceScanPending) return`).
+
+### Ce qui ne perd RIEN — *question de Frédéric du 11/10, et il avait raison*
+
+```
+fermer la modale · changer d'ecran, de filtre, de bien · ouvrir une autre annonce
+laisser l'onglet ouvert 10 minutes          ->  AUCUN RISQUE
+```
+
+**Ce qui perd, et c'est tout** : fermer l'onglet · recharger la page (F5) · un plantage ·
+partir sur un autre site. Ces quatre cas détruisent la mémoire de **l'application**.
+
+### ⚠ ET J'AI DÛ CORRIGER MON PROPRE ALARMISME
+
+J'avais écrit « la création dure jusqu'à 44 minutes ». **Faux comme généralité** — et c'est
+Frédéric qui m'a reprise (« je crois que le worker est immédiat »). Mesure complète :
+
+```
+le worker interroge la file toutes les 5 SECONDES (reglage lu dans le code)
+attente dans la file, sur les 79 creations :
+   63 sur 79  ->  moins de 10 s        <- « immediat », il avait raison
+    5 sur 79  ->  entre 10 et 60 s
+   11 sur 79  ->  PLUS d'une minute (14 %)
+   mediane 3,4 s · p95 190 s · maximum 2 646 s (un seul cas, le 15/05)
+bout en bout : 66 sur 79 finissent en moins de 2 min · p95 353 s
+```
+
+⭐ Et **deux** des 11 cas longs ont une **explication structurelle** que je n'avais pas vue :
+le **07/06, deux fois**, deux créations lancées **dans la même minute** — la seconde a attendu
+la première (65 s, puis 146 s), parce qu'il n'y a **qu'un seul worker « actions »** et que les
+travaux passent **un par un**. Ça se reproduira dès que deux négociateurs créeront en même temps.
+
+**Ce que ça change** : pour **4c et 4d**, la règle « on tranche sur l'état du travail, jamais sur
+l'horloge » **reste juste et mieux fondée** *(un délai de 5 ou 15 min aurait crié 11 fois sur 79)*.
+Pour **4e**, le risque est **réel mais petit** : fermer ou recharger pendant la minute d'attente.
+
+### Le précédent qui éclaire tout — *cinq lignes plus bas dans la même fonction*
+
+Le scan d'estimation, lui, reçoit un **dépôt durable** :
+
+> *« Dépôt DURABLE immédiat : survit à un refresh. La file en mémoire est ré-hydratée depuis ces
+> clés au démarrage. »*
+
+**Le geste existe déjà pour un objet voisin.** Pas pour les photos — parce que le scan est du
+**texte** (il entre dans la mémoire persistante) et une photo un **fichier binaire** (il n'y entre
+pas). Ce n'est donc **pas un oubli, c'est une limite technique**.
+
+### Ce qui informe déjà, et ce qui ne dit rien
+
+- **Si la création échoue**, l'écran **prévient déjà** : *« Les photos n'ont pas été envoyées car
+  la création de l'annonce Hektor a échoué. »* — mais les photos sont jetées.
+- **L'onglet fermé ne disait rien** : aucun `beforeunload` dans tout le front.
+- **La perte est rattrapable à la main** : le négociateur peut rajouter les photos sur la fiche
+  — s'il s'en aperçoit.
+- **Le chemin fonctionne** : **14 travaux photo sur 16** viennent de là, tous réussis.
+
+**Ce que je ne peux pas mesurer, et je le dis** : une photo qui n'a jamais atteint le cloud **ne
+laisse aucune trace**. Je mesure la fenêtre et l'absence de filet, **pas le nombre de pertes**.
+
+---
+
+## ⭐ LA DEMANDE DE FRÉDÉRIC : PLUSIEURS PHOTOS À LA FOIS
+
+### Ce qui existe déjà
+
+**À la création, le multiple EST là** : le champ accepte plusieurs fichiers d'un coup, **jusqu'à
+20 photos**, avec tri des formats et messages pour ce qui est refusé.
+**Ce qui manque, c'est sur la fiche annonce** : un seul fichier à la fois (`files[0]`).
+
+### Mais derrière, elles partent une par une
+
+```
+1 photo = 1 travail = 1 session de navigateur ouverte sur la console Hektor
+duree mesuree : 15 s mini · 21,4 s en general · 56,5 s au pire
+-> 20 photos = ~7 MINUTES de worker et 20 ouvertures de la console
+et elles font la queue derriere le rattrapage des documents :
+   attente mesuree pour un travail photo : jusqu'a 857 s = 14 MINUTES
+```
+
+### ⭐ HEKTOR ACCEPTE LE MULTIPLE — *et je l'ai su SANS l'appeler*
+
+Frédéric avait donné son accord pour ouvrir la page photos d'un bien d'essai. **Ça n'a pas été
+nécessaire** : nous avons **11 captures de la vraie page** (`.tmp/annonce_groups_*/photos_lecture.html`).
+
+```html
+<input id="fileupload" type="file" name="files[]"
+       accept="image/gif, image/jpg, image/jpeg, image/png, image/x-png" multiple/>
+<input id="fileuploadHidden" type="file" name="files[]" ... multiple/>
+```
+
+**Les DEUX champs portent `multiple`, et `name="files[]"` est un tableau** : l'interface de Hektor
+est bâtie pour recevoir plusieurs fichiers en une fois. Et notre outil sait les envoyer
+(`setInputFiles` accepte une liste). **Aucun appel à Hektor n'a été fait.**
+
+**Deux réserves, à ne pas oublier avant de coder l'envoi groupé :**
+1. ⚠ **La confirmation devra compter N, pas 1.** Aujourd'hui elle exige « au moins une photo de
+   plus dans la galerie ». Avec N fichiers il faut exiger **N de plus** — sinon un envoi partiel
+   passerait pour réussi : **exactement le défaut 4a, sur un autre objet.**
+2. ⚠ **L'`accept` de Hektor ne liste PAS le WebP** (gif, jpg, jpeg, png, x-png), alors que notre
+   app ET notre worker l'acceptent. **Mesuré : aucun WebP n'a jamais été envoyé** (11 PNG,
+   5 JPEG). `accept` ne filtre que le sélecteur de fichiers du navigateur, pas le serveur — donc
+   **on ne sait pas** ce que Hektor ferait d'un WebP. **Non mesuré, non corrigé.**
+
+---
+
+## ② LE CORRECTIF — *« informer », choisi par Frédéric le 11/10*
+
+> **On ne change rien au mécanisme — il est bon. On ajoute la parole.**
+
+Trois ajouts, **84 lignes ajoutées, 0 supprimée** dans `App.tsx` + **10 lignes** de style :
+
+1. **Le compte dans la vignette de suivi** *(celle qui existe déjà)* : *« 3 photos partiront dès
+   que Hektor aura rendu le numéro — ne fermez pas et ne rechargez pas cet onglet. »* Un
+   paramètre neuf et facultatif (`photosEnAttente`), passé aux **deux** endroits qui affichent la
+   vignette.
+2. **L'avertissement du navigateur** (`beforeunload`), qui couvre **la fermeture ET le
+   rechargement** — c'est le même événement. ⚠ **Conditionné à « des photos attendent
+   vraiment »** : un avertissement qui sort tout le temps est un avertissement qu'on n'écoute plus.
+3. **Une confirmation avant de vider la modale** quand des photos y sont choisies — le seul
+   reproche du premier moment : jusqu'ici un clic suffisait à perdre 20 photos sélectionnées,
+   sans un mot.
+
+### Ce que ça pourrait casser ailleurs — vérifié
+| Ce que ça touche | Vérifié |
+|---|---|
+| le mécanisme d'envoi des photos | **pas une ligne** : ni la file, ni l'effet qui envoie, ni le worker |
+| la vignette de suivi | paramètre **facultatif** → les deux appels le passent, et un appelant qui l'oublierait afficherait simplement 0 |
+| la fermeture normale de la modale | la confirmation ne sort **que** s'il y a des photos choisies ; sinon fermeture immédiate — **essayé en réel en mode local** |
+| l'avertissement du navigateur | enregistré **seulement** quand des photos attendent, et retiré dès qu'elles partent |
+| le reste du front | **0 suppression**, build vert, app démarrée en mode local **sans une erreur** |
+
+### L'épreuve
+- `npm run build` **vert** *(la règle du projet)* ;
+- app **démarrée en mode local** et lue : l'accueil s'affiche, **aucune erreur de console** ;
+  la modale de création s'ouvre et **se ferme normalement** (pas de confirmation, 0 photo).
+  *(La seule erreur vue, un 500 sur `/api/hektor-diffusion/broadcasts`, est l'API de diffusion
+  absente en mode local — sans rapport.)*
+- ⚠ **Ce qui n'est PAS prouvé** : le bandeau et l'avertissement **n'ont pas été vus**. Il faudrait
+  joindre un vrai fichier et lancer une vraie création, donc **écrire chez Hektor**. À faire sur
+  un bien d'essai, avec l'accord de Frédéric — ou par lui, après déploiement.
+
+### Retour arrière
+`git revert` du commit. Aucune écriture, aucun patch SQL, aucun redémarrage.
+
+## ③ CE QU'IL RESTE
+
+1. ⏳ **Déployer** : c'est du front, donc **pousser** — décision de Frédéric, elle déborde 4e.
+2. ⏳ **Le multiple sur la fiche annonce** (un fichier à la fois aujourd'hui) — petit ajout.
+3. ⏳ **L'envoi groupé** (1 travail pour N photos : ~30 s au lieu de ~7 min) — **possible, Hektor
+   l'accepte**, mais la confirmation devra **compter N**.
+4. ⏳ **Le WebP** : notre app l'accepte, l'`accept` de Hektor ne le liste pas, **jamais essayé**.
+5. ⏳ **Un seul worker « actions »** : deux créations simultanées se mettent en file. Noté, c'est
+   un sujet de capacité, pas de 4e.

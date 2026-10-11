@@ -9009,6 +9009,17 @@ function HektorActionStatusPopup(props: {
   linkedDossiers: Record<string, Dossier>
   onDismiss: (jobId: string) => void
   onOpenAppDossier: (job: ConsoleJob) => void
+  // 4e (11/10/2026) : combien de photos attendent encore, par travail de creation.
+  //   Les photos choisies a la creation ne peuvent partir qu'APRES que Hektor ait
+  //   rendu le numero de l'annonce : en attendant, elles vivent dans la memoire de
+  //   l'application (des objets `File`, qu'on ne peut pas mettre en memoire
+  //   persistante -- c'est pour cela que le scan d'estimation, lui, y est depose).
+  //   Mesure du 11/10 : fermer la MODALE ou changer d'ecran ne perd RIEN (la file
+  //   est portee par l'application, pas par la modale) ; seules la FERMETURE ou le
+  //   RECHARGEMENT de l'onglet la detruisent. Rare -- l'attente est d'une minute en
+  //   general -- mais 11 creations sur 79 ont depasse la minute. D'ou ce compte
+  //   affiche, et le garde-fou `beforeunload` plus bas.
+  photosEnAttente?: Record<string, number>
 }) {
   const [openButtonReadyJobId, setOpenButtonReadyJobId] = useState<string | null>(null)
   const primaryJobs = props.jobs.filter(isPrimaryHektorActionJob).slice(0, 3)
@@ -9026,6 +9037,8 @@ function HektorActionStatusPopup(props: {
   const canShowOpenDelay = Boolean(appOpenReady && openButtonReadyJobId !== mainJob?.id)
   const canOpenApp = Boolean(appOpenReady && openButtonReadyJobId === mainJob?.id)
   const canOpenHektor = Boolean(mainJob && mainAnnonceId && mainJob.job_type !== 'delete_hektor_annonce')
+  // 4e : le compte des photos encore en memoire pour CE travail (0 si rien n'attend).
+  const photosEnAttenteDuMainJob = mainJob ? (props.photosEnAttente?.[mainJob.id] ?? 0) : 0
 
   useEffect(() => {
     setOpenButtonReadyJobId(null)
@@ -9050,6 +9063,15 @@ function HektorActionStatusPopup(props: {
       <div className="hektor-action-popup-main">
         <strong>{hektorActionJobTitle(mainJob)}</strong>
         <span>{isWaitingForAppSync ? hektorActionWaitingLabel(mainJob) : canShowOpenDelay ? "Tout est synchronise. Patientez, preparation de l'ouverture..." : hektorActionJobDetail(mainJob)}</span>
+        {/* 4e : on le DIT, au lieu de laisser l'utilisateur l'ignorer. */}
+        {photosEnAttenteDuMainJob > 0 && (
+          <span className="hektor-action-popup-photos-attente">
+            {photosEnAttenteDuMainJob === 1
+              ? '1 photo partira des que Hektor aura rendu le numero'
+              : `${photosEnAttenteDuMainJob} photos partiront des que Hektor aura rendu le numero`}
+            {' '}&mdash; ne fermez pas et ne rechargez pas cet onglet.
+          </span>
+        )}
       </div>
 
       <div className="hektor-action-steps">
@@ -13287,6 +13309,53 @@ export default function App() {
     }
   }, [dataScope, hektorActionLinkedDossiers, session, visibleHektorActionPopupJobs])
 
+  // ── 4e (11/10/2026) : ON NE PERD PLUS UNE PHOTO EN SILENCE ─────────────────
+  //
+  // Les photos choisies a la creation ne peuvent partir qu'APRES le numero rendu
+  // par Hektor. En attendant elles sont des objets `File` dans la memoire de
+  // l'application -- qu'on ne peut pas deposer en memoire persistante (le scan
+  // d'estimation, lui, y est depose quelques lignes plus bas : c'est du texte).
+  //
+  // CE QUI NE PERD RIEN, mesure le 11/10 en lisant le code : fermer la MODALE,
+  // changer d'ecran, de filtre ou de bien -- la file est portee par
+  // l'application, pas par la modale, et la modale refuse meme de se fermer
+  // pendant l'envoi. SEULES la fermeture et le rechargement de l'onglet
+  // detruisent la file. C'est rare (l'attente est d'une minute en general) mais
+  // 11 creations sur 79 ont depasse la minute, et 2 d'entre elles parce que
+  // DEUX creations avaient ete lancees en meme temps (un seul worker « actions »,
+  // les travaux passent un par un).
+  //
+  // On ne change donc RIEN au mecanisme -- il est bon -- on ajoute la PAROLE :
+  // le compte dans la vignette de suivi, et cet avertissement du navigateur, qui
+  // couvre la fermeture ET le rechargement (c'est le meme evenement).
+  // ⚠ Conditionne a « des photos attendent vraiment » : un avertissement qui
+  //   sort tout le temps est un avertissement qu'on n'ecoute plus.
+  const photosEnAttenteParTravail = useMemo(() => {
+    const comptes: Record<string, number> = {}
+    for (const [jobId, photos] of Object.entries(draftAnnonceQueuedPhotos)) {
+      if (photos.length > 0) comptes[jobId] = photos.length
+    }
+    return comptes
+  }, [draftAnnonceQueuedPhotos])
+
+  const nombreDePhotosEnAttente = useMemo(
+    () => Object.values(photosEnAttenteParTravail).reduce((total, n) => total + n, 0),
+    [photosEnAttenteParTravail],
+  )
+
+  useEffect(() => {
+    if (nombreDePhotosEnAttente === 0) return
+    function avertirAvantDeQuitter(event: BeforeUnloadEvent) {
+      // Les navigateurs modernes imposent leur propre texte : seul le fait de
+      // remplir `returnValue` declenche la demande de confirmation.
+      event.preventDefault()
+      event.returnValue = ''
+      return ''
+    }
+    window.addEventListener('beforeunload', avertirAvantDeQuitter)
+    return () => window.removeEventListener('beforeunload', avertirAvantDeQuitter)
+  }, [nombreDePhotosEnAttente])
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     const queuedEntries = Object.entries(draftAnnonceQueuedPhotos).filter(([, photos]) => photos.length > 0)
@@ -15084,6 +15153,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function closeDraftAnnonceModal() {
     if (draftAnnoncePending || draftAnnonceScanPending) return
+    // 4e (11/10/2026) : AVANT LA VALIDATION, fermer la modale vide la liste des
+    //   photos choisies -- c'est normal (un formulaire qu'on ferme se vide) et
+    //   c'est le SEUL reproche de ce moment-la : jusqu'ici, un clic suffisait a
+    //   perdre 20 photos selectionnees, sans un mot. On demande donc confirmation,
+    //   et SEULEMENT s'il y en a : sinon la fermeture reste immediate.
+    //   ⚠ Rien a voir avec l'autre moment : APRES la validation, la file est
+    //     portee par l'application et fermer la modale ne perd rien.
+    if (draftAnnoncePhotoDrafts.length > 0) {
+      const combien = draftAnnoncePhotoDrafts.length === 1
+        ? '1 photo choisie'
+        : `${draftAnnoncePhotoDrafts.length} photos choisies`
+      if (!window.confirm(`${combien} ne sera pas conservee si vous fermez. Fermer quand meme ?`)) return
+    }
     clearDraftAnnoncePhotoDrafts()
     setDraftAnnonceModalOpen(false)
   }
@@ -21374,6 +21456,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           linkedDossiers={hektorActionLinkedDossiers}
           onDismiss={dismissHektorActionPopup}
           onOpenAppDossier={(job) => void openHektorActionAppDossier(job)}
+          photosEnAttente={photosEnAttenteParTravail}
         />
         {appModals}
       </>
@@ -22344,6 +22427,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           linkedDossiers={hektorActionLinkedDossiers}
           onDismiss={dismissHektorActionPopup}
           onOpenAppDossier={(job) => void openHektorActionAppDossier(job)}
+          photosEnAttente={photosEnAttenteParTravail}
         />
         {appModals}
         </main>
