@@ -17,7 +17,7 @@
 | **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ✅ **FINI le 11/10 (A et B)** : patch appliqué et contrôlé — empreintes `8ae7e3ab…` (vue) et `6a9c2efe…` (balayage) conformes à la répétition, 7 colonnes, 0 ligne, droits intacts, **4×7 jours / 4×24 h / 4×15 min**, cron 9 actif |
 | **4e** | les **photos de la création** attendent dans la mémoire du navigateur | 🧪 **audit fait — BEAUCOUP plus petit qu'annoncé** *(fermer la modale ne perd rien)* · **« informer » codé le 11/10** : compte dans la vignette + avertissement avant fermeture/rechargement + confirmation modale · build vert, app démarrée sans erreur · ⏳ **attend un déploiement** |
 | **4f** | l'alarme « travaux en erreur » figée au rouge ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction non notifiés | ✅ **CLOS le 11/10 SANS CORRECTIF** *(décision de Frédéric)* — l'alarme n'était **pas cassée** : seuil 0 **voulu**, et l'humain a tranché **deux fois** en écrivant pourquoi (01/10, 11/10) · **0 geste de transaction n'a jamais échoué** · **rien n'est perdu**, seulement du bruit |
-| **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** (5 tentatives ou abandon humain) ne rend pas l'état — 2 fonctions SQL | ⬜ |
+| **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** ne rend pas l'état | 🔎 **audité le 11/10, NOTÉ NON FAIT** *(décision de Frédéric)* — **auto-réparant** : le registre des affaires est refait chaque nuit depuis Hektor (31 040/31 058 aujourd'hui), donc ≤ 24 h · jamais déclenché par le filet (max **4** tentatives), **2 fois à la main** en 5 mois sur un bien d'essai · ⚠ **et « rendre l'état d'avant » serait DEVINER** : le bon geste est **relire chez Hektor** |
 | **4h** | *(reste de ⑤ : 5h B/C)* **marqueur à l'écran** et **bouton « réessayer »** pour un mandant créé en échec | ⬜ |
 | **4i** | `--missing-only`, passé **chaque soir par le run**, est **sans appelant depuis le 21/07** : l'option ne fait rien, et personne ne le dit *(journal des décisions, 09/10)* | ⬜ |
 
@@ -1047,3 +1047,82 @@ et l'humain a tranché deux fois en écrivant pourquoi.
 | **A** | les 5 gestes de transaction dans la liste des avertissements | **0 occurrence en 5 mois** · 5 lignes à glisser **le jour où on touchera le worker pour autre chose** — ne justifie pas un redémarrage des 4 services |
 | **B** | une branche « familles non rejouables » dans la vue | ⛔ **retirée** : le signal existe déjà, et elle **frôle une décision écrite** qui refuse de séparer les lectures des gestes |
 | — | `sync_console_documents` : **402 erreurs**, le plus gros producteur du système *(dont 196 du bannissement d'IP, terminé le 20/08)* | **signalé, pas traité** : c'est déjà lui qui a fait sauter 3 étapes du run le 09/10. Le point fragile à surveiller |
+
+---
+
+# POINT 4g — L'ABANDON RÉEL NE REND PAS L'ÉTAT *(reste du chantier ⑤ : 5f)*
+
+## ① AUDIT — *11/10/2026, lecture seule.* Verdict : **CONFIRMÉ, petit, et AUTO-RÉPARANT**
+
+*Décision de Frédéric le 11/10 : **on note et on passe à 4h**, pour finir le chantier et revenir
+sur ces petits rangements d'un bloc.*
+
+### Ce que fait vraiment l'abandon
+
+`app_action_resolve(target_job_id, mode)`, relue en base. Elle vérifie les droits *(le même
+contrôle que le geste lui-même)*, exige `status = 'error'` **et au moins 5 tentatives**
+— *« on ne tranche que ce qui attend vraiment »* — puis **archive** le travail et toute sa charge
+dans `app_pending_resolution`.
+
+**Et c'est tout.** Elle ne touche **pas** à l'état de l'affaire. Et `refait` et `abandon` font
+**exactement la même chose** : le mode est seulement **enregistré**.
+
+> **L'abandon est un classement, pas un geste.** Il range le dossier et ferme la ligne d'alerte ;
+> il ne corrige pas ce qui est affiché.
+
+### Quand ça se déclenche — mesuré
+
+```
+par epuisement du filet :  JAMAIS. Sur les 10 types rejouables, le maximum jamais
+                           atteint est 4 tentatives (le seuil est 5).
+a la main :                DEUX FOIS, par Frederic, le 01/09, toutes deux sur le
+                           bien d'essai 62774, toutes deux change_hektor_offre_status.
+```
+
+La charge archivée garde **`etat_avant: "proposed"`** — l'information pour restaurer **est là**.
+
+### ⭐ Mais l'état se corrige tout seul, et c'est structurel
+
+```
+31 040 affaires sur 31 058 ont ete revues AUJOURD'HUI par le run de nuit
+```
+
+Le registre des affaires est **reconstruit chaque nuit depuis Hektor** : un état faux se répare
+**en 24 h au plus**, sans que personne n'intervienne.
+
+**Vérifié sur le cas réel** : l'affaire **1000002**, dont le geste « accepté » a été abandonné le
+01/09, affiche aujourd'hui **`refused`** — exactement ce que dit la liste des propositions de
+Hektor *(dernier mouvement : refus, 01/09 à 12:03)*. **Aucun mensonge ne subsiste.**
+
+### ⚠ Un défaut latent trouvé au passage
+
+Quand un travail est **« dépassé par un plus récent »**, le filet lui **force `attempt_count = 5`**
+pour le sortir de la file. Or `geste_abandonne` sélectionne *« erreur **et** au moins
+5 tentatives »* : un travail **légitimement dépassé** apparaîtrait donc comme **« en attente d'un
+humain »** — une **fausse alerte**. *(Aujourd'hui : 0 ligne, donc aucun bruit réel.)*
+
+## ② CE QUI EST VRAIMENT NÉCESSAIRE — *et pourquoi le correctif imaginé en ⑤ était mauvais*
+
+**Rien d'urgent** : jamais déclenché automatiquement, deux fois à la main en cinq mois, sur un
+bien d'essai, et l'écran se répare seul en moins de 24 h.
+
+⚠ **Et la correction que le chantier ⑤ avait imaginée — « rendre l'état d'avant » — serait une
+mauvaise idée.** La cause écrite le 01/09 dit : *« le geste n'a **probablement** RIEN fait »*.
+**Probablement.** Remettre `etat_avant`, c'est **deviner**. La vérité est chez Hektor, pas dans
+notre charge de travail.
+
+### Le bon geste, s'il faut en faire un : **ne pas restaurer, RELIRE**
+
+Une ligne à ajouter dans `app_action_resolve` : quand on tranche *(abandon **ou** refait)*, créer
+un travail **`refresh_console_data`** sur l'annonce concernée. La fenêtre de mensonge passe de
+**≤ 24 h à ~1 minute**, et **rien n'est inventé**.
+
+| | |
+|---|---|
+| **Coût** | un patch SQL avec répétition et inverse. **Aucun worker, aucun front, aucun déploiement, aucun redémarrage** |
+| **À vérifier avant** | la fonction est appelée depuis **trois** endroits du front (action, annonce, contact) |
+| **Risque** | un travail de plus par abandon — **2 abandons en 5 mois**, le débit n'est pas un sujet |
+| **Ce que ça ne fait pas** | la fausse alerte du « dépassé par un plus récent » reste — sujet séparé, 0 occurrence |
+
+**⏳ NOTÉ, NON FAIT** — à reprendre avec les autres rangements de fin de chantier *(le `timeout`
+de 4f, les 5 gestes de transaction à notifier)*.
