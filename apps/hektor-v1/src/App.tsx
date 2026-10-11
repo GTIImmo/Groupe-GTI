@@ -13076,6 +13076,68 @@ export default function App() {
     }
   }, [session, dataFilters, dataScope, screen])
 
+  // 11/10 (Frédéric, méthode C) : un travail terminé ne recharge l'écran QUE s'il le concerne.
+  // Avant, la fin de N'IMPORTE QUEL travail suivi (y compris celui d'un collègue sur une autre
+  // fiche) rechargeait tout l'écran -- c'est ce qui fermait la modale mandat le 09/10.
+  // Concerne l'écran : mon propre travail (geste, relecture à l'ouverture, création) ; un travail
+  // sans auteur connu (prudence : comportement d'avant) ; un travail sur une annonce ou un contact
+  // AFFICHÉ (fiche ouverte, ligne de la liste, contact en pop-up). Lu par ref : le polling est
+  // monté une seule fois, il doit voir l'écran du moment.
+  const reloadScopeRef = useRef({
+    userId: null as string | null,
+    dossiers: [] as Dossier[],
+    mandats: [] as MandatRecord[],
+    contacts: [] as AppContact[],
+    selectedDossier: null as DetailedDossier | null,
+    selectedDossierId: null as number | null,
+    selectedContactId: null as string | null,
+    annonceContactId: null as string | null,
+    annonceContact: null as AppContact | null,
+  })
+  reloadScopeRef.current = {
+    userId: session?.user?.id ?? null,
+    dossiers,
+    mandats,
+    contacts: contactsDirectory,
+    selectedDossier,
+    selectedDossierId,
+    selectedContactId,
+    annonceContactId,
+    annonceContact,
+  }
+  function jobConcernsThisScreen(job: ConsoleJob) {
+    const scope = reloadScopeRef.current
+    if (!job.requested_by || job.requested_by === scope.userId) return true
+    const dossierId = job.app_dossier_id
+    const annonceId = String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? '').trim()
+    if (dossierId != null && scope.selectedDossierId === dossierId) return true
+    if (dossierId != null || annonceId) {
+      const annonces: Array<{ app_dossier_id: number; hektor_annonce_id?: unknown } | null> = [scope.selectedDossier, ...scope.dossiers, ...scope.mandats]
+      if (annonces.some((item) => item && (
+        (dossierId != null && item.app_dossier_id === dossierId)
+        || (annonceId !== '' && String(item.hektor_annonce_id ?? '').trim() === annonceId)
+      ))) return true
+    }
+    const payload = job.payload_json ?? {}
+    const contactIds = [payload.contact_id, payload.hektor_contact_id, payload.app_contact_id]
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean)
+    if (contactIds.length > 0) {
+      // Deux numéros possibles pour un même contact (le nôtre, celui de Hektor) : on compare aux deux.
+      const shown = new Set<string>()
+      for (const value of [scope.selectedContactId, scope.annonceContactId]) if (value) shown.add(String(value).trim())
+      for (const contact of [...scope.contacts, scope.annonceContact]) {
+        if (!contact) continue
+        for (const value of [contact.hektor_contact_id, contact.hektor_target_id]) {
+          const text = String(value ?? '').trim()
+          if (text) shown.add(text)
+        }
+      }
+      if (contactIds.some((id) => shown.has(id))) return true
+    }
+    return false
+  }
+
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
     let cancelled = false
@@ -13094,7 +13156,7 @@ export default function App() {
           for (const job of [...activeJobs, ...trackedJobs]) nextById.set(job.id, job)
           const transitioned = [...nextById.values()].some((job) => {
             const previous = previousById.get(job.id)
-            return previous && isConsoleJobActive(previous) && !isConsoleJobActive(job)
+            return previous && isConsoleJobActive(previous) && !isConsoleJobActive(job) && jobConcernsThisScreen(job)
           })
           if (transitioned && !refreshQueued) {
             refreshQueued = true
@@ -13141,12 +13203,14 @@ export default function App() {
         // Read-through : refresh à l'ouverture terminé -> recharge fiche + rapprochement.
         if (refreshedSearchJobIdsRef.current.has(job.id)) continue
         refreshedSearchJobIdsRef.current.add(job.id)
+        if (!jobConcernsThisScreen(job)) continue
         setDataReloadKey((value) => value + 1)
         setVisitRefreshKey((value) => value + 1)
       } else if (job.job_type === 'refresh_console_data') {
         // Read-through bien : refresh annonce terminé -> recharge le détail bien + listes.
         if (refreshedSearchJobIdsRef.current.has(job.id)) continue
         refreshedSearchJobIdsRef.current.add(job.id)
+        if (!jobConcernsThisScreen(job)) continue
         setDataReloadKey((value) => value + 1)
       }
     }
