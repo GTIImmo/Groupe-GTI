@@ -908,6 +908,22 @@ Trois ajouts, **84 lignes ajoutées, 0 supprimée** dans `App.tsx` + **10 lignes
 ### Retour arrière
 `git revert` du commit. Aucune écriture, aucun patch SQL, aucun redémarrage.
 
+### ✅ 4e-bis — *PLUSIEURS PHOTOS SUR LA FICHE ANNONCE, codé le 11/10*
+
+Frédéric : « **fais 2** ». Le formulaire de la fiche annonce ne prenait qu'**un** fichier
+() ; il accepte maintenant **plusieurs photos**, **jusqu'à 20**, avec **le même tri que
+la création** (mêmes formats, même plafond, mêmes messages) — pour que les deux écrans refusent
+la même chose.
+
+⚠ **UN TRAVAIL PAR PHOTO, comme aujourd'hui** : le worker et sa preuve de réussite ne sont
+**pas touchés**. Et le bilan **dit la vérité** : on ne s'arrête pas au premier échec, chaque photo
+est comptée, et un envoi partiel est annoncé comme tel *(« 3 photo(s) envoyée(s), mais 1 n'a pas
+pu être préparée : salon.jpg »)* — **leçon de 4a**.
+
+**Épreuve** : build vert, et **vérifié à l'écran** en mode local sur une vraie fiche — le libellé
+dit « Choisir une ou plusieurs photos » et le champ porte bien  (lu dans le
+navigateur). Aucune erreur nouvelle.
+
 ## ③ CE QU'IL RESTE
 
 1. ⏳ **Déployer** : c'est du front, donc **pousser** — décision de Frédéric, elle déborde 4e.

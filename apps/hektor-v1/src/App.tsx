@@ -11495,7 +11495,16 @@ function ConsolePhotosPanel({
   const [loading, setLoading] = useState(false)
   const [syncPending, setSyncPending] = useState(false)
   const [uploadPending, setUploadPending] = useState(false)
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  // 4e-bis (11/10/2026) : PLUSIEURS PHOTOS A LA FOIS (demande de Frederic).
+  //   La creation d'une annonce sait deja le faire (jusqu'a 20) ; la fiche annonce,
+  //   non -- elle ne prenait que `files[0]`. On aligne les deux.
+  //   ⚠ UN TRAVAIL PAR PHOTO, comme aujourd'hui : on ne change RIEN au worker ni
+  //     a sa confirmation. Un envoi groupe (1 travail pour N fichiers) serait plus
+  //     rapide -- Hektor l'accepte, son champ porte `name="files[]"` et `multiple`,
+  //     mesure du 11/10 sur nos captures -- mais il demande de reecrire la preuve
+  //     de reussite pour compter N et non 1, sinon un envoi partiel passerait pour
+  //     reussi : c'est le defaut 4a sur un autre objet. Sujet a part, pas ici.
+  const [photoFiles, setPhotoFiles] = useState<File[]>([])
   const [photoVisible, setPhotoVisible] = useState(true)
   const [fileInputKey, setFileInputKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -11534,10 +11543,29 @@ function ConsolePhotosPanel({
     }
   }
 
+  // 4e-bis : le meme tri que la creation (memes formats, meme plafond de 20), pour
+  //   que les deux ecrans se comportent pareil et refusent la meme chose.
+  function handlePhotoFilesChange(event: ChangeEvent<HTMLInputElement>) {
+    const choisis = Array.from(event.target.files ?? [])
+    if (!choisis.length) return
+    const formatsAcceptes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+    const valides = choisis.filter((file) => formatsAcceptes.has(file.type))
+    const refuses = choisis.length - valides.length
+    const retenus = valides.slice(0, 20)
+    if (refuses > 0) {
+      setError(`${refuses} fichier(s) ignore(s) : seules les images JPG, PNG ou WebP sont acceptees.`)
+    } else if (valides.length > retenus.length) {
+      setError('Selection limitee a 20 photos a la fois.')
+    } else {
+      setError(null)
+    }
+    setPhotoFiles(retenus)
+  }
+
   async function handleUploadPhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!photoFile) {
-      setError('Choisis une photo a ajouter dans Hektor')
+    if (!photoFiles.length) {
+      setError('Choisis une ou plusieurs photos a ajouter dans Hektor')
       return
     }
     if (!hasHektorNegotiator(dossier)) {
@@ -11546,21 +11574,44 @@ function ConsolePhotosPanel({
     }
     setUploadPending(true)
     setError(null)
+    // ⚠ ON NE S'ARRETE PAS AU PREMIER ECHEC, et on ne fait pas passer un envoi
+    //   partiel pour un succes : chaque photo est comptee, et le bilan le DIT.
+    //   (Lecon de 4a : une suite qui rate ne doit jamais etre silencieuse.)
+    let partis = 0
+    const echoues: string[] = []
     try {
-      const job = await createUploadHektorPhotoJob({
-        dossier,
-        file: photoFile,
-        visible: photoVisible,
-        priority: 18,
-      })
-      onJobCreated?.(job)
-      setPhotoFile(null)
-      setPhotoVisible(true)
-      setFileInputKey((value) => value + 1)
-      window.setTimeout(() => void refreshPhotos(true), 9000)
-      window.setTimeout(() => void refreshPhotos(true), 22000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Impossible d envoyer la photo vers Hektor')
+      for (const file of photoFiles) {
+        try {
+          const job = await createUploadHektorPhotoJob({
+            dossier,
+            file,
+            visible: photoVisible,
+            priority: 18,
+          })
+          onJobCreated?.(job)
+          partis += 1
+        } catch (err) {
+          echoues.push(file.name)
+          console.warn('Envoi photo Hektor non prepare', file.name, err)
+        }
+      }
+      if (echoues.length) {
+        setError(partis > 0
+          ? `${partis} photo(s) envoyee(s), mais ${echoues.length} n'a/n'ont pas pu etre preparee(s) : ${echoues.join(', ')}.`
+          : `Aucune photo n'a pu etre preparee : ${echoues.join(', ')}.`)
+      }
+      if (partis > 0) {
+        setPhotoFiles([])
+        setPhotoVisible(true)
+        setFileInputKey((value) => value + 1)
+        // Chaque photo prend 15 a 56 s chez Hektor (mesure du 11/10, mediane 21 s)
+        // et les travaux passent UN PAR UN : pour un lot, on relit plus tard.
+        window.setTimeout(() => void refreshPhotos(true), 9000)
+        window.setTimeout(() => void refreshPhotos(true), 22000)
+        if (partis > 1) {
+          window.setTimeout(() => void refreshPhotos(true), 25000 * partis)
+        }
+      }
     } finally {
       setUploadPending(false)
     }
@@ -11621,18 +11672,23 @@ function ConsolePhotosPanel({
               key={fileInputKey}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+              multiple
+              onChange={handlePhotoFilesChange}
               disabled={uploadPending}
             />
-            <span>{photoFile ? photoFile.name : 'Choisir une photo'}</span>
+            <span>{
+              photoFiles.length === 0 ? 'Choisir une ou plusieurs photos'
+                : photoFiles.length === 1 ? photoFiles[0].name
+                  : `${photoFiles.length} photos choisies`
+            }</span>
           </label>
           <div className="console-photo-visibility" role="radiogroup" aria-label="Visibilite photo Hektor">
             <button className={photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(true)} disabled={uploadPending}>Visible</button>
             <button className={!photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(false)} disabled={uploadPending}>Masquée</button>
           </div>
-          <button className="console-photo-upload-submit" type="submit" disabled={uploadPending || !photoFile}>
+          <button className="console-photo-upload-submit" type="submit" disabled={uploadPending || photoFiles.length === 0}>
             <span aria-hidden="true"><DetailIcon type="photo" /></span>
-            {uploadPending ? 'Envoi...' : 'Envoyer'}
+            {uploadPending ? 'Envoi...' : photoFiles.length > 1 ? `Envoyer ${photoFiles.length} photos` : 'Envoyer'}
           </button>
         </div>
       </form>
