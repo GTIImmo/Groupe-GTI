@@ -924,6 +924,35 @@ pu être préparée : salon.jpg »)* — **leçon de 4a**.
 dit « Choisir une ou plusieurs photos » et le champ porte bien `multiple: true` (lu dans le
 navigateur). Aucune erreur nouvelle.
 
+### ✅ ESSAI RÉEL — *11/10 à 17:31, en production, bien d'essai 62774*
+
+*Accord de Frédéric (« Oui test »). Fait dans SON Chrome, où il est connecté — le navigateur
+intégré ne sait pas joindre un fichier.*
+
+**À l'écran** : « Choisir une ou plusieurs photos » → 2 fichiers joints → « **2 photos
+choisies** » et « **Envoyer 2 photos** » → le suivi affiche **les deux** → la galerie passe de
+**2 à 4 visibles**.
+
+**En base** :
+```
+2 travaux crees a 17:31:45, LA MEME SECONDE
+  essai_multi_photo_1.png   demarre 17:31:52   fini 17:32:14   21,6 s   done
+  essai_multi_photo_2.png   demarre 17:32:14   fini 17:32:35   20,6 s   done
+                            ^ il a ATTENDU que le premier finisse
+bout en bout : 29 s pour la premiere, 49 s pour la seconde · 0 erreur
+```
+
+**Arrivées des deux côtés** : `hektor_photo_id` **487603** et **487604**,
+`present_in_hektor = true`, **et gardées chez nous** *(les deux photos plus anciennes du même
+bien, du 25/08, ne le sont pas — elles datent d'avant ce geste)*.
+
+⚠ **Et l'essai CONFIRME la limite annoncée** : les deux sont partis **l'un après l'autre**,
+**~21 s chacun**. Pour 20 photos, compter **~7 minutes**. C'est exactement pourquoi **l'envoi
+groupé** reste le vrai gain à faire *(Hektor l'accepte ; la preuve de réussite devra compter N)*.
+
+⏳ **Les 2 images d'essai sont restées sur le bien 62774** — retrait proposé à Frédéric,
+en attente de sa réponse.
+
 ## ③ CE QU'IL RESTE
 
 1. ⏳ **Déployer** : c'est du front, donc **pousser** — décision de Frédéric, elle déborde 4e.
