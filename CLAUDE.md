@@ -217,6 +217,50 @@ se déclenche doit **s'arrêter et crier**, pas réécrire le parc avec une autr
 conclu « Pipeline finished successfully », exit 0** — la sonde n'a donc rien vu. **➡ À porter au
 chantier ④ « aucun échec silencieux ».**
 
+### ✅ 11/10 — LA SURVEILLANCE ÉTAIT MUETTE PARCE QU'ELLE N'AVAIT RIEN À DIRE
+
+**Frédéric : *« j'ai pas eu de mail pour me dire que tout est revenu à la normale »*.** Il avait
+raison : la sonde voyait **3 critical** et n'envoyait rien. ⭐ **Et ce n'était pas une panne** —
+la règle (`check_gti_health.py:2843`) n'envoie que sur **bascule** vers critical, et un
+« retour à la normale » exige **ZÉRO** critical. Les 3 l'étant depuis des jours, elle était
+**coincée : rien à annoncer, et pas le droit d'annoncer le retour.**
+
+**Les 3 critical, 2 causes, toutes deux déjà connues :**
+
+```
+data.travaux_en_erreur      24 travaux  -> 12 TypeError DEJA CORRIGES le 06/10 (3607d29)
+                                         + 6 du contact fantome (reporte le 09/10)
+                                         + 3 « database is locked » (note le 06/10)
+                                         + 1 timeout 90 s · 1 document · 1 unlink non prouve
+data.contact_conflit         1 ligne  ┐  LA MEME : 10076643 MARTIN Mickael,
+data.contact_push_bloque     1 ligne  ┘  cible Hektor 145561 qui N'EXISTE PLUS
+```
+
+**Deux patchs, appliqués par Frédéric depuis son téléphone le 11/10** *(mes écritures Supabase
+restent refusées par le garde-fou de session — « Production Deploy »)* :
+
+```
+07:42:38  patch_purge_erreurs_infra_2026-10-11.sql       24 -> 0, 14 lignes archivees
+          (motif ENTIER archive, pas 150 car. ; 179 lignes de journal parties en CASCADE)
+~07:5x    patch_saisie_en_attente_contact_fantome_2026-10-11.sql    1 -> 0
+RESULTAT  les 3 alarmes a ZERO · saisie intacte : « M. Mickael MARTIN »
+```
+
+⭐ **Un garde-fou NEUF dans chaque patch** : le premier refuse si une saisie en attente
+**repartirait** *(la barrière du 5b relance tant que `conflict = false`)* ; le second refuse si
+la saisie **n'est pas déjà appliquée chez nous** — c'est ce qui protège C.1'.
+
+⏰ **LA PREUVE ATTENDUE** : à la sonde suivante *(toutes les 2 h, vers :48)*, **le mail « retour
+à la normale » doit partir**. Ce sera la **première preuve sur le terrain** du correctif du
+10/10 *(le lanceur prend le venv)* — jusqu'ici je n'avais qu'un email d'essai manuel.
+⚠ **S'il n'arrive pas, c'est que l'envoi est encore cassé** : lire le journal de cette sonde
+dans `monitoring/logs/` *(UTF-16)* et y chercher les lignes `[alert]`.
+
+⚠ **Et la cause de fond reste** : `database is locked` avait **déjà** été purgé le 01/10
+*(2 cas)* et est revenu *(3 cas)* — le `busy_timeout` manquant est noté depuis le 06/10. Et le
+contact fantôme peut revenir : les pistes A / C / D1 du 09/10 sont au « je préfère voir plus
+tard » de Frédéric.
+
 ### ⛔ Ce qui attend Frédéric
 
 ```
