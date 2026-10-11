@@ -12,9 +12,9 @@
 | # | Le point | État |
 |---|---|---|
 | **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | ✅ **FINI le 09/10** — patch appliqué et contrôlé (empreinte `e2c015e1…`, 0 ligne, droits intacts, moniteur vert) · épreuve hors ligne **19/19** · **les 4 workers redémarrés à 17:30:49** (battement `startup` en base) |
-| **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | 🧪 **audit fait (PARTIEL)** · **option A codée le 09/10**, 11/11 hors ligne : les **5 messages** ne promettent plus · attend le redémarrage du worker · ⏳ **options B et C en question** (brancher le repreneur, prévenir) |
+| **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | 🧪 **audit fait (PARTIEL)** · ✅ **FINI** : option A codée le 09/10 (11/11 hors ligne), **4 workers redémarrés le 11/10 à 15:37** → les 5 messages ne promettent plus rien · **B et C reportés** par Frédéric |
 | **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | 🧪 **audit fait (CONFIRMÉ)** · **A1 codée le 11/10**, épreuve **21/21** : la sentinelle qui existait déjà sait enfin juger · aucune écriture, aucun déploiement |
-| **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | 🧪 **audit fait (PARTIEL)** · **A et B codés le 11/10** : on compte (3ᵉ branche) et les erreurs durent **7 jours** · répétition **assemblée depuis les vrais fichiers**, attend le collage |
+| **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ✅ **FINI le 11/10 (A et B)** : patch appliqué et contrôlé — empreintes `8ae7e3ab…` (vue) et `6a9c2efe…` (balayage) conformes à la répétition, 7 colonnes, 0 ligne, droits intacts, **4×7 jours / 4×24 h / 4×15 min**, cron 9 actif |
 | **4e** | les **photos de la création** attendent dans la mémoire du navigateur → onglet fermé = perdues | ⬜ |
 | **4f** | l'alarme **« travaux en erreur » figée au rouge à 15** ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction absents de `JOB_TYPES_A_NOTIFIER` | ⬜ |
 | **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** (5 tentatives ou abandon humain) ne rend pas l'état — 2 fonctions SQL | ⬜ |
@@ -706,6 +706,23 @@ acl_retour=IDENTIQUE
 Erreur finale `P0001 ESSAI ANNULE` : **rien n'a été écrit**. Le retour arrière rend **les deux**
 objets au caractère près. Les **deux empreintes d'après** ont été inscrites dans le patch comme
 **contrôles de sortie** : un patch qui ne les donnerait pas refuse de s'enregistrer.
+
+
+### ✅ 4d EST CLOS — *patch appliqué par Frédéric le 11/10, contrôlé en base*
+
+| Contrôlé | Attendu | Mesuré |
+|---|---|---|
+| empreinte de la **vue** | `8ae7e3abdf139acf519027762539ce58` | **identique à la répétition** ✅ |
+| empreinte du **balayage** | `6a9c2efeac87f68a25c5462451083828` | **identique à la répétition** ✅ |
+| 7 colonnes, dans l'ordre | `objet, reference, libelle, nature, cause, tentatives, depuis` | identique ✅ |
+| lignes de la vue | 0 *(dont branche 3 : 0)* | **0** ✅ |
+| droits *(chantier ①)* | `postgres` + `service_role` | identique ✅ |
+| les trois délais | **4× 7 jours**, 4× 24 h, 4× 15 min | **4 / 4 / 4** ✅ |
+| le cron du balayage | jobid 9 actif | **actif** ✅ |
+
+**Ce que le contrôle ne prouve pas** : la branche rend 0 ligne, et c'est normal — **aucune
+création de recherche n'a jamais échoué**. La preuve qu'elle trouve reste `plomberie_si_erreur = 4`
+de la répétition. Aucun faux échec n'a été fabriqué en production.
 
 ## ③ CE QU'IL RESTE
 
