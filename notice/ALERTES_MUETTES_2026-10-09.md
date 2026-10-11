@@ -164,3 +164,79 @@ changement d'état, pas à chaque sonde.
 **Vérifier une dépendance, c'est la vérifier dans l'interpréteur ET le contexte de celui qui
 l'exécutera.** `python -c "import X"` depuis une session interactive ne prouve rien pour une
 tâche planifiée : `python -s -c "import X"` si.
+
+---
+
+## 7. ⭐⭐ 11/10 — DOSSIER CLOS : **LE MAIL EST ARRIVÉ**
+
+> **Frédéric, 11/10 au matin : *« c'est bizarre, j'ai pas eu de mail pour me dire que tout est
+> revenu à la normale, donc le monitoring doit avoir encore des erreurs »*.**
+> Il avait raison de douter — et la cause n'était pas une panne.
+
+### Pourquoi elle se taisait
+
+La sonde voyait **3 critical** et n'envoyait rien, parce que la règle
+(`check_gti_health.py:2843`) n'envoie que sur **bascule** vers critical, et un « retour à la
+normale » exige **ZÉRO** critical :
+
+```python
+newly_critical = [r for r in criticals if previous_status.get(r.status_key) != "critical"]
+if newly_critical:                      dispatch(newly_critical, "critical")
+elif had_critical and not criticals:    dispatch([], "recovery")
+```
+
+➡ **Les 3 l'étant depuis des jours, elle était coincée** : rien de neuf à annoncer, et pas le
+droit d'annoncer le retour. ⚠ **C'est un défaut de fond : un seul critical permanent rend la
+surveillance muette sur tout le reste du tableau.**
+
+### Les 3 critical, 2 causes — toutes deux déjà connues du projet
+
+```
+data.travaux_en_erreur    24 travaux   12 TypeError DEJA CORRIGES le 06/10 (3607d29)
+                                      + 6 du contact fantome (reporte le 09/10)
+                                      + 3 « database is locked » (note le 06/10)
+                                      + 1 timeout 90 s · 1 document · 1 unlink non prouve
+data.contact_conflit       1 ligne  ┐  LA MEME : 10076643 MARTIN Mickael, cible
+data.contact_push_bloque   1 ligne  ┘  Hektor 145561 qui N'EXISTE PLUS
+```
+
+**Deux patchs, appliqués par Frédéric depuis son téléphone** *(mes écritures Supabase restent
+refusées par le garde-fou de session — « Production Deploy » ; je ne l'ai pas contourné)* :
+
+```
+07:42:38  patch_purge_erreurs_infra_2026-10-11.sql                  24 -> 0
+~07:5x    patch_saisie_en_attente_contact_fantome_2026-10-11.sql     1 -> 0
+```
+
+⭐ **Un garde-fou neuf dans chacun** : le premier refuse si une saisie en attente
+**repartirait** ; le second refuse si la saisie **n'est pas déjà appliquée chez nous** — et
+c'est lui qui a garanti C.1'. *(Mesuré : la civilité « M. » était bien déjà dans
+`app_contact_current`. Et il a au passage corrigé ma lecture du 09/10 : les 7 champs n'étaient
+pas identiques, il y en avait **un** de différent.)*
+
+### ✅ LA PREUVE, sur le terrain, enfin
+
+Sonde de **09:48:55 → 09:52:18, code 0** :
+
+```
+71 controles : 65 ok · 6 warning · 0 CRITICAL
+une seule ligne [alert] : « whatsapp ignore: WHATSAPP_ALERT_WEBHOOK absent »
+   -> AUCUNE ligne « email echoue »   (le 10/10 : « Connection unexpectedly closed »)
+interpreteur : C:\Hektor\Projet\.venv\Scripts\python.exe
+```
+
+**Et Frédéric a reçu le mail.** ➡ La chaîne entière est prouvée **par une vraie bascule**, et
+plus par un essai manuel : le lanceur prend le venv → `requests` et `google.auth` sont là → la
+clé de service Workspace signe → le mail part → **il arrive**.
+
+**Après au moins un mois de silence** *(19 tentatives, 0 succès sur 360 sondes)*.
+
+### ⬜ Ce qui reste, et c'est le même point qu'au §5
+
+```
+WHATSAPP_ALERT_WEBHOOK   TOUJOURS absent   -> IL N'Y A QU'UN SEUL CANAL
+```
+
+⚠ **C'est littéralement la ligne que la sonde imprime à chaque envoi.** Et c'est la cause du
+mois de silence : un seul canal, sa panne = silence total. **Le défaut de fond n'est pas
+réparé** — on a réparé le canal, pas le fait qu'il soit unique.

@@ -250,11 +250,22 @@ RESULTAT  les 3 alarmes a ZERO · saisie intacte : « M. Mickael MARTIN »
 **repartirait** *(la barrière du 5b relance tant que `conflict = false`)* ; le second refuse si
 la saisie **n'est pas déjà appliquée chez nous** — c'est ce qui protège C.1'.
 
-⏰ **LA PREUVE ATTENDUE** : à la sonde suivante *(toutes les 2 h, vers :48)*, **le mail « retour
-à la normale » doit partir**. Ce sera la **première preuve sur le terrain** du correctif du
-10/10 *(le lanceur prend le venv)* — jusqu'ici je n'avais qu'un email d'essai manuel.
-⚠ **S'il n'arrive pas, c'est que l'envoi est encore cassé** : lire le journal de cette sonde
-dans `monitoring/logs/` *(UTF-16)* et y chercher les lignes `[alert]`.
+✅⭐ **LA PREUVE EST TOMBÉE, ET FRÉDÉRIC A REÇU LE MAIL** — sonde de **09:48:55 → 09:52:18, code 0** :
+
+```
+71 controles : 65 ok · 6 warning · 0 CRITICAL
+une seule ligne [alert] : « whatsapp ignore: WHATSAPP_ALERT_WEBHOOK absent »
+   -> AUCUNE ligne « email echoue »   (le 10/10 : « Connection unexpectedly closed »)
+interpreteur : C:\Hektor\Projet\.venv\Scripts\python.exe
+```
+
+➡ La chaîne entière est prouvée **par une vraie bascule**, et plus par un essai manuel :
+le lanceur prend le venv → `requests` et `google.auth` sont là → la clé de service
+Workspace signe → le mail part → **il arrive**. **Après au moins un mois de silence.**
+
+⚠ **ET LE SEUL CANAL RESTE LE SEUL CANAL** : `WHATSAPP_ALERT_WEBHOOK` est toujours absent —
+c'est littéralement la ligne que la sonde imprime à chaque envoi, et c'est la cause du mois
+de silence. **On a réparé le canal, pas le fait qu'il soit unique.**
 
 ⚠ **Et la cause de fond reste** : `database is locked` avait **déjà** été purgé le 01/10
 *(2 cas)* et est revenu *(3 cas)* — le `busy_timeout` manquant est noté depuis le 06/10. Et le
