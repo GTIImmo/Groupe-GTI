@@ -682,6 +682,31 @@ couvre un week-end et une absence courte.
 `e2c015e16d1339fee080b6b2cc7bcb2b` (vue) et `8031dd042d33e3785a27da0c4e106498` (balayage), toutes
 deux contrôlées par le script lui-même.
 
+### La répétition — *jouée par Frédéric le 11/10, EXACTE sur les 18 mesures*
+
+```
+vue_empreinte_avant=e2c015e16d1339fee080b6b2cc7bcb2b
+balayage_empreinte_avant=8031dd042d33e3785a27da0c4e106498
+vue_lignes_avant=0   colonnes_avant=7
+acl_avant={postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}   <- ni anon ni authenticated
+vue_empreinte_apres=8ae7e3abdf139acf519027762539ce58        <- NOUVELLE REFERENCE
+balayage_empreinte_apres=6a9c2efeac87f68a25c5462451083828   <- NOUVELLE REFERENCE
+vue_lignes_apres=0  branche3_apres=0  colonnes_apres=7  acl_apres=IDENTIQUE
+erreurs_a_7_jours=4   linked_a_24h=4   visible_a_15min=4
+   ^ B n'a change QUE la branche voulue : les purges « linked » et le delai des
+     15 minutes n'ont PAS bouge
+branche3_sans_fenetre=0        <- normal : aucune recherche n'a jamais echoue
+plomberie_si_erreur=4          <- LA PREUVE : la branche trouve, extrait et affiche
+exemple=contact 605075 -> recherche 120000 a 250000 EUR
+vue_empreinte_retour=e2c015e16d1339fee080b6b2cc7bcb2b        <- identique a « avant »
+balayage_empreinte_retour=8031dd042d33e3785a27da0c4e106498   <- identique a « avant »
+acl_retour=IDENTIQUE
+```
+
+Erreur finale `P0001 ESSAI ANNULE` : **rien n'a été écrit**. Le retour arrière rend **les deux**
+objets au caractère près. Les **deux empreintes d'après** ont été inscrites dans le patch comme
+**contrôles de sortie** : un patch qui ne les donnerait pas refuse de s'enregistrer.
+
 ## ③ CE QU'IL RESTE
 
 1. Frédéric colle **la répétition** → il me recopie le message `ESSAI ANNULE -- 4d`, je compare

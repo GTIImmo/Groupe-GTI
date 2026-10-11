@@ -268,6 +268,25 @@ BEGIN
   IF (length(v_src) - length(replace(v_src, '''15 minutes''', ''))) / length('''15 minutes''') <> 4 THEN
     RAISE EXCEPTION 'STOP : les 4 passages a « erreur visible » apres 15 min ont bouge';
   END IF;
+
+  -- ── LES DEUX EMPREINTES RELEVEES PAR LA REPETITION DU 11/10 ──────────────
+  -- Le patch applique doit donner EXACTEMENT les objets repetes, pas des
+  -- variantes. (Comparaison sans les retours chariot : un collage depuis
+  -- Windows met le corps en CRLF et l'empreinte brute ne correspond jamais.)
+  DECLARE v_vue2 text; v_fn2 text;
+  BEGIN
+    SELECT md5(replace(pg_get_viewdef('public.app_en_attente_humain'::regclass, true), chr(13), ''))
+      INTO v_vue2;
+    IF v_vue2 <> '8ae7e3abdf139acf519027762539ce58' THEN
+      RAISE EXCEPTION 'STOP : la vue obtenue n''est pas celle de la repetition (empreinte %, attendue 8ae7e3abdf139acf519027762539ce58)', v_vue2;
+    END IF;
+    SELECT md5(replace(pg_get_functiondef(p.oid), chr(13), '')) INTO v_fn2
+      FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+     WHERE ns.nspname = 'public' AND p.proname = 'app_sweep_stale_provisionals';
+    IF v_fn2 <> '6a9c2efeac87f68a25c5462451083828' THEN
+      RAISE EXCEPTION 'STOP : le balayage obtenu n''est pas celui de la repetition (empreinte %, attendue 6a9c2efeac87f68a25c5462451083828)', v_fn2;
+    END IF;
+  END;
 END $$;
 
 COMMIT;
