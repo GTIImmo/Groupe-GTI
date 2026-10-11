@@ -16,7 +16,7 @@
 | **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | 🧪 **audit fait (CONFIRMÉ)** · **A1 codée le 11/10**, épreuve **21/21** : la sentinelle qui existait déjà sait enfin juger · aucune écriture, aucun déploiement |
 | **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ✅ **FINI le 11/10 (A et B)** : patch appliqué et contrôlé — empreintes `8ae7e3ab…` (vue) et `6a9c2efe…` (balayage) conformes à la répétition, 7 colonnes, 0 ligne, droits intacts, **4×7 jours / 4×24 h / 4×15 min**, cron 9 actif |
 | **4e** | les **photos de la création** attendent dans la mémoire du navigateur | 🧪 **audit fait — BEAUCOUP plus petit qu'annoncé** *(fermer la modale ne perd rien)* · **« informer » codé le 11/10** : compte dans la vignette + avertissement avant fermeture/rechargement + confirmation modale · build vert, app démarrée sans erreur · ⏳ **attend un déploiement** |
-| **4f** | l'alarme **« travaux en erreur » figée au rouge à 15** ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction absents de `JOB_TYPES_A_NOTIFIER` | ⬜ |
+| **4f** | l'alarme « travaux en erreur » figée au rouge ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction non notifiés | ✅ **CLOS le 11/10 SANS CORRECTIF** *(décision de Frédéric)* — l'alarme n'était **pas cassée** : seuil 0 **voulu**, et l'humain a tranché **deux fois** en écrivant pourquoi (01/10, 11/10) · **0 geste de transaction n'a jamais échoué** · **rien n'est perdu**, seulement du bruit |
 | **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** (5 tentatives ou abandon humain) ne rend pas l'état — 2 fonctions SQL | ⬜ |
 | **4h** | *(reste de ⑤ : 5h B/C)* **marqueur à l'écran** et **bouton « réessayer »** pour un mandant créé en échec | ⬜ |
 | **4i** | `--missing-only`, passé **chaque soir par le run**, est **sans appelant depuis le 21/07** : l'option ne fait rien, et personne ne le dit *(journal des décisions, 09/10)* | ⬜ |
@@ -933,3 +933,117 @@ navigateur). Aucune erreur nouvelle.
 4. ⏳ **Le WebP** : notre app l'accepte, l'`accept` de Hektor ne le liste pas, **jamais essayé**.
 5. ⏳ **Un seul worker « actions »** : deux créations simultanées se mettent en file. Noté, c'est
    un sujet de capacité, pas de 4e.
+
+---
+
+# POINT 4f — L'ALARME « TRAVAUX EN ERREUR » FIGÉE AU ROUGE
+
+## ① AUDIT — *11/10/2026, lecture seule.* Verdict : **RIEN N'EST VRAIMENT NÉCESSAIRE**
+
+*Décision de Frédéric le 11/10 : on ferme 4f en écrivant ce qu'on a mesuré, et on passe à 4g.*
+
+### L'histoire complète des erreurs — 592 depuis le 14/05
+
+```
+466 sur 592  (79 %)  INFRASTRUCTURE, jamais un geste de negociateur
+     dont 196  « Hektor 403 »   14/05 -> 20/08  = le bannissement d'IP (TERMINE)
+     dont  47  push_single_annonce_to_supabase.py  02/06 -> 09/10  ENCORE ACTIF
+126 sur 592  (21 %)  des gestes de negociateur
+     update_hektor_annonce_fields 45 · create_hektor_draft_annonce 19
+     update_hektor_contact_search 11 · update_hektor_contact 11 · le reste < 7
+```
+
+⭐ **ZÉRO geste de transaction n'a JAMAIS échoué** — ni offre, ni compromis, ni vente, en cinq mois.
+
+### 1. « L'alarme est bloquée au rouge » : c'est **voulu**, et ce n'est pas un défaut
+
+Le seuil 0 est une décision écrite, avec son histoire *(monitoring/check_gti_health.py:182-199)* :
+
+> *« Posée le jour où on a trouvé 37 travaux en erreur dormant depuis le 27/08 — triés un par un,
+> c'étaient TOUS des essais, pas un seul geste client perdu. Mais **personne ne le savait** :
+> 37 erreurs mortes garantissent que la 38ᵉ, la vraie, passe inaperçue. »*
+>
+> *« SEUIL 0, PAS "PEU". Une erreur qui reste est une erreur qu'on a décidé de ne pas traiter.
+> **Soit on rejoue, soit on purge en écrivant pourquoi.** »*
+
+**Et l'action a été faite deux fois** : purges documentées le **01/10** et le **11/10 à 07:42**, chaque
+erreur lue une par une. Les erreurs ne sont pas perdues : `app_console_job_error_archive` garde
+**type, motif, combien, période**. **Aujourd'hui : 0 travail en erreur.**
+
+⭐ **Et une règle que je ne connaissais pas**, trouvée dans le patch du 11/10 :
+> *« job en erreur sur cette annonce → **NE JAMAIS REJOUER** (les 403 répétés ont fait **bannir
+> l'IP**) »* — le refus de rejouer a une raison **chèrement payée**.
+
+### 2. Les deux trous réels, et pourquoi aucun n'est urgent
+
+**Trou n° 1 — les gestes de transaction n'avertissent personne.** Mesuré : la liste des travaux qui
+envoient un message au négociateur compte **25 types**, et les **cinq** gestes de transaction en
+sont **absents** (`change_hektor_offre_status`, `cancel_hektor_compromis`,
+`delete_hektor_compromis`, `delete_hektor_vente`, `submit_hektor_transaction_status`).
+➡ **Mais 0 occurrence en cinq mois.** C'est une assurance, pas un trou qui saigne.
+
+**Trou n° 2 — la sentinelle est aveugle à la moitié des familles.** Les deux constantes, relues en
+base : on rejoue **5 fois au plus**, et **seulement pendant 24 h** ; or `geste_abandonne` exige
+**5 tentatives**. Donc tout ce qui n'est **pas** rejouable reste à **1 tentative pour toujours** et
+**ne peut jamais** y entrer *(mesuré : `tentatives max = 1` sur toutes les erreurs jamais
+enregistrées)*.
+
+| famille | rejouée ? | vue par `geste_abandonne` ? | négociateur averti ? |
+|---|---|---|---|
+| gestes d'état **annonce** | ✅ | ✅ | ✅ |
+| gestes d'état **transaction** | ✅ | ✅ | ❌ *(trou n° 1, 0 cas)* |
+| **mandant** (lier, délier, créer, modifier) | ❌ | ❌ **jamais** | ✅ |
+| **créations, dépôts, recherches** | ❌ | ❌ **jamais** | ✅ |
+
+➡ **Mais ces familles sont déjà couvertes** par `travaux_en_erreur` (seuil 0), qui a bien sonné et
+a bien été traité. Et le négociateur, lui, **est prévenu** pour toutes.
+
+### 3. ⚠ DEUX CORRECTIONS DE MA PART, à garder en mémoire
+
+**(a) J'ai présenté le trou n° 1 comme une urgence.** C'était faux : **0 geste de transaction n'a
+jamais échoué**. Je l'avais mis en tête de liste sans avoir compté.
+
+**(b) J'ai affirmé que deux scripts n'avaient « aucun `busy_timeout` ».** **FAUX.** J'avais cherché
+**le mot** dans les fichiers, alors que le réglage s'y écrit autrement :
+```python
+sqlite3.connect(PHASE2_DB, timeout=30)   # <- c'est EXACTEMENT le busy_timeout, en secondes
+```
+**Les trois connexions attendent déjà 30 secondes.** *Chercher un mot n'est pas mesurer un
+comportement* — la faute que le projet me reproche depuis le début.
+
+### 4. Ce que `database is locked` veut vraiment dire ici
+
+La base est en **mode WAL** *(relevé : `journal_mode = wal`, 6,1 Go)*. En WAL, **un lecteur ne
+bloque jamais un écrivain** : le message ne peut donc venir que de **deux écrivains** qui se
+croisent, le second ayant attendu ses 30 s en vain.
+
+```
+01/10 a 13:45   refresh_console_data
+05/10 a 06:44   refresh_console_data          <- PENDANT le run (05:00 -> 07:34)
+08/10 a 06:32   refresh_console_contact_data  <- PENDANT le run
+```
+
+**Deux fois sur trois, c'est le run de nuit**, qui tient le verrou d'écriture plusieurs minutes
+*(la mémoire du projet note 8 min 30 une fois)*. Ce n'est donc **pas un réglage manquant, c'est un
+réglage trop court pour la réalité du run**.
+
+## ② LA DÉCISION — *4f est CLOS sans correctif*
+
+```
+3 erreurs « locked » en 11 jours
+toutes les 3 sur des travaux d'INFRASTRUCTURE (rafraichir une fiche), jamais un geste client
+et ces rafraichissements sont REFAITS : la nuit suivante, le run remet tout a jour
+-> RIEN n'est perdu. Le seul degat, c'est du BRUIT dans l'alarme.
+```
+
+**L'alarme n'était pas cassée** : elle est faite pour rester rouge jusqu'à ce qu'un humain tranche,
+et l'humain a tranché deux fois en écrivant pourquoi.
+
+### ⏳ Ce qui reste noté, non fait, et pourquoi
+
+| | Ce que c'est | Pourquoi on ne le fait pas aujourd'hui |
+|---|---|---|
+| **C** | passer `timeout=30` à `timeout=300` dans `push_single_annonce_to_supabase.py` (2 connexions) et `refresh_contact_inproc.py` (1) | **du rangement, pas une réparation** : ça enlève la dernière cause active de bruit, mais **rien n'est perdu**. ⚠ Et pendant qu'il attend, le worker est **immobilisé** jusqu'à 5 min |
+| **A** | les 5 gestes de transaction dans la liste des avertissements | **0 occurrence en 5 mois** · 5 lignes à glisser **le jour où on touchera le worker pour autre chose** — ne justifie pas un redémarrage des 4 services |
+| **B** | une branche « familles non rejouables » dans la vue | ⛔ **retirée** : le signal existe déjà, et elle **frôle une décision écrite** qui refuse de séparer les lectures des gestes |
+| — | `sync_console_documents` : **402 erreurs**, le plus gros producteur du système *(dont 196 du bannissement d'IP, terminé le 20/08)* | **signalé, pas traité** : c'est déjà lui qui a fait sauter 3 étapes du run le 09/10. Le point fragile à surveiller |
