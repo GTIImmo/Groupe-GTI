@@ -13,7 +13,7 @@
 |---|---|---|
 | **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | ✅ **FINI le 09/10** — patch appliqué et contrôlé (empreinte `e2c015e1…`, 0 ligne, droits intacts, moniteur vert) · épreuve hors ligne **19/19** · **les 4 workers redémarrés à 17:30:49** (battement `startup` en base) |
 | **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | 🧪 **audit fait (PARTIEL)** · **option A codée le 09/10**, 11/11 hors ligne : les **5 messages** ne promettent plus · attend le redémarrage du worker · ⏳ **options B et C en question** (brancher le repreneur, prévenir) |
-| **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | ⬜ |
+| **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | 🧪 **audit fait (CONFIRMÉ)** · **A1 codée le 11/10**, épreuve **21/21** : la sentinelle qui existait déjà sait enfin juger · aucune écriture, aucun déploiement |
 | **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ⬜ |
 | **4e** | les **photos de la création** attendent dans la mémoire du navigateur → onglet fermé = perdues | ⬜ |
 | **4f** | l'alarme **« travaux en erreur » figée au rouge à 15** ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction absents de `JOB_TYPES_A_NOTIFIER` | ⬜ |
@@ -406,3 +406,171 @@ remettre le mot « repris » dans les deux messages de dépôt.
    ⭐ Le message du worker **dit désormais la vérité** (« A REPRENDRE »), et le contrôle **(2c)** de
    l'épreuve **tombera en échec** dès qu'on branchera le repreneur : le report est **gardé par le
    code**, il ne peut pas se perdre.
+
+---
+
+# POINT 4c — UNE CRÉATION EN ÉCHEC NE SE VOYAIT NULLE PART
+
+## ① AUDIT — *11/10/2026, lecture seule.* Verdict : **CONFIRMÉ**
+
+### Le mécanisme
+
+La création d'une annonce passe par `app_create_annonce_job_optimistic`, qui a **deux branches**,
+pilotées par l'interrupteur `c9_annonce_nait_dans_app` :
+
+```
+ETEINT  -> une ligne provisoire dans app_annonce_provisional + le travail.
+           L'ecran lit cette ligne et sait afficher « En creation... »
+           puis « Erreur de creation ».
+ALLUME  -> l'annonce nait DIRECTEMENT dans app_dossier_current, avec un numero
+           a nous, et AUCUNE ligne provisoire.
+```
+
+**L'interrupteur est ALLUMÉ depuis le 25/09 à 06:15** (relevé en base). Donc quatre conséquences,
+toutes vérifiées :
+
+1. `app_annonce_provisional` **n'est plus jamais remplie** — **0 ligne** *(et déjà 0 le 31/08, un
+   commentaire du front le disait)*. Le marqueur du front est correct… et **ne peut plus jamais
+   s'allumer**.
+2. `markProvisionalCreationError` du worker **ne fait plus rien** : il modifie cette table par
+   jeton → **0 ligne touchée**, et comme l'appel est en « best effort », **l'échec de l'échec est
+   avalé en silence**.
+3. **Le filet des 15 minutes est hors-jeu** : `app_sweep_stale_provisionals` transforme une
+   provisoire qui traîne en **erreur visible** au bout de 15 min — il n'a plus rien à surveiller.
+4. Une création en échec laisse **une ligne de dossier d'apparence normale**, et **rien ne la
+   nettoie** : le balayage ne fait que *lire* `app_dossier_current`.
+
+### Les mesures
+
+```
+app_annonce_provisional                          0 ligne
+la sequence des numeros de l'app : tiree UNE fois -> dossier 10 000 000,
+   « ESSAI C9 bis - ne pas diffuser » (Tence), qui a REUSSI (Hektor 63147)
+dossiers sans numero Hektor                      0
+dossiers titres « Annonce en creation »          0
+derniere creation par ce chemin                  24/09
+```
+
+**Structure cassée, zéro occurrence** — troisième fois dans ce chantier : le geste de création ne
+sert quasiment pas encore.
+
+### Deux points de l'audit du 08/10 à corriger
+
+- « **la fiche saisie ne vit que dans la charge du travail** » → **plus vrai depuis le 25/09** :
+  elle vit dans une vraie ligne durable. *(La purge du 21/08 et ses 19 créations datent de
+  l'ancienne branche ; non re-mesurées.)*
+- « **sans marque d'erreur** » → vrai **pour la ligne dans la liste**, mais **le négociateur est
+  averti** : quand le travail tombe en erreur, un message part dans sa cloche *(mécanisme du
+  20/08)*. Ce n'est pas un silence total — c'est **l'écran** qui ne dit rien, et **personne ne
+  compte** les orphelines.
+
+### ⭐ L'audit approfondi, demandé par Frédéric — cinq trouvailles qui ont changé le correctif
+
+**1. La question de Frédéric a invalidé ma première proposition.** Il a demandé : *« à la
+création, il faut forcément attendre au moins une minute le numéro Hektor ; est-ce que ça risque
+de faire sonner le garde-fou ? »* Mesuré sur les 79 créations réelles :
+
+```
+le travail lui-meme     28,2 s mini · 52,7 s median · 63,8 s au pire
+l'attente dans la file   3,4 s median · 2 646 s AU PIRE  =  44 MINUTES
+bout en bout            59,7 s median · 2 669 s AU PIRE  =  44 min 29 s
+```
+
+→ **tout délai (5, 15 ou 30 min) aurait sonné faussement** au moins une fois dans l'histoire
+réelle. J'avais écrit « ou plus vieux que 30 min » : **retiré**. On tranche sur **l'état du
+travail**, jamais sur l'horloge.
+
+**2. La jointure que je croyais avoir n'existe pas.** La colonne `app_console_job.app_dossier_id`
+est **vide sur les 79 créations** (0/79). Le numéro n'est que dans la **charge**, où il est **par
+construction** dans la branche allumée. Et `source_hash` (`c9e3:<jeton>`) est inutilisable : **la
+synchro le réécrit** dès que tout va bien.
+
+**3. La plage tient** : le plus grand numéro venu de Hektor est **7 589 248**, un seul dossier est
+au-dessus de 10 M. Marge 2,4 M — *à surveiller, elle se mange avec le temps.*
+
+**4. La ligne est bien VISIBLE à l'écran** : la vue de la liste **n'exige pas** de numéro Hektor
+(13 475 lignes = toute la table). La saisie n'est donc pas perdue de vue ; il ne manque que la
+marque. **Moins grave que l'audit ne le laissait croire.**
+
+**5. ⭐ L'ŒIL EXISTAIT DÉJÀ, ET IL REFUSAIT DE JUGER — EXPRÈS.**
+`phase2/checks/annonce_un_numero.py` (C.9-b, 24/09) **comptait déjà exactement cette population**,
+sous `en_attente`. Il est **déjà lu par le moniteur**, qui importe **la formule elle-même**
+(`a1n.mesurer`), et a **déjà** sa clé d'alerte à seuil 0. Son auteur l'avait rangé dans « ce qui
+n'est pas grave » **parce que rien ne permettait alors de distinguer une attente normale d'un
+échec**. C'est exactement ce qui manquait — et ce que la question de Frédéric a fait trouver.
+
+**Et le miroir local porte `app_console_job`** (91 609 lignes, toutes les colonnes utiles) → la
+coupure est calculable en local, sans toucher à la production.
+
+## ② LE CORRECTIF — *« A1 » choisie par Frédéric le 11/10*
+
+> **On n'ajoute pas une sentinelle. On apprend à juger à celle qui existe.**
+
+`en_attente` est coupé en deux, **dans la formule unique** :
+
+```
+en_attente        >= 10 M, inconnue du serveur, ET AUCUN travail de creation en
+                  erreur  ->  NORMAL, ne sonne jamais, meme apres 44 minutes
+creation_echouee  >= 10 M, inconnue du serveur, ET le travail de creation est en
+                  ERREUR  ->  GRAVE (ajoute a GRAVES, seuil 0)
+```
+
+**Zéro fausse alerte par construction** : aucun délai nulle part, donc aucune fenêtre où se
+tromper. **Et le moniteur n'a pas une ligne à changer** : il importe la formule et passe au rouge
+dès que le total des graves dépasse 0.
+
+**Le prix de cette sûreté** : l'alerte peut arriver ~30-40 min après le fait *(le temps que le
+travail soit déclaré en erreur : levée immédiate, ou minuteur de 10 min du worker, ou garde-fou
+des 30 min de `app_console_claim_next_job`)*, puis à la prochaine descente. **Le négociateur, lui,
+est averti sur le moment.**
+
+**Si la doublure des travaux manque**, on **ne rend pas un zéro** — un zéro dirait « rien n'a
+échoué » : `creation_echouee` vaut `None`, `creation_echouee_mesurable` vaut `false`, la ligne de
+commande dit « NON MESURABLE » et rend le code **2**.
+
+### Ce que ça pourrait casser ailleurs — vérifié
+
+| Ce que ça touche | Vérifié | Preuve |
+|---|---|---|
+| **le moniteur** | **pas une ligne** : il importe `a1n.mesurer` et lit `graves`, `supabase`, `en_attente` — les trois sont là. Le détail part en JSON avec les 2 clés neuves | simulation du 11/10 : verdict « ok », JSON sérialisable |
+| les **2 autres fichiers** qui nomment la sentinelle | **de simples commentaires** : ni `apres_run_2026-10-01.py` ni `push_single_annonce_to_supabase.py` n'importent la formule | grep |
+| **le run de nuit** | **aucun `.ps1` n'appelle cette sentinelle** → impossible de faire échouer le run | grep |
+| **le compte `en_attente`** | il se rétrécit *(il exclut les échecs)* : le message du moniteur le nomme, son sens est précisé dans la docstring. **La somme des deux est celle d'avant** | épreuve (8c) |
+| **son test** | **étendu, pas réécrit** : les 11 contrôles d'avant passent toujours | 21/21 |
+| **la base, le front, Hektor, les pages publiques** | **rien** : fichier de lecture seule, aucune écriture nulle part | — |
+
+### L'épreuve — **21 contrôles, 21 verts** *(11 d'avant + 8 neufs + les 2 sur la vraie base)*
+
+`python phase2/checks/test_c9b_annonce_un_numero.py`, sur le patron du 24/09 (éprouver **dans les
+deux sens**). Les neufs :
+
+```
+(8a) travail pending / running / done  -> ON SE TAIT  (le CAS PIEGE de Frederic)
+(8b) travail error                     -> COMPTEE, et GRAVE
+(8c) la somme est conservee : 1 echouee + 2 en attente = 3 nees dans l'app
+(8d) un autre genre de travail, ou un autre dossier -> ne fait pas crier
+(8e) en TEXTE aussi, la creation echouee est comptee
+(8f) sans app_console_job -> « non mesurable », PAS un zero
+```
+
+Et sur la **vraie base**, en lecture seule : 0 partout, **0,18 s**.
+
+### Retour arrière
+`git revert` du commit. **Aucune écriture nulle part**, aucun patch SQL, aucun déploiement, aucun
+redémarrage.
+
+## ③ CE QU'IL RESTE — *au 11/10*
+
+1. ⏳ **A2 n'est pas faite** *(et n'a pas été demandée)* : une 3ᵉ branche dans la vue de 4a
+   donnerait la même alerte **en direct** (minutes au lieu de ~24 h). À reprendre si le délai gêne
+   un jour.
+2. ⏳ **B n'est pas faite** : remettre la marque « Erreur de création » **sur la ligne à l'écran** —
+   demande une modification du front, donc **un déploiement**. La vue porte déjà une colonne
+   `alerte_principale` qui pourrait servir de véhicule.
+3. ⏳ **Un 3ᵉ compteur en question** : un dossier né dans l'app **sans aucun travail de création**
+   *(travail purgé des mois plus tard)*. Il faut d'abord mesurer **quelle date le miroir porte** sur
+   ces lignes pour ne sonner qu'au-delà de 24 h.
+4. ⏳ **Le périmètre** : le même schéma à deux branches existe pour le **contact**, la **recherche**
+   et le **lien**. À mesurer — c'est la matière de **4d**, pas élargie sans Frédéric.
+5. `markProvisionalCreationError` **n'est pas touché** : il reste juste si l'interrupteur repasse à
+   l'arrêt. ⚠ **À annoter** pour que personne ne le croie actif.

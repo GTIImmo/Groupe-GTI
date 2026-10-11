@@ -34,7 +34,7 @@ DDL = _reel.execute("SELECT sql FROM sqlite_master WHERE name='app_dossier'").fe
 _reel.close()
 
 
-def base(serveur, supabase, adoptions=None) -> sqlite3.Connection:
+def base(serveur, supabase, adoptions=None, travaux=()) -> sqlite3.Connection:
     c = sqlite3.connect(":memory:")
     c.execute(DDL)
     c.execute("CREATE TABLE app_dossier_current (app_dossier_id, hektor_annonce_id)")
@@ -44,15 +44,30 @@ def base(serveur, supabase, adoptions=None) -> sqlite3.Connection:
         c.execute("CREATE TABLE app_dossier_adoption (app_dossier_id INTEGER PRIMARY KEY, "
                   "hektor_annonce_id INTEGER NOT NULL, adopte_le TEXT)")
         c.executemany("INSERT INTO app_dossier_adoption VALUES (?, ?, NULL)", adoptions)
+    # 4c (11/10/2026) : la doublure des travaux, qui porte LA COUPURE entre une
+    # attente normale et une creation echouee. `travaux=None` simule son absence
+    # -- la mesure doit alors se declarer AVEUGLE, jamais rendre un zero.
+    # Le numero du dossier vit dans la CHARGE du travail (la colonne, elle, est
+    # vide sur les 79 creations reelles -- mesure du 11/10).
+    if travaux is not None:
+        c.execute("CREATE TABLE app_console_job (id, job_type, app_dossier_id, "
+                  "payload_json, status)")
+        c.executemany(
+            "INSERT INTO app_console_job VALUES (?, ?, NULL, ?, ?)",
+            [(f"job-{i}", genre, '{"app_dossier_id": %d}' % dossier, etat)
+             for i, (genre, dossier, etat) in enumerate(travaux)])
     return c
 
 
-def mesure(serveur, supabase, adoptions=None) -> dict:
-    c = base(serveur, supabase, adoptions)
+def mesure(serveur, supabase, adoptions=None, travaux=()) -> dict:
+    c = base(serveur, supabase, adoptions, travaux)
     try:
         return a1n.mesurer(c)
     finally:
         c.close()
+
+
+CREATION = "create_hektor_draft_annonce"
 
 
 SAIN_S = [(1, 100), (2, 101), (3, 102)]           # 3 : archivee, absente de Supabase -- normal
@@ -100,6 +115,46 @@ c = sqlite3.connect(":memory:")
 c.execute(DDL)
 controle("(6) une table manquante rend « non mesurable », pas zero", a1n.mesurer(c) is None)
 c.close()
+
+# ── (8) 4c : SEPARER L'ATTENTE NORMALE DE LA CREATION ECHOUEE ───────────────
+# Eprouve dans les deux sens, et surtout SUR LE CAS PIEGE : l'attente normale va
+# jusqu'a 44 minutes (file comprise, mesure du 11/10), donc le travail qui dort
+# en `pending` ou tourne en `running` ne doit RIEN declencher.
+APP = SAIN_SB + [(10000002, None)]
+
+for etat in ("pending", "running", "done"):
+    m = mesure(SAIN_S, APP, travaux=[(CREATION, 10000002, etat)])
+    controle(f"(8a) travail « {etat} » -> on se TAIT (attente normale)",
+             m["graves"] == 0 and m["en_attente"] == 1 and m["creation_echouee"] == 0, str(m))
+
+m = mesure(SAIN_S, APP, travaux=[(CREATION, 10000002, "error")])
+controle("(8b) travail « error » -> la creation echouee est COMPTEE, et c'est GRAVE",
+         m["creation_echouee"] == 1 and m["graves"] >= 1 and m["en_attente"] == 0, str(m))
+
+# La somme des deux comptes doit valoir la population d'avant : un cas ne doit
+# pas se PERDRE entre les deux colonnes en passant de l'une a l'autre.
+m = mesure(SAIN_S, SAIN_SB + [(10000002, None), (10000003, None), (10000004, None)],
+           travaux=[(CREATION, 10000002, "error"), (CREATION, 10000003, "pending")])
+controle("(8c) la somme est conservee : 1 echouee + 2 en attente = 3 nees dans l'app",
+         m["creation_echouee"] == 1 and m["en_attente"] == 2, str(m))
+
+# Un travail en erreur d'un AUTRE genre, ou qui vise un AUTRE dossier, ne compte pas.
+m = mesure(SAIN_S, APP, travaux=[("update_hektor_annonce_fields", 10000002, "error"),
+                                 (CREATION, 10000099, "error")])
+controle("(8d) un autre genre de travail, ou un autre dossier, ne fait pas crier",
+         m["creation_echouee"] == 0 and m["en_attente"] == 1 and m["graves"] == 0, str(m))
+
+# En TEXTE aussi (la copie Supabase stocke parfois les numeros en texte).
+m = mesure(SAIN_S, [("1", "100"), ("2", "101"), ("10000002", None)],
+           travaux=[(CREATION, 10000002, "error")])
+controle("(8e) en TEXTE, la creation echouee est quand meme COMPTEE",
+         m["creation_echouee"] == 1 and m["graves"] >= 1, str(m))
+
+# SANS la doublure des travaux : aveugle, et qui le DIT -- jamais un zero.
+m = mesure(SAIN_S, APP, travaux=None)
+controle("(8f) sans app_console_job : « non mesurable », PAS un zero",
+         m["creation_echouee"] is None and m["creation_echouee_mesurable"] is False
+         and m["en_attente"] == 1 and m["graves"] == 0, str(m))
 
 # ── (7) la vraie base, en lecture seule ─────────────────────────────────────
 reel = sqlite3.connect(f"file:{a1n.BASE.as_posix()}?mode=ro", uri=True)
