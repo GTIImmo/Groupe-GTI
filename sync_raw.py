@@ -970,6 +970,25 @@ def sync_generic_listing(conn, run_id: int, client: HektorClient, settings: Sett
         sleep_brief()
 
 
+# ⚠⚠ MORTE DEPUIS LE 21/07/2026 -- AUCUN APPELANT.        marquee le 11/10/2026
+#
+#   Mesure du 11/10 (chantier ④, point 4i) : `sync_generic_details` n'est appelee
+#   NULLE PART, et `args.missing_only` -- le seul drapeau qu'elle lit -- n'est lu
+#   nulle part non plus (0 occurrence dans tout le fichier). Sa jumelle
+#   `resolve_generic_detail_limit` porte la meme mention depuis la meme date.
+#
+#   ⚠ ET POURTANT LE RUN DE NUIT PASSE TOUJOURS `--missing-only` (run_full_pipeline.ps1).
+#     L'option est declaree, parsee... et ne fait RIEN. Ce n'est pas un echec
+#     silencieux, c'est un NO-OP silencieux : qui lit le run croit qu'un filtre
+#     s'applique, et perdra une heure dessus.
+#
+#   RIEN N'EST PERDU POUR AUTANT, et c'est voulu : les fiches de detail
+#   « generiques » ne passent plus par ce chemin. Le run le documente lui-meme --
+#   « la fraicheur des mandats vient entierement de MandatsByIdAnnonce, appele avec
+#   le detail de chaque annonce, ainsi que du read-through ».
+#
+#   ON MARQUE, ON NE SUPPRIME PAS (choix de Frederic, 11/10) : le projet n'ecrase
+#   pas du code existant, et ces deux fonctions documentent un chemin qui a servi.
 def sync_generic_details(
     conn,
     run_id: int,
@@ -1583,7 +1602,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--purge", action="store_true", help="Supprimer la base SQLite avant la synchronisation.")
     parser.add_argument("--max-pages", type=int, default=0, help="Limite globale de pages. 0 = toutes les pages.")
     parser.add_argument("--detail-limit", type=int, default=0, help="Limite globale de details ById. 0 = tous les IDs.")
-    parser.add_argument("--missing-only", action="store_true", help="Pour les details generiques, ignorer les IDs deja presents.")
+    # ⚠ SANS EFFET DEPUIS LE 21/07/2026 (marque le 11/10, chantier ④ point 4i).
+    #   `args.missing_only` n'est lu NULLE PART : sa seule lectrice,
+    #   `sync_generic_details`, n'a plus d'appelant. Le drapeau est garde pour ne
+    #   pas casser les lignes de commande qui le passent encore -- dont le run de
+    #   nuit -- mais il ne filtre plus rien. Voir le bloc en tete de cette fonction.
+    parser.add_argument("--missing-only", action="store_true", help="SANS EFFET depuis le 21/07/2026 : voir sync_generic_details.")
     parser.add_argument(
         "--force-annonce-detail-full",
         action="store_true",

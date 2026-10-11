@@ -388,6 +388,17 @@ Invoke-Step -Label "phase1 sync_raw update" -Arguments @(
     "--compromis-recent-limit", [string]$CompromisRecentLimit,
     "--offre-recent-limit", [string]$OffreRecentLimit,
     "--vente-date-start", $VenteDateStart,
+    # ⚠ CETTE OPTION NE FAIT RIEN DEPUIS LE 21/07/2026.   marquee le 11/10/2026
+    #   Chantier ④, point 4i : `args.missing_only` n'est lu NULLE PART dans
+    #   sync_raw.py (0 occurrence), parce que sa seule lectrice --
+    #   `sync_generic_details` -- n'a plus d'appelant. Elle est DECLAREE, PARSEE,
+    #   et sans effet. Ce n'est pas un echec silencieux : c'est un NO-OP silencieux.
+    #   ⭐ Rien n'est perdu pour autant : les fiches de detail « generiques » ne
+    #     passent plus par ce chemin (voir le bloc PERIMETRE ci-dessus : la
+    #     fraicheur des mandats vient de MandatsByIdAnnonce et du read-through).
+    #   ON LA GARDE, ON LA MARQUE (choix de Frederic, 11/10) : la retirer ne
+    #   changerait rien, mais toucher la ligne d'arguments du run pour un no-op
+    #   serait un risque gratuit. Le commentaire suffit a ne plus tromper personne.
     "--missing-only"
 ) -WorkerKey "phase1.sync_raw"
 

@@ -19,7 +19,7 @@
 | **4f** | l'alarme « travaux en erreur » figée au rouge ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction non notifiés | ✅ **CLOS le 11/10 SANS CORRECTIF** *(décision de Frédéric)* — l'alarme n'était **pas cassée** : seuil 0 **voulu**, et l'humain a tranché **deux fois** en écrivant pourquoi (01/10, 11/10) · **0 geste de transaction n'a jamais échoué** · **rien n'est perdu**, seulement du bruit |
 | **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** ne rend pas l'état | 🔎 **audité le 11/10, NOTÉ NON FAIT** *(décision de Frédéric)* — **auto-réparant** : le registre des affaires est refait chaque nuit depuis Hektor (31 040/31 058 aujourd'hui), donc ≤ 24 h · jamais déclenché par le filet (max **4** tentatives), **2 fois à la main** en 5 mois sur un bien d'essai · ⚠ **et « rendre l'état d'avant » serait DEVINER** : le bon geste est **relire chez Hektor** |
 | **4h** | *(reste de ⑤ : 5h B/C)* **marqueur à l'écran** et **bouton « réessayer »** pour un mandant créé en échec | 🔎 **audité le 11/10, NOTÉ NON FAIT** *(décision de Frédéric)* — le scénario n'est **jamais arrivé** (17 créations de mandant, **0 en erreur** ; **0 contact sans numéro Hektor** sur 62 189) et la **sentinelle de l'option A alerte le jour même** · **B** la pastille = ~10 lignes, un **confort** · ⛔ **C le bouton « réessayer » : NON**, il **doublerait le contact** chez Hektor |
-| **4i** | `--missing-only`, passé **chaque soir par le run**, est **sans appelant depuis le 21/07** : l'option ne fait rien, et personne ne le dit *(journal des décisions, 09/10)* | ⬜ |
+| **4i** | `--missing-only`, passé **chaque soir par le run**, est **sans appelant depuis le 21/07** : l'option ne fait rien, et personne ne le dit | ✅ **MARQUÉ le 11/10** *(choix de Frédéric : marquer, pas supprimer)* — **+36 lignes de commentaires, 1 ligne d'aide**, et **zéro changement de comportement** : l'option reste passée, mais `--help` dit désormais « SANS EFFET depuis le 21/07/2026 » |
 
 **Ordre retenu** : celui de l'audit (4a → 4f), puis les deux restes de ⑤ (4g, 4h), qui touchent
 les mêmes fonctions. Frédéric peut le changer.
@@ -1187,3 +1187,112 @@ contact existe déjà** *(le patron du mandant, 31/08)* : cher, risqué, pour un
 
 **⏳ NOTÉ, NON FAIT** — à reprendre avec les autres rangements de fin de chantier *(le `timeout`
 de 4f, le « relire » de 4g, les 5 gestes de transaction à notifier)*.
+
+---
+
+# POINT 4i — UNE OPTION QUI NE FAIT RIEN, PASSÉE CHAQUE NUIT
+
+## ① AUDIT — *11/10/2026, lecture seule.* Verdict : **CONFIRMÉ**
+
+Chaque nuit, le run lance `sync_raw.py` avec **`--missing-only`**. L'option est déclarée
+*(« Pour les détails génériques, ignorer les IDs déjà présents »)*, elle est **parsée**… et :
+
+```
+args.missing_only                                 -> LU NULLE PART (0 occurrence)
+sa seule lectrice, sync_generic_details           -> AUCUN APPELANT
+sa jumelle, resolve_generic_detail_limit          -> AUCUN APPELANT
+```
+
+⭐ **Et le code le disait déjà lui-même**, dans `resolve_generic_detail_limit` :
+> *« **SANS APPELANT depuis le 21/07/2026**, en même temps que `sync_generic_details`. »*
+
+### Ce que ça coûte : **rien de fonctionnel**
+
+Les fiches de détail « génériques » **ne passent plus par ce chemin**, et c'est voulu — le run le
+documente : *« la fraîcheur des mandats vient entièrement de `MandatsByIdAnnonce`, appelé avec le
+détail de chaque annonce, ainsi que du read-through »*. **Rien n'est perdu, rien n'est ralenti.**
+
+### Ce que ça coûte en vrai : **un mensonge dans la ligne de commande du run**
+
+C'est le même motif que tout le chantier, à l'envers : **ce n'est pas un échec silencieux, c'est
+un NO-OP silencieux.** Qui lit le run croit qu'un filtre s'applique. Le jour où quelqu'un
+cherchera pourquoi une fiche est re-téléchargée, il perdra une heure sur cette ligne.
+
+*(À ne pas confondre : `run_contact_details_backfill.ps1` passe aussi un `--missing-only`, mais à
+**un autre script**, où il est déclaré « compatibilité : comportement par défaut » — inoffensif.)*
+
+## ② LE CORRECTIF — *« marquer », choisi par Frédéric le 11/10*
+
+> **On retire le mensonge, pas le code.**
+
+```
+run_full_pipeline.ps1   +11 lignes, QUE DES COMMENTAIRES -- l'option RESTE passee
+sync_raw.py             +25 lignes de commentaires, et 1 ligne d'aide reecrite :
+                        « SANS EFFET depuis le 21/07/2026 : voir sync_generic_details »
+```
+
+**Zéro changement de comportement** : la seule différence visible est le texte de `--help`. On ne
+touche **pas** à la ligne d'arguments du run — la retirer ne changerait rien, mais toucher le run
+pour un no-op serait **un risque gratuit**.
+
+**Pourquoi marquer et non supprimer** *(choix de Frédéric)* : le projet n'écrase pas du code
+existant, et ces deux fonctions documentent un chemin qui a servi.
+
+### L'épreuve
+- `sync_raw.py` : **syntaxe Python valide** *(analyse du fichier entier)* ;
+- `run_full_pipeline.ps1` : **syntaxe PowerShell valide** *(analyseur officiel, 0 erreur)* ;
+- `sync_raw.py --help` : l'option **existe toujours** — donc la ligne du run reste valable — et
+  son aide dit désormais **« SANS EFFET depuis le 21/07/2026 »**.
+
+### Retour arrière
+`git revert`. **Aucune écriture, aucun patch SQL, aucun déploiement, aucun redémarrage.**
+
+### Contrôle
+Le **run du 12/10** doit se dérouler **à l'identique** : mêmes étapes, même durée. Aucune raison
+qu'il bouge — rien de ce qui s'exécute n'a changé.
+
+---
+
+# ✅ CLÔTURE DU CHANTIER ④ — *11/10/2026, les 9 points traités*
+
+## Ce qui a été fait
+
+| | | |
+|---|---|---|
+| **4a** | la suite d'une création marquée « réussie » malgré l'échec | ✅ **corrigé** — avertissement au négociateur + branche de sentinelle · patch appliqué, 4 workers redémarrés · épreuve **19/19** |
+| **4b** | **cinq** messages promettaient une reprise inexistante | ✅ **corrigé** — ils disent la vérité · épreuve **11/11** · *(B et C reportés)* |
+| **4c** | « Annonce en création » sans marque d'erreur | ✅ **corrigé** — la sentinelle qui **comptait déjà** sait enfin **juger** · épreuve **21/21** |
+| **4d** | une recherche en échec effacée au bout de 24 h | ✅ **corrigé** — on **compte** et les erreurs durent **7 jours** · patch appliqué et contrôlé |
+| **4e** | les photos de la création dans la mémoire du navigateur | ✅ **corrigé** — on **informe** sans toucher au mécanisme · **déployé** · ➕ **plusieurs photos à la fois** sur la fiche annonce |
+| **4f** | l'alarme « travaux en erreur » figée | ✅ **clos sans correctif** — elle n'était **pas cassée** |
+| **4g** | l'abandon réel ne rend pas l'état | 🔎 **noté** — **auto-réparant** en ≤ 24 h |
+| **4h** | marqueur et bouton « réessayer » | 🔎 **noté** — **jamais arrivé**, et le bouton serait **dangereux** |
+| **4i** | `--missing-only` sans appelant | ✅ **marqué** — le mensonge est retiré, pas le code |
+
+## ⭐ Les cinq leçons de ce chantier
+
+1. **Chercher l'œil qui existe avant d'en poser un neuf.** En 4c, la sentinelle `annonce_un_numero`
+   **comptait déjà** la bonne population — elle **refusait de juger**, faute de pouvoir séparer
+   l'attente normale de l'échec. En 4h, l'option A était déjà posée. En 4e, le chemin différé
+   dormait dans le worker. **Trois fois sur neuf.**
+2. **On tranche sur l'état du travail, jamais sur l'horloge** *(née d'une question de Frédéric)* :
+   l'attente normale d'une création monte à **44 minutes** — tout délai aurait sonné faux.
+3. **Ne jamais faire d'un maximum une généralité.** Ces mêmes 44 minutes étaient **un seul cas**
+   sur 79 ; la médiane est de **3,4 secondes**. Donner la médiane **et** la queue.
+4. **Chercher un mot n'est pas mesurer un comportement** (4f) : j'ai affirmé qu'un `busy_timeout`
+   manquait alors qu'il s'écrivait `timeout=30`.
+5. **Le plus souvent, le défaut n'était pas une négligence** : une décision à moitié appliquée
+   (4b), une décision **écrite et raisonnée** (4d, 4f), ou une limite technique (4e).
+
+## ⏳ Ce qui reste noté, et pourquoi
+
+| | Ce que c'est | Pourquoi pas maintenant |
+|---|---|---|
+| **4b-B / 4b-C** | brancher `reprendre_envois_hektor.js`, puis prévenir | reporté par Frédéric · le report est **gardé par le code** : le contrôle (2c) de l'épreuve tombera en échec dès qu'on branchera le repreneur |
+| **4c-A2 / 4c-B** | la même alerte **en direct** · la marque « Erreur de création » **à l'écran** | A2 : le délai de ~24 h ne gêne pas · B : demande un déploiement |
+| **4f-C** | `timeout=30 → 300` sur deux scripts | **du rangement, pas une réparation** — rien n'est perdu |
+| **4f-A** | les 5 gestes de transaction à notifier | **0 occurrence en 5 mois** — à glisser quand on touchera le worker |
+| **4g** | **relire** chez Hektor au moment où l'on tranche *(ne jamais restaurer : ce serait deviner)* | auto-réparant en ≤ 24 h |
+| **4h-B** | la pastille « en attente de Hektor » | **un confort** — 0 occurrence, sentinelle critique déjà en place |
+| **4e** | l'**envoi groupé** des photos *(1 travail pour N : ~30 s au lieu de ~7 min)* · le **WebP** jamais essayé | ⚠ la confirmation devra **compter N et non 1**, sinon un envoi partiel passerait pour réussi — le défaut 4a sur un autre objet |
+| — | `sync_console_documents` : **402 erreurs**, le plus gros producteur du système | **signalé** : c'est déjà lui qui a fait sauter 3 étapes du run le 09/10 |
