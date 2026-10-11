@@ -720,6 +720,18 @@ objets au caractère près. Les **deux empreintes d'après** ont été inscrites
 | les trois délais | **4× 7 jours**, 4× 24 h, 4× 15 min | **4 / 4 / 4** ✅ |
 | le cron du balayage | jobid 9 actif | **actif** ✅ |
 
+**Le moniteur, passé en lecture seule après le patch** *(`--no-alerts --dry-run`, 70 contrôles)* :
+```
+data.geste_abandonne   ok   « Gestes abandonnes en attente d'un humain: 0 (seuil 0) »
+```
+→ il lit toujours la vue à travers l'API avec la clé de service : le patch n'a cassé ni l'accès
+ni la lecture. ⭐ Et l'état général s'est **beaucoup amélioré** depuis le 09/10 : **0 critique**
+au lieu de 4 *(la tâche « GTI Descente », `travaux_en_erreur`, `mandat_disparu` et
+`ecart_statut_regle` ne crient plus)*. Restent **5 avertissements**, tous antérieurs et aucun de
+4d : `recherche_disparue` 6 · `ecart_statut_regle` 6 (seuil 4) · `notif_orphelines` 154 ·
+`notif_non_lues` **1 551** *(1 527 le 09/10 : +24 — c'est la famille de 4f, une alarme saturée)* ·
+`orphelins_recherche` 11.
+
 **Ce que le contrôle ne prouve pas** : la branche rend 0 ligne, et c'est normal — **aucune
 création de recherche n'a jamais échoué**. La preuve qu'elle trouve reste `plomberie_si_erreur = 4`
 de la répétition. Aucun faux échec n'a été fabriqué en production.
