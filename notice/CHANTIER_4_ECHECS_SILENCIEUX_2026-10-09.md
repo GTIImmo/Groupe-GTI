@@ -14,7 +14,7 @@
 | **4a** | la **suite** d'une création (champs, mandant) rate, mais le travail est marqué « réussi » | ✅ **FINI le 09/10** — patch appliqué et contrôlé (empreinte `e2c015e1…`, 0 ligne, droits intacts, moniteur vert) · épreuve hors ligne **19/19** · **les 4 workers redémarrés à 17:30:49** (battement `startup` en base) |
 | **4b** | **aucun nouvel essai** pour 6 familles de travaux, et le worker écrit quand même « Le travail sera repris » | 🧪 **audit fait (PARTIEL)** · **option A codée le 09/10**, 11/11 hors ligne : les **5 messages** ne promettent plus · attend le redémarrage du worker · ⏳ **options B et C en question** (brancher le repreneur, prévenir) |
 | **4c** | « Annonce en création » en échec **sans marque d'erreur** (le marqueur lit une table plus remplie) | 🧪 **audit fait (CONFIRMÉ)** · **A1 codée le 11/10**, épreuve **21/21** : la sentinelle qui existait déjà sait enfin juger · aucune écriture, aucun déploiement |
-| **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | ⬜ |
+| **4d** | une **recherche créée en échec** disparaît au bout de 24 h, sans bouton « réessayer » | 🧪 **audit fait (PARTIEL)** · **A et B codés le 11/10** : on compte (3ᵉ branche) et les erreurs durent **7 jours** · répétition **assemblée depuis les vrais fichiers**, attend le collage |
 | **4e** | les **photos de la création** attendent dans la mémoire du navigateur → onglet fermé = perdues | ⬜ |
 | **4f** | l'alarme **« travaux en erreur » figée au rouge à 15** ; gestes mandant et transaction jamais dans `geste_abandonne` ; 4 types de transaction absents de `JOB_TYPES_A_NOTIFIER` | ⬜ |
 | **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** (5 tentatives ou abandon humain) ne rend pas l'état — 2 fonctions SQL | ⬜ |
@@ -574,3 +574,121 @@ redémarrage.
    et le **lien**. À mesurer — c'est la matière de **4d**, pas élargie sans Frédéric.
 5. `markProvisionalCreationError` **n'est pas touché** : il reste juste si l'interrupteur repasse à
    l'arrêt. ⚠ **À annoter** pour que personne ne le croie actif.
+
+---
+
+# POINT 4d — UNE RECHERCHE CRÉÉE EN ÉCHEC S'EFFAÇAIT AU BOUT DE 24 H
+
+## ① AUDIT — *11/10/2026, lecture seule.* Verdict : **PARTIEL**
+
+Les faits de l'audit du 08/10 sont exacts, mais il appelle « défaut » **une décision écrite et
+raisonnée**, et il manque le point le plus important : **rien n'est physiquement perdu**.
+
+### Ce qui se passe vraiment
+
+**1. La table provisoire de la recherche est vide — et c'est SAIN.** ⚠ Piège : vide ne veut pas
+dire jamais remplie. Le balayage efface la ligne **dès que la vraie recherche arrive**. Mesuré :
+**2 créations optimistes** (31/08 et 17/09), **toutes deux réussies**. C'est donc **l'inverse du
+cas de l'annonce** (4c), où la table n'est **plus jamais** remplie.
+
+**2. Aucune création de recherche n'a JAMAIS échoué** : 4 travaux `add_hektor_contact_search`,
+**tous « réussis »**, 1 seule tentative, du 12/06 au 17/09. **0 cas réel.**
+
+**3. La chaîne en cas d'échec** (cron **jobid 9**, **chaque minute**, actif) :
+
+```
+la ligne traine « en cours » plus de 15 min  ->  elle devient une ERREUR VISIBLE
+la ligne est en « erreur » depuis 24 h       ->  elle est EFFACEE  (branche c)
+une ligne encore « en cours »                ->  JAMAIS effacee (ecrit en clair)
+```
+
+**4. Aucun nouvel essai** : ce type est absent des 10 types rejouables — et c'est **juste**,
+rejouer une création **doublerait** la recherche *(trouvaille de 4b)*.
+
+**5. Aucun bouton « réessayer »** dans le front.
+
+**6. ⭐ La saisie n'est pas détruite.** Les critères vivent **en entier** dans la charge du travail
+(`payload_json->search` : budget, pièces, DPE, équipements, communes…), et les travaux **ne sont
+jamais purgés** (91 609 conservés). Après 24 h la saisie devient **invisible**, pas **perdue**.
+
+**7. C'est une décision, pas une négligence.** Le patch du **25/09** est né d'une question de
+Frédéric, et ses règles sont argumentées par écrit. La purge des erreurs à 24 h est la branche
+(c), justifiée ainsi : *« les erreurs anciennes : l'utilisateur a eu le temps de les voir »*. Et
+la règle C.1' a retiré la purge des `*_pending` **en gardant** celle des `*_provisional`.
+
+**Le seul vrai reproche** : cette prémisse est **fausse** si le négociateur est absent deux jours.
+Et **personne ne compte** ces échecs.
+
+### ⭐ Une trouvaille au passage : le 15 minutes est trop court pour UN objet
+
+Le balayage déclare « erreur » au bout de **15 minutes** d'après `created_at`. J'ai mesuré le bout
+en bout réel de chaque geste, file d'attente comprise :
+
+```
+add_hektor_contact_search        32 s au pire     -> 28 fois de marge, aucun risque
+create_hektor_contact            46 s au pire     -> large
+link_hektor_mandant              39 s au pire     -> large
+create_hektor_mandant_contact   452 s = 7 min 32  -> marge 2x seulement
+create_hektor_draft_annonce    2 669 s = 44 min   -> AU-DELA DES 15 MINUTES
+```
+
+⚠ **Pour l'annonce, le balayage pourrait donc marquer « Erreur de création » sur une création
+parfaitement en vol.** Ça ne peut pas arriver aujourd'hui *(sa table provisoire n'est plus
+remplie — c'est 4c)*, **mais ça redeviendrait vrai si l'interrupteur `c9_annonce_nait_dans_app`
+repassait à l'arrêt.** Noté, non corrigé, **hors périmètre de 4d**.
+
+## ② LE CORRECTIF — *« A et b » choisis par Frédéric le 11/10*
+
+**A. ON COMPTE** — une **3ᵉ branche** dans `app_en_attente_humain` : les recherches dont le travail
+de création est **en erreur**. La sentinelle `geste_abandonne` (seuil 0) sonne **seule**. La
+coupure est **l'état du travail, jamais l'horloge** *(règle de 4c)*. Et comme la charge du travail
+garde les critères, **l'alerte les redonne** : `contact 605030 -> recherche 120000 a 250000 EUR` —
+le négociateur n'a pas à les retrouver de mémoire.
+
+**B. ON LAISSE PLUS DE TEMPS** — la purge des **erreurs** passe de **24 h à 7 jours**, ce qui
+couvre un week-end et une absence courte.
+
+> ⚠ **PÉRIMÈTRE DE B, signalé à Frédéric avant le collage** : la branche (c) traite les **quatre**
+> tables provisoires d'un seul geste (annonce, contact, recherche, lien) et sa justification est
+> **la même pour les quatre**. Les quatre passent donc à 7 jours. Si Frédéric ne veut **que** la
+> recherche, c'est **une ligne à retirer**. Volume en jeu : **aucun** (0 ligne `error` aujourd'hui
+> sur les 4 tables).
+
+### Ce que ça pourrait casser ailleurs — vérifié
+
+| Ce que ça touche | Vérifié | Preuve |
+|---|---|---|
+| **les 7 colonnes** de la vue, leur ordre, leurs types | inchangés → le `sample` du moniteur lit pareil | contrôle de sortie du patch |
+| **les branches 1 et 2** de la vue | **recopiées au caractère près**, aucune condition touchée | la répétition est **assemblée depuis le vrai fichier** |
+| **le 15 minutes** qui rend l'erreur visible | **pas touché** — et pour la recherche il a **28 fois** de marge | mesure ci-dessus |
+| **les purges `linked` à 24 h** | **pas touchées** : le contrôle de sortie exige **4 fois 24 h, 4 fois 15 min, 4 fois 7 jours** — impossible de se tromper de branche | contrôle de sortie |
+| **le cron jobid 9** | pas touché, il appelle la même fonction | — |
+| **le chantier ①** | `create or replace` conserve l'ACL de la vue **et** de la fonction ; jamais de `drop` | `relacl` relu, contrôle de sortie |
+| **le bruit de la sentinelle** | **0 travail de recherche en erreur depuis toujours** → elle reste **verte** | mesure |
+| **la décision du 25/09** | **amendée explicitement**, pas écrasée : l'ancienne phrase et la raison du changement sont écrites dans le code | commentaire (c) |
+| **le front, le worker, le run, phase2, les pages publiques** | **rien** : un seul lecteur de la vue, `monitoring/check_gti_health.py` | grep |
+
+### L'épreuve, avant la production
+- La **branche 3 éprouvée seule, en lecture** : avec `status='done'` *(le contournement que la
+  répétition utilise pour prouver la plomberie)* elle rend **4 lignes** correctes, critères
+  compris, y compris le cas où `priceMin` manque (`recherche ? a 123456 EUR`).
+- La **répétition est ASSEMBLÉE depuis les deux vrais fichiers** par un générateur
+  *(`scratchpad/faire_repetition_4d.py`)*, et non recopiée : elle joue donc, au caractère près,
+  ce qui sera collé. Structure vérifiée : 1 `BEGIN`, **0 `COMMIT`**, 1 `ROLLBACK`, 20 mesures,
+  1 erreur volontaire.
+
+### Retour arrière
+`..._INVERSE.sql` remet **les deux** objets dans leur état du 11/10 — empreintes attendues
+`e2c015e16d1339fee080b6b2cc7bcb2b` (vue) et `8031dd042d33e3785a27da0c4e106498` (balayage), toutes
+deux contrôlées par le script lui-même.
+
+## ③ CE QU'IL RESTE
+
+1. Frédéric colle **la répétition** → il me recopie le message `ESSAI ANNULE -- 4d`, je compare
+   aux valeurs attendues (écrites en tête du fichier).
+2. Si c'est le bon : il colle **le vrai patch**, et je contrôle en base.
+3. ⏳ **Le 15 minutes trop court pour l'annonce** (marge négative) et **pour le mandant**
+   (marge 2×) : noté ci-dessus, **non corrigé**, à décider — ce n'est pas 4d.
+4. ⏳ **Le bouton « réessayer »** (option C, écartée le 11/10) : il demande d'abord de **demander à
+   l'API de Hektor si la recherche existe déjà**, sinon on la double. Patron connu : celui du
+   mandant, 31/08.
