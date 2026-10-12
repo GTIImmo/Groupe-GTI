@@ -572,6 +572,84 @@ Les 3 autres références directes à la colonne ont été auditées et sont sai
 fonction analysé après l'`ALTER TABLE` · bloc `DO` compilé à l'exécution · `EXECUTE format`
 dynamique)*, et l'inverse supprime bien **la fonction avant la colonne**.
 
+## L4.8 ✅ PATCH L4 APPLIQUÉ par Frédéric le 12/10 vers 09:55 — contrôle
+
+### Ce qui est prouvé
+
+| contrôle | résultat |
+|---|---|
+| les **8 empreintes** des règles | **8/8 CONFORMES** à la répétition |
+| 4 vues réglées · 2 fuites fermées · 4 fonctions neuves | **4 · 0 · 4** |
+| fonctions joignables **sans compte** | **0** — chantier ① intact |
+| **ADMIN** *(compte de Frédéric, emprunté le temps d'une lecture)* | **rien perdu** : 13 475 annonces · 62 189 contacts · 24 502 registre · 35 318 archives · 8 940 vendus · 26 851 mandats |
+| **Mélanie — affaires de SON bien 1346424** | **3** ✅ |
+| **Mélanie — affaires du bien 1357257 d'un COLLÈGUE** | **0** ✅ ⭐ **le cloisonnement fonctionne** |
+| **Mélanie — écran Registre des mandats** | **0** ✅ fermé |
+| Mélanie — annonces | **13 475**, tout le réseau ✅ conforme à la grille |
+| Mélanie — son agence déduite de l'annuaire | **Groupe GTI Saint-Étienne** ✅ |
+| Mélanie — 50 premiers contacts *(ce que fait une page de liste)* | instantané ✅ |
+
+⭐ **La méthode qui a permis ce contrôle sans toucher au compte de personne** :
+`BEGIN; SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claims = '{"sub":"<uuid>"}';
+<lectures>; ROLLBACK;` — **à réutiliser pour tout contrôle de droits.** Aucune écriture,
+aucun mot de passe, et on voit exactement ce que la personne verrait.
+
+### 🔴 LE DÉFAUT : L'ÉCRAN DES ARCHIVES MET 8,15 s POUR UN NÉGOCIATEUR
+
+**Erreur de forme, pas de fond, et elle est de moi.** J'ai appelé mes fonctions
+directement dans les règles — `using (app_voit_cette_ligne(negociateur_email, agence_nom))` —
+donc PostgreSQL les évalue **une fois par ligne** *(35 318 fois pour les archives)*, et
+chacune rappelle `is_app_global_reader()` et `app_perimetre_courant()` à chaque ligne.
+Les règles **d'origine** utilisaient exprès `(select is_app_global_reader())`, une
+sous-requête non corrélée évaluée **une seule fois** — forme que **j'avais repérée dans
+l'audit L4.1 et citée comme un bon point**, sans l'appliquer.
+
+| touché ? | |
+|---|---|
+| l'admin | ✅ **jamais** — le court-circuit joue |
+| les contacts d'un négociateur | ✅ rapides : l'écran demande un comptage **estimé** (`count: 'planned'`, `api.ts:3169`), pas exact |
+| les affaires d'une fiche | ✅ instantané : l'écran les lit **toujours par annonce** (`.eq('app_dossier_id', …)`, `api.ts:1914`, **seul** endroit) |
+| **les archives d'un négociateur** | ⚠ **8,15 s** — l'écran y fait un comptage **exact** (`count: 'exact'`, `api.ts:4576`) |
+| un comptage de toutes les affaires | ⚠ expire — **mais l'app ne le fait jamais** |
+
+⚠ **DEUX FOIS, MA PREMIÈRE ALERTE A ÉTÉ TROP FORTE** *(et c'est la leçon à garder)* :
+j'ai d'abord mesuré un `count(*)` sur 31 058 affaires et annoncé que l'app serait
+inutilisable. **Ce geste n'existe nulle part dans l'app.** En regardant comment l'écran lit
+vraiment, le seul vrai défaut est celui des archives.
+➡ **Mesurer LE GESTE DE L'ÉCRAN, pas un geste plausible.**
+
+**Personne n'est gêné aujourd'hui** : les deux seuls comptes non-admin actifs n'ont jamais
+rien fait dans l'app. Mais il faut corriger **avant le pilote**.
+
+## L4.9 LOT L4-BIS — LA VITESSE *(option A de Frédéric, 12/10)*
+
+Fichiers : `supabase/patch_l4bis_vitesse_2026-10-12.sql`, son `_INVERSE.sql`, la
+`_REPETITION.sql` assemblée par `supabase/generer_repetition_l4bis.py`.
+
+**Aucune décision n'est revue — la forme seule change.**
+
+| ce qui change | de | à |
+|---|---|---|
+| les parties constantes | appelées **par ligne** | `(select …)` → **une seule fois** |
+| `can_access_negotiator_email(email)` par ligne | une requête par ligne | comparaison à une **sous-requête scalaire** *(le rôle `commercial` est testé dedans, donc un rôle inconnu rend NULL → faux, comme avant)* |
+| `app_console_can_access_dossier(id, hid)` par ligne | 3 `EXISTS` par ligne | **deux appartenances** à un ensemble calculé une fois : `app_mes_biens_portefeuille()` |
+| les liens | la fonction de périmètre par ligne | `app_mes_biens_selon_perimetre()`, un ensemble |
+
+**Les deux chemins sont conservés** *(`app_dossier_id` **et** `hektor_annonce_id`)*, comme
+la fonction d'origine : mesure du 12/10, les deux colonnes sont remplies à **100 %** dans
+`app_affaire_ledger` et `app_mandat`, mais on ne supprime pas un chemin sans nécessité.
+
+**La règle du registre des mandats n'est PAS touchée** : elle ne lit aucune colonne, elle
+s'évalue déjà une seule fois.
+
+⚠ **Ce que la répétition de L4-bis ne peut PAS prouver** : que les mêmes comptes voient les
+mêmes lignes. Elle tourne en propriétaire de la base, qui ignore ces règles. Cette preuve se
+fait en **empruntant chaque identité** avant/après le collage — les nombres d'avant sont
+dans le tableau de L4.8.
+
+**La chaîne de retour arrière** : `L4-BIS_INVERSE` → état L4 *(la lenteur revient, c'est
+voulu)* ; puis `L4_INVERSE` → état d'origine.
+
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
 **À chronométrer avant de valider.**
