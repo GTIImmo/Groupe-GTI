@@ -1058,6 +1058,47 @@ LE PILOTE  2 comptes existants, 2 agences (Saint-Etienne + Firminy),
 | l'écran *(`App.tsx`, `types.ts`)* | **push → Vercel** |
 | la fonction serveur *(`supabase/functions/admin-users`)* | **déploiement Supabase à part** — un push ne la déploie PAS |
 
+## L2.16 ✅✅✅ LE PILOTE — *12/10, Mélanie LEGRAND en « son agence »*
+
+**Les deux mécanismes qui n'avaient JAMAIS tourné fonctionnent** : la branche « son agence »
+des règles, et le masquage du Rapprochement posé par L1.
+
+| | résultat |
+|---|---|
+| son périmètre · son agence déduite | **agence** · **Groupe GTI Saint-Étienne** |
+| **annonces** | **1 157** *(au lieu de 13 475)* |
+| archives · vendus | 3 628 · 618 |
+| contacts | 28 107 |
+| **photos** | **31 798** sur 441 018 — cloisonnées par agence |
+| **documents** | **4 565 — INCHANGÉ** : le dossier reste « ses biens » |
+| affaires et commissions | **479** — « ses biens », inchangé |
+| **Rapprochement** | **0 — masqué** ⭐ *première exécution de la règle de L1* |
+| Registre des mandats | **0** |
+| **ADMIN** | **4/4 intacts** |
+
+⭐ **PREUVE CROISÉE** : **1 157** est **exactement** le nombre d'annonces de Saint-Étienne
+mesuré le matin par une requête **toute différente** *(group by agence en clé de service)*.
+Deux chemins indépendants, même nombre — c'est ce qui en fait une preuve.
+
+### La vitesse, et le piège évité une troisième fois
+
+| geste | temps |
+|---|---|
+| **les photos d'une annonce** *(ce que fait l'écran)* | **0,13 s** |
+| l'écran des archives *(comptage exact, geste réel)* | **1,35 s** *(contre 8,15 s le matin)* |
+| ses affaires | 0,31 s |
+| un comptage de **toutes** ses photos | 6,1 s — ⚠ **mais l'app ne le fait JAMAIS** |
+
+➡ **Encore une fois : le seul chiffre inquiétant est un geste qui n'existe pas dans l'écran.**
+*Mesurer le geste de l'écran, pas un geste plausible.*
+
+⚠ **Une erreur de libellé de ma part, corrigée** : j'avais nommé une mesure « bien HORS
+agence » — le bien 377 est en fait **à Saint-Étienne**, donc dans son agence. Ce n'était pas
+le test que je croyais ; le cloisonnement par agence est prouvé par les comptages
+*(31 798 photos sur 441 018, 1 157 annonces sur 13 475)*, pas par ce cas-là.
+
+---
+
 ## L2.15 ✅✅ L'ÉCRAN EST FAIT ET DÉPLOYÉ — *12/10* · la case « périmètre », le manager, le message du prix
 
 ### ⚠⚠ LA TROUVAILLE QUI A CHANGÉ LE TRAVAIL : **il y a TROIS chemins pour écrire un compte**
