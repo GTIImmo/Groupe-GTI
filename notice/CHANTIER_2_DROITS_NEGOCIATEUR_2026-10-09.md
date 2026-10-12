@@ -2,14 +2,14 @@
 
 > **Ouvert le 09/10/2026.** Audit par objet du 08/10, §2 ② et §3 (critère C8) ·
 > plan : section « 🧭 LES CHANTIERS DE L'ÉTAPE 2 », ligne ② · CLAUDE.md §2.
-> **Ce chantier attend une décision de Frédéric avant tout code** : *que fait un
-> négociateur seul, que demande-t-il ?*
+> **Audit REFAIT et élargi le 12/10/2026** à la demande de Frédéric : voir la section
+> « AUDIT DU 12/10 » en bas — elle **corrige trois erreurs** de l'audit du 09/10.
 
 ## LES POINTS DU CHANTIER — *proposition de découpage, à valider*
 
 | # | point | état |
 |---|---|---|
-| **2a** | **L'état des lieux et LA DÉCISION** : qui peut quoi aujourd'hui, par quelle porte | 🔎 audit fait le 09/10 → 💬 **attend la décision** |
+| **2a** | **L'état des lieux et LA DÉCISION** : qui peut quoi aujourd'hui, par quelle porte | 🔎 audit fait le 09/10, **refait et élargi le 12/10** → 💬 **attend 4 réponses** |
 | 2b | **Annonce** : modifier les champs, changer le statut, archiver / désarchiver, changer de négociateur, supprimer | ⬜ |
 | 2c | **Mandant** : rattacher, retirer, créer, modifier | ⬜ |
 | 2d | **Transaction** : offre, compromis, vente (+ faut-il un circuit de demande ?) | ⬜ |
@@ -17,6 +17,18 @@
 | 2f | **Numéro de mandat** : demander un numéro | ⬜ |
 | 2g | **Les comptes** : 43 adresses de négociateur portent le parc, 2 comptes commerciaux actifs, 0 manager | ⬜ |
 | 2h | **L'écran** : les boutons que le front cache à tout le monde sauf l'admin | ⬜ |
+| **2i** | **LES CONSULTATIONS** *(point NEUF, 12/10)* : le cloisonnement « ses biens » est un filtre d'affichage, pas une serrure | 🔴 **trouvé le 12/10** |
+
+### Les réponses de Frédéric (12/10)
+
+```
+Q1  que fait un negociateur seul ?      -> « normalement c'est B » (le quotidien seul,
+                                           une DEMANDE pour les gestes graves)
+                                           + « mais normalement tout existe deja » -> verifie, c'est VRAI
+Q2  le role manager ?                   -> « pour l'instant faire idem que admin »
+Q3  pilote ou tous les comptes ?        -> « oui il faut tester avant de deployer a tous les comptes »
+CONTRAINTE FERME                        -> « cela ne doit surtout pas changer les worker »
+```
 
 ---
 
@@ -58,7 +70,7 @@ raison pour laquelle ce chantier est beaucoup moins lourd qu'il en avait l'air �
 | créer / modifier un mandant | `create_` / `update_hektor_mandant_contact` | oui | oui | **NON** |
 | offre, compromis, vente | 4 types | oui | **NON** | **NON** |
 | répartition de commission | *(aucun travail Hektor)* | oui | **NON** | **NON** |
-| contact : créer, modifier, supprimer | `*_hektor_contact` | oui | oui | **oui** *(ses contacts)* |
+| contact : créer, modifier, supprimer | `*_hektor_contact` | oui | oui | **oui** *(ses contacts)* ⚠ **FAUX pour SUPPRIMER — corrigé le 12/10** |
 | recherche acquéreur | `*_hektor_contact_search` | oui | oui | **oui** *(ses contacts)* |
 | documents : préparer, envoyer, resynchroniser, relancer ou annuler une signature | 7 types | oui | oui | **oui** *(ses biens)* |
 | générer un avis de valeur, un PDF de mandat, un plan cadastral | `generate_*` | oui | oui | **NON** |
@@ -70,6 +82,9 @@ raison pour laquelle ce chantier est beaucoup moins lourd qu'il en avait l'air �
 portent une règle RLS qui limite un commercial à **ses** biens et **ses** contacts
 (`can_access_negotiator_email`, `can_access_current_dossier`) ; un admin, un manager et
 un rôle `lecture` voient tout. **Le trou est donc uniquement du côté de l'écriture.**
+
+> 🔴 **CETTE DERNIÈRE PHRASE EST FAUSSE. Corrigée le 12/10 — voir le point 2i.** La règle
+> existe bien sur les **tables**, mais l'écran lit des **vues qui l'ignorent**.
 
 ### Les mesures
 
@@ -114,12 +129,288 @@ NON MESURE                   la derniere connexion de chaque compte : le schema 
 
 ### CE QUI ATTEND FRÉDÉRIC — *la décision, en trois questions*
 
-1. **Que fait un négociateur seul sur SES biens ?** *(option A, B ou C — détail dans le
-   message du 09/10 : tout sauf supprimer · le quotidien et une demande pour les gestes
-   graves · rien de plus qu'aujourd'hui)*
-2. **Le rôle `manager`** : on le garde et on lui donne statut + archivage, ou on le laisse
-   de côté (0 compte aujourd'hui) ?
-3. **Les comptes** : un pilote de 2-3 négociateurs d'abord, ou les 39 comptes manquants
-   tout de suite ?
+1. **Que fait un négociateur seul sur SES biens ?** → **répondu le 12/10 : option B**
+2. **Le rôle `manager`** → **répondu le 12/10 : idem admin pour l'instant**
+3. **Les comptes** : pilote d'abord → **répondu le 12/10 : oui, tester avant**
 
-*Rien n'est codé avant ces réponses.*
+---
+---
+
+# AUDIT DU 12/10/2026 — *refait et élargi, en lecture seule*
+
+> Demandé par Frédéric : *« Refait un audit […] mais cela ne doit surtout pas changer les
+> worker […] normalement tout existe déjà audit mieux »*, puis *« tu n'as pas audité les
+> consultations ? »*.
+> Tout ce qui suit est **mesuré ce jour** sur la base et le code. Aucune écriture.
+
+## A. CE QUI N'A PAS BOUGÉ depuis le 09/10
+
+| vérification | résultat |
+|---|---|
+| le corps des 2 portes et de `is_app_admin` | **identiques** *(relus par `pg_get_functiondef`)* |
+| comptes : 4 admins actifs, 2 commerciaux actifs, 0 manager, 1+1 désactivés | **identique** |
+| travaux demandés par un commercial | **toujours 0** |
+| `isAdmin` dans `App.tsx` | **toujours 49** |
+| les 6 fonctions « affaire » réservées à l'admin | **exactement 6** |
+| commits touchant aux droits depuis le 09/10 | **aucun** |
+
+## B. « TOUT EXISTE DÉJÀ » — Frédéric avait raison
+
+Le circuit de demande n'est pas un squelette : **c'est l'option B, déjà codée de bout en
+bout, pour 3 gestes.**
+
+| ce qui existe | preuve |
+|---|---|
+| la table porte : type, statut, commentaire, motif, réponse de l'admin, motif de refus, qui a traité et quand, **relances**, **suivi à rappeler** | 25 colonnes de `app_diffusion_request` |
+| un **journal / fil de discussion** entre le négociateur et le validateur | `app_diffusion_request_event` |
+| **deux rôles d'écran déjà séparés** : `nego` (demande) et `pauline` (traite) | `App.tsx:8103`, 11792, 12632 |
+| **trois tableaux de bord d'accueil** : `admin`, `commercial`, `pauline` | `App.tsx:305`, branché l. 21316 |
+| **`request_type` est un texte SANS contrainte** → ajouter un type **ne demande aucun patch SQL** | `pg_constraint` : seulement la clé et 2 clés étrangères |
+| la limite des 3 types est **une seule ligne du front** | `App.tsx:302` |
+
+### Les droits du circuit sont DÉJÀ l'option B, et déjà conformes à la réponse Q2
+
+| règle | ce qu'elle dit | verdict |
+|---|---|---|
+| poser une demande | `requested_by = moi` **ET** c'est **mon bien** | ✅ un négociateur peut **déjà** demander, sans patch |
+| voir les demandes | ses biens ; tout pour admin / manager / lecture | ✅ |
+| **traiter une demande** | **`is_app_manager_or_admin()`** = admin **+ manager** | ✅ **« manager = idem admin » est déjà le code en place** |
+
+Et `handleCreateDiffusionRequest` (`App.tsx:16785`) **n'a aucun contrôle de rôle**.
+
+### LE PATRON COMPLET EXISTE — et il ne touche pas aux workers
+
+À l'acceptation d'une demande d'annulation de mandat (`App.tsx:16869-16960`), l'app :
+1. enregistre la décision dans la demande ;
+2. décoche *Valide* et *Diffuse* chez Hektor ;
+3. **crée un travail `change_hektor_annonce_status` (clôture)**, posé par **le compte de
+   l'admin qui valide**.
+
+➡ **Le worker reçoit le même travail qu'aujourd'hui, du même type de compte.** C'est le
+patron réutilisable pour les gestes manquants, **sans toucher au worker**.
+
+### Les 9 demandes réelles
+
+```
+4  demande_annulation_mandat  acceptees   13-14/05/2026
+4  demande_baisse_prix        acceptees   13/05/2026
+1  demande_diffusion          EN ATTENTE DEPUIS LE 02/06/2026  <-- 4 mois sans reponse
+```
+
+## C. LES WORKERS NE BOUGENT PAS — *la contrainte ferme de Frédéric, vérifiée*
+
+| vérification | résultat |
+|---|---|
+| `app_diffusion_request` dans `Console/` | **0 occurrence** |
+| dans `backend/` | **0 occurrence** |
+| dans `scheduled/` et les scripts du run | **0 occurrence** |
+| la clé du worker | **clé de service** (`SUPABASE_SERVICE_ROLE_KEY`, l. 1265) → **ignore** toutes ces règles |
+| les `role` que lit le worker | le rôle du **jeton Hektor** (sans rapport) ; et l. 2397 pour **choisir à qui écrire** : *« si le demandeur est un commercial, envoyer le message à son adresse »* → **déjà prévu** |
+
+➡ Dans `phase2`, `app_diffusion_request` n'apparaît **qu'en descente de doublure** (lecture).
+
+## D. L'IDENTITÉ CHEZ HEKTOR — *question de Frédéric du 12/10*
+
+> *« si je donne accès à la modification des annonces aux commerciaux au sein de l'agence,
+> le worker partira toujours à Hektor avec le compte du commercial en charge et non
+> l'utilisateur ? »*
+
+**Réponse : OUI, c'est bien le négociateur en charge du bien.** Mécanisme mesuré :
+
+1. le worker se connecte avec le **compte admin technique** ;
+2. il **bascule** dans le compte du négociateur cible — autoconnexion Hektor
+   `?call=authenticate&mode=autologin&idUser=<cible>` (`switchHektorUserContextWithPlaywright`) ;
+3. il **vérifie** l'identité obtenue ;
+4. si la bascule n'est pas confirmée **et** qu'une autre identité est visible, **il
+   s'arrête avant d'écrire** (`console_job_worker.js:2896`).
+
+### L'ordre de choix du négociateur cible — `resolveHektorExecutionUser` (l. 2334)
+
+| ordre | règle | ligne |
+|---|---|---|
+| 1 | le négociateur **posé dans la charge du travail** (`hektor_user_id`) gagne toujours | 2335 |
+| 2 | sinon **le négociateur en charge du bien** (`commercial_id` → annuaire d'agence) | 2380 |
+| 3 | sinon par e-mail : **(a)** le demandeur s'il est commercial · **(b)** le négociateur du bien · **(c)** l'adresse de la charge · **(d)** le demandeur quel qu'il soit | 2395-2400 |
+| 4 | rien trouvé → **le travail échoue** (« Contexte negociateur Hektor requis ») | 2825 |
+
+**Le cas 3(a) ne peut pas se produire pour un commercial** : il n'a accès qu'aux biens dont
+**il est** le négociateur — les deux identités sont la même personne.
+
+```
+MESURE   13 475 annonces vivantes · 4 226 (31 %) SANS commercial_id · 4 227 sans email de nego
+         -> ce sont justement celles ou la regle 2 ne s'applique pas, et un commercial
+            n'y a de toute facon AUCUN acces (l'acces passe par l'email du negociateur)
+```
+
+### Deux réserves
+
+| | |
+|---|---|
+| **repli par l'agence** | si le négociateur du bien est **inactif chez Hektor**, l'écriture part sous le contexte **de l'agence**. ⚠ **Interrupteur ACTIF** : `CONSOLE_HEKTOR_AGENCY_FALLBACK=true` (`Console/.env:143`) |
+| **vérification facultative** | `CONSOLE_HEKTOR_ALLOW_UNVERIFIED_CONTEXT=true` (lanceur l. 37-38 et service l. 217) : si le worker ne peut pas vérifier qui il est devenu, et qu'aucune autre identité n'est visible, **il écrit quand même** |
+
+## E. 🔴 POINT 2i — LES CONSULTATIONS : le cloisonnement est un filtre, pas une serrure
+
+> C'est la deuxième question de Frédéric, et elle **corrige mon audit du 09/10**.
+
+### Les règles existent bien sur les tables
+
+| ce qu'on consulte | règle de lecture | limitée ? |
+|---|---|---|
+| annonces vivantes (`app_dossier_current`) | lecteur global **ou ses biens** | ✅ |
+| contacts (`app_contact_current`) | ses contacts, ou ceux de ses biens | ✅ |
+| liens (`app_contact_relation_current`) | ses biens | ✅ |
+| recherches (`app_contact_search_current`) | ses contacts | ✅ |
+| documents (`app_console_document`) | ses biens | ✅ |
+| photos (`app_console_photo`) | ses biens | ✅ |
+| **archives** (`app_archive_annonce_index_current`) | `is_app_user_active()` | 🔴 **aucune limite** |
+| **vendus / clos** (`app_historical_annonce_index_current`) | `is_app_user_active()` | 🔴 **aucune limite** |
+| **mandats** (`app_mandat`) | `is_app_user_active()` | 🔴 **aucune limite** |
+| **affaires** (`app_affaire_ledger` : offres, compromis, ventes, **commissions**) | `is_app_user_active()` | 🔴 **aucune limite** |
+| comptes (`app_user_profile`) | soi-même ou admin | ✅ |
+
+### Mais l'écran lit des VUES qui ignorent ces règles
+
+Une vue n'applique les règles des tables en dessous que si elle porte le réglage
+`security_invoker`. **Sur 24 vues `app_*`, il est absent.** Six sont lisibles par tout
+compte connecté :
+
+| vue | ce qu'elle expose | lue par l'écran |
+|---|---|---|
+| **`app_dossiers_current`** | **toutes les annonces** | **13 fois** — dont la **liste principale** (`dossiersCurrentView`, `api.ts:168`) et « ouvrir une annonce par son n° » |
+| **`app_contacts_current`** | **tous les contacts** | **7 fois** (`contactsCurrentView`, `api.ts:169`) |
+| **`app_registre_mandats_current`** | **tout le registre des mandats** | **5 fois** |
+| `app_contact_relations_current` | tous les liens | via l'écran contacts |
+| `app_contacts_sans_numero` · `app_console_action_abandonnees` | listes techniques | non |
+
+Et la seule limite réelle est **un filtre posé par le navigateur** :
+
+```
+api.ts:2432     applyNegotiatorScopeToQuery -> .eq('negociateur_email', <son adresse>)
+App.tsx:12730   le filtre n'est pose QUE si profile.role === 'commercial'
+```
+
+➡ **Filtre d'affichage, pas serrure.** Décidé par l'écran, pas par la base.
+
+### ⚠ Ce n'est PAS un trou public — le chantier ① tient
+
+**Aucune** de ces vues n'est lisible par `anon` (mesuré : `has_table_privilege('anon', …)`
+= faux partout). Vitrine, photos publiques, espace client et RDV **ne sont pas concernés**.
+C'est un trou **entre collègues**. Il ne se voit pas aujourd'hui parce que les seuls
+comptes non-admin sont **2 commerciaux qui n'ont jamais rien fait**.
+
+## F. TROIS ERREURS DE MON AUDIT DU 09/10, corrigées
+
+| ce que j'avais écrit | la vérité mesurée le 12/10 |
+|---|---|
+| « la lecture est déjà faite, le trou est uniquement en écriture » | **FAUX** : l'écran lit des vues qui contournent les règles (point 2i) |
+| « contact : créer, modifier, **supprimer** = oui pour un commercial » | **FAUX pour supprimer** : `delete_hektor_contact` n'est pas dans sa liste, et le bouton est réservé à l'admin (`canDeleteContacts={isAdmin}`) |
+| « le front, c'est **49 endroits** à changer » | **TROMPEUR** : une **seule** définition (`App.tsx:17730 const isAdmin = profile?.role === 'admin'`) ; les 48 autres en découlent |
+
+Et **deux compléments** à l'audit du 09/10 :
+- la porte 1 commande **18** fonctions, pas 16 — dont **4 qui ne font que LIRE** l'état d'un
+  travail (`app_action_status`, `app_annonce_edit_status`, `app_action_resolve`,
+  `app_annonce_pending_resolve`) : aujourd'hui un négociateur ne peut pas **voir
+  l'avancement** de sa propre saisie ;
+- **les répartitions de commission sont attachées exprès au droit « changer le statut »**
+  (`app_repartition_commission_set` : *« LE MEME CONTROLE QUE LA MODALE QUI PORTE LA
+  SAISIE »*) → ouvrir le statut ouvre les commissions, par construction.
+
+## G. NOTÉ, HORS CHANTIER — à ne pas poursuivre ici
+
+`app_espace_edit_search_optimistic` (modifier une recherche depuis **l'espace client**)
+n'a **aucun contrôle de rôle** dans son corps. Elle est probablement protégée par un jeton
+ailleurs, **non vérifié**. Sujet du chantier ① (sécurité / public), pas du ②.
+
+## H. CE QUI RESTE NON MESURÉ
+
+- la **dernière connexion** de chaque compte (le schéma `auth` refuse mes lectures) ;
+- la répartition des travaux par rôle depuis le 09/10 (requête expirée : le run tournait) ;
+- si les boutons de demande sont **visibles** pour un négociateur **à l'écran** : lu dans le
+  code, **jamais vu avec un vrai compte commercial** ;
+- les gestes **RDV / visite** : le bon de visite est autonome dans l'écran, je n'ai pas
+  vérifié s'il est gardé par un rôle.
+
+## I. ⭐ LES DÉCISIONS DE FRÉDÉRIC — *prises le 12/10/2026*
+
+> Prises sur la fiche `notice/CHANTIER_2_REPONSES_A_REMPLIR.md`, qu'il a remplie, puis
+> affinées en 7 arbitrages. **La fiche remplie reste la trace d'origine, on ne la modifie pas.**
+
+### I.1 Les décisions de cadrage
+
+| | décision |
+|---|---|
+| **l'ordre** | **L4 cloisonner les consultations D'ABORD**, puis L2, puis L3, puis L1 |
+| **le prix** | reste **sous demande** |
+| **le rôle `manager`** | **idem admin**, avec deux exceptions voulues *(voir I.3, point 5)* |
+| **le pilote** | **tester avant d'ouvrir à tous**, avec les **comptes déjà créés** |
+| **l'agence d'un compte** | **déduite de l'annuaire Hektor** (adresse → agence active) — rien à saisir |
+| **contrainte ferme** | *« cela ne doit surtout pas changer les worker »* → **vérifié, aucun changement worker** |
+
+### I.2 ⭐ R2 — LE PÉRIMÈTRE EST UNE PROPRIÉTÉ DU COMPTE, PAS UN NOUVEAU RÔLE
+
+Frédéric voulait *« un type Agent commercial avec uniquement accès à ses annonces, ses
+contacts etc… donc bien plus fermé que le compte négociateur »*. **Il a choisi R2.**
+
+- ❌ **PAS** de 5ᵉ valeur de rôle. `app_role` reste **`admin | manager | commercial |
+  lecture`**. Raison : une valeur d'énumération PostgreSQL **ne peut jamais être retirée** —
+  c'eût été le seul geste irréversible de tout le chantier.
+- ✅ À la place : une **case « périmètre » sur le compte**, réversible (une colonne qu'on
+  peut retirer), et qui permet de régler deux négociateurs différemment dans la même agence.
+
+### I.3 Les 7 arbitrages du 12/10 — *chacun contre une objection que j'avais soulevée*
+
+| # | mon objection | la décision de Frédéric |
+|---|---|---|
+| **1** | désarchiver en `S`+`R` laisse un négociateur ressortir **n'importe quelle** annonce du réseau, alors qu'archiver lui est interdit | **« NON, laisse S+R »** — assumé |
+| **2** | modifier un contact / ajouter / modifier une recherche en `S`+`R` : il **modifie** ceux des collègues | **« garde comme demandé, ce n'est pas une erreur »** — assumé |
+| **3** | supprimer un document chez Hektor est **définitif** (Hektor + serveur + cloud) | **`S`+`B`** — le négociateur le fait seul, sur ses biens |
+| **4** | statut, archivage et transactions en `A` → **plus aucune demande n'existe**, le lot L3 devient vide | **« Oui »** — ⚠ *à reconfirmer en une ligne : voir I.5* |
+| **5** | Santé admin seul mais Utilisateurs admin+manager : le manager crée des comptes sans voir la surveillance | **« Oui »** — voulu. **Ce sont les 2 exceptions à « manager = idem admin »** |
+| **6** | mandants = tout le réseau mais registre des mandats = ses biens : les deux lisent la même matière | **CHANGEMENT** : mandants restent **tout le réseau**, et **la VUE REGISTRE DES MANDATS devient un écran réservé ADMIN + MANAGER, comme la vue Suivi** — le négociateur n'y entre plus du tout |
+| **7** | R1 (5ᵉ rôle) ou R2 (case périmètre) | **« Oui R2 »** |
+
+### I.4 Ce que la grille devient — *la règle à coder*
+
+**Deux notions qui se combinent**, et c'est ce qui fait marcher R2 :
+
+1. **la GRILLE DU RÔLE `commercial`** — par objet, la portée que Frédéric a fixée :
+   - **tout le réseau** : annonces, contacts, recherches, rapprochements, archives,
+     vendus/clos, photos, estimations, mandants, liste des négociateurs ;
+   - **ses biens / ses contacts** : affaires, **commissions**, documents, agenda, statistiques ;
+   - **écran interdit** : Suivi, Santé, **Registre des mandats** *(décision 6)*.
+2. **la CASE « PÉRIMÈTRE » du compte** *(R2)* agit comme un **PLAFOND** qui **abaisse** la
+   grille :
+   - périmètre *réseau* → le compte obtient la grille telle quelle **(le négociateur)** ;
+   - périmètre *portefeuille* → **toutes** les portées retombent à ses biens
+     **(l'agent commercial)** ;
+   - périmètre *agence* → les portées « réseau » retombent à son agence.
+
+⚠ **Cette lecture en « plafond » est MA proposition de mise en œuvre, pas encore validée.**
+Elle évite d'avoir à remplir une deuxième fiche entière pour l'agent commercial.
+
+### I.5 CE QU'IL RESTE À CONFIRMER — 2 lignes, rien de plus
+
+```
+(a) decision 4 : le negociateur ne DEMANDE RIEN dans l'app pour le statut, l'archivage
+    et les transactions -- il passe par l'agence. Donc le lot L3 est SUPPRIME.
+    (cela annule sa reponse C2 « 2 types de demande d'abord »)
+(b) le PILOTE : Melanie LEGRAND (Saint-Etienne, 142 vivantes / 774 archivees / 130 vendues)
+    et Emanuelle PEREIRA (Firminy, 102 / 24 / 7) -- DEUX AGENCES, aucun compte a creer.
+    Frederic avait coche « une agence moyenne » : les comptes existants donnent mieux.
+(c) la lecture en « plafond » de I.4 est-elle la bonne ?
+```
+
+### I.6 Les lots, après décision
+
+| lot | état |
+|---|---|
+| **L4** cloisonner les consultations | ✅ **le premier**, et le plus gros |
+| **L2** ce que le négociateur fait seul | ✅ confirmé |
+| **L5** la notion d'agence *(déduite de l'annuaire)* | ✅ nécessaire *(brouillon d'annonce = son agence)* |
+| **L6** la case « périmètre » du compte *(R2)* | ✅ nouveau, réversible |
+| **L7** l'écran Registre des mandats réservé admin+manager | ✅ nouveau *(décision 6)* |
+| **L3** les demandes qui manquent | ❌ **SUPPRIMÉ** sous réserve de I.5 (a) |
+| **L1** manager = admin | ✅ confirmé, **sauf** Santé *(admin seul)* |
+
+**Rien n'est codé. Aucune écriture n'a été faite.**
