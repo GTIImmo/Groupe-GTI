@@ -1058,6 +1058,85 @@ LE PILOTE  2 comptes existants, 2 agences (Saint-Etienne + Firminy),
 | l'écran *(`App.tsx`, `types.ts`)* | **push → Vercel** |
 | la fonction serveur *(`supabase/functions/admin-users`)* | **déploiement Supabase à part** — un push ne la déploie PAS |
 
+## L2.15 ✅✅ L'ÉCRAN EST FAIT ET DÉPLOYÉ — *12/10* · la case « périmètre », le manager, le message du prix
+
+### ⚠⚠ LA TROUVAILLE QUI A CHANGÉ LE TRAVAIL : **il y a TROIS chemins pour écrire un compte**
+
+Et c'est le **backend Render** qui sert en production — la fonction Supabase `admin-users`
+n'est qu'un **chemin de secours** *(`canUseBackendApi()` est vrai dès que l'adresse Render est
+configurée)*. **Modifier la seule fonction Supabase n'aurait RIEN fait**, et le réglage se
+serait perdu **en silence** selon le chemin emprunté. **Les trois sont à jour.**
+
+| ce qui change | comment ça se déploie |
+|---|---|
+| l'écran *(`App.tsx`, `types.ts`, `api.ts`, `MobileLayout.tsx`)* | **push → Vercel** |
+| le **backend** *(`models.py`, `supabase_admin.py`)* | **push → Render** |
+| la fonction de **secours** *(`supabase/functions/admin-users`)* | ⚠ **déploiement Supabase À PART — un push ne la déploie PAS** |
+
+⚠ Et **pydantic** : sans le champ dans `CreateUserPayload` / `UpdateUserPayload`, le périmètre
+aurait été **ignoré en silence** par le backend.
+
+### Ce qui est posé
+
+| | |
+|---|---|
+| `types.ts` | `UserPerimetre` + `USER_PERIMETRES` *(libellés et **phrases d'aide en clair**, dont l'avertissement sur le Rapprochement masqué)*. La clé est **optionnelle** sur `UserProfile` : les comptes lus avant aujourd'hui ne l'ont pas → **toujours lire avec un repli sur `reseau`** |
+| l'écran | 2 états, **5 branchements** *(création, remise à zéro, ouverture d'une fiche, fermeture, modification)* et **les 2 sélecteurs** |
+| les 3 chemins | **n'écrivent le périmètre QUE s'il est fourni** à la modification — un écran plus ancien ne doit pas remettre tout le monde à `reseau` |
+| le message du prix | traduit, **avec quoi faire à la place** · et 3 autres refus traduits au passage |
+
+### ⭐ L1 à l'écran : DEUX variables au lieu d'une
+
+```
+isAdmin            = ADMIN STRICT -- un SEUL ecran s'en sert : SANTE
+isManagerOrAdmin   = tout le reste (« manager = idem admin »)
+```
+
+**33 endroits ouverts au manager**, **5 gardés en admin strict** *(les 2 écrans Santé, le
+bouton Santé, la redirection, la nouvelle prop du menu mobile)*.
+
+⭐ **Le menu mobile a dû apprendre à distinguer** : il cachait **Suivi ET Santé avec la même
+variable** (`adminOnly`). Sans y toucher, ouvrir Suivi au manager lui aurait **ouvert Santé**
+— exactement l'exception de Frédéric. Il porte maintenant `adminStrictOnly` + une prop
+`isAdminStrict`.
+
+### ⚠ TROIS DÉFAUTS DANS MON PROPRE REMPLACEMENT, et comment je les ai vus
+
+1. le **nom** de 4 propriétés avait été renommé, alors que seule leur **valeur** devait changer
+   → *un remplacement de texte ne distingue pas un nom d'une valeur* ;
+2. mes propres **commentaires** avaient été réécrits par le remplacement ;
+3. le menu mobile n'avait pas encore sa prop.
+
+⭐ **Je les ai vus parce que le script IMPRIME les 33 lignes changées et les 18 gardées, avec
+leur raison.** **Un remplacement en masse ne se relit pas autrement** — à refaire ainsi.
+
+### ✅ LE DÉPLOIEMENT, CONTRÔLÉ
+
+| | preuve |
+|---|---|
+| **Render** | `/health` rend **`c41f14b`** — le commit poussé |
+| **Vercel** | le bundle a changé *(`index-B2Ozf0YP.js`)* et **contient la chaîne « Jusqu'ou il voit »** |
+
+⚠ **J'ai failli annoncer que Render était cassé** : ma première mesure, 2 minutes après le
+push, montrait un commit du **27/09** *(287 commits de retard — personne ne l'avait vu, car
+**aucun commit ne touchait `backend/` depuis**)*. Le déploiement était simplement **en cours**.
+➡ **Ne jamais conclure « le déploiement est cassé » sur une mesure prise juste après un push** :
+sonder, puis parler.
+
+### ⬜ CE QUI RESTE
+
+```
+1. la fonction de SECOURS admin-users -- deploiement Supabase A PART :
+      cd C:\Hektor\Projet && npx supabase functions deploy admin-users
+   (sans elle tout marche, mais le secours ne saurait pas ecrire le perimetre)
+2. LE PILOTE : essayer la case pour de vrai, et un geste reel chez Hektor
+3. l'ecran NE S'EPROUVE PAS : le build garantit que ca COMPILE, pas que les bons
+   boutons apparaissent. A verifier au premier vrai essai -- et aucun compte
+   manager n'existe aujourd'hui.
+```
+
+---
+
 ## L2.14 ✅ LES PHOTOS SUIVENT LE BIEN — *appliqué et contrôlé le 12/10*
 
 **Décision de Frédéric** : *« fais les photos tout le réseau pour les négociateurs »*.
