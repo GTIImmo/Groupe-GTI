@@ -909,6 +909,56 @@ en empruntant l'identite de Melanie, en LECTURE SEULE :
   un vrai travail sur un vrai bien.
 ```
 
+## L2.9 ✅✅ L2-A APPLIQUÉ ET CONTRÔLÉ — *12/10*
+
+### Les empreintes et la structure
+
+| contrôle | résultat |
+|---|---|
+| les **3 empreintes** | **3/3 CONFORMES** à la répétition |
+| types connus du commercial | **12** *(7 + 5)* |
+| statut et archivage **toujours admin seul** | **oui** — je n'ai pas débordé |
+| contrôle « ses biens » présent | **oui** |
+| garde du prix dans les 2 chemins | **2** |
+| joignables sans compte | **0** — chantier ① intact |
+
+### ⭐ LA PREUVE PAR LE COMPORTEMENT — *12 sur 12, en interrogeant le videur en tant que Mélanie*
+
+*(le videur est une fonction qui ne fait que répondre oui/non : on peut donc l'éprouver en
+lecture seule, sans rien écrire — biens d'essai : le 477 est à elle, le 377 à un collègue)*
+
+| ce qu'elle demande | réponse | attendu |
+|---|---|---|
+| son rôle vu par la base | **commercial** | ✅ |
+| **modifier les champs — SON bien** | **oui** | ✅ |
+| **modifier les champs — bien d'un COLLÈGUE** | **non** | ✅ |
+| rattacher un mandant — son bien | **oui** | ✅ |
+| retirer un mandant — son bien | **oui** | ✅ |
+| créer un mandant — son bien | **oui** | ✅ |
+| modifier un mandant — son bien | **oui** | ✅ |
+| **changer le statut — son bien** | **non** | ✅ reste fermé |
+| **archiver — son bien** | **non** | ✅ reste fermé |
+| ajouter une photo — son bien | **non** | ✅ *(c'est L2-B)* |
+| désarchiver — son bien | **non** | ✅ *(c'est L2-B)* |
+| envoyer un document — son bien | **oui** | ✅ *(ouvert avant L2-A)* |
+
+### ⚠ CE QUE JE N'AI PAS PU ÉPROUVER : le refus du prix
+
+La fonction de saisie **écrit** *(elle pose la saisie en attente)*, et le garde-fou de session
+m'interdit d'écrire en production, **même dans une transaction annulée**. Je ne l'ai donc
+**pas exécuté**. Ce que j'ai prouvé à la place :
+
+| | |
+|---|---|
+| le garde **est** dans les deux chemins | mesuré : 2/2 |
+| `app_console_current_role()` rend bien **`commercial`** pour Mélanie | mesuré ci-dessus |
+| le garde teste exactement `= 'commercial'` et `v_price is not null` | relu dans le corps |
+| ⭐ **et il est au BON ENDROIT** : le prix est lu *(position 1867)*, le garde refuse *(2398)*, **puis** la saisie est écrite *(4518)* | mesuré |
+
+➡ **Le refus intervient avant toute écriture.** La logique est prouvée par composition, mais
+**l'exécution réelle reste à voir au premier essai** — à faire avec l'accord de Frédéric, ou
+au pilote.
+
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
 **À chronométrer avant de valider.**
