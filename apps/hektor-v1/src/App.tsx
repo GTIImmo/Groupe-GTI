@@ -15414,7 +15414,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   function openDeleteAnnonceModal(dossier: Dossier) {
-    if (!isAdmin) return
+    if (!isManagerOrAdmin) return
     setDeleteAnnonceTarget(dossier)
     setDeleteAnnonceReason('')
     setDeleteAnnonceConfirmText('')
@@ -15472,7 +15472,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   function openArchiveAnnonceModal(dossier: Dossier) {
-    if (!isAdmin) return
+    if (!isManagerOrAdmin) return
     setArchiveAnnonceTarget(dossier)
     setArchiveMainChoice('choiceAutre')
     setArchiveSubChoice('non_renouvele')
@@ -15704,7 +15704,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   function openStatusChangeModal(dossier: Dossier) {
-    if (!isAdmin) return
+    if (!isManagerOrAdmin) return
     const current = String(dossier.statut_annonce ?? '').trim().toLowerCase()
     const nextStatus: HektorAnnonceStatusTarget = current.includes('compromis')
       ? 'compromise'
@@ -15779,7 +15779,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   function openMissingNegotiatorModal(dossier: HektorNegotiatorRequiredDossier) {
-    if (!isAdmin) {
+    if (!isManagerOrAdmin) {
       setErrorMessage("Cette action nécessite un négociateur Hektor sur l'annonce. Demande à un administrateur de l'affecter.")
       return
     }
@@ -17737,11 +17737,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     ? `${new Intl.NumberFormat('fr-FR').format(mandatsTotal)} resultat${mandatsTotal > 1 ? 's' : ''} dans ${annonceSearchScopeText(dataFilters)}`
     : null
   const lightweightAnnonceFiltersActive = screen === 'mandats' && usesLightweightAnnonceIndex(filters)
+  // ⚠ DEUX variables depuis le 12/10, et c'est VOLONTAIRE.
+  //   isAdmin        = ADMIN STRICT. Un seul ecran s'en sert : SANTE.
+  //   isManagerOrAdmin = tout le reste -- « manager = idem admin », decision de
+  //                    Frederic du 12/10, avec DEUX exceptions voulues :
+  //                    l'ecran Sante reste admin seul, et l'outil Utilisateurs
+  //                    s'ouvre au manager (il l'etait DEJA cote serveur).
+  //   Ne pas les confondre : remplacer isAdmin par isManagerOrAdmin sur la ligne
+  //   de Sante ouvrirait la surveillance du systeme au manager.
   const isAdmin = profile?.role === 'admin'
+  const isManagerOrAdmin = profile?.role === 'admin' || profile?.role === 'manager'
   const screenHeader = useMemo(() => {
     if (screen === 'accueil') {
-      if (isPaulineAdministrativeProfile(profile, isAdmin)) return { title: 'Accueil Pauline administratif', copy: '' }
-      if (isAdmin) return { title: 'Accueil Admin', copy: '' }
+      if (isPaulineAdministrativeProfile(profile, isManagerOrAdmin)) return { title: 'Accueil Pauline administratif', copy: '' }
+      if (isManagerOrAdmin) return { title: 'Accueil Admin', copy: '' }
       return { title: 'Accueil commercial', copy: '' }
     }
     if (screen === 'annonces') {
@@ -17766,7 +17775,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return { title: 'Agenda Google', copy: '' }
     }
     return { title: 'Suivi des mandats', copy: '' }
-  }, [screen, mandatDrilldownLabel, currentAnnonceListingLabels, profile, isAdmin])
+  }, [screen, mandatDrilldownLabel, currentAnnonceListingLabels, profile, isManagerOrAdmin])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -18112,8 +18121,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   const contactHektorUserEmail = resolvedUserNegotiatorContext?.negociateur_email ?? sessionEmail ?? null
   const contactHektorUserId = resolvedUserNegotiatorContext?.hektor_user_id ?? null
   useEffect(() => {
-    if ((screen === 'suivi' || screen === 'sante') && !isAdmin) setScreen('mandats')
-  }, [screen, isAdmin])
+    if (screen === 'suivi' && !isManagerOrAdmin) setScreen('mandats')
+    if (screen === 'sante' && !isAdmin) setScreen('mandats')
+  }, [screen, isAdmin, isManagerOrAdmin])
   const images = useMemo(() => {
     // G.15-d (27/09/2026) -- QUAND NOTRE GALERIE EXISTE, ELLE SERT SEULE.
     //
@@ -20818,7 +20828,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             relations={annonceContactRelations}
             searches={annonceContactSearches}
             canManageContacts={canManageContacts}
-            canDeleteContacts={isAdmin}
+            canDeleteContacts={isManagerOrAdmin}
             hektorUserEmail={contactHektorUserEmail}
             hektorUserId={contactHektorUserId}
             hektorNegotiators={hektorNegotiators}
@@ -21119,12 +21129,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         <MobileLayout
         currentScreen={screen}
         title={mobileScreenTitle}
-        isAdmin={isAdmin}
+        isAdmin={isManagerOrAdmin}
+        isAdminStrict={isAdmin}
         userInitials={userInitials(profile?.display_name, session?.user.email ?? profile?.email ?? null)}
         userLabel={mobileUserLabel}
         agencyLabel={mobileAgencyLabel}
         onNavigate={openScreen}
-        onOpenUsers={isAdmin ? () => void openUserTool() : undefined}
+        onOpenUsers={isManagerOrAdmin ? () => void openUserTool() : undefined}
         onSignOut={session ? handleSignOut : undefined}
       >
         {showMobileCommandCard ? (
@@ -21323,9 +21334,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
         {screen === 'accueil' ? (
           <HomeDashboardScreen
-            variant={homeDashboardVariant(profile, isAdmin)}
+            variant={homeDashboardVariant(profile, isManagerOrAdmin)}
             profile={profile}
-            isAdmin={isAdmin}
+            isAdmin={isManagerOrAdmin}
             mandats={mandats}
             dossiers={dossiers}
             requests={diffusionRequests}
@@ -21409,7 +21420,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               setDetailOpen(true)
             }}
             canManageContacts={canManageContacts}
-            canDeleteContacts={isAdmin}
+            canDeleteContacts={isManagerOrAdmin}
             hektorUserEmail={contactHektorUserEmail}
             hektorUserId={contactHektorUserId}
             hektorNegotiators={hektorNegotiators}
@@ -21485,13 +21496,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 backLabel="Fermer"
                 onBack={closeDossierDetailPage}
                 detailVariant={detailVariantForScreen(screen)}
-                allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
+                allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isManagerOrAdmin}
                 markValidationPending={detailValidationPending}
                 validationDraft={detailValidationDraft}
                 validationObserved={detailValidationObserved}
                 validationSaved={detailValidationSaved}
                 onSetValidation={handleSetSelectedDossierValidation}
-                allowMarkDiffusable={(screen === 'suivi' || screen === 'mandats') && isAdmin}
+                allowMarkDiffusable={(screen === 'suivi' || screen === 'mandats') && isManagerOrAdmin}
                 markDiffusablePending={detailDiffusablePending}
                 onSetDiffusable={handleSetSelectedDossierDiffusable}
                 diffusableDraft={detailDiffusableDraft}
@@ -21499,9 +21510,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 diffusableSaved={detailDiffusableSaved}
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
-                onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
-                onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
-                onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
+                onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
+                onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
+                onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onOpenContact={openContactDirectory}
                 onHektorActionJobCreated={rememberHektorActionJob}
@@ -21575,7 +21586,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <button className={`nav-button ${screen === 'registre' ? 'is-active' : ''}`} type="button" title="Mandats" onClick={() => openScreen('registre')}>Mandats</button>
           <button className={`nav-button nav-button-contacts ${screen === 'contacts' ? 'is-active' : ''}`} type="button" title="Contacts" onClick={() => openScreen('contacts')}>Contacts</button>
           <button className={`nav-button ${screen === 'agenda' ? 'is-active' : ''}`} type="button" title="Agenda" onClick={() => openScreen('agenda')}>Agenda</button>
-          {isAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
+          {isManagerOrAdmin ? <button className={`nav-button ${screen === 'suivi' ? 'is-active' : ''}`} type="button" title="Suivi" onClick={() => openScreen('suivi')}>Suivi</button> : null}
           {isAdmin ? <button className={`nav-button ${screen === 'sante' ? 'is-active' : ''}`} type="button" title="Santé système" onClick={() => openScreen('sante')}>Santé</button> : null}
         </nav>
         <div className="header-user-stack">
@@ -21588,7 +21599,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               </div>
               <div className="user-card-actions">
                 <NotificationsBell negociateurEmail={sessionEmail} />
-                {isAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
+                {isManagerOrAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
                 {session ? <button className="signout-button-inline" type="button" title="Se deconnecter" data-short="S" onClick={handleSignOut}>Se deconnecter</button> : null}
               </div>
             </div>
@@ -22205,9 +22216,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
         {screen === 'accueil' ? (
           <HomeDashboardScreen
-            variant={homeDashboardVariant(profile, isAdmin)}
+            variant={homeDashboardVariant(profile, isManagerOrAdmin)}
             profile={profile}
-            isAdmin={isAdmin}
+            isAdmin={isManagerOrAdmin}
             mandats={mandats}
             dossiers={dossiers}
             requests={diffusionRequests}
@@ -22248,7 +22259,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -22366,7 +22377,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             }}
             onResetFilters={resetFilters}
             canManageContacts={canManageContacts}
-            canDeleteContacts={isAdmin}
+            canDeleteContacts={isManagerOrAdmin}
             hektorUserEmail={contactHektorUserEmail}
             hektorUserId={contactHektorUserId}
             hektorNegotiators={hektorNegotiators}
@@ -22399,7 +22410,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           <SanteSystemeScreen isAdmin={isAdmin} />
         ) : (
           <SuiviMandatsScreenV2
-            isAdmin={isAdmin}
+            isAdmin={isManagerOrAdmin}
             mandats={screenMandats}
             requests={diffusionRequests}
             stats={mandatStats}
@@ -22462,13 +22473,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 backSynthLabel={dossierReturnContactId ? 'Fiche contact' : undefined}
                 onBack={closeDossierDetailPage}
                 detailVariant={detailVariantForScreen(screen)}
-                allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isAdmin}
+                allowMarkValidation={(screen === 'suivi' || screen === 'mandats') && isManagerOrAdmin}
                 markValidationPending={detailValidationPending}
                 validationDraft={detailValidationDraft}
                 validationObserved={detailValidationObserved}
                 validationSaved={detailValidationSaved}
                 onSetValidation={handleSetSelectedDossierValidation}
-                allowMarkDiffusable={(screen === 'suivi' || screen === 'mandats') && isAdmin}
+                allowMarkDiffusable={(screen === 'suivi' || screen === 'mandats') && isManagerOrAdmin}
                 markDiffusablePending={detailDiffusablePending}
                 onSetDiffusable={handleSetSelectedDossierDiffusable}
                 diffusableDraft={detailDiffusableDraft}
@@ -22476,9 +22487,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 diffusableSaved={detailDiffusableSaved}
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
                 onOpenImage={setDetailImageModalUrl}
-                onDeleteAnnonce={isAdmin ? openDeleteAnnonceModal : undefined}
-                onArchiveAnnonce={isAdmin ? openArchiveAnnonceModal : undefined}
-                onChangeAnnonceStatus={isAdmin ? openStatusChangeModal : undefined}
+                onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
+                onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
+                onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
                 onRestoreAnnonce={handleRestoreHektorAnnonce}
                 onOpenContact={openContactDirectory}
                 onOpenRapprochement={openRapprochementMandat}
@@ -22499,7 +22510,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </main>
       </div>
 
-      {userToolOpen && isAdmin ? (
+      {userToolOpen && isManagerOrAdmin ? (
         <div className="filters-overlay" onClick={() => setUserToolOpen(false)}>
           <section className="filters-drawer" onClick={(event) => event.stopPropagation()}>
             <div className="filters-head">

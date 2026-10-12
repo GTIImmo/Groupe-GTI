@@ -6,7 +6,11 @@ type MobileLayoutProps = {
   children: ReactNode
   currentScreen: AppScreen
   title: string
+  // « admin ou manager » depuis le 12/10 : c'est ce qui ouvre Suivi et l'outil
+  // Utilisateurs au manager.
   isAdmin: boolean
+  // ADMIN STRICT : rien que l'ecran Sante s'en sert.
+  isAdminStrict?: boolean
   userInitials: string
   userLabel: string
   agencyLabel: string
@@ -15,7 +19,7 @@ type MobileLayoutProps = {
   onSignOut?: () => void
 }
 
-const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; adminOnly?: boolean }> = [
+const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; adminOnly?: boolean; adminStrictOnly?: boolean }> = [
   { screen: 'accueil', label: 'Accueil', icon: 'home' },
   { screen: 'mandats', label: 'Annonces', icon: 'home' },
   { screen: 'estimations', label: 'Estimations', icon: 'trend' },
@@ -23,7 +27,9 @@ const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; ad
   { screen: 'agenda', label: 'Agenda', icon: 'calendar' },
   { screen: 'registre', label: 'Mandats', icon: 'doc' },
   { screen: 'suivi', label: 'Suivi', icon: 'target', adminOnly: true },
-  { screen: 'sante', label: 'Santé', icon: 'target', adminOnly: true },
+  // ⚠ L'ecran Sante reste ADMIN SEUL -- exception voulue par Frederic le 12/10,
+  //   alors que Suivi et l'outil Utilisateurs s'ouvrent au manager.
+  { screen: 'sante', label: 'Santé', icon: 'target', adminStrictOnly: true },
 ]
 
 export function MobileLayout({
@@ -31,6 +37,7 @@ export function MobileLayout({
   currentScreen,
   title,
   isAdmin,
+  isAdminStrict,
   userInitials,
   userLabel,
   agencyLabel,
@@ -38,7 +45,11 @@ export function MobileLayout({
   onOpenUsers,
   onSignOut,
 }: MobileLayoutProps) {
-  const visibleNav = mobileNavItems.filter((item) => !item.adminOnly || isAdmin)
+  const visibleNav = mobileNavItems.filter((item) => {
+    if (item.adminStrictOnly) return Boolean(isAdminStrict)
+    if (item.adminOnly) return isAdmin
+    return true
+  })
 
   return (
     <div className="mobile-app-shell">
