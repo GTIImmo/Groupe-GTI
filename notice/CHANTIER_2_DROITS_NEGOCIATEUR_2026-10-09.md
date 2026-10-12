@@ -1002,7 +1002,7 @@ qu'on s'en aperçoive, parce que L4 les portait.
 | lot | état réel |
 |---|---|
 | **L5** la notion d'agence | ✅ **FAIT par L4** : `app_mon_agence()` existe et rend la bonne agence *(prouvé : « Groupe GTI Saint-Étienne » pour Mélanie)*, et les règles s'en servent pour le périmètre « agence » |
-| **L6** la case « périmètre » | ✅ **FAIT par L4** : la colonne est posée *(défaut `reseau`)* et **les règles l'utilisent déjà**. Il ne reste qu'un **geste d'exploitation** : décider quel compte passe en `portefeuille` ou `agence` |
+| **L6** la case « périmètre » | 🟠 **À MOITIÉ FAIT — et j'avais écrit « fait », c'était FAUX** *(erreur corrigée le 12/10, **trouvée par Frédéric** : « je ne vois pas où dans le front on peut choisir le périmètre »)*. La colonne est posée *(défaut `reseau`)* et **les règles l'utilisent déjà** ✅, mais **RIEN NE PERMET DE LA RÉGLER** : ni le formulaire de l'écran, ni la fonction serveur. Voir **L6-bis** ci-dessous |
 | **L7** l'écran Registre des mandats | ✅ **FAIT par L4** : règle `is_app_manager_or_admin()` **et** la vue réglée. Mesuré : Mélanie voit **0** ligne |
 | **L2** ce que le négociateur fait seul | ✅ **FINI** *(L2-A + L2-B)* |
 | **L4** cloisonner les consultations | ✅ **FINI** *(L4 + L4-bis)* |
@@ -1034,6 +1034,37 @@ LE PILOTE  2 comptes existants, 2 agences (Saint-Etienne + Firminy),
              - le message francais du refus du prix (attend un deploiement)
              - mesurer les branches « agence » / « portefeuille » si on les utilise
 ```
+
+## L2.12 🟠 L6-bis — RÉGLER LE PÉRIMÈTRE DEPUIS L'APP *(trou trouvé par Frédéric le 12/10)*
+
+> **Mon erreur** : j'avais classé L6 « fait ». La case existe et les règles s'en servent, mais
+> **personne ne peut la régler** — j'avais vérifié la base et pas l'écran.
+
+### Ce qui manque, mesuré
+
+| | état | où |
+|---|---|---|
+| la colonne `app_user_profile.perimetre` | ✅ posée, défaut `reseau` | base |
+| les règles de lecture s'en servent | ✅ *(L4 + L4-bis)* | base |
+| **le formulaire de création** | ❌ 7 champs *(email, mot de passe, rôle, prénom, nom, nom affiché, actif)* — **pas de périmètre** | `App.tsx:12619-12625` |
+| **le formulaire de modification** | ❌ même chose | `App.tsx:22586` |
+| **le type `UserProfile`** | ❌ 7 champs, pas de `perimetre` | `types.ts:319-327` |
+| **la fonction serveur `admin-users`** | ❌ ne lit ni n'écrit `perimetre` : absente du `select` *(l. 45, 52)*, de la création *(l. 126)* et de la modification *(l. 155)* | `supabase/functions/admin-users/index.ts` |
+
+### ⚠ Deux déploiements DIFFÉRENTS, et c'est le point à retenir
+
+| | comment ça se déploie |
+|---|---|
+| l'écran *(`App.tsx`, `types.ts`)* | **push → Vercel** |
+| la fonction serveur *(`supabase/functions/admin-users`)* | **déploiement Supabase à part** — un push ne la déploie PAS |
+
+### En attendant : un patch SQL suffit
+
+Régler un périmètre ne demande qu'une ligne :
+`update app_user_profile set perimetre = 'portefeuille' where email = '…';`
+➡ **Donc le pilote n'est pas bloqué.** Un patch à coller fait l'affaire, avec contrôle avant /
+après et son inverse — et c'est de toute façon ce qu'il faudra pour le **premier** réglage,
+puisque l'écran ne l'aura pas encore.
 
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
