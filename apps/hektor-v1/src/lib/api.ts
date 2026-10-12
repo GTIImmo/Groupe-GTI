@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockRapprochementsForDossier, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase, supabaseUrl } from './supabase'
-import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from '../types'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserPerimetre, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -7323,6 +7323,11 @@ export async function sendDiffusionDecisionEmail(input: {
   return payload as { ok: true; messageId?: string | null }
 }
 
+// ⚠ `perimetre` traverse les TROIS chemins sans rien de plus a ecrire : les
+//   appels passent `...input`, donc il part aussi bien vers le backend Render
+//   (le chemin normal) que vers la fonction Supabase (le secours) et vers l'API
+//   locale. Les trois ont ete mis a jour le 12/10 -- ne pas en oublier un, sinon
+//   le reglage se perd en silence selon le chemin emprunte.
 export async function createAppUser(input: {
   email: string
   password: string
@@ -7331,6 +7336,7 @@ export async function createAppUser(input: {
   lastName: string
   displayName: string
   isActive: boolean
+  perimetre: UserPerimetre
 }) {
   if (input.password.trim().length < 8) {
     throw new Error('Le mot de passe temporaire doit contenir au moins 8 caracteres')
@@ -7399,6 +7405,7 @@ export async function updateAppUser(input: {
   lastName: string
   displayName: string
   isActive: boolean
+  perimetre: UserPerimetre
 }) {
   if (canUseBackendApi()) {
     return invokeBackendApi<{ ok: true }>('/admin/users/update', {
@@ -9503,7 +9510,29 @@ export async function editAnnonceOptimistic(input: {
     edit_fields: editFields,
     debounce_seconds: input.debounceSeconds ?? 600,
   })
-  if (error) throw new Error(error.message)
+  if (error) {
+    // ⚠ ON TRADUIT LE REFUS, ON NE LE MASQUE PAS -- meme regle que pour le
+    //   retrait d'un mandant. Un « prix_sur_demande » brut ne dit rien a un
+    //   negociateur ; il faut lui dire QUOI FAIRE a la place.
+    const brut = error.message ?? ''
+    if (brut.includes('prix_sur_demande')) {
+      throw new Error(
+        'Le prix ne se modifie pas directement : utilise « Demande de baisse de prix » '
+        + 'sur la fiche du bien. Tes autres modifications n’ont pas été enregistrées — '
+        + 'retire le prix et enregistre à nouveau.',
+      )
+    }
+    if (brut.includes('forbidden_update_annonce')) {
+      throw new Error("Modification impossible : tu n'as pas les droits sur ce bien.")
+    }
+    if (brut.includes('invalid_price')) {
+      throw new Error('Le prix doit être un montant numérique.')
+    }
+    if (brut.includes('dossier_not_found')) {
+      throw new Error("Ce bien n'a pas été retrouvé dans l'application.")
+    }
+    throw new Error(brut)
+  }
   return (data as { ok: boolean }) ?? { ok: true }
 }
 

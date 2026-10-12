@@ -316,6 +316,21 @@ export type WorkItem = {
   age_jours: number | null
 }
 
+// PERIMETRE d'un compte (pose le 12/10/2026, chantier 2) : jusqu'ou il voit.
+//   portefeuille  ses biens et ses contacts seulement
+//   agence        toute son agence
+//   reseau        tout le reseau  -- LE DEFAUT
+// Il ne remplace PAS le role : un negociateur reste « commercial », on regle
+// seulement jusqu'ou il voit (decision R2 de Frederic, pour eviter une 5e valeur
+// de role : une valeur d'enum PostgreSQL ne peut jamais etre retiree).
+export type UserPerimetre = 'portefeuille' | 'agence' | 'reseau'
+
+export const USER_PERIMETRES: ReadonlyArray<{ valeur: UserPerimetre; libelle: string; aide: string }> = [
+  { valeur: 'reseau', libelle: 'Tout le réseau', aide: 'Il voit les annonces, les contacts et les photos de toutes les agences. C’est le réglage normal d’un négociateur.' },
+  { valeur: 'agence', libelle: 'Son agence', aide: 'Il ne voit que les biens et les contacts de son agence.' },
+  { valeur: 'portefeuille', libelle: 'Ses biens seulement', aide: 'Il ne voit que ses propres biens et contacts. ⚠ L’écran Rapprochement lui est alors masqué, et il perd les archives qui ne portent pas son adresse.' },
+]
+
 export type UserProfile = {
   id: string
   email: string | null
@@ -324,6 +339,9 @@ export type UserProfile = {
   last_name?: string | null
   display_name: string | null
   is_active: boolean
+  // absent des comptes lus avant le 12/10 : on lit donc toujours avec un repli
+  // sur « reseau », jamais en supposant que la cle existe.
+  perimetre?: UserPerimetre | null
 }
 
 export type GoogleWorkspaceIdentity = {

@@ -1,5 +1,6 @@
 import { ChangeEvent, type CSSProperties, FormEvent, Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { USER_PERIMETRES } from './types'
 import type { Session } from '@supabase/supabase-js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -208,7 +209,7 @@ import {
 } from './lib/api'
 import type { CadreDeVie, CadastreData, CadastreParcelle, DvfComparablesResult, DossierEstimation, BdnbData, DpeData, PatrimoineData, LoyerData, CoproRnieData, InseeProfil } from './lib/api'
 import { getCurrentSession, googleWorkspaceDomain, hasSupabaseEnv, isGoogleWorkspaceEmail, signInWithGoogleWorkspace, signInWithPassword, signOut, supabase, updatePassword } from './lib/supabase'
-import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserProfile, WorkItem } from './types'
+import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsolePhoto, ContactStats, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetailPayload, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserPerimetre, UserProfile, WorkItem } from './types'
 import DOMPurify from 'dompurify'
 import { DesktopLayout } from './layouts/DesktopLayout'
 import { MobileLayout } from './layouts/MobileLayout'
@@ -12623,12 +12624,16 @@ export default function App() {
   const [newUserLastName, setNewUserLastName] = useState('')
   const [newUserDisplayName, setNewUserDisplayName] = useState('')
   const [newUserIsActive, setNewUserIsActive] = useState(true)
+  // PERIMETRE (12/10/2026) : jusqu'ou le compte voit. « reseau » par defaut, donc
+  // un compte cree sans y toucher voit tout -- comme avant que la case existe.
+  const [newUserPerimetre, setNewUserPerimetre] = useState<UserPerimetre>('reseau')
   const [editUserEmail, setEditUserEmail] = useState('')
   const [editUserRole, setEditUserRole] = useState<UserProfile['role']>('commercial')
   const [editUserFirstName, setEditUserFirstName] = useState('')
   const [editUserLastName, setEditUserLastName] = useState('')
   const [editUserDisplayName, setEditUserDisplayName] = useState('')
   const [editUserIsActive, setEditUserIsActive] = useState(true)
+  const [editUserPerimetre, setEditUserPerimetre] = useState<UserPerimetre>('reseau')
   const [requestModalRole, setRequestModalRole] = useState<'nego' | 'pauline'>('nego')
   const [requestModalDecision, setRequestModalDecision] = useState('in_progress')
   const [requestModalRefusalReason, setRequestModalRefusalReason] = useState('')
@@ -17335,6 +17340,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         lastName: newUserLastName.trim(),
         displayName,
         isActive: newUserIsActive,
+        perimetre: newUserPerimetre,
       })
       setNewUserEmail('')
       setNewUserPassword('')
@@ -17343,6 +17349,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setNewUserLastName('')
       setNewUserDisplayName('')
       setNewUserIsActive(true)
+      setNewUserPerimetre('reseau')
       setErrorMessage(`Utilisateur cree : ${result.email}`)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Erreur de creation utilisateur')
@@ -17427,6 +17434,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setEditUserLastName(user.last_name ?? '')
     setEditUserDisplayName(user.display_name ?? '')
     setEditUserIsActive(Boolean(user.is_active))
+    setEditUserPerimetre(user.perimetre ?? 'reseau')
   }
 
   function resetEditUser() {
@@ -17437,6 +17445,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setEditUserLastName('')
     setEditUserDisplayName('')
     setEditUserIsActive(true)
+    setEditUserPerimetre('reseau')
   }
 
   async function handleUpdateAppUser(event: FormEvent<HTMLFormElement>) {
@@ -17454,6 +17463,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         lastName: editUserLastName.trim(),
         displayName,
         isActive: editUserIsActive,
+        perimetre: editUserPerimetre,
       })
       setAppUsers(await loadAppUsers())
       resetEditUser()
@@ -22532,6 +22542,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <option value="lecture">Lecture</option>
                     </select>
                   </label>
+                  {/* PERIMETRE (12/10/2026) : jusqu'ou ce compte voit. Il ne remplace
+                      PAS le role -- un negociateur reste « Negociateur », on regle
+                      seulement sa vue. « Tout le reseau » par defaut, donc un compte
+                      cree sans y toucher se comporte comme avant que la case existe. */}
+                  <label className="filter-field">
+                    <span>Jusqu'ou il voit</span>
+                    <select value={newUserPerimetre} onChange={(event) => setNewUserPerimetre(event.target.value as UserPerimetre)}>
+                      {USER_PERIMETRES.map((item) => (
+                        <option key={item.valeur} value={item.valeur}>{item.libelle}</option>
+                      ))}
+                    </select>
+                    <small className="field-hint">
+                      {USER_PERIMETRES.find((item) => item.valeur === newUserPerimetre)?.aide}
+                    </small>
+                  </label>
                   <label className="checkbox-inline">
                     <input type="checkbox" checked={newUserIsActive} onChange={(event) => setNewUserIsActive(event.target.checked)} />
                     Utilisateur actif
@@ -22588,6 +22613,17 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <option value="admin">Administrateur</option>
                         <option value="lecture">Lecture</option>
                       </select>
+                    </label>
+                    <label className="filter-field">
+                      <span>Jusqu'ou il voit</span>
+                      <select value={editUserPerimetre} onChange={(event) => setEditUserPerimetre(event.target.value as UserPerimetre)}>
+                        {USER_PERIMETRES.map((item) => (
+                          <option key={item.valeur} value={item.valeur}>{item.libelle}</option>
+                        ))}
+                      </select>
+                      <small className="field-hint">
+                        {USER_PERIMETRES.find((item) => item.valeur === editUserPerimetre)?.aide}
+                      </small>
                     </label>
                     <label className="checkbox-inline">
                       <input type="checkbox" checked={editUserIsActive} onChange={(event) => setEditUserIsActive(event.target.checked)} />

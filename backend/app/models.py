@@ -7,6 +7,16 @@ from pydantic import BaseModel, EmailStr, Field
 
 UserRole = Literal["admin", "manager", "commercial", "lecture"]
 
+# PERIMETRE d'un compte (pose le 12/10/2026, chantier 2) : jusqu'ou il voit.
+#   portefeuille  ses biens et ses contacts seulement
+#   agence        toute son agence
+#   reseau        tout le reseau  -- LE DEFAUT
+# Il ne remplace PAS le role : un negociateur reste « commercial », on regle
+# seulement jusqu'ou il voit. C'est la decision R2 de Frederic (12/10), prise
+# pour eviter une 5e valeur de role -- une valeur d'enum PostgreSQL ne peut
+# JAMAIS etre retiree, une colonne si.
+UserPerimetre = Literal["portefeuille", "agence", "reseau"]
+
 
 class CreateUserPayload(BaseModel):
     email: EmailStr
@@ -16,6 +26,9 @@ class CreateUserPayload(BaseModel):
     lastName: str = ""
     displayName: str = ""
     isActive: bool = True
+    # defaut « reseau » : un compte cree sans cette case voit tout, exactement
+    # comme avant que la colonne existe.
+    perimetre: UserPerimetre = "reseau"
 
 
 class UpdateUserPayload(BaseModel):
@@ -26,6 +39,9 @@ class UpdateUserPayload(BaseModel):
     lastName: str = ""
     displayName: str = ""
     isActive: bool = True
+    # None = « ne touche pas au perimetre de ce compte ». Un ecran plus ancien
+    # qui n'envoie pas la case ne doit pas remettre tout le monde a « reseau ».
+    perimetre: UserPerimetre | None = None
 
 
 class SendResetPayload(BaseModel):

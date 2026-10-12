@@ -23,6 +23,21 @@ function requireEnv(name: string) {
   return value
 }
 
+// PERIMETRE d'un compte (pose le 12/10/2026, chantier 2) : jusqu'ou il voit.
+//   portefeuille  ses biens et ses contacts seulement
+//   agence        toute son agence
+//   reseau        tout le reseau  -- LE DEFAUT
+// Toute valeur inconnue retombe sur « reseau » : on n'enferme JAMAIS quelqu'un
+// par accident (meme esprit que le coalesce du patch du 30/08 cote base).
+// La colonne porte la meme contrainte, donc une valeur fantaisiste serait de
+// toute facon refusee par la base : ici on evite juste une erreur inutile.
+const PERIMETRES = ['portefeuille', 'agence', 'reseau'] as const
+
+function normalisePerimetre(valeur: unknown): string {
+  const propre = String(valeur ?? '').trim().toLowerCase()
+  return (PERIMETRES as readonly string[]).includes(propre) ? propre : 'reseau'
+}
+
 async function createClients(authHeader: string | null) {
   const supabaseUrl = requireEnv('SUPABASE_URL')
   const anonKey = requireEnv('SUPABASE_ANON_KEY')
@@ -100,6 +115,10 @@ Deno.serve(async (request) => {
       const lastName = String(body?.lastName ?? '').trim() || null
       const displayName = String(body?.displayName ?? '').trim() || [firstName, lastName].filter(Boolean).join(' ') || email || null
       const isActive = body?.isActive !== false
+      // PERIMETRE (pose le 12/10/2026, chantier 2) : jusqu'ou ce compte voit.
+      // Defaut « reseau » = il voit tout, comme avant la pose de la colonne : un
+      // compte cree sans cette case ne change donc de comportement pour personne.
+      const perimetre = normalisePerimetre(body?.perimetre)
 
       if (!email || !password || !role) {
         return jsonResponse({ ok: false, error: 'Email, password and role are required' }, { status: 400 })
@@ -128,6 +147,7 @@ Deno.serve(async (request) => {
         last_name: lastName,
         display_name: displayName,
         is_active: isActive,
+        perimetre,
         updated_at: new Date().toISOString(),
       })
       if (profileError) throw new Error(profileError.message)
@@ -148,6 +168,13 @@ Deno.serve(async (request) => {
         return jsonResponse({ ok: false, error: 'id, email and role are required' }, { status: 400 })
       }
 
+      // PERIMETRE : on ne l'ecrit QUE s'il est fourni. Sinon on laisse celui du
+      // compte tel quel -- un ecran plus ancien qui n'envoie pas la case ne doit
+      // pas remettre tout le monde a « reseau » sans le vouloir.
+      const champsPerimetre = body?.perimetre === undefined || body?.perimetre === null
+        ? {}
+        : { perimetre: normalisePerimetre(body.perimetre) }
+
       const { error } = await adminClient
         .from('app_user_profile')
         .update({
@@ -157,6 +184,7 @@ Deno.serve(async (request) => {
           last_name: lastName,
           display_name: displayName,
           is_active: isActive,
+          ...champsPerimetre,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)

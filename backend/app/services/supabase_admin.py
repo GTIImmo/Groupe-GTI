@@ -375,6 +375,9 @@ class SupabaseAdminService:
             "last_name": payload.get("lastName") or None,
             "display_name": display_name,
             "is_active": payload.get("isActive", True),
+            # PERIMETRE (12/10/2026) : jusqu'ou ce compte voit. « reseau » par
+            # defaut, donc un compte cree sans cette case voit tout -- comme avant.
+            "perimetre": payload.get("perimetre") or "reseau",
         }
         profile = self._upsert_profile(profile_payload)
         if str(profile.get("id") or "") != str(user_id):
@@ -402,18 +405,24 @@ class SupabaseAdminService:
         if is_active and not self._is_workspace_email(email):
             raise HTTPException(status_code=400, detail=f"Utilisateur actif hors domaine @{self.settings.google_workspace_domain} refuse")
         display_name = payload.get("displayName") or " ".join(filter(None, [payload.get("firstName"), payload.get("lastName")])).strip() or email
+        champs = {
+            "email": email,
+            "role": payload["role"],
+            "first_name": payload.get("firstName") or None,
+            "last_name": payload.get("lastName") or None,
+            "display_name": display_name,
+            "is_active": is_active,
+        }
+        # PERIMETRE (12/10/2026) : on ne l'ecrit QUE s'il est fourni. Sinon on
+        # laisse celui du compte tel quel -- un ecran plus ancien qui n'envoie pas
+        # la case ne doit pas remettre tout le monde a « reseau » sans le vouloir.
+        if payload.get("perimetre"):
+            champs["perimetre"] = payload["perimetre"]
         response = requests.patch(
             f"{self.settings.supabase_url}/rest/v1/app_user_profile",
             headers=self._rest_headers(),
             params={"id": f"eq.{payload['id']}"},
-            json={
-                "email": email,
-                "role": payload["role"],
-                "first_name": payload.get("firstName") or None,
-                "last_name": payload.get("lastName") or None,
-                "display_name": display_name,
-                "is_active": is_active,
-            },
+            json=champs,
             timeout=30,
         )
         self._raise_for_response(response, "Unable to update user profile")
