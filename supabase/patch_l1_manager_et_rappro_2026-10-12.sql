@@ -228,8 +228,16 @@ begin
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.proname = 'app_console_can_request_job';
 
-    if position('current_app_role in (''admin'', ''manager'')' in v_def) = 0 then
+    -- ⚠ ON CHERCHE LE RETURN DU CAS PARTICULIER, pas n'importe quel « admin, manager » :
+    --   la phrase « current_app_role in ('admin', 'manager') » EXISTE DEJA dans le videur
+    --   (c'est celle qui donne au manager tout le reste), donc la chercher ne prouvait
+    --   RIEN. Erreur trouvee par la repetition du 12/10.
+    if position('coalesce(current_app_role in (''admin'', ''manager''), false)' in v_def) = 0 then
         raise exception 'CONTROLE : le videur n''ouvre pas le statut au manager.';
+    end if;
+    -- et le temoin inverse : l'ancienne phrase doit avoir disparu
+    if position('coalesce(current_app_role = ''admin'', false)' in v_def) > 0 then
+        raise exception 'CONTROLE : le cas particulier « admin seul » est encore la.';
     end if;
 
     foreach v_t in array array[

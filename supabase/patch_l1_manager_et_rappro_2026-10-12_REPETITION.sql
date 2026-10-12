@@ -14,6 +14,7 @@
 --
 --   AVANT          fonctions_affaire_ouvertes_au_manager          = 0
 --                  statut_et_archivage_ouverts_au_manager         = non
+--                  statut_et_archivage_encore_admin_seul          = oui
 --                  regles_rapprochement_qui_suivent_le_perimetre  = 0
 --                  types_du_commercial_intacts                    = 21
 --                  archivage_entre_dans_la_liste_du_commercial    = non
@@ -21,12 +22,19 @@
 --                  rapprochements_lisibles_sans_compte            = 0
 --
 --   APRES_PATCH    fonctions_affaire_ouvertes_au_manager          = 6
---                  statut_et_archivage_ouverts_au_manager         = oui
+--                  statut_et_archivage_ouverts_au_manager         = oui  <<< BASCULE
+--                  statut_et_archivage_encore_admin_seul          = non  <<< TEMOIN INVERSE
 --                  regles_rapprochement_qui_suivent_le_perimetre  = 3
 --                  types_du_commercial_intacts                    = 21  <<< PAS TOUCHES
 --                  archivage_entre_dans_la_liste_du_commercial    = non <<< TOUJOURS
 --                  is_app_admin_existe_toujours                   = oui <<< CONSERVEE
 --                  rapprochements_lisibles_sans_compte            = 0   <<< chantier 1
+--
+--   ⚠ LES DEUX LIGNES « statut_et_archivage_* » VONT PAR PAIRE, et elles doivent
+--     BASCULER TOUTES LES DEUX (non->oui et oui->non). Au premier essai du 12/10,
+--     la premiere disait « oui » aux trois etapes : la mesure cherchait une phrase
+--     qui existait DEJA dans le videur, donc elle ne prouvait rien. Le temoin
+--     inverse est la pour que ce piege ne puisse plus passer.
 --
 --   APRES_INVERSE  identique a AVANT
 --
@@ -69,9 +77,24 @@ select 'AVANT', 'is_app_admin_existe_toujours',
                           where n.nspname = 'public' and p.proname = 'is_app_admin')
             then 'oui' else '*** NON ***' end;
 
+-- ⚠ ON CHERCHE LE CAS PARTICULIER, PAS N'IMPORTE QUEL « admin, manager ».
+--   La phrase « current_app_role in ('admin', 'manager') » EXISTE DEJA dans le
+--   videur : c'est celle qui donne au manager tout le reste. La chercher rendait
+--   « oui » aux trois etapes et ne mesurait RIEN (erreur trouvee par la repetition
+--   du 12/10 -- « chercher un mot n'est pas mesurer un comportement »).
+--   La seule phrase qui change est celle du RETURN du cas particulier.
 insert into _l1_mesures(etape, cle, valeur)
 select 'AVANT', 'statut_et_archivage_ouverts_au_manager',
-       case when position('current_app_role in (''admin'', ''manager'')' in d.def) > 0
+       case when position('coalesce(current_app_role in (''admin'', ''manager''), false)' in d.def) > 0
+            then 'oui' else 'non' end
+  from (select pg_get_functiondef(p.oid) as def
+          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and p.proname = 'app_console_can_request_job' limit 1) d;
+
+-- et le temoin inverse : l'ancienne phrase doit DISPARAITRE (1 -> 0)
+insert into _l1_mesures(etape, cle, valeur)
+select 'AVANT', 'statut_et_archivage_encore_admin_seul',
+       case when position('coalesce(current_app_role = ''admin'', false)' in d.def) > 0
             then 'oui' else 'non' end
   from (select pg_get_functiondef(p.oid) as def
           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -346,8 +369,16 @@ begin
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.proname = 'app_console_can_request_job';
 
-    if position('current_app_role in (''admin'', ''manager'')' in v_def) = 0 then
+    -- ⚠ ON CHERCHE LE RETURN DU CAS PARTICULIER, pas n'importe quel « admin, manager » :
+    --   la phrase « current_app_role in ('admin', 'manager') » EXISTE DEJA dans le videur
+    --   (c'est celle qui donne au manager tout le reste), donc la chercher ne prouvait
+    --   RIEN. Erreur trouvee par la repetition du 12/10.
+    if position('coalesce(current_app_role in (''admin'', ''manager''), false)' in v_def) = 0 then
         raise exception 'CONTROLE : le videur n''ouvre pas le statut au manager.';
+    end if;
+    -- et le temoin inverse : l'ancienne phrase doit avoir disparu
+    if position('coalesce(current_app_role = ''admin'', false)' in v_def) > 0 then
+        raise exception 'CONTROLE : le cas particulier « admin seul » est encore la.';
     end if;
 
     foreach v_t in array array[
@@ -404,9 +435,24 @@ select 'APRES_PATCH', 'is_app_admin_existe_toujours',
                           where n.nspname = 'public' and p.proname = 'is_app_admin')
             then 'oui' else '*** NON ***' end;
 
+-- ⚠ ON CHERCHE LE CAS PARTICULIER, PAS N'IMPORTE QUEL « admin, manager ».
+--   La phrase « current_app_role in ('admin', 'manager') » EXISTE DEJA dans le
+--   videur : c'est celle qui donne au manager tout le reste. La chercher rendait
+--   « oui » aux trois etapes et ne mesurait RIEN (erreur trouvee par la repetition
+--   du 12/10 -- « chercher un mot n'est pas mesurer un comportement »).
+--   La seule phrase qui change est celle du RETURN du cas particulier.
 insert into _l1_mesures(etape, cle, valeur)
 select 'APRES_PATCH', 'statut_et_archivage_ouverts_au_manager',
-       case when position('current_app_role in (''admin'', ''manager'')' in d.def) > 0
+       case when position('coalesce(current_app_role in (''admin'', ''manager''), false)' in d.def) > 0
+            then 'oui' else 'non' end
+  from (select pg_get_functiondef(p.oid) as def
+          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and p.proname = 'app_console_can_request_job' limit 1) d;
+
+-- et le temoin inverse : l'ancienne phrase doit DISPARAITRE (1 -> 0)
+insert into _l1_mesures(etape, cle, valeur)
+select 'APRES_PATCH', 'statut_et_archivage_encore_admin_seul',
+       case when position('coalesce(current_app_role = ''admin'', false)' in d.def) > 0
             then 'oui' else 'non' end
   from (select pg_get_functiondef(p.oid) as def
           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -589,9 +635,24 @@ select 'APRES_INVERSE', 'is_app_admin_existe_toujours',
                           where n.nspname = 'public' and p.proname = 'is_app_admin')
             then 'oui' else '*** NON ***' end;
 
+-- ⚠ ON CHERCHE LE CAS PARTICULIER, PAS N'IMPORTE QUEL « admin, manager ».
+--   La phrase « current_app_role in ('admin', 'manager') » EXISTE DEJA dans le
+--   videur : c'est celle qui donne au manager tout le reste. La chercher rendait
+--   « oui » aux trois etapes et ne mesurait RIEN (erreur trouvee par la repetition
+--   du 12/10 -- « chercher un mot n'est pas mesurer un comportement »).
+--   La seule phrase qui change est celle du RETURN du cas particulier.
 insert into _l1_mesures(etape, cle, valeur)
 select 'APRES_INVERSE', 'statut_et_archivage_ouverts_au_manager',
-       case when position('current_app_role in (''admin'', ''manager'')' in d.def) > 0
+       case when position('coalesce(current_app_role in (''admin'', ''manager''), false)' in d.def) > 0
+            then 'oui' else 'non' end
+  from (select pg_get_functiondef(p.oid) as def
+          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and p.proname = 'app_console_can_request_job' limit 1) d;
+
+-- et le temoin inverse : l'ancienne phrase doit DISPARAITRE (1 -> 0)
+insert into _l1_mesures(etape, cle, valeur)
+select 'APRES_INVERSE', 'statut_et_archivage_encore_admin_seul',
+       case when position('coalesce(current_app_role = ''admin'', false)' in d.def) > 0
             then 'oui' else 'non' end
   from (select pg_get_functiondef(p.oid) as def
           from pg_proc p join pg_namespace n on n.oid = p.pronamespace
