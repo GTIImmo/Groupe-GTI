@@ -510,12 +510,67 @@ biens vivants **et** archivés **et** vendus.
 | `app_contacts_sans_numero` | `df7d08615abf99eb5389a0a90c795117` | 4 547 | 🚫 retirer le droit de lecture *(non lue par l'écran)* |
 | `app_console_action_abandonnees` | `71fd3bc298903e3645ef7ce7cee282eb` | 539 | 🚫 retirer le droit de lecture *(non lue par l'écran)* |
 
-## L4.7 CE QUI RESTE À TRANCHER
+## L4.7 ⭐ LA RÉPÉTITION EST EXACTE — *23 mesures sur 23, le 12/10 vers 09:45*
+
+**Option A choisie par Frédéric.** Fichiers : `supabase/patch_l4_cloisonnement_2026-10-12.sql`,
+son `_INVERSE.sql`, et la `_REPETITION.sql` **assemblée par**
+`supabase/generer_repetition_l4.py` *(leçon du point 4d : aucune divergence possible entre
+ce qu'on éprouve et ce qu'on applique)*.
+
+| mesure | AVANT | APRÈS PATCH | APRÈS INVERSE |
+|---|---|---|---|
+| vues qui regardent leur gardien | **0** | **4** | **0** |
+| vues techniques lisibles par un compte | **2** | **0** | **2** |
+| case « périmètre » | absente | **présente** | absente |
+| comptes hors réseau | 0 | **0** | 0 |
+| fonctions neuves présentes | 0 | **4** | 0 |
+| fonctions neuves **ouvertes sans compte** | 0 | **0** ✅ *chantier ① intact* | 0 |
+| fonctions neuves **utilisables par un compte** | 0 | **4** ✅ *l'écran marchera* | 0 |
+| **règles qui ne reviennent pas à leur état d'origine** | — | — | **0** ✅ |
+
+Les **8 empreintes de AVANT sont identiques à celles de APRÈS INVERSE** : le retour arrière
+est exact, prouvé, pas supposé.
+
+### ⭐ LES 8 EMPREINTES À RETROUVER APRÈS LE VRAI COLLAGE
+
+*(c'est le contrôle du résultat : si une seule diffère, le patch n'a pas fait ce qu'il a fait
+en répétition)*
+
+| règle de lecture | empreinte attendue APRÈS le patch |
+|---|---|
+| `app_dossier_current` | `bebfbd39f19ada2ad8f37d7b28eef4b4` |
+| `app_archive_annonce_index_current` | `bebfbd39f19ada2ad8f37d7b28eef4b4` |
+| `app_historical_annonce_index_current` | `bebfbd39f19ada2ad8f37d7b28eef4b4` |
+| `app_contact_current` | `075389d63245e6794da9a4c0874edf71` |
+| `app_contact_relation_current` | `fd9ce6dd0bdf7ecf29d728e37b028577` |
+| `app_affaire_ledger` | `2d3aa9390e6cb527a55d9d347d19d52b` |
+| `app_mandat` | `ce33e869d64b7a831686a25795362032` |
+| `app_mandat_register_current` | `71f003c898951218afb6036efc2c1279` |
+
+⭐ **Trois règles partagent la même empreinte** *(annonces, archives, vendus)* : c'est normal
+et c'est une **preuve de cohérence** — les trois portent la même condition,
+`app_voit_cette_ligne(negociateur_email, agence_nom)`.
+
+### Deux défauts de MON code, trouvés avant le collage
+
+1. le garde-fou ne couvrait que **6 des 8** règles remplacées *(archives et vendus oubliés)* ;
+2. `like 'regle__%'` : dans un `LIKE`, `_` est un **joker** → remplacé par `starts_with`
+   *(piège déjà payé le 08/10 sur une mesure SQLite)*.
+
+### ⚠ Et un troisième, trouvé par le PREMIER essai de Frédéric
 
 ```
-le PERIMETRE DU LOT : le correctif complet (6 gestes, serrure + case perimetre)
-ou l'alternative reduite (commissions + registre + les 2 fuites) ?
+ERROR 42703: column "perimetre" does not exist
 ```
+
+**Un `CASE` ne protège pas d'une colonne absente** : PostgreSQL **analyse** toute la requête
+avant de l'exécuter, **branche non prise comprise**. Aux étapes AVANT et APRÈS INVERSE la
+colonne n'existe pas → l'analyse échouait avant la première mesure.
+➡ Corrigé par **`to_jsonb(p) ->> 'perimetre'`**, qui rend NULL quand la colonne est absente :
+**la même ligne de code marche aux trois étapes.**
+Les 3 autres références directes à la colonne ont été auditées et sont saines *(corps de
+fonction analysé après l'`ALTER TABLE` · bloc `DO` compilé à l'exécution · `EXECUTE format`
+dynamique)*, et l'inverse supprime bien **la fonction avant la colonne**.
 
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
