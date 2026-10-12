@@ -414,3 +414,109 @@ Elle évite d'avoir à remplir une deuxième fiche entière pour l'agent commerc
 | **L1** manager = admin | ✅ confirmé, **sauf** Santé *(admin seul)* |
 
 **Rien n'est codé. Aucune écriture n'a été faite.**
+
+---
+---
+
+# LOT L4 — CLOISONNER LES CONSULTATIONS
+
+> Audit du **12/10/2026**, en lecture seule. Premier lot, choisi par Frédéric.
+
+## L4.1 Trois risques écartés par la mesure
+
+| ce que je redoutais | mesuré |
+|---|---|
+| casser les **4 workers**, le backend Render, `phase2`, le run de nuit, les crons | ✅ **impossible** : `service_role` a **`rolbypassrls = true`** — la clé de service ignore toute règle RLS, quoi qu'on pose |
+| une **erreur de permission** à l'écran *(avec `security_invoker`, l'appelant doit avoir `SELECT` sur les tables sous la vue)* | ✅ **écarté** : `authenticated` a `SELECT` sur **les 13 tables** concernées |
+| devoir inventer une règle par objet | ✅ **l'outil existe déjà** : `app_console_can_access_dossier` teste les **3 index** *(vivant, archives, vendus)* et répond « oui » immédiatement pour admin / manager |
+
+## L4.2 🔴 L'ADRESSE DU NÉGOCIATEUR MANQUE SUR LA MOITIÉ DU PASSÉ — et c'est irréparable
+
+| objet | lignes | **sans adresse de négociateur** | sans agence |
+|---|---|---|---|
+| archives | 35 318 | **23 412 — 66 %** | **0** |
+| vendus / clos | 8 940 | **4 536 — 51 %** | **0** |
+| registre des mandats | 24 502 | **13 004 — 53 %** | **0** |
+
+**Pas rattrapable** : sur les 23 412 archives sans adresse, **763 seulement** portent un
+identifiant ou un nom de négociateur → **22 649 lignes n'ont aucune trace** de qui tenait le
+bien. *(Registre : 13 004 sans adresse, dont 87 avec identifiant.)*
+
+➡ **Cloisonner ces trois objets « par négociateur » est techniquement impossible.**
+➡ **L'AGENCE, elle, est TOUJOURS là — zéro manquante sur les trois.** C'est le seul axe de
+cloisonnement utilisable sur le passé.
+
+**Sans conséquence pour la grille actuelle** *(Frédéric a mis `R` sur archives et vendus)*,
+**mais décisif pour R2** : ⭐ **Q1 tranchée le 12/10 → OPTION 3, ASSUMÉE** — un compte au
+périmètre « portefeuille » **perd les archives et les vendus qui n'ont pas son adresse**
+*(66 % et 51 % du total)*. Décision de Frédéric, à ne pas renverser.
+
+## L4.3 ⚠ Poser la serrure telle quelle IRAIT CONTRE la grille
+
+Frédéric a répondu **`R` (tout le réseau)** pour les annonces, les contacts et les mandants.
+Or la règle qui dort sous ces vues dit *« ses biens » / « ses contacts »*. **Poser simplement
+`security_invoker` produirait l'inverse de sa décision.**
+
+➡ **CONCLUSION : L4 et L6 (la case « périmètre ») ne peuvent pas être séparés.** Pour dire
+« réseau pour un négociateur, portefeuille pour un agent commercial », il faut la case
+périmètre **en même temps** que la serrure ; seule, la serrure ne sait exprimer qu'une
+portée, et ce n'est pas celle qu'il veut.
+
+## L4.4 ⚠ IL Y A QUATRE VUES À RÉGLER, PAS TROIS
+
+`app_registre_mandats_current` est **elle aussi** une vue sans `security_invoker`. Changer la
+règle de sa table (`app_mandat_register_current`) **ne suffirait pas** : la vue continuerait de
+tout montrer. Elle doit recevoir le réglage comme les trois autres.
+
+Et ⚠ **chaîne de vues** : `app_contact_relations_current` lit **`app_dossiers_current`**, qui
+est elle-même une vue à régler → **les quatre ensemble, ou aucune.**
+
+## L4.5 Ce qui reste à cloisonner, et par quoi
+
+| objet | décision | rattachement | faisable |
+|---|---|---|---|
+| **affaires + commissions** `app_affaire_ledger` *(31 058 l.)* | ses biens | `app_dossier_id` **rempli 100 %** *(0 vide)* | ✅ |
+| **mandats** `app_mandat` *(26 851 l.)* | ⭐ **Q2 → option 1** : le **bandeau mandat reste visible sur ses biens** | `app_dossier_id` **rempli 100 %** | ✅ |
+| **registre des mandats** *(l'écran)* | **admin + manager** *(décision 6)* | — | ✅ |
+| annonces, contacts, liens, archives, vendus, photos, estimations | tout le réseau | — | ✅ **rien à changer** |
+
+**Mesure du cloisonnement des affaires**, sur les 2 comptes du pilote *(via les 3 index)* :
+**Mélanie LEGRAND 479 affaires sur 31 058** · **Emanuelle PEREIRA 42**. Elle garde bien ses
+biens vivants **et** archivés **et** vendus.
+
+## L4.6 ⭐ L'ÉTAT D'AVANT — *relevé le 12/10, c'est LE retour arrière*
+
+### Les 6 règles de lecture
+
+| objet | règle | condition | empreinte md5 |
+|---|---|---|---|
+| `app_dossier_current` | `app_dossier_current_select_scoped_users` | `(SELECT is_app_global_reader()) OR can_access_negotiator_email(negociateur_email)` | `c5109c98cb7801ed5b81b3d38e9d3105` |
+| `app_contact_current` | `app_contact_current_select_scoped` | global reader **ou** son adresse **ou** `EXISTS` sur un lien de ses dossiers | `2818e450186a422804f3eda93025da02` |
+| `app_contact_relation_current` | `app_contact_relation_current_select_scoped` | global reader **ou** `can_access_current_dossier(app_dossier_id)` | `aba52a7eb4745a58b7ea130c7bfc9e60` |
+| `app_affaire_ledger` | `app_affaire_ledger_select_active_users` | `is_app_user_active()` | `71bef22dc7c148dc362e8670c90245b3` |
+| `app_mandat` | `app_mandat_select_active_users` | `is_app_user_active()` | `71bef22dc7c148dc362e8670c90245b3` |
+| `app_mandat_register_current` | `app_mandat_register_current_select_active_users` | `is_app_user_active()` | `71bef22dc7c148dc362e8670c90245b3` |
+
+*(les 3 dernières partagent la même empreinte : c'est la même condition, mot pour mot)*
+
+### Les 6 vues — **toutes en `security_invoker` NON POSÉ**, toutes lisibles par `authenticated`
+
+| vue | empreinte de la définition | taille | sort prévu |
+|---|---|---|---|
+| `app_dossiers_current` | `0dad1adca33e590c2f871a4778e3516e` | 1 813 | 🔧 régler |
+| `app_contacts_current` | `8004d10588f97fc08b7ab2e3f2508bec` | 919 | 🔧 régler |
+| `app_contact_relations_current` | `6c89ceb7052f335a11514c92c47d550f` | 2 595 | 🔧 régler |
+| `app_registre_mandats_current` | `ac950ac5f689d4eeae2ca066efe5c132` | 1 875 | 🔧 régler *(L4.4)* |
+| `app_contacts_sans_numero` | `df7d08615abf99eb5389a0a90c795117` | 4 547 | 🚫 retirer le droit de lecture *(non lue par l'écran)* |
+| `app_console_action_abandonnees` | `71fd3bc298903e3645ef7ce7cee282eb` | 539 | 🚫 retirer le droit de lecture *(non lue par l'écran)* |
+
+## L4.7 CE QUI RESTE À TRANCHER
+
+```
+le PERIMETRE DU LOT : le correctif complet (6 gestes, serrure + case perimetre)
+ou l'alternative reduite (commissions + registre + les 2 fuites) ?
+```
+
+**NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
+négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
+**À chronométrer avant de valider.**
