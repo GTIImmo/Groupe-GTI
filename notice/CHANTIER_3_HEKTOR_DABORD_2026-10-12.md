@@ -932,3 +932,98 @@ inventés qui doivent rester refusés. Puis le vrai inverse, et une erreur final
 | **B3** négociateur sur un bien vivant | `3828957` — **inchangé** ✅ |
 | **C1 / C2** numéros inventés | `dossier_not_found` des deux côtés ✅ |
 | après l'inverse | **les deux empreintes reviennent**, 0 marqueur ✅ |
+
+---
+
+## 🔧 LE DÉFAUT 5a — « les désarchivages posent un numéro vide alors que le vrai existe »
+
+### ÉTAPE 1 — AUDIT (13/10, lecture seule) — verdict : **CONFIRMÉ**, et la prémisse est fausse à grande échelle
+
+**La prémisse de 5a, éprouvée sur TOUT le parc** *(et non plus sur un cas)* : pour chaque archive,
+on compare son `app_archive_id` au `app_dossier_id` que portent ses **anciens travaux** —
+
+| | |
+|---|---|
+| archives recoupées | **35 318** *(toutes : le rattrapage documents leur a créé des travaux)* |
+| `app_archive_id` = le numéro de dossier de leurs travaux | **35 312** |
+| écarts | **6** — et ce sont des **fantômes déjà réconciliés** : ces 6 biens ont **deux** numéros dans leur histoire, et **le plus récent est bien `app_archive_id`** |
+
+➡ **35 318 sur 35 318. `app_archive_id` EST notre `app_dossier_id`.** La phrase de la note 5a —
+*« nous n'avons AUCUN numéro de dossier pour une archive »* — est fausse, et avec elle la
+justification *« y écrire le numéro d'archive serait poser un FAUX identifiant »*.
+
+**Ce que ça coûte aujourd'hui — mesuré, et c'est petit** : `restore_hektor_annonce` compte
+**16 travaux** depuis le 21/05, tous `done`, dont **1 seul** sans numéro de dossier *(l'essai réel
+du 08/10)*. **Le défaut est donc surtout devant nous**, pas derrière.
+
+**Les deux conséquences, vérifiées dans le code :**
+
+1. **Le bandeau « geste abandonné » ne voit rien.** `GesteAbandonneBanner` (`App.tsx:32925-32939`)
+   appelle `loadActionStatus(dossier.app_dossier_id)` : un travail sans numéro lui est invisible.
+2. **Le filet de rejeu ne peut pas détecter un geste dépassé.** Sa boucle 0 compare
+   `plus_recent.app_dossier_id = j.app_dossier_id` : `NULL = NULL` n'est jamais vrai, donc un
+   désarchivage qu'un geste plus récent a déjà mené à bien **serait rejoué** au lieu d'être
+   abandonné.
+
+### ÉTAPE 2 — LE CORRECTIF PROPOSÉ (écrit, **attend le « vas-y »**)
+
+**Une seule ligne de code** *(plus deux commentaires devenus faux, corrigés en même temps —
+laisser un commentaire qui contredit le code, c'est préparer la prochaine erreur)* :
+
+```
+    v_dossier := null;              -- « nous n'avons AUCUN numero de dossier »   ← faux
+    v_dossier := target_dossier_id; -- le numero recu EST notre app_dossier_id (35 318/35 318)
+```
+
+Tout le reste suit **tout seul** : le `if v_dossier is not null` plus bas écrit alors la ligne de
+carnet `archive='0'` *(aujourd'hui sautée pour toute archive)*, et le travail porte le vrai numéro.
+
+#### ⚠ Ce que ça pourrait casser ailleurs — chacun vérifié
+
+| | |
+|---|---|
+| **les droits d'un négociateur** ⚠ *(le vrai point)* | `restore_hektor_annonce` est **dans la liste des gestes ouverts au commercial**, donc le numéro part dans `app_console_can_access_dossier`. **Lue dans la base** : elle teste `(le numéro de dossier correspond) OU (le numéro Hektor correspond)`, sur **les trois sources** *(vivants, archives, historique)*. Aujourd'hui, avec un numéro vide, c'est la branche Hektor qui tranche ; demain les deux branches désigneront **le même bien** *(0 collision sur les séries)*. ➡ **le résultat ne peut pas devenir plus permissif sur un autre bien** |
+| le worker | `handleRestoreHektorAnnonce` tolère les deux *(prouvé par 5a)* — et recevra enfin le vrai numéro |
+| le filet de rejeu | **il s'améliore** : la détection du « geste dépassé » redevient possible |
+| le carnet | 1 ligne de plus par désarchivage, `origine='geste_desarchiver'` — **relue par personne** aujourd'hui *(`CHAMPS_APP_ANNONCE` est vide)* → aucun changement de comportement |
+| le chemin du bien **vivant** | **pas touché** : la ligne modifiée est dans la branche « archive » |
+| les 16 travaux existants | **pas touchés** — on ne réécrit pas le passé |
+
+**Retour arrière** : script inverse qui repose la ligne d'origine, avec contrôle que l'empreinte
+revient à **`709571469083a76b1be384e879ca523b`**.
+
+**Le contrôle** : une répétition — désarchiver une **vraie archive** *(15633 / annonce 49544)* doit
+créer un travail portant **`app_dossier_id = 15633`** et écrire `archive=0` au carnet · un bien
+**vivant** doit rester **inchangé** · un numéro inventé reste refusé · et l'empreinte doit revenir
+après l'inverse.
+
+### ÉTAPE 4 et 5 — le défaut 5a : **répétition exacte, puis essai réel CHEZ HEKTOR**
+
+**Répétition** — et son premier essai est **le témoin d'avant** :
+
+| | Mesure | Résultat |
+|---|---|---|
+| **A0** *(avant le patch)* | désarchiver l'archive 49544 | travail `app_dossier_id = `**NULL** — **le défaut, en direct** ✅ |
+| **A** *(après)* | le même geste | **15633**, hektor **49544**, carnet **`archive=0 (geste_desarchiver)`** ✅ |
+| **B** | un bien vivant | `3828957`, **inchangé** ✅ |
+| **C** | numéro inventé | `dossier_not_found` ✅ |
+| empreinte **retour** | 3 557 → 4 167 puis retour | **`709571469083a76b1be384e879ca523b`** des deux côtés ✅ |
+
+**Patch appliqué**, contrôlé en base : 4 167 caractères, la correction est là, **plus aucun
+`v_dossier := null`**, et **le commentaire faux a disparu**.
+
+#### L'ESSAI RÉEL — un aller-retour complet chez Hektor, sur un bien d'essai (12/10, 22 h 33 → 22 h 44)
+
+Bien **62965** *(« TEST C13 cloture mandat - a supprimer »)*, état de départ **`Actif /
+diffusable=0 / archive=0`**.
+
+| | |
+|---|---|
+| **22:35:35** | **archiver** depuis l'écran → travail `dossier=`**5941336**, hektor 62965 ; carnet `archive=1 (geste_archiver)` · Hektor accepte en **98 s** |
+| **22:38** | le bien **sort du parc vivant** et entre dans l'index des archives — **sous `app_archive_id = 5941336`**, c'est-à-dire **notre numéro de dossier** *(une preuve de plus, sur un bien qu'on vient d'archiver)* |
+| **22:41:35** | **désarchiver** depuis l'écran → ⭐ travail `dossier=`**5941336** *(et non `NULL`)*, hektor 62965, `cible_source = index_archives` · carnet **`archive=0 (geste_desarchiver)`** — **la ligne qui était purement sautée avant** |
+| **22:42** | Hektor accepte en **38 s** |
+| **22:44** | **le bien est revenu : `Actif / diffusable=0 / archive=0`** — **son état de départ, au caractère près** · sorti de l'index des archives |
+
+➡ **Le défaut 5a est corrigé, et les deux gestes sont prouvés de bout en bout chez Hektor.**
+Le bien d'essai finit exactement comme il a commencé.
