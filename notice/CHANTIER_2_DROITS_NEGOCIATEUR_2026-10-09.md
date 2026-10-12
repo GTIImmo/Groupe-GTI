@@ -650,6 +650,60 @@ dans le tableau de L4.8.
 **La chaîne de retour arrière** : `L4-BIS_INVERSE` → état L4 *(la lenteur revient, c'est
 voulu)* ; puis `L4_INVERSE` → état d'origine.
 
+### ⭐ RÉPÉTITION L4-BIS : EXACTE — *12/10, les deux contrôles tiennent*
+
+```
+REGLES QUI NE REVIENNENT PAS A LEUR ETAT D'ORIGINE : 0   (0 attendu)
+REGLES QUE LE PATCH N'A PAS CHANGEES               : 0   (0 attendu)
+```
+
+Le **second** contrôle est neuf par rapport à la répétition de L4, et il valait la peine :
+un patch qui ne changerait rien passerait le premier sans faire son travail.
+
+| mesure | AVANT | APRÈS PATCH | APRÈS INVERSE |
+|---|---|---|---|
+| ensembles présents | 0 | **2** | 0 |
+| ensembles **ouverts sans compte** | 0 | **0** ✅ | 0 |
+| ensembles utilisables par un compte | 0 | **2** ✅ | 0 |
+| **fonctions de L4 intactes** | 4 | **4** ✅ *(L4-bis n'en supprime aucune)* | 4 |
+| règles de lecture au total | 8 | **8** | 8 |
+| registre des mandats réservé | oui | **oui** ✅ *(pas touché)* | oui |
+
+### LES 7 EMPREINTES À RETROUVER APRÈS LE VRAI COLLAGE DE L4-BIS
+
+| règle | empreinte attendue |
+|---|---|
+| `app_dossier_current` | `0d7da391e87088d5d7ec6c9bcf34763f` |
+| `app_archive_annonce_index_current` | `0d7da391e87088d5d7ec6c9bcf34763f` |
+| `app_historical_annonce_index_current` | `0d7da391e87088d5d7ec6c9bcf34763f` |
+| `app_contact_current` | `8a1da0e3c256e15977233073ac2e2d45` |
+| `app_contact_relation_current` | `e9e9ead71ab10b5c128bfae8ea228510` |
+| `app_affaire_ledger` | `73d92b58e78ee20e7b249416929fba53` |
+| `app_mandat` | `21ff276c6d7ac3c48f73664ed6cf56e3` |
+
+Comme pour L4, **trois partagent la même empreinte** *(annonces, archives, vendus)* : preuve
+que la même condition a bien été posée aux trois endroits.
+
+### Les 9 nombres à retrouver, identiques, après le collage
+
+*(relevés avant L4-bis en empruntant chaque identité — c'est la preuve que la forme seule
+a changé)*
+
+```
+ADMIN     13 475 annonces · 62 189 contacts · 24 502 registre
+          35 318 archives · 8 940 vendus · 26 851 mandats
+MELANIE   13 475 annonces · 3 affaires sur son bien 1346424
+          0 affaire sur le bien 1357257 d'un collegue · 0 au registre
+          agence deduite « Groupe GTI Saint-Etienne »
+          ARCHIVES : 8,15 s  <<< le seul chiffre qui DOIT changer (vers < 1 s)
+```
+
+**Deux versions sans commentaires** ont été produites pour pouvoir être collées depuis un
+téléphone *(même code, lignes de commentaire et lignes vides retirées, jamais en milieu de
+ligne pour ne pas casser la chaîne « ESSAI ANNULE -- … »)* :
+`*_REPETITION_COMPACTE.sql` *(487 lignes au lieu de 733)* et `*_COMPACT.sql`
+*(269 au lieu de 378)*.
+
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
 **À chronométrer avant de valider.**
