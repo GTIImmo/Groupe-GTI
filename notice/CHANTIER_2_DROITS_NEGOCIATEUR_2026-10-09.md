@@ -1058,6 +1058,38 @@ LE PILOTE  2 comptes existants, 2 agences (Saint-Etienne + Firminy),
 | l'écran *(`App.tsx`, `types.ts`)* | **push → Vercel** |
 | la fonction serveur *(`supabase/functions/admin-users`)* | **déploiement Supabase à part** — un push ne la déploie PAS |
 
+## L2.14 ✅ LES PHOTOS SUIVENT LE BIEN — *appliqué et contrôlé le 12/10*
+
+**Décision de Frédéric** : *« fais les photos tout le réseau pour les négociateurs »*.
+Une **photo** est la vitrine du bien ; un **document** est son dossier. Les deux étaient
+rangés ensemble avec la même règle « ses biens » — un négociateur voyait donc l'annonce
+d'un collègue **sans aucune photo**. ⚠ Et cela **ne respectait pas la grille de Frédéric**,
+qui disait depuis le début « voir les photos = tout le réseau » : **L4 n'avait pas touché aux
+photos**, écart que je n'avais pas relevé *(trouvé en répondant à sa question sur l'agent
+commercial)*.
+
+| contrôle | résultat |
+|---|---|
+| les 2 règles | **CONFORMES** à la répétition |
+| **photos vues par Mélanie** | **5 007 → 441 018** |
+| **documents vus** | **4 565 → 4 565** — inchangé |
+| ⭐ **photos du bien 377 d'un COLLÈGUE** | **0 → 7, en 0,009 s** |
+| ⭐ **documents du même bien** | **0** — le dossier reste privé |
+
+⭐ **Et la vitesse : le piège évité.** Le comptage global des 441 018 photos prend 5,2 s —
+mais **l'écran ne compte jamais toutes les photos** : il les lit **par annonce**
+(`.eq('app_dossier_id', …)`), et ce geste-là est à **0,009 s**. *Ne pas confondre une
+mesure plausible avec le geste de l'écran* — la leçon de ce matin, appliquée.
+
+Au passage, les **documents** passent à la **forme rapide** de L4-bis : **même portée**,
+seulement la vitesse *(leur règle appelait une fonction une fois par ligne sur 156 300)*.
+
+⭐ **Signe de cohérence** : les deux nouvelles règles ont **exactement les mêmes empreintes**
+que des règles déjà posées aujourd'hui — `app_console_document` = `app_mandat`, et
+`app_console_photo` = les liens. Moins de formes différentes à maintenir.
+
+---
+
 ## L2.13 ✅ LOT L1 APPLIQUÉ ET CONTRÔLÉ — *12/10* + les rapprochements
 
 **Trois morceaux, aucun déploiement.** Appliqué par Frédéric le 12/10.
