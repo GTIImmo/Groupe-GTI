@@ -704,6 +704,67 @@ ligne pour ne pas casser la chaîne « ESSAI ANNULE -- … »)* :
 `*_REPETITION_COMPACTE.sql` *(487 lignes au lieu de 733)* et `*_COMPACT.sql`
 *(269 au lieu de 378)*.
 
+## L4.10 ✅✅ L4-BIS APPLIQUÉ ET CONTRÔLÉ — *12/10, le lot L4 est FINI*
+
+### La vitesse : **107 fois plus rapide**
+
+| geste | avant L4-bis | après |
+|---|---|---|
+| **l'écran des archives d'un négociateur** | **8,15 s** | **0,076 s** |
+| **toutes ses affaires** | **expirait** *(> 45 s)* | **0,182 s** |
+| ses contacts | rapide | **0,060 s** |
+
+### Et rien d'autre n'a changé — les 7 empreintes et les 13 nombres
+
+| | résultat |
+|---|---|
+| les **7 empreintes** | **7/7 CONFORMES** à la répétition |
+| **ADMIN** | **7/7 identiques** : 13 475 · 62 189 · 24 502 · 35 318 · 8 940 · 26 851 · 31 058 |
+| **Mélanie** — annonces · contacts | **13 475 · 62 189** *(inchangés : tout le réseau)* |
+| **Mélanie** — affaires de **son** bien 1346424 | **3** ✅ |
+| **Mélanie** — affaires du bien 1357257 d'un **collègue** | **0** ✅ |
+| **Mélanie** — écran Registre des mandats | **0** ✅ |
+| **Mélanie** — son agence déduite | **Groupe GTI Saint-Étienne** ✅ |
+
+### ⭐ LA PREUVE CROISÉE, et elle vaut d'être notée
+
+« Toutes les affaires de Mélanie » rend **479**. Or **479** est **exactement** le nombre que
+j'avais calculé le matin, **avant tout patch**, par une requête directe en clé de service
+*(jointure sur les 3 index par son adresse)*. Deux chemins indépendants, deux fois 479 :
+- la **règle de lecture** cloisonne bien ce qu'il faut, ni plus ni moins ;
+- et le comptage total, qui **expirait** après L4, passe maintenant en **0,182 s**.
+
+⚠ **C'est le contraire du piège du 09/10** *(« ne jamais prouver une mesure par une autre
+faite dans le même environnement »)* : ici les deux mesures viennent d'**environnements
+différents** — l'une en clé de service sans aucune règle, l'autre en tant que Mélanie à
+travers la règle. C'est **pour cela** qu'elles valent preuve.
+
+### ⭐ LES LEÇONS DU LOT L4
+
+1. **Un `CASE` ne protège pas d'une colonne absente** : PostgreSQL analyse toute la requête
+   avant de l'exécuter, branche non prise comprise. `to_jsonb(ligne) ->> 'colonne'` rend NULL
+   et marche dans les deux états — indispensable dans une répétition qui mesure avant/après
+   un `ALTER TABLE`.
+2. ⭐ **Une règle de lecture doit sortir ses parties constantes** : `(select f())` est évalué
+   **une fois**, `f()` l'est **une fois par ligne**. 8,15 s → 0,076 s pour le seul fait de
+   déplacer les parenthèses. **Et la bonne forme était déjà dans le code d'origine** : je
+   l'avais repérée, citée comme un bon point, et pas appliquée.
+3. ⭐ **Mesurer LE GESTE DE L'ÉCRAN, pas un geste plausible.** J'ai annoncé deux fois une
+   avarie trop grave en mesurant un `count(*)` que l'app ne fait jamais. Il faut d'abord
+   lire **comment l'écran lit** : les affaires le sont toujours **par annonce**, les contacts
+   avec un comptage **estimé** (`count: 'planned'`), les annonces avec un comptage **exact**.
+4. ⭐ **Un contrôle de droits se fait en empruntant l'identité, sans mot de passe** :
+   `BEGIN; SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claims = '{"sub":"<uuid>"}';
+   <lectures>; ROLLBACK;`
+5. **Un garde-fou doit couvrir TOUTES les règles que le patch remplace** — le mien n'en
+   couvrait que 6 sur 8.
+6. **Une répétition doit vérifier les DEUX sens** : que l'inverse revient à l'identique,
+   **et que le patch a bien changé quelque chose**. Le second contrôle a été ajouté pour
+   L4-bis ; sans lui, un patch qui ne fait rien passe pour bon.
+7. **`service_role` porte `rolbypassrls`** : aucune règle RLS ne peut casser les 4 workers,
+   le backend, `phase2`, le run de nuit ni les crons. **À ressortir à chaque fois que la
+   question « est-ce que ça touche les workers ? » se pose.**
+
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
 **À chronométrer avant de valider.**
