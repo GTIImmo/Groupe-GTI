@@ -1058,6 +1058,49 @@ LE PILOTE  2 comptes existants, 2 agences (Saint-Etienne + Firminy),
 | l'écran *(`App.tsx`, `types.ts`)* | **push → Vercel** |
 | la fonction serveur *(`supabase/functions/admin-users`)* | **déploiement Supabase à part** — un push ne la déploie PAS |
 
+## L2.13 ✅ LOT L1 APPLIQUÉ ET CONTRÔLÉ — *12/10* + les rapprochements
+
+**Trois morceaux, aucun déploiement.** Appliqué par Frédéric le 12/10.
+
+| contrôle | résultat |
+|---|---|
+| les **7 empreintes** | **7/7 CONFORMES** à la répétition |
+| statut et archivage ouverts au manager | **oui** |
+| l'ancien « admin seul » a disparu | **oui** |
+| **les 21 types du négociateur** | **21** — pas touchés |
+| archivage dans la liste du négociateur | **non** — toujours |
+| les 6 fonctions « affaire » au manager | **6/6** |
+| **`is_app_admin` existe toujours** | **oui** — la règle de lecture des profils en dépend |
+| les 3 règles de rapprochement suivent le périmètre | **3** |
+| **ADMIN** | **rien perdu** : 52 835 rapprochements · 13 475 annonces · 31 058 affaires · 24 502 registre |
+| **Mélanie** *(repassée en « réseau »)* | 13 475 annonces, rapprochements visibles — **comportement d'avant conservé** |
+
+### ⚠ Mes TROIS erreurs du jour, et ce qu'elles disent de la méthode
+
+1. **L4** : les règles appelées **une fois par ligne** → 8,15 s *(corrigé par L4-bis : 0,076 s)*.
+2. **La répétition L4** : un `CASE` qui ne protège pas d'une colonne absente.
+3. **La répétition L1** : une mesure qui **ne mesurait rien** — je cherchais la phrase
+   `current_app_role in ('admin', 'manager')`, qui **existait déjà** dans le videur *(c'est
+   celle qui donne au manager tout le reste)*. Elle rendait « oui » aux trois étapes.
+   ⭐ **J'ai refait là une erreur que j'avais moi-même écrite comme leçon du chantier ④** :
+   *« chercher un mot n'est pas mesurer un comportement »*.
+   ➡ **Corrigé par un TÉMOIN INVERSE** : on vérifie que la **nouvelle** phrase apparaît **et**
+   que l'**ancienne** disparaît. Les deux lignes vont par paire et doivent basculer
+   **ensemble** — ce piège ne peut plus passer. **À reprendre dans toute répétition.**
+
+⭐ **Aucune des trois n'a touché la production** : les deux premières ont été vues au contrôle,
+la troisième par un chiffre dans le retour de Frédéric. **C'est exactement à cela que sert la
+répétition.**
+
+### ⚠ NON ÉPROUVÉ : la règle des rapprochements
+
+Plus aucun compte n'est en périmètre réduit *(Mélanie est revenue en « réseau »)*, donc
+**on n'a pas vu les rapprochements se cacher**. La logique est vérifiée
+*(`is_app_global_reader()` OU (`is_app_user_active()` ET périmètre = `reseau`))* mais elle
+**n'a pas tourné**. ➡ À mesurer au premier compte réglé.
+
+---
+
 ### En attendant : un patch SQL suffit
 
 Régler un périmètre ne demande qu'une ligne :
