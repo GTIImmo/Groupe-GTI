@@ -959,6 +959,82 @@ m'interdit d'écrire en production, **même dans une transaction annulée**. Je 
 **l'exécution réelle reste à voir au premier essai** — à faire avec l'accord de Frédéric, ou
 au pilote.
 
+## L2.10 ✅✅ L2-B APPLIQUÉ ET CONTRÔLÉ — *12/10 : LE LOT L2 EST FINI*
+
+Le négociateur passe de **12 à 21 gestes**. Empreinte du videur conforme
+*(`e1435a48a47b4987109eefa7b9c34237`)*, et les 7 contrôles de structure au vert.
+
+### ⭐ LA PREUVE PAR LE COMPORTEMENT — *15 sur 15*
+
+| ce que Mélanie demande | réponse | attendu |
+|---|---|---|
+| supprimer un document — **son** bien 477 | **oui** | ✅ |
+| avis de valeur · PDF du mandat · plan cadastral — son bien | **oui** | ✅ |
+| ajouter une photo · resynchroniser · visite virtuelle — son bien | **oui** | ✅ |
+| demander un n° de mandat — son bien | **oui** | ✅ |
+| **désarchiver — SON archive 1054340** | **oui** | ✅ |
+| **désarchiver — archive 1053230 SANS adresse** | **non** | ✅ *voulu* |
+| supprimer un document — bien 377 d'un **collègue** | **non** | ✅ |
+| ajouter une photo — bien d'un **collègue** | **non** | ✅ |
+| **changer le statut** — son bien | **non** | ✅ reste fermé |
+| **archiver** — son bien | **non** | ✅ reste fermé |
+| **supprimer l'annonce** — son bien | **non** | ✅ reste fermé |
+
+⭐ **Le contrôle le plus utile du patch** : `archivage_entre_dans_la_liste_du_commercial = non`.
+« Archiver » et « désarchiver » se ressemblent, l'un s'ouvre et l'autre doit rester fermé — une
+erreur d'ancre aurait ouvert l'archivage **sans que rien ne le signale**. Le patch le vérifie
+en ne regardant que la partie du corps qui **suit** le mot `commercial`.
+
+### Les deux décisions assumées, écrites dans le patch
+
+| | |
+|---|---|
+| **supprimer un document chez Hektor** | **destructeur** : Hektor + notre serveur + le cloud. Mis en « seul, ses biens » **après objection** → ce n'est pas un oubli |
+| **désarchiver sera souvent refusé** | **23 412 archives sur 35 318 n'ont aucune adresse de négociateur** *(22 649 n'ont même pas d'identifiant : irréparable)*. Mélanie en désarchivera **774**. Les autres restent à un admin ou un manager — conséquence directe de Q1 option 3 |
+
+---
+
+# L2.11 ⭐ CE QUI RESTE DU CHANTIER ② — plus petit qu'annoncé
+
+En contrôlant L2-B, j'ai vérifié l'état des autres lots : **trois sont déjà faits**, sans
+qu'on s'en aperçoive, parce que L4 les portait.
+
+| lot | état réel |
+|---|---|
+| **L5** la notion d'agence | ✅ **FAIT par L4** : `app_mon_agence()` existe et rend la bonne agence *(prouvé : « Groupe GTI Saint-Étienne » pour Mélanie)*, et les règles s'en servent pour le périmètre « agence » |
+| **L6** la case « périmètre » | ✅ **FAIT par L4** : la colonne est posée *(défaut `reseau`)* et **les règles l'utilisent déjà**. Il ne reste qu'un **geste d'exploitation** : décider quel compte passe en `portefeuille` ou `agence` |
+| **L7** l'écran Registre des mandats | ✅ **FAIT par L4** : règle `is_app_manager_or_admin()` **et** la vue réglée. Mesuré : Mélanie voit **0** ligne |
+| **L2** ce que le négociateur fait seul | ✅ **FINI** *(L2-A + L2-B)* |
+| **L4** cloisonner les consultations | ✅ **FINI** *(L4 + L4-bis)* |
+| **L3** les demandes qui manquent | ❌ supprimé *(décision du 12/10)* |
+| **L1** manager = admin | ⬜ **LE SEUL QUI RESTE** |
+
+## ⚠ MAIS DEUX CHOSES N'ONT JAMAIS ÉTÉ EXÉCUTÉES, et il faut le savoir
+
+1. **Les branches « agence » et « portefeuille » des règles n'ont jamais tourné.** Tous les
+   comptes sont en `reseau`, donc le court-circuit joue avant elles. Elles sont **codées et
+   relues, pas éprouvées**. ➡ Le jour où Frédéric crée un agent commercial ou passe un compte
+   en `agence`, **il faudra les mesurer** *(et c'est là que la lenteur pourrait réapparaître :
+   le court-circuit ne jouera plus)*.
+2. **Le refus du prix n'a pas été exécuté** *(voir L2.9)*.
+
+## Ce qu'il reste à faire, en clair
+
+```
+L1   manager = admin  -> une ligne du front (isAdmin inclut manager)
+                       + le cas particulier statut/archivage du videur
+                       + les 6 fonctions « affaire » (is_app_admin -> manager_or_admin)
+     ⚠ SEUL LOT QUI DEMANDE UN DEPLOIEMENT (le front bouge)
+     ⚠ avec les 2 exceptions voulues : l'ecran Sante reste ADMIN SEUL,
+       et l'outil Utilisateurs s'ouvre au manager
+
+LE PILOTE  2 comptes existants, 2 agences (Saint-Etienne + Firminy),
+           aucun compte a creer. Et il faudra alors :
+             - un essai REEL d'un geste (accord de Frederic : ca ecrit chez Hektor)
+             - le message francais du refus du prix (attend un deploiement)
+             - mesurer les branches « agence » / « portefeuille » si on les utilise
+```
+
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
 **À chronométrer avant de valider.**
