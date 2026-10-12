@@ -129,6 +129,49 @@ PAUSE_TABLE = 2.0       # secondes entre deux tables
 #   a aucune liste de tables lourdes a tenir a jour.
 POIDS_PAGE_MAX = 4 * 1024 * 1024
 VERROU = "pull_from_supabase.lock"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LES VUES NE DESCENDENT PLUS                                      12/10/2026
+#
+# Une vue n'est pas une donnee : c'est un calcul refait sur des tables que la
+# descente copie deja. Elles descendaient par accident (« tout ce que l'API
+# expose ») -- 41 vues, 437 956 lignes, 25 % de la descente du 12/10, et la part
+# la plus lourde pour Supabase, qui refait le calcul a chaque page. Ce matin-la
+# la descente a sature l'instance de 08:44 a 09:00.
+#   Audit : notice/AUDIT_DESCENTE_2026-10-12.md, sections 7 et 8. Aucun script
+#   local ne lit une copie de vue ; ceux qui ont besoin d'une vue l'interrogent
+#   dans Supabase.
+#
+# ⚠ POURQUOI UNE LISTE, contre la regle « pas de liste a tenir » de ce script :
+#   l'API ne distingue pas une vue d'une table (verifie le 12/10 : des vues ont
+#   une cle primaire et acceptent POST/PATCH, comme app_dossiers_current). La
+#   liste est donc relevee dans pg_class (relkind = 'v') le 12/10.
+#   Le risque est du BON cote : une vue nouvelle, absente d'ici, descend comme
+#   avant -- du volume en trop, jamais une perte. Ne JAMAIS y mettre une table.
+#
+# Les anciennes copies locales de ces vues restent dans phase2.sqlite, figees au
+# 12/10 : personne ne les lit. --table <vue> les descend encore sur demande.
+# ═══════════════════════════════════════════════════════════════════════════
+VUES_NON_DESCENDUES = frozenset({
+    "alerts_current", "alerts_governed", "app_affaires_sans_numero_hektor",
+    "app_annonces_current", "app_annonces_sans_numero_hektor",
+    "app_appointment_event_current", "app_appointment_request_current",
+    "app_console_action_abandonnees", "app_contact_duplicate_groups_current",
+    "app_contact_relations_current", "app_contact_searches_current",
+    "app_contacts_current", "app_contacts_sans_numero", "app_dashboard_v1",
+    "app_diffusion_requests_current", "app_dossier_details_current",
+    "app_dossier_match_attrs", "app_dossiers_current", "app_ecart_statut_regle",
+    "app_en_attente_humain", "app_filter_catalog_current", "app_latest_sync_run",
+    "app_mandat_broadcasts_current", "app_rapprochements_sur_recherche_archivee",
+    "app_recherches_disparues", "app_recherches_numero_en_double",
+    "app_recherches_sans_numero", "app_registre_mandats_current",
+    "app_search_orphans_non_rattachables", "app_search_pending_audit",
+    "app_stat_negociateur_v", "app_v_contacts_en_double_identite",
+    "app_v_contacts_sans_cible", "app_v_correspondance_identite_cible",
+    "app_v_couples_non_traduits", "app_v_envois_en_attente_hektor",
+    "app_v_orphelins_recherche", "app_v_plages_numeros",
+    "app_v_plages_trop_proches", "app_work_items_current", "app_workers_current",
+})
 RELECTURE_ENTIERE_MAX = 5000   # au-dela, on ne redemande pas une table en un seul bloc
 
 
@@ -1011,8 +1054,12 @@ def main() -> int:
     # cibles = [(nom chez Supabase, nom en local)]
     cibles: list[tuple[str, str]] = []
     doublures: list[tuple[str, str]] = []
+    vues_ecartees = 0
     for nom in sorted(schema):
         if args.table and nom not in args.table:
+            continue
+        if not args.table and nom in VUES_NON_DESCENDUES:
+            vues_ecartees += 1
             continue
         if nom in natives:
             cibles.append((nom, nom + "__sb"))
@@ -1021,6 +1068,7 @@ def main() -> int:
             cibles.append((nom, nom))
 
     print(f"Supabase expose {len(schema)} tables/vues")
+    print(f"  vues ecartees (VUES_NON_DESCENDUES) : {vues_ecartees}")
     print(f"  a descendre : {len(cibles)}")
     if doublures:
         print(f"  dont {len(doublures)} sous un nom de doublure (le nom local est pris) :")
