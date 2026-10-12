@@ -302,6 +302,12 @@ C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 
   fin vers le **16-17/10**. ⚠ **À remettre à 2 500** quand les vendus/clos seront finis.
 - **Le run de nuit** : 55 étapes, ~2 h 35 (05:00 → 07:35). Reprise :
   `.\scheduled\run_quotidien.ps1 -StartAtLabel "<étiquette exacte>"`.
+- ⏰ **LA MATINÉE A CHANGÉ LE 12/10** : `03:00` recherches actives · `05:00` le run *(fin 07:18-07:34)* ·
+  **`07:45` la descente** *(était 08:15 ; fin attendue 08:18-08:49 ; elle attend le run jusqu'à 45 min)* ·
+  `08:00` les relances e-mail · **`09:00` la sauvegarde** *(était 08:00)*. **Pourquoi** : la descente
+  **saturait la passerelle de Supabase** et **l'app en souffrait** *(146 appels du front refusés sur
+  une fenêtre de 12 min le 12/10)*. ⚠ **C'est un pansement, pas la cause.** Et la mesure a trouvé
+  mieux : **152 tables descendues, 0 dans la sauvegarde quotidienne** — option C en attente de Frédéric.
 - **Render et Vercel se déploient seuls** sur un push vers `main` : `/health` rend le commit.
 - **Une autre session** travaille parfois en parallèle : relire `git log` avant d'écrire.
 
