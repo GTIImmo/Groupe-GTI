@@ -160,7 +160,7 @@ sur 41 n'ont leur formule **que** dans Supabase (`app_annonces_current`,
 `app_dossier_match_attrs`, `app_ecart_statut_regle`, `app_search_orphans_non_rattachables`,
 `app_stat_negociateur_v`).
 
-Préparé, **non branché** : `Console/sauvegarde_plan_supabase.js`. Lecture seule du catalogue
+Branché le 12/10 dans `scheduled/run_backup.ps1` (tâche « GTI Sauvegarde », 08:00), après `backup_critical.py` et indépendant de lui : `Console/sauvegarde_plan_supabase.js`. Lecture seule du catalogue
 par le pooler (l'adresse directe `db.<ref>` n'est servie qu'en IPv6, introuvable depuis le
 serveur), un fichier SQL daté dans `C:\Hektor\Backups\schema`, 60 jours gardés, recompte de
 chaque section contre le catalogue (écart = exit 1). Essai du 12/10 : 762 Ko en moins de 2 s —

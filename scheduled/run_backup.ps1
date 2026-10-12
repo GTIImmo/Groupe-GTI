@@ -44,7 +44,27 @@ try {
     & "$root\.venv\Scripts\python.exe" @args
     $code = $LASTEXITCODE
     Write-Output "=== Sauvegarde terminee $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $code) ==="
-    if ($code -ne 0) { throw "backup_critical.py a echoue (exit $code)" }
+    # 12/10/2026 : l'echec ne saute plus l'etape suivante -- les deux sauvegardes sont
+    # independantes. Le resultat de la tache reste en echec (exit 1) comme avant.
+    if ($code -ne 0) {
+        Write-Output "=== ERREUR sauvegarde : backup_critical.py a echoue (exit $code) ==="
+        $runFailed = $true
+    }
+
+    # LE PLAN DE LA BASE SUPABASE                                      12/10/2026
+    # Les FORMULES (vues, fonctions, declencheurs, RLS, droits, pg_cron) : la descente
+    # ne garde que les donnees, et 5 vues sur 41 n'existaient que dans Supabase.
+    # Lecture seule, < 2 s, un fichier date dans C:\Hektor\Backups\schema (60 jours).
+    # Voir notice/AUDIT_DESCENTE_2026-10-12.md, section 9.
+    $nodeCandidates = @(@(
+        $env:CONSOLE_NODE_EXE,
+        "C:\Program Files\nodejs\node.exe"
+    ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
+    if ($nodeCandidates.Count -eq 0) { throw "node.exe introuvable (plan Supabase)" }
+    & $nodeCandidates[0] "$root\Console\sauvegarde_plan_supabase.js"
+    $codePlan = $LASTEXITCODE
+    Write-Output "=== Plan Supabase termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $codePlan) ==="
+    if ($codePlan -ne 0) { throw "sauvegarde_plan_supabase.js a echoue (exit $codePlan)" }
 } catch {
     Write-Output "=== ERREUR sauvegarde : $_ ==="
     $runFailed = $true
