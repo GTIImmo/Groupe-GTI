@@ -75,13 +75,17 @@ select 'AVANT', 'case_perimetre',
                             and column_name = 'perimetre')
             then 'presente' else 'absente' end;
 
+-- ⚠ On lit le perimetre par to_jsonb(p) ->> 'perimetre', PAS par « p.perimetre ».
+--   Raison : aux etapes AVANT et APRES_INVERSE la colonne n'existe pas, et un CASE
+--   ne protege de rien -- PostgreSQL ANALYSE toute la requete avant de l'executer,
+--   branche non prise comprise, donc il echoue sur « column perimetre does not
+--   exist ». to_jsonb rend NULL quand la colonne est absente : la mesure passe aux
+--   trois etapes, avec la meme ligne de code.
 insert into _l4_mesures(etape, cle, valeur)
 select 'AVANT', 'comptes_hors_reseau',
-       case when exists (select 1 from information_schema.columns
-                          where table_schema = 'public' and table_name = 'app_user_profile'
-                            and column_name = 'perimetre')
-            then (select count(*)::text from public.app_user_profile where perimetre <> 'reseau')
-            else 'sans objet' end;
+       (select count(*)::text
+          from public.app_user_profile p
+         where coalesce(to_jsonb(p) ->> 'perimetre', 'reseau') <> 'reseau');
 
 insert into _l4_mesures(etape, cle, valeur)
 select 'AVANT', 'fonctions_neuves_presentes', count(*)::text
@@ -582,13 +586,17 @@ select 'APRES_PATCH', 'case_perimetre',
                             and column_name = 'perimetre')
             then 'presente' else 'absente' end;
 
+-- ⚠ On lit le perimetre par to_jsonb(p) ->> 'perimetre', PAS par « p.perimetre ».
+--   Raison : aux etapes AVANT et APRES_INVERSE la colonne n'existe pas, et un CASE
+--   ne protege de rien -- PostgreSQL ANALYSE toute la requete avant de l'executer,
+--   branche non prise comprise, donc il echoue sur « column perimetre does not
+--   exist ». to_jsonb rend NULL quand la colonne est absente : la mesure passe aux
+--   trois etapes, avec la meme ligne de code.
 insert into _l4_mesures(etape, cle, valeur)
 select 'APRES_PATCH', 'comptes_hors_reseau',
-       case when exists (select 1 from information_schema.columns
-                          where table_schema = 'public' and table_name = 'app_user_profile'
-                            and column_name = 'perimetre')
-            then (select count(*)::text from public.app_user_profile where perimetre <> 'reseau')
-            else 'sans objet' end;
+       (select count(*)::text
+          from public.app_user_profile p
+         where coalesce(to_jsonb(p) ->> 'perimetre', 'reseau') <> 'reseau');
 
 insert into _l4_mesures(etape, cle, valeur)
 select 'APRES_PATCH', 'fonctions_neuves_presentes', count(*)::text
@@ -843,13 +851,17 @@ select 'APRES_INVERSE', 'case_perimetre',
                             and column_name = 'perimetre')
             then 'presente' else 'absente' end;
 
+-- ⚠ On lit le perimetre par to_jsonb(p) ->> 'perimetre', PAS par « p.perimetre ».
+--   Raison : aux etapes AVANT et APRES_INVERSE la colonne n'existe pas, et un CASE
+--   ne protege de rien -- PostgreSQL ANALYSE toute la requete avant de l'executer,
+--   branche non prise comprise, donc il echoue sur « column perimetre does not
+--   exist ». to_jsonb rend NULL quand la colonne est absente : la mesure passe aux
+--   trois etapes, avec la meme ligne de code.
 insert into _l4_mesures(etape, cle, valeur)
 select 'APRES_INVERSE', 'comptes_hors_reseau',
-       case when exists (select 1 from information_schema.columns
-                          where table_schema = 'public' and table_name = 'app_user_profile'
-                            and column_name = 'perimetre')
-            then (select count(*)::text from public.app_user_profile where perimetre <> 'reseau')
-            else 'sans objet' end;
+       (select count(*)::text
+          from public.app_user_profile p
+         where coalesce(to_jsonb(p) ->> 'perimetre', 'reseau') <> 'reseau');
 
 insert into _l4_mesures(etape, cle, valeur)
 select 'APRES_INVERSE', 'fonctions_neuves_presentes', count(*)::text
