@@ -108,7 +108,7 @@ résultat** → plan, liste et cette page à jour. Prompt de reprise :
 |---|---|---|
 | ① | sécurité : 136 fonctions ouvertes à la clé publique | ✅ **FINI le 08/10** |
 | ② | **les droits du négociateur** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — **8 patchs** et **1 déploiement**, tous contrôlés. Le négociateur a **21 gestes** sur ses biens · les **commissions** des collègues sont cachées · les **photos** du réseau sont visibles · le **registre** est réservé · le **manager = admin** *(sauf l'écran Santé)* · la **case « périmètre »** est à l'écran, **éprouvée par un pilote**. Restes **reportés par Frédéric**, pas oubliés *(voir « ce qui attend »)* |
-| ③ | Hektor d'abord → chez nous d'abord (statuts, clôture, fichiers) | ⬜ **le prochain** |
+| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours (12/10)** — **3 patchs, 0 déploiement, 0 redémarrage**. ✅ **3a** : « Actif » et « Mandat clos » écrivent le **statut et le diffusable chez nous d'abord**, puis Hektor *(73 s gagnées, prouvé en réel)* · ✅ **un bien VENDU/CLOS peut de nouveau être manipulé** — 8 941 annonces, bloquées depuis le 25/08 : **statut, archiver, négociateur** *(les 35 318 **archives** restent en lecture seule, règle de Frédéric)*. ⚠ **Reste** : 3b le carnet que personne ne lit · 3c la clôture de mandat · 3d/3e documents et photos |
 | ④ | aucun échec silencieux — 9 points *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
@@ -144,14 +144,38 @@ report ne se décident jamais sans lui.
 8. ⚠ **Ne jamais conclure « le déploiement est cassé » juste après un push** : sonder en
    boucle, puis parler. *(Render `/health` rend le commit ; pour Vercel, chercher une chaîne
    neuve dans `/assets/index-*.js`.)*
-9. ⚠ **Deux règles PostgreSQL** : deux règles « permissive » se combinent en **OU** *(ajouter
+9. ⭐⭐ **UNE CAUSE STRUCTURELLE SE BALAIE DANS TOUTE SA FAMILLE** *(12/10)*. Le 08/10, 5a a
+   réparé « désarchiver » pour les archives — **une case sur huit**, alors que les 7 autres
+   partageaient la même supposition *(« le bien est dans `app_dossier_current` »)*, fausse
+   depuis le 20/05 pour **44 259 biens**. **Ce que Frédéric signale est un symptôme, jamais
+   le périmètre.**
+10. ⭐ **LE NOM D'UNE COLONNE MENT — et une mesure peut être une tautologie.** `app_archive_id`
+   / `app_historical_id` **sont** `app_dossier_id`, renommés. J'avais conclu l'inverse d'un
+   « 0 archive n'existe comme `app_dossier_id` » qui ne disait que *« aucune archive n'est
+   dans la table des vivants »* — **la définition d'une archive**. Vérifier par un **second
+   chemin** *(ici : les anciens travaux du même bien)*.
+11. ⚠ **L'ÉCRAN PEUT PORTER UNE RÈGLE QUE LA BASE IGNORE.** L'écran a trois états
+   *(vivant · index sans détail · index avec détail)*, les RPC n'en connaissaient qu'un :
+   le bouton restait affiché et échouait en jargon. **Avant de corriger une fonction, lire
+   ce que l'écran promet.**
+12. ⚠ **Deux règles PostgreSQL** : deux règles « permissive » se combinent en **OU** *(ajouter
    une règle stricte à côté d'une large ne cloisonne rien — il faut remplacer)* · et une **vue**
    n'applique les règles des tables qu'avec `security_invoker`.
 
 ### ⛔ Ce qui attend Frédéric
 
 ```
-① LE PROCHAIN CHANTIER : ③ Hektor d'abord -> chez nous d'abord
+① CHANTIER ③ EN COURS -- la suite : 3b (le carnet que personne ne lit),
+   3c (la cloture de mandat), 3d / 3e (documents et photos)
+①-bis NE SE DECIDENT PAS SANS LUI, sortis du chantier ③ le 12/10 :
+     - MODIFIER LES CHAMPS d'un bien vendu/clos : ce n'est PAS un repli, c'est un autre
+       chantier (la file d'attente de 10 min a le n° de dossier pour cle primaire), et
+       l'ecran l'interdit deliberement (« Lecture seule jusqu'a desarchivage »)
+     - LE DEFAUT 5a : les desarchivages posent app_dossier_id = NULL alors que le VRAI
+       numero existe (app_archive_id EST app_dossier_id) -> le bandeau « geste abandonne »
+       ne les voit pas. Deux lignes, mais une autre fonction.
+     - REACTIVER UN BIEN CLOS marche maintenant ; l'ecran promet encore « desarchiver »
+       a un bien qui n'est pas archive (bandeau de l'index leger) -> chantier ⑦
 ② REPORTE PAR LUI, chantier ② (noter, NE PAS relancer de soi-meme) :
      - ce que doit voir exactement un AGENT COMMERCIAL. L'essai du 12/10 a prouve
        que tout abaisser casse le rapprochement (93 % de lignes mortes) : les
