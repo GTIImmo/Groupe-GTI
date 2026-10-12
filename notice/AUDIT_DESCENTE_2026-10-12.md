@@ -160,7 +160,7 @@ sur 41 n'ont leur formule **que** dans Supabase (`app_annonces_current`,
 `app_dossier_match_attrs`, `app_ecart_statut_regle`, `app_search_orphans_non_rattachables`,
 `app_stat_negociateur_v`).
 
-Branché le 12/10 dans `scheduled/run_backup.ps1` (tâche « GTI Sauvegarde », 08:00), après `backup_critical.py` et indépendant de lui : `Console/sauvegarde_plan_supabase.js`. Lecture seule du catalogue
+Branché le 12/10 dans `scheduled/run_backup.ps1` (tâche « GTI Sauvegarde », 09:00 depuis le 12/10), après `backup_critical.py` et indépendant de lui : `Console/sauvegarde_plan_supabase.js`. Lecture seule du catalogue
 par le pooler (l'adresse directe `db.<ref>` n'est servie qu'en IPv6, introuvable depuis le
 serveur), un fichier SQL daté dans `C:\Hektor\Backups\schema`, 60 jours gardés, recompte de
 chaque section contre le catalogue (écart = exit 1). Essai du 12/10 : 762 Ko en moins de 2 s —
@@ -169,7 +169,7 @@ vues 41 (dans l'ordre de leurs dépendances, avec `security_invoker`) · déclen
 politiques 121 · droits 2 644 · commentaires 91 · pg_cron 12.
 
 Non éprouvé : le **rejeu** du fichier dans une base vide (aucun Postgres local ; une branche
-Supabase serait payante). Reste à décider : le brancher dans `run_backup.ps1` (08:00).
+Supabase serait payante). Branché : voir ci-dessus.
 
 Constaté en passant : les 4 vues signalées le 10/10 sans `security_invoker`
 (`app_dossiers_current`, `app_contacts_current`, `app_contact_relations_current`,

@@ -11,6 +11,8 @@
 # 76,8 min pour `sync_raw` seul). Quatre minutes de marge. 08:15 place la
 # sauvegarde APRES la descente (07:30-08:00), avec plus d'une heure de chaque cote.
 #
+# 2026-10-12 : la tache tourne a 09:00 (la descente est passee a 07:45).
+#
 # ⚠ ET L'HORAIRE NE SUFFIT PAS. Decaler achete du temps, ca ne supprime pas le mode
 #   d'echec : backup_critical.py ATTEND desormais qu'un verrou se libere (60 s par
 #   connexion, 3 tentatives) au lieu d'abandonner apres les 5 s par defaut de la
