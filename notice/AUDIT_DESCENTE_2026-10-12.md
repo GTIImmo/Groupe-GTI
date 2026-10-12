@@ -152,3 +152,25 @@ pour les affaires (identités ratées). Le bon filtre est « ce qui a changé »
 
 *Non mesuré : la durée gagnée par piste (le temps est surtout dans les vues et les pages
 lourdes, pas proportionnel aux lignes) ; quelles vues descendues sont lues par un script local.*
+
+## 9. La sauvegarde du PLAN de la base (12/10)
+
+Les données d'une vue ne permettent pas de la recréer : il faut sa formule. Relevé : 5 vues
+sur 41 n'ont leur formule **que** dans Supabase (`app_annonces_current`,
+`app_dossier_match_attrs`, `app_ecart_statut_regle`, `app_search_orphans_non_rattachables`,
+`app_stat_negociateur_v`).
+
+Préparé, **non branché** : `Console/sauvegarde_plan_supabase.js`. Lecture seule du catalogue
+par le pooler (l'adresse directe `db.<ref>` n'est servie qu'en IPv6, introuvable depuis le
+serveur), un fichier SQL daté dans `C:\Hektor\Backups\schema`, 60 jours gardés, recompte de
+chaque section contre le catalogue (écart = exit 1). Essai du 12/10 : 762 Ko en moins de 2 s —
+extensions 9 · séquences 12 · tables 110 · contraintes 215 · index 249 · fonctions 147 ·
+vues 41 (dans l'ordre de leurs dépendances, avec `security_invoker`) · déclencheurs 4 ·
+politiques 121 · droits 2 644 · commentaires 91 · pg_cron 12.
+
+Non éprouvé : le **rejeu** du fichier dans une base vide (aucun Postgres local ; une branche
+Supabase serait payante). Reste à décider : le brancher dans `run_backup.ps1` (08:00).
+
+Constaté en passant : les 4 vues signalées le 10/10 sans `security_invoker`
+(`app_dossiers_current`, `app_contacts_current`, `app_contact_relations_current`,
+`app_registre_mandats_current`) l'ont de nouveau au 12/10.
