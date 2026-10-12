@@ -765,6 +765,150 @@ travers la règle. C'est **pour cela** qu'elles valent preuve.
    le backend, `phase2`, le run de nuit ni les crons. **À ressortir à chaque fois que la
    question « est-ce que ça touche les workers ? » se pose.**
 
+---
+---
+
+# LOT L2 — CE QUE LE NÉGOCIATEUR FAIT SEUL
+
+> Audit du **12/10/2026**. Découpage **« B »** choisi par Frédéric : **L2-A** les 5 gestes du
+> quotidien, puis **L2-B** les 9 autres après contrôle.
+
+## L2.1 ⭐ LE FRONT N'A RIEN À CHANGER — donc aucun déploiement
+
+J'attendais du travail à l'écran : **il n'y en a pas.** Aucun bouton de L2 n'est caché à un
+négociateur — l'édition des champs, les mandants, les photos, les PDF sont **déjà visibles**.
+C'est la **base** qui refusait.
+
+Les seules gardes de rôle de l'écran sont `canCreateHektorDraftAnnonce` et
+`canManageContacts` *(déjà ouvertes au commercial)*, les 4 boutons graves
+*(supprimer, archiver, statut, affecter un négociateur)* et les 3 écrans — **tous hors L2**.
+
+## L2.2 Les 14 types de travail, avec leur nom exact
+
+| geste | type | lot |
+|---|---|---|
+| modifier les champs | `update_hektor_annonce_fields` ⚠ **sauf le prix** | **A** |
+| rattacher un mandant | `link_hektor_mandant` | **A** |
+| retirer un mandant | `unlink_hektor_mandant` | **A** |
+| créer un mandant | `create_hektor_mandant_contact` | **A** |
+| modifier un mandant | `update_hektor_mandant_contact` | **A** |
+| supprimer un document chez Hektor | `delete_document_from_hektor` | B |
+| avis de valeur | `generate_estimation_pdf` | B |
+| PDF du mandat | `generate_mandat_document` | B |
+| plan cadastral | `generate_cadastre_document` | B |
+| ajouter une photo | `upload_hektor_photo` | B |
+| resynchroniser les photos | `sync_hektor_photos` | B |
+| visite virtuelle | `matterport_action` | B |
+| demander un n° de mandat | `create_hektor_mandat_auto_number` | B |
+| **désarchiver** | `restore_hektor_annonce` | B |
+
+Plus les **7 déjà ouverts** *(documents, signatures)* → **21 types** au total à la fin.
+
+## L2.3 ⚠ LE PIÈGE DU PRIX — et l'œil qui existait déjà
+
+« Modifier les champs » est **un seul** type de travail : le videur, qui ne voit que le type
+et pas le contenu, **ne peut pas** arrêter le prix.
+
+⭐ **Mais la fonction de saisie isole déjà le prix**, avec ses **TROIS clés** et un contrôle de
+format juste après :
+
+```
+v_price := coalesce(edit_fields->>'price', edit_fields->>'prix', edit_fields->>'ESTIMATION_MONTANT');
+if v_price is not null and v_price !~ '^[0-9]+([.,][0-9]+)?$' then raise exception 'invalid_price';
+```
+
+Le garde s'ajoute **à cet endroit précis, en 3 lignes**, sans rien réécrire.
+
+⚠ **ET UN SECOND CHEMIN POUVAIT LE CONTOURNER** :
+`app_console_create_update_annonce_job(…, update_fields, …)` reçoit aussi les champs. L'écran
+**ne l'appelle plus** *(0 occurrence dans `App.tsx`)* mais elle **reste joignable** par un
+compte connecté. **Le même garde y est posé.**
+
+## L2.4 ⭐ UN GAIN NON DEMANDÉ
+
+Ouvrir `update_hektor_annonce_fields` ouvre **aussi** les 4 fonctions qui ne font que **lire**
+l'état d'un travail *(`app_action_status`, `app_annonce_edit_status`, `app_action_resolve`,
+`app_annonce_pending_resolve`)* → un négociateur pourra enfin **voir si sa saisie est partie
+chez Hektor**. Aujourd'hui c'est impossible.
+
+## L2.5 ⚠ LES REFUS NE SONT TRADUITS NULLE PART, SAUF UN
+
+Un seul geste explique ses refus en français — **retirer un mandant** — avec ce commentaire :
+*« ON TRADUIT LE REFUS, ON NE LE MASQUE PAS »* (`api.ts:8175`). Partout ailleurs, un
+négociateur verrait le code brut.
+
+➡ Après L2-A, ça ne gêne plus **sauf pour le prix**, qui reste refusé : il verra
+`prix_sur_demande`. **Le message à traduire est noté, et il attend le prochain déploiement
+front** *(avec le filet « statut vide » et 4e, déjà en attente)* — on ne déploie pas pour un
+message. Texte proposé : *« Le prix ne se modifie pas directement : utilise « Demande de
+baisse de prix » sur la fiche du bien. »*
+
+## L2.6 ⭐ DÉCISION AMENDÉE : désarchiver passe à « ses biens »
+
+Dans la fiche, Frédéric avait répondu **`S` + tout le réseau**, en assumant mon objection.
+Mais en codant, la mesure a montré que **le contrôle de droits est le MÊME pour les 14 gestes**
+et ne sait répondre qu'à *« ce bien est-il à lui ? »*. « Tout le réseau » aurait demandé une
+**exception rien que pour ce geste**.
+➡ Présenté le 12/10 → **Frédéric a choisi « ses biens », comme les 13 autres.** Désarchiver
+part donc dans L2-B sans rien de spécial.
+
+## L2.7 ⭐ COMMENT LE PATCH NE PEUT RIEN ÉCRASER — *la méthode, à réutiliser*
+
+**Le patch ne recopie aucune fonction.** Pour chacune, il :
+
+1. la **lit dans la base** (`pg_get_functiondef`) ;
+2. **vérifie son empreinte** *(sans les retours chariot — un collage Windows en ajoute)* ;
+3. contrôle que **l'ancre est unique** *(mesuré avant d'écrire : `cancel_signature_procedure`
+   1 fois, `invalid_price` 1 fois, `forbidden_update_annonce` 1 fois)* ;
+4. contrôle que **le texte n'est pas déjà là** *(anti-double application)* ;
+5. **insère ses lignes après l'ancre** et réexécute.
+
+Le corps d'origine est conservé **au caractère près** : aucune transcription, donc aucune
+occasion de perdre une ligne. ⭐ **C'est la réponse à la règle « ne rien écraser », et c'est
+la méthode à reprendre pour toute modification d'une fonction existante.**
+
+L'inverse fait l'opération contraire **et vérifie qu'il retombe exactement sur les 3
+empreintes d'origine** : si le texte retiré n'était pas celui inséré, il **s'arrête** au lieu
+de laisser les choses à moitié défaites.
+
+## L2.8 ⭐ RÉPÉTITION L2-A : EXACTE — *12/10*
+
+```
+FONCTIONS QUI NE REVIENNENT PAS A LEUR CORPS D'ORIGINE : 0   (0 attendu)
+FONCTIONS QUE LE PATCH N'A PAS CHANGEES                : 0   (0 attendu)
+```
+
+| mesure | AVANT | APRÈS PATCH | APRÈS INVERSE |
+|---|---|---|---|
+| types connus du commercial | **7** | **12** ✅ | 7 |
+| garde du prix dans les chemins | 0 | **2** ✅ *(les deux)* | 0 |
+| statut et archivage admin seul | oui | **oui** ✅ *(pas débordé)* | oui |
+| contrôle « ses biens » présent | oui | **oui** ✅ | oui |
+| fonctions joignables sans compte | 0 | **0** ✅ *(chantier ① intact)* | 0 |
+
+### Les 3 empreintes à retrouver après le vrai collage
+
+| fonction | empreinte attendue *(sans retours chariot)* |
+|---|---|
+| `app_console_can_request_job` | `7eea707fd7bd93b9f34473d57b5371fa` |
+| `app_edit_annonce_optimistic` | `5eb2c1a46bf77dfcb2327d993fafc5c1` |
+| `app_console_create_update_annonce_job` | `8488e13d15c3e888d9351fe27c3066b6` |
+
+*(empreintes d'origine, pour le retour arrière : `7143dda690cf82c8c4e65210aa40f483`,
+`45110168d91358c7790032b5085e1314`, `cc039ade1eca389ecde206ec5df54b21`)*
+
+### Ce qui restera à contrôler après le collage
+
+```
+en empruntant l'identite de Melanie, en LECTURE SEULE :
+  - elle DOIT pouvoir demander une modification de champ sur SON bien
+  - elle NE DOIT PAS pouvoir toucher au PRIX          -> prix_sur_demande
+  - elle NE DOIT PAS pouvoir modifier le bien d'un COLLEGUE
+  - le statut et l'archivage DOIVENT lui rester fermes
+⚠ un essai REEL (qui ecrit chez Hektor) demande l'accord de Frederic : il cree
+  un vrai travail sur un vrai bien.
+```
+
 **NON MESURÉ** : le **coût en temps** d'une règle par ligne sur 31 058 affaires pour un
 négociateur *(nul pour un admin : la forme `(SELECT …)` n'est évaluée qu'une fois)*.
 **À chronométrer avant de valider.**
