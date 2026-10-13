@@ -1552,3 +1552,648 @@ et le repli vendu/clos sont tous deux conservés**.
 | **3d / 3e** — documents et photos | ⬜ pas commencé |
 
 **Total : 6 patchs SQL · 0 déploiement · 0 redémarrage de worker · 0 ligne de front.**
+
+### ❓ « Et pour les CONTACTS, a-t-on fait pareil ? » (13/10) — **oui, et avant l'annonce**
+
+| Geste du contact *(appelé par l'écran)* | écrit la fiche chez nous ? |
+|---|---|
+| créer un contact *(`app_create_contact_optimistic`)* | ✅ |
+| modifier un contact *(`app_edit_contact_optimistic`)* | ✅ + **file d'attente** + les champs app |
+| créer un mandant *(`app_create_mandant_contact_optimistic`)* | ✅ |
+| modifier un mandant *(`app_update_mandant_contact_optimistic`)* | ✅ + file d'attente |
+| modifier *(voie console)* · supprimer | ✅ · ✅ |
+
+⚠ **Trois fonctions n'écrivent PAS la fiche** — `app_console_create_contact_job`,
+`app_console_create_mandant_contact_job`, `app_console_create_update_mandant_contact_job` —
+**mais l'écran n'en appelle AUCUNE** *(mesuré : 0 occurrence dans `api.ts`)*. Ce sont les voies
+d'avant, mortes.
+
+**Et le contact a quelque chose que l'annonce n'aura pas avant la coupure :** son interrupteur
+est **allumé**, sur 3 champs — `birth_date`, `birth_place`, `marital_status` — **parce qu'ils
+remplissent le critère** : *« Hektor ne renvoie JAMAIS ces trois-là : seule l'app les écrit.
+Aucun arbitrage possible, donc aucun risque. »* **261 contacts portent déjà une date de
+naissance.**
+
+**L'architecture est différente, et plus simple** : pas de carnet ni d'applicateur nocturne — la
+protection vit **dans le push lui-même** *(`push_contacts_to_supabase.py:483-505`, il relit les
+3 champs dans Supabase et les réinjecte pour qu'un push ciblé ne les perde pas)*.
+
+**Et le motif de suppression d'un contact était déjà gardé** : `app_console_deleted_contact_log`,
+**13 suppressions tracées, 4 avec un motif** *(et 114 pour les annonces)*.
+
+➡ **Le contact n'était pas en retard : c'est l'annonce qui l'était.** Ce qu'on a fait ces deux
+jours la met au même niveau — et au-delà, puisque ses motifs sont désormais gardés aussi.
+
+---
+
+## 3c — LA CLÔTURE DE MANDAT · ÉTAPE 1, AUDIT COMPLET (13/10) — verdict : **CONFIRMÉ**
+
+### Ce qui existe déjà, et qui marche
+
+| | |
+|---|---|
+| le geste à l'écran *(statut « Clos » + motif)* | ✅ |
+| le worker écrit la date **chez nous** : `cloturerMandatLocalement` → carnet `app_mandat_champ_app`, **clé (annonce, n° de mandat)** | ✅ |
+| **l'interrupteur `CHAMPS_APP_MANDAT = ("mandat_date_cloture",)`** | ✅ **ALLUMÉ depuis le 28/08 — le seul du projet** |
+| `magasin_mandat_app.py` descend le carnet chaque nuit | ✅ *(run l. 590)* |
+| `appliquer_contrat_mandat.py` tourne chaque nuit, avec « vide ne gagne pas » | ✅ *(run l. 593)* |
+| les colonnes existent | `app_mandat.date_cloture` · `app_mandat_register_current.mandat_date_cloture` · la vue |
+
+### ⛔ LA CHAÎNE EST COUPÉE EN DEUX ENDROITS
+
+**① L'applicateur écrit au mauvais grain, et dans une colonne qui ne voyage pas.**
+`appliquer_contrat_mandat.py:50` → `CIBLE = "app_view_generale"`, `UPDATE … WHERE hektor_annonce_id = …`
+➡ il pose la date **sur l'ANNONCE** *(une par annonce)*, alors que le carnet est rangé par
+**couple (annonce, n° de mandat)** — la clé du projet. ⚠ **Et `app_dossier_current` n'a même pas
+de colonne `mandat_date_cloture`** *(mesuré : elle n'existe que dans `app_mandat`, le registre et
+sa vue)* : ce qu'il écrit localement **ne monte nulle part**.
+
+**② Le fabricant du registre ne la reprend jamais.**
+`mandat_ledger.py` prend la date dans **la version de Hektor**
+*(`_texte(courante.get("cloture")) or _texte(_du_plat("date_cloture"))`, l. 579)* — **jamais dans
+le carnet** — et `date_cloture` est **hors de son `ON CONFLICT`**, par sa « **protection par
+omission** » :
+
+> *« Ce que le run ne réécrit pas, il le préserve. `date_cloture` est donc HORS du ON CONFLICT :
+> **l'app la possède déjà**, le carnet la porte, et le run n'a pas à l'écraser. »*
+
+➡ **Les deux moitiés se font confiance, et personne n'écrit.** Et comme la date n'est posée qu'à
+la **première insertion**, un mandat déjà connu **ne peut plus jamais la recevoir** — **ni de
+l'app, ni de Hektor**.
+
+### LA MESURE QUI PROUVE LES DEUX
+
+| annonce / mandat | au carnet *(l'app)* | dans `app_mandat` | dans le registre |
+|---|---|---|---|
+| **62966 / 18842** | **2026-08-28** | ❌ vide | ❌ vide |
+| **24933 / 11939** | **2026-09-18** | ❌ vide | ⚠ **2026-10-05** — **la date de HEKTOR**, pas la nôtre |
+
+Et à l'échelle : **26 855 mandats, 91 avec une date — 0,3 %** · le registre en porte **118**.
+⭐ **Cet écart de 27 s'explique par la même cause** *(l'audit du 08/10 le soupçonnait sans le
+prouver)* : les clôtures faites **dans Hektor** après la première insertion ne peuvent pas entrer
+non plus.
+
+### CE QUE JE N'AI PAS MESURÉ
+
+Lequel des deux consommateurs gagne exactement quand les deux écrivent *(je n'ai pas rejoué une
+nuit)*. **Mais le résultat, lui, est mesuré : 0 sur 2.**
+
+### ⚠ CORRECTION DE MON PROPRE AUDIT, LE MÊME JOUR
+
+J'avais écrit « **0 sur 2** » en regardant `app_mandat` — **une table que l'écran ne lit pas**.
+Mesuré à la bonne source *(`app_mandat_register_current`, celle que lit `api.ts`)* :
+
+| annonce | mandat | notre date | **ce que l'écran montre** | statut |
+|---|---|---|---|---|
+| 11810 | 17770 | 2026-06-05 | ✅ 2026-06-05 | Actif |
+| 1951 | 17988 | 2026-07-14 | ✅ 2026-07-14 | Actif |
+| 11824 | 17946 | 2026-08-24 | ✅ 2026-08-24 | Actif |
+| **62966** | 18842 | 2026-08-28 | ❌ **vide** | Clos |
+| **62774** | 18836 | 2026-08-30 | ❌ **vide** | Sous offre |
+| 41433 | 18038 | 2026-09-14 | ✅ 2026-09-14 | Sous offre |
+| **24933** | 11939 | 2026-09-18 | ⚠ **2026-10-05** | Clos |
+
+➡ **4 sur 7 tiennent.** Et le geste, lui, est **complet** : `cloturerMandatLocalement`
+écrit le carnet *(« l'écriture qui fait foi », vérifiée)* **puis `PATCH` le registre tout de
+suite** — « le registre montre la date tout de suite, au lieu d'attendre le run de nuit ».
+
+### ⭐ LE VRAI DÉFAUT : **LA DATE TIENT PAR CHANCE**
+
+Le `PATCH` du worker survit **tant que la ligne du registre n'est pas réécrite**. Le push est
+un **delta par empreinte** : il ne réécrit une ligne que si l'annonce a bougé. Donc
+
+> **la date de clôture survit tant que l'annonce ne bouge plus ; dès qu'elle bouge, le
+> constructeur la remplace par celle de Hektor — c'est-à-dire par du vide.**
+
+Les 3 perdues sont les 3 qui ont bougé. ⚠ **Et pour 62966, c'est MOI** : je l'ai archivée
+puis désarchivée hier pour éprouver 5a — ce qui a réécrit sa ligne et effacé sa date.
+**Une épreuve a détruit une donnée réelle.** Je ne l'avais pas vu.
+
+➡ Ce n'est donc **pas** « écrire chez nous d'abord » qui manque. C'est :
+**la nuit ne doit pas effacer ce que nous détenons.**
+
+### LE PRÉCÉDENT : LE PROJET A DÉJÀ TRANCHÉ CE CHOIX
+
+`export_app_payload.py` l. 1909-1917, écrit le 06/10 pour **les mandants**, exactement le même
+problème :
+
+> *« Et sa place dans le run est le point délicat. […] Corriger dans `mandat_ledger.py` aurait
+> réintroduit **l'erreur classique du projet : lire la couche de la veille**. ⭐ Et le même
+> constructeur sert `push_single_annonce_to_supabase.py` — donc **le chemin IMMÉDIAT du worker
+> (~1 min) en profite aussi**, sans code en plus. »*
+
+➡ Le bon endroit est **`build_mandat_register_rows`**, pas `mandat_ledger.py`.
+Et l'ordre du run le permet : le carnet est descendu **l. 590**, le push est **l. 1159**.
+
+---
+
+## 3c — ÉTAPE 2 : LE CORRECTIF PROPOSÉ *(présenté le 13/10, EN ATTENTE DU « VAS-Y »)*
+
+### Ce que je changerais — **un seul fichier, deux endroits, zéro table nouvelle**
+
+`phase2/sync/export_app_payload.py` — le constructeur du registre. Au lieu de
+
+```python
+"mandat_date_cloture": normalize_text(current_version.get("cloture")) or None,   # Hektor seul
+```
+
+on prend **la nôtre quand nous en avons une**, et celle de Hektor sinon :
+
+```python
+"mandat_date_cloture": nos_clotures.get((annonce, numero))                      # ⭐ l'app d'abord
+                       or normalize_text(current_version.get("cloture")) or None
+```
+
+`nos_clotures` étant lu **une seule fois**, au début, dans le carnet local
+`app_mandat_champ_app` *(descendu à l. 590, donc frais au moment du push l. 1159)* :
+`where champ='mandat_date_cloture' and trim(valeur_app) <> ''`.
+
+C'est **« vide ne gagne pas »**, la règle déjà écrite trois fois dans le projet. Et c'est le
+**même patron que les mandants**, au même endroit, pour la même raison.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+| | |
+|---|---|
+| **le statut du mandat à l'écran** *(Actif / Clos / Échu)* | ⚠ **IL CHANGE, ET C'EST LE BUT.** Il est dérivé de `mandat_date_cloture`. Les 3 dates qui manquent reviennent → **3 mandats passeront de « Actif / Sous offre » à « Clos »** au registre. **C'est une correction, pas une régression — mais tu dois le savoir avant.** |
+| **le tri et le filtre serveur** sur le statut du mandat | les 3 lignes changent de groupe. Rien d'autre. |
+| **les 93 clôtures de HEKTOR** que `app_mandat` ne porte pas | ⛔ **CE PATCH N'Y TOUCHE PAS.** Elles sont déjà au registre *(elles viennent de `current_version`)*. Voir la question ② ci-dessous. |
+| **le chemin immédiat du worker** *(`push_single_annonce`, ~1 min)* | ⚠ le carnet **local** a jusqu'à 24 h de retard. Donc une clôture faite **aujourd'hui**, suivie d'un re-push de **la même annonce dans la même journée**, retomberait à vide **jusqu'à la nuit**. C'est le cas qui reste, et c'est la question ③. |
+| **la chaîne des mandats / les avenants / les versions** | aucune autre colonne touchée, aucun `ON CONFLICT` modifié. |
+| **les affaires, le rapprochement, les pages publiques** | ne lisent pas cette colonne — mesuré : `mandat_date_cloture` n'apparaît que dans le registre et sa vue. |
+| **`appliquer_contrat_mandat.py`** *(l. 593, aujourd'hui mal visé)* | ⚠ je **n'y touche pas** dans ce patch. Il continue d'écrire dans `app_view_generale`, où ça ne sert à rien — **inoffensif, mais trompeur**. À redresser ou à retirer : question ④. |
+| **la nuit du 14/10** | le patch ne s'applique qu'au prochain run. **Rien ne change d'ici là.** |
+
+### RETOUR ARRIÈRE
+Un seul fichier Python, additif : on remet la ligne d'origine *(ou `git revert` du commit)*.
+**Aucune écriture de schéma, aucun patch SQL, aucun redémarrage de worker.** La colonne existe
+déjà et est refaite chaque nuit : il n'y a rien à défaire en base.
+
+### CONTRÔLE PRÉVU *(avant tout run réel)*
+1. `--dry-run` : le constructeur tourne, on compte combien de lignes prennent **notre** date
+   *(attendu : 7)* et combien gardent celle de Hektor *(attendu : les 118 autres, inchangées)*.
+2. **Le témoin inverse** : les 3 dates perdues **apparaissent** *(62966, 62774, 11939→09-18)*
+   **et** aucune des 118 autres ne **disparaît**.
+3. On recompte le registre entier avant / après : **aucune autre colonne ne doit bouger**.
+
+### 🛑 CE QUE JE NE DÉCIDE PAS — 4 QUESTIONS POUR TOI
+
+1. **Le périmètre du patch** : seulement ce qui est écrit ci-dessus *(le registre, l'écran)* —
+   ou bien ?
+2. **`app_mandat` et les 93 clôtures de Hektor.** La table `app_mandat` *(le futur registre,
+   que l'écran ne lit pas encore)* porte 91 dates sur 26 855, et **93 dates que Hektor détient
+   n'y entrent pas** — figées à la première insertion. Je peux l'ouvrir en une ligne
+   *(`date_cloture = COALESCE(excluded.date_cloture, app_mandat.date_cloture)` — qui ne peut
+   qu'**ajouter**, jamais effacer)*. **Maintenant, pour préparer la bascule — ou plus tard ?**
+3. **Le trou résiduel du chemin immédiat** *(une clôture + un re-push le même jour)*. Je peux le
+   fermer en faisant lire le carnet **dans Supabase** sur ce chemin-là. Ça ajoute une lecture
+   réseau au worker. **On le ferme maintenant, ou on l'accepte ?**
+4. **`appliquer_contrat_mandat.py`**, qui écrit depuis le 28/08 dans une table où ça ne sert à
+   rien. **On le redresse, on le retire du run, ou on le laisse en l'état avec un commentaire ?**
+
+*(Le **motif** de clôture du mandat : tu as dit « c'est un autre chantier ». Il n'est pas ici.)*
+
+---
+
+## 3c — AUDIT REFAIT À LA DEMANDE DE FRÉDÉRIC (13/10) : **IL AVAIT RAISON, J'AVAIS 3 ERREURS**
+
+> *« audit de nouveau tu trompe il y a deja une vue registre des mandats et une table registre
+> de mandat chez nous »* — et c'est exact. Mesuré dans Supabase, pas dans le front :
+
+| objet | nature | colonnes | lignes | porte la date de clôture |
+|---|---|---|---|---|
+| `app_mandat_register_current` | **TABLE** | 69 | 24 505 | ✅ `mandat_date_cloture` |
+| `app_registre_mandats_current` | **vue** | 71 | — | ✅ *(elle ne lit que la table ci-dessus)* |
+| `app_mandat` | TABLE | 24 | 26 855 | `date_cloture` — ⚠ **rien ne la lit à l'écran** |
+
+➡ **Ma question ② était trompeuse** : j'ai appelé `app_mandat` « le futur registre » et parlé de
+« préparer la bascule ». Faux : **le registre existe, table ET vue, et il tourne.** `app_mandat`
+est une **troisième** table, citée par **un seul** RPC *(`app_unlink_mandant_optimistic`)* et par
+aucun écran. Ce n'est pas le registre.
+
+### ❌ ERREUR 2 — « delta par empreinte » : FAUX
+
+Le registre n'est pas mis à jour, il est **supprimé puis réinséré**
+*(`push_upgrade_to_supabase.py` l. 1726-1737)* : chaque nuit on efface les lignes des annonces
+**du parc vivant** qu'on va réécrire, puis on réinsère. Donc :
+
+> ⭐ **notre date survit seulement quand l'annonce a QUITTÉ le parc vivant.** Sa ligne est alors
+> **gelée** *(correctif du 29/09 : « un registre CONSERVÉ, c'est sa définition même »)* et
+> personne ne la réécrit. Tant que l'annonce est **vivante**, sa ligne est effacée et refaite
+> depuis la version de Hektor chaque nuit — et notre date part avec.
+
+### ❌ ERREUR 3 — « 4 sur 7 » : FAUX AUSSI, et c'est la plus grave
+
+`valeur_app` du carnet **ne veut pas dire « décision de l'app »**. Le magasin lit **le registre**
+comme « ce que dit l'app » : pour les lignes `origine='observe'`, `valeur_app` est donc
+**ce que le registre affichait**, d'origine inconnue. Les **vraies** clôtures de l'app sont
+celles marquées `origine='cloture_app'`, avec `ecrit_par` : **il y en a 3.**
+
+| annonce | mandat | notre date *(l'app)* | Hektor | **ce que l'écran montre** | parc |
+|---|---|---|---|---|---|
+| **62966** | 18842 | 2026-08-28 | — | ❌ **vide** | vivant → refait chaque nuit |
+| **62774** | 18836 | 2026-08-30 | — | ❌ **vide** | vivant → refait chaque nuit |
+| **24933** | 11939 | 2026-09-18 | **2026-10-05** | ⚠ **2026-10-05** *(Hektor)* | archivé → gelé |
+
+➡ **0 sur 3.** Mon premier chiffre était le bon ; ma « correction » l'avait abîmé.
+
+### ⚠ ERREUR 4 (la tienne et la mienne) — HEKTOR **A** DES DATES DE CLÔTURE
+
+Mesuré dans le miroir : **212 dates de clôture sur 27 103 mandats (0,8 %)**. Donc « tous les
+mandats n'ont pas de date de clôture » est vrai à 99,2 %, **pas à 100 %**. Et sur nos 3, Hektor
+en a une pour **24933** — **15 jours après la nôtre** — et c'est **la sienne** qui s'affiche.
+⚠ **Piège** : `hektor_mandat` porte plusieurs versions du même couple, dont une à `NULL` *(1951,
+11824, 41433)*. Une lecture naïve prendrait la vide.
+
+### ⭐ CONSÉQUENCE POUR LE CORRECTIF
+
+Mon patch de l'étape 2 lisait `valeur_app` **sans filtre**. Il aurait donc **réinjecté 4 restes
+de Hektor en les faisant passer pour nos décisions** — exactement le genre de blanchiment que
+ce chantier combat. **Le patch doit ne faire confiance qu'à `origine='cloture_app'`.**
+
+### CONSOMMATEUR OUBLIÉ DANS MA RUBRIQUE
+
+`app_generate_mandat_echu_alerts` **supprime** l'alerte « Mandat échu » dès que le registre porte
+une date de clôture. Donc effacer notre date peut **faire revenir une alerte sur un mandat que tu
+as clos**. Mesuré aujourd'hui : **0 alerte** sur les 7 *(dates de fin en 2027, ou statut clos)* —
+**pas de dégât constaté**, mais la dépendance existe et doit figurer dans la rubrique.
+
+---
+
+## 3c — DÉCISION DE FRÉDÉRIC, 13/10 : **« 1 celle de l'app »**
+
+Quand les deux dates existent, **c'est la nôtre qui gagne**. *(Cas mesuré : 24933 — nous
+18/09, Hektor 05/10 ; c'est 18/09 qui doit s'afficher.)* Le patch applique donc :
+`clôture de l'app (origine='cloture_app') d'abord, Hektor ensuite, jamais du vide`.
+
+## 3c — QUESTION 2 EXPLIQUÉE : `appliquer_contrat_mandat.py`, OÙ VA SON ÉCRITURE ?
+
+**Ce qu'il a été construit pour faire** *(son en-tête, 28/08)* :
+> *« C.13-b — L'ENDROIT OÙ LA CLÔTURE DE MANDAT CESSE D'APPARTENIR À HEKTOR. […] Il n'écrit que
+> la colonne `mandat_date_cloture`, et seulement pour le mandat COURANT de l'annonce. **Les
+> mandats des cycles passés se traitent dans le constructeur du registre, qui lit le même
+> magasin.** »*
+
+⭐ **Donc le correctif que je propose était prévu dès le départ — il n'a jamais été écrit.**
+
+**Ce qu'il fait réellement.** Mesuré, chaînon par chaînon :
+
+| étape | mesure |
+|---|---|
+| il lit le carnet, garde les valeurs non vides | ✅ la règle « vide ne gagne pas » est bien là |
+| il écrit `app_view_generale.mandat_date_cloture` | ✅ la colonne **existe** localement *(163 colonnes)* — donc **il n'échoue pas, il écrit** |
+| le push envoie-t-il cette colonne sur la fiche ? | ❌ **non** |
+| la colonne existe-t-elle sur la fiche Supabase ? | ❌ **non** — `mandat_date_cloture` n'existe **que** dans `app_mandat_register_current`. Ni `app_dossier_current`, ni l'index archive, ni l'index historique ne l'ont *(tous les trois ont `mandat_date_fin`, pas celle-ci)* |
+| le constructeur du registre la relit-il sur la fiche ? | ❌ **non** — l. 1817 et 2401 prennent `current_version.get("cloture")`, **la version de Hektor** |
+
+➡ **Son écriture meurt dans la base locale, qui est détruite et refaite la nuit suivante.**
+Il tourne chaque nuit depuis le 28/08 et **ne produit rien**. Ce n'est pas un bug bruyant :
+c'est un échec silencieux, le genre que le chantier ④ traque.
+
+### ⚠ ET UN SECOND DÉFAUT, LATENT
+
+Sa table de travail a pour clé **`hektor_annonce_id` seul** *(`TEXT PRIMARY KEY`)*, avec
+`INSERT OR REPLACE`. Si une annonce portait **deux** mandats clos, **le dernier lu écraserait
+l'autre en silence**, et la date d'un mandat se retrouverait sur un autre.
+Mesuré aujourd'hui : **0 annonce concernée** — donc **ça ne mord pas**. Mais c'est exactement
+la situation que ce chantier va créer, puisqu'il s'agit de se mettre à clore des mandats.
+
+### LES TROIS OPTIONS, ET CE QU'ELLES COÛTENT
+
+| | |
+|---|---|
+| **A — le retirer du run** *(recommandé)* | Une ligne retirée de `run_full_pipeline.ps1` *(l. 593)*. Le fichier **reste sur le disque**, avec son en-tête mis à jour : « remplacé le 13/10 par le constructeur du registre, qui écrit là où la donnée va vraiment ». On ne perd pas l'histoire, et plus rien ne fait semblant de marcher. ⚠ **Touche le run → ton accord.** |
+| **B — le redresser** | Il faudrait qu'il écrive au grain **(annonce, n° de mandat)**… or il n'existe aucune table locale à ce grain qui monte chez nous : le registre est **fabriqué au moment du push**. Le redresser revient donc à **refaire le correctif une seconde fois, ailleurs**. Deux endroits à maintenir pour un seul résultat. |
+| **C — le laisser avec un commentaire** | Coût : quelques secondes par nuit et une colonne locale morte. Inoffensif. ⚠ Mais il reste **trompeur** : son en-tête dit « l'endroit où la clôture cesse d'appartenir à Hektor », et le prochain qui le lira — moi compris — le croira encore. |
+
+---
+
+## 3c — AUDIT REFAIT (3ᵉ fois), SUR LA DEMANDE DE FRÉDÉRIC DU 13/10
+
+> *« il y a donc le registre des mandats avec date de début et date de fin ; la date de clôture
+> doit donc être une colonne supplémentaire, et cette colonne doit être maj éventuellement par
+> Hektor mais **surtout pas l'app** — mais cette demande n'a pas à être transmise à Hektor. »*
+
+### ⭐ CE PATRON EXISTE DÉJÀ DANS LE REGISTRE — POUR LES PHOTOS
+
+La vue `app_registre_mandats_current`, aujourd'hui, fait **exactement** ce que Frédéric décrit :
+
+```sql
+COALESCE(NULLIF(btrim(photo_url_listing_app), ''), photo_url_listing) AS photo_url_listing,
+...
+photo_url_listing_app,                      -- la nôtre, nue
+photo_url_listing AS photo_url_listing_hektor   -- celle de Hektor, nue
+```
+
+Et la mécanique complète, mesurée :
+
+| | |
+|---|---|
+| la colonne `_app` est-elle écrite par le run ? | ❌ **zéro occurrence** dans `export_app_payload.py` **et** dans `push_upgrade_to_supabase.py` |
+| survit-elle au `delete`+`insert` de la nuit ? | ❌ **non** — elle revient à `NULL` sur les lignes refaites |
+| alors comment est-elle pleine à **24 497 / 24 505** ? | ⭐ **une étape de re-pose APRÈS le push** : `run_full_pipeline.ps1` **l. 1510** → `Console/remplir_adresses_photos.js` → RPC `app_photos_remplir_adresses_registre` |
+| déclencheurs sur la table ? | **0** — rien de caché |
+
+➡ **Le projet a donc déjà un patron éprouvé pour « une colonne qui est à nous, dans une table
+que la nuit détruit ».** Il n'y a rien à inventer : colonne `_app` + re-pose après le push + la
+vue qui donne la nôtre d'abord, et expose les deux séparément.
+
+### ⛔ ET LA MESURE QUI TRANCHE LA FORME : LES DROITS
+
+| table | RLS | politiques |
+|---|---|---|
+| `app_mandat_champ_app` *(le carnet)* | **activée** | ⛔ **0 politique — personne ne peut la lire** |
+| `app_mandat_register_current` | activée | 1 *(SELECT, utilisateurs actifs)* |
+
+➡ J'avais envisagé une vue qui **joindrait le carnet** *(aucune re-pose nécessaire)*. **C'est
+impossible** : la vue est `security_invoker=on`, le carnet n'a **aucune** politique de lecture,
+donc la date serait **vide pour tout le monde**. **L'intuition de Frédéric est la seule qui
+tienne : il faut une colonne.**
+
+### ⭐⭐ LA CAUSE RACINE, ENFIN TROUVÉE — ET ELLE EXPLIQUE MON ERREUR 3
+
+Aujourd'hui, le worker écrit notre date **dans la colonne de Hektor** :
+```js
+// console_job_worker.js -- « confort d'affichage, SANS AUTORITE »
+PATCH app_mandat_register_current ... { mandat_date_cloture: date }
+```
+Puis `magasin_mandat_app.py` relit **ce même registre** comme « ce que dit l'app »
+*(l. 204 : « CE QUE DIT L'APP. Relu EN DIRECT dans Supabase »)*.
+
+➡ **La boucle est fermée : nous relisons notre propre écriture comme si elle faisait autorité.**
+C'est pour ça que 4 lignes du carnet portaient une `valeur_app` qui n'était la décision de
+personne — et c'est pour ça que je me suis trompé en les comptant comme des clôtures de l'app.
+**La demande de Frédéric supprime la cause, pas le symptôme.**
+
+### CE QUE ÇA DONNE, POINT PAR POINT
+
+| | aujourd'hui | après |
+|---|---|---|
+| `mandat_date_cloture` | ⚠ écrite par **Hektor** *(la nuit)* **ET par l'app** *(le worker)* | **Hektor seul**. L'app n'y touche plus jamais. |
+| notre date | nulle part de durable | **`mandat_date_cloture_app`**, à nous seuls |
+| ce que l'écran affiche | tantôt la nôtre, tantôt celle de Hektor, tantôt rien | la nôtre si elle existe, celle de Hektor sinon — **et les deux lisibles séparément** |
+| envoyé à Hektor | non | **non** *(inchangé — c'est voulu)* |
+| le carnet | source de vérité, illisible par l'écran | **inchangé** : il reste la source, et c'est lui qui alimente la re-pose |
+
+---
+
+## 3c — « JE VEUX QUE LA DATE DE CLÔTURE SOIT SAISISSABLE DANS MON APP » (13/10)
+
+### CE QUI EXISTE DÉJÀ À L'ÉCRAN — mesuré
+
+Le front **lit** `mandat_date_cloture` en **4 endroits** :
+`mandatStatutForRegister` *(App.tsx l. 7667)* et son jumeau *(api.ts l. 85)* en dérivent le
+**statut du mandat** — Actif / Clos / Échu ; l. 18267 l'affiche dans le détail *(« Cloture »)* ;
+l. 26752 la relit. Elle est demandée dans deux `select` du registre *(api.ts l. 6162, 6221)*.
+
+⛔ **Mais il ne l'écrit NULLE PART.** Aucun champ, aucun formulaire. Le seul chemin actuel est
+la modale « changer le statut → Clos », qui passe par le worker.
+
+### ⚠ ET UN OBSTACLE À CONNAÎTRE : LE FRONT NE PEUT PAS ÉCRIRE LE CARNET
+
+`app_mandat_champ_app` a **RLS activée et 0 politique** : le front ne peut **ni la lire ni
+l'écrire**. Une saisie ne peut donc PAS taper directement dans le carnet.
+➡ Il faut un **RPC `SECURITY DEFINER`**, exactement comme tous les autres gestes du projet
+*(`app_change_annonce_status_optimistic`, `app_archive_annonce_optimistic`…)*.
+
+### LE MODÈLE À RETENIR : **LE COFFRE ET LA VITRINE**
+
+| | **le coffre** `app_mandat_champ_app` | **la vitrine** `app_mandat_register_current` |
+|---|---|---|
+| à quoi ça sert | **la date y VIT** | la date s'y **AFFICHE** |
+| qui la voit | personne *(RLS, 0 politique)* | l'écran |
+| la nuit | **intacte, jamais touchée** | ⚠ **détruite et refaite** pour le parc vivant |
+| qui l'écrit | le RPC *(notre geste)* | le RPC *(tout de suite)* **+ la re-pose** *(après le push)* |
+
+⭐ **C'est le point à comprendre** : la table du registre est **détruite chaque nuit**. Une date
+écrite là-dedans et nulle part ailleurs **disparaît**. D'où le coffre. Et c'est précisément le
+patron déjà en service pour les photos *(24 497 lignes)*.
+
+### LES 5 PIÈCES DU CHANTIER
+
+| | pièce | touche | accord |
+|---|---|---|---|
+| **1** | **SQL** : colonne `mandat_date_cloture_app` + la vue sur le modèle des photos *(la nôtre d'abord, Hektor sinon, les deux lisibles)* | Supabase | tu colles |
+| **2** | **RPC** `app_set_mandat_cloture_optimistic(annonce, n° mandat, date)` : écrit **le coffre ET la vitrine** dans la même transaction. Refuse une date illisible, refuse un couple inconnu. | Supabase | tu colles |
+| **3** | **Le champ à l'écran** : saisie de la date sur la fiche du mandat → appelle le RPC | front *(Vercel se déploie seul)* | ton go |
+| **4** | **La re-pose après le push** : relit le coffre, repose notre colonne — comme `remplir_adresses_photos.js` l. 1510 | **le run** | ton go |
+| **5** | **Le worker** : son `PATCH` quitte la colonne de Hektor pour la nôtre *(ou appelle le RPC n° 2)* | ⚠ **4 services à redémarrer** | ton go |
+
+### CE QUE ÇA DONNE, CONCRÈTEMENT
+
+> Tu ouvres un mandat, tu tapes **28/08/2026**, tu valides.
+> → le RPC écrit **le coffre** *(ça fait foi)* **et la vitrine** *(tu le vois tout de suite)*
+> → le statut du mandat passe à **Clos** à l'écran, tri et filtre compris *(le front le dérive déjà)*
+> → l'alerte « Mandat échu » **disparaît** *(`app_generate_mandat_echu_alerts` la supprime dès qu'une clôture existe)*
+> → **rien ne part chez Hektor** *(voulu)*
+> → la nuit refait le registre, **la re-pose remet ta date**
+> → si Hektor en ajoute une plus tard, **la tienne reste affichée** *(décision du 13/10)*, et la
+>   sienne reste lisible à côté.
+
+---
+
+## 3c — DÉCISIONS DE FRÉDÉRIC, 13/10 (suite)
+
+- **L'ordre est validé** : **1 + 2** *(SQL)* → **4** *(la re-pose)* → **3 + 5** *(l'écran, le worker)*.
+- **La saisie va sur la FICHE DU MANDAT** — et il précise : *« il y a des liens aussi dans la
+  rubrique mandat de l'annonce et aussi dans le modal changement de statut »*.
+  ➡ **3 points d'entrée** à couvrir en pièce 3 : la fiche du mandat, la rubrique « Mandat » de
+  l'annonce, la modale de changement de statut. *(Noté pour la pièce 3, pas pour maintenant.)*
+
+## 3c — ÉTAPE 2 : PIÈCES 1 + 2 *(présenté le 13/10, EN ATTENTE DU « VAS-Y »)*
+
+### MESURES PRÉALABLES, FAITES
+
+| | |
+|---|---|
+| le couple (annonce, n° de mandat) est-il unique au registre ? | ✅ **24 505 lignes = 24 505 couples**, 0 sans numéro, 0 sans annonce |
+| la clé du coffre **côté Supabase** | **`(hektor_annonce_id, numero_mandat, champ)`** — le couple. `hektor_mandat_id` est **facultatif** |
+| ⚠ piège | la table **locale** du même nom a une **autre clé** : `(hektor_annonce_id, hektor_mandat_id, champ)`. Même nom, clé différente. |
+| qui lit `mandat_date_cloture` dans la base ? | **exactement deux** : la vue, et `app_generate_mandat_echu_alerts` *(SECURITY DEFINER)* |
+
+### PIÈCE 1 — LA COLONNE, LA VUE, ET L'ALERTE
+
+1. `alter table app_mandat_register_current add column if not exists mandat_date_cloture_app text;`
+2. la vue refaite **à l'identique** *(ses 71 colonnes, mêmes noms, même ordre)*, avec **trois**
+   changements seulement — le patron exact des photos :
+   ```sql
+   COALESCE(NULLIF(btrim(mandat_date_cloture_app), ''), mandat_date_cloture) AS mandat_date_cloture,
+   mandat_date_cloture_app,                              -- la nôtre, nue
+   mandat_date_cloture AS mandat_date_cloture_hektor     -- celle de Hektor, nue
+   ```
+   → **71 colonnes deviennent 73.** Aucun nom retiré, aucun renommé.
+3. ⚠ **`app_generate_mandat_echu_alerts` lit la TABLE, pas la vue.** Sans la toucher, l'alerte
+   « Mandat échu » **ne disparaîtrait pas** sur un mandat que tu clos — **la promesse que j'ai
+   faite serait fausse.** On y applique le même `COALESCE`.
+4. **la re-pose des 3 clôtures déjà faites**, depuis le coffre *(`origine='cloture_app'`)* :
+   62966 → 2026-08-28 · 62774 → 2026-08-30 · 24933 → 2026-09-18.
+
+### PIÈCE 2 — LE RPC `app_set_mandat_cloture_optimistic`
+
+`SECURITY DEFINER`, propriétaire `postgres`, sur le modèle des gestes de 3a/3b :
+- **refuse** une date qui n'est pas `AAAA-MM-JJ`, **refuse** un couple absent du registre
+  *(`mandat_introuvable`)* — on n'écrit jamais à côté ;
+- écrit **le coffre** *(upsert sur le couple, `origine='cloture_app'`, `ecrit_par` = l'utilisateur)*
+  **et** la colonne `mandat_date_cloture_app` du registre, **dans la même transaction** ;
+- une date **vide efface la nôtre** → celle de Hektor réapparaît. C'est le retour arrière de
+  l'utilisateur quand il s'est trompé.
+- **n'envoie rien à Hektor.**
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+| | |
+|---|---|
+| **le statut du mandat à l'écran** *(Actif / Clos / Échu)* | ⚠ **IL CHANGE, ET C'EST LE BUT** : le front le dérive de `mandat_date_cloture` *(App.tsx l. 7667, api.ts l. 85)*. **3 mandats** passeront à **Clos**. |
+| le tri et le filtre serveur du registre | suivent ces 3 lignes. Rien d'autre. |
+| **les alertes « Mandat échu »** | couvertes par le point 3 ci-dessus. Mesuré aujourd'hui : **0 alerte** sur ces 3 *(dates de fin en 2027, ou statut clos)* → **aucune notification ne bougera**. |
+| le front qui lit la vue | il demande des colonnes **nommées** *(api.ts l. 6162, 6221)*, jamais `select *` → **ajouter deux colonnes ne casse rien**. |
+| le run de nuit | ⛔ **pas touché par les pièces 1-2.** Le push ne connaît pas la nouvelle colonne, donc il ne l'écrit pas — mais il **efface la ligne** du parc vivant : d'où la **pièce 4**. ⚠ **Sans la pièce 4, les 3 dates reposées repartiront à la prochaine nuit.** Je le dis net. |
+| le worker | ⛔ **pas touché.** Il continue d'écrire dans la colonne de Hektor jusqu'à la pièce 5. Conséquence : le `COALESCE` affichera la **nôtre** *(colonne `_app`)*, donc son écriture devient **sans effet visible** — inoffensive, mais à nettoyer en pièce 5. |
+| `app_photos_remplir_adresses_registre` | ne touche que les colonnes photo. Aucun lien. |
+| les affaires, le rapprochement, les pages publiques | ne lisent pas cette colonne — **mesuré : 2 consommateurs en tout**. |
+
+### RETOUR ARRIÈRE
+`supabase/patch_chantier3_3c_cloture_mandat_app_2026-10-13_INVERSE.sql` : remet la vue
+d'aujourd'hui *(empreinte vérifiée)*, remet l'alerte d'aujourd'hui, supprime le RPC, et vide la
+colonne. ⚠ **La colonne elle-même est conservée** *(un `drop column` détruirait la saisie ; on la
+laisse, vide et inerte — elle n'est lue que par la vue et l'alerte, revenues à leur état)*.
+
+### CONTRÔLE PRÉVU *(dans la répétition, tout annulé à la fin)*
+1. **le témoin inverse** : les 3 dates **apparaissent** dans la vue *et* les **118** autres
+   lignes à date de clôture **ne changent pas** — comptées avant / après.
+2. le RPC éprouvé **pour de vrai** : une saisie sur un mandat, relue dans la vue ; un couple
+   bidon → refus `mandat_introuvable` ; une date `32/13/2026` → refus.
+3. **l'effacement** : date vide → la nôtre part, celle de Hektor réapparaît.
+4. l'alerte « Mandat échu » recomptée avant / après : **doit rester à l'identique**.
+5. la vue recomptée : **73 colonnes**, et les 71 anciens noms **tous présents**.
+
+## 3c — ÉTAPE 4 : CODÉ (13/10) — pièces 1 et 2, **en attente du collage**
+
+| fichier | ce qu'il fait |
+|---|---|
+| `supabase/patch_chantier3_3c_cloture_mandat_app_2026-10-13.sql` | la colonne · la vue refaite **depuis elle-même** · l'alerte · la re-pose · le RPC + les droits |
+| `…_INVERSE.sql` | la vue **détruite et recréée** à l'identique *(un `CREATE OR REPLACE` ne sait pas retirer une colonne)* **+ les droits rendus** *(`authenticated=r`, `service_role=all`, relevés avant)* · l'alerte rendue · le RPC supprimé · la colonne **vidée, conservée** |
+| `…_REPETITION.sql` | tout, éprouvé pour de vrai, puis tout défait, puis **annulé** |
+
+**Contrôles statiques faits** : balises `$tag$` toutes paires · 1 `BEGIN` / 1 `COMMIT` par
+fichier · **0 CRLF** · le message final porte **34 mesures pour 34 emplacements**.
+
+**Les 6 épreuves du RPC dans la répétition** : une saisie sur un mandat choisi
+*(`ORDER BY` — un `LIMIT` sans ordre ne prouve rien)*, relue **dans la vue ET au carnet** avec
+son auteur · **l'effacement sur 24933**, qui doit faire réapparaître **la date de Hektor
+(2026-10-05)** · et quatre refus : mandat inconnu, `13/10/2026`, `2026-13-32`, anonyme.
+
+⚠ **À dire à Frédéric** : refaire la vue prend un verrou exclusif dessus. Pendant la répétition
+*(quelques secondes)*, l'écran **Registre des mandats** attend. À lancer quand personne n'y est.
+
+### ⚠ DÉFAUT CORRIGÉ AVANT APPLICATION — 42601, LE MESSAGE FINAL
+
+Premier collage de la répétition : `ERROR: 42601: syntax error at or near "E'\n  ── LA VUE…"`.
+
+**La cause, et elle est à retenir.** Deux règles de Postgres se cumulent :
+1. le **format d'un `RAISE` doit être un littéral** — pas une expression, donc pas de `||` ;
+2. un littéral **`E'…'` ne peut pas CONTINUER une concaténation implicite** *(celle qui colle
+   deux littéraux séparés par un retour à la ligne)*.
+
+➡ Un message long avec des `\n` est donc **impossible** en concaténation implicite.
+**La parade** : bâtir le message dans une variable avec **`format()`** — dont le premier
+argument est une **expression**, donc les `E'…'` s'y joignent par `||` — puis
+`RAISE EXCEPTION '%', v_msg;`. Les emplacements passent de `%` à **`%s`**.
+
+⚠ **Et un second piège, du shell celui-là** : ma première réparation est passée par un heredoc
+Bash, qui a **mangé les `\n`** — le message est devenu une seule ligne de 1 523 caractères.
+*(Leçon déjà connue : écrire des fichiers à travers le shell détruit les échappements. J'ai
+refait la réparation par un script sur disque.)*
+
+**Contrôles statiques repassés** : balises paires · 1 `BEGIN` / 1 `COMMIT` · 0 CRLF ·
+**34 emplacements pour 34 arguments** · et **aucun autre `RAISE` à plusieurs littéraux** dans
+les trois fichiers.
+
+## 3c — ÉTAPE 5 : LE CONTRÔLE, RÉPÉTITION PASSÉE (13/10)
+
+| mesure | résultat |
+|---|---|
+| **la vue** | `5c64469d…` → `57ec4573…` → **`5c64469d…`** — rendue **à l'identique** |
+| ses colonnes | **71 → 73 → 71**, et les **71 anciens noms tous là, dans l'ordre** |
+| **l'alerte « Mandat échu »** | `d45b9290…` → `67918ee6…` → **`d45b9290…`** — rendue à l'identique |
+| dossiers dont le sort change à cause de notre colonne | **0** *(comme prévu)* |
+| les autres lignes à date de clôture | **117 avant = 117 après** ✅ |
+| **62966/18842** | écran **(vide)** → **2026-08-28** *(la nôtre)* |
+| **24933/11939** | écran **2026-10-05** *(Hektor)* → **2026-09-18** *(la nôtre)* — la décision du 13/10 |
+| **(a) la saisie** | `ok:true` · relue **2026-10-13** dans la vue **et** au carnet, `origine=cloture_app`, auteur = l'email de Frédéric |
+| **(b) l'effacement** | `ok:true` · l'écran montre **2026-10-05** — **la date de Hektor réapparaît**, prouvé |
+| **(c→f) les 4 refus** | `mandat_introuvable` · `date_illisible` · `date_inexistante` · `non_authentifie` |
+| **le retour arrière** | le RPC : **1 → 0** |
+
+### ⚠ LA SEULE LIGNE QUI N'EST PAS ÉGALE, ET POURQUOI CE N'EST PAS UN DÉFAUT
+
+`avant 117 / apres 117 / rendue 118`. **C'est mon test (b) qui l'a produite**, pas le patch :
+l'effacement de 24933 **supprime sa ligne du carnet**. Or mon décompte des « autres » exclut
+les couples qui ONT une ligne au carnet. Après le retour arrière, 24933 n'est plus « à nous »
+→ elle rejoint les autres → **117 + 1 = 118**. L'arithmétique boucle : le registre porte
+**118** dates de clôture en tout, dont **1** à nous.
+➡ **La preuve utile est intacte : 117 avant = 117 après.** Le patch ne touche aucune autre
+ligne. ⚠ Mais c'est un **défaut de ma mesure**, pas du patch : un témoin ne devrait pas
+dépendre d'une table que l'épreuve modifie. Noté.
+
+### ⚠⚠ UNE PERTE QUE JE NE M'EXPLIQUE PAS — **62774**
+
+La répétition annonce **2 clôtures au carnet**, pas 3. Mesuré :
+
+| | |
+|---|---|
+| le carnet **Supabase** | **2 lignes seulement** : 62966 *(28/08, par `gonzalez@…`)* et 24933 *(18/09)* |
+| le carnet **local** | **3** — dont **62774/18836 = 2026-08-30**, `origine='cloture_app'`, **vue une seule fois : le 31/08 à 04:30**, jamais depuis |
+| d'où vient la copie locale ? | **uniquement de la lecture du carnet Supabase** *(`magasin_mandat_app.py`, seconde source)* — donc **la ligne Y ÉTAIT le 31/08** |
+| 62774 est-elle encore dans le miroir ? | ✅ **oui** *(mandat 648, n° 18836)* — le magasin saurait donc la rafraîchir si elle existait |
+| qui, dans le code, supprime dans ce carnet ? | ⛔ **personne.** Aucun `delete`, aucun `truncate` — ni le run, ni le worker, ni un patch |
+| la clé primaire a-t-elle changé ? | ❌ non — `(annonce, numero_mandat, champ)` **depuis sa naissance le 28/08** |
+| et le 30/08, le patch C.4 mesurait | **« `app_mandat_champ_app` 1 ligne »** — la chronologie colle : 1 le 30/08, 2 le 31/08, 3 le 03/09, **2 aujourd'hui** |
+
+➡ **Une ligne du coffre a disparu entre le 31/08 et aujourd'hui, et rien dans le code ne
+l'explique.** Je ne sais pas pourquoi. Hypothèses non prouvées : une suppression à la main
+dans le tableau de bord Supabase, ou un script hors dépôt.
+⚠ **Conséquence directe** : le patch reposera **2** clôtures, pas 3. **La clôture de 62774 du
+30/08 ne reviendra pas** — elle n'existe plus nulle part. Le nouveau champ permettra de la
+ressaisir.
+⚠ **Et ça nuance ce que j'ai affirmé** : « le coffre, la nuit ne le touche jamais » est vrai
+**du code**. Ça ne veut pas dire que rien ne peut l'effacer. **1 clôture sur 3 perdue en six
+semaines**, par une route inconnue. Une sentinelle sur ce carnet est à prévoir.
+
+### ⭐ L'ALERTE DU 62774 : LEVÉE PUIS REFERMÉE PAR MOI-MÊME
+
+J'étais parti écrire « 1 clôture sur 3 perdue, route inconnue, sentinelle à poser ».
+**Ma propre mémoire a tranché : 62774 EST LE BAC À SABLE DU PROJET** — essais des 25/08,
+28/08, 29/08, 01/09 et 11/10 — et la note `ACTIONS_TRANSACTION_HEKTOR_2026-08-28.md` se
+termine par **« Bac a sable 62774 : propre »**, suivie de trois suppressions.
+
+➡ **C'était une clôture d'ESSAI, retirée avec les autres traces. Les 2 clôtures réelles sur 2
+sont intactes. Rien n'a été perdu, et il n'y a pas de sentinelle à poser.**
+⚠ **Non prouvé** : je n'ai pas retrouvé l'acte de suppression. L'explication est très forte,
+pas démontrée.
+
+**LEÇON (CLAUDE.md n° 18)** : avant de crier à la perte, **écarter les biens d'essai** —
+62963, 62774, 284/107, 15633/49544, contact 10355757.
+
+## 3c — ÉTAPE 6 : PATCH APPLIQUÉ ET CONTRÔLÉ EN BASE (13/10)
+
+| contrôle | mesure |
+|---|---|
+| la colonne `mandat_date_cloture_app` | ✅ posée |
+| la vue | ✅ **73 colonnes**, empreinte **`57ec45730c9cdd536178b211cc19234d`** — *exactement celle que la répétition avait annoncée* |
+| l'alerte « Mandat échu » | ✅ empreinte **`67918ee68dae6168f60887b9f90abf84`** — *idem* |
+| le RPC | ✅ posé · droits **`postgres=X · authenticated=X · service_role=X`** — **`anon` absent**, `PUBLIC` retiré |
+| nos dates reposées | ✅ **2** |
+| total affiché au registre | **119** *(118 + 62966 qui n'en avait aucune ; 24933 change de valeur, pas de compte)* |
+
+**Ce que l'écran montre maintenant :**
+
+| annonce | mandat | l'écran | la nôtre | celle de Hektor |
+|---|---|---|---|---|
+| **62966** | 18842 | **2026-08-28** | 2026-08-28 | (vide) |
+| **24933** | 11939 | **2026-09-18** | 2026-09-18 | **2026-10-05** *(lisible à côté)* |
+
+⚠ **PROCHAINE PIÈCE, ET ELLE EST URGENTE : la 4 (la re-pose après le push).** Sans elle, ces
+deux dates **repartent à la prochaine nuit** — la nuit efface et réinsère la ligne de registre
+des annonces du parc vivant. Modèle à recopier : run **l. 1510**,
+`Console/remplir_adresses_photos.js` → RPC `app_photos_remplir_adresses_registre`.

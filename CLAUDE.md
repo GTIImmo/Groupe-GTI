@@ -108,7 +108,7 @@ résultat** → plan, liste et cette page à jour. Prompt de reprise :
 |---|---|---|
 | ① | sécurité : 136 fonctions ouvertes à la clé publique | ✅ **FINI le 08/10** |
 | ② | **les droits du négociateur** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — **8 patchs** et **1 déploiement**, tous contrôlés. Le négociateur a **21 gestes** sur ses biens · les **commissions** des collègues sont cachées · les **photos** du réseau sont visibles · le **registre** est réservé · le **manager = admin** *(sauf l'écran Santé)* · la **case « périmètre »** est à l'écran, **éprouvée par un pilote**. Restes **reportés par Frédéric**, pas oubliés *(voir « ce qui attend »)* |
-| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ⚠ **Reste** : **3c** la clôture de mandat *(tout existe, l'applicateur écrit au grain de l'annonce au lieu du mandat)* · **3d/3e** documents et photos |
+| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (1/5)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** *(la nôtre d'abord, les deux lisibles, re-pose après le push)* — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit. ⚠ **Restent 4 pièces de 3c** : la **re-pose** *(sans elle les dates repartent chaque nuit)*, le **champ à l'écran** *(3 points d'entrée)*, le **worker** *(4 services)*, et le sort de `appliquer_contrat_mandat.py`. ⚠ **Reste** : **3d/3e** documents et photos |
 | ④ | aucun échec silencieux — 9 points *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
@@ -171,12 +171,57 @@ report ne se décident jamais sans lui.
 14. ⚠ **DEUX DATES NE SE COMPARENT PAS COMME DEUX TEXTES.** `app_mandat.last_seen_at` est en
    **UTC**, `sb_pull_state.derniere_descente` est **locale sans fuseau écrit** : comparer les
    chaînes rendait l'**inverse** de la vérité, à **deux heures** près.
+15. ⭐⭐ **CHERCHER SI LE PROJET A DÉJÀ TRANCHÉ — avant de proposer une forme.** Le 13/10,
+   Frédéric a demandé « une colonne supplémentaire » : ce patron tournait **déjà dans la vue
+   que je venais de lire** *(photos : `COALESCE(x_app, x)` + les deux colonnes nues + une
+   **re-pose après le push**, 24 497 lignes sur 24 505)*. J'avais proposé une jointure — que
+   la **RLS à 0 politique** rendait impossible. **Il avait la bonne forme avant moi.**
+16. ⚠⚠ **NE PAS RELIRE SA PROPRE ÉCRITURE COMME SI ELLE FAISAIT AUTORITÉ.** Le worker écrivait
+   notre date dans **la colonne de Hektor** *(« confort d'affichage, sans autorité »)*, et le
+   magasin relisait **ce même registre** comme « ce que dit l'app ». **La boucle était fermée** :
+   4 fausses « décisions de l'app », et **deux de mes comptages faux** *(« 0 sur 2 » puis
+   « 4 sur 7 » — le vrai était 0 sur 3)*. ➡ **Toujours demander : qui a ÉCRIT cette valeur ?**
+   Une colonne « ce que dit l'app » qui est aussi écrite par l'app ne prouve rien.
+17. ⚠ **UN TÉMOIN NE DOIT PAS DÉPENDRE D'UNE TABLE QUE L'ÉPREUVE MODIFIE.** Mon témoin inverse
+   a rendu `117 / 117 / 118` : l'épreuve d'effacement supprimait la ligne de carnet qui servait
+   à **exclure** ce couple du décompte. Le patch était sain ; **la mesure était mal bâtie**.
+   ➡ **Figer la liste des exclus AVANT les épreuves.**
+18. ⭐ **AVANT DE CRIER À LA PERTE, REGARDER SI LA LIGNE EST UN BIEN D'ESSAI.** Le 13/10 j'ai
+   bâti une alerte complète *(« une ligne du coffre a disparu, rien ne l'explique, sentinelle à
+   poser »)* sur la clôture de **62774** — **le bac à sable du projet**, dont les traces sont
+   **retirées exprès** *(« Bac a sable 62774 : propre »)*. **Les 2 clôtures réelles sur 2
+   étaient intactes.** Les biens d'essai sont listés dans la mémoire de reprise : **62963,
+   62774, 284/107, 15633/49544, contact 10355757**. **Les écarter d'abord.**
 
 ### ⛔ Ce qui attend Frédéric
 
 ```
-① CHANTIER ③ EN COURS -- 3a, le repli vendu/clos, 5a et 3b sont FAITS.
-   La suite : 3c (la cloture de mandat), 3d / 3e (documents et photos)
+① CHANTIER ③ EN COURS -- 3a, le repli vendu/clos, 5a, 3b et 3c(1/5) sont FAITS.
+   3c EN 5 PIECES, ordre valide par Frederic le 13/10 : [1+2 FAITES] la colonne
+   mandat_date_cloture_app + la vue + l'alerte + le RPC de saisie.
+   ⚠ LA SUITE, ET LA PIECE 4 EST URGENTE :
+     - PIECE 4 -- LA RE-POSE APRES LE PUSH (touche LE RUN). SANS ELLE LES 2 DATES
+       REPOSEES REPARTENT A LA PROCHAINE NUIT : la nuit efface et reinsere la ligne
+       de registre du parc vivant. Modele a recopier : run l. 1510,
+       Console/remplir_adresses_photos.js -> RPC app_photos_remplir_adresses_registre.
+     - PIECE 3 -- LE CHAMP A L'ECRAN. Frederic, 13/10 : sur LA FICHE DU MANDAT, et
+       « il y a des liens aussi dans la rubrique mandat de l'annonce et aussi dans le
+       modal changement de statut » -> TROIS points d'entree a couvrir.
+     - PIECE 5 -- LE WORKER : son PATCH quitte mandat_date_cloture (a Hektor) pour
+       mandat_date_cloture_app, ou mieux : il appelle le RPC. ⚠ 4 SERVICES A REDEMARRER.
+     - appliquer_contrat_mandat.py : INUTILE depuis le 28/08 (il ecrit
+       app_view_generale.mandat_date_cloture, une colonne qui ne monte NULLE PART --
+       mesure : elle n'existe que dans app_mandat_register_current). Trois options
+       presentees le 13/10 (A le retirer du run / B le redresser / C le commenter),
+       RECOMMANDE A, Frederic n'a pas encore tranche.
+   Puis : 3d / 3e (documents et photos)
+①-ter 📜 FAUSSE ALERTE REFERMEE LE 13/10, A NE PAS RELANCER : la cloture de 62774
+   du 30/08 manque au carnet Supabase alors que la copie locale l'a vue le 31/08.
+   62774 EST LE BAC A SABLE DU PROJET (essais 25/08, 28/08, 29/08, 01/09, 11/10 ;
+   note ACTIONS_TRANSACTION_HEKTOR_2026-08-28.md : « Bac a sable 62774 : propre »).
+   C'etait une cloture D'ESSAI, retiree avec les autres traces.
+   ➡ LES 2 CLOTURES REELLES SUR 2 SONT INTACTES. Pas de sentinelle a poser.
+   (Non prouve : l'acte de suppression n'a pas ete retrouve.)
 ①-bis NE SE DECIDENT PAS SANS LUI, sortis du chantier ③ les 12 et 13/10 :
      - MODIFIER LES CHAMPS d'un bien vendu/clos : ce n'est PAS un repli, c'est un autre
        chantier (la file d'attente de 10 min a le n° de dossier pour cle primaire), et
