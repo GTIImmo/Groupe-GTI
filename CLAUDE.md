@@ -108,7 +108,7 @@ résultat** → plan, liste et cette page à jour. Prompt de reprise :
 |---|---|---|
 | ① | sécurité : 136 fonctions ouvertes à la clé publique | ✅ **FINI le 08/10** |
 | ② | **les droits du négociateur** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — **8 patchs** et **1 déploiement**, tous contrôlés. Le négociateur a **21 gestes** sur ses biens · les **commissions** des collègues sont cachées · les **photos** du réseau sont visibles · le **registre** est réservé · le **manager = admin** *(sauf l'écran Santé)* · la **case « périmètre »** est à l'écran, **éprouvée par un pilote**. Restes **reportés par Frédéric**, pas oubliés *(voir « ce qui attend »)* |
-| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **5 patchs, 0 déploiement, 0 redémarrage**, tous éprouvés en réel. ✅ **3a** : « Actif » et « Mandat clos » écrivent le **statut et le diffusable chez nous d'abord** *(73 s gagnées)* · ✅ **un bien VENDU/CLOS est de nouveau manipulable** — **8 941** annonces bloquées depuis le 25/08 *(les 35 318 **archives** restent en lecture seule, règle de Frédéric)* · ✅ **défaut 5a** : le désarchivage porte enfin **notre vrai numéro** · ✅ **3b** : **archiver** et **changer de négociateur** écrivent la **fiche**, et ⭐ **le MOTIF d'archivage est gardé chez nous pour la première fois**. ⚠ **Reste** : **3c** la clôture de mandat *(la chaîne existe et son interrupteur est allumé — l'applicateur écrit juste au mauvais grain)* · **3d/3e** documents et photos |
+| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ⚠ **Reste** : **3c** la clôture de mandat *(tout existe, l'applicateur écrit au grain de l'annonce au lieu du mandat)* · **3d/3e** documents et photos |
 | ④ | aucun échec silencieux — 9 points *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
@@ -183,16 +183,17 @@ report ne se décident jamais sans lui.
        l'ecran l'interdit deliberement (« Lecture seule jusqu'a desarchivage »)
      - REACTIVER UN BIEN CLOS marche maintenant ; l'ecran promet encore « desarchiver »
        a un bien qui n'est pas archive (bandeau de l'index leger) -> chantier ⑦
-     - L'INTERRUPTEUR DU CONTRAT D'ANNONCE (CHAMPS_APP_ANNONCE) : NE PAS L'ALLUMER tant
-       que appliquer_contrat.py n'a pas la regle « vide ne gagne pas » -- il pose la
-       valeur de Supabase SANS filtre, et n'importe meme pas la constante (ses freres
-       mandat et affaire, eux, l'appliquent)
-     - LA MODALE « REAFFECTER LE NEGOCIATEUR » ne propose QU'UN SEUL nom (Emmanuelle
-       PEREIRA), et changer d'agence ne change pas la liste -> essai reel impossible a
-       defaire, donc NON FAIT. Defaut a part, a trancher.
-     - LE MOTIF du statut CLOS ne va nulle part (ni Hektor -- formulaire validerClos
-       eteint depuis le 28/08 -- ni chez nous). Celui de l'ARCHIVAGE est gardé depuis
-       le 13/10. A decider pour le Clos : carnet, ou circuit des demandes ?
+     - ⛔ L'INTERRUPTEUR CHAMPS_APP_ANNONCE RESTE ETEINT (tranche le 13/10, « sommes-nous
+       prets ? » -> NON). La regle « vide ne gagne pas » est posee (13/10, inerte, prouve),
+       mais le CRITERE DU PROJET n'est pas rempli : on n'allume qu'un champ que l'APP CREE
+       et que HEKTOR N'ENTRETIENT PAS (contrat_autorite.py le dit deux fois). Or nos 4
+       champs sont tous entretenus par Hektor, et la valeur qu'on ecrit est PROVISOIRE
+       ~70 s sans marque « confirmee ». C'est LA COUPURE qui nous rendra prets.
+     - 📜 LES NEGOCIATEURS INACTIFS : 1 522 biens vivants (11 %) sont a leur nom, 4 227
+       (31 %) n'ont aucun negociateur -- mais seulement 12 actifs et 2 diffuses.
+       DECISION DE FREDERIC LE 13/10 : ON NE TOUCHE A RIEN. Ne pas relancer.
+       (La modale « reaffecter » n'est PAS cassee : elle montre les 30 actifs de l'agence
+        choisie ; Firminy n'en a qu'un. GONZALEZ est inactif, d'ou l'essai non fait.)
 ② REPORTE PAR LUI, chantier ② (noter, NE PAS relancer de soi-meme) :
      - ce que doit voir exactement un AGENT COMMERCIAL. L'essai du 12/10 a prouve
        que tout abaisser casse le rapprochement (93 % de lignes mortes) : les
