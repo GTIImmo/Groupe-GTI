@@ -2298,6 +2298,12 @@ class Monitor:
           cloud` vaut alors le nombre de lignes du serveur. Meme parti pris que
           `mandat_disparu` a sa naissance -- une sentinelle qui naitrait verte
           sur un etat faux n'apprendrait rien le jour ou il devient vrai.
+
+        ⚠ MAIS ELLE SE TAIT QUAND ELLE NE PEUT PAS SAVOIR (13/10/2026) : si la
+          doublure a ete descendue AVANT la derniere ecriture du registre, l'ecart
+          mesure n'est pas un push rate, c'est une copie en retard -- warning
+          « NON CONCLUANT », pas critical. Cette nuance est DANS LA FORMULE
+          (`absents_non_concluants`), pas ici.
         """
         db = self.root / "phase2" / "phase2.sqlite"
         try:
@@ -2337,6 +2343,25 @@ class Monitor:
             self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "critical",
                      f"Numeros du run dans la plage reservee a l'app : "
                      f"{mesure['plage_envahie']} (seuil 0) -- le defaut d'aout revient",
+                     mesure)
+        elif mesure.get("absents_non_concluants"):
+            # ⚠ ON SE TAIT QUAND ON NE PEUT PAS SAVOIR. Le moniteur passe a
+            #   ...:48 ; le push du registre a 06:56, mais la doublure
+            #   app_mandat__sb n'est descendue que vers 07:58 (table 97 sur
+            #   110). A 07:48 on comparait donc le registre de CE MATIN a une
+            #   copie de LA VEILLE : « le push n'est pas passe » tous les jours
+            #   depuis le 08/10, et vert deux heures plus tard. Un rouge qui
+            #   revient chaque matin et part seul n'est plus un rouge.
+            #   LE VRAI ROUGE EST INTACT : si la copie est a jour et que des
+            #   mandats manquent, la branche suivante crie comme avant.
+            retard = ("la copie est en cours de descente"
+                      if mesure.get("copie_en_cours")
+                      else "la copie est plus vieille que le registre")
+            self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "warning",
+                     f"Accord serveur/Supabase : NON CONCLUANT ({retard}) -- "
+                     f"{mesure['absents_du_cloud']} mandat(s) semblent absents, mais la "
+                     f"doublure date du {mesure.get('copie_descendue_le')} et le registre "
+                     f"du {mesure.get('registre_ecrit_le')} : ce n'est pas un push rate",
                      mesure)
         elif mesure["absents_du_cloud"]:
             self.add("data.mandat_un_numero", "data_quality", "mandat", "absolute", "critical",

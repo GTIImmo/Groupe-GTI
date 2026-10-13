@@ -161,6 +161,16 @@ report ne se décident jamais sans lui.
 12. ⚠ **Deux règles PostgreSQL** : deux règles « permissive » se combinent en **OU** *(ajouter
    une règle stricte à côté d'une large ne cloisonne rien — il faut remplacer)* · et une **vue**
    n'applique les règles des tables qu'avec `security_invoker`.
+13. ⭐⭐ **UNE SENTINELLE QUI CRIE AU LOUP N'EST PLUS UNE SENTINELLE** *(13/10)*. « le push
+   n'est pas passé » revenait **chaque matin depuis le 08/10** et repartait seul deux heures
+   plus tard : le moniteur passe à 07:48, entre le push *(06:56)* et la descente de la doublure
+   *(~07:58)* — il comparait **le registre du matin à la copie de la veille**. **Quand on ne
+   peut pas savoir, on dit « non concluant », on ne crie pas** — et le vrai rouge reste intact.
+   ⚠ Et **un rouge quotidien n'est pas forcément de mon fait** : l'historique des alertes le
+   datait d'avant mon travail. *(`notice/SENTINELLE_MANDAT_FRAICHEUR_2026-10-13.md`.)*
+14. ⚠ **DEUX DATES NE SE COMPARENT PAS COMME DEUX TEXTES.** `app_mandat.last_seen_at` est en
+   **UTC**, `sb_pull_state.derniere_descente` est **locale sans fuseau écrit** : comparer les
+   chaînes rendait l'**inverse** de la vérité, à **deux heures** près.
 
 ### ⛔ Ce qui attend Frédéric
 
@@ -192,6 +202,16 @@ report ne se décident jamais sans lui.
 ⑤ C.9-couple          creer un menage d'essai (la sonde est prete)
 ⑥ LE CARNET DES LIENS : cause racine NOTEE ET REPORTEE le 10/10 (un lien s'identifie
    par un badge CALCULE alors que son numero existe). Ne pas la relancer.
+⑦ LA SENTINELLE DU REGISTRE (13/10) : elle ne crie plus au loup, mais la CAUSE reste --
+   la doublure app_mandat__sb descend une heure APRES le push (table 97 sur 110).
+   A TRANCHER PAR LUI, je n'ai rien choisi :
+     A descendre app_mandat__sb en PREMIER      B decaler le moniteur apres 08:05
+   Controle a faire : l'e-mail de demain 07:48 doit porter un WARNING « NON CONCLUANT »
+   au lieu du rouge, et 0 ecart a 09:48.
+⑦-bis SA SOEUR N'EST PAS CORRIGEE : data.recherche_divergente (l. 2128) tire le MEME
+   critical sur une doublure perimee -- correctif propose le 29/08, jamais code, et le
+   garde-fou est a UN « and » pres (dernier != aujourdhui est deja calcule 2 lignes
+   plus haut). Mesure du 13/10 : c'est la DERNIERE de la famille. A trancher par lui.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
