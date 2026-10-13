@@ -108,7 +108,7 @@ résultat** → plan, liste et cette page à jour. Prompt de reprise :
 |---|---|---|
 | ① | sécurité : 136 fonctions ouvertes à la clé publique | ✅ **FINI le 08/10** |
 | ② | **les droits du négociateur** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — **8 patchs** et **1 déploiement**, tous contrôlés. Le négociateur a **21 gestes** sur ses biens · les **commissions** des collègues sont cachées · les **photos** du réseau sont visibles · le **registre** est réservé · le **manager = admin** *(sauf l'écran Santé)* · la **case « périmètre »** est à l'écran, **éprouvée par un pilote**. Restes **reportés par Frédéric**, pas oubliés *(voir « ce qui attend »)* |
-| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (3/5 — pièces 1, 2 et 4)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit + ⭐ **la re-pose après le push, sur les DEUX chemins qui effacent** *(le run **et** le chemin immédiat du worker)*, **sans aucun redémarrage**. ⏰ **À prouver par le run du 14/10.** ⚠ **Restent 2 pièces de 3c** : le **champ à l'écran** *(3 points d'entrée)* et le **worker** *(4 services)*, + le sort de `appliquer_contrat_mandat.py`. ⚠ **Reste** : **3d/3e** documents et photos |
+| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (4/5 — pièces 1, 2, 3 et 4)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit + ⭐ **la re-pose après le push, sur les DEUX chemins qui effacent** *(le run **et** le chemin immédiat du worker)*, **sans aucun redémarrage**. ⏰ **À prouver par le run du 14/10.** ⚠ **Restent 2 pièces de 3c** : le **champ à l'écran** *(3 points d'entrée)* et le **worker** *(4 services)*, + le sort de `appliquer_contrat_mandat.py`. ⚠ **Reste** : **3d/3e** documents et photos |
 | ④ | aucun échec silencieux — 9 points *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
@@ -223,9 +223,23 @@ report ne se décident jamais sans lui.
      le heartbeat `phase2.repose_cloture_mandat` et la ligne « phase2 re-pose cloture
      mandat » du journal du run. C'est la seule preuve par le VRAI chemin.
    ⚠ LA SUITE :
-     - PIECE 3 -- LE CHAMP A L'ECRAN. Frederic, 13/10 : sur LA FICHE DU MANDAT, et
-       « il y a des liens aussi dans la rubrique mandat de l'annonce et aussi dans le
-       modal changement de statut » -> TROIS points d'entree a couvrir.
+     [3 FAITE, SAUF LE CRAYON] l'ecran. ⭐ La logique existait DEJA et lisait la
+       mauvaise source ; la bonne valeur etait DEJA CHARGEE dans ckCycleAff
+       (loadRegisterCycleAffaires lit le registre PAR CYCLE). Une seule
+       superposition (`ckClotureDe`) corrige SIX consommateurs : la frontiere des
+       cycles, la pastille du cycle, le parcours du cockpit (son test lisait LA
+       FICHE, qui n'a pas la colonne -> vide depuis toujours), l'historique V3, et
+       « Jours restants » AUX DEUX ENDROITS + la jauge. `mandatClos` pose une fois :
+       Clos avant Echu avant restant. ➕ la SAISIE : champ date dans la modale
+       « Clos » -> app_set_mandat_cloture_optimistic (un echec n'empeche pas le
+       changement de statut). ➕ le texte « Motif transmis a Hektor », FAUX depuis
+       le 28/08, corrige. tsc -b vert.
+       ⚠ NON FAIT, A DIRE : (a) le CRAYON dans la rubrique Mandat (saisie hors
+         modale) -- il demande une verification a l'oeil, impossible sans session ;
+         (b) la rubrique « Mandat SOURCE » laissee sur la version de Hektor,
+         VOLONTAIREMENT (c'est son nom) -- a confirmer ;
+         (c) PERSONNE N'A VU L'ECRAN. ⚠ VERCEL SE DEPLOIE SEUL AU PUSH : c'est
+         FREDERIC qui pousse, pas moi.
      - PIECE 5 -- LE WORKER : son PATCH quitte mandat_date_cloture (a Hektor) pour
        mandat_date_cloture_app, ou mieux : il appelle le RPC. ⚠ 4 SERVICES A REDEMARRER.
      - appliquer_contrat_mandat.py : INUTILE depuis le 28/08 (il ecrit

@@ -6166,6 +6166,48 @@ export async function loadRegisterCycleAffaires(hektorAnnonceId: number | string
   return data as CycleAffaire[]
 }
 
+// ─── 3c (13/10/2026) : SAISIR LA DATE DE CLOTURE DU MANDAT, CHEZ NOUS ───────────
+//
+// C'EST UNE DONNEE QUI NOUS APPARTIENT, ET HEKTOR NE LA RECOIT JAMAIS.
+// Decision de Frederic du 13/10 : « la date de cloture doit etre une colonne
+// supplementaire, maj eventuellement par Hektor mais SURTOUT PAS l'app ». Il y a
+// donc DEUX colonnes au registre : `mandat_date_cloture_app` (la notre) et
+// `mandat_date_cloture` (celle de Hektor) ; la vue donne la notre d'abord et
+// expose les deux separement. Meme patron que les photos (`photo_url_listing_app`).
+//
+// POURQUOI UN RPC ET PAS UN UPDATE. Le carnet `app_mandat_champ_app` -- celui qui
+// FAIT FOI, que la nuit ne touche jamais -- a RLS activee et ZERO politique : le
+// front ne peut ni le lire ni l'ecrire. La RPC (SECURITY DEFINER) ecrit le carnet
+// ET la colonne du registre dans la MEME transaction.
+//
+// UNE DATE VIDE EFFACE LA NOTRE, et celle de Hektor reapparait : c'est le retour
+// arriere de l'utilisateur quand il s'est trompe.
+//
+// ⚠ ELLE NE JETTE PAS. L'appelant decide : un echec de la cloture ne doit jamais
+//   faire echouer le geste qui l'accompagne (le changement de statut part chez
+//   Hektor, lui). Meme regle que la repartition des honoraires.
+export async function setMandatClotureApp(input: {
+  hektorAnnonceId: number | string
+  numeroMandat: string
+  dateCloture: string | null
+}): Promise<{ ok: boolean; erreur?: string; dateHektor?: string | null }> {
+  if (!hasSupabaseEnv || !supabase) return { ok: false, erreur: 'supabase_absent' }
+  const annonce = String(input.hektorAnnonceId ?? '').trim()
+  const numero = String(input.numeroMandat ?? '').trim()
+  if (!annonce || !numero) return { ok: false, erreur: 'parametres_incomplets' }
+  const date = (input.dateCloture ?? '').trim()
+  const { data, error } = await supabase.rpc('app_set_mandat_cloture_optimistic', {
+    target_annonce: annonce,
+    target_numero_mandat: numero,
+    cloture_date: date || null,
+  })
+  if (error) return { ok: false, erreur: error.message }
+  const sortie = (data ?? {}) as { ok?: boolean; erreur?: string; date_hektor?: string | null }
+  return sortie.ok === true
+    ? { ok: true, dateHektor: sortie.date_hektor ?? null }
+    : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
+}
+
 export async function loadMandatRegisterStats(filters: AppFilters, scope?: DataScope | null): Promise<MandatStats> {
   if (!hasSupabaseEnv || !supabase) {
     const rows = applyMandatStatutFilter(applyMandateLifecycleFilter(

@@ -72,6 +72,7 @@ import {
   loadConsoleDocuments,
   loadCockpitActivite,
   loadRegisterCycleAffaires,
+  setMandatClotureApp,
   type CycleAffaire,
   type CockpitActiviteRow,
   loadConsolePhotos,
@@ -12594,6 +12595,11 @@ export default function App() {
   // Motif structuré de clôture (mécanique Hektor réelle) : etat = choiceBags, raison = sous-motif.
   const [statusChangeCloseEtat, setStatusChangeCloseEtat] = useState<'choiceNonRenouv' | 'choiceVendu' | 'choiceAutre'>('choiceAutre')
   const [statusChangeCloseRaison, setStatusChangeCloseRaison] = useState('autre')
+  // 3c (13/10/2026) : LA DATE DE CLOTURE DU MANDAT, SAISIE CHEZ NOUS.
+  // Hektor ne la recoit jamais (sa cloture est debranchee depuis le 28/08, elle
+  // echouait sur 98,8 % du parc). Pre-remplie a aujourd'hui : c'est le cas courant,
+  // et une date vide EFFACE la notre (retour arriere de l'utilisateur).
+  const [statusChangeCloseDate, setStatusChangeCloseDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [statusChangePending, setStatusChangePending] = useState(false)
   // ─── LA REPARTITION DE COMMISSION (14/09/2026) ───
   // Donnee PROPRE A L'APP : elle ne part jamais chez Hektor. Quatre emplacements,
@@ -16690,6 +16696,39 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       })
       rememberHektorActionJob(job)
 
+      // ═══ LA DATE DE CLOTURE DU MANDAT PART APRES, ET SEULEMENT CHEZ NOUS ═══
+      //                                                              13/10/2026
+      // Demande de Frederic : « tous les mandats n'ont pas de date de cloture, ce
+      // sera mon app qui va le gerer ». Hektor ne la recoit JAMAIS -- sa cloture
+      // est debranchee depuis le 28/08 (son formulaire exige un n° de mandat et
+      // echouait sur 98,8 % du parc). La RPC ecrit le carnet (qui fait foi) ET la
+      // colonne du registre dans la meme transaction.
+      //
+      // ⚠ UN ECHEC ICI NE FAIT PAS ECHOUER LE GESTE, exactement comme la
+      //   repartition juste en dessous : le changement de statut est DEJA parti
+      //   chez Hektor. Une date manquante se ressaisit ; un geste rejoue, non.
+      // ⚠ SEULEMENT POUR « Clos », et seulement si on a un n° de mandat : la RPC
+      //   refuse un couple inconnu (`mandat_introuvable`), on ne la derange pas
+      //   pour rien.
+      if (statusChangeStatus === 'closed') {
+        const numeroMandat = String(statusChangeTarget.numero_mandat ?? '').trim()
+        const annonceId = String(statusChangeTarget.hektor_annonce_id ?? '').trim()
+        if (numeroMandat && annonceId) {
+          try {
+            const pose = await setMandatClotureApp({
+              hektorAnnonceId: annonceId,
+              numeroMandat,
+              dateCloture: statusChangeCloseDate.trim() || null,
+            })
+            if (!pose.ok) {
+              console.warn('[cloture mandat] non enregistree :', pose.erreur)
+            }
+          } catch (erreurCloture) {
+            console.warn('[cloture mandat] non enregistree :', erreurCloture)
+          }
+        }
+      }
+
       // ═══ LA REPARTITION PART APRES, ET SEULEMENT CHEZ NOUS ═══   14/09/2026
       //
       // ⚠ APRES, PARCE QU'A LA CREATION LE DOSSIER N'EXISTE PAS ENCORE. La RPC de
@@ -19797,7 +19836,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <section className="status-change-section">
                     <div>
                       <p className="eyebrow">Cloture mandat</p>
-                      <strong>Motif transmis à Hektor · mandat {statusChangeTarget.numero_mandat ?? '-'}</strong>
+                      {/* 3c (13/10/2026) : CE TEXTE DISAIT FAUX. « Motif transmis à Hektor »
+                          n'est plus vrai depuis le 28/08 : la clôture chez Hektor est
+                          débranchée (son formulaire exige un n° de mandat et échouait sur
+                          98,8 % du parc). Hektor ne reçoit que le STATUT ; le motif et la
+                          date restent chez nous. */}
+                      <strong>Mandat {statusChangeTarget.numero_mandat ?? '-'} · motif et date gardés chez nous</strong>
                     </div>
                     <div className="status-choice-grid">
                       {hektorClosureEtatOptions.map((etat) => (
@@ -19818,6 +19862,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <option key={raison.value} value={raison.value}>{raison.label}</option>
                         ))}
                       </select>
+                    </label>
+                    {/* 3c (13/10/2026) : LA DATE DE CLOTURE DU MANDAT.
+                        Elle ne part PAS chez Hektor -- c'est la demande de Frédéric :
+                        « ce sera mon app qui va le gérer ». Elle est écrite chez nous
+                        (carnet + registre, même transaction) par
+                        app_set_mandat_cloture_optimistic. Vider le champ EFFACE notre
+                        date et fait réapparaître celle de Hektor s'il en a une. */}
+                    <label className="filter-field">
+                      <span>Date de clôture du mandat</span>
+                      <input
+                        type="date"
+                        value={statusChangeCloseDate}
+                        onChange={(event) => setStatusChangeCloseDate(event.target.value)}
+                      />
                     </label>
                     {statusChangeCloseEtat === 'choiceAutre' ? (
                       <label className="filter-field">
@@ -26821,7 +26879,32 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // NB (Lot B) : le « vendu par cycle » complet viendra des affaires rattachées au mandat ;
   // ici on couvre le cycle COURANT (statut annonce + date de clôture du mandat courant).
   const pVendu = /vendu|vente/i.test(String(dossier.statut_annonce ?? ''))
-  const pClotureMandat = String((props.detail as Record<string, unknown>)['mandat_date_cloture'] ?? '').trim()
+  // ─── 3c (13/10/2026) : LA CLOTURE DE MANDAT, LA NOTRE D'ABORD ────────────────
+  //
+  // ⛔ CE QUI NE MARCHAIT PAS, ET N'AVAIT JAMAIS MARCHE. `pClotureMandat` lisait
+  //   `props.detail['mandat_date_cloture']`. Or `detail` vient de loadDossierDetail
+  //   = la FICHE (select *) + le detail_payload_json, et la fiche n'a PAS cette
+  //   colonne (mesure du 13/10 : `mandat_date_cloture` n'existe QUE dans
+  //   app_mandat_register_current). La valeur etait donc TOUJOURS vide, et `pClos`
+  //   retombait depuis toujours sur l'expression reguliere du statut d'annonce.
+  //
+  // ⭐ ET LA BONNE VALEUR ETAIT DEJA CHARGEE, A COTE. `loadRegisterCycleAffaires`
+  //   lit le registre PAR CYCLE pour cette annonce et selectionne
+  //   `mandat_date_cloture` -- que la vue sert avec NOTRE date d'abord depuis les
+  //   pieces 1-2 du chantier. Elle arrive dans `ckCycleAff`, cle = numero de mandat.
+  //   Il n'y a donc aucun chargement a ajouter : seulement a s'en servir.
+  //
+  // ⚠ L'ORDRE DE PRIORITE EST CELUI DU REGISTRE : notre date, sinon celle de
+  //   Hektor (la vue a deja tranche), sinon ce que portait mandats_json.
+  const ckClotureDe = (numero: string | null | undefined): string => {
+    const num = String(numero ?? '').trim()
+    if (!num) return ''
+    return String(ckCycleAff[num]?.mandat_date_cloture ?? '').trim()
+  }
+  const pClotureMandat = firstNonEmpty(
+    ckClotureDe(dossier.numero_mandat),
+    String((props.detail as Record<string, unknown>)['mandat_date_cloture'] ?? '').trim(),
+  )
   const pClos = !pVendu && (Boolean(pClotureMandat) || /clos|clotur/i.test(String(dossier.statut_annonce ?? '')))
   const detailStr = (k: string) => { const v = (props.detail as Record<string, unknown>)[k]; return v == null ? '' : String(v) }
   // Diffusé & en attente d'offre : le jalon Offre devient le jalon COURANT (comme le v26).
@@ -26856,7 +26939,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       .find((m) => String(m?.numero ?? '').trim() === num) ?? null
   })()
   const mandatDateFin = firstNonEmpty(currentMandatFromJson?.fin, dossierRec['mandat_date_fin'] == null ? '' : String(dossierRec['mandat_date_fin']).trim())
-  const mandatEchu = pMandatNum && Boolean(mandatDateFin) && !isMandateEndDateStillValid(mandatDateFin)
+  // ─── 3c (13/10/2026) : UN MANDAT CLOS N'EST PAS « ECHU », ET IL N'A PAS DE
+  //     « JOURS RESTANTS ». ────────────────────────────────────────────────────
+  // L'ordre est celui que la pastille du cycle applique deja (ckCycleBadge) et que
+  // le registre applique deja (mandatStatutForRegister) :
+  //     Vendu  ->  Clos  ->  Echu  ->  Actif (restant)
+  // Avant, `mandatEchu` ne regardait QUE la date de fin : un mandat clos le 18/09
+  // mais dont l'echeance court jusqu'en 2027 s'affichait « 320 jours restants ».
+  // ⚠ `mandatEchu` est lu a huit endroits (sous-etat du cockpit, carte d'action
+  //   « Mandat echu · a renouveler », bandeau, barre de temps...) : l'exclusion se
+  //   pose donc ICI, une fois, plutot qu'a chaque usage.
+  const mandatClos = Boolean(pClotureMandat)
+  const mandatEchu = pMandatNum && !mandatClos && Boolean(mandatDateFin) && !isMandateEndDateStillValid(mandatDateFin)
   // Chronologie du mandat, calculée avec la MÊME règle que le détail mandat du registre.
   const mandatDateDebut = firstNonEmpty(currentMandatFromJson?.debut, dossierRec['mandat_date_debut'] == null ? '' : String(dossierRec['mandat_date_debut']).trim())
   const ckMandatTiming = computeMandatTiming(mandatDateDebut, mandatDateFin)
@@ -26871,7 +26965,22 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         numero: String(m?.numero ?? '').trim(),
         debut: String(m?.debut ?? '').trim(),
         fin: String(m?.fin ?? '').trim(),
-        cloture: String(m?.cloture ?? '').trim(),
+        // ─── 3c (13/10/2026) : NOTRE CLOTURE D'ABORD ───────────────────────────
+        // ⭐ UN SEUL POINT A CHANGER POUR DEUX EFFETS, parce que la regle etait
+        //   deja ecrite au bon endroit :
+        //     ① la FRONTIERE du cycle (`endStr = m.cloture || m.fin`, juste en
+        //        dessous) -- donc une activite datee APRES notre cloture bascule
+        //        sur le cycle suivant S'IL EXISTE (le dernier cycle reste ouvert
+        //        a +infini : c'est deja la regle, et c'est le « si il existe »
+        //        demande par Frederic le 13/10) ;
+        //     ② la PASTILLE du cycle (`ckCycleBadge` lit ce meme `cloture`) :
+        //        Vendu -> Clos -> Echu -> Actif.
+        // ⚠ MESURE DU 13/10, POUR SAVOIR CE QUE CA DEPLACE AUJOURD'HUI : sur
+        //   24 466 annonces du registre, 39 ont PLUSIEURS cycles (2 au maximum),
+        //   et AUCUNE de ces 39 ne porte une cloture de nous -> **0 activite
+        //   reclassee**. Le changement est donc inerte sur le parc actuel ; il
+        //   jouera le jour ou on clora un mandat sur une annonce a deux cycles.
+        cloture: firstNonEmpty(ckClotureDe(m?.numero), String(m?.cloture ?? '').trim()),
       }))
       .filter((m) => Boolean(m.numero) && !seen.has(m.numero) && Boolean(seen.add(m.numero)))
     const cur = String(dossier.numero_mandat ?? '').trim()
@@ -27562,7 +27671,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       <div className="mv3-figs">
         <div className="mv3-fig"><div className="v mag">{formatPrice(Number(dossier.prix ?? 0) || null) || '—'}</div><div className="k">Montant</div></div>
         <div className="mv3-fig"><div className="v">{mv3Type || '—'}</div><div className="k">Type de mandat</div></div>
-        <div className="mv3-fig"><div className={`v ${mandatEchu ? '' : 'amber'}`}>{mandatEchu ? 'Échu' : (ckMandatTiming.joursRestants ?? '—')}{!mandatEchu && ckMandatTiming.joursRestants != null ? <span className="u"> j</span> : null}</div><div className="k">{mandatEchu ? 'État' : 'Jours restants'}</div></div>
+        {/* 3c (13/10/2026) : un mandat CLOS n'a pas de compte a rebours. L'ordre
+            est celui du registre et de la pastille de cycle : Clos -> Echu ->
+            restant. Sans ce cas, un mandat clos le 18/09 dont l'echeance court
+            jusqu'en 2027 affichait « 320 jours restants ». */}
+        <div className="mv3-fig"><div className={`v ${mandatClos || mandatEchu ? '' : 'amber'}`}>{mandatClos ? 'Clos' : mandatEchu ? 'Échu' : (ckMandatTiming.joursRestants ?? '—')}{!mandatClos && !mandatEchu && ckMandatTiming.joursRestants != null ? <span className="u"> j</span> : null}</div><div className="k">{mandatClos || mandatEchu ? 'État' : 'Jours restants'}</div></div>
       </div>
     )
     const mv3Fold = (
@@ -27607,7 +27720,11 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         const cur = sorted[0] ?? {}
         const avenants = sorted.flatMap((v) => Array.isArray(v.avenants) ? v.avenants : []).filter((a): a is Record<string, unknown> => Boolean(a && typeof a === 'object'))
         return {
-          num, type: safeText(cur.type), debut: safeText(cur.debut), fin: safeText(cur.fin), cloture: safeText(cur.cloture),
+          // 3c (13/10/2026) : NOTRE cloture d'abord, comme pour la pastille de cycle.
+          // Sans ca, la ligne d'historique restait « En cours » sur un mandat que
+          // nous avons clos -- Hektor n'en sait rien, c'est voulu.
+          num, type: safeText(cur.type), debut: safeText(cur.debut), fin: safeText(cur.fin),
+          cloture: firstNonEmpty(ckClotureDe(num), safeText(cur.cloture)),
           dateenr: safeText(cur.dateenr) || safeText(cur.date_enregistrement), montant: safeText(cur.montant),
           mandants: safeText(cur.mandants), note: safeText(cur.note), versions: versions.length, avenants,
         }
@@ -28298,16 +28415,20 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {ckMandatTiming.valid && pMandatNum ? (
                 <button
                   type="button"
-                  className={`fa-ck-tl-mandat${mandatEchu ? ' is-over' : (ckMandatTiming.joursRestants ?? 999) <= 60 ? ' is-soon' : ''}`}
-                  style={{ ['--mg-c']: `hsl(${Math.round(Math.max(0, Math.min(130, ((mandatEchu ? 0 : (ckMandatTiming.joursRestants ?? 999)) / 120) * 130)))}, 68%, 42%)` } as CSSProperties}
+                  className={`fa-ck-tl-mandat${mandatClos || mandatEchu ? ' is-over' : (ckMandatTiming.joursRestants ?? 999) <= 60 ? ' is-soon' : ''}`}
+                  style={{ ['--mg-c']: `hsl(${Math.round(Math.max(0, Math.min(130, ((mandatClos || mandatEchu ? 0 : (ckMandatTiming.joursRestants ?? 999)) / 120) * 130)))}, 68%, 42%)` } as CSSProperties}
                   onClick={() => goRub('mandat')}
-                  title={`Mandat ${mandatEchu ? 'échu' : 'en cours'} — échéance le ${formatDate(mandatDateFin)}`}
+                  title={mandatClos
+                    ? `Mandat clos le ${formatDate(pClotureMandat)} — échéance initiale le ${formatDate(mandatDateFin)}`
+                    : `Mandat ${mandatEchu ? 'échu' : 'en cours'} — échéance le ${formatDate(mandatDateFin)}`}
                 >
+                  {/* 3c (13/10/2026) : CLOS avant ECHU, et pas de compte a rebours
+                      sur un mandat clos -- meme ordre que la pastille de cycle. */}
                   <span className="fa-ck-tl-mandat-v">
-                    {mandatEchu ? 'Échu' : <>{ckMandatTiming.joursRestants}<span className="u"> j</span></>}
+                    {mandatClos ? 'Clos' : mandatEchu ? 'Échu' : <>{ckMandatTiming.joursRestants}<span className="u"> j</span></>}
                   </span>
                   <span className="fa-ck-tl-mandat-tx">
-                    <span className="k">{mandatEchu ? 'Mandat expiré' : 'Mandat · restant'}</span>
+                    <span className="k">{mandatClos ? 'Mandat clos' : mandatEchu ? 'Mandat expiré' : 'Mandat · restant'}</span>
                     <span className="fa-ck-tl-mandat-tr" aria-hidden="true"><i style={{ width: `${ckMandatTiming.pct}%` }} /></span>
                   </span>
                 </button>
@@ -28857,7 +28978,10 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                     <div className="md-fig"><div className="v brand">{formatPrice(Number(dossier.prix ?? 0) || null)}</div><div className="k">Montant</div></div>
                     <div className="md-fig"><div className="v">{ckMandatTiming.dureeMois} <span className="u">mois</span></div><div className="k">Durée</div></div>
                     <div className="md-fig"><div className="v">{ckMandatTiming.pct} <span className="u">%</span></div><div className="k">Temps écoulé</div></div>
-                    <div className="md-fig"><div className={`v ${mandatEchu ? 'amber' : 'amber'}`}>{mandatEchu ? '0' : ckMandatTiming.joursRestants} <span className="u">j</span></div><div className="k">Jours restants</div></div>
+                    {/* 3c (13/10/2026) : un mandat CLOS n'a pas de jours restants.
+                        Endroit trouve en recomptant les consommateurs APRES avoir cru
+                        avoir fini -- il y en avait six, pas cinq. */}
+                    <div className="md-fig"><div className={`v ${mandatEchu ? 'amber' : 'amber'}`}>{mandatClos ? 'Clos' : mandatEchu ? '0' : ckMandatTiming.joursRestants}{mandatClos ? null : <> <span className="u">j</span></>}</div><div className="k">{mandatClos ? 'État' : 'Jours restants'}</div></div>
                   </div>
                   <div className="md-lifecycle">
                     <div className="md-lc-top">

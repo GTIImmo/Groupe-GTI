@@ -2404,3 +2404,224 @@ La répétition a prouvé le mécanisme **en simulant** la nuit. L'épreuve qui 
 **05:00 le 14/10** : si les **2 dates sont encore là au réveil**, la pièce 4 est prouvée par le
 vrai chemin. ⚠ **À vérifier en premier demain**, avec le heartbeat
 `phase2.repose_cloture_mandat` et la ligne `phase2 re-pose cloture mandat` du journal du run.
+
+---
+
+## 3c — PIÈCE 3, ÉTAPE 1-2 : LE CHAMP À L'ÉCRAN *(présentée le 13/10, EN ATTENTE DU « VAS-Y »)*
+
+### CE QUE L'AUDIT TROUVE, POINT D'ENTRÉE PAR POINT D'ENTRÉE
+
+| point d'entrée | ce qui existe | ce qui marche |
+|---|---|---|
+| **① le registre des mandats** *(la liste et sa fiche)* | lit `mandat_date_cloture` de la vue, et en **dérive le statut Actif / Clos / Échu** *(`mandatStatutForRegisterRow`, api.ts l. 85)* | ✅ **déjà juste depuis cet après-midi** : la vue lui sert **notre** date d'abord. Rien à changer pour l'affichage |
+| **② la rubrique « Mandat source » de l'annonce** *(App.tsx l. 18267)* | une ligne `['Cloture', detail.mandat_date_cloture]` | ⛔ **elle n'a JAMAIS pu s'afficher** — voir ci-dessous |
+| **③ la modale de changement de statut** *(App.tsx l. 19796-19828)* | 3 cartes d'état + une raison + un texte libre | ⛔ **aucun champ de date**. ⚠ Et elle affiche **« Motif transmis à Hektor »** — ce qui est **faux depuis le 28/08** |
+
+### ⛔ SURPRISE 1 — LA LIGNE « CLÔTURE » DE L'ANNONCE N'A JAMAIS FONCTIONNÉ
+
+`props.detail` vient de `loadDossierDetail` *(api.ts l. 4863-4877)* : c'est **la fiche**
+*(`select('*')`)* plus le `detail_payload_json`. Or, mesuré :
+
+| table | colonnes `mandat%` |
+|---|---|
+| `app_dossier_current` *(la fiche)* | **5** — mais **pas** `mandat_date_cloture` |
+| `app_dossier_detail_current` | **0** |
+| `app_mandat_register_current` | **10**, dont les deux clôtures |
+
+➡ `detail.mandat_date_cloture` est **toujours `undefined`**, donc `.filter((entry) => entry[1])`
+**retire la ligne** : **« Clôture » n'a jamais paru dans la rubrique Mandat de l'annonce.**
+➡ Et `pClotureMandat` *(App.tsx l. 26824)*, qui sert à décider `pClos` dans **le parcours du
+cockpit** *(Avis → Mandat → Offre → Compromis → Vente)*, est **toujours vide** : le parcours
+retombe depuis toujours sur l'expression régulière `/clos|clotur/` du **statut de l'annonce**.
+
+### ⛔ SURPRISE 2 — LA MODALE PROMET CE QU'ELLE NE FAIT PLUS
+
+> **« Motif transmis à Hektor · mandat <n°> »**
+
+C'est **faux depuis le 28/08** *(la clôture chez Hektor est débranchée — elle échouait sur
+98,8 % du parc)*. Depuis cet après-midi le motif est **gardé chez nous** *(`clos_motif`)*.
+**Le texte doit dire la vérité.**
+
+### CE QUE JE PROPOSE
+
+**① La saisie, au même endroit que le motif** — dans la modale, branche « Clos » : un champ
+**date**, pré-rempli à aujourd'hui, à côté de l'état et de la raison. À la validation, en plus
+du travail Hektor, un appel à **`app_set_mandat_cloture_optimistic`** *(déjà posé, déjà éprouvé,
+`authenticated` a le droit)*.
+⚠ **Et un échec de la saisie ne doit pas faire échouer le changement de statut** — même règle
+que la répartition juste à côté *(l. 16682 : « un échec ici ne fait pas échouer le geste »)*.
+
+**② La fiche du mandat** *(la rubrique de l'annonce)* : la ligne « Clôture » **réparée** — on lit
+la date **dans le registre** pour ce couple (annonce, n° de mandat), au lieu d'une colonne qui
+n'existe pas sur la fiche. Avec un **crayon** qui appelle le même RPC.
+
+**③ Le texte de la modale**, corrigé : le motif et la date sont **gardés chez nous**, Hektor ne
+reçoit que le statut.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+| | |
+|---|---|
+| **le parcours du cockpit** | ⚠ `pClos` se mettrait à voir une vraie date. **Conséquence : un bien dont le mandat est clos mais dont le statut ne dit pas « clos » basculerait de jalon.** Mesuré : **2 biens** aujourd'hui *(62966 « Clos » — déjà d'accord — et 24933 « Clos »)*. **Aucun bien en contradiction.** Mais c'est le genre d'effet qui se voit, donc **c'est une question pour Frédéric** |
+| le registre des mandats | ⛔ **rien à changer** : il affiche déjà la bonne date |
+| les filtres et le tri du registre | ⛔ inchangés |
+| la modale pour les autres statuts *(Actif, Offre, Compromis, Vendu)* | ⛔ **pas touchée** : le champ ne vit que dans la branche « Clos » |
+| ce qui part chez Hektor | ⛔ **inchangé** : le statut, comme aujourd'hui |
+| **le déploiement** | ⚠ **le front se déploie seul sur Vercel au push.** Je code et je commite **en local** ; **c'est toi qui pousses** |
+| le build | à vérifier avec `tsc -b` *(règle du projet)* avant de commiter |
+
+### RETOUR ARRIÈRE
+`git revert` du commit. Rien en base, rien chez Hektor, aucun worker.
+
+### LA QUESTION POUR FRÉDÉRIC
+**Le parcours du cockpit doit-il se fier à ta date de clôture** *(aujourd'hui il ne regarde que
+le statut de l'annonce)* — ou **on ne touche qu'à l'affichage et à la saisie** ?
+
+### 3c PIÈCE 3 — AUDIT ÉLARGI À LA DEMANDE DE FRÉDÉRIC (13/10)
+
+> *« Dans le front cockpit prendre la date de début et la date de fin "restant ou échu ou clos",
+> je crois c'est là qu'il faudrait interagir. Et dans la rubrique mandat au niveau du cycle du
+> mandat, et audit s'il n'y a pas d'autre endroit. »*
+
+⭐ **Il a visé juste : la logique existe déjà, et elle est BONNE. Elle lit la mauvaise source.**
+
+### LES 5 ENDROITS DU FRONT QUI DISENT « RESTANT / ÉCHU / CLOS »
+
+| | où | ce qu'il fait | source |
+|---|---|---|---|
+| **①** | `ckCycles` *(l. 26867-26880)* | ⭐ **la FRONTIÈRE entre deux cycles** = `m.cloture \|\| m.fin` — *« toute activité APRÈS la clôture bascule sur le cycle suivant »* | `detail.mandats_json` *(**Hektor**)* |
+| **②** | `ckCycleBadge` *(l. 26911-26914)* | **Vendu → Clos → Échu → Actif** — ⭐ **la bonne règle, déjà écrite** | idem *(**Hektor**)* |
+| **③** | `mandatEchu` + `computeMandatTiming` *(l. 26859, 25224)* | « Jours restants », la barre de temps, le rouge si échu | **n'a AUCUNE notion de clôture** |
+| **④** | l'historique de la rubrique Mandat V3 *(l. 27597, 27630)* | la pastille **« Clôturé »** par version | `detail.mandats_json` *(**Hektor**)* |
+| **⑤** | la rubrique « Mandat source » *(l. 18221-18273)*, dans **un autre composant** *(`DetailAdminPilotPanel`)* | la ligne **« Clôture »** | `detail.mandat_date_cloture` → ⛔ **colonne qui n'existe pas sur la fiche** |
+
+Plus, **déjà justes** : le **registre des mandats** *(`mandatStatutForRegister`, l. 7667 — il lit
+la vue, donc **notre** date depuis cet après-midi)* et son filtre « Échu » *(l. 22094)*.
+
+### ⭐⭐ ET LE COCKPIT A DÉJÀ NOTRE DATE SOUS LA MAIN
+
+`loadRegisterCycleAffaires` *(api.ts l. 6156)* lit **`app_registre_mandats_current`** et
+sélectionne **`mandat_date_cloture`** — qui porte **notre date d'abord** depuis les pièces 1-2.
+Elle arrive dans **`ckCycleAff`**, une table **par numéro de mandat**, chargée pour l'annonce
+affichée *(l. 26724, 26780)*.
+
+➡ **Elle est là, chargée, par cycle. Elle n'est simplement pas utilisée.**
+➡ Et `ckCycleAff` vit dans **`CockpitDetail`**, qui contient **①②③④** : **une seule
+superposition** y suffit. Seul **⑤** est dans un autre composant.
+
+### CE QUE JE PROPOSE — **un fichier, cinq points, zéro base, zéro run, zéro worker**
+
+**A. Une seule superposition dans `CockpitDetail`** : un `useMemo` qui reprend la liste des
+mandats et remplace `cloture` par **`notre clôture (ckCycleAff) sinon celle de Hektor`**.
+➡ **①②④ deviennent justes sans être modifiés** — la frontière des cycles, la pastille, et
+l'historique.
+
+**B. `mandatClos`, à côté de `mandatEchu`** : un mandat **clos** n'est ni « échu » ni
+« 120 jours restants ». Priorité à l'affichage : **Vendu → Clos → Échu → restant**.
+*(C'est déjà l'ordre que le badge du cycle applique — on l'aligne partout.)*
+
+**C. La ligne « Clôture » de la rubrique Mandat source** : on lit le registre *(le même appel,
+déjà écrit)* au lieu d'une colonne absente.
+
+**D. La saisie** : un champ **date** dans la modale, branche « Clos », à côté de l'état et de la
+raison, pré-rempli à aujourd'hui + un **crayon** dans la rubrique Mandat → les deux appellent
+**`app_set_mandat_cloture_optimistic`**. ⚠ Un échec de la saisie **ne fait pas échouer** le
+changement de statut *(même règle que la répartition, l. 16682)*.
+
+**E. Le texte faux** : « Motif transmis à Hektor » → la vérité *(le motif et la date restent
+chez nous ; Hektor ne reçoit que le statut)*.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+| | |
+|---|---|
+| ⚠⚠ **la frontière des cycles (①)** | **c'est le point le plus structurant** : déplacer la frontière **reclasse les activités** d'un cycle à l'autre *(offres, compromis, documents, fil d'activité)*. Aujourd'hui **2 mandats** portent une date de nous ; les deux sont **déjà « Clos »** et **Hektor en porte une pour un des deux** *(24933 : la sienne au 05/10, la nôtre au 18/09)* → **la frontière de ce cycle avancerait de 17 jours**, et une activité datée entre les deux changerait de cycle |
+| **③ les « jours restants »** | ⚠ **ils changent d'affichage** sur un mandat clos : au lieu d'un compte à rebours, « Clos ». **C'est le but** |
+| le registre des mandats, ses filtres, son tri | ⛔ **rien à changer** — déjà justes |
+| la modale pour Actif / Offre / Compromis / Vendu | ⛔ **pas touchée** : le champ ne vit que dans la branche « Clos » |
+| ce qui part chez Hektor | ⛔ **inchangé** |
+| la base, le run, les workers | ⛔ **rien** |
+| **le déploiement** | ⚠ **Vercel se déploie seul au push.** Je code et je commite **en local** ; **c'est Frédéric qui pousse** |
+| le build | `tsc -b` **avant** de commiter *(règle du projet)* |
+
+### RETOUR ARRIÈRE
+`git revert` du commit. Rien en base, rien chez Hektor, aucun worker, aucun schéma.
+
+### LA SEULE QUESTION QUI RESTE
+**La frontière des cycles (①) doit-elle bouger**, c'est-à-dire : une activité datée **après ta
+date de clôture** doit-elle basculer sur **le cycle suivant** ? *(C'est la règle déjà écrite,
+mais avec la date de Hektor.)* Si tu préfères, je fais **②③④⑤ + la saisie** et **je laisse la
+frontière sur la date de Hektor** pour l'instant — c'est séparable.
+
+## 3c — PIÈCE 3, ÉTAPE 4-5 : CODÉE ET BÂTIE (13/10) — **un seul fichier de front**
+
+> **Décision de Frédéric** : *« Oui elle doit basculer sur le cycle suivant s'il existe »*
+> ⭐ **Et son « s'il existe » était DÉJÀ la règle du code** : le dernier cycle est laissé ouvert
+> à +∞, donc une activité après la dernière clôture reste sur son cycle.
+
+### LA MESURE QUI DIT CE QUE ÇA DÉPLACE AUJOURD'HUI
+
+| | |
+|---|---|
+| annonces au registre | **24 466** |
+| à **plusieurs** cycles | **39** *(2 au maximum)* |
+| parmi elles, **avec une clôture de nous** | **0** |
+| ➡ activités reclassées aujourd'hui | **0** |
+
+**62966** et **24933** n'ont **qu'un seul cycle** → il est le dernier → ouvert → **leur frontière
+ne bouge pas**. Le changement est **inerte sur le parc actuel** ; il jouera le jour où on clôra
+un mandat sur une annonce à deux cycles.
+
+### ⭐ UNE SEULE SOURCE, DÉJÀ CHARGÉE, ET SIX CONSOMMATEURS
+
+`ckClotureDe(numero)` lit **`ckCycleAff`** — la table par n° de mandat que
+`loadRegisterCycleAffaires` remplit déjà pour l'annonce affichée, et qui porte
+`mandat_date_cloture` = **notre date d'abord** depuis les pièces 1-2. **Aucun chargement
+ajouté.**
+
+| | ce qui est corrigé | comment |
+|---|---|---|
+| **①** la **frontière** des cycles | `endStr = m.cloture \|\| m.fin` | ⭐ **le `cloture` de la liste est superposé** → ① et ② corrigés **sans toucher à leur code** |
+| **②** la **pastille** du cycle *(Vendu → Clos → Échu → Actif)* | `ckCycleBadge` | idem |
+| **③** le **parcours** du cockpit | `pClotureMandat` lisait **la fiche**, qui n'a pas la colonne → **toujours vide depuis toujours** | branché sur la même source → `pClos` fonctionne enfin, et `ckStage` tombe sur **`'clos'`** *(il était déjà 2ᵉ dans la chaîne, avant `mandatEchu`)* |
+| **④** l'**historique** de la rubrique Mandat V3 | `h.cloture` | superposé → la pastille **« Clôturé »** et le badge des lignes d'historique suivent |
+| **⑤** **« Jours restants »** × **2** | ⚠ `mandatEchu` ne connaissait **aucune** clôture | **`mandatClos`** posé **une fois** *(`mandatEchu` l'exclut désormais)* → **Clos** avant **Échu** avant **restant**, partout |
+| **⑥** la **jauge** « Mandat · restant » | idem | « **Mandat clos** », barre éteinte, infobulle qui donne la date de clôture **et** l'échéance initiale |
+
+⚠ **Le 6ᵉ a été trouvé en recomptant APRÈS avoir cru avoir fini** *(un second `md-fig`
+« Jours restants », dans un autre bloc du même composant)*. **Cinq, c'était faux.**
+
+### LA SAISIE
+Un champ **date** dans la modale, branche « Clos », à côté de l'état et de la raison,
+**pré-rempli à aujourd'hui**. À la validation : `setMandatClotureApp` →
+**`app_set_mandat_cloture_optimistic`**.
+⚠ **Un échec n'empêche pas le changement de statut** — même règle que la répartition juste en
+dessous : *« la transaction est partie chez Hektor, une répartition manquante se ressaisit »*.
+⚠ **Seulement pour « Clos »**, et seulement avec un n° de mandat *(la RPC refuse un couple
+inconnu — on ne la dérange pas pour rien)*.
+**Vider le champ efface notre date** et fait réapparaître celle de Hektor.
+
+### LE TEXTE QUI DISAIT FAUX
+> ~~« Motif transmis à Hektor »~~ → **« Mandat <n°> · motif et date gardés chez nous »**
+
+Faux depuis le **28/08**, quand la clôture chez Hektor a été débranchée *(elle échouait sur
+98,8 % du parc)*.
+
+### ⬜ CE QUI N'EST PAS FAIT, ET POURQUOI — À DIRE À FRÉDÉRIC
+
+1. **Le crayon dans la rubrique Mandat** *(saisie hors modale)*. **Non fait.** Le champ de la
+   modale s'insère dans un formulaire existant et éprouvé ; un bloc d'édition neuf dans une
+   rubrique demande une **vérification à l'œil** que je ne peux pas faire ce soir *(il faudrait
+   une session connectée — je ne me connecte pas à sa place)*. **À faire ensuite, avec captures.**
+2. **La rubrique « Mandat source »** *(`['Cloture', current.cloture]`)* : **laissée sur la
+   version de Hektor, volontairement** — elle s'appelle « Mandat **source** », elle montre ce
+   que Hektor dit. **Décision à confirmer.** *(Sa branche de repli lit une colonne qui n'existe
+   pas : ligne morte, inoffensive, laissée.)*
+3. **La vérification visuelle.** `tsc -b` est **vert**, la logique est mesurée — mais **personne
+   n'a encore vu l'écran**. ⚠ **Vercel se déploie seul au push : c'est Frédéric qui pousse.**
+
+### CE QUI N'EST PAS TOUCHÉ
+Le **registre des mandats** *(déjà juste)*, ses filtres et son tri · la modale pour **Actif /
+Offre / Compromis / Vendu** · ce qui part **chez Hektor** · la **base** · le **run** · les
+**workers**. **Un seul fichier de code front** *(`App.tsx`)* **plus la fonction d'appel**
+*(`api.ts`)*.
