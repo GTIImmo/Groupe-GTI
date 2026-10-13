@@ -1418,3 +1418,137 @@ de code est **le même** que celui de l'archivage, éprouvé en réel ci-dessus.
 **⬜ Deux questions pour Frédéric** : ① la modale ne propose **qu'un négociateur** — est-ce voulu,
 ou est-ce un défaut à part ? ② veut-il quand même un essai réel du négociateur, sur un bien de son
 choix et avec une cible qu'il pourra reprendre ?
+
+---
+
+## LES TROIS POINTS LAISSÉS EN SUSPENS — traités le 13/10 sur demande de Frédéric
+
+### ① ✅ FAIT — « vide ne gagne pas » posé dans le contrat d'annonce
+
+`appliquer_contrat.py` posait la valeur de Supabase **sans aucun filtre**, et **n'importait même
+pas** la constante `VIDE_NE_GAGNE_PAS` *(qui vaut pourtant `True` et que ses **deux frères**
+appliquent depuis le 28/08)*. Un champ vide côté app aurait donc **effacé la valeur de Hektor**
+dans la base locale, en silence — exactement ce que le commentaire du contrat de mandat annonce :
+*« un "l'app gagne" aveugle aurait effacé les 94 clôtures dès la première nuit, en silence »*.
+
+**La règle est maintenant posée** *(import + filtre + une ligne au journal qui dit combien de
+vides ont été ignorés)*. ⭐ **Et elle est posée AVANT d'allumer l'interrupteur, pas après — c'est
+tout l'intérêt.**
+
+**Preuve d'inertie, exécutée** : `python phase2/identite/appliquer_contrat.py --dry-run` →
+*« contrat d'annonce : (aucun) · Le contrat est VIDE : Hektor garde l'autorité sur tous les
+champs. Rien à arbitrer — comportement identique à aujourd'hui. »*, **code de sortie 0**. La
+fonction sort **avant** la boucle modifiée : le run de cette nuit se comportera à l'identique.
+
+➡ **L'interrupteur `CHAMPS_APP_ANNONCE` peut désormais être allumé sans danger** — mais c'est une
+décision de Frédéric, et elle reste à prendre.
+
+### ② ✅ AUDITÉ — la modale n'est PAS cassée, c'est la DONNÉE qui parle
+
+La liste vient de `app_hektor_negotiator_agency_directory`, filtrée sur `is_active` **et sur
+l'agence choisie**. Mesure :
+
+| | |
+|---|---|
+| lignes de l'annuaire | **219** |
+| **négociateurs actifs** | **30**, répartis sur **18 agences** |
+| **Groupe GTI Firminy** | **1 seul actif : Emmanuelle PEREIRA** |
+| Groupe GTI Saint-Étienne | 2 : Lucille FORLICO, Mélanie LEGRAND |
+
+➡ **La modale affichait exactement la vérité.** Elle ne pouvait pas proposer GONZALEZ parce que
+**Vincent-Lucas GONZALEZ est INACTIF** : il figure **trois fois** dans l'annuaire *(Firminy,
+Monistrol, Saint-Étienne)* et **`is_active = false` sur les trois**.
+
+#### ⚠ CE QUE CET AUDIT A SORTI, ET QUI EST PLUS IMPORTANT
+
+**1 522 biens vivants sur 13 480 (11 %) sont au nom d'un négociateur INACTIF** — et **4 227 (31 %)
+n'ont aucun négociateur**.
+
+| négociateur inactif | biens vivants | dont *Actif* | dont **diffusés** |
+|---|---|---|---|
+| valette@ | **508** | 1 | 0 |
+| gonzalez@ | **309** | 9 | **2** |
+| berger@ | 217 | 0 | 0 |
+| accueil@ | 171 | 0 | 0 |
+| p.girinon@ | 158 | 0 | 0 |
+| martinez@ | 129 | 0 | 0 |
+
+➡ **L'essentiel est historique** *(des estimations au nom de gens partis)*, et l'urgence est
+petite : **12 biens actifs** et **2 diffusés**. Mais c'est une **décision de Frédéric** : réaffecter,
+ou laisser. **Ce n'est pas du code.**
+
+### ③ ⬜ LE MOTIF DU STATUT « CLOS » — ma recommandation, et elle attend son mot
+
+**Le carnet**, comme on vient de le faire pour l'archivage. Pourquoi, et pas le circuit des
+demandes :
+
+- le statut « Clos » est un **geste direct**, pas une **demande** : `app_diffusion_request` sert à
+  **demander** quelque chose à un administrateur *(avec réponse, refus, relance, traiteur)* — ce
+  n'est pas le même objet ;
+- le carnet, lui, est fait pour *« ce que l'app détient »*, et c'est **la même transaction, 2
+  lignes**, exactement comme `archive_motif` ce matin ;
+- et le jour de la coupure, c'est le carnet qui devient la vérité.
+
+➡ **Un mot de Frédéric et je le pose.** *(Le geste du statut est déjà patché ; ce serait une
+quatrième ligne dans le même bloc.)*
+
+### 📜 DÉCISIONS DE FRÉDÉRIC (13/10) + réponse à « sommes-nous prêts ? »
+
+1. **Le motif du statut « Clos » → au CARNET.** *(« ok pour le carnet »)* — patch écrit :
+   `supabase/patch_chantier3_3b_motif_clos_2026-10-13.sql`.
+2. **Les 1 522 biens au nom d'un négociateur inactif → ON NE TOUCHE À RIEN.** *(« ok donc ne
+   touche rien »)*. Noté, à ne pas relancer de moi-même.
+3. **« Sommes-nous prêts à allumer l'interrupteur ? » → NON**, et ce n'est pas une question de
+   maturité du code : **nos quatre champs ne passent pas le critère que le projet s'est donné.**
+
+#### Le critère est écrit dans `contrat_autorite.py`, et il est le même deux fois
+
+| Champ allumé | La raison écrite |
+|---|---|
+| contacts : `birth_date`, `birth_place`, `marital_status` | *« Hektor ne renvoie JAMAIS ces trois-là : seule l'app les écrit. **Aucun arbitrage possible, donc aucun risque.** »* |
+| mandat : `mandat_date_cloture` | *« C'est un champ que **l'app CRÉE**, pas un champ que **Hektor entretient**. »* |
+
+➡ **On allume un champ que l'app CRÉE et que Hektor N'ENTRETIENT PAS.**
+
+Or `statut_annonce`, `diffusable`, `archive` et `negociateur_email` sont **tous entretenus par
+Hektor** — c'est même lui qui les **confirme**, à chaque geste, ~70 s après. Les allumer ferait
+gagner l'app sur des champs dont Hektor est encore le maître.
+
+**Et il y a pire, précis** : la valeur que nos patchs écrivent est **provisoire** pendant la fenêtre
+d'attente, et **rien ne la marque « confirmée »**. L'interrupteur promouvrait donc **un affichage
+transitoire en autorité** — exactement l'inverse du but.
+
+**Ce qui nous rendra prêts : la coupure.** Quand Hektor n'entretiendra plus rien, le critère sera
+rempli de lui-même. D'ici là, **le carnet est le bon véhicule** : il garde ce que l'app a décidé
+*sans* contredire Hektor. C'est d'ailleurs ce qu'on a fait toute la journée.
+
+⚠ **La règle « vide ne gagne pas » posée ce matin reste utile** : elle enlève le risque **le jour
+où** un champ remplira le critère. On ne l'allume pas, mais on ne laissera plus un piège derrière.
+
+#### ✅ LE MOTIF DU « CLOS » EST POSÉ (13/10)
+
+Répétition exacte : empreinte et ancre conformes · **chemin inverse = empreinte d'avant** ·
+essai **A** → carnet `clos_motif=choiceNonRenouv · concurence`, à côté de `statut=Clos` et
+`diffusable=0` · essai **B, le témoin** → « Actif » ne pose **aucun** `clos_motif`.
+
+Patch appliqué, contrôlé : **14 685 → 16 044**, `clos_motif` une seule fois, et ⭐ **le bloc 3a
+et le repli vendu/clos sont tous deux conservés**.
+
+➡ **Les trois motifs que l'app connaît sont désormais gardés chez nous** : l'archivage
+*(`archive_motif`)*, le désarchivage *(le geste, `archive=0`)* et la clôture *(`clos_motif`)*.
+
+---
+
+## 📋 ÉTAT DU CHANTIER ③ AU 13/10, 11 h
+
+| Point | État |
+|---|---|
+| **3a** — statut et diffusable chez nous d'abord | ✅ **fini**, prouvé en réel *(73 s gagnées)* |
+| **le repli vendu/clos** *(hors périmètre d'origine, ouvert par Frédéric)* | ✅ **fini** — **8 941** biens débloqués, les 35 318 archives restant en lecture seule |
+| **le défaut 5a** *(trouvé en chemin)* | ✅ **corrigé**, aller-retour réel chez Hektor |
+| **3b** — archiver et négociateur écrivent la fiche | ✅ **fini**, + ⭐ **les motifs gardés chez nous** |
+| « vide ne gagne pas » dans le contrat d'annonce | ✅ **posé** *(et inerte, prouvé par exécution)* |
+| **3c** — la clôture de mandat | ⬜ **audité** : tout existe, un seul maillon est au mauvais grain |
+| **3d / 3e** — documents et photos | ⬜ pas commencé |
+
+**Total : 6 patchs SQL · 0 déploiement · 0 redémarrage de worker · 0 ligne de front.**
