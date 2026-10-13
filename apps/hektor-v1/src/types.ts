@@ -673,6 +673,11 @@ export type ConsoleDocument = {
   storage_bucket: string | null
   storage_path: string | null
   storage_status: ConsoleDocumentStorageStatus
+  // 3e (13/10/2026) : false = Hektor ne l'a plus, NOUS SI. La ligne et les fichiers
+  // sont conservés (décision de Frédéric : « on garde dans l'app avec mention
+  // supprimé chez Hektor »). Mêmes noms que app_console_photo (G.10bis).
+  present_in_hektor?: boolean | null
+  absent_depuis?: string | null
   file_size: number | null
   sha256: string | null
   mime_type: string | null

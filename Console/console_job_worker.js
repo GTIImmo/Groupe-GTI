@@ -4487,10 +4487,34 @@ async function upsertConsolePhotos(dossier, entries) {
   // portail met en cache et qu'un email integre. Un id supprime ne revient jamais :
   // l'adresse tomberait et le derive deviendrait orphelin.
   // Meme patron que app_affaire_ledger.present_in_hektor.
+  // ⚠⚠ 3e (13/10/2026) -- LE GARDE-FOU DE LA LISTE VIDE. IL MANQUAIT.
+  //
+  // Ce bloc marque « plus chez Hektor » tout ce qui n'est pas dans `rows`. Or
+  // `rows` vient d'une LECTURE DE PAGE chez Hektor. Si cette page revient VIDE
+  // SANS LEVER D'ERREUR -- reponse tronquee, bloc absent, mise en page changee --
+  // alors `keepIds` est vide et TOUTES LES PHOTOS DE L'ANNONCE seraient marquees
+  // absentes d'un seul coup. Le seul filet existant est qu'une ERREUR soit levee
+  // (un 403 est meme rattrape et rejoue) ; une reponse vide, elle, passait.
+  //
+  // Mesure du 13/10 : 0 photo marquee sur 441 117, et toutes portent
+  // present_in_hektor = true -- donc le mecanisme TOURNE et ca n'est jamais
+  // arrive. Mais l'absence de symptome ne prouve rien (lecon du 12/10).
+  //
+  // ⚠ UNE ANNONCE PEUT LEGITIMEMENT N'AVOIR AUCUNE PHOTO. On ne refuse donc pas
+  //   « liste vide » dans l'absolu : on refuse de marquer DES PHOTOS EXISTANTES a
+  //   partir d'une liste vide. S'il n'y a rien a marquer, il n'y a rien a faire ;
+  //   s'il y a des photos chez nous et plus rien chez Hektor, c'est suspect et on
+  //   le DIT au lieu de le faire.
   const keepIds = new Set(rows.map((row) => row.hektor_photo_id));
   const existing = await supabaseRequest(`app_console_photo?hektor_annonce_id=eq.${encodeURIComponent(String(dossier.hektor_annonce_id))}&select=id,hektor_photo_id,present_in_hektor`, {
     method: "GET",
   });
+  const dejaChezNous = (Array.isArray(existing) ? existing : []).length;
+  if (keepIds.size === 0 && dejaChezNous > 0) {
+    console.warn(`[photos] liste Hektor VIDE pour l'annonce ${dossier.hektor_annonce_id} alors que `
+      + `nous avons ${dejaChezNous} photo(s) : on ne marque RIEN (garde-fou 3e du 13/10).`);
+    return rows;
+  }
   const partiesIds = (Array.isArray(existing) ? existing : [])
     .filter((row) => row.hektor_photo_id && !keepIds.has(String(row.hektor_photo_id)))
     .filter((row) => row.present_in_hektor !== false)   // deja marquee : on n'ecrase pas sa date
@@ -4643,6 +4667,48 @@ async function upsertConsoleDocuments(dossier, entries) {
       prefer: "return=minimal",
     });
   }
+
+  // ═══ 3e (13/10/2026) -- « SUPPRIME CHEZ HEKTOR », ET ON LE GARDE ═══
+  //
+  // DEMANDE DE FREDERIC : « Si il est supprime dans Hektor donc supprime du run,
+  // alors on garde dans l'app avec mention "supprime chez Hektor", une purge sera
+  // possible. »
+  //
+  // CE QUI SE PASSAIT AVANT : la ligne RESTAIT -- la suppression ci-dessus ne vise
+  // que les DOUBLONS (sa condition exige que le document soit ENCORE chez Hektor
+  // sous une autre cle) -- mais SANS AUCUNE MENTION. On gardait donc des documents
+  // dont nous ne savions pas que Hektor ne les avait plus. Mesure du 13/10 : 1 a
+  // 12 documents dans ce cas sur 162 544.
+  //
+  // ⭐ C'EST LE PATRON DES PHOTOS, RECOPIE (G.10bis, upsertConsolePhotos) : memes
+  //   noms de colonnes, meme regle « on ne re-date jamais une ligne deja marquee »
+  //   -- sinon l'horloge d'une purge repartirait a chaque synchro et la purge
+  //   n'arriverait jamais.
+  //
+  // ⚠⚠ LE GARDE-FOU DE LA LISTE VIDE, comme pour les photos. `selectedEntries`
+  //   vient d'une LECTURE DE PAGE chez Hektor : si elle revient vide sans lever
+  //   d'erreur, on marquerait TOUS les documents de l'annonce. Une annonce peut
+  //   legitimement n'avoir aucun document, donc on ne refuse pas « vide » dans
+  //   l'absolu : on refuse de MARQUER DES DOCUMENTS EXISTANTS depuis une liste
+  //   vide, et on le DIT.
+  const vusChezHektor = new Set(selectedEntries.map((entry) => String(entry.hektor_document_id)));
+  const absents = existing.rows.filter((row) => row.hektor_document_id
+    && !vusChezHektor.has(String(row.hektor_document_id))
+    && row.present_in_hektor !== false            // deja marque : on n'ecrase pas sa date
+    && !duplicateIds.includes(row.id));           // celui-la vient d'etre efface
+  if (absents.length && vusChezHektor.size === 0) {
+    console.warn(`[documents] liste Hektor VIDE pour l'annonce ${dossier.hektor_annonce_id} alors `
+      + `que nous avons ${existing.rows.length} document(s) : on ne marque RIEN `
+      + `(garde-fou 3e du 13/10).`);
+  } else if (absents.length) {
+    const ids = absents.map((row) => encodeURIComponent(row.id)).join(",");
+    await supabaseRequest(`app_console_document?id=in.(${ids})`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({ present_in_hektor: false, absent_depuis: now, updated_at: now }),
+    });
+  }
+
   return rows;
 }
 
@@ -8292,8 +8358,39 @@ async function handleDeleteDocumentFromHektor(job) {
   });
   if (stillExists) throw new Error(`Suppression Hektor non confirmee pour ${document.document_name}`);
 
-  if (document.storage_path) await deleteStorageObject(document.storage_path);
+  // ═══ 3e (13/10/2026) -- LA TRACE S'ECRIT AVANT LA DESTRUCTION ═══
+  //
+  // Avant ce jour, les trois destructions ci-dessous ne laissaient RIEN : ni le
+  // fichier cloud, ni le fichier serveur, ni la ligne, ni la moindre trace. Mesure
+  // du 13/10 : 34 documents detruits ainsi du 14/05 au 22/07, sur 11 annonces
+  // REELLES (19 sur la seule 24113), et AUCUNE table de suppression dans tout le
+  // schema. L'ecran, lui, ne promettait qu'une suppression « dans Hektor ».
+  //
+  // ⚠ L'ORDRE EST LE CORRECTIF. `insertDeletedDocumentLog` **JETTE** si la trace
+  //   ne s'ecrit pas : on sort ici, Hektor a deja supprime (c'est acquis et
+  //   verifie), et NOS COPIES RESTENT. Le travail se rejoue. L'inverse -- detruire
+  //   puis echouer a tracer -- ne se repare pas.
+  // ⚠ `before_json` EMPORTE TOUTE LA LIGNE : nom, type, empreinte sha256, taille,
+  //   chemins cloud et serveur, id Hektor, visibilite. La suppression est
+  //   definitive ; le journal dit ce qui a existe.
   const localPath = document.metadata_json && document.metadata_json.local_archive_path;
+  await insertDeletedDocumentLog(job, {
+    app_dossier_id: dossier.app_dossier_id == null ? null : dossier.app_dossier_id,
+    hektor_annonce_id: dossier.hektor_annonce_id,
+    document_id: document.id,
+    hektor_document_id: document.hektor_document_id,
+    document_name: document.document_name,
+    reason: payload.reason || "suppression_depuis_app",
+    before_json: document,
+    result_json: {
+      hektor_uploaded_document_id: String(hektorUploadedDocumentId),
+      hektor_confirme: true,
+      fichier_cloud: document.storage_path || null,
+      fichier_serveur: localPath || null,
+    },
+  });
+
+  if (document.storage_path) await deleteStorageObject(document.storage_path);
   if (isReadableFile(localPath)) fs.unlinkSync(localPath);
   await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(document.id)}`, {
     method: "DELETE",
@@ -18494,6 +18591,86 @@ async function insertDeletedContactLog(job, payload) {
       error: error && error.message ? error.message : String(error),
     });
   }
+}
+
+// ═══ 3e (13/10/2026) -- LE JOURNAL DES SUPPRESSIONS : QUI, QUOI, QUAND ═══
+//
+// DEMANDE DE FREDERIC, MOT POUR MOT : « Retire l'idee de la corbeille. Garde le
+// code actuel qui detruit le fichier cloud, le fichier serveur et la ligne. Donc
+// il faudrait juste une ligne, une forme de journal des suppressions : qui, quoi,
+// quand. » ➡ la destruction reste DEFINITIVE ; ce qui manquait, c'etait la trace.
+//
+// ⚠⚠ ET CES DEUX-LA **JETTENT**, CONTRAIREMENT A LEURS DEUX AINES.
+//
+// `insertDeletedAnnonceLog` et `insertDeletedContactLog` (juste au-dessus) avalent
+// l'erreur : ils la journalisent et laissent la suppression continuer. C'est
+// MESURABLE -- une ligne de app_console_deleted_annonce_log (29/08) a un
+// `before_json` VIDE et aucun demandeur. Autrement dit : on a deja detruit sans
+// savoir quoi.
+//   ➡ Ici c'est l'inverse : SI LA TRACE NE PEUT PAS S'ECRIRE, ON NE DETRUIT PAS.
+//     Un document qu'on garde une heure de trop se resupprime ; un document detruit
+//     sans trace ne revient jamais. L'appelant ne rattrape donc PAS cette erreur.
+//
+// ⚠ ET L'ORDRE EST TOUT : on ecrit AVANT de detruire. Ecrire apres, c'est risquer
+//   de detruire puis d'echouer -- exactement le defaut qu'on repare.
+async function insertDeletedDocumentLog(job, payload) {
+  const ecrites = await supabaseRequest("app_console_deleted_document_log", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify([{
+      job_id: job.id,
+      app_dossier_id: payload.app_dossier_id == null ? null : payload.app_dossier_id,
+      hektor_annonce_id: String(payload.hektor_annonce_id),
+      document_id: payload.document_id || null,
+      hektor_document_id: payload.hektor_document_id == null ? null : String(payload.hektor_document_id),
+      document_name: payload.document_name || null,
+      requested_by: job.requested_by || null,
+      reason: payload.reason || null,
+      before_json: payload.before_json || null,
+      result_json: payload.result_json || null,
+    }]),
+  });
+  // `return=representation` nous rend la ligne : c'est la seule facon de distinguer
+  // « ecrit » de « aucune ligne touchee ». Meme garde-fou que la cloture de mandat.
+  if (!Array.isArray(ecrites) || ecrites.length === 0) {
+    throw new Error("journal de suppression du document non ecrit : on ne detruit pas");
+  }
+  return ecrites[0];
+}
+
+// ⚠⚠ CELLE-CI N'EST ENCORE APPELEE PAR PERSONNE, ET C'EST VOULU -- A NE PAS PRENDRE
+//   POUR UN OUBLI. Le geste « supprimer une photo depuis l'app » N'EXISTE PAS, et il
+//   ne peut pas etre ecrit aujourd'hui : LA COMMANDE HEKTOR EST INCONNUE.
+//   On extrait bien les ARGUMENTS de `delete_img(filename, annonceId, photoId)` depuis
+//   le HTML (l. ~1258), mais on n'a jamais releve l'adresse qui l'execute -- et
+//   l'audit du 25/09 (notice/AUDIT_PHOTOS_2026-09-25.md) le dit deja :
+//     « Deux modes Hektor seulement sont connus du worker : vignettes et
+//       vignettes_hidden, tous deux en LECTURE. Aucun mode de suppression [...]
+//       n'a jamais ete releve. C'est le vrai travail : les trouver d'abord. »
+//   ➡ il faut d'abord un RELEVE EN LECTURE SEULE de la page Photos de Hektor
+//     (patron : Console/releve_assistant_etapes.js, qui n'ecrit jamais), avec
+//     l'accord de Frederic. Cette fonction attend ce jour-la, prete.
+async function insertDeletedPhotoLog(job, payload) {
+  const ecrites = await supabaseRequest("app_console_deleted_photo_log", {
+    method: "POST",
+    prefer: "return=representation",
+    body: JSON.stringify([{
+      job_id: job.id,
+      app_dossier_id: payload.app_dossier_id == null ? null : payload.app_dossier_id,
+      hektor_annonce_id: String(payload.hektor_annonce_id),
+      photo_id: payload.photo_id || null,
+      hektor_photo_id: payload.hektor_photo_id == null ? null : String(payload.hektor_photo_id),
+      filename: payload.filename || null,
+      requested_by: job.requested_by || null,
+      reason: payload.reason || null,
+      before_json: payload.before_json || null,
+      result_json: payload.result_json || null,
+    }]),
+  });
+  if (!Array.isArray(ecrites) || ecrites.length === 0) {
+    throw new Error("journal de suppression de la photo non ecrit : on ne detruit pas");
+  }
+  return ecrites[0];
 }
 
 async function handleDeleteHektorContact(job) {

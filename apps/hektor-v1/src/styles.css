@@ -11687,6 +11687,20 @@ button.metric-card.is-active {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 3e (13/10/2026) : « supprimé chez Hektor, conservé chez nous ».
+   Ambre et non rouge : ce n'est pas une panne, c'est un constat — le document est
+   toujours chez nous, et c'est justement ce que la mention dit. Reprend la mise en
+   forme de .console-document-main span (même taille, même graisse) pour ne pas
+   créer un troisième style dans la ligne. */
+.console-document-main .console-document-absent {
+  color: #9a6a12;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .console-document-actions {
   display: flex;
   grid-column: 2 / -1;

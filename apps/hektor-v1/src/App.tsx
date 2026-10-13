@@ -11101,7 +11101,20 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
   }
 
   async function handleDeleteDocument(document: ConsoleDocument) {
-    const confirmed = window.confirm(`Supprimer ce document dans Hektor ?\n\n${document.document_name}`)
+    // ⚠⚠ 3e (13/10/2026) : CE TEXTE NE DISAIT PAS CE QUE LE GESTE FAIT.
+    //
+    // Il annonçait « Supprimer ce document dans Hektor ? ». En réalité le worker
+    // supprime chez Hektor PUIS détruit nos trois copies : le fichier cloud, le
+    // fichier serveur et la ligne. Rien ne le disait. Mesure du 13/10 : 34 documents
+    // détruits ainsi du 14/05 au 22/07, sur 11 annonces réelles.
+    // Depuis 3e, une trace est écrite AVANT la destruction (qui / quoi / quand), et
+    // si elle ne peut pas s'écrire, le worker NE DÉTRUIT PAS. Mais la suppression
+    // reste définitive : il n'y a pas de corbeille (décision de Frédéric du 13/10).
+    const confirmed = window.confirm(
+      `Supprimer définitivement ce document ?\n\n${document.document_name}\n\n`
+      + `Il sera supprimé CHEZ HEKTOR et CHEZ NOUS : le fichier et sa fiche partent, `
+      + `sans retour possible.\nUne trace est conservée (qui, quoi, quand).`,
+    )
     if (!confirmed) return
     if (!hasHektorNegotiator(dossier)) {
       onMissingNegotiator?.(dossier)
@@ -11456,6 +11469,15 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                   <div className="console-document-main">
                     <strong>{document.document_name}</strong>
                     <span>{[document.document_type, consoleDocumentVisibilityLabel(document.visibility), formatFileSize(document.file_size)].filter((value) => value && value !== '-').join(' - ') || 'Document Console'}</span>
+                    {/* 3e (13/10/2026) : « supprimé chez Hektor, gardé chez nous ».
+                        Avant, la ligne restait (la synchro n'efface que les doublons)
+                        mais SANS AUCUNE MENTION : on gardait un document sans savoir
+                        que Hektor ne l'avait plus. Mesuré : 1 à 12 cas sur 162 544. */}
+                    {document.present_in_hektor === false ? (
+                      <span className="console-document-absent">
+                        Supprimé chez Hektor{document.absent_depuis ? ` le ${formatDate(document.absent_depuis)}` : ''} — conservé chez nous
+                      </span>
+                    ) : null}
                     <SignatureBadge signature={signature} />
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />

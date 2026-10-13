@@ -2779,3 +2779,407 @@ vérifier que **`mandat_date_cloture_app`** bouge et que **`mandat_date_cloture`
 | **62966** *(annonce d'essai, mandat 18842)* | déjà « Clos » |
 ⭐ **Et la preuve viendra de toute façon seule** : le chemin « Vendu » clôt le mandat **à chaque
 vente**. La prochaine vente réelle avec un n° de mandat écrira dans notre colonne.
+
+---
+
+## 3e — SUPPRIMER UN DOCUMENT : AUDIT (13/10) · **ÉTAPE 2, EN ATTENTE DU « VAS-Y »**
+
+*Ordre choisi par Frédéric : **3e avant 3d**, « par gravité ».*
+
+### LA SÉQUENCE, LUE LIGNE PAR LIGNE *(`handleDeleteDocumentFromHektor`, l. 8257-8320)*
+
+| | |
+|---|---|
+| 1-3 | charge le dossier et le document, **vérifie qu'il appartient bien à l'annonce** ✅ |
+| 4 | exige l'**ID Hektor supprimable** — ⚠ **sinon le geste ÉCHOUE** |
+| 5 | vérifie que le document existe **chez Hektor** |
+| **6** | **`UploadedDocument_delete` → SUPPRIME CHEZ HEKTOR** |
+| 7 | relit et **confirme** la suppression chez Hektor ✅ |
+| **8** | ⛔ `deleteStorageObject(storage_path)` → **détruit NOTRE fichier cloud** |
+| **9** | ⛔ `fs.unlinkSync(local_archive_path)` → **détruit NOTRE fichier serveur** |
+| **10** | ⛔ `DELETE app_console_document` → **détruit NOTRE ligne** |
+
+➡ **« Hektor d'abord » au sens le plus littéral : on supprime chez lui, puis on détruit nos
+TROIS copies. Et il ne reste RIEN.**
+
+### CE QUE ÇA DÉTRUIT, MESURÉ
+
+| | |
+|---|---|
+| documents chez nous | **162 543** · **~229 Go** |
+| avec un **fichier serveur** | **162 328** |
+| avec un **fichier cloud** | **21 839** |
+| ⛔ une **corbeille** / table des supprimés | **0** — mesuré sur tout le schéma |
+| l'empreinte `app_console_document_fingerprint` | ⛔ **une par ANNONCE**, pas par document → **aucune trace** qu'un document a existé |
+
+### ⚠⚠ ET L'ÉCRAN DIT AUTRE CHOSE QUE CE QU'IL FAIT
+
+> `window.confirm(`**Supprimer ce document dans Hektor ?**`)` — *App.tsx l. 11104*
+
+**L'utilisateur croit supprimer chez Hektor.** Rien ne lui dit que **nos trois copies partent
+avec**. C'est le même défaut que le « Motif transmis à Hektor » trouvé ce matin — **mais ici
+c'est irréversible.**
+
+### CE QUI A DÉJÀ ÉTÉ DÉTRUIT
+**34 suppressions réussies**, du **14/05** au **22/07**, sur **11 annonces réelles** — dont
+**19 sur la seule 24113** *(22/05 → 29/06)*. **Ce ne sont pas des biens d'essai.**
+
+### ⭐ LE FEU VERT TECHNIQUE : LA NUIT NE DÉTRUIRA PAS À NOTRE PLACE
+`upsertConsoleDocuments` *(l. 4634-4644)* ne supprime que les **DOUBLONS** : sa condition exige
+`selectedEntries.some(entry => entry.hektor_document_id === row.hektor_document_id)` — donc
+**le document doit être ENCORE chez Hektor**, sous une autre clé. Et un `preservedIds` protège
+en plus certaines lignes.
+➡ **Un document absent de chez Hektor n'est PAS supprimé par la synchro.** Si on cesse de
+détruire dans le geste, **la ligne survit toute seule.**
+
+### ⭐ ET LE BON PRINCIPE N'EST PAS « CHEZ NOUS D'ABORD »
+Pour une **écriture**, « chez nous d'abord » veut dire *écrire chez nous avant Hektor*. Pour une
+**suppression**, ça voudrait dire *détruire chez nous avant* — **l'inverse de ce qu'on veut.**
+⭐ **Le principe du projet pour une suppression est : CHEZ NOUS, ON NE DÉTRUIT PAS, ON MARQUE.**
+Il a deux précédents : *« la ligne de la photo ne disparaît jamais »* et le `retire_le` des
+relations.
+
+### CE QUE JE PROPOSE
+**① On cesse de détruire.** Les trois destructions deviennent **une marque** : le document est
+**retiré de chez Hektor**, et chez nous il reste — fichier serveur, fichier cloud, et ligne —
+avec **qui** l'a retiré et **quand**.
+**② L'écran dit la vérité** : « Supprimer ce document **dans Hektor** ? **Notre copie est
+conservée.** »
+**③ Le travail reste confirmé par Hektor** *(l'étape 7 ne change pas)* : on ne marque que si
+Hektor a bien supprimé.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+| | |
+|---|---|
+| **la liste des documents à l'écran** | ⚠⚠ **LA question** : un document retiré chez Hektor mais gardé chez nous — **l'utilisateur le voit encore ?** S'il le voit, il re-cliquera « supprimer » et **ça échouera** *(plus d'ID Hektor)*. S'il ne le voit pas, il est « conservé » mais **invisible**. ➡ **décision de Frédéric** |
+| **l'espace** | ⚠ conserver sans jamais détruire = **229 Go qui ne décroissent plus**. Il existe une colonne `archive_policy` et une purge cloud des archives → **décision de Frédéric** |
+| la synchro de nuit | ⛔ **ne détruira pas** *(mesuré ci-dessus)* |
+| le compte des documents | ⚠ il **n'baissera plus** après une suppression. À dire, sinon ça ressemble à un bug |
+| ce qui part chez Hektor | ⛔ **inchangé** : on supprime toujours chez lui, et on le vérifie |
+| ⚠ **le worker** | **4 services à redémarrer** |
+| la base | selon la forme de la marque — **une colonne** *(patch SQL, filtrable)* ou **`metadata_json`** *(aucun patch)*. **Décision de Frédéric** |
+
+### ⚠ UN DÉFAUT DE BORD, TROUVÉ AU PASSAGE
+Le geste **exige** `hektor_uploaded_document_id` : ➡ **un document qui n'est QU'À NOUS ne peut
+pas être supprimé du tout.** Inoffensif aujourd'hui, **bloquant après la coupure.** Noté, non
+corrigé.
+
+### LES 3 QUESTIONS POUR FRÉDÉRIC
+1. **Un document retiré chez Hektor, l'écran le montre encore ?** *(visible avec une mention
+   « retiré de Hektor » · caché · ou dans un onglet « retirés »)*
+2. **La marque : une colonne** *(propre, filtrable, patch SQL)* **ou `metadata_json`**
+   *(immédiat, sans patch)* ?
+3. **L'espace** : on garde **tout** pour toujours, ou on prévoit une purge *(ex. le fichier
+   cloud après N mois, en gardant la ligne et l'empreinte)* ?
+
+### ⭐ LA RÈGLE DE FRÉDÉRIC (13/10) — ET ELLE CORRIGE LA MIENNE
+
+> *« Si il est supprimé dans Hektor donc supprimé du run, alors on garde dans l'app avec
+> mention "supprimé chez Hektor", une purge sera possible. Mais si supprimé par l'app, alors on
+> demande la suppression chez Hektor et on supprime dans l'app aussi, on peut garder une
+> corbeille si possible. »*
+
+| cas | ce qui se passe | **ce qu'on fait** |
+|---|---|---|
+| **A** | le document disparaît **dans Hektor** *(constaté par le run)* | **on GARDE chez nous**, avec la mention **« supprimé chez Hektor »** · une **purge sera possible** |
+| **B** | le document est supprimé **par l'app** *(geste voulu)* | on supprime **chez Hektor** **et chez nous** · **une corbeille si possible** |
+
+⭐ **C'est plus juste que ma proposition** : j'avais dit « on ne détruit jamais ». Sa règle
+distingue **une disparition subie** *(on garde, c'est une perte qu'on ne décide pas)* d'une
+**suppression voulue** *(elle doit faire ce qu'elle dit — avec un filet)*.
+
+### LE CAS A, MESURÉ : IL EST MINUSCULE AUJOURD'HUI
+
+| | |
+|---|---|
+| documents que nous avons et que Hektor n'a plus *(repère : `synced_at` resté en arrière sur une annonce revue depuis)* | **1** à 7 jours · **12** à 1 jour |
+| sur combien | **162 543** |
+| fiabilité du repère | **bonne** : **23 850** annonces portent des documents, **toutes revues depuis le 18/08** *(6 102 sur 7 jours, 17 282 sur 30)*, **0** non revue depuis 90 j |
+| ⚠ limite | le repère ne voit une disparition que si l'annonce est **revue après**. Il **sous-estime**, mais la couverture est large |
+
+➡ **Aujourd'hui, presque personne ne supprime de documents directement dans Hektor.** Le
+mécanisme du cas A sert donc surtout **pour après la coupure** — et pour ne plus être aveugle.
+
+### CE QUE CHAQUE CAS DEMANDE
+
+**CAS A — la ligne survit DÉJÀ, mais en silence.**
+`upsertConsoleDocuments` ne supprime que les **doublons** *(mesuré)*, donc un document absent de
+chez Hektor **reste**. ⛔ Mais **aucune mention**, et **rien ne le détecte**.
+⭐ **Le code pour le détecter est déjà là, à une condition près** : la règle des doublons exige
+`selectedEntries.some(entry => entry.hektor_document_id === row.hektor_document_id)` —
+**retirer cette exigence donne exactement les absents**. Au lieu de les supprimer : **on les
+marque**.
+⚠⚠ **ET IL FAUT UN GARDE-FOU, SANS QUOI C'EST UNE CATASTROPHE** : cette fonction tourne à
+**chaque** synchro d'annonce. Si la liste de Hektor revient **vide ou tronquée** *(réseau, page
+partielle)*, on marquerait **tous les documents de l'annonce** comme supprimés. ➡ **on ne marque
+JAMAIS depuis une liste vide**, et jamais au-delà d'une proportion plausible.
+
+**CAS B — ça détruit déjà tout, sans filet.** → **la corbeille** : la ligne et les fichiers sont
+**conservés**, marqués « corbeille », **retirés de la liste normale**, et **restaurables**.
+
+### LA FORME : UNE COLONNE EST NÉCESSAIRE
+Sa règle demande **deux états distincts** *et* **une purge** → `metadata_json` ne suffit pas
+*(on ne filtre ni ne purge proprement un JSON)*. Je propose **trois colonnes** sur
+`app_console_document` *(et leurs jumelles sur `app_console_photo`, puisqu'il dit « photos et
+documents »)* :
+`retire_le` *(quand)* · `retire_motif` *(**`absent_hektor`** ou **`corbeille_app`**)* ·
+`retire_par` *(qui, pour le cas B)*.
+
+### LES 3 PALIERS QUE JE PROPOSE *(on peut s'arrêter après chacun)*
+| | |
+|---|---|
+| **① la base** | les 3 colonnes sur les documents **et** les photos · la vue/les filtres qui écartent les retirés · **rien ne change à l'écran** |
+| **② le worker** | **cas B** : au lieu de détruire, on marque `corbeille_app` *(fichiers conservés)* · **cas A** : on marque `absent_hektor`, **avec le garde-fou de liste vide** · ⚠ **4 services** |
+| **③ l'écran** | la mention **« supprimé chez Hektor »** · la **corbeille** avec **Restaurer** · et le texte du `confirm` qui dit la vérité · ⚠ **c'est Frédéric qui pousse** |
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+| | |
+|---|---|
+| **le compte des documents** | ⚠ il **n'baissera plus** sur une suppression *(ils vont en corbeille)*. À dire, sinon ça ressemble à un bug |
+| **l'espace** | ⚠ **229 Go qui ne décroissent plus** tant qu'aucune purge n'existe |
+| la liste à l'écran | les retirés **en sortent** → il faut que les filtres l'appliquent partout, sinon un document en corbeille réapparaîtrait |
+| ⚠ **le garde-fou de liste vide** | **c'est le risque n° 1 du cas A.** Sans lui, une page Hektor tronquée marquerait tout un dossier comme supprimé |
+| ce qui part chez Hektor | ⛔ **inchangé** dans les deux cas |
+| la synchro de nuit | ⛔ ne détruit pas *(mesuré)* |
+
+### LES QUESTIONS QUI RESTENT
+1. **La corbeille garde-t-elle les fichiers** *(serveur + cloud)*, ou seulement la ligne et
+   l'empreinte ? *(Garder les fichiers = restauration vraie ; garder la ligne seule = on sait ce
+   qui a existé, sans pouvoir le rendre.)*
+2. **La purge** : au bout de combien de temps, et sur quoi — le **cloud** seulement, ou aussi le
+   **serveur** ? *(Elle viendra après ; il faut juste savoir si on prévoit la place.)*
+3. **On commence par le palier ①** *(la base seule, rien ne change)* **ou les trois d'un coup ?**
+
+---
+
+## 3e — AUDIT REFAIT SUR LES **QUATRE** CASES (13/10) · *« photos ET documents »*
+
+J'avais audité **une case sur quatre**. Il y a **deux objets** et **deux façons de disparaître**.
+
+| | **PHOTOS** *(441 117)* | **DOCUMENTS** *(162 543 · ~229 Go)* |
+|---|---|---|
+| **① disparu CHEZ HEKTOR** | ✅ **DÉJÀ EXACTEMENT CE QUE FRÉDÉRIC DEMANDE** *(G.10bis)* : la ligne **reste**, marquée `present_in_hektor = false` **+ `absent_depuis`** | ⛔ **la ligne reste, mais SANS AUCUNE MENTION** — on ne sait pas que Hektor ne l'a plus |
+| **② supprimé PAR L'APP** | ⛔ **le geste N'EXISTE PAS** — on ne peut pas supprimer une photo depuis l'app | ⛔ **détruit TOUT** : Hektor, notre cloud, notre serveur, **et la ligne**. Aucune corbeille |
+
+### ⭐ LA SOLUTION EST DÉJÀ ÉCRITE, DANS LE PROJET, POUR LES PHOTOS
+`upsertConsolePhotos` l. 4485-4506, et son commentaire dit **pourquoi** :
+> *« L'id de cette ligne porte deux choses irréversibles : le chemin du fichier sur le serveur
+> et, dès G.11, **l'adresse PUBLIQUE de ses dérivés, qu'un portail met en cache et qu'un email
+> intègre**. Un id supprimé ne revient jamais. […] **Même patron que
+> `app_affaire_ledger.present_in_hektor`.** »*
+
+Et il a un **détail de qualité** : `.filter(row => row.present_in_hektor !== false)` →
+**il n'écrase pas une date d'absence déjà posée.**
+➡ **C'est un patron du projet, utilisé 3 fois** *(photos, affaires, et bientôt documents)*.
+
+### LES MESURES
+
+| | |
+|---|---|
+| photos marquées « plus chez Hektor » | **0** sur **441 117** — et **toutes** portent `present_in_hektor = true`, donc **le mécanisme TOURNE**, il n'a simplement **jamais rien eu à marquer** |
+| documents que Hektor n'a plus *(repère `synced_at`)* | **1** à 7 jours · **12** à 1 jour, sur 162 543 |
+| suppressions de documents **par l'app** | **34 réussies**, 14/05 → 22/07, sur **11 annonces réelles** *(19 sur la seule 24113)* |
+| une corbeille | **0** table, sur tout le schéma |
+| trace qu'un document a existé | **aucune** — l'empreinte est **par annonce**, pas par document |
+
+### ⚠ DEUX TROUS DE BORD, TROUVÉS EN REFAISANT L'AUDIT
+1. ⚠⚠ **LE GARDE-FOU DE LISTE VIDE N'EXISTE NULLE PART** — ni pour les photos, ni pour les
+   documents. Le seul filet est qu'une **erreur** soit levée *(un 403 est même rattrapé et
+   rejoué)*. Mais une réponse **vide sans erreur** passerait : **toutes** les photos d'une
+   annonce seraient marquées absentes d'un coup. **Jamais arrivé en 2 mois** *(0 marquée)*,
+   **mais le filet n'est pas là.** Et si on recopie le patron sur les documents **sans ce
+   garde-fou, on importe le risque sur 229 Go.**
+2. ⚠ **On ne peut pas supprimer** une photo depuis l'app, ni un document **qui n'est qu'à nous**
+   *(le geste exige l'id Hektor)*. Inoffensif aujourd'hui, **bloquant après la coupure.**
+
+### LA SOLUTION PROPOSÉE — **recopier ce qui marche, et poser le filet qui manque**
+
+| palier | ce qu'il fait | risque |
+|---|---|---|
+| **①** *(base)* | sur `app_console_document` : `present_in_hektor` + `absent_depuis` *(les mêmes noms que les photos — un seul vocabulaire)*, et `corbeille_le` / `corbeille_par` pour le cas ②. **Rien ne change à l'écran.** | nul |
+| **②** *(worker)* | **cas ①** : les documents absents de la liste Hektor sont **marqués**, pas supprimés — **avec le garde-fou de liste vide**, posé **aussi pour les photos** · **cas ②** : la suppression par l'app **met en corbeille** *(ligne + fichiers gardés)* au lieu de détruire, **après** confirmation de Hektor | ⚠ **4 services** |
+| **③** *(écran)* | la mention **« supprimé chez Hektor »** · la **corbeille** avec **Restaurer** · et le `confirm` qui dit la vérité au lieu de *« Supprimer ce document dans Hektor ? »* | ⚠ **Frédéric pousse** |
+
+⭐ **Le palier ② corrige aussi un risque qui existe déjà sur les photos** — le garde-fou de liste
+vide. C'est le genre de chose que ce chantier doit attraper au passage.
+
+### ⚠ LA QUESTION DE FRÉDÉRIC QUE MA PROPOSITION NE COUVRAIT PAS (13/10)
+
+> *« Mais tu me dis pas si après on peut supprimer une photo de mon app ? »*
+
+**NON — et il a raison de le relever.** Mes trois paliers couvraient **les documents**, plus le
+garde-fou des photos. **Supprimer une photo depuis l'app n'existe pas, et je ne l'avais pas
+proposé.** C'est la 4ᵉ case du tableau, laissée vide.
+
+### CE QU'IL FAUDRAIT, ET C'EST PLUS PETIT QUE PRÉVU
+
+⭐ **Le worker sait déjà tout ce qu'il faut.** `fetchConsolePhotoEntries` extrait, pour chaque
+photo lue sur la page console de Hektor *(l. 1272-1280)* :
+`delete_filename` · `delete_annonce_id` · `delete_photo_id` · et **`actions.can_delete`**
+*(est-ce que Hektor autorise la suppression)*.
+
+⚠ **MAIS CE N'EST GARDÉ QUE SUR 1 401 PHOTOS SUR 441 117 — 0,3 %.** Les autres viennent d'un
+chemin plus léger qui ne lit pas la page console, donc sans bouton de suppression.
+
+⭐ **Et ça n'a aucune importance pour le correctif** : le worker **relira la page au moment du
+geste** — exactement ce que fait déjà la suppression de document *(« `before = hektorFetch(listUrl)`
+… introuvable avant suppression »)*. **On ne dépend donc pas de ce qui est stocké.**
+
+### LE PALIER ④ QUE J'AJOUTE À LA PROPOSITION
+**Supprimer une photo depuis l'app**, sur le patron **exact** de la suppression de document,
+mais **avec la règle de Frédéric dès le départ** :
+1. le geste à l'écran, avec un `confirm` **qui dit la vérité** ;
+2. un travail `delete_hektor_photo` : le worker **relit la page console**, trouve l'id de
+   suppression, **refuse si Hektor ne l'autorise pas** *(`can_delete`)*, supprime chez Hektor,
+   **confirme** ;
+3. puis **chez nous : CORBEILLE**, jamais de destruction.
+⚠⚠ **ET LA RAISON D'ÊTRE PRUDENT EST ÉCRITE DANS LE CODE DES PHOTOS** : *« l'id porte le chemin
+du fichier sur le serveur **et l'adresse PUBLIQUE de ses dérivés, qu'un portail met en cache et
+qu'un email intègre**. Un id supprimé ne revient jamais. »* ➡ **une photo supprimée casse des
+adresses publiques déjà diffusées.** La corbeille n'est pas un luxe ici, c'est une nécessité.
+
+### ⭐ CORRECTION DE FRÉDÉRIC (13/10) : **PAS DE CORBEILLE, UN JOURNAL**
+
+> *« Non, retire l'idée de la corbeille. Garde le code actuel qui détruit le fichier cloud, le
+> fichier serveur et la ligne. Donc il faudrait juste une ligne, une forme de journal des
+> suppressions : qui, quoi, quand. »*
+
+**C'est plus simple et ça règle le vrai manque** : ce qui gênait n'était pas la destruction
+*(elle est voulue)*, c'était **l'absence de trace**. Et ça supprime les deux problèmes de ma
+proposition : **l'espace** *(229 Go qui ne décroissent plus)* et **la liste à l'écran**
+*(que montrer ?)*.
+
+### ⭐⭐ ET CE JOURNAL EXISTE DÉJÀ DANS LE PROJET — **DEUX FOIS**
+
+| | lignes | colonnes |
+|---|---|---|
+| `app_console_deleted_annonce_log` | **78** | 9 |
+| `app_console_deleted_contact_log` | — | 9 |
+
+**Le patron, mot pour mot :**
+`id` · `job_id` *(quel travail)* · `app_dossier_id` · `hektor_annonce_id` · **`requested_by`
+(QUI)** · `reason` *(pourquoi)* · ⭐ **`before_json` (TOUT ce qu'on savait AVANT)** ·
+`result_json` · **`created_at` (QUAND)**.
+
+**Éprouvé sur une vraie ligne** *(annonce 62741, 21/07)* : `before_json` garde **17 champs**
+— adresse, prix, surface, statut, ville, n° de dossier… — et `requested_by` est rempli.
+⚠ **Mais pas toujours** : la ligne du 29/08 *(annonce d'essai 99999999)* a `before_json` **vide**
+et **aucun demandeur**. ➡ **le patron est bon, son remplissage doit être garanti.**
+
+### LE MÉCANISME PROPOSÉ, VERSION CORRIGÉE
+
+**① Deux journaux**, sur le patron exact *(un par objet, comme annonce et contact)* :
+`app_console_deleted_document_log` et `app_console_deleted_photo_log`, plus l'id de l'objet.
+
+**② Cas B — supprimé par l'app** *(documents, et photos au palier ④)* :
+1. le worker vérifie que l'objet existe **chez Hektor** *(déjà fait)*
+2. il **supprime chez Hektor** et **confirme** *(déjà fait)*
+3. ⭐ **AVANT de détruire chez nous : il écrit la ligne de journal** — `before_json` = la ligne
+   entière *(nom, type, empreinte sha256, taille, chemins cloud et serveur, id Hektor,
+   visibilité)*, plus **qui** et **quand**
+4. ⚠⚠ **ET SI LE JOURNAL ÉCHOUE, ON NE DÉTRUIT PAS.** L'ordre est tout : écrire après, c'est
+   risquer de détruire sans trace — exactement le défaut qu'on répare
+5. puis la destruction, **comme aujourd'hui** : cloud, serveur, ligne
+
+**③ Cas A — disparu chez Hektor** *(inchangé par rapport à la proposition)* : la ligne **reste**,
+marquée **« plus chez Hektor » + la date**, patron des photos recopié — **avec le garde-fou de
+liste vide**, posé aussi pour les photos.
+
+**④ L'écran** : le `confirm` dit **la vérité** — *supprimé chez Hektor **et chez nous**,
+définitivement ; une trace est gardée* — et la mention « plus chez Hektor » pour le cas A.
+
+### ⚠ CE QU'IL FAUT ACCEPTER EN CONNAISSANCE
+| | |
+|---|---|
+| une suppression reste **définitive** | ⛔ **pas de restauration**. Le journal dit **ce qui a existé**, il ne le rend pas |
+| ⚠⚠ **pour une PHOTO** *(palier ④)* | le code dit : *« l'id porte l'adresse PUBLIQUE de ses dérivés, qu'un portail met en cache et qu'un email intègre »* → **supprimer une photo casse définitivement des adresses déjà diffusées**. Sans corbeille, **c'est irréversible**. **À dire à Frédéric avant de construire le geste** |
+| l'espace | ✅ **inchangé** — c'était l'avantage de sa correction |
+
+### ⭐⭐ L'AUDIT DES DÉRIVÉS CHANGE LE GESTE PHOTO — à trancher avant de coder
+
+`app_console_photo` porte **déjà** : `present_in_hektor` · `absent_depuis` · `derives_json` ·
+`derives_generes_le` · **`hors_vitrine_depuis`**.
+
+⚠ **Et `hors_vitrine_depuis` n'est pas « retirée par l'utilisateur »** — c'est **l'ANCRE DES SIX
+MOIS D'UNE PURGE DÉJÀ CONÇUE** *(`notice/patch_ancre_six_mois_2026-09-26.sql`,
+`app_photo_marquer_sortie_vitrine`)* : quand l'annonce cesse d'être en vente, ses photos
+prennent la date, et la purge effacera leurs dérivés publics **six mois plus tard**. Avec deux
+règles fines déjà écrites : *« on ne re-date jamais une photo déjà marquée, sinon l'horloge des
+six mois repartirait chaque nuit »* et *« une annonce qui redevient vivante libère ses photos »*.
+
+| mesure | |
+|---|---|
+| photos | **441 117** |
+| **hors vitrine** *(annonce plus en vente)* | **365 946** — ancre la plus ancienne : **26/09** |
+| avec des **dérivés publics** | **113 812** |
+| hors vitrine **ET** avec dérivés | **38 641** ← la cible de la purge |
+| **déjà purgeables** | **0** — la purge ne mordra pas avant **mars 2027** |
+
+### ⛔ LA CONTRADICTION QU'IL FAUT RÉSOUDRE
+Frédéric veut **détruire la ligne**. Mais la ligne **porte l'ancre des six mois et la liste des
+dérivés**. ➡ **détruire la ligne rend les dérivés publics ORPHELINS POUR TOUJOURS** : des
+fichiers publics que plus rien ne référence et que la purge ne trouvera jamais.
+
+### ⭐ LA RÉSOLUTION PROPOSÉE — et elle donne le meilleur des deux
+Le geste « supprimer une photo » :
+1. supprime **chez Hektor** *(et refuse si Hektor ne l'autorise pas — `can_delete`)* ;
+2. **journalise** — et `before_json` **emporte `derives_json`**, donc le journal devient
+   **l'ancre de remplacement** pour une purge future ;
+3. détruit **le fichier serveur** et **la ligne** *(comme Frédéric le demande)* ;
+4. ⭐ **mais ne touche PAS aux fichiers dérivés publics.**
+   ➡ **la photo disparaît immédiatement de la vitrine et des listes** *(la ligne n'existe plus,
+   donc rien ne la liste)*, **et les adresses déjà diffusées** — portails en cache, emails
+   envoyés — **continuent de répondre au lieu de tomber en erreur.**
+   C'est exactement ce que le code des photos redoutait : *« l'adresse tomberait et le dérivé
+   deviendrait orphelin »*.
+
+### CE QUE ÇA DONNE, CAS PAR CAS — **LE MÉCANISME FINAL**
+| | **document** | **photo** |
+|---|---|---|
+| **disparu chez Hektor** | la ligne **reste**, marquée `present_in_hektor=false` + `absent_depuis` *(nouveau, patron des photos)* | ✅ **déjà le cas** |
+| **supprimé par l'app** | **journal** *(qui/quoi/quand)* **PUIS** destruction cloud + serveur + ligne *(comme aujourd'hui)* | **journal** *(dérivés inclus)* **PUIS** destruction serveur + ligne · **dérivés publics conservés** |
+| garde-fou | **liste vide → on ne marque rien** *(nouveau, posé aussi pour les photos)* | idem |
+| si le journal échoue | ⛔ **on ne détruit pas** | ⛔ **on ne détruit pas** |
+
+## 3e — CODÉ ET APPLIQUÉ (13/10) · **sauf le geste photo, et je me corrige**
+
+### ⚠⚠ D'ABORD, UNE ERREUR QUE J'AI FAITE
+J'ai écrit *« c'est plus petit que je ne le craignais »* pour le geste
+« supprimer une photo », parce que le worker capture `delete_photo_id`.
+**C'était faux** : capturer les **arguments** de `delete_img(filename, annonceId, photoId)`
+dans le HTML **n'est pas** connaître **l'adresse qui l'exécute**. Le worker ne connaît que
+**deux** modes photo chez Hektor — `vignettes` et `vignettes_hidden` — **tous deux en lecture**.
+
+⭐ **Et l'audit du 25/09 le disait déjà** *(`notice/AUDIT_PHOTOS_2026-09-25.md`)* :
+> *« Aucun mode de suppression, de réordonnancement ou de choix de la photo principale n'a
+> jamais été relevé. […] C'est le vrai travail : **les trouver d'abord**. »*
+> Son plan, en trois étapes : ① **relever** les commandes de la page Photos **en lecture seule**
+> sur une annonce d'essai *(~0,5 j, patron `Console/releve_assistant_etapes.js` — il n'écrit
+> jamais ; ⚠ cadence 0,5 s, un 403 = arrêt)* · ② **coder** *(~1,5-2 j)* · ③ **éprouver avec
+> l'accord de Frédéric** — *« supprimer une photo est irréversible »*.
+
+➡ **Le palier ④ n'est donc pas un refus, c'est une reconnaissance à faire avant.**
+`insertDeletedPhotoLog` est **écrite et prête**, avec un commentaire qui dit pourquoi elle
+n'est appelée par personne — pour qu'on ne la prenne pas pour un oubli.
+
+### CE QUI EST FAIT
+
+| | |
+|---|---|
+| **la base** *(appliquée et contrôlée)* | 2 journaux · 4 politiques · 2 colonnes · **0 document sans mention** sur 162 544 · 3 index |
+| **le journal AVANT la destruction** | `insertDeletedDocumentLog`, appelée avant les trois destructions. `before_json` = **toute la ligne** |
+| ⭐ **et elle JETTE** | ⚠ ses deux aînées *(`insertDeletedAnnonceLog`, `insertDeletedContactLog`)* **avalent l'erreur** et laissent la suppression continuer — **c'est mesurable** : une ligne du journal des annonces a un `before_json` **vide**. Ici : **si la trace ne s'écrit pas, on ne détruit pas.** Un document gardé une heure de trop se resupprime ; détruit sans trace, non |
+| **la mention « plus chez Hektor »** | posée par la synchro sur les documents absents de la liste Hektor — patron des photos recopié, **sans jamais re-dater** une ligne déjà marquée |
+| ⭐⭐ **le garde-fou de liste vide** | posé **pour les documents ET pour les photos**, où il manquait depuis G.10bis. ⚠ Il ne refuse pas « liste vide » dans l'absolu *(une annonce peut n'avoir aucun document)* : il refuse de **marquer des lignes existantes** depuis une liste vide, **et il le dit** |
+| **l'écran** | le `confirm` dit enfin la vérité — *« supprimé CHEZ HEKTOR et CHEZ NOUS, sans retour possible ; une trace est conservée »* — et la mention s'affiche sur la ligne, **en ambre** *(un constat, pas une panne)* |
+| ⚠ **le `select` du front** | `present_in_hektor` et `absent_depuis` **ajoutés** : il nomme ses colonnes, donc sans ça la mention **n'arriverait jamais**, en silence — **le même piège que la clôture de mandat ce matin** |
+
+**Contrôles** : `node --check` **OK** · `tsc -b` **vert** · témoins : le journal appelé **avant**
+les destructions *(1 appel)*, **2** garde-fous de liste vide, la mention lue par le front.
+
+### ⛔ CE QU'IL RESTE
+1. ⚠ **4 services à redémarrer** — sans ça le worker en mémoire ne journalise rien et ne marque rien.
+2. ⚠ **Frédéric pousse** le front.
+3. ⬜ **Le geste « supprimer une photo »** : le relevé chez Hektor d'abord *(plan du 25/09)*.
+4. ⬜ L'**écran du journal** *(qui a supprimé quoi)* : la table et les droits existent, la vue
+   d'écran n'est pas faite. ⚠ **Réservée aux admins** par la politique.
