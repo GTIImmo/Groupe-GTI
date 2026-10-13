@@ -1513,6 +1513,32 @@ if (-not $adressesOk) {
     Write-RunLog "WARN  Adresses photos non remplies cette nuit (echec non bloquant) - voir heartbeat phase2.adresses_photos"
 }
 
+# 3c PIECE 4, 13/10/2026 -- REPOSER LA CLOTURE DE MANDAT.
+# Meme raison que les adresses photos juste au-dessus, et meme patron. La ligne de
+# registre qui AFFICHE notre date de cloture est DETRUITE PUIS REFAITE par le push
+# (l. 1726-1737 : delete + insert), donc `mandat_date_cloture_app` repart a NULL.
+# Le carnet `app_mandat_champ_app` n'est jamais touche : c'est lui qui fait foi, et
+# c'est de lui qu'on repose. Le registre REFLETE le carnet -- on pose ce qu'il dit,
+# on efface la ou il ne dit plus rien (sans quoi une cloture annulee resterait
+# affichee pour toujours).
+#
+# ⚠ SA PLACE EST ICI, APRES LE PUSH. Plus haut, elle reposerait sur des lignes que
+#   le push va effacer : un travail pour rien, et un faux sentiment de securite.
+#
+# ⚠ LE GARDE-FOU EST EN BASE : la fonction REFUSE d'agir si le registre est sous son
+#   plancher (10 000 ; il en porte 24 505). Sans lui, un push casse VIDERAIT nos
+#   clotures. Un refus sort en 1 -> heartbeat en erreur -> le moniteur le dit.
+#
+# ⚠ NON BLOQUANTE, comme sa voisine : un echec n'arrete pas le run. Au pire la date
+#   attend la nuit suivante -- elle n'est jamais perdue, le carnet la porte.
+$clotureOk = $false
+Invoke-OptionalStepWithRetry -Label "phase2 re-pose cloture mandat (colonne soeur du registre)" -Arguments @(
+    (Join-Path $projectRoot "Console\reposer_cloture_mandat.js")
+) -Exe $nodeExeGlobal -MaxAttempts 2 -RetryDelaySeconds 30 -Succeeded ([ref]$clotureOk) -WorkerKey "phase2.repose_cloture_mandat"
+if (-not $clotureOk) {
+    Write-RunLog "WARN  Cloture de mandat non reposee cette nuit (echec non bloquant) - voir heartbeat phase2.repose_cloture_mandat"
+}
+
 # LA SONDE : Hektor a-t-il des photos que nous n'avons pas ?
 # Une question, une reponse. 25 annonces par nuit -- les plus anciennement modifiees,
 # car c'est la qu'un ecart se verrait -- et on compare la galerie de Hektor au miroir.

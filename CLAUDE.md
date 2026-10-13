@@ -108,7 +108,7 @@ résultat** → plan, liste et cette page à jour. Prompt de reprise :
 |---|---|---|
 | ① | sécurité : 136 fonctions ouvertes à la clé publique | ✅ **FINI le 08/10** |
 | ② | **les droits du négociateur** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — **8 patchs** et **1 déploiement**, tous contrôlés. Le négociateur a **21 gestes** sur ses biens · les **commissions** des collègues sont cachées · les **photos** du réseau sont visibles · le **registre** est réservé · le **manager = admin** *(sauf l'écran Santé)* · la **case « périmètre »** est à l'écran, **éprouvée par un pilote**. Restes **reportés par Frédéric**, pas oubliés *(voir « ce qui attend »)* |
-| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (1/5)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** *(la nôtre d'abord, les deux lisibles, re-pose après le push)* — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit. ⚠ **Restent 4 pièces de 3c** : la **re-pose** *(sans elle les dates repartent chaque nuit)*, le **champ à l'écran** *(3 points d'entrée)*, le **worker** *(4 services)*, et le sort de `appliquer_contrat_mandat.py`. ⚠ **Reste** : **3d/3e** documents et photos |
+| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (3/5 — pièces 1, 2 et 4)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit + ⭐ **la re-pose après le push, sur les DEUX chemins qui effacent** *(le run **et** le chemin immédiat du worker)*, **sans aucun redémarrage**. ⏰ **À prouver par le run du 14/10.** ⚠ **Restent 2 pièces de 3c** : le **champ à l'écran** *(3 points d'entrée)* et le **worker** *(4 services)*, + le sort de `appliquer_contrat_mandat.py`. ⚠ **Reste** : **3d/3e** documents et photos |
 | ④ | aucun échec silencieux — 9 points *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
@@ -192,18 +192,37 @@ report ne se décident jamais sans lui.
    **retirées exprès** *(« Bac a sable 62774 : propre »)*. **Les 2 clôtures réelles sur 2
    étaient intactes.** Les biens d'essai sont listés dans la mémoire de reprise : **62963,
    62774, 284/107, 15633/49544, contact 10355757**. **Les écarter d'abord.**
+19. ⚠⚠ **UN HEARTBEAT NON ENREGISTRÉ PART DANS LE VIDE *ET COMPTE POUR UN SUCCÈS*.**
+   `monitoring/heartbeat.py` écrit en **`PATCH` FILTRÉ** sur `app_worker_registry` : une clé
+   **sans ligne** touche **0 ligne**, reçoit **204**, et `200 <= status < 300` compte un succès.
+   Et `check_gti_health` **énumère la table** — donc il ne la regarde jamais. ⚠ **9 des 40 clés
+   du run sont dans ce cas**, dont **`phase2.adresses_photos`**, alors que le commentaire du run
+   promet le contraire depuis le 27/09 *(→ chantier ④)*. **Poser une étape avec `-WorkerKey`
+   n'est PAS la faire surveiller : il faut la ligne de registre.**
+20. ⚠ **UN `revoke ... from public` N'ENLÈVE PAS UN DROIT PAR DÉFAUT.** Supabase pose
+   `GRANT EXECUTE ... TO authenticated` sur **toute nouvelle fonction** ; ce n'est pas PUBLIC,
+   donc le `revoke` le laisse. **Relire `proacl` après avoir créé une fonction** — mon patch
+   annonçait « `service_role` seulement » et la base disait autre chose.
 
 ### ⛔ Ce qui attend Frédéric
 
 ```
-① CHANTIER ③ EN COURS -- 3a, le repli vendu/clos, 5a, 3b et 3c(1/5) sont FAITS.
-   3c EN 5 PIECES, ordre valide par Frederic le 13/10 : [1+2 FAITES] la colonne
-   mandat_date_cloture_app + la vue + l'alerte + le RPC de saisie.
-   ⚠ LA SUITE, ET LA PIECE 4 EST URGENTE :
-     - PIECE 4 -- LA RE-POSE APRES LE PUSH (touche LE RUN). SANS ELLE LES 2 DATES
-       REPOSEES REPARTENT A LA PROCHAINE NUIT : la nuit efface et reinsere la ligne
-       de registre du parc vivant. Modele a recopier : run l. 1510,
-       Console/remplir_adresses_photos.js -> RPC app_photos_remplir_adresses_registre.
+① CHANTIER ③ EN COURS -- 3a, le repli vendu/clos, 5a, 3b et 3c(3/5) sont FAITS.
+   3c EN 5 PIECES, ordre valide par Frederic le 13/10 :
+     [1+2 FAITES] la colonne mandat_date_cloture_app + la vue + l'alerte + le RPC
+       de saisie app_set_mandat_cloture_optimistic (authenticated : VOULU).
+     [4 FAITE]    la re-pose : RPC app_reposer_cloture_mandat_app (service_role
+       seulement) + une etape NON BLOQUANTE dans le run (l. 1515-1539, apres le push)
+       + un appel CIBLE dans push_single_annonce_to_supabase.py.
+       ⚠ IL Y AVAIT DEUX CHEMINS QUI EFFACENT, PAS UN : le run ET le chemin immediat
+         du worker (delete_target_remote efface toujours les lignes de registre de
+         l'annonce) -- donc ~1 min apres n'importe quel geste.
+       ⭐ AUCUN REDEMARRAGE : le worker lance ce .py en sous-processus (mesure).
+   ⏰ A VERIFIER EN PREMIER LE 14/10 AU MATIN : les 2 dates d'essai (62966 = 2026-08-28,
+     24933 = 2026-09-18) doivent ETRE ENCORE LA apres le run de 05:00. Regarder aussi
+     le heartbeat `phase2.repose_cloture_mandat` et la ligne « phase2 re-pose cloture
+     mandat » du journal du run. C'est la seule preuve par le VRAI chemin.
+   ⚠ LA SUITE :
      - PIECE 3 -- LE CHAMP A L'ECRAN. Frederic, 13/10 : sur LA FICHE DU MANDAT, et
        « il y a des liens aussi dans la rubrique mandat de l'annonce et aussi dans le
        modal changement de statut » -> TROIS points d'entree a couvrir.

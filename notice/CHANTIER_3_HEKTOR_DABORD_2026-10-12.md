@@ -2232,3 +2232,175 @@ gérer »* — **au futur**.
   registre sur deux biens d'essai. ⭐ **Je propose de les LAISSER** : ce sont précisément les
   **témoins** qui prouveront la **pièce 4** demain matin — si elles survivent à la nuit, la
   re-pose marche. À retirer quand la pièce 4 sera prouvée.
+
+---
+
+## 3c — PIÈCE 4, ÉTAPE 2 : LA RE-POSE *(présentée le 13/10, EN ATTENTE DU « VAS-Y »)*
+
+### L'AUDIT CHANGE LE PÉRIMÈTRE : IL Y A **DEUX** CHEMINS QUI EFFACENT, PAS UN
+
+| chemin | ce qu'il fait au registre | notre colonne |
+|---|---|---|
+| **le run de nuit** *(`push_upgrade`, l. 1726-1737)* | `delete` par annonce **puis** `insert` | ⛔ **effacée** |
+| **le chemin immédiat du worker** *(`push_single_annonce`, l. 358-360 puis 630)* | `delete_target_remote` **efface toujours** les lignes de registre de l'annonce, puis `upsert` | ⛔ **effacée, ~1 min après n'importe quel geste sur cette annonce** |
+
+⭐ **Et le commentaire du run explique tout** *(l. ~1495)* : *« les colonnes sœurs SURVIVENT
+(PostgREST en merge-duplicates ne touche que les colonnes du payload — vérifié le 27/09 sur
+table jetable) »*. ➡ **Vrai pour la fiche et les index** *(upsert)*, **faux pour le registre**
+*(delete+insert)*. C'est précisément pourquoi
+`app_photos_remplir_adresses_registre` existe : *« le registre RECOPIE ce que les index savent »*.
+
+⚠ **Le patron des photos a donc le MÊME trou sur le chemin immédiat, et le projet l'accepte** :
+*« Inoffensif tant que Hektor vit, INACCEPTABLE après la coupure. »* Pour la clôture, le trou se
+voit tout de suite : clore un mandat puis faire **n'importe quel** geste sur l'annonce, et la
+date part pour la journée.
+
+### CE QUE JE PROPOSE — **un RPC, deux appelants**
+
+**① Le RPC `app_reposer_cloture_mandat_app(target_annonce default null, plancher_registre default 10000)`**
+`SECURITY DEFINER`. **Le registre reflète le carnet** : il pose `mandat_date_cloture_app` là où
+le carnet dit *(`champ='mandat_date_cloture'`, `origine='cloture_app'`, valeur non vide)*, et il
+**efface** là où le carnet ne dit plus rien — sinon une clôture annulée resterait affichée pour
+toujours. Sans portée = tout le parc ; avec portée = une seule annonce.
+⚠ **Garde-fou en base, copié des photos** : il **REFUSE** si le registre est sous son plancher
+*(10 000 ; il en porte 24 505)* — sans lui, un push cassé **viderait nos clôtures**.
+⭐ Le plancher est un **paramètre** pour que la répétition puisse **prouver le refus** sans rien
+supprimer *(on l'appelle avec 1 000 000)*.
+
+**② Appelant « nuit » — le run**, une étape après le push, sur le modèle **exact** de la l. 1510
+*(`Invoke-OptionalStepWithRetry`, `WorkerKey` pour le heartbeat, **non bloquante**)*, via
+`Console/reposer_cloture_mandat.js`. Script séparé et pas greffé sur les photos : un heartbeat
+par sujet, sinon on ne sait plus qui a échoué.
+
+**③ Appelant « immédiat » — `push_single_annonce_to_supabase.py`**, un appel RPC **ciblé sur
+l'annonce**, juste après son upsert du registre.
+⭐⭐ **AUCUN REDÉMARRAGE DE WORKER** : le worker lance ce fichier **en sous-processus**
+*(`console_job_worker.js` l. 4042-4047 : `args: ["phase2/sync/push_single_annonce_to_supabase.py", "--hektor-annonce-id", id]`)* → la correction prend effet **au travail suivant**.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+| | |
+|---|---|
+| **le run** | une étape de plus, **non bloquante** *(comme les photos)* : un échec sort en `WARN` + heartbeat, il n'arrête pas le run. Coût mesuré côté photos : **~1 s**. |
+| **le chemin immédiat** | **+1 appel réseau** (~100 ms) dans un script qui en fait déjà des dizaines. ⚠ Si l'appel échoue, **le push ne doit pas échouer** : on l'enveloppe et on le journalise. |
+| ⚠ **l'effacement** | **le registre suivra le carnet** : effacer une clôture au carnet la fait disparaître du registre. **C'est voulu** — mais c'est un geste destructif, et c'est pour ça qu'il est **borné par le plancher**. |
+| les colonnes sœurs des **photos** | ⛔ **pas touchées** : le RPC n'écrit **qu'une** colonne. |
+| **l'alerte « Mandat échu »** | suit **automatiquement** *(elle lit déjà notre colonne depuis les pièces 1-2)*. |
+| `mandat_date_cloture` *(à Hektor)* | ⛔ **jamais touchée.** |
+| le worker, les 4 services | ⛔ **aucun redémarrage** *(mesuré ci-dessus)*. |
+| **la nuit du 14/10** | c'est le **premier essai réel** : les **2 dates d'essai doivent survivre**. Si elles sont là demain matin, la pièce 4 est prouvée. |
+
+### RETOUR ARRIÈRE
+`…_INVERSE.sql` supprime le RPC · on retire l'étape du run *(une ligne)* · on retire l'appel du
+script Python *(additif, enveloppé)*. **Aucun schéma touché.** La colonne reste, avec ce qu'elle
+porte.
+
+### CONTRÔLE PRÉVU
+1. **répétition SQL** : poser → compter · effacer une ligne du carnet → **la colonne doit se
+   vider** · reposer → **la valeur revient** · appeler avec un plancher impossible → **refus
+   prouvé** · et le **témoin inverse figé AVANT les épreuves** *(ma leçon du jour)*.
+2. **`--dry-run` du script Python** pour vérifier qu'il n'écrit rien de plus.
+3. ⏰ **l'épreuve qui compte : demain matin.** Les 2 dates d'essai encore là = la nuit ne les
+   efface plus.
+
+## 3c — PIÈCE 4, ÉTAPE 4 : CODÉE (13/10) — **en attente du collage**
+
+| morceau | fichier |
+|---|---|
+| **la fonction** + l'enregistrement du battement de cœur | `supabase/patch_chantier3_3c_piece4_repose_cloture_2026-10-13.sql` |
+| le retour arrière | `…_INVERSE.sql` *(le RPC, la ligne de registre ; **aucun schéma touché**)* |
+| la répétition | `…_REPETITION.sql` *(8 épreuves, tout défait, tout annulé)* |
+| **l'étape de nuit** | `Console/reposer_cloture_mandat.js` + `run_full_pipeline.ps1` **l. 1515-1539** *(après le push de la l. 1282)* |
+| **le chemin immédiat** | `phase2/sync/push_single_annonce_to_supabase.py` — appel ciblé après l'upsert du registre, **enveloppé** |
+
+### ⚠⚠ CE QUE L'AUDIT A RATTRAPÉ : **MON GARDE-FOU ALLAIT ÊTRE DÉCORATIF**
+
+J'allais écrire *« un refus sort en 1 → heartbeat en erreur → le moniteur le dit »*.
+**C'est faux par défaut, et je l'ai mesuré avant de le promettre** *(la leçon du matin : l'alerte
+« Mandat échu » lisait la table et non la vue)* :
+
+| | |
+|---|---|
+| `monitoring/heartbeat.py` l. 105-120 | écrit en **`PATCH` FILTRÉ** sur `app_worker_registry`. Clé sans ligne → **0 ligne touchée**, **204**, et `200 <= status < 300` **compte un succès** |
+| `check_gti_health.check_worker_heartbeat` l. 1276 | **énumère la table**. Une clé sans ligne **n'est jamais regardée** |
+
+➡ **Une clé non enregistrée = un battement qui part dans le vide, en silence.**
+D'où l'`insert` dans le patch, calqué sur `phase2.reappliquer_saisies` — même esprit *(« repose,
+après le push, les champs saisis dans l'app »)*, donc **medium / optional_pipeline_step**.
+
+### ⚠ ET CE N'EST PAS QUE MOI — **9 DES 40 CLÉS DU RUN N'ONT AUCUNE LIGNE**
+
+`phase1.archived_details` · **`phase2.adresses_photos`** · `phase2.correspondance_annonces` ·
+`phase2.correspondance_identite` · `phase2.derives_photos` · `phase2.doublure_mandat` ·
+`phase2.doublure_relation` · `phase2.rattrapage_photos` · `phase2.sonde_photos`
+
+⚠ **Le commentaire du run promet le contraire pour les photos depuis le 27/09.** C'est un sujet
+du **chantier ④ (échecs silencieux)**, pas celui-ci : **signalé à Frédéric, non corrigé.**
+La répétition **recompte les 9** pour que le chiffre soit daté.
+
+### LES 8 ÉPREUVES
+① plancher impossible → **refus** · ② appel normal → **0 posée, 0 effacée** *(idempotent)* ·
+③ ⭐ **on simule la nuit** *(colonne vidée)* → **2 posées, les dates reviennent** · ④ une clôture
+annulée au carnet → **1 effacée, et seulement celle-là** · ⑤ on remet la ligne → **1 posée** ·
+⑥ **portée sur une annonce** → 1 posée, l'autre reste vide · ⑦ sans portée → l'autre revient ·
+⑧ **le battement de cœur** 0 → 1 → 0.
+⭐ **Le témoin inverse est FIGÉ dans une table temporaire AVANT toute épreuve** — ma leçon du
+jour, après le `117 / 117 / 118`.
+
+**Contrôles statiques** : balises paires · 1 `BEGIN`/1 `COMMIT` · 0 CRLF ·
+**31 emplacements pour 31 arguments** · Python `py_compile` **OK** · `node --check` **OK** ·
+`run_full_pipeline.ps1` **0 erreur de syntaxe** *(parseur PowerShell)*.
+
+## 3c — PIÈCE 4, ÉTAPE 5 : LA RÉPÉTITION, PUIS LE CONTRÔLE EN BASE (13/10)
+
+**Les 8 épreuves, toutes tenues :**
+
+| | mesure |
+|---|---|
+| ① le garde-fou | `statut: refus` sur un plancher de 1 000 000 — **rien écrit** |
+| ② appel normal | **0 posée, 0 effacée** — il est **idempotent** |
+| ③ ⭐ **on simule la nuit** | **2 posées**, et les deux dates **reviennent** *(28/08 et 18/09)* |
+| ④ une clôture annulée | **1 effacée** — 62966 se vide, **24933 reste intacte** |
+| ⑤ on remet la ligne | **1 posée**, la valeur revient |
+| ⑥ la portée | `portee: "24933"`, **1 posée**, 62966 **reste vide** |
+| ⑦ sans portée | l'autre revient |
+| ⑧ le battement de cœur | **0 → 1 → 0** |
+| **le témoin inverse** *(figé avant)* | **118 / 118** et **la même empreinte `7356099ce0b968c7170d80ced4d10fa5`** |
+| le retour arrière | fonction **0**, état de départ rendu |
+
+*(Le 118 compte les dates **de Hektor** dans la table ; l'écran en montre **119** = 118 + 62966,
+qui n'a que la nôtre. L'arithmétique boucle.)*
+⚠ Confirmé par la mesure : **9 clés du run sur 9 n'ont aucune ligne de registre.**
+
+### CONTRÔLE EN BASE APRÈS APPLICATION
+
+| | |
+|---|---|
+| la fonction | ✅ posée |
+| **la clé `phase2.repose_cloture_mandat`** | ✅ `medium / optional_pipeline_step / active` — **le moniteur la regardera** |
+| nos dates | ✅ **2** · l'écran affiche **119** |
+
+### ⚠ UN ÉCART ENTRE MON COMMENTAIRE ET LA BASE, CORRIGÉ LE MÊME SOIR
+
+Mon patch annonçait *« droits : `service_role` seulement »*. La base répondait
+**`authenticated=X`** en plus. Ce n'était pas une faute du patch : c'est un **droit par défaut**
+que Supabase pose sur toute nouvelle fonction, et qu'un `revoke ... from public` **n'enlève pas**
+*(ce n'est pas PUBLIC, c'est un grant direct)*.
+⚠ **Risque réel faible** — la fonction ne fait que rendre le registre **conforme au carnet** —
+et ⭐ **`anon` ne l'avait pas** *(le point du chantier ①)*. Corrigé quand même : un commentaire
+qui dit une chose et une base qui en dit une autre, c'est la dérive qui mord dans six mois.
+
+`supabase/patch_chantier3_3c_piece4_droits_2026-10-13.sql` — un `revoke`, puis **trois
+contrôles** qui refusent si `authenticated` reste, si **`service_role` a perdu son droit**
+*(le run ne pourrait plus reposer)*, ou si `anon` en a un. **Appliqué et vérifié** :
+
+| fonction | droits |
+|---|---|
+| `app_reposer_cloture_mandat_app` | `postgres` + **`service_role` seulement** ✅ |
+| `app_set_mandat_cloture_optimistic` | `postgres` + `authenticated` + `service_role` ✅ *(voulu : l'écran l'appelle)* |
+
+### ⏰ CE QUI RESTE À PROUVER : **LA VRAIE NUIT**
+La répétition a prouvé le mécanisme **en simulant** la nuit. L'épreuve qui compte est le run de
+**05:00 le 14/10** : si les **2 dates sont encore là au réveil**, la pièce 4 est prouvée par le
+vrai chemin. ⚠ **À vérifier en premier demain**, avec le heartbeat
+`phase2.repose_cloture_mandat` et la ligne `phase2 re-pose cloture mandat` du journal du run.

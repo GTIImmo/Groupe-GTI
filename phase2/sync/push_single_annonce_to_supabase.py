@@ -629,12 +629,50 @@ def push_payload(client: SupabaseRestClient, payload: dict[str, Any], app_dossie
         # met simplement à jour la ligne (et rattache le bon app_dossier_id).
         client.upsert_rows(path="app_mandat_register_current", rows=current_mandat_register_rows, batch_size=20)
 
+    # 3c PIECE 4, 13/10/2026 -- ON REPOSE NOTRE DATE DE CLOTURE DE MANDAT.
+    #
+    # POURQUOI ICI. `delete_target_remote` (plus haut) efface TOUJOURS les lignes de
+    # registre de cette annonce, et l'upsert juste au-dessus les remet depuis le
+    # payload -- qui ne connait PAS `mandat_date_cloture_app`. Notre colonne repart
+    # donc a NULL ~1 minute apres n'importe quel geste sur l'annonce.
+    # Le carnet `app_mandat_champ_app` n'est jamais touche : c'est lui qui fait foi.
+    #
+    # ⚠ CE N'EST PAS LE MEME TROU QUE LA NUIT, c'est le MEME MECANISME par un autre
+    #   chemin. Le run a son etape (run_full_pipeline.ps1, apres le push) ; ici il
+    #   faut l'appel cible, sinon la date attendrait la nuit pour revenir.
+    #
+    # ⚠ PORTEE : cette annonce seulement. Un appel sur tout le parc a chaque geste
+    #   ferait balayer 24 505 lignes pour une.
+    #
+    # ⚠ UN ECHEC NE DOIT PAS FAIRE ECHOUER LE PUSH. Le push a REUSSI ; la date, au
+    #   pire, revient a la nuit suivante (le carnet la porte). On enveloppe donc, et
+    #   on journalise -- un silence serait pire que le defaut.
+    cloture_reposee: object = None
+    annonces_registre = sorted({
+        str(row.get("hektor_annonce_id")).strip()
+        for row in current_mandat_register_rows
+        if str(row.get("hektor_annonce_id") or "").strip()
+    })
+    for annonce in annonces_registre:
+        try:
+            cloture_reposee = client._request(
+                method="POST",
+                path="rpc/app_reposer_cloture_mandat_app",
+                payload={"target_annonce": annonce},
+            )
+            if isinstance(cloture_reposee, dict) and cloture_reposee.get("statut") == "refus":
+                print(f"[cloture] REFUS du garde-fou : {cloture_reposee.get('raison')}", flush=True)
+        except Exception as exc:  # noqa: BLE001 -- le push ne doit pas tomber pour ca
+            print(f"[cloture] re-pose impossible pour {annonce} ({exc}) "
+                  f"-- la date reviendra au run de nuit", flush=True)
+
     return {
         "dossiers_upserted": len(current_dossiers),
         "details_upserted": len(current_details),
         "work_items_replaced": len(current_work_items),
         "broadcasts_replaced": len(current_broadcasts),
         "mandat_register_replaced": len(current_mandat_register_rows),
+        "cloture_reposee": cloture_reposee,
     }
 
 
