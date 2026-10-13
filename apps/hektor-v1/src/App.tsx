@@ -20209,6 +20209,34 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </p>
                   )
                 })()}
+                {/* 13/10 -- L'OFFRE ACCEPTEE EST FIGEE CHEZ HEKTOR.
+                    Le bouton juste en dessous est eteint ; ici on dit POURQUOI et
+                    QUOI FAIRE. Doctrine deja posee par 2.2c, un peu plus bas :
+                    « un bouton gris et muet est pire que pas de bouton -- l'infobulle
+                    dit pourquoi, le bandeau le repete en clair, et le geste qui
+                    debloque est juste au-dessus ». Ici le geste qui debloque est bien
+                    juste au-dessus : « Refuser l'offre ».
+                    ⚠ SAUF S'IL N'Y EST PAS : quand l'offre est verrouillee par son
+                      dossier (un compromis ou une vente derriere elle), « Refuser »
+                      est CACHE -- le bandeau precedent dit alors quoi faire d'abord,
+                      et on ne lui donne pas un conseil qu'il ne peut pas suivre. */}
+                {(() => {
+                  const affaire = affaireCourantePourStatut()
+                  if (!offreAccepteeFigeeChezHektor(affaire)) return null
+                  const refusHorsDePortee = Boolean(
+                    offreVerrouilleeParSonDossier(statusChangeAffaires, affaire))
+                  return (
+                    <p className="status-change-note">
+                      <strong>Cette offre est acceptée : son montant ne se corrige plus
+                      directement.</strong>{' '}
+                      Une fois acceptée, une offre est figée — le formulaire ne s’ouvre
+                      même pas, et l’envoi échouerait sans un mot d’explication.
+                      {refusHorsDePortee
+                        ? ' Pour y revenir, il faut d’abord défaire ce que dit le message ci-dessus.'
+                        : ' Pour changer le montant : refusez l’offre, corrigez-la, puis acceptez-la de nouveau.'}
+                    </p>
+                  )
+                })()}
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending || statusChangeCorrectionPending}>Annuler</button>
                   {affaireCourantePourStatut() && statusChangeStatus === 'offer'
@@ -20238,8 +20266,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   {affaireCourantePourStatut() && statusChangeStatus !== 'closed' && statusChangeStatus !== 'active' ? (
                     <button className="ghost-button button-subtle" type="button"
                       onClick={(e) => { void handleChangeHektorAnnonceStatus(e as unknown as FormEvent<HTMLFormElement>, true) }}
-                      disabled={statusChangePending || statusChangeCorrectionPending}
-                      title="Reprend la transaction existante chez Hektor au lieu d'en creer une nouvelle.">
+                      disabled={statusChangePending || statusChangeCorrectionPending
+                        /* 13/10 : une offre ACCEPTEE n'est plus modifiable chez Hektor --
+                           il n'ouvre meme pas le formulaire (mesure, 9 sur 9). Le bandeau
+                           juste au-dessus dit pourquoi et quoi faire. */
+                        || offreAccepteeFigeeChezHektor(affaireCourantePourStatut())}
+                      title={offreAccepteeFigeeChezHektor(affaireCourantePourStatut())
+                        ? "Une offre acceptee est figee chez Hektor : il n'ouvre pas son formulaire, la modification ne peut pas aboutir."
+                        : "Reprend la transaction existante chez Hektor au lieu d'en creer une nouvelle."}>
                       {statusChangePending ? 'Envoi...' : 'Modifier chez Hektor'}
                     </button>
                   ) : null}
@@ -26035,6 +26069,44 @@ function offreVerrouilleeParSonDossier(
   const vente = memeDossier.find((r) => String(r.kind) === 'vente')
   if (vente) return vente
   return memeDossier.find((r) => String(r.kind) === 'compromis' && !compromisMort(r)) ?? null
+}
+
+/** ─── UNE OFFRE ACCEPTEE EST FIGEE CHEZ HEKTOR (13/10/2026) ───
+ *
+ *  MESURE, en lecture seule, sur 12 offres reelles. L'ouverture du formulaire
+ *  chez Hektor (`createOffre` + `init=1` + `idOffre`) depend de l'ETAT :
+ *      accepted   200 + 0 OCTET              9 sur 9
+ *      proposed   200 + ~230 000 octets      2 sur 2   (et pre-remplie)
+ *      refused    200 + ~230 000 octets      1 sur 1   (et pre-remplie)
+ *  Hektor n'ouvre meme pas le formulaire d'une offre acceptee : le worker ne
+ *  peut donc rien enregistrer. Et son refus est MUET -- 200 avec un corps vide,
+ *  aucun message. 144 des 185 offres vivantes sont acceptees : 78 %.
+ *  notice/MESURE_MODIFIER_OFFRE_ACCEPTEE_2026-10-13.md
+ *
+ *  ⚠ CE N'ETAIT PAS UN OUBLI, et c'est pour ca qu'on en retire le MINIMUM.
+ *    Le bouton est sans condition d'etat par DECISION (3.2, 07/09, piece ①) :
+ *    « on n'interdit rien d'avance : on envoie, et si Hektor refuse on montre sa
+ *    reponse ». Cette decision reste JUSTE partout ou Hektor parle -- et il
+ *    parle pour le compromis (« un compromis cloture ne peut pas etre
+ *    modifie »). Ce qui tombe, c'est sa CONDITION dans un seul cas mesure.
+ *    Donc : ni le compromis, ni la vente, ni l'offre REFUSEE (qui est
+ *    exactement ce que Frederic a demande le 07/09), ni un etat INCONNU
+ *    (54 lignes sans etat : on laisse Hektor dire).
+ *
+ *  ⚠ L'ETAT SE LIT SUR L'AFFAIRE QUE LA MODALE AFFICHE, jamais sur
+ *    `dossier.offre_state` : celui-la n'est rempli que par le run de nuit et
+ *    peut designer l'offre PRECEDENTE -- c'est l'incident du 02/09, deja ecrit
+ *    dans affaireCourantePourStatut(). La charge du travail portait bien
+ *    `offre_state: "accepted"` le 13/10 : l'information etait la, personne ne la
+ *    regardait.
+ */
+function offreAccepteeFigeeChezHektor(
+  affaire: AffaireLedgerRow | null | undefined,
+): boolean {
+  if (!affaire || String(affaire.kind) !== 'offre') return false
+  // Un seul mot en base (mesure du 13/10 sur les 11 125 offres du registre :
+  // accepted · refused · proposed · vide). Pas de variante francaise a couvrir.
+  return String(affaire.state ?? '').trim().toLowerCase() === 'accepted'
 }
 
 /** ─── 2.2c : LES DOSSIERS OUVERTS D'UN BIEN (05/09/2026) ───

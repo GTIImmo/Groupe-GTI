@@ -175,6 +175,30 @@ const CREATE_HEKTOR_HTTP_DIRECT = String(process.env.CONSOLE_CREATE_HEKTOR_HTTP_
 const CREATE_HEKTOR_PLAYWRIGHT_FALLBACK = String(process.env.CONSOLE_CREATE_HEKTOR_PLAYWRIGHT_FALLBACK || "true").toLowerCase() !== "false";
 const CLOUD_STATUSES = new Set(["Actif", "Sous offre", "Sous compromis", "Estimation"]);
 
+// ─── LE REFUS D'ETAT NE SE REJOUE PAS ───                         13/10/2026
+//
+// Un travail en erreur est rejoue jusqu'a 5 fois par
+// `app_console_action_enqueue_due_retries`. C'est juste pour une panne (session
+// perdue, reseau coupe) : elle passe. Ca ne l'est pas pour un REFUS D'ETAT --
+// « une offre acceptee n'est plus modifiable », « un compromis cloture ne peut
+// pas etre modifie ». Celui-la ne guerit pas en 24 h : 5 tentatives, 5 echecs,
+// 5 notifications pour rien. Mesure du 13/10 sur l'offre 33094.
+//
+// LE FREIN EMPRUNTE LE MECANISME QUE LE PROJET A DEJA CHOISI. La boucle 0 de
+// cette meme fonction SQL ecarte les travaux depasses en portant leur
+// `attempt_count` au maximum -- elle l'ecrit noir sur blanc : « ils sortent donc
+// d'eux-memes de la condition ci-dessous ». On fait pareil, on n'invente rien.
+//
+// ⚠ DEUX COPIES D'UNE CONSTANTE : `max_tentatives` vit dans la fonction SQL,
+//   celle-ci dans le worker. Si l'une monte sans l'autre, la panne est BENIGNE --
+//   le travail redevient simplement rejouable, c'est-a-dire le comportement
+//   d'avant ce frein. Rien ne casse, le bruit revient.
+const REJEU_MAX_TENTATIVES = Number(process.env.CONSOLE_REJEU_MAX_TENTATIVES || 5);
+// La marque voyage DANS le message : c'est le seul canal que `finishJob` recoit
+// de la part de celui qui a leve. Elle est lue par `processOnce`, et elle reste
+// lisible par un humain dans la notification.
+const MARQUE_REFUS_ETAT = "[REFUS D'ETAT]";
+
 function browserLaunchOptions(options = {}) {
   const executablePath = [
     process.env.CONSOLE_CHROME_EXE,
@@ -1694,17 +1718,23 @@ async function logJob(jobId, step, status, message, payload) {
   });
 }
 
-async function finishJob(jobId, status, result, errorMessage) {
+async function finishJob(jobId, status, result, errorMessage, options = {}) {
+  const corps = {
+    status,
+    finished_at: new Date().toISOString(),
+    result_json: result || null,
+    error_message: errorMessage || null,
+    updated_at: new Date().toISOString(),
+  };
+  // 13/10 : un refus d'etat sort de la file de rejeu, par le compteur -- voir
+  // REJEU_MAX_TENTATIVES. `attempt_count` n'est ecrit que par la prise du travail
+  // (app_console_claim_next_job, +1), et ce travail est le notre : aucun autre
+  // ecrivain sur cette ligne a cet instant.
+  if (options.nePlusRejouer === true) corps.attempt_count = REJEU_MAX_TENTATIVES;
   await supabaseRequest(`app_console_job?id=eq.${encodeURIComponent(jobId)}`, {
     method: "PATCH",
     prefer: "return=minimal",
-    body: JSON.stringify({
-      status,
-      finished_at: new Date().toISOString(),
-      result_json: result || null,
-      error_message: errorMessage || null,
-      updated_at: new Date().toISOString(),
-    }),
+    body: JSON.stringify(corps),
   });
 }
 
@@ -12458,6 +12488,44 @@ async function submitHektorTransactionStatus(job, annonceId, target, config, pay
     },
     timeoutMs: 60000,
   });
+  // ─── LE REFUS MUET DE HEKTOR, TRADUIT ───                       13/10/2026
+  //
+  // `200 + corps VIDE` est la SIGNATURE DU REFUS chez Hektor. Ce n'est pas une
+  // nouveaute : la mesure du 29/08 l'avait deja etablie pour deux autres verbes
+  // (`clotureCompromis` et `ventes-deleteVente`, avec un identifiant bidon) --
+  // notice/ACTIONS_TRANSACTION_HEKTOR_2026-08-28.md. Elle n'avait pas ete
+  // reportee sur l'ouverture d'une transaction.
+  //
+  // MESURE DU 13/10, en lecture seule, sur 12 offres reelles :
+  //     accepted   200 + 0 OCTET                9 sur 9
+  //     proposed   200 + ~230 000 octets        2 sur 2   (et pre-remplie)
+  //     refused    200 + ~230 000 octets        1 sur 1   (et pre-remplie)
+  // Une offre ACCEPTEE n'est plus modifiable chez Hektor. 144 des 185 offres
+  // vivantes sont dans ce cas.
+  //
+  // ⚠ POURQUOI ON NE CONTINUE PAS MALGRE TOUT. Hektor repond TOUJOURS
+  //   `error: true` a cette ouverture -- 10 envois d'offre sur 10 dans
+  //   l'historique -- et le code le tolere depuis le debut, parce que le
+  //   formulaire arrive quand meme. Ici il n'arrive pas. Or ce formulaire est le
+  //   REPLI des champs que l'utilisateur ne retape pas (sequestre,
+  //   prixNetVendeur) : enregistrer sans lui EFFACERAIT (voir plus haut). On
+  //   s'arrete donc, et c'est la protection qui joue -- on change seulement la
+  //   phrase, qui disait « Reponse Hektor JSON invalide init Sous offre: », rien
+  //   apres les deux-points, et partait telle quelle au negociateur.
+  if (!String(init.text || "").trim()) {
+    const etatRepris = String((payload && (payload[`${genreTransaction}_state`] ?? "")) || "").trim().toLowerCase();
+    // L'elision est dans la chaine, pas dans la phrase : « refuse de ouvrir » etait faux.
+    const quoi = idRepris
+      ? `de rouvrir ${genreTransaction} ${idRepris}${etatRepris ? ` (etat « ${etatRepris} »)` : ""}`
+      : `d'ouvrir le formulaire ${config.label}`;
+    const remede = target === "offer" && idRepris
+      ? " Une offre ACCEPTEE n'est plus modifiable chez lui (mesure du 13/10) ; une offre proposee ou refusee s'ouvre."
+        + " Pour corriger le montant d'une offre acceptee : la refuser, corriger, puis l'accepter de nouveau."
+      : "";
+    throw new Error(
+      `${MARQUE_REFUS_ETAT} Hektor refuse ${quoi} : il repond 200 avec un corps VIDE, sans aucun message.`
+      + `${remede} Rien n'a ete envoye chez Hektor.`);
+  }
   const initJson = parseHektorJson(init.text, `init ${config.label}`);
   const initHtml = String(
     initJson.html ||
@@ -20510,8 +20578,16 @@ async function processOnce() {
     await writeWorkerHeartbeat("success", { durationMs: Date.now() - startedAt });
   } catch (error) {
     const message = error && error.message ? error.message : String(error);
+    // 13/10 : REFUS D'ETAT -> on n'encombre pas la file de rejeu. Le travail
+    // reste en erreur, visible, notifie ; il ne repart simplement pas tout seul.
+    const refusDEtat = message.includes(MARQUE_REFUS_ETAT);
     await logJob(job.id, "finish", "error", message, null);
-    await finishJob(job.id, "error", null, message);
+    if (refusDEtat) {
+      await logJob(job.id, "rejeu", "done",
+        "Refus d'etat de Hektor : AUCUN rejeu automatique (il ne guerirait pas). Relancer la demande une fois l'etat change.",
+        { attempt_count_pose: REJEU_MAX_TENTATIVES, job_type: job.job_type });
+    }
+    await finishJob(job.id, "error", null, message, { nePlusRejouer: refusDEtat });
     await notifyJobFailureBestEffort(job, message);
     await writeWorkerHeartbeat("error", { durationMs: Date.now() - startedAt, error: message });
   }
