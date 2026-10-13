@@ -2751,3 +2751,31 @@ fait et qui ne l'est pas, c'est déjà arrivé ici*. **À contrôler par l'heure
 par la croyance.**
 ⚠ **Accord de Frédéric NON DONNÉ sur le redémarrage** : il a dit « vas-y » pour le code. **Je ne
 redémarre rien.**
+
+### ✅ REDÉMARRAGE CONFIRMÉ PAR LA MESURE (13/10, 16:55)
+
+| | |
+|---|---|
+| `Console/console_job_worker.js` modifié | **16:52:28** |
+| les **4** processus `node` démarrés | **16:55:05 · 16:55:06 · 16:55:07 · 16:55:07** |
+| écart | **2 min 37** — le redémarrage porte bien la nouvelle ligne |
+| nombre de processus | **4**, pas 5 → **aucun worker orphelin** |
+
+⚠ **Première mesure non concluante, et je ne l'ai pas prise pour un échec** :
+`Get-Process | Select StartTime` rend la colonne **vide** *(droits)*, ce qui faisait
+« démarré après la modif = False » pour les quatre. **Refait avec
+`Get-CimInstance Win32_Process`**, qui donne `CreationDate` sans élévation.
+➡ **Une colonne vide n'est pas un « non ».** *(Le 08/10, le même contrôle avait révélé
+**1 h 24** d'écart : c'est pour ça qu'on le refait à chaque fois.)*
+
+### ⏳ CE QUI RESTE POUR PROUVER LA PIÈCE 5 : UN ESSAI RÉEL
+Il faut un passage en **« Clos »** sur un bien d'essai **qui porte un n° de mandat**, puis
+vérifier que **`mandat_date_cloture_app`** bouge et que **`mandat_date_cloture` ne bouge pas**.
+⚠ **Ça écrit chez Hektor → accord de Frédéric.**
+| bien | utilisable ? |
+|---|---|
+| **62963** *(le bien d'essai courant)* | ⛔ **non** — c'est précisément lui qui a journalisé *« aucun numéro de mandat »* le 12/10 |
+| **62774** *(bac à sable, « Sous offre », mandat 18836)* | ✅ utilisable — réversible par « Actif » |
+| **62966** *(annonce d'essai, mandat 18842)* | déjà « Clos » |
+⭐ **Et la preuve viendra de toute façon seule** : le chemin « Vendu » clôt le mandat **à chaque
+vente**. La prochaine vente réelle avec un n° de mandat écrira dans notre colonne.
