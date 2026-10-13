@@ -13147,9 +13147,27 @@ async function enregistrerMandatAuRegistreApp(job, annonceId, numeroMandat, mand
 async function cloturerMandatLocalement(job, annonceId, payload, dateCloture) {
   const numero = String(payload.numero_mandat || payload.numeroMandat || "").trim();
   if (!numero) {
-    await logJob(job.id, "cloture_mandat_locale", "error",
-      "Cloture locale impossible : aucun numero de mandat dans la demande", {
+    // 3c PIECE 5 (13/10/2026) -- CE N'EST PAS UNE PANNE, ET CA NE DOIT PLUS CRIER.
+    //
+    // Ce refus est VOULU : on ne devine jamais le mandat cible (regle du 28/08 --
+    // « la cloture est IRREVERSIBLE cote Hektor -> on refuse de deviner »). Mais il
+    // etait journalise en `error`, donc une annonce SANS numero de mandat qui passe
+    // en « Clos » fabriquait une fausse alerte. Mesure du 13/10 : 4 des 5 « erreurs »
+    // de cette etape sont ce refus -- dont une hier (62963), sur un essai.
+    // Le geste lui-meme, lui, a REUSSI : c'est pour ca qu'on sort en `done`.
+    //
+    // ⚠ POURQUOI `done` ET PAS UN STATUT NEUF. La colonne n'a aucune contrainte,
+    //   mais inventer une 4e valeur (seuls running/done/error existent, mesure du
+    //   13/10) risquerait de surprendre un lecteur. Le seul lecteur programmatique
+    //   du journal filtre une AUTRE etape (hektor_qualification_acquereur). On garde
+    //   donc `done` et on met la verite DANS LE MESSAGE et dans la charge, ou un
+    //   futur lecteur pourra filtrer proprement sur `saute`.
+    await logJob(job.id, "cloture_mandat_locale", "done",
+      "Cloture du mandat SAUTEE : aucun numero de mandat dans la demande "
+      + "(le changement de statut, lui, a reussi)", {
         hektor_annonce_id: annonceId,
+        saute: true,
+        reason: "numero_mandat_absent",
       });
     return { status: "skipped", reason: "numero_mandat_absent" };
   }
@@ -13181,13 +13199,34 @@ async function cloturerMandatLocalement(job, annonceId, payload, dateCloture) {
     // au lieu d'attendre le run de nuit. Il peut ne correspondre a aucune ligne -- une
     // annonce close en sort -- et c'est sans consequence, la valeur qui fait foi est
     // deja ecrite ci-dessus.
+    //
+    // ⚠⚠ 3c PIECE 5 (13/10/2026) -- ON ECRIT DESORMAIS **NOTRE** COLONNE.
+    //
+    // CE QUI N'ALLAIT PAS. On ecrivait `mandat_date_cloture`, LA COLONNE DE HEKTOR.
+    // Puis magasin_mandat_app.py relisait ce meme registre comme « ce que dit
+    // l'app » (l. 204 : « CE QUE DIT L'APP. Relu EN DIRECT dans Supabase »).
+    // ➡ NOUS RELISIONS NOTRE PROPRE ECRITURE COMME SI ELLE FAISAIT AUTORITE. C'est
+    //   ce qui a fabrique 4 fausses « valeur_app » au carnet -- des valeurs qui
+    //   n'etaient la decision de personne -- et deux comptages faux dans mon audit.
+    //
+    // Demande de Frederic, 13/10 : « cette colonne doit etre maj eventuellement par
+    // Hektor mais SURTOUT PAS l'app ». Il y a donc deux colonnes au registre, et la
+    // vue sert la notre d'abord (patron des photos). Le commentaire ci-dessus
+    // devient enfin vrai : SANS AUTORITE, dans NOTRE case.
+    //
+    // ⚠ ET ON NE PASSE PAS PAR LE RPC app_set_mandat_cloture_optimistic, bien qu'il
+    //   fasse les deux ecritures : il REFUSE un couple absent du registre
+    //   (`mandat_introuvable`). Or le journal montre 4 clotures ou
+    //   `registre_lignes_rafraichies` valait 0 -- le registre n'avait pas la ligne,
+    //   et c'est le CARNET qui a sauve la cloture. Le RPC les aurait PERDUES.
+    //   La piece 4 (re-pose apres le push) reposera la date de toute facon.
     let registreTouche = 0;
     try {
       const majRegistre = await supabaseRequest(
         `app_mandat_register_current?hektor_annonce_id=eq.${encodeURIComponent(annonceId)}`
         + `&numero_mandat=eq.${encodeURIComponent(numero)}`,
         { method: "PATCH", prefer: "return=representation",
-          body: JSON.stringify({ mandat_date_cloture: date }) });
+          body: JSON.stringify({ mandat_date_cloture_app: date }) });
       registreTouche = Array.isArray(majRegistre) ? majRegistre.length : 0;
     } catch (erreurRegistre) {
       registreTouche = -1;

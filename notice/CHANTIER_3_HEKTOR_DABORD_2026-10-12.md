@@ -2625,3 +2625,129 @@ Le **registre des mandats** *(déjà juste)*, ses filtres et son tri · la modal
 Offre / Compromis / Vendu** · ce qui part **chez Hektor** · la **base** · le **run** · les
 **workers**. **Un seul fichier de code front** *(`App.tsx`)* **plus la fonction d'appel**
 *(`api.ts`)*.
+
+---
+
+## 3c — PIÈCE 5, ÉTAPE 1-2 : LE WORKER *(présentée le 13/10, EN ATTENTE DU « VAS-Y »)*
+
+### ⭐ LE WORKER CLÔT DÉJÀ, PAR **DEUX** CHEMINS VIVANTS
+
+| | |
+|---|---|
+| `submitHektorClosedStatus` *(l. 13256)* | quand le statut passe à **« Clos »** |
+| le chemin **« Vendu »** *(l. 14670)* | ⭐ **toute vente clôt le mandat chez nous**, avec la **date de la vente** — inconditionnel |
+
+### ⭐⭐ ET LE JOURNAL CLÔT L'HISTOIRE DES CLÔTURES
+
+**24 lignes** `cloture_mandat_locale` depuis le 28/08 : **19 « done », 5 « error »**. Et elles ne
+concernent que **TROIS annonces** :
+
+| annonce | passages | ce que c'est |
+|---|---|---|
+| **24933** | **11** *(03/09 → 18/09)* | le bien d'essai des tâches 3.2 / 3.4 |
+| **62774** | **7** *(29/08 → 31/08)* | le bac à sable |
+| **62966** | **2** *(28/08)* | l'annonce d'essai de la clôture |
+| **62963** | 1 *(12/10, erreur)* | mon propre essai de 3a, hier |
+
+➡ **Troisième preuve indépendante : aucune clôture réelle, jamais.** Le journal, le carnet et
+les notes disent la même chose.
+
+### LES 5 ERREURS, LUES
+
+| | |
+|---|---|
+| **4 ×** *« Clôture locale impossible : aucun numéro de mandat dans la demande »* | ⛔ **ce n'est PAS un bug** : c'est le garde-fou qui **refuse de deviner** le mandat cible. ⚠ Mais il journalise en **`error`**, donc **une annonce sans n° de mandat qui passe en « Clos » fait du bruit** *(c'est arrivé hier sur 62963)* |
+| **1 ×** *« STATUT CHANGE, MAIS CLOTURE LOCALE NON ECRITE -- à reprendre »* + `Supabase 400 … Empty or invalid json` | 📜 **le bug du 28/08 au matin**, déjà corrigé *(« le corps doit être du TEXTE — un objet donne Empty or invalid json »)*. Historique |
+
+### ⭐ UNE MESURE QUI CHANGE LE CORRECTIF : `registre_lignes_rafraichies: 0`
+
+Elle apparaît **4 fois** *(62966 le 28/08, 62774 le 30 et le 31/08, 24933 le 17/09 ×2)* : le
+`PATCH` du registre **n'a touché AUCUNE ligne**. Le worker le dit lui-même — *« il peut ne
+correspondre à aucune ligne, et c'est sans conséquence, la valeur qui fait foi est déjà
+écrite »*.
+
+➡ ⛔ **DONC REMPLACER LES DEUX ÉCRITURES DU WORKER PAR UN APPEL AU RPC SERAIT UNE RÉGRESSION** :
+le RPC **refuse** un couple absent du registre *(`mandat_introuvable`)*, et ces **4 clôtures
+auraient été perdues** au lieu d'être gardées au carnet.
+C'était ma première idée. **La mesure l'a écartée.**
+
+### CE QUE JE PROPOSE — **option A, une seule ligne**
+
+Dans `cloturerMandatLocalement`, le `PATCH` du registre change de **colonne** :
+```js
+body: JSON.stringify({ mandat_date_cloture: date })        // ❌ celle de HEKTOR
+body: JSON.stringify({ mandat_date_cloture_app: date })    // ✅ la NÔTRE
+```
+Et son commentaire, qui dit *« confort d'affichage, SANS AUTORITÉ »*, devient vrai : il écrit
+désormais **dans notre colonne**, et la **pièce 4** la repose de toute façon depuis le carnet.
+
+⭐ **L'écriture du carnet ne change pas d'un octet** — c'est elle qui fait foi, et c'est elle qui
+garde les cas où le registre n'a pas la ligne.
+
+| | option A *(recommandée)* | option B *(appeler le RPC)* |
+|---|---|---|
+| taille | **une ligne** | le worker **et** le RPC |
+| les 4 cas sans ligne de registre | ✅ **gardés** | ⛔ **perdus** |
+| un seul chemin d'écriture | non | oui |
+| risque | **minimal** | il faudrait **assouplir un RPC déjà éprouvé** |
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+| | |
+|---|---|
+| **le carnet** | ⛔ **pas touché** — l'écriture qui fait foi est inchangée |
+| **la colonne de Hektor** | ✅ le worker **cesse de l'écrire** — c'est exactement la demande de Frédéric *(« maj éventuellement par Hektor mais surtout pas l'app »)*, et ça **ferme la boucle** qui nous faisait relire notre propre écriture |
+| **le magasin de nuit** | ⭐ **il arrêtera de fabriquer de fausses « valeur_app »** : il lit le registre comme « ce que dit l'app » ; comme le worker n'y écrira plus, les lignes `observe` redeviendront **vraies** |
+| l'affichage | ⛔ **inchangé** : la vue sert déjà `_app` d'abord |
+| le chemin « Vendu » | ⛔ **inchangé** dans sa logique — il clôt toujours le mandat à la vente, mais **dans notre colonne** |
+| ⚠ **les 4 services** | **À REDÉMARRER.** Sans ça, le worker en mémoire continue d'écrire l'ancienne colonne. ⚠ Et **mesure du 08/10** : les processus avaient été lancés **1 h 24 après** la modification du fichier — un redémarrage qu'on croit fait et qui ne l'est pas, ça s'est déjà vu |
+| le run, la base, le front | ⛔ **rien** |
+
+### RETOUR ARRIÈRE
+`git revert` *(une ligne)* **+ un nouveau redémarrage des 4 services**. Aucune base, aucun schéma.
+
+### CONTRÔLE PRÉVU
+1. `grep` de la ligne avant / après *(le témoin : la nouvelle apparaît **et** l'ancienne disparaît)*.
+2. ⛔ **Je ne lance JAMAIS le worker pour l'inspecter** *(ça démarre un 5ᵉ)* — contrôle par lecture, puis par les **processus** et l'**heure de modification du fichier**.
+3. **L'essai réel** : un passage en « Clos » sur un bien d'essai avec n° de mandat, puis vérifier
+   que **`mandat_date_cloture_app`** bouge et que **`mandat_date_cloture` ne bouge pas**.
+   ⚠ **Accord de Frédéric nécessaire** *(ça écrit chez Hektor)*.
+
+### LA QUESTION POUR FRÉDÉRIC
+Les **4 journaux en `error`** pour *« aucun numéro de mandat »* : c'est un **refus voulu**, pas une
+panne — mais il crie. **On le passe en avertissement** *(le geste a réussi, seule la clôture est
+sautée)*, ou **on le laisse en erreur** pour que ça se voie ?
+
+## 3c — PIÈCE 5, ÉTAPE 4-5 : CODÉE (13/10) — ⚠ **INERTE JUSQU'AU REDÉMARRAGE**
+
+**Décision de Frédéric** : *« 1. Vas y. 2 nettoie. »*
+
+| geste | fait |
+|---|---|
+| le `PATCH` du registre écrit **`mandat_date_cloture_app`** *(la nôtre)* au lieu de `mandat_date_cloture` *(celle de Hektor)* | ✅ une ligne |
+| le refus *« aucun numéro de mandat »* passe de **`error`** à **`done`**, avec la vérité dans le message et `saute: true` dans la charge | ✅ |
+
+**Témoin dans les deux sens** *(ma règle)* :
+`mandat_date_cloture_app: date` **apparaît** *(l. 13229)* · `mandat_date_cloture: date`
+**ne figure plus nulle part** · `node --check` **OK**.
+
+⭐ **Et la vraie erreur, elle, reste une erreur** : *« STATUT CHANGÉ, MAIS CLÔTURE LOCALE NON
+ÉCRITE — à reprendre »* *(l. 13252)*. Le nettoyage ne touche **que les 4 fausses alertes**, pas
+la seule vraie panne du journal.
+
+**Pourquoi `done` et pas un statut neuf** : la colonne n'a **aucune contrainte**, mais seuls
+`running / done / error` existent *(mesuré : 201 370 / 109 551 / 147)*, et inventer une 4ᵉ valeur
+risquerait de surprendre un lecteur. **Le seul lecteur programmatique du journal filtre une
+AUTRE étape** *(`hektor_qualification_acquereur`)* — vérifié avant de choisir.
+
+**Pourquoi PAS le RPC** *(ma première idée, écartée par la mesure)* : il **refuse** un couple
+absent du registre, et le journal montre **4 clôtures** où `registre_lignes_rafraichies` valait
+**0** — c'est le **carnet** qui les avait sauvées. Le RPC les aurait **perdues**.
+
+### ⛔ CE QUI MANQUE POUR QUE ÇA SERVE : **LE REDÉMARRAGE DES 4 SERVICES**
+Le worker en mémoire continue d'écrire l'ancienne colonne. ⚠ **Mesure du 08/10** : les processus
+avaient été lancés **1 h 24 après** la modification du fichier — *un redémarrage qu'on croit
+fait et qui ne l'est pas, c'est déjà arrivé ici*. **À contrôler par l'heure des processus, pas
+par la croyance.**
+⚠ **Accord de Frédéric NON DONNÉ sur le redémarrage** : il a dit « vas-y » pour le code. **Je ne
+redémarre rien.**
