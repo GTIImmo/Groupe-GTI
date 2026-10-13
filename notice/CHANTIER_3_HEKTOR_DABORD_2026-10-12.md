@@ -1027,3 +1027,394 @@ diffusable=0 / archive=0`**.
 
 ➡ **Le défaut 5a est corrigé, et les deux gestes sont prouvés de bout en bout chez Hektor.**
 Le bien d'essai finit exactement comme il a commencé.
+
+---
+
+## 3b — LE CARNET QUE PERSONNE NE LIT · ÉTAPE 1, AUDIT (13/10, 06 h 45, run en cours)
+
+### ⚠ D'ABORD, JE CORRIGE CE QUE J'AI ÉCRIT HIER
+
+J'ai écrit plusieurs fois que *« le carnet de l'annonce n'a PAS de pendant "appliquer" »*, sur la
+foi du commentaire de `run_full_pipeline.ps1:1272-1277`. **C'était une lecture incomplète** : il y
+a **DEUX mécanismes**, et un seul manque.
+
+| | Ce qu'il lit | Ce qu'il écrit | Dans le run ? |
+|---|---|---|---|
+| **`appliquer_contrat.py`** *(C.7, 25/08)* | **la COLONNE** de `app_dossier_current`, dans Supabase, en direct | la base locale (`app_view_generale`) | ✅ **OUI, chaque nuit** — étape « phase2 appliquer le contrat d autorite », l. 571 |
+| **`magasin_annonce_app.py`** *(C.4, 30/08)* | — | descend le **CARNET** `app_annonce_champ_app` chez nous | ✅ oui, l. 1279 — mais **il n'applique rien** |
+
+➡ **La machinerie « l'app gagne » existe, elle est branchée, et elle tourne toutes les nuits.**
+Elle ne fait rien pour une seule raison : `CHAMPS_APP_ANNONCE` est **vide**. Et son garde-fou est
+déjà écrit : *« si la relecture Supabase échoue, on ne touche à rien »*.
+
+### CE QUE ÇA CHANGE POUR L'ÉNONCÉ DE 3b
+
+L'audit du 08/10 disait : *« l'intention va dans le carnet, que ni l'écran ni le run ne lisent »*.
+C'est vrai **du carnet**. Mais le vrai nœud est ailleurs, et il est plus précis :
+
+> **Pour « archiver » et « changer de négociateur », l'app n'écrit QUE le carnet — jamais la
+> colonne.** Or c'est **la colonne** que `appliquer_contrat.py` lirait si on allumait
+> l'interrupteur. **Allumer la liste ne suffirait donc pas : il n'y aurait rien à appliquer.**
+
+*(À comparer avec ce qu'on a fait hier pour le statut : la fonction écrit **la colonne ET le
+carnet**. Pour ces deux gestes-là, l'interrupteur aurait de la matière.)*
+
+**État du carnet au 13/10, 06 h 45 — 6 lignes**, dont **3 posées hier soir par les nouveaux
+patchs** *(`geste_statut` ×2, `geste_desarchiver` ×1)* :
+
+| champ | origine | n |
+|---|---|---|
+| `archive` | `geste_archiver` (30/08) · `geste_desarchiver` (**12/10, nouveau**) | 1 + 1 |
+| `statut` | `redescente_transaction` (18/09) · `geste_statut` (**12/10, nouveau**) | 1 + 1 |
+| `diffusable` | `geste_statut` (**12/10, nouveau**) | 1 |
+| `negociateur_email` | `geste_affecter_negociateur` (01/09) | 1 |
+
+**⏳ Suite de l'audit à faire** *(après le run et la descente)* : ce que devient le **motif
+d'archivage** *(il ne vit que dans la charge du travail)* · ce que `appliquer_contrat.py` ferait
+exactement si on allumait `archive` et `negociateur_email` · et **la question à Frédéric** :
+allume-t-on l'interrupteur, et pour quels champs ?
+
+### ⭐ FRÉDÉRIC A RAISON : les CHAMPS de l'annonce sont bien déjà chez nous
+
+*« pour moi tous les champs de l'annonce étaient déjà saisis chez nous »* — **oui**, et c'est
+mesuré. Quand on modifie une annonce à l'écran, `app_edit_annonce_optimistic` écrit **tout de
+suite, chez nous, avant Hektor** :
+
+| Où | Quoi |
+|---|---|
+| **la colonne** de la fiche | `prix`, `ville`, `code_postal`, `numero_mandat` |
+| **le grand bloc** du détail | `surface`, `nb_pieces`, `nb_chambres`, terrain, latitude, longitude, garage |
+| **le calque** `app_optimistic_overlay` | ⭐ **TOUS les champs saisis**, quels qu'ils soient |
+| **la file d'attente** `app_annonce_pending` | les mêmes, avec la photo d'avant (`base_snapshot`) |
+
+Et **le run les repose chaque nuit** : étape « phase2 reappliquer les saisies de l app »
+*(L3, 21/09, `run_full_pipeline.ps1:1299`)*, **après** le push, pour que le prix saisi survive à la
+réécriture depuis le miroir — *« le prix reste à l'app, la surface arrive de Hektor »*.
+
+**Mesuré le 13/10 à 06 h 50** : **69 envois de champs, 69 réussis**, **0 en conflit**, **1 saisie
+en attente**. La chaîne fonctionne.
+
+➡ **Le trou de 3b n'est donc PAS sur les champs. Il est sur les champs d'ÉTAT.**
+
+### LE VRAI ÉNONCÉ DE 3b, APRÈS CET AUDIT
+
+Il reste **deux gestes** qui n'écrivent **que le carnet**, jamais la fiche :
+
+| Geste | fiche | carnet | ce que ça donne |
+|---|---|---|---|
+| **archiver / désarchiver** | ❌ | ✅ `archive` | notre base dit « actif » tant que Hektor n'a pas répondu *(mesuré hier sur 62965 : ~2 à 3 minutes)* |
+| **changer de négociateur** | ❌ | ✅ `negociateur_email` | idem *(4 gestes depuis juillet, tous réussis ; la colonne n'a jamais été juste avant la réponse de Hektor)* |
+
+**C'est exactement le défaut de 3a, sur deux gestes de plus — et le correctif a la même forme**
+que celui d'hier soir : écrire **aussi la colonne**, et ranger **l'état d'avant** dans la charge du
+travail pour pouvoir revenir.
+
+*(Le statut et le diffusable, eux, sont réglés depuis hier soir : la fonction écrit la colonne
+**et** le carnet.)*
+
+**⏳ Reste à mesurer avant l'étape 2** : le **motif d'archivage** *(il ne vit que dans la charge du
+travail — faut-il le garder chez nous ?)* · et la question de l'**interrupteur**
+`CHAMPS_APP_ANNONCE`, qui ne se pose vraiment qu'une fois la colonne écrite.
+
+### Les deux dernières mesures de l'audit 3b (13/10, 07 h)
+
+**① Le motif d'archivage — il n'est pas perdu, mais il est mal rangé.** Il voyage bien dans la
+charge du travail, et on l'y retrouve *(archivage de 62965 hier soir)* :
+`archive_main_choice`, `archive_sub_choice`, `archive_other_text`, `archive_confrere`,
+`archive_price`. Et **rien ne purge les travaux** : **93 631 lignes gardées depuis le 14/05**.
+➡ L'information **existe chez nous**, mais elle n'est **attachée à l'annonce nulle part de
+lisible** : il faut aller la chercher dans la table des travaux. Elle n'est pas au carnet — qui
+est pourtant *« ce que l'app détient »*.
+
+**② ⚠ L'INTERRUPTEUR DU CONTRAT N'EST PAS PRÊT À ÊTRE ALLUMÉ, et c'est une découverte.**
+`appliquer_contrat.py` pose la valeur de Supabase **sans aucun filtre** :
+
+```
+for champ in CHAMPS_APP_ANNONCE:
+    couples = [(row["app_dossier_id"], row[champ]) for row in distant ...]
+    UPDATE app_view_generale SET "champ" = (valeur du couple) ...
+```
+
+Il **n'importe même pas** `VIDE_NE_GAGNE_PAS` *(qui vaut pourtant `True` dans
+`contrat_autorite.py:182` et sert à ses frères mandat et affaire)*. ➡ **« l'app gagne »
+y est INCONDITIONNEL** : allumer un champ aujourd'hui reposerait aussi les **vides** sur la base
+locale. C'est exactement le danger que le commentaire du contrat annonce pour le mandat — *« un
+"l'app gagne" aveugle aurait effacé les 94 clôtures dès la première nuit, en silence »*.
+
+➡ **Ma recommandation : NE PAS allumer l'interrupteur aujourd'hui.** D'abord écrire la colonne
+*(c'est 3b)* ; la règle « vide ne gagne pas » viendra avec, si Frédéric veut l'allumer un jour.
+
+### ÉTAPE 2 — LE CORRECTIF PROPOSÉ POUR 3b (écrit, **attend le « vas-y »**)
+
+**Même forme qu'hier soir, sur deux fonctions** *(un seul remplacement chacune, comme pour le
+statut : la colonne, et l'état d'avant dans la charge)* :
+
+| Fonction | ce qu'on ajoute |
+|---|---|
+| `app_archive_annonce_optimistic` | `app_dossier_current.archive = '1'` · `archive_avant` dans la charge |
+| `app_assign_negotiator_optimistic` | `app_dossier_current.negociateur_email = <le nouveau>` · `negociateur_avant` dans la charge |
+
+#### ⚠ Ce que ça pourrait casser ailleurs — à vérifier avant de coder
+
+| | |
+|---|---|
+| **`archive='1'` sur la fiche** | le bien **sort des listes actives tout de suite** — c'est le geste voulu, et ça arrive de toute façon 2-3 min plus tard. La page RDV publique exige `archive=0` → elle se **ferme** plus tôt : **plus sûr** |
+| ⚠ **`negociateur_email`** | c'est **le champ du périmètre du négociateur (chantier ②)** : changer la colonne change **immédiatement qui voit le bien**. Même raisonnement — c'est le geste voulu — mais **ça se dit** |
+| le run | il réécrit les deux colonnes depuis Hektor chaque nuit → **retour arrière automatique** |
+| la protection L3 | elle lit `app_annonce_pending`, pas ces champs → **pas touchée** |
+| les workers | aucun changement → **aucun redémarrage** |
+
+#### ⬜ TROIS QUESTIONS POUR FRÉDÉRIC
+
+1. **Le motif d'archivage** : le poser **au carnet** pour qu'il reste attaché à l'annonce, ou le
+   laisser dans la charge du travail *(où il est conservé, mais introuvable sans fouiller)* ?
+2. **L'interrupteur** `CHAMPS_APP_ANNONCE` : **on ne l'allume pas aujourd'hui** *(recommandation
+   ci-dessus)*. D'accord ?
+3. **Le motif de désarchivage** n'existe pas *(le geste n'en demande pas)* — on laisse ainsi ?
+
+### 🔎 AUDIT DEMANDÉ : LE MOTIF D'ARCHIVAGE, dans l'app ET chez Hektor (13/10, 07 h 15)
+
+> *« s'il n'y a pas de motif d'archivage, pourquoi rajouter la colonne ? Il y a, et c'est sûr, des
+> motifs pour clore un mandat, clore une annonce. Fais un audit... il faut comprendre pourquoi on
+> est dans cette situation. »*
+
+**Frédéric a raison, et je me suis mal exprimé hier soir.** Le motif existe — il est même plus
+riche que je ne l'ai dit. Ce qui n'existe pas, c'est **sa conservation chez nous**.
+
+| Geste | Motif à l'écran ? | Part-il chez Hektor ? | Gardé chez nous ? |
+|---|---|---|---|
+| **ARCHIVER** | ✅ **riche** : 2 motifs principaux *(Vendu · Autre)*, **9 causes**, + **prix** et **confrère** *(`App.tsx:19131-19176`)* | ✅ **OUI** — un appel **dédié** : `mode=popins-StatutBien-statutBienDispatcher`, `context=validerArchivage`, avec `params[etat]`, `params[raison]`, `params[autre]`, `params[prix]`, `params[confrere]`, `params[id_confrere]` *(`console_job_worker.js:19979-19993`)* | ❌ **NON** |
+| **CLORE le mandat** *(statut « Mandat clos »)* | ✅ 3 états *(non renouvelé · vendu · autre)* + **7 raisons** *(`App.tsx:8675-8690`)* | ❌ **NON** — `CONSOLE_HEKTOR_CLOTURE_MANDAT` vaut **`false`** et n'est **posé nulle part** : Hektor **n'est jamais informé** *(décision C.13 du 28/08)* | ❌ **NON** — seule **la DATE** est écrite *(`mandat_date_cloture` au carnet du mandat, `console_job_worker.js:13094-13105`)* |
+| **DÉSARCHIVER** | ❌ aucun motif demandé | — | — |
+
+**Mesure décisive** : **aucune colonne** de la base ne porte un motif d'annonce. Recherche sur
+tout le schéma *(`%motif%`, `%raison%`, `%reason%`, `%cause%`)* : 26 colonnes trouvées, **aucune**
+sur la fiche, les index ou le carnet de l'annonce. Le motif ne vit que dans
+`app_console_job.payload_json` — où il est **conservé** *(93 631 travaux depuis le 14/05, rien
+n'est purgé)*, mais **introuvable sans fouiller**.
+
+#### POURQUOI ON EN EST LÀ — deux raisons, toutes les deux écrites
+
+1. **L'app a été construite pour TRANSMETTRE le motif, pas pour le DÉTENIR.** Le libellé de la
+   modale le dit lui-même : *« Motif principal **Hektor** »*, et les listes sont **celles du
+   formulaire de Hektor** *(`choiceVendu`/`choiceAutre`, `agence`/`confrere`/`concurence`…)*.
+   À l'étape 2 c'est cohérent : **Hektor est le maître, c'est lui qui garde le motif.**
+2. **Pour la clôture, c'est pire — et c'est une décision assumée.** Le 28/08 (C.13), on a décidé
+   que **Hektor ne serait pas informé** d'une clôture de mandat. Le motif saisi ne part donc
+   **nulle part** : ni chez Hektor, ni dans nos tables. **Un négociateur choisit « Confié à la
+   concurrence » et cette phrase n'est écrite nulle part de lisible.**
+
+#### CE QUE ÇA COÛTERA À LA COUPURE
+
+Le jour où Hektor s'arrête, on garde **la date** et **le geste**, mais on perd **la raison** pour
+laquelle chaque bien a été archivé. Et pour les **clôtures de mandat**, on ne l'a **déjà pas** —
+c'est le registre légal des mandats qui s'en trouve amputé.
+
+**Volume d'aujourd'hui** : 6 archivages et 9 « Mandat clos » depuis l'app — petit, **parce que les
+négociateurs le font encore dans Hektor**. C'est le volume d'aujourd'hui, pas celui de demain.
+
+➡ **Ma recommandation : garder les deux motifs chez nous**, au carnet, dans la même fonction et la
+même transaction que le geste. C'est deux lignes de plus par geste, et ça ne change rien à ce qui
+part chez Hektor.
+
+### 🔎 AUDIT RECADRÉ PAR FRÉDÉRIC (13/10, 07 h 35) — **le STATUT « Clos » de l'annonce**, pas le mandat
+
+> *« Le mandat clos est une action uniquement dans notre app, pas dans Hektor, et c'est normal.
+> Tous les mandats n'ont pas de date de clôture — ce sera mon app qui va le gérer, mais c'est un
+> AUTRE chantier. Là on est sur les statuts d'annonce. Je parlais du statut Clos. »*
+
+**Sa mesure, vérifiée** : `app_mandat` porte **26 855 mandats**, dont **91 seulement** ont une date
+de clôture — **0,3 %**. *(Registre : 24 505 lignes, 118 closes. Carnet du mandat : 2 lignes,
+toutes `mandat_date_cloture / cloture_app`.)* ➡ **la date de clôture est à construire, et c'est un
+autre chantier.** Noté, pas lancé.
+
+#### LE STATUT « CLOS » DE L'ANNONCE — ce que j'ai trouvé
+
+**Hektor a UN SEUL mécanisme pour les deux gestes**, le même point d'entrée
+`popins-StatutBien-statutBienDispatcher`, avec deux contextes :
+
+| Geste | Point d'entrée Hektor | Appelé ? |
+|---|---|---|
+| **archiver** | `context=validerArchivage` + `etat`, `raison`, `autre`, `prix`, `confrere` | ✅ **OUI, toujours** |
+| **statut « Clos »** | `context=validerClos` + `etat`, `raison`, `idMandat` | ❌ **NON** — derrière `CONSOLE_HEKTOR_CLOTURE_MANDAT`, **éteint et jamais posé** |
+
+➡ **Le motif du statut « Clos » est saisi, validé par le worker… et n'est envoyé à personne.**
+`normalizeHektorClosureMotif` *(l. 12677)* le normalise, `HEKTOR_CLOSURE_RAISONS` le contrôle —
+puis la seule fonction qui l'utilise est derrière l'interrupteur éteint. **Et il n'est stocké nulle
+part chez nous** *(0 colonne motif sur l'annonce, vérifié sur tout le schéma)*.
+
+⚠ **Et la modale le PROMET** : elle affiche *« CLÔTURE MANDAT — Motif transmis à Hektor »*. **Il
+n'est transmis à rien.**
+
+#### POURQUOI ON EN EST LÀ — c'est écrit, et c'est une décision de bon sens
+
+`console_job_worker.js:13177-13186`, C.13 du **28/08** :
+
+> *« AVANT : clôture chez Hektor PUIS changement de statut. **La clôture échouant sur 98,8 % du
+> parc, LE STATUT NE CHANGEAIT PAS NON PLUS** — constaté le 28/08 sur l'annonce 62966 : "Mandat
+> clos" demandé, l'annonce est restée "Actif". **Un geste qui marche était pris en otage par un
+> geste qui échoue.** MAINTENANT : le statut d'abord, chez Hektor. Puis la clôture CHEZ NOUS. »*
+
+**Et pourquoi la clôture échouait sur 98,8 % du parc ?** Parce que le formulaire de Hektor exige
+un **`idMandat`**, et que *« la clôture est IRRÉVERSIBLE côté Hektor → on refuse de deviner le
+mandat cible »*. Or **99,7 % des mandats n'ont pas de date de clôture** chez nous — le même trou,
+vu de l'autre bout.
+
+➡ **Le motif n'a pas été oublié : il est tombé avec le geste qu'on a débranché le 28/08**, pour
+une bonne raison. Mais personne n'a décidé qu'il devait **disparaître** — il a juste suivi.
+
+#### ⭐ ET IL Y A UN CIRCUIT QUI, LUI, GARDE LE MOTIF CHEZ NOUS
+
+`app_diffusion_request` — **les demandes du négociateur**, avec `request_reason`,
+`request_comment`, `refusal_reason`, `processing_comment`, le demandeur et le traiteur :
+
+| Type de demande | n | avec une raison |
+|---|---|---|
+| `demande_baisse_prix` | 4 *(acceptées)* | **4** |
+| **`demande_annulation_mandat`** | 4 *(acceptées)* | 1 |
+| `demande_diffusion` | 1 *(en attente)* | 0 |
+
+➡ **Le modèle « garder le motif chez nous » existe déjà dans l'app, et il est meilleur** : il porte
+le motif, le demandeur, la réponse et le traiteur. C'est le circuit prévu par la **spéc. du 30/07**
+pour qu'un négociateur demande une annulation de mandat.
+
+#### ⚠ CORRECTION IMMÉDIATE (Frédéric : « c'est faux, nous l'avons testé »)
+
+Ma table ci-dessus était **ambiguë et se lisait de travers**. Il faut distinguer **deux choses qui
+partent par deux chemins différents** :
+
+| | Chez Hektor | Preuve |
+|---|---|---|
+| **LE STATUT « Clos » lui-même** | ✅ **ENVOYÉ, toujours** — `setHektorAnnonceStatusValue` : `upval champ=status val=6`, puis `upval champ=diffusable val=0` | **éprouvé hier soir sur 62963** : travail `done` en 43 s, journal `hektor_status: done`, et l'état relu par l'API rend bien le statut **6** · idem ce matin dans l'autre sens *(« Actif », 31 s)* |
+| **LE MOTIF de la clôture** *(état + raison + n° de mandat)* | ❌ **non envoyé** — c'est le formulaire `validerClos`, derrière `CONSOLE_HEKTOR_CLOTURE_MANDAT`, éteint depuis le 28/08 | `console_job_worker.js:13192-13195` |
+
+➡ **Le geste marche et il arrive chez Hektor. C'est le MOTIF, et lui seul, qui ne va nulle part.**
+La ligne « statut Clos → validerClos → non appelé » de la table précédente parlait **du formulaire
+du motif**, pas du changement de statut — c'est à corriger dans la lecture de ce document.
+
+### 🔎 « REGARDE S'IL N'EXISTE PAS DÉJÀ QUELQUE CHOSE POUR LA CLÔTURE DES MANDATS » (13/10, 07 h 50)
+
+**Oui — presque tout existe.** La chaîne est construite, son interrupteur est **allumé** *(c'est le
+seul qui le soit)*, et elle tourne chaque nuit. **Un seul maillon est au mauvais grain.**
+
+| Ce qui existe | État |
+|---|---|
+| le geste à l'écran *(statut « Clos » + motif)* | ✅ |
+| le worker écrit la date **chez nous** : `cloturerMandatLocalement` → `app_mandat_champ_app` *(clé : annonce + n° de mandat)* | ✅ |
+| **l'interrupteur** `CHAMPS_APP_MANDAT = ("mandat_date_cloture",)` | ✅ **ALLUMÉ depuis le 28/08** — le seul contrat allumé du projet |
+| le magasin descend le carnet chaque nuit *(`magasin_mandat_app.py`, run l. 590)* | ✅ |
+| l'applicateur tourne chaque nuit *(`appliquer_contrat_mandat.py`, run l. 593)* | ✅ |
+| la règle « **vide ne gagne pas** » y est appliquée | ✅ *(l. 84 — elle protège les clôtures que Hektor porte et que l'app ignore)* |
+| la colonne existe dans `app_mandat` *(`date_cloture`)* et dans le registre *(`mandat_date_cloture`)* | ✅ |
+
+#### ⛔ LE MAILLON CASSÉ : L'APPLICATEUR ÉCRIT SUR L'ANNONCE, PAS SUR LE MANDAT
+
+`appliquer_contrat_mandat.py:50` → **`CIBLE = "app_view_generale"`**, et l'`UPDATE` est fait
+`WHERE hektor_annonce_id = …`. **Il pose donc la date sur l'ANNONCE** *(une date par annonce)*,
+alors que le carnet, lui, est rangé par **couple (annonce, n° de mandat)** — et c'est ce couple
+qui fait foi dans le projet *(« la clé : le couple », 24 939 sur 24 939)*.
+
+Et de l'autre côté, `mandat_ledger.py` **exclut volontairement `date_cloture` de son
+`ON CONFLICT`** — sa « **protection par omission** », écrite en tête du fichier :
+
+> *« Ce que le run ne réécrit pas, il le préserve. `date_cloture` est donc HORS du ON CONFLICT :
+> **l'app la possède déjà** (CHAMPS_APP_MANDAT), le carnet la porte, et le run n'a pas à
+> l'écraser. »*
+
+➡ **Les deux moitiés se font confiance l'une à l'autre, et personne n'écrit.** Le ledger s'efface
+devant l'app ; l'applicateur de l'app écrit ailleurs. **La date reste au carnet, et n'arrive
+jamais au mandat.**
+
+#### LA MESURE QUI LE PROUVE — les 2 clôtures faites par l'app
+
+| annonce / mandat | au carnet | dans `app_mandat` | dans le registre |
+|---|---|---|---|
+| **62966 / 18842** | **2026-08-28** | ❌ **NULL** | ❌ **NULL** |
+| **24933 / 11939** | **2026-09-18** | ❌ **NULL** | ⚠ **2026-10-05** — **une AUTRE date**, qui ne vient pas de nous |
+
+*(Et au total : 26 855 mandats, **91** avec une date — 0,3 % ; registre : 118.)*
+
+➡ **Ce n'est donc pas « il n'existe rien » : il existe presque tout, et ça ne se rejoint pas.**
+Le correctif est petit — faire écrire l'applicateur **au grain du mandat** — mais c'est un geste
+sur le **run de nuit**, donc : **chantier 3c, et avec le « vas-y » de Frédéric.**
+
+### ÉTAPE 2/3 DE 3b — LE CORRECTIF (écrit le 13/10, **attend le « vas-y »**)
+
+**Trois remplacements, sur deux fonctions** *(dans leur état d'aujourd'hui — elles ont reçu le
+repli vendu/clos hier soir : empreintes `04dfcb30…` et `85bde9eb…`)* :
+
+| | Fonction | Ce qu'on ajoute |
+|---|---|---|
+| **R1** | archiver | la **fiche** reçoit `archive='1'` · et le **carnet** reçoit **le MOTIF** (`archive_motif`) à côté de `archive` |
+| **R2** | archiver | `archive_avant` voyage dans la charge du travail |
+| **R3** | négociateur | la **fiche** reçoit le nouvel email · l'ancien part dans la charge |
+
+**Les 3 ancres sont uniques** *(vérifié dans la base : R1=1, R2=1, R3=1)*.
+
+**⚠ Le motif est inclus** — c'est ma réponse à l'audit du matin : il est demandé à l'écran,
+envoyé à Hektor, et **perdu chez nous**. Il est rangé au carnet sous la forme
+`choiceVendu · agence` *(ou avec le texte libre si « Autre »)*. **Si Frédéric n'en veut pas, c'est
+la paire R1 qu'on remplace par sa version sans motif — le reste tient sans elle.**
+
+**La règle « on n'invente pas » est conservée mot pour mot** pour le négociateur : sans email, ni
+la fiche ni le carnet ne bougent, et le travail part quand même. **C'est l'essai D de la
+répétition** *(le témoin)*.
+
+**Les 5 essais** : archiver un bien **vivant** avec motif · archiver un bien **vendu** *(la fiche
+touche 0 ligne, le carnet reçoit quand même)* · négociateur **avec** email · négociateur **sans**
+email *(rien ne doit bouger)* · et le retour des deux empreintes après l'inverse.
+
+#### ✅ RÉPÉTITION 3b (13/10, 10 h) — **toutes les mesures exactes**
+
+| | Mesure | Résultat |
+|---|---|---|
+| avant | les 2 empreintes · les 3 ancres | `04dfcb30…` · `85bde9eb…` · **R1=1 R2=1 R3=1** ✅ |
+| après | **empreintes NUES** *(chemin inverse)* | **identiques à celles d'avant** → rien d'autre n'a changé ✅ |
+| **A** archiver un **vivant** | fiche `archive=1` · carnet **`archive=1 \| archive_motif=choiceVendu · agence`** · charge `archive_avant=0` | ✅ **le motif est enfin gardé** |
+| **B** archiver un **vendu** | fiche **0 ligne** *(il n'y est pas)* · carnet `archive=1 \| archive_motif=choiceAutre · autre · essai repetition` | ✅ **le texte libre passe aussi** |
+| **C** négociateur **avec** email | fiche = le nouvel email · charge `negociateur_avant = gonzalez@…` | ✅ |
+| **D** négociateur **SANS** email *(le témoin)* | fiche **avant = après** · carnet : **aucune ligne `negociateur_email` ajoutée** | ✅ **la règle « on n'invente pas » est intacte** |
+| après l'inverse | les 2 empreintes | **revenues à l'identique** ✅ |
+
+### ÉTAPE 5 DE 3b — CONTRÔLE ET ESSAI RÉEL (13/10, 10 h 15)
+
+**Le patch en base** : archiver **3 845 → 5 415**, négociateur **4 508 → 5 187** · le bloc 3b posé
+**une fois** dans chacune · ⭐ **le repli vendu/clos d'hier soir est CONSERVÉ** dans les deux ·
+`SECURITY DEFINER`, propriétaire et droits intacts, **`anon` toujours absent**. Et le patch a
+vérifié lui-même, avant de valider, qu'en défaisant ses 3 remplacements on retombait exactement
+sur les fonctions d'avant.
+
+#### ✅ L'ESSAI RÉEL DE L'ARCHIVAGE — aller-retour complet chez Hektor, bien d'essai 62965
+
+État de départ : `Actif / diffusable=0 / archive=0`, négociateur GONZALEZ.
+
+| Heure (UTC) | |
+|---|---|
+| **08:14:35** | clic « Archiver », motif **« Parti à la concurrence »** |
+| **08:14:44** *(+9 s)* | le travail est encore **`running`** — Hektor n'a pas répondu — et **chez nous** : fiche **`archive=1`** · carnet **`archive=1 \| archive_motif=choiceAutre · concurence`** · charge **`archive_avant=0`** |
+| 08:16 | Hektor confirme *(114 s)*, puis la relecture *(32 s)* |
+| | le bien sort du parc vivant, entre dans l'index des archives sous **5941336** · ⭐ **et le carnet garde le motif : la relecture ne le touche pas** |
+| **08:19:54** | clic « Désarchiver » → travail avec **`app_dossier_id = 5941336`** *(la correction 5a)*, carnet passé à `archive=0`, **motif conservé** |
+| 08:21 | Hektor confirme *(47 s)*, relecture *(34 s)* |
+| **au final** | **`archive=0 / statut=Actif / diffusable=0 / nego=gonzalez@…`** — **l'état de départ, au caractère près** |
+
+⭐ **Le motif d'archivage est gardé chez nous pour la première fois du projet.**
+
+#### ⛔ L'ESSAI DU NÉGOCIATEUR : ARRÊTÉ AVANT D'ÉCRIRE, ET VOICI POURQUOI
+
+J'ai ouvert « Réaffecter le négociateur » et **vérifié d'abord que je pourrais revenir**. Je ne
+peux pas : la liste des négociateurs de la modale ne propose **qu'un seul nom**, *Emmanuelle
+PEREIRA*, et **changer d'agence ne change pas la liste** *(essayé : Firminy → Saint-Étienne, même
+liste)*. **Vincent-Lucas GONZALEZ, le négociateur actuel du bien, n'y est pas.**
+
+➡ Faire l'essai, c'était réaffecter le bien **sans savoir le remettre**. J'ai **annulé sans rien
+envoyer**. *(Règle : accord obligatoire pour tout geste irréversible — et je n'ai pas d'accord pour
+celui-là.)*
+
+**Ce qui reste donc prouvé pour le négociateur** : la **répétition**, essais C et D — la fiche
+reçoit le nouvel email, l'ancien part dans la charge, et **sans email rien ne bouge**. Le chemin
+de code est **le même** que celui de l'archivage, éprouvé en réel ci-dessus.
+
+**⬜ Deux questions pour Frédéric** : ① la modale ne propose **qu'un négociateur** — est-ce voulu,
+ou est-ce un défaut à part ? ② veut-il quand même un essai réel du négociateur, sur un bien de son
+choix et avec une cible qu'il pourra reprendre ?
