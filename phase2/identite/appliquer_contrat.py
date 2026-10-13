@@ -49,7 +49,11 @@ RACINE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RACINE / "phase2" / "sync"))
 sys.path.insert(0, str(RACINE / "phase2" / "identite"))
 
-from contrat_autorite import CHAMPS_APP_ANNONCE, contrat_vide  # noqa: E402
+from contrat_autorite import (  # noqa: E402
+    CHAMPS_APP_ANNONCE,
+    VIDE_NE_GAGNE_PAS,
+    contrat_vide,
+)
 from push_contacts_to_supabase import (  # noqa: E402
     DEFAULT_ENV_FILES,
     SupabaseRestClient,
@@ -149,11 +153,33 @@ def main() -> int:
         # l'index disparaitrait avec elle.
         applique = 0
         for champ in CHAMPS_APP_ANNONCE:
-            couples = [
-                (row.get("app_dossier_id"), row.get(champ))
-                for row in distant
-                if row.get("app_dossier_id") is not None
-            ]
+            # ⚠ « VIDE NE GAGNE PAS » -- ajoute le 13/10/2026.
+            #
+            # CE QUI MANQUAIT. Cette etape posait la valeur de Supabase SANS AUCUN
+            # filtre : un champ vide cote app aurait efface la valeur de Hektor dans
+            # la base locale, en silence. Ses deux freres, eux, appliquent la regle
+            # depuis le 28/08 -- appliquer_contrat_mandat.py l. 84 et
+            # appliquer_contrat_affaire.py -- et son commentaire dit pourquoi :
+            # « un "l'app gagne" aveugle aurait efface les 94 clotures que Hektor
+            #   porte encore, des la premiere nuit, en silence ».
+            # Ce fichier n'importait meme pas la constante.
+            #
+            # ⚠ AUJOURD'HUI C'EST INERTE : CHAMPS_APP_ANNONCE est vide, donc cette
+            #   boucle ne tourne pas. On pose la regle AVANT d'allumer l'interrupteur,
+            #   pas apres -- c'est tout l'interet.
+            ignores = 0
+            couples = []
+            for row in distant:
+                if row.get("app_dossier_id") is None:
+                    continue
+                valeur = row.get(champ)
+                if VIDE_NE_GAGNE_PAS and str(valeur if valeur is not None else "").strip() == "":
+                    ignores += 1
+                    continue
+                couples.append((row.get("app_dossier_id"), valeur))
+            if ignores:
+                print(f"   {champ} : {ignores} valeur(s) vide(s) ignoree(s) "
+                      f"-- « l'app gagne seulement quand elle a quelque chose a dire »")
             if args.dry_run:
                 print(f"   [dry-run] {champ} : {len(couples)} valeurs a poser")
                 continue
