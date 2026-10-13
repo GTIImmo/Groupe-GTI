@@ -460,7 +460,7 @@ Invoke-Step -Label "normalize_source" -Arguments @(
 # hektor_annonce_draft_state. Non bloquant : si la session est expiree, le run continue.
 Invoke-OptionalStepWithRetry -Label "hektor drafts sweep (isDraft)" -Arguments @(
     "phase2\sync\sync_hektor_drafts.py"
-)
+) -WorkerKey "hektor.drafts_sweep"
 
 # C.15 27/08 -- LE BLOC COMMERCIAL de l'immobilier professionnel.
 #
@@ -482,11 +482,11 @@ Invoke-OptionalStepWithRetry -Label "hektor drafts sweep (isDraft)" -Arguments @
 # IMMEDIAT sur 403 -- c'est l'insistance qui avait aggrave le bannissement du 26/08.
 Invoke-OptionalStepWithRetry -Label "hektor immo pro (bloc commercial)" -Arguments @(
     "phase2\sync\sync_hektor_immo_pro.py"
-)
+) -WorkerKey "hektor.immo_pro"
 Invoke-OptionalStepWithRetry -Label "hektor immo pro archivees" -Arguments @(
     "phase2\sync\sync_hektor_immo_pro.py",
     "--archived"
-)
+) -WorkerKey "hektor.immo_pro_archivees"
 
 if (-not $SkipContactDetails) {
     $contactDetailsOk = $false
@@ -588,10 +588,10 @@ Invoke-Step -Label "phase2 appliquer le contrat d autorite" -Arguments @(
 # premiere nuit, en silence.
 Invoke-OptionalStepWithRetry -Label "phase2 magasin des champs de mandat" -Arguments @(
     "phase2\identite\magasin_mandat_app.py"
-)
+) -WorkerKey "phase2.magasin_mandat"
 Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat de mandat" -Arguments @(
     "phase2\identite\appliquer_contrat_mandat.py"
-)
+) -WorkerKey "phase2.contrat_mandat"
 
 # 26bis-(1) 26/08 -- LES ANNONCES QUE L'APP CONNAIT ET QUE LE MIROIR IGNORE.
 # Le contrat ci-dessus sait METTRE A JOUR une ligne d'app_view_generale ; il ne sait pas
@@ -673,7 +673,7 @@ Invoke-OptionalStepWithRetry -Label "phase2 build contacts layer seconde passe" 
     "phase2\contacts\build_contacts_layer.py",
     "--no-reports",
     "--seulement-si-contacts-a-traduire"
-) -MaxAttempts 1 -RetryDelaySeconds 0
+) -MaxAttempts 1 -RetryDelaySeconds 0 -WorkerKey "phase2.contacts_layer_passe2"
 
 # C.16 21/09/2026 -- LES CONTACTS QUE HEKTOR NE CONNAIT PLUS.
 # Quand une fiche est supprimee chez lui, son detail repond 404 et le pipeline
@@ -730,13 +730,19 @@ if (-not $SkipHektorChauffage -and $HektorChauffageLimit -gt 0) {
     # le raisonnement deja applique a Matterport (cf. plus bas).
     # -> 2 essais, non bloquant : sur echec final, une ligne WARN dans le log et le run
     # se poursuit. Le rattrapage a 30 jours reprendra les fiches manquees.
-    # PAS de -WorkerKey : aucune cle chauffage n'existe dans app_worker_registry, et un
-    # heartbeat sur une cle absente ecrit dans le vide (PATCH ...?worker_key=eq.X renvoie
-    # 2xx avec 0 ligne modifiee). A ajouter au registre pour rendre l'echec visible dans
-    # l'ecran Sante.
+    # ⭐ CORRIGE LE 13/10/2026 (chantier 4, point 4j). Ce commentaire disait :
+    #   « PAS de -WorkerKey : aucune cle chauffage n'existe dans app_worker_registry, et un
+    #     heartbeat sur une cle absente ecrit dans le vide (PATCH ...?worker_key=eq.X renvoie
+    #     2xx avec 0 ligne modifiee). A ajouter au registre pour rendre l'echec visible. »
+    # C'ETAIT EXACT, et c'est fait : la cle `hektor.chauffage_delta` est au registre
+    # (patch_4j_battements_invisibles_2026-10-13.sql), et l'etape l'envoie desormais.
+    # ⚠ LA MESURE QUI A DECIDE L'AJOUT : cette etape est celle qui a le plus echoue EN
+    #   SILENCE -- 5 nuits sur 46 journaux (18 et 27/09, 01, 05 et 09/10). Le rattrapage
+    #   a 30 jours reprend les fiches manquees, donc `medium` : visible dans l'ecran
+    #   Sante, PAS d'e-mail.
     $chauffageOk = $false
     Invoke-OptionalStepWithRetry -Label "hektor chauffage delta" -Arguments $hektorChauffageArgs `
-        -MaxAttempts 2 -RetryDelaySeconds 60 -Succeeded ([ref]$chauffageOk)
+        -MaxAttempts 2 -RetryDelaySeconds 60 -Succeeded ([ref]$chauffageOk) -WorkerKey "hektor.chauffage_delta"
     if (-not $chauffageOk) {
         Write-RunLog "WARN  hektor chauffage delta non execute cette nuit (echec non bloquant) - pipeline poursuivi ; rattrapage automatique a 30 jours"
     }
@@ -771,7 +777,7 @@ if (-not $SkipContactMissing -and $ContactMissingLimit -gt 0) {
     #   toute la remontee vers Supabase : le registre des affaires, la
     #   repartition de commission, les contacts, l'annuaire, l'export Android.
     #   C'est un ENRICHISSEMENT : il ne doit pas priver l'agence de sa nuit.
-    Invoke-OptionalStepWithRetry -Label "contact champs manquants (naissance/lieu/matrimonial) delta" -Arguments $contactMissingArgs
+    Invoke-OptionalStepWithRetry -Label "contact champs manquants (naissance/lieu/matrimonial) delta" -Arguments $contactMissingArgs -WorkerKey "contacts.champs_manquants"
 }
 else {
     Write-RunLog "SKIP contact champs manquants delta"
@@ -849,7 +855,7 @@ if (-not $AllowStaleSupabaseDeletes) {
 # aggraver, seulement ameliorer.
 Invoke-OptionalStepWithRetry -Label "phase2 doublure du ledger d affaires" -Arguments @(
     "phase2\sync\pull_from_supabase.py", "--table", "app_affaire_ledger"
-)
+) -WorkerKey "phase2.doublure_affaire_ledger"
 
 # Niveau B/B+ : ledger d'affaires app-owned (offre/compromis/vente). UPSERT sur l'id stable
 # (changements d'etat refletes) mais JAMAIS supprime : si Hektor retire une affaire on la conserve
@@ -993,7 +999,7 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des liens (app_relation)" -
     "phase2\sync\relation_ledger.py",
     "--refresh",
     "--push"
-)
+) -WorkerKey "phase2.registre_relations"
 
 # ============================================================================
 # LE REGISTRE DES MANDATS (app_mandat)      DEPLACE ICI LE 06/10/2026
@@ -1046,7 +1052,7 @@ Invoke-OptionalStepWithRetry -Label "phase2 registre des mandats (app_mandat)" -
     "phase2\sync\mandat_ledger.py",
     "--refresh",
     "--push"
-)
+) -WorkerKey "phase2.registre_mandats"
 
 
 # 11/09/2026 -- L'ENTRETIEN DE LA LECTURE CONSOLE DES COMPROMIS.
@@ -1264,10 +1270,10 @@ Invoke-Step -Label "phase2 perimetre contacts cites par la console" -Arguments @
 # JAMAIS chez Hektor -- lui n'apprend que les changements d'etat.
 Invoke-OptionalStepWithRetry -Label "phase2 magasin des champs d affaire" -Arguments @(
     "phase2\identite\magasin_affaire_app.py"
-)
+) -WorkerKey "phase2.magasin_affaire"
 Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat d affaire" -Arguments @(
     "phase2\identite\appliquer_contrat_affaire.py"
-)
+) -WorkerKey "phase2.contrat_affaire"
 
 # C.4 (30/08) -- LE CARNET DE L'ANNONCE descend chez nous.
 # Il n'a PAS de pendant "appliquer" pour l'instant, et c'est voulu : la liste
@@ -1277,7 +1283,7 @@ Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat d affaire" -Arg
 # ligne et avant le push, exactement comme son frere ci-dessus.
 Invoke-OptionalStepWithRetry -Label "phase2 carnet des champs d annonce" -Arguments @(
     "phase2\identite\magasin_annonce_app.py"
-)
+) -WorkerKey "phase2.carnet_annonce"
 
 Invoke-Step -Label "phase2 push upgrade to supabase" -Arguments $supabaseArgs -WorkerKey "supabase.push_upgrade"
 

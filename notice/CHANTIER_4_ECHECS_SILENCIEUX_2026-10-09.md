@@ -20,9 +20,15 @@
 | **4g** | *(reste de ⑤ : 5f)* l'**abandon réel** ne rend pas l'état | 🔎 **audité le 11/10, NOTÉ NON FAIT** *(décision de Frédéric)* — **auto-réparant** : le registre des affaires est refait chaque nuit depuis Hektor (31 040/31 058 aujourd'hui), donc ≤ 24 h · jamais déclenché par le filet (max **4** tentatives), **2 fois à la main** en 5 mois sur un bien d'essai · ⚠ **et « rendre l'état d'avant » serait DEVINER** : le bon geste est **relire chez Hektor** |
 | **4h** | *(reste de ⑤ : 5h B/C)* **marqueur à l'écran** et **bouton « réessayer »** pour un mandant créé en échec | 🔎 **audité le 11/10, NOTÉ NON FAIT** *(décision de Frédéric)* — le scénario n'est **jamais arrivé** (17 créations de mandant, **0 en erreur** ; **0 contact sans numéro Hektor** sur 62 189) et la **sentinelle de l'option A alerte le jour même** · **B** la pastille = ~10 lignes, un **confort** · ⛔ **C le bouton « réessayer » : NON**, il **doublerait le contact** chez Hektor |
 | **4i** | `--missing-only`, passé **chaque soir par le run**, est **sans appelant depuis le 21/07** : l'option ne fait rien, et personne ne le dit | ✅ **MARQUÉ le 11/10** *(choix de Frédéric : marquer, pas supprimer)* — **+36 lignes de commentaires, 1 ligne d'aide**, et **zéro changement de comportement** : l'option reste passée, mais `--help` dit désormais « SANS EFFET depuis le 21/07/2026 » |
+| **4j** | **23 battements du run partaient dans le vide** : une clé non enregistrée reçoit un **204 avec 0 ligne modifiée**, et le code compte **un succès** — la sonde, elle, énumère la table et ne voit donc **rien** | ✅ **FINI le 13/10** — **23 lignes de registre** posées *(répétition exacte : lignes 53→76 (+23)→53 écart 0 · critical 12→16→12 · absentes 23→0→23)*, **14 `-WorkerKey` ajoutés au run** *(+515 octets, 0 suppression, 0 erreur de syntaxe)* · il ne reste que **3 étapes sans clé**, celles dont l'échec **tue déjà le run** · ⏳ **1ᵉʳ contrôle le 14/10 au matin** |
 
 **Ordre retenu** : celui de l'audit (4a → 4f), puis les deux restes de ⑤ (4g, 4h), qui touchent
 les mêmes fonctions. Frédéric peut le changer.
+
+⚠ **Le point 4j a été AJOUTÉ LE 13/10, après la clôture du chantier.** Il ne vient pas de
+l'audit du 08/10 : c'est **la session du chantier ③ qui l'a trouvé** en inscrivant sa propre
+clé de battement, et qui l'a renvoyé ici sans le corriger — ce n'était pas son périmètre.
+**Mon audit du 11/10 ne regardait pas le run de nuit lui-même : c'est un trou dans mon audit.**
 
 ---
 
@@ -1325,3 +1331,161 @@ qu'il bouge — rien de ce qui s'exécute n'a changé.
 | **4h-B** | la pastille « en attente de Hektor » | **un confort** — 0 occurrence, sentinelle critique déjà en place |
 | **4e** | l'**envoi groupé** des photos *(1 travail pour N : ~30 s au lieu de ~7 min)* · le **WebP** jamais essayé | ⚠ la confirmation devra **compter N et non 1**, sinon un envoi partiel passerait pour réussi — le défaut 4a sur un autre objet |
 | — | `sync_console_documents` : **402 erreurs**, le plus gros producteur du système | **signalé** : c'est déjà lui qui a fait sauter 3 étapes du run le 09/10 |
+
+---
+
+# POINT 4j — LES BATTEMENTS QUE PERSONNE NE LIT
+
+> **Ajouté le 13/10/2026, après la clôture du chantier.** Trouvé par la session du
+> chantier ③, qui l'a signalé sans le corriger. Mon audit du 11/10 ne regardait pas le
+> run de nuit : **je l'avais manqué.**
+
+## ① AUDIT — *13/10/2026, lecture seule*
+
+**Le mécanisme, mesuré dans le code :**
+
+```
+monitoring/heartbeat.py          ecrit en PATCH FILTRE sur app_worker_registry
+                                 cle sans ligne -> 0 ligne touchee, 204 recu,
+                                 et `200 <= status < 300` compte UN SUCCES
+check_gti_health.py:1276         ENUMERE la table : une cle sans ligne
+                                 n'est JAMAIS regardee
+-> une cle non enregistree = un battement qui part dans le vide, EN SILENCE
+```
+
+**Le relevé complet du run (58 étapes) :**
+
+| | |
+|---|---|
+| 41 envoient une clé | *40 distinctes + `pipeline.full`, envoyée à part à la fin* → **9 écrivaient dans le vide** |
+| 17 n'envoyaient **aucune** clé | → **3 n'en ont pas besoin** : elles passent par `Invoke-Step`, qui **tue le run** (`throw`, l. 17) — leur échec déclenche déjà l'alarme du run entier · → **14 étaient vraiment muettes** |
+| + 3 appels directs | hors du mécanisme des étapes : **NON MESURÉS** |
+
+**⚠ Et le silence n'était pas théorique : 6 nuits sur 46 journaux.**
+
+```
+17 et 18/09   Hektor muet : brouillons, immo pro, immo pro archivees
+18/09          + les champs manquants
+18, 27/09, 01, 05, 09/10   le chauffage -- 5 nuits
+01/10          LE REGISTRE DES LIENS n'a pas tourne DU TOUT :
+               « can't open file ...phase2\sync<CR>elation_ledger.py »
+               -> WARN, puis « pipeline continues ». Repare seul le 02/10.
+```
+
+⚠ Je n'affirme **pas** que ça ait causé l'incident du carnet des liens du 09→10/10 :
+**ce n'est pas mesuré**, et la proximité des dates ne prouve rien.
+
+**Deux erreurs à moi, corrigées en cours d'audit :**
+
+| ce que j'avais dit | la mesure |
+|---|---|
+| « 10 clés orphelines » | **9** — la 10ᵉ venait d'être inscrite à 14:08 par la session ③, et je lisais la **copie locale** *(c'est ma propre leçon : mesurer sur la BONNE source)* |
+| « certaines étapes sautent » | **aucune ne saute** — les trous des journaux sont soit « l'étape n'existait pas encore », soit « le run est mort avant » (03/10) |
+
+**Et le `never` de la sonde** *(l. 1357)* : une clé sans aucun succès est **comptée dans le
+résumé mais ne déclenche rien** — le résumé ne regarde que les **retards**. Donc inscrire
+une clé ne peut pas créer un `critical` instantané. ⚠ **Revers signalé, non corrigé** : une
+étape cassée dès le premier jour resterait muette pour toujours.
+
+## ② LE CORRECTIF — *option B de Frédéric, puis option ② pour le périmètre*
+
+**Aucune ligne de code pour les 9** : le run envoyait déjà leurs noms, il manquait les
+lignes de registre. Pour les 14, un `-WorkerKey` chacune.
+
+**La gravité** : **4 critical**, **19 medium**.
+
+⭐ **Pourquoi si peu de critical** : la surveillance n'envoie un mail que sur une **bascule**
+vers critical, et un « retour à la normale » exige **ZÉRO** critical *(l. 2843)*. Le 11/10,
+3 alarmes coincées l'ont rendue muette **pendant des jours**. On passe de 12 à 16, pas plus.
+Les 14 nouvelles sont toutes en **observation** — promotion à revoir dans un mois, mesures
+en main.
+
+**Le seuil, dicté par la mesure et non choisi au doigt** : `pipeline_step` **28 h** (« elle a
+manqué UNE nuit ») pour les étapes inconditionnelles ; `optional_pipeline_step` **50 h** pour
+celles **sous condition** ou qui ont **déjà échoué**. → **13 à 28 h, 10 à 50 h.**
+
+**Et `correspondance_annonces` est restée `medium`** alors qu'elle touche l'identité : c'est
+la **seule des 9** à porter `-FailOnError`. Son échec **tue le run**, donc l'alarme du run
+entier sonne déjà — la mettre en critical ferait sonner **deux fois pour un seul fait**.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+| | vérifié |
+|---|---|
+| **la surveillance muette** | 12 → 16 critical. Les 4 nouvelles ont **0 échec sur 46 nuits** |
+| **du bruit un soir de panne** | le 03/10, le run est mort tôt : cette nuit-là aurait sonné beaucoup. Chaque ligne serait **vraie**, mais c'est du volume |
+| **le worker** | **intact** : il ne lit que **sa** clé, par un filtre *(`console_job_worker.js:1342`)*. **Pas de redémarrage des 4 services** |
+| **le front** | **0 occurrence** de `app_worker_registry` dans `apps/` — aucun écran ne change |
+| **les droits** | la table garde sa sécurité et sa politique ; le patch n'ajoute que de la configuration, **aucune donnée de client** |
+| **un chiffre à l'écran** | le résumé « X planifiés suivis » passe de ~41 à ~64 |
+| **les décisions écrites** | **aucune contredite — deux appliquées** : le commentaire du chauffage *(l. 735 : « à ajouter au registre »)* et celui des photos |
+| **la clé du chantier ③** | `phase2.repose_cloture_mandat` **non touchée**, et **absente de l'inverse** exprès |
+
+## ③ LE CODE — *13/10*
+
+| fichier | ce qui change |
+|---|---|
+| `supabase/patch_4j_battements_invisibles_2026-10-13.sql` | **23 lignes** de registre, `on conflict do nothing` *(idempotent)* |
+| `..._INVERSE.sql` | les retire, **nommées une par une** |
+| `..._REPETITION.sql` | **générée depuis les deux vrais fichiers** par `scratchpad/faire_repetition_4j.py` |
+| `run_full_pipeline.ps1` | **14 `-WorkerKey`** ajoutés · **+515 octets, 0 suppression** · le commentaire du chauffage, devenu faux, réécrit |
+
+## ④ L'ÉPREUVE
+
+```
+analyse PowerShell du run      0 erreur de syntaxe   (ParseFile -- RIEN n'a ete execute)
+releve refait                  58 etapes : 55 avec cle, 3 sans (les 3 qui tuent le run)
+-WorkerKey declare ?           OUI, [string]$WorkerKey = "" dans les deux fonctions
+les 15 cles a blanc            heartbeat.py --dry-run : charge correcte, 0 ecriture
+                               (verifie dans le code : `return False` AVANT _config()
+                                et avant tout appel reseau -- l. 97)
+```
+
+### ⚠ MA RÉPÉTITION A MENTI LA PREMIÈRE FOIS
+
+Première exécution : **`+23` et `écart 0` justes**, mais le 3ᵉ contrôle disait `1 -> 0 -> 1`
+au lieu de `9`. **Mon gabarit mettait une parenthèse en trop** autour de la liste :
+
+```sql
+from (values (('phase2.adresses_photos'),('phase2.correspondance_identite'),…)) as v(cle)
+             ^-- en trop : Postgres lit UNE ligne de 9 colonnes,
+                 et `as v(cle)` n'en nomme qu'UNE -> une seule cle verifiee
+```
+
+**Deux corrections, pas une** : la parenthèse, **et** la liste qui n'est plus recopiée à la
+main — elle est désormais **extraite du patch lui-même**, donc elle ne peut plus en dériver.
+Et le contrôle porte maintenant sur **les 23**, plus sur 9.
+
+➡ **La leçon** : un contrôle peut être vert *et* ne pas mesurer ce qu'on croit. **Vérifier
+le contrôle lui-même**, pas seulement son résultat.
+
+## ⑤ ✅ 4j EST CLOS — *13/10/2026*
+
+**La répétition, seconde exécution — exacte au caractère près :**
+
+```
+lignes 53 -> 76 (+23) -> 53 (ecart 0)
+critical 12 -> 16 -> 12
+cles des 23 absentes du registre 23 -> 0 -> 23
+```
+
+**Le vrai patch, collé par Frédéric, contrôlé juste après :**
+
+```
+lignes au registre        53 -> 76        (+23 exactement)
+mes 23 cles presentes     23   ·  manquantes 0
+critical actives          12 -> 16        (+4, les 4 voulus)
+seuil 28 h / 50 h         13 / 10         (exactement comme concu)
+deja un succes            0  -> toutes « jamais vues », donc AUCUNE alarme
+cle du chantier ③         medium / optional_pipeline_step / active   INTACTE
+```
+
+⚠ **Aucun push, aucun déploiement, aucun redémarrage** : le run lit son fichier à chaque
+exécution, donc la modification est active **dès la nuit du 13 au 14/10**.
+
+⏳ **CE QUI RESTE À CONTRÔLER, LE 14/10 AU MATIN** : les **23** doivent porter un premier
+succès daté. Celle qui n'en a pas est mal orthographiée quelque part.
+
+⏳ **Et ce qui reste à décider** : la promotion en `critical` des étapes qui l'auront mérité,
+**dans un mois, mesures en main** — en particulier `phase2.registre_relations`, la seule des
+14 à avoir déjà disparu une nuit entière.
