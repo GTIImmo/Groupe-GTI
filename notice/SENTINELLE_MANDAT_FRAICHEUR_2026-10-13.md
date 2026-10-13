@@ -227,5 +227,86 @@ pas**. C'est vrai à 07:48 comme à 08:20, et même le jour où la descente pren
 > quelle que soit la durée de la descente. **Aucune tâche planifiée n'a été modifiée, et il n'y
 > a rien à faire plus tard** : la question est fermée, pas reportée.
 >
-> ⚠ Reste **ouvert**, et seulement ça : le **3ᵉ cas** de confusion UTC / locale *(le faux vert
-> du passage de 01:48, section 9)*. Il ne me l'a pas confié.
+> ✅ Le **3ᵉ cas** a été confié ensuite et traité — **option B** — voir la section 11.
+
+---
+
+## 11. LE 3ᵉ CAS — *la mesure a renversé le diagnostic : il y avait DEUX défauts*
+
+J'avais signalé « un faux vert à 01:48 ». En mesurant, j'ai trouvé que ce n'était pas le plus
+grave.
+
+### Ce que 10 nuits de journaux du moniteur disent *(`monitoring/logs/`, 120 fichiers lus)*
+
+| passage | `data.doublure_journal` | juste ? |
+|---|---|---|
+| **01:48** | **« à jour » — 10 fois sur 10** | ❌ **faux** : le relevé est de la veille |
+| 03:48 | avertissement — 10/10 | techniquement vrai… |
+| 05:48 | avertissement — 10/10 | …mais |
+| 07:48 | avertissement — 10/10 | **c'est l'état normal** |
+| 09:48 → 23:48 | « à jour » | ✅ |
+
+⭐ **La preuve du défaut d'horloge tient en une ligne** : 01:48 et 03:48 lisent **exactement les
+mêmes données** et disent l'inverse. Seul le changement de date **UTC** à 02:00 l'explique —
+`releve_le` est écrit en date **locale** *(`comparer_doublures.py` l. 224, `time.strftime`)* et
+était comparé à `datetime.now(timezone.utc)`.
+
+⭐⭐ **Mais le second défaut est le vrai.** J'ai trouvé **qui écrit ce relevé** :
+`scheduled/run_descente.ps1`, étape **2 sur 3**, donc **juste après la Descente** — entre
+**08:03 et 08:49**. Demander « le relevé est-il d'aujourd'hui ? » avant 08:30 **ne peut jamais
+être vrai** : la sonde posait **3 avertissements par nuit sur un état parfaitement normal**.
+**Le même mal que les deux autres sentinelles**, corrigées le même jour.
+
+*Et un fait écrit dans le fichier lui-même (l. 66-68) : **seuls les rouges envoient un e-mail**.
+Ces avertissements n'ont jamais réveillé personne — ils remplissaient la ligne « 8 warning »,
+dont celle de l'e-mail du 13/10 au matin.*
+
+### Le remède choisi — **option B**, et c'est le même patron que les deux autres
+
+**On ne devine pas avec une heure écrite en dur : on lit la fraîcheur réelle.**
+
+> • relevé **du jour** → « à jour »
+> • relevé de la veille **et la Descente du jour n'a pas encore tourné** → « **NORMAL** », on se tait
+> • la **Descente a tourné** mais le relevé n'a pas suivi → **avertissement** ← *la vraie panne*
+> • fraîcheur inconnue *(pas de `sb_pull_state`)* → on ne devine pas, on avertit comme avant
+
+**La panne est détectée le jour même, au passage de 09:48**, et **aucune heure n'est écrite en
+dur** : même le jour où la Descente durera trois heures, la sonde restera juste.
+
+⚠ **Et ce n'est pas un angle mort** : si la **Descente elle-même** ne tourne pas,
+`TASK_CRITICALITY["GTI Descente"] = "critical"` le dit déjà, **en rouge**. Vérifié avant de
+rendre la main.
+
+### Éprouvé — 6 cas de plus, **horloge figée**
+
+Le cas de 01:48 n'arrive **qu'une fois par nuit**, et on ne change pas l'heure de la machine :
+l'épreuve **fige l'heure que la sonde croit être** *(`_horloge_figee`)*. Les 6 cas : 09:48 normal ·
+01:48 relevé de la veille · 07:48 idem · **la vraie panne** · relevé d'avant-hier · fraîcheur
+inconnue. **14 épreuves au total dans ce fichier, 14 vertes.**
+
+⭐ **TÉMOIN INVERSE, et il était indispensable** : à 01:48 le nouveau code rend **le même
+statut** que l'ancien *(`ok`)* — un test naif n'aurait donc **rien prouvé**. J'ai exécuté
+**l'ancien code pris dans le commit précédent** *(`git show HEAD:`)* et comparé :
+
+| | avant | après | |
+|---|---|---|---|
+| **01:48**, relevé de la veille | « à jour » | « de la veille — **NORMAL** » | ✅ **bascule** |
+| **07:48**, relevé de la veille | avertissement | « NORMAL » | ✅ **bascule** |
+| **09:48**, Descente faite, relevé non | avertissement | avertissement | ✅ **identique, et c'est voulu** |
+
+### Contrôle sur le vrai état, en lecture seule
+
+```
+[ok] data.doublure_journal   Releve des doublures a jour : 10 doublures, 49 app seule
+     dernier_releve             '2026-10-13'
+     descente_la_plus_recente   '2026-10-13T07:45:03'
+     descente_du_jour           True
+```
+
+### Ce que ça change pour toi
+
+- **4 bruits de moins par nuit** *(1 faux vert + 3 avertissements inutiles)*.
+- **Un avertissement de moins** dans le résumé de l'e-mail du matin.
+- Une panne du relevé est maintenant **dite le jour même**, alors qu'avant elle se **noyait**
+  dans trois avertissements quotidiens identiques.
+

@@ -229,10 +229,17 @@ report ne se décident jamais sans lui.
    TRANCHE LE 13/10 : OPTION 1, ON NE TOUCHE A RIEN -- le code gere le cas quelle que
    soit la duree de la descente. Rien a faire plus tard : la question est FERMEE, pas
    reportee. Aucune tache planifiee n'a ete modifiee.
-   ⚠ ET UN TROISIEME CAS DE LA MEME CONFUSION UTC/LOCALE, NON CORRIGE (son appel) :
-   l. ~2184, releve_le est une date LOCALE comparee a datetime.now(timezone.utc) ->
-   entre minuit et 2 h, le passage de 01:48 peut dire « a jour » sur le releve de la
-   VEILLE. Faux vert, deux heures par nuit.
+   ✅ LES TROIS SENTINELLES SONT CORRIGEES (13/10) : data.doublure_journal avait DEUX
+   defauts, et la mesure a renverse le diagnostic. (1) l'horloge : releve_le est une
+   date LOCALE comparee a une date UTC -- 10 nuits de journaux montrent 01:48 « a jour »
+   10 fois sur 10 quand 03:48, MEMES DONNEES, avertit 10 fois sur 10. (2) le vrai
+   defaut : ce releve est ecrit par la DESCENTE (run_descente.ps1 etape 2/3, vers
+   08:03-08:49), donc « est-il d'aujourd'hui ? » est FAUX chaque nuit -> 3 avertissements
+   par nuit sur un etat NORMAL. Remede (option B) : on lit la fraicheur reelle, pas une
+   heure en dur -- tant que la Descente du jour n'a pas tourne, la veille est normale ;
+   des qu'elle a tourne, le releve doit avoir suivi (panne dite a 09:48, le jour meme).
+   Pas d'angle mort : « GTI Descente » est deja surveillee en critical.
+   Gain : 4 bruits de moins par nuit, 1 avertissement de moins dans l'e-mail du matin.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*

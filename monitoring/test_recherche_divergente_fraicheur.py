@@ -31,7 +31,8 @@ COLONNES = ("hektor_contact_id TEXT, search_index INTEGER, prix_min TEXT, prix_m
 
 
 def _base(dossier: Path, natif_ecrit_le: str | None, descendue: str | None,
-          divergente: bool, en_cours: bool = False, avec_pull_state: bool = True) -> Path:
+          divergente: bool, en_cours: bool = False, avec_pull_state: bool = True,
+          releve_le: str | None = None) -> Path:
     """Le plus petit phase2.sqlite qui fasse tourner `check_doublures`."""
     (dossier / "phase2").mkdir(parents=True, exist_ok=True)
     chemin = dossier / "phase2" / "phase2.sqlite"
@@ -42,7 +43,7 @@ def _base(dossier: Path, natif_ecrit_le: str | None, descendue: str | None,
                  "cle TEXT, accord INTEGER, hektor_seul INTEGER, app_seule INTEGER)")
     conn.execute("INSERT INTO app_doublure_journal VALUES "
                  "(?, 'app_contact_search_current', 'cle', 2, 0, 0)",
-                 (datetime.now().strftime("%Y-%m-%d"),))
+                 (releve_le or datetime.now().strftime("%Y-%m-%d"),))
     conn.execute("CREATE TABLE app_contact_search_current (" + COLONNES + ")")
     conn.execute("CREATE TABLE app_contact_search_current__sb (" + COLONNES + ")")
     # une recherche identique des deux cotes, plus une qui diverge si on le demande
@@ -67,6 +68,94 @@ def _base(dossier: Path, natif_ecrit_le: str | None, descendue: str | None,
     conn.commit()
     conn.close()
     return chemin
+
+
+def _horloge_figee(quand_local: datetime):
+    """Un `datetime` dont `now()` rend TOUJOURS l'instant donne.
+
+    POURQUOI. Le defaut d'horloge ne se voit qu'entre minuit et 02:00, c'est-a-dire
+    au seul passage de 01:48 -- une fois par nuit. On ne va pas attendre cette nuit
+    pour savoir si le correctif tient, et on ne peut pas changer l'heure de la
+    machine. On fige donc l'heure que la sonde croit etre.
+    """
+    aware = quand_local.astimezone()
+
+    class Figee(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return aware.astimezone(tz) if tz is not None else aware.replace(tzinfo=None)
+
+    return Figee
+
+
+def epreuve_journal() -> int:
+    """3e PARTIE : `data.doublure_journal`, les DEUX defauts du 13/10.
+
+    1. l'horloge : `releve_le` est une date LOCALE comparee a une date UTC ;
+    2. la question etait mal posee : le releve est ecrit par la DESCENTE (vers
+       08:03-08:49), donc « est-il d'aujourd'hui ? » est faux chaque nuit.
+
+    Mesure sur 10 nuits de journaux AVANT le correctif : 01:48 disait « a jour »
+    10 fois sur 10, et 03:48, 05:48, 07:48 avertissaient 10 fois sur 10 -- sur un
+    etat parfaitement normal.
+    """
+    vrai_datetime = cgh.datetime
+    rates = 0
+
+    # Le passage de 01:48 locale : en UTC on est encore la VEILLE.
+    nuit = datetime(2026, 10, 13, 1, 48, 54)
+    # Un passage de plein jour, apres la Descente.
+    jour = datetime(2026, 10, 13, 9, 48, 54)
+
+    cas = [
+        ("1. 09:48, releve du jour, descente du jour   -> a jour",
+         jour, dict(releve_le="2026-10-13", descendue="2026-10-13T07:45:03"),
+         "ok", "a jour"),
+        ("2. 01:48, releve de la VEILLE, descente de la veille -> NORMAL, on se tait",
+         nuit, dict(releve_le="2026-10-12", descendue="2026-10-12T08:15:02"),
+         "ok", "NORMAL"),
+        ("3. 07:48, releve de la veille, descente de la veille -> NORMAL aussi",
+         datetime(2026, 10, 13, 7, 48, 54),
+         dict(releve_le="2026-10-12", descendue="2026-10-12T08:15:02"),
+         "ok", "NORMAL"),
+        ("4. 09:48, la DESCENTE a tourne mais pas le releve -> LA VRAIE PANNE",
+         jour, dict(releve_le="2026-10-12", descendue="2026-10-13T07:45:03"),
+         "warning", "pas fait aujourd'hui"),
+        ("5. releve d'AVANT-HIER, descente du jour     -> panne aussi",
+         jour, dict(releve_le="2026-10-11", descendue="2026-10-13T07:45:03"),
+         "warning", "pas fait aujourd'hui"),
+        ("6. pas de sb_pull_state : on ne devine pas   -> comme avant, on avertit",
+         nuit, dict(releve_le="2026-10-12", descendue=None, avec_pull_state=False),
+         "warning", "pas fait aujourd'hui"),
+    ]
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="epreuve_journal_") as tmp:
+            racine = Path(tmp)
+            for titre, quand, args_base, statut_voulu, mot_voulu in cas:
+                _base(racine, natif_ecrit_le="2026-10-13T04:49:18+00:00",
+                      divergente=False, **args_base)
+                cgh.datetime = _horloge_figee(quand)
+                moniteur = cgh.Monitor(argparse.Namespace(project_root=str(racine)), None)
+                moniteur.check_doublures()
+                journal = [r for r in moniteur.results
+                           if r.status_key == "data.doublure_journal"]
+                if len(journal) != 1:
+                    print("  ECHEC  " + titre)
+                    print(f"         {len(journal)} ligne(s), attendu 1")
+                    rates += 1
+                    continue
+                r = journal[0]
+                if r.status != statut_voulu or mot_voulu not in r.message:
+                    rates += 1
+                    print("  ECHEC  " + titre)
+                    print(f"         statut {r.status!r}, attendu {statut_voulu!r}")
+                    print(f"         message : {r.message}")
+                else:
+                    print(f"  ok     {titre}  [{r.status}]")
+    finally:
+        cgh.datetime = vrai_datetime
+    return rates
 
 
 def main() -> int:
@@ -143,11 +232,15 @@ def main() -> int:
                 print(f"  ok     {titre}  [{r.status}]")
 
     print()
+    print("-- data.doublure_journal : l'horloge, et la question mal posee --")
+    rates += epreuve_journal()
+
+    print()
     if rates:
-        print(f"{rates} epreuve(s) sur {len(scenarios)} en ECHEC.")
+        print(f"{rates} epreuve(s) en ECHEC.")
         return 1
-    print(f"Les {len(scenarios)} epreuves passent : la soeur se tait quand elle ne peut pas "
-          "savoir, ET crie encore quand les criteres divergent pour de vrai.")
+    print(f"Les {len(scenarios)} + 6 epreuves passent : les deux sentinelles de cette sonde "
+          "se taisent quand l'etat est normal, ET parlent quand il ne l'est pas.")
     return 0
 
 

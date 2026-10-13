@@ -2108,6 +2108,7 @@ class Monitor:
             copie_descendue_le = None
             natif_ecrit_le = None
             copie_en_cours = False
+            descente_la_plus_recente = None
             if conn.execute(
                 "SELECT count(*) FROM sqlite_master WHERE type='table' "
                 "AND name='app_contact_search_current__sb'").fetchone()[0]:
@@ -2170,6 +2171,13 @@ class Monitor:
                     copie_descendue_le = ligne[0]
                     copie_en_cours = (ligne[1] or "").strip().lower().startswith(
                         "copie en cours")
+                # Quand la Descente a-t-elle tourne pour la derniere fois ? Toutes
+                # ses tables portent le meme horodatage de depart, donc le maximum
+                # est l'heure du dernier passage.
+                derniere = conn.execute(
+                    "SELECT max(derniere_descente) FROM sb_pull_state").fetchone()
+                if derniere:
+                    descente_la_plus_recente = derniere[0]
             if conn.execute(
                 "SELECT count(*) FROM sqlite_master WHERE type='table' "
                 "AND name='app_contact_search_current'").fetchone()[0]:
@@ -2183,14 +2191,49 @@ class Monitor:
 
         detail = {"dernier_releve": dernier, "doublures": lignes,
                   "lignes_app_seule": app_seule, "recherches_divergentes": divergentes}
-        aujourdhui = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        if dernier != aujourdhui:
-            self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "warning",
-                     f"Releve des doublures pas fait aujourd'hui (dernier : {dernier})", detail)
-        else:
+        # ⚠ DEUX DEFAUTS CORRIGES ICI LE 13/10/2026, ET LE SECOND EST LE PLUS GROS.
+        #
+        #   1. L'HORLOGE. `releve_le` est une date LOCALE (comparer_doublures.py :
+        #      `time.strftime("%Y-%m-%d")`) et on la comparait a une date UTC. Entre
+        #      minuit et 02:00 les deux ne sont pas le meme jour : mesure sur 10 nuits
+        #      de journaux, le passage de 01:48 disait « a jour » 10 fois sur 10,
+        #      pendant que celui de 03:48 -- MEMES DONNEES -- disait l'inverse.
+        #      Seul le changement de date UTC explique l'ecart.
+        #
+        #   2. LA QUESTION ETAIT MAL POSEE. Ce releve est ecrit par la DESCENTE, juste
+        #      apres elle (scheduled/run_descente.ps1, etape 2/3), donc entre 08:03 et
+        #      08:49 selon les jours. Demander « est-il d'aujourd'hui ? » avant 08:30
+        #      ne peut JAMAIS etre vrai : la sonde posait donc 3 avertissements par
+        #      nuit (03:48, 05:48, 07:48, mesures 10/10) sur un etat NORMAL. Meme mal
+        #      que data.mandat_un_numero et data.recherche_divergente, corrigees le
+        #      meme jour : alarmer sur un etat normal apprend a ne plus etre lu.
+        #
+        #   LE REMEDE, et c'est le meme patron que les deux autres : on ne devine pas
+        #   avec une heure ecrite en dur, ON LIT LA FRAICHEUR REELLE. Tant que la
+        #   Descente du jour n'a pas tourne, un releve de la veille est l'etat attendu.
+        #   Des qu'elle a tourne, le releve doit avoir suivi -- sinon c'est une vraie
+        #   panne, et elle sort au premier passage suivant (09:48).
+        #
+        #   ⚠ CE N'EST PAS UN ANGLE MORT : si la Descente elle-meme ne tourne pas,
+        #     TASK_CRITICALITY["GTI Descente"] = "critical" le dit deja, et en rouge.
+        aujourdhui = datetime.now().strftime("%Y-%m-%d")
+        descente = parse_iso_locale_si_sans_fuseau(descente_la_plus_recente)
+        descente_du_jour = (None if descente is None
+                            else descente.astimezone().strftime("%Y-%m-%d") == aujourdhui)
+        detail.update({"descente_la_plus_recente": descente_la_plus_recente,
+                       "descente_du_jour": descente_du_jour})
+        if dernier == aujourdhui:
             self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "ok",
                      f"Releve des doublures a jour : {lignes} doublures, "
                      f"{app_seule} ligne(s) connues de l'app seule", detail)
+        elif descente_du_jour is False:
+            self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "ok",
+                     f"Releve des doublures de la veille ({dernier}) -- NORMAL, la "
+                     f"Descente du jour n'a pas encore tourne (derniere : "
+                     f"{descente_la_plus_recente})", detail)
+        else:
+            self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "warning",
+                     f"Releve des doublures pas fait aujourd'hui (dernier : {dernier})", detail)
 
         descendue = parse_iso_locale_si_sans_fuseau(copie_descendue_le)
         ecrit = parse_iso_locale_si_sans_fuseau(natif_ecrit_le)
