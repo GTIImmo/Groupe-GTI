@@ -215,13 +215,20 @@ report ne se décident jamais sans lui.
        presentees le 13/10 (A le retirer du run / B le redresser / C le commenter),
        RECOMMANDE A, Frederic n'a pas encore tranche.
    Puis : 3d / 3e (documents et photos)
-①-ter 📜 FAUSSE ALERTE REFERMEE LE 13/10, A NE PAS RELANCER : la cloture de 62774
-   du 30/08 manque au carnet Supabase alors que la copie locale l'a vue le 31/08.
-   62774 EST LE BAC A SABLE DU PROJET (essais 25/08, 28/08, 29/08, 01/09, 11/10 ;
-   note ACTIONS_TRANSACTION_HEKTOR_2026-08-28.md : « Bac a sable 62774 : propre »).
-   C'etait une cloture D'ESSAI, retiree avec les autres traces.
-   ➡ LES 2 CLOTURES REELLES SUR 2 SONT INTACTES. Pas de sentinelle a poser.
-   (Non prouve : l'acte de suppression n'a pas ete retrouve.)
+①-ter ⭐⭐ LES TROIS CLOTURES DE MANDAT « DE L'APP » ETAIENT DES ESSAIS (etabli le 13/10).
+   62966 = L'ANNONCE D'ESSAI, designee explicitement pour eprouver la cloture
+     (CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md, 3 fois : « Essai sur l'annonce
+      62966 (mandat 660) » -- exactement notre ligne, n° 18842)
+   62774 = LE BAC A SABLE (« Bac a sable 62774 : propre »)
+   24933 = le bien d'essai des taches 3.2 / 3.4 (4 fichiers SUPPRESSION_ESSAIS*)
+   ➡ AUCUN UTILISATEUR REEL N'A JAMAIS CLOS UN MANDAT DANS L'APP. Colle a Frederic :
+     « CE SERA mon app qui va le gerer » -- au futur. Le defaut etait reel (la date
+     ne tenait pas), mais il n'a JAMAIS perdu une donnee de production.
+   ➡ FAUSSE ALERTE REFERMEE : la ligne « disparue » de 62774 etait une trace d'essai,
+     retiree comme les autres. PAS DE SENTINELLE A POSER.
+   ⭐ Les 2 dates reposees sont des donnees d'ESSAI, LAISSEES EXPRES : ce sont les
+     TEMOINS DE LA PIECE 4 -- si elles survivent a la nuit, la re-pose marche.
+     A retirer quand la piece 4 sera prouvee.
 ①-bis NE SE DECIDENT PAS SANS LUI, sortis du chantier ③ les 12 et 13/10 :
      - MODIFIER LES CHAMPS d'un bien vendu/clos : ce n'est PAS un repli, c'est un autre
        chantier (la file d'attente de 10 min a le n° de dossier pour cle primaire), et

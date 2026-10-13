@@ -2197,3 +2197,38 @@ pas démontrée.
 deux dates **repartent à la prochaine nuit** — la nuit efface et réinsère la ligne de registre
 des annonces du parc vivant. Modèle à recopier : run **l. 1510**,
 `Console/remplir_adresses_photos.js` → RPC `app_photos_remplir_adresses_registre`.
+
+### ⭐⭐ ET LA VÉRITÉ COMPLÈTE : **LES TROIS CLÔTURES ÉTAIENT DES ESSAIS**
+
+En rangeant, un fichier non suivi m'a mis sur la piste :
+`notice/SUPPRESSION_ESSAIS_3_2_24933_2026-09-07.json` — une **sauvegarde datée avant un geste
+destructif** *(la règle de la maison)*, qui dit : *« Deux lignes d'essai de la tâche 3.2 »*.
+Il y en a **quatre** de cette famille, tous sur **24933**.
+
+Et `notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md` le dit **trois fois** :
+> *« la preuve A.3-a sur **l'annonce d'essai 62966** »* · *« sur l'annonce d'essai 62966 »* ·
+> *« le patron de la clôture (C.13-a et b) […] **Essai sur l'annonce 62966 (mandat 660)** »*
+
+⭐ **Et c'est exactement notre ligne** : 62966, mandat Hektor **660**, n° **18842**.
+
+| annonce | ce que c'est |
+|---|---|
+| **62966** | **l'annonce d'essai**, désignée explicitement pour éprouver la clôture |
+| **62774** | **le bac à sable** *(« Bac a sable 62774 : propre »)* |
+| **24933** | **le bien d'essai des tâches 3.2 / 3.4** *(4 fichiers de suppression)* |
+
+➡ **AUCUN UTILISATEUR RÉEL N'A JAMAIS CLOS UN MANDAT DANS L'APP.** Ce qui colle mot pour mot
+à Frédéric : *« tous les mandats n'ont pas de date de clôture. **Ce sera** mon app qui va le
+gérer »* — **au futur**.
+
+**Ce que ça corrige dans ce que j'ai écrit :**
+- « **3 clôtures faites dans l'app** » laissait croire à des gestes métier. **C'étaient 3
+  essais.** Le défaut mesuré était réel *(la date ne tenait pas)*, mais **il n'a jamais perdu
+  une donnée de production** — on l'a réparé **avant** que ça compte. C'est une meilleure
+  nouvelle que celle que j'ai annoncée.
+- l'alerte du 62774 est **définitivement close** : la pratique de suppression des essais est
+  **documentée quatre fois**, avec sauvegarde datée.
+- ⚠ **Les 2 dates que le patch vient de reposer sont donc des données d'essai**, affichées au
+  registre sur deux biens d'essai. ⭐ **Je propose de les LAISSER** : ce sont précisément les
+  **témoins** qui prouveront la **pièce 4** demain matin — si elles survivent à la nuit, la
+  re-pose marche. À retirer quand la pièce 4 sera prouvée.
