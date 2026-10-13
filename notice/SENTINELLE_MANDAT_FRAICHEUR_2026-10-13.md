@@ -137,8 +137,90 @@ Et le plus frappant : **deux lignes au-dessus du rouge**, le même code calcule 
 pas fait aujourd'hui »*. **Elle sait que sa copie est périmée, et tire quand même.**
 Le garde-fou est **à un `and` près**.
 
-> ❓ **QUESTION, JE NE DÉCIDE PAS** : est-ce que je corrige `data.recherche_divergente` de la
-> même façon ?
-> **Option A** — oui, maintenant *(≈ 20 min : même patron, même épreuve, le rouge réel reste
-> intact)*. **Option B** — non, un autre jour : le chantier ③ est en cours et une autre session
-> travaille sur le dépôt.
+> ✅ **RÉPONSE DE FRÉDÉRIC : « A, maintenant »** — fait, voir la section 9.
+
+---
+
+## 9. LA SŒUR EST CORRIGÉE — *et mieux que ce que proposait le 29/08*
+
+Le correctif proposé le 29/08 était : *« ne pas évaluer quand le relevé des doublures n'est pas
+d'aujourd'hui »*. En mesurant, j'ai trouvé **une meilleure source** : les deux côtés portent
+leur propre date, donc on lit la **fraîcheur réelle** au lieu d'un indice indirect.
+
+| ce qu'on compare | sa date, mesurée le 13/10 |
+|---|---|
+| le **natif** `app_contact_search_current` *(réécrit en entier chaque nuit — 77 178 lignes, toutes la même date)* | `max(refreshed_at)` = **04:49 UTC** *(= 06:49 chez nous)* |
+| la **doublure** `app_contact_search_current__sb` | `sb_pull_state.derniere_descente` = **07:45 locale** *(= 05:45 UTC)* |
+
+05:45 UTC **après** 04:49 UTC → la copie est à jour, donc on juge normalement. À 07:48, elle ne
+l'était pas.
+
+⭐ **Et j'ai trouvé le piège avant qu'il ne morde.** Le fichier contient **déjà** un lecteur de
+dates, `parse_iso`, qui suppose **UTC** quand le fuseau manque. S'en servir ici aurait
+**rajeuni la copie de deux heures** — et **dans le pire sens** : une copie périmée serait
+passée pour fraîche, donc la sentinelle aurait crié en croyant ses données bonnes.
+D'où un **jumeau** `parse_iso_locale_si_sans_fuseau`, dont le nom dit ce qu'il fait.
+*(Et `parse_iso` reste juste là où elle sert : les dates de Supabase et des API, toutes en UTC.)*
+
+**Éprouvé : 8 cas sur 8** — `monitoring/test_recherche_divergente_fraicheur.py`, sur une base
+d'essai construite dans un dossier temporaire *(jamais la vraie)*, en appelant **la seule sonde**.
+Dont **« copie à jour ET un critère qui diverge → on crie encore »**, et les 4 cas où la
+fraîcheur est **inconnue** → **on ne devine pas, on juge comme avant**.
+
+**Témoin inverse** : en remplaçant le bon lecteur de dates par `parse_iso`, le cas 8 **bascule**
+de `warning` à `critical`. Il mesure donc bien quelque chose.
+
+**Contrôle réel**, base en lecture seule : `[ok] 0 (seuil 0)`, `copie_en_retard = False`.
+
+⚠ **Un défaut voisin, trouvé en passant, PAS corrigé** *(c'est ton appel)* : deux lignes plus
+haut, le même code compare `releve_le` — écrit en **date locale** par `comparer_doublures.py` —
+à `datetime.now(timezone.utc)`, une **date UTC**. Entre minuit et 2 h du matin les deux ne sont
+pas le même jour : le passage de **01:48** peut dire « relévé à jour » en s'appuyant sur celui de
+**la veille**. C'est un **faux vert**, deux heures par nuit — **la troisième fois** que la même
+confusion UTC / locale apparaît dans ce fichier.
+
+---
+
+## 10. ⛔ DÉCALER LE MONITEUR NE PEUT PAS MARCHER — *la mesure contredit la consigne*
+
+Tu as tranché : **« décaler le moniteur du matin après 08:05 »**. **Je ne l'ai pas fait**, parce
+qu'en mesurant la durée réelle de la descente j'ai trouvé que ça **ne résoudrait rien**.
+
+**Ce que j'avais dit** : la copie est prête « vers 07:58 ». **C'était le bon chiffre d'un seul
+jour.** Les 12 dernières descentes :
+
+| jour | début | durée | fin |
+|---|---|---|---|
+| 13/10 | 07:45 | **18 min** | 08:03 |
+| 12/10 | 08:15 | **50 min** | 09:04 |
+| 11/10 | 08:15 | 33 min | 08:48 |
+| 10/10 | 08:15 | 41 min | 08:56 |
+| 09/10 | 08:15 | 39 min | 08:53 |
+| **08/10** | 08:15 | **64 min** | **09:19** |
+| 07 → 03/10 | 08:15 | 30 à 36 min | ≈ 08:45 → 08:50 |
+
+Avec un départ à 07:45, la copie est prête **entre 08:03 et 08:49** selon le jour. **08:05 ne
+suffit donc pas** : sur 11 de ces 12 jours la descente tournait encore.
+
+**Et le fond du problème est géométrique.** La fenêtre dangereuse va du moment où le run
+réécrit nos tables *(≈ 06:49)* jusqu'au moment où la copie est prête *(08:03 → 08:49)* : elle
+fait donc **de 1 h 14 à 2 h**. Or le moniteur a **un seul déclencheur**, qui se **répète toutes
+les 2 h** *(départ 17:48:54, donc …:48:54)*.
+
+> **Une cadence de 2 h et une fenêtre de 2 h : quel que soit le décalage, un passage tombe
+> dedans.** Le mettre à 08:20 → dedans la plupart des jours. Le mettre à 09:20 → le passage
+> **précédent** tombe à 07:20, dedans aussi. **Le décalage déplace le problème, il ne l'enlève
+> pas** — et il bougerait les **12** passages de la journée, pas seulement celui du matin.
+
+**Ce qui marche, et qui est fait** : les deux sentinelles **savent maintenant qu'elles ne savent
+pas**. C'est vrai à 07:48 comme à 08:20, et même le jour où la descente prendra 90 minutes.
+
+### ❓ Si tu veux quand même fermer la cause à la source — à toi de trancher
+
+| | ce que ça fait | ce que ça coûte |
+|---|---|---|
+| **1. ne rien toucher** *(ma recommandation)* | le code gère déjà le cas, quelle que soit la durée | rien |
+| **2. descendre les 2 doublures EN PREMIER** | `app_mandat__sb` *(97ᵉ sur 110)* et `app_contact_search_current__sb` seraient prêtes vers **07:46**, avant le passage de 07:48 | on touche à **la descente**, donc au run : c'est un geste sérieux, et il faut ton go |
+| **3. passer le moniteur à toutes les 3 h** | la cadence ne colle plus à la fenêtre | on perd un tiers des passages, pour un bénéfice que le code apporte déjà |
+
+**Je n'ai rien choisi, et je n'ai touché à aucune tâche planifiée.**

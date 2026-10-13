@@ -708,6 +708,44 @@ def parse_iso(value: str | None) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
+def parse_iso_locale_si_sans_fuseau(value: str | None) -> datetime | None:
+    """Comme `parse_iso`, MAIS une date sans fuseau est lue en heure LOCALE.
+
+    ⚠ POURQUOI DEUX FONCTIONS, ET POURQUOI C'EST IMPORTANT (13/10/2026).
+      `parse_iso` suppose UTC quand le fuseau manque, et c'est juste pour ce
+      qu'elle lit : des dates venues de Supabase et des API, toutes en UTC.
+      Mais les tables locales de phase2 melangent les deux horloges :
+
+        app_mandat.last_seen_at            '2026-10-13T04:56:43+00:00'  UTC
+        app_contact_search_current.
+                      refreshed_at         '2026-10-13T04:49:18+00:00'  UTC
+        sb_pull_state.derniere_descente    '2026-10-13T07:45:03'        LOCALE
+
+      Passer `derniere_descente` a `parse_iso` la RAJEUNIRAIT de deux heures --
+      et dans le pire sens : une copie perimee passerait pour fraiche, donc la
+      sentinelle crierait sur des donnees qu'elle croirait bonnes. D'ou ce
+      jumeau, dont le nom dit exactement ce qu'il fait.
+
+      Meme logique que `_en_utc` dans phase2/checks/mandat_un_numero.py, qui
+      reste independante : cette formule-la doit tourner seule en ligne de
+      commande. Si tu changes l'une, regarde l'autre.
+    """
+    if not value:
+        return None
+    cleaned = str(value).strip().replace(" ", "T")
+    if not cleaned:
+        return None
+    if cleaned.endswith("Z"):
+        cleaned = cleaned[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(cleaned)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()        # astimezone() sur un naif = heure locale
+    return parsed.astimezone(timezone.utc)
+
+
 def age_minutes(dt: datetime | None) -> float | None:
     if dt is None:
         return None
@@ -2067,6 +2105,9 @@ class Monitor:
                 (dernier,)).fetchone()[0] or 0
             # L'alarme : les criteres qui different sur une recherche connue des deux cotes.
             divergentes = None
+            copie_descendue_le = None
+            natif_ecrit_le = None
+            copie_en_cours = False
             if conn.execute(
                 "SELECT count(*) FROM sqlite_master WHERE type='table' "
                 "AND name='app_contact_search_current__sb'").fetchone()[0]:
@@ -2107,6 +2148,36 @@ class Monitor:
                     "   OR COALESCE(h.chambre_min,'') <> COALESCE(s.chambre_min,''))"
                     + exclusion
                 ).fetchone()[0]
+
+            # ⚠ LA COPIE EST-ELLE PLUS VIEILLE QUE LE NATIF ? (13/10/2026)
+            #   La divergence se calcule entre le NATIF, reecrit en entier par le
+            #   run de nuit (~06:49), et la DOUBLURE, descendue a 07:45 et finie
+            #   entre 08:03 et 08:49 selon les jours. Le moniteur passe a 07:48 :
+            #   il comparait donc les recherches de CE MATIN a la copie de LA
+            #   VEILLE, et tirait un critical. Diagnostic pose le 29/08, jamais
+            #   corrige -- et la sonde ecrit deux lignes plus bas qu'elle SAIT sa
+            #   copie perimee (`data.doublure_journal`).
+            #
+            #   On ne se fie pas au journal des doublures (une date de jour, donc
+            #   trop grossiere) : on lit la FRAICHEUR REELLE des deux cotes.
+            if conn.execute(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' "
+                "AND name='sb_pull_state'").fetchone()[0]:
+                ligne = conn.execute(
+                    "SELECT derniere_descente, dernier_echec FROM sb_pull_state "
+                    "WHERE table_name = 'app_contact_search_current__sb'").fetchone()
+                if ligne:
+                    copie_descendue_le = ligne[0]
+                    copie_en_cours = (ligne[1] or "").strip().lower().startswith(
+                        "copie en cours")
+            if conn.execute(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' "
+                "AND name='app_contact_search_current'").fetchone()[0]:
+                natif = conn.execute(
+                    "SELECT max(refreshed_at) FROM app_contact_search_current"
+                ).fetchone()
+                if natif:
+                    natif_ecrit_le = natif[0]
         finally:
             conn.close()
 
@@ -2121,9 +2192,28 @@ class Monitor:
                      f"Releve des doublures a jour : {lignes} doublures, "
                      f"{app_seule} ligne(s) connues de l'app seule", detail)
 
+        descendue = parse_iso_locale_si_sans_fuseau(copie_descendue_le)
+        ecrit = parse_iso_locale_si_sans_fuseau(natif_ecrit_le)
+        copie_en_retard = None if (descendue is None or ecrit is None) else descendue < ecrit
+        detail.update({"copie_descendue_le": copie_descendue_le,
+                       "natif_ecrit_le": natif_ecrit_le,
+                       "copie_en_retard": copie_en_retard,
+                       "copie_en_cours": copie_en_cours})
+
         if divergentes is None:
             self.add("data.recherche_divergente", "data_quality", "doublure", "absolute", "warning",
                      "Doublure des recherches absente : divergence non mesurable", detail)
+        elif divergentes > 0 and (copie_en_retard is True or copie_en_cours):
+            # ON SE TAIT QUAND ON NE PEUT PAS SAVOIR -- cf. le commentaire ci-dessus,
+            # et data.mandat_un_numero, corrigee le meme jour de la meme facon.
+            # LE VRAI ROUGE EST INTACT : copie a jour + criteres differents = critical.
+            retard = ("la copie est en cours de descente" if copie_en_cours
+                      else "la copie est plus vieille que le natif")
+            self.add("data.recherche_divergente", "data_quality", "doublure", "absolute", "warning",
+                     f"Criteres app/Hektor : NON CONCLUANT ({retard}) -- {divergentes} "
+                     f"recherche(s) semblent diverger, mais la doublure date du "
+                     f"{copie_descendue_le} et le natif du {natif_ecrit_le}",
+                     detail)
         elif divergentes > 0:
             self.add("data.recherche_divergente", "data_quality", "doublure", "absolute", "critical",
                      f"Recherches dont les criteres different app/Hektor : {divergentes} (seuil 0)",

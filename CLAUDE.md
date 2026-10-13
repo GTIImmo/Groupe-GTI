@@ -215,10 +215,23 @@ report ne se décident jamais sans lui.
      A descendre app_mandat__sb en PREMIER      B decaler le moniteur apres 08:05
    Controle a faire : l'e-mail de demain 07:48 doit porter un WARNING « NON CONCLUANT »
    au lieu du rouge, et 0 ecart a 09:48.
-⑦-bis SA SOEUR N'EST PAS CORRIGEE : data.recherche_divergente (l. 2128) tire le MEME
-   critical sur une doublure perimee -- correctif propose le 29/08, jamais code, et le
-   garde-fou est a UN « and » pres (dernier != aujourdhui est deja calcule 2 lignes
-   plus haut). Mesure du 13/10 : c'est la DERNIERE de la famille. A trancher par lui.
+⑦-bis SA SOEUR EST CORRIGEE AUSSI (13/10, go « A maintenant ») : data.recherche_
+   divergente lit desormais la fraicheur REELLE (max(refreshed_at) du natif contre
+   sb_pull_state.derniere_descente) au lieu de l'indice propose le 29/08. 8 epreuves,
+   temoin inverse. C'etait la DERNIERE de la famille (mesure).
+⑧ ⛔ LE DECALAGE DU MONITEUR NE MARCHE PAS -- mesure du 13/10, consigne NON EXECUTEE.
+   La descente a dure de 18 a 64 MINUTES sur les 12 derniers jours : partie a 07:45,
+   elle finit entre 08:03 et 08:49. « Apres 08:05 » ne suffit donc pas (11 jours sur 12).
+   Et la fenetre dangereuse (run ~06:49 -> copie prete) fait 1 h 14 a 2 h, alors que le
+   moniteur a UN SEUL declencheur repete TOUTES LES 2 H (depart 17:48:54) : quel que soit
+   le decalage, un passage tombe dedans, et les 12 passages bougeraient.
+   Le code gere deja le cas. Si Frederic veut fermer la cause a la source :
+     1 ne rien toucher (recommande)   2 descendre les 2 doublures EN PREMIER (touche
+     au run, go necessaire)           3 moniteur toutes les 3 h
+   ⚠ ET UN TROISIEME CAS DE LA MEME CONFUSION UTC/LOCALE, NON CORRIGE (son appel) :
+   l. ~2184, releve_le est une date LOCALE comparee a datetime.now(timezone.utc) ->
+   entre minuit et 2 h, le passage de 01:48 peut dire « a jour » sur le releve de la
+   VEILLE. Faux vert, deux heures par nuit.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
