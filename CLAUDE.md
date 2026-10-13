@@ -225,9 +225,9 @@ report ne se décident jamais sans lui.
    Et la fenetre dangereuse (run ~06:49 -> copie prete) fait 1 h 14 a 2 h, alors que le
    moniteur a UN SEUL declencheur repete TOUTES LES 2 H (depart 17:48:54) : quel que soit
    le decalage, un passage tombe dedans, et les 12 passages bougeraient.
-   Le code gere deja le cas. Si Frederic veut fermer la cause a la source :
-     1 ne rien toucher (recommande)   2 descendre les 2 doublures EN PREMIER (touche
-     au run, go necessaire)           3 moniteur toutes les 3 h
+   TRANCHE LE 13/10 : OPTION 1, ON NE TOUCHE A RIEN -- le code gere le cas quelle que
+   soit la duree de la descente. Rien a faire plus tard : la question est FERMEE, pas
+   reportee. Aucune tache planifiee n'a ete modifiee.
    ⚠ ET UN TROISIEME CAS DE LA MEME CONFUSION UTC/LOCALE, NON CORRIGE (son appel) :
    l. ~2184, releve_le est une date LOCALE comparee a datetime.now(timezone.utc) ->
    entre minuit et 2 h, le passage de 01:48 peut dire « a jour » sur le releve de la

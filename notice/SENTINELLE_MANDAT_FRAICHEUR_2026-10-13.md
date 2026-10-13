@@ -223,4 +223,9 @@ pas**. C'est vrai à 07:48 comme à 08:20, et même le jour où la descente pren
 | **2. descendre les 2 doublures EN PREMIER** | `app_mandat__sb` *(97ᵉ sur 110)* et `app_contact_search_current__sb` seraient prêtes vers **07:46**, avant le passage de 07:48 | on touche à **la descente**, donc au run : c'est un geste sérieux, et il faut ton go |
 | **3. passer le moniteur à toutes les 3 h** | la cadence ne colle plus à la fenêtre | on perd un tiers des passages, pour un bénéfice que le code apporte déjà |
 
-**Je n'ai rien choisi, et je n'ai touché à aucune tâche planifiée.**
+> ✅ **TRANCHÉ : OPTION 1 — on ne touche à rien** *(Frédéric, 13/10)*. Le code gère le cas,
+> quelle que soit la durée de la descente. **Aucune tâche planifiée n'a été modifiée, et il n'y
+> a rien à faire plus tard** : la question est fermée, pas reportée.
+>
+> ⚠ Reste **ouvert**, et seulement ça : le **3ᵉ cas** de confusion UTC / locale *(le faux vert
+> du passage de 01:48, section 9)*. Il ne me l'a pas confié.
