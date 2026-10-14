@@ -310,3 +310,117 @@ statut** que l'ancien *(`ok`)* — un test naif n'aurait donc **rien prouvé**. 
 - Une panne du relevé est maintenant **dite le jour même**, alors qu'avant elle se **noyait**
   dans trois avertissements quotidiens identiques.
 
+
+---
+
+# ⚠ LA **QUATRIÈME** DE LA FAMILLE — `data.relation_disparue` (14/10, 05:51)
+
+**L'alerte reçue par Frédéric :**
+> `[data.relation_disparue]` **Liens de la couche absents du registre : 1 sur 132 769 (seuil 0)
+> — l'étape de nuit ne passe plus** · 2026-10-14T03:51:11 UTC
+
+## C'EST UNE FAUSSE ALERTE, ET POUR LA MÊME RAISON QUE LES TROIS AUTRES
+
+| | heure (UTC) | heure locale |
+|---|---|---|
+| **l'alerte** | **03:51:11** | **05:51** |
+| l'étape « registre des liens (app_relation) » *(journal du run)* | **04:52:49 → 04:53:30** | **06:52:49 → 06:53:30** |
+
+➡ **Le moniteur a mesuré 1 h 01 AVANT que l'étape ne reconstruise le registre.** Il comparait
+une couche **déjà rafraîchie cette nuit** à un registre **de la veille**.
+⚠ Et le message est le plus trompeur de la famille : *« l'étape de nuit ne passe plus »* —
+alors qu'elle passait **une heure plus tard, et avec succès** *(`DONE`, 41 s)*.
+
+## LA PREUVE, MESURÉE APRÈS LE PASSAGE DE L'ÉTAPE
+La même formule, rejouée à 07:20 en lecture seule *(`phase2/checks/relation_disparue.py`)* :
+
+| garde | valeur |
+|---|---|
+| `source_absents` | **0** |
+| `doublons` · `hors_plage_app` · `plage_envahie` | **0** |
+| `retraits_perdus` · `doublure_perimee` · `registre_sans_mandant` | **0** |
+| **`graves`** | **0** |
+| `source_lus` | **132 736** *(contre 132 769 dans l'alerte : la couche bougeait pendant la mesure)* |
+| `doublure_du` | **2026-10-14T06:51:46** |
+
+## ⭐ ET LA SENTINELLE A DÉJÀ TOUT CE QU'IL FAUT POUR SE TAIRE
+
+| | UTC |
+|---|---|
+| **la couche** `app_contact_relation_current.refreshed_at` *(max)* | **04:46:13** |
+| **le registre** `app_relation.last_seen_at` *(max)* | **04:52:49** |
+
+**La règle est limpide : le registre doit être AU MOINS aussi frais que la couche.**
+À 03:51 il datait de la veille et la couche du jour → **la mesure n'était pas concluante**.
+Maintenant le registre est **postérieur** à la couche → elle l'est, et elle dit **0**.
+
+⭐ **C'est exactement le correctif appliqué aux trois autres le 13/10** : *« elle lit maintenant
+la fraîcheur réelle des deux côtés »*.
+
+## ⚠ LE PIÈGE À NE PAS REFAIRE
+Les deux dates ne s'écrivent **pas** de la même façon :
+`refreshed_at` → `2026-10-14T04:46:13+00:00` · `last_seen_at` *(couche)* → `2026-10-14T04:27:59Z`
+➡ **comparer les CHAÎNES marcherait par chance** *(`+` < `Z`)*. Il faut **analyser les dates**,
+pas les textes — leçon déjà payée le 13/10 *(UTC contre locale, deux heures d'erreur)*.
+
+## CE QUE JE PROPOSE *(non codé, en attente du « vas-y »)*
+`source_absents` ne devient **critique** que si le registre est **au moins aussi frais** que la
+couche. Sinon : **« NON CONCLUANT »** *(warning)*, comme ses trois sœurs. Le vrai rouge — un
+lien perdu alors que le registre est à jour — **reste intact**.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+| | |
+|---|---|
+| **le vrai rouge** | ⛔ **intact** : registre à jour + un lien manquant = toujours `critical` |
+| les **7 autres gardes** de cette sentinelle | ⛔ **pas touchées** *(doublons, plages, retraits, doublure périmée, registre sans mandant)* |
+| ⚠ **le risque réel du correctif** | **masquer une panne durable** : si l'étape des liens ne tournait **plus du tout**, le registre resterait vieux et la sentinelle dirait « non concluant » **tous les jours**. ➡ il faut donc **un warning qui s'aggrave avec l'âge** *(au-delà de ~26 h sans passage de l'étape, c'est une vraie panne)* — c'est ce que les trois sœurs font déjà |
+| le moniteur | ⚠ **une ligne de plus dans `check_gti_health.py`**, aucune autre sonde touchée |
+| **décaler le moniteur** | ⛔ **ne marche pas** — déjà tranché le 13/10 : *« la descente dure de 18 à 64 min et la fenêtre fait 2 h, comme la cadence »* |
+
+## ✅ CORRIGÉE (14/10) — ET ELLE VA PLUS LOIN QUE SES TROIS SŒURS
+
+**La nuance est DANS LA FORMULE**, pas dans le moniteur — la règle du 13/10 :
+*« si elle vivait dans `check_gti_health.py`, elle serait perdue pour quiconque lance la formule
+à la main, et c'est justement ce qu'on fait pour vérifier. »*
+
+| | |
+|---|---|
+| `phase2/checks/relation_disparue.py` | `_en_utc()` · `_fraicheur_registre()` · le drapeau **`source_non_concluant`** · **`PLAFOND_HEURES = 26`** |
+| `monitoring/check_gti_health.py` | **une branche `warning` avant le rouge**, et rien d'autre |
+
+⭐ **CE QU'ELLE FAIT DE PLUS QUE SES SŒURS : LE PLAFOND.** Un registre qui resterait vieux
+**plusieurs jours** n'est pas un décalage d'horloge, c'est une panne — et ses sœurs, dans ce cas,
+**se tairaient indéfiniment**. Au-delà de **26 h** *(24 h de cycle + 2 h de marge pour un run en
+retard)*, on crie, **et le message le dit**. ⚠ **Sans ce plafond, le correctif masquerait
+l'avarie qu'il est censé laisser passer.**
+
+⚠ **ET `graves` SUIT.** `main()` rend un code de sortie non nul dès que `graves > 0` : sans
+l'ajustement, la sonde serait **rouge en ligne de commande** pendant que le moniteur se tait.
+**Deux verdicts différents sur la même mesure, c'est la pire des issues.** Le compte brut reste
+lisible dans `source_absents` — on n'efface rien, on refuse seulement de le compter comme
+**grave** tant qu'on ne sait pas.
+
+### LES ÉPREUVES — **5 sur 5**, base SQLite **en mémoire**, **la vraie formule** appelée
+*(`mesurer()`, celle que le moniteur appelle — aucune écriture sur `phase2.sqlite`)*
+
+| | situation | verdict | attendu |
+|---|---|---|---|
+| ① | **le cas de ce matin** : registre de la veille *(24 h)* + 1 absent | **NON CONCLUANT** | ✅ |
+| ② | **le vrai rouge** : registre à jour + 1 absent | **GRAVE** | ✅ |
+| ③ | **la panne durable** : registre vieux de **30 h** + 1 absent | **GRAVE** *(plafond)* | ✅ |
+| ④ | rien à signaler : registre à jour, 0 absent | **ok** | ✅ |
+| ⑤ | **le piège des fuseaux** : `+00:00`, `Z`, et une date locale | **le même instant** | ✅ |
+
+⚠ **ET LE ④ A ÉCHOUÉ AU PREMIER ESSAI — C'ÉTAIT MON ÉPREUVE, PAS LE CODE.** Je jugeais sur
+`graves`, qui **agrège les sept gardes** ; une base en mémoire minimale n'a pas les tables des
+autres *(doublure, mandants…)*, donc il portait **du bruit de décor**. On juge désormais sur
+**la garde elle-même** — exactement les deux lignes du moniteur.
+➡ *Une épreuve qui échoue n'accuse pas toujours le code : il faut d'abord vérifier qu'elle
+mesure ce qu'on croit.*
+
+⚠ **`check_gti_health.py` N'A PAS ÉTÉ LANCÉ** : il écrit des alertes et **enverrait un email**.
+Les deux fichiers **compilent** *(`py_compile`)*, et la formule a été exécutée seule.
+
+### CE QUI RESTE À VOIR
+⏰ **Demain matin à 05:51** : l'email ne doit plus arriver — ou, s'il arrive, dire
+**« NON CONCLUANT »** en avertissement, avec les deux dates comparées.

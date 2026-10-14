@@ -2555,10 +2555,33 @@ class Monitor:
         if mesure is None:
             self.add("data.relation_disparue", "data_quality", "relation", "absolute", "warning",
                      "Liens disparus : NON MESURABLE (app_relation manquante) -- ce n'est pas un zero", {})
+        elif mesure.get("source_non_concluant"):
+            # ⚠ ON SE TAIT QUAND ON NE PEUT PAS SAVOIR -- la 4e de la famille.
+            #   Le 14/10 a 05:51, Frederic a recu « l'etape de nuit ne passe
+            #   plus ». Elle a tourne de 06:52:49 a 06:53:30, avec succes, UNE
+            #   HEURE PLUS TARD : la sonde comparait une couche DU JOUR a un
+            #   registre DE LA VEILLE. La meme formule rejouee a 07:20 rendait 0
+            #   sur les huit gardes.
+            #   LE VRAI ROUGE EST INTACT : registre a jour + un lien manquant =
+            #   la branche suivante crie comme avant. Et si le registre reste
+            #   vieux plus de 26 h, `registre_trop_vieux` nous renvoie dans
+            #   cette meme branche suivante : une panne durable ne se cache pas
+            #   derriere un « non concluant ».
+            self.add("data.relation_disparue", "data_quality", "relation", "absolute", "warning",
+                     f"Liens de la couche absents du registre : NON CONCLUANT -- "
+                     f"{mesure['source_absents']} lien(s) semblent absents, mais le registre "
+                     f"date du {mesure.get('registre_ecrit_le')} et la couche du "
+                     f"{mesure.get('couche_fraiche_le')} "
+                     f"({mesure.get('registre_age_heures')} h) : l'etape de nuit n'a pas "
+                     f"encore tourne, ce n'est pas un lien perdu",
+                     mesure)
         elif mesure["source_absents"]:
             self.add("data.relation_disparue", "data_quality", "relation", "absolute", "critical",
                      f"Liens de la couche absents du registre : {mesure['source_absents']} "
-                     f"sur {mesure['source_lus']} (seuil 0) -- l'etape de nuit ne passe plus",
+                     f"sur {mesure['source_lus']} (seuil 0) -- l'etape de nuit ne passe plus"
+                     + (f" ET LE REGISTRE N'A PAS ETE REECRIT DEPUIS "
+                        f"{mesure.get('registre_age_heures')} h"
+                        if mesure.get("registre_trop_vieux") else ""),
                      mesure)
         elif mesure["doublons"]:
             self.add("data.relation_disparue", "data_quality", "relation", "absolute", "critical",

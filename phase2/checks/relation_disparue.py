@@ -53,7 +53,7 @@ from __future__ import annotations
 
 import sqlite3
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parents[2]
@@ -93,6 +93,123 @@ ROLES_DU_BIEN = ("mandant", "proprietaire")
 #      n'est pas une garde.
 GRAVES = ("source_absents", "doublons", "hors_plage_app", "plage_envahie",
           "retraits_perdus", "doublure_perimee", "registre_sans_mandant")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LA FRAICHEUR DU REGISTRE -- ajoute le 14/10/2026
+#
+# POURQUOI. Ce matin a 05:51, Frederic a recu :
+#     « Liens de la couche absents du registre : 1 sur 132 769 (seuil 0)
+#       -- l'etape de nuit ne passe plus »
+# L'etape de nuit, elle, a tourne de 06:52:49 a 06:53:30 -- UNE HEURE PLUS TARD,
+# et avec succes (41 s, DONE). La meme formule rejouee a 07:20 rendait 0 sur les
+# HUIT gardes. Les donnees etaient bonnes ; c'est la MESURE qui etait trop tot.
+#
+# LA CAUSE EST L'ORDRE DES HORLOGES, exactement comme pour ses trois soeurs
+# corrigees le 13/10 (mandat_un_numero, recherche_divergente, doublure_journal) :
+#     ~04:46 UTC  la COUCHE app_contact_relation_current est rafraichie
+#      03:51 UTC  LA SONDE PASSE -- le registre est encore celui de la VEILLE
+#      04:52 UTC  l'etape reconstruit enfin app_relation
+# On comparait donc une couche DU JOUR a un registre DE LA VEILLE.
+#
+# ⚠ ET LE MESSAGE EST LE PLUS TROMPEUR DE LA FAMILLE : « l'etape de nuit ne passe
+#   plus » alors qu'elle passait une heure plus tard. Une alarme qui crie tous les
+#   matins pour rien est une alarme qu'on ne lit plus -- et le jour ou elle aura
+#   raison, personne ne la croira.
+#
+# ⚠ CE QU'ON NE CHANGE PAS : le rouge quand un lien est VRAIMENT perdu. Si le
+#   registre est a jour (plus recent que la couche) et qu'un lien manque, on crie
+#   comme avant. La garde reste entiere.
+#
+# ⭐ ET ON VA PLUS LOIN QUE LES TROIS SOEURS : un registre qui resterait vieux
+#   PLUSIEURS JOURS n'est pas un decalage d'horloge, c'est une panne. Elles, dans
+#   ce cas, se tairaient indefiniment. Ici, au-dela de PLAFOND_HEURES, on crie --
+#   et on dit pourquoi. Sans ce plafond, le correctif masquerait l'avarie qu'il
+#   est cense laisser passer.
+#
+# ⚠ LE PIEGE DES FUSEAUX, parce qu'il aurait fausse la mesure. Les deux dates ne
+#   s'ecrivent meme pas pareil :
+#     app_relation.last_seen_at                    '2026-10-14T04:52:49+00:00'
+#     app_contact_relation_current.refreshed_at    '2026-10-14T04:46:13+00:00'
+#     app_contact_relation_current.last_seen_at    '2026-10-14T04:27:59Z'   <- Z !
+#   Comparer les TEXTES marcherait par chance ('+' < 'Z' en ASCII). On analyse
+#   donc les dates, et on REND les deux pour qu'on puisse verifier a la main.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 24 h de cycle + 2 h de marge pour un run en retard. Au-dela, l'etape a manque
+# un tour entier : ce n'est plus une horloge, c'est une panne.
+PLAFOND_HEURES = 26
+
+
+def _en_utc(texte: str | None) -> datetime | None:
+    """Rend un instant en UTC, ou None si on ne sait pas lire.
+
+    Trois formes rencontrees dans ces tables :
+        '2026-10-14T04:52:49+00:00'  -> deja situe
+        '2026-10-14T04:27:59Z'       -> deja situe (notation Zulu)
+        '2026-10-14 04:52:49'        -> heure LOCALE de la machine du run
+    Une date illisible rend None, et l'appelant se tait : on ne devine pas un
+    fuseau. (`fromisoformat` lit le 'Z' depuis Python 3.11, mais on le remplace
+    quand meme : cette formule doit survivre a une machine plus ancienne.)
+    """
+    propre = (texte or "").strip().replace(" ", "T")
+    if not propre:
+        return None
+    if propre.endswith(("Z", "z")):
+        propre = propre[:-1] + "+00:00"
+    try:
+        instant = datetime.fromisoformat(propre)
+    except ValueError:
+        return None
+    if instant.tzinfo is None:
+        instant = instant.astimezone()   # pas de fuseau ecrit = heure locale
+    return instant.astimezone(timezone.utc)
+
+
+def _fraicheur_registre(conn: sqlite3.Connection) -> dict:
+    """Le registre est-il au moins aussi frais que la couche qu'on lui compare ?
+
+    Rend toujours les deux dates, meme quand on ne peut pas trancher : une mesure
+    se verifie a la main, donc elle montre ce qu'elle a compare.
+    """
+    sortie = {
+        "couche_fraiche_le": None,
+        "registre_ecrit_le": None,
+        "registre_en_retard": False,
+        "registre_trop_vieux": False,
+        "registre_age_heures": None,
+    }
+    if not (_table_existe(conn, "app_relation")
+            and _table_existe(conn, "app_contact_relation_current")):
+        return sortie
+
+    try:
+        sortie["registre_ecrit_le"] = conn.execute(
+            "SELECT MAX(last_seen_at) FROM app_relation").fetchone()[0]
+        # `refreshed_at` est la date d'ecriture de la couche ; `last_seen_at` est
+        # celle de Hektor. On prend la PLUS RECENTE des deux : la question est
+        # « la couche a-t-elle bouge apres le registre ? », pas « d'ou vient sa
+        # fraicheur ».
+        ligne = conn.execute(
+            "SELECT MAX(refreshed_at), MAX(last_seen_at) FROM app_contact_relation_current"
+        ).fetchone()
+    except sqlite3.Error:
+        return sortie
+
+    candidates = [_en_utc(ligne[0]), _en_utc(ligne[1])]
+    couche = max([d for d in candidates if d], default=None)
+    registre = _en_utc(sortie["registre_ecrit_le"])
+    sortie["couche_fraiche_le"] = (
+        ligne[0] if _en_utc(ligne[0]) == couche else ligne[1]) if couche else None
+
+    if couche is None or registre is None:
+        return sortie   # on ne sait pas lire : on ne tranche pas
+
+    age = datetime.now(timezone.utc) - registre
+    sortie["registre_age_heures"] = round(age / timedelta(hours=1), 1)
+    sortie["registre_en_retard"] = registre < couche
+    sortie["registre_trop_vieux"] = age > timedelta(hours=PLAFOND_HEURES)
+    return sortie
 
 
 def _table_existe(conn: sqlite3.Connection, nom: str) -> bool:
@@ -235,6 +352,7 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         "plage_envahie": plage_envahie,
         "source_absents": source_absents,
         "source_lus": source_lus,
+        **_fraicheur_registre(conn),
         "retard_cloud": retard_cloud,
         "retraits_perdus": retraits_perdus,
         "doublure_perimee": doublure_perimee,
@@ -244,7 +362,33 @@ def mesurer(conn: sqlite3.Connection) -> dict | None:
         "marques_absents": conn.execute(
             "SELECT COUNT(*) FROM app_relation WHERE present_in_hektor = 0").fetchone()[0],
     }
-    comptes["graves"] = sum(comptes[c] or 0 for c in GRAVES)
+    # ⭐ LA NUANCE EST DANS LA FORMULE, PAS DANS LE MONITEUR (14/10/2026).
+    #
+    # C'est la regle que ses trois soeurs appliquent depuis le 13/10 : le
+    # moniteur ne fait que CHOISIR UNE BRANCHE, il ne recalcule rien. Si la
+    # nuance vivait dans check_gti_health.py, elle serait perdue pour quiconque
+    # lance la formule a la main -- et c'est justement ce qu'on fait pour
+    # verifier.
+    #
+    # « NON CONCLUANT » = des liens semblent manquer, MAIS le registre est plus
+    # vieux que la couche, donc l'etape de nuit n'a pas encore tourne. Ce n'est
+    # pas un zero, et ce n'est pas un rouge : c'est « je ne peux pas savoir ».
+    # ⚠ Sauf si le registre est trop vieux (PLAFOND_HEURES) : la, l'etape a
+    #   manque un tour entier, et c'est une VRAIE panne -- on crie.
+    comptes["source_non_concluant"] = bool(
+        source_absents
+        and comptes.get("registre_en_retard")
+        and not comptes.get("registre_trop_vieux"))
+
+    # ⚠ ET `graves` DOIT SUIVRE, sinon le correctif ne sert a rien : `main()`
+    #   rend un code de sortie non nul des que `graves` est > 0, et la sonde
+    #   serait rouge en ligne de commande alors que le moniteur, lui, se tait.
+    #   Deux verdicts differents sur la meme mesure, c'est la pire des issues.
+    #   Le compte brut reste lisible dans `source_absents` : on n'efface rien,
+    #   on refuse seulement de le compter comme GRAVE tant qu'on ne sait pas.
+    graves = [c for c in GRAVES
+              if not (c == "source_absents" and comptes["source_non_concluant"])]
+    comptes["graves"] = sum(comptes[c] or 0 for c in graves)
     return comptes
 
 
