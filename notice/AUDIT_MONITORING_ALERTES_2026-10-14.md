@@ -309,3 +309,64 @@ désarchivages posaient `app_dossier_id = NULL` alors que le vrai numéro exista
 
 **Je recommande C, et B tout de suite** *(la ligne sans numéro mérite un regard dans tous les
 cas)*. **Je n'ai rien décidé.**
+
+---
+
+## 11. ⚠ CORRECTION : « le bouton Résolu ne sert à rien » ÉTAIT TROP FORT
+
+*Question de Frédéric après le déploiement : « maintenant le bouton Corrigé fonctionne ? »*
+**Réponse mesurée : il fonctionnait DÉJÀ — pour l'écran. Et il a un autre défaut, plus grave.**
+
+### Ce qu'il fait vraiment
+
+`alerts_governed`, la vue que l'écran Santé lit, contient en ce moment :
+
+| | nombre |
+|---|---|
+| `new` / **info** | **1 601** ← *une ligne par notification non lue* |
+| `new` / warning | **8** ← *les 8 avertissements affichés* |
+| **`resolved`** / warning | **4** |
+| **`resolved`** / critical | **2** ← *ses deux clics du 14/10 à 08:37* |
+
+Et l'écran filtre : `alertsToTreat` ne garde que `warning` **et** `critical`, en excluant
+`resolved`, `ignored` et `snoozed` *(`SanteSystemeScreen.tsx`, l. 160-168)*.
+
+➡ **Ses deux clics de ce matin ont marché** : les deux alertes rouges ont bien disparu de
+« Alertes à traiter ». **J'avais tort de dire que le bouton ne servait à rien.**
+
+**Ce qu'il ne fait pas** *(et c'est délibéré, cf. § 0)* : il n'enlève **aucun e-mail**, puisque
+l'e-mail ne part que sur une bascule.
+
+### ⚠⚠ MAIS LE VRAI DÉFAUT EST AILLEURS : « Résolu » EST DÉFINITIF
+
+`app_alert_state` garde `resolved` **pour toujours**, par `alert_key`. Donc :
+
+| cliqué « Résolu » le | n'apparaîtra **plus jamais** dans « Alertes à traiter » |
+|---|---|
+| 24/08 | `scheduledtasks`, `scheduledtasks:gti_recherches_actives`, `workers.heartbeat:console.worker.documents` |
+| 01/09 | `data.geste_abandonne` |
+| 03/09 | `data.notif_non_lues`, `data.notif_orphelines`, `console.jobs.errors` |
+| **14/10** | `data.travaux_en_erreur`, `monitor.summary` |
+
+> **Même si l'une d'elles empire, elle ne reviendra pas dans la liste.** Un clic vaut
+> extinction définitive sur cet écran.
+
+⭐ **Et c'est exactement pour ça que la colonne `snoozed_until` existe** — *« se taire
+jusqu'au… »*. Elle est **vide partout**, et le bouton ne l'utilise pas. Le mécanisme sûr a été
+prévu puis jamais branché.
+
+### ⭐ Un défaut de poids, trouvé en passant
+
+L'écran Santé charge **1 615 lignes, soit ~285 Ko**, à chaque ouverture — parce que **chacune
+des 1 601 notifications non lues est une ligne d'alerte** dans `alerts_governed`. Elles ne sont
+même pas affichées *(elles sont seulement comptées)*. **Non corrigé, pas demandé.**
+
+### ❓ La suite, à trancher
+
+| | |
+|---|---|
+| **A** ⭐ | **brancher `snoozed_until`** : « Résolu » = silence **7 jours**, puis l'alerte revient si le problème est toujours là. Plus de silence définitif, et le mécanisme existe déjà en base |
+| **B** | **ajouter un bouton « Réveiller »** à côté, pour annuler un « Résolu » devenu faux |
+| **C** | ne rien changer, en sachant que les 9 alertes ci-dessus sont éteintes **pour de bon** |
+
+**Je recommande A.** Rien n'est décidé.
