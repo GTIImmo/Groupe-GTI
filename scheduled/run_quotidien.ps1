@@ -36,7 +36,7 @@ try {
     #   Vide, il ne change rien (c'est le defaut du pipeline). Deux invocations
     #   differentes selon le cas finiraient par diverger sur un drapeau -- et la
     #   nuit ne passerait plus par la ligne qu'on a eprouvee le jour.
-    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes -IncludeArchivedContactSearches -StartAtLabel $StartAtLabel
+    & "$root\run_full_pipeline.ps1" -PushContactsToSupabase -ContactsEligibleOnly -AllowStaleSupabaseDeletes -IncludeArchivedContactSearches -GarderRecherchesDejaPoussees -StartAtLabel $StartAtLabel
     Write-Output "=== Run quotidien termine $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (exit $LASTEXITCODE) ==="
 } catch {
     Write-Output "=== ERREUR run quotidien : $_ ==="

@@ -117,3 +117,62 @@ comportement observé, pas seulement par la lecture du code.**
 | **4** | ⬜ décider du sort de l'aggravant « clé-hash » | autre chantier |
 
 ⛔ **Rien n'est décidé, rien n'a été touché, rien n'a été purgé.**
+
+---
+
+## 6. LE CORRECTIF EST POSÉ — *« Oui » de Frédéric, 14/10*
+
+### Ce qui change, en une phrase
+
+> **Une recherche qui a déjà existé dans Supabase n'en est plus retirée parce que son contact
+> s'est endormi.**
+
+| fichier | ce qui change |
+|---|---|
+| `phase2/sync/push_contacts_to_supabase.py` | une **option** `--garder-recherches-deja-poussees`, **éteinte par défaut**, qui élargit le périmètre d'un `OR` |
+| `run_full_pipeline.ps1` | le switch `-GarderRecherchesDejaPoussees` |
+| `scheduled/run_quotidien.ps1` | **l'option est allumée** pour le run de 05:00 |
+
+**Le comportement par défaut ne change pas.** Syntaxe PowerShell validée sur les deux scripts.
+
+### ⭐ LE TÉMOIN INVERSE A RATTRAPÉ UN CORRECTIF MORT-NÉ
+
+**Ma première version s'appuyait sur l'état de push des RECHERCHES.** Mesure : **+0**.
+**Elle n'aurait rien fait.** Et elle serait partie en production sans que rien ne le dise.
+
+**Pourquoi** : le push **met à jour son état en même temps qu'il supprime**. L'état de push des
+recherches a donc **déjà oublié** les 36 lignes. Une clause bâtie dessus ne pouvait rien voir.
+
+➡ **La bonne version s'appuie sur l'état de push des CONTACTS**, qui est **intact** : le contact
+n'est jamais supprimé de Supabase, il cesse seulement d'être mis à jour.
+
+### L'épreuve, sur la VRAIE base, en lecture seule
+
+| | |
+|---|---|
+| option **éteinte** | **11 453** recherches poussées |
+| option **allumée** | **11 489** — soit **+36** |
+| les 36 lignes en plus | **toutes inactives**, pour **35 contacts** |
+| et ce sont | **exactement** les 36 absentes de Supabase aujourd'hui |
+| 5 contacts testés sur 5 | **retrouvent une recherche** → le ménage de 05:00 aura une cible |
+
+**Ni plus, ni moins que ce qu'on voulait.** Témoin inverse : ✅
+
+### ⚠ Et une erreur de pose, attrapée par le diff
+
+Mon premier patch du run a modifié **le commentaire** au lieu de **la ligne de commande** *(la
+chaîne cherchée apparaissait deux fois)*. **Vu immédiatement en faisant imprimer le diff**,
+annulé, refait sur l'ancre exacte. *(Leçon 7 du projet : un remplacement ne se relit qu'en le
+faisant imprimer.)*
+
+### ⬜ CE QUI RESTE À CONTRÔLER — demain matin
+
+1. **Le run de 05:00** doit repousser les **36** recherches → Supabase passe à **~11 489**.
+2. **Le ménage de 05:00** *(`app_sweep_search_orphans`)* doit alors **rattacher** les 4 022.
+3. **Les 3 alertes** doivent tomber : `orphelins_recherche`, `recherche_disparue`,
+   `recherche_orphelin_bloque`.
+
+⚠ **L'ordre compte** : le ménage tourne à 05:00 **et le push aussi**. S'il passe **avant** le
+push, le rattrapage n'aura lieu que **le surlendemain**. **À vérifier dans le journal du run.**
+
+⛔ **Rien n'est poussé. Rien n'a été lancé à la main.**

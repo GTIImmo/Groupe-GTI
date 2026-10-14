@@ -413,6 +413,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--include-archived-relations", action="store_true", help="Pousse aussi les relations rattachees uniquement a des annonces archivees.")
     parser.add_argument("--include-archived-searches", action="store_true", help="Pousse aussi les recherches archivees. Par defaut seules les recherches actives partent.")
+    parser.add_argument(
+        "--garder-recherches-deja-poussees",
+        action="store_true",
+        help=("Ne retire plus de Supabase une recherche qui y a DEJA ETE POUSSEE, "
+              "meme si son contact a cesse d'etre eligible. Repare l'historique de "
+              "rapprochement laisse orphelin (14/10/2026)."),
+    )
     parser.add_argument("--include-duplicates", action="store_true", help="Pousse aussi les tables d'audit doublons reservees admin/manager.")
     parser.add_argument(
         "--contact-id",
@@ -636,11 +643,69 @@ def main() -> int:
     # (constate en direct le 21/08 : 76 839 lignes au lieu des 10 744 voulues).
     # Le filtre actif/archive reste independant : c'est l'option qui le decide.
     search_scope = "" if args.include_archived_searches else "is_active = 1"
-    search_where = scoped_where(
-        f"WHERE {search_scope}" if search_scope else "",
+    clause_contacts = (
         "hektor_contact_id IN (SELECT hektor_contact_id FROM app_contact_current"
         + (f" {contact_where}" if contact_where else "")
-        + ")",
+        + ")"
+    )
+    # ⚠ UNE RECHERCHE QUI A DEJA EXISTE DANS SUPABASE N'EN EST PLUS RETIREE (14/10/2026).
+    #
+    #   CE QUI S'EST PASSE. La nuit du 13 au 14/10, 24 recherches sont sorties de
+    #   Supabase et 4 022 lignes de rapprochement, de score, de notification et de
+    #   relance se sont retrouvees accrochees dans le vide. La chaine, mesuree :
+    #     1. une RECHERCHE passe inactive chez Hektor (son champ s'appelle `archive`,
+    #        mais sur une recherche il veut dire « inactive » -- ce n'est PAS la fiche
+    #        contact : 6 150 contacts archives gardent leurs recherches ici) ;
+    #     2. c'etait la DERNIERE recherche active de cet acquereur, qui n'a pas non
+    #        plus d'annonce active ;
+    #     3. il perd donc son eligibilite (build_contacts_layer.py l. 1750-1754 :
+    #        eligible SI annonce active OU recherche active) ;
+    #     4. la clause ci-dessus ne le charge plus ;
+    #     5. et `find_stale_row_keys` declare DISPARU tout ce qui n'est pas charge,
+    #        donc SUPPRIME la recherche chez Supabase ;
+    #     6. son historique de rapprochement reste, et ne mene plus nulle part.
+    #
+    #   POURQUOI LE MENAGE EXISTANT N'Y PEUT RIEN. app_sweep_search_orphans() tourne
+    #   tous les jours a 05:00 et travaille vraiment (16 rapprochements et 212 lignes
+    #   d'historique rattaches le 14/10). Mais sa regle est de RATTACHER l'orphelin a
+    #   une recherche du contact -- et au maillon 5 il n'en reste AUCUNE. Les deux
+    #   mecanismes se contredisent : l'un suppose que la recherche existe encore,
+    #   l'autre la supprime. C'est aussi l'explication des 37 « orphelins non
+    #   rattachables » : la fonction passe et ne trouve rien.
+    #
+    #   LE REMEDE EST CELUI QUE LE PROJET APPLIQUE DEJA AILLEURS : « la ligne ne
+    #   disparait jamais » (photos), et les 35 318 annonces archivees qui restent en
+    #   lecture seule. Les recherches etaient le seul objet qu'on EFFACAIT au lieu de
+    #   RANGER. On garde donc la ligne, inactive, et le menage de 05:00 retrouve une
+    #   cible : il se declenche tout seul, sans qu'on reecrive sa regle.
+    #
+    #   ⚠ ON S'APPUIE SUR L'ETAT DE PUSH DES **CONTACTS**, PAS DES RECHERCHES, et le
+    #     temoin inverse l'a impose : l'etat de push des RECHERCHES a deja oublie les
+    #     36 lignes (le push le met a jour en meme temps qu'il supprime), donc une
+    #     clause batie dessus ne changeait RIEN -- mesure : +0. L'etat des CONTACTS,
+    #     lui, est intact : le contact n'est jamais supprime de Supabase, il cesse
+    #     seulement d'etre mis a jour.
+    #
+    #   COUT MESURE LE 14/10 : 11 489 lignes au lieu de 11 453, soit +36 -- exactement
+    #   les recherches perdues. Et la clause ne peut que FREINER une decroissance :
+    #   elle n'ajoute jamais une recherche qui n'a pas deja ete poussee.
+    #
+    #   ⚠ CE QU'ELLE NE BLOQUE PAS, ET C'EST VOULU : une recherche qui disparait
+    #     VRAIMENT du local (contact supprime chez Hektor) n'est plus dans
+    #     app_contact_search_current, donc pas chargee, donc toujours supprimee.
+    #     Seul le cas « le contact s'est endormi » est retenu.
+    #
+    #   ⚠ AUCUN EFFET A L'ECRAN : l'app lit `app_contact_searches_current`, qui
+    #     FILTRE sur is_active (verifie le 14/10 sur les 9 vues consommatrices).
+    if args.garder_recherches_deja_poussees:
+        clause_contacts = (
+            "(" + clause_contacts
+            + f" OR hektor_contact_id IN (SELECT row_key FROM {PUSH_STATE_TABLE}"
+            + " WHERE table_name = 'app_contact_current'))"
+        )
+    search_where = scoped_where(
+        f"WHERE {search_scope}" if search_scope else "",
+        clause_contacts,
     )
     stats_contact_where = contact_where
     if contact_ids:

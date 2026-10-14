@@ -103,6 +103,7 @@
     [switch]$ContactsEligibleOnly,
     [switch]$IncludeArchivedContactRelations,
     [switch]$IncludeArchivedContactSearches,
+    [switch]$GarderRecherchesDejaPoussees,
     [ValidateSet("full", "update")]
     [string]$MatterportPushMode = "update",
     [switch]$FullRebuildSupabase,
@@ -1392,6 +1393,13 @@ if ($PushContactsToSupabase) {
     }
     if ($IncludeArchivedContactSearches) {
         $contactsPushArgs += "--include-archived-searches"
+    }
+    # 14/10/2026 -- une recherche qui a deja existe dans Supabase n'en est plus
+    # retiree parce que son contact s'est endormi. Voir le long commentaire de
+    # push_contacts_to_supabase.py (clause `garder_recherches_deja_poussees`).
+    # Mesure du 14/10 : +36 lignes, exactement les 36 perdues la nuit precedente.
+    if ($GarderRecherchesDejaPoussees) {
+        $contactsPushArgs += "--garder-recherches-deja-poussees"
     }
     Invoke-Step -Label "phase2 push contacts to supabase" -Arguments $contactsPushArgs -WorkerKey "supabase.push_contacts"
 
