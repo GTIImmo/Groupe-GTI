@@ -353,3 +353,189 @@ est **vide (0 ligne)** et **rien ne la remplit** — il n'existe pas de type de 
 `prepare_historical_…`)*. Ce serait **un nouveau type de travail = les 3 verrous**
 *(contrainte, droits, distribution)* + 5 endroits dans le worker. **C'est du chantier ⑦**, et
 ça ne vaut la peine que si Frédéric en a l'usage. ⚠ **Question posée, non tranchée.**
+
+---
+
+# 6b — G.2 : LE PARC VIVANT N'EST PLUS RELU DEPUIS LE 20/08
+
+## ÉTAPE 1 — AUDIT (14/10/2026, lecture seule, aucun appel à Hektor)
+
+### VERDICT : CONFIRMÉ, et c'est PIRE que ce que disait l'audit du 07/10
+
+**L'âge de la dernière lecture documentaire du parc vivant, mesuré en base le 14/10 :**
+
+| statut | annonces | jamais lues | dernière lecture | relues en 30 j |
+|---|---|---|---|---|
+| **Actif** | 595 | **132** | **20/08** | **0** |
+| **Sous compromis** | 89 | **6** | **20/08** | **0** |
+| **Sous offre** | 43 | **5** | 14/10 | 1 *(mon essai 62774)* |
+| Estimation | 12 757 | **313** | 28/09 | 1 |
+| **total vivant** | **13 484** | **456** | — | **2** |
+
+**Deux annonces relues en trente jours sur 13 484** — et les deux sont des essais. Les biens
+**en vente** (727) n'ont pas été relus depuis le **20 août**. Tout ce qui a été déposé chez
+Hektor depuis — bons de visite, mandats, **compromis** — n'est pas chez nous.
+
+### POURQUOI : l'étape n'est pas « mal réglée », elle est ÉTEINTE
+
+`run_full_pipeline.ps1:1484` : l'étape n'existe que derrière `-EnqueueConsoleDocuments`. Et
+`scheduled/run_quotidien.ps1:39` **ne passe pas ce drapeau** → **l'étape ne tourne jamais**.
+C'est `G.6`, le point que Frédéric doit allumer — mais il ne doit PAS l'être tel quel :
+sans `--detect`, elle empile **tout** le périmètre chaque nuit.
+
+### ⭐ CE QUE LE CODE SAIT DÉJÀ FAIRE — et c'est beaucoup
+
+`--detect` existe depuis le 20/08 (`enqueue_console_sync_jobs.js:372`, `runDetection`) et il est
+bien construit :
+
+- il compare une **empreinte du contenu** documentaire, pas une date — *parce que la date de
+  mise à jour d'une annonce ne bouge pas quand on y dépose un document : 91 % des documents sont
+  plus récents que la MAJ déclarée de leur annonce* ;
+- ⭐ **il trie le périmètre : jamais contrôlées d'abord, puis les plus anciennement contrôlées**,
+  « sans cet ordre, un plafond atteint verrouillerait le balayage sur les mêmes annonces » ;
+- une annonce **sans empreinte** est empilée **sans aucune lecture Hektor** ;
+- il ajoute l'**ensemble 2** : les annonces dont un cycle de **signature est en cours** — mesuré
+  aujourd'hui : **75** — parce que l'empreinte ne voit pas passer « en attente → signé » ;
+- il **s'arrête net** sur 401/403/429/503 ou sur une page de login, et il **ne conclut rien**
+  d'une lecture ratée isolée ;
+- il **porte le même frein que le worker**, lu dans les mêmes variables d'environnement ;
+- il **ne double pas** un travail déjà en file (`loadPendingJobs`) ;
+- et il **rafraîchit `checked_at`** sur les inchangées — donc la rotation s'entretient seule.
+
+### LES TROIS MANQUES RÉELS
+
+1. ⛔ **LE PLAFOND NE PLAFONNE QUE LES TRAVAUX, PAS LES LECTURES.** `--cap` (3 000 par défaut)
+   arrête la boucle quand *assez de travaux sont retenus*. Si peu d'annonces ont bougé — le cas
+   normal — la boucle lit **tout le périmètre**. Or `daily-cloud` = **13 484** annonces
+   (`DAILY_STATUSES` inclut *Estimation*), et avec le frein (1 s par requête, +60 s toutes les
+   100, +300 s toutes les 2 000) cela fait **≈ 6 h 23 de lecture**. Impossible dans le run.
+   ⚠ **La limite n'est plus le bannissement** (≈ 18 000 requêtes/nuit depuis 12 nuits, 0 ban)
+   **mais le TEMPS.**
+2. ⛔ **L'ÉTAPE EST BLOQUANTE ET SANS SURVEILLANCE.** `& $nodeExe … ; if ($LASTEXITCODE -ne 0)
+   { throw }` : une session Hektor morte **tuerait le reste du run** (Matterport, les liens
+   publics de RDV, la vitrine, l'export Android). Et elle n'a **aucun `-WorkerKey`** — donc
+   aucun battement, aucune sentinelle *(c'est exactement la leçon 4j du 13/10)*. Sa voisine
+   immédiate, elle, en a un (`hektor.carnet_acquereurs`).
+3. ⚠ **AUCUNE EXCLUSION DES ÉCHECS.** Contrairement au rattrapage (« on ne rejoue jamais »), la
+   détection ré-empile une annonce **sans empreinte** à chaque passage. C'est voulu pour un bien
+   vivant — mais une annonce qui échoue **toujours** reviendrait **chaque nuit**. Aujourd'hui le
+   risque est nul (**0** travail `sync_console_documents` en erreur), il ne l'est pas demain.
+
+### LA CONTRAINTE D'HORAIRE — mesurée, et elle commande tout
+
+Le run finit **07:18-07:34** et **la descente part à 07:45** (elle l'attend jusqu'à 45 min).
+L'étape est à la **fin** du run. Lui donner 1 200 lectures = **+32 min** → le run finirait
+**07:50-08:06**, donc **après** l'heure de la descente.
+
+Et trois étapes du run **refusent de démarrer s'il reste un travail console en attente**
+(`require_no_console_jobs`, `sync_hektor_chauffages.py:251` — chauffage l. 786, entretien
+compromis l. 1118, entretien ventes l. 1149). Elles sont **toutes avant** l'étape d'enfilement :
+pas de conflit dans le même run. Mais les travaux posés vers 07:00 doivent être **digérés avant
+21:00**, sinon le rattrapage refuse son lot (`--exiger-file-vide`, sortie 3).
+
+### CE QUI EST DÉJÀ DÉCIDÉ — à ne pas re-trancher
+
+📜 **Journal du 07/10** : *« G.2 se fera sur **toutes** les annonces vivantes, estimations
+comprises »* (décision de Frédéric). ➡ Donc **pas de périmètre réduit** : toutes les vivantes,
+mais **pas toutes la même nuit**.
+
+### ⚠ LA QUESTION DE FRÉDÉRIC (14/10) ET SA MESURE
+
+> *« Non, il faut d'abord finir le rattrapage, sinon toutes les empreintes ne seront pas posées
+> et on va tout repasser au lieu de ne faire que les MAJ, non ? »*
+
+**Sa conclusion est juste — mais pas pour cette raison.** Trois mesures.
+
+**① Le rattrapage ne posera JAMAIS les empreintes du parc vivant.** Ses périmètres sont
+`archive`, `historical` et `brouillon` — **jamais** `app_dossier_current`. Mesure : **7 750
+empreintes posées ces 7 derniers jours, dont ZÉRO sur une annonce vivante**. Et les **456**
+vivantes sans empreinte ne sont **dans aucun autre index** (0 archive, 0 vendu/clos, 0
+brouillon) → le rattrapage **ne peut pas** les atteindre. Attendre ne les posera pas.
+
+**② « On va tout repasser » : non, 3,4 %.** **13 028 des 13 484** vivantes ont **déjà** leur
+empreinte, celle du 19-20/08. Pour elles la détection ne fait que **comparer** — exactement
+« que les MAJ ». Seules les **456** sans empreinte seront repassées en entier, et ce sera vrai
+quel que soit le jour où on commence.
+
+**③ MAIS LA VRAIE RAISON D'ATTENDRE EST SOLIDE** — un seul service worker `documents`, une
+seule file : les travaux de la détection feraient **refuser le lot de 21:00**
+(`--exiger-file-vide`, sortie 3 + rouge) et se disputeraient le worker avec les 1 000/nuit du
+rattrapage (4,8 à 7,9 h). ➡ **On démarre après la nuit du 16 au 17/10**, quand les 2 396
+vendus/clos restants sont finis.
+
+### ⭐⭐ ET CE QUE SA QUESTION A FAIT TROUVER — l'inverse de ce qu'il craignait (G.1-c)
+
+**L'empreinte a DEUX sens contradictoires selon qui la lit :**
+
+| qui | ce que « l'annonce a une empreinte » veut dire |
+|---|---|
+| le **rattrapage** (`enqueue_empreinte_lot.js`) | « **déjà faite, ne jamais y revenir** » |
+| la **détection** (`--detect`) | « j'ai une **référence** à comparer » |
+
+Donc quand une annonce **vivante** (avec son empreinte) devient **vendue**, elle entre dans
+`historical` et le rattrapage **la saute** — ses pièces de fin de vie (**compromis, acte**) ne
+seront **jamais** lues. C'est **G.1-c**, et c'est mesurable :
+
+```
+vendus/clos avec une empreinte                       6 548
+  dont empreinte posee AVANT la reprise du 25/09        49   <-- posee quand l'annonce etait VIVANTE
+  dont empreinte du lot d'aout                          48
+```
+
+➡ **49 aujourd'hui** *(la liste disait 111, comptés autrement le 26/09)*, et la détection en
+fabriquera **~34 de plus par mois** (le rythme des changements d'état) **si on ne traite pas la
+cause**. ⚠ **Question posée à Frédéric : G.1-c entre-t-il dans ce chantier ?**
+
+---
+
+# G.1-c — L'AUDIT DEMANDÉ PAR FRÉDÉRIC (« oui, mais audit avant pour être sûr de toi »)
+
+## VERDICT : ⚠ **LE MÉCANISME EST CERTAIN. L'EFFET, JE NE PEUX PAS LE PROUVER D'ICI.**
+
+### ① Le mécanisme — confirmé dans le code
+
+`enqueue_empreinte_lot.js` : exclusion n° 1, *« empreinte déjà posée → déjà rattrapée »*
+(l. 9, appliquée l. 190 `if (empreintes.has(id)) { stats.deja_marquees += 1; continue; }`).
+L'empreinte est une **clé par numéro d'annonce**, pas par index : une annonce qui change
+d'index **emporte son empreinte**, donc le rattrapage la saute.
+
+### ② La population — **49**, pas 111
+
+```
+vendus/clos avec une empreinte                        6 548
+  dont empreinte posee AVANT la reprise du 25/09         49   (48 du lot du 19-20/08)
+  leur derniere lecture documentaire                20/08/2026
+```
+*(la liste annonçait 111, compté autrement le 26/09 — le chiffre d'aujourd'hui est 49)*
+
+### ③ L'EFFET — ⛔ **NON PROUVÉ, et il penche même dans l'autre sens**
+
+J'avais écrit « leurs compromis et leurs actes ne seront jamais lus ». **C'était une déduction,
+pas une mesure.** La mesure dit :
+
+| | les 6 499 lues par le rattrapage | **les 49 sautées** |
+|---|---|---|
+| documents en moyenne | 8,54 | **23,67** |
+| avec un compromis | 30 % | 22 % |
+| avec un **acte** | 7 % | **29 %** |
+| avec un mandat | 35 % | **94 %** |
+| dernière lecture | 12/10 | **20/08** |
+
+Les 49 sont **mieux documentées**, pas moins. L'explication tient : ce sont des biens qui
+étaient **en vente en août** — donc sous mandat, avec un dossier complet — tandis que les 6 499
+vendus/clos comprennent beaucoup de vieilles fiches maigres (**2 200 n'ont aucun document**).
+
+⚠ **Et c'est précisément pour ça qu'on ne peut pas conclure d'ici : on ne voit pas une absence.**
+Ce qui manquerait, c'est ce qu'on n'a jamais téléchargé. Les 14 actes qu'elles portent ont été
+lus **en août**, avant la vente.
+
+### ④ Ce qui rendrait sûr — un relevé en lecture seule, ~5 requêtes
+
+Lire la page documents de **5 des 49** chez Hektor et comparer le compte avec le nôtre. Écrit
+**zéro** ligne. ⛔ **Demande l'accord de Frédéric** (un audit n'appelle pas Hektor).
+
+### ⑤ Et si c'est confirmé : il n'y a AUCUN moyen de rattraper à la main aujourd'hui
+
+`createSyncConsoleDocumentsJob` existe dans `api.ts:8082` mais **n'a aucun appelant** : il
+n'y a **pas de bouton « resynchroniser les documents »** dans l'app. Le seul recours serait de
+retirer leur empreinte pour que le rattrapage les reprenne — un geste en base.

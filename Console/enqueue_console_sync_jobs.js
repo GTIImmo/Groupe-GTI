@@ -22,6 +22,27 @@ function parseArgs(argv) {
     // que celles qui ont bouge. Purement additif : sans --detect, comportement d'origine.
     detect: false,
     cap: 3000,
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LE BUDGET DE LECTURES (6b, 14/10/2026) — 0 = pas de budget, comportement d'origine
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ⚠⚠ `cap` NE PLAFONNE PAS LES LECTURES, il plafonne les TRAVAUX RETENUS. Si peu
+    //   d'annonces ont bouge -- le cas normal -- la boucle lit TOUT le perimetre.
+    //   Mesure du 14/10 : `daily-cloud` = 13 484 annonces, et avec le frein (1 s par
+    //   requete, +60 s toutes les 100, +300 s toutes les 2 000) cela fait ≈ 6 h 23.
+    //   Impossible dans un run qui doit finir avant la descente de 07:45.
+    //   ⚠ La limite n'est plus le bannissement (≈ 18 000 requetes/nuit depuis 12 nuits,
+    //     0 ban) mais LE TEMPS.
+    //
+    // ⭐ ET UN BUDGET SUFFIT A FAIRE LA ROTATION, sans nouveau perimetre : le tri de
+    //   runDetection met deja les JAMAIS CONTROLEES d'abord, puis les plus anciennement
+    //   controlees. Toutes les vivantes sont donc couvertes en N nuits -- ce qui respecte
+    //   la decision du 07/10 (« G.2 se fera sur TOUTES les annonces vivantes, estimations
+    //   comprises ») sans reduire le perimetre.
+    //
+    // ⚠ ON COMPTE LES REQUETES, REUSSIES OU NON : une lecture ratee coute la meme seconde
+    //   et le meme credit chez Hektor. Compter les seules reussites laisserait le temps
+    //   deraper sur une serie de timeouts.
+    maxLectures: 0,
   };
   for (let index = 2; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -45,6 +66,9 @@ function parseArgs(argv) {
       args.detect = true;
     } else if (arg === "--cap" && next) {
       args.cap = Number(next);
+      index += 1;
+    } else if (arg === "--max-lectures" && next) {
+      args.maxLectures = Number(next);
       index += 1;
     } else if (arg === "--dry-run") {
       args.dryRun = true;
@@ -394,7 +418,10 @@ async function runDetection(args) {
   });
 
   const aSynchroniser = [];
-  const stats = { balayees: 0, inchangees: 0, changees: 0, sans_empreinte: 0, suivi_signature: 0, lectures_ko: 0, arret: null };
+  const stats = { balayees: 0, inchangees: 0, changees: 0, sans_empreinte: 0, suivi_signature: 0, lectures_ko: 0, arret: null,
+    // 6b (14/10) : le budget est un ARRET NORMAL, il ne doit pas se confondre avec
+    // `arret`, qui veut dire « Hektor nous ecarte ». Deux champs, deux sens.
+    lectures: 0, budget_lectures: args.maxLectures || null, budget_atteint: false };
 
   // Ensemble 2 d'abord : aucune lecture Hektor, et c'est le seul moyen de voir une signature
   // aboutir.
@@ -413,8 +440,20 @@ async function runDetection(args) {
     if (dejaPris.has(id)) continue;
     const connue = empreintes.get(id);
     if (!connue) { aSynchroniser.push(dossier); stats.sans_empreinte += 1; continue; }
+    // ── LE BUDGET DE LECTURES (6b, 14/10) ───────────────────────────────────────
+    // On s'arrete AVANT de lire, jamais apres : le budget est un plafond de requetes
+    // chez Hektor, pas un plafond de resultats.
+    // ⚠ ON NE PERD RIEN EN SORTANT ICI : le tri a mis les annonces SANS EMPREINTE en
+    //   tete (leur `checked_at` vaut 0), elles sont donc toutes deja retenues, sans
+    //   aucune lecture. Ce qui reste derriere est, par construction, plus frais que ce
+    //   qu'on vient de lire -- ce sera le lot de la nuit suivante.
+    if (args.maxLectures > 0 && stats.lectures >= args.maxLectures) {
+      stats.budget_atteint = true;
+      break;
+    }
     let html;
     try {
+      stats.lectures += 1;
       html = await fetchDocumentsHtml(id, session);
     } catch (error) {
       // ARRET : le serveur nous ecarte, ou la session est morte. On sort de la boucle --
