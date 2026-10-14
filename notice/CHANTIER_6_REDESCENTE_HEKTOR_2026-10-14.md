@@ -874,3 +874,65 @@ Donc le champ du mandat a été écrit **sans** que la colonne de fraîcheur sui
 « date de dernière écriture » **ne peut pas servir de détecteur de changement**. Sur les 22,
 **2 seulement** ont été rafraîchies dans les 36 h, la plus vieille datant du **03/04/2026**.
 *(Défaut noté, hors périmètre de 6b — à verser au chantier ⑦ ou à une note propre.)*
+
+---
+
+# ✅ LE PLAN ARRÊTÉ AVEC FRÉDÉRIC (14/10, fin de journée)
+
+> *« Étape 1 oui, mais il faut attendre la fin du rattrapage de 21 h pour allumer, rappelle-toi !!! »*
+
+## ÉTAPE 1 — la passe à la main · **GO donné** · demain 15/10 vers 10:00
+
+**Deux commandes, dans cet ordre :**
+
+```
+A)  node Console/enqueue_console_sync_jobs.js --scope daily-cloud --detect --max-lectures 1 --cap 600
+      -> les 456 annonces SANS EMPREINTE, tous statuts (estimations comprises), TOUT leur dossier
+      -> 1 seule requete de lecture  ·  ~481 travaux  ·  ~1 h 30 de worker
+
+B)  node Console/enqueue_console_sync_jobs.js --scope vente --detect --max-lectures 800 --cap 400
+      -> les 727 biens EN VENTE deja lus : tout ce qui a ete ajoute depuis aout
+      -> ~584 lectures (~15 min)  ·  ~175 travaux  ·  ~45 min de worker
+```
+
+⚠ **Le mandat n'est pas le périmètre, c'est le détecteur.** Les travaux téléchargent **tout** le
+dossier nouveau (diagnostics, avenants, titre, taxe foncière, offres), pas seulement le mandat.
+
+**Pourquoi le matin, et pourquoi ça ne gêne pas le lot de 21:00** : le lot de la nuit finit entre
+**01:47 et 04:57**, donc le worker est libre le matin ; nos ~650 travaux occupent ~2 h 15 → **file
+vide vers 12:30**, et le lot du soir part normalement *(il exige une file vide)*.
+
+**Deux garde-fous imposés** : ① vérifier que la file est **vide avant** de lancer ; ② **revérifier
+vers 18:00** qu'elle est revidée — sinon le dire à Frédéric et ne rien laisser traîner jusqu'à 21:00.
+
+**Contrôle promis** : vers midi, dire combien des **93** mandats sont arrivés.
+
+## ÉTAPE 2 — allumer l'étape PRÉVUE dans le run · ⛔ **PAS AVANT LA FIN DU RATTRAPAGE**
+
+**C'est le plan écrit dans la liste le 07/10, pas une idée neuve** — `G.2` : *« Cible : une
+détection limitée aux ~724 biens en vente + le suivi de signature ; les estimations en rotation
+lente ; étape NON bloquante »* · `G.6` : *« FRÉDÉRIC : allumer `-EnqueueConsoleDocuments` »*.
+
+**La règle de Frédéric, à ne pas lâcher** : un seul worker, une seule file. Tant que la tâche de
+21:00 pose 1 000 travaux par nuit, allumer le soir ferait **refuser son lot** *(sortie 3 + rouge)*.
+➡ **Fin du rattrapage attendue la nuit du 16 au 17**, et le signal est net : son journal écrira
+**« rien à faire »**. Ce jour-là, Frédéric désactive la tâche de 21:00 — **et seulement après** on
+allume.
+
+**Les trois correctifs à faire avant l'allumage** *(en attente de « vas-y »)* :
+1. **réécrire l'étape du run** : passer `--detect`, le périmètre `vente`, le plafond de lectures,
+   et la rendre **NON BLOQUANTE** avec son battement de surveillance *(aujourd'hui : bloquante,
+   et sans aucun `-WorkerKey`)* ;
+2. **la pagination sans tri** — sinon elle ne voit que **31 des 58** signatures en cours ;
+3. **le nom dans la liste du moniteur** — `GTI Rattrapage Documents` n'y est pas depuis le 26/09.
+
+**Ce qui N'entre PAS dans le run** *(mesuré)* : la rotation lente des **estimations** (+13 min)
+ferait déborder la descente sur la sauvegarde de 09:00 — il ne reste que **7 minutes** de marge
+avec les 15 min des biens en vente. Et ce n'est pas grave : 0,95 document par estimation, reçu à
+sa naissance, et les neuves sont attrapées **gratuitement** par la ligne A.
+
+## ⚪ MIS DE CÔTÉ, PAS OUBLIÉ
+- la tâche de **22:00** que j'avais écrite : **sans objet** puisqu'on allume l'étape du run.
+  Le script reste dans `scheduled/` (dormant) au cas où le run devienne trop serré.
+- **G.1-c** *(39 biens vendus sans leur compromis ni leur acte)* : à traiter après.
+- les **estimations déjà lues** : à relire un jour, ou jamais.
