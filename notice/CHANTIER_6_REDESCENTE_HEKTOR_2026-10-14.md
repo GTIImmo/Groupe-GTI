@@ -539,3 +539,51 @@ Lire la page documents de **5 des 49** chez Hektor et comparer le compte avec le
 `createSyncConsoleDocumentsJob` existe dans `api.ts:8082` mais **n'a aucun appelant** : il
 n'y a **pas de bouton « resynchroniser les documents »** dans l'app. Le seul recours serait de
 retirer leur empreinte pour que le rattrapage les reprenne — un geste en base.
+
+## ⭐⭐ 6b — LA PREUVE MÉTIER, SANS APPELER HEKTOR (14/10)
+
+*Demande de Frédéric : « continue tes mesures et explique-moi clairement quel problème tu
+souhaites corriger par rapport au chantier ».*
+
+**Le raisonnement** : un **mandat signé est un acte**. Son document existe donc **forcément**
+chez Hektor. On n'a pas besoin de le demander à Hektor pour savoir qu'il nous manque — il suffit
+de regarder les biens **sous mandat** et de voir si on a le document.
+
+### Les biens EN VENTE sous mandat, selon la date de signature du mandat
+
+| mandat signé | biens sous mandat | document chez nous | **manquant** | % |
+|---|---|---|---|---|
+| **avant le 20/08** | 472 | 399 | 73 | **15,5 %** |
+| **après le 20/08** | **97** | **4** | **93** | **95,9 %** |
+| sans date | 2 | 0 | 2 | 100 % |
+
+➡ **Avant le 20 août on a 84 % des mandats. Après, on en a 4 %.** La bascule est nette, et elle
+tombe exactement au jour où la relecture s'est arrêtée. **93 mandats signés n'existent que chez
+Hektor.**
+
+*(Le filtre a été contrôlé : les mandats s'appellent bien « Mandat (Avec saisie du numéro)
+(Vente) » — 377 exemplaires —, « mandat_simple_de_vente… », « mandat_exclusif… »,
+« Mandat de vente 2026… ». Tous portent le mot. Et les **4** qui sont chez nous sont
+vraisemblablement ceux que **notre app a générés** elle-même, arrivés par un autre chemin.)*
+
+### Le reste du dossier des biens en vente
+
+```
+595 biens ACTIFS           ->  199 n'ont AUCUN document chez nous
+ 89 biens SOUS COMPROMIS   ->   76 n'ont aucun document « compromis »
+ 43 biens SOUS OFFRE       ->    6 n'ont aucun document
+```
+⚠ Pour le compromis la preuve est **plus faible** que pour le mandat : seuls 30 % des
+vendus/clos relus par le rattrapage en portent un, donc son absence ne prouve pas à elle seule
+qu'il manque.
+
+### LE COÛT DE L'ATTENTE, mesuré
+
+**97 mandats signés en 8 semaines ≈ 12 par semaine.** Chaque semaine sans relecture ajoute donc
+**~12 mandats qui n'existent plus que chez Hektor** — et le jour de la coupure, ils sont perdus.
+
+### CE QUE JE VEUX CORRIGER, EN UNE PHRASE
+
+**Rallumer la relecture des dossiers chez Hektor, en la plafonnant** pour qu'elle ne dure pas
+6 h et ne casse ni le run ni le rattrapage. Le **budget de lectures** codé aujourd'hui est
+exactement la pièce qui manquait pour pouvoir la rallumer sans danger.
