@@ -24,9 +24,40 @@ const SOURCES = {
   brouillon: { table: "app_brouillon_annonce_index_current", idColumn: "app_brouillon_id" },
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// LES PERIMETRES QU'ON NE RATTRAPE PAS -- PAR DECISION, PAS PAR OUBLI   14/10/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+// DECISION DE FREDERIC (14/10, chantier 6 point 6a) : « il n'y a pas de documents
+// dans les brouillons, donc pas necessaire -- il faut juste le savoir. »
+// Les mesures du meme jour vont dans le meme sens : sur les 527 brouillons,
+// AUCUN n'est sous mandat (0 numero de mandat), et 0 document n'est indexe chez
+// nous pour eux. Un brouillon est une saisie en cours, pas un bien avec un dossier.
+//
+// ⚠⚠ POURQUOI UNE LISTE DECLAREE, ET PAS UN SIMPLE RETRAIT DE `auto`.
+//   Deux alarmes de ce fichier regardent TOUS les perimetres de SOURCES :
+//     · « PERIMETRE OUBLIE » -- un perimetre qui a du travail et que `auto` ne
+//       visite pas ; elle sort en code 1 ;
+//     · « LOT MAIGRE » -- il reste du travail ailleurs et on pose moins d'un
+//       dixieme du lot ; elle sort aussi en code 1.
+//   La tache « GTI Rattrapage Documents » est surveillee en `critical` dans
+//   check_gti_health.py -> un code 1 = UN E-MAIL ROUGE CHAQUE NUIT. Retirer
+//   `brouillon` de la liste de `auto` sans le declarer ici aurait donc remplace un
+//   probleme par un autre. Une decision ecrite se DECLARE ; elle ne se devine pas.
+//
+// ⚠ `--scope brouillon` CONTINUE DE MARCHER a la main : la porte reste ouverte si
+//   la decision change. Mais dans ce cas il faudra D'ABORD reparer le worker :
+//   loadDossier (console_job_worker.js:1927) ne connait que TROIS index, pas celui
+//   des brouillons -> aujourd'hui un lot pose a la main echouerait 527 fois sur
+//   527, et « on ne rejoue jamais » les exclurait pour toujours (G.1-b).
+const HORS_AUTO = {
+  brouillon: "decision du 14/10 : pas de documents dans les brouillons (chantier 6, point 6a)",
+};
+
 // AJOUTS DU 25/09 pour la tache planifiee de 23:00 -- tous ADDITIFS : sans eux, le
 // comportement manuel d'origine est inchange.
-//   --scope auto              enchaine archive -> historical -> brouillon tout seul
+//   --scope auto              enchaine les perimetres tout seul. ⚠ DEPUIS LE 14/10 il
+//                             enchaine archive -> historical SEULEMENT : les brouillons
+//                             sont hors rattrapage par decision (voir HORS_AUTO ci-dessous)
 //   --exiger-file-vide        REFUSE de poser un lot si le precedent n'est pas digere
 //   --max-erreurs-recentes N  REFUSE si N erreurs ou plus en 24 h (signature d'un rejet Hektor)
 // Codes de sortie : 0 pose ou rien a faire · 3 file occupee · 4 trop d'erreurs · 1 panne
@@ -166,7 +197,12 @@ async function main() {
   // LE CORRECTIF : on ENCHAINE les perimetres jusqu'a remplir le lot. `archive` donne
   // ses 2, `historical` complete jusqu'a la limite, et quand il est fini `brouillon`
   // prend la suite. ⚠ Le comportement de `--scope <un seul>` NE CHANGE PAS.
-  const scopes = args.scope === "auto" ? ["archive", "historical", "brouillon"] : [args.scope];
+  // ⚠ 14/10 : `.filter` sur HORS_AUTO -- la liste reste ecrite en entier pour qu'on
+  //   voie d'un coup d'oeil l'ordre complet, et la decision se lit a cote.
+  //   `--scope <un seul>` n'est PAS filtre : une demande explicite reste explicite.
+  const scopes = args.scope === "auto"
+    ? ["archive", "historical", "brouillon"].filter((s) => !HORS_AUTO[s])
+    : [args.scope];
 
   const retenus = [];
   const stats = { balayees: 0, deja_marquees: 0, exclues_erreur: 0, deja_en_file: 0 };
@@ -200,8 +236,17 @@ async function main() {
   }
 
   if (!retenus.length) {
+    // ⚠ 14/10 : le message disait « TOUS les perimetres sont rattrapes ». Des qu'un
+    //   perimetre est hors rattrapage par decision, c'est faux -- et un message faux
+    //   dans un journal de nuit, c'est ce qui fait raisonner a cote des semaines plus
+    //   tard. On nomme donc ce qui n'est pas compte.
+    //   (une demande explicite `--scope brouillon` n'est pas filtree : rien a signaler)
+    const horsAuto = args.scope === "auto" ? Object.keys(HORS_AUTO) : [];
     console.log(JSON.stringify({ scope: args.scope, rien_a_faire: true,
-      message: "tous les perimetres sont rattrapes" }, null, 2));
+      hors_rattrapage: horsAuto.length ? HORS_AUTO : undefined,
+      message: horsAuto.length
+        ? `perimetres rattrapes, hors : ${horsAuto.join(", ")} (par decision)`
+        : "tous les perimetres sont rattrapes" }, null, 2));
     return;
   }
 
@@ -259,21 +304,33 @@ async function main() {
   }
   // Un perimetre qui a du travail et que `auto` n'a jamais visite : c'est un oubli de
   // cablage, et il est GRAVE -- on crie meme si le lot est plein.
-  const oublies = restantAilleurs.filter((s) => !scopes.includes(s));
+  //
+  // ⚠⚠ 14/10 : LES DEUX ALARMES IGNORENT LES PERIMETRES DE `HORS_AUTO`, et sans ca le
+  //   frein des brouillons se payait en rouges quotidiens :
+  //     · « PERIMETRE OUBLIE » aurait crie DES CETTE NUIT (brouillon a du travail et
+  //       n'est plus visite) ;
+  //     · « LOT MAIGRE » aurait crie des la fin des vendus/clos (il ne reste alors que
+  //       les 1 ou 2 archives du jour, soit moins d'un dixieme du lot, avec « du travail
+  //       ailleurs » = les brouillons).
+  //   Un perimetre hors rattrapage par DECISION n'est ni un oubli ni un calage. Il
+  //   reste affiche dans `reste_a_faire` -- on le voit -- mais il ne declenche rien.
+  const restantSansDecision = restantAilleurs.filter((s) => !HORS_AUTO[s]);
+  const oublies = restantSansDecision.filter((s) => !scopes.includes(s));
   const maigre = retenus.length < Math.max(1, Math.floor(args.limit / 10));
 
   console.log(JSON.stringify({ scope: args.scope, par_perimetre: parScope, ...stats,
     retenus: retenus.length, jobs_empiles: args.dryRun ? 0 : empiles, dry_run: args.dryRun,
-    reste_a_faire: restantAilleurs }, null, 2));
+    reste_a_faire: restantAilleurs,
+    hors_rattrapage: args.scope === "auto" ? HORS_AUTO : undefined }, null, 2));
 
   if (oublies.length) {
     console.error(`PERIMETRE OUBLIE : ${oublies.join(", ")} -- il a du travail et `
       + `« --scope auto » ne le visite pas. Son travail ne sera JAMAIS pose. `
       + `Ajouter le perimetre a la liste de "auto" (voir l'en-tete de ce fichier).`);
     process.exitCode = 1;
-  } else if (maigre && restantAilleurs.length) {
+  } else if (maigre && restantSansDecision.length) {
     console.error(`LOT MAIGRE : ${retenus.length} travail(aux) pose(s) pour une limite de `
-      + `${args.limit}, alors qu'il reste du travail dans : ${restantAilleurs.join(", ")}. `
+      + `${args.limit}, alors qu'il reste du travail dans : ${restantSansDecision.join(", ")}. `
       + `Le rattrapage n'avance pas -- voir l'en-tete de ce fichier.`);
     process.exitCode = 1;
   }

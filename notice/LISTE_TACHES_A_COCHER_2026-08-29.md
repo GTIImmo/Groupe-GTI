@@ -48,13 +48,13 @@ L1 🟡    ROUVERT 07/10 : la recherche ne nait pas sous NOTRE numero (etape 3) 
          n'est pas rejoue -> chantier ④
 L2 🟡    ROUVERT 07/10 : 26bis-3 (= N.4) · 26bis-TRANSACTIONS
 L3 ✅    la recence par champ (le run « ecrase puis repose » : l'enonce est a reecrire)
-L4-b' ✅ L4-c ✅ (L4-c l. 98)
-L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 391) ; 0 creation reelle depuis le 25/09
-         C.9-couple (l. 888) : la sonde existe (033e946), reste le geste humain
+L4-b' ✅ L4-c ✅ (L4-c l. 102)
+L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 395) ; 0 creation reelle depuis le 25/09
+         C.9-couple (l. 892) : la sonde existe (033e946), reste le geste humain
          26bis-TRANSACTIONS · 4.3
-L5 ⛔    E.0-bis (l. 2400) : photos, mandat existant, fusion, brouillon, suppressions,
+L5 ⛔    E.0-bis (l. 2422) : photos, mandat existant, fusion, brouillon, suppressions,
          16 « Ouvrir Hektor » vivants (sur l'ancien domaine)
-L6 ⛔    D.0 (l. 970) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
+L6 ⛔    D.0 (l. 974) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
 L7 🟡    afficher ✅ · ajouter ⛔ (G.5, devenu bloquant)
 L8 ⛔    E.2 pas jouable avec les droits actuels : F.1 AVANT E.2 -> L10-11
 L9 🟡    phase 1 ✅ ; registre legal, C.13-c, export PROTEXA, 2 defauts dormants (section 9)
@@ -78,7 +78,11 @@ code     (section 12)
 ## ⚠⚠ CE QUI A UNE DATE DE PÉREMPTION — *à finir tant que Hektor vit*
 
 ```
-G.1-b    les 508 brouillons : a reparer AVANT que le rattrapage les atteigne
+G.1-b    ✅ CLOS LE 14/10 PAR UNE DECISION, PAS PAR UN CORRECTIF -- Frederic : « il n'y a
+         pas de documents dans les brouillons, donc pas necessaire, il faut juste le
+         savoir ». Les 527 brouillons sont HORS rattrapage (HORS_AUTO dans
+         enqueue_empreinte_lot.js). Plus de date de peremption. Voir 6a de
+         notice/CHANTIER_6_REDESCENTE_HEKTOR_2026-10-14.md
 G.2      rebalayer le PARC VIVANT (fige depuis le 20/08)
 L10-8    les planchers « Hektor repond vide » -- ils protegent aussi DES MAINTENANT
 C.9-couple · C.13-c · N.4 (26bis-3) · E.1 (recherches, visites, documents, signatures)
@@ -1221,12 +1225,30 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               · tache a 21 h depuis le 05/10, lots de 2 500, UN seul perimetre par nuit
               · ventes ≈ 24 documents/annonce (2,7 pour les archives) : un lot de 2 500
                 ventes = 20 a 36 h (est.) -> fin plutot fin octobre ; +137 a +273 Go
-            [ ] G.1-b  ⛔ LES 508 BROUILLONS ECHOUERONT TOUS   A FAIRE AVANT QU'IL LES ATTEIGNE
-                  loadDossier (console_job_worker.js:1877-1929) ne cherche pas dans
-                  app_brouillon_annonce_index_current -> « Dossier introuvable » x 508,
-                  puis refus (>= 20 erreurs), puis EXCLUSION DEFINITIVE (« ne jamais rejouer »)
-                  et le --dry-run dira « rien_a_faire ». Touche le worker : « vas-y » +
-                  redemarrage des 4 services EN JOURNEE.
+            [x] G.1-b  ✅ CLOS LE 14/10 -- LES BROUILLONS SORTENT DU RATTRAPAGE (chantier 6a)
+                  LE DEFAUT ETAIT REEL, revérifié le 14/10 : loadDossier
+                  (console_job_worker.js:1927) ne connait que TROIS index ; les 527
+                  brouillons ne sont dans AUCUN des trois (mesure : 0 sur 527) -> 527
+                  echecs sur 527, puis refus (>= 20 erreurs en 24 h), puis EXCLUSION
+                  DEFINITIVE (« ne jamais rejouer »), et un rouge critical pendant 30 j.
+                  Premier contact mesure : la nuit du 16 au 17/10 (et non du 15 au 16).
+                  ⭐ MAIS LE CORRECTIF N'EST PAS CELUI QUI ETAIT ECRIT ICI. Frederic,
+                  14/10 : « il n'y a pas de documents dans les brouillons, donc pas
+                  necessaire -- il faut juste le savoir. » Mesures concordantes : 0 des
+                  527 sous mandat, 0 document indexe, 194 sans detail REST, 154 plus
+                  touches depuis avant juin.
+                  ➡ FAIT : `HORS_AUTO` dans enqueue_empreinte_lot.js -- `--scope auto`
+                  n'enchaine plus que archive -> historical. AUCUN redemarrage, aucun
+                  patch SQL, le worker n'est pas touche.
+                  ⚠ LE PIEGE EVITE : retirer `brouillon` sans le DECLARER faisait crier
+                  « PERIMETRE OUBLIE » (code 1) des cette nuit, puis « LOT MAIGRE » a la
+                  fin des vendus/clos -- or la tache est surveillee en `critical` : un
+                  e-mail rouge par nuit. Prouve par temoin inverse (filtre retire ->
+                  code 1 ; filtre remis -> code 0).
+                  ⚠ SI LA DECISION CHANGE UN JOUR : `--scope brouillon` marche toujours
+                  (527 vus en dry-run), mais il faudra D'ABORD apprendre le 4e index a
+                  loadDossier, sinon c'est 527 exclusions definitives.
+                  Detail et mesures : notice/CHANTIER_6_REDESCENTE_HEKTOR_2026-10-14.md
             [ ] G.1-c  111 annonces lues en aout VIVANTES puis vendues : leurs pieces de fin
                   de vie (compromis, acte) ne seront JAMAIS relues (empreinte deja posee)
             [ ] G.1-d  230 documents indexes SANS fichier (synchros tuees par le
