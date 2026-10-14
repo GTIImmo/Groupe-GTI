@@ -1483,8 +1483,17 @@ cle du chantier ③         medium / optional_pipeline_step / active   INTACTE
 ⚠ **Aucun push, aucun déploiement, aucun redémarrage** : le run lit son fichier à chaque
 exécution, donc la modification est active **dès la nuit du 13 au 14/10**.
 
-⏳ **CE QUI RESTE À CONTRÔLER, LE 14/10 AU MATIN** : les **23** doivent porter un premier
-succès daté. Celle qui n'en a pas est mal orthographiée quelque part.
+### ✅ LE CONTRÔLE DU 14/10 — VERT
+
+```
+run           05:00:02 -> 07:13:09   exit 0
+23 cles   ·   23 avec un premier succes   ·   0 manquante   ·   0 erreur
+              datees de 06:21:29 a 07:08:47, dans l'ordre exact du run
+```
+
+Les 4 `critical` ont toutes parlé — dont **`phase2.adresses_photos` à 07:07:52**, celle dont
+le commentaire promettait depuis le **27/09** que « le moniteur le dit ». **C'est vrai
+depuis cette nuit.**
 
 ⏳ **Et ce qui reste à décider** : la promotion en `critical` des étapes qui l'auront mérité,
 **dans un mois, mesures en main** — en particulier `phase2.registre_relations`, la seule des
