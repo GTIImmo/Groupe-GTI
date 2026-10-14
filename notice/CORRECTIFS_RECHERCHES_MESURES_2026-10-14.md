@@ -176,3 +176,43 @@ faisant imprimer.)*
 push, le rattrapage n'aura lieu que **le surlendemain**. **À vérifier dans le journal du run.**
 
 ⛔ **Rien n'est poussé. Rien n'a été lancé à la main.**
+
+---
+
+## 7. ⭐⭐ LE PROJET AVAIT DÉJÀ TRANCHÉ — *le 21 août, mot pour mot*
+
+*Question de Frédéric : « mais le périmètre de Supabase c'est uniquement les recherches actives,
+non ? »* — **Non, et la mesure le dit :**
+
+| Supabase contient | |
+|---|---|
+| recherches **inactives** | **7 203** *(63 %)* |
+| recherches **actives** | **4 250** *(toutes celles qui existent en local, à l'unité près)* |
+| **total** | **11 453** |
+
+Le périmètre n'est donc pas « les actives » : c'est **toutes les recherches, actives et
+inactives, des contacts ÉLIGIBLES**.
+
+### Et ce n'était pas un hasard — c'est écrit dans le run
+
+> **`-IncludeArchivedContactSearches` (21/08/2026)** : *« on cesse de supprimer de Supabase une
+> recherche que Hektor vient d'archiver. **Sa ligne disparaissait, et tout ce qui pointait sur sa
+> clé — propositions, relances, retours acquéreur, rapprochements — devenait orphelin.** Désormais
+> elle reste, marquée inactive. Le moteur de rapprochement ne la calcule plus *(verrou posé le
+> même jour)* et **le front ne la liste plus**. »*
+
+⭐⭐ **Même problème, même analyse, même remède — posés il y a deux mois.**
+
+➡ **Mon correctif n'invente rien : il achève une décision déjà prise.** Le 21/08, le projet a
+fermé **la première porte** *(la recherche est archivée)*. Il restait **la seconde**, par laquelle
+les 36 sont sorties : **le contact perd son éligibilité**.
+
+### Et ça répond d'avance à deux inquiétudes
+
+| | ce que dit le commentaire du 21/08 | |
+|---|---|---|
+| le moteur de rapprochement va-t-il recalculer ces 36 ? | *« ne la calcule plus, verrou posé le même jour »* | ✅ **non** |
+| vont-elles réapparaître à l'écran ? | *« le front ne la liste plus »* | ✅ **non** — et je l'avais vérifié séparément : `app_contact_searches_current` filtre sur `is_active` |
+
+*(Leçon 15 du projet : **chercher si le projet a déjà tranché, avant de proposer une forme**.
+Ici il avait tranché, et il avait raison.)*
