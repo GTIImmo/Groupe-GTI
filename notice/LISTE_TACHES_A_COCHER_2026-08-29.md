@@ -52,7 +52,7 @@ L4-b' ✅ L4-c ✅ (L4-c l. 102)
 L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 395) ; 0 creation reelle depuis le 25/09
          C.9-couple (l. 892) : la sonde existe (033e946), reste le geste humain
          26bis-TRANSACTIONS · 4.3
-L5 ⛔    E.0-bis (l. 2422) : photos, mandat existant, fusion, brouillon, suppressions,
+L5 ⛔    E.0-bis (l. 2458) : photos, mandat existant, fusion, brouillon, suppressions,
          16 « Ouvrir Hektor » vivants (sur l'ancien domaine)
 L6 ⛔    D.0 (l. 974) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
 L7 🟡    afficher ✅ · ajouter ⛔ (G.5, devenu bloquant)
@@ -1254,7 +1254,28 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             [ ] G.1-d  230 documents indexes SANS fichier (synchros tuees par le
                   bannissement du 20/08, dont des mandats et un avenant) : seul Hektor les a
 
-[ ] G.2   LE PIPELINE APPELLE --detect          PEUT SE FAIRE MAINTENANT
+[x] G.2   LE PIPELINE APPELLE --detect    ✅ CODE LE 14/10, DORMANT (chantier 6b)
+            L'etape du run est REECRITE en DEUX lignes, cible de la liste du 07/10 tenue :
+              A) --scope daily-cloud --detect --max-lectures 1 --cap 600
+                 les annonces SANS EMPREINTE sont empilees AVANT toute lecture -> le parc
+                 vivant ENTIER, estimations comprises, pour UNE SEULE requete Hektor
+                 (454 ramassees ainsi au dry-run du 14/10)
+              B) --scope vente --detect --max-lectures 800 --cap 400
+                 les 727 biens en vente RELUS (~584 lectures, ~15 min)
+            + NON BLOQUANTE (Invoke-OptionalStepWithRetry -Exe, patron du 26/09) : un throw
+              ne peut plus tuer Matterport, les liens RDV, la vitrine, l'export Android
+            + SURVEILLEE : -WorkerKey « console.enqueue_sync_jobs », cle qui EXISTAIT DEJA
+              au registre (optional_pipeline_step -> tolerance 50 h) -> AUCUNE ecriture en base
+            + perimetre `vente` neuf (Actif/Sous offre/Sous compromis) : sans lui, un petit
+              budget partirait a 95 % sur les estimations, car les 13 028 empreintes du parc
+              vivant portent TOUTES la meme date (19-20/08) et le tri ne les distingue pas
+            ⚠ DEUX DEFAUTS TROUVES ET CORRIGES LE MEME JOUR, voir le journal du plan :
+              · la PAGINATION SANS TRI de ce fichier (meme defaut que 461a66c du 25/09) :
+                le suivi de signature voyait 31 annonces sur 58. Curseur recopie -> 58/58.
+              · « GTI Rattrapage Documents » n'etait PAS dans la liste du moniteur (6 suivies
+                sur 8) : le correctif du 26/09 avait pose la gravite SANS le nom. 8/8 maintenant.
+            ⛔ RESTE : le drapeau, c'est G.6, et APRES le rattrapage (regle de Frederic)
+            (ancien etat, garde pour la memoire)
             run_full_pipeline.ps1:1033 lance --scope daily-cloud SANS --detect : le
             drapeau ajoute tel quel empilerait TOUT le perimetre chaque nuit.
             ⚠⚠ Un balayage du parc entier coute 56 867 requetes = 4x le seuil de
@@ -1326,6 +1347,21 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
             ↳ 07/10 : ⛔ PAS « TEL QUEL ». Allume aujourd'hui, il empilerait les 13 463
               annonces vivantes CHAQUE NUIT (> 27 h de travail) : la file ne se viderait
               jamais et --exiger-file-vide ferait sauter le rattrapage. G.2 D'ABORD.
+            ↳ 14/10 : ✅ G.2 EST FAIT (ci-dessus), le « tel quel » n'existe plus : l'etape
+              lit desormais ~584 pages (~15 min), elle est non bloquante et surveillee.
+              ⛔ IL RESTE LA REGLE DE FREDERIC, repetee deux fois le 14/10 : « il faut
+                attendre la fin du rattrapage de 21 h pour allumer ». UN SEUL worker, UNE
+                SEULE file -- tant que 21:00 pose 1 000 travaux par nuit, allumer le soir
+                ferait refuser son lot (sortie 3 + rouge, et c'est desormais un e-mail).
+              FIN DU RATTRAPAGE attendue la nuit du 16 au 17/10 (2 396 vendus/clos
+                restants a 1 000/nuit). SIGNAL NET : son journal ecrira « rien a faire ».
+              L'ORDRE DES GESTES, ce jour-la :
+                1. verifier « rien a faire » dans le journal de 21:00
+                2. desactiver la tache « GTI Rattrapage Documents » (une tache Disabled
+                   est ignoree par le moniteur -> aucun faux rouge)
+                3. ajouter -EnqueueConsoleDocuments a la tache « GTI Quotidien »
+                4. le lendemain : controler last_success_at sur la cle
+                   console.enqueue_sync_jobs, et le journal du run (2 lignes START/DONE)
 ```
 
 ### LES PHOTOS
