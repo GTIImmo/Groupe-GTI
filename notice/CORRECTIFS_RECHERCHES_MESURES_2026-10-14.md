@@ -216,3 +216,36 @@ les 36 sont sorties : **le contact perd son éligibilité**.
 
 *(Leçon 15 du projet : **chercher si le projet a déjà tranché, avant de proposer une forme**.
 Ici il avait tranché, et il avait raison.)*
+
+---
+
+## 8. ⚠⚠ L'ORDRE DES DEUX ÉTAPES EST UNE COURSE — et elle est perdue de 48 secondes
+
+**L'inconnue signalée en section 6 est levée, et la réponse n'est pas bonne.**
+
+| | quand, en heure locale |
+|---|---|
+| **le ménage** `app-sweep-search-orphans` *(cron Supabase, `0 5 * * *` en UTC)* | **07:00:00** |
+| **le push des contacts** *(étape du run)* | **07:00:48** le 14/10 · **07:04:00** le 13/10 |
+
+➡ **Le ménage passe AVANT le push, de 48 secondes.**
+
+### Trois conséquences
+
+1. **Le rattrapage des 4 022 n'aura pas lieu demain matin.** Les 36 remonteront à 07:00:48, mais
+   le ménage sera déjà passé. **Ce sera le 16/10.**
+2. ⚠ **C'est une COURSE, pas un ordre.** 48 s un jour, 4 min l'autre — **l'ordre peut s'inverser
+   n'importe quand**. Ça explique peut-être pourquoi le ménage rattrape **370 lignes** certains
+   jours et **0** les 11, 12 et 13/10.
+3. **Le ménage dépend du run sans que rien ne le dise** : l'un est un cron Supabase, l'autre une
+   étape PowerShell. **Personne ne garantit leur enchaînement.**
+
+### ❓ Trois sorties — à trancher
+
+| | | |
+|---|---|---|
+| **A** | **décaler le cron** à `0 6 * * *` *(08:00 locale)* | 1 ligne SQL · ⚠ **écriture en base de production** |
+| **B** ⭐ | **appeler le ménage DEPUIS le run**, juste après le push | l'ordre devient **certain** au lieu d'aléatoire · ~30 min |
+| **C** | ne rien faire | le rattrapage a lieu le **16/10**, et la course reste |
+
+**Je recommande B** : c'est la seule qui supprime la course. **Rien n'est décidé.**
