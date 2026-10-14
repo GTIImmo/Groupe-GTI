@@ -108,7 +108,7 @@ résultat** → plan, liste et cette page à jour. Prompt de reprise :
 |---|---|---|
 | ① | sécurité : 136 fonctions ouvertes à la clé publique | ✅ **FINI le 08/10** |
 | ② | **les droits du négociateur** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — **8 patchs** et **1 déploiement**, tous contrôlés. Le négociateur a **21 gestes** sur ses biens · les **commissions** des collègues sont cachées · les **photos** du réseau sont visibles · le **registre** est réservé · le **manager = admin** *(sauf l'écran Santé)* · la **case « périmètre »** est à l'écran, **éprouvée par un pilote**. Restes **reportés par Frédéric**, pas oubliés *(voir « ce qui attend »)* |
-| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (5/5 codées)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit + ⭐ **la re-pose après le push, sur les DEUX chemins qui effacent** *(le run **et** le chemin immédiat du worker)*, **sans aucun redémarrage**. ⏰ **À prouver par le run du 14/10.** ⚠ **Restent 2 pièces de 3c** : le **champ à l'écran** *(3 points d'entrée)* et le **worker** *(4 services)*, + le sort de `appliquer_contrat_mandat.py`. ✅ **3e** le **journal des suppressions** *(qui/quoi/quand)* : le patron existait **deux fois** dans le projet, recopié — **mais avec une divergence : si la trace ne s'écrit pas, ON NE DÉTRUIT PAS** *(ses deux aînées, elles, avalent l'erreur — mesurable)* · + la **mention « supprimé chez Hektor »** sur les documents · + ⭐⭐ **le garde-fou de LISTE VIDE, qui manquait aussi aux photos** · + le `confirm` qui dit la vérité. ⛔ **Reste pour 3e** : 4 services, le push, l'écran du journal, et le **geste « supprimer une photo »** — ⚠ **la commande Hektor est INCONNUE** *(audit du 25/09 : « les trouver d'abord »)*, un relevé en lecture seule est à faire. ⚠ **Reste** : **3d** ajouter un document/une photo |
+| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (5/5 codées)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit + ⭐ **la re-pose après le push, sur les DEUX chemins qui effacent** *(le run **et** le chemin immédiat du worker)*, **sans aucun redémarrage**. ⏰ **À prouver par le run du 14/10.** ⚠ **Restent 2 pièces de 3c** : le **champ à l'écran** *(3 points d'entrée)* et le **worker** *(4 services)*, + le sort de `appliquer_contrat_mandat.py`. ✅ **3e** le **journal des suppressions** *(qui/quoi/quand)* : le patron existait **deux fois** dans le projet, recopié — **mais avec une divergence : si la trace ne s'écrit pas, ON NE DÉTRUIT PAS** *(ses deux aînées, elles, avalent l'erreur — mesurable)* · + la **mention « supprimé chez Hektor »** sur les documents · + ⭐⭐ **le garde-fou de LISTE VIDE, qui manquait aussi aux photos** · + le `confirm` qui dit la vérité. ⛔ **Reste pour 3e** : 4 services, le push, l'écran du journal, et le **geste « supprimer une photo »** — ⚠ **la commande Hektor est INCONNUE** *(audit du 25/09 : « les trouver d'abord »)*, un relevé en lecture seule est à faire. ✅ **3d (2 pièces sur 4)** un document et une photo **existent chez nous avant que Hektor réponde** — le lot était en plan depuis le 25/09, et j'ai trouvé **pourquoi il ne pouvait pas marcher** : le rangement calcule `storage_path || <place définitive>`, donc il gardait le chemin **temporaire** comme domicile du document *(mesuré contre la version d'avant : 2 contrôles rouges)*. ⭐ **Deux gardes, pas une** — et celle des droits faisait **déjà** ce que Frédéric demandait. **Répétition 15/15.** ⭐⭐ **Et la fuite de la salle d'attente est nettoyée ET bouchée** : **109 fichiers, 196 Mo** dormaient sous `temp/` depuis le 14/05, dont **93 venant des générateurs de PDF**, pas des documents. ⚠ **Restent 3d-③ le front et 3d-④ le repreneur** |
 | ④ | aucun échec silencieux — **10 points** *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** · ⭐ **4j ajouté et fait le 13/10** *(trouvé par la session du chantier ③)* : **23 battements du run partaient dans le vide** — une clé non enregistrée reçoit **0 ligne modifiée** et le code compte **un succès**. **6 nuits sur 46** portaient un échec dont personne n'a rien su. 23 lignes de registre + 14 `-WorkerKey` au run ; il ne reste que **3 étapes sans clé**, celles qui **tuent déjà le run**. ⏳ **1ᵉʳ contrôle le 14/10 au matin** |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(liste : `D.0`, l. 970 · photos, section **10bis**, l. 1170)* | ⬜ |
@@ -265,7 +265,55 @@ report ne se décident jamais sans lui.
        mesure : elle n'existe que dans app_mandat_register_current). Trois options
        presentees le 13/10 (A le retirer du run / B le redresser / C le commenter),
        RECOMMANDE A, Frederic n'a pas encore tranche.
-   Puis : 3d / 3e (documents et photos)
+   3d : LOT 2c, LE 14/10 -- 2 PIECES SUR 4.
+     [1 FAITE, A COLLER] patch_chantier3_3d_lot2c_creer_document_2026-10-14.sql :
+       app_console_creer_document_optimistic + sa jumelle photo. Elles creent la
+       ligne chez nous ET posent app_document_id dans la charge du travail, dans
+       la MEME transaction -- c'est ca qui allume le chemin differe du worker.
+       REPETITION 15/15, 0 echec (collee par Frederic), dont le refus d'un depot
+       sur le bien d'un AUTRE joue avec la vraie identite d'un commercial.
+       ⭐ La garde des droits (app_console_can_access_dossier) faisait DEJA ce que
+         Frederic demandait au point 3 : il n'y avait rien a ajouter.
+       ⭐ REPLI NATUREL : sans la RPC, le travail part sans app_document_id et le
+         worker reprend l'ancien chemin (121 envois sur 121 depuis mai).
+     [2 FAITE, INERTE] le worker. ⛔ LES 4 SERVICES N'ONT PAS ETE REDEMARRES.
+       ⚠⚠ LE DEFAUT QUI BLOQUAIT LE LOT DEPUIS LE 25/09 : le rangement calcule
+         `document.storage_path || <place definitive>`, et la RPC pose le chemin
+         TEMPORAIRE dedans -- donc le « || » ne se declenche JAMAIS. Le document
+         aurait vecu dans temp/ pour toujours, marque « cloud_available ».
+         Remede : le marqueur storage_status='pending_upload' (PAS le nom du
+         chemin) remet storage_path a blanc avant le rangement.
+     [3 PAS COMMENCEE] le front. ⚠ MESURE A GARDER : les derives se fabriquent
+       AVANT que Hektor soit contacte, donc l'ecran montre NOTRE image depuis
+       NOTRE coffre. Mais entre la RPC et le worker la ligne n'a aucune URL -- un
+       sort_order vide atterrit EN FIN de galerie (1 -> 5 -> NULL), pas en tete.
+       loadConsolePhotos ne descend PAS storage_status : a ajouter (lecon 22).
+     [4 PAS COMMENCEE] brancher le repreneur -- et son epreuve (n) est PERIMEE
+       (elle cherche « offset= », le script est passe au curseur le 26/09, 461a66c).
+   ⭐⭐ LA FUITE DE LA SALLE D'ATTENTE : NETTOYEE ET BOUCHEE LE 14/10.
+     109 fichiers, 196 Mo dormaient sous temp/ du coffre documents depuis le 14/05.
+     ⚠ ILS NE VENAIENT PAS D'OU JE CROYAIS : 93 sortaient des TROIS GENERATEURS DE
+       PDF (estimation 137 Mo, cadastre 19 Mo, mandat 2,3 Mo), 11 seulement de
+       l'ajout de documents, 5 sans aucun travail (tous des essais).
+     ⭐ Les 104 travaux etaient tous « done » et AUCUNE LIGNE VIVANTE N'Y POINTAIT
+       (0 sur 162 544 documents, 0 sur 441 199 photos) : rien en vol, zero perte.
+     SUPPRIMES : 109, verifie PAR DEUX CHEMINS -- le script recompte a la source, et
+       storage.objects passe de 22 973 a 22 864 (exactement 109 de moins).
+     Trace : logs/temporaires_avant_nettoyage_2026-10-14T08-07-17.tsv
+     Outil : Console/nettoyer_temporaires_orphelins.js -- QUATRE gardes refaites a
+       chaque passage, et il ne supprime rien sans --supprimer.
+     LE BOUCHON TENAIT EN UN SEUL ENDROIT : handleUploadDocumentToHektor, par ou
+       passent les quatre types. On y recopie la regle des photos ET sa prudence :
+       on ne supprime que si la copie serveur a reussi, sinon on garde et on le DIT.
+   ⚠ DEUX EPREUVES ETAIENT DEJA ROUGES AVANT (verifie contre HEAD), NON REPAREES --
+     HORS PERIMETRE, Frederic n'a rien dit :
+     - test_photo_ajout_gardee est tombee le 27/09 quand fabriquerDerivesApres-
+       Rangement est entre dans persistProvidedPhotoFile (bf3afb9, G.17) : ses
+       doublures n'ont jamais suivi -> ReferenceError. 17 JOURS ROUGE SANS QUE
+       PERSONNE LE VOIE.
+     - test_porte_contacts : 11 verts, 2 rouges sur « L4-c ② l'ecrasement de
+       l'identite par la cible », depuis le chantier contacts du 23/09.
+   Puis : 3e (le reste : 4 services, le push, l'ecran du journal, la photo)
 ①-ter ⭐⭐ LES TROIS CLOTURES DE MANDAT « DE L'APP » ETAIENT DES ESSAIS (etabli le 13/10).
    62966 = L'ANNONCE D'ESSAI, designee explicitement pour eprouver la cloture
      (CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md, 3 fois : « Essai sur l'annonce
@@ -371,7 +419,7 @@ C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 
 
 ---
 
-## 3. Avant de coder — la liste de relecture *(plan, l. 1037 « ⛔ AVANT DE COMMENCER UN CHANTIER »)*
+## 3. Avant de coder — la liste de relecture *(plan, l. 1106 « ⛔ AVANT DE COMMENCER UN CHANTIER »)*
 
 Elle existe *« parce que le 20/08 j'ai oublié trois fois un point déjà documenté »*.
 
@@ -396,13 +444,13 @@ décision écrite) · **Est-ce mesuré ?** (mesurer, *puis* conclure) · **Qu'es
   de refaire les mêmes choses.*
 - **Une mesure approximative vaut une mesure fausse.**
 - **Une tâche n'est cochée que si son ÉNONCÉ est couvert**, et la mesure doit répondre à la
-  question posée — pas montrer que « ça marche ». *(plan, l. 686 « ⚖ LA RÈGLE DU FAIT »)*
+  question posée — pas montrer que « ça marche ». *(plan, l. 755 « ⚖ LA RÈGLE DU FAIT »)*
 - **Ne rien écraser.** Additif et chirurgical, jamais de remplacement massif.
 - **Pas de code sans « go » explicite.** Un message court, en cadrage, est une **question**.
 - **Stager fichier par fichier.** Jamais `git add .` : 73 fichiers non suivis traînent
   dans le dépôt.
 - **Les 5 règles du projet** et **la règle des identifiants** : plan, sections « LA RÈGLE DES
-  IDENTIFIANTS » (l. 2746) et « LES CINQ RÈGLES » (l. 2757).
+  IDENTIFIANTS » (l. 2966) et « LES CINQ RÈGLES » (l. 2977).
   *(un numéro ne se perd jamais · Hektor confirme, il n'écrase pas · une action a une fin
   visible · Hektor reste à jour tant qu'il diffuse · le miroir se met à jour, il ne se
   remplace pas)*
