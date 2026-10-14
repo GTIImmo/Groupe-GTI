@@ -129,6 +129,35 @@ const INDEX_SOURCES = {
   archive: { table: "app_archive_annonce_index_current", idColumn: "app_archive_id", dailyFilter: false },
   historical: { table: "app_historical_annonce_index_current", idColumn: "app_historical_id", dailyFilter: false },
   brouillon: { table: "app_brouillon_annonce_index_current", idColumn: "app_brouillon_id", dailyFilter: false },
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // LE PERIMETRE « EN VENTE » (6b, 14/10/2026) — les biens qui recoivent vraiment
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Mesure du 14/10, sur des annonces toutes lues en aout (donc comparables) :
+  //     Sous compromis   22,4 documents par bien   (97 % en ont au moins un)
+  //     Sous offre       13,7                      (86 %)
+  //     Actif             8,3                      (67 %)
+  //     Estimation        0,95                     (33 %)
+  // Une estimation recoit 9 fois moins de documents qu'un bien en vente -- et elle les
+  // recoit A SA NAISSANCE (l'avis de valeur), puis elle ne bouge plus jusqu'a passer sous
+  // mandat. Or une annonce NEUVE est empilee SANS AUCUNE LECTURE (pas d'empreinte, rien a
+  // comparer) : le chemin gratuit les attrape deja.
+  //
+  // ⚠⚠ ET SANS CE PERIMETRE, UN PETIT BUDGET DE LECTURES PART A 95 % SUR LES ESTIMATIONS.
+  //   Les 13 028 empreintes du parc vivant portent TOUTES la meme date (19-20/08) : le tri
+  //   « les plus anciennement controlees d'abord » ne peut donc pas les distinguer, et il
+  //   sert les lignes dans l'ordre ou elles arrivent. Sur 13 484 annonces dont 12 757
+  //   estimations, un budget de 1 200 lectures en depenserait ~1 140 sur des estimations
+  //   qui dorment, pour ~60 biens en vente.
+  //   ➡ LE TRI NE REMPLACE PAS UN PERIMETRE QUAND TOUTES LES DATES SONT EGALES.
+  //
+  // ADDITIF : `daily-cloud` et `all-local` n'ont pas de liste `statuses`, donc ils gardent
+  // DAILY_STATUSES a l'identique. Rien de ce qui existe ne change.
+  vente: {
+    table: "app_dossier_current",
+    idColumn: "app_dossier_id",
+    dailyFilter: true,
+    statuses: ["Actif", "Sous offre", "Sous compromis"],
+  },
 };
 
 function buildDossierPath(args, offset) {
@@ -141,7 +170,10 @@ function buildDossierPath(args, offset) {
   });
   if (source.dailyFilter) {
     params.set("archive", "eq.0");
-    params.set("statut_annonce", `in.(${DAILY_STATUSES.map((status) => `"${status}"`).join(",")})`);
+    // 6b (14/10) : un perimetre peut porter SA liste de statuts. Absente -> DAILY_STATUSES,
+    // donc `daily-cloud` et `all-local` sont inchanges au caractere pres.
+    const statuses = source.statuses || DAILY_STATUSES;
+    params.set("statut_annonce", `in.(${statuses.map((status) => `"${status}"`).join(",")})`);
   }
   return `${source.table}?${params.toString()}`;
 }

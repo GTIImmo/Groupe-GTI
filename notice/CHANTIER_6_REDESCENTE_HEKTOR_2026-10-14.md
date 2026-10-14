@@ -666,3 +666,63 @@ la détection poserait **2 407 travaux d'un coup** (les 2 396 sans empreinte + 7
 changées) — elle doublerait le travail du rattrapage et noierait le worker.
 ➡ **Ne jamais lancer `--detect` sur `historical` sans `--cap` serré.** Le périmètre de la
 détection, c'est le **parc vivant**.
+
+---
+
+## ÉTAPE 3 — LE PÉRIMÈTRE « EN VENTE » (14/10, « vas-y » de Frédéric)
+
+**3 lignes utiles, additives**, dans `enqueue_console_sync_jobs.js` : un périmètre `vente`
+(`Actif`, `Sous offre`, `Sous compromis`, non archivées) et un `source.statuses || DAILY_STATUSES`
+dans la construction de la requête — donc `daily-cloud` et `all-local` sont **inchangés au
+caractère près**.
+
+**Pourquoi il fallait un périmètre et pas seulement un budget** : les 13 028 empreintes du parc
+vivant portent **toutes la même date** (19-20/08). Le tri « les plus anciennement contrôlées
+d'abord » **ne peut donc pas les distinguer**, et sert les lignes dans l'ordre où elles
+arrivent : sur 13 484 annonces dont **12 757 estimations**, un budget de 1 200 lectures en
+dépenserait **~1 140 sur des estimations qui dorment**. ➡ **Le tri ne remplace pas un périmètre
+quand toutes les dates sont égales.**
+
+### ÉTAPE 4 — LES ÉPREUVES (14/10, 16:10)
+
+| épreuve | appels Hektor | attendu | obtenu |
+|---|---|---|---|
+| `--scope vente --dry-run` | **0** | le périmètre = 595 + 89 + 43 | **727** ✅ |
+| **témoin inverse** `--scope daily-cloud --dry-run` | **0** | **inchangé** | **13 484** ✅ |
+| `--scope vente --detect --dry-run --max-lectures 5` | 5 | 142-143 sans empreinte, budget respecté | `sans_empreinte 142` · `suivi_signature 31` · `lectures 5` · `budget_atteint true` · `arret null` · `jobs_empiles 174` *(= 142+31+1, cohérent)* ✅ |
+
+**Et une mesure utile au passage** : sur les 5 biens en vente relus, **1 a changé, 4 non**.
+Le taux de changement du parc vivant est donc **bien plus bas** que celui des vendus/clos
+*(4 sur 5)* — ce qui se comprend : un bien vendu reçoit son compromis et son acte, un bien en
+vente qui attend ne reçoit rien.
+
+➡ **Estimation du lot de rattrapage du parc vivant : ~350 travaux**, pas 1 000
+*(142 sans empreinte + 31 signatures + ~20-30 % des 584 relues)*.
+
+### ⭐ LA TROUVAILLE QUI REND LA PREMIÈRE PASSE QUASI GRATUITE
+
+Une annonce **sans empreinte** est empilée **avant toute lecture** (le tri la met en tête, et le
+code l'empile sans comparer). Donc :
+
+> **`--scope daily-cloud --detect --max-lectures 1 --cap 600` ramasse les 456 annonces jamais
+> lues du parc vivant entier — estimations comprises — pour UNE SEULE requête Hektor.**
+
+C'est là que sont les **71 mandats manquants** de biens nés après le 20/08.
+
+## LES DEUX COMMANDES DE LA PASSE DE RATTRAPAGE — ⛔ accord de Frédéric requis (elles POSENT des travaux)
+
+```
+A) les 456 JAMAIS LUES, tout le parc vivant, pour ~1 requete de lecture :
+   node Console/enqueue_console_sync_jobs.js --scope daily-cloud --detect --max-lectures 1 --cap 600
+      -> ~531 travaux (456 + 75 signatures) · worker ~1 h 20
+
+B) les 584 biens EN VENTE deja lus, pour voir ce qui a bouge depuis aout :
+   node Console/enqueue_console_sync_jobs.js --scope vente --detect --max-lectures 800 --cap 400
+      -> detection ~15 min · ~175 travaux · worker rapide (les documents deja la ne sont PAS retelecharges)
+```
+
+**Quand** : le matin, après le run et la descente, vers **10:00**. ⚠ **La file doit être vide à
+21:00** sinon le rattrapage refuse son lot (sortie 3 + un rouge) : avec ~700 travaux au total et
+~2 h 30 de worker, on finit vers 12:30-13:00. Large.
+**Dans quel ordre** : **A d'abord** (c'est là que sont les mandats manquants, et ça ne coûte
+rien), on regarde le résultat, puis **B**.
