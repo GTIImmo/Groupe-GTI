@@ -587,3 +587,34 @@ qu'il manque.
 **Rallumer la relecture des dossiers chez Hektor, en la plafonnant** pour qu'elle ne dure pas
 6 h et ne casse ni le run ni le rattrapage. Le **budget de lectures** codé aujourd'hui est
 exactement la pièce qui manquait pour pouvoir la rallumer sans danger.
+
+### ⚠ « ON AVAIT POURTANT DÉJÀ RÉCUPÉRÉ TOUS LES DOCUMENTS DES VIVANTS » (Frédéric, 14/10)
+
+**Il a raison, et ma formulation était trompeuse.** Vérifié dans l'historique et en base :
+
+- **La récupération d'août a bien été complète** : **13 028** des 13 484 annonces vivantes
+  portent une empreinte **du 19 ou du 20/08**. C'est la campagne des commits `220026a`
+  *(« Rattrapage empreintes : composeur de lot qui ne rejoue jamais une annonce »)* et
+  `652c962` *(le frein posé après le bannissement du 20/08)*.
+- **Donc rien n'« échoue à redescendre ».** Ce qui existait le 20 août est chez nous.
+  **La photo était complète — elle a simplement huit semaines.**
+
+**Les 93 mandats manquants ne contredisent pas sa mémoire : ils sont nés APRÈS la photo.**
+
+```
+93 mandats signes depuis le 20/08 et absents de chez nous :
+   71  biens NES APRES LE 20/08       -> ils n'existaient pas lors de la recuperation
+                                         (aucune empreinte, et AUCUN DOSSIER sur le serveur :
+                                          verifie a la main sur 63280, 63200, 63285, 63184, 63105)
+   22  biens DEJA LUS les 19-20/08    -> leur mandat a ete signe APRES la lecture
+                                         (ex. 14429, lu le 19/08, mandat du 12/10, 1 seul fichier)
+```
+
+➡ **Il y a donc DEUX fuites, pas une**, et il faut les nommer séparément :
+ ① les **annonces neuves** que personne n'est jamais allé lire *(**456** sans aucune empreinte)* ;
+ ② les **documents ajoutés après la lecture** sur des biens déjà récupérés *(invisibles sans
+ relecture, puisque la date de mise à jour d'une annonce ne bouge pas quand on y dépose une
+ pièce)*.
+
+**La formule juste n'est donc pas « les documents ne redescendent pas »** — c'est :
+**« depuis le 20 août, plus personne ne va voir s'il y a du nouveau. »**
