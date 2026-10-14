@@ -5,14 +5,51 @@
 
 ---
 
+## ⚠ PRÉCISION DEMANDÉE PAR FRÉDÉRIC — *« c'est la fiche contact qui est archivée, ou la recherche ? sois précis »*
+
+**Il avait raison de douter. Ma formulation était imprécise, et la mesure le prouve.**
+
+### C'est la RECHERCHE, pas la fiche
+
+| | éligible | non éligible |
+|---|---|---|
+| fiche **non archivée** + au moins **1 recherche ACTIVE** | **4 025** | **0** |
+| fiche **ARCHIVÉE** + au moins **1 recherche ACTIVE** | **1** | **0** |
+| fiche non archivée + **aucune** recherche active | 35 489 | 132 851 |
+| fiche archivée + **aucune** recherche active | 22 640 | 161 487 |
+
+➡ **Une recherche active ⇒ le contact reste éligible. Sans UNE SEULE exception** *(0 non
+éligible sur les deux premières lignes)*. Les éligibles sans recherche active le sont par
+**l'autre** critère, l'annonce active.
+➡ **L'archivage de la fiche contact n'intervient NULLE PART dans l'éligibilité.**
+
+**La preuve la plus parlante : 6 150 contacts ARCHIVÉS gardent aujourd'hui leurs recherches dans
+Supabase** *(sur 10 222)*. Si la fiche archivée faisait sortir, ils n'y seraient pas.
+
+### Pourquoi je m'étais trompé — un nom de champ qui ment
+
+Les 35 fiches **sont** archivées *(35 sur 35)*, ce qui m'a induit en erreur. **C'est une
+coïncidence, pas la cause** : ce sont des acquéreurs anciens, archivés entre **janvier 2024** et
+**octobre 2026** — dont **31 bien avant** l'incident de cette nuit. Si leur fiche avait été la
+cause, ils seraient sortis depuis des mois.
+
+⚠ **Et le vocabulaire de Hektor n'aide pas** : le champ qui porte l'état d'une recherche
+s'appelle… **`archive`**. Notre build le traduit en `is_active = int(not archive)`
+*(`build_contacts_layer.py` l. 1474-1475)*.
+➡ **Sur une RECHERCHE, « archive » veut dire « inactive »** — exactement ce que Frédéric disait :
+*« normalement une recherche est active ou inactive »*. **Deux objets, deux sens, un seul mot.**
+
+---
+
 ## LA RAISON PRÉCISE — une chaîne de 7 maillons
 
 ```
-1.  HEKTOR ARCHIVE une recherche                         archive = 1
+1.  LA RECHERCHE passe INACTIVE chez Hektor               son champ `archive` = 1
+        (« archive » sur une recherche = « inactive » -- pas la fiche contact)
 2.  le build recopie                                     is_active = int(not archive) = 0
          phase2/contacts/build_contacts_layer.py l. 1475
-3.  ce contact n'a alors PLUS AUCUNE recherche active,
-    et pas d'annonce active non plus
+3.  c'etait SA DERNIERE recherche active, et il n'a pas
+    d'annonce active non plus (c'est un acquereur)
 4.  -> IL PERD SON ELIGIBILITE                           supabase_sync_eligible = 0
          l. 1750-1754 : eligible SI (annonce active) OU (recherche active)
 5.  le push ne charge que les recherches
