@@ -409,6 +409,21 @@ Les défauts **2** *(les deux chiffres qui se contredisent)* et **3** *(le libel
 la date trompeuse)*, et le **doublon haut/bas**. **Frédéric a choisi A, pas C** — je n'ai pas
 élargi.
 
+### ✅ CONTROLE EN PRODUCTION, dans son Chrome *(14/10, après son push)*
+
+| | |
+|---|---|
+| **replié** *(par défaut)* | **10 lignes**, puis une seule ligne : ● **60 contrôles au vert** · *Afficher* |
+| **déplié** *(un clic)* | tout revient — rien n'est perdu |
+
+Le groupe **« Infrastructure & workers » a entièrement disparu** : ses 24 contrôles étaient tous
+au vert. Restent « Qualité des données » *(8)* et « Métier » *(1)*.
+
+⚠ **ET LE DOUBLON SAUTE MAINTENANT AUX YEUX.** Avec 61 lignes de bruit en moins, on voit que
+« Notifications non lues: 1601 » est affiché **deux fois à dix lignes d'écart** — une fois dans
+« Alertes à traiter », une fois dans « Qualité des données ». C'était invisible avant, c'est
+criant maintenant. **Non corrigé : Frédéric a choisi A, pas C.**
+
 ### ⚠ Et la réponse à sa question : « pourquoi tes corrections ne sont pas en ligne ? »
 
 **Ce n'est pas un déploiement.** Le moniteur est un **script sur son serveur**, pas une app en
