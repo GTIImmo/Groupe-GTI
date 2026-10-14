@@ -102,9 +102,23 @@ const ilYA = (ms) => new Date(T0 - ms).toISOString();
   controle("(m) un echec durable fait SORTIR EN 1, donc il se voit",
     /if \(aSignaler\.length\) process\.exitCode = 1;/.test(src),
     "un incident durable passerait inapercu");
-  controle("(n) les lectures sont paginees",
-    /offset=\$\{offset\}|offset=/.test(src) && /async function tout/.test(src),
+  // ⚠⚠ CORRIGE LE 14/10/2026 -- L'EPREUVE EXIGEAIT LA TECHNIQUE ABANDONNEE EXPRES.
+  //   Elle cherchait « offset= ». Or le 26/09 (461a66c) le script est passe au
+  //   CURSEUR, et c'est un PROGRES, pas une regression : une pagination par offset
+  //   saute ou duplique des lignes des que l'ensemble bouge entre deux pages -- ce qui
+  //   est justement le cas ici, puisque le script POSE des travaux pendant qu'il lit.
+  //   L'epreuve etait donc rouge depuis 18 jours en reclamant le defaut.
+  //   ➡ On verifie maintenant le curseur, ET le garde-fou qui le rend correct : la
+  //     fonction REFUSE un ordre dans le chemin, parce que deux « order= »
+  //     concurrents feraient sauter des lignes sans rien dire.
+  controle("(n) les lectures sont paginees PAR CURSEUR",
+    /async function tout\(/.test(src)
+      && /=gt\.\$\{encodeURIComponent/.test(src)
+      && /&order=\$\{cleUnique\}\.asc&limit=/.test(src),
     "PostgREST plafonnerait a 1 000 lignes");
+  controle("(o) ⭐ et le curseur impose SON ordre : un ordre dans le chemin est REFUSE",
+    /pas d'ordre dans le chemin/.test(src),
+    "deux order= concurrents feraient sauter des lignes en silence");
 
   console.log(`\n${echecs ? `${echecs} ECHEC(S)` : "TOUT VERT"}`);
   process.exit(echecs ? 1 : 0);

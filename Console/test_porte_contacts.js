@@ -25,6 +25,17 @@ const path = require("path");
 const FICHIER = path.join(__dirname, "console_job_worker.js");
 const src = fs.readFileSync(FICHIER, "utf8");
 
+// LE CODE SANS LES COMMENTAIRES -- ajoute le 14/10/2026.
+// ⚠ POURQUOI : le worker PORTE, en commentaire, le defaut que l'on interdit
+//   (« Le code d'avant ECRASAIT l'identite par la cible (`contactId = await
+//   cibleHektorContact(contactId)`) »), et il est meme coupe sur deux lignes. Toute
+//   expression qui cherche ce motif dans `src` se declenche donc sur le commentaire
+//   qui le raconte. Un controle doit lire LE CODE, pas ce qu'on dit du code.
+const srcCode = src
+  .replace(/\/\*[\s\S]*?\*\//g, " ")   // les blocs
+  .replace(/^[ \t]*\/\/.*$/gm, " ")     // les lignes de commentaire
+  .replace(/([^:"'`])\/\/.*$/gm, "$1");  // les commentaires en fin de ligne
+
 const controles = [
   {
     nom: "la porte existe, et elle connait la plage de l'app",
@@ -107,12 +118,19 @@ const controles = [
   // l'app.
   {
     nom: "L4-c ② plus aucun ecrasement de l'identite par la cible",
-    // ⚠ Le « (?<!const ) » est indispensable : sans lui, l'expression attrapait
-    //   aussi `const contactId = await cibleHektorContact(...)`, qui est
-    //   justement la forme CORRIGEE. Un controle qui accuse la bonne reponse
-    //   se fait desactiver au bout de trois fois -- deuxieme fois aujourd'hui.
-    ok: () => !/(?<!const )\bcontactId = await cibleHektorContact\(/.test(src)
-           && !/(?<!const )\bhektorContactId = await cibleHektorContact\(/.test(src),
+    // ⚠⚠ TROISIEME REECRITURE, LE 14/10 -- ET LA PREDICTION DU COMMENTAIRE D'AVANT
+    //   S'EST REALISEE : « un controle qui accuse la bonne reponse se fait desactiver
+    //   au bout de trois fois ». Il accusait `link_hektor_mandant`, qui declare
+    //   `let contactId` AVANT son `try` parce que son `catch` en a besoin pour
+    //   defaire le rattachement -- la forme est differente, l'intention est juste.
+    //   Interdire « une affectation sans const » visait la SYNTAXE, pas le danger.
+    //
+    // ⭐ LE VRAI DANGER, LUI, S'ECRIT EXACTEMENT : une variable passee comme SA
+    //   PROPRE SOURCE -- `X = await cibleHektorContact(X)`. La reference arriere
+    //   « \\1 » le dit, et elle accepte les deux formes saines :
+    //       contactId   = await cibleHektorContact(identite)   <- noms differents
+    //       cibleMandant = await cibleHektorContact(contactId)  <- noms differents
+    ok: () => !/\b(\w+)\s*=\s*await\s+cibleHektorContact\(\s*\1\b/.test(srcCode),
   },
   {
     nom: "L4-c ② ensureContactSearchExecution rend LES DEUX numeros",
@@ -128,9 +146,13 @@ const controles = [
   },
   {
     nom: "L4-c ② le menage de suppression vise l'identite",
-    ok: () => /cleanupSupabaseContactRows\(numeroDemande\)/.test(src)
-           && /runDeletedContactLocalCleanup\(job, numeroDemande\)/.test(src)
-           && /loadSupabaseContactRelationsForCleanup\(numeroDemande\)/.test(src),
+    // ⚠ CORRIGE LE 14/10 : le 08/10 (e5afa64, point 5g) le menage local a pris un
+    //   TROISIEME argument, `contactId`. Il vise TOUJOURS `numeroDemande` -- l'intention
+    //   est intacte, seule la forme a bouge. On exige donc que le PREMIER numero soit
+    //   l'identite, et on tolere qu'un argument suive.
+    ok: () => /cleanupSupabaseContactRows\(numeroDemande[,)]/.test(src)
+           && /runDeletedContactLocalCleanup\(job, numeroDemande[,)]/.test(src)
+           && /loadSupabaseContactRelationsForCleanup\(numeroDemande[,)]/.test(src),
   },
   {
     nom: "L4-c ② la ligne provisoire de relation vise l'identite",

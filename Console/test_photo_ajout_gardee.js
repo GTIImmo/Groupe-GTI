@@ -45,8 +45,23 @@ function tranche(debutMarque) {
     const ecrits = [];
     const versLeCloud = [];
     const patches = [];
+    // AJOUTES LE 14/10 : la fabrique des derives est entree dans la fonction le 27/09
+    // (bf3afb9, G.17) et l'epreuve ne la connaissait pas -- elle mourait en
+    // ReferenceError AVANT son premier controle. On en profite pour la MESURER.
+    const derives = [];
+    const gestes = [];
     const faux = {
-      writeLocalArchiveFile: (p, b) => ecrits.push({ chemin: p, octets: b.length }),
+      writeLocalArchiveFile: (p, b) => {
+        gestes.push("serveur");
+        return ecrits.push({ chemin: p, octets: b.length });
+      },
+      // LA DEPENDANCE QUI MANQUAIT. ⭐ Elle compte : c'est elle qui fabrique les
+      // vignettes de NOTRE coffre, et elle tourne AVANT que Hektor soit contacte --
+      // donc l'ecran peut afficher la photo sans lui.
+      fabriquerDerivesApresRangement: async (photo, localPath, cloudWanted) => {
+        gestes.push("derives");
+        derives.push({ photo: photo && photo.id, localPath, cloudWanted });
+      },
       uploadStorageObject: async (p, b, m) => versLeCloud.push({ chemin: p, octets: b.length, type: m }),
       supabaseRequest: async (chemin, options) => {
         patches.push({ chemin, corps: JSON.parse(options.body) });
@@ -89,8 +104,19 @@ function tranche(debutMarque) {
     controle("(g) la ligne visee est la bonne",
       patches[0].chemin.includes("id=eq.row-uuid-1"), patches[0].chemin);
 
+    // AJOUTES LE 14/10 avec la doublure qui manquait.
+    controle("(g1) ⭐ les derives sont fabriques, sur le fichier du serveur",
+      derives.length === 1 && derives[0].photo === "row-uuid-1"
+        && derives[0].localPath === ecrits[0].chemin,
+      JSON.stringify(derives));
+    controle("(g2) ⚠ et APRES le rangement, jamais avant",
+      gestes.indexOf("derives") > gestes.indexOf("serveur"), gestes.join(" > "));
+    controle("(g3) l'etat de l'annonce leur est transmis",
+      derives[0].cloudWanted === true, JSON.stringify(derives[0]));
+
     // ── ② ANNONCE ARCHIVEE : le serveur SEUL ────────────────────────────────
     ecrits.length = 0; versLeCloud.length = 0; patches.length = 0;
+    derives.length = 0; gestes.length = 0;
     r = await persist(ligne, buf, "image/jpeg", { cloud: false });
     controle("(h) annonce archivee -> le serveur quand meme",
       ecrits.length === 1, "le serveur ne recoit rien");
@@ -99,6 +125,8 @@ function tranche(debutMarque) {
     controle("(j) l'index retient local_only",
       patches[0].corps.storage_status === "local_only", JSON.stringify(patches[0].corps));
     controle("(k) la fonction rend le chemin ecrit", r && r.local_path === ecrits[0].chemin, JSON.stringify(r));
+    controle("(k1) ⭐ archivee : les derives sont fabriques QUAND MEME, sans le cloud",
+      derives.length === 1 && derives[0].cloudWanted === false, JSON.stringify(derives));
   }
 
   // ── ③ LE GESTE EST BRANCHE DANS L'AJOUT ───────────────────────────────────

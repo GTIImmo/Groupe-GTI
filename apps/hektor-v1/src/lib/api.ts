@@ -7549,7 +7549,7 @@ export async function loadConsoleDocuments(appDossierId: number): Promise<Consol
     //   chez Hektor » n'arriverait JAMAIS à l'écran, en silence. C'est le même
     //   piège que la clôture de mandat ce matin — une colonne posée en base ne
     //   remonte pas toute seule.
-    .select('id,app_dossier_id,hektor_annonce_id,hektor_document_id,document_type,document_name,source,visibility,storage_bucket,storage_path,storage_status,present_in_hektor,absent_depuis,file_size,sha256,mime_type,created_at_hektor,synced_at,last_accessed_at,archive_policy,metadata_json,created_at,updated_at')
+    .select('id,app_dossier_id,hektor_annonce_id,hektor_document_id,document_type,document_name,source,visibility,storage_bucket,storage_path,storage_status,envoi_hektor_statut,present_in_hektor,absent_depuis,file_size,sha256,mime_type,created_at_hektor,synced_at,last_accessed_at,archive_policy,metadata_json,created_at,updated_at')
     .eq('app_dossier_id', appDossierId)
     .order('document_type', { ascending: true })
     .order('document_name', { ascending: true })
@@ -7619,7 +7619,7 @@ export async function loadConsolePhotos(appDossierId: number): Promise<ConsolePh
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase
     .from('app_console_photo')
-    .select('id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,visible,legend,sort_order,source,source_json,synced_at,created_at,updated_at,derives_json')
+    .select('id,app_dossier_id,hektor_annonce_id,hektor_photo_id,filename,url_preview,url_hd,visible,legend,sort_order,source,source_json,synced_at,created_at,updated_at,derives_json,storage_status,envoi_hektor_statut')
     .eq('app_dossier_id', appDossierId)
     // Depuis le 26/09 (G.10bis) une photo retiree chez Hektor n'est plus SUPPRIMEE :
     // elle est marquee, parce que l'id de sa ligne porte le chemin de son fichier sur
@@ -7646,6 +7646,41 @@ export async function createSyncHektorPhotosJob(input: {
   })
   if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor photos sync job')
   return data as ConsoleJob
+}
+
+// ⭐⭐ 3d / LOT 2c (14/10/2026) -- NOTRE LIGNE EXISTE AVANT QUE HEKTOR REPONDE.
+//
+// Le worker sait faire l'inversion depuis le 25/09 (completerEnvoiDocumentDiffere :
+// notre serveur d'abord, Hektor ensuite, et son silence n'efface rien) -- mais ce
+// chemin ne s'allume que si la charge du travail porte `app_document_id`. PERSONNE ne
+// le posait, parce que le front ne pouvait pas creer la ligne. C'est ce qui manquait.
+//
+// ⚠ L'ORDRE EST IMPOSE PAR LA POLITIQUE DE STORAGE, il ne se discute pas : le travail
+//   doit EXISTER, etre `pending` et etre a nous pour que le depot sous
+//   temp/uploads/<travail>/ soit autorise. Donc : le travail, puis le fichier, puis
+//   cette ligne -- jamais dans un autre ordre.
+//
+// ⚠ UN SEUL POINT D'APPEL POUR LES DEUX OBJETS. Deux copies divergeraient au premier
+//   ajustement, et l'un des deux chemins poserait alors une ligne de travers sans que
+//   rien ne le signale.
+//
+// ⭐ ET IL NE FAIT JAMAIS ECHOUER UN DEPOT. Si la RPC refuse ou tombe, le travail part
+//   SANS `app_document_id` : le worker reprend l'ancien chemin, celui qui tourne depuis
+//   mai (121 envois sur 121). On perd l'inversion, on ne perd pas la fonction -- donc on
+//   ne leve pas, on le DIT dans la console.
+async function poserNotreLigneAvantHektor(
+  rpc: 'app_console_creer_document_optimistic' | 'app_console_creer_photo_optimistic',
+  parametres: Record<string, unknown>,
+): Promise<void> {
+  if (!supabase) return
+  try {
+    const { error } = await supabase.rpc(rpc, parametres)
+    if (error) throw new Error(error.message)
+  } catch (err) {
+    const motif = err instanceof Error ? err.message : String(err)
+    console.warn(`[3d] ${rpc} : la ligne n'a pas pu etre creee chez nous (${motif}). `
+      + `L'envoi continue par l'ancien chemin -- Hektor d'abord.`)
+  }
 }
 
 export async function createUploadHektorPhotoJob(input: {
@@ -7698,6 +7733,19 @@ export async function createUploadHektorPhotoJob(input: {
     throw new Error(uploadError.message)
   }
 
+  // Le fichier est depose : la photo peut exister CHEZ NOUS, maintenant.
+  await poserNotreLigneAvantHektor('app_console_creer_photo_optimistic', {
+    target_job_id: jobId,
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    nom_du_fichier: originalName,
+    legende: null,
+    taille_octets: input.file.size,
+  })
+
+  // ⚠ LA RELECTURE VIENT APRES, ET C'EST VOULU : c'est elle qui rapporte la charge
+  //   ENRICHIE de `app_photo_id` -- donc l'appelant voit tout de suite que le chemin
+  //   differe est allume.
   const { data: updatedJob, error: updateError } = await supabase
     .from('app_console_job')
     .select('*')
@@ -7789,6 +7837,19 @@ export async function createUploadDocumentToHektorJob(input: {
     throw new Error(uploadError.message)
   }
 
+  // Le fichier est depose : le document peut exister CHEZ NOUS, maintenant.
+  await poserNotreLigneAvantHektor('app_console_creer_document_optimistic', {
+    target_job_id: jobId,
+    target_app_dossier_id: input.dossier.app_dossier_id,
+    target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+    nom_du_document: uploadFilename,
+    type_de_document: input.documentType ?? null,
+    visibilite: input.visibility,
+    taille_octets: input.file.size,
+    type_mime: input.file.type || null,
+  })
+
+  // ⚠ La relecture vient APRES : elle rapporte la charge enrichie de `app_document_id`.
   const { data: updatedJob, error: updateError } = await supabase
     .from('app_console_job')
     .select('*')

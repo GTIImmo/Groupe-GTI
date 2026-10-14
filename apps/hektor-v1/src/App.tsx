@@ -11478,6 +11478,23 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                         Supprimé chez Hektor{document.absent_depuis ? ` le ${formatDate(document.absent_depuis)}` : ''} — conservé chez nous
                       </span>
                     ) : null}
+                    {/* 3d / lot 2c (14/10/2026) -- L'ETAT DE L'ENVOI A HEKTOR.
+                        La pastille de droite dit deja « En attente » pour
+                        `pending_upload`, mais elle ne dit pas DE QUOI, et surtout
+                        un envoi ECHOUE n'apparaissait NULLE PART. ⚠ Ca compte : le
+                        repreneur n'est pas branche (piece 4), donc un echec est
+                        aujourd'hui DEFINITIF -- et il etait muet.
+                        ⭐ Le mot « chez nous » est la volontairement : c'est ce que
+                        le negociateur doit retenir, le document ne risque rien. */}
+                    {document.storage_status === 'pending_upload' ? (
+                      <span className="console-document-encours">
+                        Chez nous — envoi à Hektor en cours
+                      </span>
+                    ) : document.envoi_hektor_statut === 'echec' ? (
+                      <span className="console-document-absent">
+                        Chez nous — l'envoi à Hektor a échoué
+                      </span>
+                    ) : null}
                     <SignatureBadge signature={signature} />
                   </div>
                   <StatusPill value={deleting ? 'Suppression demandee' : preparing ? 'Demande envoyee' : consoleDocumentStatusLabel(document.storage_status)} />
@@ -11643,7 +11660,11 @@ function ConsolePhotosPanel({
 
   const visiblePhotos = photos.filter((photo) => photo.visible)
   const hiddenPhotos = photos.filter((photo) => !photo.visible)
-  const sourcePhotos = photos.length ? photos : apiImages.map((image, index) => ({
+  // 3d / lot 2c (14/10/2026) : TYPE EXPLICITE. Sans lui, sourcePhotos etait une UNION
+  // entre ConsolePhoto et cet objet fabrique sur place -- et TypeScript refusait alors
+  // de lire storage_status sur la tuile. L'annotation fait aussi controler ce
+  // litteral contre le type, ce qui est un gain : il ne peut plus deriver en silence.
+  const sourcePhotos: ConsolePhoto[] = photos.length ? photos : apiImages.map((image, index) => ({
     id: `api-photo-${index}-${image.url}`,
     app_dossier_id: dossier.app_dossier_id,
     hektor_annonce_id: String(dossier.hektor_annonce_id),
@@ -11723,7 +11744,44 @@ function ConsolePhotosPanel({
         <div className="console-photos-grid">
           {galleryPhotos.map((photo) => {
             const url = photo.url_preview || photo.url_hd
-            if (!url) return null
+            // ⭐⭐ 3d / lot 2c (14/10/2026) -- UNE PHOTO DEPOSEE NE DOIT PAS DISPARAITRE.
+            //
+            // Ici se tenait un simple `if (!url) return null`. Or une photo creee par
+            // l'app n'a NI URL NI derives tant que le worker ne l'a pas rangee : elle
+            // n'etait donc pas affichee DU TOUT. Le negociateur deposait sa photo, ne
+            // voyait rien, en concluait que l'envoi avait rate -- et recommencait.
+            //
+            // ⚠ Ce n'etait pas une tuile cassee : c'etait une ABSENCE, ce qui est pire,
+            //   parce qu'une absence ne se remarque pas comme une erreur.
+            //
+            // ⭐ La fenetre est courte : le worker fabrique les derives JUSTE APRES avoir
+            //   range le fichier, et AVANT d'appeler Hektor -- donc l'image arrive de
+            //   NOTRE coffre, sans lui. Courte, mais pas nulle : la file peut etre
+            //   chargee, et si Hektor refuse, le statut d'envoi reste « echec » (le
+            //   repreneur n'est pas encore branche -- piece 4).
+            const photoEnAttente = photo.storage_status === 'pending_upload'
+            const photoEnvoiEchoue = photo.envoi_hektor_statut === 'echec'
+            if (!url) {
+              if (!photoEnAttente && !photoEnvoiEchoue) return null
+              return (
+                <div
+                  key={photo.id}
+                  className={`console-photo-tile console-photo-tile-attente ${photoEnvoiEchoue ? 'is-echec' : ''}`}
+                >
+                  <span className="console-photo-attente-marque" aria-hidden="true">
+                    {photoEnvoiEchoue ? '⚠' : '↑'}
+                  </span>
+                  <span className="console-photo-badge">
+                    {photoEnvoiEchoue ? 'Envoi échoué' : 'Enregistrée'}
+                  </span>
+                  <small>
+                    {photoEnvoiEchoue
+                      ? 'Gardée chez nous — l\'envoi à Hektor a échoué'
+                      : 'Gardée chez nous — envoi à Hektor en cours'}
+                  </small>
+                </div>
+              )
+            }
             return (
               <button key={photo.id} className={`console-photo-tile ${photo.visible ? 'is-visible' : 'is-hidden'}`} type="button" onClick={() => onOpenImage?.(photo.url_hd || url)}>
                 <img src={url} alt={photo.legend || dossier.titre_bien} />

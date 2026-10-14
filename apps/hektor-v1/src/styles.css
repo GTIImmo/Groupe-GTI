@@ -11701,6 +11701,54 @@ button.metric-card.is-active {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 3d / lot 2c (14/10/2026) : « chez nous — envoi à Hektor en cours ».
+   Bleu et non ambre : rien ne va mal, c'est un etat transitoire. L'echec, lui,
+   reprend .console-document-absent (ambre) -- le document est chez nous dans les
+   deux cas, et c'est ce que les deux mentions disent. Meme mise en forme que ses
+   voisines, pour ne pas ajouter un style de plus dans la ligne. */
+.console-document-main .console-document-encours {
+  color: #1f6feb;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La tuile d'une photo deposee mais pas encore rangee par le worker. Elle REMPLACE
+   une absence : avant, la photo n'etait pas affichee du tout. */
+.console-photo-tile-attente {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px dashed rgba(31, 111, 235, 0.55);
+  background: rgba(31, 111, 235, 0.06);
+  cursor: default;
+  padding: 10px;
+  text-align: center;
+}
+.console-photo-tile-attente.is-echec {
+  border-color: rgba(154, 106, 18, 0.6);
+  background: rgba(154, 106, 18, 0.08);
+}
+.console-photo-tile-attente .console-photo-attente-marque {
+  color: #1f6feb;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+.console-photo-tile-attente.is-echec .console-photo-attente-marque {
+  color: #9a6a12;
+}
+.console-photo-tile-attente small {
+  color: var(--text-muted, #6b7280);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
 .console-document-actions {
   display: flex;
   grid-column: 2 / -1;

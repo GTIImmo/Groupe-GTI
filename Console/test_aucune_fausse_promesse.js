@@ -37,25 +37,84 @@ function tranche(debutMarque) {
 const lignesDeCode = src.split("\n").filter((ligne) => !ligne.trim().startsWith("//"));
 
 (async () => {
-  // ── (1) PLUS AUCUNE PROMESSE DANS UNE CHAINE ──────────────────────────────
+  // ── (1) ET (2) : LA PROMESSE DOIT CORRESPONDRE A LA REALITE ───────────────
+  //
+  // ⚠⚠ REECRIT LE 14/10/2026 -- ET LE DECLENCHEUR, C'EST CE TEST LUI-MEME.
+  //   Le 14/10 la piece 4 de 3d a ecrit `scheduled/run_reprise_envois_hektor.ps1`.
+  //   Le controle (2c) d'alors cherchait « un fichier de scheduled/ qui cite le
+  //   repreneur » : il est donc passe au rouge aussitot, en disant « remettre le mot
+  //   repris dans les 2 messages ». ⭐ Il a fait son travail.
+  //
+  // ⭐ MAIS IL MESURAIT LA MAUVAISE CHOSE, et le suivre aurait cree exactement la
+  //   fausse promesse qu'il interdit : un `.ps1` dans scheduled/ NE TOURNE PAS. Mesure
+  //   du 14/10 : 7 taches planifiees Windows portent « GTI », et AUCUNE n'appelle le
+  //   repreneur. Ecrire « il sera repris » aurait donc promis une reprise qui n'a
+  //   toujours pas lieu. (Lecon du projet : les horaires et les appels se lisent dans
+  //   les taches Windows, jamais dans un fichier ni dans un commentaire.)
+  //
+  // ➡ DESORMAIS ON MESURE LA TACHE, et le controle marche DANS LES DEUX SENS :
+  //     pas de tache  -> les messages DOIVENT dire « le repreneur n'est pas branche »
+  //     une tache     -> les messages DOIVENT promettre la reprise
+  //   Le jour ou Frederic enregistre la tache, ce test redevient rouge et dit quoi
+  //   changer. Et si la tache est un jour retiree, il le dit aussi.
+  function tachePlanifieeDuRepreneur() {
+    const ps = [
+      '$a = Get-ScheduledTask -ErrorAction Stop | ForEach-Object {',
+      '  ($_.Actions | ForEach-Object { [string]$_.Execute + " " + [string]$_.Arguments }) -join " " };',
+      '@($a | Where-Object { $_ -match "reprendre_envois_hektor|run_reprise_envois_hektor" }).Count',
+    ].join(" ");
+    try {
+      const sortie = require("child_process").execFileSync(
+        "powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+        { encoding: "utf8", timeout: 60000, stdio: ["ignore", "pipe", "ignore"] });
+      const n = Number(String(sortie).trim());
+      return Number.isFinite(n) ? n > 0 : null;   // null = pas mesurable
+    } catch (_) {
+      return null;
+    }
+  }
+
+  const tache = tachePlanifieeDuRepreneur();
+  // ⚠ « pas mesurable » est traite comme « pas de tache » : on exige alors le message
+  //   PRUDENT. On ne promet jamais sur une mesure qu'on n'a pas pu faire.
+  const repreneurTourne = tache === true;
+  console.log(`  ..  la tache planifiee du repreneur : ${
+    tache === null ? "NON MESURABLE (on exige donc le message prudent)"
+      : tache ? "ELLE EXISTE" : "aucune (7 taches GTI, aucune ne l'appelle)"}`);
+
   const promesses = lignesDeCode.filter((l) =>
     /sera\s+repris|seront\s+repris|sera\s+rejou|seront\s+rejou/i.test(l));
-  controle("(1) aucune chaine ne promet plus une reprise",
-    promesses.length === 0, promesses.join(" | "));
 
-  // ── (2) LES DEUX MESSAGES DE DEPOT DISENT LA VERITE ───────────────────────
-  controle("(2a) le document dit « A REPRENDRE (le repreneur n'est pas branche) »",
-    src.includes("Document garde chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)"));
-  controle("(2b) la photo dit la meme chose",
-    src.includes("Photo gardee chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)"));
-  // Le jour ou le repreneur sera branche (4b option B), ces deux messages doivent
-  // changer EN MEME TEMPS -- ce controle le rappellera.
-  controle("(2c) le repreneur est toujours orphelin : AUCUN run ne l'appelle",
-    !fs.readdirSync(path.join(__dirname, "..", "scheduled"))
-       .some((f) => /\.(ps1|bat|cmd)$/i.test(f)
-         && fs.readFileSync(path.join(__dirname, "..", "scheduled", f), "utf8")
-              .includes("reprendre_envois_hektor")),
-    "un script du run l'appelle maintenant -> remettre le mot « repris » dans les 2 messages");
+  if (repreneurTourne) {
+    controle("(1) une tache reprend -> les messages PROMETTENT la reprise",
+      promesses.length >= 2,
+      `seulement ${promesses.length} message(s) promettent une reprise : ${promesses.join(" | ")}`);
+    controle("(2a) le document dit qu'il sera repris",
+      /Document garde chez nous[^"]*repris/.test(src),
+      "le message n'annonce pas la reprise alors qu'une tache reprend");
+    controle("(2b) la photo dit la meme chose",
+      /Photo gardee chez nous[^"]*repris/.test(src),
+      "le message n'annonce pas la reprise alors qu'une tache reprend");
+  } else {
+    controle("(1) personne ne reprend -> aucune chaine ne promet une reprise",
+      promesses.length === 0, promesses.join(" | "));
+    controle("(2a) le document dit « A REPRENDRE (le repreneur n'est pas branche) »",
+      src.includes("Document garde chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)"),
+      "le message ne dit plus la verite");
+    controle("(2b) la photo dit la meme chose",
+      src.includes("Photo gardee chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)"),
+      "le message ne dit plus la verite");
+  }
+
+  // Le script existe-t-il, au moins ? S'il manque, la tache ne pourrait rien lancer.
+  const scriptPret = fs.existsSync(path.join(__dirname, "..", "scheduled", "run_reprise_envois_hektor.ps1"));
+  controle("(2c) le script de reprise est pret a etre branche",
+    scriptPret, "scheduled/run_reprise_envois_hektor.ps1 est absent");
+  if (scriptPret && !repreneurTourne) {
+    console.log("  ..  ⚠ LE SCRIPT EST PRET MAIS AUCUNE TACHE NE L'APPELLE : il ne tourne pas.");
+    console.log("  ..    A enregistrer par Frederic. Ce test passera alors au rouge et dira");
+    console.log("  ..    quoi changer dans les deux messages du worker.");
+  }
 
   // ── (3) LA VRAIE FONCTION, DANS SES DEUX CAS D'ECHEC ──────────────────────
   const bloc = tranche("async function cibleHektorContact(");

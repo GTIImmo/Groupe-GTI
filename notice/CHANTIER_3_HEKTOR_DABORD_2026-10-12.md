@@ -3747,3 +3747,139 @@ AVANT** — vérifié en les relançant contre `HEAD` :
   `row.hektor_document_id &&` / `row.hektor_photo_id &&`, donc une ligne en attente d'envoi
   *(sans numéro Hektor)* est ignorée. C'est **la règle même** que le lot 1 appelait « le risque
   principal » le 25/09.
+
+
+---
+
+## 3d — PIÈCES ③ ET ④, LE 14/10/2026 *(après « c'est collé et workers redémarré »)*
+
+### ✅ LES DEUX PRÉALABLES, MESURÉS AVANT DE CONTINUER
+
+- **Le patch est en base** : les deux RPC existent, `authenticated` a l'exécution,
+  **`anon` n'a rien** *(`proacl` relu — leçon du 13/10)*.
+- **Les 4 services portent le correctif** : les processus sont nés à **10:21:5x**, le
+  fichier a été modifié à **10:10:24** → **11 minutes après**. Mesuré par
+  `Get-CimInstance Win32_Process` *(`StartTime` est refusé : les workers tournent sous un
+  autre compte)*, pas cru.
+
+### ✅ PIÈCE ③ — LE FRONT
+
+**Un seul point d'appel pour les deux objets** — `poserNotreLigneAvantHektor()` :
+deux copies divergeraient au premier ajustement, et l'un des deux chemins poserait alors
+une ligne de travers sans que rien ne le signale.
+
+⚠ **L'ordre est imposé par la politique de storage, il ne se discute pas** : le travail
+doit **exister**, être `pending` et être à nous pour que le dépôt sous
+`temp/uploads/<travail>/` soit autorisé. Donc **le travail, puis le fichier, puis la
+ligne** — jamais autrement. La relecture du travail vient **après** l'appel, et c'est
+voulu : c'est elle qui rapporte la charge **enrichie** de `app_document_id`.
+
+⭐ **Il ne fait jamais échouer un dépôt** : si la RPC refuse, le travail part sans
+`app_document_id`, le worker reprend l'ancien chemin, et on le **dit** dans la console.
+
+### ⭐⭐ CE QUE L'ÉCRAN FAISAIT, ET QUI ÉTAIT PIRE QUE CE QUE J'AVAIS ANNONCÉ
+
+J'avais dit à Frédéric : *« une tuile cassée en fin de galerie »*. **C'était faux.**
+L'écran faisait `if (!url) return null` — une photo sans URL **n'était pas affichée du
+tout**. ⚠ **Une absence est pire qu'une erreur, parce qu'elle ne se remarque pas** : le
+négociateur déposait sa photo, ne voyait rien, en concluait que l'envoi avait raté, et
+recommençait.
+
+➡ Une **tuile d'attente** remplace l'absence : « Gardée chez nous — envoi à Hektor en
+cours », et en ambre « l'envoi à Hektor a échoué ».
+
+⭐ **La fenêtre est courte** : le worker fabrique les dérivés **juste après** avoir rangé
+le fichier et **avant** d'appeler Hektor — donc l'image arrive de **notre** coffre, sans
+lui. Courte, mais pas nulle : la file peut être chargée, et un refus de Hektor laisse le
+statut sur « échec ».
+
+**Ce qui a été touché** *(`npm run build` vert)* :
+
+| fichier | quoi |
+|---|---|
+| `types.ts` | ⚠ `hektor_photo_id` devient **nullable** — il mentait : une photo créée par l'app existe avant son numéro Hektor *(3 usages dans tout le front, aucun ne le lit)* · `storage_status` et `envoi_hektor_statut` sur la photo · `envoi_hektor_statut` sur le document |
+| `api.ts` | le point d'appel partagé + les 2 appels · les 2 `select` étendus |
+| `App.tsx` | la tuile d'attente · la mention sur la ligne de document · ⚠ `sourcePhotos: ConsolePhoto[]` — sans ce type, l'objet de secours formait une **union** et TypeScript refusait de lire `storage_status` |
+| `styles.css` | la tuile d'attente *(bleu = transitoire)*, la mention *(bleu / ambre)* |
+
+⚠ **Ce qui existait déjà et n'avait pas besoin de moi** : `'pending_upload'` était **déjà**
+dans `ConsoleDocumentStorageStatus`, et `loadConsoleDocuments` sélectionnait **déjà**
+`storage_status`. Et **personne d'autre n'écrit `pending_upload`** *(mesuré)* — le message
+« envoi en cours » est donc exact, jamais ambigu.
+
+### ✅ PIÈCE ④ — LE REPRENEUR
+
+`scheduled/run_reprise_envois_hektor.ps1`, sur le patron du rattrapage *(le `@()` du piège
+PowerShell du 25/09, la propagation de l'échec au Planificateur du 19/08, la purge des
+journaux à 30 jours)*.
+
+**État mesuré : ZÉRO ligne en `a_envoyer` ou `echec`**, documents et photos confondus — et
+c'est normal : le chemin différé était **dormant**, donc aucune ligne n'a jamais porté
+`a_envoyer`. ➡ **C'est un filet, et il ne devient utile qu'à partir de la pièce ③.** Il ne
+trouvera presque toujours rien, et c'est le signe que tout va bien.
+
+**12:30, par le calcul** : le run finit ~07:30, la descente entre 08:03 et 08:49, et
+**trois étapes du run refusent de démarrer** s'il reste un travail console en attente *(le
+dégât du 30/09 et du 08/10)* ; le rattrapage part à 21:00. 12:30 est le creux, et le lot
+est plafonné à **50** → ~17 min de worker, plus de huit heures de marge.
+
+⚠ **Pas de battement `-WorkerKey`** : la leçon du 13/10 est qu'un battement sans ligne de
+registre part dans le vide **et compte pour un succès**. Ici la surveillance passe par le
+résultat de la tâche Windows, qui ne mente pas.
+
+### ⛔ LE SCRIPT NE TOURNE PAS ENCORE — et c'est le point à retenir
+
+**Mesuré le 14/10 : 7 tâches planifiées portent « GTI », AUCUNE n'appelle le repreneur.**
+Un `.ps1` dans `scheduled/` **ne tourne pas**. ➡ **À enregistrer par Frédéric.**
+
+### ✅ LES DEUX ÉPREUVES RÉPARÉES — et une troisième que j'avais cassée
+
+**1. `test_photo_ajout_gardee`** *(24 contrôles, était rouge depuis le 27/09)*. Cause :
+`fabriquerDerivesApresRangement` est entré dans `persistProvidedPhotoFile` *(`bf3afb9`,
+G.17)* et la doublure n'a jamais suivi → `ReferenceError` **avant le premier contrôle**.
+⭐ On ne s'est pas contenté d'ajouter la doublure muette : **4 contrôles neufs** prouvent
+que les dérivés sont fabriqués, sur le fichier du serveur, **après** le rangement — et
+**(k1) : même pour une annonce archivée, sans le cloud**.
+
+**2. `test_porte_contacts`** *(23 contrôles, 2 rouges depuis le 23/09 et le 08/10)*.
+⚠⚠ **Établi avant de toucher à quoi que ce soit : LE CODE EST JUSTE, LES EXPRESSIONS
+ÉTAIENT PÉRIMÉES.** Les 8 appels à `cibleHektorContact` passent `identite` et rangent la
+cible ailleurs ; le vrai défaut *(`X = await cibleHektorContact(X)`)* est **absent** — ses
+deux seules traces sont **un commentaire qui le raconte** et un appel qui écrit dans
+`cibleMandant`.
+
+- ① Le contrôle interdisait **toute** affectation sans `const`. Or `link_hektor_mandant`
+  déclare `let contactId` **avant** son `try`, parce que son `catch` en a besoin. ⭐ Son
+  propre commentaire prévenait : *« un contrôle qui accuse la bonne réponse se fait
+  désactiver au bout de trois fois »* — **c'était la troisième**. ➡ On guette désormais le
+  **vrai** danger, par une **référence arrière** `\1` : une variable passée comme **sa
+  propre source**. Et on teste le **code sans les commentaires** — sinon le commentaire
+  qui raconte l'ancien défaut le déclenche lui-même.
+- ② `runDeletedContactLocalCleanup(job, numeroDemande)` a pris un **3ᵉ argument** le 08/10
+  *(`e5afa64`, point 5g)*. L'intention est intacte, la forme a bougé.
+- ⭐ **Prouvé qu'ils mordent encore** : les deux défauts réintroduits dans une copie, chacun
+  fait crier son contrôle.
+
+**3. `test_aucune_fausse_promesse`** — ⭐⭐ **elle est passée au rouge PARCE QUE j'ai écrit le
+`.ps1`**, en disant *« un script du run l'appelle maintenant → remettre le mot repris dans
+les 2 messages »*. **Elle a fait son travail.**
+
+⭐ **Mais elle mesurait la mauvaise chose, et la suivre aurait créé exactement la fausse
+promesse qu'elle interdit** : un fichier dans `scheduled/` ne tourne pas. ➡ Elle mesure
+maintenant **la tâche Windows**, et elle marche **dans les deux sens** : pas de tâche → les
+messages **doivent** dire « le repreneur n'est pas branché » *(je n'ai donc rien changé aux
+deux messages du worker)* ; une tâche → ils **doivent** promettre la reprise. Le jour où
+Frédéric enregistre la tâche, elle redevient rouge et dit quoi changer. **Les deux branches
+sont prouvées** *(la sonde pointée sur une tâche qui existe vraiment)*.
+
+**4. `test_reprendre_envois`** *(15 contrôles, `(n)` rouge depuis le 26/09)*. ⚠ Elle
+exigeait **la technique abandonnée exprès** : `offset=`. Or le script est passé au
+**curseur** *(`461a66c`)*, et c'est un **progrès** — une pagination par offset saute ou
+duplique des lignes dès que l'ensemble bouge entre deux pages, ce qui est **justement** le
+cas, puisque le script pose des travaux pendant qu'il lit. ➡ On vérifie le curseur, **et**
+le garde-fou qui le rend correct *(un ordre dans le chemin est **refusé**, deux `order=`
+concurrents feraient sauter des lignes en silence)* — contrôle `(o)`, neuf.
+
+### LE BILAN DES ÉPREUVES
+
+**294 contrôles verts, 0 échec, sur 17 épreuves.** C'est la première fois depuis le 27/09.

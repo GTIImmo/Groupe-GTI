@@ -678,6 +678,11 @@ export type ConsoleDocument = {
   // supprimé chez Hektor »). Mêmes noms que app_console_photo (G.10bis).
   present_in_hektor?: boolean | null
   absent_depuis?: string | null
+  // 3d / lot 2c (14/10/2026). storage_status existait deja (et connait deja
+  // 'pending_upload') ; il manquait l'etat de l'ENVOI, qui est la seule chose capable
+  // de dire qu'un depot a ECHOUE -- le repreneur n'etant pas encore branche, un echec
+  // reste sinon totalement muet.
+  envoi_hektor_statut?: string | null
   file_size: number | null
   sha256: string | null
   mime_type: string | null
@@ -694,7 +699,11 @@ export type ConsolePhoto = {
   id: string
   app_dossier_id: number | null
   hektor_annonce_id: string
-  hektor_photo_id: string
+  // ⚠ 3d / lot 2c (14/10/2026) : DESORMAIS NULLABLE, et il l'etait deja en base.
+  //   Une photo creee par l'app existe AVANT que Hektor lui donne un numero. Le type
+  //   disait le contraire. (L'index UNIQUE tient : en Postgres les NULL y sont
+  //   distincts, donc plusieurs photos en attente cohabitent.)
+  hektor_photo_id: string | null
   filename: string | null
   url_preview: string | null
   url_hd: string | null
@@ -714,6 +723,13 @@ export type ConsolePhoto = {
   derives_json: Record<string, { chemin?: string; largeur?: number; octets?: number }> | null
   url_preview_hektor?: string | null
   url_hd_hektor?: string | null
+  // 3d / lot 2c (14/10/2026) -- CE QUI PERMET A L'ECRAN DE DIRE « envoi en cours ».
+  // ⚠ Sans ces deux champs, une photo deposee mais pas encore rangee par le worker
+  //   s'afficherait en TUILE MUETTE, sans la moindre explication : elle n'a ni URL ni
+  //   derives tant que le worker n'a pas tourne. (Elle atterrit en FIN de galerie, un
+  //   sort_order vide passant apres tous les autres -- mesure : 1 -> 5 -> NULL.)
+  storage_status?: ConsoleDocumentStorageStatus | null
+  envoi_hektor_statut?: string | null
 }
 
 export type ConsoleJobStatus = 'pending' | 'running' | 'done' | 'error'
