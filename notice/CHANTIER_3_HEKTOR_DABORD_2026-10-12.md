@@ -4151,3 +4151,75 @@ plus notre date dans sa **fiche détail** — elle resterait dans le registre, l
 sauf « Mandat source », qui doit montrer Hektor.
 ⚠ Le run est **un fichier local** : la modification prend effet au run de demain 05:00, **que le
 patch soit collé ou non**. Pour l'annuler : décommenter les six lignes.
+
+
+---
+
+## ⭐⭐ L'ESSAI RÉEL DU 14/10 SUR 62774 — RÉUSSI DE BOUT EN BOUT *(accord de Frédéric : « je te laisse faire un essai sur 62774 »)*
+
+### Les préalables, mesurés
+
+- **les 4 services** nés à **12:29:41**, après la dernière modification du worker (11:36:18) ;
+- **la tâche « GTI Reprise Envois Hektor »** enregistrée par Frédéric — et elle a **tourné le jour même à
+  12:30:00** : 0 à reprendre, sortie 0. **Première exécution du repreneur depuis le 25/09** ;
+- **le front déployé** contient le bloc 2 (`delete_hektor_photo` ×2, `console-photo-supprimer`) ;
+- la file des travaux vide.
+
+### ① AJOUTER — par le chemin différé (3d), 28 secondes
+
+Je ne peux pas cliquer dans l'app (il faudrait se connecter). Le script d'essai laisse **exactement**
+ce que l'écran laisse : le fichier dans la salle d'attente, la ligne créée comme la crée
+`app_console_creer_photo_optimistic`, le travail au nom de Frédéric portant `app_photo_id`. Le
+worker, Hektor et tout le reste ont tourné pour de vrai. *(La RPC elle-même : prouvée par la
+répétition, 15/15, vraies identités.)*
+
+| | |
+|---|---|
+| la ligne existe chez nous **avant** que Hektor réponde | ✅ `a_envoyer`, `pending_upload` |
+| Hektor l'accepte | ✅ n° **487926**, position 5, visible |
+| ⭐ elle quitte la salle d'attente | ✅ `annonces/62774/photos/<id>/…` — **le défaut corrigé le matin (le `\|\|` qui gardait le chemin temporaire), prouvé en réel** |
+| le temporaire est effacé | ✅ 0 restant |
+| une seule ligne, pas de doublon | ✅ (l'adoption avant la réindexation a tenu) |
+| copie serveur (53 533 octets), copie cloud, 2 dérivés publics | ✅ |
+
+### ② SUPPRIMER — ⛔ D'ABORD BLOQUÉ : LE TROISIÈME VERROU
+
+Le travail de suppression est resté **`pending` six minutes** : **aucun service ne l'a pris**. Rien n'a
+été détruit. **Cause** : `app_console_claim_next_job`, qui distribue les travaux, a **sa propre liste
+de types par service** — et `delete_hektor_photo` n'était pas dans celle du service `documents`.
+⚠ **Le piège était écrit dans la fonction elle-même**, pour un autre geste, depuis le 03/10 :
+*« Sans cette ligne, le travail n'est réclamé par personne et reste « pending » à vie. »*
+
+➡ **Pour poser un NOUVEAU type de travail, il y a TROIS verrous en base** : la contrainte des types,
+les droits (`app_console_can_request_job`), **et la distribution** (`app_console_claim_next_job`). Plus
+cinq endroits dans le worker, `ConsoleJobType` et huit fonctions d'habillage à l'écran. Mesuré le
+14/10 : aucun autre (ni vue, ni tâche cron, ni autre fonction ne cite ces types).
+
+Correctif : `supabase/patch_chantier3_bloc2_distribution_2026-10-14.sql` (+ inverse, répétition). ⭐ La
+répétition **a appelé la vraie fonction de distribution** sur le travail réellement en attente :
+**avant** le correctif le service documents ne le recevait pas, **après** il le reçoit, ni `admin` ni
+`actions`. **8/8.** Collé par Frédéric.
+
+### ③ SUPPRIMER — 6 secondes après le collage
+
+| | |
+|---|---|
+| la ligne, le fichier cloud, le fichier serveur | ✅ supprimés |
+| les 2 dérivés publics | ✅ supprimés — le bien retrouve ses **8** dérivés d'avant |
+| la renumérotation | ✅ les **deux** listes (4 visibles, 0 masquée) |
+| aucune autre photo emportée | ✅ `disparues_en_trop: []` — les 4 d'origine, ordre 1-2-3-4, intactes |
+| **le journal** | ✅ 1 ligne : qui (le compte de Frédéric), pourquoi, la photo **entière** d'avant, ce qui a été détruit |
+
+⚠ **Un détail, pas un défaut** : le **dossier** serveur de la photo reste, **vide**
+(`C:\Hektor\HektorConsoleDocuments\annonces\62774\photos\<id>\`). Le geste supprime le fichier,
+comme le fait celui du document ; aucun des deux ne retire le dossier. Sans conséquence ; à traiter
+avec l'autre geste si on le veut.
+
+### LES DEUX MESSAGES DU WORKER PROMETTENT ENFIN LA REPRISE
+
+Dès la tâche enregistrée, `test_aucune_fausse_promesse.js` est passé **au rouge, comme prévu** — il
+mesure la tâche Windows. Les deux messages disent maintenant *« il sera repris par la tâche « GTI
+Reprise Envois Hektor » (12:30) »*. ⚠ **Ce texte n'est dans les processus qu'après le prochain
+redémarrage** des 4 services (il n'apparaît que si un envoi échoue — sans urgence).
+
+**324 contrôles verts, 0 échec.**

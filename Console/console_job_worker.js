@@ -7967,8 +7967,13 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
     //   notice/RESTE_A_FAIRE_DOCUMENTS_PHOTOS_2026-09-25.md).
     //   Tant qu'il n'est pas branche, la ligne reste marquee « echec » et PERSONNE
     //   ne la reprend. Le mot « repris » revient le jour ou le repreneur tourne.
+    // ✅ 14/10/2026 : CE JOUR EST VENU. La tache « GTI Reprise Envois Hektor » est
+    //   enregistree (12:30 chaque jour, scheduled/run_reprise_envois_hektor.ps1) et elle
+    //   a tourne le jour meme (0 a reprendre, sortie 0). Le message peut donc promettre.
+    //   ⚠ C'est Console/test_aucune_fausse_promesse.js qui l'a exige : il mesure la TACHE
+    //     Windows, pas un fichier -- si la tache disparait, il redemandera l'ancien message.
     await logJob(job.id, "upload_document_to_hektor", "running",
-      "Document garde chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)", {
+      "Document garde chez nous, envoi Hektor en echec -- il sera repris par la tache « GTI Reprise Envois Hektor » (12:30)", {
         app_document_id: ligne.id,
         hektor_annonce_id: String(dossier.hektor_annonce_id),
         erreur: motif,
@@ -8290,9 +8295,10 @@ async function completerEnvoiPhotoDifferee(job, dossier, payload) {
         updated_at: maintenant,
       }),
     });
-    // 4b : meme chose que pour le document ci-dessus -- le repreneur est orphelin.
+    // 4b : meme chose que pour le document ci-dessus -- et, depuis le 14/10, le repreneur
+    //   est BRANCHE (tache « GTI Reprise Envois Hektor », 12:30).
     await logJob(job.id, "upload_hektor_photo", "running",
-      "Photo gardee chez nous, envoi Hektor en echec -- A REPRENDRE (le repreneur n'est pas branche)", {
+      "Photo gardee chez nous, envoi Hektor en echec -- elle sera reprise par la tache « GTI Reprise Envois Hektor » (12:30)", {
         app_photo_id: ligne.id,
         hektor_annonce_id: String(dossier.hektor_annonce_id),
         erreur: motif,
