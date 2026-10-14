@@ -1403,6 +1403,28 @@ if ($PushContactsToSupabase) {
     }
     Invoke-Step -Label "phase2 push contacts to supabase" -Arguments $contactsPushArgs -WorkerKey "supabase.push_contacts"
 
+    # ⚠ LE MENAGE DES ORPHELINS DE RECHERCHE, JUSTE APRES LE PUSH -- 14/10/2026.
+    #   app_sweep_search_orphans() rattache les lignes de rapprochement, de score, de
+    #   notification et de relance dont la recherche a disparu. Elle a un cron Supabase
+    #   (« 0 5 * * * » en UTC, donc 07:00 locale) -- MAIS LE PUSH TOMBE A 07:00:48.
+    #   Le menage passait donc 48 SECONDES AVANT ce qu'il devait nettoyer, et il fallait
+    #   attendre le LENDEMAIN. Pire : 48 s un jour, 4 min l'autre (13/10) -- une COURSE,
+    #   pas un ordre. C'est sans doute pour cela qu'il rattrape 370 lignes certains jours
+    #   et ZERO les 11, 12 et 13/10.
+    #
+    #   UN CRON ET UNE ETAPE DE RUN NE S'ORDONNENT PAS TOUT SEULS : l'un vit chez
+    #   Supabase, l'autre ici. On supprime la course en l'appelant d'ici, APRES le push.
+    #   ⚠ LE CRON N'EST PAS ETEINT, ET C'EST VOULU : il reste le filet si le run echoue
+    #     avant cette etape. La fonction est idempotente, la rejouer ne coute rien.
+    #   NON BLOQUANTE : un menage rate se rattrape le lendemain, un run interrompu non.
+    $menageOk = $false
+    Invoke-OptionalStepWithRetry -Label "phase2 menage orphelins de recherche" -Arguments @(
+        (Join-Path $projectRoot "phase2\sync\menage_orphelins_recherche.py")
+    ) -MaxAttempts 2 -RetryDelaySeconds 30 -Succeeded ([ref]$menageOk) -WorkerKey "phase2.menage_orphelins_recherche"
+    if (-not $menageOk) {
+        Write-RunLog "WARN  Menage des orphelins de recherche non fait cette nuit (echec non bloquant) - le cron Supabase de 05:00 UTC reste le filet"
+    }
+
     # C.2b 25/08 -- Supabase RECOIT la serie, il ne la fabrique jamais (regle du 19/08,
     # etablie apres la divergence des numeros d'annonce). Apres le push contacts, donc :
     # les fiches neuves sont arrivees, on peut leur poser leur numero.

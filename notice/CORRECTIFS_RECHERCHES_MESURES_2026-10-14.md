@@ -249,3 +249,53 @@ Ici il avait tranché, et il avait raison.)*
 | **C** | ne rien faire | le rattrapage a lieu le **16/10**, et la course reste |
 
 **Je recommande B** : c'est la seule qui supprime la course. **Rien n'est décidé.**
+
+---
+
+## 9. LA COURSE EST SUPPRIMÉE — *« Oui fais le », 14/10*
+
+**On n'attend plus un cron : le run appelle le ménage lui-même, juste après le push.**
+
+| | |
+|---|---|
+| `phase2/sync/menage_orphelins_recherche.py` | **neuf** — appelle `rpc/app_sweep_search_orphans`, patron recopié de `repartition_commission.py` |
+| `run_full_pipeline.ps1` | une étape **non bloquante**, **juste après** « push contacts », avec 2 essais |
+| `supabase/patch_registre_menage_orphelins_2026-10-14.sql` *(+ son INVERSE)* | **à coller** — la ligne de registre |
+
+**Syntaxe PowerShell validée. Les 3 noms importés existent.**
+
+### ⚠ LE CRON N'EST PAS ÉTEINT, ET C'EST VOULU
+
+Il reste **le filet** si le run échoue avant cette étape. La fonction est **idempotente** : la
+rejouer ne coûte qu'un passage à vide. *(Et éteindre un cron serait une écriture en production.)*
+
+### ⚠ CE QUE LA MÉMOIRE DU PROJET M'A FAIT VÉRIFIER — et elle avait raison
+
+La clé `phase2.menage_orphelins_recherche` **n'existe pas** dans `app_worker_registry`
+*(mesuré)*. Sans elle, **le battement serait parti dans le vide ET aurait compté pour un
+succès** — `heartbeat.py` écrit en `PATCH` filtré, une clé sans ligne touche **0 ligne**, reçoit
+**204**, et `200 <= status < 300` compte un succès.
+
+➡ **C'est le défaut 4j, trouvé et réparé le 13/10 pour 23 autres étapes.** Je l'aurais refabriqué
+le lendemain. **D'où le patch SQL**, recopié sur `phase2.repose_cloture_mandat`, posée la veille
+pour exactement le même usage.
+
+### ⛔ Ce que je n'ai PAS fait
+
+**Je n'ai pas lancé le script.** Il appelle une fonction qui **écrit en production** *(elle
+rattache des lignes)* : le go portait sur la suppression de la course, pas sur un ménage lancé à
+la main. **La première exécution sera celle du run, demain à ~07:01.**
+
+J'ai seulement vérifié, en lecture, que la fonction **sera appelable** :
+`proacl = postgres=X | service_role=X` → le run, qui utilise la clé de service, peut l'exécuter,
+et elle reste fermée à tout le reste.
+
+### Le calendrier, maintenant
+
+| | |
+|---|---|
+| **demain ~07:01** | le push remonte les **36**, **puis** le ménage rattache les **4 022** |
+| **demain ~07:48 et 09:48** | les **3 alertes** doivent tomber |
+
+➡ **Le rattrapage a lieu demain, et non plus le 16/10** — à condition que le patch de registre
+soit collé *(sinon l'étape tourne quand même, mais sa surveillance ment)*.
