@@ -108,6 +108,8 @@ const DOCUMENT_JOB_TYPES = new Set([
   "delete_document_from_hektor",
   "sync_hektor_photos",
   "upload_hektor_photo",
+  // 3 bloc 2 (14/10/2026) : la suppression d'une photo, jumelle de delete_document_from_hektor.
+  "delete_hektor_photo",
   "prepare_archived_annonce_detail",
   "prepare_historical_annonce_detail",
 ]);
@@ -8496,6 +8498,192 @@ async function handleDeleteDocumentFromHektor(job) {
     hektor_uploaded_document_id: String(hektorUploadedDocumentId),
     hektor_annonce_id: String(dossier.hektor_annonce_id),
     indexed: entries.length,
+    sync_job: syncJob,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUPPRIMER UNE PHOTO -- chantier ③, bloc 2 (14/10/2026). Jumelle de
+// handleDeleteDocumentFromHektor, dont elle recopie le patron : la preuve AVANT, la
+// commande, la preuve APRES, le journal, PUIS nos copies.
+//
+// LA COMMANDE, ET D'OU ELLE VIENT. Elle n'avait jamais ete relevee (audit du 25/09 :
+// « les trouver d'abord »). Le 14/10, la sonde en lecture seule
+// Console/sonde_photos_suppression.js a lu le JavaScript de la page Photos de Hektor
+// (xmlrpc.1.2.js.php) -- identique a une capture du 13/05 :
+//     delete_img(img, idann, num, table)
+//       -> GET xmlrpc.php?mode=delete_img&img=<fichier>&idann=<annonce>&table=<table>
+//       -> puis, si table == 'ordre_img' : saveOrder('liste_photos')
+//                                          et saveOrder('liste_photos_hidden')
+//     saveOrder(div)
+//       -> POST xmlrpc.php  <div>[]=<id>&<div>[]=<id>...&mode=ordonne_photos&div=<div>&idann=<annonce>
+// Le 3e argument (num) ne sert qu'a l'animation : il n'est PAS envoye. Les arguments
+// sont ceux que la galerie porte deja, photo par photo --
+//     delete_img('4c74d35c35db0a783035764726014962.jpg', 24113, '115564', 'ordre_img')
+// -- et que extractConsolePhotoEntries range depuis longtemps dans source_json.
+//
+// ⚠ LA RENUMEROTATION N'EST PAS UN DETAIL. La page de Hektor la fait apres chaque
+//   suppression. Sans elle, supprimer la photo en position 1 laisse une liste qui
+//   commence a 2 -- et un portail qui prend « la photo n° 1 » pour photo principale
+//   n'en aurait plus. On la refait donc, avec l'ordre RELU chez Hektor apres la
+//   suppression : c'est son propre ordre qu'on lui renvoie, rien n'est reclasse.
+//
+// ⚠ ON NE SUPPRIME QUE CE QUE HEKTOR A. Une photo deposee par l'app et pas encore
+//   envoyee (pas de numero Hektor) est REFUSEE : son envoi est en cours, ou en echec et
+//   attend le repreneur. La supprimer en vol casserait l'envoi.
+//
+// ⚠ LA LIGNE DISPARAIT -- et c'est une exception VOULUE a la regle du 26/09 (G.10bis,
+//   « la ligne d'une photo ne se supprime plus »). Cette regle protege d'une
+//   DISPARITION ACCIDENTELLE (une liste de Hektor qui revient vide). Ici la suppression
+//   est DEMANDEE : decision de Frederic du 13/10 pour 3e -- « detruit ton fichier
+//   cloud, ton fichier serveur et la ligne », et pour les derives publics « qu'ils
+//   partent tout de suite ». L'adresse publique doit tomber : c'est le but.
+//   La synchro, elle, garde sa regle (upsertConsolePhotos ne fait jamais de DELETE ;
+//   Console/test_photo_adresse_stable.js le garde).
+async function handleDeleteHektorPhoto(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await ensureHektorExecutionContext(job, dossier, payload,
+    { preferRequester: true, preferDossierOwner: true, required: true });
+  const photoId = payload.photo_id;
+  if (!photoId) throw new Error("payload_json.photo_id required");
+
+  const lignes = await supabaseRequest(
+    `app_console_photo?id=eq.${encodeURIComponent(String(photoId))}&select=*&limit=1`,
+    { method: "GET" },
+  );
+  const photo = Array.isArray(lignes) ? lignes[0] : null;
+  if (!photo) throw new Error(`Photo ${photoId} introuvable`);
+  if (String(photo.hektor_annonce_id) !== String(dossier.hektor_annonce_id)) {
+    throw new Error(`Photo ${photoId} hors annonce ${dossier.hektor_annonce_id}`);
+  }
+  if (!photo.hektor_photo_id) {
+    throw new Error("Photo pas encore chez Hektor (envoi en cours ou a reprendre) : on ne la supprime pas en vol");
+  }
+  const numero = String(photo.hektor_photo_id);
+  const annonce = String(dossier.hektor_annonce_id);
+
+  // ① AVANT : la photo doit etre dans la galerie, avec son bouton de suppression.
+  //    Les arguments sont relus ICI, chez Hektor -- pas dans notre copie, qui peut dater.
+  const avant = await fetchConsolePhotoEntries(annonce);
+  const cible = avant.find((e) => String(e.hektor_photo_id) === numero);
+  if (!cible) throw new Error(`Photo Hektor ${numero} introuvable avant suppression`);
+  const sj = cible.source_json || {};
+  const fichier = sj.delete_filename;
+  const idann = String(sj.delete_annonce_id || "").trim();
+  if (!sj.actions || !sj.actions.can_delete || !fichier) {
+    throw new Error(`Hektor ne propose pas la suppression de la photo ${numero} (bouton absent)`);
+  }
+  if (idann !== annonce) {
+    throw new Error(`La galerie designe l'annonce ${idann} pour la photo ${numero}, pas ${annonce}`);
+  }
+
+  // ② LA COMMANDE, telle que la page de Hektor l'envoie.
+  await hektorFetch(`${XMLRPC_URL}?mode=delete_img&img=${encodeURIComponent(fichier)}`
+    + `&idann=${encodeURIComponent(idann)}&table=ordre_img`);
+  await sleep(1500);
+
+  // ③ LA PREUVE : relue, elle n'y est plus. On exige la preuve du succes, on ne le
+  //    deduit jamais de l'absence d'erreur (un 200 vide est la signature d'un refus).
+  const apres = await fetchConsolePhotoEntries(annonce);
+  if (apres.some((e) => String(e.hektor_photo_id) === numero)) {
+    throw new Error(`Suppression Hektor non confirmee pour la photo ${numero}`);
+  }
+  // Et les autres sont toujours la : on n'en a pas emporte davantage.
+  const restantes = new Set(apres.map((e) => String(e.hektor_photo_id)));
+  const disparuesEnTrop = avant
+    .map((e) => String(e.hektor_photo_id))
+    .filter((id) => id !== numero && !restantes.has(id));
+
+  // ④ LA RENUMEROTATION, comme saveOrder -- avec l'ordre relu chez Hektor.
+  //    ⚠ Elle ne leve PAS : la photo EST supprimee chez Hektor (prouve en ③). Lever ferait
+  //      rejouer le travail, qui echouerait alors sur « introuvable avant suppression »
+  //      et laisserait nos copies sans journal. On le DIT a la place.
+  const renumerotation = {};
+  for (const [div, visible] of [["liste_photos", true], ["liste_photos_hidden", false]]) {
+    const ids = apres
+      .filter((e) => Boolean(e.visible) === visible)
+      .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0))
+      .map((e) => String(e.hektor_photo_id));
+    const corps = ids.map((id) => `${div}[]=${encodeURIComponent(id)}`).join("&")
+      + `&mode=ordonne_photos&div=${div}&idann=${encodeURIComponent(idann)}&rnd=${Date.now()}`;
+    try {
+      await hektorFetch(XMLRPC_URL, {
+        method: "POST",
+        body: corps,
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+      });
+      renumerotation[div] = { ok: true, photos: ids.length };
+    } catch (error) {
+      const motif = error && error.message ? error.message : String(error);
+      renumerotation[div] = { ok: false, photos: ids.length, erreur: motif.slice(0, 300) };
+      await logJob(job.id, "delete_hektor_photo", "running",
+        "Photo supprimee chez Hektor, mais l'ordre n'a pas pu etre renumerote", {
+          hektor_annonce_id: annonce, liste: div, erreur: motif,
+        });
+    }
+  }
+
+  // ⑤ LE JOURNAL, AVANT NOS DESTRUCTIONS -- meme regle qu'au document (3e) :
+  //    insertDeletedPhotoLog JETTE si la trace ne s'ecrit pas, et alors on sort ici.
+  //    Hektor a deja supprime (c'est acquis et prouve) ; NOS COPIES RESTENT.
+  const derives = photo.derives_json && typeof photo.derives_json === "object" ? photo.derives_json : {};
+  const cheminsDerives = Object.values(derives)
+    .map((d) => (d && typeof d.chemin === "string" ? d.chemin : null))
+    .filter(Boolean);
+  const metadata = photo.metadata_json && typeof photo.metadata_json === "object" ? photo.metadata_json : {};
+  const localPath = metadata.local_archive_path || null;
+  await insertDeletedPhotoLog(job, {
+    app_dossier_id: dossier.app_dossier_id == null ? null : dossier.app_dossier_id,
+    hektor_annonce_id: annonce,
+    photo_id: photo.id,
+    hektor_photo_id: numero,
+    filename: photo.filename || fichier,
+    reason: payload.reason || "suppression_depuis_app",
+    before_json: photo,
+    result_json: {
+      hektor_confirme: true,
+      fichier_hektor: fichier,
+      renumerotation,
+      disparues_en_trop: disparuesEnTrop,
+      fichier_cloud: photo.storage_path || null,
+      fichier_serveur: localPath,
+      derives_publics: cheminsDerives,
+    },
+  });
+
+  // ⑥ NOS COPIES : le fichier cloud, le fichier serveur, les derives PUBLICS, la ligne.
+  //    Les derives ne vivent QUE dans le coffre public (genererDerivesPhoto ne les ecrit
+  //    pas sur le serveur) : quatre choses a detruire, pas cinq.
+  if (photo.storage_path) await deleteStorageObject(photo.storage_path);
+  if (isReadableFile(localPath)) fs.unlinkSync(localPath);
+  for (const chemin of cheminsDerives) {
+    try {
+      await storageRequest(chemin, { method: "DELETE", bucket: COFFRE_PHOTO_PUBLIC });
+    } catch (error) {
+      const message = error && error.message ? error.message : String(error);
+      if (!message.includes("404")) throw error;
+    }
+  }
+  await supabaseRequest(`app_console_photo?id=eq.${encodeURIComponent(photo.id)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+
+  await upsertConsolePhotos(dossier, apres);
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonce, {
+    reason: "delete_hektor_photo",
+    priority: 82,
+  });
+
+  return {
+    deleted_photo_id: photo.id,
+    hektor_photo_id: numero,
+    hektor_annonce_id: annonce,
+    renumerotation,
+    disparues_en_trop: disparuesEnTrop,
+    derives_supprimes: cheminsDerives.length,
+    indexed: apres.length,
     sync_job: syncJob,
   };
 }
@@ -17481,6 +17669,7 @@ const JOB_TYPES_A_NOTIFIER = new Set([
   "delete_hektor_annonce", "assign_hektor_annonce_negotiator",
   "create_hektor_mandat_auto_number",
   "upload_document_to_hektor", "delete_document_from_hektor", "upload_hektor_photo",
+  "delete_hektor_photo",
   "generate_mandat_document", "generate_estimation_pdf", "generate_cadastre_document",
   "relance_signature", "cancel_signature_procedure",
 ]);
@@ -17506,6 +17695,7 @@ const JOB_LIBELLES = {
   upload_document_to_hektor: "L'envoi du document",
   delete_document_from_hektor: "La suppression du document",
   upload_hektor_photo: "L'envoi de la photo",
+  delete_hektor_photo: "La suppression de la photo",
   generate_mandat_document: "La generation du mandat",
   generate_estimation_pdf: "La generation de l'avis de valeur",
   generate_cadastre_document: "La generation du plan cadastral",
@@ -18726,18 +18916,12 @@ async function insertDeletedDocumentLog(job, payload) {
   return ecrites[0];
 }
 
-// ⚠⚠ CELLE-CI N'EST ENCORE APPELEE PAR PERSONNE, ET C'EST VOULU -- A NE PAS PRENDRE
-//   POUR UN OUBLI. Le geste « supprimer une photo depuis l'app » N'EXISTE PAS, et il
-//   ne peut pas etre ecrit aujourd'hui : LA COMMANDE HEKTOR EST INCONNUE.
-//   On extrait bien les ARGUMENTS de `delete_img(filename, annonceId, photoId)` depuis
-//   le HTML (l. ~1258), mais on n'a jamais releve l'adresse qui l'execute -- et
-//   l'audit du 25/09 (notice/AUDIT_PHOTOS_2026-09-25.md) le dit deja :
-//     « Deux modes Hektor seulement sont connus du worker : vignettes et
-//       vignettes_hidden, tous deux en LECTURE. Aucun mode de suppression [...]
-//       n'a jamais ete releve. C'est le vrai travail : les trouver d'abord. »
-//   ➡ il faut d'abord un RELEVE EN LECTURE SEULE de la page Photos de Hektor
-//     (patron : Console/releve_assistant_etapes.js, qui n'ecrit jamais), avec
-//     l'accord de Frederic. Cette fonction attend ce jour-la, prete.
+// APPELEE PAR handleDeleteHektorPhoto DEPUIS LE 14/10/2026 (chantier ③, bloc 2).
+//   Elle a attendu du 13/10 au 14/10, prete : la commande Hektor etait inconnue. Le
+//   releve en lecture seule (Console/sonde_photos_suppression.js) l'a trouvee --
+//   mode=delete_img, puis mode=ordonne_photos pour renumeroter (voir le geste).
+//   ⚠ ELLE JETTE si la trace ne s'ecrit pas : c'est une CONDITION de la destruction,
+//     pas un effet de bord (lecon 21 -- ses deux ainees avalent l'erreur).
 async function insertDeletedPhotoLog(job, payload) {
   const ecrites = await supabaseRequest("app_console_deleted_photo_log", {
     method: "POST",
@@ -20767,6 +20951,8 @@ async function runHandler(job) {
       return handleSyncHektorPhotos(job);
     case "upload_hektor_photo":
       return handleUploadHektorPhoto(job);
+    case "delete_hektor_photo":
+      return handleDeleteHektorPhoto(job);
     case "prepare_archived_annonce_detail":
       return handlePrepareArchivedAnnonceDetail(job);
     case "prepare_historical_annonce_detail":

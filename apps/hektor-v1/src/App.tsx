@@ -100,6 +100,7 @@ import {
   cadastreMapThumbUrl,
   createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
+  createDeleteHektorPhotoJob,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
   createSyncHektorPhotosJob,
@@ -8775,6 +8776,10 @@ function hektorActionJobTitle(job: ConsoleJob) {
   if (job.job_type === 'delete_document_from_hektor') {
     return documentName ? `Suppression ${documentName}` : 'Suppression document'
   }
+  if (job.job_type === 'delete_hektor_photo') {
+    const nomPhoto = typeof payload.filename === 'string' && payload.filename.trim() ? payload.filename.trim() : ''
+    return nomPhoto ? `Suppression photo ${nomPhoto}` : 'Suppression photo'
+  }
   if (job.job_type === 'upload_document_to_hektor') {
     return documentName ? `Ajout ${documentName}` : 'Ajout document Hektor'
   }
@@ -8821,6 +8826,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'restore_hektor_annonce') return 'Desarchivage en cours'
   if (job.job_type === 'change_hektor_annonce_status') return 'Changement statut'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression document'
+  if (job.job_type === 'delete_hektor_photo') return 'Suppression photo'
   if (job.job_type === 'upload_document_to_hektor') return 'Ajout document'
   if (job.job_type === 'upload_hektor_photo') return 'Ajout photo'
   if (job.job_type === 'prepare_document_cloud') return 'Preparation document'
@@ -8842,7 +8848,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'archive_hektor_annonce') return 'update'
   if (job.job_type === 'restore_hektor_annonce') return 'update'
   if (job.job_type === 'change_hektor_annonce_status') return 'update'
-  if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_hektor_contact' || job.job_type === 'delete_document_from_hektor') return 'delete'
+  if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_hektor_contact' || job.job_type === 'delete_document_from_hektor' || job.job_type === 'delete_hektor_photo') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
   if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'contact'
@@ -8865,6 +8871,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'prepare_archived_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'prepare_historical_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
+  if (job.job_type === 'delete_hektor_photo') return 'Suppression Hektor demandee'
   if (job.job_type === 'archive_hektor_annonce') return 'Archivage Hektor puis resynchronisation'
   if (job.job_type === 'restore_hektor_annonce') return 'Reintegration Hektor puis resynchronisation'
   if (job.job_type === 'change_hektor_annonce_status') return 'Transaction Hektor puis resynchronisation'
@@ -8921,6 +8928,7 @@ async function loadHektorActionAppDossier(job: ConsoleJob, scope?: DataScope | n
 function hektorActionCanFinishWithoutAppDossier(job: ConsoleJob) {
   return [
     'delete_document_from_hektor',
+    'delete_hektor_photo',
     'prepare_document_cloud',
     'sync_console_documents',
     'sync_hektor_photos',
@@ -8965,6 +8973,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'prepare_archived_annonce_detail') return 'Archive prete'
     if (job.job_type === 'prepare_historical_annonce_detail') return 'Fiche prete'
     if (job.job_type === 'delete_document_from_hektor') return 'Document supprime'
+    if (job.job_type === 'delete_hektor_photo') return 'Photo supprimee'
     if (job.job_type === 'sync_hektor_photos') return 'Photos synchronisees'
     if (job.job_type === 'delete_hektor_annonce') return 'Suppression terminee'
     if (job.job_type === 'archive_hektor_annonce') return 'Annonce archivee'
@@ -8980,6 +8989,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
     if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'delete_document_from_hektor') return 'Synchronisation document'
     if (job.job_type === 'upload_hektor_photo') return 'Mise a jour galerie'
+    if (job.job_type === 'delete_hektor_photo') return 'Mise a jour galerie'
     if (job.job_type === 'sync_hektor_photos') return 'Synchronisation photos'
     return "Mise a jour de l'app"
   }
@@ -9002,6 +9012,7 @@ function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute dans Hektor. Synchronisation app en cours...'
   if (job.job_type === 'upload_hektor_photo') return 'Photo ajoutee dans Hektor. Mise a jour de la galerie en cours...'
   if (job.job_type === 'delete_document_from_hektor') return 'Document supprime dans Hektor. Mise a jour app en cours...'
+  if (job.job_type === 'delete_hektor_photo') return 'Photo supprimee dans Hektor et chez nous. Mise a jour de la galerie en cours...'
   if (job.job_type === 'sync_hektor_photos') return 'Photos Hektor lues. Mise a jour de la galerie app en cours...'
   return 'Commande Hektor terminee. Mise a jour de l app en cours...'
 }
@@ -11549,6 +11560,9 @@ function ConsolePhotosPanel({
   const [photoVisible, setPhotoVisible] = useState(true)
   const [fileInputKey, setFileInputKey] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  // 3 bloc 2 (14/10/2026) : la suppression d'une photo, jumelle de celle du document.
+  const [deletingPhotoIds, setDeletingPhotoIds] = useState<Set<string>>(() => new Set())
+  const [busyPhotoId, setBusyPhotoId] = useState<string | null>(null)
 
   const refreshPhotos = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -11655,6 +11669,54 @@ function ConsolePhotosPanel({
       }
     } finally {
       setUploadPending(false)
+    }
+  }
+
+  // ⭐ 3 bloc 2 (14/10/2026) -- SUPPRIMER UNE PHOTO DEPUIS L'APP.
+  // Jumelle de handleDeleteDocument, et le texte dit la meme verite : la photo part CHEZ
+  // HEKTOR ET CHEZ NOUS (le fichier, ses vignettes publiques, sa fiche), sans retour
+  // possible, et une trace est conservee (qui, quoi, quand) -- decision de Frederic du
+  // 13/10, pas de corbeille.
+  // ⚠ La photo ne disparait PAS tout de suite de l'ecran : elle est marquee « suppression
+  //   demandee » et reste tant que le worker n'a pas PROUVE la suppression chez Hektor. Si
+  //   Hektor refuse, la photo est toujours la -- et elle doit le rester ; l'echec est
+  //   notifie a celui qui l'a demande.
+  async function handleDeletePhoto(photo: ConsolePhoto) {
+    const confirmed = window.confirm(
+      `Supprimer définitivement cette photo ?\n\n${photo.legend || photo.filename || 'Photo'}\n\n`
+      + `Elle sera supprimée CHEZ HEKTOR et CHEZ NOUS : le fichier, ses vignettes publiques `
+      + `et sa fiche partent, sans retour possible.\nUne trace est conservée (qui, quoi, quand).`,
+    )
+    if (!confirmed) return
+    if (!hasHektorNegotiator(dossier)) {
+      onMissingNegotiator?.(dossier)
+      return
+    }
+    setBusyPhotoId(photo.id)
+    setError(null)
+    try {
+      const job = await createDeleteHektorPhotoJob({ photo, priority: 15 })
+      onJobCreated?.(job)
+      setDeletingPhotoIds((current) => new Set([...current, photo.id]))
+      // Le worker relit la galerie avant ET apres ; on relit a notre tour. Au second
+      // passage on retire la marque : si la photo est encore la, c'est que Hektor a
+      // refuse -- elle redevient une photo normale, et la notification dit pourquoi.
+      const relire = async (dernier: boolean) => {
+        await refreshPhotos(true)
+        if (dernier) {
+          setDeletingPhotoIds((current) => {
+            const suivant = new Set(current)
+            suivant.delete(photo.id)
+            return suivant
+          })
+        }
+      }
+      window.setTimeout(() => void relire(false), 12000)
+      window.setTimeout(() => void relire(true), 30000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de creer la demande de suppression de la photo')
+    } finally {
+      setBusyPhotoId(null)
     }
   }
 
@@ -11782,12 +11844,35 @@ function ConsolePhotosPanel({
                 </div>
               )
             }
+            const suppressionDemandee = deletingPhotoIds.has(photo.id)
+            // ⚠ La suppression n'est proposee que pour une photo CONNUE DE HEKTOR : les
+            //   apercus de secours (source 'api_preview') n'ont pas de vraie fiche, et une
+            //   photo en attente d'envoi est refusee par le worker (on ne la coupe pas en vol).
+            const supprimable = photo.source !== 'api_preview' && Boolean(photo.hektor_photo_id)
             return (
-              <button key={photo.id} className={`console-photo-tile ${photo.visible ? 'is-visible' : 'is-hidden'}`} type="button" onClick={() => onOpenImage?.(photo.url_hd || url)}>
-                <img src={url} alt={photo.legend || dossier.titre_bien} />
-                <span className="console-photo-badge">{photo.source === 'api_preview' ? 'API' : photo.visible ? 'Visible' : 'Masquée'}</span>
+              // ⚠ LA TUILE RESTE L'ENFANT DIRECT DE LA GRILLE, AVEC SA CLASSE : le cockpit vise
+              //   `.console-photos-grid > .console-photo-tile:first-child` pour la « Couverture »
+              //   (fa-cockpit-v2.css). Elle devient un <div> parce qu'elle porte DEUX boutons --
+              //   ouvrir l'image, la supprimer -- et qu'un bouton dans un bouton est interdit.
+              <div key={photo.id} className={`console-photo-tile ${photo.visible ? 'is-visible' : 'is-hidden'}${suppressionDemandee ? ' is-suppression' : ''}`}>
+                <button className="console-photo-ouvrir" type="button" onClick={() => onOpenImage?.(photo.url_hd || url)}>
+                  <img src={url} alt={photo.legend || dossier.titre_bien} />
+                </button>
+                <span className="console-photo-badge">{suppressionDemandee ? 'Suppression demandée' : photo.source === 'api_preview' ? 'API' : photo.visible ? 'Visible' : 'Masquée'}</span>
                 {photo.legend ? <small>{photo.legend}</small> : null}
-              </button>
+                {supprimable ? (
+                  <button
+                    className="console-photo-supprimer"
+                    type="button"
+                    onClick={() => void handleDeletePhoto(photo)}
+                    disabled={suppressionDemandee || busyPhotoId === photo.id}
+                    aria-label="Supprimer la photo"
+                    title="Supprimer la photo"
+                  >
+                    ✕
+                  </button>
+                ) : null}
+              </div>
             )
           })}
         </div>

@@ -38,6 +38,8 @@ photo principale n'a jamais été relevé.** *(Par comparaison, le worker conna�
 occurrence de « photo principale » est un **compteur d'accueil** *(« Annonces sans photo
 principale »)*, pas un geste.
 
+> ⭐ **14/10/2026 — LA COMMANDE DE SUPPRESSION EST TROUVÉE, ET LE GESTE EST ÉCRIT.** Relevé en lecture seule (`Console/sonde_photos_suppression.js`, un seul GET) : `mode=delete_img&img=..&idann=..&table=ordre_img`, puis `mode=ordonne_photos` pour renuméroter. Geste : `handleDeleteHektorPhoto` (type `delete_hektor_photo`). Détail : `notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`, « BLOC 2 ». Réordonner et choisir la principale restent à faire — `mode=ordonne_photos` est désormais connu.
+
 ➡ **Le manque annoncé par `E.0-bis` est confirmé et complet** : supprimer, réordonner et
 choisir la principale n'existent ni côté worker, ni côté front, **et les commandes Hektor
 correspondantes ne sont pas connues**. C'est le vrai travail : **les trouver d'abord.**

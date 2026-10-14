@@ -3883,3 +3883,235 @@ concurrents feraient sauter des lignes en silence)* — contrôle `(o)`, neuf.
 ### LE BILAN DES ÉPREUVES
 
 **294 contrôles verts, 0 échec, sur 17 épreuves.** C'est la première fois depuis le 27/09.
+
+
+---
+
+## AUDIT DU 14/10 — L'ÉTAPE « APPLIQUER LE CONTRAT DE MANDAT » *(« 8 lignes arbitrées en faveur de l'app »)*
+
+> Demandé par Frédéric : *« Il faut que tu sois sûr, retirer cette étape va forcément avoir
+> des conséquences non ? »* puis *« refais un audit sur ce sujet, j'ai des doutes »*.
+> **Il avait raison de douter : je m'étais trompé deux fois dans la journée.**
+
+### ⚠ MES DEUX ERREURS DU JOUR, ET LEUR CAUSE
+
+1. J'ai écrit que l'étape **« falsifiait la colonne de Hektor dans le registre »** sur 5 biens.
+   **FAUX.** J'avais lu une **égalité** comme une **causalité** : la valeur de l'étape est égale
+   à celle du registre parce que **l'étape LIT le registre** *(`magasin_mandat_app.py`,
+   `lire_registre_supabase`)*, pas parce qu'elle l'écrit. C'est la leçon 16 — *« qui a ÉCRIT
+   cette valeur ? »* — et c'est moi qui l'ai oubliée.
+2. J'ai présenté `hektor_mandat` comme **« ce que Hektor dit vraiment »**. **FAUX** : le projet a
+   tranché le 30/09 que le registre lit **le détail** de l'annonce, et que `hektor_mandat` est la
+   source **la moins fiable** *(elle accumule, et a mélangé sur 28 couples deux mandats différents
+   partageant un numéro)*.
+
+### LA CHAÎNE RÉELLE, MESURÉE MAILLON PAR MAILLON
+
+```
+registre (date tirée du DÉTAIL)  ──lu par──▶  magasin LOCAL  ──▶  contrat  ──▶  app_view_generale.mandat_date_cloture
+                                                                                         │
+                                                                                         ✗  personne ne la lit
+```
+
+| maillon | preuve |
+|---|---|
+| le registre ne lit **pas** cette colonne | `export_app_payload.py` l. 2401 : `mandat_date_cloture = current_version.cloture` (le mandat du détail), **sans repli** sur la ligne de la vue — alors que la même ligne s'en sert pour la ville, l'archive, le diffusable |
+| aucune autre table de Supabase ne la porte | `information_schema` : seuls `app_mandat_register_current` et sa vue ont une colonne `mandat_date_cloture%` |
+| les caches de fiche ne la portent pas | `app_historical_…_cache` 8 lignes, `app_archive_…_cache` 9 lignes : **0** avec la clé |
+| lecteurs locaux | `export_mini_app_html.py` et `checks/registre_depuis_app_mandat.py` — **tous deux sans appelant** ; `bootstrap_phase2.py` l. 264 lit le **miroir**, pas la vue ; les 4 autres fichiers ne citent le nom qu'en **commentaire** |
+
+➡ **La note du projet du 13/10 (« une colonne qui ne monte NULLE PART ») avait RAISON.**
+
+**Les 8 lignes** = 5 `observe` *(deux chemins de Hektor qui divergent : le détail et
+`hektor_mandat` — aucune décision de l'app, la colonne « la nôtre » est vide)* + 3 vraies clôtures
+`cloture_app` *(24933, 62774, 62966 — elles vivent désormais dans `mandat_date_cloture_app`,
+réposée par la pièce 4)*. ⚠ **Le message « 8 lignes arbitrées en faveur de l'app » ment donc
+sur 5 des 8** — et c'est lui qui m'a égaré.
+
+### LES CONSÉQUENCES D'UN RETRAIT — la question de Frédéric
+
+| sur | conséquence |
+|---|---|
+| les données | **aucune** — la colonne n'atteint rien (mesuré ci-dessus) |
+| ⚠ **la surveillance** | **OUI** : les deux étapes portent un `-WorkerKey` *(`phase2.magasin_mandat`, `phase2.contrat_mandat`)*, **inscrits au registre de surveillance le 13/10** (4j). Retirées du run sans désactiver ces deux lignes, leurs battements vieilliraient → **alerte chaque jour**. |
+| le run | 2 étapes non bloquantes (`run_full_pipeline.ps1` l. 589-594), ~1 s |
+
+⚠ Et la note du registre de surveillance (*« AUJOURD'HUI ELLE NE FAIT RIEN »*) est périmée : elle
+pose bien 8 valeurs — simplement dans une colonne que personne ne lit.
+
+### ⚠ UNE PISTE, HORS CHANTIER ③, NON TRANCHÉE
+
+Sur les 5 `observe`, le détail et `hektor_mandat` ne disent pas la même date — et sur **49624**,
+`hektor_mandat` porte le **13/10** quand le détail dit le **19/08**. Cela peut vouloir dire que la
+fiche détail des biens clos **n'est plus rafraîchie** — c'est le sujet du chantier ⑥ (G.2, les
+fiches détail à rattraper). **À mesurer là-bas, pas ici.**
+
+### ÉTAT DE LA PIÈCE 4 DE 3c, REMESURÉ
+
+**Toujours pas prouvée par le vrai chemin.** La re-pose du run (07:07:52) a rendu `posees 0,
+effacees 0, carnet 2` : aucun push n'avait effacé les lignes, elle n'a rien eu à restaurer. Et le
+carnet n'avait que 2 entrées parce que la saisie de 62774 date de **07:35:39** *(par le compte de
+Frédéric)*, après le passage. Sur 62774, aucun push n'a suivi depuis — un seul travail de
+documents, à 07:35:32 *(la preuve de 3e)*.
+
+### CE QUI RESTE DU CHANTIER ③ — MESURÉ DANS LE CODE
+
+- `setMandatClotureApp` n'a **qu'un appelant** (la modale de statut) → **le crayon de la rubrique
+  Mandat n'existe pas**.
+- **aucun écran** ne lit `app_console_deleted_document_log` / `_photo_log`.
+- **aucun geste « supprimer une photo »** dans le worker.
+- la tâche Windows du repreneur **n'est pas enregistrée** (7 tâches GTI, aucune ne l'appelle).
+
+
+---
+
+## LA FIN DU CHANTIER ③ — BLOC 1 (option B) ET BLOC 2, LE 14/10/2026
+
+> **Décision de Frédéric** : *« fais le Bloc 1 B et le bloc 2, BLOC 3 REPORTE AU CHANTIER 7 »*.
+
+### ➡ LE BLOC 3 PART AU CHANTIER ⑦ (« les gestes qui manquent »)
+
+Mesuré dans le code le 14/10, absent aujourd'hui :
+- **le crayon** de la date de clôture dans la rubrique Mandat — `setMandatClotureApp` n'a **qu'un
+  appelant**, la modale de changement de statut ;
+- **l'écran du journal des suppressions** (admins seulement) — aucun écran ne lit
+  `app_console_deleted_document_log` ni `_photo_log`.
+
+### BLOC 1
+
+| | | |
+|---|---|---|
+| ① la tâche du repreneur | ⛔ **refusée à ma session : « Accès refusé »** — une tâche en mode S4U demande les droits administrateur. **À enregistrer par Frédéric**, dans un PowerShell administrateur. ⚠ La commande `schtasks /ru admin` que j'avais d'abord donnée était **mauvaise** : sans mot de passe, elle crée une tâche qui ne tourne que session ouverte, alors que les 7 tâches GTI sont en S4U. Frédéric ne l'a pas lancée. |
+| ② pousser | ⛔ **pas moi** — règle « tu ne pousses jamais » |
+| ③a essai réel d'ajout | ⏳ après le déploiement du front |
+| ③b **la pièce 4 de 3c** | ✅ **PROUVÉE PAR LE VRAI CHEMIN** — voir ci-dessous |
+| ④ option B | ✅ codée — le patch reste à coller |
+
+#### ⭐⭐ LA PIÈCE 4 DE 3c EST PROUVÉE
+
+Le chemin exact qu'un geste déclenche a été lancé sur **62774**, le bac à sable :
+`phase2/sync/push_single_annonce_to_supabase.py --hektor-annonce-id 62774`.
+
+```
+"mandat_register_replaced": 1                       <- la ligne du registre est DETRUITE puis refaite
+"cloture_reposee": { "posees": 1, "portee": "62774", "carnet": 3, "statut": "ok" }
+```
+
+`posees: 1` veut dire : la ligne refaite est sortie **sans** notre date, et la re-pose l'a
+**remise**. Avant et après sont **identiques** (`18836 : hektor=- / la_notre=2026-10-14`, vue
+`2026-10-14`, fiche « Sous offre / diffusable 0 ») alors que la ligne a bien été détruite entre les
+deux. ⚠ Avant de lancer, j'ai vérifié que la **copie locale** disait la même chose que la base
+(« Sous offre / 0 / 18836 ») — sinon le push aurait ramené une valeur périmée sur la fiche.
+
+#### ✅ OPTION B — LES DEUX ÉTAPES DU CONTRAT DE MANDAT QUITTENT LE RUN
+
+- `run_full_pipeline.ps1` : les six lignes sont **laissées en commentaire**, avec la raison et le
+  retour arrière *(BOM et CRLF conservés ; syntaxe vérifiée ; la re-pose est toujours là)*.
+- `supabase/patch_chantier3_optionB_contrat_mandat_legacy_2026-10-14.sql` (+ inverse, répétition) :
+  les deux inscriptions de surveillance passent en **`legacy`** — l'usage déjà en place *(« présent
+  dans le code mais le flux principal ne l'utilise plus »)*. ⚠ **LA MOITIÉ OBLIGATOIRE DU GESTE** :
+  sans lui, leurs battements vieilliraient et le moniteur alerterait chaque jour. **À coller
+  aujourd'hui.**
+- Mesuré : la sonde des battements écarte tout ce qui n'est pas `active` (`check_gti_health.py`
+  l. 1381) ; la sonde de comptage ne fait que compter et répond toujours « ok ». **Aucune alerte**.
+
+### ⭐⭐ BLOC 2 — SUPPRIMER UNE PHOTO : LA COMMANDE EST TROUVÉE, LE GESTE EST ÉCRIT
+
+#### LE RELEVÉ — en lecture seule, comme l'audit du 25/09 le prévoyait
+
+1. **Hors ligne d'abord.** Une capture du 13/05
+   (`Console/exports/inspect_announcement_delete_62200_…/report.json`) contenait le corps de
+   `delete_img`. Une autre (`console_assets_24113_…/raw_html/photos_vignettes.html`) montrait l'appel
+   réel : `delete_img('4c74d35c….jpg', 24113, '115564', 'ordre_img')`.
+2. **Puis une seule requête** : `Console/sonde_photos_suppression.js` — un `GET` vers le fichier
+   JavaScript de la page Photos, avec la session déjà enregistrée. **Code 200, aucune connexion,
+   aucun clic, et le fichier de session est resté IDENTIQUE** (même empreinte avant et après).
+
+```
+delete_img(img, idann, num, table)      -> GET  xmlrpc.php?mode=delete_img&img=..&idann=..&table=ordre_img
+   (num ne sert qu'a l'animation : il n'est PAS envoye)
+   puis saveOrder('liste_photos') et saveOrder('liste_photos_hidden')
+saveOrder(div)                          -> POST xmlrpc.php  <div>[]=<id>&...&mode=ordonne_photos&div=<div>&idann=..
+```
+
+⭐ **`delete_img` n'a pas changé depuis mai.** Et **le worker rangeait déjà les trois arguments**
+dans `source_json` depuis longtemps (`extractConsolePhotoEntries`, l. ~1258).
+
+⚠ **La renumérotation compte** : sans elle, supprimer la photo en position 1 laisse une liste qui
+commence à 2, et un portail qui prend « la photo n° 1 » pour principale n'en aurait plus.
+
+#### LE GESTE — `handleDeleteHektorPhoto`, type `delete_hektor_photo`
+
+Jumeau du geste document : **la preuve avant** (la photo est dans la galerie relue, avec son bouton)
+→ **la commande** → **la preuve après** (relue, elle n'y est plus, et aucune autre n'a disparu) →
+**la renumérotation** des deux listes, avec l'ordre **relu chez Hektor** → **le journal** (il jette
+s'il ne s'écrit pas) → **puis nos copies** : le fichier cloud, le fichier serveur, **les dérivés
+publics** (coffre `gti-photo`), la ligne.
+
+⚠ **Les refus** : une photo pas encore chez Hektor (envoi en vol) · absente de la galerie avant ·
+sans bouton de suppression chez Hektor · une galerie qui désigne une autre annonce.
+⚠ **La renumérotation ne lève pas** : la photo est déjà supprimée chez Hektor (prouvé) ; lever ferait
+rejouer un travail qui échouerait sur « introuvable avant », sans journal.
+
+⚠⚠ **LA LIGNE DISPARAÎT — exception VOULUE à la règle du 26/09** (G.10bis, « la ligne d'une photo
+ne se supprime plus »). Cette règle protège d'une **disparition accidentelle** ; ici la suppression
+est **demandée**, et la décision du 13/10 dit *« détruit ton fichier cloud, ton fichier serveur et
+la ligne »*, *« qu'ils partent tout de suite »*. **La synchro garde sa règle** — vérifié :
+`test_photo_adresse_stable.js` ne découpe que `upsertConsolePhotos`, qui ne supprime toujours rien.
+
+**Branché aux 5 endroits** : `DOCUMENT_JOB_TYPES` (le service documents), `JOB_TYPES_A_NOTIFIER`
+(un échec prévient celui qui l'a demandé), `JOB_LIBELLES`, l'aiguillage, et le commentaire du
+journal photo, qui affirmait « appelée par personne » et serait devenu faux.
+
+#### LA BASE — `supabase/patch_chantier3_bloc2_supprimer_photo_2026-10-14.sql`
+
+Deux verrous fermaient la porte : la **contrainte** des types de travaux, et la fonction des
+**droits** `app_console_can_request_job`. Les deux sont **lues en base**, empreinte vérifiée, ancre
+unique, une valeur ajoutée à côté de son modèle.
+⭐ **Les droits sont ceux du document, à l'identique** : admin/manager tout ; un commercial
+**seulement sur ses biens** — `delete_hektor_photo` est posé juste à côté de
+`delete_document_from_hektor`.
+⚠ La contrainte est posée `NOT VALID` puis validée **après le COMMIT** : la table compte **93 663
+travaux** (64 Mo), et valider dans la transaction bloquerait les workers pendant le balayage.
+⚠ L'inverse **refuse de partir** tant qu'un travail `delete_hektor_photo` existe.
+
+#### L'ÉCRAN
+
+Un petit bouton ✕ sur chaque tuile **connue de Hektor** (ni les aperçus de secours, ni les photos
+en attente d'envoi). Le `confirm` dit la vérité : *chez Hektor ET chez nous, le fichier, ses
+vignettes publiques et sa fiche, sans retour, une trace est conservée*. La photo est marquée
+« Suppression demandée » et **reste à l'écran tant que le worker n'a pas prouvé la suppression**.
+
+⚠⚠ **CE QUE ÇA AURAIT CASSÉ, ET QUE J'AI ÉVITÉ** : la tuile était un `<button>` ; un second bouton
+dedans est interdit en HTML. L'envelopper dans un cadre aurait cassé **le cockpit** :
+`fa-cockpit-v2.css` vise `.console-photos-grid > .console-photo-tile:first-child` pour l'étiquette
+**« Couverture »**. ➡ La tuile **reste l'enfant direct de la grille, avec sa classe**, et devient un
+`<div>` qui porte les deux boutons. Dans le cockpit, le bouton d'ouverture est posé en absolu
+(sinon sa hauteur minimale de 118 px agrandirait les tuiles au ratio 4/3), et le bouton de
+suppression se range **sous** le badge du coin haut-droit.
+⚠ Le build l'a aussi rattrapé : `ConsoleJobType` (types.ts) devait connaître le nouveau type.
+Et les **8 fonctions** qui habillent un travail dans le suivi des actions le connaissent.
+⚠ **PERSONNE N'A VU L'ÉCRAN** : il faut une session connectée, et je ne me connecte pas.
+
+#### LES ÉPREUVES — `Console/test_supprimer_photo.js` (30 contrôles)
+
+Dont les témoins inverses : **Hektor ne confirme pas → rien n'est détruit chez nous, pas de
+journal** · **le journal ne s'écrit pas → on ne détruit pas** · et la synchro ne supprime toujours
+aucune ligne. ⚠ Un premier rouge était **mon épreuve** : j'attendais 4 destructions, il y en a 5
+(le cloud, le serveur, **deux** dérivés, la ligne).
+
+**324 contrôles verts, 0 échec, sur 18 épreuves.**
+
+### L'ORDRE D'ALLUMAGE — il compte
+
+1. **coller** la répétition puis le patch du bloc 2 *(sinon la base refuse le travail — l'écran le
+   dit, rien ne casse)* ;
+2. **redémarrer les 4 services** *(sinon le travail reste en attente : aucun service ne le prend)* ;
+3. **pousser** *(le front)* — recommandé après le 17/10, avec celui de 3d.
+
+### L'ESSAI RÉEL PROPOSÉ — sans rien détruire de réel
+
+Sur **62774**, le bac à sable : **ajouter** une photo d'essai depuis l'app *(3d)*, vérifier qu'elle
+existe chez nous avant la réponse de Hektor, **puis la supprimer** *(bloc 2)*. Les deux gestes sont
+éprouvés de bout en bout, sur une photo qui n'a jamais compté. ⚠ C'est une écriture chez Hektor :
+**avec l'accord de Frédéric**.

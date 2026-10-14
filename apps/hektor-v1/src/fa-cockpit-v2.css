@@ -496,6 +496,13 @@
   font-size: 9px; font-weight: 800; color: #fff; background: rgba(20, 14, 10, .55);
   padding: 2px 7px; border-radius: 99px;
 }
+/* 3 bloc 2 (14/10/2026) : la tuile porte deux boutons (ouvrir, supprimer).
+   · le bouton d'ouverture se pose en ABSOLU, comme l'image : sinon sa hauteur minimale
+     (118 px) agrandirait les tuiles, que le cockpit dimensionne au ratio 4/3 ;
+   · le badge occupe deja le coin haut-droit : le bouton de suppression se range DESSOUS. */
+.fa-ck-medias .console-photo-tile .console-photo-ouvrir { position: absolute; inset: 0; min-height: 0; height: auto; }
+.fa-ck-medias .console-photo-tile .console-photo-supprimer { top: 30px; right: 6px; width: 22px; height: 22px; font-size: 11px; }
+
 /* La légende du composant (Séjour, Façade…) : conservée, en bandeau bas lisible plutôt que
    rejetée sous la tuile où elle cassait la grille. */
 .fa-ck-medias .console-photo-tile small {

@@ -12203,6 +12203,58 @@ button.metric-card.is-active {
   min-height: 118px;
   object-fit: cover;
 }
+/* 3 bloc 2 (14/10/2026) : la tuile porte DEUX boutons -- ouvrir l'image, la supprimer.
+   Elle est donc devenue un <div> ; le bouton d'ouverture la remplit entierement et ne
+   garde rien d'un bouton (ni marge, ni bordure, ni fond) : la tuile reste identique. */
+.console-photo-tile .console-photo-ouvrir {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 118px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.console-photo-tile .console-photo-supprimer {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(34, 35, 35, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.78;
+}
+.console-photo-tile .console-photo-supprimer:hover,
+.console-photo-tile .console-photo-supprimer:focus-visible {
+  background: #b42318;
+  opacity: 1;
+}
+.console-photo-tile .console-photo-supprimer:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+.console-photo-tile.is-suppression img {
+  filter: grayscale(0.8);
+  opacity: 0.45;
+}
 .console-photo-tile.is-hidden img {
   filter: grayscale(0.55);
   opacity: 0.72;

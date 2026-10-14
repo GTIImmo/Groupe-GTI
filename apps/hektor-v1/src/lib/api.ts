@@ -8047,6 +8047,36 @@ export async function createDeleteDocumentFromHektorJob(input: {
   return data as ConsoleJob
 }
 
+// 3 bloc 2 (14/10/2026) -- SUPPRIMER UNE PHOTO. Jumelle exacte de la fonction ci-dessus.
+// ⚠ La base doit connaitre le type : patch supabase/patch_chantier3_bloc2_supprimer_photo
+//   _2026-10-14.sql (la contrainte des types + les droits, ceux du document a l'identique).
+//   Sans lui, l'insertion est REFUSEE par la base -- et le message remonte a l'ecran.
+export async function createDeleteHektorPhotoJob(input: {
+  photo: Pick<ConsolePhoto, 'id' | 'app_dossier_id' | 'hektor_annonce_id' | 'hektor_photo_id' | 'filename'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'delete_hektor_photo',
+      app_dossier_id: input.photo.app_dossier_id,
+      hektor_annonce_id: input.photo.hektor_annonce_id,
+      payload_json: {
+        photo_id: input.photo.id,
+        hektor_photo_id: input.photo.hektor_photo_id,
+        filename: input.photo.filename,
+      },
+      priority: input.priority ?? 25,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create Hektor photo delete job')
+  return data as ConsoleJob
+}
+
 // Synchro documents a la demande (read-through) : le worker relit Hektor -> etat signature a jour
 // + recuperation auto du PDF signe, sans clic. Declenche en silence a l'ouverture de l'annonce.
 export async function createSyncConsoleDocumentsJob(input: {
@@ -10131,6 +10161,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'delete_document_from_hektor',
   'sync_hektor_photos',
   'upload_hektor_photo',
+  'delete_hektor_photo',
   'prepare_archived_annonce_detail',
   'prepare_historical_annonce_detail',
   'refresh_console_contact_data',
