@@ -555,3 +555,50 @@ Le compte reste **2**, ce qui est juste : **Frédéric n'a pas encore cliqué.**
    plus partir**.
 2. ⬜ **Les 8 avertissements** : un autre sujet, **ils ne sonnent pas**. Chacun a un seuil posé
    pour une raison. À reprendre un par un **s'il le demande** — je n'ai rien décidé.
+
+---
+
+## 14. ⚠ JE M'ÉTAIS TROMPÉ : CE N'ÉTAIT PAS LA DERNIÈRE DE LA FAMILLE
+
+Le 13/10 j'ai écrit, en section 8 : *« **Mesuré le 13/10 : c'est la DERNIÈRE sentinelle de la
+famille** — `relation_disparue` rend le retard du cloud en information, jamais en alerte, et
+`mandat_disparu` compare serveur ↔ miroir, pas la doublure. »*
+
+**Les deux moitiés de cette phrase étaient fausses.**
+
+| ce que j'avais dit | ce que dit le code |
+|---|---|
+| *« `relation_disparue` n'alerte jamais sur ce retard »* | ❌ **elle le faisait** — Frédéric a reçu *« l'étape de nuit ne passe plus »* le **14/10 à 05:51**, et la même formule rejouée à 07:20 rendait **0** sur les huit gardes. **Corrigée le 14/10** par l'autre session *(commit `a4ab4d9`)* |
+| *« `mandat_disparu` ne lit pas la doublure »* | ❌ **elle lit `app_mandat__sb`** |
+
+### ⭐ Pourquoi je me suis trompé — l'erreur de méthode, deux fois
+
+1. **J'ai cru un docstring au lieu de lire le code.** Celui de `relation_disparue` dit *« le
+   retard du cloud est rendu en information, jamais en alerte »* — c'était vrai **d'un** de ses
+   écarts, pas de celui qui criait. **C'est la règle n° 4 de CLAUDE.md, mot pour mot :
+   « lire le CODE, pas les notes, pour établir un état ».**
+2. **J'ai cherché au mauvais endroit.** Mon balayage grepait `__sb` **dans le moniteur**. Or
+   `relation_disparue` est une **formule de `phase2/checks/`** : elle ne pouvait pas apparaître.
+   **Un balayage de famille se fait là où vivent les membres, pas là où on les appelle.**
+
+### Le balayage refait, au bon endroit *(14/10)*
+
+Le moniteur importe **quatre** formules. Voici leur état, lu dans le code **et** mesuré sur
+**104 passages** de journal :
+
+| formule | garde de fraîcheur | rouges mesurés |
+|---|---|---|
+| `mandat_un_numero` | ✅ posée le 13/10 | 1 *(un passage manuel à 08:23)* |
+| `relation_disparue` | ✅ posée le 14/10 | 0 |
+| `annonce_un_numero` | ⬜ **aucune** | **0 — jamais de rouge** |
+| `mandat_disparu` | ⬜ **aucune** | **7**, mais à **01:48, 03:48, 05:48, 15:48, 19:48, 21:48, 23:48** |
+
+⚠ **Et je ne conclus pas cette fois.** Les 7 rouges de `mandat_disparu` sont **dispersés sur
+toute la journée**, pas groupés le matin : **ça ne ressemble pas au faux cri de la fenêtre
+matinale**, ça ressemble à un épisode réel. `annonce_un_numero` n'a jamais crié.
+
+> ❓ **Question, je ne décide pas** : faut-il poser le même garde sur ces deux-là ?
+> **A** — oui, par précaution *(elles n'ont aucun garde, et la cause est structurelle)*.
+> **B** — non : pas de symptôme, et on ne corrige pas ce qui ne se plaint pas.
+> **C** — d'abord **mesurer** d'où viennent les 7 rouges de `mandat_disparu`, puis trancher.
+> ⭐ **Je recommande C** : une mesure avant un correctif, c'est la règle du projet.

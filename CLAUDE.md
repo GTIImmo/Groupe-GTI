@@ -382,7 +382,19 @@ report ne se décident jamais sans lui.
 ⑦-bis SA SOEUR EST CORRIGEE AUSSI (13/10, go « A maintenant ») : data.recherche_
    divergente lit desormais la fraicheur REELLE (max(refreshed_at) du natif contre
    sb_pull_state.derniere_descente) au lieu de l'indice propose le 29/08. 8 epreuves,
-   temoin inverse. C'etait la DERNIERE de la famille (mesure).
+   temoin inverse.
+   ⚠⚠ MAIS J'AI EU TORT DE DIRE « c'etait la DERNIERE de la famille » : il y en avait
+   une 4e, data.relation_disparue, corrigee le 14/10 par l'autre session (a4ab4d9) --
+   Frederic a recu son faux rouge le 14/10 a 05:51. DEUX ERREURS DE METHODE : (1) j'ai
+   cru un DOCSTRING au lieu de lire le code (c'est la regle n° 4 de cette page) ;
+   (2) j'ai grepe « __sb » DANS LE MONITEUR, alors que la formule vit dans
+   phase2/checks/ -- un balayage de famille se fait LA OU VIVENT LES MEMBRES.
+   Balayage refait le 14/10 : le moniteur importe QUATRE formules. mandat_un_numero et
+   relation_disparue ont leur garde ; annonce_un_numero et mandat_disparu n'en ont AUCUN,
+   mais mesure sur 104 passages : annonce_un_numero n'a JAMAIS crie, et les 7 rouges de
+   mandat_disparu sont DISPERSES sur la journee (01:48 a 23:48), donc ca ne ressemble pas
+   au faux cri du matin. JE NE CONCLUS PAS : 3 options en section 14 de la note,
+   RECOMMANDE « mesurer d'abord d'ou viennent ces 7 rouges ». A trancher par Frederic.
 ⑧ ⛔ LE DECALAGE DU MONITEUR NE MARCHE PAS -- mesure du 13/10, consigne NON EXECUTEE.
    La descente a dure de 18 a 64 MINUTES sur les 12 derniers jours : partie a 07:45,
    elle finit entre 08:03 et 08:49. « Apres 08:05 » ne suffit donc pas (11 jours sur 12).
