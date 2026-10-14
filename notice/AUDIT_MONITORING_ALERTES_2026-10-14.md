@@ -439,3 +439,56 @@ CE QUE LE PASSAGE DE 11:48 DIRA
 
 ➡ **Les deux notifications passent au vert.** Le rouge reste, et c'est normal : il attend le clic
 **« J'ai refait » dans la fiche du bien** — pas celui de l'écran Santé.
+
+---
+
+## 13. ⚠⚠ JE ME SUIS TROMPÉ EN SECTION 11 : « Résolu » N'EST PAS DÉFINITIF — IL TIENT 2 HEURES
+
+*Frédéric, 12:05 : « Non idem tu dois te tromper ??? »* — **il avait raison.**
+
+J'avais écrit en section 11 que `app_alert_state` garde `resolved` **pour toujours** et que neuf
+alertes étaient *« éteintes à vie »*. **C'est l'inverse.** La mesure :
+
+| | |
+|---|---|
+| `monitor:monitor.summary` — **cliqué « Résolu »** | 14/10 à **08:37** |
+| la même alerte, **recréée** par le passage suivant | 14/10 à **09:50** |
+| son `lifecycle_status` aujourd'hui | **`new`** ← elle est redevenue neuve |
+
+➡ **La vue repart de `new` dès que l'alerte est RECRÉÉE après le clic.** Le marquage ne vaut que
+pour l'alerte telle qu'elle existait au moment du clic.
+
+**Et c'est bien conçu** : si le problème revient, l'alerte revient. Mon diagnostic d'« extinction
+à vie » était faux — j'avais lu la table `app_alert_state` *(qui garde bien `resolved`)* **sans
+regarder ce que la vue en fait**. Encore une fois : **la table dit une chose, la vue en fait une
+autre.**
+
+### ⭐ ET VOILÀ ENFIN LA VRAIE RÉPONSE À SA QUESTION DU DÉBUT
+
+*« La plupart des erreurs sont connues, comment arrêter de les faire sonner ? »*
+
+**Il nettoie son écran, et deux heures plus tard tout est revenu.** Le moniteur passe toutes les
+2 h et recrée les alertes ; chaque clic est effacé au passage suivant. **C'est ça, le sapin de
+Noël qui se reconstitue tout seul.**
+
+➡ **Le remède est exactement `snoozed_until`** : une sourdine **datée**, qui survit aux
+recréations parce qu'elle porte une échéance au lieu d'un état. La colonne existe en base depuis
+le 05/07, elle est **vide partout**, et ni la vue ni le bouton ne l'utilisent.
+
+### ⚠ Et un second défaut, visible sur la capture de 12:05
+
+**`monitor.summary` est la PREMIÈRE ligne de « Alertes à traiter », en rouge** :
+*« GTI monitor summary: 1 critical, 6 warning »*. C'est **le compte rendu du passage**, pas un
+incident — et il s'affiche **au-dessus du vrai incident**. Je l'ai retiré de l'e-mail ce matin ;
+**il faut le retirer de l'écran aussi** *(l'écran l'exclut déjà de la liste du bas et des
+compteurs — mais pas de « Alertes à traiter », qui vient d'une autre source)*.
+
+### ❓ À trancher
+
+| | |
+|---|---|
+| **A** ⭐ | **les deux d'un coup** : « Résolu » devient une **sourdine de 7 jours** qui survit aux recréations, **et** le résumé sort de « Alertes à traiter ». ≈ 1 h 30, front + base |
+| **B** | seulement le résumé *(1 ligne de front, 10 min)* — l'écran se nettoie un peu, mais tes clics continueront d'être effacés toutes les 2 h |
+| **C** | seulement la sourdine |
+
+**Je recommande A.** Rien n'est décidé.
