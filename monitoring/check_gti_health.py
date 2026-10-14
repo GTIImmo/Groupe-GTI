@@ -204,6 +204,23 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "params": {"status": "eq.error"},
         "rule": "absolute",
         "max": 0,
+        # LE CLIC DE L'HUMAIN DOIT ETEINDRE L'ALERTE (14/10/2026).
+        #   L'ecran montre les gestes abandonnes dans un bandeau, avec deux
+        #   boutons (« J'ai refait » / « Abandonner ce geste »). Le RPC
+        #   app_action_resolve ecrit alors une trace dans app_pending_resolution
+        #   -- ET RIEN D'AUTRE : il ne touche pas au travail, qui reste en
+        #   `error` pour toujours (c'est de l'historique, c'est voulu).
+        #   Resultat mesure : le bandeau se tait, data.geste_abandonne se tait,
+        #   et CE ROUGE CONTINUE -- or c'est le seul qui envoie un e-mail.
+        #   Frederic l'a dit autrement : « la plupart des erreurs sont connues,
+        #   comment arreter de les faire sonner ».
+        #
+        #   On retire donc du decompte ce qu'un humain a deja tranche, ET les
+        #   travaux trop vieux pour etre visibles dans l'app : la vue
+        #   app_en_attente_humain s'arrete a 30 jours, donc au-dela PERSONNE NE
+        #   PEUT PLUS CLIQUER -- le rouge serait eternel. Ils ne sont pas
+        #   masques en silence : le message les compte a part.
+        "exclure_resolus": {"objet": "geste", "fenetre_jours": 30},
     },
     {
         "key": "data.diffusion_erreur",
@@ -1580,8 +1597,26 @@ class Monitor:
                 continue
             if count is None:
                 continue
+            brut, retraits = count, None
+            if sentinel.get("exclure_resolus") and count:
+                count, retraits = self._retirer_resolus(sentinel, count)
             status, message, details = self._evaluate_sentinel(sentinel, count)
             details["count"] = count
+            if retraits is not None:
+                details.update(retraits)
+                details["count_brut"] = brut
+                suite = []
+                if retraits.get("tranches_par_un_humain"):
+                    suite.append(str(retraits["tranches_par_un_humain"])
+                                 + " deja tranche(s) a l'ecran")
+                if retraits.get("trop_vieux_pour_l_ecran"):
+                    suite.append(str(retraits["trop_vieux_pour_l_ecran"])
+                                 + " de plus de " + str(retraits["fenetre_jours"])
+                                 + " jours, invisibles dans l'app")
+                if retraits.get("non_filtre_cause"):
+                    suite.append("filtre non applique : " + str(retraits["non_filtre_cause"]))
+                if suite:
+                    message = message + " [sur " + str(brut) + " au total : " + " ; ".join(suite) + "]"
             # L'echantillon, seulement si ca sonne : une alerte qui dit « 1 »
             # sans dire lequel oblige a chercher, et c'est exactement ce qu'une
             # sonde doit eviter.
@@ -1592,6 +1627,96 @@ class Monitor:
                     details["apercu"] = apercu
                     message = f"{message} — {self._format_sample(apercu)}"
             self.add(key, "data_quality", "data", "sentinel", status, message, details)
+
+    # Au-dela de ce nombre on ne liste pas : on garde le comportement d'avant.
+    # Mesure du 14/10 sur 220 passages de journal : le maximum jamais atteint est
+    # 24 travaux en erreur (moyenne 5,8). 200 laisse donc une marge de huit fois,
+    # et si ce plafond saute un jour, c'est que quelque chose de gros se passe --
+    # exactement le moment ou il NE FAUT PAS filtrer l'alerte.
+    PLAFOND_LISTE_RESOLUS = 200
+
+    # ⚠ MON DEFAUT DU 13/10, MESURE LE 14 AU MATIN. J'avais ecrit « des que la
+    #   Descente a tourne, le releve doit avoir suivi » -- mais
+    #   sb_pull_state.derniere_descente porte l'heure de DEPART, pas de fin :
+    #   TOUTES ses lignes valent 07:45:03, et derniere_complete aussi (mesure :
+    #   149 lignes sur 154 ou les deux sont identiques). Il n'existe donc AUCUNE
+    #   colonne qui dise « la Descente est finie ».
+    #   Resultat : a 07:48 la sonde croyait la Descente terminee et avertissait,
+    #   alors que le releve n'arrive qu'a la fin (etape 2 sur 3). J'avais donc
+    #   supprime 3 bruits sur 4, pas 4 sur 4.
+    #   REMEDE : on laisse a la Descente le temps de finir. Mesure du 13/10 sur
+    #   12 jours : elle dure de 18 a 64 minutes. 120 minutes laissent presque le
+    #   double du pire cas, et le passage de 09:48 (2 h 03 apres 07:45) juge
+    #   quand meme -- donc une vraie panne du releve sort LE JOUR MEME.
+    #   ⚠ CE N'EST PAS « fuir la fenetre avec un horaire » (ce qu'on a refuse le
+    #     13/10) : c'est accorder un delai mesure a un travail en cours.
+    DELAI_DESCENTE_MINUTES = 120
+
+    def _retirer_resolus(self, sentinel: dict[str, Any], brut: int) -> tuple[int, dict[str, Any]]:
+        """Retire du decompte ce qu'un humain a tranche, et ce qui est hors de l'ecran.
+
+        EN CAS DE DOUTE ON NE FILTRE PAS. Si la liste des resolutions pouvait
+        etre tronquee, on croirait « non tranche » ce qui l'est, donc on
+        crierait a tort : dans ce cas on rend le compte BRUT et on dit pourquoi.
+        Mieux vaut l'alerte d'hier qu'une alerte fausse.
+
+        ET ON NE SOUSTRAIT PAS AVEUGLEMENT. Mesure du 14/10 : les 2 gestes deja
+        tranches par Frederic n'existent PLUS dans app_console_job -- « 2 en
+        erreur moins 2 tranches = 0 » aurait donc efface une vraie alerte. On
+        croise sur les identifiants, jamais sur les nombres.
+        """
+        reglage = sentinel["exclure_resolus"]
+        fenetre = int(reglage.get("fenetre_jours", 30))
+        sortie: dict[str, Any] = {"tranches_par_un_humain": 0,
+                                  "trop_vieux_pour_l_ecran": 0,
+                                  "fenetre_jours": fenetre,
+                                  "non_filtre_cause": None}
+        if brut > self.PLAFOND_LISTE_RESOLUS:
+            sortie["non_filtre_cause"] = "plus de " + str(self.PLAFOND_LISTE_RESOLUS) + " travaux"
+            return brut, sortie
+        try:
+            params = dict(sentinel.get("params") or {})
+            params.update({"select": "id,requested_at",
+                           "limit": str(self.PLAFOND_LISTE_RESOLUS)})
+            travaux = self.supabase.get(sentinel["table"], params) or []
+            resolus = self.supabase.get("app_pending_resolution", {
+                "select": "payload_json",
+                "objet": "eq." + str(reglage.get("objet", "geste")),
+                "limit": "2000",
+            }) or []
+        except Exception as exc:
+            sortie["non_filtre_cause"] = "lecture impossible (" + type(exc).__name__ + ")"
+            return brut, sortie
+        if not isinstance(travaux, list) or not isinstance(resolus, list):
+            sortie["non_filtre_cause"] = "reponse de forme inconnue"
+            return brut, sortie
+        if len(travaux) < brut or len(resolus) >= 2000:
+            # liste incomplete d'un cote ou de l'autre -> on ne filtre pas
+            sortie["non_filtre_cause"] = "liste tronquee"
+            return brut, sortie
+
+        deja = set()
+        for ligne in resolus:
+            charge = (ligne or {}).get("payload_json")
+            if isinstance(charge, dict):
+                job = charge.get("job_id")
+                if job:
+                    deja.add(str(job))
+        limite = utc_now() - timedelta(days=fenetre)
+        restants = 0
+        for t in travaux:
+            if not isinstance(t, dict):
+                restants += 1
+                continue
+            if str(t.get("id")) in deja:
+                sortie["tranches_par_un_humain"] += 1
+                continue
+            demande = parse_iso(t.get("requested_at"))
+            if demande is not None and demande < limite:
+                sortie["trop_vieux_pour_l_ecran"] += 1
+                continue
+            restants += 1
+        return restants, sortie
 
     def check_email_volume(self) -> None:
         """Volume d'emails REELS envoyes aujourd'hui vs plafond quotidien (anti-spam).
@@ -2231,6 +2356,15 @@ class Monitor:
                      f"Releve des doublures de la veille ({dernier}) -- NORMAL, la "
                      f"Descente du jour n'a pas encore tourne (derniere : "
                      f"{descente_la_plus_recente})", detail)
+        elif descente_du_jour and (age_minutes(descente) or 0) < self.DELAI_DESCENTE_MINUTES:
+            # Elle a demarre aujourd'hui, mais elle n'a pas eu le temps de finir :
+            # le releve est sa DERNIERE etape. Voir DELAI_DESCENTE_MINUTES.
+            detail["descente_depuis_minutes"] = round(age_minutes(descente) or 0)
+            self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "ok",
+                     f"Releve des doublures de la veille ({dernier}) -- NORMAL, la "
+                     f"Descente du jour est EN COURS (demarree a "
+                     f"{descente_la_plus_recente}, il y a "
+                     f"{round(age_minutes(descente) or 0)} min)", detail)
         else:
             self.add("data.doublure_journal", "data_quality", "doublure", "fraicheur", "warning",
                      f"Releve des doublures pas fait aujourd'hui (dernier : {dernier})", detail)

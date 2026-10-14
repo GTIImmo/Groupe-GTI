@@ -424,3 +424,134 @@ Les deux fichiers **compilent** *(`py_compile`)*, et la formule a été exécut�
 ### CE QUI RESTE À VOIR
 ⏰ **Demain matin à 05:51** : l'email ne doit plus arriver — ou, s'il arrive, dire
 **« NON CONCLUANT »** en avertissement, avec les deux dates comparées.
+
+---
+
+# 14/10/2026 — LE LENDEMAIN
+
+## 12. LE CONTRÔLE PROMIS EST PASSÉ… à trois quarts
+
+| passage de la nuit | avant | cette nuit |
+|---|---|---|
+| **01:48** | « relevé à jour » *(faux)* | **« de la veille — NORMAL »** ✅ |
+| **03:48 · 05:48** | avertissement | **silencieux** ✅ |
+| **07:48** `mandat_un_numero` | 🔴 « le push n'est pas passé » | **🟠 « NON CONCLUANT »** ✅ *exactement ce qui était promis* |
+| **07:48** `doublure_journal` | avertissement | ⚠ **avertissement encore** |
+| **09:48** | | tout vert ✅ |
+
+### ⚠ Mon défaut, et sa cause
+
+J'avais écrit : *« dès que la Descente a tourné, le relevé doit avoir suivi »*. Faux.
+`sb_pull_state.derniere_descente` porte l'heure de **DÉPART**, pas de fin : **toutes** ses lignes
+valent `07:45:03`. Et `derniere_complete` **aussi** *(mesuré : 149 lignes sur 154 où les deux sont
+identiques)*. **Aucune colonne ne dit « la Descente est finie ».**
+
+À 07:48 la sonde croyait donc la Descente terminée, alors que le relevé est son **étape 2 sur 3**.
+**J'avais supprimé 3 bruits sur 4, pas 4 sur 4.**
+
+**Remède** : on accorde à la Descente un **délai mesuré** de **120 minutes** *(elle dure de 18 à
+64 min sur 12 jours — presque le double du pire cas)*. Le passage de **09:48** est à **2 h 03**
+du départ, donc il juge quand même : **une vraie panne du relevé sort le jour même.**
+
+⚠ **Ce n'est pas « fuir la fenêtre avec un horaire »**, ce qu'on a refusé le 13/10 : c'est
+accorder un délai à un travail **en cours**. La différence est que le délai suit la Descente,
+il n'est pas accroché à une heure du cadran.
+
+---
+
+## 13. ⭐ « LA PLUPART DES ERREURS SONT CONNUES, COMMENT ARRÊTER DE LES FAIRE SONNER »
+
+Question de Frédéric. La mesure a donné une réponse courte : **il n'y a qu'UNE chose qui sonne.**
+
+### Ce que disait son e-mail : « 1 critical, 8 warning »
+
+**Les 8 avertissements n'envoient rien** — c'est écrit dans le fichier *(l. 66-68)* :
+*« SEULS LES CRITICAL DECLENCHENT UN ENVOI. Un warning est enregistre et personne n'est
+prevenu. »* Ils ne font que grossir la ligne de résumé.
+
+👉 **Un seul rouge : `data.travaux_en_erreur`, 2 travaux.** C'est lui qui envoie l'e-mail chaque
+matin.
+
+### Et les 2 travaux ne coûtaient rien
+
+| | |
+|---|---|
+| **61672** « Villa de PP de 1999 » | le travail a échoué *(« Réponse Hektor JSON invalide init Sous offre »)* **mais chez Hektor le bien EST en « Sous offre »** — le geste a abouti malgré l'erreur. **Rien à refaire.** |
+| **62963** « TEST C15 entrepot » | **bien d'essai**. La demande le dit elle-même : *« Essai du correctif 3c pièce 5 du 14/10 — à remettre en Actif »*. Fabriqué par l'autre session à 06:13. |
+
+*(Leçon 18 appliquée : écarter les biens d'essai d'abord.)*
+
+### ⭐ LE DÉFAUT : le bouton de l'écran était à moitié branché
+
+L'écran montre un bandeau avec deux boutons, **« J'ai refait »** et **« Abandonner ce geste »**.
+J'ai lu la fonction qui s'exécute au clic, `app_action_resolve` : elle fait **un seul geste**, un
+`INSERT` dans `app_pending_resolution`. **Elle ne touche pas au travail**, qui reste `error` pour
+toujours *(c'est de l'historique, et c'est voulu)*.
+
+Conséquence mesurée : le bandeau se tait, `data.geste_abandonne` se tait… **et le rouge
+continue.** Frédéric recevait donc un e-mail chaque matin **pour un problème qu'il avait déjà
+traité**. La même famille que les trois d'hier : **l'humain a répondu, la sentinelle crie encore.**
+
+> ❓ Sa question : *« cela nettoie la sentinelle de l'erreur, enfin ne la fait plus sonner pour ce
+> problème, mais la garde active ? »* — **Oui, exactement.** La sentinelle reste allumée ; elle
+> arrête de compter **ce geste-là**. Un **nouveau** geste qui plante sonne.
+> **Réponse de Frédéric : « oui ».**
+
+### Ce qui a été fait
+
+Un champ **optionnel** sur **une seule** sentinelle — `"exclure_resolus"` — et une méthode neuve.
+**Les 39 autres sondes ne sont pas touchées** *(le champ est absent chez elles)*.
+
+Le rouge ne compte plus :
+- ce qu'un **humain a tranché** à l'écran ;
+- les travaux de **plus de 30 jours**, parce que la vue du bandeau s'arrête à 30 jours — **au-delà,
+  personne ne peut plus cliquer**, donc le rouge serait éternel.
+
+**Rien n'est masqué en silence** : le message les compte à part —
+`Travaux console en erreur: 0 (seuil 0) [sur 2 au total : 2 deja tranche(s) a l'ecran]`
+
+### ⭐⭐ Le piège que la mesure a évité
+
+J'ai d'abord pensé *« compte brut moins nombre de résolutions »*. **La mesure l'a interdit** : les
+**2** gestes que Frédéric avait déjà tranchés **n'existent plus du tout** dans `app_console_job`
+*(`travail_retrouve = 0`)*. « 2 moins 2 = 0 » aurait donc **effacé une vraie alerte**.
+➡ **On croise sur les identifiants, jamais sur les nombres.**
+
+### Et un garde-fou, chiffré
+
+Au-delà de **200** travaux en erreur, on **ne filtre pas** : on rend le compte brut. Mesure sur
+**220 passages** de journal : le maximum jamais atteint est **24** *(moyenne 5,8)*. 200 laisse
+huit fois de marge — et si ce plafond sautait, **ce serait précisément le moment de ne pas
+filtrer**. Même principe quand une lecture échoue, quand une liste pourrait être tronquée ou
+quand la réponse a une forme inconnue : **en cas de doute, on crie comme avant.**
+
+### Éprouvé — 10 cas, et le témoin inverse sur la boucle entière
+
+`monitoring/test_travaux_en_erreur_resolus.py`, **10/10**, avec un **faux client** *(aucun appel
+réseau, aucune dépense)* : le clic éteint · 1 sur 2 tranché · **le piège des résolutions qui
+visent ailleurs** · le vieux de 40 jours · liste tronquée · plafond · Supabase injoignable ·
+forme inconnue · résolution sans identifiant.
+
+⭐ **Témoin inverse sur la BOUCLE, pas sur la méthode** — un correctif branché nulle part
+passerait toutes les épreuves unitaires. J'ai exécuté **l'ancien code pris dans le commit
+précédent** avec le même faux client :
+
+```
+AVANT : [critical] Travaux console en erreur: 2 (seuil 0)
+APRES : [ok]       Travaux console en erreur: 0 (seuil 0) [sur 2 au total : 2 deja tranche(s)]
+```
+
+### Contrôle réel, contre la production
+
+Appelé avec le **vrai** client : `non_filtre_cause = None` → **mes deux lectures PostgREST
+fonctionnent vraiment**. Sans ce contrôle, une syntaxe fausse aurait fait retomber le filtre dans
+« lecture impossible » — et le correctif serait **mort en silence**, sans que rien ne le dise.
+Le compte reste **2**, ce qui est juste : **Frédéric n'a pas encore cliqué.**
+
+### ⬜ Ce qui reste à Frédéric
+
+1. **Cliquer « J'ai refait » sur les deux gestes** *(aucun risque : l'un a abouti chez Hektor,
+   l'autre est un essai)*. Le rouge doit alors passer au vert, et **l'e-mail de demain ne doit
+   plus partir**.
+2. ⬜ **Les 8 avertissements** : un autre sujet, **ils ne sonnent pas**. Chacun a un seuil posé
+   pour une raison. À reprendre un par un **s'il le demande** — je n'ai rien décidé.

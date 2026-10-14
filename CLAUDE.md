@@ -209,6 +209,18 @@ report ne se décident jamais sans lui.
    la clôture de mandat *(le cockpit lisait la fiche, qui n'a pas la colonne)* et la mention
    « supprimé chez Hektor » *(le `select` du front **nomme** ses colonnes)*. **Après avoir ajouté
    une colonne, chercher le `select` qui doit la porter** — sinon le silence est total.
+23. ⭐⭐ **UNE ALERTE DOIT ÉCOUTER LA RÉPONSE DE L'HUMAIN** *(14/10)*. L'écran offrait deux
+   boutons pour trancher un geste abandonné, et le rouge ne les regardait pas : Frédéric
+   recevait un e-mail **chaque matin pour un problème qu'il avait déjà traité**. ➡ Quand on
+   ajoute un bouton « j'ai traité », **chercher toutes les sondes qui comptent la même
+   chose** — ici le bandeau et `geste_abandonne` écoutaient, le rouge non.
+   ⚠ Et dans le même geste : **ne jamais soustraire des NOMBRES, croiser des IDENTIFIANTS**
+   *(les 2 gestes tranchés n'existaient plus : « 2 − 2 = 0 » aurait effacé une vraie alerte)*.
+24. ⚠ **UNE COLONNE « dernière exécution » PORTE SOUVENT LE DÉPART, PAS LA FIN**
+   *(14/10)*. `sb_pull_state.derniere_descente` **et** `derniere_complete` valent toutes
+   deux l'heure de **départ** *(149 lignes sur 154 identiques)*. Mon correctif de la veille
+   en a déduit « la Descente a fini » et a gardé un faux avertissement.
+   ➡ **Avant de conclure « c'est fini », vérifier que la colonne mesure une FIN.**
 20. ⚠ **UN `revoke ... from public` N'ENLÈVE PAS UN DROIT PAR DÉFAUT.** Supabase pose
    `GRANT EXECUTE ... TO authenticated` sur **toute nouvelle fonction** ; ce n'est pas PUBLIC,
    donc le `revoke` le laisse. **Relire `proacl` après avoir créé une fonction** — mon patch
@@ -391,6 +403,40 @@ report ne se décident jamais sans lui.
    des qu'elle a tourne, le releve doit avoir suivi (panne dite a 09:48, le jour meme).
    Pas d'angle mort : « GTI Descente » est deja surveillee en critical.
    Gain : 4 bruits de moins par nuit, 1 avertissement de moins dans l'e-mail du matin.
+   ⚠ MESURE DU 14/10 : 3 BRUITS SUR 4, PAS 4. derniere_descente porte l'heure de DEPART
+   (toutes ses lignes valent 07:45:03, et derniere_complete AUSSI -- 149 sur 154
+   identiques) : AUCUNE colonne ne dit « la Descente est finie ». A 07:48 la sonde la
+   croyait terminee alors que le releve est son etape 2 sur 3. Corrige le 14/10 par un
+   DELAI MESURE (DELAI_DESCENTE_MINUTES = 120 ; la descente dure 18 a 64 min, et le
+   passage de 09:48 juge quand meme -> une vraie panne sort le jour meme).
+⑨ ✅ LE CLIC DE L'HUMAIN ETEINT ENFIN L'ALERTE (14/10, go « oui »).
+   QUESTION DE FREDERIC : « la plupart des erreurs sont connues, comment arreter de les
+   faire sonner ». REPONSE MESUREE : IL N'Y A QU'UNE CHOSE QUI SONNE. Les 8 warnings de
+   son e-mail n'envoient RIEN (l. 66-68 : seuls les critical declenchent un envoi) ;
+   le seul rouge est data.travaux_en_erreur.
+   LE DEFAUT : le bandeau de l'ecran a deux boutons, et app_action_resolve fait UN SEUL
+   geste -- un INSERT dans app_pending_resolution. Il ne touche PAS au travail, qui
+   reste `error` pour toujours. Donc le bandeau se taisait, data.geste_abandonne se
+   taisait, ET LE ROUGE CONTINUAIT : un e-mail chaque matin pour un probleme deja traite.
+   REMEDE : champ OPTIONNEL "exclure_resolus" sur CETTE sentinelle seulement (les 39
+   autres ne bougent pas). Le rouge ne compte plus ce qu'un humain a tranche, ni les
+   travaux de plus de 30 jours (la vue du bandeau s'arrete a 30 jours : au-dela personne
+   ne peut plus cliquer). Rien n'est masque en silence, le message les compte a part.
+   ⭐⭐ LE PIEGE EVITE PAR LA MESURE : « brut moins nombre de resolutions » aurait efface
+   une vraie alerte -- les 2 gestes deja tranches N'EXISTENT PLUS dans app_console_job.
+   ON CROISE SUR LES IDENTIFIANTS, JAMAIS SUR LES NOMBRES.
+   Garde-fou chiffre : au-dela de 200 travaux on ne filtre pas (max jamais atteint sur
+   220 passages : 24, moyenne 5,8). Idem si une lecture echoue, si une liste peut etre
+   tronquee, ou si la forme est inconnue : EN CAS DE DOUTE ON CRIE COMME AVANT.
+   10 epreuves + temoin inverse SUR LA BOUCLE (un correctif branche nulle part passe
+   toutes les epreuves unitaires) + controle contre la PRODUCTION (non_filtre_cause =
+   None, donc les 2 lectures PostgREST marchent -- sans ce controle le correctif serait
+   mort en silence).
+   ⬜ RESTE A FREDERIC : (a) CLIQUER « J'ai refait » sur les 2 gestes -- aucun risque,
+   61672 a abouti chez Hektor (le bien EST « Sous offre ») et 62963 est un bien d'essai
+   de l'autre session ; le rouge doit passer au vert et l'e-mail ne plus partir.
+   (b) LES 8 WARNINGS : autre sujet, ILS NE SONNENT PAS, chacun a un seuil pose pour une
+   raison. A reprendre un par un S'IL LE DEMANDE -- rien n'a ete decide.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*

@@ -118,6 +118,17 @@ def epreuve_journal() -> int:
          datetime(2026, 10, 13, 7, 48, 54),
          dict(releve_le="2026-10-12", descendue="2026-10-12T08:15:02"),
          "ok", "NORMAL"),
+        # ⚠ LE CAS QUI A RATE LE 14/10 AU MATIN. derniere_descente porte l'heure de
+        #   DEPART : a 07:48 la sonde croyait la Descente finie et avertissait, alors
+        #   que le releve est sa DERNIERE etape. Voir DELAI_DESCENTE_MINUTES.
+        ("3-bis. 07:48, la Descente du jour vient de DEMARRER -> NORMAL, elle tourne",
+         datetime(2026, 10, 13, 7, 48, 54),
+         dict(releve_le="2026-10-12", descendue="2026-10-13T07:45:03"),
+         "ok", "est EN COURS"),
+        ("3-ter. 09:40, la Descente dure depuis 1 h 55 -> encore dans le delai",
+         datetime(2026, 10, 13, 9, 40, 0),
+         dict(releve_le="2026-10-12", descendue="2026-10-13T07:45:03"),
+         "ok", "est EN COURS"),
         ("4. 09:48, la DESCENTE a tourne mais pas le releve -> LA VRAIE PANNE",
          jour, dict(releve_le="2026-10-12", descendue="2026-10-13T07:45:03"),
          "warning", "pas fait aujourd'hui"),
@@ -239,7 +250,7 @@ def main() -> int:
     if rates:
         print(f"{rates} epreuve(s) en ECHEC.")
         return 1
-    print(f"Les {len(scenarios)} + 6 epreuves passent : les deux sentinelles de cette sonde "
+    print(f"Les {len(scenarios)} + 8 epreuves passent : les deux sentinelles de cette sonde "
           "se taisent quand l'etat est normal, ET parlent quand il ne l'est pas.")
     return 0
 
