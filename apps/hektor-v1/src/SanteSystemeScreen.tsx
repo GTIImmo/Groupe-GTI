@@ -80,6 +80,12 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
   const [agentRuns, setAgentRuns] = useState<AgentRunRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // 14/10/2026 -- « C'est un sapin de Noel » (Frederic). L'ecran listait les 71
+  // sondes a plat : 61 vertes, dont 21 qui disent litteralement « 0 (seuil 0) »,
+  // et il fallait quatre ecrans pour arriver en bas. Les 10 lignes qui comptent
+  // etaient noyees. On replie donc les vertes derriere une seule ligne, qui se
+  // deplie d'un clic : RIEN N'EST SUPPRIME, tout reste consultable.
+  const [verrouDesVerts, setVerrouDesVerts] = useState(true)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
   const refresh = useCallback(async () => {
@@ -156,6 +162,21 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
     })
     return entries
   }, [rows])
+
+  // Ce qui ne va pas, groupe par groupe -- et combien de controles sont au vert.
+  const groupesAffiches = useMemo(() => {
+    if (!verrouDesVerts) return groups
+    return groups
+      .map(([domaine, liste]) =>
+        [domaine, liste.filter((row) => toneOf(row.status) !== 'ok')] as [string, MonitorStatusRow[]],
+      )
+      .filter(([, liste]) => liste.length > 0)
+  }, [groups, verrouDesVerts])
+
+  const nbAuVert = useMemo(
+    () => rows.filter((row) => row.status_key !== 'monitor.summary' && toneOf(row.status) === 'ok').length,
+    [rows],
+  )
 
   const alertsToTreat = useMemo(
     () =>
@@ -330,7 +351,7 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
         </div>
       ) : null}
 
-      {groups.map(([domain, list]) => (
+      {groupesAffiches.map(([domain, list]) => (
         <div className="ss-group" key={domain}>
           <div className="ss-group-head">
             <h2>{DOMAIN_LABEL[domain] ?? domain}</h2>
@@ -356,6 +377,22 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
           </div>
         </div>
       ))}
+
+      {nbAuVert > 0 ? (
+        <button
+          type="button"
+          className="ss-verts-repli"
+          onClick={() => { setVerrouDesVerts((v) => !v) }}
+        >
+          <span className="ss-dot ss-ok" aria-hidden="true" />
+          <span className="ss-verts-texte">
+            {verrouDesVerts
+              ? `${nbAuVert} controle${nbAuVert > 1 ? 's' : ''} au vert`
+              : `${nbAuVert} controle${nbAuVert > 1 ? 's' : ''} au vert — affiches ci-dessus`}
+          </span>
+          <span className="ss-verts-action">{verrouDesVerts ? 'Afficher' : 'Masquer'}</span>
+        </button>
+      ) : null}
 
       {!loading && rows.length === 0 && !error ? (
         <p className="empty-state">Aucune donnée de monitoring pour le moment.</p>

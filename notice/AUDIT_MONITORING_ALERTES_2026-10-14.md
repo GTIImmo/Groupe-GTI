@@ -370,3 +370,57 @@ même pas affichées *(elles sont seulement comptées)*. **Non corrigé, pas dem
 | **C** | ne rien changer, en sachant que les 9 alertes ci-dessus sont éteintes **pour de bon** |
 
 **Je recommande A.** Rien n'est décidé.
+
+---
+
+## 12. L'ÉCRAN SANTÉ — *« c'est un sapin de Noël »* (Frédéric, 14/10)
+
+**Je l'ai regardé dans son Chrome**, connecté avec sa session. Il avait raison, et **ce n'est pas
+la couleur le problème** :
+
+| ce que l'écran affiche | |
+|---|---|
+| **71 lignes** à plat, toutes au même niveau visuel | il faut **4 écrans** pour arriver en bas |
+| **61 sont vertes** | dont **21 disent littéralement « 0 (seuil 0) »** |
+| les **10 qui comptent** | affichées **DEUX FOIS** — en haut dans « Alertes à traiter », puis **à nouveau** dans la liste du bas |
+
+### Trois défauts vus à l'écran
+
+1. ⚠ **Chaque ligne s'appelle « sentinel » ou « absolute »** — en gras, comme un titre. C'est le
+   **type de règle**, pas un nom. Le vrai libellé est en dessous, en plus petit. **71 fois.**
+2. ⚠ **Deux chiffres se contredisent en haut** : « Alertes à traiter **7** » et
+   « À SURVEILLER **8** » — une alerte marquée « Résolu » sort de la liste mais **reste comptée**.
+3. ⚠ **« il y a 2 h » partout** : l'écran montrait le relevé de 09:48 à 11:24. Le bouton
+   « Rafraîchir » **relit la base**, il ne relance pas le moniteur.
+
+### FAIT — *décision de Frédéric : « A »*
+
+**On ne montre plus que ce qui ne va pas.** Les lignes vertes sont repliées derrière **une seule
+ligne** — *« 61 contrôles au vert »* — qui se **déplie d'un clic**.
+⭐ **Rien n'est supprimé** : tout reste consultable, c'est du bruit qu'on range, pas de
+l'information qu'on cache. `npm run build` **vert**.
+
+➡ **L'écran passe de 71 lignes à 10.** *(Et le mot « sentinel » de 71 occurrences à 10 — le
+défaut 1 se résorbe de lui-même sans qu'on y touche.)*
+
+### ⬜ Ce qui reste, non fait et non décidé
+
+Les défauts **2** *(les deux chiffres qui se contredisent)* et **3** *(le libellé « sentinel »,
+la date trompeuse)*, et le **doublon haut/bas**. **Frédéric a choisi A, pas C** — je n'ai pas
+élargi.
+
+### ⚠ Et la réponse à sa question : « pourquoi tes corrections ne sont pas en ligne ? »
+
+**Ce n'est pas un déploiement.** Le moniteur est un **script sur son serveur**, pas une app en
+ligne : le fichier était déjà modifié *(11:13)*, mais **sa dernière exécution datait de 09:48**.
+L'écran montrait donc l'ancien résultat. Calculé à l'avance, en lecture seule :
+
+```
+CE QUE LE PASSAGE DE 11:48 DIRA
+  VERT    Notifications non lues: 1601 (prec. 1601)
+  VERT    Notifications sans destinataire: 166 (prec. 166)
+  ROUGE   Travaux console en erreur: 2 (seuil 0)
+```
+
+➡ **Les deux notifications passent au vert.** Le rouge reste, et c'est normal : il attend le clic
+**« J'ai refait » dans la fiche du bien** — pas celui de l'écran Santé.
