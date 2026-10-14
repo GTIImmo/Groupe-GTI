@@ -62,7 +62,8 @@ UPDATE public.app_worker_registry
    SET status       = 'legacy',
        source_notes = coalesce(source_notes, '')
                       || ' [[RETIREE DU RUN 14/10/2026]] Decision de Frederic (chantier 3, option B) : '
-                      || 'l''etape n''atteignait plus rien depuis le 30/09 (le registre lit la fiche detail). '
+                      || 'l''etape ne servait plus : le registre lit la fiche detail depuis le 30/09, et aucune de ses '
+                      || 'valeurs n''arrivait a l''ecran (mesure du 14/10). '
                       || 'Le script est garde ; la date de l''app vit dans le carnet et mandat_date_cloture_app, '
                       || 'reposee par phase2.repose_cloture_mandat.',
        updated_at   = now()

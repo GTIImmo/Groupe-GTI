@@ -5,9 +5,18 @@
 --
 -- POURQUOI. Les deux etapes « phase2 magasin des champs de mandat » et « phase2 appliquer
 -- le contrat de mandat » sont RETIREES DU RUN le meme jour (run_full_pipeline.ps1, laissees
--- en commentaire). Elles n'atteignaient plus rien depuis le 30/09 : la date de cloture d'une
--- ligne de registre se lit desormais dans le mandat de la FICHE DETAIL, jamais dans la
--- colonne qu'elles posaient.
+-- en commentaire).
+-- ⚠ CORRIGE LE 14/10 (question de Frederic : « ca va pas casser quelque chose ? »).
+--   ▸ Elles n'atteignaient plus le REGISTRE depuis le 30/09 : sa date de cloture se lit dans
+--     le mandat de la FICHE DETAIL, jamais dans la colonne qu'elles posaient.
+--   ▸ Mais leur colonne alimente bien la FICHE DETAIL du dossier (detail_payload_json, une
+--     colonne TEXTE -- d'abord manquee, la recherche ne regardait que les colonnes jsonb).
+--     Mesure : AUCUNE de leurs 8 valeurs n'y arrivait -- 7 biens sans fiche detail, et le 8e
+--     (62774) voit sa ligne refaite depuis Hektor a chaque geste. Les 4 fiches qui portent
+--     une vraie date l'ont recue de Hektor.
+--   ▸ Un seul ecran lit cette fiche : « Mandat source », qui doit montrer Hektor (decision
+--     du 13/10). Tous les autres lisent le registre.
+--   ➡ Ce que le patch FAIT est inchange ; seul ce qu'il DIT a ete corrige.
 --
 -- ⚠ CE PATCH EST LA MOITIE OBLIGATOIRE DU GESTE. Les deux etapes portaient un -WorkerKey,
 --   inscrit au registre de surveillance le 13/10 (chantier ④, 4j). Retirees du run SANS ce
@@ -56,7 +65,8 @@ UPDATE public.app_worker_registry
    SET status       = 'legacy',
        source_notes = coalesce(source_notes, '')
                       || ' [[RETIREE DU RUN 14/10/2026]] Decision de Frederic (chantier 3, option B) : '
-                      || 'l''etape n''atteignait plus rien depuis le 30/09 (le registre lit la fiche detail). '
+                      || 'l''etape ne servait plus : le registre lit la fiche detail depuis le 30/09, et aucune de ses '
+                      || 'valeurs n''arrivait a l''ecran (mesure du 14/10). '
                       || 'Le script est garde ; la date de l''app vit dans le carnet et mandat_date_cloture_app, '
                       || 'reposee par phase2.repose_cloture_mandat.',
        updated_at   = now()

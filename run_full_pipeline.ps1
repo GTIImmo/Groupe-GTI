@@ -588,18 +588,27 @@ Invoke-Step -Label "phase2 appliquer le contrat d autorite" -Arguments @(
 # premiere nuit, en silence.
 # ⛔⛔ RETIREES DU RUN LE 14/10/2026 -- decision de Frederic (chantier ③, option B).
 #
-# ELLES N'ATTEIGNAIENT PLUS RIEN DEPUIS LE 30/09. Le commentaire ci-dessus dit
+# ELLES N'ATTEIGNAIENT PLUS LE REGISTRE DEPUIS LE 30/09. Le commentaire ci-dessus dit
 # qu'elles tournent « AVANT le push, qui enverra la table deja arbitree » : c'etait
 # vrai a l'origine. Puis le registre est passe a la FICHE DETAIL comme source
 # (memoire « registre : source = le DETAIL ») -- et la date de cloture d'une ligne de
 # registre se lit desormais UNIQUEMENT dans le mandat du detail
 # (phase2/sync/export_app_payload.py, « mandat_date_cloture = current_version.cloture »,
 # sans repli sur app_view_generale). Mesure du 14/10, maillon par maillon :
-#   · aucune table de Supabase ne porte cette colonne, hors le registre et sa vue ;
-#   · les caches de fiche ne portent pas la cle (0 ligne) ;
-#   · ses deux seuls lecteurs locaux (export_mini_app_html.py et
+#   · ⚠ CORRIGE LE 14/10 : la colonne alimente bien la FICHE DETAIL du dossier
+#     (app_dossier_detail_current.detail_payload_json -- une colonne TEXTE, d'abord
+#     manquee : la recherche ne regardait que les colonnes jsonb). MAIS aucune des 8
+#     valeurs n'y arrivait : 7 biens sans fiche detail (leurs lignes d'index ne portent
+#     pas la colonne), et le 8e (62774) voit sa ligne refaite depuis Hektor a chaque geste
+#     (le push d'un seul bien reconstruit d'abord la ligne locale). Les 4 fiches qui
+#     portent une vraie date l'ont recue de Hektor ;
+#   · un seul ecran lit cette fiche : « Mandat source », qui DOIT montrer Hektor
+#     (decision du 13/10) ; tous les autres lisent le registre ;
+#   · ses deux autres lecteurs locaux (export_mini_app_html.py et
 #     checks/registre_depuis_app_mandat.py) n'ont AUCUN appelant.
-# Elles posaient chaque nuit 8 valeurs dans une colonne que personne ne lit -- et le
+# ⚠ LA SEULE CONSEQUENCE, FUTURE : un bien VIVANT clos dans l'app n'aura pas notre date
+#   dans sa fiche detail -- elle reste dans le registre, que lisent tous les ecrans.
+# Elles posaient chaque nuit 8 valeurs que rien n'affichait -- et le
 # message « 8 ligne(s) arbitree(s) en faveur de l'app » MENTAIT sur 5 des 8 : ce
 # n'etaient pas des decisions de l'app, mais deux chemins de Hektor qui divergent
 # (le detail et hektor_mandat). Ce message a induit en erreur l'audit du 14/10.
