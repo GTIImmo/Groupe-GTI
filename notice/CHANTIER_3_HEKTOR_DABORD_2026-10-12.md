@@ -3282,3 +3282,232 @@ l'index historique**. ⭐ **Et son aller-retour a prouvé le repli de 3b en dire
 elle a quitté le parc vivant pour l'index historique, et c'est **seulement parce que le repli
 existe** que le geste « Actif » a pu la ramener de là. **Hier, il aurait répondu
 `dossier_not_found`.**
+
+---
+
+## 3d — AJOUTER UN DOCUMENT / UNE PHOTO · AUDIT (14/10) · **ÉTAPE 2, EN ATTENTE DU « VAS-Y »**
+
+### ⭐⭐ LE MÉCANISME EST DÉJÀ ÉCRIT, COMPLET ET CORRECT — **ET IL DORT**
+
+`completerEnvoiDocumentDiffere()` *(`console_job_worker.js` l. 7867)*, écrit le **25/09** :
+
+```
+① NOTRE SERVEUR D'ABORD. C'est l'inversion.
+② HEKTOR ENSUITE, et son silence n'efface rien.
+```
+En cas d'échec de Hektor : la ligne est marquée `envoi_hektor_statut='echec'` + le motif,
+**et notre copie reste**. C'est exactement « chez nous d'abord ».
+
+Et son en-tête dit **pourquoi il ne sert pas** :
+> *« La ligne EXISTE DÉJÀ, créée par l'app avec son fichier. C'est le modèle des contacts, des
+> annonces et des recherches. **Documents et photos étaient les seules à exiger une confirmation
+> de Hektor pour exister. À la coupure, cela aurait arrêté l'ajout.**
+> **DORMANT : aucun appelant ne pose `app_document_id` tant que le front n'est pas basculé.** »*
+
+### ⭐⭐⭐ ET LE PROJET A DÉJÀ TRANCHÉ CE POINT, AVEC SON ORDRE
+`notice/RESTE_A_FAIRE_DOCUMENTS_PHOTOS_2026-09-25.md` — **3d, c'est `D1` + `P3`**, et il dit
+exactement ce qui manque :
+> **D1** *« Le socle est posé (lots 1, 2a, 2b — dormants). **Manque : le front ne peut pas créer
+> la ligne** — il n'a que `SELECT`. Il faut une **RPC `SECURITY DEFINER`** (patron de la
+> signature manuscrite) qui **vérifie l'accès du négociateur à l'annonce** — sinon n'importe qui
+> dépose un document sur n'importe quel bien. »*
+> **P3** *« Même lot 2c que D1 — le socle est posé, le front ne peut pas créer la ligne. »*
+
+### LES MESURES QUI CONFIRMENT, UNE PAR UNE
+
+| | |
+|---|---|
+| politiques sur `app_console_document` et `app_console_photo` | **une seule chacune : `SELECT`** *(avec périmètre)* → ⛔ **le front ne peut pas créer la ligne** |
+| ⭐ le patron à recopier | `supabase/patch_console_mark_signed_manual_2026-07-27.sql` : `SECURITY DEFINER` · garde **`app_console_can_access_dossier(app_dossier_id, hektor_annonce_id)`** · `raise 'document_not_found_or_forbidden'` · `grant ... to authenticated` · **additif et réversible** |
+| le front peut-il **déposer le fichier** ? | ✅ **oui, déjà** — politique `hektor_console_documents_temp_upload` *(INSERT, `authenticated`)*, ⚠ **mais seulement sous `temp/uploads/`** |
+| ⚠ l'écart à combler | `completerEnvoiDocumentDiffere` **exige `ligne.storage_path`**, et `persistProvidedDocumentFile` **réutilise ce chemin** s'il existe → un fichier déposé en `temp/` **resterait dans `temp/`** |
+
+### CE QUE JE PROPOSE — **une RPC, et une ligne dans le worker**
+
+**① La RPC** `app_console_creer_document_optimistic(annonce, nom, type, visibilité, chemin_temp, …)`
+sur le patron **exact** de la signature manuscrite :
+- `SECURITY DEFINER`, **garde `app_console_can_access_dossier`** → *« sinon n'importe qui dépose
+  un document sur n'importe quel bien »* ;
+- crée la ligne avec `storage_status = 'pending_upload'`, `envoi_hektor_statut = 'a_envoyer'` ;
+- rend l'`id`, que le front passe en **`app_document_id`** au travail → **le chemin dormant
+  s'allume**.
+
+**② Une ligne dans le worker** : quand `storage_status = 'pending_upload'`, **ne pas réutiliser**
+le chemin `temp/` comme chemin définitif — recalculer `annonces/<annonce>/documents/<id>/<nom>`.
+⭐ **Ainsi la politique de storage ne bouge pas** : le front n'écrit toujours que dans `temp/`.
+
+**③ Le front** : déposer le fichier, appeler la RPC, créer le travail avec `app_document_id`.
+
+**④ Pareil pour la photo** *(`P3`, « même lot 2c »)*.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+| | |
+|---|---|
+| le chemin actuel *(sans `app_document_id`)* | ⛔ **intact** : le `if (payload.app_document_id)` est un aiguillage, l'ancien chemin reste |
+| la politique de storage | ⛔ **pas touchée** *(c'est l'intérêt du point ②)* |
+| ⚠ **les droits** | **c'est LE risque** : une RPC `SECURITY DEFINER` qui crée une ligne **doit** vérifier l'accès au dossier. Le patron le fait ; je le recopie **sans l'alléger** |
+| le run, la base existante | ⛔ rien · la table ne change pas |
+| ⚠ **4 services** | **à redémarrer** *(point ②)* · et ⚠ **Frédéric pousse** le front *(point ③)* |
+
+### ⚠⚠ ET DEUX CHOSES PLUS URGENTES QUE 3d, QUE JE DOIS SIGNALER SANS LES PRENDRE
+1. ⛔ **`P1` + `P2` — « l'app affiche les photos DEPUIS HEKTOR »** *(30 occurrences dans
+   `App.tsx`, adresses `staticlbi.com`)*. **Le jour de la coupure, toutes les photos
+   disparaissent de l'écran en même temps** — fiches, listes, **vitrine publique** — **même avec
+   les 110 Go rapatriés**. La note du 25/09 le met **avant** tout le reste : *« c'est la seule
+   chose qui ne se rattrape pas après coup »*. ⚠ **Ce n'est pas le chantier ③** *(ce sont des
+   gestes, pas l'affichage)* — **c'est à Frédéric de dire s'il passe devant.**
+2. ⚠ **`D3` — le repreneur d'envois est ORPHELIN** : `Console/reprendre_envois_hektor.js` existe
+   et est testé, **aucune tâche planifiée ne l'appelle** *(vérifié le 09/10, déjà écrit le
+   25/09)*. ➡ **sans lui, une ligne marquée « échec » n'est JAMAIS reprise** — et le chemin
+   différé que 3d allume **produit justement des lignes en échec**. ⚠ **3d sans D3 fabriquerait
+   des documents bloqués en silence.**
+
+---
+
+## 3d — AUDIT REFAIT CONTRE LE CODE, LA BASE ET L'HISTORIQUE (14/10)
+
+*Demande de Frédéric : « refais un audit en analysant mon projet, notes, historique, et l'état
+actuel de mes codes ». Mon audit précédent s'appuyait sur une note de trois semaines.*
+
+### L'HISTORIQUE — quatre lots prévus le 25/09, trois écrits, un jamais fait
+| lot | commit | ce qu'il fait | état **aujourd'hui** |
+|---|---|---|---|
+| **1** | `7428303` 25/09 | worker : un **document** existe sans que Hektor ait répondu *(« notre serveur d'abord »)* + 3 colonnes + index | ✅ écrit · ⛔ **dort** |
+| **2a** | `db5c38c` 25/09 | la jumelle **photo** + retrait du `NOT NULL` sur `hektor_photo_id` | ✅ écrit · ⛔ **dort** |
+| **2b** | `ec838b2` 25/09 | le **repreneur** `reprendre_envois_hektor.js` *(il ne s'acharne pas, il signale l'échec durable)* | ✅ écrit · ⛔ **jamais branché** |
+| **2c** | — | **le front** : créer la ligne chez nous et réveiller le chemin | ⛔ **JAMAIS FAIT** |
+
+Les messages de Lot 1 et Lot 2a se terminent tous deux par *« ⛔ RESTE : le repassage, et le
+front (lot 2c) »*. **Le 2b a été fait le soir même ; le 2c, jamais.**
+
+### L'ÉTAT DU CODE, MESURÉ AUJOURD'HUI
+| | |
+|---|---|
+| le front pose-t-il `app_document_id` / `app_photo_id` ? | ⛔ **nulle part** *(grep sur tout `apps/hektor-v1/src`)* |
+| ⭐ **le chemin différé marche-t-il ENCORE ?** | ✅ **`test_envoi_hektor_differe.js` : TOUT VERT** *(25 contrôles)* — malgré tout ce qui a changé dans le worker depuis le 25/09, **mes modifications d'hier comprises**. Le test **lit et découpe** la vraie fonction, avec de fausses dépendances : aucun worker lancé |
+| le repreneur est-il appelé ? | ⛔ **par rien** : aucune des 7 tâches GTI, ni `run_full_pipeline.ps1`, ni `run_quotidien.ps1` |
+| ⚠ son test | **1 contrôle rouge sur 14, code de sortie 1** : `(n) les lectures sont paginées`. ⭐ **C'est le TEST qui est périmé** : il cherche `offset=` *(pagination par décalage)*, or le **26/09** *(`461a66c`)* le script est passé à une pagination **par curseur** — meilleure, et le commit dit pourquoi : *« mon rapatriement a perdu 40 % de son travail, en silence »*. **Le script est juste, son test n'a pas suivi.** |
+
+### LA BASE, MESURÉE AUJOURD'HUI
+| | documents | photos |
+|---|---|---|
+| lignes passées par le chemin différé | **0** | **0** |
+| en échec · sans numéro Hektor | **0** · **0** | **0** · **0** |
+| **ajouts depuis l'app, tous temps** | **103, tous `done`** | **18, tous `done`** |
+
+➡ **Aucun ajout n'a jamais échoué** *(121 sur 121 depuis le 14/05)*. **Le risque de 3d est donc
+théorique aujourd'hui — il devient TOTAL à la coupure** : quand Hektor ne répondra plus, **100 %
+des ajouts échoueront**, et le document n'existera **nulle part** chez nous.
+
+### ⚠ UNE PETITE FUITE, TROUVÉE EN PASSANT *(pas 3d)*
+**109 fichiers temporaires, 196 Mo**, du 14/05 au 05/10, sous `temp/` du coffre des documents.
+⚠ **Ce ne sont PAS des ajouts ratés** : les **103** ajouts de documents ont **tous** encore leur
+temporaire → **l'ancien chemin ne nettoie jamais le temporaire après une réussite**. Les photos,
+elles, n'en laissent **aucun** *(18 sur 18 nettoyés)*. ⚠ **6 temporaires n'ont AUCUN travail**
+correspondant *(109 − 103)* : des fichiers déposés sans que l'envoi soit jamais créé — **à regarder,
+ce sont peut-être les seuls documents réellement perdus.**
+
+---
+
+## ⚠⚠ LE RATTRAPAGE DES DOCUMENTS EST **CALÉ** — trouvé le 14/10 sur demande de Frédéric
+
+*« Il y a aussi le run de rattrapage qui a dû tourner à 21 h, il reste quelques nuits […]
+contrôle cela avant. »* — **Il a bien tourné. Mais il ne rattrape plus rien.**
+
+### CE QUE CHAQUE NUIT A RÉELLEMENT POSÉ
+| nuit | périmètre | travaux posés |
+|---|---|---|
+| 30/09 → 07/10 | `archive` | **2 500/nuit** *(1 250 le 07/10 : la fin d'`archive`)* |
+| 08/10 | `historical` | **2 500** |
+| 09 → 12/10 | `historical` | **1 000/nuit** |
+| **13/10** | ⚠ **`archive`** | ⛔ **1** |
+
+### LA CAUSE, ET ELLE EST STRUCTURELLE
+La tâche lance `--scope auto`, et `auto` prend **le PREMIER périmètre qui a encore du travail**
+*(`enqueue_empreinte_lot.js` l. 150-157 : « on prend le premier périmètre qui a encore du
+travail »)*.
+
+⭐ **Or `archive` se REMPLIT tous les jours** : chaque annonce archivée dans la journée y
+réapparaît comme « à faire ». Donc `auto` **repart sur `archive`**, y trouve 1 ou 2 annonces,
+les pose, et **s'arrête** — pendant que `historical` et `brouillon` attendent.
+
+⛔ **Et il sort en SUCCÈS** *(exit 0, « lot posé »)*. Le Planificateur est vert, le moniteur ne
+dit rien. **Échec silencieux parfait** — exactement le chantier ④.
+
+### CE QU'IL RESTE VRAIMENT
+| périmètre | balayées | déjà marquées | **reste** |
+|---|---|---|---|
+| `archive` | 35 322 | 35 320 | **2** |
+| `historical` | 8 944 | 6 548 | **2 396** |
+| `brouillon` | 527 | 0 | **527** |
+| | | **TOTAL** | **2 925** |
+
+| au rythme… | nuits restantes |
+|---|---|
+| **actuel** *(1-2/nuit)* | ⛔ **jamais** |
+| **1 000/nuit** *(le réglage réel)* | **3 nuits** |
+
+➡ **La réponse à la question : il ne reste pas « quelques nuits ». Le rattrapage n'avance plus
+depuis hier soir, et sans correctif il n'avancera plus jamais.**
+
+### ⚠ ET UN ÉCART COMMENTAIRE / RÉEL, AU PASSAGE
+L'en-tête du script dit *« RÉGLAGE RETENU PAR FRÉDÉRIC : 22:00 et un lot de 2 500 »*. Le réel :
+la tâche se déclenche à **21:00** et passe **`--limit 1000`** *(l. 87)*. **Trois écarts** —
+l'heure, la taille du lot, et le commentaire que personne n'a corrigé.
+
+### ✅ ET D8 EST BIEN ÉTEINT, COMME FRÉDÉRIC LE DISAIT
+L'étape `enqueue console documents` est gardée par
+`if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal)` *(l. 1413)*, et **elle n'a
+pas tourné cette nuit** *(absente du journal du run)*. C'est le point **D8** de la note du
+25/09 : *« allumer le quotidien — geste de Frédéric, APRÈS le rattrapage »*.
+➡ **Il doit rester éteint tant que le rattrapage n'est pas fini** — donc **le rattrapage bloque
+la fin de la chaîne documents.**
+
+### ✅ LE RATTRAPAGE EST DÉBLOQUÉ (14/10) — les trois correctifs
+
+**① Il enchaîne enfin les périmètres**, comme son propre commentaire l'annonçait depuis le
+25/09 *(« `--scope auto` **enchaîne** archive → historical → brouillon tout seul »)*. Le code
+prenait le **premier** périmètre ayant du travail et s'arrêtait là.
+
+| | avant | après |
+|---|---|---|
+| ce que `auto --limit 1000` pose | ⛔ **2** | ✅ **1 000** *(`archive` 2 + `historical` 998)* |
+
+**② Il crie quand il n'avance pas** — et l'alarme couvre **deux** cas :
+- **lot maigre** : moins d'un dixième du lot posé alors qu'il reste du travail ;
+- ⭐ **périmètre oublié** : un périmètre présent dans `SOURCES` mais **absent de la liste de
+  `auto`**. ⭐ **C'est ce qui rend l'alarme ATTEIGNABLE** : une fois ① corrigé, le « lot maigre »
+  ne peut plus arriver par la cause d'hier — et *« une alarme qu'on ne peut pas déclencher est
+  un décor »*. Le cas du périmètre oublié, lui, est **exactement le défaut d'hier sous une autre
+  forme**.
+
+**③ Le commentaire dit enfin le réglage réel** : il annonçait *« 22:00 et un lot de 2 500 »*,
+le réel est **21:00 et `--limit 1000`**. ⚠ **Et ce mensonge m'a fait raisonner à côté** : j'ai
+annoncé à Frédéric « il reste 3 nuits à 2 500 » alors que le lot est de 1 000.
+Le commentaire porte désormais les mesures : **1 000 travaux = 4,8 à 7,9 h**, et le
+contre-exemple du **08/10** *(2 499 travaux, 14,6 h, fini à 11:38 — en plein run et en heures
+d'agence)*.
+
+### LES ÉPREUVES — **sur le vrai script, en `--dry-run` : il ne pose rien**
+| | cas | résultat | code |
+|---|---|---|---|
+| ① | le lot plein *(le cas de ce soir)* | **1 000** posés, `archive 2 + historical 998`, **aucune alarme** | **0** |
+| ② | **un périmètre oublié** *(copie du script, `brouillon` retiré de `auto`)* | ⭐ **« PERIMETRE OUBLIE : brouillon — son travail ne sera JAMAIS posé »** | **1** |
+| ③ | **un lot maigre** *(copie, collecte plafonnée à 3)* | ⭐ **« LOT MAIGRE : 3 posés pour une limite de 1 000 »** | **1** |
+| ④ | `--scope archive` · `historical` · `brouillon` | **2** · **1 000** · **527** — **inchangé**, aucune fausse alarme | **0** |
+
+⚠ **Les deux copies d'essai ont été retirées** *(vérifié : 0 restante)*.
+
+### ⚠ ET UN DÉFAUT DANS MA PROPRE ALARME, TROUVÉ EN L'ÉPROUVANT
+`enFile` ne contient pas ce qu'on vient de poser, donc `premierReste` revoyait les lignes du lot
+comme « restantes ». ➡ **la DERNIÈRE nuit — celle qui termine le rattrapage — aurait crié
+« lot maigre » alors que tout était fini.** Corrigé en ajoutant les lignes posées aux « déjà
+vues ». *Une alarme qui crie le jour de la victoire, c'est précisément ce que je corrige
+ailleurs depuis deux jours.*
+
+### ⏰ CE QUI RESTE, ET QUAND
+| | |
+|---|---|
+| à faire | **2 925** annonces *(archive 2 · historical 2 396 · brouillon 527)* |
+| à **1 000/nuit** | **3 nuits** → ce soir, le 15 et le 16 → **fini le 17/10 au matin** |
+| ⚠ pendant ces 3 nuits | **ne pas laisser un ajout de document en attente à 21:00** : le rattrapage refuse de poser si la file n'est pas vide, et une nuit sauterait |

@@ -147,48 +147,72 @@ async function main() {
   const code = await refusEventuel(args, enFile);
   if (code) { process.exitCode = code; return; }
 
-  // --scope auto : on prend le PREMIER perimetre qui a encore du travail. L'ordre est
-  // celui du volume decroissant, et il se vide tout seul -- quand les trois sont finis,
-  // le script le dit et ne pose rien (code 0 : ce n'est pas une panne).
+  // ⚠⚠ CORRIGE LE 14/10/2026 -- LE SCRIPT NE FAISAIT PAS CE QUE SON PROPRE COMMENTAIRE
+  //    ANNONCE. La ligne 29 dit « --scope auto ENCHAINE archive -> historical ->
+  //    brouillon tout seul ». Le code, lui, prenait le PREMIER perimetre ayant du
+  //    travail et s'arretait la.
+  //
+  // CE QUE CA A COUTE, MESURE SUR LES JOURNAUX DES NUITS :
+  //      30/09 -> 07/10   archive       2 500/nuit
+  //      08/10 -> 12/10   historical    2 500 puis 1 000/nuit
+  //      13/10            archive       ⛔ UN SEUL TRAVAIL
+  //    Pourquoi : `archive` SE REMPLIT TOUS LES JOURS -- chaque annonce archivee dans
+  //    la journee y reapparait comme « a faire ». `auto` repartait donc sur `archive`,
+  //    y trouvait 1 ou 2 annonces, les posait, et s'arretait -- pendant que
+  //    `historical` (2 396) et `brouillon` (527) attendaient.
+  //    ⛔ ET IL SORTAIT EN SUCCES : Planificateur vert, moniteur muet. Au rythme
+  //      obtenu, les 2 925 annonces restantes n'auraient JAMAIS ete rattrapees.
+  //
+  // LE CORRECTIF : on ENCHAINE les perimetres jusqu'a remplir le lot. `archive` donne
+  // ses 2, `historical` complete jusqu'a la limite, et quand il est fini `brouillon`
+  // prend la suite. ⚠ Le comportement de `--scope <un seul>` NE CHANGE PAS.
   const scopes = args.scope === "auto" ? ["archive", "historical", "brouillon"] : [args.scope];
-  let source = null;
+
+  const retenus = [];
+  const stats = { balayees: 0, deja_marquees: 0, exclues_erreur: 0, deja_en_file: 0 };
+  const parScope = {};
+  const page = 1000;
+
   for (const s of scopes) {
-    const reste = await premierReste(SOURCES[s], empreintes, erreurs, enFile);
-    if (reste) { args.scope = s; source = SOURCES[s]; break; }
+    if (retenus.length >= args.limit) break;
+    const source = SOURCES[s];
+    const avant = retenus.length;
+    for (let offset = 0; retenus.length < args.limit; offset += page) {
+      const rows = await rest(source.table + "?select=" + source.idColumn + ",hektor_annonce_id&order=" + source.idColumn + ".asc&limit=" + page + "&offset=" + offset);
+      if (!Array.isArray(rows) || !rows.length) break;
+      for (const row of rows) {
+        if (retenus.length >= args.limit) break;
+        stats.balayees += 1;
+        const id = String(row.hektor_annonce_id);
+        if (!row.hektor_annonce_id || row[source.idColumn] == null) continue;
+        if (empreintes.has(id)) { stats.deja_marquees += 1; continue; }
+        if (erreurs.has(id)) { stats.exclues_erreur += 1; continue; }
+        if (enFile.has(id)) { stats.deja_en_file += 1; continue; }
+        // ⚠ LE PERIMETRE EST PORTE PAR LA LIGNE, plus par une variable globale : un lot
+        //   peut desormais melanger deux perimetres, et chaque travail doit savoir d'ou
+        //   il vient (la charge le dit, et `app_dossier_id` depend de la colonne).
+        retenus.push({ row, scope: s, source });
+      }
+      if (rows.length < page) break;
+    }
+    const pris = retenus.length - avant;
+    if (pris) parScope[s] = pris;
   }
-  if (!source) {
+
+  if (!retenus.length) {
     console.log(JSON.stringify({ scope: args.scope, rien_a_faire: true,
       message: "tous les perimetres sont rattrapes" }, null, 2));
     return;
   }
 
-  const retenus = [];
-  const stats = { balayees: 0, deja_marquees: 0, exclues_erreur: 0, deja_en_file: 0 };
-  const page = 1000;
-  for (let offset = 0; retenus.length < args.limit; offset += page) {
-    const rows = await rest(source.table + "?select=" + source.idColumn + ",hektor_annonce_id&order=" + source.idColumn + ".asc&limit=" + page + "&offset=" + offset);
-    if (!Array.isArray(rows) || !rows.length) break;
-    for (const row of rows) {
-      if (retenus.length >= args.limit) break;
-      stats.balayees += 1;
-      const id = String(row.hektor_annonce_id);
-      if (!row.hektor_annonce_id || row[source.idColumn] == null) continue;
-      if (empreintes.has(id)) { stats.deja_marquees += 1; continue; }
-      if (erreurs.has(id)) { stats.exclues_erreur += 1; continue; }
-      if (enFile.has(id)) { stats.deja_en_file += 1; continue; }
-      retenus.push(row);
-    }
-    if (rows.length < page) break;
-  }
-
   let empiles = 0;
   if (!args.dryRun) {
     for (let i = 0; i < retenus.length; i += 100) {
-      const jobs = retenus.slice(i, i + 100).map((row) => ({
+      const jobs = retenus.slice(i, i + 100).map(({ row, scope, source }) => ({
         job_type: JOB_TYPE,
         app_dossier_id: Number(row[source.idColumn]),
         hektor_annonce_id: String(row.hektor_annonce_id),
-        payload_json: { scope: args.scope, lot: "empreinte" },
+        payload_json: { scope, lot: "empreinte" },
         status: "pending",
         priority: args.priority,
       }));
@@ -197,7 +221,62 @@ async function main() {
     }
   }
 
-  console.log(JSON.stringify({ scope: args.scope, ...stats, retenus: retenus.length, jobs_empiles: args.dryRun ? 0 : empiles, dry_run: args.dryRun }, null, 2));
+  // ⚠⚠ ET IL DOIT CRIER QUAND IL POSE RIDICULEMENT PEU (14/10/2026).
+  //
+  // C'est la seconde moitie du defaut : la nuit du 13/10 a pose 1 travail sur 2 925
+  // restants et a SORTI EN SUCCES. Une nuit perdue ne se voyait nulle part -- ni dans
+  // le Planificateur, ni dans check_gti_health. Un rattrapage qui cale en silence est
+  // pire que pas de rattrapage, parce que personne ne le cherche.
+  //
+  // LA REGLE : s'il reste du travail ET qu'on en a pris moins d'un dixieme du lot
+  // demande, quelque chose cloche -- on le DIT et on sort en 1. On ne juge pas sur un
+  // nombre absolu : un lot de 50 demande qui en pose 40 est normal, un lot de 1 000 qui
+  // en pose 1 ne l'est pas.
+  // ⚠ Et on ne crie PAS quand tout est rattrape : « plus rien a faire » est un succes,
+  //   c'est le cas `rien_a_faire` au-dessus, qui sort avant.
+  // ⚠ ET MON ALARME AVAIT ELLE-MEME UN DEFAUT, TROUVE EN L'EPROUVANT : `enFile` ne
+  //   contient pas ce qu'on vient de poser, donc `premierReste` revoyait les lignes du
+  //   lot comme « restantes ». La DERNIERE nuit -- celle qui pose les 2 dernieres
+  //   annonces et termine le rattrapage -- aurait donc crie « lot maigre » alors que
+  //   tout etait fini. Une alarme qui crie le jour de la victoire, c'est precisement
+  //   ce que je passe mes journees a corriger ailleurs.
+  const posees = new Set(retenus.map(({ row }) => String(row.hektor_annonce_id)));
+  const dejaVues = new Set([...enFile, ...posees]);
+
+  // ⚠⚠ ET ON REGARDE **TOUS** LES PERIMETRES CONNUS, pas seulement ceux qu'on vient de
+  //   parcourir. C'est ce qui rend cette alarme ATTEIGNABLE, et donc utile.
+  //
+  //   Une fois le defaut d'enchainement corrige, « lot maigre » ne peut plus arriver
+  //   par la cause d'hier : `auto` remplit le lot en enchainant. L'alarme ne servirait
+  //   alors a rien -- et une alarme qu'on ne peut pas declencher est un decor.
+  //   LE CAS QU'ELLE ATTRAPE VRAIMENT : un perimetre ajoute a SOURCES et OUBLIE dans la
+  //   liste de `auto`. Son travail ne serait jamais pose, et personne ne le saurait --
+  //   exactement le defaut d'hier, sous une autre forme. En balayant SOURCES, on le voit.
+  const aRegarder = args.scope === "auto" ? Object.keys(SOURCES) : scopes;
+  const restantAilleurs = [];
+  for (const s of aRegarder) {
+    if (await premierReste(SOURCES[s], empreintes, erreurs, dejaVues)) restantAilleurs.push(s);
+  }
+  // Un perimetre qui a du travail et que `auto` n'a jamais visite : c'est un oubli de
+  // cablage, et il est GRAVE -- on crie meme si le lot est plein.
+  const oublies = restantAilleurs.filter((s) => !scopes.includes(s));
+  const maigre = retenus.length < Math.max(1, Math.floor(args.limit / 10));
+
+  console.log(JSON.stringify({ scope: args.scope, par_perimetre: parScope, ...stats,
+    retenus: retenus.length, jobs_empiles: args.dryRun ? 0 : empiles, dry_run: args.dryRun,
+    reste_a_faire: restantAilleurs }, null, 2));
+
+  if (oublies.length) {
+    console.error(`PERIMETRE OUBLIE : ${oublies.join(", ")} -- il a du travail et `
+      + `« --scope auto » ne le visite pas. Son travail ne sera JAMAIS pose. `
+      + `Ajouter le perimetre a la liste de "auto" (voir l'en-tete de ce fichier).`);
+    process.exitCode = 1;
+  } else if (maigre && restantAilleurs.length) {
+    console.error(`LOT MAIGRE : ${retenus.length} travail(aux) pose(s) pour une limite de `
+      + `${args.limit}, alors qu'il reste du travail dans : ${restantAilleurs.join(", ")}. `
+      + `Le rattrapage n'avance pas -- voir l'en-tete de ce fichier.`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error) => { console.error(error.message); process.exit(1); });

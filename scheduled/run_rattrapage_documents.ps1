@@ -22,12 +22,25 @@
 #        push du run (07:01-07:25) chargeait PostgREST. Un travail en erreur
 #        n'est JAMAIS rejoue : ces 13 annonces ne seront jamais scannees.
 #
-# REGLAGE RETENU PAR FREDERIC : 22:00 et un lot de 2 500.
-#    A 358/h, 2 500 travaux prennent ~7 h -> fin vers 05:00, avec de la marge
-#    meme si une nuit est plus lente. Cout : ~13 nuits de rattrapage au lieu de
-#    ~10,6. On echange de la vitesse contre des annonces qu'on ne perd pas.
+# ⚠⚠ CORRIGE LE 14/10/2026 -- CE COMMENTAIRE DISAIT TROIS CHOSES FAUSSES.
+#    Il annoncait « REGLAGE RETENU PAR FREDERIC : 22:00 et un lot de 2 500 ». Le reel,
+#    mesure le 14/10 dans le Planificateur et a la ligne 87 de ce fichier :
+#        l'heure  -> 21:00  (declencheur quotidien depuis le 05/10)
+#        le lot   -> --limit 1000
+#    Le reglage a ete resserre apres le 08/10 sans que ce commentaire suive. Un
+#    commentaire qui mente sur un reglage, c'est ce qui fait qu'on raisonne a cote
+#    pendant des semaines -- et c'est arrive : j'ai annonce « il reste 3 nuits a
+#    2 500 » alors que le lot est de 1 000.
 #
-# 22:00 reste hors des heures d'agence.
+# REGLAGE REEL : 21:00, lot de 1 000.
+#    MESURE SUR LES NUITS DU 09 AU 12/10 : 1 000 travaux prennent 4,8 a 7,9 h, donc
+#    fin entre 01:47 et 04:57. ⚠ La nuit du 10/10 a fini a 04:57 -- TROIS MINUTES
+#    avant le run de 05:00. Le lot de 1 000 est le bon, et il est DEJA SERRE.
+#    ⛔ CONTRE-EXEMPLE A NE PAS REFAIRE : la nuit du 08/10, un lot de 2 499 a mis
+#      14,6 h et fini a 11:38 -- en plein run ET en pleines heures d'agence. C'est
+#      exactement le degat decrit ci-dessus, et il s'est REPRODUIT.
+#
+# 21:00 reste hors des heures d'agence.
 #
 # ⚠ ELLE S'ARRETE TOUTE SEULE dans trois cas, et c'est le coeur du dispositif :
 #   - plus rien a faire            -> succes, elle ne pose rien (on peut la desactiver)
