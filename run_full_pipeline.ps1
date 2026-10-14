@@ -586,12 +586,44 @@ Invoke-Step -Label "phase2 appliquer le contrat d autorite" -Arguments @(
 # quelque chose a dire » les ecarte toutes. Cette regle protege les 94 clotures que
 # Hektor porte encore -- un « l app gagne » aveugle les aurait effacees des la
 # premiere nuit, en silence.
-Invoke-OptionalStepWithRetry -Label "phase2 magasin des champs de mandat" -Arguments @(
-    "phase2\identite\magasin_mandat_app.py"
-) -WorkerKey "phase2.magasin_mandat"
-Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat de mandat" -Arguments @(
-    "phase2\identite\appliquer_contrat_mandat.py"
-) -WorkerKey "phase2.contrat_mandat"
+# ⛔⛔ RETIREES DU RUN LE 14/10/2026 -- decision de Frederic (chantier ③, option B).
+#
+# ELLES N'ATTEIGNAIENT PLUS RIEN DEPUIS LE 30/09. Le commentaire ci-dessus dit
+# qu'elles tournent « AVANT le push, qui enverra la table deja arbitree » : c'etait
+# vrai a l'origine. Puis le registre est passe a la FICHE DETAIL comme source
+# (memoire « registre : source = le DETAIL ») -- et la date de cloture d'une ligne de
+# registre se lit desormais UNIQUEMENT dans le mandat du detail
+# (phase2/sync/export_app_payload.py, « mandat_date_cloture = current_version.cloture »,
+# sans repli sur app_view_generale). Mesure du 14/10, maillon par maillon :
+#   · aucune table de Supabase ne porte cette colonne, hors le registre et sa vue ;
+#   · les caches de fiche ne portent pas la cle (0 ligne) ;
+#   · ses deux seuls lecteurs locaux (export_mini_app_html.py et
+#     checks/registre_depuis_app_mandat.py) n'ont AUCUN appelant.
+# Elles posaient chaque nuit 8 valeurs dans une colonne que personne ne lit -- et le
+# message « 8 ligne(s) arbitree(s) en faveur de l'app » MENTAIT sur 5 des 8 : ce
+# n'etaient pas des decisions de l'app, mais deux chemins de Hektor qui divergent
+# (le detail et hektor_mandat). Ce message a induit en erreur l'audit du 14/10.
+#
+# ⭐ LA DATE DE L'APP NE PASSE PLUS PAR ICI : elle vit dans le carnet
+#   app_mandat_champ_app (Supabase) et dans mandat_date_cloture_app, reposee apres
+#   chaque push par l'etape « phase2 re-pose cloture mandat » plus bas (3c, piece 4 --
+#   PROUVEE par le vrai chemin le 14/10 : posees 1 sur 62774). C'est elle qui a
+#   remplace ce mecanisme ; personne n'avait eteint l'ancien.
+#
+# ⚠ LES DEUX INSCRIPTIONS DE SURVEILLANCE (phase2.magasin_mandat, phase2.contrat_mandat)
+#   SONT PASSEES EN `legacy` LE MEME JOUR (supabase/patch_chantier3_optionB_contrat_mandat
+#   _legacy_2026-10-14.sql). Sans ce patch, leurs battements vieilliraient et le moniteur
+#   alerterait chaque jour.
+#
+# RETOUR ARRIERE : decommenter les six lignes ci-dessous ET coller le _INVERSE.sql.
+# Les deux scripts sont GARDES dans phase2/identite/.
+#
+# Invoke-OptionalStepWithRetry -Label "phase2 magasin des champs de mandat" -Arguments @(
+#     "phase2\identite\magasin_mandat_app.py"
+# ) -WorkerKey "phase2.magasin_mandat"
+# Invoke-OptionalStepWithRetry -Label "phase2 appliquer le contrat de mandat" -Arguments @(
+#     "phase2\identite\appliquer_contrat_mandat.py"
+# ) -WorkerKey "phase2.contrat_mandat"
 
 # 26bis-(1) 26/08 -- LES ANNONCES QUE L'APP CONNAIT ET QUE LE MIROIR IGNORE.
 # Le contrat ci-dessus sait METTRE A JOUR une ligne d'app_view_generale ; il ne sait pas
