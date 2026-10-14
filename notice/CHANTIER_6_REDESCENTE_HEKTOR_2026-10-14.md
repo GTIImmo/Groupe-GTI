@@ -813,3 +813,64 @@ documents — et il faut alors SÉLECTIONNER `id`, sinon le curseur saute des li
 des annonces déclarées « sans empreinte » à tort *(donc resynchronisées en entier pour rien,
 avec des téléversements cloud inutiles)*, et **des signatures qui n'aboutissent jamais chez
 nous**.
+
+---
+
+## ⭐ L'HYPOTHÈSE DE FRÉDÉRIC, TESTÉE (14/10) : « la date de maj de l'annonce bouge »
+
+> *« On a depuis 10 jours un rattrapage avec un mécanisme permettant la mise à jour, donc même
+> si un doc est ajouté sur une annonce déjà vue on doit le détecter, je crois à l'aide de la date
+> de maj de l'annonce qui bouge. Refais des recherches dans mes notes et mon historique, tu
+> oublies quelque chose. »*
+
+### ① Ce qu'il a raison de dire : LE MÉCANISME EXISTE, et il est à moitié installé
+
+Le rattrapage **ne fait pas que télécharger : il POSE une empreinte** du contenu documentaire
+(`app_console_document_fingerprint`, **54 896** lignes aujourd'hui). Et cette empreinte est
+*exactement* ce qui rend une mise à jour détectable ensuite.
+
+**Ce qui manque, c'est la moitié qui COMPARE** : `--detect` (écrit le 20/08) relit la page,
+recalcule l'empreinte et ne synchronise que ce qui a bougé. **Il n'a jamais été allumé.** C'est
+écrit dans sa propre liste, section 10bis : *« **G.2** LE PIPELINE N'APPELLE JAMAIS `--detect` »*
+et *« **G.6** FRÉDÉRIC : allumer `-EnqueueConsoleDocuments` »*.
+➡ Donc : empreintes posées ✅ · comparaison jamais lancée ⛔.
+
+### ② Ce que la mesure dit de la DATE : testée sur les 22, **22 fois « non »**
+
+La date de mise à jour de l'annonce chez Hektor (`source_updated_at`) **n'a pas bougé** quand le
+mandat a été signé. Extrait :
+
+| dossier | mandat signé le | date maj Hektor | notre ligne écrite le | documents lus le |
+|---|---|---|---|---|
+| **VM68941** | **12/10/2026** | **13/02/2025** | 03/04/2026 | 20/08 |
+| EM9004 | 15/09/2026 | **11/04/2022** | 07/05/2026 | 20/08 |
+| EM66194 | 15/09/2026 | **07/10/2024** | — | 19/08 |
+| 18880 | 17/09/2026 | 10/08/2026 | 11/08/2026 | 19/08 |
+| V400062847 | 01/10/2026 | 04/08/2026 | 08/08/2026 | 19/08 |
+
+**Sur les 22 : 0 a bougé.** Et ça confirme la mesure écrite dans le code le 20/08 :
+*« la date de mise à jour d'une annonce NE BOUGE PAS quand un document y est déposé — 91 % des
+documents sont plus récents que la MAJ déclarée de leur annonce »*.
+⚠ **À ne pas confondre avec les PHOTOS** : là, la mesure du projet dit l'inverse
+*(liste, `G.7` : « ajouter une photo dans Hektor FAIT BOUGER la date_maj de l'annonce »)*.
+Hektor date l'annonce quand on touche ses photos, **pas** quand on dépose un document — ses
+documents sont une entité à part.
+
+### ③ MAIS SON INSTINCT EST BON : il existe un signal gratuit — ce n'est pas celui-là
+
+**Pour un mandat**, le signal est **le mandat lui-même** : `numero_mandat` et `mandat_date_debut`
+arrivent dans notre propre ligne *(par le registre des mandats, que le run entretient)*.
+C'est exactement comme ça que les **93** ont été trouvés, sans appeler Hektor.
+➡ **Pour les mandats, aucune relecture n'est nécessaire.**
+
+**Pour les autres documents** *(diagnostics, avenants, titre de propriété, taxe foncière, offres)*
+il n'y a **aucun** signal dans la fiche. Seule une relecture les trouve. C'est là, et seulement
+là, que `--detect` est nécessaire.
+
+### ④ ⚠ ET UN DÉFAUT TROUVÉ EN TESTANT : `refreshed_at` ne bouge pas non plus
+
+**VM68941 porte un mandat signé le 12/10/2026 et sa ligne annonce `refreshed_at = 03/04/2026`.**
+Donc le champ du mandat a été écrit **sans** que la colonne de fraîcheur suive : notre propre
+« date de dernière écriture » **ne peut pas servir de détecteur de changement**. Sur les 22,
+**2 seulement** ont été rafraîchies dans les 36 h, la plus vieille datant du **03/04/2026**.
+*(Défaut noté, hors périmètre de 6b — à verser au chantier ⑦ ou à une note propre.)*
