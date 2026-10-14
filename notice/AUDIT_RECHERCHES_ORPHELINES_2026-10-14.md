@@ -1,132 +1,111 @@
 # AUDIT — LA FAMILLE « RECHERCHES » · 3 alertes · 14/10/2026
 
-*Demandé par Frédéric : « vas y audit ».* **Lecture seule, rien n'a été touché.**
+*« NON REFAIT UN AUDIT PLUS POUSSÉ IL Y A UNE RAISON PRÉCISE À CET ÉCART CHERCHE »* — Frédéric.
+**Il avait raison. La voici, de bout en bout.** Lecture seule, rien n'a été touché.
 
 ---
 
-## En trois lignes
+## LA RAISON PRÉCISE — une chaîne de 7 maillons
 
-1. **Ce n'est pas 4 022 problèmes, c'est 35 recherches.** Les 4 022 sont des lignes d'historique
-   accrochées à ces 35.
-2. **24 d'entre elles ont disparu CETTE NUIT** *(du 13 au 14/10)*. Les 11 autres étaient déjà là.
-3. ⚠ **Elles existent toujours chez Hektor.** Ce n'est donc **pas** une suppression légitime :
-   c'est **notre synchro** qui a cessé de les remonter.
+```
+1.  HEKTOR ARCHIVE une recherche                         archive = 1
+2.  le build recopie                                     is_active = int(not archive) = 0
+         phase2/contacts/build_contacts_layer.py l. 1475
+3.  ce contact n'a alors PLUS AUCUNE recherche active,
+    et pas d'annonce active non plus
+4.  -> IL PERD SON ELIGIBILITE                           supabase_sync_eligible = 0
+         l. 1750-1754 : eligible SI (annonce active) OU (recherche active)
+5.  le push ne charge que les recherches
+    DES CONTACTS ELIGIBLES                               push_contacts_to_supabase.py l. 639-644
+6.  -> et « ce qui n'est pas dans `loaded` est declare
+    DISPARU, DONC SUPPRIME chez Supabase »                l. 670-676, commentaire du projet
+7.  -> tout ce qui pointait vers cette recherche
+    reste accroche DANS LE VIDE                           4 022 lignes
+```
 
----
+### La preuve en une égalité
 
-## 1. Les trois alertes ne font qu'un seul sujet
-
-| alerte | valeur | ce que c'est |
-|---|---|---|
-| `data.orphelins_recherche` | **4 022** | des lignes qui pointent vers une recherche absente |
-| `data.recherche_disparue` | **35** | des contacts qui ont **perdu** des recherches |
-| `data.recherche_orphelin_bloque` | **37** | des orphelins que le robot de nuit ne sait pas réparer |
-
-**Les 4 022 se répartissent ainsi :**
-
-| table | lignes | **recherches distinctes** |
-|---|---|---|
-| `app_rapprochement_score_history` | 3 791 | **28** |
-| `app_rapprochement` | 183 | 21 |
-| `app_rapprochement_search_state` | **35** | **35** |
-| `app_notification` | 8 | 4 |
-| `app_relance_rapprochement` | 5 | 1 |
-
-➡ **35 recherches**, dont une seule *(l'historique des scores)* traîne **3 791** lignes à elle
-seule. **Le chiffre de 4 022 est un effet de volume, pas une mesure de gravité.**
-
----
-
-## 2. Quand ? — la courbe est sans ambiguïté
-
-| passage | lignes accrochées | recherches disparues |
-|---|---|---|
-| **12/10, toute la journée** | 11 | 6 |
-| 13/10 · 01:48 → 05:48 | 11 | 6 |
-| 13/10 · 07:48 → 11:48 | ⚠ *journaux illisibles* | |
-| **13/10 · 13:48** | **247** *(+236)* | 8 |
-| 14/10 · 01:48 → 03:48 | 247 | 8 |
-| 14/10 · 05:48 | ⚠ *journal illisible* | |
-| **14/10 · 07:48** | **4 022** *(+3 775)* | **35** *(+27)* |
-
-➡ **Deux sauts, tous deux pendant la nuit**, encadrant le **run de 05:00** et la **descente de
-07:45**.
-⚠ *Les journaux des heures clés font partie des **43 illisibles** signalés dans l'audit du
-monitoring. Le trou m'a coûté la précision ici même.*
-
----
-
-## 3. ⭐ MAIS LES LIGNES ORPHELINES SONT VIEILLES — ce n'est pas elles qui sont nées
-
-Les 35 états de rapprochement devenus orphelins ont été **calculés** :
-
-| calculé le | combien |
+| | |
 |---|---|
-| **18/08** | **29** |
-| 19/08 · 01/09 · 04/09 · 12/09 | 6 |
+| recherches des contacts **éligibles**, en local | **11 453** |
+| recherches **dans Supabase** | **11 453** |
 
-**Aucune n'est du 13 ou du 14 octobre.** ➡ **Ce ne sont pas les lignes qui sont apparues, ce sont
-les recherches qui ont disparu sous elles.**
+**À l'unité près.** Le filtre du push n'est donc pas « actives » *(il n'y en a que 4 250)* : c'est
+bien **« les recherches des contacts éligibles »**.
 
-Et les repères *(`app_search_count_high_water`)* le confirment :
+### Et la contradiction qui l'a révélée
 
-| repère posé le | contacts | recherches au repère | aujourd'hui |
-|---|---|---|---|
-| **21/08** | **33** | 34 | **0** |
-| 04/09 | 1 | 1 | 0 |
-| 12/09 | 1 | 1 | 0 |
+| les 35 contacts | `supabase_sync_eligible` |
+|---|---|
+| dans **notre base locale** *(celle qui décide du push)* | **0** |
+| dans **Supabase** *(resté sur l'ancienne valeur)* | **vrai** |
+
+Le contact n'est pas supprimé de Supabase — **il n'est simplement plus mis à jour**. Seules ses
+**recherches** sont retirées.
 
 ---
 
-## 4. ⚠⚠ LE FAIT QUI COMPTE : elles sont toujours chez Hektor
+## Les mesures, dans l'ordre où elles sont tombées
 
-Le **journal quotidien des doublures** *(`app_doublure_journal`, écrit par la Descente)* compare
-ce que nous avons à ce que Hektor a :
-
-| relevé | **en accord** *(chez nous)* | **chez Hektor seul** |
+| | mesure | ce que ça a éliminé |
 |---|---|---|
-| 01/10 | 11 427 | 65 694 |
-| … *(montée régulière)* … | | |
-| 12/10 | 11 471 | 65 699 |
-| **13/10** | **11 477** | 65 701 |
-| **14/10** | **11 453** ⬇ **−24** | **65 729** ⬆ **+28** |
-
-> **Jusqu'au 13/10, le compte ne faisait que MONTER.** Cette nuit, il a **baissé de 24** — et
-> dans le même temps, le compte « Hektor seul » a **augmenté de 28**.
-
-➡ **Les recherches n'ont pas été supprimées : elles sont sorties de NOTRE périmètre.** Elles sont
-passées de « chez nous » à « chez Hektor seulement ».
-
-*(Le chiffre de 65 729 « chez Hektor seul » est normal et structurel : nous ne remontons qu'une
-partie des recherches — les éligibles. Ce qui est anormal, c'est le **transfert** de 24 lignes
-d'un côté à l'autre en une nuit.)*
+| 1 | **4 022 lignes = 35 recherches** *(l'historique des scores en traîne 3 791 à lui seul)* | le chiffre mesurait un **volume**, pas une gravité |
+| 2 | les lignes orphelines ont été **calculées en août-septembre** | ce ne sont pas elles qui sont nées hier |
+| 3 | journal des doublures : **11 477 → 11 453** la nuit du 13 au 14, et « Hektor seul » **+28** | **elles existent toujours chez Hektor** |
+| 4 | les 35 contacts sont **présents et éligibles dans Supabase** | ⛔ la piste « contact sorti du périmètre » |
+| 5 | leurs **36 recherches sont bien dans notre base locale** | ⛔ la piste « le build ne les fabrique plus » → **le défaut est au push** |
+| 6 | ces 36 ont **`archive = 1`, `is_active = 0`** | ✅ elles ont été **archivées chez Hektor** |
+| 7 | le run passe bien `-IncludeArchivedContactSearches` | ⛔ la piste « le push filtre sur actif » |
+| 8 | **recherches des contacts éligibles = 11 453 = Supabase** | ✅ **le filtre est l'ÉLIGIBILITÉ DU CONTACT** |
+| 9 | les 35 sont **`eligible = 0` en local** mais **vrai dans Supabase** | ✅ **ils ont perdu leur éligibilité cette nuit** |
 
 ---
 
-## 5. Ce que je n'ai PAS établi
+## ⭐ CE N'EST PAS UNE PERTE DE DONNÉES — c'est un défaut de MÉNAGE
 
-⬜ **Pourquoi ces 24 recherches sont sorties du périmètre cette nuit.** Deux pistes, non mesurées :
+Le cycle est **normal et voulu** : une recherche archivée chez Hektor sort du périmètre, et un
+contact sans rien d'actif cesse d'être synchronisé. **Rien n'est perdu chez Hektor.**
 
-1. **leur contact n'est plus éligible** *(`supabase_sync_eligible`)* — un contact qui sort du
-   périmètre emporte ses recherches ;
-2. **la recherche n'est plus « active »** chez Hektor — et nous ne remontons que les actives
-   *(cf. la note « index actives vs complet »)*.
+⚠ **Le défaut est au maillon 7** : on retire la recherche, **mais on laisse tout ce qui s'y
+accrochait**. Et le volume est brutal — **une seule recherche archivée laisse jusqu'à 238 lignes
+d'historique orphelines**.
 
-⬜ **Et je n'ai pas prouvé que notre travail des 12-14/10 n'y est pour rien.** Le chantier ②
-*(12/10)* a remplacé **8 politiques de lecture** et trois politiques de rapprochement.
-⚠ **En principe** cela ne peut pas être la cause — `service_role` contourne la RLS, et c'est lui
-qui fait tourner le run et la descente — **mais je l'écris comme une présomption, pas comme une
-mesure.** C'est la première chose à vérifier.
+Le projet le savait à moitié : le code dit *« la cause a été corrigée dans le worker (il lit les
+clés AVANT de supprimer les recherches) et 146 orphelins ont été purgés »*. ➡ **Ce correctif ne
+couvre que le chemin du worker. Il ne couvre pas l'archivage chez Hektor**, qui passe par le run.
 
 ---
 
-## 6. Ce que je recommande
+## ⚠ DEUX AGGRAVANTS, trouvés en chemin
+
+### A. La clé d'une recherche est un **hash de son contenu**
+
+```python
+key_payload = {"contact_id": contact_id, "index": index, "search": search}
+search_key   = stable_hash(key_payload)[:24]        # l. 1476-1477
+```
+
+➡ **Si un seul critère change — un prix, une ville — la clé change.** L'ancienne disparaît, une
+neuve apparaît, et **tout l'historique de rapprochement se détache de la même façon**.
+*Non mesuré aujourd'hui, mais c'est le même effet par une autre porte.*
+
+### B. Et ce que Frédéric a signalé pendant l'audit
+
+> *« les modifications de recherche ne sont pas envoyées à Hektor »*
+
+➡ Une recherche **affinée dans l'app** n'est pas connue de Hektor. Si Hektor l'archive ensuite,
+**le maillon 1 se déclenche sur une recherche que l'app croyait à elle** — et l'affinage sort du
+périmètre sans que personne ne soit prévenu. **À vérifier : c'est la suite logique de cet audit.**
+
+---
+
+## Ce qu'il reste à décider
 
 | | | |
 |---|---|---|
-| **1** ⭐ | **identifier les 24** et regarder **un** cas de bout en bout *(le contact, son éligibilité, sa recherche chez Hektor)* | ~1 h · **c'est là que se trouve la réponse** |
-| **2** | vérifier la présomption « la RLS n'y est pour rien » | ~20 min |
-| **3** | réparer les **43 journaux illisibles** du moniteur | ils m'ont coûté la précision deux fois aujourd'hui |
-| ⛔ | **ne surtout pas purger les 4 022** avant d'avoir compris | ce sont des historiques de rapprochement, pas des déchets |
+| **1** ⭐ | **nettoyer derrière une recherche qui sort du périmètre** — étendre au run ce que le worker fait déjà | c'est **la** correction de fond |
+| **2** | vérifier l'aggravant **B** *(l'affinage de l'app face à un archivage Hektor)* | ~1 h |
+| **3** | décider du sort des **4 022** lignes actuelles | ⛔ **pas avant 1** : ce sont des historiques de rapprochement |
+| **4** | la clé-hash *(aggravant A)* | gros sujet, à part |
 
-⛔ **Rien n'est décidé, rien n'a été touché.**
+⛔ **Rien n'est décidé, rien n'a été touché, rien n'a été purgé.**
