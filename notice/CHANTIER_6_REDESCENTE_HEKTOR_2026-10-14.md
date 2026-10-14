@@ -618,3 +618,51 @@ exactement la pièce qui manquait pour pouvoir la rallumer sans danger.
 
 **La formule juste n'est donc pas « les documents ne redescendent pas »** — c'est :
 **« depuis le 20 août, plus personne ne va voir s'il y a du nouveau. »**
+
+---
+
+## ✅ LE RELEVÉ EN LECTURE SEULE (14/10, 15:55 — accord de Frédéric : « 1. ok »)
+
+**Une seule commande a répondu aux DEUX questions, en 5 requêtes Hektor et 0 écriture :**
+
+```
+node Console/enqueue_console_sync_jobs.js --scope historical --detect --dry-run --max-lectures 5
+```
+
+*Pourquoi ce périmètre : le tri de `runDetection` lit « les plus anciennement contrôlées »
+d'abord, et les 49 annonces de G.1-c sont précisément les plus anciennes (19-20/08) parmi les
+vendus/clos — toutes les autres ont été relues après le 25/09.*
+
+### Résultat
+
+```
+balayees            5        lectures           5
+inchangees          1        budget_lectures    5
+changees            4        budget_atteint  true
+sans_empreinte  2 396        arret           null     <- arret NORMAL, pas un refus de Hektor
+suivi_signature     7        jobs_empiles   2 407     <- dry-run : RIEN n'a ete pose (verifie : 0 travail cree)
+```
+
+### ① LE BUDGET DE LECTURES FONCTIONNE — éprouvé
+
+Il s'est arrêté **exactement** à 5 lectures, avec son propre témoin `budget_atteint: true` et
+`arret: null` — donc la distinction entre « budget atteint » (normal) et « Hektor nous écarte »
+(anormal) tient. **Sortie 0.** Et **0 travail créé** (contrôlé en base après coup).
+
+### ② ⭐⭐ G.1-c EST CONFIRMÉ — 4 sur 5
+
+**4 des 5 annonces vendues que le rattrapage saute ont des documents NOUVEAUX chez Hektor.**
+C'est la preuve que je ne pouvais pas obtenir de notre côté — on ne voit pas une absence, mais
+Hektor, lui, la montre.
+
+➡ Sur les **49** concernées, cela représente **≈ 39 biens vendus** dont il nous manque des
+pièces : **compromis, actes**. ⚠ Et ces 49 **ne seront jamais reprises** par le rattrapage
+(« empreinte déjà posée = déjà faite »), ni par la détection (qui ne couvre que le parc vivant).
+
+### ⚠ AU PASSAGE, UN AVERTISSEMENT TROUVÉ PAR LE RELEVÉ
+
+`jobs_empiles: 2 407` en dry-run sur `historical` : lancée **pour de vrai** sur ce périmètre,
+la détection poserait **2 407 travaux d'un coup** (les 2 396 sans empreinte + 7 signatures + 4
+changées) — elle doublerait le travail du rattrapage et noierait le worker.
+➡ **Ne jamais lancer `--detect` sur `historical` sans `--cap` serré.** Le périmètre de la
+détection, c'est le **parc vivant**.
