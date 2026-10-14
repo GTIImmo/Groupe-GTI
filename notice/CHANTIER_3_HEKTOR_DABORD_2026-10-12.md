@@ -4115,3 +4115,39 @@ Sur **62774**, le bac à sable : **ajouter** une photo d'essai depuis l'app *(3d
 existe chez nous avant la réponse de Hektor, **puis la supprimer** *(bloc 2)*. Les deux gestes sont
 éprouvés de bout en bout, sur une photo qui n'a jamais compté. ⚠ C'est une écriture chez Hektor :
 **avec l'accord de Frédéric**.
+
+
+---
+
+### ⚠ CORRECTION DU 14/10 (après « mais retirer cela du run va pas casser quelque chose ? »)
+
+**J'avais écrit que la colonne arbitrée « ne mène nulle part ». C'était INCOMPLET.** Ma recherche
+ne regardait que les colonnes `jsonb` ; or la fiche détail range son contenu dans une colonne
+**texte**, `app_dossier_detail_current.detail_payload_json`, construite champ par champ depuis
+`app_view_generale` (`build_trimmed_detail_payload`). La colonne **alimente donc la fiche détail**.
+
+**Mais, mesuré, aucune des 8 valeurs de l'étape n'y arrive aujourd'hui :**
+- la clé est présente dans les **13 484** fiches, mais **4 seulement** portent une vraie date
+  (11854, 41436, 47174, 49853) — **aucune des 8**, toutes égales à la colonne de Hektor du
+  registre, aucune au carnet : ce sont des dates de Hektor ;
+- **7 des 8** biens n'ont **pas de fiche détail** (biens clos) ; leurs lignes d'index (6 en
+  archives, 1 en vendus/clos) **ne portent pas** la colonne ;
+- le 8ᵉ, **62774** : le push d'un seul bien **reconstruit d'abord sa ligne locale depuis le
+  miroir** (`case_index_rows: 1`) — mesuré après le push de 11 h 30 : la vue locale est passée de
+  `2026-08-30` à **vide**. Le chemin immédiat défait donc déjà ce que l'étape pose, à chaque geste.
+
+**Les écrans** : tous lisent la date dans le **registre** (qui porte `mandat_date_cloture_app`),
+sauf **un** — le bloc **« Mandat source »** (`DetailAdminPilotPanel`, l. ~18471, affichage de
+secours quand un bien n'a pas de versions), qui lit la fiche. Sans l'étape, il montrera la date de
+**Hektor** — ce qui est **son rôle**, décision du 13/10 (« Mandat source » reste sur la version de
+Hektor).
+
+**Le registre local des mandats** (`mandat_ledger.py`) : protège la date « par omission », ne lit
+ni le magasin ni la vue — pas concerné.
+
+➡ **Conclusion inchangée, mais fondée cette fois** : retirer l'étape ne change **rien de visible
+aujourd'hui**. ⚠ La seule conséquence **future** : un bien **vivant** clos dans l'app n'aurait
+plus notre date dans sa **fiche détail** — elle resterait dans le registre, lu par tous les écrans
+sauf « Mandat source », qui doit montrer Hektor.
+⚠ Le run est **un fichier local** : la modification prend effet au run de demain 05:00, **que le
+patch soit collé ou non**. Pour l'annuler : décommenter les six lignes.
