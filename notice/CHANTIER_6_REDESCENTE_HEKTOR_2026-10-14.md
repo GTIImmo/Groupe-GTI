@@ -11,7 +11,8 @@
 | # | point | d'où il vient | état |
 |---|---|---|---|
 | **6a** | **G.1-b** — les **527 brouillons** feront **tous** échouer le rattrapage des documents, et seront **exclus pour toujours** | liste 10bis l. 1224 · péremption CLAUDE.md l. 533 | 🔎 **audit approfondi le 14/10 : CONFIRMÉ, mais le correctif n'est PAS celui qui était écrit** — ⏰ nuit du 16 au 17/10 |
-| **6b** | **G.2** — le **parc vivant** n'est plus relu depuis le 20/08 : `--detect` n'est jamais appelé par le run | liste 10bis l. 1235 · audit §6 | ⬜ |
+| **6a-bis** | **le 4ᵉ index dans les 3 fonctions de droits** *(ajouté le 14/10 sur décision de Frédéric : « A, on le traite »)* | trouvé par l'audit de 6a | ✅ **FINI le 14/10 — SANS AUCUN PATCH** : rien à ouvrir *(le panneau photos n'est pas affiché sur une fiche légère, la RLS n'est jamais testée)*, et l'ouvrir aurait **ouvert 10 gestes d'écriture** |
+| **6b** | **G.2** — le **parc vivant** n'est plus relu depuis le 20/08 : `--detect` n'est jamais appelé par le run | liste 10bis l. 1235 · audit §6 | 🔎 **audit en cours** |
 | **6c** | **G.6** — allumer `-EnqueueConsoleDocuments` (⛔ après le rattrapage **et** après 6b) | liste 10bis l. 1302 | ⬜ *(geste de Frédéric)* |
 | **6d** | **photos** — les ajouts remontent, **ni les retraits ni l'ordre** | audit §6 · §3 Photos C5 | ⬜ |
 | **6e** | **agenda des visites Hektor** — importé nulle part (~115 bons/mois) | audit §6 · §3 RDV C5 | ⬜ **question de fait à Frédéric** |
@@ -267,14 +268,88 @@ Et **aucune alerte** `data.travaux_en_erreur` dans l'e-mail du matin.
 `loadDossier`. **Par décision.** On ne sait donc **toujours pas** si la Console répondrait pour
 un brouillon — et on n'a plus besoin de le savoir.
 
-## ÉTAPE 6 — CE QUI RESTE OUVERT SUR LES BROUILLONS
+---
 
-⛔ **Le 4ᵉ index est aussi oublié dans trois fonctions de droits** — à trancher par Frédéric :
+# 6a-bis — LE 4ᵉ INDEX DANS LES TROIS FONCTIONS DE DROITS
 
-| fonction | ce qu'un négociateur ne voit pas |
+*Frédéric, 14/10 : « **A** » (on le traite ici) « **puis enchaîne sur 6b** ».*
+
+## ÉTAPE 1 — AUDIT (14/10, lecture seule)
+
+### VERDICT : ⛔ **IL N'Y A RIEN À OUVRIR — et l'ouvrir serait DANGEREUX.**
+
+J'avais présenté ce point comme « un négociateur ne voit ni la fiche ni les photos de ses
+propres brouillons ». **C'était vrai des fonctions, et faux de l'écran.** Trois mesures.
+
+### ① Ce qu'un négociateur voit DÉJÀ d'un brouillon
+
+| | |
 |---|---|
-| `app_console_can_access_dossier` | la **fiche légère** d'un brouillon *(le cache est de toute façon vide : 0 ligne)* |
-| `app_mes_biens_portefeuille()` | les **documents** d'un brouillon — ⚪ **sans objet depuis la décision du 14/10** |
-| `app_mes_biens_selon_perimetre()` | les **photos** — ⚠ **956 déjà rapatriées, invisibles pour lui aujourd'hui** |
+| **la liste** | l'index des brouillons a pour RLS `is_app_user_active()` → **tout utilisateur actif voit les 527**, pas seulement les siens |
+| **la vignette** | `photo_url_listing_app` est posée sur **510 des 527** — l'image vient **de notre serveur**, et elle est dans la ligne d'index, donc **déjà visible** |
+| **la fiche** | elle s'ouvre en **fiche légère** depuis la ligne d'index, avec « Reprendre la saisie » |
 
-Il reste donc **deux tiers** de ce point : la fiche et les photos. Les documents sont sans objet.
+### ② Le panneau photos n'est PAS affiché sur une fiche légère — la RLS n'est jamais testée
+
+`App.tsx:29014` : si la fiche est légère, l'écran rend un avis *« Les photos ne peuvent pas être
+modifiées depuis une fiche d'index léger »* **à la place** de `ConsolePhotosPanel`. Et
+`App.tsx:34990` ne le rend pas du tout. Le seul endroit qui montre des photos sur une fiche
+légère (`App.tsx:30990`) les prend dans `props.images` — **le détail**, pas `app_console_photo`.
+
+➡ `loadConsolePhotos()` **n'est jamais appelé** pour un brouillon. Ouvrir la RLS de
+`app_console_photo` ne changerait donc **rien à l'écran**.
+
+### ③ ⚠⚠ ET L'OUVRIR SERAIT DANGEREUX — `app_console_can_access_dossier` est la porte de 12 fonctions
+
+Mesuré en base : **les 12 fonctions** qui consomment une de ces trois fonctions passent **toutes**
+par `app_console_can_access_dossier`, et **10 sont des fonctions d'ÉCRITURE** :
+
+```
+app_console_creer_document_optimistic     <- creer un document
+app_console_creer_photo_optimistic        <- creer une photo
+app_console_mark_document_signed_manual · app_console_touch_document
+app_affaire_note_ecrire · app_conditions_affaire_ecrire · app_affaire_personne_ecart_fermer
+app_edit_affaire_optimistic · app_geste_affaire_optimistic · app_modifier_affaire_optimistic
++ app_console_can_request_job   <- LA PORTE QUI AUTORISE A DEMANDER UN TRAVAIL HEKTOR
++ app_voit_ce_dossier_selon_perimetre
+```
+
+➡ Ajouter l'index des brouillons à cette fonction **ouvrirait d'un coup 10 gestes d'écriture et
+le droit de demander un travail Hektor sur un brouillon** — exactement contre la décision du
+23/06 *(un brouillon est en lecture seule)* et contre ce que Frédéric a dit aujourd'hui
+*(« on n'arrive pas à les modifier »)*.
+
+**Et les deux autres fonctions ne servent à rien ici** *(mesuré)* : `app_mes_biens_portefeuille()`
+alimente les documents *(sans objet)*, `app_mandat` *(**0** ligne sur un brouillon)* et
+`app_affaire_ledger` *(**1** ligne)*. `app_mes_biens_selon_perimetre()` alimente les photos
+*(jamais lues, cf. ②)*, `app_contact_current` et `app_contact_relation_current` *(**26** relations
+— les ouvrir élargirait l'accès aux contacts, pour rien)*.
+
+### ④ ⭐ ET LE SYSTÈME SE RÉPARE TOUT SEUL À LA FINALISATION — le témoin
+
+Les **73** brouillons déjà finalisés *(`is_draft=0` dans la table locale)* :
+
+```
+66  revenus dans le PARC VIVANT      ·  2 dans les archives  ·  5 disparus de Hektor
+ 0  encore dans l'index brouillon     (la transition marche)
+638 photos de ces annonces, dont 602 pointent le BON app_dossier_id
+ 0  photo MAL pointee                 (les 36 autres sont celles des 7 non vivantes)
+```
+
+➡ **L'invisibilité dure exactement le temps du brouillon.** Dès que la saisie est terminée dans
+Hektor, l'annonce rejoint le parc vivant **et ses photos deviennent visibles, bien rattachées**.
+Il n'y a **pas d'orphelin** à craindre : la ligne photo est reposée sur la bonne clé à chaque
+passage du rattrapage *(`rattrapage_photos.js` recalcule la correspondance depuis les 4 index)*.
+
+## ÉTAPE 2 — CE QUE JE PROPOSE : NE RIEN CHANGER, ET L'ÉCRIRE
+
+**Aucun patch.** Le point est traité par la mesure : il n'y a pas de manque visible, et le
+correctif « évident » aurait ouvert dix gestes d'écriture sur des brouillons.
+
+**Si un jour on veut vraiment qu'un négociateur voie les photos d'un brouillon dans l'app**, le
+maillon qui manque n'est pas un droit, c'est **le détail** : `app_brouillon_annonce_detail_cache`
+est **vide (0 ligne)** et **rien ne la remplit** — il n'existe pas de type de travail
+`prepare_brouillon_annonce_detail` *(ses deux sœurs existent : `prepare_archived_…` et
+`prepare_historical_…`)*. Ce serait **un nouveau type de travail = les 3 verrous**
+*(contrainte, droits, distribution)* + 5 endroits dans le worker. **C'est du chantier ⑦**, et
+ça ne vaut la peine que si Frédéric en a l'usage. ⚠ **Question posée, non tranchée.**
