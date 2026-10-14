@@ -3183,3 +3183,102 @@ les destructions *(1 appel)*, **2** garde-fous de liste vide, la mention lue par
 3. ⬜ **Le geste « supprimer une photo »** : le relevé chez Hektor d'abord *(plan du 25/09)*.
 4. ⬜ L'**écran du journal** *(qui a supprimé quoi)* : la table et les droits existent, la vue
    d'écran n'est pas faite. ⚠ **Réservée aux admins** par la politique.
+
+---
+
+## LES PREUVES PAR LE VRAI CHEMIN (14/10, matin) — **le bien d'essai 62774**
+
+**62774 = « TEST C4 du 25-08 Villa Bellecour »** : **vivant** *(archive=0, « Sous offre »)*,
+mandat **18836**, échéance 2027-09-24, **13 documents**. ⭐ Le seul bien d'essai qui permette
+les trois preuves.
+
+### ✅ PREUVE DE 3e — le code du worker a tourné pour de vrai
+Travail `sync_console_documents` créé comme l'écran le crée *(`priority 45`,
+`reason: preuve_3e_14_10_2026`)*. Le worker **redémarré hier à 21:28** l'a pris en **4 s** et
+fini en **77 s**.
+
+| | |
+|---|---|
+| documents de l'annonce | **13** |
+| **marqués « plus chez Hektor »** | **0** — et **0 dans tout le parc** |
+| le **garde-fou de liste vide** | ⛔ **ne s'est PAS déclenché** → la liste de Hektor n'était pas vide, **donc la comparaison a bien eu lieu** |
+| erreurs du worker | **aucune** |
+
+⭐ **0 marqué sur 13 existants, c'est la preuve que la comparaison a tourné ET qu'elle est
+juste** : un défaut de ma boucle aurait marqué les 13.
+
+### ✅ PREUVE DU RPC DE SAISIE (3c pièce 2) — en production
+`app_set_mandat_cloture_optimistic('62774','18836','2026-10-14')` →
+`{"ok": true, "ecrit_par": "frederic.gerphagnon@…", "avant_app": null, "date_hektor": null}`
+
+| | |
+|---|---|
+| **le carnet** *(fait foi)* | **2026-10-14** · `origine=cloture_app` · **écrit par l'email de Frédéric** |
+| **la vitrine** | `mandat_date_cloture_app` = 2026-10-14, et **l'écran montre 2026-10-14** |
+| ⭐ `refreshed_at` de la ligne | **2026-10-14 05:00:36** — **elle a été réécrite cette nuit** |
+
+### ⭐⭐ LE TÉMOIN DE LA PIÈCE 4 EST DONC EN PLACE, ET IL EST VALIDE
+Contrairement à 62966 et 24933 *(archivés → lignes **gelées**, elles auraient survécu sans la
+re-pose)*, **62774 est vivant : sa ligne SERA détruite et réinsérée cette nuit.**
+➡ **Si la date du 14/10 est encore là demain matin, la pièce 4 est prouvée par le vrai chemin.**
+Sinon, la re-pose ne marche pas — et on le saura.
+
+### ⚠⚠ UNE INTERACTION QUI CHANGE L'ORDRE DES PREUVES
+La preuve de la **pièce 5** *(le worker écrit NOTRE colonne)* demandait de passer un bien en
+« Clos » **avec un n° de mandat**. ⛔ **Mais passer 62774 en « Clos » le ferait SORTIR du parc
+vivant → sa ligne de registre GÈLERAIT → et ça détruirait le témoin de la pièce 4.**
+
+➡ **Les deux preuves s'excluent sur le même bien.** Ordre retenu :
+1. **aujourd'hui** : le témoin de la pièce 4 reste sur 62774, intact ;
+2. **demain, après le run** : une fois la pièce 4 prouvée, on passe 62774 en « Clos »
+   *(réversible par « Actif »)* et on vérifie que le worker écrit `mandat_date_cloture_app`
+   **et non** `mandat_date_cloture`.
+3. **possible aujourd'hui sans rien casser** : passer **62963** en « Clos ». Il **n'a pas de n°
+   de mandat** *(c'est lui qui a journalisé « aucun numéro » le 12/10)* → ça éprouve **l'autre
+   moitié de la pièce 5** : le faux cri doit être devenu un `done` *« clôture SAUTÉE »*, plus
+   un `error`. **Demande l'accord de Frédéric** *(ça écrit un statut chez Hektor)*.
+
+### ✅ PREUVE DU NETTOYAGE (3c pièce 5, moitié « ne plus crier ») — EN RÉEL, 14/10
+
+Bien d'essai **62963** *(« TEST C15 entrepot depuis l app - a supprimer »)* : **aucun numéro de
+mandat**, **0 ligne au registre** *(logique : le registre est rangé par couple annonce + n° de
+mandat)*. État de départ relevé **avant** d'agir : `Actif`, `diffusable = 1`.
+
+**Le journal du travail, mot pour mot :**
+```
+hektor_status         = done   « Statut Hektor Mandat clos envoye »   (status_value 6, diffusable 0)
+cloture_mandat_locale = done   « Cloture du mandat SAUTEE : aucun numero de mandat
+                                 dans la demande (le changement de statut, lui, a reussi) »
+                               { "saute": true, "reason": "numero_mandat_absent" }
+```
+**Avant le 13/10 : `error` + « Clôture locale impossible ». Maintenant : `done` + « SAUTÉE ».**
+➡ **Le témoin dans les deux sens.** Et la vraie panne reste une erreur *(code inchangé)*.
+
+**Puis remis en `Actif`** : la fiche est revenue à `Actif` / `diffusable = 1`
+**instantanément**, avant que Hektor ne soit informé — **3a en direct**.
+
+### ⚠⚠ ET DEUX ERREURS DE MA PART, PENDANT CE TEST
+
+**① Mon premier appel était incomplet, et j'ai failli accuser le code.**
+J'ai appelé le RPC avec `target_status` **en argument** mais **pas dans la charge du travail**.
+Le worker lit `payload.target_status || payload.status || payload.targetStatus` *(l. 14591)* →
+il a répondu **« Statut Hektor non supporté : undefined »** et le travail est tombé en erreur.
+⭐ **L'écran, lui, le met aux DEUX endroits** *(api.ts l. 9876 **et** l. 9966)*. **C'était donc
+mon essai qui était faux, pas le code** — et je l'ai vérifié avant de conclure.
+⚠ **Conséquence qu'il a fallu réparer** : 62963 était alors **`Clos` chez nous et `Actif` chez
+Hektor**. Le second appel, correct, a aligné les deux. **Une divergence créée par un essai doit
+être refermée par l'essai suivant, pas laissée.**
+
+**② J'ai cru un compte rendu plutôt qu'une mesure.**
+Le RPC rend `champs_au_carnet: 0`, et j'ai annoncé *« mon bloc de 3a/3b n'a rien écrit »*.
+**Faux** : le carnet portait bien **3 lignes** —
+`statut=Clos` · `diffusable=0` · ⭐ **`clos_motif=choiceAutre · autre · <le texte complet>`**,
+toutes en `origine=geste_statut`. **3a et 3b marchent ; c'est ce compteur qui mesure autre
+chose.** *(Leçon déjà écrite : un compte rendu n'est pas une mesure.)*
+
+**✅ 62963 RENDU À SON ÉTAT DE DÉPART** *(06:19:32)* : travail `done` — `hektor_status=done ·
+sync_queue=done · finish=done` — **`Actif / diffusable=1` au parc vivant**, et **0 ligne à
+l'index historique**. ⭐ **Et son aller-retour a prouvé le repli de 3b en direct** : en « Clos »
+elle a quitté le parc vivant pour l'index historique, et c'est **seulement parce que le repli
+existe** que le geste « Actif » a pu la ramener de là. **Hier, il aurait répondu
+`dossier_not_found`.**
