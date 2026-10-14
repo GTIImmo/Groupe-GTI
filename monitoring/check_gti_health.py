@@ -49,6 +49,26 @@ WORKER_STALE_POLICY: dict[str, int | None] = {
     "manual_or_watch": None,
 }
 
+# ⚠ LE RESUME N'EST PAS UNE ALERTE (14/10/2026).
+#   `monitor.summary` dit « N critical, M warning » : c'est le COMPTE RENDU du
+#   passage, pas un incident. Or il porte lui-meme le statut `critical` des qu'un
+#   autre l'est, donc il entrait dans `newly_critical` et DOUBLAIT l'e-mail.
+#   Mesure sur un mois (318 passages de journal) : 33 bascules vers le rouge, dont
+#   SEPT etaient `monitor.summary` -- 21 % des e-mails de Frederic pour une ligne
+#   qui ne dit rien de neuf. Et il est rouge ou orange 318 fois sur 318 : jamais vert.
+#
+#   ON NE TOUCHE PAS A SON STATUT, on le retire seulement de la liste qui declenche
+#   l'envoi. Ainsi l'ecran Sante garde son compte rendu exact (il n'en lit d'ailleurs
+#   que l'ANCIENNETE, `staleSummary`), la trace reste dans app_monitor_status, et
+#   seul l'e-mail cesse de le compter.
+#
+#   ⚠ ET CA NE PEUT PAS FAIRE PERDRE UNE ALERTE : `add_summary` calcule son statut
+#   SUR LES AUTRES RESULTATS (`critical = sum(... == "critical")` avant de s'ajouter),
+#   donc il n'est rouge QUE s'il existe deja un autre rouge -- lequel est, lui, dans
+#   la liste. Les trois usages de `criticals` ont ete relus un par un, y compris le
+#   message de RETABLISSEMENT (`had_critical and not criticals`), qui ne change pas.
+CLES_HORS_ALERTE: frozenset[str] = frozenset({"monitor.summary"})
+
 # Criticite des taches planifiees Windows surveillees (defaut = warning).
 TASK_CRITICALITY: dict[str, str] = {
     "GTI Quotidien": "critical",
@@ -3144,7 +3164,8 @@ def dispatch_alerts(
     if alerter is None:
         return
     try:
-        criticals = [r for r in results if r.status == "critical"]
+        criticals = [r for r in results
+                     if r.status == "critical" and r.status_key not in CLES_HORS_ALERTE]
         if not previous_status_lu:
             if criticals:
                 print(

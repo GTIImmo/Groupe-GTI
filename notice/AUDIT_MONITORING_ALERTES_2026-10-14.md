@@ -161,3 +161,66 @@ Et il est **rouge ou orange aux 318 passages sur 318** — **jamais vert en un m
 | **4 sentinelles de la famille** *(elles criaient sur une copie en retard)* | ✅ corrigées les 13 et 14/10 — **26 épreuves** |
 | **`data.travaux_en_erreur` écoute le bandeau du bien** | ✅ 14/10 — **mais pas le bouton de l'écran Santé**, qui est celui que Frédéric utilise |
 | **les tâches planifiées** | ✅ réessai par table posé *(15/09, 01/10)* — **plus aucun échec depuis le 12/10** |
+
+---
+
+## 9. ⚠⚠ CORRECTION DE MON PROPRE AUDIT — *« 33 e-mails » était faux : il y en a **14***
+
+En codant le point 1, j'ai **rejoué tout le mois** à travers l'ancien et le nouveau code
+*(318 journaux lisibles)*. Résultat :
+
+| | |
+|---|---|
+| e-mails partis **avant** le correctif | **14** |
+| e-mails qui partiraient **après** | **14** |
+| **gain** | **ZÉRO** |
+
+### Mon erreur
+
+J'ai compté **33 bascules** vers le rouge et j'en ai déduit **33 e-mails**, puis **7 bascules de
+`monitor.summary`** → **« −21 % »**. C'est faux : `dispatch(newly_critical)` envoie **UNE**
+liste, donc **toutes les bascules d'un même passage partent dans un seul e-mail**.
+
+Et le résumé **n'a jamais basculé seul** : aux 7 passages concernés, il accompagnait une vraie
+alerte *(une tâche planifiée, `wal_size`, `travaux_en_erreur`…)*. **L'e-mail partait de toute
+façon.**
+
+### Ce que le correctif apporte réellement
+
+**Pas moins d'e-mails — des e-mails plus propres.** Sur 7 des 14 envois du mois, la liste
+contenait une ligne qui ne disait rien de neuf :
+
+```
+AVANT : scheduledtasks:gti_descente, scheduledtasks, monitor.summary
+APRES : scheduledtasks:gti_descente, scheduledtasks
+```
+
+**Je le garde** : c'est juste *(un résumé n'est pas une alerte)*, c'est éprouvé **8 fois sur 8**,
+et le témoin inverse montre qu'**aucune vraie alerte n'est perdue** — y compris le message de
+rétablissement, qui reste identique. **Mais le bénéfice est de lisibilité, pas de volume, et
+j'avais annoncé l'inverse.**
+
+### ⭐ Et ça change l'ordre des priorités
+
+**14 e-mails en un mois, soit un tous les deux jours.** Ce n'est pas un monitoring qui hurle.
+➡ **Le vrai problème n'est donc pas le NOMBRE d'e-mails, c'est que CHAQUE e-mail est illisible** :
+il porte *« 1 critical, 8 warning »*, dont **3 avertissements qui n'ont jamais été verts en un
+mois**.
+
+**Nouvel ordre recommandé :**
+
+| | | pourquoi |
+|---|---|---|
+| **1** ⭐⭐ | **les 3 sondes jamais vertes** *(§ 4)* | c'est **elles** qui rendent chaque e-mail illisible. Pour chacune : seuil à corriger **ou** travail à faire. **Ce sont les chiffres de Frédéric — 1 601 notifications non lues — je ne peux pas trancher** |
+| **2** ⭐ | **l'écran Santé dit la vérité** *(§ 6-3)* | le bouton « Résolu » mentait depuis le 24/08 |
+| **3** | les 43 journaux illisibles | le monitoring doit être mesurable — **ce trou m'a déjà fait manquer une alerte et sous-estimer un chiffre** |
+| **4** | le second canal | une seule clé tient tout |
+| ~~0~~ | ~~le résumé~~ | **fait**, mais gain **0 e-mail** — seulement 7 e-mails plus propres |
+
+### ⭐ La leçon, et c'est la troisième de la journée
+
+**J'ai présenté un gain chiffré AVANT de l'avoir mesuré.** Le chiffre semblait solide — il venait
+d'un comptage réel — mais il comptait **la mauvaise unité** : des *bascules* au lieu des *envois*.
+➡ **Un pourcentage annoncé doit être mesuré SUR LE GESTE FINAL** *(ici : l'e-mail qui part)*,
+jamais sur un intermédiaire qui lui ressemble. C'est la même famille que « mesurer le geste de
+l'écran, pas un geste plausible » *(leçon 1)*.

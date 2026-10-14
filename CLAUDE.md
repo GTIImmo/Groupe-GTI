@@ -209,6 +209,12 @@ report ne se décident jamais sans lui.
    la clôture de mandat *(le cockpit lisait la fiche, qui n'a pas la colonne)* et la mention
    « supprimé chez Hektor » *(le `select` du front **nomme** ses colonnes)*. **Après avoir ajouté
    une colonne, chercher le `select` qui doit la porter** — sinon le silence est total.
+25. ⚠⚠ **UN POURCENTAGE ANNONCE SE MESURE SUR LE GESTE FINAL** *(14/10)*. J'ai promis
+   « −21 % d'e-mails » en comptant **7 bascules** de `monitor.summary` sur 33. Rejeu du mois
+   entier : **14 e-mails avant, 14 après — gain ZERO**. `dispatch` envoie **une** liste, donc
+   toutes les bascules d'un même passage partent dans **un seul** e-mail, et le résumé n'a
+   jamais basculé seul. ➡ **Mesurer sur ce qui PART, pas sur l'intermédiaire qui lui
+   ressemble.** Même famille que la leçon 1. *(Le correctif reste : 7 e-mails plus propres.)*
 23. ⭐⭐ **UNE ALERTE DOIT ÉCOUTER LA RÉPONSE DE L'HUMAIN** *(14/10)*. L'écran offrait deux
    boutons pour trancher un geste abandonné, et le rouge ne les regardait pas : Frédéric
    recevait un e-mail **chaque matin pour un problème qu'il avait déjà traité**. ➡ Quand on
