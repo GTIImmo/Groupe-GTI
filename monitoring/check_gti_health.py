@@ -3135,8 +3135,23 @@ def build_parser() -> argparse.ArgumentParser:
         # pour le motif du niveau "critical".
         # ⚠ Le lanceur (run_gti_health.ps1) appelle le script SANS
         #   --scheduled-tasks : c'est bien ce defaut qui sert. Verifie le 08/09.
+        # ⚠⚠ 2026-10-14, CINQUIEME FOIS LE MEME TROU -- ET IL ETAIT A MOITIE REBOUCHE.
+        #   Le 26/09, "GTI Rattrapage Documents" a bien ete posee dans TASK_CRITICALITY
+        #   (en "critical", avec le commentaire « QUATRIEME FOIS LE MEME TROU »)... mais
+        #   SON NOM N'A JAMAIS ETE AJOUTE ICI. Or check_scheduled_tasks ne regarde QUE
+        #   les noms de cette liste : TASK_CRITICALITY ne sert qu'a choisir la GRAVITE
+        #   d'une tache deja suivie. La tache de 21:00 n'a donc jamais ete surveillee,
+        #   et le 14/10 le moniteur disait encore « 6 suivies » pour 8 taches existantes.
+        #   ➡ POSER LA GRAVITE NE SUFFIT PAS. Il faut les deux, et toujours ensemble.
+        #   Ajoutees le 14/10 : le rattrapage des documents (deja "critical" -> e-mail) et
+        #   la reprise des envois Hektor (enregistree le 13/10, laissee en "warning" par
+        #   defaut : visible a l'ecran, sans e-mail, en attente de l'avis de Frederic).
+        #   ⚠ Consequence VOULUE : le rattrapage sort en 1 quand il refuse son lot
+        #     (file non vide, ou >= 20 erreurs en 24 h) -- ces deux arrets DOIVENT se
+        #     voir, c'est ecrit dans son propre en-tete.
         default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
-                 "GTI Relances Email,GTI Sauvegarde,GTI Descente"),
+                 "GTI Relances Email,GTI Sauvegarde,GTI Descente,"
+                 "GTI Rattrapage Documents,GTI Reprise Envois Hektor"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)

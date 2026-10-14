@@ -376,18 +376,59 @@ async function fetchDocumentsHtml(hektorAnnonceId, session, timeoutMs = 20000) {
   }
 }
 
-async function loadFingerprints() {
-  const map = new Map();
-  const pageSize = 1000;
-  for (let offset = 0; ; offset += pageSize) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// LA PAGINATION PAR CURSEUR (6b, 14/10/2026) — recopiee de enqueue_empreinte_lot.js
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⚠⚠ CE FICHIER LISAIT PAR `offset` SANS AUCUN `order`. C'est EXACTEMENT le defaut
+//   corrige le 25/09 dans le fichier voisin (461a66c : « mon rapatriement a perdu 40 %
+//   de son travail, en silence » -- 174 433 photos sur 435 126 declarees absentes a
+//   tort). Postgres n'est pas tenu de rendre les lignes dans le meme ordre d'une page a
+//   l'autre : certaines reviennent deux fois, d'autres JAMAIS.
+//
+// MESURE DU 14/10, AVANT CORRECTIF -- la verite calculee en base contre ce que le script
+// voyait, avec la regle EXACTE du code :
+//     suivi de signature, biens en vente   verite 58   vu 31   (53 %)
+//     suivi de signature, parc vivant      verite 59   vu 25   (42 %)
+//   La MOITIE perdue, sans un message. Et c'est l'ensemble qui compte le plus :
+//   l'empreinte ne peut PAS voir passer « en attente -> signe » (les identifiants de
+//   procedure sont les memes avant et apres), donc une signature aboutie n'arrivait
+//   jamais chez nous pour une annonce sur deux.
+//
+// -> On demande « les 1 000 suivants APRES cet identifiant ». Le cout ne depend plus de
+//    la profondeur, et l'ordre est stable par construction.
+//
+// ⚠ LA CLE DOIT ETRE UNIQUE *ET* FIGURER DANS LE SELECT, sinon le curseur saute des
+//   lignes. Verifie en base le 14/10 :
+//     app_console_document_fingerprint  cle primaire (hektor_annonce_id)
+//     app_console_document              cle primaire (id)  <- d'ou le `id,` ajoute au select
+async function lireParCurseur(table, select, cle) {
+  const page = 1000;
+  const lignes = [];
+  let curseur = null;
+  for (;;) {
+    const apres = curseur == null ? "" : "&" + cle + "=gt." + encodeURIComponent(String(curseur));
     const rows = await supabaseRequest(
-      "app_console_document_fingerprint?select=hektor_annonce_id,fingerprint,checked_at&limit=" + pageSize + "&offset=" + offset,
+      `${table}?select=${select}${apres}&order=${cle}.asc&limit=${page}`,
       { method: "GET" },
     );
     if (!Array.isArray(rows) || !rows.length) break;
-    for (const row of rows) map.set(String(row.hektor_annonce_id), row);
-    if (rows.length < pageSize) break;
+    lignes.push(...rows);
+    const dernier = rows[rows.length - 1][cle];
+    if (dernier == null) throw new Error(`lireParCurseur(${table}) : ${cle} absent du select`);
+    curseur = dernier;
+    if (rows.length < page) break;
   }
+  return lignes;
+}
+
+async function loadFingerprints() {
+  const map = new Map();
+  const lignes = await lireParCurseur(
+    "app_console_document_fingerprint",
+    "hektor_annonce_id,fingerprint,checked_at",
+    "hektor_annonce_id",
+  );
+  for (const row of lignes) map.set(String(row.hektor_annonce_id), row);
   return map;
 }
 
@@ -396,25 +437,19 @@ async function loadFingerprints() {
 // la signature n'est pas manuscrite, et le cycle n'est ni abouti ni annule.
 async function loadSignatureFollowSet() {
   const annonces = new Set();
-  const pageSize = 1000;
-  for (let offset = 0; ; offset += pageSize) {
-    const rows = await supabaseRequest(
-      "app_console_document?select=hektor_annonce_id,metadata_json&limit=" + pageSize + "&offset=" + offset,
-      { method: "GET" },
-    );
-    if (!Array.isArray(rows) || !rows.length) break;
-    for (const row of rows) {
-      const md = row.metadata_json || {};
-      const sig = md.signature || null;
-      const statut = (sig && sig.status) || "";
-      if (sig && sig.source === "manuscrite") continue;
-      if (statut === "cancelled") continue;
-      if (statut === "signed" && md.signed_document) continue;
-      const procedure = (md.modelo && md.modelo.procedure_id) || (sig && sig.procedure_id) || null;
-      if (!procedure) continue;
-      annonces.add(String(row.hektor_annonce_id));
-    }
-    if (rows.length < pageSize) break;
+  // Curseur sur `id` (cle primaire) -- voir lireParCurseur : avant le 14/10 cette
+  // lecture perdait la moitie de l'ensemble, en silence.
+  const rows = await lireParCurseur("app_console_document", "id,hektor_annonce_id,metadata_json", "id");
+  for (const row of rows) {
+    const md = row.metadata_json || {};
+    const sig = md.signature || null;
+    const statut = (sig && sig.status) || "";
+    if (sig && sig.source === "manuscrite") continue;
+    if (statut === "cancelled") continue;
+    if (statut === "signed" && md.signed_document) continue;
+    const procedure = (md.modelo && md.modelo.procedure_id) || (sig && sig.procedure_id) || null;
+    if (!procedure) continue;
+    annonces.add(String(row.hektor_annonce_id));
   }
   return annonces;
 }

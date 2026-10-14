@@ -111,6 +111,12 @@
     [switch]$AllowStaleSupabaseDeletes,
     [switch]$EnqueueConsoleDocuments,
     [switch]$EnqueueAllConsoleDocumentsLocal,
+    # G.2 (14/10/2026) : le plafond de LECTURES de la detection documentaire, et le
+    # plafond de travaux retenus. Mesure : 727 biens en vente, dont ~584 ont deja une
+    # empreinte a comparer -> ~15 min avec le frein (1 s par requete, +60 s toutes les
+    # 100). 800 est donc une ceinture, pas une limite atteinte en pratique.
+    [int]$ConsoleDetectLectures = 800,
+    [int]$ConsoleDetectCap = 400,
     [string]$GitHubOwner = "GTIImmo",
     [string]$GitHubRepo = "vitrine",
     [string]$GitHubBranch = "main",
@@ -1498,13 +1504,67 @@ if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
     if (-not (Test-Path -LiteralPath $consoleScript)) {
         throw "Console enqueue script not found: $consoleScript"
     }
-    $scope = if ($EnqueueAllConsoleDocumentsLocal) { "all-local" } else { "daily-cloud" }
-    Write-RunLog "START enqueue console documents ($scope)"
-    & $nodeExe $consoleScript "--scope" $scope
-    if ($LASTEXITCODE -ne 0) {
-        throw "Step failed: enqueue console documents (exit code $LASTEXITCODE)"
+    if ($EnqueueAllConsoleDocumentsLocal) {
+        # CHEMIN MANUEL, INCHANGE : empile TOUT le perimetre local, et il reste bloquant.
+        # C'est un outil qu'on lance a la main en sachant ce qu'on fait.
+        Write-RunLog "START enqueue console documents (all-local)"
+        & $nodeExe $consoleScript "--scope" "all-local"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Step failed: enqueue console documents (exit code $LASTEXITCODE)"
+        }
+        Write-RunLog "DONE  enqueue console documents (all-local)"
     }
-    Write-RunLog "DONE  enqueue console documents ($scope)"
+    else {
+        # ═══════════════════════════════════════════════════════════════════════════
+        # G.2 + G.6 — LA DETECTION QUOTIDIENNE DES DOCUMENTS        14/10/2026
+        # ═══════════════════════════════════════════════════════════════════════════
+        # CE QUI A CHANGE, ET POURQUOI. Cette etape lancait `--scope daily-cloud` SANS
+        # `--detect` : elle empilait donc TOUT le perimetre (13 484 annonces) a chaque
+        # passage. C'est pour ca qu'elle n'a jamais ete allumee, et c'est exactement ce
+        # que la liste decrit : « G.2 LE PIPELINE N'APPELLE JAMAIS --detect ».
+        # La cible, elle aussi ecrite dans la liste le 07/10 : « une detection limitee
+        # aux ~724 biens en vente + le suivi de signature ; les estimations en rotation
+        # lente ; etape NON bloquante ».
+        #
+        # POURQUOI DEUX LIGNES, ET PAS UNE :
+        #   A) les annonces SANS EMPREINTE sont empilees AVANT toute lecture (il n'y a
+        #      rien a comparer) -> le parc vivant ENTIER, estimations comprises, pour
+        #      UNE SEULE requete Hektor. Mesure du 14/10 : 454 annonces ramassees ainsi.
+        #   B) les biens EN VENTE sont RELUS pour voir ce qui a bouge. C'est la seule
+        #      facon : la date de mise a jour d'une annonce NE BOUGE PAS quand on y
+        #      depose un document (mesure du 20/08, revérifiée le 14/10 sur 22 annonces
+        #      sur 22 -- un mandat signe le 12/10 sur une annonce « modifiee » en
+        #      fevrier 2025). ⚠ Pour les PHOTOS c'est l'inverse, ne pas confondre.
+        #   ⚠ ET PAS `daily-cloud` POUR LA LIGNE B : les 13 028 empreintes du parc
+        #     vivant portent TOUTES la meme date (19-20/08), donc le tri « les plus
+        #     anciennes d'abord » ne sait pas les distinguer ; sur 12 757 estimations
+        #     pour 727 biens en vente, le budget partirait a 95 % sur des estimations
+        #     qui dorment (0,95 document chacune, recu a leur naissance).
+        #
+        # NON BLOQUANTE, ET SURVEILLEE. Avant, un `throw` ici tuait la fin du run
+        # (Matterport, les liens publics de RDV, la vitrine, l'export Android) pour une
+        # session Hektor perdue. Et l'etape n'avait AUCUN `-WorkerKey` : aucun battement,
+        # aucune sentinelle -- la lecon 4j du 13/10, ou 23 battements partaient dans le
+        # vide. La cle `console.enqueue_sync_jobs` existe DEJA au registre
+        # (`optional_pipeline_step` -> tolerance 50 h) : rien a ecrire en base.
+        # ⚠ Les deux lignes partagent cette cle : le dernier battement gagne, et le
+        #   detail de chaque ligne reste dans le journal du run (START/DONE/WARN).
+        Invoke-OptionalStepWithRetry -Label "console documents : les neuves (detection)" -Exe $nodeExe -Arguments @(
+            $consoleScript,
+            "--scope", "daily-cloud",
+            "--detect",
+            "--max-lectures", "1",
+            "--cap", "600"
+        ) -WorkerKey "console.enqueue_sync_jobs"
+
+        Invoke-OptionalStepWithRetry -Label "console documents : les biens en vente (detection)" -Exe $nodeExe -Arguments @(
+            $consoleScript,
+            "--scope", "vente",
+            "--detect",
+            "--max-lectures", "$ConsoleDetectLectures",
+            "--cap", "$ConsoleDetectCap"
+        ) -WorkerKey "console.enqueue_sync_jobs"
+    }
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
