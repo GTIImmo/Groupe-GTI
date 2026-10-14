@@ -726,3 +726,90 @@ B) les 584 biens EN VENTE deja lus, pour voir ce qui a bouge depuis aout :
 ~2 h 30 de worker, on finit vers 12:30-13:00. Large.
 **Dans quel ordre** : **A d'abord** (c'est là que sont les mandats manquants, et ça ne coûte
 rien), on regarde le résultat, puis **B**.
+
+---
+
+## LE MEILLEUR MOMENT — 22:00 (choix délégué par Frédéric : « tous les soirs, trouve le meilleur moment »)
+
+**Pourquoi pas dans le run** — l'étranglement du matin, mesuré :
+
+```
+05:00  le run        finit 07:18-07:34
+07:45  la descente   attend le run jusqu'a 45 min, puis dure 18 a 64 min
+09:00  la sauvegarde
+```
+
+19 min de plus dans le run → il finit **07:37-07:53**, la descente part vers 07:53 et, au pire,
+se termine à **08:57** : **trois minutes** avant la sauvegarde. C'est exactement l'empilement qui
+a déjà coûté un décalage-pansement le 12/10.
+
+**22:00** : agence fermée, Hektor calme, **rien d'autre ne tourne** *(03:00, 05:00, 07:45, 08:00,
+09:00, 12:30, 18:00, 21:00)*, travail digéré vers 23:00 — loin des recherches actives de 03:00 et
+du run de 05:00.
+
+⛔ **Deux conditions avant d'enregistrer la tâche**, écrites en tête du script :
+ ① **retirer la tâche de 21:00** quand le rattrapage est fini *(nuit du 16 au 17)* — sinon ses
+ 1 000 travaux occupent le worker jusqu'à 01:47-04:57 et les nôtres passent derrière ;
+ ② **l'ajouter à la LISTE du moniteur**, pas seulement à la table des gravités *(voir ci-dessous)*.
+
+**Le script est écrit et dormant** : `scheduled/run_detection_documents.ps1` — aucune tâche ne
+l'appelle. Éprouvé `-DryRun -Lectures 2 -Cap 10` : parseur PowerShell vert, A et B tournent,
+sortie 0, **0 écriture**. ⭐ **A a ramassé les 455 annonces jamais lues du parc vivant entier
+pour UNE SEULE requête Hektor** (455 + 25 signatures + 1 changée = 481 travaux).
+*(La 456ᵉ était dans l'ensemble « signature », compté en premier : les chiffres se recoupent.)*
+
+---
+
+# ⚠⚠ DEUX TROUS TROUVÉS EN PRÉPARANT — ILS BLOQUENT L'ALLUMAGE
+
+## ① LA SURVEILLANCE DES TÂCHES : 6 SUIVIES SUR 8 — *5ᵉ fois le même trou*
+
+Mesuré dans `app_monitor_status` à 17:50 : *« Tâches planifiées : **6 suivies**, 0 en anomalie »*.
+
+`check_gti_health.py` ne regarde **que** les noms de son argument `--scheduled-tasks`
+(l. 3138) : `GTI Quotidien, GTI Recherches Actives, GTI Health Monitor, GTI Relances Email,
+GTI Sauvegarde, GTI Descente`. **Deux tâches existantes sont absentes :**
+
+| tâche | déclarée `critical` ? | réellement suivie ? |
+|---|---|---|
+| **GTI Rattrapage Documents** | ✅ oui, le **26/09** | ⛔ **NON** |
+| **GTI Reprise Envois Hektor** | ⛔ non | ⛔ **NON** |
+
+➡ Le 26/09, le correctif a été **appliqué à moitié** : la gravité a été posée dans
+`TASK_CRITICALITY` — avec le commentaire *« QUATRIÈME FOIS LE MÊME TROU »* — mais **le nom n'a
+jamais été ajouté à la liste des tâches regardées**. Donc **la tâche de 21:00 n'a jamais été
+surveillée**, et la cinquième occurrence du même trou dure depuis dix-huit jours.
+
+## ② ⚠⚠ LA PAGINATION SANS TRI : LA DÉTECTION NE VOIT QUE LA MOITIÉ DES SIGNATURES
+
+`enqueue_console_sync_jobs.js` pagine ses deux chargements avec `limit` + `offset` et **sans
+aucun `order=`** : `loadFingerprints` (l. 384, **55 pages**) et `loadSignatureFollowSet`
+(l. 402, **163 pages**).
+
+**C'est le défaut corrigé le 25/09 dans l'AUTRE fichier** (`enqueue_empreinte_lot.js`, commit
+`461a66c` — *« mon rapatriement a perdu 40 % de son travail, en silence »*, 174 433 photos sur
+435 126 déclarées absentes à tort). **Il a été laissé entier ici.**
+
+**Preuve indépendante** — la vérité calculée en base avec la règle *exacte* du code, contre ce
+que le script a vu :
+
+| | vérité (SQL) | vu par le script |
+|---|---|---|
+| biens **en vente** avec une signature en cours | **58** | **31** *(53 %)* |
+| **parc vivant** | **59** | **25** *(42 %)* |
+
+➡ **La moitié du suivi de signature est perdue, en silence.** Et c'est grave précisément ici :
+l'empreinte **ne peut pas** voir passer « en attente → signé » *(les identifiants de procédure
+sont les mêmes avant et après)* — cet ensemble est **le seul moyen** de voir une signature
+aboutir. *(`loadFingerprints` s'en est tiré ce soir — 455 = 456 − 1 — mais c'est de la chance,
+pas de la conception : 55 pages jouées au même jeu.)*
+
+**Le correctif existe déjà dans le projet** : le curseur de `enqueue_empreinte_lot.js`
+(`loadSet`, l. 92-116) — « les 1 000 suivants APRÈS cet identifiant », trié sur une clé unique.
+Il suffit de le recopier *(clé : `hektor_annonce_id` pour les empreintes, `id` pour les
+documents — et il faut alors SÉLECTIONNER `id`, sinon le curseur saute des lignes)*.
+
+⛔ **Tant que ② n'est pas corrigé, allumer la détection chaque soir ferait deux dégâts** :
+des annonces déclarées « sans empreinte » à tort *(donc resynchronisées en entier pour rien,
+avec des téléversements cloud inutiles)*, et **des signatures qui n'aboutissent jamais chez
+nous**.
