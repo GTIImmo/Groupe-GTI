@@ -224,3 +224,88 @@ d'un comptage réel — mais il comptait **la mauvaise unité** : des *bascules*
 ➡ **Un pourcentage annoncé doit être mesuré SUR LE GESTE FINAL** *(ici : l'e-mail qui part)*,
 jamais sur un intermédiaire qui lui ressemble. C'est la même famille que « mesurer le geste de
 l'écran, pas un geste plausible » *(leçon 1)*.
+
+---
+
+## 10. LES TROIS SONDES JAMAIS VERTES — *décisions de Frédéric : « 1a, 2a, 3a »*
+
+### ① et ② — FAIT, mais **pas** avec un seuil
+
+Sa consigne : *« c'est normal, personne ne les lit, monte le seuil »*. **La mesure a dit qu'un
+seuil ne tiendrait pas.**
+
+| sonde | il y a un mois | aujourd'hui | vitesse |
+|---|---|---|---|
+| `data.notif_non_lues` | **1 110** | **1 601** | **+15,8 / jour** |
+| `data.notif_orphelines` | **81** | **166** | **+2,7 / jour** |
+
+> ⚠ **Un seuil absolu sur un compteur qui ne fait que croître est une alarme à retardement.**
+> À +15,8 par jour, un seuil posé à 2 000 serait franchi **dans 25 jours**, et on y reviendrait.
+
+**La bonne forme existait déjà dans le fichier** : `rule: "growth"`. On ne surveille plus le
+**total** *(que Frédéric assume)* mais **l'emballement** — « est-ce que ça double d'un coup ? ».
+C'est ce qui dirait qu'un robot s'est mis à fabriquer des notifications.
+
+**Réglages calés sur la mesure, pas choisis au hasard :**
+
+| | croissance normale | il faut, pour sonner |
+|---|---|---|
+| non lues | ~ **+1,3** par passage *(2 h)* sur 1 601 | **+10 % ET +100** d'un coup |
+| sans destinataire | ~ **+0,23** par passage sur 166 | **+15 % ET +20** d'un coup |
+
+*`growth_abs` évite qu'un petit nombre sonne sur un pourcentage : de 2 à 3, c'est +50 %, et ça
+ne veut rien dire.*
+
+⚠ **LE PRIX, ASSUMÉ ET DIT** : une dérive **lente** ne sonnera plus jamais — le point de
+comparaison avance avec elle. **Le total reste visible dans l'écran Santé**, et c'est là qu'il
+faudra le regarder.
+
+**Éprouvé 10 fois sur 10** *(`monitoring/test_notifications_emballement.py`)*, dont les deux
+chiffres d'aujourd'hui → **vert**, l'emballement → **sonne**, la baisse → vert, et le garde-fou
+du petit nombre. **Témoin inverse** : les mêmes chiffres avec l'ancien réglage → `warning` ;
+avec le nouveau → `ok`. **Les deux basculent.**
+
+---
+
+### ③ — ⛔ JE N'AI PAS MONTÉ LE SEUIL, ET VOICI POURQUOI
+
+Sa consigne était *« 3a »* = monter le seuil de `data.ecart_statut_regle` de 4 à 6.
+**Le projet avait déjà tranché contre, et il avait écrit pourquoi** *(`check_gti_health.py`,
+l. 407-412)* :
+
+> *« SEUIL 4, ET NON 0. Au 01/09 il y a exactement quatre écarts, et les quatre sont des
+> **REMONTÉES** que la borne 2 bloque — ce sont de vraies incohérences du côté Hektor […].
+> **Un CINQUIÈME écart, lui, veut dire que quelque chose a bougé : c'est celui-là qu'on veut
+> voir.** »*
+
+**Il y en a six.** Et j'ai regardé lesquels :
+
+| n° de dossier | Hektor dit | la règle dit | sens |
+|---|---|---|---|
+| 18594 | Actif | Sous offre | remontée |
+| 18865 | Actif | Sous offre | remontée |
+| VM66700 | Actif | Sous compromis | remontée |
+| VS046 | Sous offre | Sous compromis | remontée |
+| **VT9437** | Sous offre | **Actif** | **redescente** |
+| **⚠ *(vide)*** | Sous offre | **Actif** | **redescente** |
+
+⭐⭐ **Les quatre écarts tolérés en septembre étaient des REMONTÉES. Les deux nouveaux sont des
+REDESCENTES** — une **autre famille**, que le seuil 4 ne couvrait pas. C'est **exactement** le
+« cinquième écart » que la sonde devait signaler.
+
+⚠⚠ **Et le sixième n'a PAS de numéro de dossier.** *« Un numéro ne se perd jamais »* est l'une
+des **cinq règles du projet**, et c'était déjà la cause du **défaut 5a** du chantier ③ *(les
+désarchivages posaient `app_dossier_id = NULL` alors que le vrai numéro existait)*.
+
+> **Monter le seuil à 6 avalerait ces deux lignes sans que personne ne les regarde jamais.**
+
+#### ❓ Trois sorties — à trancher
+
+| | |
+|---|---|
+| **A** | monter quand même le seuil à 6 *(ou 7)* — **les 2 redescentes disparaissent du radar** |
+| **B** ⭐ | **regarder les 2 redescentes** *(c'est 2 lignes, ~15 min)*, corriger, et le seuil 4 redevient juste |
+| **C** ⭐ | **changer la règle plutôt que le seuil** : tolérer les **remontées** *(la famille jugée acceptable en septembre)* et sonner sur **toute redescente**. Plus durable que n'importe quel chiffre |
+
+**Je recommande C, et B tout de suite** *(la ligne sans numéro mérite un regard dans tous les
+cas)*. **Je n'ai rien décidé.**

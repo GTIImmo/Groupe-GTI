@@ -457,21 +457,54 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 0,
     },
+    # ⚠⚠ ELLES MONTENT TOUS LES JOURS -- UN SEUIL NE PEUT PAS TENIR (14/10/2026).
+    #
+    #   Frederic : « la plupart des erreurs sont connues, comment arreter de les
+    #   faire sonner ? », puis, pour ces deux-la : « c'est normal, personne ne les
+    #   lit, monte le seuil ».
+    #
+    #   MESURE SUR UN MOIS (318 passages de journal, 31 jours) :
+    #       notif_non_lues     1 110 -> 1 601   soit +15,8 PAR JOUR
+    #       notif_orphelines       81 ->   166   soit  +2,7 PAR JOUR
+    #   Elles etaient donc en alerte 318 fois sur 318 : JAMAIS VERTES en un mois.
+    #
+    #   ⚠ MONTER LE SEUIL NE REGLE RIEN, IL REPORTE. A +15,8 par jour, un seuil a
+    #     2 000 serait franchi dans 25 jours, et on y reviendrait. Un seuil absolu
+    #     sur un compteur qui ne fait que croitre est une alarme a retardement.
+    #
+    #   LA BONNE FORME EXISTE DEJA DANS CE FICHIER : `rule: "growth"`. On ne
+    #   surveille plus le TOTAL (que Frederic assume), on surveille L'EMBALLEMENT :
+    #   le compte double-t-il d'un passage a l'autre ? C'est ca qui dirait qu'un
+    #   robot s'est mis a fabriquer des notifications.
+    #
+    #   LES REGLAGES SONT CALES SUR LA MESURE, pas choisis au hasard :
+    #       non_lues    croissance normale ~ +1,3 par passage (2 h) sur 1 601
+    #                   -> il faut +10 % ET +100 d'un coup pour sonner
+    #       orphelines  croissance normale ~ +0,23 par passage sur 166
+    #                   -> il faut +15 % ET +20 d'un coup pour sonner
+    #   `growth_abs` est la pour qu'un petit nombre ne sonne pas sur un pourcentage
+    #   (de 2 a 3, c'est +50 %, et ca ne veut rien dire).
+    #
+    #   ⚠ LE PRIX, ASSUME ET DIT A FREDERIC : une derive LENTE ne sonnera plus
+    #     jamais -- le point de comparaison avance avec elle. Le total reste
+    #     visible dans l'ecran Sante, et c'est la qu'il faudra le regarder.
     {
         "key": "data.notif_orphelines",
         "label": "Notifications sans destinataire",
         "table": "app_notification",
         "params": {"negociateur_email": "is.null"},
-        "rule": "absolute",
-        "max": 20,
+        "rule": "growth",
+        "growth_pct": 15,
+        "growth_abs": 20,
     },
     {
         "key": "data.notif_non_lues",
         "label": "Notifications non lues",
         "table": "app_notification",
         "params": {"read_at": "is.null"},
-        "rule": "absolute",
-        "max": 300,
+        "rule": "growth",
+        "growth_pct": 10,
+        "growth_abs": 100,
     },
     # Fidelite de la boucle optimiste (Tier 2). Ces jobs finissent "done" cote worker,
     # donc check_console_jobs ne les voit PAS -> ces sentinelles comblent le trou.

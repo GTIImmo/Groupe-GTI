@@ -209,6 +209,19 @@ report ne se décident jamais sans lui.
    la clôture de mandat *(le cockpit lisait la fiche, qui n'a pas la colonne)* et la mention
    « supprimé chez Hektor » *(le `select` du front **nomme** ses colonnes)*. **Après avoir ajouté
    une colonne, chercher le `select` qui doit la porter** — sinon le silence est total.
+26. ⚠⚠ **UN SEUIL ABSOLU SUR UN COMPTEUR QUI CROIT EST UNE ALARME A RETARDEMENT**
+   *(14/10)*. Frédéric a demandé « monte le seuil » pour deux sondes jamais vertes. Mesure :
+   elles montent de **+15,8** et **+2,7 par jour** — un seuil à 2 000 serait franchi dans
+   **25 jours**. ➡ **Sur un compteur cumulatif, surveiller l'EMBALLEMENT** *(`rule: "growth"`,
+   déjà dans le fichier)*, **pas le total** — et **régler les paramètres sur la vitesse
+   mesurée**, jamais sur un chiffre rond. ⚠ Le prix à dire : une dérive **lente** ne sonnera
+   plus jamais.
+27. ⚠⚠ **UN SEUIL QUI PORTE UN RAISONNEMENT NE SE MONTE PAS « POUR FAIRE TAIRE »** *(14/10)*.
+   Le seuil 4 de `ecart_statut_regle` tolérait **quatre REMONTÉES** nommées, et le commentaire
+   disait : *« un cinquième écart veut dire que quelque chose a bougé »*. Les 2 nouveaux sont
+   des **REDESCENTES** — autre famille — et l'un n'a **aucun numéro de dossier**.
+   ➡ **Lire ce qu'un seuil PROTÈGE avant de le déplacer** ; proposer de changer **la règle**
+   plutöt que le chiffre.
 25. ⚠⚠ **UN POURCENTAGE ANNONCE SE MESURE SUR LE GESTE FINAL** *(14/10)*. J'ai promis
    « −21 % d'e-mails » en comptant **7 bascules** de `monitor.summary` sur 33. Rejeu du mois
    entier : **14 e-mails avant, 14 après — gain ZERO**. `dispatch` envoie **une** liste, donc
