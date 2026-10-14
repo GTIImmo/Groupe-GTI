@@ -7877,9 +7877,40 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
   const visibility = ligne.visibility === "shared" ? "shared" : "private";
   const fichier = await downloadStorageObject(ligne.storage_path);
 
+  // ⚠⚠ LE TEMPORAIRE N'EST PAS UNE PLACE DEFINITIVE -- 3d / lot 2c (14/10/2026).
+  // L'app depose son fichier sous temp/uploads/<travail>/ et pose la ligne en
+  // storage_status = 'pending_upload' : ce marqueur dit « ce chemin est provisoire ».
+  // SANS LA REMISE A BLANC CI-DESSOUS, persistProvidedDocumentFile REUTILISERAIT ce
+  // chemin -- son calcul est `document.storage_path || <place definitive>`, et le `||`
+  // ne se declenche donc jamais. Il reteleverserait le fichier AU MEME ENDROIT et
+  // marquerait la ligne « cloud_available » alors qu'elle vivrait dans temp/ POUR
+  // TOUJOURS. Le jour d'un nettoyage des temporaires, on detruirait un vrai document.
+  const cheminProvisoire = ligne.storage_status === "pending_upload" ? ligne.storage_path : null;
+  const aRanger = cheminProvisoire ? { ...ligne, storage_path: null } : ligne;
+
   // ① NOTRE SERVEUR D'ABORD. C'est l'inversion.
-  const garde = await persistProvidedDocumentFile(ligne, fichier.buffer, fichier.mimeType,
+  const garde = await persistProvidedDocumentFile(aRanger, fichier.buffer, fichier.mimeType,
     { cloud: shouldKeepCloud(dossier) });
+
+  // ⚠ ON NE RETIRE LE TEMPORAIRE QUE SI LA PLACE A VRAIMENT CHANGE. Quand l'annonce
+  //   ne va pas au cloud (shouldKeepCloud faux), le rangement laisse storage_path VIDE :
+  //   on garde alors le temporaire plutot que de supprimer sans savoir ou est le fichier.
+  //   Il devient un orphelin -- c'est le comportement ACTUEL des documents (aucun des
+  //   deux chemins ne nettoie ; 109 fichiers, 196 Mo mesures le 14/10), et ca se traite
+  //   a part, pas en catimini dans un envoi.
+  if (cheminProvisoire && garde && garde.storage_path && garde.storage_path !== cheminProvisoire) {
+    try {
+      await deleteStorageObject(cheminProvisoire);
+    } catch (error) {
+      // Un temporaire qui resiste ne doit PAS faire echouer un envoi reussi.
+      await logJob(job.id, "upload_document_to_hektor", "running",
+        "Document range, mais le fichier temporaire n'a pas pu etre retire", {
+          app_document_id: ligne.id,
+          temporaire: cheminProvisoire,
+          erreur: error && error.message ? error.message : String(error),
+        });
+    }
+  }
 
   // ② HEKTOR ENSUITE, et son silence n'efface rien.
   const maintenant = new Date().toISOString();
@@ -8012,6 +8043,43 @@ async function handleUploadDocumentToHektor(job) {
   const storedRow = indexed.find((row) => row.hektor_document_id === found.hektor_document_id);
   const stored = storedRow ? await persistProvidedDocumentFile(storedRow, temp.buffer, temp.mimeType, { cloud: shouldKeepCloud(dossier) }) : null;
 
+  // ⚠ ON VIDE LA SALLE D'ATTENTE -- 14/10/2026, chantier ③ / 3d.
+  //
+  // MESURE DU 14/10 : 109 fichiers, 196 Mo dormaient sous temp/ depuis le 14/05 -- et
+  // 93 d'entre eux ne venaient PAS de l'ajout de documents mais des TROIS GENERATEURS
+  // DE PDF (estimation 137 Mo, cadastre 19 Mo, mandat 2,3 Mo). Ils deposent leur fichier
+  // sous temp/uploads/<leur travail>/ puis font poser un upload_document_to_hektor qui
+  // le consomme. LES QUATRE TYPES PASSENT DONC PAR CE CHEMIN : le boucher ici les
+  // bouche tous. Rien ne relit ce chemin ensuite (verifie : les six autres occurrences
+  // de temp_storage_path sont des ECRITURES, dont le compte rendu des generateurs).
+  //
+  // Le chemin des photos le fait depuis toujours (« else { await deleteStorageObject } ») ;
+  // on recopie sa regle ET sa prudence.
+  //
+  // ⚠⚠ ON NE SUPPRIME QUE SI LA COPIE SERVEUR A REUSSI. Sans `stored`, le temporaire
+  //   est la SEULE copie connue du fichier : on le garde, et on le DIT -- une copie
+  //   manquante qui s'installe en silence est precisement ce qu'on cherche a ne plus
+  //   produire. (On n'arrive ici qu'apres « if (!found) throw » : si Hektor n'a pas
+  //   confirme, on a deja leve, donc le temporaire reste pour un rejeu.)
+  if (stored) {
+    try {
+      await deleteStorageObject(tempPath);
+    } catch (error) {
+      // Un temporaire qui resiste ne doit PAS faire echouer un envoi reussi.
+      await logJob(job.id, "upload_document_to_hektor", "running",
+        "Document envoye et copie, mais le fichier temporaire n'a pas pu etre retire", {
+          temporaire_conserve: tempPath,
+          erreur: error && error.message ? error.message : String(error),
+        });
+    }
+  } else {
+    await logJob(job.id, "upload_document_to_hektor", "running",
+      "Document envoye a Hektor mais NON copie sur le serveur -- temporaire conserve", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        temporaire_conserve: tempPath,
+      });
+  }
+
   // Avenant : annotation passive du nouveau prix PROPOSÉ sur le document (affichage seul).
   // NE modifie JAMAIS le prix réel de l'annonce (qui ne change qu'à la validation de la baisse).
   // Merge non-destructif : on relit la metadata courante et on n'ajoute que avenant_new_price.
@@ -8142,9 +8210,29 @@ async function completerEnvoiPhotoDifferee(job, dossier, payload) {
     throw new Error(`Type fichier photo refuse: ${mimeType}`);
   }
 
+  // ⚠⚠ MEME PIEGE QUE POUR LE DOCUMENT, ET MEME REMEDE (3d / lot 2c, 14/10/2026) :
+  // persistProvidedPhotoFile calcule `photo.storage_path || <place definitive>`, donc il
+  // garderait le chemin temporaire comme domicile de la photo.
+  const cheminProvisoire = ligne.storage_status === "pending_upload" ? ligne.storage_path : null;
+  const aRanger = cheminProvisoire ? { ...ligne, storage_path: null } : ligne;
+
   // ① NOTRE SERVEUR D'ABORD. C'est l'inversion.
-  const garde = await persistProvidedPhotoFile(ligne, fichier.buffer, mimeType || fichier.mimeType,
+  const garde = await persistProvidedPhotoFile(aRanger, fichier.buffer, mimeType || fichier.mimeType,
     { cloud: shouldKeepCloud(dossier) });
+
+  // ①-bis le temporaire, aux memes conditions que pour le document.
+  if (cheminProvisoire && garde && garde.storage_path && garde.storage_path !== cheminProvisoire) {
+    try {
+      await deleteStorageObject(cheminProvisoire);
+    } catch (error) {
+      await logJob(job.id, "upload_hektor_photo", "running",
+        "Photo rangee, mais le fichier temporaire n'a pas pu etre retire", {
+          app_photo_id: ligne.id,
+          temporaire: cheminProvisoire,
+          erreur: error && error.message ? error.message : String(error),
+        });
+    }
+  }
 
   // ② HEKTOR ENSUITE, et son silence n'efface rien.
   const maintenant = new Date().toISOString();

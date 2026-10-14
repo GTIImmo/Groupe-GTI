@@ -3511,3 +3511,239 @@ ailleurs depuis deux jours.*
 | à faire | **2 925** annonces *(archive 2 · historical 2 396 · brouillon 527)* |
 | à **1 000/nuit** | **3 nuits** → ce soir, le 15 et le 16 → **fini le 17/10 au matin** |
 | ⚠ pendant ces 3 nuits | **ne pas laisser un ajout de document en attente à 21:00** : le rattrapage refuse de poser si la file n'est pas vide, et une nuit sauterait |
+
+---
+
+## 3d — LE CORRECTIF PROPOSÉ (14/10) · **EN ATTENTE DU « VAS-Y »**
+
+### CE QUI EXISTE, ET CE QUI MANQUE — en une image
+
+```
+   AUJOURD'HUI                      CE QUE LE LOT 2C ALLUME
+   le fichier -> temp/              le fichier -> temp/
+   -> HEKTOR                        -> la RPC cree la LIGNE chez nous      ⟵ MANQUE
+   -> si OK : la ligne existe       -> NOTRE serveur                        (ecrit)
+   -> si KO : RIEN n'existe         -> HEKTOR, et son silence n'efface rien (ecrit)
+```
+
+**Écrit et prouvé vert aujourd'hui** *(25 contrôles)* : les deux moitiés de droite.
+**Jamais écrit** : la première ligne — **la RPC et le front**.
+
+### LE CORRECTIF — quatre morceaux
+
+**① LA RPC** `app_console_creer_document_optimistic` *(et sa jumelle photo)*, sur le patron
+**exact** de `app_console_mark_document_signed_manual` *(27/07)* :
+- `SECURITY DEFINER`, `set search_path = public` ;
+- ⚠ **la garde d'accès `app_console_can_access_dossier(app_dossier_id, hektor_annonce_id)`**,
+  recopiée **sans l'alléger** — *« sinon n'importe qui dépose un document sur n'importe quel
+  bien »* ;
+- `raise 'dossier_not_found_or_forbidden'` si la garde refuse ;
+- crée la ligne avec `storage_status = 'pending_upload'` et `envoi_hektor_statut = 'a_envoyer'` ;
+- rend l'`id`.
+
+**② UNE CONDITION DANS LE WORKER**, aux deux endroits *(document l. 5086, photo l. 4996)* :
+```js
+const storagePath = photo.storage_path || `annonces/.../...`   // aujourd'hui
+```
+⚠ Tel quel, un fichier déposé en `temp/` **resterait dans `temp/` pour toujours**. On ignore
+donc le chemin quand `storage_status === 'pending_upload'`, et on **efface le temporaire** une
+fois le fichier rangé.
+⭐ **Ainsi la politique de storage ne bouge pas** : le front n'écrit toujours que dans `temp/`.
+
+**③ LE FRONT** : déposer le fichier, appeler la RPC, créer le travail **avec `app_document_id`**
+→ le chemin dormant s'allume. *(C'est la seule ligne qui manquait depuis le 25/09.)*
+
+**④ BRANCHER LE REPRENEUR** `reprendre_envois_hektor.js` — ⚠ **indispensable avec ③** : le
+chemin différé **produit des lignes en échec quand Hektor ne répond pas**, et **rien ne les
+reprend aujourd'hui**. ⭐ Et **corriger son test** : son contrôle `(n)` cherche `offset=`, or le
+script est passé à une pagination **par curseur** le 26/09 — **le script est juste, son test est
+périmé** *(1 rouge sur 14)*.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+| | |
+|---|---|
+| **le chemin actuel** *(sans `app_document_id`)* | ⛔ **intact** — c'est un aiguillage, l'ancien chemin reste mot pour mot. **121 ajouts sur 121 ont réussi depuis mai**, on n'y touche pas |
+| ⚠⚠ **les droits** | **c'est LE risque du lot** : une RPC `SECURITY DEFINER` qui **crée** une ligne doit vérifier l'accès au dossier, sinon elle ouvre un dépôt sur n'importe quel bien. Le patron le fait ; je le recopie **tel quel** |
+| la politique de storage | ⛔ **pas touchée** *(c'est l'intérêt du ②)* |
+| ⚠ **le chemin du fichier** | le ② change **où** le fichier atterrit. ⚠ Il ne doit **pas** toucher les 162 544 documents existants : la condition ne s'applique **qu'à** `pending_upload`, un statut que **0 ligne ne porte aujourd'hui** |
+| ⚠ **la file du rattrapage** | **pendant les 3 nuits qui restent**, un ajout en attente à 21:00 **ferait sauter une nuit**. ➡ **c'est la seule vraie raison d'attendre le 17/10 pour DÉPLOYER** *(coder ne gêne rien)* |
+| le run · le registre · les autres tables | ⛔ rien |
+| ⚠ **4 services** | **à redémarrer** *(②)* · ⚠ **Frédéric pousse** le front *(③)* · ⚠ **une tâche planifiée à créer** *(④)* |
+
+### RETOUR ARRIÈRE
+`drop function` pour la RPC *(additif, comme son patron)* · `git revert` pour le worker et le
+front · la tâche planifiée se désactive. **Aucune table modifiée** — les colonnes du lot 1
+existent déjà depuis le 25/09.
+
+### CONTRÔLE PRÉVU
+1. **le test existant** `test_envoi_hektor_differe.js` doit **rester vert** *(25 contrôles)* ;
+2. **son test `(n)` corrigé** → `test_reprendre_envois.js` **14 sur 14** ;
+3. la RPC éprouvée **dans une répétition annulée** : un dépôt autorisé passe, **un dépôt sur un
+   bien hors périmètre est REFUSÉ** ;
+4. **l'essai réel** : ajouter un document depuis l'app sur un bien d'essai, **et vérifier qu'il
+   existe chez nous AVANT que Hektor réponde**. ⚠ Après le 17/10.
+
+### LES QUESTIONS POUR FRÉDÉRIC
+1. **Quand déployer** ? Je peux **coder maintenant** et **déployer après le 17/10** *(fin du
+   rattrapage)* — c'est ce que je recommande, pour ne pas risquer une nuit.
+2. **Les 109 fichiers temporaires (196 Mo)** jamais nettoyés — dont **6 sans aucun envoi**,
+   peut-être les seuls documents réellement perdus : **dans ce lot, ou à part ?**
+3. **Qui a le droit de déposer** ? Je recopie la garde du patron *(l'accès au dossier)*. Faut-il
+   davantage — par exemple **interdire à un négociateur de déposer sur le bien d'un autre** ?
+   ⚠ C'est le chantier ② *(les droits)*, et je ne tranche pas seul.
+
+
+---
+
+## 3d / LOT 2c — CE QUI A ÉTÉ FAIT LE 14/10/2026
+
+> **Les trois réponses de Frédéric** : *« 1 maintenant 2. In faut analyser si ce ne sont pas
+> des test 3. Oui »*, puis **« NETTOIE »**, puis **« vas y bouche la fuite »**.
+
+### ⭐⭐ POURQUOI LE LOT 2c N'AVAIT JAMAIS ÉTÉ FINI — le défaut qui l'en empêchait
+
+Les messages des lots 1 *(7428303)* et 2a *(db5c38c)* finissent tous deux par
+« ⛔ RESTE : le repassage, et le front (lot 2c) ». Le 2b a été fait le soir même ; **le 2c,
+jamais**. En le codant, j'ai trouvé pourquoi : **il ne pouvait pas marcher tel quel.**
+
+Le rangement du fichier calcule sa place ainsi :
+
+    const storagePath = document.storage_path || `annonces/.../${document.id}/${filename}`
+
+La RPC pose le **chemin temporaire** dans `storage_path`. Le `||` ne se déclenche donc
+**jamais** : le worker aurait **retéléversé le fichier au même endroit temporaire**, marqué la
+ligne `cloud_available`, et le document aurait vécu **dans `temp/` définitivement** — pour être
+détruit au premier nettoyage des temporaires.
+
+**Mesuré, pas supposé** — l'épreuve lancée contre la version d'avant le correctif :
+
+    KO  (z2) le rangement recoit storage_path VIDE  -- recu : ["temp/uploads/j-1/Mandat.pdf"]
+    KO  (z3) et le temporaire est RETIRE            -- jamais appele
+
+**Le remède** : on s'appuie sur le marqueur `storage_status = 'pending_upload'` *(et non sur le
+nom du chemin)* pour remettre `storage_path` à blanc avant le rangement, afin qu'il **calcule**
+la place définitive. Posé dans **les deux** chemins différés, document et photo.
+
+### ① LA RPC — `patch_chantier3_3d_lot2c_creer_document_2026-10-14.sql`
+
+`app_console_creer_document_optimistic` et sa jumelle `app_console_creer_photo_optimistic`
+créent la ligne chez nous **et** posent `app_document_id` / `app_photo_id` dans la charge du
+travail, **dans la même transaction** — l'une sans l'autre donnerait une ligne orpheline, ou un
+travail qui pointe vers du vide.
+
+**DEUX gardes, pas une** *(plus strict que le patron d'origine)* :
+
+1. `app_console_can_access_dossier` — ⭐ **elle faisait déjà ce que Frédéric a demandé au
+   point 3** : admin/manager → tout ; commercial → **seulement si `negociateur_email` est le
+   sien**. Il n'y avait rien à ajouter, juste à ne pas l'alléger.
+2. Le patron de `app_console_fail_own_pending_job` : le travail doit être **`pending`** ET
+   **`requested_by = auth.uid()`**.
+
+⭐ **Et le client ne choisit pas le chemin du fichier** : il est **lu dans la charge du travail**
+*(`temp_storage_path`)*, là où la politique de storage l'a déjà lié à cet utilisateur.
+
+⭐ **Le repli est naturel et sûr** : sans la RPC, le travail part sans `app_document_id` → le
+worker prend **l'ancien chemin**, celui qui tourne depuis mai *(121 envois sur 121)*. Rien ne
+régresse.
+
+**RÉPÉTITION : 15 sur 15, 0 échec** *(collée par Frédéric le 14/10)*. Dont
+**`[4] UN DEPOT SUR LE BIEN D'UN AUTRE EST REFUSE`**, jouée avec la vraie identité d'un
+commercial, et `[9] anon` → *permission denied*. Le témoin inverse recoupe une mesure faite
+séparément : `docs=162544 photos=441199`.
+
+⚠ **Le patch lui-même reste à coller.**
+
+### ② LE WORKER — codé, **INERTE**
+
+`Console/console_job_worker.js` : la remise à blanc du chemin provisoire + le retrait du
+temporaire, dans `completerEnvoiDocumentDiffere` **et** `completerEnvoiPhotoDifferee`.
+⛔ **Les 4 services n'ont PAS été redémarrés** *(accord non demandé)*.
+
+### ⭐ LA FUITE DE LA SALLE D'ATTENTE — trouvée, nettoyée, bouchée
+
+**Ce que le nettoyage a appris, et que je croyais autrement.** Les 109 fichiers ne venaient
+**pas** de l'ajout de documents :
+
+| état du travail | type | fichiers | poids |
+|---|---|---|---|
+| `done` | **generate_estimation_pdf** | 37 | **137 Mo** |
+| `done` | generate_cadastre_document | 38 | 19 Mo |
+| `done` | upload_document_to_hektor | 11 | 23 Mo |
+| `done` | generate_mandat_document | 18 | 2,3 Mo |
+| (aucun travail) | — | **5** | 15 Mo |
+
+- ⭐ **Les 104 travaux sont tous `done`** : aucun en attente, aucun en erreur → **rien n'était
+  en vol, rien ne pouvait être perdu.**
+- ⭐ **Aucune ligne vivante n'y pointait** : **0 sur 162 544** documents, **0 sur 441 199** photos.
+- ⚠ **Les 5 sans travail sont tous des essais** *(le logo GTI, `CHASPINAHC12.png` du 22/05,
+  une image ChatGPT, un `photo.jpg`, le plan cadastral du 14/05 — jour de l'ouverture)*.
+  ⚠ **J'avais dit 6** : la mesure dit **5**.
+- ⚠ **Le plus récent datait du 05/10** : la fuite était **active**, pas historique.
+
+**Le nettoyage** — `Console/nettoyer_temporaires_orphelins.js`, lancé le 14/10 :
+**109 fichiers, 196,4 Mo supprimés, 0 retenu, 0 perte.** Vérifié **par deux chemins
+indépendants** : le script recompte à la source *(`0 restant`)*, et `storage.objects` passe de
+**22 973 à 22 864** — exactement 109 de moins, ni un de plus. Trace :
+`logs/temporaires_avant_nettoyage_2026-10-14T08-07-17.tsv`.
+
+⚠ **Le script ne croit pas la mesure d'hier** : il refait ses **quatre gardes** à chaque
+passage — chemin inattendu · une ligne vivante pointe dessus · travail `pending`/`running`
+*(envoi EN COURS)* ou `error` *(le repreneur pourrait en avoir besoin)* · fichier de moins de
+`--age-min` jours. Il ne supprime rien sans `--supprimer`.
+
+**Le bouchon** — ⭐ **un seul endroit suffisait**. Les quatre types font passer leur fichier par
+`handleUploadDocumentToHektor` : il le téléchargeait, l'envoyait, le rangeait… et ne vidait
+jamais la salle d'attente. On y recopie la règle du chemin des photos *(le `else { await
+deleteStorageObject(tempPath) }`, qui le fait depuis toujours)* **et sa prudence : on ne
+supprime que si la copie serveur a réussi** — sinon le temporaire est la seule copie connue, on
+le garde **et on le dit** au journal.
+
+⚠ Vérifié avant d'écrire : **personne ne relit ce chemin ensuite** — les six autres occurrences
+de `temp_storage_path` sont des **écritures** *(les générateurs, et leur compte rendu)*.
+
+### LES ÉPREUVES
+
+| épreuve | contrôles | contre la version d'avant |
+|---|---|---|
+| `test_envoi_hektor_differe` *(+4)* | **29 verts** | **z2, z3 ROUGES** → le témoin est réel |
+| `test_nettoyage_temporaire` *(neuve)* | **9 verts** | **b, c, e ROUGES** → le témoin est réel |
+
+⚠ **Dit honnêtement** : dans la seconde, **(d), (f), (g) sont verts des deux côtés** — l'ancien
+code ne supprimait jamais, donc il satisfaisait trivialement les cas « ne pas supprimer ». Ils
+prouvent qu'on ne supprime pas **trop**, pas que le correctif marche.
+
+**Les 13 autres épreuves qui découpent le worker sont vertes.** Deux étaient **DÉJÀ ROUGES
+AVANT** — vérifié en les relançant contre `HEAD` :
+
+- ⚠ **`test_photo_ajout_gardee`** *(écrite le 25/09)* est tombée le **27/09**, quand
+  `fabriquerDerivesApresRangement` est entré dans `persistProvidedPhotoFile` *(`bf3afb9`,
+  G.17)* : ses doublures n'ont jamais suivi → `ReferenceError`. **17 jours rouge sans que
+  personne le voie.**
+- ⚠ **`test_porte_contacts`** : 11 verts, **2 rouges** sur « L4-c ② l'écrasement de l'identité
+  par la cible », depuis le chantier contacts du 23/09.
+
+➡ **NON RÉPARÉES : ce n'est pas le périmètre de 3d, Frédéric n'a rien dit.**
+
+### CE QUI RESTE DE 3d
+
+| pièce | état |
+|---|---|
+| ① la RPC | écrite, **éprouvée 15/15** — ⏳ **le patch reste à coller** |
+| ② le worker | codé, **inerte** jusqu'au redémarrage des 4 services |
+| ③ le front | ⬜ **pas commencée** |
+| ④ le repreneur | ⬜ **pas commencée** — et son épreuve `(n)` est périmée *(elle cherche `offset=`, le script est passé au curseur le 26/09, `461a66c`)* |
+
+### ⚠ CE QUE LA PIÈCE ③ DEVRA FAIRE, ET QUE J'AI MESURÉ
+
+- ⭐ **Les dérivés se fabriquent AVANT que Hektor soit contacté**
+  *(`fabriquerDerivesApresRangement`, juste après le rangement serveur)* → l'écran affiche
+  **notre** image, depuis **notre** coffre, sans Hektor. « Chez nous d'abord » existe déjà.
+- ⚠ **Mais entre la RPC et le passage du worker, la ligne n'a aucune URL.** Mesuré : un
+  `sort_order` vide atterrit **en FIN** de galerie *(`1 -> 5 -> NULL`)*, pas en tête — le dégât
+  est petit et transitoire. **La pièce ③ devra le dire à l'écran** : `loadConsolePhotos` ne
+  descend **pas** `storage_status` *(leçon 22 : une colonne posée en base ne remonte pas toute
+  seule)*.
+- ⭐ **3e et 3d ne se gênent pas** : les deux marquages « plus chez Hektor » commencent par
+  `row.hektor_document_id &&` / `row.hektor_photo_id &&`, donc une ligne en attente d'envoi
+  *(sans numéro Hektor)* est ignorée. C'est **la règle même** que le lot 1 appelait « le risque
+  principal » le 25/09.

@@ -76,6 +76,9 @@ function charger(hektorEchoue) {
     enqueueRefreshConsoleDataJobBestEffort: async () => { journal.push("rafraichissement"); return null; },
     logJob: async () => { journal.push("journal"); },
     safeFilename: (n, f) => n || f,
+    // 3d / lot 2c : declaree pour que l'epreuve puisse PROUVER qu'elle ne sert pas
+    // quand la ligne n'est pas en attente d'envoi.
+    deleteStorageObject: async (chemin) => { journal.push(`SUPPRESSION:${chemin}`); },
   };
   // eslint-disable-next-line no-new-func
   const fn = new Function(...Object.keys(faux), `${bloc}; return completerEnvoiDocumentDiffere;`)(
@@ -223,6 +226,82 @@ function charger(hektorEchoue) {
       journal.includes("ECRITURE_SERVEUR"), journal.join(" > "));
     controle("(x) photo : la ligne est marquee « echec »",
       patches.some((p) => p.envoi_hektor_statut === "echec"), JSON.stringify(patches));
+  }
+
+  // ── ④ LE FICHIER DEPOSE PAR L'APP EST DANS temp/ ─────────────────────
+  //
+  // 3d / lot 2c (14/10/2026). L'app cree la ligne AVANT l'envoi, avec le fichier encore
+  // sous temp/uploads/<travail>/ et storage_status = 'pending_upload'.
+  //
+  // ⚠⚠ CE QUE CES EPREUVES EMPECHENT DE REVENIR : persistProvidedDocumentFile calcule
+  //   `document.storage_path || <place definitive>`. Si on lui passe la ligne telle
+  //   quelle, le `||` ne se declenche JAMAIS -- il garde le chemin temporaire comme
+  //   domicile, marque la ligne « cloud_available », et le document vit dans temp/ pour
+  //   toujours. Le jour d'un nettoyage des temporaires, on detruit un vrai document.
+  if (bloc) {
+    function chargerProvisoire(rangementRendUnePlace) {
+      const journal = [];
+      const vus = [];            // ce que le rangement a RECU : c'est le coeur de l'epreuve
+      const faux = {
+        supabaseRequest: async (chemin, options) => {
+          if (!options || options.method === "GET") {
+            return [{
+              id: "doc-1", hektor_annonce_id: "62087", document_name: "Mandat.pdf",
+              visibility: "private",
+              storage_path: "temp/uploads/j-1/Mandat.pdf",
+              storage_status: "pending_upload",
+              metadata_json: {},
+            }];
+          }
+          return null;
+        },
+        downloadStorageObject: async (chemin) => {
+          journal.push(`LECTURE:${chemin}`);
+          return { buffer: Buffer.alloc(2048, 3), mimeType: "application/pdf" };
+        },
+        persistProvidedDocumentFile: async (ligne) => {
+          vus.push(ligne);
+          journal.push("ECRITURE_SERVEUR");
+          // Avec cloud : le rangement rend la place definitive. Sans cloud, il rend
+          // ce qu'il a recu -- donc VIDE, et il n'y a plus de copie au coffre.
+          return rangementRendUnePlace
+            ? { local_path: "C:/serveur/x", storage_path: "annonces/62087/documents/doc-1/Mandat.pdf" }
+            : { local_path: "C:/serveur/x", storage_path: null };
+        },
+        shouldKeepCloud: () => rangementRendUnePlace,
+        ensureHektorExecutionContext: async () => {},
+        envoyerDocumentAHektor: async () => ({
+          entries: [{ hektor_document_id: "H-99" }], found: { hektor_document_id: "H-99" } }),
+        upsertConsoleDocuments: async () => [],
+        enqueueRefreshConsoleDataJobBestEffort: async () => null,
+        logJob: async () => { journal.push("journal"); },
+        safeFilename: (n, f) => n || f,
+        deleteStorageObject: async (chemin) => { journal.push(`SUPPRESSION:${chemin}`); },
+      };
+      // eslint-disable-next-line no-new-func
+      const fn = new Function(...Object.keys(faux), `${bloc}; return completerEnvoiDocumentDiffere;`)(
+        ...Object.values(faux));
+      return { fn, journal, vus };
+    }
+
+    // (A) le cas courant : l'annonce va au coffre, la place change
+    let { fn, journal, vus } = chargerProvisoire(true);
+    await fn({ id: "job-1" }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+
+    controle("(z1) le fichier est lu A SA PLACE PROVISOIRE",
+      journal.includes("LECTURE:temp/uploads/j-1/Mandat.pdf"), journal.join(" > "));
+    controle("(z2) ⚠ le rangement recoit storage_path VIDE, donc il calcule la place definitive",
+      vus.length === 1 && !vus[0].storage_path,
+      `recu : ${JSON.stringify(vus.map((v) => v.storage_path))}`);
+    controle("(z3) ⚠ et le temporaire est RETIRE",
+      journal.includes("SUPPRESSION:temp/uploads/j-1/Mandat.pdf"), journal.join(" > "));
+
+    // (B) le temoin inverse : si le rangement ne rend AUCUNE place (pas de coffre),
+    //     on ne supprime pas -- on ne detruit jamais sans savoir ou est le fichier.
+    ({ fn, journal, vus } = chargerProvisoire(false));
+    await fn({ id: "job-1" }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(z4) ⭐ TEMOIN INVERSE : sans nouvelle place, le temporaire est GARDE",
+      !journal.some((e) => e.startsWith("SUPPRESSION:")), journal.join(" > "));
   }
 
   // ⚠ Sans cette contrainte levee, l'app ne pourrait PAS creer une photo avant l'envoi.
