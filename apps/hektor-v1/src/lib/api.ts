@@ -2937,6 +2937,26 @@ export type MonitorStatusRow = {
   details_json: Record<string, unknown> | null
 }
 
+// 15/10/2026 -- L'ECRAN SANTE CITE DES BIENS, MAIS ON NE POUVAIT PAS LES OUVRIR.
+// Une alerte dit « Gestes abandonnes : 2 -- annonce 61672 | annonce 62963 », et il
+// fallait aller chercher chaque bien a la main pour trouver le bandeau qui porte les
+// boutons. Les alertes sont a un endroit, les boutons a un autre, et rien ne reliait
+// les deux.
+// Les sondes rendent un NUMERO HEKTOR ; l'ecran ouvre un bien par son app_dossier_id.
+// Cette fonction fait le pont, et elle ne lit qu'une colonne sur une ligne.
+export async function findDossierIdByHektorAnnonce(hektorAnnonceId: string): Promise<number | null> {
+  if (!hasSupabaseEnv || !supabase || !hektorAnnonceId.trim()) return null
+  const { data, error } = await supabase
+    .from('app_dossier_current')
+    .select('app_dossier_id')
+    .eq('hektor_annonce_id', hektorAnnonceId.trim())
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(error.message ?? 'Unable to resolve dossier')
+  const id = (data as { app_dossier_id?: number } | null)?.app_dossier_id
+  return typeof id === 'number' ? id : null
+}
+
 export async function loadMonitorStatus(): Promise<MonitorStatusRow[]> {
   if (!hasSupabaseEnv || !supabase) return []
   const { data, error } = await supabase

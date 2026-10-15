@@ -72,6 +72,53 @@ une vraie fiche. À confirmer avec l'agence.)*
 
 ---
 
+## ⑦-5 · ✅ FAIT LE 15/10 — *« l'alerte est à un endroit, le bouton à un autre »*
+
+*Frédéric : « mais dans le monitoring je n'ai pas de bouton pour relancer ou annuler ? »,
+puis « FAIS LES 2 ».* **Deux trous, fermés ensemble.**
+
+### B · Un travail que plus rien ne rejouera devient VISIBLE
+
+**Le défaut** : l'écran Santé disait *« Travaux console en erreur : 3 »*, et Frédéric ne pouvait
+en trancher que **deux**. Le bandeau exige **5 tentatives** — or le filet de rejeu
+*(patch c4bis du 30/08)* ne rejoue que **9 types idempotents**, et `sync_console_documents` n'y
+est pas, **délibérément** : *« sans vérification absolue, le rejeu transforme un succès en échec,
+ou double une création »*.
+➡ **Un travail non rejouable qui échoue était invisible ET éternel.**
+
+**Le remède** *(`supabase/patch_bandeau_erreurs_definitives_2026-10-15.sql` + INVERSE)* :
+la règle devient **« 5 tentatives épuisées OU plus de 3 heures »**. On ne touche **ni** au filet,
+**ni** à la liste des types rejouables — on élargit seulement ce que le bandeau **montre**.
+
+⚠ **Les 3 heures sont mesurées, pas choisies** : le filet attend 5, 10, 15 puis 20 minutes, soit
+**50 minutes** pour épuiser les 5 tentatives. Passé 3 h *(marge ×3,6)*, un travail qui n'y est pas
+ne le sera **jamais**.
+⚠ **Ma première version disait 24 h** *(la constante du filet)*. **L'épreuve a montré qu'elle ne
+changeait rien aujourd'hui** — le travail 47824 a 12 h. **J'aurais fait attendre jusqu'à 19:00
+pour rien.**
+
+**Éprouvé en lecture seule, sur la vraie base** : `47824` *(1 tentative, 12 h)* → **apparaît** ;
+`62963` et `61672` *(5 tentatives)* → **inchangés**. **Exactement +1 ligne.**
+
+### A · Les biens cités par une alerte deviennent CLIQUABLES
+
+**Le défaut** : l'alerte nomme les biens *(« annonce 61672 | annonce 62963 »)*, mais il fallait
+aller les chercher à la main pour trouver le bandeau qui porte les boutons.
+
+**Le remède, entièrement côté front — rien en base** : les sondes joignent déjà un **aperçu** à
+leur résultat *(le `sample` ajouté le 01/09, après la question de Frédéric « comment je le
+retrouve ? »)*, et `details_json` **était déjà chargé** par l'écran. Un clic sur le bien ouvre sa
+fiche, donc son bandeau.
+
+⚠ **Le pont se fait au clic**, pas au chargement : la sonde rend un **numéro Hektor**, l'écran
+ouvre par `app_dossier_id`. On n'interroge la base que pour la ligne sur laquelle on clique.
+⚠ **La prop est facultative** : sans elle, l'écran se comporte exactement comme avant.
+
+`npm run build` **vert**. ⬜ **À pousser par Frédéric** *(front → Vercel se déploie)*, et le patch
+SQL **à coller**.
+
+---
+
 ## ⑦-3 · CE QUI VIENT DU CHANTIER ③ *(décisions de Frédéric, 13 et 14/10)*
 
 | | |

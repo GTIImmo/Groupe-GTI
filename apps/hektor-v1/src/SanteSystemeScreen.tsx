@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, type MonitorStatusRow, type AlertRow, type AgentRunRow } from './lib/api'
+import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, findDossierIdByHektorAnnonce, type MonitorStatusRow, type AlertRow, type AgentRunRow } from './lib/api'
 import './sante-systeme.css'
 
 type SanteSystemeScreenProps = {
   isAdmin: boolean
+  // 15/10/2026 : facultatif EXPRES. Sans lui, l'ecran se comporte exactement
+  // comme avant -- les biens s'affichent, mais ne sont pas cliquables.
+  onOpenDossier?: (appDossierId: number) => void
 }
 
 type Tone = 'ok' | 'warn' | 'crit' | 'unknown'
@@ -58,6 +61,84 @@ const AGENT_LABEL: Record<string, string> = {
 
 const TONE_RANK: Record<Tone, number> = { crit: 0, warn: 1, unknown: 2, ok: 3 }
 
+// ⭐ LES BIENS CITES PAR UNE ALERTE, CLIQUABLES (15/10/2026).
+//
+//   Les sondes qui sonnent joignent un APERCU a leur resultat -- c'est le `sample`
+//   ajoute le 01/09, apres la question de Frederic « comment je le retrouve a partir
+//   du monitoring pour savoir lequel ? ». Il porte deja tout :
+//       { reference: "annonce 61672", libelle: "Villa de PP de 1999...", cause: "..." }
+//   On s'en sert pour offrir un bouton par bien. RIEN N'EST AJOUTE EN BASE : la
+//   colonne details_json etait deja chargee par loadMonitorStatus.
+//
+//   ⚠ Le numero cite est celui de HEKTOR ; l'ecran ouvre un bien par son
+//     app_dossier_id. Le pont se fait au clic (findDossierIdByHektorAnnonce), pas
+//     au chargement : une alerte qui sonne est rare, et on ne va pas interroger la
+//     base pour des lignes que personne ne regardera.
+type ApercuLigne = { reference?: string; libelle?: string; cause?: string }
+
+function biensCites(row: MonitorStatusRow | undefined): ApercuLigne[] {
+  const apercu = (row?.details_json as { apercu?: unknown } | null)?.apercu
+  if (!Array.isArray(apercu)) return []
+  return apercu.filter((x): x is ApercuLigne => typeof x === 'object' && x !== null)
+}
+
+function numeroHektor(reference: string | undefined): string | null {
+  const m = /(\d{3,})/.exec(reference ?? '')
+  return m ? m[1] : null
+}
+
+function BiensCitesParLAlerte({
+  lignes,
+  onOpenDossier,
+}: {
+  lignes: ApercuLigne[]
+  onOpenDossier?: (appDossierId: number) => void
+}) {
+  const [ouverture, setOuverture] = useState<string | null>(null)
+  const [souci, setSouci] = useState<string | null>(null)
+  if (!lignes.length) return null
+
+  const ouvrir = async (numero: string) => {
+    if (!onOpenDossier || ouverture) return
+    setOuverture(numero)
+    setSouci(null)
+    try {
+      const id = await findDossierIdByHektorAnnonce(numero)
+      if (id == null) setSouci(`Bien ${numero} introuvable dans l'app`)
+      else onOpenDossier(id)
+    } catch (err) {
+      setSouci(err instanceof Error ? err.message : String(err))
+    } finally {
+      setOuverture(null)
+    }
+  }
+
+  return (
+    <div className="ss-biens-cites">
+      {lignes.map((l, i) => {
+        const numero = numeroHektor(l.reference)
+        const texte = l.libelle || l.reference || '—'
+        if (!numero || !onOpenDossier) {
+          return <span className="ss-bien-cite ss-bien-cite-mort" key={i}>{texte}</span>
+        }
+        return (
+          <button
+            type="button"
+            className="ss-bien-cite"
+            key={i}
+            title={l.cause || `Ouvrir le bien ${numero}`}
+            disabled={ouverture === numero}
+            onClick={() => { void ouvrir(numero) }}
+          >
+            {ouverture === numero ? 'Ouverture…' : texte}
+          </button>
+        )
+      })}
+      {souci ? <span className="ss-bien-cite-souci">{souci}</span> : null}
+    </div>
+  )
+}
+
 function toneOf(status: string | null | undefined): Tone {
   if (!status) return 'unknown'
   return STATUS_TONE[status] ?? 'unknown'
@@ -74,7 +155,7 @@ function timeAgo(iso: string | null): string {
   return `il y a ${Math.round(hours / 24)} j`
 }
 
-export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps) {
+export default function SanteSystemeScreen({ isAdmin, onOpenDossier }: SanteSystemeScreenProps) {
   const [rows, setRows] = useState<MonitorStatusRow[]>([])
   const [alerts, setAlerts] = useState<AlertRow[]>([])
   const [agentRuns, setAgentRuns] = useState<AgentRunRow[]>([])
@@ -291,6 +372,10 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
                       {alert.title ?? alert.alert_key}
                     </div>
                     <div className="ss-row-msg">{alert.owner_email ?? alert.owner_role ?? ''}</div>
+                    <BiensCitesParLAlerte
+                      lignes={biensCites(rows.find((r) => `monitor:${r.status_key}` === alert.alert_key))}
+                      onOpenDossier={onOpenDossier}
+                    />
                   </div>
                   <div className="ss-row-meta">
                     {alert.lifecycle_status === 'acknowledged' ? <span className="ss-ack">Pris en charge</span> : null}
@@ -366,6 +451,7 @@ export default function SanteSystemeScreen({ isAdmin }: SanteSystemeScreenProps)
                   <div className="ss-row-body">
                     <div className="ss-row-name">{row.check_name || row.status_key}</div>
                     <div className="ss-row-msg">{row.message ?? ''}</div>
+                    <BiensCitesParLAlerte lignes={biensCites(row)} onOpenDossier={onOpenDossier} />
                   </div>
                   <div className="ss-row-meta">
                     <span className={`ss-pill ss-bg-${tone}`}>{STATUS_LABEL[tone]}</span>

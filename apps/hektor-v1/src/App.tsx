@@ -21698,7 +21698,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenRequestModal={(id, requestType) => openRequestModal(id, 'pauline', requestType)}
           />
         ) : screen === 'sante' ? (
-          <SanteSystemeScreen isAdmin={isAdmin} />
+          <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
         ) : screen === 'registre' ? (
           <MobileRegisterCards
             mandats={screenMandats}
@@ -22664,7 +22664,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             loading={mandatLoading}
           />
         ) : screen === 'sante' ? (
-          <SanteSystemeScreen isAdmin={isAdmin} />
+          <SanteSystemeScreen isAdmin={isAdmin} onOpenDossier={openDossierDetailPage} />
         ) : (
           <SuiviMandatsScreenV2
             isAdmin={isManagerOrAdmin}
