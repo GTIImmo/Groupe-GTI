@@ -1572,3 +1572,16 @@ elle redeviendrait rouge. *(Même famille que `test_porte_contacts` le 14/10.)*
    dans cet ordre, et **après** le redémarrage.
 3. **Demain matin** : `0` travail en erreur, et des lignes « Document refusé par le coffre »
    dans le journal des travaux de la nuit.
+
+## 7. ✅ CONTRÔLE EN PRODUCTION (15/10, 14:35 → 14:50)
+
+| geste | preuve |
+|---|---|
+| **4 services redémarrés** | processus nés à **14:35:31**, fichier modifié à **14:20** — ⚠ et le redémarrage annoncé à **12:50 n'avait PAS pris** *(les processus dataient du 14/10 12:29)* |
+| **répétition de la purge** | `33 / 33 / 0 / 33` et **31 refus définitifs** — exactement la forme attendue |
+| **patch collé** | `lignes_sauvegardees = 33`, `dont_refus_definitifs = 31`, `en_erreur_restants = 0` |
+| **après coup** | **0 travail documents en erreur**, **33 annonces libérées**, dont **32 sans empreinte → servies EN PREMIER** par la détection de 22:00 |
+
+⚠ **Il reste 5 travaux en erreur, tous `change_hektor_annonce_status`** *(24933 — essai en cours de l'autre session à 14:25-14:27 —, 62963, 61672)*. L'alerte `data.travaux_en_erreur` compte **tous les types** : un rouge demain pour ceux-là serait **attendu**, pas une rechute. **Je n'y touche pas : ce n'est pas mon travail.**
+
+➡ **La preuve en réel du correctif viendra cette nuit** : les 32 annonces sans empreinte repasseront, et le journal des travaux doit porter des lignes **« Document refusé par le coffre, gardé sur le serveur »** avec le nom du document.
