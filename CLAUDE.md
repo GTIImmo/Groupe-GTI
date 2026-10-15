@@ -259,6 +259,16 @@ report ne se décident jamais sans lui.
    que la RPC rendait depuis toujours. ➡ **Après avoir changé un seuil, chercher qui
    d'autre porte le même seuil** ; et **un front qui jette le compte-rendu d'une RPC
    fabrique un bouton menteur**.
+31. ⭐⭐ **UN RETOUR ARRIÈRE NE JUGE QUE SA PROPRE PART** *(15/10)*. Deux patchs du même jour
+   touchaient **la même fonction**. L'inverse du premier exigeait l'empreinte d'**avant les
+   deux** : les deux posés, il **défaisait correctement sa part, puis refusait** —
+   `STOP : on ne retombe PAS sur l'empreinte d'origine (2315de8f…)`, et `2315de8f` **est**
+   l'empreinte « second patch seul ». Le travail était bon, **le juge trop strict**. Il
+   refusait sans rien casser *(l'exception annule tout)*, mais il **bloquait**.
+   ➡ **Un inverse vérifie d'abord qu'il ne reste AUCUNE TRACE de ce qu'il devait retirer** ;
+   l'empreinte globale ne s'exige que si l'autre patch n'est pas là — sinon il **dit**
+   pourquoi elle diffère et **nomme l'autre inverse à jouer**. ⚠ Et ça ne se voit qu'en
+   **éprouvant la chaîne complète dans l'ordre réel**, pas chaque patch isolément.
 30. ⚠⚠⚠ **TROISIÈME FOIS : MES ÉPREUVES NE TRAVERSENT PAS LE COPIER-COLLER** *(15/10)*.
    Frédéric colle `patch_aligner_seuil_trancher` → `STOP : l'ancre du repli apparait 0 fois`.
    J'avais protégé l'**empreinte** avec `replace(…, chr(13), '')` et laissé les **ancres**
@@ -596,10 +606,18 @@ report ne se décident jamais sans lui.
    BIEN. Cockpit onglet « Le Bien » (App.tsx:28785, masque si lecture seule) et au-dessus
    de la barre d'onglets de la fiche classique (App.tsx:30394, toujours). Chemin court :
    Sante -> cliquer le bien cite par l'alerte (le lien de ⑦-5 A).
-   ⬜ RESTE A FREDERIC : (a) coller LES DEUX patchs du 15/10 (ordre indifferent) ;
-   (b) pousser le front ; (c) « J'ai refait » sur 61672 et 62963 (RIEN a defaire, le geste
-   ETAIT passe chez Hektor) ; (d) « Abandonner » sur 47824 (envoi de documents qui a recu du
-   HTML ; rien n'a ete ecrit chez nous) ; (e) 61439 apparaitra a 12:02.
+   ✅ (a) LES DEUX PATCHS SONT COLLES -- controle du 15/10 : les 5 morceaux sont en base,
+   0 retour chariot, empreintes ad573c70 (resolve) et 9d68752a (status, exactement celle que
+   l'epreuve avait predite). Le bandeau du bien VENDU 47824 rend « 1 geste » (avant : erreur,
+   bandeau invisible) ; 61672 et 62963 : 1 chacun ; 61439 (1 h 48) : 0, a partir de 12:02.
+   Sur les QUATRE, lignes_a_defaire = 0 -- rien a remettre.
+   ⚠ LA VERSION 1 DES PATCHS A ECHOUE AU COLLAGE (CRLF, lecon 30) : rien n'avait ete ecrit.
+   ⚠⚠ ET LE CONTROLE A TROUVE UN DEFAUT DANS LE RETOUR ARRIERE, corrige (lecon 31) : les deux
+     patchs touchent la MEME fonction, et l'inverse du premier exigeait l'empreinte d'avant
+     LES DEUX -- il defaisait sa part puis refusait. 6 controles de la chaine complete.
+   ⬜ RESTE A FREDERIC : (b) pousser le front (sans lui, le bandeau ne DIT pas ce que le clic
+   a fait, et il cache encore une ligne qu'il n'a pas tranchee) ; (c) « J'ai refait » sur
+   61672 et 62963 ; (d) « Abandonner » sur 47824 ; (e) 61439 a partir de 12:02.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*

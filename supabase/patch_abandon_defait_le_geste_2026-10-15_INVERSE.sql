@@ -73,14 +73,35 @@ $vieux$, chr(13), ''), '');
 
   EXECUTE v_corps;
 
-  SELECT md5(replace(pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure), chr(13), ''))
-    INTO v_apres;
+  -- ⚠⚠ VERSION 2 DE CE CONTROLE -- LA VERSION 1 SE REFUSAIT ELLE-MEME.
+  --   Elle exigeait l'empreinte d'AVANT LES DEUX patchs du 15/10. Or le patch frere
+  --   (« aligner le seuil ») touche LA MEME fonction : les deux poses, ce retour
+  --   arriere defaisait correctement sa part, puis REFUSAIT -- parce que l'empreinte
+  --   portait encore, legitimement, la marque de l'autre patch.
+  --   Mesure du 15/10, les deux poses : « STOP : on ne retombe PAS sur l'empreinte
+  --   d'origine (2315de8fa9c52d6568f1c19904788adb) » -- et 2315de8f EST exactement
+  --   l'empreinte « seuil 3 h seul ». Le travail etait bon, le juge trop strict.
+  --   (Il refusait SANS RIEN CASSER -- l'exception annule tout -- mais il bloquait.)
+  --   ➡ UN RETOUR ARRIERE NE JUGE QUE SA PROPRE PART : il verifie d'abord qu'il ne
+  --     reste AUCUNE trace de ce qu'il devait retirer ; l'empreinte globale n'est
+  --     exigee que si l'autre patch n'est pas la.
+  SELECT replace(pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure), chr(13), '')
+    INTO v_corps;
+  v_apres := md5(v_corps);
 
-  IF v_apres <> '5590da3aff0e57512d8fb69c13abab2d' THEN
-    RAISE EXCEPTION 'STOP : on ne retombe PAS sur l''empreinte d''origine (%). Rien n''est sur, on annule tout.', v_apres;
+  IF position('@abandon' in v_corps) > 0 OR position('v_defait' in v_corps) > 0 THEN
+    RAISE EXCEPTION 'STOP : il reste des traces du retour arriere dans la fonction. Rien n''est sur, on annule tout.';
   END IF;
 
-  RAISE NOTICE 'RETIRE : la fonction est revenue a son empreinte du 15/10 avant patch.';
+  IF position('@seuil-3h' in v_corps) = 0 THEN
+    -- l'autre patch n'est pas pose : on peut exiger l'empreinte exacte
+    IF v_apres <> '5590da3aff0e57512d8fb69c13abab2d' THEN
+      RAISE EXCEPTION 'STOP : on ne retombe PAS sur l''empreinte d''origine (%). Rien n''est sur, on annule tout.', v_apres;
+    END IF;
+    RAISE NOTICE 'RETIRE : la fonction est revenue a son empreinte du 15/10 avant patch.';
+  ELSE
+    RAISE NOTICE 'RETIRE : le retour arriere est enleve, et il ne reste aucune de ses traces. ⚠ L''AUTRE patch du 15/10 (seuil 3 h) est TOUJOURS pose : l''empreinte vaut donc % et non celle d''origine -- c''est normal. Pour revenir completement en arriere, jouer aussi patch_aligner_seuil_trancher_2026-10-15_INVERSE.sql.', v_apres;
+  END IF;
 END $patch$;
 
 COMMENT ON FUNCTION public.app_action_resolve(uuid,text) IS

@@ -382,3 +382,52 @@ Scène montée sur le **bac à sable 62963**, identité empruntée *(`SET ROLE a
    envoi de documents qui a reçu du HTML au lieu de JSON ; **rien n'a été écrit chez nous**,
    donc rien à remettre.
 5. **61439** : attendre **12:02** *(3 heures)*, puis il apparaîtra à son tour.
+
+---
+
+## 10 · ✅ CONTRÔLE DU 15/10 — *les deux patchs sont posés*
+
+**Les cinq morceaux sont en base, et `0` caractère parasite** *(la version 2 a tenu le
+collage)* :
+
+| | |
+|---|---|
+| retour arrière sur « Abandonner » · sa trace | ✅ ✅ |
+| seuil 3 h dans le **clic** · dans le **bandeau** | ✅ ✅ |
+| repli **vendus / clos / archives** | ✅ |
+| retours chariot laissés dans les 2 fonctions | **0** |
+
+**Nouvelles empreintes** : `app_action_resolve` = `ad573c70facf20026fbe3043dc4d6ed3` ·
+`app_action_status` = `9d68752afbbe48d99b2efec09e42faf8` *(exactement celle que l'épreuve
+avait prédite)*.
+
+**Et le résultat, lu avec l'identité de Frédéric :**
+
+| bien | | le bandeau |
+|---|---|---|
+| **47824** *Maison de village à rénover* | **VENDU** → repli | **1 geste** ✅ *(avant : erreur, bandeau invisible)* |
+| **61672** *Villa de PP de 1999* | parc vivant | 1 geste ✅ |
+| **62963** *TEST C15 entrepôt* | parc vivant | 1 geste ✅ |
+| **61439** *Beau T3 traversant* | 1 h 48 | **0** ⏳ *à partir de 12:02* |
+
+➡ Et sur les **quatre**, `lignes_a_defaire = 0` : **rien à remettre**, confirmé une
+troisième fois.
+
+### ⚠⚠ Le contrôle a révélé un défaut DANS LE RETOUR ARRIÈRE — corrigé
+
+Les deux patchs touchent **la même fonction**. L'inverse du patch ① exigeait l'empreinte
+d'**avant les deux** : les deux posés, il **défaisait correctement sa part, puis refusait**.
+
+> `STOP : on ne retombe PAS sur l'empreinte d'origine (2315de8fa9c52d6568f1c19904788adb)`
+
+Et `2315de8f…` **est** exactement l'empreinte « seuil 3 h seul ». **Le travail était bon, le
+juge trop strict.** Il refusait **sans rien casser** *(l'exception annule tout)* — mais il
+bloquait.
+
+⭐ **La règle qui en sort : un retour arrière ne juge que SA PROPRE part.** Il vérifie d'abord
+qu'il ne reste **aucune trace** de ce qu'il devait retirer ; l'empreinte globale n'est exigée
+que si l'autre patch n'est pas là, sinon il **dit** pourquoi elle diffère.
+
+**6 contrôles de la chaîne complète** *(en transaction annulée)* : inverse ① avec ② posé →
+**passe**, 0 trace, le seuil 3 h **est toujours là**, empreinte `2315de8f…` ; puis inverse ②
+→ **`5590da3a…`, l'empreinte du départ**.
