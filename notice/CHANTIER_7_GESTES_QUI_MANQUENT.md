@@ -212,6 +212,45 @@ ni `modifDateArchiveCritere`, ni « autoarchivage », ni « critère » n'appara
 ➡ **Il ne reste qu'une inconnue : ce que le serveur de Hektor fait en recevant l'ordre.**
 Aucune lecture ne peut le dire — **seul un essai sur une fiche d'essai**, avec accord.
 
+#### ⑤-ter OÙ VA LE BOUTON — *et quelle fiche contact est RÉELLEMENT en ligne (question de Frédéric)*
+
+**Il n'existe PAS de fiche contact V3.** Le front n'a que **deux** fiches et **un** interrupteur :
+`ContactDetailPopup` *(App.tsx:41845)* → `ContactDetailPopupV2` *(:40667)* si
+`VITE_APP_CONTACT_V2_ENABLED`, sinon `ContactDetailPopupBase` *(:39714)*. Les **3** endroits
+qui ouvrent une fiche passent par ce même aiguillage *(:21083, :42109, :42256)* → **le bouton
+ne s'écrit qu'une fois par fiche.**
+
+⚠ **Deux numérotations se croisent, et c'est la source de la confusion** :
+
+| | |
+|---|---|
+| le **code** | la fiche portée s'appelle **V2** *(`contact-detail-v2.css`, classes `fa-cx-*`)* |
+| les **maquettes** | `maquettes/detail-contact-v26 … v30` — la V2 du code **est le portage de `detail-contact-v30-dashboard.html`** *(`PLAN_DEV_CONTACT_V2.md`)*, et un commentaire du cockpit parle même de « Contact v34 » |
+| le seul **V3** du front | **Mandat V3** *(`fa-mandat-v3.css`, `VITE_APP_MANDAT_V3_ENABLED`)* — facile à confondre |
+
+**Preuve que la V2 est en ligne, par un SECOND chemin** *(je n'ai pas pu lire la variable chez
+Vercel : **403, droit refusé**)* : dans le fichier que l'app sert *(`/assets/index-Cwrhht31.js`,
+2,27 Mo)*, les **trois** interrupteurs valent `"true"`, et l'aiguillage du contact s'y lit
+`KI ? <V2> : <Base>` avec `KI = "true"` *(les deux autres gardent le cockpit `fa-ck-` et le
+mandat)*. Concordant avec `plan-portage-contact-v2` *(flag allumé en prod le 19-24/07,
+vérifié à l'écran par Frédéric à l'époque)*.
+
+**La place du bouton** : dans le menu **« … »** de l'en-tête de la fiche V2
+*(`fa-cx-act-menu`, App.tsx:41314-41326)*, **juste au-dessus de « Supprimer »**, libellé
+« Archiver ce contact » / « Réactiver ce contact » selon `isArchived` *(déjà calculé :40737)*.
+La pastille **« Actif / Archivé »** est à côté *(:41366)* : l'effet se voit au même endroit.
+Le **même item** va dans le menu de la fiche Base *(`menu-pop`, :40136-40142)*, avec **un seul
+morceau de code partagé** — sinon le jour où l'interrupteur serait éteint, le bouton
+disparaîtrait.
+
+**Le droit à utiliser** : `canManageContacts` *(:18325 — admin, manager **et commercial**)*,
+celui qui garde déjà « Modifier » — **c'est exactement l'option B de Frédéric, et il n'y a rien
+à brancher**. ⚠ Mais au front ce droit ne connaît que le **rôle**, pas « ce contact est-il à
+moi » : un négociateur verrait l'item sur le contact d'un collègue et la base refuserait —
+**comme « Modifier » aujourd'hui**. ➡ Soit on garde ce comportement avec un **refus en
+français clair**, soit le front recalcule « à moi » *(il n'en connaît que la moitié)*.
+**Question posée, non tranchée.**
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».
