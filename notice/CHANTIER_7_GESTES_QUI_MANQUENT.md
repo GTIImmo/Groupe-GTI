@@ -302,6 +302,29 @@ Frédéric l'a collée : **le message rendu est mot pour mot celui que la note a
 ⭐ **Les deux sens sont prouvés** *(leçon 2)* : le patch **a changé** quelque chose, et
 l'inverse **revient à l'octet près**. → le vrai patch peut être collé.
 
+#### ⑤-sexies ✅✅ LE PATCH EST EN PRODUCTION — *collé par Frédéric le 16/10 vers 00:25, contrôle 8/8*
+
+| contrôle en base | résultat |
+|---|---|
+| verrou 1, la contrainte | **oui** |
+| verrou 2, les droits | **oui** |
+| verrou 3, branche **actions** | **oui** |
+| verrou 3, branche **admin** | **non** — le geste n'a PAS rejoint la session admin |
+| la fonction de saisie | **présente** (1) |
+| droit `authenticated` / `anon` | **oui** / **non** |
+| « supprimer un contact » | **toujours hors de la liste du commercial** |
+
+**Empreintes d'APRÈS, à citer dans tout futur inverse** *(sans les retours chariot)* :
+droits **19d0fc0b1f4f22b0a91a05809ebe94bb** · distribution **4da660742838e4e0849bbd70b7b9a7f5** ·
+fonction de saisie **85e3c91dc701b4a60d9e2fb07d805e4d**.
+
+⚠ **Un détail mesuré, pas deviné** : la **fonction neuve** porte des **retours chariot** dans
+son corps *(collée depuis Windows)*, les **deux fonctions modifiées non** — parce que le patch
+les a lues avec `replace(..., chr(13), '')`. **Sans conséquence aujourd'hui** *(l'inverse la
+supprime par sa signature, le front l'appelle par son nom)*, mais un futur patch qui voudrait
+s'ancrer **dans** ce corps se ferait mordre. Nettoyage possible en 6 lignes
+*(relire + réexécuter ; `CREATE OR REPLACE` garde les droits)* — proposé, non fait.
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».
