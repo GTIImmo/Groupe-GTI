@@ -641,6 +641,17 @@ report ne se décident jamais sans lui.
    Chemin complet eprouve sous l'identite de Frederic (RLS comprise) : piste 2 rend
    « 1377256 | Maison de village a renover | Vendu », les gestes rendent le job_id.
    ⬜ RESTE : pousser le front, puis trancher 47824 depuis l'ecran Sante ; 61439 des 12:02.
+⑪-bis ⚠⚠ DEUX DEFAUTS DE LA TACHE NEUVE, TROUVES PAR LA VERIFICATION FINALE DU 15/10 ET
+   CORRIGES PAR FREDERIC (une seule commande) -- a reverifier sur toute tache future :
+     1. elle etait enregistree en « Interactive » -- SEULE des 9 : elle n'aurait tourne QUE
+        session admin ouverte, et n'aurait rien dit en se taisant. Les 8 autres sont en S4U.
+     2. limite de duree a 72 h (les autres : 1 a 2 h). Avec « ignorer la nouvelle instance »,
+        une ligne bloquee aurait fait SAUTER les nuits suivantes, en silence.
+   Etat verifie apres correction : S4U / Limited / Win7 / moteur unifie / PT4H / IgnoreNew,
+   declencheur QUOTIDIEN (MSFT_TaskDailyTrigger, tous les 1 jour, sans fin), 22:00.
+   ➡ REGLE : une tache neuve se compare REGLAGE PAR REGLAGE a une tache qui marche
+     (principal, LogonType, RunLevel, compatibilite, moteur, limite, instances, classe du
+     declencheur). « Enregistree » ne veut pas dire « configuree comme ses soeurs ».
 ⑪ ⏰ LE CONTROLE DU 16/10 AU MATIN -- la PREMIERE nuit de « GTI Entretien Documents » (22:00).
    A REGARDER, dans cet ordre :
      1. le journal de la tache : les QUATRE lignes passees, sortie 0
