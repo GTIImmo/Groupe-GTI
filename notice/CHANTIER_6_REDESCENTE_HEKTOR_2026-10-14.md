@@ -984,3 +984,75 @@ et la mesure ci-dessus le prouve *(8 806 en octobre)*.
 
 ➡ **6i se ferme sans correctif.** La seule chose à savoir : une archive modifiée chez Hektor
 est relue **la nuit suivante**, pas dans la seconde — et ça suffit.
+
+---
+
+# 6d — PHOTOS : NI LES RETRAITS NI L'ORDRE · ÉTAPE 1, AUDIT (15/10, lecture seule)
+
+## VERDICT : CONFIRMÉ, et la cause est précise — *le code existe, il ne tourne plus*
+
+### ① Le marquage est écrit, correct… et jamais appelé
+
+`upsertConsolePhotos` (`console_job_worker.js:4510-4532`) marque `present_in_hektor = false` +
+`absent_depuis` pour toute photo que Hektor ne liste plus, **avec son garde-fou de liste vide**
+*(3e, 13/10 : on refuse de marquer des photos existantes depuis une liste vide)*. Rien à
+reprocher à ce code.
+
+**Mais il ne tourne que dans un travail `sync_hektor_photos` — et il n'en a plus été posé depuis
+le 27/09 08:37** *(mesuré : 314 travaux au total, le dernier à cette date)*.
+
+⚠ **Et le commentaire du 13/10 dit le contraire** : *« 0 photo marquée sur 441 117, et toutes
+portent `present_in_hektor = true` — donc le mécanisme TOURNE et ça n'est jamais arrivé »*.
+**Non : le mécanisme ne tourne plus depuis 18 jours.** Le commentaire a confondu « aucun
+symptôme » avec « tout va bien » — ce qu'il se méfiait d'ailleurs d'être dans sa phrase
+suivante *(« l'absence de symptôme ne prouve rien, leçon du 12/10 »)*. ➡ **La règle vaut même
+pour un commentaire écrit avant-hier.**
+
+**Ce qui alimente l'index aujourd'hui** : `rattrapage_photos.js`, qui lit le **miroir local** et
+le CDN — et qui **ne fait qu'AJOUTER** les lignes absentes. Personne ne compare donc notre liste
+à celle de Hektor.
+
+### ② L'écart, mesuré — **entièrement en local, sans un appel à Hektor**
+
+*Sources : `data/hektor.sqlite` → `hektor_annonce_detail.images_json` (la liste de Hektor, avec
+l'**id**, l'**ordre** et le drapeau **visible**) contre `phase2/phase2.sqlite` →
+`app_console_photo` (441 199 lignes, copie du 14/10 05:07 ; Supabase en porte 441 238).*
+
+| | tout le parc | **les biens en vente** |
+|---|---|---|
+| photos chez nous que **Hektor ne liste plus** | **440** *(67 annonces)* | **309** *(41 annonces)* |
+| photos de Hektor **qui nous manquent** | **16** | **16** |
+| photos dans un **ordre différent** | **1 662** *(290 annonces)* | **434** *(68 annonces)* |
+| drapeau **visible** différent | **0** | **0** |
+
+➡ **Les ajouts, eux, sont à jour** *(16 manquantes sur 463 199)* : l'audit du 08/10 disait vrai.
+
+### ③ ⭐ LE SYMPTÔME QUI SE VOIT : **la photo principale**
+
+```
+annonces non archivees ou LA PHOTO PRINCIPALE differe de celle de Hektor : 64
+   dont des biens EN VENTE : 57
+   exemples : VA32389 · EA32418 · EM596 · EM3056 · EM5578 · EM66194  (tous « Actif »)
+```
+
+La photo principale est celle qui s'affiche **dans le listing, sur la vitrine et dans les
+e-mails**. **57 biens en vente montrent donc chez nous une autre photo que celle choisie dans
+Hektor** — et 41 biens en vente affichent encore des photos **retirées**.
+
+### ④ ⭐⭐ ET LE CORRECTIF NE DEMANDERA AUCUN APPEL À HEKTOR
+
+`images_json` porte **l'id, l'ordre ET le drapeau visible**, et il est rafraîchi **chaque nuit**
+par le balayage normal *(prouvé en 6i : 8 806 fiches de vendus/clos relues en octobre)*. Tout
+est donc déjà chez nous : il ne manque qu'une **comparaison locale**, exactement comme
+`rattrapage_photos.js` fait pour les téléchargements.
+
+## ⛔ AVANT DE PROPOSER — ce qu'il faut vérifier (et que le projet a lui-même écrit le 26/09)
+
+> *« Le front n'a pas le filtre qui les cache. Une photo retirée apparaîtrait dans le **panneau
+> photos**, dans la **liste de pièces jointes** d'un envoi, et surtout sur la **photo de la fiche
+> visite**. »*
+
+Marquer 440 photos **les fera disparaître** là où le filtre existe, et **pas** là où il manque.
+Et corriger l'ordre **change la photo principale sur les pages publiques**. ➡ Il faut donc
+d'abord relever **tous les lecteurs** de `app_console_photo` *(fiche, panneau, pièces jointes,
+fiche visite, vitrine, e-mails)* et dire pour chacun ce que ça change. **C'est l'étape 2.**
