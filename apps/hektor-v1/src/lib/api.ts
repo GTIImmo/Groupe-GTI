@@ -2992,6 +2992,7 @@ export function gesteLibelleFr(jobType: string): string {
     refresh_console_contact_data: "Relecture d'une fiche contact",
     create_hektor_contact: "Creation d'un contact",
     update_hektor_contact: "Modification d'un contact",
+    archive_hektor_contact: "Archivage / reactivation d'un contact",
     delete_hektor_contact: 'Suppression du contact',
     create_hektor_mandant_contact: "Creation d'un mandant",
     update_hektor_mandant_contact: "Modification d'un mandant",
@@ -9450,6 +9451,30 @@ export async function createDeleteHektorContactJob(input: {
   return data as ConsoleJob
 }
 
+// ⑦-1 (16/10/2026) : ARCHIVER OU REACTIVER UNE FICHE CONTACT.
+// UN SEUL geste pour les deux sens -- `archiver` dit lequel -- comme l'interrupteur
+// de la fiche Hektor (commande relevee en lecture seule le 15/10).
+// ⚠ La RPC coche l'interrupteur CHEZ NOUS et cree le travail Hektor dans la MEME
+//   transaction, et elle refuse avec une PHRASE EN FRANCAIS (« Ce contact n'est pas
+//   dans votre portefeuille… », « Ce contact est deja archive. ») : on remonte donc
+//   `error.message` tel quel a l'ecran -- c'est le choix de Frederic (le bouton reste
+//   visible, le refus s'explique), sinon ce serait un bouton menteur.
+export async function archiverContact(input: {
+  contactId: string
+  archiver: boolean
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const cleanContactId = input.contactId.trim()
+  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  const { data, error } = await supabase.rpc('app_console_archiver_contact_optimistic', {
+    p_hektor_contact_id: cleanContactId,
+    p_archive: input.archiver,
+  })
+  if (error || !data) throw new Error(error?.message ?? "Impossible de changer l'archivage de ce contact")
+  return data as ConsoleJob
+}
+
 export async function findContactDuplicateCandidates(input: {
   email?: string | null
   phone?: string | null
@@ -10265,6 +10290,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'update_hektor_annonce_fields',
   'create_hektor_contact',
   'update_hektor_contact',
+  'archive_hektor_contact',
   'add_hektor_contact_search',
   'update_hektor_contact_search',
   'delete_hektor_contact_search',

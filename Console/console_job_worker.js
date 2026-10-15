@@ -87,6 +87,14 @@ const ACTION_JOB_TYPES = new Set([
   "unlink_hektor_mandant",
   "create_hektor_contact",
   "update_hektor_contact",
+  // ⑦-1 (16/10/2026) : archiver / desarchiver une FICHE contact. Sa place est ICI,
+  // avec les autres gestes contact, et PAS dans ADMIN_JOB_TYPES : Frederic a ouvert
+  // ce geste au negociateur (option B), et cette liste est celle de la session
+  // negociateur -- « meme session, meme objet, meme famille de geste ». La liste
+  // jumelle en base (app_console_claim_next_job, branche `actions`) dit la meme
+  // chose : les deux doivent rester d'accord, sinon le travail n'est reclame par
+  // personne et reste « pending » a vie, SANS erreur.
+  "archive_hektor_contact",
   "add_hektor_contact_search",
   "update_hektor_contact_search",
   "delete_hektor_contact_search",
@@ -17444,6 +17452,109 @@ async function handleUpdateHektorContact(job) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ⑦-1 — ARCHIVER / DESARCHIVER UNE FICHE CONTACT            16/10/2026
+// ═══════════════════════════════════════════════════════════════════════════
+// LA COMMANDE, relevee en LECTURE SEULE le 15/10 (Console/sonde_archive_contact.js)
+// et confirmee IDENTIQUE a une capture du 01/06 (empreinte fc22f6b4..., accents mis
+// de cote) :
+//     POST xmlrpc.php   mode=contacts-contactProfile-archiveContact
+//                       id=<idContact>   archive=<true|false>
+// ⭐ UN SEUL ordre pour les DEUX sens -- chez Hektor c'est un interrupteur, et sa
+//   fonction de rappel ne fait que de l'animation : dans la page, archiver un
+//   contact ne touche a rien d'autre.
+// ⚠ CE QUI RESTE INCONNU, et qui ne se saura qu'a l'essai : ce que le SERVEUR de
+//   Hektor fait en recevant l'ordre -- s'il archive AUSSI les criteres du contact.
+//   Si c'etait le cas, un contact sans annonce active et sans transaction perdrait
+//   son eligibilite et sortirait de notre cloud a la nuit suivante (les 35 fiches
+//   du 14/10). D'ou l'essai sur une fiche d'ESSAI avant tout vrai client.
+// ⚠ L'app a DEJA ecrit `archive` chez nous (app_console_archiver_contact_optimistic,
+//   meme transaction que ce travail) : ici on ne fait que porter le geste chez
+//   Hektor, puis on redemande la fiche -- c'est la verite de Hektor qui fait
+//   autorite, et c'est elle qui reviendra confirmer (ou defaire) ce que l'app a ecrit.
+async function archiverHektorContact(job, contactId, archive) {
+  await logJob(job.id, "hektor_contact_archive", "running",
+    archive ? "Archivage du contact Hektor" : "Reactivation du contact Hektor", {
+      hektor_contact_id: String(contactId),
+      archive: Boolean(archive),
+    });
+  // `archive=true` / `archive=false` : c'est exactement ce que le navigateur envoie
+  // (jQuery serialise le booleen de setArchiveContact ainsi).
+  const body = new URLSearchParams({
+    mode: "contacts-contactProfile-archiveContact",
+    id: String(contactId),
+    archive: archive ? "true" : "false",
+  });
+  const response = await hektorFetch(XMLRPC_URL, {
+    method: "POST",
+    body,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      Referer: `${ADMIN_URL}?page=/mes-contacts/mon-contact&id=${encodeURIComponent(String(contactId))}`,
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  let parsed = response.text;
+  try {
+    parsed = JSON.parse(response.text);
+  } catch (_) {
+    parsed = response.text;
+  }
+  await logJob(job.id, "hektor_contact_archive", "done",
+    archive ? "Contact Hektor archive" : "Contact Hektor reactive", {
+      hektor_contact_id: String(contactId),
+      archive: Boolean(archive),
+      result: parsed,
+    });
+  return { archive: Boolean(archive), result: parsed };
+}
+
+async function handleArchiveHektorContact(job) {
+  const payload = safeJsonParse(job.payload_json);
+  // L4-c ② : deux numeros, deux variables. `identite` est NOTRE numero (celui que
+  // porte app_contact_current), `contactId` est la cible chez Hektor.
+  const identite = String(payload.hektor_contact_id || payload.contact_id || "").trim();
+  if (!/^\d+$/.test(identite)) throw new Error("contact_id Hektor numerique requis");
+  // On n'invente JAMAIS le sens : sans le booleen, on refuse. Un defaut a `false`
+  // aurait pu desarchiver un contact qu'on voulait archiver.
+  if (typeof payload.archive !== "boolean") {
+    throw new Error("archive (true ou false) requis dans la charge du travail");
+  }
+  const contactId = await cibleHektorContact(identite, { contexte: "archive_hektor_contact" });
+  const context = await loadContactExecutionContext(identite);
+  const contextPayload = {
+    ...payload,
+    hektor_user_email: payload.hektor_user_email || payload.target_hektor_user_email || context.contact.negociateur_email || null,
+    target_hektor_user_email: payload.target_hektor_user_email || payload.hektor_user_email || context.contact.negociateur_email || null,
+    contact_negociateur_email: context.contact.negociateur_email || null,
+    contact_hektor_agence_id: context.contact.hektor_agence_id || null,
+    hektor_agence_id: payload.hektor_agence_id || payload.target_hektor_agence_id || context.contact.hektor_agence_id || null,
+    target_hektor_agence_id: payload.target_hektor_agence_id || payload.hektor_agence_id || context.contact.hektor_agence_id || null,
+    contact_hektor_negociateur_id: context.contact.hektor_negociateur_id || null,
+    hektor_negociateur_id: payload.hektor_negociateur_id || payload.target_hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+    target_hektor_negociateur_id: payload.target_hektor_negociateur_id || payload.hektor_negociateur_id || context.contact.hektor_negociateur_id || null,
+  };
+  const executionPayload = await resolveContactAgencyExecutionPayload(contextPayload) || contactAgencyExecutionPayload(contextPayload);
+  await ensureHektorExecutionContext(job, context.dossier, executionPayload, { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const resultat = await archiverHektorContact(job, contactId, payload.archive);
+  await sleep(1000);
+  // La fiche revient de Hektor : c'est elle qui confirme. Best-effort -- si le
+  // rafraichissement ne part pas, le geste reste fait chez Hektor et la nuit
+  // ramenera l'etat.
+  const syncJob = await enqueueRefreshConsoleContactDataJobBestEffort(job, identite, {
+    reason: "archive_hektor_contact",
+    priority: 82,
+  });
+
+  return {
+    status: payload.archive ? "archived" : "reactivated",
+    hektor_contact_id: contactId,
+    ...resultat,
+    sync_job: syncJob,
+  };
+}
+
 // Construit l'objet "search spec" attendu par buildHektorContactSearchContainer
 // a partir d'un payload de job autonome. Accepte la spec sous payload.search,
 // payload.contact_next_step, ou directement a la racine du payload.
@@ -17782,7 +17893,7 @@ async function fetchLocalContactSearchSnapshot(job, contactId, searchIndex) {
 const JOB_TYPES_A_NOTIFIER = new Set([
   "create_hektor_draft_annonce", "create_hektor_contact", "create_hektor_mandant_contact",
   "update_hektor_mandant_contact", "link_hektor_mandant", "delete_hektor_contact",
-  "update_hektor_annonce_fields", "update_hektor_contact",
+  "update_hektor_annonce_fields", "update_hektor_contact", "archive_hektor_contact",
   "add_hektor_contact_search", "update_hektor_contact_search", "delete_hektor_contact_search",
   "change_hektor_annonce_status", "archive_hektor_annonce", "restore_hektor_annonce",
   "delete_hektor_annonce", "assign_hektor_annonce_negotiator",
@@ -17802,6 +17913,10 @@ const JOB_LIBELLES = {
   delete_hektor_contact: "La suppression du contact",
   update_hektor_annonce_fields: "La modification de l'annonce",
   update_hektor_contact: "La modification du contact",
+  // ⑦-1 : UN SEUL type porte les deux sens (c'est la charge qui dit lequel), donc le
+  // libelle doit rester vrai dans les deux cas -- il sert a prevenir l'utilisateur
+  // quand le geste n'aboutit pas.
+  archive_hektor_contact: "L'archivage (ou la reactivation) du contact",
   add_hektor_contact_search: "L'ajout de la recherche",
   update_hektor_contact_search: "La modification de la recherche",
   delete_hektor_contact_search: "La suppression de la recherche",
@@ -21085,6 +21200,10 @@ async function runHandler(job) {
       return handleCreateHektorContact(job);
     case "update_hektor_contact":
       return handleUpdateHektorContact(job);
+    // ⑦-1 16/10/2026 : l'interrupteur de la fiche contact, les deux sens dans un
+    // seul type (la charge porte `archive: true|false`).
+    case "archive_hektor_contact":
+      return handleArchiveHektorContact(job);
     case "add_hektor_contact_search":
       return handleAddHektorContactSearch(job);
     case "update_hektor_contact_search":

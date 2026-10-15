@@ -750,6 +750,9 @@ export type ConsoleJobType =
   | 'link_hektor_mandant'
   | 'create_hektor_contact'
   | 'update_hektor_contact'
+  // ⑦-1 (16/10/2026) : l'interrupteur de la fiche contact. UN SEUL type pour les deux
+  // sens -- la charge porte `archive: true|false` -- comme chez Hektor.
+  | 'archive_hektor_contact'
   | 'add_hektor_contact_search'
   | 'update_hektor_contact_search'
   | 'delete_hektor_contact_search'

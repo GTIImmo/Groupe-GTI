@@ -109,6 +109,7 @@ import {
   createUpdateHektorContactJob,
   editContactOptimistic,
   createDeleteHektorContactJob,
+  archiverContact,
   createDeleteHektorContactSearchJob,
   createHektorMandantContactJob,
   createLinkHektorMandantJobOptimistic,
@@ -8803,7 +8804,7 @@ function hektorActionJobTitle(job: ConsoleJob) {
     const numero = typeof result.numero_mandat === 'string' && result.numero_mandat.trim() ? result.numero_mandat.trim() : null
     return numero ? `Mandat ${numero}` : `Generation mandat ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   }
-  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'delete_hektor_contact' || job.job_type === 'refresh_console_contact_data') {
+  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'archive_hektor_contact' || job.job_type === 'delete_hektor_contact' || job.job_type === 'refresh_console_contact_data') {
     const contactName = [payload.first_name, payload.last_name].filter((value) => typeof value === 'string' && value.trim()).join(' ')
     const contactId = String(result.hektor_contact_id ?? payload.hektor_contact_id ?? payload.contact_id ?? '').trim()
     if (contactName.trim()) return `Contact ${contactName.trim()}`
@@ -8837,6 +8838,7 @@ function hektorActionJobLabel(job: ConsoleJob) {
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Generation mandat'
   if (job.job_type === 'create_hektor_contact') return 'Creation contact'
   if (job.job_type === 'update_hektor_contact') return 'Modification contact'
+  if (job.job_type === 'archive_hektor_contact') return job.payload_json?.archive === false ? 'Reactivation contact' : 'Archivage contact'
   if (job.job_type === 'delete_hektor_contact') return 'Suppression contact'
   if (job.job_type === 'refresh_console_contact_data') return 'Sync contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant en cours'
@@ -8852,7 +8854,7 @@ function hektorActionJobTone(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_annonce' || job.job_type === 'delete_hektor_contact' || job.job_type === 'delete_document_from_hektor' || job.job_type === 'delete_hektor_photo') return 'delete'
   if (job.job_type === 'update_hektor_annonce_fields') return 'update'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'contact'
-  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'contact'
+  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'archive_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'contact'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'contact'
   if (job.job_type === 'upload_document_to_hektor' || job.job_type === 'upload_hektor_photo' || job.job_type === 'prepare_document_cloud' || job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'sync_hektor_photos') return 'document'
   return 'create'
@@ -8880,6 +8882,7 @@ function hektorActionJobDetail(job: ConsoleJob) {
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
   if (job.job_type === 'create_hektor_contact') return 'Creation puis resynchronisation ciblee'
   if (job.job_type === 'update_hektor_contact') return 'Modification puis resynchronisation ciblee'
+  if (job.job_type === 'archive_hektor_contact') return 'Changement d archivage puis resynchronisation ciblee'
   if (job.job_type === 'delete_hektor_contact') return 'Suppression Hektor puis nettoyage app'
   if (job.job_type === 'refresh_console_contact_data') return 'Lecture detail contact puis push Supabase'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
@@ -8935,6 +8938,7 @@ function hektorActionCanFinishWithoutAppDossier(job: ConsoleJob) {
     'sync_hektor_photos',
     'create_hektor_contact',
     'update_hektor_contact',
+    'archive_hektor_contact',
     'delete_hektor_contact',
     'refresh_console_contact_data',
   ].includes(job.job_type)
@@ -8964,6 +8968,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Mandat genere'
     if (job.job_type === 'create_hektor_contact') return 'Contact cree'
     if (job.job_type === 'update_hektor_contact') return 'Contact modifie'
+    if (job.job_type === 'archive_hektor_contact') return job.payload_json?.archive === false ? 'Contact reactive' : 'Contact archive'
     if (job.job_type === 'delete_hektor_contact') return 'Contact supprime'
     if (job.job_type === 'refresh_console_contact_data') return 'Contact synchronise'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Mandant synchronise'
@@ -8984,7 +8989,7 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
   }
   if (progress === 'syncing') {
     if (!job || job.job_type === 'create_hektor_draft_annonce') return "Ajout dans l'app"
-    if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'delete_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'Synchronisation contact'
+    if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'archive_hektor_contact' || job.job_type === 'delete_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'Synchronisation contact'
     if (job.job_type === 'update_hektor_annonce_fields' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'archive_hektor_annonce' || job.job_type === 'restore_hektor_annonce' || job.job_type === 'change_hektor_annonce_status') return "Mise a jour de l'app"
     if (job.job_type === 'create_hektor_mandat_auto_number') return 'Synchronisation mandat'
     if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Synchronisation mandant'
@@ -9001,6 +9006,9 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
 
 function hektorActionWaitingLabel(job: ConsoleJob) {
   if (job.job_type === 'delete_hektor_contact') return 'Hektor a supprime le contact. Nettoyage app en cours...'
+  if (job.job_type === 'archive_hektor_contact') return job.payload_json?.archive === false
+    ? 'Hektor a reactive le contact. Synchronisation app en cours...'
+    : 'Hektor a archive le contact. Synchronisation app en cours...'
   if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'Hektor a mis a jour le contact. Synchronisation app en cours...'
   if (job.job_type === 'update_hektor_mandant_contact') return 'Hektor a modifie le mandant. Mise a jour de l app en cours...'
   if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
@@ -39711,6 +39719,53 @@ function ContactEditModalV2(props: {
   )
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ⑦-1 — L'INTERRUPTEUR D'ARCHIVAGE D'UNE FICHE CONTACT      16/10/2026
+// ═══════════════════════════════════════════════════════════════════════════
+// UN SEUL morceau de code pour les DEUX fiches (Base et V2). Deux copies
+// divergeraient -- c'est la lecon des documents et des photos du 14/10 (« un seul
+// point d'appel pour les deux objets »).
+//
+// LE DROIT : `canManageContacts` (admin, manager ET commercial), celui qui garde
+// deja « Modifier ». C'est l'option B de Frederic.
+// ⚠ Au front ce droit ne connait que le ROLE, pas « ce contact est-il a moi » : un
+//   negociateur verra donc l'item sur le contact d'un collegue et la BASE refusera.
+//   C'est le choix de Frederic (« 2. a » : le bouton reste visible, le refus
+//   s'explique) -- d'ou le message de la RPC, affiche tel quel. Sans ce message, ce
+//   serait un bouton menteur.
+function useArchivageContact(props: {
+  contact: AppContact
+  onJobCreated?: (job: ConsoleJob) => void
+  onFait?: () => void
+}) {
+  const [pending, setPending] = useState(false)
+  const estArchive = contactArchiveLabel(props.contact) === 'Archive'
+  const libelle = estArchive ? 'Reactiver ce contact' : 'Archiver ce contact'
+  const basculer = async () => {
+    const qui = (props.contact.display_name || '').trim() || 'ce contact'
+    // Le `confirm` DIT LA VERITE : archiver ne supprime rien, et on nomme l'effet
+    // visible (la fiche sort de l'annuaire, dont le filtre par defaut est « actifs »).
+    const question = estArchive
+      ? `Reactiver ${qui} ? Sa fiche revient dans l'annuaire.`
+      : `Archiver ${qui} ? Sa fiche sort de l'annuaire (filtre « actifs »). Rien n'est supprime, et le geste se defait par le meme bouton.`
+    if (!window.confirm(question)) return
+    setPending(true)
+    try {
+      const job = await archiverContact({
+        contactId: props.contact.hektor_contact_id,
+        archiver: !estArchive,
+      })
+      props.onJobCreated?.(job)
+      props.onFait?.()
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Impossible de changer l'archivage de ce contact.")
+    } finally {
+      setPending(false)
+    }
+  }
+  return { estArchive, libelle, pending, basculer }
+}
+
 function ContactDetailPopupBase(props: {
   contact: AppContact
   relations: AppContactRelation[]
@@ -40068,6 +40123,8 @@ function ContactDetailPopupBase(props: {
   const avatarInitials = userInitials(props.contact.display_name, props.contact.email)
   const negotiatorInitials = userInitials(props.contact.commercial_nom) || 'GTI'
   const isArchived = contactArchiveLabel(props.contact) === 'Archive'
+  // ⑦-1 : l'interrupteur d'archivage, partage avec la fiche V2 (meme code).
+  const archivage = useArchivageContact({ contact: props.contact, onJobCreated: props.onJobCreated })
   const hasSeverity = Boolean(props.contact.duplicate_max_severity)
   const severityLabel = contactSeverityLabel(props.contact.duplicate_max_severity)
   const isEligibleApp = contactBool(props.contact.supabase_sync_eligible)
@@ -40134,6 +40191,9 @@ function ContactDetailPopupBase(props: {
                 {contactActionsOpen ? (
                   <div className="menu-pop">
                     <button className="menu-item" type="button" onClick={() => { setContactActionsOpen(false); openHektorContact(cibleHektorDuContact(props.contact)) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor<svg className="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 17 17 7M9 7h8v8" /></svg></button>
+                    {props.canManageContacts ? (
+                      <button className="menu-item" type="button" disabled={archivage.pending} onClick={() => { setContactActionsOpen(false); void archivage.basculer() }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 7h18v4H3z" /><path d="M5 11v9h14v-9" /><path d="M10 15h4" /></svg>{archivage.pending ? 'Patientez…' : archivage.libelle}</button>
+                    ) : null}
                     {props.canDeleteContacts ? (
                       <button className="menu-item danger" type="button" onClick={() => { setContactActionsOpen(false); setDeleteOpen(true) }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Supprimer</button>
                     ) : null}
@@ -40735,6 +40795,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const contactAddress = (props.contact.adresse ?? '').trim()
   const negotiatorInitials = userInitials(props.contact.commercial_nom) || 'GTI'
   const isArchived = contactArchiveLabel(props.contact) === 'Archive'
+  // ⑦-1 : l'interrupteur d'archivage, partage avec la fiche Base (meme code).
+  const archivage = useArchivageContact({ contact: props.contact, onJobCreated: props.onJobCreated })
   const isEligibleApp = contactBool(props.contact.supabase_sync_eligible)
   // ── Sévérité doublon (GAP 4) + données Hektor (GAP 3) — mêmes dérivations que ...Base ──
   const hasSeverity = Boolean(props.contact.duplicate_max_severity)
@@ -41316,6 +41378,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg>Ouvrir dans Hektor
                         <svg className="fa-cx-menu-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M7 17 17 7M9 7h8v8" /></svg>
                       </button>
+                      {props.canManageContacts ? (
+                        <button className="fa-cx-menu-item" type="button" disabled={archivage.pending} onClick={() => { setContactActionsOpen(false); void archivage.basculer() }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}><path d="M3 7h18v4H3z" /><path d="M5 11v9h14v-9" /><path d="M10 15h4" /></svg>{archivage.pending ? 'Patientez…' : archivage.libelle}
+                        </button>
+                      ) : null}
                       {props.canDeleteContacts ? (
                         <button className="fa-cx-menu-item danger" type="button" onClick={() => { setContactActionsOpen(false); setDeleteOpen(true) }}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></svg>Supprimer

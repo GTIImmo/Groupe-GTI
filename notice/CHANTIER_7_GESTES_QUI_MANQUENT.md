@@ -325,6 +325,35 @@ supprime par sa signature, le front l'appelle par son nom)*, mais un futur patch
 s'ancrer **dans** ce corps se ferait mordre. Nettoyage possible en 6 lignes
 *(relire + réexécuter ; `CREATE OR REPLACE` garde les droits)* — proposé, non fait.
 
+#### ⑤-septies LE WORKER ET L'ÉCRAN SONT ÉCRITS — *16/10, go « ENCHAINE »*
+
+**Le worker** *(`Console/console_job_worker.js`)* — **les 5 endroits**, tous additifs :
+
+| | |
+|---|---|
+| `ACTION_JOB_TYPES` *(l. 97)* | le type rejoint la **session négociateur**, pas `ADMIN_JOB_TYPES` — même règle que la branche `actions` en base |
+| le bras `archiverHektorContact` | `POST xmlrpc.php` · `mode=contacts-contactProfile-archiveContact` · `id` · `archive=true|false` — **tel que le relevé l'a lu**, avec le `Referer` de la fiche contact |
+| `handleArchiveHektorContact` | patron de `handleUpdateHektorContact` recopié : traduction **identité → cible**, contexte d'exécution, bascule dans le compte du négociateur, puis **un rafraîchissement de la fiche** *(c'est Hektor qui confirme)* |
+| l'aiguillage *(l. 21205)* | `case 'archive_hektor_contact'` |
+| les libellés et la liste à notifier | « L'archivage (ou la réactivation) du contact » — **vrai dans les deux sens**, puisqu'un seul type les porte |
+
+⭐ **Le sens ne s'invente jamais** : sans le booléen dans la charge, le bras **refuse**.
+Un défaut à `false` aurait pu **désarchiver** un contact qu'on voulait archiver.
+⛔ **Inerte jusqu'au redémarrage des QUATRE services.**
+
+**L'écran** — l'item est dans le menu « … » des **deux** fiches *(V2 `fa-cx-menu-item`,
+Base `menu-item`)*, **au-dessus de « Supprimer »**, libellé **« Archiver » / « Réactiver »**
+selon l'état. ⭐ **Un seul morceau de code pour les deux fiches** *(`useArchivageContact`)* :
+deux copies divergeraient. Le droit utilisé est **`canManageContacts`** *(admin, manager **et**
+commercial)* — l'option B, **sans rien brancher**. Le `confirm` **dit la vérité** *(« sa fiche
+sort de l'annuaire, rien n'est supprimé, le geste se défait par le même bouton »)*, et le
+refus de la base s'affiche **tel quel**.
+
+**Épreuves** : `node --check` sur le worker *(il ne le LANCE pas)* · **`npm run build` vert**
+*(bundle neuf `index-CRuWIgLd.js`)* · et **3 suites du projet rejouées, toutes vertes** :
+`test_porte_contacts` **23/23**, `test_suite_creation_avertie`, `test_envoi_hektor_differe`.
+⚠ **Rien n'est poussé** : l'écran n'existera qu'après le push de Frédéric.
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».
