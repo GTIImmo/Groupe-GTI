@@ -67,7 +67,23 @@ def main() -> int:
         print("!! SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absents", file=sys.stderr)
         return 1
 
-    client = SupabaseRestClient(url, cle)
+    # ⚠ LES ARGUMENTS SONT NOMMES OBLIGATOIREMENT (`def __init__(self, *, base_url, ...)`).
+    #   Le 15/10 au matin, l'etape a echoue DEUX FOIS sur
+    #   « __init__() takes 1 positional argument but 3 were given » : j'avais recopie
+    #   l'import de repartition_commission.py sans lire COMMENT il instancie.
+    client = SupabaseRestClient(base_url=url, service_role_key=cle)
+
+    # ⭐ L'ESSAI A VIDE : tout se joue SAUF l'appel. C'est ce qui manquait le 14/10 --
+    #   je n'avais pas lance le script (il ECRIT en production, et c'etait le bon
+    #   reflexe), mais je pouvais eprouver TOUT CE QUI PRECEDE l'ecriture. Un script
+    #   qui ecrit doit offrir un moyen de s'eprouver sans ecrire.
+    if "--essai-a-vide" in sys.argv:
+        print("essai a vide : env lu, client construit")
+        print(f"   base    : {client.base_url}")
+        print(f"   cle     : {'oui' if client.service_role_key else 'NON'}")
+        print("   appel   : NON JOUE (c'est le but)")
+        return 0
+
     try:
         reponse = client.request(method="POST", path="rpc/app_sweep_search_orphans")
     except Exception as exc:  # non bloquant : on dit, et on rend la main

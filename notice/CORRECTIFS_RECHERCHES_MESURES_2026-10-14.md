@@ -299,3 +299,68 @@ et elle reste fermée à tout le reste.
 
 ➡ **Le rattrapage a lieu demain, et non plus le 16/10** — à condition que le patch de registre
 soit collé *(sinon l'étape tourne quand même, mais sa surveillance ment)*.
+
+---
+
+# 15/10/2026 — LE CONTRÔLE
+
+## 10. LE CONTRÔLE DU 15/10 — *le remède marche, mon étape a planté, et elle était inutile*
+
+### ✅ CE QUI A MARCHÉ
+
+| | hier | ce matin |
+|---|---|---|
+| recherches **chez nous** | 11 453 | **11 498** *(+45)* |
+| recherches **chez Hektor seul** | 65 729 | **65 693** *(−36)* |
+| nos **5 contacts témoins** | 0 recherche | **6** |
+| 🟠 lignes accrochées à une recherche disparue | **4 022** | **0** |
+| 🟠 recherches disparues | **35** | **0** |
+| 🟠 orphelins non rattachables | **37** | **0** |
+| **le moniteur, à 07:48** | 8 avertissements | **4** |
+
+➡ **Les trois alertes sont tombées**, et les deux sondes de notifications corrigées la veille sont
+restées vertes. **L'ordre push → ménage est bon** : push 07:02:40 → 07:03:20, ménage 07:03:20.
+**La course est supprimée.**
+
+### ❌ MON ÉTAPE A PLANTÉ — deux fois
+
+```
+TypeError: SupabaseRestClient.__init__() takes 1 positional argument but 3 were given
+```
+
+**Ma faute** : j'ai recopié l'**import** de `repartition_commission.py` sans lire **comment il
+instancie**. Les arguments sont **nommés obligatoirement**
+*(`def __init__(self, *, base_url, service_role_key, …)`)*.
+
+⚠ **Et cet échec a créé une alerte** : `logs.pipeline.latest` passe en avertissement parce que
+mon `Traceback` est dans la queue du journal du run. **Une alerte de plus, causée par moi.**
+
+**Corrigé le 15/10**, et surtout : **le script offre maintenant `--essai-a-vide`**, qui joue tout
+*(lecture de l'environnement, construction du client)* **sauf l'appel**.
+
+> ⭐ **LA LEÇON** : le 14/10 j'ai eu **raison** de ne pas lancer un script qui écrit en
+> production — mais j'aurais pu éprouver **tout ce qui précède l'écriture**. **Un script qui
+> écrit doit offrir un moyen de s'éprouver sans écrire.**
+
+### ⭐⭐ ET LA LEÇON LA PLUS IMPORTANTE : L'ÉTAPE DE MÉNAGE ÉTAIT INUTILE ICI
+
+**Les 4 022 orphelins ont disparu alors que le ménage n'a pas tourné.**
+
+Parce qu'un orphelin n'est pas « une ligne à rattacher ailleurs » : c'est **une ligne dont la
+recherche manque**. **Rendre la recherche suffit** — la vue ne les compte plus, point.
+
+➡ **Le correctif B seul suffisait.** L'étape ajoutée le 14/10 *(et le patch de registre que
+Frédéric a collé deux fois)* **n'a rien apporté à ce problème-là**.
+
+**Elle garde un intérêt pour l'AUTRE porte** — celle où la recherche **ne revient pas** parce que
+sa clé a changé *(le hash du contenu)*. Mais **je l'ai présentée comme nécessaire au rattrapage,
+et elle ne l'était pas.** ⚠ **J'aurais dû mesurer ce que B seul produisait avant d'ajouter une
+étape au run.**
+
+### ⬜ CE QUI RESTE
+
+1. **Demain matin** : vérifier que l'étape corrigée tourne *(elle aura son premier succès)* et que
+   `logs.pipeline.latest` redevient vert.
+2. ⚠ **3ᵉ travail en erreur, sans rapport avec ce chantier** : annonce **47824**,
+   `sync_console_documents`, 14/10 à 19:00 — *« Unexpected token '<' »*, Hektor a renvoyé une page
+   HTML au lieu de JSON. **1 seule tentative.** Non diagnostiqué.
