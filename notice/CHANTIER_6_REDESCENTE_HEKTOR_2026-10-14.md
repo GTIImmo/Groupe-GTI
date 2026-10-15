@@ -1124,3 +1124,65 @@ front**.
 ⚠ **Une réserve à confirmer après la descente** : j'ai mesuré l'ordre sur **notre** index ; il
 reste à vérifier que les 56 annonces ont bien `images_preview_json_app` rempli *(sinon elles
 tombent sur le repli frais et ne sont pas exposées)*.
+
+### 6d — LES DEUX VÉRIFICATIONS QUI MANQUAIENT (15/10, 09:10) : **le correctif est sans danger**
+
+**① La réserve est levée** — l'exposition publique est bien réelle :
+```
+annonces publiables sur la vitrine                449
+   avec NOS adresses (images_preview_json_app)    447
+   avec NOTRE vignette (photo_url_listing_app)    449
+```
+➡ La vitrine publie donc **notre** galerie et **notre** vignette pour la quasi-totalité : les
+**56** mauvaises photos d'accroche et les **34** annonces qui montrent des photos retirées sont
+bien **en ligne**.
+
+**② La fiche visite et les pièces jointes : le filtre EXISTE** *(l'avertissement du 26/09 est
+périmé)*. Les **trois** lecteurs du front passent par **une seule** fonction,
+`loadConsolePhotos` *(`api.ts:7618`)*, qui filtre `present_in_hektor = true` :
+`ConsolePhotosPanel` *(le panneau)* · `loadVisitVoucherPhotoUrl` *(`App.tsx:38263` → la **fiche
+visite**)* · et le couple documents+photos d'un **envoi** *(`App.tsx:37741`)*.
+
+| lecteur | filtre « retirée » | ordre utilisé | effet du correctif |
+|---|---|---|---|
+| panneau photos | ✅ | le nôtre | les retirées disparaissent, l'ordre devient juste |
+| **fiche visite** | ✅ | le nôtre | ⚠ **aujourd'hui elle peut imprimer une photo retirée** → corrigé |
+| pièces jointes d'un envoi | ✅ | le nôtre | corrigé |
+| galerie de la fiche *(hero)* | — *(lit le détail)* | **celui de Hektor** | ⚪ inchangée, déjà juste |
+| **vitrine** · listing · registre des mandats | ✅ *(patch du 27/09)* | le nôtre | corrigés **sans toucher au front** |
+
+➡ **Aucun lecteur n'est cassé par le marquage** : tous ceux qui montrent des photos, ou filtrent
+déjà, ou lisent la source fraîche.
+
+## 6d — ÉTAPE 2 : LE CORRECTIF PROPOSÉ
+
+**Un script local**, sur le patron de `rattrapage_photos.js` *(`--dry-run` par défaut,
+`--appliquer` pour écrire)*, qui met notre index d'accord avec `images_json` :
+
+1. **marquer** `present_in_hektor = false` + `absent_depuis` les photos absentes de `images_json` ;
+2. **reprendre** `sort_order` *(et `visible`)* depuis `images_json`.
+
+**Quatre garde-fous, tous repris de décisions déjà prises dans le projet :**
+
+| garde-fou | pourquoi | d'où il vient |
+|---|---|---|
+| **jamais depuis une liste vide** | une `images_json` vide marquerait toutes les photos de l'annonce | 3e, 13/10 |
+| **une annonce sans fiche détail est SAUTÉE** | pas de détail = aucune information, pas une absence | — |
+| **un plafond** *(refus si plus de 2 000 à marquer)* | un miroir cassé marquerait tout le parc ; la mesure du jour est **440** | le plancher de G.8, 26/09 |
+| **on ne re-date jamais une déjà marquée** | sinon l'horloge d'une purge repartirait sans cesse | G.10bis + 3e |
+
+**Aucun appel à Hektor. Aucune ligne de front. Aucun patch SQL.**
+⭐ **Et le reste suit tout seul** : le patch du 27/09 recalcule `photo_url_listing_app` et
+`images_preview_json_app` depuis ces deux colonnes → vitrine, listing et registre redeviennent
+justes au prochain passage du run.
+
+**Retour arrière** : l'inverse est trivial *(`present_in_hektor = true`, `absent_depuis = null`
+sur ce que le script a marqué — il journalise les identifiants)*, et `sort_order` est de toute
+façon reconstruit depuis `images_json` à chaque passage.
+
+**Contrôle** : après `--appliquer`, les trois chiffres du jour doivent tomber à **0**
+*(440 retirées, 1 662 ordres faux, 56 mauvaises photos d'accroche)*, et le compte des photos
+**marquées** doit valoir **440** — pas 441 238.
+
+⛔ **En attente du « vas-y » de Frédéric.** *(Et l'étape dans le run, elle, viendra après : c'est
+une modification du run.)*
