@@ -119,6 +119,45 @@ SQL **à coller**.
 
 ---
 
+## ⑦-6 · ✅ FAIT LE 15/10 — *« ABANDONNER » DÉFAIT, au lieu de seulement faire taire*
+
+*Frédéric : « comment dire a mon apps d'annuler le worker et annuler le changement dans
+l'apps c'est a dire remettre le montant comme hektor », puis « oui fais A ».*
+
+**Détail complet : `notice/ABANDON_DEFAIT_LE_GESTE_2026-10-15.md`.** En trois points :
+
+**Le défaut** — depuis le chantier ③ l'app écrit *chez nous d'abord*, et les **deux** boutons
+du bandeau faisaient la même chose : un `INSERT` dans `app_pending_resolution`, qui ne sert
+qu'à **faire taire l'alerte**. La valeur écrite par l'app **restait en place pour toujours**
+alors que Hektor n'avait jamais reçu le geste.
+
+**Le remède** — « Abandonner » veut dire *« ce geste n'a pas eu lieu »* : la fiche reprend
+l'état d'avant *(déjà posé dans la charge du travail par les RPC optimistes — « pour que le
+worker sache quoi restaurer »)*, et **la ligne de carnet est EFFACÉE**, ce qui rend la parole
+à Hektor *(contrat d'autorité : « l'app n'a rien → ON NE TOUCHE À RIEN »)*. « J'ai refait »
+n'est pas touché.
+
+⭐ **Le garde-fou est un IDENTIFIANT, pas une approximation** : la RPC écrit le carnet et crée
+le travail dans la **même transaction**, donc `ecrit_le = requested_at` **à la microseconde**
+*(mesure : un seul couple à 0,000 s sur 21 ; les autres à 44 s, 124 s, 8 006 s, 473 236 s)*.
+⚠ **Et il n'est pas décoratif** : sur **61672** et **62963**, la ligne de carnet a été écrite
+par un geste **plus récent** *(+2 h 14 et +2 min)* — sans lui, abandonner effaçait du vrai.
+⚠⚠ **Les 4 gestes d'affaire sont hors de portée, exprès** : le worker les restaure **déjà**
+*(`restaurerEtatAffaire`)*, au moment même où le filet de rejeu s'arrête. Un second retour
+arrière serait un **double** retour arrière.
+
+**11 contrôles verts sur la vraie base en transaction annulée, dont un TÉMOIN INVERSE** qui
+montre l'ancien code laisser la fiche fausse, le carnet plein **et l'alerte éteinte**.
+
+⚠⚠ **ET UN SECOND DÉFAUT TROUVÉ EN CHEMIN** : la vue corrigée hier *(⑦-5 B)* montre les
+travaux de plus de 3 heures, **mais `app_action_status` et `app_action_resolve` sont restées
+à `>= 5` tentatives**. Donc **47824** sonne, est visible, et **n'a aucun bouton** — le clic
+était refusé **en silence** (`resolved: false`, que le front jetait). Le silence est corrigé.
+⬜ **L'alignement sur « 5 OU > 3 h » reste à trancher par Frédéric** : il rendrait tranchables
+des travaux qu'un filet pourrait encore rejouer.
+
+---
+
 ## ⑦-3 · CE QUI VIENT DU CHANTIER ③ *(décisions de Frédéric, 13 et 14/10)*
 
 | | |

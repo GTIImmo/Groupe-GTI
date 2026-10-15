@@ -33287,6 +33287,8 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
   const [gestes, setGestes] = useState<ActionAbandonnee[]>([])
   const [resolving, setResolving] = useState<string | null>(null)
   const [resolveError, setResolveError] = useState<string | null>(null)
+  // 15/10/2026 : ce que le clic a fait. Un bouton qui agit doit le dire.
+  const [resolveNote, setResolveNote] = useState<string | null>(null)
 
   const dossierId = dossier?.app_dossier_id ?? null
 
@@ -33303,8 +33305,26 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
     if (resolving) return
     setResolving(jobId)
     setResolveError(null)
+    setResolveNote(null)
     try {
-      await resolveAction(jobId, mode)
+      const compte = await resolveAction(jobId, mode)
+      // LA RPC PEUT REFUSER DE TRANCHER, et avant le 15/10 l'ecran cachait la
+      // ligne quand meme : elle revenait au rechargement suivant, sans un mot.
+      if (compte && compte.resolved === false) {
+        setResolveError(compte.reason === 'deja_tranche'
+          ? 'Ce geste a déjà été tranché. Rechargez la page.'
+          : "Ce geste n'est pas encore tranchable : il lui faut 5 tentatives.")
+        return
+      }
+      // « ABANDONNER » DEFAIT CE QUE L'APP AVAIT ECRIT CHEZ NOUS (15/10/2026).
+      // On nomme les champs remis comme Hektor. Et quand il n'y a rien a remettre,
+      // on le dit aussi : c'est une bonne nouvelle, pas un silence.
+      if (compte && mode === 'abandon') {
+        const remis = (compte.defait ?? []).filter((x) => Number(x.fiche_remise) > 0)
+        setResolveNote(remis.length
+          ? `Abandonné. Remis comme Hektor : ${remis.map((x) => `${x.champ} = ${x.valeur_avant ?? 'vide'}`).join(', ')}.`
+          : "Abandonné. Rien à remettre : votre fiche disait déjà la même chose que Hektor.")
+      }
       setGestes((liste) => liste.filter((g) => g.job_id !== jobId))
     } catch (err) {
       setResolveError(err instanceof Error ? err.message : String(err))
@@ -33334,6 +33354,7 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
         </div>
       ))}
       {resolveError ? <div style={{ fontSize: 13, marginTop: 8 }}>{resolveError}</div> : null}
+      {resolveNote ? <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9 }}>{resolveNote}</div> : null}
     </div>
   )
 }

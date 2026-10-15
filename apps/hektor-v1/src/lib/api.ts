@@ -3792,10 +3792,36 @@ export async function loadActionStatus(appDossierId: number | null | undefined):
   return (data ?? null) as ActionStatus | null
 }
 
-export async function resolveAction(jobId: string, mode: 'refait' | 'abandon'): Promise<void> {
-  if (!hasSupabaseEnv || !supabase || !jobId) return
-  const { error } = await supabase.rpc('app_action_resolve', { target_job_id: jobId, mode })
+// 15/10/2026 -- CE QUE LE CLIC A VRAIMENT FAIT.
+//
+// La RPC rend un compte-rendu depuis le premier jour, et l'ecran le JETAIT. Deux
+// choses s'y cachaient :
+//   · `resolved: false` -- la RPC a REFUSE de trancher (« rien_a_trancher » si le
+//     geste n'a pas 5 tentatives, « deja_tranche » sinon). L'ecran faisait
+//     disparaitre la ligne quand meme : au rechargement suivant elle revenait, et
+//     le bouton semblait ne rien faire -- en silence.
+//   · `defait` -- depuis aujourd'hui, la liste de ce qu'« Abandonner » a remis
+//     comme Hektor (la fiche) et efface du carnet de l'app.
+export type ActionDefait = {
+  champ: string
+  valeur_app: string | null
+  valeur_avant: string | null
+  fiche_remise: number
+}
+export type ActionResolveResult = {
+  resolved: boolean
+  reason?: string | null
+  mode?: string
+  job_type?: string
+  champs_defaits?: number
+  defait?: ActionDefait[]
+}
+
+export async function resolveAction(jobId: string, mode: 'refait' | 'abandon'): Promise<ActionResolveResult | null> {
+  if (!hasSupabaseEnv || !supabase || !jobId) return null
+  const { data, error } = await supabase.rpc('app_action_resolve', { target_job_id: jobId, mode })
   if (error) throw new Error(error.message ?? 'Unable to resolve action')
+  return (data ?? null) as ActionResolveResult | null
 }
 
 export type AnnonceEditSkippedField = { field: string; reason?: string | null; value?: unknown }

@@ -240,6 +240,25 @@ report ne se décident jamais sans lui.
    deux l'heure de **départ** *(149 lignes sur 154 identiques)*. Mon correctif de la veille
    en a déduit « la Descente a fini » et a gardé un faux avertissement.
    ➡ **Avant de conclure « c'est fini », vérifier que la colonne mesure une FIN.**
+28. ⭐⭐ **DEUX ÉCRITURES DE LA MÊME TRANSACTION SE RECONNAISSENT À LA MICROSECONDE**
+   *(15/10)*. Il fallait savoir quelles lignes du carnet appartenaient à *ce* travail et
+   pas à un geste plus récent qui avait réussi. `now()` est **figé** pendant une
+   transaction, et les deux colonnes l'ont pour défaut : donc
+   `app_annonce_champ_app.ecrit_le = app_console_job.requested_at` **exactement**.
+   Mesure : **un seul couple à 0,000 s** sur 21, les autres à 44 s, 124 s, 8 006 s,
+   473 236 s. ➡ **Un horodatage de transaction est un IDENTIFIANT** — même famille que
+   « on croise sur les identifiants, jamais sur les nombres » (leçon 23). ⚠ Et il n'était
+   pas décoratif : les 2 lignes visées avaient été écrites **plus tard** (+2 h 14, +2 min)
+   par le geste que Frédéric avait refait à la main. Sans lui, on effaçait du vrai.
+29. ⚠⚠ **UNE RÈGLE ÉLARGIE DANS UNE VUE NE L'EST PAS DANS LES FONCTIONS QUI LA DOUBLENT**
+   *(15/10)*. Le 14/10 j'ai élargi `app_en_attente_humain` à « 5 tentatives **OU** plus de
+   3 h » et j'ai écrit « le travail devient visible ». **Faux à moitié** : `app_action_status`
+   (le bandeau) et `app_action_resolve` (le clic) portent **leur propre copie** du `>= 5`.
+   Résultat mesuré : 47824 sonne, apparaît dans le moniteur, et **n'a aucun bouton** — le
+   clic était refusé **en silence**, parce que le front **jetait** le `{"resolved": false}`
+   que la RPC rendait depuis toujours. ➡ **Après avoir changé un seuil, chercher qui
+   d'autre porte le même seuil** ; et **un front qui jette le compte-rendu d'une RPC
+   fabrique un bouton menteur**.
 20. ⚠ **UN `revoke ... from public` N'ENLÈVE PAS UN DROIT PAR DÉFAUT.** Supabase pose
    `GRANT EXECUTE ... TO authenticated` sur **toute nouvelle fonction** ; ce n'est pas PUBLIC,
    donc le `revoke` le laisse. **Relire `proacl` après avoir créé une fonction** — mon patch
@@ -525,6 +544,26 @@ report ne se décident jamais sans lui.
    de l'autre session ; le rouge doit passer au vert et l'e-mail ne plus partir.
    (b) LES 8 WARNINGS : autre sujet, ILS NE SONNENT PAS, chacun a un seuil pose pour une
    raison. A reprendre un par un S'IL LE DEMANDE -- rien n'a ete decide.
+⑩ ✅ « ABANDONNER CE GESTE » DEFAIT ENFIN L'ECRITURE DE L'APP (15/10, go « oui fais A »).
+   QUESTION DE FREDERIC : « comment annuler le changement dans l'apps, remettre le montant
+   comme hektor ». REPONSE : ca n'existait pas. Les DEUX boutons du bandeau faisaient la
+   meme chose -- faire taire l'alerte -- et la valeur ecrite chez nous restait en place
+   alors que Hektor n'avait jamais recu le geste.
+   REMEDE : « Abandonner » = « ce geste n'a pas eu lieu ». La fiche reprend l'etat d'avant
+   (DEJA pose dans la charge du travail par les RPC optimistes), et la ligne de carnet est
+   EFFACEE -- une ligne absente veut dire « l'app n'a rien a dire », donc Hektor gagne
+   (contrat d'autorite). « J'ai refait » n'est PAS touche.
+   GARDE-FOU : ecrit_le = requested_at a la microseconde (lecon 28). Les 4 gestes d'AFFAIRE
+   sont hors de portee EXPRES : le worker les restaure deja (restaurerEtatAffaire).
+   11 controles verts sur la vraie base en transaction annulee + TEMOIN INVERSE.
+   Detail : notice/ABANDON_DEFAIT_LE_GESTE_2026-10-15.md
+   ⬜ RESTE A FREDERIC : (a) coller patch_abandon_defait_le_geste_2026-10-15.sql ;
+   (b) pousser le front ; (c) cliquer « J'ai refait » sur 61672 et 62963 (mesure : RIEN a
+   defaire sur ces deux-la, le geste ETAIT passe chez Hektor) ;
+   (d) ⬜ TRANCHER : aligne-t-on app_action_status et app_action_resolve sur « 5 tentatives
+   OU plus de 3 h », comme la vue du 14/10 ? Sans ca, 47824 et 61439 sonnent et n'ont
+   AUCUN bouton (lecon 29). Ce n'est pas un detail : ca rendrait tranchables des travaux
+   qu'un filet pourrait encore rejouer. JE N'AI RIEN CHOISI.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
