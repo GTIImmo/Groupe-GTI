@@ -1335,3 +1335,83 @@ appelle le ménage juste après le push »)*. **Je ne le double pas.**
 | **3** | **6f** carnet | 🟠 défaut réel, conséquence faible, décision déjà prise |
 | **4** | **6h** RDV Google | ⚪ défaut réel mais **inerte** : 0 usage depuis 4 mois |
 | **5** | **6g** recherches | ⚪ **à fermer** : l'objet n'existe plus, le reste est à l'autre session |
+
+---
+
+# G.1-c — LE DÉTAIL (15/10, lecture seule)
+
+## CE QUI MANQUE, PRÉCISÉMENT
+
+```
+49  biens vendus/clos sautes par le rattrapage
+    38  n'ont AUCUN document « compromis »
+    35  n'ont AUCUN document « acte »
+    28  n'ont NI L'UN NI L'AUTRE
+    23,7 documents en moyenne  ·  46 sur 49 ont bien leur mandat
+```
+
+Ce sont donc des biens **bien documentés** — mandat compris — dont **la fin de vie manque**.
+
+## QUAND ILS ONT BOUGÉ CHEZ HEKTOR — et les 28 dossiers, nommés
+
+| dernière MAJ chez Hektor | biens | **sans compromis NI acte** | les dossiers |
+|---|---|---|---|
+| **octobre** | 19 | **10** | `18367` `EM71485` `V290062325` `V390061949` `V690062167` `VA2380` `VI3269` `VM66034` `VM69235` `VM71018` |
+| septembre | 25 | **14** | `18603` `EM4048` `V110062068` `V290062352` `V320062170` `V390062405` `V480059466` `V550061730` `V770061756` `V770061935` `V770061986` `VM67168` `VM69738` `VT9192` |
+| août | 5 | **4** | `V320059627` `V320062051` `VM70845` `VT9346` |
+
+⭐ **19 ont bougé chez Hektor en octobre** — donc bien après notre dernière lecture (19-20/08).
+C'est la preuve la plus directe : quelque chose a changé chez eux, et nous ne l'avons pas lu.
+*(⚠ `VA2380` est un bien d'essai du projet — ses documents sont peut-être des essais.)*
+
+⚠ **Une nuance d'honnêteté** : pour un bien vendu le mois dernier, **l'acte n'existe pas encore
+chez Hektor non plus** *(il vient 2 à 3 mois après le compromis)*. Le vrai manque sûr, c'est
+donc **le compromis — 38 biens**.
+
+## LA CAUSE : une seule ligne
+
+`Console/enqueue_empreinte_lot.js:190` — `if (empreintes.has(id)) { stats.deja_marquees += 1; continue; }`
+L'empreinte est une clé **par numéro d'annonce**, pas par index : une annonce qui **change
+d'index emporte son empreinte**, et le rattrapage la lit comme « déjà faite ».
+
+## LES REMÈDES
+
+### ⭐ Option A — retirer leurs 49 empreintes, et laisser la machine de 21:00 les reprendre
+
+**Le calendrier est parfait** : le rattrapage finit les vendus/clos la **nuit du 16 au 17**, et il
+lui restera alors **exactement ces 49** à faire. **Aucune nuit de plus** — il les prend dans sa
+foulée. Coût : 49 lectures Hektor + les documents nouveaux, ~20 min de worker.
+
+- **un patch SQL**, avec sa **sauvegarde datée** *(`app_console_document_fingerprint_avant_g1c_2026-10-15`,
+  le patron du projet)* et son **inverse** ;
+- **aucune ligne de code**, aucun redémarrage.
+
+**Ce que ça pourrait casser ailleurs — les quatre consommateurs de cette table, vérifiés :**
+
+| consommateur | effet du retrait |
+|---|---|
+| `enqueue_empreinte_lot.js` *(le rattrapage)* | ✅ **c'est le but** : les 49 redeviennent « à faire » |
+| `enqueue_console_sync_jobs.js` *(la détection)* | ⚪ ses périmètres sont `vente` et `daily-cloud` — **les vendus/clos n'y sont pas** |
+| `console_job_worker.js:1211` | ⚪ il **repose** l'empreinte quand il traite l'annonce |
+| `push_single_annonce_to_supabase.py:468` | ⚪ il ne fait que **repointer** `app_dossier_id` ; une ligne absente n'est pas repointée |
+
+### Option B — poser 49 travaux ciblés
+Demande l'outil « redemander une annonce », que Frédéric a écarté. Et le résultat est le même.
+
+### Option C — la rotation lente des vendus/clos, le soir
+C'est la **4ᵉ ligne** de la tâche du soir *(300 lectures ≈ 8 min, tout le stock en 30 nuits)*.
+⭐ **Elle empêche le RETOUR du défaut**, ce que A ne fait pas.
+
+## ⚠ ET LA CAUSE REVIENDRA — mesurée
+
+L'index des vendus/clos est passé de **8 937** *(07/10)* à **8 944** *(14/10)* : **+7 en 7 jours,
+soit ≈ 30 par mois**. Chaque bien vivant déjà lu qui se vend devient un nouveau cas.
+➡ **A répare le passé, C empêche le retour. Les deux, dans cet ordre.**
+
+## LE CONTRÔLE
+
+Après la nuit du 16 au 17 : les 49 doivent avoir une **empreinte neuve**, le compte des
+« sautées » doit tomber à **0**, et les **38 sans compromis** doivent diminuer. Et surtout :
+**0 travail en erreur** *(un échec vaudrait une exclusion définitive)*.
+
+⛔ **En attente du choix de Frédéric : A seule, A + C, ou rien pour l'instant.**
