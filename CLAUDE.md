@@ -664,25 +664,33 @@ report ne se décident jamais sans lui.
      (principal, LogonType, RunLevel, compatibilite, moteur, limite, instances, classe du
      declencheur). « Enregistree » ne veut pas dire « configuree comme ses soeurs ».
 ⑪ ⏰ LE CONTROLE DU 16/10 AU MATIN -- la PREMIERE nuit de « GTI Entretien Documents » (22:00).
-   A REGARDER, dans cet ordre :
-     1. le journal de la tache : les QUATRE lignes passees, sortie 0
-          Get-Content (Get-ChildItem C:\Hektor\Projet\logs\scheduled\entretien_documents_*.log |
-                       Sort-Object LastWriteTime -Descending | Select-Object -First 1)
-     2. les 33 annonces liberees par la purge du 15/10 (sauvegarde datee
-        app_console_job_erreurs_avant_purge_2026_10_15) : 32 d'entre elles n'avaient PAS
-        d'empreinte, donc la detection les sert EN PREMIER -> elles doivent toutes en avoir
-        une, et le journal des travaux doit porter des lignes « Document refuse par le
-        coffre, garde sur le serveur » (c'est la PREUVE EN REEL du correctif du 15/10).
-     3. 0 travail documents en erreur. ⚠ L'alerte data.travaux_en_erreur compte TOUS les
-        types : il restait 5 change_hektor_annonce_status de l'AUTRE SESSION (24933, 62963,
-        61672). Un rouge pour ceux-la est ATTENDU, ce n'est pas une rechute -- et ils ne
-        sont pas a moi.
-     4. les PHOTOS (ligne 4, elle a ecrit pour de vrai) : ~440 marquees « retirees »,
-        ~1 662 remises en ordre, et les 56 annonces du site public qui montraient la
-        mauvaise photo d'accroche doivent tomber a 0.
-     5. la file vide bien avant 03:00 (recherches actives) et 05:00 (le run).
-   ⚠ Si la ligne 1 (biens en vente) a ete plafonnee par son cap, c'est NORMAL le premier
-     soir : elle repasse chaque nuit.
+   ⭐ TOUT EST PRET : L'OUTIL EXISTE, IL SE JOUE EN UNE COMMANDE ET IL REND UN VERDICT.
+        python phase2/checks/controle_entretien_documents.py
+     Il ne fait que LIRE (aucun appel a Hektor). Sortie 0 = vert, 1 = un rouge, 2 = il n'a
+     pas pu mesurer. Il porte EN DUR la reference figee la veille a 15:40, et il separe les
+     ROUGES (grave) des ORANGES (a regarder, pas forcement un echec).
+   PUIS la mesure des photos, a part, en lecture seule (~1 min) :
+        node Console/accorder_photos_miroir.js
+   LA REFERENCE DE LA VEILLE -- gardee aussi dans logs/scheduled/reference_*_2026-10-15.* :
+        biens en vente     729 dont  726 avec empreinte,     3 sans
+        estimations     12 758 dont 12 728 avec empreinte,  30 sans
+        vendus/clos      8 943 dont  7 545 avec empreinte, 1 398 sans
+        travaux documents en erreur 0 · file 0 · autres types en erreur 2 (autre session)
+        lignes marquees cloud_refuse : 0        <- LE TEMOIN DU CORRECTIF
+        photos : a_marquer 440 (67 annonces) · a_reordonner 1 662 · visible_divergent 0
+   LES DEUX TEMOINS QUI COMPTENT :
+     · les 33 annonces liberees par la purge doivent recevoir leur empreinte (32 n'en avaient
+       pas, donc la detection les sert EN PREMIER) ;
+     · au moins une ligne doit porter `metadata_json.cloud_refuse` -- c'est la PREUVE EN REEL
+       du correctif du coffre. ⚠ 0 n'est pas forcement un echec : si 0 marque ET 0 en erreur,
+       c'est qu'aucune annonce a type refuse n'est repassee. Les deux se lisent ENSEMBLE.
+   ⚠ L'alerte data.travaux_en_erreur compte TOUS les types : les 2 change_hektor_annonce_status
+     restants sont a l'AUTRE SESSION. Un rouge pour eux est ATTENDU, pas une rechute.
+   ⚠ Si un cap a mordu, c'est NORMAL le premier soir : la tache repasse chaque nuit. Ce qui
+     serait grave : 0 progres, un travail en erreur, ou la file encore pleine a 05:00.
+   ⭐ L'ESSAI A BLANC DU 15/10 EST LE TEMOIN INVERSE : joue AVANT la nuit, l'outil rend
+     2 rouges (tache jamais executee, aucun journal) et 2 oranges (1/33 empreintes,
+     0 cloud_refuse). Demain, ces quatre lignes doivent avoir bouge.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
