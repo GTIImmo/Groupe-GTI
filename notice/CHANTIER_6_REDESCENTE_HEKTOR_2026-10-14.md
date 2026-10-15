@@ -1258,3 +1258,80 @@ conception** — il n'y a simplement aucune photo d'app en vol à cet instant *(
 14/10 sur 62774 a été supprimée le jour même)*. **Le jour où un négociateur ajoute une photo
 depuis l'app, le script sans ces gardes la ferait disparaître de son écran.** ⭐ Frédéric l'a
 arrêté avant qu'une ligne soit écrite.
+
+---
+
+# AUDIT DES CINQ POINTS RESTANTS — 15/10, lecture seule
+*(demande de Frédéric : « audite correctement tout avant de dire qu'il y a un problème »)*
+
+## ⭐ 1. G.1-c — **LE SEUL VRAI PROBLÈME DES CINQ**
+
+```
+vendus/clos portant une empreinte d'AVANT la reprise du 25/09 :  49
+   -> sautes POUR TOUJOURS par le rattrapage (« empreinte posee = deja faite »)
+   -> releve en lecture seule du 14/10 : 4 SUR 5 avaient du nouveau chez Hektor
+   -> soit ~39 biens vendus dont il nous manque le COMPROMIS ou l'ACTE
+```
+Ni le rattrapage *(qui les saute)* ni la détection *(parc vivant seul)* ne les reprendra.
+**Remède connu et petit** : les faire entrer dans une rotation lente, ou retirer leur empreinte.
+
+## 2. 6e — L'AGENDA DES VISITES : **le fait est confirmé, mais ce n'est pas un défaut**
+
+```
+points d'entree Hektor lus par sync_raw : 12
+   list_annonces_active · _archived · _neuf · _pro · _loc · _loc_pro (x2)
+   list_contacts_active · list_contacts_archived
+   -> AUCUNE visite, aucun agenda
+table de visites dans le miroir local   : AUCUNE
+```
+➡ **Rien n'est importé, c'est exact — mais rien n'a jamais été branché.** Ce n'est pas une
+panne, c'est un périmètre jamais ouvert. ⛔ **La question est métier et elle est pour Frédéric** :
+si ses négociateurs ne saisissent plus leurs visites dans Hektor, **il n'y a rien à importer** et
+le point se ferme sans une ligne de code.
+
+## 3. 6f — LE CARNET ACQUÉREUR : **le carnet est bien mort, mais les recherches arrivent**
+
+```
+le carnet (sync_contact_typologie_acquereur) :  2 entrees, les deux du 20/09
+                                                -> rien depuis 25 jours : defaut CONFIRME
+MAIS le registre des recherches (app_search_registry, 77 203 lignes) :
+   arrivees en 2026-10 :  81      (~5 par jour)
+   arrivees en 2026-09 : 194
+```
+➡ **Les chemins détournés fonctionnent** *(date de mise à jour du contact, relectures)*. Défaut
+réel, **conséquence faible**, et **une décision existe déjà** *(journal du 20/09 : « le rattrapage
+global reste pour avant la coupure »)*. **Pas urgent.**
+⚠ **Non mesurable d'ici** : si Hektor en crée 10 par jour et qu'on n'en voit que 5, seul un appel
+chez lui le dirait.
+
+## 4. 6h — LE RDV DÉPLACÉ DANS GOOGLE : **défaut réel, mais INERTE**
+
+```
+liens de RDV en tout        : 11
+dernier cree                : 2026-06-15
+crees depuis 90 jours       :  0
+```
+➡ Le défaut existe, sur une fonction que **personne n'utilise depuis quatre mois**.
+**Verdict : pas un problème aujourd'hui.** À rouvrir le jour où les RDV servent vraiment.
+
+## ⚪ 5. 6g — LES 2 RECHERCHES DISPARUES : **à fermer, l'objet n'existe plus**
+
+```
+74680 et 76218 dans app_contact_search_current : PRESENTES toutes les deux
+la vue locale des disparues                    : 6 contacts, TOUS en 10 3xx xxx
+                                                 (notre plage : nes dans l'app)
+```
+➡ **L'objet nommé par l'audit du 08/10 n'existe plus.** Et le reste est le **chantier vivant de
+l'autre session** : trois commits et un patch SQL hier sur exactement ce sujet *(« 35 recherches,
+pas 4 022 » · « une recherche qui a déjà existé dans Supabase n'en est plus retirée » · « le run
+appelle le ménage juste après le push »)*. **Je ne le double pas.**
+
+## LE CLASSEMENT
+
+| | point | verdict |
+|---|---|---|
+| **1** | **G.1-c** | 🔴 **vrai problème** — 39 biens vendus sans leur compromis ni leur acte |
+| **2** | **6e** agenda | ⛔ **question métier**, pas un défaut — la réponse de Frédéric ferme ou ouvre |
+| **3** | **6f** carnet | 🟠 défaut réel, conséquence faible, décision déjà prise |
+| **4** | **6h** RDV Google | ⚪ défaut réel mais **inerte** : 0 usage depuis 4 mois |
+| **5** | **6g** recherches | ⚪ **à fermer** : l'objet n'existe plus, le reste est à l'autre session |
