@@ -20,17 +20,20 @@ DECLARE
   v_corps text;
   v_debut int;
   v_fin   int;
-  n1 CONSTANT text := $vieux$  -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
+  -- ⚠ ON RETIRE LES RETOURS CHARIOT DES DEUX COTES : colle dans l'editeur Supabase,
+  --   ce fichier arrive en CRLF, et un bloc multi-lignes ne se retrouverait plus
+  --   dans un corps stocke en LF (c'est l'echec de la version 1, le 15/10).
+  n1 CONSTANT text := replace($vieux$  -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
   -- Un travail dont le type n'est pas rejouable n'atteindra JAMAIS 5 tentatives :
   -- il etait donc visible dans le moniteur et impossible a trancher. Passe 3 h
   -- (le filet epuise ses 5 tentatives en 50 min : marge x3,6), on laisse l'humain
   -- decider. Les 3 heures sont mesurees, pas choisies.
   if j.status <> 'error'
      or (coalesce(j.attempt_count, 0) < 5
-         and j.requested_at >= now() - interval '3 hours') then$vieux$;
-  a1 CONSTANT text := '  if j.status <> ''error'' or coalesce(j.attempt_count, 0) < 5 then';
+         and j.requested_at >= now() - interval '3 hours') then$vieux$, chr(13), '');
+  a1 CONSTANT text := replace('  if j.status <> ''error'' or coalesce(j.attempt_count, 0) < 5 then', chr(13), '');
 BEGIN
-  SELECT pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure) INTO v_corps;
+  SELECT replace(pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure), chr(13), '') INTO v_corps;
   IF position('@seuil-3h' in v_corps) = 0 THEN
     RAISE NOTICE 'RIEN A FAIRE (app_action_resolve) : le patch n''est pas pose.';
   ELSE
@@ -47,15 +50,15 @@ DECLARE
   v_corps text;
   v_debut int;
   v_fin   int;
-  n1 CONSTANT text := $vieux$     -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
+  n1 CONSTANT text := replace($vieux$     -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
      and (coalesce(j.attempt_count, 0) >= 5
-          or j.requested_at < now() - interval '3 hours')$vieux$;
-  a1 CONSTANT text := '     and coalesce(j.attempt_count, 0) >= 5';
-  a2 CONSTANT text := $vieux$  if d.app_dossier_id is null then
+          or j.requested_at < now() - interval '3 hours')$vieux$, chr(13), '');
+  a1 CONSTANT text := replace('     and coalesce(j.attempt_count, 0) >= 5', chr(13), '');
+  a2 CONSTANT text := replace($vieux$  if d.app_dossier_id is null then
     raise exception 'dossier_not_found' using errcode = '22023';
-  end if;$vieux$;
+  end if;$vieux$, chr(13), '');
 BEGIN
-  SELECT pg_get_functiondef('public.app_action_status(bigint)'::regprocedure) INTO v_corps;
+  SELECT replace(pg_get_functiondef('public.app_action_status(bigint)'::regprocedure), chr(13), '') INTO v_corps;
   IF position('@repli-trancher' in v_corps) = 0 THEN
     RAISE NOTICE 'RIEN A FAIRE (app_action_status) : le patch n''est pas pose.';
     RETURN;

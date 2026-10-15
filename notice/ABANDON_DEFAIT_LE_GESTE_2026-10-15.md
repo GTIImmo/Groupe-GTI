@@ -268,6 +268,48 @@ le 15/10, ⑦-5 A)* → la fiche s'ouvre → le bandeau rouge est en haut.
 n'importe quel ordre — vérifié en les posant l'un après l'autre, les 4 + 3 ancres restent
 uniques.
 
+### ⚠⚠ VERSION 2 des deux patchs — *la version 1 a échoué chez Frédéric*
+
+> `STOP : l'ancre du repli apparait 0 fois, attendu 1`
+
+**Rien n'a été écrit** *(vérifié : les deux fonctions étaient à leurs empreintes d'origine,
+sans aucun retour chariot — l'éditeur Supabase a tout annulé)*.
+
+**La cause** : **coller du texte dans l'éditeur Supabase y met des CRLF.** L'ancre du repli
+tient sur **deux lignes** : collée, elle porte un retour chariot que le corps de la fonction
+*(stocké en LF)* n'a pas → **zéro correspondance**. Les ancres d'**une seule** ligne
+marchaient — c'est pourquoi **une seule des trois** a cassé.
+
+⚠ **Et la leçon était déjà écrite dans le projet, deux fois** *(08/10 puis 12/10 : « ça ne
+touche pas que le md5, ça touche TOUTE ANCRE MULTILIGNE »)*. J'avais appliqué
+`replace(…, chr(13), '')` à l'**empreinte** et l'avais oublié pour les **ancres**.
+
+**Le remède** : on nettoie les retours chariot **des deux côtés** — le corps lu dans la base,
+**chaque** ancre, et **chaque** texte inséré *(sinon le CRLF entre dans la fonction et c'est
+l'INVERSE qui ne retrouverait plus ses ancres)*.
+
+⚠⚠ **La vraie cause est plus profonde : mon épreuve ne reproduisait pas LE TRANSPORT.** Trois
+épreuves vertes n'ont rien vu parce qu'elles passent par l'outil SQL, jamais par un
+copier-coller Windows. **Donc j'éprouve maintenant le transport lui-même** :
+
+```sql
+EXECUTE replace(le_patch, chr(10), chr(13) || chr(10));   -- « comme si c'etait colle »
+```
+
+| | le cas | mesuré |
+|---|---|---|
+| 1 | l'ancre du repli, **en LF** *(comme je l'éprouvais)* | **1** occurrence |
+| 2 | **la même, COLLÉE en CRLF** | **0** ← **l'erreur de Frédéric, reproduite** |
+| 3 | collée + **les deux côtés nettoyés** | **1** ✅ |
+| 4 | une ancre d'**une** ligne *(LF / CRLF)* | **1 / 1** — insensible, donc muette |
+| 5 | **le vrai patch v2, exécuté en CRLF** | **posé sans erreur** ✅ |
+| 6-8 | repli présent · seuil présent · **0 retour chariot** dans la fonction | ✅ |
+| 9-13 | **patch ① en CRLF, puis son INVERSE en CRLF** | posé, 0 CR, **empreinte d'origine retrouvée** ✅ |
+
+⚠ Un contrôle sur 8 est sorti rouge **à tort** : je cherchais `03:00:00` dans la fonction.
+Une **vue** garde la forme normalisée `03:00:00`, une **fonction** garde le texte source
+`interval '3 hours'` — vérifié dans les deux. Le patch était bon, mon attendu était faux.
+
 **Empreintes d'avant** : `app_action_resolve` = `5590da3aff0e57512d8fb69c13abab2d` ·
 `app_action_status` = `0c8a54d36ea621fbd4b5e7bc7b7da6a2`
 

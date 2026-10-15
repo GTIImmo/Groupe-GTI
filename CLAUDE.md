@@ -259,6 +259,25 @@ report ne se décident jamais sans lui.
    que la RPC rendait depuis toujours. ➡ **Après avoir changé un seuil, chercher qui
    d'autre porte le même seuil** ; et **un front qui jette le compte-rendu d'une RPC
    fabrique un bouton menteur**.
+30. ⚠⚠⚠ **TROISIÈME FOIS : MES ÉPREUVES NE TRAVERSENT PAS LE COPIER-COLLER** *(15/10)*.
+   Frédéric colle `patch_aligner_seuil_trancher` → `STOP : l'ancre du repli apparait 0 fois`.
+   J'avais protégé l'**empreinte** avec `replace(…, chr(13), '')` et laissé les **ancres**
+   nues : collé depuis Windows, le fichier arrive en **CRLF**, et une ancre **multi-lignes**
+   ne se retrouve plus dans un corps stocké en LF. Une seule de mes trois ancres était
+   multi-lignes — **c'est la seule qui a cassé**. Reproduit et guéri en lecture seule :
+   la même ancre donne **1** en LF, **0** collée, **1** quand on nettoie **les deux côtés**.
+   ⚠ **La leçon était déjà écrite, deux fois** *(mémoire « empreinte md5 faussée par les
+   fins de ligne Windows », élargie le 12/10 : « ça touche TOUTE ANCRE MULTILIGNE »)*.
+   ➡ **Règle mécanique : dans un patch destiné à être COLLÉ, envelopper
+   `replace(…, chr(13), '')` autour de CHAQUE ancre, de CHAQUE texte inséré** *(sinon le CRLF
+   entre dans `prosrc` et c'est l'INVERSE qui ne retrouvera plus rien)* **et du
+   `pg_get_functiondef`/`pg_get_viewdef` lu. Puis COMPTER les ancres multi-lignes avant
+   d'envoyer.**
+   ⚠⚠ **Et la cause profonde : mon épreuve ne reproduisait pas LE TRANSPORT.** Trois épreuves
+   vertes n'ont rien vu parce qu'elles passent par l'outil SQL, jamais par un copier-coller.
+   **Le remède est d'éprouver le transport lui-même** : exécuter le patch via
+   `EXECUTE replace(texte, chr(10), chr(13)||chr(10))` — ce qui a reproduit l'erreur exacte,
+   puis prouvé la guérison (aller **et** retour, empreinte d'origine retrouvée).
 20. ⚠ **UN `revoke ... from public` N'ENLÈVE PAS UN DROIT PAR DÉFAUT.** Supabase pose
    `GRANT EXECUTE ... TO authenticated` sur **toute nouvelle fonction** ; ce n'est pas PUBLIC,
    donc le `revoke` le laisse. **Relire `proacl` après avoir créé une fonction** — mon patch

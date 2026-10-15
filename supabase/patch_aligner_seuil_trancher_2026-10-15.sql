@@ -50,6 +50,23 @@
 --  LES DEUX PATCHS DU 15/10 SONT INDEPENDANTS : leurs ancres ne se touchent pas.
 --  On peut les coller dans n'importe quel ordre.
 --
+--  ⚠⚠ VERSION 2 -- LA PREMIERE A ECHOUE CHEZ FREDERIC, ET LA LECON EST DEJA ECRITE
+--     DANS CE PROJET. « STOP : l'ancre du repli apparait 0 fois, attendu 1 », alors
+--     que la meme ancre se trouvait UNE fois quand je l'eprouvais ici.
+--     LA CAUSE : COLLER DU TEXTE DANS L'EDITEUR SUPABASE Y MET DES CRLF. L'ancre du
+--     repli tient sur DEUX lignes : collee, elle contient un retour chariot que le
+--     corps de la fonction (stocke en LF) n'a pas -- donc zero correspondance. Les
+--     ancres d'UNE SEULE ligne, elles, marchaient : c'est pour ca que seule
+--     celle-la a casse.
+--     ⭐ Le projet connaissait ce piege : « empreinte md5 faussee par les fins de
+--       ligne Windows -- patch colle = CRLF dans prosrc, retirer chr(13) avant de
+--       comparer ». Je l'avais applique a l'EMPREINTE et oublie pour les ANCRES.
+--     LE REMEDE : on retire les retours chariot DES DEUX COTES -- du corps lu dans
+--     la base ET de chaque ancre -- avant toute comparaison. Le patch devient
+--     insensible a la facon dont il est colle.
+--     ⭐ BONUS : le texte insere est lui aussi nettoye, donc le RETOUR ARRIERE
+--       retrouvera ses ancres, lui qui en a de multi-lignes.
+--
 --  METHODE : on NE RECOPIE PAS les fonctions. On les LIT dans la base, on controle
 --  que chaque ancre est unique, on remplace, on reexecute.
 --
@@ -90,17 +107,21 @@ DO $patch$
 DECLARE
   v_corps text;
   v_occ   int;
-  a1 CONSTANT text := '  if j.status <> ''error'' or coalesce(j.attempt_count, 0) < 5 then';
-  n1 CONSTANT text := $neuf$  -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
+  -- ⚠ chaque ancre est nettoyee de ses retours chariot : colle dans l'editeur
+  --   Supabase, ce fichier arrive en CRLF, et une ancre multi-lignes ne se
+  --   retrouverait plus dans un corps stocke en LF (version 1, 15/10).
+  a1 CONSTANT text := replace('  if j.status <> ''error'' or coalesce(j.attempt_count, 0) < 5 then', chr(13), '');
+  n1 CONSTANT text := replace($neuf$  -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
   -- Un travail dont le type n'est pas rejouable n'atteindra JAMAIS 5 tentatives :
   -- il etait donc visible dans le moniteur et impossible a trancher. Passe 3 h
   -- (le filet epuise ses 5 tentatives en 50 min : marge x3,6), on laisse l'humain
   -- decider. Les 3 heures sont mesurees, pas choisies.
   if j.status <> 'error'
      or (coalesce(j.attempt_count, 0) < 5
-         and j.requested_at >= now() - interval '3 hours') then$neuf$;
+         and j.requested_at >= now() - interval '3 hours') then$neuf$, chr(13), '');
 BEGIN
-  SELECT pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure) INTO v_corps;
+  -- le corps AUSSI, pour comparer deux textes de meme nature
+  SELECT replace(pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure), chr(13), '') INTO v_corps;
 
   IF position('@seuil-3h' in v_corps) > 0 THEN
     RAISE NOTICE 'DEJA POSE (app_action_resolve). Rien a faire.';
@@ -120,16 +141,19 @@ DECLARE
   v_corps text;
   v_occ   int;
 
+  -- ⚠ chaque ancre est nettoyee de ses retours chariot (voir l'en-tete, version 2).
+  --   C'est l'ancre ② -- la seule multi-lignes -- qui a fait echouer la version 1.
+
   -- ① le seuil
-  a1 CONSTANT text := '     and coalesce(j.attempt_count, 0) >= 5';
-  n1 CONSTANT text := $neuf$     -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
+  a1 CONSTANT text := replace('     and coalesce(j.attempt_count, 0) >= 5', chr(13), '');
+  n1 CONSTANT text := replace($neuf$     -- @seuil-3h (15/10/2026) : la MEME regle que la vue app_en_attente_humain.
      and (coalesce(j.attempt_count, 0) >= 5
-          or j.requested_at < now() - interval '3 hours')$neuf$;
+          or j.requested_at < now() - interval '3 hours')$neuf$, chr(13), '');
 
   -- ② le repli vendus/clos et archives
-  a2 CONSTANT text := $vieux$  select * into d from public.app_dossier_current where app_dossier_id = target_dossier_id;
-  if not found then raise exception 'dossier_not_found' using errcode = '22023'; end if;$vieux$;
-  n2 CONSTANT text := $neuf$  select * into d from public.app_dossier_current where app_dossier_id = target_dossier_id;
+  a2 CONSTANT text := replace($vieux$  select * into d from public.app_dossier_current where app_dossier_id = target_dossier_id;
+  if not found then raise exception 'dossier_not_found' using errcode = '22023'; end if;$vieux$, chr(13), '');
+  n2 CONSTANT text := replace($neuf$  select * into d from public.app_dossier_current where app_dossier_id = target_dossier_id;
 
   -- @repli-trancher (15/10/2026) : UN BIEN VENDU, CLOS OU ARCHIVE A AUSSI SON BOUTON.
   --
@@ -162,9 +186,9 @@ DECLARE
   end if;
   if d.app_dossier_id is null then
     raise exception 'dossier_not_found' using errcode = '22023';
-  end if;$neuf$;
+  end if;$neuf$, chr(13), '');
 BEGIN
-  SELECT pg_get_functiondef('public.app_action_status(bigint)'::regprocedure) INTO v_corps;
+  SELECT replace(pg_get_functiondef('public.app_action_status(bigint)'::regprocedure), chr(13), '') INTO v_corps;
 
   IF position('@repli-trancher' in v_corps) > 0 THEN
     RAISE NOTICE 'DEJA POSE (app_action_status). Rien a faire.';

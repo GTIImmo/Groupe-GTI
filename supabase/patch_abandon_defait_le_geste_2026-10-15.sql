@@ -134,18 +134,27 @@ DECLARE
   v_corps text;
   v_occ   int;
 
+  -- ⚠⚠ CHAQUE ANCRE ET CHAQUE INSERTION EST NETTOYEE DE SES RETOURS CHARIOT.
+  --   COLLER DU TEXTE DANS L'EDITEUR SUPABASE Y MET DES CRLF. Les quatre ancres
+  --   ci-dessous tiennent sur UNE ligne, donc elles se retrouvaient quand meme --
+  --   mais le texte INSERE, lui, est multi-lignes : sans nettoyage, la fonction
+  --   aurait porte des retours chariot, et le RETOUR ARRIERE (qui a des ancres
+  --   multi-lignes) n'aurait plus rien retrouve.
+  --   ⭐ Le projet connaissait ce piege (« empreinte md5 faussee par les fins de
+  --     ligne Windows ») : je l'avais applique a l'EMPREINTE et oublie pour le
+  --     TEXTE. Le patch frere du 15/10 s'y est casse les dents, ancre 0 fois.
   -- ① la declaration des variables de travail
-  a1 CONSTANT text := '  j public.app_console_job%rowtype;';
-  n1 CONSTANT text := $neuf$  j public.app_console_job%rowtype;
+  a1 CONSTANT text := replace('  j public.app_console_job%rowtype;', chr(13), '');
+  n1 CONSTANT text := replace($neuf$  j public.app_console_job%rowtype;
   -- @abandon (15/10/2026) : de quoi defaire ce que l'app avait ecrit.
   v_defait jsonb := '[]'::jsonb;
   v_champ  record;
   v_avant  text;
-  v_fiche  int;$neuf$;
+  v_fiche  int;$neuf$, chr(13), '');
 
   -- ② le retour arriere, AVANT l'ecriture de la trace (meme transaction)
-  a2 CONSTANT text := '  insert into public.app_pending_resolution';
-  n2 CONSTANT text := $neuf$  -- @abandon-debut   15/10/2026 : « ABANDONNER » DEFAIT L'ECRITURE DE L'APP.
+  a2 CONSTANT text := replace('  insert into public.app_pending_resolution', chr(13), '');
+  n2 CONSTANT text := replace($neuf$  -- @abandon-debut   15/10/2026 : « ABANDONNER » DEFAIT L'ECRITURE DE L'APP.
   --
   -- « Abandonner » veut dire « ce geste n'a pas eu lieu ». Avant aujourd'hui, les
   -- deux boutons faisaient la meme chose -- faire taire l'alerte -- et la valeur
@@ -225,20 +234,21 @@ DECLARE
   end if;
   -- @abandon-fin
 
-  insert into public.app_pending_resolution$neuf$;
+  insert into public.app_pending_resolution$neuf$, chr(13), '');
 
   -- ③ la trace de ce qui a ete defait, dans la ligne de resolution
-  a3 CONSTANT text := '     jsonb_build_object(''job_id'', target_job_id::text,';
-  n3 CONSTANT text := $neuf$     jsonb_build_object('defait', v_defait,
-                        'job_id', target_job_id::text,$neuf$;
+  a3 CONSTANT text := replace('     jsonb_build_object(''job_id'', target_job_id::text,', chr(13), '');
+  n3 CONSTANT text := replace($neuf$     jsonb_build_object('defait', v_defait,
+                        'job_id', target_job_id::text,$neuf$, chr(13), '');
 
   -- ④ le compte-rendu rendu a l'ecran
-  a4 CONSTANT text := '  return jsonb_build_object(''resolved'', true, ''mode'', mode, ''job_type'', j.job_type);';
-  n4 CONSTANT text := $neuf$  return jsonb_build_object('resolved', true, 'mode', mode, 'job_type', j.job_type,
+  a4 CONSTANT text := replace('  return jsonb_build_object(''resolved'', true, ''mode'', mode, ''job_type'', j.job_type);', chr(13), '');
+  n4 CONSTANT text := replace($neuf$  return jsonb_build_object('resolved', true, 'mode', mode, 'job_type', j.job_type,
                             'defait', v_defait,
-                            'champs_defaits', jsonb_array_length(v_defait));$neuf$;
+                            'champs_defaits', jsonb_array_length(v_defait));$neuf$, chr(13), '');
 BEGIN
-  SELECT pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure) INTO v_corps;
+  -- le corps AUSSI, pour comparer deux textes de meme nature
+  SELECT replace(pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure), chr(13), '') INTO v_corps;
 
   IF position('@abandon-debut' in v_corps) > 0 THEN
     RAISE NOTICE 'DEJA POSE : le retour arriere est deja dans la fonction. Rien a faire.';

@@ -29,7 +29,11 @@ DECLARE
   v_debut int;
   v_fin   int;
 BEGIN
-  SELECT pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure) INTO v_corps;
+  -- ⚠ ON RETIRE LES RETOURS CHARIOT DES DEUX COTES. Colle dans l'editeur Supabase,
+  --   ce fichier arrive en CRLF : les blocs multi-lignes ci-dessous ne se
+  --   retrouveraient plus dans un corps stocke en LF. (Le patch frere s'y est casse
+  --   les dents le 15/10 : « l'ancre apparait 0 fois ».)
+  SELECT replace(pg_get_functiondef('public.app_action_resolve(uuid,text)'::regprocedure), chr(13), '') INTO v_corps;
 
   IF position('@abandon-debut' in v_corps) = 0 THEN
     RAISE NOTICE 'RIEN A FAIRE : le patch n''est pas pose.';
@@ -47,25 +51,25 @@ BEGIN
 
   -- ① les declarations
   v_corps := replace(v_corps,
-    $vieux$  -- @abandon (15/10/2026) : de quoi defaire ce que l'app avait ecrit.
+    replace($vieux$  -- @abandon (15/10/2026) : de quoi defaire ce que l'app avait ecrit.
   v_defait jsonb := '[]'::jsonb;
   v_champ  record;
   v_avant  text;
   v_fiche  int;
-$vieux$, '');
+$vieux$, chr(13), ''), '');
 
   -- ③ la trace
   v_corps := replace(v_corps,
-    $vieux$     jsonb_build_object('defait', v_defait,
-                        'job_id', target_job_id::text,$vieux$,
-    $vieux$     jsonb_build_object('job_id', target_job_id::text,$vieux$);
+    replace($vieux$     jsonb_build_object('defait', v_defait,
+                        'job_id', target_job_id::text,$vieux$, chr(13), ''),
+    replace($vieux$     jsonb_build_object('job_id', target_job_id::text,$vieux$, chr(13), ''));
 
   -- ④ le compte-rendu
   v_corps := replace(v_corps,
-    $vieux$  return jsonb_build_object('resolved', true, 'mode', mode, 'job_type', j.job_type,
+    replace($vieux$  return jsonb_build_object('resolved', true, 'mode', mode, 'job_type', j.job_type,
                             'defait', v_defait,
-                            'champs_defaits', jsonb_array_length(v_defait));$vieux$,
-    $vieux$  return jsonb_build_object('resolved', true, 'mode', mode, 'job_type', j.job_type);$vieux$);
+                            'champs_defaits', jsonb_array_length(v_defait));$vieux$, chr(13), ''),
+    replace($vieux$  return jsonb_build_object('resolved', true, 'mode', mode, 'job_type', j.job_type);$vieux$, chr(13), ''));
 
   EXECUTE v_corps;
 
