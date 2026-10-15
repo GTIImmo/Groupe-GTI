@@ -251,6 +251,44 @@ moi » : un négociateur verrait l'item sur le contact d'un collègue et la base
 français clair**, soit le front recalcule « à moi » *(il n'en connaît que la moitié)*.
 **Question posée, non tranchée.**
 
+#### ⑤-quater LE PATCH EST ÉCRIT *(15/10, dormant — rien n'est appliqué)*
+
+**Les décisions de Frédéric, appliquées** : `2 = B` *(le négociateur sur ses contacts)* ·
+`3 = un seul geste` *(le sens est dans la charge, comme Hektor)* · `1 = le menu « … »` ·
+`2 = a` *(le bouton reste visible, le refus s'explique → la fonction lève une **phrase en
+français**, pas un code machine)* · **Gladys seule** *(les 54 autres ne sont pas touchées)*.
+
+| fichier | ce qu'il fait |
+|---|---|
+| `supabase/patch_chantier7_archiver_contact_2026-10-15.sql` | les **3 verrous** + la fonction de saisie |
+| `…_INVERSE.sql` | retire tout ; **refuse** s'il reste un travail de ce type |
+| `…_REPETITION.sql` | avant → patch → mesures → inverse → retour → **erreur volontaire** qui annule tout |
+
+**Le choix du service : `actions`, pas `admin`.** Ce n'est pas un goût : c'est la règle écrite
+dans le worker pour cette liste — *« même session négociateur, même objet, même famille de
+geste »*. `admin` travaille avec la **session admin** et porte les gestes réservés
+*(supprimer un contact)*, que le négociateur n'a pas.
+
+**Mesuré avant d'écrire une ligne** *(15/10)* : les **3 ancres apparaissent exactement 1 fois**,
+le type n'est **nulle part**, la fonction de saisie n'existe pas, `app_console_job` porte
+**95 483 lignes** *(coût de la revalidation de la contrainte)*, `archive` est un **booléen**,
+et **aucun autre consommateur** ne connaît ce geste *(les 5 objets qui nomment
+`delete_hektor_contact` sont les 3 verrous + ses 2 fonctions de saisie)*.
+
+⚠ **Le filet de rejeu n'est PAS touché** : un échec sonnera dans l'écran Santé. Et **un travail
+de contact n'a pas de bandeau « Abandonner »** *(le bandeau exige un numéro d'annonce)* —
+dit, pas découvert.
+⚠ **Collage** : **0 ancre multi-ligne, 0 texte inséré multi-ligne** → la panne du 15/10 *(CRLF
+sur une ancre multi-ligne)* ne peut pas se reproduire ici ; et les corps réécrits sont lus
+**sans retours chariot**, donc aucun CR n'entre dans la base.
+⭐ **Les mesures de la répétition sont elles-mêmes éprouvées** *(en lecture seule, 15/10)* :
+l'extraction de la branche « actions » trouve `unlink_hektor_mandant` **oui** et la branche
+« admin » **non** *(témoin inverse : l'extraction isole vraiment la branche)*, la lecture d'un
+droit par signature rend `authenticated` **oui** / `anon` **non**, et « supprimer un contact »
+est bien **hors** de la liste du commercial.
+⚠ **Et le témoin de l'insert ne dépend plus de ce que l'épreuve annule** *(leçon du 13/10)* :
+le résultat passe par une **variable**, écrite **après** le point de reprise.
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».
