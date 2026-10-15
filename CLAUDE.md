@@ -615,9 +615,32 @@ report ne se décident jamais sans lui.
    ⚠⚠ ET LE CONTROLE A TROUVE UN DEFAUT DANS LE RETOUR ARRIERE, corrige (lecon 31) : les deux
      patchs touchent la MEME fonction, et l'inverse du premier exigeait l'empreinte d'avant
      LES DEUX -- il defaisait sa part puis refusait. 6 controles de la chaine complete.
-   ⬜ RESTE A FREDERIC : (b) pousser le front (sans lui, le bandeau ne DIT pas ce que le clic
-   a fait, et il cache encore une ligne qu'il n'a pas tranchee) ; (c) « J'ai refait » sur
-   61672 et 62963 ; (d) « Abandonner » sur 47824 ; (e) 61439 a partir de 12:02.
+   ✅ (b) FRONT POUSSE ET EN LIGNE (verifie chez Vercel : commit 202d6dc, READY, bundle neuf
+   servi, les textes neufs dedans). ⚠ Au premier coup de sonde le domaine servait encore
+   l'ancien bundle, en cache depuis 1 h 52 : je n'ai PAS conclu, j'ai interroge Vercel puis
+   re-sonde (lecon 8).
+   ✅ (c) SES DEUX CLICS, 11:15 et 11:16 : il a choisi « Abandonner » sur 61672 et 62963.
+   champs_defaits = 0 sur les deux, fiche et carnet INTACTS -- le garde-fou a travaille sur
+   un vrai clic, exactement comme la mesure l'annoncait. (La trace dit « abandon » alors que
+   ces gestes etaient passes chez Hektor : sans consequence sur les donnees.)
+   ⚠⚠ (d) « sync_console_documents NE S'OUVRE PAS » -- DEUX MURS, ET LE PREMIER EST DE MOI :
+     1. findDossierIdByHektorAnnonce (ecrite la VEILLE) ne cherchait que dans
+        app_dossier_current -> 47824 est VENDU -> « introuvable ». C'EST LA SUPPOSITION QUE
+        J'AVAIS BALAYEE LE MATIN MEME DANS LA BASE, en oubliant MON PROPRE CODE DU FRONT.
+        Le balayage de famille s'etait arrete a la frontiere de la base.
+     2. Et reparer le lien n'aurait rien debloque : 47824 n'a AUCUN detail en cache (0 ligne
+        dans app_historical_annonce_detail_cache). Sa fiche demande un import de detail chez
+        Hektor -> trois etapes et une attente pour eteindre une alerte.
+   ✅ (A) GO « fais a » : LES DEUX BOUTONS SONT DANS L'ECRAN SANTE. Un clic sur le bien cite
+   ouvre un PANNEAU sur place, avec les gestes qui attendent un humain et leurs deux boutons.
+   ⭐ C'etait SA question du 14/10 (« dans le monitoring je n'ai pas de bouton ») : j'avais
+     repondu en rendant les biens cliquables -- la mauvaise reponse, prouvee le lendemain.
+   RIEN EN BASE (le repli du matin suffit) · paresseux (une lecture par bien clique) · le lien
+   est repare aussi (localiserAnnonceParNumeroHektor cherche les TROIS mondes et DIT lequel) ·
+   et la table des libelles a demenage dans lib/api.ts, ou `sync_console_documents` MANQUAIT.
+   Chemin complet eprouve sous l'identite de Frederic (RLS comprise) : piste 2 rend
+   « 1377256 | Maison de village a renover | Vendu », les gestes rendent le job_id.
+   ⬜ RESTE : pousser le front, puis trancher 47824 depuis l'ecran Sante ; 61439 des 12:02.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*

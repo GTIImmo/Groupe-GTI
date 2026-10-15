@@ -117,6 +117,7 @@ import {
   loadAffaireChampsApp,
   loadAffaireCarnetEtats,
   resolveAction,
+  gesteLibelleFr,
   type ActionAbandonnee,
   loadRelationProvisionals,
   type RelationProvisionalRow,
@@ -33359,20 +33360,11 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
   )
 }
 
-// Le nom du geste, en francais. Le type technique ne dit rien a personne.
+// Le nom du geste, en francais. La table a DEMENAGE dans lib/api.ts le 15/10/2026 :
+// l'ecran Sante en a besoin aussi (les deux boutons y sont desormais), et deux copies
+// divergeraient. On delegue, le comportement est inchange.
 function gesteLibelle(jobType: string): string {
-  const noms: Record<string, string> = {
-    change_hektor_offre_status: "Changement d'etat d'une offre",
-    cancel_hektor_compromis: 'Annulation d\'un compromis',
-    delete_hektor_vente: 'Suppression d\'une vente',
-    change_hektor_annonce_status: 'Changement de statut du bien',
-    archive_hektor_annonce: 'Archivage du bien',
-    restore_hektor_annonce: 'Desarchivage du bien',
-    delete_hektor_annonce: 'Suppression du bien',
-    assign_hektor_annonce_negotiator: 'Affectation du negociateur',
-    delete_hektor_contact: 'Suppression du contact',
-  }
-  return noms[jobType] || jobType
+  return gesteLibelleFr(jobType)
 }
 
 function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {

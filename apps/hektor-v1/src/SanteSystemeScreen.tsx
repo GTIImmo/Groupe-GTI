@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, findDossierIdByHektorAnnonce, type MonitorStatusRow, type AlertRow, type AgentRunRow } from './lib/api'
+import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, localiserAnnonceParNumeroHektor, loadActionStatus, resolveAction, gesteLibelleFr, type MonitorStatusRow, type AlertRow, type AgentRunRow, type AnnonceLocalisee, type ActionAbandonnee } from './lib/api'
 import './sante-systeme.css'
 
 type SanteSystemeScreenProps = {
@@ -87,6 +87,134 @@ function numeroHektor(reference: string | undefined): string | null {
   return m ? m[1] : null
 }
 
+// ⭐⭐ LES DEUX BOUTONS SONT ICI, SUR LA LIGNE DE L'ALERTE (15/10/2026).
+//
+// LA QUESTION DE FREDERIC, LE 14/10 : « dans le monitoring je n'ai pas de bouton pour
+// relancer ou annuler le worker ? ». J'avais repondu en rendant les biens CLIQUABLES,
+// pour aller chercher le bandeau sur leur fiche. C'ETAIT LA MAUVAISE REPONSE, et le
+// 15/10 l'a prouve : le bien 47824 est VENDU, il n'a aucun detail en cache, donc sa
+// fiche ne s'ouvre qu'apres un import de detail chez Hektor -- trois etapes et une
+// attente, pour eteindre une alerte.
+//
+// Desormais un clic sur le bien cite OUVRE UN PANNEAU, ici meme, avec les gestes qui
+// attendent un humain et leurs deux boutons. La fiche reste accessible quand elle
+// existe, mais elle n'est plus le seul chemin.
+//
+// ⚠ RIEN N'EST AJOUTE EN BASE : app_action_status et app_action_resolve sont celles du
+//   bandeau de la fiche, et le repli vendus/clos/archives pose le matin meme fait
+//   qu'elles repondent pour un bien qui n'est plus dans le parc vivant.
+// ⚠ TOUT EST PARESSEUX : on n'interroge la base que pour le bien sur lequel on clique.
+function TrancherIci({
+  numero,
+  onOpenDossier,
+}: {
+  numero: string
+  onOpenDossier?: (appDossierId: number) => void
+}) {
+  const [etat, setEtat] = useState<'ferme' | 'charge' | 'ouvert'>('ferme')
+  const [lieu, setLieu] = useState<AnnonceLocalisee | null>(null)
+  const [gestes, setGestes] = useState<ActionAbandonnee[]>([])
+  const [occupe, setOccupe] = useState<string | null>(null)
+  const [souci, setSouci] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+
+  const charger = async () => {
+    if (etat === 'charge') return
+    if (etat === 'ouvert') { setEtat('ferme'); return }
+    setEtat('charge')
+    setSouci(null)
+    setNote(null)
+    try {
+      const ou = await localiserAnnonceParNumeroHektor(numero)
+      if (!ou) {
+        setSouci(`Bien ${numero} introuvable dans l'app (ni vivant, ni vendu, ni archive).`)
+        setEtat('ouvert')
+        return
+      }
+      setLieu(ou)
+      const statut = await loadActionStatus(ou.app_dossier_id)
+      setGestes(statut?.gestes ?? [])
+      if (!statut) setSouci("Impossible de lire les gestes de ce bien (droits ou lecture en echec).")
+      setEtat('ouvert')
+    } catch (err) {
+      setSouci(err instanceof Error ? err.message : String(err))
+      setEtat('ouvert')
+    }
+  }
+
+  const trancher = async (jobId: string, mode: 'refait' | 'abandon') => {
+    if (occupe) return
+    setOccupe(jobId)
+    setSouci(null)
+    setNote(null)
+    try {
+      const compte = await resolveAction(jobId, mode)
+      if (compte && compte.resolved === false) {
+        setSouci(compte.reason === 'deja_tranche'
+          ? 'Ce geste a déjà été tranché.'
+          : "Ce geste n'est pas encore tranchable : il lui faut 5 tentatives ou 3 heures.")
+        return
+      }
+      if (compte && mode === 'abandon') {
+        const remis = (compte.defait ?? []).filter((x) => Number(x.fiche_remise) > 0)
+        setNote(remis.length
+          ? `Abandonné. Remis comme Hektor : ${remis.map((x) => `${x.champ} = ${x.valeur_avant ?? 'vide'}`).join(', ')}.`
+          : "Abandonné. Rien à remettre : votre fiche disait déjà la même chose que Hektor.")
+      } else {
+        setNote('Noté comme traité.')
+      }
+      setGestes((liste) => liste.filter((g) => g.job_id !== jobId))
+    } catch (err) {
+      setSouci(err instanceof Error ? err.message : String(err))
+    } finally {
+      setOccupe(null)
+    }
+  }
+
+  return (
+    <div className="ss-trancher">
+      <button type="button" className="ss-bien-cite" onClick={() => { void charger() }} disabled={etat === 'charge'}>
+        {etat === 'charge' ? 'Lecture…' : etat === 'ouvert' ? `Bien ${numero} ▴` : `Bien ${numero} — trancher ▾`}
+      </button>
+      {etat === 'ouvert' ? (
+        <div className="ss-trancher-panneau">
+          {lieu ? (
+            <div className="ss-trancher-lieu">
+              {lieu.titre_bien || `Bien ${numero}`}
+              {lieu.monde !== 'vivant'
+                ? ` · ${lieu.monde === 'archive' ? 'archivé' : lieu.statut_annonce || 'vendu / clos'} — sa fiche demande un import de détail`
+                : null}
+              {lieu.monde === 'vivant' && onOpenDossier ? (
+                <>
+                  {' · '}
+                  <button type="button" className="ss-lien-fiche" onClick={() => onOpenDossier(lieu.app_dossier_id)}>
+                    ouvrir la fiche
+                  </button>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          {gestes.map((g) => (
+            <div className="ss-trancher-geste" key={g.job_id}>
+              <div className="ss-trancher-geste-nom">{gesteLibelleFr(g.job_type)}</div>
+              {g.erreur ? <div className="ss-trancher-geste-cause">{g.erreur}</div> : null}
+              <div className="ss-trancher-actions">
+                <button type="button" className="ss-btn-refait" disabled={occupe === g.job_id}
+                        onClick={() => { void trancher(g.job_id, 'refait') }}>J'ai refait</button>
+                <button type="button" className="ss-btn-abandon" disabled={occupe === g.job_id}
+                        onClick={() => { void trancher(g.job_id, 'abandon') }}>Abandonner ce geste</button>
+              </div>
+            </div>
+          ))}
+          {!gestes.length && !souci ? <div className="ss-trancher-vide">Rien à trancher sur ce bien.</div> : null}
+          {note ? <div className="ss-trancher-note">{note}</div> : null}
+          {souci ? <div className="ss-trancher-souci">{souci}</div> : null}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function BiensCitesParLAlerte({
   lignes,
   onOpenDossier,
@@ -94,47 +222,16 @@ function BiensCitesParLAlerte({
   lignes: ApercuLigne[]
   onOpenDossier?: (appDossierId: number) => void
 }) {
-  const [ouverture, setOuverture] = useState<string | null>(null)
-  const [souci, setSouci] = useState<string | null>(null)
   if (!lignes.length) return null
-
-  const ouvrir = async (numero: string) => {
-    if (!onOpenDossier || ouverture) return
-    setOuverture(numero)
-    setSouci(null)
-    try {
-      const id = await findDossierIdByHektorAnnonce(numero)
-      if (id == null) setSouci(`Bien ${numero} introuvable dans l'app`)
-      else onOpenDossier(id)
-    } catch (err) {
-      setSouci(err instanceof Error ? err.message : String(err))
-    } finally {
-      setOuverture(null)
-    }
-  }
-
   return (
     <div className="ss-biens-cites">
       {lignes.map((l, i) => {
         const numero = numeroHektor(l.reference)
-        const texte = l.libelle || l.reference || '—'
-        if (!numero || !onOpenDossier) {
-          return <span className="ss-bien-cite ss-bien-cite-mort" key={i}>{texte}</span>
+        if (!numero) {
+          return <span className="ss-bien-cite ss-bien-cite-mort" key={i}>{l.libelle || l.reference || '—'}</span>
         }
-        return (
-          <button
-            type="button"
-            className="ss-bien-cite"
-            key={i}
-            title={l.cause || `Ouvrir le bien ${numero}`}
-            disabled={ouverture === numero}
-            onClick={() => { void ouvrir(numero) }}
-          >
-            {ouverture === numero ? 'Ouverture…' : texte}
-          </button>
-        )
+        return <TrancherIci key={`${numero}-${i}`} numero={numero} onOpenDossier={onOpenDossier} />
       })}
-      {souci ? <span className="ss-bien-cite-souci">{souci}</span> : null}
     </div>
   )
 }

@@ -2944,17 +2944,92 @@ export type MonitorStatusRow = {
 // les deux.
 // Les sondes rendent un NUMERO HEKTOR ; l'ecran ouvre un bien par son app_dossier_id.
 // Cette fonction fait le pont, et elle ne lit qu'une colonne sur une ligne.
-export async function findDossierIdByHektorAnnonce(hektorAnnonceId: string): Promise<number | null> {
+// ⚠⚠ CORRIGE LE 15/10/2026 -- CETTE FONCTION NE CHERCHAIT QUE DANS LE PARC VIVANT.
+//
+// Ecrite la veille, elle faisait `from('app_dossier_current')` et rien d'autre. Or
+// depuis le 20/05 les biens VENDUS, CLOS et ARCHIVES n'y sont plus : ils vivent dans
+// deux index separes (44 259 biens). Frederic a clique sur le bien 47824 cite par une
+// alerte -- « Maison de village a renover », VENDU -- et l'ecran a repondu
+// « introuvable dans l'app ».
+// ⭐ C'est EXACTEMENT la supposition fausse balayee le matin meme dans les fonctions de
+//   la base (defaut 5a du 08/10, app_action_status le 15/10). Le balayage de famille
+//   n'avait pas atteint MON PROPRE code du front, ecrit la veille.
+// ⭐ Les deux cles SONT notre app_dossier_id, renommees (export_app_payload.py:363) :
+//   app_historical_id pour les vendus/clos, app_archive_id pour les archives.
+//
+// On rend desormais OU VIT LE BIEN, parce que l'appelant n'en fait pas la meme chose :
+// une fiche de bien vivant s'ouvre directement, une fiche de bien vendu demande d'abord
+// un import de detail (et 47824 n'en a aucun en cache).
+export type MondeAnnonce = 'vivant' | 'vendu_clos' | 'archive'
+export type AnnonceLocalisee = {
+  app_dossier_id: number
+  monde: MondeAnnonce
+  titre_bien?: string | null
+  statut_annonce?: string | null
+}
+
+// Le nom du geste, en francais. Le type technique ne dit rien a personne.
+//
+// 15/10/2026 : cette table vivait dans App.tsx (gesteLibelle). L'ecran Sante en a
+// besoin aussi -- les deux boutons y sont desormais -- et DEUX COPIES DIVERGERAIENT.
+// Elle est donc ici, et App.tsx y delegue : un seul endroit a tenir.
+// ⚠ `sync_console_documents` MANQUAIT : c'est justement le geste du bien 47824 que
+//   Frederic devait trancher, et son nom s'affichait en jargon.
+// Les neuf gestes « contact » viennent du releve du 14/10 (chantier ⑦-1).
+export function gesteLibelleFr(jobType: string): string {
+  const noms: Record<string, string> = {
+    change_hektor_offre_status: "Changement d'etat d'une offre",
+    cancel_hektor_compromis: "Annulation d'un compromis",
+    delete_hektor_compromis: "Suppression d'un compromis",
+    delete_hektor_vente: "Suppression d'une vente",
+    change_hektor_annonce_status: 'Changement de statut du bien',
+    archive_hektor_annonce: 'Archivage du bien',
+    restore_hektor_annonce: 'Desarchivage du bien',
+    delete_hektor_annonce: 'Suppression du bien',
+    assign_hektor_annonce_negotiator: 'Affectation du negociateur',
+    create_hektor_draft_annonce: "Creation d'une annonce",
+    sync_console_documents: 'Envoi des documents vers Hektor',
+    refresh_console_contact_data: "Relecture d'une fiche contact",
+    create_hektor_contact: "Creation d'un contact",
+    update_hektor_contact: "Modification d'un contact",
+    delete_hektor_contact: 'Suppression du contact',
+    create_hektor_mandant_contact: "Creation d'un mandant",
+    update_hektor_mandant_contact: "Modification d'un mandant",
+    add_hektor_contact_search: "Ajout d'une recherche acquereur",
+    update_hektor_contact_search: "Modification d'une recherche acquereur",
+    delete_hektor_contact_search: "Suppression d'une recherche acquereur",
+  }
+  return noms[jobType] || jobType
+}
+
+export async function localiserAnnonceParNumeroHektor(hektorAnnonceId: string): Promise<AnnonceLocalisee | null> {
   if (!hasSupabaseEnv || !supabase || !hektorAnnonceId.trim()) return null
-  const { data, error } = await supabase
-    .from('app_dossier_current')
-    .select('app_dossier_id')
-    .eq('hektor_annonce_id', hektorAnnonceId.trim())
-    .limit(1)
-    .maybeSingle()
-  if (error) throw new Error(error.message ?? 'Unable to resolve dossier')
-  const id = (data as { app_dossier_id?: number } | null)?.app_dossier_id
-  return typeof id === 'number' ? id : null
+  const numero = hektorAnnonceId.trim()
+  const pistes: { table: string; cle: string; monde: MondeAnnonce }[] = [
+    { table: 'app_dossier_current', cle: 'app_dossier_id', monde: 'vivant' },
+    { table: 'app_historical_annonce_index_current', cle: 'app_historical_id', monde: 'vendu_clos' },
+    { table: 'app_archive_annonce_index_current', cle: 'app_archive_id', monde: 'archive' },
+  ]
+  for (const piste of pistes) {
+    const { data, error } = await supabase
+      .from(piste.table)
+      .select(`${piste.cle}, titre_bien, statut_annonce`)
+      .eq('hektor_annonce_id', numero)
+      .limit(1)
+      .maybeSingle()
+    if (error) throw new Error(error.message ?? 'Unable to resolve dossier')
+    const ligne = data as Record<string, unknown> | null
+    const id = ligne ? ligne[piste.cle] : null
+    if (typeof id === 'number') {
+      return {
+        app_dossier_id: id,
+        monde: piste.monde,
+        titre_bien: (ligne?.titre_bien as string | null) ?? null,
+        statut_annonce: (ligne?.statut_annonce as string | null) ?? null,
+      }
+    }
+  }
+  return null
 }
 
 export async function loadMonitorStatus(): Promise<MonitorStatusRow[]> {

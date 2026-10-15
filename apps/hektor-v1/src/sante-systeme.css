@@ -95,3 +95,31 @@
 .ss-bien-cite:disabled { opacity: 0.55; cursor: default; }
 .ss-bien-cite-mort { cursor: default; opacity: 0.7; }
 .ss-bien-cite-souci { font-size: 12.5px; opacity: 0.8; }
+
+/* 15/10/2026 -- trancher un geste SANS quitter l'ecran Sante. */
+.ss-trancher { display: inline-block; }
+.ss-trancher-panneau {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--ss-border, #e0e0e0);
+  border-radius: 8px;
+  font-size: 12.5px;
+  max-width: 560px;
+}
+.ss-trancher-lieu { opacity: 0.85; margin-bottom: 6px; }
+.ss-lien-fiche {
+  border: 0; background: transparent; padding: 0; font: inherit;
+  text-decoration: underline; cursor: pointer; color: inherit;
+}
+.ss-trancher-geste { padding-top: 6px; border-top: 1px solid var(--ss-border, #eee); margin-top: 6px; }
+.ss-trancher-geste:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.ss-trancher-geste-nom { font-weight: 600; }
+.ss-trancher-geste-cause { opacity: 0.8; margin-top: 2px; }
+.ss-trancher-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.ss-btn-refait, .ss-btn-abandon {
+  padding: 4px 10px; border-radius: 6px; font: inherit; font-size: 12.5px; cursor: pointer;
+  background: #fff; border: 1px solid #B3564C; color: #7A241C;
+}
+.ss-btn-abandon { border-color: #D8B4AF; color: #8A4A42; }
+.ss-btn-refait:disabled, .ss-btn-abandon:disabled { opacity: 0.55; cursor: default; }
+.ss-trancher-vide, .ss-trancher-note, .ss-trancher-souci { margin-top: 6px; opacity: 0.9; }

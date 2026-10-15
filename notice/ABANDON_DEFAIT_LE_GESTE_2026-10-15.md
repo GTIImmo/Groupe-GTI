@@ -431,3 +431,64 @@ que si l'autre patch n'est pas là, sinon il **dit** pourquoi elle diffère.
 **6 contrôles de la chaîne complète** *(en transaction annulée)* : inverse ① avec ② posé →
 **passe**, 0 trace, le seuil 3 h **est toujours là**, empreinte `2315de8f…` ; puis inverse ②
 → **`5590da3a…`, l'empreinte du départ**.
+
+---
+
+## 11 · LES CLICS DE FRÉDÉRIC, ET LE MUR QU'ILS ONT RÉVÉLÉ
+
+### ✅ Ses deux clics ont fonctionné — *et le garde-fou a travaillé*
+
+Il a cliqué **« Abandonner »** sur **61672** *(11:15)* et **62963** *(11:16)*.
+
+| | |
+|---|---|
+| **champs défaits** | **0** sur les deux |
+| fiche 61672 | `Sous offre` — **inchangée**, et Hektor dit pareil |
+| carnet 61672 | `statut=Sous offre` — **intact** |
+
+⭐ **Premier usage réel du mécanisme, et il n'a rien touché** — parce que les lignes de carnet
+appartenaient au geste refait à la main. **Exactement la mesure annoncée.**
+
+*(Sans conséquence : la trace dit `abandon` alors que ces deux gestes étaient en fait passés
+chez Hektor. Aucun effet sur les données.)*
+
+### ⚠⚠ Puis : *« sync_console_documents NE S'OUVRE PAS »* — **deux murs, et le premier est de moi**
+
+**Mur 1 — `findDossierIdByHektorAnnonce` ne cherchait que dans le parc vivant.** Écrite la
+veille, elle faisait `from('app_dossier_current')` et rien d'autre. **47824 est VENDU** → « bien
+introuvable dans l'app ».
+➡ **C'est la supposition fausse que j'avais balayée le matin même dans les fonctions de la
+base — en oubliant MON PROPRE CODE DU FRONT, écrit la veille.** Le balayage de famille s'était
+arrêté à la frontière de la base.
+
+**Mur 2 — et réparer le lien n'aurait rien débloqué.** Mesuré : **47824 n'a aucun détail en
+cache** *(`app_historical_annonce_detail_cache` : 0 ligne)*. Pour un bien vendu, l'app demande
+d'abord un **import de détail** *(un travail chez Hektor, puis attendre)*. **Trois étapes et une
+attente pour éteindre une alerte.**
+
+### ⭐⭐ Donc : LES DEUX BOUTONS SONT DANS L'ÉCRAN SANTÉ — *« fais a »*
+
+**Le 14/10, Frédéric demandait : « dans le monitoring je n'ai pas de bouton pour relancer ou
+annuler le worker ? ». J'avais répondu en rendant les biens cliquables. C'était la mauvaise
+réponse à sa question** — et le mur l'a prouvé le lendemain.
+
+Un clic sur le bien cité par une alerte **ouvre un panneau, sur place**, avec les gestes qui
+attendent un humain et **leurs deux boutons**. La fiche reste accessible quand elle existe,
+mais **elle n'est plus le seul chemin**.
+
+| | |
+|---|---|
+| **rien en base** | `app_action_status` / `app_action_resolve` sont celles du bandeau, et le **repli vendus/clos/archives** posé le matin fait qu'elles répondent pour 47824 |
+| **paresseux** | on n'interroge la base que pour **le bien sur lequel on clique** |
+| **le lien est réparé aussi** | `localiserAnnonceParNumeroHektor` cherche dans les **trois mondes** et **dit lequel** — l'appelant n'en fait pas la même chose |
+| **un seul nom par geste** | la table des libellés a déménagé dans `lib/api.ts` *(deux copies divergeraient)*, et ⚠ **`sync_console_documents` y manquait** — le geste de 47824 s'affichait en jargon |
+
+**Le chemin complet, éprouvé sous l'identité de Frédéric** *(donc RLS comprise)* :
+
+| | mesuré |
+|---|---|
+| piste 1, parc vivant | **0** — comme prévu |
+| piste 2, vendus/clos | **`1377256 | Maison de village à rénover | Vendu`** ✅ lisible par `authenticated` |
+| les gestes que le panneau lira | **`4f2d8098-… | sync_console_documents | 1 tent.`** ✅ |
+
+`npm run build` **vert** *(bundle `index-DsDImr8N.js`)*.
