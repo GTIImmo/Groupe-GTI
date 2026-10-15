@@ -52,7 +52,7 @@ L4-b' ✅ L4-c ✅ (L4-c l. 102)
 L4 🟡    C.9 a->f codes, e3 allume -- C.9-e (l. 395) ; 0 creation reelle depuis le 25/09
          C.9-couple (l. 892) : la sonde existe (033e946), reste le geste humain
          26bis-TRANSACTIONS · 4.3
-L5 ⛔    E.0-bis (l. 2458) : photos, mandat existant, fusion, brouillon, suppressions,
+L5 ⛔    E.0-bis (l. 2510) : photos, mandat existant, fusion, brouillon, suppressions,
          16 « Ouvrir Hektor » vivants (sur l'ancien domaine)
 L6 ⛔    D.0 (l. 974) : le parc vivant n'est plus relu depuis le 20/08 -- G.2 avant G.6
 L7 🟡    afficher ✅ · ajouter ⛔ (G.5, devenu bloquant)
@@ -1249,12 +1249,49 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
                   (527 vus en dry-run), mais il faudra D'ABORD apprendre le 4e index a
                   loadDossier, sinon c'est 527 exclusions definitives.
                   Detail et mesures : notice/CHANTIER_6_REDESCENTE_HEKTOR_2026-10-14.md
-            [ ] G.1-c  111 annonces lues en aout VIVANTES puis vendues : leurs pieces de fin
+            [x] G.1-c  ✅ CLOS LE 15/10 PAR LE CHANGEMENT DE DESSIN, sans un patch
+                  Le compte reel mesure le 15/10 est 49 (pas 111), et un releve en
+                  lecture seule du 14/10 a montre que 4 SUR 5 avaient du nouveau chez
+                  Hektor : 38 des 49 n'ont AUCUN document « compromis », 35 aucun
+                  « acte », 28 ni l'un ni l'autre (23,7 documents en moyenne, 46 sur 49
+                  avec leur mandat -- des biens bien documentes dont la FIN DE VIE
+                  manque). 19 ont bouge chez Hektor en octobre, bien apres notre lecture
+                  du 19-20/08.
+                  LA CAUSE : l'empreinte est une cle par NUMERO d'annonce, pas par index
+                  (enqueue_empreinte_lot.js:190). Une annonce qui change d'index emporte
+                  son empreinte, et le rattrapage la lit comme « deja faite ».
+                  ➡ LA LIGNE 3 DE LA TACHE DE 22:00 LES REMET DANS LA ROUE : les
+                  vendus/clos sont relus tous les ~5 jours, leur empreinte est comparee,
+                  le compromis arrive. Le defaut se repare ET ne revient plus -- or
+                  l'index grossit de ~30 par mois (8 937 le 07/10, 8 944 le 14/10).
+                  ⚪ Le patch qui retirait leurs 49 empreintes devient SANS OBJET.
+                  (ancien libelle, garde pour la memoire)
+            [ ] G.1-c-ancien  111 annonces lues en aout VIVANTES puis vendues : leurs pieces de fin
                   de vie (compromis, acte) ne seront JAMAIS relues (empreinte deja posee)
             [ ] G.1-d  230 documents indexes SANS fichier (synchros tuees par le
                   bannissement du 20/08, dont des mandats et un avenant) : seul Hektor les a
 
-[x] G.2   LE PIPELINE APPELLE --detect    ✅ CODE LE 14/10, DORMANT (chantier 6b)
+[x] G.2   LA DETECTION TOURNE — MAIS DANS SA PROPRE TACHE, PAS DANS LE RUN
+            ⭐⭐ CHANGEMENT DE DESSIN, 15/10, decision de Frederic : « on eteint le
+            rattrapage, on allume la tache de 22:00 », l'ordre etant « l'index des
+            actifs le + important, ensuite estimation, ensuite vendu/clos ».
+            ➡ TACHE « GTI Entretien Documents », 22:00, ENREGISTREE LE 15/10 a 12:50
+              (scheduled/run_entretien_documents.ps1), QUATRE lignes :
+                1/4 biens EN VENTE      727 lectures, cap 300  ~15 min  (chaque nuit)
+                2/4 ESTIMATIONS       2 000 lectures, cap 100  ~57 min  (tour ~6 nuits)
+                3/4 VENDUS/CLOS       2 000 lectures, cap 300  ~57 min  (tour ~5 nuits)
+                4/4 PHOTOS (local, sans Hektor)                ~2 min
+              worker fini vers 02:00-02:30, file vide avant 03:00 et avant le run de 05:00
+            ➡ « GTI Rattrapage Documents » (21:00) DESACTIVEE le 15/10 a 12:50.
+            ⚠ POURQUOI PAS DANS LE RUN : le run finit 07:14-07:34, la descente part a
+              07:45 (18 a 64 min), la sauvegarde est a 09:00. Y ajouter ~2 h de lectures
+              pousserait la descente sur la sauvegarde.
+            ⭐ ET LE DEFAUT DU 20/08 ETAIT LE PLAFOND : --cap ne borne que les TRAVAUX,
+              jamais les LECTURES. Le commentaire d'origine ecrivait « une lecture coute
+              ~1 s » sans jamais multiplier par 13 212 (= 3 h 40, et ~5 h 30 apres le
+              frein du 25/09). C'est pour ca que l'etape est restee eteinte deux mois.
+              --max-lectures (14/10) est la piece qui manquait.
+            (ancien etat du 14/10, garde pour la memoire)
             L'etape du run est REECRITE en DEUX lignes, cible de la liste du 07/10 tenue :
               A) --scope daily-cloud --detect --max-lectures 1 --cap 600
                  les annonces SANS EMPREINTE sont empilees AVANT toute lecture -> le parc
@@ -1342,7 +1379,22 @@ C.1' (le filet des SAISIES, meme famille) -- DEUX DEFAUTS TROUVES LE 18/09, en l
               console_job_worker.js:8071). Le plan 6.5 « les 3 PDF continuent tels
               quels » est donc faux.
 
-[ ] G.6   FREDERIC : allumer -EnqueueConsoleDocuments   ⛔ APRES LE RATTRAPAGE
+[x] G.6   ✅ FAIT LE 15/10 — MAIS PAS COMME ECRIT ICI : IL N'Y A PLUS DE DRAPEAU
+            Le drapeau -EnqueueConsoleDocuments NE SERT PLUS A RIEN. L'etape du run
+            porte desormais un REFUS EXPLICITE qui renvoie a la tache de 22:00
+            (run_full_pipeline.ps1, cherchez « REMPLACE par la tache »), et ses deux
+            parametres ont ete RETIRES du run.
+            ⚠ POURQUOI UN REFUS ET PAS UN CODE DORMANT — question de Frederic le 15/10 :
+              « ca risque de porter en erreur de run similaire, ton avis ? ». OUI : un
+              code qui marche et que personne n'allume est exactement ce qui est arrive
+              ici depuis le 20/08. Et allumer les DEUX doublerait tout le travail, la
+              file pleine faisant refuser trois etapes du run. Une decision se DECLARE
+              la ou le prochain lecteur la cherchera (meme regle que HORS_AUTO du 14/10).
+            CE QUI A ETE FAIT A LA PLACE, par Frederic, le 15/10 a 12:50 :
+              Disable-ScheduledTask -TaskName "GTI Rattrapage Documents"
+              Register-ScheduledTask -TaskName "GTI Entretien Documents" ... -At 22:00
+            PREMIER PASSAGE : la nuit du 15 au 16/10, a 22:00. Voir G.2 ci-dessus.
+            (ancien etat, garde pour la memoire)
             Le seul point qui DOIT attendre.
             ↳ 07/10 : ⛔ PAS « TEL QUEL ». Allume aujourd'hui, il empilerait les 13 463
               annonces vivantes CHAQUE NUIT (> 27 h de travail) : la file ne se viderait
