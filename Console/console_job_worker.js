@@ -793,6 +793,15 @@ function storageSafeFilename(name, fallback) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\x20-\x7E]+/g, "_")
     .replace(/[#%?&{}^`[\]]+/g, "_")
+    // \u26a0 UN NOM QUI COMMENCE PAR UN POINT EST REFUSE PAR SUPABASE STORAGE  15/10/2026
+    //   Vecu ce matin sur l'annonce 61439 : un document nomme \u00ab .67-carnetentretien4 \u00bb
+    //   (point en tete, aucune extension) -> \u00ab Supabase Storage 400 \u00bb sur la cle
+    //   annonces/61439/documents/<id>/.67-carnetentretien4, le travail tombe en erreur,
+    //   et \u00ab on ne rejoue jamais \u00bb excluait l'annonce POUR TOUJOURS.
+    //   Ce n'est pas une panne passagere : le meme nom echouera a chaque passage. Le
+    //   point de tete est donc remplace, pas supprime -- on ne veut pas deux documents
+    //   differents qui se retrouveraient avec la meme cle.
+    .replace(/^\.+/, "_")
     .replace(/\s+/g, " ")
     .trim();
   return clean || fallback;

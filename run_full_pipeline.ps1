@@ -111,12 +111,10 @@
     [switch]$AllowStaleSupabaseDeletes,
     [switch]$EnqueueConsoleDocuments,
     [switch]$EnqueueAllConsoleDocumentsLocal,
-    # G.2 (14/10/2026) : le plafond de LECTURES de la detection documentaire, et le
-    # plafond de travaux retenus. Mesure : 727 biens en vente, dont ~584 ont deja une
-    # empreinte a comparer -> ~15 min avec le frein (1 s par requete, +60 s toutes les
-    # 100). 800 est donc une ceinture, pas une limite atteinte en pratique.
-    [int]$ConsoleDetectLectures = 800,
-    [int]$ConsoleDetectCap = 400,
+    # ⚠ 15/10 : les deux reglages de la detection documentaire ont ete RETIRES d'ici.
+    #   Ils vivent desormais dans scheduled\run_entretien_documents.ps1 (la tache de
+    #   22:00). Les laisser ici ferait croire que le run fait ce travail -- c'est
+    #   exactement le malentendu qu'on vient de supprimer.
     [string]$GitHubOwner = "GTIImmo",
     [string]$GitHubRepo = "vitrine",
     [string]$GitHubBranch = "main",
@@ -1549,21 +1547,33 @@ if ($EnqueueConsoleDocuments -or $EnqueueAllConsoleDocumentsLocal) {
         # (`optional_pipeline_step` -> tolerance 50 h) : rien a ecrire en base.
         # ⚠ Les deux lignes partagent cette cle : le dernier battement gagne, et le
         #   detail de chaque ligne reste dans le journal du run (START/DONE/WARN).
-        Invoke-OptionalStepWithRetry -Label "console documents : les neuves (detection)" -Exe $nodeExe -Arguments @(
-            $consoleScript,
-            "--scope", "daily-cloud",
-            "--detect",
-            "--max-lectures", "1",
-            "--cap", "600"
-        ) -WorkerKey "console.enqueue_sync_jobs"
-
-        Invoke-OptionalStepWithRetry -Label "console documents : les biens en vente (detection)" -Exe $nodeExe -Arguments @(
-            $consoleScript,
-            "--scope", "vente",
-            "--detect",
-            "--max-lectures", "$ConsoleDetectLectures",
-            "--cap", "$ConsoleDetectCap"
-        ) -WorkerKey "console.enqueue_sync_jobs"
+        # ═══════════════════════════════════════════════════════════════════════════
+        # ⛔ CETTE ETAPE A ETE REMPLACEE — ET LE REFUS EST DECLARE ICI   15/10/2026
+        # ═══════════════════════════════════════════════════════════════════════════
+        # DECISION DE FREDERIC (15/10) : l'entretien des documents se fait PAR INDEX,
+        # dans une tache dediee a 22:00 -- « GTI Entretien Documents »,
+        # scheduled\run_entretien_documents.ps1 -- et PAS dans le run.
+        #
+        # POURQUOI PAS ICI, mesure du 15/10 : le run finit 07:14-07:34, la descente part
+        # a 07:45 (18 a 64 min) et la sauvegarde a 09:00. Ajouter ~2 h de lectures
+        # pousserait la descente sur la sauvegarde. A 22:00, personne n'attend.
+        #
+        # ⚠⚠ ET POURQUOI UN REFUS PLUTOT QU'UN CODE DORMANT -- la question de Frederic :
+        #   « ca risque de porter en erreur de run similaire, ton avis ? ». OUI. Un code
+        #   qui marche mais que personne n'allume est exactement le piege de cette
+        #   etape depuis le 20/08 : elle etait prete, personne ne l'a allumee, et deux
+        #   mois plus tard son plan etait perime (le frein du 25/09 avait triple son
+        #   cout, sans que personne refasse la multiplication).
+        #   Pire : allumer les DEUX doublerait tout le travail, et la file pleine
+        #   ferait refuser trois etapes du run (chauffage, entretien compromis,
+        #   entretien ventes).
+        #   ➡ Donc on ne laisse pas un code dormant : ON DECLARE LA DECISION LA OU LE
+        #     PROCHAIN LECTEUR LA CHERCHERA. Meme regle que `HORS_AUTO` du 14/10.
+        #
+        # Le code de l'entretien n'est pas perdu : il a demenage dans la tache de 22:00,
+        # ou il compte desormais QUATRE lignes (biens en vente, estimations,
+        # vendus/clos, photos) au lieu de deux.
+        Write-RunLog "SKIP  enqueue console documents -- REMPLACE par la tache « GTI Entretien Documents » (22:00). Le drapeau -EnqueueConsoleDocuments ne fait plus rien ici : voir scheduled\run_entretien_documents.ps1 et G.6 dans la liste."
     }
 }
 

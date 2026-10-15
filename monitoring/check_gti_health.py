@@ -128,6 +128,16 @@ TASK_CRITICALITY: dict[str, str] = {
     #   Et son script sort en 3 quand la file n'est pas digeree, en 4 quand Hektor
     #   rejette : deux etats qui doivent se VOIR, pas s'accumuler en silence.
     "GTI Rattrapage Documents": "critical",
+    # 2026-10-15 : « GTI Entretien Documents » (22:00) REMPLACE le rattrapage ci-dessus
+    #   des que les vendus/clos sont finis. Meme gravite, et pour la meme raison : c'est
+    #   desormais ELLE qui tient a jour les documents ET les photos des quatre index. Une
+    #   nuit perdue ne se repare pas toute seule -- la roue reprend ou elle s'etait
+    #   arretee, mais ce qui a bouge entre-temps attend un tour complet.
+    #   ⚠ Tant que Frederic ne l'a pas enregistree dans Windows, elle rend « tache
+    #     introuvable » en WARNING (la branche NotFound n'utilise pas cette gravite) :
+    #     visible a l'ecran, aucun e-mail. C'est voulu -- on declare avant d'enregistrer,
+    #     pour ne pas refaire le trou du 26/09.
+    "GTI Entretien Documents": "critical",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
@@ -3149,9 +3159,15 @@ def build_parser() -> argparse.ArgumentParser:
         #   ⚠ Consequence VOULUE : le rattrapage sort en 1 quand il refuse son lot
         #     (file non vide, ou >= 20 erreurs en 24 h) -- ces deux arrets DOIVENT se
         #     voir, c'est ecrit dans son propre en-tete.
+        #   15/10 : ajout de « GTI Entretien Documents » (la tache de 22:00 qui remplace
+        #   le rattrapage). Elle est posee ICI **avant** d'etre enregistree dans Windows :
+        #   une tache absente rend un simple `warning` « tache introuvable », alors qu'une
+        #   tache enregistree et jamais regardee est le trou qu'on vient de reboucher pour
+        #   la cinquieme fois. On declare d'abord, on enregistre ensuite.
         default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
                  "GTI Relances Email,GTI Sauvegarde,GTI Descente,"
-                 "GTI Rattrapage Documents,GTI Reprise Envois Hektor"),
+                 "GTI Rattrapage Documents,GTI Reprise Envois Hektor,"
+                 "GTI Entretien Documents"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)

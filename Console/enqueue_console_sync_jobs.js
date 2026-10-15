@@ -158,6 +158,20 @@ const INDEX_SOURCES = {
     dailyFilter: true,
     statuses: ["Actif", "Sous offre", "Sous compromis"],
   },
+  // ── LES ESTIMATIONS, A PART (15/10/2026) ────────────────────────────────────
+  // Decision de Frederic : l'entretien se fait PAR INDEX, dans l'ordre de ce qui
+  // compte -- les actifs d'abord, les estimations ensuite, les vendus/clos apres.
+  // `vente` + `estimation` = exactement `daily-cloud`, en deux lignes qu'on regle
+  // separement (12 757 estimations contre 727 biens en vente : sans la separation,
+  // le budget part a 95 % sur les dormantes).
+  // ⚠ Les vendus/clos n'ont PAS besoin d'un perimetre neuf : `historical` existe
+  //   deja ci-dessus et convient tel quel.
+  estimation: {
+    table: "app_dossier_current",
+    idColumn: "app_dossier_id",
+    dailyFilter: true,
+    statuses: ["Estimation"],
+  },
 };
 
 function buildDossierPath(args, offset) {
