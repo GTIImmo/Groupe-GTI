@@ -1632,3 +1632,42 @@ décisions.
 
 ⏰ **Il ne reste qu'un CONTRÔLE** : la première nuit de « GTI Entretien Documents »
 *(16/10 au matin, les 5 points sont écrits dans `CLAUDE.md` §2, item ⑪)*.
+
+---
+
+## ⏰ LA PREMIÈRE NUIT DE « GTI ENTRETIEN DOCUMENTS » — *mesurée le 16/10 à 00:45*
+
+**La tâche a tourné : 22:00:01 → 23:24:46, résultat 0.** Ce qu'elle a fait, ligne par ligne :
+
+| ligne | ce qu'elle a fait | l'état, contre la référence du 15/10 15:40 |
+|---|---|---|
+| **1 en vente** | **725** des 729 relus | **727**/729 ont une empreinte *(726)*, **2** sans — `63073` et `61715` |
+| **2 estimations** | **2 031** relues | ⭐ **12 758 / 12 758 — LE LOT EST COMPLET** *(12 728, donc les 30 qui manquaient)* |
+| **3 vendus/clos** | **300** enfilés *(son cap)*, **113** faits, **187 encore en file** | **7 651** avec empreinte *(7 545, +106)*, **1 292** sans → ~4-5 nuits |
+| **4 photos** | ⭐ **2 102 écritures en 82 secondes** *(23:23:24 → 23:24:46)* = **440 marquées « retirées » + 1 662 remises en ordre** | exactement les deux nombres attendus |
+
+⭐ **Et la preuve en réel du correctif du coffre** *(15/10)* : **46 lignes** portent
+`cloud_refuse`, contre **0** la veille. **0 travail documents en erreur.**
+
+### ⚠ Deux choses trouvées en mesurant — et la première a failli me faire dire l'inverse
+
+**① L'outil des photos LIT le local et ÉCRIT dans le cloud.** `accorder_photos_miroir.js`
+calcule ses candidats depuis l'**index local** *(`lireNotreIndex`, une base SQLite)* et
+écrit par PATCH dans **Supabase**. Donc tant que la **descente** n'a pas ramené la copie,
+il **recalcule les mêmes 440 / 1 662** et affiche `sautees_deja_marquees: 0`.
+⚠⚠ **J'ai failli écrire « la ligne 4 n'a rien fait »** sur cette seule lecture. La vérité
+est dans la base : **440 lignes `present_in_hektor = false`** et **2 102 écritures datuées de
+23:23**. ➡ **Règle : les nombres photos de l'outil ne jugent la nuit qu'APRÈS la descente.**
+
+**②⚠⚠ LE DÉTECTEUR D'ÉCHEC DE LA TÂCHE EST MORT** *(c'est la 6ᵉ fois dans ce projet)*.
+Dans `run_entretien_documents.ps1`, `Invoke-Ligne` fait `Write-Output "--- $Titre"` — or
+**en PowerShell, ce qu'une fonction émet devient sa VALEUR DE RETOUR**. Conséquences
+mesurées :
+- les **4 marqueurs « --- x/4 » n'arrivent jamais au journal** *(951 caractères : l'ouverture
+  et la fermeture, rien entre les deux)* — ce que le contrôle a signalé en 4 rouges ;
+- et surtout **`if (-not (Invoke-Ligne ...))` teste un TABLEAU non vide, donc toujours vrai** :
+  **une ligne en échec ne serait JAMAIS comptée**, `$echecs` resterait vide, la tâche
+  sortirait **0** et dirait « les 4 lignes sont passées ».
+➡ **La tâche est une machine à succès silencieux.** Remède : 2 lignes *(sortir l'affichage
+de la fonction, ou poser le résultat dans une variable de portée script)*. **Non fait :
+c'est du code existant et une tâche planifiée — à décider par Frédéric.**
