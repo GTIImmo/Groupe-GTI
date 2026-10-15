@@ -936,3 +936,51 @@ sa naissance, et les neuves sont attrapées **gratuitement** par la ligne A.
   Le script reste dans `scheduled/` (dormant) au cas où le run devienne trop serré.
 - **G.1-c** *(39 biens vendus sans leur compromis ni leur acte)* : à traiter après.
 - les **estimations déjà lues** : à relire un jour, ou jamais.
+
+---
+
+# 6i — LES FICHES DÉTAIL DES BIENS CLOS · ⚪ **FAUSSE ALERTE** (15/10, lecture seule)
+
+**La piste, héritée du chantier ③** : *« sur 49624, `hektor_mandat` porte le 13/10 quand le
+détail dit le 19/08 → la fiche détail des biens clos n'est peut-être plus rafraîchie. »*
+
+## VERDICT : elles SONT rafraîchies. Les deux sources disent la même chose.
+
+**49624, mesuré dans le miroir local le 15/10 à 07:00 :**
+
+```
+archive          '1'  (statut « Clos »)
+date_maj Hektor  2026-10-13 09:33     <- elle a bien bouge chez Hektor le 13/10
+detail relu le   2026-10-15 04:24Z    <- CE MATIN, par l'etape posee le 09/10
+```
+
+Et le bloc mandat **du détail** porte **tout** :
+`numero 17929 · EXCLUSIF · debut 2025-07-16 · fin 2026-07-17 · cloture 2026-10-13 ·
+montant 49000 · mandants « M. MACHABERT Florian »`
+➡ **identique à `hektor_mandat`** *(id 20816, n° 17929, clôture 2026-10-13, lu à 04:26)*.
+
+⚠ **Et mon erreur de lecture, pour mémoire** : j'ai d'abord affiché `date_debut` / `date_fin`
+et conclu « le détail n'a pas les dates ». **Les clés du détail s'appellent `debut`, `fin`,
+`cloture`** — pas comme celles de la table. *Un nom de clé supposé vaut une mesure fausse.*
+
+## POURQUOI LE CHANTIER ③ A VU UNE DIVERGENCE LE 14/10 : une LATENCE, pas un gel
+
+La `date_maj` de 49624 a bougé le **13/10 à 09:33**. Son détail a été relu le **15/10 à 04:24**.
+Le 14/10, quand la mesure a été prise, le détail **portait encore l'état d'avant**. Ce n'était
+donc ni un gel ni un défaut : **le détail avait une ou deux nuits de retard.**
+
+## ET LA MÉCANIQUE EST SAINE — mesuré
+
+| | |
+|---|---|
+| **archives en attente** de relecture *(la sélection exacte du script)* | **2** — pas de file d'attente *(le lot est de 50 par nuit)* |
+| **volume réel** | 7 relues le 15/10 · 3 le 14/10 · 1 le 13/10 *(les 5 245 du 09/10 = le jour de l'installation)* |
+| **les vendus/clos** *(`archive='0'`, statut Vendu/Clos)* | **8 810 fiches, 8 806 relues en octobre**, la plus récente **aujourd'hui** |
+
+⚠ **Au passage, une distinction à retenir** : l'étape dédiée des fiches détail ne prend que
+`a.archive = '1'` *(`sync_archived_annonce_details.py`)*. Les **vendus/clos sont `archive='0'`**
+— ce ne sont donc **pas** elles qu'elle traite : eux sont couverts par le balayage normal,
+et la mesure ci-dessus le prouve *(8 806 en octobre)*.
+
+➡ **6i se ferme sans correctif.** La seule chose à savoir : une archive modifiée chez Hektor
+est relue **la nuit suivante**, pas dans la seconde — et ça suffit.
