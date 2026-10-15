@@ -182,10 +182,74 @@ cliquer.** Mesure du 15/10 : `resolve_accepte = false` pour **47824** et pour **
 
 ⚠ **Et le refus était SILENCIEUX** : la RPC rend `{"resolved": false, "reason":
 "rien_a_trancher"}`, et le front **jetait ce compte-rendu** — il cachait la ligne quand même.
-Au rechargement suivant elle revenait, sans un mot. **C'est corrigé** *(§ 7)*, mais
-**l'alignement des deux fonctions sur la règle des 3 heures reste à trancher par Frédéric** :
-ce n'est pas un détail technique, c'est un **choix** — il rendrait tranchables des travaux
-qu'un filet pourrait encore rejouer.
+Au rechargement suivant elle revenait, sans un mot.
+
+### ✅ TRANCHÉ ET FAIT LE 15/10 — *Frédéric : « OUI ALIGNE LES 2 »*
+
+`patch_aligner_seuil_trancher_2026-10-15.sql` *(+ INVERSE)* : les deux fonctions prennent la
+**même** règle que la vue — « 5 tentatives **OU** plus de 3 heures ».
+
+⚠ **Le prix, dit en clair** : un travail de 4 h avec 2 tentatives devient tranchable alors
+que le filet de rejeu pourrait encore le reprendre *(sa fenêtre est de 24 h)*. Si l'humain
+l'abandonne et que le filet réussit ensuite, Hektor recevra le geste **après** qu'on l'a
+déclaré abandonné. La descente du matin remettra tout d'accord.
+⭐ **Et le filet ne concerne que 9 types idempotents** : les deux travaux d'aujourd'hui
+*(`sync_console_documents`)* n'en font pas partie — pour eux, **il n'y a rien à rejouer, donc
+rien à perdre**.
+
+### ⚠⚠ ET UN TROISIÈME MUR, que seule la mesure a trouvé
+
+**Aligner les seuils n'aurait pas suffi.** `app_action_status` commence par
+
+```sql
+select * into d from app_dossier_current where app_dossier_id = ...;
+if not found then raise exception 'dossier_not_found';
+```
+
+Or le bien de **47824** — **« Maison de village à rénover », VM8012** — est **VENDU** : depuis
+le 20/05 il n'est plus dans `app_dossier_current` mais dans
+`app_historical_annonce_index_current`. La fonction **levait une exception**, le front
+l'avalait *(il le fait exprès : « un échec de lecture ne doit pas priver l'utilisateur de sa
+fiche »)*, et **le bandeau ne s'affichait JAMAIS**. Le travail sonnait éternellement.
+
+⭐ **C'est la même supposition fausse que le défaut 5a du 08/10** — *« le bien est dans
+`app_dossier_current` »*, fausse pour **44 259 biens**. On la balaie ici **dans sa dernière
+case** *(leçon 9 : une cause structurelle se balaie dans toute sa famille)*.
+
+⚠ **On inclut les archives, délibérément** : une archive est en lecture seule pour ses
+**champs**, mais trancher un geste abandonné **ne modifie pas le bien** — ça répond à une
+**alerte**. L'exclure recréerait exactement le défaut qu'on répare.
+
+---
+
+## 6bis · OÙ SONT LES BOUTONS, ET QUAND ILS APPARAISSENT
+
+**Les boutons ne sont PAS dans l'écran Santé Système.** Ils sont sur **la fiche du bien** —
+c'est voulu : on tranche un geste là où on voit le bien, pas dans une liste de sondes.
+
+| | où exactement |
+|---|---|
+| **cockpit** | onglet **« Le Bien »** *(App.tsx:28785)* — ⚠ **masqué** si la fiche est en lecture seule *(archive, brouillon, ou vendu/clos sans détail chargé)* |
+| **fiche classique** | **au-dessus de la barre d'onglets** *(App.tsx:30394)* — **toujours affiché** |
+
+Le chemin le plus court : **écran Santé → cliquer le bien cité par l'alerte** *(le lien posé
+le 15/10, ⑦-5 A)* → la fiche s'ouvre → le bandeau rouge est en haut.
+
+**Quand le bandeau apparaît**, depuis le 15/10 — il faut **les trois** :
+
+1. le travail est en **erreur** ;
+2. **5 tentatives épuisées OU plus de 3 heures** *(avant : 5 tentatives, point)* ;
+3. moins de **30 jours** ;
+4. et **personne ne l'a déjà tranché**.
+
+**Mesure du 15/10, sur les 4 travaux en erreur :**
+
+| bien | tentatives | âge | tranchable | où est le bien |
+|---|---|---|---|---|
+| **61672** | 5 | 47 h | ✅ | parc vivant |
+| **62963** | 5 | 26 h | ✅ | parc vivant |
+| **47824** | 1 | 13 h | ✅ *(règle des 3 h)* | **vendus/clos → repli** |
+| **61439** | 1 | **1 h 30** | ⏳ **pas encore** — à partir de **12:02** | parc vivant |
 
 ---
 
@@ -195,10 +259,28 @@ qu'un filet pourrait encore rejouer.
 |---|---|
 | `supabase/patch_abandon_defait_le_geste_2026-10-15.sql` | le correctif, **4 ancres**, sur la fonction **lue dans la base** |
 | `…_INVERSE.sql` | le retour arrière, avec contrôle d'empreinte |
+| `supabase/patch_aligner_seuil_trancher_2026-10-15.sql` | « 5 **ou** > 3 h » dans les 2 fonctions **+ le repli vendus/clos/archives** |
+| `…_INVERSE.sql` | le retour arrière des deux |
 | `apps/hektor-v1/src/lib/api.ts` | `resolveAction` **rend** son compte-rendu *(il était jeté)* |
 | `apps/hektor-v1/src/App.tsx` | le bandeau **dit** ce que le clic a fait — et **ne cache plus une ligne qu'il n'a pas tranchée** |
 
-**Empreinte d'avant** : `5590da3aff0e57512d8fb69c13abab2d`
+**Les deux patchs SQL sont indépendants** *(leurs ancres ne se touchent pas)* : à coller dans
+n'importe quel ordre — vérifié en les posant l'un après l'autre, les 4 + 3 ancres restent
+uniques.
+
+**Empreintes d'avant** : `app_action_resolve` = `5590da3aff0e57512d8fb69c13abab2d` ·
+`app_action_status` = `0c8a54d36ea621fbd4b5e7bc7b7da6a2`
+
+### Les deux retours arrière sont ÉPROUVÉS, pas seulement écrits
+
+| | `app_action_resolve` | `app_action_status` |
+|---|---|---|
+| origine | `5590da3a…` | `0c8a54d3…` |
+| après patch | `723707b2…` / `2315de8f…` | `9d68752a…` |
+| **après inverse** | **`5590da3a…`** ✅ | **`0c8a54d3…`** ✅ |
+
+➡ **On retombe à l'octet près.** Et la ligne « après patch » prouve que le patch **a changé
+quelque chose** — un inverse qui revient sur un patch qui ne faisait rien ne prouverait rien.
 
 ---
 
@@ -225,14 +307,36 @@ Scène montée sur le **bac à sable 62963**, identité empruntée *(`SET ROLE a
 
 `npm run build` **vert** *(bundle `index-CaeOf3Z1.js`)*.
 
+### Et 11 contrôles de plus pour l'alignement — *avant / après, sur les VRAIS travaux*
+
+| | le cas | mesuré |
+|---|---|---|
+| **AVANT** | le bandeau du bien **vendu** 47824 | **`ERREUR dossier_not_found`** |
+| **AVANT** | trancher 47824 | **`rien_a_trancher`** |
+| AVANT | le bandeau du bien vivant 61672 | `abandonnes=1` |
+| **APRÈS** | le bandeau du bien **vendu** 47824 | **`abandonnes=1`** ✅ |
+| APRÈS | le bandeau de 61672 *(inchangé)* | `abandonnes=1` ✅ |
+| APRÈS | **abandonner** 47824 | `resolved=true defaits=0` ✅ |
+| APRÈS | 47824 **sort** du bandeau | `abandonnes=0` ✅ |
+| APRÈS | **61439 n'a que 1 h 30** | `rien_a_trancher` ✅ — *la règle des 3 h n'ouvre pas tout* |
+| APRÈS | « J'ai refait » sur 61672 | `resolved=true defaits=0` ✅ |
+| APRÈS | sa fiche n'a pas bougé | `Sous offre` ✅ |
+| APRÈS | son carnet est intact | `statut=Sous offre` ✅ |
+
+> **Les trois lignes « AVANT » sont le témoin inverse** : elles montrent le défaut en
+> fonctionnement, sur les vraies données, avant que le patch n'existe.
+
 ---
 
 ## 9. ⬜ Ce qui reste à Frédéric
 
-1. **Coller** `patch_abandon_defait_le_geste_2026-10-15.sql` dans Supabase.
+1. **Coller les DEUX patchs** *(n'importe quel ordre)* :
+   `patch_abandon_defait_le_geste_2026-10-15.sql` puis
+   `patch_aligner_seuil_trancher_2026-10-15.sql`.
 2. **Pousser** le front *(Vercel se déploie seul)*.
-3. **Cliquer « J'ai refait »** sur **61672** et **62963** — la mesure dit qu'il n'y a **rien
-   à défaire** sur ces deux-là, et « J'ai refait » est le bon bouton : le geste **était
-   passé** chez Hektor.
-4. **Trancher la question du § 6** : aligne-t-on `app_action_status` et `app_action_resolve`
-   sur « 5 tentatives **OU** plus de 3 heures », comme la vue d'hier ?
+3. Sur **61672** et **62963** : **« J'ai refait »** — la mesure dit qu'il n'y a **rien à
+   défaire** sur ces deux-là, et le geste **était passé** chez Hektor.
+4. Sur **47824** *(« Maison de village à rénover »)* : **« Abandonner ce geste »** — c'est un
+   envoi de documents qui a reçu du HTML au lieu de JSON ; **rien n'a été écrit chez nous**,
+   donc rien à remettre.
+5. **61439** : attendre **12:02** *(3 heures)*, puis il apparaîtra à son tour.

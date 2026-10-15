@@ -557,13 +557,30 @@ report ne se décident jamais sans lui.
    sont hors de portee EXPRES : le worker les restaure deja (restaurerEtatAffaire).
    11 controles verts sur la vraie base en transaction annulee + TEMOIN INVERSE.
    Detail : notice/ABANDON_DEFAIT_LE_GESTE_2026-10-15.md
-   ⬜ RESTE A FREDERIC : (a) coller patch_abandon_defait_le_geste_2026-10-15.sql ;
-   (b) pousser le front ; (c) cliquer « J'ai refait » sur 61672 et 62963 (mesure : RIEN a
-   defaire sur ces deux-la, le geste ETAIT passe chez Hektor) ;
-   (d) ⬜ TRANCHER : aligne-t-on app_action_status et app_action_resolve sur « 5 tentatives
-   OU plus de 3 h », comme la vue du 14/10 ? Sans ca, 47824 et 61439 sonnent et n'ont
-   AUCUN bouton (lecon 29). Ce n'est pas un detail : ca rendrait tranchables des travaux
-   qu'un filet pourrait encore rejouer. JE N'AI RIEN CHOISI.
+   ✅ (d) ALIGNE LE 15/10, go « OUI ALIGNE LES 2 » :
+   patch_aligner_seuil_trancher_2026-10-15.sql -- app_action_status ET app_action_resolve
+   prennent la regle de la vue (« 5 tentatives OU plus de 3 h »).
+   ⚠ LE PRIX, DIT : un travail de 4 h a 2 tentatives devient tranchable alors que le filet
+     pourrait encore le reprendre (fenetre 24 h). ⭐ Mais le filet ne couvre que 9 types
+     IDEMPOTENTS, et les 2 travaux du jour n'en sont pas : rien a rejouer, rien a perdre.
+   ⚠⚠ ET UN TROISIEME MUR, TROUVE PAR LA MESURE : aligner les seuils N'AURAIT PAS SUFFI.
+     app_action_status leve 'dossier_not_found' si le bien n'est pas dans
+     app_dossier_current -- et 47824 est VENDU (« Maison de village a renover », VM8012),
+     donc dans l'index des vendus/clos depuis le 20/05. Le front avalait l'erreur (EXPRES)
+     et LE BANDEAU NE S'AFFICHAIT JAMAIS. ⭐ Meme supposition fausse que le defaut 5a du
+     08/10, fausse pour 44 259 biens : balayee ici dans sa DERNIERE case (lecon 9).
+     Les ARCHIVES sont incluses expres : trancher une alerte ne modifie pas le bien.
+   11 controles avant/apres sur les VRAIS travaux (ERREUR dossier_not_found -> abandonnes=1 ;
+   61439 a 1 h 30 reste « rien_a_trancher » : la regle des 3 h n'ouvre pas tout).
+   LES DEUX RETOURS ARRIERE RETOMBENT A L'OCTET PRES (empreintes mesurees aux 3 etapes).
+   OU SONT LES BOUTONS (question de Frederic) : PAS dans l'ecran Sante -- sur LA FICHE DU
+   BIEN. Cockpit onglet « Le Bien » (App.tsx:28785, masque si lecture seule) et au-dessus
+   de la barre d'onglets de la fiche classique (App.tsx:30394, toujours). Chemin court :
+   Sante -> cliquer le bien cite par l'alerte (le lien de ⑦-5 A).
+   ⬜ RESTE A FREDERIC : (a) coller LES DEUX patchs du 15/10 (ordre indifferent) ;
+   (b) pousser le front ; (c) « J'ai refait » sur 61672 et 62963 (RIEN a defaire, le geste
+   ETAIT passe chez Hektor) ; (d) « Abandonner » sur 47824 (envoi de documents qui a recu du
+   HTML ; rien n'a ete ecrit chez nous) ; (e) 61439 apparaitra a 12:02.
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*

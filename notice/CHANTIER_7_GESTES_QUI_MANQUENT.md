@@ -151,10 +151,33 @@ montre l'ancien code laisser la fiche fausse, le carnet plein **et l'alerte éte
 
 ⚠⚠ **ET UN SECOND DÉFAUT TROUVÉ EN CHEMIN** : la vue corrigée hier *(⑦-5 B)* montre les
 travaux de plus de 3 heures, **mais `app_action_status` et `app_action_resolve` sont restées
-à `>= 5` tentatives**. Donc **47824** sonne, est visible, et **n'a aucun bouton** — le clic
-était refusé **en silence** (`resolved: false`, que le front jetait). Le silence est corrigé.
-⬜ **L'alignement sur « 5 OU > 3 h » reste à trancher par Frédéric** : il rendrait tranchables
-des travaux qu'un filet pourrait encore rejouer.
+à `>= 5` tentatives**. Donc **47824** sonnait, était visible, et **n'avait aucun bouton** — le
+clic était refusé **en silence** (`resolved: false`, que le front jetait).
+
+✅ **ALIGNÉ LE 15/10** *(Frédéric : « OUI ALIGNE LES 2 »)* —
+`patch_aligner_seuil_trancher_2026-10-15.sql` + INVERSE.
+⚠ **Le prix, dit** : un travail de 4 h à 2 tentatives devient tranchable alors que le filet
+pourrait encore le reprendre *(fenêtre 24 h)*. ⭐ Mais le filet ne couvre que **9 types
+idempotents**, et les 2 travaux du jour n'en sont pas — **rien à rejouer, rien à perdre**.
+
+⚠⚠ **ET UN TROISIÈME MUR, que seule la mesure a trouvé** : aligner les seuils **n'aurait pas
+suffi**. `app_action_status` lève `dossier_not_found` si le bien n'est pas dans
+`app_dossier_current` — et **47824 est VENDU** *(« Maison de village à rénover », VM8012)*,
+donc dans l'index des vendus/clos depuis le 20/05. **Le front avalait l'erreur et le bandeau
+ne s'affichait JAMAIS.** ⭐ Même supposition fausse que le défaut **5a du 08/10**, fausse pour
+**44 259 biens** : balayée ici **dans sa dernière case**. Les **archives** sont incluses
+exprès — trancher une alerte ne modifie pas le bien.
+
+**11 contrôles avant/après sur les vrais travaux**, dont `ERREUR dossier_not_found` →
+`abandonnes=1`, et **61439 (1 h 30) reste `rien_a_trancher`** — la règle des 3 h n'ouvre pas
+tout. **Les deux retours arrière retombent à l'octet près.**
+
+### Où sont les boutons *(question de Frédéric)*
+
+**Pas dans l'écran Santé** : sur **la fiche du bien** — cockpit onglet **« Le Bien »**
+*(masqué si la fiche est en lecture seule)*, et **au-dessus de la barre d'onglets** de la
+fiche classique *(toujours)*. Chemin court : **Santé → cliquer le bien cité par l'alerte**
+*(le lien de ⑦-5 A)*.
 
 ---
 
