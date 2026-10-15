@@ -1056,3 +1056,71 @@ Marquer 440 photos **les fera disparaître** là où le filtre existe, et **pas*
 Et corriger l'ordre **change la photo principale sur les pages publiques**. ➡ Il faut donc
 d'abord relever **tous les lecteurs** de `app_console_photo` *(fiche, panneau, pièces jointes,
 fiche visite, vitrine, e-mails)* et dire pour chacun ce que ça change. **C'est l'étape 2.**
+
+## 6d — ÉTAPE 2 : LE PROBLÈME EXACT *(question de Frédéric : « je ne comprends pas trop le but »)*
+
+### CE QUE ÇA COÛTE, MESURÉ — **le site public est touché**
+
+```
+annonces publiables sur la vitrine                                    449
+   dont publient encore des photos RETIREES de Hektor        34   (255 photos)
+   dont publient la MAUVAISE PHOTO PRINCIPALE                56
+   exemples : 18442 (9 photos retirees !) · 18753 · EM596 · 18629 · V700061904
+              EM5578 · EA32586 · EA32675 · V290061677
+```
+
+**56 annonces sur 449 — une sur huit — montrent au public une autre photo d'accroche que celle
+choisie dans Hektor.** Et 34 affichent encore des photos que l'agence a retirées.
+
+### POURQUOI LE PUBLIC EST TOUCHÉ — le chemin, relu dans le code
+
+`Ecrans Android/export_project_vitrine.py:474` :
+```python
+"photos": (photos_chez_nous(adresses_app, row["hektor_annonce_id"], max_photos)
+           or visible_photos(row["images_json"], row["photo_url_listing"], max_photos))
+```
+➡ **Quand nos adresses existent, la galerie publiée vient de NOS colonnes**, pas du miroir frais.
+Et ces colonnes sont construites par `notice/patch_photos_adresses_app_2026-09-27.sql` :
+```sql
+where p.present_in_hektor and p.derives_json ? 'w400' ...
+order by p.visible desc nulls last, p.sort_order asc nulls last, p.id
+photo_url_listing_app = g.entrees->0->>'url'
+```
+**Donc la vitrine hérite de notre `sort_order` figé et de notre `present_in_hektor` jamais
+marqué.** *(Le repli, lui, lit le miroir frais — il n'est utilisé que si nous n'avons pas
+d'adresses pour cette annonce.)*
+
+**Et ça se voit aussi dans l'app** : la même requête alimente `photo_url_listing_app` du listing
+**et celle du registre des mandats** *(l. 154 du patch)*.
+
+### ⭐ LE CORRECTIF, ET POURQUOI IL EST PETIT
+
+Il suffit de mettre **deux colonnes** d'accord avec `images_json` *(qui porte l'id, l'ordre et le
+drapeau visible, et que le balayage rafraîchit chaque nuit — prouvé en 6i)* :
+
+1. `present_in_hektor = false` + `absent_depuis` pour les photos absentes de `images_json`
+   — **le patron existe déjà** dans le worker, garde-fou de liste vide compris ;
+2. `sort_order` *(et `visible`)* repris de `images_json`.
+
+⭐⭐ **Et le reste se corrige TOUT SEUL** : le patch du 27/09 recalcule `photo_url_listing_app`
+et `images_preview_json_app` **à partir de ces deux colonnes**. Donc **la vignette du listing, la
+vignette du registre et la galerie de la vitrine redeviennent justes sans toucher une ligne de
+front**.
+
+**Aucun appel à Hektor.** Tout est local, comme le téléchargement des photos.
+
+### CE QUE ÇA POURRAIT CASSER AILLEURS — relevé des lecteurs
+
+| lecteur | ce qu'il lit | effet du correctif |
+|---|---|---|
+| **la vitrine** *(site public)* | `images_preview_json_app` / `photo_url_listing` | ✅ **corrigé** : la bonne photo d'accroche, les retirées disparaissent |
+| **le listing de l'app** et le **registre des mandats** | `photo_url_listing_app` | ✅ corrigés par le même patch |
+| **le panneau photos** de la fiche | `app_console_photo`, filtré `present_in_hektor=true` | ✅ le filtre **existe déjà** — il n'avait rien à filtrer. 440 photos disparaîtront du panneau |
+| **la galerie de la fiche** *(hero)* | `props.images`, c'est-à-dire le **détail** | ⚪ inchangée — elle était déjà juste |
+| **la fiche visite / les pièces jointes** | ⚠ **à vérifier** — avertissement du 26/09 *(« le front n'a pas le filtre qui les cache »)* | à relever avant de coder |
+| **les adresses publiques déjà diffusées** *(portails, e-mails)* | le coffre `gti-photo` | ⚪ **intactes par décision** : marquer ne supprime ni la ligne ni le fichier *(G.10bis)* |
+| **la purge des six mois** | `hors_vitrine_depuis` | ⚪ pas touchée |
+
+⚠ **Une réserve à confirmer après la descente** : j'ai mesuré l'ordre sur **notre** index ; il
+reste à vérifier que les 56 annonces ont bien `images_preview_json_app` rempli *(sinon elles
+tombent sur le repli frais et ne sont pas exposées)*.
