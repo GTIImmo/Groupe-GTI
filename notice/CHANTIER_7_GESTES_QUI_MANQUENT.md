@@ -177,6 +177,61 @@ exactement ce geste *(l. 236-237)* :
 Frédéric** : cette interdiction porte sur l'**outil doublons** *(qui doit proposer, pas agir)*
 — pas forcément sur un **bouton manuel** sur une fiche. **Je ne tranche pas.**
 
+#### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
+
+> ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».
+> **Il y en a TROIS.** La troisième a été ajoutée le **11/09** justement parce que les deux
+> premières laissaient des trous *(`phase2/contacts/elargir_perimetre_console.py`)*.
+
+```
+Hektor (API)  ->  data/hektor.sqlite        356 515 contacts   (184 128 archives)
+                  phase2.sqlite             356 515 lignes, dont 62 170 ELIGIBLES
+                  push (scope « eligible ») ->  Supabase : 62 234 fiches
+```
+
+**Les TROIS règles d'éligibilité** *(mesurées des deux côtés, local et cloud)* :
+
+| règle | ce qu'elle dit | local | cloud |
+|---|---|---|---|
+| `active_annonce_relation` | lié à une annonce **ACTIVE** | 55 349 | 55 379 |
+| `active_search` | a une **recherche active** | 3 787 | 3 821 |
+| `console_transaction_party` | **nommé dans une transaction** lue par la console *(ajoutée le 11/09)* | 2 786 | 2 786 |
+| les deux premières | | 248 | 248 |
+
+*(Écart de 64 entre local et cloud : les fiches rafraîchies ou créées depuis le run de 05:00
+écrivent directement dans Supabase. Explication probable, **non prouvée**.)*
+
+**Pourquoi la 3ᵉ règle existe** *(son en-tête le dit)* : les deux premières ne gardaient que
+l'**actif**, donc elles laissaient dehors les parties d'une transaction **déjà faite** — **1 191
+mandants, 465 acquéreurs** — et **les notaires** *(137 sur 143 : ils n'entrent dans **aucune**
+relation, l'API ne les rend jamais)*. ⚠ Sa **place dans le run** est délibérée *(déplacée le
+12/09)* : **après** la construction de la couche *(qui remet l'éligibilité à zéro)*, **après**
+l'entretien qui remplit sa source, **avant** le push qui lit son résultat.
+
+**⚠ CE QUE LA RÈGLE N'EST PAS** *(l'intuition de Frédéric, corrigée sur un point)* : le cloud
+**n'est pas** construit depuis **notre registre des relations** `app_relation`, mais depuis les
+**liens de Hektor sur une annonce ACTIVE**. Mesure :
+
+| | |
+|---|---|
+| `app_relation` *(notre registre)* | **132 757 lignes**, **96 164 contacts** distincts |
+| ces contacts présents au cloud | **45 202** |
+| ces contacts **absents** du cloud | **50 962** |
+| ⭐ dont sur un bien **vivant** | **0** |
+| sur un bien **non vivant** *(vendu, clos, archivé)* | 50 961 *(+1 relation sans dossier)* |
+| contacts nommés par le registre sur un bien vivant | **20 991**, **0 absent du cloud** |
+
+➡ **Aucun trou sur les biens vivants.** Les 50 962 absents sont les relations que notre
+registre **garde pour toujours** *(delete-never)* sur des biens qui ne sont plus actifs —
+exactement ce que la règle écarte, et ce que la 3ᵉ règle rattrape quand une **transaction**
+les nomme.
+➡ **`archive` n'est PAS un critère** : archiver une fiche ne la fait **jamais** sortir du
+cloud. Seule la perte des trois raisons l'en fait sortir.
+
+**➡ Et ça répond à une question ouverte de `CLAUDE.md` §2** *(« pourquoi 62 000 contacts
+seulement au cloud sur 356 000 ? »)* : **par décision, pas par accident** — on ne monte que
+ce qui sert *(16,5 % au 11/09, 17,5 % aujourd'hui)*.
+
 ---
 
 ## ⑦-2 · LE CAS GLADYS DURIEUX — *à régler en même temps* **(décision de Frédéric, 14/10)**

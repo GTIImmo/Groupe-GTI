@@ -491,7 +491,15 @@ report ne se décident jamais sans lui.
      - le refus du prix n'a JAMAIS ETE EXECUTE (ma session ne peut pas ecrire)
      - un essai REEL d'un geste chez Hektor par un negociateur
 ③ QUESTIONS DE FAIT   les negociateurs saisissent-ils encore leurs visites dans Hektor ?
-                      pourquoi 62 000 contacts seulement au cloud sur 356 000 ?
+   ✅ REPONDU LE 15/10 : « pourquoi 62 000 contacts sur 356 000 » est une DECISION, pas un
+   accident -- on ne monte que ce qui sert, par TROIS regles d'eligibilite (et non deux, mon
+   erreur de la veille) : annonce ACTIVE (55 349) · recherche active (3 787) · nomme dans une
+   TRANSACTION lue par la console (2 786, regle ajoutee le 11/09 parce que les deux premieres
+   laissaient dehors 1 191 mandants, 465 acquereurs et 137 notaires sur 143).
+   ⚠ Le cloud N'EST PAS bati sur notre registre app_relation : il l'est sur les liens de
+   Hektor vers une annonce ACTIVE. app_relation nomme 96 164 contacts, 50 962 ne sont pas au
+   cloud -- mais ZERO d'entre eux sur un bien vivant (20 991 contacts, 0 absent). Rien a
+   corriger. Detail et mesures : notice/CHANTIER_7_GESTES_QUI_MANQUENT.md (audit du 15/10).
 ④ HORS CODE (etape 3) : A.4 zone DNS (La Boite Immo -> OVH, garder www) · A.5 les leads ·
    l'export PROTEXA · contrats A.1 et A.2
 ⑤ C.9-couple          creer un menage d'essai (la sonde est prete)
