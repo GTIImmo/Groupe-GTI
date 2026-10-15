@@ -8,6 +8,29 @@
 
 ---
 
+## 📋 LES POINTS DU CHANTIER ET LEUR ÉTAT — *tableau ouvert le 15/10, à tenir à jour*
+
+| # | le point | état |
+|---|---|---|
+| ⑦-1 | **archiver / désarchiver un contact** | 🔎 audité le 14/10, **re-audité le 15/10** — en cours |
+| ⑦-2 | **le cas Gladys DURIEUX** *(fiche archivée, mandante d'une annonce active)* | ⬜ va avec ⑦-1 *(sa décision du 14/10)* |
+| ⑦-3a | le **crayon** de la date de clôture, rubrique Mandat | ⬜ reçu du chantier ③ |
+| ⑦-3b | l'**écran du journal des suppressions** | ⬜ reçu du chantier ③ |
+| ⑦-3c | **réordonner / choisir la photo principale** *(`mode=ordonne_photos` connu)* | ⬜ reçu du chantier ③ |
+| ⑦-4 | le **bandeau qui ment** *(« désarchiver » promis à un bien non archivé)* | ⬜ |
+| ⑦-5 | relancer / abandonner depuis le monitoring, biens cliquables | ✅ **fait le 15/10** |
+| ⑦-6 | « Abandonner » **défait** le geste | ✅ **fait le 15/10** |
+| ⑦-7 | **modifier ou prolonger un mandat** *(audit 08/10 : ni RPC ni travail worker ; l'avenant ne change que le prix)* | ⬜ |
+| ⑦-8 | **photos : rendre visible / masquer** *(E.0-bis ; « retirer » est fait depuis le 14/10)* | ⬜ |
+| ⑦-9 | **renommer un document** *(audit 08/10, § Documents C2)* | ⬜ |
+| ⑦-10 | `app_brouillon_annonce_detail_cache` **vide et rien ne la remplit** *(venu du chantier ⑥, 14/10)* | ⬜ **question** : seulement si Frédéric en a l'usage |
+
+> ⚠ Les points ⑦-7, ⑦-8, ⑦-9 viennent du **§2 ⑦ de l'audit du 08/10** et ⑦-10 du chantier ⑥ :
+> ils manquaient à cette note, qui ne portait que ce que les sessions y avaient déposé.
+> **L'ordre de traitement ne se décide pas sans Frédéric.**
+
+---
+
 ## ⑦-1 · ARCHIVER ET DÉSARCHIVER UN CONTACT — *audité le 14/10, à la demande de Frédéric*
 
 ### La réponse : **l'app ne sait pas le faire**, et c'est établi par quatre chemins
@@ -41,6 +64,118 @@ relevé.
 ➡ **Même méthode que « supprimer une photo »** *(audit du 25/09 : « les trouver d'abord »,
 commande trouvée le 14/10 par un relevé en lecture seule)* : **un relevé, en lecture seule,
 avant d'écrire la moindre ligne.**
+
+### 🔎 RE-AUDIT DU 15/10 — *le geste manque toujours, et **la commande était chez nous***
+
+**Verdict : CONFIRMÉ** pour le geste, **FAUX** pour « la commande est inconnue ».
+
+⭐⭐ **La commande Hektor dormait dans une capture du 01/06** —
+`Console/exports/impersonate_create_annonce_2026-06-01T09-42-48-999Z/labs_contactsRefonte.js:436`
+*(fichier servi par `…/admin/?call=getJs&js=labs/contacts/labs_contactsRefonte.js`, URL dans
+le `report.json` de la capture)* :
+
+```
+POST xmlrpc.php   mode=contacts-contactProfile-archiveContact & id=<idContact> & archive=<0|1>
+```
+
+enveloppée dans `setArchiveContact(archive)` *(l. 422-441)*, avec la confirmation de Hektor
+« êtes-vous sûr de vouloir **archiver** / **activer** ce contact ? ».
+⭐ **UN SEUL mode pour les deux sens** : c'est le paramètre `archive` qui décide — donc
+« désarchiver » ne demande rien de plus que « archiver ».
+*(Troisième fois qu'une commande dite inconnue était déjà payée : `delete_img` le 13/05,
+`archiveUnarchiveContactRecherche` dans `Console/exports/probe_recherche_tab.txt`.)*
+⚠ `git log -S "archiveContact"` : **0 commit**, **0 note** — jamais utilisée, jamais écrite.
+
+**Les quatre chemins du 14/10, re-mesurés le 15/10 :**
+
+| | mesure du 15/10 |
+|---|---|
+| **la base** | 11 types de travaux « contact » ou « archive » ont tourné ; le seul archivage est **`archive_hektor_annonce` (7, dernier le 13/10)** — **aucun archivage de fiche contact** |
+| **verrou 1 — la contrainte** | `app_console_job_job_type_check` porte **43 types**, aucun pour archiver un contact |
+| **verrou 2 — les droits** | `app_console_can_request_contact_job` ne nomme que 5 types *(création + modification + les 3 recherches)* ; admin et manager passent partout |
+| **verrou 3 — la distribution** | `app_console_claim_next_job` : `delete_hektor_contact` est dans la liste du service **« gestes d'état »** — c'est là qu'irait l'archivage |
+| **le worker** | il modifie un contact par `mode=contacts-saveDataEditContact` *(l. 17202+13)*, archive une **recherche** par `modifDateArchiveCritere` *(l. 18340)* ; `archive` n'est que **LU** *(l. 2217 et 2252)* |
+| **l'écran** | `contactArchiveLabel` *(App.tsx:35591)* ne sert qu'à **afficher** une pastille *(:42242)* et à filtrer l'annuaire *(api.ts:2367-2368, 2459-2460)* ; `isArchived` existe **en deux copies** *(:40070 fiche V1, :40737 fiche V2)* et ne commande **aucun bouton** |
+
+**⑦-2 Gladys DURIEUX, mesurée le 15/10** : toujours **archivée**, `ville` =
+**Saint-Romain-Lachalm** *(la note du 14/10 disait Saint-Étienne : c'est son **agence**)*,
+**1 recherche active**, éligible pour **deux** raisons
+*(`["active_annonce_relation","active_search"]`)*.
+
+**⚠ Non mesuré** *(règle du prompt : aucun appel à Hektor pendant un audit)* : si la commande
+a changé depuis juin, et si archiver la **fiche** entraîne l'archivage de ses **critères**
+*(la page porte un « autoarchivage »)*. **C'est l'objet du relevé en lecture seule.**
+
+### 🔬 AUDIT APPROFONDI DU 15/10 — *demandé par Frédéric : « tes explications sont un peu légères »*
+
+> **Audit limité à l'objet CONTACT, geste ARCHIVER / DÉSARCHIVER.** Les autres objets ne sont
+> mesurés que là où ils touchent ce geste.
+
+#### ① Le bouton de Hektor, retrouvé une SECONDE fois — et c'est un INTERRUPTEUR
+
+`Console/exports/probe_search_listing_603882_2026-06-12…/fiche.html` *(capture d'une vraie
+fiche contact, 12/06 — onze jours après l'autre, et elles concordent)* :
+
+```
+.switchButtonState  rel="on"  -> setArchiveContact(true, …)   = archiver
+.switchButtonState  rel="off" -> setArchiveContact(false, …)  = reactiver
+```
+
+⭐ **Et la fonction de rappel ne fait QUE de l'animation** *(elle bascule l'image de
+l'interrupteur et cache un bloc)* : **dans la page, archiver un contact ne touche à rien
+d'autre.** Le doute sur les critères ne peut donc plus venir que du **serveur de Hektor**,
+invisible pour nous — c'est tout ce qui reste à relever.
+
+#### ② L'ampleur : archiver est un geste du QUOTIDIEN chez Hektor, impossible chez nous
+
+| mesure du 15/10 | |
+|---|---|
+| contacts dans le miroir local *(`data/hektor.sqlite`, lecture seule)* | **356 515**, dont **184 128 archivés** = **52 %** |
+| contacts dans notre cloud | **62 234**, dont **22 643 archivés** (36 %) — tous **éligibles** *(0 non éligible)* |
+| archivages faits **par l'app** depuis toujours | **0** |
+| suppressions faites par l'app | **13** — et ⭐ **les 13 sont des fiches d'ESSAI** *(603745, 603746, 603751, 603796, 604135, 605093-95, 605414/429/450/453, et 10355757 le contact d'essai du projet)*. **Aucun vrai client n'a jamais été supprimé par l'app.** |
+
+➡ **Le seul geste que l'app possède sur ce sujet (« supprimer ») n'a jamais servi en vrai, et
+le geste dont l'agence se sert tous les jours (« archiver ») n'existe pas.**
+
+#### ③ Des fiches archivées portent encore du travail en cours
+
+Fiches **archivées** qui sont **mandantes** d'une annonce du parc vivant *(jointure sur
+`app_dossier_current`)* :
+
+| statut de l'annonce | contacts archivés | annonces |
+|---|---|---|
+| Estimation | 160 | 76 |
+| **Actif** | **44** | **42** |
+| Sous offre | 6 | 5 |
+| Sous compromis | 5 | 5 |
+
+➡ **Gladys n'est pas « le dernier cas »** : elle est le dernier cas de **sa** famille
+*(fiche archivée **+ recherche active**)*. La famille **« fiche archivée + mandat en cours »**
+compte **55 contacts sur 52 biens réellement en vente** *(215 / 128 en comptant les
+estimations)*. *(Leçon 9 : ce que Frédéric signale est un symptôme, jamais le périmètre.)*
+
+#### ④ Ce que l'archivage change AUJOURD'HUI, mesuré geste par geste
+
+| | effet, et sa preuve |
+|---|---|
+| l'annuaire des contacts | **la fiche disparaît de la liste** : le filtre par défaut est « actifs » *(`App.tsx:379`)* |
+| la fiche elle-même | une pastille « Archivé » *(`:42242`)* ; **on peut toujours la modifier** *(aucun contrôle sur `archive` dans `app_edit_contact_optimistic`)*, et ⭐ **Hektor accepte d'écrire sur une fiche archivée** *(mesuré le 09/10 : 4 archivés + 2 actifs, tous ont répondu)* |
+| le rapprochement | **il continue** : il regarde la **RECHERCHE**, pas la fiche. ⭐ Preuve : **Gladys a 2 rapprochements éligibles, meilleur score 100/100** — et elle est **le seul** contact archivé dans tout le moteur *(2 lignes sur 52 020)* |
+| notre cloud | **la fiche reste** : l'éligibilité ne regarde pas `archive` *(`build_contacts_layer.py:1749-1753`)* |
+| ⚠⚠ le vrai danger | si la **recherche** est archivée en même temps **et** qu'il n'y a pas d'annonce active, la fiche **sort de l'éligibilité → elle est SUPPRIMÉE de notre cloud la nuit suivante** *(`-ContactsEligibleOnly -AllowStaleSupabaseDeletes`, `find_stale_row_keys`)*. C'est ce qui est arrivé aux **35 fiches** du 14/10 |
+| les internautes | **rien** : **0 droit** pour un visiteur non connecté sur `app_contact_current` et `app_contacts_current` |
+
+#### ⑤ Le pourquoi : le projet avait DÉJÀ prévu ce geste, en juin
+
+`CAHIER_CHARGES_DOUBLONS_CONTACTS_2026-06-29.md` nomme **deux actions** qui demandent
+exactement ce geste *(l. 236-237)* :
+`restore_archive_error` = *« cas archivé à tort, après validation »* · et
+`archive_secondary_candidate` = *« proposition d'archivage, non automatique »*.
+⚠ **Et la même note interdit l'« archivage direct » dans les premiers lots** *(l. 243)*, avec
+*« ne pas archiver automatiquement »* en priorité 4 *(l. 184)*. **Lecture à confirmer par
+Frédéric** : cette interdiction porte sur l'**outil doublons** *(qui doit proposer, pas agir)*
+— pas forcément sur un **bouton manuel** sur une fiche. **Je ne tranche pas.**
 
 ---
 
