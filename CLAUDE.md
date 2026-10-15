@@ -296,6 +296,31 @@ report ne se décident jamais sans lui.
 ### ⛔ Ce qui attend Frédéric
 
 ```
+①③ ⏰⏰ DEMAIN 16/10, DANS L'ORDRE -- valide par Frederic a 01:00 :
+   0. CORRIGER LE DETECTEUR D'ECHEC de scheduled/run_entretien_documents.ps1 (2 lignes).
+      LE DEFAUT, mesure cette nuit : `Invoke-Ligne` fait Write-Output, et en PowerShell ce
+      qu'une fonction emet DEVIENT SA VALEUR DE RETOUR -> (a) les 4 marqueurs « --- x/4 »
+      n'arrivent jamais au journal (951 caracteres : l'ouverture et la fermeture seules) ;
+      (b) `if (-not (Invoke-Ligne ...))` teste un TABLEAU NON VIDE, donc toujours vrai :
+      UNE LIGNE EN ECHEC NE SERAIT JAMAIS COMPTEE, la tache sort 0 et le MONITEUR SE TAIT
+      (elle y est en `critical`, il lit LastTaskResult). 6e fois cette famille de defaut ;
+      le gel du 20/08 avait dure 7 SEMAINES. A EPROUVER en forcant une ligne a echouer :
+      la tache doit sortir 1 et le journal porter ECHEC.
+   1. REDEMARRER LES 4 SERVICES worker (file documents vide -- vers 02:50 cette nuit)
+      -> c'est ce qui reveille le bras `archive_hektor_contact` du chantier 7.
+   2. POUSSER LE FRONT (Vercel se deploie seul) -> l'item « Archiver / Reactiver » apparait
+      dans le menu « ... » de la fiche contact.
+   3. ESSAI REEL du point 7-1, dans CET ordre :
+      · GLADYS DURIEUX (10059959) en « REACTIVER » D'ABORD -- sens inverse, donc la seule
+        inconnue qui reste (le serveur de Hektor archive-t-il AUSSI les recherches ?) ne
+        peut pas se produire ; et elle est eligible DEUX fois (annonce active + recherche
+        active), donc elle ne peut pas tomber du cloud.
+      · PUIS l'autre sens (ARCHIVER, celui qui porte le risque) sur une fiche JETABLE.
+        ⚠ Le contact d'essai 10355757 N'EXISTE PLUS (supprime le 08/10) : soit en creer un
+        (ecriture chez Hektor = SON ACCORD), soit il en designe une.
+   4. Puis la suite du chantier 7 : 7-3a (crayon de cloture), 7-3b (ecran du journal),
+      7-3c (reordonner les photos), 7-4 (bandeau menteur), 7-7 (prolonger un mandat),
+      7-8 (photos visible/masquer), 7-9 (renommer un document), 7-10 (cache brouillons).
 ① ✅✅ LA FIN DU CHANTIER ③ -- 14/10, FAIT ET EPROUVE EN REEL :
    · option B collee : les 2 etapes du contrat de mandat sont hors du run ET en `legacy`
      (verifie en base, note corrigee) ;
