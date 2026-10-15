@@ -289,6 +289,19 @@ est bien **hors** de la liste du commercial.
 ⚠ **Et le témoin de l'insert ne dépend plus de ce que l'épreuve annule** *(leçon du 13/10)* :
 le résultat passe par une **variable**, écrite **après** le point de reprise.
 
+#### ⑤-quinquies ✅ LA RÉPÉTITION EST PASSÉE — *23 lignes sur 23, 16/10 au matin*
+
+Frédéric l'a collée : **le message rendu est mot pour mot celui que la note annonçait.**
+
+| | |
+|---|---|
+| **avant** | le type n'est ni dans la contrainte, ni dans les droits, ni dans la distribution ; la fonction de saisie est absente ; les **3 empreintes** sont celles mesurées la veille |
+| **après** | type dans la contrainte **oui** · dans les droits **oui** · dans la branche **actions oui** · dans la branche **admin non** · fonction **présente** · `authenticated` **oui** / `anon` **non** · **insert d'un vrai travail du type : accepté** *(puis annulé)* · « supprimer un contact » **toujours hors de la liste du commercial** |
+| **retour** | tout retiré, fonction absente, et les **3 empreintes IDENTIQUES** |
+
+⭐ **Les deux sens sont prouvés** *(leçon 2)* : le patch **a changé** quelque chose, et
+l'inverse **revient à l'octet près**. → le vrai patch peut être collé.
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».

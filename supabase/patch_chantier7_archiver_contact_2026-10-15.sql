@@ -50,6 +50,16 @@
 
 begin;
 
+-- ⚠ AJOUTE LE 16/10 APRES LA REPETITION (elle etait verte, ceci n'y touche pas) :
+--   refaire la contrainte demande un verrou EXCLUSIF sur app_console_job, et le
+--   worker documents y pioche un travail toutes les 5 secondes. Sans garde-fou,
+--   l'ALTER attendrait -- et pire, il ferait la queue DEVANT les workers, qui
+--   seraient bloques derriere lui. Avec ce reglage, s'il ne prend pas le verrou
+--   en 5 secondes il ABANDONNE proprement (« lock timeout ») et rien n'est ecrit :
+--   on retente plus tard. Ce n'est pas une modification du patch, c'est une
+--   ceinture autour.
+set local lock_timeout = '5s';
+
 -- ---------------------------------------------------------------------------
 -- VERROU 1 sur 3 -- LA CONTRAINTE : le type devient permis
 -- ---------------------------------------------------------------------------
