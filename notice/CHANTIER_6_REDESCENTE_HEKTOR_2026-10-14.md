@@ -1186,3 +1186,75 @@ façon reconstruit depuis `images_json` à chaque passage.
 
 ⛔ **En attente du « vas-y » de Frédéric.** *(Et l'étape dans le run, elle, viendra après : c'est
 une modification du run.)*
+
+### ⛔⛔ 6d — LE DÉFAUT DE MA PROPOSITION, TROUVÉ PAR FRÉDÉRIC (15/10)
+
+> *« Attention, ton correctif ne doit pas retirer les photos ajoutées à partir de l'app,
+> revérifie. »* · *« Normalement nous avons désormais un registre de photos à nous,
+> indépendant. »*
+
+**Il a raison deux fois, et sur deux pièges différents.**
+
+#### ① LE REGISTRE EST BIEN LE NÔTRE — et `present_in_hektor` ne veut PAS dire « existe »
+
+Vérifié en base : il n'y a pas d'autre table — **`app_console_photo` EST notre registre
+indépendant** *(29 colonnes)*, flanqué de son journal de suppressions
+*(`app_console_deleted_photo_log`)*. Son indépendance est réelle et mesurable :
+
+- **son identité est à nous** : le `id` (uuid) de la ligne, **pas** le numéro de Hektor — et
+  c'est lui qui porte le chemin du fichier sur le serveur **et** l'adresse publique du dérivé
+  *(G.10bis, 26/09)* ;
+- **delete-never** : une photo retirée chez Hektor se **marque**, elle ne se supprime jamais ;
+- **ses colonnes sont à nous** : `derives_json`, `storage_path`, `hors_vitrine_depuis`,
+  `envoi_hektor_statut`.
+
+➡ Donc **`present_in_hektor = false` ne dit pas « cette photo n'existe plus »**, il dit
+**« Hektor ne l'a plus »**. La photo reste à nous, son fichier reste, son adresse publique
+continue de servir.
+
+#### ② MAIS LE FRONT SE SERT DE CE DRAPEAU POUR **CACHER** — d'où le danger
+
+`loadConsolePhotos` filtre `present_in_hektor = true`. Le drapeau est donc devenu un
+**interrupteur de visibilité**. Conséquence :
+
+| cas | marquer à `false` |
+|---|---|
+| photo **retirée chez Hektor** | ✅ voulu — elle doit disparaître de nos écrans |
+| photo **ajoutée depuis l'app**, pas encore (ou jamais) chez Hektor | ⛔ **FAUX** — le négociateur verrait sa photo s'évanouir |
+
+Et le piège a **deux formes**, pas une :
+- **l'envoi en cours** : `app_console_creer_photo_optimistic` crée la ligne avec
+  `source = 'app'`, `envoi_hektor_statut = 'a_envoyer'`, et **`hektor_photo_id` NULL** — elle ne
+  peut donc correspondre à rien dans `images_json` ;
+- ⚠ **la forme sournoise** : une photo **déjà confirmée** par Hektor dans la journée porte bien
+  un `hektor_photo_id`… mais **le miroir ne la connaît pas encore** *(il ne se rafraîchit qu'au
+  run de 05:00)*. Elle **ressemble** à une photo retirée.
+
+#### ③ LA RÈGLE CORRIGÉE — trois conditions, toutes nécessaires
+
+On ne marque une photo que si :
+1. elle porte un **`hektor_photo_id`** *(Hektor l'a connue un jour)* ;
+2. elle est **plus ancienne que la dernière lecture du miroir** pour son annonce
+   *(`created_at` < `hektor_annonce_detail.synced_at`)* — **le miroir a donc eu la chance de la
+   voir** ;
+3. elle n'est pas une ligne **`source = 'app'`** dont l'envoi est en cours ou en erreur
+   *(son sort dépend du worker, pas de `images_json`)*.
+
+*(+ les quatre garde-fous déjà prévus : jamais depuis une liste vide · annonce sans fiche détail
+sautée · plafond de 2 000 · on ne re-date jamais une déjà marquée.)*
+
+#### ④ CE QUE LA MESURE DIT AUJOURD'HUI — et pourquoi les gardes restent obligatoires
+
+```
+candidates brutes (absentes de images_json)        440
+   dont SANS hektor_photo_id (envoi en cours)        0
+   dont source = app                                 0
+   dont PLUS RECENTES que la lecture du miroir        0
+   -> vrais retraits a marquer                      440
+```
+
+**Aujourd'hui, aucun faux positif** : le 440 tient. **Mais c'est de la chance, pas de la
+conception** — il n'y a simplement aucune photo d'app en vol à cet instant *(celle de l'essai du
+14/10 sur 62774 a été supprimée le jour même)*. **Le jour où un négociateur ajoute une photo
+depuis l'app, le script sans ces gardes la ferait disparaître de son écran.** ⭐ Frédéric l'a
+arrêté avant qu'une ligne soit écrite.
