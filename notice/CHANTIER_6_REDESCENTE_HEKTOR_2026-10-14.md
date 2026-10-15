@@ -1415,3 +1415,160 @@ Après la nuit du 16 au 17 : les 49 doivent avoir une **empreinte neuve**, le co
 **0 travail en erreur** *(un échec vaudrait une exclusion définitive)*.
 
 ⛔ **En attente du choix de Frédéric : A seule, A + C, ou rien pour l'instant.**
+
+---
+
+# ⚠⚠ 6b — LE DÉFAUT TROUVÉ EN CONTRÔLANT LA FILE (15/10, 14:00) : **un document refusé coulait toute son annonce**
+
+*Trouvé en allant vérifier si la file était vide, pour prévenir Frédéric. Je m'attendais à
+**3** travaux en erreur ; il y en avait **33**.*
+
+## 1. La cause — et ma première explication était fausse
+
+J'avais écrit, ce matin, que l'annonce 61439 échouait à cause d'un **nom de fichier**
+(« .67-carnetentretien4 », point en tête → clé refusée). **Faux.** Le corps de la réponse,
+relu dans `app_console_job.error_message`, dit :
+
+```
+{"statusCode":"415","error":"invalid_mime_type",
+ "message":"mime type application/octet-stream is not supported","code":"InvalidMimeType"}
+```
+
+Le coffre **`hektor-console-documents` porte une liste blanche de 10 types**
+*(`storage.buckets.allowed_mime_types` : pdf, jpeg, png, webp, doc, docx, xls, xlsx,
+text/plain, zip)* et **refuse tout le reste**, plus tout fichier **> 50 Mo**
+*(`file_size_limit = 52 428 800`)*.
+
+**Les 33, par famille** *(mesure du 15/10 14:00)* :
+
+| | |
+|---|---|
+| **27** × `415 invalid_mime_type` | 23 **.odt**, 1 .ods, 2 .html, 1 sans extension |
+| **4** × `413 payload too large` | des PDF de plus de 50 Mo |
+| 1 | session Hektor expirée (page HTML au lieu de JSON) — **passager** |
+| 1 | « fetch failed » — **passager** |
+
+**30 des 33 ont été posés par ma passe à la main de ce matin** : ils dormaient, c'est la
+relecture qui les a révélés. Et le point en tête n'y est pour rien — **le nettoyage
+`storageSafeFilename` reste bon à prendre, mais il ne répare RIEN** *(commentaire corrigé
+dans le worker, pour qu'il ne soit pas recompté comme un correctif)*.
+
+## 2. Le prix était sans rapport avec la faute
+
+`handleSyncConsoleDocuments` ne tolère l'échec que des **PDF « modelo »** — avec le bon
+commentaire : *« un échec sur UN document ne doit pas priver l'annonce de tous les
+autres »*. Pour tout le reste : **ça lève**. Donc **un seul .odt faisait tomber toute
+l'annonce** :
+
+- ses **voisins ne sont jamais téléchargés** — la boucle meurt avant eux ;
+- **aucune empreinte n'est posée** *(elle s'écrit après, si la synchro est complète)* ;
+- et le composeur de lot **exclut « pour toujours »** une annonce qui porte un travail en
+  erreur → elle ne repassera plus jamais.
+
+**Mesure du coût réel**, sur les **annonces vivantes** *(extension du nom de fichier)* :
+
+| extension | dans l'app | manquants |
+|---|---|---|
+| **.odt** | **0** | **68** |
+| .html / .ods / sans extension | 0 | 10 |
+| **.pdf** | 18 726 | **89** |
+| .jpg | 2 224 | 4 |
+| .zip | 0 | 2 |
+
+➡ **~95 des 173 manquants sont des documents parfaitement normaux** *(des PDF, des
+photos)* : ils ne manquaient **que** parce qu'un voisin avait été refusé.
+
+⚪ **Et ce qui n'est PAS un problème** : les **303 documents** à type refusé qui sont
+*enregistrés* (154 .odt, 57 inconnus, 38 .ods, 33 tiff, 12 bmp, 2 gif, 7 PDF trop gros)
+sont **tous sur des annonces archivées ou vendues** — **0 sur une vivante**. Pour celles-là
+le cloud **n'est pas voulu** *(décision ancienne : les archives ne gardent pas de copie
+cloud)* : ils sont sur le serveur, listés dans l'app avec « À préparer », non ouvrables —
+exactement comme **124 000 PDF d'archives**. **Élargir le coffre ne les changerait pas** :
+aucune montée n'est même tentée pour eux. *(J'avais annoncé « 239 débloqués » : c'était
+faux, corrigé devant Frédéric.)*
+
+## 3. Ce qui a été fait — **décision de Frédéric : « FAIS 2 »**
+
+Deux pièces avaient été présentées. Il a tranché **la ② seule** : on ne touche pas à la
+liste blanche du coffre ; **on empêche un refus de couler son annonce**.
+
+| | |
+|---|---|
+| ⬜ **① élargir la liste blanche** du coffre *(.odt, .ods, .html…)* | **NON RETENU** — les 78 .odt/.ods/.html des biens vivants resteront « À préparer » |
+| ✅ **② un refus ne coule plus l'annonce** | fait, éprouvé, **inerte jusqu'au redémarrage** |
+
+**Le code (`Console/console_job_worker.js`, additif)** :
+
+1. **`refusDefinitifDuCoffre(error)`** — ne reconnaît **que** les deux refus définitifs,
+   par le code que Supabase renvoie : **415 `InvalidMimeType`** et **413 `EntityTooLarge`**.
+   ⚠ Tout le reste *(401, 403, 429, 5xx, « fetch failed », un 400 d'une autre cause)* reste
+   une **erreur qui fait rejouer** : un accroc passager ne doit jamais devenir « c'est
+   normal » — c'est ainsi qu'un échec devient muet.
+2. **`persistConsoleDocumentFile`** reçoit une option **`tolererRefusCoffre`, FAUSSE par
+   défaut** : les deux appelants existants ne changent pas d'un cheveu. Quand elle est
+   armée et que le refus est définitif : pas d'exception, la ligne est enregistrée
+   **`local_only`** avec sa taille, son empreinte, **son chemin serveur** et une **marque
+   durable `metadata_json.cloud_refuse`** *(code, http, type, date)*. La marque **s'efface
+   d'elle-même** si la montée passe un jour *(coffre élargi, document remplacé)* — sinon on
+   rattraperait dans le vide.
+   ⛔ **`handlePrepareDocumentCloud` ne l'arme PAS** : là un humain a cliqué « préparer » et
+   taire le refus fabriquerait un **bouton menteur**.
+3. **La boucle de synchro** l'arme, **compte** *(`coffre_refuses` dans le compte rendu)* et
+   **journalise** le document nommé — jamais un silence.
+4. ⚠ **L'empreinte EST posée malgré un refus — divergence voulue, écrite dans le code.**
+   La règle voisine *(« pas d'empreinte si un modelo a sauté »)* suppose que le prochain
+   passage pourrait réussir : vrai d'un générateur PDF instable, **faux d'un type hors liste
+   blanche**. Refuser l'empreinte ferait relire et retélécharger ces annonces **chaque
+   nuit** pour rien, éternellement « à traiter », en mangeant le plafond. La garantie
+   « plus rien ne reviendra dessus » est tenue autrement : la marque permet de les
+   retrouver et de les rattraper **sans appeler Hektor** *(le fichier est chez nous)*.
+
+⭐ **Le fichier n'est jamais perdu** : `writeLocalArchiveFile()` tourne **avant** la montée
+au cloud. Un refus ne coûte que la copie ouvrable depuis l'app.
+
+## 4. Les preuves — `Console/test_refus_coffre_documents.js`
+
+**33 contrôles verts, 0 rouge**, en faisant tourner **les vraies fonctions du worker**
+*(le juge n'est pas doublé : son code est concaténé)* avec un faux disque, un faux Supabase
+et un faux Hektor. **Aucun appel, aucun fichier écrit.** Dont **quatre témoins inverses** :
+
+- **sans** l'option, le refus **lève** comme avant *(le clic humain ne mentira pas)* ;
+- un **403** et un **« fetch failed »** lèvent **même avec** l'option armée ;
+- un **PDF modelo** sauté → **pas d'empreinte** *(la règle voisine est intacte)* ;
+- une **panne passagère** fait **toujours** tomber le travail.
+
+Et la mesure qui compte : **3 documents, 1 refusé → les 3 sont traités, 2 arrivent au
+cloud, l'empreinte est posée, le compte rendu dit « 1 refusé », le journal le nomme**.
+
+**Toute la suite hors ligne** : **29 épreuves, 398 contrôles verts, 0 rouge.**
+⚠ Un rouge est apparu et **c'était MON expression du matin qui était périmée, pas le
+code** : `test_empreinte_numero_app (h1)` cherchait l'URL littérale
+`app_console_document_fingerprint?select=hektor_annonce_id`, qui n'existe plus depuis que
+cette lecture passe par `lireParCurseur` *(pagination triée)*. Expression mise à jour, **et
+vérifiée par témoin inverse** : si quelqu'un repointait cette lecture sur `app_dossier_id`,
+elle redeviendrait rouge. *(Même famille que `test_porte_contacts` le 14/10.)*
+
+## 5. Ce que ça pourrait casser ailleurs — les appelants, vérifiés un par un
+
+| appelant | effet |
+|---|---|
+| `handleSyncConsoleDocuments` *(la boucle)* | **seul à armer** la tolérance — c'est le correctif |
+| `handlePrepareDocumentCloud` *(clic « préparer »)* | **inchangé** : le refus lève, le travail tombe en erreur, l'humain n'a pas de fausse promesse *(contrôle (dd))* |
+| `persistProvidedDocumentFile` *(envoi app → Hektor)* | **pas touché** *(contrôle (ee))* — et il ne doit pas l'être : l'effacement du temporaire dépend de sa réussite |
+| `persistConsolePhotoFile` / `persistProvidedPhotoFile` | **pas touchés** : le coffre des photos a sa propre liste *(jpeg, png, webp)* et son propre chemin |
+| le front | **rien à changer** : `local_only` existe déjà dans son vocabulaire et s'affiche **« À préparer »** *(`App.tsx:9952`)* ; la contrainte de base accepte déjà cette valeur |
+| la sentinelle `data.travaux_en_erreur` | elle **baissera** — c'est le but ; aucune sonde ne compte les documents hors du cloud |
+
+**Retour arrière** : le correctif est additif et tient en trois endroits d'un seul fichier.
+`git revert` du commit, puis redémarrage des 4 services → comportement d'avant à l'identique.
+
+## 6. Ce qui attend Frédéric
+
+1. ⛔ **REDÉMARRER LES 4 SERVICES** — le correctif est **inerte** sans ça, et la tâche de
+   22:00 reposerait des annonces en erreur dès cette nuit. **La file est vide depuis
+   14:17**, c'est le bon moment :
+   `.\Console\install_console_worker_services.ps1 -Action Restart -WorkerKind all`
+2. Puis **la répétition** de la purge *(il me recopie le message)*, puis **le patch** —
+   dans cet ordre, et **après** le redémarrage.
+3. **Demain matin** : `0` travail en erreur, et des lignes « Document refusé par le coffre »
+   dans le journal des travaux de la nuit.

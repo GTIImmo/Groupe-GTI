@@ -97,8 +97,19 @@ function chargerEnregistreur(captures) {
   //     C'est la garde de Frederic : les workers en ont besoin, on ne leur retire rien.
   const enq = fs.readFileSync(ENQUEUE, "utf8");
   const lot = fs.readFileSync(LOT, "utf8");
+  // ⚠ EXPRESSION MISE A JOUR LE 15/10 -- LE CODE EST JUSTE, C'ETAIT L'EXPRESSION QUI
+  //   ETAIT PERIMEE (meme famille que test_porte_contacts le 14/10). La lecture des
+  //   empreintes est passee par le helper `lireParCurseur` (6b, pagination triee : une
+  //   lecture par offset sans tri perdait ~40 % des lignes en silence), donc l'URL
+  //   litterale « ?select=hektor_annonce_id » n'existe plus telle quelle.
+  //   LA GARDE EST LA MEME, elle se lit juste ailleurs : la table est bien lue avec
+  //   hektor_annonce_id en tete du select ET comme cle de curseur. Les deux formes sont
+  //   acceptees pour qu'un retour arriere ne rende pas l'epreuve rouge.
+  const empreintesLuesParNumero =
+    /app_console_document_fingerprint\?select=hektor_annonce_id/.test(enq)
+    || /lireParCurseur\(\s*"app_console_document_fingerprint",\s*"hektor_annonce_id[^"]*",\s*"hektor_annonce_id",?\s*\)/.test(enq);
   controle("(h1) loadFingerprints lit toujours hektor_annonce_id",
-    /app_console_document_fingerprint\?select=hektor_annonce_id/.test(enq), "select modifie");
+    empreintesLuesParNumero, "select modifie");
   controle("(h2) touchFingerprintChecked filtre toujours sur hektor_annonce_id",
     /app_console_document_fingerprint\?hektor_annonce_id=eq\./.test(enq), "filtre modifie");
   controle("(h3) le composeur de lots lit toujours hektor_annonce_id",

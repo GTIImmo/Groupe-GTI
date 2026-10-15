@@ -793,14 +793,20 @@ function storageSafeFilename(name, fallback) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\x20-\x7E]+/g, "_")
     .replace(/[#%?&{}^`[\]]+/g, "_")
-    // \u26a0 UN NOM QUI COMMENCE PAR UN POINT EST REFUSE PAR SUPABASE STORAGE  15/10/2026
-    //   Vecu ce matin sur l'annonce 61439 : un document nomme \u00ab .67-carnetentretien4 \u00bb
-    //   (point en tete, aucune extension) -> \u00ab Supabase Storage 400 \u00bb sur la cle
-    //   annonces/61439/documents/<id>/.67-carnetentretien4, le travail tombe en erreur,
-    //   et \u00ab on ne rejoue jamais \u00bb excluait l'annonce POUR TOUJOURS.
-    //   Ce n'est pas une panne passagere : le meme nom echouera a chaque passage. Le
-    //   point de tete est donc remplace, pas supprime -- on ne veut pas deux documents
-    //   differents qui se retrouveraient avec la meme cle.
+    // UN NOM DE FICHIER NE COMMENCE PAS PAR UN POINT                      15/10/2026
+    //   Un point en tete fait un fichier cache cote serveur et une cle d'objet trompeuse
+    //   (annonces/61439/documents/<id>/.67-carnetentretien4). On le REMPLACE, on ne le
+    //   supprime pas : deux documents differents ne doivent pas tomber sur la meme cle.
+    //
+    //   \u26a0\u26a0 CORRECTION DU MEME JOUR, ET ELLE COMPTE : j'avais ecrit ici que ce point
+    //   etait LA CAUSE de l'echec de l'annonce 61439. C'EST FAUX. Le corps de la reponse,
+    //   relu dans app_console_job, dit :
+    //       {"statusCode":"415","error":"invalid_mime_type",
+    //        "message":"mime type application/octet-stream is not supported"}
+    //   -> le coffre a refuse le TYPE, pas la cle. Le point en tete n'y est pour rien.
+    //   La vraie cause et son remede sont ailleurs : refusDefinitifDuCoffre() et la
+    //   tolerance de la boucle de synchro (point 6b). Ce nettoyage reste bon a prendre,
+    //   mais il ne repare RIEN -- ne pas le recompter comme un correctif.
     .replace(/^\.+/, "_")
     .replace(/\s+/g, " ")
     .trim();
@@ -1662,6 +1668,41 @@ async function uploadStorageObject(objectPath, buffer, mimeType, options = {}) {
     ...(options.bucket ? { bucket: options.bucket } : {}),
     ...(options.cacheControl ? { cacheControl: options.cacheControl } : {}),
   });
+}
+
+// ⚠⚠ RECONNAITRE UN REFUS *DEFINITIF* DU COFFRE -- 15/10/2026, chantier 6 / point 6b.
+//
+// MESURE DU 15/10 : 33 travaux `sync_console_documents` en erreur, dont 31 pour cette
+// seule cause. Le coffre `hektor-console-documents` porte une LISTE BLANCHE de 10 types
+// (storage.buckets.allowed_mime_types : pdf, jpeg, png, webp, doc, docx, xls, xlsx,
+// text/plain, zip) et il REFUSE tout le reste -- 68 .odt de biens en vente, des .ods,
+// des .html, un document sans extension -- plus tout fichier au-dela de 50 Mo
+// (file_size_limit). Ces deux refus ne sont PAS passagers : le meme fichier sera refuse
+// a l'identique a chaque passage, cette nuit comme dans six mois.
+//
+// ⭐ ET LE PRIX ETAIT SANS RAPPORT AVEC LA FAUTE : la boucle de synchro ne tolere
+//   l'echec que des PDF « modelo ». UN SEUL .odt FAISAIT DONC TOMBER TOUTE L'ANNONCE :
+//   ses voisins n'etaient jamais telecharges (mesure : 89 PDF et 4 photos parfaitement
+//   normaux manquaient dans l'app pour cette seule raison), aucune empreinte n'etait
+//   posee, et le composeur de lot exclut « pour toujours » une annonce qui porte un
+//   travail en erreur. 33 annonces vivantes etaient dans ce cas.
+//
+// ⚠ ON NE RECONNAIT QUE LES DEUX REFUS DEFINITIFS, par le code que Supabase renvoie :
+//     415 InvalidMimeType  -- type hors liste blanche
+//     413 EntityTooLarge   -- au-dela de file_size_limit
+//   Tout le reste -- 401, 403, 429, 5xx, « fetch failed », un 400 d'une autre cause --
+//   reste une ERREUR qui fait rejouer le travail. Un accroc passager ne doit JAMAIS se
+//   transformer en « c'est normal » : c'est exactement ainsi qu'un echec devient muet.
+function refusDefinitifDuCoffre(error) {
+  const message = error && error.message ? String(error.message) : String(error || "");
+  if (!message.startsWith("Supabase Storage ")) return null;
+  if (message.includes('"code":"InvalidMimeType"') || message.includes('"statusCode":"415"')) {
+    return { code: "type_refuse", http: 415 };
+  }
+  if (message.includes('"code":"EntityTooLarge"') || message.includes('"statusCode":"413"')) {
+    return { code: "trop_gros", http: 413 };
+  }
+  return null;
 }
 
 async function deleteStorageObject(objectPath) {
@@ -4801,23 +4842,52 @@ async function persistConsoleDocumentFile(dossier, document, options = {}) {
   const cloudWanted = Boolean(options.cloud);
   const storagePath = document.storage_path || `annonces/${document.hektor_annonce_id}/documents/${document.id}/${storageFilename}`;
 
+  // ⚠⚠ UN DOCUMENT REFUSE PAR LE COFFRE NE DOIT PLUS COULER SON ANNONCE
+  //    15/10/2026, chantier 6 / point 6b -- voir refusDefinitifDuCoffre().
+  //
+  // `tolererRefusCoffre` est OPTIONNEL et vaut FAUX par defaut : les deux appelants
+  // existants gardent EXACTEMENT le comportement d'avant. Seule la boucle de synchro
+  // l'arme (handleSyncConsoleDocuments).
+  // ⛔ handlePrepareDocumentCloud NE DOIT PAS l'armer : la, un humain a clique
+  //   « preparer » et attend son document. Taire le refus fabriquerait un BOUTON
+  //   MENTEUR -- le travail dirait « fait » et le document resterait inouvrable.
+  //
+  // ⭐ LE FICHIER EST DEJA SUR NOTRE SERVEUR : writeLocalArchiveFile() a tourne plus
+  //   haut, AVANT la montee au cloud. Un refus ne perd donc rien ; il prive seulement
+  //   l'app de la copie ouvrable (l'ecran affiche « A preparer »).
+  let refusCoffre = null;
+  let cloudEcrit = cloudWanted;
   if (cloudWanted) {
-    await uploadStorageObject(storagePath, file.buffer, mimeType);
+    try {
+      await uploadStorageObject(storagePath, file.buffer, mimeType);
+    } catch (error) {
+      refusCoffre = options.tolererRefusCoffre ? refusDefinitifDuCoffre(error) : null;
+      if (!refusCoffre) throw error;
+      cloudEcrit = false;
+    }
   }
 
-  const nextStatus = cloudWanted ? "cloud_available" : (document.storage_status === "cloud_available" ? "cloud_available" : "local_only");
+  const nextStatus = cloudEcrit ? "cloud_available" : (document.storage_status === "cloud_available" ? "cloud_available" : "local_only");
   const nextMetadata = {
     ...metadata,
     ...localArchiveMetadata(localPath),
     ...(metadata.modelo ? { archived_updated_on: modeloUpdatedOn } : {}),
+    // LA MARQUE DURABLE, pour pouvoir les retrouver et les rattraper plus tard SANS
+    // APPELER HEKTOR (le fichier est sur notre serveur) : `metadata_json ? 'cloud_refuse'`.
+    ...(refusCoffre
+      ? { cloud_refuse: { code: refusCoffre.code, http: refusCoffre.http, mime_type: mimeType, le: new Date().toISOString() } }
+      : {}),
   };
+  // Et elle s'efface d'elle-meme le jour ou la montee passe (coffre elargi, document
+  // remplace chez Hektor) : sans ca, une marque perimee ferait rattraper dans le vide.
+  if (!refusCoffre && nextMetadata.cloud_refuse) delete nextMetadata.cloud_refuse;
 
   await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(document.id)}`, {
     method: "PATCH",
     prefer: "return=minimal",
     body: JSON.stringify({
-      storage_bucket: cloudWanted ? STORAGE_BUCKET : document.storage_bucket,
-      storage_path: cloudWanted ? storagePath : document.storage_path,
+      storage_bucket: cloudEcrit ? STORAGE_BUCKET : document.storage_bucket,
+      storage_path: cloudEcrit ? storagePath : document.storage_path,
       storage_status: nextStatus,
       file_size: file.buffer.length,
       sha256: digest,
@@ -4831,10 +4901,12 @@ async function persistConsoleDocumentFile(dossier, document, options = {}) {
   return {
     document_id: document.id,
     local_path: localPath,
-    storage_path: cloudWanted ? storagePath : document.storage_path,
-    cloud_available: cloudWanted || document.storage_status === "cloud_available",
+    storage_path: cloudEcrit ? storagePath : document.storage_path,
+    cloud_available: cloudEcrit || document.storage_status === "cloud_available",
     bytes: file.buffer.length,
     sha256: digest,
+    // null quand tout va bien : l'appelant compte et journalise, il ne devine pas.
+    cloud_refuse: refusCoffre,
   };
 }
 
@@ -5623,11 +5695,16 @@ async function handleSyncConsoleDocuments(job) {
   let cloudStored = 0;
   let immosignCompanions = 0;
   let modeloSkipped = 0;
+  let coffreRefuses = 0;
   for (const row of rows) {
     const isModelo = Boolean(row.metadata_json && row.metadata_json.modelo);
     let result;
     try {
-      result = await persistConsoleDocumentFile(dossier, row, { cloud });
+      // `tolererRefusCoffre` : ARME ICI ET NULLE PART AILLEURS (15/10, point 6b). Un
+      // type refuse par le coffre (415) ou un fichier trop gros (413) ne doit pas
+      // priver l'annonce de ses AUTRES documents -- meme regle que les PDF modelo
+      // juste en dessous, pour une cause qui, elle, ne guerira pas au prochain run.
+      result = await persistConsoleDocumentFile(dossier, row, { cloud, tolererRefusCoffre: true });
     } catch (error) {
       // Documents modelo uniquement : le generateur PDF Hektor est instable. Un echec
       // sur UN document ne doit pas priver l'annonce de tous les autres -> on saute et
@@ -5644,6 +5721,20 @@ async function handleSyncConsoleDocuments(job) {
     }
     localStored += result.local_path ? 1 : 0;
     cloudStored += result.cloud_available && cloud ? 1 : 0;
+    // ⚠ UN REFUS SE DIT. Il est garde sur le serveur, marque dans la ligne
+    //   (metadata_json.cloud_refuse) ET ecrit au journal du travail : « rien a signaler »
+    //   serait un echec muet, exactement ce que le chantier ④ a passe dix points a
+    //   supprimer.
+    if (result.cloud_refuse) {
+      coffreRefuses += 1;
+      await logJob(job.id, "hektor", "running", "Document refuse par le coffre, garde sur le serveur", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        document_id: row.id,
+        document_name: row.document_name,
+        cause: result.cloud_refuse.code,
+        http: result.cloud_refuse.http,
+      });
+    }
     // ImmoSign (Lot 1) : les 2 ZIP compagnons (procedure signee + preuves).
     // BEST-EFFORT : un echec ne doit pas faire tomber la sync du reste des documents.
     try {
@@ -5684,6 +5775,18 @@ async function handleSyncConsoleDocuments(job) {
   // dessus. Regle jumelle cote detection : PAS d'empreinte = annonce a synchroniser.
   // (Les echecs durs, eux, levent une exception : le return n'est jamais atteint, donc rien n'est
   // ecrit — meme protection.)
+  //
+  // ⚠⚠ ET UN REFUS DU COFFRE NE SE TRAITE PAS COMME UN MODELO SAUTE -- DIVERGENCE
+  //   VOULUE, 15/10/2026, point 6b. Le raisonnement ci-dessus (« ne pas graver "traite"
+  //   alors qu'un document manque ») suppose que le prochain passage pourrait REUSSIR.
+  //   C'est vrai d'un generateur PDF instable ; c'est FAUX d'un type hors liste blanche :
+  //   le meme fichier sera refuse a l'identique, cette nuit, demain, et dans six mois.
+  //   Refuser l'empreinte reviendrait a relire et retelecharger ces annonces CHAQUE NUIT
+  //   pour rien -- elles resteraient eternellement « a traiter », mangeraient le plafond
+  //   et retarderaient les autres. On pose donc l'empreinte, et la garantie « plus rien
+  //   ne reviendra dessus » est tenue autrement : la ligne porte une marque durable
+  //   (metadata_json.cloud_refuse) qui permet de les retrouver et de les rattraper SANS
+  //   APPELER HEKTOR, le fichier etant deja sur notre serveur.
   try {
     if (modeloSkipped === 0) {
       await saveDocumentContentFingerprint(dossier.hektor_annonce_id, lecture.fingerprint, dossier.app_dossier_id);
@@ -5706,6 +5809,7 @@ async function handleSyncConsoleDocuments(job) {
     immosign_companions: immosignCompanions,
     fingerprint: lecture.fingerprint || null,
     modelo_skipped: modeloSkipped,
+    coffre_refuses: coffreRefuses,
     signed_fetched: signedFetched,
     pruned,
     cloud_policy: cloud ? "daily_cloud_scope" : "local_archive_only",
