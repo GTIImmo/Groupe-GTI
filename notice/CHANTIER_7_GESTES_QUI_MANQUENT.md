@@ -177,6 +177,41 @@ exactement ce geste *(l. 236-237)* :
 Frédéric** : cette interdiction porte sur l'**outil doublons** *(qui doit proposer, pas agir)*
 — pas forcément sur un **bouton manuel** sur une fiche. **Je ne tranche pas.**
 
+#### ⑤-bis ✅ LE RELEVÉ EST FAIT — *15/10, accord de Frédéric (« 1. oui »)*
+
+**Outil** : `Console/sonde_archive_contact.js` *(patron de `sonde_photos_suppression.js`)*.
+**Contrat tenu** : session du worker **réutilisée et non réécrite**, aucune connexion, **aucun
+POST**, aucun appel à `xmlrpc.php`, aucune fiche touchée — **un GET** sur le fichier
+JavaScript de la page Contacts *(`/admin/?call=getJs&js=labs/contacts/labs_contactsRefonte.js`,
+**200**, 74 891 caractères)*. La copie est gardée dans
+`Console/exports/sonde_archive_contact_2026-10-15/` : **plus besoin de rappeler Hektor.**
+
+**Résultat : la commande est CONFIRMÉE, inchangée depuis juin.**
+
+```
+POST xmlrpc.php   mode=contacts-contactProfile-archiveContact
+                  id=<idContact>   archive=<true|false>
+```
+
+| | |
+|---|---|
+| `setArchiveContact` | **identique** à juin — empreinte `fc22f6b4…` des **deux** côtés |
+| `deleteContact` *(témoin)* | identique **à l'octet près** |
+| le fichier entier | **différent** *(74 217 → 74 891)* : Hektor a bougé **ailleurs**, pas ici |
+
+⚠ **Et un piège évité par la mesure** : au premier passage, l'empreinte **brute** de
+`setArchiveContact` différait → *« la commande a changé ! »*. **Faux.** La capture de juin
+avait été écrite avec un **encodage abîmé** *(« Ãªtes-vous sÃ»r » au lieu de « êtes-vous
+sûr »)* : la seule différence était **deux accents**. La sonde porte désormais une **seconde
+empreinte, sans les accents** — et elle rend **IDENTIQUE**. *(Même famille que les retours
+chariot : la différence était dans la **mesure**, pas dans la chose.)*
+
+**La cascade sur les recherches : rien dans le navigateur.** Dans le fichier d'aujourd'hui,
+ni `modifDateArchiveCritere`, ni « autoarchivage », ni « critère » n'apparaissent **dans**
+`setArchiveContact` *(ils existent ailleurs dans le fichier, pour les recherches)*.
+➡ **Il ne reste qu'une inconnue : ce que le serveur de Hektor fait en recevant l'ordre.**
+Aucune lecture ne peut le dire — **seul un essai sur une fiche d'essai**, avec accord.
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».
