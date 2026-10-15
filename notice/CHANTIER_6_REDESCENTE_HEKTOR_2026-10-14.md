@@ -1585,3 +1585,50 @@ elle redeviendrait rouge. *(Même famille que `test_porte_contacts` le 14/10.)*
 ⚠ **Il reste 5 travaux en erreur, tous `change_hektor_annonce_status`** *(24933 — essai en cours de l'autre session à 14:25-14:27 —, 62963, 61672)*. L'alerte `data.travaux_en_erreur` compte **tous les types** : un rouge demain pour ceux-là serait **attendu**, pas une rechute. **Je n'y touche pas : ce n'est pas mon travail.**
 
 ➡ **La preuve en réel du correctif viendra cette nuit** : les 32 annonces sans empreinte repasseront, et le journal des travaux doit porter des lignes **« Document refusé par le coffre, gardé sur le serveur »** avec le nom du document.
+
+---
+
+# ✅ 6e — CLOS LE 15/10 PAR DÉCISION : **le sujet sort du chantier**
+
+*Frédéric, 15/10 : « **Clôture le 6e, c'est un autre problème, rien à voir avec ce
+chantier.** »*
+
+Le point est **clos ici**. L'audit complet *(ce que disent les 3 notes, ce que fait notre
+propre système, ce que Hektor a et qu'on n'a pas, et la trouvaille des **1 721 bons de visite
+déjà sur notre serveur**)* est consigné **en entier et de façon autoportante** dans
+**`notice/HISTORIQUE_VISITES_HEKTOR_2026-10-15.md`**.
+
+Trois choses à retenir si le sujet revient :
+
+1. ⭐ **1 721 bons de visite sont déjà chez nous**, sur 1 182 annonces, dont **1 089 lisibles
+   en texte** — rapatriés par la synchro des documents. La matière d'un historique est déjà
+   payée, **sans un appel à Hektor**.
+2. ⚠ **L'audit du 07/10 est périmé** : le bon de visite n'est **plus** fabriqué par Hektor,
+   il est à nous *(`visitVoucherHtml`)*. Ne pas recopier son ⛔ C3.
+3. ⚠ Notre système de RDV existe mais **ne sert pas** *(11 lignes, toutes de juin, 0 depuis
+   30 jours)* : les négociateurs tapent dans Google Agenda, et **l'ingestion Google → app a
+   un cadrage validé du 31/07 jamais développé**.
+
+⛔ **Rien ne se relance de soi-même** : A, B ou C, et où ce sujet atterrit, sont ses
+décisions.
+
+---
+
+# 🏁 LE CHANTIER ⑥ EST COMPLET — *les 9 points sont traités*
+
+| point | sortie |
+|---|---|
+| **6a** les 527 brouillons | ✅ une **décision** *(pas de documents dans les brouillons)*, périmètre déclaré |
+| **6a-bis** le 4ᵉ index dans les droits | ✅ **aucun patch** — et l'ouvrir aurait ouvert 10 gestes d'écriture |
+| **6b** le parc n'était plus relu *(G.2)* | ✅ la **tâche de 22:00** remplace le rattrapage · + le défaut du coffre corrigé et prouvé en production |
+| **6c** G.6 | ✅ **refus déclaré** dans le run *(plus de code dormant)* |
+| **6d** photos : retraits et ordre | ✅ codé, 6 verrous, **la ligne 4 tourne cette nuit** |
+| **6e** agenda des visites | ✅ **clos par décision** — sujet sorti du chantier *(note à part)* |
+| **6f** carnet acquéreur | ⚪ défaut réel, conséquence faible, **décision déjà prise** |
+| **6g** 2 recherches disparues | ⚪ **fermé** : l'objet n'existe plus |
+| **6h** RDV déplacé dans Google | ⚪ défaut réel mais **inerte** *(0 usage en 4 mois)* |
+| **6i** fiches des biens clos | ⚪ **fausse alerte** *(les détails SONT rafraîchis)* |
+| **+ G.1-c** | ✅ clos **sans patch** : la ligne 3 de la tâche les remet dans la roue |
+
+⏰ **Il ne reste qu'un CONTRÔLE** : la première nuit de « GTI Entretien Documents »
+*(16/10 au matin, les 5 points sont écrits dans `CLAUDE.md` §2, item ⑪)*.
