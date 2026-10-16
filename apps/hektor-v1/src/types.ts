@@ -564,6 +564,27 @@ export type AppContactSearch = {
   surface_terrain_max?: string | null
   contact_date_maj?: string | null
   refreshed_at?: string | null
+  // A.3 piece 5 (16/10/2026) : le MANDAT DE RECHERCHE que cette recherche
+  // honore, quand notre registre peut le designer sans deviner. Il n'est pas
+  // dans la table des recherches -- la descente Hektor la refait en entier
+  // chaque nuit -- mais accroche a la volee par loadContactSearches.
+  mandat_recherche?: AppContactMandatRecherche | null
+}
+
+// Une ligne de app_contact_mandat_recherche_current. `contact_search_key`
+// vaut null quand aucune recherche ne peut etre designee sans deviner.
+export type AppContactMandatRecherche = {
+  hektor_contact_id: string
+  numero_mandat: string
+  contact_search_key: string | null
+  search_index: number | null
+  type: string | null
+  date_debut: string | null
+  date_fin: string | null
+  date_cloture: string | null
+  famille: string | null
+  source_app: string | null
+  designation: string | null
 }
 
 export type ContactStats = {

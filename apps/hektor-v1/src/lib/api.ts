@@ -1,7 +1,7 @@
 import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockRapprochementsForDossier, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase, supabaseUrl } from './supabase'
-import type { AppContact, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserPerimetre, UserProfile, WorkItem } from '../types'
+import type { AppContact, AppContactMandatRecherche, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserPerimetre, UserProfile, WorkItem } from '../types'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -170,6 +170,10 @@ const contactsCurrentView = 'app_contacts_current'
 const contactStatsCurrentTable = 'app_contact_stats_current'
 const contactRelationsCurrentView = 'app_contact_relations_current'
 const contactSearchesCurrentView = 'app_contact_searches_current'
+// A.3 piece 5 (16/10/2026) : nos mandats de recherche, table satellite.
+// Elle n'est PAS une colonne de app_contact_search_current, que la descente
+// Hektor refait en entier chaque nuit : notre donnee y serait effacee.
+const contactMandatsRechercheTable = 'app_contact_mandat_recherche_current'
 /** UNE PERSONNE, UNE LIGNE — regle de Frederic, 11/09/2026.
  *
  *  Hektor cree une SECONDE fiche, vide, pour le second membre d'un menage. Elle
@@ -3528,6 +3532,27 @@ async function prependProvisionalSearches(rows: AppContactSearch[], contactId: s
   return [...restantes.map(provisionalToAppContactSearch), ...rows]
 }
 
+// Nos mandats de recherche pour un contact.
+// (!) NE JETTE JAMAIS. La table peut ne pas exister (patch non colle) ou etre
+//   vide : une fiche contact ne doit pas tomber pour un complement
+//   d'affichage. On rend [] et la carte reste celle d'avant.
+export async function loadContactMandatsRecherche(
+  contactId: string,
+): Promise<AppContactMandatRecherche[]> {
+  if (!hasSupabaseEnv || !supabase || !contactId.trim()) return []
+  try {
+    const { data, error } = await supabase
+      .from(contactMandatsRechercheTable)
+      .select('*')
+      .eq('hektor_contact_id', contactId.trim())
+      .order('numero_mandat', { ascending: true })
+    if (error || !data) return []
+    return data as AppContactMandatRecherche[]
+  } catch {
+    return []
+  }
+}
+
 export async function loadContactSearches(contactId: string): Promise<AppContactSearch[]> {
   if (!hasSupabaseEnv || !supabase || !contactId.trim()) return []
   const { data, error } = await supabase
@@ -3538,8 +3563,23 @@ export async function loadContactSearches(contactId: string): Promise<AppContact
     .order('contact_date_maj', { ascending: false, nullsFirst: false })
     .order('search_index', { ascending: true })
   if (error || !data) throw new Error(error?.message ?? 'Unable to load contact searches')
-  return prependProvisionalSearches(
-    (data as AppContactSearch[]).map(normalizeContactSearchRow), contactId.trim())
+  // A.3 piece 5 : on accroche le mandat A LA RECHERCHE, ici, plutot que de faire
+  // descendre une prop jusqu'a la carte (elle est profonde dans l'arbre).
+  // (!) Le rattachement se fait sur `contact_search_key`. Un mandat dont la
+  //   recherche n'a pas pu etre designee porte NULL : il n'est accroche a AUCUNE
+  //   carte. On prefere ne rien dire a dire peut-etre.
+  const mandats = await loadContactMandatsRecherche(contactId.trim())
+  const parCle = new Map<string, AppContactMandatRecherche>()
+  mandats.forEach((m) => {
+    const cle = (m.contact_search_key ?? '').trim()
+    if (cle && !parCle.has(cle)) parCle.set(cle, m)
+  })
+  const rows = (data as AppContactSearch[]).map(normalizeContactSearchRow).map(
+    (search) => {
+      const m = parCle.get((search.contact_search_key ?? '').trim())
+      return m ? { ...search, mandat_recherche: m } : search
+    })
+  return prependProvisionalSearches(rows, contactId.trim())
 }
 
 export type RapprochementComponent = { k: string; ok: boolean; v: string }
