@@ -556,6 +556,25 @@ doit se dire autrement : **« on a choisi de ne pas »**, et non « on ne peut p
 05-06-2028)*. L'archivage d'une recherche est donc **d'abord un mécanisme de durée de
 conservation**, pas un geste de suppression déguisé.
 
+### 🔎 CE QUI EXISTE DÉJÀ SUR LES RECHERCHES, ET CE QUI MANQUE — *audit du 16/10*
+
+| | état réel, mesuré |
+|---|---|
+| **archiver une recherche** | ✅ **fait, et bien fait** — écrit **chez nous dans la même transaction**, garde l'**état d'avant** *(`app_search_pending.base_snapshot`)*, pose un **verrou au numéro du travail** *(effacé au succès, réarmé à l'échec)*. C'est le bouton **« Supprimer »**, mal nommé |
+| **désarchiver une recherche** | ❌ **n'existe NULLE PART chez nous.** Des **5** fonctions qui écrivent `app_contact_search_current`, **aucune** ne remet `archive=false`/`is_active=true` ; les **3** types de travail « recherche » sont *add / update / delete* ; et le mode `archiveUnarchiveContactRecherche` **n'apparaît nulle part dans le dépôt** |
+| **l'auto-archivage à 2 ans** | ❌ **on ne le voit même pas.** L'API ne rend que `offre, archive, types, villes, quartiers, particularites, criteres` — **aucune date** ; notre table *(23 colonnes)* n'en a pas non plus. La date n'existe que dans **la page HTML** de Hektor *(`valueInputAutoarchivage` — chez Gladys : **22-06-2028**, soit création + 2 ans)*. ➡ **on ne peut ni l'anticiper ni l'afficher**, on constate le basculement **après coup** |
+| **désigner UNE recherche** | ⚠ cassé — mais ⭐ **le correctif est déjà écrit** *(note du 31/08)* : *« le HTML porte pourtant l'identifiant, proprement : un attribut **`data-search-id`**, une balise par recherche, dans l'ordre »*. **Il n'est toujours pas lu** : `console_job_worker.js:17757` ratêble encore `dropDownMenu_|contentDrop_|valueInputAutoarchivage|rel=` |
+
+➡ **Donc ce qui manque vraiment, et Frédéric l'a dit avant moi** : non pas « un geste
+archiver/désarchiver » à inventer, mais **les deux AUTOMATISMES** — *« soit lors de
+l'archivage du contact, soit au bout de 2 ans »* :
+
+| | ce qu'il faut |
+|---|---|
+| **A** | archiver un contact ⇒ **archiver ses recherches actives CHEZ NOUS d'abord**, même patron que ci-dessus *(état d'avant + verrou)* — ⭐ **et ici aucun problème d'identification** : on prend **toutes** ses recherches actives, aucun index à deviner |
+| **B** | **désarchiver une recherche** : geste neuf *(mode connu depuis juin + `data-search-id` à lire)* |
+| **C** | *(optionnel)* **capter la date d'auto-archivage** pour la montrer et l'anticiper — elle n'est que dans le HTML |
+
 ### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
 
 « Archiver un contact » n'est **pas** un geste anodin : il peut emporter une recherche
