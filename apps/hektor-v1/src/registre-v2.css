@@ -116,10 +116,14 @@
   overflow-x:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;
 }
 .app-screen-registre .registre-nb .register-table{
-  /* ⑦-3a piece 3 (16/10/2026) : 1084 -> 1180px. La colonne « Date de cloture »
-     ajoute 96px de largeur FIXE ; sans ce report, c'est « Mandant(s) » (width:auto)
-     qui les aurait perdus et se serait ecrase. */
-  min-width:1180px;width:100%;border-collapse:collapse;position:relative;z-index:1;background:transparent;table-layout:fixed;
+  /* ⚠ 16/10/2026 : CE 1084 EST UN SEUIL QUI PROTEGE QUELQUE CHOSE -- lire le
+     commentaire des largeurs plus bas AVANT d'y toucher. Je l'ai passe a 1180 cet
+     apres-midi pour loger une colonne « Date de cloture », et la mesure A L'ECRAN
+     l'a dit tout de suite : conteneur 1089 px, tableau 1180, soit 91 px de trop
+     et une BARRE DE DEFILEMENT HORIZONTAL -- exactement ce que ce chiffre
+     interdit. Remis a 1084. La cloture vit desormais en sous-ligne de la colonne
+     « Date de fin » : zero pixel ajoute. */
+  min-width:1084px;width:100%;border-collapse:collapse;position:relative;z-index:1;background:transparent;table-layout:fixed;
 }
 .app-screen-registre .registre-nb .register-table th{
   font-size:10px !important;font-weight:800 !important;letter-spacing:.08em;text-transform:uppercase;
@@ -187,6 +191,12 @@
 /* Montant (ink, façon maquette — pas magenta) + ligne « modif prix » */
 .registre-nb .register-amount{color:var(--rg-ink) !important;font-size:14.5px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
 .registre-nb .register-price-history{display:block;color:rgba(34,35,35,.4);font-size:10.5px;font-weight:600;margin-top:3px;white-space:nowrap;}
+/* ⑦-3a (16/10/2026) : la cloture, en sous-ligne de « Date de fin ».
+   Memes reglages que `register-price-history` juste au-dessus -- c'est la meme
+   idee (une precision sous une valeur), elle doit avoir la meme allure.
+   ⚠ `Clos 14/10/2027` tient dans les 96 px de la colonne ; `Clos le …` n'y
+     tiendrait pas, d'ou le libelle court. */
+.registre-nb .register-cloture{display:block;color:rgba(34,35,35,.45);font-size:10.5px;font-weight:700;margin-top:3px;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
 /* Mandant(s) */
 .registre-nb .register-col-mandants .register-primary{font-size:13px;font-weight:700;color:var(--rg-ink);line-height:1.35;white-space:normal;}

@@ -24269,14 +24269,25 @@ function MandatRegisterScreen(props: {
   const clotureSansBien = Boolean(selectedDetail && estMandatDeRecherche(selectedDetail))
   const clotureAnnonce = String(selectedDetail?.hektor_annonce_id ?? '').trim()
   const clotureNumero = String(selectedDetail?.numero_mandat ?? '').trim()
+  // ⚠ `clotureModifiable` ne sert PLUS à clôturer — seulement à CORRIGER une date
+  //   déjà posée, ou à rouvrir. Clôturer passe par la demande, pour tout le monde
+  //   (voir juste en dessous).
   const clotureModifiable = Boolean(props.isManagerOrAdmin) && !clotureSansBien
     && Boolean(clotureAnnonce) && Boolean(clotureNumero)
-  // Le renvoi du négociateur existe DÉJÀ (MandatActionMenu) et il a sa condition :
-  // la validation doit être accordée, sinon la demande n'aboutirait à rien. On
-  // recopie cette condition au lieu d'en inventer une seconde.
-  const clotureRenvoiPossible = !clotureSansBien
-    && selectedDetail?.app_dossier_id != null
-    && isValidationApproved(selectedDetail?.validation_diffusion_state)
+  // ─── 16/10, 2ᵉ consigne de Frédéric ──────────────────────────────────────────
+  // « il faudrait que le clic sur clôturer le mandat passe SYSTÉMATIQUEMENT par la
+  //   demande d'annulation de mandat, MÊME avec un compte admin / manager ».
+  // Le circuit existe depuis toujours et il laisse une trace : qui a demandé, qui
+  // a accepté, avec quel commentaire. Son acceptation clôt réellement le mandat
+  // (App.tsx, chaînage « A5 » du 30/07).
+  //
+  // ⚠⚠ ET ON NE RECOPIE PAS LA CONDITION DU MENU `MandatActionMenu`, qui exige un
+  //   mandat VALIDÉ. Mesure du 16/10 : 22 759 des 24 564 lignes du registre sont
+  //   `a_controler` -- avec cette condition, 93 % des mandats n'auraient AUCUN
+  //   bouton. Et c'est logique : la validation concerne la DIFFUSION, la clôture
+  //   concerne la VIE DU MANDAT. Deux choses différentes.
+  //   ➡ Divergence assumée et déclarée, pas un oubli.
+  const clotureDemandePossible = !clotureSansBien && selectedDetail?.app_dossier_id != null
   async function enregistrerCloture(valeur: string | null) {
     if (!clotureModifiable || clotureOccupe) return
     setClotureOccupe(true)
@@ -24406,15 +24417,16 @@ function MandatRegisterScreen(props: {
                     <th className="register-col-mstatut">Statut du mandat</th>
                     <th className="register-col-etat">État</th>
                     <th className="register-col-date">Date de début</th>
+                    {/* ⑦-3a (16/10/2026) : LA CLÔTURE EST DANS CETTE COLONNE, EN 2ᵉ LIGNE.
+                        Elle a d'abord eu SA colonne (décision de Frédéric à midi), puis on
+                        l'a retirée l'après-midi — mesure à l'écran : le tableau passait à
+                        1 180 px pour un conteneur de 1 089, soit 91 px de trop et une barre
+                        de défilement horizontal, que le commentaire des largeurs interdit
+                        explicitement. Et le prix était hors de proportion : sur 24 564
+                        lignes, 215 ont une clôture (0,88 %), 0 sur les 50 affichées par
+                        défaut. Une colonne vide 99 % du temps coûtait 96 px à tout le monde.
+                        ➡ Option C, choisie par Frédéric : zéro pixel ajouté. */}
                     <th className="register-col-date">Date de fin</th>
-                    {/* ⑦-3a pièce 3 (16/10/2026) : LA DATE DE CLÔTURE, UNE COLONNE EN PLUS.
-                        Décision de Frédéric du 16/10 (« Une colonne en + »), après l'audit
-                        qui a montré qu'elle n'était NULLE PART au registre — ni ici, ni
-                        dans la fiche mandat (9 lignes), alors que la pastille « Statut du
-                        mandat » passait déjà à « Clos » en la lisant.
-                        ⚠ C'est la RÉSULTANTE que la vue sert : NOTRE date d'abord, celle de
-                          Hektor ensuite (COALESCE dans app_registre_mandats_current). */}
-                    <th className="register-col-date">Date de clôture</th>
                     <th className="register-col-amount">Montant</th>
                     <th className="register-col-mandants">Mandant(s)</th>
                     <th className="register-col-nature">Nature et situation</th>
@@ -24492,13 +24504,22 @@ function MandatRegisterScreen(props: {
                           </div>
                         </td>
                         <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
-                        <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
-                        {/* ⑦-3a pièce 3 : vide = mandat non clos. On n'écrit pas « — » :
-                            le registre est l'écran le plus officiel de l'app, et un tiret
-                            se lit comme une donnée manquante, pas comme un mandat vivant. */}
-                        <td className="register-col-date">{(item.mandat_date_cloture ?? '').trim()
-                          ? <strong className="register-date">{formatDate(item.mandat_date_cloture)}</strong>
-                          : null}</td>
+                        {/* ⑦-3a (16/10/2026) : l'échéance, et SOUS ELLE la clôture quand il
+                            y en a une. Zéro pixel ajouté au tableau (option C).
+                            ⭐ Le patron n'est pas inventé : c'est exactement celui de la
+                              colonne « Montant » juste à droite, qui porte déjà sa
+                              sous-ligne « 1 modif prix · … » (register-price-history).
+                            ⚠ Rien quand le mandat n'est pas clos — pas de tiret : sur
+                              l'écran le plus officiel de l'app, un tiret se lit « donnée
+                              manquante », pas « mandat vivant ».
+                            ⚠ C'est la RÉSULTANTE que la vue sert : NOTRE date d'abord,
+                              celle de Hektor ensuite (COALESCE dans la vue). */}
+                        <td className="register-col-date">
+                          <strong className="register-date">{formatDate(item.mandat_date_fin)}</strong>
+                          {(item.mandat_date_cloture ?? '').trim()
+                            ? <span className="register-cloture">Clos {formatDate(item.mandat_date_cloture)}</span>
+                            : null}
+                        </td>
                         <td className="register-col-amount">
                           <strong className="register-amount">{formatPrice(item.prix)}</strong>
                           {priceChangeSummaryLine(item) ? <span className="register-price-history">{priceChangeSummaryLine(item)}</span> : null}
@@ -24832,79 +24853,83 @@ function MandatRegisterScreen(props: {
                             Un mandat de recherche n'est pas porté par un bien : sa clôture ne
                             peut pas être saisie ici.
                           </p>
-                        ) : clotureModifiable ? (
-                          clotureEnEdition ? (
-                            <div className="md-cloture-edit">
-                              <input
-                                type="date"
-                                value={clotureBrouillon}
-                                disabled={clotureOccupe}
-                                onChange={(event) => setClotureBrouillon(event.target.value)}
-                              />
-                              <button
-                                type="button"
-                                className="ghost-button button-primary"
-                                disabled={clotureOccupe || !clotureBrouillon.trim()}
-                                onClick={() => { void enregistrerCloture(clotureBrouillon.trim()) }}
-                              >
-                                {clotureOccupe ? 'Enregistrement…' : 'Enregistrer'}
-                              </button>
-                              {clotureCourante ? (
-                                /* Vider la date EFFACE la nôtre et fait réapparaître celle
-                                   de Hektor s'il en a une : c'est le retour arrière de
-                                   l'utilisateur qui s'est trompé (déjà prévu par la RPC). */
+                        ) : (
+                          <>
+                            {/* ① CLÔTURER — TOUJOURS PAR LA DEMANDE, MÊME EN ADMIN.
+                                2ᵉ consigne de Frédéric du 16/10. Un même bouton pour tout le
+                                monde : le geste laisse une trace (qui demande, qui accepte,
+                                avec quel commentaire), et c'est l'acceptation qui clôt
+                                réellement le mandat (chaînage « A5 » du 30/07).
+                                ⚠ On n'a PAS fabriqué un second circuit : c'est celui qui
+                                  existe depuis toujours. */}
+                            {clotureDemandePossible ? (
+                              <div className="md-cloture-edit">
                                 <button
                                   type="button"
                                   className="ghost-button"
-                                  disabled={clotureOccupe}
-                                  onClick={() => { void enregistrerCloture(null) }}
+                                  onClick={() => props.onOpenRequestModal(
+                                    selectedDetail.app_dossier_id as number, 'nego', 'demande_annulation_mandat')}
                                 >
-                                  Rouvrir le mandat
+                                  Demander l'annulation de ce mandat
                                 </button>
-                              ) : null}
-                              <button
-                                type="button"
-                                className="ghost-button"
-                                disabled={clotureOccupe}
-                                onClick={() => { setClotureEnEdition(false); setClotureMessage(null) }}
-                              >
-                                Annuler
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              className="ghost-button button-primary"
-                              onClick={() => {
-                                setClotureBrouillon(clotureCourante || todayInputDate())
-                                setClotureMessage(null)
-                                setClotureEnEdition(true)
-                              }}
-                            >
-                              {clotureCourante ? 'Corriger la date de clôture' : 'Clôturer ce mandat'}
-                            </button>
-                          )
-                        ) : clotureRenvoiPossible ? (
-                          /* « sinon visible mais lié à la demande annulation de mandat
-                             existante » (Frédéric, 16/10). Le circuit existe depuis
-                             toujours : on y renvoie, on n'en fabrique pas un second. */
-                          <div className="md-cloture-edit">
-                            <button
-                              type="button"
-                              className="ghost-button"
-                              onClick={() => props.onOpenRequestModal(
-                                selectedDetail.app_dossier_id as number, 'nego', 'demande_annulation_mandat')}
-                            >
-                              Demander l'annulation de ce mandat
-                            </button>
-                            <span className="md-cloture-note">
-                              Clôturer est réservé aux managers. Ta demande part à l'administratif.
-                            </span>
-                          </div>
-                        ) : (
-                          <p className="md-cloture-note">
-                            Clôturer un mandat est réservé aux managers et aux administrateurs.
-                          </p>
+                                <span className="md-cloture-note">
+                                  {props.isManagerOrAdmin
+                                    ? "Clôturer passe toujours par une demande, même pour toi : c'est ce qui en garde la trace."
+                                    : "Ta demande part à l'administratif, qui la traite."}
+                                </span>
+                              </div>
+                            ) : (
+                              <p className="md-cloture-note">
+                                Ce mandat n'est rattaché à aucun dossier : la demande d'annulation
+                                ne peut pas être créée.
+                              </p>
+                            )}
+
+                            {/* ② CORRIGER UNE DATE DÉJÀ POSÉE — admin / manager.
+                                C'est le « rendre ces dates modifiables » du matin. Ce n'est
+                                PAS clôturer : la date existe déjà, on la redresse.
+                                ⚠ Rien ne s'affiche tant qu'aucune clôture n'est posée. */}
+                            {clotureCourante && clotureModifiable ? (
+                              clotureEnEdition ? (
+                                <div className="md-cloture-edit">
+                                  <input
+                                    type="date"
+                                    value={clotureBrouillon}
+                                    disabled={clotureOccupe}
+                                    onChange={(event) => setClotureBrouillon(event.target.value)}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="ghost-button button-primary"
+                                    disabled={clotureOccupe || !clotureBrouillon.trim()}
+                                    onClick={() => { void enregistrerCloture(clotureBrouillon.trim()) }}
+                                  >
+                                    {clotureOccupe ? 'Enregistrement…' : 'Enregistrer'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="ghost-button"
+                                    disabled={clotureOccupe}
+                                    onClick={() => { setClotureEnEdition(false); setClotureMessage(null) }}
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="ghost-button"
+                                  onClick={() => {
+                                    setClotureBrouillon(clotureCourante)
+                                    setClotureMessage(null)
+                                    setClotureEnEdition(true)
+                                  }}
+                                >
+                                  Corriger la date de clôture
+                                </button>
+                              )
+                            ) : null}
+                          </>
                         )}
 
                         {clotureMessage ? <p className="md-cloture-msg">{clotureMessage}</p> : null}

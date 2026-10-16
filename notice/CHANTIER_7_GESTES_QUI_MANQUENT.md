@@ -1204,3 +1204,83 @@ Et ma clé **rejoint une famille qui existait déjà** dans cette charge.
    `ecrit_le` *(24933 porte une valeur du 18/09 avec un horodatage du 03/09)*.
 3. 🔸 **La pièce 2 reste dormante** *(la porte de derrière : la RPC est encore ouverte à
    `authenticated` sans garde)*. Le **geste**, lui, est déjà réservé depuis le chantier ②.
+
+## 11. L'APRÈS-MIDI : DEUX CORRECTIONS, DONT UNE DE MOI — 16/10/2026
+
+### ⚠⚠ J'AI CASSÉ LA MISE EN PAGE DU REGISTRE, ET C'EST L'ŒIL QUI L'A VU
+
+Frédéric : *« Ouvre, tu as accès Chrome, et donne-moi aussi ton avis »*. J'ai ouvert l'écran
+dans son Chrome — et **la première chose mesurée a été un défaut à moi** :
+
+| mesure, dans la page | valeur |
+|---|---|
+| largeur du conteneur | **1 089 px** |
+| largeur du tableau | **1 180 px** *(mon nouveau `min-width`)* |
+| **débordement** | **91 px → barre de défilement horizontal** |
+| la colonne était remplie sur | **0 ligne sur les 50 affichées** |
+
+Et le commentaire CSS que j'avais remplacé disait, mot pour mot :
+*« calées pour tenir dans la page **sans défilement horizontal** »*.
+**Je l'ai lu, et je l'ai déplacé quand même** — c'est la leçon 27 de `CLAUDE.md`
+*(« un seuil qui porte un raisonnement ne se monte pas pour faire taire »)*, prise en flagrant
+délit sur une largeur au lieu d'une alerte.
+
+⭐ **Et la mesure donnait le vrai prix** : sur **24 564 lignes du registre, 215 ont une
+clôture — 0,88 %**. Une colonne vide 99 % du temps coûtait **96 px et une barre de
+défilement à tout le monde, tous les jours**.
+
+**Option C, choisie par Frédéric.** La colonne est retirée, `min-width` revient à **1 084**,
+et la clôture s'affiche **en sous-ligne de « Date de fin »** quand elle existe :
+`Clos 14/10/2027`, en petit et en gris. ⭐ **Le patron n'est pas inventé** : c'est celui de la
+colonne « Montant » juste à droite, qui porte déjà sa sous-ligne « 1 modif prix · … »
+*(`register-price-history`)*. **Zéro pixel ajouté.**
+
+### 2ᵉ CONSIGNE : CLÔTURER PASSE TOUJOURS PAR LA DEMANDE, MÊME EN ADMIN
+
+> *« il faudrait que le clic sur clôturer le mandat passe systématiquement par la demande
+> d'annulation de mandat. Même avec un compte admin / manager. »* — Frédéric, 16/10
+
+Le bloc a donc **deux parties, et une seule porte pour clôturer** :
+
+| | qui | ce qu'il voit |
+|---|---|---|
+| **① clôturer** | **tout le monde**, admin compris | **« Demander l'annulation de ce mandat »** → le circuit qui existe depuis toujours. Pour un manager la phrase dit pourquoi : *« même pour toi : c'est ce qui en garde la trace »* |
+| **② corriger** | manager / admin, **et seulement si une date existe déjà** | **« Corriger la date de clôture »** — ce n'est pas clôturer, c'est redresser. C'est le *« rendre ces dates modifiables »* du matin |
+
+⚠⚠ **ET UNE CONDITION N'A PAS ÉTÉ RECOPIÉE, EXPRÈS.** Le menu `MandatActionMenu` exige un
+mandat **validé** pour proposer la demande. Mesure du 16/10 :
+
+| état de validation | lignes | dont actifs |
+|---|---|---|
+| `a_controler` *(non validé)* | **22 759** | 245 |
+| `valide` | 1 767 | 502 |
+| `(null)` *(mandats de recherche)* | 38 | 0 |
+
+➡ Avec cette condition, **93 % des mandats n'auraient AUCUN bouton**. Et c'est logique :
+**la validation concerne la DIFFUSION, la clôture concerne la VIE DU MANDAT.** Divergence
+**assumée et déclarée dans le code**, pas un oubli.
+
+### ⛔ CE QUE JE DOIS DIRE, ET QUI N'EST PAS RÉGLÉ
+
+1. ⚠⚠ **« Clôturer » reste atteignable autrement** : la **modale de changement de statut**
+   *(annonce → « Mandat clos » ou « Vendu »)* clôt toujours le mandat sans passer par la
+   demande. Elle est déjà réservée `admin`/`manager`, mais la consigne « systématiquement par
+   la demande » **n'est donc vraie que pour ce bouton-ci**. À trancher par Frédéric.
+2. 🔸 **« Rouvrir le mandat » a disparu** avec la réécriture *(il n'était offert que dans
+   l'éditeur de clôture)*. La RPC sait toujours effacer une date ; plus aucun écran ne le
+   demande. ⭐ Au passage, ça referme le défaut que j'avais signalé : **il effaçait sans
+   confirmation**.
+3. ⬜ **Le poids visuel du bouton** : il est maintenant en bouton discret *(`ghost-button`)*,
+   plus en rose plein. Ce n'était pas demandé explicitement, mais la réécriture l'a fait.
+4. ⬜ **Non vérifié à l'œil** : la vue du négociateur *(je suis admin dans cette session)* et
+   celle d'un mandat de recherche.
+
+### Les épreuves
+
+`npm run build` **vert**. Témoins **dans les deux sens** sur le fichier construit :
+**disparus** — `Clôturer ce mandat` 0, `Rouvrir le mandat` 0, l'en-tête de colonne 0,
+« réservé aux managers et aux administrateurs » 0 ;
+**présents** — `Demander l'annulation de ce mandat` 1, `Corriger la date de clôture` 1,
+« c'est ce qui en garde la trace » 1, `register-cloture` 1 *(et 1 dans la CSS)*,
+`min-width:1084px` 1. ⚠ Le `min-width:1180px` qui reste dans la CSS est une **média-query de
+`layout-overrides.css`**, touchée pour la dernière fois le **23/06** — rien à voir.
