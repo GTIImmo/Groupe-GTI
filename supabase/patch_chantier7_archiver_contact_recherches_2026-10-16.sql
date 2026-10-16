@@ -74,7 +74,6 @@ begin
   end if;
 
   v_ajout := replace(v_ancre || '
-' || '
   -- BLOC RECHERCHES ARCHIVEES -- DEBUT
   -- ⑦-1 bis (16/10) : ET SES RECHERCHES ACTIVES, DANS LA MEME TRANSACTION.
   -- Hektor les archive quand on archive la fiche (mesure du 16/10) : on le dit tout
