@@ -411,3 +411,7 @@ RANGÉ, sur demande seulement :
 |---|---|---|---|
 | 13/10 | — | scope `spreadsheets` ouvert · classeur et registre audités · prototype à blanc | 4 760 / 4 760 sur la règle d'état |
 | 14/10 | — | gestes de l'app relevés · les deux commissions auditées · ce plan | 99,8 % des commissions sont au vendeur · la charge ne se déduit pas (13 cas) |
+| 16/10 | **1a** | 3 colonnes de classe A posées **des deux côtés** (Supabase + local) · le **filet d'ordre** dans les deux sens | 41 → 44 colonnes · 0 valeur · la contrainte refuse `Vendeur` majuscule · le push prépare 31 074 lignes et **aucune** ne porte une colonne de classe A |
+| 16/10 | **1b** | la RPC `app_affaire_commission_ecrire` — écrit sur **UNE** ligne, jamais une autre étape de la chaîne | existe et refuse un id inconnu · **anon → 401 permission denied** · 0 valeur en base |
+| 16/10 | audit | ⭐ la commission **ne diverge jamais** le long d'une chaîne · une offre acceptée est **déjà figée deux fois** · Hektor ne garde **aucun** honoraire à l'offre | 1 divergence sur 9 826 · 200 + 0 octet 9/9 · offre 0 % / compromis 99 % / vente 100 % |
+
