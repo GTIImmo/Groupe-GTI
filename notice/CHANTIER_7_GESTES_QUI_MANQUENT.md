@@ -15,7 +15,7 @@
 | ⑦-1 | **archiver / désarchiver un contact** | 🔎 audité le 14/10, **re-audité le 15/10** — en cours |
 | ⑦-2 | **le cas Gladys DURIEUX** *(fiche archivée, mandante d'une annonce active)* | ⬜ va avec ⑦-1 *(sa décision du 14/10)* |
 | ⑦-3a | **clôturer un mandat à la main** + le **crayon** de la date de clôture *(périmètre élargi par Frédéric le 16/10 : toutes les entrées, droits admin/manager, dates modifiables)* | 🔎 **audité à fond le 16/10** — voir la section en bas de note |
-| ⑦-3b | l'**écran du journal des suppressions** | ⬜ reçu du chantier ③ |
+| ⑦-3b | l’**écran du journal des suppressions** *(4 journaux, 128 lignes)* | ✅ **écrit le 16/10** — dans Santé, admin strict, tout ; témoin inverse 128/0 |
 | ⑦-3c | **réordonner / choisir la photo principale** *(`mode=ordonne_photos` connu)* | ⬜ reçu du chantier ③ |
 | ⑦-4 | le **bandeau qui ment** *(« désarchiver » promis à un bien non archivé)* | ⬜ |
 | ⑦-5 | relancer / abandonner depuis le monitoring, biens cliquables | ✅ **fait le 15/10** |
@@ -1423,3 +1423,98 @@ et disent maintenant « tout compte admin ou manager ».
 c’est le vocabulaire du projet pour ce rôle *(« Vue Pauline », « File Pauline »,
 « Décision Pauline », `isPaulineAdministrativeProfile`…)*. Le renommer serait un autre
 chantier, et il ne m’a pas été demandé.
+
+---
+
+# ⑦-3b — L'ÉCRAN DU JOURNAL DES SUPPRESSIONS — 16/10/2026
+
+## 1. L'AUDIT : IL N'Y A PAS UN JOURNAL, IL Y EN A QUATRE
+
+Et la phrase du chantier ③ — *« aucun écran ne le lit »* — est **exacte, re-mesurée** :
+**zéro occurrence** des quatre tables dans tout le front.
+
+| journal | lignes | sans demandeur | sans l'état d'avant | période |
+|---|---|---|---|---|
+| **annonce** | **114** | ⚠ **79** *(69 %)* | ⚠ **46** *(40 %)* | 15/05 → 29/08 |
+| **contact** | **13** | 10 | **0** | 29/05 → 08/10 |
+| **document** | **0** | — | — | — |
+| **photo** | **1** | 0 | 0 | 14/10 |
+
+**Trois choses que ces chiffres disent :**
+
+① ⚠⚠ **Le journal des annonces est largement muet.** Le patch du 13/10 annonçait
+*« une ligne a `before_json` vide et aucun demandeur »* — c'est en réalité **69 % et 40 %**.
+Exemple réel du 29/08 : cible `99999999`, pas de demandeur, pas de motif, état d'avant
+**VIDE**. On a détruit **sans savoir quoi ni qui**.
+
+② ⛔ **Le journal des documents est à 0, et le restera pour le passé** : les **34 documents
+détruits du 14/05 au 22/07** sont **antérieurs à la table** (créée le 13/10). Ils n'y sont
+pas et n'y seront jamais. **Un journal vide ne veut pas dire « rien détruit ».**
+
+③ ⭐ **La seule ligne de photo** (14/10) est la photo d'essai supprimée sur 62774 — la
+**preuve que le mécanisme neuf écrit vraiment**.
+
+### Les droits étaient déjà propres
+
+| | |
+|---|---|
+| lire | `authenticated` **+ `app_console_current_role() = 'admin'`** → **admin STRICT** |
+| écrire | `service_role` seulement |
+| modifier / effacer | ⭐ **aucune politique** → la RLS refuse tout : le journal est **inaltérable** |
+
+⭐ **Et l'écran Santé colle exactement à cette règle** : il reçoit `isAdmin={isAdmin}` —
+l'admin **strict**, la seule exception du chantier ②. C'est le seul écran de l'app dont le
+périmètre égale celui de ces tables.
+
+## 2. LES DÉCISIONS DE FRÉDÉRIC — 16/10
+
+> *« A ; dans santé. 2. Admin strict. 3. Tout »*
+
+**Dans Santé** · **admin strict** *(la RLS n'est PAS touchée)* · **tout**, sans filtre de date.
+
+## 3. CE QUI EST ÉCRIT
+
+| pièce | où | quoi |
+|---|---|---|
+| **1** | `lib/api.ts` | `loadJournalSuppressions()` — **code neuf** : lit les 4 tables, les ramène à **une seule forme**, trie par date, et traduit `requested_by` en nom |
+| **2** | `SanteSystemeScreen.tsx` | un bloc **« Journal des suppressions »**, patron du bloc « Agents IA » juste au-dessus |
+
+⭐ **Aucune CSS nouvelle** : `ss-group`, `ss-rows`, `ss-row`, `ss-dot`, `ss-age` existaient
+tous, et `timeAgo()` aussi.
+
+**Quatre choix qui méritent d'être dits :**
+
+- ⚠ **Chaque lecture tombe toute seule** (`try/catch` + `.catch(() => [])`). L'écran Santé
+  charge en `Promise.all` : **une lecture qui jette ferait une page blanche** au lieu d'un
+  bloc vide. C'est le seul vrai risque de cette pièce, et il est traité exprès.
+- ⚠ **Pas de clic sur la ligne**, volontairement : **ces objets sont détruits**. Ouvrir la
+  fiche d'un bien supprimé échouerait — un bouton qui ment.
+- ⚠ **La pastille passe à l'orange quand l'état d'avant est vide** *(46 lignes sur 114)*.
+  Ce n'est pas un détail décoratif : ces lignes disent qu'on a détruit **sans savoir quoi**.
+- ⭐ **Une seule requête pour tous les noms**, pas une par ligne ; et si elle échoue on garde
+  l'identifiant brut — **un identifiant affiché vaut mieux qu'une ligne manquante**.
+
+## 4. LES ÉPREUVES
+
+`npm run build` **vert**. Et le **témoin inverse promis à l'étape 2**, joué en empruntant les
+deux identités, **en lecture seule** :
+
+| qui | rôle | annonces | contacts | documents | photos | profils lisibles |
+|---|---|---|---|---|---|---|
+| codex.test | `admin` | **114** | **13** | 0 | **1** | **8** |
+| legrand | `commercial` | **0** | **0** | **0** | **0** | **1** *(le sien)* |
+
+✅ **128 lignes pour l'admin** — exactement le total annoncé *(114 + 13 + 0 + 1)*.
+✅ **0 ligne pour le négociateur, SANS erreur** → l'écran montrera un bloc vide, pas une
+panne. C'était la question qui comptait.
+✅ La traduction des noms marchera : l'admin lit **8 profils**, le négociateur **1**.
+
+## 5. CE QUI RESTE À DIRE
+
+1. ⚠ **Le bloc ne s'affiche pas s'il est vide** (`suppressions.length > 0`). Pour un
+   négociateur il n'existera donc pas du tout — mais il n'a pas accès à Santé de toute
+   façon *(`isAdmin` strict dans la navigation)*.
+2. ⚠ **Le manager ne le verra pas**, par décision du 16/10. L'ouvrir voudrait dire
+   **remplacer les 4 politiques RLS** — une politique ne se complète pas.
+3. ⬜ **Rien ne purge ce journal.** 128 lignes aujourd'hui, et il ne fera que grandir. Ce
+   n'est pas un problème à cette taille ; ça le deviendra. Non traité, non demandé.

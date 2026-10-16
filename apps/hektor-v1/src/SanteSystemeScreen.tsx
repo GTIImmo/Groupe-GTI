@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, localiserAnnonceParNumeroHektor, loadActionStatus, resolveAction, gesteLibelleFr, type MonitorStatusRow, type AlertRow, type AgentRunRow, type AnnonceLocalisee, type ActionAbandonnee } from './lib/api'
+import { loadMonitorStatus, loadAlertsCurrent, setAlertState, loadAgentRuns, loadJournalSuppressions, localiserAnnonceParNumeroHektor, loadActionStatus, resolveAction, gesteLibelleFr, type MonitorStatusRow, type AlertRow, type AgentRunRow, type SuppressionJournalRow, type AnnonceLocalisee, type ActionAbandonnee } from './lib/api'
 import './sante-systeme.css'
 
 type SanteSystemeScreenProps = {
@@ -32,6 +32,14 @@ const SOURCE_LABEL: Record<string, string> = {
   relance: 'Relance',
   pauline: 'Pauline',
   agent: 'Agent',
+}
+
+// ⑦-3b : en français et au singulier -- une ligne = un objet détruit.
+const LIBELLE_OBJET: Record<SuppressionJournalRow['objet'], string> = {
+  annonce: 'Bien',
+  contact: 'Contact',
+  document: 'Document',
+  photo: 'Photo',
 }
 
 const DOMAIN_LABEL: Record<string, string> = {
@@ -256,6 +264,9 @@ export default function SanteSystemeScreen({ isAdmin, onOpenDossier }: SanteSyst
   const [rows, setRows] = useState<MonitorStatusRow[]>([])
   const [alerts, setAlerts] = useState<AlertRow[]>([])
   const [agentRuns, setAgentRuns] = useState<AgentRunRow[]>([])
+  // ⑦-3b (16/10/2026) : le journal des suppressions. TOUT, sans filtre de date
+  // (décision de Frédéric : « Tout » -- 128 lignes au total le 16/10, c'est peu).
+  const [suppressions, setSuppressions] = useState<SuppressionJournalRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // 14/10/2026 -- « C'est un sapin de Noel » (Frederic). L'ecran listait les 71
@@ -269,10 +280,20 @@ export default function SanteSystemeScreen({ isAdmin, onOpenDossier }: SanteSyst
   const refresh = useCallback(async () => {
     try {
       setError(null)
-      const [status, alertRows, runs] = await Promise.all([loadMonitorStatus(), loadAlertsCurrent(), loadAgentRuns(7).catch(() => [])])
+      // ⚠ ⑦-3b : le `.catch(() => [])` n'est PAS décoratif. Ce Promise.all tient
+      //   tout l'écran : une lecture qui jette ferait une PAGE BLANCHE au lieu d'un
+      //   bloc vide. Le journal est en `admin` strict -- pour tout autre rôle
+      //   Supabase rend zéro ligne, mais une panne réseau, elle, jette.
+      const [status, alertRows, runs, journal] = await Promise.all([
+        loadMonitorStatus(),
+        loadAlertsCurrent(),
+        loadAgentRuns(7).catch(() => []),
+        loadJournalSuppressions().catch(() => []),
+      ])
       setRows(status)
       setAlerts(alertRows)
       setAgentRuns(runs)
+      setSuppressions(journal)
       setLastRefresh(new Date())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement')
@@ -529,6 +550,49 @@ export default function SanteSystemeScreen({ isAdmin, onOpenDossier }: SanteSyst
                 <div className="ss-row-meta"><span className="ss-age">{timeAgo(e.created_at)}</span></div>
               </div>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* ═══ ⑦-3b (16/10/2026) : LE JOURNAL DES SUPPRESSIONS ═══════════════
+          Demande de Frédéric du 13/10 : « qui, quoi, quand ». Les quatre tables
+          existaient et PERSONNE NE LES LISAIT (mesure du 16/10 : zéro occurrence
+          dans tout le front). Ici, parce que c'est le seul écran dont le périmètre
+          est l'admin STRICT -- exactement la règle de lecture de ces tables.
+          ⭐ Patron recopié du bloc « Agents IA » juste au-dessus : aucune CSS neuve.
+          ⚠ PAS DE CLIC SUR LA LIGNE, volontairement : ces objets sont DÉTRUITS.
+            Ouvrir la fiche d'un bien supprimé échouerait -- un bouton qui ment.
+          ⚠ La pastille passe à l'orange quand l'état d'avant est vide : sur le
+            journal des annonces c'est 46 lignes sur 114, et ce n'est pas un détail
+            -- ces lignes disent qu'on a détruit SANS SAVOIR QUOI. */}
+      {suppressions.length > 0 ? (
+        <div className="ss-group">
+          <div className="ss-group-head">
+            <h2>Journal des suppressions</h2>
+            <span className="ss-count">{suppressions.length}</span>
+          </div>
+          <div className="ss-rows">
+            {suppressions.map((ligne) => {
+              const perdu = ligne.champsGardes === 0
+              return (
+                <div className="ss-row" key={ligne.id}>
+                  <span className={`ss-dot ${perdu ? 'ss-warn' : 'ss-ok'}`} aria-hidden="true" />
+                  <div className="ss-row-body">
+                    <div className="ss-row-name">
+                      <span className="ss-src">{LIBELLE_OBJET[ligne.objet]}</span> {ligne.cible}
+                    </div>
+                    <div className="ss-row-msg">
+                      {ligne.demandeur ?? (ligne.demandeurId ? 'demandeur ' + ligne.demandeurId.slice(0, 8) : 'demandeur inconnu')}
+                      {ligne.motif ? ' · ' + ligne.motif : ''}
+                      {perdu ? " · ⚠ état d'avant perdu" : ' · ' + ligne.champsGardes + ' champs gardés'}
+                    </div>
+                  </div>
+                  <div className="ss-row-meta">
+                    <span className="ss-age">{timeAgo(ligne.quand)}</span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       ) : null}

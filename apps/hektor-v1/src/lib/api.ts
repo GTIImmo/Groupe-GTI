@@ -3113,6 +3113,139 @@ export async function loadAgentRuns(days = 7): Promise<AgentRunRow[]> {
   return (data ?? []) as AgentRunRow[]
 }
 
+// ═══ ⑦-3b (16/10/2026) : LE JOURNAL DES SUPPRESSIONS ═══════════════════════════
+//
+// Demande de Frédéric du 13/10 : « il faudrait juste une ligne, une forme de
+// journal des suppressions : qui, quoi, quand ». Les tables ont été posées ce
+// jour-là ; le worker les remplit depuis le 14/10 ; PERSONNE NE LES LISAIT
+// (mesure du 16/10 : zéro occurrence dans tout le front).
+//
+// ⚠ IL Y EN A QUATRE, PAS UNE. annonce et contact existaient depuis mai, document
+//   et photo sont nées le 13/10. Leurs colonnes diffèrent (9 contre 12) : les deux
+//   récentes portent en plus le NOM de ce qui a été détruit. On ramène tout à une
+//   seule forme, sinon l'écran porterait quatre logiques.
+//
+// ⚠⚠ CE QUE CE JOURNAL NE DIRA JAMAIS, et il faut le savoir en le lisant : les
+//   34 documents détruits du 14/05 au 22/07 sont ANTÉRIEURS à la table. Ils n'y
+//   sont pas et n'y seront pas. Un journal vide ne veut pas dire « rien détruit ».
+//
+// ⚠ LA RÈGLE DE LECTURE EST `admin` STRICT (décision de Frédéric, 16/10) : pour
+//   tout autre rôle, Supabase ne renvoie pas une erreur mais ZÉRO LIGNE. L'écran
+//   montrera donc un bloc vide, pas une panne. C'est voulu.
+export type SuppressionJournalRow = {
+  id: string
+  objet: 'annonce' | 'contact' | 'document' | 'photo'
+  quand: string
+  /** L'identifiant du demandeur, tel qu'il est au journal (peut être absent). */
+  demandeurId: string | null
+  /** Son nom ou son e-mail, résolu si on a pu ; sinon null. */
+  demandeur: string | null
+  motif: string | null
+  /** Ce qui a été détruit, en clair : un nom de fichier, ou un numéro. */
+  cible: string
+  /** Le bien concerné, quand il y en a un (pour ouvrir la fiche). */
+  hektorAnnonceId: string | null
+  /** Combien de champs l'état d'avant a gardés. 0 = on ne sait pas ce qu'on a détruit. */
+  champsGardes: number
+}
+
+function compterChamps(valeur: unknown): number {
+  if (!valeur || typeof valeur !== 'object') return 0
+  try { return Object.keys(valeur as Record<string, unknown>).length } catch { return 0 }
+}
+
+export async function loadJournalSuppressions(): Promise<SuppressionJournalRow[]> {
+  if (!hasSupabaseEnv || !supabase) return []
+  const client = supabase
+  // ⚠ CHAQUE LECTURE TOMBE TOUTE SEULE. L'écran Santé charge en Promise.all : si
+  //   une table refusait, une exception ferait tomber TOUT l'écran. Une table
+  //   illisible doit coûter un bloc vide, jamais une page blanche.
+  const lire = async (table: string, colonnes: string) => {
+    try {
+      const { data, error } = await client.from(table).select(colonnes).order('created_at', { ascending: false }).limit(1000)
+      if (error) return [] as Array<Record<string, unknown>>
+      return (data ?? []) as unknown as Array<Record<string, unknown>>
+    } catch {
+      return [] as Array<Record<string, unknown>>
+    }
+  }
+
+  const [annonces, contacts, documents, photos] = await Promise.all([
+    lire('app_console_deleted_annonce_log', 'id,job_id,app_dossier_id,hektor_annonce_id,requested_by,reason,before_json,created_at'),
+    lire('app_console_deleted_contact_log', 'id,job_id,hektor_contact_id,requested_by,reason,before_json,created_at'),
+    lire('app_console_deleted_document_log', 'id,job_id,app_dossier_id,hektor_annonce_id,document_name,requested_by,reason,before_json,created_at'),
+    lire('app_console_deleted_photo_log', 'id,job_id,app_dossier_id,hektor_annonce_id,filename,requested_by,reason,before_json,created_at'),
+  ])
+
+  const texte = (v: unknown) => {
+    const s = v == null ? '' : String(v).trim()
+    return s || null
+  }
+
+  const lignes: SuppressionJournalRow[] = [
+    ...annonces.map((r) => ({
+      id: `annonce-${String(r.id)}`, objet: 'annonce' as const,
+      quand: String(r.created_at ?? ''),
+      demandeurId: texte(r.requested_by), demandeur: null,
+      motif: texte(r.reason),
+      cible: texte(r.hektor_annonce_id) ? `Bien ${String(r.hektor_annonce_id)}` : 'Bien sans numéro',
+      hektorAnnonceId: texte(r.hektor_annonce_id),
+      champsGardes: compterChamps(r.before_json),
+    })),
+    ...contacts.map((r) => ({
+      id: `contact-${String(r.id)}`, objet: 'contact' as const,
+      quand: String(r.created_at ?? ''),
+      demandeurId: texte(r.requested_by), demandeur: null,
+      motif: texte(r.reason),
+      cible: texte(r.hektor_contact_id) ? `Contact ${String(r.hektor_contact_id)}` : 'Contact sans numéro',
+      hektorAnnonceId: null,
+      champsGardes: compterChamps(r.before_json),
+    })),
+    ...documents.map((r) => ({
+      id: `document-${String(r.id)}`, objet: 'document' as const,
+      quand: String(r.created_at ?? ''),
+      demandeurId: texte(r.requested_by), demandeur: null,
+      motif: texte(r.reason),
+      cible: texte(r.document_name) ?? 'Document sans nom',
+      hektorAnnonceId: texte(r.hektor_annonce_id),
+      champsGardes: compterChamps(r.before_json),
+    })),
+    ...photos.map((r) => ({
+      id: `photo-${String(r.id)}`, objet: 'photo' as const,
+      quand: String(r.created_at ?? ''),
+      demandeurId: texte(r.requested_by), demandeur: null,
+      motif: texte(r.reason),
+      cible: texte(r.filename) ?? 'Photo sans nom',
+      hektorAnnonceId: texte(r.hektor_annonce_id),
+      champsGardes: compterChamps(r.before_json),
+    })),
+  ].sort((a, b) => (b.quand || '').localeCompare(a.quand || ''))
+
+  // ⭐ QUI A DEMANDÉ : `requested_by` est un identifiant, illisible à l'écran. La
+  //   règle de lecture des profils est `(id = auth.uid()) OR is_app_admin()` --
+  //   un admin les lit donc tous, et c'est exactement notre lecteur.
+  //   ⚠ Une seule requête pour tous les identifiants, pas une par ligne.
+  //   ⚠ Si elle échoue, on garde l'identifiant brut : un identifiant affiché vaut
+  //     mieux qu'une ligne manquante.
+  const ids = Array.from(new Set(lignes.map((l) => l.demandeurId).filter((v): v is string => Boolean(v))))
+  if (ids.length > 0) {
+    try {
+      const { data } = await client.from('app_user_profile').select('id,display_name,email').in('id', ids)
+      const noms = new Map<string, string>()
+      for (const row of (data ?? []) as Array<{ id: string; display_name?: string | null; email?: string | null }>) {
+        const nom = (row.display_name ?? '').trim() || (row.email ?? '').trim()
+        if (nom) noms.set(String(row.id), nom)
+      }
+      for (const ligne of lignes) {
+        if (ligne.demandeurId) ligne.demandeur = noms.get(ligne.demandeurId) ?? null
+      }
+    } catch {
+      /* on garde les identifiants bruts */
+    }
+  }
+  return lignes
+}
+
 type ContactStatsSnapshotRow = {
   total?: number | string | null
   active?: number | string | null
