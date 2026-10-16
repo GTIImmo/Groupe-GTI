@@ -554,49 +554,6 @@ export default function SanteSystemeScreen({ isAdmin, onOpenDossier }: SanteSyst
         </div>
       ) : null}
 
-      {/* ═══ ⑦-3b (16/10/2026) : LE JOURNAL DES SUPPRESSIONS ═══════════════
-          Demande de Frédéric du 13/10 : « qui, quoi, quand ». Les quatre tables
-          existaient et PERSONNE NE LES LISAIT (mesure du 16/10 : zéro occurrence
-          dans tout le front). Ici, parce que c'est le seul écran dont le périmètre
-          est l'admin STRICT -- exactement la règle de lecture de ces tables.
-          ⭐ Patron recopié du bloc « Agents IA » juste au-dessus : aucune CSS neuve.
-          ⚠ PAS DE CLIC SUR LA LIGNE, volontairement : ces objets sont DÉTRUITS.
-            Ouvrir la fiche d'un bien supprimé échouerait -- un bouton qui ment.
-          ⚠ La pastille passe à l'orange quand l'état d'avant est vide : sur le
-            journal des annonces c'est 46 lignes sur 114, et ce n'est pas un détail
-            -- ces lignes disent qu'on a détruit SANS SAVOIR QUOI. */}
-      {suppressions.length > 0 ? (
-        <div className="ss-group">
-          <div className="ss-group-head">
-            <h2>Journal des suppressions</h2>
-            <span className="ss-count">{suppressions.length}</span>
-          </div>
-          <div className="ss-rows">
-            {suppressions.map((ligne) => {
-              const perdu = ligne.champsGardes === 0
-              return (
-                <div className="ss-row" key={ligne.id}>
-                  <span className={`ss-dot ${perdu ? 'ss-warn' : 'ss-ok'}`} aria-hidden="true" />
-                  <div className="ss-row-body">
-                    <div className="ss-row-name">
-                      <span className="ss-src">{LIBELLE_OBJET[ligne.objet]}</span> {ligne.cible}
-                    </div>
-                    <div className="ss-row-msg">
-                      {ligne.demandeur ?? (ligne.demandeurId ? 'demandeur ' + ligne.demandeurId.slice(0, 8) : 'demandeur inconnu')}
-                      {ligne.motif ? ' · ' + ligne.motif : ''}
-                      {perdu ? " · ⚠ état d'avant perdu" : ' · ' + ligne.champsGardes + ' champs gardés'}
-                    </div>
-                  </div>
-                  <div className="ss-row-meta">
-                    <span className="ss-age">{timeAgo(ligne.quand)}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ) : null}
-
       {groupesAffiches.map(([domain, list]) => (
         <div className="ss-group" key={domain}>
           <div className="ss-group-head">
@@ -639,6 +596,53 @@ export default function SanteSystemeScreen({ isAdmin, onOpenDossier }: SanteSyst
           </span>
           <span className="ss-verts-action">{verrouDesVerts ? 'Afficher' : 'Masquer'}</span>
         </button>
+      ) : null}
+
+      {/* ═══ ⑦-3b (16/10/2026) : LE JOURNAL DES SUPPRESSIONS ═══════════════
+          Demande de Frédéric du 13/10 : « qui, quoi, quand ». Les quatre tables
+          existaient et PERSONNE NE LES LISAIT (mesure du 16/10 : zéro occurrence
+          dans tout le front). Ici, parce que c'est le seul écran dont le périmètre
+          est l'admin STRICT -- exactement la règle de lecture de ces tables.
+          ⭐ Patron recopié du bloc « Agents IA » : aucune CSS neuve.
+          ⚠ PLACÉ TOUT EN BAS (Frédéric, 16/10 : « le tout en bas »). Il était
+            d'abord en 2ᵉ, au-dessus des indicateurs de santé -- or ce n'est PAS une
+            alerte : c'est de l'archive, on la consulte, elle ne demande rien.
+            Elle ne doit pas pousser vers le bas ce qui, lui, attend une action.
+          ⚠ PAS DE CLIC SUR LA LIGNE, volontairement : ces objets sont DÉTRUITS.
+            Ouvrir la fiche d'un bien supprimé échouerait -- un bouton qui ment.
+          ⚠ La pastille passe à l'orange quand l'état d'avant est vide : sur le
+            journal des annonces c'est 46 lignes sur 114, et ce n'est pas un détail
+            -- ces lignes disent qu'on a détruit SANS SAVOIR QUOI. */}
+      {suppressions.length > 0 ? (
+        <div className="ss-group">
+          <div className="ss-group-head">
+            <h2>Journal des suppressions</h2>
+            <span className="ss-count">{suppressions.length}</span>
+          </div>
+          <div className="ss-rows">
+            {suppressions.map((ligne) => {
+              const perdu = ligne.champsGardes === 0
+              return (
+                <div className="ss-row" key={ligne.id}>
+                  <span className={`ss-dot ${perdu ? 'ss-warn' : 'ss-ok'}`} aria-hidden="true" />
+                  <div className="ss-row-body">
+                    <div className="ss-row-name">
+                      <span className="ss-src">{LIBELLE_OBJET[ligne.objet]}</span> {ligne.cible}
+                    </div>
+                    <div className="ss-row-msg">
+                      {ligne.demandeur ?? (ligne.demandeurId ? 'demandeur ' + ligne.demandeurId.slice(0, 8) : 'demandeur inconnu')}
+                      {ligne.motif ? ' · ' + ligne.motif : ''}
+                      {perdu ? " · ⚠ état d'avant perdu" : ' · ' + ligne.champsGardes + ' champs gardés'}
+                    </div>
+                  </div>
+                  <div className="ss-row-meta">
+                    <span className="ss-age">{timeAgo(ligne.quand)}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       ) : null}
 
       {!loading && rows.length === 0 && !error ? (
