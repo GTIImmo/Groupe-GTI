@@ -1767,3 +1767,52 @@ autres dans leur ordre courant. Ce n'est pas un « annuler ».
 ⭐ **L'ordre d'avant est pourtant gardé** dans `base_snapshot` de chaque travail : un futur
 geste « remettre comme avant » aurait tout ce qu'il lui faut. **Non demandé, non fait.**
 *(Sur ce bien : 3 photos, 0 portail — sans conséquence.)*
+
+### ⭐⭐ COMPRENDRE L'ORDRE CHEZ HEKTOR — sur la mise en garde de Frédéric
+
+> *« peux tenter de comprendre l'ordre chez hektor, attention il y a aussi visible / non
+> visible »*
+
+**Mesure sur nos données** : les **103 photos masquées** sont sur **14 annonces**, et sur
+chacune les deux numérotations **se chevauchent complètement** :
+
+| annonce | rangs des visibles | rangs des masquées |
+|---|---|---|
+| 59434 | **1..13** | **1..14** |
+| 61521 | **1..10** | **1..10** |
+| 40563 | **0..5** | **1..14** |
+
+➡ **Ce ne sont pas deux parties d'une même liste : ce sont DEUX LISTES SÉPARÉES**, chacune
+numérotée depuis le début. C'est exactement pourquoi la page de Hektor appelle `saveOrder`
+**deux fois**, une par `div`.
+
+### ⭐ ET LE POINT QUI SIMPLIFIE TOUT : HEKTOR NE REÇOIT JAMAIS DE NUMÉRO
+
+Ce que le worker lui envoie, c'est **une suite d'identifiants**, pas des positions :
+
+```
+liste_photos[]=487540&liste_photos[]=487542&liste_photos[]=487541
+&mode=ordonne_photos&div=liste_photos&idann=63261
+```
+
+➡ **Notre `sort_order` n'est qu'un rang INTERNE.** Qu'il commence à 0 ou à 1 est **sans
+importance pour Hektor** — il ne lit que **l'ordre des identifiants**. C'est pour cela que
+l'essai a marché du premier coup sur un bien numéroté **1..3**, alors que 97 % du parc est
+numéroté **à partir de 0**.
+
+### Ce que ça veut dire pour le geste — et c'est rassurant
+
+| | |
+|---|---|
+| **masquer une photo** | la sortir de `liste_photos`, l'entrer dans `liste_photos_hidden` — **et les deux se renumérotent** |
+| **la couverture** | la **1ʳᵉ de `liste_photos`**, rien d'autre |
+| **notre geste** | envoie **les deux listes**, les masquées **dans leur ordre inchangé** ✅ |
+| ⚠ **les 103 masquées d'aujourd'hui** | elles ont **toutes** `present_in_hektor = false` — Hektor ne les a plus. La RPC les **exclut**, la liste masquée part **vide**, et le worker **saute** une liste vide au lieu de dire « il n'y a plus de photos masquées » ✅ |
+
+⭐ **Rien ne casse de ce côté**, et **⑦-8** *(rendre visible / masquer)* aura la commande toute
+prête : c'est la même, avec la photo qui **change de liste**.
+
+⚠ **Non mesuré** : ce qui se passe quand une photo masquée est **encore chez Hektor**
+*(`present_in_hektor = true`)* — il n'en existe **aucune** aujourd'hui. Le code la traiterait
+*(elle partirait dans `liste_photos_hidden` avec son rang)*, mais ce chemin **n'a jamais été
+emprunté**.
