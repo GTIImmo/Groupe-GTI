@@ -102,6 +102,20 @@ CREATE TABLE IF NOT EXISTS {LEDGER_TABLE} (
     -- aucune destination, ni dans l'offre ni dans la proposition.
     taux_honoraires     TEXT,
     notaire_id          TEXT,
+    -- Lot 1a (16/10/2026) : LA COMMISSION ET SA CHARGE, DES L'OFFRE.
+    -- Demande de Frederic du 14/10. Mesure qui l'a motivee : la commission a
+    -- l'offre vaut 0 sur 11 182 chez nous, et 22 sur 22 dans le classeur de
+    -- suivi ; la charge, elle, NE SE DEDUIT PAS -- sur 25 lignes ou le classeur
+    -- dit Acquereur, 13 sont rangees cote vendeur chez Hektor.
+    -- ⚠ NE PAS CONFONDRE avec honoraires_entree / honoraires_sortie plus bas :
+    --   celles-la sont de CLASSE C, Hektor les calcule et elles sont RELUES a
+    --   chaque run. Le suffixe _app dit la valeur QUE NOUS AVONS SAISIE.
+    -- ⛔ RIEN NE PART CHEZ HEKTOR : decision de Frederic du 14/10.
+    honoraires_entree_app TEXT,
+    honoraires_sortie_app TEXT,
+    -- 'vendeur' ou 'acquereur', jamais autre chose ni accentue. La contrainte
+    -- vit cote Supabase, la ou l'ecriture a lieu.
+    charge_commission_app TEXT,
     -- ⚠ CELLE-CI N'EST PAS DE CLASSE A, ET C'EST UNE CORRECTION DU 03/09.
     -- 0.1 rangeait jours_retractation en classe A, alors que sa propre mesure
     -- disait « retraction_days 10 -> dateEnd, B mais CONVERTI ». Hektor CONNAIT
@@ -529,7 +543,12 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   "notaires_origine",
                   # 2.7 (16/09) : d'ou vient le numero de mandat -- Hektor l'a dit,
                   # ou on l'a deduit. Sans elle, les deux se confondent.
-                  "mandat_origine"):
+                  "mandat_origine",
+                  # Lot 1a (16/10) : classe A. Le local ne les ECRIT jamais ; il
+                  # les RECOIT a la redescente, pour que la sauvegarde de nuit
+                  # emporte aussi cette connaissance.
+                  "honoraires_entree_app", "honoraires_sortie_app",
+                  "charge_commission_app"):
         if neuve not in colonnes:
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
@@ -1312,6 +1331,40 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
     # Le local ne s'en sert pas pour ecrire ; il les garde pour que la sauvegarde de
     # nuit emporte aussi cette connaissance, que Hektor ne saura jamais reconstruire.
     colonnes = list(COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS)
+    # ⚠⚠ LE FILET D'ORDRE -- pose le 16/10/2026, avant d'en avoir besoin.
+    #
+    #   UNE COLONNE DE CLASSE A NAIT EN DEUX TEMPS : le patch Supabase (colle
+    #   par Frederic) puis le code local (pousse par moi). Entre les deux, le
+    #   local la connait et Supabase pas encore -- et CE SELECT la demandait
+    #   quand meme. PostgREST rend alors 400, la fonction leve, et comme son
+    #   appel (l. ~1648) n'est PAS garde, c'est TOUTE l'etape affaire_ledger du
+    #   run qui tombe. Le simple fait de coller dans le mauvais ordre cassait
+    #   la nuit.
+    #
+    #   ⭐ On demande donc a Supabase ce qu'il a, en UN appel (une ligne, ses
+    #     clefs sont ses colonnes), et on ne reclame que l'intersection. Quand
+    #     tout existe -- le cas normal -- le comportement est EXACTEMENT celui
+    #     d'avant : aucune colonne n'est retiree.
+    #   ⚠ Si la table est vide, l'echantillon n'apprend rien : on garde alors
+    #     la liste entiere, comme avant.
+    try:
+        echantillon = client._request(method="GET", path=LEDGER_TABLE,
+                                      query={"select": "*", "limit": "1"})
+    except Exception:
+        echantillon = None
+    if isinstance(echantillon, list) and echantillon and isinstance(echantillon[0], dict):
+        la_haut = set(echantillon[0].keys())
+        absentes = [c for c in colonnes if c not in la_haut]
+        if absentes:
+            print(f"[affaire_ledger] colonne(s) encore absente(s) de Supabase, "
+                  f"non redescendue(s) : {', '.join(absentes)} -- le patch SQL "
+                  f"n'est pas encore colle. Le run CONTINUE.")
+            colonnes = [c for c in colonnes if c in la_haut]
+    if not colonnes:
+        return {"chainees_par_supabase": posees, "lignes_redescendues": 0,
+                "colonnes_redescendues": 0, "locales_sans_chaine": con.execute(
+                    f"SELECT COUNT(*) FROM {LEDGER_TABLE} WHERE app_chaine_id IS NULL"
+                ).fetchone()[0]}
     lignes = client.fetch_all_rows(path=LEDGER_TABLE,
                                    select="app_affaire_id," + ",".join(colonnes),
                                    order="app_affaire_id.asc")
@@ -1360,6 +1413,13 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
 #   trois. A garder en tete pour les etapes 2, 3 et 4 de 0.1.
 COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
     "taux_honoraires", "notaire_id",
+    # Lot 1a (16/10/2026) : la commission et sa charge, saisies DES L'OFFRE.
+    # Hektor n'a aucune destination pour elles a ce stade -- l'app seule les
+    # ecrit, dans Supabase. Si le push les envoyait, la valeur LOCALE (vide
+    # jusqu'a la redescente) ecraserait celle que l'ecran vient de poser.
+    # ⚠ A ne pas confondre avec honoraires_entree / honoraires_sortie, de
+    #   CLASSE C : Hektor les calcule, il fait foi, elles SONT relues.
+    "honoraires_entree_app", "honoraires_sortie_app", "charge_commission_app",
 )
 
 
