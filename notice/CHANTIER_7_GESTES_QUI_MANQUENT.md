@@ -17,7 +17,7 @@
 | ⑦-3a | **clôturer un mandat à la main** + le **crayon** de la date de clôture *(périmètre élargi par Frédéric le 16/10 : toutes les entrées, droits admin/manager, dates modifiables)* | 🔎 **audité à fond le 16/10** — voir la section en bas de note |
 | ⑦-3b | l’**écran du journal des suppressions** *(4 journaux, 128 lignes)* | ✅ **écrit le 16/10** — dans Santé, admin strict, tout ; témoin inverse 128/0 |
 | ⑦-3c | **réordonner / choisir la photo principale** *(`mode=ordonne_photos` connu)* | ⬜ reçu du chantier ③ |
-| ⑦-4 | le **bandeau qui ment** *(« désarchiver » promis à un bien non archivé)* | ⬜ |
+| ⑦-4 | le **bandeau qui ment** *(9 462 biens : 8 935 vendus/clos + 527 brouillons)* | ✅ **écrit le 16/10** — trois messages, trois boutons, desktop ET mobile |
 | ⑦-5 | relancer / abandonner depuis le monitoring, biens cliquables | ✅ **fait le 15/10** |
 | ⑦-6 | « Abandonner » **défait** le geste | ✅ **fait le 15/10** |
 | ⑦-7 | **modifier ou prolonger un mandat** *(audit 08/10 : ni RPC ni travail worker ; l'avenant ne change que le prix)* | ⬜ |
@@ -1816,3 +1816,103 @@ prête : c'est la même, avec la photo qui **change de liste**.
 *(`present_in_hektor = true`)* — il n'en existe **aucune** aujourd'hui. Le code la traiterait
 *(elle partirait dans `liste_photos_hidden` avec son rang)*, mais ce chemin **n'a jamais été
 emprunté**.
+
+---
+
+# ⑦-4 — LE BANDEAU QUI MENT — 16/10/2026
+
+## 1. L'AUDIT : IL MENT À 9 462 BIENS, ET IL MENT DEUX FOIS
+
+Le code disait tout :
+
+```tsx
+const lightweightDetailLabel = dossier.archive === '1' ? 'archivee' : 'historique'
+...
+<p>Cette annonce {lightweightDetailLabel} … il faut d'abord la desarchiver.</p>
+<button>Demander le desarchivage</button>
+```
+
+**Seul le MOT changeait.** La phrase et le bouton parlaient toujours de désarchivage.
+
+| qui voit ce bandeau | biens | le bandeau |
+|---|---|---|
+| **archivés** | **35 325** | ✅ dit vrai |
+| **vendus / clos** *(sans détail en cache)* | **8 935** | ⛔ **ment** |
+| **brouillons** | **527** | ⛔ **ment** — cas que l'énoncé ne mentionnait pas |
+| vendus/clos avec détail | 8 | pas de bandeau |
+
+⭐ Le **brouillon** est la trouvaille : c'est une **saisie en cours**, en lecture seule **par
+décision** (23/06). Lui dire « désarchive-la » n'a aucun sens, et l'app avait déjà le bon
+bouton ailleurs : **« Reprendre la saisie »**.
+
+### ⚠⚠ ET LE SECOND MENSONGE EST PIRE QUE LE PREMIER
+
+Le bouton crée un `restore_hektor_annonce`, qui envoie à Hektor
+`mode=upval&champ=archive&val=0`. Or **les 8 935 vendus/clos ont DÉJÀ `archive=0`**
+*(mesuré : **0** sur 8 943 à `'1'`)*. L'ordre ne changerait rien — **mais le contrôle final
+du worker exige `archive == "0"`, donc il serait SATISFAIT et le travail passerait `done`.**
+
+➡ **Le bouton dirait « Désarchivage demandé », le travail réussirait, et le bien resterait
+en lecture seule.** C'est *« une avarie qui ne change rien ne prouve rien »*, retournée :
+**une réussite qui ne fait rien**.
+
+⭐ **Personne n'a encore été trompé** : les **15** désarchivages demandés portent tous sur
+**4 biens d'ESSAI** *(62965, 78, 62774, 24113)*.
+
+## 2. ⭐ LE PATRON EXISTAIT DÉJÀ — DANS LA VERSION MOBILE
+
+Avant d'inventer quoi que ce soit : la **fiche mobile** distinguait **déjà** l'archive du
+vendu/clos, avec le bon message **et** le bon bouton *(« Changer le statut »)*. Le mensonge
+n'était donc que côté **desktop**. On a recopié sa logique au lieu d'en écrire une seconde.
+
+## 3. CE QUI EST ÉCRIT *(pièce 1 seule — sa décision)*
+
+**Trois états, trois messages, et un seul bouton — celui qui sert :**
+
+| état | titre | bouton |
+|---|---|---|
+| **archivé** | « Fiche archivée » | **Demander le désarchivage** *(inchangé)* |
+| **vendu / clos** | « Bien vendu ou clos » | **Charger le détail** *(son choix)* |
+| **brouillon** | « Saisie en cours chez Hektor » | **Reprendre la saisie dans Hektor** |
+
+⭐ **Aucun des trois boutons n'est neuf.** « Désarchiver » était là ; « Charger le détail »
+et « Reprendre la saisie » existaient **ailleurs dans l'app**. On ne les invente pas, **on
+les met au bon endroit**.
+
+⭐⭐ **ET LA FAMILLE EST BALAYÉE EN ENTIER** *(leçon du 08/10)* : le **mobile** aussi disait
+« Cette fiche vendue ou close » à un brouillon. Il a désormais son 3ᵉ cas, avec le même
+bouton. **S'arrêter au desktop aurait laissé 527 biens avec le mensonge.**
+
+⚠ **Une plomberie à dire** : le bouton « Charger le détail » a demandé une **prop neuve**
+*(`onOpenLightweightDetail`)*, déclarée sur **4 composants** et passée aux **3 sites
+d'appel** — une prop déclarée mais non passée aurait donné un bouton qui **ne s'affiche
+jamais**, ce qui est pire qu'un bouton qui ment. *(C'est exactement le piège payé le matin
+même sur ⑦-1.)*
+
+## 4. LES ÉPREUVES
+
+`npm run build` **vert**, et témoins **dans les deux sens** sur le fichier construit :
+
+```
+DISPARUS : "il faut d'abord la desarchiver"      0
+           "Lecture seule jusqu'a desarchivage"  0
+           "Fiche consultee depuis l'index leger" 0
+PRESENTS : "Charger le détail"                   1
+           "Reprendre la saisie dans Hektor"     2   <- desktop ET mobile
+           "Bien vendu ou clos"                  1
+           "Saisie en cours chez Hektor"         1
+           "Cette fiche vendue ou close"         1   <- mobile, toujours juste
+           "il faut d'abord la désarchiver"      1   <- la seule branche qui le mérite
+```
+
+## 5. CE QUI RESTE À DIRE
+
+1. ⚠ **Deux boutons différents pour le même cas** : pour un vendu/clos, le **desktop** offre
+   désormais « **Charger le détail** » *(son choix)* et le **mobile** offre « **Changer le
+   statut** » *(qui existait avant)*. Les deux se défendent — charger pour consulter, changer
+   le statut pour le ramener au parc — mais **ce n'est pas aligné**. À trancher.
+2. ⛔ **La pièce 2 n'est pas faite** *(sa décision : « juste la 1 »)* : le worker répondrait
+   toujours `done` à un désarchivage inutile. Plus personne ne peut cliquer ce bouton à tort,
+   mais le trou reste **si un autre chemin rappelait ce geste**.
+3. ⛔ **Rien n'est poussé**, et **personne n'a vu l'écran** — tout est prouvé par le build et
+   les textes servis.
