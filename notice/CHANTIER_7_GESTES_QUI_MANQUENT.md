@@ -1916,3 +1916,52 @@ PRESENTS : "Charger le détail"                   1
    mais le trou reste **si un autre chemin rappelait ce geste**.
 3. ⛔ **Rien n'est poussé**, et **personne n'a vu l'écran** — tout est prouvé par le build et
    les textes servis.
+
+### ⚠⚠⚠ CORRECTION MAJEURE — LE BANDEAU MENTEUR EST DANS L'ANCIENNE FICHE
+
+**Je me suis trompé de composant, et il faut le dire avant tout le reste.**
+
+En allant montrer les trois cas à l'écran, j'ai découvert que :
+
+```tsx
+return APP_COCKPIT_V2_ENABLED ? <CockpitDetail {...props} /> : <DossierDetailLayoutBase {...props} />
+```
+
+➡ **J'ai corrigé `DossierDetailLayoutBase` — que la production NE REND PAS.** Le drapeau est
+allumé *(cockpit v2 en prod)*, et c'est `CockpitDetail` qui s'affiche.
+
+**Preuve observée deux fois, en direct** : les fiches ouvertes rendent `fa-ck-hero-photo`,
+`fa-ck-mb`, `fa-ck-rub` — classes qui n'existent QUE dans `CockpitDetail` — et
+`.detail-readonly-banner` était **toujours absent**.
+
+### ⭐ ET LE COCKPIT, LUI, NE MENT PAS
+
+Ses messages de lecture seule disent **« depuis une fiche d'index léger »**, jamais
+« désarchiver » :
+
+> « Les documents ne peuvent pas être modifiés **depuis une fiche d'index léger**. »
+> « Le mandat ne peut pas être édité **depuis une fiche d'index léger**. »
+
+⭐ **Et le premier écran d'un vendu/clos ne ment pas non plus** : c'est la fenêtre d'import,
+qui dit déjà « **VENDU** · Détail à charger » et offre « Télécharger le détail de la fiche ».
+*(Mesuré sur 62966, un bien d'essai : après l'import, la fiche s'ouvre en cockpit, sans
+aucun bandeau.)*
+
+### CE QUE MON TRAVAIL VAUT DONC, EXACTEMENT
+
+| | |
+|---|---|
+| **le mobile** *(`MobileDossierDetail`)* | ✅ **VIVANT** — il mentait vraiment aux **527 brouillons**, et il est corrigé |
+| **`DossierDetailLayoutBase`** | ⚠ **code que la prod ne rend pas** — mais c'est le **filet de secours** : si le drapeau du cockpit était éteint *(rollback prévu, garde-fou n° 2 du plan)*, cette fiche reviendrait, **et elle mentirait**. La corriger n'est donc pas inutile : c'est réparer le repli |
+| **ce que je t'avais annoncé** | ⛔ « le bandeau ment à 9 462 biens » — **faux en production**. Il aurait menti à 9 462 biens **si le cockpit était éteint** |
+
+⚠⚠ **LA FAUTE DE MÉTHODE, nommée** : j'ai lu le code, mesuré la base, compté les biens — et
+**je n'ai pas vérifié QUEL COMPOSANT S'AFFICHE** avant d'écrire. C'est la règle « mesurer LE
+GESTE DE L'ÉCRAN, pas un geste plausible » *(leçon 1 de `CLAUDE.md`)*, et un drapeau de
+bascule la rend encore plus impérative : **deux composants répondent au même nom, un seul
+s'affiche**.
+
+➡ À TRANCHER PAR FRÉDÉRIC : garder la correction *(elle répare le repli, coût nul)*, ou la
+retirer. Et **le second mensonge reste entier** : le bouton « désarchiver » d'un vendu/clos
+réussirait sans rien faire — mais puisque ce bandeau ne s'affiche pas, **personne ne peut le
+cliquer** aujourd'hui.
