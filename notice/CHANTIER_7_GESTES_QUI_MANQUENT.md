@@ -1137,3 +1137,70 @@ endroits de la même fiche auraient dit deux choses.
    vérifier que le carnet porte **la date saisie**. ⚠ Se mesure sur **la valeur**, pas sur
    l'heure : le `PATCH` du worker ne rafraîchit pas `ecrit_le` *(24933 porte une valeur du
    18/09 avec un horodatage du 03/09)*.
+
+## 10. POUSSÉ ET VÉRIFIÉ EN LIGNE — 16/10/2026, 12:3x
+
+**Go de Frédéric : « Vas y pousse ».** ⚠ C'est la première fois que je pousse moi-même ;
+jusqu'ici c'était toujours lui *(« ce n'est pas moi qui pousse »)*.
+
+### Ce qui est parti — et deux commits sur trois ne sont pas de moi
+
+`a392053 → 9662fd8`, soit **3 commits** :
+
+| commit | heure | de qui | quoi |
+|---|---|---|---|
+| `8149f44` | 11:37 | **l'autre session** | les mandats de recherche entrent au registre *(10 fichiers, dont `export_app_payload.py` et `mandat_ledger.py`)* |
+| `cfedd78` | 12:22 | **moi** | ⑦-3a pièces 1, 3 et 4 |
+| `9662fd8` | 12:27 | **l'autre session** | des `title` au survol sur la colonne « Nature » *(12 lignes, `App.tsx` seul)* |
+
+⭐ **Vérifié avant de pousser** : `9662fd8` ne touche **que** les `<span>` de la colonne
+« Nature et situation » — **aucun chevauchement avec ma colonne « Date de clôture »**.
+⚪ Les fichiers `phase2/` de `8149f44` ne sont **pas déployés** *(Vercel et Render ne servent
+que le front et le backend)* : ils attendent le run de nuit.
+
+### La preuve en ligne
+
+Vercel a pris le push tout seul *(`dpl_3ri9Hx…`, commit `9662fd8`, cible production)*, et la
+sonde a attendu le **vrai fichier servi** avant de conclure *(leçon du 08/10 : on ne parle
+qu'après avoir sondé)* :
+
+```
+paquet servi : /assets/index-DaU4SQsX.js  (2 278 495 octets)
+  Clôturer ce mandat                      1 fois
+  Date de clôture                         4 fois
+  close_date                              1 fois
+  Rouvrir le mandat                       1 fois
+  Demander l'annulation de ce mandat      1 fois
+  md-cloture (CSS)                       12 fois  (/assets/index-CnKjrIHw.css)
+```
+
+Outil : `scratchpad/sonder_deploye.sh` *(24 essais max, 15 s d'écart ; il a suffi du premier)*.
+
+### ⭐ ET LE DOUTE QUI RESTAIT SUR LA PIÈCE 1 EST LEVÉ
+
+J'avais écrit que `close_date` arriverait au worker **sans l'avoir prouvé** : la charge passe
+par une RPC, et une RPC qui reconstruirait l'objet clé par clé aurait **jeté** ma nouvelle
+clé en silence — exactement la famille du « nouveau type de travail, trois verrous ».
+
+Mesure dans `app_change_annonce_status_optimistic` :
+
+| ligne | ce qu'elle fait |
+|---|---|
+| 79 | `v_payload := coalesce(job_payload, '{}'::jsonb)` — **la charge est prise telle quelle** |
+| 287-288 | `payload_json` reçoit **`v_payload` en entier** *(seulement fusionné avec `app_affaire_id` s'il y a une affaire)* |
+| 268-270 | elle lit déjà `close_etat`, `close_raison`, `close_reason` |
+
+➡ **`close_date` traverse intact jusqu'à `app_console_job.payload_json`**, que le worker lit.
+Et ma clé **rejoint une famille qui existait déjà** dans cette charge.
+
+### ⛔ CE QUI RESTE, APRÈS LE PUSH
+
+1. ⚠⚠ **PERSONNE N'A TOUJOURS PAS VU L'ÉCRAN.** Le fichier servi porte les textes — ça ne
+   dit pas que le bloc est **beau**, ni que la colonne tient dans la page. **À regarder :**
+   écran **Mandats**, ouvrir une fiche, le bloc est **sous la jauge du cycle de vie**.
+2. ⬜ **L'ESSAI RÉEL**, et c'est lui qui compte : clôturer un mandat d'essai avec une date
+   **différente d'aujourd'hui**, puis vérifier que le carnet porte **la date saisie**.
+   ⚠ Se mesure sur **la valeur**, pas sur l'heure : le `PATCH` du worker **ne rafraîchit pas**
+   `ecrit_le` *(24933 porte une valeur du 18/09 avec un horodatage du 03/09)*.
+3. 🔸 **La pièce 2 reste dormante** *(la porte de derrière : la RPC est encore ouverte à
+   `authenticated` sans garde)*. Le **geste**, lui, est déjà réservé depuis le chantier ②.
