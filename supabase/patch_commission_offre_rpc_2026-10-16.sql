@@ -76,12 +76,23 @@
 --    modale, cela vaut pour saisi et est sauvegarde dans le compromis qui reste
 --    modifiable ET A HEKTOR ».
 --   Donc au compromis, un champ PREREMPLI ET NON TOUCHE doit quand meme partir
---   dans la charge du geste. Aujourd'hui `sellerFees` est garde par un drapeau
---   « touche » (App.tsx) : il faudra l'elargir a « non vide », pour qu'une valeur
---   reprise de l'offre soit envoyee. ⚠ C'EST UNE MODIFICATION DU GESTE EXISTANT,
---   la seule du lot : elle sera annoncee et eprouvee a part, pas glissee ici.
---   Le drapeau garde son role quand le champ est VIDE -- ne jamais envoyer du
---   vide, qui effacerait la valeur de Hektor.
+--   dans la charge du geste.
+--   ⭐ ET LA SOLUTION EST DE FREDERIC, PAS DE MOI (16/10). J'avais propose
+--     d'elargir la condition de `sellerFees` de « touche » a « non vide » --
+--     c'est-a-dire de MODIFIER le code qui decide ce qui part chez Hektor.
+--     Il a demande : « pourquoi ne pas saisir auto ». C'est mieux, et mesure :
+--     le drapeau `statusChangeHonorairesEntreeTouche` a CINQ points d'usage et
+--     UN SEUL LECTEUR -- la charge du geste (App.tsx:17064). Rien d'autre n'en
+--     depend. Le LEVER au prerenseignement dit donc exactement « cela vaut pour
+--     saisi », et LE GESTE N'EST PAS TOUCHE D'UNE LIGNE.
+--   LA REGLE : on prerenseigne SEULEMENT si on a une valeur. Sans valeur, pas de
+--     drapeau, donc rien n'est envoye -- on ne peut pas envoyer du vide qui
+--     effacerait Hektor. Et le prerenseignement ne s'applique que si le champ est
+--     encore vide ET le drapeau encore baisse : il ne peut pas ecraser une saisie.
+--   ⚠ SIGNALE SANS LE CHANGER : si l'admin VIDE un champ prerenseigne, le drapeau
+--     reste leve et du vide partirait. Ce cas existe DEJA aujourd'hui (taper puis
+--     effacer fait la meme chose) : le corriger serait changer un comportement en
+--     place, hors perimetre de ce lot.
 --
 -- ─── CE QUE CETTE RPC NE FAIT PAS ─────────────────────────────────────────────
 -- ⛔ ELLE, elle n'envoie rien a Hektor : elle ecrit trois colonnes, un point.
