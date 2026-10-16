@@ -297,7 +297,17 @@ report ne se décident jamais sans lui.
 
 ```
 ①③ ⏰⏰ DEMAIN 16/10, DANS L'ORDRE -- valide par Frederic a 01:00 :
-   0. CORRIGER LE DETECTEUR D'ECHEC de scheduled/run_entretien_documents.ps1 (2 lignes).
+   0. ✅ FAIT a 07:0x (go « vas-y ») : LE DETECTEUR D'ECHEC EST REPARE -- `Write-Host` +
+      `| Out-Host`, la fonction ne rend plus QU'UN SEUL booleen. Epreuve :
+      scheduled/test_detecteur_echec_entretien.ps1 -- elle EXTRAIT la fonction DU FICHIER
+      et l'execute (pas une imitation) : 10 CONTROLES VERTS, dont DEUX TEMOINS INVERSES
+      (l'ancienne forme rendait 4 valeurs et comptait 0 echec sur un echec reel).
+      ⚠ Le projet avait DEJA ecrit la lecon le 03/10 dans run_full_pipeline.ps1
+      (l. 228-245) ; la tache du 15/10 l'a refaite 12 jours plus tard.
+      BALAYAGE DE LA FAMILLE FAIT : un seul endroit etait casse (full_pipeline est
+      immunise expres, descente/relancer_run sains, phase1_safe_worker sans risque).
+      ⏰ PREUVE EN REEL CE SOIR : le journal de 22:00 doit porter les 4 marqueurs.
+   0-bis. L'ANCIEN TEXTE, pour memoire :
       LE DEFAUT, mesure cette nuit : `Invoke-Ligne` fait Write-Output, et en PowerShell ce
       qu'une fonction emet DEVIENT SA VALEUR DE RETOUR -> (a) les 4 marqueurs « --- x/4 »
       n'arrivent jamais au journal (951 caracteres : l'ouverture et la fermeture seules) ;

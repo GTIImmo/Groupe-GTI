@@ -1671,3 +1671,45 @@ mesurées :
 ➡ **La tâche est une machine à succès silencieux.** Remède : 2 lignes *(sortir l'affichage
 de la fonction, ou poser le résultat dans une variable de portée script)*. **Non fait :
 c'est du code existant et une tâche planifiée — à décider par Frédéric.**
+
+### ✅ CORRIGÉ LE 16/10 à 07:0x — *go « vas-y »* — **10 contrôles verts, 2 témoins inverses**
+
+**Le remède, deux mots** : `Write-Host` *(va à l'hôte, donc au journal, **pas** au flux de
+sortie)* et **`| Out-Host`** sur l'appel à node *(sinon c'est **sa** sortie qui polluait le
+retour)*. `$LASTEXITCODE` reste renseigné après `| Out-Host`. La fonction ne rend plus
+**qu'un seul booléen**.
+
+⚠⚠ **ET LE PROJET AVAIT DÉJÀ ÉCRIT LA LEÇON — LE 03/10, DANS LE FICHIER D'À CÔTÉ.**
+`run_full_pipeline.ps1` l. 228-245 porte un ⛔⛔ : *« EN POWERSHELL TOUT CE QU'UNE FONCTION
+ÉCRIT SUR LE FLUX DE SORTIE FAIT PARTIE DE SA VALEUR DE RETOUR »*, avec le même tableau et
+le même `-not` qui vaut `$false`. Ce jour-là la panne avait **relancé 79 minutes de lecture
+Hektor en pleine matinée**. La tâche écrite le **15/10** a refait la faute **12 jours plus
+tard**. *(Et le même avertissement dit : « **éprouver, c'est exécuter LE code** », parce que
+son épreuve de l'époque testait une **imitation**.)*
+
+**L'épreuve : `scheduled/test_detecteur_echec_entretien.ps1`** — elle **lit le fichier de la
+tâche, en extrait le texte exact de la fonction et l'exécute**, avec `cmd /c exit 3` à la
+place de node *(aucune lecture Hektor, aucune écriture, aucun travail en file)*.
+
+| contrôle | résultat |
+|---|---|
+| la fonction ne rend **qu'une** valeur, et c'est un **booléen** | ✅ 1 valeur, `Boolean` |
+| elle dit **faux** sur échec, **vrai** sur succès | ✅ |
+| **le vrai appelant compte 1 échec** / **0 sur un succès** | ✅ |
+| ⭐ **témoin inverse** : l'ancienne forme rendait **4 valeurs** | ✅ |
+| ⭐ **témoin inverse** : l'ancienne forme comptait **0 échec** sur un échec réel | ✅ *c'est le défaut du 15/10, reproduit* |
+| le marqueur **« --- x/4 » arrive au journal**, et la sortie de la commande aussi | ✅ *936 caractères de transcription* |
+
+⚠ **Un piège d'outillage en chemin** : Windows PowerShell 5.1 lit un `.ps1` **sans BOM** comme
+de l'**ANSI** — mes accents cassaient l'analyse du script. Tous les `.ps1` du projet portent
+un BOM ; le mien aussi maintenant.
+
+**LE BALAYAGE DE LA FAMILLE est fait** *(leçon 9 : une cause structurelle se balaie en entier)* :
+`run_full_pipeline.ps1` est **immunisé exprès** · `run_descente.ps1` est **sain** *(sa fonction
+n'écrit rien, ses `Write-Output` sont au niveau du script)* · `relancer_run.ps1` est **sain**
+*(`Test-HektorRepond` ne rend qu'un booléen)* · `run_phase1_safe_worker.ps1` **sans risque**
+*(la valeur de retour d'`Invoke-Step` n'est jamais lue)*. ➡ **Un seul endroit était cassé.**
+
+⏰ **La preuve en réel viendra ce soir** : le journal de 22:00 doit porter les **4 marqueurs
+« --- x/4 »** et le détail de chaque ligne *(il faisait 951 caractères, il en fera des
+milliers)*.

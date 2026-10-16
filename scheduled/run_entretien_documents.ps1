@@ -109,13 +109,35 @@ try {
     # Une ligne qui echoue n'empeche pas les suivantes : ce sont des lots independants,
     # et si la cause est commune (Hektor ferme) chacune s'arretera proprement d'elle-meme
     # (le balayage refuse d'insister sur un 403).
+    # ⛔⛔ CETTE FONCTION NE DOIT RIEN ECRIRE SUR LE FLUX DE SORTIE.
+    #
+    #   LE DEFAUT ETAIT DEJA ECRIT, le 03/10, dans run_full_pipeline.ps1 (l. 228-245) :
+    #   « EN POWERSHELL TOUT CE QU'UNE FONCTION ECRIT SUR LE FLUX DE SORTIE FAIT PARTIE
+    #   DE SA VALEUR DE RETOUR ». Ecrite le 15/10, cette fonction a refait la meme faute,
+    #   et la mesure du 16/10 a 00:45 l'a prise :
+    #     · elle rendait @("--- 1/4 ...", <toute la sortie de node>, $true|$false) ;
+    #     · or `-not` d'un tableau NON VIDE vaut $false
+    #       -> UNE LIGNE EN ECHEC N'ETAIT JAMAIS COMPTEE : $echecs restait vide, la tache
+    #          sortait 0, le planificateur etait vert et LE MONITEUR SE TAISAIT (elle y
+    #          est en `critical`, il lit LastTaskResult) ;
+    #     · et les 4 marqueurs « --- x/4 » n'arrivaient JAMAIS au journal (951 caracteres
+    #       la 1re nuit : l'ouverture et la fermeture, rien entre les deux).
+    #   C'etait la 6e fois que cette famille de defaut sortait dans ce projet, et le gel
+    #   du 20/08 avait dure 7 SEMAINES.
+    #
+    #   REMEDE, deux mots : `Write-Host` (va a l'hote, donc au journal de transcription,
+    #   et PAS au flux de sortie) et `| Out-Host` sur l'appel a node (sinon c'est SA
+    #   sortie qui polluerait le retour). $LASTEXITCODE reste renseigne apres `| Out-Host`.
+    #   La fonction ne rend donc plus QU'UN SEUL booleen -- c'est ce que l'epreuve verifie
+    #   (scheduled/test_detecteur_echec_entretien.ps1), en executant CE code, pas une
+    #   imitation : l'avertissement du 03/10 dit aussi « eprouver, c'est executer LE code ».
     function Invoke-Ligne {
         param([string]$Titre, [string[]]$Arguments)
-        Write-Output "--- $Titre"
-        & $nodeExe @Arguments
+        Write-Host "--- $Titre"
+        & $nodeExe @Arguments | Out-Host
         $code = $LASTEXITCODE
         if ($code -ne 0) {
-            Write-Output "--- $Titre : ECHEC (code $code)"
+            Write-Host "--- $Titre : ECHEC (code $code)"
             return $false
         }
         return $true
