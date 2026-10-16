@@ -1342,3 +1342,67 @@ la note à la place du texte.
 ➡ **Règle : du texte Markdown ne passe JAMAIS par une chaîne bash entre guillemets
 doubles.** On écrit un fichier `.py` et on le lance. *(Déjà arrivé le matin même sur
 `CLAUDE.md`, où « fd8a042 » avait disparu du texte.)*
+
+---
+
+## 12. LA DATE DE CLÔTURE PASSE CHEZ PAULINE — 16/10/2026
+
+> *« il faut donc que ce soit dans la vue suivie et la tâche pour Pauline annulation de
+> mandat qui gère la date de clôture et l’affiche »* — Frédéric, 16/10
+
+**C’est la suite logique de sa consigne précédente.** Si clôturer passe toujours par la
+demande d’annulation, alors c’est **l’acceptation qui clôt** — et la date doit se décider
+là, pas ailleurs.
+
+### Ce que l’audit a trouvé avant de coder
+
+| | |
+|---|---|
+| le chemin de Pauline | la modale de demande → statut « accepté » → une **fenêtre de confirmation** *(« Finaliser l’annulation ? », Oui/Non)* → `handleUpdateDiffusionRequest` |
+| qui clôt vraiment | **le « Oui » seulement** : la clôture A5 est dans `if (status === 'accepted' && unpublishAfterCancellation)` |
+| ce que la charge portait | `requestId, status, response, refusalReason, followUpNeeded, followUpDays, relaunchCount, cancellationChecked, unpublishAfterCancellation` — **aucune date** |
+| donc la clôture valait | **toujours le jour de l’acceptation** *(le worker retombait sur son repli)* |
+| ce que la vue Suivi montre par demande | type, n°, date de demande, n° de mandat, bien, commercial, statut, motif — **aucune date de clôture** |
+
+### Ce qui est écrit
+
+1. **`closeDate` entre dans la charge de l’action** *(`UpdateDiffusionRequestAction`)*.
+2. **Un champ « Date de clôture du mandat » dans la fenêtre de confirmation**, posé au
+   **jour courant** à l’ouverture et modifiable. Il est montré **avant** le choix Oui/Non,
+   pour que la date soit décidée **avant** le clic et pas après.
+   ⚠ Il ne sert qu’au « Oui » : c’est lui seul qui clôture. C’est dit dans le code.
+3. **Le chaînage A5 la transmet** : `closeDate` → `close_date` dans la charge du travail.
+   ⭐ **C’est exactement ce pour quoi la pièce 1 avait été faite** le matin même : le worker
+   lit `close_date` **en premier**. Rien à changer de son côté, **aucun redémarrage**.
+4. **Et la date s’écrit CHEZ NOUS tout de suite** *(`setMandatClotureApp`)*, doctrine du
+   chantier ③. Sans ça, la vue Suivi ne la montrerait qu’après le passage du worker
+   (~30 s), et Pauline croirait son geste perdu.
+   ⭐ **Les deux écritures ne peuvent plus se contredire**, puisqu’on vient de donner la
+   même valeur au worker — c’était tout l’objet de la pièce 1.
+   ⚠ Un échec ici **ne fait pas échouer le geste** *(la demande est déjà acceptée, le
+   travail déjà créé)* — mais il est **dit à l’écran**, traduit en français par
+   `messageRefusCloture()`, pas avalé.
+5. **La vue Suivi l’affiche** : une sous-ligne **« Clos le 14/10/2027 »** sous le numéro de
+   mandat, dans le tableau des demandes. Rien quand le mandat n’est pas clos — pas de tiret.
+6. **Deux classes CSS neuves** : `price-drop-popup-field` *(reprend le cadre de
+   `price-drop-popup-detail` juste au-dessus)* et `suivi-cloture` *(même rôle que
+   `register-cloture`)*. Aucune variable de couleur nouvelle.
+
+### Les épreuves
+
+`npm run build` **vert**. Témoins dans le fichier construit : « Date de clôture du mandat »
+**2** *(la modale de statut + la nouvelle fenêtre)*, `close_date` **1**, « Clos le » **2**,
+`suivi-cloture` **1** *(et 1 dans la CSS)*, `price-drop-popup-field` **1** *(et 4 dans la
+CSS)*.
+
+### ⛔ CE QUI RESTE À DIRE
+
+1. ⚠⚠ **Le chemin de Pauline n’a jamais tourné en production** : les 4 demandes
+   d’annulation acceptées datent de **mai**, le chaînage A5 est de **juillet**
+   *(§ 1 de cette note)*. Ce code est donc **écrit mais jamais éprouvé en réel** — il le
+   sera à la première vraie demande acceptée.
+2. ⚠ **« Non » ne clôture pas**, donc la date saisie est alors sans effet. C’est le
+   comportement d’avant, inchangé — mais la fenêtre montre le champ dans les deux cas.
+   À trancher par Frédéric s’il veut que « Non » le cache.
+3. ⚠ **La modale de statut clôt toujours sans passer par la demande** *(déjà réservée
+   admin/manager)* — rappel du § 11, toujours à trancher.

@@ -2242,6 +2242,49 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* ① 7-3a (16/10/2026) : le champ « Date de clôture du mandat » dans la fenêtre
+   de confirmation d'annulation. Il reprend le cadre de .price-drop-popup-detail
+   juste au-dessus -- même boîte, mêmes couleurs, aucune variable nouvelle. */
+.price-drop-popup-field {
+  width: 100%;
+  margin: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.price-drop-popup-field > span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b8191;
+}
+.price-drop-popup-field input[type="date"] {
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid rgba(211, 221, 228, 0.95);
+  border-radius: 8px;
+  background: #fff;
+  color: #27313a;
+  font-variant-numeric: tabular-nums;
+}
+.price-drop-popup-field input[type="date"]:disabled { opacity: 0.55; }
+
+/* ② 7-3a : la clôture, en sous-ligne de la colonne « Mandat » du Suivi.
+   Même rôle que la sous-ligne du registre (register-cloture) : une précision
+   sous une valeur, discrète, qui ne pousse aucune colonne. */
+.suivi-cloture {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b6b4a;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .price-drop-popup-actions {
   width: 100%;
   display: flex;

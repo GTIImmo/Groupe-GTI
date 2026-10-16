@@ -6459,6 +6459,13 @@ type UpdateDiffusionRequestAction = {
   runValidationWorkflow?: boolean
   cancellationChecked?: boolean
   unpublishAfterCancellation?: boolean
+  /** ⑦-3a (16/10/2026) : LA DATE DE CLÔTURE, SAISIE PAR PAULINE AU MOMENT D'ACCEPTER.
+   *
+   *  Pourquoi ici et pas ailleurs : depuis cet après-midi, clôturer passe
+   *  SYSTÉMATIQUEMENT par la demande d'annulation, même pour un admin. C'est donc
+   *  l'acceptation qui clôt — et c'est là que la date doit se décider.
+   *  ⚠ Absente = le worker garde son repli (le jour de l'acceptation). */
+  closeDate?: string
 }
 
 function detailVariantForScreen(screen: Screen): 'annonce' | 'mandat' | 'suivi' {
@@ -12909,6 +12916,10 @@ export default function App() {
     hektorAnnonceId: number | string | null
     pendingAction?: UpdateDiffusionRequestAction
   }>(null)
+  // ⑦-3a (16/10/2026) : la date que Pauline fixe en acceptant l'annulation.
+  // Remise au jour courant à chaque ouverture de la fenêtre de confirmation —
+  // c'est le cas de loin le plus fréquent, et elle reste modifiable.
+  const [cancellationCloseDate, setCancellationCloseDate] = useState('')
   const [cancellationCheckPrompt, setCancellationCheckPrompt] = useState<null | {
     kind: 'confirmed'
     title: string
@@ -17217,6 +17228,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setPriceDropCheckPrompt(null)
         setValidationCheckPrompt(null)
         if (input.status === 'accepted' && !input.cancellationChecked) {
+          // ⑦-3a (16/10) : on propose le jour courant, Pauline peut le changer.
+          setCancellationCloseDate(input.closeDate?.trim() || todayInputDate())
           setCancellationCheckPrompt({
             kind: 'confirmed',
             title: 'Finaliser l annulation ?',
@@ -17297,10 +17310,42 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               closeEtat: 'choiceAutre',
               closeRaison: 'autre',
               closeReason: `Annulation de mandat acceptee${input.response ? ` - ${input.response}` : ''}`.slice(0, 240),
+              // ⑦-3a (16/10/2026) : LA DATE QUE PAULINE VIENT DE FIXER.
+              // Sans elle, le worker retombait sur `transaction_date` puis sur le
+              // jour courant : la clôture portait toujours la date de l'acceptation,
+              // jamais celle du mandat. `close_date` est son PREMIER choix.
+              closeDate: input.closeDate?.trim() || undefined,
               priority: 7,
             })
             rememberHektorActionJob(closeJob)
             acceptanceInfoMessage = `${acceptanceInfoMessage ?? 'Demande d annulation de mandat acceptee.'} Cloture du mandat demandee a Hektor.`
+
+            // ⭐ ET CHEZ NOUS TOUT DE SUITE -- doctrine du chantier ③ (« chez nous
+            //   d'abord »). Sans ça, la vue Suivi ne montrerait la date qu'après le
+            //   passage du worker (~30 s), et Pauline croirait son geste perdu.
+            //   ⚠ LE WORKER ÉCRIRA LA MÊME VALEUR, puisqu'on vient de la lui donner :
+            //     les deux écritures ne peuvent plus se contredire. C'était tout
+            //     l'objet de la pièce 1.
+            //   ⚠ Un échec ici NE DOIT PAS faire échouer le geste : la demande est
+            //     déjà acceptée et le travail déjà créé. Même règle que la modale de
+            //     statut. On le DIT dans le message, on ne le tait pas.
+            const numeroPourCloture = String(closeSrc?.numero_mandat ?? '').trim()
+            const annoncePourCloture = String(currentRequest.hektor_annonce_id ?? '').trim()
+            if (numeroPourCloture && annoncePourCloture && input.closeDate?.trim()) {
+              try {
+                const pose = await setMandatClotureApp({
+                  hektorAnnonceId: annoncePourCloture,
+                  numeroMandat: numeroPourCloture,
+                  dateCloture: input.closeDate.trim(),
+                })
+                if (!pose.ok) {
+                  acceptanceInfoMessage = `${acceptanceInfoMessage} Mais la date n a pas pu etre enregistree chez nous : ${messageRefusCloture(pose.erreur)}`
+                }
+              } catch (erreurCloture) {
+                const message = erreurCloture instanceof Error ? erreurCloture.message : 'erreur inconnue'
+                acceptanceInfoMessage = `${acceptanceInfoMessage} Mais la date n a pas pu etre enregistree chez nous : ${message}`
+              }
+            }
           } catch (error) {
             const closeError = error instanceof Error ? error.message : 'cloture Hektor impossible'
             acceptanceInfoMessage = `${acceptanceInfoMessage ?? 'Demande d annulation de mandat acceptee.'} Mais la cloture du mandat n a pas pu etre lancee : ${closeError}`
@@ -21087,6 +21132,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               {cancellationCheckPrompt.detail ? (
                 <p className="price-drop-popup-detail">{cancellationCheckPrompt.detail}</p>
               ) : null}
+              {/* ⑦-3a (16/10/2026) : LA DATE DE CLÔTURE SE DÉCIDE ICI.
+                  Depuis cet après-midi, clôturer passe SYSTÉMATIQUEMENT par la
+                  demande d'annulation — même pour un admin. C'est donc
+                  l'acceptation qui clôt, et c'est à Pauline de dire à quelle date.
+                  ⚠ Elle ne sert qu'au « Oui » : c'est lui seul qui clôture. On la
+                    montre quand même avant le choix, pour qu'elle soit décidée
+                    AVANT le clic et pas après.
+                  ⚠ Vide = le worker retombe sur le jour courant (son repli). */}
+              <label className="filter-field price-drop-popup-field">
+                <span>Date de clôture du mandat</span>
+                <input
+                  type="date"
+                  value={cancellationCloseDate}
+                  disabled={requestLoading}
+                  onChange={(event) => setCancellationCloseDate(event.target.value)}
+                />
+              </label>
               <div className="price-drop-popup-actions">
                 <button
                   className="ghost-button button-subtle"
@@ -21096,6 +21158,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     ...cancellationCheckPrompt.pendingAction,
                     cancellationChecked: true,
                     unpublishAfterCancellation: false,
+                    closeDate: cancellationCloseDate,
                   })}
                 >
                   Non
@@ -21108,6 +21171,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     ...cancellationCheckPrompt.pendingAction,
                     cancellationChecked: true,
                     unpublishAfterCancellation: true,
+                    closeDate: cancellationCloseDate,
                   })}
                 >
                   Oui
@@ -25702,7 +25766,21 @@ function SuiviMandatsScreenV2(props: {
                 {suiviRequestRows.length > 0 ? suiviRequestRows.map(({ mandat: item, request: activeRequest }) => (
                   <tr key={`${item.app_dossier_id}-${activeRequest.id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
                     <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>N° demande {requestNumberLabel(activeRequest)}</span><span>{formatDate(activeRequest.requested_at)}</span></td>
-                    <td><strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong><span>{item.titre_bien}</span></td>
+                    {/* ⑦-3a (16/10/2026) : LA DATE DE CLÔTURE SE VOIT ICI.
+                        C'est la vue où Pauline suit ses demandes d'annulation, et
+                        depuis cet après-midi c'est son acceptation qui clôt le
+                        mandat. Elle doit donc pouvoir lire le résultat de son geste
+                        sans ouvrir la fiche.
+                        ⚠ `item.mandat_date_cloture` est la RÉSULTANTE de la vue :
+                          notre date d'abord, celle de Hektor ensuite.
+                        ⚠ Rien quand le mandat n'est pas clos — pas de tiret. */}
+                    <td>
+                      <strong>{item.numero_mandat ?? item.numero_dossier ?? '-'}</strong>
+                      <span>{item.titre_bien}</span>
+                      {(item.mandat_date_cloture ?? '').trim()
+                        ? <span className="suivi-cloture">Clos le {formatDate(item.mandat_date_cloture)}</span>
+                        : null}
+                    </td>
                     <td>{commercialDisplay(item)}</td>
                     <td><small>{requestStatusLabel(activeRequest.request_status)}</small><StatusPill value={item.statut_annonce} /></td>
                     <td><small>{activeRequest.request_reason || activeRequest.request_comment || 'Sans motif'}</small></td>
