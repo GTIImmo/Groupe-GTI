@@ -220,6 +220,15 @@
    Discrete par choix : la carte parle d'abord de la RECHERCHE ; le mandat
    est ce qui l'autorise, pas son sujet. Une ligne, qui ne pousse rien. */
 .fa-contact-v2 .fa-cx-srch-mandat { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* A.3 (16/10/2026) : le bandeau des mandats de recherche qu'aucune carte ne porte.
+   Il se distingue d'une carte -- c'est une MENTION, pas une recherche : pas d'icone
+   de maison, pas de bouton, un fond neutre. Il dit ce qu'on sait et avoue ce qu'on
+   ignore (« recherche non determinee ») plutot que de deviner. */
+.fa-contact-v2 .fa-cx-srch-mandats-orph { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.fa-contact-v2 .fa-cx-srch-morph { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px dashed color-mix(in srgb, var(--muted) 38%, transparent); border-radius: 8px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fa-contact-v2 .fa-cx-srch-morph svg { width: 13px; height: 13px; flex: 0 0 auto; opacity: .7; }
+.fa-contact-v2 .fa-cx-srch-morph-tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-contact-v2 .fa-cx-srch-morph-tag { margin-left: auto; flex: 0 0 auto; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; opacity: .75; }
 .fa-contact-v2 .fa-cx-srch-mandat svg { width: 12px; height: 12px; flex: 0 0 auto; opacity: .75; }
 .fa-contact-v2 .fa-cx-srch-mandat span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Dépliage de la liste complète des communes (repliée par défaut sur le décompte) */

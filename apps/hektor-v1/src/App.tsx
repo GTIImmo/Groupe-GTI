@@ -149,6 +149,7 @@ import {
   loadActiveHektorActionJobs,
   loadConsoleJobsByIds,
   loadContactRelations,
+  loadContactMandatsRecherche,
   loadContactSearches,
   loadContactActivite,
   type ContactActivityItem,
@@ -41288,6 +41289,11 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const [contactActivityLoading, setContactActivityLoading] = useState(false)
   const [activityFilter, setActivityFilter] = useState('all')
   const [rapproCounts, setRapproCounts] = useState<Record<string, number>>({}) // « N biens » par recherche
+  // A.3 (16/10/2026) : les mandats de recherche de ce contact. Ceux qu'une
+  // carte porte deja sont affiches DESSUS (api.ts les y accroche) ; ceux que
+  // personne ne porte vont dans le bandeau, sinon ils n'existent nulle part
+  // pour un negociateur -- l'ecran registre, lui, est reserve aux managers.
+  const [mandatsRecherche, setMandatsRecherche] = useState<AppContactMandatRecherche[]>([])
   const [contactRelances, setContactRelances] = useState<RelanceRow[]>([])
   const [contactRelancesLoading, setContactRelancesLoading] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
@@ -41305,6 +41311,13 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   // orphelin). Mais elles n'ont rien à faire dans la liste : on ne montre que les
   // vivantes. Le compteur « Recherches archivées » plus bas dit qu'elles existent.
   const orderedSearches = selectedActiveSearches
+  // Les mandats de recherche qu'AUCUNE carte visible ne porte. On compare sur le
+  // NUMERO, pas sur la cle : c'est l'accrochage de api.ts qui fait foi, et il a
+  // deja son propre repli (cle puis search_index).
+  const numerosPortes = new Set(
+    orderedSearches.map((s) => s.mandat_recherche?.numero_mandat).filter(Boolean))
+  const mandatsRechercheOrphelins = mandatsRecherche.filter(
+    (m) => !numerosPortes.has(m.numero_mandat))
   const roleLabels = selectedRoles.map((role) => contactDirectoryRoleLabel(role))
   const expectedDeleteConfirm = `SUPPRIMER CONTACT ${props.contact.hektor_contact_id}`
   const contactFullName = `${props.contact.civilite ? `${props.contact.civilite} ` : ''}${[props.contact.prenom, props.contact.nom].filter(Boolean).join(' ') || props.contact.display_name}`.trim()
@@ -41608,6 +41621,10 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     loadRapprochementCountsForContact(props.contact.hektor_contact_id)
       .then((counts) => { if (!cancelled) setRapproCounts(counts) })
       .catch(() => { if (!cancelled) setRapproCounts({}) })
+    setMandatsRecherche([])
+    loadContactMandatsRecherche(props.contact.hektor_contact_id)
+      .then((rows) => { if (!cancelled) setMandatsRecherche(rows) })
+      .catch(() => { if (!cancelled) setMandatsRecherche([]) })
     return () => { cancelled = true }
   }, [props.contact.hektor_contact_id])
 
@@ -41973,6 +41990,27 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
               </div>
 
               <section className="fa-cx-mod full" style={{ ['--sc']: '#2f7c86' } as CSSProperties}>
+                {/* A.3 (16/10/2026) : LES MANDATS DE RECHERCHE QU'AUCUNE CARTE NE PORTE.
+                    Mesure du 16/10 : sur 38 mandats de recherche, 20 se rattachent a UNE
+                    recherche et s'affichent sur sa carte ; les 18 autres n'etaient visibles
+                    QUE sur l'ecran registre, reserve aux managers -- un negociateur ne les
+                    voyait nulle part.
+                    (!) LE TEST EST « AUCUNE CARTE VISIBLE NE LE PORTE », pas « la cle est
+                      vide » : il couvre AUSSI le mandat rattache a une recherche ARCHIVEE,
+                      que la liste ne montre pas (orderedSearches = les actives seules).
+                      Et il reutilise l'accrochage fait dans api.ts : aucune regle en double. */}
+                {mandatsRechercheOrphelins.length > 0 ? (
+                  <div className="fa-cx-srch-mandats-orph">
+                    {mandatsRechercheOrphelins.map((mandat) => (
+                      <div key={`fa-cx-morph-${mandat.numero_mandat}`} className="fa-cx-srch-morph"
+                           title={mandat.designation ?? undefined}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /><path d="M9 13h6M9 17h4" /></svg>
+                        <span className="fa-cx-srch-morph-tx">{contactSearchMandatLabel(mandat)}</span>
+                        <span className="fa-cx-srch-morph-tag">recherche non déterminée</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {props.dataLoading && orderedSearches.length === 0 ? (
                   <div className="fa-cx-srch-loading" aria-busy="true" aria-label="Chargement des recherches…">
                     <span className="fa-cx-skel fa-cx-skel-ic" />
