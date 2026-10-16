@@ -92,6 +92,72 @@ les nomme, pour que Frédéric puisse en trancher à la main s'il le veut.
 
 ---
 
+## 4-bis. ⭐ RÉVISION DU 16/10, APRÈS DEUX DE MES PROPRES ERREURS — **95 %**
+
+Frédéric a demandé si **se limiter aux lignes de 2020 à 2026** améliorait le taux, puis
+de travailler les trois groupes de ratés. Les deux questions ont fait tomber deux
+erreurs **de ma mesure**, pas de ses données.
+
+### ① Non, la période ne change rien — le taux est PLAT
+
+```
+2018  92 %     2021  92 %     2024  84 %
+2019  92 %     2022  91 %     2025  92 %
+2020  89 %     2023  88 %     2026  92 %
+
+de 2020 à 2026 : 90 %   ← identique au total
+de 2023 à 2026 : 89 %   ← légèrement moins bien
+```
+
+Les ratés ne sont pas vieux, ils sont répartis. ⭐ **Mais limiter le périmètre reste
+utile — pas pour la précision, pour la CONTENANCE** : 1 302 lignes touchées (2024-2026)
+au lieu de 4 766, dans un classeur qui nourrit la paie.
+
+### ② ⚠ MON PARSEUR DE PRIX ÉTAIT CASSÉ, et il gonflait le score
+
+`re.sub(r"[^\d]", "", x)` retirait **le point décimal** : `55000.00` devenait **5 500 000**.
+Le critère « prix » ne collait donc jamais aux compromis ni aux ventes, et ne désignait
+une chaîne unique **que par accident**. Corrigé, il colle à plusieurs chaînes et
+discrimine moins : **le taux retombe de 94 % à 92 %.** Mon 94 % était dû au bug.
+
+### ③ ⭐⭐ ET 163 DES 178 « AMBIGUÏTÉS » N'EN SONT PAS
+
+Ce sont **des doublons de NOTRE chaînage** : plusieurs `app_chaine_id` pour la même
+affaire réelle, sur **le même bien**. Vérifié : les chaînes à égalité partagent toutes
+la même annonce. Prendre le plus petit identifiant les résout, et c'est juste — elles
+décrivent la même transaction.
+
+```
+appariées                                4 563   95 %
+aucun critère ne parle                      15
+mandat inconnu chez nous                   182
+ligne sans numéro de mandat                  6
+───────────────────────────────────────────────
+non appariées                              203    5 %
+```
+
+### La méthode retenue : un SCORE, pas une cascade
+
+| critère | points |
+|---|---|
+| le nom de l'acquéreur se retrouve | **3** |
+| le prix concorde à l'euro | 2 |
+| la date de l'offre concorde | 2 |
+| la date du compromis concorde | 2 |
+
+On garde la chaîne au meilleur score, **et seulement si elle est seule** — sauf si les
+ex æquo portent sur le même bien, auquel cas on prend le plus petit identifiant.
+⛔ Score nul = on ne tranche pas.
+
+### Ce qui reste, et ce qu'on en fait
+
+| | quoi | décision |
+|---|---|---|
+| **15** | aucun critère ne parle | on saute, et on les liste |
+| **182** | mandat inconnu de notre registre — dont **77 présents dans `app_mandat`**, et parmi eux les **mandats de recherche** importés le 15/10 *(17758, 17705, 17651, 17642…)*. Passer par le registre ne récupère que **4** lignes : les autres sont des mandats **sans bien**, dont la transaction réelle est sur un AUTRE bien | à creuser par le CONTACT, si Frédéric le veut |
+| **6** | pas de numéro de mandat | on saute |
+
+---
 ## 5. ⚠⚠ LE VRAI DANGER N'EST PAS TECHNIQUE — `Sheet1` NOURRIT LA PAIE
 
 `Calcul Salaire`, `CA Mensuel`, `Reporting` et `12 mois lissants` portent des montants
