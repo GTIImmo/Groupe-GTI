@@ -158,6 +158,124 @@ ex æquo portent sur le même bien, auquel cas on prend le plus petit identifian
 | **6** | pas de numéro de mandat | on saute |
 
 ---
+## 4-ter. ⭐⭐⭐ LA MÉTHODE COMPLÈTE — **98 %**, chaque échelon avec un cas réel
+
+Frédéric : « explique-moi mieux les correspondances et comment, avec du détail ».
+
+### Le principe
+
+**Une ligne du classeur = une affaire chez nous = un `app_chaine_id`.** La chaîne relie
+l'offre, le compromis et la vente d'un même acquéreur sur un même bien. Trouver la bonne
+chaîne, c'est pouvoir écrire notre clé en colonne A — et ensuite modifier la ligne quand
+on veut.
+
+### Les quatre informations comparées, et leur poids
+
+| information | poids | pourquoi ce poids |
+|---|---|---|
+| le **nom de l'acquéreur** se retrouve | **3** | c'est ce qui ment le moins : un nom ne se négocie pas |
+| le **prix** concorde à l'euro | 2 | il bouge entre l'offre et le compromis (4,1 % des chaînes) |
+| la **date de l'offre** concorde | 2 | précise, mais parfois vide |
+| la **date du compromis** concorde | 2 | idem |
+
+On garde la chaîne au **meilleur score**, et **seulement si elle est seule**.
+⛔ **Score nul = on ne tranche pas.** Jamais.
+
+### Les 8 échelons
+
+**① Le numéro de mandat suffit — 2 985 lignes (62 %)**
+```
+ligne 4   mandat 17522 · REYNARD/DHINNIN · 195 000 · offre 06/05 · compromis 03/07
+une seule chaîne : 28182, bien 54785, 195 000, mêmes dates      -> 28182
+```
+
+**② Le NOM tranche — 1 058 lignes (22 %)**
+```
+ligne 72  mandat 17285 · CHESNE Gregory · 18 000
+   chaîne 6363  compromis  bien 12273  16 000      score 3  (nom)
+   chaîne 6364  offre      bien 12273   7 600      score 0
+-> 6363, seule à marquer
+```
+
+**③ Le PRIX tranche — 89 lignes.** Quand le nom du classeur ne colle à aucune.
+```
+ligne 112 mandat 17004 · « SCI 3P » · 67 000 · compromis 10/03/2025
+   chaîne 23883  67 000 le 10/03/2025   score 4  (prix + date)
+   chaîne 23884  68 000                 score 0
+-> 23883
+```
+
+**④ Plusieurs critères ensemble — 7 lignes.**
+```
+ligne 2   mandat 17488 · DUCHET Cédric · 18 160
+   chaîne 28174  16 660   score 0
+   chaîne 28175  18 160   score 5  (nom + prix)      -> 28175
+```
+
+**⑤ La DATE seule — 266 lignes (6 %).** Ni le nom ni le prix ne parlent, mais une date au
+jour près suffit.
+
+**⑥ Les combinaisons — 2 lignes.**
+
+**⑦ ⭐ Les EX ÆQUO SUR LE MÊME BIEN — 163 lignes, et ce ne sont PAS des ambiguïtés**
+```
+ligne 67  mandat 14769 · MACHABERT Philippe · 6 800
+   chaîne 3698  compromis  bien 8494  6 800   score 5
+   chaîne 3699  compromis  bien 8494  6 800   score 5
+   chaîne 3700  offre      bien 8494  6 800   score 5
+   chaîne 3701  vente      bien 8494  6 800   score 5
+-> toutes sur LE BIEN 8494 : c'est la MÊME affaire réelle, découpée en 4 chaînes
+   par notre chaînage. On prend la plus petite (3698), et c'est juste.
+```
+
+**⑧ ⭐⭐ LE NOM + LA DATE, SANS LE MANDAT DU TOUT — 121 lignes**
+
+C'est l'échelon qui règle les « mandats inconnus », et il explique enfin leur cause :
+```
+ligne 3   mandat 17758 · SAGNARD Léna / FAURE Lucas · offre 09/05 · compromis 06/06
+          -> AUCUNE affaire ne porte le mandat 17758
+
+POURQUOI : 17758 est un MANDAT DE RECHERCHE (importé le 15/10). L'équipe a écrit
+le mandat de RECHERCHE dans la colonne Mandat ; notre registre connaît la
+transaction sous le mandat de VENTE 17564.
+   chaîne 11132 · bien 23297 · offre 09/05/2025 · compromis 06/06/2025 · « Faure »
+   les dates collent AU JOUR.                                     -> 11132
+```
+⚠ Cet échelon **ignore le mandat** : il ne compare que le nom et la date. C'est donc le
+plus faible — il vient **en dernier**, et seulement si une seule chaîne ressort.
+
+⭐ **Le détour du 15/10 sur les mandats de recherche sert exactement à ça** : sans eux,
+ces 121 lignes restaient non seulement non appariées, mais **incompréhensibles**.
+
+### Le compte final
+
+```
+① n° de mandat                    2 985   62 %
+② le nom                          1 058   22 %
+③ le prix                             89    2 %
+④ nom + prix                           7    0 %
+⑤ la date                            266    6 %
+⑥ combinaisons                         2    0 %
+⑦ ex æquo sur le même bien           163    3 %
+⑧ nom + date, sans le mandat         121    3 %
+────────────────────────────────────────────
+APPARIÉES                          4 684   98 %
+
+aucune candidate (pas chez nous)      50
+plusieurs candidates                  11
+aucun critère ne parle                15
+sans numéro de mandat                  6
+────────────────────────────────────────────
+non appariées                         82    2 %
+```
+
+### ⛔ Et les 82, on n'y touche pas
+
+Elles gardent leur colonne A vide, le code les saute, et la liste est donnée à Frédéric.
+**Deviner sur 82 lignes qui nourrissent une paie n'a aucun intérêt** : le gain serait de
+1,7 %, et le risque une erreur de salaire.
+
+---
 ## 5. ⚠⚠ LE VRAI DANGER N'EST PAS TECHNIQUE — `Sheet1` NOURRIT LA PAIE
 
 `Calcul Salaire`, `CA Mensuel`, `Reporting` et `12 mois lissants` portent des montants
