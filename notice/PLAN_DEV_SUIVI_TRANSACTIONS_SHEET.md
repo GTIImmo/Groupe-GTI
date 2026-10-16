@@ -196,7 +196,7 @@ nommés « Groupe GTI ». ⛔ **Bloquant pour le lot 3 (G9)** : rien d'autre.
 | 4 | `19401` *(bloc offre)* | **« Honoraires vendeur (agence) »** *(nouveau ici)* · « Honoraires acquéreur » *(déjà présent, intact)* · **« Charge de la commission »** Vendeur / Acquéreur, **nouveau partout**, défaut « Vendeur » (99,8 % des cas) |
 | 5 | `16699-16705` | ⚠ **ne rien ajouter à la charge Hektor** : appel séparé, après le geste |
 | 6 | `api.ts:1582` | ⭐ **ajouter les colonnes au `select`, qui les nomme une par une** — sinon elles existent en base et l'écran ne les voit jamais *(le projet s'est fait prendre deux fois le 13/10)* |
-| 7 | `App.tsx:26624` | la rubrique Affaires lit `commission_agence` : elle doit lire **notre** valeur d'abord |
+| 7 | ~~`App.tsx:26624`~~ | ⛔ **RETIRÉ LE 16/10 — CE POINT ÉTAIT FAUX.** Il demandait que la rubrique lise notre valeur « d'abord » à la place de `commission_agence`. Or **ce ne sont pas la même grandeur** : mesure sur **9 259 ventes**, `(honoraires entrée+sortie) / commission_agence` vaut **4,8** dans 43 % des cas, **1,2** dans 34 %, **2,4** dans 9 % — soit la **TVA**, puis la division par le **nombre d'agences qui partagent**. `commission_agence` est donc **la part HT de l'agence après partage**, et nos colonnes portent un **total TTC**. Les substituer aurait affiché un TTC là où s'affiche un HT. ➡ reste à faire : **afficher nos valeurs à l'OFFRE**, où Hektor n'a rien — à côté des honoraires, pas à la place de la commission |
 
 **Je ne touche pas** à `apresSaisieCommission` : il sort si le statut n'est ni compromis ni
 vente, et c'est voulu — l'offre n'a pas de net vendeur.
@@ -389,9 +389,13 @@ jour.
 
 ```
 À VOIR          les conditions suspensives (G15) -> « En attente de » ?
-À TRANCHER      la note du projet dit que commission_agence « n'est PAS un montant hors
-                taxes » ; la mesure dit l'inverse (rapport 1,2 = la TVA, puis /2, /4).
-                Corriger la note ?
+TRANCHÉ 16/10   commission_agence EST un montant HORS TAXES, et c'est LA PART DE
+                L'AGENCE après partage. Mesure sur les 9 259 ventes :
+                (honoraires entrée+sortie) / commission_agence vaut 4,8 (43 %),
+                1,2 (34 %) ou 2,4 (9 %) -- la TVA, puis /1, /2 ou /4 selon le
+                nombre d'agences. 86 % tombent exactement sur ces trois rapports,
+                0 % sur 1,0. ➡ LA NOTE DU PROJET EST FAUSSE sur ce point, et le
+                point 7 du lot 1 en découlait : il a été retiré.
 SIGNALÉ, non traité (ce sont des anomalies du classeur, pas du projet) :
   - l'onglet TOTAUX est MORT : ses 535 formules pointent vers #REF!
   - « Mois de règlement » (onglet Estimation) s'arrête à mai 2025

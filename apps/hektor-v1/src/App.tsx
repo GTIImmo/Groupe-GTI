@@ -150,6 +150,7 @@ import {
   loadActiveHektorActionJobs,
   loadConsoleJobsByIds,
   loadContactRelations,
+  ecrireAffaireCommission,
   loadContactMandatsRecherche,
   loadContactSearches,
   loadContactActivite,
@@ -12826,6 +12827,15 @@ export default function App() {
     useState<{ acquereur: boolean; mandant: boolean }>({ acquereur: false, mandant: false })
   const [statusChangeBuyerFees, setStatusChangeBuyerFees] = useState('')
   const [statusChangeBuyerFeesRate, setStatusChangeBuyerFeesRate] = useState('')
+  // ─── LOT 1c (16/10/2026) : QUI PAIE LA COMMISSION ───
+  //   Hektor n'a PAS cette notion. Mesure du 14/10 : sur 25 lignes ou le
+  //   classeur de suivi dit « Acquereur », 13 sont rangees cote vendeur chez
+  //   lui. Elle ne se deduit donc pas : il faut la SAISIR.
+  //   Defaut « vendeur » : 99,8 % des commissions y sont (mesure du 14/10).
+  const [statusChangeChargeCommission, setStatusChangeChargeCommission] = useState('vendeur')
+  // Leve des qu'on a pose une valeur de commission dans cette modale -- par la
+  // saisie OU par le prerenseignement. C'est lui qui decide si on appelle la RPC.
+  const [statusChangeCommissionTouchee, setStatusChangeCommissionTouchee] = useState(false)
   const [statusChangeNetSellerPrice, setStatusChangeNetSellerPrice] = useState('')
   // LES HONORAIRES DU VENDEUR -- la commission de l'agence. EN LECTURE SEULE :
   // Hektor les pose seul, depuis le mandat (tache 0.1, classe C), et l'app ne
@@ -15971,6 +15981,45 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie])
 
+  /** ─── LOT 1c : LA COMMISSION SE REPREND D'UNE ETAPE A L'AUTRE ───  16/10/2026
+   *
+   *  Decision de Frederic : « il faut que la donnee soit recuperee, et s'il ne
+   *  change rien cela la valide ». Donc on PRERENSEIGNE depuis l'offre de la
+   *  meme chaine, et on LEVE LE DRAPEAU -- le prerenseignement vaut saisie.
+   *
+   *  ⭐ LEVER LE DRAPEAU EST SON IDEE, ET ELLE EST MEILLEURE QUE LA MIENNE.
+   *    J'avais propose d'elargir la condition de `sellerFees` de « touche » a
+   *    « non vide » -- c'est-a-dire de modifier le code qui decide ce qui part
+   *    chez Hektor. Il a demande « pourquoi ne pas saisir auto ». Mesure :
+   *    `statusChangeHonorairesEntreeTouche` a UN SEUL LECTEUR, la charge du
+   *    geste. Le lever ici ne touche donc RIEN d'autre, et le geste reste intact.
+   *
+   *  ⚠ ON NE PRERENSEIGNE QUE SI ON A UNE VALEUR. Sans valeur, pas de drapeau,
+   *    donc rien n'est envoye -- on ne peut pas envoyer du vide, qui effacerait
+   *    la valeur de Hektor.
+   *  ⚠ ET JAMAIS PAR-DESSUS UNE SAISIE : on sort si le champ porte deja quelque
+   *    chose ou si le drapeau est leve.
+   */
+  useEffect(() => {
+    if (statusChangeStatus !== 'compromise' && statusChangeStatus !== 'sold') return
+    if (statusChangeHonorairesEntreeTouche || statusChangeHonorairesEntree.trim()) return
+    const courante = affaireCourantePourStatut()
+    const cle = courante?.app_chaine_id
+    if (cle == null) return
+    // L'offre de la MEME chaine, celle ou la commission a ete saisie.
+    const offre = statusChangeAffaires.find((a) => String(a.kind) === 'offre'
+      && a.app_chaine_id === cle)
+    const repris = String(offre?.honoraires_entree_app ?? '').trim()
+    if (!repris) return
+    setStatusChangeHonorairesEntree(repris)
+    setStatusChangeHonorairesEntreeTouche(true)
+    setStatusChangeCommissionTouchee(true)
+    const charge = String(offre?.charge_commission_app ?? '').trim()
+    if (charge) setStatusChangeChargeCommission(charge)
+    setNoticeMessage(`Commission reprise de l'offre : ${repris}. Modifiez-la si elle a change.`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie])
+
   /** Ajoute une condition, du catalogue ou libre. Trente au maximum -- la base
    *  en refuse davantage, et l'ecran doit dire la meme chose qu'elle. */
   function ajouterCondition(depuis: ConditionCatalogueRow | null) {
@@ -16144,6 +16193,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeNetSellerPrice('')
     setStatusChangeHonorairesEntree('')
     setStatusChangeHonorairesEntreeTouche(false)
+    setStatusChangeChargeCommission('vendeur')
+    setStatusChangeCommissionTouchee(false)
     setStatusChangeNetManuel(false)
     setStatusChangePrixVenteManuel(false)
     setStatusChangeSequestration('')
@@ -17145,6 +17196,45 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         // On le DIT, on ne le tait pas : c'est de l'argent.
         setNoticeMessage(`Transaction envoyee, mais la repartition de commission n'a pas ete enregistree : ${
           erreurRepartition instanceof Error ? erreurRepartition.message : 'erreur inconnue'}. A ressaisir.`)
+      }
+
+      // ─── LOT 1c : LA COMMISSION ET SA CHARGE, APRES LE GESTE ───  16/10/2026
+      //
+      // ⚠ APRES, ET JAMAIS DANS LA CHARGE. Meme raison que la repartition et les
+      //   conditions : si le travail chez Hektor echoue, on n'a pas ecrit une
+      //   commission rattachee a une transaction qui n'existe pas. Et un echec
+      //   ici ne fait pas echouer le geste -- il est DEJA parti.
+      // ⚠ L'AFFAIRE PEUT ETRE NEUVE : a la creation elle n'existe pas encore, et
+      //   son numero arrive dans la charge du travail. Meme repli que la
+      //   repartition juste au-dessus.
+      // ⚠ ON N'ECRIT QUE SI LA MODALE A TOUCHE LE SUJET (saisie OU
+      //   prerenseignement). Sans ce test, ouvrir puis envoyer effacerait la
+      //   commission d'une transaction dont on n'a rien voulu changer.
+      if (statusChangeCommissionTouchee) {
+        try {
+          const affaireCom = affaireCourantePourStatut()
+          const neufCom = (job as { payload_json?: { app_affaire_id?: number | string | null } } | null)
+            ?.payload_json?.app_affaire_id
+          const cibleCom = affaireCom ? Number(affaireCom.app_affaire_id)
+            : (neufCom == null ? null : Number(neufCom))
+          if (cibleCom != null && Number.isFinite(cibleCom)) {
+            await ecrireAffaireCommission(cibleCom, {
+              // ⚠ A L'OFFRE SEULEMENT pour les honoraires : au compromis et a la
+              //   vente ils partent chez Hektor par la charge du geste, et il les
+              //   rend a 99-100 %. Les doubler ici creerait deux verites.
+              ...(statusChangeStatus === 'offer' ? {
+                honoraires_entree_app: statusChangeHonorairesEntree.trim(),
+                honoraires_sortie_app: statusChangeBuyerFees.trim(),
+              } : {}),
+              // La charge, elle, reste a nous aux TROIS etapes.
+              charge_commission_app: statusChangeChargeCommission.trim(),
+            })
+          }
+        } catch (erreurCommission) {
+          // On le DIT, on ne le tait pas : c'est de l'argent.
+          setNoticeMessage(`Transaction envoyee, mais la commission n'a pas ete enregistree : ${
+            erreurCommission instanceof Error ? erreurCommission.message : 'erreur inconnue'}. A ressaisir.`)
+        }
       }
 
       // ─── LES CONDITIONS SUSPENSIVES, DANS LE MEME GESTE ───   16/09/2026
@@ -19990,6 +20080,46 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <label className="filter-field">
                           <span>Taux honoraires</span>
                           <input value={statusChangeBuyerFeesRate} onChange={(event) => setStatusChangeBuyerFeesRate(event.target.value)} inputMode="decimal" placeholder="0" />
+                        </label>
+                        {/* ═══ LOT 1c : LES HONORAIRES VENDEUR A L'OFFRE ═══  16/10/2026
+                            Demande de Frederic du 14/10. MESURE QUI L'A MOTIVEE :
+                            Hektor ne garde AUCUN honoraire a l'offre -- 0 % des
+                            11 187 lignes -- alors qu'il les garde a 99 % au compromis
+                            et 100 % a la vente. Et le classeur de suivi en porte 22
+                            sur 22. L'information existe donc, et nous la perdions.
+                            ⚠ CE CHAMP N'EXISTE QU'A L'OFFRE : au compromis et a la
+                              vente, celui qui est plus bas fait le travail ET part
+                              chez Hektor. Ici, Hektor n'en veut pas : la valeur va
+                              dans NOTRE colonne, par la RPC appelee apres le geste.
+                            ⚠ `apresSaisieCommission` n'est PAS appelee : elle sort
+                              d'elle-meme hors compromis/vente (l'offre n'a pas de net
+                              vendeur), et c'est voulu. */}
+                        {statusChangeStatus === 'offer' ? (
+                          <label className="filter-field">
+                            <span>Honoraires vendeur (agence)</span>
+                            <input value={statusChangeHonorairesEntree} onChange={(event) => {
+                              setStatusChangeHonorairesEntree(event.target.value)
+                              setStatusChangeHonorairesEntreeTouche(true)
+                              setStatusChangeCommissionTouchee(true)
+                            }} inputMode="numeric" placeholder="0" />
+                            <small className="sca-acq-etat">
+                              Enregistree chez nous : Hektor ne retient pas les honoraires a l&apos;offre.
+                            </small>
+                          </label>
+                        ) : null}
+                        {/* ═══ LOT 1c : QUI PAIE LA COMMISSION ═══
+                            Nouveau PARTOUT : Hektor n'a pas cette notion, et elle ne
+                            se deduit pas de ses chiffres (13 desaccords sur 25 lignes
+                            mesurees le 14/10). Elle reste chez nous aux trois etapes. */}
+                        <label className="filter-field">
+                          <span>Charge de la commission</span>
+                          <select value={statusChangeChargeCommission} onChange={(event) => {
+                            setStatusChangeChargeCommission(event.target.value)
+                            setStatusChangeCommissionTouchee(true)
+                          }}>
+                            <option value="vendeur">Vendeur</option>
+                            <option value="acquereur">Acquéreur</option>
+                          </select>
                         </label>
                         {/* ⚠ NET VENDEUR ET SEQUESTRE : LE COMPROMIS SEULEMENT --
                             14/09/2026. Releve EN DIRECT sur le formulaire de vente

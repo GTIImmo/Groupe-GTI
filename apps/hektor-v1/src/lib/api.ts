@@ -1491,6 +1491,11 @@ export function hasCompromisEnCours(item: { compromis_id?: string | number | nul
 
 export type AffaireLedgerRow = {
   app_affaire_id: number
+  /** Lot 1 (16/10/2026) : ce que NOUS avons saisi. Vide = personne ne s'est
+   *  prononce a cette etape. Ne bouge jamais quand une autre etape bouge. */
+  honoraires_entree_app?: string | null
+  honoraires_sortie_app?: string | null
+  charge_commission_app?: string | null
   app_dossier_id: number | null
   hektor_annonce_id: string | number | null
   kind: 'offre' | 'compromis' | 'vente' | string
@@ -1588,6 +1593,12 @@ const affaireLedgerSelect =
   'jours_validite,date_fin_retractation,' +
   'notaire_acquereur_id,notaire_acquereur_nom,notaire_mandant_id,notaire_mandant_nom,' +
   'taux_honoraire_entree,unites_entree_percent,unites_sortie_percent,notaires_origine,' +
+  // ⭐ Lot 1a/1c (16/10/2026) : LA COMMISSION ET SA CHARGE, SAISIES DES L'OFFRE.
+  //   ⚠⚠ CE SELECT NOMME SES COLONNES UNE PAR UNE. Une colonne absente d'ici
+  //     existe en base et l'ecran ne la voit JAMAIS -- sans aucune erreur. Le
+  //     projet s'est fait prendre DEUX FOIS le 13/10. C'est la premiere ligne
+  //     du lot 1c, et pas la derniere par hasard.
+  'honoraires_entree_app,honoraires_sortie_app,charge_commission_app,' +
   'app_chaine_id'
 
 /** ─── CE QUE SEUL L'ASSISTANT DE HEKTOR REND (10/09/2026) ───
@@ -1920,6 +1931,51 @@ export async function loadAffairesForDossier(appDossierId: number): Promise<Affa
     .order('app_affaire_id', { ascending: false })
   if (error) throw new Error(error.message)
   return (data ?? []) as unknown as AffaireLedgerRow[]
+}
+
+/** ─── LA COMMISSION SAISIE CHEZ NOUS, DES L'OFFRE (lot 1, 16/10/2026) ───
+ *
+ *  Mesure qui l'a motivee : Hektor ne garde AUCUN honoraire a l'offre
+ *  (0 % des 11 187 lignes), alors qu'il les garde a 99-100 % au compromis et
+ *  a la vente. Et la CHARGE (qui paie) n'existe pas chez lui : sur 25 lignes
+ *  ou le classeur de suivi dit « Acquereur », 13 sont rangees cote vendeur.
+ *
+ *  ⚠ A NE PAS CONFONDRE avec honoraires_entree / honoraires_sortie, qui sont
+ *    de CLASSE C : Hektor les calcule, il fait foi, elles sont relues a chaque
+ *    run. Le suffixe `_app` dit la valeur QUE NOUS AVONS SAISIE.
+ */
+export type AffaireCommissionFields = Partial<{
+  honoraires_entree_app: string
+  honoraires_sortie_app: string
+  /** 'vendeur' | 'acquereur'. La RPC normalise la casse et les accents. */
+  charge_commission_app: string
+}>
+
+/**
+ * Pose la commission et sa charge sur UNE SEULE affaire -- celle qu'on vient de
+ * traiter. Elle ne touche jamais une autre etape de la chaine : l'offre, le
+ * compromis et la vente sont trois LIGNES, et le UPDATE porte un WHERE sur une
+ * seule. C'est la demande de Frederic du 16/10, tenue par la forme de la
+ * requete et pas par une regle qu'on pourrait oublier.
+ *
+ * ⛔ RIEN NE PART CHEZ HEKTOR PAR ICI. Au compromis et a la vente, les
+ *   honoraires y vont par le chemin du geste (`sellerFees` / `buyerFees`), qui
+ *   existe deja. Cette fonction ecrit trois colonnes chez nous, un point.
+ * ⚠ A APPELER APRES LE GESTE, jamais dans sa charge : un echec ici ne doit pas
+ *   annuler un changement de statut deja parti.
+ */
+export async function ecrireAffaireCommission(
+  appAffaireId: number,
+  fields: AffaireCommissionFields,
+): Promise<{ ok: boolean; champs_retenus: number; champs_ignores: number }> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { data, error } = await supabase.rpc('app_affaire_commission_ecrire', {
+    target_affaire_id: appAffaireId,
+    edit_fields: fields,
+  })
+  if (error) throw new Error(error.message)
+  return data as { ok: boolean; champs_retenus: number; champs_ignores: number }
 }
 
 /** Les champs qu'une correction peut porter. Miroir de CHAMPS_APP_AFFAIRE côté serveur. */
