@@ -14,6 +14,17 @@ from collections import defaultdict
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
+# (!!) LA RACINE AU CHEMIN, ET CE N'EST PAS DECORATIF -- 16/10/2026.
+#   Tous les appelants de ce module l'importent en `phase2.sync.export_app_payload`,
+#   donc la racine est deja la et `from phase2.sync... import` marche. MAIS lance
+#   COMME SCRIPT (`python phase2/sync/export_app_payload.py`), sys.path[0] vaut
+#   `phase2/sync` : l'import des MANDATS SANS BIEN echoue alors sur
+#   « No module named 'phase2' », et comme il est garde par un try/except pour
+#   ne pas faire tomber le registre, il echoue EN SILENCE -- le registre sort
+#   ampute de ses 38 mandats de recherche, sans que rien ne crie.
+#   Trouve en eprouvant la piece 4, pas en relisant le code.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 OUTPUT_JSON = ROOT / "phase2" / "docs" / "APP_PAYLOAD_V1_SAMPLE.json"
@@ -2708,10 +2719,193 @@ def mandats_json_corrige(
             mandants_reecrits, montants_corriges)
 
 
+# =============================================================================
+# A.3 PIECE 4 -- LE BLOC MANDAT DE LA FICHE SE COMPLETE CHEZ NOUS   16/10/2026
+# =============================================================================
+# Frederic, le 15/10 : « normalement le bloc mandat de l'annonce doit lire chez
+# nous plus le miroir ». Aujourd'hui il lit `hektor_annonce_detail.mandats_json`,
+# la reponse brute de Hektor. Notre registre, lui, garde TOUT pour toujours.
+#
+# --- CE QUE LA MESURE DONNE, ET ELLE EST PLUS MAIGRE QUE JE NE L'AI DIT -------
+# Sur 26 822 biens portant un mandat, 13 mandats de notre registre manquent au
+# bloc de la fiche. Le detail compte, parce que le front a une BRANCHE DE REPLI
+# quand le bloc est vide (App.tsx : `if (rawMandats.length > 0)` ... sinon un
+# bloc « Mandat source » bati sur les colonnes du dossier) :
+#      10  une carte VRAIMENT absente apparait   <- le gain reel
+#       2  63003 et 63244 : le dossier porte DEJA ce numero, donc le repli
+#          l'affiche. Elles gagnent une vraie carte, pas une information.
+#       1  62038 : le bien n'est pas dans app_dossier_current (vendu/clos/
+#          archive -- lecon du projet), la fiche n'est pas atteignable par la.
+# * J'avais annonce « 3 fiches muettes ». C'etait FAUX : le repli parle. Mesure
+#   refaite en lisant le front, pas en raisonnant sur la base.
+#
+# --- POURQUOI LE FAIRE QUAND MEME, POUR 10 FICHES -----------------------------
+# Le but n'est pas les 10 : c'est que le bloc CESSE DE DEPENDRE DU SEUL MIROIR.
+# Le jour ou Hektor se detache, `mandats_json` ne sera plus alimente ; le bloc
+# lira notre registre et continuera de marcher. Les 10 sont la PREUVE que le
+# chemin fonctionne, pas la raison de l'ouvrir.
+#
+# --- CE QU'ON A CHOISI, ET CE QU'ON A ECARTE ----------------------------------
+# OUI  CARTES COMPLETES, pas de mention repliable. Mesure du 16/10 : 26 771
+#      biens sur 26 822 (99,8 %) ne portent QU'UN mandat, 50 en portent deux,
+#      1 en porte trois. Un repliable serait un bouton pour cacher deux cartes
+#      sur 10 fiches, et il ajouterait un clic aux 26 771 fiches a mandat
+#      unique : on abimerait 99,8 % des fiches pour soigner 0,04 %. Decision
+#      prise par moi, Frederic ayant dit « je te laisse verifier je sais pas ».
+# OUI  ZERO LIGNE DE FRONT. Le front regroupe deja `mandats_json` par numero et
+#      fabrique une carte par groupe (App.tsx:18562). Une entree de plus = une
+#      carte de plus. Meme patron que le lot 1 du 06/10 (commit 4ec2e2d).
+# NON  PAS DE MONTANT DANS NOS ENTREES, ET C'EST UN GARDE-FOU, PAS UN OUBLI.
+#      app_mandat ne porte pas de montant, et le prix de l'annonce est celui
+#      D'AUJOURD'HUI : le poser sur un mandat ANTERIEUR refabriquerait exactement
+#      le defaut repare au lot 4 du 06/10 (88 entrees portaient un montant
+#      emprunte : « 147 000 » sur un bien a 49 000). La ligne « Montant » reste
+#      vide, et le front la retire d'elle-meme (`.filter(entry => entry[1])`).
+# NON  ON NE TOUCHE PAS AU MIROIR. `hektor_annonce_detail.mandats_json` garde la
+#      reponse de Hektor telle quelle : on complete le PAYLOAD, rien d'autre.
+#
+# RETOUR ARRIERE : APP_DETAIL_MANDATS_DEPUIS_NOTRE_REGISTRE=0 dans l'environnement.
+# =============================================================================
+DETAIL_MANDATS_DEPUIS_NOTRE_REGISTRE = (
+    os.environ.get("APP_DETAIL_MANDATS_DEPUIS_NOTRE_REGISTRE", "1") == "1"
+)
+
+
+def charger_mandats_absents_du_bloc(
+    con: sqlite3.Connection,
+    annonces: list[object] | None = None,
+) -> dict[str, list[dict[str, object]]]:
+    """{annonce: [entrees a ajouter]} -- nos mandats que le miroir ne porte pas.
+
+    (!) `annonces` RESTREINT LA LECTURE, et ce n'est pas un detail : le CHEMIN
+      IMMEDIAT appelle le fabricant pour UNE annonce apres chaque saisie. Lui
+      imposer un balayage des 61 354 fiches serait une regression ressentie --
+      c'est la lecon deja ecrite plus haut pour la carte des liens (06/10).
+
+    (!) Un bien SANS fiche detail n'est jamais complete : on n'invente pas un
+      bloc la ou Hektor n'a rien rendu.
+    """
+    cibles: set[str] | None = None
+    if annonces is not None:
+        cibles = {normalize_text(a) for a in annonces if normalize_text(a)}
+        if not cibles:
+            return {}
+    etroit = cibles is not None and len(cibles) <= 400
+    trous = ",".join("?" * len(cibles)) if etroit else ""
+    params: tuple = tuple(sorted(cibles)) if etroit else ()
+
+    # (1) les numeros que le miroir porte DEJA
+    sql = "SELECT hektor_annonce_id, mandats_json FROM hektor.hektor_annonce_detail"
+    if etroit:
+        sql += " WHERE hektor_annonce_id IN (%s)" % trous
+    deja: dict[str, set[str]] = {}
+    for annonce, blob in con.execute(sql, params):
+        bloc = safe_json_loads(blob, [])
+        # (!) tantot une LISTE, tantot un OBJET SEUL (memoire du projet).
+        if isinstance(bloc, dict):
+            bloc = [bloc]
+        if not isinstance(bloc, list):
+            bloc = []
+        deja[normalize_text(annonce)] = {
+            normalize_text(x.get("numero")) for x in bloc if isinstance(x, dict)}
+
+    # (2) notre registre, et ce qu'il sait de plus
+    sql = ("SELECT hektor_annonce_id, numero_mandat, type, date_enregistrement,"
+           "       date_debut, date_fin, date_cloture, mandants_texte, note,"
+           "       avenants_json"
+           "  FROM app_mandat WHERE hektor_annonce_id <> ''")
+    if etroit:
+        sql += " AND hektor_annonce_id IN (%s)" % trous
+    out: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for (annonce, numero, type_mandat, enr, debut, fin, cloture,
+         mandants, note, avenants_json) in con.execute(sql, params):
+        a = normalize_text(annonce)
+        n = normalize_text(numero)
+        if not (a and n) or a not in deja or n in deja[a]:
+            continue
+        if cibles is not None and a not in cibles:
+            continue
+        avenants = safe_json_loads(avenants_json, [])
+        if isinstance(avenants, dict):
+            avenants = [avenants]
+        if not isinstance(avenants, list):
+            avenants = []
+        entree = {
+            "numero": n,
+            "type": normalize_text(type_mandat) or None,
+            "dateenr": normalize_text(enr) or None,
+            "debut": normalize_text(debut) or None,
+            "fin": normalize_text(fin) or None,
+            "cloture": normalize_text(cloture) or None,
+            "mandants": normalize_text(mandants) or None,
+            "note": normalize_text(note) or None,
+            "avenants": [x for x in avenants if isinstance(x, dict)] or None,
+            # * La marque qui dit d'ou vient la carte. Le front ne la lit pas
+            #   encore ; elle sert a reconnaitre nos entrees dans un payload.
+            "source_app_registre": True,
+        }
+        out[a].append({c: v for c, v in entree.items() if v is not None})
+    return dict(out)
+
+
+# Ce qui fait qu'une entree DIT quelque chose. Le numero seul ne compte pas :
+# il est deja le titre de la carte.
+_CHAMPS_QUI_PARLENT = ("type", "mandants", "debut", "fin", "cloture", "note")
+
+
+def _entree_porte_du_contenu(entree: dict[str, object]) -> bool:
+    return any(normalize_text(entree.get(champ)) for champ in _CHAMPS_QUI_PARLENT)
+
+
+def mandats_json_complete(
+    valeur: object,
+    absents: list[dict[str, object]] | None,
+) -> tuple[object, int]:
+    """Rend (le blob, nombre d'entrees ajoutees). Ne retire JAMAIS rien.
+
+    (!) La presence est RE-VERIFIEE ici, pas seulement a la construction de la
+      carte : le blob a pu etre reecrit entre-temps par `mandats_json_corrige`.
+      Deux gardes valent mieux qu'un doublon affiche.
+
+    (!!) ET SURTOUT : UN COMPLEMENT NE DOIT PAS ETRE PLUS PAUVRE QUE CE QU'IL
+      REMPLACE -- defaut trouve en eprouvant, le 16/10, avant toute poussee.
+      Le front ne melange pas les deux sources :
+          if (rawMandats.length > 0) { des cartes } else { un bloc de repli
+                                                          bati sur le DOSSIER }
+      Donc poser UNE entree dans un blob VIDE ne fait pas qu'ajouter : ca
+      CONGEDIE le repli. Mesure sur les 3 fiches au blob vide :
+          63003  le repli montre montant 250 000 et « Petra COSTE | Guy COSTE »
+          63244  le repli montre montant 239 000 et quatre mandants
+        et nos lignes de registre pour 18831 / 18928 ne portent QUE le numero
+        (type, mandants et dates y sont NULL). On aurait donc remplace une
+        carte renseignee par une carte vide, et fait DISPARAITRE le montant et
+        les mandants de deux fiches. Un complement qui retire est un defaut.
+
+      LA REGLE : si le blob est VIDE, on n'ajoute que des entrees qui PARLENT.
+      S'il porte deja une carte, on ajoute librement -- la on ne remplace rien.
+    """
+    if not absents:
+        return valeur, 0
+    bloc = safe_json_loads(valeur, [])
+    if isinstance(bloc, dict):
+        bloc = [bloc]
+    if not isinstance(bloc, list):
+        bloc = []
+    cartes = [x for x in bloc if isinstance(x, dict)]
+    presents = {normalize_text(x.get("numero")) for x in cartes}
+    ajoutes = [e for e in absents
+               if normalize_text(e.get("numero")) not in presents]
+    if not cartes:
+        ajoutes = [e for e in ajoutes if _entree_porte_du_contenu(e)]
+    if not ajoutes:
+        return valeur, 0
+    return json.dumps(bloc + ajoutes, ensure_ascii=False), len(ajoutes)
+
 def build_trimmed_detail_payload(
     row: dict[str, object],
     mandants_par_annonce: dict[str, list[dict[str, object]]] | None = None,
     suspects_par_annonce: dict[str, set[str]] | None = None,
+    mandats_absents_par_annonce: dict[str, list[dict[str, object]]] | None = None,
 ) -> dict[str, object]:
     detail_payload = {field: row.get(field, None) for field in DETAIL_PAYLOAD_FIELD_ORDER}
     for field, value in extract_api_detail_groups(detail_payload.get("detail_raw_json")).items():
@@ -2733,6 +2927,17 @@ def build_trimmed_detail_payload(
             (suspects_par_annonce or {}).get(annonce),
             prix_annonce=row.get("prix"),
             numero_courant=row.get("numero_mandat"),
+        )
+        detail_payload["mandats_json"] = blob
+    # A.3 piece 4 (16/10/2026) : le bloc mandat se COMPLETE depuis notre registre.
+    # (!) APRES la reecriture du 06/10, jamais avant : celle-la ne corrige que des
+    #   entrees de Hektor (corps empruntes), et nos entrees n'en sont pas. Les lui
+    #   soumettre serait lui donner a juger des lignes qu'elle ne connait pas.
+    if DETAIL_MANDATS_DEPUIS_NOTRE_REGISTRE and mandats_absents_par_annonce:
+        annonce = normalize_text(row.get("hektor_annonce_id")) or ""
+        blob, _ = mandats_json_complete(
+            detail_payload.get("mandats_json"),
+            mandats_absents_par_annonce.get(annonce),
         )
         detail_payload["mandats_json"] = blob
     return detail_payload
@@ -2772,11 +2977,13 @@ def build_dossier_details(
     rows: list[dict[str, object]],
     mandants_par_annonce: dict[str, list[dict[str, object]]] | None = None,
     suspects_par_annonce: dict[str, set[str]] | None = None,
+    mandats_absents_par_annonce: dict[str, list[dict[str, object]]] | None = None,
 ) -> list[dict[str, object]]:
     details: list[dict[str, object]] = []
     for row in rows:
         detail_payload = build_trimmed_detail_payload(
-            row, mandants_par_annonce, suspects_par_annonce
+            row, mandants_par_annonce, suspects_par_annonce,
+            mandats_absents_par_annonce,
         )
         details.append(
             {
@@ -2968,8 +3175,23 @@ def build_payload(
                 for row in dossier_rows
             ):
                 mandants_fiche = charger_mandants_du_registre_des_liens(con)
+        # A.3 piece 4 (16/10/2026) : nos mandats absents du bloc de la fiche.
+        # (!) RESTREINTE AUX ANNONCES SERVIES. Le chemin immediat n'en sert qu'une :
+        #   il ne doit pas payer un balayage des 61 354 fiches (meme raison que
+        #   pour la carte des liens, juste au-dessus). Si ce chargeur echoue, le
+        #   payload est celui d'avant -- on ne fait pas tomber la descente pour un
+        #   complement d'affichage.
+        mandats_absents_fiche: dict[str, list[dict[str, object]]] | None = None
+        if DETAIL_MANDATS_DEPUIS_NOTRE_REGISTRE:
+            try:
+                mandats_absents_fiche = charger_mandats_absents_du_bloc(
+                    con, [row.get("hektor_annonce_id") for row in dossier_rows])
+            except Exception as erreur:  # noqa: BLE001
+                print("[fiche mandat] complement depuis notre registre ignore : %s"
+                      % erreur, file=sys.stderr)
+                mandats_absents_fiche = None
         dossier_details = build_dossier_details(
-            dossier_rows, mandants_fiche, suspects_fiche
+            dossier_rows, mandants_fiche, suspects_fiche, mandats_absents_fiche
         )
         work_items = fetch_rows_by_ids(
             con,
