@@ -12264,6 +12264,33 @@ button.metric-card.is-active {
   font: inherit;
   cursor: pointer;
 }
+/* 7-3c (16/10/2026) : « mettre en couverture ». Jumelle exacte du bouton de
+   suppression juste en dessous -- memes mesures, meme place -- mais DECALEE a
+   gauche pour ne pas le recouvrir, et en dore pour ne pas se confondre avec lui.
+   Un geste reversible ne doit pas avoir l'air d'un geste destructeur. */
+.console-photo-tile .console-photo-couverture {
+  position: absolute;
+  top: 8px;
+  right: 40px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(34, 35, 35, 0.72);
+  color: #f4c430;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.78;
+}
+.console-photo-tile .console-photo-couverture:hover { opacity: 1; }
+.console-photo-tile .console-photo-couverture:disabled { opacity: 0.35; cursor: default; }
+
 .console-photo-tile .console-photo-supprimer {
   position: absolute;
   top: 8px;

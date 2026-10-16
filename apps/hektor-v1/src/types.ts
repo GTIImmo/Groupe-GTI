@@ -768,6 +768,7 @@ export type ConsoleJobType =
   | 'upload_hektor_photo'
   // 3 bloc 2 (14/10/2026) : la suppression d'une photo, jumelle de delete_document_from_hektor.
   | 'delete_hektor_photo'
+  | 'reorder_hektor_photos'
   | 'link_hektor_mandant'
   | 'create_hektor_contact'
   | 'update_hektor_contact'

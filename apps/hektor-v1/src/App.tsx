@@ -101,6 +101,7 @@ import {
   createGenerateCadastreDocumentJob,
   createDeleteDocumentFromHektorJob,
   createDeleteHektorPhotoJob,
+  mettrePhotoEnCouverture,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
   createSyncHektorPhotosJob,
@@ -7718,6 +7719,23 @@ function messageRefusCloture(code: string | undefined) {
   }
 }
 
+// ⑦-3c : un refus de mise en couverture, en français. Même règle que pour la
+// clôture : le code de la RPC ne doit jamais arriver tel quel à l'écran.
+function messageRefusCouverture(code: string | undefined) {
+  switch (code) {
+    case 'droits_insuffisants':
+      return "Ce bien n'est pas dans ton périmètre : tu ne peux pas changer sa couverture."
+    case 'photo_introuvable_ou_masquee':
+      return "Cette photo est masquée ou pas encore connue de Hektor : elle ne peut pas servir de couverture."
+    case 'parametres_incomplets':
+      return "Il manque le numéro de la photo ou celui de l'annonce."
+    case 'supabase_absent':
+      return "L'application n'est pas reliée à la base : rien n'a été changé."
+    default:
+      return `Mise en couverture refusée${code ? ` (${code})` : ''}.`
+  }
+}
+
 function mandatStatutToneClass(value: MandatStatutValue) {
   return value === 'Vendu' ? 'reg-mstatut-vendu'
     : value === 'Clos' ? 'reg-mstatut-clos'
@@ -11760,6 +11778,43 @@ function ConsolePhotosPanel({
   //   demandee » et reste tant que le worker n'a pas PROUVE la suppression chez Hektor. Si
   //   Hektor refuse, la photo est toujours la -- et elle doit le rester ; l'echec est
   //   notifie a celui qui l'a demande.
+  // ═══ ⑦-3c (16/10/2026) : METTRE UNE PHOTO EN COUVERTURE ═══════════════════
+  // Décision de Frédéric : « fais juste 1 » -- un clic, la photo passe en tête.
+  // Le glisser-déposer est écarté pour aujourd'hui.
+  // ⚠ PAS DE `confirm` : le geste est RÉVERSIBLE (il suffit de remettre l'autre
+  //   en couverture), contrairement à la suppression juste en dessous. Demander
+  //   confirmation pour un geste réversible use la confirmation de l'autre.
+  async function handleMettreEnCouverture(photo: ConsolePhoto) {
+    if (!photo.hektor_photo_id) return
+    if (!hasHektorNegotiator(dossier)) {
+      onMissingNegotiator?.(dossier)
+      return
+    }
+    setBusyPhotoId(photo.id)
+    setError(null)
+    try {
+      const retour = await mettrePhotoEnCouverture({
+        appDossierId: dossier.app_dossier_id,
+        hektorAnnonceId: dossier.hektor_annonce_id,
+        hektorPhotoId: String(photo.hektor_photo_id),
+      })
+      if (!retour.ok) {
+        setError(messageRefusCouverture(retour.erreur))
+        return
+      }
+      // ⭐ On relit TOUT DE SUITE : la RPC a déjà renuméroté chez nous, donc la
+      //   galerie se réordonne sans attendre Hektor. Puis une seconde fois, après
+      //   le passage du worker, pour porter l'ordre que Hektor a retenu -- c'est
+      //   lui qui a le dernier mot.
+      await refreshPhotos(true)
+      window.setTimeout(() => void refreshPhotos(true), 25000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de mettre cette photo en couverture')
+    } finally {
+      setBusyPhotoId(null)
+    }
+  }
+
   async function handleDeletePhoto(photo: ConsolePhoto) {
     const confirmed = window.confirm(
       `Supprimer définitivement cette photo ?\n\n${photo.legend || photo.filename || 'Photo'}\n\n`
@@ -11883,7 +11938,7 @@ function ConsolePhotosPanel({
       {!loading && galleryPhotos.length === 0 ? <p className="empty-state">Aucune photo synchronisee.</p> : null}
       {galleryPhotos.length > 0 ? (
         <div className="console-photos-grid">
-          {galleryPhotos.map((photo) => {
+          {galleryPhotos.map((photo, index) => {
             const url = photo.url_preview || photo.url_hd
             // ⭐⭐ 3d / lot 2c (14/10/2026) -- UNE PHOTO DEPOSEE NE DOIT PAS DISPARAITRE.
             //
@@ -11939,6 +11994,23 @@ function ConsolePhotosPanel({
                 </button>
                 <span className="console-photo-badge">{suppressionDemandee ? 'Suppression demandée' : photo.source === 'api_preview' ? 'API' : photo.visible ? 'Visible' : 'Masquée'}</span>
                 {photo.legend ? <small>{photo.legend}</small> : null}
+                {/* ⑦-3c : le bouton n'apparaît PAS sur la première tuile -- elle EST
+                    déjà la couverture, et le cockpit l'étiquette ainsi en CSS
+                    (`.console-photos-grid > .console-photo-tile:first-child`).
+                    Proposer « mettre en couverture » sur la couverture serait un
+                    bouton qui ne fait rien. */}
+                {supprimable && index > 0 ? (
+                  <button
+                    className="console-photo-couverture"
+                    type="button"
+                    onClick={() => void handleMettreEnCouverture(photo)}
+                    disabled={suppressionDemandee || busyPhotoId === photo.id}
+                    aria-label="Mettre cette photo en couverture"
+                    title="Mettre en couverture"
+                  >
+                    ★
+                  </button>
+                ) : null}
                 {supprimable ? (
                   <button
                     className="console-photo-supprimer"

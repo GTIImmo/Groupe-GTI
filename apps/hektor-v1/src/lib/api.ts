@@ -8394,6 +8394,41 @@ export async function createDeleteHektorPhotoJob(input: {
   return data as ConsoleJob
 }
 
+// ═══ ⑦-3c (16/10/2026) : METTRE UNE PHOTO EN COUVERTURE ══════════════════════
+//
+// ⭐ Ce n'est PAS un geste à part chez Hektor : « photo principale » veut dire
+//   « première de la liste ». Réordonner et choisir la couverture sont le même
+//   ordre — d'où le type `reorder_hektor_photos`, qui servira tel quel le jour
+//   où on ajoutera le glisser-déposer.
+//
+// ⚠ ELLE NE PASSE PAS PAR UN INSERT comme ses deux sœurs (dépôt, suppression),
+//   et c'est voulu : il faut RENUMÉROTER nos photos ET créer le travail dans LA
+//   MÊME transaction. Si l'insertion du travail échouait après la renumérotation,
+//   notre galerie montrerait un ordre que Hektor n'aura jamais reçu. La RPC fait
+//   les deux ou aucun.
+//
+// ⚠ Elle NE JETTE PAS : l'appelant décide. Un refus se lit dans `erreur`.
+export async function mettrePhotoEnCouverture(input: {
+  appDossierId: number
+  hektorAnnonceId: string | number
+  hektorPhotoId: string
+}): Promise<{ ok: boolean; erreur?: string; dejaEnCouverture?: boolean; jobId?: string }> {
+  if (!hasSupabaseEnv || !supabase) return { ok: false, erreur: 'supabase_absent' }
+  const annonce = String(input.hektorAnnonceId ?? '').trim()
+  const photo = String(input.hektorPhotoId ?? '').trim()
+  if (!annonce || !photo || !input.appDossierId) return { ok: false, erreur: 'parametres_incomplets' }
+  const { data, error } = await supabase.rpc('app_console_photo_couverture_optimistic', {
+    p_app_dossier_id: input.appDossierId,
+    p_hektor_annonce_id: annonce,
+    p_hektor_photo_id: photo,
+  })
+  if (error) return { ok: false, erreur: error.message }
+  const sortie = (data ?? {}) as { ok?: boolean; erreur?: string; deja_en_couverture?: boolean; job_id?: string }
+  return sortie.ok === true
+    ? { ok: true, dejaEnCouverture: sortie.deja_en_couverture === true, jobId: sortie.job_id }
+    : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
+}
+
 // Synchro documents a la demande (read-through) : le worker relit Hektor -> etat signature a jour
 // + recuperation auto du PDF signe, sans clic. Declenche en silence a l'ouverture de l'annonce.
 export async function createSyncConsoleDocumentsJob(input: {
@@ -10533,6 +10568,7 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'sync_hektor_photos',
   'upload_hektor_photo',
   'delete_hektor_photo',
+  'reorder_hektor_photos',
   'prepare_archived_annonce_detail',
   'prepare_historical_annonce_detail',
   'refresh_console_contact_data',

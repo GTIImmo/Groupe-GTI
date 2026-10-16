@@ -118,6 +118,10 @@ const DOCUMENT_JOB_TYPES = new Set([
   "upload_hektor_photo",
   // 3 bloc 2 (14/10/2026) : la suppression d'une photo, jumelle de delete_document_from_hektor.
   "delete_hektor_photo",
+  // (7)-3c (16/10/2026) : remettre les photos dans l'ordre chez Hektor. Elle est
+  // ICI et pas dans ACTION_JOB_TYPES parce que c'est le worker DOCUMENTS qui porte
+  // les photos -- mesure du 16/10 sur app_console_claim_next_job.
+  "reorder_hektor_photos",
   "prepare_archived_annonce_detail",
   "prepare_historical_annonce_detail",
 ]);
@@ -8627,6 +8631,104 @@ async function handleDeleteDocumentFromHektor(job) {
     indexed: entries.length,
     sync_job: syncJob,
   };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// METTRE UNE PHOTO EN COUVERTURE -- chantier (7)-3c (16/10/2026).
+//
+// LA COMMANDE N'EST PAS NEUVE : c'est `mode=ordonne_photos`, que la suppression
+// d'une photo (juste en dessous) joue deja depuis le 14/10 pour RENUMEROTER. Ici
+// elle devient un GESTE : on envoie l'ordre que l'app a decide.
+//
+// ⭐ IL N'Y A PAS DEUX GESTES. « Photo principale » n'est pas une notion a part
+//   chez Hektor : c'est LA PREMIERE DE LA LISTE. Mettre en couverture et
+//   reordonner, c'est le meme ordre -- d'ou le nom du type.
+//
+// ⚠ ON N'INVENTE PAS L'ORDRE ICI. Il est dans la charge, decide par la RPC
+//   app_console_photo_couverture_optimistic qui a deja renumerote CHEZ NOUS dans
+//   la meme transaction. Le worker ne fait que le porter. S'il le recalculait, il
+//   pourrait dire autre chose que l'ecran -- et c'est exactement le defaut qu'on
+//   a paye ce matin sur la date de cloture.
+//
+// ⚠ LES DEUX LISTES, PAS UNE. La page de Hektor en tient deux : `liste_photos`
+//   (les visibles) et `liste_photos_hidden` (les masquees). On renvoie les deux,
+//   les masquees dans leur ordre inchange -- sinon elles remonteraient dans la
+//   galerie publique.
+async function handleReorderHektorPhotos(job) {
+  const payload = job.payload_json || {};
+  const idann = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!idann) throw new Error("annonce absente de la charge");
+
+  const listes = [
+    ["liste_photos", Array.isArray(payload.liste_photos) ? payload.liste_photos : null],
+    ["liste_photos_hidden", Array.isArray(payload.liste_photos_hidden) ? payload.liste_photos_hidden : null],
+  ];
+  if (!listes[0][1]) throw new Error("liste_photos absente de la charge");
+
+  // ⚠ GARDE-FOU DE LISTE VIDE (lecon du chantier (3), 3e). Envoyer une liste vide
+  //   a `ordonne_photos` reviendrait a dire a Hektor « cette annonce n'a plus de
+  //   photo visible ». On refuse, bruyamment, plutot que de le faire en silence.
+  if (listes[0][1].length === 0) {
+    throw new Error("liste_photos VIDE : on refuse d'envoyer un ordre sans photo visible");
+  }
+
+  await logJob(job.id, "reorder_hektor_photos", "running",
+    "Mise en couverture demandee chez Hektor", {
+      hektor_annonce_id: idann,
+      motif: payload.motif || null,
+      hektor_photo_id: payload.hektor_photo_id || null,
+      visibles: listes[0][1].length,
+      masquees: listes[1][1] ? listes[1][1].length : 0,
+    });
+
+  const resultat = {};
+  for (const [div, ids] of listes) {
+    if (!ids || ids.length === 0) { resultat[div] = { ok: true, photos: 0, saute: true }; continue; }
+    const corps = ids.map((id) => `${div}[]=${encodeURIComponent(String(id))}`).join("&")
+      + `&mode=ordonne_photos&div=${div}&idann=${encodeURIComponent(idann)}&rnd=${Date.now()}`;
+    try {
+      await hektorFetch(XMLRPC_URL, {
+        method: "POST",
+        body: corps,
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+      });
+      resultat[div] = { ok: true, photos: ids.length };
+    } catch (erreur) {
+      const motif = erreur && erreur.message ? erreur.message : String(erreur);
+      resultat[div] = { ok: false, erreur: motif };
+    }
+  }
+
+  // ⚠ SI LA LISTE DES VISIBLES A ECHOUE, LE GESTE A ECHOUE. On leve, pour que le
+  //   travail passe en erreur et que l'ecran remette l'ordre d'avant
+  //   (`base_snapshot` est dans la charge, exprès pour ca).
+  if (!resultat.liste_photos || resultat.liste_photos.ok !== true) {
+    await logJob(job.id, "reorder_hektor_photos", "error",
+      "L'ordre des photos VISIBLES n'a pas pu etre envoye a Hektor", {
+        hektor_annonce_id: idann, resultat,
+      });
+    throw new Error("ordonne_photos a echoue sur liste_photos : "
+      + ((resultat.liste_photos && resultat.liste_photos.erreur) || "cause inconnue"));
+  }
+
+  await logJob(job.id, "reorder_hektor_photos", "done",
+    "Photo mise en couverture chez Hektor", {
+      hektor_annonce_id: idann,
+      hektor_photo_id: payload.hektor_photo_id || null,
+      resultat,
+    });
+
+  // On relit la galerie pour que nos copies portent l'ordre que Hektor a retenu
+  // -- c'est lui qui a le dernier mot, comme partout ailleurs.
+  //    ⚠ On passe par le MEME aide que la suppression de photo -- pas par un
+  //      appel invente. Son nom le dit : best effort, il ne fait pas tomber le
+  //      geste s'il echoue, et le run de nuit relirait de toute facon.
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, idann, {
+    reason: "reorder_hektor_photos",
+    priority: 82,
+  });
+
+  return { status: "done", resultat, sync_job: syncJob };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -17899,7 +18001,7 @@ const JOB_TYPES_A_NOTIFIER = new Set([
   "delete_hektor_annonce", "assign_hektor_annonce_negotiator",
   "create_hektor_mandat_auto_number",
   "upload_document_to_hektor", "delete_document_from_hektor", "upload_hektor_photo",
-  "delete_hektor_photo",
+  "delete_hektor_photo", "reorder_hektor_photos",
   "generate_mandat_document", "generate_estimation_pdf", "generate_cadastre_document",
   "relance_signature", "cancel_signature_procedure",
 ]);
@@ -17930,6 +18032,7 @@ const JOB_LIBELLES = {
   delete_document_from_hektor: "La suppression du document",
   upload_hektor_photo: "L'envoi de la photo",
   delete_hektor_photo: "La suppression de la photo",
+  reorder_hektor_photos: "La mise en couverture de la photo",
   generate_mandat_document: "La generation du mandat",
   generate_estimation_pdf: "La generation de l'avis de valeur",
   generate_cadastre_document: "La generation du plan cadastral",
@@ -21187,6 +21290,8 @@ async function runHandler(job) {
       return handleUploadHektorPhoto(job);
     case "delete_hektor_photo":
       return handleDeleteHektorPhoto(job);
+    case "reorder_hektor_photos":
+      return handleReorderHektorPhotos(job);
     case "prepare_archived_annonce_detail":
       return handlePrepareArchivedAnnonceDetail(job);
     case "prepare_historical_annonce_detail":

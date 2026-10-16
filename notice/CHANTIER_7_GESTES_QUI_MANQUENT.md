@@ -1518,3 +1518,128 @@ panne. C'était la question qui comptait.
    **remplacer les 4 politiques RLS** — une politique ne se complète pas.
 3. ⬜ **Rien ne purge ce journal.** 128 lignes aujourd'hui, et il ne fera que grandir. Ce
    n'est pas un problème à cette taille ; ça le deviendra. Non traité, non demandé.
+
+---
+
+# ⑦-3c — METTRE UNE PHOTO EN COUVERTURE — 16/10/2026
+
+> *« fais juste 1, le but est de finir le chantier 7 »* — Frédéric, 16/10
+
+## 1. L'AUDIT : LA MOITIÉ DU TRAVAIL TOURNAIT DÉJÀ
+
+⭐ **La commande de Hektor n'est pas seulement connue : elle est écrite dans le worker et
+jouée tous les jours.** Quand on supprime une photo, il **renumérote** en renvoyant la liste
+*(`mode=ordonne_photos`, `console_job_worker.js` l. 8725-8745, éprouvé le 14/10 sur 62774)*.
+Elle n'avait jamais été un geste, seulement une conséquence.
+
+⭐ **Et il n'y a pas deux gestes.** « Photo principale » n'est pas une notion à part chez
+Hektor : c'est **la première de la liste**. Réordonner et choisir la couverture sont **le
+même ordre** — le commentaire du worker le disait déjà.
+
+| ce que notre base savait déjà | |
+|---|---|
+| photos | **441 302**, **toutes** avec un rang |
+| visibles / masquées | **441 199** / **103**, zéro inconnue |
+| la galerie à l'écran | **déjà triée** `visible` puis rang → la 1ʳᵉ tuile EST la couverture |
+| le cockpit | l'étiquette déjà « Couverture » en CSS *(`:first-child`)* |
+
+### ⚠⚠ LA MESURE QUI A ÉVITÉ UNE ERREUR SUR 47 584 ANNONCES
+
+J'allais écrire « la couverture, c'est le rang **1** ». **C'est faux :**
+
+| plus petit rang de l'annonce | annonces |
+|---|---|
+| **0** | ⭐ **47 584** *(97 %)* |
+| 1 | 1 561 |
+| 2, 3, 4, 6, 8, 10… | **37** — des listes **à trous** |
+
+➡ On ne cherche donc **jamais** « le rang 1 » : on **renumérote de 0 à n-1**. Effet de bord
+déclaré : ça **répare** les 37 listes trouées au passage.
+
+### Ce qui manquait vraiment
+
+⛔ aucun type de travail *(donc **les 3 verrous**)* · ⛔ aucun bouton à l'écran
+
+## 2. LE CHOIX DE FRÉDÉRIC
+
+Trois façons lui ont été présentées, chiffrées sur **10 259 biens vivants avec photos**
+*(médiane **3** photos ; **5 463** en ont **3 ou moins** ; **1 418** en ont **plus de 15**)* :
+① un clic « mettre en couverture » · ② des flèches · ③ le glisser-déposer.
+➡ **① seul**, pour finir le chantier. Le glisser-déposer reste un point à part.
+
+**Les droits** : le **négociateur sur SES biens**. Ce n'est pas mon choix — c'est la règle que
+le projet applique **déjà** aux deux autres gestes photo *(`upload_hektor_photo` et
+`delete_hektor_photo` sont dans la liste du commercial, mesuré le 16/10)*.
+
+## 3. CE QUI EST ÉCRIT
+
+| | où | quoi |
+|---|---|---|
+| **base** | `patch_chantier7_3c_photo_couverture_2026-10-16.sql` *(+ inverse + répétition)* | les **3 verrous** + la RPC `app_console_photo_couverture_optimistic` |
+| **worker** | `console_job_worker.js` | **5 endroits** + `handleReorderHektorPhotos` |
+| **front** | `types.ts`, `lib/api.ts`, `App.tsx`, `styles.css` | `mettrePhotoEnCouverture()` + le bouton ★ sur la tuile |
+
+**Six choix qui méritent d'être dits :**
+
+- ⭐ **La RPC fait les deux ou aucun** : elle renumérote **chez nous** ET crée le travail dans
+  **la même transaction**. Si l'insertion échouait après la renumérotation, la galerie
+  montrerait un ordre que Hektor n'aurait jamais reçu.
+- ⭐ **Le worker n'invente pas l'ordre** : il le **porte**, depuis la charge. S'il le
+  recalculait, il pourrait dire autre chose que l'écran — **exactement le défaut payé le
+  matin même sur la date de clôture**.
+- ⚠ **Les deux listes, pas une** : `liste_photos` et `liste_photos_hidden`. Les masquées
+  repartent **dans leur ordre inchangé**, sinon elles remonteraient dans la galerie publique.
+- ⚠ **Garde-fou de liste vide** *(leçon du chantier ③)* : une `liste_photos` vide dirait à
+  Hektor « ce bien n'a plus de photo visible ». On **refuse bruyamment**.
+- ⚠ **Pas de `confirm`** : le geste est **réversible**. Demander confirmation pour un geste
+  réversible use la confirmation de celui qui ne l'est pas *(la suppression, juste à côté)*.
+- ⚠ **Le bouton n'apparaît pas sur la 1ʳᵉ tuile** : elle **est** déjà la couverture. Un bouton
+  qui ne fait rien est un bouton qui ment.
+
+## 4. LES ÉPREUVES
+
+`npm run build` **vert** · `node --check` sur le worker **vert** · **8 contrôles à blanc, 100 %
+en lecture** sur les trois verrous *(dont les trois « retour à l'identique à l'octet près »)*.
+
+### ⭐ LA RÉPÉTITION, COLLÉE PAR FRÉDÉRIC — TOUT EST VERT SAUF UNE LIGNE
+
+```
+1-avant  | 62774 : 4 visibles, 1ere 482253, rangs 1..4
+2-apres  | contrainte / droits / distribution      = oui / oui / oui
+2-apres  | RPC : authenticated / anon              = oui / non (correct)
+2-apres  | ESSAI 487604 en couverture              = ok : 1 renumerotees
+2-apres  | 62774 apres l'essai                     = 1ere 487604, rangs 0..3
+2-apres  | le travail porte les 2 listes           = 4 visibles / 0 masquees
+2-apres  | l'ordre d'AVANT est garde               = 4 photos
+2-apres  | RE-ESSAI (deja en couverture)           = ok, et AUCUN nouveau travail
+3-retour | le type a disparu des 3 / la RPC aussi  = oui / oui
+3-retour | empreintes d'origine                    = 2 sur 3      <- LA SEULE
+```
+
+⭐ **L'essai réel a marché du premier coup** : la dernière photo est passée au rang **0**, les
+autres à 1-3, et le re-essai n'a **créé aucun travail en double**.
+
+### ⚠ ET LA LIGNE QUI N'EST PAS VERTE EST, JE CROIS, UN DÉFAUT DE MA MESURE
+
+**Hypothèse** : l'inverse repose la contrainte **`NOT VALID`** — il ne peut pas lancer
+`VALIDATE CONSTRAINT` dans une transaction annulée — et `pg_get_constraintdef` **ajoute ce
+suffixe au texte**. L'empreinte diffère donc d'exactement ça. Le **vrai** patch et le **vrai**
+inverse, eux, lancent tous deux `VALIDATE` à la fin : en production la contrainte revient
+propre.
+
+⛔ **MAIS JE NE L'AI PAS PROUVÉ** : il n'existe aucune contrainte non validée dans la base à
+laquelle comparer. ➡ J'ai donc **corrigé la répétition pour qu'elle le dise elle-même** :
+trois lignes explicites au lieu d'un compteur, et la contrainte mesurée **suffixe retiré**.
+
+⚠⚠ **Et la leçon vaut pour toutes mes répétitions** : « 2 sur 3 » est **juste mais muet** —
+il ne dit pas LEQUEL, et il a coûté un aller-retour. **Un contrôle qui agrège perd
+l'information qui sert à agir.** *(Et ma première correction l'avait rendu **tautologique**,
+comparant la contrainte à elle-même : un contrôle qui passe toujours est pire que rien.)*
+
+## 5. CE QUI RESTE
+
+1. ⛔ **Le patch n'est pas collé** — attend une dernière répétition ou son go.
+2. ⛔ **Les 4 services n'ont pas redémarré** : sans ça le geste crée un travail que
+   **personne ne réclame**.
+3. ⛔ **Rien n'est poussé.**
+4. ⬜ **Le glisser-déposer** reste à faire, s'il le veut un jour.
