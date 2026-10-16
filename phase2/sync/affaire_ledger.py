@@ -316,9 +316,43 @@ SELECT hektor_annonce_id, hektor_mandat_id, 'offre' AS kind, hektor_offre_id AS 
           FROM json_each(propositions_json) p
          WHERE json_extract(p.value, '$.type') = 'proposition'
          ORDER BY CAST(p.key AS INTEGER) DESC LIMIT 1) AS validite,
-       json_extract(raw_json, '$.prixNetVendeur')   AS prix_net_vendeur,
-       json_extract(raw_json, '$.honorairesEntree')  AS honoraires_entree,
-       json_extract(raw_json, '$.honorairesSortie')  AS honoraires_sortie,
+       -- ⚠⚠ TROIS LECTURES MORTES, CORRIGEES LE 16/10/2026.
+       --   Ce bloc lisait `prixNetVendeur`, `honorairesEntree` et
+       --   `honorairesSortie` dans le brut d'une OFFRE. AUCUNE DES TROIS N'Y
+       --   EXISTE : mesure sur les 11 182 offres du miroir, 0 presence pour
+       --   chacune. Les 13 clefs du blob sont id · id_annonce · id_acquereur ·
+       --   id_mandat · type_mandat · nom · prenom · civ · honoraire_acquereur ·
+       --   annonce · mandat · acquereur · propositions.
+       --   Ces trois noms viennent du COMPROMIS et de la VENTE, ou ils existent
+       --   bien -- la faute deja commise le 07/09 sur jours_retractation et
+       --   notee juste au-dessus : mesurer sur un genre et generaliser aux trois.
+       --
+       -- ⭐ TROUVE EN REPONDANT A UNE QUESTION DE FREDERIC (16/10) : « pourquoi
+       --   mettre le taux d'honoraires sur la modale offre ? ». En cherchant ce
+       --   que Hektor garde a l'offre, j'ai mesure « 0 honoraire sur 11 187 » et
+       --   j'ai failli conclure que Hektor ne rendait rien. C'etait NOUS qui
+       --   regardions le mauvais nom.
+       --
+       -- LE VENDEUR N'A AUCUNE CLEF ICI, et ce n'est pas un oubli de Hektor :
+       -- son formulaire d'offre ne porte que l'honoraire de l'ACQUEREUR. Or
+       -- 99,8 % des commissions sont au VENDEUR (mesure du 14/10). C'est
+       -- exactement le trou que `honoraires_entree_app` comble depuis le lot 1.
+       NULL AS prix_net_vendeur,  -- absent du brut d'une offre (0 sur 11 182)
+       NULL AS honoraires_entree, -- l'offre de Hektor ne porte PAS le vendeur
+       -- ⚠ « 0 » VEUT DIRE VIDE chez Hektor, comme partout (le projet le sait
+       --   depuis le DPE) : 11 154 offres portent « 0 » ou rien, 28 une vraie
+       --   valeur. Sans ce NULLIF on rangerait 11 154 zeros pour 28 montants.
+       --
+       -- ⚠ LES 28 ONT ETE REGARDEES UNE PAR UNE, face au montant de l'offre :
+       --   27 sont vraisemblables (de 3,0 % a 10,3 % du prix -- des honoraires
+       --   d'agence normaux). UNE SEULE est une faute de saisie CHEZ HEKTOR :
+       --       annonce 61540 -- 179 000 d'honoraires pour 188 000 de prix (95 %)
+       --   ON L'IMPORTE QUAND MEME, et c'est volontaire : sur un champ de
+       --   classe C, HEKTOR FAIT FOI. La filtrer en silence serait decider a sa
+       --   place, et cacher une erreur ne la corrige pas -- elle a ete signalee
+       --   a Frederic le 16/10 pour etre reparee a la source.
+       NULLIF(NULLIF(json_extract(raw_json, '$.honoraire_acquereur'), '0'), '')
+         AS honoraires_sortie,
        NULL AS mandants,          -- l'offre n'en porte pas
        NULL AS notaires,          -- ni notaire
        propositions_json AS propositions,
