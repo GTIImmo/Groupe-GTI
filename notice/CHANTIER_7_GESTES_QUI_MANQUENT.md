@@ -17,7 +17,7 @@
 | ⑦-3a | **clôturer un mandat à la main** + le **crayon** de la date de clôture *(périmètre élargi par Frédéric le 16/10 : toutes les entrées, droits admin/manager, dates modifiables)* | 🔎 **audité à fond le 16/10** — voir la section en bas de note |
 | ⑦-3b | l’**écran du journal des suppressions** *(4 journaux, 128 lignes)* | ✅ **écrit le 16/10** — dans Santé, admin strict, tout ; témoin inverse 128/0 |
 | ⑦-3c | **réordonner / choisir la photo principale** *(`mode=ordonne_photos` connu)* | ⬜ reçu du chantier ③ |
-| ⑦-4 | le **bandeau qui ment** *(9 462 biens : 8 935 vendus/clos + 527 brouillons)* | ✅ **écrit le 16/10** — trois messages, trois boutons, desktop ET mobile |
+| ⑦-4 | le **bandeau qui ment** | ✅ **traité le 16/10, et le verdict a changé en route** — ⚠ **la production ne mentait pas** *(c’est le cockpit qui s’affiche, et il dit « depuis une fiche d’index léger »)*. Le menteur était l’**ancienne fiche**, le repli du drapeau. ✅ Corrigé quand même *(sa décision : « ça répare le repli et ça ne coûte rien »)*, ⭐ et le **mobile**, lui, mentait VRAIMENT aux **527 brouillons** — c’est la part vivante |
 | ⑦-5 | relancer / abandonner depuis le monitoring, biens cliquables | ✅ **fait le 15/10** |
 | ⑦-6 | « Abandonner » **défait** le geste | ✅ **fait le 15/10** |
 | ⑦-7 | **modifier ou prolonger un mandat** *(audit 08/10 : ni RPC ni travail worker ; l'avenant ne change que le prix)* | ⬜ |
@@ -1965,3 +1965,14 @@ s'affiche**.
 retirer. Et **le second mensonge reste entier** : le bouton « désarchiver » d'un vendu/clos
 réussirait sans rien faire — mais puisque ce bandeau ne s'affiche pas, **personne ne peut le
 cliquer** aujourd'hui.
+
+### ✅ SA DÉCISION, 16/10 : ON GARDE
+
+> *« garde-la, ça répare le repli et ça ne coûte rien »*
+
+La correction de `DossierDetailLayoutBase` reste donc en place : le jour où le drapeau
+`APP_COCKPIT_V2_ENABLED` serait éteint — c’est un **rollback prévu**, le garde-fou n° 2 du
+plan — l’ancienne fiche reviendra **sans son mensonge**.
+
+⭐ **Et la part vivante tient debout** : le mobile ne dit plus « Cette fiche vendue ou close »
+aux **527 brouillons**, il leur propose « Reprendre la saisie dans Hektor ».
