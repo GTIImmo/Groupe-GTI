@@ -1360,6 +1360,21 @@ def redescendre_ce_que_l_app_possede(client, con: sqlite3.Connection) -> dict[st
                   f"non redescendue(s) : {', '.join(absentes)} -- le patch SQL "
                   f"n'est pas encore colle. Le run CONTINUE.")
             colonnes = [c for c in colonnes if c in la_haut]
+    # ⚠⚠ ET LE MEME FILET DANS L'AUTRE SENS -- 16/10/2026.
+    #   L'ajout des colonnes locales vit dans `refresh_ledger` (--refresh) ;
+    #   cette redescente-ci vit dans --push. Le chemin par defaut fait les deux,
+    #   dans cet ordre, donc tout va bien. Mais `--push` SEUL (deconseille depuis
+    #   le 07/09, pas impossible) arriverait ici avec des colonnes que Supabase a
+    #   et que le local n'a pas encore : l'UPDATE tomberait sur « no such column »
+    #   et ferait chuter l'etape. Une colonne neuve ne doit pas rendre une
+    #   commande fragile pendant les quelques heures ou elle n'existe qu'a moitie.
+    ici = {r[1] for r in con.execute(f"PRAGMA table_info({LEDGER_TABLE})")}
+    pas_encore_ici = [c for c in colonnes if c not in ici]
+    if pas_encore_ici:
+        print(f"[affaire_ledger] colonne(s) pas encore creee(s) en local, non "
+              f"redescendue(s) : {', '.join(pas_encore_ici)} -- le prochain "
+              f"--refresh les ajoutera. Le run CONTINUE.")
+        colonnes = [c for c in colonnes if c in ici]
     if not colonnes:
         return {"chainees_par_supabase": posees, "lignes_redescendues": 0,
                 "colonnes_redescendues": 0, "locales_sans_chaine": con.execute(
