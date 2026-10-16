@@ -1696,3 +1696,53 @@ Tout patch futur qui voudra modifier cette fonction par **ancre** ne la retrouve
 *(leçon du 15/10, écrite trois fois)*. ➡ **`patch_chantier7_3c_nettoyer_crlf_rpc_2026-10-16.sql`**
 la relit et la réécrit sans retours chariot. **5 lignes, aucun changement de comportement,
 pas d’inverse** *(remettre des CRLF n’aurait aucun sens)*.
+
+### ⭐⭐⭐ L'ESSAI RÉEL A RÉUSSI DU PREMIER COUP — 16/10, 15:41
+
+⚠ **62774 n'était pas une cible possible** : c'est une **ARCHIVE**, sa fiche est en lecture
+seule, elle n'a pas de galerie. Il fallait un bien **vivant** — et comme changer une
+couverture change **l'annonce publique**, j'ai cherché une cible **sans effet dehors** et je
+l'ai fait valider : **63261 « Maison individuelle Saugues »**, *Actif*, **0 portail,
+non diffusable**, 3 photos, rangs **1..3** *(donc 1-based — ce qui éprouve aussi la
+renumérotation)*.
+
+**État d'avant, figé :** `487540` (rang 1) · `487541` (rang 2) · `487542` (rang 3).
+**Geste :** clic sur le ★ de la **3ᵉ tuile**, depuis l'écran, sous le compte de Frédéric.
+
+| ce qui a été mesuré | résultat |
+|---|---|
+| l'écran, avant le clic | 3 tuiles, **2 boutons ★** — **aucun sur la 1ʳᵉ**, qui porte le badge « Couverture » |
+| nos photos après | ✅ `487542` **rang 0** · `487540` rang 1 · `487541` rang 2 |
+| le travail | ✅ `reorder_hektor_photos` / **done**, pris par **`…:documents:service:v9`** — la branche visée |
+| la liste envoyée | ✅ `["487542","487540","487541"]` |
+| l'ordre d'avant | ✅ gardé, 3 photos |
+| le journal | `claim → running → done → sync_queue → finish` en **2 secondes** |
+
+### ⭐ ET HEKTOR L'A PRIS — vérifié CHEZ LUI, pas déduit
+
+⚠ **La relecture ne prouvait rien** : elle a bien tourné *(13:41:33 → 13:42:08, done)*, mais
+nos lignes portaient encore **notre propre** horodatage *(13:41:31)* et celui du matin
+*(05:16:5x)* — donc **elle n'avait rien réécrit**. En conclure « Hektor a confirmé » aurait
+été *une avarie qui ne change rien ne prouve rien*, à l'envers.
+
+➡ **Je suis allé regarder sa page**, comme Frédéric me l'a appris le matin même
+*(« tu as accès à la session chrome de Hektor, vérifie toi-même »)* :
+
+| position chez Hektor | fichier | c'est… |
+|---|---|---|
+| **1** | `photo_3a03b621…` | ⭐ **487542**, celle mise en couverture |
+| 2 | `photo_1197f9e7…` | 487540 *(était 1ʳᵉ)* |
+| 3 | `photo_881cf27f…` | 487541 |
+
+**Exactement la liste envoyée.** ✅ Le geste marche de bout en bout : écran → RPC → travail
+→ worker documents → Hektor.
+
+⚠ **Une observation, pas un défaut** : la vignette du *résumé* du bien montrait encore la
+façade juste après. La galerie, elle, était bien réordonnée. Hektor a peut-être un champ
+« photo principale » distinct de l'ordre, ou une vignette en cache — **non mesuré, donc non
+conclu**. À regarder si ça gêne.
+
+⚠ **À DÉCIDER** : la couverture de ce bien réel est maintenant **une chambre** au lieu de la
+façade. Le bien n'est pas diffusé, donc **aucun effet public** — mais il faut **remettre la
+façade** si Frédéric le veut (un clic sur le ★ de la façade suffit : le geste est réversible,
+c'est tout son intérêt).
