@@ -457,6 +457,46 @@ sur une fiche **jetable** trancherait.
 Hektor *(pas « désarchivée »)*. L'app ne sait pas le faire : elle sait **rendre inactive**
 *(`modifDateArchiveCritere`)*, pas **réactiver**.
 
+### 🔎 CE QUE DISENT LES NOTES SUR LES RECHERCHES — *audit demandé le 16/10*
+
+**① CONFIRMÉ — le geste de l'app rend la recherche INACTIVE en POSANT UNE DATE.** Trois
+sources concordantes :
+
+| source | ce qu'elle dit |
+|---|---|
+| `LISTE_TACHES_A_COCHER` l. 686-687 | *« **CE N'EST PAS UNE SUPPRESSION mais un ARCHIVAGE** : le worker appelle `archiveHektorContactSearch` et rend « status: archived ». **Hektor ne sait pas supprimer une recherche, il pose une date.** »* |
+| `AUDIT_RECHERCHES_AUTONOMIE_2026-09-21` | **Supprimer** : *« Sans objet — Hektor ne sait pas supprimer une recherche, **il archive** »* · **Archiver** : 3 archivages depuis l'app |
+| le worker *(l. 18331-18345)* | `modifDateArchiveCritere` avec **`dateArchive` = la date du jour** |
+
+**② NON CONFIRMÉ — « sans possibilité de la remettre active ».** **Aucune note du projet ne le
+dit**, et **le code de Hektor d'aujourd'hui dit le contraire** *(relevé du 15/10,
+`labs_contactsRefonte.js`)* :
+
+```
+function archiveUnarchiveContactRecherche(idCritere, idContact)   <- une BASCULE
+    POST xmlrpc.php  mode=contacts-contactProfile-recherche-archiveUnarchiveContactRecherche
+
+function updateDateAutoArchiveCritere(idCritere)                  <- le champ DATE de l'ecran
+    POST ... modifDateArchiveCritere & dateArchive=<date saisie>
+    success: if (data['desarchiveCritere']) archiveUnarchiveContactRecherche(...)
+```
+
+➡ **Changer la date d'auto-archivage REACTIVE la recherche** : le serveur répond
+`desarchiveCritere`, et la page bascule l'état. *(Dans la capture de juin, une recherche
+**active** portait « Auto-archivage le **05-06-2028** » — une date **future**.)*
+⚠ **Je lis le code du navigateur, je ne l'ai pas exécuté.** Le test décisif est de trente
+secondes, et il est **chez Frédéric**.
+
+**③ EN REVANCHE, C'EST VRAI DE NOTRE APP** : elle ne connaît **que** `modifDateArchiveCritere`
+*(poser une date)*. **Elle ne sait pas réactiver** — c'est l'asymétrie déjà notée.
+
+**④ ⭐ ET LE DÉTAIL QUI CHANGE LE DIAGNOSTIC DE GLADYS** : à l'écran de Hektor, sa recherche
+porte **« Auto-archivage le » VIDE**. Or le seul geste d'archivage que l'app sache faire
+**pose une date**. ➡ **Sa recherche n'a donc PAS été désactivée par une date** — ni par l'app,
+ni par un auto-archivage programmé. **C'est un autre mécanisme qui a basculé l'état**, ce qui
+reste cohérent avec la règle « fiche archivée ⇒ recherches inactives » *(0 sur 6 157)*, sans
+la prouver.
+
 ### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
 
 « Archiver un contact » n'est **pas** un geste anodin : il peut emporter une recherche
