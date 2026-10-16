@@ -417,5 +417,8 @@ RANGÉ, sur demande seulement :
 | 14/10 | — | gestes de l'app relevés · les deux commissions auditées · ce plan | 99,8 % des commissions sont au vendeur · la charge ne se déduit pas (13 cas) |
 | 16/10 | **1a** | 3 colonnes de classe A posées **des deux côtés** (Supabase + local) · le **filet d'ordre** dans les deux sens | 41 → 44 colonnes · 0 valeur · la contrainte refuse `Vendeur` majuscule · le push prépare 31 074 lignes et **aucune** ne porte une colonne de classe A |
 | 16/10 | **1b** | la RPC `app_affaire_commission_ecrire` — écrit sur **UNE** ligne, jamais une autre étape de la chaîne | existe et refuse un id inconnu · **anon → 401 permission denied** · 0 valeur en base |
+| 16/10 | **1c** | l'écran : les 3 champs, le préremplissage avec le drapeau levé, l'appel après le geste, les 3 colonnes dans `affaireLedgerSelect` | bundle : les 5 marqueurs présents · point 7 du plan **retiré** (il était faux) |
+| 16/10 | **2** | `app_sheet_ecrit` — la mémoire par (chaîne, colonne). **Patch écrit, à coller.** | la clé du classeur **mesurée** : affair_uuid vide, Mandat 719 doublons, ID Unique à eux |
+| 16/10 | hors lot | ⚠ **3 lectures mortes** dans le bloc offre du ledger (`prixNetVendeur`, `honorairesEntree`, `honorairesSortie` : 0 présence sur 11 182) | la vraie clé est `honoraire_acquereur` → **28 offres** récupérées, dont **1 fausse saisie** signalée (annonce 61540, 95 % du prix) |
 | 16/10 | audit | ⭐ la commission **ne diverge jamais** le long d'une chaîne · une offre acceptée est **déjà figée deux fois** · Hektor ne garde **aucun** honoraire à l'offre | 1 divergence sur 9 826 · 200 + 0 octet 9/9 · offre 0 % / compromis 99 % / vente 100 % |
 
