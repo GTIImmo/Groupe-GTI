@@ -20071,7 +20071,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             setStatusChangeNotairesAffirmes((etat) => ({ ...etat, acquereur: false }))
                           }} />
                         <label className="filter-field">
-                          <span>Honoraires acquereur</span>
+                          <span>Honoraires acquéreur (TTC)</span>
                           <input value={statusChangeBuyerFees} onChange={(event) => {
                             setStatusChangeBuyerFees(event.target.value)
                             apresSaisieCommission({ sortie: event.target.value })
@@ -20096,7 +20096,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               vendeur), et c'est voulu. */}
                         {statusChangeStatus === 'offer' ? (
                           <label className="filter-field">
-                            <span>Honoraires vendeur (agence)</span>
+                            <span>Honoraires vendeur (agence, TTC)</span>
                             <input value={statusChangeHonorairesEntree} onChange={(event) => {
                               setStatusChangeHonorairesEntree(event.target.value)
                               setStatusChangeHonorairesEntreeTouche(true)
@@ -20151,7 +20151,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             {/* 18/09 : MODIFIABLE -- la commission se negocie au compromis.
                                 Vide a la creation : Hektor pose alors celle du mandat. */}
                             <label className="filter-field">
-                              <span>Honoraires vendeur (agence)</span>
+                              <span>Honoraires vendeur (agence, TTC)</span>
                               <input value={statusChangeHonorairesEntree} onChange={(event) => {
                                 setStatusChangeHonorairesEntree(event.target.value)
                                 setStatusChangeHonorairesEntreeTouche(true)
@@ -20174,7 +20174,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             pose celle du mandat. Envoyee seulement si la case est touchee. */}
                         {statusChangeStatus === 'sold' ? (
                           <label className="filter-field">
-                            <span>Honoraires vendeur (agence)</span>
+                            <span>Honoraires vendeur (agence, TTC)</span>
                             <input value={statusChangeHonorairesEntree} onChange={(event) => {
                               setStatusChangeHonorairesEntree(event.target.value)
                               setStatusChangeHonorairesEntreeTouche(true)
@@ -22195,7 +22195,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
-                onRestoreAnnonce={handleRestoreHektorAnnonce}
+                onRestoreAnnonce={handleRestoreHektorAnnonce} onOpenLightweightDetail={openLightweightDetailImport}
                 onOpenContact={openContactDirectory}
                 onHektorActionJobCreated={rememberHektorActionJob}
                 onMissingNegotiator={openMissingNegotiatorModal}
@@ -22941,7 +22941,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} onOpenLightweightDetail={openLightweightDetailImport} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -23175,7 +23175,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
-                onRestoreAnnonce={handleRestoreHektorAnnonce}
+                onRestoreAnnonce={handleRestoreHektorAnnonce} onOpenLightweightDetail={openLightweightDetailImport}
                 onOpenContact={openContactDirectory}
                 onOpenRapprochement={openRapprochementMandat}
                 onHektorActionJobCreated={rememberHektorActionJob}
@@ -26435,7 +26435,7 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
           ) : null}
           {v ? (
             <CkTxCard num="03" kind="vente" title="Vente — acte authentique" sub={`Vendu le ${v.date ?? ''} · ${v.prix ?? ''}`} pill="Vendu" pillTone="done" open rows={[
-              ['Prix de vente', v.prix ?? '—'], ['Date de vente', v.date ?? '—'], ['Honoraires', v.honoraires ?? '—'], ['Commission agence', v.commission ?? '—'], ['Notaires', v.notaires ?? '—', true],
+              ['Prix de vente', v.prix ?? '—'], ['Date de vente', v.date ?? '—'], ['Honoraires', v.honoraires ?? '—'], ['Commission agence (HT)', v.commission ?? '—'], ['Notaires', v.notaires ?? '—', true],
             ]} />
           ) : null}
         </>
@@ -27446,9 +27446,26 @@ function ckAffaireDepuisChaine(
     vente: v ? {
       date: v.date ? formatDate(v.date) : '',
       prix: affairePrix(v.montant),
-      // Honoraires = entree + sortie, la somme que Hektor porte lui-meme
-      // (verifie sur 7 608 ventes sur 7 608). Commission = LA PART DE L'AGENCE
-      // apres partage, pas un montant hors taxes.
+      // ─── HT OU TTC : TRANCHE LE 16/10/2026, PAR DEUX MESURES ───
+      //
+      // Ce commentaire disait « Commission = la part de l'agence apres partage,
+      // PAS un montant hors taxes ». La seconde moitie etait FAUSSE.
+      //
+      //  ① L'ARITHMETIQUE, sur les 9 259 ventes du registre :
+      //      (honoraires entree+sortie) / commission_agence vaut
+      //      4,8 dans 43 % des cas · 1,2 dans 34 % · 2,4 dans 9 %
+      //      -- soit la TVA (20 %), puis la division par le NOMBRE D'AGENCES
+      //      qui partagent. 86 % tombent exactement sur ces trois rapports,
+      //      et 0 % sur 1,0.
+      //  ② LE CLASSEUR DE SUIVI, source INDEPENDANTE des deux autres, dont la
+      //      colonne s'appelle « Commission TTC ». Sur 618 ventes croisees :
+      //      elle vaut honoraires_entree + honoraires_sortie dans 97 % des cas,
+      //      et commission_agence dans 0 %.
+      //
+      // DONC : honoraires entree+sortie = LA COMMISSION TTC.
+      //        commission_agence        = LA PART DE L'AGENCE, HORS TAXES.
+      // Les libelles le DISENT maintenant -- un HT pris pour un TTC fausse une
+      // paie, et ces montants-la nourrissent le classeur des salaires.
       honoraires: affairePrix(v.honoraires_entree) || affairePrix(v.honoraires_sortie)
         ? [affairePrix(v.honoraires_entree), affairePrix(v.honoraires_sortie)]
             .filter(Boolean).join(' + ')
@@ -30703,6 +30720,10 @@ function DossierDetailLayoutBase(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  /** ⑦-4 (16/10) : ouvre la fenetre « Telecharger le detail de la fiche », celle
+   *  qui existe deja et que la LISTE propose. Le bandeau en a besoin pour offrir
+   *  le bon geste a un bien vendu ou clos — qui n'a rien a desarchiver. */
+  onOpenLightweightDetail?: (dossier: Dossier) => void
   onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
@@ -30735,7 +30756,38 @@ function DossierDetailLayoutBase(props: {
   const actionRequests = props.actionRequests ?? []
   const actionRole = props.actionRole ?? 'nego'
   const isLightweightDetail = isReadOnlyLightweightDetail(dossier)
-  const lightweightDetailLabel = dossier.archive === '1' ? 'archivee' : 'historique'
+  // ═══ ⑦-4 (16/10/2026) : TROIS ÉTATS, TROIS MESSAGES ═══════════════════════
+  //
+  // ⛔ CE QUI N'ALLAIT PAS. Il n'y avait qu'une phrase, et seul le MOT changeait
+  //   (`archivee` / `historique`) : le reste disait « il faut d'abord la
+  //   desarchiver » et offrait le bouton de désarchivage. Or ce bandeau
+  //   s'affiche pour TROIS états (isReadOnlyLightweightDetail), et un seul est
+  //   une archive. Mesure du 16/10 :
+  //       35 325 archivés          -> le message était JUSTE
+  //        8 935 vendus/clos       -> il MENTAIT
+  //          527 brouillons        -> il MENTAIT aussi (cas non prévu)
+  //
+  // ⚠⚠ ET LE BOUTON MENTAIT PLUS ENCORE. Il crée un `restore_hektor_annonce`,
+  //   qui envoie à Hektor `champ=archive&val=0`. Or les 8 935 vendus/clos ont
+  //   DÉJÀ `archive=0` (mesuré : 0 sur 8 943 à '1'). L'ordre ne changeait rien
+  //   -- mais le contrôle final du worker exige `archive == "0"`, donc il était
+  //   SATISFAIT et le travail passait `done`. Une réussite qui ne fait rien.
+  //   ⭐ Personne n'a encore été trompé : les 15 désarchivages demandés portent
+  //     tous sur 4 biens d'ESSAI (62965, 78, 62774, 24113).
+  //
+  // ⭐ LE PATRON N'EST PAS INVENTÉ : la version MOBILE distinguait déjà les deux
+  //   premiers cas (`lightweightReadOnlyLabel`, plus bas). On recopie sa logique
+  //   et on ajoute le troisième, qu'elle ignore aussi.
+  const lightweightEstArchive = dossier.archive === '1'
+  const lightweightEstBrouillon = (dossier as { is_brouillon?: boolean }).is_brouillon === true
+  const lightweightTitre = lightweightEstArchive
+    ? 'Fiche archivée'
+    : lightweightEstBrouillon ? 'Saisie en cours chez Hektor' : 'Bien vendu ou clos'
+  const lightweightTexte = lightweightEstArchive
+    ? "Cette annonce est archivée et reste protégée en consultation. Pour rouvrir les actions, documents, photos et modifications, il faut d'abord la désarchiver."
+    : lightweightEstBrouillon
+      ? "Cette annonce est un brouillon : sa saisie n'est pas terminée chez Hektor. Elle est consultable ici, et se reprend là-bas."
+      : "Ce bien est vendu ou clos. Sa fiche est consultable depuis l'index léger ; pour la rouvrir en entier, il faut d'abord charger son détail."
   const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
   const openDiffusionFromDetail = props.onOpenDiffusionModal ?? (() => undefined)
   const validationDraft = props.validationDraft ?? (isValidationApproved(dossier.validation_diffusion_state) ? 'oui' : 'non')
@@ -31068,11 +31120,26 @@ function DossierDetailLayoutBase(props: {
                 <section className="detail-readonly-banner">
                   <span className="detail-readonly-banner-icon" aria-hidden="true"><DetailIcon type="history" /></span>
                   <div>
-                    <strong>Fiche consultee depuis l'index leger</strong>
-                    <p>Cette annonce {lightweightDetailLabel} reste protegee en consultation. Pour reactiver les actions, documents, photos et modifications, il faut d'abord la desarchiver.</p>
-                    {props.onRestoreAnnonce ? (
+                    <strong>{lightweightTitre}</strong>
+                    <p>{lightweightTexte}</p>
+                    {/* ⑦-4 : UN SEUL BOUTON, ET SEULEMENT S'IL SERT.
+                        ⭐ Aucun des trois n'est neuf : « Demander le désarchivage »
+                          existait ici, « Charger le détail » et « Reprendre la
+                          saisie » existaient ailleurs dans l'app. On ne les
+                          invente pas, on les met au bon endroit. */}
+                    {lightweightEstArchive && props.onRestoreAnnonce ? (
                       <button className="detail-readonly-action" type="button" onClick={() => props.onRestoreAnnonce?.(dossier)}>
-                        Demander le desarchivage
+                        Demander le désarchivage
+                      </button>
+                    ) : null}
+                    {lightweightEstBrouillon ? (
+                      <button className="detail-readonly-action" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>
+                        Reprendre la saisie dans Hektor
+                      </button>
+                    ) : null}
+                    {!lightweightEstArchive && !lightweightEstBrouillon && props.onOpenLightweightDetail ? (
+                      <button className="detail-readonly-action" type="button" onClick={() => props.onOpenLightweightDetail?.(dossier)}>
+                        Charger le détail
                       </button>
                     ) : null}
                   </div>
@@ -31668,7 +31735,7 @@ function DossierDetailLayoutBase(props: {
                   {!isLightweightDetail ? <button className="hektor-context-action-button hektor-context-action-button-content" type="button" onClick={() => setHektorEditModalOpen(true)}>
                     <span aria-hidden="true"><DetailIcon type="content" /></span>
                     <strong>Modifier l'annonce</strong>
-                  </button> : <small>Lecture seule jusqu'a desarchivage.</small>}
+                  </button> : <small>{lightweightEstArchive ? 'Lecture seule jusqu\'au désarchivage.' : lightweightEstBrouillon ? 'Lecture seule : saisie en cours chez Hektor.' : 'Lecture seule : bien vendu ou clos.'}</small>}
                 </div>
               </section>
               ) : null}
@@ -31888,7 +31955,7 @@ function DossierDetailLayoutBase(props: {
                         <div><span>Date vente</span><strong>{formatDate(props.detail.vente_date)}</strong></div>
                         <div><span>Prix</span><strong>{formatPrice(props.detail.vente_prix)}</strong></div>
                         <div><span>Honoraires</span><strong>{formatPrice(props.detail.vente_honoraires)}</strong></div>
-                        <div><span>Commission agence</span><strong>{formatPrice(props.detail.vente_commission_agence)}</strong></div>
+                        <div><span>Commission agence (HT)</span><strong>{formatPrice(props.detail.vente_commission_agence)}</strong></div>
                         <div><span>Notaires</span><strong>{props.detail.vente_notaires_resume ?? '-'}</strong></div>
                       </div>
                     </div>
@@ -35169,6 +35236,7 @@ function AnnonceScreen(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onOpenLightweightDetail?: (dossier: Dossier) => void
   onOpenContact?: (contactId: string) => void
   detailLoading: boolean
   onBack: () => void
@@ -35205,6 +35273,7 @@ function DossierDetailScreen(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onOpenLightweightDetail?: (dossier: Dossier) => void
   onOpenContact?: (contactId: string) => void
   detailLoading: boolean
   sourceScreen: 'mandats' | 'suivi'
@@ -35291,6 +35360,7 @@ function MobileDossierDetail(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onOpenLightweightDetail?: (dossier: Dossier) => void
   onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
@@ -35326,9 +35396,18 @@ function MobileDossierDetail(props: {
   const isEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const showEstimation = isEstimation || (props.detailVariant ?? 'annonce') === 'annonce'
   const isArchivedLightweightDetail = isArchivedAnnonceRecord(dossier)
+  // ⑦-4 (16/10/2026) : LE MOBILE DISTINGUAIT DEUX CAS SUR TROIS.
+  // Il disait déjà juste pour une archive et pour un vendu/clos -- c'est son
+  // patron que le bandeau desktop a recopié. Mais il annonçait « Cette fiche
+  // vendue ou close » à un BROUILLON, qui n'est ni l'un ni l'autre : c'est une
+  // saisie en cours chez Hektor, en lecture seule par décision (23/06).
+  // ⚠ 527 brouillons. On balaie la famille entière plutôt qu'une case sur trois.
+  const isBrouillonLightweightDetail = isBrouillonRecord(dossier)
   const lightweightReadOnlyLabel = isArchivedLightweightDetail
     ? 'Cette fiche archivée est consultable. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes après désarchivage.'
-    : 'Cette fiche vendue ou close est consultable depuis un index léger. Les modifications restent bloquées tant que la fiche n’est pas revenue dans le périmètre principal.'
+    : isBrouillonLightweightDetail
+      ? 'Cette annonce est un brouillon : sa saisie n’est pas terminée chez Hektor. Elle est consultable ici, et se reprend là-bas.'
+      : 'Cette fiche vendue ou close est consultable depuis un index léger. Les modifications restent bloquées tant que la fiche n’est pas revenue dans le périmètre principal.'
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
   const requestItems = [...props.requestHistoryDiffusion, ...props.requestHistoryPriceDrop, ...props.requestHistoryCancellation]
@@ -35392,7 +35471,7 @@ function MobileDossierDetail(props: {
     ['Date vente', formatDate(props.detail.vente_date)],
     ['Prix', formatPrice(props.detail.vente_prix)],
     ['Honoraires', formatPrice(props.detail.vente_honoraires)],
-    ['Commission agence', formatPrice(props.detail.vente_commission_agence)],
+    ['Commission agence (HT)', formatPrice(props.detail.vente_commission_agence)],
     ['Notaires', props.detail.vente_notaires_resume ?? '-'],
   ]
   const secteurFacts = consoleDetailFacts(props.detail.secteur_console_json)
@@ -35449,7 +35528,12 @@ function MobileDossierDetail(props: {
               Demander le désarchivage
             </button>
           ) : null}
-          {!isArchivedLightweightDetail && props.onChangeAnnonceStatus ? (
+          {isBrouillonLightweightDetail ? (
+            <button className="mobile-primary-button" type="button" onClick={() => openHektorAnnonce(dossier.hektor_annonce_id)}>
+              Reprendre la saisie dans Hektor
+            </button>
+          ) : null}
+          {!isArchivedLightweightDetail && !isBrouillonLightweightDetail && props.onChangeAnnonceStatus ? (
             <button className="mobile-primary-button" type="button" onClick={() => props.onChangeAnnonceStatus?.(dossier)}>
               Changer le statut
             </button>
