@@ -72,14 +72,31 @@ GRAVES = ("deux_numeros", "croisements", "absents_du_cloud", "plage_envahie")
 
 
 def _lire(conn: sqlite3.Connection, table: str) -> dict:
-    """{(annonce, numero): numero d'app} -- les deux colonnes ramenees au texte."""
+    """{(annonce, numero): numero d'app} -- les deux colonnes ramenees au texte.
+
+    ⚠⚠ L'ANNONCE VIDE EST UNE VALEUR, PAS UNE ABSENCE -- corrige le 15/10/2026.
+    ═══════════════════════════════════════════════════════════════════════════
+    Depuis le 15/10, un MANDAT DE RECHERCHE entre au registre avec
+    `hektor_annonce_id = ''` : il n'est pas porte par un bien mais par un
+    CONTACT (colonne app_contact_id). La chaine vide est VOULUE -- un NULL
+    casserait l'index unique, en SQL deux NULL ne sont jamais egaux.
+
+    L'ancien test `if a and n` ecartait ces lignes DES DEUX COTES. La sentinelle
+    n'aurait donc jamais crie a leur sujet -- mais elle aurait surtout cesse de
+    les SURVEILLER : un mandat de recherche perdu entre le registre et sa
+    doublure serait passe inapercu. Un angle mort est pire qu'un faux rouge
+    (lecon du projet : « un controle vert peut ne pas mesurer ce qu'on croit »).
+
+    On n'exige donc plus que LE NUMERO. Le couple reste la cle -- ('', '18741')
+    est une adresse parfaitement valable, et distincte de ('62619', '18741').
+    """
     sortie = {}
     for app_id, annonce, numero in conn.execute(
         f"SELECT app_mandat_id, hektor_annonce_id, numero_mandat FROM {table}"
     ):
         a = str(annonce or "").strip()
         n = str(numero or "").strip()
-        if a and n:
+        if n:
             sortie[(a, n)] = int(app_id) if app_id is not None else None
     return sortie
 

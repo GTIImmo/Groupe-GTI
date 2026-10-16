@@ -2499,6 +2499,29 @@ def build_mandat_register_rows(
             }
             register_rows.append(row)
 
+    # ═══════════════════════════════════════════════════════════════════════
+    # LES MANDATS QUI N'ONT PAS DE BIEN -- 16/10/2026
+    # ═══════════════════════════════════════════════════════════════════════
+    # ⭐ AJOUTEES A COTE, PAS DANS LA BOUCLE. Ce constructeur ENUMERE LES
+    #   ANNONCES : un mandat de recherche n'a pas d'annonce, il ne peut pas
+    #   entrer par cette porte. On produit ses lignes au MEME FORMAT dans un
+    #   module a part et on les ajoute ici.
+    # ⚠ ET SI CE MODULE ECHOUE, LE REGISTRE EST CELUI D'AVANT. Une etape neuve
+    #   ne doit pas pouvoir faire tomber les 24 500 lignes qui marchent.
+    #   (Le push cible -- dossier_ids -- les saute : il ne traite qu'une annonce.)
+    if dossier_ids is None:
+        try:
+            from phase2.sync.registre_mandats_sans_bien import charger_mandats_sans_bien
+            sans_bien = charger_mandats_sans_bien(con)
+            register_rows.extend(sans_bien)
+            if sans_bien:
+                print("[registre des mandats] %d mandat(s) sans bien ajoute(s) "
+                      "(mandats de recherche, portes par un contact)" % len(sans_bien),
+                      file=sys.stderr)
+        except Exception as erreur:            # noqa: BLE001 -- on ne tombe jamais pour ca
+            print("[registre des mandats] mandats sans bien IGNORES (%s) -- "
+                  "le registre reste celui d'avant" % str(erreur)[:90], file=sys.stderr)
+
     register_rows.sort(
         key=lambda item: (
             int(item.get("register_sort_group") if item.get("register_sort_group") is not None else 1),

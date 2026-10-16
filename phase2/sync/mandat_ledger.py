@@ -181,11 +181,42 @@ CREATE TABLE IF NOT EXISTS app_mandat (
     -- delete-never : une ligne que le miroir ne montre plus est MARQUEE, jamais
     -- supprimee. Meme patron que les photos et que le ledger d'affaires.
     present_in_hektor    INTEGER NOT NULL DEFAULT 1,
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- LE PORTEUR DU MANDAT QUAND CE N'EST PAS UNE ANNONCE      15/10/2026
+    -- ═══════════════════════════════════════════════════════════════════════
+    -- Un MANDAT DE RECHERCHE n'est pas porte par un bien : il est porte par la
+    -- PERSONNE qui nous mandate pour chercher. Hektor le range sur la fiche du
+    -- CONTACT, pas sur celle d'une annonce -- et aucune de ses trois routes
+    -- Mandat ne le sert (elles sont gelees au n 18339 / 30-01-2026).
+    --
+    -- ⭐ LA CLE NE CHANGE PAS, ET C'EST VOULU. Un mandat sans annonce portera
+    --   hektor_annonce_id = '' (la chaine VIDE), JAMAIS NULL :
+    --       ('', '18741') contre ('', '18741')  ->  REFUSE, l'index protege
+    --       (NULL, '18741') contre (NULL,'18741') -> ⚠ ACCEPTE : en SQL, deux
+    --       NULL ne sont jamais egaux, donc UNIQUE ne protege plus RIEN.
+    --   Et on ne peut pas se rabattre sur le numero seul : 8 116 numeros sont
+    --   portes par PLUSIEURS annonces (le n 1311 sur 13) -- Hektor les recycle.
+    --   Mesure du 15/10 : la valeur '' n'est utilisee par AUCUNE des 26 859
+    --   lignes existantes, elle est donc libre.
+    --
+    -- ⚠ QUI LIT CES LIGNES DOIT LE SAVOIR : une annonce vide ne veut pas dire
+    --   « on ne sait pas », elle veut dire « il n'y en a pas, regarder
+    --   app_contact_id ». mandat_corps_recopie.py l. 198 testait deja le vide.
+    app_contact_id       INTEGER,
+    hektor_contact_id    TEXT,
     UNIQUE (hektor_annonce_id, numero_mandat)
 );
 CREATE INDEX IF NOT EXISTS idx_app_mandat_annonce ON app_mandat (hektor_annonce_id);
 CREATE INDEX IF NOT EXISTS idx_app_mandat_numero  ON app_mandat (numero_mandat);
 """
+# ⛔ L'INDEX SUR app_contact_id N'EST PAS ICI, ET C'EST UN PIEGE EVITE.
+#   SCHEMA est joue AVANT les ADD COLUMN (refresh : executescript puis les
+#   ALTER). Sur la base existante, la colonne n'existe pas encore a ce
+#   moment-la : un CREATE INDEX ... (app_contact_id) ferait tomber TOUT le run
+#   sur « no such column ». Il est donc cree apres les ALTER, plus bas.
+INDEX_CONTACT = (
+    "CREATE INDEX IF NOT EXISTS idx_app_mandat_contact ON app_mandat (app_contact_id)"
+)
 
 
 def now_iso() -> str:
@@ -215,20 +246,104 @@ def _nature(type_mandat, note, offre_type) -> str:
     mandat de gestion ou de recherche. Elle passe donc AVANT le type d'offre :
     les 260 mandats de gestion portent tous sur un bien en location, et leur
     nature est GESTION, pas LOCATION.
+
+    ── 14/10/2026 : ON LIT AUSSI LE TYPE, PARCE QUE HEKTOR A CHANGE D'ENDROIT ──
+
+    Jusqu'au 29/09, le `type` ne portait qu'une CATEGORIE JURIDIQUE (SIMPLE /
+    EXCLUSIF / ACCORD) et l'objet du mandat vivait dans la note. Depuis que le
+    wizard PROTEXA sert, le type porte le LIBELLE COMPLET -- « Mandat de recherche
+    d'un terrain ». La fonction ne regardait le type que pour y chercher « VENTE » :
+    les mandats 18937 et 18938, descendus le 13/10 sur l'annonce 63200, tombaient
+    donc en INCONNUE alors que leur objet etait ECRIT.
+
+    ⚠ CE N'EST PAS UNE EXCEPTION A LA REGLE DU 29/09, C'EST SON APPLICATION.
+      « Les 883 INCONNUE ne sont pas rangees en VENTE » vise les fiches que Hektor
+      a laissees SANS TYPE : la donnee n'existe pas, on ne la devine pas. Ici elle
+      existe : la lire, c'est « lue, jamais devinee ». Mesure : les 2 902 mandats
+      sans type ne bougent pas d'une ligne.
+
+    ⚠⚠ LES TESTS NOUVEAUX PORTENT UNIQUEMENT SUR `type`, JAMAIS SUR LA NOTE.
+      Une premiere version cherchait « mandat d'acheter » dans la note : elle a
+      reclasse le mandat 7133 -- une VENTE de 2013, mandants MIALON -- dont le
+      « Commentaire confidentiel mandat » contenait ces mots par hasard. La note
+      est du TEXTE LIBRE ; seul « Objet mandat » y est fiable, et il est deja lu.
+      Le type, lui, est un libelle court et ferme.
+
+    ⚠ STRICTEMENT ADDITIF (condition posee par Frederic le 14/10) : on AJOUTE des
+      tests, aucun n'est modifie ni retire. Mesure sur les 26 859 lignes : 2
+      changent, 0 devient VENTE, 0 perd une nature connue.
+
+    ⛔ CE QUI N'EST PAS FAIT, ET POURQUOI : « Mandat de reprise (Vente) » contient
+      le mot « vente » et tombe donc dans VENTE par le test ci-dessous -- alors
+      qu'une reprise n'est pas une vente, et que la regle 2 de _poser() irait
+      combler ses mandants. Le corriger CHANGERAIT un comportement existant, ce
+      que la consigne exclut ; et Frederic a repondu « je sais pas » le 14/10.
+      Aucun mandat de reprise n'existe en base aujourd'hui (mesure), donc le piege
+      est dormant. A rouvrir avec lui. Meme remarque pour « location-bailleur »,
+      « location-locataire » et « Baux-Commerciaux », qui resteraient INCONNUE.
+
+    ═══════════════════════════════════════════════════════════════════════════
+    15/10/2026 : LA NOTE NE NOMME PLUS UN MANDAT DE RECHERCHE
+    ═══════════════════════════════════════════════════════════════════════════
+    ⚠ CECI N'EST PAS ADDITIF. C'est un test RETIRE, sur consigne de Frederic :
+      « se baser uniquement sur le type de mandat, pas sur la note, au moins
+        pour les mandats de recherche ».
+
+    ── CE QUE LA PHRASE VEUT VRAIMENT DIRE (explique par Frederic) ──
+    « Objet mandat : mandat de recherche 13654 » sur un mandat de VENTE ne dit
+    pas « je suis un mandat de recherche ». Il dit : « un mandat de recherche,
+    le n 13654, a amene l'acquereur de ce compromis ». C'est un ANTECEDENT.
+    Le mandat 16786 le montre sans ambiguite : sa note cite le mandat 16782 de
+    « Lesault Thibault et Aurelie », alors que SON mandant est Alain VILLENEUVE.
+
+    ── CE QUE LA MESURE DIT (15/10, sur les 26 859 lignes) ──
+        65 lignes etaient classees RECHERCHE
+           49 par une note qui RENVOIE au numero d'un autre mandat
+           14 par une note sans numero  -> le tableur ancien dit VENTE : 14/14
+            2 par le TYPE               -> les SEULES vraies (18937, 18938)
+    Trois sources independantes concordent : le code `mandate_type` des exports
+    (63/63 disent « 1 = vente »), les annotations « MDR » du classeur de suivi,
+    et le REGISTRE LEGAL CERTIFIE (Certif_Export_RT14405_12586.pdf) -- aucune
+    de ces 63 lignes n'y figure comme mandat de recherche.
+
+    ── EFFET MESURE DU RETRAIT ──
+        63 lignes changent :  26 -> VENTE (elles ont un type)
+                              37 -> INCONNUE (elles n'ont AUCUN type)
+    INCONNUE est la reponse honnete : sans type, la donnee n'existe pas, et la
+    regle du 29/09 interdit de la deviner. Le registre legal, lui, n'utilise
+    PAS cette colonne (il filtre sur offre_type) : aucune ligne n'en sort.
+
+    ⛔ LA FAMILLE GESTION N'EST PAS TOUCHEE, ET C'EST MESURE.
+      La meme maladie existe : 23 mandats de GESTION ont une note qui renvoie a
+      un autre numero. Mais le tableur dit que 17 d'entre eux sont BIEN des
+      gestions (code 2). La difference est logique : une gestion qui cite une
+      gestion est un RENOUVELLEMENT -- meme objet. Une vente qui cite une
+      recherche renvoie a un objet DIFFERENT. Les corriger en casserait 17.
+
+    ⚠ ET LE RETRAIT EXPOSE UN TROISIEME CAS DE LA MEME MALADIE, corrige ici :
+      le mandat 13273 porte « mandat de recherche 4068 - PAS DE MANDAT DE
+      VENTE ». Jusqu'ici le test RECHERCHE l'attrapait en premier ; sans lui, il
+      tombait sur « MANDAT DE VENTE in note » -- dans une NEGATION -- et devenait
+      VENTE. Mesure : c'est la seule negation des 29 occurrences. D'ou la garde.
     """
     n = (note or "").upper()
-    if "MANDAT DE GESTION" in n or "MANDAT DE GERANCE" in n:
-        return "GESTION"
-    if "MANDAT DE RECHERCHE" in n:
-        return "RECHERCHE"
     t = (type_mandat or "").strip().upper()
+    if "MANDAT DE GESTION" in n or "MANDAT DE GERANCE" in n \
+            or "GESTION" in t or "GERANCE" in t:
+        return "GESTION"
+    # ⚠ PLUS DE `"MANDAT DE RECHERCHE" in n` : voir le bloc du 15/10 ci-dessus.
+    #   Le type est une liste fermee, la note est du texte libre ou le negociateur
+    #   ecrit l'ANTECEDENT du compromis. Seul le type fait foi ici.
+    if "RECHERCHE" in t or "ACHETER" in t:
+        return "RECHERCHE"
     if t in ("SIMPLE", "EXCLUSIF", "ACCORD") or "VENTE" in t:
         return "VENTE"
     if str(offre_type or "") in TYPES_LOCATION:
         return "LOCATION"
     if "MANDAT DE LOCATION" in n:
         return "LOCATION"
-    if "MANDAT DE VENTE" in n:
+    # ⚠ « PAS DE MANDAT DE VENTE » est une NEGATION, pas une declaration (13273).
+    if "MANDAT DE VENTE" in n and "PAS DE MANDAT DE VENTE" not in n:
         return "VENTE"
     return "INCONNUE"
 
@@ -350,6 +465,25 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     _ajouter_colonne_si_absente(con, "version_count", "INTEGER")
     _ajouter_colonne_si_absente(con, "avenants_json", "TEXT")
     _ajouter_colonne_si_absente(con, "avenant_count", "INTEGER")
+    # 15/10/2026 -- le porteur quand ce n'est pas une annonce (mandat de
+    # recherche). Voir le long commentaire du SCHEMA : la table existe deja,
+    # donc CREATE TABLE IF NOT EXISTS ne lui ajoute RIEN, il faut l'ALTER.
+    # ⚠ Un ADD COLUMN ne pose pas l'index : il est cree par le SCHEMA au-dessus,
+    #   qui lui a bien un IF NOT EXISTS.
+    _ajouter_colonne_si_absente(con, "app_contact_id", "INTEGER")
+    _ajouter_colonne_si_absente(con, "hektor_contact_id", "TEXT")
+    # 15/10/2026 -- CE QUE NOUS SAVONS QUAND HEKTOR SE TAIT.
+    # ⭐⭐ CES TROIS COLONNES NE SONT PAS DANS L'INSERT CI-DESSOUS, ET C'EST LE
+    #   POINT ENTIER. Le run reecrit `nature` et `type` a chaque nuit
+    #   (ON CONFLICT DO UPDATE SET nature = excluded.nature) : un UPDATE ne
+    #   tiendrait pas une nuit. Celles-ci, il ne les ecrit JAMAIS -- meme patron
+    #   que `date_cloture` et `first_seen_at`, posees a la naissance et plus
+    #   jamais touchees dans cette meme table.
+    #   L'ordre de lecture reste HEKTOR D'ABORD : COALESCE(nature, nature_app).
+    _ajouter_colonne_si_absente(con, "nature_app", "TEXT")
+    _ajouter_colonne_si_absente(con, "type_app", "TEXT")
+    _ajouter_colonne_si_absente(con, "source_app", "TEXT")
+    con.execute(INDEX_CONTACT)   # apres l'ALTER, jamais avant (voir INDEX_CONTACT)
     vu = now_iso()
 
     # Le type d'offre de chaque annonce, lu une fois. Il ne sert pas a filtrer
@@ -962,7 +1096,26 @@ COLONNES_POUSSEES = (
     "offre_type", "nature", "date_cloture", "versions_json", "version_count",
     "avenants_json", "avenant_count", "first_seen_at", "last_seen_at",
     "present_in_hektor",
+    # 15/10/2026 -- le porteur quand ce n'est pas une annonce (mandat de
+    # recherche). Voir COLONNES_JEUNES juste dessous : elles ne partent que si
+    # le cloud les connait deja.
+    "app_contact_id", "hektor_contact_id",
+    # 15/10 -- ce que NOUS savons quand Hektor se tait. Le run ne les ECRIT
+    # jamais (elles sont hors de son INSERT), mais il les POUSSE : sans ca
+    # elles resteraient locales et le cloud ne les verrait pas.
+    "nature_app", "type_app", "source_app",
 )
+
+# ⚠⚠ LES COLONNES DONT LE PATCH SQL PEUT NE PAS ENCORE ETRE PASSE.
+#   PostgREST refuse TOUT LE LOT des qu'une seule colonne lui est inconnue
+#   (PGRST204) : envoyer `app_contact_id` avant son patch ne degraderait pas le
+#   registre, il le ferait TOMBER EN ENTIER, la nuit, sans personne pour voir.
+#   Le projet a deja ce filet pour le registre (adapter_registre_au_schema,
+#   05/10) ; on le recopie ici plutot que d'en inventer un second.
+#   ⚠ ET IL NE SE TAIT PAS : une colonne retiree est ECRITE sur stderr.
+#   A retirer de cette liste une fois le patch passe pour de bon.
+COLONNES_JEUNES = ("app_contact_id", "hektor_contact_id",
+                   "nature_app", "type_app", "source_app")
 
 
 def lignes_a_pousser(con: sqlite3.Connection) -> list[dict]:
@@ -983,8 +1136,16 @@ def pousser(con: sqlite3.Connection, taille_lot: int = 200, a_blanc: bool = Fals
         for cle in ("payload_json", "versions_json", "avenants_json"):
             if exemple.get(cle):
                 exemple[cle] = str(exemple[cle])[:60] + " ..."
+        # ⚠ LE BLANC NE PEUT PAS SAVOIR : il n'ouvre pas de connexion, donc il ne
+        #   sait pas si le cloud connait deja COLONNES_JEUNES. Il annonce le
+        #   maximum et le DIT, plutot que de laisser croire a une certitude.
+        # ⚠ LE COMPTE SE PREND SUR LA LIGNE REELLE, pas sur la liste souhaitee :
+        #   lignes_a_pousser ne garde que les colonnes QUE LA TABLE LOCALE A
+        #   (`if c in r.keys()`). Tant que l'ALTER n'a pas tourne, annoncer
+        #   len(COLONNES_POUSSEES) serait une fausse promesse de 2 colonnes.
         return {"a_blanc": True, "lignes": len(lignes),
-                "colonnes": len(COLONNES_POUSSEES), "exemple": exemple}
+                "colonnes": len(exemple), "exemple": exemple,
+                "sous_reserve": [c for c in COLONNES_JEUNES if c in exemple]}
 
     load_env_files(DEFAULT_ENV_FILES)
     url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
@@ -997,8 +1158,34 @@ def pousser(con: sqlite3.Connection, taille_lot: int = 200, a_blanc: bool = Fals
             "app_mandat n'existe pas cote Supabase. Appliquer d'abord "
             "supabase/patch_app_mandat_2026-09-29.sql puis "
             "supabase/patch_app_mandat_versions_2026-09-30.sql.")
+    lignes, retirees = _retirer_colonnes_absentes_du_cloud(client, lignes)
     client.upsert_rows(path=TABLE, rows=lignes, batch_size=taille_lot)
-    return {"lignes_poussees": len(lignes)}
+    return {"lignes_poussees": len(lignes), "colonnes_retirees": retirees}
+
+
+def _retirer_colonnes_absentes_du_cloud(
+    client: "SupabaseRestClient", lignes: list[dict]
+) -> tuple[list[dict], list[str]]:
+    """Le filet du 05/10, recopie pour app_mandat. Voir COLONNES_JEUNES.
+
+    ⭐ L'ORDRE NORMAL RESTE : patch SQL d'abord, code ensuite. Ceci n'est que le
+      filet pour la nuit ou les deux se croisent -- il n'excuse pas le patch.
+    """
+    if not lignes:
+        return lignes, []
+    manquantes = [
+        c for c in COLONNES_JEUNES
+        if c in lignes[0] and not client.colonne_disponible(TABLE, c)
+    ]
+    if not manquantes:
+        return lignes, []
+    print(
+        "[app_mandat] colonnes absentes du cloud, RETIREES de ce push : %s"
+        "  -- supabase/patch_app_mandat_contact_2026-10-15.sql n'est pas encore passe."
+        % ", ".join(manquantes),
+        file=sys.stderr,
+    )
+    return [{k: v for k, v in r.items() if k not in manquantes} for r in lignes], manquantes
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -1066,6 +1253,11 @@ def main() -> int:
             print("PUSH A BLANC -- rien n'est envoye")
             print("   lignes qui partiraient  : %s" % bilan["lignes"])
             print("   colonnes envoyees       : %s" % bilan["colonnes"])
+            if bilan.get("sous_reserve"):
+                print("   ⚠ sous reserve que le cloud les connaisse : %s"
+                      % ", ".join(bilan["sous_reserve"]))
+                print("     (le vrai push le verifie et les retire sinon ; "
+                       "le blanc n'ouvre pas de connexion)")
             for k, v in sorted(bilan["exemple"].items()):
                 print("      %-22s = %r" % (k, v))
         elif args.push:
