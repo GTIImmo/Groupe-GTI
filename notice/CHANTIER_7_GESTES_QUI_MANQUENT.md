@@ -1746,3 +1746,24 @@ conclu**. À regarder si ça gêne.
 façade. Le bien n'est pas diffusé, donc **aucun effet public** — mais il faut **remettre la
 façade** si Frédéric le veut (un clic sur le ★ de la façade suffit : le geste est réversible,
 c'est tout son intérêt).
+
+### ✅ LA FAÇADE EST REMISE — et le geste a prouvé sa réversibilité
+
+Sur sa demande, un second clic sur le ★ de la façade *(487540)* :
+
+| | |
+|---|---|
+| chez nous | ✅ `487540` **rang 0** · `487542` rang 1 · `487541` rang 2 |
+| chez Hektor | ✅ `photo_1197f9e7…` **en premier** — la façade |
+| les travaux | **2 sur 2 en `done`**, **0 en erreur** |
+
+⭐ **Le geste marche donc dans les deux sens, et en quelques secondes.**
+
+⚠⚠ **MAIS IL NE RESTAURE PAS UN ORDRE, ET IL FAUT LE SAVOIR.** L'ordre d'origine était
+`487540 · 487541 · 487542` ; il est maintenant `487540 · 487542 · 487541` — **les 2ᵉ et 3ᵉ ont
+permuté**. C'est la définition même du geste ① : il **met une photo en tête** et laisse les
+autres dans leur ordre courant. Ce n'est pas un « annuler ».
+
+⭐ **L'ordre d'avant est pourtant gardé** dans `base_snapshot` de chaque travail : un futur
+geste « remettre comme avant » aurait tout ce qu'il lui faut. **Non demandé, non fait.**
+*(Sur ce bien : 3 photos, 0 portail — sans conséquence.)*
