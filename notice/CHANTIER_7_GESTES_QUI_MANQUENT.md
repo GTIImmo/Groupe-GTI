@@ -1284,3 +1284,49 @@ mandat **validé** pour proposer la demande. Mesure du 16/10 :
 « c'est ce qui en garde la trace » 1, `register-cloture` 1 *(et 1 dans la CSS)*,
 `min-width:1084px` 1. ⚠ Le `min-width:1180px` qui reste dans la CSS est une **média-query de
 `layout-overrides.css`**, touchée pour la dernière fois le **23/06** — rien à voir.
+
+### ✅ POUSSÉ ET REVÉRIFIÉ À L’ŒIL — 16/10, 13:0x
+
+Commit `6217a0d`, déploiement Vercel **READY**, puis mesures **dans la page** :
+
+| ce qui a été mesuré | avant | après |
+|---|---|---|
+| colonnes du tableau | 9 + actions | **8 + actions** *(« Date de clôture » partie)* |
+| largeur du tableau | 1 180 px | **1 089 px** |
+|  | 1 180 | **1 084** |
+| **débordement** | **91 px, défilement horizontal** | **0 px, ** |
+
+Et la fiche mandat, **sous le compte admin de Frédéric**, rend exactement sa consigne :
+
+
+boutons = [« Demander l’annulation de ce mandat »] · champs date = **0**
+
+⭐ **Et le mandat ouvert (18946) est , donc NON VALIDÉ** — le bouton est là
+quand même. C’est la preuve en réel que ne pas recopier la condition de validation était
+la bonne décision : avec elle, cette fiche n’aurait eu **aucun** bouton.
+
+### ⚠⚠ ET LA SONDE DE DÉPLOIEMENT M’A APPRIS QUELQUE CHOSE
+
+Ma première sonde a répondu **« EN LIGNE » sur l’ANCIEN paquet** : elle ne cherchait que
+les textes qui devaient **apparaître**, et ils y étaient déjà.
+➡ **Une sonde de déploiement se fait DANS LES DEUX SENS** — ce qui doit être là **et** ce
+qui doit avoir disparu. Même règle que le témoin inverse d’une répétition SQL.
+essai 1 : /assets/index-QjC7_VDG.js -- presents 4/4 · disparus 2/2
+
+=== EN LIGNE, ET VERIFIE DANS LES DEUX SENS ===
+paquet servi : /assets/index-QjC7_VDG.js (2278331 octets)
+  PRESENT  Demander l'annulation de ce mandat           1 fois
+  PRESENT  Corriger la date de clôture                 1 fois
+  PRESENT  c'est ce qui en garde la trace               1 fois
+  PRESENT  close_date                                   1 fois
+  DISPARU  Clôturer ce mandat                          0 fois
+  DISPARU  Rouvrir le mandat                            0 fois est réécrit ainsi, et il l’a prouvé sur place :
+
+
+
+### ⬜ CE QUI N’A PAS ÉTÉ VU
+
+La **sous-ligne `Clos 14/10/2027`** n’a pas pu être observée : la vue par défaut du registre
+ne contient aucun mandat clos *(0 sur les 50 affichées ; 18836 et 11939 sont hors de ce
+périmètre)*. Son rendu n’est prouvé que par le code et par la présence de 
+dans la CSS servie.
