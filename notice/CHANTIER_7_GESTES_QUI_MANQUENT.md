@@ -528,6 +528,34 @@ Supprimer la recherche
 ➡ **Donc « il faut en recréer une autre » est FAUX dans le Hektor d'aujourd'hui.** *(Ce qui
 reste vrai : **notre app** ne sait pas le faire — elle ne connaît que « poser une date ».)*
 
+### 🔎 AUDIT DU BOUTON « SUPPRIMER UNE RECHERCHE » — *demandé le 16/10*
+
+| maillon | ce qu'il fait vraiment |
+|---|---|
+| **l'écran** | l'icône dit **« Supprimer »**, mais sa confirmation dit **la vérité** : *« **Archiver** cette recherche dans Hektor ? Elle disparaîtra des recherches actives. »* → le message est juste, **le libellé ment** |
+| **la base** | `app_console_create_delete_contact_search_job` écrit `archive=true, is_active=false` **dans la même transaction**, garde une **photo d'avant** et pose un verrou |
+| **le worker** | `archiveHektorContactSearch` → `modifDateArchiveCritere` + **la date du jour** → rend `status: archived` |
+
+**⭐ LA QUESTION A DÉJÀ ÉTÉ POSÉE ET TRANCHÉE** — commit **`f48d55a`** *(31/08)* :
+> *« SUPPRIMER UNE RECHERCHE ÉTAIT DÉJÀ FAIT depuis le 30/08 … ⚠ **Et ce n'est pas une
+> suppression mais un ARCHIVAGE** »* · *« LES DEUX VRAIES SUPPRESSIONS SONT CLASSÉES SANS
+> OBJET, **sur décision de Frédéric, à revoir APRÈS la coupure des workers** »* — motif :
+> **une suppression est IRRÉVERSIBLE**, et « écrire d'abord » ne protège rien quand il n'y a
+> rien à sauvegarder.
+
+**⚠⚠ ET UNE CROYANCE DU PROJET EST FAUSSE.** Deux documents disent *« **Hektor ne sait pas
+supprimer une recherche**, il pose une date »* *(liste l. 686-687 ; audit du 21/09)*.
+**C'est faux** : le menu « ⋮ » d'une recherche porte **« Supprimer la recherche »**, et le mode
+`contacts-contactProfile-recherche-deleteContactRecherche` existe dans son code *(capture de
+juin **et** fichier relevé le 15/10)*. ➡ **Hektor sait supprimer ; c'est NOTRE app qui ne
+l'utilise nulle part** *(0 occurrence dans tout le dépôt)*. La décision reste bonne, mais elle
+doit se dire autrement : **« on a choisi de ne pas »**, et non « on ne peut pas ».
+
+**⭐ ET L'INTUITION RGPD EST JUSTE** : Hektor pose une **date d'auto-archivage à
+« création + 2 ans »** — mesuré deux fois *(créée 22-06-2026 → 22-06-2028 ; 05-06-2026 →
+05-06-2028)*. L'archivage d'une recherche est donc **d'abord un mécanisme de durée de
+conservation**, pas un geste de suppression déguisé.
+
 ### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
 
 « Archiver un contact » n'est **pas** un geste anodin : il peut emporter une recherche

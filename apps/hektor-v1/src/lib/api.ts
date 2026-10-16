@@ -3159,7 +3159,15 @@ async function loadContactStatsSnapshot(): Promise<ContactStats | null> {
   const { data, error } = await supabase
     .from(contactStatsCurrentTable)
     .select('total,active,archived,duplicates,high_risk_duplicates,linked,search_contacts,active_search_contacts,eligible')
-    .eq('scope', 'active_or_eligible')
+    // ⚠ 16/10/2026 -- ON LISAIT UNE LIGNE QUI N'EST PLUS ENTRETENUE.
+    //   Le run de nuit pousse les contacts en perimetre « eligible »
+    //   (run_quotidien.ps1 : -ContactsEligibleOnly), donc il ne rafraichit QUE la
+    //   ligne `eligible`. La ligne `active_or_eligible` que l'ecran lisait datait
+    //   du 06/06/2026 et decrivait un perimetre disparu : elle affichait
+    //   191 927 contacts / 170 494 actifs la ou la base en porte 62 111 / 39 461.
+    //   Les tuiles « Contacts / Actifs / Archives » etaient donc fausses depuis
+    //   quatre mois, et ne bougeaient plus quand on archivait quelqu'un.
+    .eq('scope', 'eligible')
     .maybeSingle()
   if (error || !data) return null
   return contactStatsFromSnapshot(data as ContactStatsSnapshotRow)

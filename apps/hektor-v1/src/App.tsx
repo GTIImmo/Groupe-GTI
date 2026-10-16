@@ -9216,7 +9216,32 @@ function mandateRegisterNatureLabel(item: MandatRecord) {
 // Refonte design (maquette « Registre des mandats ») : mêmes données que
 // mandateRegisterNatureLabel, mais séparées en nature (type) + situation
 // (adresse) pour l'affichage sur deux lignes. Aucune logique métier modifiée.
+// ═══════════════════════════════════════════════════════════════════════════════
+// LES MANDATS DE RECHERCHE DANS LE REGISTRE — 16/10/2026
+// ═══════════════════════════════════════════════════════════════════════════════
+// Un mandat de recherche n'est pas porté par un BIEN mais par un CONTACT. Il est
+// au registre légal (loi Hoguet) et doit s'y voir — mais la moitié des colonnes
+// du registre parlent d'un bien qu'il n'a pas.
+//
+// ⭐ AUCUNE COLONNE AJOUTÉE. Les 9 colonnes gardent leur sens, elles changent de
+//   SOURCE : le montant devient le budget cherché, l'état devient celui de la
+//   recherche, « nature et situation » devient les types et les communes.
+//   Le fabricant les a déjà remplies ainsi (registre_mandats_sans_bien.py).
+//
+// ⚠ CE QUI DOIT DISPARAITRE, ET C'EST LE POINT : « Validé / Non validé » et
+//   « Diffusable / Non diffusable » ne veulent RIEN DIRE pour un mandat de
+//   recherche. Les laisser afficherait « Non validé · Non diffusable » sur 38
+//   lignes — une fausse alarme permanente, sur l'écran le plus officiel de l'app.
+function estMandatDeRecherche(item: MandatRecord) {
+  return (item.register_source_kind ?? '').trim().toLowerCase() === 'recherche'
+}
+
 function mandateRegisterNatureParts(item: MandatRecord) {
+  // Un mandat de recherche n'a pas d'adresse de bien : le fabricant a mis les
+  // COMMUNES CHERCHEES dans `ville` et les TYPES CHERCHES dans `type_bien`.
+  if (estMandatDeRecherche(item)) {
+    return { type: safeText(item.type_bien) || 'Recherche', address: safeText(item.ville) }
+  }
   const address = [
     item.adresse_privee_listing,
     item.adresse_detail,
@@ -9242,7 +9267,11 @@ function mandateRegisterSourceLabel(item: MandatRecord) {
 }
 
 function mandateRegisterSourceBadge(item: MandatRecord) {
-  return (item.register_source_kind ?? '').trim().toLowerCase() === 'historique' ? 'Historique' : null
+  const kind = (item.register_source_kind ?? '').trim().toLowerCase()
+  // ⭐ On reutilise la pastille qui existe deja (« Historique ») plutot que d'en
+  //   ajouter une : une colonne de plus pour dire un mot, c'est une colonne de trop.
+  if (kind === 'recherche') return 'Recherche'
+  return kind === 'historique' ? 'Historique' : null
 }
 
 function parseRegisterDetailPayload(item: MandatRecord) {
@@ -12885,6 +12914,27 @@ export default function App() {
       return [job, ...withoutSame].slice(0, 12)
     })
     setDismissedHektorActionJobIds((current) => current.filter((id) => id !== job.id))
+  }
+
+  // ⑦-1 (16/10/2026) : LE JUMEAU D'ARCHIVAGE. Meme patron que la suppression
+  // ci-dessous, mais la fiche n'est pas retiree du monde : elle CHANGE DE CAMP.
+  // On ne la retire de la liste que si elle ne correspond plus au filtre affiche.
+  function handleOptimisticContactArchive(contact: AppContact, archiver: boolean) {
+    const contactId = contact.hektor_contact_id
+    setContactsDirectory((current) => current
+      .map((item) => item.hektor_contact_id === contactId ? { ...item, archive: archiver } : item)
+      .filter((item) => {
+        if (item.hektor_contact_id !== contactId) return true
+        if (filters.archive === activeArchiveFilterValue) return !archiver
+        if (filters.archive === archivedFilterValue) return archiver
+        return true
+      }))
+    setContactStats((current) => ({
+      ...current,
+      active: archiver ? Math.max(0, current.active - 1) : current.active + 1,
+      archived: archiver ? current.archived + 1 : Math.max(0, current.archived - 1),
+    }))
+    setNoticeMessage(`${archiver ? 'Archivage' : 'Reactivation'} demande pour ${contact.display_name || `contact ${contactId}`}.`)
   }
 
   function handleOptimisticContactDeleted(contact: AppContact) {
@@ -21102,6 +21152,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             sessionEmail={sessionEmail}
             onJobCreated={rememberHektorActionJob}
             onContactDeleted={(c) => { setAnnonceContactId(null); handleOptimisticContactDeleted(c) }}
+            onContactArchived={handleOptimisticContactArchive}
             onClose={() => setAnnonceContactId(null)}
             onOpenDossier={(id) => { setAnnonceContactId(null); setScreen('mandats'); setSelectedMandatId(id); setSelectedDossierId(id); setDetailOpen(true) }}
             onOpenRechercheAcquereur={(search) => { setAnnonceContactId(null); setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
@@ -21694,6 +21745,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             sessionEmail={sessionEmail}
             onJobCreated={rememberHektorActionJob}
             onContactDeleted={handleOptimisticContactDeleted}
+            onContactArchived={handleOptimisticContactArchive}
             onOpenRechercheAcquereur={(search) => { setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
           />
         ) : screen === 'suivi' ? (
@@ -22651,6 +22703,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             sessionEmail={sessionEmail}
             onJobCreated={rememberHektorActionJob}
             onContactDeleted={handleOptimisticContactDeleted}
+            onContactArchived={handleOptimisticContactArchive}
             onOpenRechercheAcquereur={(search) => { setRechercheAcquereurSearch(search); setRechercheAcquereurOpen(true) }}
             activeRole={filters.contactRole === allFilterValue ? '' : (filters.contactRole ?? '')}
             searchActive={filters.contactSearchScope === activeContactSearchFilterValue}
@@ -24196,7 +24249,12 @@ function MandatRegisterScreen(props: {
                     const expandKey = rowKey
                     const isMandantsExpanded = Boolean(expandedMandants[expandKey])
                     const natureParts = mandateRegisterNatureParts(item)
-                    const statutActif = (item.statut_annonce ?? '').trim().toLowerCase() === 'actif'
+                    const estRecherche = estMandatDeRecherche(item)
+                    const statutActif = estRecherche
+                      // Pour une recherche, « actif » se lit sur la RECHERCHE,
+                      // pas sur une annonce : le fabricant a pose le libelle.
+                      ? (item.statut_annonce ?? '').toLowerCase().includes('active')
+                      : (item.statut_annonce ?? '').trim().toLowerCase() === 'actif'
                     const isValide = isValidationApproved(item.validation_diffusion_state)
                     const isDiffusable = isDiffusableValue(item.diffusable)
                     return (
@@ -24229,18 +24287,26 @@ function MandatRegisterScreen(props: {
                                 : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="5" /></svg>}
                               <span>{item.statut_annonce || 'Actif'}</span>
                             </div>
+                            {/* ⚠ « Valide » et « Diffusable » ne veulent RIEN DIRE pour un
+                                mandat de recherche : il ne se diffuse pas. Les laisser
+                                afficherait « Non valide · Non diffusable » sur 38 lignes du
+                                registre legal -- une fausse alarme permanente. */}
+                            {estRecherche ? null : (
                             <div className={`reg-etat-row ${isValide ? 'ok' : 'ko'}`}>
                               {isValide
                                 ? <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
                                 : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>}
                               <span>{isValide ? 'Validé' : 'Non validé'}</span>
                             </div>
+                            )}
+                            {estRecherche ? null : (
                             <div className={`reg-etat-row ${isDiffusable ? 'ok' : 'ko'}`}>
                               {isDiffusable
                                 ? <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17 19 7" /></svg>
                                 : <svg className="reg-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>}
                               <span>{isDiffusable ? 'Diffusable' : 'Non diffusable'}</span>
                             </div>
+                            )}
                           </div>
                         </td>
                         <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
@@ -39736,6 +39802,7 @@ function ContactEditModalV2(props: {
 function useArchivageContact(props: {
   contact: AppContact
   onJobCreated?: (job: ConsoleJob) => void
+  onContactArchived?: (contact: AppContact, archiver: boolean) => void
   onFait?: () => void
 }) {
   const [pending, setPending] = useState(false)
@@ -39745,9 +39812,27 @@ function useArchivageContact(props: {
     const qui = (props.contact.display_name || '').trim() || 'ce contact'
     // Le `confirm` DIT LA VERITE : archiver ne supprime rien, et on nomme l'effet
     // visible (la fiche sort de l'annuaire, dont le filtre par defaut est « actifs »).
+    //
+    // ⚠⚠ ET SURTOUT, DEPUIS LE 16/10 : ON NOMME CE QUE LE GESTE EMPORTE.
+    //   Mesure en reel ce matin sur un vrai client : archiver la fiche a rendu sa
+    //   recherche acquereur ARCHIVEE chez Hektor -- et la reactivation de la fiche
+    //   ne l'a PAS rendue. Il a fallu aller la desarchiver a la main dans Hektor
+    //   (menu « ... » de la recherche). Consequences mesurees : 0 recherche active,
+    //   0 rapprochement (il en avait 2, dont un a 100/100).
+    //   Le prix a dire AVANT, pas apres : c'est la regle du projet sur les gestes
+    //   irreversibles-a-moitie.
+    const recherchesActives = Number(props.contact.active_search_count ?? 0)
+    const avertissement = !estArchive && recherchesActives > 0
+      ? `\n\n⚠ ATTENTION : ce contact a ${recherchesActives} recherche${recherchesActives > 1 ? 's' : ''} active${recherchesActives > 1 ? 's' : ''}.`
+        + `\nHektor les archive AUSSI quand on archive la fiche, et les reactiver se fait A LA MAIN dans Hektor,`
+        + ` recherche par recherche (menu « ... » > Desarchiver la recherche).`
+        + `\nSes rapprochements disparaitront tant que la recherche reste archivee.`
+      : ''
     const question = estArchive
       ? `Reactiver ${qui} ? Sa fiche revient dans l'annuaire.`
+        + `\n\nNote : ses recherches archivees NE reviennent PAS toutes seules.`
       : `Archiver ${qui} ? Sa fiche sort de l'annuaire (filtre « actifs »). Rien n'est supprime, et le geste se defait par le meme bouton.`
+        + avertissement
     if (!window.confirm(question)) return
     setPending(true)
     try {
@@ -39756,6 +39841,11 @@ function useArchivageContact(props: {
         archiver: !estArchive,
       })
       props.onJobCreated?.(job)
+      // ⑦-1 (16/10) : la fiche change de camp TOUT DE SUITE a l'ecran. Sans ca, la
+      // base etait juste mais la liste restait sur l'image d'avant -- c'est ce que
+      // Frederic a senti au premier essai (« le transfert d'un index a l'autre a
+      // pris du temps »).
+      props.onContactArchived?.(props.contact, !estArchive)
       props.onFait?.()
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Impossible de changer l'archivage de ce contact.")
@@ -39779,6 +39869,8 @@ function ContactDetailPopupBase(props: {
   sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
   onContactDeleted?: (contact: AppContact) => void
+  // ⑦-1 (16/10) : la fiche change de camp tout de suite dans la liste.
+  onContactArchived?: (contact: AppContact, archiver: boolean) => void
   onClose: () => void
   onOpenDossier: (id: number) => void
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
@@ -40124,7 +40216,7 @@ function ContactDetailPopupBase(props: {
   const negotiatorInitials = userInitials(props.contact.commercial_nom) || 'GTI'
   const isArchived = contactArchiveLabel(props.contact) === 'Archive'
   // ⑦-1 : l'interrupteur d'archivage, partage avec la fiche V2 (meme code).
-  const archivage = useArchivageContact({ contact: props.contact, onJobCreated: props.onJobCreated })
+  const archivage = useArchivageContact({ contact: props.contact, onJobCreated: props.onJobCreated, onContactArchived: props.onContactArchived })
   const hasSeverity = Boolean(props.contact.duplicate_max_severity)
   const severityLabel = contactSeverityLabel(props.contact.duplicate_max_severity)
   const isEligibleApp = contactBool(props.contact.supabase_sync_eligible)
@@ -40796,7 +40888,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   const negotiatorInitials = userInitials(props.contact.commercial_nom) || 'GTI'
   const isArchived = contactArchiveLabel(props.contact) === 'Archive'
   // ⑦-1 : l'interrupteur d'archivage, partage avec la fiche Base (meme code).
-  const archivage = useArchivageContact({ contact: props.contact, onJobCreated: props.onJobCreated })
+  const archivage = useArchivageContact({ contact: props.contact, onJobCreated: props.onJobCreated, onContactArchived: props.onContactArchived })
   const isEligibleApp = contactBool(props.contact.supabase_sync_eligible)
   // ── Sévérité doublon (GAP 4) + données Hektor (GAP 3) — mêmes dérivations que ...Base ──
   const hasSeverity = Boolean(props.contact.duplicate_max_severity)
@@ -41945,6 +42037,7 @@ function ContactsScreen(props: {
   sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
   onContactDeleted?: (contact: AppContact) => void
+  onContactArchived?: (contact: AppContact, archiver: boolean) => void
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
   activeRole?: string
   searchActive?: boolean
@@ -42189,6 +42282,7 @@ function ContactsScreen(props: {
           sessionEmail={props.sessionEmail}
           onJobCreated={props.onJobCreated}
           onContactDeleted={props.onContactDeleted}
+          onContactArchived={props.onContactArchived}
           onClose={() => setDetailOpen(false)}
           onOpenDossier={props.onOpenDossier}
           onOpenRechercheAcquereur={props.onOpenRechercheAcquereur}
@@ -42223,6 +42317,7 @@ function MobileContactCards(props: {
   sessionEmail?: string | null
   onJobCreated?: (job: ConsoleJob) => void
   onContactDeleted?: (contact: AppContact) => void
+  onContactArchived?: (contact: AppContact, archiver: boolean) => void
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
 }) {
   const [detailOpen, setDetailOpen] = useState(false)
@@ -42335,6 +42430,7 @@ function MobileContactCards(props: {
           sessionEmail={props.sessionEmail}
           onJobCreated={props.onJobCreated}
           onContactDeleted={props.onContactDeleted}
+          onContactArchived={props.onContactArchived}
           onClose={() => setDetailOpen(false)}
           onOpenDossier={props.onOpenDossier}
           onOpenRechercheAcquereur={props.onOpenRechercheAcquereur}
