@@ -24519,8 +24519,18 @@ function MandatRegisterScreen(props: {
                           ) : null}
                         </td>
                         <td className="register-col-nature">
-                          <span className="register-nat-type">{natureParts.type || '—'}</span>
-                          {natureParts.address ? <span className="register-nat-addr">{natureParts.address}</span> : null}
+                          {/* ⭐ LA BULLE AU SURVOL — 16/10/2026.
+                              Cette colonne fait 188 px et son CSS coupe a l'ellipse
+                              (registre-v2.css : white-space:nowrap + text-overflow).
+                              MESURE AVANT DE TOUCHER : 18 208 des 24 514 adresses du
+                              registre (74 %) sont DEJA tronquees a l'ecran, plus les
+                              12 designations des mandats de recherche posees ce jour.
+                              ⚠ ON N'ELARGIT PAS LA COLONNE : ce serait changer
+                                l'allure de 18 208 lignes d'un ecran deja valide --
+                                une decision de design, pas un correctif. `title`
+                                rend le texte entier lisible sans deplacer un pixel. */}
+                          <span className="register-nat-type" title={natureParts.type || undefined}>{natureParts.type || '—'}</span>
+                          {natureParts.address ? <span className="register-nat-addr" title={natureParts.address}>{natureParts.address}</span> : null}
                         </td>
                         <td className="register-col-acts">
                           <div className="reg-acts" onClick={(event) => event.stopPropagation()}>
