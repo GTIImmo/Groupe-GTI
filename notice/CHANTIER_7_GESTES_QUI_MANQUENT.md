@@ -354,6 +354,42 @@ refus de la base s'affiche **tel quel**.
 `test_porte_contacts` **23/23**, `test_suite_creation_avertie`, `test_envoi_hektor_differe`.
 ⚠ **Rien n'est poussé** : l'écran n'existera qu'après le push de Frédéric.
 
+#### ✅✅⭐ L'ESSAI RÉEL A RÉUSSI DU PREMIER COUP — *16/10, 07:29:36 → 07:30:08*
+
+**Gladys DURIEUX est réactivée, et c'est l'app qui l'a fait.**
+
+| étape | mesure |
+|---|---|
+| le travail | **1 seule tentative**, `done` · demandé **07:29:36**, pris **07:29:46**, fini **07:29:52** — **16 secondes** |
+| **le service qui l'a pris** | ⭐ **`actions`** *(`NS31851120:actions:service:v9`)* — exactement celui choisi, **pas** `admin` |
+| la charge | `archive: false`, et l'**état d'avant** (`{archive: true}`) est bien dedans |
+| **la réponse de Hektor** | ⭐ **`{"success": "Modification archivage ok"}`** — dans ses propres mots |
+| **les deux numéros** | notre identité **10059959** → cible Hektor **113412** : la traduction a marché en production, du premier coup |
+| le rafraîchissement | `refresh_console_contact_data` enfilé tout seul, **fini 07:30:08**, `synced` |
+
+**⭐⭐ ET LA DERNIÈRE INCONNUE EST FERMÉE — par le VRAI chemin.** Après le
+rafraîchissement *(donc **relu chez Hektor**, pas notre écriture optimiste)* :
+
+| | avant, 07:28:12 | après, 07:30:26 |
+|---|---|---|
+| sa fiche | archivée | ✅ **active** |
+| sa recherche **n° 0** | archivée | **archivée** — inchangée |
+| sa recherche **n° 1** | active | **active** — inchangée |
+| son éligibilité | les 2 raisons | les 2 raisons |
+
+➡ **Réactiver une fiche ne touche PAS ses recherches.** Ses deux recherches, l'une archivée
+et l'autre active, étaient la **sonde parfaite** : aucune des deux n'a bougé.
+⚠ **Ce qui reste à prouver, et je ne l'extrapole pas** : l'autre sens *(**archiver**)* pourrait
+être asymétrique côté serveur Hektor *(archiver une fiche pourrait auto-archiver ses
+critères)*. Le risque est **beaucoup plus faible** qu'hier *(la page ne fait rien d'autre, et
+le serveur n'a rien cascadé dans ce sens-là)*, mais ça se mesure **sur une fiche jetable**,
+pas sur un client.
+
+**À ce stade, le point ⑦-1 est FAIT** : base en production, worker vivant *(4 services
+redémarrés 07:25:26)*, écran en ligne *(commit `1fbce99`, déploiement Vercel READY, les
+textes neufs dans le fichier servi)*, et **un vrai client réparé**. ⭐ **Et le cas ⑦-2 est
+réglé par la même occasion.**
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».

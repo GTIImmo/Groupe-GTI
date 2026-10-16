@@ -316,7 +316,20 @@ report ne se décident jamais sans lui.
       (elle y est en `critical`, il lit LastTaskResult). 6e fois cette famille de defaut ;
       le gel du 20/08 avait dure 7 SEMAINES. A EPROUVER en forcant une ligne a echouer :
       la tache doit sortir 1 et le journal porter ECHEC.
-   1. REDEMARRER LES 4 SERVICES worker (file documents vide -- vers 02:50 cette nuit)
+   1. ✅ FAIT 07:25:26 : LES 4 SERVICES SONT REDEMARRES -- 4 processus node nes APRES le
+      fichier (00:35:27) et 4 battements de coeur a 11-13 s. Le bras est vivant.
+   2. ✅ FAIT 07:25:52 : LE FRONT EST POUSSE ET DEPLOYE (ce n'est pas moi qui pousse) --
+      Vercel : production READY, commit 1fbce99 ; et le fichier SERVI contient
+      « Archiver ce contact », « Reactiver ce contact » et archive_hektor_contact.
+   3. ✅⭐ FAIT 07:29:36 -> 07:30:08 : L'ESSAI REEL SUR GLADYS A REUSSI DU PREMIER COUP.
+      1 tentative, 16 secondes, pris par le service `actions` (pas admin), Hektor repond
+      « Modification archivage ok », traduction 10059959 -> cible 113412, puis le
+      rafraichissement relit la fiche CHEZ HEKTOR : elle est ACTIVE.
+      ⭐⭐ ET LA DERNIERE INCONNUE EST FERMEE : ses DEUX recherches (n°0 archivee,
+      n°1 active) sont INCHANGEES apres relecture -> REACTIVER NE TOUCHE PAS LES
+      RECHERCHES. ⚠ L'autre sens (ARCHIVER) peut etre asymetrique cote serveur : a
+      mesurer sur une fiche JETABLE, pas sur un client. C'est le seul reste du point 7-1.
+   1-bis. L'ANCIEN TEXTE, pour memoire :
       -> c'est ce qui reveille le bras `archive_hektor_contact` du chantier 7.
    2. POUSSER LE FRONT (Vercel se deploie seul) -> l'item « Archiver / Reactiver » apparait
       dans le menu « ... » de la fiche contact.
