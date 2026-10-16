@@ -1657,3 +1657,42 @@ comparant la contrainte à elle-même : un contrôle qui passe toujours est pire
    **personne ne réclame**.
 3. ⛔ **Rien n'est poussé.**
 4. ⬜ **Le glisser-déposer** reste à faire, s'il le veut un jour.
+
+### ✅ LE PATCH EST COLLÉ — CONTRÔLE DU 16/10, 5 VERTS SUR 6
+
+« Vérifié, pas cru » : Frédéric a dit « j'ai collé », j'ai mesuré.
+
+| contrôle | résultat |
+|---|---|
+| la contrainte connaît le type | ✅ **oui, et elle est VALIDÉE** |
+| les droits : collé à `delete_hektor_photo` | ✅ oui |
+| la distribution : branche **documents** | ✅ oui, collé à ses deux sœurs |
+| la RPC existe | ✅ oui — `authenticated` **oui**, `anon` **non** |
+| zéro retour chariot dans la RPC | ⚠ **NON : 112 sur 118 lignes** |
+
+### ⚠ LE 6ᵉ : LES RETOURS CHARIOT, ET POURQUOI CE N'EST PAS UN DÉFAUT
+
+Le fichier du dépôt est en **LF** : les 112 retours chariot viennent du **TRANSPORT**
+*(le copier-coller depuis Windows)*. **4ᵉ fois aujourd'hui que cette famille se manifeste.**
+
+✅ **Ce n'est pas un défaut de fonctionnement**, et c'est mesuré, pas supposé :
+- **aucune chaîne ne traverse de ligne** — les 3 lignes à apostrophes impaires sont des
+  **commentaires français** *(« L'ETAT », « n'aurait », « l'insertion »)* ;
+- **preuve par l'exemple** : `app_set_mandat_cloture_optimistic` porte **102** retours
+  chariot, elle est en production depuis le **13/10**, et elle a tourné correctement
+  aujourd'hui.
+
+⚠ **Mon premier test disait « DANGER » — c’était une mauvaise expression de ma part**
+*(elle attrapait `);` en fin de ligne)*. Refait proprement, il dit non.
+
+⭐ **MAIS ÇA MORDRA PLUS TARD**, et la cause mérite d’être sue :
+
+| le patch… | résultat |
+|---|---|
+| **LIT** la fonction en base et la réécrit *(archiver un contact)* | **0** retour chariot — il enveloppe déjà `replace(…, chr(13), '')` |
+| **CRÉE** la fonction depuis le texte collé *(celle-ci)* | **emporte le CRLF tel quel** |
+
+Tout patch futur qui voudra modifier cette fonction par **ancre** ne la retrouverait pas
+*(leçon du 15/10, écrite trois fois)*. ➡ **`patch_chantier7_3c_nettoyer_crlf_rpc_2026-10-16.sql`**
+la relit et la réécrit sans retours chariot. **5 lignes, aucun changement de comportement,
+pas d’inverse** *(remettre des CRLF n’aurait aucun sens)*.
