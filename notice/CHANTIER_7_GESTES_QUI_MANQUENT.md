@@ -390,6 +390,55 @@ redémarrés 07:25:26)*, écran en ligne *(commit `1fbce99`, déploiement Vercel
 textes neufs dans le fichier servi)*, et **un vrai client réparé**. ⭐ **Et le cas ⑦-2 est
 réglé par la même occasion.**
 
+#### ⚠⚠⚠ 16/10 — **LA CASCADE EXISTE, ET ELLE EST ASYMÉTRIQUE** *(l'essai du sens « archiver »)*
+
+**Archiver une fiche contact chez Hektor ARCHIVE AUSSI ses recherches. Réactiver la fiche
+NE LES REND PAS.** C'était la dernière inconnue : elle est fermée, et la réponse est **oui**.
+
+**La démonstration tient à DEUX LECTURES FRAÎCHES qui encadrent le geste** *(donc ce n'est pas
+une supposition : c'est Hektor qui parle, deux fois)* :
+
+| heure | ce qui s'est passé | sa recherche n° 1 |
+|---|---|---|
+| **07:30:08** | relecture chez Hektor **réussie** *(après la réactivation)* | **ACTIVE** |
+| **07:56:26** | **archiver** la fiche — Hektor : *« Modification archivage ok »* | *(relecture de 07:57 **échouée** : verrou de la descente → on n'a rien vu)* |
+| **08:14:18** | **réactiver** la fiche — Hektor : *« ok »* | |
+| **08:14:39** | relecture chez Hektor **réussie** | ⚠ **ARCHIVÉE** |
+
+**Les dégâts, mesurés sur Gladys** *(un vrai client)* :
+
+| | avant | après |
+|---|---|---|
+| sa fiche | archivée | ✅ **active** *(réparé)* |
+| sa recherche n° 1 *(prix max 123 456)* | **active** | ⚠ **archivée** |
+| `active_search_count` | 1 | **0** |
+| ses raisons d'éligibilité | annonce active **+ recherche active** | **annonce active** seule |
+| ses rapprochements éligibles | **2** *(dont un à **100/100**)* | ⚠ **0** |
+
+⭐ **ET C'EST EXACTEMENT POURQUOI ELLE AVAIT ÉTÉ CHOISIE** : avec son annonce active, elle
+**ne peut pas tomber du cloud**. Sur une fiche sans annonce active et sans transaction,
+l'archivage lui aurait fait perdre **sa dernière raison d'être là** → **supprimée du cloud à
+la nuit suivante**, comme les 35 fiches du 14/10. **Le risque annoncé était le bon risque.**
+
+⚠ **ET LA RÉPARATION NE PEUT PAS SE FAIRE DEPUIS L'APP** : il n'existe **aucun geste
+« désarchiver une recherche »** *(c'est l'asymétrie du tableau de ⑦-1 : la recherche
+s'archive, elle ne se désarchive pas)*. Sa recherche n° 1 doit être rouverte **à la main dans
+Hektor**. ⭐ Le mode existe pourtant chez eux — `contacts-contactProfile-recherche-archiveUnarchiveContactRecherche`, vu dans `Console/exports/probe_recherche_tab.txt` — donc le geste
+est **trouvable**, c'est un point à ouvrir.
+
+### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
+
+« Archiver un contact » n'est **pas** un geste anodin : il peut emporter une recherche
+active, et avec elle l'éligibilité de la fiche. Trois sorties :
+
+| | |
+|---|---|
+| **A** | **refuser** l'archivage quand le contact a une **recherche active** *(message clair : « ce contact a une recherche active, archiver la fermerait »)* |
+| **B** | **avertir** dans la confirmation — nommer ce qui va être emporté, et laisser décider |
+| **C** | refuser seulement quand l'archivage ferait **perdre la dernière raison d'éligibilité** *(ni annonce active, ni transaction)* — le plus précis, le plus de code |
+
+**Rien n'est décidé. Le geste reste ouvert tel quel en attendant.**
+
 #### ⑥ LA CHAÎNE DES CONTACTS, de Hektor à l'app — *question de Frédéric, 15/10 : « as-tu bien compris ? »*
 
 > ⚠ **Et une correction de moi** : j'avais écrit « l'éligibilité tient à DEUX règles ».
