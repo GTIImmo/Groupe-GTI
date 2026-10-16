@@ -390,10 +390,24 @@ redémarrés 07:25:26)*, écran en ligne *(commit `1fbce99`, déploiement Vercel
 textes neufs dans le fichier servi)*, et **un vrai client réparé**. ⭐ **Et le cas ⑦-2 est
 réglé par la même occasion.**
 
-#### ⚠⚠⚠ 16/10 — **LA CASCADE EXISTE, ET ELLE EST ASYMÉTRIQUE** *(l'essai du sens « archiver »)*
+#### ⚠⚠⚠ 16/10 — **CE QUE L'ESSAI A VRAIMENT MONTRÉ** *(et l'erreur de vocabulaire que j'ai faite)*
 
-**Archiver une fiche contact chez Hektor ARCHIVE AUSSI ses recherches. Réactiver la fiche
-NE LES REND PAS.** C'était la dernière inconnue : elle est fermée, et la réponse est **oui**.
+> ⚠⚠ **CORRECTION DU 16/10, après que Frédéric a regardé dans Hektor et n'y a RIEN vu.**
+> J'avais écrit « la cascade ARCHIVE ses recherches ». **Mauvais mot, et le projet l'avait
+> déjà écrit** : `AUDIT_RECHERCHES_ORPHELINES_2026-10-14.md` dit noir sur blanc
+> — *« le champ qui porte l'état d'une recherche s'appelle… **`archive`** » · **« sur une
+> RECHERCHE, archive veut dire INACTIVE »** · *« normalement une recherche est active ou
+> inactive »* (Frédéric) — **deux objets, deux sens, un seul mot**.
+> ➡ Il n'y a donc **rien à voir dans l'écran de Hektor** : une recherche ne s'« archive » pas,
+> elle est **active ou inactive**. *(Le champ « Auto-archivage le » de l'écran est une date
+> **programmée** — vide ici.)* Et la chaîne de conséquences que j'ai présentée comme une
+> découverte est **exactement les 7 maillons** de l'audit du 14/10.
+
+**Ce qui est MESURÉ : la recherche n° 1 de Gladys est passée d'ACTIVE à INACTIVE entre deux
+lectures fraîches de Hektor**, et c'est le champ dont **toute l'app dépend** *(éligibilité,
+rapprochement)*.
+**Ce qui N'EST PAS ÉTABLI : qui l'a rendue inactive.** Mon attribution à notre geste repose sur
+notre avant/après, pas sur une preuve directe.
 
 **La démonstration tient à DEUX LECTURES FRAÎCHES qui encadrent le geste** *(donc ce n'est pas
 une supposition : c'est Hektor qui parle, deux fois)* :
@@ -403,14 +417,14 @@ une supposition : c'est Hektor qui parle, deux fois)* :
 | **07:30:08** | relecture chez Hektor **réussie** *(après la réactivation)* | **ACTIVE** |
 | **07:56:26** | **archiver** la fiche — Hektor : *« Modification archivage ok »* | *(relecture de 07:57 **échouée** : verrou de la descente → on n'a rien vu)* |
 | **08:14:18** | **réactiver** la fiche — Hektor : *« ok »* | |
-| **08:14:39** | relecture chez Hektor **réussie** | ⚠ **ARCHIVÉE** |
+| **08:14:39** | relecture chez Hektor **réussie** | ⚠ **INACTIVE** |
 
 **Les dégâts, mesurés sur Gladys** *(un vrai client)* :
 
 | | avant | après |
 |---|---|---|
 | sa fiche | archivée | ✅ **active** *(réparé)* |
-| sa recherche n° 1 *(prix max 123 456)* | **active** | ⚠ **archivée** |
+| sa recherche n° 1 *(prix max 123 456)* | **active** | ⚠ **inactive** |
 | `active_search_count` | 1 | **0** |
 | ses raisons d'éligibilité | annonce active **+ recherche active** | **annonce active** seule |
 | ses rapprochements éligibles | **2** *(dont un à **100/100**)* | ⚠ **0** |
@@ -425,6 +439,23 @@ la nuit suivante**, comme les 35 fiches du 14/10. **Le risque annoncé était le
 s'archive, elle ne se désarchive pas)*. Sa recherche n° 1 doit être rouverte **à la main dans
 Hektor**. ⭐ Le mode existe pourtant chez eux — `contacts-contactProfile-recherche-archiveUnarchiveContactRecherche`, vu dans `Console/exports/probe_recherche_tab.txt` — donc le geste
 est **trouvable**, c'est un point à ouvrir.
+
+
+**⭐ LA MESURE QUI SITUE LE CAS, refaite le 16/10** *(le même tableau que l'audit du 14/10)* :
+
+| | avec une recherche **active** | sans |
+|---|---|---|
+| fiche **non archivée** | **3 961** | 151 |
+| fiche **ARCHIVÉE** | ⚠ **0** *(c'était **1** le 14/10 : Gladys)* | 6 157 |
+
+➡ **Sur 6 157 fiches archivées, AUCUNE n'a de recherche active.** Gladys était la dernière
+exception ; elle ne l'est plus. La règle « fiche archivée ⇒ recherches inactives » est donc
+**très fortement suggérée** par les nombres — mais **suggérée, pas prouvée** : seul un essai
+sur une fiche **jetable** trancherait.
+
+**La réparation, dans les bons mots** : sa recherche n° 1 doit être **remise ACTIVE** dans
+Hektor *(pas « désarchivée »)*. L'app ne sait pas le faire : elle sait **rendre inactive**
+*(`modifDateArchiveCritere`)*, pas **réactiver**.
 
 ### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
 
