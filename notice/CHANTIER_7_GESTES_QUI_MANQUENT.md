@@ -497,6 +497,37 @@ ni par un auto-archivage programmé. **C'est un autre mécanisme qui a basculé 
 reste cohérent avec la règle « fiche archivée ⇒ recherches inactives » *(0 sur 6 157)*, sans
 la prouver.
 
+### ✅ VU DE MES YEUX DANS HEKTOR — *16/10, session Chrome de Frédéric, lecture seule*
+
+**① LE MARQUEUR EXISTE DANS L'ÉCRAN : c'est un CADENAS.** Les deux recherches de Gladys
+portent **🔒** à côté de leur nom *(« Recherche 1 🔒 », « Recherche 2 🔒 »)*, et les deux sont
+`archive = "1"` dans l'API. ⭐ **Témoin** : dans la capture de juin *(`probe_recherche_tab.txt`,
+contact 603882, recherche **active**)*, le libellé « Recherche 1 » **ne porte aucun cadenas**.
+
+**② ⚠ ET J'AVAIS DIT « la date d'auto-archivage est VIDE » : C'ÉTAIT FAUX.** Elle vaut
+**22-06-2028** *(exactement « création + 2 ans » : créée le 22-06-2026)*. Je l'avais lue avec
+une extraction de **texte**, qui **ne voit pas la valeur d'un champ de saisie**. **Deuxième
+mesure de la matinée faussée par la même famille d'erreur : lire une vue dérivée au lieu de la
+source.**
+
+**③ CHANGER LA DATE NE RÉACTIVE PAS.** Frédéric l'a passée à **22-06-2029** : après
+rechargement complet, la date est bien enregistrée **et les deux cadenas sont toujours là**.
+➡ Le chemin `desarchiveCritere` *(vu dans le code)* **ne s'est pas déclenché**.
+
+**④ ⭐⭐ MAIS LE GESTE EXISTE — DANS LE MENU « ⋮ » DE LA RECHERCHE :**
+
+```
+Modifier la recherche
+Mandat de recherche
+DÉSARCHIVER LA RECHERCHE      <-- il est là
+Supprimer la recherche
+```
+
+➡ **Deux conclusions d'un coup** : la recherche **EST** bien archivée *(sinon le menu dirait
+« Archiver »)* — ce qui **confirme l'API et le cadenas** — et **elle se désarchive en un clic**.
+➡ **Donc « il faut en recréer une autre » est FAUX dans le Hektor d'aujourd'hui.** *(Ce qui
+reste vrai : **notre app** ne sait pas le faire — elle ne connaît que « poser une date ».)*
+
 ### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
 
 « Archiver un contact » n'est **pas** un geste anodin : il peut emporter une recherche
