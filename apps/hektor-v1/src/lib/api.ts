@@ -3570,13 +3570,27 @@ export async function loadContactSearches(contactId: string): Promise<AppContact
   //   carte. On prefere ne rien dire a dire peut-etre.
   const mandats = await loadContactMandatsRecherche(contactId.trim())
   const parCle = new Map<string, AppContactMandatRecherche>()
+  // (!!) LE REPLI PAR LE NUMERO DE RECHERCHE, ET IL N'EST PAS DECORATIF.
+  //   `contact_search_key` est un HACHE DU CONTENU EDITABLE : il change a
+  //   chaque modification de la recherche (defaut connu du projet, mesure du
+  //   20/08). Entre le moment ou notre table est posee et celui ou les
+  //   recherches sont poussees, une edition suffit a rendre notre cle
+  //   perimee -- et la ligne du mandat disparaitrait EN SILENCE.
+  //   `search_index` est stable : c'est le rang de la recherche chez le
+  //   contact. On s'en sert en SECOND, jamais en premier (la cle, quand elle
+  //   tombe juste, est plus precise).
+  const parIndex = new Map<number, AppContactMandatRecherche>()
   mandats.forEach((m) => {
     const cle = (m.contact_search_key ?? '').trim()
     if (cle && !parCle.has(cle)) parCle.set(cle, m)
+    if (m.search_index != null && !parIndex.has(m.search_index)) {
+      parIndex.set(m.search_index, m)
+    }
   })
   const rows = (data as AppContactSearch[]).map(normalizeContactSearchRow).map(
     (search) => {
       const m = parCle.get((search.contact_search_key ?? '').trim())
+        ?? (search.search_index != null ? parIndex.get(search.search_index) : undefined)
       return m ? { ...search, mandat_recherche: m } : search
     })
   return prependProvisionalSearches(rows, contactId.trim())
