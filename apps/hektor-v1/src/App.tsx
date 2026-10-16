@@ -7677,6 +7677,36 @@ function mandatStatutForRegister(item: Pick<MandatRecord, 'statut_annonce' | 'ma
   if (!isMandateEndDateStillValid(item.mandat_date_fin)) return 'Échu'
   return 'Actif'
 }
+// ═══ ⑦-3a pièce 4 (16/10/2026) : UN REFUS SE DIT EN FRANÇAIS ══════════════════
+//
+// La RPC de saisie rend un code (`droits_insuffisants`, `mandat_introuvable`…).
+// ⑦-1 nous a appris à ne jamais laisser ce code arriver à l'écran : le bouton
+// reste visible, et le refus s'explique. On garde le code en queue pour les cas
+// qu'on n'a pas prévus — mieux vaut un mot technique affiché qu'un silence.
+//
+// ⚠ `droits_insuffisants` n'existe PAS ENCORE en base : c'est la pièce 2, écrite
+//   et dormante. Le message est posé d'avance, exprès — le jour où le patch sera
+//   collé, l'écran saura déjà quoi dire au lieu d'afficher un code brut.
+function messageRefusCloture(code: string | undefined) {
+  switch (code) {
+    case 'droits_insuffisants':
+      return "Seul un manager ou un administrateur peut fixer la date de clôture d'un mandat."
+    case 'mandat_introuvable':
+      return "Ce mandat n'est pas au registre : la date ne peut pas y être rattachée."
+    case 'date_illisible':
+    case 'date_inexistante':
+      return 'Cette date est impossible. Attendu : une date réelle, au format jour/mois/année.'
+    case 'parametres_incomplets':
+      return "Il manque le numéro du mandat ou le numéro de l'annonce."
+    case 'non_authentifie':
+      return 'Session expirée : reconnecte-toi, puis recommence.'
+    case 'supabase_absent':
+      return "L'application n'est pas reliée à la base : rien n'a été écrit."
+    default:
+      return `Enregistrement refusé${code ? ` (${code})` : ''}.`
+  }
+}
+
 function mandatStatutToneClass(value: MandatStatutValue) {
   return value === 'Vendu' ? 'reg-mstatut-vendu'
     : value === 'Clos' ? 'reg-mstatut-clos'
@@ -12450,6 +12480,23 @@ export default function App() {
   const [dossierReturnContactId, setDossierReturnContactId] = useState<string | null>(null)
   const [selectedDossier, setSelectedDossier] = useState<DetailedDossier | null>(null)
   const selectedDossierRef = useRef<DetailedDossier | null>(null)
+  // ─── ⑦-3a pièce 3 (16/10/2026) : NOS DATES DE CLÔTURE, PAR N° DE MANDAT ───
+  //
+  // ⛔ POURQUOI IL FAUT CET ÉTAT. La rubrique Mandat de la fiche annonce lit
+  //   `detail.mandat_date_cloture` — et cette colonne N'EXISTE PAS dans la fiche :
+  //   `mandat_date_cloture` ne vit que dans `app_mandat_register_current`
+  //   (mesure du 13/10, redite le 16/10). La ligne « Clôture » était donc
+  //   TOUJOURS vide, et comme la rubrique masque les lignes vides, elle
+  //   n'apparaissait jamais. Le cockpit, lui, s'en sort parce qu'il charge le
+  //   registre par cycle (`ckCycleAff`) — mais c'est un AUTRE composant.
+  //
+  // ⚠ LE PRIX, DIT : c'est une seconde lecture du même registre pour la même
+  //   annonce quand le cockpit est ouvert à côté. Quelques lignes, une fois par
+  //   fiche ouverte. L'alternative — piocher dans l'état `mandats` de l'écran
+  //   Registre — a été ÉCARTÉE : cette liste est filtrée et paginée, donc une
+  //   fiche ouverte depuis l'écran Annonces n'y serait pas, et on retomberait
+  //   sur une ligne vide SANS ERREUR. Une absence est pire qu'une erreur.
+  const [clotureParMandat, setClotureParMandat] = useState<Record<string, string>>({})
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [googleWorkspaceIdentity, setGoogleWorkspaceIdentity] = useState<GoogleWorkspaceIdentity | null>(null)
   const [userNegotiatorContext, setUserNegotiatorContext] = useState<UserNegotiatorContext | null>(null)
@@ -14072,6 +14119,30 @@ export default function App() {
       cancelled = true
     }
   }, [selectedDossierId, session, dataReloadKey, dossiers, mandats])
+  // ⑦-3a pièce 3 (16/10/2026) : on va chercher NOS dates de clôture au registre,
+  // là où elles vivent. Recopie fidèle du chargement du cockpit (l. 27102-27115) —
+  // même fonction, même clé (le n° de mandat), même repli (un objet vide), pour
+  // qu'il n'y ait pas deux logiques à maintenir.
+  // ⚠ `loadRegisterCycleAffaires` lit `mandat_date_cloture` = la RÉSULTANTE de la
+  //   vue : notre date d'abord, celle de Hektor ensuite. On ne choisit pas ici.
+  useEffect(() => {
+    const aid = selectedDossier?.hektor_annonce_id
+    if (!aid) { setClotureParMandat({}); return }
+    let cancelled = false
+    void loadRegisterCycleAffaires(aid)
+      .then((rows) => {
+        if (cancelled) return
+        const map: Record<string, string> = {}
+        for (const r of rows) {
+          const n = String(r.numero_mandat ?? '').trim()
+          const d = String(r.mandat_date_cloture ?? '').trim()
+          if (n && d) map[n] = d
+        }
+        setClotureParMandat(map)
+      })
+      .catch(() => { if (!cancelled) setClotureParMandat({}) })
+    return () => { cancelled = true }
+  }, [selectedDossier?.hektor_annonce_id, dataReloadKey])
 
   useEffect(() => {
     if (deepLinkHandled || bootLoading || (hasSupabaseEnv && !session)) return
@@ -16909,6 +16980,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         closeReason: statusChangeCloseReason,
         closeEtat: statusChangeCloseEtat,
         closeRaison: statusChangeCloseRaison,
+        // ⑦-3a piece 1 (16/10) : LA DATE QU'ON VIENT DE SAISIR PART AVEC LE TRAVAIL.
+        // Sans elle, le worker retombait sur `transaction_date` (le champ date
+        // GENERIQUE de cette meme modale, qui vaut aujourd'hui) et ECRASAIT la date
+        // saisie dans le carnet -- il ecrit apres nous. Detail : `closeDate` dans
+        // lib/api.ts.
+        // ⚠ Seulement pour « Clos » : c'est le seul cas ou la modale affiche ce
+        //   champ, et le chemin « Vendu » clot sur la DATE DE VENTE, exprès.
+        closeDate: statusChangeStatus === 'closed' ? statusChangeCloseDate : undefined,
         closeMandatOnSale: statusChangeStatus === 'sold',
         closePrice: statusChangeSalePrice || statusChangeAmount,
         reprendreTransaction: reprendre,
@@ -18510,7 +18589,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             ['Enregistrement', safeText(current.dateenr) || safeText(current.date_enregistrement)] as [string, string],
             ['Debut', safeText(current.debut)] as [string, string],
             ['Fin', safeText(current.fin)] as [string, string],
-            ['Cloture', safeText(current.cloture)] as [string, string],
+            // ⑦-3a pièce 3 (16/10/2026) : NOTRE DATE D'ABORD, celle du blob de Hektor
+            // ensuite. `clotureParMandat` vient du registre, où la vue a déjà tranché
+            // (COALESCE de notre colonne puis de la sienne). Même ordre de priorité
+            // que le cockpit, pour qu'un même mandat ne dise pas deux choses.
+            ['Cloture', firstNonEmpty(clotureParMandat[numero] ?? '', safeText(current.cloture))] as [string, string],
             ['Montant', safeText(current.montant)] as [string, string],
             ['Mandants', safeText(current.mandants)] as [string, string],
             ['Versions', sortedVersions.length > 1 ? `${sortedVersions.length} versions détectées` : '1 version'] as [string, string],
@@ -18527,14 +18610,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       ['Enregistrement', detail.mandat_date_enregistrement ?? ''] as [string, string],
       ['Debut', detail.mandat_date_debut ?? ''] as [string, string],
       ['Fin', detail.mandat_date_fin ?? ''] as [string, string],
-      ['Cloture', detail.mandat_date_cloture ?? ''] as [string, string],
+      // ⑦-3a pièce 3 (16/10/2026) : `detail.mandat_date_cloture` est TOUJOURS VIDE
+      // — la fiche n'a pas cette colonne, elle ne vit qu'au registre. On met donc
+      // notre date en PREMIER, et on garde l'ancienne lecture derrière (elle ne
+      // coûte rien, et le jour où la fiche portera la colonne elle servira).
+      // ⚠ Ici le mandat est CELUI DU DOSSIER, pas un numéro du blob : c'est la
+      //   branche de repli, qui ne décrit qu'un seul « Mandat source ».
+      ['Cloture', firstNonEmpty(
+        clotureParMandat[String(selectedDossier?.numero_mandat ?? '').trim()] ?? '',
+        detail.mandat_date_cloture ?? '',
+      )] as [string, string],
       ['Montant', detail.mandat_montant == null ? '' : String(detail.mandat_montant)] as [string, string],
       ['Mandants', detail.mandants_texte ?? ''] as [string, string],
       ['Note', detail.mandat_note ?? ''] as [string, string],
     ].filter((entry) => entry[1])]
       .filter((entry) => entry.length > 0)
       .map((lines, index) => ({ id: `source-${index}`, title: 'Mandat source', lines }))
-  }, [detail])
+  }, [detail, clotureParMandat, selectedDossier?.numero_mandat])
 
   function openPriorityAction(action: HeaderMetricItem['action']) {
     if (!action) return
@@ -22723,6 +22815,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onSelectMandat={setSelectedRegisterRowId}
             onOpenDetailPage={openDossierDetailPage}
             onOpenRequestModal={openRequestModal}
+            isManagerOrAdmin={isManagerOrAdmin}
+            onClotureEnregistree={() => setDataReloadKey((value) => value + 1)}
             loading={mandatLoading}
           />
         ) : screen === 'sante' ? (
@@ -24100,10 +24194,29 @@ function MandatRegisterScreen(props: {
   onSelectMandat: (registerRowId: string) => void
   onOpenDetailPage: (id: number) => void
   onOpenRequestModal: (appDossierId: number, role?: 'nego' | 'pauline', requestType?: BusinessRequestType) => void
+  /** ⑦-3a pièce 4 (16/10/2026) : « ce bouton doit être accessible uniquement par les
+   *  admin / manager, sinon visible mais lié à la demande annulation de mandat
+   *  existante » (Frédéric, 16/10).
+   *  ⚠ C'est bien `isManagerOrAdmin` et PAS `isAdmin` : le second est l'admin STRICT
+   *    et ne sert qu'à l'écran Santé (décision du 12/10, chantier ②). */
+  isManagerOrAdmin?: boolean
+  /** Appelé après une écriture réussie, pour que la liste du registre reparte
+   *  chercher la valeur : sans ça la ligne du tableau garderait l'ancienne date. */
+  onClotureEnregistree?: () => void
   loading: boolean
 }) {
   const [expandedMandants, setExpandedMandants] = useState<Record<string, boolean>>({})
   const [detailOpen, setDetailOpen] = useState(false)
+  // ─── ⑦-3a pièce 4 : l'état de la saisie de la date de clôture ───
+  // `clotureLocale` est une SUPERPOSITION par ligne de registre : la valeur qu'on
+  // vient d'écrire s'affiche tout de suite, sans attendre que la liste revienne.
+  // (La liste est rechargée en parallèle par onClotureEnregistree ; les deux se
+  // rejoignent, et en cas d'échec de la liste c'est la superposition qui tient.)
+  const [clotureLocale, setClotureLocale] = useState<Record<string, string>>({})
+  const [clotureEnEdition, setClotureEnEdition] = useState(false)
+  const [clotureBrouillon, setClotureBrouillon] = useState('')
+  const [clotureOccupe, setClotureOccupe] = useState(false)
+  const [clotureMessage, setClotureMessage] = useState<string | null>(null)
   // Ne fermer au clic sur le fond que si le clic a DÉMARRÉ sur le fond : évite la
   // fermeture accidentelle quand un scroll/drag depuis le panneau se termine sur
   // la bande d'overlay autour de la carte (bug « se ferme en descendant »).
@@ -24139,11 +24252,72 @@ function MandatRegisterScreen(props: {
   const selectedContactItems = contactsDepuisHektor.length > 0
     ? contactsDepuisHektor
     : buildDetailContactsFromMandantsJson(selectedDetail?.mandants_json as string | null | undefined)
+  // ═══ ⑦-3a pièce 4 (16/10/2026) : LA CLÔTURE DU MANDAT, LUE PUIS ÉCRITE ═══════
+  const clotureRowKey = selectedDetail ? mandateRegisterRowKey(selectedDetail) : ''
+  // La valeur du registre est la RÉSULTANTE de la vue : notre date d'abord.
+  // La superposition locale ne gagne que si on vient d'écrire dans CETTE ligne.
+  const clotureCourante = clotureRowKey && Object.prototype.hasOwnProperty.call(clotureLocale, clotureRowKey)
+    ? clotureLocale[clotureRowKey]
+    : String(selectedDetail?.mandat_date_cloture ?? '').trim()
+  // ⚠⚠ UN PÉRIMÈTRE EST EXCLU, ET IL EST DÉCLARÉ (mesure du 16/10) : les 38 mandats
+  //   de RECHERCHE du registre — entrés le 16/10 par l'autre session — n'ont NI
+  //   annonce NI dossier (0 sur 38, mesuré). Or notre carnet a pour clé le couple
+  //   (annonce, n° de mandat), et la demande d'annulation exige un app_dossier_id.
+  //   Ni le crayon ni le renvoi ne peuvent donc les servir. On affiche la date en
+  //   LECTURE et on DIT pourquoi, plutôt que d'offrir un bouton qui échouerait en
+  //   jargon (« mandat_introuvable ») — un périmètre qu'on exclut se déclare.
+  const clotureSansBien = Boolean(selectedDetail && estMandatDeRecherche(selectedDetail))
+  const clotureAnnonce = String(selectedDetail?.hektor_annonce_id ?? '').trim()
+  const clotureNumero = String(selectedDetail?.numero_mandat ?? '').trim()
+  const clotureModifiable = Boolean(props.isManagerOrAdmin) && !clotureSansBien
+    && Boolean(clotureAnnonce) && Boolean(clotureNumero)
+  // Le renvoi du négociateur existe DÉJÀ (MandatActionMenu) et il a sa condition :
+  // la validation doit être accordée, sinon la demande n'aboutirait à rien. On
+  // recopie cette condition au lieu d'en inventer une seconde.
+  const clotureRenvoiPossible = !clotureSansBien
+    && selectedDetail?.app_dossier_id != null
+    && isValidationApproved(selectedDetail?.validation_diffusion_state)
+  async function enregistrerCloture(valeur: string | null) {
+    if (!clotureModifiable || clotureOccupe) return
+    setClotureOccupe(true)
+    setClotureMessage(null)
+    try {
+      const retour = await setMandatClotureApp({
+        hektorAnnonceId: clotureAnnonce,
+        numeroMandat: clotureNumero,
+        dateCloture: valeur,
+      })
+      if (!retour.ok) {
+        // ⑦-1 (15/10) nous a appris à ne jamais laisser un refus en jargon à
+        // l'écran : on le traduit, et on garde le code pour les cas inconnus.
+        setClotureMessage(messageRefusCloture(retour.erreur))
+        return
+      }
+      setClotureLocale((courant) => ({ ...courant, [clotureRowKey]: valeur ?? '' }))
+      setClotureEnEdition(false)
+      setClotureMessage(valeur ? 'Date de clôture enregistrée.' : 'Date de clôture effacée.')
+      props.onClotureEnregistree?.()
+    } catch (erreur) {
+      setClotureMessage(erreur instanceof Error ? erreur.message : 'Enregistrement impossible.')
+    } finally {
+      setClotureOccupe(false)
+    }
+  }
   const selectedMandateLines = selectedDetail ? [
     ['Numero', selectedDetail.numero_mandat ?? '-'] as [string, string],
     ['Type', selectedDetail.mandat_type ?? selectedDetail.mandat_type_source ?? '-'] as [string, string],
     ['Debut', formatDate(selectedDetail.mandat_date_debut)] as [string, string],
     ['Fin', formatDate(selectedDetail.mandat_date_fin)] as [string, string],
+    // ⑦-3a pièce 3 (16/10/2026) : la fiche mandat du registre n'avait AUCUNE ligne
+    // de clôture — mesure du 16/10, ses 9 lignes étaient Numéro, Type, Début, Fin,
+    // Montant, Validation, Diffusable, Commercial, Agence.
+    // ⚠ Ici le « - » est juste : toutes les autres lignes l'emploient, et dans une
+    //   fiche de détail il se lit « non renseigné », pas « donnée perdue ».
+    // ⚠ On lit `clotureCourante` et PAS la colonne brute : juste après une saisie,
+    //   la liste du registre porte encore l'ancienne valeur, et le dépliant
+    //   afficherait une autre date que le bloc juste au-dessus. Deux endroits de la
+    //   même fiche ne doivent jamais dire deux choses.
+    ['Cloture', formatDate(clotureCourante || null)] as [string, string],
     ['Montant', formatPrice(selectedDetail.prix)] as [string, string],
     ['Validation', selectedDetail.validation_diffusion_state ?? '-'] as [string, string],
     ['Diffusable', mandateRegisterDiffusableLabel(selectedDetail.diffusable)] as [string, string],
@@ -24233,6 +24407,14 @@ function MandatRegisterScreen(props: {
                     <th className="register-col-etat">État</th>
                     <th className="register-col-date">Date de début</th>
                     <th className="register-col-date">Date de fin</th>
+                    {/* ⑦-3a pièce 3 (16/10/2026) : LA DATE DE CLÔTURE, UNE COLONNE EN PLUS.
+                        Décision de Frédéric du 16/10 (« Une colonne en + »), après l'audit
+                        qui a montré qu'elle n'était NULLE PART au registre — ni ici, ni
+                        dans la fiche mandat (9 lignes), alors que la pastille « Statut du
+                        mandat » passait déjà à « Clos » en la lisant.
+                        ⚠ C'est la RÉSULTANTE que la vue sert : NOTRE date d'abord, celle de
+                          Hektor ensuite (COALESCE dans app_registre_mandats_current). */}
+                    <th className="register-col-date">Date de clôture</th>
                     <th className="register-col-amount">Montant</th>
                     <th className="register-col-mandants">Mandant(s)</th>
                     <th className="register-col-nature">Nature et situation</th>
@@ -24311,6 +24493,12 @@ function MandatRegisterScreen(props: {
                         </td>
                         <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_debut)}</strong></td>
                         <td className="register-col-date"><strong className="register-date">{formatDate(item.mandat_date_fin)}</strong></td>
+                        {/* ⑦-3a pièce 3 : vide = mandat non clos. On n'écrit pas « — » :
+                            le registre est l'écran le plus officiel de l'app, et un tiret
+                            se lit comme une donnée manquante, pas comme un mandat vivant. */}
+                        <td className="register-col-date">{(item.mandat_date_cloture ?? '').trim()
+                          ? <strong className="register-date">{formatDate(item.mandat_date_cloture)}</strong>
+                          : null}</td>
                         <td className="register-col-amount">
                           <strong className="register-amount">{formatPrice(item.prix)}</strong>
                           {priceChangeSummaryLine(item) ? <span className="register-price-history">{priceChangeSummaryLine(item)}</span> : null}
@@ -24610,6 +24798,110 @@ function MandatRegisterScreen(props: {
                           </div>
                         </div>
                       ) : null}
+
+                      {/* ═══ ⑦-3a pièce 4 (16/10/2026) : CLÔTURER LE MANDAT À LA MAIN ═══
+                          Demande de Frédéric du 16/10. L'audit du jour a montré que la
+                          clôture n'était PAS un geste : elle ne tombait que comme
+                          conséquence d'un changement de statut, et aucun mandat réel
+                          n'avait jamais été clos par l'app.
+                          ⚠ La date reste CHEZ NOUS. Hektor n'en est jamais informé —
+                            décision écrite de Frédéric le 13/10, et sa clôture est
+                            débranchée depuis le 28/08 (elle échouait sur 98,8 % du parc). */}
+                      <div className="md-cloture">
+                        <div className="md-cloture-top">
+                          <span className="md-lc-label">Clôture du mandat</span>
+                          {clotureCourante
+                            ? <span className="md-pill neutral"><span className="d" />Clos le {formatDate(clotureCourante)}</span>
+                            : <span className="md-pill green"><span className="d" />Non clos</span>}
+                        </div>
+
+                        {clotureSansBien ? (
+                          /* Les 38 mandats de recherche : ni annonce ni dossier (mesuré
+                             le 16/10). On le DIT au lieu d'offrir un bouton qui échouerait. */
+                          <p className="md-cloture-note">
+                            Un mandat de recherche n'est pas porté par un bien : sa clôture ne
+                            peut pas être saisie ici.
+                          </p>
+                        ) : clotureModifiable ? (
+                          clotureEnEdition ? (
+                            <div className="md-cloture-edit">
+                              <input
+                                type="date"
+                                value={clotureBrouillon}
+                                disabled={clotureOccupe}
+                                onChange={(event) => setClotureBrouillon(event.target.value)}
+                              />
+                              <button
+                                type="button"
+                                className="ghost-button button-primary"
+                                disabled={clotureOccupe || !clotureBrouillon.trim()}
+                                onClick={() => { void enregistrerCloture(clotureBrouillon.trim()) }}
+                              >
+                                {clotureOccupe ? 'Enregistrement…' : 'Enregistrer'}
+                              </button>
+                              {clotureCourante ? (
+                                /* Vider la date EFFACE la nôtre et fait réapparaître celle
+                                   de Hektor s'il en a une : c'est le retour arrière de
+                                   l'utilisateur qui s'est trompé (déjà prévu par la RPC). */
+                                <button
+                                  type="button"
+                                  className="ghost-button"
+                                  disabled={clotureOccupe}
+                                  onClick={() => { void enregistrerCloture(null) }}
+                                >
+                                  Rouvrir le mandat
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="ghost-button"
+                                disabled={clotureOccupe}
+                                onClick={() => { setClotureEnEdition(false); setClotureMessage(null) }}
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="ghost-button button-primary"
+                              onClick={() => {
+                                setClotureBrouillon(clotureCourante || todayInputDate())
+                                setClotureMessage(null)
+                                setClotureEnEdition(true)
+                              }}
+                            >
+                              {clotureCourante ? 'Corriger la date de clôture' : 'Clôturer ce mandat'}
+                            </button>
+                          )
+                        ) : clotureRenvoiPossible ? (
+                          /* « sinon visible mais lié à la demande annulation de mandat
+                             existante » (Frédéric, 16/10). Le circuit existe depuis
+                             toujours : on y renvoie, on n'en fabrique pas un second. */
+                          <div className="md-cloture-edit">
+                            <button
+                              type="button"
+                              className="ghost-button"
+                              onClick={() => props.onOpenRequestModal(
+                                selectedDetail.app_dossier_id as number, 'nego', 'demande_annulation_mandat')}
+                            >
+                              Demander l'annulation de ce mandat
+                            </button>
+                            <span className="md-cloture-note">
+                              Clôturer est réservé aux managers. Ta demande part à l'administratif.
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="md-cloture-note">
+                            Clôturer un mandat est réservé aux managers et aux administrateurs.
+                          </p>
+                        )}
+
+                        {clotureMessage ? <p className="md-cloture-msg">{clotureMessage}</p> : null}
+                        <p className="md-cloture-note">
+                          Cette date reste dans nos données : Hektor n'en est pas informé, c'est voulu.
+                        </p>
+                      </div>
 
                       <details className="md-fold">
                         <summary>

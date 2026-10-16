@@ -10096,6 +10096,32 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   closeState?: string
   closeEtat?: string
   closeRaison?: string
+  /** ─── ⑦-3a pièce 1 (16/10/2026) : LA DATE DE CLÔTURE DU MANDAT ───
+   *
+   *  ⚠⚠ LE DÉFAUT QU'ELLE RÉPARE. La modale a DEUX champs de date, et ce n'était
+   *     pas celui qu'on remplit qui gagnait. Le front écrivait « Date de clôture
+   *     du mandat » par app_set_mandat_cloture_optimistic ; puis le worker
+   *     repassait sur le MÊME carnet et lisait
+   *       payload.close_date || payload.date_cloture || payload.transaction_date
+   *     (console_job_worker.js:13674). Les deux premières n'étaient JAMAIS
+   *     envoyées, donc il prenait `transaction_date` -- l'AUTRE champ de la
+   *     modale, qui vaut AUJOURD'HUI par défaut -- avec un ON CONFLICT DO UPDATE.
+   *     Il écrit en dernier : on saisissait le 30/06, on obtenait le jour même.
+   *     Preuve au journal : le 18/09 il a écrit 2026-09-17 puis 2026-09-18 sur le
+   *     même mandat, au gré de ce champ-là.
+   *
+   *  ⭐ LE REMÈDE ÉTAIT À MOITIÉ POSÉ : `close_date` est DÉJÀ le premier choix du
+   *     worker. Il suffisait de l'envoyer. Aucune modification du worker, donc
+   *     AUCUN redémarrage des 4 services.
+   *
+   *  ⛔ ET SURTOUT PAS en détournant `transactionDate` : il part AUSSI chez Hektor
+   *     (setHektorAnnonceStatusValue, console_job_worker.js:11929), et le chemin
+   *     « Mandat clos » passe par cette même fonction.
+   *
+   *  ⚠ Vide ou absente = le worker garde son repli (la date du jour). C'est ce que
+   *    veut l'acceptation d'une demande d'annulation, qui n'a pas de champ date :
+   *    elle ne l'envoie pas, et la clôture prend le jour de l'acceptation. */
+  closeDate?: string
   closeMandatOnSale?: boolean
   // C.19-c : 'actif' (defaut) ou 'archiver'. Lu par le worker APRES que la
   // vente a ete confirmee chez Hektor -- jamais avant.
@@ -10158,6 +10184,9 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     close_state: input.closeState?.trim() || null,
     close_etat: input.closeEtat?.trim() || null,
     close_raison: input.closeRaison?.trim() || null,
+    // ⑦-3a pièce 1 (16/10) : la date SAISIE, pas celle de la transaction. Le
+    // worker la lit en PREMIER (voir le commentaire de `closeDate` ci-dessus).
+    close_date: input.closeDate?.trim() || null,
     close_mandat_on_sale: input.closeMandatOnSale ? true : null,
     apres_vente: input.apresVente === 'archiver' ? 'archiver' : 'actif',
     close_price: input.closePrice?.trim() || null,

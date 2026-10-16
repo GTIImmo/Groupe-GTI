@@ -14,7 +14,7 @@
 |---|---|---|
 | ⑦-1 | **archiver / désarchiver un contact** | 🔎 audité le 14/10, **re-audité le 15/10** — en cours |
 | ⑦-2 | **le cas Gladys DURIEUX** *(fiche archivée, mandante d'une annonce active)* | ⬜ va avec ⑦-1 *(sa décision du 14/10)* |
-| ⑦-3a | le **crayon** de la date de clôture, rubrique Mandat | ⬜ reçu du chantier ③ |
+| ⑦-3a | **clôturer un mandat à la main** + le **crayon** de la date de clôture *(périmètre élargi par Frédéric le 16/10 : toutes les entrées, droits admin/manager, dates modifiables)* | 🔎 **audité à fond le 16/10** — voir la section en bas de note |
 | ⑦-3b | l'**écran du journal des suppressions** | ⬜ reçu du chantier ③ |
 | ⑦-3c | **réordonner / choisir la photo principale** *(`mode=ordonne_photos` connu)* | ⬜ reçu du chantier ③ |
 | ⑦-4 | le **bandeau qui ment** *(« désarchiver » promis à un bien non archivé)* | ⬜ |
@@ -837,3 +837,303 @@ L'index léger promet encore **« désarchiver »** à un bien **qui n'est pas a
 ⚠ **Avant d'écrire un geste, trouver la commande Hektor par un RELEVÉ EN LECTURE SEULE.**
 Le projet s'est fait avoir deux fois *(suppression de photo, archivage de recherche)*, et la
 méthode du relevé a fonctionné les deux fois.
+
+---
+
+# ⑦-3a — CLÔTURER UN MANDAT À LA MAIN — AUDIT DU 16/10/2026
+
+> Demande de Frédéric, 16/10 : *« audit la clôture d'un mandat se fait actuellement
+> uniquement par le worker annulation de mandat suite à l'acceptation d'une demande par
+> Pauline. On peut ajouter la possibilité de clôturer manuellement un mandat mais il faut
+> auditer toutes les entrées — cockpit rubrique mandat, aussi dans l'annonce, il y a aussi
+> notre registre des mandats (je crois qu'il n'y a pas de colonne, à vérifier où se
+> sauvegardent les dates), mais il y a la vue registre des mandats et la fiche mandats —
+> analyse tous les points, puisque ce bouton doit être accessible uniquement par les
+> admin / manager, sinon visible mais lié à la demande d'annulation de mandat existante.
+> Rendre ces dates modifiables. Mais À VÉRIFIER AUSSI : il n'est pas nécessaire de
+> communiquer avec Hektor sur les dates de clôture de mandats, je crois que nous l'avions
+> déjà décidé, à vérifier. »*
+
+**Périmètre de cet audit : le MANDAT, geste « clôturer » et geste « modifier la date de
+clôture ».** Les autres objets ne sont pas mesurés ici.
+
+## 1. SA PREMIÈRE PHRASE EST VRAIE — ET LE CHEMIN N'A JAMAIS SERVI
+
+L'acceptation d'une demande d'annulation **enchaîne bien** une clôture
+*(`App.tsx:17204-17221`, commentaire « A5 »)* : elle crée un travail
+`change_hektor_annonce_status` avec `targetStatus: 'closed'`, que le worker traite.
+Commit `fd8a042`, **30/07/2026**.
+
+⚠ **Mais il n'est pas le seul, et il n'a jamais tourné.** Mesures :
+
+| ce qui a été mesuré | résultat |
+|---|---|
+| demandes d'annulation de mandat, tous états | **4**, toutes `accepted` |
+| quand | **13 et 14 mai 2026**, toutes sur **la même annonce 24113**, toutes traitées par Frédéric |
+| le chaînage A5 qui les aurait closes | arrivé le **30/07**, soit **2 mois et demi APRÈS** |
+| les 4 ont-elles une date de clôture à nous ? | **0 sur 4** |
+| travaux ayant journalisé une clôture locale | **25**, tous de type `change_hektor_annonce_status` |
+| sur combien de biens ? | **4 : 62966, 62774, 24933, 62963** |
+| et ces 4 biens sont… | ⭐ **les 4 biens d'ESSAI du projet** *(liste de la mémoire de reprise)* |
+| l'annonce 24113 apparaît-elle dans ces 25 lignes ? | **non, jamais** |
+
+➡ **Le chemin « demande acceptée → clôture » existe dans le code depuis le 30/07 et n'a
+jamais été emprunté une seule fois.** Et **aucun mandat réel n'a jamais été clos par
+l'app** — conclusion identique à celle du 13/10 *(§ ①-ter de `CLAUDE.md`)*, re-mesurée ici
+par un autre chemin.
+
+## 2. LES DEUX CHEMINS QUI CLÔTURENT, AUJOURD'HUI
+
+Les deux passent par **la modale de changement de statut** et par le worker :
+
+| | ce qui déclenche | où |
+|---|---|---|
+| **a** | l'annonce passe au statut **« Mandat clos »** | `submitHektorClosedStatus` → `cloturerMandatLocalement` *(`console_job_worker.js:13795`)* |
+| **b** | l'annonce passe à **« Vendu »** | `target === "sold"` → `cloturerMandatLocalement` *(l. 15209)* |
+
+Et **a** est atteint de deux façons : à la main dans la modale *(`App.tsx:16942`)*, ou par
+le chaînage A5 ci-dessus. **Il n'y a pas d'autre écriture de clôture dans le projet.**
+
+## 3. OÙ SE SAUVEGARDENT LES DATES — TROIS ENDROITS, UN SEUL FAIT FOI
+
+| objet | lignes | clôtures | rôle |
+|---|---|---|---|
+| **`app_mandat_champ_app`** *(le carnet)* | — | **3** *(origine `cloture_app`)* | ⭐ **CE QUI FAIT FOI**. 1 sans auteur, 1 par Frédéric, 1 par GONZALEZ |
+| **`app_mandat_register_current.mandat_date_cloture_app`** *(la vitrine)* | 24 564 | **3** | confort d'affichage, **sans autorité** |
+| **`app_mandat_register_current.mandat_date_cloture`** | 24 564 | **213** | ⚠ **la colonne de HEKTOR** — l'app ne l'écrit plus depuis le 13/10 |
+| **`app_mandat.date_cloture`** | 26 912 | **91** | ⛔ **aucun écran ne la lit** |
+| **vue `app_registre_mandats_current`** | *(vue)* | — | expose les trois : `mandat_date_cloture` *(la nôtre d'abord)*, `_app`, `_hektor` |
+
+⚠⚠ **Et la vitrine est détruite chaque nuit** pour les annonces du parc vivant
+*(`delete`+`insert` du registre)* : c'est pourquoi la **pièce 4 du chantier ③** repose la
+date après le push *(RPC `app_reposer_cloture_mandat_app`, prouvée le 14/10)*. **Le carnet,
+lui, survit** — c'est la seule raison pour laquelle les 3 dates sont encore là.
+
+## 4. LES ENTRÉES À L'ÉCRAN — IL A RAISON : LE REGISTRE N'A PAS DE COLONNE
+
+| entrée | ce qu'elle lit | notre date s'y voit-elle ? |
+|---|---|---|
+| **cockpit, parcours / pastille / jauge** | `ckClotureDe()` → la résultante de la vue *(`App.tsx:27139-27146`, `27223`, `28662`)* | ✅ **oui** |
+| **cockpit, historique des mandats V3** | `firstNonEmpty(ckClotureDe(num), cur.cloture)` *(l. 27967)* | ✅ **oui** |
+| **fiche annonce classique, rubrique Mandat** | `current.cloture` *(données Hektor)* puis `detail.mandat_date_cloture` *(colonne Hektor)* — `mandatDetails`, `App.tsx:18513` et `18530`, passé à **3 écrans** | ❌ **non** — la ligne est même **masquée si vide** |
+| **écran Registre, le tableau** | 2 colonnes de date : **début** et **fin** *(l. 24312-24313)* | ❌ **aucune colonne clôture** |
+| **écran Registre, la fiche mandat** | `selectedMandateLines` — **9 lignes** : Numéro, Type, Début, Fin, Montant, Validation, Diffusable, Commercial, Agence *(l. 24142-24153)* | ❌ **aucune ligne « Clôture »** |
+
+⭐ **MAIS LE REGISTRE N'EST PAS AVEUGLE** : sa colonne **« Mandat »** est calculée par
+`mandatStatutForRegister` *(l. 7671)*, qui met **« Clos »** dès qu'une date de clôture
+existe — et elle lit la **résultante**, donc **la nôtre**. Poser une date fait donc
+**basculer la pastille** et **déplace la ligne dans le filtre par statut**
+*(`applyMandatStatutFilter`, `api.ts:95`)*, sans que la date soit écrite nulle part à
+l'écran. **La conséquence est déjà visible ; seule la valeur est invisible.**
+
+## 5. LES DROITS — LE TROU EST RÉEL
+
+`app_set_mandat_cloture_optimistic(target_annonce, target_numero_mandat, cloture_date)` :
+
+| | |
+|---|---|
+| `security definer` | **oui** |
+| droits | `authenticated` ⚠ **tout utilisateur connecté** |
+| garde interne | ⛔ **AUCUNE** — l'étape ① ne demande que *« es-tu authentifié ? »* |
+| appelants | **un seul** : `App.tsx:16942`, la modale de statut, quand `statusChangeStatus === 'closed'` |
+
+➡ **La fonction est ouverte à la clé publique** : quelqu'un de connecté peut l'appeler
+**directement**, sans passer par l'écran, et écrire une date sur n'importe lequel des
+24 564 mandats — exactement la famille du **chantier ①**.
+
+⭐⭐ **MAIS LE GESTE LUI-MÊME EST DÉJÀ RÉSERVÉ — correction du 16/10, j'avais dit faux.**
+`app_console_can_request_job` réserve `change_hektor_annonce_status` **et**
+`archive_hektor_annonce` à `admin`/`manager` : c'est sa **toute première règle**, posée au
+**chantier ②**, et `app_change_annonce_status_optimistic` **appelle bien cette garde**.
+Épreuve du 16/10, en empruntant les identités, en lecture seule :
+
+| qui | son rôle | `can_request_job('change_hektor_annonce_status')` |
+|---|---|---|
+| legrand | `commercial` | ⛔ **false** |
+| codex.test | `admin` | ✅ **true** |
+
+Les **deux** chemins de clôture *(« Mandat clos » et « Vendu »)* passent par ce même type de
+travail. ➡ **Un négociateur ne peut donc pas clôturer un mandat.** Ce que Frédéric demande
+est **déjà vrai pour le geste** ; la pièce 2 ne ferme que **la porte de derrière**.
+
+⭐ **ET LE DROIT DEMANDÉ EXISTE DÉJÀ** : `is_app_manager_or_admin()` est en base
+*(chantier ②, « manager = admin »)*, et le front porte déjà `isManagerOrAdmin`
+*(`App.tsx:18012`)*, déjà utilisé pour l'archivage d'annonce *(l. 22580)*. **Rien à inventer.**
+
+## 6. « PAS BESOIN DE COMMUNIQUER À HEKTOR » — DÉCISION ÉCRITE, RETROUVÉE
+
+> *« la date de clôture doit donc être une colonne supplémentaire, et cette colonne doit
+> être maj éventuellement par Hektor mais **surtout pas l'app** — mais cette demande n'a
+> pas à être transmise à Hektor. »*
+> **Frédéric, 13/10** *(`CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`, l. 1873-1875)*
+
+Et la raison technique, du **28/08** *(même note, l. 1253-1258)* : le formulaire de clôture
+de Hektor **exige un numéro de mandat** et **échouait sur 98,8 % du parc** — il a été
+débranché, et un geste qui marchait *(le changement de statut)* était pris en otage.
+
+**État mesuré du code** : `CLOTURE_MANDAT_CHEZ_HEKTOR` *(`console_job_worker.js:13533-13534)`*
+vaut `false` par défaut, et **aucun fichier du dépôt ne pose `CONSOLE_HEKTOR_CLOTURE_MANDAT`**.
+La porte reste ouverte, elle n'est pas franchie. Le texte de l'écran a d'ailleurs été
+corrigé le 13/10 : **« motif et date gardés chez nous »** *(`App.tsx:20068`)*.
+
+➡ **Sa mémoire est juste, c'est écrit deux fois, et le code le respecte. Rien à changer sur
+ce point.**
+
+## 7. CE QUE L'AUDIT N'A PAS PU MESURER
+
+- **Aucune capture d'écran** : je ne peux pas voir l'écran Registre ni la fiche mandat avec
+  une session. Les absences du § 4 sont lues **dans le code**, pas constatées à l'œil.
+- **Pourquoi les 4 demandes d'annulation de mai portent toutes la même annonce 24113** : pas
+  mesuré *(probablement des essais de Frédéric, mais je ne le prouve pas)*.
+- `app_mandat.date_cloture` **91 lignes** : je n'ai pas cherché **qui** les a écrites.
+- ⚠ **Une autre session travaille le registre aujourd'hui** *(les mandats de recherche,
+  `App.tsx:9219-9236`)* : tout code sur l'écran Registre devra relire `git log` d'abord.
+
+## 8. LES DÉCISIONS DE FRÉDÉRIC — 16/10/2026
+
+> *« 1. dans l'ordre recommandé · 2. NON LA CLÔTURE PAS LES DATES D'ORIGINE DU MANDAT !! ·
+> 3. Une colonne en + »*
+
+| | décision | ce que ça ferme |
+|---|---|---|
+| **ordre** | **pièce 1** *(la bonne date gagne)*, **pièce 2** *(les droits)*, puis **3** *(la date visible)* et **4** *(le bouton)* | le périmètre et la taille sont tranchés |
+| **quelles dates** | ⛔ **LA CLÔTURE SEULE.** Les dates **d'origine** du mandat *(enregistrement, début, fin)* **restent en lecture** — elles viennent de Hektor et n'auront pas de colonne « à nous » | ⚠ **ne pas relancer ce sujet de soi-même** |
+| **le registre** | ✅ **une colonne clôture EN PLUS** dans le tableau | ⚠ **à concilier avec la doctrine « aucune colonne ajoutée » écrite le 16/10 par l'autre session** *(mandats de recherche)* : relire `git log` avant d'écrire la pièce 3 |
+
+### ⭐ PIÈCE 1 — LE REMÈDE ÉTAIT DÉJÀ À MOITIÉ POSÉ
+
+`cloturerMandatLocalement` lit `payload.close_date || payload.date_cloture ||
+payload.transaction_date` *(`console_job_worker.js:13674`)* — **`close_date` est son PREMIER
+choix, et personne ne l'envoie jamais** *(0 occurrence de `closeDate`/`close_date` dans
+`api.ts`)*. Donc il retombe sur `transaction_date`, c'est-à-dire **l'autre champ date de la
+modale**, qui vaut **aujourd'hui** par défaut.
+
+➡ **Deux lignes dans le front suffisent** : `closeDate` dans l'entrée de
+`createChangeHektorAnnonceStatusJob`, et `close_date: input.closeDate?.trim() || null` dans
+la charge *(la charge est construite en snake_case explicite, l. 6078+)*.
+⭐ **Aucune modification du worker, aucun redémarrage des 4 services.**
+
+⛔ **ET SURTOUT PAS en détournant `transactionDate`** : il part **aussi chez Hektor**
+*(`setHektorAnnonceStatusValue`, `console_job_worker.js:11929`)*, et le chemin `closed_form`
+passe par cette même fonction. Le détourner changerait ce que Hektor reçoit.
+
+### PIÈCE 2 — ÉCRITE, DORMANTE, ET ÉPROUVÉE À BLANC
+
+| fichier | ce qu'il fait |
+|---|---|
+| `supabase/patch_chantier7_3a_piece2_droits_cloture_2026-10-16.sql` | insère une garde `is_app_manager_or_admin()` dans `app_set_mandat_cloture_optimistic`, **sans retirer le `grant`** *(un refus lisible valant mieux qu'une erreur de permission que le front avale)* |
+| `..._INVERSE.sql` | retire la garde entre deux bornes, vérifie **0 trace**, puis **dit** si l'empreinte d'origine revient *(lesson du 15/10 : un inverse ne juge que sa part)* |
+| `..._REPETITION.sql` | mesures avant *(dont le **témoin inverse** : le négociateur doit être **accepté** avant le patch)* → patch → **les 3 identités** → inverse → retour → erreur volontaire |
+
+**Contrôle à blanc du 16/10, 100 % en lecture, 7 contrôles verts** *(le texte patché est
+fabriqué puis repassé par l'inverse, sans jamais être exécuté)* :
+
+```
+a  le texte patche grandit de 962 caracteres
+b  2 bornes (attendu 2)
+c  l appel NOT public.is_app_manager_or_admin() est present
+d  les apostrophes sont justes (service_role, droits_insuffisants, le message)
+e  zero retour chariot introduit
+f  l INVERSE retombe sur l original  -> OUI, A L OCTET PRES
+g  empreinte apres l inverse         -> IDENTIQUE (09280b46...)
+```
+
+⚠ **Ce que la répétition ne pourra pas prouver** : il n'y a **aucun manager actif**
+aujourd'hui *(mesure : 4 admin, 2 commercial, 0 manager)*. La branche « manager » repose sur
+`is_app_manager_or_admin()`, déjà en production, qui teste `role in ('admin','manager')`.
+**Non éprouvée en réel, et c'est dit.**
+
+⚠⚠ **CORRECTION DU 16/10 — J'AVAIS ÉCRIT FAUX ICI.** J'avais annoncé que la pièce 2
+n'empêcherait pas un négociateur de clôturer un mandat. **Mesuré : il ne peut déjà pas.**
+`change_hektor_annonce_status` est réservé à `admin`/`manager` depuis le chantier ②
+*(détail et épreuve au § 5)*. La pièce 2 ferme **la porte de derrière** — l'appel direct à
+la RPC avec la clé publique — et **pas** le geste, qui est déjà fermé.
+➡ **Leçon : avant d'annoncer qu'un garde-fou « ne suffira pas », mesurer les garde-fous qui
+existent déjà AILLEURS sur le même geste.** Frédéric a tiqué sur la phrase ; elle était
+fausse.
+
+## 9. CE QUI EST ÉCRIT — 16/10/2026, pièces 1, 3 et 4
+
+**Go de Frédéric : « Option a »** → pièce 1, puis 3 et 4 ; la pièce 2 reste dormante.
+**Aucun redémarrage de worker, aucune écriture en base, rien de poussé.**
+
+### Pièce 1 — la bonne date gagne *(2 endroits, 3 lignes utiles)*
+
+| fichier | ce qui change |
+|---|---|
+| [`lib/api.ts`](../apps/hektor-v1/src/lib/api.ts) | `closeDate?: string` en entrée de `createChangeHektorAnnonceStatusJob`, et `close_date: input.closeDate?.trim() \|\| null` dans la charge |
+| [`App.tsx`](../apps/hektor-v1/src/App.tsx) | `closeDate: statusChangeStatus === 'closed' ? statusChangeCloseDate : undefined` au seul site d'appel de la modale |
+
+⭐ **Le worker lit `close_date` en PREMIER depuis toujours** — il n'a pas été touché, donc
+**pas un seul des 4 services n'a besoin de redémarrer**.
+⛔ **On n'a PAS détourné `transactionDate`** : il part *aussi* chez Hektor
+*(`setHektorAnnonceStatusValue`)*, et le chemin « Mandat clos » passe par cette fonction.
+⚪ **Le chemin « Vendu » est laissé tel quel, exprès** : il clôt sur la **date de vente**
+*(le worker y passe `transaction_date` en dur)*, ce qui est juste.
+⚪ **L'acceptation d'une demande d'annulation n'envoie rien** : elle n'a pas de champ date,
+donc la clôture prend **le jour de l'acceptation**. Voulu.
+
+### Pièce 3 — la date devient visible *(3 entrées sur 4 ; le cockpit l'était déjà)*
+
+| entrée | avant | après |
+|---|---|---|
+| **tableau du Registre** | aucune colonne | ⭐ **colonne « Date de clôture »**, après « Date de fin » *(décision de Frédéric : « une colonne en + »)*. Vide = non clos, **sans tiret** : sur l'écran le plus officiel de l'app, un tiret se lit « donnée manquante » |
+| **fiche mandat du Registre** | 9 lignes, aucune clôture | ligne **« Cloture »** après « Fin » *(ici le `-` est juste : toutes les lignes voisines l'emploient)* |
+| **rubrique Mandat de la fiche annonce** | lisait `detail.mandat_date_cloture`, **toujours vide** *(la colonne n'existe pas dans la fiche)* | lit **notre date d'abord** via `clotureParMandat`, alimenté par `loadRegisterCycleAffaires` |
+| CSS | — | `min-width` du tableau : **1084 → 1180 px** *(la colonne ajoute 96 px fixes ; sans ce report, « Mandant(s) » — en `width:auto` — les aurait perdus)* |
+
+⚠ **Le prix de la 3ᵉ ligne, dit** : c'est une **seconde lecture** du même registre pour la
+même annonce quand le cockpit est ouvert à côté. L'alternative — piocher dans l'état
+`mandats` de l'écran Registre — a été **écartée** : cette liste est **filtrée et paginée**,
+donc une fiche ouverte depuis l'écran Annonces n'y serait pas et on retomberait sur une
+ligne vide **sans erreur**. *Une absence est pire qu'une erreur.*
+
+### Pièce 4 — le geste, dans la fiche mandat du Registre
+
+Un bloc **« Clôture du mandat »** sous la jauge du cycle de vie, qui recopie le cadre de son
+voisin `.md-lifecycle` *(aucune couleur ni variable nouvelle)* :
+
+| qui | ce qu'il voit |
+|---|---|
+| **manager / admin** | **« Clôturer ce mandat »** → un champ date → **Enregistrer** ; si déjà clos : **« Corriger la date de clôture »** + **« Rouvrir le mandat »** *(vider la date efface la nôtre et fait réapparaître celle de Hektor — le retour arrière était déjà prévu par la RPC)* |
+| **négociateur** *(validation accordée)* | **« Demander l'annulation de ce mandat »** → le circuit qui existe depuis toujours, + la phrase qui explique. ⭐ **On n'a pas fabriqué un second circuit** |
+| **négociateur** *(sans validation)* | une phrase : clôturer est réservé aux managers |
+| ⚠ **mandat de recherche** | **lecture seule, et on DIT pourquoi** |
+
+⚠⚠ **LE PÉRIMÈTRE EXCLU EST DÉCLARÉ** *(mesure du 16/10)* : les **38 mandats de recherche**
+entrés au registre le 16/10 par l'autre session **n'ont ni annonce ni dossier — 0 sur 38**.
+Or notre carnet a pour clé le couple **(annonce, n° de mandat)** et la demande d'annulation
+exige un `app_dossier_id`. Ni le crayon ni le renvoi ne peuvent les servir : la fiche affiche
+la date en lecture et explique, **au lieu d'offrir un bouton qui échouerait en
+`mandat_introuvable`**.
+
+⭐ **`messageRefusCloture()`** traduit les codes de la RPC en français — y compris
+**`droits_insuffisants`, qui n'existe pas encore en base** : c'est la pièce 2, dormante. Le
+message est posé **d'avance**, exprès, pour que le jour du collage l'écran sache déjà quoi
+dire.
+
+⭐ **Le dépliant « Tous les champs » lit la MÊME valeur que le bloc** *(`clotureCourante`)* :
+juste après une saisie, la liste du registre porte encore l'ancienne date, et les deux
+endroits de la même fiche auraient dit deux choses.
+
+### Les épreuves
+
+| | |
+|---|---|
+| `npm run build` | ✅ **vert** *(`tsc -b && vite build`)* |
+| ⭐ **le build vérifie-t-il VRAIMENT les types ?** | **témoin inverse** : un `const x: number = "texte"` posé exprès → `error TS2322` ; retiré, le build repasse au vert. Sans ce témoin, « build vert » ne voulait rien dire |
+| témoins dans le fichier SERVI | `close_date` 1 · `Date de clôture` 4 · `Clôturer ce mandat` 1 · `Corriger la date de clôture` 1 · `Rouvrir le mandat` 1 · `Demander l'annulation de ce mandat` 1 · la phrase du mandat de recherche 1 · `md-cloture` **12 fois dans la CSS** |
+| l'autre session | `git log` relu **avant** d'écrire : son registre est **commité** *(`8149f44`, 11:37)*, et le diff de mes 2 fichiers de code ne contenait **que mes lignes** |
+
+### ⛔ CE QUI N'EST PAS FAIT, ET QUI DOIT ÊTRE DIT
+
+1. ⚠⚠ **PERSONNE N'A VU L'ÉCRAN.** Je n'ai pas de session pour ouvrir la fiche mandat : tout
+   est prouvé par le **build** et par les **textes présents dans le fichier servi**, pas à
+   l'œil. La colonne du registre et le bloc de clôture **restent à regarder**.
+2. ⛔ **Rien n'est poussé** — et c'est Frédéric qui pousse *(Vercel se déploie seul)*.
+3. 🔸 **La pièce 2 reste dormante** : la RPC est toujours ouverte à `authenticated` sans garde
+   *(la porte de derrière)*. Le geste, lui, est déjà réservé.
+4. ⬜ **L'essai réel** : clôturer un mandat d'essai avec une date **différente du jour**, et
+   vérifier que le carnet porte **la date saisie**. ⚠ Se mesure sur **la valeur**, pas sur
+   l'heure : le `PATCH` du worker ne rafraîchit pas `ecrit_le` *(24933 porte une valeur du
+   18/09 avec un horodatage du 03/09)*.

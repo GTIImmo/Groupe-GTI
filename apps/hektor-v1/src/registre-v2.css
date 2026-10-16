@@ -116,7 +116,10 @@
   overflow-x:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:1;
 }
 .app-screen-registre .registre-nb .register-table{
-  min-width:1084px;width:100%;border-collapse:collapse;position:relative;z-index:1;background:transparent;table-layout:fixed;
+  /* ⑦-3a piece 3 (16/10/2026) : 1084 -> 1180px. La colonne « Date de cloture »
+     ajoute 96px de largeur FIXE ; sans ce report, c'est « Mandant(s) » (width:auto)
+     qui les aurait perdus et se serait ecrase. */
+  min-width:1180px;width:100%;border-collapse:collapse;position:relative;z-index:1;background:transparent;table-layout:fixed;
 }
 .app-screen-registre .registre-nb .register-table th{
   font-size:10px !important;font-weight:800 !important;letter-spacing:.08em;text-transform:uppercase;

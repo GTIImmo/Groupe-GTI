@@ -282,3 +282,22 @@
 @media (prefers-reduced-motion:reduce){
   .md-root .md-mod,.md-root .md-mod:hover{transform:none}
 }
+
+/* ═══ ⑦-3a pièce 4 (16/10/2026) : LA CLÔTURE DU MANDAT ════════════════════════
+   Recopie du voisin `.md-lifecycle` (même cadre, même fond, mêmes variables) :
+   le bloc vit juste en dessous de la jauge, il doit en avoir l'air. Aucune
+   couleur nouvelle, aucune variable nouvelle. */
+.md-root .md-cloture{margin-top:14px;padding:15px 19px 14px;border:1px solid var(--md-line);border-radius:14px;background:linear-gradient(180deg,#fffdfb,#faf6f1)}
+.md-root .md-cloture-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.md-root .md-cloture-edit{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.md-root .md-cloture-edit input[type=date]{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--md-line);border-radius:10px;background:#fff;color:var(--md-ink);font-variant-numeric:tabular-nums}
+.md-root .md-cloture-edit input[type=date]:disabled{opacity:.55}
+.md-root .md-cloture-msg{margin:10px 0 0;font-size:12.5px;font-weight:700;color:var(--md-brand-ink)}
+.md-root .md-cloture-note{margin:10px 0 0;font-size:11.5px;line-height:1.45;color:var(--md-faint)}
+/* Dans la rangée du renvoi, la note est en ligne : elle explique le bouton d'à
+   côté, elle ne lui passe pas dessous. */
+.md-root .md-cloture-edit .md-cloture-note{margin:0;flex:1 1 180px;min-width:160px}
+@media (max-width:640px){
+  .md-root .md-cloture-edit{align-items:stretch;flex-direction:column}
+  .md-root .md-cloture-edit .md-cloture-note{flex:none}
+}
