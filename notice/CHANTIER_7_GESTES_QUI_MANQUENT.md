@@ -583,6 +583,31 @@ l'archivage du contact, soit au bout de 2 ans »* :
 | **B** — un geste « désarchiver une recherche » dans l'app | ❌ **NON, inutile** — ➡ et donc `data-search-id` n'est pas urgent non plus |
 | **C** — capter la date d'auto-archivage | ❌ **NON ici** — à développer comme **un auto-archivage conforme RGPD**, et *« c'est un autre dev »* |
 
+### ✅ A EST EN PRODUCTION — *16/10, répétition 9/9 puis contrôle 7/7*
+
+**La répétition a servi à quelque chose** : au premier passage elle a rendu
+`3-retour | empreinte DIFFERENTE` — mon patch insérait **une ligne vide** entre l'ancre
+et la borne, que l'inverse ne reprenait pas. Le bloc partait bien *(0 trace)*, mais le
+corps ne retombait pas à l'octet près. **Un seul saut de ligne.** Corrigé → second
+passage **IDENTIQUE**. *(Même famille que la leçon 31 : un retour arrière ne juge que
+sa part — ici c'était lui le fautif, pas le patch.)*
+
+| contrôle en base | |
+|---|---|
+| le bloc est posé | ✅ |
+| le verrou `app_search_pending` | ✅ |
+| le garde `if p_archive then` *(archivage seulement)* | ✅ |
+| **0 retour chariot** dans le corps | ✅ *(le `replace(chr(13))` autour du texte inséré a tenu)* |
+| `authenticated` / `anon` | ✅ **oui / non** |
+| « supprimer un contact » reste fermé au négociateur | ✅ |
+
+**Empreinte après, pour tout futur patch** : **`d089fbf1bb0922030c3fe87ad8dd4371`**
+*(l'inverse, lui, vise toujours `85e3c91d…`, l'état d'avant — c'est correct)*.
+
+⏰ **La preuve en réel viendra au prochain archivage** : ses recherches actives doivent
+passer inactives **tout de suite** chez nous, et `app_search_pending` porter l'état
+d'avant + le numéro du travail.
+
 ### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
 
 « Archiver un contact » n'est **pas** un geste anodin : il peut emporter une recherche
