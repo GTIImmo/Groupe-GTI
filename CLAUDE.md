@@ -538,6 +538,17 @@ report ne se décident jamais sans lui.
        (inutile tant que Render repond)
      - le refus du prix n'a JAMAIS ETE EXECUTE (ma session ne peut pas ecrire)
      - un essai REEL d'un geste chez Hektor par un negociateur
+③-bis 📜 UN AUTO-ARCHIVAGE CONFORME RGPD -- SUJET A PART, ouvert le 16/10 par Frederic
+   (« a developper un auto archivage conforme rgpd etc.. mais cela est un autre dev »).
+   Ce qu'on sait deja, mesure le 16/10 : Hektor pose une date d'auto-archivage a
+   CREATION + 2 ANS sur chaque recherche (22-06-2026 -> 22-06-2028 ; 05-06-2026 ->
+   05-06-2028), et quand elle tombe la recherche passe inactive. ⚠ CETTE DATE NE NOUS
+   PARVIENT PAS : ni l'API (son bloc `recherches` ne porte que offre, archive, types,
+   villes, quartiers, particularites, criteres), ni notre table (23 colonnes) ne la
+   portent -- elle n'existe que dans la page HTML (`valueInputAutoarchivage`).
+   Donc aujourd'hui on CONSTATE le basculement apres coup, on ne l'anticipe pas.
+   NE PAS RELANCER DE SOI-MEME : c'est un dev a part entiere.
+
 ③ QUESTIONS DE FAIT   les negociateurs saisissent-ils encore leurs visites dans Hektor ?
    ✅ REPONDU LE 15/10 : « pourquoi 62 000 contacts sur 356 000 » est une DECISION, pas un
    accident -- on ne monte que ce qui sert, par TROIS regles d'eligibilite (et non deux, mon

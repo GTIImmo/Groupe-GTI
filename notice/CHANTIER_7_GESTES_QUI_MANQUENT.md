@@ -575,6 +575,14 @@ l'archivage du contact, soit au bout de 2 ans »* :
 | **B** | **désarchiver une recherche** : geste neuf *(mode connu depuis juin + `data-search-id` à lire)* |
 | **C** | *(optionnel)* **capter la date d'auto-archivage** pour la montrer et l'anticiper — elle n'est que dans le HTML |
 
+### ✅ TRANCHÉ PAR FRÉDÉRIC — *16/10*
+
+| | sa décision |
+|---|---|
+| **A** — archiver un contact archive ses recherches **chez nous d'abord** | ✅ **OUI** — *« on garde la corbeille, cela me va »* → patch écrit *(`patch_chantier7_archiver_contact_recherches_2026-10-16.sql`)* |
+| **B** — un geste « désarchiver une recherche » dans l'app | ❌ **NON, inutile** — ➡ et donc `data-search-id` n'est pas urgent non plus |
+| **C** — capter la date d'auto-archivage | ❌ **NON ici** — à développer comme **un auto-archivage conforme RGPD**, et *« c'est un autre dev »* |
+
 ### ➡ CE QUE ÇA CHANGE POUR LE GESTE — **à trancher par Frédéric**
 
 « Archiver un contact » n'est **pas** un geste anodin : il peut emporter une recherche
