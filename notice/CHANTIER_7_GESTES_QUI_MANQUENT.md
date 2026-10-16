@@ -1345,7 +1345,7 @@ doubles.** On écrit un fichier `.py` et on le lance. *(Déjà arrivé le matin 
 
 ---
 
-## 12. LA DATE DE CLÔTURE PASSE CHEZ PAULINE — 16/10/2026
+## 12. LA DATE DE CLÔTURE SE DÉCIDE EN ACCEPTANT LA DEMANDE — 16/10/2026
 
 > *« il faut donc que ce soit dans la vue suivie et la tâche pour Pauline annulation de
 > mandat qui gère la date de clôture et l’affiche »* — Frédéric, 16/10
@@ -1358,7 +1358,7 @@ là, pas ailleurs.
 
 | | |
 |---|---|
-| le chemin de Pauline | la modale de demande → statut « accepté » → une **fenêtre de confirmation** *(« Finaliser l’annulation ? », Oui/Non)* → `handleUpdateDiffusionRequest` |
+| le chemin de celui qui traite | la modale de demande → statut « accepté » → une **fenêtre de confirmation** *(« Finaliser l’annulation ? », Oui/Non)* → `handleUpdateDiffusionRequest` |
 | qui clôt vraiment | **le « Oui » seulement** : la clôture A5 est dans `if (status === 'accepted' && unpublishAfterCancellation)` |
 | ce que la charge portait | `requestId, status, response, refusalReason, followUpNeeded, followUpDays, relaunchCount, cancellationChecked, unpublishAfterCancellation` — **aucune date** |
 | donc la clôture valait | **toujours le jour de l’acceptation** *(le worker retombait sur son repli)* |
@@ -1368,7 +1368,7 @@ là, pas ailleurs.
 
 1. **`closeDate` entre dans la charge de l’action** *(`UpdateDiffusionRequestAction`)*.
 2. **Un champ « Date de clôture du mandat » dans la fenêtre de confirmation**, posé au
-   **jour courant** à l’ouverture et modifiable. Il est montré **avant** le choix Oui/Non,
+   **jour courant** à l’ouverture et modifiable par qui traite la demande. Il est montré **avant** le choix Oui/Non,
    pour que la date soit décidée **avant** le clic et pas après.
    ⚠ Il ne sert qu’au « Oui » : c’est lui seul qui clôture. C’est dit dans le code.
 3. **Le chaînage A5 la transmet** : `closeDate` → `close_date` dans la charge du travail.
@@ -1376,7 +1376,7 @@ là, pas ailleurs.
    lit `close_date` **en premier**. Rien à changer de son côté, **aucun redémarrage**.
 4. **Et la date s’écrit CHEZ NOUS tout de suite** *(`setMandatClotureApp`)*, doctrine du
    chantier ③. Sans ça, la vue Suivi ne la montrerait qu’après le passage du worker
-   (~30 s), et Pauline croirait son geste perdu.
+   (~30 s), et celui qui vient d’accepter le croirait perdu.
    ⭐ **Les deux écritures ne peuvent plus se contredire**, puisqu’on vient de donner la
    même valeur au worker — c’était tout l’objet de la pièce 1.
    ⚠ Un échec ici **ne fait pas échouer le geste** *(la demande est déjà acceptée, le
@@ -1397,7 +1397,7 @@ CSS)*.
 
 ### ⛔ CE QUI RESTE À DIRE
 
-1. ⚠⚠ **Le chemin de Pauline n’a jamais tourné en production** : les 4 demandes
+1. ⚠⚠ **Ce chemin n’a jamais tourné en production** : les 4 demandes
    d’annulation acceptées datent de **mai**, le chaînage A5 est de **juillet**
    *(§ 1 de cette note)*. Ce code est donc **écrit mais jamais éprouvé en réel** — il le
    sera à la première vraie demande acceptée.
@@ -1406,3 +1406,20 @@ CSS)*.
    À trancher par Frédéric s’il veut que « Non » le cache.
 3. ⚠ **La modale de statut clôt toujours sans passer par la demande** *(déjà réservée
    admin/manager)* — rappel du § 11, toujours à trancher.
+
+### ⚠ « PAULINE » EST UN RÔLE, PAS UNE PERSONNE — précision de Frédéric, 16/10
+
+> *« quand je dis Pauline c’est pour t’aider, car ce sont les comptes Admin et manager qui
+> voient aussi dans le suivi des demandes »*
+
+**Mesuré, et le comportement était déjà juste** : le bouton « Suivi » de la navigation est
+derrière `isManagerOrAdmin`, et l’écran reçoit `isAdmin={isManagerOrAdmin}`.
+⚠ **Le nom de la prop est trompeur** — `isAdmin` porte en fait « manager ou admin » — mais
+la mesure, elle, ne l’est pas. **Aucun code à changer.**
+
+En revanche **mes commentaires parlaient d’une personne** : ils sont redressés *(6 endroits)*
+et disent maintenant « tout compte admin ou manager ».
+⭐ **Je n’ai PAS purgé le mot « Pauline » du reste de l’app** : il y apparaît **35 fois** et
+c’est le vocabulaire du projet pour ce rôle *(« Vue Pauline », « File Pauline »,
+« Décision Pauline », `isPaulineAdministrativeProfile`…)*. Le renommer serait un autre
+chantier, et il ne m’a pas été demandé.

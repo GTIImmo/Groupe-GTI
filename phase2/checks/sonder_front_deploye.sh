@@ -34,12 +34,17 @@ for essai in $(seq 1 24); do
   done
   PARTIS=0
   for mot in "${DISPARUS[@]}"; do
+    # une entree VIDE veut dire « rien a faire disparaitre » : on ne la compte pas
+    # comme un succes gratuit, on la retire du total.
+    if [ -z "$mot" ]; then continue; fi
     if printf '%s' "$CORPS" | grep -qF "$mot"; then MANQUE="$MANQUE [-]$mot"; else PARTIS=$((PARTIS+1)); fi
   done
+  ATTENDU_PARTIS=0
+  for mot in "${DISPARUS[@]}"; do if [ -n "$mot" ]; then ATTENDU_PARTIS=$((ATTENDU_PARTIS+1)); fi; done
 
-  echo "essai $essai : $JS -- presents $OK/${#ATTENDUS[@]} · disparus $PARTIS/${#DISPARUS[@]}$MANQUE"
+  echo "essai $essai : $JS -- presents $OK/${#ATTENDUS[@]} · disparus $PARTIS/$ATTENDU_PARTIS$MANQUE"
 
-  if [ "$OK" -eq "${#ATTENDUS[@]}" ] && [ "$PARTIS" -eq "${#DISPARUS[@]}" ]; then
+  if [ "$OK" -eq "${#ATTENDUS[@]}" ] && [ "$PARTIS" -eq "$ATTENDU_PARTIS" ]; then
     echo
     echo "=== EN LIGNE, ET VERIFIE DANS LES DEUX SENS ==="
     echo "paquet servi : $JS ($(printf '%s' "$CORPS" | wc -c) octets)"

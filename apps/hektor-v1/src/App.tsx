@@ -6459,11 +6459,14 @@ type UpdateDiffusionRequestAction = {
   runValidationWorkflow?: boolean
   cancellationChecked?: boolean
   unpublishAfterCancellation?: boolean
-  /** ⑦-3a (16/10/2026) : LA DATE DE CLÔTURE, SAISIE PAR PAULINE AU MOMENT D'ACCEPTER.
+  /** ⑦-3a (16/10/2026) : LA DATE DE CLÔTURE, FIXÉE EN ACCEPTANT LA DEMANDE.
    *
    *  Pourquoi ici et pas ailleurs : depuis cet après-midi, clôturer passe
    *  SYSTÉMATIQUEMENT par la demande d'annulation, même pour un admin. C'est donc
    *  l'acceptation qui clôt — et c'est là que la date doit se décider.
+   *  ⚠ QUI TRAITE : tout compte ADMIN ou MANAGER, pas une personne. L'écran Suivi
+   *    est derrière `isManagerOrAdmin`, et il reçoit `isAdmin={isManagerOrAdmin}` —
+   *    le nom de la prop est trompeur, la mesure ne l'est pas (16/10).
    *  ⚠ Absente = le worker garde son repli (le jour de l'acceptation). */
   closeDate?: string
 }
@@ -12916,9 +12919,9 @@ export default function App() {
     hektorAnnonceId: number | string | null
     pendingAction?: UpdateDiffusionRequestAction
   }>(null)
-  // ⑦-3a (16/10/2026) : la date que Pauline fixe en acceptant l'annulation.
-  // Remise au jour courant à chaque ouverture de la fenêtre de confirmation —
-  // c'est le cas de loin le plus fréquent, et elle reste modifiable.
+  // ⑦-3a (16/10/2026) : la date fixée en acceptant l'annulation, par l'admin ou
+  // le manager qui traite la demande. Remise au jour courant à chaque ouverture de
+  // la fenêtre de confirmation — le cas de loin le plus fréquent — et modifiable.
   const [cancellationCloseDate, setCancellationCloseDate] = useState('')
   const [cancellationCheckPrompt, setCancellationCheckPrompt] = useState<null | {
     kind: 'confirmed'
@@ -17228,7 +17231,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setPriceDropCheckPrompt(null)
         setValidationCheckPrompt(null)
         if (input.status === 'accepted' && !input.cancellationChecked) {
-          // ⑦-3a (16/10) : on propose le jour courant, Pauline peut le changer.
+          // ⑦-3a (16/10) : on propose le jour courant ; celui qui traite la demande
+          // — tout compte admin ou manager — peut le changer avant de trancher.
           setCancellationCloseDate(input.closeDate?.trim() || todayInputDate())
           setCancellationCheckPrompt({
             kind: 'confirmed',
@@ -17322,7 +17326,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
             // ⭐ ET CHEZ NOUS TOUT DE SUITE -- doctrine du chantier ③ (« chez nous
             //   d'abord »). Sans ça, la vue Suivi ne montrerait la date qu'après le
-            //   passage du worker (~30 s), et Pauline croirait son geste perdu.
+            //   passage du worker (~30 s), et celui qui vient d'accepter le croirait perdu.
             //   ⚠ LE WORKER ÉCRIRA LA MÊME VALEUR, puisqu'on vient de la lui donner :
             //     les deux écritures ne peuvent plus se contredire. C'était tout
             //     l'objet de la pièce 1.
@@ -21135,7 +21139,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               {/* ⑦-3a (16/10/2026) : LA DATE DE CLÔTURE SE DÉCIDE ICI.
                   Depuis cet après-midi, clôturer passe SYSTÉMATIQUEMENT par la
                   demande d'annulation — même pour un admin. C'est donc
-                  l'acceptation qui clôt, et c'est à Pauline de dire à quelle date.
+                  l'acceptation qui clôt, et c'est à celui qui traite la demande
+                  — un compte admin ou manager — de dire à quelle date.
                   ⚠ Elle ne sert qu'au « Oui » : c'est lui seul qui clôture. On la
                     montre quand même avant le choix, pour qu'elle soit décidée
                     AVANT le clic et pas après.
@@ -25767,10 +25772,11 @@ function SuiviMandatsScreenV2(props: {
                   <tr key={`${item.app_dossier_id}-${activeRequest.id}`} onClick={() => props.onOpenDetailPage(item.app_dossier_id)}>
                     <td><strong>{requestTypeLabel(activeRequest.request_type)}</strong><span>N° demande {requestNumberLabel(activeRequest)}</span><span>{formatDate(activeRequest.requested_at)}</span></td>
                     {/* ⑦-3a (16/10/2026) : LA DATE DE CLÔTURE SE VOIT ICI.
-                        C'est la vue où Pauline suit ses demandes d'annulation, et
-                        depuis cet après-midi c'est son acceptation qui clôt le
-                        mandat. Elle doit donc pouvoir lire le résultat de son geste
-                        sans ouvrir la fiche.
+                        C'est la vue où l'administratif suit les demandes d'annulation
+                        — TOUT compte admin ou manager, pas une personne (Frédéric,
+                        16/10) — et depuis cet après-midi c'est l'acceptation qui clôt
+                        le mandat. On doit donc pouvoir lire le résultat du geste sans
+                        ouvrir la fiche.
                         ⚠ `item.mandat_date_cloture` est la RÉSULTANTE de la vue :
                           notre date d'abord, celle de Hektor ensuite.
                         ⚠ Rien quand le mandat n'est pas clos — pas de tiret. */}
@@ -36100,6 +36106,23 @@ function contactBool(value: unknown) {
   return value === true || value === 1 || value === '1'
 }
 
+// A.3 piece 5 (16/10/2026) : la ligne « Mandat de recherche n ... » de la
+// carte. Rendue a part pour qu'elle reste lisible, et pour qu'on voie d'un
+// coup d'oeil CE QU'ELLE N'AFFICHE PAS : ni montant (app_mandat n'en porte
+// pas), ni criteres (ils sont deja au-dessus, c'est la recherche).
+function contactSearchMandatLabel(mandat: AppContactMandatRecherche) {
+  const parts: string[] = [`Mandat de recherche n\u00b0 ${mandat.numero_mandat}`]
+  if (mandat.type) parts.push(mandat.type)
+  // (!) LA CLOTURE L'EMPORTE SUR LA FIN PREVUE : un mandat clos le 12/03 ne
+  //   court pas jusqu'au 13/09. Meme ordre de priorite qu'au registre et au
+  //   cockpit, pour qu'un meme mandat ne dise pas deux choses.
+  const fin = mandat.date_cloture || mandat.date_fin
+  const periode = [mandat.date_debut, fin].filter(Boolean).map(formatDate).join(' \u2192 ')
+  if (periode) parts.push(periode)
+  if (mandat.date_cloture) parts.push('clos')
+  return parts.join(' \u00b7 ')
+}
+
 function contactSearchTypes(value: AppContactSearch['types_json']) {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return Object.entries(value)
@@ -41978,6 +42001,16 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                               : <span className={`fa-cx-srch-tag ${isActive ? '' : 'archived'}`}>{isActive ? 'Active' : 'Archivée'}</span>}
                           </div>
                           <div className="fa-cx-srch-crit">{critParts.join(' · ') || 'Critères non renseignés'}</div>
+                          {/* A.3 piece 5 : le mandat de recherche que cette recherche honore.
+                              Il vient de NOTRE registre (app_mandat), accroche a la recherche
+                              par loadContactSearches. Absent = aucun mandat, ou un mandat dont
+                              la recherche n'a pas pu etre designee sans deviner. */}
+                          {search.mandat_recherche ? (
+                            <div className="fa-cx-srch-mandat" title={search.mandat_recherche.designation ?? undefined}>
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /><path d="M9 13h6M9 17h4" /></svg>
+                              <span>{contactSearchMandatLabel(search.mandat_recherche)}</span>
+                            </div>
+                          ) : null}
                           {cities.length > 1 ? (
                             <div className="fa-cx-srch-cities-wrap">
                               <button type="button" className="fa-cx-srch-cities-tg" onClick={() => toggleSearchExpanded(search.contact_search_key)} aria-expanded={isExpanded}>
