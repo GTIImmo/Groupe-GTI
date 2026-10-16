@@ -1627,9 +1627,23 @@ suffixe au texte**. L'empreinte diffère donc d'exactement ça. Le **vrai** patc
 inverse, eux, lancent tous deux `VALIDATE` à la fin : en production la contrainte revient
 propre.
 
-⛔ **MAIS JE NE L'AI PAS PROUVÉ** : il n'existe aucune contrainte non validée dans la base à
-laquelle comparer. ➡ J'ai donc **corrigé la répétition pour qu'elle le dise elle-même** :
-trois lignes explicites au lieu d'un compteur, et la contrainte mesurée **suffixe retiré**.
+⚠ **Sur le moment je ne l'avais PAS prouvé** : il n'existe aucune contrainte non validée
+dans la base à laquelle comparer. ➡ Plutôt que d'affirmer, j'ai **corrigé la répétition
+pour qu'elle le dise elle-même** : trois lignes explicites au lieu d'un compteur, et la
+contrainte mesurée **suffixe retiré**.
+
+### ✅✅ ET LE SECOND COLLAGE DE FRÉDÉRIC L'A TRANCHÉ
+
+```
+3-retour | contrainte (texte nu)    = IDENTIQUE (suffixe NOT VALID present -- normal en repetition)
+3-retour | droits (empreinte)       = IDENTIQUE
+3-retour | distribution (empreinte) = IDENTIQUE
+```
+
+**Les trois reviennent à l'identique.** C'était bien **ma mesure**, pas le patch : la
+contrainte ne portait que le suffixe `NOT VALID`, que le vrai patch retire en lançant
+`VALIDATE CONSTRAINT`. ⭐ **La répétition est donc verte de bout en bout**, essai réel
+compris, et le patch peut être collé.
 
 ⚠⚠ **Et la leçon vaut pour toutes mes répétitions** : « 2 sur 3 » est **juste mais muet** —
 il ne dit pas LEQUEL, et il a coûté un aller-retour. **Un contrôle qui agrège perd
