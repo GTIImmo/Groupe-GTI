@@ -1293,40 +1293,52 @@ Commit `6217a0d`, déploiement Vercel **READY**, puis mesures **dans la page** :
 |---|---|---|
 | colonnes du tableau | 9 + actions | **8 + actions** *(« Date de clôture » partie)* |
 | largeur du tableau | 1 180 px | **1 089 px** |
-|  | 1 180 | **1 084** |
-| **débordement** | **91 px, défilement horizontal** | **0 px, ** |
+| `min-width` de `.register-table` | 1 180 | **1 084** |
+| **débordement** | **91 px, défilement horizontal** | **0 px**, `DEFILE: false` |
 
 Et la fiche mandat, **sous le compte admin de Frédéric**, rend exactement sa consigne :
 
+```
+CLOTURE DU MANDAT | Non clos | Demander l'annulation de ce mandat |
+Cloturer passe toujours par une demande, meme pour toi : c'est ce qui en garde
+la trace. | Cette date reste dans nos donnees : Hektor n'en est pas informe.
+```
 
 boutons = [« Demander l’annulation de ce mandat »] · champs date = **0**
 
-⭐ **Et le mandat ouvert (18946) est , donc NON VALIDÉ** — le bouton est là
-quand même. C’est la preuve en réel que ne pas recopier la condition de validation était
-la bonne décision : avec elle, cette fiche n’aurait eu **aucun** bouton.
+⭐ **Et le mandat ouvert (18946) est `a_controler`, donc NON VALIDÉ** — le bouton est là
+quand même. C’est la **preuve en réel** que ne pas recopier la condition de validation
+était la bonne décision : avec elle, cette fiche n’aurait eu **aucun** bouton.
 
-### ⚠⚠ ET LA SONDE DE DÉPLOIEMENT M’A APPRIS QUELQUE CHOSE
+### ⚠⚠ LA SONDE DE DÉPLOIEMENT M’A APPRIS QUELQUE CHOSE
 
 Ma première sonde a répondu **« EN LIGNE » sur l’ANCIEN paquet** : elle ne cherchait que
 les textes qui devaient **apparaître**, et ils y étaient déjà.
+
 ➡ **Une sonde de déploiement se fait DANS LES DEUX SENS** — ce qui doit être là **et** ce
-qui doit avoir disparu. Même règle que le témoin inverse d’une répétition SQL.
-essai 1 : /assets/index-QjC7_VDG.js -- presents 4/4 · disparus 2/2
+qui doit avoir **disparu**. Même règle que le témoin inverse d’une répétition SQL.
+`phase2/checks/sonder_front_deploye.sh` est réécrit ainsi, et il l’a prouvé sur place :
 
-=== EN LIGNE, ET VERIFIE DANS LES DEUX SENS ===
-paquet servi : /assets/index-QjC7_VDG.js (2278331 octets)
-  PRESENT  Demander l'annulation de ce mandat           1 fois
-  PRESENT  Corriger la date de clôture                 1 fois
-  PRESENT  c'est ce qui en garde la trace               1 fois
-  PRESENT  close_date                                   1 fois
-  DISPARU  Clôturer ce mandat                          0 fois
-  DISPARU  Rouvrir le mandat                            0 fois est réécrit ainsi, et il l’a prouvé sur place :
-
-
+```
+essai 1 : index-DaU4SQsX.js -- presents 3/4 · disparus 0/2   <- REFUSE (ancien paquet)
+essai 2 : index-QjC7_VDG.js -- presents 4/4 · disparus 2/2   <- ACCEPTE
+```
 
 ### ⬜ CE QUI N’A PAS ÉTÉ VU
 
-La **sous-ligne `Clos 14/10/2027`** n’a pas pu être observée : la vue par défaut du registre
-ne contient aucun mandat clos *(0 sur les 50 affichées ; 18836 et 11939 sont hors de ce
-périmètre)*. Son rendu n’est prouvé que par le code et par la présence de 
-dans la CSS servie.
+La **sous-ligne « Clos 14/10/2027 »** n’a pas pu être observée : la vue par défaut du
+registre ne contient **aucun mandat clos** *(0 sur les 50 affichées ; les mandats 18836 et
+11939 sont hors de ce périmètre)*. Son rendu n’est prouvé que par le code et par la
+présence de `register-cloture` dans la CSS servie.
+
+### ⚠⚠⚠ ET UN PIÈGE D’OUTILLAGE, LA TROISIÈME FOIS AUJOURD’HUI
+
+Cette section a d’abord été écrite par un `python -c "..."` lancé depuis bash. **Les
+accents graves du Markdown ont été pris pour des substitutions de commande** : `a_controler`,
+`min-width`, `DEFILE: false` et `register-cloture` ont été **effacés**, et
+`phase2/checks/sonder_front_deploye.sh` a été **réellement EXÉCUTÉ**, sa sortie collée dans
+la note à la place du texte.
+
+➡ **Règle : du texte Markdown ne passe JAMAIS par une chaîne bash entre guillemets
+doubles.** On écrit un fichier `.py` et on le lance. *(Déjà arrivé le matin même sur
+`CLAUDE.md`, où « fd8a042 » avait disparu du texte.)*
