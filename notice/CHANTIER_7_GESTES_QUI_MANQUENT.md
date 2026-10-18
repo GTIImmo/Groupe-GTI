@@ -2810,3 +2810,51 @@ même geste qu'une décision n'est pas couverte par cette décision.*
 La ligne 4 a marqué **440 photos** sa première nuit *(15/10, 23:23)* — **dont les 103
 masquées**, à tort. La note du ch. ⑥ portait déjà le chiffre « 440 » et l'heure « 23:23 »
 **sans voir que 103 d'entre elles n'étaient pas des supprimées.**
+
+---
+
+# ⚠⚠ L'ANGLE MORT DES MASQUÉES AVANT LA COUPURE — audit du 18/10
+
+## 1. La commande qui les a ramenées : `sync_hektor_photos`
+
+**Un seul chemin du projet lit les photos masquées** : le travail `sync_hektor_photos`,
+qui appelle `fetchConsolePhotoEntries` *(`console_job_worker.js:4482`)* — **DEUX guichets**,
+`mode=vignettes` *(visible: true)* et `mode=vignettes_hidden` *(visible: false)*.
+
+**Qui le déclenche** : un **bouton à l'écran**, bien par bien *(`handleSyncPhotos`,
+App.tsx:11684 → `createSyncHektorPhotosJob` → `app_console_create_sync_photos_job`)*.
+**Jamais une tâche, jamais le run.** ➡ **313 travaux en tout, 304 annonces, le dernier le
+17/08** — c'est le soir où les 103 sont entrées, entre 18:40 et 19:52.
+
+## 2. Ce que le PLAN prévoit pour les photos — et ce qu'il ne prévoit pas
+
+`PLAN_DEV_ACTUALISE`, ligne 91 *(25/09)* :
+> ⛔ **LES PHOTOS NE SURVIVRONT PAS À LA COUPURE** *(mesuré)* — « trois pièces :
+> **rapatrier ~125 Go** · le worker écrit sur le serveur d'abord · le chemin d'affichage ».
+
+✅ **La pièce 1 est FAITE** : 172 Go rapatriés les 25-26/09, et le run entretient.
+
+⛔⛔ **MAIS LE MOT « MASQUÉE » N'APPARAÎT NULLE PART** — ni dans le plan, ni dans la liste,
+à propos des photos *(vérifié le 18/10 : toutes les occurrences parlent d'autre chose —
+boutons masqués, défauts masqués)*. **Ce n'est pas une décision écrite : c'est un ANGLE
+MORT.** Le rattrapage lit le miroir, le miroir vient de l'API, l'API ne donne que les
+visibles — et personne n'a écrit ce que ça laissait dehors.
+
+## 3. Le coût d'un rattrapage des masquées — chiffré
+
+Il faut **1 appel Hektor par annonce** *(`vignettes_hidden`)*. Cadence sûre du projet :
+**1 appel/seconde** *(`sonde_photos_manquantes`)*. Le bannissement du 20/08 est arrivé vers
+**18 000 requêtes/nuit**.
+
+| périmètre | annonces | appels | durée à 1/s | tient en une nuit ? |
+|---|---|---|---|---|
+| **les VIVANTES** | **10 259** | 10 259 | **≈ 2 h 51** | ✅ **oui**, loin sous le seuil |
+| tout le parc à photos | 49 188 | 49 188 | ≈ 13 h 40 | ⛔ non — plusieurs nuits, avec plafond |
+
+⭐ **Le téléchargement des fichiers, lui, est GRATUIT** : il passe par le **CDN public**,
+hors quota Hektor *(0 refus sur 435 000 en septembre)*. **Seule la LECTURE de la liste
+coûte.**
+
+❓ **À TRANCHER PAR FRÉDÉRIC** : veut-on les masquées avant la coupure, et sur quel
+périmètre ? *(Aujourd'hui : **0 masquée sur 10 biens vivants sondés en direct** — l'agence
+ne semble pas s'en servir sur le parc actif.)*
