@@ -20,7 +20,7 @@
 | ⑦-4 | le **bandeau qui ment** | ✅ **traité le 16/10, et le verdict a changé en route** — ⚠ **la production ne mentait pas** *(c’est le cockpit qui s’affiche, et il dit « depuis une fiche d’index léger »)*. Le menteur était l’**ancienne fiche**, le repli du drapeau. ✅ Corrigé quand même *(sa décision : « ça répare le repli et ça ne coûte rien »)*, ⭐ et le **mobile**, lui, mentait VRAIMENT aux **527 brouillons** — c’est la part vivante |
 | ⑦-5 | relancer / abandonner depuis le monitoring, biens cliquables | ✅ **fait le 15/10** |
 | ⑦-6 | « Abandonner » **défait** le geste | ✅ **fait le 15/10** |
-| ⑦-7 | **modifier ou prolonger un mandat** *(audit 08/10 : ni RPC ni travail worker ; l'avenant ne change que le prix)* | ⬜ |
+| ⑦-7 | **modifier ou prolonger un mandat** | ⛔ **FERMÉ PAR DÉCISION le 18/10** — Frédéric : « je ne souhaite pas pouvoir modifier un mandat ou prolonger ». **Ne pas relancer.** L'audit reste en bas de note : il a servi à autre chose *(202 biens en vente à mandat échu, et la commande des dates identifiée)* |
 | ⑦-8 | **photos : rendre visible / masquer** *(E.0-bis ; « retirer » est fait depuis le 14/10)* | ⬜ |
 | ⑦-9 | **renommer un document** *(audit 08/10, § Documents C2)* | ⬜ |
 | ⑦-10 | `app_brouillon_annonce_detail_cache` **vide et rien ne la remplit** *(venu du chantier ⑥, 14/10)* | ⬜ **question** : seulement si Frédéric en a l'usage |
@@ -2574,3 +2574,114 @@ négociateur verra donc **une phrase, pas un code**. Rien à pousser pour ça.
 2. **`App.tsx:7700`** disait « `droits_insuffisants` n'existe PAS ENCORE en base ». Faux
    depuis le collage. Corrigé, **commentaire seul** *(4 insertions, 3 suppressions,
    aucune ligne de code)*. ⚠ Il n'atteindra la production qu'au prochain push.
+
+---
+
+# ⑦-7 — MODIFIER OU PROLONGER UN MANDAT — AUDIT DU 18/10/2026
+
+> ## ⛔⛔ DÉCISION DE FRÉDÉRIC, 18/10/2026 — **ON NE LE FERA PAS**
+>
+> *« Mais je ne souhaite pas pouvoir modifier un mandat ou prolonger »*, dit **pendant**
+> cet audit, avant toute ligne de code. **Le point ⑦-7 est FERMÉ. Ne pas le relancer de
+> soi-même.**
+>
+> ⭐ **C'est cohérent** : un mandat est un **contrat signé**. Le prolonger depuis l'app
+> engagerait l'agence sur un acte juridique, et Hektor reste la source de cet acte — même
+> logique que la clôture, qu'on a décidé le 13/10 de **ne jamais transmettre à Hektor**.
+>
+> ### ⚠ MAIS L'AUDIT A SERVI, ET DEUX CHOSES RESTENT SUR LA TABLE
+>
+> 1. **202 biens EN VENTE ont un mandat échu et non clos** *(sur 741)*, et **26 arrivent
+>    à échéance sous 30 jours**. Ce n'est pas un trou de code — c'est un fait métier que
+>    cet audit a mis au jour. **Question ouverte à Frédéric : que fait-on de ces 202 ?**
+>    *(rien · les clore · une alerte)* — et la clôture, elle, **existe déjà** depuis ⑦-3a.
+> 2. **La commande des dates est identifiée** *(`protexa-valideStep3`)* et **le GET de
+>    lecture aussi** *(`protexa-mandat&mandat=<n>`)*. **Écrit ici pour ne pas être
+>    recherché deux fois**, si la question se rouvrait un jour.
+>
+> ⚠ Ce qui suit est l'audit tel qu'il a été mené avant la décision. Il est conservé pour
+> ses mesures, **pas comme un plan de travail**.
+
+
+## 1. LE TABLEAU DES GESTES SUR UN MANDAT — mesuré, pas recopié
+
+| geste | base (RPC) | worker | écran | chez Hektor |
+|---|---|---|---|---|
+| **créer un n°** | ✅ `app_console_create_mandat_auto_number_job` | ✅ `create_hektor_mandat_auto_number` | ✅ | ✅ PROTEXA step1→5 |
+| **clôturer** | ✅ `app_set_mandat_cloture_optimistic` *(⑦-3a ; manager/admin depuis le 18/10)* | écrit en direct | ✅ | ⛔ **jamais transmis** *(décision du 13/10)* |
+| **générer un document** | — | ✅ `generate_mandat_document` | ✅ | — |
+| **modifier le PRIX** | ⬜ | ✅ `ihmChargeGroupe_MandatPrix` *(bloc `mandat_infofi`)* | ✅ l'avenant *(PDF)* | ✅ |
+| ⛔ **PROLONGER (dates, durée)** | ⛔ **rien** | ⛔ **rien** | ⛔ **rien** | 🔎 **commande identifiée, jamais éprouvée** |
+| **alerter « échu »** | ✅ `app_generate_mandat_echu_alerts` | — | ✅ | — |
+
+⭐ **L'ÉNONCÉ DU 08/10 EST PÉRIMÉ SUR UN POINT** : il dit *« il n'y a ni travail worker ni
+RPC […] il faut ouvrir Hektor »*. **Faux pour le prix** — le worker écrit **déjà** dans le
+bloc mandat de Hektor *(`console_job_worker.js:11132`)*. Juste pour les **dates**.
+
+## 2. L'AMPLEUR — et le chiffre qui parle n'est pas celui du registre
+
+| | |
+|---|---|
+| lignes au registre | **24 568** · dont **23 614 échues** ⚠ *mais c'est tout l'historique* |
+| ⭐ **mandats de biens VIVANTS** | **741** |
+| ⚠⚠ **déjà échus ET non clos** | **202** — *des biens en vente sans mandat valide* |
+| échéance sous 30 j · 90 j | **26** · **84** |
+| au-delà de 90 j | 443 |
+
+⚠ **Trouvé en plantant la mesure** : **2 dates `0000-00-00`** et **30 sans date de fin**
+dans le registre — la date vide à la mode Hektor. Toute RPC de prolongation devra les
+refuser proprement au lieu de lever.
+
+## 3. CE QUE LE PROJET AVAIT DÉJÀ ÉCRIT
+
+**`E.0-bis`** *(liste des tâches, l. 1071, repris dans
+`AUDIT_FRONT_ET_RESTE_DU_PLAN_2026-09-25.md`)* :
+> *« modifier un MANDAT existant (dates, durée, avenant qui prolonge) — **seuls prix,
+> honoraires et surface le sont**. »*
+
+Chiffré **2-3 jours**, classé `L5`. Et le commit `a56eef2` du 25/09 le résume :
+*« tous les écrans en service et complets ; **seul manque = l'avenant ne prolonge pas** »*.
+
+⭐ L'avenant actuel *(`App.tsx:5012`)* est un **PDF** dont le texte dit lui-même :
+*« les parties conviennent […] de modifier **le prix de commercialisation** du bien, sans
+novation »*. **Il ne touche ni nos données, ni Hektor, ni les dates.**
+
+## 4. ⭐⭐ LA COMMANDE DES DATES EST IDENTIFIÉE
+
+Dans le geste de création *(`console_job_worker.js`, step 3)* :
+
+```js
+mode: "protexa-valideStep3",
+id: annonceId,
+numMandat: numeroMandat,      // <- un numero DEJA EXISTANT
+date_debut: mandat.dateDebut,
+duree: mandat.duree,
+TR: mandat.taciteReconduction,
+```
+
+➡ **`valideStep3` porte exactement les dates, et il prend un numéro existant.** C'est
+`step1` avec `numMandat: "0"` qui, lui, **consomme un numéro neuf**.
+
+**Et pour OUVRIR un mandat existant, le code de Hektor lui-même** *(capture du 12/06,
+`labs_Header.js`)* :
+
+```js
+function load_protexa_mandat(numMandat) {
+  var dataToSend = { mode: "protexa-mandat", mandat: numMandat, idann: idann };
+  $j.ajax({ type: "GET", url: 'xmlrpc.php', data: dataToSend, ... });
+}
+```
+
+⭐ **C'est un GET → relevable EN LECTURE SEULE.** Le worker ne l'appelle qu'avec
+`mandat=0`. *(À ne pas confondre avec `protexa-saveProtexa` / `protexa-duree`, qui sont
+les réglages de l'AGENCE — login PROTEXA et durée par défaut — pas un mandat.)*
+
+## 5. ⛔ CE QUE JE N'AI PAS PU MESURER, ET JE LE DIS
+
+1. **Hektor accepte-t-il `valideStep3` sur un mandat déjà finalisé** *(step5 passé)* ?
+   **Inconnu.** C'est un POST qui écrit : impossible à éprouver en lecture.
+2. **Que rend `protexa-mandat&mandat=<numéro réel>` ?** **Jamais relevé** — le projet ne
+   l'a appelé qu'avec `mandat=0`.
+3. ⚠⚠ **LE RISQUE QUI DOMINE TOUT** : un numéro de mandat est **NON ANNULABLE** — écrit
+   noir sur blanc dans `sonde_mandat_prix_web.js` *(05/10)*. **Si rejouer step3 CRÉE au
+   lieu de MODIFIER, on brûle un numéro à chaque essai.**
