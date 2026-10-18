@@ -7697,9 +7697,10 @@ function mandatStatutForRegister(item: Pick<MandatRecord, 'statut_annonce' | 'ma
 // reste visible, et le refus s'explique. On garde le code en queue pour les cas
 // qu'on n'a pas prévus — mieux vaut un mot technique affiché qu'un silence.
 //
-// ⚠ `droits_insuffisants` n'existe PAS ENCORE en base : c'est la pièce 2, écrite
-//   et dormante. Le message est posé d'avance, exprès — le jour où le patch sera
-//   collé, l'écran saura déjà quoi dire au lieu d'afficher un code brut.
+// ✅ `droits_insuffisants` EXISTE EN BASE DEPUIS LE 18/10 (pièce 2 de ⑦-3a,
+//   empreinte 03d520f5b76880fc5e81e5b22b50cb35). Le message avait été posé
+//   d'avance, et il a servi tel quel le jour du collage. Vérifié en production :
+//   legrand (commercial) REFUSÉ, codex.test (admin) ACCEPTÉ, service_role exempté.
 function messageRefusCloture(code: string | undefined) {
   switch (code) {
     case 'droits_insuffisants':

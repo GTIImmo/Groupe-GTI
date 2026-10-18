@@ -2509,3 +2509,68 @@ terminés dans l'heure**, le dernier **il y a 4 secondes**, et les **4 services 
 *(documents `success`, les 3 autres `idle` à 29-49 s)*. **La file se vide en direct.**
 ➡ Le contrôle exige « file vide », ce qui ne peut pas être vrai juste après un entretien
 qui vient d'enfiler du travail. **Le critère est à revoir**, pas la file.
+
+---
+
+# ✅ ⑦-3a PIÈCE 2 — **EN PRODUCTION LE 18/10/2026**
+
+*La porte de derrière est fermée. Go de Frédéric : « Oui puis colle ».*
+
+## La répétition — **verte 14 sur 14**, collée par Frédéric
+
+```
+1-avant  | la garde est dans la fonction  = non
+1-avant  | empreinte de la fonction       = 09280b46e6832db15dce53ca5e30e9db
+1-avant  | ancre vue combien de fois      = 1
+1-avant  | TEMOIN INVERSE negociateur     = ACCEPTE (ok=true) -- le trou est reel
+2-apres  | la garde est dans la fonction  = oui
+2-apres  | la fonction compile            = oui (elle a ete reexecutee sans erreur)
+2-apres  | negociateur (legrand)          = REFUSE : droits_insuffisants
+2-apres  | le refus est en francais       = oui
+2-apres  | admin (codex.test)             = ACCEPTE (ok=true)
+2-apres  | service_role (worker/re-pose)  = ACCEPTE (ok=true)
+3-retour | la garde est dans la fonction  = non
+3-retour | trace is_app_manager_or_admin  = non
+3-retour | trace droits_insuffisants      = non
+3-retour | empreinte de la fonction       = IDENTIQUE
+ERROR: ESSAI ANNULE -- rien n a ete ecrit.
+```
+
+⭐ **La ligne qui comptait était la 4ᵉ** : `TEMOIN INVERSE negociateur = ACCEPTE`. Sans
+elle, on aurait posé une garde sur un trou qui n'existait pas.
+
+## Le contrôle après collage — **mesuré, pas cru**
+
+⚠ Frédéric a dit « c'est collé » **sans joindre le résultat**. J'ai donc mesuré la base
+au lieu de le croire sur parole.
+
+| contrôle | résultat |
+|---|---|
+| la garde est posée | ✅ **OUI** |
+| elle appelle `is_app_manager_or_admin` | ✅ oui |
+| le refus est lisible *(`droits_insuffisants`)* | ✅ oui |
+| `service_role` exempté *(worker + re-pose)* | ✅ oui |
+| **empreinte** | `09280b46…` → **`03d520f5b76880fc5e81e5b22b50cb35`** |
+| **retours chariot** | ⭐ **0** — le collage n'a pas introduit de CRLF *(leçon du 15/10 tenue)* |
+| droits | `postgres` · `authenticated` · `service_role` — **`anon` absent** |
+
+**Le tri des rôles, éprouvé EN PRODUCTION** *(identités empruntées, lecture seule)* :
+`legrand` (commercial) → **REFUSÉ** · `codex.test` (admin) → **ACCEPTÉ**.
+
+**Et le bout de la chaîne tient** : le paquet servi `/assets/index-1nL-Mwzp.js` porte
+`droits_insuffisants` **2 fois** et « manager ou un administrateur » **1 fois** — un
+négociateur verra donc **une phrase, pas un code**. Rien à pousser pour ça.
+
+⚠ **CE QUI N'EST PAS ÉPROUVÉ, ET JE LE DIS** : la branche **« manager »**. Il y a
+**5 admin et 3 commercial, ZERO manager** dans `app_user_profile`. Elle repose sur
+`is_app_manager_or_admin()`, déjà en production et qui teste `role in ('admin','manager')`.
+
+## Deux commentaires périmés corrigés le même jour
+
+1. **L'en-tête du patch** annonçait « un changement d'avis assumé ». **Inexact** : le 13/10
+   tranchait **QUI APPELLE** *(l'écran → `authenticated`, la nuit → `service_role`)*, et la
+   question du **RÔLE** derrière l'écran n'avait jamais été posée. Les deux décisions
+   **se complètent**. Réécrit, **0 ligne exécutable touchée** *(prouvé par `git diff`)*.
+2. **`App.tsx:7700`** disait « `droits_insuffisants` n'existe PAS ENCORE en base ». Faux
+   depuis le collage. Corrigé, **commentaire seul** *(4 insertions, 3 suppressions,
+   aucune ligne de code)*. ⚠ Il n'atteindra la production qu'au prochain push.
