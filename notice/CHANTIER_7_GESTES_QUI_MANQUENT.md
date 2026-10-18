@@ -1976,3 +1976,536 @@ plan — l’ancienne fiche reviendra **sans son mensonge**.
 
 ⭐ **Et la part vivante tient debout** : le mobile ne dit plus « Cette fiche vendue ou close »
 aux **527 brouillons**, il leur propose « Reprendre la saisie dans Hektor ».
+
+---
+
+# ⑦-8 — VISIBLE / MASQUER UNE PHOTO — AUDIT DU 16/10/2026
+
+> ⚠ **CET AUDIT A ÉTÉ REFAIT DEUX FOIS, SUR DEMANDE DE FRÉDÉRIC.** Ma première conclusion
+> était fausse, la seconde était fondée sur une preuve qui n'en était pas une. Ce qui suit
+> est la troisième version, celle qui est mesurée de bout en bout — et c'est **lui** qui a
+> donné la bonne direction : *« regarde dans le serveur ??? cherche dans les notes »*.
+
+## 1. LA CHAÎNE COMPLÈTE — serveur Hektor → app → coffre → vitrine
+
+| étage | ce que c'est | le drapeau `visible` |
+|---|---|---|
+| **① Hektor, serveur** | **deux** listes : `liste_photos` *(visibles)* et `liste_photos_hidden` *(masquées)*. Deux guichets de lecture : `mode=vignettes` et `mode=vignettes_hidden` | **la source de vérité** |
+| **② l'API detail** *(celle du run)* | remplit le miroir `data/hektor.sqlite` *(**4 Go**)*, table `hektor_annonce_detail`, colonne `images_json` | ⭐ **la clé `visible` existe — et vaut `'1'` partout** |
+| **③ notre table** `app_console_photo` | **441 302** lignes, dont **440 862** posées par `rattrapage_photos.js` *(`source: "miroir_local"`)* | colonne `visible`, **true sur 441 199** |
+| **④ le coffre public** `gti-photo` | les dérivés `w400` / `w1600` de ③ | — |
+| **⑤ la vitrine** | `espace_client.py:88` lit **`app_dossiers_current`** *(la **vue**)* → `COALESCE(images_preview_json_app::text, images_preview_json)` | ⭐ **NOTRE galerie gagne** |
+
+### ⭐⭐ LA RÉPONSE À « ÇA FONCTIONNAIT » : C'EST VRAI, ET CE N'EST PAS NOUS
+
+**Mesure du 16/10, en lecture seule, sur le miroir** *(échantillon de 3 000 annonces,
+17 535 photos)* : chaque entrée de `images_json` porte **7 clés** — `id, order, img,
+visible, legende, path, pathTumb` — et **`visible` vaut `'1'` pour les 17 535**.
+
+➡ **L'API de Hektor ne nous livre QUE les photos visibles.** Une photo masquée chez Hektor
+**n'arrive jamais jusqu'à nous** par le chemin de masse. Ce n'est pas un filtre de notre
+part : c'est Hektor qui ne la donne pas.
+
+⭐ **Et ce n'est pas qu'un échantillon** : `accorder_photos_miroir.js` a comparé, le 15/10,
+notre drapeau à celui du miroir et trouvé **0 divergence sur 441 238 photos**. Le parc
+entier est donc couvert.
+
+### LES CHIFFRES DE NOTRE TABLE, AU 16/10
+
+| `visible` | `present_in_hektor` | photos | annonces | ce que c'est |
+|---|---|---|---|---|
+| **true** | **true** | **440 862** | 49 188 | le cas normal |
+| true | false | 337 | 53 | retirées chez Hektor *(« delete-never »)* |
+| **false** | **false** | **103** | **14** | les masquées — **toutes absentes de Hektor** |
+| **false** | **true** | **0** | **0** | ⭐ **CE CAS N'EXISTE PAS AUJOURD'HUI** |
+
+Les 103 masquées viennent des **304 annonces** passées par `sync_hektor_photos` *(le seul
+chemin qui interroge `vignettes_hidden` — `console_job_worker.js:4491`)*, et le dernier
+travail de ce type date du **27/09**.
+
+⚠ **À rapprocher de la note du 25/09** *(`AUDIT_PHOTOS_2026-09-25.md`)*, qui comptait
+**1 252 visibles sur 1 397** : **145 masquées existaient alors**. Le chargement de masse
+depuis le miroir les a noyées dans 441 000 lignes toutes marquées visibles.
+
+## 2. ⚠⚠ LE DÉFAUT RÉEL : `visible` EST UN TRI, JAMAIS UN FILTRE — SAUF UNE FOIS
+
+**Quatre endroits lisent le drapeau. Un seul filtre.**
+
+| # | qui | ce qu'il fait de `visible` | qui le voit |
+|---|---|---|---|
+| 1 | `app_photos_remplir_adresses_app` *(étape « adresses photos » du run)* | ⛔ `order by p.visible desc nulls last` — **TRI** | **la vitrine publique** + la vignette du listing et du registre |
+| 2 | `app_get_dossier_photos`, **source principale** | ⛔ `row_number() over (order by p.visible desc …)` — **TRI** | l'écran **Rapprochement acquéreur** *(`RechercheAcquereur.tsx:534`)* |
+| 3 | `app_get_dossier_photos`, **repli** | ✅ `and coalesce(img->>'visible','1') = '1'` — **FILTRE** | le même écran, quand notre table est vide |
+| 4 | `loadConsolePhotos` *(front)* | ⛔ `order('visible', desc)` — **TRI**, et c'est **VOULU** | le panneau photos de l'app *(il faut voir une masquée pour la démasquer)* |
+
+⭐ **Le projet SAVAIT** : le repli ③ porte la bonne règle. Elle a été **perdue en passant
+du repli à la source principale** — c'est-à-dire le jour où le chargement de masse a rempli
+`app_console_photo`. Avant, la source principale était vide *(1 397 photos sur 229
+annonces au 25/09)* et **le repli faisait tout le travail**.
+
+### ⚠⚠ ET LA VITRINE DÉTRUIT LA SEULE PROTECTION QUI RESTAIT
+
+La galerie publique est un **tableau** dont l'ordre porte la protection *(`visible desc`
+d'abord)*. Mais `espace_client.py::_photos` **re-trie par le champ `order`** :
+
+```python
+order = int(it.get("order"))        # ... ordered.sort(key=lambda x: x[0])
+```
+
+➡ Une photo masquée **ne serait même pas en dernier** : elle reprendrait **sa place
+naturelle**, donc possiblement **en première page du site public**.
+
+⭐ *(La **vignette** d'accroche, elle, reste protégée : `photo_url_listing_app =
+g.entrees->0->>'url'` prend la **première entrée du tableau**, donc une visible.)*
+
+## 3. ⭐⭐ LA COMMANDE DE MASQUAGE EST DÉJÀ ENTRE NOS MAINS
+
+**Rien à relever chez Hektor.** Le geste de suppression du 14/10 renumérote **les deux
+listes** *(`console_job_worker.js:8832`)* :
+
+```js
+for (const [div, visible] of [["liste_photos", true], ["liste_photos_hidden", false]]) {
+  const ids = apres.filter((e) => Boolean(e.visible) === visible) ...
+  // ...&mode=ordonne_photos&div=${div}&idann=...
+}
+```
+
+➡ **Déplacer un id de `liste_photos` vers `liste_photos_hidden`, c'est masquer.** C'est
+`mode=ordonne_photos`, **déjà connu, déjà écrit, déjà prouvé en production** le 14/10
+*(suppression)* et le 16/10 *(réordonnancement de ⑦-3c)*.
+
+⚠ **À NE PAS CONFONDRE avec les deux boutons que Frédéric a en mémoire** : ceux de
+`App.tsx` *(~11929 « Visible »/« Masquée » et ~19363 « Masquer »/« Rendre visible »)*
+agissent sur des photos **pas encore envoyées** — le brouillon de création et le panneau
+de dépôt. Le worker choisit alors `#fileupload` ou `#fileuploadHidden`
+*(`console_job_worker.js:8264`)*. **Aucun des deux ne touche une photo existante.**
+
+## 4. CE QUI N'A PAS PU ÊTRE MESURÉ
+
+- **Hektor a-t-il des photos masquées aujourd'hui ?** Le savoir exigerait d'interroger
+  `vignettes_hidden`, donc **un appel à Hektor par annonce** — non fait, et hors feu vert.
+  Ce qu'on sait : il en avait **145** au 25/09 sur les 229 annonces alors indexées.
+- **Le compte complet du miroir** *(hors échantillon)* tournait encore à la rédaction ;
+  les 0 divergences du 15/10 sur 441 238 le remplacent.
+
+---
+
+## 5. L'AUDIT APPROFONDI DU 16/10 — demandé par Frédéric, mesuré dans la CONSOLE HEKTOR
+
+> *« retrouve nos essais lors de la création de code ajouter photo et également le coffre
+> privé et public, pourquoi nous n'avons pas téléchargé les photos non visibles […]
+> regarde dans la console Hektor Chrome »*
+
+### 5.1 ⭐⭐ CE QUE HEKTOR DIT, DANS SES PROPRES MOTS
+
+Relevé **en direct le 16/10** sur `…/?page=/mes-biens/mon-bien/photos&id=62774` :
+
+```
+Photos visibles sur votre site et dans vos exports        [ VISIBLES ]
+  « cliquez et glissez les photos dans l'ordre que vous désirez »
+  1  2  3  4        [+ Ajouter des photos]
+
+Photos non visibles sur votre site et dans vos exports    [ NON VISIBLES ]
+  « cliquez et glissez les photos dans l'ordre que vous désirez »
+  (vide)            [+ Ajouter des photos]
+```
+
+⭐ **DEUX ZONES, deux bandeaux, deux boutons d'ajout** — et **on masque en GLISSANT** une
+photo de l'une à l'autre. C'est **mot pour mot** `mode=ordonne_photos` avec ses deux `div`
+*(`liste_photos` / `liste_photos_hidden`)* : un classeur à deux listes reliées.
+
+➡ **« Visible » veut dire : sur votre SITE et dans vos EXPORTS** *(donc les portails)*.
+C'est la définition de Hektor, pas une interprétation.
+
+### 5.2 NOS ESSAIS DU GESTE « AJOUTER UNE PHOTO » — 19 envois, 7 biens, 22/05 → 14/10
+
+| date | bien | durée | remarque |
+|---|---|---|---|
+| **22/05 06:59** | 24113 | **889 s, 3 tentatives** | ⭐ **le tout premier**, et le seul qui ait peiné |
+| 22/05 07:34 · 03/06 · 22/06 | 24113 | 20 / 22 / 36 s | |
+| 29/05 · 30/05 | 62354, 62356 | 16 / 32 s | |
+| 30/06 · 02/07 ×2 | 24935 | 54 / 58 / 45 s | |
+| 23/07 ×2 | 62774 | 24 / 27 s | |
+| 05/08 ×4 | 62853 | 18 à 34 s | |
+| **26/09 07:32** | 63146 | 18 s | ⭐ celui qui a prouvé qu'**ajouter une photo fait bouger la date de l'annonce** |
+| 11/10 ×2 · 14/10 | 62774 | 29 / 49 / 32 s | lot 3d, puis la suppression |
+
+⭐⭐ **ET LA MESURE QUI COMPTE** : la clé `visible` est présente dans **les 19 charges**,
+et elle vaut **`true` dans les 19**. ➡ **`#fileuploadHidden` n'a JAMAIS été emprunté.**
+La branche « masqué » du code existe depuis le 22/05 et **n'a jamais été exécutée**.
+
+### 5.3 LES DEUX COFFRES
+
+| | **coffre PRIVÉ** | **coffre PUBLIC** |
+|---|---|---|
+| où | **notre serveur Windows**, disque | Supabase Storage, bucket **`gti-photo`** *(`public = true`)* |
+| quoi | **l'original** de chaque photo | **les dérivés** `w400` + `w1600` |
+| combien | **441 302** lignes d'index, **≈ 172 Go** | **189 807** fichiers *(= 114 025 + 75 779)* |
+| qui en a | **tout le parc** | ⭐ **les vivantes à 100 %** *(75 260/75 260)* ; vendues **8 %**, archivées **11 %** |
+
+⭐ **La règle G.8 est donc vraie et mesurée** : *« les dérivés sont la VITRINE »*. Une
+annonce qui sort du parc vivant garde son original chez nous et **perd peu à peu sa
+présence publique**.
+
+### 5.4 ⭐⭐ POURQUOI NOUS N'AVONS PAS TÉLÉCHARGÉ LES NON VISIBLES — la réponse, datée
+
+`Console/rattrapage_photos.js`, en-tête du **25/09/2026** :
+
+```
+// ⚠⚠ CE SCRIPT NE PARLE JAMAIS A HEKTOR.
+//    Les adresses sont DEJA sur ce serveur, dans le miroir local (data/hektor.sqlite,
+//    hektor_annonce_detail.images_json -- 57 967 annonces). On lit en local, on
+//    telecharge sur le CDN public.
+//    -> AUCUNE requete contre le quota Hektor, aucun risque de bannissement
+```
+
+➡ **Ce n'est pas un oubli, c'est une conséquence.** Le rattrapage a été écrit pour **ne
+jamais appeler Hektor**, après le **bannissement d'IP du 20/08**. Or le miroir est nourri
+par **l'API detail**, et l'API detail **ne liste que les visibles** *(mesure : `visible`
+vaut `'1'` sur 17 535/17 535 entrées)*. Les masquées ne vivent que derrière
+`mode=vignettes_hidden`, **un appel Hektor par annonce** — exactement ce que le script
+devait éviter.
+
+**LE RATTRAPAGE, NUIT DU 25 AU 26/09 :**
+
+| passe | départ | résultat |
+|---|---|---|
+| 1 | **25/09 23:07** | 444 431 photos au miroir · 434 626 lignes créées · **260 233 rapatriées, 174 433 en échec, 102,8 Go**, 14,8 ph/s |
+| 2 *(reprise)* | **26/09 04:16** | **174 433 rapatriées, 0 échec, 69,2 Go**, 23,7 ph/s |
+
+⛔ **8 013 photos de 583 annonces ont été ÉCARTÉES** : pas de numéro app.
+
+### 5.5 ⚠⚠ LE DÉFAUT TROUVÉ — UNE PHOTO MASQUÉE EST PRISE POUR UNE PHOTO SUPPRIMÉE
+
+Les **103** photos masquées de notre table *(14 annonces)* ont été :
+- **créées le 17/08/26, 18:40 → 19:52**, source `hektor_console` *(donc lues par
+  `sync_hektor_photos`, le seul chemin qui interroge les DEUX guichets)* ;
+- **déclarées « absentes de Hektor » le 15/10/26 à 21:23** — **les 103 à la même minute**.
+
+**PREUVE EN DIRECT, 16/10, que c'est FAUX :**
+
+| annonce | masquées chez **Hektor** | chez **nous** | visibles chez **Hektor** | chez **nous** |
+|---|---|---|---|---|
+| **32704** | **19** | **19** | **12** | **12** |
+| **59434** | **14** | **14** | — | 11 |
+
+**Les comptes collent exactement : ces photos sont TOUJOURS chez Hektor.**
+
+⭐ **LA CAUSE** : le rapprochement compare notre registre au **miroir**, qui ne contient
+que les visibles. Une photo masquée n'y figure pas ⇒ elle **ressemble trait pour trait à
+une photo supprimée**, et les trois conditions de garde du script
+*(`accorder_photos_miroir.js`, verrou 2)* ne la protègent pas : elle a un
+`hektor_photo_id`, elle est plus ancienne que la lecture du miroir, et ce n'est pas un
+envoi `app` en cours.
+
+⚠ **Et le compte rendu ne pouvait pas le voir** : `visible_divergent` n'est calculé que
+pour les photos **trouvées dans le miroir**. Une masquée n'y est pas du tout, donc elle
+tombe dans `a_marquer`, jamais dans `visible_divergent`. ➡ **Le « 0 divergence sur
+441 238 » est exact ET aveugle à ce cas précis.**
+
+**CONSÉQUENCE MESURÉE** : `loadConsolePhotos` filtre `present_in_hektor = true`, donc ces
+**103 photos ont disparu du panneau photos de l'app**. ⭐ **Gravité limitée, et il faut le
+dire : les 14 annonces sont TOUTES des ARCHIVES** *(14/14)* — en lecture seule, hors
+vitrine, sans dérivés voulus.
+
+### 5.6 L'AGENCE SE SERT-ELLE DE CETTE ZONE ? — sondage en direct du 16/10
+
+**10 biens interrogés chez Hektor, 10 fois `vignettes_hidden` VIDE** : 63261, 62774, et
+les **8 biens vivants les plus photographiés** *(5836, 59396, 61554, 8474, 10139, 61547,
+8484, 5843 — de 91 à 107 photos, 792 photos en tout)*.
+
+➡ **Sur le parc VIVANT, la zone « non visibles » n'est pas utilisée aujourd'hui.** Les
+seules masquées connues sont les **103 d'archives**, posées en **août**.
+
+⛔ **Ce qui reste non mesuré, et je le dis** : les 49 188 annonces n'ont pas été sondées —
+ce serait **un appel Hektor par annonce**. ⭐ **L'outil existe pourtant depuis le 26/09** :
+`Console/sonde_photos_manquantes.js` lit les deux guichets et les compare au miroir —
+**mais il n'est enregistré dans AUCUNE tâche** *(0 référence dans `scheduled/`,
+`phase2/`, `monitoring/`)*. Il n'a donc jamais tourné.
+
+### 5.7 LES TROIS QUESTIONS DE FRÉDÉRIC, MESURÉES *(16/10, fin d'après-midi)*
+
+**Q1 — « dans le serveur il y a 170 Go, il y a aussi le masqué ? »** ➡ **OUI.**
+
+| | photos | fichier pesé | poids | empreinte | **dérivé public** |
+|---|---|---|---|---|---|
+| **les masquées** | **103** | **103** | **69 Mo** | **103** | ⭐ **0** |
+| tout le parc | 441 302 | 441 300 | **171 Go** | 441 300 | 114 025 |
+
+⭐⭐ **La règle que Frédéric décrivait est donc RESPECTÉE** : les masquées sont **sur le
+serveur** *(coffre privé, `local_only`)* et **PAS dans le coffre public** — **0 dérivé sur
+103**.
+
+**Q2 — « dans l'app uniquement les annonces visibles des annonces vivantes ? »** ➡ **NON,
+c'est plus large.** `loadConsolePhotos` filtre **`present_in_hektor`**, jamais `visible`,
+et ne regarde aucun monde en particulier :
+
+| monde | photos en index | **vues au panneau** | cachées | annonces |
+|---|---|---|---|---|
+| **vivant** | 75 260 | **74 927** | 333 | 10 259 |
+| vendu / clos | 104 830 | 104 830 | 0 | 8 489 |
+| **archive** | 260 269 | 260 162 | **107** | 30 271 |
+| brouillon | 941 | 941 | 0 | 167 |
+
+⚠ **Nuance d'écran** : le panneau n'est rendu que sur une fiche **complète** ; sur une
+fiche d'index léger *(vendu/clos sans détail, brouillon)* il n'est pas affiché du tout —
+donc `loadConsolePhotos` n'y est jamais appelé *(décision du chantier ⑥, 6a-bis)*.
+⭐ Les **440 cachées** *(333 + 107)* sont exactement le `a_marquer 440` de la référence du
+15/10 : des photos marquées « absentes de Hektor », dont **103 ne le sont pas** (§ 5.5).
+
+**Q3 — « les vitrines/écrans utilisent bien NOS photos ? Pas celles du miroir Hektor ? »**
+➡ ⭐⭐ **OUI, à une annonce près.**
+
+| sur **13 493** annonces vivantes | |
+|---|---|
+| **notre vignette** d'accroche | **13 493 / 13 493** — **0 de Hektor** |
+| **notre galerie** | **10 259** |
+| « galerie Hektor » | 3 234 — ⭐ mais **3 233 sont des COQUILLES VIDES** : `[{"url":null,"full":null,"legend":null,"order":null}]`, et `_photos()` saute toute adresse qui ne commence pas par `https://` ⇒ **rien ne s'affiche**, le repli est **notre** vignette |
+| ⚠ **vraie adresse Hektor servie** | **1 seule : 63299** |
+
+⚠ **L'EXCEPTION, 63299** — « GARAGE / ENTREPOT 36 m² », Saint-Étienne, **ACTIVE et
+DIFFUSABLE** : sa galerie pointe `groupe-gti-immobilier.staticlbi.com` *(le CDN de
+Hektor)* pendant que notre vignette dit `gti-photo/marque/sans-photo.jpg`. **Le site
+montre donc la photo de Hektor ET « sans photo ».**
+⭐ **Ce n'est pas une fuite, c'est un délai** : elle a été **enregistrée le 15/10**, elle
+n'a **aucune photo chez nous** et `adresses_app_le` est **null**. La ligne photos de
+« GTI Entretien Documents » *(22:00)* doit la rapatrier **ce soir**. ⏰ **À recontrôler
+demain matin : si 63299 a toujours 0 photo chez nous, le rattrapage quotidien ne tient
+pas.**
+
+⭐ **Et le rattrapage quotidien tient, mesuré** : sur les annonces vivantes enregistrées
+depuis août — **oct. 48/59 · sept. 118/134 · août 94/107 ont nos photos** ; les autres
+n'ont **aucune photo du tout**, chez personne *(ce sont les coquilles vides)*.
+
+### 5.8 ⚠⚠ CORRECTION — J'AVAIS RATÉ UN CONSOMMATEUR, ET LES NOTES LE DISAIENT
+
+Frédéric : *« non c'est bizarre, retrouve des notes qui le disent clairement »*. **Il avait
+raison** : j'avais grepé `backend/`, `apps/`, `supabase/`, `Console/` et `phase2/*.py` —
+**jamais `Ecrans Android/`**. Or `AUDIT_DEUX_COFFRES_PHOTOS_DOCUMENTS_2026-09-26.md`
+liste **CINQ** consommateurs, dont **`Ecrans Android/export_project_vitrine.py` (8 points,
+la vitrine publique GitHub)**. **Il y a bien DEUX vitrines.**
+
+#### Les notes qui le disent clairement
+
+**`NOTE_PHOTOS_HEKTOR_API_CONSOLE_2026-05-18.md`** *(la note fondatrice, 18/05)* :
+> *« Les photos **VISIBLES** issues de l'API Hektor restent stockées sous forme d'URLs »*
+> *(`images_json`, `images_preview_json`, `photo_url_listing`, `nb_images`)*
+> *« Une couche Console **séparée** a été ajoutée […] Elle stocke uniquement l'index :
+> […] **visible / masquée** »* · le worker lit **`vignettes` ET `vignettes_hidden`**
+> *« les badges `API`, `Visible`, `Masquée` ; un formulaire `Ajouter une photo`
+> visible / masquée »*
+> *« Les futures actions photos restent à faire […] : modifier une légende ;
+> **MASQUER / AFFICHER** ; supprimer ; réordonner. »*
+
+⭐⭐ **DEUX FLUX, ÉCRITS DEPUIS LE 18/05 — c'est la clé de tout** : le **flux API**
+*(quotidien, miroir)* ne connaît **que les visibles** ; la **couche Console**
+*(`sync_hektor_photos`, à la demande)* connaît **visible ET masquée**. ➡ Les **103**
+masquées viennent de la couche Console *(17/08)*, les **441 000** du flux API
+*(25-26/09)*. **Les deux affirmations étaient vraies, elles ne parlaient pas du même
+chemin.**
+
+⭐ **`AUDIT_DEUX_COFFRES…_2026-09-26.md`** confirme la date : *« travaux
+`sync_hektor_photos` : **313 en tout, le dernier le 17/08** »* — et mesure le serveur à
+*« 481 527 fichiers · 229,4 Go (documents 60 + **photos 169**) »*.
+
+#### ⭐⭐ ET LA VITRINE PUBLIQUE, ELLE, PORTE LE BON FILTRE — DEPUIS TOUJOURS
+
+`Ecrans Android/export_project_vitrine.py`, fonction **`visible_photos()`** :
+
+```python
+for img in ordered:
+    if str(img.get("visible", "1")).strip() == "0":
+        continue          # elle ECARTE les masquees
+```
+
+Sa doctrine **G.15 (27/09)**, en en-tête du fichier :
+> *« LA VITRINE PUBLIQUE PUBLIE **NOS** ADRESSES DE PHOTOS »* · *« la vitrine ne publie
+> que les annonces non archivées + diffusables + actives/sous offre/sous compromis »* ·
+> *« Mesure du 27/09 : sur les 459 annonces publiées, **459 ont notre vignette et 458
+> notre galerie** »* · *« ⚠⚠ SI SUPABASE NE RÉPOND PAS, ON PUBLIE LES ADRESSES HEKTOR —
+> JAMAIS RIEN »*
+
+#### ⛔ MAIS CE FILTRE EST INERTE — mesuré le 16/10
+
+`images_preview_json_app` *(notre galerie)* porte **4 clés : `full, legend, order, url`**.
+**`visible` n'y est PAS** — sur **0 des 10 259 galeries**. Et `visible_photos` lit
+`img.get("visible", "1")`, donc **défaut « visible »**.
+
+➡ **Le projet a écrit le bon filtre, notre galerie ne lui donne pas le champ.** Le
+commentaire le frôle : *« LE FORMAT TOMBE JUSTE SANS CONVERSION : nos entrées sont
+{url, full, order, legend} »* — l'auteur a vérifié `url` et `order`, **sans voir que
+`visible` manquait**.
+
+#### LE TABLEAU CORRIGÉ — CINQ consommateurs, et le correctif qui en découle
+
+| # | consommateur | source | `visible` |
+|---|---|---|---|
+| 1 | **vitrine publique** GitHub/Android | **nos colonnes `_app`** | ✅ **FILTRE** — ⛔ **inerte, clé absente** |
+| 2 | **espace client** *(`espace_client.py`)* | la vue `COALESCE` | ⛔ **aucun filtre**, et il **re-trie par `order`** |
+| 3 | **écran Rapprochement** *(`app_get_dossier_photos`)* | notre table / repli Hektor | ⛔ TRI · ✅ **FILTRE** au repli |
+| 4 | **panneau photos de l'app** | notre table | ⛔ TRI — **et c'est VOULU** |
+| 5 | **RDV public + e-mails** de rapprochement | `photo_url_listing` | ✅ protégé *(1ʳᵉ entrée = visible)* |
+
+⭐⭐ **LE CORRECTIF DEVIENT MINUSCULE** : ajouter **`'visible', p.visible`** au
+`jsonb_build_object` de `app_photos_remplir_adresses_app`. **Une clé** — et le filtre que
+le projet a déjà écrit le 27/09 se met à fonctionner tout seul sur la vitrine publique.
+Restent alors **2** et **3** à aligner.
+
+### 5.9 LE RATTRAPAGE GLOBAL DES PHOTOS — **il était prévu, il EXISTE, il tourne**
+
+Frédéric : *« on a fait des run de téléchargement des photos et je pense qu'on avait prévu
+une mise à jour ou rattrapage globale, cherche des notes »*. **Il a raison, et c'est en
+place.**
+
+#### La note qui le prévoit — `AUDIT_ETAPE_PHOTOS_DANS_LE_RUN_2026-09-26.md`
+
+> *« Hektor **DATE** les photos […] donc pas de balayage à construire — juste une étape au
+> bon endroit. »* · fenêtre imposée : **après `push upgrade to supabase`** *(sinon les
+> photos d'une annonce née cette nuit sont écartées faute de numéro d'app)* et **avant
+> l'export vitrine**. · *« Les photos n'ont pas ce problème [de quota] — CDN public, hors
+> quota, **0 refus sur 435 000 téléchargements** »*, donc **dans le run**, pas en tâche
+> séparée. · réglages : **non bloquante**, **`--limite 2000`**, sonde
+> **`-WorkerKey "phase2.rattrapage_photos"`**.
+
+#### ✅ LES QUATRE ÉTAPES SONT DANS `run_full_pipeline.ps1`
+
+| ligne | étape | sonde | ce matin |
+|---|---|---|---|
+| **1600** | `rattrapage_photos.js` *(télécharge)* | `phase2.rattrapage_photos` | ✅ 05:12 |
+| **1628** | `generer_derives_photos.js` *(coffre public)* | `phase2.derives_photos` | ✅ 05:12 |
+| **1657** | `remplir_adresses_photos.js` *(nos adresses)* | `phase2.adresses_photos` | ✅ 05:12 |
+| **1695** | `sonde_photos_manquantes.js` *(25 annonces/nuit)* | `phase2.sonde_photos` | ✅ 05:13 |
+
+⚠ **Je m'étais trompé deux fois et il faut le dire** : j'avais écrit que la sonde n'était
+*« enregistrée dans aucune tâche »*. **Faux** — elle est **ligne 1695 du run**. Mon grep
+cherchait dans `scheduled/`, or **`run_full_pipeline.ps1` est à la RACINE**. Même erreur
+que pour `Ecrans Android/` : **je cherche là où je pense, pas partout.**
+
+#### Le journal du 16/10 — ce que la chaîne a fait cette nuit
+
+```
+07:07:59  rattrapage photos : miroir 463 249 · deja dans l'index 441 238
+          ⛔⛔ ECARTEES (pas de numero app) : 22 403 photo(s), 2 809 annonce(s)
+          64 photo(s) rapatriee(s) · 0 en echec · 61,0 Mo
+07:12:20  derives : 87 photos sans derives
+07:12:52  adresses photos (app_photos_remplir_adresses_app : 0,5 s)
+07:13:46  sonde : ✅✅ Aucune photo manquante sur cet echantillon  (25 annonces)
+```
+
+#### ⚠⚠ LE TROU QUE LE JOURNAL MONTRE SANS LE DIRE : **22 403 PHOTOS ÉCARTÉES CHAQUE NUIT**
+
+C'était **8 013 photos / 583 annonces** le 25/09. C'est **22 403 / 2 809** aujourd'hui.
+
+⭐ **Mesuré dans le miroir, ce sont EXACTEMENT les LOCATIONS** — et le compte tombe à
+l'unité :
+
+| `offre_type` | libellé *(`mandat_ledger.py:943`)* | annonces | |
+|---|---|---|---|
+| `0` | vente | 57 249 | ✅ admis |
+| `10` | vente immo pro | 1 043 | ✅ admis |
+| `6` | neuf | 1 | ✅ admis |
+| **`2`** | **LOCATION** | **2 869** | ⛔ écartée |
+| **`11`** | **LOCATION immo pro** | **262** | ⛔ écartée |
+
+**3 131 annonces de location, toutes avec des photos, et `22 403` photos — le chiffre exact
+du journal.** Le périmètre « vente seulement » est **écrit** dans le projet
+*(`TYPES_ADMIS_AU_REGISTRE = ("0","10","6")` · `TYPES_LOCATION = ("2","11","8")`)*.
+
+⛔⛔ **MAIS L'EXCLUSION N'EST PAS DÉCLARÉE — et c'est la leçon du projet, prise en
+flagrant délit.** `rattrapage_photos.js` *(l. 260-264)* **imprime une ligne et continue** :
+
+```js
+if (sansNumeroApp.length) {
+  console.log(`  ⛔ ECARTEES (pas de numero app) : ...`);
+}
+```
+
+**Aucune alerte, aucun code de sortie, aucun battement en erreur.** Le script **ne sait pas
+que ce sont des locations** — il dit seulement *« pas de numéro app »*. Donc : si un jour
+de vraies annonces de **vente** tombaient dans ce panier, **elles s'y perdraient sans un
+bruit**, noyées dans les 22 403.
+
+➡ **QUESTION POUR FRÉDÉRIC, et elle n'est pas technique** : **veut-on les photos des
+locations ?** Aujourd'hui elles n'existent **que chez Hektor** — ni sur notre serveur, ni
+dans le coffre public. **Au jour de la coupure, ces 22 403 photos meurent.**
+⭐ Le rapatriement coûterait peu : ~22 400 photos à 12-25 photos/s = **15 à 30 minutes**,
+sur le **CDN public, hors quota Hektor**.
+
+### 5.10 ⭐⭐ LA REPONSE A LA QUESTION DE FREDERIC — **NON**, en une mesure
+
+*« je t'ai demandé de faire tout cela pour savoir si notre rattrapage récupère les photos
+non visibles de Hektor ? »* — **La réponse est NON.** Preuve sur **l'annonce 32704**,
+16/10 :
+
+| | |
+|---|---|
+| **chez Hektor** *(lu en direct)* | **19 masquées** + **12 visibles** |
+| **dans le miroir** *(la seule source du rattrapage)* | **12 photos**, toutes `visible='1'` — `451251, 451250, 311055, 311093, 311102, 311106, 311111, 311113, 311114, 311116, 311128, 451252` |
+| **les 19 masquées cherchées dans le miroir** | ⛔ **0 trouvée, 19 absentes** |
+
+➡ **Le rattrapage ne peut pas les voir** : il lit `hektor_annonce_detail.images_json`,
+et elles n'y sont pas. Ce n'est pas un réglage à changer — **la matière n'arrive jamais
+jusqu'à lui**.
+
+⭐ **Les 19 que nous avons viennent d'un AUTRE chemin** : `source = hektor_console`,
+créées le **17/08/26 à 19:34** par `sync_hektor_photos` — **le seul qui interroge
+`vignettes_hidden`** — et **ce chemin est arrêté depuis le 17/08** *(313 travaux, le
+dernier ce jour-là)*.
+
+⚠ **Donc les 103 masquées que nous avons sont un PLANCHER, pas un total.** Seules **304**
+annonces sur 49 188 sont jamais passées par ce guichet. Ce que Hektor garde de masqué sur
+les 48 884 autres est **inconnu** — et **invisible pour nous**.
+
+---
+
+# ✅ CONTROLE DU 17/10/2026 — après le run de nuit
+
+*Demandé par Frédéric : « le run du 17 est passé, vérifie ton travail ».*
+
+## Ce qui était à prouver, et ce que ça donne
+
+| contrôle | attendu | **mesuré le 17/10** |
+|---|---|---|
+| **63299** *(enregistrée le 15/10, servait le CDN Hektor)* | rapatriée à 22:00 | ✅ **2 photos, NOTRE galerie**, adresses calculées **05:17** |
+| annonces vivantes servant une **vraie** adresse Hektor | 0 | ✅ **0** *(c'était 1)* — les 3 234 restantes sont **toutes** des coquilles vides |
+| **⑦-3c la couverture** *(63261 et 63046)* | tient après le run | ✅ `487540` et `485272` toujours en tête, **après DEUX runs** |
+| **⑦-3a en ligne** *(sonde `sonder_front_deploye.sh`)* | 4 présents / 2 disparus | ✅ **4/4 et 2/2** sur `/assets/index-1nL-Mwzp.js` — « Clôturer ce mandat » et « Rouvrir le mandat » **ont bien disparu** |
+| **les 103 masquées** | inchangées *(rien n'a été corrigé)* | ✅ 103, toujours marquées absentes — **le diagnostic tient** |
+
+## Le run du 17 — les 4 étapes photos
+
+```
+07:13:16  rattrapage : 46 photo(s) rapatriee(s) · 0 en echec · 44,3 Mo
+          ⛔⛔ ECARTEES : 22 403 photo(s), 2 809 annonce(s)   <- IDENTIQUE au 16/10
+07:17:14  derives : 47 photos
+07:17:40  adresses photos (app_photos_remplir_adresses_app : 0,8 s)
+07:18:34  sonde : ✅✅ Aucune photo manquante sur cet echantillon
+```
+
+⭐ **Le chiffre des écartées est EXACTEMENT le même deux nuits de suite** : c'est bien un
+**ensemble figé** *(les locations)*, **pas une fuite qui grandit**. Mon analyse du 16/10
+est confirmée par un second jour.
+
+## La santé des photos — `accorder_photos_miroir.js` *(lecture seule)*
+
+| | référence du 15/10 | **17/10** |
+|---|---|---|
+| `a_marquer` | **440** *(67 annonces)* | ✅ **12** *(4 annonces)* |
+| `a_reordonner` | **1 662** *(290 annonces)* | ✅ **93** |
+| `visible_divergent` | 0 | ✅ **0** |
+| `manquantes_chez_nous` | — | ⚠ **22 403** — **le même chiffre, par un second chemin** |
+
+## L'entretien documents — le point ⑧ qui attendait depuis le 16
+
+`python phase2/checks/controle_entretien_documents.py` : la tâche a tourné **le 17/10 à
+22:00:01, résultat 0**, **4 lignes sur 4**, aucune en échec, **33/33 empreintes** sur les
+annonces libérées, **2 725 empreintes vérifiées** dans la nuit.
+⭐⭐ **ET LE TÉMOIN QUI COMPTAIT EST VERT** : **46 lignes portent `cloud_refuse`**
+*(référence de la veille : **0**)* — **le correctif du coffre a travaillé en réel.**
+
+⚠ **Le seul rouge est un FAUX rouge** : « la file est vide : 292 travaux ». Mesure : ce
+sont **291 `sync_console_documents` créés 6 minutes plus tôt**, **1 en cours**, **36
+terminés dans l'heure**, le dernier **il y a 4 secondes**, et les **4 services battent**
+*(documents `success`, les 3 autres `idle` à 29-49 s)*. **La file se vide en direct.**
+➡ Le contrôle exige « file vide », ce qui ne peut pas être vrai juste après un entretien
+qui vient d'enfiler du travail. **Le critère est à revoir**, pas la file.

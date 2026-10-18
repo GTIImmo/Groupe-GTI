@@ -13,12 +13,25 @@
 --   -> n importe quel negociateur connecte peut ecrire une date de cloture sur
 --      n importe lequel des 24 564 mandats, y compris ceux d un collegue.
 --
--- ⚠⚠ LE PROJET AVAIT DEJA TRANCHE L INVERSE, ET IL FAUT LE DIRE :
---   patch_chantier3_3c_piece4_droits_2026-10-13.sql, l. 22 :
---     « NE PAS TOUCHER A app_set_mandat_cloture_optimistic : pour celle-la,
---       authenticated est VOULU -- c est l ecran qui l appelle pour saisir. »
---   La demande du 16/10 REMPLACE cette decision. Ce patch n est pas la
---   correction d une negligence : c est un changement d avis, assume et date.
+-- ⚠ CE QUE LE 13/10 AVAIT DIT, ET POURQUOI CE PATCH NE LE CONTREDIT PAS.
+--   TROIS traces du 13/10 disent que `authenticated` est voulu ici :
+--     · le patch d origine (13:49, l. 336-340) : `revoke all ... from public`
+--       PUIS `grant execute ... to authenticated, service_role` -- accorde
+--       NOMMEMENT, pas herite d un defaut Supabase ;
+--     · patch_chantier3_3c_piece4_droits_2026-10-13.sql, l. 22 :
+--       « NE PAS TOUCHER A app_set_mandat_cloture_optimistic : pour celle-la,
+--         authenticated est VOULU -- c est l ecran qui l appelle pour saisir. »
+--     · notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md, l. 2400 :
+--       « voulu : l ecran l appelle ».
+--   ⭐ MAIS CE RAISONNEMENT REPONDAIT A « QUI APPELLE ? », PAS « QUEL ROLE ? ».
+--     Ce soir-la on separait DEUX fonctions : app_reposer_cloture_mandat_app,
+--     appelee par LA NUIT -> service_role seul ; et celle-ci, appelee par
+--     L ECRAN -> authenticated. La question du role DERRIERE l ecran
+--     (negociateur ou manager) n a jamais ete posee.
+--   ➡ CE PATCH NE REVIENT DONC SUR RIEN : il GARDE le grant a authenticated
+--     (l ecran continue d appeler -- decision du 13/10 tenue) et ajoute la
+--     verification du ROLE A L INTERIEUR (demande du 16/10). Les deux
+--     decisions SE COMPLETENT. Ce n est pas un changement d avis.
 --
 -- CE QU ON NE FAIT PAS, ET POURQUOI :
 --   ⚠ ON NE RETIRE PAS LE GRANT `authenticated`. Un `revoke` ferait lever une
@@ -105,8 +118,9 @@ begin
   v_ajout := replace(
 '  -- GARDE MANAGER ADMIN -- DEBUT
   -- (7)-3a piece 2 (16/10/2026) : SEUL UN MANAGER OU UN ADMIN FIXE LA DATE.
-  -- Demande de Frederic du 16/10. Elle REMPLACE la decision du 13/10 qui disait
-  -- que `authenticated` etait VOULU ici (patch_chantier3_3c_piece4_droits, l.22).
+  -- Demande de Frederic du 16/10. Elle NE CONTREDIT PAS le 13/10 : ce jour-la on
+  -- avait tranche QUI APPELLE (l ecran -> authenticated, la nuit -> service_role),
+  -- jamais QUEL ROLE derriere l ecran. Le grant reste, la garde est ici.
   -- On garde le GRANT a authenticated et on refuse PROPREMENT : le front avale
   -- les erreurs de cette fonction (console.warn), donc une erreur de permission
   -- serait un silence. `anon` n a aucun droit (chantier (1)).

@@ -111,8 +111,9 @@ begin
   v_ajout := replace(
 '  -- GARDE MANAGER ADMIN -- DEBUT
   -- (7)-3a piece 2 (16/10/2026) : SEUL UN MANAGER OU UN ADMIN FIXE LA DATE.
-  -- Demande de Frederic du 16/10. Elle REMPLACE la decision du 13/10 qui disait
-  -- que `authenticated` etait VOULU ici (patch_chantier3_3c_piece4_droits, l.22).
+  -- Demande de Frederic du 16/10. Elle NE CONTREDIT PAS le 13/10 : ce jour-la on
+  -- avait tranche QUI APPELLE (l ecran -> authenticated, la nuit -> service_role),
+  -- jamais QUEL ROLE derriere l ecran. Le grant reste, la garde est ici.
   -- On garde le GRANT a authenticated et on refuse PROPREMENT : le front avale
   -- les erreurs de cette fonction (console.warn), donc une erreur de permission
   -- serait un silence. `anon` n a aucun droit (chantier (1)).
