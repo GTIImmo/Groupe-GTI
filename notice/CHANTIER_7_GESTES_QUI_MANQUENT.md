@@ -2685,3 +2685,70 @@ les réglages de l'AGENCE — login PROTEXA et durée par défaut — pas un man
 3. ⚠⚠ **LE RISQUE QUI DOMINE TOUT** : un numéro de mandat est **NON ANNULABLE** — écrit
    noir sur blanc dans `sonde_mandat_prix_web.js` *(05/10)*. **Si rejouer step3 CRÉE au
    lieu de MODIFIER, on brûle un numéro à chaque essai.**
+
+---
+
+# ⑦-8 — AUDIT EN PROFONDEUR DU 18/10 : **la pièce A n'était pas le sujet**
+
+*Frédéric a refusé de coller : « j'ai besoin de bien comprendre ». Il avait raison —
+l'audit qui suit a trouvé **deux choses plus graves** que la clé `visible`.*
+
+## ⭐ CE QUI EXISTE DÉJÀ, ET QUE JE N'AVAIS PAS VU
+
+**1. Le worker sait DÉJÀ masquer.** `handleReorderHektorPhotos` prend **deux listes**
+dans la charge *(`liste_photos`, `liste_photos_hidden`)* et envoie chacune à son guichet.
+➡ Masquer = déplacer un id d'une liste à l'autre. **0 nouveau type de travail, 0 des
+3 verrous, 0 redémarrage des 4 services.**
+
+**2. La RPC de couverture fait déjà les 9/10 du travail** : elle construit les deux
+listes **depuis `visible`** (⑦), garde **`visible` dans son `base_snapshot`** (③, donc le
+retour arrière existe), et pose le travail. Une RPC « masquer » serait **la même, avec une
+seule différence** : basculer `visible` au lieu de renuméroter.
+⚠ Elle porte **112 retours chariot** *(jamais nettoyés — patch du 16/10 non collé)* :
+écrire « masquer » comme un patch à ancre **dans** cette fonction casserait. ➡ **nouvelle
+fonction, pas un patch de celle-là.**
+
+## ⚠⚠ LE VRAI SUJET N° 1 — LE GESTE SERAIT À SENS UNIQUE
+
+Enchaînement mesuré :
+1. on masque → Hektor déplace la photo dans sa liste cachée ;
+2. **l'API detail cesse de la lister** → elle disparaît du miroir ;
+3. **chaque nuit à 22:00**, `accorder_photos_miroir.js` tourne **avec `--appliquer`**
+   *(`run_entretien_documents.ps1` : `if (-not $DryRun) { $argsPhotos += "--appliquer" }`)* ;
+4. sa branche de marquage ne regarde **PAS** `visible` :
+   `if (!chezEux) { ... aMarquer.get(aid).push(r.id); }` → **present_in_hektor = false** ;
+5. ⛔ `loadConsolePhotos` filtre `present_in_hektor` → **la photo sort du panneau de
+   l'app**, et la RPC exige `present_in_hektor IS TRUE` → **on ne peut plus la
+   démasquer**.
+
+⭐ **CE N'EST PAS UNE HYPOTHÈSE : c'est exactement ce qui est arrivé aux 103**, le 15/10
+à 21:23. Et la preuve du 16/10 : 32704 porte **19 masquées + 12 visibles chez Hektor**,
+nos comptes exacts — elles n'avaient jamais disparu.
+
+➡ **REMÈDE : UNE LIGNE** dans `accorder_photos_miroir.js`, avant le marquage — *une
+masquée n'est pas une supprimée*. **À poser AVANT le bouton**, sinon le premier masquage
+est irréversible au bout d'une nuit.
+
+## ⚠ LE VRAI SUJET N° 2 — MASQUER NE RETIRE PAS LA PHOTO D'INTERNET
+
+`app_photo_marquer_sortie_vitrine` *(08:30)* ne marque `hors_vitrine_depuis` que pour les
+photos dont **l'annonce n'est plus vivante** — elle ne regarde **ni `visible` ni
+`present_in_hektor`**. ➡ **Une photo masquée d'un bien EN VENTE garde son dérivé dans
+`gti-photo` indéfiniment**, et son adresse publique continue de servir à qui la connaît.
+
+*(Mesure : 472 photos marquées absentes, dont **365 ont encore un dérivé public**. Les 103
+masquées, elles, sont toutes sorties du coffre — **parce que leurs 14 annonces sont des
+ARCHIVES**, pas parce qu'elles sont masquées.)*
+
+❓ **À TRANCHER PAR FRÉDÉRIC** : « masquer » veut-il dire *« retirer de la galerie »* ou
+*« plus personne ne peut la voir »* ? La seconde demande un travail en plus.
+
+## L'ORDRE QUI EN DÉCOULE — et il n'est plus celui que j'avais proposé
+
+| # | pièce | pourquoi à cette place |
+|---|---|---|
+| **1** | **une masquée n'est pas une supprimée** *(1 ligne JS)* | sans elle, le geste est à sens unique |
+| **2** | la clé `visible` *(pièce A, écrite)* | ferme la fenêtre entre le masquage et la nuit |
+| **3** | l'espace client *(pièce B)* | il ne filtre pas, et re-trie par `order` |
+| **4** | la RPC + le bouton *(pièce C)* | **le plus petit**, tout le reste existe |
+| ? | le coffre public | **décision de Frédéric d'abord** |
