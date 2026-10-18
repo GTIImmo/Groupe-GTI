@@ -2858,3 +2858,47 @@ coûte.**
 ❓ **À TRANCHER PAR FRÉDÉRIC** : veut-on les masquées avant la coupure, et sur quel
 périmètre ? *(Aujourd'hui : **0 masquée sur 10 biens vivants sondés en direct** — l'agence
 ne semble pas s'en servir sur le parc actif.)*
+
+---
+
+## ⭐ LA FILIATION DE LA LIGNE 4 — Frédéric avait raison *(18/10)*
+
+*« pourquoi il y a une ligne sur les photos dans le run de rattrapage document de 22h,
+anciennement 21h ? »* — **Les deux générations précédentes n'y touchaient pas.**
+
+| génération | fichier | ligne photos ? |
+|---|---|---|
+| **1. le rattrapage** *(21 h, désactivé le 15/10)* | `run_rattrapage_documents.ps1` *(existe encore)* | ⛔ **0 occurrence de « photo »** |
+| **2. la détection** *(14/10, 22 h, dormante)* | `run_detection_documents.ps1` *(`9811a21`)* | ⛔ **0 occurrence** |
+| **3. l'entretien** *(15/10 **12:35**, `87ff456`)* | `run_entretien_documents.ps1` | ✅ **la ligne 4/4 PHOTOS** |
+
+➡ **La ligne photos est NÉE le 15/10 à 12:35**, dans le commit qui refondait la tâche en
+quatre lignes — **3 heures après** que le script `accorder_photos_miroir.js` ait été écrit
+« DORMANT » *(09:47, `75e6c37`)*.
+
+### Les deux raisons — l'une écrite, l'autre seulement mesurée après coup
+
+**Écrite dans le commit** : *« ⭐ LA LIGNE 4 empêche le retour des ~7 photos/jour ».*
+
+**Mesurée le 18/10, jamais écrite à l'époque** : le script compare **deux copies
+locales** — le miroir Hektor *(rafraîchi par le run vers 06:47)* et notre registre
+*(`phase2.sqlite`, rafraîchi par la **descente de 07:45**)*. **À 05:00 aucune n'est à
+jour ; à 22:00 les deux le sont.** C'est une vraie contrainte, et elle justifie l'heure.
+
+### ⛔ CE QUI N'A PAS ÉTÉ FAIT, ET QUI EST LA FAUTE
+
+1. **Elle n'a pas été soumise à Frédéric comme une décision à part.** Le commit lui
+   attribue « actifs, puis estimation, puis vendu/clos » — **trois lignes de documents**.
+2. **Elle a été logée dans une tâche « Documents »** au lieu d'avoir la sienne, alors
+   qu'elle est **la seule des cinq étapes photos qui RETIRE**.
+3. **L'en-tête du script a continué de dire « DORMANT »** pendant trois jours.
+
+**Le coût : 103 photos rayées à tort dès la première nuit.**
+
+### ❓ TROIS SORTIES POSSIBLES, À TRANCHER PAR FRÉDÉRIC
+
+| | quoi | ce que ça coûte |
+|---|---|---|
+| **A** | **sortir la ligne 4** dans sa propre tâche « GTI Entretien **Photos** » *(22:30)* | une tâche Windows à enregistrer *(son geste)* + 1 nom au moniteur ; le détecteur d'échec ne mélange plus les deux objets |
+| **B** | **renommer** la tâche « Documents **et Photos** » | 30 secondes, aucun code |
+| **C** | **laisser** | rien — mais le nom reste un piège |
