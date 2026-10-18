@@ -2752,3 +2752,61 @@ ARCHIVES**, pas parce qu'elles sont masquées.)*
 | **3** | l'espace client *(pièce B)* | il ne filtre pas, et re-trie par `order` |
 | **4** | la RPC + le bouton *(pièce C)* | **le plus petit**, tout le reste existe |
 | ? | le coffre public | **décision de Frédéric d'abord** |
+
+---
+
+# ❓ « POURQUOI LA LIGNE 4 PHOTOS DANS UNE TÂCHE DOCUMENTS ? » — audit du 18/10
+
+*Frédéric : « nous avons normalement déjà des run quotidiens pour les photos et celui de
+22h n'aurait pas dû toucher aux photos, on a sûrement fait une erreur ».*
+
+## La réponse : le placement est JUSTE, le NOM et la DÉCLARATION étaient faux
+
+**⭐ IL Y A UNE RAISON TECHNIQUE, ET ELLE EST SOLIDE.** `accorder_photos_miroir` ne lit
+**pas** Supabase : il compare **deux copies locales** — le **miroir Hektor**
+*(`hektor.sqlite`, rafraîchi par le run vers **06:47**)* et **notre registre**
+*(`phase2/phase2.sqlite`, rafraîchi par la **descente de 07:45**, `pull_from_supabase.py`)*.
+
+| moment | miroir Hektor | notre copie |
+|---|---|---|
+| **05:00** *(le run)* | de la veille | de la veille |
+| 07:45 | frais | **la descente la rafraîchit** |
+| **22:00** *(l'entretien)* | **frais** | **frais** |
+
+➡ **À 05:00 aucune des deux n'est à jour ; à 22:00 les deux le sont.** La ligne 4 est au
+**seul endroit possible**. *(La note du ch. ⑥ l'avait déjà mesuré : « tant que la descente
+n'a pas ramené la copie, il recalcule les mêmes 440 / 1 662 ».)*
+
+## ⭐ ET LES CINQ ÉTAPES NE FONT PAS LA MÊME CHOSE
+
+| quand | étape | elle |
+|---|---|---|
+| 05:00 | `rattrapage_photos` | **AJOUTE** — télécharge les nouvelles |
+| 05:00 | `generer_derives_photos` | **AJOUTE** — fabrique les dérivés publics |
+| 05:00 | `remplir_adresses_photos` | **AJOUTE** — pose nos adresses |
+| 05:00 | `sonde_photos_manquantes` | **SURVEILLE** |
+| **22:00** | **`accorder_photos_miroir`** | ⚠ **LE SEUL QUI RETIRE** — `present_in_hektor = false` |
+
+➡ **Ce ne sont pas des doublons.** Mais **le seul dangereux est caché dans une tâche
+appelée « Documents ».**
+
+## ⛔ LES DEUX VRAIES FAUTES, ET ELLES SONT À MOI
+
+**1. L'en-tête du script a menti pendant trois jours.** Écrit à **09:47** le 15/10 :
+*« ⛔ DORMANT : aucune tache ne l'appelle »*. Branché à **12:35** le même jour
+*(`87ff456`)*. **Le commentaire n'a pas suivi.** ⭐ Et il **m'a trompé moi-même** : le
+17/10 j'ai affirmé à Frédéric que le script était dormant, avant de devoir me corriger.
+**Corrigé le 18/10** — commentaire seul, `git diff` ne porte aucune ligne de code.
+
+**2. La décision citée ne portait que TROIS lignes.** Le commit `87ff456` attribue à
+Frédéric : *« on éteint le rattrapage, on allume la tâche de 22:00 », l'ordre étant
+*« l'index des actifs le + important, ensuite estimation, ensuite vendu/clos »*. **La
+quatrième ligne — les photos — n'est pas dans cette phrase.** Elle était dans la note
+*(point 6d)*, mais **pas dans ce qu'on lui a fait dire**. ➡ *Une ligne ajoutée dans le
+même geste qu'une décision n'est pas couverte par cette décision.*
+
+## LE COÛT RÉEL DE CES DEUX FAUTES
+
+La ligne 4 a marqué **440 photos** sa première nuit *(15/10, 23:23)* — **dont les 103
+masquées**, à tort. La note du ch. ⑥ portait déjà le chiffre « 440 » et l'heure « 23:23 »
+**sans voir que 103 d'entre elles n'étaient pas des supprimées.**

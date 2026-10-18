@@ -1,8 +1,23 @@
 // METTRE NOTRE REGISTRE DE PHOTOS D'ACCORD AVEC CE QUE HEKTOR LISTE
 //                                                   15/10/2026 — chantier 6, point 6d
 //
-// ⛔ DORMANT : aucune tache ne l'appelle. `--dry-run` est le DEFAUT ; il faut
-//    `--appliquer` pour qu'une seule ligne soit ecrite.
+// ⚠⚠ IL TOURNE CHAQUE NUIT, AVEC `--appliquer`. Depuis le 15/10 12:35 il est la
+//    LIGNE 4/4 de la tache « GTI Entretien Documents » (22:00) --
+//    run_entretien_documents.ps1 : `if (-not $DryRun) { $argsPhotos += "--appliquer" }`.
+//    ⛔ CE COMMENTAIRE A DIT « DORMANT : aucune tache ne l'appelle » PENDANT TROIS
+//      JOURS APRES AVOIR ETE BRANCHE, et il a trompe une relecture du 18/10. Un
+//      commentaire qui dit autre chose que le planificateur est la derive que ce
+//      projet paie en boucle. Corrige le 18/10.
+//    `--dry-run` reste le DEFAUT quand on le lance A LA MAIN.
+//
+// ⭐ POURQUOI A 22:00 ET PAS DANS LE RUN DE 05:00, ou vivent les 4 autres etapes
+//    photos : il compare DEUX COPIES LOCALES -- le miroir Hektor (rafraichi par le
+//    run vers 06:47) et NOTRE registre (phase2.sqlite, rafraichi par la DESCENTE de
+//    07:45). A 05:00 aucune des deux n'est a jour ; a 22:00 les deux le sont.
+//    ⚠ ET IL EST LE SEUL DES CINQ A RETIRER : les 4 etapes du run AJOUTENT
+//      (telecharger, fabriquer les derives, poser nos adresses, sonder). Lui seul
+//      marque `present_in_hektor = false`. C'est le dangereux : il merite d'etre
+//      nomme, pas cache dans une tache appelee « Documents ».
 //
 // POURQUOI. Mesure du 15/10 :
 //     440 photos que nous affichons et que Hektor NE LISTE PLUS  (67 annonces)
