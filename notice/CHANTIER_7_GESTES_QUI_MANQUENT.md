@@ -5230,3 +5230,69 @@ il faudra regarder tout de suite.
 ⭐ **Aucun redémarrage n'est nécessaire** : ce script est lancé par la tâche de 21:00, il prend donc
 effet tout seul demain soir. ⚠ Et **je n'ai touché aucun `.ps1`**, donc
 `scheduled/test_detecteur_echec_entretien.ps1` n'est pas concerné.
+
+
+### ✅ ⑦-3c PIÈCE ① — LA RECETTE GÉNÉRIQUE EST ÉCRITE *(20/10, « Oui »)*
+
+**Trois fichiers** : `supabase/patch_chantier7_3c_reordonner_2026-10-20.sql`, son `_INVERSE` et
+son `_REPETITION`. ⛔ **Frédéric colle** *(mon outil refuse les écritures en production)*.
+
+### ⭐ ELLE EST ADDITIVE — donc le retour arrière est un simple DROP
+
+| | |
+|---|---|
+| ✅ **ajoute** | `app_console_photos_reordonner_optimistic(bigint, text, text[])` |
+| ⛔ **ne touche pas** | la recette de couverture *(`cbe7d537`)*, celle du masquage *(`0a5f62d1`)*, le worker, le type de travail, ses trois verrous |
+
+**Sept de ses huit étapes sont copiées** de la couverture *(droits, état d'avant, déjà-fait, les deux
+listes, le travail dans la même transaction)*. ⭐ **Une seule change** : la renumérotation prend
+**l'ordre donné par l'écran** au lieu de « mets celle-là en premier ».
+
+### ⭐⭐ ET DEUX PIÈCES QUE LA COUVERTURE N'A PAS
+
+**① LE GARDE-FOU DE LA LISTE EXACTE** — il répond à un **trou de l'audit** : ⛔ *on ne sait pas ce
+que Hektor fait d'un ordre PARTIEL*, et le garde-fou du worker ne refuse que la liste **vide**. Donc
+on refuse **tout écart**, en nommant lequel : `ordre_vide` · `ordre_avec_doublons` ·
+`ordre_avec_photos_inconnues` · `ordre_incomplet`. ⭐ **On ne découvre pas un comportement inconnu en
+production.**
+
+**② LE POST-IT SUR LES QUATRE INDEX** — recopié **à l'identique** de la recette du masquage *(pas
+réinventé)*, parce que l'ordre alimente le fabricant de la boîte publique. ⚠ **La couverture ne le
+pose pas**, et ça s'est vu : le 19/10 la boîte de 63261 datait du **11/10** et celle de 63046 du
+**27/09**, alors que leur couverture avait changé le **16/10**.
+
+### ✅ L'ÉPREUVE À BLANC — tout ce qui peut se mesurer sans écrire
+
+| | résultat |
+|---|---|
+| les **4 index** : clé + `adresses_app_le` | ✅ **les 4 existent** *(une faute ici = collage refusé)* |
+| `app_console_can_access_dossier(bigint, text)` | ✅ existe, rend `boolean` |
+| ⭐ **la logique des gardes, rejouée sur les vraies données** | ✅ **les 6 cas tombent juste** |
+
+```
+bon ordre (echange 2 et 3)   aucun refus   -> 482254:0 487604:1 487603:2
+doublon                      ordre_avec_doublons        (et il sort EN PREMIER)
+photo inconnue               inconnues: 999999
+incomplet (2 sur 3)          manquantes: 487604
+⭐ la masquee dans la liste   inconnues: 482253          (bien rejetee)
+deja dans cet ordre          DEJA                       (Hektor n'est pas derange)
+```
+
+⭐ **L'ordre des tests compte et il est juste** : le cas « doublon » déclenche aussi « manquantes »,
+mais le patch teste les doublons d'abord, donc il rend **le message le plus précis**.
+
+### ⭐ ET LE BALAYAGE A REFERMÉ L'ÉCART DE LA VEILLE, TOUT SEUL
+
+Hier soir notre table portait l'ordre de l'essai et Hektor celui d'avant. ⭐⭐ **Le balayage a
+resynchronisé 62774 à 00:16, et notre ordre est revenu sur celui de Hektor**
+*(`482254, 487603, 487604`)*. **L'auto-correction annoncée s'est produite, 50 minutes plus tard** —
+et c'est la preuve que le geste ne peut pas laisser les deux côtés durablement en désaccord.
+
+### ⬜ CE QUI RESTE DE ⑦-3c
+
+| pièce | état |
+|---|---|
+| ① **la recette** | ✅ **écrite** — reste à coller *(patch, inverse, répétition)* |
+| ② **les deux flèches** dans l'écran | ⬜ ⚠ ce sera la **4ᵉ et la 5ᵉ pastille** d'une tuile |
+| ③ **montrer plus de 12 photos** | ⬜ sans ça **23 %** du parc n'est pas réordonnable |
+| ④ **le réveil immédiat** du fabricant | ⬜ ⚠ **modification du worker → redémarrage des 4 services**, donc l'accord de Frédéric. *Sans lui, la boîte se refait au prochain passage du fabricant au lieu de quelques secondes.* |
