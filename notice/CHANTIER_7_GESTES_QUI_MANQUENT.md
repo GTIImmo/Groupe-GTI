@@ -4699,3 +4699,155 @@ acte 2 265 · pret 2 257 · ci 2 242 · diag 2 224 · fonciere 2 196
 que ça veut dire**, et un dictionnaire ne doit **rien inventer**. *(`bv` = bon de visite,
 `tp` = titre de propriété, `cni`/`ci` = pièce d'identité, `pv ag` = PV d'assemblée générale,
 `diag` = diagnostic — à confirmer par lui.)*
+
+
+---
+
+## ⑦-9 · AUDIT APPROFONDI DE TOUTE LA CHAÎNE DOCUMENTAIRE *(19/10, sur demande de Frédéric)*
+
+> *« attends il y a tout un travail sur les documents je pense qu'il ne faut surtout rien cassé et
+> bien comprendre le fonctionnement avant de proposer un correctif donc refait un audit approfondi
+> puis explique moi en detail »*
+
+⭐ **Il avait raison de m'arrêter**, et l'audit a **démoli deux de mes affirmations**.
+
+### 1. LES NOTES DU PROJET D'ABORD — 9 notes mémoire relues
+
+| ce qu'elles apprennent | conséquence pour ⑦-9 |
+|---|---|
+| la page documents a **4 sections** : ImmoSign, « Mes documents », ECM, Dépôt | deux familles de noms, pas une |
+| le HTML **dépend du contexte utilisateur** *(en admin Hektor masque `docBtnSign_`)* | ⚠ un relevé en admin ne prouve rien sur l'affichage négociateur |
+| **une ligne = un chemin = UN fichier** *(policy `hektor_console_documents_read_scope`)* | le modèle ne sait pas porter deux fichiers |
+| le mécanisme de détection est **installé à moitié** *(`--detect` jamais allumé = G.2/G.6)* | ⚠ **hors ⑦-9**, mais ça veut dire que les noms ne se rafraîchissent pas tous |
+| le mur de Hektor est un **quota de volume** | tout relevé en ligne se compte |
+| **un document ne bouge pas `date_maj`** | on ne peut pas détecter un ajout par la date |
+| ⚠ **la note dit que les blocs ImmoSign ne sont JAMAIS indexés** | ⛔ **PÉRIMÉ : le code les indexe** *(l. 1085)*. **Le code gagne** |
+
+### 2. ⚠⚠ MA PREMIÈRE AFFIRMATION ÉTAIT FAUSSE : « 99 % de noms illisibles »
+
+Mon critère comptait **tout nom qui ressemble à un fichier**. Or `vente_odin_rembault.pdf`,
+`bon_de_visite_133.pdf`, `dpe_poulenard.pdf`, `acte_donation_page_de_couverture.pdf`
+**ressemblent à un fichier ET se lisent parfaitement.**
+
+| la VRAIE mesure *(189 809)* | documents | |
+|---|---|---|
+| des **mots lisibles** | **182 519** | **96,2 %** |
+| pas de mot, mais une **abréviation** du relevé | **3 347** | **1,8 %** |
+| pas de mot, mais une **date** | **1 184** | **0,6 %** |
+| ⛔ **rien du tout** *(`1.pdf`, `556.pdf`, un UUID)* | **2 759** | ⭐ **1,5 %** |
+
+➡ **Le besoin réel n'est pas 187 610 documents. Il est de 2 759.**
+
+### 3. ⛔ MA DEUXIÈME PEUR ÉTAIT INFONDÉE : AUCUNE ÉTIQUETTE N'EST JETÉE
+
+J'avais trouvé dans `extractDocumentEntries` *(l. 1038)* :
+```js
+if (/\.(pdf|jpe?g|png|docx?|xlsx?|csv|txt)$/i.test(text)) labels.push(text);
+```
+et j'ai cru qu'on **jetait** une colonne « libellé ». ⭐ **Tranché sur une capture locale, sans
+appeler Hektor** *(`documents_uploaded_private.html`, annonce 59624, **28 lignes**)* :
+
+```
+LIGNE 1  [RETENUE] attestation_devolutive_3_1.pdf          [date] 23/02/2026
+LIGNE 2  [RETENUE] attestation_de_propriete_mme_layes_claudette_1.pdf   [date] 23/02/2026
+LIGNE 3  [RETENUE] plancadastralnormalise_layes_1.pdf       [date] 23/02/2026
+```
+⛔ **Une ligne de document déposé porte DEUX cellules : le nom et la date.** Il n'y a **rien**
+derrière le filtre. ⭐ **`document_name` EST le nom que Hektor affiche.**
+
+### 4. ⭐⭐ ET LES DEUX FAMILLES SONT NOMMÉES PAR DES RÈGLES DIFFÉRENTES — mesuré
+
+| famille | documents | finit par une extension | **vraie étiquette** |
+|---|---|---|---|
+| **déposés** privé + partagé | **187 995** | **187 815** | **180** *(et ce sont des `.ods`, `.tif`, `.bmp` — encore des fichiers)* |
+| ⭐ **« Mes documents »** *(modèles)* | **1 066** | **0** | ⭐ **1 066 — 100 %** |
+| ⭐ **ImmoSign** | **711** | **0** | ⭐ **711 — 100 %** |
+| ImmoSign signé | 36 | 1 | 35 |
+| **né dans l'app** | **1** | 1 | 0 |
+
+**Pourquoi** : les modèles sont lus par `extractModeloDocumentEntries` *(l. 1143)*, qui prend
+`modeloSectionCell(rowHtml, "bxld7")` **sans aucun filtre**. Preuve lue dans la capture :
+⭐ **« Bon de Visite Groupe GTI »** — une vraie étiquette, sans extension.
+
+➡ ⭐⭐⭐ **DONC LE « NOM ILLISIBLE » N'EST PAS UN DÉFAUT DE NOTRE CODE.** C'est **le nom que
+l'agence a donné au fichier en le déposant**, et Hektor affiche exactement le même.
+
+### 5. ⭐⭐⭐ ET NOMMER UN DOCUMENT MARCHE DÉJÀ — DANS L'APP, AU DÉPÔT
+
+`App.tsx:11378` porte **un champ « Libellé »**, avec pour indication *« Nom visible dans Hektor »* :
+```jsx
+<label className="filter-field"><span>Libelle</span>
+  <input value={uploadLabel} placeholder="Nom visible dans Hektor" /></label>
+```
+Et `api.ts:8169` en fait **le nom du fichier envoyé** :
+```js
+const requestedLabel = filenameStem(safeUploadFilename(input.documentLabel ?? '', ''))
+const uploadFilename = safeUploadFilename(requestedLabel ? `${requestedLabel}${extension}` : originalName, originalName)
+```
+⭐ **Le geste « nommer » existe donc déjà.** Ce qui manque, c'est **renommer après coup** — et
+c'est ça, et seulement ça, que Hektor ne sait pas faire.
+
+### 6. LE TABLEAU OBJETS × GESTES, rempli par les travaux réellement exécutés
+
+| geste sur un document | travail | exécutés | ⭐ erreurs | dernier |
+|---|---|---|---|---|
+| **lire / indexer** | `sync_console_documents` | **92 497** | ⭐ **0** | 18/10 |
+| **créer / déposer** *(avec son nom)* | `upload_document_to_hektor` | **104** | ⭐ **0** | **19/10** |
+| **supprimer** | `delete_document_from_hektor` | **39** | ⭐ **0** | 22/07 |
+| **fabriquer** *(cadastre / mandat)* | `generate_*_document` | 38 + 18 | ⭐ **0** | 26/08 |
+| **remettre au cloud** | `prepare_document_cloud` | 6 | **0** | 27/07 |
+| **relancer / annuler** une signature | `relance_signature`, `cancel_…` | 1 + 1 | **0** | 30/06 |
+| ⛔ **RENOMMER** | — | — | — | **n'existe pas** |
+
+⭐⭐ **Zéro erreur sur 92 706 travaux.** *La chaîne documentaire n'est pas fragile : elle marche.*
+
+### 7. L'ÉTAT DU PARC
+
+| | |
+|---|---|
+| documents | **189 809** *(189 808 chez Hektor, 1 né dans l'app)* |
+| volume | ⚠ **265 Go** — *la note de plan parlait de **32 Go** ; écart à noter, hors ⑦-9* |
+| sur le serveur seul | **165 187** *(230 Go)* · au cloud **24 622** *(35 Go)* |
+| portant une signature | **9 504** · dont **426** avec le PDF signé |
+| refusés par le coffre | **46** · sans fichier local **43** |
+| ⚠ envoyés vers Hektor | **1 seul** porte un statut d'envoi *(en échec)*, alors que 104 dépôts ont réussi — **incohérence constatée, non élucidée, hors ⑦-9** |
+
+### 8. ⭐⭐ CE QUE J'AI VÉRIFIÉ SUR « NE RIEN CASSER » — les 4 verrous, un par un
+
+| | mesuré |
+|---|---|
+| ⭐ **les chemins de fichier sont COLLANTS** | `metadata.local_archive_path \|\| …` et `document.storage_path \|\| …` → **une fois posés, réutilisés, jamais recalculés**. ⭐ **Renommer ne déplacerait AUCUN fichier existant** |
+| ⭐⭐ **la synchro CONSERVE** | `storage_path`, `file_size`, `sha256`, `archive_policy` repris de l'existant ; **`metadata_json` est FUSIONNÉ** *(`...current.metadata_json`)*. Elle n'écrase que ce qu'elle lit chez Hektor — **dont `document_name`** |
+| ⭐⭐⭐ **les 8 écrivains de `metadata_json` fusionnent TOUS** | vérifiés un par un : l. 4692, 4913, 4993 *(relit d'abord !)*, 5109, 5161, 5202, 5321, 8233 *(« Merge non-destructif » écrit en commentaire)*. Le seul qui remplace *(l. 5370)* **crée une ligne neuve** et sort si elle existe. ➡ **une clé à nous SURVIVRAIT, sans colonne ni migration** |
+| ⭐ **le front n'écrit JAMAIS la table en direct** | aucun PATCH/POST/UPDATE sur `app_console_document` dans `api.ts` ni dans `backend/` — tout passe par RPC et travaux |
+| ⚠ **`archive_filename` est FIGÉ au dépôt** | `${document_name} - ${hektor_doc_id}.pdf` : un renommage après coup ne le change pas → **deux noms** pour les 1 777 modèles |
+| ⚠ **13 endroits RECONNAISSENT par le nom** | mandat, avenant, avis de valeur, extension, appariement Hektor, appariement signature, tri. **Un remplacement casse 98,5 % ; un AJOUT ne casse rien** |
+
+### 9. ⛔ CE QUE JE N'AI PAS PU MESURER — et je le dis
+
+1. ⚠ **La capture est du 13/05/2026.** La structure est nette, mais je n'ai **pas relu une page
+   vivante aujourd'hui**. Vu : **28 lignes déposées** sur 59624, **5** sur 24113, **4 lignes de
+   modèle**. *Une capture n'est pas une mesure du présent.*
+2. ⚠ **L'affichage en contexte NÉGOCIATEUR** : la note prouve que Hektor **change son HTML** selon
+   l'utilisateur. Toutes mes lectures sont en **admin**. Une colonne de libellé réservée au
+   négociateur reste donc **théoriquement possible** — non mesurée.
+3. ⛔ **Les trois modes de renommage de Hektor, je les ai LUS, jamais déclenchés** — les déclencher
+   est une écriture chez Hektor, donc l'accord de Frédéric. *On ne sait donc pas ce que
+   `updatedocument` ferait sur l'id d'un document d'annonce : probablement rien ou une erreur,
+   mais c'est une supposition.*
+4. ⚠ **`aae`** — **2 271 documents** et **je ne sais pas ce que ça veut dire.**
+5. ⚠ Les deux écarts notés sans les traiter : **265 Go contre 32 Go**, et **1 statut d'envoi contre
+   104 dépôts réussis**.
+
+### 10. ➡ CE QUE L'AUDIT CHANGE À LA DÉCISION
+
+| | |
+|---|---|
+| ⛔ **ce qui est cassé** | **RIEN.** 92 706 travaux, 0 erreur. Je n'ai aucun défaut à corriger |
+| ⭐ **ce qui existe déjà** | **nommer au dépôt** *(champ « Libellé » → nom du fichier chez Hektor)* |
+| ⛔ **ce qui manque** | **renommer après coup**, et **Hektor ne sait pas le faire** |
+| ⭐ **le vrai besoin chiffré** | **2 759 documents** sans aucun nom *(1,5 %)*, pas 187 610 |
+| ⭐ **la mise en forme** *(souligné → espaces, majuscule)* | **98,5 %**, **sans rien stocker**, donc **sans aucun risque mesurable** : rien à écraser, rien à effacer, réversible à la seconde |
+| ⚠ **une étiquette à nous** | techniquement **gratuite** *(`metadata_json` est fusionné)*, **mais elle DIVERGE de Hektor** : le négociateur verrait un nom dans l'app et un autre dans Hektor. **C'est exactement le risque que Frédéric redoutait** |
+
+⛔ **RIEN N'EST ÉCRIT. La décision est à lui.**
