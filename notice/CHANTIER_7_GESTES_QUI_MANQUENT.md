@@ -3818,3 +3818,102 @@ démasque — l'avantage de l'option B de Frédéric)*, **et pourtant la galerie
 | **la tâche Windows** | à 00:00, fenêtre jusqu'à 02:30 |
 | **le calibrage** | **1 200 les 2 premières nuits** *(la prudence du 20/08, jamais appliquée)* |
 | ⛔ **le lancer** | **accord de Frédéric**, à part |
+
+
+---
+
+## ✅ ⑦-8 MARCHE 2 — ÉCRITE ET ÉPROUVÉE, PAS ENCORE ENREGISTRÉE *(19/10, go « DONC ? »)*
+
+**Trois fichiers neufs, deux fichiers élargis. Rien n'est enregistré dans Windows, rien ne tourne.**
+
+### CE QUI A ÉTÉ ÉCRIT
+
+| fichier | quoi |
+|---|---|
+| `Console/enqueue_photos_masquees_lot.js` | **l'empileur** — il pose des travaux, ⚠ **il ne parle JAMAIS à Hektor** |
+| `scheduled/run_balayage_photos_masquees.ps1` | **la tâche** (00:00), `Invoke-Ligne` recopiée **à l'octet près** |
+| `scheduled/test_detecteur_echec_entretien.ps1` | ⭐ **élargi** — voir ci-dessous |
+| `monitoring/check_gti_health.py` | la tâche **déclarée AVANT** d'être enregistrée, en **`critical`** |
+
+### ⭐⭐ LE DESSIN, ET CE QUI L'A IMPOSÉ
+
+**Pourquoi passer par le worker et pas écrire un script à nous** *(question de Frédéric :
+« on se sert des workers dans le balayage ? »)* : un script séparé aurait **son propre frein**,
+et les deux s'additionneraient — *« un frein ne protège QU'À L'INTÉRIEUR d'un client »*, la cause
+du bannissement du 17/09. Mesure du 19/10 : `sync_hektor_photos` n'est réclamé que par
+`worker_kind = 'documents'` ➡ **un seul processus, un seul frein.**
+
+**Un seul lot, deux parts** *(question : « on fait les deux en même temps ? »)*. Deux tâches
+séparées se bloqueraient : la part MAJ poserait ~29 travaux, puis le balayage verrait « la file
+n'est pas vide » et **refuserait son lot entier**. Donc un lot, rempli dans cet ordre :
+**① les annonces dont la date a bougé · ② les jamais visitées**. ⭐⭐ **Et quand le balayage sera
+fini, le lot tombera tout seul à ~29/nuit et DEVIENDRA le run de mise à jour** — pas
+d'interrupteur, pas de 2ᵉ tâche.
+
+**1 000 et pas 2 000** — ⚠ **la contrainte a changé de nature en cours de route.** Je calculais
+sur le quota Hektor ; la vraie borne est **le temps de digestion du worker** : médiane **10 s**
+par travail sur les 315 réels *(moyenne 12 s, max 79 s)* ➡ 2 h 30 de creux = **~868 annonces**,
+3 h 42 = **~1 285**. Un lot de 2 000 aurait pris **5,8 à 6,6 h** et débordé sur les recherches de
+03:00 puis le run de 05:00.
+
+**Les vivantes seules** — décision du 19/10, **déclarée** dans `HORS_AUTO` : une archive n'est
+publiée **nulle part** *(la vitrine filtre `archive=0` et statut Actif/Sous offre/Sous compromis)*,
+son taux de masquées est **0,7 % contre 3,6 %**, et les **44 277** archives + historiques
+coûteraient **44 nuits pour ~700 photos**. `--scope archive` reste ouvert **à la main**.
+⚠ Déclarer était obligatoire : sans ça l'alarme « périmètre oublié » sortirait en code 1 chaque nuit.
+
+### ⚠⚠ L'ÉPREUVE DU DÉTECTEUR NOMMAIT SA JUMELLE EN DUR — élargie
+
+Le contrôle ④ ajouté le 19/10 comparait `Invoke-Ligne` à **une** jumelle nommée en dur
+*(`run_entretien_photos.ps1`)*. ➡ **Ma 3ᵉ tâche lui aurait échappé EN SILENCE** — exactement le
+trou que ce contrôle est censé boucher. Il **balaie maintenant le dossier** : toute tâche de
+`scheduled\` portant `Invoke-Ligne` est comparée, qu'elle existe aujourd'hui ou qu'on l'écrive
+demain. **C'est la règle du balayage de famille appliquée à l'épreuve elle-même.**
+
+**Résultat : 13 contrôles verts**, dont *« 2 autres tâches porteuses trouvées »* et les deux
+comparaisons **325 caractères contre 325**.
+
+### LES DEUX REFUS, ET POURQUOI ILS SORTENT EN 1
+
+| code | quoi | pourquoi il doit SONNER |
+|---|---|---|
+| **3** | la file n'est pas vide | ⭐ **c'est la garde qui régule la taille toute seule.** Sans e-mail, le balayage s'arrêterait en silence et les 14 nuits n'arriveraient **jamais** — c'est le défaut mesuré le 14/10 sur le rattrapage documents : *« UN SEUL TRAVAIL posé, et il sortait EN SUCCÈS »* |
+| **4** | ≥ 10 erreurs en 24 h | Hektor nous rejette — la signature du 20/08. *« Un 403 arrête tout, on ne rejoue jamais. »* |
+
+⭐ **Et la fenêtre de pose** : la tâche **refuse de poser passé 01:00**. On borne le **départ** —
+un lot posé à 02:00 ferait travailler le worker jusqu'à 05:00 et au-delà.
+
+### L'ESSAI À BLANC — tous les chiffres se recoupent
+
+```
+annonces du perimetre      13 491      le parc vivant
+deja visitees                 305      (surtout des archives, d aout)
+part MISE A JOUR                3      deja vues ET leur date a bouge
+part BALAYAGE              13 487
+lot pose                    1 000      dont 3 de MAJ, 997 de balayage
+ecartees pour erreur            0
+sans date au miroir             0      le miroir couvre tout le parc
+requetes Hektor attendues   2 000
+nuits restantes                14
+exemples : 24113, 62853, 63157, puis 102, 104, 108...
+```
+
+⭐ **L'ordre est le bon** : les 3 modifiées **en tête**, puis les jamais vues. Et **62189, visitée
+ce matin, est correctement exclue** — c'est la 4ᵉ vivante déjà vue, celle dont la date n'a pas bougé.
+
+### ⭐ LES DEUX PIÈGES ANTICIPÉS, PAS DÉCOUVERTS
+
+1. **La date de Hektor est LOCALE, celle des travaux en UTC** *(piège payé le 13/10 : « deux
+   heures d'erreur, l'inverse de la vérité »)*. ➡ **Marge de 3 h, dans le sens SÛR** : revisiter
+   pour rien coûte 2 requêtes, en manquer une perd des photos pour toujours.
+2. **L'exclusion pour erreur est COMPTÉE ET NOMMÉE**, pas silencieuse. Le projet a payé deux fois
+   l'exclusion définitive muette *(les 527 brouillons, les 33 annonces bloquées par le coffre)*.
+   On ne les rejoue pas tout seul — **mais on les VOIT** dans le compte rendu.
+
+### ⛔ RESTE À FRÉDÉRIC
+
+| | |
+|---|---|
+| **enregistrer la tâche Windows** | à 00:00, quotidienne · ⚠ **comparer réglage par réglage** à une sœur qui marche *(S4U / Limited / Win7 / moteur unifié / limite 4 h / IgnoreNew)* — la leçon du 15/10, où la tâche neuve était en « Interactive », **seule des 9** |
+| **le calibrage** | ⭐ **`-Limite 1200` les 2 premières nuits** puis 1 000 en régime *(ou plus si le worker va plus vite que les 10 s médianes — la 1ʳᵉ nuit le dira)* |
+| ⛔ **le premier lancement** | **accord à part** |

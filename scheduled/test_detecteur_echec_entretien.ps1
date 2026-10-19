@@ -98,32 +98,49 @@ Controle "le marqueur « --- x/4 » arrive au journal" ($texteJournal -like "*--
 Controle "et la sortie de la commande aussi" ($texteJournal -like "*bruit de sortie de node*") "le detail de la ligne est trace"
 Remove-Item -LiteralPath $journal -Force -ErrorAction SilentlyContinue
 
-# ── ④ LES DEUX TACHES PORTENT LA MEME FONCTION -- ajoute le 19/10 ──────────────────
-# Depuis le 19/10 il y a DEUX taches qui portent Invoke-Ligne : l'entretien des
-# DOCUMENTS (22:00) et celui des PHOTOS (21:00, sorti de la ligne 4/4 a la demande de
-# Frederic). Cette epreuve n'en execute qu'une.
+# ── ④ TOUTES LES TACHES PORTENT LA MEME FONCTION -- ajoute le 19/10, ELARGI le 19/10 ─
+# Depuis le 19/10 PLUSIEURS taches portent Invoke-Ligne : l'entretien des DOCUMENTS
+# (22:00), celui des PHOTOS (21:00), et le BALAYAGE DES PHOTOS MASQUEES (00:00).
+# Cette epreuve n'en execute QU'UNE.
 # ➡ Plutot que de la dedoubler, on EXIGE qu'elles soient IDENTIQUES A L'OCTET PRES :
-#   si elles le sont, eprouver l'une c'est eprouver l'autre. Si un jour elles divergent,
-#   ce controle passe au rouge et dit qu'il faut dedoubler l'epreuve.
+#   si elles le sont, eprouver l'une c'est eprouver toutes les autres. Si un jour
+#   l'une divergent, ce controle passe au rouge et dit qu'il faut dedoubler l'epreuve.
 # ⚠ C'est la regle du balayage de famille : un defaut se cherche LA OU VIVENT TOUS LES
 #   MEMBRES, pas seulement chez celui qu'on a sous les yeux.
-$jumelle = Join-Path $PSScriptRoot "run_entretien_photos.ps1"
-if (-not (Test-Path -LiteralPath $jumelle)) {
-    Controle "la tache jumelle existe" $false "run_entretien_photos.ps1 introuvable"
-} else {
-    $srcJ = Get-Content -LiteralPath $jumelle -Raw
-    $dJ = $srcJ.IndexOf("function Invoke-Ligne")
-    if ($dJ -lt 0) {
-        Controle "la jumelle porte Invoke-Ligne" $false "fonction introuvable dans la jumelle"
+#
+# ⚠⚠ ELARGI LE 19/10, ET C'EST LE POINT : la 1re version NOMMAIT SA JUMELLE EN DUR
+#   (run_entretien_photos.ps1). Une TROISIEME tache portant la meme fonction lui aurait
+#   donc ECHAPPE EN SILENCE -- exactement le trou que ce controle est cense boucher.
+#   On BALAIE donc le dossier : toute tache de scheduled\ qui porte Invoke-Ligne est
+#   comparee, qu'elle existe aujourd'hui ou qu'on l'ecrive demain.
+function Get-TexteInvokeLigne {
+    param([string]$Chemin)
+    $src = Get-Content -LiteralPath $Chemin -Raw
+    $d = $src.IndexOf("function Invoke-Ligne")
+    if ($d -lt 0) { return $null }
+    $i = $src.IndexOf("{", $d); $p = 0; $f = -1
+    for ($k = $i; $k -lt $src.Length; $k++) {
+        if ($src[$k] -eq "{") { $p++ }
+        elseif ($src[$k] -eq "}") { $p--; if ($p -eq 0) { $f = $k; break } }
+    }
+    if ($f -lt 0) { return "" }
+    return $src.Substring($d, $f - $d + 1)
+}
+
+$porteuses = @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter "*.ps1" -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -ne $fichier -and $_.Name -notlike "test_*" } |
+    Where-Object { (Get-Content -LiteralPath $_.FullName -Raw) -like "*function Invoke-Ligne*" })
+
+Controle "au moins une autre tache porte Invoke-Ligne" ($porteuses.Count -ge 1) `
+    "$($porteuses.Count) autre(s) tache(s) porteuse(s) trouvee(s) dans scheduled\"
+
+foreach ($p in $porteuses) {
+    $t = Get-TexteInvokeLigne -Chemin $p.FullName
+    if ($null -eq $t) {
+        Controle "$($p.Name) porte Invoke-Ligne" $false "fonction introuvable"
     } else {
-        $iJ = $srcJ.IndexOf("{", $dJ); $pJ = 0; $finJ = -1
-        for ($k = $iJ; $k -lt $srcJ.Length; $k++) {
-            if ($srcJ[$k] -eq "{") { $pJ++ }
-            elseif ($srcJ[$k] -eq "}") { $pJ--; if ($pJ -eq 0) { $finJ = $k; break } }
-        }
-        $texteJumelle = if ($finJ -ge 0) { $srcJ.Substring($dJ, $finJ - $dJ + 1) } else { "" }
-        Controle "les DEUX taches portent la MEME fonction" ($texteJumelle -ceq $texteVrai) `
-            "documents $($texteVrai.Length) car. / photos $($texteJumelle.Length) car. -- si elles divergent, DEDOUBLER cette epreuve"
+        Controle "$($p.Name) porte la MEME fonction (a l'octet pres)" ($t -ceq $texteVrai) `
+            "eprouvee $($texteVrai.Length) car. / $($p.Name) $($t.Length) car. -- si elles divergent, DEDOUBLER cette epreuve"
     }
 }
 

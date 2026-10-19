@@ -159,6 +159,26 @@ TASK_CRITICALITY: dict[str, str] = {
     #   ⚠ Tant que Frederic ne l'a pas enregistree dans Windows, elle rend « tache
     #     introuvable » en WARNING. C'est voulu : on declare AVANT d'enregistrer.
     "GTI Entretien Photos": "warning",
+    # 2026-10-19 : « GTI Balayage Photos Masquees » (00:00) -- elle empile les travaux
+    #   qui vont chercher chez Hektor les photos MASQUEES que le flux API ne voit pas
+    #   (mesure du 19/10 : 1,5 % du parc, ~490 annonces et ~1 100 photos sur le vivant).
+    #
+    # ⚠ ELLE EST "critical", CONTRAIREMENT A SA VOISINE JUSTE AU-DESSUS, et la
+    #   difference est VOULUE : ses deux refus (code 3 « la file n'est pas vide »,
+    #   code 4 « trop d'erreurs en 24 h ») sont precisement ce qu'il faut VOIR.
+    #     · le code 3 veut dire que le worker est plus lent que le lot : sans e-mail,
+    #       le balayage s'arreterait en silence et les 14 nuits n'arriveraient JAMAIS
+    #       (c'est exactement le defaut mesure le 14/10 sur le rattrapage documents :
+    #        « UN SEUL TRAVAIL pose, et il sortait EN SUCCES ») ;
+    #     · le code 4 veut dire que Hektor nous rejette -- la signature du
+    #       bannissement du 20/08. On ne laisse pas ca dans un journal que personne
+    #       ne lit.
+    #   ⭐ C'est la meme convention que « GTI Rattrapage Documents », dont l'en-tete
+    #     dit : « ces deux arrets DOIVENT se voir ».
+    #   ⚠ Tant que Frederic ne l'a pas enregistree dans Windows, elle rend « tache
+    #     introuvable » en WARNING (la branche NotFound n'utilise pas la gravite) :
+    #     visible a l'ecran, aucun e-mail. C'est voulu -- on declare AVANT.
+    "GTI Balayage Photos Masquees": "critical",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
@@ -3189,10 +3209,14 @@ def build_parser() -> argparse.ArgumentParser:
         #   de l'entretien des documents. Meme regle : DECLAREE ICI AVANT d'etre
         #   enregistree dans Windows. Elle est en "warning" et non "critical" -- la
         #   raison est ecrite au-dessus de TASK_CRITICALITY. 10 noms surveilles.
+        #   19/10 (2) : ajout de « GTI Balayage Photos Masquees » (00:00). Meme regle,
+        #   DECLAREE AVANT d'etre enregistree. Elle est "critical" -- raison au-dessus
+        #   de TASK_CRITICALITY. 11 noms surveilles.
         default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
                  "GTI Relances Email,GTI Sauvegarde,GTI Descente,"
                  "GTI Rattrapage Documents,GTI Reprise Envois Hektor,"
-                 "GTI Entretien Documents,GTI Entretien Photos"),
+                 "GTI Entretien Documents,GTI Entretien Photos,"
+                 "GTI Balayage Photos Masquees"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
