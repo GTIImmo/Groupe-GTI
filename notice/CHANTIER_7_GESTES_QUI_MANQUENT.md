@@ -2902,3 +2902,51 @@ jour ; à 22:00 les deux le sont.** C'est une vraie contrainte, et elle justifie
 | **A** | **sortir la ligne 4** dans sa propre tâche « GTI Entretien **Photos** » *(22:30)* | une tâche Windows à enregistrer *(son geste)* + 1 nom au moniteur ; le détecteur d'échec ne mélange plus les deux objets |
 | **B** | **renommer** la tâche « Documents **et Photos** » | 30 secondes, aucun code |
 | **C** | **laisser** | rien — mais le nom reste un piège |
+
+---
+
+# ✅ « GTI ENTRETIEN PHOTOS » EST ENREGISTRÉE — 19/10/2026, 21:00
+
+*Option A, choisie par Frédéric. La ligne 4/4 quitte la tâche Documents et prend son
+nom, son journal et sa surveillance.*
+
+## Les 9 réglages, comparés un par un à une sœur qui marche
+
+| | la neuve | la sœur *(Entretien Documents)* |
+|---|---|---|
+| `LogonType` / `RunLevel` / `UserId` | **S4U / Limited / admin** | identiques |
+| `Compatibility` / `MultipleInstances` | **Win7 / IgnoreNew** | identiques |
+| `DisallowOnBatteries` / classe du déclencheur | **true / MSFT_TaskDailyTrigger** | identiques |
+| **durée max** | **PT1H** | PT4H — *voulu : la tâche dure ~2 min* |
+| **heure** | **21:00** | 22:00 — *voulu* |
+
+**État : `Ready`**, prochain passage **19/10 21:00:00**, action sur le bon script.
+
+## Et le moniteur la reconnaît
+
+- le nom concorde **au caractère près** *(20 caractères)* entre Windows et le code ;
+- présente dans **`TASK_CRITICALITY`** *(gravité **`warning`**)* **et** dans la liste ;
+- ⭐ **les 10 tâches surveillées existent toutes dans Windows** — aucune « absente ».
+
+## ⚠ CE QUI CHANGE DÈS CE SOIR
+
+| | |
+|---|---|
+| **21:00** | la nouvelle tâche — **sa toute première nuit** |
+| **22:00** | l'entretien documents, désormais à **3 lignes** — il ne touche plus aux photos |
+
+## ⏰ LE CONTRÔLE DE DEMAIN MATIN — ce qu'il faut regarder
+
+```
+logs/scheduled/entretien_photos_2026-10-19_21-00-*.log
+```
+1. **le journal existe** — s'il est vide ou absent, la tâche n'a pas tourné ;
+2. il porte **« --- 1/1 les PHOTOS »** — le marqueur prouve que le détecteur d'échec
+   écrit bien au journal *(c'est le défaut des six fois)* ;
+3. il finit par **« la ligne est passee »** et le résultat Windows vaut **0** ;
+4. ⭐ **le nouveau compteur `sautees_masquee` apparaît** — il vaudra **0**, et c'est
+   normal : aucune photo masquée-et-présente n'existe aujourd'hui ;
+5. et le journal de **22:00** ne porte plus que **3 lignes**, sans photos.
+
+⚠ **Si la tâche échoue, le moniteur le dira à l'écran Santé SANS e-mail** *(elle est en
+`warning`)*. C'est voulu — la raison est écrite dans `check_gti_health.py`.
