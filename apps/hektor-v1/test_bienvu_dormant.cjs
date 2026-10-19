@@ -35,7 +35,9 @@ function selecteurs(css) {
     }
   }
   parcourir(sans)
-  return out.flatMap((s) => s.split(',').map((x) => x.trim())).filter(Boolean)
+  // on coupe sur les virgules du NIVEAU 0 seulement : `:is(a, b)` ne fait qu'un sélecteur
+  const separer = (s) => { const r = []; let p = 0, d = ''; for (const c of s) { if (c === '(') p++; if (c === ')') p--; if (c === ',' && p === 0) { r.push(d); d = '' } else d += c } r.push(d); return r }
+  return out.flatMap((s) => separer(s).map((x) => x.trim())).filter(Boolean)
 }
 
 console.log('1. bienvu.css : tout est sous .bv')
@@ -63,6 +65,8 @@ check('App.tsx garde « Groupe GTI » + titre d\'écran hors bienvu', /APP_BIENV
 check('App.tsx garde l\'ancien écran de connexion (login-shell) après le test bienvu', /if \(bienvuLoginProps\) return <BienvuLogin mode="connexion"[\s\S]{0,80}\n\s*return \(\s*\n\s*<div className="login-shell">/.test(app))
 const mob = read('layouts/MobileLayout.tsx')
 check('MobileLayout garde la forme CSS et « GTI Immobilier » hors bienvu', /: <div className="mobile-brand-mark" aria-hidden="true" \/>/.test(mob) && /APP_BIENVU_ENABLED \? 'bienvu' : 'GTI Immobilier'/.test(mob))
+
+check("le choix « Nouvelle annonce » garde ses emojis quand l'interrupteur est éteint", ['✨', '✍️', '📸', '🤖', '📷', '📄', '⚠️'].every((e) => app.includes(": '" + e + "'}")))
 
 console.log('5. l\'interrupteur est lu de la même façon partout')
 const flag = read('lib/bienvuFlag.ts')

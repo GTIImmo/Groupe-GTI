@@ -232,7 +232,8 @@ import SanteSystemeScreen from './SanteSystemeScreen'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
-import { BienvuLogo, BienvuSymbol } from './BienvuLogo'
+import { BienvuLoader, BienvuLogo, BienvuSymbol } from './BienvuLogo'
+import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -19291,19 +19292,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               {createFlow === 'choice' ? (
                 <>
                   <div className="gcc-head">
-                    <span className="gcc-spark" aria-hidden="true">✨</span>
+                    <span className="gcc-spark" aria-hidden="true">{APP_BIENVU_ENABLED ? <BienvuSymbol roof="#222323" /> : '✨'}</span>
                     <h3>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</h3>
                     <p>Comment veux-tu la créer ?</p>
                   </div>
                   <div className="gcc-cards">
                     <button type="button" className="gcc-card gcc-manual" onClick={() => { setCreateFlow('closed'); openDraftAnnonceModal() }}>
-                      <span className="gcc-emoji" aria-hidden="true">✍️</span>
+                      <span className="gcc-emoji" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="pen" /> : '✍️'}</span>
                       <strong>Manuellement</strong>
                       <small>Je remplis le formulaire moi-même</small>
                     </button>
                     <button type="button" className="gcc-card gcc-ia" onClick={() => setCreateFlow('ia')}>
                       <span className="gcc-tag" aria-hidden="true">IA</span>
-                      <span className="gcc-emoji" aria-hidden="true">📸</span>
+                      <span className="gcc-emoji" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="camera" /> : '📸'}</span>
                       <strong>Par photo, avec l'IA</strong>
                       <small>Un agent lit ma fiche et pré-remplit</small>
                     </button>
@@ -19314,20 +19315,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <>
                   <div className="gcc-head">
                     <button type="button" className="gcc-back" onClick={() => setCreateFlow('choice')} aria-label="Retour">‹</button>
-                    <span className="gcc-spark" aria-hidden="true">🤖</span>
+                    <span className="gcc-spark" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="sparkles" /> : '🤖'}</span>
                     <h3>Création assistée par IA</h3>
                     <p>Choisis ton agent</p>
                   </div>
                   <div className="gcc-agents">
                     <label className="gcc-agent">
-                      <span className="gcc-emoji" aria-hidden="true">📷</span>
+                      <span className="gcc-emoji" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="scan" /> : '📷'}</span>
                       <div className="gcc-agent-tx"><strong>Scanner la fiche</strong><small>Photo(s) → OCR → pré-remplissage</small></div>
                       <span className="gcc-go" aria-hidden="true">→</span>
                       <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => { openDraftAnnonceModal(); setDraftAnnonceModalOpen(false); setCreateFlow('ia-result'); void handleDraftAnnonceScanFile(event) }} />
                     </label>
                   </div>
                   <a className="gcc-download" href="/patron-fiche-saisie.html" target="_blank" rel="noreferrer">
-                    <span className="gcc-dl-ic" aria-hidden="true">📄</span>
+                    <span className="gcc-dl-ic" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="file" /> : '📄'}</span>
                     <span className="gcc-dl-tx"><strong>Télécharger le patron vierge</strong><small>À imprimer, remplir à la main, puis photographier</small></span>
                     <span className="gcc-dl-go" aria-hidden="true">↓</span>
                   </a>
@@ -19336,7 +19337,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               ) : (
                 <>
                   <div className="gcc-head">
-                    <span className="gcc-spark" aria-hidden="true">📸</span>
+                    <span className="gcc-spark" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="camera" /> : '📸'}</span>
                     <h3>{draftAnnonceScanPending ? 'Analyse de la fiche…' : 'Fiche analysée'}</h3>
                   </div>
                   <div className={`gcc-scan-status${draftAnnonceScanPending ? ' is-loading' : ''}`}>
@@ -19382,7 +19383,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </div>
                   {draftMandantChoice === 'new' && draftMandantLastName.trim() !== '' && draftMandantEmail.trim() === '' ? (
                     <div className="gcc-warn">
-                      <span className="gcc-warn-ic" aria-hidden="true">⚠️</span>
+                      <span className="gcc-warn-ic" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="alert" /> : '⚠️'}</span>
                       <span>Le <strong>vendeur</strong> a été lu, mais son <strong>e-mail manque</strong> (il n'est pas sur la fiche papier). Ajoute-le via « Détailler dans l'assistant » avant de créer — sinon la création sera bloquée.</span>
                     </div>
                   ) : null}
@@ -20163,8 +20164,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head status-change-head">
                 <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">Pilotage Hektor</p>
-                  <h3>Changer le statut annonce</h3>
+                  <p className="eyebrow">{APP_BIENVU_ENABLED ? "Pilotage de l'annonce" : 'Pilotage Hektor'}</p>
+                  <h3>{APP_BIENVU_ENABLED ? 'Changer le statut' : 'Changer le statut annonce'}</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Fermer</button>
               </div>
@@ -20253,8 +20254,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </>
                         ) : null}
                         <label className="filter-field">
-                          <span>Mandat Hektor</span>
-                          <input value={statusChangeSelectedMandat} onChange={(event) => setStatusChangeSelectedMandat(event.target.value)} placeholder="Auto si vide" />
+                          <span>{APP_BIENVU_ENABLED ? 'N° de mandat' : 'Mandat Hektor'}</span>
+                          <input value={statusChangeSelectedMandat} onChange={(event) => setStatusChangeSelectedMandat(event.target.value)} placeholder={APP_BIENVU_ENABLED ? 'Attribué automatiquement si vide' : 'Auto si vide'} />
                         </label>
                         {/* ─── 2.5 + 2.6 : L'ACQUEREUR SE DESIGNE, ET ILS PEUVENT ETRE PLUSIEURS ───
                             Avant : un champ ou il fallait TAPER un identifiant. Le 04/09, un
@@ -24503,7 +24504,7 @@ function MandatsScreen(props: {
           </div>
         ) : null}
         <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'estim-v2-tablewrap' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
-          {props.loading ? <div className="listing-loading-banner">Chargement du listing...</div> : null}
+          {props.loading ? <div className="listing-loading-banner">{APP_BIENVU_ENABLED ? <BienvuLoader label="Chargement…" /> : 'Chargement du listing...'}</div> : null}
           <table>
             {!isEstimationMode ? (
               <colgroup>
@@ -43253,7 +43254,7 @@ function ContactsScreen(props: {
               <label className="pg-jump"><span>Aller</span><input type="number" min={1} max={props.contactTotalPages} value={props.contactPage} onChange={(event) => props.onGoToContactPage(Number(event.target.value || 1))} /></label>
             </div>
           </div>
-          {props.loading ? <div className="av-loading">Chargement des contacts…</div> : null}
+          {props.loading ? <div className="av-loading">{APP_BIENVU_ENABLED ? <BienvuLoader label="Chargement des contacts…" /> : 'Chargement des contacts…'}</div> : null}
           {props.contacts.length > 0 ? (
             <div className="av-table-wrap">
               <div className="av-table">

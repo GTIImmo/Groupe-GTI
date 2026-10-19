@@ -118,3 +118,202 @@
 }
 .bv .mobile-title-block span { text-transform: lowercase; letter-spacing: 0.02em; }
 .bv .mobile-title-block h1 { font-family: var(--bv-font-display); font-weight: 800; letter-spacing: -0.02em; }
+
+/* =============================================================================
+   Lot 4 — les modales
+   Quatre familles d'en-tête cohabitent dans l'app ; ce lot habille celles qui partagent une
+   structure (tête sombre avec symbole : statut, suppression, archivage, affectation, nouvelle
+   annonce) et, pour TOUTES les modales, le fond et les champs. Les deux dessins propres
+   (« Gestion des demandes » v3 et la console de diffusion) viennent au sous-lot suivant, après
+   avoir été regardés un par un. Les fiches plein cadre (modal-panel-detail) sont le lot 7.
+   Toujours sous `.bv`. Les couches existantes abusent de !important : on répond par !important
+   et par la spécificité, sans toucher une seule de leurs lignes.
+   ============================================================================= */
+
+/* Le fond : encre neutre, plus de halo bleu-vert */
+.bv .modal-overlay { background: rgba(34, 35, 35, 0.56) !important; backdrop-filter: blur(3px) !important; }
+
+/* Les champs de toutes les modales : une seule police et un seul focus */
+.bv .modal-panel :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+  font-family: var(--bv-font-ui) !important;
+  border-radius: var(--bv-radius-sm) !important;
+}
+.bv .modal-panel :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea):focus {
+  outline: 0 !important;
+  border-color: var(--bv-magenta) !important;
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.16) !important;
+}
+.bv .modal-panel .primary-button { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .modal-panel .primary-button:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* Famille « tête sombre » */
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) {
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: var(--bv-shadow-modal) !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) {
+  background: var(--bv-ink) !important;
+  color: #ffffff !important;
+  border-bottom: 3px solid var(--bv-magenta) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head)::before {
+  background: transparent !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) .eyebrow {
+  color: #cfd3d4 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) h3 {
+  color: #ffffff !important;
+  font-family: var(--bv-font-display) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+/* le symbole à la place de la tuile générique, posé directement sur le bandeau */
+.bv .modal-panel .modal-hero-icon {
+  background: url('/brand/bienvu-symbole-sombre.svg') center / 74% no-repeat !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.bv .modal-panel .modal-hero-icon::before, .bv .modal-panel .modal-hero-icon::after { display: none !important; }
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) .ghost-button {
+  color: #ffffff !important;
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) .ghost-button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Modale « Changer le statut » : la sélection et le bouton au magenta de la charte */
+.bv .fa-ck-statusmodal .status-choice-card:hover { border-color: var(--bv-magenta) !important; }
+.bv .fa-ck-statusmodal .status-choice-card.is-selected { border-color: var(--bv-magenta) !important; background: var(--bv-rose-soft) !important; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.14) !important; }
+.bv .fa-ck-statusmodal .status-choice-card.is-selected strong::before { border-color: var(--bv-magenta) !important; background: var(--bv-magenta) !important; }
+.bv .fa-ck-statusmodal .status-change-form button[type='submit'] { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .fa-ck-statusmodal .status-change-form button[type='submit']:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* =============================================================================
+   Lot 4b — modales restantes, première série
+   « Actions disponibles » (menu du bouton Action) et le choix « Nouvelle annonce ».
+   ============================================================================= */
+
+/* ---- « Actions disponibles » ----
+   Défaut mesuré, antérieur à bienvu : la tête et la liste dépassaient de 67 px le cadre de 468 px
+   (largeur 100 % + marges en content-box) et le contenu était rogné à droite — le bouton
+   « Ajouter » et la fin des phrases disparaissaient. On passe tout en border-box. */
+.bv .action-menu-dialog, .bv .action-menu-dialog * { box-sizing: border-box; }
+.bv .action-menu-dialog-backdrop { background: rgba(34, 35, 35, 0.56) !important; backdrop-filter: blur(3px) !important; }
+.bv .action-menu-dialog { border-radius: 18px !important; overflow: hidden !important; padding: 0 !important; background: #ffffff !important; box-shadow: var(--bv-shadow-modal) !important; }
+.bv .action-menu-dialog-head { background: var(--bv-ink) !important; padding: 16px 22px !important; align-items: center !important; border-bottom: 3px solid var(--bv-magenta) !important; }
+.bv .action-menu-dialog-eyebrow { color: #cfd3d4 !important; letter-spacing: 0.12em !important; }
+.bv .action-menu-dialog-eyebrow::before { background: var(--bv-magenta) !important; }
+.bv .action-menu-dialog-head h4 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; }
+.bv .action-menu-dialog .action-menu-close { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .action-menu-dialog .action-menu-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
+/* la vraie cause : la grille du dialogue n'avait qu'une colonne `auto`, dimensionnée par le plus long
+   texte non coupé (539 px dans un cadre de 468 px). Une colonne minmax(0, 1fr) tient dans le cadre. */
+.bv .action-menu-dialog { grid-template-columns: minmax(0, 1fr) !important; }
+.bv .action-menu-dialog .action-menu-item-main, .bv .action-menu-dialog .action-menu-item-label, .bv .action-menu-dialog .action-menu-item-helper { min-width: 0; white-space: normal !important; overflow-wrap: anywhere; }
+.bv .action-menu-dialog-copy { margin: 16px 22px 0 !important; }
+.bv .action-menu-dialog-list { padding: 14px 20px 22px !important; }
+.bv .action-menu-dialog .action-menu-item { min-width: 0; }
+.bv .action-menu-dialog .action-menu-item:hover { border-color: var(--bv-magenta) !important; }
+/* les pastilles d'icône : plus de vert-bleu ni de violet, deux teintes de la charte */
+.bv .action-menu-dialog .action-menu-item-icon-validation { background: var(--bv-rose-soft) !important; color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .action-menu-dialog .action-menu-item-icon-hektor { background: var(--bv-ink) !important; color: #ffffff !important; box-shadow: none !important; }
+
+/* ---- Choix « Nouvelle annonce » : des pictos au trait à la place des emojis ---- */
+.bv .gti-cc { border: 0 !important; border-radius: 18px !important; background: #ffffff !important; padding: 28px 28px 22px !important; box-shadow: var(--bv-shadow-modal) !important; }
+.bv .gti-cc .gcc-head h3 { font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; font-size: 22px !important; }
+.bv .gti-cc .gcc-head p { color: var(--bv-mute) !important; }
+.bv .gti-cc .gcc-spark { width: 46px; height: 46px; margin: 0 auto 12px !important; display: grid !important; place-items: center; font-size: 0 !important; color: var(--bv-ink); }
+.bv .gti-cc .gcc-spark .bv-ico { width: 30px; height: 30px; color: var(--bv-magenta); }
+.bv .gti-cc .gcc-card { border: 1.5px solid var(--bv-line) !important; border-radius: var(--bv-radius-md) !important; }
+.bv .gti-cc .gcc-card:hover, .bv .gti-cc .gcc-agent:hover { border-color: var(--bv-magenta) !important; box-shadow: 0 14px 30px -18px rgba(197, 0, 95, 0.45) !important; }
+.bv .gti-cc .gcc-ia { background: linear-gradient(160deg, #ffffff, var(--bv-rose-soft)) !important; border-color: var(--bv-rose) !important; }
+.bv .gti-cc .gcc-tag { background: var(--bv-magenta) !important; }
+.bv .gti-cc .gcc-emoji { width: 54px; height: 54px; border-radius: 15px; background: var(--bv-rose-soft); color: var(--bv-magenta); display: grid; place-items: center; font-size: 0 !important; flex: none; }
+.bv .gti-cc .gcc-emoji .bv-ico { width: 28px; height: 28px; }
+.bv .gti-cc .gcc-dl-ic, .bv .gti-cc .gcc-warn-ic { color: var(--bv-magenta); display: inline-grid; place-items: center; font-size: 0 !important; }
+.bv .gti-cc .gcc-dl-ic .bv-ico, .bv .gti-cc .gcc-warn-ic .bv-ico { width: 22px; height: 22px; }
+.bv .gti-cc .gcc-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .gti-cc .gcc-primary:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* ---- « Gestion des demandes » (v3) ----
+   Avant : un bandeau plein de la couleur du type de demande (rouge pour l'annulation, etc.), un
+   titre en Fraunces, des coins à 8 px. Désormais : le même bandeau encre que les autres modales ;
+   la couleur du type reste, en petit — le filet du bas et la pastille — pour qu'on reconnaisse
+   toujours une annulation d'une baisse de prix d'un coup d'œil. */
+.bv .modal-panel.request-modal-v3 { border: 0 !important; border-radius: 18px !important; box-shadow: var(--bv-shadow-modal) !important; background: #ffffff !important; }
+.bv .request-modal-v3 .request-modal-head { background: var(--bv-ink) !important; color: #ffffff !important; border-bottom: 3px solid var(--req-acc, var(--bv-magenta)) !important; border-radius: 0 !important; box-shadow: none !important; }
+.bv .request-modal-v3 .request-modal-head::before { background: transparent !important; }
+.bv .request-modal-v3 .request-modal-head .eyebrow { color: #cfd3d4 !important; font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+.bv .request-modal-v3 .request-modal-head h3 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+.bv .request-modal-v3 .request-type-chip { width: fit-content !important; align-self: flex-start; background: var(--req-acc, var(--bv-magenta)) !important; color: #ffffff !important; border-radius: var(--bv-radius-pill) !important; padding: 3px 10px !important; letter-spacing: 0.08em; }
+.bv .request-modal-v3 .request-modal-close { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .request-modal-v3 .request-modal-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
+.bv .request-modal-v3 .button-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; color: #ffffff !important; box-shadow: none !important; }
+.bv .request-modal-v3 .button-primary:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* =============================================================================
+   Lot 5 — chargement, rafraîchissement, vide, erreur
+   Les états vivent DANS les listes. Rien n'est réécrit dans le code : on habille les éléments que
+   l'application pose déjà (bandeau « Chargement du listing… », « Mise a jour… », `.empty-state`,
+   `.error-banner`) et on dessine le squelette en CSS pur quand la liste charge sans aucune ligne.
+   ============================================================================= */
+@keyframes bv-dot { 0%, 100% { transform: scale(0.8); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
+/* Le symbole qui se construit en boucle : le toit tombe, la coche se trace, on tient, on repart (2,2 s) */
+@keyframes bv-ld-roof { 0% { opacity: 0; transform: translateY(-9px); } 14%, 84% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+@keyframes bv-ld-draw { 0%, 10% { stroke-dashoffset: 100; } 42%, 84% { stroke-dashoffset: 0; } 96%, 100% { stroke-dashoffset: 0; opacity: 0; } }
+
+/* Chargement : le symbole animé au centre de la liste, avec son libellé. Les lignes déjà là se voilent
+   sous lui (elles restent lisibles) ; une liste encore vide garde une hauteur pour qu'il ait sa place. */
+.bv .bv-loader { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; color: var(--bv-ink); }
+.bv .bv-loader svg { width: 46px; height: auto; display: block; overflow: visible; }
+.bv .bv-loader .bv-ld-roof { animation: bv-ld-roof 2.2s cubic-bezier(0.2, 0.9, 0.3, 1) infinite; }
+.bv .bv-loader .bv-ld-mask { stroke-dasharray: 100; stroke-dashoffset: 100; animation: bv-ld-draw 2.2s cubic-bezier(0.5, 0, 0.2, 1) infinite; }
+.bv .bv-loader-label { font-size: 13px; font-weight: 600; color: var(--bv-mute); }
+.bv .listing-table-wrap { position: relative; }
+.bv .listing-table-wrap.is-refreshing { min-height: 260px; }
+.bv .listing-loading-banner {
+  position: absolute; inset: 0; z-index: 3; display: flex; justify-content: center; align-items: flex-start; padding: 64px 0 0 !important;
+  min-height: 0 !important; border: 0 !important; background: rgba(255, 255, 255, 0.72) !important; font-size: 0 !important; text-transform: none !important;
+}
+.bv .listing-loading-banner .bv-loader { align-self: flex-start; padding: 16px 26px 14px; border-radius: var(--bv-radius-lg, 18px); background: #ffffff; box-shadow: 0 10px 30px rgba(34, 35, 35, 0.14), 0 0 0 1px var(--bv-line); }
+.bv .annuaire-v2 .av-loading {
+  display: flex; justify-content: center; padding: 40px 0 28px !important; min-height: 0 !important; border: 0 !important;
+  background: transparent !important; font-size: 0 !important;
+}
+/* « Mise a jour… » à côté de la pagination : une pastille discrète avec un point qui pulse */
+.bv .loading-inline, .bv .annuaire-v2 .pg-load, .bv .registre-nb .pager .loading-inline {
+  display: inline-flex; align-items: center; gap: 6px; text-transform: none !important; letter-spacing: 0 !important; font-weight: 700; color: var(--bv-framboise) !important;
+}
+.bv .loading-inline::before, .bv .annuaire-v2 .pg-load::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--bv-magenta); animation: bv-dot 1s ease-in-out infinite; }
+
+/* Vide : centré, sobre, le symbole en filigrane au lieu d'une phrase italique perdue */
+.bv .empty-state { text-align: center; font-style: normal; color: var(--bv-mute); }
+.bv .empty-state::before {
+  content: ''; display: block; width: 34px; height: 34px; margin: 0 auto 8px; opacity: 0.85;
+  background: url('/brand/bienvu-symbole-couleur.svg') center / contain no-repeat;
+}
+
+/* Erreur : le bandeau du haut d'écran passe au rouge des états de la charte, avec un picto */
+.bv .error-banner {
+  display: flex; align-items: flex-start; gap: 10px; border-radius: var(--bv-radius-md); padding: 12px 16px;
+  background: var(--bv-danger-soft); border: 1px solid #f1d2d0; color: #8f2f2d;
+}
+.bv .error-banner::before {
+  content: ''; flex: none; width: 20px; height: 20px; margin-top: 1px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 16.5v.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 16.5v.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bv .bv-loader .bv-ld-roof, .bv .bv-loader .bv-ld-mask { animation: none !important; stroke-dashoffset: 0; opacity: 1; }
+  .bv .loading-inline::before, .bv .annuaire-v2 .pg-load::before { animation: none !important; }
+}
