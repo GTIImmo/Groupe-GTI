@@ -8532,6 +8532,57 @@ export async function changerVisibilitePhoto(input: {
     : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
 }
 
+// ⑦-3c (20/10/2026) : RÉORDONNER LES PHOTOS.
+//
+// ⭐ C'est le MÊME geste que la couverture, en plus général : « photo principale »
+//   veut dire « première de la liste ». D'où le même type de travail
+//   (`reorder_hektor_photos`), dont les trois verrous sont ouverts depuis le 16/10.
+//
+// ⭐⭐ ET HEKTOR ACCEPTE UNE PERMUTATION QUELCONQUE -- prouvé le 19/10 à 23:26 sur le
+//   bac à sable 62774 : envoyé `482254, 487604, 487603` (échange des rangs 2 et 3,
+//   donc ni une renumérotation ni une mise en couverture), et la relecture de SES
+//   galeries a rendu exactement cet ordre.
+//
+// ⚠ `ordre` NE PORTE QUE LES VISIBLES, et il doit être COMPLET. La recette refuse
+//   tout écart en le nommant (`ordre_incomplet`, `ordre_avec_photos_inconnues`,
+//   `ordre_avec_doublons`, `ordre_vide`) -- parce qu'on NE SAIT PAS ce que Hektor
+//   fait d'un ordre partiel, et qu'on ne découvre pas ça en production. Les photos
+//   masquées partent dans leur propre liste, inchangée : réordonner ne peut donc
+//   pas démasquer.
+//
+// ⚠ Elle NE JETTE PAS : l'appelant décide. Un refus se lit dans `erreur`.
+export async function reordonnerPhotos(input: {
+  appDossierId: number
+  hektorAnnonceId: string | number
+  ordre: string[]
+}): Promise<{ ok: boolean; erreur?: string; dejaDansCetOrdre?: boolean; jobId?: string
+              ordreAvant?: string; ordreApres?: string; photosRenumerotees?: number
+              couvertureAChange?: boolean; nouvelleCouverture?: string }> {
+  if (!hasSupabaseEnv || !supabase) return { ok: false, erreur: 'supabase_absent' }
+  const annonce = String(input.hektorAnnonceId ?? '').trim()
+  if (!annonce || !input.appDossierId) return { ok: false, erreur: 'parametres_incomplets' }
+  const ordre = (input.ordre ?? []).map((x) => String(x ?? '').trim()).filter(Boolean)
+  if (!ordre.length) return { ok: false, erreur: 'ordre_vide' }
+  const { data, error } = await supabase.rpc('app_console_photos_reordonner_optimistic', {
+    p_app_dossier_id: input.appDossierId,
+    p_hektor_annonce_id: annonce,
+    p_ordre: ordre,
+  })
+  if (error) return { ok: false, erreur: error.message }
+  const sortie = (data ?? {}) as {
+    ok?: boolean; erreur?: string; deja_dans_cet_ordre?: boolean; job_id?: string
+    ordre_avant?: string; ordre_apres?: string; photos_renumerotees?: number
+    couverture_a_change?: boolean; nouvelle_couverture?: string
+  }
+  return sortie.ok === true
+    ? { ok: true, dejaDansCetOrdre: sortie.deja_dans_cet_ordre === true, jobId: sortie.job_id,
+        ordreAvant: sortie.ordre_avant, ordreApres: sortie.ordre_apres,
+        photosRenumerotees: sortie.photos_renumerotees,
+        couvertureAChange: sortie.couverture_a_change === true,
+        nouvelleCouverture: sortie.nouvelle_couverture }
+    : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
+}
+
 // Synchro documents a la demande (read-through) : le worker relit Hektor -> etat signature a jour
 // + recuperation auto du PDF signe, sans clic. Declenche en silence a l'ouverture de l'annonce.
 export async function createSyncConsoleDocumentsJob(input: {

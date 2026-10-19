@@ -5296,3 +5296,58 @@ et c'est la preuve que le geste ne peut pas laisser les deux côtés durablement
 | ② **les deux flèches** dans l'écran | ⬜ ⚠ ce sera la **4ᵉ et la 5ᵉ pastille** d'une tuile |
 | ③ **montrer plus de 12 photos** | ⬜ sans ça **23 %** du parc n'est pas réordonnable |
 | ④ **le réveil immédiat** du fabricant | ⬜ ⚠ **modification du worker → redémarrage des 4 services**, donc l'accord de Frédéric. *Sans lui, la boîte se refait au prochain passage du fabricant au lieu de quelques secondes.* |
+
+
+### ✅ ⑦-3c PIÈCES ② ET ③ — LES DEUX FLÈCHES ET LA GALERIE DÉPLIÉE *(20/10, « Enchaine »)*
+
+**Trois fichiers** : `apps/hektor-v1/src/lib/api.ts`, `src/App.tsx`, `src/styles.css`.
+✅ **`npm run build` vert** *(8,88 s, aucune erreur TypeScript)* — c'est ce que fait Vercel.
+
+### ⭐ OÙ LES FLÈCHES SONT PLACÉES, ET POURQUOI — les deux autres places sont PRISES, mesuré
+
+| place | pourquoi c'est non |
+|---|---|
+| **en haut à droite** | ⛔ la tuile fait **118 px** et les **trois pastilles occupent déjà 98 px** du bord *(right 8 / 40 / 72)*. Deux de plus demanderaient **162 px** — plus large que beaucoup de tuiles |
+| **en bas** | ⛔ `.console-photo-tile small` *(la légende)* est en `left: 8px; right: 8px; bottom: 8px` — **elle occupe TOUTE la bande du bas** |
+| ⭐ **les bords gauche et droit, à mi-hauteur** | ✅ la place d'un carrousel : **gauche/droite y dit la POSITION**, c'est-à-dire ce que le geste fait. Et ça ne touche rien |
+
+⭐ **Mêmes mesures que les trois pastilles du haut** *(26 px, même fond, même opacité)* : la tuile
+reste une famille.
+
+### ⭐ CE QUE LE GESTE FAIT, ET CE QU'IL REFUSE DE FAIRE
+
+| | |
+|---|---|
+| **un clic = un échange avec la voisine** | la forme choisie par Frédéric. ⭐ **Aucune bibliothèque** *(le front n'a aucun glisser-déposer : 0 occurrence de `draggable`/`onDragStart`/`onDrop`)*, marche au doigt, **réversible d'un clic** |
+| ⭐ **seulement sur les visibles** | la recette refuse une liste contenant une masquée. Les masquées gardent leur propre liste, inchangée |
+| ⭐ **une flèche sans destination n'est pas affichée** | pas de « reculer » sur la première, pas d'« avancer » sur la dernière — *plutôt que désactivée* |
+| ⭐⭐ **et la couverture est annoncée AVANT** | si le déplacement touche la 1ʳᵉ place, un `window.confirm` dit **quelle photo deviendra la couverture**. ⚠ La recette rend bien `couvertureAChange`, mais **c'est après l'écriture — trop tard pour prévenir** |
+| ⚠ **le rang vient des DONNÉES, pas de l'affichage** | la galerie peut être tronquée, et le repli `api_preview` fabrique des photos sans numéro Hektor. **Un index d'affichage n'est pas un rang** |
+| ⭐ **un refus de liste recharge la galerie** | les quatre refus veulent dire « ta galerie est périmée » *(quelqu'un a masqué ou supprimé entre-temps)*. Sans le rechargement, le clic suivant referait la même erreur |
+
+### ⭐ PIÈCE ③ — LA GALERIE SE DÉPLIE, SUR DEMANDE
+
+| | |
+|---|---|
+| le problème | **on ne peut pas déplacer une photo qu'on ne voit pas**, et le panneau s'arrêtait à **12** *(6 en compact)* |
+| la mesure | **77,1 %** des annonces ont ≤ 12 photos visibles *(médiane **5**)*, mais ⚠ **22,9 % — 11 266 annonces — en ont plus, jusqu'à 166** |
+| ⭐ **la vue par défaut NE CHANGE PAS** | elle reste à 12 : afficher 166 vignettes d'office ralentirait l'écran de tout le monde pour une médiane de 5. **C'est un bouton, donc le négociateur décide** |
+| ⭐ **et il dit COMBIEN** | *« Voir les 24 photos (12 de plus) »* — un bouton qui ne révèle rien est un bouton qui ment, donc il n'apparaît que s'il y a vraiment des photos cachées |
+
+### ⛔ CE QUE JE N'AI PAS PU VÉRIFIER, ET JE LE DIS
+
+⛔ **Je n'ai pas VU les boutons.** Le build passe et le code est servi, mais il faut une session
+ouverte sur un bien réel pour les regarder. ⚠ **Ça rejoint la liste des choses que personne n'a vues
+à l'œil** : le bouton masquer/afficher de ⑦-8, et l'écran de clôture de ⑦-3a.
+➡ **À regarder : écran d'un bien, panneau Photos — les flèches sont sur les bords gauche et droit de
+chaque vignette visible, à mi-hauteur.**
+
+⛔ **Et rien n'est déployé** : le front ne part qu'au push, et un push déploie. **L'accord de
+Frédéric.**
+
+### ⬜ IL RESTE UNE SEULE PIÈCE À ⑦-3c
+
+**④ le réveil immédiat du fabricant de la boîte publique.** ⭐ La recette **pose déjà le post-it** sur
+les 4 index, donc la vitrine suivra **au prochain passage du fabricant**. Pour qu'elle suive **en
+quelques secondes**, il faut une ligne dans le handler du worker — ⚠ **et donc un redémarrage des 4
+services, donc l'accord de Frédéric.**

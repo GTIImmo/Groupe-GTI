@@ -103,6 +103,7 @@ import {
   createDeleteHektorPhotoJob,
   mettrePhotoEnCouverture,
   changerVisibilitePhoto,
+  reordonnerPhotos,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
   createSyncHektorPhotosJob,
@@ -7763,6 +7764,32 @@ function messageRefusVisibilite(code: string | undefined, versVisible: boolean) 
   }
 }
 
+// ⑦-3c (20/10/2026) : les refus du réordonnancement, en français.
+// ⭐ Les quatre refus de liste ne devraient JAMAIS arriver à l'écran : l'écran
+//   construit l'ordre depuis les photos qu'il affiche, donc il est complet par
+//   construction. S'ils arrivent, c'est que la galerie affichée n'est plus celle
+//   de la base (une autre personne a masqué ou supprimé une photo entre-temps) --
+//   et le message doit le DIRE, pas afficher un code.
+function messageRefusReordonner(code: string | undefined) {
+  switch (code) {
+    case 'droits_insuffisants':
+      return "Ce bien n'est pas dans ton périmètre : tu ne peux pas changer l'ordre de ses photos."
+    case 'ordre_incomplet':
+    case 'ordre_avec_photos_inconnues':
+    case 'ordre_avec_doublons':
+      return "La liste des photos a changé depuis l'affichage (quelqu'un en a masqué, "
+        + "ajouté ou supprimé une). Rien n'a été changé : la galerie se recharge, réessaie."
+    case 'ordre_vide':
+      return "Il n'y a aucune photo visible à réordonner."
+    case 'parametres_incomplets':
+      return "Il manque le numéro de l'annonce."
+    case 'supabase_absent':
+      return "L'application n'est pas reliée à la base : rien n'a été changé."
+    default:
+      return `Changement d'ordre refusé${code ? ` (${code})` : ''}.`
+  }
+}
+
 function mandatStatutToneClass(value: MandatStatutValue) {
   return value === 'Vendu' ? 'reg-mstatut-vendu'
     : value === 'Clos' ? 'reg-mstatut-clos'
@@ -11687,6 +11714,8 @@ function ConsolePhotosPanel({
   // 3 bloc 2 (14/10/2026) : la suppression d'une photo, jumelle de celle du document.
   const [deletingPhotoIds, setDeletingPhotoIds] = useState<Set<string>>(() => new Set())
   const [busyPhotoId, setBusyPhotoId] = useState<string | null>(null)
+  // ⑦-3c pièce ③ : la galerie s'arrête à 12 par défaut ; ce drapeau la déplie.
+  const [toutesLesPhotos, setToutesLesPhotos] = useState(false)
 
   const refreshPhotos = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -11901,6 +11930,83 @@ function ConsolePhotosPanel({
     }
   }
 
+  // ⑦-3c (20/10/2026) : déplacer une photo d'un cran, vers la gauche ou la droite.
+  //
+  // ⭐ UN CLIC = UN ÉCHANGE AVEC LA VOISINE. C'est la forme choisie par Frédéric
+  //   (« A »), et elle a trois avantages mesurés : aucune bibliothèque à ajouter
+  //   (le front n'a AUCUN glisser-déposer, vérifié : 0 occurrence de `draggable`,
+  //   `onDragStart` ou `onDrop`), ça marche au doigt sur mobile, et c'est
+  //   réversible d'un clic en arrière.
+  //
+  // ⚠ SEULEMENT SUR LES VISIBLES. La recette n'accepte QUE les visibles, et elle
+  //   refuse une liste qui contiendrait une masquée (`ordre_avec_photos_inconnues`).
+  //   Les masquées partent dans leur propre liste, inchangée.
+  //
+  // ⚠ ET ON CONSTRUIT L'ORDRE DEPUIS LES DONNÉES, PAS DEPUIS L'INDEX AFFICHÉ : la
+  //   galerie peut être tronquée (voir « voir toutes les photos ») et le repli
+  //   `api_preview` fabrique des photos qui n'ont pas de numéro Hektor. Un index
+  //   d'affichage n'est pas un rang.
+  //
+  // ⭐ ET LA 1re PHOTO EST LA COUVERTURE : si le déplacement la change, on le
+  //   DEMANDE avant d'appeler. La recette rend bien `couvertureAChange`, mais
+  //   c'est APRÈS l'écriture -- trop tard pour prévenir.
+  async function handleDeplacerPhoto(photo: ConsolePhoto, sens: -1 | 1) {
+    if (!photo.hektor_photo_id || !photo.visible) return
+    const visibles = photos
+      .filter((p) => p.visible && p.hektor_photo_id)
+      .map((p) => String(p.hektor_photo_id))
+    const depuis = visibles.indexOf(String(photo.hektor_photo_id))
+    const vers = depuis + sens
+    if (depuis < 0 || vers < 0 || vers >= visibles.length) return
+
+    if (depuis === 0 || vers === 0) {
+      const nouvelle = depuis === 0 ? visibles[vers] : visibles[depuis]
+      const ok = window.confirm(
+        `Ce déplacement change la PHOTO DE COUVERTURE du bien.\n\n`
+        + `La première photo est celle qui s'affiche partout : vitrine, espace client, `
+        + `e-mails de rapprochement.\n\n`
+        + `Nouvelle couverture : photo n° ${nouvelle}.\n\n`
+        + `Le geste reste réversible : la flèche inverse la remet.`,
+      )
+      if (!ok) return
+    }
+
+    if (!hasHektorNegotiator(dossier)) {
+      onMissingNegotiator?.(dossier)
+      return
+    }
+    const ordre = visibles.slice()
+    ordre[depuis] = visibles[vers]
+    ordre[vers] = visibles[depuis]
+
+    setBusyPhotoId(photo.id)
+    setError(null)
+    try {
+      const retour = await reordonnerPhotos({
+        appDossierId: dossier.app_dossier_id,
+        hektorAnnonceId: dossier.hektor_annonce_id,
+        ordre,
+      })
+      if (!retour.ok) {
+        setError(messageRefusReordonner(retour.erreur))
+        // ⭐ Les refus de liste veulent dire « ta galerie est périmée » : on la
+        //   recharge, sinon le prochain clic referait la même erreur.
+        await refreshPhotos(true)
+        return
+      }
+      // ⭐ On relit TOUT DE SUITE : la recette a déjà renuméroté chez nous, donc la
+      //   galerie se réordonne sans attendre Hektor. Puis une seconde fois, après le
+      //   passage du worker, pour porter l'ordre que HEKTOR a retenu -- c'est lui qui
+      //   a le dernier mot. Même rythme que la couverture et le masquage.
+      await refreshPhotos(true)
+      window.setTimeout(() => void refreshPhotos(true), 25000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Impossible de changer l'ordre des photos")
+    } finally {
+      setBusyPhotoId(null)
+    }
+  }
+
   async function handleDeletePhoto(photo: ConsolePhoto) {
     const confirmed = window.confirm(
       `Supprimer définitivement cette photo ?\n\n${photo.legend || photo.filename || 'Photo'}\n\n`
@@ -11967,7 +12073,29 @@ function ConsolePhotosPanel({
     // derives a lui -- c'est la galerie en amont qui doit venir de chez nous.
     derives_json: null,
   } satisfies ConsolePhoto))
-  const galleryPhotos = sourcePhotos.slice(0, compact ? 6 : 12)
+  // ⑦-3c pièce ③ (20/10/2026) : MONTRER TOUTES LES PHOTOS, SUR DEMANDE.
+  //
+  // ⚠ LE PANNEAU S'ARRÊTAIT À 12 (6 en compact), et c'était bloquant pour le
+  //   réordonnancement : on ne peut pas déplacer une photo qu'on ne voit pas.
+  //   Mesure du 19/10 sur 49 192 annonces : 77,1 % ont 12 photos visibles ou moins
+  //   (médiane 5), mais ⚠ 22,9 % -- 11 266 annonces -- en ont PLUS, jusqu'à 166.
+  //
+  // ⭐ ON NE CHANGE PAS LA VUE PAR DÉFAUT. Elle reste à 12 : afficher 166 vignettes
+  //   d'office ralentirait l'écran pour tout le monde, alors que la médiane est à 5.
+  //   C'est un bouton, donc c'est le négociateur qui décide, et seulement quand il
+  //   en a besoin.
+  const plafondGalerie = compact ? 6 : 12
+  const galleryPhotos = toutesLesPhotos ? sourcePhotos : sourcePhotos.slice(0, plafondGalerie)
+  const photosCachees = Math.max(0, sourcePhotos.length - galleryPhotos.length)
+
+  // ⑦-3c : LE RANG D'UNE PHOTO PARMI LES VISIBLES -- calculé sur les DONNÉES, pas
+  //   sur l'index d'affichage (la galerie peut être tronquée, et le repli
+  //   `api_preview` fabrique des photos sans numéro Hektor). C'est ce rang qui dit
+  //   si une flèche a un sens : pas de « gauche » sur la première, pas de « droite »
+  //   sur la dernière.
+  const visiblesOrdonnees = photos
+    .filter((p) => p.visible && p.hektor_photo_id)
+    .map((p) => String(p.hektor_photo_id))
 
   return (
     <div className={`console-photos-panel ${compact ? 'is-compact' : ''}`}>
@@ -12069,6 +12197,14 @@ function ConsolePhotosPanel({
             //   apercus de secours (source 'api_preview') n'ont pas de vraie fiche, et une
             //   photo en attente d'envoi est refusee par le worker (on ne la coupe pas en vol).
             const supprimable = photo.source !== 'api_preview' && Boolean(photo.hektor_photo_id)
+            // ⑦-3c : son rang PARMI LES VISIBLES (-1 si elle n'en est pas). Les
+            //   flèches n'ont de sens que là : la recette ne réordonne que les
+            //   visibles, les masquées gardent leur propre liste inchangée.
+            const rangVisible = supprimable && photo.visible
+              ? visiblesOrdonnees.indexOf(String(photo.hektor_photo_id))
+              : -1
+            const peutReculer = rangVisible > 0
+            const peutAvancer = rangVisible >= 0 && rangVisible < visiblesOrdonnees.length - 1
             return (
               // ⚠ LA TUILE RESTE L'ENFANT DIRECT DE LA GRILLE, AVEC SA CLASSE : le cockpit vise
               //   `.console-photos-grid > .console-photo-tile:first-child` pour la « Couverture »
@@ -12116,6 +12252,41 @@ function ConsolePhotosPanel({
                     {photo.visible ? '🚫' : '👁'}
                   </button>
                 ) : null}
+                {/* ⑦-3c pièce ② : les deux flèches. ⭐ ELLES SONT EN BAS, pas dans la
+                    rangée du haut, et c'est mesuré : la tuile fait 118 px et les trois
+                    pastilles occupent déjà 98 px du bord haut (8 · 40 · 72). Deux de
+                    plus demanderaient 162 px -- plus large que beaucoup de tuiles.
+                    ⭐ Et en bas, gauche/droite dit la POSITION : c'est ce que le geste
+                    fait. Une flèche qui ne mènerait nulle part n'est pas affichée
+                    plutôt que désactivée -- sur la première, « reculer » n'existe pas. */}
+                {peutReculer ? (
+                  <button
+                    className="console-photo-reculer"
+                    type="button"
+                    onClick={() => void handleDeplacerPhoto(photo, -1)}
+                    disabled={suppressionDemandee || busyPhotoId === photo.id}
+                    aria-label={`Déplacer cette photo vers la gauche (position ${rangVisible} sur ${visiblesOrdonnees.length})`}
+                    title={rangVisible === 1
+                      ? 'Reculer : elle devient la photo de COUVERTURE'
+                      : 'Reculer d’un cran'}
+                  >
+                    ‹
+                  </button>
+                ) : null}
+                {peutAvancer ? (
+                  <button
+                    className="console-photo-avancer"
+                    type="button"
+                    onClick={() => void handleDeplacerPhoto(photo, 1)}
+                    disabled={suppressionDemandee || busyPhotoId === photo.id}
+                    aria-label={`Déplacer cette photo vers la droite (position ${rangVisible + 2} sur ${visiblesOrdonnees.length})`}
+                    title={rangVisible === 0
+                      ? 'Avancer : ce bien CHANGERA de photo de couverture'
+                      : 'Avancer d’un cran'}
+                  >
+                    ›
+                  </button>
+                ) : null}
                 {supprimable ? (
                   <button
                     className="console-photo-supprimer"
@@ -12132,6 +12303,21 @@ function ConsolePhotosPanel({
             )
           })}
         </div>
+      ) : null}
+      {/* ⑦-3c pièce ③ : déplier la galerie. ⭐ Le bouton n'existe que s'il y a
+          vraiment des photos cachées -- un bouton qui ne révèle rien est un bouton
+          qui ment. Et il DIT COMBIEN, pour que le négociateur sache ce qu'il ne
+          voit pas : sans ça, 23 % des annonces semblent n'avoir que 12 photos. */}
+      {photosCachees > 0 || toutesLesPhotos ? (
+        <button
+          className="ghost-button console-photos-deplier"
+          type="button"
+          onClick={() => setToutesLesPhotos((v) => !v)}
+        >
+          {toutesLesPhotos
+            ? `Ne montrer que les ${plafondGalerie} premières`
+            : `Voir les ${sourcePhotos.length} photos (${photosCachees} de plus)`}
+        </button>
       ) : null}
     </div>
   )

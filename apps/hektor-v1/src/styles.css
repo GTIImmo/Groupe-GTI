@@ -12325,6 +12325,54 @@ button.metric-card.is-active {
 .console-photo-tile .console-photo-visibilite:hover { opacity: 1; }
 .console-photo-tile .console-photo-visibilite:disabled { opacity: 0.35; cursor: default; }
 
+/* ⑦-3c piece 2 (20/10/2026) : REORDONNER -- les deux fleches.
+   ⚠⚠ ELLES NE SONT NI EN HAUT NI EN BAS, ET LES DEUX SONT MESUREES :
+     · EN HAUT c'est plein : la tuile fait 118 px et les trois pastilles occupent
+       deja 98 px du bord (right 8 / 40 / 72). Deux de plus demanderaient 162 px,
+       plus large que beaucoup de tuiles.
+     · EN BAS c'est pris AUSSI : `.console-photo-tile small` (la legende) est en
+       `left: 8px; right: 8px; bottom: 8px` -- elle occupe TOUTE la bande du bas.
+       Des fleches en bas passeraient dessous ou par-dessus.
+   ⭐ DONC LES BORDS GAUCHE ET DROIT, A MI-HAUTEUR : c'est la place d'un carrousel,
+     gauche/droite y dit la POSITION (ce que le geste fait), et elle ne touche rien.
+   Memes mesures que les trois pastilles du haut, pour que la tuile reste une
+   famille : 26 px, meme fond, meme opacite. */
+.console-photo-tile .console-photo-reculer,
+.console-photo-tile .console-photo-avancer {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 999px;
+  background: rgba(34, 35, 35, 0.72);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.72;
+}
+.console-photo-tile .console-photo-reculer { left: 8px; }
+.console-photo-tile .console-photo-avancer { right: 8px; }
+.console-photo-tile .console-photo-reculer:hover,
+.console-photo-tile .console-photo-avancer:hover { opacity: 1; }
+.console-photo-tile .console-photo-reculer:disabled,
+.console-photo-tile .console-photo-avancer:disabled { opacity: 0.3; cursor: default; }
+
+/* ⑦-3c piece 3 : deplier la galerie (elle s'arrete a 12, 6 en compact).
+   Un bouton discret, sous la grille -- il ne doit pas concurrencer les gestes. */
+.console-photos-deplier {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
 .console-photo-tile .console-photo-supprimer {
   position: absolute;
   top: 8px;
