@@ -3736,3 +3736,85 @@ est sûr**. C'est la règle « éprouver LE code, pas une doublure » appliquée
 
 ⚠ **Rien ne changera visiblement** tant que la marche 2 n'a pas tourné : **0** masquée a un
 dérivé aujourd'hui. Ce verrou est **préventif**, et c'est voulu — il devait précéder le balayage.
+
+
+---
+
+## ✅✅✅ ⑦-8 MARCHE 2 — L'ESSAI RÉEL EST VERT, ET IL PROUVE TOUT *(19/10, 09:47)*
+
+**Décision de Frédéric : option A — 2 000 annonces/nuit, 7 nuits, on ne touche PAS au run de 22 h.**
+Puis : *« fais le toi même »* → ⛔ impossible *(garde-fou de session sur les écritures prod)*, donc
+j'ai réduit sa part à **une seule ligne** et relevé l'état d'avant moi-même.
+
+### LA PRÉDICTION, ÉCRITE AVANT L'ESSAI
+
+> `hidden = 3` · `visible = 4` · `total = 7` · 7 lignes dont 3 à `visible = false` ·
+> **la boîte publique reste à 4, PAS 7**
+
+### LE COMPTE RENDU DU BRAS — chaque chiffre est celui prédit
+
+```
+status             photos_synced
+total              7      <- prédit 7
+visible            4      <- prédit 4
+hidden             3      <- ⭐⭐ PRÉDIT 3
+photos_downloaded  3      <- les 3 masquées sont sur le serveur (2,7 Mo)
+photos_unchanged   4      <- ⭐ les 4 visibles N'ONT PAS été retéléchargées
+photos_failed      0
+```
+
+⭐ **`photos_unchanged: 4` prouve que le téléchargement est bien INCRÉMENTAL** — c'est la réponse,
+en réel, à la question de Frédéric « des empreintes pour ne pas tout retélécharger » : **c'est déjà
+le cas, et le fichier lui-même est l'empreinte.**
+
+### LES 8 CONTRÔLES EN BASE
+
+| contrôle | résultat |
+|---|---|
+| a. photos chez nous | **4 → 7** |
+| b. dont **masquées** | **0 → 3** |
+| c. marquées absentes *(dégât collatéral)* | ⭐ **0** |
+| d. les 4 visibles intactes | **4** |
+| e. masquées **avec un dérivé** | **3** — le worker les fabrique aussitôt |
+| f. la boîte publique | **4** |
+| g. le panneau photos du négociateur | **7 photos dont 3 masquées** |
+| h. fichier sur le serveur | **3 sur 3** |
+
+### ⭐⭐⭐ ET LE TÉMOIN INVERSE SUR DONNÉES RÉELLES — LA PREUVE DU DESSIN
+
+⚠ « la boîte est à 4 » ne prouvait **rien** par soi-même : elle pouvait être à 4 simplement parce
+qu'elle **n'avait pas encore été recalculée** *(leçon « un contrôle vert peut mesurer autre
+chose »)*. J'ai donc rejoué **les deux versions du calcul à la main**, en lecture seule :
+
+```
+ANCIENNE regle (sans le verrou)  ->  7 photos dont 3 MASQUEES
+NOUVELLE regle (avec le verrou)  ->  4 photos dont 0 MASQUEE
+la COUVERTURE choisie            ->  une visible (sort_order 1)
+l annonce est-elle RE-CIBLEE ?   ->  OUI, sa boite sera refaite CETTE NUIT
+```
+
+➡ ⚠⚠ **SANS LE VERROU COLLÉ CE MATIN, CES 3 PHOTOS MASQUÉES PARTAIENT CE SOIR** sur la vitrine
+Android, l'espace client et le portail de rapprochement. **La marche 1 a précédé la marche 2 de
+quelques heures, et c'était la bonne décision.**
+
+⭐ Et les lignes **e + f ensemble** prouvent le dessin des deux boîtes : les 3 masquées **ont déjà
+leurs dérivés** *(donc dans le coffre public, prêtes à s'afficher instantanément si on les
+démasque — l'avantage de l'option B de Frédéric)*, **et pourtant la galerie publique les exclut.**
+
+### CE QUE L'ESSAI A ÉTABLI, ET QUI N'ÉTAIT PAS ACQUIS
+
+1. ⭐⭐ **Le bras ramène bien les masquées.** Les 314 travaux existants portaient **tous**
+   `hidden: 0` — ce chemin n'avait **jamais** été vu en ramener une. C'est fait, c'est mesuré.
+2. **Aucun dégât collatéral** : 0 photo marquée absente, les 4 visibles intactes.
+3. **Un seul service le prend** : `NS31851120:documents:service:v9` — donc **un seul frein**.
+4. **Durée mesurée : ~30 s pour une annonce** *(2 appels Hektor + 3 téléchargements)*.
+5. **Coût : 2 requêtes Hektor.**
+
+### ⛔ RESTE POUR LA MARCHE 2 — et maintenant on peut l'écrire
+
+| | |
+|---|---|
+| **l'empileur** | il choisit 2 000 annonces/nuit et pose les travaux — **copié sur `enqueue_empreinte_lot.js`** et ses 3 exclusions *(déjà faite · en erreur → NE JAMAIS REJOUER · déjà en file)* |
+| **la tâche Windows** | à 00:00, fenêtre jusqu'à 02:30 |
+| **le calibrage** | **1 200 les 2 premières nuits** *(la prudence du 20/08, jamais appliquée)* |
+| ⛔ **le lancer** | **accord de Frédéric**, à part |
