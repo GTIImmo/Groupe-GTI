@@ -5015,3 +5015,107 @@ photo, 14 plus récente, 0 jamais faite)*.
    photos)* — non mesuré. Le garde-fou actuel refuse seulement la liste **vide**.
 4. ⚠ **L'ordre des masquées entre elles** : la RPC les renvoie dans leur ordre actuel, mais
    **personne ne les réordonne jamais**. Non mesuré, probablement sans importance.
+
+
+### ✅✅✅ ⑦-3c — L'ESSAI EST VERT : HEKTOR ACCEPTE UNE PERMUTATION QUELCONQUE *(19/10, 23:26)*
+
+**Frédéric a collé les trois parties d'un coup** *(tout demandé à 23:25:55)*, ce qui rend
+l'enchaînement lisible à la seconde :
+
+| | heure | compte rendu |
+|---|---|---|
+| **l'essai** | 23:25:56 → **57** *(1 s)* | ✅ `done` · envoyé **`482254, 487604, 487603`** · `liste_photos: {ok:true, photos:3}` |
+| ⭐ **le juge** *(relecture des 2 galeries)* | 23:25:57 → **23:26:10** *(13 s)* | ✅ `done` · **total 4 · visible 3 · hidden 1** |
+| **le retour arrière** | 23:26:10 → **11** | ✅ `done` · remis **`482254, 487603, 487604`** |
+
+**ET LE VERDICT, écrit par la relecture de HEKTOR à 23:26:10 :**
+
+```
+482254  rang 1  visible          <- la 1re n'a PAS bouge
+487604  rang 2  visible          <- elle etait 3e
+487603  rang 3  visible          <- elle etait 2e
+482253  rang 1  MASQUEE          <- le temoin de ⑦-8 tient
+```
+
+➡ ⭐⭐⭐ **C'est exactement la permutation envoyée, et elle vient de chez Hektor, pas de notre
+écriture.** La liste a gardé sa taille, la première photo n'a pas bougé, les deux rangs ont été
+échangés. ⭐ **Donc la forme A (les deux flèches) est fondée, et le handler existant suffit.**
+
+⚠ **ET LA CHARGE A RÉVÉLÉ DEUX ANOMALIES** que seule la mesure a vues :
+`masquees_envoyees: []` et `base_snapshot: 3` *(au lieu de 4)*. ⭐⭐ **Le garde-fou du worker nous a
+sauvés** : il **saute** une liste vide au lieu de l'envoyer — sans lui, Hektor aurait pu comprendre
+« cette annonce n'a plus de photo masquée ». ⭐ **La cause est la même que le défaut ci-dessous** :
+à 23:25:55 la ligne masquée était `present_in_hektor = false`, donc invisible à mes CTE. Le juge
+l'a remise d'aplomb à 23:26:10, et les CTE rejouées après donnent bien `["482253"]` et 4 lignes.
+
+⚠ **Reste un écart à refermer** : le juge a écrit notre table **une seconde avant** que le retour
+arrière ne parte chez Hektor. Donc **notre table porte l'ordre de l'essai et Hektor celui d'avant.**
+⭐ **C'est auto-corrigé** : `accorder_photos_miroir.js` aligne notre ordre sur celui de Hektor
+chaque soir *(mesuré : `photos_reordonnees: 5` le 19/10 à 21:00)*.
+
+---
+
+### ⛔⛔⛔ MAIS L'ESSAI A FAIT TOMBER UN DÉFAUT EN PRODUCTION — SUR LE GESTE LIVRÉ LA VEILLE
+
+**La photo 485375 de l'annonce 63073 — celle que Frédéric a masquée lui-même à 14:31 — a été
+déclarée DISPARUE à 21:00:05** par l'entretien photos.
+
+**Et c'est précisément ce que le verrou 7 du 18/10 devait empêcher.** Son propre commentaire :
+> *« sans ce verrou, masquer une photo la ferait déclarer disparue la nuit suivante, elle sortirait
+> du panneau de l'app (`loadConsolePhotos` filtre `present_in_hektor`) et ON NE POURRAIT PLUS LA
+> DÉMASQUER. À sens unique. »*
+
+### LA CAUSE, PROUVÉE ET NON SUPPOSÉE
+
+`accorder_photos_miroir.js` lit nos lignes **dans une COPIE LOCALE** — `INDEX_LOCAL`, l. 116,
+c'est-à-dire `phase2/phase2.sqlite` — **et pas dans Supabase**. Mesure faite dans cette copie le
+19/10 à **23:27** :
+
+| | la copie locale dit | la production dit |
+|---|---|---|
+| photo **485375** | ⛔ **`visible = 1`** | **masquée depuis 14:31** |
+| annonce **63073** | **10 photos, 0 masquée** | **24 photos, 15 masquées** |
+
+Le verrou fait `if (drapeauVisible(r) === "masquee") continue;` → ⛔ **il a lu « visible », donc il
+n'a pas protégé.** ⭐⭐ **C'est la leçon « mesurer sur la BONNE source »** : le verrou est juste dans
+sa logique, il consulte la mauvaise copie.
+
+⚠ **Et la copie locale ne se met à jour qu'à la DESCENTE DE 07:45.** Donc **toute photo masquée
+entre 07:45 et 21:00 tombe dans la fenêtre** — tous les jours.
+
+### L'AMPLEUR, MESURÉE — elle est étroite, et c'est ce qui l'avait rendue invisible
+
+| | photos |
+|---|---|
+| ⛔ **masquées ET déclarées disparues** *(le défaut)* | **1 — celle de Frédéric** |
+| ⭐ **masquées et bien présentes** *(le verrou a joué)* | **121** |
+| visibles déclarées disparues *(vrais reportages remplacés)* | **371** |
+| annonces concernées par le défaut | ⭐ **63073 seule** |
+
+⭐ **Pourquoi les 121 autres sont saines** : leur masquage est **antérieur à la dernière descente**,
+donc la copie locale les connaît comme masquées. ⚠ **Le défaut ne frappe que le masquage du jour**
+— c'est-à-dire **exactement le geste de ⑦-8 marche 4, livré la veille.**
+
+### ⭐ ET LE REMÈDE EST DÉJÀ OBSERVÉ EN VRAI, CE SOIR
+
+La photo **482253** de 62774 avait été marquée disparue elle aussi à 21:00. ⭐⭐ **Le juge de
+l'essai — un simple `sync_hektor_photos` — l'a remise d'aplomb à 23:26:10.** Donc le remède
+immédiat est connu et prouvé : **une relecture des galeries répare.**
+
+⭐⭐ **ET ELLE RÉPARE DEUX CHOSES À LA FOIS SUR 63073**, parce que le clic de 14:31 avait laissé un
+second impayé : les **14 photos masquées découvertes n'ont jamais été téléchargées** *(leur
+`sync_hektor_photos` a été tué par le redémarrage des services à 17:10 :
+« exécution running trop ancienne »)*, et ⚠ **le balayage ne les prendra pas** — il exclut les
+annonces portant un travail en erreur.
+
+➡ Fichier écrit : **`supabase/reparation_63073_photos_masquees_2026-10-19.sql`** — un seul travail,
+~16 requêtes au pire, avec son garde-fou « déjà en vol », son état d'avant et **trois verdicts
+calculés** *(la photo est-elle revenue · est-elle toujours masquée · reste-t-il des photos sans
+fichier)*. **État d'avant mesuré : 24 photos, 9 visibles, 15 masquées, 1 disparue, 14 sans fichier.**
+
+### ⚠ LE REMÈDE DE FOND — À DÉCIDER, RIEN N'EST ÉCRIT
+
+Le verrou doit lire le drapeau **sur la bonne source**. ⭐ Et les candidates sont **très peu
+nombreuses** *(2 ce soir)*, donc une relecture ciblée dans Supabase avant de marquer suffirait —
+**zéro appel à Hektor**. ⚠ Mais c'est une modification d'un script du run de nuit : **ça demande son
+accord.**
