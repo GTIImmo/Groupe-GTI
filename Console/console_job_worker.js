@@ -122,6 +122,10 @@ const DOCUMENT_JOB_TYPES = new Set([
   // ICI et pas dans ACTION_JOB_TYPES parce que c'est le worker DOCUMENTS qui porte
   // les photos -- mesure du 16/10 sur app_console_claim_next_job.
   "reorder_hektor_photos",
+  // ⑦-8 marche 4 (19/10/2026) : masquer / afficher une photo. ICI et pas dans
+  // ACTION_JOB_TYPES pour la meme raison que sa voisine : c'est le worker
+  // DOCUMENTS qui porte les photos (mesure sur app_console_claim_next_job).
+  "set_hektor_photo_visibility",
   "prepare_archived_annonce_detail",
   "prepare_historical_annonce_detail",
 ]);
@@ -8654,6 +8658,181 @@ async function handleDeleteDocumentFromHektor(job) {
 //   (les visibles) et `liste_photos_hidden` (les masquees). On renvoie les deux,
 //   les masquees dans leur ordre inchange -- sinon elles remonteraient dans la
 //   galerie publique.
+// ═══════════════════════════════════════════════════════════════════════════════
+// ⑦-8 MARCHE 4 (19/10/2026) : MASQUER / AFFICHER UNE PHOTO CHEZ HEKTOR
+// ═══════════════════════════════════════════════════════════════════════════════
+// LA COMMANDE EST PROUVEE PAR LE CODE DE HEKTOR LUI-MEME, lu le 19/10 dans une
+// capture de juin (Console/exports/extract_contact_search_2026-06-12.../js/
+// labs_Header.js, l. 6816) :
+//
+//     function visibiliteVignette(id, visible) {
+//         var data_url = 'mode=vignette_visibilite&id=' + id
+//                        + '&idann=' + $j('#idannonceVignette').val()
+//                        + '&visible=' + visible;
+//         $j.ajax({ type: "GET", url: "xmlrpc.php", data: data_url,
+//                   success: function () { vignettes(); vignettes_hidden(); } });
+//     }
+//
+// ⭐ UNE PHOTO A LA FOIS. ⛔ L'autre route connue (`mode=ordonne_photos` sur les
+//   deux listes) REECRIT LES DEUX LISTES ENTIERES : on ne l'emploie pas pour un
+//   simple drapeau. Son handler est juste en dessous, et il reste pour l'ORDRE.
+//
+// ⭐⭐ ET HEKTOR NOUS DIT COMMENT FINIR : son rappel RELIT SES DEUX GALERIES. On
+//   fait pareil -- et cette relecture sert DEUX FOIS : elle PROUVE le succes et
+//   elle nous donne l'etat a ecrire. Une seule action, deux usages.
+//
+// ⚠⚠ ON N'ACCEPTE JAMAIS LE 200 COMME PREUVE. C'est la regle du handler frere
+//   (« un 200 vide est la signature d'un refus ») et la memoire du projet la
+//   porte depuis l'affaire des offres acceptees : 200 + 0 octet = refus silencieux,
+//   78 % des offres. Donc : on relit, et on EXIGE que le drapeau ait bascule.
+//
+// ⚠⚠⚠ ET SI HEKTOR REFUSE, C'EST NOUS QUI REMETTONS LE DRAPEAU -- audit du 19/10 :
+//   RIEN NE LE FERAIT A NOTRE PLACE.
+//     · l'« Abandonner » du bandeau ne touche que `app_annonce_champ_app` ;
+//       `app_console_photo` n'y apparait PAS ;
+//     · le `base_snapshot` que la RPC met dans la charge n'est LU PAR PERSONNE
+//       (le commentaire du geste couverture dit « expres pour ca » = PREPARE,
+//        pas fait) ;
+//     · il n'existe aucun retour arriere generique dans ce fichier.
+//   ➡ Donc le geste se defait LUI-MEME ici : une colonne, une ligne, et la charge
+//     porte `etat_avant`. ⚠ Si la remise echoue, on le DIT et on jette quand meme :
+//     un drapeau faux qui se croit juste est pire qu'une erreur visible.
+//   📌 NOTE HORS PERIMETRE : le geste COUVERTURE (⑦-3c, 16/10) a le MEME trou --
+//     son ordre renumerote chez nous ne serait pas defait si Hektor refusait.
+//     Signale, pas corrige ici (« une trouvaille hors sujet se NOTE »).
+async function handleSetHektorPhotoVisibility(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await ensureHektorExecutionContext(job, dossier, payload,
+    { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const numero = String(payload.hektor_photo_id || "").trim();
+  if (!numero) throw new Error("payload_json.hektor_photo_id required");
+  if (typeof payload.visible !== "boolean") {
+    throw new Error("payload_json.visible doit etre un booleen (true = afficher, false = masquer)");
+  }
+  const vise = payload.visible;
+  const etatAvant = typeof payload.etat_avant === "boolean" ? payload.etat_avant : !vise;
+  const annonce = String(dossier.hektor_annonce_id);
+
+  // ⓵ AVANT : on relit la galerie CHEZ HEKTOR, pas notre copie qui peut dater --
+  //    et on exige que Hektor PROPOSE le bouton pour cette photo. L'extracteur
+  //    releve `can_change_visibility` depuis mai (il teste `visibiliteVignette(`
+  //    dans le bloc de la photo) : le terrain etait pret avant le geste.
+  const avant = await fetchConsolePhotoEntries(annonce);
+  const cibleAvant = avant.find((e) => String(e.hektor_photo_id) === numero);
+  if (!cibleAvant) throw new Error(`Photo Hektor ${numero} introuvable dans les galeries de ${annonce}`);
+  const sj = cibleAvant.source_json || {};
+  if (!sj.actions || !sj.actions.can_change_visibility) {
+    throw new Error(`Hektor ne propose pas de changer la visibilite de la photo ${numero} (bouton absent)`);
+  }
+  if (cibleAvant.visible === vise) {
+    // Deja dans l'etat voulu chez Hektor : on ne le derange pas, et on aligne nos
+    // lignes sur SA lecture (c'est elle qui fait foi).
+    await upsertConsolePhotos(dossier, avant);
+    await logJob(job.id, "set_hektor_photo_visibility", "done",
+      "Hektor avait deja cette photo dans l'etat demande", {
+        hektor_annonce_id: annonce, hektor_photo_id: numero, visible: vise,
+      });
+    return { hektor_annonce_id: annonce, hektor_photo_id: numero, visible: vise, deja_chez_hektor: true };
+  }
+
+  await logJob(job.id, "set_hektor_photo_visibility", "running",
+    vise ? "Affichage de la photo demande chez Hektor" : "Masquage de la photo demande chez Hektor", {
+      hektor_annonce_id: annonce, hektor_photo_id: numero, visible: vise,
+    });
+
+  // ⓶ LA COMMANDE, telle que la page de Hektor l'envoie : un GET, une photo.
+  await hektorFetch(`${XMLRPC_URL}?mode=vignette_visibilite&id=${encodeURIComponent(numero)}`
+    + `&idann=${encodeURIComponent(annonce)}&visible=${vise ? 1 : 0}`);
+  await sleep(1500);
+
+  // ⓷ LA PREUVE : on RELIT les deux galeries, comme Hektor le fait lui-meme. On
+  //    exige la preuve du succes, on ne la deduit JAMAIS de l'absence d'erreur.
+  const apres = await fetchConsolePhotoEntries(annonce);
+  const cibleApres = apres.find((e) => String(e.hektor_photo_id) === numero);
+
+  if (!cibleApres || cibleApres.visible !== vise) {
+    // ⚠ HEKTOR A REFUSE, ET SANS LE DIRE. On remet NOTRE drapeau avant de jeter.
+    let remise = "faite";
+    try {
+      await supabaseRequest(
+        `app_console_photo?app_dossier_id=eq.${encodeURIComponent(String(dossier.app_dossier_id))}`
+        + `&hektor_photo_id=eq.${encodeURIComponent(numero)}`,
+        { method: "PATCH", prefer: "return=minimal",
+          body: JSON.stringify({ visible: etatAvant, updated_at: new Date().toISOString() }) },
+      );
+    } catch (error) {
+      remise = `ECHOUEE : ${error && error.message ? error.message : String(error)}`;
+    }
+    await logJob(job.id, "set_hektor_photo_visibility", "error",
+      "Hektor n'a PAS change la visibilite (refus silencieux) -- notre drapeau est remis", {
+        hektor_annonce_id: annonce, hektor_photo_id: numero,
+        demande: vise, lu_chez_hektor: cibleApres ? cibleApres.visible : null,
+        photo_encore_la: !!cibleApres, remise_du_drapeau: remise,
+      });
+    throw new Error(`Hektor n'a pas change la visibilite de la photo ${numero} `
+      + `(demande ${vise ? "visible" : "masquee"}, relu `
+      + `${cibleApres ? (cibleApres.visible ? "visible" : "masquee") : "ABSENTE"}) `
+      + `-- notre drapeau : remise ${remise}`);
+  }
+
+  // ⓸ NOS LIGNES, DEPUIS LA LECTURE -- on n'invente pas l'etat, on le recopie.
+  //    upsertConsolePhotos porte ses trois garde-fous (liste vide, delete-never,
+  //    garde symetrique) : on ne les contourne pas.
+  await upsertConsolePhotos(dossier, apres);
+
+  // ⓹ ⭐⭐ ON REVEILLE LE FABRICANT DE LA BOITE PUBLIQUE.
+  //    La RPC a remis `adresses_app_le` a blanc sur les quatre index : l'annonce
+  //    est donc une CIBLE. Ici on dit au fabricant « vas-y maintenant », au lieu
+  //    d'attendre le run de 05:00 -- sinon la photo masquee resterait visible au
+  //    vendeur et a l'acquereur jusqu'au lendemain.
+  //    ⛔ ON NE RECOPIE PAS SON CALCUL : sa regle (dont le verrou
+  //      « visible is not false » du 19/10) vit chez lui, et deux copies
+  //      divergeraient au premier ajustement.
+  //    ⚠ BEST EFFORT, comme enqueueRefreshConsoleDataJobBestEffort : s'il echoue
+  //      (8 s de budget PostgREST), le geste chez Hektor est DEJA fait et prouve,
+  //      et le run de nuit remettra la boite d'aplomb. On le DIT, on ne jette pas.
+  let boite = "rafraichie";
+  try {
+    const r = await supabaseRequest("rpc/app_photos_remplir_adresses_app", {
+      method: "POST", body: JSON.stringify({ p_heures: 48, p_tout: false }),
+    });
+    boite = r && typeof r === "object" ? JSON.stringify(r).slice(0, 200) : "rafraichie";
+  } catch (error) {
+    boite = `NON rafraichie (${error && error.message ? error.message : String(error)}) `
+      + `-- le run de nuit la remettra d'aplomb`;
+  }
+
+  // ⓺ ⚠ LA VITRINE ANDROID, ELLE, NE BOUGERA PAS AVANT LE RUN : c'est un export
+  //    statique pousse sur GitHub (run_full_pipeline.ps1:1726). Dit, pas cache.
+  const visibles = apres.filter((e) => e.visible).length;
+  await logJob(job.id, "set_hektor_photo_visibility", "done",
+    vise ? "Photo affichee chez Hektor" : "Photo masquee chez Hektor", {
+      hektor_annonce_id: annonce, hektor_photo_id: numero, visible: vise,
+      photos_lues: apres.length, visibles, masquees: apres.length - visibles,
+      boite_publique: boite,
+      vitrine_android: "inchangee jusqu'au prochain run (export statique)",
+    });
+
+  const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, annonce, {
+    reason: "set_hektor_photo_visibility",
+    priority: 82,
+  });
+
+  return {
+    hektor_annonce_id: annonce,
+    hektor_photo_id: numero,
+    visible: vise,
+    photos_lues: apres.length,
+    visibles,
+    masquees: apres.length - visibles,
+    plus_aucune_visible: visibles === 0,
+    boite_publique: boite,
+    refresh_job_id: syncJob ? syncJob.id : null,
+  };
+}
+
 async function handleReorderHektorPhotos(job) {
   const payload = job.payload_json || {};
   const idann = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
@@ -18001,7 +18180,7 @@ const JOB_TYPES_A_NOTIFIER = new Set([
   "delete_hektor_annonce", "assign_hektor_annonce_negotiator",
   "create_hektor_mandat_auto_number",
   "upload_document_to_hektor", "delete_document_from_hektor", "upload_hektor_photo",
-  "delete_hektor_photo", "reorder_hektor_photos",
+  "delete_hektor_photo", "reorder_hektor_photos", "set_hektor_photo_visibility",
   "generate_mandat_document", "generate_estimation_pdf", "generate_cadastre_document",
   "relance_signature", "cancel_signature_procedure",
 ]);
@@ -18033,6 +18212,7 @@ const JOB_LIBELLES = {
   upload_hektor_photo: "L'envoi de la photo",
   delete_hektor_photo: "La suppression de la photo",
   reorder_hektor_photos: "La mise en couverture de la photo",
+  set_hektor_photo_visibility: "Le masquage ou l'affichage de la photo",
   generate_mandat_document: "La generation du mandat",
   generate_estimation_pdf: "La generation de l'avis de valeur",
   generate_cadastre_document: "La generation du plan cadastral",
@@ -21292,6 +21472,8 @@ async function runHandler(job) {
       return handleDeleteHektorPhoto(job);
     case "reorder_hektor_photos":
       return handleReorderHektorPhotos(job);
+    case "set_hektor_photo_visibility":
+      return handleSetHektorPhotoVisibility(job);
     case "prepare_archived_annonce_detail":
       return handlePrepareArchivedAnnonceDetail(job);
     case "prepare_historical_annonce_detail":

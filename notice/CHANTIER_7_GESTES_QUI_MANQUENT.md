@@ -4079,3 +4079,129 @@ ne crie pas »* — et c'est **l'épreuve qui a trouvé le défaut, pas la relec
 
 ➡ Le rappel est aussi posé dans **`CLAUDE.md` §2**, item **⓿**, pour qu'il survive à la fin de
 cette conversation.
+
+
+---
+
+## 🔧 ⑦-8 MARCHE 4 — LE BOUTON MASQUER / AFFICHER : LES 4 PIÈCES SONT ÉCRITES *(19/10)*
+
+**Go de Frédéric** : *« Oui »*, puis *« audit sérieusement il faut être sûr »*, puis *« est-tu sûr
+de toi cette fois »*. ⛔ **Rien n'est actif** : aucun patch collé, les 4 services tournent sur
+l'ancienne version du worker, le front n'est pas poussé.
+
+### ⭐⭐⭐ LA COMMANDE EST PROUVÉE PAR LE CODE DE HEKTOR LUI-MÊME
+
+`Console/exports/extract_contact_search_2026-06-12…/js/labs_Header.js`, **l. 6816** :
+
+```javascript
+function visibiliteVignette(id, visible) {
+    var data_url = 'mode=vignette_visibilite&id=' + id
+                   + '&idann=' + $j('#idannonceVignette').val() + '&visible=' + visible;
+    $j.ajax({ type: "GET", url: "xmlrpc.php", data: data_url,
+              success: function () { vignettes(); vignettes_hidden(); } });
+}
+```
+
+**Trois choses qu'on ne devinait pas :** ⭐ **une photo à la fois** *(l'autre route,
+`mode=ordonne_photos`, réécrit les DEUX listes entières — écartée)* · **aucune cascade serveur**
+*(le rappel ne rafraîchit que l'affichage)* · ⭐⭐ **et Hektor nous dit comment finir : il RELIT
+SES DEUX GALERIES.**
+
+### LE SENS DE LA VIE DU GESTE — la règle de Frédéric
+
+> *« il faut d'abord écrire chez nous, ensuite envoyer l'information à Hektor, et sinon il y a le
+> run quotidien pour l'autre sens »*
+
+⭐⭐ **Et l'autre sens est DÉJÀ écrit** : c'est le balayage de la marche 2. Si un négociateur
+masque une photo **directement dans Hektor**, le lot de la nuit le voit. **La boucle est complète,
+et il n'en manquait qu'un quart.**
+
+### ⭐⭐ « CHEZ NOUS » A DEUX ÉTAGES — le point de conception
+
+| « chez nous » | qui le lit | à jour en |
+|---|---|---|
+| la **table** `app_console_photo` | le **panneau photos** | **immédiat** |
+| la **boîte** `images_preview_json_app` | vitrine · espace client · portail | ⚠ sinon : **le lendemain** |
+
+⛔ **Ce qu'on ne fait PAS** : recopier le calcul de la boîte *(il vit dans
+`app_photos_remplir_adresses_app`, et « deux copies divergeraient au premier ajustement »)*.
+✅ **Ce qu'on fait** : la RPC remet `adresses_app_le` **à blanc sur les 4 index** — l'annonce
+redevient une **cible** du fabricant — et le **worker réveille le fabricant** juste après son
+appel Hektor. ➡ **Une seule copie de la règle, et la boîte est juste en quelques SECONDES.**
+⭐ Le « post-it » n'est pas une invention : `adresses_app_le IS NULL` est **exactement la première
+condition de ciblage du fabricant**.
+⚠ **La vitrine Android, elle, est un export statique poussé par le run** : rien ne la changera
+avant la nuit. **Dit, pas caché** — et écrit dans l'infobulle du bouton.
+
+### ⚠⚠⚠ CE QUE L'AUDIT SÉRIEUX A TROUVÉ : PERSONNE NE REMETTRAIT NOTRE DRAPEAU
+
+Vérifié sur **trois** chemins :
+
+| | |
+|---|---|
+| l'« Abandonner » du bandeau | ne touche que `app_annonce_champ_app` — ⛔ `app_console_photo` **n'y apparaît pas** |
+| le `base_snapshot` du geste **couverture** | ⛔ **personne ne le lit** — *« exprès pour ça »* veut dire **préparé**, pas fait |
+| un retour arrière générique | ⛔ **il n'en existe aucun** *(la l. 18432 est un garde-fou de recherche contact)* |
+
+➡ **Donc le geste se défait LUI-MÊME dans le worker** : une colonne, une ligne, et la charge porte
+`etat_avant`. ⚠ Si la remise échoue, **il le dit et il jette quand même** — *un drapeau faux qui
+se croit juste est pire qu'une erreur visible*.
+📌 **NOTÉ, PAS TRAITÉ** : le geste **couverture** du 16/10 a **le même trou**.
+
+### ⚠ ET ON N'ACCEPTE JAMAIS LE 200 COMME PREUVE
+
+Le handler frère l'écrit : *« un 200 vide est la signature d'un refus »*, et la mémoire le paie
+depuis l'affaire des offres *(78 % refusées en silence)*. ➡ Le handler **relit les deux galeries et
+EXIGE que le drapeau ait basculé** — ⭐ ce qui est exactement ce que fait Hektor. **Une action,
+deux usages : la preuve ET l'état.**
+⭐ Et il vérifie que Hektor **PROPOSE le bouton** : `source_json.actions.can_change_visibility`,
+relevé par l'extracteur **depuis mai**.
+
+### LES 4 PIÈCES
+
+| pièce | fichier | contrôle |
+|---|---|---|
+| **1 — la base** | `supabase/patch_chantier7_8_marche4_visibilite_2026-10-19.sql` *(+ INVERSE)* | les 3 ancres **uniques**, sur une ligne ; les 4 index ont bien `adresses_app_le` |
+| **2 — le worker** | `Console/console_job_worker.js`, **les 5 endroits** *(128 · 8733 · 18183 · 18215 · 21475)* | ✅ **`node --check` passe** |
+| **3 — l'écran** | `api.ts` · `App.tsx` *(refus, handler, bouton)* · `styles.css` *(3ᵉ créneau, `right: 72px`)* | ✅ **build vert**, et ⭐ **témoin inverse** : `TS2322` avec une faute volontaire, vert sans elle |
+| **4 — la répétition** | `supabase/…_REPETITION.sql`, ⭐ **GÉNÉRÉE** par `supabase/generer_repetition_marche4.py` | voir ci-dessous |
+
+### ⭐⭐⭐ LA RÉPÉTITION EST GÉNÉRÉE, PAS RECOPIÉE
+
+J'allais recopier **190 lignes** de patch à la main dans la répétition — **c'est exactement là
+qu'on introduit une divergence invisible**, et on éprouve alors **une imitation**
+*(avertissement du 03/10)*. ➡ Un générateur **extrait le patch verbatim** et **le vérifie** :
+
+```
+corps extrait  11 838 caracteres   empreinte f393d40dba5308294fee13b6c50d64bd
+LE CORPS EXTRAIT EST-IL DANS LA REPETITION, A L'OCTET PRES ?  OUI
+la RPC complete y est : True   ·   1 begin / 1 rollback / 0 commit
+ancres protegees : 9   ·   multi-lignes : 0
+```
+
+**Ce qu'elle prouve** : les 3 verrous posés · la RPC existe et `anon` **ne** peut pas l'appeler
+*(la leçon du 08/10 : Supabase pose un GRANT à `authenticated` sur toute fonction neuve)* · le
+masquage écrit le drapeau, **pose le post-it**, met `adresses_app_le` **à blanc** et crée **un
+travail du bon type avec l'état d'avant** · ⭐ **rejouer le même masquage ne dérange pas Hektor** ·
+⭐ **le témoin inverse du geste : on la réaffiche** · les deux refus · et **l'inverse complet**.
+
+### ⛔ CE QUI N'EST PAS ÉPROUVÉ, ET JE LE DIS
+
+1. **La branche des DROITS n'est pas exercée.** L'éditeur SQL tourne en superutilisateur, et le
+   seul commercial actif *(legrand)* a un périmètre **`reseau`** → la garde l'**autoriserait**, donc
+   le refus ne se prouverait pas. *(Même honnêteté que le 16/10 : « la répétition ne pourra pas
+   prouver la branche manager : 0 manager actif ».)*
+2. **Le worker n'a jamais tourné.** `node --check` prouve **la syntaxe**, pas la logique.
+3. ⚠ **Et un doute trouvé en répondant à Frédéric, pas avant** : le handler réveille le fabricant,
+   **qui traite TOUTES ses cibles**. Mesure du 19/10 : **23 cibles vivantes + 55 sur les autres
+   index** → ça passe. ⚠ **Mais pendant les 14 nuits du balayage, chaque annonce balayée devient
+   une cible** → un clic au petit matin pourrait dépasser les **8 s de PostgREST**. C'est en *best
+   effort* *(le geste chez Hektor est déjà fait et prouvé)*, **mais la photo masquée resterait
+   visible au vendeur jusqu'au lendemain, ces nuits-là.**
+
+### ⛔ RESTE
+
+**Frédéric colle la répétition**, puis le patch · **redémarrer les 4 services** *(accord à part)* ·
+**pousser le front** · puis **l'essai réel sur le bac à sable 62774** — ⭐ **et c'est lui qui
+répondra à la question restée ouverte : masquer une photo fait-il bouger `date_maj` ?**
+*(ce qui tranche la marche 3)*.

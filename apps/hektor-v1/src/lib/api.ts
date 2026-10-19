@@ -8485,6 +8485,53 @@ export async function mettrePhotoEnCouverture(input: {
     : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
 }
 
+// ⑦-8 marche 4 (19/10/2026) : MASQUER OU AFFICHER UNE PHOTO.
+//
+// ⚠ MÊME FORME QUE SA SŒUR CI-DESSUS, et pour la même raison : il faut écrire le
+//   drapeau CHEZ NOUS **et** créer le travail dans LA MÊME transaction. La règle
+//   est de Frédéric (19/10) : « il faut d'abord écrire chez nous, ensuite envoyer
+//   l'information à Hektor ». Si l'insertion du travail échouait après l'écriture
+//   du drapeau, notre panneau montrerait un état que Hektor n'aura jamais reçu.
+//
+// ⭐ ELLE VA DANS LES DEUX SENS : `visible: false` masque, `visible: true` affiche.
+//   C'est la même commande chez Hektor (`mode=vignette_visibilite&visible=0|1`),
+//   donc le geste est réversible par construction.
+//
+// ⭐⭐ `plusAucuneVisible` : quand ce geste laisse l'annonce SANS AUCUNE photo
+//   publiable, elle affichera « Sans photo » sur la vitrine. C'est juste, mais ça
+//   ne doit pas être une surprise -- l'écran demande confirmation AVANT d'appeler,
+//   et cette sortie sert de second filet (elle dit ce qui vient de se passer).
+//
+// ⚠ Elle NE JETTE PAS : l'appelant décide. Un refus se lit dans `erreur`.
+export async function changerVisibilitePhoto(input: {
+  appDossierId: number
+  hektorAnnonceId: string | number
+  hektorPhotoId: string
+  visible: boolean
+}): Promise<{ ok: boolean; erreur?: string; dejaDansCetEtat?: boolean; jobId?: string
+              visiblesRestantes?: number; plusAucuneVisible?: boolean }> {
+  if (!hasSupabaseEnv || !supabase) return { ok: false, erreur: 'supabase_absent' }
+  const annonce = String(input.hektorAnnonceId ?? '').trim()
+  const photo = String(input.hektorPhotoId ?? '').trim()
+  if (!annonce || !photo || !input.appDossierId) return { ok: false, erreur: 'parametres_incomplets' }
+  if (typeof input.visible !== 'boolean') return { ok: false, erreur: 'parametres_incomplets' }
+  const { data, error } = await supabase.rpc('app_console_photo_visibilite_optimistic', {
+    p_app_dossier_id: input.appDossierId,
+    p_hektor_annonce_id: annonce,
+    p_hektor_photo_id: photo,
+    p_visible: input.visible,
+  })
+  if (error) return { ok: false, erreur: error.message }
+  const sortie = (data ?? {}) as {
+    ok?: boolean; erreur?: string; deja_dans_cet_etat?: boolean; job_id?: string
+    visibles_restantes?: number; plus_aucune_visible?: boolean
+  }
+  return sortie.ok === true
+    ? { ok: true, dejaDansCetEtat: sortie.deja_dans_cet_etat === true, jobId: sortie.job_id,
+        visiblesRestantes: sortie.visibles_restantes, plusAucuneVisible: sortie.plus_aucune_visible === true }
+    : { ok: false, erreur: sortie.erreur || 'refus_inconnu' }
+}
+
 // Synchro documents a la demande (read-through) : le worker relit Hektor -> etat signature a jour
 // + recuperation auto du PDF signe, sans clic. Declenche en silence a l'ouverture de l'annonce.
 export async function createSyncConsoleDocumentsJob(input: {

@@ -12291,6 +12291,40 @@ button.metric-card.is-active {
 .console-photo-tile .console-photo-couverture:hover { opacity: 1; }
 .console-photo-tile .console-photo-couverture:disabled { opacity: 0.35; cursor: default; }
 
+/* ⑦-8 marche 4 (19/10/2026) : masquer / afficher une photo.
+   ⚠ LE TROISIEME CRENEAU, et les trois ne doivent pas se chevaucher :
+        right: 8px   supprimer
+        right: 40px  couverture
+        right: 72px  visibilite   <- celui-ci
+   Memes dimensions que ses deux soeurs (26 px + 6 px d'ecart), sinon la rangee
+   se decale. ⭐ Et la couleur dit l'ACTION, pas l'etat : la pastille au-dessus
+   de la tuile dit deja « Visible » / « Masquee ». */
+.console-photo-tile .console-photo-visibilite {
+  position: absolute;
+  top: 8px;
+  right: 72px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(34, 35, 35, 0.72);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.78;
+}
+/* la photo est VISIBLE -> le bouton propose de la MASQUER (teinte d'alerte) */
+.console-photo-tile .console-photo-visibilite.is-visible { color: #e8b4b8; }
+/* la photo est MASQUEE -> le bouton propose de l'AFFICHER (teinte d'accord) */
+.console-photo-tile .console-photo-visibilite.is-hidden { color: #9fd8b4; }
+.console-photo-tile .console-photo-visibilite:hover { opacity: 1; }
+.console-photo-tile .console-photo-visibilite:disabled { opacity: 0.35; cursor: default; }
+
 .console-photo-tile .console-photo-supprimer {
   position: absolute;
   top: 8px;

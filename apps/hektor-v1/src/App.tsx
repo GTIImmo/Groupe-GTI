@@ -102,6 +102,7 @@ import {
   createDeleteDocumentFromHektorJob,
   createDeleteHektorPhotoJob,
   mettrePhotoEnCouverture,
+  changerVisibilitePhoto,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
   createSyncHektorPhotosJob,
@@ -7738,6 +7739,26 @@ function messageRefusCouverture(code: string | undefined) {
   }
 }
 
+// ⑦-8 marche 4 (19/10/2026) : les refus du masquage, en français.
+// ⭐ `photo_introuvable_chez_hektor` et non « ou masquée » comme sa sœur : ce geste
+//   va dans les DEUX sens, une photo masquée est une cible parfaitement légitime.
+function messageRefusVisibilite(code: string | undefined, versVisible: boolean) {
+  const geste = versVisible ? 'Affichage' : 'Masquage'
+  switch (code) {
+    case 'droits_insuffisants':
+      return "Ce bien n'est pas dans ton périmètre : tu ne peux pas changer la visibilité de ses photos."
+    case 'photo_introuvable_chez_hektor':
+      return "Cette photo n'est pas encore connue de Hektor (envoi en cours ou à reprendre) : "
+        + "on ne peut pas changer sa visibilité tant qu'il ne la connaît pas."
+    case 'parametres_incomplets':
+      return "Il manque le numéro de la photo ou celui de l'annonce."
+    case 'supabase_absent':
+      return "L'application n'est pas reliée à la base : rien n'a été changé."
+    default:
+      return `${geste} refusé${code ? ` (${code})` : ''}.`
+  }
+}
+
 function mandatStatutToneClass(value: MandatStatutValue) {
   return value === 'Vendu' ? 'reg-mstatut-vendu'
     : value === 'Clos' ? 'reg-mstatut-clos'
@@ -11817,6 +11838,65 @@ function ConsolePhotosPanel({
     }
   }
 
+  // ⑦-8 marche 4 (19/10/2026) : masquer ou afficher une photo.
+  //
+  // ⭐⭐ LA CONFIRMATION N'EST DEMANDÉE QUE DANS UN CAS : masquer LA DERNIÈRE
+  //   photo visible. L'annonce afficherait alors « Sans photo » sur la vitrine, et
+  //   ça ne doit pas être une surprise. Masquer la 3e de 12, non : c'est le geste
+  //   courant, et un `confirm` à chaque clic ne serait plus lu.
+  //   ⚠ On compte ICI, AVANT d'appeler -- la RPC rend `plusAucuneVisible` mais
+  //     c'est APRÈS l'écriture : trop tard pour demander.
+  //
+  // ⚠ ET ON DIT CE QUI RESTE EN RETARD. Le panneau et la boîte publique sont justes
+  //   en quelques secondes, mais LA VITRINE ANDROID est un export statique poussé
+  //   par le run : elle ne bougera pas avant la nuit. On l'écrit à l'écran plutôt
+  //   que de laisser croire que c'est instantané partout.
+  async function handleChangerVisibilite(photo: ConsolePhoto) {
+    if (!photo.hektor_photo_id) return
+    const versVisible = !photo.visible
+    if (!versVisible) {
+      const visiblesRestantes = photos.filter((p) => p.visible && p.id !== photo.id).length
+      if (visiblesRestantes === 0) {
+        const ok = window.confirm(
+          `Masquer la DERNIÈRE photo visible de ce bien ?\n\n`
+          + `${photo.legend || photo.filename || 'Photo'}\n\n`
+          + `L'annonce n'aura plus AUCUNE photo publiable : elle affichera « Sans photo » `
+          + `sur la vitrine, dans l'espace client et dans les e-mails de rapprochement.\n\n`
+          + `Le geste reste réversible : « Afficher » la remet.`,
+        )
+        if (!ok) return
+      }
+    }
+    if (!hasHektorNegotiator(dossier)) {
+      onMissingNegotiator?.(dossier)
+      return
+    }
+    setBusyPhotoId(photo.id)
+    setError(null)
+    try {
+      const retour = await changerVisibilitePhoto({
+        appDossierId: dossier.app_dossier_id,
+        hektorAnnonceId: dossier.hektor_annonce_id,
+        hektorPhotoId: String(photo.hektor_photo_id),
+        visible: versVisible,
+      })
+      if (!retour.ok) {
+        setError(messageRefusVisibilite(retour.erreur, versVisible))
+        return
+      }
+      // ⭐ On relit TOUT DE SUITE : la RPC a déjà écrit le drapeau chez nous, donc
+      //   le panneau bascule sans attendre Hektor. Puis une seconde fois, après le
+      //   passage du worker, pour porter ce que HEKTOR a retenu -- c'est lui qui a
+      //   le dernier mot, et s'il a refusé en silence le worker a remis le drapeau.
+      await refreshPhotos(true)
+      window.setTimeout(() => void refreshPhotos(true), 25000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de changer la visibilité de cette photo')
+    } finally {
+      setBusyPhotoId(null)
+    }
+  }
+
   async function handleDeletePhoto(photo: ConsolePhoto) {
     const confirmed = window.confirm(
       `Supprimer définitivement cette photo ?\n\n${photo.legend || photo.filename || 'Photo'}\n\n`
@@ -12011,6 +12091,25 @@ function ConsolePhotosPanel({
                     title="Mettre en couverture"
                   >
                     ★
+                  </button>
+                ) : null}
+                {/* ⑦-8 marche 4 : masquer / afficher. ⭐ IL APPARAÎT SUR TOUTES LES
+                    TUILES, y compris la première et les masquées -- contrairement au
+                    bouton couverture, ce geste va dans LES DEUX SENS et n'a pas de
+                    tuile où il ne ferait rien. La pastille au-dessus dit déjà l'état
+                    (« Visible » / « Masquée ») : le bouton dit donc l'ACTION. */}
+                {supprimable ? (
+                  <button
+                    className={`console-photo-visibilite ${photo.visible ? 'is-visible' : 'is-hidden'}`}
+                    type="button"
+                    onClick={() => void handleChangerVisibilite(photo)}
+                    disabled={suppressionDemandee || busyPhotoId === photo.id}
+                    aria-label={photo.visible ? 'Masquer cette photo' : 'Afficher cette photo'}
+                    title={photo.visible
+                      ? 'Masquer : elle sort de la vitrine, de l’espace client et des e-mails. Elle reste ici.'
+                      : 'Afficher : elle revient sur la vitrine au prochain run.'}
+                  >
+                    {photo.visible ? '🚫' : '👁'}
                   </button>
                 ) : null}
                 {supprimable ? (
