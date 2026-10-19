@@ -4544,3 +4544,82 @@ prochaine synchro de l'annonce.** ⚠ **C'est exactement le piège de la date de
 **Mais c'est un périmètre, donc la décision est de Frédéric** — et A est parfaitement défendable :
 un nom que Hektor ne connaît pas est un nom qui disparaît le jour de la coupure... ⭐ **non, l'inverse** :
 c'est NOTRE colonne, elle survit à la coupure. **C'est même un argument POUR B.**
+
+
+### ⭐⭐ ÉTAPE 2 — ET LA MESURE A RETOURNÉ LA QUESTION : `document_name` EST UN IDENTIFIANT
+
+J'allais présenter « renommer chez nous, en acceptant la divergence ». ⚠ **La mesure l'interdit
+sous cette forme.**
+
+**`document_name` n'est pas une étiquette : 13 endroits s'en servent pour RECONNAÎTRE un
+document.**
+
+| où | ce qu'il reconnaît |
+|---|---|
+| `App.tsx:5468` · `10970` · `11465` | ⭐ **le MANDAT**, par `/mandat/i` sur le nom |
+| `App.tsx:11465` · `28164` | **l'AVENANT**, par `/avenant/i` |
+| `App.tsx:10109` → `10120` | le **type de fichier** *(l'icône, le visualiseur)*, par l'extension |
+| `App.tsx:11493` | `docTypeOf(...)` — **la rubrique** du document |
+| ⭐⭐ `backend/.../supabase_storage.py:33` | **l'AVIS DE VALEUR**, par `ilike 'Avis de valeur%'` |
+| `console_job_worker.js:8145` | ⭐⭐ **l'appariement avec la ligne de Hektor**, par le nom |
+| `console_job_worker.js:5531` | ⭐ **l'appariement d'une SIGNATURE**, par le nom |
+| `console_job_worker.js:4617` | le **tri** de la liste |
+
+**ET VOICI CE QUE ÇA COÛTERAIT DE REMPLACER LE NOM :**
+
+| le motif qui sert de reconnaissance | documents |
+|---|---|
+| contient « mandat » | ⚠ **18 225** |
+| contient « avenant » | ⚠ **7 344** |
+| commence par « Avis de valeur » | **44** |
+| porte une extension *(`.pdf`, image, bureautique)* | ⚠ **185 852** |
+| ⭐⭐ **AUCUN de ces motifs — renommables sans rien casser** | ⛔ **2 093 sur 189 809, soit 1,1 %** |
+
+➡ ⛔ **Donc un renommage qui ÉCRASE `document_name` casserait la reconnaissance de 98,9 % des
+documents.** Ce n'est pas une précaution : c'est un chiffre.
+
+### ✅ ET LE PROJET A DÉJÀ TRANCHÉ LA FORME *(leçon 15, une fois de plus)*
+
+Je cherchais « une colonne sœur `_app` » en croyant la trouver **deux fois**. Il y en a
+**28, sur 17 tables** — dont `mandat_date_cloture_app`, `photo_url_listing_app`,
+`images_preview_json_app`. ⭐⭐ **Et il y a mieux : un mécanisme GÉNÉRIQUE**, trois fois posé :
+
+```
+app_annonce_champ_app   (app_dossier_id, champ, valeur_app, origine, ecrit_le, ecrit_par)     9 lignes
+app_mandat_champ_app    (hektor_annonce_id, numero_mandat, champ, valeur_app, origine, …)     3 lignes
+app_affaire_champ_app   (…, valeur_app, …)                                                   17 lignes
+app_document_champ_app  ⛔ N'EXISTE PAS
+```
+
+⭐⭐⭐ **ET LE CRITÈRE D'ALLUMAGE DU PROJET RÉPOND AU POINT ⑦-9 TOUT SEUL.** Il est écrit dans
+CLAUDE.md, tranché le 13/10 : *« on n'allume qu'un champ que l'APP CRÉE et que HEKTOR
+N'ENTRETIENT PAS »*. C'est pour ça que `CHAMPS_APP_ANNONCE` reste **ÉTEINT** : Hektor entretient
+les champs d'une annonce.
+
+➡ ⭐ **L'étiquette humaine d'un document est le cas d'école du critère** : **Hektor n'a aucun
+renommage**, donc il ne l'entretient pas, donc il ne l'écrasera jamais. **C'est l'inverse exact
+du cas qui a fait éteindre l'interrupteur.**
+
+### LES DEUX OPTIONS, TELLES QU'ELLES SONT MAINTENANT
+
+| | |
+|---|---|
+| **A — fermer le point** | comme ⑦-7. Coût zéro. ⚠ Les 99 % de noms illisibles restent, **et ils sont illisibles pour les négociateurs tous les jours** |
+| **B — une étiquette À CÔTÉ, jamais à la place** | `document_name` **ne bouge pas** *(les 13 reconnaissances continuent de marcher)*, et une étiquette humaine s'ajoute. **~12 endroits d'affichage** à passer en `étiquette ?? document_name`. ⭐ **Rien à inventer : le patron est posé 28 fois** |
+
+⭐ **Mon avis : B**, et plus franchement qu'avant la mesure — parce que **le critère du projet est
+rempli** *(Hektor n'entretient pas ce champ, il ne sait même pas le lire)* et parce que **le
+risque identifié se contourne par construction** : on n'écrase rien.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS *(option B)*
+
+| | |
+|---|---|
+| ⛔ **les 13 reconnaissances** | **rien** — elles lisent `document_name`, qu'on ne touche pas. ⭐ C'est tout l'intérêt de la colonne à côté |
+| ⚠ **le nom du fichier téléchargé** *(`App.tsx:38752`)* | **à TRANCHER** : télécharger « DPE 2021.pdf » est le but, mais ⚠ **l'extension doit survivre** *(sinon le fichier ne s'ouvre plus)* |
+| ⚠ **le coffre** *(`4703`, `4807`, `5177`)* | `archive_filename` est **déjà figé** à l'envoi : un renommage **après** ne le change pas → **deux noms**. À déclarer, ou à ne pas toucher |
+| ⚠ **la synchro de nuit** | elle écrit `document_name`, **pas** la colonne neuve → ⭐ **rien à modifier dans le worker**. C'est le cœur du choix |
+| ⚠ **`app_cockpit_activite`** et **`app_console_creer_document_optimistic`** | les **2 seules** fonctions en base qui citent `document_name` *(0 vue)*. À lire avant d'écrire |
+| ⚠ **les droits** | qui peut renommer ? **Question pour Frédéric** *(négociateur sur ses biens, ou admin ?)* |
+
+⛔ **JE N'ÉCRIS RIEN AVANT SON CHOIX.** Un périmètre ne se décide pas sans lui.
