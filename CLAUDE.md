@@ -81,11 +81,14 @@ git répond *« not a git repository »*, tu es au mauvais endroit.
 ## 2. Où on en est — *une page, pas une archive*
 
 > ⚠ **Cette section porte LE PRÉSENT, et rien d'autre.** Règle : en fin de session, on la
-> **RÉÉCRIT**, on ne l'empile pas ; ce qui en sort descend dans **`notice/JOURNAL_DE_BORD.md`**
-> *(l'état du 11/10 et toute la journée du 12/10 y sont descendus le 12/10 — le §2 était
-> reparti à **234 lignes**, dont 40 pour la seule ligne du chantier ②)*.
+> **RÉÉCRIT**, on ne l'empile pas ; ce qui en sort descend dans **`notice/JOURNAL_DE_BORD.md`**.
 
-**Réécrit le 12/10/2026, à la clôture du chantier ②.**
+**Réécrit le 19/10/2026.** ⚠ Il pesait **79 966 caractères, 91 % du fichier** — « Ce qui attend
+Frédéric » en faisait **47 % à lui seul**, rempli d'items déjà marqués ✅ FAIT. Tout est descendu
+dans le journal de bord *(rien n'est perdu)*, et les **31 leçons** ont leur propre note :
+**`notice/LECONS_DE_METHODE.md`**, numéros conservés. **Règle tenue pendant la réécriture : en cas
+de doute sur un item, on le GARDE** — un item gardé coûte une ligne, un item perdu coûte une
+décision.
 
 ### Les deux étapes — *définies par Frédéric le 08/10*
 
@@ -99,199 +102,52 @@ ETAPE 3   notre registre electronique des mandats (nos numeros) -> la signature 
 
 ### Les 8 chantiers *(plan, section « 🧭 LES CHANTIERS DE L'ÉTAPE 2 »)*
 
-**La méthode, à chaque chantier** : **audit du sujet** (revérifier) → **explication des
-correctifs**, avec « ce que ça pourrait casser ailleurs » → « vas-y » → code → **contrôle du
-résultat** → plan, liste et cette page à jour. Prompt de reprise :
-**`notice/PROMPT_CHANTIER_ETAPE2.md`** (une ligne à changer, et un § 6 « déjà appris »).
+**La méthode, à chaque chantier** : **audit** → **explication** des correctifs, avec « ce que ça
+pourrait casser ailleurs » → « vas-y » → code → **contrôle** → plan, liste et cette page à jour.
+Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 
 | # | chantier | état |
 |---|---|---|
 | ① | sécurité : 136 fonctions ouvertes à la clé publique | ✅ **FINI le 08/10** |
-| ② | **les droits du négociateur** *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — **8 patchs** et **1 déploiement**, tous contrôlés. Le négociateur a **21 gestes** sur ses biens · les **commissions** des collègues sont cachées · les **photos** du réseau sont visibles · le **registre** est réservé · le **manager = admin** *(sauf l'écran Santé)* · la **case « périmètre »** est à l'écran, **éprouvée par un pilote**. Restes **reportés par Frédéric**, pas oubliés *(voir « ce qui attend »)* |
-| ③ | **Hektor d'abord → chez nous d'abord** *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | 🔧 **en cours** — **6 patchs, 0 déploiement, 0 redémarrage, 0 ligne de front**, tous éprouvés en réel. ✅ **3a** statut + diffusable chez nous d'abord *(73 s gagnées)* · ✅ **8 941 biens vendus/clos redeviennent manipulables** *(bloqués depuis le 25/08 ; les 35 318 **archives** restent en lecture seule)* · ✅ **défaut 5a** : le désarchivage porte notre vrai numéro · ✅ **3b** archiver et négociateur écrivent la **fiche**, et ⭐ **les 3 motifs que l'app connaît sont gardés chez nous** *(archivage, désarchivage, clôture)* · ✅ **« vide ne gagne pas »** posé dans le contrat d'annonce. ⛔ **L'interrupteur reste ÉTEINT** *(voir « ce qui attend »)*. ✅ **3c (5/5 codées)** la clôture de mandat a sa **propre colonne** `mandat_date_cloture_app` — forme trouvée par Frédéric, **patron des photos recopié** — + le RPC de saisie *(carnet **et** vitrine en une transaction)* + l'alerte « Mandat échu » qui suit + ⭐ **la re-pose après le push, sur les DEUX chemins qui effacent** *(le run **et** le chemin immédiat du worker)*, **sans aucun redémarrage**. ⏰ **À prouver par le run du 14/10.** ⚠ **Restent 2 pièces de 3c** : le **champ à l'écran** *(3 points d'entrée)* et le **worker** *(4 services)*, + le sort de `appliquer_contrat_mandat.py`. ✅ **3e** le **journal des suppressions** *(qui/quoi/quand)* : le patron existait **deux fois** dans le projet, recopié — **mais avec une divergence : si la trace ne s'écrit pas, ON NE DÉTRUIT PAS** *(ses deux aînées, elles, avalent l'erreur — mesurable)* · + la **mention « supprimé chez Hektor »** sur les documents · + ⭐⭐ **le garde-fou de LISTE VIDE, qui manquait aussi aux photos** · + le `confirm` qui dit la vérité. ⛔ **Reste pour 3e** : 4 services, le push, l'écran du journal, et le **geste « supprimer une photo »** — ⚠ **la commande Hektor est INCONNUE** *(audit du 25/09 : « les trouver d'abord »)*, un relevé en lecture seule est à faire. ✅ **3d (2 pièces sur 4)** un document et une photo **existent chez nous avant que Hektor réponde** — le lot était en plan depuis le 25/09, et j'ai trouvé **pourquoi il ne pouvait pas marcher** : le rangement calcule `storage_path || <place définitive>`, donc il gardait le chemin **temporaire** comme domicile du document *(mesuré contre la version d'avant : 2 contrôles rouges)*. ⭐ **Deux gardes, pas une** — et celle des droits faisait **déjà** ce que Frédéric demandait. **Répétition 15/15.** ⭐⭐ **Et la fuite de la salle d'attente est nettoyée ET bouchée** : **109 fichiers, 196 Mo** dormaient sous `temp/` depuis le 14/05, dont **93 venant des générateurs de PDF**, pas des documents. ✅ **3d-③ le front** : un seul point d'appel pour les deux objets, et ⭐⭐ **une photo déposée ne disparaît plus** — l'écran faisait `if (!url) return null`, donc elle n'était **pas affichée du tout** *(une absence est pire qu'une erreur : elle ne se remarque pas)*. ✅ **3d-④ le repreneur** a son script — ⛔ **mais aucune tâche Windows ne l'appelle : il ne tourne pas, c'est à enregistrer**. ⭐ **Les 4 épreuves rouges sont réparées** *(dont 2 qui exigeaient le défaut ou accusaient la bonne réponse)* : **294 contrôles verts, 0 échec** — une première depuis le 27/09. ⭐⭐ **14/10, la fin** : ✅ **la pièce 4 de 3c est PROUVÉE par le vrai chemin** *(`posees 1` sur 62774)* · ✅ **option B** : les 2 étapes du contrat de mandat quittent le run *(elles n'atteignaient plus rien depuis le 30/09)* · ✅ **bloc 2 : supprimer une photo** — la commande Hektor est **trouvée** par un relevé en lecture seule *(`mode=delete_img` + `mode=ordonne_photos`)*, le geste, la base et l'écran sont écrits, **324 contrôles verts**. ➡ **Bloc 3 reporté au chantier ⑦** (décision de Frédéric). ✅ **Tout est collé, déployé et éprouvé en réel le 14/10** : une photo ajoutée puis supprimée sur 62774, le repreneur a tourné. ⚠ L'essai a trouvé un **3ᵉ verrou** (la distribution des travaux), corrigé |
-| ④ | aucun échec silencieux — **10 points** *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** · ⭐ **4j ajouté et fait le 13/10** *(trouvé par la session du chantier ③)* : **23 battements du run partaient dans le vide** — une clé non enregistrée reçoit **0 ligne modifiée** et le code compte **un succès**. **6 nuits sur 46** portaient un échec dont personne n'a rien su. 23 lignes de registre + 14 `-WorkerKey` au run ; il ne reste que **3 étapes sans clé**, celles qui **tuent déjà le run**. ⏳ **1ᵉʳ contrôle le 14/10 au matin** |
+| ② | les droits du négociateur *(`notice/CHANTIER_2_DROITS_NEGOCIATEUR_2026-10-09.md`)* | ✅ **FINI le 12/10** — 8 patchs, 1 déploiement. Restes **reportés par lui** *(voir « ce qui attend »)* |
+| ③ | Hektor d'abord → chez nous d'abord *(`notice/CHANTIER_3_HEKTOR_DABORD_2026-10-12.md`)* | ✅ **FINI le 14/10**, éprouvé en réel sur 62774. ⛔ **L'interrupteur `CHAMPS_APP_ANNONCE` reste ÉTEINT** *(tranché le 13/10)* |
+| ④ | aucun échec silencieux — 10 points *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** · + **4j** le 13/10 *(23 battements partaient dans le vide)* |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
-| ⑥ | ce qui ne redescend pas de Hektor (G.1-b, G.2 → G.6, photos, agenda) *(`notice/CHANTIER_6_REDESCENTE_HEKTOR_2026-10-14.md` · liste : `D.0`, l. 974 · photos, section **10bis**, l. 1174)* | 🏁 **LES 9 POINTS SONT TRAITÉS — il ne reste que le CONTRÔLE du 16/10 au matin** *(item ⑪ ci-dessous)*. ✅ **6e clos le 15/10 PAR DÉCISION** *(Frédéric : « clôture le 6e, c'est un autre problème, rien à voir avec ce chantier »)* — le sujet **sort du chantier** et vit seul dans **`notice/HISTORIQUE_VISITES_HEKTOR_2026-10-15.md`**. ⭐ Son audit a trouvé mieux que ce qu'il cherchait : **1 721 bons de visite sont DÉJÀ sur notre serveur** *(1 182 annonces, 1 089 lisibles en texte, 632 scans)*, rapatriés par la synchro des documents **sans un appel à Hektor** ; l'agenda de Hektor, lui, n'est lu nulle part *(12 points d'entrée, 12 familles d'API, 38 tables du miroir : aucun agenda)*. ⚠ **Deux corrections** : le bon de visite n'est **plus** fabriqué par Hektor *(`visitVoucherHtml` le fait chez nous → l'audit du 07/10 et son ⛔ C3 sont **périmés**)* ; et notre système de RDV **existe mais ne sert pas** *(11 lignes, toutes de juin, 0 depuis 30 jours)*. ⚪ **6f** décision déjà prise · **6g** objet disparu · **6h** inerte *(0 usage en 4 mois)* · **6i** fausse alerte. · ✅ **6a FINI le 14/10** : les **527 brouillons** sortent du rattrapage des documents — ⭐ **pas par un correctif, par une décision** *(Frédéric : « il n'y a pas de documents dans les brouillons, il faut juste le savoir »)*. Le défaut était réel *(0 des 527 dans les 3 index que `loadDossier` connaît → 527 échecs, exclusion définitive, rouge 30 j, la nuit du **16→17/10**)*. ⭐ **Et un brouillon est un MONDE À PART** : il entre par la **GraphQL** (`sync_hektor_drafts.py`), pas par le run REST ; il est **sorti du parc vivant exprès** (301 le 22/06) ; il est **en lecture seule par décision** (`App.tsx:411`, bouton « Reprendre la saisie » qui ouvre Hektor) ; **aucune modification n'a jamais été tentée** (8 rafraîchissements, 0 autre travail, depuis juin). ⭐ **Les 956 photos de 168 brouillons sont déjà sur le serveur — sans jamais appeler Hektor** (miroir local + CDN) ; **les documents, eux, n'ont aucune source locale**. ⚠ **Le piège évité** : retirer le périmètre sans le **déclarer** faisait crier « PÉRIMÈTRE OUBLIÉ » puis « LOT MAIGRE » en **code 1** → un e-mail rouge par nuit *(prouvé par témoin inverse)*. **3 épreuves vertes, 0 écriture, 0 redémarrage.** ✅ **6a-bis FINI le 14/10, SANS AUCUN PATCH** *(Frédéric : « A »)* — j'avais annoncé « un négociateur ne voit ni la fiche ni les photos de ses brouillons » : **vrai des fonctions, faux de l'écran**. Il voit déjà la liste *(RLS `is_app_user_active()`)*, la **vignette** *(510/527, servie par notre serveur)* et la fiche légère ; et le **panneau photos n'est pas affiché** sur une fiche légère → `loadConsolePhotos()` n'est **jamais appelé**, la RLS n'est **jamais testée**. ⚠⚠ **Et l'ouvrir aurait été dangereux** : `app_console_can_access_dossier` est la porte de **12 fonctions, dont 10 d'ÉCRITURE** *(créer un document, créer une photo, les 3 gestes d'affaire…)* **+ `app_console_can_request_job`** — on aurait ouvert dix gestes d'écriture sur une saisie en cours, contre la décision du 23/06. ⭐ **Et le système se répare seul** : sur les 73 brouillons finalisés, **66** sont revenus au parc vivant et sur leurs 638 photos **602 pointent le bon numéro, 0 est mal pointée**. ⛔ **Question en attente** : `app_brouillon_annonce_detail_cache` est **vide et rien ne la remplit** *(pas de type `prepare_brouillon_annonce_detail`)* → ce serait un **nouveau type de travail (3 verrous)**, donc **chantier ⑦**, et seulement si tu en as l'usage. · 🔧 **6b en cours (G.2 ✅ codé, dormant)** : **depuis le 20/08 personne ne va voir s'il y a du nouveau** — la récupération d'août **était complète**, la photo a 8 semaines. ⭐ **Preuve métier sans appeler Hektor** : mandats signés **avant** le 20/08 → 399 documents sur 472 ; **après** → **4 sur 97**. ➡ **93 mandats n'existent que chez Hektor**, +12/semaine *(71 annonces neuves + 22 déjà lues)*. ⭐ **Le mécanisme existait à moitié** : l'empreinte est posée (54 896), **la comparaison `--detect` jamais allumée**. ⚠ **Et la date ne peut pas servir** *(22/22 : un mandat du 12/10 sur une annonce « modifiée » le 13/02/2025)* — **pour les photos c'est l'inverse**, ne pas confondre. ✅ **Codé dormant** : budget de lectures *(le `--cap` ne plafonnait que les travaux : la boucle lisait 13 484 pages ≈ 6 h 23)*, périmètre `vente` *(727)*, étape du run en **2 lignes, non bloquante et surveillée** par une clé qui existait déjà *(0 écriture en base)*. ⚠⚠ **2 défauts trouvés et corrigés** : la **pagination sans tri** *(31 signatures vues sur 58 → 58/58 ; même défaut qu'en septembre, laissé dans ce fichier)* et **6 tâches suivies sur 8** *(« GTI Rattrapage Documents » jamais dans la liste du moniteur — 5ᵉ fois le même trou, à moitié rebouché le 26/09)* → **8/8**. ⭐⭐ **15/10 — CHANGEMENT DE DESSIN, décidé par Frédéric : on ÉTEINT le rattrapage, on ALLUME une tâche d'ENTRETIEN à 22:00** *(ordre : actifs > estimations > vendus/clos ; plafond 300/nuit sur les vendus/clos)*. Le rattrapage empile une **synchro complète** *(~25 s)*, l'entretien une **lecture** *(~1 s)* et ne synchronise **que ce qui a bougé** : 25 fois moins cher, donc répétable indéfiniment. ➡ **« GTI Entretien Documents »** *(`scheduled/run_entretien_documents.ps1`)*, enregistrée le 15/10 à 12:50, **4 lignes** : en vente 800/cap 300 **chaque nuit** · estimations 2 000/cap 100 *(~6 nuits)* · vendus/clos 2 000/cap 300 *(~5 nuits)* · **photos** *(local)*. ⭐ **La ligne 3 règle G.1-c seule** *(plus besoin du patch d'empreintes)* ; **la ligne 4** empêche le retour des ~7 photos/jour. ⚠ **« GTI Rattrapage Documents » DÉSACTIVÉE** et le run de 05:00 porte un **refus explicite** à la place de son étape dormante *(les allumer tous les deux doublerait le travail)*. ⚠ Tâche **déclarée au moniteur AVANT d'être enregistrée** *(9 noms, critical)*. **Arrivée : 726/729 biens en vente et 12 728/12 758 estimations ont leur empreinte.** · ⚠⚠ **ET LE DÉFAUT DU JOUR, trouvé en contrôlant la file** *(j'attendais 3 travaux en erreur, il y en avait **33**)* : **un document refusé par le coffre coulait TOUTE son annonce**. Le coffre a une **liste blanche de 10 types** et refuse le reste *(23 **.odt**, .ods, .html, sans extension)* + tout fichier **> 50 Mo** ; la boucle ne tolérait que les **PDF modelo**, donc un seul .odt → voisins jamais téléchargés, **aucune empreinte**, exclusion « pour toujours ». **173 documents manquaient dans l'app sur les biens vivants, dont 89 PDF et 4 photos parfaitement normaux.** ⚠ **Ma 1ʳᵉ explication était fausse** *(j'avais accusé un nom de fichier à point en tête ; le corps dit `415 InvalidMimeType`)*, et mon « 239 débloqués » aussi *(ces 239 sont des archives, où le cloud n'est pas voulu)*. ➡ **Correctif « FAIS 2 »** *(on ne touche PAS à la liste blanche)* : seuls **415** et **413** sont reconnus comme définitifs, option **fausse par défaut**, le clic humain « préparer » **ne l'arme pas** *(pas de bouton menteur)*, marque durable `cloud_refuse` **qui s'efface d'elle-même**, et **l'empreinte est posée quand même — divergence voulue et écrite** *(sinon relecture chaque nuit pour rien)*. **33 contrôles verts dont 4 témoins inverses ; suite complète 29 épreuves / 398 verts.** **EN PRODUCTION** : 4 services redémarrés **14:35:31** *(⚠ celui annoncé à 12:50 n'avait pas pris)*, répétition **33/33/0/33/31**, purge collée → **0 en erreur, 33 annonces libérées**, dont **32 sans empreinte donc servies EN PREMIER à 22:00** |
-| ⑦ | les gestes qui manquent *(`notice/CHANTIER_7_GESTES_QUI_MANQUENT.md` — **les 12 points y sont tabulés depuis le 15/10** : 4 manquaient, venus de l'audit du 08/10 et du chantier ⑥)* | 🔧 **en cours** — **⑦-1 ARCHIVER / DÉSARCHIVER UN CONTACT, audité à fond le 15/10** : ⭐⭐ **la commande Hektor n'est PAS inconnue** — elle dort dans **deux** captures de juin *(`mode=contacts-contactProfile-archiveContact` + `archive=0|1`, **un seul ordre pour les deux sens** ; et dans la page de Hektor c'est un **interrupteur** dont le rappel ne fait que de l'animation → aucune cascade côté navigateur)*. **Ampleur** : **52 % des 356 515 contacts sont archivés chez Hektor** *(geste du quotidien)*, l'app en a archivé **0**, et ses **13 suppressions sont 13 fiches d'ESSAI** *(aucun vrai client)*. **55 fiches archivées sont mandantes d'un bien en vente** *(52 biens ; 215/128 avec les estimations)* → **Gladys n'est pas « le dernier cas »**, elle est la dernière de **sa** famille. ⚠ **Le danger est indirect** : si l'archivage emporte la **recherche** et qu'il n'y a pas d'annonce active, la fiche **sort du cloud la nuit suivante** *(les 35 du 14/10)*. 📜 **Et le projet avait déjà prévu le geste** *(cahier doublons du 29/06 : `restore_archive_error`, `archive_secondary_candidate`)*, **mais il interdit l'« archivage direct » dans les premiers lots** — lecture à confirmer par Frédéric. ✅ **16/10 : LA BASE EST EN PRODUCTION** *(répétition **23/23**, puis contrôle **8/8** : les 3 verrous posés, le type dans la branche **actions** et **pas** dans **admin**, `authenticated` oui / `anon` non, et « supprimer un contact » toujours fermé au négociateur)*. **Décisions de Frédéric** : le négociateur sur **ses** contacts · **un seul geste** *(interrupteur, comme Hektor)* · l'item dans le **menu « … »** · bouton **toujours visible** avec un refus en français · **Gladys seule**. ✅ **Le worker et l'écran sont écrits** *(5 endroits worker, un **seul** code pour les 2 fiches, `npm run build` vert, 3 suites vertes)*. ⛔ **RESTE** : redémarrer les **4 services** *(accord à part)*, **pousser** le front, puis l'essai réel — ⚠ le contact d'essai 10355757 **n'existe plus**, il faut une cible · ➕ **le cas Gladys DURIEUX** *(mandante d'une annonce active, fiche archivée — à régler en même temps)* — ➡ **reçoit du chantier ③ (14/10, décision de Frédéric)** : le **crayon** de la date de clôture dans la rubrique Mandat *(`setMandatClotureApp` n'a qu'un appelant, la modale de statut)* et l'**écran du journal des suppressions** *(admins ; aucun écran ne le lit)*. ⭐ Et **réordonner / choisir la photo principale** : `mode=ordonne_photos` est désormais **connu** (relevé du 14/10) · 🔎 **⑦-3a AUDITÉ À FOND LE 16/10** — **aucun mandat réel n’a jamais été clos par l’app** *(les 25 clôtures journalisées portent sur les **4 biens d’essai**)*. Sa 1ʳᵉ phrase est **vraie** *(l’acceptation d’une annulation enchaîne bien une clôture — commit `fd8a042`, 30/07)* **mais ce chemin n’a jamais servi** : les 4 demandes acceptées datent de **mai**, **2 mois et demi avant** ce code. Et il y a **deux** chemins, pas un *(statut « Mandat clos » **ou** « Vendu »)*. ✅ **Il a raison sur la colonne** : **ni le tableau du registre ni la fiche mandat (9 lignes) n’ont de clôture**, et la rubrique Mandat de la fiche annonce lit **la colonne de Hektor** — **seul le cockpit montre la nôtre**. ⭐ Mais le registre **n’est pas aveugle** : sa pastille passe à « Clos » dès qu’une date existe, **en lisant la nôtre** — donc poser une date **déplace la ligne dans le filtre**. ✅ **La décision « pas de clôture transmise à Hektor » est retrouvée, écrite deux fois** *(13/10 par lui ; raison technique du 28/08 : le formulaire de Hektor exige un n° de mandat et **échouait sur 98,8 % du parc**)*, et le code la respecte — `CLOTURE_MANDAT_CHEZ_HEKTOR` vaut **false** et **aucun fichier ne le pose**. ⚠ **Le trou des droits est réel mais c’est une PORTE DE DERRIÈRE** : la RPC de saisie est ouverte à `authenticated` **sans aucune garde interne**, donc appelable **en direct avec la clé publique**, sans l’écran. ⭐⭐ **En revanche LE GESTE EST DÉJÀ RÉSERVÉ, et j’avais dit faux à Frédéric** : `app_console_can_request_job` réserve `change_hektor_annonce_status` à `admin`/`manager` **dès sa première règle** *(chantier ②)* — épreuve du 16/10 en empruntant les identités : legrand (commercial) **false**, codex.test (admin) **true**. Les deux chemins de clôture passent par ce type de travail, donc **un négociateur ne peut pas clore un mandat**. ⚠ **Mais c’était une décision ÉCRITE du 13/10** *(« `authenticated` est VOULU »)* que sa demande du 16/10 **remplace** — ce n’est pas une négligence. ⭐ Et **rien à inventer** : `is_app_manager_or_admin()` **existe déjà** en base *(chantier ②)*, `isManagerOrAdmin` **existe déjà** au front, et le chemin du négociateur qu’il décrit *(« lié à la demande d’annulation »)* **existe déjà** dans le menu du mandat, sur **4 écrans**. ⚠⚠ **ET LE DÉFAUT DU JOUR, non cherché** : la modale a **DEUX champs de date** et **ce n’est pas celui qu’on remplit qui gagne** — le front écrit la « date de clôture », puis le worker repasse et lit `transaction_date`, **l’autre champ, qui vaut aujourd’hui par défaut**, avec un `DO UPDATE` *(preuve au journal : 2026-09-17 puis 2026-09-18 sur le même mandat)*. ⭐⭐ **Le remède était à moitié posé** : `close_date` est **déjà le premier choix du worker** et **personne ne l’envoie** → **2 lignes de front, aucun redémarrage des 4 services**. ⛔ **Et surtout pas en détournant `transactionDate`** : il part **aussi chez Hektor**. **Décisions de Frédéric, 16/10** : ordre **1 → 2 → 3 → 4** · ⛔ **la clôture SEULE, jamais les dates d’origine du mandat** · ✅ **une colonne en + au registre** *(⚠ à concilier avec le « aucune colonne ajoutée » écrit le même jour par l’autre session)*. ⚠ **Pièce 2 ÉCRITE ET DORMANTE** *(patch + inverse + répétition ; **7 contrôles à blanc verts, 100 % en lecture**, dont « l’inverse retombe sur l’original à l’octet près » et l’empreinte retrouvée)*. ⚠ La répétition **ne pourra pas** prouver la branche « manager » : **0 manager actif** *(4 admin, 2 commercial)*. ✅✅ **GO « Option a » — LES PIÈCES 1, 3 ET 4 SONT ÉCRITES ET LE BUILD EST VERT** *(la 2 reste dormante)*. ⭐ **Pièce 1 en 3 lignes** : `closeDate` → `close_date` dans la charge du travail — **aucun des 4 services ne redémarre**, le worker lisait `close_date` en premier depuis toujours. **Pièce 3** : la colonne **« Date de clôture »** au tableau du registre *(min-width 1084→1180 px, sinon « Mandant(s) » en `width:auto` perdait les 96 px)*, la ligne **« Cloture »** dans la fiche mandat, et la rubrique Mandat de la fiche annonce qui lit **notre** date *(`clotureParMandat`)* au lieu d’une colonne **toujours vide**. **Pièce 4** : un bloc **« Clôture du mandat »** sous la jauge — manager/admin **saisit, corrige, ou rouvre** ; le négociateur est renvoyé vers **la demande d’annulation qui existe déjà** *(on n’a pas fabriqué un second circuit)*. ⚠⚠ **ET UN PÉRIMÈTRE EST EXCLU, DÉCLARÉ** : les **38 mandats de recherche** entrés le 16/10 par l’autre session **n’ont ni annonce ni dossier (0/38)**, or notre carnet a pour clé le couple *(annonce, n°)* → **lecture seule, avec la raison à l’écran** plutôt qu’un bouton qui échouerait. ⭐ `messageRefusCloture()` traduit les refus en français, **y compris `droits_insuffisants` qui n’existe pas encore** *(posé d’avance pour la pièce 2)*. ⭐ **Le build type-vérifie VRAIMENT** : prouvé par un **témoin inverse** *(`const x: number = "texte"` → `error TS2322`, puis retiré)* — sans lui, « build vert » ne voulait rien dire. ✅✅ **POUSSÉ ET VÉRIFIÉ EN LIGNE à 12:3x** *(go « Vas y pousse » — première fois que je pousse moi-même)* : `a392053 → 9662fd8`, **3 commits dont 2 de l’autre session** *(`8149f44` les mandats de recherche, `9662fd8` des `title` au survol)* — ⭐ vérifié avant de pousser : le plus récent ne touche **que** la colonne « Nature », **aucun chevauchement**. Sonde du fichier SERVI *(`phase2/checks/sonder_front_deploye.sh`)* : `/assets/index-DaU4SQsX.js` porte **5/5 textes neufs** et `md-cloture` **12 fois** dans la CSS. ⭐⭐ **ET LE DOUTE SUR LA PIÈCE 1 EST LEVÉ** : une RPC qui aurait reconstruit la charge clé par clé aurait **jeté `close_date` en silence** *(famille des « trois verrous »)* — mesuré : `app_change_annonce_status_optimistic` fait `v_payload := coalesce(job_payload, ...)` (l. 79) et insère **`v_payload` en entier** (l. 287), et elle lit déjà `close_etat`/`close_raison`/`close_reason` → **ma clé traverse intacte et rejoint une famille existante**. ⛔ **RESTE** : ⚠⚠ **PERSONNE N’A VU L’ÉCRAN** *(le fichier servi porte les textes ; ça ne dit pas que le bloc est beau ni que la colonne tient dans la page — écran **Mandats**, ouvrir une fiche, le bloc est **sous la jauge**)* · ⬜ **l’essai réel**, celui qui compte : clôturer avec une date **différente d’aujourd’hui** et vérifier que le carnet porte **la date saisie** — ⚠ à mesurer sur **la valeur**, pas sur l’heure *(le `PATCH` du worker ne rafraîchit pas `ecrit_le`)* · 🔸 **la pièce 2 reste dormante** *(la porte de derrière)*. ⚠⚠ **APRÈS-MIDI — J’AI CASSÉ LA MISE EN PAGE DU REGISTRE, ET C’EST L’ŒIL QUI L’A VU** *(« ouvre, tu as accès Chrome »)* : conteneur **1 089 px**, tableau **1 180** → **91 px de trop et une barre de défilement horizontal**, alors que le commentaire que j’avais remplacé disait **« calées pour tenir dans la page sans défilement horizontal »** — **la leçon 27 prise en flagrant délit**, sur une largeur au lieu d’une alerte. ⭐ Et le vrai prix était là : **215 clôtures sur 24 564 lignes (0,88 %)**, **0 sur les 50 affichées** — une colonne vide 99 % du temps coûtait 96 px à tout le monde. ✅ **Option C (sa décision)** : colonne retirée, `min-width` revenu à **1 084**, la clôture passe **en sous-ligne de « Date de fin »** (`Clos 14/10/2027`) — ⭐ **le patron de la colonne « Montant » juste à côté**, qui porte déjà sa sous-ligne. **Zéro pixel ajouté.** ✅ **2ᵉ consigne : CLÔTURER PASSE TOUJOURS PAR LA DEMANDE D’ANNULATION, MÊME EN ADMIN.** Un seul bouton pour tout le monde *(le circuit existe depuis toujours, et c’est son acceptation qui clôt — chaînage « A5 »)* ; **corriger** une date déjà posée reste manager/admin. ⚠⚠ **Une condition N’A PAS été recopiée, exprès** : le menu exige un mandat **validé**, or **22 759 des 24 564 lignes sont `a_controler`** → **93 % n’auraient aucun bouton**. Valider concerne la **diffusion**, clôturer la **vie du mandat**. Divergence **déclarée dans le code**. ⚠ **À TRANCHER** : « systématiquement » n’est vrai que pour CE bouton — **la modale de statut clôt toujours sans passer par la demande** *(déjà réservée admin/manager)*. ⭐ Au passage, « Rouvrir le mandat » disparaît : il **effaçait sans confirmation**. Build vert, **témoins dans les deux sens** *(4 textes disparus, 5 présents)*. ⛔ **PAS ENCORE POUSSÉ** |
+| ⑥ | ce qui ne redescend pas de Hektor *(`notice/CHANTIER_6_REDESCENTE_HEKTOR_2026-10-14.md` · liste : `D.0`, l. 974 · photos, section **10bis**, l. 1174)* | ✅ **TRAITÉ les 14-16/10** — les 9 points. 6e et l'historique des visites **sortis du chantier** *(sujets à part)* |
+| ⑦ | **les gestes qui manquent** *(`notice/CHANTIER_7_GESTES_QUI_MANQUENT.md`)* | 🔧 **EN COURS** — voir le tableau ci-dessous |
 | ⑧ | gardé chez nous en entier | ⬜ |
 
-**Ordre de Frédéric : ① ⑤ ④ ② puis ③ → ⑥ → ⑦ ⑧.** ➡ **⑥ est traité** *(contrôle du 16/10 au matin)*, **le suivant est ⑦**. Un périmètre, une taille, un ordre ou un
-report ne se décident jamais sans lui.
+**Ordre de Frédéric : ① ⑤ ④ ② puis ③ → ⑥ → ⑦ ⑧.** ➡ **Le chantier en cours est ⑦.**
+⚠ Un périmètre, une taille, un ordre ou un report **ne se décident jamais sans lui**.
 
-### ⭐ Les leçons qui servent au chantier suivant
+### 🔧 LE CHANTIER ⑦ — les 12 points, et ce qui reste
 
-1. ⭐ **Mesurer LE GESTE DE L'ÉCRAN, pas un geste plausible.** Trois fois le 12/10 j'ai cru à
-   une avarie grave en comptant des lignes que l'app ne compte jamais *(l'écran lit les
-   affaires et les photos **par annonce**, compte les contacts en **estimé** et les annonces en
-   **exact**)*. **Lire comment l'écran lit, avant de crier.**
-2. ⭐ **Une répétition vérifie les DEUX SENS** : que la nouvelle phrase **apparaît** *et* que
-   l'ancienne **disparaît** ; et qu'un patch **a changé quelque chose**, pas seulement que
-   l'inverse revient. *(Mémoire : « répétition : le témoin inverse ».)*
-3. ⭐ **Modifier une fonction sans rien écraser** : le patch ne **recopie** pas la fonction, il
-   la **lit dans la base**, vérifie son empreinte *(sans les retours chariot)*, contrôle que
-   **l'ancre est unique**, insère après elle, réexécute.
-4. ⭐ **Contrôler un droit sans mot de passe**, en empruntant l'identité, en lecture seule :
-   `BEGIN; SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claims = …'{"sub":"<uuid>"}'…;`
-   puis des lectures, puis `ROLLBACK;`
-5. ⭐ **Une règle de lecture doit sortir ses parties constantes** : `(select f())` est évalué
-   **une fois**, `f()` **une fois par ligne** — 8,15 s contre 0,076 s pour un déplacement de
-   parenthèses.
-6. ⭐ **`service_role` porte `rolbypassrls`** → **aucune règle RLS ne peut casser** les
-   workers, le backend, `phase2`, le run ni les crons. À ressortir chaque fois que la question
-   se pose.
-7. ⭐ **Un remplacement en masse ne se relit qu'en le faisant IMPRIMER** : lignes changées
-   **et** lignes gardées avec leur raison. C'est ainsi que 3 défauts sont sortis.
-8. ⚠ **Ne jamais conclure « le déploiement est cassé » juste après un push** : sonder en
-   boucle, puis parler. *(Render `/health` rend le commit ; pour Vercel, chercher une chaîne
-   neuve dans `/assets/index-*.js`.)*
-9. ⭐⭐ **UNE CAUSE STRUCTURELLE SE BALAIE DANS TOUTE SA FAMILLE** *(12/10)*. Le 08/10, 5a a
-   réparé « désarchiver » pour les archives — **une case sur huit**, alors que les 7 autres
-   partageaient la même supposition *(« le bien est dans `app_dossier_current` »)*, fausse
-   depuis le 20/05 pour **44 259 biens**. **Ce que Frédéric signale est un symptôme, jamais
-   le périmètre.**
-10. ⭐ **LE NOM D'UNE COLONNE MENT — et une mesure peut être une tautologie.** `app_archive_id`
-   / `app_historical_id` **sont** `app_dossier_id`, renommés. J'avais conclu l'inverse d'un
-   « 0 archive n'existe comme `app_dossier_id` » qui ne disait que *« aucune archive n'est
-   dans la table des vivants »* — **la définition d'une archive**. Vérifier par un **second
-   chemin** *(ici : les anciens travaux du même bien)*.
-11. ⚠ **L'ÉCRAN PEUT PORTER UNE RÈGLE QUE LA BASE IGNORE.** L'écran a trois états
-   *(vivant · index sans détail · index avec détail)*, les RPC n'en connaissaient qu'un :
-   le bouton restait affiché et échouait en jargon. **Avant de corriger une fonction, lire
-   ce que l'écran promet.**
-12. ⚠ **Deux règles PostgreSQL** : deux règles « permissive » se combinent en **OU** *(ajouter
-   une règle stricte à côté d'une large ne cloisonne rien — il faut remplacer)* · et une **vue**
-   n'applique les règles des tables qu'avec `security_invoker`.
-13. ⭐⭐ **UNE SENTINELLE QUI CRIE AU LOUP N'EST PLUS UNE SENTINELLE** *(13/10)*. « le push
-   n'est pas passé » revenait **chaque matin depuis le 08/10** et repartait seul deux heures
-   plus tard : le moniteur passe à 07:48, entre le push *(06:56)* et la descente de la doublure
-   *(~07:58)* — il comparait **le registre du matin à la copie de la veille**. **Quand on ne
-   peut pas savoir, on dit « non concluant », on ne crie pas** — et le vrai rouge reste intact.
-   ⚠ Et **un rouge quotidien n'est pas forcément de mon fait** : l'historique des alertes le
-   datait d'avant mon travail. *(`notice/SENTINELLE_MANDAT_FRAICHEUR_2026-10-13.md`.)*
-14. ⚠ **DEUX DATES NE SE COMPARENT PAS COMME DEUX TEXTES.** `app_mandat.last_seen_at` est en
-   **UTC**, `sb_pull_state.derniere_descente` est **locale sans fuseau écrit** : comparer les
-   chaînes rendait l'**inverse** de la vérité, à **deux heures** près.
-15. ⭐⭐ **CHERCHER SI LE PROJET A DÉJÀ TRANCHÉ — avant de proposer une forme.** Le 13/10,
-   Frédéric a demandé « une colonne supplémentaire » : ce patron tournait **déjà dans la vue
-   que je venais de lire** *(photos : `COALESCE(x_app, x)` + les deux colonnes nues + une
-   **re-pose après le push**, 24 497 lignes sur 24 505)*. J'avais proposé une jointure — que
-   la **RLS à 0 politique** rendait impossible. **Il avait la bonne forme avant moi.**
-16. ⚠⚠ **NE PAS RELIRE SA PROPRE ÉCRITURE COMME SI ELLE FAISAIT AUTORITÉ.** Le worker écrivait
-   notre date dans **la colonne de Hektor** *(« confort d'affichage, sans autorité »)*, et le
-   magasin relisait **ce même registre** comme « ce que dit l'app ». **La boucle était fermée** :
-   4 fausses « décisions de l'app », et **deux de mes comptages faux** *(« 0 sur 2 » puis
-   « 4 sur 7 » — le vrai était 0 sur 3)*. ➡ **Toujours demander : qui a ÉCRIT cette valeur ?**
-   Une colonne « ce que dit l'app » qui est aussi écrite par l'app ne prouve rien.
-17. ⚠ **UN TÉMOIN NE DOIT PAS DÉPENDRE D'UNE TABLE QUE L'ÉPREUVE MODIFIE.** Mon témoin inverse
-   a rendu `117 / 117 / 118` : l'épreuve d'effacement supprimait la ligne de carnet qui servait
-   à **exclure** ce couple du décompte. Le patch était sain ; **la mesure était mal bâtie**.
-   ➡ **Figer la liste des exclus AVANT les épreuves.**
-18. ⭐ **AVANT DE CRIER À LA PERTE, REGARDER SI LA LIGNE EST UN BIEN D'ESSAI.** Le 13/10 j'ai
-   bâti une alerte complète *(« une ligne du coffre a disparu, rien ne l'explique, sentinelle à
-   poser »)* sur la clôture de **62774** — **le bac à sable du projet**, dont les traces sont
-   **retirées exprès** *(« Bac a sable 62774 : propre »)*. **Les 2 clôtures réelles sur 2
-   étaient intactes.** Les biens d'essai sont listés dans la mémoire de reprise : **62963,
-   62774, 284/107, 15633/49544, contact 10355757**. **Les écarter d'abord.**
-19. ⚠⚠ **UN HEARTBEAT NON ENREGISTRÉ PART DANS LE VIDE *ET COMPTE POUR UN SUCCÈS*.**
-   `monitoring/heartbeat.py` écrit en **`PATCH` FILTRÉ** sur `app_worker_registry` : une clé
-   **sans ligne** touche **0 ligne**, reçoit **204**, et `200 <= status < 300` compte un succès.
-   Et `check_gti_health` **énumère la table** — donc il ne la regarde jamais. ⚠ **9 des 40 clés
-   du run sont dans ce cas**, dont **`phase2.adresses_photos`**, alors que le commentaire du run
-   promet le contraire depuis le 27/09 *(→ chantier ④)*. **Poser une étape avec `-WorkerKey`
-   n'est PAS la faire surveiller : il faut la ligne de registre.**
-21. ⚠⚠ **UN JOURNAL QUI AVALE SON ERREUR NE PROUVE RIEN.** `insertDeletedAnnonceLog` et son
-   jumeau contacts journalisent l'échec d'écriture **et laissent la suppression continuer** :
-   résultat mesurable, **une de leurs lignes a un `before_json` vide et aucun demandeur** — on a
-   détruit sans savoir quoi. ➡ **Pour une trace de geste irréversible, l'écriture de la trace
-   est une CONDITION, pas un effet de bord** : elle s'écrit **avant**, et si elle rate, on ne
-   détruit pas.
-22. ⚠ **UNE COLONNE POSÉE EN BASE NE REMONTE PAS TOUTE SEULE À L'ÉCRAN.** Deux fois le 13/10 :
-   la clôture de mandat *(le cockpit lisait la fiche, qui n'a pas la colonne)* et la mention
-   « supprimé chez Hektor » *(le `select` du front **nomme** ses colonnes)*. **Après avoir ajouté
-   une colonne, chercher le `select` qui doit la porter** — sinon le silence est total.
-26. ⚠⚠ **UN SEUIL ABSOLU SUR UN COMPTEUR QUI CROIT EST UNE ALARME A RETARDEMENT**
-   *(14/10)*. Frédéric a demandé « monte le seuil » pour deux sondes jamais vertes. Mesure :
-   elles montent de **+15,8** et **+2,7 par jour** — un seuil à 2 000 serait franchi dans
-   **25 jours**. ➡ **Sur un compteur cumulatif, surveiller l'EMBALLEMENT** *(`rule: "growth"`,
-   déjà dans le fichier)*, **pas le total** — et **régler les paramètres sur la vitesse
-   mesurée**, jamais sur un chiffre rond. ⚠ Le prix à dire : une dérive **lente** ne sonnera
-   plus jamais.
-27. ⚠⚠ **UN SEUIL QUI PORTE UN RAISONNEMENT NE SE MONTE PAS « POUR FAIRE TAIRE »** *(14/10)*.
-   Le seuil 4 de `ecart_statut_regle` tolérait **quatre REMONTÉES** nommées, et le commentaire
-   disait : *« un cinquième écart veut dire que quelque chose a bougé »*. Les 2 nouveaux sont
-   des **REDESCENTES** — autre famille — et l'un n'a **aucun numéro de dossier**.
-   ➡ **Lire ce qu'un seuil PROTÈGE avant de le déplacer** ; proposer de changer **la règle**
-   plutöt que le chiffre.
-25. ⚠⚠ **UN POURCENTAGE ANNONCE SE MESURE SUR LE GESTE FINAL** *(14/10)*. J'ai promis
-   « −21 % d'e-mails » en comptant **7 bascules** de `monitor.summary` sur 33. Rejeu du mois
-   entier : **14 e-mails avant, 14 après — gain ZERO**. `dispatch` envoie **une** liste, donc
-   toutes les bascules d'un même passage partent dans **un seul** e-mail, et le résumé n'a
-   jamais basculé seul. ➡ **Mesurer sur ce qui PART, pas sur l'intermédiaire qui lui
-   ressemble.** Même famille que la leçon 1. *(Le correctif reste : 7 e-mails plus propres.)*
-23. ⭐⭐ **UNE ALERTE DOIT ÉCOUTER LA RÉPONSE DE L'HUMAIN** *(14/10)*. L'écran offrait deux
-   boutons pour trancher un geste abandonné, et le rouge ne les regardait pas : Frédéric
-   recevait un e-mail **chaque matin pour un problème qu'il avait déjà traité**. ➡ Quand on
-   ajoute un bouton « j'ai traité », **chercher toutes les sondes qui comptent la même
-   chose** — ici le bandeau et `geste_abandonne` écoutaient, le rouge non.
-   ⚠ Et dans le même geste : **ne jamais soustraire des NOMBRES, croiser des IDENTIFIANTS**
-   *(les 2 gestes tranchés n'existaient plus : « 2 − 2 = 0 » aurait effacé une vraie alerte)*.
-24. ⚠ **UNE COLONNE « dernière exécution » PORTE SOUVENT LE DÉPART, PAS LA FIN**
-   *(14/10)*. `sb_pull_state.derniere_descente` **et** `derniere_complete` valent toutes
-   deux l'heure de **départ** *(149 lignes sur 154 identiques)*. Mon correctif de la veille
-   en a déduit « la Descente a fini » et a gardé un faux avertissement.
-   ➡ **Avant de conclure « c'est fini », vérifier que la colonne mesure une FIN.**
-28. ⭐⭐ **DEUX ÉCRITURES DE LA MÊME TRANSACTION SE RECONNAISSENT À LA MICROSECONDE**
-   *(15/10)*. Il fallait savoir quelles lignes du carnet appartenaient à *ce* travail et
-   pas à un geste plus récent qui avait réussi. `now()` est **figé** pendant une
-   transaction, et les deux colonnes l'ont pour défaut : donc
-   `app_annonce_champ_app.ecrit_le = app_console_job.requested_at` **exactement**.
-   Mesure : **un seul couple à 0,000 s** sur 21, les autres à 44 s, 124 s, 8 006 s,
-   473 236 s. ➡ **Un horodatage de transaction est un IDENTIFIANT** — même famille que
-   « on croise sur les identifiants, jamais sur les nombres » (leçon 23). ⚠ Et il n'était
-   pas décoratif : les 2 lignes visées avaient été écrites **plus tard** (+2 h 14, +2 min)
-   par le geste que Frédéric avait refait à la main. Sans lui, on effaçait du vrai.
-29. ⚠⚠ **UNE RÈGLE ÉLARGIE DANS UNE VUE NE L'EST PAS DANS LES FONCTIONS QUI LA DOUBLENT**
-   *(15/10)*. Le 14/10 j'ai élargi `app_en_attente_humain` à « 5 tentatives **OU** plus de
-   3 h » et j'ai écrit « le travail devient visible ». **Faux à moitié** : `app_action_status`
-   (le bandeau) et `app_action_resolve` (le clic) portent **leur propre copie** du `>= 5`.
-   Résultat mesuré : 47824 sonne, apparaît dans le moniteur, et **n'a aucun bouton** — le
-   clic était refusé **en silence**, parce que le front **jetait** le `{"resolved": false}`
-   que la RPC rendait depuis toujours. ➡ **Après avoir changé un seuil, chercher qui
-   d'autre porte le même seuil** ; et **un front qui jette le compte-rendu d'une RPC
-   fabrique un bouton menteur**.
-31. ⭐⭐ **UN RETOUR ARRIÈRE NE JUGE QUE SA PROPRE PART** *(15/10)*. Deux patchs du même jour
-   touchaient **la même fonction**. L'inverse du premier exigeait l'empreinte d'**avant les
-   deux** : les deux posés, il **défaisait correctement sa part, puis refusait** —
-   `STOP : on ne retombe PAS sur l'empreinte d'origine (2315de8f…)`, et `2315de8f` **est**
-   l'empreinte « second patch seul ». Le travail était bon, **le juge trop strict**. Il
-   refusait sans rien casser *(l'exception annule tout)*, mais il **bloquait**.
-   ➡ **Un inverse vérifie d'abord qu'il ne reste AUCUNE TRACE de ce qu'il devait retirer** ;
-   l'empreinte globale ne s'exige que si l'autre patch n'est pas là — sinon il **dit**
-   pourquoi elle diffère et **nomme l'autre inverse à jouer**. ⚠ Et ça ne se voit qu'en
-   **éprouvant la chaîne complète dans l'ordre réel**, pas chaque patch isolément.
-30. ⚠⚠⚠ **TROISIÈME FOIS : MES ÉPREUVES NE TRAVERSENT PAS LE COPIER-COLLER** *(15/10)*.
-   Frédéric colle `patch_aligner_seuil_trancher` → `STOP : l'ancre du repli apparait 0 fois`.
-   J'avais protégé l'**empreinte** avec `replace(…, chr(13), '')` et laissé les **ancres**
-   nues : collé depuis Windows, le fichier arrive en **CRLF**, et une ancre **multi-lignes**
-   ne se retrouve plus dans un corps stocké en LF. Une seule de mes trois ancres était
-   multi-lignes — **c'est la seule qui a cassé**. Reproduit et guéri en lecture seule :
-   la même ancre donne **1** en LF, **0** collée, **1** quand on nettoie **les deux côtés**.
-   ⚠ **La leçon était déjà écrite, deux fois** *(mémoire « empreinte md5 faussée par les
-   fins de ligne Windows », élargie le 12/10 : « ça touche TOUTE ANCRE MULTILIGNE »)*.
-   ➡ **Règle mécanique : dans un patch destiné à être COLLÉ, envelopper
-   `replace(…, chr(13), '')` autour de CHAQUE ancre, de CHAQUE texte inséré** *(sinon le CRLF
-   entre dans `prosrc` et c'est l'INVERSE qui ne retrouvera plus rien)* **et du
-   `pg_get_functiondef`/`pg_get_viewdef` lu. Puis COMPTER les ancres multi-lignes avant
-   d'envoyer.**
-   ⚠⚠ **Et la cause profonde : mon épreuve ne reproduisait pas LE TRANSPORT.** Trois épreuves
-   vertes n'ont rien vu parce qu'elles passent par l'outil SQL, jamais par un copier-coller.
-   **Le remède est d'éprouver le transport lui-même** : exécuter le patch via
-   `EXECUTE replace(texte, chr(10), chr(13)||chr(10))` — ce qui a reproduit l'erreur exacte,
-   puis prouvé la guérison (aller **et** retour, empreinte d'origine retrouvée).
-20. ⚠ **UN `revoke ... from public` N'ENLÈVE PAS UN DROIT PAR DÉFAUT.** Supabase pose
-   `GRANT EXECUTE ... TO authenticated` sur **toute nouvelle fonction** ; ce n'est pas PUBLIC,
-   donc le `revoke` le laisse. **Relire `proacl` après avoir créé une fonction** — mon patch
-   annonçait « `service_role` seulement » et la base disait autre chose.
+> Le détail vit dans **`notice/CHANTIER_7_GESTES_QUI_MANQUENT.md`** *(4 100 lignes, à jour)*.
+> Ici : l'état, et **seulement ce qui reste**.
+
+| # | le point | état |
+|---|---|---|
+| ⑦-1 | archiver / désarchiver un contact | ✅ **base, worker et écran en production le 16/10** · ⛔ **reste l'essai ARCHIVER sur une fiche JETABLE** *(le sens qui porte le risque ; le contact d'essai 10355757 n'existe plus → il faut une cible)* |
+| ⑦-2 | le cas Gladys DURIEUX | ✅ **RÉACTIVER réussi le 16/10 à 07:29** — et ses 2 recherches sont **inchangées** |
+| ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ⛔ **reste : PERSONNE N'A VU L'ÉCRAN**, et **l'essai réel** *(clôturer avec une date ≠ aujourd'hui, et vérifier que le carnet porte LA DATE SAISIE)* · ⚠ **À TRANCHER : la modale de statut clôt toujours sans passer par la demande d'annulation** |
+| ⑦-3b | l'écran du journal des suppressions | ✅ **écrit le 16/10** — Santé, admin strict, témoin inverse 128/0 |
+| ⑦-3c | réordonner / choisir la photo principale | ✅ **la couverture est en production** *(`7727f66`)* · ⬜ **réordonner** reste |
+| ⑦-4 | le bandeau qui ment | ✅ **traité le 16/10** — ⚠ la production ne mentait pas, c'était le **mobile** sur les 527 brouillons |
+| ⑦-5 | relancer / abandonner depuis le monitoring | ✅ **fait le 15/10** |
+| ⑦-6 | « Abandonner » défait le geste | ✅ **fait le 15/10** |
+| ⑦-7 | modifier ou prolonger un mandat | ⛔ **FERMÉ PAR DÉCISION le 18/10** — *« je ne souhaite pas pouvoir modifier un mandat ou prolonger »*. **Ne pas relancer** |
+| ⑦-8 | **photos : rendre visible / masquer** | 🔧 **marches 1 et 2 faites** *(voir ci-dessous)* · ⬜ **marche 4 : le bouton** |
+| ⑦-9 | renommer un document | ⬜ |
+| ⑦-10 | `app_brouillon_annonce_detail_cache` vide | ⬜ **question** : seulement si Frédéric en a l'usage |
+
+**⑦-8, les 4 marches** *(19/10)* :
+
+| | |
+|---|---|
+| **1 — le verrou de publication** | ✅ **EN PRODUCTION**. `app_photos_remplir_adresses_app` exclut les masquées des **deux** boîtes *(couverture + galerie)*. Empreinte `682e3860` → **`b87f6c68`**, 7 contrôles verts. ⭐⭐ **L'idée des deux boîtes est de Frédéric**, et elle a rendu les pièces A et B inutiles. ⚠ **Le témoin inverse a prouvé qu'elle a servi le jour même** : sans elle, 3 masquées partaient le soir sur la vitrine, l'espace client et le portail |
+| **2 — le balayage** | ✅ **écrit, éprouvé, la tâche est enregistrée** — `GTI Balayage Photos Masquees`, **00:00**, lot de **1 000/nuit**, **~14 nuits** pour les 13 491 vivantes. ⭐ Il **passe par le worker** *(un seul service, un seul frein)* : `Console/enqueue_photos_masquees_lot.js` + `scheduled/run_balayage_photos_masquees.ps1`. **Essai réel vert le 19/10** : 4 → 7 photos sur 62189, `hidden: 3` comme prédit |
+| **3 — le run de mise à jour** | ⭐ **rien à écrire** : c'est **le même lot**, rempli « les modifiées d'abord, les jamais-vues ensuite ». Quand le balayage finira, il tombera à **~29/nuit** et deviendra le run de MAJ **tout seul** |
+| **4 — le bouton masquer/afficher** | ⬜ `mode=vignette_visibilite&id=…&idann=…&visible=0|1`, trouvé dans le code de Hektor, **jamais prouvé en écriture**. ⛔ **Son essai sur le bac à sable 62774 demande l'accord de Frédéric** — et il répondra aussi à la question restée ouverte : **masquer une photo bouge-t-il `date_maj` ?** ⭐ **Aucune limite de photos ne le gêne** *(sujet clos le 19/10 : le panneau lit la table, limite 500 ; le « 5 » de `export_app_payload.py` ne mord plus, 0 annonce tronquée)* |
 
 ### ⛔ Ce qui attend Frédéric
 
@@ -302,511 +158,138 @@ report ne se décident jamais sans lui.
    Sortie 0 = vert · 1 = un rouge · 2 = pas pu mesurer. Huit points, dont :
      ⭐ LE RYTHME REEL -- c'est LUI qui dit si on peut monter le plafond de 1 000
         (il refuse de conclure sous 20 travaux mesures : « non concluant ») ;
-     ⭐⭐ LE VERROU -- ZERO masquee dans une boite publique. Le controle qui compte :
-        sans lui, les masquees fraichement ramenees partiraient sur la vitrine
-        Android, l'espace client et le portail de rapprochement.
-   LA REFERENCE EST FIGEE DANS LE FICHIER (19/10, avant la nuit) : 106 masquees sur
-   15 annonces · 3 avec un derive · 0 dans une boite · 13 490 annonces a faire ·
-   305 deja visitees · duree medianne historique 10 s.
+     ⭐⭐ LE VERROU -- ZERO masquee dans une boite publique. Le controle qui compte.
+   REFERENCE FIGEE DANS LE FICHIER (19/10 au soir) : 106 masquees sur 15 annonces ·
+   3 avec un derive · 0 dans une boite · 13 490 a faire · 305 deja visitees.
    ⚠ UN REFUS SORT EN 1 EXPRES, et il est ROUGE : code 3 « file non vide » (le
      worker est plus lent que le lot -> baisser -Limite), code 4 « >= 10 erreurs
      en 24 h » (Hektor nous rejette -> ne RIEN rejouer).
-   TEMOIN INVERSE JOUE LE 19/10 AU SOIR : 5 oranges, 0 rouge -- donc un vert demain
-   voudra dire quelque chose.
-①③ ⏰⏰ DEMAIN 16/10, DANS L'ORDRE -- valide par Frederic a 01:00 :
-   0. ✅ FAIT a 07:0x (go « vas-y ») : LE DETECTEUR D'ECHEC EST REPARE -- `Write-Host` +
-      `| Out-Host`, la fonction ne rend plus QU'UN SEUL booleen. Epreuve :
-      scheduled/test_detecteur_echec_entretien.ps1 -- elle EXTRAIT la fonction DU FICHIER
-      et l'execute (pas une imitation) : 10 CONTROLES VERTS, dont DEUX TEMOINS INVERSES
-      (l'ancienne forme rendait 4 valeurs et comptait 0 echec sur un echec reel).
-      ⚠ Le projet avait DEJA ecrit la lecon le 03/10 dans run_full_pipeline.ps1
-      (l. 228-245) ; la tache du 15/10 l'a refaite 12 jours plus tard.
-      BALAYAGE DE LA FAMILLE FAIT : un seul endroit etait casse (full_pipeline est
-      immunise expres, descente/relancer_run sains, phase1_safe_worker sans risque).
-      ⏰ PREUVE EN REEL CE SOIR : le journal de 22:00 doit porter les 4 marqueurs.
-   0-bis. L'ANCIEN TEXTE, pour memoire :
-      LE DEFAUT, mesure cette nuit : `Invoke-Ligne` fait Write-Output, et en PowerShell ce
-      qu'une fonction emet DEVIENT SA VALEUR DE RETOUR -> (a) les 4 marqueurs « --- x/4 »
-      n'arrivent jamais au journal (951 caracteres : l'ouverture et la fermeture seules) ;
-      (b) `if (-not (Invoke-Ligne ...))` teste un TABLEAU NON VIDE, donc toujours vrai :
-      UNE LIGNE EN ECHEC NE SERAIT JAMAIS COMPTEE, la tache sort 0 et le MONITEUR SE TAIT
-      (elle y est en `critical`, il lit LastTaskResult). 6e fois cette famille de defaut ;
-      le gel du 20/08 avait dure 7 SEMAINES. A EPROUVER en forcant une ligne a echouer :
-      la tache doit sortir 1 et le journal porter ECHEC.
-   1. ✅ FAIT 07:25:26 : LES 4 SERVICES SONT REDEMARRES -- 4 processus node nes APRES le
-      fichier (00:35:27) et 4 battements de coeur a 11-13 s. Le bras est vivant.
-   2. ✅ FAIT 07:25:52 : LE FRONT EST POUSSE ET DEPLOYE (ce n'est pas moi qui pousse) --
-      Vercel : production READY, commit 1fbce99 ; et le fichier SERVI contient
-      « Archiver ce contact », « Reactiver ce contact » et archive_hektor_contact.
-   3. ✅⭐ FAIT 07:29:36 -> 07:30:08 : L'ESSAI REEL SUR GLADYS A REUSSI DU PREMIER COUP.
-      1 tentative, 16 secondes, pris par le service `actions` (pas admin), Hektor repond
-      « Modification archivage ok », traduction 10059959 -> cible 113412, puis le
-      rafraichissement relit la fiche CHEZ HEKTOR : elle est ACTIVE.
-      ⭐⭐ ET LA DERNIERE INCONNUE EST FERMEE : ses DEUX recherches (n°0 archivee,
-      n°1 active) sont INCHANGEES apres relecture -> REACTIVER NE TOUCHE PAS LES
-      RECHERCHES. ⚠ L'autre sens (ARCHIVER) peut etre asymetrique cote serveur : a
-      mesurer sur une fiche JETABLE, pas sur un client. C'est le seul reste du point 7-1.
-   1-bis. L'ANCIEN TEXTE, pour memoire :
-      -> c'est ce qui reveille le bras `archive_hektor_contact` du chantier 7.
-   2. POUSSER LE FRONT (Vercel se deploie seul) -> l'item « Archiver / Reactiver » apparait
-      dans le menu « ... » de la fiche contact.
-   3. ESSAI REEL du point 7-1, dans CET ordre :
-      · GLADYS DURIEUX (10059959) en « REACTIVER » D'ABORD -- sens inverse, donc la seule
-        inconnue qui reste (le serveur de Hektor archive-t-il AUSSI les recherches ?) ne
-        peut pas se produire ; et elle est eligible DEUX fois (annonce active + recherche
-        active), donc elle ne peut pas tomber du cloud.
-      · PUIS l'autre sens (ARCHIVER, celui qui porte le risque) sur une fiche JETABLE.
-        ⚠ Le contact d'essai 10355757 N'EXISTE PLUS (supprime le 08/10) : soit en creer un
-        (ecriture chez Hektor = SON ACCORD), soit il en designe une.
-   4. Puis la suite du chantier 7 : 7-3a (crayon de cloture), 7-3b (ecran du journal),
-      7-3c (reordonner les photos), 7-4 (bandeau menteur), 7-7 (prolonger un mandat),
-      7-8 (photos visible/masquer), 7-9 (renommer un document), 7-10 (cache brouillons).
-① ✅✅ LA FIN DU CHANTIER ③ -- 14/10, FAIT ET EPROUVE EN REEL :
-   · option B collee : les 2 etapes du contrat de mandat sont hors du run ET en `legacy`
-     (verifie en base, note corrigee) ;
-   · bloc 2 colle -- ET UN TROISIEME VERROU TROUVE PAR L'ESSAI : app_console_claim_next_job
-     a sa PROPRE liste de types par service. ⚠ NOUVEAU TYPE DE TRAVAIL = 3 verrous en base
-     (contrainte, droits, DISTRIBUTION) + 5 endroits worker + ConsoleJobType + 8 fonctions ecran ;
-   · la tache « GTI Reprise Envois Hektor » enregistree, et elle a TOURNE a 12:30 (0, sortie 0) ;
-   · 4 services redemarres (12:29), pousse (front du bloc 2 en ligne, mesure) ;
-   · ⭐⭐ L'ESSAI REEL SUR 62774 : une photo AJOUTEE chez nous avant Hektor (28 s, rangee a sa
-     place definitive, temporaire efface, une seule ligne) puis SUPPRIMEE chez Hektor et chez nous
-     (6 s, renumerotation, 0 autre photo emportee, les 4 d'origine intactes, 1 ligne au journal) ;
-   · la piece 4 de 3c PROUVEE par le vrai chemin (posees 1).
-   ⚠ RESTE, SANS URGENCE : redemarrer les 4 services un jour (les 2 messages du worker
-     promettent desormais la reprise, mais ce texte n'est pas encore dans les processus) ;
-     le dossier serveur VIDE de la photo d'essai (le geste efface le fichier, pas le dossier --
-     comme celui du document).
-   ➡ BLOC 3 REPORTE AU CHANTIER ⑦ : le crayon de cloture, l'ecran du journal.
-①-avant CHANTIER ③ EN COURS -- 3a, le repli vendu/clos, 5a, 3b et 3c(3/5) sont FAITS.
-   3c EN 5 PIECES, ordre valide par Frederic le 13/10 :
-     [1+2 FAITES] la colonne mandat_date_cloture_app + la vue + l'alerte + le RPC
-       de saisie app_set_mandat_cloture_optimistic (authenticated : VOULU).
-     [4 FAITE]    la re-pose : RPC app_reposer_cloture_mandat_app (service_role
-       seulement) + une etape NON BLOQUANTE dans le run (l. 1515-1539, apres le push)
-       + un appel CIBLE dans push_single_annonce_to_supabase.py.
-       ⚠ IL Y AVAIT DEUX CHEMINS QUI EFFACENT, PAS UN : le run ET le chemin immediat
-         du worker (delete_target_remote efface toujours les lignes de registre de
-         l'annonce) -- donc ~1 min apres n'importe quel geste.
-       ⭐ AUCUN REDEMARRAGE : le worker lance ce .py en sous-processus (mesure).
-   ⏰ A VERIFIER EN PREMIER LE 14/10 AU MATIN : les 2 dates d'essai (62966 = 2026-08-28,
-     24933 = 2026-09-18) doivent ETRE ENCORE LA apres le run de 05:00. Regarder aussi
-     le heartbeat `phase2.repose_cloture_mandat` et la ligne « phase2 re-pose cloture
-     mandat » du journal du run. C'est la seule preuve par le VRAI chemin.
-   ⚠ LA SUITE :
-     [3 FAITE, SAUF LE CRAYON] l'ecran. ⭐ La logique existait DEJA et lisait la
-       mauvaise source ; la bonne valeur etait DEJA CHARGEE dans ckCycleAff
-       (loadRegisterCycleAffaires lit le registre PAR CYCLE). Une seule
-       superposition (`ckClotureDe`) corrige SIX consommateurs : la frontiere des
-       cycles, la pastille du cycle, le parcours du cockpit (son test lisait LA
-       FICHE, qui n'a pas la colonne -> vide depuis toujours), l'historique V3, et
-       « Jours restants » AUX DEUX ENDROITS + la jauge. `mandatClos` pose une fois :
-       Clos avant Echu avant restant. ➕ la SAISIE : champ date dans la modale
-       « Clos » -> app_set_mandat_cloture_optimistic (un echec n'empeche pas le
-       changement de statut). ➕ le texte « Motif transmis a Hektor », FAUX depuis
-       le 28/08, corrige. tsc -b vert.
-       ⚠ NON FAIT, A DIRE : (a) le CRAYON dans la rubrique Mandat (saisie hors
-         modale) -- il demande une verification a l'oeil, impossible sans session ;
-         (b) la rubrique « Mandat SOURCE » laissee sur la version de Hektor,
-         VOLONTAIREMENT (c'est son nom) -- a confirmer ;
-         (c) PERSONNE N'A VU L'ECRAN. ⚠ VERCEL SE DEPLOIE SEUL AU PUSH : c'est
-         FREDERIC qui pousse, pas moi.
-     [5 FAITE, INERTE] le worker : son PATCH ecrit mandat_date_cloture_app (la
-       notre) -- une ligne -- et le refus « aucun numero de mandat » passe de `error`
-       a `done` (4 fausses alertes sur 5 ; la VRAIE erreur reste une erreur).
-       L'ecriture du carnet est INCHANGEE. ⭐ Ca ferme la boucle qui m'a coute deux
-       comptages faux. ⚠ LA MESURE A ECARTE l'appel au RPC : il refuse un couple
-       absent du registre, et 4 clotures du journal etaient dans ce cas -- il les
-       aurait PERDUES.
-       ⛔⛔ INERTE JUSQU'AU REDEMARRAGE DES 4 SERVICES. ACCORD NON DONNE le 13/10 :
-         JE N'AI RIEN REDEMARRE. A controler par l'HEURE DES PROCESSUS, pas par la
-         croyance (le 08/10 : lances 1 h 24 APRES la modification du fichier).
-     - appliquer_contrat_mandat.py : INUTILE depuis le 28/08 (il ecrit
-       app_view_generale.mandat_date_cloture, une colonne qui ne monte NULLE PART --
-       mesure : elle n'existe que dans app_mandat_register_current). Trois options
-       presentees le 13/10 (A le retirer du run / B le redresser / C le commenter),
-       RECOMMANDE A, Frederic n'a pas encore tranche.
-   3d : LOT 2c, LE 14/10 -- 2 PIECES SUR 4.
-     [1 FAITE, A COLLER] patch_chantier3_3d_lot2c_creer_document_2026-10-14.sql :
-       app_console_creer_document_optimistic + sa jumelle photo. Elles creent la
-       ligne chez nous ET posent app_document_id dans la charge du travail, dans
-       la MEME transaction -- c'est ca qui allume le chemin differe du worker.
-       REPETITION 15/15, 0 echec (collee par Frederic), dont le refus d'un depot
-       sur le bien d'un AUTRE joue avec la vraie identite d'un commercial.
-       ⭐ La garde des droits (app_console_can_access_dossier) faisait DEJA ce que
-         Frederic demandait au point 3 : il n'y avait rien a ajouter.
-       ⭐ REPLI NATUREL : sans la RPC, le travail part sans app_document_id et le
-         worker reprend l'ancien chemin (121 envois sur 121 depuis mai).
-     [2 FAITE, INERTE] le worker. ⛔ LES 4 SERVICES N'ONT PAS ETE REDEMARRES.
-       ⚠⚠ LE DEFAUT QUI BLOQUAIT LE LOT DEPUIS LE 25/09 : le rangement calcule
-         `document.storage_path || <place definitive>`, et la RPC pose le chemin
-         TEMPORAIRE dedans -- donc le « || » ne se declenche JAMAIS. Le document
-         aurait vecu dans temp/ pour toujours, marque « cloud_available ».
-         Remede : le marqueur storage_status='pending_upload' (PAS le nom du
-         chemin) remet storage_path a blanc avant le rangement.
-     [1 et 2 EN PRODUCTION] patch colle, 4 services redemarres -- VERIFIE, pas cru :
-       les deux RPC sont en base (authenticated oui, anon NON), et les 4 processus
-       sont nes a 10:21:5x alors que le fichier a ete modifie a 10:10:24.
-       ⚠ Get-Process StartTime est REFUSE (autre compte) : passer par
-         Get-CimInstance Win32_Process.
-     [3 FAITE] le front. Un SEUL point d'appel pour les deux objets
-       (poserNotreLigneAvantHektor) -- deux copies divergeraient.
-       ⚠ L'ORDRE EST IMPOSE PAR LA POLITIQUE DE STORAGE : le travail, PUIS le
-         fichier, PUIS la ligne. La relecture du travail vient APRES l'appel, c'est
-         elle qui rapporte la charge enrichie de app_document_id.
-       ⭐⭐ ET J'AVAIS DIT FAUX A FREDERIC : ce n'etait pas « une tuile cassee en fin
-         de galerie ». L'ecran faisait `if (!url) return null` -- la photo n'etait
-         PAS AFFICHEE DU TOUT. Une absence est pire qu'une erreur : elle ne se
-         remarque pas. Le negociateur deposait, ne voyait rien, recommencait.
-         -> une TUILE D'ATTENTE remplace l'absence.
-       ⚠ hektor_photo_id etait declare NON NUL et il mentait (3 usages, aucun ne le
-         lit). Et sourcePhotos avait besoin d'un type explicite : sans lui, l'objet
-         de secours formait une UNION et TypeScript refusait storage_status.
-     [4 FAITE, MAIS ELLE NE TOURNE PAS] scheduled/run_reprise_envois_hektor.ps1,
-       12:30, lot de 50 (le creux : run fini ~07:30, descente jusqu'a 08:49,
-       rattrapage a 21:00 ; 50 envois = ~17 min de worker).
-       ⛔⛔ MESURE DU 14/10 : 7 TACHES « GTI », AUCUNE N'APPELLE LE REPRENEUR.
-         UN .ps1 DANS scheduled/ NE TOURNE PAS. A ENREGISTRER PAR FREDERIC.
-       ⭐ Mesure : ZERO ligne en a_envoyer/echec aujourd'hui -- normal, le chemin
-         etait dormant. C'est un FILET, utile a partir de la piece 3.
-       ⚠ Pas de battement -WorkerKey (lecon du 13/10) : la surveillance passe par le
-         resultat de la tache Windows.
-   ⭐ LES 4 EPREUVES ROUGES SONT REPAREES -- 294 controles verts, 0 echec, 17 epreuves
-     (une premiere depuis le 27/09) :
-     - test_photo_ajout_gardee : la doublure de fabriquerDerivesApresRangement
-       manquait (bf3afb9). +4 controles, dont « archivee : les derives SONT fabriques
-       quand meme, sans le cloud ».
-     - test_porte_contacts : ⚠ LE CODE EST JUSTE, LES EXPRESSIONS ETAIENT PERIMEES.
-       L'une accusait la bonne reponse (`let contactId` avant le try, pour le catch) ;
-       son propre commentaire previenait « au bout de trois fois » -- c'etait la
-       TROISIEME. On guette le VRAI danger par une reference arriere \1 (une variable
-       passee comme SA PROPRE SOURCE), sur le code SANS LES COMMENTAIRES -- sinon le
-       commentaire qui raconte l'ancien defaut le declenche lui-meme.
-     - test_reprendre_envois : (n) exigeait « offset= », la technique ABANDONNEE
-       EXPRES. Le curseur est un PROGRES (l'offset saute des lignes quand l'ensemble
-       bouge, et le script pose des travaux pendant qu'il lit). +controle (o).
-     - test_aucune_fausse_promesse : ⭐⭐ elle est passee au rouge PARCE QUE j'ai ecrit
-       le .ps1, et elle avait RAISON de crier. Mais elle mesurait un FICHIER : la
-       suivre aurait cree la fausse promesse qu'elle interdit. Elle mesure maintenant
-       LA TACHE WINDOWS, dans les DEUX SENS (pas de tache -> le message prudent est
-       EXIGE ; une tache -> la promesse est EXIGEE). Les deux branches sont prouvees.
-       ➡ LES 2 MESSAGES DU WORKER N'ONT DONC PAS BOUGE : ils disent encore la verite.
-   ⭐⭐ LA FUITE DE LA SALLE D'ATTENTE : NETTOYEE ET BOUCHEE LE 14/10.
-     109 fichiers, 196 Mo dormaient sous temp/ du coffre documents depuis le 14/05.
-     ⚠ ILS NE VENAIENT PAS D'OU JE CROYAIS : 93 sortaient des TROIS GENERATEURS DE
-       PDF (estimation 137 Mo, cadastre 19 Mo, mandat 2,3 Mo), 11 seulement de
-       l'ajout de documents, 5 sans aucun travail (tous des essais).
-     ⭐ Les 104 travaux etaient tous « done » et AUCUNE LIGNE VIVANTE N'Y POINTAIT
-       (0 sur 162 544 documents, 0 sur 441 199 photos) : rien en vol, zero perte.
-     SUPPRIMES : 109, verifie PAR DEUX CHEMINS -- le script recompte a la source, et
-       storage.objects passe de 22 973 a 22 864 (exactement 109 de moins).
-     Trace : logs/temporaires_avant_nettoyage_2026-10-14T08-07-17.tsv
-     Outil : Console/nettoyer_temporaires_orphelins.js -- QUATRE gardes refaites a
-       chaque passage, et il ne supprime rien sans --supprimer.
-     LE BOUCHON TENAIT EN UN SEUL ENDROIT : handleUploadDocumentToHektor, par ou
-       passent les quatre types. On y recopie la regle des photos ET sa prudence :
-       on ne supprime que si la copie serveur a reussi, sinon on garde et on le DIT.
-   ⚠ DEUX EPREUVES ETAIENT DEJA ROUGES AVANT (verifie contre HEAD), NON REPAREES --
-     HORS PERIMETRE, Frederic n'a rien dit :
-     - test_photo_ajout_gardee est tombee le 27/09 quand fabriquerDerivesApres-
-       Rangement est entre dans persistProvidedPhotoFile (bf3afb9, G.17) : ses
-       doublures n'ont jamais suivi -> ReferenceError. 17 JOURS ROUGE SANS QUE
-       PERSONNE LE VOIE.
-     - test_porte_contacts : 11 verts, 2 rouges sur « L4-c ② l'ecrasement de
-       l'identite par la cible », depuis le chantier contacts du 23/09.
-   Puis : 3e (le reste : 4 services, le push, l'ecran du journal, la photo)
-①-ter ⭐⭐ LES TROIS CLOTURES DE MANDAT « DE L'APP » ETAIENT DES ESSAIS (etabli le 13/10).
-   62966 = L'ANNONCE D'ESSAI, designee explicitement pour eprouver la cloture
-     (CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md, 3 fois : « Essai sur l'annonce
-      62966 (mandat 660) » -- exactement notre ligne, n° 18842)
-   62774 = LE BAC A SABLE (« Bac a sable 62774 : propre »)
-   24933 = le bien d'essai des taches 3.2 / 3.4 (4 fichiers SUPPRESSION_ESSAIS*)
-   ➡ AUCUN UTILISATEUR REEL N'A JAMAIS CLOS UN MANDAT DANS L'APP. Colle a Frederic :
-     « CE SERA mon app qui va le gerer » -- au futur. Le defaut etait reel (la date
-     ne tenait pas), mais il n'a JAMAIS perdu une donnee de production.
-   ➡ FAUSSE ALERTE REFERMEE : la ligne « disparue » de 62774 etait une trace d'essai,
-     retiree comme les autres. PAS DE SENTINELLE A POSER.
-   ⭐ Les 2 dates reposees sont des donnees d'ESSAI, LAISSEES EXPRES : ce sont les
-     TEMOINS DE LA PIECE 4 -- si elles survivent a la nuit, la re-pose marche.
-     A retirer quand la piece 4 sera prouvee.
-①-bis NE SE DECIDENT PAS SANS LUI, sortis du chantier ③ les 12 et 13/10 :
-     - MODIFIER LES CHAMPS d'un bien vendu/clos : ce n'est PAS un repli, c'est un autre
-       chantier (la file d'attente de 10 min a le n° de dossier pour cle primaire), et
-       l'ecran l'interdit deliberement (« Lecture seule jusqu'a desarchivage »)
-     - REACTIVER UN BIEN CLOS marche maintenant ; l'ecran promet encore « desarchiver »
-       a un bien qui n'est pas archive (bandeau de l'index leger) -> chantier ⑦
-     - ⛔ L'INTERRUPTEUR CHAMPS_APP_ANNONCE RESTE ETEINT (tranche le 13/10, « sommes-nous
-       prets ? » -> NON). La regle « vide ne gagne pas » est posee (13/10, inerte, prouve),
-       mais le CRITERE DU PROJET n'est pas rempli : on n'allume qu'un champ que l'APP CREE
-       et que HEKTOR N'ENTRETIENT PAS (contrat_autorite.py le dit deux fois). Or nos 4
-       champs sont tous entretenus par Hektor, et la valeur qu'on ecrit est PROVISOIRE
-       ~70 s sans marque « confirmee ». C'est LA COUPURE qui nous rendra prets.
-     - 📜 LES NEGOCIATEURS INACTIFS : 1 522 biens vivants (11 %) sont a leur nom, 4 227
-       (31 %) n'ont aucun negociateur -- mais seulement 12 actifs et 2 diffuses.
-       DECISION DE FREDERIC LE 13/10 : ON NE TOUCHE A RIEN. Ne pas relancer.
-       (La modale « reaffecter » n'est PAS cassee : elle montre les 30 actifs de l'agence
-        choisie ; Firminy n'en a qu'un. GONZALEZ est inactif, d'ou l'essai non fait.)
-② REPORTE PAR LUI, chantier ② (noter, NE PAS relancer de soi-meme) :
-     - ce que doit voir exactement un AGENT COMMERCIAL. L'essai du 12/10 a prouve
-       que tout abaisser casse le rapprochement (93 % de lignes mortes) : les
-       annonces doivent rester au reseau. Trois sorties possibles dans la note.
-     - la fonction de SECOURS admin-users, a deployer A PART chez Supabase :
-         npx supabase functions deploy admin-users --project-ref dwaqxfrinihnychuoptk
-       (inutile tant que Render repond)
-     - le refus du prix n'a JAMAIS ETE EXECUTE (ma session ne peut pas ecrire)
-     - un essai REEL d'un geste chez Hektor par un negociateur
-③-bis 📜 UN AUTO-ARCHIVAGE CONFORME RGPD -- SUJET A PART, ouvert le 16/10 par Frederic
-   (« a developper un auto archivage conforme rgpd etc.. mais cela est un autre dev »).
-   Ce qu'on sait deja, mesure le 16/10 : Hektor pose une date d'auto-archivage a
-   CREATION + 2 ANS sur chaque recherche (22-06-2026 -> 22-06-2028 ; 05-06-2026 ->
-   05-06-2028), et quand elle tombe la recherche passe inactive. ⚠ CETTE DATE NE NOUS
-   PARVIENT PAS : ni l'API (son bloc `recherches` ne porte que offre, archive, types,
-   villes, quartiers, particularites, criteres), ni notre table (23 colonnes) ne la
-   portent -- elle n'existe que dans la page HTML (`valueInputAutoarchivage`).
-   Donc aujourd'hui on CONSTATE le basculement apres coup, on ne l'anticipe pas.
-   NE PAS RELANCER DE SOI-MEME : c'est un dev a part entiere.
+   TEMOIN INVERSE JOUE LE 19/10 AU SOIR : 5 oranges, 0 rouge.
 
-③ QUESTIONS DE FAIT   les negociateurs saisissent-ils encore leurs visites dans Hektor ?
-   ✅ REPONDU LE 15/10 : « pourquoi 62 000 contacts sur 356 000 » est une DECISION, pas un
-   accident -- on ne monte que ce qui sert, par TROIS regles d'eligibilite (et non deux, mon
-   erreur de la veille) : annonce ACTIVE (55 349) · recherche active (3 787) · nomme dans une
-   TRANSACTION lue par la console (2 786, regle ajoutee le 11/09 parce que les deux premieres
-   laissaient dehors 1 191 mandants, 465 acquereurs et 137 notaires sur 143).
-   ⚠ Le cloud N'EST PAS bati sur notre registre app_relation : il l'est sur les liens de
-   Hektor vers une annonce ACTIVE. app_relation nomme 96 164 contacts, 50 962 ne sont pas au
-   cloud -- mais ZERO d'entre eux sur un bien vivant (20 991 contacts, 0 absent). Rien a
-   corriger. Detail et mesures : notice/CHANTIER_7_GESTES_QUI_MANQUENT.md (audit du 15/10).
-④ HORS CODE (etape 3) : A.4 zone DNS (La Boite Immo -> OVH, garder www) · A.5 les leads ·
-   l'export PROTEXA · contrats A.1 et A.2
-⑤ C.9-couple          creer un menage d'essai (la sonde est prete)
-⑥ LE CARNET DES LIENS : cause racine NOTEE ET REPORTEE le 10/10 (un lien s'identifie
-   par un badge CALCULE alors que son numero existe). Ne pas la relancer.
-⑦ LA SENTINELLE DU REGISTRE (13/10) : elle ne crie plus au loup, mais la CAUSE reste --
-   la doublure app_mandat__sb descend une heure APRES le push (table 97 sur 110).
-   A TRANCHER PAR LUI, je n'ai rien choisi :
-     A descendre app_mandat__sb en PREMIER      B decaler le moniteur apres 08:05
-   Controle a faire : l'e-mail de demain 07:48 doit porter un WARNING « NON CONCLUANT »
-   au lieu du rouge, et 0 ecart a 09:48.
-⑦-bis SA SOEUR EST CORRIGEE AUSSI (13/10, go « A maintenant ») : data.recherche_
-   divergente lit desormais la fraicheur REELLE (max(refreshed_at) du natif contre
-   sb_pull_state.derniere_descente) au lieu de l'indice propose le 29/08. 8 epreuves,
-   temoin inverse.
-   ⚠⚠ MAIS J'AI EU TORT DE DIRE « c'etait la DERNIERE de la famille » : il y en avait
-   une 4e, data.relation_disparue, corrigee le 14/10 par l'autre session (a4ab4d9) --
-   Frederic a recu son faux rouge le 14/10 a 05:51. DEUX ERREURS DE METHODE : (1) j'ai
-   cru un DOCSTRING au lieu de lire le code (c'est la regle n° 4 de cette page) ;
-   (2) j'ai grepe « __sb » DANS LE MONITEUR, alors que la formule vit dans
-   phase2/checks/ -- un balayage de famille se fait LA OU VIVENT LES MEMBRES.
-   Balayage refait le 14/10 : le moniteur importe QUATRE formules. mandat_un_numero et
-   relation_disparue ont leur garde ; annonce_un_numero et mandat_disparu n'en ont AUCUN,
-   mais mesure sur 104 passages : annonce_un_numero n'a JAMAIS crie, et les 7 rouges de
-   mandat_disparu sont DISPERSES sur la journee (01:48 a 23:48), donc ca ne ressemble pas
-   au faux cri du matin. JE NE CONCLUS PAS : 3 options en section 14 de la note,
-   RECOMMANDE « mesurer d'abord d'ou viennent ces 7 rouges ». A trancher par Frederic.
-⑧ ⛔ LE DECALAGE DU MONITEUR NE MARCHE PAS -- mesure du 13/10, consigne NON EXECUTEE.
-   La descente a dure de 18 a 64 MINUTES sur les 12 derniers jours : partie a 07:45,
-   elle finit entre 08:03 et 08:49. « Apres 08:05 » ne suffit donc pas (11 jours sur 12).
-   Et la fenetre dangereuse (run ~06:49 -> copie prete) fait 1 h 14 a 2 h, alors que le
-   moniteur a UN SEUL declencheur repete TOUTES LES 2 H (depart 17:48:54) : quel que soit
-   le decalage, un passage tombe dedans, et les 12 passages bougeraient.
-   TRANCHE LE 13/10 : OPTION 1, ON NE TOUCHE A RIEN -- le code gere le cas quelle que
-   soit la duree de la descente. Rien a faire plus tard : la question est FERMEE, pas
-   reportee. Aucune tache planifiee n'a ete modifiee.
-   ✅ LES TROIS SENTINELLES SONT CORRIGEES (13/10) : data.doublure_journal avait DEUX
-   defauts, et la mesure a renverse le diagnostic. (1) l'horloge : releve_le est une
-   date LOCALE comparee a une date UTC -- 10 nuits de journaux montrent 01:48 « a jour »
-   10 fois sur 10 quand 03:48, MEMES DONNEES, avertit 10 fois sur 10. (2) le vrai
-   defaut : ce releve est ecrit par la DESCENTE (run_descente.ps1 etape 2/3, vers
-   08:03-08:49), donc « est-il d'aujourd'hui ? » est FAUX chaque nuit -> 3 avertissements
-   par nuit sur un etat NORMAL. Remede (option B) : on lit la fraicheur reelle, pas une
-   heure en dur -- tant que la Descente du jour n'a pas tourne, la veille est normale ;
-   des qu'elle a tourne, le releve doit avoir suivi (panne dite a 09:48, le jour meme).
-   Pas d'angle mort : « GTI Descente » est deja surveillee en critical.
-   Gain : 4 bruits de moins par nuit, 1 avertissement de moins dans l'e-mail du matin.
-   ⚠ MESURE DU 14/10 : 3 BRUITS SUR 4, PAS 4. derniere_descente porte l'heure de DEPART
-   (toutes ses lignes valent 07:45:03, et derniere_complete AUSSI -- 149 sur 154
-   identiques) : AUCUNE colonne ne dit « la Descente est finie ». A 07:48 la sonde la
-   croyait terminee alors que le releve est son etape 2 sur 3. Corrige le 14/10 par un
-   DELAI MESURE (DELAI_DESCENTE_MINUTES = 120 ; la descente dure 18 a 64 min, et le
-   passage de 09:48 juge quand meme -> une vraie panne sort le jour meme).
-⑨ ✅ LE CLIC DE L'HUMAIN ETEINT ENFIN L'ALERTE (14/10, go « oui »).
-   QUESTION DE FREDERIC : « la plupart des erreurs sont connues, comment arreter de les
-   faire sonner ». REPONSE MESUREE : IL N'Y A QU'UNE CHOSE QUI SONNE. Les 8 warnings de
-   son e-mail n'envoient RIEN (l. 66-68 : seuls les critical declenchent un envoi) ;
-   le seul rouge est data.travaux_en_erreur.
-   LE DEFAUT : le bandeau de l'ecran a deux boutons, et app_action_resolve fait UN SEUL
-   geste -- un INSERT dans app_pending_resolution. Il ne touche PAS au travail, qui
-   reste `error` pour toujours. Donc le bandeau se taisait, data.geste_abandonne se
-   taisait, ET LE ROUGE CONTINUAIT : un e-mail chaque matin pour un probleme deja traite.
-   REMEDE : champ OPTIONNEL "exclure_resolus" sur CETTE sentinelle seulement (les 39
-   autres ne bougent pas). Le rouge ne compte plus ce qu'un humain a tranche, ni les
-   travaux de plus de 30 jours (la vue du bandeau s'arrete a 30 jours : au-dela personne
-   ne peut plus cliquer). Rien n'est masque en silence, le message les compte a part.
-   ⭐⭐ LE PIEGE EVITE PAR LA MESURE : « brut moins nombre de resolutions » aurait efface
-   une vraie alerte -- les 2 gestes deja tranches N'EXISTENT PLUS dans app_console_job.
-   ON CROISE SUR LES IDENTIFIANTS, JAMAIS SUR LES NOMBRES.
-   Garde-fou chiffre : au-dela de 200 travaux on ne filtre pas (max jamais atteint sur
-   220 passages : 24, moyenne 5,8). Idem si une lecture echoue, si une liste peut etre
-   tronquee, ou si la forme est inconnue : EN CAS DE DOUTE ON CRIE COMME AVANT.
-   10 epreuves + temoin inverse SUR LA BOUCLE (un correctif branche nulle part passe
-   toutes les epreuves unitaires) + controle contre la PRODUCTION (non_filtre_cause =
-   None, donc les 2 lectures PostgREST marchent -- sans ce controle le correctif serait
-   mort en silence).
-   ⬜ RESTE A FREDERIC : (a) CLIQUER « J'ai refait » sur les 2 gestes -- aucun risque,
-   61672 a abouti chez Hektor (le bien EST « Sous offre ») et 62963 est un bien d'essai
-   de l'autre session ; le rouge doit passer au vert et l'e-mail ne plus partir.
-   (b) LES 8 WARNINGS : autre sujet, ILS NE SONNENT PAS, chacun a un seuil pose pour une
-   raison. A reprendre un par un S'IL LE DEMANDE -- rien n'a ete decide.
-⑩ ✅ « ABANDONNER CE GESTE » DEFAIT ENFIN L'ECRITURE DE L'APP (15/10, go « oui fais A »).
-   QUESTION DE FREDERIC : « comment annuler le changement dans l'apps, remettre le montant
-   comme hektor ». REPONSE : ca n'existait pas. Les DEUX boutons du bandeau faisaient la
-   meme chose -- faire taire l'alerte -- et la valeur ecrite chez nous restait en place
-   alors que Hektor n'avait jamais recu le geste.
-   REMEDE : « Abandonner » = « ce geste n'a pas eu lieu ». La fiche reprend l'etat d'avant
-   (DEJA pose dans la charge du travail par les RPC optimistes), et la ligne de carnet est
-   EFFACEE -- une ligne absente veut dire « l'app n'a rien a dire », donc Hektor gagne
-   (contrat d'autorite). « J'ai refait » n'est PAS touche.
-   GARDE-FOU : ecrit_le = requested_at a la microseconde (lecon 28). Les 4 gestes d'AFFAIRE
-   sont hors de portee EXPRES : le worker les restaure deja (restaurerEtatAffaire).
-   11 controles verts sur la vraie base en transaction annulee + TEMOIN INVERSE.
-   Detail : notice/ABANDON_DEFAIT_LE_GESTE_2026-10-15.md
-   ✅ (d) ALIGNE LE 15/10, go « OUI ALIGNE LES 2 » :
-   patch_aligner_seuil_trancher_2026-10-15.sql -- app_action_status ET app_action_resolve
-   prennent la regle de la vue (« 5 tentatives OU plus de 3 h »).
-   ⚠ LE PRIX, DIT : un travail de 4 h a 2 tentatives devient tranchable alors que le filet
-     pourrait encore le reprendre (fenetre 24 h). ⭐ Mais le filet ne couvre que 9 types
-     IDEMPOTENTS, et les 2 travaux du jour n'en sont pas : rien a rejouer, rien a perdre.
-   ⚠⚠ ET UN TROISIEME MUR, TROUVE PAR LA MESURE : aligner les seuils N'AURAIT PAS SUFFI.
-     app_action_status leve 'dossier_not_found' si le bien n'est pas dans
-     app_dossier_current -- et 47824 est VENDU (« Maison de village a renover », VM8012),
-     donc dans l'index des vendus/clos depuis le 20/05. Le front avalait l'erreur (EXPRES)
-     et LE BANDEAU NE S'AFFICHAIT JAMAIS. ⭐ Meme supposition fausse que le defaut 5a du
-     08/10, fausse pour 44 259 biens : balayee ici dans sa DERNIERE case (lecon 9).
-     Les ARCHIVES sont incluses expres : trancher une alerte ne modifie pas le bien.
-   11 controles avant/apres sur les VRAIS travaux (ERREUR dossier_not_found -> abandonnes=1 ;
-   61439 a 1 h 30 reste « rien_a_trancher » : la regle des 3 h n'ouvre pas tout).
-   LES DEUX RETOURS ARRIERE RETOMBENT A L'OCTET PRES (empreintes mesurees aux 3 etapes).
-   OU SONT LES BOUTONS (question de Frederic) : PAS dans l'ecran Sante -- sur LA FICHE DU
-   BIEN. Cockpit onglet « Le Bien » (App.tsx:28785, masque si lecture seule) et au-dessus
-   de la barre d'onglets de la fiche classique (App.tsx:30394, toujours). Chemin court :
-   Sante -> cliquer le bien cite par l'alerte (le lien de ⑦-5 A).
-   ✅ (a) LES DEUX PATCHS SONT COLLES -- controle du 15/10 : les 5 morceaux sont en base,
-   0 retour chariot, empreintes ad573c70 (resolve) et 9d68752a (status, exactement celle que
-   l'epreuve avait predite). Le bandeau du bien VENDU 47824 rend « 1 geste » (avant : erreur,
-   bandeau invisible) ; 61672 et 62963 : 1 chacun ; 61439 (1 h 48) : 0, a partir de 12:02.
-   Sur les QUATRE, lignes_a_defaire = 0 -- rien a remettre.
-   ⚠ LA VERSION 1 DES PATCHS A ECHOUE AU COLLAGE (CRLF, lecon 30) : rien n'avait ete ecrit.
-   ⚠⚠ ET LE CONTROLE A TROUVE UN DEFAUT DANS LE RETOUR ARRIERE, corrige (lecon 31) : les deux
-     patchs touchent la MEME fonction, et l'inverse du premier exigeait l'empreinte d'avant
-     LES DEUX -- il defaisait sa part puis refusait. 6 controles de la chaine complete.
-   ✅ (b) FRONT POUSSE ET EN LIGNE (verifie chez Vercel : commit 202d6dc, READY, bundle neuf
-   servi, les textes neufs dedans). ⚠ Au premier coup de sonde le domaine servait encore
-   l'ancien bundle, en cache depuis 1 h 52 : je n'ai PAS conclu, j'ai interroge Vercel puis
-   re-sonde (lecon 8).
-   ✅ (c) SES DEUX CLICS, 11:15 et 11:16 : il a choisi « Abandonner » sur 61672 et 62963.
-   champs_defaits = 0 sur les deux, fiche et carnet INTACTS -- le garde-fou a travaille sur
-   un vrai clic, exactement comme la mesure l'annoncait. (La trace dit « abandon » alors que
-   ces gestes etaient passes chez Hektor : sans consequence sur les donnees.)
-   ⚠⚠ (d) « sync_console_documents NE S'OUVRE PAS » -- DEUX MURS, ET LE PREMIER EST DE MOI :
-     1. findDossierIdByHektorAnnonce (ecrite la VEILLE) ne cherchait que dans
-        app_dossier_current -> 47824 est VENDU -> « introuvable ». C'EST LA SUPPOSITION QUE
-        J'AVAIS BALAYEE LE MATIN MEME DANS LA BASE, en oubliant MON PROPRE CODE DU FRONT.
-        Le balayage de famille s'etait arrete a la frontiere de la base.
-     2. Et reparer le lien n'aurait rien debloque : 47824 n'a AUCUN detail en cache (0 ligne
-        dans app_historical_annonce_detail_cache). Sa fiche demande un import de detail chez
-        Hektor -> trois etapes et une attente pour eteindre une alerte.
-   ✅ (A) GO « fais a » : LES DEUX BOUTONS SONT DANS L'ECRAN SANTE. Un clic sur le bien cite
-   ouvre un PANNEAU sur place, avec les gestes qui attendent un humain et leurs deux boutons.
-   ⭐ C'etait SA question du 14/10 (« dans le monitoring je n'ai pas de bouton ») : j'avais
-     repondu en rendant les biens cliquables -- la mauvaise reponse, prouvee le lendemain.
-   RIEN EN BASE (le repli du matin suffit) · paresseux (une lecture par bien clique) · le lien
-   est repare aussi (localiserAnnonceParNumeroHektor cherche les TROIS mondes et DIT lequel) ·
-   et la table des libelles a demenage dans lib/api.ts, ou `sync_console_documents` MANQUAIT.
-   Chemin complet eprouve sous l'identite de Frederic (RLS comprise) : piste 2 rend
-   « 1377256 | Maison de village a renover | Vendu », les gestes rendent le job_id.
-   ⬜ RESTE : pousser le front, puis trancher 47824 depuis l'ecran Sante ; 61439 des 12:02.
-⑫ 📜 L'HISTORIQUE DES VISITES -- SUJET A PART, SORTI DU CHANTIER ⑥ LE 15/10 (sa decision :
-   « c'est un autre probleme, rien a voir avec ce chantier »). NE PAS RELANCER DE SOI-MEME.
-   Tout l'audit est dans notice/HISTORIQUE_VISITES_HEKTOR_2026-10-15.md (autoportante).
-   Ce qu'il faut savoir sans la lire : 1 721 bons de visite sont DEJA sur notre serveur
-   (1 182 annonces, 1 089 lisibles en texte, 632 scans) -- la matiere est payee, 0 appel a
-   Hektor ; l'agenda de Hektor n'a AUCUN point d'entree connu (il faudrait un releve) ; et
-   notre propre systeme de RDV existe mais ne sert pas (11 lignes, toutes de juin).
-   Trois chemins chiffres (A rien / B lire ce qu'on a, ~1/2 journee / C ouvrir le carnet
-   Hektor, ~1 journee + un releve), et un PREMIER PAS GRATUIT : relire les 1 089 textes pour
-   dire la vraie periode et le vrai rythme (le « ~115/mois » n'a jamais ete verifie).
-   A TRANCHER PAR LUI : A, B ou C, et OU ce sujet atterrit.
-⑪-bis ⚠⚠ DEUX DEFAUTS DE LA TACHE NEUVE, TROUVES PAR LA VERIFICATION FINALE DU 15/10 ET
-   CORRIGES PAR FREDERIC (une seule commande) -- a reverifier sur toute tache future :
-     1. elle etait enregistree en « Interactive » -- SEULE des 9 : elle n'aurait tourne QUE
-        session admin ouverte, et n'aurait rien dit en se taisant. Les 8 autres sont en S4U.
-     2. limite de duree a 72 h (les autres : 1 a 2 h). Avec « ignorer la nouvelle instance »,
-        une ligne bloquee aurait fait SAUTER les nuits suivantes, en silence.
-   Etat verifie apres correction : S4U / Limited / Win7 / moteur unifie / PT4H / IgnoreNew,
-   declencheur QUOTIDIEN (MSFT_TaskDailyTrigger, tous les 1 jour, sans fin), 22:00.
-   ➡ REGLE : une tache neuve se compare REGLAGE PAR REGLAGE a une tache qui marche
-     (principal, LogonType, RunLevel, compatibilite, moteur, limite, instances, classe du
-     declencheur). « Enregistree » ne veut pas dire « configuree comme ses soeurs ».
-⑪ ⏰ LE CONTROLE DU 16/10 AU MATIN -- la PREMIERE nuit de « GTI Entretien Documents » (22:00).
-   ⭐ TOUT EST PRET : L'OUTIL EXISTE, IL SE JOUE EN UNE COMMANDE ET IL REND UN VERDICT.
-        python phase2/checks/controle_entretien_documents.py
-     Il ne fait que LIRE (aucun appel a Hektor). Sortie 0 = vert, 1 = un rouge, 2 = il n'a
-     pas pu mesurer. Il porte EN DUR la reference figee la veille a 15:40, et il separe les
-     ROUGES (grave) des ORANGES (a regarder, pas forcement un echec).
-   PUIS la mesure des photos, a part, en lecture seule (~1 min) :
-        node Console/accorder_photos_miroir.js
-   LA REFERENCE DE LA VEILLE -- gardee aussi dans logs/scheduled/reference_*_2026-10-15.* :
-        biens en vente     729 dont  726 avec empreinte,     3 sans
-        estimations     12 758 dont 12 728 avec empreinte,  30 sans
-        vendus/clos      8 943 dont  7 545 avec empreinte, 1 398 sans
-        travaux documents en erreur 0 · file 0 · autres types en erreur 2 (autre session)
-        lignes marquees cloud_refuse : 0        <- LE TEMOIN DU CORRECTIF
-        photos : a_marquer 440 (67 annonces) · a_reordonner 1 662 · visible_divergent 0
-   LES DEUX TEMOINS QUI COMPTENT :
-     · les 33 annonces liberees par la purge doivent recevoir leur empreinte (32 n'en avaient
-       pas, donc la detection les sert EN PREMIER) ;
-     · au moins une ligne doit porter `metadata_json.cloud_refuse` -- c'est la PREUVE EN REEL
-       du correctif du coffre. ⚠ 0 n'est pas forcement un echec : si 0 marque ET 0 en erreur,
-       c'est qu'aucune annonce a type refuse n'est repassee. Les deux se lisent ENSEMBLE.
-   ⚠ L'alerte data.travaux_en_erreur compte TOUS les types : les 2 change_hektor_annonce_status
-     restants sont a l'AUTRE SESSION. Un rouge pour eux est ATTENDU, pas une rechute.
-   ⚠ Si un cap a mordu, c'est NORMAL le premier soir : la tache repasse chaque nuit. Ce qui
-     serait grave : 0 progres, un travail en erreur, ou la file encore pleine a 05:00.
-   ⭐ L'ESSAI A BLANC DU 15/10 EST LE TEMOIN INVERSE : joue AVANT la nuit, l'outil rend
-     2 rouges (tache jamais executee, aucun journal) et 2 oranges (1/33 empreintes,
-     0 cloud_refuse). Demain, ces quatre lignes doivent avoir bouge.
+① LES ESSAIS REELS QUI MANQUENT (chantier ⑦) :
+   · ⑦-1 ARCHIVER un contact sur une fiche JETABLE -- le sens qui porte le risque
+     (le serveur de Hektor archive-t-il AUSSI les recherches ?). Le contact d'essai
+     10355757 N'EXISTE PLUS : en creer un (ecriture chez Hektor = son accord) ou
+     qu'il en designe une.
+   · ⑦-3a CLOTURER avec une date DIFFERENTE d'aujourd'hui, et verifier que le
+     carnet porte LA DATE SAISIE. ⚠ Mesurer sur LA VALEUR, pas sur l'heure (le
+     PATCH du worker ne rafraichit pas `ecrit_le`).
+   · ⑦-3a PERSONNE N'A VU L'ECRAN : ecran Mandats, ouvrir une fiche, le bloc
+     « Cloture du mandat » est SOUS LA JAUGE.
+   · ⑦-8 marche 4 : masquer une photo sur le bac a sable 62774 (ecriture Hektor).
+
+② A TRANCHER PAR LUI -- je n'ai rien choisi :
+   · ⑦-3a : la MODALE DE STATUT clot toujours sans passer par la demande
+     d'annulation, alors que sa consigne du 16/10 etait « toujours par la
+     demande ». Elle est deja reservee admin/manager. On la laisse ou on la ferme ?
+   · LA SENTINELLE DU REGISTRE (13/10) : elle ne crie plus au loup, mais la cause
+     reste -- app_mandat__sb descend une heure APRES le push (table 97 sur 110).
+         A descendre app_mandat__sb en PREMIER      B decaler le moniteur
+   · L'HISTORIQUE DES VISITES (sorti du chantier ⑥ le 15/10, autoportant dans
+     notice/HISTORIQUE_VISITES_HEKTOR_2026-10-15.md) : 1 721 bons de visite sont
+     DEJA sur notre serveur (1 089 lisibles). Trois chemins chiffres, A / B / C,
+     et un PREMIER PAS GRATUIT : relire les 1 089 textes pour dire la vraie
+     periode et le vrai rythme. NE PAS RELANCER DE SOI-MEME.
+   · LES 8 WARNINGS de l'e-mail du matin : ils NE SONNENT PAS (seuls les critical
+     envoient). Chacun a un seuil pose pour une raison. A reprendre un par un
+     S'IL LE DEMANDE -- rien n'a ete decide.
+   · LA LIMITE `MAX_EXPORTED_IMAGES = 5` (export_app_payload.py:32) : elle ne mord
+     pas aujourd'hui (0 annonce tronquee) mais elle DORT. La monter, ou retirer la
+     troncature du payload ? Sans urgence.
+
+③ ⛔ RESTES DU CHANTIER ③, SANS URGENCE :
+   · redemarrer les 4 services un jour (les 2 messages du worker promettent
+     desormais la reprise, mais ce texte n'est pas encore dans les processus) ;
+   · le dossier serveur VIDE de la photo d'essai (le geste efface le fichier, pas
+     le dossier) ;
+   · appliquer_contrat_mandat.py : INUTILE depuis le 28/08. Trois options
+     presentees le 13/10 (A le retirer du run / B le redresser / C le commenter),
+     RECOMMANDE A. Il n'a pas tranche.
+   · ⛔ L'INTERRUPTEUR CHAMPS_APP_ANNONCE RESTE ETEINT (tranche le 13/10). Le
+     critere du projet n'est pas rempli : on n'allume qu'un champ que l'APP CREE
+     et que HEKTOR N'ENTRETIENT PAS. C'est LA COUPURE qui nous rendra prets.
+
+④ NE SE DECIDENT PAS SANS LUI (sortis des chantiers ② et ③) :
+   · ce que doit voir exactement un AGENT COMMERCIAL (l'essai du 12/10 a prouve
+     que tout abaisser casse le rapprochement : 93 % de lignes mortes) ;
+   · la fonction de SECOURS admin-users, a deployer A PART chez Supabase
+     (npx supabase functions deploy admin-users --project-ref dwaqxfrinihnychuoptk)
+     -- inutile tant que Render repond ;
+   · un essai REEL d'un geste chez Hektor par un negociateur ;
+   · MODIFIER LES CHAMPS d'un bien vendu/clos : ce n'est PAS un repli, c'est un
+     autre chantier, et l'ecran l'interdit deliberement ;
+   · 📜 LES NEGOCIATEURS INACTIFS : 1 522 biens vivants (11 %) sont a leur nom.
+     DECISION DU 13/10 : ON NE TOUCHE A RIEN. Ne pas relancer.
+
+⑤ 📜 SUJETS A PART, OUVERTS PAR LUI -- NE PAS RELANCER DE SOI-MEME :
+   · UN AUTO-ARCHIVAGE CONFORME RGPD (16/10, « c'est un autre dev »). Mesure du
+     16/10 : Hektor pose une date d'auto-archivage a CREATION + 2 ANS sur chaque
+     recherche, et CETTE DATE NE NOUS PARVIENT PAS (ni l'API ni notre table ne la
+     portent -- elle n'existe que dans la page HTML). On CONSTATE le basculement
+     apres coup, on ne l'anticipe pas.
+   · LE CARNET DES LIENS : cause racine NOTEE ET REPORTEE le 10/10 (un lien
+     s'identifie par un badge CALCULE alors que son numero existe).
+
+⑥ NOTE, NON RELANCE (trouve en passant, hors perimetre) :
+   · 202 biens EN VENTE a mandat echu, dont 43 sans negociateur ;
+   · 150 notifications sur 150 non lues ;
+   · les 22 403 photos de LOCATION ecartees chaque nuit -- l'exclusion n'est pas
+     declaree dans le code (elle devrait l'etre, regle du 14/10) ;
+   · ⑩ trancher le geste du bien VENDU 47824 depuis l'ecran Sante (les boutons y
+     sont depuis le 15/10).
+
+⑦ HORS CODE (etape 3) : A.4 zone DNS (La Boite Immo -> OVH, garder www) · A.5 les
+   leads · l'export PROTEXA · contrats A.1 et A.2 · C.9-couple (creer un menage
+   d'essai, la sonde est prete).
 ```
 
 ### ⚠⚠ Ce qui a une DATE DE PÉREMPTION — *à finir tant que Hektor vit*
 
 ```
-G.1-b    ✅ PLUS DE PEREMPTION -- CLOS LE 14/10 PAR UNE DECISION (chantier 6, point 6a) :
-         « il n'y a pas de documents dans les brouillons » (Frederic). Les 527 sont HORS
-         rattrapage (HORS_AUTO, enqueue_empreinte_lot.js), le worker n'est pas touche.
-G.2      ✅ PLUS DE PEREMPTION -- CLOS LE 15/10 : la detection TOURNE, dans sa propre tache
-         « GTI Entretien Documents » (22:00, 4 lignes), le rattrapage de 21:00 est eteint.
-         Arrivee mesuree : 726/729 biens en vente et 12 728/12 758 estimations ont leur
-         empreinte. Ce qui reste a verifier est un CONTROLE du 16/10, pas une peremption.
+G.1-b · G.2   ✅ PLUS DE PEREMPTION -- clos les 14 et 15/10 (chantier ⑥).
 C.9-couple · C.13-c · E.1 (recherches, visites, documents, signatures) · A.3 · A.4
+⭐ ET DEPUIS LE 19/10 : LES PHOTOS MASQUEES ont leur balayage (⑦-8 marche 2). Le
+   jour de la coupure, elles seraient perdues -- ~1 100 photos sur le parc vivant.
+   14 nuits. C'est la seule peremption qui AVANCE TOUTE SEULE.
 ```
 
 ### Ce qui reste vrai de l'exploitation
 
-- ⭐ **Les documents, depuis le 15/10** : le **rattrapage de 21 h est DÉSACTIVÉ**, remplacé par
-  **« GTI Entretien Documents » à 22 h** *(`scheduled/run_entretien_documents.ps1`, 4 lignes :
-  biens en vente chaque nuit · estimations ~6 nuits · vendus/clos ~5 nuits · photos)*. Elle
-  tourne **sans paramètre**, donc avec ses valeurs par défaut **et la ligne photos qui écrit**.
-  ⚠ Le run de 05:00 ne fait **plus** ce travail : son étape écrit un refus qui renvoie ici.
-- ⏰ **La matinée, depuis le 12/10** : `03:00` recherches actives · `05:00` le run *(55 étapes,
-  fin 07:18-07:34)* · **`07:45` la descente** *(elle attend le run jusqu'à 45 min)* · `08:00`
-  les relances e-mail · **`09:00` la sauvegarde**. ⚠ C'est un **pansement** : la descente
-  saturait la passerelle Supabase. Reprise du run :
-  `.\scheduled\run_quotidien.ps1 -StartAtLabel "<étiquette exacte>"`.
+- ⏰ **La nuit, au 19/10** : `22:00` entretien documents *(3 lignes, fin 23:17-23:25)* · ⭐ **`00:00`
+  le balayage des photos masquées** *(nouveau, lot de 1 000)* · `03:00` recherches actives · `05:00`
+  le run *(fin 07:03-07:34)* · **`07:45` la descente** · `08:00` les relances e-mail ·
+  **`09:00` la sauvegarde** · `12:30` reprise envois · `21:00` entretien photos.
+  ⚠ **Le creux de la nuit va de ~23:18 à 03:00** — c'est le seul budget disponible.
+  Reprise du run : `.\scheduled\run_quotidien.ps1 -StartAtLabel "<étiquette exacte>"`.
+- ⚠ **Le mur de Hektor est un quota de VOLUME, pas de débit** : **13 000 à 17 000 requêtes par
+  période**, et *« ralentir ne fait que retarder l'échéance »* *(mesure du 20/08)*. La règle de
+  Frédéric : **rester 40 % en dessous**. ⭐ La nuit en consomme déjà **~4 500** *(mesuré)*.
+  Les 4 freins du projet sont dans `console_job_worker.js` : **1 s** entre appels · **60 s** toutes
+  les 100 · **300 s** toutes les 2 000 · **15 s** de recul après un refus, et **arrêt net**.
 - **Render et Vercel se déploient seuls** sur un push vers `main` : `/health` rend le commit.
   ⚠ **La fonction Supabase `admin-users` NE se déploie PAS par un push.**
 - ⚠ **Une autre session travaille en parallèle** : relire `git log` avant d'écrire, et stager
   **fichier par fichier**.
 - ⚠ **Les alertes n'ont qu'UN seul canal** : `WHATSAPP_ALERT_WEBHOOK` n'a jamais été posé.
+- ⚠ **11 tâches sont surveillées** par `check_gti_health.py` ; une tâche neuve se **déclare AVANT**
+  d'être enregistrée, et se **compare réglage par réglage** à une sœur qui marche.
+
+### ⭐ Les leçons
+
+> **Les 31 leçons ont déménagé le 19/10** dans **`notice/LECONS_DE_METHODE.md`** — *numéros
+> conservés*, parce que le code et les commits y renvoient *(« leçon 30 », « la règle n° 4 »)*.
+> Elles pesaient **14 576 caractères** dans une section qui doit porter le présent.
+
+**Les six qui servent au chantier en cours :**
+
+| n° | en une ligne |
+|---|---|
+| **9** | ⭐⭐ **une cause structurelle se balaie dans TOUTE sa famille** — ce que Frédéric signale est un symptôme, jamais le périmètre |
+| **30** | ⚠⚠ **dans un patch destiné à être COLLÉ** : `replace(…, chr(13), '')` autour de **chaque** ancre et de **chaque** texte inséré, et **des ancres sur UNE SEULE LIGNE** — une ancre sans retour chariot dedans est **immunisée** *(prouvé le 19/10 : trouvée 2 fois dans les 4 cas)* |
+| **31** | **un retour arrière ne juge que SA part** — il vérifie d'abord qu'il ne reste aucune trace de ce qu'il devait retirer |
+| **1** | ⭐ **mesurer LE GESTE DE L'ÉCRAN**, pas un geste plausible — lire comment l'écran lit, avant de crier |
+| **23** | ⭐⭐ **une alerte doit écouter la réponse de l'humain** — et on croise sur les **identifiants**, jamais sur les nombres |
+| **15** | ⭐⭐ **chercher si le projet a DÉJÀ tranché** avant de proposer une forme — deux fois le 19/10, la bonne réponse était déjà écrite *(le verrou des photos, et le passage par le worker)* |
 
 ---
 
@@ -855,7 +338,8 @@ décision écrite) · **Est-ce mesuré ?** (mesurer, *puis* conclure) · **Qu'es
 | le **pourquoi** | `notice/PLAN_DEV_ACTUALISE_2026-08-20.md` (3 092 l. au 08/10) |
 | le **quoi**, item par item | `notice/LISTE_TACHES_A_COCHER_2026-08-29.md` (9 469 l. au 08/10 — lire la page de tête, l. 1-75) |
 | le **dernier audit** | `notice/AUDIT_OBJETS_ETAPE2_2026-10-08.md` — l'étape 2, objet par objet *(celui du 07/10, `AUDIT_AUTONOMIE_COMPLET_2026-10-07.md`, reste utile pour l'étape 3)* |
-| l'**historique** de la page de tête | `notice/JOURNAL_DE_BORD.md` — *un pourquoi, jamais un ordre du jour* |
+| l'**historique** de la page de tête | `notice/JOURNAL_DE_BORD.md` — *un pourquoi, jamais un ordre du jour*. ⭐ **Le §2 du 19/10 y est descendu EN ENTIER** *(79 966 caractères, verbatim)* |
+| ⭐ les **31 leçons de méthode** | `notice/LECONS_DE_METHODE.md` *(déménagées du §2 le 19/10)* — ⚠ **numéros conservés**, le code et les commits y renvoient par leur numéro. **Ne jamais renuméroter** : une leçon neuve prend le 32. Les **six** qui servent au chantier en cours sont rappelées au §2 |
 | le protocole de test en cours | `notice/PROTOCOLE_TEST_STATUTS_TRANSACTIONS_2026-09-01.md` |
 | les pièges déjà payés | la mémoire projet (voir §3.5) |
 
@@ -887,7 +371,8 @@ décision écrite) · **Est-ce mesuré ?** (mesurer, *puis* conclure) · **Qu'es
 ## 7. En fin de session — deux gestes, deux minutes
 
 1. **RÉÉCRIRE le §2** de cette page — *réécrire, pas ajouter un bloc en haut.* C'est
-   l'empilement qui l'avait porté à 467 lignes sur 609, avec trois états datés marqués
+   l'empilement qui l'avait porté à **732 lignes sur 895 — 91 % du fichier** le 19/10
+   *(et à 467 sur 609 le 12/10 : l'empilement revient si on ne réécrit pas)*, avec des états datés marqués
    *« ne jamais relire comme un ordre du jour »* : un document qui se contredit ne tient
    plus le fil. Ce qui sort du présent descend dans `notice/JOURNAL_DE_BORD.md`.
 2. **Réécrire la mémoire de reprise** (`reprise-…` dans le dossier mémoire), toujours la même,
