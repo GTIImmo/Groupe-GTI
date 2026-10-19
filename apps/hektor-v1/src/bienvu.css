@@ -267,35 +267,28 @@
    l'application pose déjà (bandeau « Chargement du listing… », « Mise a jour… », `.empty-state`,
    `.error-banner`) et on dessine le squelette en CSS pur quand la liste charge sans aucune ligne.
    ============================================================================= */
-@keyframes bv-line { 0% { transform: translateX(-110%); } 100% { transform: translateX(380%); } }
-@keyframes bv-shimmer { 0% { background-position: 150% 0; } 100% { background-position: -50% 0; } }
 @keyframes bv-dot { 0%, 100% { transform: scale(0.8); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
+/* Le symbole qui se construit en boucle : le toit tombe, la coche se trace, on tient, on repart (2,2 s) */
+@keyframes bv-ld-roof { 0% { opacity: 0; transform: translateY(-9px); } 14%, 84% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+@keyframes bv-ld-draw { 0%, 10% { stroke-dashoffset: 100; } 42%, 84% { stroke-dashoffset: 0; } 96%, 100% { stroke-dashoffset: 0; opacity: 0; } }
 
-/* Chargement : le gros bandeau avec son texte devient un filet magenta qui avance en haut du
-   tableau. Le texte reste dans la page (lecteurs d'écran), il n'est plus affiché. */
-.bv .listing-loading-banner, .bv .annuaire-v2 .av-loading {
-  position: sticky; top: 0; z-index: 3; display: block; height: 3px; min-height: 0 !important; padding: 0 !important;
-  border: 0 !important; overflow: hidden; background: var(--bv-rose-soft) !important; color: transparent !important; font-size: 0 !important;
+/* Chargement : le symbole animé au centre de la liste, avec son libellé. Les lignes déjà là se voilent
+   sous lui (elles restent lisibles) ; une liste encore vide garde une hauteur pour qu'il ait sa place. */
+.bv .bv-loader { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; color: var(--bv-ink); }
+.bv .bv-loader svg { width: 46px; height: auto; display: block; overflow: visible; }
+.bv .bv-loader .bv-ld-roof { animation: bv-ld-roof 2.2s cubic-bezier(0.2, 0.9, 0.3, 1) infinite; }
+.bv .bv-loader .bv-ld-mask { stroke-dasharray: 100; stroke-dashoffset: 100; animation: bv-ld-draw 2.2s cubic-bezier(0.5, 0, 0.2, 1) infinite; }
+.bv .bv-loader-label { font-size: 13px; font-weight: 600; color: var(--bv-mute); }
+.bv .listing-table-wrap { position: relative; }
+.bv .listing-table-wrap.is-refreshing { min-height: 260px; }
+.bv .listing-loading-banner {
+  position: absolute; inset: 0; z-index: 3; display: flex; justify-content: center; align-items: flex-start; padding: 64px 0 0 !important;
+  min-height: 0 !important; border: 0 !important; background: rgba(255, 255, 255, 0.72) !important; font-size: 0 !important; text-transform: none !important;
 }
-.bv .listing-loading-banner::before, .bv .annuaire-v2 .av-loading::before {
-  content: ''; position: absolute; inset: 0 auto 0 0; width: 28%; height: auto; border-radius: 3px; box-shadow: none !important;
-  background: var(--bv-magenta) !important; animation: bv-line 1.15s ease-in-out infinite !important;
-}
-/* Rafraîchissement : les lignes déjà là restent lisibles, un peu éteintes, jamais effacées */
-.bv .listing-table-wrap.is-refreshing tbody { opacity: 0.55; transition: opacity 0.2s ease; }
-/* Squelette : la liste charge et n'a encore AUCUNE ligne -> cinq lignes fantômes (photo, deux traits) */
-.bv .listing-table-wrap.is-refreshing:not(:has(tbody tr))::after {
-  content: ''; display: block; height: 360px; margin: 6px 14px 0;
-  background-image:
-    linear-gradient(90deg, transparent 20%, rgba(255, 255, 255, 0.75) 50%, transparent 80%),
-    linear-gradient(to bottom, transparent 12px, #eef0f1 12px, #eef0f1 56px, transparent 56px),
-    linear-gradient(to bottom, transparent 14px, #eef0f1 14px, #eef0f1 28px, transparent 28px),
-    linear-gradient(to bottom, transparent 36px, #eef0f1 36px, #eef0f1 48px, transparent 48px),
-    linear-gradient(to bottom, transparent 22px, #eef0f1 22px, #eef0f1 40px, transparent 40px);
-  background-size: 220% 100%, 64px 72px, 34% 72px, 20% 72px, 72px 72px;
-  background-position: 150% 0, 0 0, 90px 0, 90px 0, 64% 0;
-  background-repeat: no-repeat, repeat-y, repeat-y, repeat-y, repeat-y;
-  animation: bv-shimmer 1.4s linear infinite;
+.bv .listing-loading-banner .bv-loader { align-self: flex-start; padding: 16px 26px 14px; border-radius: var(--bv-radius-lg, 18px); background: #ffffff; box-shadow: 0 10px 30px rgba(34, 35, 35, 0.14), 0 0 0 1px var(--bv-line); }
+.bv .annuaire-v2 .av-loading {
+  display: flex; justify-content: center; padding: 40px 0 28px !important; min-height: 0 !important; border: 0 !important;
+  background: transparent !important; font-size: 0 !important;
 }
 /* « Mise a jour… » à côté de la pagination : une pastille discrète avec un point qui pulse */
 .bv .loading-inline, .bv .annuaire-v2 .pg-load, .bv .registre-nb .pager .loading-inline {
@@ -321,6 +314,6 @@
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 16.5v.5'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 @media (prefers-reduced-motion: reduce) {
-  .bv .listing-loading-banner::before, .bv .annuaire-v2 .av-loading::before, .bv .loading-inline::before, .bv .annuaire-v2 .pg-load::before { animation: none !important; width: 100%; }
-  .bv .listing-table-wrap.is-refreshing:not(:has(tbody tr))::after { animation: none; }
+  .bv .bv-loader .bv-ld-roof, .bv .bv-loader .bv-ld-mask { animation: none !important; stroke-dashoffset: 0; opacity: 1; }
+  .bv .loading-inline::before, .bv .annuaire-v2 .pg-load::before { animation: none !important; }
 }

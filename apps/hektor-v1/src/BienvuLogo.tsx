@@ -42,3 +42,22 @@ export function BienvuSymbol(props: { roof?: string; className?: string }) {
     </svg>
   )
 }
+
+/** Chargement : le symbole se construit (toit, coche tracée), tient un instant, repart. Même geste que l'écran
+ *  de démarrage, en boucle, pour les listes qui attendent leurs résultats. Le CSS (bienvu.css) fait l'animation. */
+export function BienvuLoader(props: { label?: string }) {
+  return (
+    <span className="bv-loader" role="status">
+      <svg viewBox="11.76 7.51 76.49 84.97" aria-hidden="true">
+        <defs>
+          <mask id="bvLoaderMask" maskUnits="userSpaceOnUse" x="0" y="0" width="120" height="120">
+            <path className="bv-ld-mask" pathLength={100} d="M22 62 L44 84 L77 51" fill="none" stroke="#fff" strokeWidth={26} />
+          </mask>
+        </defs>
+        <path className="bv-ld-roof" d={ROOF} fill="currentColor" />
+        <path d={CHECK} fill={MAGENTA} mask="url(#bvLoaderMask)" />
+      </svg>
+      {props.label ? <span className="bv-loader-label">{props.label}</span> : null}
+    </span>
+  )
+}

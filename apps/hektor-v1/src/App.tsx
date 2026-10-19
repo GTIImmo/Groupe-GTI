@@ -231,7 +231,7 @@ import SanteSystemeScreen from './SanteSystemeScreen'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
-import { BienvuLogo, BienvuSymbol } from './BienvuLogo'
+import { BienvuLoader, BienvuLogo, BienvuSymbol } from './BienvuLogo'
 import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
@@ -24318,7 +24318,7 @@ function MandatsScreen(props: {
           </div>
         ) : null}
         <div className={`table-wrap listing-table-wrap ${isEstimationMode ? 'estim-v2-tablewrap' : 'listing-table-active'} ${props.loading ? 'is-refreshing' : ''}`}>
-          {props.loading ? <div className="listing-loading-banner">Chargement du listing...</div> : null}
+          {props.loading ? <div className="listing-loading-banner">{APP_BIENVU_ENABLED ? <BienvuLoader label="Chargement…" /> : 'Chargement du listing...'}</div> : null}
           <table>
             {!isEstimationMode ? (
               <colgroup>
@@ -43068,7 +43068,7 @@ function ContactsScreen(props: {
               <label className="pg-jump"><span>Aller</span><input type="number" min={1} max={props.contactTotalPages} value={props.contactPage} onChange={(event) => props.onGoToContactPage(Number(event.target.value || 1))} /></label>
             </div>
           </div>
-          {props.loading ? <div className="av-loading">Chargement des contacts…</div> : null}
+          {props.loading ? <div className="av-loading">{APP_BIENVU_ENABLED ? <BienvuLoader label="Chargement des contacts…" /> : 'Chargement des contacts…'}</div> : null}
           {props.contacts.length > 0 ? (
             <div className="av-table-wrap">
               <div className="av-table">
