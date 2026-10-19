@@ -3038,3 +3038,54 @@ les DEUX listes entières *(et donc de risquer d'en emporter d'autres)*.
 ⭐ Et le worker la **détecte déjà** sur chaque photo : `can_change_visibility`.
 ⚠ **Jamais éprouvée en écriture** — c'est un GET, donc un relevé ne suffira pas à la
 prouver : il faudra un vrai essai sur le bac à sable 62774.
+
+---
+
+# ⭐⭐ LE TAUX RÉEL DE PHOTOS MASQUÉES — mesuré le 19/10 sur 200 annonces
+
+*Frédéric : « fais 1 mais sur 200 annonces ».*
+
+```
+200 annonces lues, AUCUN refus de Hektor
+  3 annonces avec des masquees   ->  taux 1,5 %
+  7 photos masquees au total     ->  2,3 par annonce concernee
+  projection : ~732 annonces, ~1 709 photos sur les 48 820
+```
+
+**Les trois** : `59068` *(archive, 2)* · `62189` *(VIVANT, 3)* · `63005` *(VIVANT, 2)* —
+et **0 masquée chez nous** pour les trois : ce sont des photos qu'on **n'a pas du tout**.
+
+⭐ **LA RÉPARTITION COMPTE** : **2 sur 55 vivants = 3,6 %** · **1 sur 145 archives = 0,7 %**.
+Les masquées sont surtout sur les biens **VIVANTS** — logique : on masque une photo d'un
+bien qu'on commercialise.
+⚠ **Petits nombres** : 3 sur 200 donne un intervalle large *(grossièrement 0,3 % à 4,3 %)*.
+La projection n'est **pas** une mesure, et le compte rendu de la sonde le dit lui-même.
+
+## ⚠ ET JE ME SUIS TROMPÉ SUR LE SEUIL DE BANNISSEMENT
+
+J'ai cité plusieurs fois « ~18 000 requêtes/nuit ». **La mémoire ne dit pas ça.** Elle dit
+*(incident du 19-20/08)* :
+> « **DEUX causes, pas une** : ① **le débit** — ~3 requêtes par annonce à 1,3 s l'annonce =
+> **2 à 3 req/s en continu pendant des heures** ; ② **les 403 répétés** — ~1 300 identiques
+> depuis la même IP, déclencheur classique de fail2ban. »
+
+➡ **Ce n'est pas le VOLUME, c'est le DÉBIT et les erreurs répétées.** À **1 appel/seconde**
+on est **2 à 3 fois en dessous**, et la sonde du 19/10 a fait **200 appels sans un refus**.
+⭐ *(Et le run fait déjà ~61 340 lectures de détail par nuit sans être banni — mais par
+l'API, pas par la Console. La prudence reste due sur le canal Console.)*
+
+## CE QUE ÇA CHANGE POUR LE RAPATRIEMENT
+
+Le coût est **les appels**, pas le volume : **~1 709 photos à télécharger**, c'est
+**trois fois rien** *(le CDN est gratuit et hors quota)*.
+
+| option | quoi | nuits à 1 appel/s | ce qu'on récupère |
+|---|---|---|---|
+| **A** | **les VIVANTS d'abord** *(13 491)* | **~4 nuits** à 3 500/nuit *(58 min)* | ⭐ là où le taux est **3,6 %** — ~490 annonces, ~1 100 photos |
+| **B** | **tout** *(48 820)* | ~14 nuits | tout |
+| **C** | **en continu**, un curseur qui tourne en boucle dans « GTI Entretien Photos » | ~500/nuit, sans fin | tout, **sans aucune nuit lourde** |
+
+⭐⭐ **RECOMMANDATION : A puis C.** Les vivants d'abord *(c'est là que ça compte et que le
+taux est fort)*, puis le reste **en continu**. Et **C est AUSSI le « run de mise à jour »**
+que Frédéric demande pour les prochaines : **un seul mécanisme fait les deux** — il
+repasse indéfiniment et attrape les masquées nouvelles au passage suivant.
