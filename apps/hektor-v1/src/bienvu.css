@@ -260,3 +260,67 @@
 .bv .request-modal-v3 .request-modal-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
 .bv .request-modal-v3 .button-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; color: #ffffff !important; box-shadow: none !important; }
 .bv .request-modal-v3 .button-primary:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* =============================================================================
+   Lot 5 — chargement, rafraîchissement, vide, erreur
+   Les états vivent DANS les listes. Rien n'est réécrit dans le code : on habille les éléments que
+   l'application pose déjà (bandeau « Chargement du listing… », « Mise a jour… », `.empty-state`,
+   `.error-banner`) et on dessine le squelette en CSS pur quand la liste charge sans aucune ligne.
+   ============================================================================= */
+@keyframes bv-line { 0% { transform: translateX(-110%); } 100% { transform: translateX(380%); } }
+@keyframes bv-shimmer { 0% { background-position: 150% 0; } 100% { background-position: -50% 0; } }
+@keyframes bv-dot { 0%, 100% { transform: scale(0.8); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
+
+/* Chargement : le gros bandeau avec son texte devient un filet magenta qui avance en haut du
+   tableau. Le texte reste dans la page (lecteurs d'écran), il n'est plus affiché. */
+.bv .listing-loading-banner, .bv .annuaire-v2 .av-loading {
+  position: sticky; top: 0; z-index: 3; display: block; height: 3px; min-height: 0 !important; padding: 0 !important;
+  border: 0 !important; overflow: hidden; background: var(--bv-rose-soft) !important; color: transparent !important; font-size: 0 !important;
+}
+.bv .listing-loading-banner::before, .bv .annuaire-v2 .av-loading::before {
+  content: ''; position: absolute; inset: 0 auto 0 0; width: 28%; height: auto; border-radius: 3px; box-shadow: none !important;
+  background: var(--bv-magenta) !important; animation: bv-line 1.15s ease-in-out infinite !important;
+}
+/* Rafraîchissement : les lignes déjà là restent lisibles, un peu éteintes, jamais effacées */
+.bv .listing-table-wrap.is-refreshing tbody { opacity: 0.55; transition: opacity 0.2s ease; }
+/* Squelette : la liste charge et n'a encore AUCUNE ligne -> cinq lignes fantômes (photo, deux traits) */
+.bv .listing-table-wrap.is-refreshing:not(:has(tbody tr))::after {
+  content: ''; display: block; height: 360px; margin: 6px 14px 0;
+  background-image:
+    linear-gradient(90deg, transparent 20%, rgba(255, 255, 255, 0.75) 50%, transparent 80%),
+    linear-gradient(to bottom, transparent 12px, #eef0f1 12px, #eef0f1 56px, transparent 56px),
+    linear-gradient(to bottom, transparent 14px, #eef0f1 14px, #eef0f1 28px, transparent 28px),
+    linear-gradient(to bottom, transparent 36px, #eef0f1 36px, #eef0f1 48px, transparent 48px),
+    linear-gradient(to bottom, transparent 22px, #eef0f1 22px, #eef0f1 40px, transparent 40px);
+  background-size: 220% 100%, 64px 72px, 34% 72px, 20% 72px, 72px 72px;
+  background-position: 150% 0, 0 0, 90px 0, 90px 0, 64% 0;
+  background-repeat: no-repeat, repeat-y, repeat-y, repeat-y, repeat-y;
+  animation: bv-shimmer 1.4s linear infinite;
+}
+/* « Mise a jour… » à côté de la pagination : une pastille discrète avec un point qui pulse */
+.bv .loading-inline, .bv .annuaire-v2 .pg-load, .bv .registre-nb .pager .loading-inline {
+  display: inline-flex; align-items: center; gap: 6px; text-transform: none !important; letter-spacing: 0 !important; font-weight: 700; color: var(--bv-framboise) !important;
+}
+.bv .loading-inline::before, .bv .annuaire-v2 .pg-load::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--bv-magenta); animation: bv-dot 1s ease-in-out infinite; }
+
+/* Vide : centré, sobre, le symbole en filigrane au lieu d'une phrase italique perdue */
+.bv .empty-state { text-align: center; font-style: normal; color: var(--bv-mute); }
+.bv .empty-state::before {
+  content: ''; display: block; width: 34px; height: 34px; margin: 0 auto 8px; opacity: 0.85;
+  background: url('/brand/bienvu-symbole-couleur.svg') center / contain no-repeat;
+}
+
+/* Erreur : le bandeau du haut d'écran passe au rouge des états de la charte, avec un picto */
+.bv .error-banner {
+  display: flex; align-items: flex-start; gap: 10px; border-radius: var(--bv-radius-md); padding: 12px 16px;
+  background: var(--bv-danger-soft); border: 1px solid #f1d2d0; color: #8f2f2d;
+}
+.bv .error-banner::before {
+  content: ''; flex: none; width: 20px; height: 20px; margin-top: 1px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 16.5v.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 16.5v.5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bv .listing-loading-banner::before, .bv .annuaire-v2 .av-loading::before, .bv .loading-inline::before, .bv .annuaire-v2 .pg-load::before { animation: none !important; width: 100%; }
+  .bv .listing-table-wrap.is-refreshing:not(:has(tbody tr))::after { animation: none; }
+}
