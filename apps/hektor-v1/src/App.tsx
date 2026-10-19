@@ -237,6 +237,7 @@ import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
+import { bvs, bvt } from './lib/bienvuTexte'
 
 type DetailContact = {
   id: string
@@ -2506,7 +2507,7 @@ const draftAnnonceStepMeta: Record<DraftAnnonceStepKey, { label: string; title: 
   offre: {
     label: '1. Offre',
     title: '1. Offre',
-    subtitle: 'Compte, type de bien et champs obligatoires de l offre Hektor.',
+    subtitle: bvs('Compte, type de bien et champs obligatoires de l offre Hektor.'),
     hint: 'Prix et bien',
   },
   photos: {
@@ -2824,7 +2825,7 @@ function HektorCompositionPiecesEditor(props: {
       </label>
       <label className="filter-field hektor-composition-note">
         <span>Note publique</span>
-        <textarea value={piece.notePublique} onChange={(event) => onChange('notePublique', event.target.value)} disabled={props.disabled} placeholder="Visible dans Hektor" />
+        <textarea value={piece.notePublique} onChange={(event) => onChange('notePublique', event.target.value)} disabled={props.disabled} placeholder={bvs("Visible dans Hektor")} />
       </label>
       <label className="filter-field hektor-composition-note">
         <span>Note privee</span>
@@ -2873,7 +2874,7 @@ function HektorCompositionPiecesEditor(props: {
             </div>
           </article>
         )) : (
-          <p className="hektor-composition-empty">Aucune piece ajoutee. Ajoute les pieces une par une comme dans Hektor.</p>
+          <p className="hektor-composition-empty">{bvs("Aucune piece ajoutee. Ajoute les pieces une par une comme dans Hektor.")}</p>
         )}
         {deletedPieces.length ? (
           <div className="hektor-composition-deleted">
@@ -3000,7 +3001,7 @@ function HektorAnnonceUpdateForm(props: {
       setMessage(null)
       props.onCancel?.()
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Modification Hektor impossible.')
+      setError(submitError instanceof Error ? submitError.message : bvs('Modification Hektor impossible.'))
     } finally {
       setPending(false)
     }
@@ -3045,15 +3046,15 @@ function HektorAnnonceUpdateForm(props: {
       <div className="hektor-inline-form-head">
         <span className="hektor-inline-icon" aria-hidden="true">M</span>
         <div>
-          <strong>Modifier dans Hektor</strong>
-          <small>Memes pages et champs techniques que la creation Hektor.</small>
+          <strong>{bvs("Modifier dans Hektor")}</strong>
+          <small>{bvs("Memes pages et champs techniques que la creation Hektor.")}</small>
         </div>
       </div>
       <div className="hektor-advanced-sections">
         {sectionsBeforeComposition.map(renderUpdateSection)}
         <HektorCompositionPiecesEditor
           title="4. Composition"
-          subtitle="Ajoute ou corrige les pieces une par une, comme dans Hektor."
+          subtitle={bvs("Ajoute ou corrige les pieces une par une, comme dans Hektor.")}
           pieces={compositionPieces}
           draft={compositionDraft}
           disabled={pending}
@@ -3067,7 +3068,7 @@ function HektorAnnonceUpdateForm(props: {
         {sectionsAfterComposition.map(renderUpdateSection)}
       </div>
       <div className="hektor-inline-actions">
-        <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer vers Hektor'}</button>
+        <button type="submit" disabled={pending}>{pending ? 'Envoi...' : bvs('Envoyer vers Hektor')}</button>
         {props.onCancel ? <button className="button-subtle" type="button" onClick={props.onCancel} disabled={pending}>Fermer</button> : null}
         {message ? <span className="hektor-inline-feedback is-success">{message}</span> : null}
         {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
@@ -3111,7 +3112,7 @@ function HektorAnnonceFieldDetailPanel(props: {
   return (
     <section className="detail-section detail-hektor-fields-section">
       <div className="section-header">
-        <DetailSectionTitle icon="summary" title="Champs Hektor" />
+        <DetailSectionTitle icon="summary" title={bvs("Champs Hektor")} />
         <span>{filledFields}/{totalFields} renseignes</span>
       </div>
       <div className="hektor-detail-field-groups">
@@ -3131,12 +3132,12 @@ function HektorAnnonceFieldDetailPanel(props: {
                     piece.surfacePiece ? `${piece.surfacePiece} m2` : '',
                     piece.etagePiece ? `Etage ${piece.etagePiece}` : '',
                     hektorCompositionPieceTypeLabel(piece.idTypePiece, piece.typeLabel),
-                  ].filter(Boolean).join(' - ') || 'Piece Hektor'}</small>
+                  ].filter(Boolean).join(' - ') || bvs('Piece Hektor')}</small>
                 </article>
               ))}
             </div>
           ) : (
-            <p className="hektor-detail-composition-empty">Aucune piece detaillee remontee par la synchronisation Hektor.</p>
+            <p className="hektor-detail-composition-empty">{bvs("Aucune piece detaillee remontee par la synchronisation Hektor.")}</p>
           )}
         </details>
         {groupsAfterComposition.map((group, index) => renderDetailGroup(group, index + groupsBeforeComposition.length + 1))}
@@ -3191,7 +3192,7 @@ function MandantsEnCreation(props: {
           <div
             key={`mandant-prov-${ligne.creation_token}`}
             className={`mandant-prov${enErreur ? ' is-error' : ''}`}
-            title={enErreur ? (ligne.error_message || 'Le rattachement a echoue chez Hektor') : undefined}
+            title={enErreur ? (ligne.error_message || bvs('Le rattachement a echoue chez Hektor')) : undefined}
           >
             <span className="mandant-prov-dot" aria-hidden="true" />
             <strong>{ligne.contact_label || (ligne.hektor_contact_id ? `Contact ${ligne.hektor_contact_id}` : 'Mandant')}</strong>
@@ -3341,7 +3342,7 @@ function HektorMandantContactForm(props: {
     setMessage(null)
     setError(null)
     if (!lastName.trim() || !email.trim()) {
-      setError('Nom et email sont obligatoires pour créer le contact Hektor.')
+      setError(bvs('Nom et email sont obligatoires pour créer le contact Hektor.'))
       return
     }
     if (!hasHektorNegotiator(props.dossier)) {
@@ -3388,7 +3389,7 @@ function HektorMandantContactForm(props: {
         <button className="hektor-mandant-add-card" type="button" onClick={() => setOpen(true)}>
           <span aria-hidden="true">+</span>
           <strong>Ajouter un mandant</strong>
-          <small>Nouveau contact Hektor associé à cette annonce</small>
+          <small>{bvs("Nouveau contact Hektor associé à cette annonce")}</small>
         </button>
       ) : null}
       {open ? (
@@ -3412,7 +3413,7 @@ function HektorMandantContactForm(props: {
       <div className="hektor-inline-form-head">
         <span className="hektor-inline-icon" aria-hidden="true">+</span>
         <div>
-          <strong>Créer un mandant Hektor</strong>
+          <strong>{bvs("Créer un mandant Hektor")}</strong>
           <small>Le contact est créé puis associé automatiquement à cette annonce.</small>
         </div>
       </div>
@@ -3497,7 +3498,7 @@ function HektorMandantContactForm(props: {
                 >
                   <span>
                     <strong>{mandantContactOptionTitle(option)}</strong>
-                    <small>{mandantContactOptionSubtitle(option) || 'Contact Hektor actif'}</small>
+                    <small>{mandantContactOptionSubtitle(option) || bvs('Contact Hektor actif')}</small>
                   </span>
                   <em>{mandantContactOptionMeta(option) || `Contact ${option.hektor_contact_id}`}</em>
                 </button>
@@ -3583,7 +3584,7 @@ function RetirerMandantBouton(props: {
   if (fait) {
     return (
       <div className="fa-ck-ct-retrait is-done">
-        Retiré du bien. Hektor est prévenu ; s’il refuse, le lien réapparaîtra.
+        {bvs("Retiré du bien. Hektor est prévenu ; s’il refuse, le lien réapparaîtra.")}
       </div>
     )
   }
@@ -3633,8 +3634,7 @@ function RetirerMandantBouton(props: {
         <div className="fa-ck-ct-retrait-ask">
           <strong>Retirer {props.contact.name} de ce bien ?</strong>
           <span>
-            Le lien part aussi chez Hektor. La trace est conservée chez nous, datée et
-            nominative. Pour revenir en arrière, il faudra rattacher le mandant à nouveau.
+            {bvs("Le lien part aussi chez Hektor. La trace est conservée chez nous, datée et nominative. Pour revenir en arrière, il faudra rattacher le mandant à nouveau.")}
           </span>
           <div className="fa-ck-ct-retrait-acts">
             <button type="button" className="fa-ck-ct-retrait-b is-go" onClick={retirer} disabled={pending}>
@@ -3690,11 +3690,11 @@ function HektorMandantContactEditForm(props: {
     event.preventDefault()
     setError(null)
     if (!canEdit || !props.contact.sourceId) {
-      setError('ID contact Hektor manquant.')
+      setError(bvs('ID contact Hektor manquant.'))
       return
     }
     if (!lastName.trim() || !email.trim()) {
-      setError('Nom et email sont obligatoires pour modifier le contact Hektor.')
+      setError(bvs('Nom et email sont obligatoires pour modifier le contact Hektor.'))
       return
     }
     if (!hasHektorNegotiator(props.dossier)) {
@@ -3932,7 +3932,7 @@ function HektorMandatNumberForm(props: {
         <button className={`hektor-mandat-number-card ${hasMandat && !props.allowNewMandate ? 'is-done' : ''}`} type="button" disabled={!canCreate} onClick={() => setOpen(true)}>
           <span aria-hidden="true">{props.allowNewMandate ? '+' : hasMandat ? 'N' : '#'}</span>
           <strong>{props.allowNewMandate ? 'Ajouter un nouveau mandat' : hasMandat ? `Mandat ${props.dossier.numero_mandat}` : 'Générer le numéro de mandat'}</strong>
-          <small>{props.allowNewMandate ? (props.contacts.length ? "Nouveau numéro auto ; l'ancien reste dans l'historique." : 'Ajoutez un mandant avant cette étape.') : hasMandat ? "Numéro déjà présent dans l'app." : props.contacts.length ? 'Hektor attribue automatiquement le prochain numéro.' : 'Ajoutez un mandant avant cette étape.'}</small>
+          <small>{props.allowNewMandate ? (props.contacts.length ? "Nouveau numéro auto ; l'ancien reste dans l'historique." : 'Ajoutez un mandant avant cette étape.') : hasMandat ? "Numéro déjà présent dans l'app." : props.contacts.length ? bvs('Hektor attribue automatiquement le prochain numéro.') : 'Ajoutez un mandant avant cette étape.'}</small>
         </button>
       ) : null}
       {open ? (
@@ -3940,8 +3940,8 @@ function HektorMandatNumberForm(props: {
           <div className="hektor-inline-form-head">
             <span className="hektor-inline-icon" aria-hidden="true">#</span>
             <div>
-              <strong>Generer le N° mandat Hektor</strong>
-              <small>Le prochain numéro est réservé par Hektor au moment de l'envoi.</small>
+              <strong>{bvs("Generer le N° mandat Hektor")}</strong>
+              <small>{bvs("Le prochain numéro est réservé par Hektor au moment de l'envoi.")}</small>
             </div>
           </div>
           <div className="hektor-inline-grid hektor-mandat-number-grid">
@@ -3980,9 +3980,9 @@ function HektorMandatNumberForm(props: {
                 </label>
               ))}
             </div>
-          ) : <p className="hektor-inline-feedback">Les mandants seront detectes directement dans Hektor.</p>}
+          ) : <p className="hektor-inline-feedback">{bvs("Les mandants seront detectes directement dans Hektor.")}</p>}
           <div className="hektor-inline-actions">
-            <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Generer dans Hektor'}</button>
+            <button type="submit" disabled={pending}>{pending ? 'Envoi...' : bvs('Generer dans Hektor')}</button>
             <button className="button-subtle" type="button" onClick={() => setOpen(false)} disabled={pending}>Annuler</button>
             {error ? <span className="hektor-inline-feedback is-error">{error}</span> : null}
           </div>
@@ -5155,7 +5155,7 @@ function CorrigeableAnnonceField(props: {
       await editAnnonceOptimistic({ dossier: props.dossier, fields: { [props.fieldKey]: clean } })
       props.onSaved(clean)
       setEditing(false)
-      setMsg({ ok: true, text: 'Mis à jour dans la fiche · synchro Hektor en cours' })
+      setMsg({ ok: true, text: bvs('Mis à jour dans la fiche · synchro Hektor en cours') })
     } catch (error) {
       setMsg({ ok: false, text: error instanceof Error ? error.message : 'Mise à jour impossible' })
     } finally {
@@ -5461,7 +5461,7 @@ function MandatDocumentEditor(props: {
       setPdfBusy(false)
       return
     }
-    setMessage('Mandat en cours de depot dans Hektor…')
+    setMessage(bvs('Mandat en cours de depot dans Hektor…'))
     // La pop-up de signature n'apparait QUE lorsque Hektor a reellement ajoute le document.
     const deadline = Date.now() + 150000
     const poll = async () => {
@@ -5469,7 +5469,7 @@ function MandatDocumentEditor(props: {
         const docs = await loadConsoleDocuments(props.dossier.app_dossier_id)
         const fresh = docs.find((doc) => !beforeIds.has(doc.id) && /mandat/i.test(doc.document_name || ''))
         if (fresh) {
-          setMessage('Mandat depose dans Hektor.')
+          setMessage(bvs('Mandat depose dans Hektor.'))
           setPdfBusy(false)
           setSignPromptOpen(true)
           return
@@ -5478,7 +5478,7 @@ function MandatDocumentEditor(props: {
       if (Date.now() < deadline) {
         window.setTimeout(() => { void poll() }, 4000)
       } else {
-        setMessage('Le mandat met du temps a arriver dans Hektor. Utilise le bouton « Signature » sur le document quand il apparait.')
+        setMessage(bvs('Le mandat met du temps a arriver dans Hektor. Utilise le bouton « Signature » sur le document quand il apparait.'))
         setPdfBusy(false)
       }
     }
@@ -5921,7 +5921,7 @@ function EstimationDocumentEditor(props: {
     const dept = String(dossier.code_postal || '').trim().slice(0, 2)
     const surface = Number(props.detail.surface_habitable_detail ?? props.detail.surface) || null
     const type = dvfTypeForBien(dossier.type_bien)  // Maison | Appartement | null (mappé depuis le code Hektor)
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMarcheMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setMarcheMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     if (!dept) { setMarcheMsg('Code postal du bien manquant.'); return }
     if (!type) { setMarcheMsg(`Comparaison DVF non pertinente pour ce type de bien (${libelleTypeBien(dossier)}). La base DVF ne couvre que maisons et appartements.`); return }
     // Maisons : terrain de taille comparable, mais uniquement en LOCAL (≤2km) — la RPC v4 élargit
@@ -5947,7 +5947,7 @@ function EstimationDocumentEditor(props: {
     if (cadreBusy) return
     const lat = Number(props.detail.latitude_detail)
     const lon = Number(props.detail.longitude_detail)
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadreMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadreMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     setCadreBusy(true); setCadreMsg(null)
     try {
       const res = await loadCadreDeVie({ lat, lon })
@@ -5967,7 +5967,7 @@ function EstimationDocumentEditor(props: {
     if (cadastreBusy) return
     const lat = Number(props.detail.latitude_detail)
     const lon = Number(props.detail.longitude_detail)
-    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadastreMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) { setCadastreMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     setCadastreBusy(true); setCadastreMsg(null)
     try {
       const res = await loadCadastre({ lat, lon })
@@ -6208,7 +6208,7 @@ function EstimationDocumentEditor(props: {
         })
         setMessage(res?.dryRun ? "Avis de valeur en génération + email préparé (mode test : envoi réel désactivé côté serveur)." : "Avis de valeur en génération + email envoyé au propriétaire.")
       } else {
-        setMessage("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants.")
+        setMessage(bvs("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants."))
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Génération de l'avis de valeur impossible.")
@@ -6261,7 +6261,7 @@ function EstimationDocumentEditor(props: {
                   <div className="avd-recap-ring"><b>{recap.filled}</b><small>/{recap.total}</small></div>
                   <div className="avd-recap-info">
                     <div className="avd-recap-bar"><span style={{ width: `${recap.total ? Math.round((recap.filled / recap.total) * 100) : 0}%` }} /></div>
-                    <p>Données déjà synchronisées depuis Hektor — elles alimentent <b>automatiquement</b> le PDF. Pour les corriger, modifiez la fiche du bien.</p>
+                    <p>{bvs("Données déjà synchronisées depuis Hektor — elles alimentent")} <b>automatiquement</b> le PDF. Pour les corriger, modifiez la fiche du bien.</p>
                   </div>
                 </div>
                 <div className="avd-sec">
@@ -7735,7 +7735,7 @@ function messageRefusCouverture(code: string | undefined) {
     case 'droits_insuffisants':
       return "Ce bien n'est pas dans ton périmètre : tu ne peux pas changer sa couverture."
     case 'photo_introuvable_ou_masquee':
-      return "Cette photo est masquée ou pas encore connue de Hektor : elle ne peut pas servir de couverture."
+      return bvs("Cette photo est masquée ou pas encore connue de Hektor : elle ne peut pas servir de couverture.")
     case 'parametres_incomplets':
       return "Il manque le numéro de la photo ou celui de l'annonce."
     case 'supabase_absent':
@@ -7754,7 +7754,7 @@ function messageRefusVisibilite(code: string | undefined, versVisible: boolean) 
     case 'droits_insuffisants':
       return "Ce bien n'est pas dans ton périmètre : tu ne peux pas changer la visibilité de ses photos."
     case 'photo_introuvable_chez_hektor':
-      return "Cette photo n'est pas encore connue de Hektor (envoi en cours ou à reprendre) : "
+      return bvs("Cette photo n'est pas encore connue de Hektor (envoi en cours ou à reprendre) : ")
         + "on ne peut pas changer sa visibilité tant qu'il ne la connaît pas."
     case 'parametres_incomplets':
       return "Il manque le numéro de la photo ou celui de l'annonce."
@@ -8897,10 +8897,10 @@ function hektorActionJobTitle(job: ConsoleJob) {
     return nomPhoto ? `Suppression photo ${nomPhoto}` : 'Suppression photo'
   }
   if (job.job_type === 'upload_document_to_hektor') {
-    return documentName ? `Ajout ${documentName}` : 'Ajout document Hektor'
+    return documentName ? `Ajout ${documentName}` : bvs('Ajout document Hektor')
   }
   if (job.job_type === 'upload_hektor_photo') {
-    return documentName ? `Ajout photo ${documentName}` : 'Ajout photo Hektor'
+    return documentName ? `Ajout photo ${documentName}` : bvs('Ajout photo Hektor')
   }
   if (job.job_type === 'prepare_document_cloud') {
     return documentName ? `Preparation ${documentName}` : 'Preparation document'
@@ -8922,16 +8922,16 @@ function hektorActionJobTitle(job: ConsoleJob) {
     const contactName = [payload.first_name, payload.last_name].filter((value) => typeof value === 'string' && value.trim()).join(' ')
     const contactId = String(result.hektor_contact_id ?? payload.hektor_contact_id ?? payload.contact_id ?? '').trim()
     if (contactName.trim()) return `Contact ${contactName.trim()}`
-    return contactId ? `Contact ${contactId}` : 'Contact Hektor'
+    return contactId ? `Contact ${contactId}` : bvs('Contact Hektor')
   }
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'update_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') {
     const contact = typeof payload.last_name === 'string' && payload.last_name.trim() ? payload.last_name.trim() : null
-    return contact ? `Mandant ${contact}` : 'Mandant Hektor'
+    return contact ? `Mandant ${contact}` : bvs('Mandant Hektor')
   }
   if (job.job_type === 'sync_hektor_photos') return `Photos ${job.hektor_annonce_id ?? payload.hektor_annonce_id ?? ''}`.trim()
   const folder = typeof result.folder_number === 'string' ? result.folder_number : null
   const title = typeof payload.title === 'string' && payload.title.trim() ? payload.title.trim() : null
-  return folder ? `Creation ${folder}` : title ? `Creation ${title}` : 'Creation annonce Hektor'
+  return folder ? `Creation ${folder}` : title ? `Creation ${title}` : bvs('Creation annonce Hektor')
 }
 
 function hektorActionJobLabel(job: ConsoleJob) {
@@ -8980,24 +8980,24 @@ function hektorActionJobDetail(job: ConsoleJob) {
   const agency = typeof payload.agence_nom === 'string' ? payload.agence_nom : null
   const negotiator = typeof payload.hektor_user_label === 'string' ? payload.hektor_user_label : null
   const folder = typeof result.folder_number === 'string' ? result.folder_number : null
-  if (job.status === 'error') return job.error_message || 'Action Hektor en erreur'
+  if (job.status === 'error') return job.error_message || bvs('Action Hektor en erreur')
   if (job.job_type.startsWith('matterport_')) return 'Commande envoyee au worker Matterport local'
   if (job.job_type === 'upload_document_to_hektor') return 'Document envoye au PC serveur'
   if (job.job_type === 'upload_hektor_photo') return 'Photo envoyee au PC serveur'
   if (job.job_type === 'prepare_document_cloud') return 'Mise en cloud demandee'
   if (job.job_type === 'prepare_archived_annonce_detail') return 'Preparation locale demandee'
   if (job.job_type === 'prepare_historical_annonce_detail') return 'Preparation locale demandee'
-  if (job.job_type === 'delete_document_from_hektor') return 'Suppression Hektor demandee'
-  if (job.job_type === 'delete_hektor_photo') return 'Suppression Hektor demandee'
-  if (job.job_type === 'archive_hektor_annonce') return 'Archivage Hektor puis resynchronisation'
-  if (job.job_type === 'restore_hektor_annonce') return 'Reintegration Hektor puis resynchronisation'
-  if (job.job_type === 'change_hektor_annonce_status') return 'Transaction Hektor puis resynchronisation'
+  if (job.job_type === 'delete_document_from_hektor') return bvs('Suppression Hektor demandee')
+  if (job.job_type === 'delete_hektor_photo') return bvs('Suppression Hektor demandee')
+  if (job.job_type === 'archive_hektor_annonce') return bvs('Archivage Hektor puis resynchronisation')
+  if (job.job_type === 'restore_hektor_annonce') return bvs('Reintegration Hektor puis resynchronisation')
+  if (job.job_type === 'change_hektor_annonce_status') return bvs('Transaction Hektor puis resynchronisation')
   if (job.job_type === 'update_hektor_annonce_fields') return 'Modification puis resynchronisation'
   if (job.job_type === 'create_hektor_mandat_auto_number') return 'Numero reserve puis resynchronisation'
   if (job.job_type === 'create_hektor_contact') return 'Creation puis resynchronisation ciblee'
   if (job.job_type === 'update_hektor_contact') return 'Modification puis resynchronisation ciblee'
   if (job.job_type === 'archive_hektor_contact') return 'Changement d archivage puis resynchronisation ciblee'
-  if (job.job_type === 'delete_hektor_contact') return 'Suppression Hektor puis nettoyage app'
+  if (job.job_type === 'delete_hektor_contact') return bvs('Suppression Hektor puis nettoyage app')
   if (job.job_type === 'refresh_console_contact_data') return 'Lecture detail contact puis push Supabase'
   if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Association puis resynchronisation'
   if (job.job_type === 'update_hektor_mandant_contact') return 'Modification puis resynchronisation'
@@ -9113,31 +9113,31 @@ function hektorActionProgressLabel(progress: ReturnType<typeof hektorActionProgr
     if (job.job_type === 'sync_hektor_photos') return 'Synchronisation photos'
     return "Mise a jour de l'app"
   }
-  if (progress === 'creating') return job && job.job_type !== 'create_hektor_draft_annonce' ? 'Commande Hektor' : 'Creation Hektor'
+  if (progress === 'creating') return job && job.job_type !== 'create_hektor_draft_annonce' ? bvs('Commande Hektor') : bvs('Creation Hektor')
   if (progress === 'error') return 'Action a verifier'
   return 'En attente'
 }
 
 function hektorActionWaitingLabel(job: ConsoleJob) {
-  if (job.job_type === 'delete_hektor_contact') return 'Hektor a supprime le contact. Nettoyage app en cours...'
+  if (job.job_type === 'delete_hektor_contact') return bvs('Hektor a supprime le contact. Nettoyage app en cours...')
   if (job.job_type === 'archive_hektor_contact') return job.payload_json?.archive === false
-    ? 'Hektor a reactive le contact. Synchronisation app en cours...'
-    : 'Hektor a archive le contact. Synchronisation app en cours...'
-  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return 'Hektor a mis a jour le contact. Synchronisation app en cours...'
-  if (job.job_type === 'update_hektor_mandant_contact') return 'Hektor a modifie le mandant. Mise a jour de l app en cours...'
-  if (job.job_type === 'update_hektor_annonce_fields') return 'Hektor a modifie l annonce. Mise a jour de l app en cours...'
-  if (job.job_type === 'archive_hektor_annonce') return 'Hektor a archive l annonce. Mise a jour de l app en cours...'
-  if (job.job_type === 'restore_hektor_annonce') return 'Hektor a desarchive l annonce. Mise a jour de l app en cours...'
-  if (job.job_type === 'change_hektor_annonce_status') return 'Hektor a accepte le statut. Reprise des informations transaction en cours...'
-  if (job.job_type === 'create_hektor_mandat_auto_number') return 'Hektor a genere le numero de mandat. Mise a jour de l app en cours...'
-  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return 'Hektor a mis a jour le mandant. Synchronisation app en cours...'
-  if (job.job_type === 'create_hektor_draft_annonce') return 'Annonce creee dans Hektor. Ajout dans l app en cours...'
-  if (job.job_type === 'upload_document_to_hektor') return 'Document ajoute dans Hektor. Synchronisation app en cours...'
-  if (job.job_type === 'upload_hektor_photo') return 'Photo ajoutee dans Hektor. Mise a jour de la galerie en cours...'
-  if (job.job_type === 'delete_document_from_hektor') return 'Document supprime dans Hektor. Mise a jour app en cours...'
-  if (job.job_type === 'delete_hektor_photo') return 'Photo supprimee dans Hektor et chez nous. Mise a jour de la galerie en cours...'
-  if (job.job_type === 'sync_hektor_photos') return 'Photos Hektor lues. Mise a jour de la galerie app en cours...'
-  return 'Commande Hektor terminee. Mise a jour de l app en cours...'
+    ? bvs('Hektor a reactive le contact. Synchronisation app en cours...')
+    : bvs('Hektor a archive le contact. Synchronisation app en cours...')
+  if (job.job_type === 'create_hektor_contact' || job.job_type === 'update_hektor_contact' || job.job_type === 'refresh_console_contact_data') return bvs('Hektor a mis a jour le contact. Synchronisation app en cours...')
+  if (job.job_type === 'update_hektor_mandant_contact') return bvs('Hektor a modifie le mandant. Mise a jour de l app en cours...')
+  if (job.job_type === 'update_hektor_annonce_fields') return bvs('Hektor a modifie l annonce. Mise a jour de l app en cours...')
+  if (job.job_type === 'archive_hektor_annonce') return bvs('Hektor a archive l annonce. Mise a jour de l app en cours...')
+  if (job.job_type === 'restore_hektor_annonce') return bvs('Hektor a desarchive l annonce. Mise a jour de l app en cours...')
+  if (job.job_type === 'change_hektor_annonce_status') return bvs('Hektor a accepte le statut. Reprise des informations transaction en cours...')
+  if (job.job_type === 'create_hektor_mandat_auto_number') return bvs('Hektor a genere le numero de mandat. Mise a jour de l app en cours...')
+  if (job.job_type === 'create_hektor_mandant_contact' || job.job_type === 'link_hektor_mandant') return bvs('Hektor a mis a jour le mandant. Synchronisation app en cours...')
+  if (job.job_type === 'create_hektor_draft_annonce') return bvs('Annonce creee dans Hektor. Ajout dans l app en cours...')
+  if (job.job_type === 'upload_document_to_hektor') return bvs('Document ajoute dans Hektor. Synchronisation app en cours...')
+  if (job.job_type === 'upload_hektor_photo') return bvs('Photo ajoutee dans Hektor. Mise a jour de la galerie en cours...')
+  if (job.job_type === 'delete_document_from_hektor') return bvs('Document supprime dans Hektor. Mise a jour app en cours...')
+  if (job.job_type === 'delete_hektor_photo') return bvs('Photo supprimee dans Hektor et chez nous. Mise a jour de la galerie en cours...')
+  if (job.job_type === 'sync_hektor_photos') return bvs('Photos Hektor lues. Mise a jour de la galerie app en cours...')
+  return bvs('Commande Hektor terminee. Mise a jour de l app en cours...')
 }
 
 function HektorActionStatusPopup(props: {
@@ -9190,7 +9190,7 @@ function HektorActionStatusPopup(props: {
       <div className="hektor-action-popup-head">
         <span className="hektor-action-popup-icon" aria-hidden="true">{isError ? '!' : isAvailable ? 'OK' : 'H'}</span>
         <div>
-          <p className="hektor-action-popup-eyebrow">Suivi Hektor</p>
+          <p className="hektor-action-popup-eyebrow">{bvs("Suivi Hektor")}</p>
           <h3>{hektorActionProgressLabel(mainProgress, mainJob)}</h3>
         </div>
         <button className="hektor-action-popup-close" type="button" onClick={() => props.onDismiss(mainJob.id)} aria-label="Masquer le suivi">x</button>
@@ -9203,8 +9203,8 @@ function HektorActionStatusPopup(props: {
         {photosEnAttenteDuMainJob > 0 && (
           <span className="hektor-action-popup-photos-attente">
             {photosEnAttenteDuMainJob === 1
-              ? '1 photo partira des que Hektor aura rendu le numero'
-              : `${photosEnAttenteDuMainJob} photos partiront des que Hektor aura rendu le numero`}
+              ? bvs('1 photo partira des que Hektor aura rendu le numero')
+              : bvt`${photosEnAttenteDuMainJob} photos partiront des que Hektor aura rendu le numero`}
             {' '}&mdash; ne fermez pas et ne rechargez pas cet onglet.
           </span>
         )}
@@ -10314,7 +10314,7 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated, autoGenerate
         // -> visible dans « Le Bien » / Localisation et inversement.
         try { await saveDossierEstimationSource(dossier.app_dossier_id, dossier.hektor_annonce_id, 'cadastre', true, nextCad) } catch { /* best effort */ }
       }
-      setMessage('Plan cadastral en génération — il apparaîtra dans le bloc Documents (onglet Contenu) et dans Hektor.')
+      setMessage(bvs('Plan cadastral en génération — il apparaîtra dans le bloc Documents (onglet Contenu) et dans Hektor.'))
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Génération des éléments cadastraux impossible.')
     } finally {
@@ -10324,7 +10324,7 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated, autoGenerate
 
   async function handleGenerate() {
     if (busy) return
-    if (!hasCoords()) { setMessage('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setMessage(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     setBusy(true); setMessage('Récupération des éléments cadastraux…')
     try {
@@ -10424,7 +10424,7 @@ function CadastreCommercialSection({ dossier, detail, onJobCreated, autoGenerate
           </div>
         </div>
       ) : (
-        <p className="cadastre-hint">Références cadastrales + contenance (surface officielle du terrain) + zonage PLU (IGN / Géoportail de l’Urbanisme). Le bouton génère un document « Plan cadastral » déposé dans Hektor.</p>
+        <p className="cadastre-hint">{bvs("Références cadastrales + contenance (surface officielle du terrain) + zonage PLU (IGN / Géoportail de l’Urbanisme). Le bouton génère un document « Plan cadastral » déposé dans Hektor.")}</p>
       )}
       {message ? <p className="cadastre-hint cadastre-msg">{message}</p> : null}
       {picker ? (
@@ -10500,7 +10500,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise le MARCHÉ DVF directement depuis l'onglet (même règle que la modale : loadMarche).
   async function generateDvf() {
     if (dvfBusy) return
-    if (!hasCoords()) { setDvfMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setDvfMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     const dept = String(dossier.code_postal || '').trim().slice(0, 2)
     const type = dvfTypeForBien(dossier.type_bien)
@@ -10521,7 +10521,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise le CADRE DE VIE directement depuis l'onglet.
   async function generateCadre() {
     if (cadreBusy) return
-    if (!hasCoords()) { setCadreMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setCadreMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     setCadreBusy(true); setCadreMsg('Calcul du cadre de vie…')
     try {
@@ -10537,7 +10537,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise les CARACTÉRISTIQUES BÂTI (BDNB, chaînage RNB->BDNB côté serveur).
   async function generateBdnb() {
     if (bdnbBusy) return
-    if (!hasCoords()) { setBdnbMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setBdnbMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     setBdnbBusy(true); setBdnbMsg('Interrogation de la BDNB…')
     try {
@@ -10553,7 +10553,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise le DPE RÉEL (dernier diagnostic ADEME à proximité).
   async function generateDpe() {
     if (dpeBusy) return
-    if (!hasCoords()) { setDpeMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setDpeMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     const surface = Number(detail.surface_habitable_detail ?? detail.surface) || null
     setDpeBusy(true); setDpeMsg('Recherche du DPE ADEME…')
@@ -10570,7 +10570,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise les servitudes PATRIMONIALES / ABF (monuments, sites, SPR).
   async function generatePatrimoine() {
     if (patriBusy) return
-    if (!hasCoords()) { setPatriMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setPatriMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     setPatriBusy(true); setPatriMsg('Recherche des périmètres de protection…')
     try {
@@ -10586,7 +10586,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise le PROFIL COMMUNE (population INSEE + revenu médian) depuis la table pré-ingérée.
   async function generatePopulation() {
     if (popuBusy) return
-    if (!hasCoords()) { setPopuMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setPopuMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     setPopuBusy(true); setPopuMsg('Lecture du profil INSEE de la commune…')
     try {
@@ -10611,7 +10611,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
       setCoproBusy(false)
       setCoproMsg('Bien non marqué « copropriété » dans la fiche — recherche RNIC non applicable (donnée effacée).'); return
     }
-    if (!hasCoords()) { setCoproMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setCoproMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     setCoproBusy(true); setCoproMsg('Recherche au registre des copropriétés…')
     try {
@@ -10628,7 +10628,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
   // Génère + mémorise le POTENTIEL LOCATIF (loyer commune + zonage ABC).
   async function generateLoyer() {
     if (loyerBusy) return
-    if (!hasCoords()) { setLoyerMsg('Coordonnées du bien manquantes (géolocalisation Hektor absente).'); return }
+    if (!hasCoords()) { setLoyerMsg(bvs('Coordonnées du bien manquantes (géolocalisation Hektor absente).')); return }
     const { lat, lon } = coords()
     setLoyerBusy(true); setLoyerMsg('Estimation du loyer de marché…')
     try {
@@ -10684,7 +10684,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
     try {
       await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields: clean })
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('hektor:annonce-updated', { detail: { app_dossier_id: dossier.app_dossier_id } }))
-      setApplyMsg(`✓ ${label} reporté dans la fiche — mise à jour Hektor en cours.`)
+      setApplyMsg(bvt`✓ ${label} reporté dans la fiche — mise à jour Hektor en cours.`)
     } catch (error) {
       setApplyMsg(error instanceof Error ? error.message : 'Report dans la fiche impossible.')
     } finally { setApplyBusy(null) }
@@ -10733,7 +10733,7 @@ function EstimationDataSection({ dossier, detail, refreshKey, onJobCreated, onOp
           ) : null}
           {estim?.updatedAt ? <span className="ev3-updated">Mis à jour {formatDate(estim.updatedAt)}</span> : null}
         </div>
-        <p className="ev3-bar-hint">Un clic récupère marché, loyer, bâti, DPE réel, cadre de vie, patrimoine et cadastre — puis les mémorise. Le plan cadastral est déposé dans les documents Hektor.</p>
+        <p className="ev3-bar-hint">{bvs("Un clic récupère marché, loyer, bâti, DPE réel, cadre de vie, patrimoine et cadastre — puis les mémorise. Le plan cadastral est déposé dans les documents Hektor.")}</p>
         <div className="ev3-pills" role="status" aria-label="Progression de la génération">
           {pills.map((p) => (
             <span key={p.key} className={`ev3-pill ev3-pill-${p.state}`}><span className="ev3-pill-dot" aria-hidden="true" />{p.label}</span>
@@ -11250,7 +11250,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       setMessage(null)
       window.setTimeout(() => void refreshDocuments(true), 1500)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Impossible de creer la demande upload Hektor')
+      setError(err instanceof Error ? err.message : bvs('Impossible de creer la demande upload Hektor'))
     } finally {
       setUploadPending(false)
     }
@@ -11292,7 +11292,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
       setDeletingDocumentIds((current) => new Set([...current, document.id]))
       setMessage(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Impossible de creer la demande de suppression Hektor')
+      setError(err instanceof Error ? err.message : bvs('Impossible de creer la demande de suppression Hektor'))
     } finally {
       setBusyDocumentId(null)
     }
@@ -11376,7 +11376,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         <span className="console-upload-card-icon" aria-hidden="true"><DetailIcon type="actions" /></span>
         <div>
           <strong>Ajouter un document</strong>
-          <small>Le fichier sera envoyé dans Hektor puis indexé dans l'app.</small>
+          <small>{bvs("Le fichier sera envoyé dans Hektor puis indexé dans l'app.")}</small>
         </div>
       </div>
 
@@ -11405,7 +11405,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
 
       <label className="filter-field">
         <span>Libelle</span>
-        <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder="Nom visible dans Hektor" />
+        <input value={uploadLabel} onChange={(event) => setUploadLabel(event.target.value)} placeholder={bvs("Nom visible dans Hektor")} />
       </label>
 
       <fieldset className="console-visibility-field">
@@ -11543,7 +11543,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
           <span className="fa-ck-pub-ic" style={{ background: '#e9ebf8', color: '#4756a6' }} aria-hidden="true"><CkIcon path={CK_ICON.documents} /></span>
           <div className="fa-ck-docs-head-tx">
             <div className="fa-ck-pub-t">Documents</div>
-            <div className="fa-ck-pub-s">Consulter, préparer et signer — synchronisé avec Hektor</div>
+            <div className="fa-ck-pub-s">{bvs("Consulter, préparer et signer — synchronisé avec Hektor")}</div>
           </div>
           <button type="button" className={`fa-ck-docadd${uploadOpen ? ' on' : ''}`} onClick={() => setUploadOpen((v) => !v)}>
             <span aria-hidden="true"><DetailIcon type={uploadOpen ? 'actions' : 'content'} /></span>
@@ -11601,7 +11601,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
         <span className="console-documents-title">
           <span className="console-documents-title-icon" aria-hidden="true"><DetailIcon type="mandate" /></span>
           <span>
-            <strong>Documents Hektor Console</strong>
+            <strong>{bvs("Documents Hektor Console")}</strong>
             <small>Ajouter, consulter et préparer les documents</small>
           </span>
         </span>
@@ -11638,7 +11638,7 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                         que Hektor ne l'avait plus. Mesuré : 1 à 12 cas sur 162 544. */}
                     {document.present_in_hektor === false ? (
                       <span className="console-document-absent">
-                        Supprimé chez Hektor{document.absent_depuis ? ` le ${formatDate(document.absent_depuis)}` : ''} — conservé chez nous
+                        {bvs("Supprimé chez Hektor")}{document.absent_depuis ? ` le ${formatDate(document.absent_depuis)}` : ''} — conservé chez nous
                       </span>
                     ) : null}
                     {/* 3d / lot 2c (14/10/2026) -- L'ETAT DE L'ENVOI A HEKTOR.
@@ -11651,11 +11651,11 @@ function ConsoleDocumentsPanel({ dossier, compact = false, skin = 'classic', onJ
                         le negociateur doit retenir, le document ne risque rien. */}
                     {document.storage_status === 'pending_upload' ? (
                       <span className="console-document-encours">
-                        Chez nous — envoi à Hektor en cours
+                        {bvs("Chez nous — envoi à Hektor en cours")}
                       </span>
                     ) : document.envoi_hektor_statut === 'echec' ? (
                       <span className="console-document-absent">
-                        Chez nous — l'envoi à Hektor a échoué
+                        {bvs("Chez nous — l'envoi à Hektor a échoué")}
                       </span>
                     ) : null}
                     <SignatureBadge signature={signature} />
@@ -11746,7 +11746,7 @@ function ConsolePhotosPanel({
       window.setTimeout(() => void refreshPhotos(true), 8000)
       window.setTimeout(() => void refreshPhotos(true), 18000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Impossible de lancer la synchro photos Hektor')
+      setError(err instanceof Error ? err.message : bvs('Impossible de lancer la synchro photos Hektor'))
     } finally {
       setSyncPending(false)
     }
@@ -11774,7 +11774,7 @@ function ConsolePhotosPanel({
   async function handleUploadPhoto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!photoFiles.length) {
-      setError('Choisis une ou plusieurs photos a ajouter dans Hektor')
+      setError(bvs('Choisis une ou plusieurs photos a ajouter dans Hektor'))
       return
     }
     if (!hasHektorNegotiator(dossier)) {
@@ -12102,7 +12102,7 @@ function ConsolePhotosPanel({
     <div className={`console-photos-panel ${compact ? 'is-compact' : ''}`}>
       <div className="console-photos-head">
         <div>
-          <strong>Photos Hektor</strong>
+          <strong>{bvs("Photos Hektor")}</strong>
           <small>{photos.length ? 'Galerie Console active : visibles, masquees et legendes.' : 'Affichage API actuel. Tu peux ajouter une photo ou actualiser la galerie Console.'}</small>
         </div>
         <div className="console-photos-actions">
@@ -12119,7 +12119,7 @@ function ConsolePhotosPanel({
           <span aria-hidden="true"><DetailIcon type="photo" /></span>
           <div>
             <strong>Ajouter une photo</strong>
-            <small>La photo part d abord en stockage temporaire prive, puis le PC serveur l envoie dans Hektor.</small>
+            <small>{bvs("La photo part d abord en stockage temporaire prive, puis le PC serveur l envoie dans Hektor.")}</small>
           </div>
         </div>
         <div className="console-photo-upload-controls">
@@ -12138,7 +12138,7 @@ function ConsolePhotosPanel({
                   : `${photoFiles.length} photos choisies`
             }</span>
           </label>
-          <div className="console-photo-visibility" role="radiogroup" aria-label="Visibilite photo Hektor">
+          <div className="console-photo-visibility" role="radiogroup" aria-label={bvs("Visibilite photo Hektor")}>
             <button className={photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(true)} disabled={uploadPending}>Visible</button>
             <button className={!photoVisible ? 'is-active' : ''} type="button" onClick={() => setPhotoVisible(false)} disabled={uploadPending}>Masquée</button>
           </div>
@@ -12187,8 +12187,8 @@ function ConsolePhotosPanel({
                   </span>
                   <small>
                     {photoEnvoiEchoue
-                      ? 'Gardée chez nous — l\'envoi à Hektor a échoué'
-                      : 'Gardée chez nous — envoi à Hektor en cours'}
+                      ? bvs('Gardée chez nous — l\'envoi à Hektor a échoué')
+                      : bvs('Gardée chez nous — envoi à Hektor en cours')}
                   </small>
                 </div>
               )
@@ -12598,19 +12598,19 @@ function DetailAdminPilotPanel(props: {
     validation: props.validationPending
       ? 'Synchronisation en cours'
       : props.validationObserved
-        ? 'Etat confirme par Hektor'
+        ? bvs('Etat confirme par Hektor')
         : 'En attente de validation',
     diffusion: props.diffusablePending
       ? 'Synchronisation en cours'
       : props.diffusableObserved
-        ? 'Etat confirme par Hektor'
-        : 'Diffusion inactive cote Hektor',
+        ? bvs('Etat confirme par Hektor')
+        : bvs('Diffusion inactive cote Hektor'),
   }
 
   return (
     <div className="detail-admin-pilot">
-      <div className="section-header"><DetailSectionTitle icon="hektor" title="Pilotage Hektor" /></div>
-      <p className="detail-admin-intro">Configurez et controlez les automatisations Hektor.</p>
+      <div className="section-header"><DetailSectionTitle icon="hektor" title={bvs("Pilotage Hektor")} /></div>
+      <p className="detail-admin-intro">{bvs("Configurez et controlez les automatisations Hektor.")}</p>
       <div className="detail-admin-pilot-grid">
         {props.allowValidation ? (
           <article className={`detail-admin-tile ${validationTone}`}>
@@ -12705,7 +12705,7 @@ function DetailAdminPilotPanel(props: {
             </div>
             <div className="detail-admin-meta">
               <p className="detail-admin-copy">
-                {props.diffusableActive ? "L'annonce est diffusee automatiquement sur les portails." : 'Diffusion coupee cote Hektor.'}
+                {props.diffusableActive ? "L'annonce est diffusee automatiquement sur les portails." : bvs('Diffusion coupee cote Hektor.')}
               </p>
               <div className="detail-admin-timestamps">
                 <span>{pilotDates.diffusion}</span>
@@ -12718,7 +12718,7 @@ function DetailAdminPilotPanel(props: {
       <div className="detail-admin-footer">
         <div className="detail-admin-footer-copy">
           <span className="detail-admin-footer-icon" aria-hidden="true">i</span>
-          <p>Les parametres Hektor s&apos;appliquent aux controles de cette annonce.</p>
+          <p>{bvs("Les parametres Hektor s'appliquent aux controles de cette annonce.")}</p>
         </div>
         {props.onOpenHektor ? (
           <button className="detail-admin-footer-button" type="button" onClick={props.onOpenHektor}>
@@ -13733,7 +13733,7 @@ export default function App() {
     }
     if (!selectedDraftNegotiator?.email) {
       setDraftExistingMandantOptions([])
-      setDraftExistingMandantError('Choisis le negociateur Hektor avant de rechercher un mandant.')
+      setDraftExistingMandantError(bvs('Choisis le negociateur Hektor avant de rechercher un mandant.'))
       return
     }
 
@@ -14103,7 +14103,7 @@ export default function App() {
             delete next[createJobId]
             return next
           })
-          setErrorMessage("Les photos n'ont pas ete envoyees car la creation de l annonce Hektor a echoue.")
+          setErrorMessage(bvs("Les photos n'ont pas ete envoyees car la creation de l annonce Hektor a echoue."))
           continue
         }
         if (createJob.status !== 'done') continue
@@ -14151,12 +14151,12 @@ export default function App() {
             return next
           })
           draftAnnoncePhotoUploadStartedRef.current.delete(createJobId)
-          if (queuedCount > 0) setNoticeMessage(`${queuedCount} photo(s) ajoutee(s) a la file du worker photos Hektor.`)
+          if (queuedCount > 0) setNoticeMessage(bvt`${queuedCount} photo(s) ajoutee(s) a la file du worker photos Hektor.`)
           if (failedCount > 0) setErrorMessage(`${failedCount} photo(s) n ont pas pu etre preparee(s) pour le worker photos.`)
         } catch (error) {
           if (cancelled) return
           draftAnnoncePhotoUploadStartedRef.current.delete(createJobId)
-          setErrorMessage(error instanceof Error ? error.message : 'Impossible de preparer les photos Hektor')
+          setErrorMessage(error instanceof Error ? error.message : bvs('Impossible de preparer les photos Hektor'))
         }
       }
     }
@@ -14803,7 +14803,7 @@ export default function App() {
     setErrorMessage(null)
     setNoticeMessage(null)
     if (activeAdminAnnonceJobIds.has(String(dossier.hektor_annonce_id))) {
-      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setErrorMessage(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
       return
     }
     try {
@@ -14861,7 +14861,7 @@ export default function App() {
       return
     }
     if (isBrouillonRecord(lightweightDetailTarget)) {
-      setNoticeMessage("Brouillon en création : reprenez la saisie directement dans Hektor via le bouton « Ouvrir ».")
+      setNoticeMessage(bvs("Brouillon en création : reprenez la saisie directement dans Hektor via le bouton « Ouvrir »."))
       return
     }
     setErrorMessage("Cette ligne n'est pas eligible au chargement de detail leger.")
@@ -15244,7 +15244,7 @@ export default function App() {
           : "PDF en génération + email envoyé au propriétaire.")
       } else {
         setEstimationPdfDraft(null)
-        setEstimationPdfMsg("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants.")
+        setEstimationPdfMsg(bvs("Avis de valeur en cours de génération — il sera archivé dans le dossier (et Hektor) d'ici quelques instants."))
       }
     } catch (error) {
       setEstimationPdfMsg(error instanceof Error ? error.message : "Création de l'avis de valeur impossible.")
@@ -15946,7 +15946,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }
     }
     if (!dossier) {
-      setNoticeMessage("Annonce creee dans Hektor. L'app attend encore la remontee de la fiche complete; le bouton s'activera automatiquement.")
+      setNoticeMessage(bvs("Annonce creee dans Hektor. L'app attend encore la remontee de la fiche complete; le bouton s'activera automatiquement."))
       setDataReloadKey((value) => value + 1)
       return
     }
@@ -15966,12 +15966,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return
     }
     if (!draftAnnonceAgency.trim()) {
-      setErrorMessage('Choisis une agence avant de creer l annonce Hektor.')
+      setErrorMessage(bvs('Choisis une agence avant de creer l annonce Hektor.'))
       setDraftAnnonceStep('offre')
       return
     }
     if (!selectedDraftNegotiator) {
-      setErrorMessage(profile?.role === 'commercial' ? 'Impossible d identifier ton acces negociateur Hektor.' : 'Choisis le negociateur Hektor qui portera l annonce.')
+      setErrorMessage(profile?.role === 'commercial' ? bvs('Impossible d identifier ton acces negociateur Hektor.') : bvs('Choisis le negociateur Hektor qui portera l annonce.'))
       setDraftAnnonceStep('offre')
       return
     }
@@ -16105,7 +16105,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         ? `${queuedPhotos.length} photo(s) preparee(s). Elles seront envoyees par le worker photos des que l annonce sera synchronisee dans l app.`
         : null)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d annonce Hektor')
+      setErrorMessage(error instanceof Error ? error.message : bvs('Impossible de creer la demande d annonce Hektor'))
     } finally {
       setDraftAnnoncePending(false)
     }
@@ -16139,7 +16139,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setNoticeMessage(null)
     setErrorMessage(null)
     if (activeAdminAnnonceJobIds.has(String(deleteAnnonceTarget.hektor_annonce_id))) {
-      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setErrorMessage(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
       setDeleteAnnoncePending(false)
       return
     }
@@ -16161,9 +16161,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setDeleteAnnonceReason('')
       setDeleteAnnonceConfirmText('')
       setDetailOpen(false)
-      setNoticeMessage(`Annonce masquee. Suppression Hektor en arriere-plan, job ${job.id.slice(0, 8)}.`)
+      setNoticeMessage(bvt`Annonce masquee. Suppression Hektor en arriere-plan, job ${job.id.slice(0, 8)}.`)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande de suppression Hektor')
+      setErrorMessage(error instanceof Error ? error.message : bvs('Impossible de creer la demande de suppression Hektor'))
     } finally {
       setDeleteAnnoncePending(false)
     }
@@ -16205,7 +16205,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setNoticeMessage(null)
     setErrorMessage(null)
     if (activeAdminAnnonceJobIds.has(String(archiveAnnonceTarget.hektor_annonce_id))) {
-      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setErrorMessage(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
       setArchiveAnnoncePending(false)
       return
     }
@@ -16226,7 +16226,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       setArchiveConfrere('')
       setNoticeMessage(`Archivage demande pour ${archiveAnnonceTarget.numero_dossier ?? archiveAnnonceTarget.hektor_annonce_id}.`)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Impossible de creer la demande d archivage Hektor')
+      setErrorMessage(error instanceof Error ? error.message : bvs('Impossible de creer la demande d archivage Hektor'))
     } finally {
       setArchiveAnnoncePending(false)
     }
@@ -16519,7 +16519,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   function openMissingNegotiatorModal(dossier: HektorNegotiatorRequiredDossier) {
     if (!isManagerOrAdmin) {
-      setErrorMessage("Cette action nécessite un négociateur Hektor sur l'annonce. Demande à un administrateur de l'affecter.")
+      setErrorMessage(bvs("Cette action nécessite un négociateur Hektor sur l'annonce. Demande à un administrateur de l'affecter."))
       return
     }
     const dossierAgency = (dossier.agence_nom ?? '').trim().toLowerCase()
@@ -16550,16 +16550,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (!negotiatorAssignTarget) return
     const agency = negotiatorAssignAgency
     if (!agency) {
-      setErrorMessage('Choisis une agence Hektor avant de lancer l affectation.')
+      setErrorMessage(bvs('Choisis une agence Hektor avant de lancer l affectation.'))
       return
     }
     const negotiator = negotiatorAssignOptions.find((item) => item.hektorNegociateurId === negotiatorAssignValue)
     if (!negotiator) {
-      setErrorMessage('Choisis un négociateur Hektor avant de lancer l’affectation.')
+      setErrorMessage(bvs('Choisis un négociateur Hektor avant de lancer l’affectation.'))
       return
     }
     if (activeAdminAnnonceJobIds.has(String(negotiatorAssignTarget.hektor_annonce_id))) {
-      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setErrorMessage(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
       return
     }
     setNegotiatorAssignPending(true)
@@ -17264,7 +17264,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (!affaire || !statusChangeTarget) return
     const identifiant = String(affaire.hektor_affaire_id ?? '')
     if (!identifiant) {
-      setErrorMessage("Cette transaction n'a pas encore de numéro Hektor : le geste ne peut pas partir.")
+      setErrorMessage(bvs("Cette transaction n'a pas encore de numéro Hektor : le geste ne peut pas partir."))
       return
     }
 
@@ -17377,7 +17377,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return
     }
     if (activeAdminAnnonceJobIds.has(String(statusChangeTarget.hektor_annonce_id))) {
-      setErrorMessage('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+      setErrorMessage(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
       setStatusChangePending(false)
       return
     }
@@ -17700,8 +17700,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           setCancellationCheckPrompt({
             kind: 'confirmed',
             title: 'Finaliser l annulation ?',
-            message: 'Demande d annulation acceptee. Voulez-vous CLOTURER le mandat sur Hektor (statut Clos, diffusion coupee) ?',
-            detail: 'Oui : cloture le mandat sur Hektor (+ decochage Valide/Diffuse). Non : accepte la demande sans action Hektor.',
+            message: bvs('Demande d annulation acceptee. Voulez-vous CLOTURER le mandat sur Hektor (statut Clos, diffusion coupee) ?'),
+            detail: bvs('Oui : cloture le mandat sur Hektor (+ decochage Valide/Diffuse). Non : accepte la demande sans action Hektor.'),
             hektorAnnonceId: currentRequest.hektor_annonce_id,
             pendingAction: { ...input, cancellationChecked: true },
           })
@@ -17754,9 +17754,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               setDetailDiffusableObserved(diffusableValue === '1')
               setDetailDiffusableSaved(diffusableValue === '1')
             }
-            acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Valide et Diffuse ont ete decoches sur Hektor.'
+            acceptanceInfoMessage = bvs('Demande d annulation de mandat acceptee. Valide et Diffuse ont ete decoches sur Hektor.')
           } catch (error) {
-            const hektorError = error instanceof Error ? error.message : 'Decochement Hektor impossible'
+            const hektorError = error instanceof Error ? error.message : bvs('Decochement Hektor impossible')
             acceptanceInfoMessage = `Demande d annulation de mandat acceptee, mais Valide/Diffuse n ont pas pu etre decoches : ${hektorError}`
           }
           // A5 : l'acceptation d'une annulation CLÔTURE reellement le mandat sur Hektor
@@ -17785,7 +17785,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               priority: 7,
             })
             rememberHektorActionJob(closeJob)
-            acceptanceInfoMessage = `${acceptanceInfoMessage ?? 'Demande d annulation de mandat acceptee.'} Cloture du mandat demandee a Hektor.`
+            acceptanceInfoMessage = bvt`${acceptanceInfoMessage ?? 'Demande d annulation de mandat acceptee.'} Cloture du mandat demandee a Hektor.`
 
             // ⭐ ET CHEZ NOUS TOUT DE SUITE -- doctrine du chantier ③ (« chez nous
             //   d'abord »). Sans ça, la vue Suivi ne montrerait la date qu'après le
@@ -17814,11 +17814,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               }
             }
           } catch (error) {
-            const closeError = error instanceof Error ? error.message : 'cloture Hektor impossible'
+            const closeError = error instanceof Error ? error.message : bvs('cloture Hektor impossible')
             acceptanceInfoMessage = `${acceptanceInfoMessage ?? 'Demande d annulation de mandat acceptee.'} Mais la cloture du mandat n a pas pu etre lancee : ${closeError}`
           }
         } else if (input.status === 'accepted') {
-          acceptanceInfoMessage = 'Demande d annulation de mandat acceptee. Aucun automatisme Hektor n a ete lance.'
+          acceptanceInfoMessage = bvs('Demande d annulation de mandat acceptee. Aucun automatisme Hektor n a ete lance.')
         }
         closeRequestModal()
         try {
@@ -17919,9 +17919,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       if (isClassicValidationApproval && !input.validationChecked) {
         setValidationCheckPrompt({
           kind: 'confirmed',
-          title: 'Lancer la validation Hektor ?',
+          title: bvs('Lancer la validation Hektor ?'),
           message: 'Cette action va accepter la demande, demander Validation = oui, activer Diffusable puis appliquer les passerelles par defaut.',
-          detail: 'Clique sur Non pour accepter la demande sans lancer l automatisme Hektor.',
+          detail: bvs('Clique sur Non pour accepter la demande sans lancer l automatisme Hektor.'),
           hektorAnnonceId: currentRequest.hektor_annonce_id,
           pendingAction: { ...input, validationChecked: true },
         })
@@ -17957,13 +17957,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             const failureDetails = summarizeApplyFailures(acceptanceResult.failed)
             throw new Error(
               failureDetails
-                ? `Activation passerelles refusee par Hektor : ${failureDetails}. La demande reste en attente.`
-                : 'Activation passerelles refusee par Hektor. La demande reste en attente.',
+                ? bvt`Activation passerelles refusee par Hektor : ${failureDetails}. La demande reste en attente.`
+                : bvs('Activation passerelles refusee par Hektor. La demande reste en attente.'),
             )
           }
         } else if (currentRequestType === 'demande_diffusion' && input.runValidationWorkflow !== false) {
           if (!isValidationApproved(currentMandat?.validation_diffusion_state ?? null)) {
-            acceptanceInfoMessage = "Demande acceptee. L'app demande d'abord Validation = oui sur Hektor, puis active la diffusion et les passerelles si Hektor confirme la validation."
+            acceptanceInfoMessage = bvs("Demande acceptee. L'app demande d'abord Validation = oui sur Hektor, puis active la diffusion et les passerelles si Hektor confirme la validation.")
           }
           acceptanceResult = await acceptDiffusionRequestOnHektor({
             appDossierId: currentRequest.app_dossier_id,
@@ -17973,14 +17973,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             setValidationCheckPrompt({
               kind: 'mismatch',
               title: 'Opération refusée par Hektor',
-              message: 'La demande n a pas ete acceptee : Hektor a refuse la validation ou l activation des passerelles.',
+              message: bvs('La demande n a pas ete acceptee : Hektor a refuse la validation ou l activation des passerelles.'),
               detail: failureDetails || acceptanceResult.waiting_message || null,
               hektorAnnonceId: currentRequest.hektor_annonce_id,
             })
             return
           }
         } else if (currentRequestType === 'demande_diffusion') {
-          acceptanceInfoMessage = 'Demande acceptee sans lancement de la validation Hektor.'
+          acceptanceInfoMessage = bvs('Demande acceptee sans lancement de la validation Hektor.')
         }
       }
       await updateDiffusionRequest({
@@ -18095,7 +18095,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   : null,
           })
         }
-        acceptanceInfoMessage = acceptanceResult.waiting_message ?? "Demande acceptee. Hektor n'a pas encore confirme le passage du bien en diffusable."
+        acceptanceInfoMessage = acceptanceResult.waiting_message ?? bvs("Demande acceptee. Hektor n'a pas encore confirme le passage du bien en diffusable.")
       }
       closeRequestModal()
       try {
@@ -18167,7 +18167,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           setValidationCheckPrompt({
             kind: 'mismatch',
             title: 'Opération refusée par Hektor',
-            message: 'La demande n a pas ete acceptee : Hektor a bloque la validation ou la diffusion.',
+            message: bvs('La demande n a pas ete acceptee : Hektor a bloque la validation ou la diffusion.'),
             detail: message,
             hektorAnnonceId: currentRequest.hektor_annonce_id,
           })
@@ -18412,7 +18412,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setSelectedDossier((current) => current && current.app_dossier_id === diffusionModalMandat.app_dossier_id ? { ...current, validation_diffusion_state: validationValue, diffusable: diffusableValue, portails_resume: appliedPortalsResume, nb_portails_actifs: uniquePortalKeys(appliedPortalsResume.split(',')).length } : current)
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Erreur d application Hektor')
+      setErrorMessage(error instanceof Error ? error.message : bvs('Erreur d application Hektor'))
     } finally {
       setDiffusionApplyPending(false)
     }
@@ -18491,7 +18491,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setDiffusionTargets(refreshedTargets)
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Erreur d application Hektor')
+      setErrorMessage(error instanceof Error ? error.message : bvs('Erreur d application Hektor'))
     } finally {
       setDiffusionTargetsSaving(false)
       setDiffusionApplyPending(false)
@@ -18562,13 +18562,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         setDetailDiffusableObserved(observed)
         setDetailDiffusableSaved(observed)
       }
-      setErrorMessage(nextValue ? 'Validation Hektor demandee et relue.' : 'Invalidation Hektor demandee et relue.')
+      setErrorMessage(nextValue ? bvs('Validation Hektor demandee et relue.') : bvs('Invalidation Hektor demandee et relue.'))
     } catch (error) {
       const currentValidation = isValidationApproved(selectedDossier.validation_diffusion_state) ? 'oui' : 'non'
       setDetailValidationDraft(currentValidation)
       setDetailValidationObserved(currentValidation)
       setDetailValidationSaved(currentValidation)
-      setErrorMessage(error instanceof Error ? error.message : 'Erreur de mise a jour validation Hektor')
+      setErrorMessage(error instanceof Error ? error.message : bvs('Erreur de mise a jour validation Hektor'))
     } finally {
       setDetailValidationPending(false)
     }
@@ -18623,7 +18623,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       return { title: 'Registre des mandats', copy: '' }
     }
     if (screen === 'contacts') {
-      return { title: 'Contacts Hektor', copy: '' }
+      return { title: bvs('Contacts Hektor'), copy: '' }
     }
     if (screen === 'agenda') {
       return { title: 'Agenda Google', copy: '' }
@@ -19039,7 +19039,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       }))
       .filter((item) => item.content)
     if (detail.note_hektor_principale) {
-      list.unshift({ id: 'hektor-main-note', title: 'Synthese Hektor', date: '', content: detail.note_hektor_principale })
+      list.unshift({ id: 'hektor-main-note', title: bvs('Synthese Hektor'), date: '', content: detail.note_hektor_principale })
     }
     return list
   }, [detail])
@@ -19402,8 +19402,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head draft-annonce-head">
                 <span className="modal-hero-icon modal-hero-icon-diffusion" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">Console Hektor</p>
-                  <h3>Nouvelle annonce Hektor</h3>
+                  <p className="eyebrow">{bvs("Console Hektor")}</p>
+                  <h3>{bvs("Nouvelle annonce Hektor")}</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeDraftAnnonceModal} disabled={draftAnnoncePending || draftAnnonceScanPending}>Fermer</button>
               </div>
@@ -19482,12 +19482,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <span>Option</span>
                         <strong>Fiche papier</strong>
                       </div>
-                      {renderDraftAnnonceScanButton('Lecture optionnelle pour pre-remplir les champs, separee de la page Photos Hektor.')}
+                      {renderDraftAnnonceScanButton(bvs('Lecture optionnelle pour pre-remplir les champs, separee de la page Photos Hektor.'))}
                     </section>
                     <section className="draft-annonce-section draft-annonce-section-account">
                       <div className="draft-annonce-section-title">
                         <span>1. Offre</span>
-                        <strong>Acces Hektor</strong>
+                        <strong>{bvs("Acces Hektor")}</strong>
                       </div>
                       <label className="filter-field">
                         <span>Agence</span>
@@ -19497,7 +19497,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         </select>
                       </label>
                       <label className="filter-field">
-                        <span>Negociateur Hektor</span>
+                        <span>{bvs("Negociateur Hektor")}</span>
                         <select
                           value={draftAnnonceNegotiatorId}
                           onChange={(event) => setDraftAnnonceNegotiatorId(event.target.value)}
@@ -19572,7 +19572,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <section className="draft-annonce-section draft-annonce-section-values">
                       <div className="draft-annonce-section-title">
                         <span>1. Offre</span>
-                        <strong>Donnees obligatoires Hektor</strong>
+                        <strong>{bvs("Donnees obligatoires Hektor")}</strong>
                       </div>
                       <label className="filter-field">
                         <span>Prix</span>
@@ -19816,7 +19816,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                 >
                                   <span>
                                     <strong>{mandantContactOptionTitle(option)}</strong>
-                                    <small>{mandantContactOptionSubtitle(option) || 'Contact Hektor actif'}</small>
+                                    <small>{mandantContactOptionSubtitle(option) || bvs('Contact Hektor actif')}</small>
                                   </span>
                                   <em>{mandantContactOptionMeta(option) || 'Mandant potentiel'}</em>
                                 </button>
@@ -19941,11 +19941,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <article><span>Pieces / chambres</span><strong>{draftAnnonceTypeRules.showRooms || draftAnnonceTypeRules.showBedrooms ? [draftAnnonceRoomCount || '-', draftAnnonceBedroomCount || '-'].join(' / ') : 'Non demande'}</strong></article>
                         <article><span>Composition</span><strong>{draftAnnonceCompositionFilledCount ? `${draftAnnonceCompositionFilledCount} piece(s)` : 'Aucune'}</strong></article>
                         <article><span>Photos</span><strong>{draftAnnoncePhotoDrafts.length ? `${draftAnnoncePhotoDrafts.length} en attente` : 'Aucune'}</strong></article>
-                        <article><span>Champs Hektor</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
+                        <article><span>{bvs("Champs Hektor")}</span><strong>{draftAnnonceAdvancedFilledCount + draftAnnonceWizardFilledCount} renseignes</strong></article>
                         <article><span>Mandant initial</span><strong>{draftAnnonceMandantReviewLabel}</strong></article>
                         <article><span>Note interne</span><strong>{draftAnnonceNote.trim() ? 'Presente' : 'Vide'}</strong></article>
                       </div>
-                      <p className="draft-annonce-review-warning">La creation sera en statut {draftAnnonceCreationStatusLabel}, non diffusee. La diffusion reste une action separee dans Hektor.</p>
+                      <p className="draft-annonce-review-warning">La creation sera en statut {draftAnnonceCreationStatusLabel}{bvs(", non diffusee. La diffusion reste une action separee dans Hektor.")}</p>
                     </section>
                   </>
                 ) : null}
@@ -19972,7 +19972,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head delete-annonce-head">
                 <span className="modal-hero-icon modal-hero-icon-danger" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">Administration Hektor</p>
+                  <p className="eyebrow">{bvs("Administration Hektor")}</p>
                   <h3>Supprimer l'annonce</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeDeleteAnnonceModal} disabled={deleteAnnoncePending}>Fermer</button>
@@ -19980,7 +19980,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <form className="delete-annonce-form" onSubmit={handleDeleteHektorAnnonce}>
                 <section className="delete-annonce-warning">
                   <strong>{deleteAnnonceTarget.titre_bien || deleteAnnonceTarget.numero_dossier || `Annonce ${deleteAnnonceTarget.hektor_annonce_id}`}</strong>
-                  <span>Cette demande supprime l'annonce dans Hektor avec une session administrateur, puis nettoie Supabase et les fichiers locaux connus.</span>
+                  <span>{bvs("Cette demande supprime l'annonce dans Hektor avec une session administrateur, puis nettoie Supabase et les fichiers locaux connus.")}</span>
                 </section>
                 <label className="filter-field">
                   <span>Raison interne</span>
@@ -20003,7 +20003,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     type="submit"
                     disabled={deleteAnnoncePending || deleteAnnonceConfirmText.trim() !== `SUPPRIMER ${deleteAnnonceTarget.hektor_annonce_id}`}
                   >
-                    {deleteAnnoncePending ? 'Envoi...' : 'Supprimer dans Hektor'}
+                    {deleteAnnoncePending ? 'Envoi...' : bvs('Supprimer dans Hektor')}
                   </button>
                 </div>
               </form>
@@ -20016,7 +20016,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head delete-annonce-head">
                 <span className="modal-hero-icon modal-hero-icon-archive" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">Administration Hektor</p>
+                  <p className="eyebrow">{bvs("Administration Hektor")}</p>
                   <h3>Archiver l'annonce</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeArchiveAnnonceModal} disabled={archiveAnnoncePending}>Fermer</button>
@@ -20024,10 +20024,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <form className="delete-annonce-form" onSubmit={handleArchiveHektorAnnonce}>
                 <section className="delete-annonce-warning archive-annonce-warning">
                   <strong>{archiveAnnonceTarget.titre_bien || archiveAnnonceTarget.numero_dossier || `Annonce ${archiveAnnonceTarget.hektor_annonce_id}`}</strong>
-                  <span>Cette action utilise le compte administrateur Hektor, archive le bien, coupe la diffusion, puis lance la resynchronisation de l'app.</span>
+                  <span>{bvs("Cette action utilise le compte administrateur Hektor, archive le bien, coupe la diffusion, puis lance la resynchronisation de l'app.")}</span>
                 </section>
                 <label className="filter-field">
-                  <span>Motif principal Hektor</span>
+                  <span>{bvs("Motif principal Hektor")}</span>
                   <select value={archiveMainChoice} onChange={(event) => updateArchiveMainChoice(event.target.value as ArchiveHektorAnnonceMainChoice)}>
                     <option value="choiceAutre">Autre motif</option>
                     <option value="choiceVendu">Vendu</option>
@@ -20070,7 +20070,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     {archiveSubChoice === 'autre' ? (
                       <label className="filter-field">
                         <span>Precision obligatoire</span>
-                        <textarea className="inline-textarea" value={archiveOtherText} onChange={(event) => setArchiveOtherText(event.target.value)} placeholder="Motif transmis a Hektor" />
+                        <textarea className="inline-textarea" value={archiveOtherText} onChange={(event) => setArchiveOtherText(event.target.value)} placeholder={bvs("Motif transmis a Hektor")} />
                       </label>
                     ) : null}
                   </>
@@ -20082,7 +20082,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     type="submit"
                     disabled={archiveAnnoncePending || (archiveMainChoice === 'choiceAutre' && archiveSubChoice === 'autre' && !archiveOtherText.trim())}
                   >
-                    {archiveAnnoncePending ? 'Envoi...' : 'Archiver dans Hektor'}
+                    {archiveAnnoncePending ? 'Envoi...' : bvs('Archiver dans Hektor')}
                   </button>
                 </div>
               </form>
@@ -20095,7 +20095,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head status-change-head">
                 <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">{hasHektorNegotiator(negotiatorAssignTarget) ? 'Administration Hektor' : 'Action Hektor bloquee'}</p>
+                  <p className="eyebrow">{hasHektorNegotiator(negotiatorAssignTarget) ? bvs('Administration Hektor') : bvs('Action Hektor bloquee')}</p>
                   <h3>{hasHektorNegotiator(negotiatorAssignTarget) ? 'Reaffecter le negociateur' : 'Affecter un negociateur'}</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeMissingNegotiatorModal} disabled={negotiatorAssignPending}>Fermer</button>
@@ -20110,11 +20110,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 </section>
                 <p className="status-change-note">
                   {hasHektorNegotiator(negotiatorAssignTarget)
-                    ? "Choisis le compte negociateur qui doit reprendre cette annonce. Le worker admin mettra Hektor a jour puis relancera la synchronisation de la fiche."
-                    : "Cette annonce n'a pas de negociateur Hektor. Les actions comme photo, document, mandat, modification ou changement de statut doivent etre executees dans le contexte d'un negociateur."}
+                    ? bvs("Choisis le compte negociateur qui doit reprendre cette annonce. Le worker admin mettra Hektor a jour puis relancera la synchronisation de la fiche.")
+                    : bvs("Cette annonce n'a pas de negociateur Hektor. Les actions comme photo, document, mandat, modification ou changement de statut doivent etre executees dans le contexte d'un negociateur.")}
                 </p>
                 <label className="filter-field">
-                  <span>Agence Hektor</span>
+                  <span>{bvs("Agence Hektor")}</span>
                   <select
                     value={negotiatorAssignAgencyValue}
                     onChange={(event) => handleNegotiatorAssignAgencyChange(event.target.value)}
@@ -20129,7 +20129,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </select>
                 </label>
                 <label className="filter-field">
-                  <span>Negociateur Hektor</span>
+                  <span>{bvs("Negociateur Hektor")}</span>
                   <select
                     key={negotiatorAssignAgencyValue || 'no-agency'}
                     value={negotiatorAssignValue}
@@ -20146,12 +20146,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </select>
                 </label>
                 {negotiatorAssignAgencyValue && negotiatorAssignOptions.length === 0 ? (
-                  <p className="status-change-note">Aucun negociateur n'est rattache a cette agence dans l'annuaire Hektor synchronise.</p>
+                  <p className="status-change-note">{bvs("Aucun negociateur n'est rattache a cette agence dans l'annuaire Hektor synchronise.")}</p>
                 ) : null}
                 <div className="modal-actions">
                   <button className="ghost-button button-subtle" type="button" onClick={closeMissingNegotiatorModal} disabled={negotiatorAssignPending}>Annuler</button>
                   <button className="ghost-button button-primary" type="submit" disabled={negotiatorAssignPending || !negotiatorAssignValue}>
-                    {negotiatorAssignPending ? 'Affectation...' : 'Affecter dans Hektor'}
+                    {negotiatorAssignPending ? 'Affectation...' : bvs('Affecter dans Hektor')}
                   </button>
                 </div>
               </form>
@@ -20164,7 +20164,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head status-change-head">
                 <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">{APP_BIENVU_ENABLED ? "Pilotage de l'annonce" : 'Pilotage Hektor'}</p>
+                  <p className="eyebrow">{APP_BIENVU_ENABLED ? "Pilotage de l'annonce" : bvs('Pilotage Hektor')}</p>
                   <h3>{APP_BIENVU_ENABLED ? 'Changer le statut' : 'Changer le statut annonce'}</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Fermer</button>
@@ -20287,11 +20287,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                   && !typologies.some((t: unknown) => /acqu/i.test(String(t ?? '')))
                                 return (
                                   <span className={`sca-acq-jeton${aQualifier ? ' is-a-qualifier' : ''}`} key={`acq-${id}`}
-                                    title={aQualifier ? "Pas encore acquéreur chez Hektor : il sera qualifié automatiquement à l'envoi (recherche créée puis archivée)" : undefined}>
+                                    title={aQualifier ? bvs("Pas encore acquéreur chez Hektor : il sera qualifié automatiquement à l'envoi (recherche créée puis archivée)") : undefined}>
                                     <b>{mandantContactOptionTitle(option)}</b>
                                     {aQualifier ? <i className="sca-acq-qualif">sera qualifié</i> : null}
                                     {rang === 0 && statusChangeBuyers.length > 1
-                                      ? <i title="C'est lui que Hektor recevra en premier">principal</i> : null}
+                                      ? <i title={bvs("C'est lui que Hektor recevra en premier")}>principal</i> : null}
                                     <button type="button" aria-label={`Retirer ${mandantContactOptionTitle(option)}`}
                                       onClick={() => retirerAcquereurStatut(id)}>×</button>
                                   </span>
@@ -20306,9 +20306,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               && !t.some((x: unknown) => /acqu/i.test(String(x ?? '')))
                           }) ? (
                             <small className="sca-acq-etat">
-                              Hektor n'accepte comme acquéreur qu'un contact déjà qualifié. Ceux marqués
-                              « sera qualifié » le seront automatiquement à l'envoi : une recherche est créée,
-                              la transaction est enregistrée, puis la recherche est archivée.
+                              {bvs("Hektor n'accepte comme acquéreur qu'un contact déjà qualifié. Ceux marqués « sera qualifié » le seront automatiquement à l'envoi : une recherche est créée, la transaction est enregistrée, puis la recherche est archivée.")}
                             </small>
                           ) : null}
                           <input
@@ -20355,7 +20353,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           }} />
                         {statusChangeMandantsAffirmes ? (
                           <p className="status-change-note is-alerte">
-                            La liste des mandants sera <strong>envoyée à Hektor</strong> et remplacera
+                            La liste des mandants sera <strong>{bvs("envoyée à Hektor")}</strong> et remplacera
                             la sienne. Tant que vous n'y touchez pas, c'est la sienne qui vaut.
                           </p>
                         ) : null}
@@ -20434,7 +20432,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               setStatusChangeCommissionTouchee(true)
                             }} inputMode="numeric" placeholder="0" />
                             <small className="sca-acq-etat">
-                              Enregistree chez nous : Hektor ne retient pas les honoraires a l&apos;offre.
+                              {bvs("Enregistree chez nous : Hektor ne retient pas les honoraires a l'offre.")}
                             </small>
                           </label>
                         ) : null}
@@ -20525,8 +20523,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             partage le cote a parts egales (50 -> 25 + 25). */}
                       <section className="status-change-repartition">
                         <p className="status-change-note">
-                          <strong>Repartition de la commission</strong> — elle reste dans l'app et
-                          n'est pas transmise a Hektor.
+                          <strong>Repartition de la commission</strong> {bvs("— elle reste dans l'app et n'est pas transmise a Hektor.")}
                         </p>
                         <div className="filter-grid">
                           {(['entree', 'sortie'] as const).map((cote) => (
@@ -20596,8 +20593,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       {statusChangeStatus === 'compromise' ? (
                         <section className="status-change-repartition">
                           <p className="status-change-note">
-                            <strong>Conditions suspensives</strong> — elles restent dans l'app et
-                            ne sont pas transmises a Hektor.
+                            <strong>Conditions suspensives</strong> {bvs("— elles restent dans l'app et ne sont pas transmises a Hektor.")}
                           </p>
                           {statusChangeConditions.map((condition, rang) => {
                             const echeance = echeanceCondition(condition)
@@ -20683,8 +20679,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             OPERATIONNEL qu'elle sert, pas l'usage contractuel. */}
                       <section className="status-change-repartition">
                         <p className="status-change-note">
-                          <strong>Note</strong> — elle reste dans l'app et n'est pas
-                          transmise a Hektor.
+                          <strong>Note</strong> {bvs("— elle reste dans l'app et n'est pas transmise a Hektor.")}
                         </p>
                         <label className="filter-field">
                           <span>Note libre</span>
@@ -20708,7 +20703,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           {' = '}{ecartPrixTransaction.attendu.toLocaleString('fr-FR')}, et non
                           {' '}{ecartPrixTransaction.prix.toLocaleString('fr-FR')}
                           {' '}(ecart de {Math.abs(ecartPrixTransaction.ecart).toLocaleString('fr-FR')} &euro;).
-                          {' '}Vous pouvez envoyer quand meme &mdash; Hektor recalculera le net vendeur.
+                          {' '}{bvs("Vous pouvez envoyer quand meme — Hektor recalculera le net vendeur.")}
                         </p>
                       ) : null}
                     </section>
@@ -20729,7 +20724,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         un geste a part, et il n'est necessaire que dans de rares cas.
                       </p>
                     ) : null}
-                    <p className="status-change-note">Apres validation Hektor, le worker relance une reprise ciblee pour remplir les blocs transaction de la fiche. Le run quotidien reste la verification de secours.</p>
+                    <p className="status-change-note">{bvs("Apres validation Hektor, le worker relance une reprise ciblee pour remplir les blocs transaction de la fiche. Le run quotidien reste la verification de secours.")}</p>
                   </>
                 ) : statusChangeStatus === 'closed' ? (
                   <section className="status-change-section">
@@ -20785,7 +20780,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <p className="status-change-note">La clôture d'un mandat est <strong>définitive</strong> côté Hektor : l'annonce passe en « Clos » (diffusion coupée). Elle reste consultable et réactivable via « Actif ».</p>
                   </section>
                 ) : (
-                  <p className="status-change-note">Le statut Actif est envoyé directement à Hektor puis la fiche est resynchronisée.</p>
+                  <p className="status-change-note">{bvs("Le statut Actif est envoyé directement à Hektor puis la fiche est resynchronisée.")}</p>
                 )}
                 {/* ─── CE QUE LA MODALE ECARTE, ELLE DOIT LE DIRE ───
                     02/09/2026. Le correctif du jour a rendu la designation JUSTE : une
@@ -20875,10 +20870,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             {' '}{etatLabel(courante.kind, courante.state) ? `« ${etatLabel(courante.kind, courante.state)} »` : ''}
                           </b>
                           <span className="sca-amb-d">
-                            Hektor l'accepte, et le geste ajoutera une ligne a son historique
-                            plutot que d'en corriger une. Mais rouvrir un dossier terminé peut
-                            en laisser deux ouverts sur ce bien : un compromis créé ensuite ne
-                            saurait plus auquel se rattacher, et partirait seul.
+                            {bvs("Hektor l'accepte, et le geste ajoutera une ligne a son historique plutot que d'en corriger une. Mais rouvrir un dossier terminé peut en laisser deux ouverts sur ce bien : un compromis créé ensuite ne saurait plus auquel se rattacher, et partirait seul.")}
                           </span>
                         </p>
                       ) : null}
@@ -21143,8 +21135,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 {affaireCourantePourStatut() ? (
                   <p className="status-change-note">
                     Ce bien porte déjà {statusChangeStatus === 'offer' ? 'une offre' : statusChangeStatus === 'compromise' ? 'un compromis' : 'une vente'}.
-                    <strong> Modifier chez Hektor</strong> reprend celle-là au lieu d'en créer une seconde.
-                    Un champ laissé vide n'efface rien : il conserve ce que Hektor porte déjà.
+                    <strong> {bvs("Modifier chez Hektor")}</strong> {bvs("reprend celle-là au lieu d'en créer une seconde. Un champ laissé vide n'efface rien : il conserve ce que Hektor porte déjà.")}
                   </p>
                 ) : null}
                 {(() => {
@@ -21230,8 +21221,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         || offreAccepteeFigeeChezHektor(affaireCourantePourStatut())}
                       title={offreAccepteeFigeeChezHektor(affaireCourantePourStatut())
                         ? "Une offre acceptee est figee chez Hektor : il n'ouvre pas son formulaire, la modification ne peut pas aboutir."
-                        : "Reprend la transaction existante chez Hektor au lieu d'en creer une nouvelle."}>
-                      {statusChangePending ? 'Envoi...' : 'Modifier chez Hektor'}
+                        : bvs("Reprend la transaction existante chez Hektor au lieu d'en creer une nouvelle.")}>
+                      {statusChangePending ? 'Envoi...' : bvs('Modifier chez Hektor')}
                     </button>
                   ) : null}
                   {affaireCourantePourStatut() && statusChangeStatus === 'compromise' ? (
@@ -21331,7 +21322,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     <p className="request-summary-note">
                       {requestModalEffectiveType === 'demande_baisse_prix'
                         ? requestModalRole === 'pauline'
-                          ? 'Controlez l avenant signe dans Hektor puis validez ou refusez la baisse.'
+                          ? bvs('Controlez l avenant signe dans Hektor puis validez ou refusez la baisse.')
                           : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                             ? 'La direction a demande un ajustement. Corrigez puis renvoyez.'
                             : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
@@ -21339,7 +21330,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               : 'Verifiez le nouveau prix puis transmettez la demande a la direction.'
                         : requestModalEffectiveType === 'demande_annulation_mandat'
                         ? requestModalRole === 'pauline'
-                          ? 'Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.'
+                          ? bvs('Controle le mandat dans Hektor via le lien puis accepte ou refuse la demande.')
                           : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                             ? 'La direction a demande un ajustement. Corrigez puis renvoyez.'
                             : requestModalNegoLabel.includes('envoyee') || requestModalNegoLabel.includes('envoyée')
@@ -21369,7 +21360,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <article className="request-summary-metric">
                     <span className="request-summary-metric-label">{requestModalEffectiveType === 'demande_baisse_prix' ? 'Nouveau prix' : 'Apres accord'}</span>
                     <strong>{requestModalEffectiveType === 'demande_baisse_prix' ? `${requestModalPriceValue || '—'}${requestModalPriceValue ? ' €' : ''}` : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Email commercial envoye' : 'Diffusion activee'}</strong>
-                    <small>{requestModalEffectiveType === 'demande_baisse_prix' ? 'Applique apres validation' : requestModalEffectiveType === 'demande_annulation_mandat' ? 'Aucun automatisme Hektor' : 'Passerelles par defaut appliquees'}</small>
+                    <small>{requestModalEffectiveType === 'demande_baisse_prix' ? 'Applique apres validation' : requestModalEffectiveType === 'demande_annulation_mandat' ? bvs('Aucun automatisme Hektor') : 'Passerelles par defaut appliquees'}</small>
                   </article>
                 </div>
               </section>
@@ -21429,7 +21420,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       ? requestModalEffectiveType === 'demande_baisse_prix'
                         ? "Exemple : avenant signe controle, baisse de prix validee."
                         : requestModalEffectiveType === 'demande_annulation_mandat'
-                          ? 'Exemple : mandat controle dans Hektor, annulation acceptee.'
+                          ? bvs('Exemple : mandat controle dans Hektor, annulation acceptee.')
                           : 'Exemple : dossier controle, validation accordee.'
                       : requestModalNegoLabel.includes('corriger') || requestModalNegoLabel.includes('Corriger')
                         ? requestModalEffectiveType === 'demande_baisse_prix'
@@ -21438,9 +21429,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             ? "Exemple : motif d'annulation complete, merci de revoir la demande."
                             : 'Exemple : pieces et informations corrigees, merci de revoir la demande.'
                         : requestModalEffectiveType === 'demande_baisse_prix'
-                          ? "Exemple : avenant signe depose dans Hektor, merci de valider la baisse."
+                          ? bvs("Exemple : avenant signe depose dans Hektor, merci de valider la baisse.")
                           : requestModalEffectiveType === 'demande_annulation_mandat'
-                            ? "Exemple : merci de controler l'annulation du mandat dans Hektor."
+                            ? bvs("Exemple : merci de controler l'annulation du mandat dans Hektor.")
                             : 'Exemple : le mandat est pret, merci de valider le bien.'
                   }
                 />
@@ -21529,7 +21520,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onClick={(event) => event.stopPropagation()}
             >
               <div className="price-drop-popup-icon" aria-hidden="true" />
-              <p className="price-drop-popup-eyebrow">Contrôle prix Hektor</p>
+              <p className="price-drop-popup-eyebrow">{bvs("Contrôle prix Hektor")}</p>
               <h3 id="price-drop-popup-title">
                 {priceDropCheckPrompt.kind === 'mismatch' ? 'Prix différent Hektor' : 'Prix confirmé'}
               </h3>
@@ -21598,7 +21589,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               onClick={(event) => event.stopPropagation()}
             >
               <div className="price-drop-popup-icon" aria-hidden="true" />
-              <p className="price-drop-popup-eyebrow">Validation Hektor</p>
+              <p className="price-drop-popup-eyebrow">{bvs("Validation Hektor")}</p>
               <h3 id="validation-popup-title">{validationCheckPrompt.title}</h3>
               <p className="price-drop-popup-message">{validationCheckPrompt.message}</p>
               {validationCheckPrompt.detail ? (
@@ -21760,7 +21751,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   <div className="dv3-work-head">
                     <div>
                       <strong className="dv3-work-title">Sélection des portails</strong>
-                      <span className="dv3-work-note">Active uniquement les portails à diffuser. La console enverra les ajouts et retraits correspondants sur Hektor.</span>
+                      <span className="dv3-work-note">{bvs("Active uniquement les portails à diffuser. La console enverra les ajouts et retraits correspondants sur Hektor.")}</span>
                     </div>
                     {diffusionPortalRows.length > 0 ? (
                       <span className="dv3-count-chip">{diffusionEnabledCount}/{diffusionPortalRows.length}</span>
@@ -21780,7 +21771,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                               <div className="dv3-portal-meta">
                                 <strong>{portal.portalKey}</strong>
                                 <small>{portal.details[0] ?? '—'}</small>
-                                {isDirty ? <span className="dv3-portal-dirty">Envoyé à Hektor · en attente de confirmation</span> : null}
+                                {isDirty ? <span className="dv3-portal-dirty">{bvs("Envoyé à Hektor · en attente de confirmation")}</span> : null}
                               </div>
                               <span className="dv3-portal-state">{targetEnabled ? 'Activée' : 'Inactive'}</span>
                               <input
@@ -21797,7 +21788,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       <div className="dv3-empty">
                         {isValidationApproved(diffusionModalMandat.validation_diffusion_state)
                           ? "Aucune passerelle n'est configurée pour ce mandat. Le mapping agence n'a pas été trouvé."
-                          : "Aucune passerelle configurée pour ce mandat. L'app peut tenter Diffuse puis les portails même si Hektor indique validation = non."}
+                          : bvs("Aucune passerelle configurée pour ce mandat. L'app peut tenter Diffuse puis les portails même si Hektor indique validation = non.")}
                       </div>
                     ) : null}
                   </div>
@@ -21805,13 +21796,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     {diffusionApplyResult ? (
                       <>
                         <strong>{diffusionApplyResult.dry_run ? 'Simulation exécutée' : 'Application exécutée'}</strong>
-                        <span>{diffusionApplyResult.waiting_on_hektor ? (diffusionApplyResult.waiting_message ?? 'En attente de mise à jour Hektor.') : 'La console a tenté diffusable puis appliqué les passerelles sur Hektor.'}</span>
+                        <span>{diffusionApplyResult.waiting_on_hektor ? (diffusionApplyResult.waiting_message ?? bvs('En attente de mise à jour Hektor.')) : bvs('La console a tenté diffusable puis appliqué les passerelles sur Hektor.')}</span>
                         <span className="dv3-feedback-figs">Ajouts {diffusionApplyResult.to_add_count} · Retraits {diffusionApplyResult.to_remove_count} · Réussies {diffusionApplyResult.applied.length} · En attente {diffusionApplyResult.pending?.length ?? 0} · Erreurs {diffusionApplyResult.failed.length}</span>
                       </>
                     ) : diffusionHasUnsavedChanges ? (
-                      <span>Des modifications sont en attente — clique sur « Activer la diffusion » pour les envoyer à Hektor.</span>
+                      <span>{bvs("Des modifications sont en attente — clique sur « Activer la diffusion » pour les envoyer à Hektor.")}</span>
                     ) : (
-                      <span>Aucune exécution Hektor sur ce lot depuis l'ouverture de la console.</span>
+                      <span>{bvs("Aucune exécution Hektor sur ce lot depuis l'ouverture de la console.")}</span>
                     )}
                   </div>
                   <div className="dv3-actions">
@@ -25542,7 +25533,7 @@ function MandatRegisterScreen(props: {
 
                         {clotureMessage ? <p className="md-cloture-msg">{clotureMessage}</p> : null}
                         <p className="md-cloture-note">
-                          Cette date reste dans nos données : Hektor n'en est pas informé, c'est voulu.
+                          {bvs("Cette date reste dans nos données : Hektor n'en est pas informé, c'est voulu.")}
                         </p>
                       </div>
 
@@ -26108,7 +26099,7 @@ function SuiviMandatsScreenV2(props: {
   const suiviPriorities = [
     { key: 'pending_or_in_progress' as const, label: 'À traiter', value: pendingRows.length, detail: 'Demandes de diffusion, baisse ou annulation à décider', tone: 'demandes' },
     { key: 'anomalies' as const, label: 'Anomalies', value: anomalyRows.length, detail: 'Mandats ou diffusions à corriger', tone: 'warning' },
-    { key: 'price_alert' as const, label: 'Alerte prix', value: priceAlertRows.length, detail: 'Baisses à contrôler dans Hektor', tone: 'diffusion' },
+    { key: 'price_alert' as const, label: 'Alerte prix', value: priceAlertRows.length, detail: bvs('Baisses à contrôler dans Hektor'), tone: 'diffusion' },
   ]
 
   const listingTitle =
@@ -26741,7 +26732,7 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
           abandonnés restent visibles dans leur propre bloc plus bas. */}
       {(o || c || v) ? (
         <>
-          <div className="fa-ck-ct-sec"><span className="l">Transactions détaillées</span><span className="bar" /><span className="k">Synchronisé depuis Hektor</span></div>
+          <div className="fa-ck-ct-sec"><span className="l">Transactions détaillées</span><span className="bar" /><span className="k">{bvs("Synchronisé depuis Hektor")}</span></div>
           {o ? (
             <CkTxCard num="01" kind="offre" title={`Offre d'achat — ${o.montant ?? ''}`} sub={`${o.etat ?? ''} · ${o.date ?? ''} · ${o.acqNom ?? ''}`} pill={o.etat ?? 'Offre'} pillTone="on" open rows={[
               ["Montant de l'offre", o.montant ?? '—'], ['Prix net vendeur', o.net ?? '—'], ["Date de l'offre", o.date ?? '—'], ['Validité', o.validite ?? '—'], ['État', o.etat ?? '—'], ['Statut source Hektor', o.raw ?? '—'], ['Acquéreur', [o.acqNom, o.acqTel, o.acqMail].filter(Boolean).join(' · '), true],
@@ -26848,7 +26839,7 @@ const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string
   { key: 'affaires', label: 'Affaires', sub: 'Offre · compromis · vente', ico: CK_ICON.affaires, color: '#3b7d4f', bg: '#e4f1e8' },
   { key: 'historique', label: 'Historique', sub: 'Journal · baisse de prix', ico: CK_ICON.historique, color: '#7a6f67', bg: '#f1eae1' },
   { key: 'reporting', label: 'Reporting mandant', sub: 'KPIs · PDF · envoyer', ico: CK_ICON.reporting, color: '#8a6a2f', bg: '#f4ecd9' },
-  { key: 'documents', label: 'Documents', sub: 'Fichiers · signature · Hektor', ico: CK_ICON.documents, color: '#4756a6', bg: '#e9ebf8' },
+  { key: 'documents', label: 'Documents', sub: bvs('Fichiers · signature · Hektor'), ico: CK_ICON.documents, color: '#4756a6', bg: '#e9ebf8' },
   { key: 'rendezvous', label: 'Rendez-vous', sub: 'Visites · demandes · disponibilités', ico: CK_ICON.rendezvous, color: '#6d4bb5', bg: '#ece4f8' },
 ]
 
@@ -29032,7 +29023,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </div>
                 </div>
               </div>
-              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Deux façons de faire signer : la <b>signature électronique</b> (bouton ci‑dessus) ou, exceptionnellement, la <b>signature manuscrite</b> — dans ce cas, joignez le mandat signé dans les Documents : il part dans Hektor et le mandat passe directement à « Signé ».</span></div>
+              <div className="mv3-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9}><path d="M12 16v-4M12 8h.01" /><circle cx="12" cy="12" r="9" /></svg><span>Deux façons de faire signer : la <b>signature électronique</b> (bouton ci‑dessus) ou, exceptionnellement, la <b>signature manuscrite</b> {bvs("— dans ce cas, joignez le mandat signé dans les Documents : il part dans Hektor et le mandat passe directement à « Signé ».")}</span></div>
               <details className="mv3-manual">
                 <summary className="mv3-alt" style={{ marginTop: 11 }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg><span><b>Signer à la main</b><em>imprimez, faites signer, puis joignez le signé</em></span></summary>
                 <div className="mv3-drop">
@@ -29422,7 +29413,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       // Champs ET pièces dans le MÊME appel : un seul job worker débouché, comme la modale
       // d'origine (deux appels séparés se conflictualisaient via date_maj).
       await editAnnonceOptimistic({ dossier: { app_dossier_id: dossier.app_dossier_id, hektor_annonce_id: dossier.hektor_annonce_id }, fields, compositionPieces: ckChangedPieces() })
-      setSaveMsg(geoRecalee ? 'Envoyé — adresse + géoloc recalées (~10 min)' : 'Envoyé — vague vers Hektor (~10 min)')
+      setSaveMsg(geoRecalee ? 'Envoyé — adresse + géoloc recalées (~10 min)' : bvs('Envoyé — vague vers Hektor (~10 min)'))
       // Le calque optimiste est committé : on demande au parent de recharger le détail pour que la
       // colonne de gauche (et tout le reste) reflète la modif immédiatement, sans refresh manuel.
       props.onAfterOptimisticSave?.()
@@ -29591,7 +29582,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               </span>
             ) : null}
           </div>
-          <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />Hektor · à jour</span>
+          <span className="fa-ck-tb-chip"><span className="fa-ck-tb-chip-dot" />{bvs("Hektor · à jour")}</span>
         </div>
         </div>
 
@@ -29825,7 +29816,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               {/* Bandeau conflit/partiel Hektor (retour du worker). Édition = en place, champ par champ. */}
               {!isLightweightDetail ? <AnnonceEditStatusBanner dossier={dossier} /> : null}
               {!isLightweightDetail ? <GesteAbandonneBanner dossier={dossier} /> : null}
-              {!isLightweightDetail ? <p className="fa-ck-lb-edithint">Clique un champ pour le modifier en place, puis <b>Enregistrer</b> (une vague vers Hektor).</p> : null}
+              {!isLightweightDetail ? <p className="fa-ck-lb-edithint">Clique un champ pour le modifier en place, puis <b>Enregistrer</b> {bvs("(une vague vers Hektor).")}</p> : null}
               {/* Galerie mosaïque (façon v21) construite depuis les vraies photos */}
               {props.images.length > 0 ? (
                 <div className={`fa-ck-lb-gallery n${Math.min(props.images.length, 5)}`}>
@@ -29963,7 +29954,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <div className={`fa-ck-lb-acc${open ? ' open' : ''}`} style={{ ['--sc']: '#7a4bb0', ['--sbg']: '#f1eafc' } as CSSProperties}>
                     <button type="button" className="fa-ck-pub-sec fa-ck-lb-sectrig" aria-expanded={open} onClick={() => toggleCkSec('pieces')}>
                       <span className="fa-ck-pub-ic" style={{ background: '#f1eafc', color: '#7a4bb0' }} aria-hidden="true"><CkIcon path="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 13h8v8H3z" /></span>
-                      <div className="fa-ck-lb-sectxt"><div className="fa-ck-pub-t">Composition des pièces</div><div className="fa-ck-pub-s">Pièce par pièce · comme dans Hektor</div></div>
+                      <div className="fa-ck-lb-sectxt"><div className="fa-ck-pub-t">Composition des pièces</div><div className="fa-ck-pub-s">{bvs("Pièce par pièce · comme dans Hektor")}</div></div>
                       {ckPieces.filter((p) => !p.deleted).length > 0 ? <span className="fa-ck-lb-cnt" style={{ color: '#7a4bb0', background: '#f1eafc' }}>{ckPieces.filter((p) => !p.deleted).length}</span> : null}
                       <span className="fa-ck-lb-chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path d="M6 9l6 6 6-6" /></svg></span>
                     </button>
@@ -29972,7 +29963,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         <HektorCompositionPiecesEditor
                           kicker="Composition"
                           title="Composition des pièces"
-                          subtitle="Ajoute ou corrige les pièces une par une, comme dans Hektor. Enregistre en bas de page."
+                          subtitle={bvs("Ajoute ou corrige les pièces une par une, comme dans Hektor. Enregistre en bas de page.")}
                           pieces={ckPieces}
                           draft={ckPieceDraft}
                           disabled={saving}
@@ -30306,7 +30297,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       </>
                     ) : null}
                     <div className="fa-ck-pub-sec"><span className="fa-ck-pub-ic green" aria-hidden="true"><CkIcon path={CK_ICON.mandat} /></span><div><div className="fa-ck-pub-t">Validation du mandat</div><div className="fa-ck-pub-s">Contrôle &amp; diffusion</div></div></div>
-                    <div className="fa-ck-pub-card"><div className="fa-ck-valstate"><div className="vlab">État de validation</div><div className={`vval ${pMandatOk ? 'ok' : 'wait'}`}>{pMandatOk ? 'Validé · confirmé par Hektor' : 'En attente de validation'}</div></div><p className="fa-ck-vnote">L'annonce est validée après contrôle. La validation débloque la diffusion sur les portails.</p>
+                    <div className="fa-ck-pub-card"><div className="fa-ck-valstate"><div className="vlab">État de validation</div><div className={`vval ${pMandatOk ? 'ok' : 'wait'}`}>{pMandatOk ? bvs('Validé · confirmé par Hektor') : 'En attente de validation'}</div></div><p className="fa-ck-vnote">L'annonce est validée après contrôle. La validation débloque la diffusion sur les portails.</p>
                       {/* Le bascule Activé/Désactivé de la maquette : on ouvre le panneau
                           Pilotage RÉEL (DetailAdminPilotPanel), qui porte déjà validation et
                           diffusion — plutôt que de recoder un toggle à côté. */}
@@ -30408,7 +30399,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   </>
                 )
               })()}
-              <div className="fa-ck-lb-manage-h" id="fa-ck-mandat-tools" style={{ marginTop: 18 }}>Actions mandat (Hektor)</div>
+              <div className="fa-ck-lb-manage-h" id="fa-ck-mandat-tools" style={{ marginTop: 18 }}>{bvs("Actions mandat (Hektor)")}</div>
               {isLightweightDetail
                 ? <ReadOnlyDetailNotice label="Le numero de mandat et les pieces ne sont pas modifiables depuis une fiche d'index leger." />
                 : <HektorMandatNumberForm dossier={dossier} contacts={props.contacts} onJobCreated={props.onHektorActionJobCreated} onMissingNegotiator={props.onMissingNegotiator} />}
@@ -30437,7 +30428,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       )
                     })}
                   </div>
-                  <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>Agenda &amp; demandes (Google / Hektor)</div>
+                  <div className="fa-ck-lb-manage-h" style={{ marginTop: 18 }}>{bvs("Agenda & demandes (Google / Hektor)")}</div>
                 </>
               ) : null}
               <GoogleAgendaAnnonceSection
@@ -30516,7 +30507,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       compromis: pVendu ? 'done' : pCompromis ? 'active' : 'pending',
                       vente: pVendu ? 'done' : 'pending',
                     },
-                    offre: hasO ? { montant: money('offre_montant') || formatPrice(dossier.prix), net, date: dateOf('offre_event_date'), validite: '', etat: pOffre && !hasC ? 'Proposition' : 'Acceptée', raw: nz('offre_raw_status', 'offre_state') || 'Synchronisé depuis Hektor', acqNom, acqTel: blobAcqCoord.tel ?? '', acqMail: blobAcqCoord.email ?? '' } : null,
+                    offre: hasO ? { montant: money('offre_montant') || formatPrice(dossier.prix), net, date: dateOf('offre_event_date'), validite: '', etat: pOffre && !hasC ? 'Proposition' : 'Acceptée', raw: nz('offre_raw_status', 'offre_state') || bvs('Synchronisé depuis Hektor'), acqNom, acqTel: blobAcqCoord.tel ?? '', acqMail: blobAcqCoord.email ?? '' } : null,
                     compromis: hasC ? { prix: money('vente_prix') || formatPrice(dossier.prix), net, dateStart: dateOf('compromis_date_start'), dateActe: dateOf('date_signature_acte'), retract: '', sequestre: money('compromis_sequestre') } : null,
                     vente: pVendu ? { date: dateOf('vente_date'), prix: money('vente_prix') || formatPrice(dossier.prix), honoraires: money('vente_honoraires'), commission: money('vente_commission_agence'), notaires: '' } : null,
                     parties: { acq: acqNom ? { n: acqNom, s: 'Acquéreur' } : null, notAcq: null, notVend: null, vendeur },
@@ -30713,7 +30704,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 }
                 return inter.length > 0 ? (
                   <>
-                    <div className="fa-ck-ct-sec"><span className="l">Diagnostics et syndic</span><span className="bar" /><span className="k">Intervenants · console Hektor</span></div>
+                    <div className="fa-ck-ct-sec"><span className="l">Diagnostics et syndic</span><span className="bar" /><span className="k">{bvs("Intervenants · console Hektor")}</span></div>
                     <div className="fa-ck-inter">
                       {inter.map((it) => (
                         <div key={it.role} className="fa-ck-ic-card">
@@ -30739,7 +30730,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <div className="fa-ck-rub fa-ck-pub">
               <div className="fa-ck-pub-sec">
                 <span className="fa-ck-pub-ic mag" aria-hidden="true"><CkIcon path={CK_ICON.historique} /></span>
-                <div><div className="fa-ck-pub-t">État diffusion</div><div className="fa-ck-pub-s">Vue de contrôle Hektor</div></div>
+                <div><div className="fa-ck-pub-t">État diffusion</div><div className="fa-ck-pub-s">{bvs("Vue de contrôle Hektor")}</div></div>
                 {/* Régression corrigée (audit §5 bis #10) : onOpenDiffusionModal n'était JAMAIS
                     appelé dans le cockpit — la rubrique Publicité était en lecture seule, alors
                     que la maquette v36 porte « Activer la diffusion et appliquer ». */}
@@ -30766,7 +30757,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                 <div><div className="fa-ck-pub-t">Passerelles</div><div className="fa-ck-pub-s">Sélection des portails</div></div>
               </div>
               <div className="fa-ck-pub-card">
-                <p className="fa-ck-pnote">Coche uniquement les portails à laisser actifs. L'enregistrement pousse l'état vers Hektor (Diffusable + ajout/retrait des passerelles).</p>
+                <p className="fa-ck-pnote">{bvs("Coche uniquement les portails à laisser actifs. L'enregistrement pousse l'état vers Hektor (Diffusable + ajout/retrait des passerelles).")}</p>
                 {(() => {
                   const det = parseJson<Array<{ name: string; state?: string; sub?: string }>>(detailStr('portails_detail_json') || '[]', [])
                   const portalsRaw = det.length
@@ -30792,7 +30783,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                   <>
                     <div className="fa-ck-pub-sec">
                       <span className="fa-ck-pub-ic green" aria-hidden="true"><CkIcon path={CK_ICON.reporting} /></span>
-                      <div><div className="fa-ck-pub-t">Retour d'application</div><div className="fa-ck-pub-s">Exécution du lot Hektor{ap.at ? ` · ${formatDate(ap.at)}` : ''}</div></div>
+                      <div><div className="fa-ck-pub-t">Retour d'application</div><div className="fa-ck-pub-s">{bvs("Exécution du lot Hektor")}{ap.at ? ` · ${formatDate(ap.at)}` : ''}</div></div>
                     </div>
                     <div className="fa-ck-pub-card">
                       <div className="fa-ck-res-grid">
@@ -30941,7 +30932,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     {editedCount > 0 && !isLightweightDetail && typeof document !== 'undefined' ? createPortal(
       <div className="fa-ck-savebar" role="status">
         <span className="fa-ck-savebar-n">{editedCount}</span>
-        <span className="fa-ck-savebar-tx">champ{editedCount > 1 ? 's' : ''} modifié{editedCount > 1 ? 's' : ''}<em>1 vague vers Hektor</em></span>
+        <span className="fa-ck-savebar-tx">champ{editedCount > 1 ? 's' : ''} modifié{editedCount > 1 ? 's' : ''}<em>{bvs("1 vague vers Hektor")}</em></span>
         {saveMsg ? <span className="fa-ck-savebar-msg">{saveMsg}</span> : null}
         <div className="fa-ck-savebar-acts">
           <button type="button" className="fa-ck-savebar-btn" onClick={() => { setEdited({}); setSaveMsg(null) }} disabled={saving}>Annuler</button>
@@ -30965,13 +30956,13 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               <div className="panel-head status-change-head">
                 <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">Pilotage Hektor</p>
+                  <p className="eyebrow">{bvs("Pilotage Hektor")}</p>
                   <h3>Pilotage de l'annonce</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={() => setPilotageOpen(false)}>Fermer</button>
               </div>
               <div className="fa-ck-pilotbody">
-                <p className="fa-ck-pilotnote">Ces deux commutateurs pilotent directement Hektor. La validation du mandat débloque la diffusion ; chaque bascule génère un job de synchronisation.</p>
+                <p className="fa-ck-pilotnote">{bvs("Ces deux commutateurs pilotent directement Hektor. La validation du mandat débloque la diffusion ; chaque bascule génère un job de synchronisation.")}</p>
                 <DetailAdminPilotPanel
                   allowValidation={props.allowMarkValidation}
                   allowDiffusable={props.allowMarkDiffusable}
@@ -31118,11 +31109,11 @@ function DossierDetailLayoutBase(props: {
   const lightweightEstBrouillon = (dossier as { is_brouillon?: boolean }).is_brouillon === true
   const lightweightTitre = lightweightEstArchive
     ? 'Fiche archivée'
-    : lightweightEstBrouillon ? 'Saisie en cours chez Hektor' : 'Bien vendu ou clos'
+    : lightweightEstBrouillon ? bvs('Saisie en cours chez Hektor') : 'Bien vendu ou clos'
   const lightweightTexte = lightweightEstArchive
     ? "Cette annonce est archivée et reste protégée en consultation. Pour rouvrir les actions, documents, photos et modifications, il faut d'abord la désarchiver."
     : lightweightEstBrouillon
-      ? "Cette annonce est un brouillon : sa saisie n'est pas terminée chez Hektor. Elle est consultable ici, et se reprend là-bas."
+      ? bvs("Cette annonce est un brouillon : sa saisie n'est pas terminée chez Hektor. Elle est consultable ici, et se reprend là-bas.")
       : "Ce bien est vendu ou clos. Sa fiche est consultable depuis l'index léger ; pour la rouvrir en entier, il faut d'abord charger son détail."
   const openRequestFromDetail = props.onOpenRequestModal ?? (() => undefined)
   const openDiffusionFromDetail = props.onOpenDiffusionModal ?? (() => undefined)
@@ -32065,13 +32056,13 @@ function DossierDetailLayoutBase(props: {
                 <div className="hektor-context-panel">
                   <span className="hektor-context-panel-icon" aria-hidden="true"><DetailIcon type="content" /></span>
                   <div>
-                    <strong>Contenu annonce Hektor</strong>
+                    <strong>{bvs("Contenu annonce Hektor")}</strong>
                     <small>Titre, prix, surface, pieces, chambres et descriptif principal.</small>
                   </div>
                   {!isLightweightDetail ? <button className="hektor-context-action-button hektor-context-action-button-content" type="button" onClick={() => setHektorEditModalOpen(true)}>
                     <span aria-hidden="true"><DetailIcon type="content" /></span>
                     <strong>Modifier l'annonce</strong>
-                  </button> : <small>{lightweightEstArchive ? 'Lecture seule jusqu\'au désarchivage.' : lightweightEstBrouillon ? 'Lecture seule : saisie en cours chez Hektor.' : 'Lecture seule : bien vendu ou clos.'}</small>}
+                  </button> : <small>{lightweightEstArchive ? 'Lecture seule jusqu\'au désarchivage.' : lightweightEstBrouillon ? bvs('Lecture seule : saisie en cours chez Hektor.') : 'Lecture seule : bien vendu ou clos.'}</small>}
                 </div>
               </section>
               ) : null}
@@ -32495,9 +32486,9 @@ function DossierDetailLayoutBase(props: {
             <div className="detail-edit-popup-head">
               <div className="detail-edit-popup-icon" aria-hidden="true">M</div>
               <div>
-                <span>Modification Hektor</span>
+                <span>{bvs("Modification Hektor")}</span>
                 <h3>{dossier.titre_bien || dossier.numero_dossier || `Annonce #${dossier.hektor_annonce_id}`}</h3>
-                <p>Les changements sont envoyes au PC serveur, appliques dans Hektor, puis resynchronises dans l app.</p>
+                <p>{bvs("Les changements sont envoyes au PC serveur, appliques dans Hektor, puis resynchronises dans l app.")}</p>
                 <div className="detail-edit-popup-flow" aria-label="Circuit de mise a jour">
                   <span>App</span>
                   <span>PC serveur</span>
@@ -34125,7 +34116,7 @@ function GoogleAgendaGlobalEventModal(props: {
                     <strong>{activeContactLabel || activeContactEmail}</strong>
                     <span>{activeContactEmail || selectedContact?.phone_primary || selectedContact?.phone_secondary || 'Email absent'}</span>
                     {activeContactEmail ? <small>Invite Google ajoute automatiquement.</small> : <small>Email requis pour inviter le client.</small>}
-                    {createdContactLink?.source === 'contact_create_pending' ? <small>Contact en creation Hektor</small> : null}
+                    {createdContactLink?.source === 'contact_create_pending' ? <small>{bvs("Contact en creation Hektor")}</small> : null}
                     <button className="ghost-button button-subtle" type="button" onClick={handleChangeSelectedContact}>Changer</button>
                   </div>
                 ) : (
@@ -34227,7 +34218,7 @@ function GoogleAgendaGlobalEventModal(props: {
         {contactCreateOpen && props.canManageContacts ? (
           <ContactWorkflowModal
             title="Nouveau contact"
-            eyebrow="Creation Hektor"
+            eyebrow={bvs("Creation Hektor")}
             summary="Creation via le workflow contact existant, puis ajout aux invites si un email est renseigne."
             tone="create"
             onClose={() => setContactCreateOpen(false)}
@@ -34344,9 +34335,9 @@ function ContactEditStatusBanner({ hektorContactId }: { hektorContactId: string 
   return (
     <div role="status" style={{ ...base, background: '#FDECEA', border: '1px solid #E5A29B', color: '#7A241C' }}>
       {envoiImpossible ? (
-        <><strong>Modification non transmise.</strong> Après 5 tentatives, elle n'a pas pu être envoyée à Hektor.</>
+        <><strong>Modification non transmise.</strong> {bvs("Après 5 tentatives, elle n'a pas pu être envoyée à Hektor.")}</>
       ) : (
-        <><strong>Modification non enregistrée.</strong> Ce contact a été modifié dans Hektor depuis votre édition : vos changements n'ont pas été appliqués. Rouvrez la fiche et refaites la modification.</>
+        <><strong>Modification non enregistrée.</strong> {bvs("Ce contact a été modifié dans Hektor depuis votre édition : vos changements n'ont pas été appliqués. Rouvrez la fiche et refaites la modification.")}</>
       )}{' '}
       <strong>Votre saisie est conservée</strong> et ne sera pas écrasée tant que vous n'aurez pas tranché.
       <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -34414,8 +34405,8 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
       if (compte && mode === 'abandon') {
         const remis = (compte.defait ?? []).filter((x) => Number(x.fiche_remise) > 0)
         setResolveNote(remis.length
-          ? `Abandonné. Remis comme Hektor : ${remis.map((x) => `${x.champ} = ${x.valeur_avant ?? 'vide'}`).join(', ')}.`
-          : "Abandonné. Rien à remettre : votre fiche disait déjà la même chose que Hektor.")
+          ? bvt`Abandonné. Remis comme Hektor : ${remis.map((x) => `${x.champ} = ${x.valeur_avant ?? 'vide'}`).join(', ')}.`
+          : bvs("Abandonné. Rien à remettre : votre fiche disait déjà la même chose que Hektor."))
       }
       setGestes((liste) => liste.filter((g) => g.job_id !== jobId))
     } catch (err) {
@@ -34514,8 +34505,8 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
         <div role="status" style={{ ...base, background: '#FCF3E3', border: '1px solid #E4C583', color: '#6B4E12' }}>
           <strong>Enregistré.</strong>{' '}
           {envoiImpossible
-            ? <>La mise à jour de Hektor n'est pas encore passée : elle sera renvoyée automatiquement. <strong>Votre saisie est conservée</strong>, vous n'avez rien à faire — l'administrateur est prévenu.</>
-            : <>Le bien a été modifié dans Hektor depuis votre saisie, c'est cette version-là qui est affichée. Votre saisie est gardée en mémoire.</>}
+            ? <>{bvs("La mise à jour de Hektor n'est pas encore passée : elle sera renvoyée automatiquement.")} <strong>Votre saisie est conservée</strong>, vous n'avez rien à faire — l'administrateur est prévenu.</>
+            : <>{bvs("Le bien a été modifié dans Hektor depuis votre saisie, c'est cette version-là qui est affichée. Votre saisie est gardée en mémoire.")}</>}
         </div>
       )
     }
@@ -34524,9 +34515,9 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
     return (
       <div role="status" style={{ ...base, background: '#FDECEA', border: '1px solid #E5A29B', color: '#7A241C' }}>
         {envoiImpossible ? (
-          <><strong>Modification non transmise.</strong> Après 5 tentatives, elle n'a pas pu être envoyée à Hektor — elle sera réessayée toutes les 6 heures.</>
+          <><strong>Modification non transmise.</strong> {bvs("Après 5 tentatives, elle n'a pas pu être envoyée à Hektor — elle sera réessayée toutes les 6 heures.")}</>
         ) : (
-          <><strong>Modification non enregistrée.</strong> Le bien a été modifié dans Hektor depuis l'édition : les changements n'ont pas été appliqués.</>
+          <><strong>Modification non enregistrée.</strong> {bvs("Le bien a été modifié dans Hektor depuis l'édition : les changements n'ont pas été appliqués.")}</>
         )}{' '}
         <strong>La saisie est conservée</strong> et ne sera pas écrasée tant que personne n'aura tranché.
         <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -34541,7 +34532,7 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
     const fields = (status.skipped_fields ?? []).map((s) => s.field).filter(Boolean)
     return (
       <div role="status" style={{ ...base, background: '#FCF3E3', border: '1px solid #E4C583', color: '#6B4E12' }}>
-        <strong>Enregistré partiellement.</strong>{fields.length ? ` Champ(s) non appliqué(s) dans Hektor : ${fields.join(', ')}.` : ''} Vérifiez ces champs directement dans Hektor.
+        <strong>Enregistré partiellement.</strong>{fields.length ? ` Champ(s) non appliqué(s) dans Hektor : ${fields.join(', ')}.` : ''} {bvs("Vérifiez ces champs directement dans Hektor.")}
       </div>
     )
   }
@@ -35446,7 +35437,7 @@ function GoogleAgendaAnnonceSection(props: {
             {contactCreateOpen && props.canManageContacts ? (
               <ContactWorkflowModal
                 title="Nouveau contact"
-                eyebrow="Creation Hektor"
+                eyebrow={bvs("Creation Hektor")}
                 summary="Creation via le workflow contact existant, puis ajout aux invites si un email est renseigne."
                 tone="create"
                 onClose={() => setContactCreateOpen(false)}
@@ -35742,7 +35733,7 @@ function MobileDossierDetail(props: {
   const lightweightReadOnlyLabel = isArchivedLightweightDetail
     ? 'Cette fiche archivée est consultable. Les demandes, modifications, photos, documents et actions de diffusion seront rouvertes après désarchivage.'
     : isBrouillonLightweightDetail
-      ? 'Cette annonce est un brouillon : sa saisie n’est pas terminée chez Hektor. Elle est consultable ici, et se reprend là-bas.'
+      ? bvs('Cette annonce est un brouillon : sa saisie n’est pas terminée chez Hektor. Elle est consultable ici, et se reprend là-bas.')
       : 'Cette fiche vendue ou close est consultable depuis un index léger. Les modifications restent bloquées tant que la fiche n’est pas revenue dans le périmètre principal.'
   const canShowDiffusion = props.adminPilotSurface === 'diffusion' || props.adminPilotSurface === 'both'
   const canShowMandatePilot = props.adminPilotSurface === 'sidebar' || props.adminPilotSurface === 'both'
@@ -35915,7 +35906,7 @@ function MobileDossierDetail(props: {
       {(canShowMandatePilot || props.allowMarkValidation || props.allowMarkDiffusable) && !isLightweightDetail ? (
         <section className="mobile-detail-section mobile-detail-pilot">
           <div className="mobile-detail-section-head">
-            <span>Pilotage Hektor</span>
+            <span>{bvs("Pilotage Hektor")}</span>
             <strong>{props.markValidationPending || props.markDiffusablePending ? 'Synchronisation...' : 'Contrôle'}</strong>
           </div>
           {props.allowMarkValidation ? (
@@ -37686,7 +37677,7 @@ function HektorContactIdentityForm(props: {
       return
     }
     if (isCompanyPerson && !legalForm.trim()) {
-      setError('Forme juridique requise pour une personne morale Hektor.')
+      setError(bvs('Forme juridique requise pour une personne morale Hektor.'))
       return
     }
     if (isCouplePerson && !spouseLastName.trim()) {
@@ -37694,32 +37685,32 @@ function HektorContactIdentityForm(props: {
       return
     }
     if (props.mode === 'create' && !email.trim() && !phone.trim() && !phoneSecondary.trim()) {
-      setError('Email ou telephone requis pour creer un contact Hektor.')
+      setError(bvs('Email ou telephone requis pour creer un contact Hektor.'))
       return
     }
     if (props.hektorNegotiators && props.hektorNegotiators.length === 0) {
-      setError('Repertoire negociateurs Hektor indisponible, impossible de garantir le bon acces agence/nego.')
+      setError(bvs('Repertoire negociateurs Hektor indisponible, impossible de garantir le bon acces agence/nego.'))
       return
     }
     if (availableHektorNegotiators.length > 0 && !selectedHektorUser) {
-      setError('Choisis le negociateur Hektor qui portera cette action contact.')
+      setError(bvs('Choisis le negociateur Hektor qui portera cette action contact.'))
       return
     }
     if (!selectedHektorId && !selectedHektorEmail) {
-      setError('Choisis le compte Hektor qui portera cette action contact.')
+      setError(bvs('Choisis le compte Hektor qui portera cette action contact.'))
       return
     }
     if (contactStep === 'search' && createSearchCriteria) {
       if (searchValue.typeIds.length === 0) {
-        setError('Selectionne au moins un type de bien pour la recherche Hektor.')
+        setError(bvs('Selectionne au moins un type de bien pour la recherche Hektor.'))
         return
       }
       if (!searchValue.localities.length) {
-        setError('Ajoute au moins une commune pour la recherche Hektor.')
+        setError(bvs('Ajoute au moins une commune pour la recherche Hektor.'))
         return
       }
       if (!searchValue.priceMax) {
-        setError('Budget maximum requis pour creer la recherche Hektor.')
+        setError(bvs('Budget maximum requis pour creer la recherche Hektor.'))
         return
       }
     }
@@ -37836,9 +37827,9 @@ function HektorContactIdentityForm(props: {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10" cy="8" r="4" /><path d="M3 21a7 7 0 0 1 12-5" /><path d="M19 14v6M16 17h6" /></svg>
               </span>
               <div>
-                <div className="edit-eyebrow">Création Hektor</div>
+                <div className="edit-eyebrow">{bvs("Création Hektor")}</div>
                 <h2 className="edit-title" id="cnewTitle">Nouveau contact</h2>
-                <div className="head-meta"><span className="hm-pill"><span className="hm-dot" />Création globale · resynchronisation Hektor</span></div>
+                <div className="head-meta"><span className="hm-pill"><span className="hm-dot" />{bvs("Création globale · resynchronisation Hektor")}</span></div>
               </div>
             </div>
             <div className="head-right">
@@ -37854,14 +37845,14 @@ function HektorContactIdentityForm(props: {
           <div className="edit-context">
             <div className="ctx-acct">
               <div className="wrap">
-                <span className="k">Compte Hektor</span>
+                <span className="k">{bvs("Compte Hektor")}</span>
                 {availableHektorNegotiators.length > 0 ? (
                   <select
                     value={selectedHektorUserId}
                     onChange={(event) => setSelectedHektorUserId(event.target.value)}
                     disabled={props.profileRole === 'commercial' && availableHektorNegotiators.length <= 1}
                     required
-                    aria-label="Compte Hektor"
+                    aria-label={bvs("Compte Hektor")}
                   >
                     <option value="">{props.profileRole === 'commercial' ? 'Acces personnel' : 'Choisir le negociateur'}</option>
                     {availableHektorNegotiators.map((negotiator) => (
@@ -37871,10 +37862,10 @@ function HektorContactIdentityForm(props: {
                     ))}
                   </select>
                 ) : (
-                  <input value={selectedHektorEmail || selectedHektorId || 'Contexte Hektor non detecte'} disabled aria-label="Compte Hektor" />
+                  <input value={selectedHektorEmail || selectedHektorId || bvs('Contexte Hektor non detecte')} disabled aria-label={bvs("Compte Hektor")} />
                 )}
               </div>
-              <span className="hint">Le contact sera créé sous ce compte Hektor.</span>
+              <span className="hint">{bvs("Le contact sera créé sous ce compte Hektor.")}</span>
             </div>
             <div className="stepper">
               <div className={`step-conn${contactStep !== 'identity' ? ' rev' : ''}`}>
@@ -37919,7 +37910,7 @@ function HektorContactIdentityForm(props: {
                     </div>
                     <div className="fgrid3" style={{ marginBottom: 15 }}>
                       <div className="field">
-                        <label>Type Hektor</label>
+                        <label>{bvs("Type Hektor")}</label>
                         <select className="inp" value={contactKind} onChange={(event) => setContactKind(event.target.value)} required>
                           {hektorContactKindOptions.map((option) => (
                             <option key={`contact-kind-${option.value}`} value={option.value}>{option.label}</option>
@@ -37934,7 +37925,7 @@ function HektorContactIdentityForm(props: {
                             <option key={`person-type-${option.value}`} value={option.value}>{option.label}</option>
                           ))}
                         </select>
-                        {isPartnerKind ? <span className="field-note">Hektor partenaire accepte personne morale ou physique.</span> : null}
+                        {isPartnerKind ? <span className="field-note">{bvs("Hektor partenaire accepte personne morale ou physique.")}</span> : null}
                       </div>
                       {isCompanyPerson ? (
                         <div className="field">
@@ -38028,7 +38019,7 @@ function HektorContactIdentityForm(props: {
                       <span className="fsec-t">Qualification &amp; naissance</span>
                     </div>
                     <div className="fgrid3" style={{ marginBottom: 15 }}>
-                      <div className="field"><label>Date de naissance</label><input className="inp" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" /><span className="field-note warm">Utilisée par le message anniversaire Hektor.</span></div>
+                      <div className="field"><label>Date de naissance</label><input className="inp" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" /><span className="field-note warm">{bvs("Utilisée par le message anniversaire Hektor.")}</span></div>
                       <div className="field col2"><label>Lieu de naissance</label><input className="inp" value={birthPlace} onChange={(event) => setBirthPlace(event.target.value)} placeholder="—" /></div>
                     </div>
                     <div className="fgrid3">
@@ -38063,24 +38054,24 @@ function HektorContactIdentityForm(props: {
                   <div className="fsec">
                     <div className="fsec-h">
                       <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
-                      <span className="fsec-t">Automatismes Hektor &amp; RGPD</span>
+                      <span className="fsec-t">{bvs("Automatismes Hektor & RGPD")}</span>
                     </div>
                     <div className="fgrid3" style={{ marginBottom: 15 }}>
                       <div className="field"><label>Mail nouveau mandat</label>
                         <select className="inp" value={crmMandateSummaryEnabled} onChange={(event) => setCrmMandateSummaryEnabled(event.target.value)}>
-                          <option value="">Réglage Hektor</option><option value="true">Activé</option><option value="false">Coupé</option>
+                          <option value="">{bvs("Réglage Hektor")}</option><option value="true">Activé</option><option value="false">Coupé</option>
                         </select>
                         <span className="field-note">Automatisme CRM par contact.</span>
                       </div>
                       <div className="field"><label>Mail échéance mandat</label>
                         <select className="inp" value={crmMandateExpirationEnabled} onChange={(event) => setCrmMandateExpirationEnabled(event.target.value)}>
-                          <option value="">Réglage Hektor</option><option value="true">Activé</option><option value="false">Coupé</option>
+                          <option value="">{bvs("Réglage Hektor")}</option><option value="true">Activé</option><option value="false">Coupé</option>
                         </select>
                         <span className="field-note">Alerte avant fin de mandat.</span>
                       </div>
                       <div className="field"><label>Message anniversaire</label>
                         <select className="inp" value={crmBirthdayEnabled} onChange={(event) => setCrmBirthdayEnabled(event.target.value)}>
-                          <option value="">Réglage Hektor</option><option value="true">Activé</option><option value="false">Coupé</option>
+                          <option value="">{bvs("Réglage Hektor")}</option><option value="true">Activé</option><option value="false">Coupé</option>
                         </select>
                         <span className="field-note">Nécessite une date de naissance.</span>
                       </div>
@@ -38089,7 +38080,7 @@ function HektorContactIdentityForm(props: {
                       <span className="check-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12.5 10 17 19 7" /></svg></span>
                       <span className="tr-bd"><span className="check-t">Envoyer l'email d'activation Espace personnel / RGPD</span><span className="check-s">Le contact reçoit le lien d'activation et le consentement RGPD.</span></span>
                     </button>
-                    <div className="field full"><label>Note Hektor</label><textarea className="inp" value={comments} onChange={(event) => setComments(event.target.value)} rows={3} placeholder="Note interne synchronisée avec Hektor…" /></div>
+                    <div className="field full"><label>{bvs("Note Hektor")}</label><textarea className="inp" value={comments} onChange={(event) => setComments(event.target.value)} rows={3} placeholder={bvs("Note interne synchronisée avec Hektor…")} /></div>
                   </div>
                 </div>
 
@@ -38113,7 +38104,7 @@ function HektorContactIdentityForm(props: {
                     <div className="pcard-foot">
                       <div className="pc-meter-top"><span>Complétion</span><b>{cnewFilled} / 5</b></div>
                       <div className="pc-bar"><i style={{ width: `${cnewFilled / 5 * 100}%` }} /></div>
-                      <div className="pc-neg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg>Négociateur · {selectedHektorUser?.label ?? selectedHektorEmail ?? 'Compte Hektor'}</div>
+                      <div className="pc-neg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg>Négociateur · {selectedHektorUser?.label ?? selectedHektorEmail ?? bvs('Compte Hektor')}</div>
                     </div>
                   </div>
                 </aside>
@@ -38127,9 +38118,9 @@ function HektorContactIdentityForm(props: {
                   <span className="tr-bd">
                     <span className="check-t" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                       <input type="checkbox" checked={createSearchCriteria} onChange={(event) => setCreateSearchCriteria(event.target.checked)} />
-                      Créer la recherche dans Hektor
+                      {bvs("Créer la recherche dans Hektor")}
                     </span>
-                    <span className="check-s">Page 2 Hektor : offre, types, secteur et critères de la recherche acquéreur.</span>
+                    <span className="check-s">{bvs("Page 2 Hektor : offre, types, secteur et critères de la recherche acquéreur.")}</span>
                   </span>
                 </label>
                 <div className="csearch">
@@ -38240,13 +38231,13 @@ function HektorContactIdentityForm(props: {
       <div className="hektor-inline-form-head">
         <span className="hektor-inline-icon" aria-hidden="true">{props.mode === 'create' ? '+' : 'ID'}</span>
         <div>
-          <strong>{props.mode === 'create' ? 'Nouveau contact Hektor' : 'Modifier le contact Hektor'}</strong>
-          <small>{props.mode === 'create' ? 'Creation globale, contexte Hektor controle, puis resynchronisation ciblee.' : 'Modification de la fiche Hektor avec le contexte negociateur cible.'}</small>
+          <strong>{props.mode === 'create' ? bvs('Nouveau contact Hektor') : bvs('Modifier le contact Hektor')}</strong>
+          <small>{props.mode === 'create' ? bvs('Creation globale, contexte Hektor controle, puis resynchronisation ciblee.') : bvs('Modification de la fiche Hektor avec le contexte negociateur cible.')}</small>
         </div>
       </div>
       <div className="contact-editor-context">
         <label>
-          <span>Compte Hektor</span>
+          <span>{bvs("Compte Hektor")}</span>
           {availableHektorNegotiators.length > 0 ? (
             <select
               value={selectedHektorUserId}
@@ -38262,9 +38253,9 @@ function HektorContactIdentityForm(props: {
               ))}
             </select>
           ) : (
-            <input value={selectedHektorEmail || selectedHektorId || 'Contexte Hektor non detecte'} disabled />
+            <input value={selectedHektorEmail || selectedHektorId || bvs('Contexte Hektor non detecte')} disabled />
           )}
-          <small>{props.mode === 'create' ? 'Le contact sera cree sous ce compte Hektor.' : 'Ce compte sera utilise pour enregistrer la modification dans Hektor.'}</small>
+          <small>{props.mode === 'create' ? bvs('Le contact sera cree sous ce compte Hektor.') : bvs('Ce compte sera utilise pour enregistrer la modification dans Hektor.')}</small>
         </label>
       </div>
       {duplicateCandidates.length > 0 ? (
@@ -38289,7 +38280,7 @@ function HektorContactIdentityForm(props: {
         {props.mode === 'create' ? (
           <>
             <label>
-              <span>Type Hektor</span>
+              <span>{bvs("Type Hektor")}</span>
               <select value={contactKind} onChange={(event) => setContactKind(event.target.value)} required>
                 {hektorContactKindOptions.map((option) => (
                   <option key={`contact-kind-${option.value}`} value={option.value}>{option.label}</option>
@@ -38304,7 +38295,7 @@ function HektorContactIdentityForm(props: {
                   <option key={`person-type-${option.value}`} value={option.value}>{option.label}</option>
                 ))}
               </select>
-              {isPartnerKind ? <small>Hektor partenaire accepte personne morale ou personne physique.</small> : null}
+              {isPartnerKind ? <small>{bvs("Hektor partenaire accepte personne morale ou personne physique.")}</small> : null}
             </label>
           </>
         ) : null}
@@ -38429,7 +38420,7 @@ function HektorContactIdentityForm(props: {
         <label className="is-small">
           <span>Date naissance</span>
           <input value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" />
-          <small>Utilisee par le message anniversaire Hektor.</small>
+          <small>{bvs("Utilisee par le message anniversaire Hektor.")}</small>
         </label>
         <label>
           <span>Lieu naissance</span>
@@ -38465,7 +38456,7 @@ function HektorContactIdentityForm(props: {
         <label>
           <span>Mail nouveau mandat</span>
           <select value={crmMandateSummaryEnabled} onChange={(event) => setCrmMandateSummaryEnabled(event.target.value)}>
-            <option value="">Reglage Hektor</option>
+            <option value="">{bvs("Reglage Hektor")}</option>
             <option value="true">Oui</option>
             <option value="false">Non</option>
           </select>
@@ -38474,16 +38465,16 @@ function HektorContactIdentityForm(props: {
         <label>
           <span>Mail echeance mandat</span>
           <select value={crmMandateExpirationEnabled} onChange={(event) => setCrmMandateExpirationEnabled(event.target.value)}>
-            <option value="">Reglage Hektor</option>
+            <option value="">{bvs("Reglage Hektor")}</option>
             <option value="true">Oui</option>
             <option value="false">Non</option>
           </select>
-          <small>Alerte Hektor avant fin de mandat.</small>
+          <small>{bvs("Alerte Hektor avant fin de mandat.")}</small>
         </label>
         <label>
           <span>Message anniversaire</span>
           <select value={crmBirthdayEnabled} onChange={(event) => setCrmBirthdayEnabled(event.target.value)}>
-            <option value="">Reglage Hektor</option>
+            <option value="">{bvs("Reglage Hektor")}</option>
             <option value="true">Oui</option>
             <option value="false">Non</option>
           </select>
@@ -38494,7 +38485,7 @@ function HektorContactIdentityForm(props: {
           <span>Envoyer l'email d'activation Espace personnel/RGPD</span>
         </label>
         <label className="is-wide">
-          <span>Note Hektor</span>
+          <span>{bvs("Note Hektor")}</span>
           <textarea value={comments} onChange={(event) => setComments(event.target.value)} rows={3} />
         </label>
       </div>
@@ -38503,11 +38494,11 @@ function HektorContactIdentityForm(props: {
         <div className="contact-next-step-panel">
           <div className="contact-next-step-head">
             <strong>{contactKind === 'locataire' ? 'Recherche locataire' : 'Recherche acquéreur'}</strong>
-            <span>Page 2 Hektor : offre, types, secteur et critères de la recherche.</span>
+            <span>{bvs("Page 2 Hektor : offre, types, secteur et critères de la recherche.")}</span>
           </div>
           <label className="contact-editor-toggle contact-next-toggle">
             <input type="checkbox" checked={createSearchCriteria} onChange={(event) => setCreateSearchCriteria(event.target.checked)} />
-            <span>Créer la recherche dans Hektor</span>
+            <span>{bvs("Créer la recherche dans Hektor")}</span>
           </label>
           <div className="csearch">
             <ContactSearchFields
@@ -38525,7 +38516,7 @@ function HektorContactIdentityForm(props: {
         <div className="contact-next-step-panel">
           <div className="contact-next-step-head">
             <strong>Nouveau mandant</strong>
-            <span>Page 2 Hektor: Rattacher un bien existant, Creer un bien ou Terminer.</span>
+            <span>{bvs("Page 2 Hektor: Rattacher un bien existant, Creer un bien ou Terminer.")}</span>
           </div>
           <div className="contact-owner-choice-grid">
             {[
@@ -40437,7 +40428,7 @@ const contactEditSections = [
   { id: 'sec-loc', label: 'Localisation', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z" /><circle cx="12" cy="10" r="2.5" /></svg> },
   { id: 'sec-qualif', label: 'Qualification', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 7h18M3 12h18M3 17h12" /></svg> },
   { id: 'sec-auto', label: 'Automatismes', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg> },
-  { id: 'sec-note', label: 'Note Hektor', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg> },
+  { id: 'sec-note', label: bvs('Note Hektor'), icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg> },
 ] as const
 
 function ContactEditModalV2(props: {
@@ -40584,8 +40575,8 @@ function ContactEditModalV2(props: {
   const handleSave = async () => {
     setError(null)
     if (!lastName.trim()) { setError('Nom contact requis.'); setActiveSection('sec-identite'); scrollToSection('sec-identite'); return }
-    if (availableHektorNegotiators.length > 0 && !selectedHektorUser) { setError('Choisis le négociateur Hektor qui portera la modification.'); return }
-    if (!selectedHektorId && !selectedHektorEmail) { setError('Choisis le compte Hektor qui portera la modification.'); return }
+    if (availableHektorNegotiators.length > 0 && !selectedHektorUser) { setError(bvs('Choisis le négociateur Hektor qui portera la modification.')); return }
+    if (!selectedHektorId && !selectedHektorEmail) { setError(bvs('Choisis le compte Hektor qui portera la modification.')); return }
     setPending(true)
     try {
       const input: HektorContactIdentityInput = {
@@ -40651,9 +40642,9 @@ function ContactEditModalV2(props: {
           <div className="edit-h-main">
             <span className="edit-badge">ID</span>
             <div>
-              <div className="edit-eyebrow">Mise à jour Hektor</div>
+              <div className="edit-eyebrow">{bvs("Mise à jour Hektor")}</div>
               <h2 className="edit-title" id="contactEditTitle">Modifier le contact</h2>
-              <p className="edit-sub">Les changements sont envoyés au worker Hektor puis resynchronisés vers le local et Supabase.</p>
+              <p className="edit-sub">{bvs("Les changements sont envoyés au worker Hektor puis resynchronisés vers le local et Supabase.")}</p>
             </div>
           </div>
           <button className="edit-close" type="button" onClick={props.onClose}>
@@ -40671,13 +40662,13 @@ function ContactEditModalV2(props: {
           </div>
           <span className="ec-sp" />
           <label className="ec-acct">
-            <span className="k">Compte Hektor</span>
+            <span className="k">{bvs("Compte Hektor")}</span>
             {availableHektorNegotiators.length > 0 ? (
               <select
                 value={selectedHektorUserId}
                 onChange={(event) => setSelectedHektorUserId(event.target.value)}
                 disabled={props.profileRole === 'commercial' && availableHektorNegotiators.length <= 1}
-                aria-label="Compte Hektor"
+                aria-label={bvs("Compte Hektor")}
               >
                 <option value="">{props.profileRole === 'commercial' ? 'Accès personnel' : 'Choisir le négociateur'}</option>
                 {availableHektorNegotiators.map((negotiator) => (
@@ -40687,8 +40678,8 @@ function ContactEditModalV2(props: {
                 ))}
               </select>
             ) : (
-              <select aria-label="Compte Hektor" disabled value="ctx">
-                <option value="ctx">{selectedHektorEmail || selectedHektorId || 'Contexte Hektor non détecté'}</option>
+              <select aria-label={bvs("Compte Hektor")} disabled value="ctx">
+                <option value="ctx">{selectedHektorEmail || selectedHektorId || bvs('Contexte Hektor non détecté')}</option>
               </select>
             )}
           </label>
@@ -40739,7 +40730,7 @@ function ContactEditModalV2(props: {
                 <div className="field">
                   <label>Date de naissance</label>
                   <input className="inp" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" />
-                  <span className="field-note warm">Utilisée par le message anniversaire Hektor.</span>
+                  <span className="field-note warm">{bvs("Utilisée par le message anniversaire Hektor.")}</span>
                 </div>
                 <div className="field col2"><label>Lieu de naissance</label><input className="inp" value={birthPlace} onChange={(event) => setBirthPlace(event.target.value)} placeholder="—" /></div>
               </div>
@@ -40784,7 +40775,7 @@ function ContactEditModalV2(props: {
             <div className="fsec" id="sec-auto">
               <div className="fsec-h">
                 <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
-                <span className="fsec-t">Automatismes Hektor</span>
+                <span className="fsec-t">{bvs("Automatismes Hektor")}</span>
                 <span className="fsec-sp" />
                 <span className="fsec-tag">Réglage par contact</span>
               </div>
@@ -40797,7 +40788,7 @@ function ContactEditModalV2(props: {
                 <div className="autoc">
                   <div className="autoc-t">Mail échéance mandat</div>
                   {renderAutoSeg(crmMandateExpirationEnabled, setCrmMandateExpirationEnabled)}
-                  <div className="autoc-note">Alerte Hektor avant la fin du mandat.</div>
+                  <div className="autoc-note">{bvs("Alerte Hektor avant la fin du mandat.")}</div>
                 </div>
                 <div className="autoc">
                   <div className="autoc-t">Message anniversaire</div>
@@ -40819,15 +40810,15 @@ function ContactEditModalV2(props: {
             <div className="fsec" id="sec-note">
               <div className="fsec-h">
                 <span className="fsec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg></span>
-                <span className="fsec-t">Note Hektor</span>
+                <span className="fsec-t">{bvs("Note Hektor")}</span>
               </div>
-              <div className="field full"><textarea className="inp" value={comments} onChange={(event) => setComments(event.target.value)} placeholder="Note interne synchronisée avec Hektor…" /></div>
+              <div className="field full"><textarea className="inp" value={comments} onChange={(event) => setComments(event.target.value)} placeholder={bvs("Note interne synchronisée avec Hektor…")} /></div>
             </div>
           </div>
         </div>
 
         <footer className="edit-foot">
-          {error ? <span className="edit-error">{error}</span> : <span className="spacer"><span className="d" />Synchronisé via le worker Hektor</span>}
+          {error ? <span className="edit-error">{error}</span> : <span className="spacer"><span className="d" />{bvs("Synchronisé via le worker Hektor")}</span>}
           <button className="btn ghost" type="button" onClick={props.onClose} disabled={pending}>Annuler</button>
           <button className="btn brand" type="button" onClick={() => void handleSave()} disabled={pending}>{pending ? 'Enregistrement…' : 'Enregistrer les modifications'}</button>
         </footer>
@@ -41300,10 +41291,10 @@ function ContactDetailPopupBase(props: {
     return 'tg'
   }
   const activityItems: Array<{ d: string; t: string; s: string; soft?: boolean }> = []
-  if (props.contact.contact_detail_synced_at) activityItems.push({ d: formatDate(props.contact.contact_detail_synced_at), t: 'Synchronisation Hektor', s: candidateId ? `Détail candidat ${candidateId} rapproché sur la fiche.` : 'Fiche resynchronisée depuis Hektor.' })
+  if (props.contact.contact_detail_synced_at) activityItems.push({ d: formatDate(props.contact.contact_detail_synced_at), t: bvs('Synchronisation Hektor'), s: candidateId ? `Détail candidat ${candidateId} rapproché sur la fiche.` : bvs('Fiche resynchronisée depuis Hektor.') })
   if (props.contact.date_maj) activityItems.push({ d: formatDate(props.contact.date_maj), t: 'Fiche mise à jour', s: 'Dernière modification de la fiche contact.', soft: true })
   props.relations.slice(0, 1).forEach((relation) => activityItems.push({ d: relation.contact_date_maj ? formatDate(relation.contact_date_maj) : '—', t: 'Annonce rattachée', s: `${relation.numero_mandat ? `Mandat ${relation.numero_mandat}` : relation.numero_dossier || `Annonce ${relation.hektor_annonce_id}`} · ${contactDirectoryRoleLabel(relation.role_contact)}.`, soft: true }))
-  if (props.contact.date_enregistrement) activityItems.push({ d: formatDate(props.contact.date_enregistrement), t: 'Contact créé', s: `Import depuis Hektor${contactLocation && contactLocation !== '-' ? ` · secteur ${contactLocation}` : ''}.`, soft: true })
+  if (props.contact.date_enregistrement) activityItems.push({ d: formatDate(props.contact.date_enregistrement), t: 'Contact créé', s: bvt`Import depuis Hektor${contactLocation && contactLocation !== '-' ? ` · secteur ${contactLocation}` : ''}.`, soft: true })
   const sortedGoogleEvents = [...activeGoogleContactEvents].sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime())
   const upcomingGoogleEvents = sortedGoogleEvents.filter((event) => new Date(event.starts_at).getTime() >= Date.now())
 
@@ -41404,7 +41395,7 @@ function ContactDetailPopupBase(props: {
                   </div>
                   <div className="coord">
                     <span className="coord-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" /><path d="m9 12 2 2 4-4" /></svg></span>
-                    <div className="coord-bd"><div className="coord-k">Détail Hektor</div><div className="coord-v" style={hasDetail ? { color: '#1f6e44' } : undefined}>{hasDetail ? 'Détail Hektor lu' : 'Détail à charger'}</div></div>
+                    <div className="coord-bd"><div className="coord-k">{bvs("Détail Hektor")}</div><div className="coord-v" style={hasDetail ? { color: '#1f6e44' } : undefined}>{hasDetail ? bvs('Détail Hektor lu') : 'Détail à charger'}</div></div>
                   </div>
                 </div>
               </div>
@@ -41417,7 +41408,7 @@ function ContactDetailPopupBase(props: {
                 <button className={`tab ${contactDetailTab === 'emails' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('emails')}>Échanges</button>
                 <button className={`tab ${contactDetailTab === 'history' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('history')}>Suivi &amp; historique</button>
                 <button className={`tab ${contactDetailTab === 'notes' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('notes')}>Notes &amp; qualif.</button>
-                <button className={`tab ${contactDetailTab === 'sync' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('sync')}>Données Hektor</button>
+                <button className={`tab ${contactDetailTab === 'sync' ? 'active' : ''}`} type="button" onClick={() => setContactDetailTab('sync')}>{bvs("Données Hektor")}</button>
               </nav>
 
               {contactDetailTab === 'summary' ? (
@@ -41489,7 +41480,7 @@ function ContactDetailPopupBase(props: {
                                 const hiddenCities = cities.length - shownCities.length
                                 const prov = contactSearchProvisional(search)
                                 return (
-                                  <div key={`search-${search.contact_search_key}`} className={`lk fcx-srch${prov.provisoire ? ' is-provisional' : ''}${prov.enErreur ? ' is-provisional-error' : ''}`} title={prov.enErreur ? (prov.message || 'La creation a echoue chez Hektor') : undefined} style={{ cursor: 'default' }}>
+                                  <div key={`search-${search.contact_search_key}`} className={`lk fcx-srch${prov.provisoire ? ' is-provisional' : ''}${prov.enErreur ? ' is-provisional-error' : ''}`} title={prov.enErreur ? (prov.message || bvs('La creation a echoue chez Hektor')) : undefined} style={{ cursor: 'default' }}>
                                     <div className="lk-bd">
                                       <div className="fcx-srch-top">
                                         <span className="fcx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} width="14" height="14"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.4-3.4" /></svg></span>
@@ -41540,7 +41531,7 @@ function ContactDetailPopupBase(props: {
                               <div className="empty-lg">
                                 <span className="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></span>
                                 <div className="eh">Aucune recherche active</div>
-                                <div className="es">{hasDetail ? 'Aucun critère d\'acquisition poussé sur Supabase. Créez une recherche pour rapprocher ce contact des biens.' : 'Recherche visible après chargement de la fiche détail Hektor.'}</div>
+                                <div className="es">{hasDetail ? 'Aucun critère d\'acquisition poussé sur Supabase. Créez une recherche pour rapprocher ce contact des biens.' : bvs('Recherche visible après chargement de la fiche détail Hektor.')}</div>
                               </div>
                               <div className="crit">
                                 <div className="crit-c"><div className="crit-k">Budget</div><div className="crit-v">À définir</div></div>
@@ -41571,14 +41562,14 @@ function ContactDetailPopupBase(props: {
 
                   <section className="section">
                     <div className="sec-head-row">
-                      <div className="sec-label">Dernière synchronisation Hektor</div>
+                      <div className="sec-label">{bvs("Dernière synchronisation Hektor")}</div>
                       <button className="linkmini" type="button" onClick={() => setContactDetailTab('sync')}>Détail synchronisation →</button>
                     </div>
                     <div className="dbar">
                       <span className="dbar-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2" /><path d="M18 4v5h-5M6 20v-5h5" /></svg></span>
                       <div>
-                        <div className="dbar-t">{hasDetail ? 'Détail Hektor disponible' : 'Détail Hektor à charger'}</div>
-                        <div className="dbar-s">{hasDetail ? 'Fiche resynchronisée depuis Hektor · candidat rapproché' : 'En attente de la prochaine reprise Hektor'}</div>
+                        <div className="dbar-t">{hasDetail ? bvs('Détail Hektor disponible') : bvs('Détail Hektor à charger')}</div>
+                        <div className="dbar-s">{hasDetail ? bvs('Fiche resynchronisée depuis Hektor · candidat rapproché') : bvs('En attente de la prochaine reprise Hektor')}</div>
                       </div>
                       <div className="dbar-grid">
                         <div className="dbar-f"><span className="k">État</span><span className={`v ${hasDetail ? 'ok' : ''}`}>{hasDetail ? 'Détail lu' : 'À charger'}</span></div>
@@ -41706,7 +41697,7 @@ function ContactDetailPopupBase(props: {
                       {props.canManageContacts ? <button className="btn brand-soft sm" type="button" onClick={() => setEditing(true)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14" /></svg>Modifier la qualif.</button> : null}
                     </div>
                     <div className="mod">
-                      <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg></span><span className="et">Aucune note contact dans l'app pour le moment. La fiche conserve les informations Hektor, les RDV Google et les relations annonces.</span></div>
+                      <div className="empty"><span className="ee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 5h16v11H8l-4 4V5Z" /></svg></span><span className="et">{bvs("Aucune note contact dans l'app pour le moment. La fiche conserve les informations Hektor, les RDV Google et les relations annonces.")}</span></div>
                     </div>
                   </section>
                 </div>
@@ -41718,7 +41709,7 @@ function ContactDetailPopupBase(props: {
                     <div className="dbar">
                       <span className="dbar-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2" /><path d="M18 4v5h-5M6 20v-5h5" /></svg></span>
                       <div>
-                        <div className="dbar-t">Synchronisation Hektor</div>
+                        <div className="dbar-t">{bvs("Synchronisation Hektor")}</div>
                         <div className="dbar-s">{hasDetail ? 'Dernière reprise · détail candidat lu' : 'Détail non encore chargé'}</div>
                       </div>
                       <div className="dbar-grid">
@@ -41728,11 +41719,11 @@ function ContactDetailPopupBase(props: {
                     </div>
                   </section>
                   <section className="section">
-                    <div className="sec-label">Détail candidat Hektor</div>
+                    <div className="sec-label">{bvs("Détail candidat Hektor")}</div>
                     <div className="mod">
                       <div className="fgrid">
                         <div className="fcell"><span className="fk">Candidat principal</span><span className="fv">{candidateId || '—'}</span></div>
-                        <div className="fcell"><span className="fk">Détail Hektor</span><span className={`fv ${hasDetail ? 'brand' : 'muted'}`}>{hasDetail ? 'Disponible' : 'À charger'}</span></div>
+                        <div className="fcell"><span className="fk">{bvs("Détail Hektor")}</span><span className={`fv ${hasDetail ? 'brand' : 'muted'}`}>{hasDetail ? 'Disponible' : 'À charger'}</span></div>
                         <div className="fcell"><span className="fk">Détail lu le</span><span className="fv">{syncDate || '—'}</span></div>
                         <div className="fcell"><span className="fk">Doublons</span><span className="fv">{duplicateCount}</span></div>
                         <div className="fcell"><span className="fk">Négociateur</span><span className="fv">{props.contact.commercial_nom || '—'}</span></div>
@@ -41807,14 +41798,14 @@ function ContactDetailPopupBase(props: {
         <ContactWorkflowModal
           title="Supprimer le contact"
           eyebrow="Action sensible"
-          summary="La suppression passe par Hektor, puis nettoie la copie locale et le listing Supabase."
+          summary={bvs("La suppression passe par Hektor, puis nettoie la copie locale et le listing Supabase.")}
           tone="danger"
           onClose={() => setDeleteOpen(false)}
         >
           <form className="contact-delete-panel contact-delete-panel-modern delete-annonce-form" onSubmit={handleDeleteContact}>
             <section className="delete-annonce-warning">
               <strong>{props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`}</strong>
-              <span>Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.</span>
+              <span>{bvs("Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.")}</span>
             </section>
             <label className="filter-field">
               <span>Raison interne</span>
@@ -41834,7 +41825,7 @@ function ContactDetailPopupBase(props: {
             <div className="modal-actions">
               <button className="ghost-button button-subtle" type="button" onClick={() => setDeleteOpen(false)} disabled={deletePending}>Annuler</button>
               <button className="ghost-button button-danger" type="submit" disabled={deletePending || deleteConfirmText.trim() !== expectedDeleteConfirm}>
-                {deletePending ? 'Envoi...' : 'Supprimer dans Hektor'}
+                {deletePending ? 'Envoi...' : bvs('Supprimer dans Hektor')}
               </button>
             </div>
           </form>
@@ -42651,7 +42642,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                     const isExpanded = expandedSearchKeys.has(search.contact_search_key)
                     const prov = contactSearchProvisional(search)
                     return (
-                      <div key={`fa-cx-srch-${search.contact_search_key}`} className={`fa-cx-srch${prov.provisoire ? ' is-provisional' : ''}${prov.enErreur ? ' is-provisional-error' : ''}`} title={prov.enErreur ? (prov.message || 'La creation a echoue chez Hektor') : undefined}>
+                      <div key={`fa-cx-srch-${search.contact_search_key}`} className={`fa-cx-srch${prov.provisoire ? ' is-provisional' : ''}${prov.enErreur ? ' is-provisional-error' : ''}`} title={prov.enErreur ? (prov.message || bvs('La creation a echoue chez Hektor')) : undefined}>
                         <span className="fa-cx-srch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}><path d="M3 11l9-7 9 7" /><path d="M5 10v9h14v-9" /><path d="M9 19v-6h6v6" /></svg></span>
                         <div className="fa-cx-srch-main">
                           <div className="fa-cx-srch-head">
@@ -42978,8 +42969,8 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
                 </div>
                 {/* ── GAP 3 — Données Hektor (portage de l'onglet Synchronisation de ...Base) ── */}
                 <div className="fa-cx-dbar">
-                  <div className="fa-cx-dbar-f"><span className="k">Détail Hektor</span><span className={`v ${hasDetail ? 'ok' : ''}`}>{hasDetail ? 'Disponible' : 'À charger'}</span></div>
-                  <div className="fa-cx-dbar-f"><span className="k">Détail Hektor lu le</span><span className="v">{syncDate || '—'}</span></div>
+                  <div className="fa-cx-dbar-f"><span className="k">{bvs("Détail Hektor")}</span><span className={`v ${hasDetail ? 'ok' : ''}`}>{hasDetail ? 'Disponible' : 'À charger'}</span></div>
+                  <div className="fa-cx-dbar-f"><span className="k">{bvs("Détail Hektor lu le")}</span><span className="v">{syncDate || '—'}</span></div>
                   <div className="fa-cx-dbar-f"><span className="k">ID contact</span><span className="v">{props.contact.hektor_contact_id}</span></div>
                   <div className="fa-cx-dbar-f"><span className="k">Recherches connues</span><span className="v">{props.contact.total_search_count ?? props.searches.length}</span></div>
                   <div className="fa-cx-dbar-f"><span className="k">Recherches actives</span><span className="v">{selectedActiveSearches.length}</span></div>
@@ -43041,14 +43032,14 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         <ContactWorkflowModal
           title="Supprimer le contact"
           eyebrow="Action sensible"
-          summary="La suppression passe par Hektor, puis nettoie la copie locale et le listing Supabase."
+          summary={bvs("La suppression passe par Hektor, puis nettoie la copie locale et le listing Supabase.")}
           tone="danger"
           onClose={() => setDeleteOpen(false)}
         >
           <form className="contact-delete-panel contact-delete-panel-modern delete-annonce-form" onSubmit={handleDeleteContact}>
             <section className="delete-annonce-warning">
               <strong>{props.contact.display_name || `Contact ${props.contact.hektor_contact_id}`}</strong>
-              <span>Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.</span>
+              <span>{bvs("Suppression Hektor, nettoyage local et retrait Supabase. Action reservee administrateur.")}</span>
             </section>
             <label className="filter-field">
               <span>Raison interne</span>
@@ -43068,7 +43059,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
             <div className="modal-actions">
               <button className="ghost-button button-subtle" type="button" onClick={() => setDeleteOpen(false)} disabled={deletePending}>Annuler</button>
               <button className="ghost-button button-danger" type="submit" disabled={deletePending || deleteConfirmText.trim() !== expectedDeleteConfirm}>
-                {deletePending ? 'Envoi...' : 'Supprimer dans Hektor'}
+                {deletePending ? 'Envoi...' : bvs('Supprimer dans Hektor')}
               </button>
             </div>
           </form>
@@ -43211,8 +43202,8 @@ function ContactsScreen(props: {
         {props.createOpen && props.canManageContacts ? (
           <ContactWorkflowModal
             title="Nouveau contact"
-            eyebrow="Creation Hektor"
-            summary="Identite, typologie et options CRM avant creation dans Hektor puis synchronisation app."
+            eyebrow={bvs("Creation Hektor")}
+            summary={bvs("Identite, typologie et options CRM avant creation dans Hektor puis synchronisation app.")}
             tone="create"
             onClose={props.onCloseCreate}
           >
@@ -43301,7 +43292,7 @@ function ContactsScreen(props: {
                     <div
                       key={estProvisoire ? `prov-${prov.creation_token}` : contact.hektor_contact_id}
                       className={`contact-row${isSelected ? ' is-selected' : ''}${estProvisoire ? ' is-provisional' : ''}${provEnErreur ? ' is-provisional-error' : ''}`}
-                      title={provEnErreur ? (prov.provisional_error || 'La creation a echoue chez Hektor') : undefined}
+                      title={provEnErreur ? (prov.provisional_error || bvs('La creation a echoue chez Hektor')) : undefined}
                       onClick={() => { if (estProvisoire) return; openContactDetail(contact.hektor_contact_id) }}
                       role="button"
                       tabIndex={0}
@@ -43317,7 +43308,7 @@ function ContactsScreen(props: {
                           </div>
                           <div className="ci-id">
                             {estProvisoire
-                              ? (provEnErreur ? 'Non créé chez Hektor' : 'Envoi à Hektor en cours')
+                              ? (provEnErreur ? bvs('Non créé chez Hektor') : bvs('Envoi à Hektor en cours'))
                               : `ID ${contact.hektor_contact_id}`}
                           </div>
                         </div>
@@ -43430,8 +43421,8 @@ function MobileContactCards(props: {
         {props.createOpen && props.canManageContacts ? (
           <ContactWorkflowModal
             title="Nouveau contact"
-            eyebrow="Creation Hektor"
-            summary="Creation Hektor controlee, puis synchronisation locale et Supabase."
+            eyebrow={bvs("Creation Hektor")}
+            summary={bvs("Creation Hektor controlee, puis synchronisation locale et Supabase.")}
             tone="create"
             onClose={props.onCloseCreate}
           >
@@ -43463,8 +43454,8 @@ function MobileContactCards(props: {
       {props.createOpen && props.canManageContacts ? (
         <ContactWorkflowModal
           title="Nouveau contact"
-          eyebrow="Creation Hektor"
-          summary="Creation Hektor controlee, puis synchronisation locale et Supabase."
+          eyebrow={bvs("Creation Hektor")}
+          summary={bvs("Creation Hektor controlee, puis synchronisation locale et Supabase.")}
           tone="create"
           onClose={props.onCloseCreate}
         >
@@ -43501,7 +43492,7 @@ function MobileContactCards(props: {
             <div className="mobile-status-row">
               <StatusPill value={contactArchiveLabel(contact)} />
               {contact.active_search_count ? <StatusPill value={`${contact.active_search_count} recherche(s)`} /> : null}
-              <StatusPill value={contactBool(contact.has_contact_detail) ? 'Detail Hektor lu' : 'Detail a charger'} />
+              <StatusPill value={contactBool(contact.has_contact_detail) ? bvs('Detail Hektor lu') : 'Detail a charger'} />
               <span className={`contact-duplicate-pill ${contactDuplicateTone(contact.duplicate_max_severity)}`}>{contactSeverityLabel(contact.duplicate_max_severity)}</span>
             </div>
           </article>

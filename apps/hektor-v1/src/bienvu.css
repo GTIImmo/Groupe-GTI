@@ -317,3 +317,9 @@
   .bv .bv-loader .bv-ld-roof, .bv .bv-loader .bv-ld-mask { animation: none !important; stroke-dashoffset: 0; opacity: 1; }
   .bv .loading-inline::before, .bv .annuaire-v2 .pg-load::before { animation: none !important; }
 }
+
+/* =============================================================================
+   Lot 6 — vocabulaire. Les textes (bvs/bvt, lib/bienvuTexte.ts) sont réécrits dans le code ; ceux que le CSS
+   écrit lui-même (content:) se réécrivent ici.
+   ============================================================================= */
+.bv .mobile-detail-actionbar::before { content: "Actions de l'annonce"; }
