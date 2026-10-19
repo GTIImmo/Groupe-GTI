@@ -104,9 +104,18 @@ console.log("=== LA REGLE N'EST ECRITE QU'UNE FOIS ===");
 // Le fichier calculait deja la verite du drapeau en ligne (l. 247). Deux copies
 // divergeraient au premier ajustement : la statistique `visible_divergent` et le
 // verrou doivent lire LA MEME fonction.
-const copiesEnLigne = (src.match(/String\(r\.visible\)\s*===\s*"1"/g) || []).length;
-controle("plus aucune copie en ligne de la regle", copiesEnLigne === 0,
-  `${copiesEnLigne} copie(s) restante(s) -- la statistique doit appeler drapeauVisible()`);
+// ⚠ ON COMPTE HORS DE LA DEFINITION. La regle DOIT exister une fois -- dans
+//   drapeauVisible() -- et nulle part ailleurs. Une premiere version de cette
+//   epreuve exigeait ZERO occurrence et accusait donc la definition elle-meme :
+//   elle etait rouge sur un code juste (18/10). On retire le corps de la
+//   fonction avant de compter.
+const horsDefinition = src.replace(bloc, "");
+const copiesEnLigne = (horsDefinition.match(/String\(r\.visible\)\s*===\s*"1"/g) || []).length;
+controle("la regle n'existe QUE dans drapeauVisible()", copiesEnLigne === 0,
+  `${copiesEnLigne} copie(s) hors de la definition -- la statistique doit l'appeler`);
+controle("et elle existe BIEN dans drapeauVisible()",
+  /String\(r\.visible\)\s*===\s*"1"/.test(bloc),
+  "la definition ne porte pas la regle : le temoin serait vide");
 controle("la statistique visible_divergent appelle la fonction",
   /visible_divergent/.test(src) && /drapeauVisible\(r\)/.test(src),
   "visible_divergent ne passe pas par drapeauVisible()");
@@ -118,7 +127,7 @@ controle("le compte rendu porte `sautees_masquee`", /sautees_masquee/.test(src),
 
 console.log("");
 if (echecs === 0) {
-  console.log(`✅ ${11 + 3 + 2 + 1} controles, 0 echec -- une masquee ne sera plus prise pour une supprimee.`);
+  console.log(`✅ ${10 + 3 + 3 + 1} controles, 0 echec -- une masquee ne sera plus prise pour une supprimee.`);
 } else {
   console.log(`⛔ ${echecs} echec(s).`);
 }

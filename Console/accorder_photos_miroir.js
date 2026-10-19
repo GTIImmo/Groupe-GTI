@@ -183,6 +183,27 @@ function lireLeMiroir() {
   return parAnnonce;
 }
 
+// LA VERITE DU DRAPEAU -- UNE SEULE REGLE, TROIS ETATS (18/10/2026)
+//
+// ⚠ Elle existait DEJA, en ligne, pour la statistique `visible_divergent`. On la
+//   sort ici pour que le VERROU 7 et la statistique lisent LA MEME chose : deux
+//   copies divergeraient au premier ajustement.
+//
+// LES FORMES REELLEMENT PRODUITES par nos deux chemins d'ecriture :
+//   booleen true/false -> rattrapage_photos.js  |  "1"/"0" -> le miroir Hektor
+//   "true"/"false"     -> un aller-retour JSON
+//
+// ⚠⚠ ET L'INCONNU EST UN TROISIEME ETAT, PAS UNE MASQUEE. Un drapeau absent ou
+//   vide ne doit PAS proteger la ligne : une photo dont on ignore l'etat et que
+//   Hektor ne liste plus est, selon toute vraisemblance, vraiment supprimee. Le
+//   verrou ne couvre QUE ce qu'on SAIT masque -- sinon il cesserait de marquer
+//   des photos legitimement retirees, et notre registre divergerait en silence.
+function drapeauVisible(r) {
+  if (r.visible === true || String(r.visible) === "1" || String(r.visible).toLowerCase() === "true") return "visible";
+  if (r.visible === false || String(r.visible) === "0" || String(r.visible).toLowerCase() === "false") return "masquee";
+  return "inconnu";
+}
+
 function lireNotreIndex() {
   const db = ouvrir(INDEX_LOCAL);
   const lignes = db.prepare(
@@ -218,7 +239,7 @@ async function main() {
     lignes_lues: lignes.length, annonces_du_miroir: miroir.size, lectures_fraiches: fraiches,
     sautees_annonce_inconnue: 0, sautees_lecture_pas_fraiche: 0, sautees_liste_vide: 0,
     sautees_sans_numero_hektor: 0, sautees_photo_de_l_app: 0, sautees_plus_recente_que_le_miroir: 0,
-    sautees_deja_marquees: 0, a_marquer: 0, a_reordonner: 0, visible_divergent: 0,
+    sautees_deja_marquees: 0, sautees_masquee: 0, a_marquer: 0, a_reordonner: 0, visible_divergent: 0,
     manquantes_chez_nous: 0,
   };
   const listesVides = [];
@@ -249,6 +270,26 @@ async function main() {
         if (!listesVides.includes(aid)) listesVides.push(aid);
         continue;
       }
+      // ⚠⚠ VERROU 7 (18/10/2026) : UNE MASQUEE N'EST PAS UNE SUPPRIMEE.
+      //   Le miroir vient de l'API detail de Hektor, QUI NE LISTE QUE LES
+      //   VISIBLES. Une photo masquee n'y figure donc pas -- et elle ressemble
+      //   trait pour trait a une supprimee : elle a un hektor_photo_id, elle est
+      //   plus ancienne que la lecture du miroir, et ce n'est pas un envoi `app`
+      //   en cours. Les trois verrous precedents ne la protegent pas.
+      //
+      //   CE QUE CA A COUTE, le 15/10 a 23:23 : sur 440 photos declarees
+      //   disparues, 337 l'etaient vraiment (reportages remplaces -- verifie en
+      //   direct le 18/10 : 13/13, 25/25, 25/25) mais 103 ETAIENT MASQUEES, et
+      //   toujours chez Hektor (verifie sur 6 annonces, 75 photos).
+      //
+      // ⭐ ET C'EST LE PREALABLE AU BOUTON « MASQUER » (chantier (7)-8) : sans ce
+      //   verrou, masquer une photo la ferait declarer disparue la nuit suivante,
+      //   elle sortirait du panneau de l'app (loadConsolePhotos filtre
+      //   present_in_hektor) et ON NE POURRAIT PLUS LA DEMASQUER. A sens unique.
+      if (drapeauVisible(r) === "masquee") {
+        stats.sautees_masquee += 1;
+        continue;
+      }
       if (!aMarquer.has(aid)) aMarquer.set(aid, []);
       aMarquer.get(aid).push(r.id);
       stats.a_marquer += 1;
@@ -259,8 +300,7 @@ async function main() {
       aReordonner.push({ id: r.id, ordre: chezEux.ordre });
       stats.a_reordonner += 1;
     }
-    const notreVisible = String(r.visible) === "1" || r.visible === true || String(r.visible).toLowerCase() === "true";
-    if ((chezEux.visible === "1") !== notreVisible) stats.visible_divergent += 1;
+    if ((chezEux.visible === "1") !== (drapeauVisible(r) === "visible")) stats.visible_divergent += 1;
   }
 
   // Information seulement : ce que Hektor a et que nous n'avons pas -> c'est le travail
