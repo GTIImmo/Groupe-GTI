@@ -2984,3 +2984,57 @@ répond pas à la question qu'on croit lui poser.
 du taux de photos masquées sur le parc. Les seuls chiffres sont **304 annonces d'août**
 *(dont 14 avec des masquées — 4,6 %, mais échantillon probablement biaisé)* et **10 biens
 vivants sondés en direct — 0**.
+
+---
+
+# ⭐ OÙ SONT LES LIENS DES PHOTOS MASQUÉES — audit + test du 19/10
+
+*Frédéric : « comment faire ? les liens photos sont accessibles où ? cherche dans mon
+projet, on les a déjà trouvés à plusieurs reprises. Fais des tests si nécessaire. »*
+
+## ✅ LE TEST, EN DIRECT SUR L'ANNONCE 32704 (19 masquées)
+
+`?mode=vignettes_hidden&id=32704` rend **19 items**, et chacun porte **tout** :
+
+```
+id      : item_311060                                 <- le numero Hektor
+src     : .../staticlbi.com/wx200/images/biens/11/... <- la VIGNETTE
+srcHD   : .../staticlbi.com/wa/images/biens/11/...    <- la GRANDE IMAGE
+delete_img('2e6de5af....jpg', 32704, '311060', ...)   <- le NOM DE FICHIER
+visibiliteVignette( present                           <- la bascule est possible
+```
+
+➡ **UN SEUL appel Hektor par annonce suffit.** Le worker sait déjà tout en tirer :
+`extractConsolePhotoEntries` rend `hektor_photo_id`, `url_preview`, `url_hd`,
+`filename`, `legend`, `sort_order` **et** `actions.can_change_visibility`.
+
+⚠ **ET LES ADRESSES NE SONT PAS DEVINABLES** : le chemin porte des hachés
+*(`/images/biens/11/265d1769012cf77f8b7a602756031b24/...`)*. Pas de formule, pas de
+raccourci — **il faut l'appel**.
+
+## ⛔ LES DEUX IMPASSES VÉRIFIÉES
+
+| piste | verdict |
+|---|---|
+| le miroir `images_json` | ⛔ **ne porte que les visibles** *(`visible` vaut `'1'` sur 17 535/17 535)* |
+| `hektor_annonce_console_detail` *(miroir Console)* | ⛔ **aucune photo** — 168 lignes, et son payload ne porte que chauffage, diagnostics, DPE/GES, honoraires, pièces, secteur |
+
+## ⭐⭐ ET LA COMMANDE DE BASCULE EST TROUVÉE — bien meilleure que les deux listes
+
+Dans le JS de Hektor *(capture du 12/06)* :
+
+```js
+function visibiliteVignette(id, visible) {
+  var data_url = 'mode=vignette_visibilite&id=' + id
+               + '&idann=' + $j('#idannonceVignette').val()
+               + '&visible=' + visible;
+  $j.ajax({ type: "GET", url: "xmlrpc.php", data: data_url, ... });
+}
+```
+
+➡ **`mode=vignette_visibilite&id=<photo>&idann=<annonce>&visible=<0|1>`** — **un GET,
+UNE photo à la fois**. C'est **plus sûr** que `ordonne_photos`, qui exige de renvoyer
+les DEUX listes entières *(et donc de risquer d'en emporter d'autres)*.
+⭐ Et le worker la **détecte déjà** sur chaque photo : `can_change_visibility`.
+⚠ **Jamais éprouvée en écriture** — c'est un GET, donc un relevé ne suffira pas à la
+prouver : il faudra un vrai essai sur le bac à sable 62774.
