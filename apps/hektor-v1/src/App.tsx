@@ -229,6 +229,8 @@ import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
 import { bvBoot } from './lib/bienvuBoot'
+import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
+import { BienvuLogin } from './BienvuLogin'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -18983,7 +18985,37 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   ) : null
   const responsiveExperience = useResponsiveExperience()
 
+  // bienvu (lot 2) : la page de connexion neuve remplace l'ancienne SEULEMENT si l'interrupteur est
+  // allumé au build. Elle ne porte aucune logique : elle reçoit les gestionnaires existants, inchangés.
+  const bienvuLoginProps = APP_BIENVU_ENABLED
+    ? {
+        domaine: googleWorkspaceDomain,
+        message: errorMessage,
+        email: authEmail,
+        onEmail: setAuthEmail,
+        motDePasse: authPassword,
+        onMotDePasse: setAuthPassword,
+        emailValide: (valeur: string) => /^[^\s@]+@/.test(valeur.trim()) && isGoogleWorkspaceEmail(valeur),
+        onConnexion: handleSignIn,
+        connexionEnCours: authPending,
+        onGoogle: () => void handleGoogleWorkspaceSignIn(),
+        googleEnCours: googleAuthPending,
+        oubliOuvert: forgotPasswordOpen,
+        // changer de vue efface le message de l'autre vue (sinon un refus de connexion reste affiché sous « Mot de passe oublié »)
+        onOubli: (ouvert: boolean) => { setErrorMessage(null); setForgotPasswordOpen(ouvert) },
+        onEnvoiLien: handleForgotPassword,
+        envoiEnCours: forgotPasswordPending,
+        nouveauMotDePasse: recoveryPassword,
+        onNouveauMotDePasse: setRecoveryPassword,
+        confirmation: recoveryPasswordConfirm,
+        onConfirmation: setRecoveryPasswordConfirm,
+        onRecuperation: handleResetRecoveredPassword,
+        recuperationEnCours: recoveryPending,
+      }
+    : null
+
   if (hasSupabaseEnv && recoveryMode && !bootLoading) {
+    if (bienvuLoginProps) return <BienvuLogin mode="recuperation" {...bienvuLoginProps} />
     return (
       <div className="login-shell">
         <section className="login-panel">
@@ -19002,6 +19034,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   if (hasSupabaseEnv && !session && !bootLoading) {
+    if (bienvuLoginProps) return <BienvuLogin mode="connexion" {...bienvuLoginProps} />
     return (
       <div className="login-shell">
         <section className="login-panel">
