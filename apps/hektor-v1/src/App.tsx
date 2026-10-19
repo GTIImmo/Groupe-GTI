@@ -19977,8 +19977,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <div className="panel-head status-change-head">
                 <span className="modal-hero-icon modal-hero-icon-status" aria-hidden="true" />
                 <div>
-                  <p className="eyebrow">Pilotage Hektor</p>
-                  <h3>Changer le statut annonce</h3>
+                  <p className="eyebrow">{APP_BIENVU_ENABLED ? "Pilotage de l'annonce" : 'Pilotage Hektor'}</p>
+                  <h3>{APP_BIENVU_ENABLED ? 'Changer le statut' : 'Changer le statut annonce'}</h3>
                 </div>
                 <button className="ghost-button button-subtle" type="button" onClick={closeStatusChangeModal} disabled={statusChangePending}>Fermer</button>
               </div>
@@ -20067,8 +20067,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           </>
                         ) : null}
                         <label className="filter-field">
-                          <span>Mandat Hektor</span>
-                          <input value={statusChangeSelectedMandat} onChange={(event) => setStatusChangeSelectedMandat(event.target.value)} placeholder="Auto si vide" />
+                          <span>{APP_BIENVU_ENABLED ? 'N° de mandat' : 'Mandat Hektor'}</span>
+                          <input value={statusChangeSelectedMandat} onChange={(event) => setStatusChangeSelectedMandat(event.target.value)} placeholder={APP_BIENVU_ENABLED ? 'Attribué automatiquement si vide' : 'Auto si vide'} />
                         </label>
                         {/* ─── 2.5 + 2.6 : L'ACQUEREUR SE DESIGNE, ET ILS PEUVENT ETRE PLUSIEURS ───
                             Avant : un champ ou il fallait TAPER un identifiant. Le 04/09, un

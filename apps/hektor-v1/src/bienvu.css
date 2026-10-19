@@ -118,3 +118,82 @@
 }
 .bv .mobile-title-block span { text-transform: lowercase; letter-spacing: 0.02em; }
 .bv .mobile-title-block h1 { font-family: var(--bv-font-display); font-weight: 800; letter-spacing: -0.02em; }
+
+/* =============================================================================
+   Lot 4 — les modales
+   Quatre familles d'en-tête cohabitent dans l'app ; ce lot habille celles qui partagent une
+   structure (tête sombre avec symbole : statut, suppression, archivage, affectation, nouvelle
+   annonce) et, pour TOUTES les modales, le fond et les champs. Les deux dessins propres
+   (« Gestion des demandes » v3 et la console de diffusion) viennent au sous-lot suivant, après
+   avoir été regardés un par un. Les fiches plein cadre (modal-panel-detail) sont le lot 7.
+   Toujours sous `.bv`. Les couches existantes abusent de !important : on répond par !important
+   et par la spécificité, sans toucher une seule de leurs lignes.
+   ============================================================================= */
+
+/* Le fond : encre neutre, plus de halo bleu-vert */
+.bv .modal-overlay { background: rgba(34, 35, 35, 0.56) !important; backdrop-filter: blur(3px) !important; }
+
+/* Les champs de toutes les modales : une seule police et un seul focus */
+.bv .modal-panel :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) {
+  font-family: var(--bv-font-ui) !important;
+  border-radius: var(--bv-radius-sm) !important;
+}
+.bv .modal-panel :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea):focus {
+  outline: 0 !important;
+  border-color: var(--bv-magenta) !important;
+  box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.16) !important;
+}
+.bv .modal-panel .primary-button { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .modal-panel .primary-button:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* Famille « tête sombre » */
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) {
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: var(--bv-shadow-modal) !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) {
+  background: var(--bv-ink) !important;
+  color: #ffffff !important;
+  border-bottom: 3px solid var(--bv-magenta) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head)::before {
+  background: transparent !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) .eyebrow {
+  color: #cfd3d4 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) h3 {
+  color: #ffffff !important;
+  font-family: var(--bv-font-display) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+/* le symbole à la place de la tuile générique, posé directement sur le bandeau */
+.bv .modal-panel .modal-hero-icon {
+  background: url('/brand/bienvu-symbole-sombre.svg') center / 74% no-repeat !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.bv .modal-panel .modal-hero-icon::before, .bv .modal-panel .modal-hero-icon::after { display: none !important; }
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) .ghost-button {
+  color: #ffffff !important;
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+.bv .modal-panel:is(.status-change-modal, .delete-annonce-modal, .archive-annonce-modal, .negotiator-assign-modal, .draft-annonce-modal) :is(.status-change-head, .delete-annonce-head, .draft-annonce-head) .ghost-button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Modale « Changer le statut » : la sélection et le bouton au magenta de la charte */
+.bv .fa-ck-statusmodal .status-choice-card:hover { border-color: var(--bv-magenta) !important; }
+.bv .fa-ck-statusmodal .status-choice-card.is-selected { border-color: var(--bv-magenta) !important; background: var(--bv-rose-soft) !important; box-shadow: 0 0 0 3px rgba(197, 0, 95, 0.14) !important; }
+.bv .fa-ck-statusmodal .status-choice-card.is-selected strong::before { border-color: var(--bv-magenta) !important; background: var(--bv-magenta) !important; }
+.bv .fa-ck-statusmodal .status-change-form button[type='submit'] { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .fa-ck-statusmodal .status-change-form button[type='submit']:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }

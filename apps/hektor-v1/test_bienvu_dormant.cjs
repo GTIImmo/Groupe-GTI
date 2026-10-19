@@ -35,7 +35,9 @@ function selecteurs(css) {
     }
   }
   parcourir(sans)
-  return out.flatMap((s) => s.split(',').map((x) => x.trim())).filter(Boolean)
+  // on coupe sur les virgules du NIVEAU 0 seulement : `:is(a, b)` ne fait qu'un sélecteur
+  const separer = (s) => { const r = []; let p = 0, d = ''; for (const c of s) { if (c === '(') p++; if (c === ')') p--; if (c === ',' && p === 0) { r.push(d); d = '' } else d += c } r.push(d); return r }
+  return out.flatMap((s) => separer(s).map((x) => x.trim())).filter(Boolean)
 }
 
 console.log('1. bienvu.css : tout est sous .bv')
