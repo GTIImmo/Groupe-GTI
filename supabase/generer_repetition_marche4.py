@@ -79,20 +79,31 @@ EN_TETE = """-- ================================================================
 --   1-avant  | la photo 482253 est                           = visible
 --   2-patch  | la contrainte / les droits / la distribution  = OUI, OUI, OUI
 --   2-patch  | la RPC existe (4 parametres)                  = OUI
---   2-patch  | anon peut l appeler                           = NON
---   3-masque | le retour est ok                              = oui, visible=false
---   3-masque | la photo 482253 est devenue                   = masquee
---   3-masque | LE POST-IT est pose (index marques)           = 1 ou plus
---   3-masque | adresses_app_le de 62774                      = A BLANC
---   3-masque | le travail cree, du bon type                  = set_hektor_photo_visibility
---   3-masque | sa charge porte l etat d avant                = true (visible)
---   3-masque | visibles restantes / plus_aucune_visible      = 3 / non
---   4-rejoue | rejouer le MEME masquage                      = deja_dans_cet_etat
---   5-affich | on la REAFFICHE                               = oui, visible=true
---   6-refus  | une photo inconnue                            = photo_introuvable_chez_hektor
---   6-refus  | des parametres vides                          = parametres_incomplets
---   6-refus  | sous l identite d un commercial               = ce que la garde repond VRAIMENT
---   7-retour | la RPC a disparu / les 3 verrous non plus     = oui, oui
+--   2-patch  | anon peut l appeler                           = NON  (authenticated : oui)
+--   3-garde  | SANS identite : la garde refuse               = droits_insuffisants -- LA GARDE MORD
+--   3-garde  | identite empruntee : auth.uid()               = 0548613b-...
+--   3-garde  | AVEC identite : la garde laisse               = oui
+--   4-masque | le retour est ok                              = oui, visible=false
+--   4-masque | la photo 482253 est devenue                   = masquee
+--   4-masque | LE POST-IT (index marques)                    = 1 ou plus
+--   4-masque | adresses_app_le de 62774                      = A BLANC
+--   4-masque | le travail cree, du bon type                  = set_hektor_photo_visibility (pending)
+--   4-masque | sa charge : l etat d avant                    = true, demande=false, 4 photos
+--   4-masque | visibles restantes / derniere                 = 3 / plus_aucune_visible=false
+--   5-rejoue | rejouer le MEME masquage                      = deja_dans_cet_etat -- Hektor non derange
+--   6-affich | on la REAFFICHE                               = oui, visible=true
+--   6-affich | la photo 482253 est revenue                   = visible
+--   6-affich | deux travaux distincts crees                  = oui
+--   7-refus  | une photo inconnue                            = photo_introuvable_chez_hektor
+--   7-refus  | des parametres vides                          = parametres_incomplets
+--   8-retour | la RPC a disparu / les 3 verrous non plus     = oui, oui
+--
+-- ⚠⚠ LE 1er COLLAGE DU 19/10 A RENDU `droits_insuffisants` PARTOUT, et c'etait
+--   JUSTE : dans l'editeur SQL `auth.uid()` est NUL (mesure : current_user =
+--   postgres, la garde = false). Ce n'etait PAS un defaut du code, c'etait une
+--   EPREUVE INCOMPLETE. ⭐ Cet echec a offert un controle gratuit, garde ici en
+--   etape 3-garde : SANS IDENTITE, LA GARDE DOIT REFUSER. Si cette ligne disait
+--   « ok », la garde ne garderait rien.
 -- ============================================================================
 
 begin;
@@ -206,46 +217,82 @@ select '2-patch ', 'anon peut l appeler           ',
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname='public' and p.proname='app_console_photo_visibilite_optimistic';
 
--- ========================= 3. LE GESTE : ON MASQUE =========================
+-- ============ 3. ⭐⭐ LE TEMOIN INVERSE DE LA GARDE, OFFERT PAR UN ECHEC =====
+-- Le 1er collage du 19/10 a rendu `droits_insuffisants` PARTOUT, et c'etait JUSTE :
+-- dans l'editeur SQL `auth.uid()` est NUL (mesure : current_user = postgres,
+-- auth.uid() = NUL, la garde = false), donc aucune identite = aucun acces.
+-- ⭐ CE N'ETAIT PAS UN DEFAUT DU CODE, C'ETAIT UNE EPREUVE INCOMPLETE -- et ca
+--   nous donne un controle gratuit : SANS IDENTITE, LA GARDE DOIT REFUSER.
+--   Si cette ligne disait « ok », c'est que la garde ne garderait rien.
+
+insert into essai (etape, mesure, valeur)
+select '3-garde ', 'SANS identite : la garde refuse',
+       case when (x->>'erreur') = 'droits_insuffisants' then 'droits_insuffisants -- LA GARDE MORD'
+            when (x->>'ok') = 'true' then 'AUTORISE -- ECHEC GRAVE : la garde ne garde rien'
+            else 'autre refus : ' || coalesce(x->>'erreur','?') end
+  from (select public.app_console_photo_visibilite_optimistic(c.dossier, c.annonce, c.photo, false) as x
+          from cible c) z;
+
+-- ── ON EMPRUNTE UNE IDENTITE, en lecture de la garde seulement ──────────────
+-- ⭐ Meme technique que la repetition du geste couverture (16/10) et que la
+--   regle n° 4 du projet : on pose les claims JWT, `true` = LOCAL a la
+--   transaction. Pas besoin de changer de role : la garde lit `auth.uid()`.
+-- ⚠ codex.test est l'ADMIN D'ESSAI du projet (0548613b..., actif) -- pas un
+--   compte de production, et la transaction est annulee de toute facon.
+select set_config('request.jwt.claims',
+  '{"sub":"0548613b-7654-42fa-a65d-d9adc815d2c0","role":"authenticated","email":"codex.test@gti-immobilier.fr"}',
+  true) as identite_empruntee;
+
+insert into essai (etape, mesure, valeur)
+select '3-garde ', 'identite empruntee : auth.uid()',
+       coalesce(auth.uid()::text, 'NUL -- l emprunt a RATE, la suite ne prouvera rien');
+
+insert into essai (etape, mesure, valeur)
+select '3-garde ', 'AVEC identite : la garde laisse ',
+       case when public.app_console_can_access_dossier(c.dossier, c.annonce) then 'oui'
+            else 'NON -- la suite va echouer, epreuve NON CONCLUANTE' end
+  from cible c;
+
+-- ========================= 4. LE GESTE : ON MASQUE =========================
 
 create temporary table retour as
   select public.app_console_photo_visibilite_optimistic(c.dossier, c.annonce, c.photo, false) as r
     from cible c;
 
 insert into essai (etape, mesure, valeur)
-select '3-masque', 'le retour est ok              ',
+select '4-masque', 'le retour est ok              ',
        case when (r->>'ok') = 'true'
             then 'oui, visible=' || coalesce(r->>'visible','?')
             else 'NON : ' || coalesce(r->>'erreur','?') end
   from retour;
 
 insert into essai (etape, mesure, valeur)
-select '3-masque', 'la photo 482253 est devenue   ',
+select '4-masque', 'la photo 482253 est devenue   ',
        case when p.visible then 'visible -- ECHEC' else 'masquee' end
   from public.app_console_photo p, cible c
  where p.app_dossier_id = c.dossier and p.hektor_photo_id = c.photo;
 
 insert into essai (etape, mesure, valeur)
-select '3-masque', 'LE POST-IT (index marques)    ',
+select '4-masque', 'LE POST-IT (index marques)    ',
        coalesce(r->>'index_marques_a_refaire','?')
        || case when coalesce((r->>'index_marques_a_refaire')::int, 0) = 0
                then '  (0 est normal si adresses_app_le etait DEJA a blanc)' else '' end
   from retour;
 
 insert into essai (etape, mesure, valeur)
-select '3-masque', 'adresses_app_le de 62774      ',
+select '4-masque', 'adresses_app_le de 62774      ',
        case when d.adresses_app_le is null then 'A BLANC -- le fabricant la reciblera'
             else 'ENCORE POSEE (' || d.adresses_app_le::text || ') -- ECHEC' end
   from public.app_dossier_current d, cible c where d.app_dossier_id = c.dossier;
 
 insert into essai (etape, mesure, valeur)
-select '3-masque', 'le travail cree, du bon type  ',
+select '4-masque', 'le travail cree, du bon type  ',
        coalesce(j.job_type, 'AUCUN TRAVAIL -- ECHEC')
        || case when j.status is not null then ' (' || j.status || ')' else '' end
   from retour r left join public.app_console_job j on j.id = (r.r->>'job_id')::uuid;
 
 insert into essai (etape, mesure, valeur)
-select '3-masque', 'sa charge : l etat d avant    ',
+select '4-masque', 'sa charge : l etat d avant    ',
        coalesce(j.payload_json->>'etat_avant', '(absent) -- ECHEC')
        || ', demande=' || coalesce(j.payload_json->>'visible','?')
        || ', photos dans base_snapshot=' ||
@@ -253,23 +300,23 @@ select '3-masque', 'sa charge : l etat d avant    ',
   from retour r left join public.app_console_job j on j.id = (r.r->>'job_id')::uuid;
 
 insert into essai (etape, mesure, valeur)
-select '3-masque', 'visibles restantes / derniere ',
+select '4-masque', 'visibles restantes / derniere ',
        coalesce(r->>'visibles_restantes','?') || ' / plus_aucune_visible=' ||
        coalesce(r->>'plus_aucune_visible','?')
   from retour;
 
--- ===================== 4. ON REJOUE LE MEME MASQUAGE =======================
+-- ===================== 5. ON REJOUE LE MEME MASQUAGE =======================
 -- ⭐ Il ne doit PAS deranger Hektor une seconde fois.
 
 insert into essai (etape, mesure, valeur)
-select '4-rejoue', 'rejouer le MEME masquage      ',
+select '5-rejoue', 'rejouer le MEME masquage      ',
        case when (x->>'deja_dans_cet_etat') = 'true' then 'deja_dans_cet_etat -- Hektor non derange'
             when (x->>'ok') = 'true' then 'UN SECOND TRAVAIL A ETE CREE -- ECHEC'
             else 'refus : ' || coalesce(x->>'erreur','?') end
   from (select public.app_console_photo_visibilite_optimistic(c.dossier, c.annonce, c.photo, false) as x
           from cible c) z;
 
--- ========================= 5. ET ON LA REAFFICHE ===========================
+-- ========================= 6. ET ON LA REAFFICHE ===========================
 -- ⭐ LE TEMOIN INVERSE DU GESTE : la meme commande dans l'autre sens.
 
 create temporary table retour2 as
@@ -277,36 +324,36 @@ create temporary table retour2 as
     from cible c;
 
 insert into essai (etape, mesure, valeur)
-select '5-affich', 'on la REAFFICHE               ',
+select '6-affich', 'on la REAFFICHE               ',
        case when (r->>'ok') = 'true' then 'oui, visible=' || coalesce(r->>'visible','?')
             else 'NON : ' || coalesce(r->>'erreur','?') end
   from retour2;
 
 insert into essai (etape, mesure, valeur)
-select '5-affich', 'la photo 482253 est revenue   ',
+select '6-affich', 'la photo 482253 est revenue   ',
        case when p.visible then 'visible' else 'masquee -- ECHEC' end
   from public.app_console_photo p, cible c
  where p.app_dossier_id = c.dossier and p.hektor_photo_id = c.photo;
 
 insert into essai (etape, mesure, valeur)
-select '5-affich', 'deux travaux distincts crees  ',
+select '6-affich', 'deux travaux distincts crees  ',
        case when (select r->>'job_id' from retour) is distinct from (select r->>'job_id' from retour2)
             then 'oui' else 'NON -- ECHEC' end;
 
--- ============================== 6. LES REFUS ===============================
+-- ============================== 7. LES REFUS ===============================
 
 insert into essai (etape, mesure, valeur)
-select '6-refus ', 'une photo inconnue            ',
+select '7-refus ', 'une photo inconnue            ',
        coalesce(x->>'erreur', 'AUCUN REFUS -- ECHEC')
   from (select public.app_console_photo_visibilite_optimistic(c.dossier, c.annonce, '999999999', false) as x
           from cible c) z;
 
 insert into essai (etape, mesure, valeur)
-select '6-refus ', 'des parametres vides          ',
+select '7-refus ', 'des parametres vides          ',
        coalesce(x->>'erreur', 'AUCUN REFUS -- ECHEC')
   from (select public.app_console_photo_visibilite_optimistic(null, '', '', null) as x) z;
 
--- ========================== 7. LE VRAI INVERSE =============================
+-- ========================== 8. LE VRAI INVERSE =============================
 -- ⚠ L'ORDRE EST CELUI DE L'INVERSE : la RPC d'abord, la contrainte en dernier.
 
 drop function if exists public.app_console_photo_visibilite_optimistic(bigint, text, text, boolean);
@@ -343,13 +390,13 @@ begin
 end $inv_contrainte$;
 
 insert into essai (etape, mesure, valeur)
-select '7-retour', 'la RPC a disparu              ',
+select '8-retour', 'la RPC a disparu              ',
        case when exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                           where n.nspname='public' and p.proname='app_console_photo_visibilite_optimistic')
             then 'NON -- ECHEC' else 'oui' end;
 
 insert into essai (etape, mesure, valeur)
-select '7-retour', 'les 3 verrous ne connaissent + ',
+select '8-retour', 'les 3 verrous ne connaissent + ',
        case when (select position('set_hektor_photo_visibility' in pg_get_constraintdef(c.oid))
                     from pg_constraint c where c.conrelid='public.app_console_job'::regclass
                      and c.conname='app_console_job_job_type_check') = 0
@@ -361,7 +408,7 @@ select '7-retour', 'les 3 verrous ne connaissent + ',
                    where n.nspname='public' and p.proname='app_console_claim_next_job') = 0
             then 'oui, aucune trace' else 'NON -- ECHEC' end;
 
--- ================== 8. L ERREUR VOLONTAIRE : tout est annule ================
+-- ================== 9. L ERREUR VOLONTAIRE : tout est annule ================
 -- ⚠ Le compte rendu voyage DANS le message : un SELECT d une transaction qui
 --   echoue n est pas toujours rendu par l editeur SQL.
 
