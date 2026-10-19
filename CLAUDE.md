@@ -136,8 +136,8 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑦-5 | relancer / abandonner depuis le monitoring | ✅ **fait le 15/10** |
 | ⑦-6 | « Abandonner » défait le geste | ✅ **fait le 15/10** |
 | ⑦-7 | modifier ou prolonger un mandat | ⛔ **FERMÉ PAR DÉCISION le 18/10** — *« je ne souhaite pas pouvoir modifier un mandat ou prolonger »*. **Ne pas relancer** |
-| ⑦-8 | **photos : rendre visible / masquer** | 🔧 **marches 1 et 2 faites** *(voir ci-dessous)* · ⬜ **marche 4 : le bouton** |
-| ⑦-9 | renommer un document | ⬜ |
+| ⑦-8 | **photos : rendre visible / masquer** | ✅ **COMPLET le 19/10** — les **4 marches**, dont le bouton **prouvé en réel deux fois** *(voir ci-dessous)* |
+| ⑦-9 | renommer un document | ⛔ **FERMÉ PAR DÉCISION le 19/10** — *« je pense qu'il ne faut rien changer donc il faut que l'utilisateur puisse mettre un libellé au début donc rien à changer »*. ⭐ **Et le champ existe déjà** *(`App.tsx:11378` « Libellé », → nom du fichier envoyé à Hektor, `api.ts:8169`)*. **Ne pas relancer** |
 | ⑦-10 | `app_brouillon_annonce_detail_cache` vide | ⬜ **question** : seulement si Frédéric en a l'usage |
 
 **⑦-8, les 4 marches** *(19/10)* :
@@ -147,7 +147,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | **1 — le verrou de publication** | ✅ **EN PRODUCTION**. `app_photos_remplir_adresses_app` exclut les masquées des **deux** boîtes *(couverture + galerie)*. Empreinte `682e3860` → **`b87f6c68`**, 7 contrôles verts. ⭐⭐ **L'idée des deux boîtes est de Frédéric**, et elle a rendu les pièces A et B inutiles. ⚠ **Le témoin inverse a prouvé qu'elle a servi le jour même** : sans elle, 3 masquées partaient le soir sur la vitrine, l'espace client et le portail |
 | **2 — le balayage** | ✅ **écrit, éprouvé, la tâche est enregistrée** — `GTI Balayage Photos Masquees`, **00:00**, lot de **1 000/nuit**, **~14 nuits** pour les 13 491 vivantes. ⭐ Il **passe par le worker** *(un seul service, un seul frein)* : `Console/enqueue_photos_masquees_lot.js` + `scheduled/run_balayage_photos_masquees.ps1`. **Essai réel vert le 19/10** : 4 → 7 photos sur 62189, `hidden: 3` comme prédit |
 | **3 — le run de mise à jour** | ⭐ **rien à écrire** : c'est **le même lot**, rempli « les modifiées d'abord, les jamais-vues ensuite ». Quand le balayage finira, il tombera à **~29/nuit** et deviendra le run de MAJ **tout seul** |
-| **4 — le bouton masquer/afficher** | ⬜ `mode=vignette_visibilite&id=…&idann=…&visible=0|1`, trouvé dans le code de Hektor, **jamais prouvé en écriture**. ⛔ **Son essai sur le bac à sable 62774 demande l'accord de Frédéric** — et il répondra aussi à la question restée ouverte : **masquer une photo bouge-t-il `date_maj` ?** ⭐ **Aucune limite de photos ne le gêne** *(sujet clos le 19/10 : le panneau lit la table, limite 500 ; le « 5 » de `export_app_payload.py` ne mord plus, 0 annonce tronquée)* |
+| **4 — le bouton masquer/afficher** | ✅ **EN PRODUCTION, PROUVÉ DEUX FOIS LE 19/10**. RPC `app_console_photo_visibilite_optimistic` → travail `set_hektor_photo_visibility` → `mode=vignette_visibilite&id=…&idann=…&visible=0|1`, et le handler **EXIGE le basculement** en relisant les deux galeries *(jamais un 200)*. ⭐ Essai sur le bac à sable **62774** : `masquees: 1`, boîte publique **4 → 3 en secondes**, 8 contrôles verts. ⭐⭐ Et le clic de Frédéric sur **63073** a **découvert 14 photos masquées** qu'on n'avait jamais eues — d'où le remède : le geste pose un `sync_hektor_photos` quand il découvre. ⚠ **Personne n'a encore VU le bouton à l'œil** *(3ᵉ pastille en haut à droite de chaque tuile)* |
 
 ### ⛔ Ce qui attend Frédéric
 
@@ -176,7 +176,9 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      PATCH du worker ne rafraichit pas `ecrit_le`).
    · ⑦-3a PERSONNE N'A VU L'ECRAN : ecran Mandats, ouvrir une fiche, le bloc
      « Cloture du mandat » est SOUS LA JAUGE.
-   · ⑦-8 marche 4 : masquer une photo sur le bac a sable 62774 (ecriture Hektor).
+   · ⑦-8 marche 4 : ✅ FAIT ET PROUVE le 19/10 (62774 par moi, 63073 par lui).
+     ⛔ MAIS PERSONNE N'A VU LE BOUTON A L'OEIL : ecran d'un bien, panneau Photos,
+     3e pastille en haut a droite de chaque tuile (rouge = visible, vert = masquee).
 
 ② A TRANCHER PAR LUI -- je n'ai rien choisi :
    · ⑦-3a : la MODALE DE STATUT clot toujours sans passer par la demande

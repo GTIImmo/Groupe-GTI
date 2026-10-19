@@ -4851,3 +4851,55 @@ c'est ça, et seulement ça, que Hektor ne sait pas faire.
 | ⚠ **une étiquette à nous** | techniquement **gratuite** *(`metadata_json` est fusionné)*, **mais elle DIVERGE de Hektor** : le négociateur verrait un nom dans l'app et un autre dans Hektor. **C'est exactement le risque que Frédéric redoutait** |
 
 ⛔ **RIEN N'EST ÉCRIT. La décision est à lui.**
+
+
+### ⛔ ⑦-9 EST FERMÉ PAR DÉCISION *(19/10, soir)*
+
+> *« Non je pense qu'il ne faut rien changer donc il faut que l'utilisateur puisse mettre un
+> libellé au début donc rien à changer »*
+
+⭐⭐ **Et son raisonnement est exactement ce que l'audit avait établi** : le nom d'un document se
+pose **au dépôt**, pas après coup — et **le champ existe déjà**.
+
+### ✅ CE QUE J'AI VÉRIFIÉ AVANT DE FERMER *(sa prémisse tient-elle ?)*
+
+| | mesuré |
+|---|---|
+| le champ « Libellé » existe | ✅ `App.tsx:11378`, indication *« Nom visible dans Hektor »* |
+| il devient le nom envoyé à Hektor | ✅ `api.ts:8169` — `requestedLabel + extension`, sinon le nom d'origine |
+| ⭐ **il est là PARTOUT où l'app dépose** | ✅ `uploadForm` est **le même objet** rendu dans les **deux** habillages *(l. 11528 le tiroir du cockpit, l. 11591 le bureau et le mobile compact)*. ⭐ *Piège du projet évité : « vérifier QUEL composant s'affiche avant de conclure »* |
+| ⚠ chez Hektor | ses colonnes sont **« Aperçu \| nom du document \| ajouté le »** — **trois colonnes, aucune étiquette**. ⛔ **Son propre formulaire de dépôt n'est PAS dans ma capture : NON MESURÉ** |
+
+⚠⚠ **ET LA LIMITE DE LA DÉCISION, dite une fois** : le champ « Libellé » n'agit que sur un dépôt
+**fait depuis l'app**. Or **189 808 des 189 809 documents ont été déposés dans Hektor**, et **un
+seul** est né dans l'app. ⭐ **C'est pour ça que le parc porte des noms de fichiers** — pas par
+défaut de code. *Le levier futur est donc « déposer depuis l'app », jamais « renommer ».*
+**Noté, non relancé.**
+
+### ⭐ CE QUE CE POINT A RAPPORTÉ MÊME EN ÉTANT FERMÉ
+
+1. ⭐⭐ **La chaîne documentaire est saine** : **92 706 travaux, 0 erreur**. On ne le savait pas.
+2. ⭐ **Les deux familles de noms** sont désormais comprises *(déposés = nom de fichier ;
+   modèles/ImmoSign = vraie étiquette Hektor à 100 %)*.
+3. ⭐⭐ **Les 8 écrivains de `metadata_json` fusionnent tous** — mesuré un par un *(l. 4692, 4913,
+   4993, 5109, 5161, 5202, 5321, 8233)*. *Utile le jour où l'app devra garder un champ à elle sur
+   un document : aucune colonne, aucune migration.*
+4. ⭐ **Les chemins de fichier sont collants** *(`storage_path || …`)* — aucun renommage ne
+   déplacerait un fichier déjà rangé.
+5. ⭐ **13 endroits reconnaissent un document PAR SON NOM** — à savoir avant d'y toucher un jour.
+6. ⚠ **Deux écarts notés, non traités** : **265 Go** de documents contre **32 Go** annoncés dans la
+   note de plan ; et **1 seul** document porte un statut d'envoi alors que **104 dépôts** ont réussi.
+7. ⚠ **Et une note du projet est PÉRIMÉE** : `hektor-documents-blocs-non-captures` dit que les blocs
+   ImmoSign *« ne sont JAMAIS indexés »*. ⛔ **Le code les indexe** *(l. 1085, sur le HTML déjà en
+   main, sans appel de plus)*, et la base le confirme *(1 777 lignes)*. **Le code gagne.**
+
+### ⭐ ET DEUX DE MES AFFIRMATIONS ÉTAIENT FAUSSES — pour mémoire
+
+| j'avais dit | la mesure |
+|---|---|
+| « 99 % des noms sont illisibles » | ⛔ **faux** : mauvais critère — *je confondais **laid** et **illisible***. **96,2 %** portent de vrais mots ; **2 759** seulement n'ont rien |
+| « notre filtre jette peut-être l'étiquette de Hektor » | ⛔ **faux** : une ligne de document déposé porte **deux cellules**, le nom et la date. **Rien derrière le filtre** |
+
+➡ **Et le chantier ⑦ n'a plus que ceci d'ouvert** : **⑦-3c réordonner** · **⑦-10** *(une question)* ·
+et les **essais réels** de ⑦-1 *(archiver une fiche jetable)* et ⑦-3a *(clôturer à une date ≠
+aujourd'hui, et voir l'écran)*. ⛔ **Plus personne n'a vu le bouton des photos à l'œil.**
