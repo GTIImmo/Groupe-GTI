@@ -232,6 +232,7 @@ import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
 import { BienvuLogo, BienvuSymbol } from './BienvuLogo'
+import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -19105,19 +19106,19 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               {createFlow === 'choice' ? (
                 <>
                   <div className="gcc-head">
-                    <span className="gcc-spark" aria-hidden="true">✨</span>
+                    <span className="gcc-spark" aria-hidden="true">{APP_BIENVU_ENABLED ? <BienvuSymbol roof="#222323" /> : '✨'}</span>
                     <h3>{screen === 'estimations' ? 'Nouvelle estimation' : 'Nouvelle annonce'}</h3>
                     <p>Comment veux-tu la créer ?</p>
                   </div>
                   <div className="gcc-cards">
                     <button type="button" className="gcc-card gcc-manual" onClick={() => { setCreateFlow('closed'); openDraftAnnonceModal() }}>
-                      <span className="gcc-emoji" aria-hidden="true">✍️</span>
+                      <span className="gcc-emoji" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="pen" /> : '✍️'}</span>
                       <strong>Manuellement</strong>
                       <small>Je remplis le formulaire moi-même</small>
                     </button>
                     <button type="button" className="gcc-card gcc-ia" onClick={() => setCreateFlow('ia')}>
                       <span className="gcc-tag" aria-hidden="true">IA</span>
-                      <span className="gcc-emoji" aria-hidden="true">📸</span>
+                      <span className="gcc-emoji" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="camera" /> : '📸'}</span>
                       <strong>Par photo, avec l'IA</strong>
                       <small>Un agent lit ma fiche et pré-remplit</small>
                     </button>
@@ -19128,20 +19129,20 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <>
                   <div className="gcc-head">
                     <button type="button" className="gcc-back" onClick={() => setCreateFlow('choice')} aria-label="Retour">‹</button>
-                    <span className="gcc-spark" aria-hidden="true">🤖</span>
+                    <span className="gcc-spark" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="sparkles" /> : '🤖'}</span>
                     <h3>Création assistée par IA</h3>
                     <p>Choisis ton agent</p>
                   </div>
                   <div className="gcc-agents">
                     <label className="gcc-agent">
-                      <span className="gcc-emoji" aria-hidden="true">📷</span>
+                      <span className="gcc-emoji" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="scan" /> : '📷'}</span>
                       <div className="gcc-agent-tx"><strong>Scanner la fiche</strong><small>Photo(s) → OCR → pré-remplissage</small></div>
                       <span className="gcc-go" aria-hidden="true">→</span>
                       <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => { openDraftAnnonceModal(); setDraftAnnonceModalOpen(false); setCreateFlow('ia-result'); void handleDraftAnnonceScanFile(event) }} />
                     </label>
                   </div>
                   <a className="gcc-download" href="/patron-fiche-saisie.html" target="_blank" rel="noreferrer">
-                    <span className="gcc-dl-ic" aria-hidden="true">📄</span>
+                    <span className="gcc-dl-ic" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="file" /> : '📄'}</span>
                     <span className="gcc-dl-tx"><strong>Télécharger le patron vierge</strong><small>À imprimer, remplir à la main, puis photographier</small></span>
                     <span className="gcc-dl-go" aria-hidden="true">↓</span>
                   </a>
@@ -19150,7 +19151,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               ) : (
                 <>
                   <div className="gcc-head">
-                    <span className="gcc-spark" aria-hidden="true">📸</span>
+                    <span className="gcc-spark" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="camera" /> : '📸'}</span>
                     <h3>{draftAnnonceScanPending ? 'Analyse de la fiche…' : 'Fiche analysée'}</h3>
                   </div>
                   <div className={`gcc-scan-status${draftAnnonceScanPending ? ' is-loading' : ''}`}>
@@ -19196,7 +19197,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   </div>
                   {draftMandantChoice === 'new' && draftMandantLastName.trim() !== '' && draftMandantEmail.trim() === '' ? (
                     <div className="gcc-warn">
-                      <span className="gcc-warn-ic" aria-hidden="true">⚠️</span>
+                      <span className="gcc-warn-ic" aria-hidden="true">{APP_BIENVU_ENABLED ? <BvIcon name="alert" /> : '⚠️'}</span>
                       <span>Le <strong>vendeur</strong> a été lu, mais son <strong>e-mail manque</strong> (il n'est pas sur la fiche papier). Ajoute-le via « Détailler dans l'assistant » avant de créer — sinon la création sera bloquée.</span>
                     </div>
                   ) : null}

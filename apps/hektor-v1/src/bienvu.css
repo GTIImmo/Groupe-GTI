@@ -197,3 +197,66 @@
 .bv .fa-ck-statusmodal .status-choice-card.is-selected strong::before { border-color: var(--bv-magenta) !important; background: var(--bv-magenta) !important; }
 .bv .fa-ck-statusmodal .status-change-form button[type='submit'] { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; box-shadow: none !important; }
 .bv .fa-ck-statusmodal .status-change-form button[type='submit']:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* =============================================================================
+   Lot 4b — modales restantes, première série
+   « Actions disponibles » (menu du bouton Action) et le choix « Nouvelle annonce ».
+   ============================================================================= */
+
+/* ---- « Actions disponibles » ----
+   Défaut mesuré, antérieur à bienvu : la tête et la liste dépassaient de 67 px le cadre de 468 px
+   (largeur 100 % + marges en content-box) et le contenu était rogné à droite — le bouton
+   « Ajouter » et la fin des phrases disparaissaient. On passe tout en border-box. */
+.bv .action-menu-dialog, .bv .action-menu-dialog * { box-sizing: border-box; }
+.bv .action-menu-dialog-backdrop { background: rgba(34, 35, 35, 0.56) !important; backdrop-filter: blur(3px) !important; }
+.bv .action-menu-dialog { border-radius: 18px !important; overflow: hidden !important; padding: 0 !important; background: #ffffff !important; box-shadow: var(--bv-shadow-modal) !important; }
+.bv .action-menu-dialog-head { background: var(--bv-ink) !important; padding: 16px 22px !important; align-items: center !important; border-bottom: 3px solid var(--bv-magenta) !important; }
+.bv .action-menu-dialog-eyebrow { color: #cfd3d4 !important; letter-spacing: 0.12em !important; }
+.bv .action-menu-dialog-eyebrow::before { background: var(--bv-magenta) !important; }
+.bv .action-menu-dialog-head h4 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; }
+.bv .action-menu-dialog .action-menu-close { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .action-menu-dialog .action-menu-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
+/* la vraie cause : la grille du dialogue n'avait qu'une colonne `auto`, dimensionnée par le plus long
+   texte non coupé (539 px dans un cadre de 468 px). Une colonne minmax(0, 1fr) tient dans le cadre. */
+.bv .action-menu-dialog { grid-template-columns: minmax(0, 1fr) !important; }
+.bv .action-menu-dialog .action-menu-item-main, .bv .action-menu-dialog .action-menu-item-label, .bv .action-menu-dialog .action-menu-item-helper { min-width: 0; white-space: normal !important; overflow-wrap: anywhere; }
+.bv .action-menu-dialog-copy { margin: 16px 22px 0 !important; }
+.bv .action-menu-dialog-list { padding: 14px 20px 22px !important; }
+.bv .action-menu-dialog .action-menu-item { min-width: 0; }
+.bv .action-menu-dialog .action-menu-item:hover { border-color: var(--bv-magenta) !important; }
+/* les pastilles d'icône : plus de vert-bleu ni de violet, deux teintes de la charte */
+.bv .action-menu-dialog .action-menu-item-icon-validation { background: var(--bv-rose-soft) !important; color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .action-menu-dialog .action-menu-item-icon-hektor { background: var(--bv-ink) !important; color: #ffffff !important; box-shadow: none !important; }
+
+/* ---- Choix « Nouvelle annonce » : des pictos au trait à la place des emojis ---- */
+.bv .gti-cc { border: 0 !important; border-radius: 18px !important; background: #ffffff !important; padding: 28px 28px 22px !important; box-shadow: var(--bv-shadow-modal) !important; }
+.bv .gti-cc .gcc-head h3 { font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; font-size: 22px !important; }
+.bv .gti-cc .gcc-head p { color: var(--bv-mute) !important; }
+.bv .gti-cc .gcc-spark { width: 46px; height: 46px; margin: 0 auto 12px !important; display: grid !important; place-items: center; font-size: 0 !important; color: var(--bv-ink); }
+.bv .gti-cc .gcc-spark .bv-ico { width: 30px; height: 30px; color: var(--bv-magenta); }
+.bv .gti-cc .gcc-card { border: 1.5px solid var(--bv-line) !important; border-radius: var(--bv-radius-md) !important; }
+.bv .gti-cc .gcc-card:hover, .bv .gti-cc .gcc-agent:hover { border-color: var(--bv-magenta) !important; box-shadow: 0 14px 30px -18px rgba(197, 0, 95, 0.45) !important; }
+.bv .gti-cc .gcc-ia { background: linear-gradient(160deg, #ffffff, var(--bv-rose-soft)) !important; border-color: var(--bv-rose) !important; }
+.bv .gti-cc .gcc-tag { background: var(--bv-magenta) !important; }
+.bv .gti-cc .gcc-emoji { width: 54px; height: 54px; border-radius: 15px; background: var(--bv-rose-soft); color: var(--bv-magenta); display: grid; place-items: center; font-size: 0 !important; flex: none; }
+.bv .gti-cc .gcc-emoji .bv-ico { width: 28px; height: 28px; }
+.bv .gti-cc .gcc-dl-ic, .bv .gti-cc .gcc-warn-ic { color: var(--bv-magenta); display: inline-grid; place-items: center; font-size: 0 !important; }
+.bv .gti-cc .gcc-dl-ic .bv-ico, .bv .gti-cc .gcc-warn-ic .bv-ico { width: 22px; height: 22px; }
+.bv .gti-cc .gcc-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; box-shadow: none !important; }
+.bv .gti-cc .gcc-primary:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* ---- « Gestion des demandes » (v3) ----
+   Avant : un bandeau plein de la couleur du type de demande (rouge pour l'annulation, etc.), un
+   titre en Fraunces, des coins à 8 px. Désormais : le même bandeau encre que les autres modales ;
+   la couleur du type reste, en petit — le filet du bas et la pastille — pour qu'on reconnaisse
+   toujours une annulation d'une baisse de prix d'un coup d'œil. */
+.bv .modal-panel.request-modal-v3 { border: 0 !important; border-radius: 18px !important; box-shadow: var(--bv-shadow-modal) !important; background: #ffffff !important; }
+.bv .request-modal-v3 .request-modal-head { background: var(--bv-ink) !important; color: #ffffff !important; border-bottom: 3px solid var(--req-acc, var(--bv-magenta)) !important; border-radius: 0 !important; box-shadow: none !important; }
+.bv .request-modal-v3 .request-modal-head::before { background: transparent !important; }
+.bv .request-modal-v3 .request-modal-head .eyebrow { color: #cfd3d4 !important; font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+.bv .request-modal-v3 .request-modal-head h3 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+.bv .request-modal-v3 .request-type-chip { width: fit-content !important; align-self: flex-start; background: var(--req-acc, var(--bv-magenta)) !important; color: #ffffff !important; border-radius: var(--bv-radius-pill) !important; padding: 3px 10px !important; letter-spacing: 0.08em; }
+.bv .request-modal-v3 .request-modal-close { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .request-modal-v3 .request-modal-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
+.bv .request-modal-v3 .button-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; color: #ffffff !important; box-shadow: none !important; }
+.bv .request-modal-v3 .button-primary:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }

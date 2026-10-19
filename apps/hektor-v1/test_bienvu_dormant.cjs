@@ -66,6 +66,8 @@ check('App.tsx garde l\'ancien écran de connexion (login-shell) après le test 
 const mob = read('layouts/MobileLayout.tsx')
 check('MobileLayout garde la forme CSS et « GTI Immobilier » hors bienvu', /: <div className="mobile-brand-mark" aria-hidden="true" \/>/.test(mob) && /APP_BIENVU_ENABLED \? 'bienvu' : 'GTI Immobilier'/.test(mob))
 
+check("le choix « Nouvelle annonce » garde ses emojis quand l'interrupteur est éteint", ['✨', '✍️', '📸', '🤖', '📷', '📄', '⚠️'].every((e) => app.includes(": '" + e + "'}")))
+
 console.log('5. l\'interrupteur est lu de la même façon partout')
 const flag = read('lib/bienvuFlag.ts')
 const main = read('main.tsx')
