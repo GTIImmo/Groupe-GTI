@@ -1,0 +1,79 @@
+/* =============================================================================
+   bienvu — habillage du logiciel (charte de marque d'octobre 2026)
+   -----------------------------------------------------------------------------
+   Ce fichier est ADDITIF et DORMANT.
+     · Les polices sont déclarées mais ne se téléchargent que si une règle les utilise.
+     · Tout le reste vit sous la classe `.bv`, posée sur <html> par main.tsx
+       UNIQUEMENT quand VITE_APP_BIENVU_ENABLED est allumé au build.
+     · Interrupteur éteint = ce fichier ne change aucun pixel de l'application.
+   Il se charge EN DERNIER (voir main.tsx) : il complète les couches existantes sans
+   jamais les modifier. Les écrans le consomment un par un, par lots.
+
+   Périmètre : le CRM et ses modales. Les documents (mandat, bon de visite, avis de
+   valeur, e-mails clients) gardent le logo GTI et leurs propres styles.
+
+   Palette : celle de la charte, sans rien inventer. La coche garde TOUJOURS le même
+   magenta (#C5005F), y compris sur fond sombre (décision du 19/10).
+   ============================================================================= */
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans-400.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans-600.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans-800.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root.bv {
+  /* Couleurs de la charte */
+  --bv-magenta: #c5005f;      /* accent : coche, boutons, point du i */
+  --bv-framboise: #8c0044;    /* survol, textes sur rose */
+  --bv-rose: #f6b6d5;         /* fonds légers, bordures de pastilles */
+  --bv-rose-soft: #fdf0f6;    /* fond d'un élément choisi */
+  --bv-ink: #222323;          /* textes, barre latérale, toit du logo */
+  --bv-brume: #f6f7f8;        /* fond de page */
+
+  /* Neutres (même échelle que le design system existant) */
+  --bv-line: #e2e5e6;
+  --bv-line-strong: #cfd3d4;
+  --bv-mute: #5c6163;
+  --bv-subtle: #7c8082;
+  --bv-surface: #ffffff;
+
+  /* États : à part de l'accent, ils ne servent qu'à dire un état */
+  --bv-ok: #2f7d59;   --bv-ok-soft: #e8f5ee;
+  --bv-warn: #b66a16; --bv-warn-soft: #fff3df;
+  --bv-danger: #b94a48; --bv-danger-soft: #fdeceb;
+
+  /* Typographies : titres en Plus Jakarta Sans ExtraBold, interface en Hanken Grotesk */
+  --bv-font-display: 'Plus Jakarta Sans', 'Hanken Grotesk', system-ui, sans-serif;
+  --bv-font-ui: 'Hanken Grotesk', 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Formes */
+  --bv-radius-sm: 10px;
+  --bv-radius-md: 14px;
+  --bv-radius-lg: 22px;
+  --bv-radius-pill: 999px;
+  --bv-shadow-card: 0 1px 2px rgba(34, 35, 35, 0.06), 0 8px 24px rgba(34, 35, 35, 0.06);
+  --bv-shadow-modal: 0 28px 70px rgba(34, 35, 35, 0.35);
+  --bv-focus-ring: 0 0 0 3px rgba(197, 0, 95, 0.4);
+
+  /* Mouvement */
+  --bv-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --bv-fast: 150ms;
+  --bv-base: 240ms;
+}

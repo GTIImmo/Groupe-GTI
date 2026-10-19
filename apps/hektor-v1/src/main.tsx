@@ -34,6 +34,13 @@ import './annuaire-contacts-v2.css'
 import './fa-cockpit-v2.css'
 import './fa-mandat-v3.css'
 import './contact-detail-v2.css'
+import './bienvu.css'
+
+// bienvu (refonte graphique, charte d'octobre 2026) : ÉTEINT par défaut. Lu au BUILD par Vite,
+// donc toute bascule Vercel exige un rebuild. Éteint, bienvu.css ne change aucun pixel.
+if (['true', '1', 'on', 'yes'].includes(String(import.meta.env.VITE_APP_BIENVU_ENABLED ?? '').trim().toLowerCase())) {
+  document.documentElement.classList.add('bv')
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
