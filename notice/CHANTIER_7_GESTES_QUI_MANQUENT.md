@@ -4623,3 +4623,79 @@ risque identifié se contourne par construction** : on n'écrase rien.
 | ⚠ **les droits** | qui peut renommer ? **Question pour Frédéric** *(négociateur sur ses biens, ou admin ?)* |
 
 ⛔ **JE N'ÉCRIS RIEN AVANT SON CHOIX.** Un périmètre ne se décide pas sans lui.
+
+
+### ⭐⭐⭐ LA QUESTION DE FRÉDÉRIC A TUÉ MON PLAN, ET IL AVAIT RAISON *(19/10, soir)*
+
+Il a répondu **« B, négociateur sur ses biens et admin manager »**, puis il a demandé :
+> *« mais on peux pas la deviné ? c'est pas un geste manuel ?? »*
+
+⭐⭐ **Il a raison, et ma proposition était mauvaise** : je lui faisais renommer **187 610
+documents à la main**, autrement dit **jamais**. Un geste qui demande 187 610 gestes n'est pas un
+geste.
+
+### ⚠⚠ ET EN MESURANT, J'AI DÛ CORRIGER MON PROPRE AUDIT
+
+**Mon chiffre « 99 % illisibles » ÉTAIT FAUX** — pas la base : **mon critère**. J'avais compté
+« tout nom qui ressemble à un fichier ». Or :
+
+```
+vente_odin_rembault.pdf     titre_de_proprie_te_250.pdf     dpe_poulenard.pdf
+bon_de_visite_133.pdf       mandat_2093.pdf                 plan_lot_n_7.pdf
+acte_donation_page_de_couverture.pdf        2016_5_18_facture_doyen.pdf
+```
+⭐ **Tous ressemblent à un fichier ET se lisent très bien.** *Leçon : un critère qui ne distingue
+pas « laid » de « illisible » ne mesure rien.*
+
+**LA VRAIE MESURE, sur les 189 809 :**
+
+| | documents | |
+|---|---|---|
+| au moins **2 vrais mots** *(« vente odin rembault »)* | **132 293** | **69,7 %** |
+| **un seul** mot *(« titre_120 »)* | **50 226** | **26,5 %** |
+| ⛔ **aucun mot** *(« 556.pdf », un hachage)* | **7 290** | **3,8 %** |
+
+### ⛔ LES DEUX SOURCES QUE J'ESPÉRAIS SONT MORTES, mesurées
+
+| | |
+|---|---|
+| `document_type` | ⛔ **inutile** : **189 808 sur 189 809** valent littéralement le mot `document` |
+| `metadata_json->transfer_name` | ⛔ **inutile, et PIRE que le nom** : il existe sur 100 % des documents, il diffère sur 181 450… mais c'est **le même texte sans les séparateurs** — `vente_odin_rembault.pdf` → `venteodinrembault.pdf` |
+
+### ⭐⭐ MAIS LE VOCABULAIRE EST DÉJÀ DANS LES NOMS — relevé, jamais inventé
+
+```
+mandat 19 002 · vente 17 424 · offre 11 398 · gti 10 107 · titre 9 006 · avenant 7 590
+agence 7 516 · facture 6 747 · dpe 6 529 · cadastre 6 170 · attestation 4 978
+propriete 4 795 · cni 4 441 · ggti 4 222 · plan 4 146 · compromis 3 993 · avis 3 959
+achat 3 846 · valeur 3 064 · bon 3 048 · visite 3 029 · exclusif 2 969 · taxe 2 885
+bv 2 843 · tp 2 452 · accord 2 361 · estimation 2 307 · promesse 2 285 · aae 2 271
+acte 2 265 · pret 2 257 · ci 2 242 · diag 2 224 · fonciere 2 196
+```
+
+➡ ⭐⭐⭐ **Donc ça ne se DEVINE pas : ça se LIT.** Et le découpage final le prouve :
+
+| | documents | | ce qu'il faut |
+|---|---|---|---|
+| ⭐ **des mots lisibles** | **182 519** | **96,2 %** | une **mise en forme**, rien de plus |
+| ⭐ une **abréviation** du relevé | **3 347** | **1,8 %** | un **petit dictionnaire**, lu dans la base |
+| ⭐ une **date** *(`20250716_095119.jpg`)* | **1 184** | **0,6 %** | « **Photo du 16/07/2025** » |
+| ⛔⛔ **rien du tout** *(`1.pdf`, `556.pdf`, un UUID)* | **2 759** | **1,5 %** | ⭐ **LÀ SEULEMENT, la main** |
+
+### ⭐⭐⭐ ET ÇA CHANGE TOUT LE COÛT ET TOUT LE RISQUE
+
+**98,5 % se résout SANS RIEN STOCKER** — une fonction d'affichage, dans le front.
+
+| | |
+|---|---|
+| ⭐⭐ **les 13 reconnaissances** | **intactes PAR CONSTRUCTION** : on ne stocke rien, donc rien ne peut être écrasé |
+| ⭐⭐ **la synchro de nuit** | **ne peut pas l'effacer** : il n'y a rien à effacer |
+| ⭐ **aucune colonne, aucun DDL, aucun worker** | le patron `_app` n'est plus nécessaire pour 98,5 % |
+| ⭐ **réversible à la seconde** | c'est **une fonction** ; on la retire, tout revient |
+| ⭐ **ça marche sur les 189 809 d'un coup** | pas un document à la fois |
+| ⚠ **et le geste à la main** | ne concerne plus que **2 759 documents** — là, les droits de Frédéric s'appliquent : **négociateur sur ses biens, admin, manager** |
+
+⚠ **UNE QUESTION AVANT D'ÉCRIRE LE DICTIONNAIRE** : **`aae`, 2 271 documents — je ne sais pas ce
+que ça veut dire**, et un dictionnaire ne doit **rien inventer**. *(`bv` = bon de visite,
+`tp` = titre de propriété, `cni`/`ci` = pièce d'identité, `pv ag` = PV d'assemblée générale,
+`diag` = diagnostic — à confirmer par lui.)*
