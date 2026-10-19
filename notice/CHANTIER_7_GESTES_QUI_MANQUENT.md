@@ -4259,3 +4259,48 @@ répondra à la question restée ouverte : masquer une photo fait-il bouger `dat
 services** · **pousser le front** · puis **l'essai réel sur 62774**, le seul qui prouvera le geste
 **chez Hektor** — et qui répondra à la question restée ouverte : **masquer une photo fait-il bouger
 `date_maj` ?**
+
+
+### ✅✅ MARCHE 4 PIÈCE 1 **EN PRODUCTION** — 7 contrôles, et une attente de MOI qui était fausse
+
+Frédéric a collé le patch. Mesure en lecture seule :
+
+| contrôle | résultat |
+|---|---|
+| a. la **contrainte** connaît le type | **OUI** |
+| b. les **droits** le connaissent | **OUI** |
+| c. la **distribution** le connaît *(service `documents`)* | **OUI** |
+| d. la **RPC** existe | **OUI (4 paramètres)** |
+| e. `anon` peut l'appeler | ⭐ **NON** · `authenticated` oui · `service_role` oui |
+| f. retours chariot injectés | ⚠ **139** *(j'attendais 0)* |
+| g. travaux de ce type déjà posés | **0** — normal, le worker n'est pas redémarré |
+
+### ⚠⚠ LES 139 RETOURS CHARIOT : MON ATTENTE ÉTAIT FAUSSE, PAS LE PATCH
+
+Mesure en détail :
+
+| fonction | CR | l'inverse retrouve sa pose ? |
+|---|---|---|
+| `app_console_can_request_job` | **0, propre** | ✅ **1 fois** |
+| `app_console_claim_next_job` | **0, propre** | ✅ **1 fois** |
+| `app_console_photo_visibilite_optimistic` | **139** | *(elle se `DROP`, aucune ancre à chercher)* |
+
+⭐⭐ **LA LEÇON, ET ELLE EST NEUVE** : `replace(…, chr(13), '')` protège **les ancres et la
+RECHERCHE** — il **ne nettoie pas le corps d'une fonction qu'on CRÉE**. Les deux fonctions
+*patchées* sont propres *(le patch les relit en retirant les CR et les réécrit depuis le texte
+nettoyé)* ; la RPC, elle, est **créée depuis le texte collé**, donc elle les garde.
+
+**Et c'est l'état NORMAL du projet, mesuré le 19/10 :**
+```
+fonctions app_* en tout        148
+  AVEC des retours chariot      26      = 18 %
+les plus chargees : app_bascule_identite_contact (170) ·
+                    app_console_photo_visibilite_optimistic (139) ·
+                    app_console_photo_couverture_optimistic (112)  <- celle du 16/10
+```
+➡ **Sans conséquence** : l'inverse de ce geste **supprime** la RPC, il ne cherche pas d'ancre
+dedans. ⚠ **Mais à savoir** pour un futur patch qui la modifierait **par ancre** : il devra
+retirer les CR des deux côtés — ce que tous les patchs du projet font déjà.
+
+➡ **LA PIÈCE 1 EST EN PRODUCTION.** ⛔ Reste : **redémarrer les 4 services** · **pousser le
+front** · puis **l'essai réel sur 62774**.
