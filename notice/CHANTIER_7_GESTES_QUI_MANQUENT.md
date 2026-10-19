@@ -5119,3 +5119,40 @@ Le verrou doit lire le drapeau **sur la bonne source**. ⭐ Et les candidates so
 nombreuses** *(2 ce soir)*, donc une relecture ciblée dans Supabase avant de marquer suffirait —
 **zéro appel à Hektor**. ⚠ Mais c'est une modification d'un script du run de nuit : **ça demande son
 accord.**
+
+
+### ✅✅✅ LA RÉPARATION DE 63073 EST VERTE — 32 SECONDES, 4 CONTRÔLES *(19/10, 23:39)*
+
+**Frédéric a collé** *(je ne peux pas : mon outil refuse les écritures en production)*. Travail pris
+à **23:38:41** par `NS31851120:documents:service:v9`, **`done` à 23:39:13**.
+
+**Son compte rendu** : ⭐⭐ **`photos_downloaded: 14`** · **`photos_failed: 0`** · aucune erreur.
+
+| contrôle | avant | après |
+|---|---|---|
+| photos | 24 | **24** *(9 visibles, 15 masquées)* |
+| ⭐ **déclarées disparues** | **1** | ⭐ **0** |
+| ⭐ **sans fichier** | **14** | ⭐ **0** |
+| ⭐ **avec dérivé** | 10 | ⭐ **24 sur 24** |
+| ⭐⭐ **masquée dans la boîte publique** | — | ⭐⭐ **0 — le verrou de ⑦-8 tient** |
+
+**ET LA PHOTO DE FRÉDÉRIC, NOMMÉMENT** *(485375)* :
+
+| | |
+|---|---|
+| `present_in_hektor` | ⭐⭐ **`true`** — elle est **revenue dans le panneau** |
+| `visible` | ⭐ **`false`** — **toujours masquée, son geste tient** |
+| `absent_depuis` | ⭐ **effacé** *(il était à 21:00:05)* |
+
+⭐⭐ **Donc la relecture des galeries répare les deux maux d'un coup**, et c'est maintenant prouvé
+**deux fois le même soir** : sur 482253 *(62774, par le juge de l'essai)* et sur 485375 *(63073, par
+cette réparation)*.
+
+### ⛔ MAIS LA CAUSE N'EST PAS CORRIGÉE — elle reviendra demain
+
+Le verrou de `accorder_photos_miroir.js` lit toujours le drapeau dans la **copie locale**. ➡ **Toute
+photo masquée depuis l'app entre 07:45 et 21:00 sera encore déclarée disparue le soir même.**
+
+⚠ **Rien n'est écrit pour ça** : c'est un script du run de nuit, donc l'accord de Frédéric.
+**La forme la moins risquée** : avant de marquer, relire le drapeau `visible` **dans Supabase** pour
+les seules candidates *(2 ce soir)* — **zéro appel à Hektor**, et le reste du script intact.
