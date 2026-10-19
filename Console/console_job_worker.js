@@ -8938,8 +8938,13 @@ async function handleReorderHektorPhotos(job) {
     throw new Error("liste_photos VIDE : on refuse d'envoyer un ordre sans photo visible");
   }
 
+  // ⑦-3c (20/10/2026) : CE HANDLER SERT DEUX GESTES, et le journal doit le dire.
+  //   'couverture' depuis le 16/10, 'reordonnancement' depuis le 20/10. Le motif est
+  //   dans la charge : on le lit UNE fois, ici, et les deux journaux s'en servent.
+  const estCouverture = String(payload.motif || "") === "couverture";
   await logJob(job.id, "reorder_hektor_photos", "running",
-    "Mise en couverture demandee chez Hektor", {
+    estCouverture ? "Mise en couverture demandee chez Hektor"
+                  : "Nouvel ordre des photos demande chez Hektor", {
       hektor_annonce_id: idann,
       motif: payload.motif || null,
       hektor_photo_id: payload.hektor_photo_id || null,
@@ -8977,11 +8982,60 @@ async function handleReorderHektorPhotos(job) {
       + ((resultat.liste_photos && resultat.liste_photos.erreur) || "cause inconnue"));
   }
 
+  // ⑦-3c piece 4 (20/10/2026) : ⭐⭐ ON REVEILLE LE FABRICANT DE LA BOITE PUBLIQUE.
+  //    RECOPIE A L'IDENTIQUE du geste de masquage (etape 6, l. 8866) -- pas
+  //    reinvente.
+  //
+  //    POURQUOI ICI. `sort_order` est lu par `app_photos_remplir_adresses_app`, le
+  //    fabricant de la boite publique : l'ordre des photos decide de la COUVERTURE
+  //    et de la galerie que voient la vitrine, l'espace client et les e-mails de
+  //    rapprochement. La RPC a remis `adresses_app_le` a blanc sur les quatre
+  //    index, donc l'annonce est une CIBLE ; ici on dit « vas-y maintenant ».
+  //
+  //    ⚠ CE QUE SON ABSENCE A COUTE, mesure du 19/10 : la RPC de COUVERTURE ne
+  //      pose pas ce post-it et son handler ne reveillait personne. Resultat, la
+  //      boite publique de 63261 datait du 11/10 et celle de 63046 du 27/09, alors
+  //      que leur couverture avait change le 16/10. La vitrine suivait avec un jour
+  //      de retard.
+  //      ⭐ Le reveil est pose ICI, donc il sert AUSSI a la couverture : les deux
+  //        usages passent par ce meme handler.
+  //
+  //    ⛔ ON NE RECOPIE PAS SON CALCUL : sa regle (dont le verrou
+  //      « visible is not false » du 19/10) vit chez lui, et deux copies
+  //      divergeraient au premier ajustement.
+  //    ⚠ BEST EFFORT : si l'appel echoue (8 s de budget PostgREST), l'ordre est
+  //      DEJA parti chez Hektor et prouve, et le run de nuit remettra la boite
+  //      d'aplomb. On le DIT, on ne jette pas.
+  let boite = "rafraichie";
+  try {
+    const r = await supabaseRequest("rpc/app_photos_remplir_adresses_app", {
+      method: "POST", body: JSON.stringify({ p_heures: 48, p_tout: false }),
+    });
+    boite = r && typeof r === "object" ? JSON.stringify(r).slice(0, 200) : "rafraichie";
+  } catch (error) {
+    boite = `NON rafraichie (${error && error.message ? error.message : String(error)}) `
+      + `-- le run de nuit la remettra d'aplomb`;
+  }
+
+  // ⚠ ET LE JOURNAL NE DOIT PLUS MENTIR. Ce handler sert maintenant DEUX gestes --
+  //   la couverture (motif 'couverture', depuis le 16/10) et le reordonnancement
+  //   (motif 'reordonnancement', depuis le 20/10). Il disait « Photo mise en
+  //   couverture chez Hektor » dans les deux cas : faux pour un reordonnancement,
+  //   et c'est le genre de ligne qui fait chercher au mauvais endroit six mois plus
+  //   tard. Le motif est deja dans la charge, il suffisait de le lire -- et il est
+  //   lu UNE SEULE FOIS, en tete du handler (`estCouverture`).
   await logJob(job.id, "reorder_hektor_photos", "done",
-    "Photo mise en couverture chez Hektor", {
+    estCouverture ? "Photo mise en couverture chez Hektor" : "Ordre des photos envoye a Hektor", {
       hektor_annonce_id: idann,
+      motif: payload.motif || null,
       hektor_photo_id: payload.hektor_photo_id || null,
+      photos_ordonnees: listes[0][1].length,
+      masquees_inchangees: listes[1][1] ? listes[1][1].length : 0,
       resultat,
+      boite_publique: boite,
+      // ⚠ Dit, pas cache : la vitrine Android est un export statique pousse par le
+      //   run (run_full_pipeline.ps1:1726), elle ne bougera pas avant la nuit.
+      vitrine_android: "inchangee jusqu'au prochain run (export statique)",
     });
 
   // On relit la galerie pour que nos copies portent l'ordre que Hektor a retenu
@@ -8994,7 +9048,7 @@ async function handleReorderHektorPhotos(job) {
     priority: 82,
   });
 
-  return { status: "done", resultat, sync_job: syncJob };
+  return { status: "done", resultat, boite_publique: boite, sync_job: syncJob };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

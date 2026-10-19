@@ -5351,3 +5351,57 @@ Frédéric.**
 les 4 index, donc la vitrine suivra **au prochain passage du fabricant**. Pour qu'elle suive **en
 quelques secondes**, il faut une ligne dans le handler du worker — ⚠ **et donc un redémarrage des 4
 services, donc l'accord de Frédéric.**
+
+
+### ✅ ⑦-3c PIÈCE ④ — LA VITRINE SUIT EN SECONDES *(20/10, « Fini 4 »)*
+
+**`Console/console_job_worker.js`**, dans `handleReorderHektorPhotos`. ✅ `node --check` OK.
+
+⭐ **Recopié à l'identique du geste de masquage** *(son étape ⓺, l. 8866)* — pas réinventé.
+
+**POURQUOI ICI** : `sort_order` est lu par `app_photos_remplir_adresses_app`, le fabricant de la
+boîte publique. L'ordre des photos décide donc de **la couverture et de la galerie** que voient la
+vitrine, l'espace client et les e-mails de rapprochement. La recette a posé le post-it sur les 4
+index ; ici on dit **« vas-y maintenant »**.
+
+⭐⭐ **ET LE RÉVEIL SERT AUSSI À LA COUVERTURE**, livrée le 16/10 sans lui — **les deux usages passent
+par ce même geste**. C'est ce qui explique la mesure du 19/10 : la boîte de 63261 datait du **11/10**
+et celle de 63046 du **27/09**, alors que leur couverture avait changé le **16/10**.
+
+### ⚠ ET J'AI TROUVÉ UN SECOND DÉFAUT EN PASSANT — le journal mentait
+
+Le geste écrivait **« Photo mise en couverture chez Hektor »** dans **les deux cas**. ⛔ Faux pour un
+réordonnancement, et *c'est le genre de ligne qui fait chercher au mauvais endroit six mois plus
+tard*. ⭐ **Le motif était déjà dans la charge** : il suffisait de le lire — **une seule fois, en
+tête du geste**, et les deux journaux s'en servent.
+
+| | avant | après |
+|---|---|---|
+| au départ | « Mise en couverture demandée » | ⭐ ou **« Nouvel ordre des photos demandé »** |
+| à l'arrivée | « Photo mise en couverture » | ⭐ ou **« Ordre des photos envoyé »** |
+| et le journal porte en plus | — | `motif`, `photos_ordonnees`, **`masquees_inchangees`**, `boite_publique`, `vitrine_android` |
+
+### ✅ LES 8 ÉTAPES, DANS L'ORDRE, VÉRIFIÉES
+
+```
++12  garde-fou de liste vide          (on ne dit jamais « plus aucune photo »)
++22  le motif, lu UNE fois
++23  journal « running », selon le motif
++34  l'envoi des DEUX listes
++54  si la liste des VISIBLES a echoue -> erreur, et on leve
++89  ⭐ LE REVEIL DU FABRICANT          (best effort)
++105 journal « done », selon le motif
++124 la resynchro de la galerie        (Hektor a le dernier mot)
+```
+⭐ **Le réveil tombe APRÈS la preuve de l'envoi et AVANT le journal** — donc son résultat est
+journalisé, pas espéré. ⚠ **Et best effort** : s'il échoue, l'ordre est **déjà parti et prouvé**, et
+le run de nuit remettra la boîte d'aplomb. **Dit, pas caché.**
+
+### ⛔⛔ ET IL EST INERTE JUSQU'AU REDÉMARRAGE DES 4 SERVICES
+
+Les quatre services partagent ce fichier. **Un correctif non redémarré n'est pas actif** — plusieurs
+essais ont été perdus comme ça dans ce projet. ⚠ **Pousser ne redémarre rien** : c'est un geste à
+part, et il demande l'accord de Frédéric.
+
+➡ **⑦-3c est donc écrit en entier : les 4 pièces.** Reste à **coller la recette**, **redémarrer les
+services**, et **voir les flèches à l'œil**.
