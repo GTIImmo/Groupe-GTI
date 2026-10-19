@@ -228,6 +228,7 @@ import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
+import { bvBoot } from './lib/bienvuBoot'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -13382,6 +13383,7 @@ export default function App() {
 
   useEffect(() => {
     if (!hasSupabaseEnv) {
+      bvBoot.session(true)
       void bootstrapApp()
       return
     }
@@ -13394,6 +13396,7 @@ export default function App() {
     }
 
     void getCurrentSession().then((nextSession) => {
+      bvBoot.session(Boolean(nextSession))
       const sameIdentity = sameSessionIdentity(sessionRef.current, nextSession)
       if (!sameIdentity) {
         sessionRef.current = nextSession
@@ -13408,6 +13411,7 @@ export default function App() {
 
     if (!supabase) return
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      bvBoot.session(Boolean(nextSession))
       if (event === 'PASSWORD_RECOVERY') {
         setRecoveryMode(true)
       }
@@ -14054,7 +14058,10 @@ export default function App() {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement des contacts')
       })
       .finally(() => {
-        if (!cancelled) setContactsLoading(false)
+        if (!cancelled) {
+          setContactsLoading(false)
+          bvBoot.data()
+        }
       })
     if (!useDirectContactLookup) {
       loadContactStats(dataFilters)
@@ -14248,7 +14255,10 @@ export default function App() {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement')
       })
       .finally(() => {
-        if (!cancelled) setPageLoading(false)
+        if (!cancelled) {
+          setPageLoading(false)
+          bvBoot.data()
+        }
       })
 
     workItemsPromise
