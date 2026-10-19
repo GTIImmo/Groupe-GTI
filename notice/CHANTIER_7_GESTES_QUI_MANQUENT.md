@@ -4467,3 +4467,80 @@ du travail — *sans ces deux lignes, 14 photos ramenées passeraient pour un ef
 ➡ **La récolte des 14 nuits sera bien plus grosse qu'annoncé.** ⭐ Et ces 14 n'ont **aucun dérivé**,
 donc elles **ne peuvent pas** sortir sur la vitrine — la boîte est à 9, le nombre de visibles.
 **Le contrôle de demain matin dira la vraie ampleur.**
+
+
+---
+
+## ⑦-9 · RENOMMER UN DOCUMENT — **AUDITÉ LE 19/10, ET LA RÉPONSE EST NON**
+
+**Go de Frédéric : « Renommer ».** Ce point venait de l'audit du 08/10, qui l'avait repéré en
+**trois mots** — *« C2 | 🟠 | ⑦ (renommer) »* — **avec sa colonne « preuve » VIDE**. Il n'avait
+jamais été audité.
+
+### 1. LE BESOIN EST RÉEL, mesuré
+
+| | |
+|---|---|
+| documents en tout | **189 809** *(dont 189 808 chez Hektor)* |
+| noms qui **ressemblent à un fichier** | ⚠ **187 610 — 99 %** |
+| noms qui sont une **vraie étiquette** | **2 199** |
+| le nom technique est gardé à part | ✅ **189 807** l'ont dans `metadata_json` |
+
+```
+_1_24137_diag_ae2021_.pdf   ·   _194401863817793382_1_.jpg
+_20480087_diagnostic_technique.pdf
+```
+⭐ **Un document a TROIS noms** *(`extractDocumentEntries`, l. 1020)* : le **technique**
+*(args[1])*, le **transfert** *(args[2], le `humanname` de `force_transfert`)*, et le
+**crmLabel** — celui que Hektor **affiche** dans sa colonne « Nom du document ». ⭐ C'est le
+crmLabel que `document_name` garde.
+
+### 2. ⛔ ET HEKTOR NE SAIT PAS LE RENOMMER — relevé en lecture seule
+
+**`Console/sonde_documents_renommage.js`** *(neuve, lecture seule, 2 appels, arrêt net au premier
+refus, la session du worker réutilisée et **jamais réécrite**)*.
+
+⭐⭐ **ELLE A TROUVÉ CE QUE MES CAPTURES N'AVAIENT PAS** : le JavaScript **vivant** fait
+**218 823 caractères** contre **104 Ko** dans ma capture du 13/05 — *une capture de cinq mois
+n'est pas une mesure*. Et il porte **18 modes « doc »**, dont trois que je n'avais jamais vus.
+
+**LES TROIS FAUX AMIS, écartés UN PAR UN en lisant leur corps :**
+
+| mode | champ de nom | ce qu'il renomme VRAIMENT |
+|---|---|---|
+| `updatedocument` | ⭐ **`titre`** | ⚠ **la BIBLIOTHÈQUE de l'agence** — `onComplete: loadBiblio()`, et `editedocument` ouvre `labs_bibliotheque.js` en portée *agence* |
+| `documentTypeUpdateAction` | ⭐ **`nom`** | ⚠ **un MODÈLE de document** — `onComplete: chargemesdocumentstype()` |
+| `templateDocument-getNameOrRenameBloc` | — | ⚠ **un BLOC dans un modèle** |
+
+➡ **Pour un document ATTACHÉ À UNE ANNONCE, Hektor n'offre que trois gestes** : le **lister**
+*(`UploadedDocument_list`, `documentTypeListUploadedDocs`)*, le **télécharger**
+*(`force_transfert`)*, le **supprimer** *(`deleteUploadedDocument`, `delete_doc_simple`,
+`deletedocument`)*. ⛔ **Aucun renommage.**
+
+⭐ **Et le précédent le confirme** : pour les photos, Hektor a `legendVignette(` et notre
+extracteur relève `can_edit_legend`. **Pour les documents, rien d'équivalent — ni dans la capture,
+ni dans le JavaScript vivant.**
+
+⚠ **Ce que la sonde n'a PAS pu lire** : la page `mode=chargeannonce_Documents&idann=…` a rendu
+**27 caractères** — mes paramètres sont faux. ⭐ **La sonde l'a DIT au lieu de faire semblant.**
+Donc le HTML rendu d'une ligne de document reste non mesuré ; **mais les 18 modes du JS vivant,
+eux, sont exhaustifs** — et aucun ne renomme.
+
+### 3. ⚠⚠ ET RENOMMER « CHEZ NOUS » SERAIT EFFACÉ — mesuré, pas supposé
+
+`upsertConsoleDocuments` écrit **`document_name: entry.document_name`**, c'est-à-dire **le nom lu
+sur la page de Hektor**. ➡ **Un nom qu'on écrirait dans cette colonne serait écrasé à la
+prochaine synchro de l'annonce.** ⚠ **C'est exactement le piège de la date de clôture, payé le
+16/10** *(« le worker écrivait notre date dans la colonne de Hektor »)*.
+
+### 4. DONC ⑦-9 EST UNE DÉCISION, PAS UN DÉVELOPPEMENT
+
+| | |
+|---|---|
+| **A — fermer le point** | comme ⑦-7 le 18/10. **Hektor ne sait pas le faire, donc l'app ne peut pas le lui demander.** Coût : zéro. ⚠ Et les 99 % de noms illisibles restent |
+| **B — renommer CHEZ NOUS, avec le patron du projet** | une colonne `document_name_app` + `COALESCE(document_name_app, document_name)`. ⭐ **Ce patron existe déjà deux fois** *(les adresses photos, la date de clôture)*, donc rien à inventer. ⚠ Mais **Hektor afficherait toujours l'ancien nom** : deux vérités, et l'app serait seule à porter la bonne |
+
+⭐ **Mon avis : B**, parce que le besoin est massif *(99 %)* et que **le patron est éprouvé**. ⚠
+**Mais c'est un périmètre, donc la décision est de Frédéric** — et A est parfaitement défendable :
+un nom que Hektor ne connaît pas est un nom qui disparaît le jour de la coupure... ⭐ **non, l'inverse** :
+c'est NOTRE colonne, elle survit à la coupure. **C'est même un argument POUR B.**
