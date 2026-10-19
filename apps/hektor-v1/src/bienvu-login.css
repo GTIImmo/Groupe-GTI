@@ -90,6 +90,14 @@
 .bvl-last { position: absolute; right: 10px; top: -10px; background: var(--bvl-accent); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; padding: 2px 9px; border-radius: 99px; }
 .bvl-safe { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; color: var(--bvl-muted); margin-top: 12px; }
 .bvl-safe svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* « Accès par mot de passe » : libellé replié sous le bouton Google (l'accès normal est Google Workspace) */
+.bvl-toggle { display: flex; align-items: center; gap: 12px; width: 100%; margin: 22px 0 4px; padding: 6px 0; background: transparent; border: 0; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bvl-muted); }
+.bvl-toggle::before, .bvl-toggle::after { content: ''; flex: 1; height: 1px; background: var(--bvl-line); }
+.bvl-toggle span { display: inline-flex; }
+.bvl-toggle:hover { color: var(--bvl-fg); }
+.bvl-toggle svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; margin-left: -6px; transition: transform 0.2s ease; }
+.bvl-toggle.is-open svg { transform: rotate(180deg); }
+.bvl-unfold { margin-top: 16px; animation: bvl-rise 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .bvl-sep { display: flex; align-items: center; gap: 12px; margin: 26px 0 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bvl-muted); }
 .bvl-sep::before, .bvl-sep::after { content: ''; flex: 1; height: 1px; background: var(--bvl-line); }
 

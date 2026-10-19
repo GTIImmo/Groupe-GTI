@@ -81,12 +81,12 @@ function ChampMotDePasse(props: { id: string; libelle: string; valeur: string; o
   )
 }
 
-function ChampEmail(props: { id: string; libelle: string; valeur: string; onChange: (v: string) => void; domaine: string; valide: boolean }) {
+function ChampEmail(props: { id: string; libelle: string; valeur: string; onChange: (v: string) => void; domaine: string; valide: boolean; autoFocus?: boolean }) {
   return (
     <div className="bvl-field">
       <label className="bvl-label" htmlFor={props.id}>{props.libelle}</label>
       <div className={`bvl-in${props.valide ? ' is-ok' : ''}`}>
-        <input id={props.id} type="email" value={props.valeur} onChange={(e) => props.onChange(e.target.value)} autoComplete="username" inputMode="email" enterKeyHint="next" autoCapitalize="none" spellCheck={false} placeholder={`prenom.nom@${props.domaine}`} required />
+        <input id={props.id} type="email" value={props.valeur} onChange={(e) => props.onChange(e.target.value)} autoComplete="username" inputMode="email" enterKeyHint="next" autoCapitalize="none" spellCheck={false} placeholder={`prenom.nom@${props.domaine}`} required autoFocus={props.autoFocus} />
         <svg className="bvl-tick" viewBox="0 0 100 100" aria-hidden="true"><path pathLength={100} d="M22 52 L43 73 L78 30" fill="none" stroke="#c5005f" strokeWidth={12} /></svg>
       </div>
     </div>
@@ -97,9 +97,17 @@ export function BienvuLogin(props: BienvuLoginProps) {
   const genre = classerMessageAuth(props.message)
   const [secousse, setSecousse] = useState(false)
   const [derniere, setDerniere] = useState<string | null>(null)
+  // Dans bienvu l'accès se fait par Google Workspace : le mot de passe reste derrière un libellé, replié.
+  // Il s'ouvre de lui-même si c'était la dernière méthode utilisée.
+  const [mdpOuvert, setMdpOuvert] = useState(false)
+  const [focusEmail, setFocusEmail] = useState(false)
   const racine = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { setDerniere(lireDerniereMethode()) }, [])
+  useEffect(() => {
+    const m = lireDerniereMethode()
+    setDerniere(m)
+    if (m === 'mot-de-passe') setMdpOuvert(true)
+  }, [])
 
   // Une erreur secoue légèrement le formulaire (sauf si l'utilisateur réduit les animations : le CSS l'éteint)
   useEffect(() => {
@@ -173,15 +181,20 @@ export function BienvuLogin(props: BienvuLoginProps) {
           {derniere === 'google' && !props.googleEnCours ? <span className="bvl-last">Dernière utilisation</span> : null}
         </button>
         <p className="bvl-safe"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>Réservé aux comptes @{props.domaine}</p>
-        <div className="bvl-sep">Accès provisoire par mot de passe</div>
-        <form onSubmit={(e) => { if (props.emailValide(props.email)) noterDerniereMethode('mot-de-passe'); props.onConnexion(e) }}>
-          <ChampEmail id="bvl-email" libelle="E-mail" valeur={props.email} onChange={props.onEmail} domaine={props.domaine} valide={props.emailValide(props.email)} />
-          <ChampMotDePasse id="bvl-motdepasse" libelle="Mot de passe" valeur={props.motDePasse} onChange={props.onMotDePasse} autoComplete="current-password"
-            avecLien={<button className="bvl-link" type="button" onClick={() => props.onOubli(true)}>Mot de passe oublié ?</button>} />
-          <button className="bvl-go" type="submit" disabled={props.connexionEnCours}>
-            {props.connexionEnCours ? <><span className="bvl-spin" />Connexion…</> : 'Se connecter'}
-          </button>
-        </form>
+        <button className={`bvl-toggle${mdpOuvert ? ' is-open' : ''}`} type="button" aria-expanded={mdpOuvert} aria-controls="bvl-mdp" onClick={() => { setFocusEmail(!mdpOuvert); setMdpOuvert((o) => !o) }}>
+          <span>Accès par mot de passe</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+        {mdpOuvert ? (
+          <form id="bvl-mdp" className="bvl-unfold" onSubmit={(e) => { if (props.emailValide(props.email)) noterDerniereMethode('mot-de-passe'); props.onConnexion(e) }}>
+            <ChampEmail id="bvl-email" libelle="E-mail" valeur={props.email} onChange={props.onEmail} domaine={props.domaine} valide={props.emailValide(props.email)} autoFocus={focusEmail} />
+            <ChampMotDePasse id="bvl-motdepasse" libelle="Mot de passe" valeur={props.motDePasse} onChange={props.onMotDePasse} autoComplete="current-password"
+              avecLien={<button className="bvl-link" type="button" onClick={() => props.onOubli(true)}>Mot de passe oublié ?</button>} />
+            <button className="bvl-go" type="submit" disabled={props.connexionEnCours}>
+              {props.connexionEnCours ? <><span className="bvl-spin" />Connexion…</> : 'Se connecter'}
+            </button>
+          </form>
+        ) : null}
       </>
     )
   }
