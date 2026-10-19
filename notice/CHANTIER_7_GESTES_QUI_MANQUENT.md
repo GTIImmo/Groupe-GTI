@@ -4304,3 +4304,92 @@ retirer les CR des deux côtés — ce que tous les patchs du projet font déjà
 
 ➡ **LA PIÈCE 1 EST EN PRODUCTION.** ⛔ Reste : **redémarrer les 4 services** · **pousser le
 front** · puis **l'essai réel sur 62774**.
+
+
+### ✅✅✅ MARCHE 4 — L'ESSAI RÉEL EST VERT. ⑦-8 EST COMPLET *(19/10, 16:21)*
+
+**Les 4 services redémarrés, vérifiés PAR L'HEURE DES PROCESSUS** *(pas par la croyance)* :
+fichier worker modifié à **15:22:14**, les 4 processus node nés à **16:13:07-09** → **après**.
+Et le front **poussé** *(écart avec le distant : `0 0`)*.
+
+⚠ **Le 1ᵉʳ appel a rendu `droits_insuffisants`** — ⭐ **exactement ce que la répétition avait
+prouvé** : dans l'éditeur SQL `auth.uid()` est nul. Il a fallu **emprunter l'identité dans la même
+transaction** *(`begin; set_config(…, true); select …; commit;`)* — un `set_config` seul se perd
+entre deux instructions. ⭐ Identité : **codex.test, l'admin d'essai**, pour que la trace du travail
+dise « essai » et pas le nom de Frédéric.
+
+**LE RETOUR DE LA RPC, chaque valeur comme prédite :**
+```
+ok=true · visible=false · deja_dans_cet_etat=false · visibles_restantes=3
+plus_aucune_visible=false · index_marques_a_refaire=1   <- LE POST-IT EST POSE
+job_id 17655d3f-ff21-49ec-b25e-a2ba27b130c1
+```
+
+**LE COMPTE RENDU DU WORKER** — `done`, **1 tentative, 16 secondes**, aucune erreur,
+`NS31851120:documents:service:v9` *(le bon service)* :
+```
+photos_lues 4 · visibles 3 · masquees 1      <- HEKTOR CONFIRME LE BASCULEMENT
+boite_publique {"cibles":79,"statut":"ok","vivantes_remplies":2}
+```
+⭐⭐ **« cibles: 79 » prouve le post-it** : j'avais mesuré **78 cibles** avant l'essai, **plus la
+nôtre = 79**. Et `statut: ok` → **le fabricant a tourné dans le budget de 8 s**, donc le doute que
+j'avais soulevé ne s'est pas réalisé *(il reste vrai pour les nuits de balayage)*.
+
+**LES 8 CONTRÔLES EN BASE :**
+
+| contrôle | résultat |
+|---|---|
+| a. la photo 482253 est | **MASQUÉE** |
+| b. photos / visibles chez nous | **4 / 3** |
+| c. marquées absentes *(dégât collatéral)* | ⭐ **0** |
+| d. ⭐⭐ **la BOÎTE PUBLIQUE** | **3** *(elle était à 4)* — **en secondes, pas en une nuit** |
+| e. la masquée est-elle DANS la boîte ? | ⭐⭐ **NON — le verrou tient** |
+| f. la couverture est une visible ? | **une visible** |
+| g. le panneau photos voit toujours tout | ⭐ **4 photos dont 1 masquée** |
+| h. `adresses_app_le` reposée par le fabricant | **2026-10-19 14:21:33** — fraîche |
+
+### ⭐⭐⭐ CE QUE CET ESSAI PROUVE, BOUT À BOUT
+
+**La règle de Frédéric du 19/10 est réalisée en entier** : *« il faut d'abord écrire chez nous,
+ensuite envoyer l'information à Hektor, et sinon il y a le run quotidien pour l'autre sens »*.
+
+```
+le clic          -> notre table : MASQUEE                          immediat
+                 -> Hektor appele, et les DEUX galeries RELUES     16 s
+                 -> le basculement PROUVE (masquees: 1)            pas deduit d un 200
+                 -> la boite publique 4 -> 3                       secondes
+                 -> le verrou tient : la masquee n y entre pas
+                 -> le panneau photos voit toujours ses 4
+```
+
+### ⏰ ET LA DERNIÈRE QUESTION OUVERTE SE MESURE DEMAIN, GRATUITEMENT
+
+**« Masquer une photo fait-il bouger `date_maj` ? »** — ⭐ **la photo 482253 reste MASQUÉE ce soir
+exprès** : c'est le témoin. Demain, après le run, il suffit de lire la date de l'annonce 62774 dans
+le miroir :
+
+```sql
+-- dans data/hektor.sqlite, apres le run du 20/10
+select hektor_annonce_id, date_maj from hektor_annonce where hektor_annonce_id = '62774';
+```
+
+- si `date_maj` porte le **19/10** → ⭐ **masquer bouge la date**, et le run de mise à jour
+  *(marche 3)* verra les masquages tardifs **tout seul** ;
+- si elle porte une date **antérieure** → le run de MAJ voit les **arrivées** mais pas les
+  masquages tardifs, et il faudra **repasser le balayage périodiquement** *(cadence = décision de
+  Frédéric)*.
+
+➡ **Une lecture locale, zéro appel à Hektor, et elle tranche la marche 3.**
+
+### ✅ ⑦-8 EST COMPLET
+
+| marche | état |
+|---|---|
+| **1 — le verrou de publication** | ✅ **en production** *(et le témoin inverse a prouvé qu'il a servi le jour même)* |
+| **2 — le balayage** | ✅ **la tâche est enregistrée**, elle part **cette nuit à 00:00**, ~14 nuits |
+| **3 — le run de mise à jour** | ✅ **rien à écrire** : c'est la même tâche, qui y deviendra toute seule ⏰ *(sa cadence dépend de la mesure de demain)* |
+| **4 — le bouton masquer / afficher** | ✅ **PROUVÉ EN RÉEL** — base, worker, écran, et 8 contrôles verts |
+
+⛔ **Reste à voir à l'œil** : personne n'a encore **vu le bouton** dans le panneau photos. Le
+fichier servi porte le code *(front poussé)*, mais ça ne dit pas qu'il est bien placé.
+➡ **Écran d'un bien, panneau Photos, 3ᵉ pastille en haut à droite de chaque tuile.**
