@@ -4393,3 +4393,77 @@ select hektor_annonce_id, date_maj from hektor_annonce where hektor_annonce_id =
 ⛔ **Reste à voir à l'œil** : personne n'a encore **vu le bouton** dans le panneau photos. Le
 fichier servi porte le code *(front poussé)*, mais ça ne dit pas qu'il est bien placé.
 ➡ **Écran d'un bien, panneau Photos, 3ᵉ pastille en haut à droite de chaque tuile.**
+
+
+### ⭐⭐⭐ LE GESTE EST AUSSI UN MINI-BALAYAGE — trouvé par un clic de Frédéric *(19/10, 14:31)*
+
+**Il a masqué UNE photo sur l'annonce 63073 (V800063073), depuis l'app.** Résultat mesuré :
+
+| | |
+|---|---|
+| le travail | `set_hektor_photo_visibility`, **done**, posé à **14:31:23** |
+| photos chez nous après | **24** — **9 visibles, 15 masquées** |
+| la boîte publique | **9** — ⭐ exactement le nombre de visibles |
+| `adresses_app_le` reposée | **14:31:56**, soit **33 s après** |
+
+⚠ **Mais 15 masquées, alors qu'on n'en avait AUCUNE sur cette annonce le matin.** La mesure
+tranche :
+
+| | combien | créées | dérivé |
+|---|---|---|---|
+| **la photo qu'il a masquée** *(485375)* | **1** | le 25/09 | ⭐ **oui** — elle était visible chez nous |
+| ⭐⭐ **les découvertes** | **14** | ⭐ **le 19/10 à 14:31:56** | **aucun** — jamais vues chez nous |
+
+➡ **Il n'a pas masqué 15 photos. Il en a masqué UNE, et le système en a DÉCOUVERT 14.**
+
+**POURQUOI** : le ⓷ du handler **relit les deux galeries pour PROUVER le basculement** *(on
+n'accepte jamais le 200)*. ⭐ Et une relecture ne rend pas une photo : **elle rend les 24 de
+l'annonce, des deux galeries**. Donc **la preuve a ramené toute la vérité.**
+⭐⭐ C'est exactement l'« autre sens » que Frédéric décrivait — *« sinon il y a le run quotidien
+pour l'autre sens »* — **sauf qu'il n'a pas attendu le run : il s'est produit dans le même travail.**
+⚠ **Je ne l'avais pas annoncé** : je décrivais le geste comme une écriture. **C'en est une, PLUS
+un mini-balayage de l'annonce.**
+
+### ⚠⚠ ET ÇA A DÉCOUVERT UN TROU : LES LIGNES SANS FICHIER
+
+| | la sienne | les 14 découvertes |
+|---|---|---|
+| sur le serveur | **1** | ⛔ **0** |
+| dérivé | **1** | ⛔ **0** |
+| `storage_status` | `local_only` | ⚠ **`pending`** |
+| adresse Hektor | oui | oui |
+
+⛔ **Et RIEN NE LES AURAIT TÉLÉCHARGÉES** : `rattrapage_photos.js` lit **le miroir**, qui ne porte
+que **les visibles**. Elles auraient attendu le balayage — **jusqu'à 14 nuits**.
+*(État du parc : **16 lignes en `pending`** sur **3 annonces**, dont **14 masquées**.)*
+
+### ✅ LE REMÈDE, ÉCRIT *(go « Ok »)* — une étape de plus, pas un code de plus
+
+Le handler compare, **avant d'écrire**, ce que Hektor rend avec ce qu'on a. S'il a **découvert**
+des lignes, il **pose un `sync_hektor_photos`** — ⭐ **le geste qui sait télécharger depuis mai**
+*(preuve du 19/10 : « photos_downloaded: 3 »)*, avec les freins du projet.
+
+| | |
+|---|---|
+| ⛔ **ce qu'il ne fait pas** | télécharger lui-même — **deux codes de téléchargement divergeraient** |
+| ⭐ **il ne coûte rien à vide** | la condition est *« j'ai découvert des lignes »* → un masquage ordinaire reste à **2 appels** |
+| ⛔ **aucune boucle** | `sync_hektor_photos` ne pose pas de geste de visibilité |
+| ⭐ **il ne double pas** | même garde que les deux `enqueue*` du fichier : si un sync est **déjà en vol**, il ne repose rien |
+| ⚠ **best effort** | le masquage est **déjà fait et prouvé** ; si la demande rate, **le balayage repassera**. Elle AMÉLIORE, elle ne CONDITIONNE pas |
+
+⭐ **Et le compte rendu le DIT** : `masquees_decouvertes` et `synchro_photos` sont dans le résultat
+du travail — *sans ces deux lignes, 14 photos ramenées passeraient pour un effet de bord invisible.*
+
+**Contrôle** : ✅ `node --check` passe, et les **7 étapes** du handler sont dans l'ordre.
+⛔ **Inerte jusqu'au redémarrage des 4 services.**
+
+### ⚠⚠ ET UN CHIFFRE DE MA PROJECTION EST À REVOIR
+
+| | |
+|---|---|
+| ma projection du 19/10 | **~2,3 masquées** par annonce concernée, **~1 709** au total |
+| cette annonce **à elle seule** | ⚠ **14** |
+
+➡ **La récolte des 14 nuits sera bien plus grosse qu'annoncé.** ⭐ Et ces 14 n'ont **aucun dérivé**,
+donc elles **ne peuvent pas** sortir sur la vitrine — la boîte est à 9, le nombre de visibles.
+**Le contrôle de demain matin dira la vraie ampleur.**

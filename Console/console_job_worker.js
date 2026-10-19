@@ -8780,9 +8780,90 @@ async function handleSetHektorPhotoVisibility(job) {
   // ⓸ NOS LIGNES, DEPUIS LA LECTURE -- on n'invente pas l'etat, on le recopie.
   //    upsertConsolePhotos porte ses trois garde-fous (liste vide, delete-never,
   //    garde symetrique) : on ne les contourne pas.
+  //
+  // ⭐⭐ AVANT D'ECRIRE, ON REGARDE CE QU'ON NE CONNAISSAIT PAS. La relecture du
+  //   ⓷ rend TOUTES les photos de l'annonce, des DEUX galeries -- pas seulement
+  //   la cible. Elle decouvre donc des masquees que le flux API ne nous a jamais
+  //   donnees (il ne livre que les visibles depuis le 18/05).
+  //   MESURE DU 19/10 QUI A IMPOSE CE BLOC : un seul clic sur l'annonce 63073
+  //   (V800063073) a CREE 14 lignes de masquees qu'on n'avait pas -- 14, quand ma
+  //   projection annoncait 2,3 par annonce.
+  const nosIds = new Set();
+  try {
+    const nos = await supabaseRequest(
+      `app_console_photo?app_dossier_id=eq.${encodeURIComponent(String(dossier.app_dossier_id))}`
+      + "&select=hektor_photo_id&limit=500",
+      { method: "GET" },
+    );
+    for (const l of (Array.isArray(nos) ? nos : [])) {
+      if (l.hektor_photo_id) nosIds.add(String(l.hektor_photo_id));
+    }
+  } catch (_) { /* best-effort : sans cette liste on ne declenchera rien, c'est tout */ }
+  const decouvertes = apres.filter((e) => !nosIds.has(String(e.hektor_photo_id)));
+
   await upsertConsolePhotos(dossier, apres);
 
-  // ⓹ ⭐⭐ ON REVEILLE LE FABRICANT DE LA BOITE PUBLIQUE.
+  // ⓹ ⭐⭐ ET SI ON A DECOUVERT DES PHOTOS, ON DEMANDE LEUR SYNCHRO.
+  //   ⚠⚠ LE TROU QUE CA BOUCHE, mesure du 19/10 sur l'annonce 63073 : les 14
+  //     lignes decouvertes avaient leur ADRESSE HEKTOR mais AUCUN FICHIER chez
+  //     nous (`storage_status: pending`, 0 derive). Et RIEN NE LES AURAIT
+  //     TELECHARGEES : `rattrapage_photos.js` lit le MIROIR, qui ne porte que les
+  //     visibles. Elles auraient attendu le balayage -- jusqu'a 14 nuits.
+  //   ⛔ ON NE TELECHARGE PAS ICI : `sync_hektor_photos` sait le faire depuis mai
+  //     (preuve du 19/10 : « photos_downloaded: 3 »), avec les freins du projet.
+  //     Deux codes de telechargement divergeraient au premier ajustement.
+  //   ⚠ BEST EFFORT, et c'est volontaire : le masquage est DEJA fait et PROUVE
+  //     chez Hektor. Si cette demande echoue, le balayage repassera. Elle
+  //     AMELIORE, elle ne CONDITIONNE pas.
+  //   ⭐ ET ELLE NE COUTE RIEN QUAND IL N'Y A RIEN DE NEUF : la condition est
+  //     « j'ai decouvert des lignes », donc un masquage ordinaire reste a 2
+  //     appels Hektor.
+  //   ⛔ AUCUN RISQUE DE BOUCLE : sync_hektor_photos ne pose pas de geste de
+  //     visibilite.
+  let syncPhotos = decouvertes.length ? "a demander" : "rien de nouveau";
+  if (decouvertes.length) {
+    try {
+      // On ne double pas un travail deja en vol -- meme garde que les deux
+      // enqueue* de ce fichier (« ne jamais rejouer » est la regle du projet).
+      const params = new URLSearchParams({
+        select: "id,status", job_type: "eq.sync_hektor_photos",
+        status: "in.(pending,running)",
+        hektor_annonce_id: `eq.${annonce}`, limit: "1",
+      });
+      const enVol = await supabaseRequest(`app_console_job?${params.toString()}`, { method: "GET" });
+      if (Array.isArray(enVol) && enVol.length) {
+        syncPhotos = `deja en vol (${enVol[0].id})`;
+      } else {
+        const cree = await supabaseRequest("app_console_job", {
+          method: "POST", prefer: "return=representation",
+          body: JSON.stringify([{
+            job_type: "sync_hektor_photos",
+            app_dossier_id: dossier.app_dossier_id == null ? null : Number(dossier.app_dossier_id),
+            hektor_annonce_id: annonce,
+            payload_json: {
+              origine: "set_hektor_photo_visibility",
+              motif: "photos masquees decouvertes par la relecture",
+              decouvertes: decouvertes.length,
+            },
+            priority: 30,
+          }]),
+        });
+        const id = Array.isArray(cree) && cree.length ? cree[0].id : null;
+        syncPhotos = id ? `demandee (${id})` : "demandee";
+        await logJob(job.id, "set_hektor_photo_visibility", "running",
+          `${decouvertes.length} photo(s) masquee(s) DECOUVERTE(S) : synchro photos demandee pour les telecharger`, {
+            hektor_annonce_id: annonce,
+            decouvertes: decouvertes.map((e) => String(e.hektor_photo_id)).slice(0, 30),
+            sync_job_id: id,
+          });
+      }
+    } catch (error) {
+      syncPhotos = `NON demandee (${error && error.message ? error.message : String(error)})`
+        + " -- le balayage repassera";
+    }
+  }
+
+  // ⓺ ⭐⭐ ON REVEILLE LE FABRICANT DE LA BOITE PUBLIQUE.
   //    La RPC a remis `adresses_app_le` a blanc sur les quatre index : l'annonce
   //    est donc une CIBLE. Ici on dit au fabricant « vas-y maintenant », au lieu
   //    d'attendre le run de 05:00 -- sinon la photo masquee resterait visible au
@@ -8804,13 +8885,17 @@ async function handleSetHektorPhotoVisibility(job) {
       + `-- le run de nuit la remettra d'aplomb`;
   }
 
-  // ⓺ ⚠ LA VITRINE ANDROID, ELLE, NE BOUGERA PAS AVANT LE RUN : c'est un export
+  // ⓻ ⚠ LA VITRINE ANDROID, ELLE, NE BOUGERA PAS AVANT LE RUN : c'est un export
   //    statique pousse sur GitHub (run_full_pipeline.ps1:1726). Dit, pas cache.
   const visibles = apres.filter((e) => e.visible).length;
   await logJob(job.id, "set_hektor_photo_visibility", "done",
     vise ? "Photo affichee chez Hektor" : "Photo masquee chez Hektor", {
       hektor_annonce_id: annonce, hektor_photo_id: numero, visible: vise,
       photos_lues: apres.length, visibles, masquees: apres.length - visibles,
+      // ⭐ CE QUE LA RELECTURE A DECOUVERT, et ce qu'on en a fait. Sans ces deux
+      //   lignes, 14 photos ramenees passeraient pour un effet de bord invisible.
+      masquees_decouvertes: decouvertes.length,
+      synchro_photos: syncPhotos,
       boite_publique: boite,
       vitrine_android: "inchangee jusqu'au prochain run (export statique)",
     });
@@ -8827,6 +8912,8 @@ async function handleSetHektorPhotoVisibility(job) {
     photos_lues: apres.length,
     visibles,
     masquees: apres.length - visibles,
+    masquees_decouvertes: decouvertes.length,
+    synchro_photos: syncPhotos,
     plus_aucune_visible: visibles === 0,
     boite_publique: boite,
     refresh_job_id: syncJob ? syncJob.id : null,
