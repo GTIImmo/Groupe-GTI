@@ -296,6 +296,23 @@ report ne se décident jamais sans lui.
 ### ⛔ Ce qui attend Frédéric
 
 ```
+⓿ ⏰⏰ LE 20/10 AU MATIN -- LA PREMIERE NUIT DU BALAYAGE DES PHOTOS MASQUEES.
+   UNE COMMANDE, UN VERDICT (elle ne fait que LIRE, aucun appel a Hektor) :
+        python phase2/checks/controle_balayage_photos_masquees.py
+   Sortie 0 = vert · 1 = un rouge · 2 = pas pu mesurer. Huit points, dont :
+     ⭐ LE RYTHME REEL -- c'est LUI qui dit si on peut monter le plafond de 1 000
+        (il refuse de conclure sous 20 travaux mesures : « non concluant ») ;
+     ⭐⭐ LE VERROU -- ZERO masquee dans une boite publique. Le controle qui compte :
+        sans lui, les masquees fraichement ramenees partiraient sur la vitrine
+        Android, l'espace client et le portail de rapprochement.
+   LA REFERENCE EST FIGEE DANS LE FICHIER (19/10, avant la nuit) : 106 masquees sur
+   15 annonces · 3 avec un derive · 0 dans une boite · 13 490 annonces a faire ·
+   305 deja visitees · duree medianne historique 10 s.
+   ⚠ UN REFUS SORT EN 1 EXPRES, et il est ROUGE : code 3 « file non vide » (le
+     worker est plus lent que le lot -> baisser -Limite), code 4 « >= 10 erreurs
+     en 24 h » (Hektor nous rejette -> ne RIEN rejouer).
+   TEMOIN INVERSE JOUE LE 19/10 AU SOIR : 5 oranges, 0 rouge -- donc un vert demain
+   voudra dire quelque chose.
 ①③ ⏰⏰ DEMAIN 16/10, DANS L'ORDRE -- valide par Frederic a 01:00 :
    0. ✅ FAIT a 07:0x (go « vas-y ») : LE DETECTEUR D'ECHEC EST REPARE -- `Write-Host` +
       `| Out-Host`, la fonction ne rend plus QU'UN SEUL booleen. Epreuve :

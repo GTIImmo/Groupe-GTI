@@ -3969,3 +3969,113 @@ l'empileur sort en moins d'une minute.
 **c'était à l'envers**, un calibrage part EN DESSOUS de la cible. ➡ La tâche tourne au **défaut de
 1 000**, et ⭐ **le calibrage est automatique** : si le worker ne digère pas son lot, la nuit
 suivante le refus « file non vide » sort en 1 et le dit. Pas de rampe à la main.
+
+
+---
+
+## ⑦-8 — « IL Y A UNE LIMITE DE 12 PHOTOS ? » *(question de Frédéric, 19/10)* — **c'est 5, et elle ne mord plus**
+
+**Sa mémoire était juste sur le fond, fausse sur le chiffre et sur l'endroit.**
+
+### LA LIMITE EXISTE : `MAX_EXPORTED_IMAGES = 5`
+
+`phase2/sync/export_app_payload.py:32`, appliquée par `trim_json_array_field` *(l. 2917-2921)* à
+**`images_json`** ET **`images_preview_json`** du **payload de détail**.
+
+⚠ Le « 12 » qu'il avait en tête est probablement la mesure que je lui ai montrée le 19/10 :
+`.images` = **12** pour l'annonce 32704 — c'était son **nombre de visibles chez Hektor**, pas une
+limite.
+
+### ⭐⭐ MAIS IL Y A TROIS CHEMINS DE PHOTOS, ET UN SEUL EST TRONQUÉ
+
+| chemin | limite | mesure du 19/10 |
+|---|---|---|
+| **la table `app_console_photo`** → `loadConsolePhotos` *(le PANNEAU PHOTOS)* | ⭐ **`.limit(500)`** | annonce 118 : **20** · 62189 : **7** · 63005 : **14** |
+| **notre boîte `images_preview_json_app`** *(la galerie de la fiche, la vitrine…)* | ⭐ **AUCUNE** | 118 : **20** · 63005 : **14** |
+| ⚠ **le payload de détail** `app_dossier_detail_current` | ⛔ **5** | 118 : **5** · 63005 : **5** |
+
+### ⭐⭐⭐ ET ELLE NE MORD PLUS — mesuré, pas supposé
+
+L'app lit **notre boîte** quand elle existe *(`api.ts` substitue `images_preview_json_app` dans
+`images_preview_json` via `galerieAppEnTexte`)*, et elle ne retombe sur le payload que si notre
+boîte est absente.
+
+| mesure | valeur |
+|---|---|
+| vivantes **sans** notre boîte *(donc qui retomberaient sur 5)* | **3 236** sur 13 491 |
+| ⭐ **dont ZÉRO photo chez nous** | **3 236 sur 3 236** |
+| **annonces vraiment tronquées** *(sans boîte ET plus de 5 photos)* | ⭐⭐ **0** |
+
+➡ **Les 3 236 n'ont aucune photo** — la limite de 5 ne leur enlève rien. *(C'est exactement ce que
+disait déjà le commentaire d'`App.tsx:18694` : « les 3 222 qui n'ont pas notre galerie sont
+EXACTEMENT celles qui n'ont aucune photo », mesure du 27/09.)*
+
+### ⭐ POUR LE BOUTON MASQUER/AFFICHER (pièce C) : AUCUNE LIMITE
+
+Le panneau photos — là où vivra le bouton — lit **la table**, avec `.limit(500)`. **Il voit tout**,
+visibles et masquées. ⚠ Et c'est déjà **prouvé en réel** : après l'essai du 19/10, le panneau de
+l'annonce 62189 voit **7 photos dont 3 masquées**, alors que sa boîte publique n'en porte que 4.
+
+### ⚠ LE PIÈGE LATENT, NOTÉ ET NON TRAITÉ
+
+La limite de 5 **est toujours là, dormante**. Si notre boîte disparaissait un jour pour une annonce
+**qui a des photos**, l'app n'en montrerait **que 5, en silence**. Aujourd'hui : **0 annonce dans
+ce cas**. ➡ **Noté, pas corrigé** — ce n'est pas le chantier en cours, et le remède serait de
+monter `MAX_EXPORTED_IMAGES` ou de retirer la troncature du payload *(décision de Frédéric)*.
+
+
+---
+
+## ✅ ⑦-8 — LA TACHE EST ENREGISTREE, ET LE CONTROLE DE DEMAIN EST ECRIT *(19/10)*
+
+### L'ENREGISTREMENT : 13 REGLAGES VERTS
+
+Frédéric a lancé l'installeur. **Vérifié de mon côté, pas cru** :
+
+| | |
+|---|---|
+| état | **Ready** |
+| prochaine passe | ⭐ **20/10/2026 00:00:00** |
+| dernier résultat | **267011** = « jamais lancée » — l'un des `ACCEPTABLE_TASK_RESULTS`, **le moniteur ne criera pas** |
+| script appelé | le bon |
+| les 11 tâches surveillées | toutes **Ready**, sauf « Rattrapage Documents » **Disabled** *(voulu)* |
+
+**Et la file est libre pour cette nuit** *(sinon le refus « file non vide » serait sorti en 1 pour
+rien)* : **0** travail `sync_hektor_photos` en attente · **0** erreur sur 24 h · **0** travail
+**tous types confondus** · le service `documents` bat depuis **27 s**.
+
+### LE CONTROLE DE DEMAIN : `phase2/checks/controle_balayage_photos_masquees.py`
+
+Écrit **la veille**, pour que le contrôle du lendemain **ne dépende d'aucune conversation**.
+Huit points, sortie 0/1/2, et la **référence du 19/10 figée dedans** *(106 masquées sur
+15 annonces · 3 avec un dérivé · **0 dans une boîte** · 13 490 à faire · 305 visitées)*.
+
+⭐ **Les deux points qui portent tout :**
+- **④ le rythme réel** — c'est lui qui dira si on peut monter au-dessus de 1 000 ;
+- **⑦⭐⭐ le verrou** — **zéro masquée dans une boîte publique**. ⚠ Et s'il **ne peut pas** mesurer,
+  il sort **ROUGE par prudence**, pas vert.
+
+### ⭐ TEMOIN INVERSE JOUE LE SOIR MEME — 5 oranges, 0 rouge
+
+Joué **avant** la nuit, il doit crier ; sinon un vert demain ne prouverait rien.
+```
+🟠 la tache n'a pas encore tourne (resultat 267011)
+🟠 1 travaux poses au lieu de ~1000
+🟠 rythme NON CONCLUANT : 1 travail mesure, il en faut 20
+🟠 aucune masquee ramenee
+🟠 le curseur n'a pas avance
+✅ les marqueurs du journal · 0 erreur · 0 refus Hektor · LE VERROU TIENT
+```
+
+### ⚠⚠ ET LE TEMOIN INVERSE A TROUVE UN DEFAUT DANS MON PROPRE CONTROLE
+
+Sa 1ʳᵉ version conseillait **« baisser le plafond à 114 »** — calculé sur **UN SEUL travail**,
+celui de l'essai du matin, qui était **le plus lent des 315** *(78,9 s : il téléchargeait 3 photos
+et fabriquait leurs dérivés)*. **Un verdict sur un échantillon de 1 n'est pas un verdict.**
+
+➡ Corrigé : **minimum 20 travaux mesurés**, sinon il écrit *« rythme NON CONCLUANT […] Aucun
+conseil de plafond »*. ⭐ C'est la règle *« quand on ne peut pas savoir, on dit non concluant, on
+ne crie pas »* — et c'est **l'épreuve qui a trouvé le défaut, pas la relecture.**
+
+➡ Le rappel est aussi posé dans **`CLAUDE.md` §2**, item **⓿**, pour qu'il survive à la fin de
+cette conversation.
