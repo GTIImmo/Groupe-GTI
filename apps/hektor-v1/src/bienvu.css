@@ -77,3 +77,44 @@
   --bv-fast: 150ms;
   --bv-base: 240ms;
 }
+
+/* =============================================================================
+   Lot 3 — le cadre : barre latérale (bureau) et en-tête (mobile / tablette)
+   Toujours sous `.bv` : éteint, rien ne change. La coche garde son magenta ; seule l'encre
+   (toit et mot) passe au blanc sur ces fonds sombres. Jamais de plaque derrière le logo.
+   Les couches existantes ont de nombreux !important : on les passe par la spécificité
+   (.bv + .app-shell + .side-rail), sans toucher une seule de leurs lignes.
+   ============================================================================= */
+
+/* Bureau : le logo remplace la tuile magenta et le texte « Groupe GTI / écran » */
+.bv .app-shell .side-rail .rail-mark.rail-mark-bv {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 46px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #ffffff;
+  justify-content: flex-start;
+  place-items: center start;
+  padding: 0 0 0 6px;
+}
+.bv .app-shell .side-rail .rail-mark.rail-mark-bv:hover { filter: none; transform: none; opacity: 0.9; }
+/* !important : le composant pose width:100% en ligne (style=...), seule une règle importante le dépasse */
+.bv .app-shell .side-rail .rail-mark.rail-mark-bv svg { width: 132px !important; height: auto; max-height: 40px; }
+/* replié : le symbole seul, centré */
+.bv .app-shell.is-sidebar-collapsed .side-rail .rail-mark.rail-mark-bv { justify-content: center; place-items: center; padding: 0; }
+.bv .app-shell.is-sidebar-collapsed .side-rail .rail-mark.rail-mark-bv svg { width: 36px !important; height: auto; }
+
+/* Mobile et tablette : le symbole remplace la forme dessinée en CSS */
+.bv .mobile-brand-mark.mobile-brand-mark-bv {
+  width: 34px;
+  height: 34px;
+  border-radius: 0;
+  background: none;
+  transform: none;
+  box-shadow: none;
+}
+.bv .mobile-title-block span { text-transform: lowercase; letter-spacing: 0.02em; }
+.bv .mobile-title-block h1 { font-family: var(--bv-font-display); font-weight: 800; letter-spacing: -0.02em; }

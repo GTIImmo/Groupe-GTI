@@ -231,6 +231,7 @@ import SanteSystemeScreen from './SanteSystemeScreen'
 import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
+import { BienvuLogo, BienvuSymbol } from './BienvuLogo'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -22381,19 +22382,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </button>
         <div className="brand-block rail-top">
           <button
-            className="rail-mark"
+            className={`rail-mark${APP_BIENVU_ENABLED ? ' rail-mark-bv' : ''}`}
             type="button"
             aria-label={sidebarCollapsed ? 'Deplier le menu' : 'Replier le menu'}
             aria-pressed={sidebarCollapsed}
             title="Deplier / replier le menu"
             onClick={() => setSidebarCollapsed((value) => !value)}
           >
-            <img src="/gti-mark.png" alt="Groupe GTI" />
+            {/* bienvu (lot 3) : replié = le symbole seul, déplié = le logo complet (mot blanc, coche magenta), sans plaque */}
+            {APP_BIENVU_ENABLED
+              ? (sidebarCollapsed ? <BienvuSymbol /> : <BienvuLogo />)
+              : <img src="/gti-mark.png" alt="Groupe GTI" />}
           </button>
-          <div className="rail-brand">
-            <strong>Groupe GTI</strong>
-            <span>{screenHeader.title}</span>
-          </div>
+          {APP_BIENVU_ENABLED ? null : (
+            <div className="rail-brand">
+              <strong>Groupe GTI</strong>
+              <span>{screenHeader.title}</span>
+            </div>
+          )}
           <button
             className="rail-reduce"
             type="button"
