@@ -3089,3 +3089,650 @@ Le coût est **les appels**, pas le volume : **~1 709 photos à télécharger**,
 taux est fort)*, puis le reste **en continu**. Et **C est AUSSI le « run de mise à jour »**
 que Frédéric demande pour les prochaines : **un seul mécanisme fait les deux** — il
 repasse indéfiniment et attrape les masquées nouvelles au passage suivant.
+
+
+---
+
+## ⑦-8 — « POURQUOI NE PAS FAIRE COMME LE RUN DES PHOTOS VISIBLES ? » *(question de Frédéric, 19/10)*
+
+**Il a raison, et la réponse était déjà écrite dans le projet.** Ma proposition de la veille
+*(balayer les 13 491 vivants chaque nuit, ou en cycle de 3 jours)* était **450 fois trop chère**.
+
+### 1. Pourquoi le run des photos visibles ne coûte RIEN à Hektor
+
+`Console/rattrapage_photos.js`, en tête du fichier, l'écrit en majuscules :
+
+> ⚠⚠ **CE SCRIPT NE PARLE JAMAIS A HEKTOR.** Les adresses sont DEJA sur ce serveur, dans le
+> miroir local (`data/hektor.sqlite`, `hektor_annonce_detail.images_json`). On lit en local,
+> on telecharge sur le CDN public. -> AUCUNE requete contre le quota Hektor.
+
+Et il descend à `--parallele 4`, `--intervalle 100` *(≈17 photos/s)*, parce que **staticlbi n'est
+pas Hektor** : *« le 20/08 il repondait en 55 ms pendant que l'admin nous bannissait »*.
+
+➡ **La liste des photos visibles arrive GRATUITEMENT, chaque nuit, dans le miroir** — c'est l'API
+détail qui la porte. Le rattrapage n'est qu'une **lecture locale + un téléchargement CDN**.
+
+### 2. Ce qui ne peut PAS être recopié : la DÉCOUVERTE
+
+Le miroir ne porte **aucune** photo masquée *(l'API détail ne livre que les visibles — mesuré le
+19/10 sur 32704 : `.images` = 12 alors que Hektor en a 19 masquées + 12 visibles, et **aucun
+compte total** nulle part)*. Donc pour une masquée, **la liste ne peut pas venir du local** : il
+faut un appel Console par annonce. ⭐ Mais une fois l'adresse connue, **le téléchargement
+redevient gratuit** — même CDN, même cadence.
+
+### 3. ⭐⭐ Ce qui PEUT être recopié : LE DÉCLENCHEUR — et la règle existe depuis le 26/09
+
+`LISTE_TACHES_A_COCHER_2026-08-29.md:1437`, point **G.7** :
+
+> *« Mesure qui, elle, tient : ajouter une photo dans Hektor FAIT BOUGER la date_maj de
+> l'annonce -> **pas de balayage necessaire**. »*
+
+**Mesures du 19/10 qui rendent ce déclencheur utilisable :**
+
+| mesure | résultat |
+|---|---|
+| le signal est-il frais ? | ⭐ **61 431 lignes sur 61 431** de `hektor_annonce` portent `synced_at = 2026-10-19` — le run descend **tout l'index chaque nuit**, vivants **et** archives |
+| combien d'annonces vivantes bougent par jour ? | **2, 3, 23, 25, 26, 29, 30, 34, 35, 41, 53, 96** sur les 19 derniers jours — **médiane ≈ 29** *(une pointe à 684 le 01/10)* |
+| coût d'un run de MAJ piloté par `date_maj` | **≈ 30 appels/nuit = 30 secondes**, au lieu de 13 491 = 3 h 45 |
+
+➡ **450 fois moins cher**, et c'est exactement le patron du run visible : **un signal local déjà
+payé décide qui on va voir.**
+
+### 4. ⚠ MAIS LE SIGNAL EST AVEUGLE AU PASSÉ — mesuré sur les 3 annonces trouvées la veille
+
+| annonce | état | `date_maj` | le signal aurait parlé ? |
+|---|---|---|---|
+| **59068** *(2 masquées)* | **archivée** | **31/03/2026** | ⛔ non — 7 mois |
+| **62189** *(3 masquées)* | vivante | 15/09/2026 | ⛔ non — 1 mois |
+| **63005** *(2 masquées)* | vivante | 01/10/2026 | ✅ oui — 18 jours |
+
+**1 sur 3.** Leurs photos masquées sont **antérieures** à tout mouvement récent : **aucune date ne
+les révélera jamais.**
+
+➡ **C'est la preuve des deux étages**, et non d'un seul :
+- **① un balayage UNIQUE** — le seul moyen d'aller chercher les ~1 709 masquées **déjà là** ;
+- **② un run de MAJ piloté par `date_maj`** — pour tout ce qui arrive **à partir de maintenant**.
+
+### 5. ⚠⚠ L'AVERTISSEMENT DU PROJET, ÉCRIT DEUX FOIS — il vise mon balayage
+
+`LISTE:1038` *(D.0-f)* **et** `LISTE:1318` :
+
+> *« ⚠⚠ ET UN BALAYAGE DU PARC ENTIER COUTE 56 867 REQUETES = **4x LE SEUIL** (memoire) : la
+> detection quotidienne doit rester PLAFONNEE. »*
+
+Ce n'est pas un veto sur l'étage ①, mais **la condition** : plafond par nuit, curseur, cadence 1/s,
+arrêt net au premier refus. **Un balayage sans plafond est précisément ce que cette ligne
+interdit.**
+
+### 6. ⛔ CE QUE JE NE SAIS PAS MESURER, et il faut le dire
+
+G.7 a mesuré **AJOUTER** une photo. **MASQUER une photo déjà ancienne**, est-ce que ça bouge
+`date_maj` ? **Non mesuré** — et le mesurer demande une **écriture chez Hektor** *(masquer une
+photo sur le bac à sable 62774)*, donc ça appartient à la **pièce C** de ⑦-8, pas ici.
+
+- Si **oui** → l'étage ② voit tout, l'étage ① ne sert qu'une fois.
+- Si **non** → l'étage ② voit les **arrivées** *(une photo masquée est d'abord une photo
+  **déposée**, et le dépôt, lui, bouge la date)* et **manque les masquages tardifs** → il faut
+  alors **repasser l'étage ① périodiquement** sur le parc vivant seulement *(13 491 = 1 nuit)*.
+  **Cadence = décision de Frédéric, pas la mienne.**
+
+
+---
+
+## ⑦-8 — AUDIT COMPLET DE LA FAMILLE « QUI PUBLIE UNE PHOTO ? » *(19/10, demandé par Frédéric)*
+
+> *« il faut penser aussi aux vitrines Android, écran rapprochement, mes futurs envois pub
+> etc... pour ne pas publier des photos masquées. »*
+
+**Balayage de famille** *(leçon 9)* : je n'avais audité que la vitrine publique. Il y a
+**neuf** surfaces, et **deux programmes de vitrine**, pas un.
+
+### 1. LE POINT DE PASSAGE : comment une masquée entre dans un blob
+
+`app_photos_remplir_adresses_app` *(patch du 27/09, l. 77-92)* :
+
+```sql
+-- la COUVERTURE
+order by p.app_dossier_id, p.visible desc nulls last, p.sort_order asc nulls last, p.id
+-- la GALERIE
+jsonb_agg(...) order by p.visible desc nulls last, p.sort_order asc nulls last, p.id
+where p.present_in_hektor and p.derives_json ? 'w400' and p.derives_json ? 'w1600'
+```
+
+⭐⭐ **`visible desc` est un TRI, JAMAIS UN FILTRE** *(la règle que le projet connaît déjà)* :
+
+- **la couverture** prend la **première** ligne → donc une visible **tant qu'il en existe une** ;
+- **la galerie** `jsonb_agg` prend **TOUT** → les masquées y sont, **à la fin** ;
+- ⭐ **et la vraie barrière d'aujourd'hui est la clause `where` : LES DÉRIVÉS.** Une photo
+  masquée sans `w400`/`w1600` **n'entre nulle part**.
+
+### 2. LA FAMILLE, MESURÉE — 7 objets en base, ni un de plus
+
+Mesure *(`pg_get_viewdef` / `pg_get_functiondef` sur tout `public`)* :
+
+| objet | porte |
+|---|---|
+| `app_photos_remplir_adresses_app` | **le fabricant** — galerie + couverture |
+| `app_photos_remplir_adresses_registre` | le recopieur — galerie + couverture |
+| `app_dossiers_current` *(vue)* | ⭐ **galerie + couverture** — c'est ELLE qui sert les surfaces publiques |
+| `app_registre_mandats_current` *(vue)* | galerie + couverture *(interne)* |
+| ⭐ **`app_get_rapprochements`** | **COUVERTURE SEULE** |
+| `app_dossier_match_attrs` *(vue)* | **COUVERTURE SEULE** |
+| `app_photos_placeholder_sans_photo` | **COUVERTURE SEULE** |
+
+### 3. LES NEUF SURFACES, une ligne par surface
+
+| surface | reçoit | filtre `visible` ? | une masquée peut-elle sortir ? |
+|---|---|---|---|
+| **vitrine Android publique** `Ecrans Android/export_project_vitrine.py:167` | **galerie `_app`**, demandée explicitement | ⚠ **écrit mais INERTE** *(la clé manque au blob)* | ⚠ **OUI** → **pièce A** |
+| **espace client** *(page sécurisée du vendeur)* `espace_client.py:88` → vue `app_dossiers_current` | **galerie `_app`** *(la vue coalesce)* | ⛔ **AUCUN**, et il **RE-TRIE par `order`** | ⚠⚠ **OUI, et en PREMIER** → **pièce B** |
+| **portail de rapprochement** *(envoyé par e-mail à l'acquéreur)* `espace_portal` ← `espace_client._photos` l. 476 | **la même galerie**, 8 photos | ⛔ **AUCUN** *(même code)* | ⚠⚠ **OUI** → **pièce B** |
+| ⭐ **écran Rapprochement** `app_get_rapprochements` | **couverture seule** | le tri `visible desc` | ✅ **non** — sauf annonce 100 % masquée |
+| **attributs de rapprochement** `app_dossier_match_attrs` | couverture seule | idem | ✅ idem |
+| **e-mails de rapprochement** `rapprochement_email.py:214` | `photo_url_listing` *(couverture)* | idem | ✅ idem |
+| **RDV publics** `appointment_service.py:194,282` | `photo_url_listing` *(couverture)* | idem | ✅ idem |
+| **app front** *(cockpit, fiches, vignettes, registre)* | galerie `_app` | aucun | ⭐ **VOULU** : le négociateur DOIT voir ses masquées |
+| ⭐ **ancienne vitrine** `Ecrans Android/vitrine6.py:477` | Hektor `modes = ["vignettes"]  # PUBLIC only` | — | ✅✅ **sûre par construction** — elle ne lit jamais `vignettes_hidden` |
+| **portails / diffusion pub** | — | — | ✅ **aucun code photo** *(grep vide sous `backend/app/services/`)* ; gelée depuis juillet |
+
+### 4. L'ÉTAT D'AUJOURD'HUI, mesuré en production *(19/10, lecture seule)*
+
+| mesure | valeur |
+|---|---|
+| photos masquées, total | **103** |
+| dont présentes chez Hektor *(réparées le 19/10)* | **103** |
+| dont avec `w400` → **entrent dans la couverture** | ⭐ **0** |
+| dont avec `w400`+`w1600` → **entrent dans la galerie** | ⭐ **0** |
+| annonces concernées | 14 |
+| dont **vivantes** | ⭐ **0** |
+| annonces où **TOUTES** les photos sont masquées *(le trou du tri)* | ⭐ **0** |
+
+➡ ✅ **ZÉRO FUITE AUJOURD'HUI.** ⚠ **Mais par accident, pas par conception** : les 103 n'ont pas
+de dérivés et vivent sur des archives. **Rien dans le code ne l'empêche.**
+
+### 5. ⭐⭐ LA PIÈCE QUE JE N'AVAIS PAS VUE — un seul endroit protège TOUT
+
+`Console/generer_derives_photos.js` **n'a aucun filtre sur `visible`** *(mesuré : 0 occurrence)*
+et il sert **les annonces vivantes** *(`app_dossier_current`)*. **C'est lui qui ouvre la vanne.**
+
+➡ **Ne pas fabriquer de dérivé pour une photo masquée** protège **d'un seul geste** :
+la vitrine publique, l'espace client, le portail de rapprochement, **et toutes les surfaces
+publiques pas encore écrites** — ses futurs envois pub comprises. C'est la **barrière amont**,
+là où les pièces A et B sont deux barrières aval à poser surface par surface.
+
+⭐ **Et ça ne cache rien au négociateur** : `prefererNosPhotos` *(api.ts:7980)* fait
+`if (!notreApercu && !notreGrande) return photo` → **une photo sans dérivé garde l'adresse
+Hektor et s'affiche quand même** dans le panneau photos.
+
+### 6. ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS — la question de la coupure
+
+Sans dérivé, une photo masquée est visible **tant que Hektor vit**. **Le jour de la coupure,
+elle devient une image morte dans l'app** *(l'original est sur notre serveur — le coffre privé —
+mais l'app ne sait afficher que les dérivés ou Hektor)*.
+
+- ⭐ **Le mécanisme de secours existe** : règle **G.8**, *« un dérivé retiré → REGÉNÉRABLE à la
+  demande (comme "Préparer") »*.
+- ⛔ **Mais ce n'est pas à moi d'en décider** : fabriquer les dérivés d'une masquée et les
+  filtrer partout, ou ne pas les fabriquer et les regénérer au besoin, **c'est un arbitrage de
+  Frédéric**. Les deux chemins sont tenables ; ils ne coûtent pas la même chose.
+
+### 7. Ce que je n'ai PAS pu mesurer
+
+- **Masquer** une photo ancienne bouge-t-il `date_maj` ? → écriture chez Hektor, **pièce C**.
+- **Personne n'a vu l'écran** du panneau photos avec une masquée dedans *(0 annonce vivante en
+  porte une aujourd'hui)*.
+
+
+---
+
+## ⭐⭐⭐ ⑦-8 — « MAIS ON PEUT PAS FAIRE DEUX BOÎTES ? » *(Frédéric, 19/10)* — SA SOLUTION EST LA BONNE
+
+**Et la deuxième boîte EXISTE DÉJÀ.** Mes options A et B étaient toutes les deux moins bonnes.
+
+| la boîte | contient | qui la lit |
+|---|---|---|
+| **la boîte PUBLIQUE** = `images_preview_json_app` | ⚠ aujourd'hui **TOUT**, masquées comprises | la vitrine Android · l'espace client · le portail de rapprochement · la galerie de la fiche |
+| **la boîte COMPLÈTE** = la table `app_console_photo` | **tout**, avec le drapeau `visible` | ⭐ **le panneau photos** *(`loadConsolePhotos`, api.ts:7991 — il lit la TABLE, jamais la boîte)* — là où vivra le bouton masquer/afficher |
+
+➡ **Il n'y a pas de deuxième boîte à construire. Il y a UNE boîte à nettoyer.**
+
+### Le geste : une condition, dans UNE fonction
+
+`app_photos_remplir_adresses_app`, aux **deux** endroits de cette même fonction *(la couverture
+`tmp_principale` et la galerie `tmp_galerie`)* : ajouter `and p.visible is not false` au `where`
+qui exige déjà les dérivés.
+
+⚠ **Et `is not false`, pas `not visible`** : un `NULL` doit rester **visible** — c'est la règle
+que le projet porte déjà *(`coalesce(img->>'visible','1')`)*. On recopie, on n'invente pas.
+
+### Ce que ça règle d'un seul coup
+
+| surface | code à écrire |
+|---|---|
+| vitrine Android publique | ✅ **zéro ligne** |
+| espace client | ✅ **zéro ligne** |
+| portail de rapprochement | ✅ **zéro ligne** |
+| ⭐⭐ **les futurs envois pub** | ✅ **protégés pour toujours** — une page qui ouvre la boîte publique **ne PEUT PAS** y trouver une masquée |
+| la couverture | ✅ **structurellement** impossible à masquer *(le trou « annonce 100 % masquée » se ferme)* |
+
+⭐ **Et les dérivés continuent d'être fabriqués** → le bouton « afficher » de la pièce C reste
+**instantané**. C'est l'avantage de l'option B, **gardé**.
+
+⭐⭐ **LA PIÈCE A ET LA PIÈCE B DEVIENNENT INUTILES.** Plus de clé à poser, plus de filtre à
+recopier surface par surface, **plus de sentinelle à écrire** : la discipline est remplacée par
+une impossibilité.
+
+### Ce que ça change à l'écran — à dire, pas à cacher
+
+- La **galerie de la fiche annonce** *(App.tsx:18699-18706)* ne montrerait plus que les visibles.
+  ⭐ **C'est juste** : elle montre ce que le public voit. Le **panneau photos** — le vrai outil de
+  travail — montre tout, puisqu'il lit la table.
+- ⭐⭐ **C'est exactement le dessin de Hektor lui-même** : deux galeries, `mode=vignettes` et
+  `mode=vignettes_hidden`. On ne copie pas une idée nouvelle, on copie la sienne.
+- Une annonce dont **toutes** les photos sont masquées afficherait « Sans photo ».
+  **C'est juste aussi** — et **0 annonce** est dans ce cas aujourd'hui *(mesuré)*.
+
+### ⚠ Le seul prix, dit clairement
+
+Le dérivé d'une photo masquée serait dans le coffre **public** : **listé nulle part**, mais
+ouvrable par quelqu'un qui connaîtrait l'adresse exacte. ⭐ C'est déjà le cas de **toutes** nos
+photos *(le coffre est public par conception — règle G.8)*. Pour que ce ne soit PAS le cas, il
+faudrait ne pas les redimensionner — et le bouton « afficher » redeviendrait lent.
+**Arbitrage de Frédéric.**
+
+### ⚠ LE CONTRÔLE QUI A FAILLI ME TROMPER — la règle des jumeaux
+
+Mesure : **deux** fonctions font un `jsonb_agg` sur `app_console_photo`. J'ai cru à un jumeau.
+Vérifié avant de conclure : `app_console_photo_couverture_optimistic` fabrique **l'état d'avant**
+pour le retour arrière, et **n'écrit PAS** dans la boîte *(`images_preview_json_app` : **0**
+occurrence ; `photo_url_listing_app` : **0**)*. ⭐ Mieux : **elle exige déjà que la photo choisie
+comme couverture soit VISIBLE** — une garde qui existait, non cherchée.
+
+➡ **`app_photos_remplir_adresses_app` est le SEUL fabricant de la boîte.** Une fonction, un patch.
+
+
+---
+
+## ⑦-8 — SECOND AUDIT : CÔTÉ **ÉCRITURES**, ET LE RATTRAPAGE *(19/10, « refais un audit pour être sûr »)*
+
+Le premier audit a mesuré **qui lit** la boîte. Celui-ci mesure **qui écrit** — le drapeau, la
+boîte, et ce que le rattrapage va y verser.
+
+### 1. QUI ÉCRIT LA BOÎTE ? — **une seule fonction, et un seul appelant**
+
+| mesure | résultat |
+|---|---|
+| code *(JS / Python / PS1)* qui écrit `images_preview_json_app` ou `photo_url_listing_app` | ⭐ **AUCUN** — la vitrine ne fait que les **lire** |
+| fonctions en base qui les écrivent | `app_photos_remplir_adresses_app` *(le fabricant)* + `app_photos_remplir_adresses_registre` *(il RECOPIE)* |
+| qui appelle le fabricant | ⭐ **un seul** : `Console/remplir_adresses_photos.js:65`, étape du run |
+| le jumeau soupçonné `app_console_photo_couverture_optimistic` | ✅ **innocent** — son `jsonb_agg` fabrique **l'état d'avant** du retour arrière ; il écrit la boîte **0 fois**, et ⭐ **il exige déjà une cible VISIBLE** |
+
+➡ **Une fonction à toucher. Pas de jumeau.** *(Vérifié, pas supposé — la règle des jumeaux.)*
+
+### 2. QUI ÉCRIT LE DRAPEAU `visible` ? — et peut-il être écrasé ?
+
+⭐⭐ **Le drapeau n'est jamais DEVINÉ : il est passé par l'appelant.**
+`extractConsolePhotoEntries(html, visible)` → `visible: Boolean(visible)` *(worker l. 1298)*.
+
+| chemin d'écriture | ce qu'il pose | sûr ? |
+|---|---|---|
+| **le worker** `sync_hektor_photos` *(l. 4486-4518)* | lit **LES DEUX** galeries : `mode=vignettes` → `visible: true` · `mode=vignettes_hidden` → `visible: false` | ✅ **juste** |
+| **le rattrapage** `rattrapage_photos.js:172` | `!["0","false","non"].includes(String(e.visible)...)` — avec un booléen `false`, `String(false)` = `"false"` → **dans la liste** → `visible: false` | ✅ **juste** ⚠ mais `undefined` → **visible** : l'entrée DOIT porter le drapeau |
+| ⭐⭐ **`accorder_photos_miroir.js`** | **RIEN.** En-tête l. 88 : *« ON NE TOUCHE PAS AU DRAPEAU `visible` »* ; `visible_divergent` *(l. 303)* n'est **qu'un compteur** | ✅✅ **aucun écrasement possible** |
+
+➡ **Le miroir — qui ne connaît que les visibles — ne peut PAS « corriger » une masquée en
+visible.** C'était le risque le plus grave ; il est fermé **par une décision déjà prise le 15/10**.
+
+### 3. ⭐⭐ ET LE PROJET AVAIT DÉJÀ ÉCRIT LA SOLUTION
+
+`accorder_photos_miroir.js`, en-tête l. 92-96 :
+
+> ⭐ **ET LE RESTE SE CORRIGE TOUT SEUL.** `patch_photos_adresses_app_2026-09-27.sql` recalcule
+> `photo_url_listing_app` et `images_preview_json_app` […] Donc la vignette du listing, celle du
+> registre des mandats et **LA GALERIE DU SITE PUBLIC redeviennent justes au passage suivant du
+> run, sans toucher une ligne de front.**
+
+**C'est exactement le dessin des deux boîtes.** Corriger le fabricant, et les trois surfaces
+publiques se remettent d'aplomb **seules**, au run suivant.
+
+### 4. LE RATTRAPAGE — ce qu'il doit faire, et dans quel ORDRE
+
+| | |
+|---|---|
+| lire `mode=vignettes_hidden` et appeler l'extracteur avec **`false`** | ✅ prouvé : le drapeau vient de l'appelant |
+| les dérivés seront fabriqués *(pas de filtre dans `generer_derives_photos.js`)* | ⭐ **voulu** dans ce dessin : le bouton « afficher » reste instantané |
+| la boîte sera reconstruite | ✅ le fabricant re-cible une annonce dès qu'une de ses photos bouge *(`m.dernier > adresses_app_le`)* — donc **chaque annonce balayée** passe par le filtre |
+
+⚠⚠ **DONC L'ORDRE EST IMPOSÉ : LA CONDITION D'ABORD, LE BALAYAGE ENSUITE.** Sinon les boîtes
+construites pendant le balayage porteraient des masquées, et rien ne garantirait leur
+reconstruction.
+
+⭐ **Et il n'y a rien à nettoyer derrière** : mesure du 19/10, **0** masquée a un dérivé, donc
+**aucune boîte n'en contient une aujourd'hui**.
+
+### 5. VERDICT
+
+**La condition unique tient sur TOUS les chemins mesurés.** Un seul fabricant, un seul appelant,
+aucune écriture directe du code, aucun écrasement du drapeau possible, et la reconstruction
+est automatique. ⚠ **Reste non mesuré** : si **masquer** une photo ancienne bouge `date_maj`
+*(écriture Hektor → pièce C)*.
+
+
+---
+
+## ⚠⚠⚠ ⑦-8 — AUDIT DU BANNISSEMENT : LE BALAYAGE QUE J'AI PROPOSÉ ÉTAIT DANGEREUX *(19/10)*
+
+> *« J'ai peur de l'IP ban sur le run de balayage proposé, peut-être des pauses non ? audit un
+> peu mon historique à ce sujet. »* — **Frédéric avait raison sur les deux points.**
+
+### 1. MON ERREUR, ET C'EST LA DEUXIÈME FOIS
+
+J'ai calculé **sur le TEMPS libre de la nuit** *(3 h 42 → 13 300 appels à 1/s)*. **Le mur n'est
+pas le temps.** La mémoire du projet le dit mot pour mot, et elle dit aussi que **j'avais déjà
+fait cette erreur** :
+
+> **MESURE DÉCISIVE (20/08/2026) : c'est un quota de VOLUME, pas de débit.**
+> ```
+> blocage 1   5 572 annonces   ~16 700 requêtes   sur 5 h 06   à 1,5 req/s
+> blocage 3   4 540 annonces   ~13 600 requêtes   sur 6 h 30   à 0,6 req/s
+> ```
+> Même ordre de grandeur **malgré un débit divisé par deux**. **« Ralentir ne fait que retarder
+> l'échéance »** — vérifié à nos dépens. ➡ **Seuil estimé : 13 000 à 17 000 requêtes par période.**
+
+> *« CE QUE J'AVAIS OUBLIÉ DE CETTE NOTE : le chiffre qui compte n'est pas les "61 h de
+> traitement" que j'ai calculés, mais **le nombre de requêtes par nuit**. »* *(25/09)*
+
+➡ **Mon balayage à 10 000 appels/nuit était à la limite du seuil À LUI SEUL.**
+
+### 2. L'HISTORIQUE : QUATRE BLOCAGES, TROIS MÉCANISMES DIFFÉRENTS
+
+| date | cause | signature |
+|---|---|---|
+| **19-20/08** | **volume cumulé** *(3 blocages)* — et des **403 répétés** *(68 annonces × 19 lots ≈ 1 300 refus identiques)* | plus aucune réponse TCP sur **tout le cluster** ; le CDN répondait en 55 ms depuis la **même IP** |
+| **26/08** | ⚠ **MES PROPRES SONDES D'AUDIT** — 300 contacts à 0,25 s *(4× le débit que le projet s'impose)*, des boucles par agence… | identique ; Frédéric a débloqué |
+| **17/09** | **une rafale de LOGINS** — un client reconstruit en boucle = **17 logins OAuth en 22 s**, bloqué au 16ᵉ | *« un login est la requête la plus chère qui soit pour un pare-feu »* |
+| **18/09** | **relire des objets SUPPRIMÉS** — des 404/403 rejoués chaque nuit | coupé par `VERIFIER_CHEZ_HEKTOR=False` |
+
+⭐ **Et la phrase qui vise exactement mon plan** *(worker, l. 3069-3072)* :
+
+> *« Le frein du 20/08 avait corrigé le DÉBIT ; il restait **LA DURÉE D'EXPOSITION**, qui est
+> précisément ce que son propre en-tête désignait comme la cause du blocage du 19/08. »*
+> *« Le blocage du 19/08 est survenu après **QUATRE HEURES de flux ininterrompu à ~1,5 req/s,
+> sans la moindre erreur**. »*
+
+⚠⚠ **Mon plan : 3 h 42 de flux ininterrompu à 1/s. C'est LA FORME EXACTE du blocage du 19/08.**
+
+### 3. ⭐⭐ IL A RAISON : LES PAUSES EXISTENT — ET ELLES NE SONT PAS DANS MA SONDE
+
+Les règles du projet, **en code** *(`console_job_worker.js:3069-3112`)* :
+
+```
+ 1 000 ms  intervalle minimum entre deux appels     HEKTOR_MIN_REQUEST_INTERVAL_MS
+    60 s   de respiration tous les 100 appels       HEKTOR_PAUSE_EVERY_N_REQUESTS
+   300 s   de pause de vague tous les 2 000         HEKTOR_WAVE_EVERY_N_REQUESTS
+    15 s   de recul après un 503/429/timeout        HEKTOR_BACKOFF_AFTER_REJECT_MS
+```
+*(« La méthode de référence travaille par lots de 100 suivis de 60 s, soit **45 %** de charge. »)*
+
+**Mesure, script par script :**
+
+| script | intervalle | pause/100 | vague/2 000 |
+|---|---|---|---|
+| `console_job_worker.js` | ✅ | ✅ | ✅ |
+| `enqueue_console_sync_jobs.js` | ✅ | ✅ | ✅ |
+| `sonde_photos_manquantes.js` | ⚠ 1 s codé à la main | ⛔ **non** | ⛔ **non** |
+| ⚠⚠ **`sonde_taux_photos_masquees.js`** *(la mienne, 19/10)* | 1 s à la main | ⛔ **non** | ⛔ **non** |
+| `rattrapage_photos.js` | — | — | ⭐ **normal** : il parle au **CDN**, pas à Hektor *(réglages séparés, 150 ms / 500)* |
+
+➡ **Ma sonde est moins protégée que le worker.** Elle n'a tourné que sur 200 annonces, donc sans
+dommage — mais **le balayage, bâti sur elle, aurait tourné 10 000 fois.**
+
+### 4. LE BUDGET RÉEL DE LA NUIT, MESURÉ *(19/10)*
+
+| ce qui consomme | requêtes Hektor |
+|---|---|
+| **« GTI Entretien Documents » (22:00)** — journal du 18/10 : *« 800 lectures, cap 300 »* + *« 2 000 lectures, cap 100 »* + *« 2 000 lectures, cap 300 »* | ⚠ **jusqu'à 4 800 lectures** + jusqu'à ~2 100 pour les synchronisations des 700 qui bougent ➡ **~6 900** |
+| **le run de 05:00** | ⭐ **léger aujourd'hui** — il est incrémental *(`Pages=0`, « 1 page »)* et **0 trace de frein** dans son journal, donc jamais 100 appels d'affilée |
+| les 4 workers en journée | variable, non mesuré |
+
+**Le seuil est 13 000–17 000. La règle de Frédéric du 20/08 : rester 40 % en dessous.**
+
+➡ ⚠⚠ **La marge réelle pour un balayage est de ~2 000 à 3 000 appels par nuit. PAS 10 000.**
+
+### 5. LE PLAN CORRIGÉ
+
+| | avant *(faux)* | **après** |
+|---|---|---|
+| appels/nuit | 10 000 | ⭐ **1 500 les 3 premières nuits, puis 2 500** |
+| freins | 1 s seulement | ⭐ **les 4 freins du projet**, repris du worker, **pas réécrits** |
+| forme | 3 h 42 de flux continu | ⭐ **45 % de charge** : 100 appels → 60 s, 2 000 → 300 s |
+| périmètre | 48 820 d'un coup | ⭐ **les vivants d'abord** *(3,6 % de masquées contre 0,7 % aux archives)* |
+| durée | « 5 nuits » | **~7 nuits pour les vivants**, les archives ensuite **sur décision** |
+| en plus | — | ⭐ **un compteur de requêtes journalisé**, pour qu'on SACHE où on est |
+
+⭐⭐ **ET LA PRUDENCE DE FRÉDÉRIC DU 20/08, CONSEILLÉE ET JAMAIS APPLIQUÉE, LE SERA CETTE FOIS** :
+*« 2 000/jour les 3 premiers jours, le temps de vérifier si leur compteur se réinitialise par
+journée civile ou glisse sur 24-48 h. »* La mémoire note : **« n'a PAS été appliquée »**.
+
+### 6. ⚠ Ce que je ne sais pas mesurer
+
+- **La période exacte du quota** *(journée civile ? 24 h glissantes ?)* — inconnue depuis le 20/08.
+- **Le débit acceptable selon Ma Boîte Immo** : la note dit *« à demander »*, **jamais demandé**.
+- **Ce que les 4 workers consomment en journée.**
+
+➡ **Donc le budget ci-dessus est une estimation prudente, pas une mesure.** C'est une raison de
+plus de commencer à 1 500 et de regarder.
+
+
+---
+
+## ✅ ⑦-8 MARCHE 1 — ÉCRITE ET DORMANTE *(19/10, go « oui vas y »)*
+
+**Trois fichiers** : `supabase/patch_chantier7_8_deux_boites_2026-10-19.sql` + `_INVERSE` +
+`_REPETITION`. ⛔ **Rien n'est collé** — ma session ne peut pas écrire en production.
+
+### L'état de départ, mesuré dans la BASE *(pas dans le fichier)*
+
+| mesure | valeur |
+|---|---|
+| empreinte de `app_photos_remplir_adresses_app` *(sans CR)* | **`682e386007b59eda6e5dc54056c87693`** |
+| retours chariot dans le corps stocké | ⭐ **0** |
+| taille | 4 826 |
+| déjà patchée ? | **non** |
+| signature | `(p_heures integer default 48, p_tout boolean default false)` |
+| plancher interne | refuse si `app_dossier_current < 5000` → on en a **13 491**, il ne mordra pas |
+
+### ⭐ L'ANCRE : une seule, et elle corrige LES DEUX `where`
+
+```
+where p.present_in_hektor and p.derives_json
+   ->  where p.present_in_hektor and p.visible is not false and p.derives_json
+```
+
+Elle apparaît **exactement 2 fois** *(ligne 50 = la COUVERTURE, ligne 62 = la GALERIE)*, donc
+**un seul remplacement les traite toutes les deux**, et le patch **vérifie le compte = 2** avant
+d'écrire — si une 3ᵉ apparaissait un jour, il **refuse**.
+
+### ⭐⭐ ÉPREUVE DU TRANSPORT — la leçon 30, prouvée en lecture seule
+
+Je ne peux pas jouer la répétition *(écriture en production, même annulée)*, mais le mécanisme
+du piège se prouve sans rien écrire. Simulation de l'arrivée en CRLF, **des deux côtés** :
+
+| cas | l'ancre est trouvée |
+|---|---|
+| retours chariot **dans** mon ancre | ⭐ **0** → elle est **sur une seule ligne** |
+| LF / LF | **2 fois** |
+| CRLF / LF | **2 fois** |
+| CRLF / CRLF | **2 fois** |
+| guéri *(chr(13) retiré des deux côtés — ce que fait le patch)* | **2 fois** |
+
+➡ **Les quatre cas donnent 2.** Une ancre **sans retour chariot dedans** est **immunisée** : le
+CRLF n'a rien à corrompre. C'est la première fois que ce piège est **structurellement** écarté
+plutôt que contourné.
+
+**Contrôles des fichiers** : 2 / 2 / 4 littéraux protégés par `replace(…, chr(13), '')`,
+⭐ **0 multi-ligne**, 0 `\gset`, et la répétition a **1 `begin;`, 0 `commit;`, 1 `rollback;`**.
+Types vérifiés en base : `id` = **uuid**, `visible` = **boolean**, `derives_json` = jsonb.
+
+### ⚠⚠ DEUX PIÈGES TROUVÉS EN ÉCRIVANT L'ÉPREUVE
+
+1. **Les tables temporaires de la fonction sont `on commit drop`.** La répétition l'appelle
+   **deux fois** dans une transaction jamais validée → le second appel aurait échoué sur
+   *« relation tmp_maj already exists »*. ➡ `drop table if exists tmp_maj, tmp_cibles,
+   tmp_principale, tmp_galerie;` **entre les deux passages**.
+2. ⭐ **`now()` est FIGÉ dans une transaction** *(leçon 28)*. Après le 1ᵉʳ appel,
+   `adresses_app_le = now()`, donc le test `m.dernier > d.adresses_app_le` serait **faux**
+   (égal, pas supérieur) et l'annonce **ne serait pas re-ciblée**. ➡ on remet
+   `adresses_app_le = null` avant le 2ᵉ passage.
+
+### CE QUE LA RÉPÉTITION PROUVE — elle FABRIQUE le cas
+
+⚠ **Il fallait le faire** : **0** masquée a un dérivé aujourd'hui, donc une épreuve naïve serait
+**verte avant comme après** et ne prouverait rien *(« un contrôle vert peut mesurer autre
+chose »)*. Elle prend donc **deux annonces vivantes** et leur fabrique le cas :
+
+- **annonce A** : une photo **masquée** *(avec ses dérivés)* + une photo à **`visible` NULL** ;
+- **annonce B** : **toutes** ses photos masquées → le trou « annonce 100 % masquée ».
+
+| étape | ce qui est exigé |
+|---|---|
+| **2-témoin** *(sans le patch)* | A : la masquée **EST** dans la boîte · B : sa couverture **EST** une masquée — ⭐ **si le témoin ne montre pas le défaut, l'épreuve se déclare non concluante** |
+| **3-après** | A : la masquée **n'y est plus** · ⭐ la photo à **NULL y est toujours** *(un NULL reste visible — la règle du projet, sinon le patch serait trop strict)* · A : la couverture est une **visible** · B : couverture **et** galerie **VIDES** · ⭐ **le panneau photos voit toujours tout** *(on reproduit son filtre exact : `present_in_hektor` seul)* |
+| **4-retour** | l'empreinte revient à `682e3860…`, **0 trace** de la condition |
+
+### ⛔ RESTE
+
+**Frédéric colle la répétition**, puis le patch. ➡ Ensuite : **marche 2** *(le balayage, au profil
+corrigé : 1 500/nuit, les 4 freins du worker, les vivants d'abord)*.
+
+
+### ⚠ ⑦-8 MARCHE 1 — LA RÉPÉTITION A ÉCHOUÉ AU COLLAGE, ET C'ÉTAIT MON ÉPREUVE QUI AVAIT TORT
+
+**Frédéric colle, et la base refuse :**
+`ERROR: 23502: null value in column "visible" of relation "app_console_photo" violates not-null
+constraint`
+
+**Ce que j'avais manqué** : j'avais vérifié le **TYPE** de la colonne *(`boolean`)* et **pas sa
+NULLABILITÉ**. Mesure après l'échec :
+
+| mesure | valeur |
+|---|---|
+| `app_console_photo.visible` | ⭐ **NOT NULL, défaut `true`** |
+| photos à `visible` NULL en base | **0** sur 441 363 |
+| les 4 autres colonnes que la répétition écrit | ✅ **toutes nullables** — `visible` était la seule |
+| ⭐ **empreinte de la fonction après l'échec** | **`682e386007b59eda6e5dc54056c87693`** — **INCHANGÉE : rien n'avait été écrit** |
+
+➡ **Le patch n'a pas bougé d'une ligne.** La branche « un NULL reste visible » que mon épreuve
+voulait prouver **ne peut pas exister** : la contrainte l'interdit. La forme `visible is not false`
+reste la bonne — elle est **défensive** *(elle tiendrait si la contrainte sautait)* et elle recopie
+la règle du projet. **C'est l'épreuve qui avait tort, pas le code** *(3ᵉ fois ce motif ; déjà payé
+le 15/10 sur `test_masquee_pas_supprimee.js` et sur `test_porte_contacts`)*.
+
+**Version 2 de la répétition** : la photo à NULL est remplacée par une **photo TÉMOIN qui reste
+VISIBLE** — et c'est un **meilleur** contrôle, parce que sans elle **un patch qui viderait TOUT
+serait vert**. Et le cas du NULL est **déclaré impossible**, mesuré depuis le catalogue, plutôt
+qu'oublié.
+
+**Contrôles mécaniques de la v2** : 0 `visible = null` · 0 `\gset` · 1 `begin;` / 0 `commit;` /
+1 `rollback;` · 4 ancres protégées, **0 multi-ligne** · 2 effacements des tables temporaires ·
+2 appels au fabricant · 16 lignes de mesure.
+
+⭐ **Et la leçon à retenir, plus large que ce patch** : *avant d'écrire une épreuve qui FABRIQUE
+un cas, vérifier que la base ACCEPTE ce cas* — `information_schema.columns` donne le type **et**
+`is_nullable`, et je ne lisais que le premier.
+
+
+### ✅✅ RÉPÉTITION v2 COLLÉE — **16 MESURES, 16 VERTES** *(19/10)*
+
+```
+1-avant  | empreinte de depart              = 682e386007b59eda6e5dc54056c87693
+1-avant  | l ancre apparait                 = 2 fois
+1-avant  | masquees AVEC derive en prod      = 0  (d ou la fabrication)
+1-avant  | annonce A choisie / photos        = 118 / 20
+1-avant  | annonce B choisie / photos        = 311 / 2
+2-temoin | A : la masquee EST dans la boite  = OUI -- c est bien le defaut qu on corrige
+2-temoin | B : sa couverture EST une masquee = OUI -- c est bien le trou « 100 % masquee »
+3-apres  | A : la masquee est dans la boite  = NON -- le filtre mord
+3-apres  | A : la photo VISIBLE y est encore = OUI -- le patch n est PAS trop strict
+3-apres  | le cas « visible NULL » possible  = NON (NOT NULL, defaut true) -> DEFENSIF
+3-apres  | A : sa couverture est VISIBLE     = OUI
+3-apres  | A : photos dans la boite          = 19 (il y en avait 20, une est masquee)
+3-apres  | B : couverture et galerie         = VIDES -- 0 % publiable, le trou est ferme
+3-apres  | le panneau photos voit tout       = 20 photos dont 1 masquee -- OUI, il les voit
+4-retour | empreinte revenue                 = oui, a l octet pres
+4-retour | aucune trace de la condition      = oui
+```
+
+⭐⭐ **CE QUE CES LIGNES PROUVENT, ET QUI NE SE DEVINAIT PAS :**
+
+1. **Le défaut existait vraiment.** Sans le patch, la masquée **EST** dans la boîte publique de
+   l'annonce 118, et la couverture de l'annonce 311 **EST** une masquée. ➡ **Les deux témoins
+   inverses ont montré le défaut** — sans eux, « le filtre mord » n'aurait rien voulu dire.
+2. ⭐ **Le trou « annonce 100 % masquée » était réel** : l'annonce 311 n'a que 2 photos, les deux
+   masquées → avant le patch elle publiait une masquée en couverture, après elle n'a **ni
+   couverture ni galerie**. 0 annonce est dans ce cas en production *aujourd'hui*, mais le trou
+   est désormais **fermé par construction**.
+3. ⭐ **L'arithmétique est exacte** : 20 photos → **19** dans la boîte, une seule retirée.
+4. ⭐⭐ **Le négociateur ne perd rien** : « le panneau photos voit tout = **20 photos dont 1
+   masquée** ». La boîte publique est filtrée, **la boîte complète ne l'est pas** — c'est
+   exactement le dessin des deux boîtes de Frédéric.
+5. **Le patch n'est pas trop strict** : la photo témoin restée visible est **toujours** dans la
+   boîte. Sans ce contrôle, un patch qui aurait vidé TOUT serait passé pour vert.
+6. **Le retour arrière retombe à l'octet près**, 0 trace.
+
+### ⚠ CE QU'IL FAUT SAVOIR POUR LE CONTRÔLE D'APRÈS
+
+⚠ **Rien ne changera visiblement ce soir.** Mesure : **0** masquée a un dérivé en production,
+donc **aucune boîte n'en contient une**. Ce patch est un **verrou préventif** — il mord le jour
+où le balayage (marche 2) ramènera des masquées sur des biens vivants.
+
+⚠ **Ne PAS rejouer la répétition après avoir collé le patch** : son bloc patch dirait
+« DEJA FAIT » et sauterait, donc ses mesures « 2-temoin » n'auraient plus de sens. Le contrôle
+d'après est une **lecture** : la condition apparaît 2 fois, l'empreinte a changé, et 0 masquée
+n'est dans une boîte.
+
+
+### ✅✅✅ MARCHE 1 **EN PRODUCTION** — contrôle du 19/10, **7 contrôles verts**
+
+Frédéric a collé le patch. Mesure en lecture seule, **on vérifie, on ne croit pas** :
+
+| contrôle | résultat |
+|---|---|
+| a. la condition est posée | **2 fois** *(la couverture ET la galerie)* |
+| b. ancre nue oubliée | **0** |
+| c. empreinte | `682e386007b59eda6e5dc54056c87693` → **`b87f6c6827fbedf0c8d8e8709d62a334`** |
+| d. ⭐ **retours chariot injectés par le collage** | **0** — le transport a tenu *(leçon 30)* |
+| e. masquées présentes dans une boîte publique | **0** |
+| f. masquées avec un dérivé *(la vanne)* | **0** |
+| g. ⭐ le panneau photos voit toujours les masquées | **103** — le négociateur ne perd rien |
+
+### ⭐ ET LA QUESTION DE FRÉDÉRIC QUI A FAIT LA DIFFÉRENCE : « mais le patch a pas changé »
+
+Il avait raison de la poser. Le patch n'a **pas** changé entre la v1 et la v2 de l'épreuve — **mais
+encore fallait-il prouver que l'épreuve avait bien joué LE patch, et pas une imitation.** Mesure,
+ligne par ligne :
+
+| les 5 lignes QUI AGISSENT | patch | épreuve |
+|---|---|---|
+| `v_ancre text := replace('where p.present_in_hektor and p.derives_json', chr(13), '')` | 1 | 1 |
+| `v_neuf  text := replace('…visible is not false…', chr(13), '')` | 1 | 1 |
+| `v_emp   constant text := '682e3860…'` | 1 | 1 |
+| `v_new := replace(v_src, v_ancre, v_neuf);` | 1 | 1 |
+| `execute v_new;` | 1 | 1 |
+
+➡ **Identiques.** Les seules divergences du diff sont **la mise en forme** *(une ligne contre
+plusieurs)*, **le libellé des refus**, et **3 contrôles d'APRÈS-ÉCRITURE que le patch a en plus**
+*(relecture en base, ancre nue résiduelle, les `raise notice`)*. ⭐ Ceux-là ne peuvent que
+**refuser** — et un refus annule la transaction, donc l'écriture est défaite : **le mode d'échec
+est sûr**. C'est la règle « éprouver LE code, pas une doublure » appliquée au patch lui-même.
+
+### ⛔ CE QUI RESTE DE ⑦-8
+
+| | |
+|---|---|
+| **marche 2 — le balayage** | au profil **corrigé** : **1 500/nuit** les 3 premières nuits puis 2 500, **les 4 freins du worker**, **les vivants d'abord** · ⛔ **le lancer = accord de Frédéric** |
+| **marche 3 — le run de MAJ** | piloté par `date_maj`, ~30 appels/nuit, greffé sur « GTI Entretien Photos » (21:00) |
+| **marche 4 — le bouton masquer/afficher** | `mode=vignette_visibilite`, **jamais prouvé en écriture** · son essai sur le bac à sable **62774** répond AUSSI à la question laissée ouverte *(masquer bouge-t-il `date_maj` ?)* |
+
+⚠ **Rien ne changera visiblement** tant que la marche 2 n'a pas tourné : **0** masquée a un
+dérivé aujourd'hui. Ce verrou est **préventif**, et c'est voulu — il devait précéder le balayage.
