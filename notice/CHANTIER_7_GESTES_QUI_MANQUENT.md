@@ -4903,3 +4903,115 @@ défaut de code. *Le levier futur est donc « déposer depuis l'app », jamais �
 ➡ **Et le chantier ⑦ n'a plus que ceci d'ouvert** : **⑦-3c réordonner** · **⑦-10** *(une question)* ·
 et les **essais réels** de ⑦-1 *(archiver une fiche jetable)* et ⑦-3a *(clôturer à une date ≠
 aujourd'hui, et voir l'écran)*. ⛔ **Plus personne n'a vu le bouton des photos à l'œil.**
+
+
+---
+
+## ⑦-3c · RÉORDONNER LES PHOTOS — AUDIT *(19/10, « Attaque »)*
+
+### 1. ⭐⭐⭐ LA MOITIÉ DU TRAVAIL EST DÉJÀ FAITE, ET ÉPROUVÉE
+
+| pièce | état mesuré |
+|---|---|
+| **la commande chez Hektor** | ✅ `mode=ordonne_photos&div=liste_photos\|liste_photos_hidden`, **en production depuis le 14/10** *(elle renumérote après une suppression)* |
+| **le geste du worker** | ✅ `handleReorderHektorPhotos` *(l. 8923)* — ⭐ **il accepte un ordre QUELCONQUE**, la couverture n'est qu'un cas particulier |
+| **le type de travail** | ✅ `reorder_hektor_photos` — ⭐⭐ **les TROIS verrous sont déjà ouverts** *(contrainte, droits, distribution)*, et il a tourné **4 fois, 4 réussis, 0 erreur** |
+| **la RPC** | ✅ `app_console_photo_couverture_optimistic` *(empreinte `cbe7d537`, 4 855 car.)* — ⭐ **presque générique** |
+| **l'écran** | ⛔ **rien** : aucun moyen d'exprimer un ordre |
+
+⭐⭐ **Et le projet avait DÉJÀ tranché**, c'est écrit dans `api.ts:8456` :
+> *« Ce n'est PAS un geste à part chez Hektor : "photo principale" veut dire "première de la
+> liste". Réordonner et choisir la couverture sont le même ordre — d'où le type
+> `reorder_hektor_photos`, qui servira tel quel le jour où on ajoutera le glisser-déposer. »*
+
+*(Leçon 15, quatrième fois aujourd'hui : chercher si le projet a déjà tranché.)*
+
+### 2. CE QUI EST PROPRE À LA COUVERTURE, ET DOIT DEVENIR GÉNÉRIQUE
+
+La RPC fait **huit** étapes ; **une seule** est spécifique :
+```sql
+-- ⓺ ON RENUMEROTE DE 0 A n-1
+row_number() OVER (ORDER BY (hektor_photo_id = v_photo) DESC, sort_order ASC, id ASC) - 1
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ « mets CELLE-LA en premier »
+```
+➡ Pour réordonner, il faut **le même code** avec un **ordre donné par l'écran**. Les sept autres
+étapes *(droits, état d'avant, cible existante, déjà-fait, les deux listes, le travail dans la même
+transaction)* **se reprennent telles quelles**.
+
+⭐ **Et les deux listes sont déjà gérées** : la RPC envoie `liste_photos` **et**
+`liste_photos_hidden` *(les masquées dans leur ordre inchangé)*, et le handler **saute** une liste
+absente. ⭐⭐ **Donc réordonner NE PEUT PAS démasquer une photo** — vérifié, et c'était ma première
+inquiétude après la livraison de ⑦-8.
+
+### 3. L'ORDRE EST-IL SAIN ? ⚠ ET LE COMMENTAIRE DE LA RPC EST PÉRIMÉ
+
+Le commentaire dit *« 97 % commencent à 0, et 37 annonces ont des TROUS »*. **Mesuré sur 49 192
+annonces / 440 887 photos visibles :**
+
+| | annonces |
+|---|---|
+| commence à **0** | **47 580** — **96,7 %** *(le commentaire disait vrai)* |
+| commence à **1** | **1 569** · **ailleurs** : **43** |
+| ⚠ **des TROUS** | **338** — ⛔ *le commentaire disait **37*** |
+| ⚠ **deux photos au MÊME rang** | **21** — ⛔ *le commentaire ne le mentionne pas du tout* |
+| rangs vides *(NULL)* | ⭐ **0** |
+
+⭐ **Les deux défauts sont inoffensifs pour le geste** : la RPC renumérote **0 → n-1**, donc elle
+**guérit** les trous ; et son `ORDER BY … , id ASC` rend les rangs doublés **déterministes**.
+*(Règle du projet : un commentaire de code n'est pas une mesure.)*
+
+### 4. ⚠ CE QUE L'ORDRE ALIMENTE — et la vraie trouvaille
+
+`sort_order` est lu par **5 fonctions**, dont ⭐⭐ **`app_photos_remplir_adresses_app`** : *le
+fabricant de la boîte publique* **de ⑦-8 marche 1**. Donc réordonner change **ce que la vitrine
+montre en premier** — c'est le but.
+
+⚠⚠ **MAIS** : le fabricant **choisit ses cibles sur `adresses_app_le is null`**, et
+
+| | |
+|---|---|
+| la RPC **du masquage** *(19/10)* | ⭐ **pose le post-it** sur les 4 index, et le worker **réveille le fabricant** |
+| la RPC **de la couverture** *(16/10)* | ⛔ **ne pose PAS le post-it**, et son handler **ne réveille personne** |
+
+➡ **Un réordonnancement changerait notre ordre et celui de Hektor tout de suite, mais la boîte
+publique ne suivrait qu'à la reconstruction de nuit.** ⭐ **C'est une LATENCE, pas une corruption**
+— et la sœur cadette, écrite 3 jours plus tard, est mieux câblée.
+
+### 5. ⛔⛔ ET MON ALARME ÉTAIT INFONDÉE — je le dis net
+
+J'ai cru tenir un défaut en production. **Mesure sur les deux annonces où la couverture a été
+changée le 16/10 :**
+
+| annonce | boîte refaite le | verdict |
+|---|---|---|
+| **63261** | 11/10 05:16 *(avant le geste)* | ⭐ **sa boîte est JUSTE** |
+| **63046** | 27/09 16:14 *(avant le geste)* | ⭐ **sa boîte est JUSTE** |
+
+Et sur **tout le parc comparable** *(10 255 annonces)* : ⭐ **10 191 — 99,4 %** montrent bien la 1ʳᵉ
+photo ; **64 — 0,6 %** montrent une autre. ⛔ **Et les 64 sont de vieilles annonces** *(2002, 2004,
+18680, 24061, 26299…)*, **sans rapport avec le geste** *(50 ont une boîte plus vieille que la
+photo, 14 plus récente, 0 jamais faite)*.
+
+⚠ **Et il m'a fallu TROIS essais pour comparer juste** : j'ai deviné la clé du dérivé deux fois
+*(`listing`, puis `w400` traité comme un texte)* avant de **lire la forme** — c'est
+`derives_json → w400 → chemin`. **Les deux premiers verdicts étaient faux et je les ai jetés.**
+
+### 6. ⛔ LE VRAI TRAVAIL EST DANS L'ÉCRAN — et il a deux contraintes mesurées
+
+| | |
+|---|---|
+| ⛔ **aucun glisser-déposer dans tout le front** | `0` occurrence de `draggable` / `onDragStart` / `onDrop` dans `App.tsx`, et **aucune bibliothèque** dans `package.json` |
+| ⚠ **le panneau ne montre que 12 photos** | `sourcePhotos.slice(0, compact ? 6 : 12)` — **6 sur mobile** |
+| et c'est bloquant pour une partie du parc | ⭐ **77,1 %** des annonces ont **≤ 12** photos visibles *(médiane **5**)*, mais ⚠ **22,9 % — 11 266 annonces — en ont PLUS**, jusqu'à **166** |
+| les tuiles portent déjà **3 pastilles** | couverture, masquer/afficher, supprimer |
+
+### 7. ⛔ CE QUE JE N'AI PAS PU MESURER
+
+1. ⛔ **Je n'ai pas déclenché `ordonne_photos` avec un ordre arbitraire.** Il est prouvé pour
+   « renuméroter après suppression » et « mettre en 1ᵉʳ ». ⚠ **Qu'il accepte une permutation
+   quelconque est très probable — pas mesuré.** *(Le mesurer = écriture chez Hektor = son accord.)*
+2. ⚠ **Pourquoi les 64 écarts existent** — non élucidé, hors ⑦-3c. **Noté, non traité.**
+3. ⚠ **Le comportement de Hektor si on lui envoie un ordre partiel** *(moins d'ids qu'il n'a de
+   photos)* — non mesuré. Le garde-fou actuel refuse seulement la liste **vide**.
+4. ⚠ **L'ordre des masquées entre elles** : la RPC les renvoie dans leur ordre actuel, mais
+   **personne ne les réordonne jamais**. Non mesuré, probablement sans importance.
