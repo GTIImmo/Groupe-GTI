@@ -2950,3 +2950,37 @@ logs/scheduled/entretien_photos_2026-10-19_21-00-*.log
 
 ⚠ **Si la tâche échoue, le moniteur le dira à l'écran Santé SANS e-mail** *(elle est en
 `warning`)*. C'est voulu — la raison est écrite dans `check_gti_health.py`.
+
+---
+
+# ⚠⚠ LA SONDE TOURNE EN ROND — trouvé le 19/10 en chiffrant le rapatriement
+
+`sonde_photos_manquantes.js` *(l. 1695 du run)* répond chaque nuit
+**« ✅✅ Aucune photo manquante sur cet echantillon »** — **22 nuits de suite**, du 01/10
+au 19/10. On pourrait croire à **550 annonces** sondées *(22 × 25)*.
+
+⛔ **FAUX. C'est 25 annonces, lues 22 fois.**
+
+Preuve : le journal imprime « la plus ancienne : … », et c'est **la même date —
+`2025-10-24 15:08:55` — DIX NUITS DE SUITE** *(10/10 au 19/10)*.
+
+**LA CAUSE** est dans son propre code : `lireLeMiroir()` fait
+`ORDER BY COALESCE(s.date_maj,'') ASC LIMIT 400`, puis la boucle prend
+`.slice(0, 25)`. Les 25 plus anciennement modifiées **ne changent pas** tant que leur
+`date_maj` ne bouge pas — et par construction, **les plus anciennes sont justement
+celles qui ne bougent jamais**.
+
+⚠ Son en-tête l'explique et le justifie : *« Elle prend les annonces les PLUS
+ANCIENNEMENT modifiees. C'est la que l'ecart se verrait »*. **Le raisonnement est juste
+pour détecter un défaut de la DATE** *(est-ce qu'ajouter une photo fait bouger
+`date_maj` ?)* — **mais il ne balaie pas le parc**. Et c'est pour ça qu'il ne dit RIEN
+des photos masquées : il regarde **0,04 % du parc**, toujours le même.
+
+⭐ **Famille connue** : *« un contrôle vert peut mesurer autre chose »*
+*([[battement-cle-non-enregistree-part-dans-le-vide]])*. Le vert est **vrai**, et il ne
+répond pas à la question qu'on croit lui poser.
+
+➡ **Conséquence pour le rapatriement** : **nous n'avons AUCUN échantillon exploitable**
+du taux de photos masquées sur le parc. Les seuls chiffres sont **304 annonces d'août**
+*(dont 14 avec des masquées — 4,6 %, mais échantillon probablement biaisé)* et **10 biens
+vivants sondés en direct — 0**.
