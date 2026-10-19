@@ -12,7 +12,8 @@ Sortie 0 = tout est vert · 1 = au moins un point rouge · 2 = il n'a pas pu mes
 
 LES CINQ POINTS (les memes que CLAUDE.md §2, item ⑪)
 -----------------------------------------------------
- 1. LA TACHE a tourne : resultat Windows 0, et ses QUATRE lignes sont passees.
+ 1. LA TACHE a tourne : resultat Windows 0, et ses TROIS lignes sont passees.
+    (Elle en avait QUATRE jusqu'au 19/10 : la 4e, les photos, a sa propre tache.)
  2. LES 33 ANNONCES LIBEREES par la purge du 15/10 ont recu leur empreinte.
     ⭐ 32 d'entre elles n'en avaient PAS, donc la detection les sert EN PREMIER.
  3. LE CORRECTIF DU COFFRE a travaille EN REEL : au moins une ligne porte
@@ -42,7 +43,7 @@ CE QU'ON ATTEND DE LA PREMIERE NUIT (budgets de la tache, sans parametre)
     ligne 2  estimations      2 000 lectures, cap 100  -> les 30 sans empreinte
              sont servies EN PREMIER (empilees SANS lecture), puis ~2 000 relues
     ligne 3  vendus/clos      2 000 lectures, cap 300  -> ~300 des 1 398 traites
-    ligne 4  photos (local)                            -> 440 marquees, 1 662 remises en ordre
+    (la ligne photos est partie le 19/10 -> « GTI Entretien Photos », 21:00)
     ⚠ LE CAP EST UN PLAFOND, PAS UN ECHEC : s'il mord, c'est normal le premier soir --
       la tache repasse chaque nuit. Ce qui serait grave : 0 progres, ou un travail en erreur.
 """
@@ -195,7 +196,10 @@ else:
     dernier = journaux[-1]
     texte = dernier.read_text(encoding="utf-8", errors="ignore")
     print(f"  (journal : {dernier.name}, {len(texte)} caracteres)")
-    for ligne in ("1/4", "2/4", "3/4", "4/4"):
+    # 19/10 : la tache est passee a TROIS lignes -- la 4e (les photos) a sa propre
+    #   tache, « GTI Entretien Photos » (21:00). Sans cette correction, ce controle
+    #   aurait crie « ligne 4/4 absente » chaque matin sur une tache saine.
+    for ligne in ("1/3", "2/3", "3/3"):
         verdict(f"ligne {ligne} presente", f"--- {ligne}" in texte, "dans le journal")
     verdict("aucune ligne en echec", "ECHEC" not in texte.upper(),
             "le journal ne porte pas le mot ECHEC")

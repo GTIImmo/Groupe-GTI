@@ -41,11 +41,18 @@
 #      ⚠ SON CAP EST LE PLUS IMPORTANT : 1 398 vendus/clos sont encore SANS empreinte,
 #        donc empiles sans lecture mais a ~25 s de worker chacun. 300 par nuit (reglage
 #        de Frederic) = ~2 h de worker, et les 1 398 absorbes en ~5 nuits.
-#   4. LES PHOTOS (local, sans Hektor) ~2 min
-#      Met notre registre d'accord avec le miroir : marque celles que Hektor ne liste
-#      plus, reprend l'ordre. SANS ELLE, l'ecart revient de ~7 photos par jour (mesure
-#      du 15/10 : 440 photos retirees jamais marquees, 56 annonces du site public avec
-#      la mauvaise photo d'accroche).
+#
+# ⚠⚠ LA LIGNE 4 (LES PHOTOS) EST PARTIE LE 19/10 -- elle a sa propre tache.
+#    Frederic, 18/10 : « on a normalement deja des run quotidiens pour les photos,
+#    celui de 22h n'aurait pas du y toucher ». Verifie : ni « GTI Rattrapage
+#    Documents » (21:00) ni run_detection_documents.ps1 ne portaient de ligne photos.
+#    Elle etait nee ICI le 15/10, dans le commit qui refondait la tache en quatre
+#    lignes, SANS etre soumise comme une decision a part.
+#    ➡ Elle vit desormais dans scheduled\run_entretien_photos.ps1, a 21:00 --
+#      « GTI Entretien Photos ». Son traitement est le SEUL des cinq a RETIRER
+#      (present_in_hektor = false) : il merite son nom, son journal, sa surveillance.
+#    ⚠ NE PAS LA REMETTRE ICI : les deux tourneraient, et la seconde recalculerait
+#      les memes candidats pour rien.
 #
 # POURQUOI 22:00 — l'etranglement du matin, mesure
 #   05:00 le run (fin 07:14-07:34) · 07:45 la descente (18 a 64 min) · 09:00 la sauvegarde
@@ -56,7 +63,6 @@
 # LE COMPTE DU TEMPS, avec les reglages par defaut
 #   detection  727 + 2 000 + 2 000 = 4 727 lectures  ->  ~2 h 15   (22:00 -> 00:15)
 #   worker     au plus 700 travaux, dont ~300 lourds  ->  fini vers 02:00-02:30
-#   photos     local                                  ->  ~2 min
 #   ⚠ En regime (tout rattrape), les caps ne mordent plus : quelques dizaines de
 #     travaux par nuit, et le worker a fini en quelques minutes.
 #
@@ -76,7 +82,6 @@ param(
     [int]$CapEstimation = 100,
     [int]$LecturesVendus = 2000,
     [int]$CapVendus = 300,
-    [switch]$SansPhotos,
     [switch]$DryRun
 )
 
@@ -103,7 +108,6 @@ try {
     $nodeExe = $nodeCandidates[0]
 
     $enfileur = Join-Path $root "Console\enqueue_console_sync_jobs.js"
-    $photos   = Join-Path $root "Console\accorder_photos_miroir.js"
     if (-not (Test-Path -LiteralPath $enfileur)) { throw "Script introuvable : $enfileur" }
 
     # Une ligne qui echoue n'empeche pas les suivantes : ce sont des lots independants,
@@ -146,35 +150,17 @@ try {
     $commun = @("--detect")
     if ($DryRun) { $commun += "--dry-run" }
 
-    if (-not (Invoke-Ligne -Titre "1/4 les biens EN VENTE ($LecturesVente lectures, cap $CapVente)" -Arguments (
+    if (-not (Invoke-Ligne -Titre "1/3 les biens EN VENTE ($LecturesVente lectures, cap $CapVente)" -Arguments (
         @($enfileur, "--scope", "vente") + $commun + @("--max-lectures", "$LecturesVente", "--cap", "$CapVente")
     ))) { $echecs += "vente" }
 
-    if (-not (Invoke-Ligne -Titre "2/4 les ESTIMATIONS ($LecturesEstimation lectures, cap $CapEstimation)" -Arguments (
+    if (-not (Invoke-Ligne -Titre "2/3 les ESTIMATIONS ($LecturesEstimation lectures, cap $CapEstimation)" -Arguments (
         @($enfileur, "--scope", "estimation") + $commun + @("--max-lectures", "$LecturesEstimation", "--cap", "$CapEstimation")
     ))) { $echecs += "estimation" }
 
-    if (-not (Invoke-Ligne -Titre "3/4 les VENDUS/CLOS ($LecturesVendus lectures, cap $CapVendus)" -Arguments (
+    if (-not (Invoke-Ligne -Titre "3/3 les VENDUS/CLOS ($LecturesVendus lectures, cap $CapVendus)" -Arguments (
         @($enfileur, "--scope", "historical") + $commun + @("--max-lectures", "$LecturesVendus", "--cap", "$CapVendus")
     ))) { $echecs += "vendus_clos" }
-
-    if ($SansPhotos) {
-        Write-Output "--- 4/4 les PHOTOS : SAUTEE (-SansPhotos)"
-    }
-    elseif (-not (Test-Path -LiteralPath $photos)) {
-        Write-Output "--- 4/4 les PHOTOS : script introuvable, sautee"
-        $echecs += "photos_introuvable"
-    }
-    else {
-        # ⚠ Celle-ci ne parle JAMAIS a Hektor : elle compare notre registre au miroir
-        #   local. Elle porte ses propres verrous (lecture fraiche exigee, photos de
-        #   l'app intouchables, plafond, plancher) -- voir son en-tete.
-        $argsPhotos = @($photos)
-        if (-not $DryRun) { $argsPhotos += "--appliquer" }
-        if (-not (Invoke-Ligne -Titre "4/4 les PHOTOS (local, sans Hektor)" -Arguments $argsPhotos)) {
-            $echecs += "photos"
-        }
-    }
 
     if ($echecs.Count -gt 0) {
         Write-Output "=== Entretien documents termine AVEC ECHECS : $($echecs -join ', ') ==="

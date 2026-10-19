@@ -138,6 +138,27 @@ TASK_CRITICALITY: dict[str, str] = {
     #     visible a l'ecran, aucun e-mail. C'est voulu -- on declare avant d'enregistrer,
     #     pour ne pas refaire le trou du 26/09.
     "GTI Entretien Documents": "critical",
+    # 2026-10-19 : « GTI Entretien Photos » (21:00) -- la ligne 4/4 de la tache
+    #   ci-dessus en est SORTIE, a la demande de Frederic (18/10) : « celui de 22h
+    #   n'aurait pas du toucher aux photos ». Verifie : ni l'ancienne tache de 21:00
+    #   ni run_detection_documents.ps1 ne portaient de ligne photos -- elle etait nee
+    #   le 15/10 sans etre soumise comme une decision a part.
+    #
+    # ⚠ ELLE EST "warning", ET PAS "critical" -- la difference compte, et voici
+    #   pourquoi. L'entretien des DOCUMENTS porte une roue : une nuit perdue ne se
+    #   repare pas, la roue reprend ou elle s'etait arretee et ce qui a bouge
+    #   entre-temps attend un tour complet. L'entretien des PHOTOS, lui, RECALCULE
+    #   SES CANDIDATS A CHAQUE PASSAGE : une nuit ratee est reprise telle quelle le
+    #   lendemain. Le cout d'un arret est donc PROGRESSIF, pas cumulatif -- il a
+    #   fallu deux mois d'arret pour produire les 440 photos et les 56 vignettes
+    #   fausses mesurees le 15/10. Un e-mail chaque matin pour un defaut qui met des
+    #   semaines a mordre, c'est du bruit, et le bruit fait ignorer les vraies
+    #   alertes (meme raisonnement que « GTI Relances Email » plus bas).
+    #   ➡ Visible a l'ecran Sante, sans e-mail. A passer "critical" le jour ou le
+    #     bouton « masquer » existera : un masquage rate se verrait tout de suite.
+    #   ⚠ Tant que Frederic ne l'a pas enregistree dans Windows, elle rend « tache
+    #     introuvable » en WARNING. C'est voulu : on declare AVANT d'enregistrer.
+    "GTI Entretien Photos": "warning",
     # ⚠ "GTI Relances Email" N'EST VOLONTAIREMENT PAS DANS CETTE LISTE, et ce
     #   n'est pas un oubli -- c'est la question qu'on s'est posee le 23/09.
     #   Elle tourne TOUTES LES HEURES et lance relance_worker SANS
@@ -3164,10 +3185,14 @@ def build_parser() -> argparse.ArgumentParser:
         #   une tache absente rend un simple `warning` « tache introuvable », alors qu'une
         #   tache enregistree et jamais regardee est le trou qu'on vient de reboucher pour
         #   la cinquieme fois. On declare d'abord, on enregistre ensuite.
+        #   19/10 : ajout de « GTI Entretien Photos » (21:00), sortie de la ligne 4/4
+        #   de l'entretien des documents. Meme regle : DECLAREE ICI AVANT d'etre
+        #   enregistree dans Windows. Elle est en "warning" et non "critical" -- la
+        #   raison est ecrite au-dessus de TASK_CRITICALITY. 10 noms surveilles.
         default=("GTI Quotidien,GTI Recherches Actives,GTI Health Monitor,"
                  "GTI Relances Email,GTI Sauvegarde,GTI Descente,"
                  "GTI Rattrapage Documents,GTI Reprise Envois Hektor,"
-                 "GTI Entretien Documents"),
+                 "GTI Entretien Documents,GTI Entretien Photos"),
         help="Noms des taches planifiees Windows a surveiller (separes par des virgules).",
     )
     parser.add_argument("--sqlite-freshness-minutes", type=int, default=30 * 60)
