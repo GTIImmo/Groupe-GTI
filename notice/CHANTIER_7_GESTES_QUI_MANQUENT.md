@@ -4205,3 +4205,57 @@ travail du bon type avec l'état d'avant** · ⭐ **rejouer le même masquage ne
 **pousser le front** · puis **l'essai réel sur le bac à sable 62774** — ⭐ **et c'est lui qui
 répondra à la question restée ouverte : masquer une photo fait-il bouger `date_maj` ?**
 *(ce qui tranche la marche 3)*.
+
+
+### ✅✅✅ RÉPÉTITION v2 COLLÉE — **22 MESURES, 22 JUSTES** *(19/10)*
+
+```
+1-avant  | contrainte / droits / distribution / RPC  = non, non, non, non
+1-avant  | 62774 : photos / visibles                 = 4 / 4
+1-avant  | la photo 482253 est                       = visible
+2-patch  | contrainte / droits / distribution        = OUI, OUI, OUI
+2-patch  | la RPC existe                             = OUI (4 parametres)
+2-patch  | anon peut l appeler                       = NON  (authenticated : oui)
+3-garde  | SANS identite : la garde refuse           = droits_insuffisants -- LA GARDE MORD
+3-garde  | identite empruntee : auth.uid()           = 0548613b-7654-42fa-a65d-d9adc815d2c0
+3-garde  | AVEC identite : la garde laisse           = oui
+4-masque | le retour est ok                          = oui, visible=false
+4-masque | la photo 482253 est devenue               = masquee
+4-masque | LE POST-IT (index marques)                = 1
+4-masque | adresses_app_le de 62774                  = A BLANC -- le fabricant la reciblera
+4-masque | le travail cree, du bon type              = set_hektor_photo_visibility (pending)
+4-masque | sa charge : l etat d avant                = true, demande=false, base_snapshot=4
+4-masque | visibles restantes / derniere             = 3 / plus_aucune_visible=false
+5-rejoue | rejouer le MEME masquage                  = deja_dans_cet_etat -- Hektor non derange
+6-affich | on la REAFFICHE                           = oui, visible=true
+6-affich | la photo 482253 est revenue               = visible
+6-affich | deux travaux distincts crees              = oui
+7-refus  | une photo inconnue                        = photo_introuvable_chez_hektor
+7-refus  | des parametres vides                      = parametres_incomplets
+8-retour | la RPC a disparu                          = oui
+8-retour | les 3 verrous ne connaissent plus         = oui, aucune trace
+```
+
+### ⭐⭐ CE QUE CES LIGNES PROUVENT, ET QUI NE SE DEVINAIT PAS
+
+1. ⭐⭐ **LA GARDE EST PROUVÉE DANS LES DEUX SENS** — `droits_insuffisants` **sans** identité,
+   `oui` **avec**. C'est le contrôle que **l'échec du 1ᵉʳ collage m'a offert** : je ne l'avais pas
+   écrit. Sans lui, « le geste marche » n'aurait rien dit sur la sécurité.
+2. ⭐ **LE POST-IT EST POSÉ** : `index_marques_a_refaire = 1`, et `adresses_app_le` passe **à
+   blanc**. ➡ Le fabricant **reciblera** l'annonce, donc la boîte publique sera juste en quelques
+   secondes au lieu d'une nuit. **Le mécanisme que je n'avais pas pu prouver est prouvé.**
+3. ⭐ **HEKTOR N'EST PAS DÉRANGÉ DEUX FOIS** : rejouer le même masquage rend
+   `deja_dans_cet_etat`. **Aucun second travail**, donc aucune requête inutile — et c'est la règle
+   qui a coûté le bannissement du 20/08.
+4. ⭐⭐ **LE GESTE EST RÉVERSIBLE, ÉPROUVÉ** : on la masque, on la réaffiche, **deux travaux
+   distincts**. C'est le témoin inverse **du geste lui-même**, pas seulement du patch.
+5. **LA CHARGE PORTE LE RETOUR ARRIÈRE** : `etat_avant = true`, `demande = false`, et
+   `base_snapshot` contient **les 4 photos**. ➡ Le worker a de quoi remettre le drapeau si Hektor
+   refuse — ce que **rien d'autre ne ferait** *(audit du 19/10)*.
+6. **LES DEUX REFUS SONT NOMMÉS**, pas génériques, donc traduisibles à l'écran.
+7. **L'INVERSE NE LAISSE AUCUNE TRACE** — ni la RPC, ni les 3 verrous.
+
+➡ **LA PIÈCE 1 EST PROUVÉE.** ⛔ Reste, dans l'ordre : coller le patch · **redémarrer les 4
+services** · **pousser le front** · puis **l'essai réel sur 62774**, le seul qui prouvera le geste
+**chez Hektor** — et qui répondra à la question restée ouverte : **masquer une photo fait-il bouger
+`date_maj` ?**
