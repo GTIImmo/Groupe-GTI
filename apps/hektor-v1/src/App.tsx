@@ -228,6 +228,10 @@ import RechercheAcquereur, { type VisitePlanInput } from './RechercheAcquereur'
 import RapprochementMandat, { type MandatContext } from './RapprochementMandat'
 import NotificationsBell from './NotificationsBell'
 import SanteSystemeScreen from './SanteSystemeScreen'
+import { bvBoot } from './lib/bienvuBoot'
+import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
+import { BienvuLogin } from './BienvuLogin'
+import { BienvuLogo, BienvuSymbol } from './BienvuLogo'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
@@ -13382,6 +13386,7 @@ export default function App() {
 
   useEffect(() => {
     if (!hasSupabaseEnv) {
+      bvBoot.session(true)
       void bootstrapApp()
       return
     }
@@ -13394,6 +13399,7 @@ export default function App() {
     }
 
     void getCurrentSession().then((nextSession) => {
+      bvBoot.session(Boolean(nextSession))
       const sameIdentity = sameSessionIdentity(sessionRef.current, nextSession)
       if (!sameIdentity) {
         sessionRef.current = nextSession
@@ -13408,6 +13414,7 @@ export default function App() {
 
     if (!supabase) return
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      bvBoot.session(Boolean(nextSession))
       if (event === 'PASSWORD_RECOVERY') {
         setRecoveryMode(true)
       }
@@ -14054,7 +14061,10 @@ export default function App() {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement des contacts')
       })
       .finally(() => {
-        if (!cancelled) setContactsLoading(false)
+        if (!cancelled) {
+          setContactsLoading(false)
+          bvBoot.data()
+        }
       })
     if (!useDirectContactLookup) {
       loadContactStats(dataFilters)
@@ -14248,7 +14258,10 @@ export default function App() {
         if (!cancelled) setErrorMessage(error instanceof Error ? error.message : 'Erreur de chargement')
       })
       .finally(() => {
-        if (!cancelled) setPageLoading(false)
+        if (!cancelled) {
+          setPageLoading(false)
+          bvBoot.data()
+        }
       })
 
     workItemsPromise
@@ -18973,7 +18986,37 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   ) : null
   const responsiveExperience = useResponsiveExperience()
 
+  // bienvu (lot 2) : la page de connexion neuve remplace l'ancienne SEULEMENT si l'interrupteur est
+  // allumé au build. Elle ne porte aucune logique : elle reçoit les gestionnaires existants, inchangés.
+  const bienvuLoginProps = APP_BIENVU_ENABLED
+    ? {
+        domaine: googleWorkspaceDomain,
+        message: errorMessage,
+        email: authEmail,
+        onEmail: setAuthEmail,
+        motDePasse: authPassword,
+        onMotDePasse: setAuthPassword,
+        emailValide: (valeur: string) => /^[^\s@]+@/.test(valeur.trim()) && isGoogleWorkspaceEmail(valeur),
+        onConnexion: handleSignIn,
+        connexionEnCours: authPending,
+        onGoogle: () => void handleGoogleWorkspaceSignIn(),
+        googleEnCours: googleAuthPending,
+        oubliOuvert: forgotPasswordOpen,
+        // changer de vue efface le message de l'autre vue (sinon un refus de connexion reste affiché sous « Mot de passe oublié »)
+        onOubli: (ouvert: boolean) => { setErrorMessage(null); setForgotPasswordOpen(ouvert) },
+        onEnvoiLien: handleForgotPassword,
+        envoiEnCours: forgotPasswordPending,
+        nouveauMotDePasse: recoveryPassword,
+        onNouveauMotDePasse: setRecoveryPassword,
+        confirmation: recoveryPasswordConfirm,
+        onConfirmation: setRecoveryPasswordConfirm,
+        onRecuperation: handleResetRecoveredPassword,
+        recuperationEnCours: recoveryPending,
+      }
+    : null
+
   if (hasSupabaseEnv && recoveryMode && !bootLoading) {
+    if (bienvuLoginProps) return <BienvuLogin mode="recuperation" {...bienvuLoginProps} />
     return (
       <div className="login-shell">
         <section className="login-panel">
@@ -18992,6 +19035,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   if (hasSupabaseEnv && !session && !bootLoading) {
+    if (bienvuLoginProps) return <BienvuLogin mode="connexion" {...bienvuLoginProps} />
     return (
       <div className="login-shell">
         <section className="login-panel">
@@ -22338,19 +22382,24 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         </button>
         <div className="brand-block rail-top">
           <button
-            className="rail-mark"
+            className={`rail-mark${APP_BIENVU_ENABLED ? ' rail-mark-bv' : ''}`}
             type="button"
             aria-label={sidebarCollapsed ? 'Deplier le menu' : 'Replier le menu'}
             aria-pressed={sidebarCollapsed}
             title="Deplier / replier le menu"
             onClick={() => setSidebarCollapsed((value) => !value)}
           >
-            <img src="/gti-mark.png" alt="Groupe GTI" />
+            {/* bienvu (lot 3) : replié = le symbole seul, déplié = le logo complet (mot blanc, coche magenta), sans plaque */}
+            {APP_BIENVU_ENABLED
+              ? (sidebarCollapsed ? <BienvuSymbol /> : <BienvuLogo />)
+              : <img src="/gti-mark.png" alt="Groupe GTI" />}
           </button>
-          <div className="rail-brand">
-            <strong>Groupe GTI</strong>
-            <span>{screenHeader.title}</span>
-          </div>
+          {APP_BIENVU_ENABLED ? null : (
+            <div className="rail-brand">
+              <strong>Groupe GTI</strong>
+              <span>{screenHeader.title}</span>
+            </div>
+          )}
           <button
             className="rail-reduce"
             type="button"

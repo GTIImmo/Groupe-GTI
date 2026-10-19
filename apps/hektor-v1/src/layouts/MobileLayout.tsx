@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import { BienvuSymbol } from '../BienvuLogo'
+import { APP_BIENVU_ENABLED } from '../lib/bienvuFlag'
 
 export type AppScreen = 'accueil' | 'annonces' | 'mandats' | 'estimations' | 'registre' | 'contacts' | 'agenda' | 'suivi' | 'sante'
 
@@ -54,9 +56,12 @@ export function MobileLayout({
   return (
     <div className="mobile-app-shell">
       <header className="mobile-app-header">
-        <div className="mobile-brand-mark" aria-hidden="true" />
+        {/* bienvu (lot 3) : le symbole remplace la forme dessinée en CSS ; « GTI Immobilier » devient le nom du logiciel */}
+        {APP_BIENVU_ENABLED
+          ? <div className="mobile-brand-mark mobile-brand-mark-bv" aria-hidden="true"><BienvuSymbol /></div>
+          : <div className="mobile-brand-mark" aria-hidden="true" />}
         <div className="mobile-title-block">
-          <span>GTI Immobilier</span>
+          <span>{APP_BIENVU_ENABLED ? 'bienvu' : 'GTI Immobilier'}</span>
           <h1>{title}</h1>
         </div>
         <button className="mobile-user-button" type="button" onClick={isAdmin ? onOpenUsers : undefined} aria-label={userLabel}>
