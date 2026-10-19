@@ -1,4 +1,4 @@
-# Tache planifiee : BALAYAGE DES PHOTOS MASQUEES (00:00)                19/10/2026
+﻿# Tache planifiee : BALAYAGE DES PHOTOS MASQUEES (00:00)                19/10/2026
 #
 # POURQUOI ELLE EXISTE. Depuis le 18/05, deux flux ramenent nos photos et un seul
 #   voit les MASQUEES : le flux API nocturne ne connait que les visibles, la couche

@@ -3917,3 +3917,55 @@ ce matin, est correctement exclue** — c'est la 4ᵉ vivante déjà vue, celle 
 | **enregistrer la tâche Windows** | à 00:00, quotidienne · ⚠ **comparer réglage par réglage** à une sœur qui marche *(S4U / Limited / Win7 / moteur unifié / limite 4 h / IgnoreNew)* — la leçon du 15/10, où la tâche neuve était en « Interactive », **seule des 9** |
 | **le calibrage** | ⭐ **`-Limite 1200` les 2 premières nuits** puis 1 000 en régime *(ou plus si le worker va plus vite que les 10 s médianes — la 1ʳᵉ nuit le dira)* |
 | ⛔ **le premier lancement** | **accord à part** |
+
+
+### ⚠⚠ L'INSTALLEUR NE PASSAIT PAS LE PARSEUR — UN PIÈGE D'ENCODAGE *(19/10)*
+
+`scheduled/installer_tache_balayage_photos.ps1` : *« Accolade fermante } manquante **ligne 121** »*
+— alors que l'accolade de la 121 était parfaitement fermée. **Le parseur signale où le bloc
+COMMENCE, pas où est la faute.** Trouvé en balayant **ligne par ligne isolément** :
+
+```
+⛔  =  U+26D4  =  UTF-8  E2 9B 94
+lu en cp1252  ->  â (E2)   › (9B)   ” (94)
+```
+
+⚠⚠ **PowerShell traite `”` comme un guillemet délimiteur.** Donc
+`Write-Host "⛔ $($rouges.Count) reglage(s)..."` se terminait **au milieu**.
+
+⭐ **Inoffensif en COMMENTAIRE, FATAL dans une CHAÎNE** — c'est pourquoi `run_entretien_photos.ps1`
+vit très bien avec ses `⛔` : ils sont dans des `#`.
+
+**Mesure du parc** : sur les **21** `.ps1` de `scheduled/`, **4 seulement ont un BOM**. Les autres
+n'ont jamais cassé **par chance**. ➡ **BOM UTF-8 ajouté aux deux fichiers neufs** : ça supprime
+toute la classe du problème, et les `⚠`/`⭐` s'afficheront juste dans le journal.
+⭐ Et le BOM **ne change pas les octets d'une fonction interne** : l'épreuve qui compare
+`Invoke-Ligne` à l'octet près reste verte, **325 caractères contre 325**.
+
+### ✅ LES DEUX ÉPREUVES APRÈS CORRECTION
+
+| | |
+|---|---|
+| `test_detecteur_echec_entretien.ps1` | **13 verts**, dont les 2 comparaisons 325 = 325 |
+| ⭐ **la tâche de bout en bout** *(`-DryRun -IgnorerFenetre`)* | **code 0**, le marqueur `--- 1/1 l'EMPILEUR` au journal, le bilan complet, et *« la ligne est passee »* |
+
+➡ **Ce n'est plus seulement l'empileur qui est éprouvé : c'est la TÂCHE, telle que Windows la
+lancera.** *(Leçon du 03/10 : « l'épreuve de la veille testait une imitation, pas le vrai code ».)*
+
+### L'INSTALLEUR, ET CE QU'IL VÉRIFIE LUI-MÊME
+
+`scheduled/installer_tache_balayage_photos.ps1` — à lancer **en PowerShell administrateur**.
+⭐ Il recopie les réglages de **« GTI Entretien Documents »** *(relevés le 19/10 : admin / S4U /
+Limited / Win7 / moteur unifié / IgnoreNew / StartWhenAvailable False / MSFT_TaskDailyTrigger
+interval 1)*, puis **il relit la tâche enregistrée et compare RÉGLAGE PAR RÉGLAGE** — **13 lignes
+nommées**, une par réglage, jamais un « 13 sur 13 ».
+⭐⭐ **C'est la leçon du 15/10 transformée en code** : les deux défauts de cette nuit-là *(principal
+« Interactive », limite à 72 h)* **sortiraient en ROUGE ici**. « Enregistrée » ne veut pas dire
+« configurée comme ses sœurs ».
+⚠ Seule divergence **voulue et vérifiée comme telle** : `ExecutionTimeLimit = PT1H` et non PT4H —
+l'empileur sort en moins d'une minute.
+
+⚠ **Correction de mon propre plan** : j'avais écrit *« 1 200 les 2 premières nuits puis 1 000 »* —
+**c'était à l'envers**, un calibrage part EN DESSOUS de la cible. ➡ La tâche tourne au **défaut de
+1 000**, et ⭐ **le calibrage est automatique** : si le worker ne digère pas son lot, la nuit
+suivante le refus « file non vide » sort en 1 et le dit. Pas de rampe à la main.
