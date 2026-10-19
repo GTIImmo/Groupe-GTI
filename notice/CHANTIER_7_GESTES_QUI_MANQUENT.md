@@ -5156,3 +5156,77 @@ photo masquée depuis l'app entre 07:45 et 21:00 sera encore déclarée disparue
 ⚠ **Rien n'est écrit pour ça** : c'est un script du run de nuit, donc l'accord de Frédéric.
 **La forme la moins risquée** : avant de marquer, relire le drapeau `visible` **dans Supabase** pour
 les seules candidates *(2 ce soir)* — **zéro appel à Hektor**, et le reste du script intact.
+
+
+### ✅ LE VERROU 8 EST ÉCRIT — *« A vas y »* *(19/10, minuit)*
+
+⭐⭐⭐ **Et c'est plus simple que ce que j'avais annoncé.** J'allais faire « relire le drapeau dans
+la base pour les candidates » *(une requête de plus)*. En lisant le code, j'ai vu que **l'auteur
+avait déjà mis un garde-fou DANS LA REQUÊTE**, pour un autre aspect du même problème :
+
+```js
+// ⚠ LE GARDE-FOU EST AUSSI DANS LA REQUETE : `present_in_hektor=is.true`. Notre
+//   comparaison vient d'une COPIE locale ; si Supabase a deja marque la ligne
+//   entre-temps, on ne re-date pas sa sortie.
+```
+
+➡ **Il suffisait d'ajouter une condition à la même requête.** ⭐ **C'est la BASE qui refuse** :
+aucune lecture de plus, aucune requête chez Hektor, et tout le reste du script intact.
+
+| ce que j'ai écrit | |
+|---|---|
+| ⭐ **le verrou** | `&visible=is.true` sur la requête de marquage — **une condition** |
+| ⭐ **il DIT ce qu'il a sauvé** | quand la base refuse, **une seule lecture** nomme les lignes et distingue « sauvée par le verrou 8 » de « déjà marquée entre-temps (normal) » |
+| ⭐ **le compte rendu** | deux lignes neuves : `sauvees_par_le_verrou_8` et `sauvees_nommees` |
+| ⚠ **et une fausse alerte évitée** | le test d'écart final comptait les sauvées comme un manque → **il aurait sorti en code 1 chaque soir** après un masquage. Elles sont maintenant comptées comme traitées, et **dites** |
+| ⭐ **les candidates sont NOMMÉES** | le compte rendu disait `a_marquer: 2` **sans dire lesquelles** — on ne pouvait rien vérifier d'avance. Ajouté : `candidates_nommees` |
+
+### ✅ L'ÉPREUVE — avec son témoin inverse
+
+**`Console/test_verrou8_photo_masquee.js`** *(neuf, lecture seule)* : il remplace le PATCH par un GET
+portant **la même chaîne de filtre**, donc il éprouve **le filtre, pas une imitation**.
+
+| | résultat |
+|---|---|
+| ⭐⭐ ② **témoin inverse** — l'ANCIEN filtre prend la masquée | ✅ **1 ligne** *(elle était bien à portée)* |
+| ⭐⭐ ③ **le verrou 8** — le NOUVEAU la laisse | ✅ **0 ligne** |
+| ⭐ ④ **il ne bloque pas tout** — une VISIBLE reste à portée | ✅ **1 ligne** *(les 371 vrais reportages sortiront toujours)* |
+| ⑤ **la syntaxe** | ✅ les 3 requêtes **acceptées** par Supabase |
+
+⭐ *Sans le ②, un filtre cassé — qui ne rend jamais rien — passerait pour un filtre qui protège.*
+
+**Et l'essai à blanc du vrai script** : ✅ **code 0**, 441 363 lignes lues, et les lignes neuves
+présentes dans le compte rendu.
+
+⚠ **Ce que l'épreuve NE couvre PAS, et le test le dit lui-même** : le chemin d'**écriture** ne tourne
+qu'avec `--appliquer`. **Son juge est le passage réel de 21:00.**
+
+### ⭐⭐⭐ ET L'ESSAI À BLANC A PROUVÉ QUE LE DÉFAUT SE RÉPÉTAIT
+
+Les candidates de demain soir, **nommées** :
+
+```
+62774/482253     <- la photo temoin de ⑦-8
+63073/485375     <- CELLE DE FREDERIC, reparee ce soir a 23:38
+```
+
+➡ ⛔⛔ **Sans le verrou 8, le script aurait retiré les deux À NOUVEAU demain soir — dont celle qu'on
+venait de réparer.** Le défaut n'était pas un accident : **c'était une rechute quotidienne.**
+
+### ⏰ LA PRÉDICTION POUR DEMAIN 21:00 — vérifiable, et c'est le juge
+
+Les deux sont mesurées `visible = false` et `present_in_hektor = true`. Donc le compte rendu doit dire :
+
+```
+candidates_nommees      : ["62774/482253", "63073/485375"]
+sauvees_par_le_verrou_8 : 2
+photos_marquees         : 0
+code de sortie          : 0, et AUCUN ecart
+```
+
+⭐ **Si `sauvees_par_le_verrou_8` vaut 0 et `photos_marquees` vaut 2, le verrou n'a pas mordu** — et
+il faudra regarder tout de suite.
+
+⭐ **Aucun redémarrage n'est nécessaire** : ce script est lancé par la tâche de 21:00, il prend donc
+effet tout seul demain soir. ⚠ Et **je n'ai touché aucun `.ps1`**, donc
+`scheduled/test_detecteur_echec_entretien.ps1` n'est pas concerné.

@@ -244,6 +244,7 @@ async function main() {
   };
   const listesVides = [];
   const aMarquer = new Map();     // annonce -> [id de ligne]
+  const candidatesNommees = [];   // "annonce/photo" -- pour les NOMMER au compte rendu
   const aReordonner = [];         // { id, ordre }
 
   for (const r of lignes) {
@@ -292,6 +293,12 @@ async function main() {
       }
       if (!aMarquer.has(aid)) aMarquer.set(aid, []);
       aMarquer.get(aid).push(r.id);
+      // ⭐ ON NOMME LES CANDIDATES (19/10/2026). Le compte rendu disait « a_marquer: 2 »
+      //   sans dire LESQUELLES -- regle du projet : un controle qui AGREGE perd ce qui
+      //   sert a agir. En essai a blanc, c'est la seule facon de savoir a l'avance ce
+      //   que le passage de 21:00 va retirer, et donc de verifier que le verrou 8
+      //   protegera bien ce qu'il doit proteger.
+      candidatesNommees.push(`${aid}/${pid}`);
       stats.a_marquer += 1;
       continue;
     }
@@ -323,6 +330,11 @@ async function main() {
 
   let marquees = 0;
   let reordonnees = 0;
+  // ⚠⚠ VERROU 8 (19/10/2026) : combien de lignes la BASE a refuse de marquer parce
+  //   qu'elles y sont masquees. Ce n'est pas un ecart, c'est le verrou qui joue --
+  //   donc ca se COMPTE et ca se DIT, sinon le compte rendu final crierait a tort.
+  let refuseesCarMasqueesEnBase = 0;
+  const refuseesNommees = [];
   if (APPLIQUER) {
     const maintenantIso = new Date().toISOString();
     for (const [aid, ids] of aMarquer) {
@@ -332,14 +344,86 @@ async function main() {
       // ⚠ LE GARDE-FOU EST AUSSI DANS LA REQUETE : `present_in_hektor=is.true`. Notre
       //   comparaison vient d'une COPIE locale ; si Supabase a deja marque la ligne
       //   entre-temps, on ne re-date pas sa sortie.
+      // ⚠⚠ VERROU 8 (19/10/2026) : LE DRAPEAU `visible` SE LIT DANS LA BASE, PAS DANS
+      //   LA COPIE. C'est la suite logique du garde-fou ci-dessus, et il a ete paye le
+      //   19/10 au soir.
+      //
+      //   CE QUE CA A COUTE. Frederic a masque la photo 485375 de l'annonce 63073
+      //   depuis l'app a 14:31. A 21:00:05 ce script l'a declaree DISPARUE. Elle est
+      //   alors sortie du panneau (`loadConsolePhotos` filtre `present_in_hektor`) :
+      //   invisible, donc IMPOSSIBLE A REAFFICHER. Exactement le « a sens unique »
+      //   que le verrou 7 annonce dans son propre commentaire.
+      //
+      //   POURQUOI LE VERROU 7 N'A PAS JOUE. Il fait
+      //   `if (drapeauVisible(r) === "masquee") continue;` -- mais `r` vient de
+      //   `lireNotreIndex()`, c'est-a-dire de la COPIE LOCALE (INDEX_LOCAL), qui ne se
+      //   rafraichit qu'a la DESCENTE DE 07:45. Mesure du 19/10 a 23:27 dans cette
+      //   copie : la photo 485375 y etait encore `visible = 1`, et l'annonce 63073 n'y
+      //   avait que 10 photos dont 0 masquee (la production : 24 dont 15).
+      //   Le verrou a donc lu « visible » et n'a pas protege.
+      //   ⭐ La fenetre est ouverte TOUS LES JOURS, de 07:45 (la copie) a 21:00 (ici).
+      //
+      //   AMPLEUR MESUREE LE 19/10 : 1 seule photo touchee. Le verrou 7 a bien protege
+      //   les 121 autres masquees -- leur masquage est anterieur a la derniere copie,
+      //   donc la copie les connait. Le defaut ne frappe QUE le masquage du jour,
+      //   c'est-a-dire exactement le bouton de ⑦-8 marche 4, livre la veille. Il est
+      //   passe inapercu parce que personne ne s'en etait encore servi en reel.
+      //
+      // ⭐ LE REMEDE EST UNE CONDITION, PAS UN APPEL : `visible=is.true`. C'est la BASE
+      //   qui refuse, donc aucune lecture de plus, aucune requete chez Hektor, et le
+      //   reste du script est intact. Une photo masquee en production ne peut plus etre
+      //   declaree disparue, quoi que dise la copie.
       const cible = `app_console_photo?id=in.(${lot.map((i) => encodeURIComponent(i)).join(",")})`
-                  + `&present_in_hektor=is.true`;
+                  + `&present_in_hektor=is.true`
+                  + `&visible=is.true`;
       const ecrites = await rest(cible, {
         method: "PATCH", prefer: "return=representation",
         body: JSON.stringify({ present_in_hektor: false, absent_depuis: maintenantIso, updated_at: maintenantIso }),
       });
       const n = Array.isArray(ecrites) ? ecrites.length : 0;
       marquees += n;
+
+      // ⭐ ET SI LA BASE A REFUSE DES LIGNES, ON DIT LESQUELLES ET POURQUOI.
+      //   Regle du projet : un controle qui AGREGE perd ce qui sert a agir -- un
+      //   « 1 sur 2 » ne dit pas quelle photo a ete sauvee. Une seule lecture, et
+      //   seulement quand il y a un refus (donc jamais les soirs ordinaires).
+      if (n < lot.length) {
+        const ecritsIds = new Set((Array.isArray(ecrites) ? ecrites : []).map((l) => String(l.id)));
+        const refuses = lot.filter((i) => !ecritsIds.has(String(i)));
+        try {
+          const detail = await rest(
+            `app_console_photo?id=in.(${refuses.map((i) => encodeURIComponent(i)).join(",")})`
+            + `&select=id,hektor_annonce_id,hektor_photo_id,visible,present_in_hektor`
+          );
+          for (const l of Array.isArray(detail) ? detail : []) {
+            if (l.visible === false) {
+              refuseesCarMasqueesEnBase += 1;
+              refuseesNommees.push(`${l.hektor_annonce_id}/${l.hektor_photo_id}`);
+              console.error(JSON.stringify({
+                etape: "verrou_8",
+                verdict: "SAUVEE -- masquee en base, la copie locale disait visible",
+                annonce: l.hektor_annonce_id, photo: l.hektor_photo_id,
+              }));
+            } else {
+              console.error(JSON.stringify({
+                etape: "marquage_refuse",
+                verdict: "deja marquee entre-temps (normal)",
+                annonce: l.hektor_annonce_id, photo: l.hektor_photo_id,
+                visible: l.visible, present_in_hektor: l.present_in_hektor,
+              }));
+            }
+          }
+        } catch (erreur) {
+          // ⚠ On ne fait pas tomber l'entretien pour un compte rendu : le marquage,
+          //   lui, a bien eu lieu (ou a bien ete refuse). Mais on le DIT.
+          console.error(JSON.stringify({
+            etape: "verrou_8",
+            avertissement: "refus non detailles -- la relecture a echoue",
+            annonce: aid, refuses: refuses.length,
+            erreur: erreur && erreur.message ? erreur.message : String(erreur),
+          }));
+        }
+      }
       console.error(JSON.stringify({ etape: "marquage", annonce: aid, demandees: lot.length, ecrites: n }));
     }
     for (const { id, ordre } of aReordonner) {
@@ -361,11 +445,28 @@ async function main() {
     annonces_a_liste_vide: listesVides.length,
     exemples_liste_vide: listesVides.slice(0, 5),
     photos_marquees: marquees, photos_reordonnees: reordonnees,
+    // ⭐ VERROU 8 : ce que la base a refuse de marquer parce que c'etait masque chez
+    //   elle. Un zero est la normale ; un nombre non nul veut dire « le verrou a
+    //   servi ce soir », et les photos sont NOMMEES pour qu'on puisse aller voir.
+    sauvees_par_le_verrou_8: refuseesCarMasqueesEnBase,
+    sauvees_nommees: refuseesNommees.slice(0, 20),
+    // ⭐ LES CANDIDATES, NOMMEES : en essai a blanc c'est la seule facon de savoir
+    //   A L'AVANCE ce que le passage de 21:00 va retirer.
+    candidates_nommees: candidatesNommees.slice(0, 20),
   }, null, 2));
 
   // Un compte rendu qui ne colle pas doit se VOIR, pas se deviner.
-  if (APPLIQUER && (marquees !== stats.a_marquer || reordonnees !== stats.a_reordonner) && !LIMITE) {
-    console.error(`ECART : ${stats.a_marquer} a marquer / ${marquees} ecrites, `
+  // ⚠ VERROU 8 : UNE PHOTO SAUVEE N'EST PAS UN ECART. Sans cette addition, le
+  //   premier masquage fait dans la journee ferait sortir l'entretien en code 1
+  //   chaque soir -- une fausse alerte repetee, et la surveillance finirait par
+  //   etre ignoree. Les sauvees sont donc COMPTEES comme traitees ici, et DITES
+  //   dans le compte rendu ci-dessus.
+  if (APPLIQUER
+      && ((marquees + refuseesCarMasqueesEnBase) !== stats.a_marquer
+          || reordonnees !== stats.a_reordonner)
+      && !LIMITE) {
+    console.error(`ECART : ${stats.a_marquer} a marquer / ${marquees} ecrites `
+      + `(+ ${refuseesCarMasqueesEnBase} sauvees par le verrou 8), `
       + `${stats.a_reordonner} a reordonner / ${reordonnees} ecrites. `
       + `Une ligne a pu etre marquee entre-temps par le worker (c'est normal) -- a verifier.`);
     process.exitCode = 1;
