@@ -8782,6 +8782,40 @@ export async function createPrepareBrouillonAnnonceDetailJob(input: {
   return data as ConsoleJob
 }
 
+// ⑦ PIECE ④ (20/10/2026) -- SORTIR UNE ANNONCE DU BROUILLON.
+//
+// ⚠ CE N'EST PAS UN CHANGEMENT DE STATUT. Le statut ne bouge pas : on retire le
+//   drapeau « brouillon », et l'annonce rejoint le catalogue que son statut
+//   designe DEJA (mesure du 20/10 : 241 « Actif », 277 « Estimation », et 11
+//   coquilles vides que l'ecran refuse AVANT d'arriver ici).
+// ⭐ Reserve admin/manager cote base (app_console_can_request_job), comme
+//   l'archivage : c'est un deplacement structurel du bien.
+export async function createExitHektorDraftAnnonceJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien' | 'statut_annonce'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'exit_hektor_draft_annonce',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        statut_annonce: input.dossier.statut_annonce ?? null,
+      },
+      priority: input.priority ?? 20,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create exit draft job')
+  return data as ConsoleJob
+}
+
 export async function createLinkHektorMandantJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   contactId: string

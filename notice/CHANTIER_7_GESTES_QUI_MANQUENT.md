@@ -6595,3 +6595,98 @@ Le **(22)** aurait attrapé le défaut **avant** le clic. **26 contrôles verts,
 2. **Le nom interne ≠ le libellé du menu** : voyant Frédéric sans changement, j'ai conclu que
    j'avais corrigé le mauvais composant et proposé **4 lots de travail**. C'était faux — voir
    l'encadré plus haut. ⭐ Le vrai coupable était **le cache du navigateur**, puis le 8ᵉ endroit.
+
+
+---
+
+## BROUILLONS — PIÈCE ④ : sortir une annonce du brouillon
+
+**20/10/2026.** *Écrit, éprouvé hors ligne. ⛔ Pas vivant : il manque le patch SQL, le push, et
+le redémarrage du worker **Admin**.*
+
+### ⭐ Ce que Frédéric a corrigé dans mon plan, et il avait raison deux fois
+
+1. **« Un brouillon reste un brouillon, quel que soit son statut »** → une **seule présentation**
+   pour les 529. Aujourd'hui un brouillon « Estimation » tombait dans `est_envoye` et un
+   brouillon « Actif » dans `man_creer` : **deux crans, deux fiches**, et tous deux proposaient
+   **« Créer le mandat »** — alors qu'un brouillon n'a pas de mandat *(0 sur 529)*.
+2. **« Les brouillons se retrouvent uniquement dans les annonces »** → vérifié dans les commits
+   d'origine : `e26e25e` l'écrit noir sur blanc, et l'écran Estimations a son propre bloc de
+   filtres **sans** « Brouillons ». ⛔ **On n'y touche pas.**
+
+### La donnée qui a fait fondre le plan
+
+```
+status 2 · detail « Actif »       239        ⭐ 2 = Actif
+status 1 · detail « Estimation »  222        ⭐ 1 = Estimation
+status 1 · (pas de detail)         55
+status 2 · (pas de detail)          2
+status (vide)                      11        ⬅ les seuls muets
+```
+
+⭐⭐ **Aucune contradiction** : quand les deux sources parlent, elles disent la même chose. Donc
+**518 fiches sur 529 savent déjà où elles vont** — le bouton n'a **rien à leur demander**.
+
+Et **les 11 muettes sont des coquilles totalement vides** : ni titre, ni ville, 0 €, 0 m²,
+**9 jamais touchées** *(date `0000-00-00`)*, 2 sans négociateur. ➡ Les mettre en ligne n'a aucun
+sens, ni en Actif ni en Estimation. **Elles sont refusées, avec leur motif.**
+
+⭐ **C'est ce qui a supprimé le besoin d'un 6ᵉ statut** dans le worker : la ligne « estimation »
+n'aurait servi qu'à ces 11 coquilles.
+
+### ⭐⭐ Et le mécanisme était déjà éprouvé en production
+
+`createHektorAnnonceWithHttpDirect` *(la création d'annonce)* envoie déjà, après l'assistant :
+
+```js
+const activationCommands = [
+  { champ: "etatAnnonce", val: "1" },   // ⬅ ACTIVER = sortir du brouillon
+  { champ: "diffusable",  val: "0" },
+  { champ: "partage",     val: "0" },
+];
+```
+
+➡ **`etatAnnonce = 1` est la commande d'activation de CHAQUE annonce que nous créons.** Mon
+*« non mesuré : que ce seul appel suffise »* tombe : il tourne depuis des mois.
+⚠ **La bascule n'envoie QUE `etatAnnonce`** — pas `diffusable`, pas `partage` : on ne touche pas
+à la diffusion d'un bien qui existe déjà. Un contrôle le vérifie.
+
+### Ce qui est écrit
+
+| | quoi |
+|---|---|
+| **les 3 verrous** | `supabase/patch_chantier7_piece4_sortir_du_brouillon_2026-10-20.sql` *(+ `_INVERSE`, `_REPETITION`)* — ⛔ **à coller**. Réservé **admin/manager**, comme l'archivage |
+| **le worker, 4 endroits** | `ADMIN_JOB_TYPES` · ⭐ **`loadDossier` laisse passer CE geste sur un brouillon** *(sinon « Annonce en cours de création » avant de commencer)* · le handler · le routeur |
+| **la preuve** | le handler relit `isDraft` par **GraphQL avant et après**, et **exige le basculement**. Un 200 sans bascule est un refus silencieux |
+| ⭐ **le miroir local** | `phase2/sync/marquer_brouillon_sorti.py` — **sans lui, l'annonce serait NULLE PART jusqu'à 05:00** : la garde de la pièce ① lit ce même miroir et refuserait de la faire entrer dans le parc vivant |
+| **le front** | un **cran unique « Brouillon »**, en lecture seule, **placé en premier** dans la cascade · le bouton **« Mettre en ligne »** dans le bandeau, sur le patron exact de **« Désarchiver »** · le refus des coquilles **avant** d'envoyer |
+
+⭐ **Le bandeau de lecture seule portait déjà un bouton** *(« Désarchiver »)* : un cran `ro` avec
+**une seule issue** est une forme qui existait, je ne l'ai pas inventée.
+
+### L'épreuve hors ligne
+
+**27 contrôles verts** *(`phase2/checks/test_piece4_sortir_du_brouillon.py`)*, dont :
+le geste n'envoie **que** `etatAnnonce` · la création d'annonce garde ses **3** commandes
+*(témoin inverse)* · le cran ne propose **plus** « Créer le mandat » · la propriété est déclarée
+**et passée** partout où sa voisine l'est · la pièce ② et la branche archive sont **intactes** ·
+leçon 30 sur les trois patchs.
+⭐ **Et c'est ce contrôle qui a trouvé les `activationCommands`** — en comptant deux `etatAnnonce`
+là où j'en attendais un.
+
+`npm run build` : 8,61 s. Les essais des pièces ① et ② restent verts.
+
+### ⛔ CE QU'IL RESTE À FAIRE
+
+```
+1. COLLER   supabase/patch_chantier7_piece4_sortir_du_brouillon_2026-10-20.sql
+2. COLLER   ..._REPETITION.sql        -> les 6 controles doivent etre verts
+3. POUSSER
+4. ⏰ REDEMARRER HektorConsoleWorkerAdmin (c'est LUI qui porte ce type),
+      ET SEULEMENT FILE VIDE : 0 pending ET 0 running
+5. EPROUVER en reel -- sur une cible que Frederic choisit
+```
+
+⚠ **Non mesuré, et je le dis** : ce qu'il advient de l'annonce **immédiatement après** la
+bascule dans l'écran *(elle quitte le panier brouillon, puis un read-through la fait entrer dans
+le parc)*. La chaîne est écrite et chaque maillon est prouvé séparément ; **l'enchaînement, non.**

@@ -148,6 +148,10 @@ const ADMIN_JOB_TYPES = new Set([
   "cancel_hektor_compromis",
   "delete_hektor_compromis",
   "delete_hektor_vente",
+  // ⑦ piece ④ (20/10/2026) : sortir une annonce du brouillon. ICI, avec l'archivage
+  // et le changement de statut, parce que c'est le meme genre de geste -- un
+  // deplacement STRUCTUREL du bien, pas une modification de ses champs.
+  "exit_hektor_draft_annonce",
 ]);
 const MATTERPORT_JOB_TYPES = new Set([
   "matterport_online",
@@ -2069,7 +2073,11 @@ async function loadDossier(job) {
   else brouillonParams.set("hektor_annonce_id", `eq.${job.hektor_annonce_id}`);
   const brouillonRows = await supabaseRequest(`app_brouillon_annonce_index_current?${brouillonParams.toString()}`, { method: "GET" });
   if (Array.isArray(brouillonRows) && brouillonRows.length) {
-    if (READ_ONLY_ARCHIVE_JOB_TYPES.has(job.job_type)) {
+    // ⑦ piece ④ (20/10/2026) : un brouillon ne se MODIFIE pas, mais il peut SORTIR
+    //   du brouillon -- c'est le seul geste d'ecriture qu'on lui autorise ici. Sans
+    //   cette ligne, loadDossier jetterait « Annonce en cours de creation » et le
+    //   travail echouerait avant meme de commencer.
+    if (READ_ONLY_ARCHIVE_JOB_TYPES.has(job.job_type) || job.job_type === "exit_hektor_draft_annonce") {
       const row = brouillonRows[0];
       return {
         ...row,
@@ -4519,6 +4527,124 @@ async function handlePrepareBrouillonAnnonceDetail(job) {
     ...result,
     hektor_annonce_id: hektorAnnonceId,
     cache_table: "app_brouillon_annonce_detail_cache",
+  };
+}
+
+// ⑦ PIECE ④ (20/10/2026) -- SORTIR UNE ANNONCE DU BROUILLON.
+//
+// CE QUE CE GESTE EST, ET CE QU'IL N'EST PAS. Il NE CHANGE PAS le statut : il
+// retire le drapeau « brouillon », et l'annonce part dans le catalogue que son
+// statut designe DEJA. Mesure du 20/10 sur les 529 brouillons :
+//     241 portent deja « Actif »      277 portent deja « Estimation »
+//      11 ne portent rien -- et ce sont des COQUILLES VIDES (ni titre, ni ville,
+//         0 EUR, 0 m2, 9 jamais touchees, 2 sans negociateur).
+// ⭐ Donc 518 fiches sur 529 savent deja ou elles vont : on n'a rien a leur
+//   demander. Les 11 autres sont refusees -- il n'y a rien a mettre en ligne.
+//
+// ⭐ UN SEUL APPEL A HEKTOR : mode=upval & champ=etatAnnonce & val=1. C'est le
+//   meme mecanisme que le changement de statut (champ=status) et que la
+//   visibilite des photos. Trouve dans leur propre assistant : setActifAnnonce().
+//   ⚠ Et c'est REVERSIBLE : etatAnnonce = 2 refait un brouillon (c'est ce que
+//     fait leur bouton « Enregistrer le brouillon »).
+//
+// ⚠⚠ ON EXIGE LE BASCULEMENT, JAMAIS UN 200. On relit l'annonce par GraphQL avant
+//   et apres (le champ isDraft), exactement comme le bouton masquer/afficher des
+//   photos. Un 200 sans basculement est la signature d'un refus silencieux --
+//   c'est ce qui arrivait a 78 % des offres en 2026.
+async function handleExitHektorDraftAnnonce(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const dossier = await loadDossier(job);
+  await ensureHektorExecutionContext(job, dossier, payload,
+    { preferRequester: true, preferDossierOwner: true, required: true });
+
+  const annonce = String(dossier.hektor_annonce_id || "").trim();
+  if (!annonce) throw new Error("hektor_annonce_id required for exit_hektor_draft_annonce");
+
+  // ── LE REFUS DES COQUILLES, ici AUSSI et pas seulement dans l'ecran ──────────
+  //    L'ecran les grise deja ; cette garde tient meme si le travail est cree
+  //    autrement. Une regle qui ne vit qu'a l'ecran n'est pas une regle.
+  const statutConnu = String(dossier.statut_annonce || "").trim();
+  if (!statutConnu) {
+    throw new Error(`Le brouillon ${annonce} n'a aucun statut : il n'y a rien a mettre en ligne. `
+      + `Terminez la saisie dans Hektor, ou supprimez-le.`);
+  }
+
+  // ── AVANT : est-ce vraiment un brouillon chez Hektor ? ──────────────────────
+  const avant = await fetchHektorPropertyByIdBestEffort(job, annonce, "exit_draft_verify_before");
+  if (avant && avant.property && avant.property.isDraft === false) {
+    await logJob(job.id, "exit_hektor_draft", "done",
+      "Deja sorti du brouillon chez Hektor -- rien a envoyer", {
+        hektor_annonce_id: annonce,
+      });
+    return { hektor_annonce_id: annonce, deja_sorti: true, statut_annonce: statutConnu };
+  }
+
+  await logJob(job.id, "exit_hektor_draft", "running",
+    `Sortie du brouillon -- l'annonce rejoindra « ${statutConnu} »`, {
+      hektor_annonce_id: annonce,
+      statut_annonce: statutConnu,
+      etait_brouillon: avant && avant.property ? avant.property.isDraft : null,
+    });
+
+  await hektorFetch(`${XMLRPC_URL}?${new URLSearchParams({
+    mode: "upval",
+    id: annonce,
+    champ: "etatAnnonce",
+    val: "1",
+  }).toString()}`, {
+    headers: { Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${encodeURIComponent(annonce)}` },
+  });
+  await sleep(1500);
+
+  // ── APRES : ON EXIGE LA PREUVE ──────────────────────────────────────────────
+  const apres = await fetchHektorPropertyByIdBestEffort(job, annonce, "exit_draft_verify_after");
+  if (!apres || !apres.property) {
+    throw new Error(`Sortie du brouillon NON PROUVEE pour ${annonce} : Hektor ne rend plus `
+      + `l'annonce dans sa liste. Ne pas rejouer sans regarder ce qui s'est passe.`);
+  }
+  if (apres.property.isDraft !== false) {
+    throw new Error(`Hektor a accepte l'appel mais ${annonce} est TOUJOURS un brouillon. `
+      + `Un 200 sans basculement est un refus silencieux.`);
+  }
+
+  await logJob(job.id, "exit_hektor_draft", "done", "Sortie du brouillon PROUVEE chez Hektor", {
+    hektor_annonce_id: annonce,
+    statut_annonce: statutConnu,
+    status_hektor: apres.property.status == null ? null : apres.property.status,
+  });
+
+  // ⚠⚠ LE MIROIR LOCAL DIT ENCORE « BROUILLON ». Sans cette etape, la garde de la
+  //   piece ① refuserait de faire entrer l'annonce dans le parc vivant, et elle
+  //   serait NULLE PART jusqu'au run de 05:00. On corrige le miroir, puisqu'on
+  //   vient de faire le geste et qu'on l'a PROUVE.
+  try {
+    await runProjectPythonScript(["phase2/sync/marquer_brouillon_sorti.py",
+                                  "--hektor-annonce-id", annonce], { timeoutMs: 30000 });
+  } catch (error) {
+    await logJob(job.id, "exit_hektor_draft", "error",
+      "Miroir local non mis a jour : l'annonce n'entrera dans le parc qu'au run de 05:00", {
+        hektor_annonce_id: annonce,
+        error: error && error.message ? error.message : String(error),
+      });
+  }
+
+  // elle quitte le panier brouillon tout de suite, puis entre dans le parc vivant
+  try {
+    await supabaseRequest(
+      `app_brouillon_annonce_index_current?hektor_annonce_id=eq.${encodeURIComponent(annonce)}`,
+      { method: "DELETE", prefer: "return=minimal" });
+  } catch (error) {
+    await logJob(job.id, "exit_hektor_draft", "error", "Ligne du panier brouillon non retiree", {
+      hektor_annonce_id: annonce,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+  await enqueueRefreshConsoleDataJobBestEffort(job, annonce, { reason: "exit_hektor_draft_annonce" });
+
+  return {
+    hektor_annonce_id: annonce,
+    sorti_du_brouillon: true,
+    statut_annonce: statutConnu,
   };
 }
 
@@ -21818,6 +21944,8 @@ async function runHandler(job) {
       return handleDeleteHektorCompromis(job);
     case "delete_hektor_vente":
       return handleDeleteHektorVente(job);
+    case "exit_hektor_draft_annonce":
+      return handleExitHektorDraftAnnonce(job);
     case "assign_hektor_annonce_negotiator":
       return handleAssignHektorAnnonceNegotiator(job);
     case "create_hektor_draft_annonce":

@@ -138,7 +138,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑦-7 | modifier ou prolonger un mandat | ⛔ **FERMÉ PAR DÉCISION le 18/10** — *« je ne souhaite pas pouvoir modifier un mandat ou prolonger »*. **Ne pas relancer** |
 | ⑦-8 | **photos : rendre visible / masquer** | ✅ **COMPLET le 19/10** — les **4 marches**, dont le bouton **prouvé en réel deux fois** *(voir ci-dessous)* |
 | ⑦-9 | renommer un document | ⛔ **FERMÉ PAR DÉCISION le 19/10** — *« je pense qu'il ne faut rien changer donc il faut que l'utilisateur puisse mettre un libellé au début donc rien à changer »*. ⭐ **Et le champ existe déjà** *(`App.tsx:11378` « Libellé », → nom du fichier envoyé à Hektor, `api.ts:8169`)*. **Ne pas relancer** |
-| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | ✅ **① FAITE le 20/10** · ✅ **② EN PRODUCTION le 20/10 à 16:23** *(clic réel sur 63131 : travail `done` en 8 s, cache 89 876 o, `app_brouillon_id` 7 589 119, +24 h ; 26 contrôles verts)* · ⛔ **reste : PERSONNE N'A VU LA FICHE S'OUVRIR** · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* · ⬜ ④ bouton « mettre en ligne » *(un seul appel, réversible)* |
+| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | ✅ **① FAITE** · ✅ **② EN PRODUCTION le 20/10 à 16:23** *(clic réel sur 63131, fiche ouverte)* · 🔧 **④ ÉCRITE le 20/10, ATTEND LA POSE** *(patch SQL + push + redémarrage **Admin** ; 27 contrôles verts ; cran unique « Brouillon », bouton « Mettre en ligne », les 11 coquilles refusées)* · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* |
 
 **⑦-8, les 4 marches** *(19/10)* :
 
@@ -179,7 +179,18 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ⛔ SI sauvees vaut 0 ET marquees vaut 2, LE VERROU N'A PAS MORDU -- regarder tout
      de suite : une photo masquee serait sortie du panneau, sans retour possible.
 
-① ✅ LA PIECE ② DES BROUILLONS EST POSEE ET EPROUVEE (20/10 16:23).
+① ⏰ LA PIECE ④ (SORTIR DU BROUILLON) ATTEND SA POSE -- 5 gestes :
+   1. COLLER supabase/patch_chantier7_piece4_sortir_du_brouillon_2026-10-20.sql
+   2. COLLER ..._REPETITION.sql  -> les 6 controles verts
+   3. POUSSER : git -C C:/Hektor/Projet push
+   4. ⏰ REDEMARRER HektorConsoleWorkerAdmin (c'est LUI qui porte ce type),
+      et SEULEMENT file vide : 0 pending ET 0 running.
+   5. EPROUVER en reel sur une cible que Frederic choisit.
+   ⛔ EN CAS DE PROBLEME : ..._INVERSE.sql (il solde d'abord les travaux pending).
+   ⭐ etatAnnonce=1 n'est PAS neuf : c'est la commande d'activation de chaque
+     annonce que nous creons (createHektorAnnonceWithHttpDirect) -- eprouve.
+
+① bis ✅ LA PIECE ② DES BROUILLONS EST POSEE ET EPROUVEE (20/10 16:23).
    Patch colle, pousse, worker DOCUMENTS redemarre a 15:32:35 (prouve : code
    ecrit a 14:50:32). Clic reel sur 63131 -> travail done en 8 s, cache de
    89 876 octets, app_brouillon_id 7 589 119, peremption +24 h, et le

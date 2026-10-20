@@ -107,6 +107,7 @@ import {
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
   createPrepareBrouillonAnnonceDetailJob,
+  createExitHektorDraftAnnonceJob,
   createSyncHektorPhotosJob,
   createUploadHektorPhotoJob,
   createHektorContactJob,
@@ -14825,6 +14826,30 @@ export default function App() {
     }
   }
 
+  // ⑦ PIECE ④ (20/10/2026) : mettre un brouillon en ligne.
+  // ⚠ ON REFUSE LES COQUILLES ICI AUSSI, pas seulement dans le worker : 11 des 529
+  //   brouillons n'ont aucun statut, et ce sont des assistants ouverts puis
+  //   abandonnes (ni titre, ni ville, 0 EUR, 0 m2). Il n'y a rien a mettre en ligne.
+  async function handleExitDraftAnnonce(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien' | 'statut_annonce'>) {
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    const statut = String(dossier.statut_annonce ?? '').trim()
+    if (!statut) {
+      setErrorMessage("Ce brouillon n'a aucun statut : il n'y a rien a mettre en ligne. Terminez la saisie dans Hektor, ou supprimez-le.")
+      return
+    }
+    const quoi = dossier.titre_bien?.trim() || dossier.numero_dossier || String(dossier.hektor_annonce_id)
+    // ⚠ Le bien QUITTE les brouillons : on demande confirmation, en nommant la destination.
+    if (!window.confirm(`Mettre « ${quoi} » en ligne ?\n\nIl quittera les brouillons et rejoindra « ${statut} ».`)) return
+    try {
+      const job = await createExitHektorDraftAnnonceJob({ dossier, priority: 20 })
+      rememberHektorActionJob(job)
+      setNoticeMessage(`Mise en ligne demandee. L'annonce rejoindra « ${statut} ».`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Impossible de demander la mise en ligne")
+    }
+  }
+
   async function handleRestoreHektorAnnonce(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
     setErrorMessage(null)
     setNoticeMessage(null)
@@ -22556,7 +22581,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
-                onRestoreAnnonce={handleRestoreHektorAnnonce} onOpenLightweightDetail={openLightweightDetailImport}
+                onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={isManagerOrAdmin ? handleExitDraftAnnonce : undefined} onOpenLightweightDetail={openLightweightDetailImport}
                 onOpenContact={openContactDirectory}
                 onHektorActionJobCreated={rememberHektorActionJob}
                 onMissingNegotiator={openMissingNegotiatorModal}
@@ -23307,7 +23332,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} onOpenLightweightDetail={openLightweightDetailImport} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={isManagerOrAdmin ? handleExitDraftAnnonce : undefined} onOpenLightweightDetail={openLightweightDetailImport} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -23541,7 +23566,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
-                onRestoreAnnonce={handleRestoreHektorAnnonce} onOpenLightweightDetail={openLightweightDetailImport}
+                onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={isManagerOrAdmin ? handleExitDraftAnnonce : undefined} onOpenLightweightDetail={openLightweightDetailImport}
                 onOpenContact={openContactDirectory}
                 onOpenRapprochement={openRapprochementMandat}
                 onHektorActionJobCreated={rememberHektorActionJob}
@@ -28371,6 +28396,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const annulEnCours = (props.requestHistoryCancellation ?? []).some((r) => /pending|in_progress|waiting/i.test(String((r as { status?: string }).status ?? '')))
   const estEstimation = screenStatusToken(dossier.statut_annonce) === 'estimation'
   const estArchive = /archiv/i.test(String(dossier.statut_annonce ?? ''))
+  // ⑦ piece ④ (20/10/2026) : un brouillon est un brouillon AVANT tout le reste.
+  //   Sans cette ligne, un brouillon « Estimation » et un brouillon « Actif »
+  //   tombaient dans DEUX crans differents (est_envoye / man_creer), donc deux
+  //   presentations -- et tous deux proposaient « Creer le mandat », alors qu'un
+  //   brouillon ne peut pas avoir de mandat (0 sur 529, mesure du 20/10).
+  const estBrouillon = (dossier as { is_brouillon?: boolean }).is_brouillon === true
   // Position du document signable (spec §1). Séparation avenant / mandat par le
   // préfixe de libellé — point de robustesse documenté au plan §8.5, pas un blocage.
   //
@@ -28414,7 +28445,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Avis envoyé : la spec §3 distingue « avis en cours » et « avis envoyé »
   // (date d'envoi présente). date_avis est déjà lu pour la timeline.
   const avisEnvoye = Boolean(detailStr('date_avis').trim())
-  const ckStage = pVendu ? 'vendu'
+  const ckStage = estBrouillon ? 'brouillon'
+    : pVendu ? 'vendu'
     : pClos ? 'clos'
     : estArchive ? 'archive'
     : pCompromis ? 'compromis'
@@ -28505,6 +28537,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
       roban: 'Mandat clos — lecture seule. Réactivez le mandat pour reprendre la commercialisation.',
       desc: 'Cycle de mandat clôturé (sans vente).',
       btns: [{ label: "Voir l'historique", rubKey: 'historique' }, { label: 'Voir le mandat', rubKey: 'mandat' }] },
+    // ⑦ piece ④ : LE MEME CRAN POUR LES 529 BROUILLONS, quel que soit leur statut.
+    //   `ro` comme l'archive : on regarde, on ne touche pas -- sauf la seule issue,
+    //   « Mettre en ligne », posee dans le bandeau ci-dessous (patron : « Desarchiver »).
+    brouillon: { label: 'Brouillon', led: '#c98a1e', ro: true,
+      roban: 'Brouillon — saisie commencée puis laissée en attente dans Hektor. Mettez-le en ligne pour pouvoir le travailler.',
+      desc: 'Saisie en cours chez Hektor — aucune diffusion, aucun mandat.',
+      sub: 'Brouillon · saisie à terminer',
+      sc: [{ label: "Voir l'annonce", rubKey: 'lebien' }, { label: 'Voir les photos', rubKey: 'photos' }],
+      btns: [{ label: "Voir l'annonce", rubKey: 'lebien' }, { label: 'Voir les photos', rubKey: 'photos' }] },
     archive: { label: 'Archivée', led: '#8a807a', ro: true,
       roban: 'Annonce archivée — lecture seule. Désarchivez-la pour pouvoir l’éditer.',
       desc: "Annonce archivée — plus de diffusion ni d'action commerciale.",
@@ -29743,6 +29784,12 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                         fallait aussi regarder le champ `archive`. */}
                     {(ckStage === 'archive' || isArchivedAnnonceRecord(dossier)) && props.onRestoreAnnonce ? (
                       <button type="button" className="fa-ck-rep-btn" onClick={() => props.onRestoreAnnonce?.(dossier)}>Désarchiver</button>
+                      ) : null}
+                      {/* ⑦ piece ④ (20/10/2026) : LA SEULE ISSUE d'un brouillon, sur le
+                          patron exact de « Desarchiver » ci-dessus. Le cran est en lecture
+                          seule (option A, decidee le 20/10) : ce bouton est le seul qui ecrit. */}
+                      {estBrouillon && props.onExitDraft ? (
+                        <button type="button" className="fa-ck-rep-btn" onClick={() => props.onExitDraft?.(dossier)}>Mettre en ligne</button>
                     ) : null}
                   </div>
                 ) : null}
@@ -31110,6 +31157,7 @@ function DossierDetailLayoutBase(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onExitDraft?: (dossier: Dossier) => void
   /** ⑦-4 (16/10) : ouvre la fenetre « Telecharger le detail de la fiche », celle
    *  qui existe deja et que la LISTE propose. Le bandeau en a besoin pour offrir
    *  le bon geste a un bien vendu ou clos — qui n'a rien a desarchiver. */
@@ -35626,6 +35674,7 @@ function AnnonceScreen(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onExitDraft?: (dossier: Dossier) => void
   onOpenLightweightDetail?: (dossier: Dossier) => void
   onOpenContact?: (contactId: string) => void
   detailLoading: boolean
@@ -35663,6 +35712,7 @@ function DossierDetailScreen(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onExitDraft?: (dossier: Dossier) => void
   onOpenLightweightDetail?: (dossier: Dossier) => void
   onOpenContact?: (contactId: string) => void
   detailLoading: boolean
@@ -35750,6 +35800,7 @@ function MobileDossierDetail(props: {
   onArchiveAnnonce?: (dossier: Dossier) => void
   onChangeAnnonceStatus?: (dossier: Dossier) => void
   onRestoreAnnonce?: (dossier: Dossier) => void
+  onExitDraft?: (dossier: Dossier) => void
   onOpenLightweightDetail?: (dossier: Dossier) => void
   onOpenContact?: (contactId: string) => void
   onHektorActionJobCreated?: (job: ConsoleJob) => void
