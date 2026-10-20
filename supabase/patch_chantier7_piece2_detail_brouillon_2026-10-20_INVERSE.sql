@@ -68,10 +68,14 @@ DECLARE
 BEGIN
     SELECT replace(pg_get_functiondef(oid), chr(13), '')
       INTO src FROM pg_proc WHERE proname = 'app_console_can_request_job';
-    ancre := $a$
+    -- ⚠⚠ LECON 30, ET C'EST ICI QUE CA COMPTE LE PLUS : cette ancre est MULTI-LIGNE.
+    --   Si ce fichier .sql est en CRLF (git le fait au checkout sous Windows), elle
+    --   porterait des CR que la source normalisee n'a pas -> AUCUNE CORRESPONDANCE,
+    --   et LE RETOUR ARRIERE NE RETIRERAIT RIEN, en se croyant deja fait.
+    ancre := replace($a$
             -- ⑦ piece ② (20/10/2026) : la troisieme soeur. C'est une LECTURE -- elle
             -- reconstruit la fiche depuis NOTRE miroir, sans un seul appel a Hektor.
-            'prepare_brouillon_annonce_detail',$a$;
+            'prepare_brouillon_annonce_detail',$a$, chr(13), '');
     combien := (length(src) - length(replace(src, ancre, ''))) / length(ancre);
     IF combien = 0 THEN
         RAISE NOTICE 'VERROU 2 : rien a retirer.';
@@ -114,7 +118,9 @@ DECLARE
 BEGIN
     SELECT replace(pg_get_functiondef(oid), chr(13), '')
       INTO src FROM pg_proc WHERE proname = 'app_console_can_access_dossier';
-    ancre := $a$        )
+    -- ⚠⚠ MULTI-LIGNE : on normalise l'ancre elle-meme (lecon 30). Sans ca, un fichier
+    --   passe en CRLF ferait echouer le retrait EN SILENCE (« rien a retirer »).
+    ancre := replace($a$        )
         -- ⑦ piece ② (20/10/2026) : LE 4e INDEX. Un brouillon n'est dans aucun des
         -- trois ci-dessus, donc un negociateur se voyait refuser la lecture de son
         -- propre brouillon -- en silence, 0 ligne et aucune erreur.
@@ -126,7 +132,7 @@ BEGIN
                  or (nullif(target_hektor_annonce_id, '') is not null and target.hektor_annonce_id::text = target_hektor_annonce_id)
                 )
               and lower(coalesce(target.negociateur_email, '')) = lower(coalesce(current_email, ''))
-        );$a$;
+        );$a$, chr(13), '');
     combien := (length(src) - length(replace(src, ancre, ''))) / length(ancre);
     IF combien = 0 THEN
         RAISE NOTICE 'DROITS : rien a retirer.';

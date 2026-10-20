@@ -102,6 +102,12 @@ DECLARE
             'prepare_brouillon_annonce_detail',$b$;
     combien  int;
 BEGIN
+    -- ⚠⚠ LECON 30, LE COTE QU'ON OUBLIE : `remplace` est un littéral MULTI-LIGNE.
+    --   Si ce fichier .sql est passe en CRLF (git le fait au checkout sous Windows),
+    --   il porterait des CR qui partiraient DANS le corps de la fonction. On normalise
+    --   LE TEXTE INSERE, pas seulement la source lue.
+    remplace := replace(remplace, chr(13), '');
+
     SELECT replace(pg_get_functiondef(oid), chr(13), '')
       INTO src FROM pg_proc WHERE proname = 'app_console_can_request_job';
 
@@ -208,7 +214,9 @@ BEGIN
             'ARRET : l''ancre de fin apparait %s fois dans can_access_dossier (il en faut 1).', combien);
     END IF;
 
-    bloc := $d$        )
+    -- ⚠⚠ Normalise AUSSI le texte insere (lecon 30) : si ce fichier est en CRLF,
+    --   le bloc porterait des CR qui partiraient dans le corps de la fonction.
+    bloc := replace($d$        )
         -- ⑦ piece ② (20/10/2026) : LE 4e INDEX. Un brouillon n'est dans aucun des
         -- trois ci-dessus, donc un negociateur se voyait refuser la lecture de son
         -- propre brouillon -- en silence, 0 ligne et aucune erreur.
@@ -220,7 +228,7 @@ BEGIN
                  or (nullif(target_hektor_annonce_id, '') is not null and target.hektor_annonce_id::text = target_hektor_annonce_id)
                 )
               and lower(coalesce(target.negociateur_email, '')) = lower(coalesce(current_email, ''))
-        );$d$;
+        );$d$, chr(13), '');
 
     EXECUTE replace(src, ancre, bloc);
     RAISE NOTICE 'DROITS poses : un negociateur voit le cache de SES brouillons.';

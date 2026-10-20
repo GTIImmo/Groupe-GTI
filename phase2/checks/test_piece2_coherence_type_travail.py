@@ -139,6 +139,71 @@ controle("(19) ⭐ OPTION A tenue : le brouillon reste en LECTURE SEULE",
          "if ((item as { is_brouillon?: boolean }).is_brouillon === true) return true" in APP,
          "la ligne de lecture seule a bouge -- ce n'est PAS ce qui a ete decide")
 
+# ═══ ⚠⚠ LECON 30, RENDUE MECANIQUE -- LE PIEGE QUI A FAILLI PASSER LE 20/10 ═══
+#
+# Dans un patch destine a etre COLLE, tout litteral « dollar-quote » qui tient sur
+# PLUSIEURS LIGNES porte les fins de ligne DU FICHIER. Or git, sous Windows, passe
+# ces .sql en CRLF au checkout -- alors que la source lue en base est normalisee par
+# replace(..., chr(13), ''). Consequences, et la deuxieme est la pire :
+#   · un BLOC INSERE non normalise met des CR dans le corps de la fonction ;
+#   · une ANCRE non normalisee NE CORRESPOND A RIEN -> le retour arriere ne retire
+#     rien EN SE CROYANT DEJA FAIT. Un inverse muet est pire qu'un inverse absent.
+# ➡ Donc : tout litteral multi-ligne doit etre enveloppe dans replace(..., chr(13), '').
+PATCHS = {
+    "patch": "supabase/patch_chantier7_piece2_detail_brouillon_2026-10-20.sql",
+    "inverse": "supabase/patch_chantier7_piece2_detail_brouillon_2026-10-20_INVERSE.sql",
+    "temoin": "supabase/patch_chantier7_piece2_detail_brouillon_2026-10-20_REPETITION.sql",
+}
+def litteraux_non_normalises(texte: str, nom: str) -> list[str]:
+    """Les litteraux dollar MULTI-LIGNE affectes a une variable et NON normalises."""
+    trouves: list[str] = []
+    # ⚠ ON NE REGARDE QUE LES DONNEES, pas le code : seuls les litteraux AFFECTES a
+    #   une variable (ancre, bloc, remplace…) partent dans un `replace` ou un
+    #   `EXECUTE`. Les $garde$ / $temoin$ qui enveloppent les blocs DO sont du code
+    #   execute par Postgres : un CR dedans ne gene personne.
+    for m in re.finditer(r"(\w+)\s*(?:text\s*)?:=\s*(replace\(\s*)?\$([a-z0-9]+)\$(.*?)\$\3\$",
+                         texte, re.S):
+        variable, enveloppe, tag, contenu = m.group(1), m.group(2), m.group(3), m.group(4)
+        if "\n" not in contenu:
+            continue                                    # une seule ligne : immunise
+        if enveloppe:
+            continue                                    # := replace($tag$ … ) : normalise
+        # sinon : accepte une normalisation faite ailleurs dans le meme bloc, par
+        #   <variable> := replace(<variable>, chr(13), '')
+        ailleurs = re.search(re.escape(variable) + r"\s*:=\s*replace\(\s*"
+                             + re.escape(variable) + r"\s*,\s*chr\(13\)", texte)
+        if not ailleurs:
+            ligne = texte[:m.start()].count("\n") + 1
+            trouves.append(f"{nom}:{ligne} ({variable}, ${tag}$)")
+    return trouves
+
+
+# ⭐ LA PREUVE D'ABORD : un controle qui ne MORD PAS ne prouve rien. On lui donne
+#   deux faux patchs -- un propre, un fautif -- et il doit trouver exactement l'un.
+_FAUTIF = "DO $g$\nDECLARE\n  ancre text := $a$ligne un\nligne deux$a$;\nBEGIN\nEND\n$g$;"
+_PROPRE = "DO $g$\nDECLARE\n  ancre text := replace($a$ligne un\nligne deux$a$, chr(13), '');\nBEGIN\nEND\n$g$;"
+_mord = litteraux_non_normalises(_FAUTIF, "faux")
+_epargne = litteraux_non_normalises(_PROPRE, "faux")
+controle("(20) LA PREUVE D'ABORD : le controle lecon 30 MORD sur un cas fautif",
+         len(_mord) == 1 and len(_epargne) == 0,
+         f"fautif -> {_mord} (attendu 1) · propre -> {_epargne} (attendu 0)")
+if len(_mord) != 1 or _epargne:
+    print("\n⛔ LE CONTROLE (20) NE SAIT PAS DETECTER : le (21) ne prouverait RIEN.")
+    sys.exit(2)
+
+nus: list[str] = []
+crlf: list[str] = []
+for nom, chemin in PATCHS.items():
+    brut = (RACINE / chemin).read_bytes()
+    if b"\r\n" in brut:
+        crlf.append(nom)
+    nus += litteraux_non_normalises(brut.decode("utf-8", errors="replace"), nom)
+
+controle("(21) ⚠⚠ LECON 30 : tout litteral MULTI-LIGNE est normalise chr(13)",
+         not nus, f"non normalises : {nus}")
+controle("(22) et les trois patchs sont en LF pur",
+         not crlf, f"en CRLF : {crlf} -- a reecrire en LF avant de les coller")
+
 print()
 if echecs:
     print(f"{len(echecs)} controle(s) en ECHEC : " + ", ".join(echecs))
