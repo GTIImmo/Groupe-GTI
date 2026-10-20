@@ -69,6 +69,96 @@ a fait le travail : j'allais écrire 14 `UPDATE` pour rien.
 
 ---
 
+## 0-ter. LE § 2.6 — LE REPLI PAR LE NOM, EN PRODUCTION LE 20/10 AU SOIR
+
+Frédéric : *« fais le repli par le nom »*, puis *« j'allume et je lance tout de suite »*.
+
+### La règle ajoutée
+
+> **§ 2.6** — un compromis **ANNULÉ** sans date exploitable rejoint **l'unique** chaîne du
+> bien qui porte une offre **à son nom**, si cette chaîne n'a ni vente ni compromis.
+
+⚠ **Restreint aux compromis annulés**, par cohérence avec sa décision du 20/10 sur le
+§ 2.3. Les **2 compromis vivants** que le repli aurait pris restent dehors, et c'est dit.
+
+⚠⚠ **Son PROPRE interrupteur : `APP_CHAINAGE_SANS_DATE`.** `APP_CHAINAGE_V2` était déjà
+allumé en production — y ajouter ce repli l'aurait fait partir la nuit suivante sans
+décision. *Un interrupteur qui porte deux changements ne permet plus d'en retirer un seul.*
+
+### Les gardes, et ce que chacune coûte
+
+```
+aucune garde                                  132 rattaches · 36 ambigus
++ la cible n'a PAS de vente                   127 ·  5
++ ni deja un compromis                        122 ·  1
++ et elle porte une offre (vraie sequence)    122 ·  1
+```
+
+➡ **10 cas en moins, l'ambiguïté passe de 36 à 1.** Le marché est bon.
+
+### Le compte complet des 220 sans-date — **220 = 220**
+
+```
+117  rattaches par le nom
+ 53  aucune chaine a leur nom
+ 32  le bien n'a AUCUNE transaction datee -- rien a rejoindre
+ 17  hors du repli (pas un compromis annule)
+  1  plusieurs chaines au meme nom -- abstention
+```
+
+⚠⚠ **Les 32 étaient comptées NULLE PART**, sautées en silence par la garde `and toutes`
+*(117+53+17+1 = 188, et 220 déclarées)*. **Deuxième fois le même défaut dans la même
+heure.** Elles sont légitimement irrattachables — 31 biens n'ont que des sans-date, surtout
+des compromis annulés isolés — **mais une absence muette ne se distingue pas d'un oubli.**
+
+### L'état en production, vérifié chez Supabase
+
+```
+registre      31 084 lignes · 12 173 chaines · 0 sans chaine
+offres/compromis/ventes  11 187 / 10 633 / 9 264   INCHANGES
+INVARIANTS    0 deux ventes · 0 deux compromis vivants · 0 chaine a deux biens
+repartition   16 071 lignes · 2 orphelines (les memes) · 0 au-dela de 100 %
+sondes a seuil zero : 0
+```
+
+⭐ **Le cas d'école** : `compromis 205` *(sans date)* et `offre 206` **sont dans une seule
+chaîne**.
+
+### Les épreuves
+
+```
+test_chainage_v2.py        LES TROIS SENS VERTS  (rien / V2 / V2 + § 2.6)
+                           + le chemin du .env dans les deux sens
+                           « la base EST le resultat de V2 + § 2.6 »  0 ecart
+test_chainage_vente_ferme  TOUT PASSE
+verifier_regle_chainage    4 controles verts, sortie 0
+```
+
+### ⚠⚠ ET UN DÉFAUT DE MON JUGE, à retenir
+
+Le témoin de l'épreuve disait *« éteinte, la V2 ne doit RIEN changer »* **en comparant à
+`app_chaine_id` tel qu'il est en base**. C'était juste tant que la base était le résultat
+de la V1. **Depuis que la V2 est en production, la base EST le résultat de la V2** : le
+même juge accusait alors **427 déplacements avec l'interrupteur ÉTEINT** et *« elle n'a
+rien changé »* avec l'interrupteur **ALLUMÉ**.
+
+➡ **Le code était sain, LA CIBLE AVAIT BOUGÉ.** Le témoin est désormais **le compte attendu
+par combinaison d'interrupteurs** *(trois références distinctes : 12 702 / 12 278 /
+12 159)*, et l'écart à la base n'est plus qu'une **information** qui dit en quel régime
+elle a été écrite.
+
+### Le bilan de la journée
+
+```
+chaines   12 715  ->  12 159      (-556)
+  333  echecs recolles (offre refusee + compromis annule)
+  117  compromis annules sans date, rattaches par le nom
+   92  ventes qui retrouvent leur offre acceptee
+   37  « ventes manquantes » du classeur  ->  4
+```
+
+---
+
 ## 1. L'OBJECTIF, EN UNE PHRASE
 
 Une affaire réelle doit faire **une seule chaîne** — que son déroulé soit
