@@ -6530,3 +6530,68 @@ raccourci **et picto**. ⭐ *« Reprendre la saisie dans Hektor »* **n'est pas 
 ```
 
 ⛔ **Et personne n'aura encore VU l'écran** : c'est à faire après le push.
+
+
+### ⭐⭐ L'ÉPREUVE EN RÉEL — 20/10 à 16:23, le geste de Frédéric
+
+**Clic sur 63131** depuis le menu **Annonces** → filtre **Archive = Brouillons**.
+
+| ma prédiction, écrite d'avance | le résultat |
+|---|---|
+| un travail `prepare_brouillon_annonce_detail` part | ✅ demandé **16:23:04** |
+| il passe en `done` | ✅ **fini 16:23:12 — 8 secondes** |
+| une ligne entre dans le cache | ✅ 63131, **89 876 octets** |
+| `app_brouillon_id` = **notre** numéro, pas 63131 | ✅ **7 589 119** |
+| péremption à **+24 h** | ✅ 21/10 à 16:23 |
+| le chevauchement parc ∩ brouillon reste **1** | ✅ **1** — ⭐ **la garde de la pièce ① a tenu** |
+
+**Ce que la fiche porte** : `listing 19 champs · index 163 champs · detail 171 champs` —
+Le Mas-de-Tence, **390 m², 6 pièces, 10 photos, 2 propriétaires, 0 mandat**, titre
+« [Sans titre] V670063131 », prix 0.
+
+⭐ **Les 163 champs d'index prouvent que la correction du défaut de la sœur Archive marche** :
+avec le repli du patron, cette couche aurait été **vide**.
+⭐ **Et `mandats 0` confirme la remarque de Frédéric** : un brouillon n'a pas de mandat.
+
+⛔ **NON ENCORE VU À L'ŒIL** : l'ouverture de la fiche elle-même *(bouton « Ouvrir la fiche
+complète », puis la fiche en lecture seule)*. La chaîne jusqu'au cache est prouvée ; le rendu
+de la fiche ne l'est pas.
+
+### ⚠⚠ LE 8e ENDROIT — ce que j'avais manqué, et comment
+
+J'avais compté **7 endroits** pour ce geste. Il y en avait **8** : la modale
+`LightweightDetailImportModal` porte **sa propre garde**.
+
+```js
+const canPrepareDetail = isArchive || isHistorical      // ⛔ pas de 3e famille
+```
+
+Pour un brouillon les deux sont faux → la modale affichait *« Cette ligne n'est pas éligible
+au chargement de detail leger »* **et désactivait son propre bouton**. Le geste mourait **au
+dernier mètre**, alors que le script, les 3 verrous, les droits, le worker, le cache et la
+lecture du front étaient tous posés et prouvés.
+
+⭐ **Trouvé par Frédéric, en cliquant.** Pas par moi, et pas par mes 20 contrôles — ils
+vérifiaient le **nom** du type de travail partout, mais aucune des **gardes qui décident si le
+geste est OFFERT**.
+
+**Rendu mécanique**, pour que ça ne repasse plus :
+
+```
+(20) la modale connaît la 3e famille
+(21) et elle la NOMME (badge « Brouillon », pas « Fiche »)
+(22) ⚠ LA FORME GÉNÉRALE : plus aucune garde du front ne teste
+     « isArchive || isHistorical » sans « || isBrouillon »
+```
+
+Le **(22)** aurait attrapé le défaut **avant** le clic. **26 contrôles verts, sortie 0.**
+
+### ⚠ Et deux fautes de méthode du même jour, notées pour ne pas les refaire
+
+1. **Un témoin qui AGRÈGE** : la première version du `_REPETITION.sql` annonçait *« 5 contrôles
+   en ÉCHEC »* sans dire lesquels, et écrivait son détail en `RAISE NOTICE` — **or l'éditeur
+   Supabase ne les affiche pas**. Frédéric voyait un nombre, et rien d'autre. ➡ Il **rend
+   maintenant un tableau**, et le patch aussi.
+2. **Le nom interne ≠ le libellé du menu** : voyant Frédéric sans changement, j'ai conclu que
+   j'avais corrigé le mauvais composant et proposé **4 lots de travail**. C'était faux — voir
+   l'encadré plus haut. ⭐ Le vrai coupable était **le cache du navigateur**, puis le 8ᵉ endroit.

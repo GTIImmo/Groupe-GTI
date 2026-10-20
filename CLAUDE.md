@@ -138,7 +138,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑦-7 | modifier ou prolonger un mandat | ⛔ **FERMÉ PAR DÉCISION le 18/10** — *« je ne souhaite pas pouvoir modifier un mandat ou prolonger »*. **Ne pas relancer** |
 | ⑦-8 | **photos : rendre visible / masquer** | ✅ **COMPLET le 19/10** — les **4 marches**, dont le bouton **prouvé en réel deux fois** *(voir ci-dessous)* |
 | ⑦-9 | renommer un document | ⛔ **FERMÉ PAR DÉCISION le 19/10** — *« je pense qu'il ne faut rien changer donc il faut que l'utilisateur puisse mettre un libellé au début donc rien à changer »*. ⭐ **Et le champ existe déjà** *(`App.tsx:11378` « Libellé », → nom du fichier envoyé à Hektor, `api.ts:8169`)*. **Ne pas relancer** |
-| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | 🔧 **① FAITE le 20/10** *(le push d'une seule annonce refuse un brouillon)* · 🔧 **② ÉCRITE le 20/10, ATTEND LA POSE** *(patch SQL à coller + push + redémarrage Documents ; 20 contrôles hors ligne verts, **option A : fiche en lecture seule**)* · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* · ⬜ ④ bouton « mettre en ligne » *(un seul appel, réversible)*. Détail dans la note de chantier |
+| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | ✅ **① FAITE le 20/10** · ✅ **② EN PRODUCTION le 20/10 à 16:23** *(clic réel sur 63131 : travail `done` en 8 s, cache 89 876 o, `app_brouillon_id` 7 589 119, +24 h ; 26 contrôles verts)* · ⛔ **reste : PERSONNE N'A VU LA FICHE S'OUVRIR** · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* · ⬜ ④ bouton « mettre en ligne » *(un seul appel, réversible)* |
 
 **⑦-8, les 4 marches** *(19/10)* :
 
@@ -179,7 +179,17 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ⛔ SI sauvees vaut 0 ET marquees vaut 2, LE VERROU N'A PAS MORDU -- regarder tout
      de suite : une photo masquee serait sortie du panneau, sans retour possible.
 
-① ⏰ LA PIECE ② DES BROUILLONS ATTEND SA POSE -- 5 gestes, DANS CET ORDRE :
+① ✅ LA PIECE ② DES BROUILLONS EST POSEE ET EPROUVEE (20/10 16:23).
+   Patch colle, pousse, worker DOCUMENTS redemarre a 15:32:35 (prouve : code
+   ecrit a 14:50:32). Clic reel sur 63131 -> travail done en 8 s, cache de
+   89 876 octets, app_brouillon_id 7 589 119, peremption +24 h, et le
+   chevauchement parc ∩ brouillon est RESTE A 1 (la garde de la piece ① tient).
+   ⛔ RESTE : PERSONNE N'A VU LA FICHE S'OUVRIR (bouton « Ouvrir la fiche
+     complete », puis la fiche EN LECTURE SEULE -- option A).
+   ⚠ Et les 3 AUTRES services worker tournent encore sur le code du 14:15 : sans
+     consequence (seul DOCUMENTS reclame ce type), mais leur loadDossier ignore
+     encore la 4e branche. A reprendre au prochain redemarrage general.
+
    1. COLLER supabase/patch_chantier7_piece2_detail_brouillon_2026-10-20.sql
       (3 verrous + les droits ; chaque bloc verifie son empreinte et S'ARRETE
        si quelqu'un est passe avant)

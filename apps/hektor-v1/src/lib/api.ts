@@ -5369,7 +5369,25 @@ async function loadLightweightAnnonceDetailCache(
   const listing = (payload.listing && typeof payload.listing === 'object' ? payload.listing : {}) as Record<string, unknown>
   const payloadIndex = (payload.index && typeof payload.index === 'object' ? payload.index : {}) as Record<string, unknown>
   let currentIndex: Record<string, unknown> = {}
-  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app,commerce_sous_type,commerce_famille,commerce_activite`
+  // ⚠⚠ 20/10/2026 -- LES TROIS COLONNES QUE L'INDEX BROUILLON N'A PAS.
+  //
+  //   Ce select sert LES TROIS familles. Les index Archive et Historique portent
+  //   les 28 colonnes ; l'index BROUILLON n'en a que 25 : il lui manque
+  //   commerce_sous_type, commerce_famille et commerce_activite (mesure du 20/10 :
+  //   0 manquante sur les deux autres, 3 sur celui-la).
+  //
+  //   ⛔ ET POSTGREST REFUSE TOUTE LA REQUETE pour une colonne inconnue -- pas la
+  //     colonne, LA REQUETE : « column ... does not exist ». Donc la fiche d'un
+  //     brouillon ne s'ouvrait JAMAIS, alors que son cache etait bien pose.
+  //     Trouve par Frederic en cliquant, apres le 8e endroit (la modale).
+  //
+  //   ⭐ On les retire pour cette famille au lieu de les ajouter a l'index : un
+  //     brouillon de commerce n'a pas encore de sous-type saisi, et ajouter trois
+  //     colonnes a l'index couterait un patch SQL, une reconstruction et un run.
+  const colonnesCommerce = indexTable === 'app_brouillon_annonce_index_current'
+    ? ''
+    : ',commerce_sous_type,commerce_famille,commerce_activite'
+  const indexSelect = `hektor_annonce_id,${indexIdKey},numero_dossier,numero_mandat,titre_bien,ville,code_postal,date_maj,type_bien,prix,commercial_id,commercial_nom,negociateur_email,agence_nom,statut_annonce,archive,diffusable,mandat_type,mandat_date_debut,mandat_date_fin,mandat_montant,mandants_texte,has_local_detail,local_detail_updated_at,photo_url_listing,photo_url_listing_app${colonnesCommerce}`
   const { data: indexData, error: indexError } = await supabase
     .from(indexTable)
     .select(indexSelect)
