@@ -307,6 +307,68 @@ code n'a pas été commité — j'attends son accord pour l'étape 3.
 
 ---
 
+## 5-ter. OÙ ON EN EST, le 20/10 au soir — **quatre pièces, quatre statuts**
+
+| la pièce | son statut |
+|---|---|
+| **la règle** | ✅ **acquise** — décidée, figée au § 3, codée, éprouvée dans les deux sens |
+| **le code** | ✅ commité en local *(`20c811a`)*, ⚠ **non poussé** |
+| **les données** | ⚠⚠ **la V2 est EN LIGNE**, mais **l'interrupteur n'est pas dans `.env`** |
+| **la répartition** | ⚠ **29 lignes orphelines**, rien de perdu |
+
+### ⭐⭐ LA PIÈCE QUI DÉCIDE : si on ne fait RIEN, tout revient cette nuit
+
+J'ai lancé avec la variable **en ligne de commande**, pas dans `.env`. Le run de 05:00
+relira donc l'interrupteur — absent — et **reposera l'ancienne règle**. Mesuré en
+rejouant la V1 :
+
+```
+chaines en base ce soir (V2)        12 290
+chaines que le run reposerait (V1)  12 715
+transactions qui REVIENDRAIENT         427
+
+repartition orpheline ce soir        29 lignes (15 chaines)
+repartition orpheline apres le run    2 lignes ( 1 chaine)  <- le cas deja connu
+```
+
+➡ **Ne rien faire = retour arrière complet et automatique.** Les orphelines
+disparaîtraient d'elles-mêmes. **C'est ce que l'interrupteur promettait, et c'est
+vérifié sur les données, pas déduit.**
+
+### ✅ ET LES ORPHELINES SONT PLUS SIMPLES QUE JE NE LE CROYAIS
+
+Cartographiées par **les membres de la chaîne** — la bonne clé, pas le dossier, qui
+porte plusieurs chaînes :
+
+```
+14 chaines -> UNE SEULE cible, sans aucune ambiguite   = 27 lignes
+ 1 chaine  -> 0 cible : 1001347, L ORPHELINE DEJA CONNUE =  2 lignes
+   (l'affaire a disparu du registre ; elle portait une des deux seules
+    repartitions saisies a la main -- elle etait deja orpheline AVANT la V2)
+```
+
+⭐ **Il n'y a donc AUCUN cas ambigu créé par la V2.** Le rattrapage est **14 UPDATE
+entièrement déterminés**, et le télescopage de clé primaire ne se produit pas
+*(mesuré : 0)*.
+
+### ⚠ CE QUE LA FENÊTRE D'AUJOURD'HUI COÛTE, dit franchement
+
+Entre maintenant et 05:00, l'app montre les chaînes fusionnées. Concrètement :
+**5 biens vivants** affichent une affaire au lieu de deux *(c'est le but)*, et
+**~15 affaires** n'affichent plus « qui est payé » *(les orphelines)*.
+
+### LE CHOIX, BINAIRE
+
+| | |
+|---|---|
+| **ne rien poser** | cette nuit tout revient à l'état d'avant. Le code reste dormant, aucune trace. |
+| **`APP_CHAINAGE_V2=1` dans `.env`** | la V2 reste, et il faut alors les **14 UPDATE** de répartition |
+
+⚠ **Les 5 commits d'avance de l'autre session ne touchent que `apps/hektor-v1/`**
+*(le renommage « bienvu », une visionneuse de photos)* : **aucun conflit** avec `phase2/`.
+
+---
+
 ## 6. LE PLAN SIMPLIFIÉ — **4 étapes, ~2 jours, réversible par un interrupteur**
 
 ### Étape 1 — LA RÈGLE, DERRIÈRE L'INTERRUPTEUR ⏱ 1 j · *aucun effet tant qu'il est éteint*
