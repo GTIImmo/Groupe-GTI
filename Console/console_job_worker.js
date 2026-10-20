@@ -4927,16 +4927,16 @@ function adoptExistingAppRows(entries, existingRows) {
 //
 // CE QUE CA A COUTE (mesure du 20/10) : 2 330 annonces · 15 403 fiches supprimees,
 // 17 120 recreees · 17 118 fichiers RETELECHARGES chez Hektor -- or son mur est un quota
-// de VOLUME et notre IP a ete bannie les 19-20/08 pour cela. Restent 27 966 fiches sur
+// de VOLUME et notre IP a ete bannie les 19-20/08 pour cela. Restent 28 363 fiches sur
 // 6 199 annonces a l'ancien domaine.
 // ⭐ AUCUN DOCUMENT N'EST PERDU : 17 148 des 17 150 fiches d'aujourd'hui portent leur
 //   fichier, 0 annonce n'a tout perdu, 207 fiches signees intactes. Ce qui se perd, c'est
 //   l'IDENTIFIANT de l'app -- et 7,4 Go de DOUBLONS dans le coffre.
 //
 // ⭐⭐ LA MESURE QUI DECIDE : le chemin sans l'hote est une cle PARFAITE.
-//   ancien domaine   27 966 fiches -> 27 966 chemins distincts -> 0 collision
-//   nouveau domaine 162 838 fiches -> 162 838 chemins distincts -> 0 collision
-//   190 804 fiches des deux cotes du demenagement, sans UNE SEULE collision.
+//   ancien domaine   28 363 fiches ->  28 363 cles distinctes -> 0 collision
+//   nouveau domaine 164 229 fiches -> 164 229 cles distinctes -> 0 collision
+//   192 592 fiches des deux cotes du demenagement, sans UNE SEULE collision.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // L'adresse SANS l'hote : la seule part qui ne bouge pas quand Hektor demenage.

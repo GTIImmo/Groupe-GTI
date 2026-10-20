@@ -52,7 +52,7 @@ tombée en panne.** Partout ailleurs l'ancienne fiche a déjà disparu.
 | depuis le 11/09 | **2 330 travaux · 15 403 fiches supprimées · 17 120 recréées** |
 | **avant** la bascule *(2 mois)* | **18 travaux · 20 fiches** — le rythme normal |
 | ces dernières 48 h | **33 annonces · 625 fiches** |
-| reste à risque | **27 966 fiches · 6 199 annonces** |
+| reste à risque | **28 363 fiches · 6 199 annonces** |
 | ⚠⚠ **fichiers RETÉLÉCHARGÉS chez Hektor** | **17 118** *(dont 5 734 remontés au cloud)* · **781 ces 48 h** |
 
 ⭐⭐ **Le coût Hektor est le point le plus grave, et il n'était pas chiffré.** Le mur de Hektor est
@@ -80,11 +80,14 @@ Elles sont rares partout *(487 sur 192 629 fiches)* et **245 survivent** sur les
 ## ⭐⭐⭐ 6. La mesure qui décide de la solution
 
 ```
-ancien domaine   27 966 fiches -> 27 966 chemins distincts -> 0 collision
-nouveau domaine 162 838 fiches -> 162 838 chemins distincts -> 0 collision
+ancien domaine   28 363 fiches ->  28 363 cles distinctes -> 0 collision
+nouveau domaine 164 229 fiches -> 164 229 cles distinctes -> 0 collision
+                ------                                      ----------
+TOTAL           192 592 fiches                              0 COLLISION
 ```
 
-**Le chemin sans l'hôte est une clé parfaite sur les 190 804 fiches, des deux côtés.**
+**Le chemin sans l'hôte est une clé parfaite sur les 192 592 fiches, des deux côtés.**
+*(mesuré sur la clé entière : annonce + source + chemin, interrogation comprise)*
 
 ---
 
@@ -163,6 +166,70 @@ ce qu'on veut.*
 changement avait cassé son harnais** *(il montait `upsertConsoleDocuments` sans ma fonction)* :
 2 tranches ajoutées, **9 lignes, aucune restructuration**.
 
+## ⭐⭐ 8 bis. CE QUE LA POSE A APPRIS, LE SOIR MÊME
+
+### ⭐⭐⭐ La réserve 3 du 25/09 est RÉPONDUE : c'est un SCRIPT, et il part du 25/09
+
+*« Ce qui déclenche la resynchro d'une annonce » était la dernière inconnue. La base le dit :
+
+```
+41 231 travaux sync_console_documents depuis le 11/09
+         TOUS poses par un SCRIPT (requested_by vide) -- un seul par un humain
+   666 ces dernieres 48 h, soit ~330 par nuit
+le premier : 2026-09-25 a 12:57:07
+```
+
+⚠⚠ **Le premier travail est du 25/09 à 12:57 — le jour même où la réserve 2 était écrite.**
+Le rattrapage a été lancé quelques heures après qu'on ait écrit *« à traiter **avant** de
+relancer »*. Ce n'est pas un balayage oublié : **c'est le rattrapage lui-même qui a usé le parc.**
+
+⭐ **Et c'est une bonne nouvelle pour l'épreuve** : le script repasse **chaque nuit**. Le
+correctif sera donc exercé sur ~330 annonces sans qu'on ait rien à provoquer — **aucun risque
+à prendre pour le prouver.**
+
+### ⚠ Un geste d'écran que le commentaire promet et que personne n'appelle
+
+`apps/hektor-v1/src/lib/api.ts:8624` déclare `createSyncConsoleDocumentsJob`, avec ce
+commentaire : *« Synchro documents à la demande (read-through) […] **Déclenché en silence à
+l'ouverture de l'annonce.** »* — **elle n'a AUCUN appelant dans tout le front.** Le geste promis
+n'existe pas. *« Un commentaire de code n'est pas une mesure »*, une fois de plus.
+⚠ **Noté, non traité** : ce n'est pas le périmètre de ce correctif, et ça ne se décide pas seul.
+
+### ⭐⭐ LE TÉMOIN DE LA RÉPARATION, et il était déjà dans la base
+
+**Une fiche re-clée garde sa date de naissance ; une fiche supprimée puis recréée en porte une
+neuve.** Donc il suffit de regarder `created_at` :
+
+| côté | fiches | nées **avant** le 11/09 | nées **après** |
+|---|---|---|---|
+| encore à l'ancien domaine *(intactes)* | **28 363** | **28 363** | **0** |
+| passées au nouveau *(resynchronisées)* | 164 229 | **716** | **163 513** |
+
+⭐⭐⭐ **163 513 fiches sur 164 229 ont été RECRÉÉES, pas reconnues** — seules **716** (0,4 %)
+avaient survécu. C'est la mesure la plus directe du dégât, **et c'est le contrôle de demain** :
+ce 716 doit monter, et il ne peut que monter.
+
+### La pose, et le contrôle qui la juge
+
+⏰ **20/10 à 20:30:46-47 : les QUATRE services ont redémarré** *(prouvé deux fois — la ligne
+« service stopping / service starting / worker started pid=16352 kind=documents » dans
+`Console/logs/console_worker_service_documents.log`, et la date de création des 4 processus,
+toutes postérieures à l'écriture du code à 19:49:37)*. ⭐ Ce redémarrage général solde au
+passage la note « 3 services sur 4 tournent sur du code ancien ».
+
+⚠ **Le premier redémarrage est allé sur `Admin`, pas sur `Documents`** — et seule la mesure l'a
+vu : le journal d'`admin` portait la coupure à 20:16:41, celui de `documents` n'en avait aucune.
+*On exige la preuve du succès, jamais l'absence d'erreur.*
+
+```bash
+python phase2/checks/controle_domaine_documents.py
+```
+
+**7 points, sortie 0 / 1 / 2**, dont le témoin ci-dessus, les deux garde-fous lus au journal, le
+coût Hektor, et — le plus important — **le témoin inverse : les suppressions légitimes
+passent-elles toujours ?** ⚠ Il a été lancé le soir de la pose : il rend les mêmes nombres que
+les requêtes SQL de cet audit *(164 229 / 716 / 28 363)*, **donc il mesure bien la bonne chose.**
+
 ## ⛔ 9. Ce qu'il reste à faire, et ce que je n'ai pas mesuré
 
 **À faire :** pousser · ⏰ **redémarrer `HektorConsoleWorkerDocuments`, file vide** *(0 pending ET
@@ -172,7 +239,9 @@ journal doit montrer *« reconnus par leur CHEMIN et re-clés »*.
 **Non mesuré, et je ne le suppose pas :**
 1. le nombre de dates de signature réellement perdues ;
 2. **les photos** : même défaut ou non *(leur identifiant vient du CDN, pas de la page)* ;
-3. ce qui déclenche la resynchro d'une annonce donnée *(réserve 3 du 25/09, toujours ouverte)* ;
+3. ✅ **répondu ci-dessus** : un script, ~330 annonces par nuit, depuis le 25/09 à 12:57.
+   ⚠ Reste ouverte, elle, l'autre moitié de la réserve 3 : **ce balayage n'a ni cadence ni
+   arrêt sur 403** ;
 4. les **7,4 Go de doublons** du coffre : du ménage, à faire **après** avoir vu A tenir une nuit.
 
 ⚠ **Coordination** : une conversation a été ouverte sur ce chantier avec le prompt du 20/10.
