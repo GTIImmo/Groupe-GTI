@@ -17,7 +17,11 @@
 //   2. une ligne retentee il y a moins de RESPIRATION minutes est laissee tranquille --
 //      sinon un Hektor indisponible ferait tourner la boucle en continu ;
 //   3. une ligne en echec depuis plus de ALERTE heures est SIGNALEE : ce n'est plus un
-//      incident passager, quelqu'un doit regarder.
+//      incident passager, quelqu'un doit regarder ;
+//   4. (20/10/2026) une ligne qui porte DEJA le numero Hektor n'est PAS renvoyee : le
+//      numero n'est pose qu'apres que Hektor a confirme avoir le fichier. La renvoyer
+//      cree un DOUBLON chez Hektor (cas vecu : AVENANTS 87K, annonce 59578). Elle est
+//      comptee et nommee, pas reposee.
 //
 //   node Console/reprendre_envois_hektor.js --dry-run
 //   node Console/reprendre_envois_hektor.js --appliquer [--limite 50]
@@ -39,9 +43,9 @@ const ALERTE = opt("--alerte", 24);             // heures avant de signaler
 
 const SORTES = [
   { nom: "document", table: "app_console_document", cle: "app_document_id",
-    travail: "upload_document_to_hektor", libelle: "document_name" },
+    travail: "upload_document_to_hektor", libelle: "document_name", numero: "hektor_document_id" },
   { nom: "photo", table: "app_console_photo", cle: "app_photo_id",
-    travail: "upload_hektor_photo", libelle: "filename" },
+    travail: "upload_hektor_photo", libelle: "filename", numero: "hektor_photo_id" },
 ];
 
 async function rest(chemin, options = {}) {
@@ -96,12 +100,20 @@ async function tout(chemin, cleUnique) {
 
 // LE TRI, sorti expres : une fonction pure, donc eprouvable sans Supabase ni Hektor.
 // C'est ici que se joue le « on ne s'acharne pas » -- le reste n'est que de la plomberie.
-function trier(lignes, enFile, maintenant, { limite, respirationMs, alerteMs, libelle }) {
+function trier(lignes, enFile, maintenant, { limite, respirationMs, alerteMs, libelle, numero }) {
   const retenus = [];
   const aSignaler = [];
-  const stats = { en_attente: lignes.length, deja_en_file: 0, trop_recentes: 0 };
+  const dejaChezHektor = [];
+  const stats = { en_attente: lignes.length, deja_en_file: 0, trop_recentes: 0, deja_chez_hektor: 0 };
   for (const l of lignes) {
     if (enFile.has(String(l.id))) { stats.deja_en_file += 1; continue; }
+    // REFUS n.4 : un numero Hektor sur la ligne = Hektor a deja le fichier. On ne le
+    // renvoie JAMAIS (doublon), on le NOMME pour qu'un humain remette le statut d'aplomb.
+    if (numero && l[numero] != null && String(l[numero]).trim() !== "") {
+      stats.deja_chez_hektor += 1;
+      dejaChezHektor.push({ id: l.id, annonce: l.hektor_annonce_id, nom: l[libelle], numero: String(l[numero]) });
+      continue;
+    }
     const depuis = l.envoi_hektor_at ? maintenant - Date.parse(l.envoi_hektor_at) : Infinity;
     if (depuis < respirationMs) { stats.trop_recentes += 1; continue; }
     if (l.envoi_hektor_statut === "echec" && depuis > alerteMs) {
@@ -110,7 +122,7 @@ function trier(lignes, enFile, maintenant, { limite, respirationMs, alerteMs, li
     }
     if (retenus.length < limite) retenus.push(l);
   }
-  return { retenus, aSignaler, stats };
+  return { retenus, aSignaler, dejaChezHektor, stats };
 }
 
 (async () => {
@@ -120,10 +132,11 @@ function trier(lignes, enFile, maintenant, { limite, respirationMs, alerteMs, li
   const maintenant = Date.now();
   let posesTotal = 0;
   const aSignaler = [];
+  const dejaChez = [];
 
   for (const sorte of SORTES) {
     const lignes = await tout(
-      `${sorte.table}?select=id,app_dossier_id,hektor_annonce_id,${sorte.libelle},envoi_hektor_statut,envoi_hektor_at,envoi_hektor_erreur`
+      `${sorte.table}?select=id,app_dossier_id,hektor_annonce_id,${sorte.libelle},${sorte.numero},envoi_hektor_statut,envoi_hektor_at,envoi_hektor_erreur`
       + "&envoi_hektor_statut=in.(a_envoyer,echec)", "id");
     // « le plus ancien d'abord » est applique ICI : le curseur impose son propre ordre a
     // la base, et un ordre metier ne departage de toute facon pas deux lignes de meme date.
@@ -141,13 +154,16 @@ function trier(lignes, enFile, maintenant, { limite, respirationMs, alerteMs, li
       respirationMs: RESPIRATION * 60 * 1000,
       alerteMs: ALERTE * 3600 * 1000,
       libelle: sorte.libelle,
+      numero: sorte.numero,
     });
     const { retenus, stats } = tri;
     for (const s of tri.aSignaler) aSignaler.push({ sorte: sorte.nom, ...s });
+    for (const s of tri.dejaChezHektor) dejaChez.push({ sorte: sorte.nom, ...s });
 
     console.log(`  ${sorte.nom.padEnd(9)} en attente ${String(stats.en_attente).padStart(4)}`
       + ` · deja en file ${String(stats.deja_en_file).padStart(3)}`
       + ` · trop recentes ${String(stats.trop_recentes).padStart(3)}`
+      + ` · deja chez Hektor ${String(stats.deja_chez_hektor).padStart(3)}`
       + ` · A REPOSER ${String(retenus.length).padStart(3)}`);
 
     if (APPLIQUER && retenus.length) {
@@ -164,6 +180,15 @@ function trier(lignes, enFile, maintenant, { limite, respirationMs, alerteMs, li
         posesTotal += paquet.length;
       }
     }
+  }
+
+  if (dejaChez.length) {
+    console.log(`
+  ATTENTION ${dejaChez.length} ligne(s) portent DEJA un numero Hektor sans etre « envoye » -- NON renvoyees (doublon) :`);
+    for (const s of dejaChez.slice(0, 10)) {
+      console.log(`     ${s.sorte} ${s.id} (annonce ${s.annonce}, ${s.nom || "?"}) numero ${s.numero.slice(0, 12)}...`);
+    }
+    if (dejaChez.length > 10) console.log(`     ... et ${dejaChez.length - 10} autre(s)`);
   }
 
   if (aSignaler.length) {

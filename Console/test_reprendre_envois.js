@@ -79,6 +79,33 @@ const ilYA = (ms) => new Date(T0 - ms).toISOString();
     controle("(h) mais il repart quand meme -- signaler n'est pas abandonner",
       ids.includes("e"), ids.join(","));
 
+    // ── REFUS n.4 : une ligne qui a DEJA le numero Hektor n'est jamais renvoyee ──
+    const optN = { ...options, numero: "hektor_document_id" };
+    const deja = [
+      { id: "n1", hektor_annonce_id: "59578", document_name: "AVENANTS 87K.pdf",
+        hektor_document_id: "716119466cb6d1696be22788a837711d9b9194ab",
+        envoi_hektor_statut: "echec", envoi_hektor_at: ilYA(20 * HEURE) },
+      { id: "n2", hektor_annonce_id: "7", document_name: "vraiment pas parti.pdf",
+        hektor_document_id: null, envoi_hektor_statut: "echec", envoi_hektor_at: ilYA(20 * HEURE) },
+      { id: "n3", hektor_annonce_id: "8", document_name: "numero vide.pdf",
+        hektor_document_id: "", envoi_hektor_statut: "a_envoyer", envoi_hektor_at: null },
+    ];
+    const rn = trier(deja, new Set(), T0, optN);
+    const idsN = rn.retenus.map((l) => l.id);
+    controle("(n) ⭐⭐ une ligne qui porte DEJA le numero Hektor n'est PAS reposee (doublon)",
+      !idsN.includes("n1"), `reposee a tort : ${idsN.join(",")}`);
+    controle("(o) elle est NOMMEE, pas oubliee en silence",
+      rn.dejaChezHektor.length === 1 && rn.dejaChezHektor[0].id === "n1" && rn.stats.deja_chez_hektor === 1,
+      JSON.stringify(rn.dejaChezHektor));
+    controle("(p) TEMOIN INVERSE : une ligne sans numero (ou numero vide) repart",
+      idsN.includes("n2") && idsN.includes("n3"), idsN.join(","));
+    // sans la colonne dans les options, l'ancien comportement est inchange
+    const rSans = trier(deja, new Set(), T0, options);
+    controle("(q) sans l'option « numero », le tri se comporte comme avant",
+      rSans.retenus.length === 3, String(rSans.retenus.length));
+    controle("(r) le script demande bien la colonne du numero a la base",
+      /\$\{sorte\.numero\},envoi_hektor_statut/.test(src), "la colonne ne serait pas lue : le refus ne verrait rien");
+
     // le plafond
     const beaucoup = Array.from({ length: 120 }, (_, n) => ({
       id: `x${n}`, hektor_annonce_id: "9", envoi_hektor_statut: "a_envoyer", envoi_hektor_at: null }));

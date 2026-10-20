@@ -4663,9 +4663,44 @@ function adoptExistingImmoSignRows(entries, existingRows) {
   });
 }
 
+// ⚠⚠ UNE LIGNE CREEE PAR L'APP GARDE SA SOURCE -- 20/10/2026.
+//
+// Le chemin differe (lot 2c, 14/10) cree la ligne cote app avec source = 'app', puis
+// `completerEnvoiDocumentDiffere` y pose le numero Hektor des que Hektor confirme. La
+// ligne porte alors LES DEUX identifiants : `id` (l'app) et `hektor_document_id`
+// (Hektor). Aucun des deux ne se perd.
+//
+// SANS CETTE ADOPTION, l'indexation de la liste Hektor retrouvait la ligne par son numero
+// (existing.byDocumentId) et REPRENAIT SON id -- c'est juste -- mais l'ecrivait avec la
+// source de la liste (hektor_console_uploaded_private). La base cherche le conflit sur
+// (annonce, source, numero), n'en trouvait pas, tentait un INSERT, et l'id etait deja
+// pris : 409 « app_console_document_pkey ». Constate le 19/10 a 11:43 (AVENANTS 87K,
+// annonce 59578), puis chaque nuit sur la synchro de cette annonce.
+//
+// MEME PRINCIPE QUE adoptExistingImmoSignRows : l'entree de la liste adopte la cle de la
+// ligne existante. LIMITE A source = 'app' ET A UNE LIGNE QUI PORTE DEJA UN NUMERO : une
+// ligne 'app' sans numero (envoi pas encore parti) n'est la source d'aucune entree, et
+// toutes les autres sources gardent leur comportement exact.
+// Effet de bord voulu : la purge nocturne ne touche que les sources `hektor_console*`
+// (voir plus bas), donc une ligne qui reste 'app' n'est jamais purgee.
+function adoptExistingAppRows(entries, existingRows) {
+  const appParNumero = new Map();
+  for (const row of Array.isArray(existingRows) ? existingRows : []) {
+    if (String(row.source || "") !== "app" || !row.hektor_document_id) continue;
+    appParNumero.set(String(row.hektor_document_id), row);
+  }
+  if (!appParNumero.size) return entries;
+  return entries.map((entry) => {
+    const row = appParNumero.get(String(entry.hektor_document_id));
+    if (!row) return entry;
+    return { ...entry, source: row.source };
+  });
+}
+
 async function upsertConsoleDocuments(dossier, entries) {
   const existingForAdoption = await loadExistingDocuments(String(dossier.hektor_annonce_id));
-  const selectedEntries = dedupeDocumentEntries(adoptExistingImmoSignRows(entries, existingForAdoption.rows));
+  const selectedEntries = dedupeDocumentEntries(
+    adoptExistingAppRows(adoptExistingImmoSignRows(entries, existingForAdoption.rows), existingForAdoption.rows));
   const existing = existingForAdoption;
   const now = new Date().toISOString();
   const selectedKeys = new Set(selectedEntries.map((entry) => `${entry.hektor_document_id}:${entry.source}`));
@@ -8045,6 +8080,10 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
 
   // ② HEKTOR ENSUITE, et son silence n'efface rien.
   const maintenant = new Date().toISOString();
+  // ⚠ 20/10/2026 -- « HEKTOR A-T-IL LE FICHIER ? » se sait au moment ou son numero est
+  // pose sur notre ligne. Tout echec APRES ce point est un echec de NOTRE rangement
+  // (indexation de la liste), pas un echec d'envoi : le fichier est chez Hektor.
+  let numeroPose = null;
   try {
     await ensureHektorExecutionContext(job, dossier, payload,
       { preferRequester: true, preferDossierOwner: true, required: true });
@@ -8066,6 +8105,7 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
         updated_at: maintenant,
       }),
     });
+    numeroPose = envoi.found.hektor_document_id;
     await upsertConsoleDocuments(dossier, envoi.entries);
 
     await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id,
@@ -8078,6 +8118,31 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
     };
   } catch (error) {
     const motif = error && error.message ? error.message : String(error);
+
+    // ⚠⚠ LE STATUT NE MENT PLUS -- 20/10/2026. Le 19/10 a 11:43 (AVENANTS 87K, annonce
+    // 59578), Hektor avait le fichier et son numero etait deja pose sur notre ligne
+    // ("envoye"), puis l'indexation a plante (409). Ce `catch` a alors ecrit « echec » :
+    // l'app disait « l'envoi a echoue » pour un document pourtant chez Hektor, et la
+    // reprise de 12:30 l'aurait RENVOYE (doublon chez Hektor).
+    // Apres la pose du numero, l'envoi est reussi : on garde « envoye », on DIT l'echec
+    // du rangement (journal + compte rendu) et la synchro suivante rattrapera l'index.
+    if (numeroPose) {
+      await logJob(job.id, "upload_document_to_hektor", "running",
+        "Document ENVOYE a Hektor, mais l'indexation de la liste a echoue -- la ligne reste « envoye », la prochaine synchro rattrapera", {
+          app_document_id: ligne.id,
+          hektor_annonce_id: String(dossier.hektor_annonce_id),
+          hektor_document_id: numeroPose,
+          erreur: motif,
+        });
+      return {
+        app_document_id: ligne.id,
+        envoi_hektor: "envoye",
+        hektor_document_id: numeroPose,
+        indexation_erreur: motif,
+        copie_serveur: garde ? garde.local_path : null,
+      };
+    }
+
     await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(ligne.id)}`, {
       method: "PATCH",
       prefer: "return=minimal",

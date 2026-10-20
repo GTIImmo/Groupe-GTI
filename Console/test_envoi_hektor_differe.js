@@ -39,7 +39,7 @@ function tranche(marque) {
 
 const bloc = tranche("async function completerEnvoiDocumentDiffere(");
 
-function charger(hektorEchoue) {
+function charger(hektorEchoue, indexationEchoue = false) {
   const journal = [];          // l'ORDRE des gestes, c'est ce qu'on verifie
   const patches = [];
   const faux = {
@@ -72,7 +72,13 @@ function charger(hektorEchoue) {
       return { entries: [{ hektor_document_id: "H-99", document_name: "Mandat.pdf" }],
                found: { hektor_document_id: "H-99", document_name: "Mandat.pdf" } };
     },
-    upsertConsoleDocuments: async () => { journal.push("reindexation"); return []; },
+    upsertConsoleDocuments: async () => {
+      journal.push("reindexation");
+      if (indexationEchoue) {
+        throw new Error('Supabase 409 on app_console_document?on_conflict=hektor_annonce_id,source,hektor_document_id: duplicate key value violates unique constraint "app_console_document_pkey"');
+      }
+      return [];
+    },
     enqueueRefreshConsoleDataJobBestEffort: async () => { journal.push("rafraichissement"); return null; },
     logJob: async () => { journal.push("journal"); },
     safeFilename: (n, f) => n || f,
@@ -132,6 +138,32 @@ function charger(hektorEchoue) {
     controle("(l) le compte rendu le dit aussi", r && r.envoi_hektor === "echec", JSON.stringify(r));
     controle("(m) et le chemin serveur remonte quand meme",
       r && r.copie_serveur, JSON.stringify(r));
+
+    // ── ④ HEKTOR A LE FICHIER, MAIS NOTRE INDEXATION PLANTE (le cas du 19/10) ──
+    // Le numero Hektor est deja pose sur la ligne : l'envoi est REUSSI. Le statut ne doit
+    // pas passer a « echec », sinon l'app ment et la reprise renvoie un doublon.
+    ({ fn, journal, patches } = charger(false, true));
+    leve = null;
+    try {
+      r = await fn({ id: "job-3" }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    } catch (e) { leve = e.message; }
+    controle("(n) l'indexation qui plante apres l'envoi NE LEVE PAS", leve === null, `a leve : ${leve}`);
+    controle("(o) ⭐ le numero Hektor est bien pose sur la ligne",
+      patches.some((p) => p.hektor_document_id === "H-99" && p.envoi_hektor_statut === "envoye"),
+      JSON.stringify(patches));
+    controle("(p) ⭐⭐ le statut ne repasse JAMAIS a « echec » (Hektor a le fichier)",
+      !patches.some((p) => p.envoi_hektor_statut === "echec"), JSON.stringify(patches));
+    controle("(q) le compte rendu dit « envoye » ET porte l'erreur d'indexation",
+      r && r.envoi_hektor === "envoye" && r.hektor_document_id === "H-99" && /app_console_document_pkey/.test(String(r.indexation_erreur || "")),
+      JSON.stringify(r));
+    controle("(r) l'echec du rangement est ecrit au journal", journal.includes("journal"), journal.join(" > "));
+
+    // TEMOIN INVERSE : si l'echec survient AVANT la pose du numero, c'est bien un echec d'envoi.
+    ({ fn, journal, patches } = charger(true, true));
+    r = await fn({ id: "job-4" }, { hektor_annonce_id: "62087" }, { app_document_id: "doc-1" });
+    controle("(s) ⭐ TEMOIN INVERSE : Hektor sans reponse -> toujours « echec »",
+      r && r.envoi_hektor === "echec" && patches.some((p) => p.envoi_hektor_statut === "echec"),
+      JSON.stringify([r, patches]));
   }
 
   // ── ① LE CHEMIN D'ORIGINE EST INCHANGE ────────────────────────────────────
