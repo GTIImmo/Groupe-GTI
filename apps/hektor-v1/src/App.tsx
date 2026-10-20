@@ -12089,8 +12089,9 @@ function ConsolePhotosPanel({
   //   en a besoin.
   const plafondGalerie = compact ? 6 : 12
   const galleryPhotos = toutesLesPhotos ? sourcePhotos : sourcePhotos.slice(0, plafondGalerie)
-  // la visionneuse parcourt les photos affichées, masquées comprises (signalées) ; une photo sans adresse n'y figure pas
-  const albumVisionneuse: ViewerItem[] = galleryPhotos
+  // la visionneuse parcourt TOUTES les photos du bien (pas seulement les 12 de la grille), masquées comprises (signalées) ;
+  // une photo sans adresse n'y figure pas
+  const albumVisionneuse: ViewerItem[] = sourcePhotos
     .filter((p) => Boolean(p.url_hd || p.url_preview))
     .map((p) => ({ url: (p.url_hd || p.url_preview) as string, thumb: p.url_preview || p.url_hd, legend: p.legend, masquee: !p.visible }))
   const photosCachees = Math.max(0, sourcePhotos.length - galleryPhotos.length)
