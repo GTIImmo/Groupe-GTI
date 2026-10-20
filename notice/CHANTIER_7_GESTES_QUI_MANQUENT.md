@@ -5771,3 +5771,43 @@ le CRÉE — pas le seul par lequel on peut y revenir.*
 2. ⭐⭐ **lui** : **ouvrir ce brouillon dans le wizard de Hektor** et dire ce qu'il voit. **Seul un
    humain peut répondre à « le wizard respecte-t-il notre écriture ? »** — et c'est la question qui
    décide si l'index peut devenir complet.
+
+
+### ⚠ L'ESSAI DE MODIFICATION : DEUX CONTRAINTES TROUVÉES AVANT D'ÉCRIRE *(20/10)*
+
+**① MON GARDE-FOU A REFUSÉ D'ÉCRIRE LE FICHIER D'ESSAI — et il avait raison de me faire hésiter.**
+Tous mes essais de la semaine étaient sur **62774, le bac à sable**. Celui-là aurait écrit dans le
+brouillon de **Stéphanie Martinez** *(62554, créé le 22/06, jamais retouché — mais le sien)*. ⭐ **Je
+ne l'avais pas assez souligné dans ma proposition.**
+
+**② ET LES 20 BROUILLONS ORPHELINS SONT PRÉCISÉMENT CEUX QU'ON NE PEUT PAS MODIFIER.**
+J'avais cru tenir la cible parfaite : **20 brouillons sans aucun négociateur** *(`59425`, `59426`,
+`59451`… tous « jamais touchée », 0 photo, les plus anciens du parc)*. ⛔ **Mais
+`ensureHektorExecutionContext(…, required: true)` EXIGE un contexte négociateur** — sans
+négociateur, **aucune identité à emprunter**.
+
+➡ ⭐⭐ **Donc : les 509 brouillons qui ont un négociateur sont modifiables ; les 20 orphelins ne le
+sont pas.** *C'est l'inverse de ce que l'intuition suggère.*
+
+### ⭐ CE QUI EST PRÊT POUR L'ESSAI
+
+| | |
+|---|---|
+| le geste | `update_hektor_annonce_fields`, **voie standard** *(pas `from_pending`, qui est la voie optimiste avec son garde-fou anti-écrasement)* |
+| ⭐ **la clé qui débloque tout** | **`hektor_user_id`** dans la charge — c'est le repli de `loadDossier` *(l. 11518)*, qui existe et **n'a jamais servi à ça** |
+| `app_dossier_id` | **NULL** — un brouillon n'en a pas, et le repli l'accepte. *Mettre un faux numéro serait pire que rien* |
+| le service qui le prend | **`HektorConsoleWorkerActions`** *(`update_hektor_annonce_fields` est dans `ACTION_JOB_TYPES`, l. 103)* — **pas celui des documents** |
+| le champ choisi | **`NB_CHAMBRES`** *(clé `bedroom_count`)* — anodin, et le basculement **0 → 3 → 0** est sans ambiguïté |
+| ⛔ **ce qu'on ne touche pas** | **le PRIX** : la note du 22/06 dit qu'il est *« refusé hors workflow mandat »*, et `link_hektor_mandant` n'a **jamais** tourné en production |
+| ⭐ l'identité de Frédéric | **`hektor_user_id = 46`** · négociateur 20 · agence 12 *(Groupe GTI Firminy)* — **une seule entrée, aucune ambiguïté** |
+
+### ⭐⭐ ET LA CIBLE RETENUE : UN BROUILLON QUE FRÉDÉRIC CRÉE LUI-MÊME
+
+*Commencer une saisie dans Hektor, l'abandonner.* ➡ **Une cible qui est la sienne, avec son
+négociateur, et personne de dérangé.** ⚠ Elle ne sera **pas** dans notre miroir *(le balayage des
+brouillons passe à 04:25)* — **mais ça n'a aucune importance** : l'essai lit le formulaire **chez
+Hektor** et écrit **par le worker**. Ni l'un ni l'autre ne passe par le miroir.
+
+➡ **Et la seconde moitié reste la sienne** : ouvrir ce brouillon **dans le wizard** et dire si le 3 y
+est, si le wizard s'ouvre normalement, et s'il garde le 3 quand on le fait avancer d'une étape.
+**Aucune mesure automatique ne peut répondre à ça.**
