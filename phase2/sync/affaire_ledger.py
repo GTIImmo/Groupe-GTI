@@ -1044,8 +1044,49 @@ def chainage_sans_date_actif() -> bool:
       Frederic du 20/10 sur le § 2.3 (« seulement les annules »). Les 2 compromis
       VIVANTS que le repli aurait pris sont laisses dehors.
     """
+    return chainage_sans_date_niveau() >= 1
+
+
+def chainage_sans_date_niveau() -> int:
+    """LE NIVEAU du repli des sans-date -- UN SEUL interrupteur, DEUX crans.
+
+        APP_CHAINAGE_SANS_DATE=0   (ou absent)  rien : chacune reste SEULE
+        APP_CHAINAGE_SANS_DATE=1   § 2.6  les compromis ANNULES, par le nom      117
+        APP_CHAINAGE_SANS_DATE=2   § 2.6 + § 2.7 : aussi les compromis ACTIFS,
+                                   vers une chaine qui porte deja une VENTE      +10
+
+    ⚠⚠ POURQUOI UN NIVEAU ET PAS UN TROISIEME INTERRUPTEUR. `=1` est DEJA allume
+      en production (20/10). Un nouvel interrupteur de plus aurait fait trois
+      variables pour une seule regle ; et surtout : le cran 1 doit rester
+      EXACTEMENT ce qui tourne aujourd'hui, pour que le temoin inverse garde un
+      sens. Monter a `2` est une decision separee, et redescendre a `1` ramene
+      l'etat d'avant sans rien reparer.
+
+    ─── LE § 2.7, ET CE QU'IL LEVE ───────────────────────────────────────────
+    Frederic, 20/10 : « les compromis actifs sans date, il y a peut-etre un lien ».
+    ⭐ IL Y EN A UN, ET IL EST NET. Mesure : 12 compromis ACTIFS sans date
+      (hors les 3 effacees chez Hektor), TOUS a `0000-00-00`, TOUS vus pour la
+      premiere fois en 2026-07 -- un lot arrive sans sa date. Leur bien : 9
+      Vendu, 1 Sous offre, 2 Clos. Et 10 sur 12 n'ont QU'UNE chaine du bien qui
+      partage leur nom, laquelle porte la VENTE ou l'OFFRE ACCEPTEE du meme
+      acquereur. Ce sont les compromis de ventes abouties.
+
+    Le § 2.6 les refusait pour DEUX raisons, levees ici et seulement ici :
+      1. il ne prend que les compromis ANNULES (decision du 20/10 sur le § 2.3) ;
+      2. il exclut une cible qui porte une VENTE -- or c'est justement la qu'ils
+         vont, parce que `compromis -> vente` est la sequence normale du metier.
+    ⚠ LA GARDE « une chaine, UN SEUL compromis » RESTE, elle : c'est elle qui
+      empeche d'empiler deux compromis sur la meme affaire.
+    """
     chainage_v2_actif()                      # il charge `.env` une fois pour tous
-    return os.environ.get("APP_CHAINAGE_SANS_DATE", "0") == "1"
+    valeur = (os.environ.get("APP_CHAINAGE_SANS_DATE") or "0").strip()
+    try:
+        return max(0, int(valeur))
+    except ValueError:
+        # ⚠ ON LE DIT : une valeur illisible vaut ETEINT, elle ne doit pas passer
+        #   pour un « 1 » par accident.
+        print(f"[ledger] APP_CHAINAGE_SANS_DATE illisible ({valeur!r}) -- traite comme 0")
+        return 0
 
 
 def chainage_v2_actif() -> bool:
@@ -1510,7 +1551,8 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
         # s'il n'y a qu'UNE chaine du bien qui le partage, il n'y a rien a
         # deviner. Mesure du 20/10 : 120 compromis annules, et ce sont les memes
         # affaires que le § 2.3 recolle quand la date existe.
-        if sans_date_du_bien and chainage_sans_date_actif():
+        niveau_sd = chainage_sans_date_niveau()
+        if sans_date_du_bien and niveau_sd >= 1:
             if not toutes:
                 # ⚠ ON LE DIT, ET C'EST LA DEUXIEME FOIS LE MEME JOUR. La garde
                 #   `and toutes` sautait le bloc EN SILENCE : 32 transactions sur
@@ -1526,29 +1568,46 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 #   que Frederic a limite aux annules le 20/10. Un compromis
                 #   VIVANT rattache sur un nom rouvrirait une affaire en cours
                 #   sur une devinette.
-                if kind != "compromis" or state not in ETATS_COMPROMIS_MORTS:
+                if kind != "compromis":
                     # ⚠ ON LE DIT. Un `continue` muet ici laissait 49 transactions
                     #   hors du compte : « 220 sans date » mais 171 expliquees, et
                     #   personne pour dire ou etaient passees les autres.
-                    signale("[2.6] hors du repli (pas un compromis annule)")
+                    signale("[2.6] hors du repli (ce n est pas un compromis)")
+                    continue
+                annule = state in ETATS_COMPROMIS_MORTS
+                if not annule and niveau_sd < 2:
+                    # au cran 1, un compromis VIVANT n'est pas concerne (§ 2.3)
+                    signale("[2.6] hors du repli (compromis actif, cran 1)")
                     continue
                 if not acqs:
                     signale("[2.6] sans date et SANS NOM -- reste seule")
                     continue
+                # ─── § 2.7 (cran 2) : pour un compromis ACTIF, la cible PEUT
+                #     porter une vente -- `compromis -> vente` est la sequence
+                #     normale du metier, et c'est justement la qu'ils vont.
+                #     ⚠ Pour un compromis ANNULE, la garde reste : une affaire
+                #       aboutie n'est pas une autre affaire qui a echoue.
+                # « une vraie sequence » : une offre pour le § 2.6 ; une offre OU
+                # une vente pour le § 2.7. ⚠ 3 des 10 cibles mesurees sont des
+                # chaines faites d'une VENTE SEULE (biens 14730, 14732, 33458) --
+                # exiger une offre les refusait, alors que `compromis -> vente`
+                # est precisement la sequence qu'on veut recoller.
                 cands = [c for c in toutes
                          if (acqs & c["acquereurs"])
-                         and not c["a_une_vente"]      # une affaire aboutie n'en est pas une autre
                          and not c["compromis"]        # une chaine ne porte qu'un compromis
-                         and c["offres"]]              # et elle doit etre une vraie sequence
+                         and (c["offres"] if annule else (c["offres"] or c["a_une_vente"]))
+                         and (not annule or not c["a_une_vente"])]
+                etiq = "2.6" if annule else "2.7"
+                quoi = "annule" if annule else "ACTIF"
                 if len(cands) == 1:
                     cands[0]["membres"].append(app_id)
                     cands[0]["compromis"] = True
                     cands[0]["acquereurs"] |= acqs
-                    signale("[2.6] compromis annule SANS DATE rattache par le nom")
+                    signale(f"[{etiq}] compromis {quoi} SANS DATE rattache par le nom")
                 elif len(cands) > 1:
-                    signale("[2.6] plusieurs chaines au meme nom -- abstention")
+                    signale(f"[{etiq}] plusieurs chaines au meme nom -- abstention")
                 else:
-                    signale("[2.6] aucune chaine a son nom -- reste seule")
+                    signale(f"[{etiq}] aucune chaine a son nom -- reste seule")
 
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
@@ -1570,11 +1629,12 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 #   saura pas, demain matin, laquelle des deux a produit ces
                 #   numeros -- et c'est la premiere question qu'on se posera.
                 "chainage_v2": v2,
-                "chainage_sans_date": chainage_sans_date_actif()}
+                "chainage_sans_date": chainage_sans_date_niveau()}
     resultat.update(anomalies)
     print(f"[ledger] chainage : {resultat['chaines']} chaines "
           f"({'V2 -- replis actifs' if v2 else 'regle d avant, V2 eteinte'}"
-          f"{' + § 2.6 sans-date par le nom' if resultat['chainage_sans_date'] else ''})")
+          f"{(' + sans-date cran %d' % resultat['chainage_sans_date'])
+             if resultat['chainage_sans_date'] else ''})")
     return resultat
 
 

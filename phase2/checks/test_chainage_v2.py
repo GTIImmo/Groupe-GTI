@@ -21,7 +21,7 @@ CE QU'ELLE EPROUVE, ET POURQUOI DANS CET ORDRE
   LE CHEMIN de l'interrupteur (environnement -> .env -> la regle), et pas
   seulement la fonction. Patcher une variable en memoire ne prouverait rien.
 
-    python phase2/checks/test_chainage_v2.py            # les trois sens, d'affilee
+    python phase2/checks/test_chainage_v2.py            # les quatre sens, d'affilee
     APP_CHAINAGE_V2=1 python phase2/checks/test_chainage_v2.py --un-seul-sens
 """
 from __future__ import annotations
@@ -48,7 +48,8 @@ for _f in (sys.stdout, sys.stderr):
 # compare avec une tolerance, et on DIT l'ecart.
 ATTENDU_V1_CHAINES = 12702
 ATTENDU_V2_CHAINES = 12278
-ATTENDU_26_CHAINES = 12159      # V2 + le repli § 2.6 par le nom (20/10)
+ATTENDU_26_CHAINES = 12159      # V2 + § 2.6, cran 1 (les compromis ANNULES)
+ATTENDU_27_CHAINES = 12149      # V2 + § 2.7, cran 2 (+ les compromis ACTIFS)
 TOLERANCE = 30          # le parc grandit chaque nuit (+1 a 15 affaires/mois)
 
 MORTS_OFFRE = {"refused", "refusee"}
@@ -135,14 +136,15 @@ def invariants(con: sqlite3.Connection) -> dict[str, int]:
 
 def un_sens() -> int:
     """Eprouve le code TEL QU'IL EST CHARGE, avec l'interrupteur que l'env porte."""
-    from phase2.sync.affaire_ledger import (LEDGER_TABLE, chainage_sans_date_actif,
+    from phase2.sync.affaire_ledger import (LEDGER_TABLE, chainage_sans_date_niveau,
                                             chainage_v2_actif,
                                             recalculer_les_chaines)
 
     CHAINAGE_V2 = chainage_v2_actif()
-    SANS_DATE = chainage_sans_date_actif()
+    SANS_DATE = chainage_sans_date_niveau()
 
-    etiquette = ("V2 + § 2.6 (le repli par le nom)" if SANS_DATE
+    etiquette = ("V2 + § 2.7 (cran 2 : + les compromis ACTIFS)" if SANS_DATE >= 2
+                 else "V2 + § 2.6 (cran 1 : les compromis ANNULES)" if SANS_DATE >= 1
                  else "V2 ALLUMEE" if CHAINAGE_V2
                  else "V2 ETEINTE (temoin inverse)")
     print(f"\n{'=' * 72}\n  {etiquette}\n{'=' * 72}")
@@ -169,11 +171,12 @@ def un_sens() -> int:
     # ① l'etiquette doit dire la verite
     if bool(resultat.get("chainage_v2")) is not bool(CHAINAGE_V2):
         rouges.append("le resultat ne dit PAS si la V2 a tourne")
-    if bool(resultat.get("chainage_sans_date")) is not bool(SANS_DATE):
-        rouges.append("le resultat ne dit PAS si le § 2.6 a tourne")
+    if int(resultat.get("chainage_sans_date") or 0) != int(SANS_DATE):
+        rouges.append("le resultat ne dit PAS a quel CRAN le repli des sans-date a tourne")
 
     # ② le compte attendu
-    attendu = (ATTENDU_26_CHAINES if SANS_DATE
+    attendu = (ATTENDU_27_CHAINES if SANS_DATE >= 2
+               else ATTENDU_26_CHAINES if SANS_DATE >= 1
                else ATTENDU_V2_CHAINES if CHAINAGE_V2
                else ATTENDU_V1_CHAINES)
     ecart = abs(chaines - attendu)
@@ -193,7 +196,9 @@ def un_sens() -> int:
     #     (verifie en ②) : les trois references sont distinctes, donc un compte
     #     juste prouve que la bonne regle a tourne. `bouge` reste AFFICHE, comme
     #     information : il dit par rapport a quel regime la base a ete ecrite.
-    regime = ("V2 + § 2.6" if SANS_DATE else "V2" if CHAINAGE_V2 else "la regle d avant")
+    regime = ("V2 + § 2.7 (cran 2)" if SANS_DATE >= 2
+              else "V2 + § 2.6 (cran 1)" if SANS_DATE >= 1
+              else "V2" if CHAINAGE_V2 else "la regle d avant")
     if bouge:
         print(f"   i {len(bouge)} transaction(s) differeraient de ce qui est EN BASE "
               f"-- normal si la base n a pas ete ecrite en « {regime} »")
@@ -293,10 +298,11 @@ def main() -> int:
 
     # ⚠ TROIS PROCESSUS, parce que l'environnement se pose AVANT le lancement :
     #   c'est ainsi que la tache planifiee et le shell s'en serviront.
-    #   ⓵ tout eteint      -> la regle d'avant, a l'identique (temoin inverse)
-    #   ⓶ V2 seule         -> ce qui tourne en production depuis le 20/10
-    #   ⓷ V2 + § 2.6       -> le repli par le nom pour les sans-date
-    for valeur, sansdate in (("0", "0"), ("1", "0"), ("1", "1")):
+    #   ⓵ tout eteint        -> la regle d'avant, a l'identique (temoin inverse)
+    #   ⓶ V2 seule           -> le chainage V2
+    #   ⓷ V2 + cran 1 (§ 2.6) -> CE QUI TOURNE EN PRODUCTION depuis le 20/10
+    #   ⓸ V2 + cran 2 (§ 2.7) -> + les compromis ACTIFS sans date
+    for valeur, sansdate in (("0", "0"), ("1", "0"), ("1", "1"), ("1", "2")):
         env = dict(os.environ)
         env["APP_CHAINAGE_V2"] = valeur
         env["APP_CHAINAGE_SANS_DATE"] = sansdate
@@ -311,7 +317,7 @@ def main() -> int:
             sys.stderr.write(r.stderr)
         total = max(total, r.returncode)
     print(f"\n{'=' * 72}")
-    print("  LES TROIS SENS : " + ("✅ VERTS" if total == 0 else "⛔ UN ROUGE"))
+    print("  LES QUATRE SENS : " + ("✅ VERTS" if total == 0 else "⛔ UN ROUGE"))
     print("=" * 72)
     return total
 
