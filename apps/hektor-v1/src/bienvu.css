@@ -323,3 +323,77 @@
    écrit lui-même (content:) se réécrivent ici.
    ============================================================================= */
 .bv .mobile-detail-actionbar::before { content: "Actions de l'annonce"; }
+
+/* =============================================================================
+   Lot 4b, série 2 — agenda, console de diffusion, détail allégé, baisse de prix, modification, image
+   Même tête sombre que les autres modales. Toujours sous `.bv`.
+   ============================================================================= */
+
+/* --- Agenda (créer un RDV, fiche contact rapide, agenda global) --- */
+.bv .modal-panel.google-agenda-modal { border: 0 !important; border-radius: 18px !important; box-shadow: var(--bv-shadow-modal) !important; }
+.bv .google-agenda-modal .google-agenda-modal-head {
+  background: var(--bv-ink) !important; border-bottom: 3px solid var(--bv-magenta) !important; color: #ffffff !important; border-radius: 0 !important;
+}
+.bv .google-agenda-modal .google-agenda-modal-head .eyebrow { color: #cfd3d4 !important; font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+.bv .google-agenda-modal .google-agenda-modal-head h3 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+.bv .google-agenda-modal .google-agenda-modal-head p { color: #cfd3d4 !important; }
+.bv .google-agenda-modal .google-agenda-modal-head .request-modal-close { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .google-agenda-modal .google-agenda-modal-head .request-modal-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
+.bv .google-agenda-modal .google-agenda-panel-head > span { color: var(--bv-magenta) !important; }
+.bv .google-agenda-modal .button-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; color: #ffffff !important; box-shadow: none !important; }
+.bv .google-agenda-modal .button-primary:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+/* Défaut d'origine : sous 1460 px les deux panneaux se partageaient la hauteur de la fenêtre et se
+   recouvraient (contenu qui déborde sur le bloc d'en dessous). Chaque panneau prend sa hauteur, la zone défile. */
+.bv .google-agenda-modal .google-agenda-modal-layout { grid-auto-rows: max-content !important; align-items: start !important; align-content: start !important; }
+
+/* --- Console de diffusion --- */
+.bv .diffusion-modal-v3 :is(.dv3-title, .dv3-metric-v, .dv3-work-title) { font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+.bv .diffusion-modal-v3 .dv3-stage { background: radial-gradient(110% 70% at 28% 0%, rgba(197, 0, 95, 0.34), transparent 62%), var(--bv-ink) !important; }
+
+/* --- Détail allégé : la tête de la famille « demandes » --- */
+.bv .modal-panel.lightweight-detail-modal { border: 0 !important; border-radius: 18px !important; box-shadow: var(--bv-shadow-modal) !important; overflow: hidden; }
+.bv .lightweight-detail-modal .request-modal-head { background: var(--bv-ink) !important; border-bottom: 3px solid var(--bv-magenta) !important; color: #ffffff !important; border-radius: 0 !important; }
+.bv .lightweight-detail-modal .request-modal-head .eyebrow { color: #cfd3d4 !important; font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+.bv .lightweight-detail-modal .request-modal-head h3 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+/* Défaut d'origine : le bandeau attend une icône (3 colonnes) que cette fenêtre n'a pas, le titre était écrasé dans 54 px ;
+   et sa marge négative suppose un panneau à 22 px de marge, qui est à 0. */
+.bv .lightweight-detail-modal .request-modal-head { grid-template-columns: minmax(0, 1fr) auto !important; align-items: center !important; margin: 0 !important; padding: 18px 22px !important; }
+.bv .lightweight-detail-modal .request-modal-close { width: auto !important; }
+.bv .modal-panel.lightweight-detail-modal { overflow-x: hidden !important; }
+.bv .lightweight-detail-modal .lightweight-detail-hero { margin: 18px 22px 0 !important; }
+.bv .lightweight-detail-modal .lightweight-detail-status { margin: 12px 22px 0 !important; }
+.bv .lightweight-detail-modal .lightweight-detail-actions { padding: 16px 22px 20px !important; }
+.bv .lightweight-detail-modal .request-modal-head::before { background: transparent !important; }
+.bv .lightweight-detail-modal .request-modal-close { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .lightweight-detail-modal .request-modal-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
+.bv .lightweight-detail-modal .button-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; color: #ffffff !important; box-shadow: none !important; }
+
+/* --- Baisse de prix : petite fenêtre d'alerte --- */
+.bv .price-drop-popup { border: 0 !important; border-top: 4px solid var(--bv-magenta) !important; border-radius: 18px !important; background: #ffffff !important; box-shadow: var(--bv-shadow-modal) !important; }
+.bv .price-drop-popup::before { display: none !important; }
+.bv .price-drop-popup .price-drop-popup-icon { background: var(--bv-rose-soft) url('/brand/bienvu-symbole-couleur.svg') center / 58% no-repeat !important; border: 0 !important; box-shadow: none !important; }
+.bv .price-drop-popup .price-drop-popup-icon::before, .bv .price-drop-popup .price-drop-popup-icon::after { display: none !important; }
+.bv .price-drop-popup .price-drop-popup-eyebrow { color: var(--bv-magenta) !important; font-weight: 800 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+.bv .price-drop-popup h3 { font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; color: var(--bv-ink) !important; }
+.bv .price-drop-popup .button-primary { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; color: #ffffff !important; box-shadow: none !important; }
+.bv .price-drop-popup .button-primary:hover:not(:disabled) { background: var(--bv-framboise) !important; border-color: var(--bv-framboise) !important; }
+
+/* --- Modification d'une annonce (fenêtre à circuit App > PC serveur > Hektor > Retour) --- */
+.bv .modal-panel.detail-edit-popup { border: 0 !important; border-radius: 18px !important; box-shadow: var(--bv-shadow-modal) !important; overflow: hidden; }
+.bv .detail-edit-popup .detail-edit-popup-head { background: var(--bv-ink) !important; border-bottom: 3px solid var(--bv-magenta) !important; color: #ffffff !important; border-radius: 0 !important; }
+.bv .detail-edit-popup .detail-edit-popup-head > div > span { color: #cfd3d4 !important; font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+.bv .detail-edit-popup .detail-edit-popup-head h3 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+.bv .detail-edit-popup .detail-edit-popup-head p { color: #cfd3d4 !important; }
+.bv .detail-edit-popup .detail-edit-popup-icon { font-size: 0 !important; background: url('/brand/bienvu-symbole-sombre.svg') center / 74% no-repeat !important; border: 0 !important; box-shadow: none !important; }
+.bv .detail-edit-popup .detail-edit-popup-flow span { background: rgba(255, 255, 255, 0.1) !important; color: #ffffff !important; border-color: rgba(255, 255, 255, 0.24) !important; }
+.bv .detail-edit-popup .detail-edit-popup-close { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .detail-edit-popup .detail-edit-popup-section-head > span { color: var(--bv-magenta) !important; }
+.bv .detail-edit-popup .button-primary, .bv .detail-edit-popup button[type='submit'] { background: var(--bv-magenta) !important; border-color: var(--bv-magenta) !important; color: #ffffff !important; box-shadow: none !important; }
+
+/* --- Visionneuse d'image : même tête, fond d'image neutre --- */
+.bv .modal-panel.modal-panel-image { border: 0 !important; border-radius: 18px !important; box-shadow: var(--bv-shadow-modal) !important; overflow: hidden; }
+.bv .modal-panel-image > .panel-head { background: var(--bv-ink) !important; border-bottom: 3px solid var(--bv-magenta) !important; color: #ffffff !important; }
+.bv .modal-panel-image > .panel-head .eyebrow { color: #cfd3d4 !important; font-weight: 700 !important; letter-spacing: 0.1em !important; text-transform: uppercase !important; }
+.bv .modal-panel-image > .panel-head h3 { color: #ffffff !important; font-family: var(--bv-font-display) !important; font-weight: 800 !important; }
+.bv .modal-panel-image > .panel-head .ghost-button { color: #ffffff !important; background: transparent !important; border-color: rgba(255, 255, 255, 0.3) !important; }
+.bv .modal-panel-image .detail-image-modal-body { background: #f3f4f4 !important; }
