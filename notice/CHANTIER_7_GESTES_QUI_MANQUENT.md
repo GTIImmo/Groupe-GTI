@@ -5967,3 +5967,46 @@ création, elle, **remplit le wizard d'abord** — donc son succès ne prouve ri
 
 ⭐ **Et l'ordre est imposé par la mesure** : ⛔ **inutile d'écrire ② et ③ avant de savoir si Hektor
 accepte de terminer une coquille vide.** ➡ **Le prochain pas est un essai sur 62554.**
+
+
+### ⚠⚠⚠ FRÉDÉRIC A DÉMOLI MON RAISONNEMENT, ET SA QUESTION ÉTAIT LA BONNE *(20/10)*
+
+> *« d'abord dis moi si 63143 est aussi une coquille vide ? »*
+
+**J'avais écrit « un brouillon est une coquille vide » et bâti tout mon raisonnement dessus — à
+partir d'UN SEUL cas, 62554. Mesuré sur les 529 :**
+
+| | brouillons | |
+|---|---|---|
+| **B — surface renseignée, PAS de prix** *(comme 63143)* | ⭐⭐ **511** | 270 estimations · 230 actifs · 11 sans statut |
+| **A — surface ET prix** | **17** | |
+| ⛔ **D — coquille vide** *(comme 62554)* | **1** | |
+
+➡ ⭐⭐⭐ **62554 EST LA SEULE COQUILLE VIDE DES 529. J'avais choisi pour mon essai le cas le plus
+atypique du parc entier**, et j'en avais tiré une règle générale. *Un échantillon de un n'est pas
+une mesure.*
+
+**ET 63143 EST TOUT LE CONTRAIRE** *(lu chez Hektor, 1 appel)* :
+
+```
+63143 :  nbpieces=6  NB_CHAMBRES=4  NB_SE=1  NB_WC=2  surfappart=151  EXPOSITION="Sud"   + 8 photos
+62554 :  nbpieces=0  NB_CHAMBRES=0  NB_SE=0  NB_WC=0  surfappart=0    EXPOSITION="Non defini"
+```
+*Brouillon Estimation, agence ANNONAY, négociateur corinne.reynaud@, modifié le 24/09, détail REST
+présent.* ⚠ **Il ne manque que le prix.**
+
+**Et le dégradé des photos le confirme** : **363** brouillons sans photo · **81** en ont 1 à 4 ·
+**59** en ont 5 à 9 · **26** en ont **10 ou plus** *(166 au total, 940 photos)*.
+
+### ⭐⭐ CE QUE ÇA CHANGE À LA QUESTION DÉCISIVE
+
+⛔ **« Hektor refusera-t-il de terminer une coquille vide ? » n'intéresse plus personne : il n'y en a
+qu'UNE.**
+
+⭐⭐⭐ **La vraie question est : « Hektor acceptera-t-il de terminer un brouillon SANS PRIX ? »** —
+et c'est le cas de **511 sur 529**. ⭐ Avec une nuance qui compte : **270 d'entre eux sont des
+ESTIMATIONS**, et *une estimation, c'est précisément ce qu'on fait AVANT d'avoir un prix*. ⚠ Alors
+que les **230 actifs** sans prix sont, eux, douteux.
+
+➡ ⭐ **Donc la bonne cible d'essai est 63143, pas 62554** — et c'est la question de Frédéric qui m'a
+sorti du mauvais échantillon.
