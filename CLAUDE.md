@@ -138,7 +138,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑦-7 | modifier ou prolonger un mandat | ⛔ **FERMÉ PAR DÉCISION le 18/10** — *« je ne souhaite pas pouvoir modifier un mandat ou prolonger »*. **Ne pas relancer** |
 | ⑦-8 | **photos : rendre visible / masquer** | ✅ **COMPLET le 19/10** — les **4 marches**, dont le bouton **prouvé en réel deux fois** *(voir ci-dessous)* |
 | ⑦-9 | renommer un document | ⛔ **FERMÉ PAR DÉCISION le 19/10** — *« je pense qu'il ne faut rien changer donc il faut que l'utilisateur puisse mettre un libellé au début donc rien à changer »*. ⭐ **Et le champ existe déjà** *(`App.tsx:11378` « Libellé », → nom du fichier envoyé à Hektor, `api.ts:8169`)*. **Ne pas relancer** |
-| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | ✅ **① FAITE** · ✅ **② EN PRODUCTION le 20/10 à 16:23** *(clic réel sur 63131, fiche ouverte)* · 🔧 **④ ÉCRITE le 20/10, ATTEND LA POSE** *(patch SQL + push + redémarrage **Admin** ; 27 contrôles verts ; cran unique « Brouillon », bouton « Mettre en ligne », les 11 coquilles refusées)* · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* |
+| ⑦-10 | **les brouillons : rendre l'index vivant** | ✅ **① FAITE** · ✅ **② EN PRODUCTION** *(16:23, fiche ouverte sur 63131)* · ✅ **④ EN PRODUCTION le 20/10 à 19:02** — ⭐ **chaîne entière prouvée en réel : 63131 est passée du brouillon au catalogue « Actif » en 1 min 13 s, en gardant son numéro 7 589 119 et avec `diffusable 0`** · ✅ **④b ouvert aux négociateurs sur LEURS biens** *(prouvé sur pereira : il peut le sien, pas celui d'un autre, et toujours ni statut ni archivage)* · ⬜ ③ bouton « modifier » *(geste déjà prouvé, il ne manque que le bouton)* |
 
 **⑦-8, les 4 marches** *(19/10)* :
 

@@ -6769,3 +6769,46 @@ son inverse existent · ⚠ **et il ne touche pas aux gestes admin** *(« change
 
 ⛔ **À coller** : `supabase/patch_chantier7_piece4b_activer_par_negociateur_2026-10-20.sql`.
 ⭐ **Pas besoin de redémarrer le worker** : rien ne change de son côté.
+
+
+### ⭐⭐⭐ L'ÉPREUVE EN RÉEL — 20/10 à 19:02, et la chaîne entière a tenu
+
+**Frédéric a cliqué sur « Activer cette annonce » pour 63131** *(V670063131, « [Sans titre] »,
+statut Actif)*. C'était le **dernier inconnu** : chaque maillon était prouvé séparément,
+l'enchaînement jamais.
+
+```
+19:02:10   le geste est demande
+19:02:12   reclame par le worker ADMIN (NS31851120:admin:service:v9)
+19:02:25   « Negociateur proprietaire inactif -> ecriture via contexte AGENCE » (repli normal)
+19:02:26   « Sortie du brouillon -- l'annonce rejoindra « Actif » »
+19:02:39   ⭐⭐ « Sortie du brouillon PROUVEE chez Hektor »   (isDraft relu APRES l'appel)
+19:02:39   le miroir local corrige : is_draft = 0, vu a 17:02:39Z -- A LA SECONDE
+19:02:39   le read-through mis en file
+19:03:23   read-through done
+```
+
+**Le résultat, objet par objet :**
+
+| | |
+|---|---|
+| le travail | `done`, **1 tentative, aucune erreur**, 27 s |
+| **63131 dans le parc vivant** | ✅ **« Actif »**, `diffusable 0`, **`app_dossier_id 7 589 119`** |
+| le panier brouillon | **528 lignes** *(était 529)* |
+| le miroir local | **528 brouillons** — les deux comptes s'accordent |
+| la file | vide |
+| **durée totale** | **1 min 13 s**, du clic au catalogue |
+
+⭐⭐⭐ **`app_dossier_id = 7 589 119` est EXACTEMENT le `app_brouillon_id` qu'elle portait.** Le
+numéro n'a pas changé en traversant les index — **la première des cinq règles du projet,
+*« un numéro ne se perd jamais »*, est prouvée sur un passage réel.**
+
+⭐ Et `diffusable 0` : elle est au catalogue, **publiée nulle part**. Ce que la modale promettait.
+
+**⚠ Un reste, mineur et noté** : son cache de détail brouillon est encore là. Il **périmera seul**
+dans ~21 h et plus personne ne le lit *(elle n'est plus dans le panier)*. Le nettoyer tout de
+suite serait une ligne de plus dans le handler — **non fait, pas urgent.**
+
+**⚠ Et une faiblesse de mon journal, vue à cette occasion** : la correction du miroir ne
+s'écrit au journal **qu'en cas d'échec**. Un silence vaut donc succès — ce que le projet
+n'aime pas. Ici j'ai vérifié dans le miroir lui-même ; **il faudrait un pas « done ».**
