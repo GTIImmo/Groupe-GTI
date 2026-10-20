@@ -1,0 +1,85 @@
+/* bienvu — visionneuse d'image. Toutes les règles portent une classe .bvv-* (ou .bvv) : rien ne s'applique
+   tant que le composant BienvuViewer n'est pas rendu, c'est-à-dire quand l'interrupteur est éteint. */
+@keyframes bvv-tourne { to { transform: rotate(360deg); } }
+
+.bvv {
+  position: fixed; inset: 0; z-index: 5000;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  background: rgba(20, 21, 21, 0.95); color: #ffffff; outline: 0;
+  font-family: var(--bv-font-ui, system-ui, -apple-system, 'Segoe UI', sans-serif);
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* barre du haut : titre, compteur, outils */
+.bvv-bar {
+  display: flex; align-items: center; gap: 14px; padding: 12px 18px;
+  background: #222323; border-bottom: 3px solid var(--bv-magenta, #c5005f);
+}
+.bvv-ttl { display: grid; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.bvv-ttl strong { font-family: var(--bv-font-display, inherit); font-weight: 800; font-size: 16px; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bvv-ttl span { font-size: 13px; color: #cfd3d4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bvv-count { flex: none; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 4px 12px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); }
+.bvv-flag { flex: none; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: #fdf1df; color: #7a4300; }
+.bvv-tools { flex: none; display: flex; align-items: center; gap: 4px; }
+.bvv-tools :is(button, a) {
+  width: 38px; height: 38px; display: inline-grid; place-items: center; padding: 0; border-radius: 12px; cursor: pointer; text-decoration: none;
+  color: #ffffff; background: transparent; border: 1px solid transparent; font: inherit;
+}
+.bvv-tools :is(button, a):hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+.bvv-tools button:disabled { opacity: 0.35; cursor: default; }
+.bvv-tools svg { width: 20px; height: 20px; }
+.bvv-zoom { min-width: 48px; text-align: center; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: #cfd3d4; }
+.bvv-close { margin-left: 6px; border-color: rgba(255, 255, 255, 0.3) !important; }
+
+/* la scène : la photo, grande, sur le noir */
+.bvv-scene { position: relative; min-height: 0; overflow: hidden; display: grid; place-items: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+.bvv-scene.is-zoom { cursor: grab; }
+.bvv-scene.is-zoom:active { cursor: grabbing; }
+.bvv-img {
+  position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block;
+  opacity: 0; transition: opacity 0.18s ease; transform-origin: center center; will-change: transform;
+  border-radius: 4px;
+}
+.bvv-img.is-ok { opacity: 1; }
+.bvv-attente {
+  position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2); border-top-color: var(--bv-magenta, #c5005f); animation: bvv-tourne 0.9s linear infinite;
+}
+.bvv-erreur { display: grid; gap: 10px; justify-items: center; text-align: center; padding: 24px; max-width: 360px; }
+.bvv-erreur a { color: #ffffff; font-weight: 700; text-underline-offset: 3px; }
+
+/* flèches */
+.bvv-nav {
+  position: absolute; top: 50%; width: 48px; height: 48px; margin-top: -24px; display: grid; place-items: center; padding: 0;
+  border-radius: 50%; cursor: pointer; color: #ffffff; background: rgba(34, 35, 35, 0.72); border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(4px);
+}
+.bvv-nav:hover { background: var(--bv-magenta, #c5005f); border-color: var(--bv-magenta, #c5005f); }
+.bvv-nav svg { width: 24px; height: 24px; }
+.bvv-prev { left: 16px; } .bvv-next { right: 16px; }
+
+/* bande de vignettes */
+.bvv-bande { display: flex; gap: 8px; padding: 10px 18px 12px; overflow-x: auto; background: #222323; border-top: 1px solid rgba(255, 255, 255, 0.1); scrollbar-width: thin; }
+.bvv-vign { flex: none; width: 72px; height: 54px; padding: 0; border-radius: 10px; overflow: hidden; cursor: pointer; background: #3a3d3e; border: 2px solid transparent; opacity: 0.62; transition: opacity 0.15s ease; }
+.bvv-vign img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bvv-vign:hover { opacity: 1; }
+.bvv-vign.is-on { opacity: 1; border-color: var(--bv-magenta, #c5005f); box-shadow: 0 0 0 2px rgba(197, 0, 95, 0.35); }
+.bvv-vign.is-masquee img { filter: grayscale(0.85); }
+
+.bvv :is(button, a):focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .bvv-bar { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
+  .bvv-ttl { order: 1; flex: 1 1 60%; }
+  .bvv-tools { order: 2; }
+  .bvv-count, .bvv-flag { order: 3; }
+  .bvv-zoom, .bvv-tools button[aria-label='Zoom arrière'], .bvv-tools button[aria-label='Zoom avant'], .bvv-tools button[aria-label="Ajuster à l'écran"] { display: none; }
+  .bvv-nav { width: 40px; height: 40px; margin-top: -20px; }
+  .bvv-prev { left: 8px; } .bvv-next { right: 8px; }
+  .bvv-bande { padding: 8px 12px 10px; }
+  .bvv-vign { width: 60px; height: 46px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bvv-img { transition: none; }
+  .bvv-attente { animation: none; }
+}

@@ -233,6 +233,8 @@ import { bvBoot } from './lib/bienvuBoot'
 import { APP_BIENVU_ENABLED } from './lib/bienvuFlag'
 import { BienvuLogin } from './BienvuLogin'
 import { BienvuLoader, BienvuLogo, BienvuSymbol } from './BienvuLogo'
+import { BienvuViewer } from './BienvuViewer'
+import type { ViewerItem } from './BienvuViewer'
 import { BvIcon } from './BienvuIcons'
 import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
@@ -11691,7 +11693,7 @@ function ConsolePhotosPanel({
   dossier: Dossier
   apiImages: Array<{ url: string; legend: string }>
   compact?: boolean
-  onOpenImage?: (url: string) => void
+  onOpenImage?: (url: string, album?: ViewerItem[]) => void
   onJobCreated?: (job: ConsoleJob) => void
   onMissingNegotiator?: MissingNegotiatorHandler
 }) {
@@ -12087,6 +12089,10 @@ function ConsolePhotosPanel({
   //   en a besoin.
   const plafondGalerie = compact ? 6 : 12
   const galleryPhotos = toutesLesPhotos ? sourcePhotos : sourcePhotos.slice(0, plafondGalerie)
+  // la visionneuse parcourt les photos affichées, masquées comprises (signalées) ; une photo sans adresse n'y figure pas
+  const albumVisionneuse: ViewerItem[] = galleryPhotos
+    .filter((p) => Boolean(p.url_hd || p.url_preview))
+    .map((p) => ({ url: (p.url_hd || p.url_preview) as string, thumb: p.url_preview || p.url_hd, legend: p.legend, masquee: !p.visible }))
   const photosCachees = Math.max(0, sourcePhotos.length - galleryPhotos.length)
 
   // ⑦-3c : LE RANG D'UNE PHOTO PARMI LES VISIBLES -- calculé sur les DONNÉES, pas
@@ -12212,7 +12218,7 @@ function ConsolePhotosPanel({
               //   (fa-cockpit-v2.css). Elle devient un <div> parce qu'elle porte DEUX boutons --
               //   ouvrir l'image, la supprimer -- et qu'un bouton dans un bouton est interdit.
               <div key={photo.id} className={`console-photo-tile ${photo.visible ? 'is-visible' : 'is-hidden'}${suppressionDemandee ? ' is-suppression' : ''}`}>
-                <button className="console-photo-ouvrir" type="button" onClick={() => onOpenImage?.(photo.url_hd || url)}>
+                <button className="console-photo-ouvrir" type="button" onClick={() => onOpenImage?.(photo.url_hd || url, albumVisionneuse)}>
                   <img src={url} alt={photo.legend || dossier.titre_bien} />
                 </button>
                 <span className="console-photo-badge">{suppressionDemandee ? 'Suppression demandée' : photo.source === 'api_preview' ? 'API' : photo.visible ? 'Visible' : 'Masquée'}</span>
@@ -13322,6 +13328,10 @@ export default function App() {
   const [detailDiffusableObserved, setDetailDiffusableObserved] = useState<boolean | null>(null)
   const [detailDiffusableSaved, setDetailDiffusableSaved] = useState<boolean | null>(null)
   const [detailImageModalUrl, setDetailImageModalUrl] = useState<string | null>(null)
+  // bienvu : la liste des photos du bien, pour passer de l'une à l'autre dans la visionneuse (absente = une seule image)
+  const [detailImageAlbum, setDetailImageAlbum] = useState<ViewerItem[] | null>(null)
+  const openDetailImage = (url: string, album?: ViewerItem[]) => { setDetailImageModalUrl(url); setDetailImageAlbum(album && album.length > 1 ? album : null) }
+  const closeDetailImage = () => { setDetailImageModalUrl(null); setDetailImageAlbum(null) }
   const [diffusionApplyResult, setDiffusionApplyResult] = useState<null | {
     dry_run: boolean
     diffusable_changed: boolean
@@ -15022,6 +15032,7 @@ export default function App() {
 
   function closeDossierDetailPage() {
     setDetailImageModalUrl(null)
+    setDetailImageAlbum(null)
     // Retour contextuel : si ce dossier a été ouvert depuis une fiche contact, le retour
     // rouvre ce contact (écran Contacts) au lieu de simplement fermer le détail.
     if (dossierReturnContactId) {
@@ -19261,7 +19272,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
   const appModals = (
     <>
-        {detailImageModalUrl ? (
+        {detailImageModalUrl && APP_BIENVU_ENABLED ? (
+          <BienvuViewer
+            items={detailImageAlbum ?? [{ url: detailImageModalUrl }]}
+            index={Math.max(0, (detailImageAlbum ?? []).findIndex((it) => it.url === detailImageModalUrl))}
+            titre={selectedDossier?.titre_bien ?? 'Annonce'}
+            onIndex={(i) => { const it = (detailImageAlbum ?? [])[i]; if (it) setDetailImageModalUrl(it.url) }}
+            onClose={closeDetailImage}
+          />
+        ) : null}
+        {detailImageModalUrl && !APP_BIENVU_ENABLED ? (
           <div className="modal-overlay" onClick={() => setDetailImageModalUrl(null)}>
             <section className="modal-panel modal-panel-image" onClick={(event) => event.stopPropagation()}>
               <div className="panel-head">
@@ -22513,7 +22533,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 diffusableObserved={detailDiffusableObserved}
                 diffusableSaved={detailDiffusableSaved}
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
-                onOpenImage={setDetailImageModalUrl}
+                onOpenImage={openDetailImage}
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
@@ -23498,7 +23518,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 diffusableObserved={detailDiffusableObserved}
                 diffusableSaved={detailDiffusableSaved}
                 adminPilotSurface={(screen === 'mandats' || screen === 'suivi') ? 'both' : 'none'}
-                onOpenImage={setDetailImageModalUrl}
+                onOpenImage={openDetailImage}
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
