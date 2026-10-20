@@ -12886,6 +12886,12 @@ export default function App() {
   const [userNegotiatorContext, setUserNegotiatorContext] = useState<UserNegotiatorContext | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [lightweightDetailTarget, setLightweightDetailTarget] = useState<LightweightDetailTarget | null>(null)
+  // ⑦ piece ④b (20/10/2026) : la modale d'activation. Elle remplace un
+  //   window.confirm du navigateur -- « groupe-gti.vercel.app indique » -- qui ne
+  //   pouvait ni montrer le bien, ni mettre en avant le catalogue de destination,
+  //   ni rassurer sur la diffusion (remarque de Frederic, 20/10).
+  const [activerTarget, setActiverTarget] = useState<Dossier | null>(null)
+  const [activerEnCours, setActiverEnCours] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const sessionRef = useRef<Session | null>(null)
   const [bootLoading, setBootLoading] = useState(true)
@@ -14838,17 +14844,26 @@ export default function App() {
       setErrorMessage("Ce brouillon n'a aucun statut : il n'y a rien a activer. Terminez la saisie dans Hektor, ou supprimez-le.")
       return
     }
-    const quoi = dossier.titre_bien?.trim() || dossier.numero_dossier || String(dossier.hektor_annonce_id)
-    // ⚠ Le bien QUITTE les brouillons : on confirme en NOMMANT le statut qu'il porte
-    //   deja (518 des 529 en ont un), et en disant que la DIFFUSION ne bouge pas --
-    //   « mettre en ligne » pretait a confusion avec elle (remarque de Frederic, 20/10).
-    if (!window.confirm(`Activer cette annonce ?\n\n« ${quoi} »\n\nElle quittera les brouillons et rejoindra le catalogue « ${statut} ».\nSa diffusion n'est pas modifiee.`)) return
+    // ⭐ ON N'ENVOIE RIEN ICI : on ouvre la modale, qui MONTRE le statut que la
+    //   fiche porte deja (choix de Frederic : montrer, pas faire choisir).
+    setActiverTarget(dossier as Dossier)
+  }
+
+  // ⑦ piece ④b : le vrai envoi, quand l'humain a confirme dans la modale.
+  async function confirmerActivation() {
+    if (!activerTarget) return
+    const statut = String(activerTarget.statut_annonce ?? '').trim()
+    if (!statut) return
+    setActiverEnCours(true)
     try {
-      const job = await createExitHektorDraftAnnonceJob({ dossier, priority: 20 })
+      const job = await createExitHektorDraftAnnonceJob({ dossier: activerTarget, priority: 20 })
       rememberHektorActionJob(job)
       setNoticeMessage(`Activation demandee. L'annonce rejoindra « ${statut} ».`)
+      setActiverTarget(null)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Impossible de demander l'activation")
+    } finally {
+      setActiverEnCours(false)
     }
   }
 
@@ -19352,6 +19367,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             onOpenReady={() => void openCachedLightweightDetail()}
           />
         ) : null}
+        {activerTarget ? (
+          <ActiverAnnonceModal
+            target={activerTarget}
+            envoiEnCours={activerEnCours}
+            onClose={() => setActiverTarget(null)}
+            onConfirm={() => void confirmerActivation()}
+          />
+        ) : null}
         {createFlow !== 'closed' ? (
           <div className="modal-overlay" onClick={() => setCreateFlow('closed')}>
             <section className="modal-panel gti-cc" onClick={(event) => event.stopPropagation()}>
@@ -22583,7 +22606,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
-                onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={isManagerOrAdmin ? handleExitDraftAnnonce : undefined} onOpenLightweightDetail={openLightweightDetailImport}
+                onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={handleExitDraftAnnonce} onOpenLightweightDetail={openLightweightDetailImport}
                 onOpenContact={openContactDirectory}
                 onHektorActionJobCreated={rememberHektorActionJob}
                 onMissingNegotiator={openMissingNegotiatorModal}
@@ -23334,7 +23357,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               author: event.actor_name || event.event_label,
               date: event.event_at,
               message: parseJson<{ message?: string | null }>(event.payload_json, {}).message || '',
-            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={isManagerOrAdmin ? handleExitDraftAnnonce : undefined} onOpenLightweightDetail={openLightweightDetailImport} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
+            }))} requestHistoryDiffusion={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestMessagesDiffusion={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_diffusion')} requestHistoryPriceDrop={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestMessagesPriceDrop={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_baisse_prix')} requestHistoryCancellation={buildRequestHistoryForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} requestMessagesCancellation={buildRequestMessagesForType(selectedDossierRequests, selectedDossierAllRequestEvents, 'demande_annulation_mandat')} actionRequests={selectedDossierRequests} actionRole="nego" onOpenRequestModal={openRequestModal} onOpenDiffusionModal={openDiffusionModal} onOpenContact={openContactDirectory} onHektorActionJobCreated={rememberHektorActionJob} onMissingNegotiator={openMissingNegotiatorModal} onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined} onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={handleExitDraftAnnonce} onOpenLightweightDetail={openLightweightDetailImport} detailLoading={detailLoading} onBack={closeDossierDetailPage} canManageContacts={canManageContacts} contactHektorUserEmail={contactHektorUserEmail} contactHektorUserId={contactHektorUserId} hektorNegotiators={hektorNegotiators} profileRole={profile?.role ?? null} sessionEmail={sessionEmail} />
         ) : screen === 'annonces' ? (
           <StockScreen dossiers={visibleDossiers} dossiersTotal={dossiersTotal} dossierPage={dossierPage} dossierTotalPages={dossierTotalPages} hektorActionJobs={activeHektorActionJobs} preparingArchiveDetailIds={preparingArchiveDetailIds} onPrepareArchivedDetail={handlePrepareArchivedAnnonceDetail} onPrevDossier={() => setDossierPage((page) => Math.max(1, page - 1))} onNextDossier={() => setDossierPage((page) => Math.min(dossierTotalPages, page + 1))} onGoToDossierPage={(page) => setDossierPage(Math.min(dossierTotalPages, Math.max(1, page)))} selectedDossier={selectedDossier} address={address} linkedWorkItems={linkedWorkItems} workItems={workItems} workItemsTotal={workItemsTotal} workItemPage={workItemPage} workItemTotalPages={workItemTotalPages} onPrevWorkItem={() => setWorkItemPage((page) => Math.max(1, page - 1))} onNextWorkItem={() => setWorkItemPage((page) => Math.min(workItemTotalPages, page + 1))} onGoToWorkItemPage={(page) => setWorkItemPage(Math.min(workItemTotalPages, Math.max(1, page)))} onSelectDossier={setSelectedDossierId} onOpenDetail={() => setDetailOpen(true)} onFocusDossier={(id) => setSelectedDossierId(id)} pageLoading={pageLoading} hasActiveFilters={activeFilters.length > 0} onResetFilters={resetFilters} />
         ) : screen === 'mandats' ? (
@@ -23568,7 +23591,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 onDeleteAnnonce={isManagerOrAdmin ? openDeleteAnnonceModal : undefined}
                 onArchiveAnnonce={isManagerOrAdmin ? openArchiveAnnonceModal : undefined}
                 onChangeAnnonceStatus={isManagerOrAdmin ? openStatusChangeModal : undefined}
-                onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={isManagerOrAdmin ? handleExitDraftAnnonce : undefined} onOpenLightweightDetail={openLightweightDetailImport}
+                onRestoreAnnonce={handleRestoreHektorAnnonce} onExitDraft={handleExitDraftAnnonce} onOpenLightweightDetail={openLightweightDetailImport}
                 onOpenContact={openContactDirectory}
                 onOpenRapprochement={openRapprochementMandat}
                 onHektorActionJobCreated={rememberHektorActionJob}
@@ -24179,6 +24202,71 @@ function DashboardScreen({
         </div>
       </section>
     </section>
+  )
+}
+
+// ⑦ PIECE ④b (20/10/2026) -- LA MODALE D'ACTIVATION D'UN BROUILLON.
+//
+// Elle remplace un window.confirm du navigateur. Meme habillage que sa voisine
+// « Charger la fiche complete » : Frederic la connait deja.
+// ⭐ Elle MONTRE le statut que la fiche porte deja (518 des 529 en ont un) au lieu
+//   de le faire choisir -- son arbitrage du 20/10.
+// ⭐ Et elle dit noir sur blanc que la DIFFUSION ne bouge pas : « mettre en ligne »
+//   pretait a confusion avec elle. Mesure : diffusable = 0 pour les 529.
+function ActiverAnnonceModal(props: {
+  target: Dossier
+  envoiEnCours: boolean
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  const statut = String(props.target.statut_annonce ?? '').trim()
+  const titre = props.target.titre_bien?.trim() || '[Sans titre]'
+  const ligneDossier = [props.target.numero_dossier, props.target.ville]
+    .filter((v) => v && v !== '-').join(' · ')
+  const ligneNego = [commercialDisplay(props.target), props.target.agence_nom]
+    .filter((v) => v && v !== '-').join(' - ')
+  return (
+    <div className="modal-overlay" onClick={props.onClose}>
+      <section className="modal-panel request-modal-panel lightweight-detail-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="panel-head request-modal-head">
+          <div className="request-modal-title">
+            <p className="eyebrow">Brouillon</p>
+            <h3>Activer cette annonce</h3>
+          </div>
+          <button className="ghost-button button-subtle request-modal-close" type="button" onClick={props.onClose}>Fermer</button>
+        </div>
+        <div className="lightweight-detail-hero">
+          <div className="lightweight-detail-summary">
+            <span className="lightweight-detail-badge">Brouillon</span>
+            <strong className="lightweight-detail-title">{titre}</strong>
+            {ligneDossier ? <span>{ligneDossier}</span> : null}
+            {ligneNego ? <small>{ligneNego}</small> : null}
+          </div>
+          {/* ⭐ la destination, en gros : c'est LA chose a verifier avant de confirmer */}
+          <div className="lightweight-detail-state is-ready">
+            <span aria-hidden="true" />
+            <strong>{statut || '—'}</strong>
+            <small>catalogue de destination</small>
+          </div>
+        </div>
+        <div className="empty-block lightweight-detail-status">
+          {statut ? (
+            <p>Elle quittera les brouillons et rejoindra le catalogue <b>{statut}</b>, <b>qu'elle porte déjà</b> — rien d'autre n'est modifié.</p>
+          ) : (
+            <p>Ce brouillon n'a aucun statut : il n'y a rien à activer. Terminez la saisie dans Hektor, ou supprimez-le.</p>
+          )}
+          <p>⚠ <b>Sa diffusion n'est pas modifiée</b> : elle ne sera publiée sur aucun portail, ni sur la vitrine.</p>
+          <p>C'est réversible : on peut la remettre en brouillon dans Hektor.</p>
+        </div>
+        <div className="mandat-document-actions lightweight-detail-actions">
+          <button className="ghost-button" type="button" onClick={props.onClose} disabled={props.envoiEnCours}>Annuler</button>
+          <button className="ghost-button button-primary" type="button" onClick={props.onConfirm}
+                  disabled={props.envoiEnCours || !statut}>
+            {props.envoiEnCours ? 'Demande envoyée' : 'Activer cette annonce'}
+          </button>
+        </div>
+      </section>
+    </div>
   )
 }
 

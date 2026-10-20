@@ -6728,3 +6728,44 @@ explicitement que la diffusion n'est pas modifiée**.
 **30 contrôles verts**, dont trois neufs : le drapeau sur la fiche · il est posé aux **trois**
 endroits *(en ne comptant que le code, pas les commentaires)* · et les **phrases vues** disent
 « activer » *(« Mettre en ligne » reste légitime pour **Matterport**, une autre fonction)*.
+
+
+### ⑦ ④b — la modale, et le geste ouvert aux négociateurs
+
+**20/10/2026**, après que Frédéric a vu la confirmation en vrai.
+
+**Deux demandes, toutes deux justes :**
+
+1. ⭐ *« il faut que ce bouton soit accessible par négociateur, ses biens — et non la modale
+   changer le statut, même si il réutilise une partie »*.
+   ➡ C'est **exactement pourquoi « activer » est un geste À PART** *(`exit_hektor_draft_annonce`)*
+   et non une variante du changement de statut : **ouvrir l'un n'ouvre pas l'autre.**
+   ⭐⭐ Et **le périmètre se fait tout seul** : la liste des négociateurs dans `can_request_job`
+   appelle `app_console_can_access_dossier`, **qui connaît l'index brouillon depuis la pièce ②**.
+   Donc « ses biens », garanti **par la base**, pas par l'écran.
+
+   | mesure du 20/10 | |
+   |---|---|
+   | **509** brouillons ont un négociateur | leur négociateur pourra les activer |
+   | **20** n'en ont aucun | hors de portée d'un négociateur → admin/manager |
+   | **11** coquilles vides | refusées **pour tout le monde**, à l'écran **et** dans le worker |
+
+2. ⭐ *« peux-tu aussi améliorer la modale de confirmation ? »* — c'était le `window.confirm` du
+   navigateur, avec son *« groupe-gti.vercel.app indique »*. Il ne pouvait ni montrer le bien, ni
+   mettre en avant la destination, ni rassurer sur la diffusion.
+
+   ➡ **Une vraie modale**, sur l'habillage de sa voisine « Charger la fiche complète » *(que
+   Frédéric connaît déjà)* : le bien à gauche, **le catalogue de destination en gros à droite**,
+   et trois phrases — *elle porte déjà ce statut* · ⚠ *sa diffusion n'est pas modifiée* ·
+   *c'est réversible*.
+   ⭐ Elle **montre** le statut, elle ne le fait pas choisir — son arbitrage du 20/10.
+
+**⚠ Les 20 autres `window.confirm` de l'app ne sont pas touchés** : ce serait un autre chantier.
+
+**36 contrôles verts**, dont six neufs : la modale existe et le `confirm` a disparu · elle montre
+la destination · elle parle de la diffusion · le bouton n'est plus réservé admin · le patch ④b et
+son inverse existent · ⚠ **et il ne touche pas aux gestes admin** *(« changer le statut » et
+« archiver » restent réservés — c'est la demande de Frédéric)*.
+
+⛔ **À coller** : `supabase/patch_chantier7_piece4b_activer_par_negociateur_2026-10-20.sql`.
+⭐ **Pas besoin de redémarrer le worker** : rien ne change de son côté.

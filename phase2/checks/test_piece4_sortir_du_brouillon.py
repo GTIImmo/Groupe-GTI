@@ -118,7 +118,7 @@ controle("(18) la propriete est declaree partout ou sa voisine l'est",
          f"{APP.count('onExitDraft?: (dossier: Dossier) => void')} contre "
          f"{APP.count('onRestoreAnnonce?: (dossier: Dossier) => void')}")
 controle("(19) et passee partout ou sa voisine l'est",
-         APP.count("onExitDraft={isManagerOrAdmin ? handleExitDraftAnnonce : undefined}")
+         APP.count("onExitDraft={handleExitDraftAnnonce}")
          == APP.count("onRestoreAnnonce={handleRestoreHektorAnnonce}"))
 
 # ── LES 3 VERROUS (dans le patch a coller) ───────────────────────────────────
@@ -174,11 +174,33 @@ controle("(28) le drapeau est pose aux TROIS endroits (2 listings + la fiche)",
 #   commentaires citent l'ancien libelle pour expliquer pourquoi il a change.
 _vues = ["Activer cette annonce</button>",
          "Activez-la pour pouvoir la travailler.",
-         "confirm(`Activer cette annonce ?",
+         "<h3>Activer cette annonce</h3>",
          "setNoticeMessage(`Activation demandee."]
 controle("(29) ⚠ les phrases VUES disent « activer », jamais « mettre en ligne »",
          all(v in APP for v in _vues),
          f"manquent : {[v for v in _vues if v not in APP]}")
+
+# ═══ ⑦ ④b -- LA MODALE, ET L'OUVERTURE AUX NEGOCIATEURS ═══
+controle("(30) ⭐ une VRAIE modale, plus le window.confirm du navigateur",
+         "function ActiverAnnonceModal(props: {" in APP
+         and "window.confirm(`Activer" not in APP,
+         "la boite du navigateur ne montrait ni le bien, ni la destination")
+controle("(31) elle MONTRE le catalogue de destination",
+         "catalogue de destination" in APP
+         and "qu'elle porte déjà" in APP,
+         "choix de Frederic : montrer le statut, pas le faire choisir")
+controle("(32) et elle dit que la diffusion ne bouge pas",
+         "Sa diffusion n'est pas modifiée" in APP)
+controle("(33) ⭐ le bouton n'est plus reserve admin/manager",
+         "onExitDraft={isManagerOrAdmin" not in APP
+         and APP.count("onExitDraft={handleExitDraftAnnonce}") == 3)
+_p4b = lire("supabase/patch_chantier7_piece4b_activer_par_negociateur_2026-10-20.sql")
+_i4b = lire("supabase/patch_chantier7_piece4b_activer_par_negociateur_2026-10-20_INVERSE.sql")
+controle("(34) le patch ④b et son inverse existent",
+         "exit_hektor_draft_annonce" in _p4b and "exit_hektor_draft_annonce" in _i4b)
+controle("(35) ⚠ et il ne touche PAS aux gestes admin (statut, archivage)",
+         "archive_hektor_annonce" in _p4b and "restent admin" in _p4b,
+         "ouvrir « activer » ne doit pas ouvrir « changer le statut »")
 
 print()
 if echecs:
