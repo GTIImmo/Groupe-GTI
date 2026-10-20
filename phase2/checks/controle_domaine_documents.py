@@ -216,7 +216,10 @@ for libelle, motif in (("re-clages par le CHEMIN", "reconnus par leur chemin"),
                        ("refus de suppression EN BLOC", "SUPPRESSION EN BLOC REFUSEE")):
     try:
         lignes = lire("app_console_job_log?"
-                      f"message=like.*{q(motif)}*&created_at=gte.{q(POSE)}"
+                      # ⚠ ilike, PAS like : le message ecrit « CHEMIN » en majuscules et
+                      #   un `like` distingue la casse -- ce controle a rendu un FAUX 0
+                      #   le 21/10 alors que le journal portait bien sa ligne.
+                      f"message=ilike.*{q(motif)}*&created_at=gte.{q(POSE)}"
                       "&select=job_id,message,payload_preview,created_at"
                       "&order=created_at.desc&limit=12")
         print(f"   {libelle:<32} {len(lignes)} ligne(s)")
