@@ -11,6 +11,64 @@
 
 ---
 
+## 0-bis. FAIT ET EN PRODUCTION — le 20/10/2026 au soir
+
+**La règle V2 est allumée, poussée et vérifiée.** Le chantier est clos.
+
+| | mesure finale, lue chez Supabase |
+|---|---|
+| registre | **31 084 lignes · 12 290 chaînes** *(12 715 avant)* |
+| répartition | 16 071 lignes · **2 orphelines**, toutes d'origine `saisie` |
+| les 4 contrôles de `verifier_regle_chainage.py` | **verts, sortie 0** |
+| `écarts base ↔ règle` | **0** — la base EST le résultat de la V2 |
+| ARNAUD Jean-Luc *(offre 28132 + vente 28133)* | **UNE chaîne** |
+| l'échec du bien 171 *(offre refusée + compromis annulé)* | **UNE chaîne** |
+
+⭐ **Les 2 orphelines restantes sont celles d'AVANT** — l'affaire 1001347, disparue du
+registre, qui porte une des deux seules répartitions saisies à la main. **La V2 n'en a
+laissé aucune derrière elle.**
+
+### Ce qui a été lancé, et dans quel ordre
+
+```
+1. phase2/sync/affaire_ledger.py --refresh     (local : 12 276 chaines)
+2. phase2/sync/affaire_ledger.py --push        (31 084 lignes, 0 ecartee)
+3. APP_CHAINAGE_V2=1 pose dans .env            (chemin PROUVE : rend True)
+4. repartition_commission.py --purger-orphelines --pousser
+      purge   : derivees_supprimees 27 · saisies_orphelines_gardees 2
+      pousse  : lignes_ecrites 27 · dossiers_ecrits 14 · refuses 0
+5. git push                                    (fusion du front « bienvu » comprise)
+```
+
+⚠ **Les gestes 4 et 5 ont été lancés par Frédéric** : le garde-fou de l'outil m'a refusé
+l'écriture partagée et la publication. C'est la règle du projet, pas un incident.
+
+⭐ **Et la répartition s'est réparée par le chemin du projet, sans aucun patch.**
+`app_repartition_purger_orphelines` ne supprime que `origine LIKE 'hektor%'` *(dérivé,
+donc refabricable)* et **garde les saisies humaines en les comptant**. La garde du 15/09
+a fait le travail : j'allais écrire 14 `UPDATE` pour rien.
+
+### Ce qui reste, nommé
+
+```
+- les 213 transactions SANS DATE (dont les compromis a 0000-00-00) : la 3e faille,
+  ENTIERE. Ni mesure ni correctif dans ce chantier.
+- 42 ventes seules · 6 ventes ambigues · 4 abstentions de compromis : elles
+  restent SEULES ET DITES AU JOURNAL. C'est voulu : on ne devine pas.
+- le § 3.4 (vente -> offre refusee) et le § 2.3 pour un compromis VIVANT :
+  ECARTES PAR FREDERIC, ce n'est pas un oubli.
+- le retour arriere reste GRATUIT : APP_CHAINAGE_V2=0 dans .env, et le run de la
+  nuit suivante repose les anciens numeros. Aucune donnee a reparer.
+```
+
+### Ce que ça débloque
+
+- l'appariement avec le classeur se refait **sur une base saine** : les 37 « ventes
+  manquantes » devraient tomber à ~3 *(à remesurer)* ;
+- le registre des transactions cesse de montrer deux affaires là où il n'y en a qu'une.
+
+---
+
 ## 1. L'OBJECTIF, EN UNE PHRASE
 
 Une affaire réelle doit faire **une seule chaîne** — que son déroulé soit
