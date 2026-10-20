@@ -5706,3 +5706,68 @@ sur 940/940)*, **150 vignettes publiques**, et ⭐⭐ **513 couvertures calculé
    introuvable », 3 index sur 4)* — non revérifié ce jour.
 4. ⚠ **Si le détail manquant se rattraperait tout seul** : la synchro les voit dans la liste depuis
    des mois *(certains de mars)* et ne les a jamais demandés. **Pourquoi — non élucidé.**
+
+
+### ⭐⭐⭐ UN BROUILLON EST MODIFIABLE CHEZ HEKTOR — mesuré le 20/10, et ça corrige les notes
+
+> Frédéric : *« peux-tu tester de modifier une fiche brouillon ? peut-être que le problème était
+> plutôt là ? si la modification fonctionne on pourrait rendre cet index complet, mais c'est
+> étonnant que nous ne l'ayons pas fait. »*
+
+⭐ **Il avait raison : CE TEST N'AVAIT JAMAIS ÉTÉ FAIT.** La note du 22/06 a bien éprouvé
+`update_hektor_annonce_fields` — **mais sur l'annonce jetable 62556**, et elle dit elle-même que
+notre création fabrique une annonce **`is_draft=false`** depuis le 15/05. ➡ **La modification était
+prouvée sur une NON-brouillon.**
+
+### ⭐⭐ ET LE TEST SE FAIT EN LECTURE — c'est ce qui l'a rendu possible tout de suite
+
+Le worker **charge le formulaire avant d'écrire** *(`postHektorMefUpdate`)*, par un **GET** :
+```
+?mode=ihmChargeGroupe&idAnnonce=<id>&group=ag_interieur&consultMode=editer&ajax=ajax
+```
+➡ Si Hektor sert ce formulaire pour un brouillon, **la modification est techniquement possible**.
+
+**`Console/sonde_brouillon_modifiable.js`** *(neuve, lecture seule, 4 appels, arrêt net au premier
+refus, session du worker réutilisée et jamais réécrite)* :
+
+| cible | HTTP | formulaire | les 3 champs que le worker écrit |
+|---|---|---|---|
+| **63314** *(brouillon, avec détail)* | 200 · 16 966 car. | 9 input, 3 select | ⭐ `surfappart, nbpieces, NB_CHAMBRES` |
+| **63275** *(brouillon, SANS détail)* | 200 · 12 061 car. | 6 input, 1 select | ⭐ **les 3 aussi** |
+| **62774** *(vraie annonce)* | 200 · 16 976 car. | 9 input, 3 select | ✅ **TÉMOIN INVERSE** |
+| **63073** *(vraie annonce)* | 200 · 22 477 car. | 18 input, 3 select | ✅ **TÉMOIN INVERSE** |
+
+⭐ **Le témoin inverse est vert** *(les vraies annonces répondent aussi)*, donc la sonde mesure bien
+ce qu'elle prétend — sans lui, une session expirée aurait rendu « rien » partout et serait passée
+pour « les brouillons ne sont pas modifiables ».
+
+➡ ⭐⭐⭐ **UN BROUILLON SERT LE MÊME FORMULAIRE QU'UNE VRAIE ANNONCE. La lecture seule est une
+DÉCISION, pas une limite de Hektor.**
+
+⚠⚠ **ET ÇA CORRIGE LES NOTES DU 23/06 ET LA MÉMOIRE**, qui affirment *« dans Hektor il vit dans le
+wizard, pas dans la fiche »*. **Mesuré : sa fiche répond.** ⭐ *Le wizard est le chemin par lequel on
+le CRÉE — pas le seul par lequel on peut y revenir.*
+
+⭐ Détail parlant : le brouillon **sans** détail sert un formulaire **plus petit** *(6 input contre 9)*
+— **le formulaire s'adapte à ce qui est rempli.**
+
+### ⛔ CE QUE CE TEST NE PROUVE PAS, et le dernier point est le vrai risque
+
+| | |
+|---|---|
+| ⛔ **qu'un POST réussirait** | le GET sert le formulaire ; **écrire est autre chose** |
+| ⛔ **que le prix passerait** | note du 22/06 : *« prix refusé hors workflow mandat »*, et `link_hektor_mandant` n'a **jamais** tourné en production |
+| ⚠⚠ **ce que fait le WIZARD ensuite** | un brouillon est une saisie **en cours**. Si on écrit un champ et que la personne finit son wizard après, **son wizard peut écraser notre écriture** — ou devenir incohérent. ⭐ **C'est très probablement la raison pour laquelle on ne l'a jamais fait, et aucune note ne l'a écrite** |
+
+### ⭐ LA CIBLE D'UN ESSAI RÉEL, SI FRÉDÉRIC LE VEUT
+
+**384 brouillons sont abandonnés depuis avant le 20/06**, et les plus anciens portent
+`datemaj = 0000-00-00` *(jamais modifiés depuis leur création)* : **62554, 62546, 62540, 62525,
+62514** — créés en juin, jamais retouchés. **Ce sont les cibles qui ne dérangent personne.**
+
+⚠ **Et l'essai a DEUX moitiés, dont la seconde n'est pas la mienne** :
+1. **moi** : lire la valeur d'un champ anodin, l'écrire changée, relire pour prouver que Hektor a
+   accepté, puis remettre l'original et le re-prouver — **5 appels, et ça ÉCRIT chez Hektor** ;
+2. ⭐⭐ **lui** : **ouvrir ce brouillon dans le wizard de Hektor** et dire ce qu'il voit. **Seul un
+   humain peut répondre à « le wizard respecte-t-il notre écriture ? »** — et c'est la question qui
+   décide si l'index peut devenir complet.
