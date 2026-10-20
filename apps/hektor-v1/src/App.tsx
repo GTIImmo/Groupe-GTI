@@ -14835,18 +14835,20 @@ export default function App() {
     setNoticeMessage(null)
     const statut = String(dossier.statut_annonce ?? '').trim()
     if (!statut) {
-      setErrorMessage("Ce brouillon n'a aucun statut : il n'y a rien a mettre en ligne. Terminez la saisie dans Hektor, ou supprimez-le.")
+      setErrorMessage("Ce brouillon n'a aucun statut : il n'y a rien a activer. Terminez la saisie dans Hektor, ou supprimez-le.")
       return
     }
     const quoi = dossier.titre_bien?.trim() || dossier.numero_dossier || String(dossier.hektor_annonce_id)
-    // ⚠ Le bien QUITTE les brouillons : on demande confirmation, en nommant la destination.
-    if (!window.confirm(`Mettre « ${quoi} » en ligne ?\n\nIl quittera les brouillons et rejoindra « ${statut} ».`)) return
+    // ⚠ Le bien QUITTE les brouillons : on confirme en NOMMANT le statut qu'il porte
+    //   deja (518 des 529 en ont un), et en disant que la DIFFUSION ne bouge pas --
+    //   « mettre en ligne » pretait a confusion avec elle (remarque de Frederic, 20/10).
+    if (!window.confirm(`Activer cette annonce ?\n\n« ${quoi} »\n\nElle quittera les brouillons et rejoindra le catalogue « ${statut} ».\nSa diffusion n'est pas modifiee.`)) return
     try {
       const job = await createExitHektorDraftAnnonceJob({ dossier, priority: 20 })
       rememberHektorActionJob(job)
-      setNoticeMessage(`Mise en ligne demandee. L'annonce rejoindra « ${statut} ».`)
+      setNoticeMessage(`Activation demandee. L'annonce rejoindra « ${statut} ».`)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Impossible de demander la mise en ligne")
+      setErrorMessage(error instanceof Error ? error.message : "Impossible de demander l'activation")
     }
   }
 
@@ -28541,7 +28543,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
     //   `ro` comme l'archive : on regarde, on ne touche pas -- sauf la seule issue,
     //   « Mettre en ligne », posee dans le bandeau ci-dessous (patron : « Desarchiver »).
     brouillon: { label: 'Brouillon', led: '#c98a1e', ro: true,
-      roban: 'Brouillon — saisie commencée puis laissée en attente dans Hektor. Mettez-le en ligne pour pouvoir le travailler.',
+      roban: 'Brouillon — saisie commencée puis laissée en attente dans Hektor. Activez-la pour pouvoir la travailler.',
       desc: 'Saisie en cours chez Hektor — aucune diffusion, aucun mandat.',
       sub: 'Brouillon · saisie à terminer',
       sc: [{ label: "Voir l'annonce", rubKey: 'lebien' }, { label: 'Voir les photos', rubKey: 'photos' }],
@@ -29789,7 +29791,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                           patron exact de « Desarchiver » ci-dessus. Le cran est en lecture
                           seule (option A, decidee le 20/10) : ce bouton est le seul qui ecrit. */}
                       {estBrouillon && props.onExitDraft ? (
-                        <button type="button" className="fa-ck-rep-btn" onClick={() => props.onExitDraft?.(dossier)}>Mettre en ligne</button>
+                        <button type="button" className="fa-ck-rep-btn" onClick={() => props.onExitDraft?.(dossier)}>Activer cette annonce</button>
                     ) : null}
                   </div>
                 ) : null}

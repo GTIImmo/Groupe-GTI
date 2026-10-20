@@ -6690,3 +6690,41 @@ là où j'en attendais un.
 ⚠ **Non mesuré, et je le dis** : ce qu'il advient de l'annonce **immédiatement après** la
 bascule dans l'écran *(elle quitte le panier brouillon, puis un read-through la fait entrer dans
 le parc)*. La chaîne est écrite et chaque maillon est prouvé séparément ; **l'enchaînement, non.**
+
+
+### ⚠⚠ LE DRAPEAU QUI MANQUAIT SUR LA FICHE — trouvé par Frédéric, en regardant
+
+Il a ouvert une fiche de brouillon et dit : *« rien ne montre que c'est un brouillon et qu'il
+faut le basculer »*. **Il avait raison, et c'était pire que ça.**
+
+`is_brouillon` n'était posé qu'à **deux endroits**, `api.ts:4978` et `5180` — **tous deux des
+requêtes de LISTING**. La fonction qui construit la **fiche ouverte**
+*(`loadLightweightAnnonceDetailCache`)* ne le posait **jamais**.
+
+| conséquence | |
+|---|---|
+| le cran **« Brouillon »** | ⛔ jamais affiché — `estBrouillon` était faux |
+| le bouton | ⛔ jamais affiché |
+| ⚠⚠ **la lecture seule** | ⛔ **pas en vigueur** : `isReadOnlyLightweightDetail` rendait faux, donc la fiche s'ouvrait **avec tous les boutons qui écrivent** |
+
+➡ **L'option A n'était pas appliquée sur la fiche ouverte.** Je l'avais **déduite du code**
+au lieu de **la mesurer sur la fiche**.
+
+⭐ **Pourquoi ça a glissé** : les deux familles sœurs n'ont pas besoin de drapeau — une archive
+se reconnaît à `archive === '1'`, un Vendu/Clos à son statut, et **ces deux champs sont dans la
+charge**. Le brouillon est **la seule famille** qui dépend d'un drapeau **posé par le front**.
+
+**Corrigé en une ligne**, le même patron que le listing :
+`return detail ? ({ ...detail, is_brouillon: true } as DetailedDossier) : null`
+
+### ⭐ Et le vocabulaire : « Activer cette annonce », pas « mettre en ligne »
+
+Remarque de Frédéric : *« mettre en ligne »* prête à confusion avec la **diffusion**. Mesure qui
+lui donne raison : **`diffusable = 0` pour les 529, sans exception**, et le geste n'y touche pas.
+➡ Le bouton dit **« Activer cette annonce »**, et la confirmation **nomme le statut que la fiche
+porte déjà** *(518 sur 529 en ont un — choix de Frédéric : montrer, pas faire choisir)* **et dit
+explicitement que la diffusion n'est pas modifiée**.
+
+**30 contrôles verts**, dont trois neufs : le drapeau sur la fiche · il est posé aux **trois**
+endroits *(en ne comptant que le code, pas les commentaires)* · et les **phrases vues** disent
+« activer » *(« Mettre en ligne » reste légitime pour **Matterport**, une autre fonction)*.

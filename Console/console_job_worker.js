@@ -4565,7 +4565,7 @@ async function handleExitHektorDraftAnnonce(job) {
   //    autrement. Une regle qui ne vit qu'a l'ecran n'est pas une regle.
   const statutConnu = String(dossier.statut_annonce || "").trim();
   if (!statutConnu) {
-    throw new Error(`Le brouillon ${annonce} n'a aucun statut : il n'y a rien a mettre en ligne. `
+    throw new Error(`Le brouillon ${annonce} n'a aucun statut : il n'y a rien a activer. `
       + `Terminez la saisie dans Hektor, ou supprimez-le.`);
   }
 

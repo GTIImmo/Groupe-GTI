@@ -99,7 +99,7 @@ controle("(12) App.tsx a son gestionnaire ET l'importe",
          "async function handleExitDraftAnnonce(" in APP
          and "  createExitHektorDraftAnnonceJob," in APP)
 controle("(13) ⚠ l'ecran refuse les coquilles AVANT d'envoyer",
-         "il n'y a rien a mettre en ligne" in APP)
+         "il n'y a rien a activer" in APP)
 controle("(14) ⭐ LE CRAN UNIQUE : un brouillon est un brouillon avant tout",
          "const ckStage = estBrouillon ? 'brouillon'" in APP,
          "sinon un brouillon Estimation et un brouillon Actif n'ont pas la meme fiche")
@@ -110,7 +110,7 @@ controle("(16) ⚠ et il ne propose PLUS « Creer le mandat »",
          and "Creer le mandat" not in APP.split("brouillon: { label: 'Brouillon'")[1][:600]
          and "Créer le mandat" not in APP.split("brouillon: { label: 'Brouillon'")[1][:600])
 controle("(17) ⭐ LE BOUTON existe, dans le bandeau de lecture seule",
-         "props.onExitDraft?.(dossier)}>Mettre en ligne</button>" in APP,
+         "props.onExitDraft?.(dossier)}>Activer cette annonce</button>" in APP,
          "le cran est `ro` : sans bouton dans le bandeau, AUCUNE issue")
 controle("(18) la propriete est declaree partout ou sa voisine l'est",
          APP.count("onExitDraft?: (dossier: Dossier) => void")
@@ -153,6 +153,32 @@ for nom, texte in (("patch", PATCH), ("inverse", INVERSE), ("temoin", TEMOIN)):
             nus.append(f"{nom}:{texte[:m.start()].count(chr(10)) + 1} ({variable})")
 controle("(26) ⚠⚠ LECON 30 : tout litteral multi-ligne est normalise chr(13)",
          not nus, f"non normalises : {nus}")
+
+# ═══ ⭐⭐ LE DRAPEAU SUR LA FICHE -- le defaut trouve par Frederic en regardant ═══
+#
+# `is_brouillon` n'etait pose que dans les deux requetes de LISTING. La FICHE
+# OUVERTE ne le portait pas -> ni cran « Brouillon », ni bouton, ET
+# isReadOnlyLightweightDetail rendait FAUX : la fiche d'un brouillon s'ouvrait avec
+# TOUS les boutons qui ecrivent. L'option A n'etait pas en vigueur.
+controle("(27) ⭐⭐ la FICHE OUVERTE porte le drapeau is_brouillon",
+         'is_brouillon: true } as DetailedDossier' in API,
+         'sans ca : ni cran, ni bouton, ET la lecture seule ne s applique pas')
+# ⚠ On ne compte QUE le code : une ligne de commentaire qui cite le motif n'est pas
+#   une pose. (Mon propre commentaire en cite une -- il ferait croire a 4.)
+_poses = [l for l in API.split(chr(10))
+          if 'is_brouillon: true' in l and not l.strip().startswith('//')]
+controle("(28) le drapeau est pose aux TROIS endroits (2 listings + la fiche)",
+         len(_poses) == 3, f"{len(_poses)} au lieu de 3")
+# ⚠ On regarde les PHRASES VUES PAR L'HUMAIN, pas le fichier entier : « Mettre en
+#   ligne » reste legitime pour MATTERPORT (action 'online', l. 7871), et mes propres
+#   commentaires citent l'ancien libelle pour expliquer pourquoi il a change.
+_vues = ["Activer cette annonce</button>",
+         "Activez-la pour pouvoir la travailler.",
+         "confirm(`Activer cette annonce ?",
+         "setNoticeMessage(`Activation demandee."]
+controle("(29) ⚠ les phrases VUES disent « activer », jamais « mettre en ligne »",
+         all(v in APP for v in _vues),
+         f"manquent : {[v for v in _vues if v not in APP]}")
 
 print()
 if echecs:

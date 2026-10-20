@@ -5506,7 +5506,24 @@ export async function loadHistoricalAnnonceDetailCache(hektorAnnonceId: number |
 }
 
 export async function loadBrouillonAnnonceDetailCache(hektorAnnonceId: number | string): Promise<DetailedDossier | null> {
-  return loadLightweightAnnonceDetailCache('app_brouillon_annonce_detail_cache', 'app_brouillon_annonce_index_current', 'app_brouillon_id', 'app_brouillon_id', '0', hektorAnnonceId)
+  // ⚠⚠ 20/10/2026 -- LA LIGNE QUI MANQUAIT, ET QUI RENDAIT TOUT INVISIBLE.
+  //
+  //   `is_brouillon` n'est pose qu'a deux endroits, et TOUS DEUX sont des requetes
+  //   de LISTING (plus haut : `.map((row) => ({ ...row, is_brouillon: true }))`).
+  //   La FICHE OUVERTE, elle, se construit ici -- et ne le portait pas.
+  //
+  //   ⛔ Consequence, trouvee par Frederic en regardant une fiche : le cran
+  //     « Brouillon » ne s'affichait jamais, le bouton « Activer cette annonce »
+  //     non plus, ET `isReadOnlyLightweightDetail` rendait FAUX -- donc la fiche
+  //     d'un brouillon s'ouvrait comme une fiche normale, avec tous les boutons
+  //     qui ecrivent. L'option A (lecture seule) n'etait pas en vigueur.
+  //
+  //   ⭐ POURQUOI CA A GLISSE : les deux familles soeurs n'ont pas besoin de
+  //     drapeau -- une archive se reconnait a `archive === '1'`, un Vendu/Clos a
+  //     son statut, et ces deux champs sont DANS la charge. Le brouillon est la
+  //     seule famille qui depend d'un drapeau pose par le front.
+  const detail = await loadLightweightAnnonceDetailCache('app_brouillon_annonce_detail_cache', 'app_brouillon_annonce_index_current', 'app_brouillon_id', 'app_brouillon_id', '0', hektorAnnonceId)
+  return detail ? ({ ...detail, is_brouillon: true } as DetailedDossier) : null
 }
 
 export async function loadDossierByHektorAnnonceId(hektorAnnonceId: string | number, scope?: DataScope | null): Promise<Dossier | null> {
