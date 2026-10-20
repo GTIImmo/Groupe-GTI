@@ -6365,3 +6365,145 @@ complète »*. Le brouillon en est écarté par **deux aiguillages seulement** :
 détournement du bouton de ligne vers *« Reprendre la saisie dans Hektor »*. Le bouton « Mettre en
 ligne » irait dans **la modale de changement de statut** *(`App.tsx:27256`, déjà réservée
 admin/manager)*, qui fait déjà ce geste sur les vraies annonces.
+
+
+---
+
+## BROUILLONS — PIÈCE ② : charger la fiche complète d'un brouillon, pour 24 h
+
+**20/10/2026.** *Écrit, éprouvé hors ligne. ⛔ Pas encore vivant : il manque le patch SQL
+(Frédéric colle), le push, et le redémarrage du worker Documents.*
+
+### ⭐⭐⭐ La grande nouvelle de l'audit : le mécanisme était construit aux trois quarts
+
+| déjà en place, rien à faire | preuve |
+|---|---|
+| **la table du cache** | `app_brouillon_annonce_detail_cache`, **les 8 mêmes colonnes** que sa sœur Archive |
+| **ses droits** | 2 politiques, **clonées du même patron** |
+| **la lecture côté front** | `loadBrouillonAnnonceDetailCache` *(`api.ts:5490`)*, **déjà appelée deux fois** *(`App.tsx:14841` et `14889`)* |
+| **le drapeau « le cache est là »** | `attachLightweightDetailCacheState(…, 'app_brouillon_annonce_detail_cache')` *(`api.ts:4977`)*, **et il respecte la péremption** |
+| **le clic de la ligne** | appelle déjà `onOpenLightweightDetail(item)` |
+| **la fusion avec l'index vivant** | 31 colonnes relues en direct, **l'index gagne** *(`api.ts:5372-5380`)* |
+| **le nettoyage à la suppression** | `cleanupSupabaseBrouillonRows` + `enqueue_delete_drafts.py:210` |
+| **le mécanisme lui-même** | **49 travaux `prepare_*`, 49 réussis** |
+
+### ⛔ Le point exact où la chaîne s'arrêtait — une seule ligne
+
+```js
+async function confirmLightweightDetailImport() {
+  if (…archive === '1')      → handlePrepareArchivedAnnonceDetail(…)
+  if (…Vendu/Clos)           → handlePrepareHistoricalAnnonceDetail(…)
+  if (isBrouillonRecord(…))  → setNoticeMessage("reprenez la saisie dans Hektor")  ⬅ ICI
+}                                                          App.tsx:14874-14876
+```
+
+**Personne ne remplissait le cache.** Tout le reste attendait derrière.
+
+### ⭐⭐ La nuance qui change tout sur les droits
+
+`app_console_can_access_dossier`, qui garde la lecture des caches :
+
+```
+admin / manager  →  return true                                    ⭐ INCONDITIONNEL
+commercial       →  parc vivant ? archive ? historique ?   ⛔ PAS de brouillon
+```
+
+➡ **Pour Frédéric, la chaîne marchait déjà.** Le trou ne frappait que les **négociateurs**, et
+**en silence** : 0 ligne lue, aucune erreur, `has_detail_cache` jamais vrai, fiche jamais ouverte.
+C'est **le 4ᵉ index oublié**, une fois de plus.
+
+### La donnée : ce que la fiche peut montrer
+
+| table du miroir local | pour les 529 brouillons |
+|---|---|
+| `hektor_annonce` | **529 / 529** |
+| `hektor_annonce_detail` *(le détail REST)* | **464 / 529** |
+| `hektor_annonce_chauffage_detail` | 396 / 529 |
+| `hektor_annonce_console_detail` | 10 / 529 *(table rare : 172 lignes en tout)* |
+| **témoin inverse — 529 archives** | **529 / 529** |
+
+➡ ⭐ **Zéro appel à Hektor pour 464.** Les **65 sans détail** reçoivent un **refus nommé**.
+
+### ⚠ Un défaut préexistant chez la sœur Archive — mesuré, NON cloné
+
+`prepare_archived_annonce_detail.py` lit `app_view_generale` **sur la connexion à
+`hektor.sqlite`, où cette table n'existe pas**, et sans `ATTACH` *(mesuré : 0 occurrence)*.
+➡ Son `try/except` se déclenche **toujours**, `index_row` reste **vide**, et `app_archive_id`
+reçoit le **numéro Hektor** au lieu du nôtre. **Le front compense** *(il relit l'index en
+direct, et c'est lui qui gagne)* : le défaut est **latent, pas actif**. **Noté, pas corrigé
+chez elle** — hors périmètre.
+
+⭐ **Le clone, lui, lit l'index pour de vrai** : `app_view_generale` est une **vraie table** dans
+`phase2.sqlite` *(61 439 lignes, 163 colonnes, sans renvoi au schéma hektor)*. Preuve par
+l'essai : `app_brouillon_id = 7 589 119` pour 63131 — **exactement le numéro que porte
+l'index**, là où le patron aurait écrit 63131.
+⚠ Et **sans `immutable=1`** : le run de 05:00 écrit dans ce fichier. Avec `busy_timeout`.
+
+### ⭐ La décision de Frédéric : **option A**
+
+> *« FAIRE A »* — la fiche s'ouvre et se **lit**, on ne touche à rien.
+
+➡ `isReadOnlyLightweightDetail` *(`App.tsx:426`)* **reste INCHANGÉ**, et c'est voulu. La pièce ③
+ouvrira l'écriture séparément, avec son propre essai. **Chaque pièce reste prouvable seule.**
+
+### Ce qui a été écrit — 7 pièces
+
+| | quoi | où |
+|---|---|---|
+| 1 | **le script** | `Console/prepare_brouillon_annonce_detail.py` — clone, **famille changée** *(une TABLE à part, pas une colonne)*, index lu pour de vrai, et un **`--dry-run`** pour l'éprouver sans écrire |
+| 2 | **les 3 verrous + les droits** | `supabase/patch_chantier7_piece2_detail_brouillon_2026-10-20.sql` *(+ `_INVERSE`, + `_REPETITION`)* — ⛔ **à coller** |
+| 3 | **le worker, 2 listes** | `DOCUMENT_JOB_TYPES` *(l. 134)* et `READ_ONLY_ARCHIVE_JOB_TYPES` *(l. 178)* |
+| 4 | **le worker, le gestionnaire** | `handlePrepareBrouillonAnnonceDetail` *(l. 4487)* |
+| 5 | **le worker, le routeur** | `case "prepare_brouillon_annonce_detail"` *(l. 21773)* |
+| 6 | ⭐ **le worker, `loadDossier`** | **la 4ᵉ branche** *(l. ~2060)* — il jetait « Dossier introuvable » |
+| 7 | **le front** | `createPrepareBrouillonAnnonceDetailJob` · son gestionnaire · **le cul-de-sac remplacé** · les **3 ternaires** de la ligne |
+
+**Les 3 ternaires** : le brouillon n'est plus détourné, il suit la famille Vendu/Clos — libellé,
+raccourci **et picto**. ⭐ *« Reprendre la saisie dans Hektor »* **n'est pas perdu** : il reste
+dans `StockScreen` *(sa propre colonne)* et **dans la fiche, aux deux endroits**
+*(`DossierDetailLayoutBase`, `MobileDossierDetail`)*. ⚠ Le picto crayon `'brouillon'` devient
+inatteignable ici ; **laissé en place**, noté.
+
+### L'épreuve hors ligne
+
+| | |
+|---|---|
+| **le script, 4 cas** | ✅ 63131 *(brouillon avec détail)* → `dry_run`, **163 champs d'index**, 171 de détail, 88 895 octets · 62529 *(sans détail)* → refus nommé · 62774 *(vraie annonce)* → « n'est pas un brouillon » · 49544 *(archivée)* → refusée aussi |
+| **la cohérence des 8 endroits** | ✅ `phase2/checks/test_piece2_coherence_type_travail.py` — **20 contrôles verts**, dont *« aucune variante orthographique »*, *« tous les scripts appelés existent »*, le **témoin inverse sur les deux sœurs**, et ⭐ *« option A tenue : le brouillon reste en lecture seule »* |
+| **le parseur** | ✅ `node --check` sur le worker *(analyse seule — on ne LANCE jamais le worker)* |
+| **le build du front** | ✅ `npm run build`, 7,19 s |
+| **non-régression** | ✅ l'essai de la pièce ① reste vert |
+
+⚠ **0 brouillon archivé** aujourd'hui *(sur 529)* : la garde « archivée » du script est
+**défensive**, elle ne porte rien — c'est écrit dans le code pour qu'on ne la croie pas charpente.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+- **Les deux familles sœurs** : rien touché chez elles, et le contrôle (18) le vérifie
+  explicitement, dans les deux sens.
+- ⚠ **`READ_ONLY_ARCHIVE_JOB_TYPES` porte désormais les TROIS familles légères** : son nom est
+  plus étroit que son contenu. Écrit à sa déclaration ; **pas renommée** *(ce serait une édition
+  large pour rien)*.
+- ⚠ **`rebuildRequestedDetailCaches` ignore le brouillon** *(les 4 ternaires `cacheKind` du
+  worker sont binaires)*. Conséquence : un geste ne rafraîchira pas un cache brouillon déjà posé.
+  **Volontaire** — ce serait une 3ᵉ famille dans deux fonctions qui marchent. **Noté.**
+- **Le refus explicite** d'un geste d'écriture sur un brouillon *(nouveau message de `loadDossier`)*
+  remplace un « Dossier introuvable » : plus clair, et toujours un refus.
+- **Le retour arrière** : l'`_INVERSE.sql` retire le type des 3 verrous et le 4ᵉ bloc des droits,
+  en vérifiant qu'**aucune trace ne reste** *(leçon 31)* **et que les deux sœurs sont intactes**.
+  Le code devient alors inerte. ⚠ L'inverse dit aussi comment **solder les travaux `pending`**
+  avant de le coller.
+
+### ⛔ CE QU'IL RESTE À FAIRE, DANS CET ORDRE
+
+```
+1. COLLER   supabase/patch_chantier7_piece2_detail_brouillon_2026-10-20.sql
+2. COLLER   ..._REPETITION.sql           -> les 9 controles doivent etre verts,
+                                            dont « un negociateur voit SES brouillons »
+3. POUSSER  git -C C:/Hektor/Projet push
+4. ⏰ REDEMARRER HektorConsoleWorkerDocuments -- ET SEULEMENT FILE VIDE :
+            0 pending ET 0 running (le 19/10 a 17:10, un redemarrage a tue 14 photos)
+5. EPROUVER en reel sur 63131 : cliquer, demander le detail, ouvrir la fiche
+```
+
+⛔ **Et personne n'aura encore VU l'écran** : c'est à faire après le push.

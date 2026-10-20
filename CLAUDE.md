@@ -138,7 +138,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑦-7 | modifier ou prolonger un mandat | ⛔ **FERMÉ PAR DÉCISION le 18/10** — *« je ne souhaite pas pouvoir modifier un mandat ou prolonger »*. **Ne pas relancer** |
 | ⑦-8 | **photos : rendre visible / masquer** | ✅ **COMPLET le 19/10** — les **4 marches**, dont le bouton **prouvé en réel deux fois** *(voir ci-dessous)* |
 | ⑦-9 | renommer un document | ⛔ **FERMÉ PAR DÉCISION le 19/10** — *« je pense qu'il ne faut rien changer donc il faut que l'utilisateur puisse mettre un libellé au début donc rien à changer »*. ⭐ **Et le champ existe déjà** *(`App.tsx:11378` « Libellé », → nom du fichier envoyé à Hektor, `api.ts:8169`)*. **Ne pas relancer** |
-| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | 🔧 **pièce ① FAITE le 20/10** *(le push d'une seule annonce refuse un brouillon — 16 contrôles hors ligne, 4 en réel)* · ⬜ ② fiche complète 24 h · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* · ⬜ ④ bouton « mettre en ligne » *(un seul appel, réversible)*. Détail dans la note de chantier |
+| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | 🔧 **① FAITE le 20/10** *(le push d'une seule annonce refuse un brouillon)* · 🔧 **② ÉCRITE le 20/10, ATTEND LA POSE** *(patch SQL à coller + push + redémarrage Documents ; 20 contrôles hors ligne verts, **option A : fiche en lecture seule**)* · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* · ⬜ ④ bouton « mettre en ligne » *(un seul appel, réversible)*. Détail dans la note de chantier |
 
 **⑦-8, les 4 marches** *(19/10)* :
 
@@ -179,7 +179,21 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ⛔ SI sauvees vaut 0 ET marquees vaut 2, LE VERROU N'A PAS MORDU -- regarder tout
      de suite : une photo masquee serait sortie du panneau, sans retour possible.
 
-① LES ESSAIS REELS QUI MANQUENT (chantier ⑦) :
+① ⏰ LA PIECE ② DES BROUILLONS ATTEND SA POSE -- 5 gestes, DANS CET ORDRE :
+   1. COLLER supabase/patch_chantier7_piece2_detail_brouillon_2026-10-20.sql
+      (3 verrous + les droits ; chaque bloc verifie son empreinte et S'ARRETE
+       si quelqu'un est passe avant)
+   2. COLLER ..._REPETITION.sql -- les 9 controles doivent etre verts, dont
+      « un negociateur voit SES brouillons, et seulement les siens »
+   3. POUSSER : git -C C:/Hektor/Projet push
+   4. ⏰ REDEMARRER HektorConsoleWorkerDocuments, ET SEULEMENT FILE VIDE :
+        0 pending ET 0 running (le 19/10 a 17:10 un redemarrage a tue 14 photos)
+        powershell -Command "Restart-Service HektorConsoleWorkerDocuments; Get-Service HektorConsoleWorker*"
+   5. EPROUVER en reel sur 63131 (brouillon propre, deja eprouve en dry-run).
+   ⛔ EN CAS DE PROBLEME : ..._INVERSE.sql (il verifie qu'aucune trace ne reste
+      ET que les deux familles soeurs sont intactes).
+
+① bis LES ESSAIS REELS QUI MANQUENT (chantier ⑦) :
    · ⑦-1 ARCHIVER un contact sur une fiche JETABLE -- le sens qui porte le risque
      (le serveur de Hektor archive-t-il AUSSI les recherches ?). Le contact d'essai
      10355757 N'EXISTE PLUS : en creer un (ecriture chez Hektor = son accord) ou

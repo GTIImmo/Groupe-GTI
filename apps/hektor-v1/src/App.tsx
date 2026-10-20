@@ -106,6 +106,7 @@ import {
   reordonnerPhotos,
   createPrepareArchivedAnnonceDetailJob,
   createPrepareHistoricalAnnonceDetailJob,
+  createPrepareBrouillonAnnonceDetailJob,
   createSyncHektorPhotosJob,
   createUploadHektorPhotoJob,
   createHektorContactJob,
@@ -14810,6 +14811,20 @@ export default function App() {
     }
   }
 
+  // ⑦ PIECE ② (20/10/2026) : demander le detail d'un brouillon. Copie exacte de ses
+  // deux soeurs ci-dessus -- seul le nom du travail change.
+  async function handlePrepareBrouillonAnnonceDetail(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
+    setErrorMessage(null)
+    setNoticeMessage(null)
+    try {
+      const job = await createPrepareBrouillonAnnonceDetailJob({ dossier, priority: 32 })
+      rememberHektorActionJob(job)
+      setNoticeMessage(`Preparation du detail brouillon demandee pour ${dossier.numero_dossier ?? dossier.hektor_annonce_id}.`)
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Impossible de demander le detail du brouillon')
+    }
+  }
+
   async function handleRestoreHektorAnnonce(dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>) {
     setErrorMessage(null)
     setNoticeMessage(null)
@@ -14872,7 +14887,10 @@ export default function App() {
       return
     }
     if (isBrouillonRecord(lightweightDetailTarget)) {
-      setNoticeMessage(bvs("Brouillon en création : reprenez la saisie directement dans Hektor via le bouton « Ouvrir »."))
+      // ⑦ PIECE ② (20/10/2026) : ICI S'ARRETAIT TOUTE LA CHAINE. Le bouton affichait
+      // « reprenez la saisie dans Hektor » au lieu de demander le cache -- alors que
+      // tout le chemin de lecture etait deja construit en aval. Une seule ligne.
+      await handlePrepareBrouillonAnnonceDetail(lightweightDetailTarget)
       return
     }
     setErrorMessage("Cette ligne n'est pas eligible au chargement de detail leger.")
@@ -24558,23 +24576,26 @@ function MandatsScreen(props: {
                 // Index archivé : même traitement que Vendu/Clos non chargé
                 // (picto download + libellé « Charger »). Le clic ouvre la même
                 // fenêtre « charger le détail » qu'avant — comportement inchangé.
-                const rowActionTitle = item.is_brouillon
-                  ? 'Reprendre la saisie de ce brouillon dans Hektor'
-                  : isArchivedLightweight
+                // ⑦ PIECE ② (20/10/2026) : le brouillon n'est plus detourne ici. Son
+                // detail se charge pour 24 h comme celui d'un Vendu/Clos, et la fiche
+                // s'ouvre EN LECTURE SEULE (option A, choisie par Frederic le 20/10 --
+                // isReadOnlyLightweightDetail reste donc INCHANGE, c'est voulu).
+                // ⭐ « Reprendre la saisie dans Hektor » n'est PAS perdu : il reste dans
+                //   StockScreen (sa propre colonne) et DANS la fiche, aux deux endroits
+                //   (DossierDetailLayoutBase et MobileDossierDetail).
+                // ⚠ Le picto 'brouillon' (le crayon) devient inatteignable ici ; on le
+                //   laisse en place, il ne gene pas et il porte l'histoire.
+                const rowActionTitle = isArchivedLightweight
                   ? 'Charger temporairement le detail complet'
                   : hasExportedDetail
                     ? 'Ouvrir la fiche complete'
                     : 'Charger temporairement le detail complet'
-                const rowActionStrong = item.is_brouillon
-                  ? 'Reprendre'
-                  : isArchivedLightweight
+                const rowActionStrong = isArchivedLightweight
                   ? 'Charger'
                   : hasExportedDetail
                     ? 'Ouvrir'
                     : 'Charger'
-                const rowActionKind: 'import' | 'ready' | 'archived' | 'brouillon' = item.is_brouillon
-                  ? 'brouillon'
-                  : isArchivedLightweight
+                const rowActionKind: 'import' | 'ready' | 'archived' | 'brouillon' = isArchivedLightweight
                     ? 'import'
                     : hasExportedDetail
                       ? 'ready'

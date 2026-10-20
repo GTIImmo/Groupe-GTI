@@ -128,6 +128,10 @@ const DOCUMENT_JOB_TYPES = new Set([
   "set_hektor_photo_visibility",
   "prepare_archived_annonce_detail",
   "prepare_historical_annonce_detail",
+  // ⑦ piece ② (20/10/2026) : la TROISIEME soeur -- le detail d'un BROUILLON, 24 h.
+  // ICI et pas dans ACTION_JOB_TYPES, pour la meme raison que ses deux voisines :
+  // c'est le worker DOCUMENTS qui porte cette famille.
+  "prepare_brouillon_annonce_detail",
 ]);
 const ADMIN_JOB_TYPES = new Set([
   "delete_hektor_annonce",
@@ -166,6 +170,12 @@ const READ_ONLY_ARCHIVE_JOB_TYPES = new Set([
   "sync_hektor_photos",
   "prepare_archived_annonce_detail",
   "prepare_historical_annonce_detail",
+  // ⑦ piece ② (20/10/2026) : un BROUILLON non plus ne doit pas etre MODIFIE par nos
+  // gestes -- il vit dans l'ASSISTANT de Hektor -- mais reconstruire sa fiche depuis
+  // NOTRE miroir est une LECTURE. Exactement la meme distinction que pour l'archive.
+  // ⚠ CETTE LISTE PORTE DESORMAIS LES TROIS FAMILLES LEGERES, pas seulement
+  //   l'archive : son nom est plus etroit que son contenu.
+  "prepare_brouillon_annonce_detail",
 ]);
 const ALL_JOB_TYPES_BY_KIND = {
   actions: ACTION_JOB_TYPES,
@@ -2039,6 +2049,35 @@ async function loadDossier(job) {
       };
     }
     throw new Error(`Annonce archivee: ${job.app_dossier_id || job.hektor_annonce_id}. Desarchivez avant d'executer cette action Hektor.`);
+  }
+
+  // ⑦ PIECE ② (20/10/2026) -- LE 4e INDEX : LE PANIER BROUILLON.
+  // Jusqu'ici loadDossier connaissait le parc vivant, l'historique et l'archive, puis
+  // jetait « Dossier introuvable ». Un brouillon n'est dans AUCUN des trois : le
+  // travail echouait donc avant meme de commencer.
+  // ⚠ MEME REGLE QUE L'ARCHIVE, et pour la meme raison : un brouillon ne doit pas
+  //   etre MODIFIE par nos gestes -- il vit dans l'assistant de Hektor -- mais
+  //   RECONSTRUIRE sa fiche est une LECTURE. On ne laisse donc passer que les travaux
+  //   de lecture, et on refuse le reste AVEC UN MESSAGE QUI DIT QUOI FAIRE.
+  // ⚠ Et app_dossier_id vaut app_brouillon_id : NOTRE numero, celui que l'index
+  //   porte deja et que Hektor ne connait pas.
+  const brouillonParams = new URLSearchParams({
+    select: "app_brouillon_id,hektor_annonce_id,numero_dossier,statut_annonce,archive",
+    limit: "1",
+  });
+  if (job.app_dossier_id != null) brouillonParams.set("app_brouillon_id", `eq.${job.app_dossier_id}`);
+  else brouillonParams.set("hektor_annonce_id", `eq.${job.hektor_annonce_id}`);
+  const brouillonRows = await supabaseRequest(`app_brouillon_annonce_index_current?${brouillonParams.toString()}`, { method: "GET" });
+  if (Array.isArray(brouillonRows) && brouillonRows.length) {
+    if (READ_ONLY_ARCHIVE_JOB_TYPES.has(job.job_type)) {
+      const row = brouillonRows[0];
+      return {
+        ...row,
+        app_dossier_id: Number(row.app_brouillon_id),
+        archive: row.archive || "0",
+      };
+    }
+    throw new Error(`Annonce en cours de creation (brouillon): ${job.app_dossier_id || job.hektor_annonce_id}. Terminez la saisie dans Hektor avant cette action.`);
   }
 
   throw new Error(`Dossier introuvable: ${job.app_dossier_id || job.hektor_annonce_id}`);
@@ -4433,6 +4472,53 @@ async function handlePrepareHistoricalAnnonceDetail(job) {
     ...result,
     hektor_annonce_id: hektorAnnonceId,
     cache_table: "app_historical_annonce_detail_cache",
+  };
+}
+
+// ⑦ PIECE ② (20/10/2026) -- LE DETAIL COMPLET D'UN BROUILLON, POUR 24 H.
+//
+// Clone de ses deux soeurs (archive, historique), qui tournent depuis le 08/10 :
+// 49 travaux, 49 reussis. Elle reconstruit la fiche depuis le miroir LOCAL et la
+// depose dans app_brouillon_annonce_detail_cache ; le front la lit ensuite comme
+// il lit deja celle des Vendu/Clos (loadBrouillonAnnonceDetailCache existait deja).
+//
+// ⭐ ZERO APPEL A HEKTOR. Mesure du 20/10 : 464 des 529 brouillons ont deja leur
+//   detail REST en local. Les 65 autres recoivent un REFUS NOMME du script.
+async function handlePrepareBrouillonAnnonceDetail(job) {
+  const payload = safeJsonParse(job.payload_json);
+  const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
+  if (!hektorAnnonceId) throw new Error("hektor_annonce_id required for prepare_brouillon_annonce_detail");
+  await logJob(job.id, "brouillon_detail_cache", "running", "Preparation du detail brouillon depuis la base locale", {
+    hektor_annonce_id: hektorAnnonceId,
+    ttl_hours: payload.ttl_hours || 24,
+  });
+  const args = [
+    "Console/prepare_brouillon_annonce_detail.py",
+    "--hektor-annonce-id",
+    hektorAnnonceId,
+    "--ttl-hours",
+    String(payload.ttl_hours || 24),
+  ];
+  if (job.requested_by) {
+    args.push("--requested-by", String(job.requested_by));
+  }
+  // ⚠ PAS D'EXTRACTION CONSOLE ICI, ET CE N'EST PAS UN OUBLI. Ses deux soeurs
+  //   appellent runTargetedConsoleMissingFields quand DETAIL_LEGER_EXTRACTION_HEKTOR
+  //   est allume -- il est ETEINT depuis le 08/10 (5a ter). Pour un brouillon on ne
+  //   l'offre meme pas : mesure du 20/10, seuls 10 des 529 ont une extraction console
+  //   (la table n'en compte que 172 en tout). Aller la chercher couterait des appels
+  //   a Hektor pour presque rien, sur des fiches inachevees.
+  const output = await runProjectPythonScript(args, { timeoutMs: 60000 });
+  const lastLine = String(output.stdout || "").trim().split(/\r?\n/).filter(Boolean).pop() || "{}";
+  const result = safeJsonParse(lastLine);
+  await logJob(job.id, "brouillon_detail_cache", "done", "Detail brouillon disponible temporairement dans Supabase", {
+    hektor_annonce_id: hektorAnnonceId,
+    result,
+  });
+  return {
+    ...result,
+    hektor_annonce_id: hektorAnnonceId,
+    cache_table: "app_brouillon_annonce_detail_cache",
   };
 }
 
@@ -21684,6 +21770,8 @@ async function runHandler(job) {
       return handlePrepareArchivedAnnonceDetail(job);
     case "prepare_historical_annonce_detail":
       return handlePrepareHistoricalAnnonceDetail(job);
+    case "prepare_brouillon_annonce_detail":
+      return handlePrepareBrouillonAnnonceDetail(job);
     case "link_hektor_mandant":
       return handleLinkHektorMandant(job);
     // ④c 02/10/2026 : le geste jumeau -- retirer un mandant d'un bien.

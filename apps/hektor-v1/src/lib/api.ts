@@ -8730,6 +8730,40 @@ export async function createPrepareHistoricalAnnonceDetailJob(input: {
   return data as ConsoleJob
 }
 
+// ⑦ PIECE ② (20/10/2026) -- DEMANDER LE DETAIL COMPLET D'UN BROUILLON, POUR 24 H.
+//
+// La troisieme soeur de createPrepareArchivedAnnonceDetailJob et de sa jumelle
+// Historical. Meme forme, meme priorite, meme ttl : seul le type de travail change.
+// ⭐ Le chemin de LECTURE existait deja en entier (loadBrouillonAnnonceDetailCache,
+//   attachLightweightDetailCacheState sur app_brouillon_annonce_detail_cache) --
+//   personne ne REMPLISSAIT le cache, c'est tout ce qui manquait.
+// ⚠ app_dossier_id porte ici app_brouillon_id : NOTRE numero, celui de l'index.
+export async function createPrepareBrouillonAnnonceDetailJob(input: {
+  dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'numero_dossier' | 'titre_bien'>
+  priority?: number
+}): Promise<ConsoleJob> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  const userId = await requireSupabaseUserId()
+  const { data, error } = await supabase
+    .from('app_console_job')
+    .insert({
+      job_type: 'prepare_brouillon_annonce_detail',
+      app_dossier_id: input.dossier.app_dossier_id,
+      hektor_annonce_id: String(input.dossier.hektor_annonce_id),
+      payload_json: {
+        numero_dossier: input.dossier.numero_dossier ?? null,
+        titre_bien: input.dossier.titre_bien ?? null,
+        ttl_hours: 24,
+      },
+      priority: input.priority ?? 32,
+      requested_by: userId,
+    })
+    .select('*')
+    .single()
+  if (error || !data) throw new Error(error?.message ?? 'Unable to create brouillon annonce detail preparation job')
+  return data as ConsoleJob
+}
+
 export async function createLinkHektorMandantJob(input: {
   dossier: Pick<Dossier, 'app_dossier_id' | 'hektor_annonce_id' | 'negociateur_email'>
   contactId: string
