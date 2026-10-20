@@ -5544,3 +5544,48 @@ pendant un balayage écartera une annonce de plus, pour toujours.
 | **B — trier par cause** | n'écarter à vie que les refus **définitifs** *(415, 413)*. Plus juste, mais il faut lire le message d'erreur — plus de code |
 
 ⭐ **Mon avis : A.** ⚠ **Et 63073 n'a besoin de rien** : réparée à la main, et la réparation a tenu.
+
+
+### ✅ LE SERVICE DOCUMENTS EST REDÉMARRÉ — ⑦-3c EST COMPLET *(20/10, 07:56:59)*
+
+**Prouvé par le journal du service, à la seconde** *(pas par la croyance — et pas par WMI, dont ma
+conversion de date a échoué deux fois)* :
+
+```
+2026-10-20T07:56:58.779  service stopping
+2026-10-20T07:56:59.067  service starting
+2026-10-20T07:56:59.086  worker started pid=20916 kind=documents
+```
+
+⭐ **Le fichier worker est daté du 20/10 à 00:37:02, le service est reparti à 07:56:59** → **après**,
+donc **le nouveau code est chargé**. Et sa ligne de démarrage liste bien `reorder_hektor_photos`
+dans ses `documentJobTypes`.
+
+### ⭐ UN SEUL SERVICE, ET LA DESCENTE N'ÉTAIT PAS UN RISQUE — mesuré avant
+
+Frédéric a demandé *« il n'y a pas le risque de la descente ? »*. Trois mesures :
+
+| | |
+|---|---|
+| la descente **crée-t-elle des travaux** ? | ⭐ **0** depuis son départ à 07:45 |
+| sur **7 jours**, les 5 travaux de la fenêtre 07:45–08:15 | ⭐⭐ **c'était Frédéric lui-même** *(archiver un contact, changer un statut)* — **jamais la descente** |
+| ⭐⭐ **ses gestes du matin passent-ils par Documents ?** | ⛔ **non** : `archive_hektor_contact` → **Actions** *(l. 97)* · `refresh_console_contact_data` → **SyncLight** *(l. 156)* · `change_hektor_annonce_status` → **Admin** *(l. 137)*. Seuls les photos/documents passent par **Documents** *(l. 117, 124)* |
+
+➡ **Le seul geste qui pouvait être tué était celui qu'il allait tester.** D'où l'ordre tenu :
+**redémarrer d'abord, essayer ensuite.**
+
+### ⭐ ET UN CHIFFRE DE LA NUIT, DONNÉ PAR LE JOURNAL
+
+`hektor_respiration · requetes: 6800` → **le service Documents seul a fait 6 800 appels à Hektor
+cette nuit**. ⭐ **Cohérent avec mon estimation de 11 000-12 000 pour la nuit entière** : on est
+resté **sous le seuil de bannissement de 13 000**, mais la marge de 40 % que Frédéric s'était fixée
+n'y est pas. *Noté — c'est la décision du plafond (1 000 ou 903).*
+
+### ⬜ IL NE RESTE QU'UNE CHOSE À ⑦-3c : LA VOIR
+
+Les 4 pièces sont en production. ⛔ **Mais personne n'a cliqué sur une flèche.** C'est le dernier
+contrôle, et il ne peut venir que d'un humain :
+➡ **écran d'un bien, panneau Photos — les flèches sont sur les bords gauche et droit de chaque
+vignette visible, à mi-hauteur.** Un clic doit : réordonner la galerie **tout de suite**, puis
+*(après ~25 s)* porter l'ordre que **Hektor** a retenu. Et si le déplacement touche la 1ʳᵉ place,
+une question s'affiche **avant**.
