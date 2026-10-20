@@ -5589,3 +5589,120 @@ contrôle, et il ne peut venir que d'un humain :
 vignette visible, à mi-hauteur.** Un clic doit : réordonner la galerie **tout de suite**, puis
 *(après ~25 s)* porter l'ordre que **Hektor** a retenu. Et si le déplacement touche la 1ʳᵉ place,
 une question s'affiche **avant**.
+
+
+---
+
+## 📜 AUDIT APPROFONDI DES BROUILLONS — LES TROIS COUCHES *(20/10, sur demande de Frédéric)*
+
+> *« refais un audit approfondi de mon projet sur les brouillons entre mon serveur l'apps et hektor
+> […] de mémoire il y a des brouillons avec ou sans ID ou state donc il y a peut-être des brouillons
+> accessibles car identifiables »*
+
+**Coût : 10 appels à Hektor**, annoncés d'avance, espacés d'une seconde. Tout le reste est local.
+
+### ⚠ CORRECTION N° 1 — « avec ou sans ID » : ils ont TOUS un numéro
+
+| | |
+|---|---|
+| brouillons | **529** |
+| **sans numéro** | ⛔ **0** |
+| numéro vide | ⛔ **0** |
+| plage des numéros | **59425 → 63314** — ⭐ **tous < 10 M, donc tous des numéros DE HEKTOR** |
+
+➡ **Ils sont donc TOUS identifiables chez lui.** ⭐ L'intuition de Frédéric était juste, mais sur
+l'autre axe : **ce qui varie, c'est le STATUT**, pas le numéro.
+
+### ⭐⭐ CE QUE LES BROUILLONS SONT VRAIMENT : des annonces ORDINAIRES marquées `isDraft`
+
+| mesure | valeur |
+|---|---|
+| présents dans **`hektor_annonce`** *(la liste du miroir)* | ⭐ **529 sur 529** |
+| présents dans **`hektor_annonce_detail`** *(le détail REST)* | **464** |
+| ⛔ **sans détail REST** | **65** |
+| `is_valid` / `is_broadcasted` | **0 / 0 pour les 529** |
+
+⚠ **ET `is_valid = 0` N'EST PAS UN MARQUEUR DE BROUILLON** — j'ai failli l'écrire : les **80 démis**
+l'ont aussi, et sur le parc entier **59 696 annonces sur 61 437 ont `valide = 0`**. ⭐ **C'est la
+norme.** *(La note du 22/06 le disait déjà : « des vrais Actif sont valide=0 ». Deuxième fois que
+j'allais tomber dedans.)*
+
+### ⭐⭐⭐ LE MÉCANISME DU STATUT MANQUANT, PROUVÉ DANS LES DEUX SENS
+
+**`statut_annonce` dans l'app vient du DÉTAIL REST. Pas de détail, pas de statut.**
+
+| les **68** sans statut dans l'app | |
+|---|---|
+| **65** sans détail REST | *(55 status=1, 8 NULL, 2 status=2)* |
+| **+ 3** avec un détail, mais status NULL dedans | |
+| ⭐ **témoin inverse** | **65 sur 65** des sans-détail sont dans les 68 — **0 exception** |
+
+⚠ *Mon test automatique a imprimé « hypothèse fausse » parce que je l'avais écrit trop strictement
+(il exigeait que les 68 soient TOUS sans détail). Le mécanisme, lui, tient.*
+
+### ⭐ `status 1 = Estimation`, `status 2 = Actif` — et c'est HEKTOR qui le confirme
+
+L'arithmétique fermait déjà sur chaque ligne :
+```
+status 1 (277) = Estimation dans l'app (222) + 55 sans statut
+status 2 (241) = Actif dans l'app      (239) +  2 sans statut
+status NULL (11)                             =  8 + 3
+                                   et 55 + 2 + 8 + 3 = 68
+```
+⭐ **Et l'essai l'a prouvé autrement** : Hektor rend `statut_nom: "Estimation"` pour status 1 et
+`"Actif"` pour status 2. *(Une addition qui ferme n'est pas une preuve ; là on a les deux.)*
+
+### ⭐⭐⭐ ET LA RÉPONSE À SA QUESTION : OUI, CERTAINS SONT ACCESSIBLES
+
+**10 appels, deux familles nettes :**
+
+| | accessibles | **Hektor ne rend rien** |
+|---|---|---|
+| **sans détail chez nous** *(8 testés)* | ⭐ **4** *(63275, 63125, 63121, 63185)* | ⛔ **4** *(63212, 61722, 63151, 62557)* |
+| **avec détail** *(2 témoins)* | ⭐ **2 sur 2** | 0 |
+
+⭐⭐ **Donc environ la moitié des 65 sont parfaitement lisibles — notre synchro ne les a jamais
+demandés.** L'autre moitié, Hektor **ne rend pas de JSON** : *« n'a pas rendu de JSON valide (deux
+essais) »* — ⚠ **la signature du « 200 + 0 octet »**, le refus silencieux déjà connu du projet.
+
+⚠⚠ **ET RIEN CHEZ NOUS NE PRÉDIT LESQUELS.** Les accessibles portent des status **1, 2 et NULL** ;
+les inaccessibles portent **1 et NULL**. ⛔ **Ni le statut, ni la date, ni la source ne discriminent**
+*(testé : la source « full » a 61 sans détail sur 490, la « delta » 4 sur 39)*. **On ne peut pas
+savoir sans demander.**
+
+⭐ **Et le statut vide n'est pas notre perte** : sur **63185**, Hektor lui-même rend `statut: ""`.
+Pour ces cas, **il n'a pas de statut non plus**.
+
+### LA CHAÎNE D'ENTRÉE, ET SA FRAÎCHEUR
+
+```
+Hektor GraphQL (isDraft)  ->  hektor_annonce_draft_state  ->  app_brouillon_annonce_index_current
+                              529 is_draft=1 + 81 demis        529
+```
+| | |
+|---|---|
+| dernier balayage **delta** | ⭐ **20/10 04:25** *(ce matin)* |
+| ⚠ dernier balayage **complet** | **17/10 04:32** — **3 jours** |
+| les 81 démis | devenus de vraies annonces *(46 en status 1, 35 en status 2)* |
+
+### ⛔ ET LE BLOCAGE, LUI, EST ENTIER CHEZ NOUS
+
+| | brouillons | archives | historiques |
+|---|---|---|---|
+| `app_console_can_access_dossier` | ⛔ **non** | ✅ | ✅ |
+| `app_mes_biens_portefeuille` | ⛔ **non** | ✅ | ✅ |
+| `app_mes_biens_selon_perimetre` | ⛔ **non** | ✅ | ✅ |
+
+⭐ **Alors que le travail est déjà fait** : **940 photos** de brouillons chez nous *(fichier présent
+sur 940/940)*, **150 vignettes publiques**, et ⭐⭐ **513 couvertures calculées sur 529**.
+
+### ⛔ CE QUE JE N'AI PAS MESURÉ
+
+1. ⚠ **La proportion exacte des accessibles** : **8 testés sur 65**. « Environ la moitié » est un
+   échantillon, pas un compte. Les mesurer tous = **65 appels**.
+2. ⛔ **La CAUSE du refus silencieux** — un 200 vide, un 403 déguisé, un objet à moitié supprimé ?
+   Non élucidé.
+3. ⛔ **Ce que `loadDossier` du worker fait d'un brouillon** *(la note du 14/10 dit « Dossier
+   introuvable », 3 index sur 4)* — non revérifié ce jour.
+4. ⚠ **Si le détail manquant se rattraperait tout seul** : la synchro les voit dans la liste depuis
+   des mois *(certains de mars)* et ne les a jamais demandés. **Pourquoi — non élucidé.**
