@@ -266,9 +266,16 @@ Le bug ne laissait pas de double : il **remplaçait**. Mesure : **17 doublons en
 l'annonce 59578** — la seule dont la suppression est tombée en panne. **Partout ailleurs, la
 preuve s'effaçait elle-même.** C'est pour ça que ça a tenu 25 jours sans être vu à l'œil.
 
-⚠ **Et mon correctif les rend permanents** : mon verrou n° 1 refuse de supprimer une fiche dont le
-chemin est dans la liste lue — c'est le cas des 17. **Elles ne partiront plus sans un geste
-exprès.** L'annonce 59578 montre aujourd'hui **35 lignes pour 18 documents**.
+✅ **DÉDOUBLONNÉE LE 21/10** — et il fallait un geste exprès, parce que **mon correctif les rendait
+permanents** *(le verrou n° 1 refuse de supprimer une fiche dont le chemin est dans la liste lue)*.
+Les 17 neuves sont retirées, les 17 anciennes conservées **avec leur date de naissance du 17 août**.
+**9 contrôles verts**, dont le témoin inverse *(le parc hors 59578 intact)*. Sauvegarde datée
+`app_console_document_avant_dedoublonnage_59578_20261021`, 17 lignes.
+⭐ **Les paires portaient le même fichier** *(même empreinte, même taille, 17/17)*, aucune signature.
+⭐ **Et les neuves étaient nées le 20/10 à 12:22 — huit heures avant la pose** : les dernières
+victimes, pas une fuite. **Zéro doublon après 20:30:47.**
+⏰ **Reste à voir au prochain balayage** : le correctif doit **re-cléer les 17 anciennes** par leur
+chemin. Le témoin du contrôle doit alors monter de 17.
 
 ---
 

@@ -229,6 +229,20 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
        vieilles procedures (essai sur la 33, vrai ZIP, 3 pistes d'audit), et la
        synchro documents accepte un bien vendu ou archive.
      ⛔ NE PAS POSER DE TRAVAUX DE RECUPERATION : il n'y a rien a recuperer.
+   ✅ L'ANNONCE 59578 EST DEDOUBLONNEE (21/10) : 35 fiches pour 18 documents -> 18.
+     Les 17 neuves retirees, les 17 anciennes gardees AVEC LEUR DATE DU 17 AOUT
+     (« un numero ne se perd jamais »). 9 controles verts des DEUX cotes : la
+     repetition collee par Frederic et ma propre mesure independante disent la meme
+     chose, temoin inverse compris (192 637 documents hors 59578).
+     Sauvegarde datee : app_console_document_avant_dedoublonnage_59578_20261021.
+     ⚠ IL FALLAIT UN GESTE EXPRES : mon propre verrou n° 1 les rendait permanents
+       (il refuse de supprimer une fiche dont le chemin est dans la liste lue).
+     ⭐ Les 17 neuves etaient nees le 20/10 a 12:22, HUIT HEURES AVANT la pose de
+       20:30:47 : les dernieres victimes, pas une fuite. Zero doublon apres.
+     ⏰ A VOIR AU PROCHAIN BALAYAGE : le correctif doit RE-CLER les 17 anciennes par
+       leur chemin -> le temoin du controle doit monter de 17.
+     ⚠ +17 fichiers orphelins au coffre (34 Mo) : ils rejoignent le menage des 7,2 Go.
+     Patch, inverse et repetition : supabase/patch_dedoublonnage_59578_2026-10-21*.sql
    ⚠ NON MESURE, et je ne le suppose pas :
      si les PHOTOS ont le meme defaut (leur id vient du CDN) ; ce qui declenche la
      resynchro d'une annonce (reserve 3 du 25/09, toujours ouverte).
