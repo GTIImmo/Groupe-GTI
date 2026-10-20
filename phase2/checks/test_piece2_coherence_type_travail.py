@@ -139,6 +139,28 @@ controle("(19) ⭐ OPTION A tenue : le brouillon reste en LECTURE SEULE",
          "if ((item as { is_brouillon?: boolean }).is_brouillon === true) return true" in APP,
          "la ligne de lecture seule a bouge -- ce n'est PAS ce qui a ete decide")
 
+# ═══ ⭐ LE 8e ENDROIT : LA MODALE. Trouve par Frederic, en reel, sur 63312 ═══
+#
+# J'avais compte SEPT endroits pour ce geste. Il y en avait HUIT : la modale
+# « Charger la fiche complete » porte SA PROPRE garde, et elle ne connaissait que
+# deux familles. Pour un brouillon elle affichait « Cette ligne n'est pas eligible »
+# et DESACTIVAIT son bouton -- le geste mourait au dernier metre, alors que toute la
+# chaine en amont etait posee et prouvee.
+controle("(20) ⭐ la modale de chargement connait la 3e famille",
+         "const canPrepareDetail = isArchive || isHistorical || isBrouillon" in APP,
+         "la modale refuse le brouillon et desactive son bouton")
+controle("(21) et elle le NOMME (badge « Brouillon », pas « Fiche »)",
+         "? 'Brouillon'" in APP)
+
+# ⚠ ET LA FORME GENERALE, pour que le piege ne repasse pas ailleurs : aucune garde
+#   ne doit plus tester les DEUX familles sans la troisieme.
+import re as _re
+deux_familles = []
+for m in _re.finditer(r"isArchive\s*\|\|\s*isHistorical(?!\s*\|\|\s*isBrouillon)", APP):
+    deux_familles.append(APP[:m.start()].count("\n") + 1)
+controle("(22) ⚠ aucune garde ne teste encore SEULEMENT les deux anciennes familles",
+         not deux_familles, f"lignes a regarder : {deux_familles}")
+
 # ═══ ⚠⚠ LECON 30, RENDUE MECANIQUE -- LE PIEGE QUI A FAILLI PASSER LE 20/10 ═══
 #
 # Dans un patch destine a etre COLLE, tout litteral « dollar-quote » qui tient sur
@@ -184,11 +206,11 @@ _FAUTIF = "DO $g$\nDECLARE\n  ancre text := $a$ligne un\nligne deux$a$;\nBEGIN\n
 _PROPRE = "DO $g$\nDECLARE\n  ancre text := replace($a$ligne un\nligne deux$a$, chr(13), '');\nBEGIN\nEND\n$g$;"
 _mord = litteraux_non_normalises(_FAUTIF, "faux")
 _epargne = litteraux_non_normalises(_PROPRE, "faux")
-controle("(20) LA PREUVE D'ABORD : le controle lecon 30 MORD sur un cas fautif",
+controle("(23) LA PREUVE D'ABORD : le controle lecon 30 MORD sur un cas fautif",
          len(_mord) == 1 and len(_epargne) == 0,
          f"fautif -> {_mord} (attendu 1) · propre -> {_epargne} (attendu 0)")
 if len(_mord) != 1 or _epargne:
-    print("\n⛔ LE CONTROLE (20) NE SAIT PAS DETECTER : le (21) ne prouverait RIEN.")
+    print("\n⛔ LE CONTROLE (23) NE SAIT PAS DETECTER : le (24) ne prouverait RIEN.")
     sys.exit(2)
 
 nus: list[str] = []
@@ -199,9 +221,9 @@ for nom, chemin in PATCHS.items():
         crlf.append(nom)
     nus += litteraux_non_normalises(brut.decode("utf-8", errors="replace"), nom)
 
-controle("(21) ⚠⚠ LECON 30 : tout litteral MULTI-LIGNE est normalise chr(13)",
+controle("(24) ⚠⚠ LECON 30 : tout litteral MULTI-LIGNE est normalise chr(13)",
          not nus, f"non normalises : {nus}")
-controle("(22) et les trois patchs sont en LF pur",
+controle("(25) et les trois patchs sont en LF pur",
          not crlf, f"en CRLF : {crlf} -- a reecrire en LF avant de les coller")
 
 print()

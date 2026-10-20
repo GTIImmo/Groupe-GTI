@@ -24164,7 +24164,20 @@ function LightweightDetailImportModal(props: {
 }) {
   const isArchive = props.target.archive === '1'
   const isHistorical = !isArchive && isHistoricalListingStatus(props.target.statut_annonce)
-  const canPrepareDetail = isArchive || isHistorical
+  // ⑦ PIECE ② (20/10/2026) -- LA 3e FAMILLE, ET C'EST LE 8e ENDROIT.
+  //
+  // CE QUE CA FAISAIT. Pour un brouillon, isArchive et isHistorical sont tous deux
+  // faux (archive = '0', statut « Actif » ou « Estimation »), donc canPrepareDetail
+  // valait faux : la modale affichait « Cette ligne n'est pas eligible au chargement
+  // de detail leger » ET DESACTIVAIT son propre bouton (plus bas). Le geste etait
+  // donc mort au dernier metre, alors que TOUT le reste de la chaine etait pose :
+  // le script, les 3 verrous, les droits, le worker, le cache, la lecture du front.
+  //
+  // ⚠ TROUVE PAR FREDERIC, EN REEL, SUR 63312 (« Maison 130m2 ... Valprivas »,
+  //   statut Estimation, app_brouillon_id 7 589 297). J'avais compte SEPT endroits
+  //   pour ce geste et il y en avait HUIT : une modale est un endroit a part entiere.
+  const isBrouillon = !isArchive && !isHistorical && isBrouillonRecord(props.target)
+  const canPrepareDetail = isArchive || isHistorical || isBrouillon
   const hasLocalDetail = hasLocalDetailAvailable(props.target)
   const jobActive = props.job ? isConsoleJobActive(props.job) : false
   const jobDone = props.job?.status === 'done'
@@ -24176,7 +24189,15 @@ function LightweightDetailImportModal(props: {
       : jobActive
         ? 'Preparation en cours'
         : 'Detail a charger'
-  const contextLabel = isArchive ? 'Archive' : isHistorical ? (props.target.statut_annonce ?? 'Historique') : 'Fiche'
+  // ⚠ Meme cause que ci-dessus : un brouillon tombait dans le dernier cas et
+  //   s'affichait « Fiche ». Il se nomme maintenant.
+  const contextLabel = isArchive
+    ? 'Archive'
+    : isHistorical
+      ? (props.target.statut_annonce ?? 'Historique')
+      : isBrouillon
+        ? 'Brouillon'
+        : 'Fiche'
   const title = props.target.titre_bien?.trim() || '[Sans titre]'
   const dossierLabel = [props.target.numero_dossier, props.target.numero_mandat ? `Mandat ${props.target.numero_mandat}` : null].filter(Boolean).join(' - ') || `Annonce ${props.target.hektor_annonce_id}`
   const locationLabel = [props.target.ville, formatPrice(props.target.prix)].filter((value) => value && value !== '-').join(' - ')
