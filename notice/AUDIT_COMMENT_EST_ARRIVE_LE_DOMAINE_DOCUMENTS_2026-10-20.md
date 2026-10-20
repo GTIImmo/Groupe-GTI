@@ -363,3 +363,92 @@ personnes attentives, chacune sur son axe, et d'un défaut logé dans l'angle mo
 
 ⭐ Et la réserve du 25/09 est la cinquième occasion : **quelqu'un avait écrit le mécanisme exact,
 dans les bons termes.** Elle n'a pas manqué d'être vue — elle a manqué d'être **une tâche**.
+
+---
+
+# PARTIE 5 — « PEUT-ON RÉCUPÉRER LES 29 PREUVES ? » — audit du 21/10, lecture seule
+
+*Frédéric : « vas-y ». Aucun appel à Hektor, aucune écriture. Verdict : **OUI, mais
+ça n'arrivera pas tout seul.**
+
+## ⭐⭐⭐ D'abord : la destruction est CONFIRMÉE, et par une meilleure mesure
+
+Ma première preuve *(24,6 % contre 4,0 %)* était **confondue par l'âge** : le zip manque
+beaucoup plus sur les vieilles procédures, quel que soit l'état de la fiche *(20,9 % en
+mars-avril contre 4,1 % en juillet+)*. Il fallait donc comparer des fiches **du même âge** :
+
+| ancienneté | état de la fiche | signés | sans zip | taux |
+|---|---|---|---|---|
+| **anciennes** *(proc < 400)* | ⛔ **recréée par le bug** | 32 | **29** | ⛔ **90,6 %** |
+| **anciennes** | **jamais touchée** | 46 | **0** | ✅ **0,0 %** |
+| anciennes | origine, nouv. domaine | 84 | 1 | 1,2 % |
+| récentes *(≥ 400)* | recréée par le bug | 110 | 6 | 5,5 % |
+| récentes | jamais touchée | 53 | 4 | 7,5 % |
+
+⭐⭐ **29 sur 32 contre 0 sur 46, à âge égal.** Ce n'est pas l'ancienneté : c'est le bug. Et il
+n'a touché **que** les procédures de **mars à mai** — sur les récentes, aucune différence.
+⚠ **Le chiffre de 29 est donc exact, mais ma première démonstration ne valait rien.**
+
+## ⭐ Ce qui rend la récupération possible
+
+```
+Console/console_job_worker.js:5306
+  { key: "proofs_zip", filename: `preuves-${procId}.zip`,
+    url: `${XMLRPC_URL}?mode=ImmoSign-downloadProofsByProcedure&procedureId=${procId}` }
+```
+
+**Un dossier de preuves se demande avec le seul numéro de procédure.** Et le commentaire du
+code écrit : *« Ils sont **IMMUABLES** une fois la procédure créée »*.
+
+Les 29 fiches ont tout ce qu'il faut :
+
+```
+les 29                            29
+avec un modelo immosign           29   <- la fonction s'executera (sinon elle sort aussitot)
+le modelo porte la procedure       29
+se souviennent du chemin local     29   <- mais le fichier n'y est plus -> elle RETELECHARGERA
+se souviennent du chemin coffre     0   <- ils n'y ont jamais ete remontes
+```
+
+⭐⭐ **Et le garde-fou de la fonction joue en notre faveur** : elle ne saute le
+téléchargement que *si la copie locale est lisible*. **Mesure : 0 zip de preuves sur tout le
+serveur** *(recherche de `preuves-*.zip` et `procedure-*.zip` dans tout
+`C:\Hektor\HektorConsoleDocuments` : zéro)*. Donc la condition de saut est fausse, et elle
+retentera. ⚠ **Et un échec est propre** : si Hektor renvoie une page HTML au lieu d'un ZIP,
+le code refuse de stocker un faux ZIP.
+
+## ⚠⚠ CE QUI L'EMPÊCHE D'ARRIVER TOUT SEUL — et c'est le vrai résultat de cet audit
+
+`persistImmoSignCompanionFiles` n'a **qu'un seul appelant** : la synchro des documents
+*(l. 6166)*. Or :
+
+```
+les 26 annonces concernees : TOUTES ABSENTES de app_dossier_current
+  11682 23373 36452 39707 48017 54773 54806 58908 59625 61578 61621 61650 61654
+  61667 61779 61802 61961 62024 62044 62055 62104 62153 62163 62174 62268 8377
+```
+
+⚠⚠ **Absentes de l'index vivant = vendues, closes ou archivées** *(voir
+[[bien-vendu-clos-nest-plus-dans-dossier-current]])*. **Le balayage nocturne ne les touchera
+jamais.** Les preuves ne reviendront donc **pas** d'elles-mêmes : il faut une **action
+délibérée sur 26 annonces nommées.**
+
+⭐ **Et c'est précisément là que ça compte** : ce sont des **mandats signés de biens vendus**
+— la piste d'audit d'une signature électronique sur une vente aboutie.
+
+## Ce que coûterait la récupération
+
+| | |
+|---|---|
+| annonces à resynchroniser | **26** |
+| appels à Hektor | ~26 pages + jusqu'à 58 ZIP = **~85**, contre un quota de 13 000–17 000 |
+| où atterrira le zip | **sur le serveur**, pas au coffre — `shouldKeepCloud` est faux pour un bien vendu, et c'est **approprié** |
+| écriture en base | le `metadata_json.immosign_files` des 29 fiches |
+
+⛔ **Rien de tout cela n'est fait : l'accord de Frédéric est obligatoire** *(appels Hektor +
+écriture en production)*, et le chemin exact *(un type de travail dédié, ou un rejeu de la
+synchro documents sur ces 26)* **reste à trancher avec lui** — un périmètre ne se décide pas seul.
+
+⚠ **Non mesuré** : qu'ImmoSign serve encore ces 29 procédures. Le code dit « immuables » et
+388 autres répondent, mais **je ne l'ai pas vérifié sur ces 29** — ça demanderait un appel à
+Hektor, donc son accord. **C'est le seul vrai inconnu, et il se lève avec UN SEUL essai.**
