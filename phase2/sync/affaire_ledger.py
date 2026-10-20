@@ -973,6 +973,66 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             "ledger_total": total, "chaines": chaines}
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# L'INTERRUPTEUR DE LA REGLE V2 -- pose le 20/10/2026, ETEINT par defaut
+# ═══════════════════════════════════════════════════════════════════════════════
+#     APP_CHAINAGE_V2=1     les replis des § 2.2, 2.3, 3.0, 3.2 et 3.3 jouent
+#     (absent ou 0)         comportement d'avant, A L'IDENTIQUE
+#
+# POURQUOI UN INTERRUPTEUR ET PAS UN REMPLACEMENT. Une chaine est une DEDUCTION
+# refaite ENTIEREMENT a chaque run (0,09 s sur 29 321 lignes), et le push envoie
+# app_chaine_id (la colonne a quitte COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS le 04/09).
+# Donc :
+#     APP_CHAINAGE_V2=1  -> le run de la nuit pose les nouveaux numeros
+#     APP_CHAINAGE_V2=0  -> le run de la nuit suivante REPOSE les anciens
+# LE RETOUR ARRIERE EST GRATUIT. Il n'y a rien a migrer, donc rien a defaire.
+# Meme patron que APP_REGISTRE_DEPUIS_APP_MANDAT (export_app_payload.py).
+#
+# CE QUE LA V2 CHANGE, MESURE PAR SIMULATION LE 20/10 (rejeu de la regle actuelle
+# fidele a 31 065/31 066 = 100,00 %, donc les chiffres valent quelque chose) :
+#     chaines              12 702  ->  12 278   (-424)
+#     ventes seules           132  ->      42
+#     echecs coupes en deux   333  ->       0   (4 abstentions declarees)
+#     transactions deplacees              426   sur 420 biens, dont 5 VIVANTS
+#     invariants : aucun defaut (jamais deux ventes, jamais deux compromis
+#                  vivants, rien apres la vente)
+#
+# ⛔ DEUX REPLIS ONT ETE ECARTES PAR FREDERIC, et ce n'est pas un oubli :
+#     § 3.4  une vente ne se rattache JAMAIS a une offre refusee   (5 cas)
+#     § 2.3  ne vaut QUE pour un compromis ANNULE                 (21 cas vivants)
+#
+# Detail : notice/CHANTIER_CHAINAGE_2026-10-20.md (la regle figee au § 3).
+#
+# ⚠⚠ ET POURQUOI C'EST UNE FONCTION ET PAS UNE CONSTANTE -- DEFAUT TROUVE LE 20/10,
+#   AVANT DE S'EN SERVIR. Une constante lue A L'IMPORT ne voit PAS `.env` : ce
+#   fichier n'est charge qu'a la ligne ~1854, DANS main(), ET SEULEMENT sous
+#   `--push`. Donc `APP_CHAINAGE_V2=1` dans `.env` n'aurait RIEN allume, et un
+#   `--refresh` seul n'aurait jamais lu l'interrupteur. Un interrupteur muet qui
+#   promet d'agir, c'est la « fausse promesse » que ce projet s'interdit.
+#   ⭐ C'est aussi pour cela que APP_REGISTRE_DEPUIS_APP_MANDAT a son defaut a
+#     « 1 » en dur : son auteur a bascule le DEFAUT dans le code, il ne s'est
+#     jamais servi de `.env`. Le patron recopie etait donc a moitie faux.
+_ENV_DEJA_CHARGE = False
+
+
+def chainage_v2_actif() -> bool:
+    """L'interrupteur de la regle V2, lu APRES `.env`. Voir le bloc au-dessus."""
+    global _ENV_DEJA_CHARGE
+    if not _ENV_DEJA_CHARGE:
+        try:
+            load_env_files(DEFAULT_ENV_FILES)
+        except Exception as souci:                                  # noqa: BLE001
+            # ⚠ ON NE TOMBE PAS POUR CA (la variable d'environnement suffit, et
+            #   l'absence des deux veut dire ETEINT) -- MAIS ON LE DIT.
+            #   Un `except: pass` muet ici m'a deja coute une heure le 20/10 :
+            #   mon epreuve passait une chaine au lieu d'un Path, l'erreur etait
+            #   avalee, et l'interrupteur paraissait casse. « Un journal qui
+            #   avale son erreur ne prouve rien. »
+            print(f"[ledger] .env illisible pour l'interrupteur V2 : {souci!r} "
+                  f"-- on s'en tient a la variable d'environnement")
+        _ENV_DEJA_CHARGE = True
+    return os.environ.get("APP_CHAINAGE_V2", "0") == "1"
+
 ETATS_OFFRE_MORTS = {"refused", "refusee"}
 ETATS_OFFRE_ACCEPTEE = {"accepted", "acceptee"}
 ETATS_COMPROMIS_MORTS = {"cancelled", "annule"}
@@ -1161,6 +1221,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     #   simplement plus dans `attribution`, donc leur numero de chaine reste tel
     #   quel. La trace garde son dossier -- c'est voulu, on veut pouvoir dire
     #   « cette vente appartenait au dossier 12 648 », meme effacee chez Hektor.
+    # ⚠ L'INTERRUPTEUR SE LIT ICI, UNE SEULE FOIS : apres `.env`, et avant la
+    #   premiere decision. Le resoudre a chaque bloc le rendrait illisible, et
+    #   une constante d'import ne verrait pas `.env` (voir chainage_v2_actif).
+    v2 = chainage_v2_actif()
     lignes = list(con.execute(f"""
         SELECT app_affaire_id, hektor_annonce_id, kind, state, date, acquereurs_json,
                propositions_json
@@ -1201,7 +1265,10 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                       "offre_acceptee": False, "compromis": False,
                       # 16/09 : il faut savoir si TOUTES les offres du dossier
                       # sont refusees avant de le fermer -- voir la branche offre.
-                      "offres": []}
+                      "offres": [],
+                      # 20/10 (V2) : une chaine qui porte DEJA une vente ne peut
+                      # pas en recevoir une seconde -- voir la garde du § 3.0.
+                      "a_une_vente": False}
             ouvertes.append(chaine)
             toutes.append(chaine)
             return chaine
@@ -1253,24 +1320,108 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
 
             elif kind == "compromis":
                 candidates = [c for c in ouvertes if c["offre_acceptee"] and not c["compromis"]]
+                cible = None
                 if len(candidates) == 1:
                     cible = candidates[0]
-                    cible["membres"].append(app_id)
-                else:
-                    if len(candidates) > 1:
-                        signale("plusieurs chaines a offre acceptee")
+                elif len(candidates) > 1:
+                    signale("plusieurs chaines a offre acceptee")
+                    # ─── § 2.2 (V2) : LE NOM DEPARTAGE ───────────────────────
+                    # La branche offre se sert du nom depuis toujours ; celle-ci
+                    # renoncait. Mesure du 20/10 : +2 compromis rattaches.
+                    if v2 and acqs:
+                        parnom = [c for c in candidates if acqs & c["acquereurs"]]
+                        if len(parnom) == 1:
+                            cible = parnom[0]
+                            signale("[V2] compromis : le nom a departage")
+                # ─── § 2.3 (V2) : LE POINT 4, DECIDE PAR FREDERIC LE 20/10 ───
+                #
+                # « il faut aussi corriger le point 4 pour que les compromis
+                #   annules et offres d'achat annulees soient dans la meme chaine »
+                #
+                # Un ECHEC se jouait en DEUX chaines : l'offre refusee d'un cote
+                # (elle FERME sa chaine, § 1.4), le compromis annule de l'autre.
+                # Mesure du 20/10 : 333 compromis annules dans ce cas.
+                #
+                # ⚠ SEULEMENT SI CE COMPROMIS EST ANNULE -- sa decision, explicite.
+                #   Les 21 compromis VIVANTS mesures gardent le comportement
+                #   d'avant : ils ouvrent leur propre chaine.
+                # ⚠ ET LE NOM EST OBLIGATOIRE : c'est lui qui distingue « la meme
+                #   tentative qui a repris » de « une seconde tentative », ce que
+                #   la regle du 04/09 protegeait en fermant la chaine.
+                if (cible is None and v2 and acqs
+                        and state in ETATS_COMPROMIS_MORTS):
+                    fermees = [c for c in toutes
+                               if c not in ouvertes and not c["compromis"]
+                               and c["offres"]
+                               and all(s in ETATS_OFFRE_MORTS for s in c["offres"])
+                               and (acqs & c["acquereurs"])]
+                    if len(fermees) == 1:
+                        cible = fermees[0]
+                        # elle redevient la chaine courante le temps d'etre refermee
+                        # juste en dessous par ETATS_COMPROMIS_MORTS.
+                        ouvertes.append(cible)
+                        signale("[V2] compromis annule rattache a l offre refusee")
+                    elif len(fermees) > 1:
+                        # ON NE DEVINE PAS, ET ON LE DIT (4 cas mesures).
+                        signale("[V2] plusieurs chaines refusees au meme nom -- abstention")
+                if cible is None:
                     cible = ouvrir(app_id, acqs)
+                else:
+                    cible["membres"].append(app_id)
                 cible["compromis"] = True
                 cible["acquereurs"] |= acqs
                 if state in ETATS_COMPROMIS_MORTS:
-                    ouvertes.remove(cible)          # annule : la chaine est close
+                    if cible in ouvertes:
+                        ouvertes.remove(cible)      # annule : la chaine est close
 
             else:  # vente -- elle ferme toujours la chaine qu'elle rejoint
                 candidates = [c for c in ouvertes if c["compromis"]]
+                # ─── § 3.0 a 3.3 (V2) : LES REPLIS DE LA VENTE ───────────────
+                #
+                # Frederic, 20/10 : « ce n'est pas normal, une vente doit aussi
+                #   s'ajouter a une offre acceptee s'il y a correspondance ».
+                #
+                # LA BRANCHE VENTE ETAIT LA PLUS PAUVRE DES TROIS : elle ne
+                # regardait NI le nom, NI les offres acceptees -- alors qu'elle
+                # conclut l'affaire. Une affaire offre -> vente SANS compromis
+                # partait donc en DEUX chaines (132 cas mesures le 20/10).
+                #
+                # ⚠⚠ LA GARDE § 3.0 N'EST PAS DECORATIVE. Sans elle, ma premiere
+                #   version produisait UNE CHAINE A DEUX VENTES -- defaut trouve
+                #   par le controle d'invariants, pas par relecture.
+                if v2:
+                    def sans_vente(lot: list[dict]) -> list[dict]:
+                        return [c for c in lot if not c["a_une_vente"]]   # § 3.0
+
+                    candidates = sans_vente(candidates)
+                    if len(candidates) > 1 and acqs:
+                        # § 3.2 : le nom departage plusieurs compromis ouverts
+                        parnom = [c for c in candidates if acqs & c["acquereurs"]]
+                        if len(parnom) == 1:
+                            candidates = parnom
+                            signale("[V2] vente : le nom a departage les compromis")
+                    if len(candidates) != 1:
+                        # § 3.3 : a defaut de compromis, une OFFRE ACCEPTEE
+                        sur_offre = sans_vente(
+                            [c for c in ouvertes
+                             if c["offre_acceptee"] and not c["compromis"]])
+                        parnom = ([c for c in sur_offre if acqs & c["acquereurs"]]
+                                  if acqs else [])
+                        if len(parnom) == 1:
+                            candidates = parnom            # § 3.3.a -- nom commun
+                            signale("[V2] vente rattachee a une offre acceptee (nom)")
+                        elif len(sur_offre) == 1:
+                            candidates = sur_offre         # § 3.3.b -- l'unique
+                            signale("[V2] vente rattachee a l unique offre acceptee")
+                    # ⛔ PAS DE § 3.4 : rattacher une vente a une offre REFUSEE a
+                    #   ete ECARTE par Frederic le 20/10 (« 3. NON »). Les 5 cas
+                    #   mesures restent seuls, et c'est voulu.
                 if len(candidates) == 1:
                     cible = candidates[0]
                     cible["membres"].append(app_id)
-                    ouvertes.remove(cible)
+                    cible["a_une_vente"] = True
+                    if cible in ouvertes:
+                        ouvertes.remove(cible)
                 else:
                     # ON NE DEVINE PAS. La vente reste seule, et on le DIT.
                     signale("vente : plusieurs compromis ouverts" if candidates
@@ -1306,7 +1457,9 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                     # suivent. Les 101 « ventes seules » ne bougent pas : rien ne les a rejointes.
                     # Sans danger : le numero de chaine n'est pas une saisie, c'est une DEDUCTION,
                     # et le run la refait entierement chaque nuit (0,09 s sur 29 321 lignes).
-                    ouvertes.remove(ouvrir(app_id, acqs))
+                    seule = ouvrir(app_id, acqs)
+                    seule["a_une_vente"] = True     # § 3.0 : elle en porte une
+                    ouvertes.remove(seule)
 
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
@@ -1323,8 +1476,14 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
     con.commit()
     resultat = {"transactions": len(attribution),
                 "chaines": len(set(attribution.values())),
-                "sans_date": sans_date}
+                "sans_date": sans_date,
+                # ⚠ ON DIT TOUJOURS QUELLE REGLE A TOURNE. Sans cette ligne, on ne
+                #   saura pas, demain matin, laquelle des deux a produit ces
+                #   numeros -- et c'est la premiere question qu'on se posera.
+                "chainage_v2": v2}
     resultat.update(anomalies)
+    print(f"[ledger] chainage : {resultat['chaines']} chaines "
+          f"({'V2 -- replis actifs' if v2 else 'regle d avant, V2 eteinte'})")
     return resultat
 
 

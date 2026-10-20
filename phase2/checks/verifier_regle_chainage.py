@@ -49,6 +49,9 @@ sys.path.insert(0, ".")
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from phase2.sync.push_upgrade_to_supabase import load_env_files  # noqa: E402
+# ⚠ LA MEME FONCTION QUE LE RUN, pas une copie : c'est elle qui dit à quelle place
+#   un bloc se trouve dans la séquence. Une transcription divergerait tôt ou tard.
+from phase2.sync.affaire_ledger import _date_de_tri  # noqa: E402
 
 load_env_files([Path(".env"), Path("apps/hektor-v1/.env")])
 URL = os.environ.get("SUPABASE_URL") or os.environ["VITE_SUPABASE_URL"]
@@ -61,8 +64,14 @@ ACCEPTEE = {"accepted", "acceptee"}
 
 def lire_registre() -> list[dict]:
     """Le registre entier, par pages -- lecture seule."""
+    # ⚠ `propositions_json` AJOUTE LE 20/10 : sans lui, le contrôle ③ ordonnait les
+    #   blocs sur la colonne `date` brute et rendait DEUX FAUX ROUGES. La règle
+    #   ordonne sur la première proposition depuis le 16/09 ; ce contrôle doit lire
+    #   la même chose. Le prix est une charge plus lourde (22 320 propositions sur
+    #   le parc) -- acceptable pour un contrôle qui se lance à la main.
     champs = ("app_affaire_id,app_chaine_id,hektor_annonce_id,kind,state,"
-              "hektor_affaire_id,present_in_hektor,date,hektor_acquereur_id")
+              "hektor_affaire_id,present_in_hektor,date,hektor_acquereur_id,"
+              "propositions_json")
     lignes, page = [], 0
     while True:
         q = urllib.parse.urlencode({
@@ -267,23 +276,48 @@ def main() -> int:
     # ── 3. LA VÉRIFICATION EMPIRIQUE : une chaîne fermée a-t-elle reçu un bloc APRÈS ? ──
     #    C'est le seul test qui ne dépende d'aucune transcription : il regarde ce
     #    qui EST dans le registre, pas ce que les formules disent.
+    # ⚠⚠ CORRIGÉ LE 20/10/2026 — IL CRIAIT AU LOUP DEPUIS LE 16/09.
+    #
+    #   Il comparait la colonne `date` BRUTE. Or, pour une offre, cette colonne
+    #   porte la date du DERNIER ÉVÉNEMENT (son acceptation, son refus), pas la
+    #   place de l'offre dans la séquence. La règle, elle, ordonne sur
+    #   `_date_de_tri` depuis le 16/09 — « la date d'une offre, c'est celle de sa
+    #   première proposition » — et ce contrôle n'a jamais suivi.
+    #
+    #   LES DEUX FAUX ROUGES QU'IL RENDAIT, mesurés le 20/10 :
+    #     chaîne 999  : offre PROPOSÉE le 02/02, acceptée le 18/05 · compromis
+    #                   12/03 · vente 07/05  ->  ordre PARFAIT
+    #     chaîne 4226 : offre PROPOSÉE le 26/06, acceptée le 14/10 · compromis
+    #                   30/07 · vente 13/10  ->  ordre PARFAIT
+    #
+    #   ⭐ Il n'est lancé par AUCUNE tâche : personne n'a vu ce rouge. Mais il
+    #     rendait le contrôle inutilisable, ce qui est pire qu'une fausse alerte.
+    def _place(m: dict) -> str:
+        """La date qui ORDONNE le bloc -- la même que la règle, pas la colonne."""
+        return _date_de_tri(m.get("kind"), m.get("date"),
+                            m.get("propositions_json")) or ""
+
     apres_fermeture = []
     for cle, membres in chaines.items():
         vente = next((m for m in membres if str(m.get("kind")) == "vente"), None)
-        if not vente or not vente.get("date"):
+        if not vente or not _place(vente):
             continue
         for m in membres:
-            if m is vente or not m.get("date"):
+            if m is vente or not _place(m):
                 continue
-            if str(m["date"])[:10] > str(vente["date"])[:10]:
+            if _place(m) > _place(vente):
                 apres_fermeture.append((cle, vente, m))
     print("--- ③ EMPIRIQUE : un bloc daté APRÈS la vente qui ferme sa chaîne ---")
     print(f"   cas trouvés {len(apres_fermeture)}"
           + ("   <<< une chaîne close a reçu quelque chose" if apres_fermeture
              else "   (aucun : « une chaîne fermée ne reçoit plus jamais rien » tient)"))
     for cle, v, m in apres_fermeture[:10]:
-        print(f"      annonce {cle[0]} chaîne {cle[1]} : vente du {str(v['date'])[:10]}"
-              f" puis {m['kind']} du {str(m['date'])[:10]} ({etat(m) or '—'})")
+        # ⚠ on affiche la date de PLACE, celle qui a servi à juger -- sinon le
+        #   message raconterait autre chose que la mesure (c'est ce qui rendait
+        #   les deux faux rouges incompréhensibles).
+        print(f"      annonce {cle[0]} chaîne {cle[1]} : vente du {_place(v)}"
+              f" puis {m['kind']} du {_place(m)} ({etat(m) or '—'})"
+              f"   [colonne brute : {str(m.get('date'))[:10]}]")
     print("")
 
     # ── 4. CE QUE LA NOUVELLE RÈGLE BLOQUERAIT, chiffré avant de l'écrire ──

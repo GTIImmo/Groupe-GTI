@@ -276,6 +276,276 @@ Elles gardent leur colonne A vide, le code les saute, et la liste est donnée à
 1,7 %, et le risque une erreur de salaire.
 
 ---
+## 4-quater. ⭐⭐⭐ L'ENQUÊTE SUR LES DIVERGENCES — **terminée le 19/10**
+
+Consigne de Frédéric : *« il faut travailler encore les divergences et ensuite réfléchir
+à la règle de conduite »*. Les six champs sont mesurés. **Tout est en lecture seule :
+aucune écriture dans le classeur n'a été faite.**
+
+### ⚠⚠ LE DÉFAUT LE PLUS GRAVE EST DANS MON PROPRE APPARIEMENT
+
+En croisant l'État Actuel, **52 lignes « Annulée » tombaient sur une chaîne que nous
+disons VENDUE**. Ce n'étaient pas 52 contradictions : **49 partageaient leur chaîne avec
+une autre ligne du classeur**. En élargissant :
+
+```
+4 345 chaînes reçoivent 1 ligne du classeur          ✅
+   61 chaînes en reçoivent 2 ou 3  (124 lignes)      ⚠
+```
+
+Et en demandant, pour chacune de ces 124 lignes, si le nom du classeur existe quelque
+part dans la chaîne :
+
+| | |
+|---|---|
+| le nom **EST** dans la chaîne — deux lignes pour une même affaire | **80** (64 %) |
+| le nom n'est **NULLE PART** chez nous — l'affaire n'existe pas | **44** (35 %) |
+
+⭐ **Ce que les 44 racontent** : un acquéreur se désiste **avant** toute saisie dans
+Hektor. Le classeur, lui, garde la trace. Exemple : `chaîne 7500`, bien 5907 — COUDOUR a
+acheté, GENILLON s'était désisté avant, et nous n'avons **que** COUDOUR.
+Ma cascade collait la ligne GENILLON sur la chaîne COUDOUR, **parce que le n° de mandat
+correspondait et que rien ne la contredisait**.
+
+⛔ **Écrire un identifiant sur ces lignes les ferait pointer l'affaire de quelqu'un
+d'autre. C'est pire que pas de lien du tout** — un vide se voit, un faux lien non.
+
+### ⭐ LE REMÈDE : LE VERROU DU NOM — un VERROU, pas un score
+
+**Si le classeur donne un nom lisible et qu'il ne figure dans AUCUNE étape de la chaîne
+candidate, on refuse l'appariement.** Mesuré sur les 4 684 :
+
+```
+le nom concorde -> GARDÉE, et CONFIRMÉE par un 2e critère   4 253   95 %
+le nom ne colle a rien -> REFUSÉE                            185    4 %
+la chaîne n'a aucun nom chez nous -> gardée (indécidable)      23    0 %
+le classeur n'a pas de nom -> le verrou ne s'applique pas        8    0 %
+```
+
+⚠ **Et un verrou STRICT serait trop dur** — vu dans mes propres exemples : `PRHDHON`
+contre notre `PRUDHON`, une faute de frappe, pas une autre personne. En séparant les 185
+par ressemblance :
+
+| | | |
+|---|---|---|
+| aucune ressemblance — **vraiment une autre personne** | **132** | 71 % | ⛔ refusées |
+| très proche — **faute de frappe** | **45** | 24 % | ✅ gardées |
+| ressemblance moyenne | **8** | 4 % |  à regarder par Frédéric |
+
+*(`CHALENDAR`/`CHALENDARD`, `GUILLOUIS`/`GUILLOIS`, `CHAUFFOUR`/`CHAUFOUR`,
+`GARDIEN`/`GORDIEN`, `GILLIO`/`GIGLIO`…)*
+
+⭐ **Le taux honnête, verrou compris** :
+
+```
+appariées ET confirmées par le nom          4 298   89 %
+gardées sans que le nom puisse trancher        31    1 %
+──────────────────────────────────────────
+UTILISABLES                                 4 329   90 %
+
+refusées par le verrou (autre personne)       132
+à regarder (ressemblance moyenne)               8
+non appariées (aucune candidate, etc.)         82
+──────────────────────────────────────────
+LAISSÉES DE CÔTÉ                              222   10 %
+```
+
+⚠ **J'avais annoncé 98 %. Le vrai chiffre est 90 %** — les 8 points d'écart étaient des
+appariements que le nom contredit. **Un taux qui baisse après vérification est un bon
+signe** : c'étaient de faux liens.
+
+### LES SIX CHAMPS, UN PAR UN
+
+| champ | accord | de quoi la divergence est faite |
+|---|---|---|
+| **Acquéreur** | 95 % | fautes de frappe, surnoms, noms de jeune fille |
+| **Prix** | 97 % | **136 cas** : le prix a bougé entre l'offre et la vente — les deux valeurs sont vraies, à deux moments |
+| **Commission** | 98 % | dont **15** où le classeur note **la moitié GTI** d'une affaire partagée |
+| **Date compromis** | 97 % | — |
+| **Date d'offre** | voir ci-dessous | **le seul où NOUS avons tort en masse** |
+| **État Actuel** | 97 % | le vocabulaire se traduit proprement |
+
+#### ⚠ La date d'offre — **146 fois c'est NOTRE colonne qui a tort**
+
+```
+371 dates d'offre ne collent pas
+   221  divergence réelle                               59 %
+   146  le classeur a la 1re PROPOSITION, nous avons
+        la DERNIÈRE -> NOTRE colonne a tort             39 %
+     4  nous n'avons aucune date                         1 %
+```
+
+⭐⭐ **Et un piège à ne pas prendre pour un défaut** : 95 % des horodatages d'offre
+tombent entre **21 h et 23 h**. Ce n'est pas un bug — c'est la façon dont **Hektor écrit
+minuit** *(22 h UTC = minuit heure d'été, 23 h = minuit heure d'hiver)*. La partie date est
+juste, **2 061 dates concordent**.
+⚠ **Mais quiconque convertira un jour ces horodatages en heure locale décalera 95 % des
+dates d'un jour.** Même famille que la leçon 14 *(UTC contre locale : deux heures
+d'erreur)*.
+
+#### État Actuel — le vocabulaire se traduit
+
+| le classeur | chez nous | accord |
+|---|---|---|
+| Vente réglée | vente | 3 550 / 3 604 — **98 %** |
+| Vente prévue · Vente fixée | compromis vivant | 75 / 76 — **99 %** |
+| Compromis en attente · Offre d'achat | offre acceptée | 42 / 43 — **98 %** |
+| Annulée | un échec | 575 / 746 — **77 %** |
+
+⭐ Les 77 % d'« Annulée » **ne sont pas une divergence métier** : c'est l'appariement,
+réglé par le verrou du nom ci-dessus.
+
+---
+
+## 4-quinquies.  LA RÈGLE DE CONDUITE PROPOSÉE — **à trancher par Frédéric**
+
+> Frédéric a posé le principe : **« Le Google Sheet est la vérité »**.
+> Ce qui suit l'applique champ par champ. **Rien n'est codé : ce sont des propositions.**
+
+### Le principe général, en une phrase
+
+**Le classeur gagne sur ce qu'il SAIT mieux ; notre base gagne sur ce qu'elle MESURE
+mieux ; et là où les deux sont vrais à des moments différents, on garde LES DEUX.**
+
+### Champ par champ
+
+| champ | qui gagne | pourquoi |
+|---|---|---|
+| **Acquéreur** | ⚠ **notre base** | le nom vient de la fiche contact, pas d'une saisie à la main. Les 45 fautes de frappe du classeur le prouvent. ➡ **proposer la correction, ne pas l'imposer** |
+| **Prix** | ⭐ **les deux** | le classeur porte le prix de **vente**, nous celui de l'**étape**. Ce ne sont pas deux versions d'un même fait ➡ **ne rien écraser, afficher les deux** |
+| **Commission et répartition** | ✅ **le classeur**, et on **REMPLIT notre table avec** | ⚠ **corrigé le 19/10 : nous AVONS la table** (`app_affaire_repartition`), mais remplie à 97 % d'une **supposition** 50/50. Voir 4-sexies. ⚠ et les 15 affaires partagées où il note la **moitié GTI** ne sont pas un écart |
+| **Date compromis** | ✅ **le classeur** | 97 % d'accord, et c'est une date **juridique** que l'équipe tient à jour |
+| **Date d'offre** | ⛔ **le classeur, et il faut corriger CHEZ NOUS** | 146 cas où notre colonne porte le **dernier** événement au lieu de la **première** proposition. C'est un défaut de notre côté, pas une divergence |
+| **État Actuel** | ✅ **notre base** | il se **déduit** des étapes (offre/compromis/vente), il ne se saisit pas. 97-99 % d'accord déjà |
+
+### ⛔ LES TROIS INTERDITS
+
+1. **On n'écrit JAMAIS d'identifiant sur une ligne que le verrou du nom refuse.**
+   Un faux lien ne se voit pas ; une colonne vide, si. *(132 + 8 + 82 = 222 lignes.)*
+2. **On n'écrase JAMAIS une valeur du classeur sans trace.** Toute correction proposée
+   passe par une colonne **à côté**, jamais par-dessus — `Sheet1` nourrit la paie.
+3. **On ne corrige JAMAIS une donnée sur la foi d'une seule mesure.** Les 136 écarts de
+   prix ressemblaient à des fautes ; ce sont des prix qui ont bougé en cours d'affaire.
+
+### ⚠ Les quatre questions que je ne tranche pas
+
+```
+1. Les 136 ecarts de prix : signaler, ecraser, ou garder les deux ?
+2. Les 146 dates d'offre ou NOUS avons tort : corrige-t-on notre colonne ?
+   (c'est une ecriture dans NOTRE base, pas dans le classeur)
+3. Les 222 lignes laissees de cote : on te donne la liste, et tu tranches a la main ?
+4. La colonne 31 avait change de sens en 2021 (departement -> prix).
+   Faut-il verifier si D'AUTRES colonnes ont change de sens ?
+```
+
+---
+
+## 4-sexies. ⚠⚠ CORRECTION DU 19/10 — **Frédéric avait raison, j'avais tort**
+
+> ⚠⚠ **CETTE SECTION EST ELLE-MÊME À MOITIÉ FAUSSE — voir l'audit complet du 19/10 :**
+> **`notice/AUDIT_REPARTITION_HONORAIRES_2026-10-19.md`**.
+> Deux corrections : (1) le « 97 % de supposition » porte sur les **unités de coupe**
+> entrée/sortie, **pas sur les personnes**, qui viennent bien de Hektor ; (2) la source
+> `app_affaire_console.intervenants_json` porte **le montant en EUROS par personne**
+> (16 199 sur 16 210), couverture **97-99 % des ventes de 2019 à 2026**, lue jusqu'au
+> **18/10**. Le seul vrai manque est le **2e négociateur** d'une affaire partagée, que
+> **personne ne saisit dans Hektor** (525 cas sur 649).
+
+> *« NON nous avons dans le projet et son registre des transactions LA RÉPARTITION par
+> négociateur chez nous !!! Donc je comprends pas "il porte la répartition commerciale,
+> que nous n'avons pas" »*
+
+**Il a raison.** La table existe, elle s'appelle **`app_affaire_repartition`**, elle porte
+**16 062 lignes**, et sa forme est exactement la bonne :
+
+```
+app_chaine_id · app_dossier_id · cote (entree/sortie) · rang · hektor_user_id
+nom_au_moment · pourcentage · origine · ecrit_le · ecrit_par
+```
+
+⭐ Elle est **mieux façonnée que le classeur** : elle sépare l'**entrée** de la **sortie**,
+elle garde le **nom au moment** *(donc un négociateur parti ne fait pas disparaître
+l'historique)*, et elle trace **qui a écrit, quand et d'où**.
+
+### ⚠ MAIS LE CONTENU N'EST PAS CE QUE LA FORME PROMET
+
+```
+15 578 lignes (97 %)  origine = hektor_partage_suppose   <- UNE SUPPOSITION
+   480 lignes         origine = hektor                   <- du vrai
+     4 lignes         ecrites par un humain (2 saisie, 2 defaut)
+
+16 054 couples (chaine, cote) sur 16 058 = UN negociateur a 50 %
+couverture : 8 031 chaines sur 12 713 (63 %)
+```
+
+Les 15 578 ont toutes le **même horodatage à la microseconde**
+*(2026-09-16T04:44:30.366561)* : c'est une **conversion en masse** qui a posé 50/50
+partout, faute de mieux. **Deux saisies humaines** seulement depuis.
+
+### ⭐⭐ ET LE CLASSEUR, LUI, PORTE LA VRAIE RÉPARTITION
+
+Colonnes **`Négociateur 1/2/3`** et **`Pourcentage 1/2/3`** — la même forme que notre
+table, remplie à la main par l'équipe :
+
+```
+4 082 lignes a 1 negociateur  ·  670 a 2  ·  13 a 3
+pourcentages reels : 100 (4 086) · 50 (840) · 25 (272) · 75 (251) · 12,5 · 40 · 30 · 90
+```
+
+### Le croisement, sur les 4 469 lignes appariées
+
+| | | |
+|---|---|---|
+| les **mêmes** négociateurs | **2 263** | 50 % — accord |
+| négociateurs **différents** | **921** | 20 % — à regarder |
+| nous n'avons **aucune** répartition | **872** | 19 % |
+| le classeur en connaît **plus** *(le 2e négociateur nous manque)* | **413** | 9 % |
+
+*(`17376` BRAVARD+HERITIER 50/50, nous : BRAVARD seul · `15858` RAYNAUD+MENDES 75/25,
+nous : RAYNAUD seul · `16221` CROIZIER+JEOFFROY 75/25, nous : CROIZIER seul…)*
+
+### ➡ CE QUE ÇA CHANGE — et c'est **mieux** que ce que je proposais
+
+Je disais « le classeur garde la commission, nous n'y touchons pas ». **La bonne règle
+est l'inverse** : le classeur est la **source**, et notre table est la **destination**.
+
+```
+la passerelle REMPLIT app_affaire_repartition depuis le classeur,
+avec origine = 'classeur', en laissant les lignes 'hektor' et 'saisie' intactes.
+```
+
+⭐ **C'est un pas vers l'autonomie, pas un simple miroir** : aujourd'hui notre registre
+affiche un 50/50 inventé ; après, il affiche la **vraie** répartition, celle qui sert à
+payer les commerciaux. ⚠ Et `origine` existe **déjà** pour distinguer les sources : rien
+à inventer, la table a été pensée pour ça.
+
+⚠ **Les 921 « différents » ne se recopient PAS en silence** : un négociateur qui change
+peut être une reprise de dossier légitime. On les liste, on ne les écrase pas.
+
+---
+
+## 4-septies. ⭐ LA CLÉ EXISTE DÉJÀ — révision de la section 3
+
+La section 3 écartait **`ID Unique`** *(4 766 / 4 766, toutes distinctes)* au motif
+qu'elle est **générée par AppSheet, donc inconnue de nous à l'écriture**.
+
+✅ **C'est vrai pour AJOUTER une ligne. C'est faux pour RELIER les lignes existantes.**
+
+| | la clé à employer | écrit-on dans le classeur ? |
+|---|---|---|
+| **relier les 4 766 lignes déjà là** | **`ID Unique`**, lue et rangée **chez nous** | ✅ **NON — zéro écriture** |
+| **ajouter une ligne neuve** | la colonne A, qu'on remplit | oui |
+
+⭐⭐ **La première étape de la passerelle ne touche donc pas au classeur du tout.** On
+ajoute une colonne **chez nous** *(`sheet_id_unique` sur la chaîne)*, et le lien est fait.
+Tout le risque de la section 5 *(`Sheet1` nourrit la paie)* disparaît de cette étape-là.
+
+⚠ **Le prix à dire** : si quelqu'un **supprime puis recrée** une ligne dans AppSheet, elle
+reçoit un **nouvel `ID Unique`** et le lien se perd en silence. À surveiller par un
+contrôle périodique *(une clé rangée chez nous qui ne se retrouve plus dans le classeur)*.
+
+---
+
 ## 5. ⚠⚠ LE VRAI DANGER N'EST PAS TECHNIQUE — `Sheet1` NOURRIT LA PAIE
 
 `Calcul Salaire`, `CA Mensuel`, `Reporting` et `12 mois lissants` portent des montants
