@@ -6460,9 +6460,32 @@ ouvrira l'écriture séparément, avec son propre essai. **Chaque pièce reste p
 
 **Les 3 ternaires** : le brouillon n'est plus détourné, il suit la famille Vendu/Clos — libellé,
 raccourci **et picto**. ⭐ *« Reprendre la saisie dans Hektor »* **n'est pas perdu** : il reste
-dans `StockScreen` *(sa propre colonne)* et **dans la fiche, aux deux endroits**
-*(`DossierDetailLayoutBase`, `MobileDossierDetail`)*. ⚠ Le picto crayon `'brouillon'` devient
-inatteignable ici ; **laissé en place**, noté.
+**dans la fiche, aux deux endroits** *(`DossierDetailLayoutBase`, `MobileDossierDetail`)*.
+⚠ Le picto crayon `'brouillon'` devient inatteignable ici ; **laissé en place**, noté.
+
+> ⚠⚠ **CORRIGÉ LE 20/10, APRÈS UNE FAUSSE PISTE DE MA PART.** J'avais écrit que
+> « `StockScreen` garde sa colonne » et, voyant Frédéric sans changement à l'écran, j'ai
+> conclu que j'avais corrigé **le mauvais composant** et proposé **4 lots de travail**.
+> **C'était faux.** Vérification faite dans les commits d'origine :
+>
+> | dans le menu | `screen` interne | composant |
+> |---|---|---|
+> | **Annonces** | **`'mandats'`** | **`MandatsScreen`** ⬅ mon correctif est bien là |
+> | Estimations | `'estimations'` | `MandatsScreen` en mode estimation |
+> | Mandats | `'registre'` | le registre |
+> | *(rien)* | ⛔ `'annonces'` | `StockScreen` — **CODE MORT** |
+>
+> `openScreen` *(l. 14927)* fait `nextScreen === 'annonces' ? 'mandats' : nextScreen` :
+> **l'écran `'annonces'` n'est jamais atteint**. Et le commit `e26e25e` l'écrit noir sur
+> blanc : *« le filtre Brouillons n'apparaît que sur la vue Annonces (screen === 'mandats') […]
+> retire aussi l'option du bloc filtre mort (screen === 'annonces', jamais actif) »*.
+>
+> ⭐ **Donc : les brouillons se retrouvent UNIQUEMENT dans le menu Annonces, tant qu'ils sont
+> en draft — c'est une décision du projet, que Frédéric a confirmée.** Le filtre vit dans le
+> bloc `screen === 'mandats'` *(l. 22972-23067)*, l'écran **Estimations a son propre bloc qui
+> n'en a pas**, et le `!isEstimationMode` qui y tue le bouton est donc **correct**.
+> ⛔ **Ne pas « corriger » l'écran Estimations.** Et mes 4 lots sont **retirés** : aucun n'avait
+> lieu d'être. Voir la mémoire `ecran-mandats-est-le-menu-annonces`.
 
 ### L'épreuve hors ligne
 
