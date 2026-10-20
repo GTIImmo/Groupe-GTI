@@ -826,9 +826,13 @@ def main() -> int:
                 #   seed_target_work_items) : elles ne polluent rien de public, et
                 #   la piece ② (« charger la fiche complete d'un brouillon ») en
                 #   aura besoin.
-                # ⚠ A FAIRE EN PIECE ② : rafraichir ICI l'index BROUILLON de cette
-                #   annonce. Tant que ce n'est pas fait, un brouillon modifie garde
-                #   une ligne d'index datant du dernier run de 05:00.
+                # ⚠ A FAIRE EN PIECE ③ (« modifier un brouillon »), PAS EN ②.
+                #   Rafraichir ICI l'index BROUILLON de cette annonce : tant que ce n'est
+                #   pas fait, un brouillon modifie garde une ligne d'index datant du
+                #   dernier run de 05:00.
+                #   ⭐ Corrige le 20/10 : la piece ② s'est averee etre AUTRE CHOSE -- le
+                #     cache de DETAIL pour 24 h (app_brouillon_annonce_detail_cache). Le
+                #     rafraichissement d'index ne sert qu'APRES une ecriture, donc ③.
                 counts = {
                     "dossiers_upserted": 0,
                     "details_upserted": 0,
