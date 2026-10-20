@@ -4909,8 +4909,121 @@ function adoptExistingAppRows(entries, existingRows) {
   });
 }
 
-async function upsertConsoleDocuments(dossier, entries) {
+// ═══════════════════════════════════════════════════════════════════════════════
+// LE DOMAINE DES DOCUMENTS -- 20/10/2026
+//
+// LE DEFAUT. `extractDocumentEntries` pose hektor_document_id = sha1(URL COMPLETE),
+// domaine compris (l. ~1075). Le 11/09/2026 le portail a demenage :
+//     groupe-gti-immobilier.la-boite-immo.com  ->  www.gti-immobilier.fr
+// Meme fichier, meme chemin, AUTRE NUMERO. Le worker ne reconnait plus la fiche : il en
+// cree une neuve, et pruneDeletedDocuments supprime l'ancienne en croyant que Hektor a
+// efface le document.
+//
+// ⚠⚠ LE DEFAUT ETAIT ECRIT LE 25/09 -- notice/AUDIT_RATTRAPAGE_DOCUMENTS_2026-09-25.md,
+//   §5 reserve 2 : « La cle d'unicite d'un document est (hektor_annonce_id, source,
+//   hektor_document_id) -- pas la notre. Un changement de numero Hektor recree les
+//   documents en double au lieu de les reconnaitre. » La premiere vague est du 26/09,
+//   LE LENDEMAIN, et la reserve n'a jamais ete traitee.
+//
+// CE QUE CA A COUTE (mesure du 20/10) : 2 330 annonces · 15 403 fiches supprimees,
+// 17 120 recreees · 17 118 fichiers RETELECHARGES chez Hektor -- or son mur est un quota
+// de VOLUME et notre IP a ete bannie les 19-20/08 pour cela. Restent 27 966 fiches sur
+// 6 199 annonces a l'ancien domaine.
+// ⭐ AUCUN DOCUMENT N'EST PERDU : 17 148 des 17 150 fiches d'aujourd'hui portent leur
+//   fichier, 0 annonce n'a tout perdu, 207 fiches signees intactes. Ce qui se perd, c'est
+//   l'IDENTIFIANT de l'app -- et 7,4 Go de DOUBLONS dans le coffre.
+//
+// ⭐⭐ LA MESURE QUI DECIDE : le chemin sans l'hote est une cle PARFAITE.
+//   ancien domaine   27 966 fiches -> 27 966 chemins distincts -> 0 collision
+//   nouveau domaine 162 838 fiches -> 162 838 chemins distincts -> 0 collision
+//   190 804 fiches des deux cotes du demenagement, sans UNE SEULE collision.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// L'adresse SANS l'hote : la seule part qui ne bouge pas quand Hektor demenage.
+// Rend null si l'adresse est absente ou illisible -- on ne devine jamais un chemin.
+function cheminDocument(url) {
+  const texte = String(url || "").trim();
+  if (!texte) return null;
+  try {
+    const u = new URL(texte);
+    return `${u.pathname}${u.search}`;
+  } catch (_e) {
+    return null;
+  }
+}
+
+// ⭐ LE VRAI CORRECTIF. Avant d'ecrire, on regarde si une fiche existante porte LE MEME
+// CHEMIN qu'une entree qu'on vient de lire, sous un autre numero. Si oui, c'est LE MEME
+// document : on RE-CLE la fiche existante (numero + adresse) par un PATCH, et l'upsert la
+// retrouve ensuite normalement -- elle garde son `id`, son fichier et son historique.
+//
+// ⚠ POURQUOI UN PATCH ET PAS UNE SIMPLE ADOPTION. La base cherche le conflit sur
+//   (annonce, source, numero). Si l'upsert ecrivait le NOUVEAU numero en reprenant l'`id`
+//   existant, elle ne trouverait aucun conflit, tenterait un INSERT, et l'`id` serait deja
+//   pris : 409 « app_console_document_pkey » -- exactement le bug corrige le 19/10 pour
+//   les lignes 'app'. On re-cle DONC AVANT.
+//
+// ⚠ PORTEE VOLONTAIREMENT ETROITE : meme annonce, meme source, meme chemin, numero
+//   different, et seulement les sources hektor_console*. Une fiche sans adresse lisible
+//   n'est jamais touchee. Et on ne re-cle jamais vers un numero deja porte par une autre
+//   fiche de la meme annonce+source -- sinon on creerait le conflit qu'on veut eviter.
+async function reconcilierParChemin(job, dossier, entries, existingRows) {
+  const parChemin = new Map();
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const chemin = cheminDocument(entry.console_url);
+    if (!chemin) continue;
+    parChemin.set(`${entry.source}|${chemin}`, entry);
+  }
+  if (!parChemin.size) return 0;
+
+  const numerosPris = new Set();
+  for (const row of Array.isArray(existingRows) ? existingRows : []) {
+    if (row.hektor_document_id) numerosPris.add(`${row.source}|${row.hektor_document_id}`);
+  }
+
+  let recles = 0;
+  for (const row of Array.isArray(existingRows) ? existingRows : []) {
+    if (!/^hektor_console/.test(String(row.source || ""))) continue;
+    const chemin = cheminDocument(row.metadata_json && row.metadata_json.console_url);
+    if (!chemin) continue;
+    const entry = parChemin.get(`${row.source}|${chemin}`);
+    if (!entry) continue;
+    if (String(entry.hektor_document_id) === String(row.hektor_document_id)) continue;
+    if (numerosPris.has(`${row.source}|${entry.hektor_document_id}`)) continue;
+
+    await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(row.id)}`, {
+      method: "PATCH",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        hektor_document_id: entry.hektor_document_id,
+        metadata_json: { ...(row.metadata_json || {}), console_url: entry.console_url },
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    numerosPris.delete(`${row.source}|${row.hektor_document_id}`);
+    numerosPris.add(`${row.source}|${entry.hektor_document_id}`);
+    row.hektor_document_id = entry.hektor_document_id;
+    row.metadata_json = { ...(row.metadata_json || {}), console_url: entry.console_url };
+    recles += 1;
+  }
+
+  // ⚠ On ecrit au journal SEULEMENT si on a un travail : logJob pose job_id tel quel,
+  //   et un id nul ferait echouer l'insertion -- donc toute la synchro.
+  if (recles && job && job.id) {
+    await logJob(job.id, "hektor", "running",
+      "Documents reconnus par leur CHEMIN et re-cles (Hektor a change de domaine)", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        recles,
+      });
+  }
+  return recles;
+}
+
+async function upsertConsoleDocuments(dossier, entries, job = null) {
   const existingForAdoption = await loadExistingDocuments(String(dossier.hektor_annonce_id));
+  // ⭐ AVANT TOUTE ECRITURE : reconnaitre par le chemin ce que le numero ne reconnait
+  //   plus. Repare la fiche EN PLACE, une annonce a la fois, sans migration de masse.
+  await reconcilierParChemin(job, dossier, entries, existingForAdoption.rows);
   const selectedEntries = dedupeDocumentEntries(
     adoptExistingAppRows(adoptExistingImmoSignRows(entries, existingForAdoption.rows), existingForAdoption.rows));
   const existing = existingForAdoption;
@@ -5827,7 +5940,7 @@ async function pruneDeletedDocuments(job, dossier, entries) {
   const empreinteIds = new Set([...buildSignatureMapFromHtml(chargeHtml).keys()].map(String));
   const presentHashes = new Set(entries.map((e) => e.hektor_document_id));
   const existing = await loadExistingDocuments(String(dossier.hektor_annonce_id));
-  const toDelete = [];
+  let toDelete = [];   // `let` : le garde-fou par chemin le filtre plus bas
   for (const r of existing.rows) {
     const src = String(r.source || "");
     if (src === "hektor_immosign_signed") continue;                 // ligne synthetique signee
@@ -5844,6 +5957,55 @@ async function pruneDeletedDocuments(job, dossier, entries) {
     toDelete.push(r.id);
   }
   if (!toDelete.length) return 0;
+
+  // ═══ GARDE-FOU (20/10/2026) -- DEUX NIVEAUX, et le premier est EXACT ═══
+  //
+  // ⭐ NIVEAU 1, EXACT : on ne supprime JAMAIS une fiche dont le CHEMIN est present dans
+  //   la liste qu'on vient de lire. C'est la signature meme du changement de domaine :
+  //   meme chemin, autre numero. Ce n'est pas une heuristique, c'est une identite.
+  //   ⚠ En principe reconcilierParChemin a deja re-cle ces fiches avant l'upsert ; ce
+  //     niveau est la ceinture, au cas ou la reconciliation n'aurait pas pu (numero deja
+  //     pris, adresse illisible, PATCH en echec).
+  const cheminsPresents = new Set();
+  for (const e of entries) {
+    const c = cheminDocument(e.console_url);
+    if (c) cheminsPresents.add(`${e.source}|${c}`);
+  }
+  const avantFiltreChemin = toDelete.length;
+  const parId = new Map(existing.rows.map((r) => [r.id, r]));
+  toDelete = toDelete.filter((id) => {
+    const r = parId.get(id);
+    const c = r && cheminDocument(r.metadata_json && r.metadata_json.console_url);
+    return !(c && cheminsPresents.has(`${r.source}|${c}`));
+  });
+  if (toDelete.length !== avantFiltreChemin) {
+    await logJob(job.id, "hektor", "running",
+      "Suppression evitee : ces documents sont TOUJOURS la, sous une autre adresse", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        epargnees: avantFiltreChemin - toDelete.length,
+      });
+  }
+  if (!toDelete.length) return 0;
+
+  // ⚠ NIVEAU 2, CHIFFRE : le filet pour l'inconnu. Une synchro qui emporte la MOITIE ou
+  //   plus des documents deposes d'une annonce est suspecte -- on refuse et on le DIT,
+  //   au lieu de supprimer en silence.
+  //   SEUIL CALIBRE SUR LES VRAIS CAS (20/10) : « >= 2 ET >= la moitie » attrape 58,7 %
+  //   des 2 330 cas du bug et EPARGNE les 18 suppressions normales d'avant la bascule
+  //   (0 faux positif). Le seuil « > la moitie » n'en attrapait que 1,2 % : dans un
+  //   remplacement, on supprime N et on recree N, donc la part est EXACTEMENT la moitie.
+  //   ⚠ Un seuil chiffre n'attrapera jamais tout : c'est un filet, PAS le correctif.
+  //     Le correctif est la reconnaissance par chemin, plus haut.
+  const deposes = existing.rows.filter((r) => /^hektor_console/.test(String(r.source || ""))).length;
+  if (toDelete.length >= 2 && deposes > 0 && toDelete.length * 2 >= deposes) {
+    await logJob(job.id, "hektor", "error",
+      "SUPPRESSION EN BLOC REFUSEE : trop de documents d'un coup, rien n'a ete supprime", {
+        hektor_annonce_id: String(dossier.hektor_annonce_id),
+        aurait_supprime: toDelete.length,
+        documents_deposes: deposes,
+      });
+    return 0;
+  }
   const ids = toDelete.map((id) => encodeURIComponent(id)).join(",");
   await supabaseRequest(`app_console_document?id=in.(${ids})`, { method: "DELETE", prefer: "return=minimal" });
   await logJob(job.id, "hektor", "running", "Docs supprimes dans Hektor retires de l'app", {
@@ -5952,7 +6114,7 @@ async function handleSyncConsoleDocuments(job) {
     await ensureHektorExecutionContext(job, dossier, payload, { preferRequester: true, preferDossierOwner: true, required: true, forceRemoteSwitch: true });
     entries = await fetchConsoleDocumentEntries(dossier.hektor_annonce_id, lecture);
   }
-  const rows = await upsertConsoleDocuments(dossier, entries);
+  const rows = await upsertConsoleDocuments(dossier, entries, job);
   const cloud = shouldKeepCloud(dossier);
   let localStored = 0;
   let cloudStored = 0;
@@ -8318,7 +8480,7 @@ async function completerEnvoiDocumentDiffere(job, dossier, payload) {
       }),
     });
     numeroPose = envoi.found.hektor_document_id;
-    await upsertConsoleDocuments(dossier, envoi.entries);
+    await upsertConsoleDocuments(dossier, envoi.entries, job);
 
     await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id,
       { reason: "upload_document_to_hektor", priority: 82 });
@@ -8450,7 +8612,7 @@ async function handleUploadDocumentToHektor(job) {
   const entries = envoi.entries;
   // ⚠ ORDRE PRESERVE : l'indexation a lieu AVANT le controle de confirmation, exactement
   // comme avant l'extraction. L'inverser changerait le comportement en cas d'echec.
-  const indexed = await upsertConsoleDocuments(dossier, entries);
+  const indexed = await upsertConsoleDocuments(dossier, entries, job);
   const found = envoi.found;
   if (!found) throw new Error(`Upload Hektor non confirme dans la liste documents: ${filename}`);
   const storedRow = indexed.find((row) => row.hektor_document_id === found.hektor_document_id);
@@ -8898,7 +9060,7 @@ async function handleDeleteDocumentFromHektor(job) {
     method: "DELETE",
     prefer: "return=minimal",
   });
-  await upsertConsoleDocuments(dossier, entries);
+  await upsertConsoleDocuments(dossier, entries, job);
   const syncJob = await enqueueRefreshConsoleDataJobBestEffort(job, dossier.hektor_annonce_id, {
     reason: "delete_document_from_hektor",
     priority: 82,

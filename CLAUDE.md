@@ -179,7 +179,46 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ⛔ SI sauvees vaut 0 ET marquees vaut 2, LE VERROU N'A PAS MORDU -- regarder tout
      de suite : une photo masquee serait sortie du panneau, sans retour possible.
 
-① ⏰ LA PIECE ④ (SORTIR DU BROUILLON) ATTEND SA POSE -- 5 gestes :
+⓿ ter ⏰⏰ LE DOMAINE DES DOCUMENTS -- CA SAIGNE CHAQUE NUIT, 2 GESTES SUFFISENT.
+   LE DEFAUT : le numero d'un document est le sha1 de son ADRESSE COMPLETE, domaine
+   compris (console_job_worker.js:1075). Le portail a demenage le 11/09 -> meme
+   fichier, autre numero -> le worker cree un double et SUPPRIME l'ancienne fiche.
+   ⚠⚠ LE DEFAUT ETAIT ECRIT LE 25/09 dans notice/AUDIT_RATTRAPAGE_DOCUMENTS_2026-09-25.md
+     §5 reserve 2. La premiere vague est du 26/09, LE LENDEMAIN. Jamais traitee.
+   L'AMPLEUR : 2 330 travaux, 15 403 fiches supprimees, 17 120 recreees ; 33 annonces
+     ces 48 h ; restent 27 966 fiches / 6 199 annonces a l'ancien domaine.
+   ⚠⚠ ET 17 118 FICHIERS RETELECHARGES CHEZ HEKTOR (781 ces 48 h) -- contre un
+     quota de VOLUME, avec un bannissement d'IP a notre historique (19-20/08).
+   ⭐ AUCUN DOCUMENT N'EST PERDU : 17 148 des 17 150 portent leur fichier, 0 annonce
+     n'a tout perdu, 207 fiches signees intactes. Ce qui est perdu = l'identifiant de
+     l'app, et 7,4 Go de DOUBLONS dans le coffre (du menage, pas une recuperation).
+   LE CORRECTIF (ecrit, eprouve, PAS ENCORE ACTIF) -- aucune ecriture en base :
+     A reconcilierParChemin() RE-CLE la fiche existante par un PATCH avant l'upsert,
+       quand le CHEMIN est le meme sous un autre numero. Le chemin est une cle
+       PARFAITE : 190 804 fiches, 0 collision, des deux cotes du demenagement.
+     B pruneDeletedDocuments a deux garde-fous : NIVEAU 1 EXACT (ne jamais supprimer
+       une fiche dont le chemin est dans la liste qu'on vient de lire) et NIVEAU 2
+       chiffre (>= 2 ET >= la moitie -> refus ecrit au journal).
+     ⭐ PAS DE MIGRATION DE MASSE : une fiche ne s'abime qu'au MOMENT de la synchro,
+       donc chaque annonce se repare d'elle-meme a son prochain passage.
+   LES 2 GESTES :
+   1. POUSSER : git -C C:/Hektor/Projet push
+   2. ⏰ REDEMARRER HektorConsoleWorkerDocuments, ET SEULEMENT FILE VIDE :
+        0 pending ET 0 running (le 19/10 a 17:10 un redemarrage a tue 14 photos)
+        powershell -Command "Restart-Service HektorConsoleWorkerDocuments; Get-Service HektorConsoleWorker*"
+   PUIS REGARDER LA NUIT SUIVANTE : `pruned` doit tomber a presque rien, et le journal
+     doit porter « reconnus par leur chemin et re-cles ».
+   ⚠ NON MESURE, et je ne le suppose pas : les dates de signature reellement perdues ;
+     si les PHOTOS ont le meme defaut (leur id vient du CDN) ; ce qui declenche la
+     resynchro d'une annonce (reserve 3 du 25/09, toujours ouverte).
+   ⚠ COORDINATION : une conversation a ete ouverte sur ce chantier avec
+     notice/PROMPT_CHANTIER_DOMAINE_DOCUMENTS_2026-10-20.md. Ces correctifs sont SES
+     pieces A et C, dans l'ordre INVERSE, et sa migration devient optionnelle.
+   Tout est dans notice/AUDIT_DOMAINE_DOCUMENTS_2026-10-20.md.
+
+① ✅ LA PIECE ④ (SORTIR DU BROUILLON) EST POSEE ET EPROUVEE (20/10 19:02) --
+   63131 est passee du brouillon au catalogue en 1 min 13 s, en gardant son numero
+   7 589 119, avec diffusable 0. Les 5 gestes ci-dessous sont FAITS :
    1. COLLER supabase/patch_chantier7_piece4_sortir_du_brouillon_2026-10-20.sql
    2. COLLER ..._REPETITION.sql  -> les 6 controles verts
    3. POUSSER : git -C C:/Hektor/Projet push

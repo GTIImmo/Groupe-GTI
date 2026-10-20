@@ -89,12 +89,19 @@ function monter(faux) {
     tranche("async function loadExistingDocuments("),
     tranche("function adoptExistingImmoSignRows("),
     tranche("function adoptExistingAppRows("),   // absent avant le correctif : le test le dira
+    // ⑦ 20/10 : upsertConsoleDocuments appelle desormais reconcilierParChemin
+    //   (le domaine des documents). Sans ces deux tranches, le montage leve
+    //   « reconcilierParChemin is not defined » -- meme raison que adoptExistingAppRows
+    //   ajoute la veille. On AJOUTE, on ne restructure pas.
+    tranche("function cheminDocument("),
+    tranche("async function reconcilierParChemin("),
     tranche("async function upsertConsoleDocuments("),
   ].filter(Boolean);
   // eslint-disable-next-line no-new-func
-  return new Function("supabaseRequest", "crypto", "storageSafeFilename",
+  return new Function("supabaseRequest", "crypto", "storageSafeFilename", "logJob",
     `${blocs.join("\n")}; return upsertConsoleDocuments;`)(
-    (chemin, options) => faux.requete(chemin, options), crypto, (n, f) => String(n || f));
+    (chemin, options) => faux.requete(chemin, options), crypto, (n, f) => String(n || f),
+    async () => {});
 }
 
 const ANNONCE = "59578";
