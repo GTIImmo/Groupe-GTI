@@ -5811,3 +5811,89 @@ Hektor** et écrit **par le worker**. Ni l'un ni l'autre ne passe par le miroir.
 ➡ **Et la seconde moitié reste la sienne** : ouvrir ce brouillon **dans le wizard** et dire si le 3 y
 est, si le wizard s'ouvre normalement, et s'il garde le 3 quand on le fait avancer d'une étape.
 **Aucune mesure automatique ne peut répondre à ça.**
+
+
+---
+
+## ⭐⭐⭐ ON PEUT MODIFIER UN BROUILLON — PROUVÉ EN RÉEL LE 20/10, LES DEUX SENS
+
+**Accord de Frédéric, et sa cible** : *« non prend exemple du bien de stephanie »* — **62554**,
+brouillon abandonné de `stephanie.martinez@gti-immobilier.fr` *(agence 10, ANNONAY)*, créé le
+22/06, jamais retouché, coquille entièrement vide.
+
+### L'ESSAI, ET SON TÉMOIN INVERSE
+
+```
+avant    NB_CHAMBRES = "0"     (relu chez Hektor juste avant d'ecrire)
+essai    NB_CHAMBRES = "3"     <- accepte, PROUVE en relisant chez Hektor
+retour   NB_CHAMBRES = "0"     <- remis, PROUVE en relisant
+```
+⭐⭐ **Et seul `NB_CHAMBRES` a bougé** : `nbpieces`, `NB_SDB`, `NB_SE`, `NB_WC`, `SURF_CARREZ`,
+`surfappart`, `SURF_SEJOUR`, `vuee` et les 3 listes sont restés identiques. **Le geste est
+chirurgical.** *(Et `skipped_fields: []` — rien n'a été jeté en silence.)*
+
+### ⭐⭐ LE MÉCANISME EST PROUVÉ, PAS DÉDUIT — le journal du geste, à la seconde
+
+```
+10:43:12  claim             app_dossier_id: null              <- ⭐ LE REPLI A JOUE
+10:43:15  hektor_context    admin (user 4, ADMIN) actif
+10:43:15  hektor_context    -> negociateur « 55 » Stephanie MARTINEZ,  source: "payload"   ⭐⭐
+10:43:18  hektor_context    contexte NEGO actif, « Mme. Stephanie MARTINEZ »
+10:43:19  hektor_annonce_update   groupe ag_interieur, skipped: []
+10:43:20  finish            result "1", « mise a jour effectuee. »
+```
+⭐⭐⭐ **`source: "payload"` et `app_dossier_id: null` le disent ensemble : la SEULE chose qui
+manquait pour modifier un brouillon était `hektor_user_id` dans la charge.** `loadDossier` ne
+connaît que 3 index sur 4, mais son **repli** *(l. 11518)* accepte le geste dès que la charge porte
+cette clé. **Ce repli existe depuis toujours et n'avait jamais servi à ça.**
+
+### ⭐⭐⭐ ET LA MOITIÉ DE FRÉDÉRIC, CELLE QU'AUCUNE MESURE NE POUVAIT DONNER
+
+Il a ouvert 62554 **dans le wizard de Hektor** :
+
+| sa question | sa réponse |
+|---|---|
+| le nombre de chambres est-il à **3** ? | ⭐ **OUI** |
+| le wizard s'ouvre-t-il **normalement** ? | ⭐ **OUI** |
+| ⭐⭐⭐ **garde-t-il le 3 si on avance d'une étape ?** | ⭐⭐⭐ **OUI** |
+
+➡ ⭐⭐⭐ **LE WIZARD RESPECTE NOTRE ÉCRITURE.** C'était la seule inconnue, et elle est levée :
+**l'index des brouillons PEUT devenir complet.**
+
+⚠ **Et ça corrige la note du 23/06 et la mémoire**, qui disaient *« dans Hektor il vit dans le
+wizard, pas dans la fiche »* — **les deux cohabitent, et ils s'accordent.**
+
+### ⛔⛔ MAIS L'ESSAI A RÉVÉLÉ UN EFFET DE BORD, ET C'EST LE VRAI OBSTACLE
+
+**62554 s'est retrouvée dans `app_dossier_current` ET dans l'index brouillon — dans les deux.** Le
+chevauchement actif ∩ brouillon, **à 0 depuis le 22/06** *(revérifié le 14/10)*, est passé à **1**.
+
+⭐ **LA CAUSE** : le geste met en file un `refresh_console_data`, qui appelle
+**`phase2_push_single_annonce_direct`** — le push **d'une seule** annonce. ⛔ **Il ne connaît pas
+`brouillon_active_exclusion_sql()`, qui vit dans le push COMPLET**
+*(`export_app_payload.py` + `push_upgrade_to_supabase.py`)*.
+
+➡ ⚠ **TOUT read-through sur un brouillon le réinjecte dans le parc vivant.**
+
+**ET CE N'EST PAS MON ESSAI QUI L'A CRÉÉ — il l'a rendu visible :**
+
+| | |
+|---|---|
+| read-through déjà passés sur un brouillon | **9 travaux, 7 annonces** *(61761, 61762, 62074, 62317, 62554, 63131, 63237)* |
+| ⭐ et le chevauchement est quand même à **1** | ➡ **le run de nuit a re-exclu les 6 autres** |
+| ⭐ 62554 dans le parc vivant | `diffusable = 0` — **aucun risque de diffusion** |
+
+⭐⭐ **Donc le défaut est RÉEL, ANCIEN, et TEMPORAIRE** : il dure jusqu'au run de 05:00.
+
+### ➡ CE QUE ⑦-10 DEVIENT
+
+Ce n'est plus *« la table de cache est vide »*. C'est :
+
+> ⭐ **On peut compléter un brouillon depuis l'app — à une condition : que le push d'UNE SEULE
+> annonce applique l'exclusion des brouillons, comme le push complet le fait.**
+
+⚠ *Et c'est peut-être exactement ce qui nous a arrêtés en juin, sans que personne ne l'écrive.*
+
+**NON MESURÉ, et je le dis** : si l'exclusion appliquée au push d'une seule annonce suffirait *(il
+faut lire `push_single_annonce_to_supabase.py`)* · si d'autres champs que `NB_CHAMBRES` passent
+aussi bien · et **le PRIX reste hors sujet** *(« refusé hors workflow mandat », note du 22/06)*.
