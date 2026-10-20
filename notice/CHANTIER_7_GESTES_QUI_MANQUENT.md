@@ -6010,3 +6010,179 @@ que les **230 actifs** sans prix sont, eux, douteux.
 
 ➡ ⭐ **Donc la bonne cible d'essai est 63143, pas 62554** — et c'est la question de Frédéric qui m'a
 sorti du mauvais échantillon.
+
+
+---
+
+# 📋 RAPPORT — MAÎTRISER LE PASSAGE BROUILLON ⇄ ACTIF / ESTIMATION *(20/10/2026)*
+
+> *« il y a deux boutons… donc on a nos boutons pour les workers, modifier un brouillon ou activer
+> le brouillon pour le passer à l'index actif ou estimation. Il faut donc que l'index des brouillons
+> ait un bouton pour récupérer le détail… comme pour les index légers, avoir la possibilité
+> d'extraire le détail et avoir une fiche avec des fonctions limitées mais fonctionnelle pendant le
+> temps où la fiche a son détail accessible — je crois que nous avons mis un délai maximum. »*
+
+**Tout est mesuré. Coût : 2 appels à Hektor** *(la fiche de 63143)*. **Le reste est local** :
+captures, code, miroir, Supabase.
+
+---
+
+## 1. ⭐⭐ LES DEUX BOUTONS EXISTENT — confirmé dans une capture de fiche
+
+| bouton *(son id dans la page)* | fonction | ce qu'il fait |
+|---|---|---|
+| **« Enregistrer le brouillon »** *(`Enregistrer_le_brouillon`)* | `saveBrouillon()` | valide **l'étape courante** et **reste** brouillon |
+| **« Enregistrer et terminer »** *(`Enregistrer_et_terminer`)* | `saveAndQuitte()` | saute à **la dernière étape** et **termine** |
+
+```js
+function saveBrouillon() { goToStepWizard(currentStep, currentStep, brouillonWizardForCallback); }
+function saveAndQuitte() { goto = ($j('#stepWizard_8').length>0) ? '8' : '7';
+                           goToStepWizard(goto, currentStep, endWizardForCallback); }
+```
+➡ ⭐ **La seule différence est l'étape de destination.** *Ce qui termine un brouillon, c'est
+d'atteindre la dernière étape.*
+
+## 2. ⭐⭐⭐ ET LE BROUILLON EST UN SIMPLE CHAMP — la trouvaille du jour
+
+```js
+function uppChampByAnn(champ, val, idann) {       // GET xmlrpc.php
+    { mode: "upval", champ: champ, val: val, id: idann }
+}
+function setActifAnnonce()            { uppChampByAnn('etatAnnonce', '1', idAnn); }
+function brouillonWizardForCallback() { uppChampByAnn('etatAnnonce', '2', idAnn);
+                                        uppChampByAnn('diffusable',  '0', idAnn);
+                                        uppChampByAnn('partage',     '0', idAnn); }
+```
+
+| | |
+|---|---|
+| ⭐⭐⭐ **`etatAnnonce = 1`** | **ACTIF** — un seul GET |
+| ⭐⭐⭐ **`etatAnnonce = 2`** | **BROUILLON** *(+ `diffusable=0`, `partage=0`)* |
+| ⭐⭐ **donc RÉVERSIBLE** | *mon objection « on ne pourra pas revenir » tombe* |
+
+⚠ **Non mesuré** : si `mode=upval` suffit **seul**, ou s'il faut aussi passer par le wizard.
+**C'est précisément ce que l'essai dira.**
+
+## 3. ⭐⭐⭐ LA VALIDATION N'EST EXIGÉE QUE SI « DIFFUSABLE » EST COCHÉ
+
+```js
+function endedWizard(keyGroup, step) {
+    if ($j("#diffusableLabel-1").is(':checked') && false === checkMandatory('wizard_obligatoire')) {
+        alertBox('des champs obligatoires sont manquants');
+        uppChampByAnn('etatAnnonce', '2', idAnn);                              // il REMET en brouillon
+    } else {
+        valideEtapeWizard(keyGroup, step, false, true, null, setActifAnnonce); // il ACTIVE
+    }
+}
+```
+➡ ⭐⭐ **On peut terminer un brouillon sans champs obligatoires, tant qu'on ne le rend pas
+diffusable.** ⭐ **Et c'est exactement notre cas : 511 des 529 n'ont pas de prix.**
+
+## 4. ⭐ LE STATUT ACTIF / ESTIMATION EST PORTÉ PAR `statusAnnonceWizard`
+
+`changeStatutPublication()` le pose, et `valideEtapeWizard` l'envoie avec le mode
+**`annonce-createBien-Ajx_Bien_wizardStepNew`**.
+⭐ **Correspondance mesurée chez Hektor** : **`statut 1 = Estimation`, `statut 2 = Actif`.**
+
+---
+
+## 5. ⭐ LE DÉTAIL DES INDEX LÉGERS — et le délai dont Frédéric se souvenait
+
+**Son souvenir est juste : il y a bien un `expires_at`.**
+
+| | |
+|---|---|
+| **le délai** | ⭐ `ttlHours = payload.cache_ttl_hours || 24` → **24 h par défaut**, réglable par la charge *(d'où les 1 h et 2 h observés)* |
+| **qui l'écrit** | un **script Python par famille** : `Console/prepare_archived_annonce_detail.py` *(342 lignes)* et `prepare_historical_annonce_detail.py` |
+| ⭐⭐ **d'où vient le détail** | **de `data/hektor.sqlite`, en lecture seule** — ⭐ **ZÉRO appel à Hektor** |
+| les types de travail | `prepare_archived_annonce_detail` *(25 exécutés, 0 erreur)* · `prepare_historical_annonce_detail` *(24, 0 erreur)* |
+| ⛔ **pour les brouillons** | **aucun script, aucun type de travail**. La table existe *(clone de la migration du 22/06)* et reste à **0 ligne** |
+| l'usage réel | **19 caches posés** en tout, ⭐ **0 encore valide** : *c'est un cache à la demande, pas un stock* |
+
+⭐⭐⭐ **ET LA BONNE NOUVELLE EST LÀ** : puisque le détail vient de **notre miroir**, et que **464 des
+529 brouillons y ont déjà leur détail REST**, ➡ **le cache des brouillons marcherait pour 464 d'entre
+eux sans appeler Hektor une seule fois.** *(Les 65 autres demandent un appel — dont ~la moitié
+répondraient, mesuré ce matin : 4 sur 8.)*
+
+---
+
+## 6. ⭐⭐ L'IDENTITÉ : LE NUMÉRO APP EST DÉJÀ À NOUS — et il survit au changement d'index
+
+> *« il faut aussi que l'index des brouillons soit chez nous, donc id hektor mais surtout id apps
+> comme les autres index. Qu'en est-il actuellement ? »*
+
+| | |
+|---|---|
+| ⭐ **`app_brouillon_id` = `app_dossier_id` = `app_dossier.id`** | **notre table locale, notre numéro** |
+| ⭐⭐ **Hektor ne le connaît pas** | **aucune** des 19 colonnes de `hektor_annonce` ne porte `7 589 132` |
+| ⭐ le numéro de Hektor est à côté | `hektor_annonce_id` |
+| ⭐⭐⭐ **le MÊME numéro dans les 4 index** | `CAST(app_dossier_id AS INTEGER)` pour les trois clones *(`export_app_payload.py` l. 327, 374, 462)* |
+
+➡ ⭐⭐⭐ **DONC LE PASSAGE D'INDEX NE CHANGE PAS L'IDENTITÉ**, et mon essai de ce matin le prouve par
+accident : 62554 portait `app_brouillon_id = 1 840 893`, et en étant réinjectée dans le parc vivant
+elle a reçu **`app_dossier_id = 1 840 893` — le même.**
+
+⚠ **Ne pas confondre avec la règle des deux numéros** *(« < 10 M = Hektor, ≥ 10 M = nous »)* : elle
+concerne **les contacts et les mandats**. Les numéros de dossier sont **à nous malgré leur plage**
+*(118 → 10 000 000, 61 439 lignes)*. ⭐ Et **une seule annonce porte 10 000 000 pile : la 63147,
+née dans l'app.**
+
+| index | lignes | plage du numéro app |
+|---|---|---|
+| `app_dossier_current` | 13 494 | 118 → 10 000 000 |
+| `app_archive_annonce_index_current` | 35 330 | 15 633 → 7 589 255 |
+| `app_historical_annonce_index_current` | 8 948 | 284 → 5 941 337 |
+| `app_brouillon_annonce_index_current` | 529 | 1 386 845 → 7 589 299 |
+
+⭐ **Et aucune collision entre index** — sauf **1 avec le vivant, qui est ma réinjection de ce matin.**
+
+---
+
+## 7. ⚠⚠ LE PRÉALABLE OBLIGATOIRE, ET IL EST CHIFFRÉ
+
+| fichier | lignes | **connaît l'exclusion des brouillons ?** |
+|---|---|---|
+| ⛔ **`push_single_annonce_to_supabase.py`** | **849** | ⛔ **0 mention** |
+| `export_app_payload.py` | 3 333 | ⭐ **5 mentions** |
+| `push_upgrade_to_supabase.py` | 1 826 | ⭐ **3 mentions** |
+
+➡ **Le push d'UNE SEULE annonce ignore l'exclusion** que les deux autres appliquent. **C'est pour ça
+que mon essai a réinjecté 62554 dans le parc vivant.**
+
+⭐ **Ce n'est pas nouveau** : **9 read-through** sont déjà passés sur **7 brouillons**, et le run de
+05:00 re-exclut chaque nuit ; sans risque de diffusion *(`diffusable = 0`)*. ⚠ **Mais ça deviendrait
+quotidien dès qu'on ouvre le bouton.**
+
+---
+
+## 8. ➡ LA SOLUTION, EN QUATRE PIÈCES — rien n'est écrit
+
+| # | pièce | ce que ça demande |
+|---|---|---|
+| ⚠ **①** | **le push d'une seule annonce applique l'exclusion** | lire ses 849 lignes et y porter le patron des deux autres. **Préalable à tout** |
+| ⭐ **②** | **« Charger la fiche complète »** | un 4ᵉ script Python *(clone de 342 lignes)* + un 4ᵉ type de travail = **3 verrous + 5 endroits worker**. ⭐ **Zéro appel Hektor pour 464 des 529** |
+| ⭐⭐ **③** | **« Modifier »** | ⭐ **DÉJÀ PROUVÉ ce matin** — `update_hektor_annonce_fields` + **`hektor_user_id`**. Il ne manque **que le bouton** |
+| ⭐ **④** | **« Mettre en ligne → Actif / Estimation »** | `mode=upval&champ=etatAnnonce&val=1` — **un seul GET**, ⭐ **réversible avec `val=2`**. ⚠ Reste à prouver que `upval` suffit seul |
+
+### Les libellés, puisqu'il les demande compréhensibles
+
+| geste | libellé proposé |
+|---|---|
+| ② | **« Charger la fiche complète »** — et afficher *« valable 24 h »* |
+| ③ | **« Modifier »** *(le mot déjà employé ailleurs dans l'app)* |
+| ④ | **« Mettre en ligne → Actif »** / **« Mettre en ligne → Estimation »** |
+| l'inverse | **« Repasser en brouillon »** |
+
+---
+
+## 9. ⛔ CE QUI N'EST PAS MESURÉ, ET JE LE DIS
+
+1. ⛔ **Si `mode=upval&champ=etatAnnonce` suffit SEUL** pour activer. ⭐ **C'est l'essai, et Frédéric
+   propose la bonne cible** : *« plutôt sur l'annonce de Stéphanie qui est une coquille donc pas
+   risqué »* — **62554**.
+2. ⛔ **Ce que l'app affiche exactement** sur une fiche légère **avec** son cache *(le code lit
+   `hasExportedDetail`, `App.tsx` l. 24545, mais je n'ai pas inventorié les fonctions offertes)*.
+3. ⚠ **Le coût réel du ①** : 849 lignes à lire, non fait.
+4. ⚠⚠ **`etatAnnonce` n'est PAS dans `hektor_annonce`** *(ses colonnes : `diffusable`, `valide`,
+   `archive`, `partage`…)* → ⛔ **on ne peut pas lire l'état brouillon sans GraphQL.** ⭐ *C'est
+   peut-être exactement pour ça que le projet a bâti `sync_hektor_drafts.py` sur GraphQL.*
