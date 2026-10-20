@@ -1015,6 +1015,39 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
 _ENV_DEJA_CHARGE = False
 
 
+def chainage_sans_date_actif() -> bool:
+    """LE REPLI PAR LE NOM POUR LES TRANSACTIONS SANS DATE -- § 2.6.
+
+        APP_CHAINAGE_SANS_DATE=1    le repli joue
+        (absent ou 0)               comportement d'avant : chacune reste SEULE
+
+    ⚠⚠ UN INTERRUPTEUR A PART, ET C'EST DELIBERE. `APP_CHAINAGE_V2` est DEJA
+      ALLUME en production (20/10) : y ajouter ce repli l'aurait fait partir la
+      nuit suivante sans decision. Un interrupteur qui porte deux changements ne
+      permet plus d'en retirer un seul.
+
+    POURQUOI CE REPLI EXISTE. 225 transactions portent une date inexploitable
+    (218 a `0000-00-00`, le « vide » de Hektor ; 7 a `1990-01-01`), dont 211
+    compromis. La regle les laisse SEULES parce qu'elle travaille dans l'ordre
+    des dates -- et 194 d'entre elles (86 %) sont sur un bien qui porte d'autres
+    transactions : l'affaire est coupee par une date manquante, pas par un
+    desaccord metier.
+    ⛔ ET IL N'EXISTE AUCUNE DATE DE SECOURS : `date_acte` et
+      `date_fin_retractation` sont vides sur les 225 ; `first_seen_at` vaut
+      2026-07-31 pour toutes -- c'est le jour de NOTRE lecture, pas celui du
+      compromis. La vraie date n'existe que chez Hektor.
+    ⭐ MAIS LE NOM N'A PAS BESOIN DE DATE. Mesure du 20/10, avec les gardes :
+      120 compromis ANNULES rejoignent l'unique chaine du bien qui porte une
+      offre a leur nom -- et c'est EXACTEMENT la famille du § 2.3.
+
+    ⚠ RESTREINT AUX COMPROMIS ANNULES, par coherence avec la decision de
+      Frederic du 20/10 sur le § 2.3 (« seulement les annules »). Les 2 compromis
+      VIVANTS que le repli aurait pris sont laisses dehors.
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return os.environ.get("APP_CHAINAGE_SANS_DATE", "0") == "1"
+
+
 def chainage_v2_actif() -> bool:
     """L'interrupteur de la regle V2, lu APRES `.env`. Voir le bloc au-dessus."""
     global _ENV_DEJA_CHARGE
@@ -1249,11 +1282,17 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
         anomalies[quoi] = anomalies.get(quoi, 0) + 1
 
     for annonce, items in par_annonce.items():
-        # sans date : chacune sa chaine, elle-meme, et on n'y revient plus
+        # sans date : chacune sa chaine, elle-meme.
+        # ⚠ « et on n'y revient plus » N'EST PLUS VRAI SI LE § 2.6 EST ALLUME :
+        #   on repasse apres la boucle datee, quand les chaines du bien existent.
+        #   L'attribution ci-dessous reste LE DEFAUT -- si le repli ne trouve
+        #   personne, la transaction garde sa propre chaine, comme avant.
+        sans_date_du_bien: list[tuple] = []
         for app_id, kind, state, date, acqs in items:
             if date is None:
                 attribution[app_id] = app_id
                 sans_date += 1
+                sans_date_du_bien.append((app_id, kind, state, date, acqs))
 
         datees = sorted((x for x in items if x[3] is not None),
                         key=lambda y: (y[3], ORDRE_DES_BLOCS.get(y[1], 9), y[0]))
@@ -1461,6 +1500,46 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                     seule["a_une_vente"] = True     # § 3.0 : elle en porte une
                     ouvertes.remove(seule)
 
+        # ─── § 2.6 : LE REPLI PAR LE NOM POUR LES SANS-DATE (20/10, derriere son
+        #     propre interrupteur -- voir chainage_sans_date_actif) ───
+        #
+        # Frederic : « fais le repli par le nom ».
+        #
+        # On ne peut pas ORDONNER une transaction sans date, donc on ne peut pas
+        # la placer dans la sequence. Mais le NOM, lui, n'a pas besoin de date :
+        # s'il n'y a qu'UNE chaine du bien qui le partage, il n'y a rien a
+        # deviner. Mesure du 20/10 : 120 compromis annules, et ce sont les memes
+        # affaires que le § 2.3 recolle quand la date existe.
+        if sans_date_du_bien and toutes and chainage_sans_date_actif():
+            for app_id, kind, state, date, acqs in sans_date_du_bien:
+                # ⚠ RESTREINT AUX COMPROMIS ANNULES : coherence avec le § 2.3,
+                #   que Frederic a limite aux annules le 20/10. Un compromis
+                #   VIVANT rattache sur un nom rouvrirait une affaire en cours
+                #   sur une devinette.
+                if kind != "compromis" or state not in ETATS_COMPROMIS_MORTS:
+                    # ⚠ ON LE DIT. Un `continue` muet ici laissait 49 transactions
+                    #   hors du compte : « 220 sans date » mais 171 expliquees, et
+                    #   personne pour dire ou etaient passees les autres.
+                    signale("[2.6] hors du repli (pas un compromis annule)")
+                    continue
+                if not acqs:
+                    signale("[2.6] sans date et SANS NOM -- reste seule")
+                    continue
+                cands = [c for c in toutes
+                         if (acqs & c["acquereurs"])
+                         and not c["a_une_vente"]      # une affaire aboutie n'en est pas une autre
+                         and not c["compromis"]        # une chaine ne porte qu'un compromis
+                         and c["offres"]]              # et elle doit etre une vraie sequence
+                if len(cands) == 1:
+                    cands[0]["membres"].append(app_id)
+                    cands[0]["compromis"] = True
+                    cands[0]["acquereurs"] |= acqs
+                    signale("[2.6] compromis annule SANS DATE rattache par le nom")
+                elif len(cands) > 1:
+                    signale("[2.6] plusieurs chaines au meme nom -- abstention")
+                else:
+                    signale("[2.6] aucune chaine a son nom -- reste seule")
+
         # ⚠ ON NUMEROTE A LA FIN, ET C'EST INDISPENSABLE. Le numero d'une chaine est
         # le plus petit app_affaire_id de ses membres -- or une transaction au numero
         # plus bas peut la rejoindre APRES coup. Numeroter au fil de l'eau laissait
@@ -1480,10 +1559,12 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
                 # ⚠ ON DIT TOUJOURS QUELLE REGLE A TOURNE. Sans cette ligne, on ne
                 #   saura pas, demain matin, laquelle des deux a produit ces
                 #   numeros -- et c'est la premiere question qu'on se posera.
-                "chainage_v2": v2}
+                "chainage_v2": v2,
+                "chainage_sans_date": chainage_sans_date_actif()}
     resultat.update(anomalies)
     print(f"[ledger] chainage : {resultat['chaines']} chaines "
-          f"({'V2 -- replis actifs' if v2 else 'regle d avant, V2 eteinte'})")
+          f"({'V2 -- replis actifs' if v2 else 'regle d avant, V2 eteinte'}"
+          f"{' + § 2.6 sans-date par le nom' if resultat['chainage_sans_date'] else ''})")
     return resultat
 
 
