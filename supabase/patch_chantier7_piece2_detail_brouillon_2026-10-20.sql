@@ -257,6 +257,32 @@ BEGIN
 END
 $garde$;
 
+-- ⚠ ET UN TABLEAU, PAS UN SILENCE. L'editeur Supabase N'AFFICHE PAS les RAISE
+--   NOTICE : sans ce SELECT, un patch reussi ne montrerait RIEN du tout, et on ne
+--   saurait pas distinguer « pose » de « rien fait ». Lecon apprise le 20/10.
+SELECT 1 AS "#", 'verrou 1 -- contrainte job_type' AS objet,
+       CASE WHEN (SELECT position('prepare_brouillon_annonce_detail' in pg_get_constraintdef(oid)) > 0
+                    FROM pg_constraint WHERE conname = 'app_console_job_job_type_check')
+            THEN 'POSE' ELSE '⛔ PAS POSE' END AS etat
+UNION ALL SELECT 2, 'verrou 2 -- app_console_can_request_job',
+       CASE WHEN (SELECT position('prepare_brouillon_annonce_detail' in prosrc) > 0
+                    FROM pg_proc WHERE proname = 'app_console_can_request_job')
+            THEN 'POSE' ELSE '⛔ PAS POSE' END
+UNION ALL SELECT 3, 'verrou 3 -- app_console_claim_next_job',
+       CASE WHEN (SELECT position('prepare_brouillon_annonce_detail' in prosrc) > 0
+                    FROM pg_proc WHERE proname = 'app_console_claim_next_job')
+            THEN 'POSE' ELSE '⛔ PAS POSE' END
+UNION ALL SELECT 4, 'droits -- app_console_can_access_dossier',
+       CASE WHEN (SELECT position('app_brouillon_annonce_index_current' in prosrc) > 0
+                    FROM pg_proc WHERE proname = 'app_console_can_access_dossier')
+            THEN 'POSE' ELSE '⛔ PAS POSE' END
+UNION ALL SELECT 5, 'TEMOIN INVERSE -- les 2 familles soeurs sont intactes',
+       CASE WHEN (SELECT position('prepare_archived_annonce_detail' in prosrc) > 0
+                     AND position('prepare_historical_annonce_detail' in prosrc) > 0
+                    FROM pg_proc WHERE proname = 'app_console_claim_next_job')
+            THEN 'INTACTES' ELSE '⛔ UNE FAMILLE A ETE CASSEE -- COLLER L''INVERSE' END
+ORDER BY 1;
+
 COMMIT;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
