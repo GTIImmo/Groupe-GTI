@@ -2,6 +2,7 @@ import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@s
 import { mockDetailPayloads, mockDiffusionRequestEvents, mockDiffusionRequests, mockDiffusionTargets, mockDossiers, mockMandatBroadcasts, mockMandats, mockRapprochementsForDossier, mockSummary, mockUserProfile, mockWorkItems } from './mockData'
 import { hasSupabaseEnv, supabase, supabaseUrl } from './supabase'
 import type { AppContact, AppContactMandatRecherche, AppContactRelation, AppContactSearch, ConsoleDocument, ConsoleDocumentVisibility, ConsoleJob, ConsoleJobType, ConsolePhoto, ContactStats, DashboardSummary, DetailedDossier, DiffusionRequest, DiffusionRequestEvent, DiffusionTarget, Dossier, DossierDetail, GoogleWorkspaceIdentity, HektorAgencyOption, HektorNegotiatorOption, MandatBroadcast, MandatRecord, MatterportGroup, MatterportModelLink, UserNegotiatorContext, UserPerimetre, UserProfile, WorkItem } from '../types'
+import { bvs, bvt } from './bienvuTexte'
 
 export type FilterCatalog = {
   commercials: string[]
@@ -3048,7 +3049,7 @@ export function gesteLibelleFr(jobType: string): string {
     delete_hektor_annonce: 'Suppression du bien',
     assign_hektor_annonce_negotiator: 'Affectation du negociateur',
     create_hektor_draft_annonce: "Creation d'une annonce",
-    sync_console_documents: 'Envoi des documents vers Hektor',
+    sync_console_documents: bvs('Envoi des documents vers Hektor'),
     refresh_console_contact_data: "Relecture d'une fiche contact",
     create_hektor_contact: "Creation d'un contact",
     update_hektor_contact: "Modification d'un contact",
@@ -5580,7 +5581,7 @@ export async function setDossierDiffusableOnHektor(input: { appDossierId: number
     })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok || payload?.ok === false) {
-      throw new Error(extractApiErrorMessage(payload) || 'Erreur de mise a jour diffusable Hektor')
+      throw new Error(extractApiErrorMessage(payload) || bvs('Erreur de mise a jour diffusable Hektor'))
     }
     const result = payload?.payload as HektorDiffusableResult
     if (result?.error) throw new Error(result.error)
@@ -5642,7 +5643,7 @@ export async function verifyPriceDropOnHektor(input: { appDossierId: number; req
     })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok || payload?.ok === false) {
-      throw new Error(extractApiErrorMessage(payload) || 'Controle du prix Hektor impossible')
+      throw new Error(extractApiErrorMessage(payload) || bvs('Controle du prix Hektor impossible'))
     }
     return payload.payload as HektorPriceDropCheckResult
   }
@@ -5658,7 +5659,7 @@ export async function verifyPriceDropOnHektor(input: { appDossierId: number; req
     return payload.payload
   }
   assertBackendApiConfigured()
-  throw new Error('Controle du prix Hektor indisponible')
+  throw new Error(bvs('Controle du prix Hektor indisponible'))
 }
 
 export async function setDossierValidationOnHektor(input: { appDossierId: number; state: 0 | 1; dryRun?: boolean }): Promise<HektorValidationResult> {
@@ -5670,7 +5671,7 @@ export async function setDossierValidationOnHektor(input: { appDossierId: number
     })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok || payload?.ok === false) {
-      throw new Error(extractApiErrorMessage(payload) || 'Erreur de mise a jour validation Hektor')
+      throw new Error(extractApiErrorMessage(payload) || bvs('Erreur de mise a jour validation Hektor'))
     }
     const result = payload?.payload as HektorValidationResult
     if (result?.error) {
@@ -7576,7 +7577,7 @@ export async function applyDiffusionTargetsOnHektor(input: { appDossierId: numbe
   if (!response.ok || payload?.ok === false) {
     const rawMessage = payload?.error ?? payload?.stderr ?? payload?.stdout ?? 'Unable to apply diffusion targets on Hektor'
     if (isPendingHektorValidationMessage(rawMessage)) {
-      throw new Error("En attente de mise a jour Hektor. La demande est bien enregistree, mais Hektor n'a pas encore confirme l'annonce en diffusable.")
+      throw new Error(bvs("En attente de mise a jour Hektor. La demande est bien enregistree, mais Hektor n'a pas encore confirme l'annonce en diffusable."))
     }
     throw new Error(normalizeHektorApplyMessage(rawMessage) || 'Unable to apply diffusion targets on Hektor')
   }
@@ -7684,7 +7685,7 @@ export async function acceptDiffusionRequestOnHektor(input: { appDossierId: numb
   if (!response.ok || payload?.ok === false) {
     const rawMessage = payload?.error ?? payload?.stderr ?? payload?.stdout ?? 'Unable to accept diffusion request on Hektor'
     if (isPendingHektorValidationMessage(rawMessage)) {
-      throw new Error("En attente de mise a jour Hektor. L'annonce n'a pas encore ete confirmee diffusable.")
+      throw new Error(bvs("En attente de mise a jour Hektor. L'annonce n'a pas encore ete confirmee diffusable."))
     }
     throw new Error(normalizeHektorApplyMessage(rawMessage) || 'Unable to accept diffusion request on Hektor')
   }
@@ -8738,7 +8739,7 @@ export async function createLinkHektorMandantJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   const userId = await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const { data, error } = await supabase
     .from('app_console_job')
     .insert({
@@ -8779,7 +8780,7 @@ export async function createLinkHektorMandantJobOptimistic(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const { data, error } = await supabase.rpc('app_link_mandant_optimistic', {
     target_app_dossier_id: input.dossier.app_dossier_id,
     target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
@@ -8815,7 +8816,7 @@ export async function createUnlinkHektorMandantJobOptimistic(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const { data, error } = await supabase.rpc('app_unlink_mandant_optimistic', {
     target_app_dossier_id: input.dossier.app_dossier_id,
     target_hektor_annonce_id: String(input.dossier.hektor_annonce_id),
@@ -9008,7 +9009,7 @@ export async function createHektorContactSearchJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const search = hContactSearchPayload(input.search)
   if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
   if (!search.priceMax) throw new Error('Budget maximum requis')
@@ -9049,7 +9050,7 @@ export async function createHektorContactSearchJobOptimistic(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const search = hContactSearchPayload(input.search)
   if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
   if (!search.priceMax) throw new Error('Budget maximum requis')
@@ -9117,7 +9118,7 @@ export async function createUpdateHektorContactSearchJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const search = hContactSearchPayload(input.search)
   if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
   if (!search.priceMax) throw new Error('Budget maximum requis')
@@ -9146,7 +9147,7 @@ export async function editSearchOptimistic(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const search = hContactSearchPayload(input.search)
   if (!search.propertyTypeIds.length) throw new Error('Au moins un type de bien requis')
   if (!search.priceMax) throw new Error('Budget maximum requis')
@@ -9208,7 +9209,7 @@ export async function createDeleteHektorContactSearchJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const { data, error } = await supabase.rpc('app_console_create_delete_contact_search_job', {
     target_contact_id: cleanContactId,
     search_index: input.searchIndex,
@@ -9739,7 +9740,7 @@ export async function createHektorContactJob(input: {
   const payload = hContactPayload(input.contact)
   if (!payload.last_name) throw new Error('Nom contact requis')
   if (!payload.email && !payload.phone && !payload.phone_secondary) throw new Error('Email ou telephone requis')
-  if (!payload.hektor_user_id && !payload.hektor_user_email) throw new Error('Compte Hektor requis pour creer le contact')
+  if (!payload.hektor_user_id && !payload.hektor_user_email) throw new Error(bvs('Compte Hektor requis pour creer le contact'))
   // C.9 (31/08) -- ON ECRIT CHEZ NOUS D'ABORD.
   //
   // L'OBSTACLE : app_contact_current a pour cle primaire le numero de HEKTOR,
@@ -9770,14 +9771,14 @@ export async function createUpdateHektorContactJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const payload = {
     ...hContactPayload(input.contact),
     hektor_contact_id: cleanContactId,
     contact_id: cleanContactId,
   }
   if (!payload.last_name) throw new Error('Nom contact requis')
-  if (!payload.hektor_user_id && !payload.hektor_user_email) throw new Error('Compte Hektor requis pour modifier le contact')
+  if (!payload.hektor_user_id && !payload.hektor_user_email) throw new Error(bvs('Compte Hektor requis pour modifier le contact'))
   const { data, error } = await supabase.rpc('app_console_create_update_contact_job', {
     target_contact_id: cleanContactId,
     contact_payload: payload,
@@ -9798,7 +9799,7 @@ export async function editContactOptimistic(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const payload = hContactPayload(input.contact)
   if (!payload.last_name) throw new Error('Nom contact requis')
   const editFields: Record<string, unknown> = {}
@@ -9824,7 +9825,7 @@ export async function createDeleteHektorContactJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const { data, error } = await supabase.rpc('app_console_create_delete_contact_job', {
     target_contact_id: cleanContactId,
     delete_reason: input.reason?.trim() || null,
@@ -9850,7 +9851,7 @@ export async function archiverContact(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const { data, error } = await supabase.rpc('app_console_archiver_contact_optimistic', {
     p_hektor_contact_id: cleanContactId,
     p_archive: input.archiver,
@@ -9931,7 +9932,7 @@ export async function createUpdateHektorMandantContactJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const cleanContactId = input.contactId.trim()
-  if (!/^\d+$/.test(cleanContactId)) throw new Error('ID contact Hektor numerique requis')
+  if (!/^\d+$/.test(cleanContactId)) throw new Error(bvs('ID contact Hektor numerique requis'))
   const payload = {
     hektor_contact_id: cleanContactId,
     contact_id: cleanContactId,
@@ -10253,7 +10254,7 @@ export async function createDeleteHektorAnnonceJob(input: {
 function throwConsoleAdminJobError(error: { message?: string; code?: string; details?: string } | null | undefined, fallback: string): never {
   const text = `${error?.code ?? ''} ${error?.message ?? ''} ${error?.details ?? ''}`.toLowerCase()
   if (text.includes('app_console_job_active_admin_annonce_idx') || text.includes('duplicate key')) {
-    throw new Error('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.')
+    throw new Error(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
   }
   throw new Error(error?.message ?? fallback)
 }
@@ -10637,7 +10638,7 @@ export async function createAssignHektorAnnonceNegotiatorJob(input: {
   if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
   await requireSupabaseUserId()
   const targetId = String(input.negotiator.idUser ?? '').trim()
-  if (!/^\d+$/.test(targetId)) throw new Error('Choisis un negociateur Hektor valide.')
+  if (!/^\d+$/.test(targetId)) throw new Error(bvs('Choisis un negociateur Hektor valide.'))
   // C.4 (30/08) — ON ECRIT CHEZ NOUS D'ABORD.
   //
   // La RPC inscrit `negociateur_email` au carnet de l'annonce ET cree le travail

@@ -11,6 +11,7 @@ import ContactSearchFields, {
   type OfferOption,
 } from './ContactSearchFields'
 import './contact-search.css'
+import { bvs, bvt } from './lib/bienvuTexte'
 
 export type ContactSearchModalProps = {
   contactId: string
@@ -106,9 +107,9 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
               </div>
               <div>
-                <div className="edit-eyebrow">Création Hektor</div>
+                <div className="edit-eyebrow">{bvs("Création Hektor")}</div>
                 <h2 className="edit-title" id="csearchTitle">{isEdit ? 'Modifier la recherche' : 'Ajouter une recherche'}</h2>
-                <div className="head-meta"><span className="hm-pill"><span className="hm-dot" />{props.contactName ? `${searchContextLabel} pour ${props.contactName}` : searchContextLabel} · resynchronisation Hektor</span></div>
+                <div className="head-meta"><span className="hm-pill"><span className="hm-dot" />{props.contactName ? `${searchContextLabel} pour ${props.contactName}` : searchContextLabel} {bvs("· resynchronisation Hektor")}</span></div>
               </div>
             </div>
             <div className="head-right">
@@ -117,7 +118,7 @@ export default function ContactSearchModal(props: ContactSearchModalProps) {
           </div>
 
           <div className="edit-context">
-            <span className="ctx-k">Compte Hektor</span>
+            <span className="ctx-k">{bvs("Compte Hektor")}</span>
             <span className="ctx-wrap"><span className="ctx-sel">{props.negotiatorLabel || 'Négociateur du contact'}</span></span>
             <span className="ctx-hint">La recherche est créée sous le compte du négociateur du contact.</span>
           </div>

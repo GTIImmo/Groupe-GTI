@@ -52,6 +52,12 @@ const selLg = selecteurs(lg)
 const horsLg = selLg.filter((s) => !/\.bvl/.test(s))
 check(`${selLg.length} sélecteurs lus, aucun sans .bvl`, selLg.length > 30 && horsLg.length === 0, horsLg.slice(0, 3).join(' | '))
 
+console.log('2b. bienvu-viewer.css : tout porte .bvv')
+const vw = read('bienvu-viewer.css')
+const selVw = selecteurs(vw)
+const horsVw = selVw.filter((s) => !/\.bvv/.test(s))
+check(`${selVw.length} sélecteurs lus, aucun sans .bvv`, selVw.length > 20 && horsVw.length === 0, horsVw.slice(0, 3).join(' | '))
+
 console.log('3. les polices ne sont utilisées que sous .bv / .bvl')
 const sansDecl = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@font-face\s*\{[^}]*\}/g, '')
 const toutesAutres = ['styles.css', 'layout-overrides.css', 'mobile.css', 'annonces-v2.css', 'fa-cockpit-v2.css', 'design-system.css'].map(read).join('\n')
@@ -65,6 +71,9 @@ check('App.tsx garde « Groupe GTI » + titre d\'écran hors bienvu', /APP_BIENV
 check('App.tsx garde l\'ancien écran de connexion (login-shell) après le test bienvu', /if \(bienvuLoginProps\) return <BienvuLogin mode="connexion"[\s\S]{0,80}\n\s*return \(\s*\n\s*<div className="login-shell">/.test(app))
 const mob = read('layouts/MobileLayout.tsx')
 check('MobileLayout garde la forme CSS et « GTI Immobilier » hors bienvu', /: <div className="mobile-brand-mark" aria-hidden="true" \/>/.test(mob) && /APP_BIENVU_ENABLED \? 'bienvu' : 'GTI Immobilier'/.test(mob))
+
+check("App.tsx garde l'ancienne visionneuse (modal-panel-image) quand l'interrupteur est éteint", /detailImageModalUrl && !APP_BIENVU_ENABLED \? \(\s*<div className="modal-overlay"[^\n]*\n\s*<section className="modal-panel modal-panel-image"/.test(app))
+check("App.tsx ne rend la nouvelle visionneuse que si l'interrupteur est allumé", /detailImageModalUrl && APP_BIENVU_ENABLED \? \(\s*<BienvuViewer/.test(app))
 
 check("le choix « Nouvelle annonce » garde ses emojis quand l'interrupteur est éteint", ['✨', '✍️', '📸', '🤖', '📷', '📄', '⚠️'].every((e) => app.includes(": '" + e + "'}")))
 
