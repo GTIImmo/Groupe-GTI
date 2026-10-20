@@ -152,19 +152,32 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 ### ⛔ Ce qui attend Frédéric
 
 ```
-⓿ ⏰⏰ LE 20/10 AU MATIN -- LA PREMIERE NUIT DU BALAYAGE DES PHOTOS MASQUEES.
-   UNE COMMANDE, UN VERDICT (elle ne fait que LIRE, aucun appel a Hektor) :
+⓿ ✅ LA 1re NUIT DU BALAYAGE EST PASSEE (controle du 20/10 a 07:18, code 1).
+   TOUTE LA NUIT EST EN CODE 0 : balayage 00:00 · recherches 03:00 · run 05:00 ·
+   moniteur 05:48 · relances 07:00.
+     ⭐⭐ LE VERROU TIENT, ET IL A ETE VRAIMENT EPROUVE : les masquees AVEC UN DERIVE
+        (la vanne) sont passees de 3 a 129, et ZERO n'est sortie dans une boite
+        publique.
+     ⭐ LA RECOLTE EST 3,6x MA PREVISION : 126 masquees ramenees contre ~35
+        annoncees -> 232 connues sur 25 annonces. Reste 12 492, soit 13 nuits.
+     ⭐ LE RYTHME EST CELUI PREDIT : mediane 10,0 s (reference 10).
+   ⚠ LE ROUGE EST UN FANTOME, prouve : la seule erreur est le travail orphelin du
+     19/10 17:10, tue par le redemarrage des services et REPARE A LA MAIN le 19/10
+     a 23:38. La reparation a tenu la nuit (63073 : 24 photos, 0 disparue, 0 sans
+     fichier, 24 avec derive).
+   ⚠ LA COMMANDE RESTE A RELANCER CHAQUE MATIN :
         python phase2/checks/controle_balayage_photos_masquees.py
-   Sortie 0 = vert · 1 = un rouge · 2 = pas pu mesurer. Huit points, dont :
-     ⭐ LE RYTHME REEL -- c'est LUI qui dit si on peut monter le plafond de 1 000
-        (il refuse de conclure sous 20 travaux mesures : « non concluant ») ;
-     ⭐⭐ LE VERROU -- ZERO masquee dans une boite publique. Le controle qui compte.
-   REFERENCE FIGEE DANS LE FICHIER (19/10 au soir) : 106 masquees sur 15 annonces ·
-   3 avec un derive · 0 dans une boite · 13 490 a faire · 305 deja visitees.
-   ⚠ UN REFUS SORT EN 1 EXPRES, et il est ROUGE : code 3 « file non vide » (le
-     worker est plus lent que le lot -> baisser -Limite), code 4 « >= 10 erreurs
-     en 24 h » (Hektor nous rejette -> ne RIEN rejouer).
-   TEMOIN INVERSE JOUE LE 19/10 AU SOIR : 5 oranges, 0 rouge.
+     Sortie 0 = vert · 1 = un rouge · 2 = pas pu mesurer. Un refus sort en 1 EXPRES :
+     code 3 « file non vide » (baisser -Limite), code 4 « >= 10 erreurs en 24 h »
+     (Hektor nous rejette -> ne RIEN rejouer).
+
+⓿ bis ⏰ CE SOIR APRES 21:00 -- LE JUGE DU VERROU 8 (photos masquees dans la journee).
+   Lire le compte rendu de l'entretien photos, et y chercher :
+        sauvees_par_le_verrou_8 : 2
+        candidates_nommees      : ["62774/482253", "63073/485375"]
+        photos_marquees         : 0        code de sortie : 0, AUCUN ecart
+   ⛔ SI sauvees vaut 0 ET marquees vaut 2, LE VERROU N'A PAS MORDU -- regarder tout
+     de suite : une photo masquee serait sortie du panneau, sans retour possible.
 
 ① LES ESSAIS REELS QUI MANQUENT (chantier ⑦) :
    · ⑦-1 ARCHIVER un contact sur une fiche JETABLE -- le sens qui porte le risque
@@ -181,6 +194,31 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      3e pastille en haut a droite de chaque tuile (rouge = visible, vert = masquee).
 
 ② A TRANCHER PAR LUI -- je n'ai rien choisi :
+   · ⏰ LE REDEMARRAGE DU SERVICE DOCUMENTS (⑦-3c piece 4). UN SEUL service, pas
+     quatre : `reorder_hektor_photos` n'est reclame que par lui (mesure du 20/10
+     dans sa liste). Sans lui, reordonner MARCHE quand meme -- l'ordre part bien
+     chez Hektor -- mais la vitrine suit au prochain passage du fabricant au lieu
+     de quelques secondes, et le journal dit « couverture » pour un reordonnancement.
+     ⛔ NE JAMAIS LE FAIRE QUAND LA FILE N'EST PAS VIDE : le 19/10 a 17:10 un
+       redemarrage a tue le travail du clic de Frederic (14 photos perdues, annonce
+       63073 ecartee du balayage A VIE). Critere : 0 pending ET 0 running.
+         powershell -Command "Restart-Service HektorConsoleWorkerDocuments; Get-Service HektorConsoleWorker*"
+   · ⭐ LE PLAFOND DU BALAYAGE : 1 000 ou 903 ? Mesure de la 1re nuit (20/10) --
+     mediane 10,0 s mais la plus lente a pris 307 s, donc seules 903 annonces
+     tiennent dans la fenetre de 2 h 30. Les 1 000 sont passees, SANS MARGE.
+     Le plafond vit dans scheduled/run_balayage_photos_masquees.ps1 (-Limite).
+   · ⚠ L'EXCLUSION POUR ERREUR DU BALAYAGE EST A VIE, et elle ne devrait pas
+     l'etre (enqueue_photos_masquees_lot.js:231, AUCUN filtre de date -- alors que
+     le frein global l. 198 regarde 24 h : asymetrie dans un seul fichier).
+     Mesure du 20/10 : UNE SEULE annonce ecartee a vie, 63073, et sa cause est
+     NOTRE PROPRE REDEMARRAGE, pas un refus de Hektor. Zero ecartee pour un vrai
+     refus. Ca grossira sans bruit : chaque redemarrage pendant un balayage en
+     ecarte une de plus, pour toujours.
+     A -- une FENETRE DE DATE (7 jours), deux mots, le patron est 12 lignes plus
+          haut, et une fenetre protege AUSSI du bannissement.   <- RECOMMANDE
+     B -- trier par CAUSE : n'ecarter a vie que les refus definitifs (415, 413).
+     « Note pour plus tard » (20/10). Voir la memoire
+     exclusion-pour-erreur-est-a-vie.md.
    · ⑦-3a : la MODALE DE STATUT clot toujours sans passer par la demande
      d'annulation, alors que sa consigne du 16/10 etait « toujours par la
      demande ». Elle est deja reservee admin/manager. On la laisse ou on la ferme ?

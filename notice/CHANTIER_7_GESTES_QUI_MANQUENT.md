@@ -5466,3 +5466,81 @@ une bonne nouvelle** : pas de démarrage à froid en pleine nuit de travail.
 | ⬜ **le redémarrage du service Documents** | ⭐ **UN seul service**, pas quatre : `reorder_hektor_photos` n'est réclamé que par lui *(mesuré dans sa liste)*. ⛔ **Pas cette nuit** : il porte aussi le balayage, **1 099 travaux en attente à 00:42**, fin estimée vers **05:40**. Un redémarrage tuerait le travail en cours — *l'accident du 17/10* |
 | ⬜ **voir les flèches à l'œil** | elles sont **servies**, mais personne ne les a vues. **Bords gauche et droit de chaque vignette visible, à mi-hauteur** |
 | ⭐ **et réordonner marche déjà** | sans le redémarrage : l'ordre part bien chez Hektor *(ce geste est en production depuis le 16/10)*. Seule **la vitrine** suit avec un peu de retard |
+
+
+---
+
+## ✅ LA PREMIÈRE NUIT DU BALAYAGE — LE CONTRÔLE DU 20/10 À 07:18
+
+**Toutes les tâches de la nuit sont passées en code 0** : balayage **00:00** · recherches **03:00** ·
+le run **05:00** · moniteur **05:48** · relances **07:00**.
+
+### ⭐⭐ LES TROIS BONNES NOUVELLES
+
+**① LE VERROU TIENT, ET CETTE FOIS IL A ÉTÉ VRAIMENT MIS À L'ÉPREUVE.**
+
+| | 19/10 au soir | 20/10 au matin |
+|---|---|---|
+| masquées avec un dérivé *(la vanne)* | **3** | ⚠ **129** |
+| ⭐⭐ **masquées dans une boîte PUBLIQUE** | **0** | ⭐⭐ **0** |
+
+*Hier le verrou protégeait 3 photos ; ce matin il en retient **129**, et aucune n'est sortie.*
+
+**② LA RÉCOLTE EST 3,6 FOIS PLUS GROSSE QUE MA PRÉVISION.** **126 masquées ramenées** contre **~35
+annoncées** → on passe de **106 à 232**, sur **25 annonces**. ⚠ *Ma projection était trop basse, et
+le clic sur 63073 (14 découvertes d'un coup) le laissait déjà craindre.*
+
+**③ LE RYTHME EST EXACTEMENT CELUI PRÉDIT : médiane 10,0 s** *(référence : 10)*.
+
+### 🟠 DEUX POINTS À REGARDER
+
+**① LE PLAFOND.** La plus lente a pris **307 s**, et à 10 s de médiane **seules 903 annonces tiennent
+dans la fenêtre de 2 h 30**. Les 1 000 sont passées cette nuit, **mais sans marge**.
+➡ **Baisser à 903 est une décision de Frédéric.** *Noté, non fait.*
+
+**② LE ROUGE EST UN FANTÔME, prouvé.** La seule erreur est le travail orphelin du **19/10 à
+17:10:20**, tué à 17:40 — celui du redémarrage des services, **réparé à la main le 19/10 à 23:38**.
+⭐ **Et la réparation a tenu la nuit** : 63073 → **24 photos, 0 disparue, 0 sans fichier, 24 avec
+dérivé**.
+
+### ⬜ ET UNE TROUVAILLE, NOTÉE ET NON TRAITÉE *(décision de Frédéric : « Note pour plus tard »)*
+
+**L'EXCLUSION POUR ERREUR DU BALAYAGE EST À VIE, ET ELLE NE DEVRAIT PAS L'ÊTRE.**
+
+`enqueue_photos_masquees_lot.js:231` écarte les annonces en erreur **sans aucun filtre de date** :
+```js
+"…&job_type=eq.sync_hektor_photos&status=eq.error"
+```
+⚠⚠ **Et le MÊME fichier traite l'erreur de deux façons contradictoires** : le frein global, douze
+lignes plus haut *(l. 198)*, ne regarde que **24 heures** *(`finished_at=gte.depuis`)* ; l'exclusion
+par annonce regarde **toute l'histoire**. **Une asymétrie dans un seul fichier.**
+
+**POURQUOI LA RÈGLE EXISTE** *(et elle a une bonne raison)* : le 20/08 notre IP a été bannie, et une
+des deux causes était exactement ça — les annonces en échec revenaient **en tête de chaque lot**,
+**68 × 19 lots ≈ 1 300 refus identiques**.
+
+⚠ **MAIS ELLE CONFOND DEUX FAMILLES**, et le projet le sait déjà *(leçon du 15/10, le coffre)* :
+> *« Ces deux refus sont DÉFINITIFS… Tout le reste (401, 403, 429, 5xx, « fetch failed ») est
+> passager et doit faire rejouer — ne jamais confondre les deux familles. »*
+
+**⭐⭐ ET LA MESURE TRANCHE : la règle ne protège de rien aujourd'hui.**
+
+| cause de l'exclusion | travaux | annonces écartées **à vie** |
+|---|---|---|
+| ⭐ **A — notre propre redémarrage** *(passager)* | **1** | **1** *(63073)* |
+| B — Hektor refuse *(401/403)* | **0** | **0** |
+| C — Hektor saturé *(429/503)* | **0** | **0** |
+| E/F — le coffre refuse *(définitif)* | **0** | **0** |
+
+➡ **Une seule annonce écartée, et la cause n'a rien à voir avec Hektor : c'est NOUS qui avons
+redémarré.** ⛔ Zéro écartée pour un vrai refus. ⚠ **Et ça grossira sans bruit** : chaque redémarrage
+pendant un balayage écartera une annonce de plus, pour toujours.
+
+**LES DEUX CORRECTIONS POSSIBLES, non faites :**
+
+| | |
+|---|---|
+| ⭐ **A — une fenêtre de date** | *« écarter les annonces en erreur des 7 derniers jours »* — **deux mots dans la requête**, et ça reprend le patron déjà présent douze lignes plus haut. ⭐ Une fenêtre protège **aussi** du bannissement : une annonce qui échoue tous les jours reste écartée tous les jours |
+| **B — trier par cause** | n'écarter à vie que les refus **définitifs** *(415, 413)*. Plus juste, mais il faut lire le message d'erreur — plus de code |
+
+⭐ **Mon avis : A.** ⚠ **Et 63073 n'a besoin de rien** : réparée à la main, et la réparation a tenu.
