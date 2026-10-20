@@ -1510,8 +1510,18 @@ def recalculer_les_chaines(con: sqlite3.Connection) -> dict[str, int]:
         # s'il n'y a qu'UNE chaine du bien qui le partage, il n'y a rien a
         # deviner. Mesure du 20/10 : 120 compromis annules, et ce sont les memes
         # affaires que le § 2.3 recolle quand la date existe.
-        if sans_date_du_bien and toutes and chainage_sans_date_actif():
-            for app_id, kind, state, date, acqs in sans_date_du_bien:
+        if sans_date_du_bien and chainage_sans_date_actif():
+            if not toutes:
+                # ⚠ ON LE DIT, ET C'EST LA DEUXIEME FOIS LE MEME JOUR. La garde
+                #   `and toutes` sautait le bloc EN SILENCE : 32 transactions sur
+                #   220 n'apparaissaient dans aucun compteur (117+53+1+17 = 188).
+                #   Ces biens n'ont QUE des transactions sans date -- 31 biens,
+                #   surtout des compromis annules isoles : il n'y a vraiment rien
+                #   a rejoindre. Mais une absence muette ne se distingue pas d'un
+                #   oubli.
+                for app_id, *_reste in sans_date_du_bien:
+                    signale("[2.6] le bien n a aucune transaction datee -- rien a rejoindre")
+            for app_id, kind, state, date, acqs in (sans_date_du_bien if toutes else []):
                 # ⚠ RESTREINT AUX COMPROMIS ANNULES : coherence avec le § 2.3,
                 #   que Frederic a limite aux annules le 20/10. Un compromis
                 #   VIVANT rattache sur un nom rouvrirait une affaire en cours
