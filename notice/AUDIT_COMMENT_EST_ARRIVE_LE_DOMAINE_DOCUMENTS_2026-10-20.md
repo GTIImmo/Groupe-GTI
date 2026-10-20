@@ -8,36 +8,46 @@ Le correctif lui-même et ses mesures sont dans `AUDIT_DOMAINE_DOCUMENTS_2026-10
 
 ---
 
-# PARTIE 1 — LES SIGNATURES : **le dossier est intact, MAIS ~29 DOSSIERS DE PREUVES SONT PERDUS**
+# PARTIE 1 — LES SIGNATURES : **RIEN N'EST PERDU** *(et j'ai dit le contraire pendant une heure)*
 
-## ⛔⛔ JE M'ÉTAIS TROMPÉ, ET C'EST FRÉDÉRIC QUI M'A FAIT CREUSER
+## ⛔⛔⛔ CE QUE J'AI ANNONCÉ DE FAUX, ET LA MESURE QUI LE CORRIGE
 
-J'avais écrit *« non, rien n'est perdu en signatures »*. **C'est faux, et voici la mesure qui le
-dit.** Un document signé a deux choses : **son dossier** *(statut, date, n° de procédure, PDF
-signé)* et **son dossier de preuves** *(`preuves-N.zip`, la piste d'audit de la signature
-électronique)*. Le premier est intact partout. **Le second manque six fois plus souvent sur les
-fiches que le bug a remplacées :**
+**Le 21/10 j'ai annoncé à Frédéric que ~29 dossiers de preuves de signature avaient été
+détruits. C'ÉTAIT FAUX. Ils sont tous sur le serveur :**
 
-| fiches signées | signés | sans leur ZIP de preuves | **taux** |
-|---|---|---|---|
-| **A. jamais touchées** *(témoin)* | 99 | 4 | **4,0 %** |
-| ⛔ **B. recréées par le bug** | 142 | **35** | ⛔ **24,6 %** |
-| C. d'origine, nouveau domaine | 188 | 2 | **1,1 %** |
+```
+les 32 fiches signees recreees par le bug (procedure < 400)
+  ZIP de preuves SUR LE SERVEUR         32 / 32
+  absent du serveur                      0
+  au coffre                              3
+  chemin memorise DANS le dossier de la fiche   32 / 32
+tous les signes : 428 / 429 sur le SERVEUR,  388 / 429 au COFFRE
+```
 
-⭐ **C'est la comparaison des TAUX qui tranche**, pas le nombre brut : au taux des fiches
-intactes, il en manquerait **~6** sur 142. **Il en manque 35.**
-➡ **Environ 29 dossiers de preuves ont été détruits par le bug.**
+**Le seul réellement absent** : annonce **24113**, procédure **556**, signée le 29/06/2026. Son
+bloc `proofs_zip` n'a **jamais** été écrit, sa fiche date du 29/06 et **n'a jamais été recréée**
+— **aucun rapport avec le bug**. Et elle a quand même son PDF signé.
 
-**Pourquoi** : le `preuves-N.zip` est rangé **dans le dossier de la fiche**. Fiche remplacée =
-nouveau dossier = le zip reste derrière, et **rien ne va le rechercher** *(le worker ne
-retélécharge que le document, pas ses compagnons)*.
+### Les deux fautes de mesure, et elles s'additionnaient
 
-⭐⭐ **ET C'EST PROBABLEMENT RÉCUPÉRABLE** : les **35 numéros de procédure sont connus**, et
-ImmoSign appartient à Hektor. Si la procédure existe encore chez eux, le dossier de preuves se
-retélécharge. **35 procédures = 35 appels**, à faire avec l'accord de Frédéric et le frein habituel.
+1. ⛔ **J'ai cherché `preuves-*.zip` sur tout le disque, obtenu 0, et je l'ai cru.** Or
+   `safeFilename` remplace `/` par `_` : le fichier s'appelle **`immosign_preuves-33.zip`**.
+   **Mon motif ne pouvait rien trouver.**
+2. ⛔ **J'ai mesuré l'absence AU COFFRE et conclu à une destruction.** Or le projet garde tout
+   **sur le serveur** et ne met au coffre qu'une copie **pour les biens vivants**
+   *(`shouldKeepCloud`)* — et ces 26 annonces sont **vendues ou archivées**. Leur absence du
+   coffre est **la politique du projet**, pas un dégât.
 
-⚠ **Les 4 fiches intactes sans zip prouvent qu'une partie de l'absence préexiste au bug** — tout
-n'est pas imputable, et je ne l'impute pas.
+⚠ **Et mon « taux » de 24,6 % contre 4,0 % mesurait donc la politique du coffre**, pas une perte.
+Le tableau croisé par âge *(90,6 % contre 0,0 %)* était juste **sur ses propres termes** —
+« absent du coffre » — et je lui ai fait dire « détruit ». ⭐ **Une statistique impeccable sur la
+mauvaise source reste fausse.**
+
+### ⭐ Ce qui a sauvé la découverte : une contradiction
+
+Deux de mes mesures se contredisaient — *« 0 zip sur le disque »* contre *« 0 zip à aller
+chercher »*. **Je me suis arrêté là plutôt que de poser les 26 travaux.** La contradiction était
+le cadeau. Voir [[un-zero-ne-se-croit-pas-sans-temoin-positif]].
 
 ## ⭐⭐⭐ Ce qui EST intact, et la preuve par les identifiants
 
@@ -54,11 +64,10 @@ coffre** *(`procedure-905.zip`, `preuves-905.zip`)*. Les deux listes sont donc c
 ⭐ C'est la règle du projet *« on croise sur des IDENTIFIANTS, jamais sur des nombres »*. Un
 comptage aurait pu coïncider par hasard ; **388 numéros qui se retrouvent un par un, non.**
 
-⚠⚠ **MAIS CE CROISEMENT NE PROUVAIT QUE LA MOITIÉ, et c'est l'erreur que j'ai faite** : il
-compare ce qui est **au coffre** à ce qui est **en base**. Il ne pouvait donc PAS voir ce qui
-n'est **ni** au coffre **ni** en base — c'est-à-dire exactement les 29 dossiers de preuves
-détruits. **Un croisement ne voit jamais ce qui a disparu des deux côtés à la fois.** Il a fallu
-comparer des **taux entre populations** pour le découvrir *(section ci-dessus)*.
+⚠ **Et ce croisement portait sur la bonne question mais la mauvaise source** : il compare le
+**coffre** à la **base**, alors que le magasin de référence du projet est **le serveur**. Il ne
+pouvait donc rien dire de ce qui est sur le serveur et pas au coffre — ce qui s'est révélé être
+**toute** la population que j'ai crue détruite. **Le croisement était juste ; ma lecture, non.**
 
 ## L'état des signatures aujourd'hui, une ligne par état
 
@@ -368,10 +377,26 @@ dans les bons termes.** Elle n'a pas manqué d'être vue — elle a manqué d'ê
 
 # PARTIE 5 — « PEUT-ON RÉCUPÉRER LES 29 PREUVES ? » — audit du 21/10, lecture seule
 
-*Frédéric : « vas-y ». Aucun appel à Hektor, aucune écriture. Verdict : **OUI, mais
-ça n'arrivera pas tout seul.**
+## ⛔⛔⛔ RÉPONSE FINALE : IL N'Y A RIEN À RÉCUPÉRER. **NE PAS POSER LES 26 TRAVAUX.**
 
-## ⭐⭐⭐ D'abord : la destruction est CONFIRMÉE, et par une meilleure mesure
+**Tout ce qui suit dans cette partie a été écrit sur une prémisse fausse** *(voir la partie 1
+corrigée : les 32 dossiers de preuves sont sur le serveur, 32 sur 32)*. Je le **garde** plutôt
+que de l'effacer, parce que deux de ses résultats valent d'être connus :
+
+| ce qui reste vrai | |
+|---|---|
+| ⭐ **ImmoSign sert encore les vieilles procédures** | éprouvé en réel le 21/10 sur la **procédure 33**, la plus ancienne : HTTP 200, vrai ZIP de 172 435 o, **3 pistes d'audit** vérifiées en ouvrant l'archive. ⭐ Les PDF portent la date du jour : ImmoSign les **reconstruit à la demande**, donc rien ne peut « périmer » |
+| ⭐ **la synchro accepte un bien vendu ou archivé** | `sync_console_documents` est la 1ʳᵉ entrée de `READ_ONLY_ARCHIVE_JOB_TYPES`, et la branche « historique » de `loadDossier` n'a **aucune** liste blanche. Les 26 annonces sont toutes trouvables : 18 en archive, 8 en historique, **0 introuvable** |
+| ⭐ **le coût aurait été de 26 appels**, pas 630 | les **525** fichiers locaux des 26 annonces sont **tous présents** → aucun retéléchargement. Seules les 26 pages auraient été relues |
+
+⚠ **Et c'est la mesure du coût qui a fait tomber l'erreur** : elle annonçait *« 0 ZIP compagnon à
+aller chercher »*, ce qui contredisait mon *« 0 zip sur le disque »*. **Deux zéros contradictoires
+valent mieux qu'un seul zéro cru.**
+
+<details>
+<summary>⛔ Ce qui suit est l'audit tel qu'il a été écrit, avec sa prémisse fausse — conservé pour la trace</summary>
+
+## ⚠ D'abord : la destruction est « CONFIRMÉE » — **CE RAISONNEMENT EST FAUX**, voir ci-dessus
 
 Ma première preuve *(24,6 % contre 4,0 %)* était **confondue par l'âge** : le zip manque
 beaucoup plus sur les vieilles procédures, quel que soit l'état de la fiche *(20,9 % en
@@ -452,3 +477,5 @@ synchro documents sur ces 26)* **reste à trancher avec lui** — un périmètre
 ⚠ **Non mesuré** : qu'ImmoSign serve encore ces 29 procédures. Le code dit « immuables » et
 388 autres répondent, mais **je ne l'ai pas vérifié sur ces 29** — ça demanderait un appel à
 Hektor, donc son accord. **C'est le seul vrai inconnu, et il se lève avec UN SEUL essai.**
+
+</details>

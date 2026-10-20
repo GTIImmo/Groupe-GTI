@@ -217,7 +217,19 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      repasse chaque nuit (41 231 travaux depuis le 25/09 a 12:57, ~330 par nuit). Le
      correctif sera donc exerce tout seul. ⚠ Et c'est la REPONSE a la reserve 3 du 25/09 :
      le rattrapage a ete lance LE JOUR MEME ou la reserve disait « a traiter AVANT ».
-   ⚠ NON MESURE, et je ne le suppose pas : les dates de signature reellement perdues ;
+   ✅ LES SIGNATURES SONT INTACTES -- MESURE LE 21/10, et j'avais dit le contraire :
+     428 des 429 documents signes ont leur DOSSIER DE PREUVES SUR LE SERVEUR (les 32
+     fiches recreees par le bug : 32 sur 32). Le seul absent est l'annonce 24113,
+     procedure 556, et sa fiche n'a JAMAIS ete recreee -- aucun rapport avec le bug.
+     ⛔ MES DEUX FAUTES : j'ai cherche « preuves-*.zip » et obtenu 0 alors que
+       safeFilename remplace le / (le fichier est « immosign_preuves-33.zip ») ; et
+       j'ai mesure l'absence AU COFFRE alors que le projet garde tout SUR LE SERVEUR
+       et ne met au coffre qu'une copie POUR LES BIENS VIVANTS (shouldKeepCloud).
+     ⭐ Au passage, deux choses eprouvees pour de vrai : ImmoSign sert encore les
+       vieilles procedures (essai sur la 33, vrai ZIP, 3 pistes d'audit), et la
+       synchro documents accepte un bien vendu ou archive.
+     ⛔ NE PAS POSER DE TRAVAUX DE RECUPERATION : il n'y a rien a recuperer.
+   ⚠ NON MESURE, et je ne le suppose pas :
      si les PHOTOS ont le meme defaut (leur id vient du CDN) ; ce qui declenche la
      resynchro d'une annonce (reserve 3 du 25/09, toujours ouverte).
    ⚠ COORDINATION : une conversation a ete ouverte sur ce chantier avec
