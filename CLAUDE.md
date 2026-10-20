@@ -138,7 +138,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑦-7 | modifier ou prolonger un mandat | ⛔ **FERMÉ PAR DÉCISION le 18/10** — *« je ne souhaite pas pouvoir modifier un mandat ou prolonger »*. **Ne pas relancer** |
 | ⑦-8 | **photos : rendre visible / masquer** | ✅ **COMPLET le 19/10** — les **4 marches**, dont le bouton **prouvé en réel deux fois** *(voir ci-dessous)* |
 | ⑦-9 | renommer un document | ⛔ **FERMÉ PAR DÉCISION le 19/10** — *« je pense qu'il ne faut rien changer donc il faut que l'utilisateur puisse mettre un libellé au début donc rien à changer »*. ⭐ **Et le champ existe déjà** *(`App.tsx:11378` « Libellé », → nom du fichier envoyé à Hektor, `api.ts:8169`)*. **Ne pas relancer** |
-| ⑦-10 | `app_brouillon_annonce_detail_cache` vide | ⬜ **question** : seulement si Frédéric en a l'usage |
+| ⑦-10 | **les brouillons : rendre l'index vivant** *(4 pièces)* | 🔧 **pièce ① FAITE le 20/10** *(le push d'une seule annonce refuse un brouillon — 16 contrôles hors ligne, 4 en réel)* · ⬜ ② fiche complète 24 h · ⬜ ③ bouton « modifier » *(geste déjà prouvé)* · ⬜ ④ bouton « mettre en ligne » *(un seul appel, réversible)*. Détail dans la note de chantier |
 
 **⑦-8, les 4 marches** *(19/10)* :
 
@@ -271,6 +271,11 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      s'identifie par un badge CALCULE alors que son numero existe).
 
 ⑥ NOTE, NON RELANCE (trouve en passant, hors perimetre) :
+   · LE `if pending is not None:` DU PUSH D'UNE SEULE ANNONCE EST DU CODE MORT
+     depuis le 21/09 : les 3 branches au-dessus remettent TOUTES pending a None,
+     donc `dirty_annonce_skipped` ne peut plus jamais valoir 1 (mesure du 20/10) ;
+   · phase2/sync/test_dirty_guards.py n'ajoute pas la racine au sys.path : il ne
+     tourne qu'avec `PYTHONPATH=.` (il est vert ainsi, 4 tests) ;
    · 202 biens EN VENTE a mandat echu, dont 43 sans negociateur ;
    · 150 notifications sur 150 non lues ;
    · les 22 403 photos de LOCATION ecartees chaque nuit -- l'exclusion n'est pas

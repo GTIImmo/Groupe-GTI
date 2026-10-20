@@ -20,9 +20,11 @@ from phase2.bootstrap_phase2 import ensure_schema  # noqa: E402
 from phase2.pipeline.view_demandes_mandat_diffusion import SQL_REFRESH_DEMANDES_MANDAT_DIFFUSION  # noqa: E402
 from phase2.pipeline.view_generale import SQL_REFRESH_VUE_GENERALE  # noqa: E402
 from phase2.sync.export_app_payload import (  # noqa: E402
+    BROUILLON_BUCKET_ENABLED,
     build_archive_annonce_index,
     build_historical_annonce_index,
     build_payload,
+    load_brouillon_draft_ids,
 )
 from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
     SupabaseRestClient,
@@ -63,6 +65,54 @@ def run_case_index_for_annonce(hektor_annonce_id: str) -> int:
         return build_case_dossier_source(conn, [hektor_annonce_id])
     finally:
         conn.close()
+
+
+def est_un_brouillon(hektor_annonce_id: str) -> bool:
+    """L'annonce est-elle un BROUILLON (isDraft) chez Hektor ?
+
+    ⑦ PIECE ① -- 20/10/2026. POURQUOI CETTE QUESTION MANQUAIT.
+    Ce script applique bien le perimetre du parc vivant : SQL_DOSSIERS_BASE porte
+    ANNONCES_SCOPE_WHERE (archive, statut, type d'offre) et le filtre par numero
+    s'ajoute PAR-DESSUS -- un bien Vendu/Clos est donc correctement refuse
+    (build_payload rend [] et rien n'est pousse).
+    Mais un brouillon RESSEMBLE a un bien normal : statut « Actif » ou
+    « Estimation », non archive, une vente. Il passe donc tous ces controles. La
+    SEULE chose qui le trahit vit dans une table a part,
+    hektor.hektor_annonce_draft_state -- et ce fichier ne la lisait JAMAIS, alors
+    que le push COMPLET l'ecarte depuis le 09/10 par brouillon_active_exclusion_sql().
+    Des deux portes du parc vivant, une seule connaissait la regle.
+
+    MESURE DU 20/10 : 461 des 529 brouillons passaient le perimetre (239 « Actif »,
+    222 « Estimation » ; les 68 autres ont un statut vide et sortaient de toute
+    facon). Temoin inverse : avec la clause, 0. Parc 13 954 -> 13 493, ecart 461.
+
+    ⚠ CE QUE CA PRODUISAIT. Un geste sur un brouillon le recopiait dans
+      app_dossier_current, ou PLUS RIEN ne permettait a l'app de savoir que c'en
+      etait un : `is_brouillon` est pose par le FRONT au moment ou il lit l'index
+      brouillon (apps/hektor-v1/src/lib/api.ts:4977), ce n'est pas une colonne. Le
+      brouillon recevait donc une fiche complete avec TOUS les boutons d'ecriture,
+      sur une annonce que Hektor tient pour inachevee dans son assistant.
+      23 gestes finissent par ce push (enqueueRefreshConsoleDataJobBestEffort).
+      Le run de 05:00 nettoyait le lendemain -- PROUVE : des 7 brouillons passes en
+      read-through depuis juin, 6 sont entierement nettoyes (parc, detail ET work
+      items), seul celui d'apres le dernier run subsiste. Donc un defaut d'au plus
+      24 h, mais reel, et qui serait devenu SYSTEMATIQUE des qu'on ouvrirait les
+      boutons « modifier » et « mettre en ligne » d'un brouillon (pieces ③ et ④).
+
+    ⭐ ON NE REECRIT PAS LA QUESTION : on appelle load_brouillon_draft_ids(), la
+      fonction dont le push complet se sert deja. Meme source, meme
+      COALESCE(is_draft, 0) = 1, et meme comportement si la table n'existe pas
+      encore (elle rend [] -- « builder inerte »). Les deux portes ne peuvent donc
+      jamais diverger, et la regle reste a UN SEUL endroit.
+    ⚠ MEME INTERRUPTEUR que le push complet : APP_BROUILLON_BUCKET_ENABLED=0 rend
+      ce garde-fou inerte, exactement comme l'exclusion du run de nuit.
+    """
+    if not BROUILLON_BUCKET_ENABLED:
+        return False
+    id_texte = str(hektor_annonce_id or "").strip()
+    if not id_texte.isdigit():
+        return False
+    return int(id_texte) in set(load_brouillon_draft_ids())
 
 
 def sync_target_app_dossier(con: sqlite3.Connection, hektor_annonce_id: str) -> int | None:
@@ -714,6 +764,9 @@ def main() -> int:
                 raise RuntimeError(f"app_dossier introuvable pour annonce Hektor {hektor_annonce_id}")
             seed_target_work_items(con, app_dossier_id)
             pending = get_annonce_pending(client, app_dossier_id)
+            # ⑦ piece ① : la question se pose AVANT l'ATTACH de la branche de push,
+            # donc est_un_brouillon() ouvre sa propre connexion en lecture seule.
+            est_brouillon = est_un_brouillon(hektor_annonce_id)
             verrou_diffusion_expire = (
                 pending is not None
                 and str(pending.get("source") or "") == "diffusion"
@@ -763,7 +816,29 @@ def main() -> int:
                 #   reste dans sa ligne d'attente : elle n'est jamais perdue, et le
                 #   run de nuit la repose.
                 pending = None
-            if pending is not None:
+            if est_brouillon:
+                # ⑦ PIECE ① (20/10/2026) -- UN BROUILLON NE REJOINT JAMAIS LE PARC
+                # VIVANT. Le pourquoi est dans est_un_brouillon(), plus haut.
+                # On saute TOUT le bloc distant : pas de push_payload, pas de
+                # reconcile_annonce_dossiers, pas de reconcile_lightweight_indexes.
+                # ⚠ Les ecritures LOCALES ont deja eu lieu et restent voulues
+                #   (run_case_index_for_annonce, sync_target_app_dossier,
+                #   seed_target_work_items) : elles ne polluent rien de public, et
+                #   la piece ② (« charger la fiche complete d'un brouillon ») en
+                #   aura besoin.
+                # ⚠ A FAIRE EN PIECE ② : rafraichir ICI l'index BROUILLON de cette
+                #   annonce. Tant que ce n'est pas fait, un brouillon modifie garde
+                #   une ligne d'index datant du dernier run de 05:00.
+                counts = {
+                    "dossiers_upserted": 0,
+                    "details_upserted": 0,
+                    "work_items_replaced": 0,
+                    "broadcasts_replaced": 0,
+                    "mandat_register_replaced": 0,
+                    "brouillon_skipped": 1,
+                    "ghost_dossiers_removed": 0,
+                }
+            elif pending is not None:
                 counts = {
                     "dossiers_upserted": 0,
                     "details_upserted": 0,

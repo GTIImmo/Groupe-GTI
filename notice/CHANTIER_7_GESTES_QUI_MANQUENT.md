@@ -6186,3 +6186,182 @@ quotidien dès qu'on ouvre le bouton.**
 4. ⚠⚠ **`etatAnnonce` n'est PAS dans `hektor_annonce`** *(ses colonnes : `diffusable`, `valide`,
    `archive`, `partage`…)* → ⛔ **on ne peut pas lire l'état brouillon sans GraphQL.** ⭐ *C'est
    peut-être exactement pour ça que le projet a bâti `sync_hektor_drafts.py` sur GraphQL.*
+
+
+---
+
+## BROUILLONS — PIÈCE ① : le push d'une seule annonce refuse un brouillon
+
+**20/10/2026.** *Écrit, éprouvé, contrôlé en réel. ⚠ Pas encore poussé — Frédéric pousse.*
+
+### La cause, en une phrase
+
+Le push d'une seule annonce **applique bien le périmètre du parc vivant** — archivé, statut,
+type d'offre — **mais pas la clause qui écarte les brouillons**, parce que cette clause est une
+pièce *séparée* qu'il faut concaténer explicitement, et **un seul appelant sur deux le faisait**.
+
+### Les preuves de l'audit
+
+| | |
+|---|---|
+| la clause vit à **un seul endroit** | `phase2/sync/export_app_payload.py:446` `brouillon_active_exclusion_sql()` |
+| et n'avait **qu'un appelant** | `push_upgrade_to_supabase.py:1035`, dans `fetch_local_app_dossier_identity()` |
+| le push d'une seule annonce | **849 lignes, 0 mention** de « brouillon » |
+| ⭐ le mécanisme est **sain par ailleurs** | `SQL_DOSSIERS_BASE` *(l. 301)* porte `ANNONCES_SCOPE_WHERE`, et `fetch_rows_by_ids` ajoute le filtre par numéro **PAR-DESSUS** → un **Vendu/Clos** est correctement refusé *(`if dossier_ids is not None and not active_rows: return []`)* |
+| ⭐⭐ pourquoi le brouillon passait | la **seule** chose qui le trahit est `hektor.hektor_annonce_draft_state.is_draft = 1`, et ce test **n'existe nulle part ailleurs** que dans la clause oubliée |
+
+**La portée, mesurée avec LA VRAIE clause importée du code, jamais une imitation :**
+
+```
+brouillons connus (is_draft=1)                      529
+...présents dans app_view_generale                  529
+...QUI PASSENT LE PÉRIMÈTRE DU PARC VIVANT          461   <-- la portée
+TÉMOIN INVERSE -- avec la clause, il en reste         0
+parc vivant sans la clause / avec                 13 954 / 13 493   (écart 461)
+statuts portés : Actif 239 · Estimation 222 · (vide) 68
+```
+
+➡ Les 68 au statut vide sortaient **de toute façon**. ⚠ **Si leur statut se remplit, ils passeront.**
+
+### ⭐⭐ La conséquence vraie — plus sérieuse que le comptage
+
+`is_brouillon` est **posé par le FRONT** au moment où il lit l'index brouillon
+*(`apps/hektor-v1/src/lib/api.ts:4977` : `.map((row) => ({ ...row, is_brouillon: true }))`)*.
+**Ce n'est pas une colonne de la base.**
+
+➡ Une fois réinjecté dans `app_dossier_current`, **plus rien ne permettait à l'app de savoir
+que c'était un brouillon** : fiche complète, **tous les boutons d'écriture**, sur une annonce
+que Hektor tient pour inachevée dans son assistant. **23 gestes** finissent par ce push
+*(`enqueueRefreshConsoleDataJobBestEffort` → `refresh_console_data` → `handleRefreshConsoleData`
+→ `runCreatedAnnonceImmediateSync`, un seul point d'entrée)*.
+
+⭐ Autrement dit : pendant quelques heures, **par accident**, on obtenait déjà ce que les pièces
+③ et ④ veulent construire **exprès** — sans l'avoir décidé et sans que personne en soit prévenu.
+
+### ⭐ Le défaut se réparait tout seul — prouvé, pas supposé
+
+`stale_remote_ids() = remote_ids − effective_local_ids` *(`push_upgrade_to_supabase.py:1386`)*, et
+cette liste locale **porte l'exclusion**. Preuve **par les données, une ligne par objet** :
+
+| annonce | dernier read-through | dans le parc | détail | work items |
+|---|---|---|---|---|
+| **62554** | 20/10 **08:48** *(après le run de 05:00)* | **OUI** | **OUI** | **1** |
+| 63131 | 07/10 08:22 | – | – | 0 |
+| 63237 | 07/10 08:18 | – | – | 0 |
+| 61761 · 61762 · 62074 · 62317 | 22/06 | – | – | 0 |
+
+➡ **6 sur 7 entièrement nettoyés**, les trois tables comprises. Le défaut durait **au plus 24 h** —
+mais il serait devenu **systématique** dès l'ouverture des boutons des pièces ③ et ④.
+
+**Le registre légal n'était pas menacé** : **0 des 529** ne porte de n° de mandat, **0** n'est dans
+le registre. ⚠ Mais c'est une propriété de la **donnée**, pas une garde dans le **code**.
+
+### Le correctif
+
+**Une branche de plus, sur le patron de sa voisine**, et une fonction de 5 lignes de logique :
+
+```python
+if not BROUILLON_BUCKET_ENABLED:
+    return False
+id_texte = str(hektor_annonce_id or "").strip()
+if not id_texte.isdigit():
+    return False
+return int(id_texte) in set(load_brouillon_draft_ids())
+```
+
+⭐⭐ **ON NE RÉÉCRIT PAS LA QUESTION** : on appelle `load_brouillon_draft_ids()`, la fonction dont
+le push complet se sert déjà. **Même source, même `COALESCE(is_draft, 0) = 1`, même comportement
+si la table n'existe pas encore** *(elle rend `[]` — « builder inerte », décision déjà prise par le
+projet)*. Les deux portes **ne peuvent donc jamais diverger**, et la règle reste à **un seul endroit**.
+
+⚠ **ET LA BRANCHE EST PLACÉE EN PREMIER**, parce que `if pending is not None:` *(l. 841)* est
+**DU CODE MORT** depuis le 21/09 : les **trois** branches au-dessus *(verrou de diffusion, conflit,
+saisie en cours)* remettent **toutes** `pending = None`. Donc `dirty_annonce_skipped` ne peut plus
+jamais valoir 1. ⭐ **Trouvé en passant, NOTÉ, PAS TRAITÉ** — hors périmètre.
+
+### L'épreuve hors ligne — `phase2/checks/test_piece1_brouillon_refuse.py`
+
+**16 contrôles, tous verts, sortie 0.** Aucun appel Hektor, aucun appel Supabase, le vrai miroir
+ouvert en `mode=ro` seulement. **La preuve d'abord** : le contrôle (1) exige que la fonction
+*reconnaisse* un brouillon, et s'il échoue l'essai **s'arrête en code 2** au lieu de se déclarer vert.
+
+```
+(1) LA PREUVE D'ABORD : un brouillon est RECONNU
+(2) TÉMOIN INVERSE : une vraie annonce n'est PAS prise
+(3) is_draft NULL = pas un brouillon (COALESCE, comme le run de nuit)
+(4) annonce absente du miroir = pas un brouillon
+(5) table absente : inerte, et le read-through ne casse PAS
+(6) interrupteur éteint : le garde-fou est INERTE   (6 bis) et il est RALLUMÉ après
+(7) entrées bizarres : aucune ne casse  (7 bis) espaces ignorés  (7 ter) vide/texte/décimal
+(8) LES DEUX PORTES NOMMENT LES MÊMES ANNONCES     529 = 529
+(8 bis) et il y en a VRAIMENT (sinon on ne mesure rien)
+(9) la branche existe · (9 bis) elle porte les 3 clés que le compte rendu lira
+(9 ter) MÊMES CLÉS que la branche voisine, au marqueur près
+```
+
+⭐ Le **(9 bis)** garde contre un vrai mode de panne : le compte rendu final lit
+`counts["dossiers_upserted"]`, `["details_upserted"]` et `["work_items_replaced"]` — une clé
+oubliée donnerait un `KeyError` **après** le travail, donc un travail *« failed »* alors que tout
+s'est bien passé.
+
+⚠ **À SAVOIR POUR TOUT ESSAI FUTUR** : `est_un_brouillon()` lit le miroir **à travers**
+`export_app_payload.load_brouillon_draft_ids()`, donc le chemin qu'elle utilise est
+`export_app_payload.HEKTOR_DB` — **PAS** `push_single_annonce_to_supabase.HEKTOR_DB` que le
+harnais C.9-e échange. C'est le prix d'avoir gardé la question à un seul endroit, et c'est écrit
+dans la docstring.
+
+### Le contrôle en réel — avec son accord, et prédictions écrites d'avance
+
+**Deux lancements du vrai script. Zéro appel Hektor** *(il ne lit que du local)*.
+
+```
+63131 (brouillon propre)  ->  brouillon_skipped: 1   dossiers_upserted: 0   sortie 0
+62774 (vraie annonce)     ->  dossiers_upserted: 1, details 1, work_items 1, registre 1
+                              et la clé brouillon_skipped N'APPARAÎT PAS
+```
+
+**Le contrôle, une ligne par objet :**
+
+| annonce | attendu | résultat |
+|---|---|---|
+| **63131** | brouillon propre → doit **rester dehors** | ✅ **dehors** |
+| 62554 | déjà pollué à 08:48 → inchangé | ✅ dans le parc, « Actif » — **pas touché** |
+| **62774** | vraie annonce → doit être **dedans** | ✅ **dans le parc**, « Sous offre » |
+| **chevauchement** | était **1** | ✅ **1**, et c'est **62554 seul** |
+
+➡ **Sans le correctif, 63131 aurait fait passer le chevauchement à 2.** Il est resté à 1.
+
+### ⚠ CE QUE ÇA POURRAIT CASSER AILLEURS
+
+- **Annonce normale** : rien. La branche ne se déclenche pas — **prouvé** par le témoin inverse 62774.
+- **Brouillon** : le geste n'actualise plus rien dans l'app. C'est le comportement voulu
+  aujourd'hui *(un brouillon n'a pas de fiche)*, mais ⚠⚠ **la pièce ② devra rafraîchir SON index
+  à cet endroit** — un commentaire le dit dans le code. Sans ça, un brouillon modifié gardera une
+  ligne d'index datant du dernier run de 05:00.
+- **Les écritures locales restent** *(`run_case_index_for_annonce`, `sync_target_app_dossier`,
+  `seed_target_work_items`)* : elles ne polluent rien de public et la pièce ② en aura besoin.
+- **Les 2 essais existants** sur ce fichier sont verts. ⭐ `phase2/sync/test_dirty_guards.py`
+  **n'ajoute pas la racine au `sys.path`** : il faut le lancer avec `PYTHONPATH=.` — défaut
+  préexistant, **noté, pas traité**.
+- `handleCreateHektorDraftAnnonce` *(worker l. 21459)* crée une annonce brouillon et déclenche le
+  même push. ⚠ **Non mesuré** si notre création produit vraiment `is_draft=1` aujourd'hui *(la note
+  du 15/05 dit non)*. À vérifier **avant** d'allumer quoi que ce soit de ce côté.
+- **Le retour arrière** : retirer la branche, ou poser `APP_BROUILLON_BUCKET_ENABLED=0` qui rend
+  tout le dispositif inerte **des deux côtés** *(contrôle 6)*. Et le run de 05:00 nettoie de toute façon.
+
+### Ce qui reste des 4 pièces
+
+| | la pièce | état |
+|---|---|---|
+| **①** | l'exclusion dans le push d'une seule annonce | ✅ **FAIT le 20/10** — 16 contrôles hors ligne + 4 en réel |
+| ② | « Charger la fiche complète » pour 24 h | ⬜ 4ᵉ script + 4ᵉ type de travail *(3 verrous + 5 endroits)* · ⭐ **zéro appel Hektor pour 464 des 529** |
+| ③ | « Modifier » un brouillon | ⬜ **déjà prouvé en réel le 20/10** — il ne manque que le bouton |
+| ④ | « Mettre en ligne → Actif / Estimation » | ⬜ `etatAnnonce` 1/2 par `mode=upval` — **un seul appel, et réversible** |
+
+⭐ **Et pour la fiche** *(sa question du 20/10)* : le mécanisme « fiche complète pendant 24 h »
+**existe déjà et tourne** pour les Vendus/Clos — `hasExportedDetail` → *« Ouvrir la fiche
+complète »*. Le brouillon en est écarté par **deux aiguillages seulement** : la ligne
+`is_brouillon === true` de `isReadOnlyLightweightDetail` *(lecture seule inconditionnelle)* et le
+détournement du bouton de ligne vers *« Reprendre la saisie dans Hektor »*. Le bouton « Mettre en
+ligne » irait dans **la modale de changement de statut** *(`App.tsx:27256`, déjà réservée
+admin/manager)*, qui fait déjà ce geste sur les vraies annonces.
