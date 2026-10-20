@@ -127,3 +127,71 @@ sur `storage.objects` laisserait les octets orphelins et abîmerait les métadon
 2. si un **export**, un **e-mail** ou la **vitrine** a pu mémoriser une URL signée d'un de ces
    fichiers *(une URL signée expire, mais je ne l'ai pas prouvé sur ce coffre)* ;
 3. le coffre **public des photos** : hors sujet ici, et non mesuré.
+
+---
+
+# PARTIE 9 — « EST-CE QU'IL ME MANQUE DES DOCUMENTS ? » — la question de Frédéric
+
+## ⭐⭐⭐ LA RÉPONSE : NON. Aucun document ne manque dans tes annonces.
+
+**Mesuré deux fois, par deux chemins indépendants :**
+
+| par où | annonces vivantes concernées | documents |
+|---|---|---|
+| le **serveur** *(ce que le disque porte et que l'app ne montre pas)* | **9** sur 13 495 | **12** |
+| le **coffre** *(fichiers sans fiche, dont aucune fiche ne porte le nom)* | **10** | **13** |
+
+Puis **chacun des 13 a été regardé un par un**, et **aucun ne manque** :
+
+| annonce | statut | le document « absent » | ce que l'app montre aujourd'hui |
+|---|---|---|---|
+| **59198** | Sous compromis | EDR du **06-06-26**, `DPE FOTO.jpeg` | ⭐ **EDR du 04-09-2026** *(plus récent)* et **`DPE 2026.pdf`** |
+| **24113** | Actif | `Mandat de vente - 1.pdf` | ⭐ **`Mandat de vente - 1.pdf`** — *le même nom est là* |
+| **58903 · 62839 · 63193** | Actif | un mandat | **2 mandats** chacune |
+| **61890** | Actif | `imprimerExtraitCadastral.pdf`, `Info_ parcelles FETU.pdf` | ⭐ **`Cadastre FETU.pdf`**, **`InformationsParcelles ZN 32.pdf`** |
+| **62764** | Estimation | `Avis de valeur.pdf`, `Plan cadastral.pdf` | ⭐ **`Estimation 2026.pdf`**, **`Cadastre.pdf`** |
+| 62802 · 63086 · 59624 | Sous offre · Actif · Sous compromis | 1 pièce | **30, 20 et 39 documents** présents |
+
+➡ **Trois causes, toutes normales** : le document a été **remplacé par une version plus
+récente**, il a été **renommé**, ou **mon comparateur a buté sur les accents** *(l'app écrit
+« numéro », le disque « numero »)*. **Aucune perte.**
+
+## ⛔⛔ ET LA RAISON POUR LAQUELLE LES 63 N'ÉTAIENT PAS UN PROBLÈME
+
+Frédéric : *« il doit y avoir une raison pour que ces annonces ne soient pas dans notre
+serveur ».* Elles **y sont** — mais il avait raison sur le fond : **il y a une raison, et
+c'est leur état.**
+
+| où elle vit | statut | annonces |
+|---|---|---|
+| historique | **Vendu** | **38** |
+| archive | Clos | 14 |
+| archive | Actif | 1 |
+| vivant | Actif | 6 |
+| vivant | Sous compromis · Sous offre · Estimation | 4 |
+
+⭐ **53 sur 63 (84 %) sont VENDUES ou CLOSES** : des affaires terminées, où l'agence fait le
+ménage dans les pièces après la vente. **Le système a fait son travail.** Et les 10 vivantes
+sont celles du tableau ci-dessus : toutes expliquées.
+
+## ⚠⚠ UNE ERREUR DE MESURE QUE J'AI FAILLI ANNONCER — et comment elle est tombée
+
+Ma première mesure disait **2 302 annonces vivantes et 7 801 documents manquants**.
+**C'était faux.** J'avais lu 192 655 fiches **par pages de 1 000 sans `order=`** : PostgREST
+rend alors des lignes **instables d'une page à l'autre**, j'en ai perdu en route, et des
+annonces ont paru amputées.
+
+⭐ **Ce qui l'a fait tomber : vérifier le chiffre sur UNE annonce nommée avant de l'annoncer.**
+Sur **53398**, ma mesure annonçait 37 documents manquants ; le contrôle direct, sans
+pagination, a rendu **ZÉRO** *(38 fiches, 38 noms, et tout le disque couvert)*.
+
+⚠ **C'est la récidive d'une leçon que j'avais déjà en mémoire** *(« LIKE et LIMIT sans
+ORDER BY », 08/10)*. Elle est renforcée : voir
+[[mesurer-un-blob-like-et-limit-sans-order-by]] et
+[[un-zero-ne-se-croit-pas-sans-temoin-positif]].
+
+## Ce que ça change pour le ménage
+
+**Rien, et ça le confirme** : les 5 091 fichiers du déchet sont bien des **doublons** ou des
+**documents retirés volontairement**, pas des pièces qui manqueraient quelque part.
+⚠ Les trois décisions de la partie 7 restent entières.
