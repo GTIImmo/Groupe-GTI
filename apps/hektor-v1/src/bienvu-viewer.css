@@ -1,46 +1,30 @@
 /* bienvu — visionneuse d'image. Toutes les règles portent une classe .bvv-* (ou .bvv) : rien ne s'applique
-   tant que le composant BienvuViewer n'est pas rendu, c'est-à-dire quand l'interrupteur est éteint. */
+   tant que le composant BienvuViewer n'est pas rendu, c'est-à-dire quand l'interrupteur est éteint.
+   Plein écran : la photo occupe tout l'espace, les barres flottent dessus et s'effacent d'elles-mêmes. */
 @keyframes bvv-tourne { to { transform: rotate(360deg); } }
+@keyframes bvv-entree { from { opacity: 0; } to { opacity: 1; } }
 
 .bvv {
-  position: fixed; inset: 0; z-index: 5000;
-  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
-  background: rgba(20, 21, 21, 0.95); color: #ffffff; outline: 0;
+  position: fixed; inset: 0; z-index: 5000; overflow: hidden; outline: 0; color: #ffffff;
+  background: rgba(14, 15, 15, calc(0.97 * var(--bvv-fond, 1)));
   font-family: var(--bv-font-ui, system-ui, -apple-system, 'Segoe UI', sans-serif);
-  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: bvv-entree 0.16s ease both;
 }
 
-/* barre du haut : titre, compteur, outils */
-.bvv-bar {
-  display: flex; align-items: center; gap: 14px; padding: 12px 18px;
-  background: #222323; border-bottom: 3px solid var(--bv-magenta, #c5005f);
-}
-.bvv-ttl { display: grid; gap: 1px; min-width: 0; flex: 1 1 auto; }
-.bvv-ttl strong { font-family: var(--bv-font-display, inherit); font-weight: 800; font-size: 16px; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bvv-ttl span { font-size: 13px; color: #cfd3d4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bvv-count { flex: none; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 4px 12px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); }
-.bvv-flag { flex: none; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: #fdf1df; color: #7a4300; }
-.bvv-tools { flex: none; display: flex; align-items: center; gap: 4px; }
-.bvv-tools :is(button, a) {
-  width: 38px; height: 38px; display: inline-grid; place-items: center; padding: 0; border-radius: 12px; cursor: pointer; text-decoration: none;
-  color: #ffffff; background: transparent; border: 1px solid transparent; font: inherit;
-}
-.bvv-tools :is(button, a):hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
-.bvv-tools button:disabled { opacity: 0.35; cursor: default; }
-.bvv-tools svg { width: 20px; height: 20px; }
-.bvv-zoom { min-width: 48px; text-align: center; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: #cfd3d4; }
-.bvv-close { margin-left: 6px; border-color: rgba(255, 255, 255, 0.3) !important; }
-
-/* la scène : la photo, grande, sur le noir */
-.bvv-scene { position: relative; min-height: 0; overflow: hidden; display: grid; place-items: center; touch-action: none; user-select: none; -webkit-user-select: none; }
+/* la scène : toute la fenêtre */
+.bvv-scene { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
 .bvv-scene.is-zoom { cursor: grab; }
 .bvv-scene.is-zoom:active { cursor: grabbing; }
+.bvv-img, .bvv-low { position: absolute; inset: 0; margin: auto; display: block; }
 .bvv-img {
-  position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block;
-  opacity: 0; transition: opacity 0.18s ease; transform-origin: center center; will-change: transform;
-  border-radius: 4px;
+  max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain;
+  opacity: 0; transition: opacity 0.2s ease; transform-origin: center center; will-change: transform;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
 }
 .bvv-img.is-ok { opacity: 1; }
+/* l'aperçu de la miniature, flou, tient la place pendant le chargement de la photo nette */
+.bvv-low { width: 100%; height: 100%; object-fit: contain; filter: blur(16px); transform: scale(1.02); opacity: 0.75; transition: opacity 0.25s ease; pointer-events: none; }
+.bvv-low.is-off { opacity: 0; }
 .bvv-attente {
   position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
   border: 3px solid rgba(255, 255, 255, 0.2); border-top-color: var(--bv-magenta, #c5005f); animation: bvv-tourne 0.9s linear infinite;
@@ -48,38 +32,82 @@
 .bvv-erreur { display: grid; gap: 10px; justify-items: center; text-align: center; padding: 24px; max-width: 360px; }
 .bvv-erreur a { color: #ffffff; font-weight: 700; text-underline-offset: 3px; }
 
+/* les barres flottent sur la photo (verre fumé) et s'effacent quand rien ne bouge */
+.bvv-bar, .bvv-pied { position: absolute; left: 0; right: 0; z-index: 2; transition: opacity 0.28s ease, transform 0.28s ease; }
+.bvv-bar {
+  top: 0; display: flex; align-items: center; gap: 12px; padding: calc(12px + env(safe-area-inset-top, 0px)) 18px 26px;
+  background: linear-gradient(180deg, rgba(14, 15, 15, 0.82) 0%, rgba(14, 15, 15, 0.5) 62%, rgba(14, 15, 15, 0) 100%);
+}
+.bvv-pied {
+  bottom: 0; padding: 30px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(0deg, rgba(14, 15, 15, 0.86) 0%, rgba(14, 15, 15, 0.55) 60%, rgba(14, 15, 15, 0) 100%);
+}
+.bvv.is-calme .bvv-bar { opacity: 0; transform: translateY(-14px); pointer-events: none; }
+.bvv.is-calme .bvv-pied { opacity: 0; transform: translateY(14px); pointer-events: none; }
+.bvv.is-calme .bvv-scene { cursor: none; }
+.bvv.is-calme .bvv-nav { opacity: 0; pointer-events: none; }
+
+.bvv-ttl { display: grid; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.bvv-ttl strong { font-family: var(--bv-font-display, inherit); font-weight: 800; font-size: 16px; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bvv-ttl span { font-size: 12.5px; color: #cfd3d4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.bvv-count { flex: none; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 4px 12px; border-radius: 99px; background: rgba(255, 255, 255, 0.14); backdrop-filter: blur(6px); }
+.bvv-flag { flex: none; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: #fdf1df; color: #7a4300; }
+.bvv-flag.is-cover { background: var(--bv-magenta, #c5005f); color: #ffffff; }
+.bvv-tools { flex: none; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 14px; background: rgba(34, 35, 35, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.12); }
+.bvv-tools :is(button, a) {
+  width: 36px; height: 36px; display: inline-grid; place-items: center; padding: 0; border-radius: 11px; cursor: pointer; text-decoration: none;
+  color: #ffffff; background: transparent; border: 0; font: inherit; transition: background 0.12s ease;
+}
+.bvv-tools :is(button, a):hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); }
+.bvv-tools button:disabled { opacity: 0.32; cursor: default; }
+.bvv-tools svg { width: 19px; height: 19px; }
+.bvv-zoom { min-width: 46px; text-align: center; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: #e3e6e7; }
+.bvv-close { margin-left: 2px; background: rgba(255, 255, 255, 0.1) !important; }
+.bvv-close:hover { background: var(--bv-magenta, #c5005f) !important; }
+/* fil de progression : où l'on en est dans l'album */
+.bvv-prog { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(255, 255, 255, 0.12); }
+.bvv-prog i { display: block; height: 100%; background: var(--bv-magenta, #c5005f); transition: width 0.25s ease; }
+
 /* flèches */
 .bvv-nav {
-  position: absolute; top: 50%; width: 48px; height: 48px; margin-top: -24px; display: grid; place-items: center; padding: 0;
-  border-radius: 50%; cursor: pointer; color: #ffffff; background: rgba(34, 35, 35, 0.72); border: 1px solid rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(4px);
+  position: absolute; top: 50%; z-index: 2; width: 52px; height: 52px; margin-top: -26px; display: grid; place-items: center; padding: 0;
+  border-radius: 50%; cursor: pointer; color: #ffffff; background: rgba(34, 35, 35, 0.6); border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px); transition: opacity 0.28s ease, background 0.12s ease, transform 0.12s ease;
 }
-.bvv-nav:hover { background: var(--bv-magenta, #c5005f); border-color: var(--bv-magenta, #c5005f); }
+.bvv-nav:hover { background: var(--bv-magenta, #c5005f); border-color: var(--bv-magenta, #c5005f); transform: scale(1.06); }
 .bvv-nav svg { width: 24px; height: 24px; }
-.bvv-prev { left: 16px; } .bvv-next { right: 16px; }
+.bvv-prev { left: 18px; } .bvv-next { right: 18px; }
 
-/* bande de vignettes */
-.bvv-bande { display: flex; gap: 8px; padding: 10px 18px 12px; overflow-x: auto; background: #222323; border-top: 1px solid rgba(255, 255, 255, 0.1); scrollbar-width: thin; }
-.bvv-vign { flex: none; width: 72px; height: 54px; padding: 0; border-radius: 10px; overflow: hidden; cursor: pointer; background: #3a3d3e; border: 2px solid transparent; opacity: 0.62; transition: opacity 0.15s ease; }
+/* pied : aide clavier discrète + bande de miniatures */
+.bvv-aide { margin: 0 0 10px; text-align: center; font-size: 12px; color: #aeb3b5; display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 18px; }
+.bvv-aide i { width: 3px; height: 3px; border-radius: 50%; background: #6c7173; }
+.bvv-aide kbd { font: inherit; font-size: 11px; font-weight: 700; padding: 1px 6px; margin-right: 3px; border-radius: 6px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.18); color: #e3e6e7; }
+.bvv-bande { display: flex; gap: 8px; padding: 4px 18px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; justify-content: safe center; }
+.bvv-bande::-webkit-scrollbar { display: none; }
+.bvv-vign {
+  flex: none; width: 88px; height: 64px; padding: 0; border-radius: 10px; overflow: hidden; cursor: pointer; scroll-snap-align: center;
+  background: #3a3d3e; border: 2px solid transparent; opacity: 0.58; transition: opacity 0.15s ease, transform 0.15s ease;
+}
 .bvv-vign img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.bvv-vign:hover { opacity: 1; }
-.bvv-vign.is-on { opacity: 1; border-color: var(--bv-magenta, #c5005f); box-shadow: 0 0 0 2px rgba(197, 0, 95, 0.35); }
+.bvv-vign:hover { opacity: 1; transform: translateY(-2px); }
+.bvv-vign.is-on { opacity: 1; border-color: #ffffff; outline: 2px solid var(--bv-magenta, #c5005f); outline-offset: 1px; }
 .bvv-vign.is-masquee img { filter: grayscale(0.85); }
 
 .bvv :is(button, a):focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
 
 @media (max-width: 720px) {
-  .bvv-bar { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
-  .bvv-ttl { order: 1; flex: 1 1 60%; }
+  .bvv-bar { padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 22px; gap: 8px; flex-wrap: wrap; }
+  .bvv-ttl { order: 1; flex: 1 1 55%; }
   .bvv-tools { order: 2; }
   .bvv-count, .bvv-flag { order: 3; }
-  .bvv-zoom, .bvv-tools button[aria-label='Zoom arrière'], .bvv-tools button[aria-label='Zoom avant'], .bvv-tools button[aria-label="Ajuster à l'écran"] { display: none; }
-  .bvv-nav { width: 40px; height: 40px; margin-top: -20px; }
+  .bvv-zoom, .bvv-tools button[aria-label='Zoom arrière'], .bvv-tools button[aria-label='Zoom avant'], .bvv-tools button[aria-label="Ajuster à l'écran"], .bvv-tools .bvv-plein { display: none; }
+  .bvv-nav { width: 42px; height: 42px; margin-top: -21px; }
   .bvv-prev { left: 8px; } .bvv-next { right: 8px; }
-  .bvv-bande { padding: 8px 12px 10px; }
-  .bvv-vign { width: 60px; height: 46px; }
+  .bvv-aide { display: none; }
+  .bvv-bande { padding: 4px 12px; }
+  .bvv-vign { width: 64px; height: 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bvv-img { transition: none; }
+  .bvv, .bvv-img, .bvv-low, .bvv-bar, .bvv-pied, .bvv-nav, .bvv-vign, .bvv-prog i { transition: none; animation: none; }
   .bvv-attente { animation: none; }
 }
