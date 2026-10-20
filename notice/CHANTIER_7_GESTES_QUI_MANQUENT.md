@@ -5897,3 +5897,73 @@ Ce n'est plus *« la table de cache est vide »*. C'est :
 **NON MESURÉ, et je le dis** : si l'exclusion appliquée au push d'une seule annonce suffirait *(il
 faut lire `push_single_annonce_to_supabase.py`)* · si d'autres champs que `NB_CHAMBRES` passent
 aussi bien · et **le PRIX reste hors sujet** *(« refusé hors workflow mandat », note du 22/06)*.
+
+
+---
+
+## ⭐⭐⭐ LE GESTE QUI TERMINE UN BROUILLON : TROUVÉ, ET IL EST DÉJÀ DANS NOTRE CODE *(20/10)*
+
+> Frédéric : *« il faudra sûrement ajouter un bouton pour transférer un bien de l'index brouillon à
+> actif ou estimation […] comment faire pour que ce ne soit plus un draft si on le souhaite ? il y a
+> sûrement un bouton aussi pour cela dans Hektor. »*
+
+### ⭐ LE BOUTON EXISTE, ET IL S'APPELLE « ENREGISTRER ET TERMINER »
+
+Trouvé dans une **capture locale de fiche** *(gratuit)* :
+```html
+<div id="Enregistrer_et_terminer">
+  <div class="btn …" onclick="saveAndQuitte(); return false;">
+    <span>Enregistrer et terminer</span></div></div>
+```
+
+⭐⭐ **Et nous l'appelons DÉJÀ** : `create_hektor_draft_annonce` ouvre la page du wizard dans
+Playwright et fait `window.saveAndQuitte()` *(worker l. 3762-3772)*. **C'est pour ça que notre
+création produit une annonce `is_draft=false` depuis le 15/05** — mesure de la note du 22/06.
+
+### ⭐ LA CHAÎNE, LUE DANS `Console/exports/labs_Bien_Wizard_New_latest.js`
+
+```js
+function saveAndQuitte() {
+    goto = $j('#stepWizard_8').length > 0 ? '8' : '7';          // la DERNIERE etape
+    currentStep = …currentStepWizard…value : '1';
+    goToStepWizard(goto, currentStep, endWizardForCallback);
+}
+function endWizardForCallback() { $j("#WizardEnd").trigger("click"); … }
+function goToStepWizard(stepToGo, currentstep, callback) {
+    … valideEtapeWizard(keyGroupActu, stepToGo, back, false, false, callback);
+}
+```
+
+➡ **« Sauter à la dernière étape du wizard, puis cliquer sur `#WizardEnd` ».**
+
+### ⭐⭐ ET LA REQUÊTE, AVEC LE CHAMP QUE FRÉDÉRIC CHERCHAIT
+
+`valideEtapeWizard` construit sa charge, et le fichier porte le mode :
+```
+mode = annonce-createBien-Ajx_Bien_wizardStepNew
+       &idann=<id>  &step=<etape>  &statusAnnonceWizard=<statut>
+       &offredem=…  &idMandant=…  &backWay=…  + les champs serialises du groupe
+```
+⭐⭐⭐ **`statusAnnonceWizard` EST le champ qui porte Actif ou Estimation.** ➡ *Le passage
+« brouillon → actif ou estimation » n'est pas à inventer : c'est ce champ, dans ce mode.*
+
+### ⚠⚠ MAIS UNE INCONNUE DÉCIDE DE TOUT, ET ELLE N'EST PAS MESURÉE
+
+`valideEtapeWizard` **VALIDE les groupes de l'étape** avant d'avancer *(`allclear`,
+`serializeFromKeyGroup`)*. ⛔ **Or un brouillon est une coquille VIDE** *(62554 : tous les champs à
+0, « Non défini » partout ; et sur 529 brouillons, **16 seulement ont un prix**)*.
+
+➡ ⚠ **Hektor va-t-il REFUSER de terminer un brouillon dont les champs obligatoires sont vides ?**
+⭐ **C'est la seule question qui reste, et elle décide si le bouton est possible ou non.** Notre
+création, elle, **remplit le wizard d'abord** — donc son succès ne prouve rien pour une coquille vide.
+
+### ➡ LA SOLUTION, EN TROIS PIÈCES — rien n'est écrit
+
+| | |
+|---|---|
+| ⚠ **① le préalable** | **le push d'UNE SEULE annonce doit appliquer l'exclusion des brouillons**, sinon chaque geste réinjecte le brouillon dans le parc vivant jusqu'à 05:00. ⛔ **Coût non chiffré** : il faut lire `push_single_annonce_to_supabase.py` |
+| ⭐ **② le geste** | un type de travail neuf qui rejoue `saveAndQuitte()` avec `statusAnnonceWizard` = Actif ou Estimation. ⭐ **Le harnais Playwright existe déjà** *(c'est celui de la création)*. ⚠ **Trois verrous + 5 endroits dans le worker** |
+| ⭐ **③ le bouton** | sur la fiche légère d'un brouillon : *« Terminer → Actif »* / *« Terminer → Estimation »* |
+
+⭐ **Et l'ordre est imposé par la mesure** : ⛔ **inutile d'écrire ② et ③ avant de savoir si Hektor
+accepte de terminer une coquille vide.** ➡ **Le prochain pas est un essai sur 62554.**
