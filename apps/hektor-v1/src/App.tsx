@@ -8375,7 +8375,7 @@ function userFullName(profile: Pick<UserProfile, 'first_name' | 'last_name' | 'd
   const lastName = profile?.last_name?.trim() || ''
   const fullName = `${firstName} ${lastName}`.trim()
   if (fullName) return fullName
-  return profile?.display_name?.trim() || profile?.email?.trim() || 'Utilisateur GTI'
+  return profile?.display_name?.trim() || profile?.email?.trim() || bvs('Utilisateur GTI')
 }
 
 function buildHektorAnnonceUrl(hektorAnnonceId: number | string | null | undefined) {
@@ -33333,7 +33333,7 @@ function GoogleAgendaGlobalScreen(props: {
       <div className="google-agenda-modal-meta google-agenda-global-meta">
         <span className="google-agenda-kpi is-calendar" title={calendarEmail || undefined}><strong>Agenda</strong>{calendarDisplayName}</span>
         <span className="google-agenda-kpi is-period"><strong>Periode</strong>{googleAgendaRangeLabel(agendaDate, agendaMode)}</span>
-        <span className="google-agenda-kpi is-gti"><strong>RDV GTI</strong>{visibleEventCount}</span>
+        <span className="google-agenda-kpi is-gti"><strong>{bvs("RDV GTI")}</strong>{visibleEventCount}</span>
         <span className="google-agenda-kpi is-busy"><strong>Google occupe</strong>{busyCount} creneau{busyCount > 1 ? 'x' : ''}</span>
         <span className="google-agenda-kpi is-free"><strong>Libre</strong>{availability ? `${Math.round(freeMinutes / 60)} h` : '-'}</span>
       </div>
@@ -33377,7 +33377,7 @@ function GoogleAgendaGlobalScreen(props: {
                   <div key={`global-agenda-head-${plan.day}`} className={`google-agenda-timeline-day-head${plan.day === agendaDate ? ' is-selected-day' : ''}`}>
                     <strong>{plan.label}</strong>
                     <span>{Math.round(dayFreeMinutes / 60)} h libres</span>
-                    <small>{plan.events.length} GTI - {plan.busy.length} occupe</small>
+                    <small>{plan.events.length} {bvs("GTI -")} {plan.busy.length} occupe</small>
                   </div>
                 )
               })}
@@ -34105,7 +34105,7 @@ function GoogleAgendaGlobalEventModal(props: {
           </section>
           <section className="google-agenda-panel google-agenda-links-panel">
             <div className="google-agenda-panel-head">
-              <span>Liaisons GTI</span>
+              <span>{bvs("Liaisons GTI")}</span>
               <strong>Contact et bien</strong>
             </div>
             <div className="google-agenda-global-link-grid">
@@ -35124,7 +35124,7 @@ function GoogleAgendaAnnonceSection(props: {
               <div>
                 <span className="eyebrow">Google Agenda</span>
                 <h3>Rendez-vous Google</h3>
-                <p>{dossier?.titre_bien || dossier?.numero_dossier || 'Annonce GTI'}</p>
+                <p>{dossier?.titre_bien || dossier?.numero_dossier || bvs('Annonce GTI')}</p>
               </div>
               <button className="request-modal-close" type="button" onClick={handleCloseGoogleAgendaModal}>Fermer</button>
             </div>
@@ -35328,10 +35328,10 @@ function GoogleAgendaAnnonceSection(props: {
                         <article key={`agenda-period-${plan.day}`} className="google-agenda-period-day">
                           <div className="google-agenda-period-day-head">
                             <strong>{plan.label}</strong>
-                            <span>{plan.events.length} RDV GTI - {plan.busy.length} occupe</span>
+                            <span>{plan.events.length} {bvs("RDV GTI -")} {plan.busy.length} occupe</span>
                           </div>
                           <div className="google-agenda-period-section">
-                            <span className="detail-label">RDV GTI</span>
+                            <span className="detail-label">{bvs("RDV GTI")}</span>
                             {plan.events.length > 0 ? (
                               <div className="google-agenda-period-items">
                                 {plan.events.map((item) => (
@@ -35341,7 +35341,7 @@ function GoogleAgendaAnnonceSection(props: {
                                   </button>
                                 ))}
                               </div>
-                            ) : <p className="empty-state">Aucun RDV GTI lie.</p>}
+                            ) : <p className="empty-state">{bvs("Aucun RDV GTI lie.")}</p>}
                           </div>
                           <div className="google-agenda-period-section">
                             <span className="detail-label">Google occupe</span>
@@ -35379,7 +35379,7 @@ function GoogleAgendaAnnonceSection(props: {
               {activeEvents.length > 0 || loading ? (
               <section className="google-agenda-panel google-agenda-links-panel">
                 <div className="google-agenda-panel-head">
-                  <span>Annonce GTI</span>
+                  <span>{bvs("Annonce GTI")}</span>
                   <strong>Rendez-vous déjà liés</strong>
                 </div>
                 {activeEvents.length > 0 ? (
@@ -40362,10 +40362,10 @@ function GoogleAgendaContactModal(props: {
                     <article key={`contact-agenda-period-${plan.day}`} className="google-agenda-period-day">
                       <div className="google-agenda-period-day-head">
                         <strong>{plan.label}</strong>
-                        <span>{plan.events.length} RDV GTI - {plan.busy.length} occupe</span>
+                        <span>{plan.events.length} {bvs("RDV GTI -")} {plan.busy.length} occupe</span>
                       </div>
                       <div className="google-agenda-period-section">
-                        <span className="detail-label">RDV GTI</span>
+                        <span className="detail-label">{bvs("RDV GTI")}</span>
                         {plan.events.length > 0 ? (
                           <div className="google-agenda-period-items">
                             {plan.events.map((item) => (
@@ -40375,7 +40375,7 @@ function GoogleAgendaContactModal(props: {
                               </article>
                             ))}
                           </div>
-                        ) : <p className="empty-state">Aucun RDV GTI lie.</p>}
+                        ) : <p className="empty-state">{bvs("Aucun RDV GTI lie.")}</p>}
                       </div>
                       <div className="google-agenda-period-section">
                         <span className="detail-label">Google occupe</span>

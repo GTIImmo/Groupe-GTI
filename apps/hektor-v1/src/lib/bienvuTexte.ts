@@ -302,6 +302,14 @@ export const TEXTES_BIENVU: Record<string, string> = {
   "Visible dans Hektor": "Visible sur la fiche",
   "Vous pouvez envoyer quand meme — Hektor recalculera le net vendeur.": "Tu peux envoyer quand même — le net vendeur sera recalculé.",
   "Vue de contrôle Hektor": "Vue de contrôle",
+  // lot 6b — « GTI » quand il nomme le logiciel
+  "Utilisateur GTI": "Utilisateur",
+  "RDV GTI": "RDV bienvu",
+  "GTI -": "bienvu -",
+  "Liaisons GTI": "Liaisons bienvu",
+  "Annonce GTI": "Annonce bienvu",
+  "RDV GTI -": "RDV bienvu -",
+  "Aucun RDV GTI lie.": "Aucun RDV bienvu lié.",
 }
 
 function remplir(nouveau: string, valeurs: readonly unknown[]): string {
