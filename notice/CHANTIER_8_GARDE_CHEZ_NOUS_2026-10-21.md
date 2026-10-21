@@ -566,6 +566,31 @@ qui **imprime** sans rien écrire).
 **Non vérifié** : ce que **montre la fiche** d'une annonce ouverte avant le retour de Hektor
 *(aucune ligne de détail)*.
 
+### Pièce 2 — le dernier audit avant de proposer *(Frédéric : « doublure, descente, etc. »)*
+
+**Tout ce qui touche la fiche détaillée** (`app_dossier_detail_current`), recensé dans le code et en
+base, et ce que deviendrait une **fiche de départ posée au clic** :
+
+| qui | ce qu'il fait | avec une fiche de départ |
+|---|---|---|
+| **la relecture** (`push_single_annonce_to_supabase.py`) | adopte notre numéro *(C.9-e)*, puis **remplace** la fiche par celle de Hektor *(upsert)*, puis repose les saisies en attente *(L3)* | ✅ Hektor confirme, comme aujourd'hui ; le calque disparaît |
+| **le run de nuit** (`push_upgrade_to_supabase.py`) | efface les fiches « disparues »… **sauf** une annonce née dans l'app que le serveur ne connaît pas encore *(C.9-c, `separer_annonces_app_en_attente`, l. 1075)* | ✅ **épargnée** si Hektor n'a jamais répondu ; remplacée par celle de Hektor sinon |
+| **la descente de 07:45** (`pull_from_supabase.py`) | copie la table entière sur le serveur *(370 Mo)* | ✅ la fiche de départ est copiée — **elle a sa doublure** |
+| **la sauvegarde** | `app_dossier` *(l'identité)* est sauvegardé ; la table descendue l'est par l'instantané | ✅ inchangé |
+| **la modification** (`app_edit_annonce_optimistic`) | écrit le calque par un **UPDATE** de la ligne | ✅ **mieux qu'aujourd'hui** : la ligne existe, le calque se pose *(aujourd'hui, avant le retour de Hektor, il ne se pose sur rien)* |
+| **la sentinelle** `data.annonce_sans_numero_hektor` *(seuil 0)* | compte les fiches **et** les détails sans numéro Hektor | ⚠ compte **déjà** la ligne de 11 champs pendant la minute d'attente ; en compterait **deux** — et **crie si Hektor ne répond jamais** *(voulu)*. Son commentaire *« rien ne doit en produire avant la tâche 22 »* est **périmé** depuis l'allumage de C.9 (25/09) |
+| **les rapprochements** (`app_dossier_match_payload`, `app_dossier_match_attrs`, `app_get_rapprochements`) | ne lisent que les biens **Actifs ET diffusables** | ✅ une annonce neuve n'est pas diffusable : **non concernée** |
+| **la vitrine publique**, les **mails aux acquéreurs** (`rapprochement_email.py`) | biens diffusables seulement | ✅ non concernés |
+| **les RDV publics** (`appointment_service.py`) | lisent par numéro Hektor | ✅ non concernés tant qu'il n'y en a pas |
+| **l'espace client** (`espace_client.py`) | lit la fiche par notre numéro | ✅ verrait la saisie au lieu de rien |
+| **les équipements, les photos** (`app_dossier_equipements`, `app_get_dossier_photos`) | lisent des clés de la fiche | ⚠ **à vérifier** : une fiche de départ doit porter les clés qu'ils attendent, ou rien |
+| **l'écran** (vue `app_dossier_details_current`) | lit **le calque en premier**, sous les noms de Hektor *(`App.tsx:2557-2645`)* | ⚠ **à vérifier en réel** |
+
+⚠ **Un point à part, trouvé en passant** : une modification faite **avant** le retour de Hektor
+garde `hektor_annonce_id` **vide** dans sa saisie en attente, et le balayeur l'envoie telle quelle
+(`app_annonce_enqueue_due_pushes`). **Non vérifié** : si le worker retrouve le numéro par
+`app_dossier_id`.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
