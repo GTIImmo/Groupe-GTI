@@ -317,6 +317,30 @@ verts, et relus à part : contact **`95fde3280af1dff65ab45596f4b3bead`**, mandan
 ➡ Restent : **allumer** l'interrupteur, puis **l'essai réel** *(il crée un vrai contact chez
 Hektor)* — deux gestes, deux accords.
 
+✅ **INTERRUPTEUR ALLUMÉ le 21/10 à 15:37** *(accord : « Oui vas y »)*.
+
+✅ **L'ESSAI RÉEL, dans l'app, dans le Chrome de Frédéric — 21/10 à 15:44** : « Nouveau contact »,
+type Propriétaire, sans annonce, sous le compte de formation `franck.gerphagnon@gmail.com`, avec
+portable, fixe, adresse, code postal, ville, naissance `21-09-1978`, lieu, situation, note.
+- contact **20000006**, travail `create_hektor_contact` `done` en **16 s**, Hektor a donné
+  **605922** ;
+- **dans notre base, à la seconde** : les **16 champs** sont là — `phone_secondary 0400000082`,
+  `adresse`, `code_postal 42000`, `ville Saint-Étienne`, **`birth_date 1978-09-21`** *(convertie)*,
+  `birth_place`, `marital_status married`, `commentaires` ✅.
+
+⭐⭐ **ET L'ESSAI A PROUVÉ L'UTILITÉ DU CORRECTIF, PAR ACCIDENT** : la relecture qui suit la
+création (`refresh_console_contact_data`, 15:44:39 → 15:45:00) a **échoué** — l'API de Hektor
+répond **500** à l'authentification *(« Hektor OAuth authenticate failed after 4 attempts »,
+déjà vu à 15:40 sur un autre contact, une réussite à 15:41 entre les deux)*. Et ce travail **n'est
+pas rejoué** par le filet *(absent de `app_console_action_enqueue_due_retries`)*.
+➡ **Sans 8a, ce contact n'aurait aujourd'hui que 7 champs**, jusqu'au run de la nuit.
+
+⬜ **Non vérifié** : que la version de Hektor, quand elle redescendra, ne fasse rien perdre.
+
+⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
+de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
+*(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
+
 ⛔ **Je ne colle pas moi-même** *(Frédéric a proposé le 21/10 que je passe par son Chrome)* : la
 règle du chantier interdit d'écrire en production, **même dans une transaction annulée**, et
 passer par le navigateur la contournerait.
