@@ -82,6 +82,16 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL 
 const CLE = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const COFFRE = process.env.CONSOLE_STORAGE_BUCKET || "hektor-console-documents";
 const SUPPRIME = args.supprimer === "1" && args.blanc !== "1";
+const LOT2 = args.lot2 === "1";
+// la racine de l'archive du serveur : le coffre et elle ont la MEME arborescence,
+// au nom de fichier pres (le coffre replie en ASCII, le disque garde les accents).
+// ⚠⚠ DES BARRES OBLIQUES, PAS DES ANTISLASHS. Vecu le 21/10 : ce defaut s'ecrivait
+//   "C:\Hektor\HektorConsoleDocuments" et JavaScript lit "\H" comme un H -- le chemin
+//   valait donc « C:HektorHektorConsoleDocuments », qui n'existe pas, et le garde-fou
+//   du lot 2 repondait « AUCUNE copie sur le serveur » POUR TOUT.
+//   Node accepte les barres obliques sur Windows : on ne prend pas le risque.
+const ARCHIVE_LOCALE = process.env.CONSOLE_LOCAL_ARCHIVE_ROOT
+  || "C:/Hektor/HektorConsoleDocuments";
 const LIMITE = args.limite ? Number(args.limite) : Infinity;
 const RACINE = path.resolve(__dirname, "..");
 
@@ -149,6 +159,38 @@ async function supprimerDuCoffre(chemin) {
 }
 
 // ── les trois garde-fous, revérifiés POUR CE FICHIER, MAINTENANT ────────────────
+// ── LA JUMELLE SUR LE SERVEUR ───────────────────────────────────────────────────
+// ⚠ ON NE PEUT PAS simplement concatener le nom : le coffre replie en ASCII
+//   (storageSafeFilename) alors que le disque garde les accents. Un
+//   « mandat signe.pdf » au coffre peut etre « mandat signé.pdf » sur le disque.
+//   On replie donc CHAQUE nom du dossier local et on cherche celui qui retombe sur
+//   le nom du coffre. Mesure du 21/10 : 419 fichiers sur 4 075 sont dans ce cas.
+function replierCommeLeCoffre(nom) {
+  return String(nom)
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\x20-\x7E]+/g, "_")
+    .replace(/[#%?&{}^`[\]]+/g, "_");
+}
+
+function cheminLocalProbable(annonce, idFiche, nomAuCoffre) {
+  const dossier = path.join(ARCHIVE_LOCALE, "annonces", annonce, "documents", idFiche);
+  let noms;
+  try {
+    noms = fs.readdirSync(dossier);
+  } catch (_e) {
+    return null;                        // pas de dossier local du tout
+  }
+  for (const n of noms) {
+    const complet = path.join(dossier, n);
+    try {
+      if (!fs.statSync(complet).isFile()) continue;
+    } catch (_e) { continue; }
+    if (n === nomAuCoffre || replierCommeLeCoffre(n) === nomAuCoffre) return complet;
+  }
+  return null;                           // le dossier existe, mais pas ce fichier
+}
+
 async function pourquoiOnNeTouchePas(chemin) {
   const bouts = chemin.split("/");
   // annonces / <annonce> / documents / <id de fiche> / <reste...>
@@ -180,6 +222,31 @@ async function pourquoiOnNeTouchePas(chemin) {
   const jumelles = await base(
     `app_console_document?hektor_annonce_id=eq.${encodeURIComponent(annonce)}`
     + `&storage_path=like.*${encodeURIComponent("/" + nom)}&select=id&limit=1`);
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // LE MODE LOT 2 (--lot2)                                        21/10/2026
+  // ───────────────────────────────────────────────────────────────────────────
+  // Le lot 1 supprime des DOUBLONS : un fichier dont le nom est encore porte par
+  // une fiche vivante. Le lot 2 est un autre animal : ces documents ont ete
+  // REELLEMENT RETIRES DE HEKTOR, donc « c'est un doublon » n'est PAS demontrable.
+  //
+  // ⭐ LA QUESTION CHANGE DONC : non pas « existe-t-il ailleurs dans l'app ? » mais
+  //   « LA COPIE DU SERVEUR EXISTE-T-ELLE ? ». C'est la regle du projet -- le serveur
+  //   porte TOUT, le coffre n'en garde une copie que pour les biens vivants -- donc
+  //   retirer la copie du coffre d'un document retire ne perd rien, A CONDITION que
+  //   le serveur l'ait encore.
+  // ⛔ ET C'EST UN GARDE-FOU, PAS UNE SUPPOSITION : on lit le fichier local, et on
+  //   REFUSE s'il n'y est pas. Un fichier du coffre sans jumelle sur le serveur est
+  //   precisement celui qu'il ne faut pas supprimer.
+  if (LOT2) {
+    if (jumelles.length) {
+      return "ce n'est PAS du lot 2 (une fiche vivante porte ce nom) -- il releve du lot 1";
+    }
+    const local = cheminLocalProbable(annonce, idFiche, nom);
+    if (!local) return "⛔ AUCUNE copie sur le serveur -- on ne supprime pas la derniere";
+    return null;   // retire de Hektor, et le serveur en garde la copie
+  }
+
   if (!jumelles.length) {
     return "AUCUNE fiche de l'annonce ne porte ce nom -- ce serait la DERNIERE COPIE (lot 2)";
   }
@@ -191,6 +258,7 @@ async function pourquoiOnNeTouchePas(chemin) {
   console.log("MENAGE DU COFFRE DES DOCUMENTS");
   console.log(`  coffre : ${COFFRE}`);
   console.log(`  mode   : ${SUPPRIME ? "⚠ SUPPRESSION REELLE" : "EN BLANC (rien ne sera supprime)"}`);
+  console.log(`  lot    : ${LOT2 ? "⚠ LOT 2 -- documents RETIRES de Hektor ; garde-fou = la copie du SERVEUR doit exister" : "LOT 1 -- doublons (un nom encore porte par une fiche vivante)"}`);
   if (LIMITE !== Infinity) console.log(`  limite : ${LIMITE} fichier(s)`);
   console.log("=".repeat(78));
 
@@ -237,8 +305,15 @@ async function pourquoiOnNeTouchePas(chemin) {
   let supprimes = 0, refuses = 0, erreurs = 0, dejaAbsents = 0;
   const motifs = new Map();
 
+  // ⚠⚠ LA LIMITE COMPTE LES FICHIERS EXAMINES, PAS SEULEMENT LES SUPPRIMES.
+  //   Vecu le 21/10 : elle ne regardait que `supprimes`, donc un passage ou TOUT est
+  //   refuse (le mode --lot2 sur la liste du lot 1) ne l'atteignait JAMAIS et parcourait
+  //   les 4 075 lignes -- ~12 000 requetes au lieu de 120. Une limite qui ne limite pas
+  //   est pire qu'aucune limite : on croit avoir borne le travail.
+  let examines = 0;
   for (const chemin of lignes) {
-    if (supprimes >= LIMITE) break;
+    if (examines >= LIMITE) break;
+    examines += 1;
     let motif;
     try {
       motif = await pourquoiOnNeTouchePas(chemin);
