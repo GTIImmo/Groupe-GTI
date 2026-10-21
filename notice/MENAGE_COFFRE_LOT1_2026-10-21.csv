@@ -1,9 +1,10 @@
-# LISTE DE CANDIDATS -- menage du coffre, lot 1, fabriquee le 2026-10-21
-# deduite du DISQUE (meme arborescence que le coffre), zero requete storage
+# LISTE DE CANDIDATS -- menage du coffre, lot 1, 2026-10-21 (v3)
+# deduite du DISQUE, avec REPLIAGE ASCII du nom (comme storageSafeFilename)
 # ⚠ CE N'EST PAS UNE DECISION : le script revérifie CHAQUE ligne avant de supprimer
 chemin
 annonces/11803/documents/27a8b54e-35ad-4624-86b5-83942693fd45/habilitation_familiale_5.pdf
 annonces/11803/documents/33f2e022-8e81-4866-a9c0-bb8282b4d327/cni_claudine_verso_2031.jpg
+annonces/11803/documents/3727433b-c754-45ce-9c8b-8c22de0d2884/offre CARETTE BELLIARD 40000_ H4000_ ok 13.08.2026.pdf
 annonces/11803/documents/44b44d9d-9cea-4fc4-8592-6c357615b6c2/PASSEPORTS MR MME CARRETTE.jpg
 annonces/11803/documents/52e4558a-0ceb-4217-b612-80a3addf11fb/cni_suzanne_verso_2017.jpg
 annonces/11803/documents/5e0506f9-e42b-4abf-8fbb-5bb4de6313ed/cni_claudine_recto_2031.jpg
@@ -40,6 +41,7 @@ annonces/11832/documents/44d3da78-5d38-4bcd-9d77-02cc348e4e4f/Document_260422_13
 annonces/11832/documents/7c12e005-5128-42e1-92f7-08e00c79c1cf/Document_260422_125346.pdf
 annonces/11832/documents/7c32bb13-2a19-4d00-a969-63cddf7c0b48/Document_260422_130451.pdf
 annonces/11832/documents/8fe3864a-6b9a-4820-a577-a6bd7a839d0f/Document_260422_125319.pdf
+annonces/11832/documents/da13d90d-bb2c-42e3-bcb8-65d2330aaa94/mandat signe.pdf
 annonces/11832/documents/e9961bab-536f-45f2-a297-c43aedaea9b4/ERRIAL_Parcelle_000-ZA-4@63374_22062026.pdf
 annonces/11832/documents/ec4c85b7-4d18-4761-a564-5b5ec02820fc/planCadastralNormalise.pdf
 annonces/11843/documents/08c21f8d-841e-40bf-a016-528a9db57e40/IMG_3759.jpeg
@@ -57,9 +59,11 @@ annonces/11850/documents/2869bcaa-3f6f-4a0c-ab15-c59a498864c7/acte_propriete_mai
 annonces/11850/documents/2985697e-7dc2-4c12-b338-d89172bdff3b/cni_20240124_0001_mme_thomas.pdf
 annonces/11850/documents/2fee70d8-77d5-48ea-925f-00b113851057/cni_20240124_0001_mme_thomas_1.pdf
 annonces/11850/documents/407745fa-1e14-4a0f-84a9-39ecfe744c13/Avenant au mandat Mme Thomas.pdf
+annonces/11850/documents/41c464c0-184f-4373-86fb-d27fae9b029a/procuration generale etablie par Maitre sauret janvier 2022 page 3.pdf
 annonces/11850/documents/54e51dce-0992-482b-8cc7-bb9f8db80905/mandat_semi_exclusif_de_vente_mandat_semi_exclusif_de_vente_em70510_68cd4c8ccfb05a3cce02c863_1.pdf
 annonces/11850/documents/566de04a-14d5-4678-9b70-a0b05acce323/taxe_fonciere_cololangette_.pdf
 annonces/11850/documents/569dc334-d736-4307-9f32-c8f3d3923959/cni_recto_mr_thomas.pdf
+annonces/11850/documents/623e8302-6303-4d67-b7c2-bb0171eafafc/procuration generale etablie par Maitre sauret janvier 2022 page 2.pdf
 annonces/11850/documents/729c4e8a-ce72-45fe-8981-b778776c2b6c/ci_mr_merle.jpg
 annonces/11850/documents/774930d9-2c87-4023-9214-c83e2915c469/mandat_semi_exlusif_thomas_merle_avec_la_maman.pdf
 annonces/11850/documents/7afe73cc-06d2-4dd5-8dc7-137e27173505/merle_dossier_diagnostics.pdf
@@ -80,14 +84,19 @@ annonces/11850/documents/c094cb80-4c33-4f82-ba6b-b7475d6af356/ci_mr_merle_1.jpg
 annonces/11850/documents/ca54da95-1a7f-412d-8f79-9f55be4a1eea/OFFRE SIGNEE 13 JUILLET 2023_20260713_0001.pdf
 annonces/11850/documents/d27077bc-b34b-45f6-8ae0-0294d0235c25/avenant pour maman_20260507_0001.pdf
 annonces/11850/documents/e6d9c630-2804-4c5e-b533-49c36b146633/planCadastralSimple.pdf
+annonces/11850/documents/ec8733f6-f396-47f9-b4a3-16fe934f8d81/procuration generale etablie par Maitre sauret janvier 2022 page 1.pdf
 annonces/11850/documents/f48e58fa-e2ea-422d-b0ee-01749a5e4bd5/BON DE VISITE CONSTANT.pdf
+annonces/11850/documents/f675926e-426b-4814-b94e-35fce9165b56/procuration generale etablie par Maitre sauret janvier 2022 page 4.pdf
 annonces/11854/documents/0410cf1e-0fd9-415d-b380-c4f15f211147/20250930_164013.pdf
 annonces/11854/documents/0820136a-ba15-4303-a5ec-573a49fbbe4d/img_20250918_151627.jpg
 annonces/11854/documents/4a3ab271-0826-4793-8401-b8b9d11e5c3f/audit_connan.pdf
 annonces/11854/documents/66d544b3-16c5-46cb-8453-8ae69f1abf4d/img_20250918_151407.jpg
 annonces/11854/documents/92f36034-b991-4199-94c8-64a2e94fb63f/avis_taxes_foncieres_2025.pdf
+annonces/11854/documents/95917a1e-73e2-4793-91a0-b978116c7d4b/avenant 139000_ H.9600_ ok.pdf
 annonces/11854/documents/95b33f29-93ab-450a-b52d-72eac28f7e9b/errial_parcelle_000_ac_29163398000_ac_4063398000_ac_3963398_30092025.pdf
+annonces/11854/documents/ae05e2f9-5ab9-4800-8877-83f02c9a3470/OFFRE signee par Mme Connan sans charge.pdf
 annonces/11854/documents/af565f1b-fb79-4ae2-a7c9-0f20fa39165e/mandat_simple_de_vente_mandat_simple_de_vente_groupe_gtimandat-68da65969810cf7ea20f0a65.pdf
+annonces/11854/documents/ba7bce78-6342-4779-9bf0-c208b15cf042/offre CORNET completee ok.pdf
 annonces/11854/documents/da290aff-e948-4d34-b7f5-302ebe3e20d0/img_20250918_151634.jpg
 annonces/11854/documents/ea394d44-48e1-4df4-a765-b11db6341221/AVENANT AVRIL 2026.pdf
 annonces/11854/documents/f342f6c7-0605-4e39-b9e8-4ddaeeb5b623/plancadastralnormalise_2465.pdf
@@ -104,6 +113,7 @@ annonces/12027/documents/df82d504-fbb3-4ce6-8520-0199141c0a01/cu.jpg
 annonces/12027/documents/e049d688-3924-46f7-a9d6-92fc7087eec2/plan_de_division_14.pdf
 annonces/12027/documents/f0f2da0e-8b3d-41af-8ebd-9010f91fcc15/a21204_plan_de_division_1.pdf
 annonces/14429/documents/581b10ca-2727-4b89-903e-f492831309c1/avis_de_valeur_marchande_vm68941_18_02_2025_09_55_28.pdf
+annonces/14446/documents/0a1c3061-3521-4d5e-be9e-7ec05252e59f/offre RIGAUD 29000_ H3000_ ok 18.06.2026.pdf
 annonces/14446/documents/286306ee-f40f-43e2-bda9-18fb3686e29a/B.I. GENA.pdf
 annonces/14446/documents/2d86f286-74e0-46d1-8327-ab56be07fdcd/Copie AAE PROMESSE DE VENTE SAGOUIS _ RIGAUD-FERREIRA_pdf_21472941.pdf
 annonces/14446/documents/34c857b2-037f-4a6e-acab-04cc1f8872ac/CNI Fabien recto.jpg
@@ -117,6 +127,7 @@ annonces/14446/documents/67a64691-bb21-4f37-be58-d900bfa4a35f/document_250527_17
 annonces/14446/documents/6c3bb287-069f-4722-b0a6-0152b5e1862d/dossier_diagnostics_dpe_m._sagouis_1__1.pdf
 annonces/14446/documents/723a9ac6-5399-4c84-8f14-beefab9fc8c7/GGTI00004471.pdf
 annonces/14446/documents/8d66a55c-27a8-4ab9-9604-485fe98a218d/CNI Fabien recto.jpg
+annonces/14446/documents/94f7a3f8-7ca0-4663-9b04-b132ed46b8a7/AVENANT 34 500_ H-3500_.pdf
 annonces/14446/documents/a3f76ac3-8740-43b2-8b71-d38b62efcd22/tp2_8.pdf
 annonces/14446/documents/b1f20ac1-2fca-4df3-83f5-0aa941654714/dossier_audit_reglementaire_m._sagouis_1.pdf
 annonces/14446/documents/b8f36b37-83d6-4f60-a27e-f90d04fb0679/entretien_toit_1__1.pdf
@@ -127,8 +138,10 @@ annonces/14446/documents/f1ca39e3-2af6-4db8-9d32-7899245d64ea/PACS 1-2.pdf
 annonces/14446/documents/fdae4780-fa25-4189-8ec9-c48b349b7cfa/errial_parcelle_000_ab_98363182_23052025.pdf
 annonces/14453/documents/0333eec4-5b7d-4f14-a145-59bbc4c8cb42/TF 2025.jpeg
 annonces/14453/documents/075f545c-fcae-4836-bf26-84e32e6ec373/TF VERSO.jpeg
+annonces/14453/documents/1596fc5d-3674-4006-9619-6ed3ea410bbc/offre KASPRZYK 71000_ H6000_ ok 06.5.2026.pdf
 annonces/14453/documents/320ac749-5382-4402-a3fb-cbf6a5c1cc85/avis_de_valeur_marchande_vm70248_19_01_2026_01_55_35.pdf
 annonces/14453/documents/3e19657d-a32b-428b-afce-ff4579a70297/CNI_20220819.pdf
+annonces/14453/documents/3e4ce150-2a0c-4218-8ecf-968a037cd865/infos precontractuelles en attente.pdf
 annonces/14453/documents/3eefb752-7e39-4de6-ad07-e6d9897b33c2/CNI PHILIPPE.jpeg
 annonces/14453/documents/50ceff8d-2831-47ed-9b81-270c4ced98bf/MANDAT SIGNE (1).pdf
 annonces/14453/documents/51eedfe1-47c4-40db-b8b4-381b92d7f623/CNI VERSO PHILIPPE.jpeg
@@ -139,21 +152,32 @@ annonces/14453/documents/791c566d-5139-45c5-b082-92c089589ae0/DOSSIER IND CHABAU
 annonces/14453/documents/8acb80bc-891e-48ec-ad60-989a03ce494f/offre d achat KASPRZYK en attente de Serge Chabaud et sa curatrice.pdf
 annonces/14453/documents/9ad63f06-a1aa-4893-a19d-5e624b23b4b4/AUDIT ENERGETIQUE (1).pdf
 annonces/14453/documents/ac8b8d63-569a-4cb9-9110-97cd23ffaa68/planCadastralNormalise.pdf
+annonces/14453/documents/b083b133-d63b-4765-aa7b-b02a53e0b20d/Carte d'identite.pdf
 annonces/14453/documents/bcea824c-b741-49bf-aeaf-d6dd6a8f6cd5/CNI PATRICK.pdf
 annonces/14453/documents/be2e5fad-0a47-4bd1-bb5c-1cd2feac8050/ANNEXE MANDAT SIGNEE.pdf
+annonces/14453/documents/c486d4c5-b3d6-437d-8e4d-5c4ccd30edc7/mandat simple GILBERT 76000_ H6000_ signe 05.05.2026.pdf
 annonces/14453/documents/c5c6881f-b178-455c-a717-399a32f7e1ff/ANNEXE MANDAT SIGNEE (1).pdf
 annonces/14453/documents/d05e41ae-7c34-462c-9092-f9cf0c321475/TP CHABAUD.pdf
 annonces/14453/documents/d4f401f6-af86-429d-bab6-c9e9f547c215/PV BORNAGE.pdf
+annonces/14453/documents/f5d0f242-3de0-4506-856e-e087b85469ad/mandat Simple 18569 CHABAUD 76000_ H6000 en attente de Serge Chabaud et sa curatrice.pdf
+annonces/14466/documents/18c47183-9b4a-4432-a483-3aa6b10188a6/Attestation realisation isolation p1.png
+annonces/14466/documents/2307eb92-68e2-4c9b-bcf5-11a97d00d23f/Carte d'identite.jpg
 annonces/14466/documents/422a3e36-31e3-42d7-af10-fc39393384c7/Taxes_foncieres_2025.pdf
 annonces/14466/documents/54de8c76-0b2c-4ed1-9b9b-3406b99d5e9b/REMIS DOSSIER.pdf
+annonces/14466/documents/60c02e5c-7ea7-4ddc-a81d-bd16345cfecd/Proces verbal installation panneaux solaires.png
 annonces/14466/documents/6d5aac65-62e0-4b91-9cf2-ea2a8d55c838/planCadastralNormalise.pdf
+annonces/14466/documents/7436b827-1c30-4c1a-b9dd-170c6389f3aa/Attestation realisation isolation p2.png
 annonces/14466/documents/84254698-a654-48c4-8a3a-8bbf576f5d1e/ERRIAL_Parcelle_000-AH-328@63275_18032026.pdf
+annonces/14466/documents/96e30156-d211-424a-9b8f-3b6b8bd9da21/Page concernant la succession au deces de Christine.png
+annonces/14466/documents/a47f56ba-7e60-4dfe-a8b5-2e1d14db2092/Declaration achevement travaux.png
 annonces/14466/documents/a67af9b6-f50f-417a-b716-6b17bbd71580/Attestation achat terrain.png
 annonces/14466/documents/ad9443ea-d888-459a-8dc5-f456e8a28f8c/planCadastralNormalise.pdf
+annonces/14466/documents/afbdcf3a-ee8a-4dee-9082-430126aa0850/Facture chaudiere.png
 annonces/14466/documents/b786e05e-57e6-4116-a045-69af68b7a2fc/Attestation constructeur.png
 annonces/14466/documents/b929b9df-6001-42d3-888a-1d616be30b3c/ERRIAL_Parcelle_000-AH-328@63275_23032026.pdf
 annonces/14466/documents/c0e2a22e-cd26-4083-96a9-a19a5acc6609/avis_de_valeur_marchande_vm70679_13_10_2025_08_53_14.pdf
 annonces/14466/documents/c468b9cf-afee-4df2-a8d1-0e9a72bd59d0/Permis construction .png
+annonces/14466/documents/d32effeb-635f-479b-91a0-27e2678b1b16/Proces verbal conformite panneaux solaire p1.png
 annonces/14466/documents/d70f6bbc-f48d-4ff8-a5e0-bf55eb4cc899/AVENANT SIGNE.pdf
 annonces/14466/documents/dca6239e-e5a7-46fb-9106-1a735d71933e/MANDAT 18470.pdf
 annonces/17516/documents/6b072d3f-ede7-4b61-a599-80f457b91446/errial_parcelle_a_3273_a_3271_a_3269.pdf
@@ -165,6 +189,7 @@ annonces/17516/documents/f7339fd6-5574-484d-9e52-757dbf945d4b/gti_vente_preferen
 annonces/17548/documents/019c5c97-f281-4265-8a46-e826119524f1/plancadastralnormalise_2216.pdf
 annonces/17548/documents/0be50ee7-7142-4b00-85fe-3099f135cf50/6438___d6___etat_des_risques_complet_2025_01_19_10_27_54.pdf
 annonces/17548/documents/0e56f254-6028-40b3-ac71-8929db8803cc/20250224_173046.pdf
+annonces/17548/documents/0fb2d4b9-99c6-446e-a51d-c3ebfb515ad3/Mandat de recherche Laniel Jouve signe.pdf
 annonces/17548/documents/10fa4859-d41f-475c-bff4-818e58200c20/CNIJouverecto.jpg
 annonces/17548/documents/208b39a5-b2ea-4369-94b0-9333253a1b3a/CNILanielrecto.jpg
 annonces/17548/documents/2dffddf4-cb18-4160-83b6-644583838dd5/offre d achat Jouve Laniel 26.03.2026.pdf
@@ -173,12 +198,14 @@ annonces/17548/documents/34453e2f-0287-45cc-a9a4-ff6cceb2de0a/twi_sgerese_tusage
 annonces/17548/documents/37c8a3b2-a560-4b9f-9d59-2fcbae919799/image1_4.jpg
 annonces/17548/documents/3df5d933-beec-490a-b90b-8507656f70a5/6438___d2___amiante_norme_2017__20_01_2025__17_47.pdf
 annonces/17548/documents/5dcbdf44-5940-49c0-af12-93e083b61bfe/6438___d7___dpe_2020_etude_audit_energetique__20_01_2025__18_20.pdf
+annonces/17548/documents/6a8527f1-5046-48d0-b4cf-17a488ba5d04/CNI Renaudier Geraldine v.jpg
 annonces/17548/documents/741f07e8-f3f4-4f4a-b03a-b3bead251c97/CNILanielverso.jpg
 annonces/17548/documents/7c1ec201-2977-46c6-afbb-2e402257ec5b/6438___d7___dpe_2020_habitation__20_01_2025__17_47.pdf
 annonces/17548/documents/8c033ab6-d392-459b-bd3a-be09f21d62ed/CNIJouveVerso.jpg
 annonces/17548/documents/8c210ab1-3db8-48f2-b74b-3a98f58bd101/dossier_de_preuve (1).pdf
 annonces/17548/documents/8d9dcfd5-4bb0-45e1-9667-46e41e4b7665/dossier_de_preuve (2).pdf
 annonces/17548/documents/8fb0d016-542e-4a5f-aa9f-2b603c41ec9c/twi_sgerese_tpatrim_cactenot_20240412_155705410_19.pdf
+annonces/17548/documents/9396d679-1979-4ec4-b56f-c3d237151192/CNI Renaudier Geraldine r.jpg
 annonces/17548/documents/95b1b59f-6375-4297-b70b-210efc0ea013/twi_sgerese_ttribmes_cordojug_20231221_161747270_13.pdf
 annonces/17548/documents/95e3fae5-491a-4c2b-b12b-f09a5daf09f4/Plan (1).pdf
 annonces/17548/documents/96ef4b8a-3b13-4247-a44c-ff421376f217/accord_honoraires_383.pdf
@@ -188,6 +215,7 @@ annonces/17548/documents/b72e9841-a47c-46fd-a17f-af61c19cb7f7/twi_sgerese_tximpo
 annonces/17548/documents/bc09fb04-add3-45ea-9b9b-4ccfead2f1d5/Copie AAE PROMESSE DE VENTE GERENTON_JOUVE-LANIEL.pdf.pdf
 annonces/17548/documents/d1540ece-7d0e-4709-81a1-3e55c8e57a9a/dossier_de_preuve (3).pdf
 annonces/17548/documents/e59836a3-8a68-4cd0-8dc9-11da4cf495de/plancadastralnormalise_2217.pdf
+annonces/17548/documents/ebc31bb7-17c4-4d86-bfdb-e5a437d26d8b/avenant report delai PUV signe par UDAF.pdf
 annonces/17548/documents/f03df1e9-44c5-4660-ab0a-a6362a3643a3/CNI Gerenton Serge.pdf
 annonces/17548/documents/f116d4ba-cd84-4c6e-b343-647001f5321e/image0_1.jpg
 annonces/17548/documents/f455d5c7-5660-42ef-ab5e-cb3b4554fe17/img_0608.jpg
@@ -232,6 +260,7 @@ annonces/1908/documents/e817cab7-3cd2-41b4-8598-7492a0bb612f/compromis_grange_da
 annonces/1908/documents/f0184507-adf8-4aea-9b02-dc2a25e47915/2112_302___d7___dpe_2025_habitation__15_01_2026__11_05.pdf
 annonces/1908/documents/f1a73a68-24c1-4b73-b730-bfaddb00d4f7/pv_2023_4.pdf
 annonces/1908/documents/f87cc92b-2398-49bf-a79e-c33fd6578f0f/fiche_synthe_tique_2.pdf
+annonces/1953/documents/0774f1d2-9027-4980-8b18-016d4cafdd62/offre ZERRAOUI 107000_ H7000_ apt.17713 + gge18325 en attente.pdf
 annonces/1953/documents/15ca21c8-de33-4b3b-a160-c5d0108ca8e1/AR SALEH 13.05.2026.pdf
 annonces/1953/documents/17441a88-bf63-4400-b616-a5e7afd1d119/pv.ago.20.12.2023.pdf
 annonces/1953/documents/19c588b2-46e3-452d-ab71-c54a06b27047/pv_19.12.2024_1.pdf
@@ -241,14 +270,22 @@ annonces/1953/documents/2545c45b-6abd-4f79-8113-0dabac7be6e9/offre_d_achat_apt._
 annonces/1953/documents/29f0d6d2-d5d4-4c0e-a175-024c7f41b81e/appel_de_provisions_charges_courantes_du_01_01_26_au_31_03_26.pdf
 annonces/1953/documents/2e770be9-bc33-42c5-a83f-22081ea51ae0/2571646247324494981.jpg
 annonces/1953/documents/3d665c23-09e3-4e48-8e81-ec9a164b5958/avenant_au_mandat_de_vente_avenant_au_mandat_groupe_gtiavenant_6863f4a78c69b3171b07c3aa.pdf
+annonces/1953/documents/3ec640e8-b866-40f6-9edc-5f764f979c06/LRAR SALEH distribuee 13.05.2026.JPG
+annonces/1953/documents/45741da1-f7dc-4c1e-b8d1-c9d7eaf877d0/offre ZERRAOUI 107000_ H7000_ apt.17713 + gge18325 ok Beatrice.pdf
 annonces/1953/documents/5ba40e4a-b290-495d-ae06-094ff273cbcc/offre_d_achat_apt._signee_philippe.pdf
+annonces/1953/documents/6a0ac088-6244-48d7-85f3-a1bd10ec70c8/mail GTI a M. Mme Saleh pour caducite offre sous huitaine 30.04.2026.pdf
 annonces/1953/documents/6a0b3e8e-13a4-4c32-bc56-871e5b7c65c5/plancadastralnormalise_2311.pdf
 annonces/1953/documents/6ae15b85-17b0-431e-baba-d65b5ce0ece0/situation_compte_20230701_20240630_1.pdf
+annonces/1953/documents/6b68c695-7936-47ff-bcbe-766f5841b08f/offre ZERRAOUI 107000_ H7000 apt17713+gge18325 ok Francois.jpg
 annonces/1953/documents/6f5b7585-aeaf-466d-a693-4018c099e292/appel_de_provisions_charges_courantes_du_01_04_25_au_30_06_25_1.pdf
 annonces/1953/documents/7330ce2e-34f2-49d2-8099-46b7a3c1743b/cni_acquereurs_26.pdf
+annonces/1953/documents/745d7a05-1482-447e-8d17-f888a8427daa/offre ZERRAOUI 104000_ H7000_ ok Beatrice.pdf
+annonces/1953/documents/7cff77c6-00e0-48c2-8312-0b8ef2a2a1b3/offre ZERRAOUI 107000_ H7000 apt17713+gge18325 ok Catherine.pdf
 annonces/1953/documents/7e5a9db1-6d4c-4b79-a877-073fc2fbbb85/avenant_au_mandat_de_vente_avenant_au_mandat_groupe_gtiavenant_695f7e1899fcfc415805f72b.pdf
 annonces/1953/documents/835a8491-2b4f-4e18-8747-dbcb6065e1e7/bilan_charges_20230701_20240630_2.pdf
 annonces/1953/documents/85bfe145-0137-4030-b60d-d9bb36b822af/cni_catherien.pdf
+annonces/1953/documents/9509d3e2-d802-44f8-8da0-926fc51a625d/offre ZERRAOUI 107000_ H7000 apt17713+gge18325 ok Philippe.pdf
+annonces/1953/documents/96c71495-2b6d-4152-b760-ecdd79823aa3/offre ZERRAOUI 104000_ H7000_ ok vendeur n_1.pdf
 annonces/1953/documents/979a1fbf-14fb-4e56-8f2d-dd2a6e4967d2/fiche_synthetique_2023_2024.pdf
 annonces/1953/documents/99d7cf9e-b087-4480-b334-c161256c76c4/erp_3168794_20250506.pdf
 annonces/1953/documents/9b340e1a-ffbd-4e23-bb14-4c00dbfec3a8/offre_d_achat_apt_saleh_ok_vend.1.pdf
@@ -261,9 +298,11 @@ annonces/1953/documents/be60b3f8-502b-4dfd-845c-026560cebd4f/donation_58.pdf
 annonces/1953/documents/c5704588-c7af-419b-8816-78b8232061b7/635414803220094352.jpg
 annonces/1953/documents/d299c9cf-095b-425b-b0a1-e242df6c1365/pv.ago.17.12.2025.pdf
 annonces/1953/documents/d8622931-de3a-4136-a32c-0a954d8b64d7/passeport_beatriceguilbert.pdf
+annonces/1953/documents/db085522-99b3-40cb-8bcd-af75be641040/LRAR a SALEH 11.05.2026 conf. annulation.pdf
 annonces/1953/documents/dd1256f6-cd19-472a-ac7c-da4e149adb85/appel_de_provisions_travaux_du_15_04_25_1.pdf
 annonces/1953/documents/dfdc5295-cdc3-4c55-a508-818753cb7f7a/plan_garages_2.pdf
 annonces/1953/documents/e8c512d3-f09e-4da0-a9e8-2875649edd57/2542e1508769j_1_.pdf
+annonces/1953/documents/eaf85329-d967-4f95-849f-e062ff810431/offre ZERRAOUI 104000_ H7000_ ok Philippe.pdf
 annonces/1953/documents/ee9a333c-1565-48d5-ae81-a8d91b94b2a2/appel_de_provisions_charges_courantes_du_01_04_25_au_30_06_25_2.pdf
 annonces/1953/documents/f03117b4-5286-4626-bd9b-162c4c4b704e/2542e1508769j.pdf
 annonces/1953/documents/fa05150a-ebd0-49aa-bd26-892f75ca9c60/cni_philippe_1_.pdf
@@ -316,9 +355,11 @@ annonces/20873/documents/340b4fa9-502f-4220-b085-26220dd88f04/12-13.jpg
 annonces/20873/documents/507bc3b9-ff06-4229-a3fb-c454a776a887/avis_de_valeur_marchande_em69434_02_05_2025_09_46_07.pdf
 annonces/20873/documents/5528f7a1-969e-4c05-bcf8-bad6312b5db0/260703_25078_COEF-DIAG_-_D7_-_DPE_2025_Habitation__06_07_2026__10_45.pdf
 annonces/20873/documents/68d6aaa8-6dba-4220-96cc-7ed96329ad31/p.2-3.jpg
+annonces/20873/documents/70a3067b-53e5-44a6-ac4e-e908a7973dc8/mandat Simple 18726 TORRE 199000_ H11000_ exp.30.06.2027.pdf
 annonces/20873/documents/79163c8b-482b-4d6e-b431-e83ba9f2d2ca/avis_de_valeur_marchande_em69434_15_04_2025_12_30_08.pdf
 annonces/20873/documents/7d766972-4221-4bf2-9753-18464207f565/8-9 (2).jpg
 annonces/20873/documents/85a23953-1e0c-483e-afa3-2f0c3570e801/4-5 (2).jpg
+annonces/20873/documents/937637ff-d7bb-4a84-b13f-a738e339ad6f/offre GUIRAO prix mandat signee.pdf
 annonces/20873/documents/a398717e-1f4e-4147-9094-01f2d7ccbc9d/16-17.jpg
 annonces/20873/documents/a6f07ac8-05e5-4ef3-b886-4818c4e541b8/CI RECTO.jpg
 annonces/20873/documents/d16b8f32-2536-43dc-92a4-e7e220a35a31/10-11.jpg
@@ -378,6 +419,7 @@ annonces/28546/documents/bf07f759-890e-4a74-9f54-6ed3beed2968/avis_de_valeur_mar
 annonces/28546/documents/c0c17199-ff00-48dc-a153-e8022702b582/CNI VEROT ISABELLE VERSO.JPEG
 annonces/28546/documents/c2266c61-7248-456b-84e8-0ff7a6b706dd/CNI VEROT ISABLLE RECTO.JPEG
 annonces/28546/documents/ccbe891c-6b80-4f11-81ef-30f117b29492/CNI DAVID KATHLEEN R.V.pdf
+annonces/28546/documents/da7a9385-7943-4dac-a498-2d223dd66351/simulation pret immobilier EPALLE _ DAVID .pdf
 annonces/28546/documents/deeb3198-667c-4941-986d-c8eefc75459c/VEROT-09062026 Certificat Carrez.pdf
 annonces/28546/documents/e700cc2a-220c-427f-bbc4-bd1ccf4fd74d/OFFRE VEROT OK .pdf
 annonces/28546/documents/f469783d-4a30-4baa-8c95-c5ac259e5f71/CNI EPALLE THOMAS R.V.pdf
@@ -385,6 +427,7 @@ annonces/30936/documents/675cd8f1-d0f7-4b1b-a0b5-7c0900f10726/plancadastralnorma
 annonces/30936/documents/c2eb3073-c3ea-4a7a-9940-c8daad49ae98/informationsparcelles_1239.pdf
 annonces/32674/documents/00244e31-fe45-4a8c-9442-1adf907d0316/tf_passot.pdf
 annonces/32674/documents/15e6cba6-c566-42b9-a11b-b86d48804285/3588_diag_dt__1.pdf
+annonces/32674/documents/1b67b9ba-755c-45dd-ac3b-9190d98b92d1/Offre LABOURDETTE BAPTISTE 166000_ H8000_ ok 01.06.2026.pdf
 annonces/32674/documents/272643e5-e839-46e7-85a5-0993ce3e5e45/cni_patricia_1.pdf
 annonces/32674/documents/45365113-c298-4152-a170-3a159e1c68f2/BAPTISTE Marc cni v.JPG
 annonces/32674/documents/7acc4458-f347-4a25-b2a1-2498c67363c8/Promesse.pdf
@@ -397,6 +440,7 @@ annonces/32674/documents/b473cee2-667e-4652-b5a0-d04670941b28/avis_de_valeur_mar
 annonces/32674/documents/b7505bc0-1c80-4c20-9faa-4482f98bcf18/avenant passot 171K.pdf
 annonces/32674/documents/c3f8c246-cd2b-4588-a0b1-8ff38ff7962f/LABOURDETTE Manon cni r.jpg
 annonces/32674/documents/c48f280d-4da2-4020-ac6f-38b43d79cbd2/avenant_au_mandat_de_vente_avenant_au_mandat_groupe_gtiavenant_69164dfb6065256f32033086_2_.pdf
+annonces/32674/documents/caa416e3-67b6-441c-81c8-1f244a3b5ee3/accord DP PASSOT 043056 26 00007 arrete signe.pdf
 annonces/32674/documents/d54fe569-3a0b-421f-afa3-f8ce2f0467f5/attestation_propriete_passot.pdf
 annonces/32674/documents/e425438a-88c3-4c71-b5e8-2258145f8559/plancadastralnormalise_2351.pdf
 annonces/32674/documents/f575c69b-e00e-4ea6-923d-39214abe8da0/3588_diag_dt_.pdf
@@ -413,6 +457,7 @@ annonces/32675/documents/676ee999-a1a2-4f3b-8b5a-19d7699d1a7e/img20250613104428.
 annonces/32675/documents/6826c9c4-d7d5-45c7-ac63-af180153ecd5/img20250613104715.jpg
 annonces/32675/documents/6924931d-a487-4a7d-92b2-bd1b407db9c4/img20250613104524.jpg
 annonces/32675/documents/78b1f55a-eda3-4db3-b13c-ef7a9d9384dd/planCadastralNormalise ZY13.pdf
+annonces/32675/documents/820b98e8-6275-453d-b7ce-4365b95c9d4a/Honoraires valides.pdf
 annonces/32675/documents/8bd2fdb6-9935-4c88-92e4-02441daa3293/TF2025.pdf
 annonces/32675/documents/91349ca3-0b2a-4cc2-ad75-280a41c4c2c4/cni_delom_agnes_recto.jpg
 annonces/32675/documents/9e01174e-1f3f-4fd6-b048-66fbeeb2af8e/TP.pdf
@@ -423,6 +468,9 @@ annonces/32675/documents/e0ed55be-8ae9-491d-924b-f00338650024/Plan arpentage.jpg
 annonces/32675/documents/ebd6be67-2da8-4a43-baf1-187147001840/img20250613104403.jpg
 annonces/32675/documents/f60cc938-33c0-4903-8f9a-d32f626e6a50/chevalier_dossier_1.pdf
 annonces/33517/documents/0a517ae4-fc3f-45c9-8f12-81e0200b8741/new_cadastre.pdf
+annonces/33517/documents/28c14bf9-49d1-45ee-b0e3-80ebc650e309/mandat Exclusif 18557 MORRIER 149000_ H9650_ signe 27.04.2026.pdf
+annonces/33517/documents/39c06255-8cc0-4d48-bc81-000c3ac301d3/offre REY TETON 149000_ H9650_ ok 16.06.2026.pdf
+annonces/33517/documents/3a166dc1-7d5b-44d0-b8b5-510f4fcbd32d/annexe mandat 18557 signee.pdf
 annonces/33517/documents/5ab313d2-640f-485c-a1cf-25b06f55369d/accord_honoraires_32.pdf
 annonces/33517/documents/6177e40c-dedf-4f8a-9833-dc9613acf9b3/CI Julie Morrier.pdf
 annonces/33517/documents/66c24623-17eb-4d45-8f99-9fb25d3acca7/devis_travaux_06_22.pdf
@@ -443,6 +491,8 @@ annonces/36768/documents/2cf19406-4023-4a09-bb46-3ea6335a7a93/plan_1_2.jpg
 annonces/36768/documents/6640ad79-9ef6-4fc7-a042-b734b3fd4a94/plan_2_2.jpg
 annonces/36768/documents/83232011-bcab-4e9e-95b3-3b9ed91d7a35/plancadastralnormalise_427.pdf
 annonces/39474/documents/1b7f3c2a-86bf-4816-81c1-265b5f9b3d42/ERRIAL_Parcelle_000-B-1670@43199_11082026.pdf
+annonces/39474/documents/2454a1ec-3a54-4689-859e-aceed1a5ce0a/Devis signe.pdf
+annonces/39474/documents/454c3b7d-c1f6-474d-b454-aed668a52655/Copie AAE NOTORIETE TRIOLLIER Alice nee SHEUCLE_21061084.pdf
 annonces/39474/documents/4925e096-bdaa-4867-96f1-5b728a892f31/Ordre de mission.pdf
 annonces/39474/documents/5322e6f9-2356-4e6d-8abc-5211278a486b/plancadastralnormalise_2_183.pdf
 annonces/39474/documents/6a4fbc86-3134-4731-b412-f581ffc97899/SPANC TRIOLLIER.pdf
@@ -450,9 +500,11 @@ annonces/39474/documents/8753e40f-3248-4cb8-9d8e-3474040817bf/Traitement de char
 annonces/39474/documents/a24ffb52-f4bd-4acb-a81b-d3f497fd56d5/20260730_171109.jpg
 annonces/39474/documents/eb9b611d-60ce-4bca-8e83-3e5fe9de353d/DONATION TRIOLLIER du 25_03_1994_21634717.pdf
 annonces/39474/documents/f7b6a1c6-1bcd-45ed-aee1-1152c4fe0854/20260730_171055.jpg
+annonces/39474/documents/f8bf5494-65f5-4c89-875a-c588ac185366/Facture entretien chaudiere.pdf
 annonces/39571/documents/0303428e-fe9a-4e30-8df1-bd35aaed52a3/Zone Ui p3.png
 annonces/39571/documents/1ac61bf5-5966-4e0d-b762-788497096cad/CORJAN.pdf
 annonces/39571/documents/30f98ff5-1ef4-4cd9-9728-a489584d0195/Zone Ui p1.png
+annonces/39571/documents/361ad037-26cf-455d-860d-cdef02acd8d5/Devis isolation plafon niveau intermediaire.pdf
 annonces/39571/documents/417e3990-bae8-4e6c-be10-4b1a80566c24/Zone Ui p2.png
 annonces/39571/documents/4185732b-273d-4d5a-9090-246eeaf2dab6/attestation_de_propriete_277.pdf
 annonces/39571/documents/49012312-967e-4595-97f4-3972f0822f30/VILATE PICHON Bon-de-visite-3569-gti-immobilier-tence-16-02-2026-gti-immobilier-tence-16-02-2026.pdf
@@ -469,16 +521,22 @@ annonces/39571/documents/96edd11d-61e9-4a82-8d91-dd0e2d08c052/localisation_assai
 annonces/39571/documents/9bd5064a-616f-44bd-9252-8f8fce5d371c/cni_v_monique.jpg
 annonces/39571/documents/a4d60152-5803-4216-885a-f36e3e4d6865/Avenant Monique 2.jpg
 annonces/39571/documents/ab40e863-9ba6-4bf1-88d9-ed46249f0a7d/plancadastralnormalise_2466.pdf
+annonces/39571/documents/b477d367-1d28-4c10-8d4c-45f77e9a3373/Devis Renovation de menuiseries PVC Blanc.pdf
 annonces/39571/documents/b6a979e1-2446-42b6-a6e3-366ca069d44b/20260803_180459.jpg
+annonces/39571/documents/b82f5fd2-5d28-4ec4-aed4-3642ff8dd617/offre CORJAN CHEBAN 63000_ H5400_ ok 04.06.2026.jpg
 annonces/39571/documents/bb6d4b52-045b-4105-9e62-39da78b531c7/Devis plomberie.pdf
+annonces/39571/documents/c22f738c-1084-4378-8956-219fc1b3b4a3/Devis electricite.pdf
 annonces/39571/documents/c5a9d777-3cc1-4adb-a3a2-6921703839f0/Devis chauffage.pdf
 annonces/39571/documents/c91cc7a7-8aea-4c3b-b7dd-3e14ea39ab3d/Devis VMC.pdf
 annonces/39571/documents/cd40773c-c3ee-4144-b377-1819146ae9a3/cni_r_monique.jpg
 annonces/39571/documents/cee20532-fcdb-43c4-8e86-1764180eaf65/20260803_180355.jpg
 annonces/39571/documents/cf8c68b8-00b2-44ee-9848-54e931eda475/avis_de_valeur_marchande_em68667_26_06_2025_11_46_02.pdf
+annonces/39571/documents/d085e847-59f7-4e3b-a531-4d9379cb0444/offre CORJAN CHEBAN 63000_ H5400_ ok 04.06.2026.jpg
 annonces/39571/documents/d33b4e44-132f-4dad-80c9-1c76457e80ba/vilate_audit_energetique.pdf
 annonces/39571/documents/d994d936-6db6-49e2-bfbc-81d52eb1075e/Devis maconnerie.pdf
 annonces/39571/documents/da340a7c-3e74-4928-bfc0-bb3f7f201cd9/Devis carrelage.pdf
+annonces/39571/documents/dcd71b04-3b8a-4298-b628-7709bd65073e/offre n_ 2 CORJAN CHEBAN 60000_ H5000_ ok Agnes.jpg
+annonces/39571/documents/dd4c35c6-b8f0-4a1f-ab6b-fe059dcbfafa/Devis isolation RDC et Intermediaire.pdf
 annonces/39571/documents/dd7e28f8-db85-40f3-a8f0-15e75bcd99f2/Avenant Monique 1.jpg
 annonces/39571/documents/ebe876b2-4f29-487b-b0f3-5157354626c5/avenant_mandat_18072_89000_h6500.pdf
 annonces/39571/documents/f15b0a14-765b-4706-914b-0cd1a43a0af5/vilate_hardouin_dpe.pdf
@@ -486,20 +544,24 @@ annonces/39571/documents/f5fbceab-656b-4ec5-ae92-e833d3b011f2/avis_de_valeur_cla
 annonces/39590/documents/32a14283-911e-4c76-a283-64c48d624894/533.pdf
 annonces/39590/documents/3fe770ae-7ae4-4b48-a773-5f0f7b86d4bc/CNI Christine et Nadine ABEL.pdf
 annonces/39590/documents/56616f1f-96fc-466a-add0-7c8e5353ec0d/ATTESTATION DEVOLUTIVE_29457768.pdf
+annonces/39590/documents/5b66e8e9-da5b-4703-a38f-431aecbb18a7/Controle SPANC ABEL.pdf
 annonces/39590/documents/665a33bc-f90b-40c8-acea-2a2fc590ecf7/MANDAT DE VENTE 18575 ABEL Stephane.pdf
 annonces/39590/documents/6a4b0e52-7217-4399-b3b2-72630d1e2be8/informationsparcelles_abel_.pdf
 annonces/39590/documents/6d579317-da48-46f7-a686-d0ca1d35f815/Mandat Christine ABEL.pdf
 annonces/39590/documents/771e07c8-9005-492a-b4e9-7b6af614d93e/CNI vendeurs.pdf
 annonces/39590/documents/87a71625-e206-4077-adef-29216d9e853d/ABEL DOSSIER.pdf
 annonces/39590/documents/a5a6a3e0-26cf-4ed9-a1ae-20f96dc25ac2/TITRE acquisition B-776.pdf
+annonces/39590/documents/ad4eef87-b26e-4421-a5d1-67c16cc1f36b/MANDAT signe de Christine et Nadine ABEL.pdf
 annonces/39590/documents/adc569e6-65e6-4890-8827-11d50c1ed0da/TITRE Acquisition B 1875.pdf
 annonces/39590/documents/ae33fd8f-c78b-4568-b961-a6a87ece6bdc/Mandat Nadine ABEL.pdf
 annonces/39590/documents/b6ee8760-10a8-4788-9d6d-13604359462b/BV BLANC.pdf
+annonces/39590/documents/b9471746-d1cb-4a62-a386-40a39239e08f/TITRE Renonciation a usu legal B-773.pdf
 annonces/39590/documents/bcc9066f-0257-4163-bf47-ce71218810fd/plancadastralnormalise_abel_.pdf
 annonces/39590/documents/c192040e-77d9-4633-a38b-9785a50d4dbe/SMS ARSAC preemption terr.jpg
 annonces/39590/documents/c1cdecf9-755a-41ca-9ec2-1fe35c099faa/TITRE Partage B-773.pdf
 annonces/39590/documents/c8bea03c-0194-442c-8e49-a32d4462ee7c/ABEL_Etude_Audit_Energetique.pdf
 annonces/39590/documents/c97604f1-3e28-4a93-9bc5-db3d602b2180/533_1.pdf
+annonces/39590/documents/d99535e3-f572-487e-96d5-447e41ce7981/Rapport SPANC Indiv Abel - Le Mazet st Voy - B 773 - Route de la pierre Plante - Rapport FO3 vente.pdf
 annonces/39590/documents/db045575-5d7f-446f-ad76-a42a6688fce2/avis_de_valeur_marchande_em69065_05_06_2025_03_40_32.pdf
 annonces/40311/documents/118d6308-2a1c-448e-82d6-918793b3cb6a/florine_r.jpg
 annonces/40311/documents/2dad3ed2-942e-479f-aa88-9d1274a168e3/avenant_au_mandat_de_vente_avenant_au_mandat_groupe_gtiavenant_685eb741fabd027fae0a5bdc.pdf
@@ -608,6 +670,7 @@ annonces/43035/documents/63b01657-a92d-4754-929f-6f797faf32b9/attestation_de_pro
 annonces/43035/documents/722e164a-5936-488e-8478-f59be0693448/tf_peyroche.pdf
 annonces/43035/documents/79b5b153-08b5-47de-ab87-a7c7377bf673/offre_429.pdf
 annonces/43035/documents/85ec7962-2b0c-40c0-8525-611bf2d4684c/plancadastralnormalise_peyroche.pdf
+annonces/43035/documents/9adf7765-5647-4834-99d4-9bebd2fb7496/AVENANT PROMESSE signe.pdf
 annonces/43035/documents/9ce8eca8-1fc0-45e1-80da-ecbcd356f5bc/cni_acquereurs_27.pdf
 annonces/43035/documents/a6e69d2a-f1fd-4c1d-b3b9-5724f1f6986f/cni_eric_1.pdf
 annonces/43035/documents/b4435709-34f1-4ac8-a2be-81621ae62142/cni_agnes.pdf
@@ -677,13 +740,16 @@ annonces/47146/documents/57486f82-83ca-4b71-bf1e-a2f2c04dd13a/2013_12_16_vente_p
 annonces/47146/documents/63ad96a4-0512-4b9c-b3f4-f47e153d3a2e/id_brun_aurelie_verso.jpg
 annonces/47146/documents/75c77a91-cb9f-455a-9dcf-58dc1defb86f/id_brun_mme.jpg
 annonces/47146/documents/793a25be-c06d-4278-90c4-eb4e743796c6/0925_dpe_d_peyrard_brun_dossier.pdf
+annonces/47146/documents/798f6592-a2b3-47c2-8476-32cdefc44643/offre RAVEL 78500_ H6000_ 05.08.2026.jpeg
 annonces/47146/documents/7b60ac00-d73a-4bbb-a41d-e11f3b30b4ea/tp2_7.jpg
 annonces/47146/documents/84dc2bea-b0b2-4707-ac3e-9bc14522699c/devis_pr2103.pdf
 annonces/47146/documents/84de8f02-08c7-428f-86c3-76fc18fd97c5/tp1_4.jpg
 annonces/47146/documents/9be1fb9a-7312-44c1-8e28-2a4c52431aae/2013_12_16_vente_peyrache_peyrard_1.pdf
 annonces/47146/documents/babf7982-da02-456d-9704-f88f662e6383/fact_edf_2.pdf
+annonces/47146/documents/d8c0b860-760d-40f5-84bd-7581f0c13f48/Carte identite RAVEL Mallaury.pdf
 annonces/47146/documents/fb84b5d7-b345-4dbc-8a67-91e5c86b390a/id_peyrard_thomas.jpg
 annonces/47174/documents/0122876d-1351-4413-891d-3278a49cd645/c.i._charra_jean_francois_1.jpg
+annonces/47174/documents/0a850aa2-03ac-4e9c-ab7e-b5056848f516/DEBOUCQ Sylvie nee GRACI CNI.pdf
 annonces/47174/documents/3a32efcd-2d98-440b-86d3-5a8a497fb526/OFFRE SIGNEE JEAN FRANCOIS CHARRA.pdf
 annonces/47174/documents/5233d38e-deb0-47a2-96ec-1204cb174ff1/MANDAT 18747 RECHERCHE DEBOUCQ SIGNE.pdf
 annonces/47174/documents/55fcb508-76e0-403c-835a-75547db32098/offre_grenier_contresignee_christine.pdf
@@ -707,9 +773,11 @@ annonces/49399/documents/0c36584c-d0d3-4ba9-b20f-e80a89ef7c61/Mandat de vente 20
 annonces/49399/documents/316b66fa-5879-4b65-8daa-71fd32d4dc4f/Cadastre.pdf
 annonces/49399/documents/45f89cdd-dbbe-49ac-9238-bd341e55026d/Passeport BONIN Sylvie.jpg
 annonces/49399/documents/8fdc6604-380b-478a-8a5b-d2dd8f4a6005/ERRIAL_Parcelle_000-AB-270@43217_17042026.pdf
+annonces/49399/documents/9b9d96f0-3484-4169-a878-fd80277393ef/Titre de propriete.pdf
 annonces/49399/documents/ad1bdb89-2d28-4d09-ad70-1d2f616cfc63/Cadastre 1.pdf
 annonces/49399/documents/cd03cb00-16ef-4889-843d-3192025aa798/Mandat de vente 2026 (2).pdf
 annonces/49416/documents/01cf1067-87cf-4e6e-a12a-5d585d7f0bca/ERP 12-06-2026.pdf
+annonces/49416/documents/3732084f-d70a-48b0-9553-32f1a52bc3b9/Taxe fonciere 2025.pdf
 annonces/49416/documents/53319e42-ec6e-4ff5-8e20-759c9bebd8aa/cadastre_1_457.pdf
 annonces/49416/documents/929df36d-8e43-4569-b8df-909ee8ba162f/est_402.pdf
 annonces/49416/documents/b06bb5df-f01b-4096-8e1e-2d7811bf63f1/DIAGS 2026.pdf
@@ -719,6 +787,7 @@ annonces/49416/documents/e47ebb4f-9b18-4a74-81e8-b35e90e86b25/Passeport FAURE LI
 annonces/49416/documents/e535f0b3-95a6-4cb6-93cb-c66f9f792807/Mandat de vente 2026 (1).pdf
 annonces/49416/documents/f57acd17-2b46-4aea-b6fb-e291352ef754/cadastre_2119.pdf
 annonces/49587/documents/0729cd76-f840-4505-b15c-71c6daff04a6/cadastre_1_719.pdf
+annonces/49587/documents/16c7720d-4737-4410-bb34-28fbea76d392/Offre d'achat contresignee vendeurs.pdf
 annonces/49587/documents/2c1de8c3-b499-4c7e-b1d6-2d1d310fc94e/Passeport ROLLAND Damien.jpg
 annonces/49587/documents/30e944c8-8809-4487-9160-068789288e87/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat_692ee9b908299353f1072438.pdf
 annonces/49587/documents/404469bf-8783-4183-861a-27f11ed6093f/diags_2021_resume.pdf
@@ -734,6 +803,8 @@ annonces/49587/documents/b176f893-aa87-4a58-a936-58c043119a6e/ci_roux_alexandre.
 annonces/49587/documents/ced5cb74-57aa-47df-a244-7d9ce329805b/diags_2021_plomb.pdf
 annonces/49587/documents/d71cb2f6-eea4-4889-a19c-f1f9be40a043/attestation_de_propriete_2__1.jpg
 annonces/49587/documents/f6ebab6e-64df-430f-922f-ef8892efa153/taxe_fonciere_2025_1_.jpg
+annonces/49618/documents/0f1722cc-cc49-4a74-8c6b-bac23b0df70b/Attestation de propriete.pdf
+annonces/49618/documents/282c82a8-1829-4cae-a2b5-0edc9ac87321/Taxe fonciere 2025.pdf
 annonces/49618/documents/4687ae8a-459f-43d0-825b-2da6178af855/cadastre_1_644.pdf
 annonces/49618/documents/5609b6a2-98b2-4d57-85e2-1b86f4a0ad99/AUDIT ENERGETIQUE 2026.pdf
 annonces/49618/documents/5c5e18cb-ec8a-446e-9f4b-d5b0fa4775b7/DIAGS 2026.pdf
@@ -746,6 +817,7 @@ annonces/49669/documents/25735924-5b53-42f4-a411-c4fb72a4fac0/cadastre_1_152.pdf
 annonces/49669/documents/62baeebd-40bc-4a5e-966e-7f4da6ef1e23/cadastre_193.pdf
 annonces/49669/documents/d290580c-0621-4a1b-97f1-a70df92907fa/cu_ok_du_22_12_2022.pdf
 annonces/49852/documents/12169c7a-741a-47f7-867f-b510a7063e30/edr_06_06_2025_1.pdf
+annonces/49852/documents/13172736-95db-41a8-ada7-a8a80d945cc8/Offre d'achat contresignee vendeur SOULIER Chantal.pdf
 annonces/49852/documents/2b343bf9-6489-47b4-9f05-32afb1f0176c/CI ROBERT Patrice (1).pdf
 annonces/49852/documents/32774f60-6112-4d33-b078-c37d9bf19209/cadastre_1_624.pdf
 annonces/49852/documents/38abb60b-cd7e-4e77-8dbe-cf2cfdd3be4b/mandat_semi_exclusif_de_vente_mandat_semi_exclu_groupe_gtimandat_68429e0f5fa462aa6e09a32b.pdf
@@ -753,12 +825,14 @@ annonces/49852/documents/3aba3ec7-1c21-4e45-bb55-f30b05721e49/CI ROBERT Maria An
 annonces/49852/documents/3ed98bbf-dac9-4460-b405-e526e9b462fe/CI ROBERT Patrice (2).pdf
 annonces/49852/documents/55673746-6807-4e70-a902-a54536076de0/passeport_laurent_et_chantal.pdf
 annonces/49852/documents/5e27c352-1a40-4630-9a01-14378857ec62/partage_du_25_juin_2008_20409809.pdf
+annonces/49852/documents/62d1051b-96bb-4178-a187-59f090d5bc34/Offre d'achat contresignee vendeur SOULIER Laurent.pdf
 annonces/49852/documents/6fc7545c-120d-45bf-bd22-c7684abedf70/CI ROBERT Maria Antonietta (2).pdf
 annonces/49852/documents/70081a02-a97a-4c24-9a2c-5ea4130cd4cc/Mandat de recherche et annexes (1).pdf
 annonces/49852/documents/8390a55c-9290-4f54-8234-5fadf0ef3fa5/attestation_de_propriete_265.pdf
 annonces/49852/documents/8e6839c1-03c2-446e-ba69-f45547e756a5/cadastre_2341.pdf
 annonces/49852/documents/9a491594-25b3-4a86-9d81-464e7125de53/Mandat de recherche et annexes (2).pdf
 annonces/49852/documents/a076b612-98ac-4331-aca4-4781c69a2a14/electricite_48.pdf
+annonces/49852/documents/b9043bd2-237e-4380-9455-5299488727e3/depot PC Accuse d'Enregistrement Electronique 02.07.2026.pdf
 annonces/49852/documents/ca505510-2ca4-46b4-8988-0172d229ddf0/recepisse_depot du 2 juillet 2026.pdf
 annonces/49853/documents/147912a1-a06b-4b69-b14f-1ef66785572b/ci_ferrand_michel.pdf
 annonces/49853/documents/18d8b324-e55f-437e-bd7b-2b4d0ebb1cd1/titre_de_propriete_947.pdf
@@ -771,7 +845,9 @@ annonces/53372/documents/0acde802-f185-42ce-9d15-f3f6fec08146/avis_de_valeur_cha
 annonces/53372/documents/242230a4-1611-4b78-989c-b4a7f0822648/mandat_exclusif_de_vente_mandat_exclusif_de_vente_n_17918_68722607b122ca3e900c0c43.pdf
 annonces/53372/documents/2713294b-6a5e-4ffd-b47d-130c4ec8597d/cni_michelle_.pdf
 annonces/53372/documents/2eb22480-a6bd-49b3-b80e-daec0d9812cd/cni_jean_pierre.pdf
+annonces/53372/documents/462b92a0-e631-403d-bffb-941d3ae4ec6e/offre CLIVILLE 200000_ H12000_ ok Jean-Pierre.pdf
 annonces/53372/documents/4963bf22-4980-489d-b2da-874ac2d7b083/cni_cathy_r_1.jpg
+annonces/53372/documents/5164ff40-76c8-4d1a-8f57-eb236e941354/offre CLIVILLE 200000_ H12000_ ok Catherine.pdf
 annonces/53372/documents/7ca462f1-b62e-4d6c-b7f5-cb138a9a0db3/devolution_de_succession_chassonnery_1.pdf
 annonces/53372/documents/9775d9d2-1fbd-4791-ba78-238a726b595e/ERP-COMPLET-CHASSONNERY REACTU.pdf
 annonces/53372/documents/a08255ff-de92-4ed8-a98e-d1a3547324e5/cni_cathy_v_1.jpg
@@ -811,6 +887,7 @@ annonces/53398/documents/e067f15b-b55a-40a8-a7ff-aadbf4cc512d/annulation_offre_1
 annonces/53398/documents/edd8dcd7-e11a-4785-800c-d48def9b3283/ci_emma_zimmer_pdf_1.pdf
 annonces/53398/documents/efb996a5-6e31-42b0-b94a-f92012a5d2a7/belonje_dossier_zp_269_1.pdf
 annonces/53398/documents/f2e6073b-64cb-4693-b616-58709902adab/SPANC 2019.pdf
+annonces/53398/documents/f645a843-deaa-451d-87f9-234c18681cbf/Offre MAURAIS HALLAERT-THEYS 199000_ H9000_ ok 18.06.2026.pdf
 annonces/53398/documents/f92bc7a8-abf4-427f-ab39-1b8cb3a784b8/SPANC Ernst BELONGE - Vente.pdf
 annonces/53467/documents/175ff23d-a85a-4115-8010-dafa3a066c2d/plancadastralnormalise_435.pdf
 annonces/53467/documents/931246ca-f115-432a-8e89-b3b5e36ede21/informationsparcelles_264.pdf
@@ -850,6 +927,7 @@ annonces/53512/documents/ea791eca-82f5-48b0-818b-a4b86d17ce30/CROZE Alban CNI v.
 annonces/53512/documents/eda78cd1-5f95-4553-95d0-7295b509de68/suivi_laposte_ar_frederic_moulin.png
 annonces/53512/documents/f138570f-2f6f-4ec9-b62d-5711f30db4be/cni_sophie_2.pdf
 annonces/54684/documents/0a618d8e-7bd2-4c26-9eb1-221715905f33/annulation_offre_le_gall.pdf
+annonces/54684/documents/1fea2659-e7f1-4e8e-be30-1fcb37c99628/depot permis 29.08.2026 _ Fwd Mairie de Saint-Dier-d'Auvergne Depot de dossier en ligne n_ 114625.pdf
 annonces/54684/documents/26841ed0-3295-4e7f-9021-04e0c1fe6b82/mise_en_demeure_signature_compromis_legall_17584_3_.pdf
 annonces/54684/documents/43065c29-cea5-4bd5-bed5-9a4901e8988b/P.I Mme Grard.pdf
 annonces/54684/documents/4368510f-5fa1-430e-b670-8ba26870ba0f/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat_67bc53c180c56c8785069038.pdf
@@ -882,6 +960,7 @@ annonces/54734/documents/fafbae5b-cbde-4966-b984-d00de0a7511b/beloeil_dossier.pd
 annonces/54753/documents/207317b8-b837-4556-9800-f6bf0bb2b17e/Fiche renseignement CHATAIGNER.pdf
 annonces/54753/documents/25d2c090-aacf-472c-a05d-4e18d992a931/bon de visite CHATAIGNER ( devillers ).pdf
 annonces/54753/documents/60432909-8d50-4fc8-81d7-8c25a33dbd35/mandat_de_vente_44_600_h_4_600.pdf
+annonces/54753/documents/7a19ed40-4047-4155-8054-c98042d9e322/Offre CHATAIGNER acceptee ( devillers ).pdf
 annonces/54753/documents/84cd76dc-1871-4f1b-9fce-5db8b1b897fa/preuve_de_depot_lrar_10.pdf
 annonces/54753/documents/a0cfd481-a4cc-421b-a225-141da57ee28e/lrar_envoi_copie_mdt_2.pdf
 annonces/54753/documents/cf506f25-ad1a-42f5-939d-e14d7f92cdbb/CNI Chataigner.pdf
@@ -902,6 +981,7 @@ annonces/54780/documents/d572651f-5092-49ed-a575-0c88997ed0e8/releve_de_propriet
 annonces/54780/documents/fd580a4e-ce5c-44e8-bc99-0072303b9c2f/20250212_113403.pdf
 annonces/54799/documents/3b09b949-e887-4e01-a9ab-073eebe5764c/avis_de_valeur_marchande_em68992_19_02_2025_03_36_39.pdf
 annonces/54880/documents/0b82889a-6dd5-464f-a3f4-f1b0dc20b92b/Bon de visite GIRAL MALLET.pdf
+annonces/54880/documents/201fd3f0-1a1e-43eb-afcf-b13a30f52877/Offre GIRAL MALLET acceptee.pdf
 annonces/54880/documents/504b885b-e7c5-4d3a-aae6-9aa1198338cb/CNI Theo GIRAL recto.pdf
 annonces/54880/documents/65e55ef3-00e1-4592-8145-90ec0afce36f/Mandat de recherche GIRAL MALLET.pdf
 annonces/54880/documents/931c9538-7910-4152-b7c8-7e4a92b7e690/CNI Theo GIRAL verso.pdf
@@ -913,10 +993,12 @@ annonces/54892/documents/15e358dd-5667-4a08-b4d6-4f56da966510/audit_energetique_
 annonces/54892/documents/1aa59d01-ad63-419f-b600-d2cb58ba22cc/Copie AAE PROMESSE DE VENTE HUTCHISON_SERRE-COULANJON.pdf.pdf
 annonces/54892/documents/33b71ba4-9a0e-4caf-9cfd-919699b6b084/errial_parcelle_000_zb_35763434000_zb_46963434000_zb_35863434_03102025.pdf
 annonces/54892/documents/421eb37d-4f97-44bb-8926-b54c07a9185c/mandat_semi_exclusif_de_vente_semi_exclusive_mandate_to_sell_68d50027fed963b150000c33_1.pdf
+annonces/54892/documents/500902a7-9d26-4a56-9de3-e9d698129360/renseignements acquereurs.pdf
 annonces/54892/documents/59bd37f7-858f-46d6-9393-5a3af49b2323/plancadastralnormalise_2460.pdf
 annonces/54892/documents/5cc27e38-a275-4b27-8dab-d90159d20fe7/img_6502.jpg
 annonces/54892/documents/823be879-2222-44b3-820e-32dc078ebe3c/AVENANT 185 000.pdf
 annonces/54892/documents/86aa9609-ea90-43b4-a063-1d98291eee50/passeport_16.pdf
+annonces/54892/documents/89858c25-c180-4247-86e7-33802e6f7073/offre Serre-Coulanjon 172000_ H11000_ ok 12.06.2026.pdf
 annonces/54892/documents/8f227e49-dd95-488b-bfb4-e9db3fcb2da0/informationsparcelles_1326.pdf
 annonces/54892/documents/903c88f2-ef96-4efd-a2b3-4540784ee92d/hutchison_william_vente_1_la_raille_laire_4_.pdf
 annonces/54892/documents/92135bc2-5c50-45f6-9363-d485e75a3552/hutchison_dossier.pdf
@@ -984,6 +1066,7 @@ annonces/58907/documents/7f017c0d-21ea-4be7-8651-5d4f00052baa/img_20251124_14501
 annonces/58907/documents/8ed307a6-cf89-4b99-952c-b9bcc8eed6ba/1000006368_1_.jpg
 annonces/58907/documents/a0630e8f-4422-4c73-818c-ecce0d1a7dfc/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat_693075aef7579711180ce0b9.pdf
 annonces/58907/documents/ac365888-da9a-4787-a301-868d57ea7e0b/carte_didentite_baptiste_fleurot.pdf
+annonces/58907/documents/b2e37595-2c7f-4813-b494-f8e08ebb854b/avenant 110000_ H.7670 ok.jpeg
 annonces/58907/documents/b6570c2a-e4d7-4819-9ae7-2f151feeccf3/dpe_attestation_19.01.2026.pdf
 annonces/58907/documents/c272f03a-a1a4-40ec-ae06-6cc19b25bff8/DOSSIER CLERMONTOIS.pdf
 annonces/58907/documents/c3cf5770-ace1-42fb-b9cb-6e7625413ee5/offre_d_achat_fleurot_chirol_ok.pdf
@@ -992,6 +1075,7 @@ annonces/58907/documents/d282c38a-f96e-4e5e-93f3-4ed1aa760650/img_20251124_14515
 annonces/58907/documents/d8aa054d-7f96-4962-9334-1d20f68d43ba/errial_parcelle_000_bs_13063010_08122025.pdf
 annonces/58907/documents/df99aa47-eae5-4200-bed8-8e3bcf4ef50c/simulation mme chirol.pdf
 annonces/58907/documents/e85c6109-ebd3-4010-b8ce-6318b73da840/annulation_offre_fleurot_baptiste.pdf
+annonces/58907/documents/f1415816-91cd-47e4-a8ba-c79015173710/nvelle offre FLEUROT CHIROL 105000_ H.7500_ ok 29.05.2026.png
 annonces/58907/documents/f8924ae9-df5f-4d5b-ac81-d6e7a25afad2/img_20251124_145023.jpg
 annonces/58907/documents/fcd44c0c-3bb7-4b3e-8f3b-14908834a349/1000006370_1_.jpg
 annonces/58930/documents/00228c37-aae3-4861-8d69-565403d964d1/BV-MEUNIER-18611.pdf
@@ -1001,11 +1085,13 @@ annonces/58930/documents/0cf1a77d-1a08-4d23-b349-cbbe399c0d63/avis_de_valeur_mar
 annonces/58930/documents/27dc5653-a8fc-4051-9102-e9d6ffd624b1/avis_de_valeur_marchande_em70781_22_10_2025_09_50_11.pdf
 annonces/58930/documents/3100525a-7d69-484e-9222-d960385f7b8f/annulation offre BROSSARD MEUNIER 23.06.2026.png
 annonces/58930/documents/51bdb795-f3db-40a4-a39a-835cbf3592ed/avis_de_valeur_marchande_em70781_22_10_2025_10_03_12.pdf
+annonces/58930/documents/57687b9d-5a2e-4ce0-a431-df52a7d45885/mandat Simple 18611 GUICHARD 139000_ H9500_ exp.18.05.2027.pdf
 annonces/58930/documents/5f755b06-9daf-4cd6-aaaf-762841c48a14/HABILITATION GUICHARD.pdf
 annonces/58930/documents/68198cda-af07-4fa2-a69c-d234187c764f/TP GUICHARD.pdf
 annonces/58930/documents/761336af-5179-4a9e-8475-719f81818ae2/GUICHARD DOSSIER.pdf
 annonces/58930/documents/8539e9f5-e482-4c25-acf2-6c388965d86a/MEUNIER Stecy cni v.PNG
 annonces/58930/documents/894dee3d-37fc-40eb-9a80-db71e4e086ca/avis_de_valeur_marchande_em70781_20_10_2025_03_06_51.pdf
+annonces/58930/documents/90b17fcc-7663-4562-a3a2-b9c09a51f579/offre BROSSARD MEUNIER 135000_ H9000_ ok 08.06.2026.pdf
 annonces/58930/documents/a4a78532-52b0-4ef9-b766-375bcf9efa93/MEUNIER Stecy cni r.PNG
 annonces/58930/documents/bada4135-3126-4a60-ae2e-ed73ea1034f9/TF GUICHARD.pdf
 annonces/58930/documents/bd1f047a-d4da-49ce-ba24-700906f81b06/BV-IWANCZAK-18611.pdf
@@ -1024,6 +1110,7 @@ annonces/58970/documents/0a22a571-d84a-418b-b43c-80ed0a4651a4/attestation_vente_
 annonces/58970/documents/1a4cd2ed-c9f8-4149-8076-064ca1b9cd34/carte_identite_steph_recto.pdf
 annonces/58970/documents/1b87caa9-f963-4150-b532-d73d640ed8f3/carte_d_identite_steph_verso.pdf
 annonces/58970/documents/1f246dee-f69c-496a-a3ae-2c314a40a614/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat_692191276bc7d43db104930b.pdf
+annonces/58970/documents/3de7e8c1-269d-4bfe-807b-192a570fd649/Avenant contrat riotord signe 04_2026.pdf
 annonces/58970/documents/3fea4a94-44b6-4b40-a524-d4cb68a96c01/AVENANT 87 000.pdf
 annonces/58970/documents/586d000d-3836-4424-84c5-76411fc1bbaa/facture_point_p_tuiles_aout_2025.pdf
 annonces/58970/documents/5c9d8939-48f8-4dea-ade1-1574cc776bcc/taxes_foncieres_2025.pdf
@@ -1041,6 +1128,7 @@ annonces/58975/documents/0eeb2113-f16a-48c5-b3cf-843db077bbbe/errial_parcelle_00
 annonces/58975/documents/12dc9ac9-c42a-46c4-ac4b-d67d0b0bd2de/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat-6953b5e750171b7d8806cc7d.pdf
 annonces/58975/documents/167572ca-4066-4c4a-a7e8-c010e04e2ce3/informationsparcelles_prohin.pdf
 annonces/58975/documents/180d8480-eb2e-4eba-8bc0-c1d19de2452c/plancadastralnormalise_prohin.pdf
+annonces/58975/documents/1883955a-e186-40c4-921e-367b31e8c69e/Capture d'ecran 2026-07-15 113246.png
 annonces/58975/documents/1c94763a-f817-4a82-9bd6-f5f304fdf8f7/BV GROUSSON.pdf
 annonces/58975/documents/376b1a41-549f-4eb9-824f-e3bc2f849305/DDT_-_7107_Habitation.pdf
 annonces/58975/documents/6dd01dd0-86d4-45ef-912d-cd627c03966c/TaxesfoncieresavisTENCE43TaxesFoncieresavisTENCE43.pdf
@@ -1097,6 +1185,7 @@ annonces/59040/documents/10690dc0-2106-45f7-a8a6-01947a938fe4/PV_0414_AG_23_04_2
 annonces/59040/documents/1857e525-0da3-4171-8789-b633b737e5c9/0000000006600000000000000.pdf
 annonces/59040/documents/18f63ec8-85c3-4ba1-833c-6c3ccebdad49/PV-414_AG_25_03_2024.pdf
 annonces/59040/documents/232cf07f-2018-4bd8-b774-84c06126583a/MartinConstat amiante avant vente.pdf
+annonces/59040/documents/3bfd35e6-9e66-4164-b68b-028d986593ce/MARTIN-27022025 Etat de l'installation eelectrique FD C16-600 (octobre 2017) (1).pdf
 annonces/59040/documents/3ebba027-e64c-4f63-a223-2a1062ec772b/PV_0414_AG_23_04_2025.pdf
 annonces/59040/documents/674a6bf5-e67a-4751-9dd7-18eb2dba24c4/PV_0414_AG_11_05_2023.pdf
 annonces/59040/documents/6c526bb2-36fb-4b6d-beb9-efc3eb5396a3/img20250310_17020094.pdf
@@ -1119,6 +1208,7 @@ annonces/59042/documents/21ce5b12-84da-4735-a8ed-4a29fab4c94d/adobe_scan_6_janv.
 annonces/59042/documents/2cf37236-869a-4afe-ad5d-5ca27cc4a50c/mandat_simple_de_vente_mandat_simple_de_vente_groupe_gtimandat_693ab186af1099276d071e98.pdf
 annonces/59042/documents/37b658f7-ad50-4b26-bf5c-7cf64a053fc8/carnet_entretien_8.pdf
 annonces/59042/documents/38d54778-a964-4b96-80cd-c164a6985010/20251001000a010000005028c.pdf
+annonces/59042/documents/58276582-0e4d-46bd-a890-256724a3486a/20250630 - Decompte de Charges.pdf
 annonces/59042/documents/6309847f-c0af-4992-8c18-0d882deb2b19/ddt___25_imo_0956_sarret_raphael_1_.pdf
 annonces/59042/documents/66588576-44a9-43ad-9be8-eabc9078473d/2642e0000269e.xlsx
 annonces/59042/documents/69c32ddc-282a-4f14-a2ad-e8e7c0e12e79/tf_recto_19.pdf
@@ -1160,20 +1250,28 @@ annonces/59154/documents/0654c79d-162d-419d-a8eb-ba99a04aea4c/plan cadastral Aub
 annonces/59154/documents/0f2f6b29-764c-443c-8044-66e1939a9db3/Avis_de_taxes_foncieres_2025.pdf
 annonces/59154/documents/122a73c5-819e-4215-96a6-c583328dc02c/pacs_signe12092025.pdf
 annonces/59154/documents/18eedbf8-d414-4b3f-a513-8488f9cbc808/facture SDB.pdf
+annonces/59154/documents/1f49d745-30dd-49e5-9428-d89834c3bedc/facture EDMC -Electricite 1.pdf
 annonces/59154/documents/201d9b70-de1b-475f-a586-9e4fe677938f/CI (2).jpg
 annonces/59154/documents/23c3d839-216f-4e56-b618-b79f93693c38/facture cuisine.pdf
 annonces/59154/documents/256f3603-f597-475a-b2ae-edcacbcd6d9c/AUDIT ENERGETIQUE.pdf
 annonces/59154/documents/2d4c7bf3-46dc-4206-a19d-c23cae8e0dc0/AVENANT 149 000.pdf
 annonces/59154/documents/31cc2b88-609d-421f-8a34-9d4d6fca9056/Euro combles.pdf
 annonces/59154/documents/3ade592e-6c3c-4bca-9dc1-d01e5826f7a7/Titre_de_sejour_Vitalii.pdf
+annonces/59154/documents/3d898a50-a6be-47ae-b1ec-ffd1e1617ccb/facture Courpiere Bricolage.pdf
+annonces/59154/documents/4889f348-5a9b-4720-a5e3-a297c0b15974/facture entrtien cheminee.pdf
 annonces/59154/documents/5970fa80-2027-4ed1-bd75-ddb6dbc2c505/ERRIAL_Parcelle_000-C-691@63015,000-C-619@63015,000-C-613@63015,000-C-698@63015,000-C-701@63015,000-C-620@63015,000-C-765@63015_15042026.pdf
+annonces/59154/documents/5c518c1f-d4e4-48b5-8294-7c7a03d012c2/offre BUCHAKCHYISKA 137000_ H7000 24.06.2026.pdf
 annonces/59154/documents/5df73dd8-960c-4a51-954a-c043187f3752/Titre de sejour Darina.pdf
+annonces/59154/documents/68df3986-1c02-4e25-91ed-928e86f49824/UF_Maison_59_cbc27c_Copie authentique creee le 29-02-2024 a 07H03.pdf
+annonces/59154/documents/818e3fe8-f5ad-42f2-a760-80db9698ea02/facture macon-ouverture.pdf
 annonces/59154/documents/89e9224f-4c70-4b72-a1d8-31769d753d8f/Compromis Chatard 21.06.26.pdf
 annonces/59154/documents/93d3f6d9-d37c-41c6-9f0f-65cff15c51b5/CI.jpg
 annonces/59154/documents/95a0e998-852a-4f72-a87a-3af56236d30d/avis_de_valeur_marchande_em71047_26_11_2025_06_48_06.pdf
 annonces/59154/documents/a5fdef94-39c1-4dda-b30a-0b034ad59ce0/Pasport Vitalii.pdf
+annonces/59154/documents/ac5f5446-897e-4260-925f-447ec72610b1/renseignements acquereurs (1).pdf
 annonces/59154/documents/bb22db77-13e2-4fcc-8656-16beeac07ad4/simul. BUCHAKCHYISKYI CE 04.07.2026.pdf
 annonces/59154/documents/de102955-087d-4a3e-9c37-b2ef47ff171f/mandat simple 18489 Chatard 155000 H.10000 27.03.2026.pdf
+annonces/59154/documents/e0776326-44d7-4534-b279-ce0092ef0494/facture EDMC- Electricite 2.pdf
 annonces/59154/documents/ee71ad8a-034f-4ef8-a44e-240b63593360/Pasport_Darina.pdf
 annonces/59154/documents/f8964747-cb28-4b89-bd6f-0141fa8f39b4/accord honoraires avt 149K.pdf
 annonces/59154/documents/fcfafd06-4d46-422e-a19b-8e0ac5a8b772/DOSSIER CHATARD.pdf
@@ -1186,20 +1284,27 @@ annonces/59161/documents/641e76f0-b56a-4b14-920b-f73c1e0ecddc/fernandez_dossier_
 annonces/59161/documents/6e845e57-7b1b-4a46-a36b-73ec98d0efaf/fernandez_dossier_2_1.pdf
 annonces/59161/documents/861cf4b2-c685-46f3-98c9-7d90bf53c582/cni_tardy_gilles_1.pdf
 annonces/59161/documents/8ccc2905-2755-49df-9b3b-77a0526de7fa/butagaz_contrat_butagaz_pour_5_ans_.pdf
+annonces/59161/documents/92938ea7-6f3f-4bb9-9901-3807ab649b1e/SSP signe le 01_07_2026 (compromis).pdf
 annonces/59161/documents/9898441b-6156-415e-8160-e5e03b9e9996/AVENANT 239K H-14000.pdf
 annonces/59161/documents/998dd6ae-8524-4fa0-8b44-057c4c3f37ea/RENSEIGNEMENTS ACQUEREURS.final.pdf
+annonces/59161/documents/a5096875-e117-4725-953d-5bee7f306ca9/offre VRAMANT KADDOUR 220000_ H10000 06.06.2026.pdf
 annonces/59161/documents/b5f0064d-2af3-4fc4-b267-6f5228205185/CNI Miouze Christophe.pdf
 annonces/59161/documents/c8497f42-3cb5-44c3-84a0-a75fe3484b13/offre d achat Miouze ok.pdf
 annonces/59161/documents/d9fd675e-e999-4d82-baa3-b3ad64eb027c/KADDOUR Yamina CI.pdf
 annonces/59161/documents/f91feaf9-7fea-4e80-b8ff-38ce3996c07d/vente_fernandez_tardy_comte.pdf
 annonces/59193/documents/05d5ec10-d915-4ed8-a7f0-3aad3df813a1/Donation 29-06-1985.pdf
+annonces/59193/documents/19deff0c-523e-4522-af41-44c218dbd91b/Offre d'achat contre signee vendeur VALENTIN Michael.jpg
 annonces/59193/documents/38592436-772b-402a-b884-0162a2a1d675/Spanc 2026.pdf
 annonces/59193/documents/3e63cc78-2e57-466f-b7dd-f8eb46f124ba/CI GERENTON Didier (1).jpg
 annonces/59193/documents/50663a98-3f02-4219-9a31-b9cfbbaf2463/CI VALENTIN Christophe.pdf
+annonces/59193/documents/5616154e-432b-459a-a0ae-c9da05cbc2ab/Taxe fonciere 2025.pdf
+annonces/59193/documents/5f5b99ef-88d0-426d-bb29-c83cb4db72e4/Attestation immobiliere.pdf
 annonces/59193/documents/65fb757e-8593-4c94-a7f4-0633ecfe70a6/Mandat de vente 2026 (1).pdf
 annonces/59193/documents/6b96d3c3-b787-4d2e-be9e-f18d02385ffd/cadastre_2419.pdf
 annonces/59193/documents/6ec0b2e4-cdbd-4280-9fcb-9c25cbb14649/Mandat de vente 2026 (2).pdf
 annonces/59193/documents/712a749b-f025-42cd-82ff-0ab4184e2b7f/Avenant rectificatif Christophe VALENTIN.pdf
+annonces/59193/documents/71dd003c-90d3-4302-a0a4-fe3a25d20533/Offre d'achat contre signee vendeur VALENTIN Christophe.pdf
+annonces/59193/documents/7659e229-db57-4315-87d8-bc4d1c9beec1/CI VALENTIN Therese.pdf
 annonces/59193/documents/79cbc2b7-85c9-4307-aa62-09e90d3193d6/CI GERENTON Claudine (2).jpg
 annonces/59193/documents/8282521d-f9f9-4895-81eb-3531fd917b98/EDR 22-04-26.pdf
 annonces/59193/documents/837523ae-7b7a-42a6-b40a-ecde071293d8/Avenant rect Mickael VALENTIN.pdf
@@ -1207,10 +1312,13 @@ annonces/59193/documents/ab1a1efe-b8c2-4234-9835-66ea8068fa4a/cadastre_1_698.pdf
 annonces/59193/documents/ae2b4267-6680-499c-8274-95c06a508cdf/estimation_2025_62.pdf
 annonces/59193/documents/c0a26ac2-8dc4-46dd-a1fb-582127a16d2a/DIAGS 2026.pdf
 annonces/59193/documents/c73e6162-526f-40eb-af25-ecd412a5d52a/636.pdf
+annonces/59193/documents/dd681e66-a348-4a53-8076-544b71538fe5/CI VALENTIN Mickael.pdf
 annonces/59193/documents/df7e36a5-e217-4cef-852a-3d6837d0cf2d/CI GERENTON Didier (2).jpg
 annonces/59193/documents/dfbc33ef-b37b-4089-95e8-1665e05ff6ec/CI GERENTON Claudine (1).jpg
 annonces/59193/documents/ea2df051-afeb-4857-8f2b-42a28481f4b9/Copie AAE PROMESSE DE VENTE ind VALENTIN _ GERENTON_pdf_20773277.pdf
 annonces/59198/documents/001a2594-f780-4f84-95bb-863a7c4b1c05/cadastre_1_710.pdf
+annonces/59198/documents/00f859b2-a4f3-4fbf-ac96-f987fc6a9aaf/Taxe fonciere 2025.pdf
+annonces/59198/documents/0e4d5866-0251-4439-82b4-1480512dc477/Titre de propriete 247.pdf
 annonces/59198/documents/20340606-1cce-41f5-a325-8cb6830bbb5c/succession3.pdf
 annonces/59198/documents/5040ac5d-9d7a-4a23-93b4-a8e9105dafc1/AVENANT 118200.pdf
 annonces/59198/documents/5ae7ea22-95ab-41a4-a796-84808bb0961d/succession4.pdf
@@ -1219,10 +1327,13 @@ annonces/59198/documents/73ebe2b8-07b2-4e4e-a4de-4d0f53d4ff13/Spanc 2026.pdf
 annonces/59198/documents/7db4e68b-470f-46af-ac6d-a02db5f04f79/Mandat de vente 2026 (2).pdf
 annonces/59198/documents/985fd001-9469-4ddc-b195-f070093bf91b/CI PUECH Philippe.pdf
 annonces/59198/documents/9a9f291d-10b9-42a6-91b6-853bb9767227/Mandat de vente 2026 (1).pdf
+annonces/59198/documents/a8fa0d11-0f06-4065-a450-3fe49a2707f0/Titre de propriete 248-445.pdf
 annonces/59198/documents/ae367ce8-0ce2-4f78-b441-753f6350e24a/succession2.pdf
 annonces/59198/documents/d32b7f95-732c-4145-924d-c86167fd811d/succession1.pdf
+annonces/59198/documents/ed381dc7-4e63-4376-931c-848f21837594/CI PUECH SAMUEL Andree.pdf
 annonces/59198/documents/f9089313-3e90-4248-9d36-b535a9715049/cadastre_2425.pdf
 annonces/59201/documents/117c2676-5b7a-4db9-8918-d98e3600712e/Copie AAE PROMESSE DE VENTE PUECH _ BOMO_pdf_22245890.pdf
+annonces/59201/documents/246c420e-b1d4-47bf-b591-e3a359b7a31c/Taxe fonciere 2025.png
 annonces/59201/documents/379b15f9-6e85-4e62-bf46-deb7a86f0aa7/AUDIT ENERGETIQUE 2026.pdf
 annonces/59201/documents/3efed8ea-7bf8-47f5-a471-509c2c0ac973/CI JOSSELIN BOMO Mireille (1).jpg
 annonces/59201/documents/3f1422dc-ce72-4a68-80e7-25fbc93d295e/ERRIAL_Parcelle_000-AB-444@43217_05052026.pdf
@@ -1232,7 +1343,9 @@ annonces/59201/documents/7f9b2700-b197-40a4-b443-54f9ad2980ae/Cadastre 1.pdf
 annonces/59201/documents/83047fe6-9b1b-4988-affd-247ac152b2e9/Mandat de vente 2026 (2).pdf
 annonces/59201/documents/874a9b27-8899-432e-95a4-2b50dc418613/Mandat de vente 2026 (1).pdf
 annonces/59201/documents/88c820c5-981f-4dd8-90ef-49ee4d7a28aa/dffre d'achat JOSSELIN-BOMO prix mandat ok 22.05.2026.pdf
+annonces/59201/documents/8fe5c87a-2094-4fde-a029-316f2e4d6b79/Titre de propriete 444.pdf
 annonces/59201/documents/94c628ef-a930-4206-ba60-089df55dab88/CI JOSSELIN BOMO Mireille (2).jpg
+annonces/59201/documents/ad508a15-c631-47f7-acdc-03cd7247528b/CI PUECH SAMUEL Andree.pdf
 annonces/59201/documents/ae10507e-2176-4e92-ba81-747d66057110/Cadastre.pdf
 annonces/59201/documents/f6928170-23ea-4735-8daa-c5f689982827/DPE 2026.pdf
 annonces/59201/documents/fbe9a477-b732-4dab-9dcb-eb4a2c8bca79/Spanc 2026.pdf
@@ -1245,12 +1358,15 @@ annonces/59203/documents/d4efb237-1e04-4e01-afb8-24b92d94f96b/cadastre_1_714.pdf
 annonces/59203/documents/d98db042-2866-4ea4-bb73-4a66aaae00b9/avis_de_valeur_marchande_em71023_24_11_2025_03_51_15.pdf
 annonces/59203/documents/e61575c6-af68-4c2b-8fc2-4546a8614c5a/cadastre_2433.pdf
 annonces/59203/documents/e9a9f4bc-afe8-4073-9e8a-78189990c77f/estimation_2025_71.pdf
+annonces/59210/documents/01508ace-b204-4da6-bb65-938e9ed139a9/Taxe fonciere 2025.pdf
 annonces/59210/documents/0eb4083c-e253-4f54-bd70-20d3a6ffc259/Facture FV20202924.pdf
 annonces/59210/documents/285be35a-4d08-4ba8-926c-cdcab451cb80/3619 CAVAILLES Jean-Loup SF Plancher.pdf
 annonces/59210/documents/6412466e-237f-4bc5-8fb2-573b07e66688/Mandat de vente 2026 (1).pdf
 annonces/59210/documents/687529c7-99f7-44aa-8ed9-36f6371d3907/DPE 2026.pdf
 annonces/59210/documents/6aa1fb8a-e8be-4896-b4be-ef474c1932af/cadastre_2443.pdf
+annonces/59210/documents/6f9ceb1e-934c-417f-a319-9727481a4d6b/Titre de propriete.pdf
 annonces/59210/documents/8b8f8d6d-bff7-41e2-b509-4a3f985e4ddb/CI CAVAILLES Jean Loup (1).jpg
+annonces/59210/documents/90e90ff5-3a49-4e3f-8281-2122aceb4dcb/Facture_n_2107_2_039.pdf
 annonces/59210/documents/a16f0b74-3a9a-4c52-b839-965396776ea5/CI CAVAILLES Jean Loup (2).jpg
 annonces/59210/documents/a2196513-61b5-45b1-be15-562d60a59cb2/ERP 12-06-2026.pdf
 annonces/59210/documents/b75ed5b9-f10f-4585-b22e-a78c6d13825f/Mandat de vente 2026 (2).pdf
@@ -1258,10 +1374,15 @@ annonces/59210/documents/c047f34a-09dc-42d5-8215-03812ae57703/cadastre_1_723.pdf
 annonces/59210/documents/cdd1ce17-fbfe-4116-b6b4-6717b70c5e70/3620 CAVAILLES Jean-Loup Toiture (1).pdf
 annonces/59210/documents/eaab510c-0162-4716-81be-d9d1e8d38002/3620 CAVAILLES Jean-Loup Toiture.pdf
 annonces/59211/documents/04f15444-faf3-402c-b3f2-5e4b87df6ea3/cadastre_2434.pdf
+annonces/59211/documents/38f2a2ca-e3ea-4bce-915f-723546e87a0c/CI MAGNE Veronique.pdf
 annonces/59211/documents/3b15b9e0-3544-4ab9-b314-c2123d1f0ae6/cadastre_1_712.pdf
+annonces/59211/documents/3f26d49d-e043-4b97-bd33-15cefdf1ce59/Titre de propriete.pdf
+annonces/59211/documents/41c566f0-dc09-4bec-babb-31ca3e639ea4/Attestation devolutive.pdf
+annonces/59211/documents/c54c9127-7ebe-46a7-ba94-f1dc62a11b50/CI MAGNE Frederic.jpg
 annonces/59211/documents/d4eecaa9-b8f2-4af4-9e0a-c34d49d9d1d6/658.pdf
 annonces/59211/documents/dbdbdd06-12ff-4888-8308-c677d3dade0d/CI MAGNE Marie Caroline.pdf
 annonces/59211/documents/dd112913-516f-44d3-acf6-d0e3a4636a9f/estimation_2025_73.pdf
+annonces/59211/documents/eb8b09e6-f2d1-4cff-aa8f-b3fd2023f1b4/CI MAGNE Therese.pdf
 annonces/59241/documents/05181944-dbdf-4957-bec5-a9b88a26a0d6/errial_parcelle_000_ak_26907197_11022026.pdf
 annonces/59241/documents/3e7cb1ac-3808-42cf-83ec-3b75aef768a2/ddt___26_imo_2469_salvat.pdf
 annonces/59241/documents/43b08ec1-4c7b-48f0-9a3b-b3de67d1ebc4/titre_de_propriete_953.pdf
@@ -1276,8 +1397,10 @@ annonces/59277/documents/c2fbf139-6e92-4f48-81da-94d7218eb259/Capture DPE.pdf
 annonces/59277/documents/c4e6f459-222b-467f-b4d3-95b1b46fd997/Succession Dufaut Raymond.pdf
 annonces/59277/documents/c789b00e-1eb7-414e-8008-62f82a0dfc3f/InformationsParcelles.pdf
 annonces/59277/documents/c7fcbc6c-9fae-4ae9-9708-b73d683ffa2c/planCadastralNormalise.pdf
+annonces/59277/documents/d1cb64dd-2373-4422-ae66-e316320ed99e/accord Franck diffusion sans annexe signee et avec tacite reconduction.pdf
 annonces/59277/documents/d25e51ac-c4a0-41a9-b09d-59f91541015f/avis_de_valeur_marchande_em70941_13_11_2025_11_40_36.pdf
 annonces/59277/documents/f0e30eaa-a458-4997-8b9c-e748d7d57fe2/Permis et DAACT.pdf
+annonces/59277/documents/fa14ff14-24f1-46c9-b683-76204c115d99/Devolution successorale Raymonde Besson-Dufaut.pdf
 annonces/59334/documents/0dc25860-f0ff-49fd-a8e3-5186f9f5d530/Copie AAE PROMESSE DE VENTE BRECHET _ CHEVALLIER_pdf_21414753.pdf
 annonces/59334/documents/14ab139d-79f7-43ec-b786-e37de4ba79c4/document_251215_114831.pdf
 annonces/59334/documents/158bd340-359b-491b-b5ad-ed23cd91ecc8/ATTESTATION POUR L'ASSUREUR - Acte 13645402.pdf
@@ -1293,10 +1416,13 @@ annonces/59334/documents/75f1fbd7-ef70-466f-bfd1-3e66b30ec848/attestation vente 
 annonces/59334/documents/9067a702-2ac2-4c56-85e0-e02a85c4fb51/cni_verso_pdf.pdf
 annonces/59334/documents/a880a04c-4521-4e68-a79a-2db62bccedf6/CHEVALLIER Gregory CI r.JPG
 annonces/59334/documents/ac3fbf72-7078-4b29-8b44-5c2c52b2d102/planCadastralNormalise ST GERMAIN.pdf
+annonces/59334/documents/c2e87374-a5b0-474b-9242-3d1b450e8ca4/recepisse depot DP CHEVALLIER 20.04.2026.pdf
 annonces/59334/documents/c6443c71-d765-4cb3-aaea-c778836a4e33/attestation_pour_l_assureur_acte_13645402.pdf
 annonces/59334/documents/ca8e2f3e-824b-4243-a8f1-5544aee211b9/cni_recto_pdf.pdf
 annonces/59334/documents/cb4f20c5-aa0e-4b63-b5ad-3d97e7c8225a/plancadastralnormalise_2499.pdf
+annonces/59334/documents/d06a62e7-473f-40cd-bba0-8bca56a9c3aa/DP accordee 01.06.2026 _ ARRETE DP 0633522600016.pdf
 annonces/59334/documents/d1aad63b-7399-4198-a7cf-5e4a3c46103e/errial_parcelle_000_ab_15663352_21102025.pdf
+annonces/59334/documents/e24ff709-c7a3-4777-88f5-baa154235483/autorisation vend. depot pc 18123.png
 annonces/59339/documents/04c3a3a2-0b48-4510-9d8c-efcb708086bb/errial_parcelle_000_b_49863185000_b_169363185000_b_169163185_23102025.pdf
 annonces/59339/documents/076e5c6b-8c1d-410e-9f07-7675e658ca66/1000011861.jpg
 annonces/59339/documents/0bee1a77-593e-4d29-ab81-fad050cd9c1a/titre_pro2.jpg
@@ -1330,8 +1456,10 @@ annonces/59364/documents/153f463e-d0a4-400a-aece-ea3956b7126d/garnier isabelle C
 annonces/59364/documents/15d470d3-22b1-47de-a1e2-c4eba3186ff6/avis_de_valeur_marchande_em71087_02_12_2025_02_43_05.pdf
 annonces/59364/documents/197b26b6-2eb0-4bd4-808b-3780b7688eb4/CNI DOMINIQUE.pdf
 annonces/59364/documents/1b8f579f-8c8e-4565-9b7c-a9d3dabafff5/BEUF THERESE AUDIT ENERGETIQUE ISSOIRE.pdf
+annonces/59364/documents/2e619016-ff10-4d6f-ab0f-6b84591868c2/MBEUF Identite.png
 annonces/59364/documents/36fbe75b-a11f-4648-ae81-4560a666e619/joel Boeuf 1.jpg
 annonces/59364/documents/47802352-f524-47b6-9d8e-c1d1bac1efe0/Habilitation BEUF.pdf
+annonces/59364/documents/4cdc0bf3-4d89-410c-a308-7fcd747d5498/PBEUF Identite.jpg
 annonces/59364/documents/8dc2add1-53c4-45d2-98c4-680ea2e06e77/BRUN Christine CI.pdf
 annonces/59364/documents/9427b82c-4fcb-49b0-8b0a-8d4f31e0f61d/copie- attestation immobiliere BEUF Paul du 9_11_2002_22098182.pdf
 annonces/59364/documents/96cf1f3c-4374-4bde-969c-d0922b437fb9/BEUF THERESE ISSOIRE DOSSIER.pdf
@@ -1345,6 +1473,7 @@ annonces/59390/documents/15be5637-b4de-4f48-a559-e03998a8f64e/dpe_21437606.pdf
 annonces/59390/documents/31121cb1-cebe-4c58-9df2-2ab1f1ba9ce7/scan_0002_1.pdf
 annonces/59390/documents/31f68c43-d7f4-41dd-95b5-1bec7f0807af/titre_de_propriete_21457299_jagonzac.pdf
 annonces/59390/documents/349d2640-dda9-4245-a368-0b429d9893ce/diagnostics_21437605.pdf
+annonces/59390/documents/3d16d685-198c-4508-a1a5-ea604e80e52c/Avenant 262000_ H.12000 ok.pdf
 annonces/59390/documents/5454c108-11b1-4c30-b877-a139a77d951a/avis_de_valeur_marchande_em69549_30_04_2025_11_54_48.pdf
 annonces/59390/documents/587e6677-aa6f-4473-9628-abffc41be72a/cni_damien.pdf
 annonces/59390/documents/5d66e901-6ca4-4c64-955e-5ccf8dfd0b06/avis_de_taxes_foncieres_2025_25.pdf
@@ -1388,6 +1517,7 @@ annonces/59415/documents/92365696-d740-4870-b5a7-698ef8249cf4/titre_2010_p4.pdf
 annonces/59415/documents/97b25aa3-acf1-4144-9254-aabe2661f036/titre_2010_p15.pdf
 annonces/59415/documents/9b18853c-2c44-461d-b000-dd61fc6666fb/facture_geothermie_15122022.pdf
 annonces/59415/documents/9f617f4b-174f-49b6-b885-a5755562f35b/plans_162.pdf
+annonces/59415/documents/af696583-1c09-4af0-b46e-56523fc5533a/Denonciation exclusivite.pdf
 annonces/59415/documents/afed4083-9097-463c-9c35-61124948fd12/croquis_11.pdf
 annonces/59415/documents/b31cbad4-5187-448a-9e4c-698fb2ec2ff5/titre_2010_p8.pdf
 annonces/59415/documents/b87888eb-f3ed-49ee-8d35-4a69042ba3d4/titre_2010_p14.pdf
@@ -1403,6 +1533,7 @@ annonces/59415/documents/f04605fa-8eb9-4628-bd6d-e411b54b2289/titre_2010_p16.pdf
 annonces/59415/documents/f88926c0-b020-44b5-bb34-a973987e90c5/titre_2010_p10.pdf
 annonces/59415/documents/fd2e29ed-63c3-4522-bb9c-4042e463be64/facture_edf_2024_2025.pdf
 annonces/59427/documents/017b86d3-8205-4429-9a32-18f443077a73/ID FAURE GREGORY.jpg
+annonces/59427/documents/2e0d2f64-9eb9-4ed3-8e59-e321ca183e72/Offre d_achat CHARREL THORSEN ok 20.04.2026.pdf
 annonces/59427/documents/32b8240d-6356-40b3-bb24-bf7e2e8a5d7c/Copie AAE PROMESSE DE VENTE SCI LES ADREYTS _ Cts THORSEN - CHARREL.pdf
 annonces/59427/documents/32bc4312-7f4b-4719-bc4c-285fe9936ce4/planCadastralSimple.pdf
 annonces/59427/documents/38d5b696-b41a-4591-9cdd-43224898ec82/Honoraires ok.pdf
@@ -1456,6 +1587,7 @@ annonces/59484/documents/2eb0b82c-9c98-4e57-8e1e-a6857fbc0bf3/ci_therias.pdf
 annonces/59484/documents/340dbfb8-7ef3-4aff-9d11-c45be6f296fb/numerisation_20260211_2_.jpg
 annonces/59484/documents/4a77b94f-5a30-4d32-82d8-75a90c06ded6/bon de visite.pdf
 annonces/59484/documents/4e59f48b-1664-4c74-b8a4-d5339e82a19a/Avenant 228K.jpg
+annonces/59484/documents/72454bde-dc60-481b-a82d-5d1ec4f2a9cd/bon de visite CAPITAINE signe.pdf
 annonces/59484/documents/77f93f25-773f-4b18-9dac-615356bf3c75/Spanc THERIAS 23.07.2025.jpg
 annonces/59484/documents/99daaa50-df75-407b-b1ae-19b39ad67433/numerisation_20260211_3_.jpg
 annonces/59484/documents/a61dfb43-666b-40de-87ee-97fcab639464/avenant_au_mandat_de_vente_avenant_au_mandat_groupe_gtiavenant_699d7efce2355a5674089358.pdf
@@ -1470,16 +1602,19 @@ annonces/59484/documents/fe78ba8b-7f43-44de-abda-e26c0f0436be/Spanc THERIAS p2 2
 annonces/59486/documents/18c7663f-8765-44fc-95bb-829476ca832a/plancadastralnormalise_2576.pdf
 annonces/59486/documents/2ff5d3cd-0a47-447d-b747-7a4d8da70276/CNI Bompard Claire recto.jpg
 annonces/59486/documents/3986b3d1-49e9-4bef-bf52-25dab55fe3e2/avis_de_valeur_marchande_em71391_15_01_2026_09_35_17.pdf
+annonces/59486/documents/43e392cb-530c-42a5-8e9c-cb7a50afe5d1/CNI Bompard Aime.pdf
 annonces/59486/documents/8f9c5d39-a5ba-48d2-85f4-abc11dd6adaf/CNI Bompard Claire verso.jpg
 annonces/59486/documents/b6c5dce4-98d5-4eb4-9050-94cc62a69c33/BOMPARD DOSSIER.pdf
 annonces/59486/documents/c0c21990-2876-4952-8500-d96db98aed3a/FAC022337.pdf
 annonces/59486/documents/d2a49b5b-7ba9-4c3e-9c7a-1d00e0f9f692/informationsparcelles_1__26.pdf
+annonces/59486/documents/d4cb1c21-5559-4964-a816-c4d77605c907/Copie AAE DONATION Aime BOMPARD_22589653.pdf
 annonces/59486/documents/dae8be9c-1af4-4e09-a411-e64a81cecec0/BOMPARD AUDIT ENERGETIQUE.pdf
 annonces/59486/documents/df30c2e4-1528-4dd5-a402-6f6e7ca5dee9/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat-698b395ad134f3025805c859.pdf
 annonces/59490/documents/3216dfdb-684c-464f-8086-802ba5dc68c1/Compte rendu AG du 09 nov 2024.pdf
 annonces/59490/documents/37997816-730f-4a22-922e-09341e6445dd/CNI Dorel Verso.jpg
 annonces/59490/documents/55a89498-c016-49cc-9d64-1dc0c9f04122/CNI Dorel William.jpg
 annonces/59490/documents/74ffdc62-b67b-4cfd-9baa-a32d8ad719d2/1000017695.jpg
+annonces/59490/documents/9f8b7243-0ff5-459f-a4fa-5cca285ea9ef/Titre de propriete.jpg
 annonces/59490/documents/b57d4815-a20b-4c72-af6e-5afd74e2545d/Infos copro.pdf
 annonces/59490/documents/bcfd0b85-0065-4fae-998e-d2c058776bc2/bail_habitation_bail_dorel_angelo-67d02cb05a7fa70a8503727a (1).pdf
 annonces/59490/documents/c21fecb4-27b0-408e-bac4-0a073f98aa4c/2507E0010595Y.pdf
@@ -1499,13 +1634,17 @@ annonces/59495/documents/ff859f70-79bc-4816-9e5d-80204907b647/AVENANT.pdf
 annonces/59502/documents/16193271-6471-4c5d-8a56-72108dc0dcab/IMG_20260519_215534.jpg
 annonces/59502/documents/2c68a00a-8bc5-4ff3-ba7a-49977289b904/planCadastralNormalise ZY26.pdf
 annonces/59502/documents/43f82395-63dc-416c-81e3-3e302ebaade4/plan bornage.jpg
+annonces/59502/documents/5510dc5f-9fa0-4b34-b651-dc3ebb4f815d/CNI Delom Agnes Verso.jpg
+annonces/59502/documents/5c29c401-04f3-451c-9c13-a4375c0c743a/CNI Delom Agnes Recto.jpg
 annonces/59502/documents/5c619e60-b6a7-41ca-8333-3d14a9764bb1/planCadastralNormalise ZY13.pdf
 annonces/59502/documents/63244f3f-4d60-4a90-885e-8ec69102d934/Plan arpentage.jpg
 annonces/59502/documents/76b377f1-64ab-4383-b74a-9b92bd5e6024/CNI Chevalier.pdf
 annonces/59502/documents/92b51c83-34ee-4c63-b8c9-282f074fb683/TP.pdf
 annonces/59502/documents/b1053f83-fd64-4508-b4fd-437b08764c74/IMG_20260519_215617.jpg
 annonces/59502/documents/be35560a-30b8-4340-b88c-de7c2bb0c0bb/TF2025.pdf
+annonces/59502/documents/c76d89cd-de5f-438e-aa23-c6256a6938d8/Honoraires valides.pdf
 annonces/59502/documents/f1b0a064-58ea-4803-a780-5d23bec819b6/bornage.jpg
+annonces/59512/documents/007ff5a4-ec75-4361-aa3f-cb5338b22b6c/Offre DROUET DESCOTTES 190000_ H10000_ ok 18.08.2026.JPG
 annonces/59512/documents/00d00a20-0f04-4ae2-9c5a-ec09ca4a88af/img_1001.jpg
 annonces/59512/documents/0956f24d-249d-4122-a1f4-34c6b5e2a8e6/pi_perret_.jpg
 annonces/59512/documents/0fe8a45d-911d-40c3-8167-af7c34470120/acte_de_vente_5_001_perret.jpg
@@ -1518,11 +1657,13 @@ annonces/59512/documents/40d63f89-7b0e-4280-a243-abe89d45dad9/acte_de_vente_2_pe
 annonces/59512/documents/41252775-aea0-416e-a2a4-8391e8ac2b39/Rapport du Spanc.pdf
 annonces/59512/documents/4e23645c-deb9-4b81-9aa8-d8f539063af5/20260220_093253.pdf
 annonces/59512/documents/520856ab-a045-4db9-babd-592eeef17acc/DESCOTTES Elya cni.pdf
+annonces/59512/documents/5754a76c-e6ca-45de-80c3-674f94b13068/carte d'identite FERIES Marc.pdf
 annonces/59512/documents/5e7f64c3-3cd9-4f55-b6a2-f36298ffffd6/img_1034.jpg
 annonces/59512/documents/681b9a82-fda4-491e-b87e-36f1a487196f/avis_de_valeur_marchande_em71175_07_01_2026_01_41_17.pdf
 annonces/59512/documents/6ed11168-6f7c-4a87-b332-22b9da1a727c/annulation offre FERIES 23.06.2026.pdf
 annonces/59512/documents/76b54c7e-15b9-463c-9d14-682eaf55ef3b/img_1003.jpg
 annonces/59512/documents/8a72251f-d41e-4f81-a743-2ffbe22195bc/acte_3_perret_.jpg
+annonces/59512/documents/9ed80aae-1230-42d7-8a58-e0e1d7e838d0/mandat Exclusif 18374 PERRET TAMET 250000_ H14200_ 13.02.2026.pdf
 annonces/59512/documents/aa37712a-c1c0-4395-99e4-3bca4cbc8797/diag_perret_.pdf
 annonces/59512/documents/b2628d24-1ebc-4cb0-a1d1-0b153d06a4be/etat civil FERIES Marc.pdf
 annonces/59512/documents/ba4e5f1a-333f-4e77-9d99-4614b57056fa/bon de visite FERIES Marc 29.05.2026.pdf
@@ -1547,14 +1688,19 @@ annonces/59541/documents/2ab2ca61-3b33-4a14-96b8-05c91f2c63da/ENSA AU 02032026.p
 annonces/59541/documents/4db8a2b4-784b-4d44-bae3-3c38e1d7d74e/CARREZ.pdf
 annonces/59541/documents/526245cf-d4c4-45cf-8078-172620f014df/ERPS AU 02032026.pdf
 annonces/59541/documents/6224c25a-ffe5-40eb-9db9-8cde163b845b/ERP AU 02032026.pdf
+annonces/59541/documents/74ad8b25-2e2a-4638-bdb4-96a7e6d7b171/Decompte de Charges annuelles.pdf
 annonces/59541/documents/78de2e7e-c0b1-4113-b229-8477e6c37f75/CNI Jean claude.pdf
 annonces/59541/documents/80c49779-c901-4592-909d-addc380e3bb2/gaz + elec ENGIE.xls
+annonces/59541/documents/854734b5-b605-4936-8e3c-07554d5675f0/extait decision juge des tutelles.pdf
 annonces/59541/documents/87b747d9-f277-4e17-97f6-18c7c913967b/planCadastralNormalise.pdf
 annonces/59541/documents/9e117ab5-337e-4490-96da-143ad8ba9f7b/DPE.pdf
+annonces/59541/documents/aabbb39f-2a8b-4ea9-9565-b5a8375178d5/ELECTRICITE.pdf
 annonces/59541/documents/bde246e6-b619-477b-8fe8-f05a5cb8b766/ATTESTATION DE PROPRIETE Mme Anne LEROY nee DELAVEAU_21600089 (1).pdf
 annonces/59541/documents/bfbd62bb-7680-4de4-bb6a-6055f4396c71/taxe fonciere 2025.pdf
+annonces/59541/documents/c5ae31d8-f769-4a5e-8237-5b098d1e6a52/Carte identite nadege recto verso.pdf
 annonces/59541/documents/c8c7c995-bd1b-4557-83c3-8b592dec7732/DPE rapport.pdf
 annonces/59541/documents/d2a61c1b-68f8-46ec-a323-a1aa0bcd5175/ICPE AU 02032026.pdf
+annonces/59541/documents/d60b944e-6023-4095-9190-26b659165b9e/RESUME.pdf
 annonces/59541/documents/d8443044-9f43-4908-a325-82fb63ad7afb/AMIANTE.pdf
 annonces/59541/documents/f70a7984-8bcb-4f4c-a766-f39fb5d349c2/PLOMB.pdf
 annonces/59541/documents/fd852c02-b330-4c72-a23c-520fb732c1da/REGLEMENT_DE_COPROPRIETE.pdf
@@ -1591,25 +1737,36 @@ annonces/59610/documents/0fb0ec39-9a84-4db2-8064-75d2fc7122f9/avis_de_valeur_mar
 annonces/59610/documents/18b8d8af-3ad9-4dc3-9775-0764803b205e/Facture Dubost.pdf
 annonces/59610/documents/2037e05c-829f-40ca-8d28-87974e2c07c0/cni MONTEL Pierre verso.jpeg
 annonces/59610/documents/237ae594-7833-412c-ad6f-56b2e7ae2e2d/GUIOVANA Slide TAILLANDIER Camille passeport.pdf
+annonces/59610/documents/381824e4-f8cd-44e5-9abb-eb5a8c6f0548/offre GUIOVANA TAILLANDIER 140000_ H9000_ ok 01.06.2026.jpg
 annonces/59610/documents/541c6c62-f6e9-4075-8a92-d964dac9dc8e/Offre d'achat MONTEL ok 28.04.2026.pdf
 annonces/59610/documents/68080c25-926b-4129-9d32-33ebeeaab1b5/Facture toiture anti-mousse.pdf
 annonces/59610/documents/72bbac74-9003-44f7-88eb-dbcd24b39c31/GRANDJEAN_Etude_Audit_Energetique.pdf
+annonces/59610/documents/73d12875-bc6f-46d4-b962-8e156e2f9c22/Taxe fonciere.pdf
 annonces/59610/documents/9c53d32b-74b7-4645-bca8-8fe58c4f201e/annulation offre d achat MONTEL 13.05.2026.pdf
 annonces/59610/documents/aca5faeb-e184-4f80-a548-913b1dbfacaf/CNI Grandjean.pdf
 annonces/59610/documents/ae2320b4-0b41-4826-be79-0b84a6ef0538/GRANDJEAN DOSSIER.pdf
 annonces/59610/documents/b74842c3-5794-4d65-97b7-a58726d0140d/avis_de_valeur_marchande_em71508_28_01_2026_06_18_26.pdf
+annonces/59610/documents/d973e5b8-93b1-4532-94f7-79ad7276a178/attestation de propriete.pdf
+annonces/59610/documents/dcbd4fc8-bc36-446e-8488-529f309d35c8/Facture platrier .pdf
 annonces/59610/documents/e4534b19-0179-44ef-8b7a-f0db2f116bb6/renseignements MONTEL Pierre.pdf
 annonces/59610/documents/ef2ca7d2-30ff-4a76-b330-95d8dd25398f/simul. MONTEL CA 21.04.2026.pdf
 annonces/59610/documents/f1777396-f012-4202-8e35-f87afbe6ee3b/cni MONTEL Pierre recto.jpeg
+annonces/59610/documents/f88e089a-8727-4fb8-8af9-a7f7188c59b9/COMPROMIS GRANDJEAN _ GUIOVANA TAILLANDIER signe le 19_06_2026_20517984.pdf
+annonces/59624/documents/36476fa9-5875-4765-b543-e6b37443bf7b/Accord de credit immobilier - CIC.pdf
+annonces/59624/documents/3ecee3ac-2f6f-4a6d-a891-4f1288a50b58/CNI RICHTER Stephane r.jpeg
 annonces/59624/documents/970901fd-651a-4090-b173-009e53310174/Attestation de depot de dossier.pdf
+annonces/59624/documents/b15b4cb6-9f26-4631-84b6-edff2192fec9/CNI RICHTER Stephane v.jpeg
 annonces/59624/documents/ba0d4a18-a6f5-45e6-ac91-0d707c00ea57/Etude de financement - RICHTER-DESPIERRES.Pdf
 annonces/59624/documents/c97db8f0-4d3b-4c53-9bf7-caf42a48c293/Copie AAE PROMESSE DE VENTE INDIVISION LAYES _RICHTER -DESPIERRES 03.06.2026.pdf
 annonces/59632/documents/171919bf-ee90-4d41-81de-d975eb245546/Mandat de vente 2026 (1).pdf
+annonces/59632/documents/17d8fe32-a34d-4429-aab5-e76970805ae6/Attestation de propriete.pdf
 annonces/59632/documents/2a22848f-b4c4-4f49-a62b-390f973d80fd/cadastre_2446.pdf
 annonces/59632/documents/509a29ac-ed5f-4edc-8fe0-106bcdfd828f/DIAGS 2026.pdf
 annonces/59632/documents/5fb457ce-7d76-4e79-a662-a490d7d0e90f/Mandat de vente 2026 (2).pdf
 annonces/59632/documents/6f7e9038-f1ab-49f2-a466-63284d697b36/Cadastre 1.pdf
+annonces/59632/documents/8c8925d7-45ee-42fa-84fc-2266857e3de7/CI PEPIN Jerome.pdf
 annonces/59632/documents/8dfdc495-f455-4eae-9b21-73e3bf5339a3/Factures travaux.pdf
+annonces/59632/documents/9370a880-b5d1-42ac-93ab-84c519a74072/CI PEPIN Isabelle et Stephane.pdf
 annonces/59632/documents/ae86deb3-d8ac-4a10-8894-dbec85f00410/AUDIT ENERGETIQUE 2026.pdf
 annonces/59632/documents/b663e19d-1e26-4106-9f32-c0c96a99cc80/avis_de_valeur_marchande_em71214_27_01_2026_11_34_07.pdf
 annonces/59632/documents/cd5415e9-11b7-4c0c-843f-d1d26f381cdb/estimation_2026_2_.pdf
@@ -1623,6 +1780,7 @@ annonces/59641/documents/368faff4-fee6-4099-a9ee-516203a2c94e/taxe_fonciere_2025
 annonces/59641/documents/5bbfdd07-fb4d-4ae0-9a89-4a4682ef5f2d/diags_2025_22.pdf
 annonces/59641/documents/6dc387ad-44f6-44fc-82ca-0181e3d1ac92/avenant.pdf
 annonces/59641/documents/84bd3266-f035-4ad7-b3e9-eb64db4eabf6/CNI TOURNIE Clemence.png
+annonces/59641/documents/a70fd247-5c39-4725-9322-bd9bd78f2e42/Offre d'achat contresignee vendeur.pdf
 annonces/59641/documents/af52610a-a084-4a85-8a7b-9e3196b64f7a/partage_23_12_2009.pdf
 annonces/59641/documents/b2989579-efc2-4fba-9a63-eb5dd24baebb/CNI TOURNIE Clemence 2.png
 annonces/59641/documents/bb32207b-3407-4ccf-ada6-48e9872a09a0/edr_22_01_2026.pdf
@@ -1637,7 +1795,9 @@ annonces/59653/documents/8b61b426-c436-48fe-8638-ade3428f4bd7/plancadastralnorma
 annonces/59653/documents/96a8ad93-60d9-4d01-af98-35ee1a78277b/copie_aae_promesse_de_vente_delobre_sociata_civile_immobiliare_daxd.pdf
 annonces/59653/documents/99c4f3bd-2774-4a4f-9218-0dd2b59ae2d9/statut_sci_daxd.pdf
 annonces/59653/documents/9df08268-1790-4965-bce7-f5d0ac967205/tp_27_1.pdf
+annonces/59653/documents/a83f160a-b37e-401b-aa18-1aa3fdb25f36/BV Aurelie ROYER.pdf
 annonces/59653/documents/b1e3ee1f-4279-46d3-8de7-4bae09190b40/SCI DAXD DPE.pdf
+annonces/59653/documents/b5266170-4e42-4a17-a52d-c2868b7ee375/Avenant Aurelie 80 000.pdf
 annonces/59653/documents/c00d7064-e077-4ed6-981f-fce165b98078/dpe_36_1_.pdf
 annonces/59653/documents/fba7bb61-12d2-498a-88a9-be9cfee4a79c/mandat_simple_de_vente_mandat_simple_de_vente_groupe_gtimandat-6994277a60763ac89404ea48.pdf
 annonces/61473/documents/08d82600-155c-4ebf-942d-eee0b977db63/mandat_simple_de_vente_mandat_simple_de_vente_groupe_gtimandat_69774ed9c1d885833f0018a7.pdf
@@ -1687,6 +1847,8 @@ annonces/61482/documents/d9793a5c-2498-45e9-8d6d-95f651ff99c8/avis favorable rac
 annonces/61482/documents/e57e57a8-6967-4834-91d0-98523ee8f2fa/20260119_142554.jpg
 annonces/61482/documents/f3a5a516-38ed-418e-8eba-21dd91f8da77/20260119_142431.jpg
 annonces/61482/documents/f80a3f6b-fcde-4e02-996c-9711666bb5b4/20260119_142447.jpg
+annonces/61483/documents/078cad22-d0b8-40c8-a511-3d0de34627f2/offre HUGUES 112000_ NET H8000_acq. ok Michel 02.06.2026.jpg
+annonces/61483/documents/0a3e382b-18ac-4566-add1-730282584b76/offre HUGUES 112000_ NET H8000_acq. ok Bernard p2 02.06.2026.jpeg
 annonces/61483/documents/1585259b-1bfa-4702-afb7-2e59e8c7c1fa/ci verso hugues.jpeg
 annonces/61483/documents/2756a99c-06f5-41b1-8c13-9e7745416a48/ci_bernard_rendla_verso_1.jpg
 annonces/61483/documents/3ac1a8df-4a5c-40e7-ad84-d0e8c171ece9/plancadastralnormalise_2525_1.pdf
@@ -1701,7 +1863,11 @@ annonces/61483/documents/88677d93-3163-497f-9c3c-b998cf132628/licitation_rendla_
 annonces/61483/documents/8a7bf65f-c942-4c70-8e66-76c86dfbc0d1/api_elise_rendla_19061979_1.pdf
 annonces/61483/documents/8c0b24bd-fd5a-4e92-80a4-8c8374c29830/avis_de_valeur_marchande_vm69986_07_07_2025_10_29_52_1.pdf
 annonces/61483/documents/97524501-6bcf-46c5-a975-98c89dde3f62/ddt___251001_23596_coef_diag_rendla_jean_1.pdf
+annonces/61483/documents/ae8c2181-b535-4669-93ee-e740965706ba/offre HUGUES 112000_ NET H8000_acq. ok Christine 02.06.2026.pdf
+annonces/61483/documents/be4256b1-b451-4e75-a94e-cf878191fa9f/mandat_simple_18262_RENDLA_126000_ NET Hacq.9000_ 20.02.2026.pdf
+annonces/61483/documents/cf2fcd14-b4c6-4e99-b115-de8e5928a708/offre HUGUES 112000_ NET H8000_acq. ok Bernard p1.jpeg
 annonces/61483/documents/dde1af67-5758-4d75-a018-788f09a4ffce/ci_rendla_michel_verso_1.jpg
+annonces/61483/documents/eff9ef75-257b-4ff8-85a8-a303208f05f7/Compromis signe.pdf
 annonces/61483/documents/f25d92dd-2148-4b1a-be96-b80ee4a3c664/notaire_et_stephanie_1.pdf
 annonces/61483/documents/fc360755-719f-4f3f-9367-fea899c04d1e/ci recto hugues.jpeg
 annonces/61483/documents/fcd641f1-edf9-4ada-928a-2ae91b42553c/piece_identite_christine_2_1.pdf
@@ -1712,11 +1878,18 @@ annonces/61545/documents/599f7c98-101c-424f-b989-bc73c9e71b2e/geoportail_121.pdf
 annonces/61545/documents/666d728d-cdc4-4c9a-9a25-f7cb26167b0f/cni_samuel_herbet.pdf
 annonces/61545/documents/66aca1a3-566d-4acb-9e69-05e1267f36d9/DIAGS AVRIL 2026.pdf
 annonces/61545/documents/69284937-4371-4a55-bef9-a53ad7b8c26e/AUDIT ENERGETIQUE.pdf
+annonces/61545/documents/77f9e83d-b029-42ec-8a55-6e7a3f1b5dbc/Mandat HERBET Helene.pdf
 annonces/61545/documents/8ea6655e-ebfe-4ac5-b700-155cfc45f31d/plan_cadastral_448.pdf
+annonces/61545/documents/a806f388-f358-4642-b554-0de3c65d0b01/MANDAT Helene HERBET.pdf
 annonces/61545/documents/aed0aaef-69c1-44c1-bef4-3c4732e0ea70/Annexe Mme Herbet.pdf
+annonces/61545/documents/bd5597cd-7045-431c-9415-58d39dad4401/MANDAT DE VENTE signe par l'UDAF.pdf
+annonces/61545/documents/bd82fb1a-80cc-45d8-8751-031f9354ae7e/Justificatif du deces de l'usufruitier.pdf
 annonces/61545/documents/cc6b4cf4-6e40-4aa4-9716-886de060a9c2/jugement_curatelle_renforcee_2.pdf
 annonces/61545/documents/cc94e2a7-7b01-4c71-83dd-ced32a2d1ce8/questionnaire_vendeur_17.pdf
+annonces/61545/documents/d525a9e6-7874-4316-bd82-10dd8d0b45dc/facture nettoyage abergement cheminee mars 2025.pdf
+annonces/61545/documents/d55a91ec-1bd6-4136-924a-009e77b4f76b/Cni herbet helene.pdf
 annonces/61545/documents/dfc64d85-1b65-48a8-a637-743b2c239f37/brouillon_notes_87.pdf
+annonces/61545/documents/eda31515-d521-4d56-bf8f-4d50753ccc44/Titre de propriete.pdf
 annonces/61592/documents/04d7bfec-d949-4857-bc7d-ab050559eaec/1009_pvag_20241220.pdf
 annonces/61592/documents/305d81f3-73f6-4596-af87-d14f36b305e4/appel_fond_garage_01_2026.pdf
 annonces/61592/documents/35b4d188-5c32-42ea-af39-8a2dbc97e6e4/avis_de_taxes_foncieres_2024_56.pdf
@@ -1732,24 +1905,31 @@ annonces/61592/documents/b69d6fd2-208e-4a2e-bfc0-9604da21d2c8/d_evolution_.pdf
 annonces/61592/documents/ba309e3d-73b9-4475-ae2c-5dfbe41796ef/mandat_simple_de_vente_mandat_simple_de_vente_groupe_gtimandat-699c69f61a778548a70ada66.pdf
 annonces/61592/documents/ef7bf764-43fe-4613-bcd4-7626320f3c9c/20250630_decompte_de_charges_copie.pdf
 annonces/61592/documents/f6ad7565-8fe4-44f2-aef3-a9f73fbb0c7c/1009_pvag_20251128_1.pdf
+annonces/61607/documents/0817b47f-d3e9-4a86-92a5-532ee4a52da2/Titre de propriete 27-11-2014.pdf
 annonces/61607/documents/0b3dd0a0-d464-4efa-bdd1-f3d6bb7f0f52/Cadastre 1.pdf
+annonces/61607/documents/1560b108-26fc-4643-8ca8-5c7f96ab7bec/CI ROLLAND Veronique.pdf
 annonces/61607/documents/511b1210-2fd7-485e-844a-e1df69ab7c84/Cadastre.pdf
+annonces/61607/documents/5dd350d6-8246-4acd-b2da-af7161bc8e2a/Offre d'achat contresignee vendeurs.pdf
 annonces/61607/documents/6849b794-791a-47be-9b9c-d94df8f43cc6/CI THOMAS Annette (1).jpg
 annonces/61607/documents/6df111e6-1f76-40ab-8e07-35a32024d35b/EDR 26-02-26.pdf
 annonces/61607/documents/6e52d759-ecfd-4b62-ba2f-85295a95b4b9/CI THOMAS Annette (2).jpg
 annonces/61607/documents/78174391-4264-4011-a028-4b8b7b39512b/Factures conso EDF et bois 2026.pdf
+annonces/61607/documents/8db157fd-5f35-4285-8080-61a86542d6fb/Declaration prealable chalet 17-09-2021.pdf
+annonces/61607/documents/916b91b4-9c7b-4c33-a832-64cfa79f585c/Taxe fonciere 2025.pdf
 annonces/61607/documents/a4fa93e7-cd42-4bf6-a387-4bb0f5982f2f/CI THOMAS Patrick (2).jpg
 annonces/61607/documents/b784b643-9347-44cd-8623-21bfa5272912/Bon de livraison chalet bois 2021.pdf
 annonces/61607/documents/b8f1b4b5-d235-4aa6-8edb-1e6c314ee729/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat-699d77c0aa743748c60b75ff.pdf
 annonces/61607/documents/bc3a20c7-a92b-42dc-a4c5-60c7ee532940/Copie AAE PROMESSE DE VENTE THOMAS _ ROLLAND_pdf_23516078.pdf
 annonces/61607/documents/bedf7d23-c17d-48b9-b9d1-08c9bc84ca4f/CI THOMAS Patrick (1).jpg
 annonces/61607/documents/d80f2a97-104c-4e9c-bd62-e6ddf48fd4c4/DIAGS 2026.pdf
+annonces/61607/documents/dad92109-a03c-4d02-a331-c1b23b0a7aba/Titre de propriete 03-10-2014.pdf
 annonces/61607/documents/e3d009ef-a5f4-429f-9ca3-504900b986be/Facture huisseries 2016.pdf
 annonces/61607/documents/fbe21473-af8f-4751-8e42-91c17b0d63e3/denonciation exclu.pdf
 annonces/61615/documents/03189a89-be45-4cb4-9b6b-4b1605184bb8/avis_de_taxes_foncieres_pic_lucette_2025_1__1.pdf
 annonces/61615/documents/03d8e1b3-09a1-446a-9bcb-62a8c75db015/offre Jean Claude Pic (2).jpg
 annonces/61615/documents/0b7903ba-b92d-4809-83c1-7eba697d9b83/statuts JD TRANSACTION - Actes du 04-11-2021.pdf
 annonces/61615/documents/13cf72fb-398c-4553-8785-bd60cff82229/image1_1_.jpg
+annonces/61615/documents/24fc5af1-2d7c-4e27-8c48-2f515977d470/offre d achat ste MP VALORIMMO et JD TRANSACTION en attente.pdf
 annonces/61615/documents/26ac8b82-ce67-415d-93ae-4d75d9db7cb1/cni_jean_claude_pic_verso_1.pdf
 annonces/61615/documents/2900cf9d-229b-4847-a1af-666542638a92/image7_1_.jpg
 annonces/61615/documents/448bf5cd-76c9-4b33-8cfe-e35b4f2f421f/recepisse_depot (1).pdf
@@ -1764,6 +1944,7 @@ annonces/61615/documents/77cb4630-5320-44b5-a112-9d7592e67982/Copie AAE PROMESSE
 annonces/61615/documents/7fee9e57-0a9f-4ce6-8038-74887768e2f6/CONTROLE DES BRANCHEMENTS (2).pdf
 annonces/61615/documents/84743436-d6fa-4a78-b48a-fca5be61e99c/DDT_-_26_FDE_7792_p03_PASCAL_PIC.pdf
 annonces/61615/documents/8c84d793-62c3-47f5-875c-5daa4241f6e7/DDT_-_26_FDE_7792_p01_PASCAL_PIC.pdf
+annonces/61615/documents/9396db1b-5be0-417b-97c3-4e69e65dcd4f/carte identite Mme PLAY.pdf
 annonces/61615/documents/a1ecfce0-549e-4cd3-8d63-26a48993d910/statuts MP VALORIMMO - Actes du 03-02-2026.pdf
 annonces/61615/documents/a7bf4372-7aef-4c41-8e76-4975832e7c3a/accord_franck_n_de_mandat_1.pdf
 annonces/61615/documents/a87a66fe-4be2-4133-8b4e-e683371c0447/image5_1_.jpg
@@ -1796,6 +1977,7 @@ annonces/61616/documents/7da144c1-2431-4f1e-a368-26c89fb0cec9/Avenant rectificat
 annonces/61616/documents/8e5a4201-d41d-4c83-85bf-1a668b1cf634/20260304_141605.jpg
 annonces/61616/documents/9536d50c-74ff-4203-8fb9-da45a991139f/BV GACHOTTE.pdf
 annonces/61616/documents/b5286341-d151-459e-b037-4f2ce1f932f3/20260304_141552.jpg
+annonces/61616/documents/fd675e7e-e37e-447a-ad2d-a3d2827ddbdf/Attestation immobiliere PABIOU Marcel .pdf
 annonces/61616/documents/ffdaf4cb-9fae-46df-8399-030dac0490e5/planCadastralNormalise.pdf
 annonces/61624/documents/1e163c65-edf1-45f9-9a9b-c18cd86b9403/ATTESTATION.jpg
 annonces/61624/documents/1f4c51cc-8fcc-4cab-aad7-5b2e50119c7d/avenant 153K ok.pdf
@@ -1809,6 +1991,7 @@ annonces/61624/documents/542533e6-0ec8-4fc6-a60f-e6c22e467054/DOREAU Bastien cni
 annonces/61624/documents/54fe6ecc-942d-4638-8325-a6b9d892415a/CI JULIEN (1).jpg
 annonces/61624/documents/7177dc51-d10a-421d-b96c-bf35d83e4532/TAXE FONCIERE.jpg
 annonces/61624/documents/85cf56e8-dbec-438c-bd2e-c2e89dfba81f/mandat_exclusif_de_vente_mandat_de_confiance_groupe_gtimandat-69a14c58b094ba9ec20c6ad8.pdf
+annonces/61624/documents/887c6ec1-b2ee-4b84-92a9-f592d82411e8/offre DOREAU 153000_ H8000_ ok 28.07.2026.pdf
 annonces/61624/documents/8c1ad618-9144-4093-94ce-f0fbde16c4e7/BOURDEAU DPE.pdf
 annonces/61624/documents/9ed53f2c-3ef4-4212-8a1b-64b112da6d65/Copie Vente DUMOULINBOURDEAU (1).pdf
 annonces/61624/documents/dda497bc-23f5-40c3-ae8b-a9a57c1c2590/DOREAU Bastien cni 1.jpg
@@ -1821,6 +2004,7 @@ annonces/61632/documents/32a47d3a-8478-4a02-b8b1-dde9490a1a99/6728_-_A0_-_Lettre
 annonces/61632/documents/3eb8d66e-81a7-4854-822a-2a3ade90daf8/CNI 5.jpg
 annonces/61632/documents/478cb078-b5f0-4fca-92a1-fa8c2aebbc82/6728_-_D9_-_attestation_sur_l_honneur__19_05_2025__13_15.pdf
 annonces/61632/documents/53effaf8-2b87-43be-aa56-5394fb01e48c/planCadastralNormalise.pdf
+annonces/61632/documents/595d616b-7e9d-4c14-b40d-2a01f2b0b0f7/Attestation immobiliere JOURDY Marc.pdf
 annonces/61632/documents/59d46e2b-cd40-4ad5-8aa2-062f283d2fd6/avis_de_valeur_marche_2_1.pdf
 annonces/61632/documents/6993b066-4775-4672-b4b1-691decf2538a/CNI 6.jpg
 annonces/61632/documents/6e2fe462-53d1-46fc-9684-927f33d34630/CNI 1.jpg
@@ -1851,6 +2035,7 @@ annonces/61677/documents/066ccd24-dd5d-4c5c-8461-7b92695c8e43/Accord honoraires.
 annonces/61677/documents/0aba3246-306b-4e93-8e4f-9c774a0d28b8/identite proprietaire .jpg
 annonces/61677/documents/3f143d63-bb19-4c51-a306-c89f2b85c9ad/id verso pro.jpg
 annonces/61677/documents/5c747b6b-1542-4cc1-bbaf-257df7e70271/titre suite.pdf
+annonces/61677/documents/654edb7c-3fef-48a6-9ee4-0327a488f91a/Capture d'ecran 2026-03-23 114819.png
 annonces/61677/documents/825c3ec6-77af-47ac-88ce-1ccc27366ce9/Infos copro.pdf
 annonces/61677/documents/910241a4-a40b-4dec-9482-6ddea07c4078/Scan2025-01-23_171449.pdf
 annonces/61677/documents/9435c81f-68a8-4ca2-b5db-640f7e322f19/carte d identite1_.jpg
@@ -1872,13 +2057,17 @@ annonces/61680/documents/9f3636c8-5a2d-4206-b27b-f5804bc6dfb4/cnipigeon (1).jpg
 annonces/61680/documents/dc37985d-200c-4d93-a67f-7031858b80c3/errialparcelle000ac28263178200120251 (2).pdf
 annonces/61680/documents/dc461c17-f36d-40c2-8fb0-16ccb322a156/Plan cadastral.pdf
 annonces/61680/documents/e600ca9b-0d68-4157-bb60-8fdef7989528/dossierpigeonnathalie2 (1).pdf
+annonces/61708/documents/027baacb-b35b-4f7d-9719-e5f5d49e5496/non opposigtion et conformite DRUYER .jpg
 annonces/61708/documents/039f0b66-8163-41e8-9579-3fe34924bf4b/DRUYER LAURENCE CUNLHAT DOSSIER.pdf
 annonces/61708/documents/0cf9ca81-7bce-4154-994c-8357740e1589/1000025577.jpg
 annonces/61708/documents/0e127882-b13e-4d4c-8d77-a65ddf4b3449/cadastre AR-374.JPG
+annonces/61708/documents/11d7a0c2-fc12-40bb-8661-1049a1e2b735/mandat simple 18504 Druyer 134300_ H.9300_ 03.04.2026.pdf
 annonces/61708/documents/1af93119-d29c-4186-8abc-1f88bfeb00d2/Copie AAE PROMESSE DE VENTE DRUYER_ROY.pdf.pdf
 annonces/61708/documents/4b5433aa-2117-45f6-b985-29c4460cbc73/ROY Mathieu cni r.JPG
+annonces/61708/documents/54953c01-9648-407e-a722-4a5d1bd5b5a9/Offre ROY 125000_ H9000_ ok 18.05.2026.pdf
 annonces/61708/documents/5a526224-5395-4e39-ae24-bc711536d1a1/CNI M. DRUYER recto.jpg
 annonces/61708/documents/6a21a86b-8510-4f36-9b77-34ed273a0d6d/BV ROY .jpeg
+annonces/61708/documents/9867109e-9c0c-4c0a-a704-893d5ceca98d/demande de pret Roy CA 12.08.2026.pdf
 annonces/61708/documents/a6f48ac1-5f92-4283-86ad-0f6af4c1b8ca/ROY Mathieu cni v.JPG
 annonces/61708/documents/b33dfafb-da61-4a53-baab-5e2a2c610a83/1000025578.jpg
 annonces/61708/documents/b69cfe49-eb67-4426-a5d7-a39dc02e8bce/CNI M. DRUER verso .jpg
@@ -1886,39 +2075,59 @@ annonces/61708/documents/bd904425-3d8a-4f77-bd0b-dc8097a8bf9d/CNI Mme DRUYER rec
 annonces/61708/documents/c26778a7-9482-4167-a2ba-490b83d45eba/Fiche renseignement ROY .jpeg
 annonces/61708/documents/d1ca721d-e986-4a54-a3aa-fab36adb16cc/simulation financement ROY.jpeg
 annonces/61708/documents/ff6ce926-283a-4c2d-bae0-9550a51852d9/Permis maison Druyer .jpg
+annonces/61726/documents/009908fa-72b7-40b4-8cd0-19b477c176e9/taxes foncieres rez de chaussee et 2eme etage.pdf
+annonces/61726/documents/00a7b37f-33b2-4e47-b9ed-2b663437fc52/Devolution Successorale.pdf
 annonces/61726/documents/09cbefe5-7de2-4616-9663-a62a5faa10ca/BONNEFOY JEAN CLAUDE F2 Rdc CUNLHAT DOSSIER.pdf
 annonces/61726/documents/0a0f805f-39d7-463d-8f44-369524d35e96/CCF_000030 plans 8 mai.pdf
+annonces/61726/documents/0b46c158-b065-488d-9d7a-832acf0930ca/CCF_000069 plans des 3 etages 8 mai (1).pdf
 annonces/61726/documents/175f8ff4-d39b-4b18-861a-545293b90d79/A25630038593T audit 1er.pdf
+annonces/61726/documents/220151fa-6575-484b-a603-df6efc7e0f18/BONNEFOY JEAN CLAUDE F4 2eme Etage CUNLHAT DOSSIER.pdf
+annonces/61726/documents/2557a5cd-10d8-46a0-9db6-a6570f372138/2363E4064351S DPE 2eme.pdf
 annonces/61726/documents/30b419e4-5c9a-401d-ac10-cb018b1be0c2/plandedivisiondelaparcelleBL71.pdf
+annonces/61726/documents/37b54101-1991-4da8-ac21-a94858ddf4c2/contrat location 2eme etage CHAUTARD.pdf
+annonces/61726/documents/3e03a846-f3dd-49f2-a0eb-348e06de137d/TAXES FONCIERES 1er etage CUNLHAT 2024 (1).pdf
 annonces/61726/documents/4233cd54-8609-44d2-87b2-c6ab8953b7a5/COURRIER CONSOMMATIONS.pdf
+annonces/61726/documents/71903240-8314-4542-b2aa-dad3a7243d70/contrat location 1er etage RICETTI.pdf
 annonces/61726/documents/7cdc3e6f-ab2b-4661-b870-776cc38d9026/DIAGNOSTIC plomb 2025.pdf
 annonces/61726/documents/7e1e87b1-83ab-4f38-ab1d-96b45d16c900/plan de division de la parcelle BL71.pdf
 annonces/61726/documents/84d41672-8a94-4a63-ba5b-62ee3ebe5d89/DIAG assainissement 3 rue du 8 mai.pdf
 annonces/61726/documents/8521b840-b86f-4602-8cc4-8d38dc290f53/A25630038581H audit RdC.pdf
 annonces/61726/documents/904126aa-57b8-49cc-8e03-a4c74f92d8d3/2363E4061914Z DPE RdC.pdf
 annonces/61726/documents/9540348a-2d8d-4074-a2ea-7a1455d883a6/COURRIER LOCATAIRE.pdf
+annonces/61726/documents/9bdf4798-080c-42f6-b433-8a2404ade81e/repartition des lots.pdf
 annonces/61726/documents/a016cd5a-5b53-4aa0-a7b4-b87832160ad8/CI RIB Mireille FABBRO.pdf
+annonces/61726/documents/bfdda3fd-2383-4e47-a62d-edec6bad6e35/acte de propriete.pdf
 annonces/61726/documents/cc83d326-dd12-436c-8423-ecd2fb35b82a/2363E4066484T DPE 1er.pdf
 annonces/61726/documents/d02d9da7-c82d-410d-b1a2-8059fc195c9d/BONNEFOY Rdc D7 - DPE 2020 Etude Audit Energetique.pdf
 annonces/61726/documents/d483846b-d30e-459d-9f53-77a75c225e1b/BONNEFOY JEAN CLAUDE F3 1er Etage CUNLHAT DOSSIER.pdf
 annonces/61726/documents/d92d8c39-484e-412c-b2ca-176674c24fa8/BONNEFOY JEAN CLAUDE PARTIES COMMUNES CUNLHAT DOSSIER (1).pdf
 annonces/61726/documents/d9cb9f7b-fe53-4e49-80d0-1eb1d000cd51/CI RIB Jean-Claude BONNEFOY.pdf
+annonces/61726/documents/dcabfa92-cec3-4848-9ffc-4382a49c32a7/contrat location rez de chaussee DUFILS.pdf
+annonces/61726/documents/e0edc233-0659-4cc9-905e-5e0922144c92/A25630038596W audit 2eme.pdf
+annonces/61726/documents/f5a4d217-8b1e-4db0-9626-e105729906e3/BONNEFOY 2eme etage D7 - DPE 2020 Etude Audit Energetiqu_e.pdf
 annonces/61739/documents/0fb6dbf5-fc10-40e2-bd21-e1d1f11b50d6/LABERTHONNIERE Benoit CNI r.png
 annonces/61739/documents/158e98e7-63b2-48d0-a358-b028a0f54ef9/MANDAT EXCLUSFIF DE VENTE FORESTIER.pdf
 annonces/61739/documents/45ebabb8-fd91-4625-aa61-abb8cc717f99/Statuts sas SEBEGA.pdf
 annonces/61739/documents/4c5e2e7c-1a7b-4af5-b389-b3128bce076b/mandat EXCLUSIF 18444 vente FORESTIER 380000 Honoraires charge acq. 30000 16.03.2026.pdf
 annonces/61739/documents/66bc1f3a-33d1-4620-afbc-a12c280ff226/PROMESSE DE VENTE FORESTIER _ SAS SEBEGA 23.05.2026.pdf
 annonces/61739/documents/66e3e069-25a3-400d-b730-a1d1b54ccb5a/Immat Export_Portail_Data_SEBEGA_Du_20-03-2026 (1).pdf
+annonces/61739/documents/77928ce2-ca62-4013-bef4-17e3ed26a16b/LABERTHONNIERE Benoit CNI v.png
 annonces/61739/documents/89544cfe-9939-4a04-ab75-29fe6e0d6f2c/SIRENE sas SEBEGA avis-47994281500016-20260320143028.pdf
 annonces/61739/documents/faa7e1d9-1144-4f03-8ed4-66d1af51a653/offre d achat SAS SEBEGA ok 19.03.2026.pdf
 annonces/61746/documents/1df4dd49-f927-4589-8346-05734ab31518/Nombre de lots.pdf
 annonces/61746/documents/2bfd9563-72f0-4314-be0e-fb28ce683363/BVBonistelli955688b5c6.pdf
+annonces/61746/documents/371c0289-7c42-4454-8325-dba20411b8b7/carte identite Nathalie Courat.jpg
+annonces/61746/documents/386d4075-ab0a-4d71-86c2-4abee4a0d02f/carte identite Romain Courat.jpg
 annonces/61746/documents/45e89947-bcff-40ff-8a14-c390b9d1fbb5/DIAGNOSTICS SUCCESSION COURAT Claudette 4 Chemin de Montchaud SAINT-BONNET-LE-CHATEAU (42380).pdf
 annonces/61746/documents/55fa3f4f-7b58-41e5-9793-6f94b65a6073/TAXE FONCIERE 2025 ST BONNET.pdf
+annonces/61746/documents/63c6661e-840c-413c-936d-5020ab774734/carte d'identite Courat Jean-noel recto.pdf
 annonces/61746/documents/6a4a87df-bb17-40d8-a8fc-e734835e37de/planCadastralNormalise.pdf
+annonces/61746/documents/70eb6b21-f163-4d18-8085-c387c7ac07f6/carte identite Courat Jean-noel verso.pdf
 annonces/61746/documents/90cc19e5-6774-464d-a4f4-261f55d50b63/20250630 - Decompte de Charges.pdf
 annonces/61746/documents/9969a45c-3d31-4393-b24c-d945b0551eac/DPE attestation ADEME modif conso..pdf
 annonces/61746/documents/ac2f40a4-af06-479f-8182-cfe873129088/20260401 - Appels de Fonds Budget 01 (5) (1).pdf
+annonces/61746/documents/b230e949-5c6d-4cc2-9e9d-4a402af346b3/carte identite clement verso.PNG
+annonces/61746/documents/b5d4b03b-201a-4ea0-aee4-beb8895f4528/carte identite Clement Recto.PNG
 annonces/61746/documents/ba9dfaa6-c184-4de7-b4ca-e63c9eb35c16/contrat mariage clement.PNG
 annonces/61746/documents/d36d79c2-e72d-4a86-9942-8d749357e82b/ATTESTATION DE DEVOLUTIO_20260319160312.pdf
 annonces/61746/documents/d95aee4f-428b-4fd8-9c5c-618b13a4c07a/ACTE ACHAT BESSENAY.pdf
@@ -1932,9 +2141,11 @@ annonces/61755/documents/50d7e510-8c5f-49ab-84e7-133612d255b9/geoportail3.pdf
 annonces/61755/documents/575767aa-2917-430b-be27-68d04f249170/DOSSIER RIOUFREYT.pdf
 annonces/61755/documents/5c67d386-1c4a-464c-9327-98ed082fc307/plandecadastreavecannotation.pdf
 annonces/61755/documents/5ff94169-a0dc-4769-87cb-39387fecc3e8/plancadastralnormalise38.pdf
+annonces/61755/documents/619e48f6-1940-454d-bc07-342c37a2baf3/taxe fonciere 2024.pdf
 annonces/61755/documents/693544ce-6b90-4c19-8947-12608ef291e4/passeport laurence RIOUFREYT.pdf
 annonces/61755/documents/c7ac125c-24dd-4066-b100-3244021757ac/brouillon1.pdf
 annonces/61755/documents/d54c98f6-6545-4287-809e-28877e8ae6ea/DONATION 24-12-1999.pdf
+annonces/61755/documents/fe6f0a16-1280-47a4-b013-9184f25b3413/acte de deces Josette RIOUFREYT.pdf
 annonces/61759/documents/01a520cf-828b-4b12-8a44-7bbde3d04e43/Accord honoraires.pdf
 annonces/61759/documents/09892d2d-10bf-4183-be05-de32186a2a4f/DONATION PRADIER du 16 septembre 2006.pdf
 annonces/61759/documents/221c795f-65d0-4f46-bfaa-144276137daf/CI RENE RECTO VERSO.pdf
@@ -1944,10 +2155,12 @@ annonces/61759/documents/82c75bf2-8cad-41cd-b30e-ba38f1bddebe/5719_-_A0_-_Resume
 annonces/61759/documents/95e3f75d-daa3-44f3-8c06-8fe584629021/planCadastralSimple.pdf
 annonces/61759/documents/b4ae3285-6ece-4839-96c7-98c6e6b35bdd/accord honoraires avt 199K.pdf
 annonces/61759/documents/d0bc6b00-3689-4757-9d60-cf2333e2d0e6/ADEME DPE 2026.pdf
+annonces/61759/documents/d612071f-8a4b-4459-8d7a-0fef1c54a846/Carte Identite Eric RECTO VERSO.pdf
 annonces/61759/documents/dd232899-b07f-4d79-bff5-b84d4bd4941c/AVENANT 199K.pdf
 annonces/61759/documents/ee73c420-a209-4fd0-aedf-ee019507b862/ERRIAL_Parcelle_000-BC-133@43177_04092024.pdf
 annonces/61759/documents/f7f146a1-d5f5-41e2-846d-422d51140dec/CI Michelle Pradier VERSO.pdf
 annonces/61759/documents/fb08672d-b47d-44bf-a718-4fd0027b22d6/ID PHILIPPE RECTO VERSO.jpeg
+annonces/61759/documents/fd921a83-8df3-4995-956a-e1d010e01d99/Carte identite Michelle Pradier RECTO.pdf
 annonces/61783/documents/06965020-5133-4714-863a-c7da8be18007/planCadastralNormalise.pdf
 annonces/61783/documents/12425783-4144-4db2-8235-dc79f87d4558/24.pdf
 annonces/61783/documents/15c561ac-2915-448f-9709-cdccd51d98b0/19.pdf
@@ -1956,6 +2169,7 @@ annonces/61783/documents/21d0dff0-694d-4f7e-b8a3-472ac6c5a502/2.pdf
 annonces/61783/documents/22e010ea-360c-4f30-b161-9e5673357cda/9.pdf
 annonces/61783/documents/263e9524-0248-459d-b70f-448269add7db/PILLARD DOSSIER.pdf
 annonces/61783/documents/27fd5e94-2564-431d-acc4-e7ec19bf8b9d/1.pdf
+annonces/61783/documents/296a23d6-d80e-4fe8-bb68-639727d55d69/CI + offre STRIPPOLI 180000_ H10000_ ok 28.05.2026.pdf
 annonces/61783/documents/2bc736fe-96d0-4763-92b6-6b8093582f46/17.pdf
 annonces/61783/documents/2e33f034-ff1d-41e7-b845-f401f1b4a2c2/27.pdf
 annonces/61783/documents/2f8d25cf-892b-4122-9ba4-0ec4b9dfdc47/Cindy verso.pdf
@@ -1981,9 +2195,12 @@ annonces/61783/documents/bc881797-0dfc-4646-a538-101dc125eb36/verso.pdf
 annonces/61783/documents/d1b97e0c-ce57-4700-ad61-b0986022e278/3.pdf
 annonces/61783/documents/d5766ef4-0d8e-45a4-b1bf-dd2c791f38e9/29.pdf
 annonces/61783/documents/e7ed80b9-5b1b-4074-ae2d-5f6691d4f379/11.pdf
+annonces/61783/documents/e8493301-6e4b-4777-b775-66d57f1c4c49/Taxe fonciere verso.pdf
 annonces/61783/documents/e8f8ba07-cd23-4024-9311-f85682f03b6a/12.pdf
 annonces/61783/documents/f1d32616-e494-410a-8e09-2c3dff99476a/20.pdf
 annonces/61783/documents/f3bb6ccd-583d-4929-9423-df55068efcef/10.pdf
+annonces/61783/documents/fdf2a8ad-b0c2-4dde-ac35-0b78b67595a8/Taxe fonciere recto.pdf
+annonces/61793/documents/2623f7a5-4f6c-48fe-bbba-f2ec1c69af32/mandat Exclusif 18820 GUILLOUET 44600_ H4600_ exp.18.08.2026.pdf
 annonces/61793/documents/397838c6-13a3-4947-916c-afe921f012d5/GUILLOUET DOSSIER (1).pdf
 annonces/61793/documents/3a87e104-410c-4ef8-abd8-3603be870e7b/Copie AAE avec annexes VENTE LINEATTE _ GUILLOUET.pdf
 annonces/61793/documents/5aa86afd-11a9-4eab-8d88-9c0ac04088a0/GUILLOUET AUDIT ENERGETIQUE.pdf
@@ -1998,16 +2215,22 @@ annonces/61793/documents/f1abef70-c83e-49c0-b38f-8a0e9a03bb37/Avis_de_taxes_fonc
 annonces/61800/documents/0e6d591b-284d-4ff2-a395-9c434d05fff1/DIAGS 2026.pdf
 annonces/61800/documents/30127b82-e37b-4632-94ec-db33f8b9d0c9/Infos SCI.PNG
 annonces/61800/documents/46e0fc92-32ef-4a37-a667-f57124b2d855/SCI SERVAT - Extrait d'immatriculation.pdf
+annonces/61800/documents/501517ab-1035-4d99-8b3e-46218ee59974/Taxe fonciere 2025.pdf
 annonces/61800/documents/6eeddd07-ec25-47c7-9a54-53d6764e9273/SCI SERVAT - Statuts constitutifs.pdf
 annonces/61800/documents/895a127d-b79d-4758-b5e1-01832e65d9a7/Facture vidange assainissement.pdf
+annonces/61800/documents/e7ba124d-a3f5-40c7-95f0-cee6b044eb83/Titre de propriete.pdf
 annonces/61800/documents/e9ef890e-5177-45d2-8cb8-0c76288539dc/Cadastre 1.pdf
 annonces/61800/documents/f0f7a5b4-7f98-4f8c-91b1-32bb7f3e2f41/Cadastre.pdf
 annonces/61800/documents/f63d2344-b498-4e33-b4c6-2b7aceda3625/EDR 30-03-2026.pdf
 annonces/61800/documents/f9d70c97-e7ce-4f41-8cb1-5ef9d687c6d1/CI SERVAT Patrick.pdf
 annonces/61830/documents/01b05e27-1126-4cf0-bda3-0435f4e123b0/VENTE CTS HENNION _ BERNARD.pdf
+annonces/61830/documents/12abb20e-4f2c-4a27-9235-db6bb9c6e64f/Facture L'OUVERTURE MENUISERIES _ FERMETURES du 25042025 - 2.pdf
 annonces/61830/documents/668a5220-a091-4923-895f-567eeda95a9a/diag elec Echaffoy.pdf
+annonces/61830/documents/84e22886-f29a-4e58-9f13-a995fbe16613/carte identite Cecile Nicod Bernard.pdf
+annonces/61830/documents/92998f26-a4a8-49da-883c-0188cb5ce18a/carte identite Pierre BERNARD.pdf
 annonces/61830/documents/add288c0-dcd3-426f-ab40-98ed6409cb56/SPANC Echaffoy.pdf
 annonces/61830/documents/ae70e421-6f23-49ee-848c-fd866e46d587/diag amiante Echaffoy.pdf
+annonces/61830/documents/b4915640-8c9e-43aa-ab13-12b0c9b2a77a/facture rehausse 2 portes.pdf
 annonces/61830/documents/bcaa6f61-7ad7-4f99-a8e1-8e35b035b2c8/Facture plancher.pdf
 annonces/61830/documents/f45fbe8d-d00b-488b-9b53-3abbf863ce37/Avis_de_taxes_foncieres_2025 (1).pdf
 annonces/61838/documents/080f1e09-2eaa-4885-b743-7248a666713f/CNI MR BRUN VERSO.jpeg
@@ -2029,18 +2252,22 @@ annonces/61838/documents/c2eb51cc-bae9-4aec-9614-37e8430346fe/CNI MME BRUN RECTO
 annonces/61838/documents/e6eff7e3-90e7-4478-8232-8ecfecdb704c/CNI MME BRUN VERSO.jpeg
 annonces/61838/documents/fcbc3553-c10b-4f2f-b0fb-d2278480fe8b/CNI MR BRUN RECTO.jpeg
 annonces/61844/documents/16c94001-b91d-4fef-ab78-1004562f6c52/Offre d'achat YAHYA DIT CORCHIA ok 28.04.2026.pdf
+annonces/61844/documents/1d340418-5b27-43c7-b1b5-6b6490ecbfd3/Taxe fonciere 2025.pdf
 annonces/61844/documents/4098d450-b8ed-4faf-880e-e763a44474cb/Cadastre.pdf
 annonces/61844/documents/4a44c1b5-3259-4eae-9c8e-956c373ef7aa/annulation offre YAHYA 27.05.2026.pdf
 annonces/61844/documents/4b992acc-cdef-4915-bdfb-555d6556d976/accord des parties pour maintenir l'offre initiale.pdf
 annonces/61844/documents/6143437f-478f-432d-982b-f304f45bee6d/EDR 20-03-2026.pdf
 annonces/61844/documents/685775ca-a850-4473-a6df-bc3096904ecc/DIAGS 2025 CHALET GAUCHE.pdf
+annonces/61844/documents/7efc187f-7682-414d-9095-3703dea4fc8e/CI YAHYA DIT CORCHIA Steve et Angelique.pdf
 annonces/61844/documents/7f146fc2-74ac-4505-87f3-d2f493f47a77/DIAGS 2021 CHALET GAUCHE.pdf
 annonces/61844/documents/868b5c8f-023e-40b1-9626-91bbb21e4a06/DIAGS 2021 CHALET DROITE.pdf
 annonces/61844/documents/87726c5c-95e4-4997-9464-c630e195402d/Copie AAE PROMESSE DE VENTE BARONE _ YAHIA DIT CORCHIA _pdf_20763388.pdf
+annonces/61844/documents/aacb85a5-f8c1-47fd-9b0d-5e88348affe3/Titre de propriete.pdf
 annonces/61844/documents/bb48e57b-5bb6-427d-9a0c-066ad42ff610/Cadastre 1.pdf
 annonces/61844/documents/bb82300c-d22b-4f63-a212-b4b0a8b8d157/CI BARONE Annie (1).JPG
 annonces/61844/documents/e39ea018-f98a-44a0-8307-6919aef1385d/DIAGS 2025 CHALET DROITE.pdf
 annonces/61844/documents/e9a796e3-8d97-461b-97a6-2ea8b8e3bb9d/CI BARONE Annie (2).JPG
+annonces/61851/documents/03c26c45-e659-4054-aee0-0c1f181ea69f/Acte de deces.pdf
 annonces/61851/documents/0bb0791e-7ede-4695-8f0f-c696661f7042/CLERGUE SUCC AUDIT ENERGETIQUE VERTOLAYE.pdf
 annonces/61851/documents/12d79619-ce28-4e3b-948b-ee8512cf3728/20260601-attestation de propriete.pdf
 annonces/61851/documents/1677b875-cfe3-4271-a1e2-7e59a9d60804/20260601-page 7.pdf
@@ -2104,9 +2331,12 @@ annonces/61875/documents/0ac2360d-8df6-4480-900d-9267eb4bc25f/cnianisandredelarc
 annonces/61875/documents/1a382940-b37b-40ee-b359-288881d168d0/auditenergetique031224avpingenierie.pdf
 annonces/61875/documents/26c27ff2-8b78-46b0-96a9-9f97524510f3/planCadastralNormalise.pdf
 annonces/61875/documents/2ea604ad-a2d1-4c1b-ac6a-1d5fad0a4d98/copieaaepromessedeventelacandredelarc22688378 (1).pdf
+annonces/61875/documents/2fa69fad-6824-43b1-a435-d65d926323d6/Societe DCMH a 43260 SAINT-PIERRE-EYNAC - SIREN 999 735 277 _ L_Annuaire des Entreprises.pdf
 annonces/61875/documents/301c1b00-fcf6-4621-b9b3-132929f580b3/diagscomplets040724avec2dpelocalapparts1.pdf
+annonces/61875/documents/30956143-1a95-4eac-8f8a-08867d17ad74/offre d achat CELLE FAURE 90000_ H5000_ ok 21.05.2026.pdf
 annonces/61875/documents/31dd22b5-d938-415c-8a47-7fa456d1b574/facturetraitementcharpentefev20201.pdf
 annonces/61875/documents/411de63d-dcd0-4d90-846a-f33ec4fa5fa4/Copie AAE PROMESSE DE VENTE ANDRE DE LARC_CELLE-FAURE_pdf_21468778.pdf
+annonces/61875/documents/5762b055-9ffc-4df5-a06e-85d8151112d5/Dirigeants - Societe DCMH a 43260 SAINT-PIERRE-EYNAC - SIREN 999 735 277 _ L_Annuaire des Entreprises.pdf
 annonces/61875/documents/595b3dd0-8531-4863-bd34-a438faf86a61/questiionnaireequipementsbien.pdf
 annonces/61875/documents/5d0c2147-4ca7-4997-af4e-691a0a90b6ba/DCMH - Copie des statuts.pdf
 annonces/61875/documents/64234be4-edcd-45a7-93ac-f8e5899bde69/TAXE FONCIERE 2025_22969445_21339948.pdf
@@ -2150,14 +2380,27 @@ annonces/61904/documents/d4697abf-243a-4fc7-acc8-8c6f7b608cbd/CNI P PEYRET.pdf
 annonces/61904/documents/dfa3f8b4-4423-4138-bc49-411152c8454d/Plan Peyret 1.pdf
 annonces/61904/documents/ec90f7e9-f537-4eef-bd52-edd08cddad7a/PEYRET DOSSIER MAISON.pdf
 annonces/61922/documents/0cf02af8-dbe7-4b76-aec5-24cd30851c7c/Cadastre 1.pdf
+annonces/61922/documents/0e8d1d37-7cd4-44c6-9ef5-606aa9bd0bee/Vente VIGNAL a MAHINC 20.05.1989.pdf
 annonces/61922/documents/1374c16d-531e-4549-8f39-f5cc33dc201a/DIAGS 2026.pdf
+annonces/61922/documents/1e90ace2-34de-4851-9e65-cd7447f91b77/CI MAHINC Herve.pdf
+annonces/61922/documents/385b1e59-8120-41c4-92a1-2434e63ec521/Succession_ Andre MAHINC.pdf
 annonces/61922/documents/43f4ddf1-7842-4ca6-8728-0de2e05e1071/AUDIT ENERGETIQUE 2026.pdf
+annonces/61922/documents/4795a7ca-0489-4bf8-94be-80b6fed265d7/Offre d'acha contresignee vendeur JANUEL Nadine - MAHINC Marie Claude.png
+annonces/61922/documents/48ca38e3-6d4c-402a-82fa-c8fe8cc524a1/Offre d'achat signee acquereurs (2).pdf
+annonces/61922/documents/4be0371e-8370-4fe8-aa2f-51666787a126/mandat Exclusif MAHINC 76600_ H6600_ exp.26.5.2027.pdf
+annonces/61922/documents/556b1472-a035-49a4-baf8-0af29715cb86/Taxe fonciere 2025.jpg
+annonces/61922/documents/6040fa15-76bf-4119-bc7f-42b24d97e69c/Vente ind FRADEL a MAHINC 08.01.2009.pdf
+annonces/61922/documents/6b24825b-382c-48ea-8b86-80ff1b191536/Vente ind GIBERT a MAHINC 25.08.1973.pdf
 annonces/61922/documents/71ff7609-c599-4404-80e5-4d91b064f85d/PROMESSE DE VENTE MAHINC _ CIGLIANO p1-25.pdf
+annonces/61922/documents/73d42435-463d-4655-9869-52357c2c99e8/Offre d'achat contresignee vendeur MAHINC Herve.jpg
 annonces/61922/documents/7778d84b-8eef-47d0-b05a-13bca72fcc02/CNI Marie-Claude MAHINC.jpg
+annonces/61922/documents/883f8699-cf72-4bb3-8ddf-91868bf2bef2/Taxe fonciere 2025 (2).jpg
 annonces/61922/documents/88c2f4ce-5f65-4e66-9582-29995153ac37/CI MAHINC Marie Claude (2).jpg
+annonces/61922/documents/8dfa5710-0cce-408b-a6df-edb59de1534f/CIGLIANO Serge et Gisele r.jpg
 annonces/61922/documents/9d472372-c4e9-40ae-9435-df06c28a06ee/ANNEXEMAND_6a0f452e7f3cb.pdf
 annonces/61922/documents/af13982a-1b3a-41cb-ae1d-adbf4c49ffcd/CI JANUEL Nadine (1).jpeg
 annonces/61922/documents/baf8b86f-3a4f-4b25-ac10-e55310a5155c/CI JANUEL Nadine (2).jpg
+annonces/61922/documents/d56e1e00-ae5f-49cb-91b9-884786eb0c09/Taxe fonciere 2026 (1).jpg
 annonces/61922/documents/da4ce3b3-7ddf-4e59-a64c-9080150cb2fc/PROMESSE DE VENTE MAHINC _ CIGLIANO p26-51.pdf
 annonces/61922/documents/eec635a6-912c-4375-a96b-068487d39db4/EDR 21-05-26.pdf
 annonces/61922/documents/ef43918b-b847-423d-a4eb-f362ce40d25a/CIGLIANO Serge et Gisele v.jpg
@@ -2168,6 +2411,7 @@ annonces/61924/documents/0e77f59e-718d-438f-a0c3-f0c6db1b6f5f/BDV DANIEL.pdf
 annonces/61924/documents/1633b9fb-3843-43c9-8591-be9a1690f574/serna_22012025_constat_amiante_avant_vente_listes_a_et_b_.pdf
 annonces/61924/documents/16bdd511-e376-4db3-907f-31c5b6610c40/APPEL DE FONDS 1ER TRIM 2026.pdf
 annonces/61924/documents/1d0f42ba-0f99-4b12-bbc6-fb3c31bacfb6/serna_22012025_etat_de_l_installation_electrique_fd_c16_600_octobre_2017_.pdf
+annonces/61924/documents/1d194c58-12b4-4b1e-bbe8-4c10592b7560/mandat exclusif 18506 Serna Albourie 117000_ H.8000 16.04.2026.pdf
 annonces/61924/documents/3ec9c8ab-189a-48f6-be31-da44fab021bb/cni_albourie_r.v.pdf
 annonces/61924/documents/4fc0295d-007e-4d19-859f-c82ae9c92f36/RG_CC_20230101_151881.pdf
 annonces/61924/documents/6749d3da-2252-4ec0-8fc9-f6e25e00812d/attestation_sans_prix_acte_100063503_20106096.pdf
@@ -2193,27 +2437,32 @@ annonces/61929/documents/6319e199-5d52-479c-aa36-9eea34b44c09/20260506_141436.pd
 annonces/61929/documents/711740ff-ff2b-4e51-85dd-c0af44dd6869/RABOUTOT-06122024 Constat amiante avant vente (Listes A et B).pdf
 annonces/61929/documents/8f1fcbf4-7dd2-4531-accf-afa44860b2a5/RABOUTOT-06122024 Note de Synthese VENTE.pdf
 annonces/61929/documents/9d8b32dd-7435-471f-92e9-35d1dc356331/IMG_3308.jpeg
+annonces/61929/documents/a8399055-7fc1-4e98-9e0b-366f4577fef4/avenant 189 900_.pdf
 annonces/61929/documents/ad4bb194-9dcf-43cf-98c4-a85ba7e00c27/RABOUTOT-06122024 Note de Synthese VENTE.pdf
 annonces/61929/documents/c61c5dfa-8f10-41b0-83b0-8c31b433fb20/IMG_3307.jpeg
 annonces/61929/documents/c65b39bc-4b1f-4076-80c5-de725088e8db/Facture EDF 2024.pdf
 annonces/61929/documents/d2ea767f-d0ae-4949-b391-3e8d52dc4707/planCadastralNormalise.pdf
 annonces/61929/documents/eb5b4ea0-1c0a-48d1-ad89-d12bc773282f/TaxesfoncieresavisLARICAMARIE42TaxesFoncieresavisLARICAMARIE42.pdf
 annonces/61929/documents/eda6a7a2-6651-49f8-a3e9-92ee95447900/IMG_3309.jpeg
+annonces/61929/documents/f0163e9b-bfd5-4e3b-b298-7c15b5bd4f65/RABOUTOT-06122024 Etat de l'installation electrique FD C16-600 (octobre 2017).pdf
 annonces/61929/documents/fa45f680-4e85-4808-903d-968f4cf2cad7/RABOUTOT-06122024 Etat de l'installation de gaz NF P45-500.pdf
 annonces/61929/documents/fe16a87c-9216-45ef-a67b-aebedb85fac7/20260330_151515.jpg
 annonces/61936/documents/17c1172a-b6a9-4d60-a460-8d63541dec21/cnitftp.pdf
 annonces/61936/documents/20be96da-880c-4e83-9f6e-9c90411de888/cnigabrielgeorge1.jpg
 annonces/61936/documents/36e42699-2ab8-4e3a-82ff-b59e0fb68b81/cnigabrielgeorge2.jpg
 annonces/61936/documents/71ecfd2f-7e12-480a-8409-e69a5bb282ce/cniclaire1.pdf
+annonces/61936/documents/76a64a3d-f7e0-4e93-a343-60913e673f84/mandat Semi-Exclusif 18499 GEORGE 87000_ H.7000_ 02.04.2026.pdf
 annonces/61936/documents/8964d2fe-4b5c-4bad-a0d2-c5fb6f75d0ed/Accord mandat sans annexe.pdf
 annonces/61936/documents/96b0a1e6-d10d-4ba4-a82c-ac762fdf4a08/cni2.pdf
 annonces/61936/documents/a98f8f73-1666-42ab-8cf1-dba0e2930405/plan_cadastre_geores.pdf
 annonces/61936/documents/bb6ef2bb-1019-4de8-843a-5267ac934baa/accordpublicationsanscni.pdf
+annonces/61936/documents/fe673d99-82d3-4cd4-bb8e-a14e03380166/CI + offre d achat CHARRETON 80 000_ H5000_ en attente.pdf
 annonces/61945/documents/268dbf89-7912-4b14-ad83-dc5a2d644eb0/CNI Anne Sophie LEREST recto .jpg
 annonces/61945/documents/427baa54-1d73-43e0-8a2e-7bc84835a048/CNI Gaetan GENESTAS verso .jpg
 annonces/61945/documents/5a05cf1f-9c57-429e-b7e5-a11bd6fbbe7c/CNI Anne Sophie LEREST verso .jpg
 annonces/61945/documents/6bd8e9ca-d5b9-4386-b76f-47d380162f2e/GENESTAS AUDIT ENERGETIQUE.pdf
 annonces/61945/documents/8a17acc8-08b9-4cc3-8559-f7bdd80bda8a/CNI Gaetan GENESTAS verso .jpg
+annonces/61945/documents/9adf70f5-c7dc-4636-8249-1564a8902ccc/Attestation de propriete LEREST GENESTAS.pdf
 annonces/61945/documents/a83d7759-452e-40b4-b60e-63a5c26f1930/CNI Gaetan GENESTAS recto .jpg
 annonces/61945/documents/b18c081c-763d-4830-98b2-1194cef8c45e/GENESTAS DOSSIER.pdf
 annonces/61945/documents/bee07626-0e6f-4671-9239-eccfe2fa656a/planCadastralNormalise.pdf
@@ -2245,18 +2494,22 @@ annonces/61997/documents/081b1c6c-8b28-4658-86d3-87f9fcb4c972/AVENANT 123000.pdf
 annonces/61997/documents/0f69d759-d67d-4378-abd3-e65edebb0732/DPE.pdf
 annonces/61997/documents/18ec0e2e-76d3-4855-8ec5-db87ecbfecdf/Cadastre.pdf
 annonces/61997/documents/35b7059e-f76d-46de-8731-a9eb60e22e1b/Attestation vente.pdf
+annonces/61997/documents/3bc04445-7f6f-44af-8161-79b44eb09f9c/E_uLECTRICITE_u.pdf
 annonces/61997/documents/5e9ccbf5-582f-42f6-9d76-a0c8f6dcb4ac/CI Anne.pdf
+annonces/61997/documents/63d318b0-b37c-4112-a629-9f2ad5ba7e14/RE_uSUME_u.pdf
 annonces/61997/documents/8843f4a7-00de-4eea-887c-644758c23498/planCadastralNormalise.pdf
 annonces/61997/documents/8c6dd84b-da45-4ff9-a3ce-f432b774a5a8/Avenant rectificatif lots copro.pdf
 annonces/61997/documents/94c8c9bf-5ac9-4671-997b-75bc330f5341/ENSA AU 25042026.pdf
 annonces/61997/documents/97ba91ee-7b64-4523-8625-991fd90a95ce/Modificatif reglement copro.pdf
 annonces/61997/documents/b07ea099-e1ea-4c79-a1ff-1a87a6278672/AVENANT 115K.pdf
+annonces/61997/documents/c03a8724-d7b7-48eb-88fb-8805b2285c45/ATTESTATION SUR LOCOHONNEUR.pdf
 annonces/61997/documents/cfb3d3ba-ccbe-48fb-9a16-082322aa3115/ERPS AU 25042026.pdf
 annonces/61997/documents/ea908273-08b0-47f7-b26d-dcb130900807/Reglement copro.pdf
 annonces/61997/documents/fac79ab5-2b6b-4049-b8ed-ad282df45198/CI Anne 2.pdf
 annonces/61997/documents/fc0d5743-3460-48ab-8c1a-d26c37174dd1/Facture.pdf
 annonces/62013/documents/00b8e0d0-3490-4a1a-a441-b5d4741f6376/20260424_110706.pdf
 annonces/62013/documents/20592b1a-dc5e-4662-8e9b-4a1d26daecf3/20260424_110521.pdf
+annonces/62013/documents/4f17a839-f466-475c-b19c-c47ee65725f7/MASSON 15 J Rue Leo Lagrange 42240 UNIEUX.pdf
 annonces/62013/documents/7e1a3a8a-9506-42d7-94d9-dc3680b5c905/20260424_110615.pdf
 annonces/62013/documents/7f2fcdb9-2d91-4d2e-b119-bf3304ef01ae/20260424_110743.pdf
 annonces/62013/documents/afd6e2b9-edf6-44f8-bf59-424fcee1b1a0/planCadastralNormalise (1).pdf
@@ -2270,6 +2523,9 @@ annonces/62021/documents/d6518fd1-f45b-4246-a3b0-e611e5855a4d/copieaaeattestatio
 annonces/62021/documents/efb7728c-f9fc-4154-a548-76f82a8f20f6/diagnostics.pdf
 annonces/62021/documents/fe09880d-3aaa-47a9-a479-74e1a593c0c0/passeportmrjourjon (1).pdf
 annonces/62028/documents/0d005c77-1de2-4689-87d4-e140c29e6931/Emmanuelle Souche - Passeport.pdf
+annonces/62028/documents/3d258bd2-2ecb-4a95-b420-7215aea0dedf/coordonnees famille de Jocelyne ARNAUD.pdf
+annonces/62028/documents/46638b6d-9f80-4547-8a7f-3f06f98aca65/Declaration d_option de succession .pdf
+annonces/62028/documents/6139986d-0a27-4dec-a651-b8de8e6cb500/CNI Cecile Arnaud.pdf
 annonces/62028/documents/6b943da9-b70c-4df6-9899-f8bf1b634b01/CNI Samuel Arnaud ID.pdf
 annonces/62028/documents/7dc20ac7-144f-4667-b491-bcd03d3efade/CNI Arnaud Bertrand.pdf
 annonces/62028/documents/94a44647-3131-4171-b212-c3d31dab64fe/planCadastralNormalise.pdf
@@ -2277,6 +2533,7 @@ annonces/62028/documents/aa85a7be-4a9a-44ca-9891-d936b3719542/Factures Arnaud.pd
 annonces/62028/documents/cbdcc5d3-33c6-4b29-9377-0e9ad5258d06/ARNAUD_8783.pdf
 annonces/62028/documents/d6f9e440-d16d-487e-afa7-a4dcf1478d90/Acte de vente terrain.pdf
 annonces/62028/documents/ebce6ede-e92b-4500-b384-385bed5b1367/acte de succession.pdf
+annonces/62028/documents/f13d4193-dee3-412b-9d89-bfd95cddf621/carte d'identite Delphine 2024.pdf
 annonces/62028/documents/f5e91cab-c2de-4917-8ee8-585d350af620/CNI Arnaud Fabien.pdf
 annonces/62057/documents/0c4a7bab-8129-48ae-8c48-16d73f592397/954B2BF6-0DBC-4555-9C8F-262CBEAB33D9.jpeg
 annonces/62057/documents/127b2bf6-85c3-4a70-bd8e-9a19aff6cefe/Juge des tutelle.jpg
@@ -2314,6 +2571,7 @@ annonces/62058/documents/f032c193-fdbe-4c8d-95e2-5d6b7840118b/Notes.jpg
 annonces/62058/documents/f192219b-c5a5-4ca5-9b36-f8a1e1b5f5fe/Plan 2 SINTEZ.pdf
 annonces/62058/documents/f5381e1a-ed22-4232-a8d7-c9788ce4982e/TP.jpg
 annonces/62061/documents/00933cc1-6e25-440a-ae20-3259df3d6a87/Cadastre.pdf
+annonces/62061/documents/6469fc74-40ee-4159-9f69-d97774f886fc/Taxe fonciere 2025 (1).pdf
 annonces/62061/documents/6762b785-5af1-40b6-9412-6437e6f4ea68/CI HIMBLOT Christophe (2).jpg
 annonces/62061/documents/977e3148-79ac-440d-be57-25e31a9c4264/Livret de famille - mariage.pdf
 annonces/62061/documents/acfd2116-0f9a-45ff-b1bd-d8a686a362aa/CI HIMBLOT Christophe (1).jpg
@@ -2321,13 +2579,17 @@ annonces/62061/documents/b27607f9-2a21-45d0-bc65-1307db28a3b5/suivi LRAR adresse
 annonces/62061/documents/b9022400-370d-4c78-a139-4d088825a4aa/CI WURTZ Philippe.pdf
 annonces/62061/documents/bba1022a-3ba8-40d3-a178-7e46c5c3a80b/Cadastre 1.pdf
 annonces/62061/documents/bcf55202-63e4-433c-b70e-0c42c43eb7a6/AR HIMBLOT.pdf
+annonces/62061/documents/bf0fde70-6085-4a5f-ad63-00f95a905828/offre d achat HIMBLOT 21500_ H2500_ ok 28.05.2026.pdf
 annonces/62061/documents/bff19219-b94c-4de1-9af6-1f6813e8e9e9/Mandat de vente 2026 (1).pdf
 annonces/62061/documents/c76a7610-efb2-470c-b21a-fde42e55fee0/EDR 22-05-26.pdf
 annonces/62061/documents/d59c13f7-4360-4ece-aef3-e45a0f31e613/LRAR annulation offre HIMBLOT 18601 01.07.2026.pdf
 annonces/62061/documents/d5cb7e1b-33b3-43fa-a6c9-f92de3ce358c/Mandat de vente 2026 (1).pdf
 annonces/62061/documents/d7004eb4-0e93-4906-a9de-835443220938/Mandat de vente 2026 (2).pdf
+annonces/62061/documents/ee48889f-67a1-4c98-bea7-1d5c3e5c77ce/Attestation de propriete (1).pdf
 annonces/62061/documents/f3087df4-8b05-419b-a005-c7265692af3b/CI WURTZ Melsicora (1).jpg
+annonces/62061/documents/f42ed8e7-d5f7-442e-b0f5-b51d7435483b/Taxe fonciere 2025 (2).pdf
 annonces/62061/documents/f93259fd-5ee1-4e5c-bd59-04bd8963c99e/CI WURTZ Melsicora (2).jpg
+annonces/62061/documents/fdf7c8f1-05ec-4b52-b689-9086a37716e9/Attestation de propriete (2).pdf
 annonces/62062/documents/1625330b-6254-4dbe-8a95-bf7274f140dc/26_BOURIN_7680_-_A3_-_Facture_FA26-267257__23_06_2026__23_15.pdf
 annonces/62062/documents/6c34dd40-c6c4-40f1-9401-7e2553be23a6/InformationsParcelles (1).pdf
 annonces/62062/documents/722a5183-3308-4401-bb58-73ea528cfdc8/CNI Bourin Brigitte.pdf
@@ -2351,13 +2613,16 @@ annonces/62066/documents/6a8aaa53-ca4c-4c34-9140-2d36fda0e6d1/TP7.jpg
 annonces/62066/documents/86abf41d-6bf2-4597-8955-cb21fb4878fd/Assainissement ROUX.pdf
 annonces/62066/documents/8a97d72a-b96a-4d19-8b74-dd5362346462/CNI2 ROUX.jpeg
 annonces/62066/documents/8fe0581d-d981-4c43-a082-db477eb1ebc3/TP4.jpg
+annonces/62066/documents/c53906cf-c689-4a7e-9f76-5f0f8698ca13/offre ROUSSEL 173000_ H.10000_ ok 28.05.2026.jpg
 annonces/62066/documents/d0f68182-295c-4031-8400-8b44400de893/CNI1 ROUX.jpeg
 annonces/62066/documents/d240eade-ae1d-49e7-ab64-67d93f085957/TF 2 ROUX.jpg
 annonces/62066/documents/ef1d452b-66ca-47a7-b45c-af34e216fdb7/retractation offre ROUSSEL 09.06.2026.pdf
 annonces/62073/documents/0614cadb-0a3a-4430-980a-95df100c4f02/Avenant 139 000.PNG
 annonces/62073/documents/26e87194-9ed7-4408-ab97-33dca241a97b/Cadastre.pdf
 annonces/62073/documents/3195e338-8f7e-4289-a542-68c851975850/taxes foncieres2025.pdf
+annonces/62073/documents/31b1804c-2216-4bdd-9408-e131b702ce43/Capture d'ecran 2026-05-11 100345.png
 annonces/62073/documents/36230720-827c-49a8-8ea9-543955e0480e/4243_2024_12_88649_KESKIN_DDT.pdf
+annonces/62073/documents/3e8df426-d530-48cf-a891-a16e6777ab79/Capture d'ecran 2026-05-11 100404.png
 annonces/62073/documents/52fe7454-ab09-48c0-a33c-7d4a69072f6a/Modificatif reglement copro.pdf
 annonces/62073/documents/71f2849c-be38-4d93-88d5-62f480824c7d/Reglement copro.pdf
 annonces/62073/documents/7e22c5da-bed0-4d7e-8335-bf52cf06752a/Donation.pdf
@@ -2376,10 +2641,13 @@ annonces/62075/documents/893e690c-9f94-40ec-8285-9cfc6ca9d865/CNI 2 jeannot.pdf
 annonces/62075/documents/9b596996-1e77-4d1d-9b68-adedfd42b780/PASSEPORT CHANTAL 2203.pdf
 annonces/62075/documents/9ba89d48-91fa-4c4a-aef3-fd7a143f6e8c/CLEM PASSEPORT 2025.pdf
 annonces/62075/documents/9beefe40-fb20-4e11-9fc3-ae18004f0f64/JUGEMENT HABILITATIOIN FAMILIALE 240125.pdf
+annonces/62075/documents/a6ae09c0-9a1f-4185-a943-ed7435af336f/Fiche information detaillee d'une parcelle - Geoportail de l'Urbanisme.pdf
 annonces/62075/documents/bed4e6d4-67ef-42f9-872b-ada98e8b21da/saint didier acte notarie rachat maison 1998.pdf
 annonces/62075/documents/d799e424-9962-4595-b03b-be7d8bb83397/Avis_de_taxes_foncieres_2 2025 ST DIDIER.pdf
+annonces/62075/documents/df9d4906-eb5b-4ff5-9bb8-b84954a6bedb/COLOMBET-MAISON-29052024 Etat de l'installation electrique FD C16-600 (octobre 2017).pdf
 annonces/62075/documents/e8bb2a6c-b20c-498c-9469-743344394987/COLOMBET-GRANGE-29052024 Constat amiante avant vente (Listes A et B).pdf
 annonces/62076/documents/0e8119b3-056f-4c18-8aae-4048500b953e/DONNIOU OLLIERGUES DOSSIER.pdf
+annonces/62076/documents/1e81ebab-9ada-43f8-b632-25a1970c9a23/mandat Simple DONNIOU 90000_ H6580 exp.14.05.2027.pdf
 annonces/62076/documents/1e9b1294-e9db-4bdb-9a8d-d11b392d665a/Permis_construire_2sur2.jpg
 annonces/62076/documents/21a8f4d6-12e1-4cac-8bbc-9dcb5699aaa9/planCadastralNormalise.pdf
 annonces/62076/documents/2439bb9d-d752-456e-9487-eabe27ea67cc/IMG_20260420_160922.jpg
@@ -2390,9 +2658,12 @@ annonces/62076/documents/5318506e-5d82-4a57-8434-1273be537bdc/CNI_R_DONNIOU (1).
 annonces/62076/documents/6cafa7b1-e9a7-4c8b-bc49-65322e7910ba/36A55D8E-EDC7-4260-B63B-E0926DDA207D 2.jpg
 annonces/62076/documents/7ff1fd6d-6401-4b4b-804a-fa159f55b284/livret_famille.pdf
 annonces/62076/documents/8122f2ec-383f-4d82-836a-7b17cdcf20cb/ANNEXEMAND_6a04547ae72de.pdf
+annonces/62076/documents/91da3c5a-a39b-4828-a751-26af5391b783/offre GROISNE 82000_ H6003 ok 27.06.2026.jpg
 annonces/62076/documents/a597aa09-8690-4897-bf57-b8116c5a0051/Permis_construire_1sur2.jpg
+annonces/62076/documents/db4f6e67-fe97-4e01-83f5-a301f7b1a253/Taxe fonciere olliergues 2024.pdf
 annonces/62084/documents/06fb0ff7-dbb3-4188-89c9-4266a9f9c21b/7270-DIV.pdf
 annonces/62084/documents/53be6e97-ce00-4292-b648-d00f2ebe1e2e/planCadastralNormalise.pdf
+annonces/62084/documents/66d12b12-d4dc-4c66-85eb-4dd31d05c93e/Avenant signe-MAZET.pdf
 annonces/62084/documents/94bfbde0-f332-46a0-8164-f756cb1a7c4e/Business card - 22 avr. 2026 - 15-28.pdf
 annonces/62084/documents/bb78f37c-5549-472c-aa55-2a1cb1243de5/AVENANT MME MAZET.pdf
 annonces/62084/documents/c26fbb29-6849-49fc-a548-6c8572e3f4ab/ERRIAL_Parcelle_000-BR-69@43211_27042026.pdf
@@ -2403,42 +2674,55 @@ annonces/62084/documents/fdb10623-3aca-4711-ac08-12b2e1b5f6b2/Doc - 22 avr. 2026
 annonces/62094/documents/054057ed-c074-4fec-b1a4-0a84077d7a39/EDD.pdf
 annonces/62094/documents/3f939021-47ab-4a4a-8a5b-a97a523fbf14/Carrez Appartement Etage 2 Droite.pdf
 annonces/62094/documents/492f0d4e-a386-46aa-83c5-ae5c122fb226/Annexe mandat.pdf
+annonces/62094/documents/4b89fbf7-d3c0-4026-9a23-d9f5c49039ef/RESUME.pdf
 annonces/62094/documents/5d25e33b-6ae2-42b0-8bc6-7007ae5085da/CNI VERSO.jpg
 annonces/62094/documents/5df61e3e-c4a2-49d2-b193-b9c17afea0fb/ICPE AU 01062026.pdf
 annonces/62094/documents/6d47aadf-a424-4e1a-9234-3a90d3a7431f/AMIANTE.pdf
 annonces/62094/documents/8cc1e982-ddea-4817-ac9c-c5b28045fe9e/CARREZ.pdf
+annonces/62094/documents/988a92c7-d8a2-4e46-a90c-617a14f35a5f/11-01-1980 Modificatif RCP 13 Place du Marche (pas de plan).pdf
 annonces/62094/documents/9cc450e6-97e7-4c94-963a-f4e59c4a8f2e/ENSA AU 01062026.pdf
 annonces/62094/documents/a45513dd-4cd8-4896-aae0-348f2dd965fb/DPE.pdf
+annonces/62094/documents/a6a4ef81-a0b4-4b99-b52d-ac00dd557a5f/ELECTRICITE.pdf
 annonces/62094/documents/a9817c9e-9deb-468b-b79d-3339be7c26c1/ATTESTATION SUR L'HONNEUR.pdf
 annonces/62094/documents/b90f8c7a-934e-4fa8-8d44-5dbba46d1f70/ERPS AU 01062026.pdf
 annonces/62094/documents/c0abb423-fb40-4134-b225-e171a4f6e88d/BAIL.pdf
 annonces/62094/documents/c3d2ab1a-27e5-4c22-b643-39ad9b8b9bb5/planCadastralNormalise.pdf
+annonces/62094/documents/d59f0ee1-1525-4074-8646-dbab3e467b68/Copie AAE PARTAGE M_ Andre RABY_pdf_20882004.pdf
 annonces/62094/documents/dac8833a-a14c-481a-92d9-bbfdb2a132ee/CNI RECTO.jpg
 annonces/62094/documents/e14fcb91-9651-438f-97cf-d7230f6f3059/ERP AU 01062026.pdf
 annonces/62094/documents/f17affe2-c92f-4303-8efe-4199ea9c2805/PLOMB.pdf
 annonces/62094/documents/feca96c6-a44a-473e-b490-8deb98a7e340/MANDAT 18570.pdf
 annonces/62106/documents/084c4718-dbda-4e23-8ef7-5eeafd0eaf30/Accueil11052026.pdf
+annonces/62106/documents/1121649d-cd9c-4eb7-a4b5-aeae43873e9f/offre CHENET 137000_ H7000_ et CNI ok 31.07.2026.pdf
 annonces/62106/documents/14748b13-3efe-457e-b305-0e107de3546a/LRAR copie mandat 18594 ROCHE Philippe 13.05.2026.pdf
 annonces/62106/documents/2a33d546-da57-4252-8ad8-5ae24d88a29e/AR Philippe et Thierry ROCHE.pdf
 annonces/62106/documents/2ccd7a97-c4b2-4877-84d1-0e2310c0219a/AR Gilles ROCHE.pdf
 annonces/62106/documents/3287d421-5460-4592-996c-f9c3443f232d/LRAR copie mandat 18594 ROCHE Gilles 13.05.2026.pdf
+annonces/62106/documents/3b29f8fb-4e8b-4648-8597-a0c0a717cbb2/Dossier Mme ROCHE avec n_ ADEME.pdf
 annonces/62106/documents/6005d314-e061-4db7-a39c-52abb767dc5f/Avis_de_taxes_foncieres_2025.pdf
 annonces/62106/documents/63764a82-26c2-43d2-a293-1400474c8855/Accueil05052026.pdf
+annonces/62106/documents/86b9c341-2e36-4a3e-a525-5cb2f0b5e564/mandat Exclusif 18594 ROCHE 149000_ H.9000_ signe 06.05.2026 ok.pdf
 annonces/62106/documents/9038293a-a5f2-4057-8d9e-d21b43b2cd02/rb-R00018 (2) parcelle a501.pdf
 annonces/62106/documents/a1ea8e88-c3fa-413c-8edf-750a77051871/20230620_071126.jpg
 annonces/62106/documents/a8e56b01-0027-4546-812b-5ac1b5e234d3/Preuves de depot.pdf
 annonces/62106/documents/cdd9d641-d45e-415f-9d03-61b7e00d48dd/AVENANT 139K.pdf
+annonces/62106/documents/e5313e40-0dbd-4886-90bc-96cf3ebb4c33/accord Franck honoraires 9000_.pdf
 annonces/62106/documents/e6319abd-8039-4c56-9e7f-f9da93788d14/LRAR copie mandat 18594 ROCHE Thierry + Marcelle 13.05.2026.pdf
 annonces/62115/documents/02a9c35b-6b89-4144-8f77-c20207121d84/REGLMT COPRO-EDD SCI SAINT JEAN 4 RUE DUGUESCLIN BRIOUDE.pdf
 annonces/62115/documents/02cb7a76-37d2-4f34-b7cc-9b9cbd6320ad/attestationpropriete18012023.pdf
+annonces/62115/documents/2419b8ca-86e1-4194-9ba6-efbfecaf8bb2/Fiche synthetique copro.pdf
 annonces/62115/documents/27b24087-6835-47a6-9c2f-8b9fcea62d88/InformationsParcelles.pdf
 annonces/62115/documents/3473cabd-e8b5-4d7a-9d21-86e1f1a1bd3b/Appel de charges 01 01 25.pdf
+annonces/62115/documents/4b7a9470-2618-4ab5-bde4-bc535015607e/Carte identite veso.jpg
 annonces/62115/documents/4e1e3c9f-45b7-4372-94b9-5dc66e1706dc/BONJEAN DOSSIER 3EME MILIEU.pdf
 annonces/62115/documents/7b20c2e7-b08f-48fe-95c6-bf1adaad2f18/RECTIFICATIF NUMEROTATION DES LOTS.pdf
 annonces/62115/documents/85cd9dd5-987f-4d53-b66d-e3f3b35354d7/BONJEAN DOSSIER PARTIES COMMUNES.pdf
+annonces/62115/documents/877bc153-fe57-48f2-a228-3b4299649638/BONJEAN BAPTISTE ELEC APPART 3eme Milieu.pdf
 annonces/62115/documents/8cab2904-18a4-4f45-a0e7-89369de7dd10/PV AG.pdf
 annonces/62115/documents/8dd09d15-bdf5-4700-8cdd-269fde686330/planCadastralNormalise.pdf
 annonces/62115/documents/90552373-bd18-4d5d-b384-03a7ac453552/EDD.pdf
+annonces/62115/documents/ba7b3d20-a48b-4c7b-9e87-157bf7a53a5f/Carte identite recto.jpg
+annonces/62115/documents/bfcb5c0f-1778-4804-a98d-364963485653/Etat des depenses.pdf
 annonces/62122/documents/0402117e-e080-479b-ae6b-5a825199f53a/planCadastralNormalise MANIN.pdf
 annonces/62122/documents/194a5102-7c0f-42a0-9ca1-cc84f2444ec6/6386_-_D7_-_DPE_2020_Habitation__18_12_2024__18_10.pdf
 annonces/62122/documents/20606c8a-24c7-4f57-81ae-b61de3a63c0c/cnimanin1.jpg
@@ -2468,12 +2752,14 @@ annonces/62126/documents/84abdbd7-0cac-4331-89f5-b00a1ce4be73/accord honoraires.
 annonces/62126/documents/8c311e8f-495f-42dc-b00d-90b587a6d61b/passeportsylvie.pdf
 annonces/62126/documents/9b1c0ba5-1aed-43da-8386-29906bd1aada/planelecetegoutgachet.jpg
 annonces/62126/documents/a6454635-347b-4f7f-b370-19a07a098a70/CNI Laura BOUIHOL recto.jpeg
+annonces/62126/documents/bc31265a-e86a-4c02-a435-ad31d48926de/Acte deces .pdf
 annonces/62126/documents/dcdf4688-288d-430d-8283-df8f9f1ea457/gachetconsortsdiagnostics.pdf
 annonces/62126/documents/ef0de8e5-5225-46a8-ae9d-9a65c36486e8/SMS Laura Bouihol RDV notaire.png
 annonces/62126/documents/f55213dd-3641-49c4-9bab-188e31fad6af/gachetconsortsauditenergetiquemontfauconenvelay.pdf
 annonces/62126/documents/fb47006b-cb20-4436-b89a-24c8f07c987a/plancadastralnormalise2598.pdf
 annonces/62136/documents/1b669288-a538-4b50-892e-0e7bca0724a2/sci_la_fon_6a1d5e5672c0b.pdf
 annonces/62136/documents/30273b5b-2347-4deb-8abf-730bd4320d0c/26ANNEXEMA_6a1d61a442f9e.pdf
+annonces/62136/documents/dfd1b4eb-a481-4f8a-90af-9c5306f3f01a/Acte Propriete AUBERGE DU VELAY.pdf
 annonces/62136/documents/fb70d362-b10f-4ec7-9f72-f476b12739f0/cnijacquelinecaseres23026429.jpg
 annonces/62140/documents/2e55c806-6a97-441c-ae61-965841871eb5/CNI MERRAD MOHAMED R.V.pdf
 annonces/62140/documents/33902866-6671-4a81-9457-ecb97799aba4/planCadastralNormalise.pdf
@@ -2484,17 +2770,22 @@ annonces/62140/documents/b7dc1959-e617-409b-97af-4d991e0dcc2c/ERRIAL_Parcelle_00
 annonces/62140/documents/c5131634-52a2-4142-b431-5fdfbafe0b84/DIAGNOSTICS MERRAD.pdf
 annonces/62140/documents/d37de2c5-30d3-4b03-bee5-8651d90e0ccb/CNI MERRAD GARMIA R.V.pdf
 annonces/62154/documents/0be0ce10-8642-4c48-a56d-fc8f39637762/AUDIT ENERGETIQUE.pdf
+annonces/62154/documents/198c60f9-2606-4c41-a300-9613309e74f5/Compromis signe par Simone - annexes.pdf
 annonces/62154/documents/38f96a9d-959b-497c-abc5-55ca2919548a/Mandat et annexe PARRAIN.pdf
 annonces/62154/documents/5cc1c4a3-720d-44b8-8bc6-46d5220acb43/Informations Parcelles.pdf
 annonces/62154/documents/5e595f74-2d35-4db7-a403-fd28f368c710/CNI RV Magali ROUS.pdf
+annonces/62154/documents/6c5a4b87-13a6-402c-a39e-1032e20cac96/Offre ROUS 129000_ H9000_ ok Alain mq Simone.pdf
 annonces/62154/documents/6fbb0087-61d8-4766-a8a0-4fe3cf4e339e/Parcelles PARRAIN.pdf
 annonces/62154/documents/84f958de-38a7-4e87-b96a-0547d4a49a90/Plan sous sol.jpeg
 annonces/62154/documents/99d5ebc2-f324-4db0-8ff7-48964d439ece/DONATION PARRAIN.pdf
 annonces/62154/documents/c01c68e1-dc8f-4b2f-b998-64c9c034e332/CNI PARRAIN.pdf
+annonces/62154/documents/c187ac44-dd39-4763-9b33-65afad4945a8/Metres 1962.jpeg
 annonces/62154/documents/d7633c3c-fec7-449f-9751-cbeb77299cfb/DOSSIER PARRAIN.pdf
 annonces/62154/documents/dd8cd41b-f8e2-45f4-829f-caac3d35fc3e/TF 2025 Parrain.pdf
 annonces/62154/documents/e26f3c3b-de06-4176-83a8-eb06361e6d58/plan RDC.jpeg
 annonces/62154/documents/f7b40100-fed8-4169-a71e-e9fcc78f0c0e/Simulation Magalir ROUS.pdf
+annonces/62154/documents/f9354f32-17dc-4462-88e5-5820815fffb9/plan etage.jpeg
+annonces/62154/documents/fb301467-9c73-4f58-b151-e4785e192651/mandat Parrain duree rectifiee.pdf
 annonces/62155/documents/2f98c831-45ce-463f-b2b6-476e51e43057/cni liogier 22.jpeg
 annonces/62155/documents/37e9d738-4d52-4cca-9387-0c5ba8a7c12f/CNI 1 liogier.jpeg
 annonces/62155/documents/807a0620-5fa8-43c5-9707-be13e2ea0edc/TP liogier.pdf
@@ -2506,12 +2797,16 @@ annonces/62171/documents/256a6b02-fd08-4014-8ea8-5c4cb27233ff/cnilililac1.pdf
 annonces/62171/documents/25df0a7e-8a8f-4d2c-b5e9-79bb15558c8a/plan cadastral.pdf
 annonces/62171/documents/2c2b0612-5140-4a20-a07c-3d5d772be78a/brouillon notes.pdf
 annonces/62171/documents/33891b2d-8914-40bd-abb0-ae24187f2309/suite attestation APRES DECES P 9 ET 10.pdf
+annonces/62171/documents/388705e3-42f5-4f3b-bbcf-b4f297dc4f58/attestation immo apres deces 27-12-2022.pdf
 annonces/62171/documents/3f3c9514-4fc8-4c80-826a-250eb353d633/plan de masse avec servitude.pdf
 annonces/62171/documents/574c81cf-dc7b-4281-9e5e-5cb73d9411f0/AUDIT ENERGETIQUE.pdf
+annonces/62171/documents/677691e1-3b10-4611-9ddc-4a3e04869f7e/CNI Melina MACHABERT.pdf
 annonces/62171/documents/7689efe6-86b3-46f2-a74f-ff9ef85ef605/Avenant Alban MACHABERT.pdf
 annonces/62171/documents/86254156-b69f-4f2a-b37b-88ef1bda6567/Avenant 76K.pdf
 annonces/62171/documents/87246c7c-ca60-47e4-9474-1e6150c8af16/Passeport A.MACHABERT.pdf
+annonces/62171/documents/a4d77963-89c1-46c0-a952-fcb205c7bb9d/taxe fonciere 2025.pdf
 annonces/62171/documents/b524b72a-f26f-4264-8360-5ee398258976/cni recto Dosia Machabert.jpg
+annonces/62171/documents/b695f7d8-5d85-4c8e-893f-57e6ce4a6734/Avenant signe Melina Machabert.jpeg
 annonces/62171/documents/bf287193-fd67-4742-a0fd-c8b5ed72abaa/DIAGS COMPLETS 27-05-26.pdf
 annonces/62171/documents/c25d81ae-ae9e-4d7c-a644-4bed8ea5e076/Avenant mandat (2).pdf
 annonces/62171/documents/ccdb1e04-a677-4837-bcb8-75da574cca3a/document d'arpentage.pdf
@@ -2524,7 +2819,10 @@ annonces/62195/documents/014d26a6-c4e6-41ac-9dd3-aca2587cc08f/infos lots.pdf
 annonces/62195/documents/18cbdf4e-b351-4342-b303-efcb4f9398dc/BDV FLANDIN (1).pdf
 annonces/62195/documents/5200d4ad-d5d3-47ec-946e-feed5f3f2064/FACT-20221004-03154 (1) (3) (1).pdf
 annonces/62195/documents/59a37dad-47ad-4e0b-be58-91fbfab58669/CNI VERSO.jpg
+annonces/62195/documents/5cd44a22-8f72-4439-af3d-8fa981656acd/releve de compte.pdf
+annonces/62195/documents/6e658396-0e9f-45d7-bb7a-729f03abb94c/charges de copropriete.pdf
 annonces/62195/documents/9c389f7c-e63d-45db-8469-2a5c23faa8f6/accord honoraires.pdf
+annonces/62195/documents/a2bcc442-1a53-4e5c-aef7-fb7f5cdc1850/CHTOUKI 17 Rue Irene Joliot Curie 42490 FRAISSES.pdf
 annonces/62195/documents/a48196cd-2717-4ad8-ae74-d0eb8d30e7fc/AF_CC_20260401_19413 (1).pdf
 annonces/62195/documents/a4bcd166-dcdf-44d8-8d41-9dd03a5b61ba/ATTESTATION SANS PRIX - Acte 100716903_20760093 (1).pdf
 annonces/62195/documents/c9566d45-af61-4f19-842b-ffc23a9360f0/Avis_de_taxes_foncieres_2025 (5).pdf
@@ -2533,6 +2831,8 @@ annonces/62195/documents/d741be0b-f7f9-4b5e-b811-ef505b9e2171/CNI RECTO.jpg
 annonces/62195/documents/e0035f29-3c33-4654-8f86-a817351b7e35/erp-955283-e0ac3a1baf.pdf
 annonces/62197/documents/13805c92-f2bb-4adb-b9d8-252e13aac492/planCadastralNormalise.pdf
 annonces/62197/documents/2fad6f1b-4c0f-457e-a304-4a6811e08fb2/SERRE_Etude_Audit_Energetique.pdf
+annonces/62197/documents/4aa08999-f88b-4c22-84fd-ba5b0abf2748/CNI Frederic Serre 2021-2031 - recto verso.pdf
+annonces/62197/documents/56395a58-db73-444e-a944-89065037b20b/Acte de propriete Fougeres compresse.pdf
 annonces/62197/documents/8cc16012-86e9-46a4-965c-d423b8828e1a/SERRE DOSSIER.pdf
 annonces/62197/documents/9d34649b-83c9-4f1b-bafd-fc7662e76353/certificat de ramonage.pdf
 annonces/62197/documents/afa3847e-aff9-497c-bfb9-35c5b44d44d6/DP 17 - SERRE - Amenagement grange en habitation-Arrete favorable.pdf
@@ -2546,6 +2846,7 @@ annonces/62266/documents/c185d18c-ef96-4a91-a0c7-2ac277d397a0/ANNEXEMAND_6a0ebb7
 annonces/62266/documents/c2c21f49-f8fd-48f4-b09b-59b7b5f1e3a7/imprimerExtraitCadastral.pdf
 annonces/62275/documents/038ff686-8aff-477b-a9ba-84cbe6357448/COLLOT-COMMERCE-05052026 Croquis de distribution.pdf
 annonces/62275/documents/14a67cab-c93a-4f07-a666-bef480b3ab96/COLLOT-COMMERCE-05052026 Etat de l'installation de gaz NF P45-500.pdf
+annonces/62275/documents/2ba6c6e3-b6c7-46b8-9f87-51c0b71c50a2/COLLOT-COMMERCE-05052026 Dpe autres batiments (6.3.c bis vente).pdf
 annonces/62275/documents/314cdae4-6d56-4bc1-8ecc-ffcd79bd7a4a/COLLOT-COMMERCE-05052026 Constat des risques d'exposition au plomb.pdf
 annonces/62275/documents/40e02243-ba21-4811-b600-daf1affc335f/COLLOT-COMMERCE-05052026 Certificat Carrez.pdf
 annonces/62275/documents/43e96de4-cb01-4d13-88ec-096055086c26/cni recto.JPG
@@ -2553,6 +2854,7 @@ annonces/62275/documents/4b578583-fbf2-434c-b9df-0c52aa32d6ca/CNI 1.jpg
 annonces/62275/documents/57fe8bcf-43f3-4781-9d95-97af1c3b4e38/CNI.jpg
 annonces/62275/documents/6d8a088e-2ec7-484d-bb30-3dd8499b6b16/planCadastralNormalise.pdf
 annonces/62275/documents/6dc35486-d8bd-40a8-a1d6-0f8f87ecc224/COLLOT-COMMERCE-05052026 Note de synthese vente.pdf
+annonces/62275/documents/98da1977-eabe-42ed-b003-8c6d91a991b0/Mirza 202108_ 2 OPAH_RU_rapport de visite_18 rue du Marche.pdf
 annonces/62275/documents/ae9a39f6-60f1-4161-9d17-e39623cc76cd/Firminy_Avis_de_taxes_foncieres_2025.pdf
 annonces/62275/documents/b581e507-6e31-4c76-9ccc-2bfd8f122e7f/COLLOT-COMMERCE-05052026 Constat amiante avant vente (Listes A et B).pdf
 annonces/62275/documents/bb33d985-af61-493f-bcbc-7311503b2421/COLLOT-COMMERCE-05052026 Etat de l'installation electrique NF C16-600 (octobre 2017).pdf
@@ -2565,6 +2867,8 @@ annonces/62295/documents/5fa8f213-ebd0-48d3-bf73-862a0615a163/planCadastralNorma
 annonces/62295/documents/78944f72-8e14-482d-8b7d-3a064f54557f/AUDIT_-_ACCEDIAG_260554-1_MEUNIER_Claire-Olivia.pdf
 annonces/62295/documents/9bfbc0b9-910c-47fe-b28a-0f6be27c0e47/TF.pdf
 annonces/62295/documents/a61bc8fa-d895-4672-bede-dff98be09b1d/CNI.pdf
+annonces/62295/documents/a7f9db3d-9f38-4a0f-a8f2-e1045bd4f306/Attestation de propriete.pdf
+annonces/62295/documents/aa2f51b2-acbd-4bfa-a9de-1a4b1b3036cf/Entretien chaudiere.pdf
 annonces/62295/documents/b2203d63-4cfc-421b-8a50-dc296b0c7f1b/R_Diag_Vente_- MEUNIER - ST JULIEN D'ANCE.pdf
 annonces/62295/documents/cce577a3-2d7c-4d47-a200-eb27b6a3e0be/AVENANT.jpg
 annonces/62295/documents/e6adcc95-636e-477b-b2cc-0e168b316776/Factures.pdf
@@ -2590,6 +2894,7 @@ annonces/62298/documents/bd0fecad-da5e-4b43-9c22-1e9927a6d930/document_scanne_6_
 annonces/62298/documents/c16e17d6-c4b1-474a-8892-c7d619876792/erp_326473_20221123_1.pdf
 annonces/62306/documents/0112e589-67a1-4873-bd57-42fff6aef8a3/TP 3-1.png
 annonces/62306/documents/0d53834f-8cae-4800-acfb-2b44d59354b1/T2 diag 2.pdf
+annonces/62306/documents/0e4ad8a2-5ad4-4948-84ec-5d9e85ecaced/reglement copro 3.png
 annonces/62306/documents/2c8f4c10-5497-4984-b89d-b928a19202f3/TF.pdf
 annonces/62306/documents/333ae702-e401-4955-9998-807b945aa727/DPE T2_.pdf
 annonces/62306/documents/388635e3-72fd-4f15-9e47-2e3cf0373ba1/TP 3.png
@@ -2598,14 +2903,17 @@ annonces/62306/documents/4ee4f9da-07fa-4f61-ba08-c246cc160788/Tableau charges.pn
 annonces/62306/documents/5636d8fc-3ef3-4469-a982-a8271f989579/planCadastralNormalise.pdf
 annonces/62306/documents/5cf4f9d5-d364-498e-8f8a-90167513ad7d/TP 2.png
 annonces/62306/documents/6293083d-c658-4653-98c6-0d5c34993d50/TP 6.png
+annonces/62306/documents/635b0b8d-8403-4127-8dc5-863392956517/reglement copro 1.png
 annonces/62306/documents/6ba17ccb-03c3-469a-92d2-36855514d282/accord honoraires.pdf
 annonces/62306/documents/6e391360-2e94-44ce-a15f-82d83904c437/TP 4.png
 annonces/62306/documents/84c6da1b-1141-4cbc-a3ad-490d5ff1c23e/TP 5.png
 annonces/62306/documents/85c81107-f370-4d16-a0d5-3b34150f9b5e/Carte recto mR_.jpeg
+annonces/62306/documents/86aeee69-ca29-49c5-bbc2-942f9e85f30e/REGLMT COPRO-EDD COTTIER DAVID . SCI VA-LLA (14 rue du Cimetiere)(1).doc
 annonces/62306/documents/8736e225-cb81-42d9-9386-af5f7ca43ee7/Cni recto madame 2.jpeg
 annonces/62306/documents/8a4e49ea-5b6e-441e-ad61-dbda83c3756b/TP 2-1.png
 annonces/62306/documents/94812130-562b-44b2-b9f9-eead3534e0b2/Cni recto madame_.jpeg
 annonces/62306/documents/9af9290c-c420-4eae-adff-39e80f530809/ERP T2.pdf
+annonces/62306/documents/b0032730-514f-4c00-a0e4-8ad6cf627010/reglement copro 2.png
 annonces/62306/documents/b0189b22-5309-4e3c-ac81-e3ed9d59c6a2/Certificat mariage_.jpeg
 annonces/62306/documents/e1dc323e-e523-49d8-933f-bbc9218cf5b4/PV d'AG.pdf
 annonces/62306/documents/e92eae6d-5779-489c-8c55-d4a72fb283d7/TP 1.png
@@ -2685,20 +2993,28 @@ annonces/62323/documents/0b2c9b82-7364-4a1b-8f27-2085af8813c7/CNI_Weiwei_recto.p
 annonces/62323/documents/1439d850-4695-4c85-a167-ef590b12e228/TP9.jpeg
 annonces/62323/documents/1aac400b-6c15-45fe-8b22-0b84240047e6/TF 2.jpeg
 annonces/62323/documents/1b84db27-3eb7-4869-a314-6ce9b5c1b435/SPANC 2026.pdf
+annonces/62323/documents/1c454bd6-a948-4a6c-a3ca-8967fb22a38e/mandat_avec_saisie_du_numero_maison_en_pierres_avec_studio_25_min_dambert (duplique).pdf
 annonces/62323/documents/1c8b6b65-7817-44c8-ac3e-5a782ca25bf5/Compromis_de_venter_GARCIA_GRIPAY_ET_GUO_ sans annexe 14.08.2026.pdf
 annonces/62323/documents/1f29fdd1-d6cf-4b15-8ca6-f03056f8ca23/AR.pdf
 annonces/62323/documents/23158a9b-18a6-4d49-a7b3-a3ccb3b7468d/CNI_Pierre_recto-verso.pdf
 annonces/62323/documents/25151e90-a54f-48f8-b71a-f39e1d8ffada/GARCIA_Etude_Audit_Energetique.pdf
+annonces/62323/documents/26f82652-b984-4ef9-87de-2f2ade1b66da/Mandat de vente pages de 1 a 5.pdf
+annonces/62323/documents/2816c771-8668-4b8c-931e-8f2620b792aa/Mandat de vente pages de 6 a 7.pdf
 annonces/62323/documents/2c81ccb5-2800-44e7-a8f0-4290661c6726/ecm_5625434eeeb6b69596887689621db0fc.pdf
 annonces/62323/documents/32c607d8-72ff-4884-8332-c35c8f12f91a/IMG_7873.jpeg
 annonces/62323/documents/33877111-8c89-4048-aab2-4733f7a393df/IMG_7872.jpeg
 annonces/62323/documents/3d67a188-1fae-4089-81a1-ec384832e102/IMG_7871 - Copie.jpeg
 annonces/62323/documents/446afd9a-dcd0-410b-a2e7-b0c02c158075/TP7.jpeg
+annonces/62323/documents/49eaf595-2e80-4ffa-981c-7b731c3bcbbb/Offre acceptee Mr Mme GARCIA.jpg
+annonces/62323/documents/4ac52edf-098f-4373-b252-f7cbd87e4629/OFFRE Contresignee Mr Mme GARCIA.pdf
 annonces/62323/documents/4b2115f8-410d-4cd2-ac19-617b7671990a/GARCIA DOSSIER.pdf
 annonces/62323/documents/4ebd3def-859e-4dad-a3f0-f1c255ec3a31/TP5.jpeg
 annonces/62323/documents/5435e689-ec5f-46c7-9c01-b188992c7135/OFFRE.pdf
 annonces/62323/documents/5f8281e1-5b68-4607-ac36-9a5640b794ac/imprimerExtraitCadastral.pdf
+annonces/62323/documents/6c2355d5-73bf-4865-a4a3-3042e6d23baf/Renseignements acquereurs GRIPAY GUO.pdf
+annonces/62323/documents/7e013cd5-c52a-462a-8d4d-5dab05824492/informations precontractuelles.pdf
 annonces/62323/documents/7e3a3543-7918-428e-b47c-7a33ad593b37/TF.jpeg
+annonces/62323/documents/9258944c-8826-42e0-9742-db1830274cae/Preuve de depot.pdf
 annonces/62323/documents/9273bd32-33c6-472e-9072-4a81eb8932b1/IMG_7874.jpeg
 annonces/62323/documents/b4592ceb-d261-4ee3-8e60-ae71a750c301/OFFRE.pdf
 annonces/62323/documents/ce2e8aee-2d01-4fe9-b4af-b905e0409563/CI recto verso Mr et Mme.pdf
@@ -2708,6 +3024,7 @@ annonces/62323/documents/de5c27df-ea93-44c6-a69a-69baaf94f935/TP2.jpeg
 annonces/62323/documents/e21c48f6-4f0a-4a53-80f0-a3b35ff59a3a/Livret 2.jpeg
 annonces/62323/documents/e9a5d0d4-4ec7-4a0f-9d6e-c3aa43abd5a2/mandat de vente.pdf
 annonces/62323/documents/f4f02515-3f2e-49b8-b12e-ae43ba4c8f7f/IMG_7871.jpeg
+annonces/62323/documents/f779f84e-e27f-4cea-8093-db21dd54871b/Offre acceptee Mr Mme GARCIA.jpg
 annonces/62326/documents/039f537a-e1bf-49a7-9a92-f62a5b3b3c2a/Machabert CNI.pdf
 annonces/62326/documents/36b35c92-64b9-452a-a805-632d91faf021/Machabert diags 2.pdf
 annonces/62326/documents/68d07329-73ef-47ef-a520-74a190a2eabf/planCadastralNormaliseMachabert.pdf
@@ -2722,8 +3039,11 @@ annonces/62329/documents/1617bdfa-44e8-45bd-902a-32b28082501c/Cadastre.pdf
 annonces/62329/documents/2f4a3aa0-2926-4707-b7ed-8e0062324fbe/CI CAPELLI Claude (2).jpg
 annonces/62329/documents/37e450ca-ee06-4630-a707-e34bfd9c14f6/DIAGS 2026.pdf
 annonces/62329/documents/420bdc8e-90f6-4d08-9935-f85290553e82/Cadastre 1.pdf
+annonces/62329/documents/42a0561c-ba33-4d4c-9102-540c604bf909/Titre de propriete.pdf
+annonces/62329/documents/80e24ff3-89fc-4fe6-b7b8-efe8c343fadd/Facture poele a bois 07-11-2022.pdf
 annonces/62329/documents/9b73751b-bcd2-4e07-9759-a5eba20da4a5/EDR 10-07-26.pdf
 annonces/62329/documents/ac4094a0-cd30-4ac6-a88e-b3b421318a74/Mandat de vente 2026 (2).pdf
+annonces/62329/documents/b0110562-6e0d-4038-b655-5de057dc432f/Facture electricte 12-04-2022.PDF
 annonces/62329/documents/c9020302-3d3b-48be-bc89-53f8a4616b3a/Mandat de vente 2026 (1).pdf
 annonces/62329/documents/edbc2066-8836-4e2f-b9eb-3905ff8246e3/CI CAPELLI Claude (1).jpg
 annonces/62334/documents/0c78aa97-7faa-4b1b-b266-9d498eab2422/1000020244.jpg
@@ -2745,10 +3065,12 @@ annonces/62336/documents/9ff270e1-d537-4452-b901-7b4e75706623/TF.pdf
 annonces/62336/documents/a09550de-8d34-4aa8-9bbe-ba2aac009e7b/20260401000A010000006037C.pdf
 annonces/62336/documents/a2cb125a-4123-4a93-8ed7-b7f16053f233/414_FICHE_SYNTHESE_AC4557666_29032024.pdf
 annonces/62336/documents/ac757601-2bfd-4fe9-8236-15df4d240330/26_03_6862_-_A0_-_Resume__13_04_2026__17_53.pdf
+annonces/62336/documents/b2c6ff40-c169-47b5-9a4f-ebc749750f17/Carte identite Agathe verso.jpg
 annonces/62336/documents/b9d02ee4-415d-437c-b4ec-890241624ba7/26_03_6862_-_D8_-_Carrez__13_04_2026__17_55.pdf
 annonces/62336/documents/c449a189-22b6-4e62-bd7b-71907223937e/26_03_6862_-_D2_-_Amiante_arrete__13_04_2026__17_54.pdf
 annonces/62336/documents/c80b62aa-04da-4a6e-a33e-1f3cc1c4d0ca/0000000006600000000000000.pdf
 annonces/62336/documents/e5cfb65a-9972-4d15-92b1-eae415f03a9c/TP.pdf
+annonces/62336/documents/eddf8752-d4bf-4cde-9619-e1ef4a2e054e/Carte identite Agathe recto.jpg
 annonces/62336/documents/fca2525f-b469-43ac-aae4-606af35b2640/PV_0414_AG_23_04_2025 (2).pdf
 annonces/62347/documents/0f146c5f-509d-452c-bebf-ad9b7b1ed7ac/DDT_-_26_IMO_0092_EL_ASI_Rami.pdf
 annonces/62347/documents/159abb29-f90b-4b2e-83ac-a6cf179412ba/TaxesfoncieresavisSAINTETIENNE42TaxesFoncieresavisSAINTETIENNE42.pdf
@@ -2769,6 +3091,7 @@ annonces/62349/documents/662c38c7-24c0-41a3-b55d-3b08ea48ed98/BROUILLON NOTES.pd
 annonces/62349/documents/726b4b8a-d29d-498a-890e-427a6e067d4a/Questionnaire vendeur.pdf
 annonces/62349/documents/ac344d6a-3857-4639-b7cf-d8849123670b/PLAN CADASTRAL.pdf
 annonces/62371/documents/0233c079-ac56-4166-b9a7-941a04dc2cf1/Titre SERRE COULANJON.pdf
+annonces/62371/documents/265e6c11-aac6-4054-b303-e8e21feef9fe/Capture d_ecran sign mandat.png
 annonces/62371/documents/31ceb7b9-d2ca-478b-8ec0-f5cf5d6ae9f0/Prise de note serre coulanjon.pdf
 annonces/62371/documents/3dc0df89-b4de-48d4-b029-626fabf5b7be/SERRE COULANJON DOSSIER.pdf
 annonces/62371/documents/82eba754-d44f-41c4-956c-024ebc055c60/SERRE COULANJON_Etude_Audit_Energetique.pdf
@@ -2811,10 +3134,14 @@ annonces/62397/documents/626c733b-6b5c-4be1-b7f8-9466cf935fbf/CNI Laurence Coste
 annonces/62397/documents/a11a45fd-398c-4c21-9ce9-ff0b83b083ed/Mail du notaire.png
 annonces/62397/documents/b605afec-0808-4ff8-a083-26bb42603d23/COSTE 8888.pdf
 annonces/62397/documents/b71fc6ea-0ec0-42f6-866b-759d816aaec7/accord honoraires.pdf
+annonces/62397/documents/ee693e8b-5b71-43a9-a1c0-d62b9bc4995f/Capture d'ecran 2026-06-23 150813.png
 annonces/62399/documents/04ee4ec7-bfdd-4249-9f7e-6313edaa78fb/Copie AAE COMPROMIS MOULIN _ PROVINI.pdf.pdf
 annonces/62399/documents/2e4c568f-731a-4376-a841-1712680f0ae1/MOULIN DOSSIER.pdf
 annonces/62399/documents/31d83b22-9afc-40e5-b418-ba5586040a80/Prise de note MOULIN.pdf
+annonces/62399/documents/4ba823f1-b060-4c31-809b-dc018b94f186/CM - Identite.pdf
 annonces/62399/documents/621b6b62-2696-46f8-a0bc-2d31391df7bc/MOULIN cadastre BR-104 BR-608 BR-586(indivis).JPG
+annonces/62399/documents/688d6567-f3a8-4b8e-8405-7105c8a8a58b/Offre PROVINI acceptee.pdf
+annonces/62399/documents/70d41723-f482-4f97-a2a8-5541b35ec3c0/mandat Simple 18683 MOULIN 81600_ H6600_ signe 09.06.2026.pdf
 annonces/62399/documents/7d919c52-e560-400a-986d-ff4b88e0cd04/RM - Carte Identite.pdf
 annonces/62399/documents/a19be012-bc03-47bc-8243-fe13a505d3fd/Fiche renseignement PROVINI.pdf
 annonces/62399/documents/b66bf250-22af-44c2-a0e0-b14a689d98fd/Bon de visite PROVINI.pdf
@@ -2844,6 +3171,7 @@ annonces/62408/documents/20b1a24c-b8a4-4809-af5d-e01a29443c40/Copie AAE avec ann
 annonces/62408/documents/2fd96e45-ffd6-4c94-8145-a48883c065ac/13201.jpg
 annonces/62408/documents/30cdbdff-9f4e-45ca-bd21-7c2e59c92c12/ciAurlieWEISS1.pdf
 annonces/62408/documents/5217f59e-17d4-4a7c-a050-75e1f889839f/ciAurlieWEISS2.pdf
+annonces/62408/documents/5ca4e183-e9d6-4956-a397-df452abc126c/acte de deces.jpg
 annonces/62408/documents/a98653e6-397a-4ede-8b0d-0c82b9bef332/CNI verso Sasha WEISS.png
 annonces/62408/documents/ab3a6b91-6502-4ed1-93c4-7a586d15cd64/ERRIALParcelle000-B-67963015000-B-26363015000-B-2616301516032026.pdf
 annonces/62408/documents/ac25b807-4743-4087-9ce1-e7c39f230631/planCadastralNormalise.pdf
@@ -2903,6 +3231,7 @@ annonces/62464/documents/9f48cf1e-0efd-4172-be65-ec66baef6d71/Mandat signe_compr
 annonces/62464/documents/a8913b80-3379-4c34-9a31-d92a6cc3f4e5/GIMBERT SYLVAIN ETIENNE AUDIT ENERGETIQUE SAINT CHRISTOPHE SUR DOLAISON.pdf
 annonces/62464/documents/b626a3ae-e7d1-4889-a025-fafbcabd91bb/plan decoupe gemoetre.jpeg
 annonces/62464/documents/c8ae951b-4b42-4b12-b2b0-22a16fd92b79/CI etienne.pdf
+annonces/62464/documents/c977e129-b2df-4104-beca-b16bdb27f9cf/attestation de propriete.JPG
 annonces/62464/documents/ee365d9c-7fdd-4494-b40a-b4b48f86b573/accord honoraires.pdf
 annonces/62465/documents/2e63a193-9992-42c1-a181-3c5dc7b87ba0/plancadastralnormalise2394.pdf
 annonces/62465/documents/330fdc42-d20f-4893-8b2c-f7791f548c6e/massetflorenceauditenergetiquesaintalyrdarlanc.pdf
@@ -2914,6 +3243,7 @@ annonces/62465/documents/7c87d757-6ae9-47e7-ad3c-a3a6224d31b2/skmc450i2306081432
 annonces/62465/documents/8a434aa5-81a5-490d-90f7-bf9961904c06/Avenantok.pdf
 annonces/62465/documents/c6359d38-f4d3-4c68-932a-d10d481570af/avisdetaxesfoncieres202446.pdf
 annonces/62465/documents/f52312e5-3741-4ede-b0ec-d112fb75b7db/carteidentiteflorencemassetrecto4.pdf
+annonces/62466/documents/04139226-aebc-4ad9-9e31-1cf7f6ce2c1c/ATTESTATION DECENNALE Macon BLAZEVIC.pdf
 annonces/62466/documents/06fa4fae-795b-4802-824a-d89145372042/ARRETE DE PERMIS DE CONSTRUIRE GARAGE SEPT 2018.pdf
 annonces/62466/documents/104eb8c0-a656-4e91-99e0-eba99dc01fc2/Facture_acquittee COUVERTURE DEC 2025.pdf
 annonces/62466/documents/14876a0e-f657-409e-8d03-02e649e3b60b/EXTRAIT DROIT DE PASSAGE.pdf
@@ -2943,11 +3273,16 @@ annonces/62466/documents/ff1d2d02-3ba3-48f9-93e4-07da1c6fbd42/Facture local fiou
 annonces/62469/documents/07d3d916-951c-4f8a-b1fa-b749ae97c34b/Carnet d'entretien - 10-06-2026 - LE VALS-1.pdf
 annonces/62469/documents/174b08eb-8ee3-4b7c-89b7-a9b1b0c30f79/240130 PV AG.pdf
 annonces/62469/documents/1b2dc510-8245-44c7-8d54-dc024cd6eaa8/Copie AAE ATTESTATION DE PROPRIETE Monsieur Albert DUCLOZ.pdf.pdf
+annonces/62469/documents/235409e4-0ce4-4619-bb58-94bcf90aab23/Regularisation ancien systeme - 23-12-2024 - LE VALS (4) - Charges courantes 2023-2024 - DUCLOZ Chez Me LECLERE-1.pdf
+annonces/62469/documents/34ac1979-a610-4ca1-99d2-c42f7218c88e/Regularisation ancien systeme - 03-01-2024 - LE VALS (4) - Charges courantes 2022-2023 - DUCLOZ Chez Me LECLERE-1.pdf
 annonces/62469/documents/47f61f0a-e1e5-4452-aae6-6341aa9e83e7/Lettre Distributeur Gaz.pdf
 annonces/62469/documents/514e1e5d-20d1-4bdd-ad88-f0fec16b5201/CNI DUCLOZ Laurence.pdf
+annonces/62469/documents/6fd3b196-dab2-44ea-a9fd-6c0115f738ab/Proces verbal (signe) - 27-01-2026 - LE VALS (4) - CC - AG Ordinaire - 01-10-2024 - 30-09-2025 - 29-01-2026-1.pdf
 annonces/62469/documents/7189d676-a6f3-482f-b88f-e6502d6ca6c0/DIAGS COMPLETS.pdf
 annonces/62469/documents/9d8b2d7f-9d69-424a-9549-a5bbb12aaa43/nombre de lots.pdf
 annonces/62469/documents/9e1fd5e4-08ac-4c46-af20-1b0544dbb08d/Registre PV AG - 2025-01-28 - 0037 - LE VALS - GI.pdf
+annonces/62469/documents/a3dc627f-8acb-476d-be86-043319185787/Projet Regularisation des Charges - 22-12-2025 - LE VALS (4) - CC - DUCLOZ (SUCCESSION) - 01-10-2024 - 30-09-2025-1.pdf
+annonces/62469/documents/a77a81fa-8088-49d8-a2ad-9bb97f8ce241/taxe fonciere 2025.pdf
 annonces/62469/documents/c6995999-1f87-425e-813f-3882e06ef00a/brouillonnotes (4).pdf
 annonces/62469/documents/c9d0f073-475e-4c27-a8e0-6a88bee869bc/PPT - TABLEAU AVEC ECHEANCES.pdf
 annonces/62469/documents/f5e4b081-a7ce-4395-a993-31498bd0498a/planCadastralNormalise.pdf
@@ -3001,6 +3336,8 @@ annonces/62487/documents/f3dc32ad-23a4-4933-b901-2cd9cc9f9f26/ATTESTATION PROPRI
 annonces/62490/documents/0f0cb2d5-b4a3-4c0d-b502-58d6436ac197/Prise de note FARGEVIEILLE.pdf
 annonces/62490/documents/107474aa-9119-4a87-a85a-63984e9a45d5/CNI M. COMBRET.pdf
 annonces/62490/documents/1e4a59c8-dc8d-4276-8bec-8262d9f802d3/Fiche renseignement COMBRET.pdf
+annonces/62490/documents/202cdfd9-48a7-4061-b271-667e517667d7/Taxes fonciere FARGEVIEILLE.pdf
+annonces/62490/documents/253990a5-f673-4b6d-a704-f7d490ec80fa/Offre COMBRET acceptee.pdf
 annonces/62490/documents/34f47d64-8778-4a7b-9c24-fa919ea416a7/CNI FARGEVIEILLE.pdf
 annonces/62490/documents/553bbea6-f1b6-4407-8adc-30b3e6df5ac3/commission surendettement FARGEVIEILLE.pdf
 annonces/62490/documents/5ff92d8e-c85e-4834-b219-804453a81537/scanDocument_260729_162525.pdf
@@ -3022,11 +3359,14 @@ annonces/62496/documents/c13e96b0-f576-4353-8bd9-1bf9267c1a7d/Dossier d'expertis
 annonces/62496/documents/c4dd4ff1-93ba-4cf8-be40-3876425a1a95/CI AMEL01.pdf
 annonces/62496/documents/e3febc3b-e727-49e8-93ca-bb38ae53d103/Avis_de_taxes_foncieres_2025 (3).pdf
 annonces/62503/documents/037b4c38-8fba-44b9-83da-fd7a809507b5/CARNET D'ENTRETIEN.pdf
+annonces/62503/documents/14c80b8c-5808-445d-a4ce-c21bdfe85f20/Proces verbal global - 03-03-2026 - NORD SUD - CC - AG Ordinaire - 03-03-2026 - AG - Proces verbal NORD SUD 30-09-2025 - AG4805.pdf
+annonces/62503/documents/1a4d13e3-4f19-490a-b2db-46444877b243/Reglement de Copropriete - 28-01-2022 - NORD SUD.pdf
 annonces/62503/documents/201571e9-3cd3-4f82-b40a-4f348a5f511e/AG 2024.pdf
 annonces/62503/documents/3f16c570-a5e3-4a8c-9393-10d39de926d1/APPEL.pdf
 annonces/62503/documents/4b038524-67b3-402b-8e39-b102a601832f/DECOMPTE.pdf
 annonces/62503/documents/7fbc7223-45f4-470a-8a0e-6d228f320785/diag.pdf
 annonces/62503/documents/acafa3ab-168f-4903-a941-0883c88b5c10/AG 2025.pdf
+annonces/62503/documents/ae0e196a-c45e-4f43-9b03-3035ae411016/Fiche Synthetique - 04-03-2026 - NORD SUD (R1291).pdf
 annonces/62503/documents/bb426e55-6e70-4e0c-acb9-1b7915c122bf/Plan cadastral.pdf
 annonces/62505/documents/1ca8335e-a2f8-49d8-8295-831deab473ab/ERRIAL_Parcelle_018-ZE-7@63160_16062026.pdf
 annonces/62505/documents/310e312c-5a32-444d-a531-35fa81ff6582/CNI SENEZE.pdf
@@ -3054,6 +3394,7 @@ annonces/62536/documents/32fc8aa2-025b-4690-90f0-fdd18013c0f7/tp recto.jpeg
 annonces/62536/documents/3440954e-c19c-4b94-8020-11afdd8d43dc/PV0150_1-mardi_19_decembre_2023.pdf
 annonces/62536/documents/908a162f-987c-4e62-aee6-2b9271477f7d/20260401 - Appels de Fonds Budget 01 (1).pdf
 annonces/62536/documents/a2ff9139-54f0-4db0-839c-0bd7a466deb2/tf recto.jpeg
+annonces/62536/documents/af4707e4-8fc2-4d90-b02d-7289e56eeb25/20250630 - Decompte de Charges.pdf
 annonces/62536/documents/c08e1882-f080-42d3-a7e2-3c97f7892b16/tp verso.jpeg
 annonces/62536/documents/c3829b2f-d484-4c74-85e1-82f8e2cc75b8/IMG_2052.jpeg
 annonces/62536/documents/dff6adec-e746-4c35-92b1-d00210227773/IMG_2053.jpeg
@@ -3063,6 +3404,7 @@ annonces/62563/documents/210f237e-0073-42a8-9468-3820350592f3/RELEVE PROPRIETE R
 annonces/62563/documents/45631d10-1a7c-4263-a17e-46eef3eeb768/MANDAT + ANNEXE.pdf
 annonces/62563/documents/77a9dcb9-d837-4788-966d-d6c3c35b05d2/planCadastralNormalise (8).pdf
 annonces/62563/documents/8460aa0c-fffc-489b-91f1-b4b51e217ac7/CHAUVET_Etude_Audit_Energetique.pdf
+annonces/62563/documents/8f6a697f-0d47-4c21-b084-522fb94d8b4b/extrait decision du 04.04.23 CHAUVET Christian.pdf
 annonces/62563/documents/b9c77a86-b4aa-48e9-b082-fea26f452534/Copie AAE VENTE TOURTON _ CHAUVET_20130785.pdf
 annonces/62563/documents/c3bbec0b-51e5-4b30-b145-15b77226c703/CNI.pdf
 annonces/62563/documents/f3f574d5-9f46-4e6a-9136-7da317a60aaa/CHAUVET Diagnostic technique.pdf
@@ -3070,12 +3412,15 @@ annonces/62564/documents/02a483d2-b400-415a-8b07-524a8cf7f2a9/extrait acte LOTS 
 annonces/62564/documents/073ae52f-1b44-4068-b438-4ad4c6505b4e/stat conso gaz 2025-2026.png
 annonces/62564/documents/0adcb278-a60f-4fb2-b544-1af68d533ff6/CNI ACQUEREURS.pdf
 annonces/62564/documents/12a5cc9e-4c26-439f-98ac-cfd017460282/annonce de la cliente juin 2026.pdf
+annonces/62564/documents/1e25af8e-2c9b-4198-a22a-8b52cbb987c0/fiche renseignement acquereurs.pdf
 annonces/62564/documents/20f7d0bb-46a3-41b3-b732-2de4b2a343ca/1968 vente cave MARGERIT ALLEGRE.pdf
 annonces/62564/documents/26cccad4-0746-458a-80b2-ec580e32e47f/DIAGS COMPLETS AVRIL 2026.pdf
 annonces/62564/documents/27bd43ea-cd6e-44e9-ac1e-d5f3ea365665/conso gaz fevrier 2026.png
 annonces/62564/documents/3502b880-1c71-4b91-8f14-a885d1d0012c/2021_06_25 Copie AAE VENTE CLEMENT Mireille par RUAT Philippe.pdf
 annonces/62564/documents/3ea457b6-10d0-409b-bfe6-ae2f97958036/vente bien acq. SERRE puv 03-08-26.pdf
+annonces/62564/documents/3eabe409-c766-4a2c-97d7-36ebddce752c/2025_10_24 Facture 6254 Remplacement Chaudiere par Nicolas LEGRAND.pdf
 annonces/62564/documents/4ce89808-0c46-467e-845d-5e025b3273b9/1974 Travaux toiture - Convention.pdf
+annonces/62564/documents/5d316661-8e1c-4f93-8ebf-85004111f07a/attestation decennale 2023 maaf LABI SURREL.pdf
 annonces/62564/documents/61df46c9-dc55-4d91-aca8-e99e5ba729fd/recap conso gaz.png
 annonces/62564/documents/6dc6b88c-e75f-47db-9923-5c2350df4de7/conso gaz 2023-2024.png
 annonces/62564/documents/8bfdca3e-4bb2-47ee-8681-dd0712b9c375/ERP-COMPLET-Cl-ment.pdf
@@ -3085,15 +3430,23 @@ annonces/62564/documents/9d5731bc-5cb2-48a7-a4a1-c962f2963de8/EXTRAIT ACTE-MAJ M
 annonces/62564/documents/a83631d6-8d83-40de-aa0c-77be684d5f20/questionnaire vendeur.pdf
 annonces/62564/documents/abe99483-cec9-4fbd-a56a-8a41b1b08964/2021_09_22 CI Mireille CLEMENT Recto-Verso.pdf
 annonces/62564/documents/b87b62cc-3be2-44ce-ad49-44c0d938c64b/croquis avec annotation.pdf
+annonces/62564/documents/bb6e061e-5f1e-4e1e-8538-1a56f16a3b7c/FACTURE N_03 2023 Couverture LABI SURREL.pdf
+annonces/62564/documents/c6213a46-34a4-45f2-a4c0-52425b2c91cd/offre d'achat contresignee.pdf
 annonces/62564/documents/dfb0e0eb-7a3f-4877-8567-8cd81aa29b6c/conso gaz 2024-2025.png
+annonces/62564/documents/ec327637-bd66-4e86-bb9c-3e9e9454b3e0/2021 Facture PROBAT - Ravalement de facade.pdf
 annonces/62564/documents/f2c9aed9-f435-4d8d-bddf-fc3b88f688b8/CLEMENT Loi Carrez.pdf
 annonces/62564/documents/f5c61a06-1b7d-4842-b56a-3eb7559468ad/conso gaz 2025-2026.png
+annonces/62567/documents/4b92a5bc-e2d1-4217-9b28-4ab8df6c7c49/Carte identite Gilbert Duplan 05 26 (1).pdf
 annonces/62567/documents/4cb91fc1-a102-4d06-95f4-60991b7ffc59/IMG_20260504_0007.pdf
+annonces/62567/documents/515fb10d-6617-489f-a1bc-10d72cf0cfbe/Titre de propriete parcelle_31960034 (1).pdf
 annonces/62567/documents/60e9e346-4031-43db-9729-65b98b0994ce/RAVIT-21052026-ERP.Pdf
+annonces/62567/documents/7ef34ecc-2548-4da2-b1fe-c3284c8daa98/Passeport Valerie Ravit 05 26 (1).pdf
 annonces/62567/documents/8c8dd675-5abb-461a-b8ab-ebfc2a742acf/RAVIT-21052026 Etat de l'installation de gaz NF P45-500 (1).pdf
 annonces/62567/documents/9deb48d3-15db-473a-8e52-4c354988eda4/RAVIT-21052026 Etat de l'installation electrique NF C16-600 (octobre 2017) (1).pdf
 annonces/62567/documents/abbcf4f3-a9b4-4513-93f8-2ef8f6ae3839/RAVIT-21052026 DPE logement maison.pdf
+annonces/62567/documents/b40ff8d2-a46c-40e7-82db-634552d1a373/Copie AAE avec annexes DONATION Monsieur et Madame Gilbert DUPLAN _ leurs enfants_32038539 (1) (1).pdf
 annonces/62567/documents/b543c825-90c3-44c0-bdb0-4f7f6a883b6f/RAVIT-21052026 Croquis de distribution.pdf
+annonces/62567/documents/c069d06d-81df-4bcb-a378-bc39a882d682/Carte identite Celine Duplan Dubois (2) (1).pdf
 annonces/62567/documents/e846d222-12df-4793-9e7d-69312d115dc7/RAVIT-21052026 Note de synthese vente.pdf
 annonces/62568/documents/621da3f9-5f0e-478b-8fcb-1fce9be9789d/spancbarrin.pdf
 annonces/62568/documents/a5d49a16-329b-4bd6-a40b-f6f9dde1cad9/BV SALGADO.pdf
@@ -3107,6 +3460,7 @@ annonces/62568/documents/d71710f6-a459-4912-b3de-70c2ae9112e0/avenant75000.pdf
 annonces/62568/documents/e9f39f3f-2542-46e5-817e-4269c013fcb2/IMG_20260806_174551.jpg
 annonces/62576/documents/00b75355-fcf7-469f-8fde-a93de58d660d/DOSSIER DURAND.pdf
 annonces/62576/documents/0877a4cc-c21c-414a-b204-ba3c1d0c9b2e/TF2.jpeg
+annonces/62576/documents/0bf0d113-fe1e-47ab-8f71-17e271db4018/Attestation de propriete.pdf
 annonces/62576/documents/36858185-e6c3-45d5-9f08-5fb710491995/MANDAT DE VENTE.pdf
 annonces/62576/documents/5612bdb4-2787-4915-88ed-6ffa4dd80992/Page servitudes TP.pdf
 annonces/62576/documents/5c98c180-0090-48b9-b519-f6b6a11fd6b2/TF.jpeg
@@ -3134,7 +3488,9 @@ annonces/62599/documents/3358fe8e-b609-47fc-8b62-fd80cd79f91c/Rapport DPE n511-1
 annonces/62599/documents/36448790-01e8-47b2-ad36-46975b5eeaac/Cni recto madame_.jpeg
 annonces/62599/documents/49e2f3f1-58a5-4676-8029-dba26fc7c517/TP1-1.png
 annonces/62599/documents/50bf98dc-96ec-45e2-9415-b1d6bfe1f82d/TP6.png
+annonces/62599/documents/6119b886-078e-4e22-bc42-d1803b3622a1/REGLMT COPRO-EDD COTTIER DAVID . SCI VA-LLA (14 rue du Cimetiere)(1).doc
 annonces/62599/documents/62c32183-c03e-404e-ace6-9b7271168b39/Carte verso mr.jpeg
+annonces/62599/documents/64bad70f-fbf5-4d70-a863-7d418c77116c/18729 (duplique).pdf
 annonces/62599/documents/6dce6165-5d01-4415-b1c7-ef15c0a3eade/Tableaucharges.png
 annonces/62599/documents/8b297c42-3d6e-4fd6-9537-c2c16c5cd54f/Infos SCI.png
 annonces/62599/documents/92199f9a-9d8f-484d-b1aa-92788de89881/TP2.png
@@ -3154,6 +3510,7 @@ annonces/62599/documents/ede56e08-04a5-4b3c-8e5c-7d911285d40d/TP5.png
 annonces/62599/documents/eff886ec-b0dc-4c70-ab66-5a1696712286/Certificat mariage_.jpeg
 annonces/62599/documents/f0b6d247-2bcb-4ed5-92f0-30814cf6e6bf/accord hono.pdf
 annonces/62599/documents/f588aea3-db5a-4fbc-830f-d5dbfd357fb7/Dossier DDT LOCATION HABITATION n511-106800 (V2).pdf
+annonces/62599/documents/fdd18930-7833-4bcc-abb7-93c42fc69a96/STATUTS DE L'ASSOCIATION SYNDICALE LIBRE DE PROPRIETAIRES _ ASL 14 RUE DU CIMETIERE _ (14 rue du Cimetiere)(1).doc
 annonces/62600/documents/095e1a9f-314e-4379-9ef7-3e5fd3fcacf7/TP3.png
 annonces/62600/documents/13fb3f4b-e3a2-4caf-abe4-9174d765438f/Rapport DPE n511-109012 (V2).pdf
 annonces/62600/documents/32d25b06-2978-489e-aede-ba5ee3180397/TP1.png
@@ -3166,6 +3523,7 @@ annonces/62600/documents/66b4540c-e351-45a6-b23b-62011bddf5e5/TP4.png
 annonces/62600/documents/6a8228fd-1493-417e-8752-a9bb5f262d97/Annexe.pdf
 annonces/62600/documents/78b6057e-aa47-485b-ac72-e834acd16098/TP2-1.png
 annonces/62600/documents/7c0503b5-9221-4b53-b1f6-5b79ec30e866/Rapport Electricit n511-109012 .pdf
+annonces/62600/documents/87d8711c-f8f5-4cab-afb9-1cd677c64a9b/REGLMT COPRO-EDD COTTIER DAVID . SCI VA-LLA (14 rue du Cimetiere)(1).doc
 annonces/62600/documents/974a716d-fc4d-44dc-bc2e-1e1822f725bc/TP5.png
 annonces/62600/documents/98c340be-30bb-4fff-89a2-c0aa05ec81c6/Rapport DPE n511-109012 .pdf
 annonces/62600/documents/a83708a6-701f-4141-adc8-f6672a9c91bd/capture d'ecran nombre de lots.PNG
@@ -3181,17 +3539,23 @@ annonces/62600/documents/f7b61234-1baa-4bf2-ba74-669bede45a70/Certificat mariage
 annonces/62600/documents/fc1935da-1936-4131-b997-f90d1281ae59/accord hono.pdf
 annonces/62600/documents/fe4fb63c-893b-4189-9400-871d28a71881/Rapport ERP n511-106800 (MJ 04-10-2024).pdf
 annonces/62600/documents/fec53475-c771-4ef4-b085-477b48786106/MANDAT.pdf
+annonces/62601/documents/005a1ebf-abd5-4020-b196-cea7c4f7a799/CNI ALLIBE Lea.pdf
 annonces/62601/documents/0223583c-7870-4a53-b2b6-f687d756dac7/CI HERLAUT Gilbert (1).jpeg
+annonces/62601/documents/1b2d0550-75fc-4b9b-bf99-1cb3b496bfb8/Titre de propriete.pdf
 annonces/62601/documents/3a86b458-47e0-41c4-88af-204956fd56c4/CI HERLAUT Gilbert (2).jpeg
+annonces/62601/documents/3c700fd6-199c-477d-9452-7a9065207ca6/Donation entre epoux 23-03-2000.pdf
 annonces/62601/documents/47652171-9cb5-4bb0-9539-1bc1c17f6ec3/CU positif 04-09-1996.pdf
+annonces/62601/documents/514afff4-0424-462b-822c-8bbdf152d289/Passeport HERLAUT Herve.pdf
 annonces/62601/documents/66c8c476-06c6-4bf8-94ae-50ff319d001d/EDR 09-07-2026.pdf
 annonces/62601/documents/76a5ca6a-d285-4351-a945-08c89e3f811c/CNI PEZET Romain.pdf
 annonces/62601/documents/9acddabd-5fa6-49b2-8f51-2c06a7995309/Mandat de vente 2026 (1).pdf
 annonces/62601/documents/a12f7f2a-31d9-4a58-8615-ae3cd37fa899/Cadastre 1.pdf
 annonces/62601/documents/c2babd8e-52ff-47c5-a984-e836a7a5cda6/Mandat de vente 2026 (2).pdf
+annonces/62601/documents/cfdcf57f-6166-45da-832c-b8cac613c8be/Declaration de travaux 1997.pdf
 annonces/62601/documents/dc422b90-21d6-44c7-b71f-6fb721d332e2/Cadastre.pdf
 annonces/62601/documents/df4ed539-6b5a-4a24-83a6-93f2d360cbbf/Passeport HERLAUT Denis.jpeg
 annonces/62601/documents/eb1e9e66-8bcc-4043-9ce3-fb1be3c247e6/Offre d'achat contresignee vende urs HERLAUT Denis et Gilbert.jpg
+annonces/62601/documents/f083915e-5421-4b71-8adb-b89a9d0735e6/Taxe fonciere 2025.pdf
 annonces/62602/documents/0b2f0a42-1aad-4370-b5c8-ebe82189c3af/ciclaudette.pdf
 annonces/62602/documents/12a4942a-cf95-4a5d-bdeb-3b3568df0624/attestationimmobilieresandrinebussy9juillet2009.pdf
 annonces/62602/documents/166b6762-6ed5-4d14-92a6-97a18d5fe5da/6762_-_D7_-_DPE_2020_Etude_Audit_Energetique__04_06_2025__14_36.pdf
@@ -3231,6 +3595,7 @@ annonces/62609/documents/795066d0-b1b3-46d9-8bb6-0c1300ca4fe6/Infos copro.pdf
 annonces/62609/documents/7ddc21e1-e7ac-4b6b-8270-725693078fed/ENSA AU 19052026.pdf
 annonces/62609/documents/919ef671-65f6-447b-860b-4e36cae805e7/Avis de valeur.pdf
 annonces/62609/documents/b5f571df-dfa8-4756-8ec2-1dd4c88f0b75/TP KARAALP 2.jpg
+annonces/62609/documents/bdbae7c9-4b07-40d0-8cc4-7a025f13feb0/A_LECTRICITA_.pdf
 annonces/62609/documents/cc9bbdce-7d6c-4ca0-b1f9-ddb396e9eb31/TP KARAALP 1.jpg
 annonces/62609/documents/ce700b60-f49a-4122-96e9-078a232ab503/PARRAINAGE COMBE-KARAALP.pdf
 annonces/62609/documents/d3c40ab7-6e5b-4e7f-bd8c-c4c5819f8781/CNI KARAALP AYKUT VERSO.jpg
@@ -3239,10 +3604,13 @@ annonces/62609/documents/f8aa247e-264c-40d8-a804-6dfc2968fdd0/planCadastralNorma
 annonces/62609/documents/fef0c3e8-63a0-45ee-bfd6-4d57e0018e46/CNI KARAALP AYKUT RECTO.jpg
 annonces/62619/documents/48498252-3ec0-49de-8f31-6ef970743d4e/CONFIRMATION_DEMANDE_TITRE_SEJOUR_4203037053_20260320.pdf
 annonces/62619/documents/4efedb33-b7e1-4398-a4d9-5b63102458dd/cni maria verso.jpeg
+annonces/62619/documents/55c770f4-b5a7-4d6f-9de1-85e5786088ea/Carte identitei maman verso.jpg
 annonces/62619/documents/61187bd2-a525-4011-ac71-087496e226d3/cni maria recto.jpeg
+annonces/62619/documents/6198500b-9429-428d-a04f-0de0462c195f/Carte identitei maman recto.jpg
 annonces/62619/documents/6619601f-59c3-4f7f-8891-75256f04883f/cni Rosa.pdf
 annonces/62619/documents/6c23ff6d-0bb8-40b9-b089-35cc8402ebed/accord honoraires.pdf
 annonces/62619/documents/77c6b933-80fa-4243-b6fd-38c073a6c40e/cni corrado.jpeg
+annonces/62619/documents/7d804d2a-3737-4f05-9314-daeacf858d94/Carte D'identitei salvator.pdf
 annonces/62619/documents/84be1f84-0a69-427d-8232-9e0f970a1276/Diagnostic 2022.pdf
 annonces/62619/documents/99bc04af-7b83-49bd-9714-6688e4c25eff/devis diag.pdf
 annonces/62619/documents/d63a78e7-d641-4b06-b124-33417eb491c2/Copie AAE ATTESTATION DE PROPRIETE LUPO Vincenzo_pdf_22573986.pdf
@@ -3295,14 +3663,19 @@ annonces/62668/documents/acc16008-407d-452c-af05-e822610b292c/EDD + REGLT DE COP
 annonces/62668/documents/b3116a3c-ac42-4e49-8265-c7c074d01ba3/compte rendu SYNDIC JUILLET 2024.pdf
 annonces/62668/documents/b7b25748-071f-479a-aa26-a23eaa432008/PV AG AVRIL 2023.pdf
 annonces/62668/documents/bd573d6c-9f3d-45da-b7d4-d5b93586095c/CNI VENDEURS.pdf
+annonces/62668/documents/c52ce6c9-7707-4c05-bd0c-9c7d0ffe5c5c/attestation simplifiee TOITURE + DECENNALE.pdf
 annonces/62668/documents/c5796dc8-767a-45f3-8fb6-ea97e3059b5b/PLAN CADASTRAL ET REF.PNG
 annonces/62668/documents/c9e8729e-fa91-4414-a8b1-44588cdce0a0/DEVIS TRAITEMENT FONGICIDE 2019.pdf
 annonces/62668/documents/d81984ff-3cea-4478-97cc-4d327e63fb31/ASSURANCE HABITATION GROUPAMA 2024-2025.pdf
+annonces/62668/documents/dcb7c338-11e0-4b67-899c-d70a56ca3438/taxe fonciere 2025.pdf
 annonces/62668/documents/f495bae3-55dc-47ac-a69d-681ff1a24dde/GEOPORTAIL.pdf
 annonces/62668/documents/fa17aa8b-200b-4dc6-8096-636734159c21/MANDAT 18762.pdf
 annonces/62690/documents/a35c99ca-5da4-424e-a3d1-395cc6471032/1121-PVAG_DU_2025.12.08..pdf
+annonces/62690/documents/a86e7782-0c69-42ee-a77c-f98c498ad467/20250630 - Decompte de Charges.pdf
+annonces/62690/documents/b4e335b7-8b6e-41bb-a041-f49306b6cfd9/titre_propriete.pdf
 annonces/62690/documents/c8229624-c73c-4186-9d3d-c5c8aec0b3e1/Avis_de_taxes_foncieres_2025 (2).pdf
 annonces/62690/documents/cf680b89-5e57-4e04-b0af-d9dbdffa8955/MANDAT 18759.pdf
+annonces/62690/documents/e2c5f541-1625-4e46-8ed3-c09a5a3e5f3a/Justificatif d_identite_.pdf
 annonces/62690/documents/e7deb1a0-eeb2-4cea-8aa7-49fc3678e022/diagnostic.pdf
 annonces/62692/documents/13049357-2be3-4bb7-b8e5-90eb35d39ba2/marchalkarineventecheminduruisseauveillette.pdf
 annonces/62692/documents/1de8ad56-60f6-4708-b9da-a0e7872b08a2/taxefonciere102.jpg
@@ -3324,6 +3697,8 @@ annonces/62692/documents/e7c35a95-cd12-4964-bc6c-d24eb97cfd81/marchaldossier.pdf
 annonces/62692/documents/fe6759ed-a5e1-47d3-ad77-12be8a7e9cfa/informationsparcelles1314.pdf
 annonces/62694/documents/0d340f9a-324c-483f-ad2f-cc9228f519a4/Ordonnance juge des Tutelles.pdf
 annonces/62694/documents/2001d1b8-3130-448c-a852-afcdfca3785b/CI FRADIN Dominique (2).jpg
+annonces/62694/documents/24c4d756-ee34-46f0-8a5e-0093d48c24e5/Taxe fonciere 2025.pdf
+annonces/62694/documents/4c122d95-661b-44da-a4e3-098d43bade32/EDF echeancier 2026.pdf
 annonces/62694/documents/64062455-e18b-4617-bc87-dfd898cad1c3/CI GIRY Isabelle (2).png
 annonces/62694/documents/741932b8-5db3-4412-aff4-6b84c0023b0d/Succession 25-06-2011.pdf
 annonces/62694/documents/76526ffb-0555-4855-b34e-248d36694d1f/CI FRADIN Dominique (1).jpg
@@ -3331,7 +3706,9 @@ annonces/62694/documents/8b18cc67-245b-4421-9af1-e12b08be00f3/Cadastre 1.pdf
 annonces/62694/documents/a39f367f-3194-46b0-8a1b-372b2443714c/CI GUILLAUMOND Chantal.pdf
 annonces/62694/documents/aeec4fbf-67ef-4343-89cc-7eccf9d29915/Achat terrain commune 24-06-2003.pdf
 annonces/62694/documents/be5aaa90-5f64-43f5-b2a1-935fbe1c8c5e/CI GIRY Isabelle (1).png
+annonces/62694/documents/d37ea3d3-8587-492f-9f17-7a2cbd809744/Titre de propriete 16-02-1974.pdf
 annonces/62694/documents/d4e263bd-bea2-48cf-a68b-cc07499a331a/CI GUILLAUMOND Philibert.pdf
+annonces/62694/documents/ebb6eec4-73b6-4c28-a2f5-9b2e128d2619/CI GUILLAUMOND Frederic.pdf
 annonces/62694/documents/f6837310-8045-410c-977e-5800ac713576/Cadastre.pdf
 annonces/62712/documents/1f3cd42c-0180-4c8f-8661-f53fef59803c/CNI VALOUR X2 .pdf
 annonces/62712/documents/22460d98-92c7-4354-b7dd-49d913a76ae1/ERRIAL VALOUR.pdf
@@ -3386,15 +3763,20 @@ annonces/62776/documents/1bf97895-d940-44bb-a011-37e61e0d952b/20164_CARREZ_LOT-3
 annonces/62776/documents/1ffbb821-0f0f-40fd-bde4-62bedfdc666f/MANDAT 18802.pdf
 annonces/62776/documents/220621a4-6afc-4f8f-9364-98615ef57311/CNI V.jpg
 annonces/62776/documents/4bc6904f-8fc8-4ffc-849f-41ddf08ae6ed/Copie AAE REGLMT COPRO-EDD par Monsieur Christian GROUSSON_20458086.pdf
+annonces/62776/documents/5afd317a-c13b-4cd8-aa2b-9dc0cc089c5b/DPE (ensemble du batiment)_20458080.pdf
 annonces/62776/documents/5bb88d63-2b57-4fb2-8fdd-1c031a681e45/planCadastralNormalise (1).pdf
 annonces/62776/documents/7925b690-344a-4427-9010-d58b6e61d981/ERRIAL_Parcelle_000-AH-217@43130_27072026.pdf
+annonces/62776/documents/7bdbeda4-f78d-48ac-a445-bfad5173d8b9/Proces verbal dassemblee generale 11-2025 avec annexe_20460945.pdf
 annonces/62776/documents/ac4bb9fe-4f9b-4622-ac8b-4a273618b945/CNI R.jpg
 annonces/62776/documents/c5baf5fb-a0bb-4f7f-a331-61a826cd424c/Diagnostic technique global_20458088.pdf
+annonces/62776/documents/d593e9cc-a32c-4cd3-87bd-c4448f4603c7/Plan exterieur de la copropriete_20457107.pdf
+annonces/62776/documents/f1fd09e4-f90f-47d7-856c-d0f18fc27462/Attestation de propriete.pdf
 annonces/62776/documents/f251bea6-06e6-4afd-9346-aeec5df11d49/09636_GROUSSON_LOT 3_MAZET ST VOY DPE logement appartement chauffage individuel.pdf
 annonces/62776/documents/fc4a994d-4408-43a9-b6c9-050b12104148/IMG_20260723_130632.jpg
 annonces/62777/documents/04034381-a6ec-4271-9bc1-a64f1269b308/MANDAT 18803.pdf
 annonces/62777/documents/5104dd6a-a1ec-4d18-bf5b-bbd7d974f71b/Diagnostic technique global_20458088.pdf
 annonces/62777/documents/6c34799e-94a9-4e94-8d8c-410a76b251cb/IMG_20260723_130634.jpg
+annonces/62777/documents/764968ad-36bb-4273-819b-0225bce46e88/Attestation de propriete.pdf
 annonces/62777/documents/8606f12f-c7e1-43c6-a633-0736364aa7b5/20164_CARREZ_LOT-2_2024_GROUSSON_MAZET Certificat Carrez.pdf
 annonces/62777/documents/9d1b66f5-00db-4934-9005-859ad7629c4d/CNI V.jpg
 annonces/62777/documents/a1a75a60-f24b-4b7d-99d0-b365139d668f/CNI R.jpg
@@ -3429,7 +3811,9 @@ annonces/62787/documents/32c031cc-a3fe-4f6c-9bb1-244db0dcd7c6/Diagnostic HAMDADO
 annonces/62799/documents/8c4b263b-d331-401a-b9cd-6a28b1651c12/titredepropriete49.pdf
 annonces/62799/documents/e6cceb1a-62e6-48b0-a959-e6988926356b/infossci14.png
 annonces/62800/documents/2bf4a182-4c7c-4688-af65-650dc263fc47/CNI Roussel.pdf
+annonces/62800/documents/3b0a3b07-baa5-4e76-8d28-3fde6ff468d1/Attestation Propriete Roussel.pdf
 annonces/62800/documents/7169d749-d462-4443-b951-3326e1f0873d/ERRIAL_Parcelle_000-A-228@07225_30072026.pdf
+annonces/62800/documents/88070d69-5b3b-47ef-a4a4-2ed388d08294/Taxes Foncieres Roussel.pdf
 annonces/62800/documents/8de699ed-5b38-4696-9252-8f52176b1132/Diag ROUSSEL Sophie (2).pdf
 annonces/62800/documents/a0c4c0db-20a7-455f-8f69-650c6b0ab48f/planCadastralNormalise.pdf
 annonces/62800/documents/da641009-7280-45d9-985b-882517ac723d/mandat 18789.pdf
@@ -3451,7 +3835,9 @@ annonces/62807/documents/4edf9111-4609-4741-b0db-6f0731ae31c6/CNI Chol Noel et A
 annonces/62813/documents/0e698673-35e8-44d2-bb01-9ca60e45b35b/Bon de visite CHATAIGNER ( genestoux ).pdf
 annonces/62813/documents/388cd5bd-11a2-474d-851b-1698cdc2740e/Mandat de recherche CHATAIGNER.pdf
 annonces/62813/documents/6cfe3cdf-152b-488d-9b08-0e666f5e7d04/CNI Chataigner.pdf
+annonces/62813/documents/a57441d4-fa60-4324-a4f0-96be125de4c5/Titre de propriete GENESTOUX.pdf
 annonces/62813/documents/d2d238c9-7986-4285-8a79-fb942f9a8edc/CNI GENESTOUX.pdf
+annonces/62813/documents/e2ba91da-2f2d-4fd1-8e06-7d34822b8fd2/Offre CHATAIGNER acceptee ( Genestoux ).pdf
 annonces/62813/documents/f29e6352-b546-431b-a75f-0af8add1f7ae/Fiche renseignement CHATAIGNER.pdf
 annonces/62817/documents/3420609b-6efe-4c86-9750-4dfc4bb4a647/1000014825.jpg
 annonces/62817/documents/9a83b16d-e9c7-4818-8aa2-6d212e2a50f8/1000014826.jpg
@@ -3461,29 +3847,44 @@ annonces/62817/documents/d82331e5-1b3b-4ee8-892a-6fa9b5163c73/1000015831.jpg
 annonces/62817/documents/dffd5854-70c5-463f-bd9b-0fe746bda25e/1000004390.jpg
 annonces/62826/documents/18a6dbed-687c-4021-adfb-5c2d9814d97f/Dossier renseignements parties.pdf
 annonces/62826/documents/2b516d2c-caa7-4020-a032-fe9ef8ec98ed/NouveauDPE.pdf
+annonces/62826/documents/4540cded-ed14-44b8-8a37-e0cf9cee6993/Offre Montregard Signee par acheteur et vendeur.pdf
 annonces/62826/documents/5205410e-a305-4eda-b020-fd27ef1ebfd2/SOUVIGNETPAULAUDITENERGETIQUEMONTREGARD..pdf
 annonces/62826/documents/5fde1bd2-d56f-44bb-a425-c80e74686dc1/BV MOLLARD.pdf
 annonces/62826/documents/7a58fe92-22ab-4fb3-9ec9-0e43f627c8d8/20260410144438.jpg
+annonces/62826/documents/9640b1f8-7ab7-4dd4-8679-3cd343a3a075/mandat simple 18794 SOUVIGNET 103000_ H7000_.pdf
 annonces/62826/documents/a40aaa78-d4e5-4ddd-a3ad-9d699f601a82/ERRIALParcelle000-H-1294314216042026.pdf
 annonces/62826/documents/b81bcac2-e5b5-4cb3-b089-b35bb0cf143d/Notesvoisins.jpg
 annonces/62826/documents/bd16d2a6-5175-4246-93c5-6a036cc0430a/offre MOLLARD prix mandat en attente.pdf
 annonces/62826/documents/c0461a21-474a-460a-9ecf-a10ec7e75969/CNI.pdf
 annonces/62826/documents/c1a7748c-35ca-4a75-b378-a5d40ab48241/TP.pdf
+annonces/62826/documents/c85347f6-a0c7-4b3a-a53a-1aa1ea027fd8/Carte d'identite Xavier Mollard.jpg
 annonces/62826/documents/cef26777-a194-4ebb-a3f8-e875f6572e12/Offre Montregard.pdf
 annonces/62826/documents/ddd3ea28-d46e-4a28-b9c9-846000b7c3dc/Cadastre.pdf
+annonces/62826/documents/f24eda6e-32af-4b88-8b07-c65316c5de90/taxe fonciere montregard 2025.pdf
 annonces/62826/documents/f27467e6-6345-4f2a-85a3-e535c436c6af/Demande modif mandat SOUVIGNET.pdf
 annonces/62826/documents/f80c2b06-33e9-467e-ae5b-3d5987c4613a/SOUVIGNETPAULMONTREGARDDOSSIER.pdf
+annonces/62829/documents/07ff6a87-b5c0-48e7-865d-527d3e1a893f/Proces verbal de delimitation.pdf
 annonces/62829/documents/08276a7d-14e4-48f3-8aa9-dd1dc33cf7b8/DEMANDE DE CU AVEC PIECES JOINTES 03-08-26.pdf
+annonces/62829/documents/30e54c99-d054-4d6b-a18d-f5fb7f541f51/Taxes fonciere 2025.pdf
+annonces/62829/documents/4a6f9192-3637-46a4-bee7-6d39af1d81a1/Plan de divisionnumerise_20260730-1722.pdf
 annonces/62829/documents/632e182d-bfef-4e82-8115-e337e49b6b8b/OFFRE CONTRESIGNEE.pdf
 annonces/62829/documents/665af578-0bbe-406f-a825-40e9a141319b/OFFRE CONTRESIGNEE 2.jpg
 annonces/62829/documents/68b57a87-d05e-4804-bfcd-be6fb4c7e297/demande de CU - 03-08-2026.pdf
+annonces/62829/documents/7abdab84-9ed2-4c47-b8b3-5da8d1f02fe3/Terrain 1708m_ Le Brignon Fiche de renseignements.pdf
 annonces/62829/documents/8b65a3c6-698c-4f7a-868c-2bdde7c7b0c5/CI Jeanne Prades.pdf
+annonces/62829/documents/9a8c51c6-8c39-4c83-a9d6-b9dc27fa4a41/Certificat d_urbanismanumerise_20260730-1740.pdf
+annonces/62829/documents/b0cb5770-b31e-4559-9a37-f143f42a7847/Arrete de voirie portant alignementnumerise_20260730-1725.pdf
 annonces/62829/documents/bf19382c-9721-40e4-a635-28ecac7a88e8/Donation Partage Saby_Lashermes.pdf
 annonces/62829/documents/c153e646-f443-4189-9ce1-9431be731328/planCadastralNormalise.pdf
+annonces/62829/documents/c20385fd-99e3-47e4-88ad-20ca07f6e194/recepisse de depot CU - MAIRIE 11-08-26.pdf
 annonces/62829/documents/c2631b40-6d45-4aa5-96c1-71b6ebcba691/CI daniel Prades.pdf
 annonces/62829/documents/d9bb4084-1d12-4671-8eff-7b0c17415bc2/mandat_18796.pdf
+annonces/62829/documents/ef341c0c-13c6-4d83-9f72-b392e6a86d4c/Reconnaissance des limites( Proces verbal)numerise_20260730-1729.pdf
+annonces/62829/documents/fa544d29-26cf-46c0-8304-8e3b70b92220/Carte d'identite.pdf
 annonces/62832/documents/0004d503-8caa-4bd2-80b0-3291d2efc331/TF 2025 (3).pdf
+annonces/62832/documents/0af646e1-d504-4cc7-94d2-573240bda7a0/Modificatif n_1 - 20 decembre 2005.pdf
 annonces/62832/documents/1321643b-f8b1-4bcb-b8d2-8b6bbc7826dc/planCadastralNormalise (4).pdf
+annonces/62832/documents/15d2d3ae-d708-4531-aee0-583db4bb602f/Reglement copro et Etat descriptif de division - 4 decembre 2005.pdf
 annonces/62832/documents/2b4e61ea-1b2e-469a-84b6-00a90b0dd2c9/CHARGES 2EME TRIMESTRE 2026.pdf
 annonces/62832/documents/3aed8eaf-083a-4ac0-a4e0-bf414fc8fc75/CHARGES ANNUELLES 2025.pdf
 annonces/62832/documents/45abc198-2a54-4a40-906b-95c3778aac24/CNI RECTO.jpeg
@@ -3497,12 +3898,14 @@ annonces/62832/documents/8ff0231e-b052-4dca-ba85-e7efd639cda5/AG 2024.pdf
 annonces/62832/documents/93fe13f9-3ca7-416e-894d-4b9b25a7a00c/DOSSIER OTTAVI (1).pdf
 annonces/62832/documents/ade61cce-5880-4bea-856b-c63117bb5282/ANNEXE PRECONTRACTUELLE.pdf
 annonces/62832/documents/b25c1cd0-6765-4f79-a57d-9220fd6e23d4/MANDAT (2).pdf
+annonces/62832/documents/cf292e21-ce12-45bd-9fac-4ca0c16d6d10/Modificatif n_2 - 29 aout 2009.pdf
 annonces/62832/documents/d0ceace0-209f-4f0a-ba4b-35d6a136fa07/MANDAT DE VENTE.pdf
 annonces/62832/documents/ea6fcb06-d8c3-492b-bfbc-1652bf61ce69/AG 2026.pdf
 annonces/62832/documents/f27c6c70-557f-401e-94cc-8caf861301b6/VENTE SCI GOUDOULIS II _ OTTAVI (2).pdf
 annonces/62832/documents/fd9bee34-7e30-4663-9834-4fb4b0dba807/CHARGES 3EME TRIMESTRE.pdf
 annonces/62833/documents/14d8ead9-8340-44f9-9f3a-af152141010a/Cadastre.pdf
 annonces/62833/documents/7d148507-74f2-442c-a051-d18afa609adf/Estimation 2026.pdf
+annonces/62833/documents/dabc9222-8b03-443a-8753-414fdf715164/Facture 805 estimation GTI 180_.pdf
 annonces/62840/documents/6d3fd4be-20cf-445d-a235-501e9ba1f5f9/Surfaces VIALLON EPALLE.pdf
 annonces/62845/documents/0b94a6f1-d094-4e07-828a-30a791825761/ERRIAL_Parcelle_000-A-2286@63404,000-A-2285@63404_04082026.pdf
 annonces/62845/documents/2956dc5a-a5aa-493e-a7e6-b2b292b2a956/CI VERSO M GIRARD.jpeg
@@ -3518,10 +3921,12 @@ annonces/62845/documents/c5e7ff34-d851-43c3-8640-696d177280cc/CI RECTO M GIRARD.
 annonces/62845/documents/fadafb5e-23bf-4d9b-9a5f-718b8753ce1f/TF2.jpg
 annonces/62849/documents/062bd5c9-bce8-47d2-8fc7-e57a931a5fae/imprimerExtraitCadastral.pdf
 annonces/62849/documents/2f3472cc-9e41-4a40-acde-a1eacf7217be/certificat d'urbanisme.pdf
+annonces/62849/documents/337d1a28-1c52-4c6b-a4f4-e130962523f3/Releve de propriete FAURE Claude.pdf
 annonces/62849/documents/7a2140c0-8fdf-49ca-814d-9da2d2b71203/Rapport_G1_ES-PGC_FAURE_MARSAC EN LIVRADOIS.pdf
 annonces/62849/documents/8b1b5f84-70de-4070-afd2-bbde2d2a9ba3/MANDAT DE VENTE.pdf
 annonces/62849/documents/d59c36e7-6ec4-4815-bf53-4422d9d00928/CI RECTO VERSO.pdf
 annonces/62849/documents/da77d939-31c1-4051-9743-7ef8e717ec71/certificat d'urbanisme.pdf
+annonces/62856/documents/005824b1-e4a4-47b0-99a5-e168cdc7fba2/mandat Simple 18807 VALLET 102500_ H7500_ exp.10.08.2027.pdf
 annonces/62856/documents/02638c93-510a-4c03-9e29-51c054e10ba5/certifDP.pdf
 annonces/62856/documents/0db26069-2e87-4ed6-97ba-e34eacffdcd1/Copie AAE DONATION-PARTAGE VALLET Jean.pdf
 annonces/62856/documents/0dc9c7d4-ca28-4df3-894a-1ce742d5ae84/12569-DIV Model (1).pdf
@@ -3558,11 +3963,15 @@ annonces/62866/documents/0f85bf2d-ebdf-40dd-9fbc-c8c5b881517a/CNI Mme Celestine 
 annonces/62866/documents/422f491f-6d89-4a91-a5af-daef43445512/EXTRAIT REGLT COPRO.pdf
 annonces/62866/documents/4ff883ad-e85e-47d8-87df-45d05c6b2fdf/PV AG JUILLET 2026.pdf
 annonces/62866/documents/512160ed-49e1-45b6-a980-ab43edc63700/PV AG JUIN 2025.pdf
+annonces/62866/documents/6494a911-45ba-44ee-92c4-97167e037595/taxe fonciere 2025 (exoneration).pdf
+annonces/62866/documents/674b55a6-aecb-4444-b197-d0e490bf9027/acte de propriete 28 mai 2002.pdf
 annonces/62866/documents/6acf4708-f646-43cd-8c36-eccb98243563/CNI Mme Chabret.pdf
 annonces/62866/documents/6e3f331c-7bc9-47e3-b3ce-3487e1ad6909/Carnet d'entretien.pdf
 annonces/62866/documents/88d4dad0-0765-4a6d-9050-6909b9bbdd86/Appel charges avril-juin 2026.pdf
+annonces/62866/documents/a06150be-7e2d-41e7-9abc-46744e96b5d5/Releve de compte 2025.pdf
 annonces/62866/documents/c95be103-e44e-4b42-b587-9f09e6d49aa1/Carnet d'entretien - 28-08-2023 - LA CITE.pdf
 annonces/62866/documents/d9294c35-a8ae-4e9e-8410-daaffabad7e3/Suite EDD P30.pdf
+annonces/62866/documents/e164f563-70fb-45e9-b20e-1b0283f50d87/ancien metrage.pdf
 annonces/62869/documents/0f341438-d499-460e-94ac-1af13818b329/Cadastre 1.pdf
 annonces/62869/documents/6969a26b-3ed7-4ca4-b6de-8f7a8bbaff49/Cadastre.pdf
 annonces/62870/documents/04c5c800-91a1-4f07-a24c-b9861837c7fb/ag 2025.PDF
@@ -3584,14 +3993,19 @@ annonces/62887/documents/07f05e9d-61ca-44b1-84b9-405ee4445413/acte de vente 43 r
 annonces/62887/documents/11199b48-897e-4570-9dd7-053fe38baf6f/acte de vente 43 rue des Passementiers Page 7.pdf
 annonces/62887/documents/26e8985d-81be-4377-9adb-283e8e2381cc/photo C.I.pdf
 annonces/62887/documents/3b1f882d-3da5-4275-8708-72964ec42e87/acte de vente 43 rue des Passementiers Page 3.pdf
+annonces/62887/documents/43ea949b-0ed0-464c-90e7-d48152610fa4/Reglement de Copropriete - 08-04-2025 - LES GIROLINES (R1295).pdf
+annonces/62887/documents/46f8cfad-f9b0-49d9-91ae-87e6426402e9/Proces verbal (signe) - 10-09-2024 - LES GIROLINES - CC - AG Ordinaire - 10-09-2024 1800000 - 10-09-2024 1911370 - 11-09-2024 - AG2073-1.pdf
 annonces/62887/documents/4f9d4e07-9aa1-45dd-ab72-afd27d0e0a9c/Carnet d'entretien - 29-06-2026 - LES GIROLINES.pdf
 annonces/62887/documents/6e39465b-0544-4f89-9e24-eed357204c6b/plan St E Passementiers page 1.pdf
 annonces/62887/documents/6ff5ecf1-1025-4b66-8344-6756693bd83d/plan St E Passementiers page 2.pdf
 annonces/62887/documents/7cdae171-f573-4107-b69b-60273650be72/acte de vente 43 rue des Passementiers Page 1.pdf
 annonces/62887/documents/87deb44c-f0b2-4853-a47a-0f3ee7a6e1e0/acte de vente 43 rue des Passementiers Page 2.pdf
 annonces/62887/documents/a2ee2d08-c61c-4787-b18f-cd7c51144e88/acte de vente 43 rue des Passementiers Page 5.pdf
+annonces/62887/documents/b07b644b-910c-46ef-8910-316643c52de5/Proces verbal (signe) - 18-09-2025 - LES GIROLINES - CC - AG Ordinaire - 01-04-2024 - 31-03-2025 - 19-09-2025-1 (1).pdf
 annonces/62887/documents/b63c93d8-0e7c-4c39-9508-e3840d48eefe/Carnet d'entretien - 29-06-2026 - LES GIROLINES.pdf
 annonces/62887/documents/b8661435-5009-42b2-87d8-4b717feeab09/acte de vente 43 rue des Passementiers Page 6.pdf
+annonces/62887/documents/bf98541a-77c9-41bc-aea1-fdfab984ba57/mandat signe.pdf
+annonces/62887/documents/c6af5277-05e2-40a1-93c8-2897148cf1f1/Projet Regularisation des Charges - 03-08-2026 - LES GIROLINES - CC - GAY Alice - 01-04-2025 - 31-03-2026.pdf
 annonces/62887/documents/d26d7eab-fef5-4da3-9d7c-21365ed1b234/Avis Appel - Juillet 2026 - LES GIROLINES - GAY Alice - 17-06-2026.pdf
 annonces/62887/documents/e3164904-cbb3-480f-8cce-a9a97fd9e627/Avis_de_taxes_foncieres_2025 maman.pdf
 annonces/62887/documents/fa3099f2-7f20-4fe6-94cd-c56a0350337f/Avis_degrevement_de_taxes_foncieres_2025 maman.pdf
@@ -3629,6 +4043,7 @@ annonces/8489/documents/91d20689-9bd1-417b-9801-937548be5f01/IMG_8055.png
 annonces/8489/documents/9c17be85-93f6-4e44-88f2-09f2edcb387c/accord_honoraires_447.pdf
 annonces/8489/documents/b0acf36d-fe0f-47d3-ace4-8d50008235a7/attestation_de_propriete_recto_5.jpg
 annonces/8489/documents/c1510fe9-c1b1-4242-a1cb-e8350440bbdf/errial_parcelle_000_ai_15443251_03102025.pdf
+annonces/8489/documents/d56b23d8-bc0b-4e13-8d27-083fd7cf9461/Accord honoraires avt 99500_.pdf
 annonces/8489/documents/d7e6db45-d0bc-445e-baf8-cb1d14169a4d/cni_recto_27.jpg
 annonces/8489/documents/d87ea921-4250-428c-a265-94f09a0d8b0d/mandat_simple_de_vente_mandat_simple_de_vente_groupe_gtimandat_68de2675b46e1a8b8a080925.pdf
 annonces/8489/documents/e1f2c58b-b592-44b2-b744-c32c2b0d657e/attestation_de_propriete_verso_5.jpg
@@ -3638,6 +4053,7 @@ annonces/9403/documents/02fd75ef-c841-45cc-aca9-275fccedf95b/succession_DENAMPS_
 annonces/9403/documents/0fc90007-7134-4642-9a1e-ac7d752be7f2/MANDATMMED_6a1aa0c0a6ccf.pdf
 annonces/9403/documents/19a35ab5-aaea-468b-b48c-d41fd92ca2c6/Offre Eric DENAMPS.pdf
 annonces/9403/documents/21dcf1e6-0ff3-4c21-97cf-1fb9ae4cd56b/attestation donation.pdf
+annonces/9403/documents/2dd1d575-008d-463b-bed2-ca6059240c23/Offre pour chalet signee par acquereurs.pdf
 annonces/9403/documents/3797313b-9c6a-4820-924b-f9834c02350d/OFFRE Sophie DENAMPS signature pour Mr DENAMPS Jean louis.pdf
 annonces/9403/documents/3b8ebde3-6ad4-4159-a849-d7bbc8a5811a/ERRIAL_Parcelle_000-ZI-36@63039_01062026.pdf
 annonces/9403/documents/48987554-4ed3-4e14-99f2-ead7df694d58/CI_verso_DENAMPS_Eric.jpg
@@ -3654,6 +4070,9 @@ annonces/9403/documents/a4e3d1ec-1d99-4f95-980d-8327d22d9ee9/DENAMPS Maryse Cour
 annonces/9403/documents/a91059e5-68b9-4e76-abc5-fbc4599715b4/fiche de renseignements Mr Mme MORAND.pdf
 annonces/9403/documents/b0dd39c5-a6e9-4ba9-98f1-6eab2c7111c0/CI_recto_DENAMPS_Eric.jpg
 annonces/9403/documents/b9e65847-6772-4ae9-9ba9-949ed807d013/Offre Maryse DENAMPS..jpg
+annonces/9403/documents/be974f17-8226-4d1c-91a0-0304c304dd90/Acte de deces.pdf
+annonces/9403/documents/ccda1663-d9cd-4f05-abd7-9659ab97ccb0/Offre signe Stephane Denamps.pdf
+annonces/9403/documents/e25b2b69-9ca1-4d78-baef-b363044a4be8/offre MORAND a formaliser prix mandat.pdf
 annonces/9403/documents/e5ba3d6c-dde9-465e-9542-d41efb3077cd/ANNEXEMAND_6a16b3d309ab7.pdf
 annonces/9403/documents/f04daf14-6648-44bd-a325-1b955dbc4228/taxe_fonciere_2025.pdf
 annonces/9403/documents/fb81bc7c-4f51-4629-b4f0-76b6421f660e/CI_verso_DENAMPS_Maryse.jpg
