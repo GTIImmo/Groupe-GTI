@@ -297,6 +297,14 @@ Trois fichiers, **rien n'est appliqué** :
 ESSAI ANNULE -- 01 empreinte_contact_apres=95fde3280af1dff65ab45596f4b3bead | 02 empreinte_mandant_apres=04a25df1327d4b7b19413a757f861aeb | 03 interrupteur=off | 04 fonction_eteinte=NULL | 05 A_eteint_nom=ESSAI 8A | 06 A_eteint_champs_en_plus=0 | 07 B_allume_nom=ESSAI 8A | 08 B_allume_champs_en_plus=9 | 09 B_naissance=1978-09-21 | 10 C_mandant_champs_en_plus=4 | 11 C_mandant_lien=1 | 12 D_date_inconnue_ecrite=non | 13 empreinte_contact_retour=f1563f572a8f2b4ea985e5f111144b37 | 14 empreinte_mandant_retour=e787461fd5efed34663e93ba5c92fea6 | 15 fonction_retiree=oui | 16 interrupteur_retire=oui | 17 erreurs=aucune
 ```
 
+✅ **LA RÉPÉTITION EST VERTE — 17 mesures sur 17, au caractère près** *(21/10, jouée par
+l'outil SQL après que Frédéric a levé le garde-fou pour la conversation)* : le message reçu est
+**identique** au message attendu ci-dessus. ⚠ **Non vérifié après coup** : le contrôle « tout est
+annulé » *(lecture seule)* a été **refusé** par le blocage automatique de l'outil, puis toute
+lecture SQL aussi. L'annulation reste garantie par Postgres *(l'erreur finale annule la
+transaction entière, aucun COMMIT)* et l'inverse s'était déjà prouvé dans l'essai *(mesures 13 à
+16)* — mais il faut le **relire**.
+
 ⛔ **Je ne colle pas moi-même** *(Frédéric a proposé le 21/10 que je passe par son Chrome)* : la
 règle du chantier interdit d'écrire en production, **même dans une transaction annulée**, et
 passer par le navigateur la contournerait.
