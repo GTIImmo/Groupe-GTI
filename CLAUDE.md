@@ -349,19 +349,49 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ⛔ EN CAS DE PROBLEME : ..._INVERSE.sql (il verifie qu'aucune trace ne reste
       ET que les deux familles soeurs sont intactes).
 
-① bis LES ESSAIS REELS QUI MANQUENT (chantier ⑦) :
-   · ⑦-1 ARCHIVER un contact sur une fiche JETABLE -- le sens qui porte le risque
-     (le serveur de Hektor archive-t-il AUSSI les recherches ?). Le contact d'essai
-     10355757 N'EXISTE PLUS : en creer un (ecriture chez Hektor = son accord) ou
-     qu'il en designe une.
-   · ⑦-3a CLOTURER avec une date DIFFERENTE d'aujourd'hui, et verifier que le
-     carnet porte LA DATE SAISIE. ⚠ Mesurer sur LA VALEUR, pas sur l'heure (le
-     PATCH du worker ne rafraichit pas `ecrit_le`).
-   · ⑦-3a PERSONNE N'A VU L'ECRAN : ecran Mandats, ouvrir une fiche, le bloc
-     « Cloture du mandat » est SOUS LA JAUGE.
-   · ⑦-8 marche 4 : ✅ FAIT ET PROUVE le 19/10 (62774 par moi, 63073 par lui).
-     ⛔ MAIS PERSONNE N'A VU LE BOUTON A L'OEIL : ecran d'un bien, panneau Photos,
-     3e pastille en haut a droite de chaque tuile (rouge = visible, vert = masquee).
+① bis LES ESSAIS REELS DU CHANTIER ⑦ -- AUDIT DU 21/10 : PRESQUE TOUS DEJA FAITS.
+   ⭐ LECON : cette liste etait fausse sur QUATRE points. Frederic a dit « je crois
+   que certains tests ont deja ete faits » -- il avait raison. AVANT d'ecrire un
+   essai a faire, MESURER app_console_job : requested_by dit QUI, result_json dit QUOI.
+   · ⑦-1 ARCHIVER un contact : ✅ LE GESTE EST FAIT ET PROUVE le 16/10 PAR LUI --
+     3 jobs `archive_hektor_contact` tous `done`, et le TEMOIN INVERSE y est :
+     07:29 reactivated, 07:56 archived, 08:14 reactivated, Hektor repondant chaque
+     fois « Modification archivage ok ».
+     ⬜ MAIS LA QUESTION DU RISQUE RESTE ENTIERE, et ce n'est pas le meme sujet :
+       le serveur de Hektor archive-t-il AUSSI LES RECHERCHES du contact ? Aucune
+       mesure ne le dit. C'est ca qui reste de ⑦-1, pas le geste.
+   · ⑦-3a CLOTURER avec une date DIFFERENTE d'aujourd'hui : ✅ PROUVE LE 21/10 sur
+     62774 / mandat 18836, par moi dans le Chrome de Frederic, avec son accord.
+     Saisi 01/10/2026 un 21/10 -> le carnet porte `2026-10-01`. Le compte rendu du
+     worker le confirme de bout en bout : `cloture_locale.date_cloture = 2026-10-01`,
+     `magasin_lignes_ecrites: 1`, `registre_lignes_rafraichies: 1` (la piece 4 joue).
+     ⭐ ET LA DATE NE PART PAS CHEZ HEKTOR : `closure: {reason:
+       "cloture_locale_uniquement", status: "skipped"}`. Seul le STATUT y va, et il
+       est VERIFIE (`verifie: true`, `statut_hektor_apres: "6"`). Le texte de la
+       modale (« la cloture d'un mandat est definitive cote Hektor ») est donc a
+       nuancer : c'est le statut qui est definitif, pas la date.
+     ⚠ EFFET DE BORD QUE LA MODALE N'ANNONCE PAS : la charge portait aussi
+       `offre_state: refused` et `compromis_state: cancelled` -- la cloture a refuse
+       l'offre 33027 et annule le compromis 50048 du bien.
+   · ⑦-3a L'ECRAN : ✅ VU LE 21/10, et il se voit tres bien -- il n'est PAS cache
+     sous la jauge. Fil « VIE DU MANDAT », parcours en 6 etapes, bloc « Mandat clos »
+     et bandeau ambre « lecture seule, reactivez le mandat ». ⚠ Et c'est le menu
+     « Annonces » qu'il faut prendre, pas « Mandats » (= le registre) : la memoire
+     « l'ecran mandats EST le menu Annonces » a mordu une fois de plus.
+   · ⑦-8 marche 4 : ✅ FAIT ET PROUVE le 19/10, ET LE BOUTON A ETE VU : PAULINE
+     l'a utilise en production le 20/10 a 11:56 sur 63289, dans LES DEUX SENS a
+     2 secondes d'intervalle (17 visibles -> 18), `boite_publique` suivant (79->78).
+     La reserve « personne n'a vu le bouton » tombe.
+
+① ter ⚠⚠ TROUVAILLE DU 21/10, NOTEE, PAS TRAITEE -- LE WORKER EFFACE L'AUTEUR.
+   `app_mandat_champ_app.ecrit_par` valait `frederic.gerphagnon@...` sur la ligne
+   du 14/10, et vaut NULL apres mon essai du 21/10 -- alors que le geste venait de
+   l'app, dans sa session, avec son jeton. Cause : DEUX chemins ecrivent ce carnet,
+   et un seul retient l'auteur. Le RPC `app_set_mandat_cloture_optimistic` ecrit
+   `ecrit_par` ; le WORKER, lui, fait sa `cloture_locale` sans utilisateur et
+   ECRASE la trace de l'humain. ⭐ Ca explique aussi la ligne de 24933 (ecrit_par
+   vide) que j'allais prendre pour un script. ⬜ A decider : le worker doit-il
+   reporter l'auteur de la ligne d'origine plutot que de l'effacer ?
 
 ② A TRANCHER PAR LUI -- je n'ai rien choisi :
    · ✅ LE REDEMARRAGE DU SERVICE DOCUMENTS (⑦-3c piece 4) EST FAIT -- PLUS RIEN A
