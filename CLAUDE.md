@@ -268,6 +268,48 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
        ne tient que sur une comparaison de COMPTES par annonce, pas fichier par fichier.
        Plus 28 orphelins non expliques, ecartes volontairement.
      Tout est dans notice/AUDIT_MENAGE_COFFRE_DOCUMENTS_2026-10-21.md.
+   ✅ LE MENAGE EST FINI, LES DEUX LOTS (21/10) : 5 062 fichiers retires, le coffre
+     passe de 42,057 a 35,254 Go -> 6,80 Go LIBERES. Restent 29 orphelins (les 28
+     non expliques + 1). Zero document vivant sans son fichier, 388 ZIP de preuves
+     INCHANGES, 1 205 compagnons INCHANGES.
+     ⭐⭐⭐ ET LE LOT 2 A PROUVE LA CONCEPTION : 377 refuses, dont 365 « SA FICHE EST
+       VIVANTE ». Entre la fabrication de la liste et la suppression, LE CORRECTIF A
+       RE-CLE DES FICHES : leurs dossiers sont redevenus vivants et le garde-fou les a
+       protegees. Sans la reverification a la volee, 365 fichiers de fiches VIVANTES
+       auraient ete supprimes. C'est pour ca que le script ne croit pas une liste gelee.
+
+   ⛔⛔ DECISION DU 21/10 -- PAS DE REMEDE SUR LA CLE. NE PAS RELANCER.
+     La question de Frederic : « si Hektor ne change pas, pas besoin de remede ? ».
+     J'ai cherche l'argument contraire et je ne l'ai pas trouve. LES TROIS MESURES :
+     1. LE RISQUE EST BIEN LIMITE A L'HOTE. Sur toute l'histoire de la base (mai ->
+        octobre), le CHEMIN et le FLAG n'ont JAMAIS bouge : une seule forme
+        (/admin/documents/biens/<annonce>/<fichier>?flag=lbiDocumentsSecure), deux
+        hotes. 162 876 fiches sur le neuf, 27 944 sur l'ancien. Je craignais que le
+        flag ou le chemin puissent changer aussi : ce n'est jamais arrive.
+     2. LES 28 343 ADRESSES MORTES NE FONT MAL A PERSONNE. L'ecran ouvre un document
+        par storage_path, JAMAIS par l'adresse Hektor (verifie : 2 appels dans tout le
+        front, les deux par storage_path, zero usage de console_url pour ouvrir). Et le
+        verrou n° 1 compare les CHEMINS sans l'hote, donc il les protege. Une adresse
+        morte DORT, elle ne casse rien.
+     3. ET SI HEKTOR REDEMENAGEAIT, LE CORRECTIF ABSORBERAIT LE COUP -- c'est exactement
+        pour ca qu'il existe. On ne reperdrait RIEN ; on repasserait par la reparation.
+     ⚠ CE QUE LA MESURE A TROUVE, et qui ne change pas la decision : la reparation est
+       LENTE -- +20 fiches en ~12 h sur 70 travaux, pour 28 343 restantes (6 209
+       annonces). A ce rythme il faudrait des annees. Mais comme elle ne protege de rien
+       d'urgent, ce n'est pas un probleme : c'est juste lent, et chaque annonce se repare
+       gratuitement a son prochain passage.
+     ⭐ LE REMEDE, SI ON LE FAISAIT UN JOUR, est connu et mesure : prendre
+       hektor_uploaded_document_id (le numero que HEKTOR donne, lu 3 lignes au-dessus
+       de la cle dans extractDocumentEntries) -- 190 840 fiches, 0 collision, et 17/17
+       inchange au demenagement -- AVEC le hache de l'adresse en REPLI (il manque sur
+       0,9 % des cas). Changer la cle = toucher au coeur de la synchro des documents.
+     ⛔ CONCLUSION : CAUSE RACINE COLMATEE, DELIBEREMENT. Ce n'est PAS un oubli.
+
+   ⚠⚠ IL RESTE UNE SEULE CHOSE NON CORRIGEE, ET ELLE EST D'UNE AUTRE NATURE :
+     LA RESERVE 3 DU 25/09 -- le balayage nocturne des documents n'a NI CADENCE NI
+     ARRET SUR UN REFUS 403, et notre IP a deja ete bannie les 19-20/08. Ce n'est pas
+     une assurance contre un evenement rare : c'est un RISQUE ACTIF CHAQUE NUIT.
+     Rien n'a ete decide -- a reprendre S'IL LE DEMANDE.
    Tout est dans notice/AUDIT_DOMAINE_DOCUMENTS_2026-10-20.md.
 
 ① ✅ LA PIECE ④ (SORTIR DU BROUILLON) EST POSEE ET EPROUVEE (20/10 19:02) --
