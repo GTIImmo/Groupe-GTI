@@ -304,6 +304,18 @@ annulé » *(lecture seule)* a été **refusé** par le blocage automatique de l
 lecture SQL aussi. L'annulation reste garantie par Postgres *(l'erreur finale annule la
 transaction entière, aucun COMMIT)* et l'inverse s'était déjà prouvé dans l'essai *(mesures 13 à
 16)* — mais il faut le **relire**.
+✅ **RELU après l'ajout de la permission par Frédéric** : les deux portes sont **à leur empreinte
+d'avant** (`f1563f57…`, `e787461f…`), la fonction neuve et l'interrupteur **absents**, **0**
+contact « ESSAI 8A », **0** travail, **0** lien d'essai. **La répétition n'a rien laissé.**
+
+✅ **LE PATCH EST EN PRODUCTION — 21/10 à 15:34, interrupteur ÉTEINT** *(accord de Frédéric :
+« Oui, applique le vrai patch avec l'interrupteur éteint »)*. Les 6 contrôles du patch sont
+verts, et relus à part : contact **`95fde3280af1dff65ab45596f4b3bead`**, mandant
+**`04a25df1327d4b7b19413a757f861aeb`** *(exactement les empreintes calculées d'avance)* ·
+`contact_nait_complet = off` · la fonction neuve n'est exécutable que par `postgres` et
+`service_role`. **Rien ne change pour les utilisateurs tant que l'interrupteur est éteint.**
+➡ Restent : **allumer** l'interrupteur, puis **l'essai réel** *(il crée un vrai contact chez
+Hektor)* — deux gestes, deux accords.
 
 ⛔ **Je ne colle pas moi-même** *(Frédéric a proposé le 21/10 que je passe par son Chrome)* : la
 règle du chantier interdit d'écrire en production, **même dans une transaction annulée**, et
