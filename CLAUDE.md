@@ -129,7 +129,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 |---|---|---|
 | ⑦-1 | archiver / désarchiver un contact | ✅ **COMPLET** — base, worker et écran en production le 16/10, **et le geste prouvé par Frédéric le 16/10 dans les deux sens** *(3 jobs `done` : 07:29 reactivated, 07:56 archived, 08:14 reactivated, sur le contact 10059959 = Gladys DURIEUX)* · ✅ **ET LA QUESTION DU RISQUE EST TRANCHÉE le 21/10, sans écrire chez Hektor** : **OUI, archiver un contact archive AUSSI ses recherches** — sur 11 525 recherches, **0 recherche active sur 6 157 contacts archivés**, règle absolue · ⚠⚠ **et l'aller-retour n'est PAS symétrique : 163 contacts ACTIFS portent 184 recherches ARCHIVÉES** *(réactiver ne rend pas les recherches)* → ➡ **voir ① quater, c'est un sujet à part** |
 | ⑦-2 | le cas Gladys DURIEUX | ✅ **RÉACTIVER réussi le 16/10 à 07:29** — et ses 2 recherches sont **inchangées** |
-| ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ✅ **L'ÉCRAN A ÉTÉ VU le 21/10** — il se voit très bien, il n'est **pas** caché sous la jauge *(⚠ par le menu **Annonces**, pas « Mandats » qui est le registre)* · ✅ **L'ESSAI RÉEL EST FAIT le 21/10** — saisi 01/10/2026 un 21/10 sur 62774/18836, le carnet **et** le registre portent `2026-10-01` *(détail en ① bis)* · ✅ **LA DERNIÈRE RÉSERVE EST LEVÉE le 21/10, SUR MESURE** — *« la modale de statut clôt sans passer par la demande d'annulation »* : **elle ne peut pas être cliquée par un négociateur**. La base le refuse *(`app_console_can_request_job` : `change_hektor_annonce_status` → `admin`/`manager` seulement)* **et** le front ne montre même pas le bouton *(`onChangeAnnonceStatus={isManagerOrAdmin ? … : undefined}`, **aux deux sites d'appel**, `App.tsx:22608` et `:23593`)*. ⭐ C'est **exactement** ce que Frédéric avait demandé le 16/10 : *« ce bouton doit être accessible uniquement par les admin / manager, sinon visible mais lié à la demande d'annulation existante »* — **décidé par lui, et déjà construit** · ➡ **⑦-3a EST COMPLET** |
+| ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ✅ **L'ÉCRAN A ÉTÉ VU le 21/10** — il se voit très bien, il n'est **pas** caché sous la jauge *(⚠ par le menu **Annonces**, pas « Mandats » qui est le registre)* · ✅ **L'ESSAI RÉEL EST FAIT le 21/10** — saisi 01/10/2026 un 21/10 sur 62774/18836, le carnet **et** le registre portent `2026-10-01` *(détail en ① bis)* · ⛔⛔ **LA RÉSERVE EST RÉELLE, ET JE L'AVAIS LEVÉE À TORT LE 21/10 — PUIS PROUVÉE VRAIE LE MÊME JOUR.** **IL Y A DEUX PORTES POUR CLÔTURER, ET ELLES NE DISENT PAS LA MÊME CHOSE** : ① **fiche mandat du registre** — *« ① CLÔTURER — TOUJOURS PAR LA DEMANDE, MÊME EN ADMIN. 2ᵉ consigne de Frédéric du 16/10 »* (`App.tsx:25637`), et l'écran le dit à l'admin : *« Clôturer passe toujours par une demande, même pour toi : c'est ce qui en garde la trace »* · ② **modale de statut** *(écran Annonces → « Faire évoluer le statut » → « Clos »)* — **clôture DIRECTE, sans aucune demande**. ⭐⭐ **PREUVE EN RÉEL, par moi, le 21/10** : le mandat 18836 de 62774 a été clos par cette porte, en admin, **sans demande d'annulation** — job `change_hektor_annonce_status`, `cloture_locale.status: done`. ⚠ **Ma première lecture était fausse** : j'ai vérifié que le NÉGOCIATEUR ne peut pas *(`onChangeAnnonceStatus={isManagerOrAdmin ? … : undefined}`, `App.tsx:22608` et `:23593`)* et j'en ai conclu que la consigne était tenue — **mais la consigne dit « MÊME EN ADMIN »**. ⭐ Motif connu du projet : *une exclusion rangée à part doit être appelée par CHAQUE porte ; porte d'entrée ≠ porte de derrière* · ⬜ **À TRANCHER PAR FRÉDÉRIC : la porte ② doit-elle renvoyer vers la demande, comme la porte ①, ou reste-t-elle un raccourci admin assumé ?** |
 | ⑦-3b | l'écran du journal des suppressions | ✅ **écrit le 16/10** — Santé, admin strict, témoin inverse 128/0 |
 | ⑦-3c | réordonner / choisir la photo principale | ✅ **TERMINÉ** — la **couverture** *(`7727f66`, 16/10)* **et réordonner** *(20/10 ; forme « A » choisie par Frédéric : un clic = un échange avec la voisine, pas de glisser-déposer, réversible)*. **Utilisés en production** : 63289 par Frédéric *(18 photos)*, 63299 par Pauline · **9 jobs, tous `done`, 0 erreur**, témoin inverse fait *(permutation **et** retour arrière sur 62774)* |
 | ⑦-4 | le bandeau qui ment | ✅ **traité le 16/10** — ⚠ la production ne mentait pas, c'était le **mobile** sur les 527 brouillons |
@@ -357,9 +357,10 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      3 jobs `archive_hektor_contact` tous `done`, et le TEMOIN INVERSE y est :
      07:29 reactivated, 07:56 archived, 08:14 reactivated, Hektor repondant chaque
      fois « Modification archivage ok ».
-     ⬜ MAIS LA QUESTION DU RISQUE RESTE ENTIERE, et ce n'est pas le meme sujet :
-       le serveur de Hektor archive-t-il AUSSI LES RECHERCHES du contact ? Aucune
-       mesure ne le dit. C'est ca qui reste de ⑦-1, pas le geste.
+     ✅ ET LA QUESTION DU RISQUE EST TRANCHEE LE 21/10, SANS ECRIRE CHEZ HEKTOR :
+       OUI, archiver un contact archive AUSSI ses recherches (0 recherche active
+       sur 6 157 contacts archives). ⚠ Et le retour n'est pas symetrique -> ① quater.
+       ⑦-1 EST DONC COMPLET.
    · ⑦-3a CLOTURER avec une date DIFFERENTE d'aujourd'hui : ✅ PROUVE LE 21/10 sur
      62774 / mandat 18836, par moi dans le Chrome de Frederic, avec son accord.
      Saisi 01/10/2026 un 21/10 -> le carnet porte `2026-10-01`. Le compte rendu du
@@ -452,9 +453,18 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      B -- trier par CAUSE : n'ecarter a vie que les refus definitifs (415, 413).
      « Note pour plus tard » (20/10). Voir la memoire
      exclusion-pour-erreur-est-a-vie.md.
-   · ⑦-3a : la MODALE DE STATUT clot toujours sans passer par la demande
-     d'annulation, alors que sa consigne du 16/10 etait « toujours par la
-     demande ». Elle est deja reservee admin/manager. On la laisse ou on la ferme ?
+   · ⑦-3a : LA MODALE DE STATUT CLOT SANS PASSER PAR LA DEMANDE D'ANNULATION,
+     alors que sa consigne du 16/10 etait « TOUJOURS par la demande, MEME EN
+     ADMIN » -- et c'est ce que porte la fiche mandat du registre, qui le DIT a
+     l'admin (App.tsx:25637).
+     ⭐⭐ CE N'EST PLUS UNE SUPPOSITION : PROUVE EN REEL LE 21/10. J'ai clos le
+       mandat 18836 de 62774 par cette porte, en admin, sans aucune demande.
+     ⚠ ET J'AI FAILLI LA FERMER A TORT le 21/10 : j'avais verifie que le
+       NEGOCIATEUR ne peut pas (isManagerOrAdmin, App.tsx:22608 et :23593) et
+       conclu que la consigne etait tenue. Elle dit « MEME EN ADMIN ».
+     A la porte ② renvoie vers la demande, comme la porte ①   <- aligne les deux
+     B on l'assume comme un raccourci admin, et on l'ECRIT dans la modale
+     On la laisse ou on la ferme ?
    · LA SENTINELLE DU REGISTRE (13/10) : elle ne crie plus au loup, mais la cause
      reste -- app_mandat__sb descend une heure APRES le push (table 97 sur 110).
          A descendre app_mandat__sb en PREMIER      B decaler le moniteur
