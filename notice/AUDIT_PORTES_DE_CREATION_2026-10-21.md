@@ -158,6 +158,34 @@ un échec se **voit** depuis 4a (`bilanSuiteCreationIncomplete`, `:18892`) ; le 
   `diffusion_lock_expired`, non lu en entier)* ;
 - les 17 lignes de carnet d'affaire sans verdict *(ci-dessus)*.
 
+## 2 quinquies. LES RELECTURES APRÈS UN GESTE — audit du 21/10 *(Frédéric : « audit et explique les différents mécanismes de relecture »)*
+
+**Ce qu'est une relecture** : après un geste envoyé à Hektor, le worker met en file un second
+travail qui relit l'objet **chez Hektor** et recopie sa version chez nous. C'est un **complément** :
+le geste, lui, est déjà fait. **Deux sortes**, recensées dans `console_job_worker.js` :
+
+| relecture | appelée | numéro reçu | programme | mesuré depuis le 24/09 |
+|---|---|---|---|---|
+| **annonce** — `refresh_console_data` | **27** endroits *(statut, champs, photos, mandant, création…)* + l'ouverture d'une fiche | le numéro Hektor de l'annonce | `refresh_single_annonce.py` → `push_single_annonce_to_supabase.py` | **551 `done`, 0 erreur**. Ouverture : **506 / 506** écrivent la fiche. Après un geste : **36** écrivent la fiche, **8** écrivent l'index des **archives** ou des **vendus/clos** *(l'annonce venait d'y passer : c'est le bon endroit)*. ✅ **100 % efficace** |
+| **contact** — `refresh_console_contact_data` | **13** endroits + l'ouverture d'une fiche | **notre** numéro *(ouverture, modification, archivage)* ou **le numéro Hektor** *(création, mandant, 3 gestes de recherche, qualification)* | `refresh_contact_inproc.py` | avec notre numéro : **74 / 75** écrivent la fiche *(1 sans écriture)*. ⚠ **avec un numéro Hektor dont la paire est connue : 0 écriture** *(08/10 sur un contact d'essai ; essai du 21/10)* |
+
+**Les autres retours ne passent PAS par une relecture** :
+- **transaction** : le worker écrit lui-même le numéro de Hektor dans le registre
+  (`app_affaire_ledger`, `:21030`) puis **ce que Hektor a retenu** (`reporterAuRegistre`, `:15090`).
+  **331 affaires nées dans l'app, 0 sans numéro Hektor**. ✅
+- **photo, document** : écrits **chez nous avant Hektor** (chantier ③, 14/10), puis une synchro dédiée
+  (`sync_hektor_photos`, `sync_console_documents`). **7 envois** depuis le 24/09, tous `done`. ✅
+- **lien mandant existant** : la ligne durable `app_relation` est posée **au clic** (30/09). ✅
+
+**Ce qui reste cassé, et seulement ça** : la relecture **de contact** reçue avec le **numéro Hektor**
+d'un contact **déjà connu**. Elle lit bien Hektor, reconstruit la fiche **sous notre numéro**, puis
+envoie sous **le numéro Hektor** → **rien n'est envoyé**. Effet **visible** sur un seul geste :
+**ajouter une recherche** — la vraie recherche *(celle qui compte pour les rapprochements)* n'arrive
+chez nous **qu'au run de la nuit** : jusque-là, l'acquéreur n'est **rapproché d'aucun bien**. *(Aucun
+ajout de recherche depuis l'app depuis le 17/09 : effet lu dans le code, pas observé.)* Pour les
+autres gestes *(mandant, modification ou suppression de recherche)*, l'app a déjà écrit la saisie :
+**aucun effet visible**. ⭐ **Le contact neuf est déjà corrigé** *(16:40)*.
+
 ## 3. ~~LA MÉTHODE PROPOSÉE~~ — ⛔ **REMPLACÉE par CH19 + N.2 ci-dessus** *(gardée pour mémoire : elle redisait, moins bien, ce qui était écrit le 07/10)*
 
 **① Une carte de champs PAR OBJET, mesurée, à quatre colonnes** *(sur le modèle de
