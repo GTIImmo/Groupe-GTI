@@ -249,6 +249,25 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ⚠ COORDINATION : une conversation a ete ouverte sur ce chantier avec
      notice/PROMPT_CHANTIER_DOMAINE_DOCUMENTS_2026-10-20.md. Ces correctifs sont SES
      pieces A et C, dans l'ordre INVERSE, et sa migration devient optionnelle.
+   ✅ LE MENAGE DU COFFRE EST FAIT -- LOT 1 (21/10, 07:21-07:42) : 4 075 fichiers
+     retires, LE COFFRE PASSE DE 42,057 A 36,816 Go -> 5,24 Go LIBERES.
+     4 controles verts a l'unite : orphelins 1 016 (= 5 091 - 4 075) · ⭐⭐ ZERO
+     document vivant sans son fichier (sur 24 120) · ⭐⭐ 388 ZIP de preuves de
+     signature INCHANGES · 26 427 fichiers (= 30 402 - 3 975).
+     ⭐ Chaque fichier supprime avait sa jumelle SUR LE SERVEUR, par construction :
+       la liste est deduite du disque (phase2/checks/fabriquer_liste_menage_coffre.py).
+     ⭐ Le script a QUATRE garde-fous, et le 4e REFUSE de tourner pendant le run.
+       Console/menage_coffre_documents.js -- EN BLANC par defaut.
+     ⚠ DEUX de mes gardes ont MENTI a l'epreuve, et seul un TEMOIN POSITIF les a
+       attrapees : (a) le garde-fou anti-run lisait le texte FRANCAIS de schtasks et
+       disait « ne tourne pas » pendant que le run tournait ; (b) un objet absent fait
+       un HTTP 400 dont le CORPS dit 404/NoSuchKey, donc « deja absent » comptait comme
+       une ERREUR (d'ou les 100 du compte rendu : ce sont les 100 du 1er passage).
+     ⏰ LA MINUTERIE DURE A SERVI : coupure a 07:42:44, DEUX MINUTES avant la descente.
+     ⛔ RESTE LE LOT 2 : 988 fichiers, 1,6 Go, A TRANCHER PAR LUI -- leur appartenance
+       ne tient que sur une comparaison de COMPTES par annonce, pas fichier par fichier.
+       Plus 28 orphelins non expliques, ecartes volontairement.
+     Tout est dans notice/AUDIT_MENAGE_COFFRE_DOCUMENTS_2026-10-21.md.
    Tout est dans notice/AUDIT_DOMAINE_DOCUMENTS_2026-10-20.md.
 
 ① ✅ LA PIECE ④ (SORTIR DU BROUILLON) EST POSEE ET EPROUVEE (20/10 19:02) --
