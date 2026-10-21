@@ -518,6 +518,18 @@ l'identité d'un numéro Hektor ; **une identité ambiguë n'est pas choisie** *
 inverse)*. **Vraie base, lecture seule** : `414472 → 10215521` *(la paire vérifiée le 02/10)* ·
 `605030 → 10355712` *(le « TEST MANDANT » du 08/10)* · 3 à 16 ms.
 
+✅ **8a bis INSTALLÉ le 21/10 à 18:43** *(accord : « Oui créer même un nouveau contact pour être
+sûr »)* — banc **17 / 17 sur le fichier en service**. **Trois essais réels, tous verts** :
+
+| essai | numéro reçu | résultat |
+|---|---|---|
+| le cas du 08/10 *(« TEST MANDANT », 18:43:58 → 18:44:23)* | `605030` | le build reçoit **10355712** · **1 ligne écrite** *(0 le 08/10)* · 0 doublon |
+| **un contact NEUF créé dans l'app** *(« ESSAI 8A BIS », 18:47)* | — | **20000007**, ses **9 champs à la seconde**, naissance `03-05-1982` → **`1982-05-03`** · Hektor : **605925** *(`done` 18:48:09)* |
+| ↳ sa relecture **automatique** *(18:48:08 → 18:48:49)* | `605925` *(le worker)* | **paire apprise** · **1 ligne écrite** · typologie `mandant` · naissance, lieu, situation, note **conservés** · **0 doublon** — *le chemin qui avait fabriqué le doublon ce matin* |
+| ↳ une relecture, paire **déjà connue** *(18:49:52)* | `605925` | **1 ligne écrite** · 0 doublon · sentinelle **0** |
+
+⬜ Le contact d'essai **20000007 / 605925** existe encore — sa suppression attend l'accord.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.

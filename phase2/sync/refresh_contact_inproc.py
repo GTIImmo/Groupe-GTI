@@ -181,14 +181,52 @@ def ecrire_la_paire(identite: str, cible: str) -> None:
         conn.close()
 
 
+def identite_connue_en_local(numero_hektor: str) -> str | None:
+    """L'identite que la base du serveur associe a ce numero de Hektor, ou None.
+
+    ⚠ Chantier 8 / 8a bis, 21/10/2026 -- LE RAFRAICHISSEMENT PERDU. Recue avec
+      un numero de Hektor (5 appelants du worker : ajout, modification et
+      suppression d'une recherche, modification d'un mandant, qualification
+      archivee), la relecture lisait bien Hektor et le build rangeait la fiche
+      SOUS L'IDENTITE -- mais le push, lui, recevait le numero de Hektor, ne
+      trouvait aucune fiche a ce numero et n'envoyait RIEN. Mesure : 08/10 11:06
+      (605030 -> 0 ligne) et l'essai du 21/10 (605922 -> 0 ligne), contre 74 / 75
+      lignes ecrites quand la relecture recoit l'identite.
+    Une identite AMBIGUE (deux identites pour un meme numero) n'est pas
+    choisie : on garde alors le chemin d'avant.
+    """
+    import sqlite3
+    conn = sqlite3.connect(str(ROOT / "phase2" / "phase2.sqlite"), timeout=30)
+    try:
+        conn.execute("PRAGMA busy_timeout = 30000")
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        trouvees: set[str] = set()
+        if "app_contact" in tables:
+            trouvees |= {str(r[0]).strip() for r in conn.execute(
+                "SELECT hektor_contact_id FROM app_contact WHERE hektor_target_id = ?", (numero_hektor,)) if r[0]}
+        if TABLE_CORRESPONDANCE in tables:
+            trouvees |= {str(r[0]).strip() for r in conn.execute(
+                f"SELECT app_identite FROM {TABLE_CORRESPONDANCE} WHERE hektor_contact_id = ?", (numero_hektor,)) if r[0]}
+        trouvees.discard(numero_hektor)
+        trouvees = {t for t in trouvees if t.isdigit()}
+        return trouvees.pop() if len(trouvees) == 1 else None
+    finally:
+        conn.close()
+
+
 def resoudre_le_numero(numero: str) -> tuple[str, str | None]:
     """Rend (le numero a donner aux 4 etapes, message d'arret ou None).
 
-    Paire connue en local -> le numero tel quel : le chemin d'avant, inchange.
-    Sinon -> on apprend la paire et on rend l'IDENTITE (le build et le push la
-    parlent ; cible_hektor() la traduira pour Hektor grace a la ligne apprise).
+    Paire connue en local -> l'IDENTITE si on a recu un numero de Hektor (8a bis,
+    21/10 : sans elle le push n'envoie rien), sinon le numero tel quel.
+    Paire inconnue -> on apprend la paire et on rend l'IDENTITE (le build et le
+    push la parlent ; cible_hektor() la traduira pour Hektor grace a la ligne apprise).
     """
     if paire_connue_en_local(numero):
+        if int(numero) < PLAGE_NUMEROS_APP:
+            identite = identite_connue_en_local(numero)
+            if identite:
+                return identite, None
         return numero, None
     try:
         paire = demander_la_paire_a_supabase(numero)
