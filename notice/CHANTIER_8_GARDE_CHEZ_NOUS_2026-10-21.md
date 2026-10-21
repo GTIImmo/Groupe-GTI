@@ -341,6 +341,27 @@ qui avait échoué : **même échec à 15:50:58** *(API Hektor toujours en 500 �
 La fiche est **intacte** : les 16 champs, toujours. ⚠ **Si l'API de Hektor reste en panne, le run
 de cette nuit en dépend aussi.**
 
+⛔⛔ **15:04 — LA RELECTURE RELANCÉE A CRÉÉ UN DOUBLON, ET C'EST MA RELANCE QUI L'A FAIT ABOUTIR.**
+- ⏱ **Ce n'est pas un bannissement** *(question de Frédéric)* : le premier `500` est de **15:40:06**,
+  sur une fiche ouverte par quelqu'un, **avant** mon premier appel à Hektor *(15:44:23)* ; 7 travaux
+  dans l'heure ; un bannissement répond `403` et bloque tout, or le témoin de **16:02** *(contact
+  10650744)* est passé. *(Non mesuré : les appels à Hektor hors de la file de travail.)*
+- 🔍 **La cause, dans le code du worker** : après une création, `handleCreateHektorContact` met la
+  relecture en file avec **le numéro de Hektor** — `enqueueRefreshConsoleContactDataJobBestEffort(job,
+  created.contactId, …)` (`console_job_worker.js:18226`) — alors que la relecture attend **notre**
+  numéro *(commentaires `:4326` et `:4362` : « ce point d'entrée prend l'IDENTITÉ, pas la cible »)*.
+  Le registre local ne connaissant pas encore la paire, le build a fabriqué une fiche **sous
+  605922**. **Même défaut** dans la porte du mandant (`:19491`).
+- 📅 **Le défaut dort depuis la bascule du 23/09** : avant, les deux numéros étaient égaux ;
+  depuis, **aucune création** n'avait eu lieu *(dernière : 21/09)*. Ce matin, la relecture
+  automatique avait échoué (panne Hektor) : **ma relance, copie exacte de sa demande**, l'a fait
+  aboutir. **8a n'en est pas la cause** *(le doublon vient de la relecture, pas de la création)*,
+  mais **c'est mon geste qui l'a déclenché**.
+- 📏 **L'étendue, mesurée** : **1** fiche en trop dans Supabase (`605922`, `app_contact_id` vide,
+  `birth_date` vide) · **1** dans la couche locale de `phase2.sqlite` · registre `app_contact`
+  **intact** · **0** lien, **0** recherche, **0** saisie en attente. ⭐ La sentinelle l'a vu :
+  `app_v_contacts_en_double_identite` = **1**.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
