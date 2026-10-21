@@ -530,6 +530,42 @@ sûr »)* — banc **17 / 17 sur le fichier en service**. **Trois essais réels,
 
 ⬜ Le contact d'essai **20000007 / 605925** existe encore — sa suppression attend l'accord.
 
+---
+
+## Pièce 2 — L'ANNONCE NAÎT COMPLÈTE *(L10-2d)* — audit du 21/10
+
+**Ce que l'écran envoie** (`createHektorDraftAnnonceJob`, `api.ts:10980-11081`) : **~60 champs à
+plat** sous les noms de l'app en `snake_case` *(adresse, prix, net vendeur, surfaces, pièces,
+chambres, niveaux, salles d'eau, WC, cuisine, exposition, vue, états, terrain, jardin, terrasses,
+garages, parkings, piscine, année, DPE, GES, copropriété ×4, description, note)* **+**
+`hektor_wizard_fields` *(les équipements, sous les noms de **Hektor**, filtrés par type de bien —
+`App.tsx:16068`)* **+** `composition_pieces` **+** les mandants *(existant ou nouveau)*.
+
+**Ce qui est écrit chez nous au clic** (`app_create_annonce_job_optimistic`, interrupteur
+`c9_annonce_nait_dans_app` allumé) : **11 colonnes** de `app_dossier_current` *(titre, prix,
+ville, code postal, statut, négociateur, agence…)* — et **aucune ligne** dans
+`app_dossier_detail_current`. Tout le reste ne vit que dans la demande au worker, **qui n'est pas
+un lieu sûr** *(nettoyages des 21/08 et 15/10)*.
+
+**Le retour de Hektor — il marche, et depuis le 24/09** : `push_single_annonce_to_supabase.py`
+**adopte le numéro de l'app** avant d'en fabriquer un *(« C.9-e (e1) », l. 188-247, avec la
+fonction de `descendre_correspondance_annonces`)* — **l'équivalent exact** du correctif contact
+d'aujourd'hui. Preuve : l'annonce d'essai `10000000 / 63147` du 24/09 a **une seule** fiche et son
+détail complet *(15 534 car.)*. Toutes les relectures d'annonce depuis le 24/09 écrivent *(551 / 551)*.
+
+**Trois vocabulaires pour les mêmes champs** ⚠ *(le piège de N.1, 28/09)* : la création parle
+`snake_case` de l'app (`bedroom_count`), la modification `camelCase` (`bedroomCount`) **et** les
+noms de Hektor (`NB_CHAMBRES`), le calque d'affichage **les noms de Hektor**. La traduction existe
+**en morceaux** : `col_map` / `json_map` de `app_edit_annonce_optimistic` *(~20 clés, recopiées à
+l'identique dans `app_annonce_reappliquer_saisies`)*, les alias du worker
+(`HEKTOR_CLEANFIELD_ALIASES`), et la correspondance des 189 champs (`correspondance_champs_annonce.py`,
+qui **imprime** sans rien écrire).
+
+**Usage** : 79 créations d'annonce au total, **2 depuis le 24/09** *(des essais)*.
+
+**Non vérifié** : ce que **montre la fiche** d'une annonce ouverte avant le retour de Hektor
+*(aucune ligne de détail)*.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
