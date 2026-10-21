@@ -114,7 +114,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ④ | aucun échec silencieux — 10 points *(`notice/CHANTIER_4_ECHECS_SILENCIEUX_2026-10-09.md`)* | ✅ **FINI le 11/10** · + **4j** le 13/10 *(23 battements partaient dans le vide)* |
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor *(`notice/CHANTIER_6_REDESCENTE_HEKTOR_2026-10-14.md` · liste : `D.0`, l. 974 · photos, section **10bis**, l. 1174)* | ✅ **TRAITÉ les 14-16/10** — les 9 points. 6e et l'historique des visites **sortis du chantier** *(sujets à part)* |
-| ⑦ | **les gestes qui manquent** *(`notice/CHANTIER_7_GESTES_QUI_MANQUENT.md`)* | 🔧 **EN COURS** — voir le tableau ci-dessous |
+| ⑦ | **les gestes qui manquent** *(`notice/CHANTIER_7_GESTES_QUI_MANQUENT.md`)* | ✅ **CLOS le 21/10/2026** — **10 points finis, 2 fermés par décision** *(⑦-7 modifier/prolonger un mandat, ⑦-9 renommer un document)*. ⭐ **Trois réserves sont tombées le 21/10 par la MESURE, aucune par une décision nouvelle** · ⛔ **le dernier point ouvert — « les deux portes pour clôturer » — a été SORTI de ⑦ par Frédéric** : *« ce n'est pas du chapitre 7 »*, c'est un chantier à part avec sa propre spécification *(voir « LES DEUX PORTES » dans les chantiers à part)*. ⛔ **NE PAS ROUVRIR ⑦** |
 | ⑧ | gardé chez nous en entier | ⬜ |
 
 **Ordre de Frédéric : ① ⑤ ④ ② puis ③ → ⑥ → ⑦ ⑧.** ➡ **Le chantier en cours est ⑦.**
@@ -129,7 +129,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 |---|---|---|
 | ⑦-1 | archiver / désarchiver un contact | ✅ **COMPLET** — base, worker et écran en production le 16/10, **et le geste prouvé par Frédéric le 16/10 dans les deux sens** *(3 jobs `done` : 07:29 reactivated, 07:56 archived, 08:14 reactivated, sur le contact 10059959 = Gladys DURIEUX)* · ✅ **ET LA QUESTION DU RISQUE EST TRANCHÉE le 21/10, sans écrire chez Hektor** : **OUI, archiver un contact archive AUSSI ses recherches** — sur 11 525 recherches, **0 recherche active sur 6 157 contacts archivés**, règle absolue · ⚠⚠ **et l'aller-retour n'est PAS symétrique : 163 contacts ACTIFS portent 184 recherches ARCHIVÉES** *(réactiver ne rend pas les recherches)* → ➡ **voir ① quater, c'est un sujet à part** |
 | ⑦-2 | le cas Gladys DURIEUX | ✅ **RÉACTIVER réussi le 16/10 à 07:29** — et ses 2 recherches sont **inchangées** |
-| ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ✅ **L'ÉCRAN A ÉTÉ VU le 21/10** — il se voit très bien, il n'est **pas** caché sous la jauge *(⚠ par le menu **Annonces**, pas « Mandats » qui est le registre)* · ✅ **L'ESSAI RÉEL EST FAIT le 21/10** — saisi 01/10/2026 un 21/10 sur 62774/18836, le carnet **et** le registre portent `2026-10-01` *(détail en ① bis)* · ⛔⛔ **LA RÉSERVE EST RÉELLE, ET JE L'AVAIS LEVÉE À TORT LE 21/10 — PUIS PROUVÉE VRAIE LE MÊME JOUR.** **IL Y A DEUX PORTES POUR CLÔTURER, ET ELLES NE DISENT PAS LA MÊME CHOSE** : ① **fiche mandat du registre** — *« ① CLÔTURER — TOUJOURS PAR LA DEMANDE, MÊME EN ADMIN. 2ᵉ consigne de Frédéric du 16/10 »* (`App.tsx:25637`), et l'écran le dit à l'admin : *« Clôturer passe toujours par une demande, même pour toi : c'est ce qui en garde la trace »* · ② **modale de statut** *(écran Annonces → « Faire évoluer le statut » → « Clos »)* — **clôture DIRECTE, sans aucune demande**. ⭐⭐ **PREUVE EN RÉEL, par moi, le 21/10** : le mandat 18836 de 62774 a été clos par cette porte, en admin, **sans demande d'annulation** — job `change_hektor_annonce_status`, `cloture_locale.status: done`. ⚠ **Ma première lecture était fausse** : j'ai vérifié que le NÉGOCIATEUR ne peut pas *(`onChangeAnnonceStatus={isManagerOrAdmin ? … : undefined}`, `App.tsx:22608` et `:23593`)* et j'en ai conclu que la consigne était tenue — **mais la consigne dit « MÊME EN ADMIN »**. ⭐ Motif connu du projet : *une exclusion rangée à part doit être appelée par CHAQUE porte ; porte d'entrée ≠ porte de derrière* · ⬜ **À TRANCHER PAR FRÉDÉRIC : la porte ② doit-elle renvoyer vers la demande, comme la porte ①, ou reste-t-elle un raccourci admin assumé ?** |
+| ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ✅ **L'ÉCRAN A ÉTÉ VU le 21/10** — il se voit très bien, il n'est **pas** caché sous la jauge *(⚠ par le menu **Annonces**, pas « Mandats » qui est le registre)* · ✅ **L'ESSAI RÉEL EST FAIT le 21/10** — saisi 01/10/2026 un 21/10 sur 62774/18836, le carnet **et** le registre portent `2026-10-01` *(détail en ① bis)* · ⛔ **LE POINT DES « DEUX PORTES » A ÉTÉ SORTI DE ⑦ LE 21/10, PAR DÉCISION DE FRÉDÉRIC** — *« la demande et la modale changer statut Clos, ce n'est pas du chapitre 7 »*, **« on va laisser les choses comme aujourd'hui »**. Il a une spécification, et elle demande de retoucher les modales de validation de Pauline → **chantier à part, voir « LES DEUX PORTES » plus bas**. ⭐ *(Pour mémoire : j'avais levé cette réserve à tort le 21/10 — j'avais vérifié que le négociateur ne peut pas, alors que la consigne disait « MÊME EN ADMIN ». Mon propre essai de ⑦-3a l'a prouvée vraie.)* · ➡ **⑦-3a EST COMPLET** |
 | ⑦-3b | l'écran du journal des suppressions | ✅ **écrit le 16/10** — Santé, admin strict, témoin inverse 128/0 |
 | ⑦-3c | réordonner / choisir la photo principale | ✅ **TERMINÉ** — la **couverture** *(`7727f66`, 16/10)* **et réordonner** *(20/10 ; forme « A » choisie par Frédéric : un clic = un échange avec la voisine, pas de glisser-déposer, réversible)*. **Utilisés en production** : 63289 par Frédéric *(18 photos)*, 63299 par Pauline · **9 jobs, tous `done`, 0 erreur**, témoin inverse fait *(permutation **et** retour arrière sur 62774)* |
 | ⑦-4 | le bandeau qui ment | ✅ **traité le 16/10** — ⚠ la production ne mentait pas, c'était le **mobile** sur les 527 brouillons |
@@ -419,6 +419,48 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ⬜ A DECIDER : faut-il que REACTIVER un contact propose de reactiver aussi ses
      recherches ? Et faut-il regarder les 150 ? C'est un sujet A PART, pas ⑦.
 
+① quinquies 📜 « LES DEUX PORTES » -- SORTI DU CHANTIER ⑦ LE 21/10 PAR FREDERIC.
+   ⛔ ON LAISSE LES CHOSES COMME AUJOURD'HUI. NE PAS RELANCER DANS ⑦.
+
+   LE CONSTAT (mesure du 21/10) : il y a DEUX portes pour cloturer un mandat.
+     ① fiche mandat du registre -> passe TOUJOURS par la demande d'annulation,
+       ADMIN COMPRIS, et l'ecran le DIT : « Clôturer passe toujours par une
+       demande, meme pour toi : c'est ce qui en garde la trace » (App.tsx:25637,
+       2e consigne de Frederic du 16/10) ;
+     ② modale de statut (Annonces -> « Faire evoluer le statut » -> « Clos »)
+       -> clot DIRECTEMENT, sans aucune demande.
+   ⭐⭐ PROUVE EN REEL le 21/10 : mon essai de ⑦-3a a clos le mandat 18836 de
+     62774 par la porte ②, en admin, sans demande. Je demontrais le defaut sans
+     le voir.
+
+   SA SPECIFICATION, DANS SES MOTS (21/10) : « il faut que les renseignements
+   saisis sur la modale changer statut "clos" soient RECUPERES dans la demande
+   d'annulation afin que Pauline ait JUSTE A VALIDER OU REFUSER, et a ce moment
+   le job est accepte -- ce qui evite de tout refaire. Donc il faut AMELIORER LES
+   MODALES DE VALIDATION DE PAULINE, et cela est encore un autre chantier. »
+
+   ⭐ POURQUOI IL NE VEUT PAS DU SIMPLE RENVOI : aligner la porte ② sur la ① sans
+     rien d'autre ferait saisir DEUX FOIS (date, motif, raison a la demande, puis
+     de nouveau a l'acceptation) et ajouterait UN GESTE A CHAQUE CLOTURE, admin
+     compris. Son dessin supprime la double saisie au lieu de l'imposer.
+
+   CE QUE L'AUDIT A DEJA ETABLI, pour le jour ou ce chantier s'ouvrira :
+     . l'acceptation fait DEJA tout le travail : elle decoche Valide + Diffuse
+       chez Hektor, PUIS cree le meme job change_hektor_annonce_status avec
+       targetStatus 'closed' et `closeDate` (chainage « A5 » du 30/07,
+       App.tsx:17834) -- le commentaire nomme Pauline : « LA DATE QUE PAULINE
+       VIENT DE FIXER » ;
+     . la demande n'a PAS de destinataire : app_diffusion_request porte
+       requested_by / processed_by / request_status, c'est une FILE que les
+       admins traitent (Pauline EST admin, verifie) ;
+     . ⚠ LE CIRCUIT DORT : 4 demandes d'annulation en tout, toutes du 13-14/05,
+       demandees ET traitees par Frederic pour des essais. Pauline n'a JAMAIS
+       traite une demande. Le rouvrir, c'est le remettre a l'epreuve.
+     . ⚠ NE TOUCHER QUE LA BRANCHE « Clos » : la meme modale porte Actif / Offre
+       / Compromis / VENDU, et « Vendu » clot sur la DATE DE VENTE, volontairement.
+     . ⚠ la demande exige un app_dossier_id -> les 38 mandats de recherche
+       (ni annonce ni dossier) ne peuvent pas passer par elle.
+
 ② A TRANCHER PAR LUI -- je n'ai rien choisi :
    · ✅ LE REDEMARRAGE DU SERVICE DOCUMENTS (⑦-3c piece 4) EST FAIT -- PLUS RIEN A
      TRANCHER ICI. Les 4 services ont demarre le 20/10 a 20:30:46-47 pour le
@@ -453,18 +495,9 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      B -- trier par CAUSE : n'ecarter a vie que les refus definitifs (415, 413).
      « Note pour plus tard » (20/10). Voir la memoire
      exclusion-pour-erreur-est-a-vie.md.
-   · ⑦-3a : LA MODALE DE STATUT CLOT SANS PASSER PAR LA DEMANDE D'ANNULATION,
-     alors que sa consigne du 16/10 etait « TOUJOURS par la demande, MEME EN
-     ADMIN » -- et c'est ce que porte la fiche mandat du registre, qui le DIT a
-     l'admin (App.tsx:25637).
-     ⭐⭐ CE N'EST PLUS UNE SUPPOSITION : PROUVE EN REEL LE 21/10. J'ai clos le
-       mandat 18836 de 62774 par cette porte, en admin, sans aucune demande.
-     ⚠ ET J'AI FAILLI LA FERMER A TORT le 21/10 : j'avais verifie que le
-       NEGOCIATEUR ne peut pas (isManagerOrAdmin, App.tsx:22608 et :23593) et
-       conclu que la consigne etait tenue. Elle dit « MEME EN ADMIN ».
-     A la porte ② renvoie vers la demande, comme la porte ①   <- aligne les deux
-     B on l'assume comme un raccourci admin, et on l'ECRIT dans la modale
-     On la laisse ou on la ferme ?
+   · ⛔ SORTI DU CHANTIER ⑦ LE 21/10, PAR DECISION DE FREDERIC -- voir « LES DEUX
+     PORTES » plus bas. ON LAISSE LES CHOSES COMME AUJOURD'HUI. NE PAS RELANCER
+     dans ⑦ : c'est un chantier a part, avec sa propre specification.
    · LA SENTINELLE DU REGISTRE (13/10) : elle ne crie plus au loup, mais la cause
      reste -- app_mandat__sb descend une heure APRES le push (table 97 sur 110).
          A descendre app_mandat__sb en PREMIER      B decaler le moniteur
