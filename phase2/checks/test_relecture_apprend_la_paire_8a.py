@@ -1,12 +1,15 @@
 # Banc d essai HORS PRODUCTION de phase2/sync/refresh_contact_inproc.py (chantier 8 / 8a).
 # Base locale = une petite base FABRIQUEE dans un dossier temporaire.
 # Supabase = SIMULE (aucun appel reseau) : rejouable a tout moment, sans rien ecrire.
-# Usage : .venv\Scripts\python.exe -I phase2\checks\test_relecture_apprend_la_paire_8a.py
+# Usage : .venv\Scripts\python.exe -I phase2\checks\test_relecture_apprend_la_paire_8a.py [fichier_a_tester]
+#         sans argument : le fichier EN SERVICE ; avec : une copie a eprouver AVANT de l'installer.
 import importlib.util, os, sqlite3, sys, tempfile, pathlib
 
 ICI = pathlib.Path(__file__).resolve().parent
 VRAI_ROOT = pathlib.Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location("rci", VRAI_ROOT / "phase2" / "sync" / "refresh_contact_inproc.py")
+A_TESTER = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else VRAI_ROOT / "phase2" / "sync" / "refresh_contact_inproc.py"
+print("fichier eprouve :", A_TESTER)
+spec = importlib.util.spec_from_file_location("rci", A_TESTER)
 rci = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rci)
 
@@ -51,9 +54,12 @@ def verifie(nom, obtenu, attendu):
 n, a = rci.resoudre_le_numero("10650744")
 verifie("1 ancien, identite : resolution", (n, a), ("10650744", None))
 verifie("1 ancien, identite : etapes", etapes(n), {"detail": "414000", "normalize": "414000", "build": "10650744", "push": "10650744"})
-# 2. contact ANCIEN par son numero Hektor -> connu du registre, chemin d'avant
+# 2. contact ANCIEN par son numero Hektor -> 8a bis (21/10) : on rend SON IDENTITE,
+#    sinon le push n'envoie rien (le rafraichissement perdu du 08/10)
 n, a = rci.resoudre_le_numero("414000")
-verifie("2 ancien, numero Hektor : resolution", (n, a), ("414000", None))
+verifie("2 ancien, numero Hektor : on rend l'IDENTITE", (n, a), ("10650744", None))
+verifie("2 : etapes (Hektor par son numero, la fiche par la notre)", etapes(n),
+        {"detail": "414000", "normalize": "414000", "build": "10650744", "push": "10650744"})
 verifie("2 : aucune paire ecrite pour les anciens", lignes_corresp(), [])
 # 3. contact NE AUJOURD'HUI, par NOTRE numero (vraie paire lue dans Supabase)
 n, a = rci.resoudre_le_numero("20000006")
@@ -67,6 +73,16 @@ n, a = rci.resoudre_le_numero("605922")
 verifie("4 neuf, numero Hektor : on rend NOTRE numero", (n, a), ("20000006", None))
 verifie("4 : etapes (plus de doublon possible)", etapes(n),
         {"detail": "605922", "normalize": "605922", "build": "20000006", "push": "20000006"})
+# 4 bis. LE CAS DE L'ESSAI 2 DU 21/10 : la paire est DEJA apprise, recu avec le numero Hektor
+n, a = rci.resoudre_le_numero("605922")
+verifie("4 bis paire deja connue, numero Hektor : NOTRE numero", (n, a), ("20000006", None))
+verifie("4 bis : etapes", etapes(n),
+        {"detail": "605922", "normalize": "605922", "build": "20000006", "push": "20000006"})
+# 4 ter. identite AMBIGUE (deux identites pour un numero) -> on ne choisit pas
+k = sqlite3.connect(base); k.execute("INSERT INTO app_contact VALUES (10999999,'10999999','777000')")
+k.execute("INSERT INTO app_contact VALUES (10999998,'10999998','777000')"); k.commit(); k.close()
+n, a = rci.resoudre_le_numero("777000")
+verifie("4 ter identite ambigue : chemin d'avant", (n, a), ("777000", None))
 # 5. identite a nous SANS numero Hektor -> ARRET
 n, a = rci.resoudre_le_numero("29999999")
 verifie("5 identite sans numero Hektor : arret", a is not None and "pas encore de numero Hektor" in a, True)

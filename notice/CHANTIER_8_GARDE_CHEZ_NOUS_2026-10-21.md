@@ -500,6 +500,24 @@ connue en local. La relecture suit alors **exactement le chemin de l'ouverture d
 *(70 réussites mesurées)*. Pas de redémarrage. **Alternative (B)** : corriger les 5 appelants du
 worker *(5 lignes, redémarrage des 4 services)*.
 
+### 8a bis — le rafraîchissement perdu : CODÉ, ÉPROUVÉ, PAS INSTALLÉ *(21/10, « vas-y »)*
+
+**Explication retenue par Frédéric** : *« la relecture échoue parce qu'on donne le numéro Hektor à
+l'app qui ne le retrouve pas »* — exactement : les étapes 1-2 *(Hektor)* ont besoin de **605922**, le
+build traduit seul, mais **le push reçoit 605922** alors que la fiche préparée porte **20000006** →
+il ne trouve rien et n'envoie rien. **Uniquement les contacts** : la relecture d'annonce retrouve
+elle-même notre numéro *(551 / 551)*, les annonces ayant deux numéros depuis toujours.
+
+**Le code** *(copie `refresh_contact_inproc_V2.py` du scratchpad, PAS en service)* :
+`identite_connue_en_local()` — le registre `app_contact` ou `app_contact_identite_app` donnent
+l'identité d'un numéro Hektor ; **une identité ambiguë n'est pas choisie** *(chemin d'avant)* ;
+`resoudre_le_numero()` la rend quand la paire est connue.
+
+**Éprouvé** : banc élargi *(il prend désormais le fichier à tester en argument)* — **copie : 17 / 17** ·
+**version en service : 13 / 17**, échoue **exactement** sur les 4 nouveaux contrôles *(témoin
+inverse)*. **Vraie base, lecture seule** : `414472 → 10215521` *(la paire vérifiée le 02/10)* ·
+`605030 → 10355712` *(le « TEST MANDANT » du 08/10)* · 3 à 16 ms.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
