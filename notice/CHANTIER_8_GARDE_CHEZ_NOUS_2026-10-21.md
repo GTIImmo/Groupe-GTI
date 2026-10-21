@@ -336,6 +336,10 @@ pas rejoué** par le filet *(absent de `app_console_action_enqueue_due_retries`)
 ➡ **Sans 8a, ce contact n'aurait aujourd'hui que 7 champs**, jusqu'au run de la nuit.
 
 ⬜ **Non vérifié** : que la version de Hektor, quand elle redescendra, ne fasse rien perdre.
+↳ **15:50, relecture relancée une fois** *(accord : « B »)*, travail `5319cac4…` copié sur celui
+qui avait échoué : **même échec à 15:50:58** *(API Hektor toujours en 500 à l'authentification)*.
+La fiche est **intacte** : les 16 champs, toujours. ⚠ **Si l'API de Hektor reste en panne, le run
+de cette nuit en dépend aussi.**
 
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
