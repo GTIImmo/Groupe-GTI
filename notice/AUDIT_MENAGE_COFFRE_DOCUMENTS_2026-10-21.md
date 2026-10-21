@@ -195,3 +195,58 @@ ORDER BY », 08/10)*. Elle est renforcée : voir
 **Rien, et ça le confirme** : les 5 091 fichiers du déchet sont bien des **doublons** ou des
 **documents retirés volontairement**, pas des pièces qui manqueraient quelque part.
 ⚠ Les trois décisions de la partie 7 restent entières.
+
+---
+
+# PARTIE 10 — LE PREMIER PASSAGE : 100 FICHIERS SUPPRIMÉS, ET LE CONTRÔLE
+
+**21/10/2026, 05:10.** Frédéric : *« supprime les 100 premiers dès que le run est fini »*.
+Le run `GTI Quotidien` a fini à **05:08, état `Ready`, résultat 0** *(attendu par une veille,
+sans surveillance en boucle)*. La file était **vide** : 0 travail documents.
+
+## Avant
+
+```
+30 502 fichiers   42 Go   0 travail documents en file
+ 5 091 orphelins   dont 4 075 candidats au lot 1
+```
+
+## ⭐ Les deux épreuves refaites sur des données fraîches, AVANT de supprimer
+
+| | |
+|---|---|
+| la liste | refaite après le run : **4 075** *(3 656 au nom identique + 419 repliés)* |
+| ⭐⭐ **le témoin positif** | **0 à supprimer, 5 REFUSÉS** avec le bon motif chacun — *2 « sa fiche est vivante », 1 compagnon `immosign/`, 1 « dernière copie », 1 forme inattendue* |
+
+## Le geste
+
+```
+SUPPRIMES 100   REFUSES 0   ERREURS 0   code de sortie 0
+```
+
+## ⭐⭐⭐ Le contrôle en 4 points — **les 4 sont verts**
+
+| | mesuré | attendu |
+|---|---|---|
+| orphelins restants | **4 991** | 4 991 *(5 091 − 100)* ✅ |
+| ⭐⭐ **documents vivants des 7 annonces touchées SANS leur fichier** | **0** | **0** ✅ |
+| ⭐⭐ **ZIP de preuves de signature** | **388** | inchangé ✅ |
+| fichiers dans le coffre | **30 402** | 30 402 ✅ |
+
+⭐⭐⭐ **ET LA PREUVE QUI COMPTE VRAIMENT** : les **100** fichiers supprimés **ont tous leur
+jumelle sur le serveur — 100 sur 100**, vérifié fichier par fichier *(en repliant le nom
+comme le fait le coffre)*. **Rien n'est perdu.** **94,2 Mo** libérés.
+
+⚠ **Deux réserves, et je les dis :**
+1. **le poids du coffre, je l'ai mesuré trop grossièrement AVANT** *(« 42 Go » arrondi)* : je
+   peux donc affirmer le compte de fichiers à l'unité *(−100)*, mais le poids libéré vient de
+   la mesure **du serveur** *(94,2 Mo)*, pas d'une différence dans le coffre ;
+2. **les compagnons `immosign/` + `signed/` comptent 1 205**, là où mon audit de la partie 1
+   disait 1 129 — ⚠ **les deux chiffres ne mesurent pas la même chose** *(1 129 = compagnons
+   d'une fiche vivante ; 1 205 = tous les chemins `immosign/` ou `signed/`)*. **Ce n'est pas
+   une anomalie, c'est deux définitions.** Ce qui compte est inchangé : **388 ZIP de preuves**.
+
+## Ce qui reste
+
+**3 975 fichiers du lot 1**, soit ~5,4 Go. ⛔ **Ils attendent le feu vert de Frédéric.**
+Et le **lot 2** *(988 fichiers, 1,6 Go)* reste hors périmètre, à trancher.
