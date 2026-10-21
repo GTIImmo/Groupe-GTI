@@ -127,9 +127,9 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 
 | # | le point | état |
 |---|---|---|
-| ⑦-1 | archiver / désarchiver un contact | ✅ **base, worker et écran en production le 16/10** · ⛔ **reste l'essai ARCHIVER sur une fiche JETABLE** *(le sens qui porte le risque ; le contact d'essai 10355757 n'existe plus → il faut une cible)* |
+| ⑦-1 | archiver / désarchiver un contact | ✅ **COMPLET** — base, worker et écran en production le 16/10, **et le geste prouvé par Frédéric le 16/10 dans les deux sens** *(3 jobs `done` : 07:29 reactivated, 07:56 archived, 08:14 reactivated, sur le contact 10059959 = Gladys DURIEUX)* · ✅ **ET LA QUESTION DU RISQUE EST TRANCHÉE le 21/10, sans écrire chez Hektor** : **OUI, archiver un contact archive AUSSI ses recherches** — sur 11 525 recherches, **0 recherche active sur 6 157 contacts archivés**, règle absolue · ⚠⚠ **et l'aller-retour n'est PAS symétrique : 163 contacts ACTIFS portent 184 recherches ARCHIVÉES** *(réactiver ne rend pas les recherches)* → ➡ **voir ① quater, c'est un sujet à part** |
 | ⑦-2 | le cas Gladys DURIEUX | ✅ **RÉACTIVER réussi le 16/10 à 07:29** — et ses 2 recherches sont **inchangées** |
-| ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ⛔ **reste : PERSONNE N'A VU L'ÉCRAN**, et **l'essai réel** *(clôturer avec une date ≠ aujourd'hui, et vérifier que le carnet porte LA DATE SAISIE)* · ⚠ **À TRANCHER : la modale de statut clôt toujours sans passer par la demande d'annulation** |
+| ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ✅ **L'ÉCRAN A ÉTÉ VU le 21/10** — il se voit très bien, il n'est **pas** caché sous la jauge *(⚠ par le menu **Annonces**, pas « Mandats » qui est le registre)* · ✅ **L'ESSAI RÉEL EST FAIT le 21/10** — saisi 01/10/2026 un 21/10 sur 62774/18836, le carnet **et** le registre portent `2026-10-01` *(détail en ① bis)* · ⚠ **SEUL RESTE À TRANCHER : la modale de statut clôt toujours sans passer par la demande d'annulation** — **c'est le dernier point ouvert de tout le chantier ⑦** |
 | ⑦-3b | l'écran du journal des suppressions | ✅ **écrit le 16/10** — Santé, admin strict, témoin inverse 128/0 |
 | ⑦-3c | réordonner / choisir la photo principale | ✅ **TERMINÉ** — la **couverture** *(`7727f66`, 16/10)* **et réordonner** *(20/10 ; forme « A » choisie par Frédéric : un clic = un échange avec la voisine, pas de glisser-déposer, réversible)*. **Utilisés en production** : 63289 par Frédéric *(18 photos)*, 63299 par Pauline · **9 jobs, tous `done`, 0 erreur**, témoin inverse fait *(permutation **et** retour arrière sur 62774)* |
 | ⑦-4 | le bandeau qui ment | ✅ **traité le 16/10** — ⚠ la production ne mentait pas, c'était le **mobile** sur les 527 brouillons |
@@ -392,6 +392,31 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
    ECRASE la trace de l'humain. ⭐ Ca explique aussi la ligne de 24933 (ecrit_par
    vide) que j'allais prendre pour un script. ⬜ A decider : le worker doit-il
    reporter l'auteur de la ligne d'origine plutot que de l'effacer ?
+
+① quater ⚠⚠ 21/10 -- ARCHIVER UN CONTACT ARCHIVE SES RECHERCHES, ET LE RETOUR
+   N'EST PAS SYMETRIQUE. C'etait LA question ouverte de ⑦-1, et elle se mesurait
+   en base, sans ecrire une seule fois chez Hektor.
+   Sur les 11 525 recherches de `app_contact_search_current`, jointes aux contacts :
+     contact actif   + recherche active    : 4 203 recherches / 3 983 contacts
+     contact actif   + recherche ARCHIVEE  :   184 recherches /   163 contacts
+     contact ARCHIVE + recherche ARCHIVEE  : 7 138 recherches / 6 157 contacts
+     contact ARCHIVE + recherche active    :       0          ⭐ AUCUNE, regle absolue
+   ⭐ ZERO sur 6 157 contacts : archiver propage aux recherches. Reponse OUI.
+   ⚠⚠ MAIS LA LIGNE DU MILIEU EST LE VRAI SUJET : 163 contacts ACTIFS portent des
+     recherches ARCHIVEES -- donc REACTIVER NE REND PAS les recherches. Gladys
+     DURIEUX (10059959) en est l'exemple vivant : reactivee le 16/10 a 08:14, sa
+     recherche index 0 est restee `archive: true`, l'index 1 est active.
+   ⭐⭐ ET L'IMPACT SE CHIFFRE : 150 contacts ACTIFS n'ont QUE des recherches
+     archivees -- 150 acquereurs vivants dans le fichier sans une seule recherche
+     active. ⚠ NE PAS SUR-CONCLURE : beaucoup peuvent avoir abandonne leur projet
+     et leur recherche avoir ete archivee expres. Le chiffre dit l'ampleur a
+     regarder, pas le nombre de victimes.
+   ⛔ CE QUI N'EST PAS PROUVE : que notre geste du 16/10 soit la cause pour Gladys.
+     Sans photo d'avant, je ne peux pas distinguer « notre archivage a casse sa
+     recherche » de « elle etait deja archivee ». La note du 16/10 disait « ses
+     2 recherches sont inchangees », ce qui est ambigu. ⭐ La REGLE, elle, est sure.
+   ⬜ A DECIDER : faut-il que REACTIVER un contact propose de reactiver aussi ses
+     recherches ? Et faut-il regarder les 150 ? C'est un sujet A PART, pas ⑦.
 
 ② A TRANCHER PAR LUI -- je n'ai rien choisi :
    · ✅ LE REDEMARRAGE DU SERVICE DOCUMENTS (⑦-3c piece 4) EST FAIT -- PLUS RIEN A
