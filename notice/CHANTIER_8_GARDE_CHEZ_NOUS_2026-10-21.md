@@ -428,6 +428,40 @@ quel que soit le numéro reçu, trouver la paire — en local d'abord, **sinon d
 build et au push. Si une identité ≥ 10 M n'a **pas** de numéro Hektor, ou si Supabase ne répond
 pas : **la relecture s'arrête en erreur**, elle n'interroge jamais Hektor avec notre numéro.
 
+### La correction de la relecture — CODÉE, ÉPROUVÉE HORS PRODUCTION, **PAS INSTALLÉE** *(21/10, « vas-y »)*
+
+⚠ **Piège évité de justesse** : `refresh_contact_inproc.py` est **exécuté à chaque relecture** par le
+worker — le modifier, c'est le mettre en service **sur-le-champ**. Ma première édition l'a été ~1 min
+*(15:3x)* : **aucune relecture n'a tourné pendant ce temps** *(la dernière : 15:03:49)*. Le fichier en
+service a été **remis à l'identique** (`git checkout`) ; la nouvelle version attend dans le scratchpad
+(`refresh_contact_inproc_NOUVEAU.py`, 321 lignes).
+
+**Ce qu'elle ajoute** *(avant les 4 étapes, rien d'autre ne change)* : `paire_connue_en_local()` →
+sinon `demander_la_paire_a_supabase()` *(la vue de la descente de nuit, même contrôle de forme)* →
+`ecrire_la_paire()` *(une ligne dans `app_contact_identite_app`)* → le build et le push reçoivent
+**l'identité**, Hektor **son numéro**. Arrêt en erreur *(code 3)* si une identité à nous n'a pas de
+numéro Hektor ou si Supabase ne répond pas, **et** une dernière barrière dans `_steps()`.
+
+**Banc d'essai hors production** *(base fabriquée + lecture seule de Supabase)* — **13 sur 13** :
+contact ancien par identité et par numéro Hektor → **chemin d'avant, aucune paire écrite** · contact
+neuf par **notre** numéro → paire apprise, Hektor visé par 605922, fiche par 20000006 · **le cas du
+doublon** *(reçu avec 605922)* → on rend **20000006** · identité sans numéro Hektor → **arrêt** ·
+numéro Hektor inconnu partout → chemin d'avant · Supabase muet → **arrêt** · dernière barrière →
+**arrêt**.
+**Témoin inverse** : l'**ancienne** version, mêmes cas → reçue avec `20000006` elle interroge Hektor
+avec **20000006** ; avec `605922` elle construit **605922** *(le doublon)*. Le banc sait voir le défaut.
+**Sur la vraie base, lecture seule** : 3 à 10 ms ; les contacts anciens (10650744, 414472) **connus en
+local** → **aucun appel à Supabase** pour eux.
+
+**Pensé à tout** *(demande de Frédéric)* : les **doublures** (`__sb`) ne sont pas touchées · la
+**descente** de 07:45 ne copie pas cette table · la **descente de correspondance** du run *(l. 670)* la
+réécrit à l'identique · le **run** n'utilise pas ce script *(il appelle le build directement)* · le
+**registre des liens** (`relation_ledger.py`) lit la même table : une paire juste ne peut que l'aider ·
+le **worker** et le **front** ne changent pas, **pas de redémarrage** · la **sauvegarde** ne porte pas
+cette table *(elle se reconstruit chaque nuit)* · ⚠ pendant un verrou long du run sur
+`phase2.sqlite`, l'écriture de la paire peut échouer → la relecture finit **en erreur, sans appeler
+Hektor**.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
