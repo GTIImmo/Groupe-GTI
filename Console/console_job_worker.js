@@ -18791,7 +18791,12 @@ const JOB_LIBELLES = {
   delete_document_from_hektor: "La suppression du document",
   upload_hektor_photo: "L'envoi de la photo",
   delete_hektor_photo: "La suppression de la photo",
-  reorder_hektor_photos: "La mise en couverture de la photo",
+  // ⑦-3c (21/10/2026) : MEME CAS QUE ⑦-1 ci-dessus -- un seul type porte deux
+  // gestes (mettre en couverture, et deplacer d'un cran depuis le 20/10), c'est la
+  // charge qui dit lequel. Le libelle doit donc rester vrai dans les deux cas : il
+  // part en notification a l'utilisateur quand le geste n'aboutit pas, et « mise en
+  // couverture » aurait menti a qui vient de deplacer une photo du milieu.
+  reorder_hektor_photos: "La mise en couverture (ou le deplacement) de la photo",
   set_hektor_photo_visibility: "Le masquage ou l'affichage de la photo",
   generate_mandat_document: "La generation du mandat",
   generate_estimation_pdf: "La generation de l'avis de valeur",

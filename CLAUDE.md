@@ -131,7 +131,7 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑦-2 | le cas Gladys DURIEUX | ✅ **RÉACTIVER réussi le 16/10 à 07:29** — et ses 2 recherches sont **inchangées** |
 | ⑦-3a | clôturer un mandat à la main, le crayon, les droits | ✅ **les 4 pièces en production** *(la 2 poussée par l'autre session, `8676855`)* · ⛔ **reste : PERSONNE N'A VU L'ÉCRAN**, et **l'essai réel** *(clôturer avec une date ≠ aujourd'hui, et vérifier que le carnet porte LA DATE SAISIE)* · ⚠ **À TRANCHER : la modale de statut clôt toujours sans passer par la demande d'annulation** |
 | ⑦-3b | l'écran du journal des suppressions | ✅ **écrit le 16/10** — Santé, admin strict, témoin inverse 128/0 |
-| ⑦-3c | réordonner / choisir la photo principale | ✅ **la couverture est en production** *(`7727f66`)* · ⬜ **réordonner** reste |
+| ⑦-3c | réordonner / choisir la photo principale | ✅ **TERMINÉ** — la **couverture** *(`7727f66`, 16/10)* **et réordonner** *(20/10 ; forme « A » choisie par Frédéric : un clic = un échange avec la voisine, pas de glisser-déposer, réversible)*. **Utilisés en production** : 63289 par Frédéric *(18 photos)*, 63299 par Pauline · **9 jobs, tous `done`, 0 erreur**, témoin inverse fait *(permutation **et** retour arrière sur 62774)* |
 | ⑦-4 | le bandeau qui ment | ✅ **traité le 16/10** — ⚠ la production ne mentait pas, c'était le **mobile** sur les 527 brouillons |
 | ⑦-5 | relancer / abandonner depuis le monitoring | ✅ **fait le 15/10** |
 | ⑦-6 | « Abandonner » défait le geste | ✅ **fait le 15/10** |
@@ -364,14 +364,22 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
      3e pastille en haut a droite de chaque tuile (rouge = visible, vert = masquee).
 
 ② A TRANCHER PAR LUI -- je n'ai rien choisi :
-   · ⏰ LE REDEMARRAGE DU SERVICE DOCUMENTS (⑦-3c piece 4). UN SEUL service, pas
-     quatre : `reorder_hektor_photos` n'est reclame que par lui (mesure du 20/10
-     dans sa liste). Sans lui, reordonner MARCHE quand meme -- l'ordre part bien
-     chez Hektor -- mais la vitrine suit au prochain passage du fabricant au lieu
-     de quelques secondes, et le journal dit « couverture » pour un reordonnancement.
-     ⛔ NE JAMAIS LE FAIRE QUAND LA FILE N'EST PAS VIDE : le 19/10 a 17:10 un
-       redemarrage a tue le travail du clic de Frederic (14 photos perdues, annonce
-       63073 ecartee du balayage A VIE). Critere : 0 pending ET 0 running.
+   · ✅ LE REDEMARRAGE DU SERVICE DOCUMENTS (⑦-3c piece 4) EST FAIT -- PLUS RIEN A
+     TRANCHER ICI. Les 4 services ont demarre le 20/10 a 20:30:46-47 pour le
+     correctif des documents, soit 4 jours APRES le code de `reorder_hektor_photos`
+     (`7727f66`, 16/10 15:14:21) : le service tourne donc avec. Mesure du 21/10 par
+     l'HEURE DES PROCESSUS (`Win32_Process.CreationDate`), pas par la croyance.
+     La vitrine suit donc en quelques secondes, comme voulu.
+     ⚠⚠ MAIS CE REDEMARRAGE NE REGLAIT PAS LE MOT, et cette note l'a cru a tort :
+       « le journal dit couverture pour un reordonnancement » venait d'un LIBELLE
+       FIGE DANS LE CODE (`JOB_LIBELLES`, console_job_worker.js l. 18794), ecrit le
+       16/10 quand seule la couverture existait. Aucun redemarrage ne change une
+       chaine de caracteres. Corrige le 21/10 sur la forme deja tranchee pour ⑦-1
+       (« L'archivage (ou la reactivation) du contact ») -- et ce libelle ne sert
+       qu'a la notification d'ECHEC, un seul lecteur, jamais compare (l. 18833).
+     ⛔ POUR TOUT PROCHAIN REDEMARRAGE, LE CRITERE RESTE : 0 pending ET 0 running.
+       Le 19/10 a 17:10 un redemarrage a tue le travail du clic de Frederic
+       (14 photos perdues, annonce 63073 ecartee du balayage A VIE).
          powershell -Command "Restart-Service HektorConsoleWorkerDocuments; Get-Service HektorConsoleWorker*"
    · ⭐ LE PLAFOND DU BALAYAGE : 1 000 ou 903 ? Mesure de la 1re nuit (20/10) --
      mediane 10,0 s mais la plus lente a pris 307 s, donc seules 903 annonces
