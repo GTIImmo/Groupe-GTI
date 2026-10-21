@@ -477,6 +477,29 @@ couche locale et dans Supabase · **1** ligne au journal des suppressions · **0
 sentinelle **0**. Reste la paire apprise dans `app_contact_identite_app` : la descente de cette nuit
 la retirera *(elle refait la table depuis la vue, où le contact n'est plus)*.
 
+### Les relectures reçues avec le numéro Hektor — audit du 21/10 *(Frédéric : « A »)*
+
+- **Les 5 appelants donnent le numéro Hektor** *(`contactId` = résultat de `cibleHektorContact`)* :
+  `:15841` qualification d'acquéreur archivée *(`cibleArchive`)* · `:18504` ajout de recherche ·
+  `:19299` modification de recherche · `:19356` suppression de recherche · `:19715` modification d'un
+  mandant. **Notre numéro est disponible dans chacun** *(`identite`)*.
+- **Mesuré depuis la bascule (24/09)** : **1** vraie relecture reçue avec un numéro Hektor — après la
+  modification d'un mandant, le **08/10 à 11:06** *(605030)* → **0 ligne écrite**. Les **70**
+  relectures de l'ouverture d'une fiche *(le front donne l'identité)* → **1 ligne chacune**.
+- **Le mécanisme** : reçue avec un numéro Hektor dont la paire est connue, la relecture lit bien
+  Hektor et reconstruit la fiche **sous notre numéro** *(le build traduit)*, mais **envoie sous le
+  numéro Hektor** → le push ne trouve rien à envoyer. **La fiche dans l'app reste à l'ancienne
+  version** jusqu'au run de la nuit. Rien n'est perdu ni abîmé : c'est **un rafraîchissement perdu**.
+- **Ce n'était pas une décision** : le commentaire `:4326` (C-12, 23/09) l'avait vu — *« Les deux
+  appelants lui passaient encore la cible : invisible tant que les deux numéros sont égaux, faux le
+  jour de la bascule »* — et n'avait corrigé que deux appelants.
+
+➡ **Correctif proposé (A, recommandé) — dans le même fichier, pas dans le worker** :
+`resoudre_le_numero()` rend **l'identité** quand elle reçoit un numéro Hektor dont la paire est
+connue en local. La relecture suit alors **exactement le chemin de l'ouverture d'une fiche**
+*(70 réussites mesurées)*. Pas de redémarrage. **Alternative (B)** : corriger les 5 appelants du
+worker *(5 lignes, redémarrage des 4 services)*.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
