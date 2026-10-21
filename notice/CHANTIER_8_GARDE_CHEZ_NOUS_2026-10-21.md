@@ -586,6 +586,35 @@ base, et ce que deviendrait une **fiche de départ posée au clic** :
 | **les équipements, les photos** (`app_dossier_equipements`, `app_get_dossier_photos`) | lisent des clés de la fiche | ⚠ **à vérifier** : une fiche de départ doit porter les clés qu'ils attendent, ou rien |
 | **l'écran** (vue `app_dossier_details_current`) | lit **le calque en premier**, sous les noms de Hektor *(`App.tsx:2557-2645`)* | ⚠ **à vérifier en réel** |
 
+### Pièce 2 — l'annonce d'essai, en réel *(21/10 à 20:12, Firminy — choix de Frédéric)*
+
+Créée par l'écran **Estimations → Nouvelle estimation → Manuellement** *(statut Estimation, non
+diffusée)* ; agence « Groupe GTI Firminy », dont le **seul** négociateur proposé est **Emmanuelle
+PEREIRA** *(le compte de formation n'a pas d'agence dans la liste)*. Titre « ESSAI 8A ANNONCE - ne
+pas diffuser », 17 champs dont 7 techniques.
+
+| moment | ce qu'on voit |
+|---|---|
+| **20:12:55, le clic** | fiche **10000001** née chez nous, **11 champs**, **aucune fiche détaillée** |
+| **pendant l'attente** | ⚠ **l'estimation N'APPARAÎT PAS dans la liste** *(recherche « ESSAI 8A » → « 0 estimations »)* ; seule une fenêtre « Suivi de l'action — Création » *(Hektor ● / App ○)* |
+| **20:13:55** *(60 s)* | Hektor l'a créée : **63329** |
+| **20:14:24** *(89 s)* | la relecture a écrit la fiche détaillée *(18 277 car.)*, **une seule fiche** ; l'estimation **apparaît** dans la liste, la fenêtre dit « Annonce disponible » |
+
+**Ce que Hektor a renvoyé, comparé à la saisie** *(un premier contrôle « N.2 », à la main)* :
+surface **85**, pièces **4**, chambres **3**, salle de bain **1**, cave **OUI**, balcon **OUI**,
+ascenseur **OUI**, année **1975**, DPE **180**, GES **30**, code postal **42700**, ville **Firminy**
+— **tout est retenu**. ⚠⚠ **SAUF L'ADRESSE** : saisie *« 3 rue de l'Essai »*, renvoyée **« 3 Rue de
+l'Ondaine »** — Hektor a **remplacé** une rue inconnue par une vraie rue de Firminy. **C'est
+exactement le genre d'écart que le contrôle au retour (pièce 3) devra noter.**
+
+**Ce que ça dit pour la pièce 2** : ⭐ aujourd'hui, pendant ~90 s, **l'annonce n'existe pas à
+l'écran** — ni fiche, ni ligne dans la liste. Une fiche complète dès le clic la ferait **apparaître
+tout de suite**. *(Non vérifié : pourquoi la liste l'écarte — un filtre de la liste sur une donnée
+que seule la fiche détaillée porte ? à lire avant de coder.)*
+
+⬜ **Non essayé** : modifier l'annonce pendant la minute d'attente *(le point 3)*.
+⬜ **L'annonce d'essai 10000001 / 63329 existe encore** — sa suppression attend l'accord.
+
 ⚠ **Un point à part, trouvé en passant** : une modification faite **avant** le retour de Hektor
 garde `hektor_annonce_id` **vide** dans sa saisie en attente, et le balayeur l'envoie telle quelle
 (`app_annonce_enqueue_due_pushes`). **Non vérifié** : si le worker retrouve le numéro par
