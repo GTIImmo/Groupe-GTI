@@ -125,10 +125,27 @@ function encoderChemin(valeur) {
   return String(valeur).split("/").map(encodeURIComponent).join("/");
 }
 
+// ⭐ IDEMPOTENT, ET IL FAUT QUE CA LE SOIT : ce menage se fait par lots, donc une
+//   reprise repassera sur des fichiers DEJA supprimes. Un 404 n'est pas une erreur,
+//   c'est « deja absent » -- sinon une reprise rendrait des milliers de fausses
+//   erreurs et le compte rendu deviendrait illisible. (21/10)
+// ⚠⚠ ON LIT LE CORPS DE L'ERREUR, PAS LE CODE HTTP. Vecu le 21/10, et le projet
+//   l'avait DEJA ecrit (memoire coffre-refus-de-type-coule-toute-l-annonce) :
+//   pour un objet absent, Supabase Storage rend un HTTP **400** dont le CORPS dit
+//     {"statusCode":"404","error":"not_found","message":"Object not found",
+//      "code":"NoSuchKey"}
+//   Un test sur `r.status === 404` ne mord donc JAMAIS, et une reprise compte tous
+//   les fichiers deja supprimes comme des ERREURS -- un compte rendu menteur, et
+//   surtout une vraie erreur devenue indiscernable d'un « deja absent ».
 async function supprimerDuCoffre(chemin) {
   const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${COFFRE}/${encoderChemin(chemin)}`,
     { method: "DELETE", headers: ENTETES });
-  if (!r.ok) throw new Error(`coffre ${r.status} : ${(await r.text()).slice(0, 200)}`);
+  if (r.ok) return "supprime";
+  const corps = await r.text().catch(() => "");
+  if (r.status === 404 || /"statusCode"\s*:\s*"404"|NoSuchKey|not_found/i.test(corps)) {
+    return "deja_absent";
+  }
+  throw new Error(`coffre ${r.status} : ${corps.slice(0, 200)}`);
 }
 
 // ── les trois garde-fous, revérifiés POUR CE FICHIER, MAINTENANT ────────────────
@@ -217,7 +234,7 @@ async function pourquoiOnNeTouchePas(chemin) {
 
   // ── le travail ────────────────────────────────────────────────────────────────
   const journal = [];
-  let supprimes = 0, refuses = 0, erreurs = 0;
+  let supprimes = 0, refuses = 0, erreurs = 0, dejaAbsents = 0;
   const motifs = new Map();
 
   for (const chemin of lignes) {
@@ -238,10 +255,17 @@ async function pourquoiOnNeTouchePas(chemin) {
     }
     if (!SUPPRIME) { supprimes += 1; journal.push(`A SUPPRIMER;${chemin};`); continue; }
     try {
-      await supprimerDuCoffre(chemin);
-      supprimes += 1;
-      journal.push(`SUPPRIME;${chemin};`);
-      if (supprimes % 50 === 0) console.log(`  ... ${supprimes} supprime(s)`);
+      const issue = await supprimerDuCoffre(chemin);
+      if (issue === "deja_absent") {
+        dejaAbsents += 1;
+        journal.push(`DEJA ABSENT;${chemin};`);
+      } else {
+        supprimes += 1;
+        journal.push(`SUPPRIME;${chemin};`);
+      }
+      if ((supprimes + dejaAbsents) % 200 === 0) {
+        console.log(`  ... ${supprimes} supprime(s), ${dejaAbsents} deja absent(s)`);
+      }
     } catch (e) {
       erreurs += 1;
       console.log(`  ⛔ ${chemin}\n     la suppression a echoue : ${e.message}`);
@@ -255,6 +279,7 @@ async function pourquoiOnNeTouchePas(chemin) {
   for (const [m, n] of [...motifs.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`   ${String(n).padStart(5)}  ${m}`);
   }
+  console.log(`DEJA ABSENTS (404, reprise) : ${dejaAbsents}`);
   console.log(`ERREURS            : ${erreurs}`);
 
   const trace = path.join(RACINE, "notice",

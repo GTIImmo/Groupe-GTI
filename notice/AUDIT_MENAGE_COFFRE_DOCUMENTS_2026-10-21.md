@@ -250,3 +250,77 @@ comme le fait le coffre)*. **Rien n'est perdu.** **94,2 Mo** libérés.
 
 **3 975 fichiers du lot 1**, soit ~5,4 Go. ⛔ **Ils attendent le feu vert de Frédéric.**
 Et le **lot 2** *(988 fichiers, 1,6 Go)* reste hors périmètre, à trancher.
+
+---
+
+# PARTIE 11 — LE LOT 1 EST FAIT : 4 075 fichiers, **5,24 Go libérés**
+
+**21/10/2026, 07:21 → 07:42:44.** Frédéric : *« vas y »*.
+
+## Le geste
+
+```
+SUPPRIMES                3 975
+REFUSES par un garde-fou     0
+ERREURS                    100   <- et les 100 sont « NoSuchKey », verifie
+                         -----
+                         4 075   = toute la liste
+```
+
+⭐ **Les 100 « erreurs » sont les 100 premiers**, déjà supprimés au premier passage : le
+script repasse dessus et le coffre répond *« objet introuvable »*. **Zéro vraie erreur.**
+
+⏰ **La minuterie dure a servi** : elle a coupé à **07:42:44**, soit **deux minutes avant la
+descente de 07:45** — celle qui a déjà mis Supabase par terre. Le compte rendu était déjà
+imprimé, donc le `code 124` ne signale aucune perte. **Rythme réel : 157 fichiers/min**
+*(j'avais annoncé ~200 : c'était optimiste)*.
+
+## ⭐⭐⭐ Le contrôle en 4 points — **les 4 verts, à l'unité**
+
+| | mesuré | attendu |
+|---|---|---|
+| orphelins restants | **1 016** | 1 016 *(5 091 − 4 075)* ✅ |
+| ⭐⭐ **TOUS les documents vivants sans leur fichier au coffre** | **0** | **0**, sur 24 120 ✅ |
+| ⭐⭐ **ZIP de preuves de signature** | **388** | inchangé ✅ |
+| compagnons `immosign/` + `signed/` | **1 205** | inchangé ✅ |
+| fichiers dans le coffre | **26 427** | 26 427 ✅ |
+| **poids** | **36,816 Go** | 42,057 avant |
+
+➡ **5,24 Go libérés**, et cette fois **le poids est exact des deux côtés** *(j'avais mesuré
+l'avant trop grossièrement au premier passage ; corrigé)*.
+
+⭐ **Et les 1 016 restants s'expliquent entièrement** : les **988** du lot 2 *(« dernières
+copies »)* **+ les 28** non expliqués de la partie 5. **Aucun orphelin inattendu.**
+
+## ⭐ Chaque fichier supprimé avait sa jumelle sur le serveur — **par construction**
+
+La liste a été **déduite du disque** : le fabricant n'a émis un candidat que s'il avait
+**lu le fichier local**. Les 4 075 avaient donc tous leur copie serveur, non par chance
+mais par construction. *(Vérifié en plus fichier par fichier sur les 100 du premier
+passage : 100 sur 100.)*
+
+## ⚠⚠ UN DÉFAUT QUE LE PROJET AVAIT DÉJÀ ÉCRIT, ET QUE J'AI REFAIT
+
+Pour un objet absent, Supabase Storage rend un **HTTP 400** dont le **corps** dit :
+
+```json
+{"statusCode":"404","error":"not_found","message":"Object not found","code":"NoSuchKey"}
+```
+
+Mon test portait sur `r.status === 404` : **il ne mordait jamais**. Une reprise comptait donc
+tous les fichiers déjà traités comme des **erreurs** — un compte rendu menteur, et surtout
+**une vraie erreur devenue indiscernable d'un « déjà absent »**.
+
+⚠ **C'est exactement la leçon `coffre-refus-de-type-coule-toute-l-annonce` : « lire le CORPS
+de l'erreur, pas le 400 ».** Déjà payée le 19/10 sur le refus de type du coffre.
+✅ **Corrigé** : le script lit le corps et reconnaît `NoSuchKey` / `statusCode 404`.
+⚠ Le correctif n'a PAS agi sur ce passage *(le processus avait déjà chargé l'ancien code)* :
+c'est pourquoi le compte rendu dit 100 erreurs.
+
+## Ce qui reste
+
+| | |
+|---|---|
+| **lot 2** — 988 fichiers, 1,6 Go | ⛔ **hors périmètre, à trancher** : leur appartenance ne tient que sur une comparaison de **comptes** par annonce, pas fichier par fichier |
+| les **28** non expliqués | ⛔ écartés volontairement — un fichier du coffre sans jumelle serveur est justement celui qu'il ne faut pas supprimer |
+| le coffre | **36,8 Go**, contre 42,1 avant |
