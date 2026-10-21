@@ -462,6 +462,21 @@ cette table *(elle se reconstruit chaque nuit)* · ⚠ pendant un verrou long du
 `phase2.sqlite`, l'écriture de la paire peut échouer → la relecture finit **en erreur, sans appeler
 Hektor**.
 
+✅ **INSTALLÉE le 21/10 à 16:40** *(accord : « Oui »)* — `phase2/sync/refresh_contact_inproc.py`,
+identique octet pour octet à la version éprouvée. **Essai réel** sur le contact d'essai :
+
+| relecture | résultat |
+|---|---|
+| **avec notre numéro** `20000006` *(16:40:46 → 16:41:05, `done`)* | paire **apprise** *(`605922 → 20000006`, 14:40:47Z)* · la fiche **20000006 mise à jour par Hektor** *(`has_contact_detail` vrai, typologie `mandant` arrivée)* · `app_contact_id`, **naissance, lieu, situation conservés** · **0 doublon**, sentinelle **0** ✅ |
+| **avec le numéro Hektor** `605922` *(16:41:46 → 16:42:01, `done`)* | **0 doublon**, sentinelle **0** ✅ · ⚠ mais la fiche **n'est pas mise à jour** *(push : 0 ligne)* : la paire étant connue en local, la relecture suit **le chemin d'avant, tel quel** — et ce chemin, reçu avec un numéro Hektor, ne met pas la fiche à jour. **C'est déjà le cas aujourd'hui pour les contacts anciens** *(5 appelants du worker passent le numéro Hektor : `:15841`, `:18504`, `:19299`, `:19356`, `:19715`)*. **Hors de la pièce 1, non corrigé — question à Frédéric.** |
+
+✅ **CONTACT D'ESSAI SUPPRIMÉ — 16:43:29 → 16:43:47** *(accord : « Oui »)* par
+`app_console_create_delete_contact_job` *(la fonction du bouton « Supprimer »)* : chez Hektor
+*(605922)*, dans le miroir *(`hektor_contact`, `raw_api_response`, `sync_contact_state`)*, dans la
+couche locale et dans Supabase · **1** ligne au journal des suppressions · **0** fiche restante ·
+sentinelle **0**. Reste la paire apprise dans `app_contact_identite_app` : la descente de cette nuit
+la retirera *(elle refait la table depuis la vue, où le contact n'est plus)*.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.

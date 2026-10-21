@@ -115,9 +115,9 @@ Prompt de reprise : **`notice/PROMPT_CHANTIER_ETAPE2.md`**.
 | ⑤ | les gestes cassés *(`notice/CHANTIER_5_GESTES_CASSES_2026-10-08.md`)* | ✅ **FINI le 09/10** |
 | ⑥ | ce qui ne redescend pas de Hektor *(`notice/CHANTIER_6_REDESCENTE_HEKTOR_2026-10-14.md` · liste : `D.0`, l. 974 · photos, section **10bis**, l. 1174)* | ✅ **TRAITÉ les 14-16/10** — les 9 points. 6e et l'historique des visites **sortis du chantier** *(sujets à part)* |
 | ⑦ | **les gestes qui manquent** *(`notice/CHANTIER_7_GESTES_QUI_MANQUENT.md`)* | ✅ **CLOS le 21/10/2026** — **10 points finis, 2 fermés par décision** *(⑦-7 modifier/prolonger un mandat, ⑦-9 renommer un document)*. ⭐ **Trois réserves sont tombées le 21/10 par la MESURE, aucune par une décision nouvelle** · ⛔ **le dernier point ouvert — « les deux portes pour clôturer » — a été SORTI de ⑦ par Frédéric** : *« ce n'est pas du chapitre 7 »*, c'est un chantier à part avec sa propre spécification *(voir « LES DEUX PORTES » dans les chantiers à part)*. ⛔ **NE PAS ROUVRIR ⑦** |
-| ⑧ | gardé chez nous en entier | ⬜ |
+| ⑧ | **gardé chez nous en entier** *(`notice/CHANTIER_8_GARDE_CHEZ_NOUS_2026-10-21.md` · audit transversal `notice/AUDIT_PORTES_DE_CREATION_2026-10-21.md`)* | 🔧 **OUVERT le 21/10** — 7 points (8a → 8g). ⭐ **Frédéric : « le but est d'anticiper la coupure »** → la méthode du 07/10 *(L10-2d, N.2 : « naître complet, Hektor complète »)* est **reprise dans ⑧**. **8a pièce 1 EN PRODUCTION** : un contact créé dans l'app a **ses 16 champs chez nous à la seconde** *(interrupteur `contact_nait_complet` **allumé** 15:37)*, prouvé en réel. ⚠⚠ **L'essai a trouvé un défaut dormant depuis le 23/09** : la relecture d'après-création fabriquait un **doublon** *(numéro Hektor au lieu du nôtre)* → **corrigé le 21/10 à 16:40** *(`refresh_contact_inproc.py` apprend la paire tout de suite ; 13/13 + essai réel)*. Doublon et contact d'essai **supprimés**. ➡ **Suite : pièce 2 = l'annonce (L10-2d), pièce 3 = le contrôle au retour (N.2)** |
 
-**Ordre de Frédéric : ① ⑤ ④ ② puis ③ → ⑥ → ⑦ ⑧.** ➡ **Le chantier en cours est ⑦.**
+**Ordre de Frédéric : ① ⑤ ④ ② puis ③ → ⑥ → ⑦ ⑧.** ➡ **Le chantier en cours est ⑧** *(⑦ clos le 21/10)*.
 ⚠ Un périmètre, une taille, un ordre ou un report **ne se décident jamais sans lui**.
 
 ### 🔧 LE CHANTIER ⑦ — les 12 points, et ce qui reste
