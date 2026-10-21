@@ -362,6 +362,22 @@ de cette nuit en dépend aussi.**
   **intact** · **0** lien, **0** recherche, **0** saisie en attente. ⭐ La sentinelle l'a vu :
   `app_v_contacts_en_double_identite` = **1**.
 
+✅ **DOUBLON SUPPRIMÉ — 21/10 à 16:1x** *(accord : « OUI SUPPRIME LE »)* : copie datée avant geste
+`notice/SUPPRESSION_DOUBLON_605922_2026-10-21.json` · `605922` cherché dans les **25** tables qui
+portent `hektor_contact_id` → **1 seule** ligne · supprimée dans Supabase *(1 ligne)* et dans la
+couche locale de `phase2.sqlite` *(1 ligne, `busy_timeout` 60 s)* · relu : **0** doublon, la
+sentinelle `app_v_contacts_en_double_identite` revenue à **0**, la bonne fiche **20000006** garde
+**ses deux numéros** *(identité 20000006, cible Hektor 605922 — exigence de Frédéric)* et ses 16 champs.
+
+⛔ **LE CORRECTIF « ÉVIDENT » SERAIT DANGEREUX** — donner l'identité à la relecture *(`:18225`,
+`:19491`)* ne suffit pas : `cible_hektor()` (`phase2/sync/refresh_contact_inproc.py:31-60`) traduit
+l'identité par la couche **LOCALE**, où un contact né il y a une minute **n'est pas encore**. Elle
+rendrait alors l'identité telle quelle → **Hektor interrogé avec NOTRE numéro** → *« 404, puis
+liste noire, et une fiche vide dans le miroir sous notre numéro »* (son propre commentaire).
+➡ **La relecture d'après-création ne sait pas traiter un contact neuf, quel que soit le numéro
+qu'on lui donne.** Le chemin prévu pour lui est la nuit : `descendre_correspondance_contacts.py`
+redescend la paire, le build traduit, le push met à jour 20000006. **Décision à Frédéric.**
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
