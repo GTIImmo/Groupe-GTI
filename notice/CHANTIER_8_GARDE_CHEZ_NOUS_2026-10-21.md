@@ -378,6 +378,25 @@ liste noire, et une fiche vide dans le miroir sous notre numéro »* (son propre
 qu'on lui donne.** Le chemin prévu pour lui est la nuit : `descendre_correspondance_contacts.py`
 redescend la paire, le build traduit, le push met à jour 20000006. **Décision à Frédéric.**
 
+❓ **Frédéric : « il faut que l'on puisse modifier la fiche avant 24 h ; sans réconciliation ce
+sera compliqué, non ? »** — **Oui, et ça change la recommandation.** Relu dans le code :
+- **la modification elle-même part bien chez Hektor avant la nuit** : `cibleHektorContact`
+  (`console_job_worker.js:2126`) lit le numéro Hektor dans **Supabase** (`hektor_target_id`), que
+  le worker range **16 s** après la création ;
+- **mais la relecture qui suit une modification** (`:18303`, avec l'identité) tombe dans le **même
+  trou** : `cible_hektor()` traduit par la couche **locale**, qui ignore le contact neuf → Hektor
+  interrogé avec **notre** numéro ;
+- **UNE SEULE CAUSE RACINE** : le serveur n'apprend la paire « identité ↔ numéro Hektor » que la
+  nuit (`descendre_correspondance_contacts.py`, run l. 670, qui refait **toute** la table
+  `app_contact_identite_app` : DELETE + INSERT). Or le build **sait déjà** traduire avec cette table
+  (`charger_identites_app`, `build_contacts_layer.py:364-433`) : **il ne lui manque que la paire.**
+
+➡ **Proposition corrigée — « la relecture apprend la paire tout de suite »** *(pas encore codée,
+audit à finir)* : au début de chaque relecture, si l'identité est à nous et inconnue en local,
+**lire sa paire dans Supabase et l'écrire dans `app_contact_identite_app`** (une ligne,
+`INSERT OR REPLACE`, comme la descente de nuit) ; `cible_hektor()` la lit aussi ; et le worker
+passe **l'identité** après une création (`:18225`, `:19491`).
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
