@@ -397,6 +397,37 @@ audit à finir)* : au début de chaque relecture, si l'identité est à nous et 
 `INSERT OR REPLACE`, comme la descente de nuit) ; `cible_hektor()` la lit aussi ; et le worker
 passe **l'identité** après une création (`:18225`, `:19491`).
 
+### Les trois derniers doutes, audités — 21/10 *(Frédéric : « audit les derniers doutes »)*
+
+**① La descente de nuit et la ligne apprise en journée — LEVÉ.** `descendre_correspondance_contacts.py`
+refait `app_contact_identite_app` depuis la vue `app_v_correspondance_identite_cible`, qui lit
+**toutes** les fiches de Supabase ayant une cible ≠ identité ≥ 10 M *(62 282 lignes, **dont 20000006**)*
+— pas seulement le périmètre éligible. La ligne apprise en journée y est **réécrite à l'identique**.
+⭐ Et ce script **est né le 21/09 contre CE doublon** *(« ESSAI L4B », 10000001 / 605450)* : il ne
+protège que la **nuit**. La relecture de **journée** n'a jamais été couverte.
+
+**② L'envoi vers Supabase d'un contact né dans l'app — LEVÉ.** `delete_contacts_except_dirty`
+**ne supprime jamais** une identité ≥ 10 M (`push_contacts_to_supabase.py`, `est_ne_dans_l_app`) :
+la fiche est **fusionnée** ; `app_contact_id` et les 3 champs propres à l'app ne sont pas dans la
+couche locale, donc **conservés**. ⭐ **Preuve par le doublon** *(qui était la version de Hektor)* :
+sur 13 champs, **10 identiques** aux nôtres, **3 absents chez Hektor** (naissance, lieu, situation),
+**0 différent**. ➡ **Le retour de Hektor ne fait rien perdre.** *(C'était le contrôle ⬜ ci-dessus.)*
+
+**③ Les autres relectures — même chemin, même trou, même remède.** Toutes passent par
+`phase2/sync/refresh_contact_inproc.py` : l'ouverture d'une fiche *(le front, avec l'identité)*,
+après une modification (`:18303`), un ajout ou une modification de recherche (`:18504`, `:19299`,
+`:19356`), un mandant (`:19715`) — **certaines avec le numéro Hektor**. Pour les 356 000 contacts
+anciens, la paire est connue en local : **aucun risque**. Pour un contact **né le jour même**,
+**toutes** tombent dans le trou.
+
+➡ **LA SOLUTION, RESSERRÉE : un seul fichier, `refresh_contact_inproc.py`, et PAS le worker** *(donc
+pas de redémarrage des 4 services : le script est relancé à chaque relecture)*. Au début :
+quel que soit le numéro reçu, trouver la paire — en local d'abord, **sinon dans Supabase**
+*(`hektor_contact_id = X` ou `hektor_target_id = X`)* — l'écrire dans `app_contact_identite_app`
+*(une ligne)*, puis donner **le numéro Hektor** aux étapes détail/normalisation et **l'identité** au
+build et au push. Si une identité ≥ 10 M n'a **pas** de numéro Hektor, ou si Supabase ne répond
+pas : **la relecture s'arrête en erreur**, elle n'interroge jamais Hektor avec notre numéro.
+
 ⚠ **Trouvaille HORS SUJET, notée** : dans `app_console_job.error_message`, la **première** trace
 de l'échec d'authentification de 15:40 porte **le secret OAuth de Hektor EN CLAIR** dans l'URL
 *(la ligne `raise_for_status`)* ; seul le message final le masque (`***`). À traiter à part.
