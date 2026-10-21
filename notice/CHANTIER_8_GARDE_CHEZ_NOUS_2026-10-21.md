@@ -631,3 +631,366 @@ passer par le navigateur la contournerait.
 *(ancienne formulation, gardée : A = la création et la modification écrivent elles-mêmes tout ce qui a
 une colonne · A+ = A, plus une place pour les champs que Hektor ne renvoie jamais, et la reprise
 des charges déjà envoyées)*
+
+### Pièce 2 — le code *(Frédéric : « garde et code pièce 2 » — 21/10)* — ÉCRIT, **PAS APPLIQUÉ**
+
+Trois fichiers, tous en `LF`, la répétition **générée** depuis les deux autres
+*(`gen_repetition_8a2.py`, dans le brouillon de la session ; il vérifie que le bloc est
+identique, à l'octet, dans le patch et dans l'inverse)* :
+`supabase/patch_8a2_annonce_nait_complete_2026-10-21.sql` · `…_INVERSE.sql` · `…_REPETITION.sql`.
+
+**Ce que fait le patch** — additif, derrière l'interrupteur **`annonce_nait_complete`, posé ÉTEINT** :
+1. une fonction **neuve**, `app_annonce_corps_de_naissance(jsonb)`, fermée à `anon` et
+   `authenticated` *(la création est `SECURITY DEFINER` : elle l'appelle quand même — vérifié)* ;
+   elle rend `NULL` si l'interrupteur est éteint ;
+2. dans `app_create_annonce_job_optimistic`, **juste après** l'insertion de la fiche *(branche C.9,
+   la seule active : `c9_annonce_nait_dans_app = on`)*, un bloc **à part** *(son échec ne peut ni
+   empêcher ni défaire la création)* qui :
+   - complète la fiche : **`search_text`**, **`date_enregistrement_annonce`** *(heure de Paris,
+     seulement si vide)*, **`type_bien` en CODE** *(`hektor_id_type`, jamais le libellé)*, l'adresse,
+     le code postal et la ville **privés** ;
+   - pose une **fiche détaillée de départ** : surface, pièces, chambres, la date, le **calque**
+     `app_optimistic_overlay` *(les équipements, déjà aux noms de Hektor, + titre, corps, prix, net
+     vendeur, surface, pièces, chambres, adresse, codes et villes)* — c'est ce que l'écran lit
+     **en premier** *(`wizardDetailValue`)* — et la **saisie telle quelle** `app_saisie_creation`,
+     **sans le mandant** *(ses coordonnées vivent dans les contacts)*.
+   - ⛔ **N'invente pas** ce que seul Hektor fabrique : numéro Hektor, numéro de dossier,
+     diffusable, blocs `equipements_json` / `ag_*_json` / photos.
+
+**Gardes** : empreinte de la création **`3407a05c…`** *(mesurée le 21/10)*, ancre trouvée **1 fois**,
+marque absente — sinon ARRÊT. L'inverse ne réécrit que si, bloc retiré, il redonne **exactement**
+`3407a05c…`.
+
+**Contrôlé en lecture seule, le 21/10** :
+- empreinte d'après attendue **`a5e70b57…`**, et le retour redonne **`3407a05c…`** ✅ ;
+- ⭐⭐ **le texte de recherche calculé sur la VRAIE saisie de l'essai 10000001 est IDENTIQUE, au
+  caractère près, à celui que le serveur a écrit 90 s plus tard** *(« ESSAI 8A ANNONCE - ne pas
+  diffuser Firminy 42700 Emmanuelle PEREIRA Groupe GTI »)* ; le type aussi (`2`) ;
+- la relecture **remplace** bien la fiche détaillée : `push_single_annonce_to_supabase.py` l'efface
+  puis l'insère **par `app_dossier_id`** *(l. 391-410, 669)* — la nôtre ne peut pas la bloquer ;
+- **les 6 lecteurs** de la fiche détaillée en base : `app_edit_annonce_optimistic` et
+  `app_annonce_reappliquer_saisies` **trouvent désormais une ligne à mettre à jour** *(avant : 0
+  ligne, la modification de la première minute ne s'y voyait pas — c'est un MIEUX)* ;
+  `app_dossier_match_payload` lit `surface` / `nb_pieces` / `nb_chambres` *(les clés posées)* ;
+  `app_dossier_equipements` lit les blocs que nous **ne** fabriquons **pas** → rend vide, comme
+  avant ; `app_get_dossier_photos`, `app_get_rapprochements` : rien de changé.
+
+**La répétition** *(jamais validée, finit par « ESSAI ANNULE -- … »)* : le vrai patch, un vrai appel
+au nom de l'admin Frédéric, éteint **puis** allumé, puis le vrai inverse. 22 mesures, dont : la saisie
+du **mandant ne doit PAS** être recopiée, une valeur **vide** et un **objet** dans les équipements ne
+doivent **pas** entrer dans le calque, et le rapprochement doit lire les pièces. ⚠ Elle consomme
+**2 numéros d'annonce de l'app** *(un trou dans la série)*.
+
+⬜ **À faire, chacun avec son accord** : jouer la répétition → appliquer le patch (éteint) → allumer
+→ un essai réel *(une nouvelle estimation à Firminy)*.
+
+### Pièce 2 — la répétition : **22 VERTES SUR 22** *(21/10, 22:22, jouée par moi avec l'accord de Frédéric : « Oui »)*
+
+`ESSAI ANNULE -- 01 empreinte_apres=a5e70b57… (= l'attendue) | 02 interrupteur=off | 03 fonction_eteinte=NULL |
+04 A_eteint_fiche_detaillee=0 | 05 A_eteint_texte_recherche=NULL | 06 A_eteint_type_date=NULL / NULL |
+07 B_allume_fiche_detaillee=1 | 08 B_texte_recherche=ESSAI 8A2 - ne pas diffuser Firminy 42700 Emmanuelle PEREIRA Groupe GTI |
+09 B_type_et_date=2 / 2026-10-21 22:22:52 | 10 B_adresse_cp_ville=3 rue de l'Essai / 42700 / Firminy | 11 B_empreinte_source=c9e3: |
+12 B_calque_nb_champs=18 | 13 B_calque_titre_et_cave=ESSAI 8A2 - ne pas diffuser / OUI | 14 B_calque_vide_et_objet=absent / absent |
+15 B_mandant_dans_la_saisie=absent | 16 B_surface_pieces_chambres=85 m2 / 4 p / 3 ch | 17 B_rapprochement_nb_pieces=4 |
+18 empreinte_retour=3407a05c… | 19 fonction_retiree=oui | 20 interrupteur_retire=oui | 21 droits_creation=inchanges | 22 erreurs=aucune`
+
+- ⭐ **Le témoin inverse est là** : éteint (A), **0** fiche détaillée, pas de texte de recherche, ni type
+  ni date — exactement le défaut d'aujourd'hui ; allumé (B), tout apparaît.
+- 18 champs dans le calque = **6 équipements** (le vide et l'objet écartés) **+ 12 principaux** : le compte juste.
+- L'heure est celle de **Paris** (22:22 pour un essai joué à 22:22).
+- **Après coup, mesuré à part** : empreinte revenue à `3407a05c…`, fonction et interrupteur absents,
+  **0** fiche et **0** travail « ESSAI 8A2 » en base. La séquence est passée de 10000001 à
+  **10000003** : les 2 numéros annoncés, un trou, rien de plus.
+
+⬜ **Reste, avec accord** : appliquer le patch (interrupteur **éteint**) → allumer → essai réel.
+
+### Pièce 2 — patch APPLIQUÉ, interrupteur ÉTEINT *(21/10, Frédéric : « oui »)*
+
+`patch_8a2` collé par moi : **5 contrôles verts** — interrupteur posé `off`, empreinte de la création
+**`a5e70b57`** (= celle de la répétition), la fonction neuve rend `NULL`, droits inchangés, fonction
+fermée à `anon` / `authenticated`. **Rien ne change pour les négociateurs tant qu'il est éteint.**
+
+### Pièce 2 bis — TOUS LES CHAMPS *(Frédéric, 21/10 : « il faut vraiment tester tous les champs, pas juste 16 »)*
+
+**La liste complète** : la fiche de l'annonce affiche **173 champs distincts** *(`draftAnnonceWizardGroups`,
+App.tsx:1414-1696 ; 195 avec les doublons d'étape)*. Chacun est lu **calque d'abord, par son nom Hektor**
+*(`wizardDetailValue`, App.tsx:2631)*. ⚠ J'avais d'abord dit 165 : **faux**, recompté sur le code.
+
+**Ce que la liste a trouvé dans la version 1** *(posée éteinte, donc personne n'en a souffert)* :
+1. **27 champs « à plat »** de la saisie *(salles de bain, WC, Carrez, séjour, cuisine, états, DPE, GES,
+   copropriété ×3, charges, parkings ×2, terrasse, garage ×2, niveaux, jardin, piscine, exposition, vue,
+   année…)* partent bien chez Hektor — le worker leur donne leur nom Hektor
+   *(`buildWizardStep2/4/6/7Body`, console_job_worker.js:10669-10862)* — **mais le calque ne les
+   reprenait pas** : la fiche les aurait montrés **vides** pendant ~90 s ;
+2. **la surface du séjour** servait de repli à la surface **habitable** : faux, le worker l'envoie dans
+   `SURF_SEJOUR` ;
+3. **l'ordre** : le worker applique les équipements **en dernier** à chaque étape
+   (`applyExactHektorWizardFields`, appelé à la fin de chaque étape), ils **gagnent** — la v1 faisait
+   l'inverse.
+
+**La version 2** *(`supabase/patch_8a2b_annonce_tous_les_champs_2026-10-21.sql` + `_INVERSE` + `_REPETITION`)*
+ne remplace **que** `app_annonce_corps_de_naissance` *(garde : empreinte v1 `2e33944a`)* : une table de
+correspondance **copiée du worker** (38 noms Hektor ← leurs clés), les équipements qui gagnent, et 19
+noms « à plat » que les **autres** écrans lisent *(en-tête, listes, rapprochement)*. La création n'est
+**pas** retouchée.
+
+**La répétition** *(jouée par moi, tout annulé ; ⚠ la 1re passe avait perdu T6 : mon test écrivait ses
+résultats DANS le bloc qui s'annule — corrigé, T6 rejoué seul)* :
+
+| essai | résultat |
+|---|---|
+| T1 — chacun des **173 champs** de la fiche, avec SA valeur | ✅ **173 sur 173**, aucun échec |
+| T2 — les **38** noms Hektor nourris par les champs à plat | ✅ **38 sur 38** |
+| T3 — un équipement gagne sur le champ à plat | ✅ `w001` attendu `w001` |
+| T4 — le séjour seul ne remplit plus l'habitable | ✅ vide |
+| T5 — les **19** noms à plat des autres écrans | ✅ **19 sur 19** ; négociateur, agence, statut posés |
+| mandant et jeton recopiés ? | ✅ **absents** ; note et composition **gardées** |
+| T6 — **vraie création** au nom de l'admin : la fiche posée en base | ✅ **173 sur 173** ; le travail du worker porte **la saisie intacte** ; recherche + type posés |
+| retour arrière | ✅ version 1 retrouvée (`2e33944a`), création non retouchée (`a5e70b57`) |
+
+Empreinte de la v2 : **`944db16b`** *(figée dans le contrôle n° 1 du patch)*. Vérifié à part après coup :
+fonction toujours en v1, interrupteur `off`, **0** fiche et **0** travail d'essai. Séquence passée à
+**10000005** *(2 numéros de plus, un trou)*.
+
+⬜ **Reste, avec accord** : appliquer la v2 → allumer → essai réel chez Hektor.
+⬜ **Ce que je ne fais PAS à la naissance, volontairement** : `NO_DOSSIER`, `diffusable`, latitude /
+longitude — seul Hektor les fabrique ; si l'écran les saisit, ils restent dans le calque tels quels.
+
+### Pièce 2 bis — version 2 APPLIQUÉE, interrupteur ÉTEINT *(21/10, Frédéric : « oui »)*
+
+Collée par moi : **5 contrôles verts** — empreinte **`944db16b`** (= celle de la répétition),
+interrupteur **inchangé (`off`)**, la fonction rend `NULL` tant qu'il est éteint, la création **non
+retouchée** (`a5e70b57`), la fonction reste fermée à `anon` / `authenticated`.
+Retour arrière : `…_8a2b_…_INVERSE.sql` (revient à la v1), puis `…_8a2_…_INVERSE.sql` (retire tout).
+
+⬜ **Reste, avec accord** : allumer → essai réel chez Hektor, **champ par champ**.
+
+### Pièce 2 — L'ESSAI RÉEL PAR L'ÉCRAN, tous les champs *(21/10, 23:47-23:5x, Frédéric : « A, et cela permet de voir les champs manquants »)*
+
+**Interrupteur `annonce_nait_complete` ALLUMÉ à 23:47:29** (heure de Paris), avec l'accord de Frédéric.
+
+**Le geste** : dans son Chrome, « + Nouveau » → la création en 7 étapes, une **maison** à Firminy
+*(Emmanuelle PEREIRA, Groupe GTI Firminy)*, **chaque champ que l'écran propose rempli** — l'écran a dit
+**« 151 champs remplis »**. ⚠ Ouverte depuis l'accueil, la création se faisait en **Actif** ; je suis passé
+sur l'écran Estimations, la saisie intacte, et elle est partie en **Estimation** comme annoncé
+*(App.tsx:13510 : le statut dépend de l'écran d'où l'on crée)*.
+
+| mesure | résultat |
+|---|---|
+| **1,3 s** après le clic | l'annonce **10000006** existe : type **1** (maison), recherche, date, adresse, **fiche détaillée de 116 champs** |
+| ce que l'écran a envoyé au worker | **116 champs non vides** dans les équipements + les champs du haut + la pièce (avec ses 3 notes) + la note |
+| **gardés chez nous à la naissance** | ✅ **116 sur 116**, zéro écart de valeur |
+| la LISTE, avant le retour de Hektor | ⭐ l'estimation est **EN TÊTE** (Maison · Firminy · 187 000 € · PEREIRA) — au 1er essai, invisible 90 s |
+| la FICHE, avant le retour de Hektor | ⭐ ouverte, titre / adresse / prix / **1 670 €/m²** ; rubriques remplies : Intérieur 8/9, Construction récente 7/7, Confort 19/22, Diagnostics 29/35, Disponibilité 5/5, Localisation 10/10… |
+| Hektor a créé | **63330** à 21:54:34 UTC — **2 min 20 s** *(contre 60 s au 1er essai, moins de champs)* |
+
+**Les champs que l'écran n'a PAS envoyés** *(sur les 173 que la fiche sait afficher)* — et pourquoi :
+- **propres à l'appartement**, masqués pour une maison *(le filtre par profil)* : étage, dernier étage,
+  balcon ×3, résidence ×2, ascenseur, gardien, syndic, copropriété ×8, diagnostic loi Carrez ×3 ;
+- **propres au terrain** : constructible, surface constructible, viabilisé, raccordements ×4 ;
+- **piscine** ×8 : masqués parce que piscine = NON ;
+- **honoraires vendeur** ×3 : masqués parce que honoraires vendeur = NON ;
+- **location** : taxe d'habitation, loyer estimé, charges locatives, rendement, occupation ;
+- **fabriqués par Hektor** : numéro de dossier, date de création, diffusable ;
+- `immeuble`, `clearing`, `cable`, `floorState` : **non proposés** à la création pour une maison
+  *(à vérifier un par un : lesquels l'écran ne montre JAMAIS)* ;
+- ⚠ **le chauffage** (format, type, énergie) : **rempli à l'écran mais PAS envoyé** — j'avais choisi les
+  valeurs **par défaut** (4 / 9 / 14), et l'écran ne retient un champ que s'il CHANGE. Pas une perte
+  (l'écran et Hektor retombent sur le même défaut), mais **ces 3 champs ne sont PAS éprouvés** par l'essai.
+- `masque` (masquer le prix) : laissé vide **par moi**.
+
+⚠⚠ **Trouvaille de l'écran : le même champ y est proposé DEUX ou TROIS fois, avec des valeurs SÉPARÉES.**
+Exposition, vue, garages, surfaces, pièces, prix… existent à l'étape 1 (champs « du haut »), à l'étape 5
+et à l'étape 7 (équipements). Mon remplissage automatique les avait mis en désaccord (exposition SUD à
+l'étape 1, NORD-EST à l'étape 7 ; garages 1 et 30) : **c'est la valeur de l'étape 7 qui part chez Hektor**
+(le worker applique les équipements en dernier). Un négociateur qui corrige l'étape 1 sans voir l'étape 7
+enverrait l'ancienne. *Noté, non traité : hors pièce 2.*
+⚠ **Fil d'Ariane** : la fiche affiche `#null` tant que Hektor n'a pas répondu. Cosmétique, noté.
+⚠ **Une table d'essai posée par moi en base** : `essai_8a2b_naissance_20261021` *(la photo de la naissance,
+pour la comparaison ; fermée à anon / authenticated)*. **À supprimer avec l'accord.**
+
+**Le retour de Hektor** *(relecture à 21:55 UTC : la fiche détaillée de Hektor, 29 000 car., a REMPLACÉ la
+nôtre, le calque a disparu — comme prévu)*. **Comparaison des 116 champs, un par un** :
+
+| | nombre | détail |
+|---|---|---|
+| identiques | **92** | |
+| même valeur, autre FORME | **12** | toutes les dates : `15-09-2026` → `2026-09-15` |
+| recalculés par Hektor | **2** | latitude / longitude, d'après l'adresse (`45.388` → `45.397`) |
+| ⚠ **écart réel** | **1** | `corps` : le **« Texte annonce » de l'étape 7 est PERDU** — Hektor n'a gardé que la « Description » (2 textes, tous deux la description). À la naissance nous montrions le texte saisi, après le retour la description |
+| ⚠ **absents de la fiche relue** | **10** | `TRANSPORT`, `PROXIMITE`, `ENVIRONNEMENT`, `diagnostiqueur`, `Particularites`, et les honoraires `_selecterHonoraires2/3`, `_tauxHonoraire2`, `_pourcentHonoraire2`, `_detailHonoraire2` (seul le **montant** 12 000 « Acheteur » revient, par `honoraires_json`) |
+
+⚠ **NON MESURÉ, et je ne le suppose pas** : si ces 10 champs sont **perdus chez Hektor** ou seulement **pas
+encore relus** — les blocs que l'app tire de la CONSOLE (`secteur_console_json`,
+`honoraires_detail_console_json`, `pieces_detail_console_json`) sont **vides**, statut de l'extraction
+console `null` : elle n'est pas encore passée. Pour trancher : lire l'annonce **63330 dans Hektor** (lecture
+seule), ou attendre l'extraction.
+
+**À l'écran, après le retour** *(même fiche, mêmes rubriques)* : Localisation **10/10 → 7/10** · Prix, mandat
+& honoraires **13 → 8** remplis · Diagnostics **29 → 28** · Intérieur **8 → 7**. Le fil d'Ariane passe de
+`#null` à `#63330`, la fenêtre dit « Annonce disponible ».
+
+⭐⭐ **CE QUE ÇA DIT POUR LA SUITE — c'est le cœur de la pièce 3** : « garder chez nous » **tient jusqu'au
+retour de Hektor, pas au-delà**. La relecture **remplace** la fiche détaillée — calque **et**
+`app_saisie_creation` compris. Ce que Hektor ne renvoie pas (ou pas encore) **disparaît de chez nous** : il
+ne reste que dans la demande au worker *(pas un lieu sûr)* et dans ma table d'essai. **La pièce 3 doit
+donc GARDER la saisie au-delà de la relecture** (une place à part, que la relecture ne touche pas) **et
+comparer** — exactement ce que la comparaison ci-dessus a fait à la main.
+
+### Audit du 22/10 — latitude / longitude, et les 10 champs « absents » *(Frédéric : « nous avions déjà tout travaillé ces champs, cherche et explique »)*
+
+**1. La latitude et la longitude : c'est NOUS, pas Hektor.** Prouvé de trois façons :
+- le journal du worker, 21:54:21 : « **Localite privee mise a jour (BAN)** », localité 912954, « 8 Rue de
+  l'Ondaine », Firminy — c'est `geocodeAddressBAN` (console_job_worker.js:3277) qui interroge la **BAN de
+  l'État** (`data.geopf.fr/geocodage`), puis pose la localité chez Hektor (`updateLocaliteByFeature`) ;
+- la BAN interrogée à nouveau le 22/10 rend **exactement** `4.292822 / 45.39706` (score 0,96) — les
+  valeurs que Hektor a gardées ;
+- la recette est écrite depuis le **29/07** (mémoire `hektor-adresse-secteur-graphql`,
+  `adresse-edit-geoloc-et-overlay`), et l'app géocode aussi elle-même à la modification d'une adresse
+  (`geocodeAddress`, lib/api.ts:4477, appelé App.tsx:29601).
+⭐ **Donc on est autonome sur ce point** : le service est public, les deux codes existent. ⚠ **Le seul
+trou** : à la **création**, l'app ne géocode PAS (un seul appel, à la modification) — les coordonnées
+n'arrivent chez nous **qu'à la relecture**, par Hektor. Pendant les ~2 min, et le jour de la coupure : une
+annonce sans coordonnées (carte, estimation, cadastre lisent `latitude_detail`). **Remède connu, petit** :
+géocoder à la naissance (l'écran avant l'envoi, ou la fonction de naissance). *Non codé.*
+
+**2. Les 10 champs absents ne sont PAS perdus chez Hektor : le worker les y a écrits.** Journal 21:54:12
+et 21:54:21 : « Sauvegarde groupe secteur » avec `TRANSPORT`, `PROXIMITE`, `ENVIRONNEMENT` (deux fois) ;
+`diagnostiques`, `mandat_infofi` sauvegardés ; `error_groups: []`. C'est **notre RELECTURE qui ne les
+rapporte pas** — l'API de Hektor (`AnnonceById`) ne les rend pas. C'était écrit le **08/06**
+(`notice/NOTE_EXTRACTION_CONSOLE_CHAMPS_MANQUANTS_2026-06-08.md`) : secteur (`immeuble`, `TRANSPORT`,
+`PROXIMITE`, `ENVIRONNEMENT`), contacts diagnostics (`diagnostiqueur`, `syndic`), détail des honoraires,
+location / rendement, détail des pièces → **seule la console** les donne, par
+`Console/extract_hektor_missing_fields.js` (via `phase2/sync/sync_console_missing_fields.py`).
+
+**3. Pourquoi ils ne sont pas revenus pour 63330 — DEUX causes, dont une NEUVE :**
+- **(déjà écrit le 08/10, chantier ⑤ « 5a ter »)** : l'extraction console **ne tourne JAMAIS la nuit** —
+  elle est derrière `-RunConsoleMissingFields` (`run_full_pipeline.ps1` l. 89, éteint par défaut) et
+  `scheduled/run_quotidien.ps1` l. 39 ne le passe pas. Elle ne tourne que dans une relecture **non
+  légère** d'une annonce précise (console_job_worker.js:4144-4155) ;
+- ⚠ **NEUF, mesuré le 22/10** : pour une annonce **qui vient de naître**, cette extraction ciblée **ne
+  sélectionne RIEN** (« selected: 0 », travail `7a29e1d5`, 21:54:45). Elle cherche l'annonce dans la table
+  locale `app_view_generale` (`sync_console_missing_fields.py:123-147`), or cette ligne n'est écrite
+  **qu'à l'étape SUIVANTE**, par `push_single_annonce_to_supabase.py:859-861`. **L'ordre des étapes la
+  rend aveugle sur toute création.** Elle y est maintenant (vérifié en lecture), mais rien ne la relancera.
+
+**4. Ce que ça pèse sur tout le parc** *(mesuré le 22/10, `app_dossier_detail_current`)* :
+
+| bloc | annonces vivantes qui l'ont chez nous |
+|---|---|
+| **console** (secteur, contacts diagnostics, honoraires détaillés…) | ⚠⚠ **103 sur 13 497 (0,8 %)** |
+| **chauffage** (le run de nuit, 50 par nuit, scope « current ») | **9 985 sur 13 497 (74 %)** |
+
+⭐ **Frédéric avait raison sur le principe** (« vérifie dans le run chauffage s'il n'y a pas aussi le DPE ») :
+le run de nuit **ne lit que le chauffage** (`extract_hektor_chauffage_only.js` : les tableaux
+`chauffageExist*`). **Le DPE n'en a pas besoin** : il vient de l'API (groupe `diagnostiques`) et les
+vignettes DPE/GES sont recalculées par `export_app_payload.py` — dans l'essai, `dpe_cons`, `dpe_ges`,
+`valeurEnergieFinale`, les coûts, l'année de référence et toutes les dates de diagnostic sont revenus
+**identiques**.
+
+⚠⚠ **POUR LA COUPURE** : pour **99,2 % du parc**, transport / proximité / environnement / immeuble,
+diagnostiqueur / syndic, honoraires détaillés et location **n'existent QUE chez Hektor**. Ce n'est inscrit
+ni dans les 46 chapitres du 07/10 (L10-8f n'en parle que comme d'une garde de forme), ni dans la liste
+« seul Hektor fournit » (pièce 4, à faire). **Ça a une date de péremption**, comme les photos masquées.
+*Noté, non décidé.*
+
+**5. Le « Texte annonce » perdu : c'est NOTRE worker.** Journal 21:53:56 : « **Sauvegarde texte
+principal** » avec `title` + `description` — après le wizard, `applyCreatedAnnonceInitialFields` réécrit
+le texte principal avec la **Description**, par-dessus le `corps` saisi à l'étape 7. *Noté, non traité.*
+
+⬜ **L'interrupteur `annonce_nait_complete` est TOUJOURS ALLUMÉ** (la question du 21/10 n'a pas reçu de
+réponse).
+
+### Résumé de l'étude des champs — 22/10 *(Frédéric : « relis et étudie en profondeur, on avait pris des décisions »)*
+
+**Les études déjà faites, retrouvées** :
+- **08/06** `NOTE_GROUPES_API_DETAIL_SUPABASE_2026-06-08.md` — ce que l'**API** donne : 9 groupes exposés
+  dans la fiche ; et la liste nommée de ce qu'elle **ne donne pas** : chauffage, `diagnostiqueur` /
+  `syndic`, secteur (`immeuble`, `TRANSPORT`, `PROXIMITE`, `ENVIRONNEMENT`), détail des pièces,
+  diagnostics terrain, détail des honoraires ;
+- **08/06** `NOTE_EXTRACTION_CONSOLE_CHAMPS_MANQUANTS_2026-06-08.md` — l'extracteur console pour ceux-là,
+  ⭐ **et la DÉCISION** : *« ne la lance plus par défaut dans le quotidien »*, « outil de
+  contrôle/rattrapage, sans multiplier les lectures console Hektor » ;
+- **09/06** `NOTE_EXTRACTION_CHAUFFAGE_HEKTOR_2026-06-09.md` — le chauffage sorti à part, **lui** tous
+  les soirs (50 / nuit) ;
+- **07/07** `AUDIT_CHAMPS_HEKTOR_MANQUANTS_2026-07-07.md` — les champs qui manquaient **à l'écran**
+  (terrain, diagnostics, piscine, construction récente…) : **ajoutés depuis** — ils sont dans les 173 ;
+  ⚠ deux d'entre eux **ne l'ont jamais été** : `PLAIN_PIED` et `globalCondition` (0 occurrence dans
+  App.tsx) ;
+- **19/08** carte A1 (**189** noms côté worker = 27 textes + 26 nombres + 136 équipements ; les mêmes
+  champs sous deux noms, d'où 173 à l'écran) · **28/09** N.1 et N.1-(b) · **08/10** chantier ⑤ « 5a ter »
+  (la console ne tourne jamais la nuit, mesuré).
+
+**Ce que ça donne, au 22/10 :**
+- **à l'écran, il ne manque PAS de champ** : la fiche en affiche **173**, c'est bien « nos 170 » ;
+- l'API de Hektor en rapporte **la grande majorité** — l'essai 63330 : 92 identiques + 11 dates
+  (autre forme) + 2 coordonnées (les nôtres, BAN) sur 116 envoyés ; ⚠ *rectification : 11 dates, pas
+  12 comme écrit plus haut* ;
+- **~21 champs ne reviennent QUE par la console** : secteur ×4, contacts diagnostics ×2, honoraires
+  détaillés ×8, location ×4 *(liste exacte : `extract_hektor_missing_fields.js` l. 24-36)*, chauffage ×3
+  (son propre extracteur) — plus les **notes des pièces** (l'API ne rend que type / étage / libellé /
+  surface) ;
+- ⭐ **« on a réussi à récupérer honoraires, syndic… » est VRAI pour la MÉCANIQUE** : depuis juin l'app
+  sait les **lire et les afficher** (`export_app_payload.py` l. 52-58 / 1429-1434 ; `App.tsx` l. 31357-31363
+  et 36008-36014). **Ce qui manque, c'est le PASSAGE** : 103 annonces vivantes sur 13 497 l'ont eu. Le
+  **montant** des honoraires, lui, vient de l'API (`honoraires_json`) ;
+- `Particularites` : l'API rend son groupe `particularites` **vide** pour 63330 — envoyé ou non par le
+  worker, **non vérifié** (le journal est tronqué) ;
+- la « Note » de l'étape 6 : **non retrouvée** dans la fiche relue — **non vérifié** si Hektor l'a.
+
+**Ce qui découle pour la coupure — À DÉCIDER PAR FRÉDÉRIC, rien n'est tranché :** la décision de juin
+(« pas de console la nuit ») a été prise pour **ménager Hektor**, pas en pensant à la coupure. Pour 99,2 %
+du parc, ces ~21 champs n'existent que chez Hektor. Trois voies : la garder telle quelle · un balayage
+lent sous le mur (comme les photos masquées) · ne garder que les annonces vivantes.
+
+### Le tableau des 173 champs, un par un — 22/10 *(Frédéric : « sois plus précis »)*
+
+➡ **`notice/ESSAI_173_CHAMPS_ANNONCE_2026-10-22.md`** : pour chacun des 173 champs de la fiche, envoyé ou non
+(et pourquoi), gardé à la naissance, revenu ou non, et son remplissage sur les **500 annonces actives les
+plus récentes**. En bref : **116 envoyés** (116 gardés à la naissance), **57 non envoyés** (51 masqués par
+l'écran — type maison, piscine NON, terrain, location, honoraires vendeur NON — 3 fabriqués par Hektor,
+3 chauffage à sa valeur par défaut) ; **10 pas revenus** (9 console seule + `Particularites`) ; sur le lot,
+**23 champs vides sur les 500** : 18 « console seule », 3 chauffage (lu dans une autre clé, rempli pour
+311 / 500), `Particularites` (groupe API en LISTE que la rubrique ne lit pas, 7 / 500), un commentaire
+jamais saisi.
+
+**22/10 — DÉCISION DE FRÉDÉRIC : « Oui, garde allumé ».** L'interrupteur `annonce_nait_complete` reste à
+`on` (allumé le 21/10 à 23:47:29). Sa question suivante : les gardes de la relecture ont-elles été
+adaptées ? → audit ci-dessous.
+
+### « Est-ce le même mécanisme qu'avant ? Les gardes ont-elles été adaptées ? » — audit du 22/10
+
+**1. C'est le MÊME mécanisme, élargi — rien de neuf vers Hektor.**
+- Depuis le **24/09 (C.9-e)**, une annonce **naît dans l'app** (numéro ≥ 10 000 000, 11 colonnes), le
+  worker la crée chez Hektor, la relecture **adopte** notre numéro et complète. La pièce 2 ne change
+  **qu'une chose** : ce que l'on écrit chez nous à la naissance (la fiche détaillée en plus).
+- **Ce qui part chez Hektor est IDENTIQUE** : la demande au worker n'est pas touchée (répétition T6 :
+  « la saisie intacte ») et le journal de 63330 montre les mêmes étapes qu'avant.
+- **Les champs non envoyés le restent, pour les mêmes raisons qu'avant** : l'écran masque ceux qui ne
+  valent pas pour le type de bien (filtre par profil, côté écran ET côté worker,
+  `isHektorWizardFieldAllowedForPayload`) ; le worker retire ses clés techniques (`mode`, `step`, `idann`…)
+  et envoie le **chauffage par sa propre étape** (`applyHektorChauffage`, l. 11166). Un champ que l'écran
+  n'envoie pas n'est **pas** non plus gardé chez nous : on ne garde que la saisie.
+- Les champs « à l'app seulement » (`CHAMPS_APP_ANNONCE`) : **toujours éteints** (tranché le 13/10), non
+  touchés.
+
+**2. Les gardes qui existent — aucune n'avait à être adaptée, et je l'ai vérifié une par une :**
+
+| garde | ce qu'elle regarde | touchée par la pièce 2 ? |
+|---|---|---|
+| le worker : « Création confirmée par liste GraphQL », puis « finalisée » (`isDraft`, `isBroadcasted`) | Hektor lui-même | non |
+| le worker : `error_groups` à chaque groupe écrit | la réponse de Hektor | non |
+| `phase2/checks/annonce_un_numero.py` (4c) : `en_attente` / `creation_echouee` | la ligne ≥ 10 M **et** l'état du travail | non — elle **ne lit pas** la fiche détaillée (l. 92-129) |
+| le run de nuit C.9-c : épargne une annonce née dans l'app | `stale_ids`, **les 4 tables dont le détail** (`push_upgrade_to_supabase.py` l. 1407-1416) | non, et elle **protège** aussi notre fiche |
+| l'écran « Suivi de l'action » (Hektor / App) | l'état du travail | non |
+| la cloche du négociateur en cas d'échec (20/08) | l'état du travail | non |
+
+**3. ⚠ CE QUI N'EXISTE PAS — et n'a jamais existé pour la création d'annonce :** une garde qui compare,
+**champ par champ**, ce que nous avons envoyé et ce que Hektor a gardé. C'est **N.2**, prévue le 07/10 —
+c'est **la pièce 3**. L'essai 63330 l'a faite **à la main** (92 identiques, 11 dates, 2 coordonnées,
+1 texte remplacé, 10 non revenus).
+
+**4. ⚠ UN EFFET À CONNAÎTRE** : avant, une création ratée chez Hektor se voyait aussi **à l'œil** — une
+fiche vide. Maintenant la fiche est **pleine dès la naissance**, même si Hektor échoue ensuite. L'échec
+reste signalé par le travail en erreur, la cloche, l'écran de suivi et la garde 4c (avec ~30-40 min de
+retard pour l'alerte), mais **l'indice visuel a disparu**. *Noté, non traité : à prendre dans la pièce 3.*
