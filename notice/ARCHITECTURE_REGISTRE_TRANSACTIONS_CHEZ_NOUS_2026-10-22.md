@@ -1,0 +1,184 @@
+# LE REGISTRE DES TRANSACTIONS : tout chez nous au clic — audit et architecture proposée
+
+**22/10/2026 · chantier ⑧ · LECTURE SEULE, RIEN N'EST CODÉ.**
+Demande de Frédéric : *« fais un audit ultra pointu sur le registre des transactions, chaînage, doublure, run etc.
+pour bien comprendre et ensuite propose-moi une architecture pour que tous les champs soient chez nous
+immédiatement, sauf cas particuliers (ID Hektor etc.), sans avoir besoin d'attendre le retour d'Hektor »*.
+
+> Audit limité à l'objet **transaction** (offre, compromis, vente). Sources lues : les 7 RPC d'affaire en entier,
+> `affaire_ledger.py` (refresh, adoption, « le silence ne gagne pas », chaînes, push), `run_full_pipeline.ps1`
+> (l. 880-1335), `registre_depuis_console.py`, `magasin_affaire_app.py`, le worker (création, preuve, verdict,
+> report, retour arrière), le front (`api.ts`). Décisions relues : `contrat_autorite.py` (3.3, « le gel »),
+> `AUDIT_CONTRAT_AUTORITE_AFFAIRE_2026-10-22.md`, ⑦-6.
+
+---
+
+## 1. CE QUI EXISTE — le chemin d'une transaction
+
+```
+AU CLIC (l'app)                         RPC app_change_annonce_status_optimistic
+   ligne au registre app_affaire_ledger, numero de l'app >= 1 000 000
+   colonnes posees : acquereur(s), numero de mandat, etat 'en_cours', montant, date,
+                     la chaine (app_chaine_pour), la charge entiere dans payload_json
+   carnet app_affaire_champ_app : 13 champs, origine creation_app
+   travail change_hektor_annonce_status
+
+LE WORKER (secondes)                    console_job_worker.js
+   cree chez Hektor, PROUVE qu'une transaction NOUVELLE est apparue (prouverTransactionCreee)
+   pose tout de suite le numero Hektor sur la ligne (poserIdTransactionSurAffaire)
+   ⚠ ne compare PAS les valeurs a la creation -- seulement a la modification
+     (prouverTransactionModifiee -> reporterAuRegistre -> marquerLeCarnetRestant)
+
+LA NUIT (05:00)
+   l. 902   la DOUBLURE : app_affaire_ledger descend de Supabase (__sb) juste avant,
+            pour adopter les lignes nees dans l'app (par le triplet annonce/genre/n° Hektor)
+   l. 912   affaire_ledger.py
+              1. relit le miroir Hektor (offres, compromis, ventes)
+              2. UPSERT : 20 colonnes REECRITES par la valeur de Hektor
+              3. « le silence ne gagne pas » : marque absentes celles que Hektor ne rend plus,
+                 SAUF les lignes de l'app, celles qui ont un carnet ou un travail en cours
+              4. RECALCULE TOUTES LES CHAINES (0,09 s)
+              5. pousse le registre local vers Supabase (SELECT *, sauf 5 colonnes de classe A)
+   l. 1253  registre_depuis_console.py : notaires, taux vendeur, unites, depuis la console
+            (une saisie humaine, notaires_origine = 'saisie', n'est jamais ecrasee)
+   l. 1318  magasin_affaire_app.py : descend le carnet en local
+   l. 1321  appliquer_contrat_affaire.py : DORMANT (CHAMPS_APP_AFFAIRE vide depuis le 16/09)
+```
+
+### Les colonnes du registre, rangées par qui en décide *(44 colonnes en base)*
+
+| famille | colonnes | qui écrit | la nuit |
+|---|---|---|---|
+| **identité, à nous** | `app_affaire_id`, `app_dossier_id`, `app_contact_id`, `app_chaine_id` | l'app / le run | protégées (absentes du `DO UPDATE`, ou `COALESCE`) |
+| **identifiants Hektor** | `hektor_affaire_id`, `hektor_annonce_id`, `hektor_mandat_id`, `hektor_acquereur_id`, `present_in_hektor` | Hektor (le worker pose le n° tout de suite) | réécrites — **c'est le cas particulier, normal** |
+| **classe A, à nous seuls** | `taux_honoraires`, `notaire_id`, `honoraires_entree_app`, `honoraires_sortie_app`, `charge_commission_app` | l'app | **protégées** (jamais poussées, jamais réécrites) |
+| **partagées : saisies dans l'app ET connues de Hektor** | `state`, `montant`, `date`, `date_acte`, `sequestre`, `date_fin_retractation`, `jours_validite`, `prix_net_vendeur`, `honoraires_entree`, `honoraires_sortie`, `numero_mandat`, `acquereur_json`, `acquereurs_json`, `mandants_json`, `notaires_json`, `notaire_acquereur_id`, `notaire_mandant_id` | l'app au clic (en partie), puis Hektor | ⛔ **RÉÉCRITES chaque nuit par Hektor** |
+| **Hektor seul** | `propositions_json`, `commission_agence`, `payload_json`, `mandat_origine`, `unites_*`, `taux_honoraire_entree` | Hektor / la console | réécrites — normal |
+
+⭐ **Le problème tient dans la 4ᵉ ligne.** Pour ces champs, la nuit **remplace** la colonne par la valeur de Hektor
+**même si Hektor n'a pas encore reçu la nôtre**. C'est pour ça que le projet a dû ranger notre saisie **à côté**,
+dans le carnet : sinon elle disparaissait au premier run (mesuré le 01/09).
+
+### Ce que la création écrit au clic, champ par champ
+
+| saisi dans la modale | colonne du registre au clic | carnet |
+|---|---|---|
+| montant / prix | ✅ `montant` | ✅ |
+| date | ✅ `date` | ✅ |
+| acquéreur principal + co-acquéreurs | ✅ `acquereur_json`, `acquereurs_json` | ❌ |
+| n° de mandat | ✅ `numero_mandat` | ✅ |
+| date d'acte, séquestre, net vendeur, honoraires acquéreur / vendeur, jours de validité | ❌ **rien** | ✅ |
+| jours de rétractation | ❌ (`date_fin_retractation` vide) | ✅ |
+| taux d'honoraires, notaire de l'acquéreur | ❌ (`taux_honoraires`, `notaire_id` restent vides) | ✅ |
+| **notaire du vendeur** | ❌ | ❌ **nulle part** |
+| **mandants** | ❌ | ❌ **nulle part** |
+
+➡ **Au clic, 4 champs sur 15 sont dans le registre.** Les autres attendent la nuit (si Hektor les a pris), ou
+vivent au carnet seulement, ou sont perdus.
+
+---
+
+## 2. LES DÉFAUTS TROUVÉS
+
+| | défaut | preuve |
+|---|---|---|
+| **D1** | la nuit réécrit les champs partagés **sans savoir** si Hektor a reçu notre valeur | `affaire_ledger.py`, `DO UPDATE SET` : 20 colonnes, aucune condition |
+| **D2** | la création ne pose que 4 champs au registre | RPC, `INSERT` : `montant`, `date`, acquéreurs, mandat |
+| **D3** | la création n'a **aucun contrôle au retour** | `marquerLeCarnetRestant` n'a qu'un appelant, la modification. Carnet : 17 lignes, **0 verdict** |
+| **D4** | notaire du vendeur et mandants saisis, **gardés nulle part** | charge du travail seulement (`api.ts:10676`) |
+| **D5** | ⚠ le contrat dormant est **placé trop tard** : l. 1321, APRÈS le push du registre (l. 912) et APRÈS le calcul des chaînes. Allumé, il écrirait en local une valeur qui ne monterait qu'à la nuit suivante, sur des chaînes déjà calculées | c'est **exactement le gel mesuré le 16/09** (« le contrat reposait sa date TROIS MINUTES après le calcul des chaînes »). ⚠ Le commentaire du run dit « AVANT le push » : je n'ai pas trouvé de second envoi du registre après l. 1321 |
+| **D6** | l'état (refus, annulation, suppression) n'est jamais au carnet : défait par le worker si Hektor échoue, réécrit la nuit | audit « l'écriture meurt », plus haut dans la note ⑧ |
+| **D7** | modifier une transaction **sans numéro Hektor** est refusé | `modification_sans_numero_hektor` |
+| **D8** | deux copies de la règle de chaîne : SQL au clic (`app_chaine_pour`) et Python la nuit (`recalculer_les_chaines`). La nuit gagne | « elle doit rester identique » (commentaire de la RPC) ; ⚠ `APP_CHAINAGE_V2` n'existe que côté Python |
+| **D9** | le cycle d'affaires du **registre des mandats** (`affaires_detail_json`) n'est refait que la nuit | `app_mandat_register_current`, refait à chaque push. ⚠ Non vérifié à l'écran |
+
+**La mesure qui décide de tout** — qui crée les transactions aujourd'hui :
+
+```
+            nees dans l'app   nees chez Hektor
+aout             315                39        <- les essais du chantier (24933, 62774)
+septembre         15             1 706
+octobre            1                70
+```
+
+⭐ **Les négociateurs saisissent encore leurs transactions DANS HEKTOR.** C'est la raison du « gel » :
+une valeur de l'app qui gagnerait **toujours** masquerait ce qu'ils corrigent ensuite chez Hektor.
+
+---
+
+## 3. L'ARCHITECTURE PROPOSÉE — « le registre porte tout au clic, Hektor confirme »
+
+### La règle, en une phrase
+
+> **Au clic, tout entre dans le registre. La nuit ne remplace un champ que lorsque Hektor a CONFIRMÉ notre
+> valeur — ou lorsque personne dans l'app n'attend rien sur ce champ.**
+
+C'est **la règle du contact et de l'annonce** (8a) : on écrit chez nous, on garde la saisie **tant que Hektor
+ne l'a pas prouvée**, et on contrôle au retour.
+
+### ⭐ Pourquoi ce n'est PAS le gel
+
+```
+LE GEL (avant le 16/09)          l'app gagne TOUJOURS, pour toujours
+                                 -> une correction faite ensuite dans Hektor est MASQUEE
+                                 -> et le contrat reposait la valeur APRES les chaines
+
+CE QUI EST PROPOSE               l'app gagne SEULEMENT TANT QUE Hektor n'a pas confirme
+                                 -> des que le worker a PROUVE l'arrivee, la protection tombe :
+                                    la nuit reprend la valeur de Hektor, qui est la notre
+                                 -> une correction faite ensuite dans Hektor est reprise
+                                 -> un desaccord (« conflit ») n'est pas masque : il SONNE
+                                 -> et la protection joue AVANT les chaines
+```
+
+Les **70 transactions d'octobre créées dans Hektor** n'ont aucune saisie en attente : **rien ne change pour
+elles**, la nuit fait exactement ce qu'elle fait aujourd'hui.
+
+### Et le carnet, alors ?
+
+**L'écran et le registre portent tout.** Le carnet ne sert plus à *montrer* notre valeur. Il devient ce que sont
+`app_contact_saisie_modif` pour le contact et `app_annonce_saisie_naissance` pour l'annonce : **la liste
+d'attente**, en coulisse — *« ces champs, Hektor ne les a pas encore confirmés : nuit, n'y touche pas »*.
+Une ligne y entre au clic ; elle en sort quand le worker a prouvé l'arrivée. Les champs de classe A, eux,
+n'y passent même pas : ils ont déjà leur colonne protégée.
+
+### Les cinq pièces
+
+| | pièce | où | ce qu'elle fait |
+|---|---|---|---|
+| **R1** | **naître complet** | RPC de création (+ modification) | écrit **les 15 champs** dans leurs colonnes au clic (date d'acte, séquestre, net vendeur, honoraires, validité, fin de rétractation = date + jours, taux, notaires des deux côtés avec `notaires_origine = 'saisie'`, mandants) ; met **tous les champs partagés** en attente au carnet, y compris notaire du vendeur, mandants, acquéreurs. Derrière un interrupteur `app_setting` (`affaire_nait_complete`), éteint au départ |
+| **R2** | **la nuit respecte l'attente** | `affaire_ledger.py`, **entre l'UPSERT et le calcul des chaînes** | descend le carnet juste avant (comme la doublure, l. 902), puis repose sur le registre local **les seuls champs encore en attente**. Les chaînes et le push partent donc avec notre valeur. Derrière un interrupteur du run (éteint au départ). Remplace le contrat dormant de la l. 1321, mal placé (D5) |
+| **R3** | **le contrôle au retour de la création** | worker | après la création, relire chez Hektor, reporter au registre ce qu'il a retenu, poser le verdict champ par champ (le code de la modification existe : on le rebranche). « arrivée » → la ligne sort de l'attente. « conflit » → elle reste, et elle sonne |
+| **R4** | **la sentinelle et l'écran** | `check_gti_health.py` + fiche | `data.affaire_ecart` (comme `data.contact_modif_ecart`) ; à l'écran, un champ en attente ou en conflit se signale |
+| **R5** | **l'état aussi** | RPC du geste + worker + R2 | l'état (refus, annulation, suppression) entre en attente comme les autres champs ; la nuit le respecte tant que Hektor n'a pas confirmé |
+
+**Restent à part, pour la coupure** (déjà notés, décision de Frédéric) : T1 (le worker défait l'état quand Hektor
+ne répond pas, décision du 29/08) et T3 / D7 (modifier sans numéro Hektor).
+
+### Ce que ça pourrait casser ailleurs
+
+| | risque | parade |
+|---|---|---|
+| **le chaînage** | R2 change la valeur sur laquelle la nuit calcule les chaînes, pour les seules transactions en attente | c'est voulu : la chaîne est calculée sur ce que l'écran montre. Mesurer avant/après par le rejeu existant (fidèle à 100,00 %) |
+| **deux règles de chaîne** (D8) | si `APP_CHAINAGE_V2` est allumé, `app_chaine_pour` (SQL) n'a pas la v2 | à trancher avant d'allumer la v2 — indépendant de R1-R5 |
+| **une attente qui ne finit jamais** | une ligne qu'aucun travail n'enverra (`origine = 'classeur'`, saisie sans envoi) resterait protégée à vie → **c'est le gel** | R2 ne protège QUE les lignes nées d'un geste qui a un travail (`creation_app`, `modification_app`, geste d'état), et seulement sans verdict « arrivée ». ⚠ **À trancher par Frédéric** : une durée maximale ? |
+| **le classeur** (chantier en attente de ⑧) | ses corrections vont au carnet `origine = 'classeur'` | compatible, à condition de les exclure de R2 (ligne précédente) |
+| **« le silence ne gagne pas »** | une ligne au carnet empêche de marquer la transaction absente | déjà le cas aujourd'hui ; R1 en ajoute quelques-unes par jour |
+| **l'adoption par la doublure** | inchangée : elle se fait par le n° Hektor, que le worker pose tout de suite | rien |
+| **le push du registre** | il enverra notre valeur pour les champs en attente | c'est le but ; le conflit d'index (`retirer_les_lignes_en_conflit`) est inchangé |
+| **les notaires de la console** (l. 1253) | ils écrasent les notaires… sauf `notaires_origine = 'saisie'` | R1 pose `'saisie'` : la garde existe déjà |
+| **les 4 services worker** | R3 touche le worker | redémarrage par Frédéric, file vide (0 pending, 0 running) |
+
+### L'ordre proposé *(à décider par Frédéric)*
+
+```
+R1  naitre complet          la base seule ; additif ; interrupteur eteint  -> essai reel sur 62774
+R3  controle au retour      le worker                                     -> preuve : un verdict pose
+R2  la nuit respecte        le run ; interrupteur eteint                  -> rejeu des chaines avant/apres
+R4  sentinelle + ecran
+R5  l'etat
+```
+
+**Comment on reviendra en arrière** : chaque pièce a son interrupteur ou son patch inverse, comme 8a.
+**Comment on vérifiera** : une transaction d'essai sur 62774, ses 15 champs au registre **à la seconde**,
+puis le lendemain matin **intacts**, chaînes comprises, et le verdict « arrivée » sur chacun.
