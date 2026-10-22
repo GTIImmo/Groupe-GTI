@@ -10578,6 +10578,13 @@ export async function createChangeHektorAnnonceStatusJob(input: {
    *    la discipline « affirme » s'applique ici A LA CREATION AUSSI. */
   mandantContactIds?: string[]
   sellerNotaryId?: string
+  /** ─── R1 (22/10/2026, chantier 8) : LE NOM DES DEUX NOTAIRES ───
+   *  La RPC pose le notaire dans le registre DES LE CLIC (interrupteur
+   *  affaire_nait_complete). Elle ne peut pas retrouver son nom : les notaires ne
+   *  sont pas dans app_contact_current. Le nom vient donc de l'ecran, qui l'a.
+   *  Le worker ne lit pas ces deux cles. */
+  buyerNotaryNom?: string
+  sellerNotaryNom?: string
   /** ─── CE QUE L'UTILISATEUR A VRAIMENT DESIGNE DANS CETTE MODALE ───
    *
    *  ⚠ SANS CETTE CLE, OUVRIR L'ENVOI DES NOTAIRES EN MODIFICATION SERAIT UN
@@ -10674,6 +10681,9 @@ export async function createChangeHektorAnnonceStatusJob(input: {
       ? input.mandantContactIds.map((x) => String(x ?? '').trim()).filter(Boolean)
       : null,
     seller_notary_id: input.sellerNotaryId?.trim() || null,
+    // R1 (22/10) : le nom, seulement avec son numero -- un nom seul ne designe personne.
+    buyer_notary_nom: input.buyerNotaryId?.trim() ? (input.buyerNotaryNom?.trim() || null) : null,
+    seller_notary_nom: input.sellerNotaryId?.trim() ? (input.sellerNotaryNom?.trim() || null) : null,
     notaires_affirmes: (input.notairesAffirmes?.acquereur || input.notairesAffirmes?.mandant)
       ? {
           acquereur: input.notairesAffirmes?.acquereur === true ? true : null,

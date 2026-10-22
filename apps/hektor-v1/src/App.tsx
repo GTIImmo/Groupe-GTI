@@ -17525,6 +17525,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         mandantContactIds: statusChangeMandantsAffirmes
           ? statusChangeMandants.map((x) => x.id) : undefined,
         sellerNotaryId: statusChangeSellerNotaryId,
+        // R1 (22/10) : le nom affiche, pour que le registre le porte des le clic.
+        buyerNotaryNom: statusChangeBuyerNotaryNom,
+        sellerNotaryNom: statusChangeSellerNotaryNom,
         notairesAffirmes: statusChangeNotairesAffirmes,
         buyerFees: statusChangeBuyerFees,
         buyerFeesRate: statusChangeBuyerFeesRate,
@@ -21151,7 +21154,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             ['Séquestre', argent(champ('sequestre', a.sequestre))],
                             ['Date', jour(champ('date', a.date))],
                             ["Date d'acte", jour(champ('date_acte', a.date_acte))],
-                            ['Notaire', champ('notaire_id')],
+                            // R1 (22/10) : la ligne ne lisait QUE le carnet, donc restait vide
+                            // pour toute transaction nee chez Hektor, alors que le registre porte
+                            // le nom (8 501 compromis, 8 612 ventes). Et le notaire du VENDEUR,
+                            // le cas majoritaire, n'avait pas de ligne.
+                            ['Notaire acquéreur', champ('notaire_id', a.notaire_acquereur_nom || a.notaire_acquereur_id)],
+                            ['Notaire vendeur', champ('notaire_mandant_id', a.notaire_mandant_nom || a.notaire_mandant_id)],
                             // ─── 2.7 : LE NUMERO DIT D'OU IL VIENT ─── 17/09/2026
                             // Le registre porte le mandat de 74,9 % des transactions,
                             // mais la MOITIE est DEDUITE par la cascade (8 335 lignes
