@@ -1179,3 +1179,43 @@ préservé.
 
 ⬜ **Reste, avec accord** : allumer, puis un essai réel (une estimation créée par l'écran, avec des champs
 « console seule » remplis) ; ensuite **la création et la modification de contact**.
+
+### Pièce 3 — ALLUMÉE le 22/10 à 07:03:47 (heure de Paris) *(Frédéric : « oui, allume et fais l'essai réel par l'écran »)*
+
+⚠ À l'allumage, **le run de nuit tournait encore** (`GTI Quotidien`, lancé à 05:00) et la descente (07:45)
+n'était pas passée. **L'essai par l'écran attend la fin des deux** : la relecture d'une création écrit dans
+`phase2.sqlite` comme le run (mémoire « phase2 : plusieurs écrivains »). L'interrupteur reste allumé pendant
+ce temps : sur une annonce **sans** saisie gardée (toutes, aujourd'hui), le déclencheur ne fait qu'une lecture
+de l'interrupteur et une recherche par clé primaire, et rend la ligne **telle quelle** (T7 de la répétition).
+
+### Pièce 3 — L'ESSAI RÉEL PAR L'ÉCRAN : **RÉUSSI** *(22/10, 07:10-07:16, entre la fin du run (07:09:58, code 0) et la descente — idée de Frédéric)*
+
+Estimation **appartement** créée par l'écran dans son Chrome (Firminy, PEREIRA, **152 champs remplis**),
+avec cette fois les champs « console seule » (immeuble, transport, proximité, environnement, diagnostiqueur,
+syndic, honoraires acquéreur 9 000 / 6,47 %) et le **chauffage hors défaut** (3 / 4 / 15). Clic à 07:10:20.
+
+| mesure | résultat |
+|---|---|
+| **1,7 s** après le clic | annonce **10000009**, fiche de départ posée, **saisie gardée à part : 118 champs**, auteur = **frederic.gerphagnon@gti-immobilier.fr**, **mandant absent** |
+| Hektor | **63331** créée à 07:12:42 (2 min 22 s), relecture à 07:13:03 |
+| **le verdict (B), posé tout seul** | identique **91** · autre_forme **12** (les dates) · console_seule **14** · **remplace 1** |
+| **l'affichage (C)** | les **14** « console seule » **reposés** dans le calque — dont le chauffage ; à l'écran **Localisation 10/10** (contre **7/10** à l'essai d'hier, sans la pièce 3), Transport « Gare SNCF a 400 m », Proximité, Environnement visibles |
+| **la sentinelle (D)** | **1 ligne** : « 63331 · copropriete · remplace » → **warning** |
+
+⭐⭐ **LE CONTRÔLE AU RETOUR A TROUVÉ UN VRAI DÉFAUT DU WORKER, dès son premier essai** : `copropriete`
+envoyé **OUI**, Hektor garde **NON**. Journal : à 07:12:17 « Sauvegarde groupe copropriete » **avec**
+`copropriete` ; à 07:12:37 **une 2ᵉ sauvegarde du même groupe**, venue des champs « à plat » (`copro_lots`,
+`copro_quote_part`, `copro_works_fund`) **sans** `copropriete` — elle le remet très probablement à NON.
+⚠ **Cause probable, NON prouvée** (il faudrait relire Hektor). *Noté, non traité : c'est le worker.*
+
+⚠ **Trouvé en passant** : la fiche ouverte pendant la bascule « notre fiche → celle de Hektor » a affiché
+**« 1 champ modifié · Enregistrer »** sans que rien ne soit saisi. Le compteur additionne les champs édités
+**et** les pièces (`ckChangedPieces`, App.tsx:29577) : la copie locale des pièces était **périmée**. Rien
+n'a été envoyé (je n'ai **pas** cliqué) ; **après rechargement, la barre a disparu**. Cause exacte **non
+vérifiée**. *Noté, non traité.*
+⚠ **Trouvé en passant (hors sujet)** : l'étape « ménage des orphelins de recherche » du run échoue **depuis
+au moins 2 nuits** (21/10 06:54 et 22/10 06:58, `rpc/app_sweep_search_orphans`), non bloquante. *Noté.*
+
+⬜ **Restent à supprimer, avec accord** : les essais 10000001/63329, 10000006/63330, 10000009/63331, le contact
+20000007/605925, et la table `essai_8a2b_naissance_20261021`.
+➡ **Suite décidée par Frédéric** : la **création et la modification de contact**, complètes.
