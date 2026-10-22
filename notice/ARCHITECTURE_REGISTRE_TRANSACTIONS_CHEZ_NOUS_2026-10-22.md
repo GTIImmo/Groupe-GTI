@@ -557,3 +557,15 @@ allumé le 21/10), les deux diffèrent (20000008 / 605946) : **le rapprochement 
 
 **Ma recommandation** : **1b d'abord** (petit, ferme le doublon à la racine), puis **1a** (le faux échec).
 **1c** n'est pas nécessaire tant qu'aucune ligne n'est touchée.
+
+### 1b ne touche pas le worker — vérifié *(Frédéric : « confirme que le worker fonctionnera comme avant pour l'acquéreur »)*
+
+- **Le worker ne lit jamais `hektor_acquereur_id` du registre** (une seule mention, `console_job_worker.js:15233`, pour
+  dire qu'il ne la touche pas). Il prend l'acquéreur dans **la charge du travail** (`buyer_contact_id`) et le **traduit
+  lui-même** vers le numéro Hektor (`ciblesHektorContacts`, depuis le 22/09).
+- **Preuve du 22/10** : la charge portait `20000008`, le worker a visé `605946`, et Hektor a attaché **Mme ESSAI 8A B2**
+  au compromis 50128. Avant (septembre, 13/10), la charge portait des numéros Hektor et le worker les visait tels quels.
+- 1b ne change **ni la charge, ni le worker** : seulement ce que la RPC range dans la colonne du registre.
+- Les autres lecteurs de la colonne : `app_chaine_pour` et `app_attribuer_chaines_affaire` (ils la comparent aux lignes
+  venues de Hektor — 1b les aligne), l'écran (« même acquéreur sur deux compromis ? » — aligné aussi), et le run de nuit
+  (il lit la table **locale**, remplie par le miroir : numéros Hektor, inchangé).
