@@ -1606,3 +1606,31 @@ postal → Hektor n'a rien gardé) : **la ville d'un contact, chez Hektor, suit 
 - L'écart de l'essai est **laissé non marqué** : c'est à Frédéric de le voir (puis `app_contact_modif_ecart_traiter`).
 - Le contact d'essai 20000007 porte désormais Saint-Étienne / 42000 et le commentaire « Essai 8a-A… » (à supprimer).
 - ⏰ **À mesurer à la 1ʳᵉ nuit allumée** : la durée de l'étape « push contacts » (le déclencheur se réveille ~62 000 fois).
+
+## Clôturer 8a — les deux contrôles au retour qui manquent *(22/10, Frédéric : « il faut faire 1 et 2 pour clôturer annonce et contact »)* — AUDIT, lecture seule
+
+| | chez nous à l'instant | contrôle au retour |
+|---|---|---|
+| annonce, créer | ✅ pièce 2 | ✅ pièce 3 |
+| annonce, modifier | ✅ calque + protection par champ (L3) | ⛔ **aucun** → **2** |
+| contact, créer | ✅ pièce 1 | ⛔ **aucun** → **1** |
+| contact, modifier | ✅ 12 champs + commentaire (A) | ✅ B |
+
+**1 — la création de contact.** Le travail `create_hektor_contact` a la forme de la modification, sauf : résultat
+**`created`** (`created_and_linked` pour `create_hektor_mandant_contact`), notre numéro dans la charge sous
+**`app_identite`** (20000007), celui de Hektor **seulement dans le résultat** (`hektor_contact_id` 605925). Les clés
+des champs sont les mêmes (`last_name`, `civilite`, `city`, `comments`…). La fiche existe chez nous **dès le clic**
+(pièce 1) → la clé se retrouve au moment où le travail passe à « done ». La relecture qui suit écrit `refreshed_at`.
+➡ **B suffit, élargi** : deux types de travail et deux résultats de plus, et la clé lue aussi dans `app_identite` /
+le résultat. Rien d'autre.
+
+**2 — la modification d'annonce.** La relecture (`push_single_annonce_to_supabase.py:868`) repose les saisies **tant
+qu'elles sont en attente** (`app_annonce_reappliquer_saisies`, L3 du 21/09). Mais un envoi réussi **solde l'attente** :
+la relecture suivante prend **la valeur de Hektor telle quelle**, sans rien comparer — c'est **exactement** ainsi que
+la copropriété est tombée en silence. ⛔ **Trou confirmé.**
+- la charge du travail `update_hektor_annonce_fields` porte les champs envoyés **en clair** (noms Hektor `immeuble`,
+  `copropriete`… ou noms de l'écran `address`…), plus `base_snapshot`, `from_pending`, `source` ;
+- résultats en 60 jours : **18 `updated`, 3 `held_conflict`, 1 sans résultat** (l'orphelin de 11:32) ;
+- la fiche porte la date Hektor (`date_maj` dans le blob) ; une relecture change son `source_hash` ;
+- la pièce 3 a déjà **tout l'outillage** : `app_annonce_lecture_hektor` (lire un champ Hektor dans la fiche), la
+  liste « console seule », `app_annonce_verdict_naissance` (le verdict, `console_seule` compris).
