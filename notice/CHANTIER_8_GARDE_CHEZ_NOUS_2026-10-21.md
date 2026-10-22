@@ -1979,3 +1979,39 @@ fabriqué à partir de `app_mandat` LOCAL, rempli par `mandat_ledger.py` depuis 
 | **T4** | « Abandonner » laisse la transaction au registre | l'abandon d'une création marque aussi la ligne | ⑦-6 a exclu les affaires **exprès** (pas de double retour arrière) — à relire avant |
 | **T5** | carnet des affaires, `app_mandat`, carnet des mandats hors sauvegarde quotidienne | les ajouter à `CRITICAL_TABLES` | rien côté app ; volume de la sauvegarde ➡ **8d** |
 | **M1** | un mandat ne naît que chez Hektor | **étape 3** | — |
+
+### Les deux registres ont-ils TOUS leurs champs saisis chez nous, comme le contact ? *(Frédéric, 22/10)* — lecture seule
+
+**Le contact** (8a pièce 1) : les 16 champs saisis sont chez nous à la seconde, puis un contrôle au retour (8a6).
+
+**La transaction — à la création** *(formulaire : `api.ts:10639`, RPC `app_change_annonce_status_optimistic`)* :
+
+| champ saisi | chez nous à l'instant ? |
+|---|---|
+| montant, prix public, date, date d'acte, séquestre, net vendeur, honoraires acquéreur, taux, honoraires vendeur, n° de mandat, jours de validité, jours de rétractation, notaire de l'acquéreur | ✅ **au carnet** (13 champs, le run n'y touche jamais) |
+| acquéreur principal | ✅ au registre (`hektor_acquereur_id` + notre numéro `app_contact_id`) |
+| les co-acquéreurs (`buyer_contact_ids`) | ⚠ au registre **jusqu'à la nuit seulement** — le run les remplace par ceux de Hektor (commentaire de la RPC : « ce qu'on écrit ici ne vaut que pour la fenêtre d'attente ») |
+| **le notaire du vendeur** (`seller_notary_id`) | ⛔ **nulle part** — seulement dans la charge du travail |
+| **les mandants choisis** (`mandant_contact_ids`) | ⛔ **nulle part** — seulement dans la charge du travail |
+| la clôture du mandat à la vente (date, prix, « archiver après ») | ⚠ écrite par le worker **après** la réponse de Hektor (⑦-3a), pas avant |
+
+⛔ **Et il n'y a PAS de contrôle au retour à la création.** `prouverTransactionCreee` vérifie qu'une transaction
+NOUVELLE est apparue chez Hektor, pas que ses valeurs sont les bonnes. Le verdict champ par champ
+(`marquerLeCarnetRestant`) n'est appelé que par `prouverTransactionModifiee` — la **modification**.
+Mesure : 17 lignes au carnet, **0 verdict**.
+
+**Le mandat — à la création** *(formulaire « Générer le numéro », `App.tsx:3923`, `api.ts:10336`)* : 6 champs
+saisis — type, sous-type, date de début, durée, tacite reconduction, mandants.
+- **Chez nous à l'instant : RIEN.** Tout part dans la charge du travail.
+- Après la réponse de Hektor : `enregistrerMandatAuRegistreApp` écrit numéro, type, date de début. **Pas** la
+  durée (donc pas la date de fin), ni la tacite reconduction, ni le sous-type, ni les mandants.
+- Mesure : le formulaire a servi **3 fois** (28/07, 25/08, 28/08), sur des biens d'essai.
+
+**Est-ce possible ?**
+
+| | quoi | comment | ce que ça pourrait casser ailleurs |
+|---|---|---|---|
+| **C1** | transaction : les 3 champs manquants au carnet | 3 lignes de plus dans la carte du carnet de la RPC (*« un champ de plus dans la modale ? une ligne de plus dans cette carte »*) — patch additif | ⚠ l'acquéreur est « une autre affaire, pas une correction » (décision) : au carnet, il serait un **témoin**, jamais une correction · une ligne de carnet **protège** la transaction du marquage « absente » la nuit · le pré-remplissage de « Modifier » lit le carnet |
+| **C2** | transaction : le contrôle au retour de la création | appeler le verdict après la création, comme après une modification | le verdict compare au registre : il faut d'abord y reporter ce que Hektor a retenu (`reporterAuRegistre`), sinon il jugerait contre une valeur vide · touche le worker → 4 services à redémarrer |
+| **C3** | mandat : garder la saisie au geste | une ligne « en attente de numéro » avec les 6 champs, complétée à la réponse de Hektor | ⛔ **le registre des mandats est un document LÉGAL** : une ligne sans numéro ne doit JAMAIS y apparaître · le numéro reste à Hektor jusqu'à l'étape 3 |
+| **C4** | mandat : écrire les 6 champs après Hektor | compléter `enregistrerMandatAuRegistreApp` (date de fin, tacite, sous-type, mandants) | le run complète déjà ces colonnes depuis le miroir — deux écrivains pour une même colonne, à arbitrer |
