@@ -333,7 +333,7 @@ rétractation = date + 10, les deux notaires avec leur nom, pas de mandants non 
 deux, dans l'ordre · vente = net, honoraires, notaires, ni acte ni séquestre ni fin · le carnet reçoit autant de
 lignes éteint et allumé · une date impossible ne casse pas le geste · l'inverse rend `3eec3f85`. Vérifié après :
 empreinte, interrupteur, lignes et travaux d'essai, **rien n'est resté**. *(La séquence des numéros d'affaire a
-avancé de 7 : une séquence ne recule jamais.)*
+avancé de 6 : une séquence ne recule jamais.)*
 
 **Écran** (`npm run build` vert, **non déployé, non vu**) — la charge porte `buyer_notary_nom` /
 `seller_notary_nom` (la RPC ne peut pas retrouver le nom : les notaires ne sont pas dans `app_contact_current`) ;

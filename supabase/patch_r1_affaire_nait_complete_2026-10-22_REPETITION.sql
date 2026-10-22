@@ -3,7 +3,7 @@
 -- ⛔ ELLE S'ANNULE TOUTE SEULE : tout se passe dans UN bloc qui finit par une erreur
 --   volontaire (« ESSAI ANNULE -- … ») ; le message porte le résultat. Rien ne reste :
 --   ni la fonction modifiée, ni l'interrupteur, ni les transactions, ni les travaux.
---   (Seule la séquence des numéros avance de 5 : une séquence ne recule jamais.)
+--   (Seule la séquence des numéros avance de 6 : une séquence ne recule jamais.)
 -- Elle joue LE VRAI PATCH (mêmes ancres), puis appelle la fonction COMME L'ÉCRAN, au nom
 -- de Frédéric, sur l'annonce d'essai 63331 (dossier 10000009, « ESSAI 8A3 ») :
 --   T1 ÉTEINT, compromis  → seuls les 4 champs d'avant (le témoin inverse) ;
