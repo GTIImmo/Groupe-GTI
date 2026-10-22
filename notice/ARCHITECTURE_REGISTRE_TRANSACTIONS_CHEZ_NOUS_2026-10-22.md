@@ -282,3 +282,13 @@ R3   le verdict par genre (les champs « — » ne se jugent pas)
 NEUF  decider du sort de `notaire_id` (colonne de classe A morte : 0 / 31 088)
 NEUF  decider si les mandants se deduisent chez nous (piste A) ou restent a Hektor
 ```
+
+### Décisions de Frédéric (22/10)
+
+1. **Les mandants : Hektor les déduit du mandat.** R1 ne les écrit que s'ils sont affirmés dans la modale.
+   La piste « les déduire chez nous » est écartée.
+2. **Le notaire : rien n'est cassé.** Le circuit marche de bout en bout (prouvé les 15-18/09 chez Hektor :
+   « 2 notaires, tout gardé »). L'écran lit la ligne de carnet `notaire_id` puis les colonnes
+   `notaire_acquereur_*` / `notaire_mandant_*`. La **colonne** `app_affaire_ledger.notaire_id` n'est ni écrite
+   ni lue : c'est un doublon inerte. **On la laisse, on n'y écrit pas.** R1 pose le notaire au clic dans
+   `notaire_acquereur_*` / `notaire_mandant_*`, sans `notaires_origine = 'saisie'`.
