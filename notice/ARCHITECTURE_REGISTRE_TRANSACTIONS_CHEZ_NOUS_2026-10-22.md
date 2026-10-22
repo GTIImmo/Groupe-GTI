@@ -385,3 +385,45 @@ affiché « Statut accepté ».
      « portefeuille / typologie » de 2.6, jamais tranchée.
 - **Petit défaut d'écran de R1** : la ligne « Notaire acquéreur » affiche le **numéro** (10064499) au lieu du nom,
   parce que le carnet porte l'identifiant sous la clé `notaire_id` et passe avant le registre. À corriger.
+
+### ⛔ MON ERREUR DANS L'ESSAI, ET SON AUDIT *(Frédéric : « rattrapage de ton erreur, audit et explication »)*
+
+**L'erreur** : j'ai choisi un acquéreur (ESSAI 8A B2, Hektor 605946) **sans aucune offre vivante sur le bien**.
+C'est **le cas connu et jamais résolu** de la tâche 2.6, écrit noir sur blanc dans la liste
+(`LISTE_TACHES_A_COCHER_2026-08-29.md`, l. ~5925) :
+
+```
+50067  worker    · 605075 (offres toutes refusees)   -> VIDE
+50069  worker    · 605030 (offre acceptee)           -> attache
+50068  ASSISTANT · 86793  (AUCUNE offre sur le bien) -> attache   (l'interface de Hektor, pas nous)
+```
+*« LEUR interface y arrive, la nôtre non. L'écart est dans NOTRE façon d'envoyer — reste à trouver laquelle. »*
+Je ne l'ai pas relu avant de choisir l'acquéreur.
+
+**Ce que dit l'historique, mesuré dans les journaux** (tous les compromis/ventes créés par l'app depuis le 30/08) :
+- **Toutes** les créations réussies sur 24933 avaient un acquéreur **déjà présent dans l'assistant** de Hektor —
+  parce qu'il avait une offre vivante sur le bien (605030, 605075). Le journal en garde la preuve :
+  « Assistant relu : 3 acquéreur(s) », même quand `findProspect` rendait 0.
+- **`findProspect` n'ajoute pas** un acquéreur que l'assistant ne propose pas déjà : 0 identifiant le 22/10, comme
+  les 16-18/09. Quand l'assistant ne le propose pas, le compromis part **sans acquéreur**, et Hektor ne crée rien.
+- ⚠ **La qualification (le grand chantier du 18/09, `8d70f1e`) a bien joué** : recherche créée (critère 471880),
+  puis archivée. **Elle n'est pas la cause.** Et sa preuve « sur compromis (605414) » était une **modification**
+  du compromis 50088 dont les acquéreurs étaient déjà attachés — **jamais une création**.
+- ➡ **L'app n'a JAMAIS créé un compromis dont l'acquéreur n'avait pas déjà une offre vivante sur le bien.** Le vrai
+  parcours, celui qui marche, est la chaîne : **offre → acceptée → compromis**.
+
+**Deux défauts du worker que l'essai a montrés** (hors R1, notés, non corrigés) :
+1. **le statut part AVANT la preuve** : « Statut Hektor Sous compromis envoyé » à 18:40:53, la preuve « rien
+   produit » à 18:41:08. Le bien est donc « Sous compromis » sans compromis, et le travail finit `done` ;
+2. l'écran dit « Statut accepté » sur un échec (famille du chantier ④).
+
+**Le rattrapage proposé — À DÉCIDER PAR FRÉDÉRIC**
+- ⛔ « Supprimer le compromis » est **impossible** : il n'existe pas chez Hektor (aucun numéro), le geste de
+  suppression exige ce numéro.
+- ⛔ Repasser « Actif » **par l'app** est **dangereux** : la configuration du worker pose `diffusable = 1` avec
+  « Actif » (`HEKTOR_STATUS_CONFIG`), alors que VA6482 était **non diffusable** avant l'essai.
+- ✅ **1.** remettre le statut « Actif » **chez Hektor, à la main**, sans toucher à la diffusion ; la relecture
+  ramènera le statut chez nous ;
+- ✅ **2.** retirer chez nous la ligne d'essai 1001368, ses 11 lignes de carnet et sa lecture console, **après une
+  sauvegarde datée** (elle n'a pas de jumelle chez Hektor, la nuit ne la recréera pas) ;
+- ✅ **3.** refaire la preuve complète plus tard, **par la chaîne** (offre → acceptée → compromis), avec R3.
