@@ -292,3 +292,26 @@ NEUF  decider si les mandants se deduisent chez nous (piste A) ou restent a Hekt
    `notaire_acquereur_*` / `notaire_mandant_*`. La **colonne** `app_affaire_ledger.notaire_id` n'est ni écrite
    ni lue : c'est un doublon inerte. **On la laisse, on n'y écrit pas.** R1 pose le notaire au clic dans
    `notaire_acquereur_*` / `notaire_mandant_*`, sans `notaires_origine = 'saisie'`.
+
+### Pourquoi la colonne `notaire_id` existe — l'histoire *(Frédéric : « elle doit bien avoir un rôle et une raison »)*
+
+| date | ce qui s'est passé | source |
+|---|---|---|
+| **03/09** | née en **classe A** (tâche 1.2) : *« NOTE DE L'APP, qui ne repart jamais chez Hektor (arbitrage Frédéric) »*. À l'époque, la modale avait un champ libre « ID notaire » et **rien n'était envoyé à Hektor** | commit `6b43e51`, liste l. 2142 |
+| **15/09** | **3.2d lot 2** : le notaire part chez Hektor, **des deux côtés** (acquéreur et vendeur). Le commentaire de l'écran le dit : *« notaire_id — ce lot vient de l'ouvrir, des DEUX côtés »*. ➡ **la raison d'être de la colonne tombe** | `App.tsx:17368` |
+| **16/09** | les notaires de Hektor reçoivent **leurs colonnes** (`notaire_acquereur_*`, `notaire_mandant_*`), remplies chaque nuit par la console et l'API | `patch_registre_console_2026-09-16.sql` |
+
+**Qui l'écrit ?** Personne. Les RPC écrivent la **ligne de carnet** nommée `notaire_id`, pas la colonne. La colonne est
+seulement portée par la liste de protection (`COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS`) et redescendue chaque nuit pour la
+sauvegarde. **0 sur 31 088.**
+**Qui la lit ?** Personne : ni l'écran, ni le run, ni le worker.
+
+➡ **Elle a eu un rôle (garder un notaire que Hektor ne recevait pas), et ce rôle a disparu le 15/09** quand le notaire
+s'est mis à partir chez Hektor. Elle n'est **pas utile aujourd'hui**. La retirer demanderait de toucher trois endroits
+(Supabase, la table locale, la liste de protection) pour aucun gain : **on la laisse, inerte**.
+
+⭐ **Et en la cherchant, un petit défaut d'affichage trouvé** : dans la liste des transactions de la modale de statut,
+la ligne « Notaire » (`App.tsx:21154`) lit **seulement le carnet**, sans repli sur le registre. Pour une transaction
+créée dans Hektor, elle est donc **vide**, alors que le nom est dans `notaire_acquereur_nom` (8 501 compromis,
+8 612 ventes). Et il n'y a **pas de ligne pour le notaire du vendeur**, le cas majoritaire. À corriger avec R1
+(l'écran), sur décision.
