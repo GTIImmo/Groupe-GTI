@@ -592,3 +592,9 @@ lien vide (les deux témoins inverses) · allumé, 20000008 → 605946 · 106505
 retrouvé · inconnu → tel quel · l'inverse rend `caab6b6c`. Vérifié après : empreinte, interrupteurs, lignes, travaux
 d'essai — **rien n'est resté**.
 ⚠ **Ordre des retours arrière** : l'inverse de 1b **avant** celui de R1.
+
+✅ **1b POSÉ EN PRODUCTION le 22/10** (accord de Frédéric : « pose et allume ») — contrôles **OK ×4** (empreinte
+`f9d02447`, interrupteur présent, droits inchangés, interrupteur de R1 toujours là) — **interrupteur
+`affaire_acquereur_numero_hektor` ALLUMÉ à 22:56:52**. Aucun service à redémarrer (base seule).
+⬜ Pas encore éprouvé par l'écran : la prochaine transaction créée dans l'app doit porter le numéro Hektor de son
+acquéreur dans `hektor_acquereur_id`, et notre contact dans `app_contact_id`.
