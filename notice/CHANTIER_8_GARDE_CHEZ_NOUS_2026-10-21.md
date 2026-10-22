@@ -1817,3 +1817,20 @@ ignorés ; ville sans CP averti ; CP à 4 chiffres averti ; service en panne →
 ⛔ **Pas vu à l'écran** (il faudrait se connecter) : à vérifier **après le déploiement**, en ouvrant « Modifier le
 contact » et en tapant un code postal — **sans enregistrer**. ⛔ **Pas déployé** : le push est à Frédéric.
 ⚠ Les mandants déjà perdus (603486, 604831, 604832, 605030) ne sont **pas** réparés : rattrapage à part, à décider.
+
+### C — ACTIF, PROUVÉ EN RÉEL PAR L'ÉCRAN *(22/10, Frédéric a redémarré les 4 services et poussé)*
+
+- **Redémarrage prouvé** par les processus : 4 numéros neufs, `node` nés à **15:33:03-04**, après la dernière écriture
+  du code (15:22:01) ; aucun travail tué. **Déploiement prouvé** : le fichier servi devient `index-CY_qivoc.js` à
+  **15:34:34** et contient la recherche par code postal.
+- **C-3 vu à l'écran** (« Modifier le contact » de 20000008, **sans enregistrer**) : code postal 42000 + ville Firminy →
+  sous la ville : *« Firminy n'est pas une commune du 42000 : Hektor risque de ne pas garder la ville (communes du
+  42000 : Saint-Étienne) »*, et la flèche de la liste des communes ; ville Saint-Étienne → l'avertissement **disparaît**.
+  Annulé → vérifié en base : fiche inchangée, aucune saisie en attente.
+- **C-1 prouvé** (Estimations → 63331 → Contact → Ajouter un mandant → « ESSAI 8A C1 / Mandant », Firminy + 42700,
+  adresse d'essai, e-mail invalide) : journal **`contact_locality_resolved` 1 / 1 « 42700 (Firminy) »** — la PREMIÈRE
+  fois pour une porte du mandant ; Hektor « created_and_linked » **605947** (chez nous **20000009**) ; **relecture
+  15:40:13 : Firminy / 42700 GARDÉS** ; le contrôle au retour (B2) a jugé la création de mandant : **6/6 identiques**.
+- Réserve : le compte rendu du travail mandant ne recopie pas `localite` (l'enveloppe `handleCreateHektorMandantContact`
+  ne le reprend pas) — le **journal** le porte. *Non corrigé, noté.*
+- **Contacts d'essai à supprimer (avec accord)** : 20000007/605925, 20000008/605946, **20000009/605947** (mandant de 63331).
