@@ -1525,3 +1525,51 @@ d'avant + `_date_maj`** · T4 l'alias `commentaires` marche · T5 **l'inverse re
 
 ⛔ **Pour le poser** (accord de Frédéric) : coller le patch → 3 contrôles « OK » → allumer l'interrupteur → essai
 réel par l'écran sur le contact d'essai.
+
+### 8a-B — le contrôle au retour d'une modification de contact : ÉCRIT, RÉPÉTÉ 16/16, **PAS APPLIQUÉ** *(22/10)*
+
+**Le patch** : `supabase/patch_8a5_contact_retour_controle_2026-10-22.sql` (+ `_INVERSE`, + `_REPETITION`), générés
+depuis **un seul texte** (`phase2/checks/gen_patch_8a5_contact_retour_controle.py`). **Additif** : aucune fonction
+existante n'est retouchée. Interrupteur `contact_retour_controle`, posé **éteint**.
+
+**Le dessin** — le patron de la pièce 3, en plus simple :
+- **GARDER** : quand un travail `update_hektor_contact` ou `update_hektor_mandant_contact` passe à **« done » avec
+  « updated »**, ce qui est **parti chez Hektor** est gardé dans `app_contact_saisie_modif` — les **10 colonnes** que
+  Hektor rend (nom, prénom, civilité, e-mail, 2 téléphones, adresse, CP, ville, commentaire). Les 3 propres à l'app
+  (naissance, lieu, situation) sont **déjà réinjectés** : pas jugés. Société, SIRET, conjoint… : pas de colonne, pas
+  jugés. Rangé par **notre** numéro, même si la charge porte celui de Hektor (porte du mandant). Une 2ᵉ modification
+  avant le retour **complète** la 1ʳᵉ (marquée « remplacée ») : rien ne se perd.
+- **CONTRÔLER** : à la **première écriture du pipeline** (on la reconnaît : `refreshed_at` change ; l'écran ne le
+  touche jamais) **dont la date Hektor suit l'envoi** (`date_maj` ≥ début du travail − 2 min, heure de Paris).
+  ⚠ C'est le piège évité : une écriture de la nuit **antérieure** porte l'ANCIEN Hektor et aurait crié au faux écart.
+  Verdict par champ : identique · autre_forme (casse, espaces, accents, tirets, téléphone) · remplace · absent.
+- **SIGNALER** : `app_v_contact_modif_ecarts`, une ligne par contact **et par champ** en écart, plus une ligne
+  **« non_relu »** si rien n'est revenu en 24 h ; marquage « vu » admin `app_contact_modif_ecart_traiter`.
+- ⚠ **Il ne remet RIEN** : la valeur de Hektor reste affichée (règle 2). L'écart est **dit**, pas corrigé.
+
+**La répétition — 16 sur 16 au premier passage**, sur le contact d'essai 20000007, faux travaux et fausses relectures
+dans la même transaction, puis le **vrai retour arrière** — **tout annulé**, vérifié après (0 objet, 0 interrupteur,
+0 faux travail, contact intact) :
+(1) **éteint → rien** (témoin inverse) · (2) `held_conflict` → rien · (3) gardé par notre clé, 7 colonnes (CP vide,
+naissance, société exclus) · (4) porte du mandant par le numéro Hektor → même contact, la 2ᵉ complète la 1ʳᵉ ·
+(5) une écriture de l'**écran** ne juge rien · (6) le pipeline avec l'**ancien** Hektor ne juge rien · (7) **le retour
+est jugé** : ville **absent**, prénom et téléphone **autre_forme**, commentaire **remplace**, le reste identique,
+2 écarts · (8) la vue : **une ligne par champ** · (9) un 2ᵉ retour ne rejuge pas · (10) **« non_relu »** après 24 h ·
+(11) « vu » par un admin → la sentinelle se tait · (12) un autre contact passe · (13) une saisie **illisible ne bloque
+pas** l'écriture de la fiche · (14) un travail d'annonce ne déclenche rien · (15) les formes · (16) **l'inverse retire
+tout** (et, la table étant non vide, il la **renomme** au lieu de la supprimer).
+
+**Ce que ça pourrait casser ailleurs — relu :**
+- **Le coût la nuit** : la nuit réécrit ~62 000 fiches → le déclencheur se réveille ~62 000 fois, mais chaque réveil =
+  une lecture de l'interrupteur + une recherche dans un index **partiel** (seulement les saisies en attente). Même
+  patron que la pièce 3 sur 13 000 fiches. *À mesurer à la 1ʳᵉ nuit allumée (durée de l'étape push contacts).*
+- **Sur `app_console_job`** (100 637 lignes) : la clause `WHEN` ne réveille la fonction **que** pour un travail de
+  contact qui passe à « done ».
+- **Aucune écriture ne peut être bloquée** : toute erreur devient un WARNING (prouvé, essai 13).
+- Il ne juge **que les modifications faites APRÈS son allumage** : 605030 (08/10) ne sera pas rattrapé.
+- ⚠ La sentinelle `data.contact_modif_ecart` sera ajoutée à `monitoring/check_gti_health.py` **au moment de la pose**
+  (la vue doit exister, sinon la sentinelle tombe en erreur).
+
+⛔ **Pour poser A et B** (accord de Frédéric, un par un) : coller le patch → contrôles « OK » → allumer → sentinelle
+(pour B) → essai réel par l'écran sur le contact d'essai 20000007 (une ville **sans** code postal doit sortir en
+écart « absent »).
