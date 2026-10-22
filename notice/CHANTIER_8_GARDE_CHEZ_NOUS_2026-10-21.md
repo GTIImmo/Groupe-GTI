@@ -1752,3 +1752,38 @@ rempli**. Remplis : type de contact 36, structure 36, e-mail RGPD 32, source 2.
 pour les **recherches**, faux pour les **contacts**). ➡ **Rien n'est perdu à la coupure** (le miroir est à nous, et il
 ne se remplace pas — règle 5), mais ni la base ni l'écran ne les portent. Le conjoint est une **2ᵉ fiche** liée par
 `refCouple` (**264 372** contacts en ont un) → c'est **8g**.
+
+### ⛔ C — CORRECTION : « Hektor recalcule la ville d'après le code postal » était FAUX *(22/10, Frédéric : « explique-moi et vérifie tes dires »)*
+
+**Ce que j'avais écrit** (essais de B et de 1) : *« Hektor recalcule la ville d'après le CP »* en modification, *« Hektor
+jette toute la localité »* à la création. **La mesure le dément.** La cause est dans **notre worker**.
+
+**La vraie règle** — déjà écrite dans le code (`console_job_worker.js:10132`, « Lot 2 ») : **la localité d'un contact
+chez Hektor est TYPÉE**, rangée par ses **identifiants** de commune (`idVille`, `idCode`) ; **le texte seul est
+ignoré**. Le worker traduit ville + CP en identifiants par l'autocomplétion de Hektor (`applyContactLocalityIds` →
+`resolveHektorPublicLocality`, `ac_villes`). **S'il ne trouve pas, il envoie le texte seul, EN SILENCE.**
+- en **modification**, Hektor garde alors ses **anciens** identifiants → « Saint-Étienne » sur 20000007 était **l'ANCIENNE
+  ville du contact**, pas un recalcul ;
+- à la **création**, pas d'anciens identifiants → **rien**.
+
+**Les journaux de chaque travail le prouvent** (étape `contact_locality_resolved`) :
+
+| travail | envoyé | résolu en identifiants ? | chez Hektor après |
+|---|---|---|---|
+| créations 20000006 / 20000007 (21/10) | Saint-Étienne + 42000 | ✅ 2 / 4 | gardé |
+| modification 10354705 (12/10) | Firminy + 42700 | ✅ 1 / 1 | gardé |
+| modification 20000007 (22/10 13:17) | Firminy + **42000** | ⛔ **aucune trace** | l'ancienne ville (Saint-Étienne) |
+| création 20000008 (22/10 14:44) | Firminy + **42000** | ⛔ aucune trace | **vide** |
+| modification de mandant 605030 (08/10) | Saint-Étienne, **sans** CP | ⛔ aucune trace | vide |
+
+⛔⛔ **LE DÉFAUT LE PLUS SÉRIEUX** : les deux portes du **mandant** — `createHektorMandantContact` (l. 19455) et
+`updateHektorMandantContact` (l. 19650) — envoient ville et CP **en TEXTE SEUL** et **n'appellent JAMAIS**
+`applyContactLocalityIds` (ses seuls appelants : `createHektorContact` l. 17713, `updateHektorContactIdentity`
+l. 18166). ➡ **toute localité d'un mandant, même JUSTE, est perdue chez Hektor.** Le miroir le confirme : les mandants
+créés par l'app **603486, 604831, 604832, 605030** ont **ville = '' et code = ''** chez Hektor (l'adresse, elle, est
+gardée) ; le contact 603800 (01/06, avant le Lot 2) aussi. Seules les créations de contact récentes **cohérentes**
+gardent leur localité (605925).
+
+➡ **C change de nature** : ce n'est pas d'abord un contrôle de l'écran, c'est **le worker** — (1) les portes du mandant
+doivent résoudre les identifiants ; (2) un échec de résolution ne doit plus être **silencieux**. L'écran (proposer les
+communes du CP) aide la résolution à réussir, il ne la remplace pas.
