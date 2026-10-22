@@ -598,3 +598,36 @@ d'essai — **rien n'est resté**.
 `affaire_acquereur_numero_hektor` ALLUMÉ à 22:56:52**. Aucun service à redémarrer (base seule).
 ⬜ Pas encore éprouvé par l'écran : la prochaine transaction créée dans l'app doit porter le numéro Hektor de son
 acquéreur dans `hektor_acquereur_id`, et notre contact dans `app_contact_id`.
+
+### 1a — LE CONTRÔLE QUI PATIENTE : audit du 22/10 *(Frédéric : « continue »)* — lecture seule
+
+**Ce que dit l'historique** (toutes les créations par l'app depuis le 30/08, ~60) : la preuve a échoué **19 fois**, et
+**à chaque fois le numéro Hektor n'a pas été posé** :
+
+| échec | nombre | ce qui s'est passé |
+|---|---|---|
+| « AUCUN nouveau » | 10 | 7 les 30-31/08 (avant le passage à l'API, le soir du 31/08) · 10/09 une vente partie **vraiment** sans acquéreur · **22/10, un faux négatif** (50128 existait) |
+| « PLUSIEURS nouveaux » | 6 | toutes sur 24933 : des compromis d'essai **supprimés de notre registre mais vivants chez Hektor** passaient pour « nouveaux » — la preuve refuse de choisir, à raison |
+| « NON vérifié » | 4 | l'API muette (3 fois de suite), la fiche illisible |
+
+**Ce que 1b change déjà** : sans numéro, la nuit rapproche maintenant par l'acquéreur **avec le bon numéro** — le
+doublon est fermé. Ce qui reste : **un jour sans numéro**, pendant lequel « Modifier » est refusé
+(`modification_sans_numero_hektor`) et « Supprimer » impossible (le geste exige le numéro) ; et un journal qui dit
+« rien produit » quand on ne sait pas.
+
+**La proposition 1a — à décider**
+- **Une seconde preuve, sans nouveau type de travail.** Le travail de relecture (`refresh_console_data`) part déjà
+  ~30 s après chaque changement de statut. On lui ajoute une étape *« poser les numéros manquants »* : pour l'annonce
+  relue, s'il existe une transaction née dans l'app **sans numéro**, il relit la liste de l'API et pose le numéro
+  **seulement si un seul candidat** porte **le même genre et le même acquéreur** et n'est pas déjà connu du registre.
+  Sinon il ne choisit pas, et le dit. ⭐ Le critère « même acquéreur » tranche aussi les cas « PLUSIEURS ».
+- **Le journal dit vrai** : « pas encore vu — seconde preuve à la relecture » au lieu de « la création n'a rien
+  produit ».
+
+**Ce que ça pourrait casser ailleurs**
+- La relecture est un travail **central** (elle tourne très souvent) : la nouvelle étape doit être **sans risque**
+  (une erreur = une ligne de journal, jamais un échec de la relecture) et **muette** quand il n'y a rien à faire —
+  elle ne lit l'API que s'il existe une ligne sans numéro (rare).
+- Poser un numéro faux serait grave : d'où **unicité + même acquéreur + inconnu du registre**, sinon on s'abstient.
+- Touche le worker : **les 4 services à redémarrer**, file vide.
+- Ne change ni la nuit ni la preuve immédiate (elle garde ses 3 lectures).
