@@ -259,8 +259,9 @@ Le `LEDGER_SQL` de la nuit encode exactement ce tableau (des `NULL AS …` par g
 `app_modifier_affaire_optimistic` met au carnet **tout champ non vide de la charge**, qu'il ait été tapé ou
 seulement prérempli. La leçon du 08/09 est écrite dans le worker : *« `sale_price` portait LE PRIX DE L'ANNONCE
 (180 000) que personne n'avait tapé »*. Exemple possible : la modification de 30712 (13/10) a mis 6 champs au
-carnet, dont `prix_publique = 180000`. ⚠ **Non vérifié** : je ne sais pas si l'écran n'envoie que les champs
-touchés.
+carnet, dont `prix_publique = 180000`. ✅ **Vérifié dans le code de l'API** (`api.ts:10734`) : création et modification partagent **une seule charge**
+(« on garde une seule construction de charge »), avec tous les champs de la modale. ⚠ Pas vérifié à l'écran :
+si la modale vide d'elle-même les champs non touchés.
 ➡ **Avant R2**, le carnet ne doit recevoir que ce que l'utilisateur a **touché**. Sinon R2 protégerait du
 prérempli — un gel fabriqué par nous.
 
