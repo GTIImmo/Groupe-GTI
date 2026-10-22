@@ -766,6 +766,24 @@ porte aussi `sort=dateStart`, mais le run passe `--compromis-recent-limit 999999
 - **Actif sans redémarrage** : le worker lance un **nouveau** Python à chaque lecture (`runProjectPythonScript` → `spawn`).
 - ⏰ **Reste à le voir en vrai** : la prochaine création de compromis par l'app doit être prouvée **tout de suite**.
 
+**Les essais du correctif (23/10, ~00:30, lecture seule, Frédéric : « as-tu testé ? »)** — l'ANCIEN script (tiré de
+`7724da6`) et le NOUVEAU, côte à côte, sur les mêmes annonces :
+
+| annonce | compromis récent | ancien tri | nouveau tri |
+|---|---|---|---|
+| 24113 | 50129 (22/10) | **rien** | ✅ 50129 |
+| 62334 | 50127 (19/10) | **rien** | ✅ 50127 |
+| 8489 | 50126 (16/10) | **rien** | ✅ 50126 |
+| 63037 | 50121 (14/10) | 50121 | ✅ 50121 |
+
+⚠ **Pire que je ne le disais** : l'ancien tri ne ratait pas que les annonces « anciennes » — il rate aussi 62334, une annonce
+récente. Seules les annonces aux plus grands numéros (≥ ~63 000) restaient visibles.
+- **Offres et ventes inchangées** (le diff ne touche que la ligne des compromis), et vérifiées par le script : offres 33108
+  (63255) et 33107 (63156) trouvées ; ventes 23350 (43783) et 23349 (9403) trouvées.
+- **Essai hors ligne de la seconde preuve** (`node Console/test_seconde_preuve.js`) : **13/13 vert**.
+- ⛔ **NON ESSAYÉ** : le chemin complet du worker sur une vraie création (il faut écrire chez Hektor), et la seconde preuve
+  en réel (elle poserait 50129 sur 1001375 — écriture en base).
+
 **Les compromis d'essai encore vivants (inventaire du 23/10, 00:2x) :**
 - **chez Hektor**, les 40 plus récents (`sort=id`, pages 0 et 1) : **un seul essai, 50129** (ESSAI 8A B2, annonce 24113).
   50128 est supprimé ; les essais de septembre sur 24933 (50084 → 50092) ne sont plus là.
