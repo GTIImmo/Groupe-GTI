@@ -1573,3 +1573,36 @@ tout** (et, la table étant non vide, il la **renomme** au lieu de la supprimer)
 ⛔ **Pour poser A et B** (accord de Frédéric, un par un) : coller le patch → contrôles « OK » → allumer → sentinelle
 (pour B) → essai réel par l'écran sur le contact d'essai 20000007 (une ville **sans** code postal doit sortir en
 écart « absent »).
+
+### 8a-A et 8a-B — POSÉS, ALLUMÉS, PROUVÉS EN RÉEL PAR L'ÉCRAN *(22/10, Frédéric : « pose A, allume, essai réel ; puis B… un par un »)*
+
+**A — le commentaire au clic.** Posé (3 contrôles OK : empreinte `eb93494b`, interrupteur, droits), **allumé à 12:43:29**.
+Essai par l'écran sur le contact d'essai 20000007 (Contacts → recherche « 20000007 » → crayon → Note) :
+- **12:50:06** clic « Enregistrer » → notre fiche porte le commentaire **à l'instant** ; la ligne d'attente l'envoie
+  (`comments`), la photo porte la valeur d'avant + `_date_maj` ;
+- 12:49:35 une relecture (l'ouverture de la fiche) est passée **pendant** l'attente : la fiche **n'a pas été réécrite**
+  (contact protégé), le commentaire a tenu ;
+- **13:01:00** envoi chez Hektor « updated » → **13:01:37** relecture, la fiche est **réécrite** (date Hektor 13:01:15) et le
+  commentaire est revenu **IDENTIQUE**. ✅
+- ⚠ **Vu à l'essai, noté** : (1) la fenêtre « Modifier le contact » ouvre la Note **VIDE** même quand le contact a un
+  commentaire — elle ne le pré-remplit pas (donc une modification sans toucher la Note ne l'envoie pas, et ne
+  l'efface pas) ; (2) la fiche d'un contact **n'affiche pas** son commentaire — il ne se voit que dans la rubrique
+  « Contact » d'une annonce liée (`App.tsx:7369`). L'écriture chez nous est prouvée en base, pas à l'œil.
+- ⚠ À la première tentative la fenêtre Chrome était **cachée** (`visibilityState = hidden`) : ni frappe ni capture.
+  Frédéric l'a mise au premier plan.
+
+**B — le contrôle au retour.** Posé (6 contrôles OK), **allumé à 13:05:16**, sentinelle **`data.contact_modif_ecart`**
+ajoutée à `monitoring/check_gti_health.py` (warning, sœur de celle des annonces). Essai par l'écran : ville
+**« Firminy »** avec le code postal **42000** (celui de Saint-Étienne) :
+- **13:06:22** clic → chez nous à l'instant (Firminy / 42000) ;
+- **13:17:03** début de l'envoi → saisie gardée (9 champs) ; **13:17:11** Hektor « updated » ;
+- **13:17:33** relecture : Hektor rend **« Saint-Étienne »** — ⭐ **il recalcule la ville d'après le code postal** ;
+- **13:17:34** verdict : **8 identiques, `ville` = remplace** (envoyé Firminy, relu Saint-Étienne), 1 écart ;
+- la vue l'affiche **sur une ligne** ; la **sentinelle lit 1** (max 0) avec le vrai client du moniteur → elle sonnera
+  en warning au prochain passage. ✅
+➡ **Avant B, ce remplacement passait sans un mot.** C'est aussi le mécanisme probable de 605030 (ville sans code
+postal → Hektor n'a rien gardé) : **la ville d'un contact, chez Hektor, suit le code postal**. ⚠ À savoir pour C
+(la validation ville / code postal à l'écran).
+- L'écart de l'essai est **laissé non marqué** : c'est à Frédéric de le voir (puis `app_contact_modif_ecart_traiter`).
+- Le contact d'essai 20000007 porte désormais Saint-Étienne / 42000 et le commentaire « Essai 8a-A… » (à supprimer).
+- ⏰ **À mesurer à la 1ʳᵉ nuit allumée** : la durée de l'étape « push contacts » (le déclencheur se réveille ~62 000 fois).

@@ -699,6 +699,27 @@ DATA_SENTINELS: list[dict[str, Any]] = [
             "limit": 5,
         },
     },
+    {
+        # Chantier 8 / 8a-B (22/10/2026) : le CONTROLE AU RETOUR d'une MODIFICATION de contact.
+        # Une ligne = un champ parti chez Hektor qu'il a REMPLACE ou n'a pas garde (le 08/10,
+        # une ville sans code postal s'est perdue en silence sur 605030), ou une modification
+        # dont rien n'est revenu en 24 h (« non_relu »). Une ligne par CHAMP ; elle se tait des
+        # qu'un admin l'a marquee « vue » (app_contact_modif_ecart_traiter).
+        # WARNING, comme sa soeur des annonces : un ecart se REGARDE ; la valeur de Hektor reste
+        # affichee, rien n'est corrige tout seul.
+        "key": "data.contact_modif_ecart",
+        "severity": "warning",
+        "label": "Contacts modifies dans l'app : champs que Hektor n'a pas gardes",
+        "table": "app_v_contact_modif_ecarts",
+        "params": {"traite_le": "is.null"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "hektor_contact_id,nom,champ,etat,envoye,relu",
+            "order": "envoye_le.desc",
+            "limit": 5,
+        },
+    },
     # C.1' 24/08 -- les memes sentinelles pour les DEUX AUTRES objets. Elles n'existaient
     # que pour les annonces : un contact ou une recherche bloque ne remontait nulle part.
     # (`partial` n'existe pas sur ces deux tables -> pas de sonde equivalente.)
