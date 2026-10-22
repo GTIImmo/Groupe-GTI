@@ -994,3 +994,188 @@ c'est **la pièce 3**. L'essai 63330 l'a faite **à la main** (92 identiques, 11
 fiche vide. Maintenant la fiche est **pleine dès la naissance**, même si Hektor échoue ensuite. L'échec
 reste signalé par le travail en erreur, la cloche, l'écran de suivi et la garde 4c (avec ~30-40 min de
 retard pour l'alerte), mais **l'indice visuel a disparu**. *Noté, non traité : à prendre dans la pièce 3.*
+
+## Pièce 3 — GARDER LA SAISIE AU-DELÀ DE LA RELECTURE + LE CONTRÔLE AU RETOUR (N.2) — audit du 22/10 *(Frédéric : « oui commence »)*
+
+*Audit limité à l'ANNONCE (création, et ce que ça dit de la modification). Contact, recherche,
+transaction, mandat : non mesurés ici.*
+
+**Ce qui existe déjà — relu :**
+- **le modèle B pour la MODIFICATION** *(plan l. 479-482, worker l. 10505-10580)* : la photo d'avant
+  (`app_annonce_pending.base_snapshot`), le worker relit la date de Hektor avant d'écrire, `skipped` →
+  `partial` et la ligne d'attente **gardée**, la sentinelle `data.annonce_partielle` (critical, seuil 0) ;
+- **L3, la protection par champ** *(21/09, `patch_l3_protection_par_champ_2026-09-21.sql`)* : après
+  chaque relecture, `push_single_annonce_to_supabase.py:461-470` appelle
+  `app_annonce_reappliquer_saisies` qui **repose par-dessus** les saisies encore en attente — **et elles
+  seules** : dès que Hektor a confirmé, la ligne disparaît et c'est lui qui parle ;
+- **N.2 redessinée le 28/09, jamais codée** : *« comparer, après la resynchro, ce qui est REVENU à ce qui
+  a été ENVOYÉ, champ par champ »*, avec **la cible de relecture figée champ par champ** (9 noms ambigus ;
+  `titre_bien` préfère le listing au détail) — cible fournie par N.1-(b), et éprouvée à la main sur 63330 ;
+- **le carnet de l'annonce** (`app_annonce_champ_app`, 12 lignes) **n'est PAS le bon endroit** : décision
+  du 28/09, c'est un carnet d'**exceptions** (4 champs), « N.3 à abandonner, elle en ferait un doublon » ;
+- le carnet de l'**affaire** (`app_affaire_champ_app`) a le patron du verdict : `valeur_hektor_au_moment`,
+  `etat`, `valeur_hektor_relue`, `constate_le`.
+
+**Le trou, mesuré :**
+1. à la création, la saisie vit dans la fiche détaillée (`app_saisie_creation` + le calque) — **la
+   relecture la remplace** (vu sur 63330). Il n'en reste que la demande au worker, qui n'est pas un lieu sûr ;
+2. **le même trou existe pour la MODIFICATION, sur les champs « console seule »** : la ligne d'attente
+   disparaît quand Hektor a confirmé l'écriture, la relecture ne rapporte pas le champ (l'API ne le donne
+   pas) → il **disparaît de l'écran** alors qu'il est chez Hektor ;
+3. personne ne compare ce qui est revenu à ce qui a été envoyé — ni à la création, ni à la modification
+   (classe « C » : accepté puis recalculé → `wrote = true`, rien ne le voit).
+
+**Les volumes** *(90 derniers jours)* : **9 créations** d'annonce (dont mes 2 essais ; 3 nées dans l'app)
+et **23 modifications** ; une seule création portait du secteur (mon essai), 2 modifications des honoraires
+détaillés. ➡ **l'enjeu n'est pas le volume d'aujourd'hui, c'est la coupure.**
+
+### La méthode proposée — À ARBITRER PAR FRÉDÉRIC, rien n'est décidé
+
+| | quoi | où | ce que ça touche |
+|---|---|---|---|
+| **A — GARDER** | une place **à part** pour la saisie de naissance : une ligne par annonce, la saisie (sans le mandant), qui l'a écrite et quand. **La relecture ne la touche jamais.** | une table neuve, remplie au moment de la naissance *(un déclencheur sur l'insertion de la fiche de départ, ou le bloc de la création)* | base seulement ; et **la doublure** (la descente doit la copier) |
+| **B — CONTRÔLER** | après la **première** relecture, comparer champ par champ, **avec la cible figée** (celle du tableau des 173), et écrire le verdict : identique · même valeur autre forme · recalculé · **remplacé** · non revenu (console seule) · **non revenu** | sur la même ligne (le patron de l'affaire : `etat`, `valeur_hektor_relue`, `constate_le`) | base seulement ; ne bloque jamais la relecture |
+| **C — AFFICHER** | les champs que Hektor **a acceptés mais ne rend pas** (console seule) **restent visibles** après le retour, tant que la console ne les a pas rapportés | dans `app_annonce_reappliquer_saisies` (L3), **le même endroit** que les saisies en attente | la fiche ; ⚠ à trancher : si quelqu'un les change ensuite **dans Hektor**, notre valeur masquerait la sienne jusqu'au passage de la console |
+| **D — SIGNALER** | un écart réel (remplacé, non revenu hors console) → **une ligne par annonce et par champ**, sur la fiche et dans Santé | sentinelle, sur le modèle de `data.annonce_partielle` | ⚠ à trancher : critical ou warning |
+
+**Hors A-D, trouvés en chemin — à ranger par Frédéric (dans la pièce 3 ou à part) :**
+- **E** l'extraction console **aveugle sur une création** (elle tourne avant que la ligne locale existe) —
+  c'est un changement d'ordre dans le **worker** (redémarrage) ;
+- **F** le « Texte annonce » réécrit par la Description (`applyCreatedAnnonceInitialFields`) — **worker** ;
+- **G** géocoder à la naissance (BAN) — petit, base ou écran ;
+- **H** le même trou « console seule » à la **modification** (point 2) — C le couvrirait si on l'étend
+  aux modifications.
+- **I** l'indice visuel perdu (fiche pleine même si Hektor échoue) — D le couvrirait.
+
+### « Mais on a fait cela pour ajouter et modifier un contact ? » — 22/10
+
+**À moitié — et la moitié faite est exactement le morceau C, pour 3 champs.**
+- **Création de contact** (pièce 1) : la relecture **remplace** la ligne par celle de Hektor, puis
+  **réinjecte** les 3 champs que Hektor ne renvoie jamais — naissance, lieu, situation — depuis notre
+  propre ligne (`fetch_app_owned_contact_fields`, `push_contacts_to_supabase.py:490-512` et 848-870,
+  « Lot 3 », correctif du 18/08). **Mesuré sur 20000007 après sa relecture** : les 13 champs saisis sont
+  **tous là** (les 10 autres, l'API de Hektor les rend). Pour le contact, « garder » tient donc **par
+  construction** : Hektor rend presque tout, et le reste est réinjecté.
+- **Modification de contact** : une ligne d'attente (`app_contact_pending`) ; tant qu'elle existe, la
+  relecture **saute le contact entier** (`dirty_contact_ids`, l. 833-846) — la protection **par bien**,
+  celle que L3 a remplacée **par champ** pour l'annonce le 21/09.
+- **Ce qui n'existe NI pour le contact NI pour l'annonce** : une **saisie gardée à part** et un **contrôle
+  au retour** champ par champ *(audit du 21/10, `AUDIT_PORTES_DE_CREATION` l. 75 et 146-147 : « aucune
+  comparaison »)*. Le seul contrôle au retour qui existe est celui de l'**affaire**
+  (`console_job_worker.js:15040-15080`, `app_affaire_champ_app`).
+➡ **Pour l'annonce, le même principe que le contact donnerait C** : réinjecter après la relecture les
+champs que Hektor ne rend pas — mais ils sont ~18 (console seule), pas 3, et ils ne sont pas dans une
+colonne chez nous : il faut d'abord **A** (les garder quelque part).
+- **Le contrat qui porte cela pour le contact** : `phase2/identite/contrat_autorite.py` l. 61-68 —
+  `CHAMPS_APP_CONTACT = (birth_date, birth_place, marital_status)`, *« Hektor ne renvoie JAMAIS ces
+  trois-là : seule l'app les écrit »* ; `CHAMPS_APP_ANNONCE = ()` **vide, voulu** (13/10 : on n'y inscrit
+  qu'un champ que l'app CRÉE et que Hektor N'ENTRETIENT PAS) ; `CHAMPS_APP_MANDAT =
+  (mandat_date_cloture,)` sur ce critère, mesuré.
+- ⭐ **Mesure du 22/10, qui éclaire la décision** : sur les **103** annonces qui ont le bloc console,
+  `TRANSPORT` est rempli **2 fois**, `PROXIMITE` **3 fois**, `diagnostiqueur` **0 fois**. Ces champs sont
+  **presque jamais saisis chez Hektor** — ils ressemblent aux 3 champs du contact. ⚠ Échantillon NON tiré
+  au hasard (les 103 sont celles qu'une relecture complète a touchées) ; les honoraires détaillés ne sont
+  **pas** mesurés ici. ➡ Le « trou de 99 % » pour la coupure porte donc **surtout sur des cases vides**.
+
+### « Les doublures, le miroir qui n'écrase plus… ça n'évite pas cela ? » — 22/10
+
+**Non, et voici pourquoi — chacune protège AUTRE CHOSE :**
+- **La règle 5** (« le miroir se met à jour, il ne se remplace pas », 21/08) protège **`data/hektor.sqlite`**,
+  l'archive de **tout ce que Hektor a dit** (plan l. 2995-3010). Elle garde les réponses de Hektor ; notre
+  saisie n'y est jamais entrée.
+- **La doublure** (la descente de 07:45, `pull_from_supabase.py`) **recopie Supabase tel qu'il est** :
+  ce que la relecture a effacé dans Supabase, elle l'efface aussi. Mesuré : la doublure locale de
+  `app_dossier_detail_current` (13 496 lignes) **n'a pas encore** 10000006 (née après la dernière
+  descente) ; à la prochaine, elle aura la version **de Hektor** — sans la saisie.
+- **La règle qui couvre ce cas existe** : **la règle 2, « Hektor confirme, il n'écrase pas »**. Elle est
+  **appliquée** à la modification d'annonce (L3, par champ) et au contact (les 3 champs réinjectés). Elle
+  ne l'est **pas** à la saisie de création d'annonce — **c'est exactement la pièce 3 (A + C)**.
+- ⭐ **Et c'était prévu dès le 19/08** — carte A1 §2.3 : *« le blob ne peut pas être réécrit en entier par
+  l'import — il faut préserver ces clés. C'est le point technique le plus délicat. »*
+
+**22/10 — DÉCISION DE FRÉDÉRIC : « LES QUATRE, ET ENSUITE ON FAIT AUSSI POUR LES CONTACTS CE QUI EST
+NÉCESSAIRE ».** Pièce 3 = A + B + C + D pour l'annonce ; puis le contact, à mesurer (ce qui lui manque
+vraiment). E à I restent **notés, non rangés** (pas de réponse) — je ne les fais pas.
+**Précision de Frédéric (22/10)** : *« ensuite il faudra finir aussi ajout et modifier contact, et pense à
+contrôler ton travail »* → après la pièce 3 de l'annonce : **la création ET la modification de contact**,
+complètes. Et chaque morceau est **éprouvé** avant d'être présenté.
+
+### Pièce 3 — le code (22/10) — ÉCRIT, **PAS APPLIQUÉ**, répétition prête
+
+`supabase/patch_8a3_annonce_saisie_gardee_2026-10-22.sql` · `…_INVERSE.sql` · `…_REPETITION.sql` (générée par
+`gen_repetition_8a3.py`, brouillon de la session). Interrupteur **`annonce_saisie_gardee`, posé ÉTEINT**.
+- **A** table `app_annonce_saisie_naissance` (une ligne par annonce née dans l'app : saisie, calque,
+  auteur, verdict, écarts, « vu ») — RLS, fermée à anon / authenticated ;
+- **B** `app_annonce_lecture_hektor` = **la cible figée** du tableau des 173 (noms à plat, 11 groupes, blocs
+  console, chauffage) ; `app_annonce_verdict_naissance` → identique · autre_forme · recalcule · remplace ·
+  absent · console_seule ; les « console seule » sont **rejugés** quand la console passe ;
+- **C** les 21 champs « console seule » sont reposés dans le calque : **la valeur de Hektor** s'il l'a rendue,
+  sinon la nôtre tant que son bloc n'est pas arrivé ; **une saisie en attente (L3) gagne** ; une
+  modification dans l'app met la saisie gardée à jour ;
+- **D** la vue `app_v_annonce_naissance_ecarts` (une ligne par champ en écart) et
+  `app_annonce_naissance_ecart_traiter` (admin, « vu ») ; la sentinelle `data.annonce_naissance_ecart`
+  sera ajoutée à `monitoring/check_gti_health.py` **après** la pose (avant, elle interrogerait une table
+  absente) ;
+- **un seul déclencheur** sur `app_dossier_detail_current` : il voit **toutes** les portes (naissance,
+  relecture, run de nuit, modification, L3) ; un échec s'avale, l'écriture passe toujours ;
+- **le retour arrière ne perd aucune saisie** : table non vide → renommée `…_avant_inverse_<date>`.
+
+**Contrôle de mon propre travail, avant tout essai** : 2 défauts trouvés à la relecture et corrigés —
+(1) une valeur de Hektor reposée par nous aurait été prise pour une saisie à la modification suivante,
+**effaçant en silence un écart « remplacé »** ; (2) un champ console modifié dans l'app mais absent à la
+naissance n'était jamais rejugé. Balises `$…$` équilibrées dans les 3 fichiers, aucun retour chariot.
+
+**La répétition** (tout annulé) rejoue sur la **vraie** fiche de 63330 et sa photo de naissance : T1 naissance
+· T2 retour de Hektor *(attendu : identique 92, autre_forme 11, recalcule 2, remplace 1, console_seule 9,
+absent 1 ; 9 champs reposés ; le reste de la fiche intact)* · T3 la console passe · T4 une modification
+dans l'app · T5 la garde anti-masquage · T6 interrupteur éteint · T7 une autre annonce intacte · T8 une
+fiche illisible (l'écriture passe) · T9 une **vraie** création · T10 la vue et le « vu » · puis le vrai retour
+arrière.
+
+### Pièce 3 — la répétition : **21 sur 21, après UN défaut trouvé par elle** *(22/10, Frédéric : « vas-y »)*
+
+**1er passage — ⛔ un défaut** : les 9 « console seule » de 63330 sortaient **`absent`**, et **aucun** n'était
+reposé (T2 : 0 au lieu de 9). Cause : quand la fiche de Hektor porte la clé du bloc console **à `null`**,
+`app_annonce_porteur_present` rendait un **booléen inconnu** (`jsonb_typeof(null) = 'object'` → NULL), et
+« not inconnu » fait sauter la condition. **Corrigé** : `coalesce(…, false)` sur les deux retours.
+⭐ *C'est exactement le rôle d'une répétition : la relecture du code ne l'avait pas vu.*
+
+**2e passage — tout conforme à l'attendu :**
+
+| essai | résultat |
+|---|---|
+| T1 la naissance | saisie gardée, **116** champs au calque |
+| T2 le retour de Hektor | identique **92** · autre_forme **11** · recalcule **2** · remplace **1** (`corps`) · absent **1** (`Particularites`) · console_seule **9** — **2 écarts** ; **9 champs reposés** (TRANSPORT = « Bus ligne 4 a 200 m ») ; le reste de la fiche **intact à l'octet** |
+| T3 la console passe | TRANSPORT **remplace** (Hektor dit « Tram », c'est lui qu'on affiche) · PROXIMITE **absent** (Hektor vide → rien d'affiché) · ENVIRONNEMENT **identique** — **4 écarts** |
+| T4 une modification dans l'app | la saisie gardée prend « Cabinet X », et la relecture suivante **l'affiche** |
+| T5 la garde anti-masquage | TRANSPORT **reste un écart** ; la saisie gardée n'a pas été écrasée par la valeur de Hektor |
+| T6 interrupteur éteint | la fiche passe **telle quelle**, la saisie gardée **ne bouge pas** |
+| T7 une autre annonce | **intacte à l'octet**, aucune ligne gardée pour elle |
+| T8 une fiche illisible | **l'écriture passe** (le déclencheur s'efface) |
+| T9 une **vraie** création | saisie gardée, TRANSPORT = « Gare à 5 min », **auteur = Frédéric**, **mandant absent** |
+| T10 la vue et le « vu » | **4** lignes d'écart, 1 annonce marquée, **0** reste à signaler |
+| droits | table et vue **fermées** à anon / authenticated |
+| retour arrière | déclencheur, fonctions, interrupteur **retirés** ; la saisie **gardée sous `…_avant_inverse_20261022`** (aucune perte) ; création et naissance **non retouchées** |
+
+**Vérifié à part après coup** : aucune table, aucune copie, aucun déclencheur, aucun interrupteur, **0** fiche
+« ESSAI 8A3 ». Séquence **10000008** (2 numéros consommés, un par passage). ⚠ La fiche de 63330 a changé
+d'empreinte depuis le 21/10 (`466d6092…` → `673ec222…`) : **le run de nuit l'a rafraîchie** — sans rapport
+avec la répétition (annulée).
+
+### Pièce 3 — APPLIQUÉE, interrupteur ÉTEINT *(22/10, Frédéric : « oui »)*
+
+Collée par moi : **6 contrôles verts** — interrupteur `annonce_saisie_gardee` posé `off` · table créée, vide,
+fermée à anon / authenticated · **un seul** déclencheur sur `app_dossier_detail_current` · création
+(`a5e70b57`) et naissance (`944db16b`) **non retouchées** · « vu » ouvert aux connectés, fermé à anon.
+**Tant que l'interrupteur est éteint, le déclencheur sort à sa première ligne : rien ne change.**
+
+**La sentinelle (D)** : `data.annonce_naissance_ecart` ajoutée à `monitoring/check_gti_health.py` (liste
+`DATA_SENTINELS`, après `data.annonce_push_bloque`) — sur la **vue** `app_v_annonce_naissance_ecarts`, filtre
+`traite_le is null` : **une ligne par champ** en écart, échantillon de 5 (annonce, champ, état, envoyé, relu).
+**`warning`** (un écart se regarde, il ne fait rien perdre) — *un mot à changer si Frédéric veut `critical`*.
+**Éprouvée en lecture, sans lancer le contrôle** (qui peut envoyer des e-mails) : la vue se lit avec la clé du
+contrôle (0 ligne), la règle rend `ok` à 0 et `warning` à 3, l'échantillon se lit. Fichier en **CRLF**,
+préservé.
+
+⬜ **Reste, avec accord** : allumer, puis un essai réel (une estimation créée par l'écran, avec des champs
+« console seule » remplis) ; ensuite **la création et la modification de contact**.

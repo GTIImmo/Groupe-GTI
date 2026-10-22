@@ -677,6 +677,28 @@ DATA_SENTINELS: list[dict[str, Any]] = [
         "rule": "absolute",
         "max": 0,
     },
+    {
+        # Chantier 8 / 8a piece 3 (22/10/2026) : le CONTROLE AU RETOUR d'une annonce nee dans
+        # l'app. Une ligne = un champ saisi a la creation que Hektor a REMPLACE, ou qu'il ne
+        # rend pas alors que son API devrait le rendre (les « console seule » ne comptent pas).
+        # Une ligne par CHAMP, jamais « N sur M » (lecon du 14/10) ; elle se tait des qu'un
+        # admin a marque l'annonce « vue » (app_annonce_naissance_ecart_traiter) -- une alerte
+        # ecoute la reponse de l'humain (lecon 23).
+        # WARNING et non critical : un ecart se REGARDE, il ne fait rien perdre (la saisie est
+        # gardee a part). A passer en critical d'un mot si Frederic le decide.
+        "key": "data.annonce_naissance_ecart",
+        "severity": "warning",
+        "label": "Annonces nees dans l'app : champs que Hektor n'a pas gardes",
+        "table": "app_v_annonce_naissance_ecarts",
+        "params": {"traite_le": "is.null"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "hektor_annonce_id,champ,etat,envoye,relu",
+            "order": "verdict_le.desc",
+            "limit": 5,
+        },
+    },
     # C.1' 24/08 -- les memes sentinelles pour les DEUX AUTRES objets. Elles n'existaient
     # que pour les annonces : un contact ou une recherche bloque ne remontait nulle part.
     # (`partial` n'existe pas sur ces deux tables -> pas de sonde equivalente.)
