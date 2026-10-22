@@ -1,0 +1,14 @@
+[
+ [
+  "  k text;",
+  "  k text;\n  v_commentaire_au_clic boolean := false;  -- 8a-A 22/10 : interrupteur contact_commentaire_au_clic"
+ ],
+ [
+  "  if edit_fields is null or edit_fields = '{}'::jsonb then raise exception 'no_fields' using errcode='22023'; end if;",
+  "  if edit_fields is null or edit_fields = '{}'::jsonb then raise exception 'no_fields' using errcode='22023'; end if;\n\n  -- 8a-A (22/10/2026) : LE COMMENTAIRE S'ECRIT CHEZ NOUS AU CLIC. Avant, l'ecran l'envoyait\n  -- (`comments`) mais seule la relecture de Hektor le posait, ~11 min apres. Interrupteur\n  -- eteint : rien ne change. Allume : `comments` (ou `commentaires`) -> colonne commentaires,\n  -- et sa valeur d'avant entre dans la photo (base_snapshot), comme les 12 autres.\n  select lower(trim(coalesce(s.value, ''))) in ('on', '1', 'true', 'oui') into v_commentaire_au_clic\n    from public.app_setting s where s.key = 'contact_commentaire_au_clic';\n  v_commentaire_au_clic := coalesce(v_commentaire_au_clic, false);\n  if v_commentaire_au_clic then\n    alias_map := alias_map || '{\"commentaires\":\"comments\"}'::jsonb;\n    col_map := col_map || '{\"comments\":\"commentaires\"}'::jsonb;\n  end if;"
+ ],
+ [
+  "    marital_status  = case when ef ? 'marital_status'  then ef->>'marital_status'  else marital_status end",
+  "    marital_status  = case when ef ? 'marital_status'  then ef->>'marital_status'  else marital_status end,\n    commentaires    = case when v_commentaire_au_clic and ef ? 'comments' then ef->>'comments' else commentaires end"
+ ]
+]
