@@ -1219,3 +1219,136 @@ au moins 2 nuits** (21/10 06:54 et 22/10 06:58, `rpc/app_sweep_search_orphans`),
 ⬜ **Restent à supprimer, avec accord** : les essais 10000001/63329, 10000006/63330, 10000009/63331, le contact
 20000007/605925, et la table `essai_8a2b_naissance_20261021`.
 ➡ **Suite décidée par Frédéric** : la **création et la modification de contact**, complètes.
+
+### Le défaut de la copropriété — audit du 22/10 *(Frédéric : « avant, il faut régler le problème de copropriété »)*
+
+**Ce qui est PROUVÉ :**
+- chez Hektor, **63331 porte vraiment `copropriete = NON`** — lu dans son formulaire (extracteur console,
+  lecture seule, 07:20), alors que le reste du groupe EST enregistré : lots **24**, lot **12**, quote-part
+  **120**, fonds travaux **3 500**, plan de sauvegarde **OUI**, statut syndicat **ALERTE** ;
+- **le témoin positif** : **62853** (créée le 05/08 avec `copropriete = OUI`) **porte OUI aujourd'hui**. Le
+  geste a donc marché. **La différence** : 62853 n'a eu **qu'UNE** sauvegarde du groupe copropriété ;
+  **63331 en a eu DEUX** — 07:12:17 (les équipements, dont `copropriete = OUI`) puis **07:12:37** (les champs
+  « à plat » `copro_lots`, `copro_quote_part`, `copro_works_fund`, **sans** `copropriete`) ;
+- **la 2ᵉ sauvegarde relit le formulaire avant d'écrire** (`postHektorMefUpdate`) et la relecture des radios
+  est juste (`extractHektorFormValues` ne garde que la case **cochée**) ;
+- **deux pistes ÉCARTÉES par la mesure** : (a) « le formulaire coche mal » — faux, le cache de 62853 montre
+  OUI coché quand c'est OUI ; (b) « un champ caché `copropriete` en double » — faux, le HTML brut de 63331
+  (`html_63331/copropriete_editer.html`, brouillon de la session) n'a que 3 radios (vide / OUI / NON).
+
+**Ce qui n'est PAS prouvé** : si la 1ʳᵉ sauvegarde a bien posé OUI (puis la 2ᵉ l'a remis à NON), ou si OUI
+n'a jamais pris. **Pour trancher, il faut ÉCRIRE chez Hektor** — rejouer les deux sauvegardes une par une sur
+l'annonce d'essai 63331, en relisant entre les deux. ⛔ **Accord requis.**
+
+**Deux autres écarts réels trouvés par la même lecture du formulaire (07:20)** :
+- **le diagnostiqueur et le syndic sont VIDES chez Hektor** : ce sont des **listes de contacts** (`tag:
+  select`, « Contacts »), l'app les saisit en **texte libre** → la valeur ne peut pas y entrer. *Défaut de
+  l'écran de création (et sans doute de la modification), à mesurer.*
+- **le pourcentage d'honoraires est RECALCULÉ** par Hektor : 6,92 % (= 9 000 / 130 000) au lieu de 6,47 %
+  saisi — un champ « classe C » : Hektor calcule, l'app ne devrait pas l'imposer.
+⭐ Et la même lecture **prouve** que transport, proximité, environnement, immeuble et les honoraires sont bien
+chez Hektor — l'hypothèse « console seule » de la pièce 3 était juste.
+
+### Le test de la copropriété chez Hektor, sur 63331 *(22/10, Frédéric : « oui »)* — ⚠ **mon hypothèse était FAUSSE**
+
+Par la fonction que l'écran utilise (`app_edit_annonce_optimistic`, à son nom), puis lecture du formulaire de
+Hektor après chaque étape :
+
+| étape | ce que le worker a envoyé | ce que Hektor porte après |
+|---|---|---|
+| 1 *(07:32)* | **une** sauvegarde du groupe copropriété, `copropriete = OUI` seul | **OUI** ✅ |
+| 2 *(07:35)* | **une 2ᵉ** sauvegarde du groupe, `copro_lots = 25` seul (relecture du formulaire avant) | lots **25**, copropriété **reste OUI** ✅ |
+
+➡ **« La 2ᵉ sauvegarde du groupe remet la case à NON » est FAUX** : relire puis renvoyer le groupe garde la
+case. **La cause de la création du 22/10 n'est donc PAS trouvée.** Ce qui distingue la création :
+(a) l'annonce sortait juste du wizard (20 s entre les deux sauvegardes) ; (b) la 1ʳᵉ sauvegarde portait 7
+champs dont **deux autres radios** (plan de sauvegarde, statut du syndicat) — qui, eux, ont pris ; (c) le
+wizard avait déjà posté `copropriete` aux étapes 2 à 7. **Pistes écartées par la mesure** : un 2ᵉ champ caché
+(HTML : 3 radios seulement), un champ `copropriete` dans un autre groupe (aucun), la normalisation de la valeur
+(`OUI` reste `OUI`).
+
+**Trois trouvailles du test, notées :**
+- ⚠ **l'écran ne permet PAS de corriger une copropriété perdue** : la rubrique « Copropriété » de la fiche ne
+  s'affiche que si la copropriété vaut déjà OUI (`condField: 'copropriete'`, App.tsx:26666) — j'ai dû passer
+  par la fonction de modification ;
+- ⚠ **un faux conflit** : le 1er essai a été **bloqué** (« bien modifié dans Hektor depuis l'édition ») —
+  la date de Hektor était 07:20:32, 4 s après ma lecture du formulaire de 07:20:28. **Non reproduit** à
+  l'étape 2 (la relecture avec lecture du formulaire n'a pas créé de conflit) : cause **non prouvée**. Saisie
+  d'essai soldée en « abandon » (journal des résolutions) ;
+- ⭐ **la pièce 3 rejuge en réel** : après la lecture du formulaire, les 15 « console seule » de 10000009 ont été
+  rejugés — **10 identiques**, `_pourcentHonoraire2` **remplacé** (Hektor recalcule : 6,92), `diagnostiqueur`
+  et `syndic` **absents** (listes de contacts chez Hektor, texte libre dans l'app) → **4 écarts, 0 en attente
+  de la console**. ⚠ Et un manque de conception : le verdict de `copropriete` **reste « remplace »** alors que
+  Hektor porte maintenant OUI — le verdict ne rejuge que les « console seule ». *À corriger : rejuger aussi
+  les écarts, et les marquer « corrigé ».*
+
+**Suite du test (22/10, Frédéric : « oui »)** — après la descente (finie à 08:07:07, code 0) :
+
+| essai | envoi | Hektor après |
+|---|---|---|
+| 3 *(07:43)* | `copropriete = NON` seul | **NON** ✅ (point de départ) |
+| 4 *(08:09)* | `copropriete = OUI` **et** `copro_lots = 26` en **un** envoi → le worker fait **exactement** le geste de la création : la sauvegarde avec la case (08:09:10), puis celle des lots **2 s après**, dans le même travail | **OUI** et **26** ✅ |
+
+➡ **L'effet de temps est ÉCARTÉ** : deux sauvegardes rapprochées gardent la case. **Restent deux hypothèses** :
+(b) la 1ʳᵉ sauvegarde de la création portait **7 champs dont deux autres radios** (plan de sauvegarde OUI,
+statut du syndicat ALERTE) — peut-être que Hektor n'accepte pas la case **avec** eux ;
+(c) l'annonce **sortait de l'assistant de création** — un état où Hektor ignore la case.
+
+| 5 *(08:28)* | `copropriete = NON`, plan **NON**, statut **NOTPROCESS** | les trois pris ✅ (point de départ) |
+| 6 *(08:30)* | **les 7 champs exacts de la création** en un envoi (case + lot + lots + quote-part + fonds + plan OUI + statut ALERTE) — le worker fait la sauvegarde « équipements » (08:30:08) **puis** celle des champs à plat (08:30:11) | **les 7 pris, copropriété OUI** ✅ |
+
+➡ **L'hypothèse (b) est ÉCARTÉE.** **Six pistes écartées par la mesure** : la 2ᵉ sauvegarde du groupe, un champ
+caché, un autre groupe, la normalisation, l'effet de temps, les 7 champs ensemble.
+
+**Ce qui reste, et c'est maintenant étroit** : à la création, **entre** la sauvegarde de la case (07:12:17)
+et la fin, le worker a fait **ce qu'aucun de mes essais n'a refait** : `construction_recente` (07:12:19), **la
+localité privée par la BAN** (`updateLocaliteByFeature`, GraphQL, 07:12:23), le groupe **secteur** (07:12:24),
+puis `ag_interieur`, **`ag_exterieur`** (étage, `floorState`, terrasse, garages, parkings — 07:12:34) et
+`diagnostiques` (07:12:36). L'un d'eux, **côté serveur Hektor**, remettrait la copropriété à NON — sans que la
+case soit dans leurs formulaires (vérifié : elle n'est que dans le groupe copropriété). *Non prouvé.*
+
+### ⭐ LA CAUSE EST TROUVÉE — c'est la sauvegarde du SECTEUR *(22/10, 08:49-09:08, Frédéric : « oui, et si tu ne trouves pas on en recrée une de A à Z »)*
+
+Sur 63331, par `app_edit_annonce_optimistic` (à son nom), puis lecture du formulaire copropriété de Hektor
+(cache console relu **après** chaque travail) :
+
+| essai | envoi | ce que le worker a sauvé | copropriété / lots chez Hektor après |
+|---|---|---|---|
+| 7 *(08:49)* | la fin de la création **sans la case** : adresse, immeuble, transports, construction, étage, parkings, états, 3 diagnostics | diagnostiques, ag_exterieur, construction_recente, **BAN**, **secteur**, ag_exterieur, diagnostiques — **aucune** sauvegarde copropriété | **NON / 0** ⛔ (lot 12, quote-part 120, fonds 3500, plan OUI, statut ALERTE **intacts**) |
+| — *(08:55)* | remise `OUI` + `24` | copropriété | OUI / 24 |
+| 8 *(08:59)* | **l'adresse seule** | **BAN** + **secteur** | **NON / 0** ⛔ |
+| — *(09:03)* | remise `OUI` + `24` | copropriété | OUI / 24 |
+| 9 *(09:07)* | **`immeuble` seul** — le secteur **sans** l'adresse, donc **sans la BAN** | **secteur** seul | **NON / 0** ⛔ |
+
+➡ **C'EST LA SAUVEGARDE DU GROUPE SECTEUR** (`update_annonce_MEF`, `MEFgroup=secteur`) qui remet chez Hektor
+`copropriete = NON` et `copropriete_nb_lot = 0`. **Ni la BAN, ni l'extérieur, ni les diagnostics, ni la
+construction** (`construction_recente` ne porte que ses 4 radios, relu en lecture seule).
+⚠ **Ce n'est PAS notre envoi qui écrit la case** : le formulaire secteur (`ihmChargeGroupe_Secteur`) ne porte
+**aucun** champ copropriété (14 champs + `idpays`, vérifié), et `postHektorMefUpdate` ne poste **que** ce
+formulaire. **C'est Hektor, côté serveur.**
+
+**Et la création du 22/10 s'explique entièrement**, étape par étape *(heure de Paris)* :
+07:12:17 copropriété OUI + 24 ✅ → **07:12:24 secteur → NON / 0** → 07:12:37 notre 2ᵉ passage « à plat »
+renvoie `copro_lots = 24` mais **relit NON** dans le formulaire pour la case → **NON avec 24 lots** — exactement
+ce que la relecture avait trouvé.
+
+⭐⭐ **HEKTOR A CHANGÉ DE COMPORTEMENT** : 62853 (créée le 05/08) a eu **la même suite** — copropriété à
+12:28:07, **secteur à 12:28:09** — et porte **toujours OUI / 3**. Entre le 05/08 et le 22/10, la sauvegarde du
+secteur s'est mise à remettre la copropriété à zéro. *Date exacte non mesurée.*
+
+**L'ampleur, mesurée sur les journaux (depuis le 07/06)** : 85 sauvegardes du secteur par le worker —
+**74 à la création (44 annonces)**, **11 en modification (2 annonces, nos bacs à sable 62774 et 63331)**.
+Créations ayant envoyé copropriété OUI : 10 — 8 de juin (hors parc vivant), 62853 (OUI, avant le changement),
+63331 (perdue). ➡ **Aujourd'hui, une seule victime prouvée : 63331, l'essai.** Mais **toute** création avec
+copropriété, et **toute** modification de l'adresse / immeuble / transports / proximité / environnement
+depuis l'app, la ferait tomber désormais.
+
+**NON MESURÉ, et je ne le suppose pas :**
+- si la **même chose arrive quand un humain sauve le secteur dans l'écran de Hektor** (ce serait un défaut de
+  Hektor pour tout le monde, et notre descente recopierait le NON) — il faudrait écrire chez Hektor par son
+  écran pour le savoir ;
+- si **d'autres champs** que ces deux-là tombent avec le secteur. Indice rassurant : à la création, la relecture
+  a comparé **118 champs** et la copropriété est le **seul** écart inexpliqué ;
+- depuis **quand**.
+
+*63331 est laissée à NON / 0 (annonce d'essai, à supprimer avec accord).*
