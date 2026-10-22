@@ -10552,6 +10552,8 @@ export async function createChangeHektorAnnonceStatusJob(input: {
   acquereursAffirmes?: boolean
   /** 3.2 : vrai = MODIFIER la transaction existante chez Hektor, pas en creer une. */
   reprendreTransaction?: boolean
+  // Point E (23/10) : les cles de la charge qu'une SAISIE a changees (modification seulement).
+  champsTouches?: string[]
   /** 3.2 : QUELLE transaction on modifie. C'est l'ECRAN qui designe -- la base ne
    *  peut pas deviner : un bien porte souvent plusieurs offres (sept sur l'annonce
    *  temoin). Vide = creation. */
@@ -10715,6 +10717,14 @@ export async function createChangeHektorAnnonceStatusJob(input: {
     // On n'envoie la cle que si elle vaut true : la charge du cas courant ne
     // change pas d'un octet.
     reprendre_transaction: input.reprendreTransaction === true ? true : null,
+    // ─── POINT E (23/10/2026, chantier 8) : CE QUI A ETE TAPE, PAS CE QUI ETAIT AFFICHE ───
+    // La charge reste ENTIERE (le worker de l'offre reconstruit le formulaire de Hektor
+    // avec elle). Cette liste ne sert qu'a la base : app_modifier_affaire_optimistic
+    // n'inscrit au carnet que ces cles (interrupteur affaire_modif_champs_touches).
+    // Le worker l'ignore. Jamais envoyee a la creation : la cle n'existe qu'en reprise.
+    champs_touches: input.reprendreTransaction === true && Array.isArray(input.champsTouches)
+      ? input.champsTouches.map((x) => String(x ?? '').trim()).filter(Boolean)
+      : null,
   }
   // C.4 25/08 -- L'AFFAIRE NAIT DANS L'APP, PUIS LE TRAVAIL PART CHEZ HEKTOR.
   //

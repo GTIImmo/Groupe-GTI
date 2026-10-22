@@ -833,3 +833,37 @@ La grille lit le carnet d'abord : `notaire_id` y vaut le **numéro** (10064499),
 - **Notaire (écran)** : quand le carnet porte le même numéro que le registre, afficher le **nom** du registre.
 - **Hors E, à décider** : (a) l'offre 33094 — 160 000 ou 16 000 ? ses 6 lignes de carnet ; (b) un travail **échoué** laisse
   ses valeurs au carnet sans verdict → c'est R3/R4.
+
+### E1, E2 et le notaire — ✅ CODÉS, RÉPÉTÉS, NON POSÉS *(Frédéric, 23/10 : « vas-y E1 E2 et notaire »)*
+
+**E1 — l'écran** (`App.tsx`, `api.ts`) : un état `statusChangeTouches` (remis à vide à l'ouverture de la modale) reçoit la
+**clé de la charge** de chaque champ qu'une saisie change (`onChange`) : `amount`, `sale_price`, `transaction_date`,
+`validity_days`, `signature_date`, `retraction_days`, `selected_mandat`, `buyer_notary_id`, `buyer_fees`, `buyer_fees_rate`,
+`seller_fees`, `net_seller_price`, `sequestration` — plus `net_seller_price` quand le net est **déduit** d'une saisie. Envoyé
+en `champs_touches`, **en modification seulement**. ⚠ **Le reste de la charge ne change pas d'un octet.**
+
+**E2 — la base** : `supabase/patch_e_modif_champs_touches_2026-10-23.sql` (+ `_INVERSE`, `_REPETITION`), générateur
+`phase2/checks/gen_patch_e_modif_champs_touches.py`. Empreinte **`a5297281` → `049643b8`**, 7 ancres d'une ligne,
+interrupteur **`affaire_modif_champs_touches`** posé **éteint**. Allumé avec une liste : seuls ces champs vont au carnet ; le
+registre (`montant`, `date`) ne bouge que si son champ est touché. ⚠ **Le montant se juge sur la PAIRE `amount` /
+`sale_price`** : l'une touchée, on garde le calcul d'avant (sinon un prix de vente touché seul deviendrait le montant d'un
+compromis). Le retour de la RPC porte `champs_touches` (pour la preuve).
+
+**La répétition (annulée d'elle-même), sur l'offre d'essai 33026 (1000001, bac à sable 62774), charge PRÉREMPLIE : 8 sur 8.**
+T1 éteint → les 6 champs (**le témoin inverse : le défaut**) · T2 allumé, montant seul → `montant` seul, date intacte · T3
+liste vide → rien · T4 sans liste (vieil écran) → les 6, comme avant · T5 date + validité → ces deux-là · T6 prix de vente
+seul → `montant` + `prix_publique` (la paire) · T7 le retour porte la liste · T8 l'inverse rend `a5297281`. **Contrôle
+d'après** : empreinte `a5297281`, aucun interrupteur, carnet et registre de 1000001 intacts, **0 travail créé**.
+
+**Le notaire** (`App.tsx`, grille des transactions) : quand le carnet porte le **même numéro** que le registre, la ligne
+montre le **nom** du registre (toujours marquée « app »). Un numéro différent reste affiché tel quel.
+
+**Contrôle du front** : `npm run build` ✅. ⛔ **Non vu à l'écran** (il faut une session) — à voir après le déploiement :
+la ligne « Notaire acquéreur » de 1001375 doit montrer « Tiffany SELARL… » au lieu de 10064499.
+
+**Ordre des gestes (accord de Frédéric à chaque étape) :**
+1. **coller** `supabase/patch_e_modif_champs_touches_2026-10-23.sql` → 4 contrôles OK ;
+2. **pousser** (le front part avec `champs_touches` ; interrupteur éteint = aucun effet tant qu'on n'allume pas) ;
+3. **allumer** l'interrupteur ;
+4. **essai réel** : une modification par l'écran sur une transaction d'essai, en touchant UN champ → au carnet, ce champ seul.
+Pas de redémarrage de service : le worker n'est pas touché.

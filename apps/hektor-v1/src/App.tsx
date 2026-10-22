@@ -13203,6 +13203,18 @@ export default function App() {
   // N'est envoyee que si la case a ete TOUCHEE : un champ prerempli n'est pas
   // une affirmation (regle du 08/09).
   const [statusChangeHonorairesEntreeTouche, setStatusChangeHonorairesEntreeTouche] = useState(false)
+  // ─── POINT E (23/10, chantier 8) : CE QUE L'UTILISATEUR A VRAIMENT CHANGE ───
+  // La modale s'ouvre PREREMPLIE (carnet, registre, prix de l'annonce, 10 jours...) et la
+  // charge part ENTIERE : le worker de l'offre reconstruit tout le formulaire de Hektor
+  // avec elle, on ne peut donc pas l'alleger. Mais en MODIFICATION, la base mettait au
+  // carnet tout champ non vide -- du prerempli que personne n'avait tape (offre 33094,
+  // 13/10 : 4 lignes sur 6). On note ici les cles de la charge qu'une SAISIE a changees ;
+  // la base (interrupteur affaire_modif_champs_touches) n'inscrit plus que celles-la.
+  // Seules les saisies (onChange) et la deduction du net qui en decoule y entrent.
+  const [statusChangeTouches, setStatusChangeTouches] = useState<string[]>([])
+  function toucherStatusChange(...cles: string[]) {
+    setStatusChangeTouches((avant) => Array.from(new Set([...avant, ...cles])))
+  }
   // LE NET EST UNE DEDUCTION : montant - commission vendeur - honoraires
   // acquereur (97 % du parc 2025+ le verifie). Il se recalcule quand on modifie
   // l'un des trois -- sauf si l'utilisateur l'a tape lui-meme.
@@ -13257,7 +13269,8 @@ export default function App() {
     // celle du mandat, que Hektor connait.
     if (montant === null || entree === null) return
     const net = montant - entree - sortie
-    if (net > 0) setStatusChangeNetSellerPrice(String(Math.round(net * 100) / 100))
+    // Point E (23/10) : un net DEDUIT d'une saisie est une consequence de cette saisie.
+    if (net > 0) { setStatusChangeNetSellerPrice(String(Math.round(net * 100) / 100)); toucherStatusChange('net_seller_price') }
   }
 
   const ecartPrixTransaction = useMemo(() => {
@@ -16612,6 +16625,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeNetSellerPrice('')
     setStatusChangeHonorairesEntree('')
     setStatusChangeHonorairesEntreeTouche(false)
+    setStatusChangeTouches([])
     setStatusChangeChargeCommission('vendeur')
     setStatusChangeCommissionTouchee(false)
     setStatusChangeNetManuel(false)
@@ -17551,6 +17565,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         closeMandatOnSale: statusChangeStatus === 'sold',
         closePrice: statusChangeSalePrice || statusChangeAmount,
         reprendreTransaction: reprendre,
+        // Point E (23/10) : en modification seulement -- la base n'inscrit au carnet que ces cles.
+        champsTouches: reprendre ? statusChangeTouches : undefined,
         // C'EST L'ECRAN QUI DESIGNE. affaireCourantePourStatut() rend la ligne du
         // registre que la modale AFFICHE -- la base, elle, ne peut pas choisir
         // entre les sept offres d'un meme bien.
@@ -20349,10 +20365,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <label className="filter-field">
                             <span>{statusChangeStatus === 'offer' ? "Montant de l'offre" : 'Montant / prix public'}</span>
                             <input value={statusChangeAmount} onChange={(event) => {
-                              setStatusChangeAmount(event.target.value)
+                              setStatusChangeAmount(event.target.value); toucherStatusChange('amount')
                               apresSaisieCommission({ montant: event.target.value })
                               if (statusChangeStatus === 'compromise' && !statusChangePrixVenteManuel) {
-                                setStatusChangeSalePrice(event.target.value)
+                                setStatusChangeSalePrice(event.target.value); toucherStatusChange('sale_price')
                               }
                             }} inputMode="numeric" placeholder="Ex : 180000" required />
                           </label>
@@ -20360,7 +20376,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <label className="filter-field">
                           <span>Prix de vente</span>
                           <input value={statusChangeSalePrice} onChange={(event) => {
-                            setStatusChangeSalePrice(event.target.value)
+                            setStatusChangeSalePrice(event.target.value); toucherStatusChange('sale_price')
                             if (statusChangeStatus === 'sold') apresSaisieCommission({ montant: event.target.value })
                             // Vider la case rend le prix de vente au montant.
                             setStatusChangePrixVenteManuel(event.target.value.trim() !== '')
@@ -20372,29 +20388,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         </label>
                         <label className="filter-field">
                           <span>Date</span>
-                          <input type="date" value={statusChangeDate} onChange={(event) => setStatusChangeDate(event.target.value)} required />
+                          <input type="date" value={statusChangeDate} onChange={(event) => { setStatusChangeDate(event.target.value); toucherStatusChange('transaction_date') }} required />
                         </label>
                         {statusChangeStatus === 'offer' ? (
                           <label className="filter-field">
                             <span>Validite offre</span>
-                            <input value={statusChangeValidityDays} onChange={(event) => setStatusChangeValidityDays(event.target.value)} inputMode="numeric" placeholder="10" />
+                            <input value={statusChangeValidityDays} onChange={(event) => { setStatusChangeValidityDays(event.target.value); toucherStatusChange('validity_days') }} inputMode="numeric" placeholder="10" />
                           </label>
                         ) : null}
                         {statusChangeStatus === 'compromise' ? (
                           <>
                             <label className="filter-field">
                               <span>Date acte prevue</span>
-                              <input type="date" value={statusChangeSignatureDate} onChange={(event) => setStatusChangeSignatureDate(event.target.value)} />
+                              <input type="date" value={statusChangeSignatureDate} onChange={(event) => { setStatusChangeSignatureDate(event.target.value); toucherStatusChange('signature_date') }} />
                             </label>
                             <label className="filter-field">
                               <span>Retractation</span>
-                              <input value={statusChangeRetractionDays} onChange={(event) => setStatusChangeRetractionDays(event.target.value)} inputMode="numeric" placeholder="10" />
+                              <input value={statusChangeRetractionDays} onChange={(event) => { setStatusChangeRetractionDays(event.target.value); toucherStatusChange('retraction_days') }} inputMode="numeric" placeholder="10" />
                             </label>
                           </>
                         ) : null}
                         <label className="filter-field">
                           <span>{APP_BIENVU_ENABLED ? 'N° de mandat' : 'Mandat Hektor'}</span>
-                          <input value={statusChangeSelectedMandat} onChange={(event) => setStatusChangeSelectedMandat(event.target.value)} placeholder={APP_BIENVU_ENABLED ? 'Attribué automatiquement si vide' : 'Auto si vide'} />
+                          <input value={statusChangeSelectedMandat} onChange={(event) => { setStatusChangeSelectedMandat(event.target.value); toucherStatusChange('selected_mandat') }} placeholder={APP_BIENVU_ENABLED ? 'Attribué automatiquement si vide' : 'Auto si vide'} />
                         </label>
                         {/* ─── 2.5 + 2.6 : L'ACQUEREUR SE DESIGNE, ET ILS PEUVENT ETRE PLUSIEURS ───
                             Avant : un champ ou il fallait TAPER un identifiant. Le 04/09, un
@@ -20531,23 +20547,23 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           onChoisir={(option) => {
                             setStatusChangeBuyerNotaryId(String(option.hektor_contact_id ?? '').trim())
                             setStatusChangeBuyerNotaryNom(mandantContactOptionTitle(option))
-                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, acquereur: true }))
+                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, acquereur: true })); toucherStatusChange('buyer_notary_id')
                           }}
                           onRetirer={() => {
                             setStatusChangeBuyerNotaryId('')
                             setStatusChangeBuyerNotaryNom('')
-                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, acquereur: false }))
+                            setStatusChangeNotairesAffirmes((etat) => ({ ...etat, acquereur: false })); toucherStatusChange('buyer_notary_id')
                           }} />
                         <label className="filter-field">
                           <span>Honoraires acquéreur (TTC)</span>
                           <input value={statusChangeBuyerFees} onChange={(event) => {
-                            setStatusChangeBuyerFees(event.target.value)
+                            setStatusChangeBuyerFees(event.target.value); toucherStatusChange('buyer_fees')
                             apresSaisieCommission({ sortie: event.target.value })
                           }} inputMode="numeric" placeholder="0" />
                         </label>
                         <label className="filter-field">
                           <span>Taux honoraires</span>
-                          <input value={statusChangeBuyerFeesRate} onChange={(event) => setStatusChangeBuyerFeesRate(event.target.value)} inputMode="decimal" placeholder="0" />
+                          <input value={statusChangeBuyerFeesRate} onChange={(event) => { setStatusChangeBuyerFeesRate(event.target.value); toucherStatusChange('buyer_fees_rate') }} inputMode="decimal" placeholder="0" />
                         </label>
                         {/* ═══ LOT 1c : LES HONORAIRES VENDEUR A L'OFFRE ═══  16/10/2026
                             Demande de Frederic du 14/10. MESURE QUI L'A MOTIVEE :
@@ -20566,7 +20582,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <label className="filter-field">
                             <span>Honoraires vendeur (agence, TTC)</span>
                             <input value={statusChangeHonorairesEntree} onChange={(event) => {
-                              setStatusChangeHonorairesEntree(event.target.value)
+                              setStatusChangeHonorairesEntree(event.target.value); toucherStatusChange('seller_fees')
                               setStatusChangeHonorairesEntreeTouche(true)
                               setStatusChangeCommissionTouchee(true)
                             }} inputMode="numeric" placeholder="0" />
@@ -20601,7 +20617,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <label className="filter-field">
                               <span>Prix net vendeur</span>
                               <input value={statusChangeNetSellerPrice} onChange={(event) => {
-                                setStatusChangeNetSellerPrice(event.target.value)
+                                setStatusChangeNetSellerPrice(event.target.value); toucherStatusChange('net_seller_price')
                                 // Vider la case rend la main au calcul.
                                 setStatusChangeNetManuel(event.target.value.trim() !== '')
                               }} inputMode="numeric" placeholder="Auto si vide" />
@@ -20621,14 +20637,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             <label className="filter-field">
                               <span>Honoraires vendeur (agence, TTC)</span>
                               <input value={statusChangeHonorairesEntree} onChange={(event) => {
-                                setStatusChangeHonorairesEntree(event.target.value)
+                                setStatusChangeHonorairesEntree(event.target.value); toucherStatusChange('seller_fees')
                                 setStatusChangeHonorairesEntreeTouche(true)
                                 apresSaisieCommission({ entree: event.target.value })
                               }} inputMode="numeric" placeholder="Celle du mandat si vide" />
                             </label>
                             <label className="filter-field">
                               <span>Sequestre</span>
-                              <input value={statusChangeSequestration} onChange={(event) => setStatusChangeSequestration(event.target.value)} inputMode="numeric" placeholder="0" />
+                              <input value={statusChangeSequestration} onChange={(event) => { setStatusChangeSequestration(event.target.value); toucherStatusChange('sequestration') }} inputMode="numeric" placeholder="0" />
                             </label>
                           </>
                         ) : null}
@@ -20644,7 +20660,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                           <label className="filter-field">
                             <span>Honoraires vendeur (agence, TTC)</span>
                             <input value={statusChangeHonorairesEntree} onChange={(event) => {
-                              setStatusChangeHonorairesEntree(event.target.value)
+                              setStatusChangeHonorairesEntree(event.target.value); toucherStatusChange('seller_fees')
                               setStatusChangeHonorairesEntreeTouche(true)
                               apresSaisieCommission({ entree: event.target.value })
                             }} inputMode="numeric" placeholder="Celle du mandat si vide" />
@@ -21133,6 +21149,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             const duLedger = colonne == null ? '' : String(colonne).trim()
                             return { v: duLedger, app: false, cle }
                           }
+                          const notaireAffiche = <T extends { v: string; app: boolean }>(x: T, id: unknown, nom: unknown): T => {
+                            const n = nom == null ? '' : String(nom).trim()
+                            return x.app && n && x.v === String(id ?? '').trim() ? { ...x, v: n } : x
+                          }
                           const argent = <T extends { v: string }>(x: T): T =>
                             x.v ? { ...x, v: formatPrice(x.v) } : x
                           const jour = <T extends { v: string }>(x: T): T =>
@@ -21158,8 +21178,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             // pour toute transaction nee chez Hektor, alors que le registre porte
                             // le nom (8 501 compromis, 8 612 ventes). Et le notaire du VENDEUR,
                             // le cas majoritaire, n'avait pas de ligne.
-                            ['Notaire acquéreur', champ('notaire_id', a.notaire_acquereur_nom || a.notaire_acquereur_id)],
-                            ['Notaire vendeur', champ('notaire_mandant_id', a.notaire_mandant_nom || a.notaire_mandant_id)],
+                            // 23/10 : le carnet garde le NUMERO du notaire (`notaire_id`, pose a la
+                            // creation) et il passe avant le registre -- la ligne affichait
+                            // 10064499. Meme numero au registre : on montre son NOM, toujours
+                            // marque « app ». Un numero different reste affiche tel quel.
+                            ['Notaire acquéreur', notaireAffiche(champ('notaire_id', a.notaire_acquereur_nom || a.notaire_acquereur_id), a.notaire_acquereur_id, a.notaire_acquereur_nom)],
+                            ['Notaire vendeur', notaireAffiche(champ('notaire_mandant_id', a.notaire_mandant_nom || a.notaire_mandant_id), a.notaire_mandant_id, a.notaire_mandant_nom)],
                             // ─── 2.7 : LE NUMERO DIT D'OU IL VIENT ─── 17/09/2026
                             // Le registre porte le mandat de 74,9 % des transactions,
                             // mais la MOITIE est DEDUITE par la cascade (8 335 lignes
