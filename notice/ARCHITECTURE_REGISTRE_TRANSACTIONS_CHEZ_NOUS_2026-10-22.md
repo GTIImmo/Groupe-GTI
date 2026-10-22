@@ -662,3 +662,8 @@ depuis le 16/09.
 service). File vide, 0 erreur dans l'heure, **0 transaction de l'app sans numéro**.
 ⬜ **Pas encore vu tourner** : aucune relecture (`refresh_console_data`) n'est passée depuis le redémarrage. La
 première portera `numeros_manquants: {"status": "rien_a_faire"}` dans son résultat.
+✅ **1a VU TOURNER (22/10, 23:40:29)** — accord de Frédéric (« relance pour vérifier ») : relecture
+`refresh_console_data` posée sur l'annonce d'essai 63331 (travail `9ddabe3b`), prise par le service **SyncLight**,
+**`done`**, résultat **`numeros_manquants: {"status": "rien_a_faire"}`** — l'étape tourne, ne lit rien chez Hektor
+quand il n'y a rien à faire, et ne gêne pas la relecture. *(Le cas « numéro posé » n'a pas encore eu lieu en réel :
+il faudra une création dont la preuve rate.)*
