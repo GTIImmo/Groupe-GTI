@@ -427,3 +427,46 @@ Je ne l'ai pas relu avant de choisir l'acquéreur.
 - ✅ **2.** retirer chez nous la ligne d'essai 1001368, ses 11 lignes de carnet et sa lecture console, **après une
   sauvegarde datée** (elle n'a pas de jumelle chez Hektor, la nuit ne la recréera pas) ;
 - ✅ **3.** refaire la preuve complète plus tard, **par la chaîne** (offre → acceptée → compromis), avec R3.
+
+### ⛔⛔ CORRECTION DE L'AUDIT CI-DESSUS — Frédéric avait raison *(« re-audite, ajouter un compromis a fonctionné avec des contacts non présents en offre, vérifie »)*
+
+**Ce que j'ai écrit est FAUX** : « l'app n'a jamais créé un compromis dont l'acquéreur n'avait pas d'offre vivante ».
+Mesure dans les journaux et les lectures console de 24933 :
+
+| compromis | acquéreur(s) attaché(s) | offre de cet acquéreur sur 24933 ? |
+|---|---|---|
+| **50085** (16/09) | 605008 TESTA Gabrielle, **605029** TEST CHAINE | **aucune** pour l'un comme pour l'autre |
+| **50088** (17/09) | **413764** TEST SEPTEO, 605030 | **aucune** pour 413764 — relu attaché à 20:11 |
+| vente 23317 (18/09) | **605429** (créé « Propriétaire », qualifié) | **aucune** |
+
+J'avais tiré ma conclusion de l'acquéreur **principal** et des notes du 04/09, sans regarder les co-acquéreurs, et
+sans comparer les réponses de Hektor.
+
+**Ce que la mesure dit vraiment de l'essai du 22/10 :**
+- `findProspect` a rendu pour 605946 **un bloc de la même forme** que pour 413764 le 17/09 (« Suivi par … ESSAI 8A B2
+  Creation · Créé le 22-10-2026 », 1 843 car.). Le « 0 identifiant » est **normal** : il s'affiche aussi pour tous
+  les compromis réussis de septembre (le lecteur ne reconnaît pas ce format de bloc).
+- « Assistant relu : 0 acquéreur » au moment de la création est **normal** aussi : même lecture dans les cas réussis.
+- **La réponse finale de Hektor est identique, octet pour octet sur l'aperçu, à celle des 15 compromis réussis** de
+  septembre (`success:true`, `currentStepIndex 3`).
+- ➡ **Le seul signe d'échec est la preuve du worker**, qui relit la fiche **15 secondes** après l'envoi. Et cette preuve
+  a déjà été **fausse** : le 31/08, trois « AUCUN compromis NOUVEAU » (00:26, 00:28, 01:12) ont été suivis à 07:53 de
+  « **PLUSIEURS** compromis nouveaux » — ils avaient donc bien été créés, plus tard visibles.
+- ➡ **On ne sait PAS si le compromis existe chez Hektor.** Notre miroir local ne tranche pas (les transactions de 24113
+  y datent de 04:24 ce matin). Je n'ai pas pu regarder la fiche Hektor : la session n'est pas ouverte dans Chrome, et je
+  ne saisis pas de mot de passe.
+
+**Ce qu'il faut savoir avant de corriger**
+- S'il existe : ⚠ notre ligne 1001368 porte l'acquéreur sous **notre** numéro (`20000008`), le miroir le portera sous
+  celui de Hektor (`605946`). L'adoption de nuit par l'acquéreur risque de **ne pas** les rapprocher → **une seconde
+  ligne** pour le même compromis. Non mesuré, à surveiller.
+- S'il n'existe pas : la piste reste ouverte (bien, mandants incomplets — 6 mandants dont un « Mr./Mme » sans nom —,
+  ou autre). **Je n'affirme plus de cause.**
+
+**Le rattrapage, révisé — à décider par Frédéric**
+1. **Regarder la fiche VA6482 chez Hektor** (Suivi de vente) : y a-t-il un compromis à 130 000 € avec ESSAI 8A B2 ?
+   *(Frédéric, connecté ; ou attendre le miroir de cette nuit.)*
+2. **S'il existe** : le supprimer — chez Hektor à la main, ou par l'app après avoir posé son numéro sur notre ligne
+   (le geste « supprimer » l'exige) — puis vérifier que le statut redescend.
+3. **S'il n'existe pas** : remettre « Actif » chez Hektor à la main (pas par l'app, qui rendrait le bien diffusable),
+   puis retirer chez nous la ligne 1001368 après une sauvegarde datée.
