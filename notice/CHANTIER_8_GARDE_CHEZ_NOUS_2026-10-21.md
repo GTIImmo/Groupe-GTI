@@ -1834,3 +1834,42 @@ contact » et en tapant un code postal — **sans enregistrer**. ⛔ **Pas dépl
 - Réserve : le compte rendu du travail mandant ne recopie pas `localite` (l'enveloppe `handleCreateHektorMandantContact`
   ne le reprend pas) — le **journal** le porte. *Non corrigé, noté.*
 - **Contacts d'essai à supprimer (avec accord)** : 20000007/605925, 20000008/605946, **20000009/605947** (mandant de 63331).
+
+## 8b — le périmètre du cloud des contacts : audit du 22/10 *(Frédéric : « passe au point 8b »)* — lecture seule
+
+**La règle, dans le code** : un contact monte dans Supabase s'il est **éligible** (`build_contacts_layer.py:1750`) —
+lié à une **annonce active** (`active_annonce_relation`) ou porteur d'une **recherche active** (`active_search`) — ou,
+depuis le 11/09, **nommé dans une transaction** chez Hektor (`console_transaction_party`, `elargir_perimetre_console.py`,
+rejoué chaque nuit). Le run pousse **les seuls éligibles** : `scheduled/run_quotidien.ps1` passe
+**`-ContactsEligibleOnly`** (sans elle, `run_full_pipeline.ps1:1359` pousserait aussi tous les actifs).
+
+**La mesure** (registre local `phase2/phase2.sqlite`, 356 597 contacts) :
+
+| | contacts |
+|---|---|
+| **éligibles = dans le cloud** | **62 139** — annonce active 55 353 · recherche active 3 739 · nommés dans une transaction 2 800 · les deux premiers 247 |
+| **actifs HORS du cloud** | **132 904** — dont **50 839** joignables (e-mail ou téléphone) |
+| **archivés hors du cloud** | **161 554** |
+
+Supabase `app_contact_current` : **62 288** lignes (39 638 actifs, 22 650 archivés utiles), **310 Mo** avec index
+(~5 Ko par contact). Tout y monter coûterait ~**1,8 Go** au même poids ; les seuls actifs ~**860 Mo**.
+⚠ `date_maj` n'est pas un bon témoin d'activité (100 146 actifs hors cloud « modifiés depuis 2025 » : des mises à jour
+de masse côté Hektor sont probables) — *non interprété*.
+
+⛔ **Pour la coupure** : les 294 458 contacts hors du cloud n'existent que dans le **miroir** `data/hektor.sqlite`
+(`hektor_contact`) et dans la couche locale. La **sauvegarde quotidienne** (`backup_critical.py:98`) garde le registre des
+**numéros** (`app_contact`) mais **PAS les fiches** (« tout le reste est reconstruit chaque nuit depuis le miroir » — vrai
+tant que Hektor vit, FAUX après la coupure). Restent l'instantané hebdomadaire et Veeam (**jamais restauré**). ➡ rejoint **8d**.
+
+### La demande de Frédéric : les contacts avec une adresse mais sans ville *(« ce qui représenterait le bug précédent »)*
+
+Miroir Hektor, **tous** les contacts (champs `localite.localite.*`) :
+- « adresse + code postal **sans** ville » : **0** — la forme n'existe pas : la localité étant rangée par
+  identifiants, quand elle se perd **ville et CP partent ensemble** ;
+- **« adresse SANS ville NI code postal » : 6 741** (dont **585 dans le cloud**) — c'est la signature ;
+- « adresse + ville sans CP » : 24.
+➡ **Le défaut de l'app n'en explique que 5** : **603486, 603800, 604831, 604832, 605030** (les mandants et le contact du
+01/06, avant le Lot 2 — tous corrigés pour l'avenir par C-1). Les **6 736 autres viennent de HEKTOR lui-même** : par
+année de création, **3 583 en 2013-2014**, et **160 saisis en 2026 directement dans Hektor** par des négociateurs (mars
+22, mai 24, juin 21, juillet 45, septembre 23…). ⭐ **L'écran de Hektor laisse lui aussi enregistrer une adresse sans
+choisir la commune.** Rien n'est corrigé ; pour la coupure, ces 6 741 adresses sont **incomplètes à la source**.
