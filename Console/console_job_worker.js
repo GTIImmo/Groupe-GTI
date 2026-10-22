@@ -4308,6 +4308,9 @@ async function handleRefreshConsoleData(job) {
   // Création optimiste : le vrai bien est maintenant dans Supabase -> on retire la ligne provisoire
   // correspondante (no-op pour les annonces normales : 0 ligne supprimée). Best effort.
   await cleanupProvisionalForAnnonce(hektorAnnonceId);
+  // 1a (22/10/2026) : la seconde preuve des transactions nees dans l'app sans numero.
+  // Best effort : elle ne fait jamais echouer la relecture (voir poserNumerosManquants).
+  const numerosManquants = await poserNumerosManquants(job, hektorAnnonceId);
   const cacheRefresh = await rebuildRequestedDetailCaches(job, hektorAnnonceId, payload);
   return {
     ...result,
@@ -4315,6 +4318,7 @@ async function handleRefreshConsoleData(job) {
     reason: payload.reason || null,
     parent_job_id: payload.parent_job_id || null,
     cache_refresh: cacheRefresh,
+    numeros_manquants: numerosManquants,
     signature_sync: signatureSync,
   };
 }
@@ -15699,7 +15703,10 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
 
   if (!nommeParHektor && nouvelles.length === 0) {
     await logJob(job.id, "hektor_transaction_preuve", "error",
-      `AUCUN ${genre} NOUVEAU sur la fiche apres l'envoi -- la creation n'a rien produit. `
+      // 1a (22/10/2026) : « rien produit » etait une affirmation, et elle a ete fausse
+      // (compromis 50128, cree, vu plus tard). On dit ce qu'on sait : pas VU en 15 s.
+      `AUCUN ${genre} NOUVEAU vu apres l'envoi (3 lectures, ~15 s) -- pas encore publie, ou pas cree. `
+      + "Seconde preuve a la relecture (1a). "
       + "Rappel : ni la reponse ni le statut ne prouvent quoi que ce soit -- la reponse de "
       + "l'enregistrement a la MEME forme qu'une reponse d'etape, et le statut est decouple "
       + "de la transaction. C'est la fiche qui fait foi.", {
@@ -21172,6 +21179,111 @@ async function poserIdTransactionSurAffaire(job, appAffaireId, idTransaction) {
         hektor_transaction_id: String(idTransaction),
         error: erreur && erreur.message ? erreur.message : String(erreur),
       });
+    return { status: "error" };
+  }
+}
+
+// ─── 1a (22/10/2026, chantier 8) : LA SECONDE PREUVE, A LA RELECTURE ───
+//
+// La preuve de creation (prouverTransactionCreee) relit l'API 3 fois en ~15 s. Si
+// Hektor n'a pas encore publie la transaction, elle conclut « aucune » et le numero
+// n'est jamais pose : 19 preuves ratees sur ~60 creations depuis le 30/08, dont un
+// faux negatif le 22/10 (compromis 50128 bien cree, vu ensuite sur la fiche de
+// Hektor). Sans numero, « Modifier » est refuse et « Supprimer » impossible jusqu'au
+// run de nuit.
+//
+// LA RELECTURE PART ~30 s APRES chaque changement de statut : on lui confie une
+// seconde chance. Pour l'annonce relue, chaque transaction NEE DANS L'APP et SANS
+// numero recoit le sien SEULEMENT si un seul candidat chez Hektor porte le meme
+// genre et le meme acquereur, et n'est pas deja connu du registre. Sinon on
+// s'abstient, et on le dit : un numero faux serait pire que pas de numero.
+// ⚠ L'acquereur se compare par SON NUMERO HEKTOR -- c'est ce que la RPC range depuis
+//   1b (22/10). Une ligne plus ancienne qui porte notre identite ne trouvera aucun
+//   candidat : abstention, et la nuit la rapprochera comme avant.
+// ⚠ BEST EFFORT ABSOLU : la relecture est un travail central. Rien ici ne la fait
+//   echouer, et sans ligne orpheline on ne lit rien chez Hektor.
+// RETOUR ARRIERE : SECONDE_PREUVE_RELECTURE = false.
+const SECONDE_PREUVE_RELECTURE = true;
+
+/** Les numeros Hektor des acquereurs d'une ligne de l'API (liste ou champ simple). */
+function acquereursDuDetail(detail) {
+  const ids = new Set();
+  if (!detail || typeof detail !== "object") return ids;
+  if (Array.isArray(detail.acquereurs)) {
+    for (const p of detail.acquereurs) {
+      const id = p && typeof p === "object" ? String(p.id ?? "").trim() : "";
+      if (id) ids.add(id);
+    }
+  }
+  // L'offre porte son acquereur a plat (`id_acquereur` dans la charge de la nuit).
+  for (const cle of ["id_acquereur", "acquereur_id", "idAcquereur"]) {
+    const v = String(detail[cle] ?? "").trim();
+    if (v && v !== "0") ids.add(v);
+  }
+  return ids;
+}
+
+async function poserNumerosManquants(job, annonceId) {
+  if (!SECONDE_PREUVE_RELECTURE) return { status: "eteint" };
+  const annonce = String(annonceId || "").trim();
+  if (!/^\d+$/.test(annonce)) return { status: "skipped", reason: "annonce_non_numerique" };
+  try {
+    const orphelines = await supabaseRequest(
+      "app_affaire_ledger?select=app_affaire_id,kind,hektor_acquereur_id,date"
+      + `&hektor_annonce_id=eq.${encodeURIComponent(annonce)}`
+      + "&hektor_affaire_id=is.null&present_in_hektor=is.false&app_affaire_id=gte.1000000",
+      { method: "GET" });
+    if (!Array.isArray(orphelines) || !orphelines.length) return { status: "rien_a_faire" };
+
+    const parGenre = new Map();
+    for (const l of orphelines) {
+      const genre = String(l.kind || "").trim();
+      if (!parGenre.has(genre)) parGenre.set(genre, []);
+      parGenre.get(genre).push(l);
+    }
+    const bilan = [];
+    for (const [genre, lignes] of parGenre) {
+      const lu = await lireTransactionsParApi(job, annonce, genre, lignes[0].date || null);
+      const connus = await idsDejaConnusDuRegistre(job, annonce, genre);
+      if (lu === null || connus === null) {
+        for (const l of lignes) {
+          bilan.push({ app_affaire_id: l.app_affaire_id, genre, resultat: "abstention",
+                       raison: lu === null ? "api_muette" : "registre_illisible" });
+        }
+        continue;
+      }
+      const details = lu.details || {};
+      for (const l of lignes) {
+        const acq = String(l.hektor_acquereur_id || "").trim();
+        // Le meme acquereur ne doit designer qu'UNE ligne orpheline : sinon on ne
+        // sait pas laquelle des deux est celle que Hektor a creee.
+        const jumelles = lignes.filter((x) => String(x.hektor_acquereur_id || "").trim() === acq).length;
+        const candidats = acq
+          ? Array.from(lu.tous).filter((id) => !connus.has(id) && acquereursDuDetail(details[id]).has(acq))
+          : [];
+        if (!acq || jumelles !== 1 || candidats.length !== 1) {
+          bilan.push({ app_affaire_id: l.app_affaire_id, genre, resultat: "abstention",
+                       raison: !acq ? "sans_acquereur"
+                         : (jumelles !== 1 ? "plusieurs_lignes_orphelines" : `${candidats.length}_candidat(s)`),
+                       candidats });
+          continue;
+        }
+        const pose = await poserIdTransactionSurAffaire(job, l.app_affaire_id, candidats[0]);
+        bilan.push({ app_affaire_id: l.app_affaire_id, genre, hektor_affaire_id: candidats[0],
+                     resultat: pose && pose.status === "done" ? "numero_pose" : "echec_ecriture" });
+      }
+    }
+    const poses = bilan.filter((b) => b.resultat === "numero_pose").length;
+    await logJob(job.id, "hektor_transaction_seconde_preuve", poses === bilan.length ? "done" : "error",
+      `Seconde preuve : ${poses} numero(s) pose(s) sur ${bilan.length} transaction(s) nee(s) dans l'app sans numero`,
+      { hektor_annonce_id: annonce, bilan });
+    return { status: "fait", poses, total: bilan.length, bilan };
+  } catch (erreur) {
+    await logJob(job.id, "hektor_transaction_seconde_preuve", "error",
+      "Seconde preuve impossible -- la relecture continue, la nuit rapprochera", {
+        hektor_annonce_id: annonce,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      }).catch(() => {});
     return { status: "error" };
   }
 }

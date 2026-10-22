@@ -631,3 +631,28 @@ doublon est fermé. Ce qui reste : **un jour sans numéro**, pendant lequel « M
 - Poser un numéro faux serait grave : d'où **unicité + même acquéreur + inconnu du registre**, sinon on s'abstient.
 - Touche le worker : **les 4 services à redémarrer**, file vide.
 - Ne change ni la nuit ni la preuve immédiate (elle garde ses 3 lectures).
+
+### 1a — CODÉ, ESSAYÉ HORS LIGNE, NON ACTIF *(Frédéric : « vas-y 1a »)*
+
+`Console/console_job_worker.js` :
+- **`poserNumerosManquants(job, annonce)`** (+ `acquereursDuDetail`), juste après `poserIdTransactionSurAffaire` ;
+  interrupteur de code `SECONDE_PREUVE_RELECTURE = true` (retour arrière : `false`) ;
+- appelée dans **`handleRefreshConsoleData`**, après le nettoyage des lignes provisoires, son bilan rangé sous
+  `numeros_manquants` dans le résultat de la relecture ;
+- le journal de la preuve dit désormais « AUCUN … NOUVEAU **vu** après l'envoi (3 lectures, ~15 s) — pas encore
+  publié, ou pas créé. Seconde preuve à la relecture » au lieu de « la création n'a rien produit ».
+
+**Règle** : pour chaque transaction de l'annonce relue, **née dans l'app, sans numéro**, on relit la liste de l'API
+et on pose le numéro **seulement** si **un seul** candidat porte **le même genre et le même acquéreur** (numéro Hektor,
+cf. 1b) et n'est pas déjà au registre. Sinon : abstention, écrite au journal (`hektor_transaction_seconde_preuve`).
+Sans ligne orpheline : **aucune lecture chez Hektor**. Une erreur : une ligne de journal, **jamais** un échec.
+
+**Essai hors ligne sur le vrai code : `node Console/test_seconde_preuve.js` → 13 sur 13**, dont le cas du 22/10
+(50128 posé sur 1001368), les cinq abstentions (autre acquéreur, deux candidats, registre illisible, API muette,
+identité d'avant 1b, deux lignes orphelines), l'offre, l'erreur Supabase sans échec, et le **témoin inverse**
+(interrupteur à `false` : rien lu, rien posé). `node --check` vert, fins de ligne CRLF intactes.
+
+⚠ **Non vérifié en réel** : la forme exacte de l'acquéreur dans la liste des **offres** de l'API (`id_acquereur` à
+plat, lu dans le brut des offres de la nuit) ; celle des compromis (liste `acquereurs`) est déjà lue par le worker
+depuis le 16/09.
+⬜ **Pour l'activer** : redémarrer **les 4 services**, file vide (0 pending, 0 running) — Frédéric ; puis pousser.
