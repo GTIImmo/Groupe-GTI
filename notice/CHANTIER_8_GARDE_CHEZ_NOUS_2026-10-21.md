@@ -1634,3 +1634,23 @@ la copropriété est tombée en silence. ⛔ **Trou confirmé.**
 - la fiche porte la date Hektor (`date_maj` dans le blob) ; une relecture change son `source_hash` ;
 - la pièce 3 a déjà **tout l'outillage** : `app_annonce_lecture_hektor` (lire un champ Hektor dans la fiche), la
   liste « console seule », `app_annonce_verdict_naissance` (le verdict, `console_seule` compris).
+
+### 1 — 8a-B2, le contrôle au retour de la CRÉATION de contact : ÉCRIT, RÉPÉTÉ 8/8, **PAS APPLIQUÉ** *(22/10, « vas-y »)*
+
+`supabase/patch_8a6_contact_creation_controle_2026-10-22.sql` (+ `_INVERSE`, + `_REPETITION`), générés depuis les mêmes
+ancres posées sur le **texte exact de production** (`phase2/checks/b64_8a6_job_trg_avant.txt`,
+`gen_patch_8a6_contact_creation_controle.py`). **Trois ancres d'une ligne** dans `app_contact_saisie_modif_job_trg` :
+accepter `created` / `created_and_linked` ; retrouver le contact aussi par `app_identite` (charge) et par le numéro
+Hektor du **résultat** ; recréer le déclencheur avec les 2 types de création. Empreintes calculées d'avance :
+**`4af27d6a` → `7a1b2292`**. Rien d'autre ne change (table, verdict, vue, sentinelle, interrupteur : ceux de B).
+
+**Répétition 8/8, tout annulé, vérifié après** (empreinte `4af27d6a`, déclencheur à 2 types, 1 saisie — celle de
+l'essai réel de B —, 0 faux travail) : (1) une création est gardée par notre clé, sans naissance ni société ·
+(2) son retour est jugé (ville **remplace**, le reste identique) · (3) la vue le montre · (4) une création de
+**mandant** (`created_and_linked`, sans numéro de l'app dans la charge) est retrouvée par le numéro Hektor du résultat
+et rangée par **notre** clé · (5) la **modification** marche toujours (non-régression) · (6) un autre résultat ne garde
+rien · (7) **éteint → rien** · (8) l'inverse rend `4af27d6a` et le déclencheur à 2 types.
+
+**Ce que ça pourrait casser ailleurs** : le déclencheur se réveille aussi pour les 2 types de création (35 créations en
+tout depuis mai — volume nul) ; la fonction ne lit qu'une colonne de plus de la charge et du résultat ; même garde
+« une erreur devient un WARNING ».
