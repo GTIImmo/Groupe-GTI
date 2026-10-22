@@ -1394,3 +1394,44 @@ de Frédéric obligatoire. Rien n'est poussé.
 ➡ **La preuve en réel, après redémarrage** : refaire l'essai 9 (`immeuble` seul sur 63331, case remise à OUI / 24
 d'abord) → le journal doit dire « Garde copropriete : le secteur l'a remise a zero, on la remet » et Hektor
 doit porter **OUI / 24** après.
+
+### La garde de la copropriété — ACTIVE et PROUVÉE EN RÉEL *(22/10, Frédéric : « vas-y », puis « c'est fait, j'ai redémarré »)*
+
+**Le redémarrage** : refusé à ma session (*« Impossible d'ouvrir le service »*, pas de droits d'administrateur) —
+je ne l'ai pas contourné, Frédéric l'a fait. **Prouvé par les processus**, pas par la croyance : les 4 services
+ont changé de numéro (17844 / 15324 / 13396 / 16844 → 536 / 4124 / 256 / 16624), les 4 `node.exe` sont nés à
+**11:29:35-37**, après la dernière écriture du code (10:31:33). File vide avant ET au moment du redémarrage
+(0 pending, 0 running, aucun travail dans les 15 min).
+
+**La preuve, sur 63331** *(heure de Paris)* :
+
+| heure | geste | résultat |
+|---|---|---|
+| 11:32 | remise `OUI` + `24` (groupe copropriété seul) | OUI / 24 chez Hektor (lu en lecture seule) — ⚠ voir l'incident ci-dessous |
+| 12:00 | **`immeuble` seul** (secteur, sans BAN) — le geste de l'essai 9 qui faisait tomber la case | ⭐ voir le journal |
+
+Le journal du travail `d86358dc` :
+- 12:02:07 `Sauvegarde groupe secteur` (immeuble)
+- 12:02:09 **`Garde copropriete : le secteur l'a remise a zero, on la remet`** — avant `OUI / 24`, après `NON / 0`
+  ⭐ **le défaut a bien mordu, en réel**, et la garde l'a vu ;
+- 12:02:10 `Sauvegarde groupe copropriete` (`copropriete`, `copropriete_nb_lot`)
+- 12:02:13 travail `done`, compte rendu `garde_copropriete.status = "remise"`.
+
+**Trois relectures indépendantes, toutes d'accord** : le formulaire Hektor en lecture seule (OUI coché, 24 lots,
+lot 12, plan OUI, statut ALERTE), le cache console (extrait 12:02:24), **notre base** (OUI / 24, immeuble
+« Residence Les Tilleuls »). File vide après.
+
+**L'incident de 11:32, sans rapport avec la garde mais à connaître :**
+- le processus « actions » s'est **arrêté net** (code `-1073740791` = `0xC0000409`, arrêt brutal de node, pas une
+  erreur JavaScript) juste après les deux sauvegardes copropriété — ce travail ne touchait PAS le secteur, la
+  garde n'a pas tourné ;
+- ⚠ **ce plantage n'est PAS nouveau** : **42 fois** sur les 4 services depuis septembre (actions 16, sync_light 11,
+  admin 9, documents 6), le dernier le 20/10. **Cause non cherchée** — noté, hors périmètre ;
+- il laisse un travail **orphelin « running »**, qui **bloque tout travail sur la même annonce**
+  (`app_console_claim_next_job` refuse un travail tant qu'un autre court sur la même annonce, et ne solde un
+  « running » qu'après **30 minutes**). Soldé à la main à 11:55 **avec l'accord de Frédéric** (« clos »), message
+  d'erreur explicite ;
+- conséquence en chaîne : l'orphelin n'avait pas relu la fiche → notre base avait la date Hektor de 11:08, Hektor
+  celle de 11:32 → l'envoi suivant a été **retenu à raison** par la garde anti-écrasement (`held_conflict`,
+  aucune écriture chez Hektor). Sortie par les gestes de l'écran : saisie soldée « abandon » (journal des
+  résolutions), relecture demandée (`app_console_request_annonce_refresh`), puis renvoi.
