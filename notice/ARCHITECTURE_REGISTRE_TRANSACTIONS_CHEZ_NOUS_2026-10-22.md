@@ -497,3 +497,21 @@ sinon, le worker pose le numéro tout de suite et le rapprochement se fait par l
    prévu, éprouvé les 07/09 et 18/09 — il exige le numéro, supprime chez Hektor avec preuve, inscrit au journal des
    suppressions, retire notre ligne, et Hektor redescend le statut tout seul.
 3. Vérifier chez Hektor et chez nous : plus de compromis, statut revenu, notre ligne partie.
+
+### ✅ RATTRAPAGE FAIT (22/10, accord de Frédéric : « fais les 2 »)
+
+1. **Sauvegarde datée** : `app_affaire_ledger_avant_numero_50128_20261022` (la ligne 1001368 telle qu'elle était).
+   **Numéro posé** sur la ligne 1001368 : `hektor_affaire_id = 50128`, `present_in_hektor = true`.
+2. **Suppression par l'app**, modale de statut → « Supprimer le compromis » (la modale affichait bien
+   « Compromis n° 50128 »). La confirmation du navigateur a été acceptée par script, son texte gardé :
+   *« Supprimer DÉFINITIVEMENT ce compromis chez Hektor ? … VA6482 — compromis n° 50128 »*.
+   Travail `delete_hektor_compromis` **done** à 22:12:18 : « Suppression DÉFINITIVE du compromis 50128 » ·
+   « Statut Hektor redescendu à Actif » · « Affaire 1001368 (compromis 50128) : journal écrit, ligne en ligne
+   effacée, 11 saisie(s) retirée(s) du carnet ».
+3. **Vérifié des deux côtés** :
+   - **chez nous** : ligne 1001368 **absente**, carnet **vide**, journal des suppressions **1 ligne**
+     (`geste_app`, compromis 50128), fiche **Actif**, `diffusable` **0** (inchangé), 0 portail ;
+   - **chez Hektor** (fiche lue dans Chrome) : étiquette **ACTIF**, « Bien actif » coché, **plus aucun compromis**,
+     plus d'événement « Compromis » dans la synthèse.
+- Reste, sans effet : la lecture console de 1001368 (`app_affaire_console`, une ligne — plus aucune affaire ne la
+  lit) ; la recherche de qualification du contact d'essai, créée puis archivée chez Hektor (prévu).
