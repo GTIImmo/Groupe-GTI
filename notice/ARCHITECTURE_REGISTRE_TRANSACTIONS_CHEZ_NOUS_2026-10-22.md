@@ -569,3 +569,26 @@ allumé le 21/10), les deux diffèrent (20000008 / 605946) : **le rapprochement 
 - Les autres lecteurs de la colonne : `app_chaine_pour` et `app_attribuer_chaines_affaire` (ils la comparent aux lignes
   venues de Hektor — 1b les aligne), l'écran (« même acquéreur sur deux compromis ? » — aligné aussi), et le run de nuit
   (il lit la table **locale**, remplie par le miroir : numéros Hektor, inchangé).
+
+### ⚠ CORRECTION DE L'AUDIT DU POINT 1 — l'ampleur était sous-estimée
+
+J'ai écrit « seuls les contacts nés dans l'app ont deux numéros ». **Faux** : les **62 288** contacts de
+`app_contact_current` ont **tous** une identité (≥ 10 M) différente de leur numéro Hektor. Et l'écran envoie **tantôt
+l'identité** (la recherche de contacts : 20000008 le 22/10), **tantôt le numéro Hektor** (605717 pour KURCEBA le 13/10,
+identité 10650570). Les deux cas cassent quelque chose :
+- identité → la nuit ne rapproche pas (doublon) ;
+- numéro Hektor → la RPC ne retrouve pas notre contact (`app_contact_id` vide au clic ; la nuit l'a refait le 13/10).
+
+### 1b — PRÉPARÉ, RÉPÉTÉ, NON POSÉ
+
+`supabase/patch_1b_affaire_acquereur_numero_hektor_2026-10-22.sql` (+ `_INVERSE`, `_REPETITION`), généré par
+`phase2/checks/gen_patch_1b_affaire_acquereur_numero_hektor.py`. Interrupteur `affaire_acquereur_numero_hektor`, éteint.
+Cinq ancres d'une ligne, empreinte `caab6b6c` (R1) → `f9d02447`. Allumé : la RPC reconnaît le contact **par l'un ou
+l'autre numéro**, range le **numéro Hektor** dans `hektor_acquereur_id`, le passe à `app_chaine_pour`, et notre identité
+dans `app_contact_id`. Inconnu : rangé tel quel, rien d'inventé. **Le worker n'est pas touché.**
+
+**Répétition sur la vraie base, annulée : 7 sur 7** — éteint, identité : rangée telle quelle · éteint, numéro Hektor :
+lien vide (les deux témoins inverses) · allumé, 20000008 → 605946 · 10650570 → 605717 · 605717 → contact 10650570
+retrouvé · inconnu → tel quel · l'inverse rend `caab6b6c`. Vérifié après : empreinte, interrupteurs, lignes, travaux
+d'essai — **rien n'est resté**.
+⚠ **Ordre des retours arrière** : l'inverse de 1b **avant** celui de R1.
