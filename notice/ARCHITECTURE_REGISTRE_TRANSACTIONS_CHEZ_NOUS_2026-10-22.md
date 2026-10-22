@@ -470,3 +470,30 @@ sans comparer les réponses de Hektor.
    (le geste « supprimer » l'exige) — puis vérifier que le statut redescend.
 3. **S'il n'existe pas** : remettre « Actif » chez Hektor à la main (pas par l'app, qui rendrait le bien diffusable),
    puis retirer chez nous la ligne 1001368 après une sauvegarde datée.
+
+### ✅ VÉRIFIÉ CHEZ HEKTOR (22/10, fiche VA6482 lue dans Chrome) — LE COMPROMIS EXISTE, COMPLET
+
+**Compromis 50128**, « Compromis de vente signé » :
+acquéreur **Mme ESSAI 8A B2 Creation** · **6 mandants déduits du mandat** par Hektor (PHILIBERT ×2, MANOA, « Mr./Mme »,
+SAMUEL-PHILIBERT, TESTCLAUDE) · date 22/10/2026 · **fin de rétractation 01/11/2026** (la même que celle que R1 a
+calculée) · acte prévu 15/01/2027 · séquestre 5 000 € · prix 130 000 € · honoraires agence 6 666,67 € HT
+(8 000 TTC) · **notaire acquéreur CORNU**, **notaire mandant FAURE**. Statut du bien : Sous compromis.
+
+➡ **L'essai a donc RÉUSSI de bout en bout.** R1 et Hektor disent la même chose, champ par champ. Ce qui a échoué,
+c'est **le contrôle du worker**, qui a relu la fiche 15 s après l'envoi et n'a pas vu le compromis
+(**faux négatif**, déjà vu le 31/08). Conséquence : le numéro 50128 n'a **pas** été posé sur notre ligne 1001368.
+
+⚠⚠ **ET UN DÉFAUT RÉEL, TROUVÉ PAR CET ESSAI** : sans ce numéro, la nuit cherche à rapprocher notre ligne **par
+l'acquéreur** (`adoptables`, `affaire_ledger.py` l. ~701). Or notre ligne porte l'acquéreur sous **notre** numéro
+(`hektor_acquereur_id = 20000008`, l'écran envoie l'identité depuis le 23/09) et le miroir le portera sous celui de
+Hektor (`605946`). **Le rapprochement échouera, et la nuit créera une seconde ligne pour le compromis 50128.**
+Ce trou existe depuis le 23/09 pour toute transaction dont la preuve rate ; il ne mord que dans ce cas, parce que,
+sinon, le worker pose le numéro tout de suite et le rapprochement se fait par le numéro.
+
+**Le rattrapage, maintenant que les faits sont sûrs — à décider par Frédéric**
+1. **Poser le numéro 50128 sur notre ligne 1001368** (+ `present_in_hektor = true`) — exactement ce que le worker
+   aurait fait. La nuit la rapprochera alors par le numéro : pas de doublon.
+2. **Supprimer le compromis PAR L'APP** (modale de statut → la transaction → « Supprimer le compromis ») : le geste
+   prévu, éprouvé les 07/09 et 18/09 — il exige le numéro, supprime chez Hektor avec preuve, inscrit au journal des
+   suppressions, retire notre ligne, et Hektor redescend le statut tout seul.
+3. Vérifier chez Hektor et chez nous : plus de compromis, statut revenu, notre ligne partie.
