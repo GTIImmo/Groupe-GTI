@@ -1654,3 +1654,40 @@ rien · (7) **éteint → rien** · (8) l'inverse rend `4af27d6a` et le déclenc
 **Ce que ça pourrait casser ailleurs** : le déclencheur se réveille aussi pour les 2 types de création (35 créations en
 tout depuis mai — volume nul) ; la fonction ne lit qu'une colonne de plus de la charge et du résultat ; même garde
 « une erreur devient un WARNING ».
+
+### 2 — 8a-C, le contrôle au retour d'une MODIFICATION d'annonce : ÉCRIT, RÉPÉTÉ 15/15, **PAS APPLIQUÉ** *(22/10)*
+
+`supabase/patch_8a7_annonce_modif_controle_2026-10-22.sql` (+ `_INVERSE`, + `_REPETITION`), générés par
+`phase2/checks/gen_patch_8a7_annonce_modif_controle.py`. **Additif**, interrupteur `annonce_retour_controle` (éteint),
+**aucune fonction existante retouchée** (la pièce 3 non plus : on **réutilise** ses fonctions de lecture et de verdict).
+- **GARDER** : travail `update_hektor_annonce_fields` « done » + « updated » → `app_annonce_saisie_modif`, aux **noms
+  Hektor**. ⭐ La liste des **180 noms** jugeables est **LUE DANS LE WORKER** par le générateur
+  (`HEKTOR_WIZARD_UPDATE_GROUPS`, exactement ce qu'il écrit chez Hektor), jamais recopiée ; les 3 identifiants
+  techniques (`idCodepublique`, `idVillepublique`, `idLocalitePrivee`) et `clearing` sont exclus — ils ne se lisent pas
+  dans la fiche et crieraient « absent » à tort. Les clés de l'écran sont traduites par **la correspondance de la pièce
+  2** (+ 6 que le worker traduit lui-même : `building`, `transport`, `proximity`, `environment`, `floor`, `terrace`,
+  dont la présence dans le worker est **vérifiée** par le générateur). Un nom inconnu est **ignoré**, pas jugé.
+- **CONTRÔLER** : à une écriture de la fiche qui vient **de Hektor** — pas une naissance (`c9e3:`), pas un calque
+  reposé (L3 / l'écran ne changent pas le `source_hash`) — et dont la date Hektor (`date_maj`, **unique, à la racine**,
+  mesuré) suit l'envoi. Verdict = `app_annonce_verdict_naissance` de la pièce 3 ; les « console seule » sont
+  **rejugés** quand leur bloc arrive.
+- **SIGNALER** : `app_v_annonce_modif_ecarts` (une ligne par annonce et par champ + « non_relu » à 24 h), marquage
+  « vu » `app_annonce_modif_ecart_traiter` ; la sentinelle `data.annonce_modif_ecart` **sera ajoutée à la pose**.
+- ⚠ Il **ne remet rien** : la valeur de Hektor reste affichée.
+
+**Répétition 15/15** sur la **vraie fiche** de 10000009 / 63331, puis le vrai retour arrière — vérifié après (0 objet,
+0 interrupteur, 0 faux travail, fiche `32f91160…` / 12:02:11 intacte, pièce 3 en place) : (1) éteint → rien · (2)
+conflit → rien · (3) le calque aux noms Hektor (adresse, ETAGE, copropriété, immeuble, TRANSPORT, lots de la boîte),
+**sans** l'inconnu ni le technique · (4) un calque reposé ne juge rien · (5) une fiche Hektor **ancienne** ne juge rien ·
+(6) **le retour est jugé** : copropriété **remplace** (envoyé NON, Hektor OUI), adresse et étage identiques, immeuble et
+TRANSPORT **console_seule** (bloc retiré exprès) · (7) **le bloc console arrive** : les deux rejugés identiques,
+copropriété reste « remplace » · (8) la vue, une ligne · (9) deux envois avant le retour : le 2ᵉ complète le 1ᵉʳ ·
+(10) une naissance ne juge rien · (11) une fiche **illisible ne bloque pas** l'écriture · (12) une autre annonce passe ·
+(13) « non_relu » · (14) un travail de contact ne garde rien ici · (15) l'inverse retire tout, pièce 3 intacte.
+⚠ **Honnêteté** : la 1ʳᵉ passe (15/15 aussi) avait été jouée sur une copie où j'avais **omis 6 lignes** (le commentaire
+de table et les droits des fonctions). Rejouée **sur le fichier exact** : 15/15.
+
+**Ce que ça pourrait casser ailleurs** : un 2ᵉ déclencheur sur la fiche d'annonce (AFTER, celui de la pièce 3 est
+BEFORE) ; il s'exécute à **chaque** écriture de fiche (~13 000 la nuit) mais sort à la 1ʳᵉ ligne si l'interrupteur
+est éteint, à la 3ᵉ si le `source_hash` n'a pas bougé, puis une recherche dans un index **partiel** ; la nuit le
+dira. Volume des modifications : 22 travaux en 60 jours.
