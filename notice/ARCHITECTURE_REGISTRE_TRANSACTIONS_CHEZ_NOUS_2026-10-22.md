@@ -667,3 +667,36 @@ première portera `numeros_manquants: {"status": "rien_a_faire"}` dans son résu
 **`done`**, résultat **`numeros_manquants: {"status": "rien_a_faire"}`** — l'étape tourne, ne lit rien chez Hektor
 quand il n'y a rien à faire, et ne gêne pas la relecture. *(Le cas « numéro posé » n'a pas encore eu lieu en réel :
 il faudra une création dont la preuve rate.)*
+
+### SECOND ESSAI RÉEL (22/10, 23:47, VA6482) — 1b prouvé, et LA VRAIE CAUSE du faux échec trouvée
+
+Compromis saisi dans la modale : 135 000 €, acte 15/02/2027, rétractation 10 j, séquestre 6 000, honoraires vendeur
+9 000, acquéreur ESSAI 8A B2, les deux notaires.
+
+- ✅ **R1 + 1b au clic (23:47:07)**, ligne **1001375** : tous les champs, **`hektor_acquereur_id = 605946`** (le numéro
+  Hektor) et **`app_contact_id = 20000008`** (notre contact). **1b est prouvé en réel.**
+- ✅ **Chez Hektor** (fiche lue dans Chrome) : **compromis 50129**, complet, identique à la saisie (rétractation au
+  01/11/2026, acte 15/02/2027, séquestre 6 000, 135 000 €, notaires CORNU et FAURE, 6 mandants déduits).
+- ⚠ **Premier contrôle** (23:47:54) : « AUCUN compromis NOUVEAU vu … pas encore publié, ou pas créé » — le nouveau
+  message, juste cette fois.
+- ⚠ **Seconde preuve** (relecture de 23:49:09) : **abstention, 0 candidat**. Elle a fait ce qu'il fallait : ne pas
+  deviner.
+
+**⭐ LA CAUSE, MESURÉE (lecture seule de l'API, 23:5x)** : la première page de `/Api/Vente/ListCompromis/` est triée
+**par numéro d'ANNONCE décroissant** (63037, 62967, 62922 … 62405), **pas par date** comme le croit le code (`sort=dateStart`,
+`way=desc` sont sans effet). Un compromis posé sur une annonce **ancienne** (24113) **n'y figure jamais**, même des
+minutes après : l'API répondait encore `ids: []` à 23:5x. Ce n'est **pas un délai** — mon audit du point 1 se trompait
+sur ce point.
+- Les essais de septembre passaient parce que… *non expliqué* : l'ordre de cette route a pu changer depuis, ou 24933
+  y figurait encore. **Non mesuré.**
+- La **fiche**, elle, porte le bon marqueur : `clore_compromis_vente(50129)`.
+- Même route utilisée par la **preuve d'une modification** : elle a le même défaut pour les annonces anciennes.
+
+**Ce que ça veut dire pour 1a** : la seconde preuve est juste et prudente, mais elle lit **la même liste aveugle** —
+elle ne pourra rien poser pour une annonce ancienne. **Correctif à proposer (non codé)** : quand la liste ne voit rien,
+lire la **fiche** (le marqueur), puis **confirmer chaque candidat par l'API « par numéro »** (`CompromisById` /
+`VenteById`, déjà utilisées : la porte 2) en vérifiant l'annonce et l'acquéreur.
+
+**Le compromis 50129 est GARDÉ pour l'instant, exprès** : sans numéro sur 1001375, **la nuit doit le rapprocher par
+l'acquéreur** — maintenant que 1b y range 605946. C'est **la preuve du chemin de nuit de 1b**, à vérifier demain
+matin ; on le supprimera ensuite.
