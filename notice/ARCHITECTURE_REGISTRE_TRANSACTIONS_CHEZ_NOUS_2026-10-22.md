@@ -352,3 +352,8 @@ la liste des transactions de la modale montre **« Notaire acquéreur »** (carn
 
 **Pour le poser** (accord de Frédéric) : coller le patch, vérifier les 3 OK, allumer l'interrupteur ; pousser le
 front ; essai réel par l'écran sur l'annonce d'essai 63331.
+
+✅ **PATCH POSÉ EN PRODUCTION le 22/10 à 18:19:29**, par moi avec l'accord de Frédéric (« j'autorise : colle
+toi-même le patch R1 »). Les 3 contrôles : **OK · OK · OK** (empreinte `caab6b6c`, interrupteur présent et
+**éteint**, droits inchangés). Tant que l'interrupteur est éteint, la création se comporte comme avant.
+⬜ Reste : le push du front (Frédéric), l'allumage, l'essai réel sur 63331.
