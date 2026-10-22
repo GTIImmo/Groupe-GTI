@@ -1889,3 +1889,93 @@ fiches ». **Faux en partie** — je n'avais regardé que la sauvegarde *critiqu
 
 ✅ **8b CLOS PAR DÉCISION DE FRÉDÉRIC (22/10)** : le périmètre du cloud (les éligibles) est **un choix**, pas un défaut,
 et il ne pose pas de problème d'autonomie — le détail de tous les contacts est sur le serveur. ⛔ **Ne pas relancer.**
+
+---
+
+## Registre des TRANSACTIONS et registre des MANDATS — audit du 22/10 *(Frédéric : « le registre des affaires garde bien les écritures immédiatement dans un carnet mais si coupure l'écriture meurt aussi […] vérifie aussi le registre des mandats, uniquement lecture seule dans un premier temps »)* — lecture seule, RIEN n'est codé
+
+> **Audit limité aux objets « transaction » et « mandat »**, les autres ne sont pas mesurés ici.
+> Sources : la base (définitions des RPC lues en entier, tables comptées), le worker, `affaire_ledger.py`,
+> `mandat_ledger.py`, `export_app_payload.py`, `contrat_autorite.py`, `backup_critical.py`, le front.
+
+### Le tableau *(objet × geste)*
+
+|  | créer | modifier | supprimer / état | lire |
+|---|---|---|---|---|
+| **transaction** (offre, compromis, vente) | ✅ chez nous à l'instant (ligne ≥ 1 000 000 + carnet), puis travail | ⚠ carnet + colonne à l'instant, MAIS **refusé sans numéro Hektor** | ⛔ **l'état est DÉFAIT si Hektor ne répond pas** | ✅ registre + carnet + verdict |
+| **mandat** | ⛔ **chez Hektor seulement** (PROTEXA) | ⛔ fermé par décision (⑦-7) | ✅ clôture : date au carnet, reposée chaque nuit | ⚠ registre refait chaque nuit depuis le miroir |
+
+### Transactions — ce que dit le code
+
+**1. Créer — l'écriture ne meurt pas.** `app_change_annonce_status_optimistic` pose la ligne au registre
+(`app_affaire_id` de la plage de l'app) et le carnet (`origine creation_app`) dans la transaction du geste.
+Si Hektor échoue, **rien n'efface la ligne** : le travail reste en erreur, la ligne reste, sans numéro Hektor.
+Le run de nuit la protège (`app_affaire_id < 1 000 000` exigé pour marquer « absente »).
+Mesure : 331 transactions nées dans l'app, **toutes** avec leur numéro Hektor ; aucune n'est restée orpheline.
+⚠ **Un trou, lu dans le code, pas éprouvé** : « Abandonner » (⑦-6) remet le STATUT du bien et efface le carnet
+de l'ANNONCE, mais **ne touche pas la ligne de la transaction** ni son carnet. Après un abandon, le bien
+redevient « Actif » et l'offre reste au registre.
+
+**2. Modifier — l'écriture est gardée, mais REFUSÉE sur une transaction neuve.**
+`app_modifier_affaire_optimistic` écrit le carnet (que le run ne touche jamais) et la colonne. La nuit, la colonne
+reprend la valeur de Hektor — **voulu** depuis le 16/09 (3.3, `CHAMPS_APP_AFFAIRE = ()` vidé exprès) ; l'écran
+montre les deux avec le verdict. ⛔ **MAIS la RPC lève `modification_sans_numero_hektor`** si la transaction n'a pas
+de numéro Hektor, et `modification_transaction_effacee` si `present_in_hektor` est faux. L'écran fait pareil pour
+les gestes (`handleGesteHektor` s'arrête sans `hektor_affaire_id`). ➡ **Le jour de la coupure, aucune transaction
+créée après ne pourra être modifiée ni changer d'état.** *(La porte sans envoi, `app_edit_affaire_optimistic`,
+existe toujours en base, mais son bouton a été retiré le 15/09 par décision.)*
+
+**3. Changer l'état (refuser / accepter une offre, annuler / supprimer un compromis, supprimer une vente) —
+C'EST ICI QUE L'ÉCRITURE MEURT.** `app_geste_affaire_optimistic` écrit l'état **dans la colonne `state` du
+registre**, PAS au carnet. Puis deux mécanismes le défont :
+- **le worker** : `restaurerEtatAffaire` (`console_job_worker.js:20824`) — le filet rejoue jusqu'à 4 fois sur
+  24 h, puis **remet l'état d'avant** (et le statut du bien s'il avait redescendu). Décision écrite du 29/08 (C.4-bis) ;
+- **le run de nuit** : le push du registre réécrit `state` avec la valeur du miroir *(colonne non protégée)*.
+
+Tant que Hektor vit, **les deux sont justes** : Hektor confirme. À la coupure, **les deux tuent l'écriture**.
+⚠ **Il n'y a PAS d'interrupteur pour ça.** Les interrupteurs existants (`app_setting`) ne concernent que les
+annonces et les contacts ; `etat_annonce_ecrit_chez_nous` (allumé le 12/10) porte le statut du BIEN, pas l'état
+de la transaction. Le retour arrière du worker est **écrit en dur**.
+
+**4. Supprimer** : même patron — `present_in_hektor = false` au geste, remis à `true` si Hektor échoue.
+La vraie suppression n'a lieu qu'avec la preuve de Hektor (journal `app_affaire_supprimee` d'abord).
+
+**5. La sauvegarde quotidienne** porte `app_affaire_ledger`, **pas** le carnet `app_affaire_champ_app`
+(ni notes, conditions, répartition). Non mesuré : si la copie hebdomadaire de `phase2.sqlite` les porte toutes. ➡ 8d.
+
+**Mesures au passage.** Le carnet : **17 lignes, 3 transactions** (24933 bac à sable, et deux de 61672),
+**aucun verdict posé** (`etat` vide partout). 84 travaux de création/modification pointent une transaction qui
+n'existe plus : **toutes sur les biens d'essai 24933 et 62774** (63 au journal des suppressions, 21 sans trace —
+non expliqué, probablement des essais nettoyés à la main).
+
+### Mandats — ce que dit le code
+
+**1. Créer : chez Hektor seulement.** Le numéro est fabriqué par Hektor (`protexa-valideStep1`). Rien n'existe chez
+nous avant sa réponse ; ensuite `enregistrerMandatAuRegistreApp` écrit une ligne `app_mandat` (best effort).
+Mesure : **0 ligne `origine app`** ; 3 travaux de numérotation en tout, le dernier le 28/08 — **aucun mandat n'a
+été créé par l'app depuis que cette écriture existe** (30/09). Les mandats arrivent par le miroir.
+⚠ Et même écrite, une ligne de l'app **n'entre au registre qu'une fois adoptée** par le miroir : le registre est
+fabriqué à partir de `app_mandat` LOCAL, rempli par `mandat_ledger.py` depuis Hektor.
+➡ C'est **l'étape 3 par définition** (« le registre électronique des mandats, nos numéros »). Rien à corriger en
+étape 2 sans décision.
+
+**2. Modifier / prolonger** : ⛔ fermé par décision (⑦-7, 18/10). Rien à auditer.
+
+**3. Clôturer : l'écriture survit.** La date va au carnet `app_mandat_champ_app` (3 lignes) et
+`app_reposer_cloture_mandat_app` la repose chaque nuit sur le registre refait. Seul le statut part chez Hektor.
+⚠ Rappel ① ter : le worker **efface l'auteur** (`ecrit_par` vide sur 2 lignes sur 3).
+
+**4. Lire** : `app_mandat_register_current` est **effacé et refait à chaque push**, depuis `app_mandat`
+(interrupteur `APP_REGISTRE_DEPUIS_APP_MANDAT=1`, allumé le 30/09). `app_mandat` : 26 923 lignes, jamais supprimées.
+⚠ **`app_mandat` n'est pas dans la sauvegarde quotidienne** (seulement dans `phase2.sqlite`, hebdomadaire). ➡ 8d.
+
+### Ce qu'on pourrait corriger — À DÉCIDER PAR FRÉDÉRIC, rien n'est choisi
+
+| | le défaut | une piste | ce que ça pourrait casser ailleurs |
+|---|---|---|---|
+| **T1** | l'état d'une transaction est défait si Hektor ne répond pas | un interrupteur `affaire_etat_garde_chez_nous` (éteint) : allumé, le worker **garde** l'état et le note au carnet au lieu de le défaire | ⚠ **renverse la décision écrite du 29/08**. Hektor vivant, un vrai refus laisserait l'app afficher un état faux — d'où l'interrupteur éteint jusqu'à la coupure |
+| **T2** | la nuit réécrit `state` depuis le miroir | mettre l'état au carnet (comme les montants) pour qu'il ne se perde pas | touche le push du registre et les chaînes (`recalculer_les_chaines` lit `state`) |
+| **T3** | « Modifier » refuse une transaction sans numéro Hektor | écrire chez nous quand même (carnet + colonne), le travail partira quand le numéro existera | le worker **crée** quand la charge n'a pas de cible — risque de **doublon** chez Hektor ; la garde `transactionDejaCreee` doit tenir |
+| **T4** | « Abandonner » laisse la transaction au registre | l'abandon d'une création marque aussi la ligne | ⑦-6 a exclu les affaires **exprès** (pas de double retour arrière) — à relire avant |
+| **T5** | carnet des affaires, `app_mandat`, carnet des mandats hors sauvegarde quotidienne | les ajouter à `CRITICAL_TABLES` | rien côté app ; volume de la sauvegarde ➡ **8d** |
+| **M1** | un mandat ne naît que chez Hektor | **étape 3** | — |
