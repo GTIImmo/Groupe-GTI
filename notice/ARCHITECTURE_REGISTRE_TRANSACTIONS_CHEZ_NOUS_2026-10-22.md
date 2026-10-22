@@ -357,3 +357,31 @@ front ; essai réel par l'écran sur l'annonce d'essai 63331.
 toi-même le patch R1 »). Les 3 contrôles : **OK · OK · OK** (empreinte `caab6b6c`, interrupteur présent et
 **éteint**, droits inchangés). Tant que l'interrupteur est éteint, la création se comporte comme avant.
 ⬜ Reste : le push du front (Frédéric), l'allumage, l'essai réel sur 63331.
+
+### ✅ R1 EN PRODUCTION — essai réel du 22/10 par l'écran, sur VA6482 (annonce 24113)
+
+Interrupteur `affaire_nait_complete` **allumé à 18:34:20** (accord de Frédéric). Front servi par Vercel
+(`index-UiODBhSX.js`). Compromis saisi dans la modale : 130 000 €, date 22/10/2026, acte 15/01/2027, rétractation
+10 j, séquestre 5 000, honoraires vendeur 8 000, acquéreur ESSAI 8A B2, les deux notaires ; mandants non touchés.
+
+**⭐ LA PREUVE DE R1 — tout est chez nous à la MÊME milliseconde que le travail (18:40:16.526)**, transaction 1001368 :
+`montant 130000` · `date 2026-10-22` · `date_acte 2027-01-15` · `sequestre 5000` · `date_fin_retractation 2026-11-01`
+(date + 10) · `prix_net_vendeur 122000` · `honoraires_entree 8000` · `notaire_acquereur` 10064499 + son nom ·
+`notaire_mandant` 10165291 + « Philippe notaires St Etienne » · `notaires_origine` vide · `notaire_id` vide ·
+`mandants_json` vide (non affirmés) · carnet 11 lignes, inchangé. *(`honoraires_sortie` vide : la modale envoie
+`null` pour 0.)* À l'écran, la liste des transactions montre la ligne, et « Notaire vendeur » affiche le nom.
+
+**⚠⚠ MAIS HEKTOR N'A PAS CRÉÉ LE COMPROMIS — et ce n'est pas R1.** Journal du travail :
+`findProspect rend 0 identifiant(s)` pour l'acquéreur 605946 → l'assistant est parti **sans acquéreur** →
+« **AUCUN compromis NOUVEAU sur la fiche après l'envoi — la création n'a rien produit** » (18:41:08). Puis le
+travail a **quand même** posé le statut « Sous compromis » chez Hektor et s'est terminé **`done`** ; l'écran a
+affiché « Statut accepté ».
+- État laissé : annonce 24113 **« Sous compromis » chez Hektor et chez nous, sans aucun compromis** ; notre ligne
+  1001368 **sans numéro Hektor** ; une recherche de qualification créée puis archivée pour le contact d'essai.
+- Deux défauts **trouvés par l'essai, hors R1, notés, non corrigés** :
+  1. **un échec qui finit `done`** : la preuve dit « rien produit » mais le statut part quand même, et l'écran
+     dit « accepté » (famille du chantier ④, « aucun échec silencieux ») ;
+  2. **le contact d'essai n'est pas accepté comme acquéreur par Hektor** (`findProspect` vide) — la piste
+     « portefeuille / typologie » de 2.6, jamais tranchée.
+- **Petit défaut d'écran de R1** : la ligne « Notaire acquéreur » affiche le **numéro** (10064499) au lieu du nom,
+  parce que le carnet porte l'identifiant sous la clé `notaire_id` et passe avant le registre. À corriger.
