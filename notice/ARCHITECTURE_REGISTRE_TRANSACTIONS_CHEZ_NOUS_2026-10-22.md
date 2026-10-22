@@ -315,3 +315,40 @@ la ligne « Notaire » (`App.tsx:21154`) lit **seulement le carnet**, sans repli
 créée dans Hektor, elle est donc **vide**, alors que le nom est dans `notaire_acquereur_nom` (8 501 compromis,
 8 612 ventes). Et il n'y a **pas de ligne pour le notaire du vendeur**, le cas majoritaire. À corriger avec R1
 (l'écran), sur décision.
+
+---
+
+## 5. R1 — PRÉPARÉ LE 22/10, NON POSÉ *(Frédéric : « oui, profites-en pour corriger les points »)*
+
+**Base** — `supabase/patch_r1_affaire_nait_complete_2026-10-22.sql` (+ `_INVERSE`, `_REPETITION`), générés par
+`phase2/checks/gen_patch_r1_affaire_nait_complete.py`. Interrupteur `affaire_nait_complete`, **éteint**.
+Deux ancres d'une ligne ; empreinte `3eec3f85` → `caab6b6c` (calculée d'avance dans la base, en lecture seule).
+Allumé, la création écrit chaque champ dans sa colonne **par genre** (§ 4 D), les notaires dans
+`notaire_acquereur_*` / `notaire_mandant_*` **sans** `'saisie'`, les mandants **seulement s'ils sont affirmés**.
+Une erreur dans ce bloc ne fait **jamais** échouer le geste (WARNING).
+
+**Répétition sur la vraie base, annulée : 13 sur 13** — éteint = rien de neuf (témoin inverse) · offre = validité,
+honoraires acquéreur, taux, et rien d'un compromis · compromis = acte, séquestre, net, honoraires, taux, fin de
+rétractation = date + 10, les deux notaires avec leur nom, pas de mandants non affirmés · mandants affirmés = les
+deux, dans l'ordre · vente = net, honoraires, notaires, ni acte ni séquestre ni fin · le carnet reçoit autant de
+lignes éteint et allumé · une date impossible ne casse pas le geste · l'inverse rend `3eec3f85`. Vérifié après :
+empreinte, interrupteur, lignes et travaux d'essai, **rien n'est resté**. *(La séquence des numéros d'affaire a
+avancé de 7 : une séquence ne recule jamais.)*
+
+**Écran** (`npm run build` vert, **non déployé, non vu**) — la charge porte `buyer_notary_nom` /
+`seller_notary_nom` (la RPC ne peut pas retrouver le nom : les notaires ne sont pas dans `app_contact_current`) ;
+la liste des transactions de la modale montre **« Notaire acquéreur »** (carnet, puis registre en repli) et
+**« Notaire vendeur »** (registre).
+
+**Ce que R1 ne fait pas, et ce qui a été trouvé en le préparant**
+- ⚠ **Le notaire posé au clic est remis à vide la première nuit**, entre le push du registre (l. 912, qui envoie
+  les colonnes locales, encore vides) et celui de la console (l. 1253). La console le remet dès qu'elle a lu la
+  transaction — le worker range cette lecture **au moment de la création**. Fenêtre de quelques minutes ; c'est R2
+  qui la fermera.
+- La **modification** n'est pas touchée (point E : la charge porte du prérempli) — pièce suivante, avec une
+  décision : comment reconnaître un champ « touché ».
+- Les autres colonnes posées au clic sont **réécrites la nuit** par la valeur de Hektor (identique si Hektor l'a
+  prise). C'est R2.
+
+**Pour le poser** (accord de Frédéric) : coller le patch, vérifier les 3 OK, allumer l'interrupteur ; pousser le
+front ; essai réel par l'écran sur l'annonce d'essai 63331.
