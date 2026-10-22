@@ -10134,15 +10134,40 @@ async function resolveHektorPublicLocality(postalCode, city) {
 // annonce idVillepublique/idCodepublique). On resout la commune en identifiants Hektor et
 // on aligne texte + id dans `values`. Best-effort : si la resolution echoue, on garde le
 // comportement texte actuel (aucune regression).
+//
+// 8a C-2 (22/10/2026) -- L'ECHEC NE SE TAIT PLUS. Mesure du 22/10 : quand la commune n'est pas
+// trouvee (ville contraire au code postal, ville sans code postal), le texte part seul et Hektor
+// l'IGNORE -- en modification il garde l'ANCIENNE ville, a la creation il ne garde RIEN (contacts
+// d'essai 20000007, 20000008, mandant 605030). Desormais l'echec est ecrit au journal du travail et
+// rendu a l'appelant ; le controle au retour (8a-B) le signale ensuite comme ecart.
+// Retour : { status: "sans_objet" | "resolue" | "non_resolue", ... } -- un appelant qui l'ignore
+// garde exactement le comportement d'avant.
 async function applyContactLocalityIds(values, contact, job, contactId) {
-  if (!contact || (!contact.city && !contact.postalCode)) return;
+  if (!contact || (!contact.city && !contact.postalCode)) return { status: "sans_objet" };
   let locality = null;
+  let erreur = null;
   try {
     locality = await resolveHektorPublicLocality(contact.postalCode, contact.city);
-  } catch (_) {
+  } catch (error) {
     locality = null;
+    erreur = error && error.message ? error.message : String(error);
   }
-  if (!locality || (!locality.idVille && !locality.idCode)) return;
+  if (!locality || (!locality.idVille && !locality.idCode)) {
+    const nonResolue = {
+      status: "non_resolue",
+      ville: contact.city || null,
+      code: contact.postalCode || null,
+      ...(erreur ? { erreur } : {}),
+    };
+    if (job) {
+      await logJob(job.id, "contact_locality_unresolved", "running",
+        "Localite contact NON resolue en identifiants Hektor : la ville partira en texte seul et Hektor ne la gardera pas", {
+          hektor_contact_id: contactId ? String(contactId) : null,
+          ...nonResolue,
+        });
+    }
+    return nonResolue;
+  }
   if (locality.idVille) values.set("idVille", locality.idVille);
   if (locality.idCode) values.set("idCode", locality.idCode);
   if (locality.name) values.set("ville", locality.name);
@@ -10153,6 +10178,7 @@ async function applyContactLocalityIds(values, contact, job, contactId) {
       ville: locality.name, code: locality.code, idVille: locality.idVille, idCode: locality.idCode,
     });
   }
+  return { status: "resolue", ville: locality.name || null, code: locality.code || null, idVille: locality.idVille || null, idCode: locality.idCode || null };
 }
 
 function exactHektorWizardFields(payload) {
@@ -19486,6 +19512,11 @@ async function createHektorMandantContact(job, annonceId, payload) {
   if (address) values.set("adresse", address);
   if (city) values.set("ville", city);
   if (postalCode) values.set("code", postalCode);
+  // 8a C-1 (22/10/2026) : la localite d'un contact est TYPEE chez Hektor (idVille/idCode) ; le texte
+  // seul est ignore. Cette porte ne cherchait JAMAIS les identifiants : toute ville de mandant etait
+  // perdue chez Hektor (miroir : 603486, 604831, 604832, 605030 -- ville et code vides). Meme commande
+  // Hektor que createHektorContact, ou la recherche marche (21/10) : on fait pareil.
+  const localite = await applyContactLocalityIds(values, { city, postalCode }, job, null);
 
   await logJob(job.id, "hektor_mandant_create", "running", "Creation contact mandant dans Hektor", {
     hektor_annonce_id: String(annonceId),
@@ -19512,6 +19543,7 @@ async function createHektorMandantContact(job, annonceId, payload) {
     lastName,
     firstName,
     email,
+    localite,
   };
 }
 
@@ -19692,6 +19724,10 @@ async function updateHektorMandantContact(job, annonceId, contactId, payload) {
   if (address !== null) values.set("adresse", address);
   if (city !== null) values.set("ville", city);
   if (postalCode !== null) values.set("code", postalCode);
+  // 8a C-1 (22/10/2026) : meme raison que createHektorMandantContact -- sans les identifiants, Hektor
+  // ignore la ville et garde l'ANCIENNE. Meme commande que updateHektorContactIdentity, ou la recherche
+  // marche (12/10). Rien n'est cherche si l'ecran n'a envoye ni ville ni code postal.
+  const localite = await applyContactLocalityIds(values, { city, postalCode }, job, contactId);
 
   const body = new URLSearchParams();
   body.set("mode", "contacts-saveDataEditContact");
@@ -19738,6 +19774,7 @@ async function updateHektorMandantContact(job, annonceId, contactId, payload) {
       code: postalCode,
       ville: city,
     },
+    localite,
   };
 }
 
