@@ -515,3 +515,45 @@ sinon, le worker pose le numéro tout de suite et le rapprochement se fait par l
      plus d'événement « Compromis » dans la synthèse.
 - Reste, sans effet : la lecture console de 1001368 (`app_affaire_console`, une ligne — plus aucune affaire ne la
   lit) ; la recherche de qualification du contact d'essai, créée puis archivée chez Hektor (prévu).
+
+---
+
+## 6. POINT 1 — LE CONTRÔLE TROP PRESSÉ ET LE DOUBLON DE NUIT — audit du 22/10 *(Frédéric : « 1 »)* — lecture seule
+
+### A. Pourquoi le worker a cru à un échec
+
+`prouverTransactionCreee` (`console_job_worker.js:15617`) relit **3 fois, espacées de 4 s** (≈ 15 s en tout) la liste
+des compromis **par l'API** (`phase2/sync/transactions_annonce_from_api.py` : `/Api/Vente/ListCompromis/`, **page 0**,
+tri `dateStart` décroissant, puis filtre sur l'annonce). Le 22/10, l'API a répondu trois fois, **sans le compromis 50128**.
+- Ce n'est **pas** le tri : notre registre ne porte aucun compromis daté du 22/10 ou après (mesure) — 50128 aurait dû
+  être en tête de la page.
+- La fiche (le repli) n'a pas été lue : elle ne sert que si l'API est muette.
+- ➡ **Cause la plus probable : un délai de l'API de Hektor** au-delà de 15 s. *(Non mesurable a posteriori : 50128 est
+  supprimé. Il faudrait une création pour mesurer le délai.)* Le commentaire du 31/08 décrivait déjà « la fiche
+  retarde » ; l'API retarde aussi, parfois.
+- Le statut « Sous compromis » part **avant** la preuve : ce jour-là c'était juste, puisque le compromis existait.
+
+### B. Pourquoi la nuit aurait fait un doublon
+
+Sans numéro Hektor, la nuit rapproche la ligne de l'app **par l'acquéreur** (`affaire_ledger.py` l. ~701 : clé
+`(annonce, genre, hektor_acquereur_id)`). Or la RPC de création range dans `hektor_acquereur_id` **le numéro envoyé par
+l'écran**, c'est-à-dire **notre identité** (`buyer_contact_id`). Pour un contact venu de Hektor, identité = numéro
+Hektor (< 10 M) : aucun souci (ex. 605717, le 13/10). Pour un contact **né dans l'app** (≥ 20 M, `contact_nait_complet`
+allumé le 21/10), les deux diffèrent (20000008 / 605946) : **le rapprochement échoue**.
+- La même identité part aussi dans `app_chaine_pour(annonce, acquéreur, …)` au clic : la chaîne posée au clic peut donc
+  différer de celle de la nuit (qui la recalcule de toute façon).
+- **Ampleur aujourd'hui** : 0 ligne touchée (la seule, 1001368, est rattrapée et supprimée) ; 2 créations par l'app
+  depuis le 23/09. **Mais chaque nouveau contact créé dans l'app est désormais concerné.**
+- Le filet existe : la sentinelle `data.affaire_sans_numero_hektor` (seuil 0) **aurait sonné** — mais au moniteur de
+  05:48, **après** le run de 05:00 qui aurait déjà créé le doublon.
+
+### C. Les corrections proposées — À DÉCIDER
+
+| | quoi | où | ce que ça pourrait casser ailleurs |
+|---|---|---|---|
+| **1a** | **la preuve patiente** : si rien n'est vu en 15 s, ne pas conclure « rien produit » mais **reprendre plus tard** (ex. relectures à +30 s, +2 min, +10 min), et poser le numéro dès qu'il apparaît — en exigeant que la transaction vue porte **notre acquéreur et notre montant** (pas seulement « un numéro nouveau ») | worker | quelques lectures API de plus (une par relecture, loin du quota) ; un travail plus long bloque la file du worker — d'où une **reprise différée** plutôt qu'une attente sur place ; les 4 services à redémarrer |
+| **1b** | **le bon numéro à la bonne place** : la RPC range dans `hektor_acquereur_id` le **numéro Hektor** de l'acquéreur (`hektor_target_id`), notre identité restant dans `app_contact_id` (déjà fait) ; la chaîne du clic utilise le même numéro que la nuit | base (RPC de création, ancre + interrupteur) | la recherche de chaîne au clic change pour les contacts nés dans l'app — c'est le but ; aucun effet pour les contacts venus de Hektor (même numéro) |
+| **1c** | **filet de nuit** : le rapprochement par acquéreur essaie aussi le numéro traduit (identité → Hektor, table locale `app_contact`) | `affaire_ledger.py` | touche le run de nuit ; utile seulement pour des lignes déjà écrites avec l'identité — **0 aujourd'hui** |
+
+**Ma recommandation** : **1b d'abord** (petit, ferme le doublon à la racine), puis **1a** (le faux échec).
+**1c** n'est pas nécessaire tant qu'aucune ligne n'est touchée.
