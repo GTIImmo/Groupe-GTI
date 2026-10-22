@@ -1435,3 +1435,61 @@ lot 12, plan OUI, statut ALERTE), le cache console (extrait 12:02:24), **notre b
   celle de 11:32 → l'envoi suivant a été **retenu à raison** par la garde anti-écrasement (`held_conflict`,
   aucune écriture chez Hektor). Sortie par les gestes de l'écran : saisie soldée « abandon » (journal des
   résolutions), relecture demandée (`app_console_request_annonce_refresh`), puis renvoi.
+
+## 8a, fin — LA MODIFICATION DE CONTACT : audit du 22/10 *(Frédéric : « A »)* — lecture seule
+
+> ⚠ **Audit limité au contact, geste « modifier »** (création : pièces 1 et 1 bis, faites). Les autres objets
+> ne sont pas mesurés ici.
+
+**Les portes — trois, une seule fonction.** Les deux fenêtres « Modifier le contact » (`App.tsx:37954` et
+`:40832`) et « Modifier un mandant » (`app_update_mandant_contact_optimistic`, `api.ts:10061`, C.4 du 31/08)
+passent **toutes** par `app_edit_contact_optimistic` (empreinte **`79d39e0e`**, inchangée depuis le 21/10).
+L'ancienne `app_console_create_update_mandant_contact_job` n'est plus appelée par aucun écran (remplacée le
+31/08, `f89c30a`) — ses 10 travaux datent de mai à octobre (essais).
+
+**Le geste, suivi jusqu'au bout :**
+
+| moment | ce qui se passe | où |
+|---|---|---|
+| clic | **12 colonnes écrites chez nous tout de suite** (nom, prénom, civilité, e-mail, 2 téléphones, adresse, CP, ville, naissance, lieu, situation) + ligne d'attente `app_contact_pending` avec la photo `_date_maj` | `app_edit_contact_optimistic` |
+| clic | la fiche se recharge (`hektor:contact-updated`) → **affichage immédiat** | `App.tsx` |
+| +10 min *(attente voulue, `debounce 600`)* | le worker envoie **toutes** les clés non vides chez Hektor ; **garde anti-écrasement** si Hektor a bougé depuis (`held_conflict`) | `handleUpdateHektorContact` |
+| après l'envoi | le pending est **effacé**, puis relecture du contact (~40 s) | `:18380` |
+| relecture | la ligne est **remplacée sur place** par Hektor (upsert qui fusionne) ; naissance / lieu / situation **réinjectés** depuis notre ligne | `refresh_contact_inproc.py` → `push_contacts_to_supabase.py:853` |
+| la nuit | un contact en attente est **sauté en entier** ; les 3 champs propres à l'app sont gardés | `fetch_dirty_contact_ids` |
+
+⭐ **Une fausse alerte de ma part, retirée par la mesure** : `fetch_app_owned_contact_fields` avale une erreur
+(`except Exception: return {}`) — mais l'envoi ciblé est un **upsert qui fusionne**, une ligne sans ces 3 clés
+**ne touche pas** les colonnes existantes. Rien ne se perd.
+
+**La mesure — les 13 contacts modifiés, dernier envoi de chacun comparé à la fiche d'aujourd'hui**
+*(jointure par les DEUX numéros : depuis la bascule, la fiche porte le nôtre, Hektor est dans `hektor_target_id`)* :
+
+| | contacts |
+|---|---|
+| identiques à l'envoi | **8** |
+| réécrits ensuite par une modification suivante (FERANCK → FERANCKd, 12/10) | 1 |
+| **normalisés par Hektor** (FIRMINY → Firminy) | 1 |
+| n'existent plus (essais de mai, supprimés) | 3 |
+| ⛔ **une valeur PERDUE** | **1** |
+
+⛔ **LE CAS PERDU — 605030 (contact d'essai, mandant de 62774), 08/10** : envoyé `ville = Saint-Étienne` **avec
+un code postal VIDE**. Le worker a répondu **« updated »** ; chez Hektor la localité est **vide** (miroir :
+`localite.ville = ""`, `code = ""`, `date_maj 08/10 16:39:57`) ; la relecture a remplacé notre « Saint-Étienne »
+par ce vide. **Personne ne l'a vu.** ➡ Hektor ne garde pas une ville sans son code postal, **et il n'existe AUCUN
+contrôle au retour pour le contact** — exactement le trou que la pièce 3 a bouché pour l'annonce.
+
+**LES TROUS, rangés :**
+1. ⛔ **Aucun contrôle au retour** (N.2 pour le contact) : un champ que Hektor ne garde pas est **remplacé en
+   silence** par la relecture. Prouvé une fois (605030), sur un essai.
+2. ⚠ **Le commentaire n'est PAS écrit chez nous au clic** : `col_map` ne connaît pas `comments` →
+   `commentaires`. Il n'apparaît qu'au retour de Hektor, **~11 minutes après** (attente de 10 min + relecture).
+   Hektor parti, il ne s'afficherait **jamais** (il resterait dans la charge du travail). 17 978 contacts ont un
+   commentaire.
+3. ⚠ **Une ville sans code postal est acceptée par l'écran** et perdue chez Hektor (cas 605030). *Non mesuré :
+   laquelle des trois fenêtres l'a permis, et si les deux autres l'empêchent.*
+4. 📜 **Pas de colonne chez nous** pour société, forme juridique, SIRET, métier, site, les 7 champs du conjoint,
+   catégorie, source, 3 réglages CRM — ils ne vivent que chez Hektor. **0 sur 39 charges** les remplissent
+   (mesure du 21/10). Sujet de **coupure**, déjà noté.
+✅ **Ce qui tient** : les 12 colonnes au clic, la garde anti-écrasement, le contact protégé la nuit, les 3 champs
+propres à l'app jamais perdus.
