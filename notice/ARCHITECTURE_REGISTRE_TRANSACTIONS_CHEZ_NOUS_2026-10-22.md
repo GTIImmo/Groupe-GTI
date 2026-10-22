@@ -166,7 +166,7 @@ ne répond pas, décision du 29/08) et T3 / D7 (modifier sans numéro Hektor).
 | **« le silence ne gagne pas »** | une ligne au carnet empêche de marquer la transaction absente | déjà le cas aujourd'hui ; R1 en ajoute quelques-unes par jour |
 | **l'adoption par la doublure** | inchangée : elle se fait par le n° Hektor, que le worker pose tout de suite | rien |
 | **le push du registre** | il enverra notre valeur pour les champs en attente | c'est le but ; le conflit d'index (`retirer_les_lignes_en_conflit`) est inchangé |
-| **les notaires de la console** (l. 1253) | ils écrasent les notaires… sauf `notaires_origine = 'saisie'` | R1 pose `'saisie'` : la garde existe déjà |
+| **les notaires de la console** (l. 1253) | ils écrasent les notaires… sauf `notaires_origine = 'saisie'` | ⚠ **corrigé au §4 B** : `'saisie'` fige pour toujours, c'est le gel. Le notaire passe par l'attente (R2) |
 | **les 4 services worker** | R3 touche le worker | redémarrage par Frédéric, file vide (0 pending, 0 running) |
 
 ### L'ordre proposé *(à décider par Frédéric)*
@@ -182,3 +182,102 @@ R5  l'etat
 **Comment on reviendra en arrière** : chaque pièce a son interrupteur ou son patch inverse, comme 8a.
 **Comment on vérifiera** : une transaction d'essai sur 62774, ses 15 champs au registre **à la seconde**,
 puis le lendemain matin **intacts**, chaînes comprises, et le verdict « arrivée » sur chacun.
+
+---
+
+## 4. ⚠ RELECTURE AVANT R1 — les particularités des champs *(22/10, Frédéric : « reprends les notes et mon historique […] vérifie si l'absence du mandant n'est pas normale »)*
+
+Sources relues : liste des tâches **1.8**, **2.6**, **2.7**, **3.2d** (lots 1 à 4), **3.2e** ; `normalizeStatusTransactionPayload`
+(worker, l. 12900) ; `patch_registre_console_2026-09-16.sql` ; `registre_depuis_console.py` ; `LEDGER_SQL`
+(`affaire_ledger.py`). Mesures en base sur les 31 088 transactions.
+
+### ⭐ A. Les mandants — leur absence est NORMALE. Frédéric avait raison.
+
+- **Hektor les déduit du mandat, tout seul.** Mesure du 16/09 : le compromis 50084, créé par l'app **sans
+  envoyer un seul mandant**, est revenu avec **trois** (141053, 485955, 605030).
+- **La règle est écrite dans le worker** (3.2d lot 3, 16/09) : *« null et tableau vide ne disent pas la même chose »*.
+  `null` = l'app n'y a pas touché → on n'envoie rien, Hektor garde les siens. Un tableau = l'app **affirme** cette
+  liste. *« Poser systématiquement notre liste remplacerait la sienne — et une liste incomplète ferait pire que
+  mieux. »*
+- Mesure : **une offre n'a JAMAIS de mandants** (0 sur 11 190 — l'offre de Hektor n'en porte pas). Compromis et
+  ventes les ont à **99,8 %** (19 877 sur 19 898), tous venus de Hektor. Dans les 100 travaux de création, la liste
+  n'a **jamais** été affirmée.
+
+➡ **Correction de ma note** : « mandants : nulle part » était faux en tant que défaut. Les mandants **ne se
+saisissent pas, ils découlent du mandat**. R1 ne doit **rien inventer** : il écrit les mandants **seulement s'ils
+sont affirmés**. *(Piste, non décidée : les déduire au clic de NOTRE registre des mandats et des liens — mais ce
+serait une seconde copie de la règle de Hektor, et le registre des mandats porte 457 « corps empruntés »
+connus. À trancher.)*
+
+### ⭐ B. Les notaires — la colonne « classe A » est MORTE, et le « gel » est déjà là
+
+- **`notaire_id` (classe A, « Hektor l'ignore ») : 0 ligne remplie sur 31 088.** L'étiquette n'est vraie que pour
+  l'**offre**, qui n'a pas de notaire chez Hektor (0 sur 11 190). Pour le **compromis** et la **vente**, Hektor
+  **garde les deux notaires** (3.2d lot 2, 15/09 ; vente 23316 « 2 notaires, tout gardé »).
+- **Leur vraie place existe** : `notaire_acquereur_id/_nom` et `notaire_mandant_id/_nom`, remplies la nuit par
+  `registre_depuis_console.py` — **8 501 compromis** (console) et **8 612 ventes** (API).
+- Le notaire du **vendeur** est le cas **majoritaire** : 89 % des compromis, 70 % des ventes (mesure du 15/09).
+- ⚠⚠ **`notaires_origine = 'saisie'` FIGE la ligne pour toujours** (commentaire de la colonne : *« l'étape locale
+  ne la touche plus »*). Si R1 posait `'saisie'`, un notaire changé ensuite dans Hektor ne remonterait **jamais**.
+  **C'est le gel.** Mesure : 0 ligne `'saisie'` aujourd'hui.
+- Même règle « affirmé » : `notaires_affirmes` — en modification, un champ prérempli n'est pas une intention.
+
+➡ **Deux corrections de ma note** : (1) R1 écrit les notaires dans `notaire_acquereur_*` / `notaire_mandant_*`,
+**pas** dans `notaire_id` ; (2) ma parade « R1 pose `'saisie'`, la garde existe déjà » était **fausse** : il faut
+l'attente (R2), qui tombe une fois Hektor confirmé, pas `'saisie'`, qui ne tombe jamais.
+
+### C. Les acquéreurs multiples — ça marche, sauf sur l'offre (par construction)
+
+- **Prouvé le 16/09 et le 18/09** (vente 23317 : « 2 acquéreurs gardés »). Les essais d'avant ne prouvaient rien :
+  ils utilisaient toujours le même couple de contacts de test, dont un que Hektor refusait (2.6, 10/09).
+- Mesure : **2 451 transactions** ont plusieurs acquéreurs — **0 offre** (l'offre de Hektor n'en a qu'un).
+- La RPC les écrit déjà au clic (`acquereurs_json`, 2.6) ; la nuit les remplace par la liste de Hektor.
+- Règle « affirmé » : en reprise, la liste ne part que si l'écran l'a touchée (`acquereurs_affirmes`).
+- Décision écrite : *« changer qui achète n'est pas une correction, c'est une autre affaire »*.
+
+### ⭐ D. Les champs ne sont PAS les mêmes selon le genre — R1 doit écrire PAR GENRE
+
+| champ | offre | compromis | vente |
+|---|---|---|---|
+| montant / prix | ✅ (dans les **propositions**) | ✅ prix public | ✅ prix |
+| date | ✅ | ✅ | ✅ |
+| jours de validité | ✅ (propositions) | — | — |
+| date d'acte, séquestre | — | ✅ | **— (absents de l'assistant de vente, relevé du 08/09)** |
+| rétractation | — | ✅ (Hektor garde la **date de fin**) | — |
+| net vendeur | — (0 sur 11 182) | ✅ | ✅ |
+| honoraires vendeur | **— Hektor ne les a pas** → `honoraires_entree_app` (lot 1a) | ✅ | ✅ |
+| honoraires acquéreur | ✅ | ✅ | ✅ |
+| notaires | **— aucun** | ✅ les deux | ✅ les deux |
+| mandants | **— aucun** | déduits du mandat | déduits du mandat |
+| acquéreurs | **un seul** | un ou plusieurs | un ou plusieurs |
+
+Le `LEDGER_SQL` de la nuit encode exactement ce tableau (des `NULL AS …` par genre). Un champ vide dans une case
+« — » n'est **pas** un défaut.
+
+### ⭐ E. Une correction que je n'avais pas vue : la modification remplit le carnet avec du PRÉREMPLI
+
+`app_modifier_affaire_optimistic` met au carnet **tout champ non vide de la charge**, qu'il ait été tapé ou
+seulement prérempli. La leçon du 08/09 est écrite dans le worker : *« `sale_price` portait LE PRIX DE L'ANNONCE
+(180 000) que personne n'avait tapé »*. Exemple possible : la modification de 30712 (13/10) a mis 6 champs au
+carnet, dont `prix_publique = 180000`. ⚠ **Non vérifié** : je ne sais pas si l'écran n'envoie que les champs
+touchés.
+➡ **Avant R2**, le carnet ne doit recevoir que ce que l'utilisateur a **touché**. Sinon R2 protégerait du
+prérempli — un gel fabriqué par nous.
+
+### F. Le numéro de mandat est RECALCULÉ la nuit
+
+`numero_mandat` ne vient pas tel quel de Hektor : la nuit le déduit par une cascade (2.7, colonne
+`mandat_origine`). R1 écrit celui choisi dans la modale ; si la cascade en trouve un autre, c'est un **conflit
+à montrer**, pas à écraser.
+
+### Ce que ça change au plan R1-R5
+
+```
+R1   ecrire PAR GENRE (tableau D) · notaires dans notaire_acquereur_* / notaire_mandant_*,
+     PAS notaire_id, et JAMAIS notaires_origine = 'saisie' · mandants SEULEMENT s'ils sont
+     affirmes · en modification, seulement les champs TOUCHES (E)
+R2   ne proteger que ce qui est en attente ET a ete touche ; le notaire passe par l'attente
+R3   le verdict par genre (les champs « — » ne se jugent pas)
+NEUF  decider du sort de `notaire_id` (colonne de classe A morte : 0 / 31 088)
+NEUF  decider si les mandants se deduisent chez nous (piste A) ou restent a Hektor
+```
