@@ -656,3 +656,9 @@ identité d'avant 1b, deux lignes orphelines), l'offre, l'erreur Supabase sans �
 plat, lu dans le brut des offres de la nuit) ; celle des compromis (liste `acquereurs`) est déjà lue par le worker
 depuis le 16/09.
 ⬜ **Pour l'activer** : redémarrer **les 4 services**, file vide (0 pending, 0 running) — Frédéric ; puis pousser.
+
+✅ **1a ACTIF (22/10, 23:35)** — mesuré, pas supposé : `origin/main` = `678b731` (le commit de 1a), fichier du worker
+écrit à 23:33:10, **les 4 services redémarrés à 23:35:49-50** (heure des processus `node.exe`, enfants de chaque
+service). File vide, 0 erreur dans l'heure, **0 transaction de l'app sans numéro**.
+⬜ **Pas encore vu tourner** : aucune relecture (`refresh_console_data`) n'est passée depuis le redémarrage. La
+première portera `numeros_manquants: {"status": "rien_a_faire"}` dans son résultat.
