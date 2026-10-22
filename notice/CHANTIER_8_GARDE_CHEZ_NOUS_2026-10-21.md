@@ -1717,3 +1717,38 @@ le travail planté à 11:32 que j'ai soldé à la main — le bandeau est juste 
 faux** (`attempt_count` = 1) : le texte est générique.
 
 **Contacts d'essai à supprimer (avec accord)** : 20000007 / 605925 et **20000008 / 605946**.
+
+## C et D — audit du 22/10 *(Frédéric : « vas-y pour C et D »)* — lecture seule, RIEN n'est codé
+
+### C — la ville et le code postal à l'écran
+
+**Le comportement de Hektor, prouvé deux fois aujourd'hui** : la ville d'un contact **suit son code postal**. En
+**modification**, une ville contraire au CP est **remplacée** par celle du CP (Firminy + 42000 → Saint-Étienne) ; à la
+**création**, Hektor **jette ville ET code postal** (20000008). Une ville **sans** CP est jetée (605030, 08/10).
+
+**Où l'on saisit** : champs **libres**, sans aucun contrôle, dans **4 composants** (`App.tsx`) :
+`HektorMandantContactForm` (créer un mandant, l. 3456) · `HektorMandantContactEditForm` (modifier un mandant, l. 3774) ·
+`HektorContactIdentityForm` (créer / modifier un contact, l. 38195 et 38596) · `ContactEditModalV2` (l. 40932).
+
+**Ce que l'app sait déjà faire** : appeler `geo.api.gouv.fr/communes` (`api.ts:4689`, par coordonnées) et la
+Géoplateforme (`geocodeAddress`, `api.ts:4477`).
+
+**L'ampleur, en base (62 287 contacts)** : 14 ont une ville **sans** CP · 13 un CP mal formé · ⚠ **586 ont une adresse
+mais NI ville NI CP** — la trace exacte du comportement de Hektor, mais *la cause n'est pas prouvée pour eux* (ils
+peuvent venir de Hektor lui-même).
+⚠ **Piège mesuré** : la table `ref_commune_geo` (3 628 couples CP / commune) est **DATÉE** — sur 32 159 contacts au CP
+connu, 342 « incohérents », dont les exemples sont des **communes fusionnées** que Hektor a GARDÉES (Oullins, Nonette,
+Le Bois-d'Oingt, Chatelguyon). ➡ **Elle ne peut pas servir à BLOQUER** une saisie : elle refuserait des villes justes.
+
+### D — les champs sans colonne chez nous
+
+**Ce que l'app saisit et ne range nulle part** (mesuré sur les **71** charges de création / modification depuis mai) :
+société, forme juridique, SIRET, métier, site, **les 7 champs du conjoint**, catégorie, 3 réglages CRM → **0 fois
+rempli**. Remplis : type de contact 36, structure 36, e-mail RGPD 32, source 2.
+
+**Ce que HEKTOR détient et que notre base n'a pas** (miroir `data/hektor.sqlite`, **356 596** contacts, champs non vides) :
+`coordonnees.bureau` **4 209** · `coordonnees.fax` **1 189** · `siret` **98** · `url` **3** · `localite.latitude/longitude`
+**154 018** · ⭐ **`dateAutoArchiv` 355 985** — la date d'auto-archivage RGPD (le 16/10 on la croyait jamais reçue : vrai
+pour les **recherches**, faux pour les **contacts**). ➡ **Rien n'est perdu à la coupure** (le miroir est à nous, et il
+ne se remplace pas — règle 5), mais ni la base ni l'écran ne les portent. Le conjoint est une **2ᵉ fiche** liée par
+`refCouple` (**264 372** contacts en ont un) → c'est **8g**.
