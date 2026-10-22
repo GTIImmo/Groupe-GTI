@@ -690,7 +690,8 @@ sur ce point.
 - Les essais de septembre passaient parce que… *non expliqué* : l'ordre de cette route a pu changer depuis, ou 24933
   y figurait encore. **Non mesuré.**
 - La **fiche**, elle, porte le bon marqueur : `clore_compromis_vente(50129)`.
-- Même route utilisée par la **preuve d'une modification** : elle a le même défaut pour les annonces anciennes.
+- ~~Même route utilisée par la **preuve d'une modification**~~ — ⛔ **FAUX, corrigé le 23/10** : depuis `d79f88f` (18/09) la
+  modification d'un compromis se relit **par son numéro** (`CompromisById`), elle n'est **pas** touchée. Voir plus bas.
 
 **Ce que ça veut dire pour 1a** : la seconde preuve est juste et prudente, mais elle lit **la même liste aveugle** —
 elle ne pourra rien poser pour une annonce ancienne. **Correctif à proposer (non codé)** : quand la liste ne voit rien,
@@ -713,8 +714,50 @@ matin ; on le supprimera ensuite.
   ancienne entre les deux.
 - **Ce qui est touché** : seulement la **preuve immédiate** du worker pour les **compromis** (création, et preuve d'une
   modification), sur les annonces **anciennes**. Ventes : leur liste est filtrée par une fenêtre de dates, non touchée a
-  priori. Offres : **non mesuré**.
+  priori. Offres : **mesuré le 23/10, pas touchées** (voir plus bas). ⚠ *La « preuve d'une modification » est hors de cause : elle
+  lit par numéro depuis le 18/09.*
 - **Ce qui n'est PAS touché** : la **nuit**. Elle lit la liste **entière** (`DailyRawMaxPages = 0`) : 11 compromis
   d'octobre sur des annonces anciennes (< 60 000) sont bien arrivés au registre.
 - **Conséquence réelle** : jusqu'à la nuit, une transaction créée dans l'app sur une annonce ancienne reste sans numéro
   (« Modifier » refusé, « Supprimer » impossible). Grâce à **1b**, la nuit la rapproche sans doublon.
+
+### Comment faisait le worker avant, et la solution déjà trouvée *(Frédéric, 23/10 : « vérifie les tests, je crois que nous avions trouvé une solution »)* — mesuré
+
+**Les trois époques de la preuve d'un compromis :**
+
+| période | le worker prouvait par | résultat mesuré (journal `hektor_transaction_preuve`) |
+|---|---|---|
+| jusqu'au 31/08 | la **fiche** de l'annonce (marqueur `clore_compromis_vente(ID)`) | semaine du 24/08 : **2 réussies, 4 ratées** — la fiche ne montre qu'un compromis, pas toujours le dernier (`8ef38c1`) |
+| 31/08 → 03/09 | la **liste** API, page 0 | semaine du 31/08 : **9 réussies, 5 ratées** — il manquait `withCompromisStatus=false` (corrigé le 03/09) |
+| 03/09 → 18/09 | la liste API **réglée** + relecture par numéro pour une **modification** (`d79f88f`, `daa4b39`) | semaines du 07 et du 14/09 : **51 preuves réussies** *(créations et modifications)*, **0 « aucun nouveau »** ⭐ |
+| 22/10 | la même liste, **code inchangé** | **0 réussie, 2 ratées** (50128 et 50129, tous deux bien créés) |
+
+- ⭐ **Oui, la solution avait été trouvée, et elle marchait** : 51 preuves réussies et aucune création manquée en septembre (sur 24933, une annonce ancienne).
+- ⭐ **Le 18/09, la solution « par numéro » a été posée pour la MODIFICATION** (commit `d79f88f` : « ListCompromis ne rend que
+  les 20 compromis les plus récents de l'agence (**tri par date**) »). Le message le dit : **le 18/09 la liste était rangée par
+  date**. Pour la **création**, la liste a été gardée exprès : on ne connaît pas encore le numéro, donc on ne peut pas le lire
+  par numéro, et « une transaction créée à l'instant est forcément parmi les 20 plus récentes ».
+- ⛔ **C'est cette dernière phrase que Hektor a cassée** entre le 18/09 et le 22/10 : `sort=dateStart` est désormais
+  **ignoré**, la page 0 est rangée par **numéro d'annonce**. Aucune création de compromis par l'app entre ces deux dates
+  (journal vide du 19/09 au 21/10) : la date exacte du changement ne se mesure pas.
+
+**Les tris mesurés le 23/10 (lecture seule, avec LES PARAMÈTRES DU WORKER, `withCompromisStatus=false` compris) :**
+
+| essai sur `ListCompromis` page 0 | 50129 (créé la veille) |
+|---|---|
+| `sort=dateStart way=desc` *(le code actuel)* | **absent** — annonces 63037, 62967… |
+| idem + `agence=12` | absent |
+| idem + `version` | absent |
+| **`sort=id way=desc`** | ⭐ **en TÊTE** — 50129, 50127, 50126, 50125, 50124 |
+
+`ListOffres` page 1 : **déjà rangée par numéro décroissant** (33108, 33107, 33106…) → les offres ne sont pas touchées.
+
+**Qui lit cette liste de compromis (le correctif les couvre tous) :** la preuve de création · la lecture « avant » qui sert à
+reconnaître ce qui est apparu · le filet anti-doublon d'une modification (`apres_modification_liste`) · la seconde preuve 1a.
+**Ne la lit PAS** : la preuve d'une modification (par numéro) · la suppression (par numéro) · **la nuit** — `sync_raw.py`
+porte aussi `sort=dateStart`, mais le run passe `--compromis-recent-limit 999999` (`run_full_pipeline.ps1:43`) : il lit
+**toutes** les pages, l'ordre ne change rien.
+
+**Le correctif proposé — NON CODÉ, en attente du « vas-y » :** dans `phase2/sync/transactions_annonce_from_api.py`, branche
+compromis, `"sort": "dateStart"` → `"sort": "id"` (on garde `way=desc` et `withCompromisStatus=false`), et corriger les
+commentaires qui disent « tri dateStart desc ».
