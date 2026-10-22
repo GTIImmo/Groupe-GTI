@@ -1691,3 +1691,29 @@ de table et les droits des fonctions). Rejouée **sur le fichier exact** : 15/15
 BEFORE) ; il s'exécute à **chaque** écriture de fiche (~13 000 la nuit) mais sort à la 1ʳᵉ ligne si l'interrupteur
 est éteint, à la 3ᵉ si le `source_hash` n'a pas bougé, puis une recherche dans un index **partiel** ; la nuit le
 dira. Volume des modifications : 22 travaux en 60 jours.
+
+### 1 et 2 — POSÉS, PROUVÉS EN RÉEL PAR L'ÉCRAN *(22/10, Frédéric : « pose 1, essai réel ; puis pose 2, allume, sentinelle, essai réel »)*
+
+**1 (8a-B2, création de contact)** — posé (3 contrôles OK, empreinte `7a1b2292`, déclencheur sur 4 types), actif aussitôt
+(B déjà allumé). Essai par l'écran (Contacts → Nouveau contact, compte formation, type Propriétaire, personne seule,
+**case RGPD décochée** pour ne rien envoyer, « Terminer » sans annonce) : **ESSAI 8A B2 / Creation**, Firminy + 42000,
+une note.
+- 14:44:12 clic → **20000008** chez nous à l'instant ; 14:44:26 Hektor « created » (**605946**) → saisie gardée ;
+- 14:44:39 relecture : la fiche revient **SANS ville NI code postal** — ⭐⭐ **à la création, Hektor jette TOUTE la
+  localité** quand la ville contredit le code postal (en modification il remplaçait la ville par celle du CP) ;
+- 14:44:40 verdict : 6 **identiques** (nom, prénom, civilité, e-mail, portable, **la note**), **ville et code postal
+  « absent »** → 2 lignes dans la vue. ✅ Avant 1, l'adresse disparaissait sans un mot.
+
+**2 (8a-C, modification d'annonce)** — posé (6 contrôles OK), **allumé 14:47:11**, sentinelle **`data.annonce_modif_ecart`**
+ajoutée (warning, lue 0 par le vrai client du moniteur). Essai par l'écran sur 63331 (⚠ statut **« Estimation »** :
+on la trouve par le menu **Estimations**, pas Annonces) → Le Bien → Localisation & secteur → **Transport** « Gare SNCF
+a 400 m » → « 500 m » → Enregistrer :
+- 14:50:01 chez nous ; 15:01:02 envoi « updated » → saisie gardée (`TRANSPORT`) ;
+- 15:01:52 relecture **avec l'extraction console ciblée** (bloc secteur présent) → **TRANSPORT identique**, 0 écart. ✅
+- Le cas « remplace » n'a pas été provoqué en réel (la répétition le prouve sur la vraie fiche, essais 6-7).
+
+**Vu en passant, noté** : la fiche de 63331 affiche un bandeau « Un geste non transmis… **après 5 tentatives** » pour
+le travail planté à 11:32 que j'ai soldé à la main — le bandeau est juste (chantier ④), mais **« 5 tentatives » est
+faux** (`attempt_count` = 1) : le texte est générique.
+
+**Contacts d'essai à supprimer (avec accord)** : 20000007 / 605925 et **20000008 / 605946**.
