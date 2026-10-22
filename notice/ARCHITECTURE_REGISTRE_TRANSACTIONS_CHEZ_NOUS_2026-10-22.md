@@ -791,3 +791,45 @@ récente. Seules les annonces aux plus grands numéros (≥ ~63 000) restaient v
   *(50048 sur le bac à sable 62774 est un essai du 29/08, déjà ANNULÉ — pas de moi, laissé tel quel.)*
 - ⏰ **La nuit n'a pas encore tourné** au moment de l'inventaire (00:16 ; run à 05:00) : la ligne 1001375 n'a donc encore
   été ni rapprochée ni doublée (`last_seen_at` = 22/10 21:47, aucune ligne 50129).
+
+## 7. POINT E — LA MODIFICATION MET DU PRÉREMPLI AU CARNET — audit du 23/10 *(Frédéric : « E »)* — lecture seule
+
+### Ce que fait le code aujourd'hui (lu, pas supposé)
+1. **L'écran** ouvre la modale de modification **déjà remplie** : carnet d'abord, registre ensuite (`App.tsx` ~16916),
+   plus des valeurs d'office (prix de l'annonce dans « prix », 10 jours de rétractation…).
+2. **La charge** est la même que pour une création (`api.ts:10646`) : **tous** les champs non vides partent.
+3. **La RPC** `app_modifier_affaire_optimistic` (empreinte `a5297281`) met au carnet **tout champ non vide** de la charge
+   (origine `modification_app`), et réécrit `montant` / `date` au registre.
+4. **Le carnet PRIME** à l'écran et au préremplissage suivant. Le run ne le touche jamais.
+5. **Le worker** juge au retour (`marquerLeCarnetRestant`, `retirerDuCarnetCeQuiEstArrive`) : ce qui est arrivé chez Hektor
+   **sort** du carnet. ⚠ Seulement pour 8 champs (`CARNET_VERS_REGISTRE`) et **seulement si le travail réussit**.
+
+### La mesure (carnet entier, 23/10)
+- Le carnet est presque vide : **1 seule modification** y a laissé des lignes — **l'offre 33094 (KURCEBA, V720061672, 61672,
+  négociateur arnaud.valla)**, modifiée par Frédéric le **13/10 à 09:37**. **6 lignes**, dont **au moins 4 sont du
+  prérempli** : `date` (même jour), `jours_validite` = 10 (= la photo), `numero_mandat` = 18426 (= la photo),
+  `jours_retractation` = 10 *(une offre n'a pas de rétractation)*, `prix_publique` = 180 000 *(le prix de l'annonce — le
+  piège du 08/09)*. Seul `montant` = **160 000** ressemble à une saisie (photo : **16 000**).
+- ⚠⚠ **ET LE TRAVAIL A ÉCHOUÉ** : 5 tentatives, `Reponse Hektor JSON invalide init Sous offre` (offre **acceptée** : Hektor
+  refuse, voir mémoire « offre acceptée, Hektor refuse en silence »). Aucun verdict n'a été posé (`etat` vide).
+  ➡ **Depuis 10 jours, l'app affiche 160 000 pour cette offre ; Hektor dit 16 000.** Lequel est vrai : **à Frédéric**.
+
+### Pourquoi on ne peut PAS simplement « ne plus envoyer » les champs non touchés
+Le worker de l'**offre** construit un formulaire **neuf** à partir de la charge (`montantOffre = tx.amount`…, l. ~14081 :
+*« omettre serait un pari, pas une protection »*). Une charge allégée ferait partir une offre **sans montant**.
+➡ **Ce qui part chez Hektor ne doit pas changer.** Seul ce qui entre **au carnet** doit changer.
+
+### Le notaire acquéreur qui s'affiche en numéro (défaut R1)
+La grille lit le carnet d'abord : `notaire_id` y vaut le **numéro** (10064499), posé à la création. Le nom est au registre
+(`notaire_acquereur_nom`) mais passe après. Écran seulement.
+
+### Proposition — NON CODÉE, en attente du « vas-y »
+- **E1 (écran)** : à la modification, l'écran retient ce qu'il a **affiché à l'ouverture** et ajoute à la charge une liste
+  `champs_touches` (les seuls champs dont la valeur a changé). Le reste de la charge **ne bouge pas**. Le worker ignore cette
+  clé (0 occurrence dans `console_job_worker.js`).
+- **E2 (base)** : `app_modifier_affaire_optimistic`, derrière un interrupteur `affaire_modif_champs_touches` : si la liste est
+  là, **seuls ces champs** vont au carnet et au registre (`montant` / `date`). Liste absente (vieil écran en cache) ou
+  interrupteur éteint → comportement d'aujourd'hui. Patch avec empreinte, inverse, répétition.
+- **Notaire (écran)** : quand le carnet porte le même numéro que le registre, afficher le **nom** du registre.
+- **Hors E, à décider** : (a) l'offre 33094 — 160 000 ou 16 000 ? ses 6 lignes de carnet ; (b) un travail **échoué** laisse
+  ses valeurs au carnet sans verdict → c'est R3/R4.
