@@ -4681,6 +4681,31 @@ export type LoyerData = {
   zone_abc?: string | null        // Abis / A / B1 / B2 / C
   millesime?: number | null
 }
+// 8a C-3 (22/10/2026) -- LES COMMUNES D'UN CODE POSTAL, pour la saisie d'un contact. Chez Hektor
+// la localite d'un contact est TYPEE : si la ville ne correspond pas au code postal, le worker ne
+// trouve pas la commune et Hektor ne garde PAS la ville (en modification il garde l'ancienne, a
+// la creation il ne garde rien -- mesure du 22/10). Proposer les communes du code postal aide la
+// saisie a etre juste. Meme service que loadCommuneLoyer (geo.api.gouv.fr, CORS ouvert).
+// Best-effort : une panne rend une liste vide, et l'ecran ne bloque jamais sur elle.
+const communesParCodePostal = new Map<string, Promise<string[]>>()
+export function fetchCommunesForPostalCode(postalCode: string): Promise<string[]> {
+  const cp = String(postalCode ?? '').trim()
+  if (!/^\d{5}$/.test(cp)) return Promise.resolve([])
+  const enCache = communesParCodePostal.get(cp)
+  if (enCache) return enCache
+  const demande = fetch(`https://geo.api.gouv.fr/communes?codePostal=${cp}&fields=nom&format=json`)
+    .then((r) => (r.ok ? r.json() : []))
+    .then((rows: unknown) => (Array.isArray(rows) ? rows : [])
+      .map((row) => String((row as { nom?: unknown })?.nom ?? '').trim())
+      .filter(Boolean))
+    .catch(() => {
+      communesParCodePostal.delete(cp)   // une panne ne se garde pas : on reessaiera
+      return [] as string[]
+    })
+  communesParCodePostal.set(cp, demande)
+  return demande
+}
+
 export async function loadCommuneLoyer(input: { lat: number; lon: number }): Promise<LoyerData> {
   const { lat, lon } = input
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || !lat || !lon) return { ok: false }

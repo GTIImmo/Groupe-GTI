@@ -131,6 +131,7 @@ import {
   createUpdateHektorAnnonceFieldsJob,
   editAnnonceOptimistic,
   geocodeAddress,
+  fetchCommunesForPostalCode,
   createHektorMandatAutoNumberJob,
   createDeleteHektorAnnonceJob,
   createArchiveHektorAnnonceJob,
@@ -3224,6 +3225,9 @@ function HektorMandantContactForm(props: {
   const [address, setAddress] = useState('')
   const [postalCode, setPostalCode] = useState('')
   const [city, setCity] = useState('')
+  // 8a C-3 : les communes du code postal, et l'avertissement si la ville n'en est pas une
+  const communesCp = useCommunesDuCodePostal(postalCode)
+  const alerteLocalite = avertissementLocaliteContact(postalCode, city, communesCp)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -3457,8 +3461,10 @@ function HektorMandantContactForm(props: {
         </label>
         <label>
           <span>Ville</span>
-          <input value={city} onChange={(event) => setCity(event.target.value)} />
+          <input value={city} list="communes-mandant-creer" onChange={(event) => setCity(event.target.value)} />
         </label>
+        <CommunesDuCodePostal id="communes-mandant-creer" communes={communesCp} />
+        {alerteLocalite ? <small className="field-hint" role="status" style={{ color: '#b45309' }}>{alerteLocalite}</small> : null}
       </div>
       <div className="hektor-inline-actions">
         <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Créer et associer'}</button>
@@ -3671,6 +3677,9 @@ function HektorMandantContactEditForm(props: {
   const [address, setAddress] = useState(props.contact.address ?? '')
   const [postalCode, setPostalCode] = useState(props.contact.postalCode ?? '')
   const [city, setCity] = useState(props.contact.city ?? '')
+  // 8a C-3 : les communes du code postal, et l'avertissement si la ville n'en est pas une
+  const communesCp = useCommunesDuCodePostal(postalCode)
+  const alerteLocalite = avertissementLocaliteContact(postalCode, city, communesCp)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -3775,8 +3784,10 @@ function HektorMandantContactEditForm(props: {
             </label>
             <label>
               <span>Ville</span>
-              <input value={city} onChange={(event) => setCity(event.target.value)} />
+              <input value={city} list="communes-mandant-modifier" onChange={(event) => setCity(event.target.value)} />
             </label>
+            <CommunesDuCodePostal id="communes-mandant-modifier" communes={communesCp} />
+            {alerteLocalite ? <small className="field-hint" role="status" style={{ color: '#b45309' }}>{alerteLocalite}</small> : null}
           </div>
           <div className="hektor-inline-actions">
             <button type="submit" disabled={pending}>{pending ? 'Envoi...' : 'Envoyer la modification'}</button>
@@ -7002,6 +7013,42 @@ function normalizeContactText(value: unknown) {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()
+}
+
+// 8a C-3 (22/10/2026) -- LA VILLE SUIT LE CODE POSTAL. Chez Hektor la localite d'un contact est
+// typee : une ville qui ne correspond pas au code postal, ou une ville sans code postal, n'est PAS
+// gardee (prouve le 22/10 sur 20000007, 20000008 et le mandant 605030). On propose donc les communes
+// du code postal (geo.api.gouv.fr) et on PREVIENT -- sans jamais bloquer : une commune ancienne
+// (fusionnee) peut rester juste chez Hektor, et une panne du service ne doit rien empecher.
+function useCommunesDuCodePostal(postalCode: string) {
+  const [communes, setCommunes] = useState<string[]>([])
+  useEffect(() => {
+    let vivant = true
+    fetchCommunesForPostalCode(postalCode).then((liste) => { if (vivant) setCommunes(liste) })
+    return () => { vivant = false }
+  }, [postalCode])
+  return communes
+}
+
+function avertissementLocaliteContact(postalCode: string, city: string, communes: string[]): string | null {
+  const cp = String(postalCode ?? '').trim()
+  const ville = String(city ?? '').trim()
+  if (!cp && !ville) return null
+  if (ville && !cp) return 'Sans code postal, Hektor ne gardera pas la ville.'
+  if (cp && !/^\d{5}$/.test(cp)) return 'Le code postal doit compter 5 chiffres.'
+  if (ville && communes.length && !communes.some((commune) => normalizeContactText(commune) === normalizeContactText(ville))) {
+    const liste = communes.slice(0, 5).join(', ') + (communes.length > 5 ? '\u2026' : '')
+    return `\u00ab ${ville} \u00bb n'est pas une commune du ${cp} : Hektor risque de ne pas garder la ville (communes du ${cp} : ${liste}).`
+  }
+  return null
+}
+
+function CommunesDuCodePostal(props: { id: string; communes: string[] }) {
+  return (
+    <datalist id={props.id}>
+      {props.communes.map((commune) => <option key={commune} value={commune} />)}
+    </datalist>
+  )
 }
 
 function normalizeContactPhone(value: string) {
@@ -37644,6 +37691,9 @@ function HektorContactIdentityForm(props: {
   const [address, setAddress] = useState(initial.address ?? '')
   const [postalCode, setPostalCode] = useState(initial.postalCode ?? '')
   const [city, setCity] = useState(initial.city ?? '')
+  // 8a C-3 : les communes du code postal, et l'avertissement si la ville n'en est pas une
+  const communesCp = useCommunesDuCodePostal(postalCode)
+  const alerteLocalite = avertissementLocaliteContact(postalCode, city, communesCp)
   const [birthDate, setBirthDate] = useState(initial.birthDate ?? '')
   const [birthPlace, setBirthPlace] = useState(initial.birthPlace ?? '')
   const [maritalStatus, setMaritalStatus] = useState(initial.maritalStatus ?? '')
@@ -38196,7 +38246,9 @@ function HektorContactIdentityForm(props: {
                     </div>
                     <div className="fgrid3">
                       <div className="field col2"><label>Adresse</label><input className="inp" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="N° et libellé de voie" /></div>
-                      <div className="field"><label>Ville</label><input className="inp" value={city} onChange={(event) => setCity(event.target.value)} placeholder="Commune" /></div>
+                      <div className="field"><label>Ville</label><input className="inp" value={city} list="communes-contact-identite" onChange={(event) => setCity(event.target.value)} placeholder="Commune" /></div>
+                      <CommunesDuCodePostal id="communes-contact-identite" communes={communesCp} />
+                      {alerteLocalite ? <span className="field-note" role="status" style={{ gridColumn: '1 / -1', color: '#b45309' }}>{alerteLocalite}</span> : null}
                     </div>
                     {isCouplePerson ? (
                       <>
@@ -38597,8 +38649,10 @@ function HektorContactIdentityForm(props: {
         </label>
         <label>
           <span>Ville</span>
-          <input value={city} onChange={(event) => setCity(event.target.value)} />
+          <input value={city} list="communes-contact-identite-b" onChange={(event) => setCity(event.target.value)} />
         </label>
+        <CommunesDuCodePostal id="communes-contact-identite-b" communes={communesCp} />
+        {alerteLocalite ? <small className="field-hint" role="status" style={{ color: '#b45309' }}>{alerteLocalite}</small> : null}
         {isCouplePerson ? (
           <>
             <label className="is-wide">
@@ -40690,6 +40744,9 @@ function ContactEditModalV2(props: {
   const [address, setAddress] = useState(initial.address ?? '')
   const [postalCode, setPostalCode] = useState(initial.postalCode ?? '')
   const [city, setCity] = useState(initial.city ?? '')
+  // 8a C-3 : les communes du code postal, et l'avertissement si la ville n'en est pas une
+  const communesCp = useCommunesDuCodePostal(postalCode)
+  const alerteLocalite = avertissementLocaliteContact(postalCode, city, communesCp)
   const [birthDate, setBirthDate] = useState(initial.birthDate ?? '')
   const [birthPlace, setBirthPlace] = useState(initial.birthPlace ?? '')
   const [maritalStatus, setMaritalStatus] = useState(initial.maritalStatus ?? '')
@@ -40930,7 +40987,9 @@ function ContactEditModalV2(props: {
               </div>
               <div className="fgrid3">
                 <div className="field"><label>Code postal</label><input className="inp" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} inputMode="numeric" /></div>
-                <div className="field col2"><label>Ville</label><input className="inp" value={city} onChange={(event) => setCity(event.target.value)} /></div>
+                <div className="field col2"><label>Ville</label><input className="inp" value={city} list="communes-contact-edition" onChange={(event) => setCity(event.target.value)} /></div>
+                <CommunesDuCodePostal id="communes-contact-edition" communes={communesCp} />
+                {alerteLocalite ? <span className="field-note" role="status" style={{ gridColumn: '1 / -1', color: '#b45309' }}>{alerteLocalite}</span> : null}
                 <div className="field">
                   <label>Date de naissance</label>
                   <input className="inp" value={birthDate} onChange={(event) => setBirthDate(event.target.value)} placeholder="jj-mm-aaaa" inputMode="numeric" />

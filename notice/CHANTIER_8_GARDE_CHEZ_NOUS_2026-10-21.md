@@ -1787,3 +1787,33 @@ gardent leur localité (605925).
 ➡ **C change de nature** : ce n'est pas d'abord un contrôle de l'écran, c'est **le worker** — (1) les portes du mandant
 doivent résoudre les identifiants ; (2) un échec de résolution ne doit plus être **silencieux**. L'écran (proposer les
 communes du CP) aide la résolution à réussir, il ne la remplace pas.
+
+### C-1, C-2, C-3 — ÉCRITS ET ÉPROUVÉS HORS LIGNE, **PAS ACTIFS** *(22/10, Frédéric : « C-1, C-2 puis C-3, un par un, essai hors ligne, sans redémarrer ni pousser »)*
+
+**C-1 (worker)** — `createHektorMandantContact` et `updateHektorMandantContact` appellent désormais
+`applyContactLocalityIds({ city, postalCode })`, comme les portes du contact (mêmes commandes Hektor :
+`insertManuelContactFromOtherObject`, `saveDataEditContact`). Rien n'est cherché si l'écran n'envoie ni ville ni CP.
+**C-2 (worker)** — `applyContactLocalityIds` rend un compte rendu (`sans_objet` · `resolue` · `non_resolue`) et
+**écrit l'échec au journal** (étape `contact_locality_unresolved`), erreur comprise ; les portes du mandant le
+rangent dans leur résultat (`localite`). Les appelants du contact l'ignorent → comportement inchangé.
+**Essai** `Console/test_localite_mandant.js` — **8/8** sur le code réel avec un faux Hektor qui enregistre ce qui
+est posté : identifiants partis (création, modification), rien cherché sans ville ni CP, commune introuvable →
+travail continue + échec écrit et rendu, recherche en panne → mandant créé quand même + erreur rendue, **témoin
+inverse** (la version d'avant n'envoie PAS les identifiants), porte du contact inchangée. `test_garde_copropriete.js`
+toujours vert. ⛔ **Pas actif** : redémarrage des 4 services (Frédéric).
+
+**C-3 (écran)** — `fetchCommunesForPostalCode` (`api.ts`, `geo.api.gouv.fr/communes?codePostal=`, cache, une panne
+rend `[]` et n'est pas gardée) ; dans `App.tsx` le crochet `useCommunesDuCodePostal`, l'avertissement
+`avertissementLocaliteContact` et la liste `CommunesDuCodePostal` (un `<datalist>` sur le champ Ville), branchés dans
+les **4 composants / 5 champs** (`HektorMandantContactForm`, `HektorMandantContactEditForm`,
+`HektorContactIdentityForm` ×2 affichages, `ContactEditModalV2`). **Jamais bloquant** : une commune ancienne
+(fusionnée) peut rester juste chez Hektor, et une panne du service ne doit rien empêcher.
+**Essai** `apps/hektor-v1/scripts/test_communes_code_postal.mjs` — **13/13**, fonctions **découpées dans les sources**,
+traduites par le TypeScript du projet, service **réellement interrogé** (lecture) : 42000 → Saint-Étienne, 42700 →
+Firminy, 63340 → plusieurs communes ; Firminy + 42000 **averti** avec les communes du 42000 ; casse / accents
+ignorés ; ville sans CP averti ; CP à 4 chiffres averti ; service en panne → **pas de faux écart** ; Oullins + 69600 →
+**avertissement** (« communes du 69600 : Oullins-Pierre-Bénite »), pas un blocage. ⚠ Mon 1ᵉʳ contrôle 13 était **creux**
+(vrai quoi qu'il arrive) : remplacé par une vraie mesure. `npm run build` vert.
+⛔ **Pas vu à l'écran** (il faudrait se connecter) : à vérifier **après le déploiement**, en ouvrant « Modifier le
+contact » et en tapant un code postal — **sans enregistrer**. ⛔ **Pas déployé** : le push est à Frédéric.
+⚠ Les mandants déjà perdus (603486, 604831, 604832, 605030) ne sont **pas** réparés : rattrapage à part, à décider.
