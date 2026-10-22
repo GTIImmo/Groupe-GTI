@@ -20,7 +20,7 @@ REUSSIS : exactement le faux echec qu'il est cense empecher.
 L'API, elle, ne masque rien. Les deux listings portent le lien vers l'annonce :
 
     /Api/Offre/ListOffres/      data[].id_annonce      (page 1, les 20 plus recentes)
-    /Api/Vente/ListCompromis/   liste[].annonce.id     (page 0, tri dateStart desc)
+    /Api/Vente/ListCompromis/   liste[].annonce.id     (page 0, tri id desc -- voir le 23/10)
     /Api/Vente/ListVentes/      sales[].annonce.id     (fenetre de dates)
 
 L'OFFRE A ETE AJOUTEE LE 01/09/2026, et voici pourquoi.
@@ -41,9 +41,14 @@ BORNES ASSUMEES, et il faut les dire :
   * offres — la PREMIERE page seulement, soit les 20 plus recentes de l'agence.
     Une offre qu'on vient de creer y est forcement. Ce n'est pas un inventaire :
     une offre ancienne n'y sera pas, et c'est voulu.
-  * compromis — on ne lit que la PREMIERE page du tri par date decroissante,
+  * compromis — on ne lit que la PREMIERE page du tri par NUMERO decroissant,
     soit les 20 plus recents. Une transaction qu'on vient de creer y est
     forcement. Ce pont ne sert qu'a cela ; ce n'est pas un inventaire.
+    ⚠ 23/10/2026 : c'etait le tri par DATE (sort=dateStart) jusqu'ici. Hektor
+    l'IGNORE desormais (change entre le 18/09 et le 22/10) : la page 0 sortait
+    rangee par numero d'annonce, et un compromis cree sur une annonce ancienne
+    n'y etait plus -- 50128 et 50129 le 22/10, tous deux bien crees, declares
+    « aucun nouveau ». Mesure : sort=id way=desc met 50129 EN TETE.
   * ventes — le listing exige une fenetre de dates. On la centre sur la date
     de la vente, +/- 3 jours, ce qui suffit pour la retrouver sans ramener
     les 7 500 autres.
@@ -130,8 +135,11 @@ def main() -> int:
             # Sur une annonce vendue, la lecture rendait donc VIDE, et l'arbitre
             # declarait « aucun compromis nouveau » sur une creation REUSSIE.
             # sync_raw.py:231 passe ce parametre depuis toujours ; le pont non.
+            # ⚠ `sort=id` DEPUIS LE 23/10 -- voir « BORNES ASSUMEES » en tete :
+            # `sort=dateStart` est ignore par Hektor, la page 0 n'etait plus les
+            # 20 plus recents. Le numero d'un compromis croit avec sa creation.
             payload = client.get_json("/Api/Vente/ListCompromis/",
-                                      params={"page": 0, "sort": "dateStart", "way": "desc",
+                                      params={"page": 0, "sort": "id", "way": "desc",
                                               "withCompromisStatus": "false"})
             lignes = payload.get("liste")  # PAS de « or [] » -- voir plus bas
         else:
