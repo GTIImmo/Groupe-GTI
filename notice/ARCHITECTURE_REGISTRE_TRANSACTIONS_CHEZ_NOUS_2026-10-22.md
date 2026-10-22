@@ -758,6 +758,18 @@ reconnaître ce qui est apparu · le filet anti-doublon d'une modification (`apr
 porte aussi `sort=dateStart`, mais le run passe `--compromis-recent-limit 999999` (`run_full_pipeline.ps1:43`) : il lit
 **toutes** les pages, l'ordre ne change rien.
 
-**Le correctif proposé — NON CODÉ, en attente du « vas-y » :** dans `phase2/sync/transactions_annonce_from_api.py`, branche
-compromis, `"sort": "dateStart"` → `"sort": "id"` (on garde `way=desc` et `withCompromisStatus=false`), et corriger les
-commentaires qui disent « tri dateStart desc ».
+**Le correctif — ✅ CODÉ ET ACTIF le 23/10 à 00:1x** *(Frédéric : « oui »)*, commit `2704dee` : dans
+`phase2/sync/transactions_annonce_from_api.py`, branche compromis, `"sort": "dateStart"` → `"sort": "id"` (on garde
+`way=desc` et `withCompromisStatus=false`), commentaires corrigés.
+- **Essai réel en lecture seule** (le script lui-même, comme l'appelle le worker) sur 24113 : `{"trouve": true, "ids":
+  ["50129"]…}`. **Témoin inverse** : le même appel avec l'ancien tri ne le trouvait pas (mesure du 22/10, 23:5x).
+- **Actif sans redémarrage** : le worker lance un **nouveau** Python à chaque lecture (`runProjectPythonScript` → `spawn`).
+- ⏰ **Reste à le voir en vrai** : la prochaine création de compromis par l'app doit être prouvée **tout de suite**.
+
+**Les compromis d'essai encore vivants (inventaire du 23/10, 00:2x) :**
+- **chez Hektor**, les 40 plus récents (`sort=id`, pages 0 et 1) : **un seul essai, 50129** (ESSAI 8A B2, annonce 24113).
+  50128 est supprimé ; les essais de septembre sur 24933 (50084 → 50092) ne sont plus là.
+- **au registre**, lignes nées dans l'app (≥ 1 000 000) : **une seule d'essai vivante, 1001375** (= 50129, sans numéro).
+  *(50048 sur le bac à sable 62774 est un essai du 29/08, déjà ANNULÉ — pas de moi, laissé tel quel.)*
+- ⏰ **La nuit n'a pas encore tourné** au moment de l'inventaire (00:16 ; run à 05:00) : la ligne 1001375 n'a donc encore
+  été ni rapprochée ni doublée (`last_seen_at` = 22/10 21:47, aucune ligne 50129).
