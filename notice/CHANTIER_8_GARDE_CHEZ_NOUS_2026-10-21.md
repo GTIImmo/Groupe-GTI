@@ -10,7 +10,7 @@
 | # | le point | état |
 |---|---|---|
 | 8a | contact : champs écrits chez nous à la **création** et à la **modification** | 🔎 **audit REFAIT le 21/10 à la demande de Frédéric (« on l'a déjà fait ») — verdict corrigé : FAUX pour l'étape 2**, il avait raison ; attend sa décision de clore |
-| 8b | périmètre du cloud : 62 281 contacts sur ~356 000 *(question à Frédéric)* | ⬜ |
+| 8b | périmètre du cloud : 62 139 éligibles sur 356 597 | ✅ **CLOS le 22/10 par décision** — un choix, pas un défaut ; le détail des 356 597 est sur le serveur et dans l'instantané du dimanche |
 | 8c | corps complet des archives d'annonces seulement dans le miroir `data/hektor.sqlite` | ⬜ |
 | 8d | sauvegarde quotidienne : `app_relation`, `app_relation_registry`, `app_mandat`, carnets ; stockage Supabase ; Veeam jamais restauré | ⬜ |
 | 8e | bon de visite archivé nulle part | ⬜ |
@@ -1873,3 +1873,19 @@ Miroir Hektor, **tous** les contacts (champs `localite.localite.*`) :
 année de création, **3 583 en 2013-2014**, et **160 saisis en 2026 directement dans Hektor** par des négociateurs (mars
 22, mai 24, juin 21, juillet 45, septembre 23…). ⭐ **L'écran de Hektor laisse lui aussi enregistrer une adresse sans
 choisir la commune.** Rien n'est corrigé ; pour la coupure, ces 6 741 adresses sont **incomplètes à la source**.
+
+### 8b — CORRECTION et CLÔTURE *(22/10, Frédéric : « les 294 000 ont bien leur détail dans le serveur, tu te trompes, audite mieux ; si oui, clos le 8b : c'est un choix, pas un bug »)*
+
+**J'avais écrit** « les 294 458 contacts hors du cloud n'existent que dans le miroir, et la sauvegarde ne garde pas leurs
+fiches ». **Faux en partie** — je n'avais regardé que la sauvegarde *critique* (niveau 1). **La mesure** :
+- **le détail est bien sur le serveur** : `data/hektor.sqlite` → `hektor_contact` **356 597 / 356 597 avec leur corps
+  brut** ; détail synchronisé pour **348 873** (`sync_contact_state.last_detail_sync_at`, du 25/05 au 22/10) ; 7 664
+  écartés du détail (`sync_contact_detail_skip`) ;
+- **ils SONT sauvegardés** : le niveau 2 (le dimanche, `VACUUM INTO` de `phase2.sqlite`) porte la couche contacts complète
+  (**356 597** lignes) — fichiers `C:\Hektor\Backups\phase2\phase2_20261004/11/18…sqlite.gz` (~757 Mo).
+**Deux réserves, notées, non tranchées** : (1) **aucune copie complète du miroir** `hektor.sqlite` (3,9 Go) dans
+`C:\Hektor\Backups` — le niveau 4 (`--full`) ne tourne qu'à la demande et n'a laissé aucun fichier ; (2) le dossier
+**`C:\Hektor\Backups\documents` est VIDE** (dernière modification 15/09). ➡ sujets de **8d**.
+
+✅ **8b CLOS PAR DÉCISION DE FRÉDÉRIC (22/10)** : le périmètre du cloud (les éligibles) est **un choix**, pas un défaut,
+et il ne pose pas de problème d'autonomie — le détail de tous les contacts est sur le serveur. ⛔ **Ne pas relancer.**
