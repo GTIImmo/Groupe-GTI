@@ -1493,3 +1493,35 @@ contrôle au retour pour le contact** — exactement le trou que la pièce 3 a b
    (mesure du 21/10). Sujet de **coupure**, déjà noté.
 ✅ **Ce qui tient** : les 12 colonnes au clic, la garde anti-écrasement, le contact protégé la nuit, les 3 champs
 propres à l'app jamais perdus.
+
+### 8a-A — le commentaire au clic : ÉCRIT, RÉPÉTÉ 8/8, **PAS APPLIQUÉ** *(22/10, Frédéric : « prépare A puis B »)*
+
+**Le patch** : `supabase/patch_8a4_contact_commentaire_au_clic_2026-10-22.sql` (+ `_INVERSE`, + `_REPETITION`),
+**générés tous trois depuis les mêmes ancres** (`phase2/checks/gen_patch_8a4_contact_commentaire.py`) pour ne pas
+pouvoir diverger.
+- un **interrupteur** `contact_commentaire_au_clic`, posé **éteint** ;
+- dans `app_edit_contact_optimistic`, **trois ancres d'une ligne** (leçon 30) : allumé, `comments` (ou
+  `commentaires`) s'écrit dans la colonne `commentaires` **au clic**, et sa valeur d'avant entre dans la photo
+  (`base_snapshot`) comme les 12 autres. **Éteint : rien ne change.**
+- **Empreintes calculées d'avance, hors base** : avant **`79d39e0e`**, après **`eb93494b`** ; le patch s'arrête
+  si l'une ne colle pas, si une ancre n'est pas trouvée **une** fois, ou si quelqu'un est passé avant.
+
+**La répétition — 8 sur 8**, elle joue le vrai patch puis appelle la fonction **comme l'écran**, au nom de
+Frédéric, sur le contact d'essai 20000007, et **s'annule seule** :
+T1 éteint → commentaire **inchangé** (témoin inverse) · T3a/T3b le nom s'écrit dans les deux cas · T2a allumé →
+commentaire **écrit au clic** · T2b il **part chez Hektor** (ligne d'attente) · T2c la photo porte **sa valeur
+d'avant + `_date_maj`** · T4 l'alias `commentaires` marche · T5 **l'inverse rend `79d39e0e`**.
+**Vérifié après** : empreinte `79d39e0e`, pas d'interrupteur, contact d'essai intact, aucune ligne d'attente.
+
+**Ce que ça pourrait casser ailleurs — relu :**
+- l'envoi à Hektor, l'attente de 10 min, la garde anti-écrasement (elle ne lit que `_date_maj`), la relecture et
+  la nuit : **inchangés** ;
+- au retour, la relecture remplace le commentaire par celui de Hektor — **même forme** : mesuré, les 17 979
+  commentaires chez nous sont du **texte simple** (0 balise, 0 entité HTML, 0 espace en bord ; 38 ont des retours
+  à la ligne) ;
+- la porte « Modifier un mandant » n'envoie pas de commentaire → **sans effet** sur elle ;
+- ⚠ **inchangé, et noté** : l'écran n'envoie **pas** un commentaire **vidé** (`cleanOptionalText` → `null`, non
+  envoyé) — on ne peut pas effacer un commentaire depuis l'app, ni avant ni après ce patch.
+
+⛔ **Pour le poser** (accord de Frédéric) : coller le patch → 3 contrôles « OK » → allumer l'interrupteur → essai
+réel par l'écran sur le contact d'essai.
