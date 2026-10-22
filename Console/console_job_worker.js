@@ -10953,6 +10953,72 @@ async function applyHektorCreateWizardFields(job, fetcher, idannWizard, meta, pa
   return captured;
 }
 
+// 8a (22/10/2026) -- LA GARDE DE LA COPROPRIETE.
+// Mesure du 22/10 sur 63331, trois essais : sauver le groupe SECTEUR chez Hektor remet,
+// COTE SERVEUR, `copropriete = NON` et `copropriete_nb_lot = 0` -- alors qu'aucun des
+// deux n'est dans le formulaire secteur (on ne poste que lui). 62853 (05/08) gardait OUI
+// apres la meme suite : Hektor a change entre-temps. Une creation avec copropriete, ou
+// une adresse modifiee dans l'app, perdait donc la case sans un mot.
+// LE REMEDE NE DECIDE RIEN : on lit la copropriete juste AVANT le secteur, on la relit
+// juste APRES, et si Hektor l'a bougee on remet CE QU'IL PORTAIT -- quel que soit l'ordre
+// des etapes, donc une case passee a NON par l'utilisateur reste NON.
+// Notes : notice/CHANTIER_8_GARDE_CHEZ_NOUS_2026-10-21.md (« LA CAUSE EST TROUVEE »).
+const GARDE_COPROPRIETE_CHAMPS = ["copropriete", "copropriete_nb_lot"];
+
+// null = Hektor ne sert pas le groupe pour cette annonce (rien a garder).
+async function lireCoproprieteHektor(annonceId) {
+  const id = encodeURIComponent(String(annonceId));
+  const html = await hektorFetch(`${XMLRPC_URL}?mode=ihmChargeGroupe&idAnnonce=${id}&group=copropriete&consultMode=editer&ajax=ajax`, {
+    headers: {
+      Referer: `${ADMIN_URL}?page=/mes-biens/mon-bien&id=${id}`,
+    },
+  });
+  if (!/name=["']copropriete["']/i.test(String(html.text || ""))) return null;
+  const values = extractHektorFormValues(html.text, "copropriete");
+  const lu = {};
+  for (const champ of GARDE_COPROPRIETE_CHAMPS) lu[champ] = values.has(champ) ? String(values.get(champ) || "") : "";
+  return lu;
+}
+
+function coproprieteDifferente(avant, apres) {
+  return GARDE_COPROPRIETE_CHAMPS.filter((champ) => String(avant[champ] || "") !== String(apres[champ] || ""));
+}
+
+// Appelee APRES une sauvegarde du secteur reussie. Rend un compte rendu ; LEVE si la
+// case est tombee et n'a pas pu etre remise (jamais d'echec silencieux, chantier 4).
+async function gardeCoproprieteApresSecteur(job, annonceId, avant) {
+  if (!avant) return { status: "sans_objet" };
+  // Rien a perdre : Hektor remet NON / 0, et c'est deja ce qu'il porte -- ou la case
+  // n'etait pas renseignee (""). Passer de « non renseigne » a NON ne perd aucune
+  // information, et remettre "" n'est pas eprouve chez Hektor : un refus ferait echouer
+  // chaque modification d'adresse des annonces sans copropriete (les maisons).
+  const sansCase = ["", "NON"].includes(avant.copropriete);
+  const sansLots = ["", "0"].includes(avant.copropriete_nb_lot);
+  if (sansCase && sansLots) {
+    return { status: "rien_a_perdre", avant };
+  }
+  const apres = await lireCoproprieteHektor(annonceId);
+  const bouges = (apres ? coproprieteDifferente(avant, apres) : [])
+    .filter((champ) => !(champ === "copropriete" && avant.copropriete === "" && apres.copropriete === "NON"));
+  if (!bouges.length) return { status: "intacte", avant };
+  await logJob(job.id, "hektor_annonce_update", "running", "Garde copropriete : le secteur l'a remise a zero, on la remet", {
+    hektor_annonce_id: String(annonceId),
+    avant,
+    apres,
+    champs: bouges,
+  });
+  const overrides = {};
+  for (const champ of bouges) overrides[champ] = { value: avant[champ], candidates: [champ] };
+  await postHektorMefUpdate(job, annonceId, "copropriete", "ihmChargeGroupe", overrides);
+  const verifie = await lireCoproprieteHektor(annonceId);
+  // On ne juge que ce qu'on a remis (un "" devenu NON n'est pas remis, donc pas juge).
+  const restent = verifie ? coproprieteDifferente(avant, verifie).filter((champ) => bouges.includes(champ)) : bouges;
+  if (restent.length) {
+    throw new Error(`Garde copropriete : la sauvegarde du secteur a remis la copropriete a zero chez Hektor et la remise a echoue (${restent.join(", ")} : attendu ${restent.map((c) => avant[c]).join(" / ")}, lu ${verifie ? restent.map((c) => verifie[c]).join(" / ") : "illisible"}).`);
+  }
+  return { status: "remise", avant, apres, champs: bouges };
+}
+
 async function postHektorMefUpdate(job, annonceId, groupName, readMode, overrides) {
   const id = encodeURIComponent(String(annonceId));
   const group = encodeURIComponent(groupName);
@@ -11014,6 +11080,22 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
   values.set("idann", String(annonceId));
   values.set("MEFgroup", groupName);
 
+  // 8a -- la garde de la copropriete : photo AVANT le secteur (voir lireCoproprieteHektor).
+  // Une lecture ratee ne bloque pas le secteur : elle se DIT au journal et au compte rendu.
+  let coproAvant = null;
+  let gardeCopropriete = null;
+  if (groupName === "secteur") {
+    try {
+      coproAvant = await lireCoproprieteHektor(annonceId);
+    } catch (error) {
+      gardeCopropriete = { status: "lecture_impossible", error: error && error.message ? error.message : String(error) };
+      await logJob(job.id, "hektor_annonce_update", "running", "Garde copropriete : lecture impossible avant le secteur, case non gardee", {
+        hektor_annonce_id: String(annonceId),
+        error: gardeCopropriete.error,
+      });
+    }
+  }
+
   await logJob(job.id, "hektor_annonce_update", "running", `Sauvegarde groupe ${groupName}`, {
     hektor_annonce_id: String(annonceId),
     group: groupName,
@@ -11042,12 +11124,16 @@ async function postHektorMefUpdate(job, annonceId, groupName, readMode, override
     }
     throw new Error(`Hektor update_annonce_MEF ${groupName} refuse: ${response.text.slice(0, 500)}`);
   }
+  if (groupName === "secteur" && !gardeCopropriete) {
+    gardeCopropriete = await gardeCoproprieteApresSecteur(job, annonceId, coproAvant);
+  }
   return {
     group: groupName,
     fields: applied.map((item) => item.field),
     targets: applied,
     skipped,
     response: parsed || response.text.slice(0, 300),
+    ...(gardeCopropriete ? { garde_copropriete: gardeCopropriete } : {}),
   };
 }
 

@@ -1352,3 +1352,45 @@ depuis l'app, la ferait tomber désormais.
 - depuis **quand**.
 
 *63331 est laissée à NON / 0 (annonce d'essai, à supprimer avec accord).*
+
+### La garde de la copropriété — ÉCRITE et éprouvée HORS LIGNE, **pas active** *(22/10, Frédéric : « prépare le correctif, sans redémarrer ni pousser »)*
+
+**Où** : `Console/console_job_worker.js` — trois fonctions neuves juste avant `postHektorMefUpdate`
+(`lireCoproprieteHektor`, `coproprieteDifferente`, `gardeCoproprieteApresSecteur`) et **deux branchements** dans
+`postHektorMefUpdate`, **seulement quand le groupe est `secteur`**. ⭐ **Un seul endroit** : c'est le **seul**
+chemin qui sauve un groupe chez Hektor (un seul appelant, `pushHektorGroupUpdate`) → il couvre **la création
+ET la modification**, les groupes exacts comme les champs à plat.
+
+**Le geste** : lire la copropriété (case + nombre de lots) **juste avant** le secteur → sauver le secteur →
+la relire → si Hektor l'a bougée, **remettre ce qu'il portait** → **vérifier**.
+- ⭐ **Il ne décide rien** : il remet l'AVANT. Une case passée à NON par l'utilisateur reste NON, quel que soit
+  l'ordre des étapes.
+- **Rien à perdre** (NON ou non renseignée, et 0 ou aucun lot) → une seule lecture, rien d'autre.
+- ⚠ **Une case NON RENSEIGNÉE ("") devenue NON n'est PAS remise** — trouvé à ma relecture : ça ne perd aucune
+  information, et remettre "" n'est pas éprouvé chez Hektor. Un refus aurait fait échouer **chaque**
+  modification d'adresse des annonces sans copropriété (les maisons).
+- **Aucun échec silencieux** : une remise qui ne tient pas **lève une erreur** nommant les champs, la valeur
+  attendue et la valeur lue (création : le groupe est marqué en erreur et la création continue, comme les
+  autres groupes ; modification : le travail échoue, rejouable). Une lecture impossible avant le secteur ne
+  bloque pas le secteur, mais se **dit** au journal et au compte rendu (`garde_copropriete.status`).
+- **Coût chez Hektor** : **+1 lecture** par sauvegarde du secteur (~1 à 2 par création) ; **+3 appels**
+  (lecture, écriture, vérification) seulement quand la case est tombée.
+
+**L'essai** : `node Console/test_garde_copropriete.js` — sur le **code réel** découpé dans le worker, avec un
+**faux Hektor qui reproduit le défaut** mesuré. **16 contrôles verts**, dont :
+- (2) **sans la garde, le faux Hektor fait tomber la case** — il est fidèle au défaut ;
+- (4) **témoin inverse** : un Hektor qui ne remet rien à zéro → aucune écriture en plus ;
+- (3e) le geste exact, appel par appel.
+
+**Deux contre-épreuves** *(« une avarie qui ne change rien ne prouve rien »)* :
+- garde cassée exprès (elle remettrait la valeur d'APRÈS) → **attrapée** par sa propre vérification, l'essai
+  sort en code 2, pas en 0 ;
+- ancienne vérification (qui jugeait aussi la case "" devenue NON) → **le contrôle (6c) échoue**, comme il le doit.
+- Et la **vraie** fonction de lecture sur le **vrai** formulaire de 63331 capturé le matin lit
+  `copropriete = NON`, `nb_lot = 24` — exactement l'état d'après la création.
+
+⛔ **PAS ACTIVE** : il faut **redémarrer les 4 services worker** (file vide : 0 pending ET 0 running) — accord
+de Frédéric obligatoire. Rien n'est poussé.
+➡ **La preuve en réel, après redémarrage** : refaire l'essai 9 (`immeuble` seul sur 63331, case remise à OUI / 24
+d'abord) → le journal doit dire « Garde copropriete : le secteur l'a remise a zero, on la remet » et Hektor
+doit porter **OUI / 24** après.
