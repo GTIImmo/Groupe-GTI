@@ -700,3 +700,21 @@ lire la **fiche** (le marqueur), puis **confirmer chaque candidat par l'API « p
 **Le compromis 50129 est GARDÉ pour l'instant, exprès** : sans numéro sur 1001375, **la nuit doit le rapprocher par
 l'acquéreur** — maintenant que 1b y range 605946. C'est **la preuve du chemin de nuit de 1b**, à vérifier demain
 matin ; on le supprimera ensuite.
+
+### Le problème était-il là avant ? *(Frédéric, 22/10)* — mesuré
+
+- **Non, pas en septembre.** Du 16 au 18/09, la même lecture (page 0 de `ListCompromis`) **trouvait** les compromis de
+  24933 — une annonce **ancienne** : « compromis 50084 / 50085 / 50086 créé et confirmé par les DEUX portes ». La page 0
+  était donc alors rangée par **date** (les compromis d'essai étaient les plus récents).
+- **Notre lecture n'a pas changé depuis** : `transactions_annonce_from_api.py`, dernier commit le 16/09 ; le client
+  commun a seulement gagné de la patience le 22/09.
+- **Aujourd'hui, la page 0 est rangée par numéro d'annonce décroissant** (mesure de 23:5x). ➡ **Le changement vient de
+  Hektor, entre le 18/09 et le 22/10.** Date exacte **non mesurable** : aucune création par l'app sur une annonce
+  ancienne entre les deux.
+- **Ce qui est touché** : seulement la **preuve immédiate** du worker pour les **compromis** (création, et preuve d'une
+  modification), sur les annonces **anciennes**. Ventes : leur liste est filtrée par une fenêtre de dates, non touchée a
+  priori. Offres : **non mesuré**.
+- **Ce qui n'est PAS touché** : la **nuit**. Elle lit la liste **entière** (`DailyRawMaxPages = 0`) : 11 compromis
+  d'octobre sur des annonces anciennes (< 60 000) sont bien arrivés au registre.
+- **Conséquence réelle** : jusqu'à la nuit, une transaction créée dans l'app sur une annonce ancienne reste sans numéro
+  (« Modifier » refusé, « Supprimer » impossible). Grâce à **1b**, la nuit la rapproche sans doublon.
