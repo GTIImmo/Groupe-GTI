@@ -1119,3 +1119,10 @@ et elle a déjà payé, et corrigé, le même genre de défaut.
   13/10) — une ligne chacune, **pas un doublon**.
 - **Ce qui reste fragile, déjà connu** : l'adoption par l'acquéreur exige le **même numéro d'acquéreur** des deux côtés —
   c'était le défaut 1 (corrigé par 1b, prouvé) ; et le **lien vers notre fiche contact** — le défaut 6 (corrigé aujourd'hui).
+
+### ✅ E2 POSÉ EN PRODUCTION — 23/10 *(Frédéric : « j'autorise : colle le patch E2, interrupteur éteint »)*
+Empreinte vérifiée avant : `a5297281`. Patch passé sans erreur. **Les 4 contrôles : OK** — empreinte **`049643b8`** ·
+interrupteur `affaire_modif_champs_touches` **éteint** · `authenticated` peut toujours appeler · `SECURITY DEFINER` gardé.
+➡ **Aucun effet tant que l'interrupteur est éteint.** Reste : **pousser** (le front E1 + le nom du notaire partent avec), puis
+**allumer**, puis **essai réel** (une modification par l'écran en touchant UN champ → au carnet, ce champ seul).
+Retour arrière : `supabase/patch_e_modif_champs_touches_2026-10-23_INVERSE.sql`.
