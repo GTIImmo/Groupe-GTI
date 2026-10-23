@@ -47,6 +47,7 @@ import {
   loadRepartitionPersonnes,
   loadRepartition,
   saveRepartition,
+  loadRepartitionsDesChaines,
   loadRepartitionDefautSortie,
   type RepartitionPersonne,
   type RepartitionLigne,
@@ -16980,7 +16981,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (prixNet) setStatusChangeNetSellerPrice(prixNet)
     // Les honoraires du VENDEUR. 18/09 : modifiables sur le compromis -- donc,
     // comme les autres champs, LE CARNET D'ABORD (la saisie pas encore arrivee).
-    setStatusChangeHonorairesEntree(valeur('honoraires_entree', affaire.honoraires_entree))
+    // ⑧ C6 (23/10/2026) : sur une OFFRE, la commission vendeur et sa charge sont A NOUS
+    //   (honoraires_entree_app, charge_commission_app -- Hektor n'en garde aucune a l'offre). La case
+    //   restait vide en modification. ⚠ Aucun drapeau « touche » n'est leve : rien de plus ne part,
+    //   ni chez Hektor (sellerFees exige le drapeau) ni chez nous (la commission aussi).
+    setStatusChangeHonorairesEntree(valeur('honoraires_entree', affaire.honoraires_entree)
+      || (String(affaire.kind) === 'offre' ? texte(affaire.honoraires_entree_app).trim() : ''))
+    const chargeSaisie = texte(affaire.charge_commission_app).trim()
+    if (chargeSaisie) setStatusChangeChargeCommission(chargeSaisie)
     const prixPublic = String(carnet.prix_publique ?? '').trim()
     if (prixPublic) setStatusChangeSalePrice(prixPublic)
     // 18/09 (essai reel) : la case restait VIDE en modification des qu'il n'y
@@ -17115,6 +17123,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   //   les 12,1 % qui n'en ont pas -- elle vaut pour la suite. La rattacher a la
   //   transaction obligerait a la ressaisir, et deux saisies divergent.
   const repartitionChaineId = useCallback((): string => {
+    // ─── ⑧ C5 (23/10/2026) : LA CHAINE DE LA TRANSACTION VISEE, D'ABORD ───
+    //
+    // La regle « le dossier OUVERT du bien » ne voit plus une chaine qui a sa vente. Rouvrir le
+    // compromis apres la vente montrait alors la repartition PAR DEFAUT, et l'enregistrer
+    // l'ecrivait sous le numero de la transaction (repli `neuf`) au lieu de la chaine. Vu le 23/10
+    // sur 1001381. Quand la modale vise une transaction (modifier), sa chaine fait foi. A la
+    // CREATION, rien n'est vise : l'ancienne regle joue, inchangee.
+    const visee = affaireCourantePourStatut()
+    if (visee?.app_chaine_id != null) return String(visee.app_chaine_id)
     const candidats = dossiersOuvertsDuBien(statusChangeAffaires)
       .filter((d) => d.ouvert || d.closeParMorte)
     // ⛔ « UN SEUL DOSSIER OUVERT » NE MARCHAIT PAS, ET C'ETAIT MESURABLE.
@@ -17133,7 +17150,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (avecOffre) return String(avecOffre.chaine)
     // Aucun des deux : un seul dossier tranche, plusieurs ne se devinent pas.
     return candidats.length === 1 ? String(candidats[0].chaine) : ''
-  }, [statusChangeAffaires])
+  // ⑧ C5 : affaireCourantePourStatut lit aussi le statut, le choix et la cible.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus, statusChangeAffaireChoisie, statusChangeTarget])
 
   const repartitionLigne = useCallback(
     (cote: 'entree' | 'sortie', rang: 1 | 2): RepartitionLigne | null =>
@@ -26921,6 +26940,20 @@ type CkAffaire = {
   vente?: Record<string, string> | null
   parties?: { acq?: CkParty | null; notAcq?: CkParty | null; notVend?: CkParty | null; vendeur?: CkParty | null }
   honoraires?: Record<string, string>
+  /** ⑧ (23/10/2026) : CE QUI A ETE SAISI et que les cartes ne montraient pas
+   *  (« tous les champs saisis », Frederic). Une ligne par valeur PRESENTE --
+   *  jamais un tiret pour « pas lu ». */
+  lignesApp?: { offre?: Array<[string, string, boolean?]>; compromis?: Array<[string, string, boolean?]>; vente?: Array<[string, string, boolean?]> }
+  /** ⑧ (23/10/2026) : la repartition du dossier, telle qu'enregistree chez nous. */
+  repartition?: Array<[string, string]>
+}
+/** ⑧ (23/10/2026) : ce que l'app garde A ELLE, lu pour la rubrique. Une lecture
+ *  ratee rend une carte sans ces lignes, jamais une erreur. */
+type CkDonneesApp = {
+  carnet: Map<number, Record<string, string>>
+  repartition: Map<string, RepartitionLigne[]>
+  conditions: Map<number, AffaireCondition[]>
+  notes: Map<number, string>
 }
 function CkTxCard({ num, kind, title, sub, pill, pillTone, rows, open }: { num: string; kind: string; title: string; sub: string; pill: string; pillTone: string; rows: Array<[string, string, boolean?]>; open: boolean }) {
   if (!rows.length) {
@@ -27012,6 +27045,7 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
           {o ? (
             <CkTxCard num="01" kind="offre" title={`Offre d'achat — ${o.montant ?? ''}`} sub={`${o.etat ?? ''} · ${o.date ?? ''} · ${o.acqNom ?? ''}`} pill={o.etat ?? 'Offre'} pillTone="on" open rows={[
               ["Montant de l'offre", o.montant ?? '—'], ['Prix net vendeur', o.net ?? '—'], ["Date de l'offre", o.date ?? '—'], ['Validité', o.validite ?? '—'], ['État', o.etat ?? '—'], ['Statut source Hektor', o.raw ?? '—'], ['Acquéreur', [o.acqNom, o.acqTel, o.acqMail].filter(Boolean).join(' · '), true],
+              ...(af.lignesApp?.offre ?? []),
             ]} />
           ) : null}
           {c ? (
@@ -27034,13 +27068,26 @@ function CkAffaires({ affaire }: { affaire: CkAffaire }) {
               ...(af.console?.tauxVendeur ? [['Taux vendeur', af.console.tauxVendeur] as [string, string]] : []),
               ...(af.console?.partage ? [['Partage entrée / sortie', af.console.partage] as [string, string]] : []),
               ...(af.console?.conditions ? [['Conditions suspensives', af.console.conditions, true] as [string, string, boolean]] : []),
+              ...(af.lignesApp?.compromis ?? []),
             ]} />
           ) : null}
           {v ? (
             <CkTxCard num="03" kind="vente" title="Vente — acte authentique" sub={`Vendu le ${v.date ?? ''} · ${v.prix ?? ''}`} pill="Vendu" pillTone="done" open rows={[
               ['Prix de vente', v.prix ?? '—'], ['Date de vente', v.date ?? '—'], ['Honoraires', v.honoraires ?? '—'], ['Commission agence (HT)', v.commission ?? '—'], ['Notaires', v.notaires ?? '—', true],
+              ...(af.lignesApp?.vente ?? []),
             ]} />
           ) : null}
+        </>
+      ) : null}
+
+      {/* ⑧ (23/10/2026) : LA REPARTITION, DANS LA RUBRIQUE. Elle n'avait qu'un lecteur, la
+          modale -- on ne la voyait qu'en ouvrant un geste. Lecture seule, rien ne part. */}
+      {af.repartition && af.repartition.length ? (
+        <>
+          <div className="fa-ck-ct-sec"><span className="l">Répartition de la commission</span><span className="bar" /><span className="k">{bvs("Gardée dans l'app · non transmise à Hektor")}</span></div>
+          <div className="fa-ck-hono">
+            {af.repartition.map(([k, val], i) => <div key={i} className="fa-ck-hf"><div className="fa-ck-hf-k">{k}</div><div className="fa-ck-hf-v">{val}</div></div>)}
+          </div>
         </>
       ) : null}
 
@@ -27122,9 +27169,9 @@ const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string
 // Lot B / C2 : forme du blob `affaires_detail_json` (détail d'affaire PAR cycle, produit par C1).
 type CkAffaireParty = { id?: string | null; civilite?: string | null; nom?: string | null; prenom?: string | null; coordonnees?: unknown }
 type CkAffaireDetail = {
-  offre?: { state?: string | null; montant?: string | null; date?: string | null; acquereur?: CkAffaireParty | null } | null
-  compromis?: { state?: string | null; date_start?: string | null; date_acte?: string | null; sequestre?: string | null; prix_net?: string | null; prix_public?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null } | null
-  vente?: { date?: string | null; prix?: string | null; honoraires?: string | null; commission?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null; notaire?: CkAffaireParty | null } | null
+  offre?: { id?: string | null; state?: string | null; montant?: string | null; date?: string | null; acquereur?: CkAffaireParty | null } | null
+  compromis?: { id?: string | null; state?: string | null; date_start?: string | null; date_acte?: string | null; sequestre?: string | null; prix_net?: string | null; prix_public?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null } | null
+  vente?: { id?: string | null; date?: string | null; prix?: string | null; honoraires?: string | null; commission?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null; notaire?: CkAffaireParty | null } | null
   // Dossiers par acquéreur (courant + abandonnés) — produit par build_affaires_dossiers (pipeline).
   // Chaque dossier porte la CHAINE COMPLETE de ses affaires (offre + compromis + vente) : la trace
   // de l'offre reste visible même quand le compromis est annulé.
@@ -27485,17 +27532,63 @@ function affaireAcquereursParties(row: AffaireLedgerRow | undefined | null): CkA
  *  ⚠ On dedoublonne par IDENTIFIANT, jamais par le nom : deux freres portent le
  *    meme nom de famille, et un couple n'a pas toujours le meme. */
 function affaireAcquereursDeChaine(lignes: AffaireLedgerRow[]): CkAffaireParty[] {
+  const alias = aliasNumerosAcquereur(lignes)
   const vus = new Set<string>()
   const out: CkAffaireParty[] = []
   for (const l of lignes) {
     for (const p of affaireAcquereursParties(l)) {
-      const cle = String(p?.id ?? '').trim() || ckPartyName(p).toLowerCase()
+      const id = String(p?.id ?? '').trim()
+      const cle = (alias.get(id) ?? id) || ckPartyName(p).toLowerCase()
       if (!cle || vus.has(cle)) continue
       vus.add(cle)
       out.push(p)
     }
   }
   return out
+}
+
+/** ⑧ C4 (23/10/2026) : UNE PERSONNE, DEUX NUMEROS. L'offre porte l'acquereur
+ *  sous NOTRE numero (20000012), le compromis et la vente sous celui de HEKTOR
+ *  (605967) : compte deux fois, « X et X ». Chaque ligne du registre porte la
+ *  PAIRE pour son acquereur principal (`app_contact_id` / `hektor_acquereur_id`)
+ *  -- on ramene le numero de Hektor au notre. Jamais par le nom. */
+function aliasNumerosAcquereur(lignes: AffaireLedgerRow[]): Map<string, string> {
+  const alias = new Map<string, string>()
+  for (const l of lignes) {
+    const notre = String(l.app_contact_id ?? '').trim()
+    const hektor = String(l.hektor_acquereur_id ?? '').trim()
+    if (notre && hektor && notre !== hektor) alias.set(hektor, notre)
+  }
+  return alias
+}
+
+/** Une liste de parties lue dans un jsonb du registre (mandants, notaires) :
+ *  tableau, objet seul, ou objet range par role (`notaires_json` d'une vente). */
+function ckPartiesDuJson(brut: unknown): CkAffaireParty[] {
+  const v = typeof brut === 'string' ? parseJson<unknown>(brut, null) : brut
+  if (Array.isArray(v)) return v.filter((x): x is CkAffaireParty => Boolean(x) && typeof x === 'object')
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>
+    if ('id' in o || 'nom' in o) return [o as CkAffaireParty]
+    return Object.values(o).filter((x): x is CkAffaireParty => Boolean(x) && typeof x === 'object')
+  }
+  return []
+}
+
+/** Des noms, sans doublon (par identifiant, ramene a notre numero). */
+function ckNomsParties(parties: CkAffaireParty[], alias: Map<string, string>): string {
+  const vus = new Set<string>()
+  const noms: string[] = []
+  for (const p of parties) {
+    const id = String(p?.id ?? '').trim()
+    // Une fiche sans nom ni prenom (Hektor en porte : « Mr./Mme » seul) n'est pas un nom.
+    const nom = String(p?.nom ?? '').trim() || String(p?.prenom ?? '').trim() ? ckPartyName(p) : ''
+    const cle = (alias.get(id) ?? id) || nom.toLowerCase()
+    if (!nom || !cle || vus.has(cle)) continue
+    vus.add(cle)
+    noms.push(nom)
+  }
+  return noms.join(', ')
 }
 
 /** « Agnes FAURE et Pierre-Eric FAURE ». Vide si personne -- jamais un
@@ -27952,6 +28045,7 @@ function ckAffaireDepuisChaine(
   c: ChaineAffaire,
   vendeur: CkParty | null,
   console_?: Map<number, AffaireConsoleRow>,
+  app?: CkDonneesApp,
 ): CkAffaire {
   const o = derniereDuGenre(c.lignes, 'offre')
   const cp = derniereDuGenre(c.lignes, 'compromis')
@@ -27979,11 +28073,14 @@ function ckAffaireDepuisChaine(
         ? "Préparer l'acte — suivre les conditions suspensives."
         : "Traiter l'offre — accepter, contre-proposer ou refuser."
 
-  // La lecture de l'assistant, pour la transaction la plus avancee de la chaine.
-  const lu = console_ && courante ? console_.get(Number(courante.app_affaire_id)) : undefined
+  // La lecture de l'assistant. ⑧ C3 (23/10/2026) : celle DU COMPROMIS, qui est la seule carte a
+  // l'afficher -- avant, celle de l'etape la plus avancee : des qu'une vente existait, la carte du
+  // compromis montrait la lecture de la VENTE et perdait ses propres notaires et conditions.
+  const porteurConsole = cp ?? courante
+  const lu = console_ && porteurConsole ? console_.get(Number(porteurConsole.app_affaire_id)) : undefined
   const parties = lu?.parties_json ?? null
   const conditionsLues = lu?.conditions_suspensives
-  const console_infos = lu ? {
+  const consoleLue = lu ? {
     notaireAcq: ckPartieConsole(parties?.notaires_acquereur),
     notaireVend: ckPartieConsole(parties?.notaires_mandant),
     tauxVendeur: lu.taux_honoraire_entree ? lu.taux_honoraire_entree + ' %' : '',
@@ -28001,9 +28098,149 @@ function ckAffaireDepuisChaine(
       : '',
   } : null
 
+  // ─── ⑧ (23/10/2026) : CE QUI A ETE SAISI, ET QUE LES CARTES NE MONTRAIENT PAS ───
+  //
+  // Frederic : « tous les renseignements saisis sur l'offre, le compromis, etc. ». Le registre
+  // les porte depuis le clic (R1, 22/10) ; le carnet garde ceux qui n'ont pas de colonne ; la
+  // repartition, les conditions et la note sont a nous. Une ligne par valeur PRESENTE : pas de
+  // tiret pour « pas lu » (regle du 10/09).
+  const txt = (x: unknown) => String(x ?? '').trim()
+  const carnetDe = (r: AffaireLedgerRow) => (app ? app.carnet.get(Number(r.app_affaire_id)) : undefined) ?? {}
+  const alias = aliasNumerosAcquereur(c.lignes)
+  // Le nom d'un notaire connu seulement par son numero : le registre, puis ce que l'assistant a lu
+  // sur une transaction de la chaine. On ne fabrique jamais de nom (« Contact N » sinon).
+  const nomNotaire = (id: string): string => {
+    if (!id) return ''
+    for (const l of c.lignes) {
+      if (txt(l.notaire_acquereur_id) === id && txt(l.notaire_acquereur_nom)) return txt(l.notaire_acquereur_nom)
+      if (txt(l.notaire_mandant_id) === id && txt(l.notaire_mandant_nom)) return txt(l.notaire_mandant_nom)
+    }
+    for (const l of c.lignes) {
+      const p = console_?.get(Number(l.app_affaire_id))?.parties_json
+      for (const x of [...(p?.notaires_acquereur ?? []), ...(p?.notaires_mandant ?? [])]) {
+        if (String(x?.id ?? '').trim() === id && txt(x?.nom)) return txt(x.nom)
+      }
+    }
+    return ''
+  }
+  const notaireDu = (r: AffaireLedgerRow, role: 'acquereur' | 'mandant'): string => {
+    const id = txt(role === 'acquereur' ? r.notaire_acquereur_id : r.notaire_mandant_id)
+    const nom = txt(role === 'acquereur' ? r.notaire_acquereur_nom : r.notaire_mandant_nom)
+    if (!id && !nom) return ''
+    return nom || nomNotaire(id) || 'Contact ' + id
+  }
+  const tauxDe = (r: AffaireLedgerRow) => {
+    const t = txt(carnetDe(r).taux_honoraires) || txt(r.taux_honoraires)
+    return t ? t.replace('.', ',') + ' %' : ''
+  }
+  const chargeDe = (r: AffaireLedgerRow) => {
+    const x = txt(r.charge_commission_app)
+    return x === 'acquereur' ? 'Acquéreur' : x === 'vendeur' ? 'Vendeur' : x
+  }
+  const ETAT_CONDITION: Record<string, string> = { attente: 'en attente', levee: 'levée', non_levee: 'non levée', sans_objet: 'sans objet' }
+  const conditionsDe = (r: AffaireLedgerRow): string => (app?.conditions.get(Number(r.app_affaire_id)) ?? [])
+    .map((x) => [txt(x.libelle), x.jours != null && Number.isFinite(Number(x.jours)) ? x.jours + ' j' : '',
+      ETAT_CONDITION[txt(x.etat)] ?? txt(x.etat)].filter(Boolean).join(' \u00b7 '))
+    .filter(Boolean).join(' \u2014 ')
+  const noteDe = (r: AffaireLedgerRow) => txt(app?.notes.get(Number(r.app_affaire_id)))
+  const mandatDe = (r: AffaireLedgerRow) => txt(r.numero_mandat) || txt(carnetDe(r).numero_mandat)
+  const ajout = (liste: Array<[string, string, boolean?]>, k: string, v: string, full?: boolean) => {
+    if (v) liste.push(full ? [k, v, true] : [k, v])
+  }
+
+  // L'OFFRE. ⚠ Le prix public et la retractation que le carnet porte sur une offre sont les
+  // valeurs PRE-REMPLIES par la modale (constat 7 du 23/10), pas des saisies : on ne les montre pas.
+  const lignesOffre: Array<[string, string, boolean?]> = []
+  if (o) {
+    const k = carnetDe(o)
+    ajout(lignesOffre, 'Honoraires acquéreur', affairePrix(o.honoraires_sortie_app) || affairePrix(o.honoraires_sortie) || affairePrix(k.honoraires))
+    ajout(lignesOffre, 'Taux honoraires acquéreur', tauxDe(o))
+    ajout(lignesOffre, 'Honoraires vendeur (agence)', affairePrix(o.honoraires_entree_app))
+    ajout(lignesOffre, 'Charge de la commission', chargeDe(o))
+    ajout(lignesOffre, 'N° de mandat', mandatDe(o))
+    const notaireOffre = txt(k.notaire_id)
+    ajout(lignesOffre, 'Notaire acquéreur',
+      notaireOffre ? (nomNotaire(notaireOffre) || 'Contact ' + notaireOffre) : notaireDu(o, 'acquereur'), true)
+    ajout(lignesOffre, 'Conditions suspensives', conditionsDe(o), true)
+    ajout(lignesOffre, 'Note', noteDe(o), true)
+  }
+  // LE COMPROMIS. Les notaires et les honoraires vendeur ont DEJA leur ligne (lecture de
+  // l'assistant) : le registre y passe en premier -- il porte la saisie depuis le clic --, la
+  // lecture reste le repli. Nos conditions passent avant celles de Hektor.
+  const lignesCompromis: Array<[string, string, boolean?]> = []
+  let consoleCompromis = consoleLue
+  if (cp) {
+    const k = carnetDe(cp)
+    ajout(lignesCompromis, 'Acquéreur(s)', ckNomsParties(affaireAcquereursParties(cp), alias), true)
+    ajout(lignesCompromis, 'Mandant(s)', ckNomsParties(ckPartiesDuJson(cp.mandants_json), alias), true)
+    ajout(lignesCompromis, 'Prix public', affairePrix(k.prix_publique))
+    ajout(lignesCompromis, 'Honoraires acquéreur', affairePrix(cp.honoraires_sortie))
+    ajout(lignesCompromis, 'Taux honoraires acquéreur', tauxDe(cp))
+    ajout(lignesCompromis, 'Charge de la commission', chargeDe(cp))
+    ajout(lignesCompromis, 'N° de mandat', mandatDe(cp))
+    const nosConditions = conditionsDe(cp)
+    ajout(lignesCompromis, 'Conditions suspensives', nosConditions, true)
+    ajout(lignesCompromis, 'Note', noteDe(cp), true)
+    const notAcq = notaireDu(cp, 'acquereur')
+    const notVend = notaireDu(cp, 'mandant')
+    const honVend = affairePrix(cp.honoraires_entree)
+    if (consoleLue || notAcq || notVend || honVend) {
+      consoleCompromis = {
+        notaireAcq: notAcq || consoleLue?.notaireAcq || '',
+        notaireVend: notVend || consoleLue?.notaireVend || '',
+        tauxVendeur: consoleLue?.tauxVendeur || '',
+        honVendeur: honVend || consoleLue?.honVendeur || '',
+        partage: consoleLue?.partage || '',
+        conditions: nosConditions ? '' : (consoleLue?.conditions || ''),
+      }
+    }
+  }
+  const console_infos = consoleCompromis
+  // LA VENTE.
+  const lignesVente: Array<[string, string, boolean?]> = []
+  if (v) {
+    ajout(lignesVente, 'Acquéreur(s)', ckNomsParties(affaireAcquereursParties(v), alias), true)
+    ajout(lignesVente, 'Mandant(s)', ckNomsParties(ckPartiesDuJson(v.mandants_json), alias), true)
+    ajout(lignesVente, 'Prix net vendeur', affairePrix(v.prix_net_vendeur))
+    ajout(lignesVente, 'Taux honoraires acquéreur', tauxDe(v))
+    ajout(lignesVente, 'Charge de la commission', chargeDe(v))
+    ajout(lignesVente, 'N° de mandat', mandatDe(v))
+    ajout(lignesVente, 'Note', noteDe(v), true)
+  }
+  // ⑧ C2 : les notaires de la vente que le registre porte DES LE CLIC (R1), quand l'API -- relue
+  // la nuit -- ne les a pas encore rendus. L'API reste prioritaire, comme avant.
+  const notairesVenteRegistre = v
+    ? [notaireDu(v, 'mandant') ? notaireDu(v, 'mandant') + ' (vendeur)' : '',
+       notaireDu(v, 'acquereur') ? notaireDu(v, 'acquereur') + ' (acquéreur)' : '']
+        .filter(Boolean).join(' \u2014 ')
+    : ''
+  // LA REPARTITION DU DOSSIER -- elle appartient a la CHAINE, pas a une transaction (14/09).
+  const repartitionLignes: Array<[string, string]> = []
+  {
+    const lignesRep = [...(app?.repartition.get(c.chaine) ?? [])]
+      .filter((l) => l.hektorUserId)
+      .sort((a, b) => (a.cote === b.cote ? a.rang - b.rang : a.cote === 'entree' ? -1 : 1))
+    const pct = (x: number) => x.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' %'
+    const totaux: Record<string, number> = { entree: 0, sortie: 0 }
+    for (const l of lignesRep) {
+      totaux[l.cote] += Number.isFinite(l.pourcentage) ? l.pourcentage : 0
+      repartitionLignes.push([(l.cote === 'entree' ? 'Entrée ' : 'Sortie ') + l.rang,
+        (txt(l.nomAuMoment) || 'Utilisateur ' + l.hektorUserId) + ' \u00b7 ' + pct(l.pourcentage)])
+    }
+    // Un cote qui ne fait pas 100 % se DIT -- c'est ce que l'essai du 23/10 avait laisse passer.
+    for (const cote of ['entree', 'sortie'] as const) {
+      const present = lignesRep.some((l) => l.cote === cote)
+      if (present && Math.abs(totaux[cote] - 100) > 0.01) {
+        repartitionLignes.push([cote === 'entree' ? 'Total entrée' : 'Total sortie', pct(totaux[cote]) + ' attribués sur 100 %'])
+      }
+    }
+  }
+
   const n = c.lignes.length
   return {
     console: console_infos,
+    lignesApp: { offre: lignesOffre, compromis: lignesCompromis, vente: lignesVente },
+    repartition: repartitionLignes,
     banner: {
       mood: morte ? 'block' : etape === 'offre' ? 'warn' : 'ok',
       state: (AFFAIRE_GENRE_LABEL[etape] ?? etape)
@@ -28075,6 +28312,7 @@ function ckAffaireDepuisChaine(
         : '',
       commission: affairePrix(v.commission_agence),
       // La vente est le SEUL genre ou l'API rend le notaire : 7 610 sur 7 610.
+      // ⑧ C2 (23/10/2026) : ... mais la nuit seulement. Le registre, lui, les a des le clic.
       notaires: ckPartieConsole(
         (v.notaires_json && typeof v.notaires_json === 'object'
           ? Object.values(v.notaires_json as Record<string, unknown>)
@@ -28085,7 +28323,7 @@ function ckAffaireDepuisChaine(
                 nom: [x.nom, x.prenom].filter(Boolean).join(' ').trim() || undefined,
               }))
           : []) as Array<{ id: string; nom?: string }>,
-      ),
+      ) || notairesVenteRegistre,
     } : null,
     parties: {
       acq: acqNom ? { n: acqNom, s: 'Acquéreur' } : null,
@@ -28094,6 +28332,68 @@ function ckAffaireDepuisChaine(
       vendeur,
     },
   }
+}
+
+/** ⑧ C1 (23/10/2026) : LA RECETTE DU RESUME DE NUIT, appliquee au registre.
+ *
+ *  Copie de build_affaire_detail_for_cycle (phase2/sync/export_app_payload.py, ~l. 996) :
+ *  acquereur = le 1er de la liste, mandant = le 1er des mandants, notaire de la vente = le 1er
+ *  de `notaires_json`. ⚠ On REPRODUIT la nuit, on ne la corrige pas -- y compris quand Hektor a
+ *  ajoute l'acquereur aux mandants a la vente. Seul ajout : le notaire de la vente se replie sur
+ *  les colonnes du registre (R1) quand l'API ne l'a pas encore rendu.
+ *
+ *  Le dossier retenu est le plus avance ENCORE VIVANT du cycle : vente, sinon compromis non
+ *  annule, sinon offre non refusee -- la meme priorite que le bloc des parties. */
+function ckDetailDepuisRegistre(
+  rows: AffaireLedgerRow[] | null,
+  numero: string,
+  courant: string,
+): CkAffaireDetail | null {
+  if (!rows || !rows.length || !numero || numero === 'ALL') return null
+  const duCycle = rows.filter((r) => {
+    const m = String(r.numero_mandat ?? '').trim()
+    return m ? m === numero : numero === courant
+  })
+  const effacee = (r: AffaireLedgerRow) =>
+    Boolean(String(r.hektor_affaire_id ?? '').trim()) && r.present_in_hektor === false
+  const vivante = (r: AffaireLedgerRow | null) =>
+    r != null && !AFFAIRE_ETAT_MORT.has(String(r.state ?? '').trim().toLowerCase())
+  const chaines = grouperAffairesParChaine(duCycle.filter((r) => !effacee(r)))
+  const choisie = chaines.find((ch) => vivante(derniereDuGenre(ch.lignes, 'vente')))
+    ?? chaines.find((ch) => vivante(derniereDuGenre(ch.lignes, 'compromis')))
+    ?? chaines.find((ch) => vivante(derniereDuGenre(ch.lignes, 'offre')))
+    ?? null
+  if (!choisie) return null
+  const t = (x: unknown) => { const s = String(x ?? '').trim(); return s || null }
+  const premier = (liste: CkAffaireParty[]) => liste[0] ?? null
+  const o = derniereDuGenre(choisie.lignes, 'offre')
+  const cp = derniereDuGenre(choisie.lignes, 'compromis')
+  const v = derniereDuGenre(choisie.lignes, 'vente')
+  const notaireVente = (r: AffaireLedgerRow): CkAffaireParty | null => {
+    const api = premier(ckPartiesDuJson(r.notaires_json))
+    if (api && String(api.id ?? '').trim()) return api
+    if (t(r.notaire_mandant_id)) return { id: t(r.notaire_mandant_id), nom: t(r.notaire_mandant_nom) ?? ('Contact ' + t(r.notaire_mandant_id)) }
+    if (t(r.notaire_acquereur_id)) return { id: t(r.notaire_acquereur_id), nom: t(r.notaire_acquereur_nom) ?? ('Contact ' + t(r.notaire_acquereur_id)) }
+    return null
+  }
+  return {
+    offre: o ? { id: t(o.hektor_affaire_id), state: t(o.state), montant: t(o.montant), date: t(o.date),
+      acquereur: premier(affaireAcquereursParties(o)) } : null,
+    compromis: cp ? { id: t(cp.hektor_affaire_id), state: t(cp.state), date_start: t(cp.date), date_acte: t(cp.date_acte),
+      sequestre: t(cp.sequestre), prix_net: t(cp.prix_net_vendeur), prix_public: t(cp.montant),
+      acquereur: premier(affaireAcquereursParties(cp)), mandant: premier(ckPartiesDuJson(cp.mandants_json)) } : null,
+    vente: v ? { id: t(v.hektor_affaire_id), date: t(v.date), prix: t(v.montant), honoraires: null, commission: t(v.commission_agence),
+      acquereur: premier(affaireAcquereursParties(v)), mandant: premier(ckPartiesDuJson(v.mandants_json)),
+      notaire: notaireVente(v) } : null,
+  }
+}
+
+/** Le resume de nuit a-t-il deja vu la transaction la plus avancee du registre ? On compare le
+ *  NUMERO de Hektor, genre par genre. Une transaction sans numero (pas encore revenue) : non. */
+function ckResumeNuitAJour(nuit: CkAffaireDetail, registre: CkAffaireDetail): boolean {
+  const genre = registre.vente ? 'vente' : registre.compromis ? 'compromis' : 'offre'
+  const id = String(registre[genre]?.id ?? '').trim()
+  return Boolean(id) && String(nuit[genre]?.id ?? '').trim() === id
 }
 
 /** LE DETAIL DE LA CHAINE -- ce que le bloc de maquette ne peut pas montrer.
@@ -28162,10 +28462,15 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   // Hektor detient pourtant sur presque tous les compromis (1 085 sur 1 151 lus).
   const [ckConsoleAffaires, setCkConsoleAffaires] =
     useState<Map<number, AffaireConsoleRow>>(new Map())
+  // ⑧ (23/10/2026) : le carnet, la repartition, les conditions et la note -- ce que l'app garde A
+  // ELLE. Jusqu'ici seule la modale les lisait. Une lecture ratee rend des cartes sans ces lignes.
+  const [ckDonneesApp, setCkDonneesApp] = useState<CkDonneesApp>(() => (
+    { carnet: new Map(), repartition: new Map(), conditions: new Map(), notes: new Map() }))
   const ckDossierIdPourRegistre = props.selectedDossier?.app_dossier_id ?? null
   useEffect(() => {
     let vivant = true
     setCkRegistreAffaires(null)
+    setCkDonneesApp({ carnet: new Map(), repartition: new Map(), conditions: new Map(), notes: new Map() })
     const id = Number(ckDossierIdPourRegistre)
     if (!Number.isFinite(id) || id <= 0) return
     loadAffairesForDossier(id)
@@ -28178,6 +28483,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
         loadAffairesConsole(lignes.map((l) => Number(l.app_affaire_id)))
           .then((m) => { if (vivant) setCkConsoleAffaires(m) })
           .catch(() => { if (vivant) setCkConsoleAffaires(new Map()) })
+        const ids = lignes.map((l) => Number(l.app_affaire_id))
+        const chaines = Array.from(new Set(lignes
+          .map((l) => (l.app_chaine_id == null ? '' : String(l.app_chaine_id))).filter(Boolean)))
+        void Promise.all([
+          loadAffaireChampsApp(ids).catch(() => new Map<number, Record<string, string>>()),
+          loadRepartitionsDesChaines(chaines).catch(() => new Map<string, RepartitionLigne[]>()),
+          loadAffairesConditions(ids).catch(() => new Map<number, AffaireCondition[]>()),
+          loadAffairesNotes(ids).catch(() => new Map<number, string>()),
+        ]).then(([carnet, repartition, conditions, notes]) => {
+          if (vivant) setCkDonneesApp({ carnet, repartition, conditions, notes })
+        })
       })
       .catch(() => { if (vivant) setCkRegistreAffaires(null) })
     return () => { vivant = false }
@@ -28519,7 +28835,17 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
   const ckSelAffDetail: CkAffaireDetail | null = (() => {
     if (ckSelectedNumero === 'ALL') return null
     const raw = ckCycleAff[ckSelectedNumero]?.affaires_detail_json
-    return raw ? parseJson<CkAffaireDetail | null>(raw, null) : null
+    const nuit = raw ? parseJson<CkAffaireDetail | null>(raw, null) : null
+    // ⑧ C1 (23/10/2026) : LE RESUME DE NUIT, REFAIT TOUT DE SUITE. Il est fabrique la nuit avec la
+    //   recette de build_affaire_detail_for_cycle (export_app_payload.py) : le 1er acquereur, le 1er
+    //   mandant, le 1er notaire de la vente. Notre registre porte ces champs DES LE RETOUR de Hektor.
+    //   Quand la nuit n'a pas encore vu la transaction la plus avancee (ou n'a pas de ligne : le
+    //   mandat de VA6482 n'en a aucune), on applique la MEME recette au registre. Sinon, la nuit,
+    //   comme avant. ⚠ Les « dossiers abandonnes » restent ceux de la nuit : non touches.
+    const registre = ckDetailDepuisRegistre(ckRegistreAffaires, ckSelectedNumero, ckCurrentNumero)
+    if (!registre) return nuit
+    if (nuit && ckResumeNuitAJour(nuit, registre)) return nuit
+    return { ...registre, dossiers: nuit?.dossiers ?? null }
   })()
   // Cartes de parties (acquéreur / mandant / notaire) avec CONTEXTE d'affaire + coordonnées.
   // Acquéreur : prio vente > compromis > offre. Mandant : de l'affaire (compromis/vente) sinon
@@ -30839,7 +31165,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
                       ) : null}
                       {chaines.map((c) => (
                         <div className="fa-ck-chaine" key={c.chaine}>
-                          <CkAffaires affaire={ckAffaireDepuisChaine(c, vendeurReg, ckConsoleAffaires)} />
+                          <CkAffaires affaire={ckAffaireDepuisChaine(c, vendeurReg, ckConsoleAffaires, ckDonneesApp)} />
                           <CkChaineLignes lignes={c.lignes} />
                         </div>
                       ))}

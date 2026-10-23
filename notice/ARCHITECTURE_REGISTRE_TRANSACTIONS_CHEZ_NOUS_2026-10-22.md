@@ -1966,3 +1966,30 @@ Les cartes portent **une liste fixe de lignes** depuis la maquette du 17/07. Jam
 l'offre ; acquéreur(s) et mandants sur les cartes Compromis et Vente ; net vendeur, taux et charge sur la vente ; **la répartition** ; **nos**
 conditions et **notre** note. Les montrer, c'est **ajouter** des lignes (le P1, P2, P4 du §22.4), pas réparer.
 ⚠ **Décision de Frédéric attendue** : C1-C6 seuls (« comme avant, tout de suite »), ou C1-C6 **plus** ces lignes et un bloc « Répartition ».
+
+## 25. C1-C6 + TOUS LES CHAMPS + LE BLOC RÉPARTITION — CODÉ le 23/10 *(Frédéric : « Vas-y : C1 à C6, plus tous les champs saisis sur les cartes et un bloc Répartition dans la rubrique »)* — écran seulement, **pas poussé**
+
+**Fichiers** : `apps/hektor-v1/src/App.tsx`, `apps/hektor-v1/src/lib/api.ts`, essai `apps/hektor-v1/test_rubrique_affaires_complete.cjs`.
+Rien chez Hektor, rien en base : uniquement des LECTURES en plus.
+
+| | ce qui change à l'écran |
+|---|---|
+| **C1** | « Parties à l'affaire » : si le résumé de nuit n'a pas vu la transaction la plus avancée (comparaison par **numéro Hektor**), ou n'existe pas, le bloc est fabriqué avec **la recette de la nuit** appliquée au registre (`ckDetailDepuisRegistre`). Sinon, la nuit, comme avant. Les « dossiers abandonnés » restent ceux de la nuit. Un cycle passé n'est pas touché |
+| **C2** | carte Vente : notaires de l'API d'abord, sinon ceux du registre (« … (vendeur) — … (acquéreur) ») |
+| **C3** | la carte Compromis lit la lecture de l'assistant **du compromis** (avant : celle de la vente dès qu'elle existait) ; notaires et honoraires vendeur du **registre d'abord**, la lecture en repli |
+| **C4** | une personne sous ses deux numéros comptée une fois : paire `app_contact_id` / `hektor_acquereur_id` de chaque ligne |
+| **C5** | modale : la répartition est cherchée dans **la chaîne de la transaction visée** d'abord (le compromis après la vente) ; à la création, l'ancienne règle, inchangée |
+| **C6** | modale d'une offre : honoraires vendeur et charge repris (`honoraires_entree_app`, `charge_commission_app`), **sans drapeau « touché »** |
+| **tous les champs** | offre : honoraires acquéreur, taux, honoraires vendeur, charge, n° mandat, notaire, nos conditions, note · compromis : acquéreur(s), mandant(s), prix public, honoraires acquéreur, taux, charge, n° mandat, nos conditions (avant celles de Hektor), note · vente : acquéreur(s), mandant(s), net vendeur, taux, charge, n° mandat, note. **Une ligne par valeur présente**, jamais de tiret |
+| **Répartition** | bloc par dossier sous les cartes (nom · %), et **un côté qui ne fait pas 100 % se dit** (« Total entrée : 50 % attribués sur 100 % ») |
+
+**Choix faits en codant, à relire par Frédéric** :
+- sur l'**offre**, le prix public et la rétractation du carnet **ne s'affichent pas** : ce sont les valeurs **pré-remplies** par la modale (constat 7), pas des saisies ;
+- le **n° de mandat n'est pas repris du registre dans la modale** (C6 réduit) : `selectedMandat` part **toujours** dans la charge du geste (App.tsx ~17541) — le reprendre changerait ce qui part chez Hektor ;
+- une fiche mandant **sans nom ni prénom** (« Mr./Mme » seul, VA6482 en a une) n'est pas listée.
+
+**Contrôles** : `npm run build` vert · `node apps/hektor-v1/test_rubrique_affaires_complete.cjs` **18/18**, sur les lignes mesurées de VA6482,
+en exécutant le code découpé dans App.tsx · **témoin inverse** : 16 sur 18 échouent sur la version d'avant (les 2 autres disent « rien ne
+change » : le pré-rempli caché, l'ancienne règle à la création).
+⚠ **Pas éprouvé hors ligne** : C6 (le préremplissage vit dans un effet du composant) — vérifié à la lecture seulement ; et **rien n'est vu à
+l'écran** : ce sera le troisième essai, après le push.

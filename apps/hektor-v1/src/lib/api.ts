@@ -1583,6 +1583,12 @@ export type AffaireLedgerRow = {
   jours_validite?: string | null
   date_fin_retractation?: string | null
   commission_agence: string | null
+  /** ⑧ (23/10/2026) : le taux SAISI (cote acquereur) et NOTRE numero du
+   *  contact principal. Au registre depuis R1 ; l'ecran ne les lisait pas.
+   *  `app_contact_id` + `hektor_acquereur_id` donnent la PAIRE de numeros d'une
+   *  meme personne : c'est elle qui evite « X et X » dans la rubrique. */
+  taux_honoraires?: string | null
+  app_contact_id?: string | number | null
 }
 
 const affaireLedgerSelect =
@@ -1600,6 +1606,8 @@ const affaireLedgerSelect =
   //     projet s'est fait prendre DEUX FOIS le 13/10. C'est la premiere ligne
   //     du lot 1c, et pas la derniere par hasard.
   'honoraires_entree_app,honoraires_sortie_app,charge_commission_app,' +
+  // ⑧ (23/10/2026) : meme piege que la ligne au-dessus -- au registre, invisibles ici.
+  'taux_honoraires,app_contact_id,' +
   'app_chaine_id'
 
 /** ─── CE QUE SEUL L'ASSISTANT DE HEKTOR REND (10/09/2026) ───
@@ -6190,6 +6198,38 @@ export async function loadRepartition(chaineId: number | string): Promise<Repart
     pourcentage: Number(row.pourcentage ?? 0),
     origine: (row.origine as string | null) ?? null,
   }))
+}
+
+/** ⑧ (23/10/2026) : la repartition de PLUSIEURS dossiers d'un coup, pour la
+ *  rubrique Affaires -- qui affiche un bloc par dossier. LECTURE SEULE. Une
+ *  lecture ratee rend une carte sans bloc, jamais une erreur a l'ecran. */
+export async function loadRepartitionsDesChaines(
+  chaineIds: Array<number | string>,
+): Promise<Map<string, RepartitionLigne[]>> {
+  const vide = new Map<string, RepartitionLigne[]>()
+  if (!hasSupabaseEnv || !supabase) return vide
+  const ids = Array.from(new Set(chaineIds.map((x) => String(x ?? '').trim()).filter((x) => /^\d+$/.test(x))))
+  if (!ids.length) return vide
+  const { data, error } = await supabase
+    .from('app_affaire_repartition')
+    .select('app_chaine_id,cote,rang,hektor_user_id,nom_au_moment,pourcentage,origine')
+    .in('app_chaine_id', ids)
+  if (error || !data) return vide
+  const out = new Map<string, RepartitionLigne[]>()
+  for (const row of data as Array<Record<string, unknown>>) {
+    const cle = String(row.app_chaine_id ?? '').trim()
+    const liste = out.get(cle) ?? []
+    liste.push({
+      cote: String(row.cote) === 'sortie' ? 'sortie' : 'entree',
+      rang: Number(row.rang) === 2 ? 2 : 1,
+      hektorUserId: String(row.hektor_user_id ?? '').trim(),
+      nomAuMoment: (row.nom_au_moment as string | null) ?? null,
+      pourcentage: Number(row.pourcentage ?? 0),
+      origine: (row.origine as string | null) ?? null,
+    })
+    out.set(cle, liste)
+  }
+  return out
 }
 
 /** REMPLACE la repartition du dossier, en une fois.
