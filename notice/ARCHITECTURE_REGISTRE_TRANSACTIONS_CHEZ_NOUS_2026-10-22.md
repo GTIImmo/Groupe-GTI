@@ -977,3 +977,44 @@ Supabase). ➡ **Le défaut dormait depuis le 24/09** : la règle n'avait jamais
 - ➡ **La nuit n'avait JAMAIS vu un contact né dans l'app avec une identité ≥ 20 000 000** avant celle du 22/10 (20000007).
   Le défaut du registre local est **ancien** (règle du 24/09) ; **nos essais l'ont simplement déclenché pour la première fois.**
   Le reste de l'audit (la cause, la propagation sur 20000007, les pistes A/B/C) est inchangé.
+
+## 10. DÉFAUT 6 — L'HISTOIRE : POURQUOI LE PROJET EST FAIT AINSI, ET COMMENT LE RÉSOUDRE *(Frédéric : « audite mon projet, comment et pourquoi avons-nous fait cela, il y a bien une raison, et surtout comment résoudre »)* — lecture seule
+
+### Les décisions, dans l'ordre (commits et plan)
+| date | décision | pourquoi |
+|---|---|---|
+| 19/08 | **le serveur local numérote les contacts** (registre `app_contact`) — « Supabase reçoit la série, il ne la fabrique jamais » | une seule source de numéros ; le serveur reconstruit tout chaque nuit depuis le miroir de Hektor |
+| 21/09 L4-a/L4-b (`627552f`, `28b2fbd`) | **un objet NAÎT dans l'app avec son numéro** : distributeur Supabase pour le contact, l'annonce, la recherche (option B : identité / cible) | ne plus attendre Hektor (« naître dans l'app ») ; préparer la coupure |
+| 21/09 | ⭐ **« le serveur remplit LES DEUX CASES : l'objet arrive avec un numéro d'app → ON L'ADOPTE »** — `adopter_numeros_app.py` | sans adoption, le serveur fabriquerait un **second numéro** à l'objet né dans l'app |
+| 22/09 L4-c (`b57d78d`) | **trois étages** : < 10 M Hektor · 10 M – 20 M la doublure (contacts venus de Hektor) · **≥ 20 M nés dans l'app** ; distributeur placé à 20 M | sans cela, le registre local et le distributeur auraient donné **le même numéro** à deux personnes |
+| 23/09 | **bascule** : `hektor_contact_id` porte l'identité, `hektor_target_id` le numéro Hektor | « une personne, un numéro » |
+| 24/09 L4-c-bis (`e414fe0`) | le registre range un contact NEUF **venu de Hektor** dans la bonne colonne | 23 contacts créés chez Hektor restaient sous leur numéro Hektor |
+| 24/09 C.9-a | ⭐ **pour l'ANNONCE, le même défaut est FERMÉ** : `descendre_correspondance_annonces.py` apprend le numéro de l'app **avant** le bootstrap, et un déclencheur interdit qu'un numéro de la plage app entre **sans adoption** | la liste le dit : « **jumeau du défaut contact du 21/09** » ; `adopter_numeros_app` = « 0 appelant, 3 défauts » |
+
+### Ce qui manque — LA VRAIE CAUSE
+- **Pour l'annonce**, l'adoption a été **branchée** (C.9-a, dans le run, éprouvée).
+- **Pour le contact**, la moitié a été faite : `descendre_correspondance_contacts.py` apprend la paire (20000008 ↔ 605946)
+  et **le build** s'en sert — c'est pour ça que la fiche est juste chez Supabase. **Mais le registre `app_contact` n'adopte
+  pas** : `adopter_numeros_app.py` n'a **jamais été mis dans le run** (« inerte, posé avant d'en avoir besoin »), et il est
+  resté écrit pour **avant** la bascule du 23/09 (il range l'identité avec `hektor_contact_id` vide). L4-c-bis (24/09) n'a
+  pensé qu'aux contacts **venus de Hektor** : pour une clé ≥ 10 M il garde la clé mais **tire un numéro neuf** et **jette la
+  cible** — alors que la source locale la porte (`app_contact_current` : 20000008 / cible 605946, vérifié).
+- **Pourquoi personne ne l'a vu en un mois** : **aucun contact n'a été créé par l'app du 22/09 au 20/10** (les négociateurs
+  créent dans Hektor). Le défaut attendait le premier — nos essais du 21-22/10.
+
+### LA SOLUTION — le jumeau de C.9-a, pour le contact (NON CODÉE)
+1. **`registre_contacts.py` ADOPTE** : une clé neuve **≥ 20 000 000** est une identité née dans l'app → `app_contact_id` =
+   **cette clé**, `hektor_contact_id` = cette clé, `hektor_target_id` = **la cible que la source porte déjà**. Aucun numéro
+   tiré. *(Une clé < 10 M garde la règle d'aujourd'hui : numéro tiré par le registre.)*
+2. **Le garde-fou, comme pour l'annonce** : un numéro ≥ 20 M n'entre dans `app_contact` **que s'il est égal à l'identité**
+   (déclencheur, ou contrôle dans le script) — sinon **arrêt bruyant** plutôt qu'un second numéro muet.
+3. **Réparer les 3 essais** : local `app_contact` (10650777 / 10650807 / 10650808 → 20000007 / 20000008 / 20000009, cibles
+   605925 / 605946 / 605947), local `app_search_registry` (77235 : 10650807 → 20000008), **Supabase** `app_contact_current`
+   de 20000007 (`app_contact_id` 10650777 → 20000007). Sauvegarde datée avant. *(Mesuré : 10650777/807/808 ne sont utilisés
+   nulle part ailleurs, ni en local ni chez Supabase.)*
+4. **Alors, rien d'autre à changer** : la nuit des transactions trouvera 605946 → 20000008 (le lien tient), et
+   `pousser_numeros_contact.py` renverra 20000008 → 20000008 (juste). Les pistes B et C d'avant deviennent **inutiles**.
+- ⏰ **Avant la nuit prochaine**, sinon 20000008 / 20000009 reçoivent probablement leur faux numéro chez Supabase.
+- **Ce que ça pourrait casser** : rien pour les 356 000 contacts venus de Hektor (clé < 10 M, chemin inchangé) ; à éprouver
+  sur **copie** de la base avec le **vrai** script, comme L4-c-bis (17/17) — y compris le témoin inverse (l'ancien script
+  refabrique 10650807).
