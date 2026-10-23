@@ -1056,3 +1056,15 @@ renverra 20000007 → 20000007 (vérifié sur la copie).
 **Noté en passant, PAS de moi, non traité** : chaque passage du registre « relève » **7 658** contacts marqués absents
 (vraie base : 7 661 absents) — l'ancien script fait **exactement** pareil sur la même copie. Probable va-et-vient avec
 `marquer_contacts_disparus.py`. À regarder à part.
+
+### ✅ RÉPARATION JOUÉE SUR LA VRAIE BASE — 23/10 à 08:24 *(Frédéric : « vas-y »)*
+Rien ne tournait. Mesure seule identique à la copie, puis `--ecrire` → code 0. **Vérifié en lecture seule** :
+- 20000007 / 20000008 / 20000009 portent **leur numéro** et leur cible (605925 / 605946 / 605947) ; **0** contact à deux
+  numéros ; **0** numéro parasite restant ; recherche 77235 → 20000008 ; registre 356 629 lignes, 356 629 numéros distincts.
+- **La nuit des transactions** relie 605925 / 605946 / 605947 → 20000007 / 20000008 / 20000009.
+- Sauvegarde : `app_contact_avant_reparation_20261023` (3 lignes) et `app_search_registry_avant_reparation_20261023` (1).
+- `test_registre_ne_double_pas.py` sur la vraie base : **5/5 vert** — après avoir corrigé son contrôle (4), qui exigeait un
+  plus haut numéro < 20 M : faux par construction depuis l'adoption ; il ne mesure plus que les numéros **tirés** par le
+  registre (plus haut : 10 650 806). `test_adoption_contact_ne_dans_app.py` toujours **22/22**.
+- ⏰ **À vérifier demain matin** : chez Supabase, `app_contact_current.app_contact_id` de **20000007** doit être revenu à
+  **20000007** (renvoyé par `pousser_numeros_contact`), et 20000008 / 20000009 doivent être restés justes.

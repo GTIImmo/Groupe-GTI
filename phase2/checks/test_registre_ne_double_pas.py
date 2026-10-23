@@ -90,7 +90,12 @@ controle("(3) la couche et le registre parlent de la MEME personne (au-dela d'un
 # ── ④ LE COULOIR N'A PAS DEBORDE ──────────────────────────────────────────
 # La doublure vit de 10 000 001 a 19 999 999. Au-dela, c'est la plage des
 # objets NES DANS L'APP : y deborder, c'est donner le meme numero a deux choses.
-plus_haut = q("SELECT COALESCE(MAX(app_contact_id), 0) FROM app_contact")
+# ⑧ 23/10 : depuis l'ADOPTION, un contact ne dans l'app est inscrit sous SON numero
+# (>= 20 M, egal a son identite) -- c'est voulu, ce n'est pas un debordement. On ne
+# mesure donc que les numeros TIRES par le registre.
+plus_haut = q("SELECT COALESCE(MAX(app_contact_id), 0) FROM app_contact "
+              "WHERE NOT (app_contact_id >= 20000000 "
+              "AND app_contact_id = CAST(hektor_contact_id AS INTEGER))")
 controle("(4) la serie reste dans le couloir de la doublure",
          plus_haut < 20_000_000, f"le plus haut est {plus_haut}")
 
