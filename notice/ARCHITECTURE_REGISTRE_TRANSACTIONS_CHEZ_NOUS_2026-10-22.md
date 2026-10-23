@@ -1663,3 +1663,6 @@ qualification**. L'ENVOI, lui, a marché (la porte `ciblesHektorContacts` reconn
 - ⚠ **Les lignes déjà jugées restent telles quelles** (1001379 `prix_publique` « conflit », 1001378 honoraires / taux « arrivée »,
   notaire « sans objet ») : R3 ne rejuge pas une ligne tranchée. Les remettre à blanc = une écriture en base, **à l'accord de Frédéric**.
 - ➡ **Pour l'activer** : pousser, redémarrer les 4 services file vide.
+- ✅ **ACTIF le 23/10 à 12:11** *(Frédéric : « poussé et 4 services redémarrés, file vide »)* : `7fce928` est sur `origin/main`
+  (commit de 12:08:54) ; les **4 processus** du worker sont nés à **12:11:07-09**, après le commit ; file vide (0 en attente, 0 en
+  cours), aucun travail ni erreur depuis. ⏰ Première preuve réelle : la prochaine relecture ou création de transaction, puis la nuit.
