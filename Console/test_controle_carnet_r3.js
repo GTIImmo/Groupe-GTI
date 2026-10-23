@@ -109,6 +109,20 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
       inconnus === LIGNES_50129.length && m.supprimes.length === 0, `${inconnus} inconnu(s), ${m.supprimes.length} retiree(s)`);
   }
   {
+    // ESSAI REEL du 23/10 (offre 33109) : apres une MODIFICATION, l'ancien verdict repassait sur les
+    // lignes de la CREATION et ecrasait « sans_objet » / « en_attente » par « inconnu ».
+    const reg = { ...REG_50129, montant: "135000", date: "2026-10-22" };
+    const m = monter({ registres: [reg], lignes: [
+      { champ: "prix_publique", valeur_app: "128787", valeur_hektor_au_moment: null, origine: "creation_app" },
+      { champ: "numero_mandat", valeur_app: "18787", valeur_hektor_au_moment: null, origine: "creation_app" },
+      { champ: "montant", valeur_app: "140000", valeur_hektor_au_moment: "135000", origine: "modification_app" }] });
+    await m.contexte.ancien(JOB, 1001375);
+    controle("(3b) apres une modification, l'ancien verdict ne touche PLUS les lignes de creation",
+      !m.patches.some((p) => p.cle.endsWith(":prix_publique") || p.cle.endsWith(":numero_mandat")), JSON.stringify(m.patches));
+    controle("(3b) ... et juge toujours la ligne de modification (montant : relu = photo -> en_attente)",
+      m.patches.some((p) => p.cle.endsWith(":montant") && p.etat === "en_attente"), JSON.stringify(m.patches));
+  }
+  {
     const m = monter({ registres: [REG_50129], lignes: LIGNES_50129, travaux: [{ status: "done", created_at: ECRIT }] });
     const r = await m.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: CHEZ_50129, force: true });
     const arrivees = ["montant", "date", "date_acte", "sequestre", "prix_net_vendeur", "honoraires_entree", "jours_retractation", "prix_publique"];

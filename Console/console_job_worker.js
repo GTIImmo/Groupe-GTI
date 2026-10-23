@@ -15140,12 +15140,16 @@ async function marquerLeCarnetRestant(job, appAffaireId) {
     if (!ligne) return;
     const carnet = await supabaseRequest(
       `app_affaire_champ_app?app_affaire_id=eq.${id}`
-      + `&select=champ,valeur_app,valeur_hektor_au_moment`, { method: "GET" });
+      + `&select=champ,valeur_app,valeur_hektor_au_moment,origine`, { method: "GET" });
     if (!Array.isArray(carnet) || !carnet.length) return;
 
     const quand = new Date().toISOString();
     const resume = [];
     for (const l of carnet) {
+      // R3 (23/10, essai reel de l'offre 33109) : une ligne de CREATION se juge par R3
+      // (controlerLeCarnet), pas ici. Ce verdict-ci compare a une photo qu'une creation n'a pas :
+      // il ecrasait « sans_objet » et « en_attente » par « inconnu ».
+      if (R3_CONTROLE_CARNET && String(l.origine || "").trim() === "creation_app") continue;
       const champ = String(l.champ || "").trim();
       const colonne = CARNET_VERS_REGISTRE[champ];
       const photo = String(l.valeur_hektor_au_moment == null ? "" : l.valeur_hektor_au_moment).trim();

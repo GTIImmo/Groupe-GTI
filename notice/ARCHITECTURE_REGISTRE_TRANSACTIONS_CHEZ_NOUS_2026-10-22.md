@@ -1299,3 +1299,26 @@ envoyé à Hektor.** *(Le reste de son carnet — prix public, rétractation —
 `origin/main` = `e93180b` ; processus démarrés à 09:56:33-35, **après** le fichier (09:51:11) ; la ligne du correctif est dans le
 fichier en service ; file vide, 0 erreur sur 20 min. ⚠ **Non revu en réel** : il faudrait une nouvelle création (écriture chez
 Hektor) — il se verra à la prochaine vraie création (« R3 : N ligne(s) jugée(s) » dès le travail de création).
+
+### ✅ E ALLUMÉ, ET ESSAI RÉEL D'UNE OFFRE (création + modification d'un seul champ) — 23/10, 10:03-10:15 *(Frédéric : « allume E » ; bien choisi : VA6482)*
+- **E allumé** à 10:03:17 (`affaire_modif_champs_touches = on`). Vérifié avant : la version EN LIGNE du front porte E1
+  (`index-9tny6SWH.js` contient `champs_touches`) ; un onglet resté ouvert sur l'ancienne version n'envoie pas la liste → comportement
+  d'avant, sans danger. *(L'onglet de Chrome était « caché » : captures et clics à l'écran figés ; essai mené par script.)*
+- **Création** de l'offre **33109** (120 000, validité 10, ESSAI 8A B2) : prouvée par les deux portes, numéro posé, registre mis à jour
+  par la **lecture par numéro** (montant 120 000, validité 10). ⭐ **R3 a jugé DÈS LA CRÉATION** (6 lignes, 3 arrivées retirées : montant,
+  date, validité) — le correctif `834da97` est prouvé. Restaient : n° de mandat **en_attente**, prix public et rétractation **sans_objet**.
+- **Modification d'un seul champ** (validité 10 → 12, « Modifier la transaction ») : ⭐ **E prouvé** — charge `champs_touches =
+  ["validity_days"]`, **charge entière** envoyée (montant 120 000 compris), **une seule ligne au carnet** (`jours_validite = 12`). Hektor
+  a relu **validité = 12**, ligne retirée, registre à 12.
+- ⚠ **DÉFAUT TROUVÉ** : après la modification, l'**ancien** verdict (`marquerLeCarnetRestant`) a repassé sur les lignes de la
+  **création** et remplacé « sans_objet » / « en_attente » par « **inconnu** ». **Corrigé** (il saute désormais les lignes
+  `creation_app`, laissées à R3), essai **26/26**, la version en service reproduit le défaut, 4 mutants attrapés. **Non actif** sans
+  redémarrage. Les 3 lignes de 1001377 resteront « inconnu » jusqu'à leur prochain rattrapage (≥ 6 h).
+- **Nettoyage** : offre 33109 **refusée** chez Hektor (`change_hektor_offre_status` done ; registre « refused ») — une offre ne se supprime
+  pas, la trace « offre refusée » reste. Bien remis à **« Actif »** (`change_hektor_annonce_status` done).
+- ⚠⚠ **EFFET DE BORD — VA6482 EST PASSÉ « diffusable = 1 »** (il était à 0). Le geste « Actif » envoie **toujours** `diffusable = 1`
+  (`HEKTOR_STATUS_CONFIG.active`, l. 12436). L'app n'a **aucun geste** pour retirer la seule diffusion. Le bien n'a **aucun portail
+  actif** et sa validation est « à contrôler » ; **non vérifié** : s'il apparaît sur le site de l'agence. **À remettre à 0 par Frédéric**
+  (fiche Hektor). Leçon : nettoyer un essai par le geste « Actif » n'est pas neutre.
+- **Noté** : la fiche du bien (`app_dossier_current`) porte encore `compromis_id = 50129` (supprimé) et pas `offre_id = 33109` — ces
+  pointeurs ne sont remplis que la nuit (déjà dit dans le code, 02/09) ; la modale s'en sort par son repli.
