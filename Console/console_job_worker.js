@@ -21425,10 +21425,12 @@ const R3_SOURCES = {
 //                     `honoraires_sortie_app` ; au compromis et a la vente, ils partent et se controlent.
 //   taux_honoraires   03/09 (1.2) : classe A, « Hektor n'a aucune destination ».
 //   notaire_id        16/09 : pour une offre, « PERSONNE » ne relit le notaire (ni API ni assistant).
+//   notaire_mandant_id / notaire_mandant_nom   23/10 (patch N, decision « A » de Frederic) : le notaire du
+//                     VENDEUR d'une offre, garde au carnet ; Hektor ne le porte pas sur une offre (0 sur 11 190).
 // ⚠ Le worker les ENVOIE encore dans le corps de l'offre (code d'avant le 16/10) : arreter cet envoi
 //   est une decision de Frederic, pas l'affaire de ce controle.
 const R3_NON_CONTROLES = {
-  offre: new Set(["honoraires", "taux_honoraires", "notaire_id"]),
+  offre: new Set(["honoraires", "taux_honoraires", "notaire_id", "notaire_mandant_id", "notaire_mandant_nom"]),
 };
 
 function r3Texte(v) { return v == null ? "" : String(v).trim(); }

@@ -16437,11 +16437,15 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (statusChangeStatus !== 'compromise' && statusChangeStatus !== 'sold') return
     if (statusChangeHonorairesEntreeTouche || statusChangeHonorairesEntree.trim()) return
     const courante = affaireCourantePourStatut()
-    const cle = courante?.app_chaine_id
-    if (cle == null) return
+    // ⑧ (23/10/2026) : A LA CREATION, il n'y a pas encore d'« affaire courante » (le compromis n'existe
+    //   pas) : cette reprise ne jouait donc JAMAIS en creation -- c'est le constat F11 de l'essai du
+    //   23/10 (« la commission vendeur et sa charge ne passent pas de l'offre au compromis »). On prend
+    //   alors le dossier ouvert du bien, par la meme regle que la repartition.
+    const cle = courante?.app_chaine_id != null ? String(courante.app_chaine_id) : repartitionChaineId()
+    if (!cle) return
     // L'offre de la MEME chaine, celle ou la commission a ete saisie.
     const offre = statusChangeAffaires.find((a) => String(a.kind) === 'offre'
-      && a.app_chaine_id === cle)
+      && String(a.app_chaine_id) === cle)
     const repris = String(offre?.honoraires_entree_app ?? '').trim()
     if (!repris) return
     setStatusChangeHonorairesEntree(repris)
@@ -17064,7 +17068,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     //   (`registre_depuis_console.py`) ; la modale lit le registre, comme pour
     //   le prix, les dates et le net vendeur. Un seul endroit.
     const notaireAcq = String(affaire.notaire_acquereur_id ?? '').trim()
-    const notaireMan = String(affaire.notaire_mandant_id ?? '').trim()
+    // ⑧ N (23/10/2026) : sur une OFFRE, le notaire du vendeur n'existe QU'AU CARNET (Hektor ne le
+    //   porte pas, R1 ne l'ecrit qu'au compromis et a la vente). Le carnet d'abord, comme partout ici.
+    const notaireManCarnet = String(carnet.notaire_mandant_id ?? '').trim()
+    const notaireMan = notaireManCarnet || String(affaire.notaire_mandant_id ?? '').trim()
     // Le carnet garde la priorite cote acquereur : c'est une saisie humaine.
     const notaire = String(carnet.notaire_id ?? '').trim() || notaireAcq
     if (notaire) {
@@ -17075,10 +17082,35 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     if (notaireMan) {
       setStatusChangeSellerNotaryId(notaireMan)
-      setStatusChangeSellerNotaryNom(String(affaire.notaire_mandant_nom ?? '').trim())
+      setStatusChangeSellerNotaryNom(notaireManCarnet
+        ? String(carnet.notaire_mandant_nom ?? '').trim()
+        : String(affaire.notaire_mandant_nom ?? '').trim())
     }
     const mandat = String(carnet.numero_mandat ?? '').trim()
     if (mandat) setStatusChangeSelectedMandat(mandat)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusChangeAffaires, statusChangeStatus, carnetAffaires])
+
+  // ─── ⑧ N (23/10/2026) : LE NOTAIRE DU VENDEUR SE REPREND DE L'OFFRE DE LA CHAINE ───
+  //
+  // Decision « A » de Frederic : saisi sur l'offre, il est garde au CARNET de l'offre (Hektor ne le
+  // porte pas sur une offre) ; le compromis cree sur la MEME chaine le reprend -- il part alors chez
+  // Hektor avec le compromis, qui le garde. C'est le meme geste que la commission ci-dessus.
+  // ⚠ A LA CREATION DU COMPROMIS SEULEMENT : en modification la transaction a le sien (registre), et
+  //   la vente herite deja du compromis (regle du 10/09). Jamais par-dessus un choix deja fait.
+  useEffect(() => {
+    if (statusChangeStatus !== 'compromise') return
+    if (affaireCourantePourStatut()) return
+    if (statusChangeSellerNotaryId.trim()) return
+    const cle = repartitionChaineId()
+    if (!cle) return
+    const offre = statusChangeAffaires.find((a) => String(a.kind) === 'offre' && String(a.app_chaine_id) === cle)
+    if (!offre) return
+    const k = carnetAffaires.get(Number(offre.app_affaire_id)) ?? {}
+    const id = String(k.notaire_mandant_id ?? '').trim()
+    if (!id) return
+    setStatusChangeSellerNotaryId(id)
+    setStatusChangeSellerNotaryNom(String(k.notaire_mandant_nom ?? '').trim())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusChangeAffaires, statusChangeStatus, carnetAffaires])
 
@@ -20575,6 +20607,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             setStatusChangeSellerNotaryId(String(option.hektor_contact_id ?? '').trim())
                             setStatusChangeSellerNotaryNom(mandantContactOptionTitle(option))
                             setStatusChangeNotairesAffirmes((etat) => ({ ...etat, mandant: true }))
+                            // ⑧ N (23/10/2026) : comme le notaire de l'acquereur -- la liste du point E dit
+                            //   qu'on l'a touche (le carnet d'une OFFRE le garde, Hektor non).
+                            toucherStatusChange('seller_notary_id')
                           }}
                           onRetirer={() => {
                             // ⚠ RETIRER N'EFFACE PAS CHEZ HEKTOR, et il ne faut pas le
@@ -20585,6 +20620,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                             setStatusChangeSellerNotaryId('')
                             setStatusChangeSellerNotaryNom('')
                             setStatusChangeNotairesAffirmes((etat) => ({ ...etat, mandant: false }))
+                            toucherStatusChange('seller_notary_id')
                           }} />
                         <SelecteurNotaire
                           libelle="Notaire de l'acquéreur"
@@ -28176,6 +28212,10 @@ function ckAffaireDepuisChaine(
     const notaireOffre = txt(k.notaire_id)
     ajout(lignesOffre, 'Notaire acquéreur',
       notaireOffre ? (nomNotaire(notaireOffre) || 'Contact ' + notaireOffre) : notaireDu(o, 'acquereur'), true)
+    // ⑧ N : le notaire du VENDEUR d'une offre n'existe qu'au carnet (Hektor ne le porte pas sur une offre).
+    const notaireVendOffre = txt(k.notaire_mandant_id)
+    ajout(lignesOffre, 'Notaire vendeur',
+      notaireVendOffre ? (txt(k.notaire_mandant_nom) || nomNotaire(notaireVendOffre) || 'Contact ' + notaireVendOffre) : '', true)
     ajout(lignesOffre, 'Conditions suspensives', conditionsDe(o), true)
     ajout(lignesOffre, 'Note', noteDe(o), true)
   }

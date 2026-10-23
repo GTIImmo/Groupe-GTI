@@ -168,6 +168,17 @@ function essai(api) {
     /7\s?000/.test(val("offre", "Honoraires vendeur (agence)")) && val("offre", "Charge de la commission") === "Acquéreur"
       && val("offre", "Taux honoraires acquéreur") === "5,08 %" && val("offre", "N° de mandat") === "18787"
       && val("offre", "Notaire acquéreur") === "Me. NOTAIRE ACQ", J(rows("offre")));
+  {
+    // ⑧ N (23/10) : le notaire du VENDEUR d'une offre n'existe qu'au carnet.
+    const avecN = APP_DONNEES(false);
+    avecN.carnet.set(1001381, { ...avecN.carnet.get(1001381), notaire_mandant_id: "10355906", notaire_mandant_nom: "Me. Eric PAILHES" });
+    const afN = api.ckAffaireDepuisChaine(ch, null, CONSOLE, avecN);
+    const ligneN = ((afN.lignesApp && afN.lignesApp.offre) || []).find((r) => r[0] === "Notaire vendeur");
+    ok("N : la carte de l'offre montre le notaire du vendeur garde au carnet",
+      ligneN && ligneN[1] === "Me. Eric PAILHES", J(afN.lignesApp && afN.lignesApp.offre));
+    ok("N : sans carnet, pas de ligne « Notaire vendeur » (pas de tiret)",
+      !rows("offre").some((r) => r[0] === "Notaire vendeur"), J(rows("offre")));
+  }
   ok("offre : la retractation et le prix public PRE-REMPLIS ne s'affichent pas",
     !rows("offre").some((r) => /Rétractation|Prix public/.test(r[0])), J(rows("offre")));
   ok("compromis : acquereur (une fois), mandant, prix public, honoraires acquereur",
