@@ -1328,3 +1328,71 @@ Fiche du bien → menu **« Pilotage »** de l'en-tête → **« Pilotage diffus
 backend Render, écrit chez Hektor puis met à jour notre fiche). ⚠ Avant rechargement, l'écran montrait déjà « Désactiver » choisi
 (état périmé) — il a fallu recharger pour voir « Activer » et pouvoir cliquer. **Vérifié des deux côtés** : notre fiche `diffusable = 0`
 et **Hektor `keyData.diffusable = 0`** (lecture `AnnonceById`).
+
+## 14. AUDIT GLOBAL DU CARNET — avant d'activer `fd8e3c8` — 23/10 *(Frédéric : « tu as mal audité mon architecture globale, fais-le maintenant : ton correctif ne doit pas générer de bug en cascade »)* — lecture seule
+
+> **Périmètre** : objet **transaction** (offre, compromis, vente), et tout ce qui écrit ou lit le carnet `app_affaire_champ_app`,
+> son `etat`, et les colonnes du registre que R3 écrit. **Les autres objets ne sont pas mesurés ici.**
+
+### Qui ÉCRIT le carnet — tous trouvés
+| écrivain | quand | ce qu'il fait |
+|---|---|---|
+| RPC `app_change_annonce_status_optimistic` | clic « créer » | lignes `creation_app`, sans photo |
+| RPC `app_modifier_affaire_optimistic` | clic « modifier » | upsert `modification_app`, **la 1re photo gagne** ; ⚠ **ne remet PAS `etat` à blanc** |
+| RPC `app_edit_affaire_optimistic` | **dormante** (appel retiré de l'écran le 15/09) | `saisie_app`, jamais envoyée à Hektor |
+| worker `retirerDuCarnetCeQuiEstArrive` | modification prouvée | **efface par champ**, quelle que soit l'origine (une ligne de création comprise) |
+| worker `marquerLeCarnetRestant` (ancien verdict) | modification prouvée, seulement sur le chemin du succès | juge **toutes** les lignes sauf `creation_app` (`fd8e3c8`) ; efface les « arrivée » qui ont une colonne |
+| worker `controlerLeCarnet` (R3) | création + chaque relecture (1 fois / 6 h / ligne) | juge les lignes à `etat` vide / en_attente / inconnu ; efface les « arrivée » |
+| worker, suppression d'une transaction | geste « supprimer » | purge le carnet (borné à `requested_at`) |
+| `nettoyer_carnet_affaire.py` | **à la main seulement — PAS dans le run** (vérifié) | — |
+| `magasin_affaire_app.py` / `appliquer_contrat_affaire.py` | nuit | copie locale / **ne fait rien** (contrat vide, « le gel ») — ne lisent pas `etat` |
+
+### Qui LIT le carnet
+- **La modale « Modifier »** (App.tsx ~16933-17060) : le carnet **d'abord**, puis le registre — **sauf** pour 4 champs qui ne lisent
+  **QUE le carnet** : **validité**, **rétractation**, taux d'honoraires, prix public.
+- **La grille de détail** (App.tsx ~21142) : prix public, prix net vendeur, honoraires, taux — **carnet seul**, aucun repli sur le
+  registre (qui porte pourtant `prix_net_vendeur` et `honoraires_sortie`).
+- **Les étiquettes d'état** (`loadAffaireCarnetEtats`).
+- **La nuit** (`affaire_ledger.py`) : une ligne au carnet **protège** l'affaire du marquage « absente ». Les affaires nées dans l'app
+  (≥ 1 M) sont protégées de toute façon par leur plage.
+
+### La mesure (23/10)
+Le carnet entier compte **18 lignes**. Les 3 « inconnu » de 1001377 sont celles que `fd8e3c8` empêchera à l'avenir.
+Le registre : **47 compromis actifs sur 323** dont la rétractation est connue ont une rétractation **≠ 10 jours** ; **8 offres**
+ont une validité **≠ 10**.
+
+### ⛔ LE RISQUE EN CASCADE TROUVÉ — R-A (réel)
+Quand une ligne « arrivée » sort du carnet, la modale **ne relit pas le registre** pour la validité ni la rétractation : elle remet
+**« 10 » par défaut** (App.tsx:16603-16604). Comme la charge part **entière** (E ne filtre que le carnet), la **modification
+suivante, même d'un autre champ, envoie 10 à Hektor** — en silence (la rétractation n'est pas un champ prouvé).
+- **Exemple vivant** : l'offre 33109 porte **12** au registre et chez Hektor ; sa ligne est sortie à 10:15 ; la modale montrerait
+  **10**.
+- ⚠ **Ce n'était pas créé par R3**, ça existait : la modification efface déjà la validité arrivée (11/09 / 18/09), et **tout compromis
+  né chez Hektor** n'a aucune ligne (les 47). **Mais R3 l'étend à toutes les créations de l'app**, dès le retour de Hektor.
+- **Parade A1 (écran, la vraie cause)** : la validité se replie sur `jours_validite` du registre ; la rétractation sur
+  `date_fin_retractation − date` ; la grille se replie sur `prix_net_vendeur` et `honoraires_sortie`. Ça couvre aussi l'existant.
+  ⚠ Pour un compromis sans `date_fin_retractation` (la plupart des anciens), on ne sait pas : « 10 » reste — comme avant.
+
+### Les risques plus petits
+- **R-B, étiquette périmée** : la RPC de modification ne remet pas `etat` à blanc, et R3 saute une ligne « déjà tranchée ». Une ligne
+  « conflit » ou « échec » réécrite garde son ancienne étiquette si le nouvel envoi échoue. **Parade B (worker, 1 ligne)** : R3 rejuge
+  une ligne écrite APRÈS son dernier verdict (`ecrit_le > constate_le`).
+- **R-C, va-et-vient** : l'ancien verdict réécrit en « inconnu » les verdicts de R3 sur les lignes de modification qu'il ne sait pas
+  juger (notaire, taux, rétractation), et repousse R3 de 6 h. Seulement visuel. **Parade C (worker)** : quand R3 est allumé, l'ancien
+  verdict laisse ces lignes-là à R3.
+- **R-D, lectures sans fin** : une ligne qui ne peut jamais conclure (taux recalculé faux, offre sans mandat, notaire jamais posé)
+  relit Hektor toutes les 6 h à chaque relecture, **pour toujours**. Aujourd'hui négligeable (18 lignes). **Parade D** : arrêter après
+  N jours. **La durée est à Frédéric.**
+- **R-E, dormant** : R3 jugerait aussi une ligne `saisie_app` ou `classeur` (jamais envoyée par construction) → faux « conflit ».
+  0 ligne aujourd'hui. **Parade E (worker, 1 ligne)** : R3 ne juge que `creation_app` et `modification_app`.
+
+### Vérifié, sans risque
+- `fd8e3c8` lui-même : **aucun risque nouveau trouvé**. Une ligne de création réécrite par une modification devient
+  `modification_app`, donc l'ancien verdict la juge. R3 éteint → retour exact au comportement d'avant.
+- Un travail **en cours** sur la même affaire : R3 ne juge pas ses lignes (garde par `ecrit_le = created_at`).
+- Le **filet de rejeu** : R3 est idempotent (une ligne effacée ne revient pas, une ligne tranchée n'est pas rejugée).
+- La **suppression** d'une transaction purge le carnet ; R3 ne ressuscite rien.
+- La **protection de nuit** : identique à avant R3 (l'ancien verdict effaçait déjà les « arrivée »).
+- `reporterAuRegistre` à la création : n'écrit que ce que Hektor a relu (« vide ne gagne pas ») ; ne touche pas `hektor_acquereur_id`
+  (la clé du chaînage).
+- ⚠ **Hors R3, déjà connu = R2** : le `--push` de nuit fait `SELECT *` + upsert et remplace la ligne du registre entière.
