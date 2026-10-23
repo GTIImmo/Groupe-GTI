@@ -2321,3 +2321,41 @@ toucher, ou délier ; (d) avant tout : mesurer qui lit ces liens (rubrique Conta
   « acquéreur » seul** dans notre copie des contacts (copie plus ancienne que le lien, ou typologie non mise à jour par Hektor : non
   mesuré). Chez Hektor en direct, les 7 liés de l'échantillon portent « acquéreur, mandant ». ⇒ Le fait qui compte est **le lien au bien**
   (liste des propriétaires), pas la typologie.
+
+## 39. LES TYPES DE CONTACTS ET LES LIENS — Hektor, serveur, app : règles et données (synthèse du 23/10, lecture seule)
+
+**1. Les 4 types de l'APP** (App.tsx ~37346, `contactDirectoryCategories`) — **calculés par nous**, non exclusifs, priorité
+Mandant > Acheteur > Propriétaire > Acquéreur :
+
+| type | règle de l'app |
+|---|---|
+| **Mandant** | lié à un bien **avec** numéro de mandat (rôle `mandant`) |
+| **Propriétaire** | lié à un bien **sans** numéro de mandat (rôle `proprietaire`) |
+| **Acheteur** | lié à un bien par une **transaction** (rôles `acquereur_offre` / `_compromis` / `_vente`) |
+| **Acquéreur** | a une **recherche active** (prospect), indépendamment des biens |
+
+**2. Ce que HEKTOR connaît** — deux choses différentes :
+- la **typologie du CONTACT** (globale, tous biens) : « acquéreur », « mandant », « partenaire »… → **récupérée** (`typologies_json`),
+  mais **les 4 types de l'app ne l'utilisent pas**. Elle sert seulement : aux badges de la fiche, à la **qualification de l'acquéreur**
+  avant un compromis / une vente (worker `estQualifieAcquereur`, avertissement de la modale), à deviner la nature (partenaire, locataire)
+  pour modifier une fiche.
+- les **LIENS au BIEN** : la liste des **propriétaires de l'annonce** (UN seul fait) et les listes d'offres / compromis / ventes (avec
+  l'acquéreur). Hektor n'a pas de lien « mandant » : c'est **notre build** qui rebaptise le propriétaire en « mandant » quand l'annonce
+  porte un numéro de mandat (`build_contacts_layer.py` l. ~1395).
+
+**3. Ce que fait le SERVEUR (la nuit)** : `build_contacts_layer.py` refait `app_contact_relation_current` depuis 6 sources —
+propriétaires de l'annonce (`sync_annonce_contact_link`) → mandant / propriétaire ; listes d'offres, compromis, ventes → acheteur ;
++ `api_contact_detail_annonces`, `api_annonce_detail_proprietaires` ; puis `relation_roles_json` par contact → **les 4 types de l'app**.
+`relation_ledger.py` tient à part le registre durable `app_relation` (le fait « propriétaire du bien » seulement).
+
+**4. Les données** (`app_contact_relation_current`) : propriétaire 25 975 + 76 · mandant 24 201 + 107 · acheteur offre 11 164 ·
+compromis 13 267 · vente 10 539.
+
+**5. Le défaut, chiffré** : un acheteur qui a AUSSI un rôle propriétaire/mandant sur **le bien qu'il a acheté** :
+**91 pour les ventes depuis le 17/07** (89 « mandant »), **14 en 2026 avant le 17/07**, **13 avant 2026**. Depuis le 17/07, c'est Hektor qui
+l'inscrit propriétaire (§38) ; notre build le range « mandant » (le bien a le numéro de mandat du VENDEUR) ; **dans l'app, son type dominant
+devient « Mandant »** au lieu d'« Acheteur ». Contraire à la règle de Frédéric.
+⚠ Les cas anciens ne sont pas forcément faux : un acheteur qui **revend plus tard le même bien** sous un nouveau mandat EST mandant. La
+règle doit donc porter sur le moment (lien apparu après la vente, sur le mandat du vendeur), pas sur « acheteur ⇒ jamais mandant ».
+
+**6. Le push en attente** (rubrique Affaires, verrou V à l'écran, note, conditions, charge, notaire) **ne touche ni les liens ni les types**.
