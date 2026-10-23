@@ -1546,3 +1546,31 @@ LA FOIS la liste d'attente et la seule mémoire de 5 champs (règle du 16/09).
   notaire **à lui-même** (« arrivée » sans preuve). Sans conséquence sur le carnet désormais (le notaire reste), à mesurer
   demain matin avec la preuve de nuit.
 - ➡ **Pour l'activer** : pousser, puis redémarrer les 4 services, file vide (Frédéric). L'écran part avec le push (Vercel).
+
+## 18. L'ESSAI COMPLET — contact → offre → acceptée → compromis → vente, sur VA6482 *(Frédéric, 23/10 : « prouver tout le registre et aussi le chaînage »)* — PROTOCOLE, rien n'est lancé
+
+⚠ **Il se joue APRÈS le push et le redémarrage** : avant, c'est l'ancien R3 qui tournerait (il retire les 5 champs), et l'essai ne
+prouverait pas la correction `941cb70`.
+
+**État de départ, mesuré le 23/10** : VA6482 (annonce 24113, dossier 1068399) **Actif**, `diffusable 0`, mandat **18787 ouvert**
+(échéance 27/08/2027, aucune clôture chez nous) ; offres 33109 et 32849 **refusées** ; carnet : les 3 lignes de 1001377 seulement.
+
+**Ce que le code dit de chaque geste (lu le 23/10)**
+- **Contact sans recherche** : l'OFFRE n'a pas ce filtre (`qualifierAcquereursAvantTransaction` : « l'offre n'a pas ce filtre ») ;
+  au **compromis et à la vente**, le worker crée une recherche, attache la transaction, puis **archive** la recherche — dans le même
+  travail (décision du 18/09). Journal : `hektor_qualification_acquereur`.
+- **Vente** : statut **Vendu** chez Hektor ; le mandat **18787 est clos CHEZ NOUS** (`cloturerMandatLocalement`) ; **pas chez
+  Hektor** (`CONSOLE_HEKTOR_CLOTURE_MANDAT` absent = faux) ; « après la vente » = **actif** (constante de l'écran) → pas d'archivage.
+
+| étape | geste (par l'écran) | valeurs d'essai | ce qu'on vérifie |
+|---|---|---|---|
+| 1 | créer le contact « ESSAI 8 R3 » | sans recherche | numéro ≥ 20 M, paire Hektor apprise, 0 doublon |
+| 2 | offre à son nom | 120 000 · validité **15** · honoraires acquéreur + taux | carnet : montant, date, validité **retirés** (registre égal) ; honoraires, taux **gardés** ; prix public, rétractation **sans objet** ; registre validité 15 ; la modale « Modifier » montre **15** (sans envoyer). ⭐ 1ʳᵉ preuve des honoraires d'une offre |
+| 3 | accepter l'offre | — | registre `accepted` |
+| 4 | compromis depuis l'offre | rétractation **14** · acte · séquestre · notaire · taux | recherche **créée puis archivée** ; **même chaîne** que l'offre ; carnet : 6 retirés, rétractation / prix public / taux / honoraires / notaire **gardés** ; la modale montre **14** |
+| 5 | vente depuis le compromis | prix · date | **même chaîne** ; Vendu chez Hektor ; mandat clos chez nous seulement ; non archivé ; `diffusable` inchangé |
+| 6 | **le lendemain** | — | la nuit adopte sans doubler, **recalcule les chaînes et garde la même** (D8 : la nuit gagne), notaire et mandat jugés |
+
+**Le nettoyage — chaque geste avec l'accord de Frédéric** : supprimer la vente puis le compromis (gestes de l'app) ; l'offre acceptée
+**reste** (Hektor la fige) ; retirer la clôture locale du mandat 18787 (écriture en base, sauvegarde datée) ; le contact d'essai
+(archiver ou garder) ; vérifier `diffusable = 0` à la fin. ⚠ Nettoyer **avant** la nuit empêche l'étape 6.
