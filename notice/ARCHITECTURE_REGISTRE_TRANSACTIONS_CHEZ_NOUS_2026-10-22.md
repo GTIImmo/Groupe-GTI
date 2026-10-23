@@ -2430,6 +2430,5 @@ une vente **sans numéro Hektor** (travail échoué) ou **effacée** ne ferme ri
 tant que la fiche n'est pas relue, le statut peut encore dire « Vendu » : le bouton reste caché une minute (sans danger, rien ne part).
 
 **Contrôles** : `test_rubrique_affaires_complete.cjs` **31/31** (6 neufs) · témoin inverse : les 6 neufs **échouent** sur la version
-d'avant · **3 mutants attrapés** (sans le numéro Hektor, sans le même mandat, effacée comptée) · `npm run build` vert · `
-` = 0.
+d'avant · **3 mutants attrapés** (sans le numéro Hektor, sans le même mandat, effacée comptée) · `npm run build` vert · `\r\r\n` = 0.
 ⚠ **Non vu à l'écran** : il faut le push (Vercel), puis rouvrir la modale de VA6482.
