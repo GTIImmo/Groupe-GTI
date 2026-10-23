@@ -16995,7 +16995,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (honoraires) setStatusChangeBuyerFees(honoraires)
     const taux = String(carnet.taux_honoraires ?? '').trim()
     if (taux) setStatusChangeBuyerFeesRate(taux)
-    const validite = String(carnet.jours_validite ?? '').trim()
+    // 23/10 (chantier 8) : le REGISTRE en repli, comme la grille depuis le 18/09 (D4). Une validite
+    // arrivee quitte le carnet (le registre porte alors la meme valeur) : sans ce repli la case
+    // retombait a « 10 », et la modification suivante, meme d'un autre champ, l'envoyait a Hektor.
+    const validite = String(carnet.jours_validite ?? '').trim() || texte(affaire.jours_validite).trim()
     if (validite) setStatusChangeValidityDays(validite)
     const retractation = String(carnet.jours_retractation ?? '').trim()
     if (retractation) setStatusChangeRetractionDays(retractation)

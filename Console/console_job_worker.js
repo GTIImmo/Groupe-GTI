@@ -15152,6 +15152,10 @@ async function marquerLeCarnetRestant(job, appAffaireId) {
       if (R3_CONTROLE_CARNET && String(l.origine || "").trim() === "creation_app") continue;
       const champ = String(l.champ || "").trim();
       const colonne = CARNET_VERS_REGISTRE[champ];
+      // C (23/10) : un champ SANS colonne au registre, ce verdict ne sait pas le juger (il dirait
+      // « inconnu ») ; R3 le sait, il relit Hektor. On le lui laisse -- sinon « inconnu » ecrasait son
+      // verdict et repoussait son prochain passage de 6 h (constate_le).
+      if (R3_CONTROLE_CARNET && !colonne) continue;
       const photo = String(l.valeur_hektor_au_moment == null ? "" : l.valeur_hektor_au_moment).trim();
       const relue = colonne ? String(ligne[colonne] == null ? "" : ligne[colonne]).trim() : "";
       let etat = "inconnu";
@@ -21334,7 +21338,9 @@ async function poserNumerosManquants(job, annonceId) {
 // sait pas juger une creation : il compare a la PHOTO (Hektor avant la saisie), qui n'existe pas.
 //
 // LA REGLE DE CREATION, sans photo :
-//     relue = saisie          -> « arrivee »    la ligne SORT du carnet
+//     relue = saisie          -> « arrivee »    la ligne SORT du carnet -- SI le registre porte la
+//                                               meme valeur (regle du 16/09, voir plus bas) ; sinon elle
+//                                               RESTE, etiquetee « arrivee »
 //     relue pas encore lisible -> « en_attente » (le notaire, le mandat : la nuit les apporte)
 //     relue differente        -> « conflit »    Hektor a garde autre chose ; ca se montre
 //     champ que ce genre n'a pas -> « sans_objet » (le prix de l'annonce prerempli sur une offre)
@@ -21354,6 +21360,9 @@ async function poserNumerosManquants(job, annonceId) {
 //     d'une fois toutes les 6 h par ligne.
 const R3_CONTROLE_CARNET = true;
 const R3_REVOIR_APRES_MS = 6 * 3600 * 1000;
+// E (23/10) : seules les saisies ENVOYEES chez Hektor se jugent. Une correction gardee chez nous
+// (`saisie_app`, `classeur`) ne part jamais : la comparer a Hektor dirait « conflit » a tort.
+const R3_ORIGINES_JUGEES = new Set(["creation_app", "modification_app"]);
 
 // D'ou vient la valeur RELUE, champ par champ et genre par genre. Mesure du 23/10 :
 //   compromis (liste ET par numero) : prixPublique, prixNetVendeur, sequestre, dateStart,
@@ -21467,7 +21476,9 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
       : `hektor_annonce_id=eq.${encodeURIComponent(annonce)}`;
     const registres = await supabaseRequest(
       `app_affaire_ledger?${filtre}&hektor_affaire_id=not.is.null`
-      + "&select=app_affaire_id,kind,hektor_affaire_id,last_seen_at,date,numero_mandat,honoraires_sortie,notaire_acquereur_id",
+      + "&select=app_affaire_id,kind,hektor_affaire_id,last_seen_at,honoraires_sortie,notaire_acquereur_id,"
+      // les colonnes de la regle de sortie : la MEME table que l'ancien verdict (une seule copie)
+      + Array.from(new Set(Object.values(CARNET_VERS_REGISTRE))).join(","),
       { method: "GET" });
     if (!Array.isArray(registres) || !registres.length) return { status: "rien_a_faire" };
     const parId = new Map(registres.map((r) => [String(r.app_affaire_id), r]));
@@ -21477,9 +21488,14 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
       { method: "GET" });
     const maintenant = Date.now();
     const aJuger = (Array.isArray(lignes) ? lignes : []).filter((l) => {
+      if (!R3_ORIGINES_JUGEES.has(r3Texte(l.origine))) return false;            // E
+      // B (23/10) : une ligne REECRITE apres son verdict se rejuge, quel que soit son etat. La RPC de
+      // modification ne remet pas l'etat a blanc : une ligne gardee « arrivee » (le taux) puis
+      // modifiee porterait sinon « arrivee » sur une valeur jamais envoyee.
+      const reecrite = Date.parse(l.ecrit_le || "") > Date.parse(l.constate_le || "");
       const etat = r3Texte(l.etat);
-      if (etat && etat !== "en_attente" && etat !== "inconnu") return false;   // deja tranche
-      if (force) return true;
+      if (etat && etat !== "en_attente" && etat !== "inconnu" && !reecrite) return false;   // deja tranche
+      if (force || reecrite) return true;
       const vu = Date.parse(l.constate_le || "");
       return !Number.isFinite(vu) || maintenant - vu > R3_REVOIR_APRES_MS;
     });
@@ -21539,7 +21555,15 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
         const relue = r3Relue(l, genre, chez, reg, { cibles });
         const verdict = r3Verdict(l, relue, etatTravail === "error");
         const champ = encodeURIComponent(l.champ);
-        if (verdict === "arrivee") {
+        // ⛔ LA REGLE DE SORTIE DU 16/09, RETABLIE LE 23/10 (note du registre, section 16). Une ligne
+        //   ne quitte le carnet que si LE REGISTRE porte desormais la meme valeur : l'ecran, qui s'y
+        //   replie, ne perd alors rien. Les champs sans colonne au registre -- prix public, honoraires,
+        //   retractation, notaire, taux -- n'ont QUE le carnet pour memoire : « arrivee », ils restent.
+        //   R3 les retirait (23/10) : la modale remettait 10 jours et le renvoyait a Hektor.
+        const colonne = CARNET_VERS_REGISTRE[l.champ];
+        const retirable = verdict === "arrivee" && Boolean(colonne)
+          && memeValeurHektor(l.valeur_app, reg[colonne]) === true;
+        if (retirable) {
           await supabaseRequest(`app_affaire_champ_app?app_affaire_id=eq.${id}&champ=eq.${champ}`, { method: "DELETE" });
         } else {
           await supabaseRequest(`app_affaire_champ_app?app_affaire_id=eq.${id}&champ=eq.${champ}`, {
@@ -21548,14 +21572,15 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
                                    constate_le: new Date().toISOString() }),
           });
         }
-        bilan.push({ app_affaire_id: Number(id), champ: l.champ, verdict });
+        bilan.push({ app_affaire_id: Number(id), champ: l.champ, verdict, ...(verdict === "arrivee" ? { retire: retirable } : {}) });
       }
     }
     const conflits = bilan.filter((b) => b.verdict === "conflit" || b.verdict === "echec").length;
     await logJob(job.id, "app_carnet_controle", conflits ? "error" : "done",
       (conflits ? `⚠ ${conflits} conflit(s) ou echec(s) au carnet. ` : "")
       + `Controle du carnet (R3) : ${bilan.filter((b) => b.verdict).length} ligne(s) jugee(s), `
-      + `${bilan.filter((b) => b.verdict === "arrivee").length} arrivee(s) retiree(s).`,
+      + `${bilan.filter((b) => b.retire === true).length} arrivee(s) retiree(s), `
+      + `${bilan.filter((b) => b.retire === false).length} arrivee(s) gardee(s) (le carnet est leur seule memoire).`,
       { hektor_annonce_id: annonce, bilan }).catch(() => {});
     return { status: "fait", bilan };
   } catch (erreur) {

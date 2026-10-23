@@ -5,6 +5,11 @@
 // fausse API qui enregistrent ce qu'on leur demande. Les valeurs sont celles des essais reels du
 // 22-23/10 (compromis 50129 sur VA6482, offres 33098 et 33094 sur 61672).
 //
+// 23/10 apres-midi : LA REGLE DE SORTIE DU 16/09 RETABLIE (note du registre, section 16) -- une ligne
+// « arrivee » ne quitte le carnet que si le REGISTRE porte la meme valeur ; les champs sans colonne
+// restent. Plus B (une ligne reecrite se rejuge), C (l'ancien verdict laisse a R3 ce qu'il ne sait
+// pas juger), E (seules les saisies envoyees se jugent).
+//
 //     node Console/test_controle_carnet_r3.js
 //     sortie 0 = tout vert · 1 = un controle en echec · 2 = n'a pas pu mesurer
 
@@ -84,6 +89,9 @@ const verdictDe = (m, cle) => { const p = m.patches.find((x) => x.cle === cle); 
 // ── le compromis 50129 du 22/10 (VA6482 / 24113), relu tel que Hektor l'a rendu ──
 const REG_50129 = { app_affaire_id: 1001375, kind: "compromis", hektor_affaire_id: "50129", last_seen_at: ECRIT,
                     numero_mandat: "18787", honoraires_sortie: null, notaire_acquereur_id: "10064499" };
+// Le registre APRES le report (reporterAuRegistre) : ce que Hektor a retenu, dans ses colonnes.
+const REG_50129_RELU = { ...REG_50129, montant: "135000.00", date: "2026-10-22", date_acte: "2027-02-15", sequestre: "6000.00",
+                         prix_net_vendeur: "126000.00", honoraires_entree: "9000.00" };
 const L = (champ, valeur, extra = {}) => ({ app_affaire_id: 1001375, champ, valeur_app: valeur, valeur_hektor_au_moment: null,
                                             origine: "creation_app", ecrit_le: ECRIT, etat: null, constate_le: null, ...extra });
 const LIGNES_50129 = [L("montant", "135000"), L("date", "2026-10-22"), L("date_acte", "2027-02-15"), L("sequestre", "6000"),
@@ -105,8 +113,10 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
     const m = monter({ registres: [REG_50129], lignes: LIGNES_50129.map((l) => ({ champ: l.champ, valeur_app: l.valeur_app, valeur_hektor_au_moment: null })) });
     await m.contexte.ancien(JOB, 1001375);
     const inconnus = m.patches.filter((p) => p.etat === "inconnu").length;
-    controle("(3) TEMOIN INVERSE : l'ancien verdict rend « inconnu » pour une creation (le defaut D3)",
-      inconnus === LIGNES_50129.length && m.supprimes.length === 0, `${inconnus} inconnu(s), ${m.supprimes.length} retiree(s)`);
+    controle("(3) TEMOIN INVERSE : l'ancien verdict rend « inconnu » pour une creation (le defaut D3) -- sur les 8 champs a colonne",
+      inconnus === 8 && m.supprimes.length === 0, `${inconnus} inconnu(s), ${m.supprimes.length} retiree(s)`);
+    controle("(3c) C : les 3 champs SANS colonne (retractation, prix public, notaire) sont laisses a R3",
+      !m.patches.some((p) => /:(jours_retractation|prix_publique|notaire_id)$/.test(p.cle)), JSON.stringify(m.patches));
   }
   {
     // ESSAI REEL du 23/10 (offre 33109) : apres une MODIFICATION, l'ancien verdict repassait sur les
@@ -123,12 +133,16 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
       m.patches.some((p) => p.cle.endsWith(":montant") && p.etat === "en_attente"), JSON.stringify(m.patches));
   }
   {
-    const m = monter({ registres: [REG_50129], lignes: LIGNES_50129, travaux: [{ status: "done", created_at: ECRIT }] });
+    const m = monter({ registres: [REG_50129_RELU], lignes: LIGNES_50129, travaux: [{ status: "done", created_at: ECRIT }] });
     const r = await m.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: CHEZ_50129, force: true });
-    const arrivees = ["montant", "date", "date_acte", "sequestre", "prix_net_vendeur", "honoraires_entree", "jours_retractation", "prix_publique"];
-    controle("(4) creation du compromis : les 8 champs relus sont « arrivee » et SORTENT du carnet",
-      arrivees.every((c) => m.supprimes.includes(`1001375:${c}`)) && m.supprimes.length === 8, JSON.stringify(m.supprimes));
-    controle("(4) ... la retractation se juge par dateEnd - dateStart (10 jours)", m.supprimes.includes("1001375:jours_retractation"));
+    const sortent = ["montant", "date", "date_acte", "sequestre", "prix_net_vendeur", "honoraires_entree"];
+    controle("(4) creation du compromis : les 6 champs que le REGISTRE porte a l'identique SORTENT du carnet",
+      sortent.every((c) => m.supprimes.includes(`1001375:${c}`)) && m.supprimes.length === 6, JSON.stringify(m.supprimes));
+    controle("(4) ... retractation (dateEnd - dateStart) et prix public : « arrivee » mais ils RESTENT (pas de colonne)",
+      verdictDe(m, "1001375:jours_retractation") === "arrivee" && verdictDe(m, "1001375:prix_publique") === "arrivee"
+      && !m.supprimes.includes("1001375:jours_retractation") && !m.supprimes.includes("1001375:prix_publique"), JSON.stringify(m.patches));
+    controle("(4) ... le bilan le dit : 6 retirees, 2 gardees",
+      r.bilan.filter((b) => b.retire === true).length === 6 && r.bilan.filter((b) => b.retire === false).length === 2, JSON.stringify(r.bilan));
     controle("(4) ... mandat et notaire attendent la nuit (« en_attente »)",
       verdictDe(m, "1001375:numero_mandat") === "en_attente" && verdictDe(m, "1001375:notaire_id") === "en_attente",
       JSON.stringify(m.patches));
@@ -146,7 +160,9 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
                        api: { "compromis:50129": { trouve: true, details: CHEZ_50129 } } });
     await m.contexte.controler(JOB, "24113");
     controle("(5) lendemain : le mandat et le notaire (la MEME personne sous deux numeros) sont « arrivee »",
-      m.supprimes.includes("1001375:numero_mandat") && m.supprimes.includes("1001375:notaire_id"), JSON.stringify({ s: m.supprimes, p: m.patches }));
+      m.supprimes.includes("1001375:numero_mandat") && verdictDe(m, "1001375:notaire_id") === "arrivee", JSON.stringify({ s: m.supprimes, p: m.patches }));
+    controle("(5) ... le mandat sort (registre identique), le notaire RESTE (pas de colonne)",
+      m.supprimes.length === 1 && !m.supprimes.includes("1001375:notaire_id"), JSON.stringify(m.supprimes));
     controle("(5) ... une seule lecture par numero chez Hektor", m.appelsApi.length === 1, JSON.stringify(m.appelsApi));
   }
   {
@@ -165,7 +181,8 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
   }
   {
     // l'offre 33098 (61672) : la liste ne rend que les honoraires ; montant, validite, date PAR NUMERO
-    const reg = { app_affaire_id: 1001361, kind: "offre", hektor_affaire_id: "33098", last_seen_at: ECRIT, numero_mandat: "18426" };
+    const reg = { app_affaire_id: 1001361, kind: "offre", hektor_affaire_id: "33098", last_seen_at: ECRIT, numero_mandat: "18426",
+                  montant: "16000", date: "2026-10-06 13:51:20", jours_validite: "10" };
     const O = (c, v) => ({ ...L(c, v), app_affaire_id: 1001361 });
     const m = monter({ registres: [reg], travaux: [{ status: "done", created_at: ECRIT }],
       lignes: [O("montant", "16000"), O("date", "2026-10-06"), O("jours_validite", "10"), O("prix_publique", "180000"),
@@ -184,7 +201,7 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
     // Valeurs du PREMIER PASSAGE REEL (23/10, 09:34) : la derniere proposition date du 30/09,
     // l'offre elle-meme du 06/10 (registre relu la nuit).
     const reg = { app_affaire_id: 30712, kind: "offre", hektor_affaire_id: "33094", last_seen_at: NUIT, numero_mandat: "18426",
-                  date: "2026-10-06 16:12:54" };
+                  date: "2026-10-06 16:12:54", jours_validite: "10" };
     const M = (c, v, photo) => ({ app_affaire_id: 30712, champ: c, valeur_app: v, valeur_hektor_au_moment: photo,
                                   origine: "modification_app", ecrit_le: T, etat: null, constate_le: null });
     const m = monter({ registres: [reg], travaux: [{ status: "error", created_at: T }],
@@ -201,7 +218,7 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
   {
     // ESSAI REEL du 23/10 (compromis 50130) : a la creation, le travail qui appelle le controle est
     // LUI-MEME « running ». Il jugeait 0 ligne ; ses propres lignes doivent etre jugees.
-    const m = monter({ registres: [REG_50129], lignes: [L("montant", "135000")],
+    const m = monter({ registres: [REG_50129_RELU], lignes: [L("montant", "135000")],
                        travaux: [{ id: JOB.id, status: "running", created_at: ECRIT }] });
     await m.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: CHEZ_50129, force: true });
     controle("(10a) a la creation, le travail lui-meme « running » juge SES lignes", m.supprimes.includes("1001375:montant"),
@@ -235,8 +252,59 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
     const m2 = monter({ registres: [REG_50129], lignes: [L("taux_honoraires", "7")], travaux: [{ status: "done", created_at: ECRIT }] });
     await m2.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez, force: true });
     controle("(13) taux recalcule : 9 000 / 180 000 = 5 % -> « arrivee » ; un taux faux reste « en_attente », jamais « conflit »",
-      m.supprimes.includes("1001375:taux_honoraires") && m.supprimes.includes("1001375:honoraires")
-      && verdictDe(m2, "1001375:taux_honoraires") === "en_attente", JSON.stringify({ a: m.supprimes, b: m2.patches }));
+      verdictDe(m, "1001375:taux_honoraires") === "arrivee" && verdictDe(m, "1001375:honoraires") === "arrivee"
+      && verdictDe(m2, "1001375:taux_honoraires") === "en_attente", JSON.stringify({ a: m.patches, b: m2.patches }));
+    controle("(13) ... taux et honoraires arrives RESTENT au carnet (Hektor ne rend pas le taux ; pas de colonne)",
+      !m.supprimes.length, JSON.stringify(m.supprimes));
+  }
+  {
+    // LA REGLE DE SORTIE : Hektor porte bien 12, mais le REGISTRE porte encore 10 (report pas fait)
+    const reg = { app_affaire_id: 1001377, kind: "offre", hektor_affaire_id: "33109", last_seen_at: ECRIT, jours_validite: "10" };
+    const m = monter({ registres: [reg], travaux: [{ status: "done", created_at: ECRIT }],
+      lignes: [{ ...L("jours_validite", "12"), app_affaire_id: 1001377, origine: "modification_app", valeur_hektor_au_moment: "10" }],
+      api: { "offre:33109": { trouve: true, details: { montant: "120000", validite: "12", dateProposition: "2026-10-23" } } } });
+    await m.contexte.controler(JOB, "24113");
+    controle("(16) « arrivee » chez Hektor mais le REGISTRE differe -> la ligne RESTE (l'ecran perdrait la valeur)",
+      verdictDe(m, "1001377:jours_validite") === "arrivee" && !m.supprimes.length, JSON.stringify({ s: m.supprimes, p: m.patches }));
+  }
+  {
+    // B : une ligne gardee « arrivee » (le taux), REECRITE apres son verdict (il y a 1 h), se rejuge
+    const vu = new Date(Date.now() - 2 * 3600 * 1000).toISOString();
+    const ecrit = new Date(Date.now() - 3600 * 1000).toISOString();
+    const chez = { ...CHEZ_50129, honorairesSortie: "9000.00", prixPublique: "180000.00" };
+    const m = monter({ registres: [REG_50129], api: { "compromis:50129": { trouve: true, details: chez } },
+      travaux: [{ status: "done", created_at: ecrit }],
+      lignes: [L("taux_honoraires", "6", { origine: "modification_app", ecrit_le: ecrit, etat: "arrivee", constate_le: vu }),
+               L("prix_publique", "180000", { etat: "arrivee", constate_le: vu })] });
+    await m.contexte.controler(JOB, "24113");
+    controle("(17) B : la ligne reecrite apres son verdict est rejugee (6 % faux -> « en_attente », plus « arrivee »)",
+      verdictDe(m, "1001375:taux_honoraires") === "en_attente", JSON.stringify(m.patches));
+    controle("(17) ... une ligne « arrivee » NON reecrite n'est pas rejugee",
+      !m.patches.some((p) => p.cle === "1001375:prix_publique"), JSON.stringify(m.patches));
+  }
+  {
+    // E : une correction gardee chez nous (saisie_app, classeur) ne part jamais chez Hektor
+    const m = monter({ registres: [REG_50129_RELU], travaux: [],
+      lignes: [L("montant", "999999", { origine: "saisie_app", ecrit_le: null }), L("date", "2026-01-01", { origine: "classeur", ecrit_le: null })] });
+    const r = await m.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: CHEZ_50129, force: true });
+    controle("(18) E : une saisie_app ou classeur n'est PAS jugee (elle dirait « conflit » a tort)",
+      !m.patches.length && !m.supprimes.length && r.status === "rien_a_juger", JSON.stringify({ r, p: m.patches }));
+  }
+  {
+    // C : apres une modification, l'ancien verdict ne repasse plus en « inconnu » ce que R3 juge
+    const reg = { ...REG_50129, montant: "140000" };
+    const lignes = [{ champ: "taux_honoraires", valeur_app: "5", valeur_hektor_au_moment: null, origine: "modification_app" },
+                    { champ: "jours_retractation", valeur_app: "14", valeur_hektor_au_moment: null, origine: "modification_app" },
+                    { champ: "montant", valeur_app: "140000", valeur_hektor_au_moment: "135000", origine: "modification_app" }];
+    const m = monter({ registres: [reg], lignes });
+    await m.contexte.ancien(JOB, 1001375);
+    const m2 = monter({ registres: [reg], lignes, eteint: true });
+    await m2.contexte.ancien(JOB, 1001375);
+    controle("(19) C : R3 allume -> l'ancien verdict laisse taux et retractation a R3, et juge toujours le montant",
+      !m.patches.some((p) => /:(taux_honoraires|jours_retractation)$/.test(p.cle)) && m.supprimes.includes("1001375:montant"),
+      JSON.stringify({ s: m.supprimes, p: m.patches }));
+    controle("(19) ... TEMOIN : R3 eteint -> l'ancien verdict reprend tout (« inconnu »), comportement d'avant",
+      m2.patches.filter((p) => p.etat === "inconnu").length === 2, JSON.stringify(m2.patches));
   }
   {
     const m = monter({ erreur: true });
