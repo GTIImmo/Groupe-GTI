@@ -1718,3 +1718,32 @@ modification écrit NOTRE valeur au registre et que Hektor ne la rend pas à la 
   - **patch** collé : **5 contrôles OK** (empreinte **0dac8c86**, interrupteur créé éteint, droits et SECURITY DEFINER inchangés, E allumé) ;
   - **interrupteur `affaire_modif_au_registre` allumé** à 11:14:13 UTC.
   - ⏰ Reste : pousser A1 (worker + écran) et redémarrer les 4 services — puis le second essai complet.
+
+## 21. LE SECOND ESSAI COMPLET — 23/10, 13:30-14:00, avec 7fce928 + A1 + A5 actifs *(Frédéric : « lance le second essai complet », VA6482 nettoyé d'abord)*
+
+**Nettoyage de la première chaîne (accord de Frédéric)** : vente 23354 supprimée · compromis 50131 supprimé · **offre 33110 refusée,
+vérifiée « refus » par l'API de Hektor** · clôture locale du mandat 18787 retirée (sauvegarde
+`app_mandat_champ_app_avant_essai_va6482_20261023`). ⚠ **La suppression de la vente a remis `diffusable = 1` chez Hektor** → remis à 0
+par Pilotage, vérifié par `AnnonceById`.
+
+| étape | résultat |
+|---|---|
+| contact « Propriétaire » | **20000012 ↔ 605967**, typologie « mandant », 0 recherche, contrôle 0 écart |
+| offre **33112** (1001381) | ⭐ honoraires, taux, notaire **non contrôlés** (étiquette vide, gardés) ; montant, date, validité retirés |
+| acceptée | done, `accepted` |
+| compromis **50132** (1001382) | **même chaîne 1001381** ; ⭐ **F1 : prix de vente 112 000 = 118 000 − 6 000 « arrivée », 0 conflit** ; ⭐ la recherche de qualification **créée** et l'acheteur **gardé** par Hektor (« acquéreur, mandant ») |
+| modification (rétractation 21 → 28, séquestre 5 500 → 6 500) | ⭐ **A5 au clic** : registre 6 500 et fin 20/11 pendant que le travail tournait ; `champs_touches` = les 2 ; photo = 5 500 ; ⭐ **A1** : le retour écrit la fin relue (20/11) ; ⭐ **B** : seule la ligne réécrite est rejugée (28 « arrivée ») ; la modale montre **28** |
+| vente **23355** (1001383) | **même chaîne 1001381** ; personnes gardées ; mandat clos chez nous ; R3 : 3 retirés, 3 gardés |
+
+### ⚠ Ce que ce second essai a trouvé
+- **F8 — la cascade de ma correction 7fce928** : reconnu sous le numéro de Hektor, l'acquéreur partait à la suite de la qualification avec
+  ce numéro → « Contact introuvable dans l'index Supabase: 605967 ». Sans effet ici (Hektor l'avait déjà comme acquéreur). **Corrigé,
+  commit local** (la suite reçoit NOTRE numéro ; une relance retrouve ses traces) — essai 6/6, témoin inverse ✅. **Non actif.**
+- **F9 — la recherche de qualification n'est PAS archivée** (« identifiant non retrouvé, elle ne sera pas archivée ») : une recherche
+  active reste sur le contact d'essai chez Hektor. À auditer (`listerCriteresBestEffort` avant / après). **Non traité.**
+- **F10 — `diffusable` repasse à 1 chez Hektor** après la suppression d'une vente ET après la création de la vente (Vendu). La fiche d'un
+  bien Vendu n'a pas « Pilotage » : **l'app ne peut pas le remettre à 0**. VA6482 est à **1** en ce moment (aucun portail actif).
+- **F11** — du compromis depuis l'offre, la **commission vendeur et la charge** ne sont pas reprises de l'offre (le lot 1c du 16/10 le
+  promettait). Préexistant, non traité.
+- La typologie de notre fiche reste « mandant » jusqu'à la relecture du contact (Hektor dit « acquéreur, mandant ») — d'où F8.
+- ⏰ **Demain matin, la preuve de nuit porte sur la SECONDE chaîne** (1001381 : offre 33112, compromis 50132, vente 23355).
