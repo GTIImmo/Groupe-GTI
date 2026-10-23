@@ -2315,3 +2315,9 @@ chez GTI — la donnée ne permet pas de trancher) : depuis, l'acquéreur entre 
 **À faire, à décider par Frédéric** : (a) la règle d'import — l'acquéreur d'une vente n'est jamais rangé propriétaire/mandant de ce bien
 (sauf s'il l'était avant la vente) ; (b) le rattrapage des liens déjà copiés (marqués, jamais supprimés) ; (c) chez Hektor : ne rien
 toucher, ou délier ; (d) avant tout : mesurer qui lit ces liens (rubrique Contact, registre des mandats, reporting, parties).
+- **« Le contact est-il acquéreur ET propriétaire ? »** (Frédéric) — mesure des ventes 2026 : **la typologie ne le dit pas**. Avant le
+  17/07, **132 acquéreurs sur 170** portaient déjà « acquéreur, mandant » sur leur fiche **sans** être liés au bien vendu (la typologie est
+  celle du CONTACT, tous biens confondus). Depuis le 17/07, sur 86 acquéreurs liés au bien vendu : 38 « acquéreur, mandant », **47
+  « acquéreur » seul** dans notre copie des contacts (copie plus ancienne que le lien, ou typologie non mise à jour par Hektor : non
+  mesuré). Chez Hektor en direct, les 7 liés de l'échantillon portent « acquéreur, mandant ». ⇒ Le fait qui compte est **le lien au bien**
+  (liste des propriétaires), pas la typologie.
