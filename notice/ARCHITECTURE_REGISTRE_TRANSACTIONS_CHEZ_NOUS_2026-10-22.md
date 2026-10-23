@@ -1126,3 +1126,36 @@ interrupteur `affaire_modif_champs_touches` **éteint** · `authenticated` peut 
 ➡ **Aucun effet tant que l'interrupteur est éteint.** Reste : **pousser** (le front E1 + le nom du notaire partent avec), puis
 **allumer**, puis **essai réel** (une modification par l'écran en touchant UN champ → au carnet, ce champ seul).
 Retour arrière : `supabase/patch_e_modif_champs_touches_2026-10-23_INVERSE.sql`.
+
+## 12. R2 — « LA NUIT RESPECTE L'ATTENTE » : audit du 23/10 *(Frédéric : « ensuite on attaque R2 »)* — lecture seule
+
+### Ce que R2 doit faire (§3) et la règle qu'il ne doit pas casser
+R2 repose sur le registre, **pendant la nuit et avant les chaînes**, les seuls champs du carnet **encore en attente**. Il ne
+doit **pas** redevenir **le gel** du 16/09 (mémoire « le registre est à Hektor, le carnet est à nous ») : une valeur de l'app qui
+gagne **pour toujours** masque ce que les négociateurs corrigent ensuite dans Hektor. La différence tient en un mot : **la
+protection doit TOMBER** dès que Hektor a confirmé — et ce sont **les verdicts** qui la font tomber.
+
+### ⚠ L'ordre convenu était R1 → R3 → R2, et il n'est pas décoratif
+C'est **R3** (le contrôle au retour de la **création**) qui pose le verdict « arrivée » et sort la ligne de l'attente. Sans R3,
+une ligne de création n'a **jamais** de verdict (D3) → R2 la protégerait **à vie** → **le gel**.
+
+### La mesure : ce que R2 protégerait s'il était allumé AUJOURD'HUI
+Le carnet compte **17 lignes, 3 transactions, 0 verdict** :
+| transaction | origine | ce que R2 ferait |
+|---|---|---|
+| **30712** — offre 33094 KURCEBA (**vraie**) | modification **échouée** le 13/10 | ⛔ **imposerait 160 000** au registre, alors que Hektor dit 16 000 — et pour toujours |
+| 1001339 — offre 33050 (essai, 24933) | création du 04/09 | protégée depuis 7 semaines, sans fin |
+| 1001361 — offre 33098 KURCEBA | création du 13/10 | idem |
+Et sur les **trois**, la **date** du carnet est un jour (`2026-10-06`) quand le registre porte l'heure (`2026-10-06 16:12:54`) :
+R2 **effacerait l'heure**, et l'offre se chaîne sur cette date. Tous les autres champs sont **égaux** à ceux de Hektor — ils
+sont donc *de fait* arrivés, mais **personne ne l'a constaté**.
+
+### Les conditions pour poser R2 sans recréer le gel
+1. **R3 d'abord** : un verdict au retour de chaque **création** (le code de la modification existe, on le rebranche).
+2. **Un travail ÉCHOUÉ ne laisse pas une attente** : aujourd'hui ses valeurs restent au carnet sans verdict (30712). Il faut un
+   verdict « échec » (ou les retirer), et le montrer. *(C'est le défaut 7.)*
+3. **E allumé** (pas de prérempli au carnet) — posé ce jour, interrupteur éteint.
+4. **Comparer une date sans l'heure à une date avec l'heure** comme égales (sinon faux « en attente », et R2 rogne l'heure).
+5. **Une durée maximale ?** (question ouverte du §3) — à trancher par Frédéric.
+6. **Les 3 transactions d'aujourd'hui** : leur poser un verdict (ou les nettoyer) **avant** d'allumer R2 ; et **30712 : 160 000
+   ou 16 000** (décision de Frédéric).
