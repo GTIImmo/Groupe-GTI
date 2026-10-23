@@ -2359,3 +2359,46 @@ devient « Mandant »** au lieu d'« Acheteur ». Contraire à la règle de Fré
 règle doit donc porter sur le moment (lien apparu après la vente, sur le mandat du vendeur), pas sur « acheteur ⇒ jamais mandant ».
 
 **6. Le push en attente** (rubrique Affaires, verrou V à l'écran, note, conditions, charge, notaire) **ne touche ni les liens ni les types**.
+
+## 40. ESSAI 5 — le chantier en entier, APRÈS le push (N + V + écran) — 23/10, 19:28-19:45 (Paris)
+
+Nettoyage d'abord (§ fin de l'essai 4 : vente 23357 et compromis 50136 supprimés, offre 33115 refusée, clôture locale retirée avec
+sauvegarde `app_mandat_champ_app_avant_essai5_va6482_20261023`, diffusion remise à 0). Contact **20000015** (Hektor **605976**).
+Données d'essai **justes cette fois** : honoraires d'UN seul côté — **5 000 acquéreur, 0 vendeur, charge acquéreur**.
+⭐ **La charge n'a été touchée NI au compromis NI à la vente** : c'est ce que l'essai devait prouver.
+
+| étape | Hektor | ce qui est arrivé chez nous |
+|---|---|---|
+| offre | **33116** (115 000, honoraire acquéreur 5 000, notaire 122190) | chaîne **1001393** · charge `acquereur` · honoraires 5 000 / 4,35 % · carnet : `notaire_id` 10064499, **`notaire_mandant_id` 10355906 + nom « Me. Eric PAILHES »** (patch N) · répartition **30/20/25/25** (4 lignes sous la chaîne) · **note enregistrée à la création** |
+| acceptée | `change_hektor_offre_status` done en 6 s | registre `accepted` |
+| compromis | **50137** | **la modale reprend la charge `acquereur` sans geste** (correctif de la charge) · notaire du vendeur **repris de l'offre** · nom du notaire de l'acquéreur **retrouvé** (« Tiffany SELARL… », plus de « Contact 10064499 ») · net 110 000 · acte 15/12/2026 · condition « Préemption mairie » · note · même chaîne |
+| vente | **23358** | **charge `acquereur` reprise sans geste** · prix 115 000, net 110 000, honoraires 5 000 · les deux notaires avec leur nom · note · même chaîne, 4 lignes de répartition |
+
+**Contrôles**
+- **10 travaux depuis 17:30 UTC, tous `done`, 0 erreur.** Pas d'arrêt du worker cette fois.
+- **R3 : 0 conflit** sur la chaîne — chaque ligne du carnet est `arrivee`, `sans_objet`, `en_attente` ou non contrôlée (les 5 champs
+  gardés de l'offre).
+- **Rubrique Affaires** (après rechargement) : « 7 dossiers », la chaîne 1001393 avec ses **trois transactions**. Carte offre complète
+  (notaire acquéreur ET vendeur nommés, charge, note) ; carte compromis complète (prix, net, acte, rétractation, notaires, charge,
+  condition, note) ; carte vente (notaires nommés, note) ; **bloc Répartition 30/20/25/25** « gardée dans l'app ».
+- **Verrou V à l'écran, sur la vraie vente** : onglet Compromis → bandeau « On ne revient plus sur ce compromis. Son dossier porte une
+  vente (n° 23358)… il faut d'abord supprimer la vente. » ; **Modifier / Annuler / Supprimer ont disparu**. Modale fermée sans rien
+  envoyer.
+
+**⚠ Ce que l'essai a vu, et qui n'est pas corrigé**
+1. **La rubrique ne montre pas une chaîne NÉE pendant la session tant que la page n'est pas rechargée** : ouverte après la vente sans
+   recharger, elle disait « 6 dossiers » (les 6 offres refusées) ; après rechargement, « 7 dossiers ». Les gestes sur une chaîne qui
+   EXISTAIT (essai 4) s'affichaient, eux, tout de suite. **Constaté, pas diagnostiqué.**
+2. **La diffusion est repassée à 1 chez Hektor** (`diffusable = 1`, statut Vendu) alors que le nettoyage l'avait remise à 0. Même famille
+   que le défaut déjà noté (« une vente supprimée remet la diffusion à 1 ») : ici la CRÉATION aussi. ⛔ La remettre à 0 = écriture chez
+   Hektor → **accord de Frédéric**.
+3. **Le 5e acheteur d'essai est inscrit propriétaire chez Hektor** (605976, 11 propriétaires sur VA6482) et apparaît dans
+   « MANDANT(S) » des cartes compromis et vente → c'est le problème des types (§37-39), **reporté après ⑧ par Frédéric**.
+4. Rappels déjà notés : l'échéance d'une condition affichée **un jour trop tôt** (« échéance 22/10 » pour 0 jour un 23/10) ;
+   « Envoyer vers Compromis » encore proposé sur une chaîne vendue (la base refuse un 2e compromis) ; les libellés de la modale du
+   compromis prêtent à confusion (« Montant / prix public » → prix de vente 115 000 ; « Prix de vente » → `prix_publique` 110 000 — les
+   valeurs sont justes, R3 les dit arrivées).
+
+**Bilan** : les trois défauts de l'essai 4 (charge, nom du notaire, compromis modifiable après la vente) sont **corrigés et prouvés en
+réel**, avec le notaire du vendeur gardé sur l'offre (N). ➡ **Le chantier du registre (⑧) est fini côté transactions**, sous réserve de
+la preuve de nuit sur la chaîne 1001393. Suite décidée par Frédéric : **le problème des types de contacts** (§37-39).
