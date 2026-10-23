@@ -1396,3 +1396,37 @@ suivante, même d'un autre champ, envoie 10 à Hektor** — en silence (la rétr
 - `reporterAuRegistre` à la création : n'écrit que ce que Hektor a relu (« vide ne gagne pas ») ; ne touche pas `hektor_acquereur_id`
   (la clé du chaînage).
 - ⚠ **Hors R3, déjà connu = R2** : le `--push` de nuit fait `SELECT *` + upsert et remplace la ligne du registre entière.
+
+## 15. L'AUDIT CHAMP PAR CHAMP — 23/10 *(Frédéric : « certains champs ne sont pas tous retournés par Hektor, acceptés, ou envoyés à la création mais pas à la modification — as-tu vraiment audité ? »)* — lecture seule
+
+⛔ **Non : le §14 traitait les champs en bloc, et sa parade A1 était FAUSSE pour deux champs.** Chaque champ a son propre
+circuit. Mesuré dans le code (RPC en base, worker, `affaire_ledger.py`, `registre_depuis_console.py`, écran) :
+
+| champ | au clic, création (R1) | au clic, modification | Hektor le rend ? | le retour l'écrit au registre ? | la nuit | la modale se replie sur le registre ? | si R3 retire la ligne |
+|---|---|---|---|---|---|---|---|
+| montant, date | ✅ | ✅ | ✅ | ✅ | réécrit | ✅ | sans risque |
+| date d'acte, séquestre | ✅ | ❌ | ✅ | ✅ | réécrit | ✅ | sans risque |
+| net vendeur, honoraires vendeur | ✅ | ❌ | ✅ | ✅ | réécrit | ✅ | la grille ne l'affiche plus |
+| honoraires acquéreur | ✅ | ❌ | compromis/vente ✅ · offre : liste seulement | compromis/vente ✅ | réécrit | ✅ (si > 0) | la grille ne l'affiche plus |
+| **validité** (offre) | ✅ | ❌ | ✅ par numéro | ✅ | réécrit | ❌ → **10** | ⛔ **10 renvoyé** — A1 corrige, **juste** |
+| **rétractation** (compromis) | ✅ (fin = date + jours) | ❌ | ✅ (`dateEnd`) | ⛔ **NON** (`dateEnd` absent de `REGISTRE_PAR_HEKTOR`) | réécrit | ❌ → **10** | ⛔ **A1 seul serait FAUX** : jusqu'à la nuit le registre porte l'ANCIENNE fin |
+| rétractation (offre) | carnet seulement : **le 10 prérempli** | — (E l'écarte) | n'existe pas | — | — | — | jamais retirée (« sans objet ») ; s'affiche « 10 jours » sur une offre — **déjà avant R3** |
+| **taux d'honoraires** | ✅ (colonne classe A) | ⛔ **NON** | ⛔ **NON** (R3 le recalcule) | — | **jamais** (classe A) | ❌ | ⛔ **A1 serait FAUX** : après une modification, le registre garde le taux de la CRÉATION, pour toujours |
+| notaire acquéreur | ✅ (`notaires_origine = 'saisie'`) | ❌ | ❌ (la nuit, console) | — | ⚠ **jamais**, une saisie est protégée | ✅ | après une modification : **faux « conflit » à vie** (le registre garde le notaire de la création) |
+| n° de mandat | ✅ | ❌ | la nuit | — | réécrit | ❌ (vide = Hektor garde le sien) | sans risque pour Hektor |
+| prix public | pas de colonne | — | compromis ✅ | — | — | ❌ | la grille ne l'affiche plus |
+| commission `_app`, charge, **répartition** | hors carnet (`ecrireAffaireCommission`, `saveRepartition`, après le geste, création ET modification) | | rien ne part chez Hektor | | jamais | | **non touchées par R3 ni par `fd8e3c8`** |
+
+### Ce que ça change aux parades
+- **Validité** : A1 (repli sur `jours_validite`) est juste — le retour l'écrit au registre.
+- **Rétractation** : il faut **d'abord** que le retour écrive `date_fin_retractation` depuis `dateEnd` (une ligne dans
+  `REGISTRE_PAR_HEKTOR`), **puis** A1. Sinon la modale montrerait l'ancienne valeur et la renverrait.
+- **Taux** : Hektor ne le rend pas et rien ne met sa colonne à jour après une modification → **R3 ne doit JAMAIS retirer
+  une ligne de taux** : c'est la seule copie à jour. (Ou la modification doit écrire la colonne : patch de RPC.)
+- **Notaire** : la RPC de modification n'écrit pas le registre, et la nuit protège la saisie de la création → R3 dira « conflit »
+  à tort après un changement de notaire. **Rien ne part chez Hektor de travers** (le carnet prime) — c'est une fausse alarme.
+- **Rétractation et prix public d'une OFFRE** : du prérempli rangé au carnet à la création (E ne corrige que la modification).
+  Inoffensif pour Hektor, trompeur à l'écran. Déjà là avant R3.
+- **Répartition et commission** : hors du carnet, R3 n'y touche pas.
+- ⛔ **Constat de fond** : R1 avait promis d'écrire au registre « au clic, création **+ modification** ». La modification n'écrit
+  que `montant` et `date`. C'est ce trou qui rend le carnet indispensable pour 5 champs — et dangereux à vider.
