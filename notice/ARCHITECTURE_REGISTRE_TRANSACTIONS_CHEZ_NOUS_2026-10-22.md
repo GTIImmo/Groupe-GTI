@@ -1068,3 +1068,20 @@ Rien ne tournait. Mesure seule identique à la copie, puis `--ecrire` → code 0
   registre (plus haut : 10 650 806). `test_adoption_contact_ne_dans_app.py` toujours **22/22**.
 - ⏰ **À vérifier demain matin** : chez Supabase, `app_contact_current.app_contact_id` de **20000007** doit être revenu à
   **20000007** (renvoyé par `pousser_numeros_contact`), et 20000008 / 20000009 doivent être restés justes.
+
+### PEUT-ON ÉPROUVER L'ADOPTION AUJOURD'HUI, SANS ATTENDRE LA NUIT ? — audit du 23/10 *(Frédéric)* — lecture seule
+**Oui, pour la pièce corrigée.** Ce qui se passe le jour d'une création (lu dans le code) :
+1. l'écran crée le contact chez nous (identité ≥ 20 M) → le worker le crée chez Hektor (`create_hektor_contact`) ;
+2. il enchaîne la **relecture** (`refresh_console_contact_data` → `refresh_contact_inproc.py`) : elle apprend la paire
+   (`app_contact_identite_app`, remède 8a du 21/10) puis **reconstruit la couche locale pour ce contact** (`build --contact-id`)
+   → `app_contact_current` local porte l'identité **et** le numéro Hektor ;
+3. le **registre** (`registre_contacts.py`), lui, ne tourne **que la nuit** — c'est la seule pièce qui attend.
+➡ Après la relecture, le registre a tout ce qu'il lit. On peut le faire tourner tout de suite :
+- **A — sur une COPIE des 4 tables réelles** (comme la répétition de ce matin) : **aucune écriture** dans la base du serveur ;
+  prouve l'adoption sur le **vrai** contact fraîchement créé. La vraie inscription se fait la nuit. ⭐ recommandé
+- **B — sur la VRAIE base** : inscrit le contact dès maintenant. Effets de bord mesurés : il relève aussi les **7 658** marques
+  « absent » (comme chaque nuit ; le run les remet ensuite par `marquer_contacts_disparus.py`, aucun autre lecteur trouvé),
+  verrou d'écriture de quelques secondes (les relectures attendent 30 s). N'apporte rien de plus que A pour la preuve.
+**Ce qui ne peut PAS s'éprouver de jour** : le lien des transactions (`affaire_ledger.py`) et le renvoi des numéros à Supabase
+(`pousser_numeros_contact.py`) sont des étapes du run ; elles se vérifient demain matin (avec le retour de 20000007).
+**Gestes chez Hektor** : créer le contact d'essai (puis le supprimer après la vérification de demain) — **accord** à chaque fois.
