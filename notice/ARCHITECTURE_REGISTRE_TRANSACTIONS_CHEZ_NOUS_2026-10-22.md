@@ -1747,3 +1747,15 @@ par Pilotage, vérifié par `AnnonceById`.
   promettait). Préexistant, non traité.
 - La typologie de notre fiche reste « mandant » jusqu'à la relecture du contact (Hektor dit « acquéreur, mandant ») — d'où F8.
 - ⏰ **Demain matin, la preuve de nuit porte sur la SECONDE chaîne** (1001381 : offre 33112, compromis 50132, vente 23355).
+
+### L'acquéreur est-il relu et validé ? *(Frédéric, 23/10)* — mesuré dans les journaux
+- **Compromis 50132** : relu chez Hektor, et le contrôle des personnes dit **demandés [605967] = gardés [605967]** ; mandants demandés
+  [603953] = gardés. ✅
+- **Vente 23355** : acquéreur demandé [605967] = gardé. ✅
+- **Offre 33112** : ⚠ **pas de relecture des personnes** — une offre n'a pas d'assistant chez Hektor (« Assistant relu : 0 acquéreur ») et
+  son API ne rend pas l'acquéreur. L'offre est prouvée créée (fiche + API), mais **pas son acquéreur** ; le registre garde NOTRE numéro
+  (20000012) jusqu'à la nuit. Préexistant.
+- ✅ **Correction du point 6 de la liste** : le **notaire du vendeur EST gardé** au compromis — la relecture de la modification (11:55)
+  rend « 1 notaire mandant ». Le « 0 » de la création était lu AVANT que Hektor l'enregistre.
+- ⚠ **Trouvé en passant** : Hektor **ajoute l'acquéreur d'une vente aux mandants du bien**. VA6482 porte désormais **7 mandants**,
+  dont **605963** (l'acquéreur de la 1ʳᵉ vente, supprimée depuis). La suppression de la vente ne le retire pas. À nettoyer.
