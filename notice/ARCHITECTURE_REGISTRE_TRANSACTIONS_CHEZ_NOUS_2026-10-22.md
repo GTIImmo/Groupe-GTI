@@ -1273,3 +1273,24 @@ Vérifié : `origin/main` = `6731460` ; processus démarrés à 09:38:24-26, apr
   (`reason = verif_r3_23_10`, lecture seule chez Hektor), terminé à 09:40:49.
 - **Le nouveau verdict** : **date → arrivée, retirée** (date de l'offre relue la nuit) · prix public et rétractation → **sans_objet** ·
   le montant 160 000 reste **« echec »** (non rejugé, comme voulu). Carnet de 30712 : 3 lignes, toutes tranchées.
+
+### 33094 REMISE À 16 000 CHEZ NOUS — 23/10 à 09:4x *(Frédéric : « passe à 16 000 chez nous sans envoyer à Hektor, qui est déjà à 16 000 »)*
+Le registre portait déjà 16 000 ; c'est la ligne de carnet `montant = 160 000` (« echec ») qui passait devant à l'écran. **Retirée**
+après **sauvegarde datée** `app_affaire_champ_app_avant_33094_16000_20261023` (1 ligne, RLS activée). **Aucun travail créé, rien
+envoyé à Hektor.** *(Le reste de son carnet — prix public, rétractation — est « sans_objet » ; il s'affiche encore à l'écran.)*
+⚠ Frédéric : modifier une offre **acceptée** bloque chez Hektor et créerait une nouvelle offre — **« c'est un autre problème »**.
+
+### ✅ ESSAI RÉEL DE R3 SUR UNE CRÉATION — compromis 50130, VA6482, 23/10 à 09:48 *(accord de Frédéric)*
+- Bac à sable **62774 indisponible** (mandat clos lors de l'essai du 21/10, plus dans le parc vivant) → **l'offre n'est pas faite**.
+- Compromis par l'écran : 135 000, acte 15/02/2027, rétractation 10, séquestre 6 000, acquéreur ESSAI 8A B2 (net et commission
+  laissés « auto »). ⭐ **La preuve immédiate a marché du premier coup** (« créé et confirmé par les DEUX portes ») : **première
+  vraie création depuis le correctif du tri** (`2704dee`). Numéro posé, registre mis à jour avec ce que Hektor a retenu.
+- ⚠ **R3 au moment de la création : 0 ligne jugée** — le travail appelant était lui-même « running », et ma règle « travail en
+  cours → on ne juge pas » le reconnaissait. **Le rattrapage, une minute plus tard, a tout jugé juste** : montant, date, date
+  d'acte, séquestre, prix public, rétractation → **arrivée, retirés** · n° de mandat → **en_attente** (la nuit) · validité →
+  **sans_objet**. **Corrigé** (`834da97` : le travail appelant ne se compte pas), essai **24/24**, la version en service reproduit
+  le raté, 4 mutants attrapés. **Non actif** tant que les services ne sont pas redémarrés.
+- **Supprimé ensuite par l'écran** : `delete_hektor_compromis` done, statut « Actif », registre et carnet **vides**, et Hektor ne
+  le rend plus (`CompromisById 50130` → `trouve: false`).
+- **Noté à l'écran, non traité** : la fiche VA6482 annonce « Mandat clos le 30/07/2026 — échéance initiale le 27/08/2027 » : elle
+  mélange la **clôture de l'ancien mandat n° 1** avec l'échéance du mandat **en cours** n° 18787.
