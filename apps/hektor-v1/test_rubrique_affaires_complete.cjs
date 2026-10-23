@@ -53,7 +53,7 @@ const FONCTIONS = [
   "function grouperAffairesParChaine(", "function ckAffaireDepuisChaine(", "function dossiersOuvertsDuBien(",
 ];
 const FONCTIONS_NEUVES = ["function aliasNumerosAcquereur(", "function ckPartiesDuJson(", "function ckNomsParties(",
-  "function ckDetailDepuisRegistre(", "function ckResumeNuitAJour("];
+  "function ckDetailDepuisRegistre(", "function ckResumeNuitAJour(", "function compromisVerrouilleParSaVente("];
 
 function monter(src) {
   const morceaux = [];
@@ -78,6 +78,7 @@ function monter(src) {
     this.api = { ckAffaireDepuisChaine, grouperAffairesParChaine, affaireAcquereursNoms,
       ckDetailDepuisRegistre: typeof ckDetailDepuisRegistre === 'function' ? ckDetailDepuisRegistre : null,
       ckResumeNuitAJour: typeof ckResumeNuitAJour === 'function' ? ckResumeNuitAJour : null,
+      compromisVerrouilleParSaVente: typeof compromisVerrouilleParSaVente === 'function' ? compromisVerrouilleParSaVente : null,
       repartitionChaineId: typeof repartitionChaineId === 'function' ? repartitionChaineId : null,
       viser: (a) => { __visee = a; }, poserAffaires: (l) => { statusChangeAffaires = l; } };`;
   const js = esbuild.transformSync(code, { loader: "ts" }).code;
@@ -218,6 +219,27 @@ function essai(api) {
     api.ckResumeNuitAJour && det && api.ckResumeNuitAJour({ compromis: { id: "50132" } }, det) === false);
   ok("C1 un autre mandat (cycle passe) ne prend pas les lignes du mandat courant",
     api.ckDetailDepuisRegistre && api.ckDetailDepuisRegistre(LIGNES, "17000", "18787") === null);
+
+  // V (23/10) : le compromis verrouille par sa vente
+  const verrou = api.compromisVerrouilleParSaVente;
+  ok("V : le compromis d'une chaine vendue est verrouille, par la vente 23355",
+    verrou && (verrou(LIGNES, COMPROMIS) || {}).hektor_affaire_id === "23355", J(verrou && verrou(LIGNES, COMPROMIS)));
+  ok("V : une vente EFFACEE chez Hektor ne verrouille pas ; une offre n'est pas concernee",
+    verrou && verrou([{ ...VENTE, present_in_hektor: false }, COMPROMIS, OFFRE], COMPROMIS) === null
+      && verrou(LIGNES, OFFRE) === null, "");
+  // ⑧ (23/10) : le nom du notaire par sa fiche contact -- la lecture de l'assistant porte le numero de
+  // HEKTOR (122190), le registre le notre (10064499).
+  {
+    const consoleHk = new Map([[1001382, { app_affaire_id: 1001382, parties_json: { notaires_acquereur: [{ id: "122190", nom: "CORNU SELARL" }] }, conditions_suspensives: [] }]]);
+    const avecNoms = { ...APP_DONNEES(false), nomsContacts: new Map([["10064499", "Tiffany SELARL CORNU"], ["122190", "Tiffany SELARL CORNU"]]) };
+    const afNoms = api.ckAffaireDepuisChaine(ch, null, consoleHk, avecNoms);
+    const afSans = api.ckAffaireDepuisChaine(ch, null, consoleHk, APP_DONNEES(false));
+    ok("le notaire de l'acquereur est nomme par sa fiche contact (deux numeros)",
+      afNoms.console && afNoms.console.notaireAcq === "Tiffany SELARL CORNU" && /Tiffany SELARL CORNU \(acquéreur\)/.test(afNoms.vente.notaires),
+      J({ c: afNoms.console, v: afNoms.vente && afNoms.vente.notaires }));
+    ok("sans la fiche, « Contact 10064499 » (on ne fabrique pas de nom)",
+      afSans.console && afSans.console.notaireAcq === "Contact 10064499", J(afSans.console));
+  }
 
   // C5 : la modale
   let c5 = null, c5creation = null;

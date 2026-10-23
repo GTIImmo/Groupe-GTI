@@ -6200,6 +6200,35 @@ export async function loadRepartition(chaineId: number | string): Promise<Repart
   }))
 }
 
+/** ⑧ (23/10/2026) : LE NOM D'UN CONTACT CONNU SEULEMENT PAR SON NUMERO -- un notaire surtout.
+ *  ⚠ UNE PERSONNE, DEUX NUMEROS : le registre et le carnet portent NOTRE numero (10064499), la
+ *    lecture de l'assistant celui de HEKTOR (122190). On cherche par les DEUX (meme porte que
+ *    loadRepartitionDefautSortie, G-3 du 23/09) et la carte est rangee sous les deux.
+ *  LECTURE SEULE. Une lecture ratee rend une carte vide : l'ecran garde « Contact N ». */
+export async function loadNomsContacts(ids: Array<string | number | null | undefined>): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  if (!hasSupabaseEnv || !supabase) return out
+  const cles = Array.from(new Set(ids.map((x) => String(x ?? '').trim()).filter((x) => /^\d+$/.test(x))))
+  if (!cles.length) return out
+  const liste = cles.join(',')
+  const { data, error } = await supabase
+    .from('app_contact_current')
+    .select('hektor_contact_id,hektor_target_id,civilite,prenom,nom,display_name')
+    .or(`hektor_contact_id.in.(${liste}),hektor_target_id.in.(${liste})`)
+    .limit(200)
+  if (error || !data) return out
+  for (const row of data as Array<Record<string, unknown>>) {
+    const nom = [row.civilite, row.prenom, row.nom].map((v) => String(v ?? '').trim()).filter(Boolean).join(' ')
+      || String(row.display_name ?? '').trim()
+    if (!nom) continue
+    for (const k of [row.hektor_contact_id, row.hektor_target_id]) {
+      const cle = String(k ?? '').trim()
+      if (cle) out.set(cle, nom)
+    }
+  }
+  return out
+}
+
 /** ⑧ (23/10/2026) : la repartition de PLUSIEURS dossiers d'un coup, pour la
  *  rubrique Affaires -- qui affiche un bloc par dossier. LECTURE SEULE. Une
  *  lecture ratee rend une carte sans bloc, jamais une erreur a l'ecran. */

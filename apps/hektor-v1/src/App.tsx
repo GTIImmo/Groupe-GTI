@@ -48,6 +48,7 @@ import {
   loadRepartition,
   saveRepartition,
   loadRepartitionsDesChaines,
+  loadNomsContacts,
   loadRepartitionDefautSortie,
   type RepartitionPersonne,
   type RepartitionLigne,
@@ -16453,7 +16454,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const offre = statusChangeAffaires.find((a) => String(a.kind) === 'offre'
       && String(a.app_chaine_id) === cle)
     const repris = String(offre?.honoraires_entree_app ?? '').trim()
-    if (!repris) return
+    // ⑧ (23/10/2026) : LA CHARGE N'ATTEND PAS LA COMMISSION VENDEUR. Une transaction a ses honoraires
+    //   d'UN seul cote (Frederic) : a charge acquereur, l'offre n'a pas de commission vendeur, et cette
+    //   reprise s'arretait AVANT la charge. Essai 4 du 23/10 : compromis sans charge, vente « vendeur »
+    //   par defaut. A la CREATION seulement, et jamais par-dessus un choix.
+    const chargeOffre = String(offre?.charge_commission_app ?? '').trim()
+    if (!repris) {
+      if (!courante && chargeOffre && !statusChangeCommissionTouchee) {
+        setStatusChangeChargeCommission(chargeOffre)
+        setStatusChangeCommissionTouchee(true)
+      }
+      return
+    }
     setStatusChangeHonorairesEntree(repris)
     setStatusChangeHonorairesEntreeTouche(true)
     setStatusChangeCommissionTouchee(true)
@@ -17119,6 +17131,27 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     setStatusChangeSellerNotaryNom(String(k.notaire_mandant_nom ?? '').trim())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusChangeAffaires, statusChangeStatus, carnetAffaires])
+
+  // ─── ⑧ (23/10/2026) : UN NOTAIRE ARRIVE PAR SON SEUL NUMERO RETROUVE SON NOM ───
+  //
+  // Le carnet de l'offre ne garde que le NUMERO du notaire de l'acquereur ; le compromis le reprend
+  // sans nom, `buyer_notary_nom` partait vide et le registre gardait un nom vide (« Contact 10064499 »
+  // partout -- essai 4 du 23/10). On lit le nom dans sa fiche contact, par ses deux numeros.
+  // ⚠ Seulement quand le nom MANQUE ; aucun drapeau « affirme » n'est leve.
+  useEffect(() => {
+    const acq = statusChangeBuyerNotaryNom.trim() ? '' : statusChangeBuyerNotaryId.trim()
+    const vend = statusChangeSellerNotaryNom.trim() ? '' : statusChangeSellerNotaryId.trim()
+    if (!acq && !vend) return
+    let annule = false
+    loadNomsContacts([acq, vend])
+      .then((noms) => {
+        if (annule) return
+        if (acq && noms.get(acq)) setStatusChangeBuyerNotaryNom(noms.get(acq) ?? '')
+        if (vend && noms.get(vend)) setStatusChangeSellerNotaryNom(noms.get(vend) ?? '')
+      })
+      .catch(() => undefined)
+    return () => { annule = true }
+  }, [statusChangeBuyerNotaryId, statusChangeBuyerNotaryNom, statusChangeSellerNotaryId, statusChangeSellerNotaryNom])
 
   // ═══ LA VENTE HERITE DU COMPROMIS DE SA CHAINE (10/09/2026) ═══
   //
@@ -21420,6 +21453,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </p>
                   )
                 })()}
+                {(() => {
+                  // V (23/10) : meme bandeau que l'offre verrouillee, pour le compromis d'une chaine vendue.
+                  const vente = statusChangeStatus === 'compromise'
+                    ? compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourantePourStatut())
+                    : null
+                  if (!vente) return null
+                  const numero = String(vente.hektor_affaire_id ?? '').trim()
+                  return (
+                    <p className="status-change-note">
+                      <strong>On ne revient plus sur ce compromis.</strong>{' '}
+                      Son dossier porte une vente{numero ? ` (n° ${numero})` : ''}. Le modifier, l'annuler ou le
+                      supprimer maintenant remettrait le bien « Sous compromis ». Pour y revenir, il faut
+                      d'abord supprimer la vente.
+                    </p>
+                  )
+                })()}
                 {/* 13/10 -- L'OFFRE ACCEPTEE EST FIGEE CHEZ HEKTOR.
                     Le bouton juste en dessous est eteint ; ici on dit POURQUOI et
                     QUOI FAIRE. Doctrine deja posee par 2.2c, un peu plus bas :
@@ -21474,7 +21523,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         celui-la part avec 3.3, quand le contrat d'autorite sera
                         vide. Le retirer avant, ce serait oter le filet avant
                         d'avoir pose le plancher. */}
-                  {affaireCourantePourStatut() && statusChangeStatus !== 'closed' && statusChangeStatus !== 'active' ? (
+                  {affaireCourantePourStatut() && statusChangeStatus !== 'closed' && statusChangeStatus !== 'active'
+                   && !(statusChangeStatus === 'compromise'
+                        && compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourantePourStatut())) ? (
                     <button className="ghost-button button-subtle" type="button"
                       onClick={(e) => { void handleChangeHektorAnnonceStatus(e as unknown as FormEvent<HTMLFormElement>, true) }}
                       disabled={statusChangePending || statusChangeCorrectionPending
@@ -21488,7 +21539,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       {statusChangePending ? 'Envoi...' : bvs('Modifier chez Hektor')}
                     </button>
                   ) : null}
-                  {affaireCourantePourStatut() && statusChangeStatus === 'compromise' ? (
+                  {affaireCourantePourStatut() && statusChangeStatus === 'compromise'
+                   && !compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourantePourStatut()) ? (
                     <>
                       <button className="ghost-button button-subtle" type="button"
                         onClick={() => handleGesteHektor('annuler_compromis')}
@@ -27011,6 +27063,8 @@ type CkDonneesApp = {
   repartition: Map<string, RepartitionLigne[]>
   conditions: Map<number, AffaireCondition[]>
   notes: Map<number, string>
+  /** ⑧ (23/10) : le nom d'un contact (un notaire) par l'un de ses deux numeros. */
+  nomsContacts?: Map<string, string>
 }
 function CkTxCard({ num, kind, title, sub, pill, pillTone, rows, open }: { num: string; kind: string; title: string; sub: string; pill: string; pillTone: string; rows: Array<[string, string, boolean?]>; open: boolean }) {
   if (!rows.length) {
@@ -27736,6 +27790,28 @@ function offreVerrouilleeParSonDossier(
   return memeDossier.find((r) => String(r.kind) === 'compromis' && !compromisMort(r)) ?? null
 }
 
+/** ─── V (23/10/2026) : LE COMPROMIS EST VERROUILLE PAR SA VENTE ───
+ *
+ *  Decision de Frederic : « apres la vente tout est verrouille ; pour modifier quoi que ce soit
+ *  sur le compromis, il faut d'abord supprimer la vente ». Meme regle, meme forme que
+ *  offreVerrouilleeParSonDossier ci-dessus (16/09) -- et meme partage : L'ECRAN N'EST PAS LA
+ *  SERRURE, le refus vit dans la base (patch_v_compromis_verrouille_2026-10-23.sql). Ici on
+ *  EXPLIQUE avant et on retire les boutons.
+ *  Essai reel du 23/10 (compromis 50136, vente 23357) : modifier le compromis d'une chaine vendue
+ *  remettait le bien « Sous compromis » chez Hektor.
+ *  ⚠ Une vente EFFACEE chez Hektor ne verrouille rien (meme clause que le chainage, 07/09).
+ *  Rend la vente qui verrouille -- pour la NOMMER -- ou null. */
+function compromisVerrouilleParSaVente(
+  lignes: AffaireLedgerRow[],
+  affaire: AffaireLedgerRow | null | undefined,
+): AffaireLedgerRow | null {
+  if (!affaire || String(affaire.kind) !== 'compromis' || affaire.app_chaine_id == null) return null
+  return lignes.find((r) => r.app_affaire_id !== affaire.app_affaire_id
+    && r.app_chaine_id === affaire.app_chaine_id
+    && String(r.kind) === 'vente'
+    && !(Boolean(String(r.hektor_affaire_id ?? '').trim()) && r.present_in_hektor === false)) ?? null
+}
+
 /** ─── UNE OFFRE ACCEPTEE EST FIGEE CHEZ HEKTOR (13/10/2026) ───
  *
  *  MESURE, en lecture seule, sur 12 offres reelles. L'ouverture du formulaire
@@ -28178,7 +28254,9 @@ function ckAffaireDepuisChaine(
         if (String(x?.id ?? '').trim() === id && txt(x?.nom)) return txt(x.nom)
       }
     }
-    return ''
+    // ⑧ (23/10) : la fiche contact, par nos DEUX numeros -- la lecture de l'assistant porte celui de
+    // Hektor (122190), le registre le notre (10064499) : l'egalite ci-dessus ne les relie pas.
+    return txt(app?.nomsContacts?.get(id))
   }
   const notaireDu = (r: AffaireLedgerRow, role: 'acquereur' | 'mandant'): string => {
     const id = txt(role === 'acquereur' ? r.notaire_acquereur_id : r.notaire_mandant_id)
@@ -28554,7 +28632,18 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
           loadAffairesConditions(ids).catch(() => new Map<number, AffaireCondition[]>()),
           loadAffairesNotes(ids).catch(() => new Map<number, string>()),
         ]).then(([carnet, repartition, conditions, notes]) => {
-          if (vivant) setCkDonneesApp({ carnet, repartition, conditions, notes })
+          if (!vivant) return
+          setCkDonneesApp({ carnet, repartition, conditions, notes })
+          // ⑧ (23/10) : les notaires connus par leur seul numero -- leur nom, dans leur fiche contact.
+          const numeros: string[] = []
+          for (const l of lignes) {
+            if (!String(l.notaire_acquereur_nom ?? '').trim()) numeros.push(String(l.notaire_acquereur_id ?? ''))
+            if (!String(l.notaire_mandant_nom ?? '').trim()) numeros.push(String(l.notaire_mandant_id ?? ''))
+          }
+          carnet.forEach((k) => { numeros.push(String(k.notaire_id ?? ''), String(k.notaire_mandant_id ?? '')) })
+          loadNomsContacts(numeros)
+            .then((nomsContacts) => { if (vivant) setCkDonneesApp((avant) => ({ ...avant, nomsContacts })) })
+            .catch(() => undefined)
         })
       })
       .catch(() => { if (vivant) setCkRegistreAffaires(null) })
