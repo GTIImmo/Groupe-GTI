@@ -1783,3 +1783,20 @@ par Pilotage, vérifié par `AnnonceById`.
 4. **Le nom doublé** : l'offre porte l'acquéreur sous NOTRE numéro (20000012), le compromis et la vente sous celui de HEKTOR (605967) ;
    `affaireAcquereursDeChaine` les compte comme deux personnes → « X et X ».
 ➡ Tout est **ancien** (l'écran n'a pas été touché par ⑧, sauf le repli validité / rétractation de la modale).
+
+### Pourquoi la rubrique Affaires ne montre pas ce que le registre porte, et pourquoi la répartition ne se voit pas *(Frédéric, 23/10 : « STOP »)* — lu dans le code
+**La rubrique Affaires** (cartes `ckAffaireDepuisChaine` + « Parties à l'affaire ») a été dessinée le **17/07 pour montrer ce que Hektor
+rend**, et branchée sur le registre le 03/09 (2.1). **R1 (22/10) a ensuite rempli le registre au clic — mais la rubrique n'a jamais appris
+à lire ces colonnes** : notaires (`notaire_acquereur_*`, `notaire_mandant_*`), taux, mandants, acquéreurs du compromis et de la vente,
+commission `_app` et charge. Elle lit à la place : un champ fixe par carte · la lecture console (étape la plus avancée seulement) · l'API
+de nuit (notaires de la vente) · le résumé de nuit du registre des mandats (« Parties à l'affaire », D9).
+
+**La répartition** :
+- **elle n'est affichée nulle part dans la rubrique Affaires** — un seul lecteur dans tout l'écran : la modale de statut
+  (`loadRepartition`, App.tsx ~17213) ;
+- **dans la modale, elle se retrouve par « le dossier ouvert du bien »** (`repartitionChaineId` → `dossiersOuvertsDuBien` : une chaîne
+  qui porte une vente n'est plus « ouverte »). Dès la vente, la modale **ne trouve plus la chaîne** → elle montre la **répartition par
+  défaut** (sortie 1 = FRANCK GERPHAGNON 50 %) au lieu de celle enregistrée (4 × 25 %) ;
+- ⛔ **et un enregistrement à ce moment-là partirait sous le numéro de la VENTE (1001383) au lieu de la chaîne (1001381)** — c'est pour ça
+  que l'essai a été arrêté : rien n'a été envoyé.
+- Ancien (modale du 14/09) ; l'essai complet l'a révélé.
