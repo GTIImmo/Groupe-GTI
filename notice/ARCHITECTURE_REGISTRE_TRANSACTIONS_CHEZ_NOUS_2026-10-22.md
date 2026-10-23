@@ -2055,3 +2055,21 @@ sans l'effacer, la nouvelle en reçoit une copie (visible à l'écran avant l'en
    commission — corrige F11 pour le notaire) ; la carte de l'offre affiche « Notaire vendeur ».
 Ce que ça pourrait casser : rien chez Hektor (le worker envoie déjà ce champ avec l'offre) ; le compromis et la vente ne changent pas ;
 le carnet garde ces lignes pour toujours (pas de colonne : règle de sortie du 16/09), ce qui est voulu.
+
+## 28. PATCH N CODÉ (notaire du vendeur de l'offre) — 23/10, commit 103a0b4 — ⛔ PAS POSÉ
+
+- **Base** : `supabase/patch_n_offre_notaire_vendeur_2026-10-23.sql` (+ `_INVERSE`, `_REPETITION`), générateur
+  `phase2/checks/gen_patch_n_offre_notaire_vendeur.py`. Empreintes : création f9d02447 → **44697dd5**, modification 0dac8c86 →
+  **43247de7**. Interrupteur `offre_notaire_vendeur`, posé **éteint**. **Répétition jouée : 7/7** (éteint → rien, le défaut ; allumé →
+  id + nom au carnet ; sans notaire → rien ; les autres lignes du carnet identiques ; modification affirmée → les deux lignes ; non
+  affirmée → rien ; l'inverse rend les deux empreintes). Vérifié après : empreintes d'origine, pas d'interrupteur, aucune affaire ni
+  ligne de carnet restée, file vide.
+- **Worker** : `R3_NON_CONTROLES.offre` + `notaire_mandant_id`, `notaire_mandant_nom` (essai R3 vert).
+- **Écran** : clé `seller_notary_id` dans la liste du point E · la modale d'une offre relit le carnet · **le compromis créé sur la
+  chaîne reprend le notaire du vendeur de l'offre** · la carte de l'offre montre « Notaire vendeur ».
+- ⚠ **Trouvé en codant — la reprise de la commission de l'offre (lot 1c, 16/10) ne jouait JAMAIS à la création** : elle cherchait
+  « l'affaire courante », qui n'existe pas encore quand on crée le compromis (c'est F11). Elle prend maintenant le dossier ouvert du
+  bien (même règle que la répartition). ⚠ **Conséquence voulue par la décision du 16/10** : à la création du compromis, la commission
+  vendeur saisie sur l'offre est pré-remplie, son drapeau levé, donc **elle part chez Hektor** avec le compromis.
+- Essais : rubrique 21/21 (témoin inverse : la ligne « Notaire vendeur » échoue sur la version d'avant), build vert.
+- **Pour activer** (accord de Frédéric) : poser le patch, allumer l'interrupteur, pousser, redémarrer les 4 services (file vide).
