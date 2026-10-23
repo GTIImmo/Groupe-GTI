@@ -1666,3 +1666,36 @@ qualification**. L'ENVOI, lui, a marché (la porte `ciblesHektorContacts` reconn
 - ✅ **ACTIF le 23/10 à 12:11** *(Frédéric : « poussé et 4 services redémarrés, file vide »)* : `7fce928` est sur `origin/main`
   (commit de 12:08:54) ; les **4 processus** du worker sont nés à **12:11:07-09**, après le commit ; file vide (0 en attente, 0 en
   cours), aucun travail ni erreur depuis. ⏰ Première preuve réelle : la prochaine relecture ou création de transaction, puis la nuit.
+
+## 20. A1 ET A5 — audit du 23/10 *(Frédéric a choisi : A1 la rétractation, A5 la modification écrit au registre ; l'envoi des honoraires / taux d'une offre est GARDÉ)* — lecture seule
+
+### A1 — la rétractation ne retombe plus à « 10 »
+- **Worker** : `REGISTRE_PAR_HEKTOR` gagne `dateEnd → date_fin_retractation`. Le retour (création ET modification) écrit donc la fin
+  de rétractation **relue chez Hektor**, comme la nuit le fait déjà (`affaire_ledger.py` l. 837). Seul le compromis rend `dateEnd`.
+  La colonne existe (R1 l'écrit) : le PATCH ne peut pas être refusé pour une colonne inconnue.
+- **Écran** : la modale se replie sur `date_fin_retractation − date` (en jours) quand le carnet n'a pas la ligne, comme la grille
+  (« jusqu'au … »). Garde : un nombre entre 1 et 365, sinon « 10 » comme avant.
+- **Ce que ça pourrait casser** : la règle de sortie ne change pas (`jours_retractation` n'a pas de colonne : il reste au carnet) ;
+  aucun verdict ne lit `date_fin_retractation` ; lecteurs : la grille, la modale, la nuit (qui la réécrit de toute façon). Un compromis
+  sans date de fin chez Hektor (la plupart des anciens) garde « 10 » — comme aujourd'hui.
+
+### A5 — la modification écrit au registre ce qu'elle ENVOIE
+Aujourd'hui `app_modifier_affaire_optimistic` n'écrit au registre que `montant` et `date`. R1 l'avait promis « création + modification ».
+**Le piège trouvé à l'audit** : l'ancien verdict (`marquerLeCarnetRestant`) compare la saisie **au registre** après le retour. Si la
+modification écrit NOTRE valeur au registre et que Hektor ne la rend pas à la relecture, le verdict se comparerait **à lui-même** —
+« arrivée » sans preuve, ligne retirée. Mesuré : c'est le cas du **net vendeur d'une VENTE** (« la vente n'a pas de prixNetVendeur »).
+**D'où le dessin, colonne par colonne — n'écrire que ce que Hektor RELIT, ou ce qu'aucun verdict ne juge sur le registre** :
+| genre | colonnes écrites au clic de la modification |
+|---|---|
+| offre | validité (relue par numéro) · honoraires acquéreur, taux (non jugés) |
+| compromis | date d'acte, séquestre, net vendeur, honoraires vendeur et acquéreur (tous relus) · taux · fin de rétractation (non jugés au registre ; A1 la réécrit au retour) · notaires · mandants |
+| vente | honoraires vendeur et acquéreur (relus) · taux · notaires · mandants — **PAS le net vendeur** |
+- **Seulement ce qui a été TOUCHÉ** (la liste `champs_touches` de E) ; les notaires seulement s'ils sont **affirmés** (`notaires_affirmes`),
+  les mandants seulement s'ils sont **désignés** — exactement ce que le worker envoie comme intention. **E éteint ou liste absente : rien
+  ne change.** « Vide ne gagne pas » : une case vidée n'efface pas le registre.
+- La **photo** du carnet reste prise dans la ligne lue AVANT l'écriture (déjà le cas).
+- **Ce que ça pourrait casser** : la nuit réécrit encore les colonnes partagées depuis Hektor (c'est R2, pas fait) — notre saisie reste au
+  carnet et l'écran la montre d'abord, comme pour la création. Les chaînes ne lisent que `date` (déjà écrite). Le classeur et l'export lisent
+  le registre : ils verront la valeur saisie dès le clic au lieu du lendemain.
+- **La forme** : un patch SQL de la RPC, généré avec ses gardes d'empreinte (`049643b8` → empreinte calculée d'avance), son **inverse** et
+  sa **répétition** ; **collé par Frédéric**. Plus les essais du worker (A1) et la compilation de l'écran.
