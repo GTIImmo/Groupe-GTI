@@ -1886,3 +1886,51 @@ remise à 1 par Hektor · F4 le prix de vente = prix du mandat · l'acquéreur d
 
 **Ensuite, dans l'ordre demandé** : nettoyer VA6482 (supprimer la vente 23355, le compromis 50132, refuser l'offre 33112, la clôture locale
 avec sauvegarde datée, la diffusion), puis le **troisième essai complet**, **en saisissant cette fois conditions, note et répartition à 100 %**.
+
+## 23. LE PLAN RAMENÉ À « COMME AVANT, MAIS TOUT DE SUITE » — 23/10 *(Frédéric : « je ne demande pas mieux que avant ce chantier au niveau affichage, juste que tout fonctionne correctement et soit visible comme avant » ; « la modale est liée à l'affaire en cours… il faut pouvoir modifier la répartition sur le compromis ; une vente peut juste être choisie et supprimée »)* — lecture seule
+
+⚠ **Le §22.4 (P1-P7) allait trop loin** : il ajoutait des lignes que l'écran n'a jamais eues. **Le modèle à reproduire est VM71227**
+(bien vendu le 19/10, passé par la nuit), où tous les blocs sont pleins.
+
+### 23.1 Ce que la relecture du code d'avant a établi
+- **Le résumé de nuit est fabriqué MÉCANIQUEMENT à partir des mêmes champs que notre registre des transactions**
+  (`export_app_payload.py`, `build_affaire_detail_for_cycle`, ~l. 996) : acquéreur = 1er de `acquereurs_json`, mandant = 1er de
+  `mandants_json`, notaire de la vente = 1er de `notaires_json`, plus prix, dates, séquestre, net. **Notre registre porte tout cela dès le
+  retour de Hektor** (mesuré sur 1001382 / 1001383). Refaire la même recette à l'écran, sur le registre, donne **le même bloc**, sans attendre.
+- ⛔ **Attendre la nuit ne suffirait pas pour VA6482** : son mandat 18787 n'a **aucune ligne** dans `app_mandat_register_current`
+  (mesuré : 0, alors que VM71227 en a une et qu'il y en a 6 775 avec une vente). Le bloc « Parties à l'affaire » ne s'y remplirait **jamais**.
+- **La répartition vit dans la modale, et seulement là — c'est le dessin du 14/09.** On ne l'ajoute pas à la rubrique.
+- **Après la vente, le compromis reste « vivant »** (`en_cours`) : l'onglet Compromis de la modale le vise toujours, « Modifier chez Hektor »
+  y est offert. C'est là que la répartition doit se modifier — et c'est là qu'elle est perdue (`repartitionChaineId` → `dossiersOuvertsDuBien`
+  écarte une chaîne qui a sa vente).
+- **L'onglet Vente** offre aujourd'hui « Modifier chez Hektor » ET « Supprimer la vente » (App.tsx ~21403, ~21436). Le projet avait mesuré
+  que le worker *peut* modifier une vente (LISTE l. 4760 ; PLAN l. 2237 : sans danger sur une annonce active, **danger sur une annonce
+  archivée**). ⚠ Frédéric dit « une vente peut juste être choisie et supprimée » : **retirer « Modifier » de la vente est à trancher par lui.**
+
+### 23.2 Les 6 corrections — écran seulement, rien chez Hektor, rien en base
+| # | quoi | résultat attendu |
+|---|---|---|
+| **C1** | « Parties à l'affaire » : **quand le résumé de nuit n'a pas la transaction la plus récente** (ou pas de ligne du tout), le bloc est fabriqué **avec la recette de la nuit**, appliquée au registre des transactions | acquéreur + coordonnées, mandant, comme VM71227, **dès le retour de Hektor** |
+| **C2** | carte Vente : notaires de `notaires_json` **d'abord** (comme avant), sinon ceux que le registre porte depuis le clic (`notaire_mandant_*`, `notaire_acquereur_*`) | plus de « — » le jour de la vente |
+| **C3** | chaque carte lit la lecture de l'assistant de **SA** transaction (aujourd'hui : celle de l'étape la plus avancée seulement) | la carte du compromis garde ses notaires, ses honoraires vendeur et ses conditions après la vente |
+| **C4** | une même personne sous ses deux numéros (notre ≥ 10 M / celui de Hektor) **comptée une fois** — par la paire `hektor_contact_id` / `hektor_target_id`, jamais par le nom | plus de « X et X » |
+| **C5** | modale : la répartition est cherchée **d'abord dans la chaîne de la transaction visée** (le compromis, même après la vente), l'ancienne règle ensuite ; et **jamais enregistrée sous un n° de transaction quand la chaîne existe** | on rouvre le compromis vendu : les vraies parts reviennent, on les modifie, elles restent sur la chaîne |
+| **C6** | modale d'une offre : reprendre honoraires vendeur et charge saisis (`honoraires_entree_app`, `charge_commission_app`) et le n° de mandat du registre, **sans lever le drapeau « touché »** | ce qui a été saisi se revoit ; rien ne part tant qu'on ne tape pas |
+
+**Ce que ça pourrait casser ailleurs** :
+- C1 : le bloc « Dossiers abandonnés » lit aussi le résumé de nuit (`dossiers[]`) — **il n'est pas touché** ; un cycle **passé** garde son
+  résumé (le repli ne joue que pour le cycle courant). Si le résumé est plus récent que le registre, **c'est lui qui gagne** (comme avant).
+- C1 : le mandant pris est le **1er** de la liste, comme la nuit — y compris quand Hektor a ajouté l'acquéreur aux mandants à la vente.
+  On reproduit la nuit, on ne la corrige pas.
+- C2 : le nom du notaire de l'acquéreur n'est pas toujours au registre (`notaire_acquereur_nom` vide sur 1001382/83) : il faudra le lire
+  dans la fiche contact, sinon n'afficher que celui qu'on a.
+- C5 : **de l'argent.** À la création (pas de transaction visée), le chemin d'aujourd'hui est inchangé. Essai obligatoire : rouvrir le
+  compromis après la vente → 4 lignes reviennent → modifier → la chaîne garde ses lignes, aucune ligne sous 1001383.
+- C6 : le prérenseignement ne lève aucun drapeau → la charge envoyée à Hektor ne change pas.
+
+**Pas dans ce plan** (déjà notés, à part) : F9 recherche de qualification non archivée · F10 diffusion remise à 1 · F4 prix de vente =
+prix du mandat · acquéreur de l'offre jamais relu · mandants ajoutés par Hektor à la vente · nos conditions et notre note dans la rubrique.
+
+**Ensuite** : `npm run build`, essais hors ligne des fonctions touchées, commit local, Frédéric pousse ; puis nettoyage de VA6482 (geste par
+geste, avec accord) et le **troisième essai complet** — conditions, note et répartition à 100 % saisies cette fois, et **la répartition
+modifiée sur le compromis après la vente**.
