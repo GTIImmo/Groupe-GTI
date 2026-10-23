@@ -1759,3 +1759,15 @@ par Pilotage, vérifié par `AnnonceById`.
   rend « 1 notaire mandant ». Le « 0 » de la création était lu AVANT que Hektor l'enregistre.
 - ⚠ **Trouvé en passant** : Hektor **ajoute l'acquéreur d'une vente aux mandants du bien**. VA6482 porte désormais **7 mandants**,
   dont **605963** (l'acquéreur de la 1ʳᵉ vente, supprimée depuis). La suppression de la vente ne le retire pas. À nettoyer.
+
+### Pourquoi l'écran ne montre pas l'acquéreur du compromis et de la vente *(Frédéric, 23/10, vu dans Chrome)*
+- **La donnée est juste** : le registre porte 605967 sur le compromis 50132 et la vente 23355, et Hektor l'a gardé.
+- **Les cartes « Compromis » et « Vente »** (App.tsx ~27013-27040) n'ont **aucune ligne « Acquéreur » dans le code** — seule l'offre en a
+  une. L'acquéreur est censé apparaître dans le bloc **« Parties à l'affaire »**.
+- **« Parties à l'affaire »** (`ckAffPartyCards`, App.tsx ~28527) lit l'acquéreur dans le **résumé d'affaires du registre des mandats**
+  (`app_registre_mandats_current.affaires_detail_json`) — refait **la nuit seulement** (D9, noté le 22/10, « non vérifié à l'écran » :
+  c'est vérifié maintenant). Mesuré : **aucune ligne** pour VA6482 en ce moment → le bloc n'affiche que le propriétaire (repli).
+- Sur la carte de l'offre, le nom apparaît **deux fois** (« X et X » : le principal et la liste).
+- **Ancien** : D9 existait avant R1 ; R1 a rendu le registre des transactions complet au clic, mais l'écran lit encore un résumé de nuit.
+- **Correction proposée (écran)** : les cartes et « Parties à l'affaire » se replient sur le **registre des transactions** quand le résumé de
+  nuit n'a pas encore l'affaire ; le nom n'est plus doublé. ⏰ Et vérifier demain si la nuit ramène la ligne d'un bien VENDU.
