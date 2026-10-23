@@ -2111,3 +2111,30 @@ le carnet garde ces lignes pour toujours (pas de colonne : règle de sortie du 1
 soit à charge acquéreur, jamais les deux ») : j'ai saisi 5 000 acquéreur **et** 6 500 vendeur, charge acquéreur. Le « conflit »
 R3 sur le prix public du compromis (115 000 contre 110 000 = 115 000 − 5 000) en découle ; les résultats de commission de cet
 essai ne comptent pas. ⚠ La modale accepte les deux à la fois : rien ne prévient — **à trancher par Frédéric**.
+
+## 30. ESSAI 4 (PROPRE) — 23/10, 18:04-18:25 (Paris) — honoraires d'UN seul côté (charge acquéreur : 5 000 acquéreur, 0 vendeur)
+
+Nettoyage d'abord (vente 23356, compromis 50135 supprimés ; offre 33114 refusée ; clôture locale retirée, sauvegarde
+`app_mandat_champ_app_avant_essai4_va6482_20261023` ; diffusion remise à 0 par Pilotage, vérifiée chez Hektor). ⚠ f00691e **pas
+encore poussé** pendant l'essai (sans effet ici : aucune commission vendeur à reprendre).
+
+**✅ Prouvé en réel** — contact **20000014** (Hektor 605975, « mandant » seul) · offre **33115** / chaîne **1001390** : la **note
+enregistrée À LA CRÉATION** (correctif 53bebff), le notaire du vendeur au carnet (patch N), charge, répartition 30/20/25/25 · offre
+acceptée · compromis **50136** : notaire du vendeur **repris de l'offre**, **R3 : 0 conflit** (prix public 110 000 arrivé, rétractation 14
+arrivée), net 110 000, acte, séquestre, mandant, 2 conditions, note, recherche de qualification 471887, « Hektor a gardé toutes les
+personnes » · vente **23357** : notaires, net, charge, note · **répartition modifiée sur le compromis APRÈS la vente → rangée sous la
+chaîne 1001390 (40/10/25/25), rien sous la vente** (C5) · **rubrique** : les trois cartes complètes (offre avec « Notaire vendeur »,
+compromis avec acquéreur, mandant, conditions, note ; vente avec notaires dès le clic), « Parties à l'affaire » rempli sans la nuit
+(acquéreur + coordonnées, mandant, notaire), bloc Répartition à jour après rechargement.
+
+**⛔ Défauts trouvés**
+1. ⛔⛔ **Modifier le compromis APRÈS la vente remet le bien « Sous compromis » chez Hektor** (statut 4) alors que la vente 23357 existe
+   toujours, et la diffusion repasse à 1. « Modifier la transaction » renvoie le statut du genre visé. Avant aujourd'hui, personne ne
+   modifiait un compromis après la vente ; c'est le geste demandé pour la répartition qui l'a révélé. **VA6482 est dans cet état.**
+2. **La charge ne passe pas au compromis quand il n'y a pas de commission vendeur** : la reprise (lot 1c) s'arrête si l'offre n'a pas
+   de `honoraires_entree_app`. Compromis : charge vide ; onglet Vente : « vendeur » par défaut (corrigé à la main).
+3. **Le nom du notaire de l'acquéreur se perd** : l'offre ne garde que son numéro (`notaire_id`), le compromis le reprend sans nom →
+   « Contact 10064499 » partout (c'est « Tiffany SELARL »).
+4. **Les mandants de la vente cumulent les acquéreurs des essais** (9 noms) : Hektor ajoute l'acquéreur aux mandants à chaque vente,
+   la suppression ne les retire pas (constat du 23/10, à nettoyer).
+5. Rappel : l'échéance des conditions affichée un jour trop tôt.
