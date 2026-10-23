@@ -1602,3 +1602,20 @@ prouverait pas la correction `941cb70`.
 - **F6** — R1 laisse `notaires_origine` vide sur le compromis et la vente ; à mesurer cette nuit (`registre_depuis_console`).
 - **F7** — sur une offre, le notaire est envoyé mais R3 le dit « sans objet ».
 - ⏰ **Le nettoyage attend la preuve de nuit** (étape 6) : vente, compromis, clôture locale du mandat 18787, contacts 20000007/8/9/10/11.
+
+### ⛔ CORRECTION — F6 était FAUX, et la remarque du §17 sur le notaire aussi *(vérifié dans la RPC, 23/10)*
+R1 laisse `notaires_origine` vide **exprès** (RPC de création, l. 233) : *« SANS notaires_origine = 'saisie', qui figerait la ligne
+pour toujours : la console doit pouvoir la confirmer ou la corriger. »* Ce n'est donc pas un défaut. Et R3 ne compare **pas** le
+notaire à lui-même : la nuit, `registre_depuis_console.py` réécrit le notaire depuis la console de Hektor, et R3 juge ensuite cette
+valeur-là. J'avais supposé l'inverse sans lire la RPC.
+
+### Les constats, ancien ou nouveau *(question de Frédéric)*
+| | constat | depuis quand |
+|---|---|---|
+| F1 | faux « conflit » prix public / prix de vente | **NOUVEAU, R3 (23/10, moi)** — l'ancien worker l'avait réglé (12/09) |
+| F2 | qualification à la vente : numéro Hektor non reconnu | **ANCIEN** (recherche par notre numéro seulement, 18/09 ; tous les contacts sont sur nos numéros depuis fin septembre) ; R3 le rend immédiat (le registre passe aux numéros Hektor dès le retour, au lieu de la nuit) |
+| F3 | mécanisme « sans recherche » non exercé | **ni l'un ni l'autre** : mon choix de type « Acquéreur » pour l'essai |
+| F4 | offre → compromis : mandant et notaire du vendeur non repris ; prix de vente = prix du mandat | **ANCIEN** — l'offre n'a jamais gardé ses notaires au registre (D4, 22/10) ; écran non touché |
+| F5 | modale de modification sans la commission `_app` ni la charge | **ANCIEN** (lot 1c, 16/10) ; écran non touché |
+| F6 | `notaires_origine` vide | **PAS UN DÉFAUT** — voulu par R1 (voir ci-dessus) |
+| F7 | notaire d'une offre « sans objet » | **NOUVEAU, R3 (23/10, moi)** — la table de R3 ne donne pas de source au notaire d'une offre ; la ligne reste au carnet, l'étiquette est fausse |
