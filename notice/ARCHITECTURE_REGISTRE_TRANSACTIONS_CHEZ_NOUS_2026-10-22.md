@@ -2001,3 +2001,30 @@ l'écran** : ce sera le troisième essai, après le push.
 - **n° de mandat** : pas repris du registre dans la modale (vide = le worker prend la valeur de Hektor, « id-FAMILLE »). ⚠ Nos essais
   du 23/10 ont TAPÉ 18787 : 7 gestes l'ont envoyé ; que Hektor ait gardé le mandat n'est **pas vérifié** (carnet « en_attente ») —
   à juger avec la preuve de nuit.
+
+## 26. LE TROISIÈME ESSAI — 23/10, 16:30-16:50 — ARRÊTÉ APRÈS L'OFFRE : deux défauts trouvés
+
+**Actif** : front déployé (le paquet en ligne porte « Taux honoraires acquéreur », « Total entrée ») ; 4 workers démarrés à 16:30:40-41
+(après cd46764) ; file vide. **Vu à l'écran, sur les données de l'essai 2, AVANT nettoyage** : cartes complètes, nom non doublé,
+« Parties à l'affaire » rempli sans la nuit (acquéreur + coordonnées, mandant 189298, notaire PAILHES), bloc Répartition, et **la modale
+du compromis après la vente retrouve les 4 × 25 %** (avant : défauts).
+
+**Nettoyage VA6482** (accord de Frédéric) : vente 23355 supprimée · compromis 50132 supprimé · offre 33112 refusée (Hektor : `refus`) ·
+clôture locale retirée (sauvegarde `app_mandat_champ_app_avant_essai3_va6482_20261023`) · Hektor : `diffusable 0`, statut « Sous offre ».
+
+**Essai 3** : contact **20000013** (Hektor **605973**, « mandant » seul) · offre **33114** / chaîne **1001384** : montant 115 000, validité 15,
+honoraires acq. 5 000, taux 4,35, honoraires vendeur 6 500, charge acquéreur, acquéreur, mandant TESTCLAUDE, notaires PAILHES / Tiffany
+SELARL, note libre, répartition 30 / 20 / 25 / 25. N° de mandat laissé VIDE exprès (le registre porte quand même 18787).
+
+⛔ **DÉFAUT 1 — la note et les conditions saisies À LA CRÉATION ne sont JAMAIS enregistrées.** Le code (App.tsx, après le geste) vise
+`affaireCourantePourStatut()`, qui est **vide à la création** ; la répartition et la commission, elles, se replient sur le numéro neuf
+rendu par le travail (`payload_json.app_affaire_id`). Depuis le 16/09 (conditions, cb864a5) et le 17/09 (note, 0329f36).
+**Mesuré : `app_affaire_note` = 0 ligne et `app_affaire_condition` = 0 ligne dans TOUTE la base.** ⚠ Mon compte rendu de l'essai 2
+(« conditions suspensives : gardées chez nous ») était **faux** : je ne l'avais pas mesuré.
+
+⚠ **DÉFAUT 2 (déjà noté F11)** — sur une **offre**, le mandant et le notaire du vendeur désignés ne sont gardés **nulle part** (registre :
+`mandants_json` et `notaire_mandant_*` vides ; carnet : seulement `notaire_id` = notaire de l'acquéreur).
+
+⚠ **MON ERREUR SUR LA RÉPARTITION** : les 4 parts se comptent **ensemble** sur 100 % (la modale : « Les parts font 200 % … refusé »).
+4 × 25 était donc **juste**, et je l'avais dit faux. Le bloc de la rubrique est corrigé (commit d210d1c : « Total — N % attribués à
+personne » seulement si la somme des 4 n'est pas 100) ; essai 19/19.
