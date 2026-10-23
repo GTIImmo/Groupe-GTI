@@ -2155,7 +2155,7 @@ compromis avec acquéreur, mandant, conditions, note ; vente avec notaires dès 
 - Le worker pose le statut du genre visé à CHAQUE `change_hektor_annonce_status`, reprise comprise (`HEKTOR_STATUS_CONFIG.compromise`
   = statut 4 « Sous compromis », l. ~12438). Modifier le compromis d'une chaîne vendue remet donc le bien « Sous compromis ».
 - Ce qu'on garde chez nous et qui doit rester modifiable après la vente : **répartition** (par chaîne), **conditions** et **note** (par
-  transaction), **charge** (`charge_commission_app`). Les quatre ont déjà leur RPC (`app_affaire_repartition_ecrire` via
+  transaction), **charge** (`charge_commission_app`). Les quatre ont déjà leur RPC (`app_repartition_commission_set` via
   `saveRepartition`, `app_conditions_affaire_ecrire`, `app_affaire_note_ecrire`, `app_affaire_commission_ecrire`) : **aucun travail
   Hektor n'est nécessaire**.
 - **Plan A** : sur l'onglet Compromis, quand la chaîne visée porte une **vente vivante**, « Modifier la transaction » est remplacé par
