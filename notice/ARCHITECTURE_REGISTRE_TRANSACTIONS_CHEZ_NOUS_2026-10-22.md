@@ -1322,3 +1322,9 @@ Hektor) — il se verra à la prochaine vraie création (« R3 : N ligne(s) jug�
   (fiche Hektor). Leçon : nettoyer un essai par le geste « Actif » n'est pas neutre.
 - **Noté** : la fiche du bien (`app_dossier_current`) porte encore `compromis_id = 50129` (supprimé) et pas `offre_id = 33109` — ces
   pointeurs ne sont remplis que la nuit (déjà dit dans le code, 02/09) ; la modale s'en sort par son repli.
+
+### ✅ VA6482 REMIS « NON DIFFUSABLE » — 23/10 à 10:2x *(Frédéric : « si on peut, dans pilotage, mettre diffusable sur non »)*
+Fiche du bien → menu **« Pilotage »** de l'en-tête → **« Pilotage diffusion » : Désactiver** (`setDossierDiffusableOnHektor`, par le
+backend Render, écrit chez Hektor puis met à jour notre fiche). ⚠ Avant rechargement, l'écran montrait déjà « Désactiver » choisi
+(état périmé) — il a fallu recharger pour voir « Activer » et pouvoir cliquer. **Vérifié des deux côtés** : notre fiche `diffusable = 0`
+et **Hektor `keyData.diffusable = 0`** (lecture `AnnonceById`).
