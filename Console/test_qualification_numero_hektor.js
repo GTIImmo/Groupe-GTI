@@ -49,27 +49,34 @@ function filtrer(chemin) {
                            || (parHektor && parHektor.includes(f.hektor_target_id)));
 }
 
-async function lancer(acquereur) {
+async function lancer(acquereur, { bien = null, traces = [] } = {}) {
   const journal = [];
+  const suite = [];
   const ctx = {
     console, JSON, Set, Map, Array, String, Number, Math, Object, encodeURIComponent,
     ASSISTANTS_HEKTOR: { sold: true, compromise: true },
     safeJsonParse: (x) => { try { return JSON.parse(x); } catch (_) { return null; } },
     r3Texte: (v) => (v == null ? "" : String(v).trim()),
     supabaseRequest: async (chemin) => {
-      if (chemin.startsWith("app_console_job_log")) return [];
+      if (chemin.startsWith("app_console_job_log")) return traces;
       if (chemin.startsWith("app_contact_current")) return filtrer(chemin);
-      if (chemin.startsWith("app_dossier_current")) return [];   // bien inconnu : la qualification s'arrete la
+      if (chemin.startsWith("app_dossier_current")) return bien ? [bien] : [];   // sans bien : la qualification s'arrete la
       return [];
     },
+    // la SUITE de la qualification : on enregistre le numero qu'elle recoit
+    ensureContactSearchExecution: async (job, { hektor_contact_id }) => { suite.push(String(hektor_contact_id)); return { contactId: "cible", context: { contact: {} } }; },
+    listerCriteresBestEffort: async () => [],
+    contactSearchExecutionContact: () => ({}),
+    createHektorContactSearchCriteria: async () => ({}),
     logJob: async (id, step, status, message) => { journal.push({ step, status, message }); },
   };
   vm.createContext(ctx);
   vm.runInContext([morceaux.demandes, morceaux.estQualifie, morceaux.qualifier,
     "this.qualifier = qualifierAcquereursAvantTransaction;"].join("\n"), ctx);
   const r = await ctx.qualifier({ id: "essai" }, { buyer_contact_id: acquereur, amount: "120000" }, "sold", "24113");
-  return { r, journal };
+  return { r, journal, suite };
 }
+const BIEN = { type_bien: "2", ville: "Le Puy-en-Velay", code_postal: "43000", numero_dossier: "VA6482" };
 
 (async () => {
   {
@@ -90,6 +97,17 @@ async function lancer(acquereur) {
     const { journal } = await lancer("999999");
     controle("(4) un numero inconnu des deux cotes reste « inconnu » (on ne devine pas)",
       journal.some((j) => /Contact 999999 inconnu de notre base/.test(j.message)), JSON.stringify(journal));
+  }
+  {
+    // ESSAI REEL du 23/10 (vente 23355) : reconnu sous le numero de Hektor, l'acquereur doit partir a la
+    // suite sous NOTRE numero -- sinon « Contact introuvable dans l'index Supabase: 605967 »
+    const { suite, journal } = await lancer("603953", { bien: BIEN });
+    controle("(5) la suite de la qualification recoit NOTRE numero (10354641), pas celui de Hektor (603953)",
+      suite.length === 1 && suite[0] === "10354641", JSON.stringify({ suite, journal }));
+  }
+  {
+    const { suite } = await lancer("603953", { bien: BIEN, traces: [{ payload_preview: JSON.stringify({ hektor_contact_id: "10354641", id_critere: "77" }) }] });
+    controle("(6) une RELANCE retrouve sa qualification sous notre numero : pas de seconde recherche", suite.length === 0, JSON.stringify(suite));
   }
   console.log(echecs.length ? `\n⛔ ${echecs.length} controle(s) en echec.` : "\n✅ Tous les controles sont verts.");
   process.exit(echecs.length ? 1 : 0);

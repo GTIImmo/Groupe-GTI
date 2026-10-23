@@ -15916,17 +15916,22 @@ async function qualifierAcquereursAvantTransaction(job, payload, target, annonce
   }
   const aQualifier = [];
   for (const id of ids) {
-    if (dejaFaites.has(id)) {
-      aQualifier.push({ contactId: id, idCritere: dejaFaites.get(id), reprise: true });
+    const c = parId.get(id);
+    // la cle de la suite : NOTRE numero (voir plus bas) ; une relance retrouve ses traces sous l'un ou l'autre
+    const cle = c ? String(c.hektor_contact_id || id) : id;
+    if (dejaFaites.has(cle) || dejaFaites.has(id)) {
+      aQualifier.push({ contactId: cle, idCritere: dejaFaites.has(cle) ? dejaFaites.get(cle) : dejaFaites.get(id), reprise: true });
       continue;
     }
-    const c = parId.get(id);
     if (!c) {
       await logJob(job.id, "hektor_qualification_acquereur", "error",
         `Contact ${id} inconnu de notre base : pas de qualification (on ne devine pas)`, { hektor_contact_id: id });
       continue;
     }
-    if (!estQualifieAcquereur(c.typologies_json)) aQualifier.push({ contactId: id });
+    // 23/10 (essai reel, vente 23355) : la suite (ensureContactSearchExecution, l'archivage) attend
+    // NOTRE numero -- c'est la cle de l'index. Reconnu sous le numero de Hektor, l'acquereur partait
+    // avec lui : « Contact introuvable dans l'index Supabase: 605967 ». On passe donc le notre.
+    if (!estQualifieAcquereur(c.typologies_json)) aQualifier.push({ contactId: cle });
   }
   const neufs = aQualifier.filter((q) => !q.reprise);
   if (!neufs.length) return aQualifier;
