@@ -1264,3 +1264,12 @@ en ouvrant la fiche V720061672 (lecture seule chez Hektor). **R3 a jugé 12 lign
 - ⚠ Les 3 lignes de 30712 déjà marquées « echec » à tort (date, prix public, rétractation) **ne seront pas rejugées** (R3 ne revient
   pas sur un verdict tranché) : **les remettre à blanc** (écriture en production, accord de Frédéric) après le redémarrage.
 - 1001339 (annonce 24933, plus parmi les biens actifs) : sera jugée à sa prochaine relecture.
+
+### ✅ CORRECTIF R3 ACTIF ET VÉRIFIÉ — 23/10 à 09:40 *(Frédéric : « poussé, 4 services redémarrés ; remets à blanc les 3 lignes, j'autorise »)*
+Vérifié : `origin/main` = `6731460` ; processus démarrés à 09:38:24-26, après le fichier (09:35:56).
+- **Remise à blanc** des 3 lignes de 30712 jugées « echec » à tort (date, prix public, rétractation) : `etat`, `valeur_hektor_relue`,
+  `constate_le` à vide, **valeurs saisies intactes**, et seulement si elles étaient encore à « echec » (3 lignes).
+- La fiche ne relançait pas de relecture (la précédente datait de 09:34) → **un travail de relecture recopié de celui de 09:34**
+  (`reason = verif_r3_23_10`, lecture seule chez Hektor), terminé à 09:40:49.
+- **Le nouveau verdict** : **date → arrivée, retirée** (date de l'offre relue la nuit) · prix public et rétractation → **sans_objet** ·
+  le montant 160 000 reste **« echec »** (non rejugé, comme voulu). Carnet de 30712 : 3 lignes, toutes tranchées.
