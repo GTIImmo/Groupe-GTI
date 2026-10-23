@@ -916,3 +916,52 @@ registre et carnet → 0 ligne ; bien « Actif ».
 | 5 | **la modification met du prérempli au carnet** (point E) | 🟡 codé et répété (8/8), **non posé** |
 | 6 | **la nuit perd le lien vers un contact créé dans l'app** | 🔴 trouvé le 23/10, **non corrigé** — sujet d'identité |
 | 7 | une modification **échouée** laisse ses valeurs au carnet sans verdict (offre 33094 : app 160 000, Hektor 16 000) | 🔴 non corrigé — R3/R4, et 33094 à trancher |
+
+## 9. DÉFAUT 6 — POURQUOI ON NE L'AVAIT PAS AVANT — audit du 23/10 *(Frédéric : « pourquoi ce problème 6, on n'avait pas cela avant, nous avions résolu ce problème d'acquéreur »)* — lecture seule
+
+### Ce que 1b avait résolu, et ce qui est différent
+- **1b** règle la **clé du rapprochement** (`hektor_acquereur_id` = le numéro Hektor) : **prouvé cette nuit**, aucun doublon.
+- Le défaut 6 porte sur **une autre colonne** : `app_contact_id`, le **lien vers notre fiche contact**. La nuit le recalcule à
+  partir du **registre local d'identité** (`app_contact`, dans `phase2.sqlite`), pas à partir de Supabase.
+
+### Pourquoi « avant » ça marchait
+- Avant le 21/10, un contact créé dans l'app partait **d'abord chez Hektor** ; son identité lui était donnée **ensuite, la
+  nuit, par le registre local**, sous la forme « identité 1065xxxx ↔ numéro Hektor ». Exemple mesuré : **10650570 ↔ 605717**
+  (créé le 07/10) — la nuit le connaît, l'offre 1001361 garde son lien.
+- **Depuis le 21/10 (8a pièce 1, « naître complet »)**, le contact reçoit **tout de suite** son identité **chez Supabase**,
+  dans la plage **≥ 20 000 000** (20000007, 20000008, 20000009). **C'est la première fois** que le registre local voit
+  arriver des contacts qui ont **déjà** leur identité : il n'en avait **jamais** vu (mesuré : ces 3-là seulement).
+
+### Ce que fait alors le registre local — LA CAUSE
+`phase2/identite/registre_contacts.py` (règle « L4-c-bis » du 24/09) : pour une clé ≥ 10 M, il **garde la clé** dans
+`hektor_contact_id`… **mais lui attribue quand même un NOUVEAU numéro** et **laisse le numéro Hektor vide** :
+
+| contact (Supabase) | ligne fabriquée dans le registre local |
+|---|---|
+| 20000007 ↔ 605925 | `app_contact_id` **10650777**, `hektor_contact_id` 20000007, cible **vide** (22/10 04:39) |
+| 20000008 ↔ 605946 | **10650807**, 20000008, cible **vide** (23/10 04:38) |
+| 20000009 ↔ 605947 | **10650808**, 20000009, cible **vide** (23/10 04:38) |
+
+La bonne paire existe pourtant en local, mais dans la table **complémentaire** (`app_contact_identite_app`, descendue de
+Supabase). ➡ **Le défaut dormait depuis le 24/09** : la règle n'avait jamais rencontré un vrai contact né dans l'app.
+
+### Qui en souffre
+1. **Le registre des transactions** (`affaire_ledger.py`) : ne lit **que** `app_contact` → ne trouve pas 605946 → lien
+   **vide** (1001375, cette nuit).
+2. ⚠⚠ **`pousser_numeros_contact.py`** (dans le run, `run_full_pipeline.ps1:1436`) renvoie chaque nuit à Supabase le numéro
+   du registre local → **le contact 20000007 porte DÉJÀ `app_contact_id = 10650777` chez Supabase** (au lieu de 20000007).
+   20000008 et 20000009 sont encore justes, **mais suivront probablement la nuit prochaine**.
+3. **12 fonctions Supabase lisent `app_contact_current.app_contact_id`** — dont `app_change_annonce_status_optimistic` (1b :
+   le lien posé au clic), `app_contact_id_propager`, `app_edit_contact_optimistic`, `app_edit_search_optimistic`… Pour
+   20000007, elles liraient désormais **10650777**, un numéro qui n'est **la fiche de personne**.
+- **Pas encore répandu** (mesuré) : 0 relation, 0 transaction, 0 recherche, 0 fiche ne porte 10650777 / 10650807 / 10650808.
+- **Ampleur** : 3 contacts, tous des **essais**. **Mais chaque contact créé dans l'app depuis le 21/10 y passera.**
+- *(Lecteurs vérifiés et sains : le build des contacts lit les deux tables, la table complémentaire en second.)*
+
+### Pistes — NON CODÉES, À DÉCIDER PAR FRÉDÉRIC
+- **A** `registre_contacts.py` : une clé ≥ 20 M **est** l'identité → ne pas en fabriquer une autre, et prendre le numéro
+  Hektor dans la table complémentaire. Réparer les 3 lignes locales.
+- **B** `affaire_ledger.py` : lire **aussi** la table complémentaire (comme le build).
+- **C** **arrêter la propagation** : `pousser_numeros_contact.py` ne doit jamais envoyer un numéro < 20 M pour une identité
+  ≥ 20 M — et **remettre 20000007** chez Supabase (écriture en production).
+- ⏰ **Urgence** : sans rien faire, la nuit prochaine écrit probablement 10650807 / 10650808 sur 20000008 / 20000009.
