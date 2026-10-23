@@ -2073,3 +2073,9 @@ le carnet garde ces lignes pour toujours (pas de colonne : règle de sortie du 1
   vendeur saisie sur l'offre est pré-remplie, son drapeau levé, donc **elle part chez Hektor** avec le compromis.
 - Essais : rubrique 21/21 (témoin inverse : la ligne « Notaire vendeur » échoue sur la version d'avant), build vert.
 - **Pour activer** (accord de Frédéric) : poser le patch, allumer l'interrupteur, pousser, redémarrer les 4 services (file vide).
+- ✅ **POSÉ EN PRODUCTION le 23/10 à 15:12 UTC, avec l'accord de Frédéric (« Oui »)** : 5 contrôles OK (empreintes 44697dd5 /
+  43247de7, droits d'appel et SECURITY DEFINER inchangés, interrupteur créé éteint), puis **interrupteur `offre_notaire_vendeur`
+  allumé à 15:12:25 UTC**. Retour arrière : `supabase/patch_n_offre_notaire_vendeur_2026-10-23_INVERSE.sql` ; suspendre : l'éteindre.
+- ⏳ **Pas encore actif côté écran et worker** : il faut pousser et redémarrer les 4 services. D'ici là, la création d'une offre
+  range déjà le notaire du vendeur (le front actuel l'envoie), la modification non (la clé `seller_notary_id` n'est pas encore
+  envoyée), et R3 jugera ces lignes jusqu'au redémarrage (sans effet chez Hektor).
