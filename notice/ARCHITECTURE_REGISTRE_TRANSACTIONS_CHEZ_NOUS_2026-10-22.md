@@ -1472,3 +1472,26 @@ même valeur — **même pour les 5 champs sans place au registre**. Il casse do
 4. **D** (durée avant d'arrêter de relire) : **à Frédéric**.
 5. **Noté, non traité** : R1 incomplet à la modification ; rétractation et prix public préremplis rangés sur une OFFRE à la
    création ; le « 10 » par défaut sur les 47 compromis nés chez Hektor ; faux « conflit » de notaire après modification.
+
+### Le jugement, champ par champ — comment faisait l'ancien, et ce que fait R3 *(Frédéric : « c'est champ par champ, certains ne sont pas envoyés ou pas retournés — tu as vu comment on faisait ? »)*
+**L'ancien (modification, depuis le 12/09)** juge avec trois filtres : ① seulement ce qui a **vraiment été envoyé** (`aVerifier` :
+clé de la charge non vide) ; ② moins ce qui a été **laissé à Hektor** (`champs_non_verifiables`, ex. le net vendeur quand les
+honoraires sont illisibles), plus ce qui a été **calculé** (`champs_calcules`, le net déduit) ; ③ le verdict compare **au registre**,
+avec la **photo** — pas de photo ou pas de colonne → **« inconnu », on ne devine pas**.
+
+**R3 (création)** juge par la table `R3_SOURCES`, **par champ ET par genre**, mesurée le 23/10. Il ne lit pas la liste « envoyé » :
+à la création c'est sans conséquence, **chaque ligne du carnet part chez Hektor** (vérifié : compromis l. 13586-13616, offre
+l. 14090-14120), sauf le prix public et la rétractation d'une **offre** (préremplis, pas des champs de l'offre → « sans objet »).
+
+| champ | envoyé à la création | Hektor le rend | R3 juge | retiré après correction |
+|---|---|---|---|---|
+| montant, date | ✅ | ✅ (date d'offre : la nuit) | arrivée / conflit | ✅ le registre l'a |
+| date d'acte, séquestre (compromis) | ✅ | ✅ | arrivée / conflit | ✅ |
+| net vendeur, honoraires vendeur (si saisis) | ✅ | ✅ | arrivée / conflit | ✅ |
+| validité (offre) | ✅ | ✅ par numéro | arrivée / conflit | ✅ + repli de la modale |
+| n° de mandat | ✅ | la nuit seulement | en attente → arrivée | ✅ |
+| honoraires acquéreur | ✅ | compromis/vente ✅ · offre : `honoraire_acquereur` ⚠ **jamais éprouvé** | arrivée / conflit | ❌ **gardé** |
+| prix public | compromis ✅ · offre : prérempli | compromis ✅ | arrivée · offre : sans objet | ❌ **gardé** |
+| rétractation | compromis ✅ (10 si non touché) · offre : prérempli | en date de fin → calculée | arrivée · offre : sans objet | ❌ **gardé** |
+| taux | ✅ | ⛔ jamais | recalculé, **jamais** « conflit » | ❌ **gardé** |
+| notaire acquéreur | ✅ | pas à la relecture → le lendemain | en attente → arrivée (par la personne) | ❌ **gardé** |
