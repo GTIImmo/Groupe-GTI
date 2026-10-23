@@ -2182,3 +2182,19 @@ non enregistré) ; vente : « vendeur » par défaut, **et une fois « acquéreu
 - 2 — la reprise de l'offre prend **la charge même sans commission vendeur** (création du compromis et de la vente, jamais par-dessus un choix).
 - 3 — le nom d'un notaire connu par son numéro se lit **dans sa fiche contact** (par nos deux numéros) : dans la carte, et dans la modale
   quand le numéro arrive sans nom — il part alors avec le compromis et le registre le garde.
+
+## 33. LES SÉCURITÉS QUI EXISTENT DÉJÀ — vérifiées dans le code le 23/10 *(Frédéric : « normalement il y a une sécurité… vérifie »)*
+
+| sécurité | en place ? | où |
+|---|---|---|
+| **pas de 2ᵉ compromis tant qu'un compromis est en cours** (ni 2ᵉ vente) | ✅ **oui, deux fois** | écran : `avisGardeFouSaisie` (2.2c, 05/09 — « Il faut l'annuler avant d'en créer un autre ») ; worker : garde-fou du 31/08 (C1/C2/C3, interroge Hektor en direct) |
+| **l'OFFRE ne se touche plus dès que son dossier porte un compromis vivant ou une vente** | ✅ **oui** | écran : `offreVerrouilleeParSonDossier` (16/09) cache Refuser/Accepter et dit « Pour y revenir, il faut d'abord supprimer la vente / annuler le compromis » ; **base** : la RPC `app_geste_affaire_optimistic` refuse (patch_offre_verrouillee_2026-09-16) — « l'écran n'est pas la serrure » |
+| une offre acceptée ne se modifie plus | ✅ oui | `offreAccepteeFigeeChezHektor` (13/10) éteint « Modifier » |
+| **le COMPROMIS ne se touche plus dès que son dossier porte une vente** | ⛔ **NON — ni à l'écran, ni en base** | « Modifier la transaction », « Annuler le compromis », « Supprimer le compromis » restent offerts. C'est le trou que l'essai 4 a révélé |
+
+⇒ **La solution de Frédéric** : étendre au compromis le verrou de l'offre, avec la même phrase — *« On ne revient plus sur ce compromis :
+son dossier porte une vente (n° …). Pour y revenir, il faut d'abord supprimer la vente. »* — à l'écran (cacher les trois boutons), et
+dans la base comme pour l'offre (refus dans `app_modifier_affaire_optimistic` et `app_geste_affaire_optimistic` pour un compromis dont la
+chaîne porte une vente vivante : patch, accord requis). Elle remplace la piste A pour les gestes Hektor.
+⚠ **Reste à trancher** : après la vente, la répartition / les conditions / la note / la charge (à nous seuls) restent-elles modifiables
+« dans l'app » sans toucher Hektor, ou faut-il, là aussi, supprimer la vente d'abord ?
