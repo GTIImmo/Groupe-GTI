@@ -1993,3 +1993,11 @@ en exécutant le code découpé dans App.tsx · **témoin inverse** : 16 sur 18 
 change » : le pré-rempli caché, l'ancienne règle à la création).
 ⚠ **Pas éprouvé hors ligne** : C6 (le préremplissage vit dans un effet du composant) — vérifié à la lecture seulement ; et **rien n'est vu à
 l'écran** : ce sera le troisième essai, après le push.
+
+**Décisions de Frédéric sur les choix du §25 (23/10)** :
+- **offre : le « Prix de vente » ne s'affiche pas** sur la carte — *« si il y a le montant de l'offre c'est suffisant »*. (La case est
+  pourtant une vraie saisie : visible et modifiable sur l'onglet Offre, pré-remplie du prix du bien.) La rétractation reste cachée
+  (aucune case sur l'onglet Offre : le « 10 » est le défaut de la modale).
+- **n° de mandat** : pas repris du registre dans la modale (vide = le worker prend la valeur de Hektor, « id-FAMILLE »). ⚠ Nos essais
+  du 23/10 ont TAPÉ 18787 : 7 gestes l'ont envoyé ; que Hektor ait gardé le mandat n'est **pas vérifié** (carnet « en_attente ») —
+  à juger avec la preuve de nuit.
