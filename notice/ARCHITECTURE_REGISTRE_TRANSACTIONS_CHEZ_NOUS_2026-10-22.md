@@ -1018,3 +1018,41 @@ Supabase). ➡ **Le défaut dormait depuis le 24/09** : la règle n'avait jamais
 - **Ce que ça pourrait casser** : rien pour les 356 000 contacts venus de Hektor (clé < 10 M, chemin inchangé) ; à éprouver
   sur **copie** de la base avec le **vrai** script, comme L4-c-bis (17/17) — y compris le témoin inverse (l'ancien script
   refabrique 10650807).
+
+### DÉFAUT 6 — L'ADOPTION, CODÉE ET ÉPROUVÉE *(Frédéric, 23/10 : « oui vas-y »)*
+
+**Le code** — `phase2/identite/registre_contacts.py` :
+- `adopter_les_nes_dans_l_app()` passe **avant** la numérotation : une clé neuve **≥ 20 000 000** est inscrite **sous son
+  propre numéro**, avec la cible que la couche porte (numéro de Hektor < 10 M, et seulement si aucune autre ligne ne la porte).
+  Une cible qui arrive plus tard se pose une nuit suivante. Les clés < 20 M : **chemin inchangé**.
+- **Garde-fou** (jumeau du déclencheur de C.9-a) : si le passage a fait **monter** le nombre de contacts nés dans l'app à deux
+  numéros, il **annule tout** et sort en **5**. Les 3 lignes d'avant le 23/10 sont **signalées** (« ATTENTION … DEUX
+  numeros 3 »), sans arrêter la nuit.
+- ⚠ **Ce fichier est lu par le run de cette nuit** (pas de redémarrage, pas de déploiement) : il est **actif dès 05:00**.
+
+**Les essais** :
+- `phase2/checks/test_adoption_contact_ne_dans_app.py` — **22/22**, le VRAI script sur bases jetables, lu comme la nuit le lit
+  (table de `affaire_ledger.py`, vraie fonction du build). **Témoin inverse** : l'ancien script (`c92003f`) refabrique bien
+  un second numéro sans cible. **Mutant** : sans l'adoption, le garde-fou arrête le passage (code 5) et n'écrit rien.
+  ⭐ **L'essai a attrapé DEUX défauts de mon premier jet** : (a) le garde-fou jugeait « posé par ce passage » à la seconde près
+  → faux arrêt ; remplacé par un compte avant / après ; (b) le symbole ⚠ dans un message **faisait planter le script** sur
+  une console non UTF-8 → message en ASCII.
+- Non-régression : `test_l4c_bis_contacts_neufs.py` **vert** (après avoir rendu l'adoption tolérante à une couche sans
+  colonne cible) · `test_seconde_passe_contacts_neufs.py` **7/7**. `test_registre_ne_double_pas.py` échoue sur la **vraie
+  base** : « 3 sans case cible » = **nos 3 lignes parasites** — il les voyait déjà ; il repassera au vert après la réparation.
+- **Répétition sur copie** des 4 tables réelles (356 629 lignes) : code 0, **0 ligne neuve**, les 3 signalées. **Ancien script
+  sur la même copie : sortie identique** (hors la ligne d'alerte).
+
+**La réparation des 3 essais — PRÊTE, NON JOUÉE** — `phase2/identite/reparer_contacts_nes_dans_app_2026-10-23.py`
+(mesure seule par défaut, `--ecrire`, `--inverse`, `--base`). 10650777 / 10650807 / 10650808 → 20000007 / 20000008 / 20000009,
+cibles 605925 / 605946 / 605947, recherche 77235 → 20000008 ; vérifie chaque ligne avant d'écrire, **sauvegarde datée**
+(`app_contact_avant_reparation_20261023`, `app_search_registry_avant_reparation_20261023`), contrôle final avant d'enregistrer.
+**Répétée sur la copie : 11/11** (mesure, réparation, rejouer = rien, nuit simulée = plus d'alerte, **605946 → 20000008**,
+retour arrière exact). ⭐ **Chez Supabase, rien à écrire à la main** : la nuit suivant la réparation, `pousser_numeros_contact`
+renverra 20000007 → 20000007 (vérifié sur la copie).
+- ⏰ **À jouer AVANT le run de 05:00** (écriture dans la base du serveur : **accord de Frédéric**), sinon la nuit recopie
+  probablement 10650807 / 10650808 sur 20000008 / 20000009 chez Supabase.
+
+**Noté en passant, PAS de moi, non traité** : chaque passage du registre « relève » **7 658** contacts marqués absents
+(vraie base : 7 661 absents) — l'ancien script fait **exactement** pareil sur la même copie. Probable va-et-vient avec
+`marquer_contacts_disparus.py`. À regarder à part.

@@ -143,6 +143,66 @@ def reparer_les_identites(conn: sqlite3.Connection) -> int:
     return cur.rowcount or 0
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# ⑧ 23/10/2026 — UN CONTACT NE DANS L'APP GARDE SON NUMERO : LE REGISTRE L'ADOPTE
+# ═══════════════════════════════════════════════════════════════════════════
+# La regle du 21/09 (L4-b, adopter_numeros_app.py) : « l'objet arrive avec un numero
+# d'app -> ON L'ADOPTE ». Pour l'ANNONCE elle est branchee depuis le 24/09 (C.9-a,
+# descendre_correspondance_annonces.py). Pour le CONTACT, la moitie l'etait : la
+# correspondance descend (20000008 <-> 605946) et le build la sert, donc la couche porte
+# deja l'identite ET sa cible. Mais ce registre ne l'adoptait pas : la cle >= 10 M
+# restait dans hektor_contact_id, un NUMERO NEUF etait tire (10650807) et la cible etait
+# jetee. Deux numeros a nous pour une personne, sans un mot.
+# Pourquoi jamais vu : AUCUN contact cree par l'app du 22/09 au 20/10. Les premiers
+# (essais du 21-22/10) ont perdu leur lien vers les transactions la nuit (affaire_ledger
+# ne trouve pas 605946), et pousser_numeros_contact a recopie 10650777 sur 20000007.
+# Desormais une cle >= 20 000 000 EST son numero : app_contact_id = la cle, cible = celle
+# que la couche porte (un numero de Hektor, < 10 M), sinon vide -- elle se pose une nuit
+# suivante. Les cles < 20 M gardent exactement le chemin d'avant.
+def adopter_les_nes_dans_l_app(conn: sqlite3.Connection) -> tuple[int, int]:
+    """Inscrit les contacts nes dans l'app SOUS LEUR NUMERO, puis pose leur cible quand
+    elle arrive. Rend (adoptes, cibles posees). Idempotent : (0, 0) la nuit suivante."""
+    # La couche porte sa cible depuis L4-c ④ (22/09). Une base qui ne l'aurait pas (copie
+    # ancienne, essai) : on adopte quand meme, sans cible -- elle se posera plus tard.
+    if "hektor_target_id" not in {d[1] for d in conn.execute(f"PRAGMA table_info({SOURCE})")}:
+        cible_valide = "0"
+    else:
+        cible_valide = f"CAST(s.hektor_target_id AS INTEGER) BETWEEN 1 AND {PLAGE_APP - 1}"
+    cible_libre = (f"NOT EXISTS (SELECT 1 FROM {REGISTRE} o "
+                   f"WHERE o.hektor_target_id = s.hektor_target_id)")
+    adoptes = conn.execute(
+        f"INSERT INTO {REGISTRE} (app_contact_id, hektor_contact_id, hektor_target_id) "
+        f"SELECT CAST(s.hektor_contact_id AS INTEGER), s.hektor_contact_id, "
+        f"       CASE WHEN {cible_valide} AND {cible_libre} THEN {'s.hektor_target_id' if cible_valide != '0' else 'NULL'} END "
+        f"  FROM {SOURCE} s "
+        f" WHERE CAST(s.hektor_contact_id AS INTEGER) >= {PLAGE_NES_DANS_L_APP} "
+        f"   AND NOT {_connu('r', 's.hektor_contact_id')} "
+        f"   AND NOT EXISTS (SELECT 1 FROM {REGISTRE} x "
+        f"                    WHERE x.app_contact_id = CAST(s.hektor_contact_id AS INTEGER))").rowcount or 0
+    # La cible d'un adopte arrive APRES lui (le worker rapporte le numero de Hektor).
+    # On ne la pose que si aucune autre ligne ne la porte deja : sinon ce serait deux
+    # fiches pour un meme numero de Hektor, et ca se signale, ca ne se tranche pas ici.
+    if cible_valide == "0":
+        return adoptes, 0
+    cibles = conn.execute(
+        f"UPDATE {REGISTRE} SET hektor_target_id = (SELECT s.hektor_target_id FROM {SOURCE} s "
+        f"        WHERE s.hektor_contact_id = {REGISTRE}.hektor_contact_id), updated_at = CURRENT_TIMESTAMP "
+        f" WHERE CAST(hektor_contact_id AS INTEGER) >= {PLAGE_NES_DANS_L_APP} "
+        f"   AND app_contact_id = CAST(hektor_contact_id AS INTEGER) AND hektor_target_id IS NULL "
+        f"   AND EXISTS (SELECT 1 FROM {SOURCE} s WHERE s.hektor_contact_id = {REGISTRE}.hektor_contact_id "
+        f"               AND {cible_valide} AND {cible_libre})").rowcount or 0
+    return adoptes, cibles
+
+
+def seconds_numeros(conn: sqlite3.Connection) -> int:
+    """Les contacts nes dans l'app a qui le registre a donne un AUTRE numero que le leur.
+    Ce script ne repare jamais ces lignes : le compte ne peut donc que MONTER s'il en pose
+    -- c'est ce que le garde-fou compare (avant / apres), pas une date a la seconde."""
+    return conn.execute(
+        f"SELECT count(*) FROM {REGISTRE} WHERE CAST(hektor_contact_id AS INTEGER) >= {PLAGE_NES_DANS_L_APP} "
+        f"AND app_contact_id <> CAST(hektor_contact_id AS INTEGER)").fetchone()[0]
+
+
 def connecte(base: Path = BASE) -> sqlite3.Connection:
     conn = sqlite3.connect(str(base), timeout=60)
     # phase2 est en WAL et plusieurs ecrivains coexistent : sans ce reglage, un
@@ -251,18 +311,28 @@ def main() -> int:
                       f"AND NOT {_present_dans_la_source('r')}")
 
         neufs = conn.execute(req_neufs).fetchone()[0] if existe else total
+        # ⑧ 23/10 : parmi les neufs, ceux nes dans l'app -- adoptes, pas numerotes.
+        a_adopter = conn.execute(f"{req_neufs} AND CAST(s.hektor_contact_id AS INTEGER) >= {PLAGE_NES_DANS_L_APP}").fetchone()[0] if existe else 0
         revenus = conn.execute(req_revenus).fetchone()[0] if existe else 0
         partis = conn.execute(req_partis).fetchone()[0] if existe else 0
 
         print(f"source {SOURCE:24s} {total:8d}")
         print(f"registre avant                   {deja:8d}")
         print(f"   a numeroter (neufs)           {neufs:8d}")
+        print(f"      dont nes dans l'app, ADOPTES {a_adopter:6d}")
         print(f"   revenus (absent_depuis leve)  {revenus:8d}")
         print(f"   disparus (a marquer)          {partis:8d}")
 
         if args.dry_run:
             print("\n--dry-run : rien ecrit.")
             return 0
+
+        # ⑧ 23/10 : ADOPTER D'ABORD. Une fois inscrits, les nes dans l'app sont « connus » :
+        # l'INSERT ci-dessous (WHERE NOT _connu) ne peut plus leur tirer un second numero.
+        deux_numeros_avant = seconds_numeros(conn)
+        adoptes, cibles_adoptes = adopter_les_nes_dans_l_app(conn)
+        if adoptes or cibles_adoptes:
+            print(f"nes dans l'app : {adoptes} adopte(s) sous leur numero, {cibles_adoptes} cible(s) Hektor posee(s).")
 
         if neufs:
             # L'ordre decide de la serie : on suit celui de Hektor, ce qui rend
@@ -335,6 +405,13 @@ def main() -> int:
 
         # Le registre des recherches suit : il porte le numero du contact chez nous.
         propages = propage_aux_recherches(conn)
+        # ⑧ 23/10 -- LE GARDE-FOU, jumeau du declencheur de C.9-a : un second numero pose
+        # PAR CE PASSAGE annule tout, bruyamment. Une nuit sans registre vaut mieux qu'une
+        # personne a deux numeros (que pousser_numeros_contact enverrait a Supabase).
+        if seconds_numeros(conn) > deux_numeros_avant:
+            conn.rollback()
+            print("ARRET : ce passage aurait donne un SECOND numero a un contact ne dans l'app. Rien n'est ecrit.")
+            return 5
         conn.commit()
 
         # --- verification, apres coup et sur la base reelle
@@ -348,6 +425,9 @@ def main() -> int:
         print(f"\nregistre apres                   {pose:8d}   ({distincts} numeros distincts)")
         print(f"   marques absents               {absents:8d}")
         print(f"   contacts sans numero          {restent:8d}")
+        anciens = seconds_numeros(conn)
+        if anciens:
+            print(f"   ATTENTION nes dans l'app a DEUX numeros {anciens:5d}   (poses avant le 23/10 -- reparation expresse)")
 
         if propages is None:
             print("   recherches : registre absent ou non migre -- rien propage.")
