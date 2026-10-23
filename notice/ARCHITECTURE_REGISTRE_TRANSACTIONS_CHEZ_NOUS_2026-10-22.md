@@ -1085,3 +1085,16 @@ Rien ne tournait. Mesure seule identique à la copie, puis `--ecrire` → code 0
 **Ce qui ne peut PAS s'éprouver de jour** : le lien des transactions (`affaire_ledger.py`) et le renvoi des numéros à Supabase
 (`pousser_numeros_contact.py`) sont des étapes du run ; elles se vérifient demain matin (avec le retour de 20000007).
 **Gestes chez Hektor** : créer le contact d'essai (puis le supprimer après la vérification de demain) — **accord** à chaque fois.
+
+### ✅ ESSAI A RÉEL — 23/10 à 08:38 *(Frédéric : « ok option A »)*
+- **Création par l'écran** (compte de formation FRANCK GERPHAGNON, propriétaire, **sans annonce reliée** — l'étape 2 « Terminer »
+  le permet, comme pour l'essai B2) : **ESSAI 8A D1 / Adoption**, Firminy 42700. `create_hektor_contact` **done en 11 s** →
+  identité **20000010**, numéro Hektor **605957**. Relecture **done** à 08:39 : « paire apprise : identite 20000010 <-> numero
+  Hektor 605957 ».
+- Mesuré : Supabase (20000010 / 605957 / `app_contact_id` 20000010) ✅ · couche locale (20000010 / 605957) ✅ · correspondance
+  ✅ · registre local : **rien encore** (étape de nuit) — exactement ce que l'audit disait.
+- **Registre sur COPIE des 4 tables réelles : 9/9.** NOUVEAU : « 1 adopté », ligne **(20000010, '20000010', '605957')**, la nuit
+  des transactions relierait **605957 → 20000010**, aucun contact à deux numéros. **ANCIEN (témoin inverse)** : second numéro
+  sans cible, 605957 non relié. **Vraie base inchangée.**
+- ⏰ **Demain matin** : registre réel → 20000010 adopté vers 06:40 ; Supabase → 20000007 revenu à 20000007. Puis **supprimer
+  les contacts d'essai** 20000007 / 20000008 / 20000009 / 20000010 (accord de Frédéric).
