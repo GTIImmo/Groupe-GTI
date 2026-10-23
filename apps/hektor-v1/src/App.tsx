@@ -16435,8 +16435,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
    */
   useEffect(() => {
     if (statusChangeStatus !== 'compromise' && statusChangeStatus !== 'sold') return
-    if (statusChangeHonorairesEntreeTouche || statusChangeHonorairesEntree.trim()) return
+    // ⚠ UNE SAISIE (le drapeau) N'EST JAMAIS RECOUVERTE.
+    if (statusChangeHonorairesEntreeTouche) return
     const courante = affaireCourantePourStatut()
+    // ⚠ ESSAI REEL DU 23/10 (compromis 50135) : en MODIFICATION, la case porte la valeur de la transaction
+    //   (registre) -- on n'y touche pas. Mais a la CREATION, une case remplie sans drapeau n'est PAS une
+    //   saisie : c'est le reste de l'onglet Offre ouvert juste avant (la modale s'ouvre sur le statut
+    //   courant). Ce reste bloquait la reprise : 6 500 affiches, rien envoye, Hektor a pose 0.
+    if (courante && statusChangeHonorairesEntree.trim()) return
     // ⑧ (23/10/2026) : A LA CREATION, il n'y a pas encore d'« affaire courante » (le compromis n'existe
     //   pas) : cette reprise ne jouait donc JAMAIS en creation -- c'est le constat F11 de l'essai du
     //   23/10 (« la commission vendeur et sa charge ne passent pas de l'offre au compromis »). On prend
