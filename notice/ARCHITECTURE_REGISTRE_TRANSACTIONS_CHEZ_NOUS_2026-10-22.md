@@ -2223,3 +2223,18 @@ supprimer la vente. »* (la piste A « Enregistrer dans l'app » est abandonnée
   Retour arrière : `supabase/patch_v_compromis_verrouille_2026-10-23_INVERSE.sql` ; suspendre : l'éteindre.
   ⚠ Le verrou en base est actif tout de suite ; l'écran (bandeau, boutons retirés) le sera après le push. D'ici là, un clic sur
   « Modifier / Annuler / Supprimer » un compromis vendu reçoit le refus de la base.
+
+## 35. L'ACQUÉREUR DEVENU PROPRIÉTAIRE APRÈS UNE VENTE SUPPRIMÉE — et notre registre des liens — 23/10, lecture seule
+
+*(Frédéric : « le registre des relations devrait se mettre à jour… sans la mise à jour de Hektor notre registre n'aurait pas bougé ;
+il faut que la suppression de la vente annule la relation si c'est elle qui la crée »)*
+- **Mesure** : `app_relation` de 24113 ne porte **aucun** des 4 acquéreurs d'essai (seul 603953 TESTCLAUDE, mandant depuis le 30/09,
+  source `sync_annonce_contact_link`). Notre registre des liens se nourrit **la nuit**, de la liste des propriétaires de Hektor : il ne
+  les a pas encore vus. ⇒ **Cette nuit, il les copierait** comme « propriétaire du bien », et ils y resteraient, puisque Hektor les garde.
+- **L'app ne crée aucun lien à la vente** : c'est Hektor qui ajoute l'acquéreur aux propriétaires (contre-épreuve VM71227) ; le geste
+  « Supprimer la vente » (`delete_hektor_vente`) ne fait que supprimer la vente.
+- **Proposition** (worker, à décider) : après « Supprimer la vente », relire les propriétaires chez Hektor ; tout acquéreur de CETTE vente
+  qui y figure **et qui n'était pas déjà lié au bien dans notre registre avant la date de la vente** est délié (même chemin que le geste
+  « Délier » : `executerRetraitMandant`), au journal du travail. Un acquéreur déjà propriétaire avant la vente est gardé.
+  Non couvert : une vente supprimée depuis l'écran de Hektor (aucun travail chez nous).
+- **Tout de suite, au nettoyage** (accord) : délier les 4 acquéreurs d'essai de VA6482 **avant cette nuit**.
