@@ -1699,3 +1699,14 @@ modification écrit NOTRE valeur au registre et que Hektor ne la rend pas à la 
   le registre : ils verront la valeur saisie dès le clic au lieu du lendemain.
 - **La forme** : un patch SQL de la RPC, généré avec ses gardes d'empreinte (`049643b8` → empreinte calculée d'avance), son **inverse** et
   sa **répétition** ; **collé par Frédéric**. Plus les essais du worker (A1) et la compilation de l'écran.
+
+### ✅ A1 ET A5 CODÉS — 23/10 *(Frédéric : « vas-y : code A1 et A5 comme décrit »)* — commit `5b0e2fb`, **non actif**
+- **A1** : worker (`REGISTRE_PAR_HEKTOR` : `dateEnd → date_fin_retractation`) + modale (repli sur fin − date, 1 à 365 jours).
+  `Console/test_report_retractation.js` **4/4** ; la version **en service** échoue le contrôle (1) — témoin inverse. `npm run build` vert.
+- **A5** : `supabase/patch_a5_modif_au_registre_2026-10-23.sql` (+ `_INVERSE`, + `_REPETITION`), générés d'un seul texte
+  (`phase2/checks/gen_patch_a5_modif_au_registre.py`). Empreinte **049643b8 → 0dac8c86**, calculée DANS la base en lecture seule ;
+  l'ancre est trouvée **1** fois (mesuré). Interrupteur **`affaire_modif_au_registre`, posé ÉTEINT**. La répétition (11 cas, dont le
+  témoin éteint, la vente sans net vendeur, la photo d'avant, l'inverse) **s'annule seule**.
+- ⛔ **À faire par Frédéric, dans l'ordre** : coller la RÉPÉTITION (elle doit finir sur « ESSAI ANNULE -- 11 sur 11 ») → coller le PATCH
+  (5 contrôles OK) → **allumer** l'interrupteur → pousser (A1 : worker + écran) → redémarrer les 4 services file vide.
+- ⚠ **Retour arrière** : éteindre l'interrupteur suffit à suspendre A5 ; l'inverse rend 049643b8.
