@@ -1800,3 +1800,89 @@ de nuit (notaires de la vente) · le résumé de nuit du registre des mandats (�
 - ⛔ **et un enregistrement à ce moment-là partirait sous le numéro de la VENTE (1001383) au lieu de la chaîne (1001381)** — c'est pour ça
   que l'essai a été arrêté : rien n'a été envoyé.
 - Ancien (modale du 14/09) ; l'essai complet l'a révélé.
+
+## 22. AUDIT EN PROFONDEUR — chaque champ saisi : où il dort, qui le montre, et s'il survit à la vente — 23/10 *(Frédéric : « dans la rubrique Affaires on doit faire apparaître tous les renseignements saisis sur l'offre, le compromis, etc., et dans la modale aussi, et que ce soit mémorisé après la vente »)* — lecture seule
+
+> **Audit limité à l'objet TRANSACTION** (offre, compromis, vente) × les gestes **créer / modifier / lire**. Supprimer n'est pas
+> mesuré ici. Mesuré sur le code (App.tsx, api.ts, worker) **et** en base sur les chaînes d'essai 1001378 et 1001381 (VA6482).
+
+### 22.1 Où chaque champ dort
+
+| table | clé | ce qu'elle porte |
+|---|---|---|
+| `app_affaire_ledger` (le registre) | l'affaire | montant, date, validité, date d'acte, séquestre, net vendeur, fin de rétractation, n° mandat, acquéreurs, mandants, honoraires entrée/sortie (Hektor), **`honoraires_entree_app` / `honoraires_sortie_app` / `charge_commission_app` (à nous)**, taux, les 2 notaires (id + nom) |
+| `app_affaire_champ_app` (le carnet) | l'affaire | ce qui n'a **pas de colonne** : prix public, honoraires, taux, rétractation (jours), notaire de l'offre — et le reste tant qu'il n'est pas arrivé |
+| `app_affaire_repartition` | **la chaîne** | la répartition (entrée 1/2, sortie 1/2, %) |
+| `app_affaire_condition` | l'affaire | les conditions suspensives |
+| `app_affaire_note` | l'affaire | la note libre |
+| `app_affaire_console` | l'affaire | ce que le worker a **lu** dans l'assistant de Hektor (notaires, conditions de Hektor, partage) |
+
+⭐ **Rien n'est effacé par la vente** : toutes ces lignes restent (mesuré : la chaîne 1001381 garde ses 3 affaires, 4 lignes de répartition,
+son carnet). **Le problème n'est pas la mémoire, c'est la LECTURE** : qui va chercher quoi.
+
+⚠ **Non mesuré : la nuit.** Le run peut-il effacer une colonne posée au clic (les notaires du compromis surtout, que l'API ne rend jamais) ?
+C'est la preuve de nuit prévue demain matin sur 1001381.
+
+### 22.2 Le tableau — champ par champ
+
+✅ = montré · ❌ = absent · ⚠ = montré, mais d'une autre source que la saisie
+
+| champ saisi | genre | dort dans | **carte de la rubrique** | **modale (modifier)** | **après la vente** |
+|---|---|---|---|---|---|
+| montant / prix | 3 | registre | ✅ | ✅ | ✅ |
+| date | 3 | registre | ✅ | ✅ | ✅ |
+| validité | offre | registre | ✅ | ✅ (941cb70) | ✅ |
+| date d'acte, séquestre | compromis | registre | ✅ | ✅ | ✅ |
+| rétractation | compromis | registre (date de fin) | ✅ « jusqu'au » | ✅ (A1) | ✅ |
+| rétractation | offre | carnet | ❌ | ✅ | ✅ |
+| net vendeur | compromis | registre | ✅ | ✅ | ✅ |
+| net vendeur | vente | registre | ❌ | ✅ | — |
+| acquéreur(s) | offre | registre | ✅ | ✅ | ✅ |
+| acquéreur(s) | compromis, vente | registre | ❌ (pas de ligne) | ✅ | ⚠ bloc « Parties » = résumé de **nuit** |
+| mandants | compromis, vente | registre | ❌ | ✅ | ⚠ résumé de nuit |
+| notaire de l'acquéreur | offre | carnet | ❌ | ✅ | ✅ (carnet) |
+| notaires (acq. + vendeur) | compromis | registre (R1/A5) | ⚠ lus dans la **console de l'étape la plus avancée** — après la vente, celle de la VENTE | ✅ | ⚠ |
+| notaires | vente | registre (R1) | ⚠ lus dans `notaires_json` (API de nuit) → **« — » au clic** alors que le registre les a | ✅ | ⚠ |
+| honoraires acquéreur | offre | registre `_app` + Hektor | ❌ | ✅ | ✅ |
+| honoraires vendeur | offre | registre `honoraires_entree_app` | ❌ | ❌ **(F5 : la modale lit `honoraires_entree`, vide sur une offre)** | ✅ repris au compromis |
+| honoraires vendeur | compromis | registre (Hektor) | ⚠ console seulement | ✅ | ✅ |
+| honoraires (entrée + sortie) | vente | registre | ✅ | ✅ | ✅ |
+| taux | 3 | registre + carnet | ❌ | ✅ (carnet) | ✅ |
+| charge de la commission | 3 | registre `charge_commission_app` | ❌ | ❌ en modification (seulement **reprise de l'offre** à la création du compromis/vente) | — |
+| prix public | offre, compromis | carnet | ❌ | ✅ | ✅ |
+| n° de mandat | 3 | registre + carnet | ❌ | ⚠ **carnet seulement** — quand la ligne sort du carnet (même valeur au registre), la case se vide | — |
+| **répartition** | la chaîne | `app_affaire_repartition` | ❌ **nulle part** | ✅ avant la vente | ⛔ **la modale ne la trouve plus** → défauts 50 %, et **enregistrer l'écrirait sous le n° de la VENTE** |
+| **conditions suspensives** | l'affaire | `app_affaire_condition` | ⚠ la carte lit les conditions **de Hektor** (console), **jamais les nôtres** | ✅ | ✅ (par affaire) |
+| **note libre** | l'affaire | `app_affaire_note` | ❌ nulle part | ✅ | ✅ |
+| bloc « Honoraires & rendement » | — | — | ❌ jamais rempli par la chaîne (le constructeur ne pose pas `honoraires`) | — | — |
+
+⚠ **Pas éprouvé dans les essais** : les conditions suspensives et la note — **0 ligne** dans les deux tables pour les 4 affaires d'essai.
+
+### 22.3 Les causes — 4, toutes anciennes
+
+1. **La rubrique a été dessinée le 17/07 pour montrer ce que Hektor RENDAIT** : une liste fixe de lignes par carte. R1 (22/10) a rempli le
+   registre au clic, **la rubrique n'a jamais appris à lire ces colonnes**.
+2. **Ce qui est à nous** (répartition, conditions, note, commission `_app`, charge) **n'a qu'un lecteur : la modale.** La rubrique montre
+   ce que Hektor dit (console, API), pas ce que nous avons saisi.
+3. **« Parties à l'affaire » vient du résumé de nuit** (`app_registre_mandats_current.affaires_detail_json`) — **24113 n'a aucune ligne**
+   dans cette table aujourd'hui (mesuré) : bloc vide jusqu'à la nuit, peut-être plus longtemps pour un bien vendu (à mesurer demain).
+4. **La modale retrouve la répartition par « le dossier OUVERT du bien »** (`repartitionChaineId` → `dossiersOuvertsDuBien`) ; une
+   chaîne qui porte une vente n'est plus ouverte. Les conditions et la note, elles, sont rangées **par affaire** : elles survivent.
+
+### 22.4 Le plan de correction — 7 pièces, **à trancher par Frédéric** (périmètre et ordre)
+
+| # | quoi | où | risque / ce que ça pourrait casser ailleurs |
+|---|---|---|---|
+| **P1** | les **cartes lisent le registre** : offre + honoraires (acq./vendeur), taux, charge, n° mandat, notaire, prix public, rétractation ; compromis + acquéreur(s), mandants, honoraires, taux, charge, notaires **du registre d'abord**, console en repli ; vente + net vendeur, acquéreur(s), mandants, charge, notaires **du registre d'abord** | front (`ckAffaireDepuisChaine`, cartes) + lecture du carnet dans la rubrique | **lecture seule, rien chez Hektor.** Règle gardée : **pas de « — » pour « pas lu »** (une ligne n'apparaît que si elle a une valeur). ⚠ Mandants de la vente : Hektor y **ajoute l'acquéreur** (VA6482 en porte 7, dont 605963, l'acquéreur d'une vente supprimée) — la carte montrerait ces 7 tels quels |
+| **P2** | la **répartition affichée** dans la rubrique (bloc par chaîne, nom + %) | front + `loadRepartition` (déjà écrit) | lecture seule. ⚠ La table est en lecture pour qui ? À vérifier pour le négociateur (droits du chantier ②) |
+| **P3** | la **modale retrouve la répartition de la chaîne VISÉE**, même vendue : d'abord la chaîne de l'affaire courante, ensuite seulement l'ancienne règle ; et **ne jamais enregistrer sous un n° d'affaire quand une chaîne existe** | front (`repartitionChaineId`, enregistrement ~17630) | ⚠ **touche à de l'argent.** À la création (pas d'affaire courante), le chemin d'aujourd'hui reste identique. Essai : modifier la vente → les 4 × 25 % reviennent, l'enregistrement garde 1001381 |
+| **P4** | **nos conditions et notre note** sur la carte du compromis (et de l'offre), celles de Hektor en repli | front + `loadAffairesConditions` / `loadAffairesNotes` (déjà écrits) | lecture seule. ⚠ « aucune » et « pas encore lu » ne se disent pas pareil (règle déjà écrite pour la console) |
+| **P5** | la **modale d'une offre** reprend honoraires vendeur et charge (`honoraires_entree_app`, `charge_commission_app`) — F5 | front (préremplissage) | le préremplissage **ne lève pas le drapeau** « touché » : rien ne part tant qu'on ne tape pas (même discipline que les acquéreurs) |
+| **P6** | la **modale reprend le n° de mandat du registre** quand le carnet n'en a plus | front, 1 ligne | rien ne part tant qu'on ne touche pas |
+| **P7** | **« Parties à l'affaire » prend la chaîne** quand le résumé de nuit manque ; et **un même contact sous deux numéros** (20000012 / 605967) ne s'affiche qu'une fois | front | lecture seule. ⚠ Le dédoublonnage s'appuie sur la paire `hektor_contact_id` / `hektor_target_id` (règle « reconnaître par la plage ») — jamais sur le nom |
+
+**Hors de ce plan, déjà notés** (à part si Frédéric les veut dedans) : F9 la recherche de qualification jamais archivée · F10 la diffusion
+remise à 1 par Hektor · F4 le prix de vente = prix du mandat · l'acquéreur de l'offre jamais relu · les mandants ajoutés par Hektor à la vente.
+
+**Ensuite, dans l'ordre demandé** : nettoyer VA6482 (supprimer la vente 23355, le compromis 50132, refuser l'offre 33112, la clôture locale
+avec sauvegarde datée, la diffusion), puis le **troisième essai complet**, **en saisissant cette fois conditions, note et répartition à 100 %**.
