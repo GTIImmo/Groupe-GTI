@@ -2028,3 +2028,30 @@ rendu par le travail (`payload_json.app_affaire_id`). Depuis le 16/09 (condition
 ⚠ **MON ERREUR SUR LA RÉPARTITION** : les 4 parts se comptent **ensemble** sur 100 % (la modale : « Les parts font 200 % … refusé »).
 4 × 25 était donc **juste**, et je l'avais dit faux. Le bloc de la rubrique est corrigé (commit d210d1c : « Total — N % attribués à
 personne » seulement si la somme des 4 n'est pas 100) ; essai 19/19.
+
+## 27. LE NOTAIRE DU VENDEUR DE L'OFFRE — décision A (le garder chez nous) ; la note et les conditions corrigées — 23/10
+
+**Pourquoi il se perdait** : (1) une offre Hektor n'a ni notaire ni mandant (0 sur 11 190, §4) ; le worker envoie quand même
+`notairesMandant[]` avec l'offre (`submitHektorTransactionStatus`), sans relecture possible ; (2) R1 n'écrit les notaires que « pour le
+genre où Hektor les porte » (compromis, vente) ; (3) le carnet n'a qu'un champ notaire, `notaire_id` = celui de l'acquéreur (d'avant le
+15/09). La case « Notaire du vendeur » est affichée sur l'onglet Offre, rien ne la range.
+
+**Le mandant — Frédéric : « on l'a déjà normalement »** : oui. Les mandants sont ceux **du bien** (registre des liens : rubrique Contact,
+« 7 mandants » sur VA6482 ; repli « Propriétaire du bien » du bloc Parties) et Hektor les **déduit du mandat** au compromis (mesure du
+16/09 : 50084 revenu avec 3 mandants sans qu'on en envoie). Rien à ranger pour l'offre. *(La case « Mandant » de l'onglet Offre ne sert
+donc à rien : la masquer reste à décider.)*
+
+**Corrigé (commit 53bebff, front seul)** : à la **création**, la note, les conditions et la commission visent la **transaction neuve**
+(numéro rendu dans la charge du travail) ; en modification, l'affaire visée. Build vert, essai hors ligne 19/19 (non touché).
+⚠ Effet de bord connu : créer une 2ᵉ offre alors qu'une offre vit encore — la modale pré-remplit la note de l'ancienne ; si on envoie
+sans l'effacer, la nouvelle en reçoit une copie (visible à l'écran avant l'envoi).
+
+**Plan pour le notaire du vendeur de l'offre (A) — ⚠ ÉCRITURE EN BASE, accord requis** :
+1. **base** : dans `app_change_annonce_status_optimistic` (empreinte f9d02447) et `app_modifier_affaire_optimistic` (0dac8c86), deux
+   lignes de carnet **pour l'offre seulement** : `notaire_mandant_id` ← `seller_notary_id`, `notaire_mandant_nom` ← `seller_notary_nom`
+   (en modification : seulement si les notaires sont **affirmés**). Patch gardé par empreinte, inverse et répétition, comme A5 ;
+2. **worker** : `R3_NON_CONTROLES.offre` + ces deux champs (gardés chez nous, pas contrôlés — Hektor ne les porte pas) ;
+3. **écran** : la modale d'une offre les reprend en modification ; **le compromis créé sur la même chaîne les reprend** (comme la
+   commission — corrige F11 pour le notaire) ; la carte de l'offre affiche « Notaire vendeur ».
+Ce que ça pourrait casser : rien chez Hektor (le worker envoie déjà ce champ avec l'offre) ; le compromis et la vente ne changent pas ;
+le carnet garde ces lignes pour toujours (pas de colonne : règle de sortie du 16/09), ce qui est voulu.
