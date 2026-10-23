@@ -1934,3 +1934,35 @@ prix du mandat · acquéreur de l'offre jamais relu · mandants ajoutés par Hek
 **Ensuite** : `npm run build`, essais hors ligne des fonctions touchées, commit local, Frédéric pousse ; puis nettoyage de VA6482 (geste par
 geste, avec accord) et le **troisième essai complet** — conditions, note et répartition à 100 % saisies cette fois, et **la répartition
 modifiée sur le compromis après la vente**.
+
+## 24. QUI ÉCRIT LE REGISTRE, QUI LE LIT — l'histoire datée *(Frédéric, 23/10 : « pourquoi avant le registre était déjà indépendant et la vue ne regardait pas le miroir ? » ; « tous les champs, c'est compris ? la répartition dans les blocs ? »)* — lecture seule
+
+### 24.1 Trois étages
+1. **Le miroir de Hektor** : la base locale du serveur (`phase2`), refaite **la nuit** depuis l'API et l'assistant de Hektor.
+2. **Notre registre des transactions** (`app_affaire_ledger`) : **ses propres numéros** (`app_affaire_id`, `app_chaine_id`), lignes jamais
+   effacées — c'est son **indépendance**. Ses colonnes sont remplies par trois écrivains :
+   - **la nuit**, depuis le miroir (`affaire_ledger.py` puis l'envoi « SELECT * … puis upsert ») — le registre est maître, le miroir le nourrit ;
+   - **le worker, au retour de Hektor** : le numéro Hektor tout de suite (`poserIdTransactionSurAffaire`), la lecture de l'assistant
+     (`app_affaire_console`, 10/09) ;
+   - **depuis le 22/10 (R1), la création au clic**, et depuis le 23/10 (A5) la modification au clic.
+3. **Ce qui n'est qu'à nous** : le carnet, la répartition, les conditions, la note, la commission `_app` et sa charge.
+
+### 24.2 Ce que lit l'écran, et depuis quand (git)
+| bloc | lit | depuis | attend la nuit ? |
+|---|---|---|---|
+| « Parties à l'affaire » | le **résumé du registre des mandats** (`app_mandat_register_current.affaires_detail_json`), fabriqué **la nuit depuis le miroir** | **31/07** (`5e7f743`, `0a352b1`) | **oui** |
+| les cartes Offre / Compromis / Vente | **notre registre** (la chaîne) | **03/09** (`e0406f6`, « 2.1 la rubrique Affaires lit le registre ») | non, sauf les colonnes que seule la nuit remplit |
+| notaires, honoraires vendeur, taux, partage, conditions (carte Compromis) | la lecture de l'assistant faite **par le worker à l'écriture** | **10/09** (`3a04ada`) | non — mais lue pour l'étape la plus avancée seulement |
+| notaires de la carte Vente | `notaires_json`, colonne du registre **remplie par la nuit seulement** (l'API) | 03/09 | **oui** |
+
+➡ **Frédéric a raison pour les cartes** : depuis le 03/09 elles lisent notre registre, pas le miroir. **Mais 2.1 a choisi « lire à côté »
+sans toucher au bloc « Parties à l'affaire »** (son message : « CkAffaires PAS TOUCHÉ ») : ce bloc, plus ancien d'un mois, lit encore un
+résumé de nuit. C'est **le seul morceau** de la rubrique qui attend la nuit, avec les notaires de la vente.
+➡ **VM71227 est complet** parce qu'il est né chez Hektor et que la nuit est passée. **VA6482** est né dans l'app aujourd'hui, et son mandat
+n'a aucune ligne au registre des mandats : la nuit ne le remplirait pas.
+
+### 24.3 « Tous les champs » : ce qui n'a JAMAIS été affiché, avant ⑧ non plus
+Les cartes portent **une liste fixe de lignes** depuis la maquette du 17/07. Jamais affichés : honoraires, taux, charge et n° de mandat sur
+l'offre ; acquéreur(s) et mandants sur les cartes Compromis et Vente ; net vendeur, taux et charge sur la vente ; **la répartition** ; **nos**
+conditions et **notre** note. Les montrer, c'est **ajouter** des lignes (le P1, P2, P4 du §22.4), pas réparer.
+⚠ **Décision de Frédéric attendue** : C1-C6 seuls (« comme avant, tout de suite »), ou C1-C6 **plus** ces lignes et un bloc « Répartition ».
