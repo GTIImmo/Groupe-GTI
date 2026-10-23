@@ -21269,9 +21269,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                       // 3.1 : on ne qualifie QUE ce qui vient du carnet. Une
                                       // valeur du registre n'attend rien, elle EST.
                                       const etat = x.app ? String(etats[x.cle] ?? '') : ''
+                                      // R3 (23/10) : « echec » = le travail a echoue, la valeur
+                                      // n'est PAS chez Hektor ; « sans objet » = ce genre n'a pas
+                                      // ce champ (prix de l'annonce prerempli sur une offre).
                                       const dit = etat === 'conflit' ? 'conflit'
                                         : etat === 'en_attente' ? 'pas encore parti'
-                                        : etat === 'arrivee' ? 'arrivé' : ''
+                                        : etat === 'arrivee' ? 'arrivé'
+                                        : etat === 'echec' ? 'échec, non envoyé'
+                                        : etat === 'sans_objet' ? 'sans objet' : ''
                                       return (
                                         <div key={k} className={x.app ? 'is-app' : undefined}>
                                           <span className="sca-k">{k}</span>

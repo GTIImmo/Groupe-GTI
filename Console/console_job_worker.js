@@ -4311,6 +4311,9 @@ async function handleRefreshConsoleData(job) {
   // 1a (22/10/2026) : la seconde preuve des transactions nees dans l'app sans numero.
   // Best effort : elle ne fait jamais echouer la relecture (voir poserNumerosManquants).
   const numerosManquants = await poserNumerosManquants(job, hektorAnnonceId);
+  // R3 (23/10/2026) : le RATTRAPAGE du carnet -- apres la seconde preuve, qui vient peut-etre de
+  // poser un numero. Best effort, comme elle : il ne fait jamais echouer la relecture.
+  const controleCarnet = await controlerLeCarnet(job, hektorAnnonceId);
   const cacheRefresh = await rebuildRequestedDetailCaches(job, hektorAnnonceId, payload);
   return {
     ...result,
@@ -4319,6 +4322,7 @@ async function handleRefreshConsoleData(job) {
     parent_job_id: payload.parent_job_id || null,
     cache_refresh: cacheRefresh,
     numeros_manquants: numerosManquants,
+    controle_carnet: controleCarnet,
     signature_sync: signatureSync,
   };
 }
@@ -15325,6 +15329,13 @@ function memeValeurHektor(envoye, chezHektor) {
   const b = String(chezHektor == null ? "" : chezHektor).trim().replace(",", ".");
   if (a === "") return null;              // rien envoye -> rien a juger
   if (a === b) return true;
+  // R3 (23/10/2026) : « 2026-10-06 » et « 2026-10-06 16:12:54 » sont le MEME jour. L'ecran envoie
+  // la date d'une offre sans l'heure ; le registre la garde avec. Sans cela, une date inchangee
+  // etait jugee « en attente » (modification) et la creation ne pouvait jamais la dire arrivee.
+  const jour = /^\d{4}-\d{2}-\d{2}$/;
+  const avecHeure = /^\d{4}-\d{2}-\d{2}[ T]\d/;
+  if ((jour.test(a) && avecHeure.test(b) && b.slice(0, 10) === a)
+      || (jour.test(b) && avecHeure.test(a) && a.slice(0, 10) === b)) return true;
   const na = Number(a); const nb = Number(b);
   // « 168500 » et « 168500.00 » sont la meme somme. Une date ne passe pas ici.
   if (Number.isFinite(na) && Number.isFinite(nb)) return na === nb;
@@ -15771,10 +15782,30 @@ async function prouverTransactionCreee(job, annonceId, genre, ventesAvant, appAf
     ? await poserIdTransactionSurAffaire(job, appAffaireId, idTransaction)
     : { status: "skipped", reason: "non_confirmee_par_api" };
 
+  // ─── R3 (23/10/2026) : LA CREATION EST RELUE ET JUGEE, COMME UNE MODIFICATION ───
+  // Ce que Hektor a RETENU va au registre (reporterAuRegistre, le meme qu'a la modification :
+  // chiffres, dates, acquereurs, mandants), puis chaque ligne du carnet recoit son verdict
+  // (controlerLeCarnet). Jamais bloquant : la creation est faite, le numero est pose.
+  // L'offre : la liste ne porte ni montant ni validite -> une lecture par numero, ici.
+  let controle = null;
+  if (R3_CONTROLE_CARNET && confirmee && identite && identite.status === "done" && appAffaireId) {
+    let parNumero = etat && etat.details ? etat.details : null;
+    if (!parNumero && genre === "offre") {
+      const lu = await lireEtatTransactionViaApi(job, genre, idTransaction, "hektor_transaction_controle");
+      parNumero = lu && lu.trouve === true && lu.details ? lu.details : null;
+    }
+    const chez = { ...((ventesApres && ventesApres.details && ventesApres.details[idTransaction]) || {}),
+                   ...(parNumero || {}) };
+    await reporterAuRegistre(job, appAffaireId, Object.keys(chez).length ? chez : null);
+    controle = await controlerLeCarnet(job, annonceId,
+      { appAffaireId, chez: Object.keys(chez).length ? chez : null, force: true });
+  }
+
   return {
     verifie: true, cree: true, confirmee,
     hektor_transaction_id: idTransaction,
     identite,
+    controle,
     // 1.4 : la relecture qui a trouve la creation porte deja ses personnes.
     personnes_relues: personnesRelues(ventesApres && ventesApres.details
       ? ventesApres.details[idTransaction] : null),
@@ -21281,6 +21312,244 @@ async function poserNumerosManquants(job, annonceId) {
   } catch (erreur) {
     await logJob(job.id, "hektor_transaction_seconde_preuve", "error",
       "Seconde preuve impossible -- la relecture continue, la nuit rapprochera", {
+        hektor_annonce_id: annonce,
+        error: erreur && erreur.message ? erreur.message : String(erreur),
+      }).catch(() => {});
+    return { status: "error" };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// R3 (23/10/2026, chantier 8) — LE CONTROLE AU RETOUR DE LA CREATION
+// ═══════════════════════════════════════════════════════════════════════════
+// Note : notice/ARCHITECTURE_REGISTRE_TRANSACTIONS_CHEZ_NOUS_2026-10-22.md, section 13.
+//
+// LE TROU (D3). La modification est relue et jugee ligne par ligne (marquerLeCarnetRestant).
+// La CREATION s'arretait a la pose du numero : ses lignes `creation_app` restaient au carnet
+// SANS VERDICT, pour toujours (1001339 depuis le 04/09). Et le verdict de la modification ne
+// sait pas juger une creation : il compare a la PHOTO (Hektor avant la saisie), qui n'existe pas.
+//
+// LA REGLE DE CREATION, sans photo :
+//     relue = saisie          -> « arrivee »    la ligne SORT du carnet
+//     relue pas encore lisible -> « en_attente » (le notaire, le mandat : la nuit les apporte)
+//     relue differente        -> « conflit »    Hektor a garde autre chose ; ca se montre
+//     champ que ce genre n'a pas -> « sans_objet » (le prix de l'annonce prerempli sur une offre)
+//     le travail a ECHOUE      -> « echec »      (30712, 13/10 : modification refusee)
+// Une ligne `modification_app` restee la (travail echoue, champ non prouve) garde la regle
+// d'avant : relue = photo -> en_attente, sinon conflit.
+//
+// ⛔ LA REGLE DE LA COUPURE (Frederic, 23/10) : « pas de reponse de Hektor » n'est JAMAIS un
+//   conflit, une alarme ni une attente qui bloque. API muette -> on ne juge rien, on revient
+//   plus tard. Rien n'attend ce controle : depuis R1, le registre porte tout des le clic.
+//
+// DEUX APPELANTS, UNE SEULE FONCTION (« deux copies d'une regle divergent ») :
+//   - prouverTransactionCreee, juste apres la pose du numero (force : on juge tout de suite) ;
+//   - handleRefreshConsoleData, a chaque relecture d'une annonce : le RATTRAPAGE. Il couvre la
+//     seconde preuve (1a), l'adoption de nuit, les travaux echoues, et ce qui attendait la nuit.
+//     Il ne relit chez Hektor qu'une transaction qui a encore une ligne a juger, et pas plus
+//     d'une fois toutes les 6 h par ligne.
+const R3_CONTROLE_CARNET = true;
+const R3_REVOIR_APRES_MS = 6 * 3600 * 1000;
+
+// D'ou vient la valeur RELUE, champ par champ et genre par genre. Mesure du 23/10 :
+//   compromis (liste ET par numero) : prixPublique, prixNetVendeur, sequestre, dateStart,
+//     dateEnd (= fin de retractation), dateSignatureActe, honorairesEntree/Sortie ;
+//   vente (liste) : prix, date, honorairesEntree/Sortie ;
+//   offre : la LISTE ne rend que honoraire_acquereur ; PAR NUMERO : montant, validite,
+//     dateProposition (sans l'heure).
+// « @registre:col » : la colonne du registre, mais SEULEMENT une fois que la nuit l'a relue
+//   chez Hektor (last_seen_at posterieur a la saisie) -- avant, elle porte NOTRE valeur (R1),
+//   et la comparer a elle-meme dirait « arrivee » sur rien.
+// Un genre absent de la table -> « sans_objet ».
+const R3_SOURCES = {
+  montant:            { compromis: ["prixPublique"], vente: ["prix"], offre: ["montant"] },
+  prix_publique:      { compromis: ["prixPublique"], vente: ["prix"] },
+  date:               { compromis: ["dateStart"], vente: ["date"], offre: ["dateProposition"] },
+  date_acte:          { compromis: ["dateSignatureActe"] },
+  sequestre:          { compromis: ["sequestre"] },
+  prix_net_vendeur:   { compromis: ["prixNetVendeur"] },
+  honoraires:         { compromis: ["honorairesSortie"], vente: ["honorairesSortie"],
+                        offre: ["honoraire_acquereur", "@registre:honoraires_sortie"] },
+  honoraires_entree:  { compromis: ["honorairesEntree"], vente: ["honorairesEntree"] },
+  jours_validite:     { offre: ["validite"] },
+  jours_retractation: { compromis: ["@retractation"] },
+  numero_mandat:      { compromis: ["@registre:numero_mandat"], vente: ["@registre:numero_mandat"],
+                        offre: ["@registre:numero_mandat"] },
+  notaire_id:         { compromis: ["@notaire"], vente: ["@notaire"] },
+  taux_honoraires:    { compromis: ["@taux"], vente: ["@taux"], offre: ["@taux"] },
+};
+
+function r3Texte(v) { return v == null ? "" : String(v).trim(); }
+
+function r3JoursEntre(debut, fin) {
+  const a = Date.parse(r3Texte(debut).slice(0, 10));
+  const b = Date.parse(r3Texte(fin).slice(0, 10));
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return "";
+  return String(Math.round((b - a) / 86400000));
+}
+
+/** La valeur relue pour une ligne du carnet.
+ *  string = relue · undefined = pas encore lisible · null = ce genre n'a pas ce champ. */
+function r3Relue(ligne, genre, chez, registre, ctx) {
+  const sources = (R3_SOURCES[ligne.champ] || {})[genre];
+  if (!sources) return null;
+  const nuitPassee = registre && registre.last_seen_at && ligne.ecrit_le
+    && Date.parse(registre.last_seen_at) > Date.parse(ligne.ecrit_le) + 60000;
+  for (const s of sources) {
+    if (s.startsWith("@registre:")) {
+      if (!nuitPassee) continue;
+      const t = r3Texte(registre[s.slice(10)]);
+      if (t) return t;
+      continue;
+    }
+    if (s === "@retractation") {
+      const t = chez ? r3JoursEntre(chez.dateStart, chez.dateEnd) : "";
+      if (t) return t;
+      continue;
+    }
+    if (s === "@notaire") {
+      // Chez nous le notaire porte NOTRE numero (10064499), au registre celui de Hektor (122190),
+      // pose la nuit par la console. On compare la PERSONNE : on traduit notre numero.
+      if (!nuitPassee) continue;
+      const auRegistre = r3Texte(registre.notaire_acquereur_id);
+      if (!auRegistre) continue;
+      const saisie = r3Texte(ligne.valeur_app);
+      const traduit = r3Texte((ctx.cibles || {})[saisie]);
+      return (auRegistre === saisie || (traduit && auRegistre === traduit)) ? saisie : auRegistre;
+    }
+    if (s === "@taux") {
+      // Hektor ne rend pas le taux : on le RECALCULE. Il n'est jamais declare en conflit --
+      // on ne sait pas sur quelle base Hektor le compte ; on ne conclut que s'il tombe juste.
+      const hon = Number(r3Texte(chez && (chez.honorairesSortie ?? chez.honoraire_acquereur)).replace(",", "."));
+      const taux = Number(r3Texte(ligne.valeur_app).replace(",", "."));
+      const bases = [chez && chez.prixPublique, chez && chez.prix, chez && chez.montant, chez && chez.prixNetVendeur]
+        .map((x) => Number(r3Texte(x).replace(",", "."))).filter((x) => Number.isFinite(x) && x > 0);
+      if (!Number.isFinite(hon) || !Number.isFinite(taux) || !bases.length) continue;
+      if (bases.some((b) => Math.abs((hon / b) * 100 - taux) <= 0.05)) return r3Texte(ligne.valeur_app);
+      continue;
+    }
+    const t = chez ? r3Texte(chez[s]) : "";
+    if (t) return t;
+  }
+  return undefined;
+}
+
+/** Le verdict d'une ligne. `echoue` : le travail qui l'a posee a fini en erreur. */
+function r3Verdict(ligne, relue, echoue) {
+  const arrive = relue !== undefined && relue !== null
+    && memeValeurHektor(ligne.valeur_app, relue) === true;
+  if (arrive) return "arrivee";
+  if (echoue) return "echec";
+  if (relue === null) return "sans_objet";
+  if (relue === undefined) return "en_attente";
+  const photo = r3Texte(ligne.valeur_hektor_au_moment);
+  if (photo && memeValeurHektor(photo, relue) === true) return "en_attente";
+  return "conflit";
+}
+
+async function controlerLeCarnet(job, annonceId, options = {}) {
+  if (!R3_CONTROLE_CARNET) return { status: "eteint" };
+  const annonce = String(annonceId || "").trim();
+  if (!/^\d+$/.test(annonce)) return { status: "skipped", reason: "annonce_non_numerique" };
+  const force = options.force === true;
+  try {
+    const filtre = options.appAffaireId
+      ? `app_affaire_id=eq.${encodeURIComponent(options.appAffaireId)}`
+      : `hektor_annonce_id=eq.${encodeURIComponent(annonce)}`;
+    const registres = await supabaseRequest(
+      `app_affaire_ledger?${filtre}&hektor_affaire_id=not.is.null`
+      + "&select=app_affaire_id,kind,hektor_affaire_id,last_seen_at,numero_mandat,honoraires_sortie,notaire_acquereur_id",
+      { method: "GET" });
+    if (!Array.isArray(registres) || !registres.length) return { status: "rien_a_faire" };
+    const parId = new Map(registres.map((r) => [String(r.app_affaire_id), r]));
+    const lignes = await supabaseRequest(
+      `app_affaire_champ_app?app_affaire_id=in.(${Array.from(parId.keys()).join(",")})`
+      + "&select=app_affaire_id,champ,valeur_app,valeur_hektor_au_moment,origine,ecrit_le,etat,constate_le",
+      { method: "GET" });
+    const maintenant = Date.now();
+    const aJuger = (Array.isArray(lignes) ? lignes : []).filter((l) => {
+      const etat = r3Texte(l.etat);
+      if (etat && etat !== "en_attente" && etat !== "inconnu") return false;   // deja tranche
+      if (force) return true;
+      const vu = Date.parse(l.constate_le || "");
+      return !Number.isFinite(vu) || maintenant - vu > R3_REVOIR_APRES_MS;
+    });
+    if (!aJuger.length) return { status: "rien_a_juger" };
+
+    // Les travaux qui ont pose ces lignes : un travail ENCORE EN COURS -> on ne juge pas (c'est
+    // son affaire) ; un travail ECHOUE -> « echec ». La RPC ecrit le carnet et le travail dans
+    // la MEME transaction : ecrit_le = created_at, a la microseconde (now() est fige).
+    const travaux = await supabaseRequest(
+      "app_console_job?job_type=eq.change_hektor_annonce_status"
+      + `&hektor_annonce_id=eq.${encodeURIComponent(annonce)}&select=status,created_at`,
+      { method: "GET" });
+    const etatDuTravail = (ecritLe) => {
+      const t = Date.parse(ecritLe || "");
+      const j = (Array.isArray(travaux) ? travaux : []).find((x) => Date.parse(x.created_at) === t);
+      return j ? r3Texte(j.status) : "";
+    };
+
+    // Les notaires : notre numero -> celui de Hektor (une seule lecture pour toutes les lignes).
+    const notaires = Array.from(new Set(aJuger.filter((l) => l.champ === "notaire_id")
+      .map((l) => r3Texte(l.valeur_app)).filter((x) => /^\d+$/.test(x))));
+    const cibles = {};
+    if (notaires.length) {
+      const c = await supabaseRequest(
+        `app_contact_current?hektor_contact_id=in.(${notaires.join(",")})&select=hektor_contact_id,hektor_target_id`,
+        { method: "GET" });
+      for (const x of (Array.isArray(c) ? c : [])) cibles[r3Texte(x.hektor_contact_id)] = r3Texte(x.hektor_target_id);
+    }
+
+    const bilan = [];
+    const parAffaire = new Map();
+    for (const l of aJuger) {
+      const k = String(l.app_affaire_id);
+      if (!parAffaire.has(k)) parAffaire.set(k, []);
+      parAffaire.get(k).push(l);
+    }
+    for (const [id, lesLignes] of parAffaire) {
+      const reg = parId.get(id);
+      const genre = r3Texte(reg.kind);
+      let chez = options.appAffaireId && String(options.appAffaireId) === id ? (options.chez || null) : null;
+      // L'offre : la liste ne porte ni montant ni validite -> une lecture par numero.
+      if (!chez || (genre === "offre" && chez.montant == null)) {
+        const lu = await lireEtatTransactionViaApi(job, genre, reg.hektor_affaire_id, "hektor_transaction_controle");
+        if (!lu || lu.trouve !== true || !lu.details) {
+          // ⛔ API muette, ou transaction introuvable : on NE JUGE PAS (regle de la coupure).
+          bilan.push({ app_affaire_id: Number(id), resultat: "non_juge", raison: lu && lu._error ? "api_muette" : "introuvable" });
+          continue;
+        }
+        chez = { ...(chez || {}), ...lu.details };
+      }
+      for (const l of lesLignes) {
+        const etatTravail = etatDuTravail(l.ecrit_le);
+        if (etatTravail === "pending" || etatTravail === "running") continue;
+        const relue = r3Relue(l, genre, chez, reg, { cibles });
+        const verdict = r3Verdict(l, relue, etatTravail === "error");
+        const champ = encodeURIComponent(l.champ);
+        if (verdict === "arrivee") {
+          await supabaseRequest(`app_affaire_champ_app?app_affaire_id=eq.${id}&champ=eq.${champ}`, { method: "DELETE" });
+        } else {
+          await supabaseRequest(`app_affaire_champ_app?app_affaire_id=eq.${id}&champ=eq.${champ}`, {
+            method: "PATCH", headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({ etat: verdict, valeur_hektor_relue: relue == null ? null : relue,
+                                   constate_le: new Date().toISOString() }),
+          });
+        }
+        bilan.push({ app_affaire_id: Number(id), champ: l.champ, verdict });
+      }
+    }
+    const conflits = bilan.filter((b) => b.verdict === "conflit" || b.verdict === "echec").length;
+    await logJob(job.id, "app_carnet_controle", conflits ? "error" : "done",
+      (conflits ? `⚠ ${conflits} conflit(s) ou echec(s) au carnet. ` : "")
+      + `Controle du carnet (R3) : ${bilan.filter((b) => b.verdict).length} ligne(s) jugee(s), `
+      + `${bilan.filter((b) => b.verdict === "arrivee").length} arrivee(s) retiree(s).`,
+      { hektor_annonce_id: annonce, bilan }).catch(() => {});
+    return { status: "fait", bilan };
+  } catch (erreur) {
+    // On n'echoue JAMAIS le travail pour ca : le controle se rejouera a la relecture suivante.
+    await logJob(job.id, "app_carnet_controle", "error",
+      "Controle du carnet impossible -- rien n'est perdu, il se rejouera a la relecture suivante", {
         hektor_annonce_id: annonce,
         error: erreur && erreur.message ? erreur.message : String(erreur),
       }).catch(() => {});

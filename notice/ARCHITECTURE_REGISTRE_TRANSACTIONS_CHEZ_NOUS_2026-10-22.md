@@ -1215,3 +1215,35 @@ report, aucun verdict. Les lignes `creation_app` restent au carnet **sans verdic
   **T1** — le worker défait l'état quand Hektor ne répond pas (décision du 29/08) ; **T3 / D7** — modifier une transaction
   **sans numéro Hektor** est refusé (`modification_sans_numero_hektor`) ; et le **travail de création** resterait « en cours »
   sans worker. Plus, hors transactions : la diffusion portails et la signature (note de stratégie du 01/07).
+
+### R3 — CODÉ ET ÉPROUVÉ HORS LIGNE, NON ACTIF *(Frédéric, 23/10 : « ok donc reprends R3 »)*
+**Le code** — `Console/console_job_worker.js`, bloc « R3 » placé à côté de 1a :
+- `controlerLeCarnet(job, annonce, {appAffaireId, chez, force})` : **une seule fonction**, deux appelants —
+  `prouverTransactionCreee` (juste après la pose du numéro : `reporterAuRegistre` puis verdict, `force`) et
+  `handleRefreshConsoleData` (le **rattrapage**, après la seconde preuve). Interrupteur `R3_CONTROLE_CARNET`.
+- **Règle de création** (sans photo) : relue = saisie → **arrivée** (retirée) · pas encore lisible → **en_attente** · autre
+  valeur → **conflit** · champ que ce genre n'a pas → **sans_objet** · travail échoué → **echec**. Une ligne de modification
+  garde la règle d'avant (photo).
+- **Les 5 champs** : honoraires (`honorairesSortie`, `honoraire_acquereur` pour l'offre) · rétractation (`dateEnd − dateStart`) ·
+  prix public (`prixPublique` / `prix`) · **notaire et n° de mandat : le lendemain**, au registre relu par la nuit
+  (`last_seen_at` postérieur à la saisie), le notaire comparé **par la personne** (`app_contact_current`) · taux **recalculé**
+  (jamais « conflit »).
+- **Offre** : 1 lecture par numéro (montant, validité, dateProposition) — à la création et au rattrapage.
+- **Travail en cours** → on ne juge pas. **Travail échoué** → « echec » (reconnu par `ecrit_le = created_at`, même transaction).
+- ⛔ **Règle de la coupure** : API muette ou transaction introuvable → **rien n'est jugé, aucune alarme**.
+- Rattrapage : seulement les lignes sans verdict / en attente, **pas plus d'une relecture chez Hektor toutes les 6 h** par ligne.
+- `memeValeurHektor` : « 2026-10-06 » = « 2026-10-06 16:12:54 » (sert aussi aux preuves de **modification**).
+- Écran (`App.tsx`) : « échec, non envoyé » et « sans objet » s'affichent.
+
+**Les essais** : `Console/test_controle_carnet_r3.js` — **22/22**, sur le vrai code et les valeurs réelles des 22-23/10.
+**Témoin inverse** : l'ancien verdict rend « inconnu » pour les 11 lignes d'une création (D3). **4 mutants, 4 attrapés** (sans la
+règle des dates · registre jugé avant la nuit · échec pris pour une attente · API muette jugée quand même). Non-régression :
+`test_seconde_preuve.js` et `test_garde_copropriete.js` verts ; `npm run build` vert.
+⚠ **Trouvé par un mutant** : mon insertion avait **doublé 238 fins de ligne** (`
+`) dans le worker — invisibles au
+compte des CRLF, et Node les accepte. Corrigé (0), syntaxe vérifiée.
+
+**Pour l'activer (gestes de Frédéric)** : pousser (le libellé de l'écran) · **redémarrer les 4 services, file vide**. ⚠ **Dès
+l'activation**, la prochaine relecture de 24933 et de 61672 jugera les 3 transactions déjà au carnet : 1001339 et 1001361 →
+leurs champs arrivés **sortent du carnet** ; **30712 → le 160 000 passe en « échec »** (le reste, arrivé, sort). Puis **essai réel** :
+un compromis sur VA6482 et une offre sur le bac à sable 62774.
