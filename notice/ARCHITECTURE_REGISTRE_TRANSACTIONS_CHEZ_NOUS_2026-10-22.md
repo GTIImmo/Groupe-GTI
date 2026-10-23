@@ -1430,3 +1430,45 @@ circuit. Mesuré dans le code (RPC en base, worker, `affaire_ledger.py`, `regist
 - **Répartition et commission** : hors du carnet, R3 n'y touche pas.
 - ⛔ **Constat de fond** : R1 avait promis d'écrire au registre « au clic, création **+ modification** ». La modification n'écrit
   que `montant` et `date`. C'est ce trou qui rend le carnet indispensable pour 5 champs — et dangereux à vider.
+
+## 16. LA LOGIQUE D'AVANT ⑧, ET L'ERREUR DE R3 — 23/10 *(Frédéric : « fais une analyse de mon projet AVANT ce chantier, explique la situation et comment tout corriger »)* — lecture seule
+
+### La logique du carnet, telle qu'elle a été construite (commits et décisions)
+| date | décision | source |
+|---|---|---|
+| 01/09 | la saisie se range au carnet, **que la nuit ne touche jamais** ; l'écran le lit **d'abord** ; 4 champs y entrent **parce qu'ils n'ont aucune colonne de la bonne nature** (validité, rétractation, notaire, taux) : *« ils se conservent dans le carnet, qui est fait pour ça : il attend sa colonne »* | `6e49230` |
+| 12/09 | **une saisie disparaît une fois arrivée** — mais seulement après une **preuve sans écart**, sur les champs **prouvables** | `8466ec3` |
+| 16/09 | le contrat d'autorité est **vidé** (« le gel ») ; le verdict retire une ligne **quand le REGISTRE porte exactement la saisie** — l'écran, qui se replie sur le registre, ne perd donc rien. Un champ **sans colonne** n'a pas de photo → « inconnu » → **il reste** | `3562bce`, `e079218` |
+| 18/09 | la validité devient prouvable (relue par numéro) ; la grille se replie sur le registre pour la validité (D4) — **pas la modale** | worker l. 15037, App.tsx |
+
+⭐ **LA RÈGLE, en une phrase : une ligne ne quitte le carnet que si LE REGISTRE porte désormais la même valeur.**
+Les 5 champs qui n'ont pas de place sûre au registre — **prix public, honoraires (nom du carnet), rétractation, notaire,
+taux** — **restaient exprès** : le carnet est leur seule mémoire.
+
+### Ce que R1 (22/10) a changé
+Au clic de **création**, R1 écrit aussi au registre la fin de rétractation, le taux, les honoraires, les notaires. **Mais pas
+à la modification** (seuls montant et date), la nuit réécrit les colonnes partagées depuis Hektor, et le taux (classe A) n'est
+jamais réécrit. ➡ **Ces champs n'ont toujours pas de place sûre au registre : la règle du 16/09 reste vraie.**
+
+### ⛔ L'erreur de R3 (23/10, la mienne)
+R3 compare la saisie à **Hektor en direct** (`R3_SOURCES`), pas **au registre**, et retire la ligne dès que Hektor porte la
+même valeur — **même pour les 5 champs sans place au registre**. Il casse donc la règle du 16/09.
+⚠ Le §13 point 4 l'avait écrit **« À trancher »** (« ce qui ne se juge pas reste "inconnu", ou sort à la confirmation ? ») —
+**je l'ai tranché seul en codant**, et le §13 affirmait à tort « une ligne retirée montre la valeur du registre, qui EST la même ».
+
+### Ce qui est abîmé aujourd'hui en production — mesuré
+- **Aucun des 5 champs n'a été retiré sur une transaction vivante** : les seules lignes « prix public » et « rétractation »
+  retirées étaient celles du compromis d'essai 50130 (1001376), supprimé depuis.
+- Les **validités** retirées (1001361, 30712, 1001377) : le registre porte 10, 10 et 12 ; seule 33109 (12, **refusée**) ferait
+  afficher 10 dans la modale.
+
+### La correction, qui RÉTABLIT la règle au lieu d'en inventer une
+1. **R3 (worker)** : il continue de **juger et d'étiqueter** tout, mais il ne retire une ligne que selon la règle du 16/09 —
+   champ ayant une colonne (`CARNET_VERS_REGISTRE`) **et** registre égal à la saisie après le report. Les 5 autres restent,
+   avec leur étiquette « arrivée ». ➡ Même règle dans les deux verdicts (« deux copies d'une règle divergent »).
+2. **Modale (écran)** : la validité se replie sur le registre, comme la grille le fait depuis le 18/09. Le registre la porte
+   (le retour l'écrit, la nuit la relit). Ça corrige aussi le défaut d'avant (validité retirée après une modification).
+3. **B, C, E** (§14) : inchangés.
+4. **D** (durée avant d'arrêter de relire) : **à Frédéric**.
+5. **Noté, non traité** : R1 incomplet à la modification ; rétractation et prix public préremplis rangés sur une OFFRE à la
+   création ; le « 10 » par défaut sur les 47 compromis nés chez Hektor ; faux « conflit » de notaire après modification.
