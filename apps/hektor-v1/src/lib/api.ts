@@ -10450,6 +10450,11 @@ export async function createDeleteHektorAnnonceJob(input: {
 
 function throwConsoleAdminJobError(error: { message?: string; code?: string; details?: string } | null | undefined, fallback: string): never {
   const text = `${error?.code ?? ''} ${error?.message ?? ''} ${error?.details ?? ''}`.toLowerCase()
+  // ⑧ (23/10) : le refus de la base pour un bien sorti du parc vivant (vendu, clos, archive)
+  //   s'affichait en code brut.
+  if (text.includes('transaction_hors_parc_vivant')) {
+    throw new Error(bvs("Ce bien n'est plus dans le parc vivant (vendu ou clos) : on n'y enregistre plus d'offre, de compromis ni de vente."))
+  }
   if (text.includes('app_console_job_active_admin_annonce_idx') || text.includes('duplicate key')) {
     throw new Error(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
   }

@@ -2409,3 +2409,27 @@ ne part et aucun message ne s'affiche** (`handleSetSelectedDossierDiffusable`, A
 `selectedDossier` est vide — un bien vendu n'est plus dans `app_dossier_current`). Un **échec silencieux** (famille du chantier ④).
 Fait donc par la fiche Hektor (icône « Diffuser ou non ce bien »). Notre fiche reprendra la valeur à la nuit.
 Au passage, l'en-tête Hektor de VA6482 dit « Propriétaire : M. ESSAI 8 CINQ » : Hektor tient l'acheteur pour LE propriétaire (§37-39).
+
+## 41. UN BIEN VENDU NE PREND PLUS DE NOUVELLE TRANSACTION — 23/10 *(Frédéric : « oui, code avant R2 »)* — écran seulement, **pas poussé**
+
+**Le défaut** (vu à l'essai 5) : sur VA6482 vendu, la modale offrait encore « Envoyer vers Compromis » (et Offre, Vendu). Ce bouton
+**crée** une affaire dans un dossier neuf. La garde 2.2c (`avisGardeFouSaisie`) ne compte que les dossiers **ouverts** ; un dossier clos
+par sa vente « ne bloque pas » — voulu pour une **revente sous un nouveau mandat**. La base refuse hors du parc vivant
+(`app_change_annonce_status_optimistic` : `transaction_hors_parc_vivant`), mais **seulement une fois le bien relu** ; et l'écran
+affichait ce code **brut** (aucune traduction dans le front).
+
+**Le correctif** (`bienVenduPourStatut`, à côté de `compromisVerrouilleParSaVente`) — deux preuves, l'une suffit :
+- **A** le registre porte une vente **confirmée** par Hektor (numéro, pas effacée) **sous le mandat courant** — couvre la minute d'avant la relecture ;
+- **B** le statut du bien dit « Vendu ».
+Alors, sur les onglets Offre / Compromis / Vendu : **bandeau** « Ce bien est vendu (vente n° …). … il faut d'abord supprimer la vente »,
+le bouton « Envoyer vers » **disparaît**, et le geste lui-même refuse (la touche Entrée soumet aussi le formulaire). « Modifier »,
+« Supprimer la vente », « Actif » et « Clos » **ne sont pas touchés**. Le refus de la base est **traduit** (`throwConsoleAdminJobError`, api.ts).
+
+**Ce que ça pourrait casser ailleurs** : la **revente** (nouveau mandat, autre numéro, statut actif) garde ses boutons — contrôlé ;
+une vente **sans numéro Hektor** (travail échoué) ou **effacée** ne ferme rien — contrôlé. ⚠ Juste après une **suppression** de vente,
+tant que la fiche n'est pas relue, le statut peut encore dire « Vendu » : le bouton reste caché une minute (sans danger, rien ne part).
+
+**Contrôles** : `test_rubrique_affaires_complete.cjs` **31/31** (6 neufs) · témoin inverse : les 6 neufs **échouent** sur la version
+d'avant · **3 mutants attrapés** (sans le numéro Hektor, sans le même mandat, effacée comptée) · `npm run build` vert · `
+` = 0.
+⚠ **Non vu à l'écran** : il faut le push (Vercel), puis rouvrir la modale de VA6482.

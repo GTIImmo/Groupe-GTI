@@ -17586,6 +17586,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   ) {
     event.preventDefault()
     if (!statusChangeTarget) return
+    // ⑧ (23/10) : un bien vendu ne prend plus de NOUVELLE transaction (le bouton a disparu, mais la
+    //   touche Entree soumet encore le formulaire). « reprendre » = modifier : inchange.
+    if (!reprendre && statusChangeNeedsTransaction(statusChangeStatus)
+        && bienVenduPourStatut(statusChangeTarget, statusChangeAffaires)) {
+      setErrorMessage("Ce bien est vendu : on n'y enregistre plus d'offre, de compromis ni de vente. "
+        + "Pour revenir en arrière, il faut d'abord supprimer la vente.")
+      return
+    }
     // ⚠ ON N'EXIGE PLUS LE MONTANT SUR LA VENTE -- 14/09/2026. Sa case vient
     //   d'etre retiree de l'ecran (elle faisait doublon avec le prix de vente,
     //   les deux alimentant le meme champ chez Hektor). Continuer a l'exiger
@@ -21454,6 +21462,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                   )
                 })()}
                 {(() => {
+                  // ⑧ (23/10) : un bien vendu ne prend plus de nouvelle transaction -- on dit pourquoi le
+                  // bouton « Envoyer vers » a disparu, et le seul chemin pour revenir.
+                  if (!statusChangeNeedsTransaction(statusChangeStatus)) return null
+                  const ferme = bienVenduPourStatut(statusChangeTarget, statusChangeAffaires)
+                  if (!ferme) return null
+                  const numero = ferme === true ? '' : String(ferme.hektor_affaire_id ?? '').trim()
+                  return (
+                    <p className="status-change-note">
+                      <strong>Ce bien est vendu{numero ? ` (vente n° ${numero})` : ''}.</strong>{' '}
+                      On n'y enregistre plus d'offre, de compromis ni de vente : le bouton « Envoyer vers »
+                      créerait une nouvelle affaire et remettrait le bien en commercialisation chez Hektor.
+                      Pour revenir en arrière, il faut d'abord supprimer la vente (onglet Vendu).
+                    </p>
+                  )
+                })()}
+                {(() => {
                   // V (23/10) : meme bandeau que l'offre verrouillee, pour le compromis d'une chaine vendue.
                   const vente = statusChangeStatus === 'compromise'
                     ? compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourantePourStatut())
@@ -21570,6 +21594,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       ⚠ UN BOUTON GRIS ET MUET EST PIRE QUE PAS DE BOUTON : l'infobulle
                       dit pourquoi, le bandeau le repete en clair, et le geste qui
                       debloque (« Annuler le compromis ») est juste au-dessus. */}
+                  {/* ⑧ (23/10) : sur un bien vendu, ce bouton CREERAIT une affaire neuve -- il disparait,
+                      le bandeau plus haut dit pourquoi. « Actif » et « Clos » ne sont pas touches. */}
+                  {statusChangeNeedsTransaction(statusChangeStatus)
+                   && bienVenduPourStatut(statusChangeTarget, statusChangeAffaires) ? null : (
                   <button className="ghost-button button-primary" type="submit"
                     title={gardeFouPourStatut()?.bloque
                       ? `${gardeFouPourStatut()?.titre} — ${gardeFouPourStatut()?.detail}`
@@ -21578,6 +21606,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       || Boolean(gardeFouPourStatut()?.bloque)}>
                     {statusChangePending ? 'Envoi...' : `Envoyer vers ${hektorStatusTargetLabel(statusChangeStatus)}`}
                   </button>
+                  )}
                 </div>
               </form>
             </section>
@@ -27788,6 +27817,37 @@ function offreVerrouilleeParSonDossier(
   const vente = memeDossier.find((r) => String(r.kind) === 'vente')
   if (vente) return vente
   return memeDossier.find((r) => String(r.kind) === 'compromis' && !compromisMort(r)) ?? null
+}
+
+/** ─── ⑧ (23/10/2026) : UN BIEN VENDU NE PREND PLUS DE NOUVELLE TRANSACTION ───
+ *
+ *  Decision de Frederic : « apres la vente tout est verrouille ». Le verrou V (juste en dessous)
+ *  ferme le compromis ; restait le bouton « Envoyer vers Offre / Compromis / Vendu », qui CREE une
+ *  transaction dans un dossier NEUF : la garde 2.2c ne compte que les dossiers OUVERTS, et un
+ *  dossier clos par sa vente « ne bloque pas » -- voulu, pour une revente sous un NOUVEAU mandat.
+ *  La base refuse deja hors du parc vivant (`transaction_hors_parc_vivant`), mais seulement une
+ *  fois le bien relu : juste apres la vente, il y est encore.
+ *  Deux preuves, l'une suffit :
+ *   A. le registre porte une vente CONFIRMEE par Hektor (son numero, pas effacee) SOUS LE MANDAT
+ *      COURANT -- ecrite au retour du travail, elle couvre le temps d'avant la relecture ;
+ *   B. le statut du bien dit « Vendu » (meme lecture que openStatusChangeModal).
+ *  ⚠ Une vente SANS numero Hektor (travail echoue) ne ferme rien : le bien n'est pas vendu.
+ *  ⚠ La revente garde ses boutons : nouveau mandat, autre numero, statut actif.
+ *  Rend la vente qui ferme (pour la NOMMER), `true` si seul le statut le dit, ou null. */
+function bienVenduPourStatut(
+  dossier: Pick<Dossier, 'statut_annonce' | 'numero_mandat'> | null | undefined,
+  lignes: AffaireLedgerRow[],
+): AffaireLedgerRow | true | null {
+  if (!dossier) return null
+  const mandat = String(dossier.numero_mandat ?? '').trim()
+  const vente = mandat
+    ? lignes.find((r) => String(r.kind) === 'vente'
+        && String(r.numero_mandat ?? '').trim() === mandat
+        && Boolean(String(r.hektor_affaire_id ?? '').trim())
+        && r.present_in_hektor !== false)
+    : undefined
+  if (vente) return vente
+  return String(dossier.statut_annonce ?? '').trim().toLowerCase().includes('vendu') ? true : null
 }
 
 /** ─── V (23/10/2026) : LE COMPROMIS EST VERROUILLE PAR SA VENTE ───
