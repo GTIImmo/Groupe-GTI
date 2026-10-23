@@ -2079,3 +2079,35 @@ le carnet garde ces lignes pour toujours (pas de colonne : règle de sortie du 1
 - ⏳ **Pas encore actif côté écran et worker** : il faut pousser et redémarrer les 4 services. D'ici là, la création d'une offre
   range déjà le notaire du vendeur (le front actuel l'envoie), la modification non (la clé `seller_notary_id` n'est pas encore
   envoyée), et R3 jugera ces lignes jusqu'au redémarrage (sans effet chez Hektor).
+
+## 29. ESSAI 3, SUITE — 23/10, 17:15-17:35 (heure de Paris), avec 103a0b4 + patch N actifs
+
+**Actif vérifié** : le paquet en ligne porte « Notaire vendeur », « attribués à personne », `seller_notary_id` ; 4 workers démarrés à
+17:13:43-44 ; patch N posé et allumé.
+
+**✅ Prouvé en réel**
+- **Modification de l'offre 33114** : la modale se remplit — commission vendeur 6 500 (C6), charge acquéreur, répartition 30/20/25/25 ;
+  notaire du vendeur désigné → **carnet `notaire_mandant_id` 10355906 / `notaire_mandant_nom` « Me. Eric PAILHES »** (origine
+  modification_app, non jugé par R3) ; **la note est enregistrée — la PREMIÈRE note de toute la base**.
+- **Offre acceptée** (`change_hektor_offre_status` done).
+- **Compromis 50135 (1001388), même chaîne 1001384** : la modale reprend **le notaire du vendeur PAILHES** de l'offre (patch N),
+  la commission 6 500, la charge, la répartition ; registre au clic : acte 01/03/2027, séquestre 5 000, net 103 500, rétractation
+  14 j → fin 06/11/2026, notaire du vendeur 10355906, notaire acquéreur 10064499, 1 mandant ; **2 conditions enregistrées**
+  (préemption 60 j, crédit 45 j) ; **note enregistrée** ; qualification : recherche 471886 créée ; « Hektor a gardé toutes les
+  personnes envoyées ».
+
+**⛔ Défauts trouvés**
+1. **La commission vendeur n'est pas partie au compromis** (`seller_fees` absent de la charge → Hektor : 0,00) et **la charge n'a
+   pas été écrite**. Cause : MON code du jour — la modale s'ouvre sur l'onglet Offre, qui affiche 6 500 ; sur Compromis, la case reste
+   remplie SANS drapeau et la reprise s'arrête. **Corrigé, commit f00691e (écran seul, pas poussé)** : à la création seule une saisie
+   bloque la reprise. Le même reste a montré « 0,00 » sur l'onglet Vente (tapé à la main pour l'essai).
+2. **L'échéance des conditions s'affiche un jour trop tôt** (23/10 + 60 j → « 21/12 » au lieu du 22/12) : `echeanceCondition`
+   passe par `toISOString()` (UTC) sur une date locale. Ancien (16/09). Non corrigé.
+3. **Le prix de vente du compromis reste au prix du mandat** (128 787) à la création — F4, déjà noté ; corrigé à la main.
+4. **Le worker sync_light s'est arrêté net à 17:24:40** (relancé par le service) et a laissé `refresh_console_contact_data` « running »
+   sur 24113 : la vente (créée 17:26:50) attend la libération (~30 min). Défaut connu (0xC0000409, §2 de CLAUDE.md).
+
+**⚠ MES DONNÉES D'ESSAI ÉTAIENT FAUSSES SUR LES HONORAIRES** (Frédéric : « une transaction a soit des honoraires à charge vendeur,
+soit à charge acquéreur, jamais les deux ») : j'ai saisi 5 000 acquéreur **et** 6 500 vendeur, charge acquéreur. Le « conflit »
+R3 sur le prix public du compromis (115 000 contre 110 000 = 115 000 − 5 000) en découle ; les résultats de commission de cet
+essai ne comptent pas. ⚠ La modale accepte les deux à la fois : rien ne prévient — **à trancher par Frédéric**.
