@@ -21364,7 +21364,10 @@ const R3_REVOIR_APRES_MS = 6 * 3600 * 1000;
 const R3_SOURCES = {
   montant:            { compromis: ["prixPublique"], vente: ["prix"], offre: ["montant"] },
   prix_publique:      { compromis: ["prixPublique"], vente: ["prix"] },
-  date:               { compromis: ["dateStart"], vente: ["date"], offre: ["dateProposition"] },
+  // L'offre : la DATE DE L'OFFRE (relue la nuit) d'abord, la date de sa derniere proposition
+  // ensuite. 23/10, premier passage reel : l'offre 33094 date du 06/10, sa derniere proposition
+  // du 30/09 -- la seule date de proposition aurait juge faux une date jamais changee.
+  date:               { compromis: ["dateStart"], vente: ["date"], offre: ["@registre:date", "dateProposition"] },
   date_acte:          { compromis: ["dateSignatureActe"] },
   sequestre:          { compromis: ["sequestre"] },
   prix_net_vendeur:   { compromis: ["prixNetVendeur"] },
@@ -21439,8 +21442,10 @@ function r3Verdict(ligne, relue, echoue) {
   const arrive = relue !== undefined && relue !== null
     && memeValeurHektor(ligne.valeur_app, relue) === true;
   if (arrive) return "arrivee";
-  if (echoue) return "echec";
+  // 23/10, premier passage reel : un champ que ce genre n'a pas reste « sans_objet » meme si le
+  // travail a echoue -- « echec, non envoye » sur le prix d'annonce d'une offre trompait.
   if (relue === null) return "sans_objet";
+  if (echoue) return "echec";
   if (relue === undefined) return "en_attente";
   const photo = r3Texte(ligne.valeur_hektor_au_moment);
   if (photo && memeValeurHektor(photo, relue) === true) return "en_attente";
@@ -21458,7 +21463,7 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
       : `hektor_annonce_id=eq.${encodeURIComponent(annonce)}`;
     const registres = await supabaseRequest(
       `app_affaire_ledger?${filtre}&hektor_affaire_id=not.is.null`
-      + "&select=app_affaire_id,kind,hektor_affaire_id,last_seen_at,numero_mandat,honoraires_sortie,notaire_acquereur_id",
+      + "&select=app_affaire_id,kind,hektor_affaire_id,last_seen_at,date,numero_mandat,honoraires_sortie,notaire_acquereur_id",
       { method: "GET" });
     if (!Array.isArray(registres) || !registres.length) return { status: "rien_a_faire" };
     const parId = new Map(registres.map((r) => [String(r.app_affaire_id), r]));

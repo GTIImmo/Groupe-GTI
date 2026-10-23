@@ -167,16 +167,22 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
   {
     // 30712 / offre 33094 : la modification du 13/10 a ECHOUE (offre acceptee). Hektor dit 16 000.
     const T = "2026-10-13T09:37:38.900921+00:00";
-    const reg = { app_affaire_id: 30712, kind: "offre", hektor_affaire_id: "33094", last_seen_at: NUIT, numero_mandat: "18426" };
+    // Valeurs du PREMIER PASSAGE REEL (23/10, 09:34) : la derniere proposition date du 30/09,
+    // l'offre elle-meme du 06/10 (registre relu la nuit).
+    const reg = { app_affaire_id: 30712, kind: "offre", hektor_affaire_id: "33094", last_seen_at: NUIT, numero_mandat: "18426",
+                  date: "2026-10-06 16:12:54" };
     const M = (c, v, photo) => ({ app_affaire_id: 30712, champ: c, valeur_app: v, valeur_hektor_au_moment: photo,
                                   origine: "modification_app", ecrit_le: T, etat: null, constate_le: null });
     const m = monter({ registres: [reg], travaux: [{ status: "error", created_at: T }],
-      lignes: [M("montant", "160000", "16000"), M("jours_validite", "10", "10"), M("date", "2026-10-06", "2026-10-06 16:12:54")],
-      api: { "offre:33094": { trouve: true, details: { montant: "16000", validite: "10", dateProposition: "2026-10-06" } } } });
+      lignes: [M("montant", "160000", "16000"), M("jours_validite", "10", "10"), M("date", "2026-10-06", "2026-10-06 16:12:54"),
+               M("prix_publique", "180000", null)],
+      api: { "offre:33094": { trouve: true, details: { montant: "16000", validite: "10", dateProposition: "2026-09-30" } } } });
     await m.contexte.controler(JOB, "61672");
     controle("(9) travail ECHOUE : le 160 000 jamais arrive -> « echec » (pas « en_attente »)", verdictDe(m, "30712:montant") === "echec", JSON.stringify(m.patches));
-    controle("(9) ... ce qui est quand meme chez Hektor (validite, date) sort du carnet",
-      m.supprimes.includes("30712:jours_validite") && m.supprimes.includes("30712:date"), JSON.stringify(m.supprimes));
+    controle("(9) ... ce qui est quand meme chez Hektor (validite, date DE L'OFFRE) sort du carnet",
+      m.supprimes.includes("30712:jours_validite") && m.supprimes.includes("30712:date"), JSON.stringify({ s: m.supprimes, p: m.patches }));
+    controle("(9) ... un champ qu'une offre n'a pas reste « sans_objet », meme travail echoue",
+      verdictDe(m, "30712:prix_publique") === "sans_objet", JSON.stringify(m.patches));
   }
   {
     const m = monter({ registres: [REG_50129], lignes: [L("montant", "135000")], travaux: [{ status: "pending", created_at: ECRIT }],

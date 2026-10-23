@@ -1239,7 +1239,8 @@ report, aucun verdict. Les lignes `creation_app` restent au carnet **sans verdic
 **Témoin inverse** : l'ancien verdict rend « inconnu » pour les 11 lignes d'une création (D3). **4 mutants, 4 attrapés** (sans la
 règle des dates · registre jugé avant la nuit · échec pris pour une attente · API muette jugée quand même). Non-régression :
 `test_seconde_preuve.js` et `test_garde_copropriete.js` verts ; `npm run build` vert.
-⚠ **Trouvé par un mutant** : mon insertion avait **doublé 238 fins de ligne** (`
+⚠ **Trouvé par un mutant** : mon insertion avait **doublé 238 fins de ligne** (`
+
 `) dans le worker — invisibles au
 compte des CRLF, et Node les accepte. Corrigé (0), syntaxe vérifiée.
 
@@ -1247,3 +1248,19 @@ compte des CRLF, et Node les accepte. Corrigé (0), syntaxe vérifiée.
 l'activation**, la prochaine relecture de 24933 et de 61672 jugera les 3 transactions déjà au carnet : 1001339 et 1001361 →
 leurs champs arrivés **sortent du carnet** ; **30712 → le 160 000 passe en « échec »** (le reste, arrivé, sort). Puis **essai réel** :
 un compromis sur VA6482 et une offre sur le bac à sable 62774.
+
+### R3 ACTIF — PREMIER PASSAGE RÉEL, 23/10 à 09:34 *(Frédéric : « c'est fait » : poussé `a91c6bf`, 4 services redémarrés à 09:32:33-34)*
+Vérifié : `origin/main` = `a91c6bf` ; processus démarrés **après** le fichier (09:25:43) ; file vide. Relecture de 61672 déclenchée
+en ouvrant la fiche V720061672 (lecture seule chez Hektor). **R3 a jugé 12 lignes, retiré 6 arrivées** :
+- **1001361** (offre 33098, création du 13/10) : montant, date, n° de mandat, validité → **arrivée, retirées** ; prix public et
+  rétractation → **sans_objet**. ✅
+- **30712** (offre 33094, modification échouée du 13/10) : **montant 160 000 → « echec »** ✅ (Hektor : 16 000) ; n° de mandat et
+  validité → arrivée, retirés ✅.
+- ⚠ **DEUX ERREURS DE MA RÈGLE, trouvées par ce passage** : (a) la **date** de 33094 jugée « echec » — Hektor rend la date de la
+  **dernière proposition** (30/09), alors que l'offre date du 06/10 ; (b) le prix public et la rétractation (champs qu'une offre
+  n'a pas) marqués « echec » au lieu de « sans_objet ». **Corrigé** (offre : date de l'offre relue la nuit d'abord ;
+  « sans_objet » avant « echec »), essai **23/23**, **4 mutants attrapés**, et **la version en service reproduit exactement les deux
+  verdicts faux** (témoin inverse). **Non actif** tant que les services ne sont pas redémarrés.
+- ⚠ Les 3 lignes de 30712 déjà marquées « echec » à tort (date, prix public, rétractation) **ne seront pas rejugées** (R3 ne revient
+  pas sur un verdict tranché) : **les remettre à blanc** (écriture en production, accord de Frédéric) après le redémarrage.
+- 1001339 (annonce 24933, plus parmi les biens actifs) : sera jugée à sa prochaine relecture.
