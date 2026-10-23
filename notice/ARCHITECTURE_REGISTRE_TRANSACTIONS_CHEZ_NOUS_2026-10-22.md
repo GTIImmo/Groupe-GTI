@@ -2264,3 +2264,21 @@ au bien chez nous avant la vente**, prendre **le même chemin que « Retirer un 
 chez nous + délier chez Hektor). La nuit respecte alors le retrait, même si Hektor tardait. Un acquéreur déjà propriétaire avant est gardé.
 *(Option à trancher : à la CRÉATION de la vente, inscrire tout de suite l'acquéreur comme propriétaire chez nous, comme Hektor le fait —
 pour que le registre soit juste avant la nuit.)*
+
+## 37. « L'ACQUÉREUR RESTE ACQUÉREUR, LE PROPRIÉTAIRE RESTE LE MANDANT » — mesure sur tout le parc, 23/10
+
+*(Frédéric : « c'est toi qui te trompes : l'acquéreur reste acquéreur pour toujours, jamais propriétaire ; le propriétaire reste le mandant »)*
+- **Mesure (ventes du registre, acquéreur retrouvé dans `app_relation` du même bien)** : juin 2026 **3 sur 39** ; juillet **27/34** ; août
+  **10/10** ; septembre **32/32** ; octobre **18/19**. Depuis juillet, **87 des 94 ventes** — **toutes faites directement dans Hektor**, aucune
+  par l'app — ont leur acquéreur rangé chez nous comme **« mandant » du bien vendu** (source `sync_annonce_contact_link`, c.-à-d. la liste
+  des propriétaires de l'annonce chez Hektor). Au total **133 liens « acquéreur = mandant »**, dont **115 encore actifs**.
+- ⇒ **Ce n'est pas l'essai** (nos 4 acquéreurs ne sont que la même chose sur VA6482) : chez Hektor, depuis juillet, l'acquéreur se retrouve
+  dans les propriétaires du bien après la vente, et **notre registre des liens le recopie la nuit comme mandant**. Selon la règle de
+  Frédéric, **c'est faux chez nous**.
+- **Mon erreur** : je l'ai présenté comme « normal, la règle de Hektor ». Le FAIT est mesuré ; l'avoir jugé acceptable pour notre registre
+  était faux.
+- **Conséquence à mesurer avant de corriger** : tout ce qui lit les mandants dans ce registre (rubrique Contact « Mandants / Propriétaires »,
+  registre des mandats, reporting mandant, parties à l'affaire en repli) peut montrer l'acquéreur comme mandant.
+- **Piste (à décider)** : à l'import de nuit, un contact qui est **l'acquéreur d'une vente du bien** n'est **jamais** rangé comme
+  propriétaire/mandant de ce bien (sauf s'il l'était déjà avant la vente) ; rattrapage des 115 liens actifs, marqués et non supprimés
+  (*delete-never*). Chez Hektor : ne rien toucher, ou délier — à décider.
