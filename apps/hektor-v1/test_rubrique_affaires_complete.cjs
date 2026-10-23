@@ -177,9 +177,19 @@ function essai(api) {
   ok("vente : les mandants NOMMES de Hektor (6 sur 7), le net vendeur, la note",
     val("vente", "Mandant(s)").split(", ").length === 6 && /105\s?000/.test(val("vente", "Prix net vendeur"))
       && val("vente", "Note") === "Acte chez Me PAILHES", J(rows("vente")));
-  ok("la repartition : 4 lignes et les deux totaux a 50 % SIGNALES",
-    af.repartition && af.repartition.length === 6 && af.repartition.filter((r) => /^Total/.test(r[0])).length === 2
-      && /50 % attribués/.test(af.repartition[4][1]), J(af.repartition));
+  // ⚠ LES 4 PARTS SE COMPTENT ENSEMBLE SUR 100 % (regle de la modale et de la base) : 4 x 25 est
+  //   une repartition COMPLETE -- aucune ligne « Total ». La 1re version disait « 50 % » a tort.
+  ok("la repartition : 4 lignes, et 4 x 25 % = 100 % ne signale RIEN",
+    af.repartition && af.repartition.length === 4 && !af.repartition.some((r) => /^Total/.test(r[0]))
+      && af.repartition[0][1] === "FRANCK GERPHAGNON · 25 %", J(af.repartition));
+  {
+    const incomplete = APP_DONNEES(false);
+    incomplete.repartition.set("1001381", [rep("entree", 1, "FRANCK GERPHAGNON"), rep("sortie", 1, "Alice RONDEAU")]);
+    const afI = api.ckAffaireDepuisChaine(ch, null, CONSOLE, incomplete);
+    ok("une repartition a 50 % le DIT : « 50 % attribués à personne »",
+      afI.repartition && afI.repartition.length === 3 && /^Total$/.test(afI.repartition[2][0])
+        && /50 % attribués à personne/.test(afI.repartition[2][1]), J(afI.repartition));
+  }
   ok("nos conditions passent AVANT celles de Hektor (pas les deux)",
     afC.console && afC.console.conditions === "" && /Obtention de pret · 60 j · en attente/.test(
       ((afC.lignesApp.compromis || []).find((r) => r[0] === "Conditions suspensives") || [])[1] || ""), J(afC.console));

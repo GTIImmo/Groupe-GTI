@@ -28221,18 +28221,19 @@ function ckAffaireDepuisChaine(
       .filter((l) => l.hektorUserId)
       .sort((a, b) => (a.cote === b.cote ? a.rang - b.rang : a.cote === 'entree' ? -1 : 1))
     const pct = (x: number) => x.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' %'
-    const totaux: Record<string, number> = { entree: 0, sortie: 0 }
+    let total = 0
     for (const l of lignesRep) {
-      totaux[l.cote] += Number.isFinite(l.pourcentage) ? l.pourcentage : 0
+      total += Number.isFinite(l.pourcentage) ? l.pourcentage : 0
       repartitionLignes.push([(l.cote === 'entree' ? 'Entrée ' : 'Sortie ') + l.rang,
         (txt(l.nomAuMoment) || 'Utilisateur ' + l.hektorUserId) + ' \u00b7 ' + pct(l.pourcentage)])
     }
-    // Un cote qui ne fait pas 100 % se DIT -- c'est ce que l'essai du 23/10 avait laisse passer.
-    for (const cote of ['entree', 'sortie'] as const) {
-      const present = lignesRep.some((l) => l.cote === cote)
-      if (present && Math.abs(totaux[cote] - 100) > 0.01) {
-        repartitionLignes.push([cote === 'entree' ? 'Total entrée' : 'Total sortie', pct(totaux[cote]) + ' attribués sur 100 %'])
-      }
+    // ⚠ LES QUATRE PARTS SE COMPTENT ENSEMBLE SUR 100 % -- la regle de la modale (« Les parts font
+    //   N % ») et de la base, qui refuse au-dessus. Ce n'est PAS 100 % par cote (corrige le 23/10 :
+    //   la premiere version disait « 50 % » sur une repartition 4 x 25 juste). En dessous de 100, le
+    //   reste n'est attribue a personne -- la « Part Reseau » de Hektor : on le DIT, comme la modale.
+    if (lignesRep.length && Math.abs(total - 100) > 0.01) {
+      repartitionLignes.push(['Total', pct(total) + (total < 100
+        ? ' \u2014 ' + pct(100 - total) + ' attribués à personne' : ' \u2014 au-dessus de 100 %')])
     }
   }
 
