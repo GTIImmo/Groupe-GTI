@@ -1649,3 +1649,17 @@ qualification**. L'ENVOI, lui, a marché (la porte `ciblesHektorContacts` reconn
 **Le risque** : un acquéreur qui n'est pas encore « acquéreur » chez Hektor serait **écarté en silence** de la vente (le défaut 1.4).
 **Ancien** : toute vente ou compromis créé APRÈS une nuit hérite de numéros Hektor. **Parade** : chercher aussi par `hektor_target_id`
 (le patron de 8a-B2).
+
+### ✅ CORRECTIONS DE R3 ET DE LA QUALIFICATION, CODÉES ET ÉPROUVÉES HORS LIGNE — 23/10 *(Frédéric : « oui bien sûr »)* — commit `7fce928`, **non actif**
+- **F1** : `prix_publique` d'un compromis (= le prix de vente) se compare à **prix public − honoraires de sortie** (`@prixDeVente`),
+  l'invariant de Hektor et la formule que le worker pose déjà en modification. Sans honoraires relus : « en attente », jamais un faux conflit.
+- **Offre** (`R3_NON_CONTROLES`, déclaré avec ses décisions) : honoraires (16/10), taux (classe A, 03/09), notaire (« personne ne le
+  relit », 16/09) **ne sont plus contrôlés**. Au compromis et à la vente, ils le restent. ⚠ L'envoi chez Hektor n'est pas touché.
+- **F7** est couvert par la même table (le notaire d'une offre n'est plus étiqueté « sans objet » : il n'est plus jugé).
+- **Qualification** : l'acquéreur se cherche par **notre** numéro **et** celui de **Hektor** (patron de 8a-B2).
+- **Essais** : `test_controle_carnet_r3.js` **41/41** ; `test_qualification_numero_hektor.js` **4/4**. Témoins inverses sur la version
+  **en service** : 3 et 2 échecs (dont le vrai « 605963 inconnu »). Mutants : prix de vente comparé au prix public, offre tout contrôlée,
+  déduction sans honoraires relus, retrait sans regarder le registre → **4 attrapés**. `\r\r\n` = 0.
+- ⚠ **Les lignes déjà jugées restent telles quelles** (1001379 `prix_publique` « conflit », 1001378 honoraires / taux « arrivée »,
+  notaire « sans objet ») : R3 ne rejuge pas une ligne tranchée. Les remettre à blanc = une écriture en base, **à l'accord de Frédéric**.
+- ➡ **Pour l'activer** : pousser, redémarrer les 4 services file vide.
