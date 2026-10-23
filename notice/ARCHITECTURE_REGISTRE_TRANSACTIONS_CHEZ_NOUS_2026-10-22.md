@@ -901,4 +901,18 @@ Il compare le numéro du carnet (**notre** 10064499) à celui du registre : vrai
 comparer **la personne** (identité ↔ numéro Hektor, `app_contact_current`) — ou que R3 retire du carnet ce que Hektor a
 confirmé. **Non codé.**
 
-**Reste** : supprimer **50129** (et la ligne 1001375) par l'app — la preuve de nuit est faite. **Accord de Frédéric attendu.**
+✅ **50129 SUPPRIMÉ PAR L'APP le 23/10 à 07:37** *(Frédéric : « supprime »)* — travail `delete_hektor_compromis` `done` en
+11 s : supprimé chez Hektor, statut redescendu à « Actif », ligne 1001375 effacée du registre (journal écrit), **11 lignes
+retirées du carnet**. Vérifié par moi : `CompromisById 50129` → `trouve: false` ; liste de 24113 → aucun compromis ;
+registre et carnet → 0 ligne ; bien « Actif ».
+
+### BILAN DES ESSAIS RÉELS DU 22-23/10 (VA6482) — ce qu'ils ont révélé
+| # | défaut | état |
+|---|---|---|
+| 1 | **le doublon de nuit** : l'acquéreur rangé sous notre identité | ✅ corrigé (1b), **prouvé la nuit du 23/10** |
+| 2 | **la preuve immédiate ratait** les compromis créés (Hektor ignore `sort=dateStart` depuis fin sept.) | ✅ corrigé (tri par numéro), prouvé en lecture ; vraie création non revue |
+| 3 | rien ne rattrapait un numéro manqué avant la nuit | ✅ seconde preuve (1a), active |
+| 4 | **le nom du notaire** s'affichait en numéro | 🟡 corrigé pour la journée du clic seulement ; l'après-nuit reste |
+| 5 | **la modification met du prérempli au carnet** (point E) | 🟡 codé et répété (8/8), **non posé** |
+| 6 | **la nuit perd le lien vers un contact créé dans l'app** | 🔴 trouvé le 23/10, **non corrigé** — sujet d'identité |
+| 7 | une modification **échouée** laisse ses valeurs au carnet sans verdict (offre 33094 : app 160 000, Hektor 16 000) | 🔴 non corrigé — R3/R4, et 33094 à trancher |
