@@ -1294,3 +1294,8 @@ envoyé à Hektor.** *(Le reste de son carnet — prix public, rétractation —
   le rend plus (`CompromisById 50130` → `trouve: false`).
 - **Noté à l'écran, non traité** : la fiche VA6482 annonce « Mandat clos le 30/07/2026 — échéance initiale le 27/08/2027 » : elle
   mélange la **clôture de l'ancien mandat n° 1** avec l'échéance du mandat **en cours** n° 18787.
+
+### ✅ CORRECTIF `834da97` ACTIF — 23/10 à 09:56 *(Frédéric : « poussé, 4 services redémarrés, file vide »)*
+`origin/main` = `e93180b` ; processus démarrés à 09:56:33-35, **après** le fichier (09:51:11) ; la ligne du correctif est dans le
+fichier en service ; file vide, 0 erreur sur 20 min. ⚠ **Non revu en réel** : il faudrait une nouvelle création (écriture chez
+Hektor) — il se verra à la prochaine vraie création (« R3 : N ligne(s) jugée(s) » dès le travail de création).
