@@ -1710,3 +1710,11 @@ modification écrit NOTRE valeur au registre et que Hektor ne la rend pas à la 
 - ⛔ **À faire par Frédéric, dans l'ordre** : coller la RÉPÉTITION (elle doit finir sur « ESSAI ANNULE -- 11 sur 11 ») → coller le PATCH
   (5 contrôles OK) → **allumer** l'interrupteur → pousser (A1 : worker + écran) → redémarrer les 4 services file vide.
 - ⚠ **Retour arrière** : éteindre l'interrupteur suffit à suspendre A5 ; l'inverse rend 049643b8.
+- ✅ **A5 POSÉ ET ALLUMÉ EN PRODUCTION — 23/10, 13:14** *(Frédéric : « fais-le toi-même, tu as mon accord »)*, par `execute_sql` :
+  - **répétition** jouée **telle que le fichier** : « ESSAI ANNULE -- **11 sur 11** », retour arrière compris. ⚠ Un premier passage avait
+    un dernier cas réécrit à la main (le contrôle de l'inverse remplacé par celui de l'empreinte posée) : il ne valait pas preuve de
+    l'inverse, je l'ai rejoué À L'IDENTIQUE. Vérifié ensuite : rien n'est resté (empreinte 049643b8, pas d'interrupteur, registre intact,
+    0 travail) ;
+  - **patch** collé : **5 contrôles OK** (empreinte **0dac8c86**, interrupteur créé éteint, droits et SECURITY DEFINER inchangés, E allumé) ;
+  - **interrupteur `affaire_modif_au_registre` allumé** à 11:14:13 UTC.
+  - ⏰ Reste : pousser A1 (worker + écran) et redémarrer les 4 services — puis le second essai complet.
