@@ -1159,3 +1159,47 @@ sont donc *de fait* arrivés, mais **personne ne l'a constaté**.
 5. **Une durée maximale ?** (question ouverte du §3) — à trancher par Frédéric.
 6. **Les 3 transactions d'aujourd'hui** : leur poser un verdict (ou les nettoyer) **avant** d'allumer R2 ; et **30712 : 160 000
    ou 16 000** (décision de Frédéric).
+
+## 13. R3 — LE CONTRÔLE AU RETOUR DE LA CRÉATION : audit du 23/10 *(Frédéric : « R3 d'abord, commence par l'audit »)* — lecture seule
+
+### Le modèle existe : la MODIFICATION (worker, ~l. 15060-15495)
+Après une modification prouvée : relecture **par numéro** → `retirerDuCarnetCeQuiEstArrive` → `reporterAuRegistre` (ce que
+Hektor a **retenu** va au registre : prix, net, honoraires, séquestre, dates, validité, **acquéreurs, mandants**) →
+`marquerLeCarnetRestant` (verdict par ligne : **arrivée** → retirée · **en_attente** · **conflit** · **inconnu**). Le verdict
+compare 3 valeurs : la **photo** (Hektor avant), la **saisie**, la **relue**.
+
+### La création s'arrête avant (D3, confirmé dans le code)
+`prouverTransactionCreee` (~l. 15625) : preuve en 3 lectures → confirmation → `poserIdTransactionSurAffaire` → **fin**. Aucun
+report, aucun verdict. Les lignes `creation_app` restent au carnet **sans verdict, pour toujours** (1001339 depuis le 04/09).
+
+### Les 6 trous que R3 doit fermer
+1. **Pas de photo à la création** : rien n'existait chez Hektor avant → la règle actuelle rend « **inconnu** » pour TOUT.
+   Il faut une règle de création : relue = saisie → **arrivée** (retirée) · relue vide → **en_attente** · sinon → **conflit**.
+2. **Les données relues selon le genre** (mesuré ce jour, lecture seule) :
+   - **compromis** : la liste les a déjà en main (prixPublique, prixNetVendeur, sequestre, dateStart, dateSignatureActe,
+     dateEnd = fin de rétractation, honorairesEntree/Sortie, acquereurs, mandants) → **0 requête de plus** ;
+   - **vente** : la liste aussi (prix, date, honoraires, honorairesEntree/Sortie, acquereurs, mandants) → **0 de plus** ;
+   - **offre** : la liste ne rend **ni montant, ni validité, ni date** → il faut **1 lecture par numéro** (OffreById :
+     montant, validite, dateProposition). ⚠ Le quota de Hektor : +1 requête par offre créée.
+3. **Une date sans heure ≠ la même date avec heure** pour `memeValeurHektor` (« 2026-10-06 » contre « 2026-10-06 16:12:54 »).
+   ⚠ **Défaut latent AUSSI en modification** : une date d'offre inchangée y serait jugée « en_attente » à tort.
+4. **Les champs sans colonne au registre** — `prix_publique`, `honoraires`, `jours_retractation`, `notaire_id`, `taux_honoraires` :
+   jugés « inconnu » aujourd'hui. Certains se jugent par une autre clé (prix_publique ↔ prixPublique/prix ; honoraires ↔
+   honorairesSortie ; rétractation ↔ dateEnd − dateStart). Le notaire n'est **pas** dans la relecture (et se compare entre
+   deux numérotations). ➡ **À trancher** : ce qui ne se juge pas reste « inconnu » (et R2 l'ignore), ou sort à la confirmation ?
+5. **Deux autres chemins donnent un numéro sans verdict** : la **seconde preuve** (1a) et **l'adoption de nuit**. Proposé : un
+   **verdict de rattrapage** à la relecture d'une annonce, pour les lignes sans verdict d'une transaction qui a son numéro —
+   il couvre aussi les 3 transactions d'aujourd'hui (1001339, 1001361, 30712).
+6. **Un travail ÉCHOUÉ laisse ses valeurs** (30712, modification refusée le 13/10). Proposé : verdict **« echec »** (montré en
+   rouge, **ignoré par R2**) quand le travail finit en erreur.
+
+### Ce que ça pourrait casser ailleurs
+- **Le worker** : code neuf **après** la pose du numéro, entouré d'un `try` (comme le report de la modification : « on
+  n'échoue jamais le travail pour ça »). Derrière un interrupteur. **Redémarrage des 4 services** (Frédéric, file vide).
+- **L'écran** : il lit le carnet d'abord — une ligne retirée « arrivée » montre la valeur du registre, qui **est** la même.
+- **La comparaison des dates** : `memeValeurHektor` sert aussi aux preuves de modification ; la rendre tolérante à l'heure ne
+  peut que faire passer « conforme » un jour égal — à éprouver hors ligne sur les deux chemins.
+- **Les chaînes** : `reporterAuRegistre` écrit `date` ; une date relue identique ne change rien.
+- **Le quota de Hektor** : +1 lecture par offre créée.
+- **Essais** : hors ligne (comme `test_seconde_preuve.js`), puis réel : un compromis sur VA6482 et une offre sur le bac à
+  sable 62774 → lignes « arrivée » retirées, registre complété.
