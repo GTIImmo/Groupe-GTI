@@ -2138,3 +2138,27 @@ compromis avec acquéreur, mandant, conditions, note ; vente avec notaires dès 
 4. **Les mandants de la vente cumulent les acquéreurs des essais** (9 noms) : Hektor ajoute l'acquéreur aux mandants à chaque vente,
    la suppression ne les retire pas (constat du 23/10, à nettoyer).
 5. Rappel : l'échéance des conditions affichée un jour trop tôt.
+
+## 31. DEUX AUDITS — les acquéreurs « mandants », et la piste A (le compromis après la vente) — 23/10, lecture seule
+
+**Les acquéreurs qui s'accumulent en propriétaires — C'EST HEKTOR, et c'est voulu chez lui.**
+- Mesure chez Hektor (`AnnonceById` → `proprietaires`) : VA6482 porte **10 propriétaires**, dont les **4 acquéreurs des essais**
+  (605963, 605967, 605973, 605975), typologie « acquéreur, mandant ».
+- **Contre-épreuve sur un vrai bien** : VM71227 (61483), vendu le 19/10 **directement dans Hektor** (aucun travail de l'app sur ce bien) :
+  son acquéreur 604016 (HUGUES) est **aussi** devenu propriétaire. ⇒ **À la vente, Hektor inscrit l'acquéreur comme propriétaire du
+  bien** (le nouveau propriétaire) ; supprimer la vente ne le retire pas.
+- Aucun `link_hektor_mandant` de l'app sur 24113. ⇒ Pas un défaut de l'app : **un effet de nos 4 ventes d'essai sur le même bien**.
+  Ma phrase « Hektor ajoute l'acquéreur aux mandants » était juste sur le fait, mais je l'avais présentée comme une anomalie.
+- À nettoyer sur VA6482 : délier les 4 acquéreurs d'essai (geste chez Hektor → accord).
+
+**La piste A (décidée par Frédéric) — ce que l'audit établit**
+- Le worker pose le statut du genre visé à CHAQUE `change_hektor_annonce_status`, reprise comprise (`HEKTOR_STATUS_CONFIG.compromise`
+  = statut 4 « Sous compromis », l. ~12438). Modifier le compromis d'une chaîne vendue remet donc le bien « Sous compromis ».
+- Ce qu'on garde chez nous et qui doit rester modifiable après la vente : **répartition** (par chaîne), **conditions** et **note** (par
+  transaction), **charge** (`charge_commission_app`). Les quatre ont déjà leur RPC (`app_affaire_repartition_ecrire` via
+  `saveRepartition`, `app_conditions_affaire_ecrire`, `app_affaire_note_ecrire`, `app_affaire_commission_ecrire`) : **aucun travail
+  Hektor n'est nécessaire**.
+- **Plan A** : sur l'onglet Compromis, quand la chaîne visée porte une **vente vivante**, « Modifier la transaction » est remplacé par
+  **« Enregistrer dans l'app »** (ces quatre écritures, aucun travail) avec un bandeau qui le dit. Écran seul.
+- À trancher en même temps : « Annuler le compromis » / « Supprimer le compromis » après la vente (mêmes risques sur le statut) ; et
+  « Modifier chez Hektor » sur l'onglet Vente (« une vente se choisit et se supprime »).
