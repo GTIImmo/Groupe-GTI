@@ -2162,3 +2162,23 @@ compromis avec acquéreur, mandant, conditions, note ; vente avec notaires dès 
   **« Enregistrer dans l'app »** (ces quatre écritures, aucun travail) avec un bandeau qui le dit. Écran seul.
 - À trancher en même temps : « Annuler le compromis » / « Supprimer le compromis » après la vente (mêmes risques sur le statut) ; et
   « Modifier chez Hektor » sur l'onglet Vente (« une vente se choisit et se supprime »).
+
+## 32. LA CHARGE ET LE NOM DU NOTAIRE DE L'ACQUÉREUR — audit du 23/10, lecture seule
+
+**La charge** (`statusChangeChargeCommission`, App.tsx) : à l'ouverture de la modale, « vendeur », drapeau baissé (l. ~16640). Elle n'est
+**enregistrée que si le drapeau est levé** (`statusChangeCommissionTouchee`) : par un choix dans la liste (l. ~20691), ou par la reprise
+de l'offre (lot 1c, l. ~16459) — **mais cette reprise s'arrête si l'offre n'a pas de commission vendeur** (`if (!repris) return` AVANT la
+charge). Conséquences mesurées à l'essai 4 : compromis 1001391 charge **vide** (la case montrait « acquéreur », reste de l'onglet Offre,
+non enregistré) ; vente : « vendeur » par défaut, **et une fois « acquéreur » choisi, elle est bien enregistrée** (vente 1001392 :
+`acquereur`). ⇒ Le choix marche ; c'est la REPRISE qui est liée à tort à la commission vendeur, et l'écran montre une valeur non gardée.
+
+**Le nom du notaire de l'acquéreur** : la lecture de l'assistant de Hektor **a le nom** (compromis 1001391 et vente 1001392 :
+« CORNU,. SELARL « Corine ROSTAING-MUSSIO, Tiffany CORNU… » ») **sous le numéro de HEKTOR 122190** ; notre registre et le carnet portent
+**NOTRE numéro 10064499** (`app_contact_current` : 10064499 ↔ 122190). La carte cherche le nom par égalité de numéro → aucun → « Contact
+10064499 ». En amont : l'offre ne garde que le numéro (carnet `notaire_id`), le compromis le reprend sans nom (reste de l'onglet Offre),
+`buyer_notary_nom` part vide, R1 écrit un nom vide. C'est le même « une personne, deux numéros » que C4 pour les acquéreurs.
+
+**Correctifs proposés (écran seul)** :
+- 2 — la reprise de l'offre prend **la charge même sans commission vendeur** (création du compromis et de la vente, jamais par-dessus un choix).
+- 3 — le nom d'un notaire connu par son numéro se lit **dans sa fiche contact** (par nos deux numéros) : dans la carte, et dans la modale
+  quand le numéro arrive sans nom — il part alors avec le compromis et le registre le garde.
