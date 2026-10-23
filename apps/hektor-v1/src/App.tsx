@@ -17683,7 +17683,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       //   commission d'une transaction dont on n'a rien voulu changer.
       if (statusChangeCommissionTouchee) {
         try {
-          const affaireCom = affaireCourantePourStatut()
+          // ⑧ (23/10/2026) : a la CREATION, la cible est la transaction NEUVE (son numero est dans la
+          //   charge du travail) -- jamais « l'affaire courante », qui peut etre une AUTRE transaction
+          //   vivante du meme genre (une 2e offre sur le bien). En MODIFICATION, l'affaire visee.
+          const affaireCom = reprendre ? affaireCourantePourStatut() : null
           const neufCom = (job as { payload_json?: { app_affaire_id?: number | string | null } } | null)
             ?.payload_json?.app_affaire_id
           const cibleCom = affaireCom ? Number(affaireCom.app_affaire_id)
@@ -17720,8 +17723,16 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       //   retirees. Sans ce test, ouvrir puis envoyer effacerait les conditions
       //   d'une transaction dont on n'a rien voulu changer.
       try {
-        const affaireConditions = affaireCourantePourStatut()
-        const cible = affaireConditions ? Number(affaireConditions.app_affaire_id) : null
+        // ⑧ (23/10/2026) : A LA CREATION, LA CIBLE EST LA TRANSACTION NEUVE -- son numero arrive dans
+        //   la charge du travail, exactement comme pour la repartition et la commission. Avant, la
+        //   creation visait « l'affaire courante », VIDE a la creation : rien n'etait jamais ecrit.
+        //   Mesure du 23/10 : 0 condition et 0 note dans TOUTE la base depuis le 16-17/09.
+        const neuveConditions = (job as { payload_json?: { app_affaire_id?: number | string | null } } | null)
+          ?.payload_json?.app_affaire_id
+        const affaireConditions = reprendre ? affaireCourantePourStatut() : null
+        const cible = affaireConditions ? Number(affaireConditions.app_affaire_id)
+          : (!reprendre && neuveConditions != null && Number.isFinite(Number(neuveConditions))
+            ? Number(neuveConditions) : null)
         if (cible != null && (statusChangeConditions.length || conditionsChargeesPour === cible)) {
           await ecrireAffaireConditions(cible, statusChangeConditions)
         }
@@ -17737,8 +17748,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       // ⚠ SON PROPRE try/catch : une note qui echoue ne doit pas faire croire que
       //   les conditions ont echoue, ni l'inverse.
       try {
-        const affaireNote = affaireCourantePourStatut()
-        const cibleNote = affaireNote ? Number(affaireNote.app_affaire_id) : null
+        // ⑧ (23/10/2026) : meme cible que les conditions -- la transaction NEUVE a la creation.
+        const neuveNote = (job as { payload_json?: { app_affaire_id?: number | string | null } } | null)
+          ?.payload_json?.app_affaire_id
+        const affaireNote = reprendre ? affaireCourantePourStatut() : null
+        const cibleNote = affaireNote ? Number(affaireNote.app_affaire_id)
+          : (!reprendre && neuveNote != null && Number.isFinite(Number(neuveNote)) ? Number(neuveNote) : null)
         if (cibleNote != null && (statusChangeNote.trim() || noteChargeePour === cibleNote)) {
           await ecrireAffaireNote(cibleNote, statusChangeNote)
         }
