@@ -1574,3 +1574,31 @@ prouverait pas la correction `941cb70`.
 **Le nettoyage — chaque geste avec l'accord de Frédéric** : supprimer la vente puis le compromis (gestes de l'app) ; l'offre acceptée
 **reste** (Hektor la fige) ; retirer la clôture locale du mandat 18787 (écriture en base, sauvegarde datée) ; le contact d'essai
 (archiver ou garder) ; vérifier `diffusable = 0` à la fin. ⚠ Nettoyer **avant** la nuit empêche l'étape 6.
+
+### ✅ L'ESSAI COMPLET JOUÉ EN RÉEL — 23/10, 09:32-09:46, après le push et le redémarrage (processus nés à 11:26, front `index-BvDwv-Gq.js`)
+| étape | résultat |
+|---|---|
+| 1 contact | **20000011 ↔ 605963**, tous les champs saisis (2 téléphones, adresse, naissance, lieu, situation, source, note), **0 recherche**, e-mail RGPD coupé ; contrôle au retour **10/10 identiques** ; 1 seule fiche. ⚠ « doublon possible » : j'avais repris le téléphone du contact d'essai 20000010 — la garde a joué, aucune fusion |
+| 2 offre **33110** (1001378) | au clic le registre porte tout ; R3 : montant, date, validité **retirés** (registre égal) ; **honoraires 5 000 et taux 4,17 gardés « arrivée »** (⭐ 1ʳᵉ preuve des honoraires d'une offre) ; la modale « Modifier » montre **validité 15** |
+| 3 acceptée | `change_hektor_offre_status` done, registre `accepted` |
+| 4 compromis **50131** (1001379) | **même chaîne 1001378 dès le clic** ; fin de rétractation 06/11 (date + 14) au clic ; R3 : 6 retirés, **rétractation 14, honoraires, taux gardés** ; la modale montre **14** ; Hektor : « toutes les personnes envoyées gardées » |
+| 5 vente **23354** (1001380) | **même chaîne 1001378** ; Vendu chez Hektor ; mandat 18787 **clos chez nous** (`mandat_date_cloture_app = 2026-10-23`), pas chez Hektor ; `diffusable 0` ; R3 : 3 retirés, 3 gardés |
+| 6 nuit | ⏰ demain matin : adoption sans doublon, **chaîne gardée par le recalcul de nuit**, notaire et mandat jugés |
+
+### ⚠ Ce que l'essai a trouvé
+- **F1 — un défaut de R3, le mien** : le carnet range le **prix de vente** sous le nom `prix_publique` ; R3 le compare au **prix public** de Hektor
+  → faux « conflit » sur 50131 (115 000 contre 120 000), dès que des honoraires acquéreur séparent les deux prix. ⛔ **L'ancien worker
+  l'avait déjà réglé** : la preuve de modification ne juge qu'UNE fois `amount`/`sale_price` (même champ Hektor) et le « jumeau » ne
+  retire `prix_publique` que s'il vaut le montant. R3 a récrit sa propre table (`R3_SOURCES`) au lieu de reprendre `CHAMPS_PROUVABLES`
+  et la règle du jumeau — « deux copies d'une règle divergent ». Correction proposée : reprendre la règle existante.
+- **F2** — à la vente, l'acquéreur part sous le numéro de **Hektor** (605963, écrit au registre par le report) et la qualification
+  ne cherche que **notre** numéro → « contact inconnu de notre base » (sans effet ici : il était déjà acquéreur). La recherche par
+  `hektor_target_id` manque (préexistant, 18/09) ; le report à la création le rend immédiat.
+- **F3** — le mécanisme « contact sans recherche » **n'a pas été exercé** : créé « Acquéreur », le contact l'est déjà chez Hektor.
+  Pour l'éprouver : un contact créé « Propriétaire ».
+- **F4** — du compromis à partir de l'offre, le **mandant** et le **notaire du vendeur** ne sont pas repris (R1 n'écrit pas les
+  notaires d'une offre) ; le **prix de vente** est prérempli avec le prix du mandat.
+- **F5** — en modification d'offre, la modale ne montre pas la commission `_app` (8 000) ni la charge (« acquéreur ») ; rien n'est perdu.
+- **F6** — R1 laisse `notaires_origine` vide sur le compromis et la vente ; à mesurer cette nuit (`registre_depuis_console`).
+- **F7** — sur une offre, le notaire est envoyé mais R3 le dit « sans objet ».
+- ⏰ **Le nettoyage attend la preuve de nuit** (étape 6) : vente, compromis, clôture locale du mandat 18787, contacts 20000007/8/9/10/11.
