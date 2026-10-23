@@ -2198,3 +2198,23 @@ dans la base comme pour l'offre (refus dans `app_modifier_affaire_optimistic` et
 chaîne porte une vente vivante : patch, accord requis). Elle remplace la piste A pour les gestes Hektor.
 ⚠ **Reste à trancher** : après la vente, la répartition / les conditions / la note / la charge (à nous seuls) restent-elles modifiables
 « dans l'app » sans toucher Hektor, ou faut-il, là aussi, supprimer la vente d'abord ?
+
+## 34. V CODÉ (le compromis verrouillé par sa vente) + la charge + le nom du notaire — 23/10, commit local — ⛔ V PAS POSÉ
+
+Décision de Frédéric : *« Non : après la vente tout est verrouillé ; pour modifier quoi que ce soit sur le compromis, il faut d'abord
+supprimer la vente. »* (la piste A « Enregistrer dans l'app » est abandonnée).
+- **Base** : `supabase/patch_v_compromis_verrouille_2026-10-23.sql` (+ `_INVERSE`, `_REPETITION`), générateur
+  `phase2/checks/gen_patch_v_compromis_verrouille.py`. Gestes 20eeca7c → **a6569229**, modification 43247de7 → **910e7947**.
+  Interrupteur `compromis_verrouille_par_vente`, posé éteint. **Répétition : 8/8** (éteint → accepté = le défaut ; allumé : modifier,
+  annuler, supprimer le compromis → refusés « compromis_verrouille … supprimer la vente » ; modifier la vente → accepté ; le verrou de
+  l'offre répond toujours ; une vente effacée chez Hektor ne verrouille plus ; l'inverse rend les deux empreintes). Vérifié après :
+  rien n'est resté.
+- **Écran** : `compromisVerrouilleParSaVente` ; bandeau « On ne revient plus sur ce compromis… Pour y revenir, il faut d'abord supprimer
+  la vente » ; « Modifier la transaction », « Annuler / Supprimer le compromis » retirés tant que la vente existe.
+- **Charge** : la reprise de l'offre pose la charge **même sans commission vendeur** (création du compromis et de la vente, jamais
+  par-dessus un choix).
+- **Nom du notaire** : `loadNomsContacts` (par nos DEUX numéros) — la carte (repli après le registre et la lecture de l'assistant) et
+  la modale (quand le numéro arrive sans nom ; il part alors avec le compromis, R1 le garde).
+- Essai rubrique **25/25** (témoin inverse : les 3 nouveaux échouent sur la version d'avant), build vert.
+- ⚠ Non éprouvé hors ligne : la reprise de la charge et le nom dans la modale (effets du composant) — au prochain essai réel.
+- **Pour activer** : poser V (accord), allumer l'interrupteur, pousser (écran seul : pas de redémarrage).
