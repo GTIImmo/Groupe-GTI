@@ -965,3 +965,15 @@ Supabase). ➡ **Le défaut dormait depuis le 24/09** : la règle n'avait jamais
 - **C** **arrêter la propagation** : `pousser_numeros_contact.py` ne doit jamais envoyer un numéro < 20 M pour une identité
   ≥ 20 M — et **remettre 20000007** chez Supabase (écriture en production).
 - ⏰ **Urgence** : sans rien faire, la nuit prochaine écrit probablement 10650807 / 10650808 sur 20000008 / 20000009.
+
+### ⛔ CORRECTION DE L'AUDIT CI-DESSUS — Frédéric avait raison *(« le worker crée le contact tout de suite, puis récupère l'id Hektor, il a 2 numéros comme avant, non ? qu'est-ce qui a changé ? »)*
+- **Rien n'a changé dans la création.** Depuis le **21/09** (L4-b, `28b2fbd`), `app_create_contact_optimistic` donne **toujours**
+  l'identité à la naissance (`app_contact_identite_seq`), interrupteur ou pas ; le worker crée chez Hektor et rapporte le
+  numéro → **deux numéros**, comme avant. **8a pièce 1 n'a ajouté que les autres champs.** Mon « depuis le 21/10 » était FAUX.
+- **Mon exemple « d'avant » était faux aussi** : 10650570 (605717, KURCEBA) est un contact **créé dans Hektor**, pas dans l'app.
+- **Ce qui est vrai, mesuré** : le distributeur a été placé à **20 000 000 le 22/09** et n'a donné que **9 numéros** en un mois.
+  Créations de contact **par l'app** : 2 le 18/09, 2 le 21/09 (10000001/2, des essais, supprimés), puis **AUCUNE du 22/09 au
+  20/10**, puis nos essais du 21-22/10 (20000006 à 20000009). Les négociateurs créent leurs contacts **dans Hektor**.
+- ➡ **La nuit n'avait JAMAIS vu un contact né dans l'app avec une identité ≥ 20 000 000** avant celle du 22/10 (20000007).
+  Le défaut du registre local est **ancien** (règle du 24/09) ; **nos essais l'ont simplement déclenché pour la première fois.**
+  Le reste de l'audit (la cause, la propagation sur 20000007, les pistes A/B/C) est inchangé.
