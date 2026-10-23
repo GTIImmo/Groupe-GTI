@@ -1203,3 +1203,15 @@ report, aucun verdict. Les lignes `creation_app` restent au carnet **sans verdic
 - **Le quota de Hektor** : +1 lecture par offre créée.
 - **Essais** : hors ligne (comme `test_seconde_preuve.js`), puis réel : un compromis sur VA6482 et une offre sur le bac à
   sable 62774 → lignes « arrivée » retirées, registre complété.
+
+### R3 et la coupure *(Frédéric, 23/10 : « R3 crée une dépendance à Hektor ? mon système survivra-t-il à la coupure ? »)*
+- **R3 n'ajoute pas de dépendance** : il ne s'exécute **qu'après** un travail réussi chez Hektor, pour **constater**. Il ne
+  bloque rien et n'est jamais attendu : depuis **R1**, toute la saisie est au registre **dès le clic**. Sans réponse de Hektor,
+  R3 ne tourne simplement pas.
+- **La règle à tenir en le codant** : « pas de réponse de Hektor » ne doit **jamais** devenir un conflit, une alarme ou une
+  attente qui bloque. R2 / R3 / R4 sont un mécanisme **de la période de transition** (deux systèmes vivants) : à la coupure, **un
+  interrupteur** les endort (plus de travail vers Hektor, plus d'import de nuit, le carnet n'a plus rien à attendre).
+- **Ce qui casserait à la coupure AUJOURD'HUI, indépendamment de R3** (déjà notés, « à part, pour la coupure ») :
+  **T1** — le worker défait l'état quand Hektor ne répond pas (décision du 29/08) ; **T3 / D7** — modifier une transaction
+  **sans numéro Hektor** est refusé (`modification_sans_numero_hektor`) ; et le **travail de création** resterait « en cours »
+  sans worker. Plus, hors transactions : la diffusion portails et la signature (note de stratégie du 01/07).
