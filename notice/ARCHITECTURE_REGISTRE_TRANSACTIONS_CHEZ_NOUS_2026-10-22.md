@@ -2402,3 +2402,10 @@ Données d'essai **justes cette fois** : honoraires d'UN seul côté — **5 000
 **Bilan** : les trois défauts de l'essai 4 (charge, nom du notaire, compromis modifiable après la vente) sont **corrigés et prouvés en
 réel**, avec le notaire du vendeur gardé sur l'offre (N). ➡ **Le chantier du registre (⑧) est fini côté transactions**, sous réserve de
 la preuve de nuit sur la chaîne 1001393. Suite décidée par Frédéric : **le problème des types de contacts** (§37-39).
+
+**Diffusion remise à 0 (23/10, ~19:55, accord de Frédéric : « fais-le »)** — vérifié par l'API Hektor : `diffusable = 0`, statut Vendu.
+⚠ **Le bouton de l'app ne marche pas sur un bien VENDU** : Pilotage → Diffusion → « Désactiver » est cliquable, mais **aucune requête
+ne part et aucun message ne s'affiche** (`handleSetSelectedDossierDiffusable`, App.tsx ~18758, sort sans rien dire quand
+`selectedDossier` est vide — un bien vendu n'est plus dans `app_dossier_current`). Un **échec silencieux** (famille du chantier ④).
+Fait donc par la fiche Hektor (icône « Diffuser ou non ce bien »). Notre fiche reprendra la valeur à la nuit.
+Au passage, l'en-tête Hektor de VA6482 dit « Propriétaire : M. ESSAI 8 CINQ » : Hektor tient l'acheteur pour LE propriétaire (§37-39).
