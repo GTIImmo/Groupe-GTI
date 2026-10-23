@@ -15075,6 +15075,12 @@ const REGISTRE_PAR_HEKTOR = {
   dateStart: ["date"],
   date: ["date"],
   dateSignatureActe: ["date_acte"],
+  // A1 (23/10/2026, chantier 8) : LA FIN DE RETRACTATION, relue chez Hektor (compromis seul : dateEnd).
+  // La nuit l'ecrit deja depuis le miroir (affaire_ledger.py) ; le retour l'ecrit tout de suite. Sans elle,
+  // une ligne de retractation absente du carnet faisait retomber la modale a « 10 » -- envoye a Hektor a
+  // la modification suivante. La modale se replie desormais sur (fin - date). La colonne existe : R1
+  // l'ecrit au clic, donc ce PATCH ne peut pas etre refuse pour une colonne inconnue.
+  dateEnd: ["date_fin_retractation"],
 };
 
 // ═══ 3.1 -- LE VERDICT SUR CE QUI RESTE AU CARNET ═══            16/09/2026

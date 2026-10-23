@@ -17000,7 +17000,18 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     // retombait a « 10 », et la modification suivante, meme d'un autre champ, l'envoyait a Hektor.
     const validite = String(carnet.jours_validite ?? '').trim() || texte(affaire.jours_validite).trim()
     if (validite) setStatusChangeValidityDays(validite)
-    const retractation = String(carnet.jours_retractation ?? '').trim()
+    // A1 (23/10, chantier 8) : le REGISTRE en repli -- (fin de retractation - date), en jours, comme la
+    // grille (« jusqu'au … »). Sans ligne au carnet (retractation arrivee, ou compromis ne chez Hektor :
+    // 47 actifs ont autre chose que 10 jours), la case retombait a « 10 » et la modification suivante,
+    // meme d'un autre champ, l'envoyait a Hektor. Hors de 1 a 365 jours : on ne devine pas, « 10 » reste.
+    const retractationRegistre = (() => {
+      const debut = Date.parse(texte(affaire.date).slice(0, 10))
+      const fin = Date.parse(texte(affaire.date_fin_retractation).slice(0, 10))
+      if (!Number.isFinite(debut) || !Number.isFinite(fin)) return ''
+      const jours = Math.round((fin - debut) / 86400000)
+      return jours >= 1 && jours <= 365 ? String(jours) : ''
+    })()
+    const retractation = String(carnet.jours_retractation ?? '').trim() || retractationRegistre
     if (retractation) setStatusChangeRetractionDays(retractation)
     // ─── LES ACQUEREURS, DEPUIS LE REGISTRE ───   2.6, 16/09/2026
     //
