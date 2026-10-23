@@ -21486,11 +21486,14 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
     // la MEME transaction : ecrit_le = created_at, a la microseconde (now() est fige).
     const travaux = await supabaseRequest(
       "app_console_job?job_type=eq.change_hektor_annonce_status"
-      + `&hektor_annonce_id=eq.${encodeURIComponent(annonce)}&select=status,created_at`,
+      + `&hektor_annonce_id=eq.${encodeURIComponent(annonce)}&select=id,status,created_at`,
       { method: "GET" });
     const etatDuTravail = (ecritLe) => {
       const t = Date.parse(ecritLe || "");
       const j = (Array.isArray(travaux) ? travaux : []).find((x) => Date.parse(x.created_at) === t);
+      // 23/10, essai reel du compromis 50130 : a la creation, le travail qui appelle ce controle
+      // est LUI-MEME encore « running » -- il ne doit pas s'empecher de juger ses propres lignes.
+      if (j && job && String(j.id) === String(job.id)) return "done";
       return j ? r3Texte(j.status) : "";
     };
 

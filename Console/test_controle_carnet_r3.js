@@ -185,7 +185,16 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
       verdictDe(m, "30712:prix_publique") === "sans_objet", JSON.stringify(m.patches));
   }
   {
-    const m = monter({ registres: [REG_50129], lignes: [L("montant", "135000")], travaux: [{ status: "pending", created_at: ECRIT }],
+    // ESSAI REEL du 23/10 (compromis 50130) : a la creation, le travail qui appelle le controle est
+    // LUI-MEME « running ». Il jugeait 0 ligne ; ses propres lignes doivent etre jugees.
+    const m = monter({ registres: [REG_50129], lignes: [L("montant", "135000")],
+                       travaux: [{ id: JOB.id, status: "running", created_at: ECRIT }] });
+    await m.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: CHEZ_50129, force: true });
+    controle("(10a) a la creation, le travail lui-meme « running » juge SES lignes", m.supprimes.includes("1001375:montant"),
+      JSON.stringify({ s: m.supprimes, p: m.patches }));
+  }
+  {
+    const m = monter({ registres: [REG_50129], lignes: [L("montant", "135000")], travaux: [{ id: "un-autre", status: "pending", created_at: ECRIT }],
                        api: { "compromis:50129": { trouve: true, details: CHEZ_50129 } } });
     await m.contexte.controler(JOB, "24113");
     controle("(10) travail ENCORE EN COURS -> on ne juge pas", !m.patches.length && !m.supprimes.length);
