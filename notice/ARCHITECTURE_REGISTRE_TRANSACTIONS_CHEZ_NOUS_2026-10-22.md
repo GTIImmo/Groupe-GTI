@@ -1530,3 +1530,19 @@ LA FOIS la liste d'attente et la seule mémoire de 5 champs (règle du 16/09).
 - **D** : sans limite pour l'instant (décision à Frédéric).
 - **Hors de cette correction, notés** : la modification n'écrit pas au registre (R1 incomplet) ; rétractation / prix public
   préremplis rangés sur une offre ; le « 10 » des 47 compromis nés chez Hektor ; le faux « conflit » de notaire.
+
+### ✅ ÉTAPES 1 À 7 CODÉES ET ÉPROUVÉES HORS LIGNE — 23/10 *(Frédéric : « vas-y »)* — commit `941cb70`, **non actif**
+- **Worker** (`controlerLeCarnet`, `marquerLeCarnetRestant`) : la règle de sortie (registre égal, table `CARNET_VERS_REGISTRE`,
+  la même que l'ancien verdict) ; **B** (ligne réécrite après son verdict → rejugée, même « arrivée ») ; **C** (l'ancien verdict
+  laisse à R3 les champs sans colonne) ; **E** (`R3_ORIGINES_JUGEES` : création et modification seulement). Le journal dit
+  « N retirées, M gardées ».
+- **Écran** (App.tsx ~16998) : la validité se replie sur `jours_validite` du registre.
+- **Essais** : `Console/test_controle_carnet_r3.js` **36/36** (dont 11 neufs : les 5 champs gardés, registre différent → gardée,
+  B, E, C avec son témoin éteint). **Témoins inverses** : la version en service (`origin/main`) échoue **12** contrôles, celle
+  d'avant ce commit **11**. **Mutants** : retrait sans regarder le registre, sans colonne → on se fie à Hektor, B absent, E absent,
+  C absent → **5 attrapés** (un 6ᵉ était équivalent : écarté). `npm run build` vert. Fins de ligne : `\r\r\n` = 0 partout.
+- ⚠ **Non éprouvé** : le chemin réel (un compromis créé par l'écran) — c'est l'étape 9. ⚠ Remarqué en codant, **noté** : le
+  notaire saisi à la création garde `notaires_origine = 'saisie'`, que la nuit ne réécrit pas ; R3 risque donc de comparer le
+  notaire **à lui-même** (« arrivée » sans preuve). Sans conséquence sur le carnet désormais (le notaire reste), à mesurer
+  demain matin avec la preuve de nuit.
+- ➡ **Pour l'activer** : pousser, puis redémarrer les 4 services, file vide (Frédéric). L'écran part avec le push (Vercel).
