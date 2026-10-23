@@ -15889,8 +15889,13 @@ async function qualifierAcquereursAvantTransaction(job, payload, target, annonce
   let contacts = [];
   try {
     contacts = await supabaseRequest(
-      `app_contact_current?select=hektor_contact_id,typologies_json`
-      + `&hektor_contact_id=in.(${ids.map((x) => encodeURIComponent(x)).join(",")})`,
+      // 23/10 (essai reel, vente 23354) : l'acquereur d'une vente HERITE du registre, ou il porte le
+      // numero de HEKTOR (605963) ; nos fiches sont rangees par NOTRE numero (20000011) depuis fin
+      // septembre. On cherche donc par les DEUX -- le patron de 8a-B2. Le 18/09 ca marchait : les fiches
+      // portaient encore les numeros de Hektor.
+      `app_contact_current?select=hektor_contact_id,hektor_target_id,typologies_json`
+      + `&or=(hektor_contact_id.in.(${ids.map((x) => encodeURIComponent(x)).join(",")}),`
+      + `hektor_target_id.in.(${ids.map((x) => encodeURIComponent(x)).join(",")}))`,
       { method: "GET" });
   } catch (erreur) {
     await logJob(job.id, "hektor_qualification_acquereur", "error",
@@ -15898,7 +15903,11 @@ async function qualifierAcquereursAvantTransaction(job, payload, target, annonce
         error: erreur && erreur.message ? erreur.message : String(erreur) });
     return [];
   }
-  const parId = new Map((Array.isArray(contacts) ? contacts : []).map((c) => [String(c.hektor_contact_id), c]));
+  const parId = new Map();
+  for (const c of (Array.isArray(contacts) ? contacts : [])) {
+    parId.set(String(c.hektor_contact_id), c);
+    if (r3Texte(c.hektor_target_id)) parId.set(String(c.hektor_target_id), c);
+  }
   const aQualifier = [];
   for (const id of ids) {
     if (dejaFaites.has(id)) {
@@ -21376,7 +21385,11 @@ const R3_ORIGINES_JUGEES = new Set(["creation_app", "modification_app"]);
 // Un genre absent de la table -> « sans_objet ».
 const R3_SOURCES = {
   montant:            { compromis: ["prixPublique"], vente: ["prix"], offre: ["montant"] },
-  prix_publique:      { compromis: ["prixPublique"], vente: ["prix"] },
+  // F1 (23/10, essai reel du compromis 50131) : sous ce nom le carnet range le PRIX DE VENTE (la cle
+  // `sale_price`), pas le prix public. Sur un compromis, Hektor ne le rend pas : on le DEDUIT (voir
+  // « @prixDeVente »). Le comparer a prixPublique fabriquait un faux « conflit » des que des honoraires
+  // acquereur separent les deux prix (115 000 contre 120 000).
+  prix_publique:      { compromis: ["@prixDeVente"], vente: ["prix"] },
   // L'offre : la DATE DE L'OFFRE (relue la nuit) d'abord, la date de sa derniere proposition
   // ensuite. 23/10, premier passage reel : l'offre 33094 date du 06/10, sa derniere proposition
   // du 30/09 -- la seule date de proposition aurait juge faux une date jamais changee.
@@ -21393,6 +21406,18 @@ const R3_SOURCES = {
                         offre: ["@registre:numero_mandat"] },
   notaire_id:         { compromis: ["@notaire"], vente: ["@notaire"] },
   taux_honoraires:    { compromis: ["@taux"], vente: ["@taux"], offre: ["@taux"] },
+};
+
+// CE QUE R3 NE CONTROLE PAS -- declare ici, avec la decision qui le fonde (« une exclusion se declare »).
+// A l'OFFRE, ces valeurs sont GARDEES CHEZ NOUS : les controler a la relecture n'a pas de sens.
+//   honoraires        16/10 (lots 1b-1c) : « a l'offre, Hektor n'a aucune destination » -> nos colonnes
+//                     `honoraires_sortie_app` ; au compromis et a la vente, ils partent et se controlent.
+//   taux_honoraires   03/09 (1.2) : classe A, « Hektor n'a aucune destination ».
+//   notaire_id        16/09 : pour une offre, « PERSONNE » ne relit le notaire (ni API ni assistant).
+// ⚠ Le worker les ENVOIE encore dans le corps de l'offre (code d'avant le 16/10) : arreter cet envoi
+//   est une decision de Frederic, pas l'affaire de ce controle.
+const R3_NON_CONTROLES = {
+  offre: new Set(["honoraires", "taux_honoraires", "notaire_id"]),
 };
 
 function r3Texte(v) { return v == null ? "" : String(v).trim(); }
@@ -21416,6 +21441,20 @@ function r3Relue(ligne, genre, chez, registre, ctx) {
       if (!nuitPassee) continue;
       const t = r3Texte(registre[s.slice(10)]);
       if (t) return t;
+      continue;
+    }
+    if (s === "@prixDeVente") {
+      // L'invariant de Hektor (affaire_ledger.py) : prix public = prix de vente + honoraires de SORTIE
+      // -- la formule meme que le worker pose en modification (prixDeVente = montant - honoraires
+      // acquereur). Sans honoraires relus, on ne deduit rien : « pas encore lisible ».
+      const direct = chez ? r3Texte(chez.prixDeVente) : "";
+      if (direct) return direct;
+      const pub = Number(r3Texte(chez && chez.prixPublique).replace(",", "."));
+      const brutSortie = r3Texte(chez && chez.honorairesSortie);
+      const sortie = Number(brutSortie.replace(",", "."));
+      if (brutSortie && Number.isFinite(pub) && pub > 0 && Number.isFinite(sortie) && sortie >= 0) {
+        return String(pub - sortie);
+      }
       continue;
     }
     if (s === "@retractation") {
@@ -21489,6 +21528,8 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
     const maintenant = Date.now();
     const aJuger = (Array.isArray(lignes) ? lignes : []).filter((l) => {
       if (!R3_ORIGINES_JUGEES.has(r3Texte(l.origine))) return false;            // E
+      const exclus = R3_NON_CONTROLES[r3Texte((parId.get(String(l.app_affaire_id)) || {}).kind)];
+      if (exclus && exclus.has(r3Texte(l.champ))) return false;                // gardes chez nous
       // B (23/10) : une ligne REECRITE apres son verdict se rejuge, quel que soit son etat. La RPC de
       // modification ne remet pas l'etat a blanc : une ligne gardee « arrivee » (le taux) puis
       // modifiee porterait sinon « arrivee » sur une valeur jamais envoyee.

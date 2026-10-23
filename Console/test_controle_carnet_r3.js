@@ -307,6 +307,39 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
       m2.patches.filter((p) => p.etat === "inconnu").length === 2, JSON.stringify(m2.patches));
   }
   {
+    // F1 -- ESSAI REEL du compromis 50131 (23/10) : 120 000 de prix public, 5 000 d'honoraires acquereur,
+    // donc 115 000 de prix de vente -- que le carnet range sous `prix_publique`.
+    const chez = { ...CHEZ_50129, prixPublique: "120000.00", honorairesSortie: "5000.00" };
+    const m = monter({ registres: [REG_50129_RELU], lignes: [L("prix_publique", "115000")], travaux: [{ status: "done", created_at: ECRIT }] });
+    await m.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez, force: true });
+    const m2 = monter({ registres: [REG_50129_RELU], lignes: [L("prix_publique", "110000")], travaux: [{ status: "done", created_at: ECRIT }] });
+    await m2.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez, force: true });
+    const m3 = monter({ registres: [REG_50129_RELU], lignes: [L("prix_publique", "115000")], travaux: [{ status: "done", created_at: ECRIT }] });
+    await m3.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: { ...chez, honorairesSortie: undefined }, force: true });
+    controle("(20) F1 : prix de vente 115 000 = 120 000 - 5 000 -> « arrivee » (plus de faux conflit), la ligne reste",
+      verdictDe(m, "1001375:prix_publique") === "arrivee" && !m.supprimes.length, JSON.stringify(m.patches));
+    controle("(20) ... un VRAI ecart (110 000) reste un « conflit »", verdictDe(m2, "1001375:prix_publique") === "conflit", JSON.stringify(m2.patches));
+    controle("(20) ... sans honoraires relus, on ne deduit rien : « en_attente »", verdictDe(m3, "1001375:prix_publique") === "en_attente", JSON.stringify(m3.patches));
+  }
+  {
+    // A L'OFFRE, honoraires / taux / notaire sont GARDES CHEZ NOUS : R3 ne les controle pas (offre 33110).
+    const reg = { app_affaire_id: 1001378, kind: "offre", hektor_affaire_id: "33110", last_seen_at: ECRIT,
+                  montant: "120000", date: "2026-10-23", jours_validite: "15" };
+    const O = (c, v) => ({ ...L(c, v), app_affaire_id: 1001378 });
+    const m = monter({ registres: [reg], travaux: [{ status: "done", created_at: ECRIT }],
+      lignes: [O("montant", "120000"), O("honoraires", "5000"), O("taux_honoraires", "4.17"), O("notaire_id", "10064499")],
+      api: { "offre:33110": { trouve: true, details: { montant: "120000", validite: "15", dateProposition: "2026-10-23" } } } });
+    await m.contexte.controler(JOB, "24113", { appAffaireId: 1001378, chez: { honoraire_acquereur: "5000" }, force: true });
+    controle("(21) offre : honoraires, taux et notaire NE SONT PAS controles (aucune ecriture), le montant l'est",
+      !m.patches.some((p) => /:(honoraires|taux_honoraires|notaire_id)$/.test(p.cle))
+      && !m.supprimes.some((s) => /:(honoraires|taux_honoraires|notaire_id)$/.test(s))
+      && m.supprimes.includes("1001378:montant"), JSON.stringify({ s: m.supprimes, p: m.patches }));
+    const m2 = monter({ registres: [REG_50129_RELU], lignes: [L("honoraires", "9000"), L("taux_honoraires", "5")], travaux: [{ status: "done", created_at: ECRIT }] });
+    await m2.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: { ...CHEZ_50129, honorairesSortie: "9000.00", prixPublique: "180000.00" }, force: true });
+    controle("(21) ... TEMOIN : au COMPROMIS, honoraires et taux restent controles",
+      verdictDe(m2, "1001375:honoraires") === "arrivee" && verdictDe(m2, "1001375:taux_honoraires") === "arrivee", JSON.stringify(m2.patches));
+  }
+  {
     const m = monter({ erreur: true });
     let jete = false; let r = null;
     try { r = await m.contexte.controler(JOB, "24113"); } catch (_) { jete = true; }
