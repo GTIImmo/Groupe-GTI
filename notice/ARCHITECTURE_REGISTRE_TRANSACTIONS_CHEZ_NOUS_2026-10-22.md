@@ -2218,3 +2218,8 @@ supprimer la vente. »* (la piste A « Enregistrer dans l'app » est abandonnée
 - Essai rubrique **25/25** (témoin inverse : les 3 nouveaux échouent sur la version d'avant), build vert.
 - ⚠ Non éprouvé hors ligne : la reprise de la charge et le nom dans la modale (effets du composant) — au prochain essai réel.
 - **Pour activer** : poser V (accord), allumer l'interrupteur, pousser (écran seul : pas de redémarrage).
+- ✅ **V POSÉ EN PRODUCTION le 23/10 à 16:54 UTC, avec l'accord de Frédéric** : 5 contrôles OK (empreintes a6569229 / 910e7947, droits et
+  SECURITY DEFINER inchangés, interrupteur créé éteint), puis **interrupteur `compromis_verrouille_par_vente` allumé à 16:54:24 UTC**.
+  Retour arrière : `supabase/patch_v_compromis_verrouille_2026-10-23_INVERSE.sql` ; suspendre : l'éteindre.
+  ⚠ Le verrou en base est actif tout de suite ; l'écran (bandeau, boutons retirés) le sera après le push. D'ici là, un clic sur
+  « Modifier / Annuler / Supprimer » un compromis vendu reçoit le refus de la base.
