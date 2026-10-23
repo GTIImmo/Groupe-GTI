@@ -867,3 +867,38 @@ la ligne « Notaire acquéreur » de 1001375 doit montrer « Tiffany SELARL… �
 3. **allumer** l'interrupteur ;
 4. **essai réel** : une modification par l'écran sur une transaction d'essai, en touchant UN champ → au carnet, ce champ seul.
 Pas de redémarrage de service : le worker n'est pas touché.
+
+## 8. LA NUIT DU 23/10 — LE CHEMIN DE NUIT DE 1b, VÉRIFIÉ *(Frédéric : « le run est passé, fais la vérification »)*
+
+Run `GTI Quotidien` du 23/10 à 05:00, **code 0**. Mesures à 07:27 (lecture seule) :
+
+- ✅ **ADOPTÉE PAR L'ACQUÉREUR, SANS DOUBLON** : la ligne **1001375** porte maintenant **50129**, `present_in_hektor = true`,
+  état `active`, adoptée à 04:46:27. **Une seule ligne** pour 50129 au registre. ➡ **Le chemin de nuit de 1b est prouvé** :
+  sans 1b, la ligne portait notre identité 20000008 et la nuit aurait créé un doublon.
+- ✅ **Hektor a CONFIRMÉ la saisie du clic** : montant 135 000, date d'acte 15/02/2027, séquestre 6 000, net vendeur 126 000,
+  honoraires vendeur 9 000 — les mêmes. Les **mandants** sont arrivés (déduits du mandat par Hektor, comme prévu). Les deux
+  **notaires** sont les mêmes personnes, sous **leur numéro Hektor** : 122190 (= notre 10064499) et 300465 (= notre 10165291).
+- ⚠ **NOTÉ, PAS NOUVEAU** : `first_seen_at` passe à la date de la nuit d'adoption (22/10 21:47 → 23/10 04:46). Mesuré sur
+  les 6 dernières adoptions (depuis le 03/09) : **toujours ainsi**. Ce n'est pas 1b.
+- ⚠ **LE CARNET garde ses 11 lignes de création, sans verdict** — attendu : le contrôle au retour de la création, c'est R3.
+
+### ⚠⚠ TROUVAILLE : LA NUIT PERD LE LIEN VERS UN CONTACT CRÉÉ DANS L'APP
+- `app_contact_id` de 1001375 valait **20000008** (posé au clic par 1b) ; après la nuit il est **VIDE**.
+- Sur **tout** le registre : **28 644** lignes dont l'acquéreur est un contact de Hektor ont leur lien, **0 perdu**. La **seule**
+  ligne dont l'acquéreur est né dans l'app (≥ 20 000 000) l'a perdu : **1 sur 1**.
+- **La cause, mesurée** : la nuit cherche le lien dans la doublure **locale** `app_contact` (`affaire_ledger.py` ~l. 756).
+  Supabase connaît la paire (`20000008 → 605946`), la doublure locale **non** : elle porte `20000008` comme si c'était un
+  numéro de Hektor, **sans cible**, avec une identité **inventée 10650807**. ⚠ Elle ne contient **aucune** identité
+  ≥ 20 000 000.
+- **Ampleur aujourd'hui** : 3 contacts nés dans l'app (20000007, 20000008, 20000009, tous des essais). **Demain** : chaque
+  contact créé dans l'app (8a pièce 1, allumée le 21/10) qui deviendra acquéreur perdra son lien la nuit de l'adoption.
+- ⚠ **Non mesuré** : les autres lecteurs de la doublure locale (relations, recherches, push des contacts) — ils pourraient
+  avoir le même trou. **C'est un sujet d'IDENTITÉ, hors du point E** : à auditer, à décider par Frédéric.
+
+### ⚠ Et mon correctif du NOTAIRE ne couvre que la journée du clic
+Il compare le numéro du carnet (**notre** 10064499) à celui du registre : vrai **jusqu'à la nuit**. Après, le registre porte
+**celui de Hektor** (122190) : les numéros diffèrent, la ligne remontrerait 10064499. Pour couvrir aussi l'après-nuit, il faut
+comparer **la personne** (identité ↔ numéro Hektor, `app_contact_current`) — ou que R3 retire du carnet ce que Hektor a
+confirmé. **Non codé.**
+
+**Reste** : supprimer **50129** (et la ligne 1001375) par l'app — la preuve de nuit est faite. **Accord de Frédéric attendu.**
