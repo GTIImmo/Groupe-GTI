@@ -1098,3 +1098,24 @@ Rien ne tournait. Mesure seule identique à la copie, puis `--ecrire` → code 0
   sans cible, 605957 non relié. **Vraie base inchangée.**
 - ⏰ **Demain matin** : registre réel → 20000010 adopté vers 06:40 ; Supabase → 20000007 revenu à 20000007. Puis **supprimer
   les contacts d'essai** 20000007 / 20000008 / 20000009 / 20000010 (accord de Frédéric).
+
+## 11. LES NUMÉROS DE TRANSACTION ONT-ILS LE MÊME PROBLÈME ? — audit du 23/10 *(Frédéric)* — lecture seule
+**Non.** La transaction a été le **premier** objet « né dans l'app » (20/08) : son adoption a été construite **dès le départ**,
+et elle a déjà payé, et corrigé, le même genre de défaut.
+- **Deux séries qui ne se croisent pas** : la nuit (`affaire_ledger.py`) numérote **sous 1 000 000** (`PLAGE_RESERVEE_APP`,
+  plus haut aujourd'hui : **30 762**) ; l'app prend **la séquence Supabase** `app_affaire_id_app_seq` (≥ 1 000 000, dernière
+  valeur : **1 001 375**).
+- ⚠ **Le défaut a existé, du 27/08 au 01/09** : le run comptait « le plus grand + 1 » sur toute la table, a pris 1 000 008 →
+  1 000 312 pour 305 vieilles affaires Hektor, et la séquence de l'app est tombée sur des numéros pris (« duplicate key ») →
+  **aucune transaction créable depuis l'app pendant 5 jours**. **Corrigé le 01/09** (le run ne regarde plus que sous
+  1 000 000). Les **323** lignes d'août restées dans la plage de l'app sont **gardées par décision** (« un dossier ne perd jamais
+  son numéro »).
+- **L'adoption existe depuis le 25/08 (C.4)** : une transaction née dans l'app est **reprise** la nuit, par son **triplet**
+  (annonce, type, numéro Hektor — depuis le 02/09) ou, faute de numéro, par son **acquéreur** (une seule candidate). ✅
+  **Prouvée cette nuit** : 1001375 a gardé son numéro sous 50129.
+- **Mesuré le 23/10** : 0 ligne au-delà de la séquence (pas de collision possible) · 0 triplet en double · 8 transactions
+  nées dans l'app vivantes, **toutes** avec leur numéro Hektor, **0** sans numéro, **0** jumelle de nuit. Un seul cas à
+  regarder (61672) : **deux offres distinctes** du même acquéreur (33094 née chez Hektor le 06/10, 33098 née dans l'app le
+  13/10) — une ligne chacune, **pas un doublon**.
+- **Ce qui reste fragile, déjà connu** : l'adoption par l'acquéreur exige le **même numéro d'acquéreur** des deux côtés —
+  c'était le défaut 1 (corrigé par 1b, prouvé) ; et le **lien vers notre fiche contact** — le défaut 6 (corrigé aujourd'hui).
