@@ -2238,3 +2238,29 @@ il faut que la suppression de la vente annule la relation si c'est elle qui la c
   « Délier » : `executerRetraitMandant`), au journal du travail. Un acquéreur déjà propriétaire avant la vente est gardé.
   Non couvert : une vente supprimée depuis l'écran de Hektor (aucun travail chez nous).
 - **Tout de suite, au nettoyage** (accord) : délier les 4 acquéreurs d'essai de VA6482 **avant cette nuit**.
+
+## 36. AUDIT DU REGISTRE DES LIENS (`app_relation`) — comment il réagit aux changements — 23/10, lecture seule
+
+**Son autonomie** (relation_ledger.py, 30/09) : sa table, ses numéros (deux plages, celle de l'app ≥ 1 000 000), *delete-never*, le FAIT
+« propriétaire du bien » (mandant / propriétaire n'en sont que deux libellés). **Les acquéreurs n'y sont PAS, par décision** : ils vivent
+dans le registre des transactions. Mesure : **132 841 liens**, 132 793 présents chez Hektor, **48 sortis du miroir** (gardés), **2 retirés
+par l'app**, **3 nés dans l'app** ; dernier passage de nuit 04:48 UTC.
+
+| ce qui change | qui l'écrit | quand |
+|---|---|---|
+| lier un mandant depuis l'app | `app_link_mandant_optimistic` (patch « lien durable à la saisie ») | **au clic** |
+| créer un mandant dans l'app | `app_create_mandant_contact_optimistic` | **au clic** |
+| retirer un mandant depuis l'app | `app_unlink_mandant_optimistic` : `retire_le` au clic + travail « délier » chez Hektor | **au clic** |
+| un lien apparaît chez Hektor | la nuit (`relation_ledger.py`, depuis les propriétaires de Hektor) : ligne ajoutée | **la nuit** |
+| un lien disparaît chez Hektor | la nuit : `present_in_hektor = 0`, `absent_depuis` — **jamais supprimé** | **la nuit** |
+| un lien retiré par l'app que Hektor montre encore | la nuit le revoit mais **garde le retrait** (`retire_le` appartient à l'app ; le serveur s'aligne sur le cloud) | — |
+
+**Le cas de la vente** : Hektor inscrit l'acquéreur comme propriétaire → **cette nuit**, notre registre l'ajoutera comme « propriétaire du
+bien » ; supprimer la vente ne le retire pas chez Hektor → notre registre le gardera. ⇒ **Sans geste de l'app, notre registre recopie
+l'effet de Hektor** (crainte de Frédéric confirmée).
+
+**La correction proposée** (worker, à décider) : à « Supprimer la vente », pour chaque acquéreur de CETTE vente **qui n'était pas déjà lié
+au bien chez nous avant la vente**, prendre **le même chemin que « Retirer un mandant »** (`app_unlink_mandant_optimistic` : retrait au clic
+chez nous + délier chez Hektor). La nuit respecte alors le retrait, même si Hektor tardait. Un acquéreur déjà propriétaire avant est gardé.
+*(Option à trancher : à la CRÉATION de la vente, inscrire tout de suite l'acquéreur comme propriétaire chez nous, comme Hektor le fait —
+pour que le registre soit juste avant la nuit.)*
