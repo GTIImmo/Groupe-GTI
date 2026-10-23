@@ -1495,3 +1495,38 @@ l. 14090-14120), sauf le prix public et la rétractation d'une **offre** (prére
 | rétractation | compromis ✅ (10 si non touché) · offre : prérempli | en date de fin → calculée | arrivée · offre : sans objet | ❌ **gardé** |
 | taux | ✅ | ⛔ jamais | recalculé, **jamais** « conflit » | ❌ **gardé** |
 | notaire acquéreur | ✅ | pas à la relecture → le lendemain | en attente → arrivée (par la personne) | ❌ **gardé** |
+
+## 17. LE PLAN DE CORRECTION, ET LES CONTACTS / ANNONCES VÉRIFIÉS — 23/10 *(Frédéric : « redonne-moi les étapes, et vérifie si tes améliorations du registre des contacts n'ont pas fait la même chose »)*
+
+### Les contacts et les annonces (8a, 22/10) n'ont PAS fait la même erreur — vérifié dans les patchs et en base
+| pièce | où vit la saisie | efface-t-elle ? | ce que voit l'écran |
+|---|---|---|---|
+| 8a-B / B2 contact, modification et création (`8a5`, `8a6`) | table à part `app_contact_saisie_modif` | **non** (4 lignes, toutes gardées, « jugé ») | la valeur de Hektor + l'écart signalé (règle 2, voulu) ; naissance / lieu / situation **réinjectés**, prouvé en réel (20000006, 605925) |
+| 8a-A commentaire au clic (`8a4`) | la colonne, au clic | non | Hektor rend le commentaire ; il est jugé par 8a-B |
+| pièce 3 annonce née dans l'app (`8a3`) | table à part `app_annonce_saisie_naissance` | **non** | les champs « console seule » **reposés** sur la fiche (notre valeur si Hektor ne la rend pas) |
+| 8a-C annonce, modification (`8a7`) | table à part `app_annonce_saisie_modif` | **non** | la valeur de Hektor + l'écart signalé |
+⭐ **Leur dessin est le bon** : la saisie vit dans une table que **rien n'efface**, le contrôle **constate**, l'écran ne perd rien
+de ce que Hektor ne rend pas. **R3 est le seul à avoir retiré des lignes** — parce que le carnet des transactions, lui, est À
+LA FOIS la liste d'attente et la seule mémoire de 5 champs (règle du 16/09).
+
+### Les étapes de la correction
+1. **R3 — la règle de retrait** (`controlerLeCarnet`) : retirer une ligne **seulement si** verdict « arrivée » **ET** champ ayant
+   une colonne (`CARNET_VERS_REGISTRE` : montant, date, date d'acte, séquestre, net vendeur, honoraires vendeur, n° de mandat,
+   validité) **ET** registre égal à la saisie après le report. Sinon la ligne **reste**, étiquetée « arrivée ».
+2. **B** : R3 rejuge une ligne réécrite après son verdict (`ecrit_le > constate_le`) — devenu **indispensable** : une ligne de taux
+   gardée « arrivée » puis modifiée garderait sinon l'étiquette « arrivée » sur la nouvelle valeur.
+3. **C** : quand R3 est allumé, l'ancien verdict laisse à R3 les champs qu'il ne sait pas juger (sans colonne).
+4. **E** : R3 ne juge que `creation_app` et `modification_app`.
+5. **Écran** : la modale relit `jours_validite` au registre quand le carnet n'a plus la ligne (comme la grille depuis le 18/09).
+6. **Essais hors ligne** : les 5 champs « arrivée » restent · montant « arrivée » + registre égal → retiré · « arrivée » mais registre
+   différent → reste · ligne réécrite → rejugée · `saisie_app` ignorée · **témoin inverse** contre la version en service ·
+   mutants · `npm run build` · fins de ligne (`\r\r\n` = 0).
+7. **Commit local**, fichier par fichier.
+8. **Frédéric** : pousser (worker + écran), redémarrer les 4 services **file vide**.
+9. **Essai réel** (accord de Frédéric, sur VA6482) : un compromis avec taux et rétractation ≠ 10 → le carnet **garde** taux,
+   rétractation, prix public ; montant / date / date d'acte / séquestre **retirés** ; la modale montre les bonnes valeurs.
+   Puis nettoyage (⚠ la diffusion : vérifier `diffusable` avant / après).
+10. **La note et le plan** à jour.
+- **D** : sans limite pour l'instant (décision à Frédéric).
+- **Hors de cette correction, notés** : la modification n'écrit pas au registre (R1 incomplet) ; rétractation / prix public
+  préremplis rangés sur une offre ; le « 10 » des 47 compromis nés chez Hektor ; le faux « conflit » de notaire.
