@@ -2282,3 +2282,36 @@ pour que le registre soit juste avant la nuit.)*
 - **Piste (à décider)** : à l'import de nuit, un contact qui est **l'acquéreur d'une vente du bien** n'est **jamais** rangé comme
   propriétaire/mandant de ce bien (sauf s'il l'était déjà avant la vente) ; rattrapage des 115 liens actifs, marqués et non supprimés
   (*delete-never*). Chez Hektor : ne rien toucher, ou délier — à décider.
+
+## 38. AUDIT EN PROFONDEUR : depuis quand, et qui — « l'acquéreur rangé en propriétaire » — 23/10, lecture seule
+
+*(Frédéric : « ce n'est pas possible, audite vraiment en profondeur, vérifie aussi Hektor depuis le début ou juste juillet »)*
+
+**1. Chez Hektor, en direct** (`AnnonceById` → `proprietaires`, 40 ventes tirées au hasard, 8 par période) :
+
+| période de la vente | acquéreur présent dans les propriétaires du bien chez Hektor |
+|---|---|
+| avant 2025 (2012-2023) | **0 / 8** |
+| 2025 | **0 / 8** |
+| 2026 janvier-mai | **1 / 8** |
+| 2026 juin | **0 / 8** |
+| 2026 juillet-octobre | **7 / 8** |
+
+Quand il y est, sa typologie chez Hektor est « acquéreur, mandant ».
+
+**2. La date de bascule** (toutes les ventes du 15/06 au 31/07, croisées avec notre registre des liens) : jusqu'au **10/07/2026** l'acquéreur
+n'est presque jamais lié (2 exceptions, 30/06 et 02/07) ; **à partir du 17/07/2026, il l'est À CHAQUE VENTE** (25 sur 25 jusqu'au 31/07,
+puis août 10/10, septembre 32/32, octobre 18/19).
+
+**3. L'app n'y est pour rien** : aucun travail de l'app (ni vente, ni compromis, ni lien de mandant) sur les biens de l'échantillon
+juillet-octobre ; les 87 ventes concernées depuis juillet ont été faites **directement dans Hektor**.
+
+⇒ **C'est un changement côté Hektor, entre le 10 et le 17 juillet 2026** (nouvelle règle chez eux, ou nouvelle façon de saisir les ventes
+chez GTI — la donnée ne permet pas de trancher) : depuis, l'acquéreur entre dans les propriétaires du bien vendu. Avant, jamais.
+⇒ **Notre registre des liens le recopie chaque nuit** comme « mandant » : **133 liens** (115 actifs). Contraire à la règle de Frédéric
+(« l'acquéreur reste acquéreur pour toujours ; le propriétaire reste le mandant »).
+⇒ Nos 4 acquéreurs d'essai sur VA6482 : le même mécanisme, déclenché par nos 4 ventes d'essai.
+
+**À faire, à décider par Frédéric** : (a) la règle d'import — l'acquéreur d'une vente n'est jamais rangé propriétaire/mandant de ce bien
+(sauf s'il l'était avant la vente) ; (b) le rattrapage des liens déjà copiés (marqués, jamais supprimés) ; (c) chez Hektor : ne rien
+toucher, ou délier ; (d) avant tout : mesurer qui lit ces liens (rubrique Contact, registre des mandats, reporting, parties).
