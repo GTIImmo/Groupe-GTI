@@ -1619,3 +1619,33 @@ valeur-là. J'avais supposé l'inverse sans lire la RPC.
 | F5 | modale de modification sans la commission `_app` ni la charge | **ANCIEN** (lot 1c, 16/10) ; écran non touché |
 | F6 | `notaires_origine` vide | **PAS UN DÉFAUT** — voulu par R1 (voir ci-dessus) |
 | F7 | notaire d'une offre « sans objet » | **NOUVEAU, R3 (23/10, moi)** — la table de R3 ne donne pas de source au notaire d'une offre ; la ligne reste au carnet, l'étiquette est fausse |
+
+## 19. LES CHAMPS DE L'OFFRE QUI RESTENT CHEZ NOUS — audit du 23/10 *(Frédéric : « on a ajouté des champs à la modale de l'offre qui ne doivent pas être envoyés à Hektor, seulement conservés : donc pas contrôlés en relecture »)* — lecture seule
+
+| champ de la modale d'offre | ajouté le | décision | envoyé chez Hektor | au carnet | R3 le contrôle |
+|---|---|---|---|---|---|
+| charge de la commission | 16/10 (lot 1c) | « reste à nous PARTOUT » (14/10) | non | non (`charge_commission_app`) | **non** ✅ |
+| honoraires vendeur | 16/10 (lot 1c) | à l'offre « Hektor n'a aucune destination » → chez nous | non (« jamais l'offre ») | non (`honoraires_entree_app`) | **non** ✅ |
+| répartition | 14/09 | « UNIQUEMENT les répartitions ne sont pas envoyées » (Frédéric, 16/10) | non | non (`app_affaire_repartition`) | **non** ✅ |
+| note libre | 17/09 | « elle reste chez nous » | non | non | **non** ✅ |
+| **honoraires acquéreur** | modale d'origine ; chez nous à l'offre le 16/10 (`honoraires_sortie_app`) | à l'offre → **chez nous** (16/10) | ⚠ **oui** : le corps de l'offre pose encore `montantHonoraireSortie` (code d'avant le 16/10) | ⚠ oui (`honoraires`) | ⚠ **OUI — à tort** |
+| **taux d'honoraires** | 01/09 (B2) | **classe A** : « Hektor n'a aucune destination » (03/09) | ⚠ oui (`tauxHonoraireSortie`) | ⚠ oui | ⚠ **OUI — à tort** (recalculé) |
+| notaires (2) | 15/09 | **envoyés** exprès (« les deux notaires se désignent ») | oui | oui (`notaire_id`) | non (« sans objet ») — conservé par hasard |
+
+➡ **Frédéric a raison pour 2 champs** : à l'offre, les honoraires acquéreur et le taux sont des valeurs **gardées chez nous** ; R3 ne
+doit pas les contrôler. Les 4 champs ajoutés le 16/10 (charge, honoraires vendeur) et avant (répartition, note) ne sont déjà **ni
+envoyés ni contrôlés**.
+⚠ **Une contradiction à trancher, pas à supposer** : le 16/10 disait « Hektor ne garde RIEN à l'offre » (0 % sur 11 187 — mesure faite
+sur **notre registre**) ; aujourd'hui la **liste de Hektor** a rendu `honoraire_acquereur = 5 000` pour l'offre 33110. Hektor garde donc
+peut-être quelque chose, que notre nuit ne lit pas. Et le worker **envoie toujours** honoraires et taux à l'offre : arrêter de les envoyer
+est une **décision de Frédéric**, pas une correction.
+
+### F2 expliqué — l'acquéreur « inconnu » à la vente
+Le contact a deux numéros : **20000011** (le nôtre) et **605963** (celui de Hektor). La qualification (18/09) cherche l'acquéreur dans
+`app_contact_current` **par notre numéro seulement** (`hektor_contact_id=in.(…)`). Au compromis, la charge portait **20000011** (le
+registre de l'offre) → trouvé. Le retour du compromis a ensuite écrit au registre l'acquéreur **sous le numéro de Hektor** (605963, la
+norme). La vente, qui hérite du registre du compromis, est partie avec **605963** → pas trouvé → « inconnu de notre base », **pas de
+qualification**. L'ENVOI, lui, a marché (la porte `ciblesHektorContacts` reconnaît les deux numéros) et Hektor a gardé l'acquéreur.
+**Le risque** : un acquéreur qui n'est pas encore « acquéreur » chez Hektor serait **écarté en silence** de la vente (le défaut 1.4).
+**Ancien** : toute vente ou compromis créé APRÈS une nuit hérite de numéros Hektor. **Parade** : chercher aussi par `hektor_target_id`
+(le patron de 8a-B2).
