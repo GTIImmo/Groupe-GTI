@@ -1771,3 +1771,15 @@ par Pilotage, vérifié par `AnnonceById`.
 - **Ancien** : D9 existait avant R1 ; R1 a rendu le registre des transactions complet au clic, mais l'écran lit encore un résumé de nuit.
 - **Correction proposée (écran)** : les cartes et « Parties à l'affaire » se replient sur le **registre des transactions** quand le résumé de
   nuit n'a pas encore l'affaire ; le nom n'est plus doublé. ⏰ Et vérifier demain si la nuit ramène la ligne d'un bien VENDU.
+
+### Les cartes à moitié vides — lu dans le code (`ckAffaireDepuisChaine`, App.tsx ~27951) *(Frédéric, 23/10)*
+1. **Par construction** : la carte Compromis porte prix, net, dates, rétractation, séquestre ; la carte Vente prix, date, honoraires,
+   commission, notaires ; **aucune des deux n'a de ligne Acquéreur** (seule l'offre). La carte Compromis est **repliée** dès qu'une vente
+   existe (`open = compromis pas terminé`) : on n'en voit que l'en-tête. Le « net vendeur » de l'offre est vide **en dur** (`net: ''`).
+2. **Ce qui n'arrive que la nuit** : la commission agence HT et les notaires de la vente (l'API, relue la nuit), et le bloc « Parties à
+   l'affaire » (résumé du registre des mandats, D9).
+3. **La lecture console (notaires, honoraires vendeur, conditions) n'est prise que pour l'étape LA PLUS AVANCÉE** (`courante` = la vente) :
+   dès qu'une vente existe, la carte du compromis perd les notaires et les conditions du compromis.
+4. **Le nom doublé** : l'offre porte l'acquéreur sous NOTRE numéro (20000012), le compromis et la vente sous celui de HEKTOR (605967) ;
+   `affaireAcquereursDeChaine` les compte comme deux personnes → « X et X ».
+➡ Tout est **ancien** (l'écran n'a pas été touché par ⑧, sauf le repli validité / rétractation de la modale).
