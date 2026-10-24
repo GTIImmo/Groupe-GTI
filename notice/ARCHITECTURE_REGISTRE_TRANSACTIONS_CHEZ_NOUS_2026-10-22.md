@@ -2632,3 +2632,23 @@ les honoraires saisis — d'où la charge intacte) ; `R3_NON_CONTROLES` (5 champ
 du carnet (une ligne reste tant que le registre ne porte pas la même valeur) ; nos tables (répartition, conditions, notes).
 ➡ Le net de la vente **est gardé** (au carnet, `sans_objet`) ; c'est la **carte Vente** de la rubrique qui ne lit que le registre
 (`App.tsx` ~28402), quand la modale lit le carnet d'abord (~17001). Non corrigé.
+
+## 48. LA CARTE VENTE LIT LE CARNET ; L'ÉTAT DU COMPROMIS ; LES DEUX NUMÉROS DES NOTAIRES — 24/10
+
+**Carte Vente** (`4f26fe4`, écran seul, pas poussé) : « Prix net vendeur » = carnet d'abord, registre ensuite — comme la modale et le
+taux. Essais 30/30, témoin inverse : la version d'avant échoue le contrôle neuf ; build vert.
+
+**L'état du compromis — mesuré, lecture seule.** Au clic, la base écrit `en_cours` (affiché « enregistrée dans l'app ») ; la nuit le
+remplace par le mot de Hektor : `active` (« signé ») ou `cancelled` (« annulé »). Hektor n'a QUE ces deux états (status 1 / 2) ; la
+conclusion d'un compromis ne s'exprime que par l'existence d'une vente (15/09). Registre : compromis **9 263 active · 1 374 cancelled ·
+0 en_cours** (les 96 nés dans l'app sont tous passés `active`). **Tous les lecteurs** (dossiers ouverts 2.2c, verrou de l'offre, chaînage,
+`AFFAIRE_ETAT_MORT`) ne distinguent que **annulé / pas annulé** : `en_cours` et `active` valent « vivant ». ➡ Normal, comme avant ; seul
+le libellé change. (Même chose pour la vente : `en_cours` au clic, vide après la nuit — Hektor n'a pas d'état de vente — d'où le titre
+« Vente · état non renseigné », vrai aussi pour les 9 198 ventes venues de Hektor.)
+
+**Les deux numéros des notaires — mesuré.** La paire existe déjà, dans la fiche contact (`app_contact_current`) :
+10355906 ↔ 605227 (Me Eric PAILHES), 10064499 ↔ 122190 (Tiffany SELARL). Le registre n'en garde **qu'un** : le nôtre au clic, celui de
+Hektor après la nuit. L'écran nomme les deux (`loadNomsContacts`). ⚠ **Ce que ça casse** : R3 compare 10064499 à 122190, ne les reconnaît
+pas, et la ligne `notaire_id` du carnet reste **« en attente » pour toujours** (2 lignes aujourd'hui, compromis et vente de l'essai 5).
+Deux voies, **à trancher par Frédéric** : (a) R3 reconnaît le notaire **par la paire** (la règle « deux numéros, reconnaître par la plage »),
+rien en base ; (b) une **seconde colonne** au registre pour notre numéro, que la nuit ne touche pas (comme les colonnes `_app`).
