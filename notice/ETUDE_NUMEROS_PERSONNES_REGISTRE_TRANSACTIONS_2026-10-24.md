@@ -277,3 +277,43 @@ encore la liste sans `app_contact_id` jusqu'à la nuit suivante — l'ajouter da
 
 **Pour l'activer** : (1) Frédéric pousse ; (2) poser la pièce 1 (patch de base, accord) ; (3) ajouter `APP_AFFAIRE_PERSONNES_DEUX_NUMEROS=1`
 au `.env` du serveur (accord) — effet à la nuit suivante ; (4) contrôler le lendemain matin le journal de nuit et quelques transactions.
+---
+
+## 12. PIÈCE 3 — LES NOTAIRES SOUS NOTRE NUMÉRO, ET R3 JUGE SUR LA SOURCE DE HEKTOR — codée, éprouvée hors ligne, **éteinte / non déployée** — 24/10 *(Frédéric : « oui, prépare la pièce 3 »)*
+
+### 3a. La nuit — `phase2/sync/registre_depuis_console.py`
+Quand il a choisi le notaire de chaque côté (l'API pour la vente, la console pour le compromis — numéros de Hektor), le script le
+**traduit en notre numéro** par la doublure du serveur (`app_contact` : `hektor_target_id` → `app_contact_id`), **après** le comptage
+des contradictions API / console (qui compare deux numéros de Hektor) et **avant** la comparaison « neuf = ancien » (sinon chaque nuit
+réécrirait tout). Inconnu : le numéro de Hektor reste (reconnaissable à sa plage) ; on n'invente rien. Noms, origine, taux, unités : inchangés.
+Le journal le dit (« notaires sous NOTRE numéro : N » ou « ÉTEINT »).
+- **Interrupteur** : `APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO=1` dans `.env` (à part de celui de la pièce 2 : un interrupteur, un changement).
+  Absent = éteint. ⚠ Le script est en service dès qu'il est enregistré : il ne change rien tant que la ligne n'est pas posée.
+- **Essais** `phase2/checks/test_notaires_notre_numero.py` — **7/7** sur copies (lecture seule, jamais `--pousser`) : **témoin inverse**
+  (version d'avant = neuve éteinte, 31 103 lignes) ; allumée : aucune autre colonne ne bouge, chaque notaire change pour **notre numéro de
+  la même personne**, **23 340 traduits, 0 sans paire** ; **stable** : une seconde nuit n'a plus rien à écrire. **2 mutants attrapés**
+  (interrupteur ignoré, traduction supprimée).
+- Premier passage allumé : les 23 340 lignes s'écrivent, et le script les envoie lui-même à Supabase (`--pousser`, ses huit colonnes) —
+  c'est le rattrapage, la même nuit.
+
+### 3b. R3 — `Console/console_job_worker.js` (`@notaire`)
+R3 jugeait le notaire **sur la colonne du registre**, qui portait le numéro de Hektor. Une fois la colonne passée à **notre** numéro, il
+aurait comparé la saisie à elle-même (« arrivée » sans preuve). Il lit désormais **ce que Hektor porte** :
+- **vente** : `notaires_json` du registre (relu la nuit par l'API ; `entree` = acquéreur) — seulement une fois la nuit passée ;
+- **compromis** : `app_affaire_console.notaires_acquereur` (la lecture de l'assistant) — seulement si elle est **postérieure** à la saisie ;
+et compare **la personne** : notre saisie traduite par la fiche contact (ou déjà un numéro de Hektor). Indépendant de l'interrupteur 3a :
+la règle est juste avant comme après.
+- **Essais** `Console/test_controle_carnet_r3.js` — **47/47** (36 avant, dont (5) et (6) passés sur la console) : **(6b) le piège** — colonne
+  à notre numéro, rien lu chez Hektor → « en attente », pas « arrivée » ; **(6b') témoin inverse** : la règle d'avant disait « arrivée » sur le
+  même piège ; (6c) lecture de l'assistant antérieure → « en attente » ; (6d) vente, même personne → « arrivée » ; (6e) vente, autre notaire
+  (JSON en texte) → « conflit » ; (6f) vente avant la nuit → « en attente ».
+- ⚠ **Ne sert qu'après un redémarrage des 4 services, file vide** (Frédéric).
+
+### Ce que ça pourrait casser ailleurs
+L'écran nomme le notaire par ses deux numéros (`loadNomsContacts`) : rien à changer. La modale préremplit **notre** numéro, que le worker
+traduit avant l'envoi (C-9). Le classeur et les exports ne lisent pas ces colonnes. Le comptage des contradictions reste en numéros de Hektor.
+
+### Pour l'activer, dans l'ordre (chaque geste avec l'accord de Frédéric)
+1. pousser (worker, scripts, essais) ; 2. redémarrer les 4 services, file vide (R3 neuf) ; 3. ajouter
+`APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO=1` au `.env` du serveur — effet à la nuit suivante ; 4. le lendemain matin : le journal de nuit
+(« notaires sous NOTRE numéro ») et les deux lignes « notaire » en attente de l'essai 5, qui doivent passer « arrivée » à la relecture suivante.

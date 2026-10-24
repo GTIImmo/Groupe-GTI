@@ -149,6 +149,37 @@ def notaires_de_la_console(parties: Any, ids_acq: Any, ids_man: Any) -> dict[str
     return resultat
 
 
+def notaires_notre_numero_actif() -> bool:
+    """⑧ piece 3 (24/10/2026) : l'interrupteur, lu APRES `.env` (sans ecraser une variable deja posee).
+
+        APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO=1    le registre range NOTRE numero de notaire
+        (absent ou autre chose)                 comportement d'avant, a l'identique
+    """
+    for fichier in DEFAULT_ENV_FILES:
+        load_env_file(fichier)
+    return (os.environ.get("APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO") or "0").strip() == "1"
+
+
+def table_notre_numero(con: sqlite3.Connection) -> dict[str, str]:
+    """⑧ piece 3 : numero de Hektor -> NOTRE numero, par la doublure d'identite du serveur.
+
+    `app_contact` (356 649 lignes le 24/10) porte les deux numeros de chaque personne : c'est la MEME
+    table que la nuit emploie deja pour l'acquereur (G-10, affaire_ledger.py) et pour les listes
+    (piece 2). Elle porte aussi les 220 notaires que la vue des contacts de Supabase ne connait pas.
+    Absente : table vide -- on ne traduit rien, on n'invente rien.
+    """
+    table: dict[str, str] = {}
+    try:
+        for notre, cible in con.execute(
+                "SELECT app_contact_id, hektor_target_id FROM app_contact "
+                "WHERE app_contact_id IS NOT NULL AND hektor_target_id IS NOT NULL"):
+            if _texte(cible):
+                table[_texte(cible)] = _texte(notre)
+    except sqlite3.OperationalError:
+        return {}
+    return table
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -208,7 +239,13 @@ def main() -> int:
 
         resume = {"lues": len(miroir), "ecrites": 0, "inchangees": 0,
                   "protegees": 0, "sans_lecture": 0,
-                  "notaire_api": 0, "notaire_console": 0, "contradictions": 0}
+                  "notaire_api": 0, "notaire_console": 0, "contradictions": 0,
+                  "traduits": 0, "sans_traduction": 0}
+        # ⑧ piece 3 (24/10/2026) : « l'id Hektor pour communiquer avec Hektor, mon id app pour le
+        # registre » (Frederic). Allume, le registre range NOTRE numero de notaire ; celui de Hektor
+        # reste dans ses sources (notaires_json, app_affaire_console) et dans la fiche contact, d'ou le
+        # worker le tire avant chaque envoi (C-9). Etude : ETUDE_NUMEROS_PERSONNES_..._2026-10-24.md §12.
+        notre_numero = table_notre_numero(con) if notaires_notre_numero_actif() else None
         exemples: list[str] = []
         a_poser: list[tuple] = []
 
@@ -256,6 +293,21 @@ def main() -> int:
                     retenu[role] = ("", "")
             if retenu["acquereur"][0] or retenu["mandant"][0]:
                 resume["notaire_api" if origine == "api" else "notaire_console"] += 1
+            # ⑧ piece 3 : on traduit ICI -- APRES le comptage des contradictions, qui compare deux
+            # numeros de HEKTOR (API / console), et AVANT la comparaison « neuf = ancien » plus bas :
+            # traduire apres, ce serait reecrire toutes les lignes chaque nuit. Inconnu : on garde
+            # le numero de Hektor (reconnaissable a sa plage, < 10 000 000) -- on n'invente rien.
+            if notre_numero is not None:
+                for role in ("acquereur", "mandant"):
+                    ident, nom = retenu[role]
+                    if not ident:
+                        continue
+                    traduit = notre_numero.get(ident)
+                    if traduit:
+                        retenu[role] = (traduit, nom)
+                        resume["traduits"] += 1
+                    else:
+                        resume["sans_traduction"] += 1
 
             taux = _texte(lecture["taux_honoraire_entree"]) if lecture is not None else ""
             u_e = _texte(lecture["unites_entree_percent"]) if lecture is not None else ""
@@ -289,6 +341,12 @@ def main() -> int:
         print(f"   protegees (saisie humaine)       {resume['protegees']:>7}")
         print(f"   sans aucune source               {resume['sans_lecture']:>7}")
         print(f"   CONTRADICTIONS api/console       {resume['contradictions']:>7}")
+        # ⑧ piece 3 : on DIT ce qui a ete fait -- et qu'il est eteint, s'il l'est.
+        if notre_numero is None:
+            print("   notaires sous NOTRE numero        ETEINT (APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO)")
+        else:
+            print(f"   notaires sous NOTRE numero      {resume['traduits']:>7}"
+                  f"   (sans traduction, numero Hektor garde : {resume['sans_traduction']})")
         for exemple in exemples:
             print(f"      {exemple}")
         if exemples and resume["contradictions"] > len(exemples):

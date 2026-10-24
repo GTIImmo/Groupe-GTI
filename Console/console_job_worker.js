@@ -21435,6 +21435,27 @@ const R3_NON_CONTROLES = {
 
 function r3Texte(v) { return v == null ? "" : String(v).trim(); }
 
+// ⑧ piece 3 (24/10/2026) : le notaire de l'acquereur, LU CHEZ HEKTOR -- deux sources, deux formes.
+//   vente     : `notaires_json` du registre, relu la nuit par l'API ; objet { entree: {id}, sortie: {id} },
+//               entree = ACQUEREUR (mesure du 16/09 : 366 sur 366).
+//   compromis : `app_affaire_console.notaires_acquereur`, lu par l'assistant ; liste d'ids (ou d'objets).
+//   Les deux en numeros de HEKTOR. Rend "" si rien n'est lisible.
+function r3Charger(brut) {
+  if (brut == null) return null;
+  if (typeof brut === "object") return brut;
+  try { return JSON.parse(String(brut)); } catch (_) { return null; }
+}
+function r3NotaireDeLApi(brut) {
+  const o = r3Charger(brut);
+  return o && typeof o === "object" && o.entree && typeof o.entree === "object" ? r3Texte(o.entree.id) : "";
+}
+function r3PremierNotaire(brut) {
+  const l = r3Charger(brut);
+  if (!Array.isArray(l) || !l.length) return "";
+  const p = l[0];
+  return r3Texte(p && typeof p === "object" ? p.id : p);
+}
+
 function r3JoursEntre(debut, fin) {
   const a = Date.parse(r3Texte(debut).slice(0, 10));
   const b = Date.parse(r3Texte(fin).slice(0, 10));
@@ -21476,14 +21497,28 @@ function r3Relue(ligne, genre, chez, registre, ctx) {
       continue;
     }
     if (s === "@notaire") {
-      // Chez nous le notaire porte NOTRE numero (10064499), au registre celui de Hektor (122190),
-      // pose la nuit par la console. On compare la PERSONNE : on traduit notre numero.
-      if (!nuitPassee) continue;
-      const auRegistre = r3Texte(registre.notaire_acquereur_id);
-      if (!auRegistre) continue;
+      // ⑧ piece 3 (24/10/2026) : ON JUGE CONTRE LA SOURCE DE HEKTOR, PLUS CONTRE NOTRE COLONNE.
+      //   Jusqu'ici la colonne du registre portait le numero de Hektor (122190), pose la nuit : elle
+      //   servait de preuve. Elle portera NOTRE numero (registre_depuis_console.py, interrupteur
+      //   APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO) -- la comparer a la saisie dirait alors « arrivee » sur rien
+      //   (risque deja note le 23/10). On lit donc ce que HEKTOR porte, et on compare la PERSONNE :
+      //   notre saisie (10064499) traduite par la fiche contact (122190), ou deja un numero de Hektor.
+      //   Etude : notice/ETUDE_NUMEROS_PERSONNES_..._2026-10-24.md §12.
       const saisie = r3Texte(ligne.valeur_app);
-      const traduit = r3Texte((ctx.cibles || {})[saisie]);
-      return (auRegistre === saisie || (traduit && auRegistre === traduit)) ? saisie : auRegistre;
+      const saisieHektor = /^\d+$/.test(saisie) && Number(saisie) < 10000000
+        ? saisie : r3Texte((ctx.cibles || {})[saisie]);
+      let lu = "";
+      if (genre === "vente") {
+        if (!nuitPassee) continue;                       // notaires_json n'est relu que la nuit
+        lu = r3NotaireDeLApi(registre.notaires_json);
+      } else if (genre === "compromis") {
+        const lecture = (ctx.console || {})[r3Texte(registre.app_affaire_id)];
+        // une lecture de l'assistant ANTERIEURE a la saisie ne dit rien d'elle
+        if (!lecture || !(Date.parse(lecture.lu_le || "") > Date.parse(ligne.ecrit_le || "") + 60000)) continue;
+        lu = r3PremierNotaire(lecture.notaires_acquereur);
+      }
+      if (!lu) continue;
+      return (saisieHektor && lu === saisieHektor) ? saisie : lu;
     }
     if (s === "@taux") {
       // Hektor ne rend pas le taux : on le RECALCULE. Il n'est jamais declare en conflit --
@@ -21528,7 +21563,7 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
       : `hektor_annonce_id=eq.${encodeURIComponent(annonce)}`;
     const registres = await supabaseRequest(
       `app_affaire_ledger?${filtre}&hektor_affaire_id=not.is.null`
-      + "&select=app_affaire_id,kind,hektor_affaire_id,last_seen_at,honoraires_sortie,notaire_acquereur_id,"
+      + "&select=app_affaire_id,kind,hektor_affaire_id,last_seen_at,honoraires_sortie,notaire_acquereur_id,notaires_json,"
       // les colonnes de la regle de sortie : la MEME table que l'ancien verdict (une seule copie)
       + Array.from(new Set(Object.values(CARNET_VERS_REGISTRE))).join(","),
       { method: "GET" });
@@ -21581,6 +21616,18 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
         { method: "GET" });
       for (const x of (Array.isArray(c) ? c : [])) cibles[r3Texte(x.hektor_contact_id)] = r3Texte(x.hektor_target_id);
     }
+    // ⑧ piece 3 (24/10) : la lecture de l'assistant pour les COMPROMIS qui ont un notaire a juger -- la seule
+    // source du notaire d'un compromis chez Hektor (l'API n'en rend aucun : 0 sur 10 599, mesure du 16/09).
+    const consoleParAffaire = {};
+    const affairesNotaire = Array.from(new Set(aJuger
+      .filter((l) => l.champ === "notaire_id" && r3Texte((parId.get(String(l.app_affaire_id)) || {}).kind) === "compromis")
+      .map((l) => String(l.app_affaire_id))));
+    if (affairesNotaire.length) {
+      const lus = await supabaseRequest(
+        `app_affaire_console?app_affaire_id=in.(${affairesNotaire.join(",")})&select=app_affaire_id,notaires_acquereur,lu_le`,
+        { method: "GET" });
+      for (const x of (Array.isArray(lus) ? lus : [])) consoleParAffaire[r3Texte(x.app_affaire_id)] = x;
+    }
 
     const bilan = [];
     const parAffaire = new Map();
@@ -21606,7 +21653,7 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
       for (const l of lesLignes) {
         const etatTravail = etatDuTravail(l.ecrit_le);
         if (etatTravail === "pending" || etatTravail === "running") continue;
-        const relue = r3Relue(l, genre, chez, reg, { cibles });
+        const relue = r3Relue(l, genre, chez, reg, { cibles, console: consoleParAffaire });
         const verdict = r3Verdict(l, relue, etatTravail === "error");
         const champ = encodeURIComponent(l.champ);
         // ⛔ LA REGLE DE SORTIE DU 16/09, RETABLIE LE 23/10 (note du registre, section 16). Une ligne

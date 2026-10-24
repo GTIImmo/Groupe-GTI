@@ -51,7 +51,7 @@ const JOB = { id: "essai" };
 const ECRIT = "2026-10-22T21:47:07.486998+00:00";
 const NUIT = "2026-10-23T04:46:27+00:00";
 
-function monter({ registres = [], lignes = [], travaux = [], contacts = [], api = {}, erreur = false, eteint = false } = {}) {
+function monter({ registres = [], lignes = [], travaux = [], contacts = [], consoleLue = [], api = {}, erreur = false, eteint = false, source = null } = {}) {
   const appelsApi = [];
   const supprimes = [];
   const patches = [];
@@ -69,6 +69,7 @@ function monter({ registres = [], lignes = [], travaux = [], contacts = [], api 
       if (chemin.startsWith("app_affaire_champ_app")) return lignes;
       if (chemin.startsWith("app_console_job")) return travaux;
       if (chemin.startsWith("app_contact_current")) return contacts;
+      if (chemin.startsWith("app_affaire_console")) return consoleLue;
       return [];
     },
     lireEtatTransactionViaApi: async (job, genre, id) => {
@@ -79,7 +80,8 @@ function monter({ registres = [], lignes = [], travaux = [], contacts = [], api 
     logJob: async (id, step, status, message, data) => { journal.push({ step, status, message, data }); },
   };
   vm.createContext(contexte);
-  const r3 = eteint ? morceaux.r3.replace("const R3_CONTROLE_CARNET = true;", "const R3_CONTROLE_CARNET = false;") : morceaux.r3;
+  const base = source || morceaux.r3;
+  const r3 = eteint ? base.replace("const R3_CONTROLE_CARNET = true;", "const R3_CONTROLE_CARNET = false;") : base;
   vm.runInContext([morceaux.meme, morceaux.table, morceaux.ancien, r3,
     "this.controler = controlerLeCarnet; this.meme = memeValeurHektor; this.ancien = marquerLeCarnetRestant;"].join("\n"), contexte);
   return { contexte, appelsApi, supprimes, patches, journal };
@@ -151,12 +153,14 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
       JSON.stringify(m.appelsApi));
   }
   {
-    // LE LENDEMAIN : la nuit a relu le compromis ; le registre porte le notaire de HEKTOR (122190)
-    const reg = { ...REG_50129, last_seen_at: NUIT, notaire_acquereur_id: "122190" };
+    // LE LENDEMAIN : la nuit a relu le compromis. ⑧ piece 3 (24/10) : la colonne porte NOTRE numero ;
+    // le notaire de HEKTOR (122190) se lit dans la lecture de l'assistant (app_affaire_console).
+    const reg = { ...REG_50129, last_seen_at: NUIT, notaire_acquereur_id: "10064499" };
     const lignes = [L("numero_mandat", "18787", { etat: "en_attente", constate_le: "2026-10-22T21:50:00Z" }),
                     L("notaire_id", "10064499", { etat: "en_attente", constate_le: "2026-10-22T21:50:00Z" })];
     const m = monter({ registres: [reg], lignes, travaux: [{ status: "done", created_at: ECRIT }],
                        contacts: [{ hektor_contact_id: "10064499", hektor_target_id: "122190" }],
+                       consoleLue: [{ app_affaire_id: 1001375, notaires_acquereur: ["122190"], lu_le: NUIT }],
                        api: { "compromis:50129": { trouve: true, details: CHEZ_50129 } } });
     await m.contexte.controler(JOB, "24113");
     controle("(5) lendemain : le mandat et le notaire (la MEME personne sous deux numeros) sont « arrivee »",
@@ -166,13 +170,73 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
     controle("(5) ... une seule lecture par numero chez Hektor", m.appelsApi.length === 1, JSON.stringify(m.appelsApi));
   }
   {
-    const reg = { ...REG_50129, last_seen_at: NUIT, notaire_acquereur_id: "999999" };
+    const reg = { ...REG_50129, last_seen_at: NUIT, notaire_acquereur_id: "10064499" };
     const lignes = [L("notaire_id", "10064499", { etat: "en_attente", constate_le: "2026-10-22T21:50:00Z" })];
     const m = monter({ registres: [reg], lignes, travaux: [{ status: "done", created_at: ECRIT }],
                        contacts: [{ hektor_contact_id: "10064499", hektor_target_id: "122190" }],
+                       consoleLue: [{ app_affaire_id: 1001375, notaires_acquereur: ["999999"], lu_le: NUIT }],
                        api: { "compromis:50129": { trouve: true, details: CHEZ_50129 } } });
     await m.contexte.controler(JOB, "24113");
     controle("(6) lendemain : un AUTRE notaire chez Hektor -> « conflit »", verdictDe(m, "1001375:notaire_id") === "conflit", JSON.stringify(m.patches));
+  }
+  // ── ⑧ piece 3 (24/10) : le notaire se juge contre la SOURCE DE HEKTOR, jamais contre notre colonne ──
+  const PIEGE = () => ({
+    registres: [{ ...REG_50129, last_seen_at: NUIT, notaire_acquereur_id: "10064499" }],
+    lignes: [L("notaire_id", "10064499", { etat: "en_attente", constate_le: "2026-10-22T21:50:00Z" })],
+    travaux: [{ status: "done", created_at: ECRIT }],
+    contacts: [{ hektor_contact_id: "10064499", hektor_target_id: "122190" }],
+    api: { "compromis:50129": { trouve: true, details: CHEZ_50129 } } });
+  {
+    const m = monter(PIEGE());
+    await m.contexte.controler(JOB, "24113");
+    controle("(6b) LE PIEGE : la colonne porte NOTRE numero et l'assistant n'a rien lu -> « en_attente », PAS « arrivee »",
+      verdictDe(m, "1001375:notaire_id") === "en_attente", JSON.stringify(m.patches));
+  }
+  {
+    // TEMOIN INVERSE du piege : la regle d'AVANT (git HEAD) dit « arrivee » sur la seule colonne
+    let ancienR3 = null;
+    try {
+      const head = require("child_process").execFileSync("git", ["show", "HEAD:Console/console_job_worker.js"],
+        { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+      const a = head.indexOf("const R3_CONTROLE_CARNET"), b = head.indexOf("// LA GARDE CONTRE LE DOUBLEMENT.");
+      ancienR3 = a >= 0 && b > a ? head.slice(a, b) : null;
+    } catch (_) { ancienR3 = null; }
+    if (ancienR3 && !ancienR3.includes("r3NotaireDeLApi")) {
+      const m = monter({ ...PIEGE(), source: ancienR3 });
+      await m.contexte.controler(JOB, "24113");
+      controle("(6b') TEMOIN INVERSE : la regle d'avant, sur le meme piege, disait « arrivee » sans preuve",
+        verdictDe(m, "1001375:notaire_id") === "arrivee", JSON.stringify(m.patches));
+    } else {
+      controle("(6b') TEMOIN INVERSE : la version d'avant n'a pas pu etre lue (ou porte deja la piece 3)", false, "git show HEAD");
+    }
+  }
+  {
+    const m = monter({ ...PIEGE(), consoleLue: [{ app_affaire_id: 1001375, notaires_acquereur: ["122190"], lu_le: "2026-10-20T04:00:00Z" }] });
+    await m.contexte.controler(JOB, "24113");
+    controle("(6c) une lecture de l'assistant ANTERIEURE a la saisie ne prouve rien -> « en_attente »",
+      verdictDe(m, "1001375:notaire_id") === "en_attente", JSON.stringify(m.patches));
+  }
+  {
+    // la VENTE : la source est notaires_json (entree = acquereur), relu la nuit ; la colonne porte notre numero
+    const VTE = { app_affaire_id: 1001395, kind: "vente", hektor_affaire_id: "23358", last_seen_at: NUIT,
+                  numero_mandat: "18787", honoraires_sortie: "5000.00", notaire_acquereur_id: "10064499",
+                  notaires_json: { entree: { id: "122190" }, sortie: { id: "605227" } } };
+    const LV = (extra = {}) => [{ app_affaire_id: 1001395, champ: "notaire_id", valeur_app: "10064499", valeur_hektor_au_moment: null,
+      origine: "creation_app", ecrit_le: ECRIT, etat: "en_attente", constate_le: "2026-10-22T21:50:00Z", ...extra }];
+    const base = { travaux: [{ status: "done", created_at: ECRIT }], contacts: [{ hektor_contact_id: "10064499", hektor_target_id: "122190" }],
+                   api: { "vente:23358": { trouve: true, details: { prix: "115000.00", date: "2026-10-23" } } } };
+    let m = monter({ ...base, registres: [VTE], lignes: LV() });
+    await m.contexte.controler(JOB, "24113");
+    controle("(6d) vente : le notaire de Hektor (notaires_json, entree) est la meme personne -> « arrivee »",
+      verdictDe(m, "1001395:notaire_id") === "arrivee", JSON.stringify(m.patches));
+    m = monter({ ...base, registres: [{ ...VTE, notaires_json: JSON.stringify({ entree: { id: "777777" } }) }], lignes: LV() });
+    await m.contexte.controler(JOB, "24113");
+    controle("(6e) vente : un autre notaire chez Hektor (notaires_json en TEXTE) -> « conflit »",
+      verdictDe(m, "1001395:notaire_id") === "conflit", JSON.stringify(m.patches));
+    m = monter({ ...base, registres: [{ ...VTE, last_seen_at: ECRIT }], lignes: LV() });
+    await m.contexte.controler(JOB, "24113");
+    controle("(6f) vente : avant la nuit, notaires_json ne prouve rien -> « en_attente »",
+      verdictDe(m, "1001395:notaire_id") === "en_attente", JSON.stringify(m.patches));
   }
   {
     const m = monter({ registres: [REG_50129], lignes: [L("montant", "135000")], travaux: [{ status: "done", created_at: ECRIT }] });
