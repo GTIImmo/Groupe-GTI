@@ -2723,3 +2723,10 @@ le fait déjà avant chaque envoi (`cibleHektorContact`).
   nôtre (`app_contact_id`) ; 9 non (7 offres, 1 compromis, 1 vente) ; 653 lignes n'ont aucun acquéreur (300 compromis, 342 ventes, 11 offres
   — pas un problème de numéro). Les deux colonnes restent : celle de Hektor sert au chaînage et aux comparaisons avec Hektor, la nôtre au
   registre ; à la coupure, la première devient morte. ➡ Rien à faire pour l'acquéreur, hormis les 9 lignes (à inclure au rattrapage).
+- **Les workers envoient-ils le numéro de Hektor ? OUI, prévu et prouvé** (Frédéric, 24/10). `traduireLesPersonnesDeLaTransaction`
+  (C-9, 23/09, worker ~l. 2242) traduit notaire de l'acquéreur, notaire du vendeur et mandants, **une fois, avant tout envoi**, sur les DEUX
+  chemins : l'offre (`submitHektorTransactionStatus`, l. ~14046) et l'assistant compromis / vente (`submitHektorAssistantTransaction`,
+  l. ~13295) — création ET modification. Preuve, essai 5 : l'écran a envoyé **10064499 / 10355906** (nos numéros) ; Hektor a enregistré
+  **idNotaire 122190** sur l'offre 33116, et porte **122190 / 605227** sur le compromis 50137 et la vente 23358 (relus la nuit) ; l'acquéreur
+  est parti en **605976** (Hektor) quand l'écran donnait 20000015. Un numéro de Hektor reçu tel quel « se vise lui-même »
+  (`cibleHektorContact`) : la modification marche que le registre porte l'un ou l'autre. ➡ **Le plan du §50 ne touche pas au worker.**
