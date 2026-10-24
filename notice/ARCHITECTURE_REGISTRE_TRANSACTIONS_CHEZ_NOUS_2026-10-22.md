@@ -2521,3 +2521,5 @@ exprès hors du parc vivant : `target_status in ('active','closed')`).
 ➡ **Ce qui est écrit contredit le souvenir de Frédéric** : l'offre en cours et la vente sont modifiables **par sa décision du 07/09**,
 et la vente contre l'avertissement du 29/08. **Rien n'est changé** : retirer « Modifier » de l'offre en cours et/ou de la vente est
 une **décision de Frédéric**.
+
+**⛔ DÉCISION DE FRÉDÉRIC (24/10) : « on ne touche pas ».** « Modifier » reste sur l'offre en cours et sur la vente, comme décidé le 07/09. Ne pas relancer.
