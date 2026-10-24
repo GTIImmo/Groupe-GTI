@@ -362,4 +362,10 @@ reprend le comportement d'avant ; les numéros déjà posés restent, une clé d
 **exactement** les 2 neufs (le co-acquéreur y est nommé deux fois ; le lecteur ne rend pas notre numéro). `npm run build` vert ; `\r\r\n` = 0.
 
 **Ce que ça pourrait casser ailleurs** : rien de ce qui lit `id` (on ajoute un champ). Les listes ne portent notre numéro qu'avec les pièces
-1 et 2 : avant elles, l'écran se comporte comme avant. ⚠ Non vu à l'écran : il faut le push (Vercel).
+1 et 2 : avant elles, l'écran se comporte comme avant. ✅ **Vu à l'écran le 24/10 vers 18:20** (poussé `61bdb50` ; Vercel a construit les deux commits, d'où deux noms de code, C2YzI53r
+puis mQoUX400 — aucun autre commit) : VA6482, rubrique Affaires → 7 dossiers, l'acquéreur de la vente nommé **une seule fois** ; modale,
+onglets Vendu et Compromis → l'acquéreur prérempli une fois, boutons inchangés ; modale fermée sans rien envoyer ; **0 erreur** dans la
+console. Les listes ne portent pas encore notre numéro (la nuit les posera) : l'écran prend donc le numéro de Hektor, comme prévu.
+⚠ Le 1ᵉʳ chargement juste après le déploiement est resté bloqué sur « Préparation de ton agenda… » ; un rechargement l'a débloqué.
+L'accueil affichait « Synchronisations en erreur : 3 » : c'est le compte des **biens en erreur de diffusion** (le même que les « 3 erreurs »
+de la carte Diffusions, `mandatStats.withErrors`), pas des travaux — aucun travail en erreur depuis le redémarrage de 17:47.
