@@ -258,6 +258,60 @@ et la ligne **revient d'elle-même** quand Hektor la relistera. L'alerte compte 
 de 48 h** : ces 11 en sortent **seules** le 25/10 vers 06:46, même si elles restaient absentes. Le compromis
 59056, « disparu » le 20/10, est d'ailleurs **revenu** depuis.
 
+### ⭐ CONTRE-AUDIT EN DIRECT CHEZ HEKTOR (24/10, ~22:40, demandé par Frédéric)
+
+Une seule connexion, 1,5 à 2 s entre appels, arrêt prévu au premier 403 : **15 appels en lecture, 0 refus**.
+Scripts : `scratchpad/verifier_11_transactions.py`, `scratchpad/tester_tri_liste.py` (hors dépôt).
+
+**A. Les 11 EXISTENT chez Hektor** (`CompromisById` / `VenteById`) : 12629, 21551, 21465, 43345, 19472,
+20235, 14411, 16197, 15028, 14269 répondent tous, **même bien, même date, même prix, même état** que notre
+registre (status 1 = actif ×4, 2 = annulé ×6) ; la vente « 2 » répond aussi. **AUCUNE SUPPRESSION.**
+
+**B. LA CAUSE EXACTE : un tri qui n'est pas unique.**
+1. La nuit demande `ListCompromis` avec `sort=dateStart&way=DESC` (`sync_raw.py` l. 1550). **Hektor ignore ce
+   tri** (constaté le 23/10 dans `transactions_annonce_from_api.py` : changement chez Hektor entre le 18/09 et
+   le 22/10) et range la liste **par numéro d'annonce décroissant** (page 0 : 63046, 63037, 62967…).
+2. **Plusieurs compromis partagent le même numéro d'annonce** (un compromis annulé puis un nouveau sur le même
+   bien). Pour ces ex-aequo, la base de Hektor ne garantit **aucun ordre** d'une page à l'autre.
+3. Quand un groupe d'ex-aequo tombe **à cheval sur deux pages**, la page N le finit avec un compromis, la page
+   N+1 le recommence **avec le même**, et le voisin **n'est jamais lu**.
+4. **Preuve dans la liste de la nuit, pour les 10 compromis, sans exception** : le voisin du même bien est en
+   **position 19 de la page N ET en position 0 de la page N+1**, le « disparu » n'est nulle part. Ex. bien
+   9247 : 12627 en 185/19 et 186/0, 12629 absent.
+5. **Preuve en direct** : pages 185 et 186 redemandées avec les paramètres exacts de la nuit → 185 finit par
+   12627, 186 commence par 12627, **12629 n'apparaît pas** (idem 24781).
+6. **Pourquoi la liste change d'une nuit à l'autre** : chaque compromis créé ou retiré décale tous les suivants,
+   donc les frontières de pages bougent. Un compromis peut être sauté une nuit, relu la suivante → il
+   « disparaît » puis « revient » (59056 le 20/10). C'est aussi l'explication probable du « fantôme » 22976 du
+   16/09, que les huit hypothèses de l'époque n'expliquaient pas : **elles ne testaient pas les frontières de
+   pages**.
+7. **Les 20 doublons fixes** : la nuit commence à `page=0`, et Hektor rend **la même chose pour 0 et 1**. Inoffensif
+   (533 appels au lieu de 532).
+8. **Ventes** : même mécanisme (la vente « 2 » de 45672, dont le bien porte aussi la vente 2713). Et
+   `ListVentes` **ignore aussi `sort=id`** (testé en direct : non trié) — le bon paramètre reste à trouver
+   (`transactions_annonce_from_api.py` utilise `order=` et non `way=` pour les ventes).
+
+**C. Le tri qui marche.** `ListCompromis` avec **`sort=id&way=ASC`** est **respecté** (testé en direct :
+strictement croissant, total 10 626). Le numéro de transaction est **unique** : plus d'ex-aequo, plus de
+frontière ambiguë. Et en **croissant**, un compromis créé pendant la lecture s'ajoute **à la fin** : il ne
+décale rien.
+
+**D. L'ampleur aujourd'hui.** Le registre porte **28 lignes marquées absentes** (21 compromis, 5 offres,
+2 ventes) depuis le 07/09. Après cette mesure, **une partie d'entre elles sont probablement des fantômes du même
+mécanisme** : non vérifié une à une.
+
+### Le remède, en deux pièces (NON fait — code du run, il faut un « vas-y »)
+
+| pièce | où | quoi | effet |
+|---|---|---|---|
+| **1 — la cause** | `sync_raw.py` l. 1550-1551 | compromis : `sort=id`, `way=ASC` au lieu de `dateStart`/`DESC` | plus d'ex-aequo → plus de compromis sauté. Sans effet sur la couverture : la nuit lit TOUTES les pages (`CompromisRecentLimit=999999`) |
+| **2 — le filet** | `normalize_source.py`, `aligner_miroir_sur_hektor` ~l. 1394 | ne rien retirer du miroir quand **distincts reçus < `metadata.total`** | protège aussi les ventes (dont le tri n'est pas encore réglé) et tout autre glissement. **Zéro appel de plus chez Hektor** |
+| (plus tard) | — | trouver le tri unique des ventes ; vérifier une à une les 28 absentes (prudemment) | — |
+
+Ce que ça pourrait casser ailleurs : la pièce 1 change l'ORDRE de lecture, pas la couverture — à vérifier que
+rien ne s'appuie sur « les premières pages = les plus récents » pour les compromis en mode update (le plafond de
+pages vaut 999999/20, donc non bloquant aujourd'hui). La pièce 2 peut retarder d'une nuit une vraie suppression.
+
 **6. Le remède proposé (NON fait — c'est du code du run, il faut un « vas-y »).** Un garde-fou **sans aucune
 requête de plus chez Hektor** (donc sans risque de blocage d'IP) : **ne rien retirer du miroir pour un type
 quand le nombre de distincts reçus est inférieur au total annoncé par Hektor** (`metadata.total`). Cette nuit,
