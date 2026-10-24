@@ -2446,3 +2446,55 @@ recharger l'onglet), modale de VA6482 ouverte onglet par onglet, **rien envoyé*
 transaction** reprend celle-là… » s'affiche encore, alors que ce bouton est retiré par V — il contredit les deux bandeaux.
 ⚠ Rappel : la vente garde « Modifier la transaction » ; Frédéric avait dit « une vente peut juste être choisie et supprimée »
 (§23.1) — **à trancher par lui**, non touché.
+
+## 42. LES BOUTONS DE LA MODALE, ÉTAT PAR ÉTAT — audit du 24/10 *(Frédéric : « les boutons doivent être visibles ou non en fonction de l'état de la transaction ; fais-moi un récapitulatif »)* — lecture seule
+
+**Source** : le code (`App.tsx` ~21524-21609, `affaireCourantePourStatut`, `offreVerrouilleeParSonDossier`, `offreAccepteeFigeeChezHektor`,
+`compromisVerrouilleParSaVente`, `bienVenduPourStatut`, `avisGardeFouSaisie`, `bienEngage`) et les refus de la base
+(`app_geste_affaire_optimistic`, `app_modifier_affaire_optimistic`, `app_change_annonce_status_optimistic`). ⚠ **Lu, pas cliqué** :
+seul l'état « vendu » a été vu à l'écran (§41).
+
+**Quelle transaction les boutons visent** : celle que l'utilisateur a « Choisie », sinon la seule VIVANTE du genre (une refusée ou une
+annulée n'est jamais visée d'office ; s'il y en a deux vivantes, aucune → pas de bouton tant qu'on n'a pas choisi). « Choisir » une offre
+refusée n'est possible que si le bien n'est pas engagé (pas de compromis ouvert, pas d'offre acceptée).
+
+### Onglet OFFRE
+| état | Refuser | Accepter | Modifier | Envoyer vers Offre (crée) |
+|---|---|---|---|---|
+| aucune offre vivante | — | — | — | ✅ |
+| offre **en cours** | ✅ | ✅ | ✅ | ✅ *(une 2ᵉ offre)* |
+| offre **acceptée**, pas de compromis | ✅ | ✅ ⚠ | 🔘 grisé *(figée chez Hektor, 13/10)* | ✅ ⚠ |
+| offre **refusée**, choisie (bien libre) | ✅ ⚠ | ✅ *(voulu, 08/09)* | ✅ | ✅ |
+| offre dont le dossier a un **compromis** ou une **vente** | — *(verrou 16/09, base aussi)* | — | 🔘 grisé si acceptée | ✅ ⚠ (— si vendu, §41) |
+
+### Onglet COMPROMIS
+| état | Modifier | Annuler le compromis | Supprimer le compromis | Envoyer vers Compromis (crée) |
+|---|---|---|---|---|
+| aucun compromis | — | — | — | ✅ |
+| compromis **en cours** | ✅ | ✅ | ✅ (rouge) | 🔘 grisé *(2.2c : « déjà un compromis en cours »)* |
+| compromis **annulé** | — | — | — | ✅ *(son dossier est clos)* |
+| compromis + **vente** | — *(V, base aussi)* | — | — | — *(§41)* |
+
+### Onglet VENDU
+| état | Modifier | Supprimer la vente | Envoyer vers Vendu (crée) |
+|---|---|---|---|
+| pas de vente | — | — | ✅ |
+| vente **enregistrée** | ✅ ⚠ | ✅ (rouge) | — *(§41)* |
+| vente **supprimée** chez Hektor | — | — | ✅ |
+
+### Onglets ACTIF et CLOS
+Toujours « Envoyer vers Actif » / « Envoyer vers Clos », **quel que soit l'état** — y compris sur un bien vendu (la base l'accepte
+exprès hors du parc vivant : `target_status in ('active','closed')`).
+
+### ⚠ Les incohérences trouvées — rien n'est corrigé, **à trancher par Frédéric**
+1. **« Accepter » sur une offre déjà acceptée**, **« Refuser » sur une offre déjà refusée** : affichés, et la base ne les refuse pas
+   (elle ne regarde que le genre, pas l'état). Un geste qui ne change rien, et qui part chez Hektor.
+2. **« Envoyer vers Offre » sur un bien ENGAGÉ** (offre acceptée ou compromis en cours) : affiché et actif. La garde 2.2c ne couvre
+   que compromis et vente (`if (genre === 'offre') return null`). Contraire à la règle écrite au 08/09 : « il peut y avoir plusieurs
+   offres, mais plus possible quand compromis ouvert ou offre acceptée » — appliquée aujourd'hui au seul « Choisir ».
+3. **« Modifier » sur une vente** : affiché ; Frédéric avait dit « une vente peut juste être choisie et supprimée » (§23.1).
+4. **« Envoyer vers Actif » / « Clos » sur un bien VENDU** : affichés. « Actif » remettrait le bien en vente chez Hektor (et la
+   diffusion à 1 — mémoire « le geste Actif remet diffusable = 1 »).
+5. **Le vieux message 2.2c** de l'onglet Compromis (« Modifier la transaction reprend celle-là… ») s'affiche encore quand V a retiré
+   ce bouton (§41).
+6. Rappel : le bouton **Pilotage → Diffusion** est muet sur un bien vendu (§40).
