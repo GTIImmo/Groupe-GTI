@@ -28399,7 +28399,10 @@ function ckAffaireDepuisChaine(
   if (v) {
     ajout(lignesVente, 'Acquéreur(s)', ckNomsParties(affaireAcquereursParties(v), alias), true)
     ajout(lignesVente, 'Mandant(s)', ckNomsParties(ckPartiesDuJson(v.mandants_json), alias), true)
-    ajout(lignesVente, 'Prix net vendeur', affairePrix(v.prix_net_vendeur))
+    // ⑧ (24/10) : LE CARNET D'ABORD, comme la modale (~17001) et le taux juste au-dessus. Hektor ne porte
+    //   JAMAIS le net sur une vente (0 sur 9 266, mesure du 24/10) : la nuit vide la colonne, le carnet
+    //   garde la saisie (verdict « sans objet »). Note §47.
+    ajout(lignesVente, 'Prix net vendeur', affairePrix(txt(carnetDe(v).prix_net_vendeur) || v.prix_net_vendeur))
     ajout(lignesVente, 'Taux honoraires acquéreur', tauxDe(v))
     ajout(lignesVente, 'Charge de la commission', chargeDe(v))
     ajout(lignesVente, 'N° de mandat', mandatDe(v))

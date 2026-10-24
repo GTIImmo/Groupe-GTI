@@ -229,6 +229,17 @@ function essai(api) {
   ok("V : une vente EFFACEE chez Hektor ne verrouille pas ; une offre n'est pas concernee",
     verrou && verrou([{ ...VENTE, present_in_hektor: false }, COMPROMIS, OFFRE], COMPROMIS) === null
       && verrou(LIGNES, OFFRE) === null, "");
+  // ⑧ (24/10) : le net vendeur de la VENTE -- Hektor ne le porte jamais, la nuit vide la colonne ; le carnet le garde
+  {
+    const venteNuit = { ...VENTE, prix_net_vendeur: null };
+    const chN = api.grouperAffairesParChaine([venteNuit, COMPROMIS, OFFRE, OFFRE_REFUSEE]).find((c) => c.chaine === "1001381");
+    const donnees = APP_DONNEES(false);
+    donnees.carnet.set(1001383, { prix_net_vendeur: "110000.00" });
+    const afN = api.ckAffaireDepuisChaine(chN, null, CONSOLE, donnees);
+    const netN = (((afN.lignesApp && afN.lignesApp.vente) || []).find((r) => r[0] === "Prix net vendeur") || [])[1] || "";
+    ok("vente : après la nuit (colonne vide), le net vendeur revient du carnet (110 000)", /110\s?000/.test(netN), J(netN));
+  }
+
   // ⑧ (24/10) : l'ETAT du bien ferme les transactions -- Vendu, Clos, Estimation ; jamais son histoire
   const etat = api.etatFermeAuxTransactions;
   const st = (statut) => etat && etat({ statut_annonce: statut, numero_mandat: "18787" });
