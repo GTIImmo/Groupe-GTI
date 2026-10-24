@@ -218,6 +218,53 @@ dans `logs/scheduled/quotidien_2026-10-25_05-00-02.log`.
    `col::date`… → écrire la condition sur la colonne nue.
 3. **Une 2e tentative qui réussit cache une dégradation** : le battement devrait dire « réussi au 2e essai ».
 
+## 2 ter. AUDIT — les 11 « transactions disparues » (n° 7) — 24/10 au soir
+
+**Verdict : AUCUNE n'a été supprimée chez Hektor, et ce N'EST PAS lié aux correctifs du registre des
+transactions. Ce sont 11 transactions que la liste de Hektor a SAUTÉES pendant sa lecture.** Lecture seule
+(base, miroir `data/hektor.sqlite` en `mode=ro`, journaux).
+
+**1. Le profil.** 10 compromis + 1 vente, tous sur des biens **vendus ou archivés**, tous vus au run du 23/10
+(04:46 UTC) et absents de celui du 24/10. **Chacun de ces biens a une autre transaction du même type encore
+présente**, vue depuis le 31/07 (ex. 9247 : 12629 « disparu », 12627 présent).
+
+**2. Ce n'est pas l'app.** Aucun travail de l'app sur ces 11 biens depuis juin (seulement des synchros de
+documents). Le **patch V** (23/10 18:54, « compromis verrouillé par sa vente ») **refuse des gestes**, il ne
+marque rien. La logique d'absence de `phase2/sync/affaire_ledger.py` (l. 940-974) n'a pas bougé ; la pièce 2
+du 24/10 est arrivée **après** le run, et **éteinte**.
+
+**3. Ce n'est pas le registre : c'est la LISTE de Hektor.** Le miroir local (réécrit chaque nuit, 06:27) ne
+contient plus les 11 numéros. Et la liste brute de cette nuit (`raw_api_response`, run 5207) le prouve :
+
+| liste (nuit du 24/10) | total annoncé par Hektor | reçus | distincts | doublons | manquants |
+|---|---|---|---|---|---|
+| `list_compromis_update` | **10 626** | 10 646 | **10 616** | 30 | **10** |
+| `list_ventes_update` | **9 267** | 9 287 | **9 266** | 21 | **1** (la vente « 2 ») |
+| `list_offres_update` | 11 193 | 11 213 | 11 193 | 20 | 0 |
+
+**Toutes les listes ont 20 doublons, même celles de mars et de mai** : une page lue deux fois à chaque passage,
+sans conséquence. **Ce qui dépasse ces 20 correspond exactement aux manquants** (10 et 1) : la liste, triée
+par date de mise à jour et lue en **10 minutes** (06:02 → 06:12), a **glissé** pendant la lecture. Des lignes
+ont été lues deux fois, d'autres jamais. Les 11 « disparues » sont **exactement** les lignes sautées : Hektor les
+compte encore dans son propre total.
+
+**4. Ce n'est pas nouveau.** `normalize_source.py` l. 1269-1311 décrit le même phénomène le 16/09 (compromis
+22976 : *« la liste de Hektor ne le compte pas »*). La relecture une par une, qui l'aurait évité, a été **coupée
+le 18/09 par décision de Frédéric** : elle faisait bloquer notre IP. D'habitude, 1 ou 2 lignes sont sautées par
+nuit ; cette nuit, 11.
+
+**5. Conséquence et durée de vie.** Le registre **ne supprime rien** : il marque `present_in_hektor = false`,
+et la ligne **revient d'elle-même** quand Hektor la relistera. L'alerte compte les absentes **vues il y a moins
+de 48 h** : ces 11 en sortent **seules** le 25/10 vers 06:46, même si elles restaient absentes. Le compromis
+59056, « disparu » le 20/10, est d'ailleurs **revenu** depuis.
+
+**6. Le remède proposé (NON fait — c'est du code du run, il faut un « vas-y »).** Un garde-fou **sans aucune
+requête de plus chez Hektor** (donc sans risque de blocage d'IP) : **ne rien retirer du miroir pour un type
+quand le nombre de distincts reçus est inférieur au total annoncé par Hektor** (`metadata.total`). Cette nuit,
+il aurait refusé 2 suppressions (compromis, ventes), et les 11 seraient restées présentes. Les vraies
+suppressions passeraient la nuit suivante, quand la liste serait complète. À écrire dans
+`aligner_miroir_sur_hektor` (`normalize_source.py` ~l. 1394), à côté du garde-fou « liste tronquée < 50 % ».
+
 ## 3. Ce qu'on peut retirer tout de suite, sans toucher à aucun garde-fou
 
 - **n° 4 et n° 5** : trancher les 6 lignes dans l'écran Santé. Elles sortent du compte, la sonde reste.
