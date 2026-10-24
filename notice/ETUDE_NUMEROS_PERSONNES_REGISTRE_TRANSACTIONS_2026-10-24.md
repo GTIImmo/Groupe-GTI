@@ -247,3 +247,33 @@ durablement qu'avec les pièces 2 (la nuit) et, pour la journée, l'ajout dans l
 **perte silencieuse** d'une personne passée sous son numéro de Hektor (acquéreurs à la création, mandants à la modification).
 
 **Pour l'activer** : (1) coller le patch (accord) ; (2) allumer l'interrupteur (accord). Aucun déploiement, aucun redémarrage.
+
+---
+
+## 11. PIÈCE 2 — LA NUIT POSE NOTRE NUMÉRO SUR CHAQUE PERSONNE — codée, éprouvée hors ligne, **ÉTEINTE** — 24/10 *(Frédéric : « oui, d'abord pièce 2 »)*
+
+**Le code** (`phase2/sync/affaire_ledger.py`, `refresh_ledger`) : juste avant l'écriture de chaque transaction, `poser_nos_numeros()`
+**ajoute** `app_contact_id` (notre numéro) à chaque personne connue de `acquereur_json` (le principal) et de `acquereurs_json` (la liste) —
+par la même table que la colonne du principal (G-10 : `app_contact` du serveur, complète). `id` garde le numéro de Hektor (la trace brute,
+décision du 23/09) ; la forme du blob (liste ou objet seul) est gardée ; une personne inconnue ne reçoit rien ; rien à poser = le texte
+d'origine à l'octet près. Le journal de nuit le dit : « personnes avec nos deux numéros : N numéro(s) posé(s) » — ou « ÉTEINT ».
+- **Interrupteur** : `APP_AFFAIRE_PERSONNES_DEUX_NUMEROS=1` dans `.env`, lu **après** `.env` (même chemin que `APP_CHAINAGE_V2`, piège du 20/10).
+  **Absent = éteint** : le fichier est en service dès qu'il est enregistré, mais il ne change rien tant que la ligne n'est pas posée.
+- Lecteurs vérifiés : le chaînage (`_acquereurs`) ne lit que `id` ; la redescente des lignes de l'app ne ramène pas ces colonnes ; le push
+  décode déjà le blob en jsonb.
+
+**Essais** : `phase2/checks/test_personnes_deux_numeros.py` — **13/13**, sur trois copies des tables utiles (phase2.sqlite et le miroir
+de Hektor ouverts en **lecture seule**, dossier temporaire effacé) :
+- la fonction seule : 8 contrôles (liste, objet seul, inconnu, illisible, vide, « 0 », déjà posé, l'ordre et les clés gardés) ;
+- **TÉMOIN INVERSE sur la vraie nuit** : la version d'avant (git HEAD) et la neuve **éteinte** rendent **le même registre, à l'octet près,
+  sur les 31 103 lignes** (hors horodatages du run) ;
+- **allumée** : aucune autre colonne ne bouge ; les listes ne changent **que** par l'ajout de `app_contact_id` ; **65 401 numéros posés sur
+  30 410 lignes** ; **les 2 446 listes à plusieurs acquéreurs sont complètes** (= 1 809 compromis + 637 ventes mesurés au §3).
+- **2 mutants attrapés** : l'interrupteur ignoré (le témoin inverse tombe), `id` remplacé au lieu d'ajouter (deux contrôles tombent).
+
+**Ce que ça pourrait casser ailleurs** : rien de ce qui lit `id`. Une fois allumée, la **première nuit** pose nos numéros sur **toutes** les
+transactions (c'est le rattrapage, sans script à part) ; Supabase les reçoit par le push habituel. ⚠ Le jour, la relecture du worker réécrit
+encore la liste sans `app_contact_id` jusqu'à la nuit suivante — l'ajouter dans la relecture est une pièce à part (worker, redémarrage).
+
+**Pour l'activer** : (1) Frédéric pousse ; (2) poser la pièce 1 (patch de base, accord) ; (3) ajouter `APP_AFFAIRE_PERSONNES_DEUX_NUMEROS=1`
+au `.env` du serveur (accord) — effet à la nuit suivante ; (4) contrôler le lendemain matin le journal de nuit et quelques transactions.

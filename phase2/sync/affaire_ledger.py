@@ -770,6 +770,10 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
 
     seen = 0
     inserted = 0
+    # ⑧ piece 2 (24/10/2026) : chaque personne des listes recoit AUSSI notre numero -- voir
+    # poser_nos_numeros(). Lu ICI, apres `.env`, pas a l'import (piege du 20/10).
+    deux_numeros = personnes_deux_numeros_actif()
+    personnes_traduites = 0
     for r in con.execute(LEDGER_SQL):
         annonce = normalize_text(r["hektor_annonce_id"])
         affaire_id = normalize_text(r["affaire_id"])
@@ -808,6 +812,17 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 adoptees += 1
             else:
                 next_affaire_id += 1
+        # ⑧ piece 2 (24/10) : LES DEUX NUMEROS DE CHAQUE PERSONNE. `id` reste celui de Hektor (la trace
+        # brute, decision du 23/09) ; `app_contact_id`, le notre, est AJOUTE a cote -- par la meme table
+        # que la colonne du principal (G-10). Eteint : exactement les octets d'avant.
+        party_json = json.dumps(party, ensure_ascii=True, separators=(",", ":")) if party else None
+        acq_tous = normalize_text(r["acq_tous"]) or None
+        if deux_numeros:
+            if party:
+                party_json, n_principal = poser_nos_numeros(party_json, contact_app_par_hektor)
+                personnes_traduites += n_principal
+            acq_tous, n_liste = poser_nos_numeros(acq_tous, contact_app_par_hektor)
+            personnes_traduites += n_liste
         con.execute(
             f"""
             INSERT INTO {LEDGER_TABLE}(app_affaire_id, app_dossier_id,
@@ -860,8 +875,8 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 int(annonce), kind, affaire_id, mid or None, numero or None,
                 mandat_origine or None, acq_id or None,
                 contact_app_par_hektor.get(acq_id) if acq_id else None,
-                json.dumps(party, ensure_ascii=True, separators=(",", ":")) if party else None,
-                normalize_text(r["acq_tous"]) or None,     # 1.8 : la liste ENTIERE, telle que Hektor la donne
+                party_json,
+                acq_tous,                                  # 1.8 : la liste ENTIERE, telle que Hektor la donne
                 normalize_text(r["state"]) or None, normalize_text(r["montant"]) or None,
                 normalize_text(r["dt"]) or None, normalize_text(r["date_acte"]) or None,
                 normalize_text(r["sequestre"]) or None,
@@ -883,6 +898,10 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     if adoptees:
         print(f"[affaire_ledger] {adoptees} affaire(s) nee(s) dans l'app ADOPTEE(S) "
               f"au lieu d'etre dupliquee(s)")
+    # ⑧ piece 2 : on DIT ce qui a ete fait -- et qu'il est eteint, s'il l'est.
+    print(f"[affaire_ledger] personnes avec nos deux numeros : "
+          + (f"{personnes_traduites} numero(s) pose(s)" if deux_numeros
+             else "ETEINT (APP_AFFAIRE_PERSONNES_DEUX_NUMEROS)"))
     # ═══════════════════════════════════════════════════════════════════════════
     # LE SILENCE NE GAGNE PAS                                        07/09/2026
     # ═══════════════════════════════════════════════════════════════════════════
@@ -1177,6 +1196,59 @@ def _date_de_tri(kind: object, date: object, propositions: object) -> str | None
     if not dates:
         return utile
     return _date_utile(min(dates)) or utile
+
+
+def personnes_deux_numeros_actif() -> bool:
+    """⑧ piece 2 (24/10/2026) : l'interrupteur, lu APRES `.env` (meme chemin que chainage_v2_actif).
+
+        APP_AFFAIRE_PERSONNES_DEUX_NUMEROS=1    les listes recoivent notre numero
+        (absent ou autre chose)                  comportement d'avant, a l'octet pres
+    """
+    chainage_v2_actif()                      # il charge `.env` une fois pour tous
+    return (os.environ.get("APP_AFFAIRE_PERSONNES_DEUX_NUMEROS") or "0").strip() == "1"
+
+
+def poser_nos_numeros(brut: object, notre_numero: dict[str, int]) -> tuple[object, int]:
+    """⑧ piece 2 (24/10/2026) : AJOUTE notre numero (`app_contact_id`) a chaque personne connue d'une liste.
+
+    LA REGLE DE FREDERIC : « l'id Hektor pour communiquer avec Hektor, et mon id app pour le registre ».
+    Les CO-ACQUEREURS n'avaient que le numero de Hektor (4 581 personnes le 24/10) : ils mouraient a la
+    coupure, et la projection des acquereurs dans le registre des relations (decision du 30/09) attendait
+    « que ce blob soit sur nos numeros ». Etude : notice/ETUDE_NUMEROS_PERSONNES_..._2026-10-24.md §8-§11.
+
+    ⚠ ON AJOUTE, ON NE REMPLACE PAS : `id` garde le numero de Hektor -- la trace brute (decision du 23/09),
+      que lisent le chainage (_acquereurs) et l'adoption. Une cle de plus ne gene aucun lecteur de `id`.
+    ⚠ LES DEUX FORMES : une LISTE, ou un OBJET SEUL (piege du 30/09 : 11 151 lignes sautees en silence
+      par un lecteur qui n'attendait que la liste). La forme est gardee.
+    ⚠ INCONNU = RIEN : une personne absente de la doublure ne recoit pas de numero ; on n'invente pas.
+    ⚠ RIEN A POSER = LE TEXTE D'ORIGINE, a l'octet pres (pas de re-serialisation pour rien).
+    Rend (le texte, le nombre de numeros poses).
+    """
+    if not brut:
+        return brut, 0
+    try:
+        valeur = json.loads(brut) if isinstance(brut, str) else brut
+    except Exception:                                               # noqa: BLE001
+        return brut, 0                       # illisible : on n'y touche pas
+    gens = [valeur] if isinstance(valeur, dict) else valeur
+    if not isinstance(gens, list):
+        return brut, 0
+    poses = 0
+    for personne in gens:
+        if not isinstance(personne, dict):
+            continue
+        ident = normalize_text(personne.get("id"))
+        if not ident or ident == "0":
+            continue
+        notre = notre_numero.get(ident)
+        if notre is None:
+            continue
+        if personne.get("app_contact_id") != notre:
+            personne["app_contact_id"] = notre
+            poses += 1
+    if not poses:
+        return brut, 0
+    return json.dumps(valeur, ensure_ascii=False, separators=(",", ":")), poses
 
 
 def _acquereurs(brut: object) -> set[str]:
