@@ -123,3 +123,43 @@ et C viendra ensuite ; mais A perd la trace brute de Hektor pour les notaires �
 champs, à confirmer), le problème des types de contacts (à ne pas mélanger : un acquéreur reste acquéreur).
 
 ⛔ **Décision de Frédéric attendue** : le mécanisme (A, B ou C), et l'ordre par rapport à R2 et au problème des types.
+
+---
+
+## 8. ⛔ RÉVISION — « on a un registre des contacts et un registre des relations : pourquoi créer encore une liste ? » *(Frédéric, 24/10)*
+
+**Frédéric a raison, et le projet l'avait DÉJÀ décidé le 30/09.** Ma recommandation C (une table des personnes de l'affaire) est
+**retirée** : elle fabriquait une troisième copie.
+
+**Ce que le projet a écrit le 30/09** (`relation_ledger.py` l. 28-38 ; `patch_app_relation_2026-09-30.sql` l. 34 ;
+`patch_relations_lisent_le_registre_2026-09-30.sql` l. 43-53 ; `patch_liens_deux_absences_2026-09-30.sql` l. 129-136) :
+- le **registre des relations** (`app_relation`) porte les liens **personne ↔ bien** (mandant / propriétaire : un seul fait, « propriétaire
+  du bien »), avec **quatre numéros** (la personne et le bien, chez nous et chez Hektor) ;
+- **« LES ACQUÉREURS NE SE RECOPIENT PAS, C'EST UNE DÉCISION.** Un acquéreur n'est pas un lien au bien : il existe PARCE QU'IL A FAIT UNE
+  OFFRE. Ce fait est déjà tenu chez nous dans `app_affaire_ledger`. Le registre les **PROJETTERA** depuis le ledger ; il ne les stockera pas.
+  **Deux copies finissent toujours par dire deux choses.** »
+- la projection a été **remise à plus tard, pour une seule raison** : les co-acquéreurs du blob `acquereurs_json` sont sur les numéros de
+  HEKTOR. *« LA PROJECTION VIENDRA QUAND CE BLOB SERA SUR NOS NUMÉROS. »* (La 2ᵉ mesure du 30/09 : le ledger connaît 98,9 % des couples,
+  co-acquéreurs compris ; il restait 180 compromis à comprendre.)
+- en attendant, la vue des liens d'un contact lit encore les acquéreurs dans la table de nuit refaite depuis Hektor.
+
+**Donc les rôles sont déjà fixés :**
+| registre | porte | numéros |
+|---|---|---|
+| des **contacts** | la personne | les deux (le dictionnaire) |
+| des **relations** | personne ↔ bien (mandant, propriétaire) | les quatre |
+| des **transactions** | personne ↔ affaire : acquéreurs (et co-acquéreurs), notaires | **le nôtre**, + la trace brute de Hektor là où elle est déjà (décision du 23/09) |
+Il ne manque **aucune liste** : il manque que le registre des transactions désigne ses personnes **par nos numéros**.
+
+**Le mécanisme révisé — À DÉCIDER, rien codé**
+1. **Acquéreurs** : dans `acquereur_json` et `acquereurs_json`, chaque personne porte **aussi** notre numéro (`app_contact_id`) à côté de
+   celui de Hektor (`id`) — exactement le montage du principal (deux colonnes), mais **dans le blob existant** : aucune colonne, aucune
+   liste, la trace de Hektor gardée (23/09). La création l'écrit au clic ; la nuit le traduit par la doublure du serveur (G-10, `app_contact`,
+   complète) et ne l'efface jamais.
+2. **Notaires** : `notaire_acquereur_id` / `notaire_mandant_id` portent **notre** numéro (la nuit traduit, le plan du §50). La trace brute
+   de Hektor reste où elle est déjà : `notaires_json` (vente, API) et `app_affaire_console` (compromis, console).
+3. **Vers Hektor** : rien à changer — le worker prend le numéro de Hektor dans le registre des contacts avant chaque envoi (C-9).
+4. **Ensuite, la décision du 30/09** : le registre des relations **projette** les acquéreurs depuis le registre des transactions, au lieu de
+   la table de nuit — la seconde copie disparaît.
+5. Les lecteurs : `aliasNumerosAcquereur` relie chaque personne de la liste (pas seulement le principal), R3 compare nos numéros, le chaînage
+   SQL reçoit le numéro de Hektor (ou compare `app_contact_id`).
