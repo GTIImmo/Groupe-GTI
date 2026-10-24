@@ -189,6 +189,27 @@ l'API (`rpc`), pas depuis l'éditeur SQL, et exiger **< 2 s**, avec `EXPLAIN ANA
 
 **Hors correctif, noté :** la table a 69 107 lignes mortes et pas de nettoyage automatique depuis le 27/09.
 
+### ✅ APPLIQUÉ LE 24/10 À 22:05, AVEC L'ACCORD DE FRÉDÉRIC (forme B)
+
+Fichiers : `supabase/patch_photos_index_derniere_date_2026-10-24.sql` (+ `_INVERSE`, `_REPETITION`), commit `b95bcbd`.
+Vérifié avant : l'entretien de 22:00 ne traite plus que les documents (ligne photos retirée le 19/10), file
+de travaux vide.
+
+| étape | résultat |
+|---|---|
+| répétition (transaction annulée) | avant : lecture complète **5 360 ms** · après : **index, 31 ms** · **mêmes dossiers (26 = 26)** · fonction entière **ok en 419 ms** · empreinte **inchangée** · retour : index retiré |
+| ① contrôles | tous OK (22:05, aucun geste photo) |
+| ② index `concurrently` | **valide, prêt, 4 752 kB** |
+| ② bis `analyze` | fait (la précédente datait du 27/09) |
+| ③ plan | **Index Scan using app_console_photo_derniere_bouge_idx, 1,2 ms** · empreinte `ec806661` **inchangée** |
+| ④ rattrapage **par l'API** (`node Console/remplir_adresses_photos.js`) | **`app_photos_remplir_adresses_app : 0,3 s`** (contre 57014 à 8 s) · 115 cibles, 15 vivantes remplies · registre 2,1 s ok · sans photo 0,2 s ok · code 0 |
+| contrôle des dégâts | **0** galerie en retard · **0** photo masquée exposée (les 2 de 59203 sont sorties) · **0** photo retirée encore affichée (les 86) · **0** vivante vide |
+
+⚠ **Reste à voir** : le battement `workers.heartbeat:phase2.adresses_photos` n'est écrit **que par le run** →
+l'alerte rouge reste jusqu'au run du **25/10 vers 07:05**. Contrôle du matin : l'étape doit être `DONE … attempt 1/2`
+dans `.tmp/full_pipeline_20261025_050002.log`, et le chrono `(app_photos_remplir_adresses_app : …)` sous 1 s
+dans `logs/scheduled/quotidien_2026-10-25_05-00-02.log`.
+
 ### Les leçons
 
 1. **Un correctif se mesure aussi en TEMPS** — la répétition du 20/10 a vérifié le résultat, pas la durée.
