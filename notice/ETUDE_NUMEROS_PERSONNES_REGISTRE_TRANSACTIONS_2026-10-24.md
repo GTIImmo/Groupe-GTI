@@ -218,3 +218,32 @@ lit encore la table de nuit). ⚠ Elle touche l'affichage des types de contacts 
 3. **La nuit, notaires** + **R3 contre la source Hektor** (code de nuit + worker, redémarrage des services file vide).
 4. **Les lecteurs de l'écran** (alias, préremplissage).
 5. **La projection des acquéreurs** dans les relations — avec le chantier des types.
+
+---
+
+## 10. PIÈCE 1 — PRÉPARÉE ET RÉPÉTÉE, **NON POSÉE** — 24/10 *(Frédéric : « vas-y »)*
+
+**Le patch** : `supabase/patch_personnes_deux_numeros_2026-10-24.sql` (+ `_INVERSE`, `_REPETITION`), générateur
+`phase2/checks/gen_patch_personnes_deux_numeros.py`. **Une seule fonction**, `app_acquereurs_json` — celle qui fabrique la liste des
+personnes pour la **création** (les acquéreurs, le principal en tête) **et** pour la **modification** (les mandants) : la corriger couvre
+les deux portes. Empreinte **1b82fdda → 69904a53**, une ancre (le corps), interrupteur `affaire_personnes_deux_numeros` posé **éteint**
+(éteint = le texte d'avant, à l'identique).
+- **Allumé** : une personne est trouvée par ses **deux** numéros ; `id` = numéro de **Hektor** (comme la relecture du worker et la nuit —
+  `id` ne change plus de sens dans la journée) ; `app_contact_id` = **le nôtre** ; une personne donnée deux fois ne sort qu'une fois ;
+  inconnue : rien ; sans numéro de Hektor encore : `id` garde notre identité.
+
+**Répétition : 8/8**, envoyée telle que le fichier (T1 éteint : 605976 introuvable = le défaut ; T2-T3 trouvé par l'un ou l'autre numéro,
+`id` 605976, `app_contact_id` 20000015 ; T4 une seule sortie pour deux numéros ; T5 l'ordre gardé ; T6 un inconnu ne fabrique personne ;
+**T7 la création, appelée comme l'écran sur le bien d'essai 63331 avec l'acquéreur sous son numéro de Hektor, range l'acquéreur
+(id 605976, app_contact_id 20000015) — avant, la liste sortait VIDE** ; T8 l'inverse rend 1b82fdda). Vérifié après : empreinte
+1b82fdda, pas d'interrupteur, 63331 en Estimation, 0 ligne, 0 travail.
+
+**Ce que ça pourrait casser ailleurs** : `id` passe de notre identité au numéro de Hektor **au clic** ; ce qui le lisait entre le clic et la
+relecture du worker (quelques minutes) voit désormais le numéro que tout le reste porte déjà. Lecteurs vérifiés : la modale (préremplissage —
+reconnu à présent dans les deux sens), la qualification (cherche les deux numéros depuis F2), `aliasNumerosAcquereur` (relie Hektor → nous),
+le worker (lit la charge, pas le registre). Le principal, le chaînage et l'adoption ne bougent pas (`hektor_acquereur_id` / `app_contact_id`).
+**Limite, dite franchement** : la relecture du worker puis la nuit réécrivent la liste **sans** `app_contact_id` — la clé ne tient
+durablement qu'avec les pièces 2 (la nuit) et, pour la journée, l'ajout dans la relecture du worker. Seule, la pièce 1 corrige surtout la
+**perte silencieuse** d'une personne passée sous son numéro de Hektor (acquéreurs à la création, mandants à la modification).
+
+**Pour l'activer** : (1) coller le patch (accord) ; (2) allumer l'interrupteur (accord). Aucun déploiement, aucun redémarrage.
