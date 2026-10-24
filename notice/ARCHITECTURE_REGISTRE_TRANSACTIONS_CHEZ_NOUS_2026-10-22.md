@@ -2613,3 +2613,22 @@ Actif) devra d'abord le passer Actif — c'est la règle voulue. Les 8 biens ven
 Estimation, ouverts dès qu'ils repassent Actif, quel que soit leur numéro de mandat.
 
 **Pour activer** : (1) Frédéric pousse (l'écran part avec Vercel) ; (2) poser le patch (accord) ; (3) allumer l'interrupteur (accord).
+
+## 47. CE QUE LA NUIT A EFFACÉ — toutes les transactions nées dans l'app, 24/10 *(Frédéric : « ce champ ne doit pas attendre un retour de Hektor, on le fait pour d'autres ; est-ce le seul disparu ? »)* — lecture seule
+
+**Mesure** : chaque ligne du carnet (valeur saisie) comparée à sa colonne du registre, sur les 339 transactions nées dans l'app.
+Une seule chaîne a des trous, 1001393 (essai 5, née la veille) :
+| transaction | champ | carnet | registre | compte ? |
+|---|---|---|---|---|
+| vente 23358 | **prix net vendeur** | 110 000 | **vide** | ⚠ **oui** — Hektor ne le porte jamais sur une vente (0 sur 9 266 ; 10 601 sur 10 616 compromis l'ont) |
+| vente 23358 | date d'acte | 15/12/2026 | vide | non — reprise du compromis ; la vente a sa date de vente, et le compromis garde l'acte |
+| vente 23358, compromis 50137 | validité | 15 | vide | non — la validité ne concerne que l'offre (reprise de l'onglet Offre) |
+Rien d'autre n'est perdu. Ont **changé** sans se perdre : les numéros des notaires (ceux de Hektor, 122190 / 605227, au lieu des nôtres),
+leurs noms réécrits par Hektor, la date de l'offre (avec l'heure), l'état du compromis (`en_cours` → `active`) ; et `first_seen_at`
+des 3 lignes, posé au clic (17:33), réécrit à la première nuit (04:52) — un horodatage, pas une saisie.
+
+**Ce que le projet fait déjà pour les champs qui n'attendent pas Hektor** : colonnes `_app` que la nuit ne touche pas (la charge,
+les honoraires saisis — d'où la charge intacte) ; `R3_NON_CONTROLES` (5 champs de l'offre gardés au carnet) ; la règle de sortie
+du carnet (une ligne reste tant que le registre ne porte pas la même valeur) ; nos tables (répartition, conditions, notes).
+➡ Le net de la vente **est gardé** (au carnet, `sans_objet`) ; c'est la **carte Vente** de la rubrique qui ne lit que le registre
+(`App.tsx` ~28402), quand la modale lit le carnet d'abord (~17001). Non corrigé.
