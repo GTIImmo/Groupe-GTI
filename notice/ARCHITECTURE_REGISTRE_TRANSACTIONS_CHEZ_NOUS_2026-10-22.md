@@ -2523,3 +2523,11 @@ et la vente contre l'avertissement du 29/08. **Rien n'est changé** : retirer «
 une **décision de Frédéric**.
 
 **⛔ DÉCISION DE FRÉDÉRIC (24/10) : « on ne touche pas ».** « Modifier » reste sur l'offre en cours et sur la vente, comme décidé le 07/09. Ne pas relancer.
+
+## 44. LA NUIT DU 24/10 SUR LA CHAÎNE DE L'ESSAI 5 (1001393) — lecture seule
+
+Relue à 04:52 UTC. **Tient** : la même chaîne pour les trois, offre `accepted`, charge `acquereur` sur les trois, honoraires 5 000,
+notaires nommés (compromis et vente), notes (3), condition du compromis, répartition 30/20/25/25, `present_in_hektor` partout.
+**A bougé** : le compromis passe `en_cours` → `active` (le mot de Hektor) ; ⚠ **la vente perd `prix_net_vendeur`** au registre
+(110 000 → vide) — Hektor ne le porte pas sur une vente ; le carnet le garde (verdict `sans_objet`). C'est exactement le terrain de
+**R2** (la nuit remplace la ligne du registre). Non corrigé.
