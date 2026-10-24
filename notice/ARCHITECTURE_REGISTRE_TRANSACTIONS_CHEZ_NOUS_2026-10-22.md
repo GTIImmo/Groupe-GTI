@@ -2431,4 +2431,18 @@ tant que la fiche n'est pas relue, le statut peut encore dire « Vendu » : le b
 
 **Contrôles** : `test_rubrique_affaires_complete.cjs` **31/31** (6 neufs) · témoin inverse : les 6 neufs **échouent** sur la version
 d'avant · **3 mutants attrapés** (sans le numéro Hektor, sans le même mandat, effacée comptée) · `npm run build` vert · `\r\r\n` = 0.
-⚠ **Non vu à l'écran** : il faut le push (Vercel), puis rouvrir la modale de VA6482.
+✅ **VU À L'ÉCRAN le 24/10** (poussé `812e7af`, bundle `index-6wMBhZVs.js` vérifié servi par Vercel ; accord de Frédéric pour
+recharger l'onglet), modale de VA6482 ouverte onglet par onglet, **rien envoyé** (0 travail sur 24113) :
+
+| onglet | bandeau « Ce bien est vendu (vente n° 23358) » | boutons du bas |
+|---|---|---|
+| Actif | non | Annuler · Envoyer vers Actif *(inchangé)* |
+| Offre | oui | Annuler · Modifier la transaction *(grisé : l'offre est verrouillée par sa chaîne, 16/09)* |
+| Compromis | oui, **et** le bandeau V | **Annuler seul** |
+| Vendu | oui | Annuler · Modifier la transaction · Supprimer la vente |
+| Clos | non | Annuler · Envoyer vers Clos *(inchangé)* |
+
+⚠ Vu au passage, non corrigé : sur l'onglet Compromis, l'ancien message 2.2c « Ce bien porte déjà un compromis. **Modifier la
+transaction** reprend celle-là… » s'affiche encore, alors que ce bouton est retiré par V — il contredit les deux bandeaux.
+⚠ Rappel : la vente garde « Modifier la transaction » ; Frédéric avait dit « une vente peut juste être choisie et supprimée »
+(§23.1) — **à trancher par lui**, non touché.
