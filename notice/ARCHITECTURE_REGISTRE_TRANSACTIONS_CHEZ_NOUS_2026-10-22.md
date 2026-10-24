@@ -2570,8 +2570,8 @@ mandat** que leur ancienne vente (numéro donné par Hektor). Aucun bien Actif /
 ### Verdict
 - **Frédéric a raison : A casse le mécanisme des chaînes successives.** Elle regarde l'HISTOIRE (une vente sous ce numéro) au lieu
   de l'ÉTAT du bien. Si l'un de ces 8 biens redevient **Actif sans nouveau numéro** de mandat, A l'empêcherait de recevoir une offre
-  — exactement l'erreur que le 05/09 avait évitée en comptant les dossiers ouverts. Le risque dépend d'un numéro de mandat (déduit la
-  nuit pour 52 % des lignes, recyclé chez Hektor en 2026) : une base fragile pour un verrou.
+  — exactement l'erreur que le 05/09 avait évitée en comptant les dossiers ouverts. Le risque dépend d'un numéro de mandat (donné par Hektor
+  pour 48 % des lignes, DÉDUIT la nuit pour ~27 % — mesure du 16/09 ; Hektor recycle ses identifiants de mandat) : une base fragile pour un verrou.
 - **B** (statut « Vendu ») est dans la logique de Frédéric ; il manque **Clos** et **Estimation**.
 - **⚠ Estimation n'est refusé NULLE PART aujourd'hui** : ni par l'écran, ni par la base (le parc vivant l'inclut). Aucune décision
   écrite trouvée sur une transaction sur une estimation.
