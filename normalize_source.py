@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sqlite3
 import sys
 import time
@@ -1417,6 +1418,15 @@ def aligner_miroir_sur_hektor(conn: sqlite3.Connection, *, table: str, id_col: s
         return 0
 
     a_retirer = set(candidats)
+    # Le filet (24/10/2026) : voir filet_liste_incomplete juste en dessous.
+    gardes_par_le_filet = filet_liste_incomplete(conn, table=table, id_col=id_col,
+                                                 endpoint_frais=endpoint_frais,
+                                                 libelle=libelle, candidats=candidats)
+    a_retirer -= gardes_par_le_filet
+    if gardes_par_le_filet and not a_retirer:
+        print(f"[miroir] {libelle} : {len(candidats)} candidat(s), tous gardes par le filet "
+              f"-> 0 retiree(s)")
+        return 0
     if genre and VERIFIER_CHEZ_HEKTOR:
         a_retirer, gardees = verifier_chez_hektor(genre, candidats)
         for ident, pourquoi in gardees.items():
@@ -1439,6 +1449,109 @@ def aligner_miroir_sur_hektor(conn: sqlite3.Connection, *, table: str, id_col: s
     print(f"[miroir] {libelle} : {len(frais)} chez Hektor, {connus} au miroir "
           f"-> {retirees} retiree(s)")
     return retirees
+
+
+# ─── LE FILET DES LISTES INCOMPLETES ─── 24/10/2026, notice/AUDIT_ALERTES_MONITORING_2026-10-24.md §2 ter
+#
+# LE DEFAUT, PROUVE EN DIRECT CHEZ HEKTOR. ListCompromis ignore `sort=dateStart` et
+# range par NUMERO D'ANNONCE, qui n'est pas unique. Deux compromis du meme bien a
+# cheval sur deux pages : le voisin est lu en fin de page N ET en debut de page N+1,
+# l'autre n'est JAMAIS lu. Nuit du 24/10 : Hektor annonce 10 626 compromis, la liste
+# en rend 10 616 distincts, et les 10 manquants etaient retires du miroir puis marques
+# « disparus » au registre -- alors que CompromisById les rend tous. Idem 1 vente.
+#
+# CE QUE LE FILET FAIT. Il compare les distincts recus au total que HEKTOR annonce
+# (`metadata.total`), sur les pages de LA DERNIERE NUIT seulement (fetch_latest_raw_payloads
+# prend la page la plus recente toutes nuits confondues : une nuit interrompue en
+# melangerait deux). S'il en manque, il GARDE les candidats dont le bien a un voisin
+# lu en double -- la signature exacte de l'ex-aequo saute.
+#
+# ⚠ POURQUOI IL NE BLOQUE PAS TOUT. La boucle d'upsert relit aussi l'instantane de
+#   mars (`list_compromis`), qui reinjecte chaque nuit des transactions VRAIMENT
+#   supprimees ; c'est l'alignement qui les retire (~20 par nuit). Tout bloquer les
+#   ferait « revenir » au registre pour un jour, puis « disparaitre » de nouveau : de
+#   fausses alertes. On ne garde donc que les sautees probables ; on ne bloque tout
+#   que si des manquants restent INEXPLIQUES, ou si la liste melange deux nuits.
+#
+# L'INTERRUPTEUR, `APP_MIROIR_FILET_LISTE` (.env) :
+#     absent ou 0   JOURNAL SEUL : le filet calcule, ecrit ce qu'il AURAIT garde, ne garde rien
+#     1             le filet garde vraiment
+# ⚠ La ligne `[miroir] FILET` est ecrite chaque nuit ou il y a des candidats a retirer
+#   (sans candidat, il n'y a rien a proteger -- la ligne « 0 retiree(s) » le dit deja). Le moniteur la lit
+#   (check_gti_health.py, `data.miroir_filet`) pour dire si un type est refuse plusieurs
+#   nuits de suite -- sinon un refus permanent gelerait le miroir sans bruit.
+# 0 appel chez Hektor : tout est lu dans raw_api_response.
+def filet_liste_incomplete(conn: sqlite3.Connection, *, table: str, id_col: str,
+                           endpoint_frais: str, libelle: str,
+                           candidats: list[str]) -> set[str]:
+    actif = (os.environ.get("APP_MIROIR_FILET_LISTE") or "0").strip() == "1"
+    mode = "ACTIF" if actif else "JOURNAL SEUL"
+    try:
+        lignes = list(fetch_latest_raw_payloads(conn, endpoint_frais))
+    except Exception as exc:                                            # noqa: BLE001
+        print(f"[miroir] FILET {libelle} ({mode}) : lecture impossible ({type(exc).__name__}) "
+              f"-> SANS TOTAL, rien de garde")
+        return set()
+    if not lignes:
+        print(f"[miroir] FILET {libelle} ({mode}) : aucune page -> SANS TOTAL, rien de garde")
+        return set()
+
+    derniere_nuit = max(int(r["run_id"] or 0) for r in lignes)
+    autres_nuits = sum(1 for r in lignes if int(r["run_id"] or 0) != derniere_nuit)
+    pages_par_id: dict[str, set] = {}
+    annonce_par_id: dict[str, str] = {}
+    total = None
+    for r in lignes:
+        if int(r["run_id"] or 0) != derniere_nuit:
+            continue
+        payload = json.loads(r["payload_json"])
+        meta = payload.get("metadata") if isinstance(payload, dict) else None
+        if total is None and isinstance(meta, dict) and str(meta.get("total") or "").isdigit():
+            total = int(meta["total"])
+        for item in iter_listing_items([r]):
+            ident = str(item.get("id") or "")
+            if not ident:
+                continue
+            pages_par_id.setdefault(ident, set()).add(r["page"])
+            annonce = item.get("annonce")
+            numero = (annonce.get("id") if isinstance(annonce, dict) else None) \
+                or item.get("id_annonce") or item.get("idAnnonce")
+            if numero is not None:
+                annonce_par_id[ident] = str(numero)
+
+    distincts = len(pages_par_id)
+    # Hektor rend la MEME chose pour page=0 et page=1 (mesure du 24/10) : ces 20
+    # doublons-la ne disent rien d'un saut, on les met de cote.
+    doubles = [i for i, pages in pages_par_id.items() if len(pages) > 1 and not pages <= {0, 1}]
+    biens_doubles = {annonce_par_id[i] for i in doubles if i in annonce_par_id}
+    manquants = (total - distincts) if total is not None else None
+
+    sautes = set()
+    if candidats and biens_doubles:
+        marques = ",".join("?" for _ in candidats)
+        for ident, annonce in conn.execute(
+                f"SELECT CAST({id_col} AS TEXT), CAST(hektor_annonce_id AS TEXT) FROM {table} "
+                f"WHERE CAST({id_col} AS TEXT) IN ({marques})", tuple(candidats)):
+            if annonce in biens_doubles:
+                sautes.add(ident)
+
+    if autres_nuits:
+        verdict, garder = f"REFUS (liste melangeant deux nuits : {autres_nuits} page(s))", set(candidats)
+    elif manquants is None:
+        verdict, garder = "SANS TOTAL", set()
+    elif manquants <= 0:
+        verdict, garder = "COMPLETE", set()
+    elif len(sautes) >= manquants:
+        verdict, garder = "SAUTES EXPLIQUES", sautes
+    else:
+        verdict, garder = (f"REFUS ({manquants - len(sautes)} manquant(s) inexplique(s))",
+                           set(candidats))
+
+    print(f"[miroir] FILET {libelle} ({mode}) : annonces {total}, distincts {distincts}, "
+          f"doublons hors page 0 {len(doubles)}, manquants {manquants}, candidats {len(candidats)}, "
+          f"{'gardes' if actif else 'AURAIT garde'} {len(garder)}"
+          f"{' : ' + ', '.join(sorted(garder)[:12]) if garder else ''} -> {verdict}")
+    return garder if actif else set()
 
 
 def upsert_offres(conn: sqlite3.Connection) -> None:

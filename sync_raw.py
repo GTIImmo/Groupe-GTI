@@ -1549,6 +1549,19 @@ def configure_generic_resources(args: argparse.Namespace, bootstrap: bool) -> Di
     configs["mandats"]["extra_params"]["way"] = "DESC"
     configs["compromis"]["extra_params"]["sort"] = "dateStart"
     configs["compromis"]["extra_params"]["way"] = "DESC"
+    # 24/10/2026 -- HEKTOR IGNORE `dateStart` (change chez lui entre le 18/09 et le 22/10)
+    # et range ListCompromis par NUMERO D'ANNONCE, qui n'est pas unique : deux compromis
+    # du meme bien a cheval sur deux pages -> l'un lu deux fois, l'autre JAMAIS (10 la
+    # nuit du 24/10, tous existants chez Hektor). `sort=id` est unique et respecte
+    # (verifie en direct sur 8 pages ; c'est le tri du worker depuis le 23/10).
+    # DESC et non ASC : le plafond de pages du mode update (`--compromis-recent-limit`,
+    # 1 000 par defaut) suppose « premieres pages = plus recents ». La nuit lit tout
+    # (999 999) : l'ordre ne change pas la couverture.
+    # Derriere un interrupteur : APP_COMPROMIS_TRI_ID=1 (.env). Absent ou 0 : comme avant.
+    # Audit : notice/AUDIT_ALERTES_MONITORING_2026-10-24.md §2 ter.
+    if (os.environ.get("APP_COMPROMIS_TRI_ID") or "0").strip() == "1":
+        configs["compromis"]["extra_params"]["sort"] = "id"
+        configs["compromis"]["extra_params"]["way"] = "DESC"
     configs["offres"]["extra_params"]["sort"] = "date"
     configs["offres"]["extra_params"]["way"] = "DESC"
 

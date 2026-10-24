@@ -3112,6 +3112,59 @@ class Monitor:
             )
         self._check_log_dir_size("logs.tmp.size", tmp_dir)
         self._check_log_dir_size("logs.console.size", console_log_dir)
+        self._check_filet_miroir()
+
+    # ─── LE FILET DU MIROIR NE DOIT PAS REFUSER EN SILENCE ─── 24/10/2026
+    # normalize_source.filet_liste_incomplete ecrit une ligne `[miroir] FILET <type> ...
+    # -> <verdict>` dans le journal du run. Un REFUS garde TOUS les candidats du type :
+    # une nuit, c'est voulu ; plusieurs nuits de suite, le miroir de ce type serait GELE
+    # et les vraies suppressions n'y entreraient plus. Les ventes y sont exposees : Hektor
+    # n'offre aucun tri unique pour ListVentes (teste le 24/10).
+    # Le mode « JOURNAL SEUL » compte aussi : il dit ce qui SE SERAIT passe, c'est la
+    # mesure qui permet de decider d'allumer le filet.
+    # Audit : notice/AUDIT_ALERTES_MONITORING_2026-10-24.md §2 ter.
+    def _check_filet_miroir(self, nuits: int = 5, seuil: int = 3) -> None:
+        journaux = sorted((self.root / "logs" / "scheduled").glob("quotidien_*.log"))[-nuits:]
+        if not journaux:
+            self.add("data.miroir_filet", "data", "miroir", "filet_liste", "ok",
+                     "Filet du miroir : aucun journal du run", {"nuits_lues": 0})
+            return
+        par_nuit: list[dict[str, str]] = []
+        for journal in journaux:
+            verdicts: dict[str, str] = {}
+            try:
+                texte = journal.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                texte = ""
+            for ligne in texte.splitlines():
+                if "[miroir] FILET " not in ligne or "->" not in ligne:
+                    continue
+                genre = ligne.split("[miroir] FILET ", 1)[1].split(" ", 1)[0]
+                verdicts[genre] = ligne.rsplit("->", 1)[1].strip()
+            par_nuit.append(verdicts)
+        genres = sorted({g for nuit in par_nuit for g in nuit})
+        suites: dict[str, int] = {}
+        for genre in genres:
+            suite = 0
+            for nuit in reversed(par_nuit):
+                if nuit.get(genre, "").startswith("REFUS"):
+                    suite += 1
+                else:
+                    break
+            suites[genre] = suite
+        geles = [g for g, n in suites.items() if n >= seuil]
+        dernier = par_nuit[-1]
+        status = "warning" if geles else "ok"
+        if geles:
+            message = (f"Filet du miroir : {', '.join(geles)} refuse(s) {max(suites[g] for g in geles)} "
+                       f"nuits de suite -- les vraies suppressions n'entrent plus")
+        elif dernier:
+            message = "Filet du miroir : " + " | ".join(f"{g} {v}" for g, v in sorted(dernier.items()))
+        else:
+            message = "Filet du miroir : rien a proteger au dernier run"
+        self.add("data.miroir_filet", "data", "miroir", "filet_liste", status, message,
+                 {"nuits_lues": len(journaux), "refus_de_suite": suites, "dernier_run": dernier,
+                  "journal": journaux[-1].name})
 
     def _check_log_dir_size(self, status_key: str, directory: Path) -> None:
         if not directory.exists():
