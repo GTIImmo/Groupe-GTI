@@ -2713,3 +2713,13 @@ le fait déjà avant chaque envoi (`cibleHektorContact`).
 - **le worker** envoie déjà le numéro de Hektor : rien à changer ;
 - **un rattrapage** des 23 340 références (96 % traduisibles), accord requis.
 ➡ Aucune colonne, aucune liste de plus ; une traduction au seul endroit qui écrit le numéro de Hektor.
+
+**Complément du 24/10 (Frédéric : « et pour les acquéreurs ? pourquoi 220 non présents ? mon serveur a les deux id »).**
+- **Les 220 notaires « sans fiche » sont tous sur le serveur.** Supabase n'a que 62 319 contacts (le périmètre de l'app) ; la doublure
+  d'identité du serveur, `app_contact` dans `phase2.sqlite`, en a **356 649**, chacun avec ses deux numéros — et elle porte **les 220**
+  (ex. Hektor 7987 ↔ nous 10003967). La nuit tourne SUR le serveur et lit déjà cette table pour l'acquéreur (G-10) : la traduction des
+  notaires y sera donc **complète** (rattrapage : les 23 340 références, pas 96 %).
+- **Les acquéreurs ont déjà notre numéro au registre** : sur 30 422 lignes qui portent le numéro de Hektor, **30 413** portent aussi le
+  nôtre (`app_contact_id`) ; 9 non (7 offres, 1 compromis, 1 vente) ; 653 lignes n'ont aucun acquéreur (300 compromis, 342 ventes, 11 offres
+  — pas un problème de numéro). Les deux colonnes restent : celle de Hektor sert au chaînage et aux comparaisons avec Hektor, la nôtre au
+  registre ; à la coupure, la première devient morte. ➡ Rien à faire pour l'acquéreur, hormis les 9 lignes (à inclure au rattrapage).
