@@ -317,3 +317,28 @@ traduit avant l'envoi (C-9). Le classeur et les exports ne lisent pas ces colonn
 1. pousser (worker, scripts, essais) ; 2. redémarrer les 4 services, file vide (R3 neuf) ; 3. ajouter
 `APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO=1` au `.env` du serveur — effet à la nuit suivante ; 4. le lendemain matin : le journal de nuit
 (« notaires sous NOTRE numéro ») et les deux lignes « notaire » en attente de l'essai 5, qui doivent passer « arrivée » à la relecture suivante.
+
+---
+
+## 13. ACTIVATION DES PIÈCES 1 À 3 — 24/10/2026, fin d'après-midi *(Frédéric : « active les pièces 1 à 3 »)*
+
+| geste | quand | preuve |
+|---|---|---|
+| push (Frédéric) | avant 17:47 | `origin/main` = `41f0f2c` |
+| file des travaux | avant le redémarrage | 0 en attente, 0 en cours |
+| redémarrage des 4 services (Frédéric) | 17:47:48-50 | heure de démarrage des 4 processus `node`, postérieure au commit du worker (17:40:43) → **R3 neuf en service** |
+| **pièce 1** posée | — | les 4 contrôles du patch OK (empreinte 69904a53, SECURITY DEFINER, fermée à authenticated, éteinte = comportement d'avant) |
+| **pièce 1** allumée (`affaire_personnes_deux_numeros = on`) | — | `app_acquereurs_json(['605976'])` → l'acquéreur avec `id` 605976 et `app_contact_id` 20000015 ; sous ses deux numéros → 1 personne ; inconnu → rien |
+| **pièce 2** : `APP_AFFAIRE_PERSONNES_DEUX_NUMEROS=1` au `.env` | — | sauvegarde `.env.avant_pieces_personnes_20261024` ; la fonction de la nuit le lit **allumé** |
+| **pièce 3** : `APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO=1` au `.env` | **après** le redémarrage | la fonction de la nuit le lit **allumé** (posé après, exprès : sans le R3 neuf, la colonne à notre numéro aurait été jugée « arrivée » sans preuve) |
+
+**Retour arrière** : pièce 1 → éteindre l'interrupteur (ou `_INVERSE.sql`) ; pièces 2 et 3 → retirer la ligne du `.env` (la nuit suivante
+reprend le comportement d'avant ; les numéros déjà posés restent, une clé de plus dans les listes, notre numéro dans les colonnes notaire).
+
+**⏰ À CONTRÔLER DEMAIN MATIN (25/10), après le run de nuit :**
+1. journal de nuit : « personnes avec nos deux numéros : N numéro(s) posé(s) » (attendu ~65 000) et « notaires sous NOTRE numéro » (attendu
+   ~23 340, 0 sans paire) ;
+2. Supabase : les listes `acquereurs_json` portent `app_contact_id` (les 2 446 multiples complètes) ; les colonnes notaire en ≥ 10 000 000 ;
+3. l'essai 5 : la vente 23358 → acquéreur 605976 + 20000015 ; notaires 10064499 / 10355906 ; les deux lignes « notaire » du carnet passent
+   « arrivée » à la prochaine relecture de l'annonce (R3 lit la console et `notaires_json`) ;
+4. aucun travail en erreur, aucune alerte.
