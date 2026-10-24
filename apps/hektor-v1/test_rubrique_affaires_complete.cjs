@@ -51,6 +51,7 @@ const FONCTIONS = [
   "function affaireAcquereurParty(", "function affaireAcquereursParties(", "function affaireAcquereursDeChaine(",
   "function affaireAcquereursNoms(", "function affairePrix(", "function derniereDuGenre(",
   "function grouperAffairesParChaine(", "function ckAffaireDepuisChaine(", "function dossiersOuvertsDuBien(",
+  "function lireMandantsAffaire(",
 ];
 const FONCTIONS_NEUVES = ["function aliasNumerosAcquereur(", "function ckPartiesDuJson(", "function ckNomsParties(",
   "function ckDetailDepuisRegistre(", "function ckResumeNuitAJour(", "function compromisVerrouilleParSaVente(",
@@ -76,7 +77,7 @@ function monter(src) {
     function useCallback(f) { return f; }
   `;
   const code = prelude + morceaux.join("\n\n") + `
-    this.api = { ckAffaireDepuisChaine, grouperAffairesParChaine, affaireAcquereursNoms,
+    this.api = { ckAffaireDepuisChaine, grouperAffairesParChaine, affaireAcquereursNoms, lireMandantsAffaire,
       ckDetailDepuisRegistre: typeof ckDetailDepuisRegistre === 'function' ? ckDetailDepuisRegistre : null,
       ckResumeNuitAJour: typeof ckResumeNuitAJour === 'function' ? ckResumeNuitAJour : null,
       compromisVerrouilleParSaVente: typeof compromisVerrouilleParSaVente === 'function' ? compromisVerrouilleParSaVente : null,
@@ -238,6 +239,21 @@ function essai(api) {
     const afN = api.ckAffaireDepuisChaine(chN, null, CONSOLE, donnees);
     const netN = (((afN.lignesApp && afN.lignesApp.vente) || []).find((r) => r[0] === "Prix net vendeur") || [])[1] || "";
     ok("vente : après la nuit (colonne vide), le net vendeur revient du carnet (110 000)", /110\s?000/.test(netN), J(netN));
+  }
+
+  // ⑧ piece 4 (24/10) : le CO-ACQUEREUR sous ses deux numeros -- compte une seule fois
+  {
+    const CO_HK = { id: "605968", nom: "COACHETEUR", prenom: "Second", civilite: "M.", app_contact_id: 20000020 };
+    const CO_NOUS = { id: "20000020", nom: "COACHETEUR", prenom: "Second", civilite: "M." };
+    const compromisCo = { ...COMPROMIS, acquereurs_json: [{ ...ACQ_HK, app_contact_id: 20000012 }, CO_HK] };
+    const venteCo = { ...VENTE, acquereurs_json: [ACQ_OFFRE, CO_NOUS] };
+    const noms = api.affaireAcquereursNoms([venteCo, compromisCo, OFFRE]);
+    const fois = (noms.match(/COACHETEUR/g) || []).length;
+    ok("piece 4 : un CO-acquereur vu sous ses deux numeros (605968 / 20000020) n'est nomme qu'une fois",
+      fois === 1, J(noms));
+    const lus = api.lireMandantsAffaire ? api.lireMandantsAffaire([CO_HK, { id: "999", nom: "X" }]) : [];
+    ok("piece 4 : le lecteur de liste rend NOTRE numero quand la liste le porte, rien sinon",
+      lus.length === 2 && lus[0].app === "20000020" && lus[0].id === "605968" && !("app" in lus[1]), J(lus));
   }
 
   // ⑧ (24/10) : l'ETAT du bien ferme les transactions -- Vendu, Clos, Estimation ; jamais son histoire

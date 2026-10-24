@@ -342,3 +342,25 @@ reprend le comportement d'avant ; les numéros déjà posés restent, une clé d
 3. l'essai 5 : la vente 23358 → acquéreur 605976 + 20000015 ; notaires 10064499 / 10355906 ; les deux lignes « notaire » du carnet passent
    « arrivée » à la prochaine relecture de l'annonce (R3 lit la console et `notaires_json`) ;
 4. aucun travail en erreur, aucune alerte.
+
+---
+
+## 14. PIÈCE 4 — LES ÉCRANS LISENT NOTRE NUMÉRO — codée, **pas poussée** — 24/10 *(Frédéric : « oui, pièce 4 »)*
+
+**Le code** (`apps/hektor-v1/src/App.tsx`, écran seul, rien en base ni chez Hektor) :
+- le type d'une partie (`CkAffaireParty`) connaît `app_contact_id` ;
+- **`aliasNumerosAcquereur`** relie désormais **chaque personne des listes** (`id` Hektor → `app_contact_id` nous), plus seulement la
+  paire du principal : un **co-acquéreur** vu sous ses deux numéros sur deux étapes de la chaîne n'est plus compté deux fois (le « X et X »
+  de C4, qui restait vrai pour le 2ᵉ acheteur) — rubrique Affaires, noms des parties, dédoublonnage de la chaîne ;
+- **`lireMandantsAffaire`** rend aussi notre numéro (`app`) quand la liste le porte ;
+- **la modale** préremplit les acquéreurs **par notre numéro** d'abord, celui de Hektor sinon. Les deux sont reconnus à la création
+  (pièce 1) et traduits par le worker avant l'envoi (C-9) : ce qui part chez Hektor ne change pas.
+- Non touchés, et c'est voulu : les mandants (Hektor les déduit — décision du 22/10 ; la liste relue n'a pas notre numéro), les notaires
+  (l'écran les nomme déjà par leurs deux numéros).
+
+**Essais** `apps/hektor-v1/test_rubrique_affaires_complete.cjs` — **32/32** (2 neufs) ; **témoin inverse** : la version d'avant échoue
+**exactement** les 2 neufs (le co-acquéreur y est nommé deux fois ; le lecteur ne rend pas notre numéro). `npm run build` vert ; `
+` = 0.
+
+**Ce que ça pourrait casser ailleurs** : rien de ce qui lit `id` (on ajoute un champ). Les listes ne portent notre numéro qu'avec les pièces
+1 et 2 : avant elles, l'écran se comporte comme avant. ⚠ Non vu à l'écran : il faut le push (Vercel).

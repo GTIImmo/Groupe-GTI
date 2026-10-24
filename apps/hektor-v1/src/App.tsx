@@ -17062,9 +17062,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     if (acquereursRegistre.length) {
       setStatusChangeBuyers((deja) => {
         if (deja.length) return deja
-        setStatusChangeBuyerContactId(acquereursRegistre[0].id)
+        // ⑧ piece 4 (24/10) : NOTRE numero d'abord (« mon id app pour le registre ») ; celui de Hektor sinon.
+        //   Les deux sont reconnus a la creation (piece 1) et traduits par le worker avant l'envoi (C-9).
+        setStatusChangeBuyerContactId(acquereursRegistre[0].app || acquereursRegistre[0].id)
         return acquereursRegistre.map((p) => ({
-          hektor_contact_id: p.id,
+          hektor_contact_id: p.app || p.id,
           display_name: p.nom || null,
           nom: null, prenom: null, civilite: null,
         })) as unknown as MandantContactSearchOption[]
@@ -27311,7 +27313,9 @@ const CK_RUBRIQUES: Array<{ key: string; label: string; sub: string; ico: string
 ]
 
 // Lot B / C2 : forme du blob `affaires_detail_json` (détail d'affaire PAR cycle, produit par C1).
-type CkAffaireParty = { id?: string | null; civilite?: string | null; nom?: string | null; prenom?: string | null; coordonnees?: unknown }
+// ⑧ piece 4 (24/10/2026) : `app_contact_id` = NOTRE numero, pose a cote de `id` (numero de Hektor) par la
+// creation (piece 1) et par la nuit (piece 2). Etude : ETUDE_NUMEROS_PERSONNES_..._2026-10-24.md §14.
+type CkAffaireParty = { id?: string | null; civilite?: string | null; nom?: string | null; prenom?: string | null; coordonnees?: unknown; app_contact_id?: string | number | null }
 type CkAffaireDetail = {
   offre?: { id?: string | null; state?: string | null; montant?: string | null; date?: string | null; acquereur?: CkAffaireParty | null } | null
   compromis?: { id?: string | null; state?: string | null; date_start?: string | null; date_acte?: string | null; sequestre?: string | null; prix_net?: string | null; prix_public?: string | null; acquereur?: CkAffaireParty | null; mandant?: CkAffaireParty | null } | null
@@ -27702,6 +27706,17 @@ function aliasNumerosAcquereur(lignes: AffaireLedgerRow[]): Map<string, string> 
     const notre = String(l.app_contact_id ?? '').trim()
     const hektor = String(l.hektor_acquereur_id ?? '').trim()
     if (notre && hektor && notre !== hektor) alias.set(hektor, notre)
+    // ⑧ piece 4 (24/10) : LES CO-ACQUEREURS AUSSI. Chaque personne des listes porte desormais sa paire
+    // (`id` = Hektor, `app_contact_id` = nous). Sans elle, un co-acquereur vu sous ses deux numeros sur
+    // deux etapes de la chaine etait compte deux fois (le « X et X » de C4, pour le 2e acheteur).
+    const parties = [...affaireAcquereursParties(l)]
+    const principal = affaireAcquereurParty(l)
+    if (principal) parties.push(principal)
+    for (const p of parties) {
+      const pNotre = String(p?.app_contact_id ?? '').trim()
+      const pHektor = String(p?.id ?? '').trim()
+      if (pNotre && pHektor && pNotre !== pHektor) alias.set(pHektor, pNotre)
+    }
   }
   return alias
 }
@@ -37953,7 +37968,7 @@ function mandantContactOptionMeta(option: MandantContactSearchOption) {
  *  `acquereurs_json` : les deux ont exactement la meme forme.
  *  ⚠ ON NE FABRIQUE RIEN : pas de nom lisible -> on garde le numero seul, qui
  *    est vrai. Le jeton affichera « n° 5415 » plutot qu'un nom devine. */
-function lireMandantsAffaire(brut: unknown): Array<{ id: string; nom: string }> {
+function lireMandantsAffaire(brut: unknown): Array<{ id: string; nom: string; app?: string }> {
   let liste: unknown = brut
   if (typeof brut === 'string' && brut.trim()) {
     try { liste = JSON.parse(brut) } catch { return [] }
@@ -37964,7 +37979,7 @@ function lireMandantsAffaire(brut: unknown): Array<{ id: string; nom: string }> 
   //   vide sur TOUTES les offres -- la modale n'y montrait aucun acquereur.
   if (liste && typeof liste === 'object' && !Array.isArray(liste)) liste = [liste]
   if (!Array.isArray(liste)) return []
-  const out: Array<{ id: string; nom: string }> = []
+  const out: Array<{ id: string; nom: string; app?: string }> = []
   for (const element of liste) {
     if (!element || typeof element !== 'object') continue
     const fiche = element as Record<string, unknown>
@@ -37972,7 +37987,9 @@ function lireMandantsAffaire(brut: unknown): Array<{ id: string; nom: string }> 
     if (!id) continue
     const nom = [fiche.civilite, fiche.prenom, fiche.nom]
       .map((x) => String(x ?? '').trim()).filter(Boolean).join(' ')
-    out.push({ id, nom })
+    // ⑧ piece 4 (24/10) : NOTRE numero quand la liste le porte (pieces 1 et 2) ; absent, on n'invente rien.
+    const app = String(fiche.app_contact_id ?? '').trim()
+    out.push(app ? { id, nom, app } : { id, nom })
   }
   return out
 }
