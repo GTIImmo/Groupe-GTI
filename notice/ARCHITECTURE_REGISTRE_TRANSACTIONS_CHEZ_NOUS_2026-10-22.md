@@ -2498,3 +2498,26 @@ exprès hors du parc vivant : `target_status in ('active','closed')`).
 5. **Le vieux message 2.2c** de l'onglet Compromis (« Modifier la transaction reprend celle-là… ») s'affiche encore quand V a retiré
    ce bouton (§41).
 6. Rappel : le bouton **Pilotage → Diffusion** est muet sur un bien vendu (§40).
+
+## 43. PEUT-ON MODIFIER UNE OFFRE EN COURS ? UNE VENTE ? — l'histoire, 24/10 *(Frédéric : « je crois qu'on peut dire refused ou accepted, c'est tout ; une vente ne peut pas être modifiée, non ? vérifie »)* — lecture seule
+
+**Ce que le projet a décidé et prouvé**
+- **07/09, arbitrage de Frédéric** (LISTE l. ~6422) : *« il faut pouvoir modifier des offres refused dans le cas où l'on veut la passer
+  en valide et si possible changer le montant et l'état, idem un compromis peut être débloqué en cas d'erreur »* → `TRANSACTIONS_REPRISES`
+  n'exclut **aucun état** (worker l. 12404).
+- **08/09, tâche 3.2b, cochée le 10/09** : les **trois genres** se modifient, prouvés en réel sur 24933 — offre **33050** (en cours)
+  165 000 → 167 000 ; compromis 50078 ×4 ; **vente 23301** 175 000 → 176 500, une seule vente, puis supprimée.
+- **13/10** (`MESURE_MODIFIER_OFFRE_ACCEPTEE_2026-10-13.md`) : Hektor **refuse** d'ouvrir une offre **acceptée** (200 + 0 octet, 9/9) ;
+  une offre **en cours** ou **refusée** s'ouvre (3/3). Depuis, « Modifier » est **grisé** sur une offre acceptée.
+- **29/08, plan C.19-c** (PLAN l. ~2237) : *« modifier une vente sur une annonce ARCHIVÉE → DANGER : désarchiver la détruit »* ; et
+  *« aucun de nos workers ne doit "modifier" une vente par ce chemin tant que ce n'est pas éclairci ; si l'app doit un jour corriger une
+  vente, elle le fera chez nous »*. **3.2b l'a ouvert quand même le 08/09**, sur une annonce active. Mesure du 24/10 : les 8 819 biens
+  vendus de notre index sont **archive = 0** — le cas dangereux est un vendu archivé ensuite.
+- **23/10** : *« une vente peut juste être choisie et supprimée »* (§23.1) ; la répétition de V garde « modifier la vente → accepté ».
+
+**L'usage réel** (`app_console_job`, reprises) : **aucune** modification d'offre en cours ni de vente hors des biens d'essai
+(24933, 24113) ; **une seule** tentative sur un vrai bien — l'offre **acceptée** 33094 (61672), échouée le 13/10.
+
+➡ **Ce qui est écrit contredit le souvenir de Frédéric** : l'offre en cours et la vente sont modifiables **par sa décision du 07/09**,
+et la vente contre l'avertissement du 29/08. **Rien n'est changé** : retirer « Modifier » de l'offre en cours et/ou de la vente est
+une **décision de Frédéric**.
