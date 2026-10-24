@@ -359,8 +359,7 @@ reprend le comportement d'avant ; les numéros déjà posés restent, une clé d
   (l'écran les nomme déjà par leurs deux numéros).
 
 **Essais** `apps/hektor-v1/test_rubrique_affaires_complete.cjs` — **32/32** (2 neufs) ; **témoin inverse** : la version d'avant échoue
-**exactement** les 2 neufs (le co-acquéreur y est nommé deux fois ; le lecteur ne rend pas notre numéro). `npm run build` vert ; `
-` = 0.
+**exactement** les 2 neufs (le co-acquéreur y est nommé deux fois ; le lecteur ne rend pas notre numéro). `npm run build` vert ; `\r\r\n` = 0.
 
 **Ce que ça pourrait casser ailleurs** : rien de ce qui lit `id` (on ajoute un champ). Les listes ne portent notre numéro qu'avec les pièces
 1 et 2 : avant elles, l'écran se comporte comme avant. ⚠ Non vu à l'écran : il faut le push (Vercel).
