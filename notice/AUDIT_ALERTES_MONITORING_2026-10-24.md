@@ -409,6 +409,20 @@ les fichiers à HEAD). À regarder à part.
 **Rangé sur une branche** pour tenir la promesse faite à Frédéric : *« te les montrer avant qu'elles tournent
 la nuit »*. Le run de 05:00 lit le dossier principal : **la nuit du 25/10 tourne exactement comme celle du 24/10**.
 
+### ✅ MIS EN SERVICE LE 25/10 VERS 00:05 — « vas-y, maintenant » de Frédéric
+
+- Commit `9dc69ae` sur `main` (reprise de `bce8c4e` ; la branche `filet-listes` est supprimée).
+- `.env` (non suivi par git) : **`APP_COMPROMIS_TRI_ID=1`** et **`APP_MIROIR_FILET_LISTE=1`**, ajoutés en fin de
+  fichier avec un commentaire. Vérifié par `Settings.from_env()` comme le run : compromis demandés en
+  `sort=id, way=DESC, withCompromisStatus=false`, offres inchangées ; essais verts sur `main`.
+- **Retour arrière : remettre les deux interrupteurs à 0** (le code éteint = le comportement d'avant, prouvé par
+  l'essai). Aucun redémarrage de service : `sync_raw` et `normalize_source` relisent `.env` à chaque run.
+- ⏰ **À vérifier au run du 25/10** (`logs/scheduled/quotidien_2026-10-25_05-00-02.log`) :
+  `[miroir] FILET compromis (ACTIF) : … manquants 0 … -> COMPLETE` (le tri par numéro ne doit plus sauter
+  personne) ; pour les ventes, `COMPLETE` ou `SAUTES EXPLIQUES` ; le nombre de `retiree(s)` des compromis doit
+  tomber à ~10 (les fantômes de mars) au lieu de ~20 ; `data.transaction_disparue` ne doit plus compter de
+  compromis sautés ; et les 11 du 24/10 doivent **revenir** présents au registre (`present_in_hektor = true`).
+
 **6. Le remède proposé (NON fait — c'est du code du run, il faut un « vas-y »).** *(⚠ remplacé par le
 correctif retenu ci-dessus.)* Un garde-fou **sans aucune
 requête de plus chez Hektor** (donc sans risque de blocage d'IP) : **ne rien retirer du miroir pour un type
