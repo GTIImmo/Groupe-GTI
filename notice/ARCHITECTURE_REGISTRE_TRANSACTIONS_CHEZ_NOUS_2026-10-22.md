@@ -2688,3 +2688,28 @@ tant qu'aucun autre travail ne touche l'affaire.
 | P5 | les lecteurs prennent **notre** numéro d'abord : l'écran (19 endroits dans App.tsx, 3 dans api.ts), la modale (préremplissage), R3 (compare `_app_id` à la saisie : égalité directe, plus besoin d'attendre la nuit → la ligne du carnet sort tout de suite) | front + worker | le worker continue d'envoyer le numéro de Hektor (inchangé) |
 ⚠ À regarder avant de coder : le classeur (`push_suivi_appsheet.py`) et les exports ne lisent pas ces colonnes (0 trouvé hors App.tsx,
 api.ts, worker, `affaire_ledger.py`, `registre_depuis_console.py`) — à confirmer pièce par pièce.
+
+## 50. « LES NOTAIRES SONT DES CONTACTS : POURQUOI UNE COLONNE DE PLUS ? » — 24/10 *(Frédéric)* — lecture seule, **remplace le plan du §49**
+
+**Mesures.** Les notaires SONT des contacts. Le registre des contacts porte les deux numéros pour **tous** : 62 319 fiches, 62 319 avec
+notre identité (≥ 10 M, dans la colonne au nom trompeur `hektor_contact_id`) **et** le numéro de Hektor (`hektor_target_id`). Sur les
+1 327 notaires cités par le registre des transactions, **1 107 y sont** avec leurs deux numéros ; 220 n'ont pas de fiche dans la vue des
+contacts.
+
+**Pourquoi l'acquéreur a deux colonnes** (`db771db`, 01/09) : Frédéric — *« les ids Hektor étant les axes, il y aura un problème lors de la
+coupure »*. `hektor_acquereur_id` était lu partout (le chaînage, les comparaisons avec Hektor, la nuit) : on a **ajouté** notre numéro à côté
+plutôt que de tout réécrire. Un doublement de **transition**, pas un modèle obligé.
+
+**Frédéric a raison : une colonne de plus n'est pas nécessaire.** Le registre des contacts EST le dictionnaire ; le registre des transactions
+n'a besoin que d'UN numéro par notaire — **le nôtre** (il survit à la coupure). Celui de Hektor se retrouve dans la fiche contact, et le worker
+le fait déjà avant chaque envoi (`cibleHektorContact`).
+
+**Le plan, simplifié — À DÉCIDER, rien codé**
+- les colonnes ACTUELLES portent **notre** numéro : la création l'écrit déjà au clic ;
+- **la nuit** (`registre_depuis_console.py`) **traduit** le numéro de Hektor en le nôtre par la fiche contact **avant** d'écrire, et compare
+  ainsi (sinon elle réécrirait chaque nuit) ; un notaire sans fiche (220) garde le numéro de Hektor — reconnaissable à la plage (< 10 M) ;
+- **R3** compare la saisie (notre numéro) au registre (notre numéro) : égalité directe, plus d'attente à vie ;
+- **l'écran** nomme déjà par les deux numéros : rien à changer ;
+- **le worker** envoie déjà le numéro de Hektor : rien à changer ;
+- **un rattrapage** des 23 340 références (96 % traduisibles), accord requis.
+➡ Aucune colonne, aucune liste de plus ; une traduction au seul endroit qui écrit le numéro de Hektor.
