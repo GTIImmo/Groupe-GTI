@@ -2652,3 +2652,39 @@ Hektor après la nuit. L'écran nomme les deux (`loadNomsContacts`). ⚠ **Ce qu
 pas, et la ligne `notaire_id` du carnet reste **« en attente » pour toujours** (2 lignes aujourd'hui, compromis et vente de l'essai 5).
 Deux voies, **à trancher par Frédéric** : (a) R3 reconnaît le notaire **par la paire** (la règle « deux numéros, reconnaître par la plage »),
 rien en base ; (b) une **seconde colonne** au registre pour notre numéro, que la nuit ne touche pas (comme les colonnes `_app`).
+
+## 49. LES NOTAIRES, DEUX NUMÉROS COMME L'ACQUÉREUR — audit du 24/10 *(Frédéric : « l'id Hektor pour communiquer avec Hektor, et mon id app pour le registre, comme les autres fiches de mon app gèrent les deux id »)* — lecture seule, **rien codé**
+
+### Le modèle qui existe déjà : l'acquéreur
+- Deux colonnes : `hektor_acquereur_id` (Hektor) et `app_contact_id` (nous).
+- Au clic, la création écrit notre numéro. La nuit (`affaire_ledger.py` ~l. 745-832, G-10 du 23/09) lit le numéro de Hektor dans le miroir,
+  le **traduit par la paire** (`app_contact` : `hektor_contact_id` / `hektor_target_id`) et pose `app_contact_id` avec un
+  `COALESCE` — **elle n'efface jamais** un rattachement établi. Vérifié sur la vente 23358 après la nuit : 20000015 et 605976, intacts.
+- Vers Hektor, le worker traduit nos numéros en ceux de Hektor par `cibleHektorContact` (C-1/C-9, 23/09) — **notaires compris**
+  (l. ~2226-2270 : « notaires et mandants passent la porte, comme les acquéreurs »). La communication avec Hektor est donc DÉJÀ juste.
+
+### Les notaires aujourd'hui : une seule colonne par rôle
+| qui | écrit quoi |
+|---|---|
+| la création / la modification (R1, A5, N) | **notre** numéro (10064499, 10355906) dans `notaire_acquereur_id` / `notaire_mandant_id` |
+| la nuit, `registre_depuis_console.py` | **le numéro de Hektor** (API pour la vente, console pour le compromis) **par-dessus** — sauf `notaires_origine = 'saisie'` (le gel, non employé) |
+| le push | recopie la ligne locale chez Supabase |
+**Mesure du 24/10** : 23 340 références de notaire au registre (6 772 côté acquéreur, 16 568 côté vendeur, ~880 notaires distincts) —
+**100 % portent le numéro de Hektor, 0 le nôtre**, y compris celles nées dans l'app. **96 % se traduisent** par la paire (6 511 et
+16 113) ; 261 + 455 n'ont pas de fiche chez nous.
+
+### ⛔ Correction de ce que j'ai dit (§48)
+R3 **sait** traduire (`@notaire`, worker ~l. 21478 : il compare la personne via la paire) — mais **seulement si la nuit est passée**, et
+R3 ne tourne qu'**à la fin d'un travail**, donc avant la nuit. Résultat identique : la ligne `notaire_id` du carnet reste « en attente »
+tant qu'aucun autre travail ne touche l'affaire.
+
+### Le plan proposé — sur le modèle de l'acquéreur, À DÉCIDER
+| # | pièce | où | ce que ça pourrait casser |
+|---|---|---|---|
+| P1 | deux colonnes **`notaire_acquereur_app_id`**, **`notaire_mandant_app_id`** (nous) ; les colonnes actuelles restent celles de **Hektor** | Supabase + la table locale (ajout de colonne au démarrage, comme `app_contact_id`) | additif ; le push envoie une colonne de plus — elle doit exister des deux côtés **avant** le run, sinon le run échoue (même piège que `app_contact_id`, l. 555) |
+| P2 | la création / la modification écrivent **notre** numéro dans `_app_id` | les RPC (patch, accord) | trois fonctions déjà patchées aujourd'hui (empreintes à suivre) |
+| P3 | la nuit **traduit** le numéro de Hektor en le nôtre (par la paire, `COALESCE`, jamais d'effacement) | `registre_depuis_console.py` | un notaire sans fiche chez nous (3 %) garde `_app_id` vide — on ne fabrique rien |
+| P4 | rattrapage des 23 340 références (96 % traduisibles) | une seule écriture, accord | — |
+| P5 | les lecteurs prennent **notre** numéro d'abord : l'écran (19 endroits dans App.tsx, 3 dans api.ts), la modale (préremplissage), R3 (compare `_app_id` à la saisie : égalité directe, plus besoin d'attendre la nuit → la ligne du carnet sort tout de suite) | front + worker | le worker continue d'envoyer le numéro de Hektor (inchangé) |
+⚠ À regarder avant de coder : le classeur (`push_suivi_appsheet.py`) et les exports ne lisent pas ces colonnes (0 trouvé hors App.tsx,
+api.ts, worker, `affaire_ledger.py`, `registre_depuis_console.py`) — à confirmer pièce par pièce.
