@@ -74,9 +74,8 @@ notaires avec ceux de Hektor — seul `app_contact_id` (le principal) est tradui
    leur fiche par notre numéro (`aliasNumerosAcquereur` ne connaît que le principal).
 2. **Les notaires perdent notre numéro chaque nuit** ; la ligne `notaire_id` du carnet reste « en attente » (R3 ne traduit qu'après la nuit
    et ne tourne qu'à la fin d'un travail).
-3. ⚠ **Le chaînage d'une nouvelle offre compare deux séries** : `app_chaine_pour` cherche le même acquéreur par `hektor_acquereur_id`
-   (Hektor) alors que la création lui passe `buyer_contact_id` de l'écran (nous). Une offre du même acquéreur ne retrouve donc pas son
-   dossier ouvert par l'acquéreur. **Effet non mesuré** : la nuit recalcule les chaînes par la séquence.
+3. ~~Le chaînage d'une nouvelle offre compare deux séries~~ — **FAUX, corrigé au §9** : depuis 1b (22/10), la création passe à
+   `app_chaine_pour` le numéro de **Hektor** (`v_acquereur_cible`), reconnu par nos deux numéros.
 4. Tout lecteur qui compare une personne doit savoir dans quelle série il est : c'est l'origine de C4 (« X et X »), de F2 (acquéreur
    inconnu), du doublon 1b et du défaut 6 — **cinq défauts de la même famille en un mois**.
 
@@ -163,3 +162,59 @@ Il ne manque **aucune liste** : il manque que le registre des transactions dési
    la table de nuit — la seconde copie disparaît.
 5. Les lecteurs : `aliasNumerosAcquereur` relie chaque personne de la liste (pas seulement le principal), R3 compare nos numéros, le chaînage
    SQL reçoit le numéro de Hektor (ou compare `app_contact_id`).
+
+---
+
+## 9. AUDIT DÉTAILLÉ DU MÉCANISME RÉVISÉ (§8) — pièce par pièce, 24/10 *(Frédéric : « oui, lance-le »)* — lecture seule, **rien codé**
+
+### ⛔ Deux corrections de ce que j'avais écrit
+- **Le chaînage n'a PAS le défaut annoncé** (§5, point 3) : la création calcule `v_acquereur_cible` (numéro de Hektor, par nos deux
+  numéros — 1b du 22/10) et c'est lui qu'elle passe à `app_chaine_pour` et qu'elle range dans `hektor_acquereur_id`.
+- **Il y a un SECOND écrivain du blob, en journée** : à la fin du travail de création, le worker **réécrit** `acquereurs_json`,
+  `acquereur_json` et `mandants_json` avec ce que Hektor a **relu** (« classe B, les personnes », 16/09, worker l. ~15235-15300) — donc en
+  numéros de Hektor, quelques minutes après le clic, sans toucher `hektor_acquereur_id` (« la CLÉ du chaînage des offres et de
+  l'adoption au run »).
+
+### Où vit vraiment le registre des transactions
+**Le maître est le registre LOCAL du serveur** : chaque nuit `affaire_ledger.py` le refait depuis le miroir de Hektor (UPSERT, `acquereurs_json
+= excluded`), `registre_depuis_console.py` y pose les notaires, puis le push recopie **toutes** les lignes chez Supabase. Le jour, deux
+écrivains passent directement chez Supabase : la création (au clic) et le worker (la relecture). ➡ **Conséquence décisive pour le
+rattrapage : une traduction écrite dans le code de nuit s'applique à TOUTES les lignes dès la première nuit** — il n'y a pas de
+script de rattrapage séparé à lancer, mais c'est un effet de production à décider comme tel.
+
+### Les écrivains, et ce que chacun devrait écrire
+| écrivain | où | aujourd'hui | à changer |
+|---|---|---|---|
+| **la création** | Supabase, `app_change_annonce_status_optimistic` + `app_acquereurs_json` | principal : les deux numéros (1b) ; la liste : `id` = notre identité, ⚠ **un co-acquéreur passé sous son numéro de Hektor DISPARAÎT de la liste** (mesuré : `app_acquereurs_json(['605976'])` → 0 ; `(['20000015'])` → 1) ; notaires : nos numéros | la liste reconnaît **les deux** numéros (comme 1b) et chaque personne porte `id` (Hektor) **et** `app_contact_id` (nous) |
+| **le worker (relecture)** | Supabase, PATCH | la liste relue chez Hektor : `id` = Hektor seul | ajouter `app_contact_id` à chaque personne (traduction par la fiche contact) — ou laisser la nuit le faire (quelques heures sans notre numéro) |
+| **la nuit, acquéreurs** | local, `affaire_ledger.py` | la liste du miroir : `id` = Hektor ; `app_contact_id` traduit pour le principal seul (G-10) | traduire **chaque** personne de la liste avec la même table (`app_contact`, complète) ; ne jamais effacer |
+| **la nuit, notaires** | local, `registre_depuis_console.py` | numéro de Hektor (API pour la vente, console pour le compromis) | écrire **notre** numéro (traduit) ; ⚠ traduire AVANT la comparaison « neuf = ancien », sinon chaque nuit réécrit tout ; garder le comptage des contradictions API / console **en numéros de Hektor** |
+| **le push** | local → Supabase | recopie | rien (le blob est déjà décodé en jsonb) |
+
+### Les lecteurs, et ce qui pourrait casser
+| lecteur | lit | risque | parade |
+|---|---|---|---|
+| écran : noms des parties, « X et X » (`aliasNumerosAcquereur`) | `id` des personnes ; la paire du principal seulement | aucun : on **ajoute** une clé, `id` ne change pas | relier chaque personne par son `app_contact_id` |
+| modale : préremplissage des acquéreurs | `acquereurs_json[].id` (Hektor) | il alimente la liste qui DISPARAÎT à la création (ci-dessus) | proposer `app_contact_id` d'abord |
+| modale / rubrique : notaires | colonne notaire + `loadNomsContacts` (deux numéros) | aucun | — |
+| **R3 `@notaire`** | la colonne notaire **comme preuve de ce que Hektor a retenu** | ⛔ **si la colonne porte NOTRE numéro, R3 comparerait la saisie à elle-même : « arrivée » sans preuve** (risque déjà noté le 23/10) | R3 juge contre la source Hektor (`notaires_json` de la vente, `app_affaire_console` du compromis), traduite |
+| chaînage SQL, adoption de nuit (C.4 / 1b) | `hektor_acquereur_id` | aucun : la colonne reste celle de Hektor | — |
+| worker, envoi | la charge, traduite (C-9) | aucun | — |
+| worker, `personnes_posees` / 1.4 | numéros de Hektor des deux côtés | aucun | — |
+| résumé du cockpit, rôles des contacts | le **miroir**, pas le registre | aucun | — |
+| les deux formes du blob | 19 905 listes et 41 619 objets seuls (local, singulier compris) | un lecteur qui n'attend qu'une forme saute l'autre en silence (piège du 30/09) | traiter les deux, comme `lireMandantsAffaire` |
+
+### La projection des acquéreurs dans les relations (la décision du 30/09) — mesurée
+Sur le serveur, en lecture seule : la table de nuit porte **16 273** couples (acquéreur, bien), en **notre** identité ; le registre des
+transactions en porte 16 300 en numéros de Hektor. **Comparés tels quels : 0 en commun** (deux séries). **Traduits par la doublure : 16 273
+sur 16 273 (100 %)**, et 27 de plus que la nuit ne connaît pas. Les 180 compromis manquants du 30/09 n'existent plus. ➡ **La projection est
+faisable dès que le blob porte nos numéros** ; elle remplacera la branche « acquéreurs » de la vue `app_contact_relations_current` (qui
+lit encore la table de nuit). ⚠ Elle touche l'affichage des types de contacts : à faire avec le chantier des types, pas avant.
+
+### L'ordre proposé (chaque pièce réversible, essais + témoin inverse ; ⛔ rien sans le « vas-y »)
+1. **La création** : la liste reconnaît les deux numéros et porte `app_contact_id` (patch de base, accord) — corrige aussi la perte
+   silencieuse d'un co-acquéreur.
+2. **La nuit, acquéreurs** : chaque personne de la liste reçoit `app_contact_id` (code de nuit ; s'applique à tout dès la 1ʳᵉ nuit).
+3. **La nuit, notaires** + **R3 contre la source Hektor** (code de nuit + worker, redémarrage des services file vide).
+4. **Les lecteurs de l'écran** (alias, préremplissage).
+5. **La projection des acquéreurs** dans les relations — avec le chantier des types.
