@@ -2531,3 +2531,55 @@ notaires nommés (compromis et vente), notes (3), condition du compromis, répar
 **A bougé** : le compromis passe `en_cours` → `active` (le mot de Hektor) ; ⚠ **la vente perd `prix_net_vendeur`** au registre
 (110 000 → vide) — Hektor ne le porte pas sur une vente ; le carnet le garde (verdict `sans_objet`). C'est exactement le terrain de
 **R2** (la nuit remplace la ligne du registre). Non corrigé.
+
+## 45. PLUSIEURS AFFAIRES SUR UNE ANNONCE, ET MON CORRECTIF DU 23/10 (§41) — audit du 24/10 *(Frédéric : « une annonce pouvait avoir plusieurs affaires du moment où la chaîne était close… il faudrait plutôt dire : pas de transaction pour les biens en état Vendu, Clos ou Estimation ; si l'état revient à Actif, possibilité de refaire une nouvelle chaîne… audite d'abord mon projet dans sa globalité »)* — lecture seule
+
+### L'histoire, datée
+| date | quoi | où |
+|---|---|---|
+| 30/07 | « Vendu » clôt aussi le mandat courant (`close_mandat_on_sale`) ; réactiver un mandat clos passe par « Actif » | `a206938` |
+| 31/07 | le dossier suit le **cycle de mandat courant** : une transaction d'un ancien mandat (autre **numéro**) n'est plus rangée sous le nouveau | `ea8b90a` |
+| 02-03/09 | seule la **création** d'une transaction déplace le statut du bien chez Hektor ; la vente le passe à « Vendu » ; le compromis reste `active` après la vente | `901995c` `1108752` `9cf217d` |
+| 03/09 | le **dossier d'affaire** (`app_chaine_id`), un numéro par chaîne, frappé par Supabase | `aedd681` |
+| 04/09 | **la règle de Frédéric** : « une chaîne c'est trois blocs, ou deux, ou un seul ; un compromis est clos quand il est annulé ou quand la vente est passée » → chaînage par la SÉQUENCE | `1db53f2` |
+| 04-05/09 | **2.2c** : on bloque une 2ᵉ vente, un 2ᵉ compromis vivant ; ⚠ **objection de Frédéric** : « gérer le cas d'une chaîne d'un ANCIEN mandat sur la même annonce » → on compte les **dossiers OUVERTS**, pas les transactions. Mesure : **8 biens vendus autrefois revenus en Estimation** | `156489f` `cbea46d` |
+| 08/09 | une vente ferme **toujours** sa chaîne | `858a34c` |
+| 16/09 | 2.7 : le numéro de mandat d'une transaction se **déduit** la nuit (cascade : Hektor l'a dit → l'annonce n'a qu'un mandat → la période → le mandant) | `affaire_ledger.py:466` |
+| 23/10 | §41 : mon `bienVenduPourStatut` | `37c0682` |
+
+### Les trois étages qui décident aujourd'hui
+1. **La base** (`app_change_annonce_status_optimistic`) : sur le **parc vivant** (`app_dossier_current` = archive 0 et statut ∈ Actif,
+   Sous offre, Sous compromis, **Estimation** — plan l. 1689) → tout est permis ; sur l'**historique** (Vendu, Clos non archivés) →
+   seulement Actif / Clos (`transaction_hors_parc_vivant`) ; sur l'**archive** → rien (`annonce_archivee_lecture_seule`).
+2. **L'écran, 2.2c** (`avisGardeFouSaisie` + `dossiersOuvertsDuBien`) : un **dossier ouvert** qui porte déjà un compromis (ou une vente)
+   éteint « Envoyer vers » ; un dossier **clos** (vente passée, compromis annulé, offres toutes refusées) **ne bloque pas** → c'est ce qui
+   permet une **nouvelle chaîne** sur la même annonce.
+3. **Mon correctif §41** : **A** une vente confirmée **sous le même numéro de mandat** que le bien, **ou B** le statut « Vendu ».
+
+### Mesure du 24/10
+| parc | statuts |
+|---|---|
+| vivant | Estimation **12 781** · Actif 592 · Sous compromis 90 · Sous offre 44 |
+| historique | Vendu 8 819 · Clos 136 |
+| archive | Clos 34 788 · Vendu 425 · Actif 91 · Estimation 31 |
+
+⚠ **Ma preuve A bloque 8 biens VIVANTS** — tous en **Estimation**, et ce sont **les 8 de l'objection du 05/09** : vendus entre 2016
+et 2021 (EM16784, EM19904, EM29852, EA14544, EM33490, EM41252, EM42200, EM42964), revenus en Estimation **sous le même numéro de
+mandat** que leur ancienne vente (numéro donné par Hektor). Aucun bien Actif / Sous offre / Sous compromis n'est touché aujourd'hui.
+
+### Verdict
+- **Frédéric a raison : A casse le mécanisme des chaînes successives.** Elle regarde l'HISTOIRE (une vente sous ce numéro) au lieu
+  de l'ÉTAT du bien. Si l'un de ces 8 biens redevient **Actif sans nouveau numéro** de mandat, A l'empêcherait de recevoir une offre
+  — exactement l'erreur que le 05/09 avait évitée en comptant les dossiers ouverts. Le risque dépend d'un numéro de mandat (déduit la
+  nuit pour 52 % des lignes, recyclé chez Hektor en 2026) : une base fragile pour un verrou.
+- **B** (statut « Vendu ») est dans la logique de Frédéric ; il manque **Clos** et **Estimation**.
+- **⚠ Estimation n'est refusé NULLE PART aujourd'hui** : ni par l'écran, ni par la base (le parc vivant l'inclut). Aucune décision
+  écrite trouvée sur une transaction sur une estimation.
+
+### Correctif proposé — NON CODÉ, en attente du « vas-y »
+- **Écran** : remplacer A + B par **l'état du bien seul** — « Envoyer vers Offre / Compromis / Vendu » caché si le statut est **Vendu,
+  Clos ou Estimation** ; présent sur Actif, Sous offre, Sous compromis. 2.2c (les dossiers ouverts), le verrou de l'offre et V ne bougent
+  pas. Modifier / Supprimer / Actif / Clos inchangés.
+- **Base** (accord requis) : refuser aussi la création sur un bien en **Estimation** — aujourd'hui elle passe.
+- **Ce qu'on perd** : la minute après une vente, la fiche peut encore dire « Sous compromis ». Le travail de vente en cours bloque déjà
+  toute autre action sur l'annonce, puis la relecture la sort du parc vivant et la base refuse. Reste une fenêtre courte, non mesurée.
