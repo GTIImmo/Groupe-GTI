@@ -380,6 +380,35 @@ testait pas les frontières de pages.
 les ventes pourraient être refusées souvent (fréquence inconnue — c'est ce que le moniteur dira) ; le mode
 bootstrap (`run_phase1_safe.ps1`, manuel) n'a aucun tri et garde le défaut : à traiter à part s'il resservait.
 
+### 🔧 ÉCRIT ET ÉPROUVÉ LE 24/10 À ~23:55 — RANGÉ SUR LA BRANCHE `filet-listes` (commit `bce8c4e`), PAS SUR `main`
+
+⚠ **Changement de conception pendant l'écriture** : le filet « on ne retire rien si la liste est incomplète »
+était **mauvais**. La boucle d'upsert relit aussi l'instantané de mars, qui réinjecte chaque nuit ~10 compromis
+**vraiment supprimés** ; tout bloquer les aurait fait « revenir » au registre pour un jour, puis « redisparaître »
+→ fausses alertes. Le filet **ne garde que les candidats dont le bien a un voisin lu en double** (signature de
+l'ex-aequo sauté), et ne refuse tout que si des manquants restent **inexpliqués** ou si la liste **mélange deux
+nuits**.
+
+| pièce | interrupteur (`.env`) | éteint (défaut) |
+|---|---|---|
+| tri des compromis `sort=id&way=DESC` (`sync_raw.py`) | `APP_COMPROMIS_TRI_ID=1` | `dateStart`, comme avant |
+| filet (`normalize_source.filet_liste_incomplete`) | `APP_MIROIR_FILET_LISTE=1` | **JOURNAL SEUL** : écrit `[miroir] FILET … AURAIT garde …`, ne garde rien |
+| alerte `data.miroir_filet` (`check_gti_health.py`) | — | warning si un type est refusé 3 nuits de suite |
+
+**Épreuves** (`phase2/checks/test_filet_liste_incomplete.py`) : **18/18** sur une liste fabriquée (complète,
+sautée, journal seul, inexpliqué, deux nuits, sans total ; tri éteint/allumé, offres intactes) · **rejeu de la
+vraie nuit du 24/10** (`--nuit-reelle`, base temporaire) : compromis **10 gardés = exactement les 10 « disparus »**,
+10 retirés = les fantômes de mars ; ventes **la vente « 2 » gardée**, 1 retirée ; offres **COMPLETE**, 5 retirées ·
+alerte **6/6** sur journaux fabriqués · moniteur complet en `--dry-run` : sans erreur, la ligne
+`data.miroir_filet` apparaît · compilation OK · fins de ligne homogènes · diff **purement additif** (402 +, 0 −).
+
+**Trouvé en passant, NON lié** : `phase2/checks/test_alignement_suppression.py` (6 échecs) et
+`phase2/checks/test_c6_miroir_propre.py` (3 échecs) échouent **déjà sur le code d'avant** (vérifié en remettant
+les fichiers à HEAD). À regarder à part.
+
+**Rangé sur une branche** pour tenir la promesse faite à Frédéric : *« te les montrer avant qu'elles tournent
+la nuit »*. Le run de 05:00 lit le dossier principal : **la nuit du 25/10 tourne exactement comme celle du 24/10**.
+
 **6. Le remède proposé (NON fait — c'est du code du run, il faut un « vas-y »).** *(⚠ remplacé par le
 correctif retenu ci-dessus.)* Un garde-fou **sans aucune
 requête de plus chez Hektor** (donc sans risque de blocage d'IP) : **ne rien retirer du miroir pour un type
