@@ -431,6 +431,28 @@ il aurait refusé 2 suppressions (compromis, ventes), et les 11 seraient restée
 suppressions passeraient la nuit suivante, quand la liste serait complète. À écrire dans
 `aligner_miroir_sur_hektor` (`normalize_source.py` ~l. 1394), à côté du garde-fou « liste tronquée < 50 % ».
 
+## 2 quater. TRAITÉ DANS LA NUIT DU 24 AU 25/10, AVEC L'ACCORD DE FRÉDÉRIC
+
+**Les 6 travaux d'essai (n° 4 et 5) sont TRANCHÉS « J'ai refait »** (~00:40). Même ligne que
+`app_action_resolve(mode='refait')` — un `INSERT` dans `app_pending_resolution`, gardes comprises (en erreur,
+> 3 h, pas déjà tranché) — écrite directement parce que la fonction vérifie la session de l'app.
+`resolved_by` = « claude (accord de Frederic, 25/10/2026 …) ». Aucune donnée touchée, rien chez Hektor.
+Moniteur (dry-run) : `travaux_en_erreur` **0** (11/11 tranchés), `geste_abandonne` **0**.
+
+**Les 8 écarts d'essai (n° 8 et 9) sont marqués « VUS »** (~00:51). ⚠ **Je m'étais trompé** en écrivant qu'il
+n'existait aucun « j'ai vu » durable : les deux sondes se taisent dès que `traite_le` est posé, par
+`app_annonce_naissance_ecart_traiter(app_dossier_id)` et `app_contact_modif_ecart_traiter(job_id)` (admin). **Mais
+AUCUN bouton de l'app ne les appelle** (0 occurrence dans le front) : c'est pourquoi je l'avais manqué.
+Fait par la même mise à jour que ces fonctions : `app_annonce_saisie_naissance` (10000009 / 63331) et
+`app_contact_saisie_modif` (jobs `816b4427…` = 20000007, `7f050b73…` = 20000008). `traite_par` laissé vide
+(aucune session d'app). Sondes : **0 / 0**.
+
+**Reste au monitoring (dry-run 25/10 ~00:55) : 4 alertes, toutes à extinction automatique** — photos (×2 rouges)
+et journal du run au run de 05:00 ; transactions disparues vers 06:46. Plus l'orange de fond du battement
+(5 workers « sans premier signe »), qui demande une décision.
+
+➡ **À proposer** : un bouton « Vu » sur la fiche annonce et la fiche contact, qui appelle ces deux fonctions.
+
 ## 3. Ce qu'on peut retirer tout de suite, sans toucher à aucun garde-fou
 
 - **n° 4 et n° 5** : trancher les 6 lignes dans l'écran Santé. Elles sortent du compte, la sonde reste.
