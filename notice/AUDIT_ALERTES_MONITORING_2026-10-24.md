@@ -312,7 +312,76 @@ Ce que ça pourrait casser ailleurs : la pièce 1 change l'ORDRE de lecture, pas
 rien ne s'appuie sur « les premières pages = les plus récents » pour les compromis en mode update (le plafond de
 pages vaut 999999/20, donc non bloquant aujourd'hui). La pièce 2 peut retarder d'une nuit une vraie suppression.
 
-**6. Le remède proposé (NON fait — c'est du code du run, il faut un « vas-y »).** Un garde-fou **sans aucune
+### ⭐⭐ AUDIT DU CORRECTIF — code, notes, historique (24/10, ~23:30, demandé par Frédéric)
+
+> Code relu par moi ; notes et historique relus par un agent (rapport intégré ici) ; mesures sur
+> `raw_api_response` ; **18 lectures de plus chez Hektor** (sort=id DESC sur 8 pages, 3 essais de tri des
+> ventes), 0 refus. **Le remède ci-dessous REMPLACE celui du §6 plus bas**, sur deux points (le sens du tri, et
+> le filet qui ne regarde qu'une nuit).
+
+**1. La meilleure preuve était déjà dans le projet.** Les **listes d'annonces** sont lues **par numéro**
+(`sort=id`) : la nuit dernière, **10 listes, ~61 000 lignes, 0 doublon, 0 manquant**. Mesure de toutes les
+listes paginées du 24/10 :
+
+| liste | tri demandé | total annoncé | distincts | manquants |
+|---|---|---|---|---|
+| annonces (10 variantes) | **id** | ~61 000 | identiques | **0** |
+| offres | date (ignoré : rangé par numéro décroissant, uniques) | 11 193 | 11 193 | 0 |
+| **compromis** | dateStart (ignoré : rangé par **annonce**) | 10 626 | 10 616 | **10** |
+| **ventes** | aucun | 9 267 | 9 266 | **1** |
+
+Précédent écrit : en **mars 2026**, les relectures complètes des annonces et des contacts sont passées de
+`datemaj` à **`sort=id&way=ASC`** parce que *« sur un run long, ce tri est instable »* (REPRISE_SYNC_2026-03-21.md
+l. 320-345). **Même défaut, même remède, déjà appliqué ailleurs.**
+
+**2. Pourquoi `dateStart` : jamais vérifié.** Choisi le 19/03 (`notice/SYNC_UPDATE_TRANSACTIONS_NOTE.md`
+l. 60-77), avec un point resté ouvert : *« vérifier en pratique le comportement sur ListCompromis avec
+sort=dateStart »* (l. 140). Personne ne l'a clos. Le refus de `sort=id` écrit dans `sync_raw.py` l. 1536 vaut
+**pour les mandats seulement** (deux espaces de numéros) ; il ne s'applique pas aux compromis.
+
+**3. ⚠ LE SENS DU TRI : DÉCROISSANT, PAS CROISSANT (je corrige ma proposition).** Le code suppose « premières
+pages = plus récents » : en mode update, le plafond de pages vaut `ceil(compromis_recent_limit / 20)`, et la
+**valeur par défaut est 1 000** (`sync_raw.py` l. 1623). La nuit passe 999 999 (lecture complète depuis le 07/09,
+commit `aa361fb`), mais **un lancement sans ce paramètre lirait, en croissant, les 1 000 PLUS ANCIENS**.
+**`sort=id&way=DESC`** garde l'ordre « récents d'abord » : **vérifié en direct** sur 8 pages (début, milieu,
+fin) — strictement décroissant, jonctions exactes (50110→50109, 21082→21081, 15664→15663, 12563→12562), aucun
+doublon, de 50137 à 12556. C'est aussi le tri du worker depuis le 23/10 (commit `2704dee`).
+
+**4. Ventes : AUCUN tri par numéro possible.** `ListVentes` ignore `sort=id` (avec `way=` ou `order=`, testé en
+direct). Elles reposeront **sur le filet seul**.
+
+**5. Deux risques trouvés par l'audit, qui changent le filet.**
+- `fetch_latest_raw_payloads` (`hektor_pipeline/common.py` l. 983) prend **pour chaque page sa version la plus
+  récente, toutes nuits confondues**. Une nuit **interrompue**, ou une liste qui **raccourcit**, laisserait des
+  pages d'une nuit précédente — rangées autrement. Ce matin, 533 pages sur 533 venaient de la même nuit (pas de
+  mélange) ; le risque existe pourtant, avec ou sans changement de tri. ➡ **Le filet doit compter UNIQUEMENT les
+  pages de la dernière nuit.**
+- **Un refus qui se répéterait chaque nuit gèlerait le miroir sans bruit** (cas possible pour les ventes, dont le
+  tri n'est pas réglable). La mesure d'une seule nuit ne dit pas la fréquence. ➡ **Le refus doit être écrit au
+  journal ET compté par le moniteur** (alerte si plusieurs nuits d'affilée).
+
+**6. Ce que les notes confirment.** La nuit lit tout (le tri ne change pas la couverture) · `metadata.total` a
+déjà été proposé deux fois (L10-8 et L10-8a, jamais codé) · la relecture une par une reste interdite sans mémoire
+des verdicts ni arrêt net au 403 (18/09) · le registre ne supprime jamais, il marque et la ligne revient · le
+filet va dans le sens de *« le miroir témoigne, il n'exécute pas »* et de *« un numéro ne se perd jamais »*.
+**Ce qu'elles contredisent** : la conclusion du 16/09 (`ba7679d`), *« notre lecture est complète »*, qui ne
+testait pas les frontières de pages.
+
+### ✅ LE CORRECTIF RETENU APRÈS AUDIT (NON fait — code du run, il faut un « vas-y »)
+
+| pièce | où | quoi |
+|---|---|---|
+| **1** | `sync_raw.py` l. 1550-1551 (mode update) | compromis : **`sort=id`, `way=DESC`** au lieu de `dateStart`/`DESC`. Couverture inchangée, ordre « récents d'abord » gardé |
+| **2** | `normalize_source.py`, `aligner_miroir_sur_hektor` (~l. 1394) | ne compter que les pages de **la dernière nuit** (`run_id` le plus récent de l'endpoint) ; **si distincts < `metadata.total` de cette nuit → aucune suppression**, et le dire au journal. Vaut pour offres, compromis, ventes. 0 appel Hektor |
+| **3** | moniteur | compter les refus du filet ; **alerte si 3 nuits de suite** sur un même type (sinon le miroir gèlerait en silence) |
+| essais | — | rejouer la liste brute du 24/10 : le filet doit refuser compromis et ventes, accepter offres ; témoin inverse : une liste complète doit passer |
+
+**Ce que ça pourrait casser ailleurs** : une vraie suppression attendra une nuit complète (au moins une nuit) ;
+les ventes pourraient être refusées souvent (fréquence inconnue — c'est ce que le moniteur dira) ; le mode
+bootstrap (`run_phase1_safe.ps1`, manuel) n'a aucun tri et garde le défaut : à traiter à part s'il resservait.
+
+**6. Le remède proposé (NON fait — c'est du code du run, il faut un « vas-y »).** *(⚠ remplacé par le
+correctif retenu ci-dessus.)* Un garde-fou **sans aucune
 requête de plus chez Hektor** (donc sans risque de blocage d'IP) : **ne rien retirer du miroir pour un type
 quand le nombre de distincts reçus est inférieur au total annoncé par Hektor** (`metadata.total`). Cette nuit,
 il aurait refusé 2 suppressions (compromis, ventes), et les 11 seraient restées présentes. Les vraies
