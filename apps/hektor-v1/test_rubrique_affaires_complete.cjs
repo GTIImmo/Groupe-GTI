@@ -54,7 +54,7 @@ const FONCTIONS = [
 ];
 const FONCTIONS_NEUVES = ["function aliasNumerosAcquereur(", "function ckPartiesDuJson(", "function ckNomsParties(",
   "function ckDetailDepuisRegistre(", "function ckResumeNuitAJour(", "function compromisVerrouilleParSaVente(",
-  "function bienVenduPourStatut("];
+  "function etatFermeAuxTransactions("];
 
 function monter(src) {
   const morceaux = [];
@@ -80,7 +80,7 @@ function monter(src) {
       ckDetailDepuisRegistre: typeof ckDetailDepuisRegistre === 'function' ? ckDetailDepuisRegistre : null,
       ckResumeNuitAJour: typeof ckResumeNuitAJour === 'function' ? ckResumeNuitAJour : null,
       compromisVerrouilleParSaVente: typeof compromisVerrouilleParSaVente === 'function' ? compromisVerrouilleParSaVente : null,
-      bienVenduPourStatut: typeof bienVenduPourStatut === 'function' ? bienVenduPourStatut : null,
+      etatFermeAuxTransactions: typeof etatFermeAuxTransactions === 'function' ? etatFermeAuxTransactions : null,
       repartitionChaineId: typeof repartitionChaineId === 'function' ? repartitionChaineId : null,
       viser: (a) => { __visee = a; }, poserAffaires: (l) => { statusChangeAffaires = l; } };`;
   const js = esbuild.transformSync(code, { loader: "ts" }).code;
@@ -229,21 +229,17 @@ function essai(api) {
   ok("V : une vente EFFACEE chez Hektor ne verrouille pas ; une offre n'est pas concernee",
     verrou && verrou([{ ...VENTE, present_in_hektor: false }, COMPROMIS, OFFRE], COMPROMIS) === null
       && verrou(LIGNES, OFFRE) === null, "");
-  // ⑧ (23/10) : un bien vendu ne prend plus de NOUVELLE transaction (« Envoyer vers » disparait)
-  const vendu = api.bienVenduPourStatut;
-  const fiche = (statut, mandat) => ({ statut_annonce: statut, numero_mandat: mandat });
-  ok("vendu : VA6482 « Vendu » -> fermé par la vente 23355 (nommée)",
-    vendu && (vendu(fiche("Vendu", "18787"), LIGNES) || {}).hektor_affaire_id === "23355", J(vendu && vendu(fiche("Vendu", "18787"), LIGNES)));
-  ok("vendu : juste après la vente, la fiche dit encore « Sous compromis » -> le registre suffit",
-    vendu && (vendu(fiche("Sous compromis", "18787"), LIGNES) || {}).hektor_affaire_id === "23355", "");
-  ok("vendu : une vente SANS numéro Hektor (travail échoué) ne ferme rien",
-    vendu && vendu(fiche("Sous compromis", "18787"), [{ ...VENTE, hektor_affaire_id: null }, COMPROMIS, OFFRE]) === null, "");
-  ok("vendu : une vente EFFACÉE chez Hektor ne ferme rien",
-    vendu && vendu(fiche("Sous compromis", "18787"), [{ ...VENTE, present_in_hektor: false }, COMPROMIS, OFFRE]) === null, "");
-  ok("vendu : la REVENTE (nouveau mandat, statut actif) garde ses boutons",
-    vendu && vendu(fiche("Actif", "19001"), LIGNES) === null, "");
-  ok("vendu : le statut seul suffit (registre pas encore lu) ; pas de fiche -> rien",
-    vendu && vendu(fiche("Vendu", "18787"), []) === true && vendu(null, LIGNES) === null, "");
+  // ⑧ (24/10) : l'ETAT du bien ferme les transactions -- Vendu, Clos, Estimation ; jamais son histoire
+  const etat = api.etatFermeAuxTransactions;
+  const st = (statut) => etat && etat({ statut_annonce: statut, numero_mandat: "18787" });
+  ok("état : Vendu, Clos et Estimation ferment les transactions",
+    st("Vendu") === "vendu" && st("Clos") === "clos" && st("Estimation") === "estimation", J([st("Vendu"), st("Clos"), st("Estimation")]));
+  ok("état : Actif, Sous offre, Sous compromis restent ouverts (2.2c décide)",
+    st("Actif") === null && st("Sous offre") === null && st("Sous compromis") === null, J([st("Actif"), st("Sous offre"), st("Sous compromis")]));
+  ok("état : un bien revenu ACTIF après une vente passée sous le même mandat peut refaire une chaîne",
+    etat && etat({ statut_annonce: "Actif", numero_mandat: "13173" }, [{ ...VENTE, numero_mandat: "13173" }]) === null, "");
+  ok("état : pas de fiche ou statut vide -> rien (la base décide)",
+    etat && etat(null) === null && st("") === null, "");
 
   // ⑧ (23/10) : le nom du notaire par sa fiche contact -- la lecture de l'assistant porte le numero de
   // HEKTOR (122190), le registre le notre (10064499).

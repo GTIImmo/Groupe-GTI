@@ -10455,6 +10455,10 @@ function throwConsoleAdminJobError(error: { message?: string; code?: string; det
   if (text.includes('transaction_hors_parc_vivant')) {
     throw new Error(bvs("Ce bien n'est plus dans le parc vivant (vendu ou clos) : on n'y enregistre plus d'offre, de compromis ni de vente."))
   }
+  // ⑧ (24/10) : patch_transaction_sur_estimation -- meme traduction.
+  if (text.includes('transaction_sur_estimation')) {
+    throw new Error(bvs("Ce bien est en estimation : une offre, un compromis ou une vente se font sur un bien Actif. Passez-le d'abord en Actif."))
+  }
   if (text.includes('app_console_job_active_admin_annonce_idx') || text.includes('duplicate key')) {
     throw new Error(bvs('Une action Hektor est deja en cours pour cette annonce. Attends la fin du traitement avant de relancer.'))
   }

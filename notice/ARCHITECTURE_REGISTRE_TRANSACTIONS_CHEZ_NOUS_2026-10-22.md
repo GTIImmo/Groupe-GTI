@@ -2583,3 +2583,33 @@ mandat** que leur ancienne vente (numéro donné par Hektor). Aucun bien Actif /
 - **Base** (accord requis) : refuser aussi la création sur un bien en **Estimation** — aujourd'hui elle passe.
 - **Ce qu'on perd** : la minute après une vente, la fiche peut encore dire « Sous compromis ». Le travail de vente en cours bloque déjà
   toute autre action sur l'annonce, puis la relecture la sort du parc vivant et la base refuse. Reste une fenêtre courte, non mesurée.
+
+## 46. L'ÉTAT DU BIEN FERME LES TRANSACTIONS — écran codé, patch de base PRÉPARÉ — 24/10 *(Frédéric : « les deux si c'est nécessaire »)* — **pas poussé, pas posé**
+
+**Écran** (`etatFermeAuxTransactions`, remplace `bienVenduPourStatut` du §41) : « Envoyer vers Offre / Compromis / Vendu » est caché,
+avec un bandeau, quand le statut du bien est **Vendu, Clos ou Estimation** ; il reste sur Actif, Sous offre, Sous compromis, où la
+garde 2.2c (les dossiers ouverts) continue de décider. **L'histoire du bien n'est plus regardée** (fin de la preuve A). Bandeau :
+Vendu → « supprimer d'abord la vente » ; Clos / Estimation → « passez d'abord le bien en Actif ». Le geste refuse aussi (touche Entrée),
+et le refus de la base `transaction_sur_estimation` est traduit (api.ts). Modifier, Supprimer, Actif, Clos : inchangés.
+- Essais : `test_rubrique_affaires_complete.cjs` **29/29** (4 neufs) · témoin : **l'ancienne règle (HEAD) bloquait EM16784 repassé
+  Actif sous le même mandat** (« BLOQUE par la vente 2417 »), la nouvelle le laisse libre · **2 mutants attrapés** (sans Estimation,
+  sans Clos) · `npm run build` vert · `\r\r\n` = 0.
+
+**Base** — `supabase/patch_transaction_sur_estimation_2026-10-24.sql` (+ `_INVERSE`, `_REPETITION`), générateur
+`phase2/checks/gen_patch_transaction_sur_estimation.py`. `app_change_annonce_status_optimistic` **44697dd5 → 93be71b4**, une ancre
+(`-- @repli-fin`), interrupteur `transaction_refusee_sur_estimation` posé **éteint**. Allumé : créer une offre, un compromis ou une vente
+sur une Estimation → `transaction_sur_estimation` ; « Actif » et « Clos » passent ; Actif / Sous offre / Sous compromis inchangés ;
+la modification (autre fonction) n'est pas touchée.
+- **Répétition : 7/7** (T1 éteint → accepté = le défaut ; T2-T4 allumé → offre, compromis, vente refusés ; T5 « Actif » accepté ; T6 une
+  offre sur un bien Actif acceptée ; T7 l'inverse rend 44697dd5). Vérifié après : empreinte 44697dd5, pas d'interrupteur, 63331 toujours
+  en Estimation, 0 ligne au registre, 0 travail.
+- ⚠ **La 1ʳᵉ répétition a dit 4/7, et c'était la répétition, pas le patch** : la création est **optimiste** — elle passe aussitôt le
+  bien « Sous offre » chez nous (mesuré : Estimation → Sous offre). Après T1, T2-T4 ne visaient plus une estimation. Corrigé en remettant
+  le bien en Estimation avant chaque appel. ⭐ C'est aussi la preuve du défaut : une offre sur une estimation **change son statut**.
+- ⚠ La répétition jouée est la logique du fichier, avec des messages d'arrêt raccourcis pour l'envoi.
+
+**Ce que ça pourrait casser ailleurs** : un négociateur qui enregistrait une offre sur un bien encore en Estimation (sans l'avoir passé
+Actif) devra d'abord le passer Actif — c'est la règle voulue. Les 8 biens vendus revenus en Estimation : fermés tant qu'ils sont en
+Estimation, ouverts dès qu'ils repassent Actif, quel que soit leur numéro de mandat.
+
+**Pour activer** : (1) Frédéric pousse (l'écran part avec Vercel) ; (2) poser le patch (accord) ; (3) allumer l'interrupteur (accord).
