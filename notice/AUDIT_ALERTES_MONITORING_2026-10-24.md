@@ -587,6 +587,35 @@ passages par nuit (`on conflict do nothing`).
 0 ligne touchée ces 10 derniers jours. Un `lock_timeout` de 30 s peut faire attendre la fonction derrière le
 recalcul des rapprochements : c'est voulu (attendre plutôt qu'échouer), et elle reste non bloquante pour le run.
 
+### 🔍 CE QUE LE CORRECTIF POURRAIT CASSER AILLEURS (25/10, demandé par Frédéric) — 4 trouvailles
+
+| # | trouvaille | gravité | conséquence pour le correctif |
+|---|---|---|---|
+| 1 | **Le script prend un refus pour un succès** (`menage_orphelins_recherche.py` l. 95-102) : si la fonction rend `{"ok": false, "raison": "conflit_unicite"}`, il rend 0 → `DONE` + battement `success`. Jamais arrivé (70 passages depuis le 21/08, tous `ok`), mais **invisible tant que l'étape échouait** | moyenne | **corriger le script** : sortir en 1 et écrire la raison quand `ok` est faux |
+| 2 | **Le compte écrit au journal est faux** (l. 98) : il additionne les valeurs entières du premier niveau — c'est-à-dire `ok` (True = 1) — et pas les comptes, rangés dans `rattachees` / `supprimees`. Il écrirait **toujours « 1 ligne rattachée »** | faible (trompeur) | corriger le calcul |
+| 3 | **Le délai de verrou s'appliquerait aussi à la tâche planifiée n° 11** (rôle `postgres` : `statement_timeout` 2 min, **`lock_timeout` illimité**). Un `SET lock_timeout` sur la fonction la fait passer d'illimité à la valeur posée. Le délai d'exécution (60 s) reste sous ses 2 min : sans effet | faible | prendre **45 s** (marge sous les 60 s ; plus longue attente observée ~11 s) ; dans le pire cas la tâche échoue ce jour-là, c'est écrit, et l'étape du run prend le relais |
+| 4 | ⚠ **Aucun plancher avant de supprimer** : la fonction efface tout rapprochement et tout historique de score dont la recherche est **absente** de `app_contact_search_current`. Le push des contacts vide puis réécrit les recherches **contact par contact** (`delete_before_upsert`, l. 790) ; s'il plantait en route, le run s'arrête (étape bloquante, le ménage n'est pas appelé) — **mais le cron de 06:00 du lendemain tournerait sur une table abîmée**. Risque **déjà présent aujourd'hui**, indépendant du correctif ; les rapprochements se recalculent, l'**historique de score, non** | moyenne (rare, irréversible) | ajouter un **plancher** à la fonction, comme pour les photos : refuser si `app_contact_search_current` < **5 000** (11 544 aujourd'hui) — protège le cron ET l'étape |
+
+**Vérifié sans problème :**
+- **conflits avec les autres tâches** : 3 tâches planifiées touchent les mêmes tables (`app_process_rapprochement_dirty`,
+  `app_generate_rapprochement_alerts`, `app_bulk_recompute_chunk`), mais sur les recherches **vivantes** ; le ménage ne
+  touche que les **orphelines** — lignes disjointes. Le cron n° 11 tourne à côté d'elles depuis 70 jours sans échec ;
+  **0 deadlock et 0 `lock timeout`** dans les journaux de la base sur 24 h ;
+- **la relecture du schéma de l'API** (`notify pgrst, 'reload schema'`) : déjà pratiquée par le projet (16/06), sans
+  coupure ;
+- **l'étape tourne deux fois par nuit avec le cron** : la fonction est idempotente, son journal accepte deux passages ;
+- **l'heure d'hiver** : le cron passe à 06:00, l'étape vers 06:11 après le push — l'ordre voulu le 14/10 est rétabli.
+
+### ✅ LE CORRECTIF COMPLET APRÈS CETTE ANALYSE (NON fait — il faut un « vas-y »)
+
+| pièce | où | quoi |
+|---|---|---|
+| 1 | fonction (base) | `delete from _cible_sweep where true;` |
+| 2 | fonction (base) | **plancher** : si `app_contact_search_current` < 5 000 → `{"ok": false, "raison": "plancher"}`, rien n'est touché, et c'est écrit au journal du ménage |
+| 3 | fonction (base) | `alter function … set statement_timeout = '60s'` et `set lock_timeout = '45s'` ; puis `notify pgrst, 'reload schema'` |
+| 4 | script du run | `ok` faux → sortie 1 avec la raison ; le compte réel (`rattachees` + `supprimees`) |
+| — | inverse + répétition | répétition en transaction annulée : patch, plancher éprouvé (témoin positif ET témoin du refus), empreinte, `proconfig`, appel de la fonction, retour |
+
 **Noté en passant** : à 06:48, le moniteur a eu un **57014 sur `rpc/app_cron_health`** (même délai de 8 s) —
 c'est la sonde des tâches planifiées. Non traité.
 
