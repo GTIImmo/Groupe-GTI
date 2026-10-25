@@ -640,3 +640,19 @@ du serveur ; 4. **l'essai réel** : lancer une fois à la main `node Console/enq
 les 10 lignes doivent passer « arrivée » (les 8 numéros de mandat sortent du carnet, les 2 notaires restent) ; 5. le lendemain : la 4ᵉ étape
 dans le journal de la descente.
 ⛔ **Retour arrière** : retirer la ligne du `.env` (plus rien n'est posé) ; la pièce 2 se coupe par `R3_HEKTOR_SI_BESOIN = false`.
+
+### ✅ ACTIVÉ ET PROUVÉ EN RÉEL — 25/10, 18:50 *(Frédéric : « vas-y, tu as mon accord, j'ai poussé et redémarré »)*
+- **Les gestes, vérifiés avant d'agir** : `origin/main` = `21138d2` ; les 4 processus worker démarrés à **18:49:37-38**, après le commit
+  (18:45:28) ; file vide (0 pending, 0 running). `.env` sauvegardé (`.env.avant_r3_rattrapage_20261025`, ignoré par git), puis
+  **`APP_AFFAIRE_R3_RATTRAPAGE=1`** ajouté (72 lignes, 0 `\r\r\n`).
+- **Le script, une fois à la main** (`--pousser`) : interrupteur ALLUMÉ, 10 lignes mûres, **1 travail posé pour 24113**.
+- **Le travail** `ef88d2b4` : pris par `sync_light` (génération v9), **fait en 11 s** ; journal : « Rattrapage du carnet (R3), sans relecture
+  de l'annonce », puis « 10 ligne(s) jugée(s), 8 arrivée(s) retirée(s), 2 arrivée(s) gardée(s) ».
+- **Le carnet de 24113, mesuré après** : les **8 `numero_mandat`** (6 offres, le compromis, la vente) **sont sortis** (le registre porte 18787) ;
+  `notaire_id` du compromis **et** de la vente : **« arrivée »**, relu `10064499` (la même personne que 122190 chez Hektor), constaté 17:50 UTC.
+  Les `notaire_*` des offres restent sans état : **exclus exprès** (`R3_NON_CONTROLES`).
+- ⭐ **Dans tout le carnet : 0 ligne « en attente » ou « inconnu »** sur une saisie envoyée.
+- ⚠ **Non prouvé par le journal** : « aucun appel à Hektor ». `lireEtatTransactionViaApi` n'écrit au journal **qu'en cas d'échec** ; l'absence
+  d'appel tient au code et à l'essai (22d), pas à une trace.
+- **Les notaires de l'essai 5 sont donc prouvés** — la réserve 2 du §15 tombe.
+- ⏰ **À voir demain matin** : la 4ᵉ étape dans `logs/scheduled/descente_2026-10-26_*.log` (attendu : « rien à poser », code 0).
