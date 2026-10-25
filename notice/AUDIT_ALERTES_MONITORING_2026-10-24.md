@@ -606,7 +606,7 @@ recalcul des rapprochements : c'est voulu (attendre plutôt qu'échouer), et ell
 - **l'étape tourne deux fois par nuit avec le cron** : la fonction est idempotente, son journal accepte deux passages ;
 - **l'heure d'hiver** : le cron passe à 06:00, l'étape vers 06:11 après le push — l'ordre voulu le 14/10 est rétabli.
 
-### ✅ LE CORRECTIF COMPLET APRÈS CETTE ANALYSE (NON fait — il faut un « vas-y »)
+### ✅ LE CORRECTIF COMPLET APRÈS CETTE ANALYSE — **POSÉ LE 25/10 vers 08:30** (« Oui avec plancher », Frédéric)
 
 | pièce | où | quoi |
 |---|---|---|
@@ -615,6 +615,35 @@ recalcul des rapprochements : c'est voulu (attendre plutôt qu'échouer), et ell
 | 3 | fonction (base) | `alter function … set statement_timeout = '60s'` et `set lock_timeout = '45s'` ; puis `notify pgrst, 'reload schema'` |
 | 4 | script du run | `ok` faux → sortie 1 avec la raison ; le compte réel (`rattachees` + `supprimees`) |
 | — | inverse + répétition | répétition en transaction annulée : patch, plancher éprouvé (témoin positif ET témoin du refus), empreinte, `proconfig`, appel de la fonction, retour |
+
+**Fichiers** : `supabase/patch_menage_orphelins_api_2026-10-25.sql` (+ `_INVERSE`, `_REPETITION`) ·
+`phase2/sync/menage_orphelins_recherche.py`.
+
+**La répétition (25/10 ~08:27, transaction annulée) — 12 mesures, toutes vertes :**
+
+| étape | mesure | résultat |
+|---|---|---|
+| avant | empreinte · délais | `be11efc3…` · `search_path=public` seul |
+| pose | ligne corrigée + plancher · délais · empreinte | oui · `+ statement_timeout=60s | lock_timeout=45s` · **`f39dc33f…`** |
+| témoin positif | table pleine (11 544) | `{"ok": true, …}`, tous les comptes à 0, **744 ms** |
+| témoin du refus | table réduite à 100 dans la transaction | `{"ok": false, "raison": "plancher", "recherches": 100}` · rapprochements **53 624 / 53 624** · historique **456 616 / 456 616** — rien effacé |
+| retour | l'inverse | empreinte **revenue à `be11efc3`**, délais retirés (`search_path` gardé) |
+
+Puis contrôle hors transaction : empreinte `be11efc3`, 11 544 recherches, journal du ménage 70 lignes — **rien n'a fui**.
+
+**La pose (même matin)** : 5 contrôles verts — `where true` OK, plancher OK,
+`search_path=public | statement_timeout=60s | lock_timeout=45s`, empreinte **`f39dc33f…`** (= celle de la
+répétition), 11 544 recherches. `notify pgrst, 'reload schema'` joué.
+
+**Le script (pièce 4)**, éprouvé avec un faux client, sans réseau, 5 cas : `ok` → code 0, « 3 ligne(s)
+rattachée(s), 228 supprimée(s) » · vide → 0 / 0 · **plancher → code 1** + raison sur stderr · **conflit d'unicité →
+code 1** · réponse texte → code 0 (inchangé). ⚠ Le journal du ménage n'a **jamais** porté de refus
+(70 lignes, toutes `ok`) : un `conflit_unicite` sortait AVANT d'écrire au journal — inchangé.
+
+⛔ **PAS ENCORE PROUVÉ : le passage par l'API.** L'appel du script depuis ici a été refusé par la garde de session
+(écriture en production) — pas contourné. **La preuve sera le run de la nuit du 25 au 26/10** (critères plus haut).
+⚠ Le script modifié n'est actif au run que s'il est sur le disque — il l'est (le run lit `C:\Hektor\Projet`), pas
+besoin de pousser pour lui ; pousser reste à faire pour l'historique.
 
 **Noté en passant** : à 06:48, le moniteur a eu un **57014 sur `rpc/app_cron_health`** (même délai de 8 s) —
 c'est la sonde des tâches planifiées. Non traité.

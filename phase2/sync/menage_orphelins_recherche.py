@@ -95,8 +95,17 @@ def main() -> int:
     if isinstance(reponse, (dict, list)):
         print(json.dumps(reponse, ensure_ascii=False, indent=2))
         detail = reponse if isinstance(reponse, dict) else {}
-        total = sum(v for v in detail.values() if isinstance(v, int))
-        print(f"menage des orphelins de recherche : {total} ligne(s) rattachee(s)")
+        # ⚠ 25/10 : un REFUS de la fonction (`ok: false` -- conflit d'unicite, ou le
+        #   PLANCHER d'une table de recherches anormalement petite) arrive en HTTP 200.
+        #   Sans ce test, l'etape disait DONE sur un menage qui n'avait rien fait.
+        if detail.get("ok") is False:
+            print(f"!! menage des orphelins REFUSE par la fonction : {detail.get('raison')!r}", file=sys.stderr)
+            return 1
+        # Les comptes vivent dans deux sous-objets ; `ok: true` comptait pour 1 (bool est un int).
+        total_rattachees = sum(v for v in (detail.get("rattachees") or {}).values() if type(v) is int)
+        total_supprimees = sum(v for v in (detail.get("supprimees") or {}).values() if type(v) is int)
+        print(f"menage des orphelins de recherche : {total_rattachees} ligne(s) rattachee(s), "
+              f"{total_supprimees} supprimee(s)")
     else:
         print(f"menage des orphelins de recherche : {reponse!r}")
     return 0
