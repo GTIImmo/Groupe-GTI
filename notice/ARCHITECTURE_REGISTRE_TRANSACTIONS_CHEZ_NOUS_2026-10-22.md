@@ -2730,3 +2730,48 @@ le fait déjà avant chaque envoi (`cibleHektorContact`).
   **idNotaire 122190** sur l'offre 33116, et porte **122190 / 605227** sur le compromis 50137 et la vente 23358 (relus la nuit) ; l'acquéreur
   est parti en **605976** (Hektor) quand l'écran donnait 20000015. Un numéro de Hektor reçu tel quel « se vise lui-même »
   (`cibleHektorContact`) : la modification marche que le registre porte l'un ou l'autre. ➡ **Le plan du §50 ne touche pas au worker.**
+
+---
+
+## 51. BILAN DU REGISTRE DES TRANSACTIONS — 25/10 au soir *(Frédéric : « fais un audit, reprends le code actuel, relis le chat, les notes et l'historique ; il faut être sûr »)*
+
+**Sources croisées** : `git log` du 21 au 25/10 (≈ 140 commits ⑧) ; cette note (§1-50) et l'étude des numéros (§1-20) ; le code
+(`console_job_worker.js`, `affaire_ledger.py`, `registre_depuis_console.py`, `contrat_autorite.py`, `App.tsx`) ; la base
+(`app_setting`, empreintes des fonctions) ; les messages de Frédéric dans les transcripts.
+
+### ✅ FAIT — et vérifié ce soir dans le code ou la base
+| pièce | quoi | preuve d'aujourd'hui |
+|---|---|---|
+| **R1** naître complet | la création écrit ses champs au registre au clic | `app_setting.affaire_nait_complete = on` |
+| **A5** | la modification écrit au registre | `affaire_modif_au_registre = on` |
+| **E** | la modification n'inscrit au carnet que ce qui a été tapé | `affaire_modif_champs_touches = on` |
+| **A1** | la fin de rétractation au registre (retour + modale) | commit `5b0e2fb` (poussé) |
+| **1a** | la seconde preuve des numéros à la relecture ; la liste des compromis lue par numéro | `poserNumerosManquants` (l. 21300) ; 0 transaction sans numéro (mesuré 25/10) |
+| **1b** | l'acquéreur envoyé sous son numéro Hektor | `affaire_acquereur_numero_hektor = on` |
+| **défaut 6** | le registre local adopte un contact né dans l'app | commits du 23/10 (`b9e58b8`…) |
+| **R3** | le contrôle au retour de la création (verdict champ par champ, règle de sortie du 16/09, B, C, E, F1) | `controlerLeCarnet` (l. 21584) ; 54/54 |
+| **C1-C6 + répartition** | la rubrique Affaires montre tout ce qui a été saisi, tout de suite | `1c5d70d` |
+| **N** | le notaire du vendeur d'une offre gardé chez nous, repris par le compromis | `offre_notaire_vendeur = on` |
+| **V** | le compromis verrouillé par sa vente | `compromis_verrouille_par_vente = on` |
+| **§41 / §46 (écran)** | Vendu / Clos / Estimation ferment les transactions ; Actif rouvre une chaîne | `etatFermeAuxTransactions` (App.tsx l. 27856), poussé |
+| **§48** | la carte Vente lit le net vendeur au carnet | `4f26fe4` |
+| **pièces 1-4 des numéros** | chaque personne des listes et chaque notaire sous notre numéro ; écrans | `affaire_personnes_deux_numeros = on`, `app_acquereurs_json` = `69904a53` ; `.env` : 2 lignes ; nuit du 25/10 prouvée |
+| **R3 sans relecture** | rattrapage « carnet seul » chaque matin + lecture de Hektor seulement au besoin | `.env` `APP_AFFAIRE_R3_RATTRAPAGE=1` ; 24113 : 10 « arrivée » ; 0 en attente |
+| **R4, moitié écran** | chaque saisie montre son verdict dans la rubrique (« arrivé », « pas encore parti », « conflit », « échec », « sans objet ») | depuis le **16/09** (3.1, `e079218`), enrichi par R3 le 23/10 |
+| **le gel** | reste éteint, comme décidé le 16/09 | `CHAMPS_APP_AFFAIRE = ()` (`contrat_autorite.py:180`) |
+
+### ⬜ PAS FAIT — vérifié ce soir
+| pièce | état réel | ce qui manque |
+|---|---|---|
+| **R2** la nuit respecte l'attente | **audit seul** (§12, 23/10, `eadad03`) ; **aucune ligne de code** dans `affaire_ledger.py`. Frédéric l'avait demandé le 23/10 (« R2, puis R4 et R5 ») ; R3 est passé devant parce qu'il en était la condition | des 6 conditions du §12 : **1 (R3) faite**, **3 (E) faite**, **4 (date sans heure = même jour) faite** dans `memeValeurHektor` ; **2 (un travail échoué)** faite par R3 (verdict « échec ») ; ⛔ **5 la durée maximale : à trancher par Frédéric** ; **6** les transactions d'essai : 0 ligne en attente aujourd'hui. Symptôme connu : le net vendeur de la vente effacé chaque nuit au registre (contourné à l'écran par §48) |
+| **R4** la sentinelle | **absente** : aucune ligne `data.affaire_ecart` dans `check_gti_health.py` | une alerte quand R3 trouve un « conflit » ou un « échec » (aujourd'hui seulement dans le journal du travail) |
+| **R5** l'état en attente | **rien** | l'état (refus, annulation, suppression) au carnet, respecté par la nuit tant que Hektor n'a pas confirmé |
+| **§46 base** | patch « pas de transaction sur un bien en Estimation » **prêt, non posé** (`transaction_sur_estimation` absent de la fonction en base) | l'accord de Frédéric pour le coller |
+| **pièce 5** | mesurée (35 005 / 35 005), audit « ce que ça pourrait casser » à faire | §16 de l'étude |
+| **relecture de jour du worker** | réécrit les listes sans notre numéro jusqu'à la nuit | worker + redémarrage |
+| **§42** boutons | 5 incohérences non tranchées | décisions de Frédéric |
+| **petits défauts** | échéance −1 jour · chaîne neuve invisible sans recharger · prix de vente = prix du mandat (F4) · diffusion remise à 1 par une vente · libellé « Envoyer vers Compromis » | — |
+| **restes de données** | 17 lignes hors miroir sans notre numéro, dont 3 compromis « active » fantômes ; la ligne d'essai 24933 jamais jugée | à décider |
+| **D7 / T1 / T3** | modifier sans numéro Hektor ; le worker défait l'état si Hektor ne répond pas | « pour la coupure », décisions de Frédéric |
+| **D8** | deux règles de chaîne (SQL au clic, Python la nuit ; v2 côté Python seulement) | à trancher avant d'allumer la v2 côté clic |
+| **D9** | le cycle d'affaires du registre des mandats refait la nuit seulement | non vérifié à l'écran |
