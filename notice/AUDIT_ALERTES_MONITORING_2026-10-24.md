@@ -478,6 +478,72 @@ les lignes longues, le verdict du filet tombait sur la ligne suivante. Moniteur 
 **« Monitor results written to Supabase », 0 critical, 2 warning** (`console.jobs.errors` jusqu'à ~17:22 ;
 `logs.pipeline.latest` à cause du ménage).
 
+## 2 sexies. AUDIT — POURQUOI LE MÉNAGE DES ORPHELINS DE RECHERCHE ÉCHOUE CHAQUE NUIT (25/10)
+
+> Lecture seule (fonction, journaux, historique git, notes). Une relance du script par l'API m'a été refusée par le
+> garde-fou de la session (écriture en production) : non contournée — les journaux de 9 nuits la remplacent.
+
+**1. La ligne fautive.** `app_sweep_search_orphans()` (empreinte `be11efc3e8134afa50ba7ca47b0681e8`), 2ᵉ instruction :
+
+    create temporary table if not exists _cible_sweep (...) on commit drop;
+    delete from _cible_sweep;          <- SANS WHERE
+
+C'est le vidage d'une **table temporaire de travail** (défensif : si la fonction était appelée deux fois dans la
+même transaction). Toutes les autres écritures de la fonction ont une condition.
+
+**2. Pourquoi seulement par l'étape du run.** Le rôle de l'API (`authenticator`) charge **`safeupdate`** à chaque
+connexion (`rolconfig : session_preload_libraries=safeupdate`), qui refuse tout `DELETE`/`UPDATE` sans `WHERE`
+(code `21000`). Le compte `postgres` (éditeur SQL, `pg_cron`) ne le charge pas (`session_preload_libraries =
+supautils`) — d'où : **la tâche planifiée Supabase n° 11 réussit chaque jour, l'étape du run échoue chaque nuit**.
+Vérifié : `load 'safeupdate'` est interdit depuis l'éditeur (« access to library not allowed ») et, sans lui, les
+trois formes (`delete` nu, `where true`, `truncate`) passent.
+
+**3. La preuve, chaque nuit, dans le journal du run** (`logs/scheduled/quotidien_*.log`) depuis le **16/10** :
+`!! menage des orphelins impossible : ... HTTP 400: {"code":"21000", ... "DELETE requires a WHERE clause"}`. Le
+journal principal (`.tmp/full_pipeline_*.log`) ne dit que `failed ... (exit code 1)` : **le message existait, il
+n'était pas lu.**
+
+**4. L'histoire — une réserve non traitée devenue le bug.**
+- `d8bd405` (20/08) : la fonction naît, avec ce `delete` nu ; elle tourne par `pg_cron` (pas de safeupdate) — elle
+  n'a jamais été appelée par l'API avant le 14/10.
+- `2dd9ee5` (14/10, go de Frédéric) : l'étape du run est ajoutée pour **supprimer une course** (le cron de 05:00 UTC
+  passait 48 s avant le push des contacts). Le script n'a **pas** été lancé avant (il écrit en production) ; seuls
+  les droits ont été lus.
+- `87e7548` (15/10) : 1ʳᵉ nuit, échec sur un autre défaut (`TypeError`, corrigé + `--essai-a-vide`). Même commit :
+  l'étape était « inutile » **pour ce rattrapage-là** mais « garde un intérêt pour l'AUTRE porte (la clé qui
+  change) », et **⬜ RESTE : « demain, vérifier que l'étape corrigée tourne et que logs.pipeline.latest redevient
+  vert »**. **Cette vérification n'a jamais été faite.** L'`--essai-a-vide` s'arrête AVANT l'appel : il ne pouvait
+  pas voir un refus de la base.
+- Du 16/10 au 25/10 : 10 nuits sur 10 en échec.
+
+**5. Ce que ça a coûté — mesuré.**
+- **Aucune donnée** : le cron n° 11 tourne chaque jour, et **depuis le 16/10 il n'a rien eu à faire** (0 rattachée,
+  0 supprimée, `app_sweep_search_orphans_log`).
+- **Du bruit permanent** : `logs.pipeline.latest` en orange (le mot « failed » est dans la fin du journal) ; le
+  battement `phase2.menage_orphelins_recherche` n'a **jamais** de succès (`last_success_at` vide) → il fait partie
+  des 5 « sans premier signe » de `workers.heartbeat`.
+- ⚠ **La course est REVENUE avec l'heure d'hiver** : le cron (05:00 UTC) passe désormais à **06:00** Paris, et le push
+  des contacts a eu lieu à **06:11** le 25/10 — le ménage repasse AVANT le push, exactement ce que l'étape devait
+  empêcher. Sans effet tant qu'il n'y a rien à nettoyer.
+
+**6. Les jumeaux.** Dans toute la base, seules 3 fonctions ont un `DELETE` sans condition : celle-ci, et
+`app_bascule_identite_contact` / `…_annuler` (vraies tables, opération **ponctuelle** du 23/09, lancée **à la main
+depuis l'éditeur** selon `notice/PROCEDURE_BASCULE_CONTACT.md`, aucun appel par l'API → non touchées). **Aucun
+`UPDATE` sans `WHERE`** dans la base.
+
+**7. Le correctif proposé (NON fait — écriture en base, il faut un « vas-y »).**
+
+| | quoi | effet |
+|---|---|---|
+| **A** ⭐ | une ligne : `delete from _cible_sweep where true;` (patch par ancre unique, empreinte `be11efc3` vérifiée avant, inverse, répétition) | l'étape du run passe → la course disparaît, le battement a son premier succès (« sans premier signe » 5 → 4), `logs.pipeline.latest` repasse au vert. Le cron reste le filet |
+| B | retirer l'étape du run (le cron seul) | plus de bruit, mais la course reste (aggravée l'hiver) et la clé de registre reste sans succès |
+
+⚠ **Ce que A pourrait casser ailleurs** : rien dans la fonction (le `where true` vide exactement la même table) ;
+mais l'étape va enfin **écrire chaque nuit** après le push — c'était la décision du 14/10, et la fonction est
+idempotente (0 ligne touchée ces 10 derniers jours). **Preuve possible seulement APRÈS la pose** : la répétition
+peut prouver que la fonction modifiée rend le même résultat (en transaction annulée, compte `postgres`), mais pas
+le passage de `safeupdate` — c'est le run suivant qui le prouvera (`DONE … attempt 1/2`, battement `success`).
+
 ## 3. Ce qu'on peut retirer tout de suite, sans toucher à aucun garde-fou
 
 - **n° 4 et n° 5** : trancher les 6 lignes dans l'écran Santé. Elles sortent du compte, la sonde reste.
