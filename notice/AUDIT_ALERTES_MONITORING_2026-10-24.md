@@ -453,6 +453,31 @@ et journal du run au run de 05:00 ; transactions disparues vers 06:46. Plus l'or
 
 ➡ **À proposer** : un bouton « Vu » sur la fiche annonce et la fiche contact, qui appelle ces deux fonctions.
 
+## 2 quinquies. LE RUN DU 25/10 (04:00 → 06:22, passage à l'heure d'hiver) — CONTRÔLE
+
+`Pipeline finished successfully` à 06:22:40.
+
+| point | résultat |
+|---|---|
+| adresses photos | ✅ **DONE au 1er essai** (06:17:36 → 39) ; par l'API **0,7 s** (à froid) ; registre 1,6 s ; sans photo 0,1 s ; battement « Retour à la normale » |
+| filet compromis | ✅ **COMPLETE** : 10 626 distincts = 10 626 annoncés, **0 doublon hors page 0** → le tri par numéro tient sur TOUTE la liste ; 10 retirées = les fantômes de mars (au lieu de ~20) |
+| filet ventes | ✅ **SAUTES EXPLIQUES** : la vente « 2 » encore sautée par Hektor, **gardée** |
+| filet offres | ✅ COMPLETE |
+| les 11 du 24/10 | ✅ **toutes revenues présentes** au registre (vues 06:01:17) |
+| balayage des masquées | ✅ 0 masquée dans une boîte publique ; 7 520 restantes (8 nuits) ; 2 points déjà connus (plafond 922, 63073) |
+| ménage des orphelins | ❌ toujours en échec (DELETE sans WHERE) — c'est lui qui laisse `logs.pipeline.latest` en orange (mot « failed » en fin de journal) |
+
+⛔ **INCIDENT CAUSÉ PAR MOI : le moniteur n'a rien écrit de 01:48 à ~07:35.** Ma nouvelle ligne
+`data.miroir_filet` portait `domain = "data"`, que la contrainte `app_monitor_status_domain_check` refuse
+(liste : system, business, mixed, data_quality, workers, cron, surface, scheduledtasks, email). **Une seule
+ligne refusée fait tomber tout le lot** : 23514 à 01:48, 02:48, 04:48, 06:48 — la tâche rendait pourtant le
+code 0. Le `--dry-run` ne pouvait pas le voir (il n'écrit pas), et j'avais affirmé « une nouvelle clé se crée
+seule » **sans lire les contraintes de la table**. Corrigé (`9bb5b4c`) : `data_quality` ; tous les domaines
+littéraux du fichier vérifiés contre la contrainte. Second défaut corrigé au passage : le journal du run coupe
+les lignes longues, le verdict du filet tombait sur la ligne suivante. Moniteur relancé pour de vrai :
+**« Monitor results written to Supabase », 0 critical, 2 warning** (`console.jobs.errors` jusqu'à ~17:22 ;
+`logs.pipeline.latest` à cause du ménage).
+
 ## 3. Ce qu'on peut retirer tout de suite, sans toucher à aucun garde-fou
 
 - **n° 4 et n° 5** : trancher les 6 lignes dans l'écran Santé. Elles sortent du compte, la sonde reste.
