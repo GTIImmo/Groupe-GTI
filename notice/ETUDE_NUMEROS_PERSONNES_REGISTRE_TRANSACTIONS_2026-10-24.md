@@ -481,7 +481,7 @@ saisie dans l'app ne seront JAMAIS jugées** — c'est le cas de chaque vente, p
 offre dont le bien se vend ou se clôt avant la relecture suivante.
 
 **Mesure** : toutes les lignes « en attente » ou jamais jugées du carnet sont sur des **biens sortis du parc** — **0 sur un bien vivant**.
-24113 (essai 5) : 7 en attente (`numero_mandat` ×3 genres dont 6 sur des offres, `notaire_id` compromis et vente) ; 24933 (essai du 04/09,
+24113 (essai 5) : **10** en attente *(corrigé le 25/10 au contre-audit ; j'avais écrit 7)* — `numero_mandat` ×8 (6 offres, le compromis, la vente) et `notaire_id` ×2 (compromis, vente) ; 24933 (essai du 04/09,
 avant la naissance de R3) : 5 jamais jugées. Les lignes d'offre `honoraires`, `taux_honoraires`, `notaire_*` sans état sont **exclues
 exprès** (`R3_NON_CONTROLES`, décisions du 03/09, 16/09, 16/10, 23/10) : pas un défaut.
 **Sur le parc vivant, R3 marche.** Le défaut est limité aux biens qui sortent du parc avant leur rejugement.
@@ -548,3 +548,53 @@ ventes et transactions du jour dont le bien est sorti du parc — quelques-unes 
 - l'enfileur en blanc sur la base réelle : il doit nommer **24113**, et rien d'autre ;
 - l'essai réel : un passage posé à la main **avec l'accord de Frédéric** → les 2 lignes notaire et les numéros de mandat de l'essai 5 doivent
   passer « arrivée ».
+
+---
+
+## 19. CONTRE-AUDIT DE B — 25/10 *(Frédéric : « d'abord refais un audit pour être sûr de ton correctif »)* — lecture seule, **rien codé**
+
+### ⛔ UN DÉFAUT DANS MA FORME DU §18 : SEULE, ELLE N'AURAIT JAMAIS JUGÉ UNE VENTE
+`controlerLeCarnet` lit chez Hektor **chaque** transaction à juger quand il n'a pas déjà sa réponse (l. ~21645), et **refuse de juger** si la
+lecture ne rend pas de détail (`lu.trouve !== true || !lu.details` → « non_juge, introuvable »). Or `transaction_etat_from_api.py` (l. 93-95)
+rend pour une **vente** seulement `{"trouve": true}` — **jamais de détail** (le détail n'existe que pour l'offre et le compromis). À la création,
+R3 a le détail par la liste des ventes (`ventesApres`) ; au rattrapage, non. **Le travail « carnet seul » aurait donc écrit « non jugé » sur la
+vente de l'essai 5, chaque matin, sans rien conclure** — c'est-à-dire exactement le cas qu'il devait régler.
+⭐ Le défaut existe déjà aujourd'hui, à la relecture d'ouverture : il est simplement caché, parce qu'une vente fait sortir le bien du parc.
+
+### Le complément nécessaire (2ᵉ pièce de B)
+Ne lire Hektor pour une transaction **que si une de ses lignes en a besoin**. Les sources `@registre:*` (numéro de mandat, date de l'offre) et
+`@notaire` (vente : `notaires_json` du registre ; compromis : `app_affaire_console`) se lisent **dans notre base**, relue la nuit chez Hektor :
+elles n'ont pas besoin de la lecture du moment. Les autres (`prixPublique`, `@taux`, `@retractation`, `@prixDeVente`…) la gardent, avec la même
+règle « API muette → on ne juge pas ».
+- **Effet sur le chemin d'aujourd'hui** : à une relecture d'ouverture, une transaction dont les seules lignes à juger sont « du registre » ne
+  coûte plus d'appel à Hektor, et n'est plus « non jugée » si l'API se tait. La garde reste : `nuitPassee` (registre relu **après** la saisie,
+  +60 s) et la lecture de l'assistant **postérieure** à la saisie.
+- **Limite déclarée** : sur une vente, les champs lus « du moment » (prix, date, honoraires) ne se jugent qu'à la création. Le rattrapage ne
+  les verra pas (aucune source sans détail). Aucun cas aujourd'hui.
+
+### Ce que R3 conclurait sur 24113, ligne par ligne, avec les données du 25/10 (simulation à la main sur la base)
+| ligne | source | valeur lue | saisie | verdict | suite |
+|---|---|---|---|---|---|
+| `numero_mandat` ×8 (6 offres, compromis, vente) | registre `numero_mandat`, relu le 25/10 05:01 > saisie du 23/10 | 18787 | 18787 | **arrivée** | **retirée** du carnet (le registre porte la même valeur : règle de sortie du 16/09) |
+| `notaire_id` compromis 1001394 | `app_affaire_console`, lue le 24/10 04:57 > saisie 23/10 17:38 | 122190 | 10064499 → 122190 par la fiche contact | **arrivée** | gardée (pas de colonne au registre) |
+| `notaire_id` vente 1001395 | `notaires_json.entree.id` du registre | 122190 | 10064499 → 122190 | **arrivée** | gardée |
+**Aucune lecture chez Hektor ne serait nécessaire pour ces 10 lignes** (avec le complément).
+
+### Le reste, vérifié
+- **Type de travail** : `refresh_console_data` est accepté et distribué au service `sync_light` par `app_console_claim_next_job` (lu dans la base) ;
+  il n'est **pas** dans les travaux rejoués (`app_console_action_enqueue_due_retries`) : un rattrapage raté se repose simplement le lendemain.
+- **Le chemin d'un travail** (`processOnce` → `runHandlerWithSessionRetry` → `runHandler`, l. 22767) ne lit aucun index de bien avant l'aiguillage :
+  la branche « carnet seul » en tête de `handleRefreshConsoleData` ne passe ni par `runCreatedAnnonceImmediateSync` ni par `loadDossier` — un bien
+  vendu, clos ou archivé passe.
+- **L'insertion directe** est le patron du balayage des photos (`enqueue_photos_masquees_lot.js` l. 312-326 : clé de service, `POST app_console_job`,
+  en blanc par défaut). Le balayage **exige** notre numéro de dossier ; pour un bien vendu ce sera le numéro de l'index historique (à lire, pas à inventer).
+- **L'écran** ne suit que les travaux qu'il a créés lui-même (`rememberHektorActionJob`) : un rattrapage ne fera rien apparaître.
+- **Le prélude** (`refreshHektorSessionIfDue`) est commun à tous les travaux : pas de coût de plus.
+
+### B, corrigé — 3 pièces
+1. **Worker** : la branche « carnet seul » dans `handleRefreshConsoleData` ;
+2. **Worker** : la lecture chez Hektor seulement si une ligne en a besoin (le complément ci-dessus) ;
+3. **L'enfileur** `Console/enqueue_rattrapage_carnet.js` + la 4ᵉ étape de la descente, interrupteur `APP_R3_RATTRAPAGE=1`.
+Essais : (7a) carnet seul, sans relecture ; (7b) **témoin inverse** : sans `carnet_seul`, la relecture se fait comme avant ; (7c) bien hors du parc ;
+(7d) **une vente « du registre » se juge sans appel à Hektor** ; (7e) **témoin inverse** : un compromis avec un prix à juger lit toujours Hektor, et
+reste « non jugé » si l'API se tait ; puis l'enfileur en blanc sur la base réelle (il doit nommer 24113, et rien d'autre).
