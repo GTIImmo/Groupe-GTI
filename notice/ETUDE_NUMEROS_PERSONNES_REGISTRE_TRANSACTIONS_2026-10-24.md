@@ -461,3 +461,30 @@ d'attendre la nuit et Hektor) ; et le jour de la coupure, les liens acquéreurs 
 `App.tsx:7313` ; et les colonnes qui ne viennent pas du registre des transactions (titre du bien, numéro de mandat, `contact_date_maj`,
 `is_active_annonce`) doivent venir des index des biens, sans perdre les biens vendus. Le rôle (`acquereur_offre / _compromis / _vente`)
 se dérive du `kind`. Les 22 personnes sans notre numéro (§15) n'y seraient pas — elles n'y sont pas non plus aujourd'hui sous notre numéro.
+
+---
+
+## 17. R3 SANS RELECTURE — audit du 25/10 *(Frédéric : « d'abord il faut corriger R3, il ne fonctionne pas sans relecture à l'ouverture ? »)* — lecture seule, **rien codé**
+
+**Quand R3 juge (code, `console_job_worker.js`)** : deux appelants, une seule fonction (`controlerLeCarnet`, l. 21555) :
+1. **juste après la création** d'une offre / d'un compromis / d'une vente (`prouverTransactionCreee`, l. 15805, `force`) ;
+2. **à chaque relecture de l'annonce** (`handleRefreshConsoleData`, l. 4316) — le rattrapage, au plus une fois toutes les 6 h par ligne.
+Rien d'autre : ni la nuit, ni une minuterie.
+
+**Ce qui ne peut se juger qu'APRÈS la nuit** (`R3_SOURCES`) : `@registre:numero_mandat` (les trois genres), `@registre:date` (offre),
+`@notaire` sur une **vente** (lu dans `notaires_json`, que seule la nuit relit). Au moment de la création, ces lignes partent donc
+**toujours** « en attente », et seule une relecture **après la nuit** peut conclure.
+
+**Le trou** : une relecture ne part que pour un bien du parc vivant (`app_console_request_annonce_refresh` → `annonce_not_found` sinon).
+Or **saisir une vente fait passer le bien à Vendu** : il sort du parc vivant le jour même. ⛔ **Donc les lignes « après la nuit » d'une vente
+saisie dans l'app ne seront JAMAIS jugées** — c'est le cas de chaque vente, pas un accident de l'essai 5. Idem pour un compromis ou une
+offre dont le bien se vend ou se clôt avant la relecture suivante.
+
+**Mesure** : toutes les lignes « en attente » ou jamais jugées du carnet sont sur des **biens sortis du parc** — **0 sur un bien vivant**.
+24113 (essai 5) : 7 en attente (`numero_mandat` ×3 genres dont 6 sur des offres, `notaire_id` compromis et vente) ; 24933 (essai du 04/09,
+avant la naissance de R3) : 5 jamais jugées. Les lignes d'offre `honoraires`, `taux_honoraires`, `notaire_*` sans état sont **exclues
+exprès** (`R3_NON_CONTROLES`, décisions du 03/09, 16/09, 16/10, 23/10) : pas un défaut.
+**Sur le parc vivant, R3 marche.** Le défaut est limité aux biens qui sortent du parc avant leur rejugement.
+
+**Les correctifs possibles — À DÉCIDER PAR FRÉDÉRIC, rien n'est choisi** : voir le message du 25/10 (A : la relecture accepte les biens
+vendus ; B : un rattrapage R3 sans relecture ; C : ne rien changer et l'écrire).
