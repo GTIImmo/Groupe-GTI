@@ -409,3 +409,19 @@ UTC+1 le 25/10 ; les journaux le confirment — run à **05:00 chaque jour du 25
 e-mail se répètent **toutes les heures** (départ 08:00, répétition 1 h, sans heure figée) : leur passage de 07:00 est normal. Le moniteur
 tourne toutes les 2 h à « h48 » (désormais aux heures paires). Cause : les départs sont figés en `+01:00` ; un départ en heure locale (comme les
 relances) suivrait les changements d'heure sans glisser.
+
+**⛔ DÉCISION DE FRÉDÉRIC (25/10) : « laisse comme cela ».** Les tâches gardent leurs nouvelles heures (une heure plus tôt) ; l'ordre de la nuit est gardé. Ne pas relancer.
+
+### Contrôle des correctifs — 25/10 vers 08:00 *(Frédéric : « analyse pour voir si tous les correctifs sont OK »)*
+- **Travaux depuis 08:00** : 1 seul (`refresh_console_data`, fait) ; **0 en erreur**.
+- **Les listes d'acquéreurs** : 22 personnes sans notre numéro, sur **14 lignes**. **18 d'entre elles SONT connues** de la doublure du
+  serveur. Cause mesurée : ces lignes **n'ont pas été relues cette nuit** — 31 086 lignes sur 31 103 ont `last_seen_at` du 25/10, les **17
+  autres** ne sont plus dans le miroir de Hektor (vues pour la dernière fois entre le 07/09 et le 01/10), et la pièce 2 ne travaille que sur
+  ce que la nuit relit. Ce n'est pas un défaut de la pièce 2, c'est son périmètre — **non déclaré jusqu'ici**. Les 3 autres personnes
+  (569174, 532019, 584990) sont absentes de la doublure : on n'invente rien.
+  ⚠ Au passage : 3 de ces 17 lignes sont des compromis encore « active » (998 / 1970, 19414 / 40318, 28808 / 61534) alors que Hektor ne les
+  montre plus depuis le 07/09. **Noté, non creusé.**
+- **L'essai 5 (annonce 24113)** : les lignes « notaire » du compromis (1001394) et de la vente (1001395) sont **toujours « en attente »** :
+  l'annonce **n'a pas été relue depuis le 23/10 à 17:42** (aucun `refresh_console_data` depuis), donc R3 n'a pas pu la rejuger. **Non prouvé.**
+  Sur l'offre (1001393), `notaire_id`, `notaire_mandant_id` et `notaire_mandant_nom` n'ont **jamais été jugés** (`etat` vide) : non mesuré
+  si c'est voulu (une offre ne porte pas de notaire chez Hektor ?).
