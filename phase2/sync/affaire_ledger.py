@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sqlite3
 import sys
 import urllib.parse
@@ -979,6 +980,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                   f"malgre le silence du miroir (ecart a lire dans le journal des "
                   f"doublures, colonne « app seule »)")
     con.commit()
+    # ⑧ R2 (25/10/2026) : LA NUIT RESPECTE L'ATTENTE -- ICI, apres l'UPSERT et AVANT les chaines :
+    # les chaines et le push partent avec notre valeur. Ne leve jamais (voir respecter_l_attente).
+    r2 = respecter_l_attente(con)
     # ─── LES CHAINES SE RECALCULENT ICI, ENTIEREMENT, A CHAQUE RUN (04/09) ───
     # Frederic : « le run doit actualiser les chaines comme l'app le ferait ».
     # Une chaine n'est pas une saisie mais une DEDUCTION : on la refait a neuf
@@ -989,7 +993,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     total = con.execute(f"SELECT COUNT(*) FROM {LEDGER_TABLE}").fetchone()[0]
     return {"seen": seen, "inserted": inserted, "marked_absent": absent,
             "proteges_app": proteges,
-            "ledger_total": total, "chaines": chaines}
+            "ledger_total": total, "chaines": chaines, "r2": r2}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1206,6 +1210,155 @@ def personnes_deux_numeros_actif() -> bool:
     """
     chainage_v2_actif()                      # il charge `.env` une fois pour tous
     return (os.environ.get("APP_AFFAIRE_PERSONNES_DEUX_NUMEROS") or "0").strip() == "1"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ⑧ R2 (25/10/2026) -- LA NUIT RESPECTE L'ATTENTE
+# ═══════════════════════════════════════════════════════════════════════════════
+#     APP_AFFAIRE_R2_ATTENTE=1     les champs encore en attente gardent NOTRE valeur
+#     (absent ou autre chose)      comportement d'avant, a l'octet pres
+#
+# LE DEFAUT. L'UPSERT recopie chaque colonne depuis le miroir, SANS « vide ne gagne pas » : un champ que
+# Hektor ne porte pas (le net vendeur d'une vente) part vide et efface ce que la creation avait ecrit au
+# clic (R1) -- et le push envoie la ligne ENTIERE. Mesure du 24/10 : 110 000 -> vide sur la vente 23358.
+#
+# LA REGLE (decision A de Frederic, 25/10 : PAS DE DUREE MAXIMALE). Une ligne du carnet garde sa valeur
+# au registre tant que R3 ne l'a pas dite « arrivee ». Ce n'est PAS le gel du 16/09 : la protection
+# TOMBE au verdict, et un « conflit » se voit (R4). Seulement si :
+#   1. la saisie est PARTIE chez Hektor (origine creation_app / modification_app ; saisie_app et
+#      classeur ne partent jamais) ;
+#   2. son verdict n'est ni « arrivee » (Hektor l'a) ni « echec » (le travail n'a rien envoye : sa valeur
+#      n'est pas la transaction -- 30712, 160 000 chez nous, 16 000 chez Hektor) ;
+#   3. le champ a une colonne ET la creation l'ecrit pour ce genre (R2_CHAMPS_PAR_GENRE) -- sinon une
+#      validite PREREMPLIE de compromis ou de vente arriverait au registre ;
+#   4. ⛔ R3 ne le juge pas SUR LE REGISTRE (numero de mandat, date d'une offre) : reposer notre valeur la,
+#      c'est faire comparer la saisie a elle-meme -- le piege des notaires de la piece 3 ;
+#   5. Hektor ne porte pas deja la meme valeur (_meme_valeur : sinon on rognerait l'heure d'une date).
+#
+# LE CARNET SE LIT CHEZ SUPABASE, ICI ET MAINTENANT : la copie locale est remplie APRES cette etape
+# (magasin_affaire_app.py) et la doublure date de la descente de la veille. Lecture ratee = on ne touche
+# a RIEN, on le dit, et la nuit fait exactement ce qu'elle faisait.
+# Etude : notice/ARCHITECTURE_REGISTRE_TRANSACTIONS_CHEZ_NOUS_2026-10-22.md §12, §52.
+#
+# ⚠ DEUX COPIES D'UNE REGLE : « quel champ pour quel genre » vit aussi dans le SQL de la creation
+#   (gen_patch_r1_affaire_nait_complete.py, l. 37-74). Si R1 change sans R2, R2 protege MOINS, jamais
+#   plus. ⚠ Et R2_CHAMP_VERS_COLONNE recopie CARNET_VERS_REGISTRE du worker.
+R2_CHAMP_VERS_COLONNE = {
+    "montant": "montant", "date": "date", "date_acte": "date_acte", "sequestre": "sequestre",
+    "prix_net_vendeur": "prix_net_vendeur", "honoraires_entree": "honoraires_entree",
+    "numero_mandat": "numero_mandat", "jours_validite": "jours_validite",
+}
+R2_CHAMPS_PAR_GENRE = {
+    "offre": {"montant", "date", "jours_validite"},
+    "compromis": {"montant", "date", "date_acte", "sequestre", "prix_net_vendeur", "honoraires_entree"},
+    "vente": {"montant", "date", "prix_net_vendeur", "honoraires_entree"},
+}
+# Ce que R3 juge en relisant NOTRE registre (« @registre:* » de R3_SOURCES) : jamais protege.
+R2_JUGES_SUR_LE_REGISTRE = {("offre", "date"), ("offre", "numero_mandat"),
+                            ("compromis", "numero_mandat"), ("vente", "numero_mandat")}
+R2_ORIGINES = ("creation_app", "modification_app")
+R2_ETATS_QUI_LIBERENT = {"arrivee", "echec"}
+
+
+def r2_attente_actif() -> bool:
+    """⑧ R2 : l'interrupteur, lu APRES `.env` (meme chemin que chainage_v2_actif)."""
+    chainage_v2_actif()
+    return (os.environ.get("APP_AFFAIRE_R2_ATTENTE") or "0").strip() == "1"
+
+
+def _meme_valeur(app: object, hektor: object) -> bool:
+    """La meme regle que memeValeurHektor du worker : « 2026-10-06 » = « 2026-10-06 16:12:54 »,
+    « 168500 » = « 168500.00 »."""
+    a = normalize_text(app).replace(",", ".")
+    b = normalize_text(hektor).replace(",", ".")
+    if a == b:
+        return True
+    jour = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    avec_heure = re.compile(r"^\d{4}-\d{2}-\d{2}[ T]\d")
+    if (jour.match(a) and avec_heure.match(b) and b[:10] == a) or \
+       (jour.match(b) and avec_heure.match(a) and a[:10] == b):
+        return True
+    try:
+        return float(a) == float(b)
+    except ValueError:
+        return False
+
+
+def lire_le_carnet_supabase() -> list[dict]:
+    """Les lignes du carnet nees d'un geste envoye, lues chez Supabase. Leve si on ne peut pas lire."""
+    url = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not (url and key):
+        raise RuntimeError("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY absents")
+    client = SupabaseRestClient(base_url=url, service_role_key=key)
+    plafond = 20000
+    lignes = client._request(method="GET", path="app_affaire_champ_app", query={   # noqa: SLF001
+        "select": "app_affaire_id,champ,valeur_app,origine,etat",
+        "origine": "in.(%s)" % ",".join(R2_ORIGINES),
+        "order": "app_affaire_id.asc,champ.asc", "limit": str(plafond)})
+    if not isinstance(lignes, list):
+        raise RuntimeError("reponse illisible")
+    if len(lignes) >= plafond:
+        raise RuntimeError(f"plafond de lecture atteint ({plafond}) : on ne pretend pas avoir tout vu")
+    return lignes
+
+
+def respecter_l_attente(con: sqlite3.Connection, carnet: list[dict] | None = None) -> dict:
+    """⑧ R2 : repose, dans le registre LOCAL, la valeur du carnet des champs encore en attente.
+    NE LEVE JAMAIS : l'etape du registre est bloquante dans le run ; une panne de R2 laisse la nuit
+    faire ce qu'elle faisait, et le dit."""
+    if not r2_attente_actif():
+        print("[ledger] R2 (la nuit respecte l'attente) : ETEINT")
+        return {"statut": "eteint"}
+    try:
+        if carnet is None:
+            carnet = lire_le_carnet_supabase()
+        ids = sorted({int(l["app_affaire_id"]) for l in carnet if l.get("app_affaire_id") is not None})
+        registre: dict[int, sqlite3.Row | tuple] = {}
+        colonnes = sorted(set(R2_CHAMP_VERS_COLONNE.values()))
+        for i in range(0, len(ids), 500):
+            tranche = ids[i:i + 500]
+            for r in con.execute(
+                    f"SELECT app_affaire_id, kind, {', '.join(colonnes)} FROM {LEDGER_TABLE} "
+                    f"WHERE app_affaire_id IN ({','.join('?' * len(tranche))})", tranche):
+                registre[int(r[0])] = dict(zip(["app_affaire_id", "kind", *colonnes], r))
+        reposees: list[str] = []
+        for l in carnet:
+            if normalize_text(l.get("origine")) not in R2_ORIGINES:
+                continue                                              # 1
+            if normalize_text(l.get("etat")) in R2_ETATS_QUI_LIBERENT:
+                continue                                              # 2
+            champ = normalize_text(l.get("champ"))
+            reg = registre.get(int(l["app_affaire_id"])) if l.get("app_affaire_id") is not None else None
+            if reg is None:
+                continue
+            genre = normalize_text(reg.get("kind"))
+            colonne = R2_CHAMP_VERS_COLONNE.get(champ)
+            if not colonne or champ not in R2_CHAMPS_PAR_GENRE.get(genre, set()):
+                continue                                              # 3
+            if (genre, champ) in R2_JUGES_SUR_LE_REGISTRE:
+                continue                                              # 4
+            valeur = normalize_text(l.get("valeur_app"))
+            if not valeur or _meme_valeur(valeur, reg.get(colonne)):
+                continue                                              # 5
+            con.execute(f"UPDATE {LEDGER_TABLE} SET {colonne}=? WHERE app_affaire_id=?",
+                        (valeur, reg["app_affaire_id"]))
+            reposees.append(f"{reg['app_affaire_id']}.{colonne} : {normalize_text(reg.get(colonne)) or '(vide)'}"
+                            f" -> {valeur} ({normalize_text(l.get('etat')) or 'sans verdict'})")
+        con.commit()
+        print(f"[ledger] R2 (la nuit respecte l'attente) : {len(reposees)} valeur(s) reposee(s) "
+              f"sur {len(carnet)} ligne(s) du carnet lues")
+        for r in reposees:
+            print(f"[ledger] R2   {r}")
+        return {"statut": "fait", "lues": len(carnet), "reposees": reposees}
+    except Exception as souci:                                        # noqa: BLE001
+        try:
+            con.rollback()
+        except Exception:                                             # noqa: BLE001
+            pass
+        print(f"[ledger] R2 (la nuit respecte l'attente) : NON JOUE -- {str(souci)[:200]} "
+              f"-- la nuit continue comme avant (rien n'est repose)")
+        return {"statut": "erreur", "erreur": str(souci)[:200]}
 
 
 def poser_nos_numeros(brut: object, notre_numero: dict[str, int]) -> tuple[object, int]:

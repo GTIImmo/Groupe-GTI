@@ -2861,3 +2861,44 @@ Le carnet compte **0 ligne « en attente »** (R3 et son rattrapage les ont tout
   date égale à l'heure près) ; lecture Supabase en panne → rien ne change, la nuit continue ; chaînes identiques ; mutants.
 - **Activation** : pousser (le script est en service dès qu'il est enregistré : sans la ligne du `.env`, il ne fait rien), puis la ligne du
   `.env`, puis le contrôle du lendemain matin (le journal de nuit + le registre de 1001395 à 110 000).
+
+---
+
+## 53. R2 CODÉ — la nuit respecte l'attente : écrit, éprouvé sur copies, **non poussé, ÉTEINT** *(25/10, Frédéric : « vas-y »)*
+
+### Le code — `phase2/sync/affaire_ledger.py`
+- `respecter_l_attente(con)` est appelé dans `refresh_ledger` **juste après l'UPSERT et le « silence ne gagne pas », avant
+  `recalculer_les_chaines`** : les chaînes et le push partent avec notre valeur.
+- Les 5 règles du §52 : origine `creation_app` / `modification_app` · verdict ni « arrivée » ni « échec » · colonne **et** genre écrit par
+  R1 (`R2_CHAMPS_PAR_GENRE`) · jamais un champ que R3 juge sur le registre (`R2_JUGES_SUR_LE_REGISTRE` : n° de mandat, date d'une offre) ·
+  rien si Hektor porte déjà la même valeur (`_meme_valeur`, copie de `memeValeurHektor`).
+- Le carnet est lu **chez Supabase, sur le moment** (`lire_le_carnet_supabase`, plafond 20 000 lignes : atteint = on refuse de conclure).
+- **Ne lève jamais** : une panne écrit « R2 NON JOUÉ — la nuit continue comme avant » et la nuit fait ce qu'elle faisait.
+- Le journal : « R2 : N valeur(s) reposée(s) sur M ligne(s) lues », puis **une ligne par valeur** (`1001395.prix_net_vendeur : (vide) ->
+  110000.00 (sans_objet)`) ; le compte rendu de `refresh_ledger` porte `r2`.
+- **Interrupteur `APP_AFFAIRE_R2_ATTENTE=1`** dans `.env`, lu après chargement. Absent = « R2 : ÉTEINT », comportement d'avant à l'octet près.
+  ⚠ **Le script est en service dès qu'il est poussé** : sans la ligne du `.env`, il n'écrit qu'une ligne de journal de plus.
+
+### Les essais — `phase2/checks/test_r2_attente.py` : **14/14**
+- **La fonction** sur un petit registre : (1) le net vendeur d'une vente reposé ; (2) **exactement** les 4 valeurs attendues, dont un
+  « conflit » (A) et une validité d'offre modifiée sans verdict ; (3) **intacts** : date d'acte et validité d'une vente (genre), validité d'un
+  compromis, n° de mandat, date d'une offre, « échec », « arrivée », `saisie_app`, `classeur`, même valeur (115 000 = 115000.00) ;
+  (4) le journal nomme chaque valeur ; (5) **témoin** : éteint, rien ne bouge ; (6) **lecture en panne** : rien ne bouge, aucune exception ;
+  (7) la règle d'égalité ; (7b) **les deux copies de la règle par genre** (R2 et le générateur du patch R1) sont identiques, colonne par colonne.
+- **La vraie nuit, sur 3 copies de `phase2.sqlite`** (miroir de Hektor en lecture seule, le vrai carnet lu une fois chez Supabase, jamais
+  de push) : (8) la version d'avant ne connaît pas R2 ; (9) **TÉMOIN INVERSE : éteinte, la nuit neuve rend le registre de la nuit d'avant,
+  31 103 lignes identiques** ; (10) allumée : **1001395.prix_net_vendeur passe de vide à 110000.00** ; (11) **rien d'autre ne change**, ni
+  colonne ni ligne ; (12) **aucune chaîne ne bouge** (12 170 chaînes dans les trois cas) ; (13) le compte rendu porte R2.
+- **7 mutants attrapés** : n° de mandat protégé, « échec » protégé, genre ignoré, même valeur ignorée, origine ignorée (→ 2, 3) ; panne non
+  attrapée (→ 6) ; une colonne ajoutée à la table d'un genre (→ 2, 3, 7b).
+- **Les essais voisins** qui chargent ce script : `test_chainage_v2`, `test_chainage_vente_ferme`, `test_adoption_contact_ne_dans_app` :
+  **verts**. ⚠ `test_alignement_suppression` est **rouge, et l'était déjà** : son faux client expose `request`, alors que le script appelle
+  `_request` depuis le correctif du 17/09 (`bcb05fe`, « le journal des suppressions n'a jamais été lu »). Sans rapport avec R2
+  (`appliquer_les_suppressions` n'est pas touché). **Noté, pas corrigé.**
+
+### Pour l'activer, dans l'ordre (chaque geste avec l'accord de Frédéric)
+1. **pousser** (rien à redémarrer : c'est le run de nuit, pas le worker) ;
+2. ajouter **`APP_AFFAIRE_R2_ATTENTE=1`** au `.env` du serveur ;
+3. **le lendemain matin** : dans `logs/scheduled/quotidien_*.log`, « R2 (la nuit respecte l'attente) : 1 valeur(s) reposée(s) » et la ligne
+   `1001395.prix_net_vendeur` ; chez Supabase, **le registre de la vente 23358 porte 110 000** ; et le nombre de chaînes inchangé.
+⛔ **Retour arrière** : retirer la ligne du `.env` — la nuit suivante, la colonne redevient ce que dit Hektor.
