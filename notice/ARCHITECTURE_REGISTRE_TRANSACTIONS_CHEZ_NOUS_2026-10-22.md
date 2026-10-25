@@ -2775,3 +2775,89 @@ le fait déjà avant chaque envoi (`cibleHektorContact`).
 | **D7 / T1 / T3** | modifier sans numéro Hektor ; le worker défait l'état si Hektor ne répond pas | « pour la coupure », décisions de Frédéric |
 | **D8** | deux règles de chaîne (SQL au clic, Python la nuit ; v2 côté Python seulement) | à trancher avant d'allumer la v2 côté clic |
 | **D9** | le cycle d'affaires du registre des mandats refait la nuit seulement | non vérifié à l'écran |
+
+### ⛔ DÉCISION DE FRÉDÉRIC (25/10) — R2 : **A, PAS DE DURÉE MAXIMALE**
+La protection d'un champ en attente **tombe seulement au verdict « arrivée »** de R3. Un champ que Hektor ne porte jamais (le net
+vendeur d'une vente) reste donc **à notre valeur pour toujours** — c'est voulu. R2 ne concerne que les colonnes que la nuit réécrit
+depuis Hektor, et seulement les lignes du carnet nées d'un geste **envoyé** à Hektor (`creation_app`, `modification_app`) ; ce qui
+est gardé chez nous seulement (colonnes `*_app`, champs sans colonne, `saisie_app`, `classeur`) n'est pas concerné.
+
+---
+
+## 52. R2 — AUDIT DU CODE, avec la décision A — 25/10 *(Frédéric : « A »)* — lecture seule, **rien codé**
+
+### L'ordre de la nuit, lu dans `run_full_pipeline.ps1` et `affaire_ledger.py`
+1. l. 902 — la doublure du registre descend (`pull_from_supabase.py --table app_affaire_ledger`) ;
+2. l. 911 — **`affaire_ledger.py --refresh --push`** : `refresh_ledger` → l'UPSERT depuis le miroir (l. 839 : `prix_net_vendeur=excluded…`,
+   **sans** « vide ne gagne pas », sauf pour `app_contact_id`) → « le silence ne gagne pas » (l. 905) → **`recalculer_les_chaines`** (l. 988) ;
+   puis `main()` : suppressions → **le push de la ligne ENTIÈRE** (`ledger_rows_for_push`, `SELECT *`) → les chaînes redescendues ;
+3. l. 1253 — `registre_depuis_console.py` (les notaires, 8 colonnes, son propre envoi) ;
+4. l. 1318-1322 — **le magasin du carnet puis le contrat dormant** (`magasin_affaire_app.py`, `appliquer_contrat_affaire.py`) : **APRÈS** le push
+   et les chaînes — c'est le défaut **D5**, confirmé. Le contrat est vide (`CHAMPS_APP_AFFAIRE = ()`, le gel éteint).
+
+⭐ **Donc la nuit d'aujourd'hui** recopie Hektor, calcule les chaînes, et **envoie à l'app la ligne entière** : un champ que Hektor ne porte
+pas (le net vendeur d'une vente) part **vide** et efface ce que la création avait écrit au clic (R1).
+⭐ Le worker, lui, **n'efface jamais** : `reporterAuRegistre` saute une valeur vide (« vide ne gagne pas »).
+
+### Le carnet n'est PAS frais sur le serveur à l'heure de R2
+La copie locale (`app_affaire_champ_app`) est remplie par le magasin **après** l'étape du registre ; la doublure `__sb` vient de la descente
+de la veille (06:45). Une saisie faite dans la journée n'y est pas. ➡ **R2 doit lire le carnet chez Supabase, au moment même** (une lecture,
+~60 lignes aujourd'hui). Si la lecture échoue : R2 ne fait rien, le dit, et la nuit fait exactement ce qu'elle fait aujourd'hui.
+
+### La règle de R2 (avec A)
+Après l'UPSERT et **avant les chaînes**, pour chaque ligne du carnet :
+1. **origine** `creation_app` ou `modification_app` (un geste envoyé ; `saisie_app` et `classeur` exclus, comme R3) ;
+2. **verdict** autre que « arrivée » (A : la protection ne tombe qu'à « arrivée ») — **et autre que « échec »** (§12, condition 2 : un
+   travail échoué n'a rien envoyé, sa valeur n'est pas la transaction ; c'était 30712 : 160 000 chez nous, 16 000 chez Hektor) ;
+3. **le champ a une colonne** (`CARNET_VERS_REGISTRE` du worker : montant, date, date d'acte, séquestre, net vendeur, honoraires vendeur,
+   n° de mandat, validité) **et R1 l'écrit pour ce genre** (la table de R1, `gen_patch_r1_affaire_nait_complete.py` l. 37-74) — offre :
+   validité ; compromis : acte, séquestre, net, honoraires vendeur ; vente : net, honoraires vendeur ; montant et date pour les trois.
+   ⭐ Sans ce filtre, R2 poserait au registre la **validité préremplie** d'un compromis ou d'une vente (mesuré : 15 jours sur 1001394 et
+   1001395) et la **date d'acte** préremplie d'une vente — que R1 refuse justement d'écrire ;
+4. ⛔ **PAS les champs que R3 juge SUR LE REGISTRE** : `numero_mandat` (les trois genres) et la `date` d'une offre (`@registre:*`). Si R2 y
+   reposait notre valeur, R3 comparerait la saisie **à elle-même** et dirait « arrivée » sans preuve, puis la ligne sortirait du carnet —
+   **le même piège que les notaires de la pièce 3**. Ils restent donc à Hektor la nuit, et R3 les juge honnêtement le lendemain ;
+5. **si le registre (Hektor) porte déjà la même valeur** (`memeValeurHektor` : une date sans heure = la même date avec l'heure), on ne
+   touche à rien — sinon R2 rognerait l'heure d'une date.
+
+Alors la colonne reprend la valeur du carnet, **dans le registre local** : les chaînes et le push partent avec elle.
+
+### Ce que R2 changerait CETTE NUIT (mesuré le 25/10 sur Supabase)
+Le carnet compte **0 ligne « en attente »** (R3 et son rattrapage les ont toutes jugées). Les lignes « non arrivées » qui ont une colonne :
+
+| ligne | carnet | registre | R2 |
+|---|---|---|---|
+| vente 1001395 `prix_net_vendeur` (sans objet : Hektor ne le porte pas) | 110 000 | **vide** | ✅ **reposé** |
+| vente 1001395 `date_acte`, `jours_validite` | 2026-12-15, 15 | vide | ❌ R1 ne les écrit pas pour une vente |
+| compromis 1001394 `jours_validite` | 15 | vide | ❌ R1 ne l'écrit pas pour un compromis |
+| offre 1001339 (essai du 04/09) `date`, `jours_validite`, `numero_mandat` | égaux | égaux | ❌ rien à faire (et `date`, `numero_mandat` exclus, point 4) |
+
+➡ **UNE seule valeur change** : le net vendeur de la vente de l'essai 5. C'est exactement le symptôme du 24/10.
+
+### Ce que ça pourrait casser ailleurs
+- **Les chaînes** : R2 joue avant `recalculer_les_chaines` ; seuls le montant ou la date d'un champ en attente pourraient bouger une chaîne.
+  Ce soir : aucun. **Essai : le rejeu des chaînes avant / après, identique.**
+- **R3** : le piège du point 4, évité par l'exclusion. **Essai : un n° de mandat en attente n'est pas reposé.**
+- **« Conflit »** : avec A, une ligne en « conflit » **reste protégée** (notre valeur au registre ; celle de Hektor reste dans `payload_json` et
+  dans le verdict). ⚠ C'est exactement ce qui peut masquer une correction faite ensuite **dans Hektor** par un négociateur — d'où **R4** (la
+  sentinelle), qui doit sonner sur chaque « conflit ». Aujourd'hui : **0 ligne en conflit**.
+- **Le classeur** (chantier en attente de ⑧) : `origine = 'classeur'` exclue.
+- **Le contrat dormant (D5)** : inchangé, toujours vide et toujours après le push. R2 le **remplace dans l'intention** ; le retirer est une
+  autre décision.
+- **Les notaires** (`registre_depuis_console.py`) : R2 ne touche aucune de leurs colonnes.
+- **Deux copies d'une règle** : la table « quel champ pour quel genre » vit dans le SQL de R1 et vivra dans R2. Si R1 change sans R2, R2 protège
+  **moins** (jamais plus) : panne bénigne. Un essai relira le SQL de R1 en base pour comparer.
+- **L'étape du registre est BLOQUANTE dans le run** (`Invoke-Step`) : toute erreur de R2 doit être **attrapée** — R2 sauté, écrit au journal,
+  la nuit continue comme aujourd'hui.
+- **Alternative écartée** : mettre « vide ne gagne pas » (`COALESCE`) sur ces colonnes dans l'UPSERT. Plus court, mais il figerait **toute**
+  valeur qu'un négociateur viderait ensuite dans Hektor, saisie dans l'app ou non : c'est le gel, en plus large.
+
+### Le code proposé (rien n'est écrit)
+- `phase2/sync/affaire_ledger.py` : `r2_attente_actif()` (interrupteur **`APP_AFFAIRE_R2_ATTENTE=1`** dans `.env`, lu après chargement) ;
+  `lire_le_carnet_supabase()` ; `respecter_l_attente(con, carnet)` appelé dans `refresh_ledger` **juste avant** `recalculer_les_chaines` ;
+  le journal dit « R2 : N valeur(s) reposée(s) » avec la liste (une ligne par valeur, jamais un total seul).
+- Essais `phase2/checks/test_r2_attente.py` sur une **copie** de `phase2.sqlite` (jamais `--push`) : **témoin inverse** éteint = octet pour
+  octet ; allumé = **la seule** `1001395.prix_net_vendeur` change ; les exclusions (échec, arrivée, classeur, n° de mandat, validité d'une vente,
+  date égale à l'heure près) ; lecture Supabase en panne → rien ne change, la nuit continue ; chaînes identiques ; mutants.
+- **Activation** : pousser (le script est en service dès qu'il est enregistré : sans la ligne du `.env`, il ne fait rien), puis la ligne du
+  `.env`, puis le contrôle du lendemain matin (le journal de nuit + le registre de 1001395 à 110 000).
