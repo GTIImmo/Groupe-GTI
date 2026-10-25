@@ -369,3 +369,34 @@ console. Les listes ne portent pas encore notre numéro (la nuit les posera) : l
 ⚠ Le 1ᵉʳ chargement juste après le déploiement est resté bloqué sur « Préparation de ton agenda… » ; un rechargement l'a débloqué.
 L'accueil affichait « Synchronisations en erreur : 3 » : c'est le compte des **biens en erreur de diffusion** (le même que les « 3 erreurs »
 de la carte Diffusions, `mandatStats.withErrors`), pas des travaux — aucun travail en erreur depuis le redémarrage de 17:47.
+
+---
+
+## 15. LA PREMIÈRE NUIT DES PIÈCES 2 ET 3 — contrôle du 25/10 à 07:20 *(Frédéric : « le run est terminé, peux-tu contrôler »)*
+
+**Le run** (`logs/scheduled/quotidien_2026-10-25_04-00-01.log`) : **exit 0, « Pipeline finished successfully »** à 06:22:40.
+- pièce 2 : « personnes avec nos deux numéros : **65 426 numéros posés** » (l'essai sur copie en annonçait 65 401 la veille) ;
+- pièce 3 : « notaires sous NOTRE numéro : **23 340** (sans traduction : **0**) » ; **17 121** lignes écrites et **17 121 envoyées** à l'app.
+- Avertissements connus, sans rapport : le ménage des orphelins de recherche échoue (3ᵉ nuit), des 403 sur des fiches de contacts.
+
+**La descente** (`descente_2026-10-25_06-45-01.log`) : **exit 0**, 06:45 → 07:05 (descente, relevé, magasin).
+
+**Supabase après la nuit** :
+| quoi | mesure |
+|---|---|
+| personnes des listes avec notre numéro | **35 005 / 35 008** (3 inconnues de la doublure : rien inventé) |
+| acquéreurs principaux avec notre numéro | **30 421** |
+| listes à plusieurs acquéreurs complètes | **2 447 / 2 447** |
+| notaire de l'acquéreur | **6 772 à notre numéro, 0 à celui de Hektor** |
+| notaire du vendeur | **16 568 à notre numéro, 0 à celui de Hektor** |
+| travaux depuis 14 h | 1 059 faits, **0 en erreur** |
+**L'essai 5** : offre, compromis et vente portent l'acquéreur sous ses deux numéros (605976 / 20000015), dans la colonne et dans la liste ;
+notaires 10064499 (« CORNU, SELARL… » côté console, « Tiffany SELARL… » côté API) et 10355906. Les deux lignes « notaire » du carnet sont
+encore « en attente » (jugées le 23/10) : R3 les rejugera à la prochaine relecture de l'annonce (plus de 6 h après) — à voir.
+
+### ⚠ Trouvé au passage : LES TÂCHES ONT GLISSÉ D'UNE HEURE (passage à l'heure d'hiver, nuit du 24 au 25/10)
+Les déclencheurs sont enregistrés avec un décalage figé `+01:00` (heure d'été, tâches synchronisées sur l'heure universelle) : depuis cette nuit,
+elles tournent **une heure plus tôt** en heure locale. Quotidien 05:00 → **04:00** · Descente 07:45 → **06:45** · Sauvegarde 09:00 →
+**08:00** · Recherches 03:00 → **02:00** · Balayage photos 00:00 → **23:00** · Entretien photos 21:00 → **20:00** · Entretien documents
+22:00 → **21:00** · Reprise envois 12:30 → **11:30** · Relances e-mail : **08:00 inchangé** (pas d'heure figée). Toutes ont rendu 0 ; l'ordre
+de la nuit est gardé, mais la Sauvegarde tombe désormais à la même heure que les Relances (08:00). **Rien n'a été modifié : à décider par Frédéric.**
