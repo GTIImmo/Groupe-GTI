@@ -544,6 +544,52 @@ idempotente (0 ligne touchée ces 10 derniers jours). **Preuve possible seulemen
 peut prouver que la fonction modifiée rend le même résultat (en transaction annulée, compte `postgres`), mais pas
 le passage de `safeupdate` — c'est le run suivant qui le prouvera (`DONE … attempt 1/2`, battement `success`).
 
+### ⚠ CONTRE-AUDIT DU CORRECTIF (25/10, demandé par Frédéric) — LA LIGNE SEULE NE SUFFIT PAS
+
+**1. La durée réelle, par le cron (`cron.job_run_details`, job 11, 20 jours)** : 1,5 à 4,3 s en général, mais
+**5,6 s** (12/10), **10,5 s** (11/10) et **8,5 s ce matin à 06:00, pendant le run**. Par l'API, la limite est
+**8 s** (`authenticator : statement_timeout=8s, lock_timeout=8s`). ➡ **Avec la seule ligne corrigée, l'étape aurait
+été coupée ce matin** (57014), comme les adresses photos le 24/10. Sa répétition, jouée dans l'éditeur (sans
+limite), ne l'aurait pas vu — le piège exact du 20/10.
+
+**2. Pourquoi c'est lent la nuit, pas le jour.** Mesuré à froid de jour (lecture seule) : la grosse suppression
+(`app_rapprochement`, 53 624 lignes, 186 Mo) **0,94 s**, l'historique (`app_rapprochement_score_history`, 150 Mo)
+**0,13 s**, le reste négligeable. La nuit, d'autres tâches planifiées travaillent **sur les mêmes tables au même
+moment** : `app_process_rapprochement_dirty` **11,3 s à 06:09**, `app_generate_rapprochement_alerts` **7,3 à 7,6 s
+toutes les 5 min** (06:05, 06:10, 06:15) — l'étape passe à ~06:11. Attente de verrous + charge = le temps en plus.
+
+**3. Le remède existe, et il est officiel.** Doc Supabase « Timeouts », *Function level* : un `set statement_timeout`
+posé **sur la fonction** *« works with the Database REST API »* (plafond client 60 s), *« for recurring functions
+that need a special exemption »*. Aucune fonction du projet ne l'utilise encore (mesuré : 0). Le script attend
+300 s côté client : pas de coupure de son côté.
+
+**4. Le reste est vérifié** : `service_role` a le droit d'exécuter ; la fonction n'appelle aucune autre fonction ;
+aucune autre écriture sans `WHERE` dedans ; le journal `app_sweep_search_orphans_log` (clé `run_at`) accepte deux
+passages par nuit (`on conflict do nothing`).
+
+### ✅ LE CORRECTIF RETENU (NON fait — écriture en base, il faut un « vas-y »)
+
+| pièce | quoi |
+|---|---|
+| 1 | `delete from _cible_sweep where true;` (au lieu de `delete from _cible_sweep;`) — ancre unique, empreinte de départ `be11efc3…` vérifiée |
+| 2 | `alter function public.app_sweep_search_orphans() set statement_timeout = '60s';` **et** `set lock_timeout = '30s';` |
+| 3 | `notify pgrst, 'reload schema';` — l'API relit les réglages des fonctions |
+| inverse | remettre la ligne nue, `reset statement_timeout`, `reset lock_timeout`, recharger le schéma |
+| répétition | en transaction annulée : patch, empreinte, `proconfig` lu, appel de la fonction (résultat `ok`), retour |
+
+**Ce que la répétition ne peut PAS prouver** (comme le 24/10) : le passage par l'API avec `safeupdate` et le délai.
+**La preuve sera le run suivant** : `DONE phase2 menage orphelins de recherche attempt 1/2` dans
+`.tmp/full_pipeline_*.log`, une réponse `{"ok": true, ...}` dans `logs/scheduled/quotidien_*.log`, le battement
+`phase2.menage_orphelins_recherche` avec un `last_success_at`, et `logs.pipeline.latest` au vert.
+
+**Ce que ça pourrait casser ailleurs** : le cron n° 11 appelle la même fonction — 60 s reste sous son plafond de
+2 min, rien ne change pour lui ; l'étape écrira chaque nuit après le push (décision du 14/10), fonction idempotente,
+0 ligne touchée ces 10 derniers jours. Un `lock_timeout` de 30 s peut faire attendre la fonction derrière le
+recalcul des rapprochements : c'est voulu (attendre plutôt qu'échouer), et elle reste non bloquante pour le run.
+
+**Noté en passant** : à 06:48, le moniteur a eu un **57014 sur `rpc/app_cron_health`** (même délai de 8 s) —
+c'est la sonde des tâches planifiées. Non traité.
+
 ## 3. Ce qu'on peut retirer tout de suite, sans toucher à aucun garde-fou
 
 - **n° 4 et n° 5** : trancher les 6 lignes dans l'écran Santé. Elles sortent du compte, la sonde reste.
