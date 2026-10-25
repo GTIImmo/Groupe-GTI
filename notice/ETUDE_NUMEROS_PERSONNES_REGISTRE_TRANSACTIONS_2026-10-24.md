@@ -425,3 +425,39 @@ relances) suivrait les changements d'heure sans glisser.
   l'annonce **n'a pas été relue depuis le 23/10 à 17:42** (aucun `refresh_console_data` depuis), donc R3 n'a pas pu la rejuger. **Non prouvé.**
   Sur l'offre (1001393), `notaire_id`, `notaire_mandant_id` et `notaire_mandant_nom` n'ont **jamais été jugés** (`etat` vide) : non mesuré
   si c'est voulu (une offre ne porte pas de notaire chez Hektor ?).
+
+### A — relire l'annonce 24113 pour juger les notaires de l'essai 5 *(25/10, Frédéric : « fais A »)* — ⛔ **IMPOSSIBLE PAR L'ÉCRAN**
+Fiche VA6482 rouverte dans l'app (recherche étendue aux vendus) : **aucun travail de relecture n'est parti**. Cause lue dans la base :
+`app_console_request_annonce_refresh` cherche l'annonce dans `app_dossier_current` et lève `annonce_not_found` sinon — or un bien **vendu**
+n'y est plus (mémoire « un bien vendu/clos n'est plus dans app_dossier_current ») — et l'écran avale l'erreur (`requestAnnonceRefresh`,
+`.catch` muet). **Conséquence plus large que l'essai 5** : le rattrapage de R3 ne passe que par cette relecture ; **une ligne du carnet
+« en attente » sur un bien vendu, clos ou archivé ne sera donc JAMAIS rejugée**. Rien n'est cassé : les lignes restent « en attente ».
+Pour prouver l'essai 5, il faudrait poser un travail `refresh_console_data` pour 24113 **à la main** (écriture en base, accord de Frédéric).
+**Noté, pas corrigé.**
+
+---
+
+## 16. LA PIÈCE 5 — ce qu'elle fait, précisément *(25/10, Frédéric : « dis-moi précisément ce que fait la pièce 5 »)* — mesure, **rien codé**
+
+**Aujourd'hui** : la fiche d'un contact montre ses liens par la vue `app_contact_relations_current` (le front ne lit qu'elle, `api.ts:172`).
+Elle a deux branches : **mandants / propriétaires** lus dans **notre** registre des relations (`app_relation`, depuis le 30/09) ; **acquéreurs**
+(offre, compromis, vente) lus dans `app_contact_relation_current`, **la table refaite chaque nuit depuis le miroir de Hektor**
+(35 005 lignes, 15 691 personnes — déjà à notre numéro, le build substitue).
+
+**La pièce 5** : remplacer **la seule branche acquéreurs** de cette vue par une **projection** depuis le registre des transactions
+(`app_affaire_ledger` : l'acquéreur principal `app_contact_id` + chaque personne de `acquereurs_json` qui porte `app_contact_id`). Aucune
+table, aucune liste, aucune copie : une vue. Mêmes 18 colonnes, même nom → le front ne bouge pas. C'est la décision du 30/09, remise
+« quand le blob sera sur nos numéros » — c'est fait depuis les pièces 1 et 2.
+
+**Mesure du 25/10** : la projection retrouve **35 005 liens sur 35 005** de la table de nuit (**0 perdu**), et **17 de plus** — des
+transactions que Hektor ne montre plus (8494, 35467, 39607…) et des **offres nées dans l'app** (24933, 47146, 62097…) que la table de nuit
+ne connaît pas.
+
+**Ce qu'elle change pour l'utilisateur** : un acquéreur saisi dans l'app apparaît sur la fiche de son contact **tout de suite** (au lieu
+d'attendre la nuit et Hektor) ; et le jour de la coupure, les liens acquéreurs **ne disparaissent pas** avec la table de nuit.
+
+**Ce qu'elle pourrait casser ailleurs (à auditer avant de coder)** : la descente recopie cette vue sur le serveur (`pull_from_supabase.py:160`) ;
+`build_contacts_layer.py` la lit (l. 258, 596, pour les propriétaires) ; le contrôle `apres_run_2026-10-01.py:164` la compte ;
+`App.tsx:7313` ; et les colonnes qui ne viennent pas du registre des transactions (titre du bien, numéro de mandat, `contact_date_maj`,
+`is_active_annonce`) doivent venir des index des biens, sans perdre les biens vendus. Le rôle (`acquereur_offre / _compromis / _vente`)
+se dérive du `kind`. Les 22 personnes sans notre numéro (§15) n'y seraient pas — elles n'y sont pas non plus aujourd'hui sous notre numéro.
