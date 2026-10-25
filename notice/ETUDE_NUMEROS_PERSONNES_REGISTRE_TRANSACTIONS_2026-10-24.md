@@ -400,3 +400,12 @@ elles tournent **une heure plus tôt** en heure locale. Quotidien 05:00 → **04
 **08:00** · Recherches 03:00 → **02:00** · Balayage photos 00:00 → **23:00** · Entretien photos 21:00 → **20:00** · Entretien documents
 22:00 → **21:00** · Reprise envois 12:30 → **11:30** · Relances e-mail : **08:00 inchangé** (pas d'heure figée). Toutes ont rendu 0 ; l'ordre
 de la nuit est gardé, mais la Sauvegarde tombe désormais à la même heure que les Relances (08:00). **Rien n'a été modifié : à décider par Frédéric.**
+
+**Vérifié le 25/10 (Frédéric pensait le changement d'heure au 24/09)** : Windows (fuseau Paris) est en UTC+2 les 23/09, 25/09 et 24/10, en
+UTC+1 le 25/10 ; les journaux le confirment — run à **05:00 chaque jour du 25/09 au 24/10**, à **04:00 le 25/10** ; descente à 07:45 les
+22-24/10, **06:45** le 25/10. Le changement a donc bien eu lieu la nuit du 24 au 25/10 (dernier dimanche d'octobre).
+**L'ordre de la nuit est GARDÉ** — tout a reculé d'une heure ensemble : entretien photos 20:00 · entretien documents 21:00 · balayage
+23:00 · recherches 02:00 · run 04:00 (fini 06:22) · descente 06:45 (finie 07:05) · sauvegarde 08:00 · reprise des envois 11:30. Les relances
+e-mail se répètent **toutes les heures** (départ 08:00, répétition 1 h, sans heure figée) : leur passage de 07:00 est normal. Le moniteur
+tourne toutes les 2 h à « h48 » (désormais aux heures paires). Cause : les départs sont figés en `+01:00` ; un départ en heure locale (comme les
+relances) suivrait les changements d'heure sans glisser.
