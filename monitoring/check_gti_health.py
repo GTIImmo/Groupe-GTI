@@ -3126,7 +3126,10 @@ class Monitor:
     def _check_filet_miroir(self, nuits: int = 5, seuil: int = 3) -> None:
         journaux = sorted((self.root / "logs" / "scheduled").glob("quotidien_*.log"))[-nuits:]
         if not journaux:
-            self.add("data.miroir_filet", "data", "miroir", "filet_liste", "ok",
+            # ⚠ domaine `data_quality`, PAS `data` : app_monitor_status a une contrainte
+            #   (app_monitor_status_domain_check) et UNE ligne refusee fait tomber TOUT le lot.
+            #   Paye le 25/10 : `data` a bloque l'ecriture du moniteur de 01:48 a ~07:30.
+            self.add("data.miroir_filet", "data_quality", "miroir", "filet_liste", "ok",
                      "Filet du miroir : aucun journal du run", {"nuits_lues": 0})
             return
         par_nuit: list[dict[str, str]] = []
@@ -3136,11 +3139,24 @@ class Monitor:
                 texte = journal.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 texte = ""
-            for ligne in texte.splitlines():
-                if "[miroir] FILET " not in ligne or "->" not in ligne:
+            # ⚠ LE JOURNAL DU RUN COUPE LES LIGNES LONGUES (largeur fixe de la console
+            #   PowerShell) : le verdict `-> COMPLETE` tombe souvent sur la ligne SUIVANTE.
+            #   Vu le 25/10 : la premiere version ne lisait que la ligne du debut et
+            #   rendait « rien a proteger » sur une nuit qui en avait trois. On recolle
+            #   donc jusqu'a trois lignes, jusqu'a trouver la fleche.
+            lignes = texte.splitlines()
+            for n, ligne in enumerate(lignes):
+                if "[miroir] FILET " not in ligne:
                     continue
-                genre = ligne.split("[miroir] FILET ", 1)[1].split(" ", 1)[0]
-                verdicts[genre] = ligne.rsplit("->", 1)[1].strip()
+                entiere = ligne
+                for suite in lignes[n + 1:n + 4]:
+                    if "->" in entiere:
+                        break
+                    entiere += suite
+                if "->" not in entiere:
+                    continue
+                genre = entiere.split("[miroir] FILET ", 1)[1].split(" ", 1)[0]
+                verdicts[genre] = entiere.rsplit("->", 1)[1].strip()
             par_nuit.append(verdicts)
         genres = sorted({g for nuit in par_nuit for g in nuit})
         suites: dict[str, int] = {}
@@ -3162,7 +3178,7 @@ class Monitor:
             message = "Filet du miroir : " + " | ".join(f"{g} {v}" for g, v in sorted(dernier.items()))
         else:
             message = "Filet du miroir : rien a proteger au dernier run"
-        self.add("data.miroir_filet", "data", "miroir", "filet_liste", status, message,
+        self.add("data.miroir_filet", "data_quality", "miroir", "filet_liste", status, message,
                  {"nuits_lues": len(journaux), "refus_de_suite": suites, "dernier_run": dernier,
                   "journal": journaux[-1].name})
 
