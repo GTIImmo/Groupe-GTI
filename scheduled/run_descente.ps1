@@ -128,6 +128,30 @@ try {
     Write-Output "--- magasin termine (exit $codeMagasin) ---"
     if ($codeMagasin -ne 0) { $runFailed = $true }
 
+    # (8) R3 25/10 -- le RATTRAPAGE DU CARNET des transactions, sans relecture de l'annonce.
+    # ICI, en quatrieme : la nuit vient de relire le registre chez Hektor, et c'est lui qui
+    # prouve le numero de mandat et le notaire. Le script POSE des travaux « carnet seul »
+    # (le worker sync_light les prend) ; il ne parle jamais a Hektor. Il ne pose rien tant
+    # que APP_AFFAIRE_R3_RATTRAPAGE=1 n'est pas dans le .env.
+    # (!) UN ECHEC ICI NE FAIT PAS ECHOUER LA DESCENTE : il est ecrit au journal, et le
+    #     rattrapage se refait le lendemain (R3 est idempotent). Les 3 etapes du dessus
+    #     gardent seules le code de sortie.
+    # Etude : notice/ETUDE_NUMEROS_PERSONNES_REGISTRE_TRANSACTIONS_2026-10-24.md par.17-19.
+    Write-Output "--- 4/4 rattrapage du carnet des transactions (R3) ---"
+    try {
+        $nodeCandidates = @(@(
+            $env:CONSOLE_NODE_EXE,
+            "C:\Program Files\nodejs\node.exe"
+        ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) })
+        if ($nodeCandidates.Count -eq 0) { throw "node.exe introuvable" }
+        & $nodeCandidates[0] (Join-Path $root "Console\enqueue_rattrapage_carnet.js") --pousser
+        $codeRattrapage = $LASTEXITCODE
+        Write-Output "--- rattrapage du carnet termine (exit $codeRattrapage) ---"
+        if ($codeRattrapage -ne 0) { Write-Output "--- (!) rattrapage du carnet en ECHEC -- la descente n'echoue pas pour lui ---" }
+    } catch {
+        Write-Output "--- (!) rattrapage du carnet impossible : $_ -- la descente n'echoue pas pour lui ---"
+    }
+
     Write-Output "=== Descente terminee $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
 } catch {
     Write-Output "=== ERREUR descente : $_ ==="

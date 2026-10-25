@@ -167,7 +167,9 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
       m.supprimes.includes("1001375:numero_mandat") && verdictDe(m, "1001375:notaire_id") === "arrivee", JSON.stringify({ s: m.supprimes, p: m.patches }));
     controle("(5) ... le mandat sort (registre identique), le notaire RESTE (pas de colonne)",
       m.supprimes.length === 1 && !m.supprimes.includes("1001375:notaire_id"), JSON.stringify(m.supprimes));
-    controle("(5) ... une seule lecture par numero chez Hektor", m.appelsApi.length === 1, JSON.stringify(m.appelsApi));
+    // ⑧ R3 (25/10) : mandat (registre) et notaire (assistant) se lisent dans NOTRE base -- plus aucune lecture
+    //   chez Hektor pour eux (c'etait 1 avant le tri « lire Hektor seulement si une ligne en a besoin »).
+    controle("(5) ... AUCUNE lecture chez Hektor : mandat et notaire se lisent dans notre base", m.appelsApi.length === 0, JSON.stringify(m.appelsApi));
   }
   {
     const reg = { ...REG_50129, last_seen_at: NUIT, notaire_acquereur_id: "10064499" };
@@ -196,7 +198,8 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
     // TEMOIN INVERSE du piege : la regle d'AVANT (git HEAD) dit « arrivee » sur la seule colonne
     let ancienR3 = null;
     try {
-      const head = require("child_process").execFileSync("git", ["show", "HEAD:Console/console_job_worker.js"],
+      // 25/10 : la version d'avant la piece 3 est FIGEE (41f0f2c^) -- HEAD porte la piece 3 depuis son commit.
+      const head = require("child_process").execFileSync("git", ["show", "41f0f2c^:Console/console_job_worker.js"],
         { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
       const a = head.indexOf("const R3_CONTROLE_CARNET"), b = head.indexOf("// LA GARDE CONTRE LE DOUBLEMENT.");
       ancienR3 = a >= 0 && b > a ? head.slice(a, b) : null;
@@ -207,7 +210,7 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
       controle("(6b') TEMOIN INVERSE : la regle d'avant, sur le meme piege, disait « arrivee » sans preuve",
         verdictDe(m, "1001375:notaire_id") === "arrivee", JSON.stringify(m.patches));
     } else {
-      controle("(6b') TEMOIN INVERSE : la version d'avant n'a pas pu etre lue (ou porte deja la piece 3)", false, "git show HEAD");
+      controle("(6b') TEMOIN INVERSE : la version d'avant n'a pas pu etre lue (ou porte deja la piece 3)", false, "git show 41f0f2c^");
     }
   }
   {
@@ -415,6 +418,77 @@ const CHEZ_50129 = { dateStart: "2026-10-22", dateEnd: "2026-11-01", dateSignatu
     const r = await m.contexte.controler(JOB, "24113", { appAffaireId: 1001375, chez: CHEZ_50129, force: true });
     controle("(15) TEMOIN : interrupteur a false -> rien n'est lu, rien n'est ecrit",
       r.status === "eteint" && !m.patches.length && !m.supprimes.length && !m.appelsApi.length);
+  }
+
+  // ── ⑧ R3 (25/10/2026) : LE RATTRAPAGE SANS RELECTURE (etude §17-19) ──
+  // (22a-c) LE CODE REEL de handleRefreshConsoleData, avec des faux qui notent ce qu'on appelle.
+  function monterRelecture() {
+    const appels = [];
+    const ctx = { console, JSON, String, Number, Date, Object, Array, encodeURIComponent,
+      safeJsonParse: (x) => (typeof x === "string" ? JSON.parse(x) : (x || {})),
+      logJob: async () => {},
+      runCreatedAnnonceImmediateSync: async () => { appels.push("relecture"); return { synced: true }; },
+      supabaseRequest: async (c) => { appels.push("supabase:" + String(c).split("?")[0]); return []; },
+      reconcileSignatureStates: async () => { appels.push("signatures"); return 0; },
+      cleanupProvisionalForAnnonce: async () => { appels.push("provisoire"); },
+      poserNumerosManquants: async () => { appels.push("numeros"); return null; },
+      controlerLeCarnet: async (job, a) => { appels.push("r3:" + a); return { status: "fait" }; },
+      rebuildRequestedDetailCaches: async () => { appels.push("caches"); return null; } };
+    vm.createContext(ctx);
+    vm.runInContext(relecture + "\nthis.f = handleRefreshConsoleData;", ctx);
+    return { ctx, appels };
+  }
+  {
+    const m = monterRelecture();
+    const r = await m.ctx.f({ id: "j", hektor_annonce_id: "24113",
+      payload_json: JSON.stringify({ hektor_annonce_id: "24113", reason: "rattrapage_carnet", carnet_seul: true, light: true }) });
+    controle("(22a) « carnet seul » : R3 est lance sur l'annonce, et RIEN d'autre (ni relecture, ni signatures, ni caches)",
+      r.status === "carnet_seul" && m.appels.join(",") === "r3:24113", JSON.stringify({ r, a: m.appels }));
+    controle("(22c) ... aucun index de bien n'est lu : un bien vendu, clos ou archive passe",
+      !m.appels.some((a) => a.startsWith("supabase:")), JSON.stringify(m.appels));
+  }
+  {
+    const m = monterRelecture();
+    const r = await m.ctx.f({ id: "j", hektor_annonce_id: "24113",
+      payload_json: JSON.stringify({ hektor_annonce_id: "24113", reason: "read_through_open", light: true }) });
+    controle("(22b) TEMOIN INVERSE : sans « carnet seul », la relecture d'ouverture se fait comme avant (relecture, signatures, R3, caches)",
+      r.status === "synced" && ["relecture", "signatures", "r3:24113", "caches"].every((x) => m.appels.includes(x))
+      && m.appels.indexOf("relecture") < m.appels.indexOf("r3:24113"), JSON.stringify(m.appels));
+  }
+  // (22d-e) la vente de l'essai 5 (24113 / 23358), AVEC LA VRAIE REPONSE de l'API pour une vente : pas de detail.
+  const VTE5 = { app_affaire_id: 1001395, kind: "vente", hektor_affaire_id: "23358", last_seen_at: "2026-10-25T05:01:17+00:00",
+                 numero_mandat: "18787", honoraires_sortie: null, notaire_acquereur_id: "10064499",
+                 notaires_json: JSON.stringify({ entree: { id: "122190" } }) };
+  const ECRIT5 = "2026-10-23T17:41:19.163807+00:00";
+  const LV5 = (champ, v) => ({ app_affaire_id: 1001395, champ, valeur_app: v, valeur_hektor_au_moment: null, origine: "creation_app",
+                               ecrit_le: ECRIT5, etat: "en_attente", constate_le: "2026-10-23T17:41:54.678+00:00" });
+  const ESSAI5 = () => ({ registres: [VTE5], lignes: [LV5("numero_mandat", "18787"), LV5("notaire_id", "10064499")],
+    travaux: [{ status: "done", created_at: ECRIT5 }], contacts: [{ hektor_contact_id: "10064499", hektor_target_id: "122190" }],
+    api: { "vente:23358": { trouve: true } } });
+  {
+    const m = monter(ESSAI5());
+    await m.contexte.controler(JOB, "24113");
+    controle("(22d) vente de l'essai 5 : mandat et notaire « arrivee », SANS AUCUN appel a Hektor",
+      m.appelsApi.length === 0 && m.supprimes.includes("1001395:numero_mandat") && verdictDe(m, "1001395:notaire_id") === "arrivee",
+      JSON.stringify({ a: m.appelsApi, s: m.supprimes, p: m.patches }));
+    controle("(22d) ... le mandat sort du carnet (registre identique), le notaire reste (pas de colonne)",
+      m.supprimes.length === 1 && !m.supprimes.includes("1001395:notaire_id"), JSON.stringify(m.supprimes));
+  }
+  {
+    const m = monter({ ...ESSAI5(), source: morceaux.r3.replace("const R3_HEKTOR_SI_BESOIN = true;", "const R3_HEKTOR_SI_BESOIN = false;") });
+    const r = await m.contexte.controler(JOB, "24113");
+    controle("(22d') TEMOIN INVERSE : sans le tri, la meme vente n'est JAMAIS jugee (« non_juge » -- le defaut du contre-audit)",
+      m.appelsApi.length === 1 && !m.patches.length && !m.supprimes.length && r.bilan.some((b) => b.resultat === "non_juge"),
+      JSON.stringify({ r, a: m.appelsApi }));
+  }
+  {
+    const m = monter({ registres: [{ ...REG_50129, last_seen_at: NUIT }], travaux: [{ status: "done", created_at: ECRIT }],
+      lignes: [L("prix_publique", "135000", { etat: "en_attente", constate_le: "2026-10-22T21:50:00Z" }),
+               L("numero_mandat", "18787", { etat: "en_attente", constate_le: "2026-10-22T21:50:00Z" })] });
+    const r = await m.contexte.controler(JOB, "24113");
+    controle("(22e) TEMOIN : un compromis avec un PRIX a juger lit toujours Hektor, et l'API muette -> rien n'est juge",
+      m.appelsApi.length === 1 && !m.patches.length && !m.supprimes.length && r.bilan.some((b) => b.resultat === "non_juge"),
+      JSON.stringify({ r, a: m.appelsApi }));
   }
 
   console.log(echecs.length ? `\n⛔ ${echecs.length} controle(s) en echec.` : "\n✅ Tous les controles sont verts.");

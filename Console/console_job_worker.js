@@ -4286,6 +4286,21 @@ async function handleRefreshConsoleData(job) {
   const payload = safeJsonParse(job.payload_json);
   const hektorAnnonceId = String(job.hektor_annonce_id || payload.hektor_annonce_id || "").trim();
   if (!hektorAnnonceId) throw new Error("hektor_annonce_id required for refresh_console_data");
+  // ⑧ R3 (25/10/2026) : le RATTRAPAGE DU CARNET SANS RELECTURE (« carnet seul »). Une vente fait sortir le
+  //   bien du parc vivant le jour meme ; la relecture d'ouverture lui est alors refusee
+  //   (app_console_request_annonce_refresh -> annonce_not_found), et les lignes que seule la nuit peut
+  //   prouver (numero de mandat, notaire) restaient « en attente » pour toujours. Ces travaux sont poses
+  //   chaque matin par Console/enqueue_rattrapage_carnet.js (4e etape de la descente) : ni relecture de
+  //   l'annonce, ni signatures, ni caches, ni loadDossier -- un bien vendu, clos ou archive passe.
+  //   Etude : notice/ETUDE_NUMEROS_PERSONNES_REGISTRE_TRANSACTIONS_2026-10-24.md §17-19.
+  if (payload.carnet_seul === true) {
+    await logJob(job.id, "refresh_console_data", "running", "Rattrapage du carnet (R3), sans relecture de l'annonce", {
+      hektor_annonce_id: hektorAnnonceId,
+      reason: payload.reason || null,
+    });
+    const controleCarnet = await controlerLeCarnet(job, hektorAnnonceId);
+    return { status: "carnet_seul", reason: payload.reason || null, controle_carnet: controleCarnet };
+  }
   await logJob(job.id, "refresh_console_data", "running", "Synchronisation differee des donnees annonce", {
     hektor_annonce_id: hektorAnnonceId,
     reason: payload.reason || null,
@@ -21435,6 +21450,20 @@ const R3_NON_CONTROLES = {
 
 function r3Texte(v) { return v == null ? "" : String(v).trim(); }
 
+// ⑧ R3 (25/10/2026) : NE LIRE HEKTOR QUE SI UNE LIGNE EN A BESOIN. Les sources « @registre:* » (numero de
+//   mandat, date de l'offre) et « @notaire » (vente : notaires_json du registre ; compromis : la lecture de
+//   l'assistant) se lisent DANS NOTRE BASE, relue la nuit chez Hektor -- avec leurs gardes (nuit passee apres
+//   la saisie, lecture de l'assistant posterieure). Sans ce tri, une VENTE ne se jugeait jamais au rattrapage :
+//   la lecture par numero d'une vente ne rend aucun detail (transaction_etat_from_api.py : {"trouve": true}),
+//   et « pas de detail » vaut « on ne juge pas ». Contre-audit du 25/10, etude §19.
+//   false = le comportement d'avant (une lecture pour chaque transaction a juger).
+const R3_HEKTOR_SI_BESOIN = true;
+function r3BesoinDeHektor(ligne, genre) {
+  const sources = (R3_SOURCES[ligne.champ] || {})[genre];
+  if (!sources) return false;                      // ce genre n'a pas ce champ : « sans_objet »
+  return sources.some((s) => !s.startsWith("@registre:") && s !== "@notaire");
+}
+
 // ⑧ piece 3 (24/10/2026) : le notaire de l'acquereur, LU CHEZ HEKTOR -- deux sources, deux formes.
 //   vente     : `notaires_json` du registre, relu la nuit par l'API ; objet { entree: {id}, sortie: {id} },
 //               entree = ACQUEREUR (mesure du 16/09 : 366 sur 366).
@@ -21641,7 +21670,9 @@ async function controlerLeCarnet(job, annonceId, options = {}) {
       const genre = r3Texte(reg.kind);
       let chez = options.appAffaireId && String(options.appAffaireId) === id ? (options.chez || null) : null;
       // L'offre : la liste ne porte ni montant ni validite -> une lecture par numero.
-      if (!chez || (genre === "offre" && chez.montant == null)) {
+      // ⑧ R3 (25/10) : et seulement si une ligne a juger a besoin de ce que Hektor porte AU MOMENT.
+      const besoin = !R3_HEKTOR_SI_BESOIN || lesLignes.some((l) => r3BesoinDeHektor(l, genre));
+      if (besoin && (!chez || (genre === "offre" && chez.montant == null))) {
         const lu = await lireEtatTransactionViaApi(job, genre, reg.hektor_affaire_id, "hektor_transaction_controle");
         if (!lu || lu.trouve !== true || !lu.details) {
           // ⛔ API muette, ou transaction introuvable : on NE JUGE PAS (regle de la coupure).

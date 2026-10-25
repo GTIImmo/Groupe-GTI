@@ -598,3 +598,45 @@ règle « API muette → on ne juge pas ».
 Essais : (7a) carnet seul, sans relecture ; (7b) **témoin inverse** : sans `carnet_seul`, la relecture se fait comme avant ; (7c) bien hors du parc ;
 (7d) **une vente « du registre » se juge sans appel à Hektor** ; (7e) **témoin inverse** : un compromis avec un prix à juger lit toujours Hektor, et
 reste « non jugé » si l'API se tait ; puis l'enfileur en blanc sur la base réelle (il doit nommer 24113, et rien d'autre).
+
+---
+
+## 20. B CODÉ — le rattrapage de R3 sans relecture : écrit, éprouvé hors ligne, **non poussé, non actif** *(25/10, Frédéric : « vas-y »)*
+
+### Les 3 pièces
+1. **`Console/console_job_worker.js`, `handleRefreshConsoleData`** : un travail `refresh_console_data` dont la charge porte
+   `carnet_seul: true` lance **seulement** `controlerLeCarnet` — ni relecture, ni signatures, ni caches, ni `loadDossier`.
+2. **`Console/console_job_worker.js`, R3** : `r3BesoinDeHektor(ligne, genre)` + `R3_HEKTOR_SI_BESOIN = true` — la lecture chez Hektor
+   d'une transaction n'a lieu que si une de ses lignes a une source autre que `@registre:*` et `@notaire`. `false` = le comportement d'avant.
+3. **`Console/enqueue_rattrapage_carnet.js`** (nouveau) + **4ᵉ étape de `scheduled/run_descente.ps1`** : pose un travail « carnet seul »
+   par annonce qui a une ligne « en attente » / « inconnu » constatée il y a plus de 6 h ; écarte une annonce qui a déjà une relecture
+   en file et une transaction sans numéro chez Hektor ; plafond 50 (le surplus est **nommé**, reporté au lendemain) ; priorité 200 ; notre
+   numéro de dossier porté quand le registre l'a. **En blanc par défaut.** Un échec de cette étape **ne fait pas échouer la descente**.
+   ⚠ **L'interrupteur s'appelle `APP_AFFAIRE_R3_RATTRAPAGE=1`** (et non `APP_R3_RATTRAPAGE` comme écrit au §18) : même famille que
+   `APP_AFFAIRE_PERSONNES_DEUX_NUMEROS` et `APP_AFFAIRE_NOTAIRES_NOTRE_NUMERO`.
+
+### Les essais
+- **`Console/test_controle_carnet_r3.js` : 54/54** (47 + 7). Neufs : (22a) « carnet seul » n'appelle que R3 ; (22c) aucun index de bien lu ;
+  (22b) **témoin inverse** : sans l'option, la relecture d'ouverture est inchangée ; (22d) **la vente de l'essai 5, avec la VRAIE réponse de
+  l'API** (`{trouve: true}`, sans détail) : mandat et notaire « arrivée », **0 appel à Hektor**, le mandat sort du carnet, le notaire reste ;
+  (22d') **témoin inverse** : sans le tri, la même vente reste « non jugée » — le défaut du contre-audit, reproduit ; (22e) un compromis avec
+  un prix à juger lit toujours Hektor, et l'API muette → rien n'est jugé.
+  Deux anciens contrôles ajustés : (5) « une seule lecture chez Hektor » devient « **aucune** » (c'est l'objet de la pièce 2) ; (6b') le témoin
+  inverse de la pièce 3 lisait `HEAD`, qui porte la pièce 3 depuis son commit : il lit désormais la version **figée** `41f0f2c^`.
+  **4 mutants attrapés** : branche retirée → 22a/22c ; tri éteint → (5), 22d ; « jamais besoin de Hektor » → (8), (9), (11), (16), (21), 22e ;
+  « carnet seul » qui relit quand même → 22a.
+- **`Console/test_enqueue_rattrapage_carnet.js` : 8/8** — l'essai 5 ; la règle des 6 h ; la file occupée ; la transaction sans numéro ;
+  le plafond ; **`main()` en vrai** par un processus fils : en blanc → 0 écriture ; `--pousser` éteint → 0 écriture et il le dit ; allumé →
+  **1** travail `refresh_console_data` « carnet seul » pour 24113, dossier 1068399, priorité 200. **3 mutants attrapés** (interrupteur
+  ignoré, règle des 6 h retirée, file ignorée).
+- `Console/test_seconde_preuve.js` (l'autre lecteur de `handleRefreshConsoleData`) : vert.
+- `run_descente.ps1` : 0 erreur d'analyse PowerShell, BOM et CRLF gardés (169 / 169, 0 `\r\r\n`).
+- **Sur la base réelle, en blanc** (lecture seule) : **1 annonce, 24113, dossier 1068399, ses 10 lignes** — rien d'autre. `--pousser` sans
+  interrupteur : « ÉTEINT, rien n'a été posé » ; **0 travail `rattrapage_carnet`** en base (mesuré).
+
+### Pour l'activer, dans l'ordre (chaque geste avec l'accord de Frédéric)
+1. **pousser** ; 2. **redémarrer les 4 services, file vide** (0 pending, 0 running) ; 3. ajouter **`APP_AFFAIRE_R3_RATTRAPAGE=1`** au `.env`
+du serveur ; 4. **l'essai réel** : lancer une fois à la main `node Console/enqueue_rattrapage_carnet.js --pousser` → 1 travail pour 24113 →
+les 10 lignes doivent passer « arrivée » (les 8 numéros de mandat sortent du carnet, les 2 notaires restent) ; 5. le lendemain : la 4ᵉ étape
+dans le journal de la descente.
+⛔ **Retour arrière** : retirer la ligne du `.env` (plus rien n'est posé) ; la pièce 2 se coupe par `R3_HEKTOR_SI_BESOIN = false`.
