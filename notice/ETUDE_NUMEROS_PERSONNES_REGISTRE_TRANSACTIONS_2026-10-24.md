@@ -488,3 +488,63 @@ exprès** (`R3_NON_CONTROLES`, décisions du 03/09, 16/09, 16/10, 23/10) : pas u
 
 **Les correctifs possibles — À DÉCIDER PAR FRÉDÉRIC, rien n'est choisi** : voir le message du 25/10 (A : la relecture accepte les biens
 vendus ; B : un rattrapage R3 sans relecture ; C : ne rien changer et l'écrire).
+
+---
+
+## 18. B — LE RATTRAPAGE DE R3 SANS RELECTURE : audit de la forme *(25/10, Frédéric : « B »)* — lecture seule, **rien codé**
+
+### Ce que R3 demande pour tourner (code)
+- un **travail** : `controlerLeCarnet(job, annonce)` écrit son bilan par `logJob(job.id, "app_carnet_controle", …)` et reconnaît « son »
+  travail de création par `job.id` ; il n'y a pas de R3 possible hors d'un travail ;
+- **une lecture chez Hektor par transaction à juger** (`lireEtatTransactionViaApi` → `phase2/sync/transaction_etat_from_api.py`, l'API, pas
+  la console) quand il n'a pas déjà la réponse — tous les genres, pas seulement l'offre ; plus des lectures Supabase (registre, carnet,
+  contacts, `app_affaire_console`) ;
+- les champs « après la nuit » (`@registre:*`, le notaire d'une vente) se lisent **dans notre registre**, une fois `last_seen_at` postérieur à
+  la saisie ; avant, R3 répond « en attente » sans se tromper. **L'heure du rattrapage n'est donc pas critique** : il est idempotent, et la règle
+  des 6 h l'empêche de rejuger trop souvent.
+
+### Les trois formes regardées
+1. **Une minuterie dans un service** : écartée — pas de travail donc pas de journal, et elle tournerait **pendant** un travail, alors que le
+   frein de Hektor suppose un travail à la fois par service (mémoire « le mur à 30 utilisateurs »).
+2. **Un nouveau type de travail** (`controle_carnet`) : possible, mais lourd — 3 verrous en base (contrainte, droits, distribution) + 5
+   endroits du worker + l'écran (mémoire « nouveau type de travail : trois verrous »).
+3. ⭐ **Le type qui existe, en mode « carnet seul »** — `refresh_console_data` avec `{ "reason": "rattrapage_carnet", "carnet_seul": true }` :
+   - type **déjà** accepté par la contrainte, **déjà** distribué au service `sync_light` (avec `refresh_console_contact_data`), **déjà** hors
+     des notifications (`JOB_TYPES_A_NOTIFIER`) et hors de la liste suivie par l'écran → **aucun patch en base, aucun changement d'écran** ;
+   - au tout début de `handleRefreshConsoleData`, si `carnet_seul` : **ni relecture de l'annonce, ni signatures, ni caches** — seulement
+     `controlerLeCarnet`. Pas de `loadDossier` sur ce chemin : un bien vendu, clos **ou archivé** passe.
+
+### Qui pose les travaux
+Un petit script `Console/enqueue_rattrapage_carnet.js`, **sur le modèle du balayage des photos** (`enqueue_photos_masquees_lot.js` : clé de
+service, insertion directe, en blanc par défaut, `--pousser` pour écrire) :
+- il cherche les annonces qui ont au moins une ligne du carnet **« en attente » ou « inconnu »** (origine `creation_app` / `modification_app`),
+  constatée il y a plus de 6 h ;
+- il écarte une annonce qui a déjà un `refresh_console_data` en attente ou en cours ;
+- un plafond par passage (proposé : 50 annonces) et une priorité basse ;
+- il écrit au journal ce qu'il pose, annonce par annonce (pas un total).
+**Branché comme 4ᵉ étape de la descente** (`scheduled/run_descente.ps1`, après le magasin, ~07:05) : le registre vient d'être relu par la nuit,
+**aucune tâche planifiée nouvelle** (donc rien à déclarer au moniteur des 11 tâches). **Interrupteur** : `APP_R3_RATTRAPAGE=1` dans `.env`,
+lu après chargement — absent, l'étape ne pose rien.
+
+### Volume, mesuré le 25/10
+Aujourd'hui : **1 annonce** (24113, 10 lignes en attente, 3 transactions) → 1 travail, **3 lectures API** chez Hektor. En régime normal : les
+ventes et transactions du jour dont le bien est sorti du parc — quelques-unes par jour, contre un quota de 13 000 à 17 000.
+
+### Ce que ça pourrait casser ailleurs
+- **Un service sur l'ancien code** qui prendrait un travail « carnet seul » ferait une **relecture légère complète** d'un bien vendu — chemin
+  jamais éprouvé. ⛔ D'où l'ordre : pousser → redémarrer les 4 services, file vide → **seulement ensuite** poser la ligne `APP_R3_RATTRAPAGE=1`.
+- La descente : l'étape est **après** ses trois étapes ; elle ne doit jamais la faire échouer (sortie ≠ 0 de l'étape écrite au journal, la descente
+  garde son code).
+- Le moniteur : un conflit trouvé par R3 écrit `app_carnet_controle` en **error** dans le journal du travail — voulu (c'est un vrai écart), mais
+  à savoir.
+- **Limite déclarée** : une ligne **jamais jugée** (`etat` vide) n'est pas visée — ce sont les lignes **exclues exprès** à l'offre
+  (`R3_NON_CONTROLES`) et celles d'avant la naissance de R3 (24933, 04/09). Les viser obligerait le script à **recopier** la liste des exclusions
+  du worker (« deux copies d'une règle divergent »).
+- La « seconde preuve » 1a (`poserNumerosManquants`) n'est pas reprise : **0 ligne du registre sans numéro** aujourd'hui (mesuré).
+
+### Les essais prévus
+- `Console/test_controle_carnet_r3.js` : (7a) un travail « carnet seul » ne relit pas l'annonce et juge le carnet ; (7b) **témoin inverse** : sans
+  `carnet_seul`, la relecture se fait comme avant ; (7c) un bien absent du parc vivant passe.
+- l'enfileur en blanc sur la base réelle : il doit nommer **24113**, et rien d'autre ;
+- l'essai réel : un passage posé à la main **avec l'accord de Frédéric** → les 2 lignes notaire et les numéros de mandat de l'essai 5 doivent
+  passer « arrivée ».
