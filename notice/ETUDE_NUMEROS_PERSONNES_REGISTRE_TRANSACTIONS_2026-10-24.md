@@ -694,3 +694,5 @@ dans le journal de la descente.
 - ⬜ **Rien à corriger sans décision** — si on le voulait : faire tenir l'anti-rejeu sur un 403 aussi longtemps que sur un corps vide (c'est
   déjà le cas), ou ne plus jamais re-tenter un compte qui a échoué depuis 4 mois. Lien avec la décision du 13/10 sur les négociateurs
   inactifs (« on ne touche à rien »). **Noté, pas modifié.**
+
+- ✅ **26/10 — la 4e étape de la descente a tourné** (`descente_2026-10-26_06-45-01.log`, 06:45 → 07:04) : les 3 étapes en code 0, puis « rattrapage du carnet (R3) » : interrupteur **ALLUMÉ**, **0 ligne mûre**, « rien à poser », code 0 — exactement l'attendu (le carnet n'a plus aucune ligne en attente depuis le 25/10). Le run de la nuit : code 0 à 06:11.
