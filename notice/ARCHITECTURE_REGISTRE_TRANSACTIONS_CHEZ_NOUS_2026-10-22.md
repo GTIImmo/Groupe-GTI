@@ -3119,3 +3119,6 @@ nuit n'a plus de miroir — c'est exactement « l'écriture meurt » du 22/10.
 - **B — le ranger avec la coupure**, avec T1 et T3 (modifier sans numéro Hektor), où il prend son sens : un seul chantier « l'état chez nous ».
   Rien n'est perdu aujourd'hui (mesuré : 0 geste réel, 0 échec).
 **Ma recommandation : B.** Et prendre à la place un point qui sert **aujourd'hui** (voir la liste au §51).
+
+### ⛔ DÉCISION DE FRÉDÉRIC (26/10) : **B — R5 est rangé dans l'étape 3** *(« B, donc dans l'étape 3 »)*
+Avec T1 (le worker défait l'état si Hektor refuse, décision du 29/08) et T3 (modifier sans numéro Hektor) : un seul chantier de la coupure, « l'état d'une transaction chez nous ». Inscrit au plan (`PLAN_DEV_ACTUALISE_2026-08-20.md`, « Ce qui n'est PAS ici » et le journal du 26/10). **Ne pas relancer en étape 2.**
