@@ -3202,3 +3202,28 @@ créée le matin n'apparaîtrait qu'après la nuit (le principal, lui, apparaît
    seulement), mesure le temps d'une fiche, et rejoue l'inverse.
 4. **À trancher** : montrer le **montant des offres** sur la fiche (nouveau) ou le masquer comme aujourd'hui ; et faire le **point 4** avant ou
    après (sinon les co-acquéreurs d'une transaction du jour attendent la nuit).
+
+### Point 2 bis — LES LIENS ENTRE LE REGISTRE DES TRANSACTIONS ET LE REGISTRE DES RELATIONS — audit du 26/10 *(Frédéric : « audite les liens possibles entre le registre des transactions et le registre des relations de mon app »)* — lecture seule
+
+**Les deux registres** :
+- **des relations** (`app_relation`, `relation_ledger.py`, 30/09) : **personne ↔ bien**, un seul fait « propriétaire du bien » (libellé mandant
+  si le bien a un numéro de mandat, propriétaire sinon), quatre numéros (`app_contact_id`, `hektor_contact_id`, `app_dossier_id`,
+  `hektor_annonce_id`), *delete-never*, deux plages ; écrit **la nuit** (propriétaires de l'annonce chez Hektor) et **au clic** (lier, créer,
+  retirer un mandant) ; ⛔ **pas d'acquéreurs, par décision du 30/09** ;
+- **des transactions** (`app_affaire_ledger`) : **personne ↔ affaire** — l'acquéreur principal (`app_contact_id` + `hektor_acquereur_id`), la
+  liste des acquéreurs, **la liste des mandants de la transaction** (`mandants_json`), les notaires.
+
+**Les liens, un par un (mesurés le 26/10)** :
+| | le lien | état |
+|---|---|---|
+| L1 | **les mêmes personnes, sous leurs deux numéros** | relations : les quatre numéros ✅ · transactions : principal ✅, liste des acquéreurs ✅ (pièces 1-2), notaires ✅ (pièce 3), ⚠ **liste des MANDANTS : aucun de nos numéros** — **58 550 personnes** (31 307 sur les compromis, 27 243 sur les ventes) ne portent que le numéro de Hektor |
+| L2 | **les acquéreurs** | absents du registre des relations par décision ; la fiche d'un contact les lit dans la table de nuit → **la pièce 5 les projette depuis le registre des transactions** (35 005 / 35 005) |
+| L3 | **les mandants, deux sources** | le mandant **du bien** (relations) et les mandants **de la transaction** (transactions, relus chez Hektor) — sur 2026 : **ventes 731 / 735, compromis 593 / 606** se retrouvent dans le registre des relations (17 non) ; la liste des mandants d'une transaction ne contient **pas** l'acheteur (1 cas sur 86 compromis, 1 sur 87 ventes depuis le 17/07) |
+| L4 | ⚠ **l'acheteur rangé « mandant » du bien qu'il a acheté** | depuis le 17/07, Hektor met l'acheteur dans les propriétaires du bien ; notre registre des relations le recopie la nuit → **151 liens, 127 actifs** (le 23/10 : 133 / 115 — il en vient à chaque vente : mai 6 · juin 3 · juillet 31 · août 10 · septembre 32 · octobre 20). Règle de Frédéric : « l'acquéreur reste acquéreur, le propriétaire reste le mandant » → **le défaut des types de contacts**, à traiter après ⑧ (mémoire « l'acheteur rangé mandant ») |
+| L5 | **les gestes** | « Retirer un mandant » ne touche que le registre des relations ; « Supprimer la vente » ne retire pas l'acheteur-propriétaire (§35, proposition non décidée) |
+| L6 | **les types de l'annuaire** (Mandant > Acheteur > Propriétaire > Acquéreur) | calculés **la nuit** depuis la table de nuit (`relation_roles_json`, `build_contacts_layer.py`) — **la pièce 5 ne les change pas** ; L4 les fausse (l'acheteur devient « Mandant ») |
+| L7 | **l'activité d'un contact** (`app_contact_activite`) | lit les biens dont il est mandant/propriétaire (branche 1) → L4 y fait entrer les biens achetés |
+
+**Ce que la pièce 5 règle et ne règle pas** : elle règle **L2** (les acquéreurs lus dans notre registre des transactions, à l'instant et à
+la coupure). Elle ne règle **ni L1-mandants** (une « pièce 2 » pour `mandants_json`), **ni L4 / L6 / L7** (la règle d'import de l'acheteur,
+chantier des types).
