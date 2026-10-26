@@ -460,3 +460,14 @@ encore dans la liste (ou fiche ouverte), sinon **rien** — plus de 1re ligne. `
 Hors point 0, laissé tel quel : la sélection d'office du **mandat** (l. 14505) et du **registre** (l. 14500) —
 lecture légère chez nous (passerelles), pas Hektor. `StockScreen` (panneau « Fiche rapide ») lit la sélection, mais
 l'écran `annonces` est **inatteignable** (`openScreen` le redirige vers `mandats`, l. 15045).
+
+### 11.2 Contrôle en production (26/10, ~09:10)
+
+- ✅ **Déployé** : le code publié (`assets/index-dFQW02Qi.js`, en ligne vers 09:04) porte la nouvelle forme
+  `…rows.some(…)?bt:null` — identique à la construction locale ; l'ancienne finissait par `…?bt:De.rows[0]?.app_dossier_id??null`.
+- ⏳ **Comportement réel pas encore prouvé** : l'extension Chrome ne répondait pas (pas d'essai dans la session de
+  Frédéric). En base, 2 relectures « à l'ouverture » ce matin, **toutes deux sur 63339** (07:32 et 09:01:15), donc
+  **avant** la mise en ligne (~09:04) — le même schéma que l'ancien code (63339 en tête de liste).
+- ⚠ Une application déjà ouverte dans un onglet **garde l'ancien code** tant qu'on ne recharge pas la page (F5).
+- **Le juge** : plus aucune relecture `read_through_open` sans fiche réellement ouverte ; à mesurer sur une journée
+  ouvrée (référence avant : 63299 ×41, 63339 ×19 en 7 jours).
