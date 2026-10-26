@@ -1216,3 +1216,27 @@ recherche + adresse), `app_contact_current(adresse)` ; puis 3 lignes de code pou
 sources et l'**afficher** dans le résultat. Couverture : 10 787 annonces + 24 347 mandats (dont 23 584 biens vendus ou
 archivés) + 32 685 contacts. Les ~20 700 archives / vendues sans mandat demandent d'ajouter l'adresse aux listes
 construites la nuit : chantier à part.
+
+### 20.4 Les index de l'adresse — le coût mesuré, le patch prêt (26/10) — ⛔ NON POSÉ
+
+*Frédéric : « est-ce que cela risque de ralentir les recherches ? »* — Non : un index accélère la lecture. Il coûte
+seulement à l'**écriture** des lignes de sa table. ⚠ Correction de mon propre propos : ce n'est **pas la descente**
+(07:45, qui **lit** Supabase) qu'il faut surveiller, c'est le **run de nuit** qui **écrit** ces tables.
+
+**Volumes écrits, 8 dernières nuits** (`logs/scheduled/quotidien_*.log`, « push upgrade » et « push contacts ») :
+annonces en cours **2 à 52** lignes · registre des mandats **740-743** · contacts **8 à 4 030** ; durées stables
+(push ~4 min 30-5 min, contacts ~35 s). Des volumes faibles : un index de plus n'y pèse presque rien.
+
+**Le patch** : `supabase/patch_index_recherche_adresse_2026-10-26.sql` (+ `_INVERSE`, `_REPETITION`) — 4 index
+trigramme créés **sans bloquer l'app** (`CONCURRENTLY`, donc **une ligne à la fois** dans l'éditeur), aucune donnée
+touchée : adresse des annonces en cours (`adresse_detail`, qui couvre aussi les 15 sans `adresse_privee_listing`),
+adresse **et** texte du registre, adresse des contacts.
+
+**La répétition éprouvée AVANT la pose** (26/10) : 8 KO attendus (index absents ; sans index : annonces 27 ms sur la
+table seule, registre 191 / 125 ms, **contacts 354 ms**) et **le témoin OK** (mandants déjà indexés, 9 ms) — le contrôle
+sait distinguer les deux cas. ⚠ Le 1 515 ms du §20.2 venait de la **vue** `app_dossiers_current` (toutes ses colonnes
+calculées pour chaque ligne avant le filtre), pas de la table seule.
+
+**Ordre** : 1) Frédéric colle les 4 lignes, une à une, en journée (pas entre 04:00 et ~06:15) ; 2) il colle la
+répétition → 9 OK ; 3) je remets l'adresse dans la recherche (annonces, registre, contacts) et je l'affiche dans le
+résultat, je mesure par la vue, il pousse ; 4) je mesure la première nuit (durées du push).
