@@ -826,5 +826,7 @@ e-mail RGPD possible), étape 2 « Terminer » (aucune annonce reliée) → « C
 **annulé avant création** (vérifié : aucun travail créé), refait avec un numéro unique.
 ⚠ La fiche affiche « Négociateur : Non affecté — Compte formation » : comportement existant de la création, noté.
 
-⬜ **À FAIRE PAR FRÉDÉRIC (ou avec son accord)** : supprimer le contact d'essai **20000016 / Hektor 605997**.
+✅ **Contact d'essai SUPPRIMÉ par Frédéric** (26/10, travail `delete_hektor_contact` `done` à 13:01:09) : Hektor
+  **605997** supprimé (`hektor_delete_sent: true`, relu ensuite **introuvable** : `after_found: false`), et 0 ligne
+  restante dans `app_contact_current` pour 20000016 / 605997.
 ⬜ **A1 (annonce) non éprouvé** : créer une annonce écrit un brouillon chez Hektor — essai à décider par Frédéric.
