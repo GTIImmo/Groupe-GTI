@@ -1110,3 +1110,11 @@ mandat : écran Mandats. Avec le point 1, chaque ouverture écrit son adresse �
 
 **Les droits** : les 5 lectures passent par les mêmes vues que les listes, donc par les mêmes règles d'accès : un
 négociateur ne trouvera rien qu'il ne voie déjà dans ses listes.
+
+### 20.0 DÉCISION DU 26/10 — 3b+3c reste EN LIGNE SANS ÊTRE ÉPROUVÉ sur ses gestes principaux
+
+Frédéric : « on passe à 4, pas besoin de test ». **Non éprouvés en réel** : offre / statut → rubrique Affaires, refus
+d'offre suivi, mandant lier / retirer, « Abandonner ce geste », archiver, affecter, acceptation d'annulation, création
+d'utilisateur (aucune annonce d'essai avec mandat n'existe). Le risque est **d'affichage seulement** (front, aucune
+écriture nouvelle) ; retour arrière = `L_ECRAN_SUIT_LE_CLIC = false`. ➡ Si une rubrique ne suit pas ou clignote dans
+l'usage, c'est ici qu'il faut regarder en premier.
