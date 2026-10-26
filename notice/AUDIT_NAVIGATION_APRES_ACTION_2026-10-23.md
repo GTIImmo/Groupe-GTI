@@ -471,3 +471,15 @@ l'écran `annonces` est **inatteignable** (`openScreen` le redirige vers `mandat
 - ⚠ Une application déjà ouverte dans un onglet **garde l'ancien code** tant qu'on ne recharge pas la page (F5).
 - **Le juge** : plus aucune relecture `read_through_open` sans fiche réellement ouverte ; à mesurer sur une journée
   ouvrée (référence avant : 63299 ×41, 63339 ×19 en 7 jours).
+- ✅ **PROUVÉ EN RÉEL le 26/10 vers 09:20** (journaux de l'API Supabase, `edge_logs`, heures de Paris) — l'extension
+  Chrome de cette session étant tombée, Frédéric a fait les gestes et j'ai lu le résultat :
+
+  | minute | listes d'annonces chargées | appels de relecture Hektor |
+  |---|---|---|
+  | 09:01 (ancien code) | 113 | **3** (→ la relecture de 63339) |
+  | 09:05 (nouveau code) | 86 | **0** |
+  | 09:09 | 90 | **0** |
+  | 09:10 | 40 | **0** |
+
+  Et `app_console_job` : **0 relecture** de 09:05 à 09:19. ⚠ Les **contacts** n'ont pas été visités dans la fenêtre :
+  non prouvé en réel pour eux (même ligne de code).
