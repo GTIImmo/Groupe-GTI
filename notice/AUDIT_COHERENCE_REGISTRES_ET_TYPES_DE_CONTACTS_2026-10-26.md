@@ -1074,3 +1074,12 @@ R2 **fait et allumé** (25/10 20:40 ; allumé 26/10 06:39), R4 **posé** (26/10 
   de créer un collaborateur. **Étape 5 ajoutée** (`notice/CHAPITRES_AUTONOMIE_PROPOSITION_2026-10-07.md`) : les menus Agence et Négociateur
   tirés de nos annuaires, la correspondance des anciens noms d'agence, la remise à jour des annuaires (agences 29/05, rattachements 07/09).
   Ligne ajoutée sous le chapitre 26 dans `notice/PLAN_DEV_ACTUALISE_2026-08-20.md`.
+
+## 24. ✅ LE CHOIX 1 EST POSÉ EN BASE — 26/10 au soir *(Frédéric : « applique toi-même … puis la comparaison --vue ; je pousse ensuite »)*
+- **Patch** : 3/3 — règle du registre enveloppée ; vue `app_filter_catalog_registre` (agence 28 · commercial 44 · diffusable 2 · passerelle 7
+  valeurs brutes → 5 après nettoyage · statut 10 · validation 2).
+- **Comparaison sur la vraie vue** (`comparer_catalogue_registre.mjs . --vue`) : **les 7 listes IDENTIQUES**, sortie 0.
+- **Sous le compte de Frédéric** : la vue en **135 ms** (commercial 46 ms, 0 valeur) ; une page de 1 000 lignes du registre en **39 ms**
+  (≈ 390 ms avant : la règle enveloppée sert aussi l'écran Registre).
+- ⏳ **L'écran n'est pas encore en ligne** : il le sera au push de Frédéric (Vercel). Jusque-là, rien ne lit la vue.
+  ⏰ Après le push : ouvrir l'app et vérifier qu'au chargement il n'y a **qu'une** lecture `app_filter_catalog_registre` et plus les 25 pages.
