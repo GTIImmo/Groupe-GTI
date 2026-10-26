@@ -675,3 +675,70 @@ coupée à 8 s (57014) — **1re fois** pour elle ; revenue ok à 06:49 (requêt
 
 **Ce qui demande une décision :** la vue (§0), les 5 workers « sans premier signe » (n° 2), la vérification
 des transactions (n° 7), et l'étape de ménage (§2).
+
+## 4. AUDIT DU 26/10 — LES COUPURES À 8 s ET LE « RÉSOLU » (lecture seule, rien modifié)
+
+*Frédéric : « audit d'abord ces points avant de proposer un correctif ».* Sources : les **362 journaux locaux** du
+moniteur (`monitoring/logs/`, 26/09 → 26/10, un par passage), `app_monitor_event`, la base, le code, la doc Supabase,
+et **l'audit du 14/10** (`notice/AUDIT_MONITORING_ALERTES_2026-10-14.md` §11-13), qui avait déjà traité le « Résolu ».
+
+### 4.1 Les coupures à 8 s — sonde par sonde, sur 362 passages
+
+| sonde | passages aveugles | ce que l'écran montre alors | cause mesurée |
+|---|---|---|---|
+| ⛔ **`cron.health`** (santé des 12 tâches pg_cron) | **146 / 362 (40 %)**, depuis le 26/09, **tous** `57014` sur `rpc/app_cron_health` — **y compris ce matin 06:49** | **VERT** « Santé pg_cron en attente de migration » | voir ci-dessous |
+| `data.rapprochement_sur_archivee` | 13 / 362 (3,6 %), à toute heure | « illisible » (unknown) — **visible** | la vue fait 2,0 s au calme : `app_rapprochement` (53 624 lignes, 186 Mo) relue avec 32 747 retours au tas (vacuum en retard, mises à jour à la minute par 2 crons) |
+| `data.actives_sans_nego` | 2 / 362 | « illisible » — visible | ponctuel |
+| `data.transaction_disparue` | 1 / 362 (26/10 04:49) | « illisible » — visible | ponctuel ; 42 ms au calme. ⚠ `app_affaire_ledger` pèse **226 Mo pour 31 103 lignes** (1,25 M mises à jour) |
+
+**⛔ LE VRAI DÉFAUT : la sonde pg_cron ment.** `check_cron_health` (`check_gti_health.py` l. 2107-2120) transforme
+**toute** erreur en `ok` / « en attente de migration » — un repli écrit en juillet pour une migration posée depuis.
+Même repli dans `check_worker_heartbeats` (l. 1518-1529), aujourd'hui sans effet (sa lecture est rapide).
+Ex. du 22-23/10 : `cron.health` était en **warning** (1 tâche en anomalie), et le passage suivant, coupé, l'a remis **vert**.
+
+**Pourquoi `app_cron_health` est lente :** elle relit `cron.job_run_details` **24 fois** (2 sous-requêtes × 12 tâches).
+Cette table n'est **jamais purgée** (la doc Supabase le dit : *« not cleaned up automatically »*) : **1 226 263 lignes,
+225 Mo**, depuis le 13/06, **+10 372 par jour**, et **aucun index sur `jobid`** — seulement la clé `runid`. **3,6 s au calme,
+plus de 8 s sous charge, et ça s'aggrave chaque jour.** `postgres` peut y supprimer, pas y créer d'index (propriétaire
+`supabase_admin`).
+
+**⭐ Mesuré (lecture seule) :** la même réponse en remontant la clé `runid` à l'envers, tâche par tâche, dans une fenêtre
+de N derniers passages → **3,4 ms au lieu de 3 585 ms**.
+
+**Ce que l'aveuglement a caché :** sur les 14 derniers jours, les seuls échecs pg_cron sont ceux du **12/10 08:20-09:00**
+(« job startup timeout » sur 8 tâches, incident Supabase). **Rien de grave n'est passé inaperçu — par chance.**
+
+**Effet de bord d'un « illisible »** : il interrompt la règle d'e-mail (« passe AU rouge ») — une sentinelle rouge qui
+devient illisible puis redevient rouge **renvoie un e-mail**. Sans effet aujourd'hui (celles qui sautent sont vertes).
+
+### 4.2 Le « Résolu » qui ne tient pas — état au 26/10
+
+- **Déjà audité le 14/10** (§11-13) : option **A** recommandée (« sourdine de 7 jours » via `snoozed_until`, + retirer le
+  résumé de « Alertes à traiter »), **jamais tranchée**. `snoozed_until` est toujours vide partout.
+- La vue `alerts_governed` : `lifecycle = clic si acted_at >= updated_at`. Le moniteur réécrit `updated_at` **à chaque
+  passage** (`status_row()`, l. 1085) → un clic tient **au plus 2 h**.
+- ⛔ **On ne peut PAS changer `updated_at` côté moniteur** : la purge des statuts obsolètes (`purge_stale_status`, l. 1195)
+  s'en sert pour savoir qu'une clé n'est plus émise. Le correctif doit vivre **dans la vue**.
+- **Un seul lecteur** : l'écran Santé (`loadAlertsCurrent`, filtre `alertsToTreat`). Ni fonction ni vue n'en dépend ;
+  la descente l'exclut. **L'e-mail ne la lit pas** (il ne part que sur une bascule, §0 du 14/10).
+- ⭐ **Le moniteur tient déjà le journal qu'il faut** : `app_monitor_event` reçoit une ligne **seulement quand une alerte
+  change d'état** (l. 3576-3585 ; 15 en 24 h, 3 465 en 5 mois). « Aucun événement depuis le clic » = « l'alerte n'a pas
+  bougé depuis que tu l'as vue ».
+- Mesure sur tes anciens clics : « Notifications non lues » (03/09) n'a changé d'état que le **01/10** — elle aurait tenu
+  28 jours ; avec un plafond de 7 jours, elle revient le 10/09.
+- Simulation sur les 3 alertes d'aujourd'hui : **aucun ancien clic ne ferait taire une alerte actuelle** (règle actuelle
+  et règle proposée donnent toutes deux « new »).
+- Au passage : `acted_by` est **vide sur les 16 clics** (le front n'envoie pas l'auteur).
+
+### 4.3 Les correctifs proposés — NON faits, il faut un « vas-y »
+
+| # | quoi | où | ce que ça pourrait casser | retour |
+|---|---|---|---|---|
+| **A1** ⭐ | **la sonde pg_cron dit la vérité** : une erreur → `unknown` « illisible » (plus jamais `ok`) ; même chose pour `workers.heartbeat` | `check_gti_health.py`, 2 blocs | rien côté données ; l'écran montrera « illisible » au lieu d'un faux vert **tant que A2 n'est pas posé** (c'est voulu) | revenir au texte |
+| **A2** ⭐ | **`app_cron_health` rapide** : même signature, mêmes colonnes ; lecture par `runid` à l'envers dans une fenêtre de **200 000 passages (~19 jours)** | base, 1 fonction (propriétaire et droits gardés : `postgres` + `service_role`) | une tâche **sans passage dans la fenêtre** rendrait `last_run` vide — et la sonde **ignore** aujourd'hui un `last_run` vide (l. 2134 : `age is not None`, trou déjà présent pour une tâche jamais lancée) → **A1 doit aussi dire : tâche active sans passage connu = anomalie** | patch inverse (empreinte) |
+| A3 | **purger `cron.job_run_details`** au-delà de 30 jours (915 147 lignes) + une tâche quotidienne | base | ⚠ **perte d'historique** : on s'en est servi pour des audits (durées du ménage depuis le 11/10). 30 jours suffisent à ces audits. Recommandé par Supabase (et avant toute montée de version) | **irréversible** — sauvegarde datée d'abord, ou 90 jours |
+| **B** | **le « Résolu » tient** : dans la vue seulement, pour les alertes du moniteur — le clic vaut **tant que l'alerte ne change pas d'état, et au plus 7 jours** ; les autres sources (notifications, relances, Pauline) gardent leur règle | base, 1 vue | une alerte qui **empire sans changer de couleur** (warning 5 → warning 50) reste muette jusqu'à 7 jours — l'e-mail est déjà dans ce cas aujourd'hui | patch inverse |
+| C | une **2e lecture** (après 5 s) avant de déclarer une sentinelle « illisible » | `check_gti_health.py` | passage du moniteur plus long de ≤ 13 s quand ça arrive (≈ 4 % des passages) | revenir au texte |
+
+**Recommandation : A1 + A2 ensemble** (la sonde est aveugle 4 fois sur 10 et le cache), puis **B**. A3 et C sont du
+confort. Le reste de l'option A du 14/10 (retirer le résumé de « Alertes à traiter ») est **toujours ouvert**.
