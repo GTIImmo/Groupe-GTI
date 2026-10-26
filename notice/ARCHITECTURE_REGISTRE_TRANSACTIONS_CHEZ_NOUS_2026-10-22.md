@@ -3287,3 +3287,25 @@ chaîné avec un compromis ou une vente […] mais on a peut-être laissé cela 
   un compromis ouvert). Une garde stricte les bloquerait **à tort**.
 - **À TRANCHER PAR FRÉDÉRIC** : bloquer à l'écran (comme 2.2c, avec le bandeau et le geste qui débloque) — ou **avertir sans bloquer**
   (la régularisation et l'offre de secours restent possibles) ; et la base, oui ou non.
+
+#### Point 5 n° 2 — « peut-on toujours refuser les AUTRES offres ? » : audit refait (26/10 soir, Frédéric : « refais un audit, cela me semble bizarre, cherche dans mes notes ou l'historique »)
+- ⛔ **CORRECTION DE MON AUDIT PRÉCÉDENT** : « 22866 a reçu une offre aujourd'hui » est **FAUX**. Les offres sans date portent l'heure de
+  la nuit (`2026-10-26T04:24:57Z`, ~30 offres 6xxx de 2009-2010 sur les annonces 22xxx) : ce n'est pas une date d'offre. Le « piège des
+  vieux compromis » reste vrai pour les 3 biens « Sous compromis » d'avant 2025, pas pour 22866.
+- **DEUX DÉCISIONS QUI SE CONTREDISENT À L'ÉCRAN** :
+  - **08/09** (`a9c6d02`, liste 2.2) — sur un bien **engagé**, **aucune** offre ne se « Choisit » (« on bloque tout ») : la crainte était
+    d'**accepter** une seconde offre et d'engager le bien deux fois. La modale vise alors l'offre retenue, et elle seule.
+  - **16/09** (`cd0d767`, liste 3.6) — on verrouille l'offre du dossier qui porte un compromis ; « **les offres écartées des autres
+    acquéreurs restent refusables, c'est le geste normal du métier quand une offre est retenue** ». La base l'applique
+    (`app_geste_affaire_optimistic` ne lit que le dossier de CETTE offre).
+  - ➡ **L'intention du 16/09 n'est vraie que dans la base** : à l'écran, une offre écartée ne peut pas être visée (`Choisir` caché par
+    `bienEngage`, `App.tsx` « QUI PEUT-ON DESIGNER »), donc pas refusée. Ce n'est pas une règle voulue : c'est la règle du 08/09 (faite pour
+    « accepter ») qui empêche aussi « refuser ».
+- **Les cas 8 et 10 du protocole du 01/09** (« deux offres, une acceptée, une refusée » ; « créer une offre alors qu'un compromis existe »)
+  n'ont **jamais été joués** — aucun résultat écrit.
+- **La vraie vie** (registre, depuis 2024) : parmi les offres posées dans les 6 mois avant une offre acceptée du même bien, **66 refusées**
+  (57 biens, 28 en 2026), 3 acceptées, 3 encore en cours. Refuser les concurrentes est **le geste courant** — fait aujourd'hui dans Hektor, ou
+  avant l'acceptation. Sur les 140 biens engagés en cours, **0** offre concurrente reste ouverte.
+- **Proposition** (n'attend que « vas-y ») : sur un bien engagé, ① masquer « Envoyer vers Offre » (la règle du 08/09 appliquée à la
+  création), ② permettre de **choisir une autre offre encore en cours pour la REFUSER seulement** — « Accepter » reste caché sur elle (la
+  crainte du 08/09), le verrou du 16/09 reste sur l'offre du dossier engagé. Écran seulement ; la base le permet déjà.
