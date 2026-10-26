@@ -19497,28 +19497,147 @@ async function resolveJobFailureRecipient(job, payload) {
   return cleanString(process.env.CONSOLE_JOB_FAILURE_FALLBACK_EMAIL) || null;
 }
 
+// --- POINT 6 bis (27/10/2026) : LES ALERTES VONT A L'ADMIN, PLUS AU NEGOCIATEUR ---------
+// DECISION DE FREDERIC : « les erreurs des workers uniquement visibles a partir de la vue Sante,
+// que ce soit moi qui sois averti en cas d'erreur ». C'est la suite de sa regle du 20/09 (bandeau
+// d'annonce) : « ce n'est pas l'utilisateur qui doit etre prevenu, son ecriture est saisie donc
+// protegee ; lui ne peut rien y faire ».
+//   · le negociateur ne voit plus qu'une PASTILLE dans la fiche (en attente / a jour / a verifier) ;
+//   · les 4 avis qui lui etaient adresses (echec d'un geste, creation incomplete, conflit sur un
+//     contact, conflit sur une recherche) vont a l'ADMIN : dans sa CLOCHE, et par E-MAIL ;
+//   · le negociateur concerne est NOMME dans le message (« Concerne : ... »).
+// Meme adresse que le moniteur (check_gti_health.py, --alert-email). Repli : CONSOLE_ALERTES_A_L_ADMIN=0
+// rend l'ancien comportement (avis au negociateur, sans e-mail).
+const ALERTES_A_L_ADMIN = String(process.env.CONSOLE_ALERTES_A_L_ADMIN ?? "1").trim() !== "0";
+const ADMIN_ALERT_EMAIL = String(process.env.GTI_ALERT_EMAIL || "frederic.gerphagnon@gti-immobilier.fr").trim();
+// Un plafond d'e-mails par heure et par service : si Hektor tombe, 30 gestes echouent -- la cloche
+// les garde tous, la boite mail n'en recoit que 10 (et le moniteur sonne de toute facon).
+const ALERTE_EMAILS_PAR_HEURE = 10;
+const alerteEmailsEnvoyes = [];
+
+// L'e-mail part par la cle de service Google Workspace (delegation complete, droit gmail.send),
+// comme le backend et le moniteur -- jamais un mot de passe SMTP. Jeton signe ici (RS256, crypto
+// de Node) : aucune dependance nouvelle.
+let jetonGmail = { valeur: null, expire: 0 };
+function base64url(tampon) {
+  return Buffer.from(tampon).toString("base64").replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+async function jetonGmailAlerte() {
+  if (jetonGmail.valeur && Date.now() < jetonGmail.expire - 60000) return jetonGmail.valeur;
+  const fichier = String(process.env.GOOGLE_WORKSPACE_SERVICE_ACCOUNT_FILE || "").trim();
+  const sujet = String(process.env.GOOGLE_WORKSPACE_SUBJECT_EMAIL || "").trim();
+  if (!fichier || !sujet) throw new Error("cle de service Workspace non configuree");
+  const chemin = path.isAbsolute(fichier) ? fichier : path.resolve(__dirname, "..", fichier);
+  const cle = JSON.parse(fs.readFileSync(chemin, "utf8"));
+  const maintenant = Math.floor(Date.now() / 1000);
+  const tete = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const corps = base64url(JSON.stringify({
+    iss: cle.client_email,
+    sub: sujet,
+    scope: "https://www.googleapis.com/auth/gmail.send",
+    aud: cle.token_uri || "https://oauth2.googleapis.com/token",
+    iat: maintenant,
+    exp: maintenant + 3600,
+  }));
+  const signature = base64url(crypto.createSign("RSA-SHA256").update(`${tete}.${corps}`).sign(cle.private_key));
+  const reponse = await fetch(cle.token_uri || "https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: `${tete}.${corps}.${signature}`,
+    }).toString(),
+  });
+  const donnees = await reponse.json().catch(() => ({}));
+  if (!reponse.ok || !donnees.access_token) throw new Error(`jeton Workspace refuse (${reponse.status})`);
+  jetonGmail = { valeur: donnees.access_token, expire: Date.now() + Number(donnees.expires_in || 3600) * 1000 };
+  return jetonGmail.valeur;
+}
+async function envoyerEmailAlerte(sujet, texte) {
+  const ilYAUneHeure = Date.now() - 3600 * 1000;
+  while (alerteEmailsEnvoyes.length && alerteEmailsEnvoyes[0] < ilYAUneHeure) alerteEmailsEnvoyes.shift();
+  if (alerteEmailsEnvoyes.length >= ALERTE_EMAILS_PAR_HEURE) {
+    console.warn(`[alerte] e-mail non envoye (plafond ${ALERTE_EMAILS_PAR_HEURE}/h atteint) : ${sujet}`);
+    return false;
+  }
+  try {
+    const jeton = await jetonGmailAlerte();
+    const expediteur = String(process.env.GOOGLE_WORKSPACE_SUBJECT_EMAIL || "").trim();
+    const message = [
+      `From: ${expediteur}`,
+      `To: ${ADMIN_ALERT_EMAIL}`,
+      `Subject: =?UTF-8?B?${Buffer.from(sujet, "utf8").toString("base64")}?=`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/plain; charset=UTF-8",
+      "Content-Transfer-Encoding: base64",
+      "",
+      Buffer.from(texte, "utf8").toString("base64"),
+    ].join("\r\n");
+    const reponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${jeton}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ raw: base64url(message) }),
+    });
+    if (!reponse.ok) throw new Error(`Gmail refuse (${reponse.status})`);
+    alerteEmailsEnvoyes.push(Date.now());
+    return true;
+  } catch (err) {
+    // On le DIT au journal du service : un e-mail perdu ne doit pas l'etre en silence. La cloche, elle, est posee.
+    console.warn(`[alerte] e-mail non envoye : ${err && err.message ? err.message : err}`);
+    return false;
+  }
+}
+
+// Pose l'avis (cloche) et, s'il est NOUVEAU, envoie l'e-mail. « Nouveau » : l'index unique
+// app_notif_unread_uq (destinataire, dossier, type, tant que non lu) ecarte le doublon -- un geste
+// rejoue 5 fois ne sonne donc qu'une fois, comme avant pour le negociateur.
+async function posterAlerte(ligne) {
+  const concerne = cleanString(ligne.negociateur_email);
+  if (!ALERTES_A_L_ADMIN) {
+    if (!concerne) return;
+    await supabaseRequest("app_notification", {
+      method: "POST",
+      prefer: "return=minimal,resolution=ignore-duplicates",
+      body: JSON.stringify([ligne]),
+    });
+    return;
+  }
+  const pourAdmin = {
+    ...ligne,
+    negociateur_email: ADMIN_ALERT_EMAIL,
+    body: concerne && concerne !== ADMIN_ALERT_EMAIL ? `${ligne.body} (Concerne : ${concerne}.)` : ligne.body,
+    payload: { ...(ligne.payload || {}), negociateur_concerne: concerne || null },
+  };
+  const posees = await supabaseRequest("app_notification", {
+    method: "POST",
+    prefer: "return=representation,resolution=ignore-duplicates",
+    body: JSON.stringify([pourAdmin]),
+  });
+  if (Array.isArray(posees) && posees.length) {
+    await envoyerEmailAlerte(`[bienvu] ${pourAdmin.title}`,
+      `${pourAdmin.body}\n\nLe negociateur ne voit qu'une pastille « a verifier » sur la fiche. `
+      + "Le detail et les boutons pour trancher sont dans l'ecran Sante (et dans la fiche, pour un admin).");
+  }
+}
+
 async function notifyJobFailureBestEffort(job, errorMessage) {
   try {
     if (!job || !JOB_TYPES_A_NOTIFIER.has(job.job_type)) return;
     const payload = safeJsonParse(job.payload_json) || {};
     const email = await resolveJobFailureRecipient(job, payload);
-    if (!email) return;
+    if (!email && !ALERTES_A_L_ADMIN) return;
     const libelle = JOB_LIBELLES[job.job_type] || "L'action demandee";
     const repere = cleanString(payload.numero_dossier || payload.titre_bien || job.hektor_annonce_id || "");
     const motif = cleanString(errorMessage).slice(0, 300);
-    await supabaseRequest("app_notification", {
-      method: "POST",
-      prefer: "return=minimal,resolution=ignore-duplicates",
-      body: JSON.stringify([{
-        negociateur_email: email,
-        type: "job_echec",
-        title: `${libelle} n'a pas abouti`,
-        body: repere
-          ? `${libelle} sur ${repere} n'a pas pu etre transmise a Hektor. Motif : ${motif}`
-          : `${libelle} n'a pas pu etre transmise a Hektor. Motif : ${motif}`,
-        app_dossier_id: job.app_dossier_id ?? null,
-        payload: { source: "job_failure", job_id: job.id, job_type: job.job_type, error: motif },
-      }]),
+    await posterAlerte({
+      negociateur_email: email,
+      type: "job_echec",
+      title: `${libelle} n'a pas abouti`,
+      body: repere
+        ? `${libelle} sur ${repere} n'a pas pu etre transmise a Hektor. Motif : ${motif}`
+        : `${libelle} n'a pas pu etre transmise a Hektor. Motif : ${motif}`,
+      app_dossier_id: job.app_dossier_id ?? null,
+      payload: { source: "job_failure", job_id: job.id, job_type: job.job_type, error: motif },
     });
   } catch (_) {
     // best-effort : ne doit jamais faire echouer le traitement du job
@@ -19610,26 +19729,22 @@ async function avertirSuiteCreationIncompleteBestEffort(job, payload, resultat) 
         manques: bilan.manques, details: bilan.details });
 
     const email = await resolveJobFailureRecipient(job, payload);
-    if (!email) return;
-    await supabaseRequest("app_notification", {
-      method: "POST",
-      prefer: "return=minimal,resolution=ignore-duplicates",
-      body: JSON.stringify([{
-        negociateur_email: email,
-        type: "creation_suite_incomplete",
-        title: "Annonce creee, mais a completer",
-        body: repere
-          ? `L'annonce ${repere} est bien creee dans Hektor, mais ${quoi}. Rouvrez la fiche pour verifier.`
-          : `L'annonce est bien creee dans Hektor, mais ${quoi}. Rouvrez la fiche pour verifier.`,
-        app_dossier_id: job.app_dossier_id ?? payload.app_dossier_id ?? null,
-        payload: {
-          source: "suite_creation_incomplete",
-          job_id: job.id,
-          job_type: job.job_type,
-          hektor_annonce_id: resultat && resultat.hektor_annonce_id ? String(resultat.hektor_annonce_id) : null,
-          manques: bilan.manques,
-        },
-      }]),
+    if (!email && !ALERTES_A_L_ADMIN) return;
+    await posterAlerte({
+      negociateur_email: email,
+      type: "creation_suite_incomplete",
+      title: "Annonce creee, mais a completer",
+      body: repere
+        ? `L'annonce ${repere} est bien creee dans Hektor, mais ${quoi}. Rouvrez la fiche pour verifier.`
+        : `L'annonce est bien creee dans Hektor, mais ${quoi}. Rouvrez la fiche pour verifier.`,
+      app_dossier_id: job.app_dossier_id ?? payload.app_dossier_id ?? null,
+      payload: {
+        source: "suite_creation_incomplete",
+        job_id: job.id,
+        job_type: job.job_type,
+        hektor_annonce_id: resultat && resultat.hektor_annonce_id ? String(resultat.hektor_annonce_id) : null,
+        manques: bilan.manques,
+      },
     });
   } catch (_) {
     // best-effort, comme notifyJobFailureBestEffort : avertir ne doit JAMAIS
@@ -19640,21 +19755,17 @@ async function avertirSuiteCreationIncompleteBestEffort(job, payload, resultat) 
 async function notifyNegoSearchConflict(job, contactId, payload, opts = {}) {
   try {
     const negoEmail = cleanString(opts.negoEmail || payload.contact_negociateur_email || payload.hektor_user_email || payload.target_hektor_user_email);
-    if (!negoEmail) return;
+    if (!negoEmail && !ALERTES_A_L_ADMIN) return;
     const s = (payload.search && typeof payload.search === "object") ? payload.search : {};
     const resume = `budget ${cleanString(s.priceMin) || "?"}–${cleanString(s.priceMax) || "?"} €`;
-    await supabaseRequest("app_notification", {
-      method: "POST",
-      prefer: "return=minimal",
-      body: JSON.stringify([{
-        negociateur_email: negoEmail,
-        type: "recherche_conflit_ecriture",
-        title: "Modification non appliquée (recherche déjà modifiée)",
-        body: opts.found === false
-          ? "La recherche n'a pas été retrouvée côté Hektor : la modification n'a pas été appliquée."
-          : `La recherche a été modifiée dans Hektor entre-temps : la modification (${resume}) n'a pas été appliquée pour ne pas écraser votre saisie.`,
-        payload: { source: "search_overwrite_guard", hektor_contact_id: String(contactId), edits: payload.edits || null },
-      }]),
+    await posterAlerte({
+      negociateur_email: negoEmail,
+      type: "recherche_conflit_ecriture",
+      title: "Modification non appliquée (recherche déjà modifiée)",
+      body: opts.found === false
+        ? "La recherche n'a pas été retrouvée côté Hektor : la modification n'a pas été appliquée."
+        : `La recherche a été modifiée dans Hektor entre-temps : la modification (${resume}) n'a pas été appliquée pour ne pas écraser votre saisie.`,
+      payload: { source: "search_overwrite_guard", hektor_contact_id: String(contactId), edits: payload.edits || null },
     });
   } catch (_) {
     // notification best-effort : ne doit jamais faire échouer le job
@@ -19841,17 +19952,13 @@ async function notifyNegoContactConflict(job, contactId, payload) {
   try {
     const safe = payload && typeof payload === "object" ? payload : {};
     const negoEmail = cleanString(safe.contact_negociateur_email || safe.hektor_user_email || safe.target_hektor_user_email);
-    if (!negoEmail) return;
-    await supabaseRequest("app_notification", {
-      method: "POST",
-      prefer: "return=minimal",
-      body: JSON.stringify([{
-        negociateur_email: negoEmail,
-        type: "contact_conflit_ecriture",
-        title: "Modification non appliquée (contact déjà modifié)",
-        body: "Le contact a été modifié dans Hektor entre-temps : votre modification n'a pas été appliquée pour ne pas écraser le changement. Re-faites-la si nécessaire.",
-        payload: { source: "contact_overwrite_guard", hektor_contact_id: String(contactId) },
-      }]),
+    if (!negoEmail && !ALERTES_A_L_ADMIN) return;
+    await posterAlerte({
+      negociateur_email: negoEmail,
+      type: "contact_conflit_ecriture",
+      title: "Modification non appliquée (contact déjà modifié)",
+      body: "Le contact a été modifié dans Hektor entre-temps : votre modification n'a pas été appliquée pour ne pas écraser le changement. Re-faites-la si nécessaire.",
+      payload: { source: "contact_overwrite_guard", hektor_contact_id: String(contactId) },
     });
   } catch (_) { /* best-effort */ }
 }
