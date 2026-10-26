@@ -1,0 +1,236 @@
+/* ============================================================
+   26/10/2026 -- le menu « trois traits » du telephone (layouts/MobileLayout.tsx).
+   Charte bienvu : en-tete encre + filet magenta, Plus Jakarta Sans / Hanken Grotesk,
+   rose doux pour l'element choisi. Chaque jeton a son repli (hors theme bienvu).
+   ============================================================ */
+
+/* --- le bouton ☰, au format de la loupe et de l'avatar --- */
+.mobile-burger {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+}
+.mobile-burger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform var(--bv-base, 240ms) var(--bv-ease, ease), opacity var(--bv-fast, 150ms);
+}
+.mobile-burger span:nth-child(2) { width: 13px; justify-self: start; margin-left: 13px; }
+.mobile-burger.is-open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.mobile-burger.is-open span:nth-child(2) { opacity: 0; }
+.mobile-burger.is-open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+.mobile-burger:active,
+.mobile-burger:focus-visible { background: rgba(197, 0, 95, 0.32); border-color: rgba(197, 0, 95, 0.75); outline: none; }
+
+/* --- la barre du haut : ☰ | titre | loupe | avatar (le symbole bienvu passe dans le panneau) --- */
+.mobile-app-header.has-tiroir { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+.mobile-app-header.has-tiroir.has-search { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
+.mobile-app-header.has-tiroir .mobile-brand-mark { display: none; }
+.mobile-app-header.has-tiroir .mobile-title-block { padding-left: 2px; }
+@media (min-width: 768px) {
+  .mobile-app-header.has-tiroir { grid-template-columns: 44px 44px minmax(0, 1fr) 52px; }
+  .mobile-app-header.has-tiroir.has-search { grid-template-columns: 44px 44px minmax(0, 1fr) 48px 52px; }
+  .mobile-app-header.has-tiroir .mobile-brand-mark { display: block; }
+}
+
+/* --- telephone : la barre d'icones laisse sa place au ☰ (60 px de rendus a chaque ecran) --- */
+@media (max-width: 767px) {
+  .mobile-app-shell.has-tiroir { padding-top: 84px !important; }
+  .mobile-app-shell.has-tiroir .mobile-bottom-nav { display: none !important; }
+}
+
+/* --- le fond et le panneau --- */
+.mtiroir-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: rgba(34, 35, 35, 0.46);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--bv-base, 240ms) var(--bv-ease, ease);
+}
+.mtiroir-fond.is-open { opacity: 1; pointer-events: auto; }
+.mtiroir {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(340px, 88vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--bv-surface, #fff);
+  box-shadow: 18px 0 50px rgba(34, 35, 35, 0.28);
+  font-family: var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  color: var(--bv-ink, #222323);
+  transform: translateX(-102%);
+  transition: transform var(--bv-base, 240ms) var(--bv-ease, cubic-bezier(0.2, 0.7, 0.2, 1));
+}
+.mtiroir-fond.is-open .mtiroir { transform: none; }
+
+.mtiroir-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px 14px 12px 18px;
+  background: var(--bv-ink, #222323);
+  border-bottom: 3px solid var(--bv-magenta, #c5005f);
+  color: #fff;
+}
+.mtiroir-marque { display: flex; align-items: center; min-width: 0; }
+.mtiroir-marque svg { width: 118px; height: auto; max-height: 34px; }
+.mtiroir-marque strong { font: 800 17px/1 var(--bv-font-display, 'Plus Jakarta Sans', system-ui, sans-serif); letter-spacing: -0.02em; }
+.mtiroir-fermer {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+}
+.mtiroir-fermer svg { width: 18px; height: 18px; }
+
+.mtiroir-recherche {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 14px 4px;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: var(--bv-radius-sm, 10px);
+  border: 1px solid var(--bv-line, #e2e5e6);
+  background: var(--bv-brume, #f6f7f8);
+  color: var(--bv-mute, #5c6163);
+  font: 600 14.5px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  text-align: left;
+  cursor: pointer;
+}
+.mtiroir-recherche svg { width: 18px; height: 18px; color: var(--bv-magenta, #c5005f); flex: none; }
+.mtiroir-recherche:active { border-color: var(--bv-rose, #f6b6d5); background: var(--bv-rose-soft, #fdf0f6); }
+
+.mtiroir-liste { flex: 1; overflow-y: auto; padding: 4px 10px 12px; overscroll-behavior: contain; }
+.mtiroir-section {
+  margin: 14px 8px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bv-subtle, #7c8082);
+}
+.mtiroir-entree {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  margin: 2px 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--bv-fast, 150ms);
+}
+.mtiroir-entree:active { background: var(--bv-brume, #f6f7f8); }
+.mtiroir-entree:focus-visible { outline: none; box-shadow: var(--bv-focus-ring, 0 0 0 3px rgba(197, 0, 95, 0.4)); }
+.mtiroir-picto {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bv-brume, #f6f7f8);
+  border: 1px solid var(--bv-line, #e2e5e6);
+  color: var(--bv-ink, #222323);
+}
+.mtiroir-picto svg { width: 21px; height: 21px; }
+.mtiroir-libelle { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.mtiroir-libelle strong { font: 700 15.5px/1.2 var(--bv-font-display, 'Plus Jakarta Sans', system-ui, sans-serif); letter-spacing: -0.01em; }
+.mtiroir-libelle small { font-size: 12.5px; color: var(--bv-mute, #5c6163); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mtiroir-entree.is-active { background: var(--bv-rose-soft, #fdf0f6); }
+.mtiroir-entree.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--bv-magenta, #c5005f);
+}
+.mtiroir-entree.is-active .mtiroir-picto {
+  background: var(--bv-magenta, #c5005f);
+  border-color: var(--bv-magenta, #c5005f);
+  color: #fff;
+  box-shadow: 0 8px 16px -8px rgba(197, 0, 95, 0.8);
+}
+.mtiroir-entree.is-active .mtiroir-libelle strong { color: var(--bv-framboise, #8c0044); }
+.mtiroir-ici {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: var(--bv-radius-pill, 999px);
+  background: #fff;
+  border: 1px solid var(--bv-rose, #f6b6d5);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bv-framboise, #8c0044);
+}
+
+.mtiroir-pied {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: center;
+  padding: 14px 16px max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--bv-line, #e2e5e6);
+  background: var(--bv-brume, #f6f7f8);
+}
+.mtiroir-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bv-magenta, #c5005f);
+  color: #fff;
+  font: 800 13px/1 var(--bv-font-display, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+.mtiroir-qui { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mtiroir-qui strong { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mtiroir-qui small { font-size: 12px; color: var(--bv-mute, #5c6163); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mtiroir-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 8px; }
+.mtiroir-actions button {
+  flex: 1;
+  height: 38px;
+  border-radius: var(--bv-radius-pill, 999px);
+  border: 1px solid var(--bv-line-strong, #cfd3d4);
+  background: #fff;
+  color: var(--bv-ink, #222323);
+  font: 700 13px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  cursor: pointer;
+}
+.mtiroir-actions button.is-sortie { color: var(--bv-danger, #b94a48); border-color: rgba(185, 74, 72, 0.35); }
+@media (prefers-reduced-motion: reduce) {
+  .mtiroir, .mtiroir-fond, .mobile-burger span { transition: none; }
+}

@@ -1330,3 +1330,27 @@ leurs libellés actuels — « laisse ».*
 - **Menu de gauche à 665 px** : 471 / 471, plus d'ascenseur.
 - ⚠ **Frédéric travaille menu REPLIÉ (82 px)** : dans ce mode la pastille est masquée → **aucune loupe visible** pour lui ;
   il lui reste « / » et la barre de l'Accueil. Question posée.
+
+### 20.10 Le menu « trois traits » sur téléphone, et la loupe du menu replié (26/10, « oui, et soigne le design et la mise en page »)
+
+**Téléphone (< 768 px)** — interrupteur `MENU_TIROIR` (`layouts/MobileLayout.tsx`), style `menu-tiroir.css` :
+- la **barre d'icônes sous l'en-tête est remplacée** par un bouton **☰** (à gauche, vitré, 44 px, se change en ✕) ;
+  l'écran commence **58 px plus haut** (84 px au lieu de 142) ;
+- en-tête : **☰ | « bienvu » + titre de l'écran | loupe | avatar** (le symbole bienvu passe dans le panneau) ;
+- **le panneau** glisse depuis la gauche (340 px, 88 % de l'écran au plus) : en-tête encre + filet magenta avec le logo
+  bienvu et ✕ ; « Rechercher partout… » ; **Travail** (Accueil, Annonces, Estimations, Mandats, Contacts, Agenda) et
+  **Pilotage** (Suivi, Santé selon les droits) — chaque vue avec **un picto dessiné**, son **nom en entier** et une
+  ligne d'aide (« Le portefeuille de biens »…) ; la vue en cours en rose avec un filet magenta et « Ici » ; en pied :
+  avatar, nom, agence, **Utilisateurs** et **Déconnexion**. Échap, le fond ou ✕ le ferment ; toucher une vue la
+  ferme et ouvre la vue (l'adresse suit : `?ecran=contacts`).
+- **Tablette (≥ 768 px)** : la barre du bas reste, le ☰ s'ajoute à côté du logo.
+- ⚠ Non fait : le bouton **Précédent** du téléphone ne ferme pas le panneau (il navigue, comme avant) — l'ajouter
+  demanderait une entrée d'historique en plus, à concilier avec les adresses du point 1.
+
+**Bureau, menu replié (82 px)** : la loupe passe **sous le logo** (44 × 32) ; sur les écrans bas, les entrées du menu
+replié passent de 50 à 46 px et leur écart de 8 à 6 px pour qu'il tienne.
+
+**Contrôle en démonstration, thème bienvu** : 390 px → en-tête 44 / 204 / 44 / 44, barre d'icônes masquée, contenu à
+84 px, panneau 340 px avec les 8 vues, curseur sur la vue en cours ; 360 px → titre 172 px, tout tient ; 768 px →
+5 colonnes, barre du bas conservée, Échap ferme, « Contacts » ouvre `?ecran=contacts` et ferme le panneau ; bureau
+1280 × 665 replié → loupe sous le logo, menu 416 / 416, la loupe ouvre la recherche ; déplié → 425 / 425.
