@@ -3345,3 +3345,9 @@ Départ : 62965 « TEST C13 clôture mandat », Actif, diffusable 0, 0 transacti
 - ⚠ **Défaut d'affichage vu, non corrigé** : le bandeau du 04/09 (2.2b) dit encore « Ces offre aurait dû être refusée au moment de
   l'acceptation. **Désigne celle qui fait foi.** » — inexact depuis le 26/10 (seul « Refuser » est possible) et une faute d'accord.
 - Traces laissées sur 62965 : 2 offres refusées (33119, 33120), comme sur les autres biens d'essai ; le compromis a disparu.
+- ✅ **Nettoyage terminé, 26/10 vers 19:45-19:50** *(Frédéric : « oui actif et diffusable = 0 »)* : « Envoyer vers Actif » depuis l'app → 62965
+  **Actif**, et Hektor a bien **remonté diffusable à 1** (attendu, mémoire du 13/10) → remise à 0 par l'icône « Diffuser ou non ce bien » de
+  la fiche Hektor (pas de confirmation demandée). **Vérifié après rechargement de la fiche Hektor : ACTIF, non publié.** La copie de l'app
+  portera diffusable 0 à la prochaine relecture (au plus tard la nuit).
+- ⚠ **Noté** : la fiche de l'app (écran Annonces, mise en page bienvu) ne montre **pas** la tuile « Diffusion » de `DetailAdminPilotPanel` sur ce
+  bien sans mandat — il a fallu passer par Hektor. À regarder s'il le demande (même famille que le n° 6 : un geste introuvable).
