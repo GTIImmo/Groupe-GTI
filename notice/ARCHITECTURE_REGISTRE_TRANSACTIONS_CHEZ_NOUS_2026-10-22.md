@@ -3227,3 +3227,5 @@ créée le matin n'apparaîtrait qu'après la nuit (le principal, lui, apparaît
 **Ce que la pièce 5 règle et ne règle pas** : elle règle **L2** (les acquéreurs lus dans notre registre des transactions, à l'instant et à
 la coupure). Elle ne règle **ni L1-mandants** (une « pièce 2 » pour `mandants_json`), **ni L4 / L6 / L7** (la règle d'import de l'acheteur,
 chantier des types).
+
+- ✅ **R4 — le premier passage du moniteur (26/10, 08:49 heure de Paris) a ÉCRIT les deux sentinelles** : `data.affaire_ecart` **ok** (0, seuil 0) et `data.affaire_personne_ecart` **ok** (0), `observed_at` 07:49:10 UTC — une vraie écriture, à la même seconde que les sœurs (`data.contact_modif_ecart` 07:49:09). Ni « illisible », ni lot refusé.
