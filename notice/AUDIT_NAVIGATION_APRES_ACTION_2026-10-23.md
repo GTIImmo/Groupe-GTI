@@ -1491,3 +1491,45 @@ bandeaux de la fiche (modification d'annonce, de contact, gestes abandonnés —
 plan cadastral, avis de valeur, mandat PDF, visibilité / couverture / réordonner des photos — suivis seulement s'ils ont
 été mémorisés pendant la session, et les photos et deux PDF ne le sont pas du tout ; (3) les 3 bandeaux de la fiche ne
 se relisent pas tout seuls.
+
+### 22.2 ✅ POINT 6 CODÉ ET CONTRÔLÉ EN DÉMONSTRATION (26/10, « Oui vas y ») — ⚠ NON ÉPROUVÉ EN RÉEL
+
+**Ce qui est codé (front seul, aucune base, aucun worker)** — deux interrupteurs dans `App.tsx` :
+`SUIVI_DANS_LA_FICHE = true` (le nouveau) et `FENETRE_SUIVI_ACTION = false` (l'ancienne fenêtre, gardée dans le code).
+
+1. **La ligne d'état dans la fiche** (`IndicateurTravauxObjet`) — cockpit, fiche de base, fiche téléphone, les deux
+   fiches contact. Par type : « ⟳ Changement de statut en cours chez Hektor (≈ 1 min) », « 2 envois de photos » ;
+   les photos de la création y disent « ne fermez pas cet onglet » ; « ✓ À jour chez Hektor » 12 s puis s'efface ;
+   **en rouge si Hektor refuse**, avec son message et un bouton « Compris » qui la range (mémorisé pour l'onglet,
+   `sessionStorage gti_travaux_vus`). Les relectures automatiques (ouverture d'une fiche, documents) n'y paraissent pas.
+2. **Le compteur de MES actions** (`CompteurMesTravaux`) à côté de la cloche : ⟳ n en cours, **rouge « ! n »** en
+   cas de refus, ✓ sinon ; un clic ouvre la liste (8 max, `requested_by` = moi), chaque ligne ouvre l'objet ; Échap
+   ou clic dehors ferme. **Barre repliée** : la cloche y est cachée exprès (`annonces-v2.css`), le compteur reste,
+   en pastille sur l'avatar — un refus ne doit pas se cacher. **Téléphone** : pastille sur le ☰, et la section
+   « Mes actions envoyées à Hektor » du menu passe **en tête** quand une action est en cours ou refusée (sinon en bas).
+3. **La fenêtre « Suivi de l'action » est retirée** (les deux montages, derrière `FENETRE_SUIVI_ACTION`). Le suivi
+   des travaux et ses 5 dépendances **ne bougent pas** ; le piège n° 1 est rebranché (`hektorActionLinkedDossiers`
+   lit `hektorActionJobs`, plus la liste de la fenêtre).
+4. **Les 3 trous du §22.1** : (1) `prepare_brouillon_annonce_detail` ajouté aux deux filtres de la fiche légère ;
+   (2) 13 types ajoutés à `hektorActionJobTypes` (`api.ts`) — brouillon (préparer, activer), offre, compromis, vente,
+   retrait de mandant, visibilité des photos, cadastre, avis de valeur, mandat PDF, relance et annulation de
+   signature ; (3) les 3 bandeaux de la fiche se relisent à chaque relecture de l'app (`useRelectureRubriques`).
+
+**Contrôle (mock bienvu, faux travaux posés par `window.__travauxDemo`, mock seulement)** — bureau 1280 px, barre
+dépliée et repliée ; téléphone 390 px :
+- ligne en cours + ligne rouge avec « Compris » dans la fiche, au bureau et au téléphone ; « Compris » → la ligne
+  part, le compteur passe de « ! 1 » rouge à « ⟳ » ;
+- panneau du compteur : 3 lignes aux bons états, un clic sur une ligne ouvre l'annonce et ferme le panneau ;
+- téléphone : pastille rouge sur le ☰, section en tête du menu, aucun débordement horizontal (390 = 390) ;
+- `npm run build` vert ; console : seulement les 500 du mock sans serveur (`/api/hektor-diffusion`), déjà là avant.
+
+**Défauts trouvés au contrôle, corrigés** : le compteur **invisible barre repliée** (son conteneur y est caché ; et
+une case de grille servait de repère à la pastille → `grid-area: auto`) ; un **double point** après le message de
+Hektor ; « envoyé il y a NaN h » si la date manque ; un guillemet seul en bout de ligne (espaces insécables) ;
+la section du menu sous la ligne de flottaison ; et **251 fins de ligne doublées** (`\r\r\n`) par mon script
+d'insertion — remises au propre, 0 restante.
+
+**Non vu, à dire** : quand le cockpit d'une annonce est ouvert, il couvre toute la barre — le compteur n'y est pas
+cliquable, c'est la ligne de la fiche qui prend le relais (voulu). **Aucun essai réel** : il faut un vrai geste
+(ex. un changement de statut) pour voir la ligne vivre sur un vrai travail — c'est une écriture chez Hektor, donc
+avec l'accord de Frédéric. **Retour arrière** : `SUIVI_DANS_LA_FICHE = false` et `FENETRE_SUIVI_ACTION = true`.
