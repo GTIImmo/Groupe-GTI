@@ -760,3 +760,31 @@ déconnexion). ⚠ Un premier « souci » (« Bellevue » perdue) venait de l'**
 redemandée **sans** « Bellevue » à 11:45:14 — **3 s avant** la mise en ligne (11:45:17) ; après rechargement, la liste
 est redemandée **avec** « Bellevue » (11:46:27). Leçon : après un déploiement, l'onglet ouvert garde l'ancien code
 tant qu'on ne recharge pas — vérifier l'heure de l'essai contre l'heure de mise en ligne avant de chercher un défaut.
+
+---
+
+## 15. POINT 3 — RE-AUDIT DU 26/10 : « ouvrir ce qu'on crée, refléter le geste au clic » (rien codé)
+
+Le point 3 regroupe les **lots 1 à 3 du §8.6** (11 correctifs). Revérifié sur le code du 26/10 (après les commits ⑧) :
+
+| constat | re-vérifié le 26/10 | où |
+|---|---|---|
+| **A1** créer une annonce : la fenêtre se ferme, **rien ne s'ouvre** | ✅ toujours vrai | `handleCreateDraftAnnonce`, l. 16523 |
+| … alors que **notre numéro est connu au clic** | ✅ `payload_json.app_dossier_id` = 10000001, 10000006, 10000009 | `app_console_job` |
+| **A2** créer un contact : rien ne s'ouvre | ✅ toujours vrai (5 hôtes : annuaire bureau et mobile, fiche annonce ×2, agenda) | `HektorContactIdentityForm`, l. 38997 |
+| … notre numéro au clic | ✅ `payload_json.app_identite` = 20000010 … 20000015 | `app_console_job` |
+| **F0** la rubrique **Affaires** du cockpit ne se relit qu'au **changement de fiche** ; le cockpit ne reçoit **aucun** signal de rechargement | ✅ toujours vrai | `CockpitDetail`, effet l. 29051-29092 sur `[ckDossierIdPourRegistre]` |
+| **F1** gestes d'affaire (refuser / accepter une offre, annuler / supprimer un compromis ou une vente) : modale fermée, **rien ne se recharge**, travail **non suivi** | ✅ toujours vrai | `handleGesteHektor`, l. 17862-17863 |
+| **B1** archiver, désarchiver, statut, négociateur : le travail est suivi, mais l'écran ne se recharge **qu'à sa fin** (~1 min) alors que la base est à jour **au clic** (RPC `*_optimistic`) | ✅ toujours vrai | l. 16633, 15219, 17011, 17929 |
+| A3, A4, B2, F6, F8, F10 | repris de l'audit du 23/10 — **à revérifier au moment de les coder** | §5, §8 |
+
+**Proposé : le découper en TROIS sous-lots, expliqués et contrôlés un par un.**
+
+| sous-lot | contenu | ce que l'utilisateur verra | ce que ça pourrait casser |
+|---|---|---|---|
+| **3a — ouvrir ce qu'on crée** | A1 (annonce → sa fiche, par notre numéro) · A2 (contact → sa fiche, par notre numéro) | après « Créer », la fiche de l'objet créé **s'ouvre** et la liste le montre | ⚠ un contact créé **depuis l'agenda** (saisie d'un RDV) ne doit **pas** faire changer d'écran : on reste dans le RDV ; ⚠ la file des **photos de la création** se rattache à son dossier par le travail suivi — ouvrir la fiche ne doit rien y changer (à éprouver) |
+| **3b — les rubriques se relisent** | F0 : Affaires, Documents du cockpit, signatures, panneau Documents branchés sur le signal de rechargement | une offre, un compromis, un document généré apparaissent **sans rouvrir la fiche** | ⚠ un rechargement ne doit **ni vider la rubrique** (clignotement) **ni effacer une saisie en cours** (note, condition) → garder l'affichage pendant la relecture ; ⚠ le signal part souvent (fin de chaque travail) |
+| **3c — refléter le geste au clic** | F1 · B1 · B2 · A3 · A4 · F6 · F8 · F10 | l'écran change **à la seconde du clic**, plus une minute après | si Hektor **refuse**, le worker remet l'ancien état en base : l'écran le reflètera **à la fin du travail** (le rechargement existe) — il faut que F1 suive son travail pour ça |
+
+**Recommandé : 3a d'abord** (le cœur de la demande initiale, et le numéro est déjà là), puis 3b, puis 3c. Tout est
+**front seul**, derrière un interrupteur par sous-lot, et n'écrit rien chez Hektor.
