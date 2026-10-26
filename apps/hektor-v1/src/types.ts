@@ -801,6 +801,24 @@ export type ConsoleJobType =
   | 'archive_cloud_documents'
   | 'prepare_archived_annonce_detail'
   | 'prepare_historical_annonce_detail'
+  // Rattrapage du 26/10/2026 : 9 types de la contrainte app_console_job_job_type_check que ce
+  // type ignorait (mesure : 48 en base, 39 ici). Élargir l'union ne retire rien.
+  | 'cancel_hektor_compromis'
+  | 'change_hektor_offre_status'
+  | 'delete_hektor_compromis'
+  | 'delete_hektor_vente'
+  | 'exit_hektor_draft_annonce'
+  | 'generate_cadastre_document'
+  | 'prepare_brouillon_annonce_detail'
+  | 'set_hektor_photo_visibility'
+  | 'unlink_hektor_mandant'
+  // A.2 lot 3 (26/10/2026) : signature Youtrust -- worker documents, négociateur sur ses biens.
+  // notice/PLAN_DEV_SIGNATURE_YOUTRUST_2026-10-26.md
+  | 'youtrust_send_signature'
+  | 'youtrust_sync_signature'
+  | 'youtrust_remind_signer'
+  | 'youtrust_cancel_signature'
+  | 'youtrust_signing_link'
 
 export type ConsoleJob = {
   id: string

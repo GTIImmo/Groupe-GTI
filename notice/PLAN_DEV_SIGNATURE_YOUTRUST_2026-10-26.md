@@ -80,6 +80,60 @@ choisissent leur travail selon `provider`.
 
 ---
 
+## 2 bis. CE QUE YOUTRUST NOUS REND — ET CE QU'IMMOSIGN NE NOUS DONNAIT PAS (doc lue le 26/10)
+
+**Deux sources, complémentaires :** les **avis** (webhooks : Youtrust nous prévient *quand*
+quelque chose change) et l'**API** (on va chercher *le détail*). Chaque avis porte **l'état
+complet de la demande** — statut, `external_id` (= notre document), dates, **et le statut de
+chaque signataire** — plus le signataire concerné (`status`, `signed_at`, réponses aux champs).
+Un seul avis suffit donc à reconstruire « En attente 2/3 ».
+
+| Information | ImmoSign via Hektor (aujourd'hui) | Youtrust (demain) |
+|---|---|---|
+| état de la demande | à envoyer / en attente / signé / annulé, lu dans le HTML, **avec retard** | idem **+ expiré, en pause**, à l'instant (`signature_request.*`) |
+| progression | « x/y » seulement pendant l'attente | **qui** a signé, **à quelle heure**, à chaque signature (`signer.done`) |
+| **le client a ouvert son lien** | ✖ | ✅ `signer.link_opened` — « M. Dupont a ouvert à 10:32, pas encore signé » |
+| invitation partie | ✖ | ✅ `signer.notified` |
+| **e-mail non remis** (adresse fausse, boîte pleine, spam) | ✖ | ✅ `signer.notification_delivery_failed`, avec la raison |
+| relances envoyées | ✖ | ✅ manuelles **et** automatiques (`…reminder_executed`) |
+| date d'expiration | ✖ | ✅ dans chaque avis + `signature_request.expired` |
+| incident de signature | ✖ | ✅ `signer.error` (la demande est annulée d'office → alerte) |
+| PDF signé | ZIP, on devine « le plus gros PDF » | ✅ téléchargement direct `version=completed` |
+| preuves | ZIP | ✅ **un dossier par signataire**, PDF **et** JSON (IP, mode et heure du code, consentement, empreintes, certificat), gardé 10 ans chez Youtrust |
+| **crédits consommés** | ✖ | ✅ API `/consumptions` — suivi du pack (500 inclus, ~1 800/an mesurés) |
+| rattrapage | relecture HTML, contexte négociateur requis | ✅ liste filtrable par `external_id`, `status`, dates |
+
+**LE SORT DE CHAQUE AVIS — aucun n'est reçu pour rien.** Le *dos* (lots 3 à 5, 7) range
+**tout** ; ce que l'*écran* en montre se décide à l'étape d'ergonomie (lot 6a).
+
+| Avis | Ce que fait le dos | Ce que l'écran pourra montrer (à décider en 6a) |
+|---|---|---|
+| `signature_request.activated` | état `pending`, `sent_at` | « envoyé en signature » (fil du cockpit — existe déjà) |
+| `signer.notified` | signataire « invité » | « invitation envoyée à M. Dupont » |
+| `signer.link_opened` | signataire « a ouvert » + heure | **« ouvert, pas signé »** |
+| `signer.done` | signataire « signé » + heure, progression | « M. Dupont a signé à 10:51 » ; **si tous les mandants ont signé → cloche du négo « à vous de contresigner »** |
+| `signature_request.done` | état `signed`, `signed_at` → **travail : PDF signé + preuves** | « Signé le … », Ouvrir le signé, Ouvrir les preuves (existe déjà) |
+| `signature_request.reminder_executed` / `…automatic_reminder_executed` | journal « relancé » | « relancé le … (3ᵉ relance) » |
+| `signer.notification_delivery_failed` | **alerte** + raison | **« e-mail non remis à M. Dupont : adresse invalide »** + cloche |
+| `signer.error` | **alerte** (Youtrust a annulé la demande) | « incident, à renvoyer » + cloche |
+| `signature_request.expired` | état `expired` | « expiré le … » (fil du cockpit — ✅ décidé) ; proposer de renvoyer |
+| `signature_request.reactivated` | état `pending` à nouveau | « relancée après expiration » |
+| `signature_request.canceled` | état `cancelled` | « annulé » (existe déjà) |
+| `signer.declined` / `signature_request.declined` | état `declined` (*ne doit pas arriver : refus désactivé*) | alerte si jamais |
+| `signature_request.paused` / `.resumed` / `.deleted` / `.permanently_deleted` | journal (*gestes que l'app ne fait pas : seulement si quelqu'un agit dans l'app Youtrust*) | alerte « modifié hors de l'app » |
+| **non abonnés** : `approver.*`, `signer.identification_*`, `signer.identity_saved`, `signer.sender_contacted` (signature avancée/qualifiée et approbateurs, non utilisés), `contact.created`, `electronic_seal.*` | — | — |
+
+**Ce que ça ajoute au plan (proposé, D15) :**
+1. s'abonner à **tous les avis de signature** (`signature_request.*` et `signer.*`, sauf ceux de
+   la signature avancée/qualifiée que nous n'utilisons pas) ;
+2. garder **chaque avis** (`app_signature_event`, lot 3) → un **journal par mandat** : envoyé,
+   ouvert, relancé, signé par untel, e-mail non remis ;
+3. afficher au négo « **ouvert, pas signé** » et « **e-mail non remis** » (lot 6) — deux
+   raisons concrètes de relancer ou de corriger une adresse ;
+4. une ligne **crédits consommés / restants** à l'écran Santé (lot 7).
+
+---
+
 ## 3. LE DÉROULEMENT, VU PAR LE NÉGOCIATEUR (interrupteur allumé)
 
 ```
@@ -125,7 +179,9 @@ FICHE ANNONCE › rubrique Mandat
 
 > Pour chaque lot : **ce qu'il fait · les fichiers · ce que ça pourrait casser ailleurs ·
 > le retour arrière · la preuve · ce qui exige l'accord de Frédéric.**
-> Ordre imposé : **2 → 3 → 4 → 5 → 6 → 6 bis → 7 → 8.** Une seule tâche en code à la fois.
+> Ordre imposé : **2 → 3 → 4 → 5 → 6a (ergonomie, validée) → 6b → 6 bis → 7 → 8.** Une seule
+> tâche en code à la fois. *L'audit d'ergonomie 6a (lecture seule) peut se faire pendant le
+> code des lots 3 à 5.*
 
 ### LOT 1 — Client Youtrust + essai de bout en bout ✅ FAIT (26/10, `11e569f`)
 
@@ -175,6 +231,42 @@ ne rend jamais deux fois le même, mesuré au lot 1)* ; (b) allumé : envoi sand
 **Accord.** « vas-y » du lot ; **déploiement Vercel** (push).
 
 ### LOT 3 — La base (fondations) · 1 j
+
+> **Audit du 26/10 (lecture seule) :** CHECK 48 types · `app_console_claim_next_job`
+> `4aa93a31…` · `app_console_can_request_job` `8b2c4378…` · `app_setting` 17 réglages, pas de
+> `signature_youtrust` · lecteurs SQL de la signature : **2** (`app_cockpit_activite`
+> `8b96ef02…`, `app_console_mark_document_signed_manual` `66e1ebec…`) · lecture des documents =
+> `is_app_global_reader() OR app_mes_biens_portefeuille()`, `anon` exclu · 0 travail Youtrust.
+>
+> **✅ « expiré » dans le fil du cockpit : oui** (Frédéric, 26/10).
+>
+> **✅ PATCH ÉCRIT ET ÉPROUVÉ LE 26/10 — NON POSÉ (Frédéric le colle).**
+> `supabase/patch_a2_signature_youtrust_lot3_2026-10-26.sql` + `_INVERSE.sql` + `_REPETITION.sql`.
+> **Essai dans UNE transaction annulée** (patch → répétition → inverse → contrôles, erreur finale
+> + ROLLBACK) : **18/18 verts en 6,9 s** — 12 de la répétition (dont négociateur : 5 types sur
+> SON bien, refusé sur celui d'un autre ; relance ImmoSign toujours permise ; écriture refusée à
+> un utilisateur connecté ; admin partout) et 6 de l'inverse (aucune trace, ImmoSign intact).
+> Témoin du cockpit identique avant/après (407 dossiers) ; **témoin éprouvé** : un défaut glissé
+> exprès fait s'arrêter le patch (« le fil d'activité a CHANGÉ »). Base intacte après l'essai
+> (empreintes `4aa93a31…`, `8b2c4378…`, `8b96ef02…` inchangées, aucune table).
+> ⚠ La contrainte est modifiée **en dernier** (l'ALTER TABLE verrouille `app_console_job`
+> jusqu'au COMMIT : ainsi un instant, pas 7 s).
+> Front : `types.ts` reçoit les 5 types Youtrust **et 9 types oubliés** (48 en base, 39 dans
+> le front — et non 5 comme dit l'inventaire du 26/10). `npm run build` vert.
+>
+> **✅ D14 — « signé à la main » : FAIRE COMME AVEC IMMOSIGN** (Frédéric, 26/10 : *« déjà géré
+> avec ImmoSign, regarde et fais pareil »*). Mesuré : la base **ne refuse rien** (la fonction
+> pose `status signed` + `source manuscrite` quel que soit l'état) ; l'écran montre le bouton
+> tant que le document n'est pas signé (`APP_MANDAT_V3_ENABLED`) ; le worker **exclut** ensuite
+> tout document `manuscrite` du suivi (`console_job_worker.js:5810`). ⇒ **aucune garde neuve en
+> base** ; l'écrivain Youtrust (lots 4-5) exclura `manuscrite` **exactement comme** l'écrivain
+> ImmoSign. *Point à trancher au lot 6 :* une demande Youtrust en cours resterait active (relances)
+> — proposer « annuler aussi la demande Youtrust ? » dans la confirmation.
+> ⚠ **Noté, non traité (hors périmètre) :** la fusion de la synchro documents
+> (`console_job_worker.js:5092-5096`, `{ ...inc, sent_at, signed_at }`) **ne garde pas**
+> `source` : une relecture Hektor qui rapporte un état sur un document marqué « à la main »
+> effacerait la marque. **0 document « à la main » en base au 26/10** (le bouton dort derrière
+> `APP_MANDAT_V3_ENABLED`) : défaut dormant. Le garde-fou R1 du lot 4 peut le couvrir aussi.
 
 **Ce qu'il fait.** Un patch Supabase **additif** :
 - interrupteur `signature_youtrust` dans `app_setting`, **`off`** (même forme que
@@ -281,7 +373,27 @@ de l'audit trail = fichiers du coffre.
 **Accord.** **Déploiement de la fonction Supabase** (manuel, pas par push) ; secret du
 webhook posé par Frédéric ; redémarrage du worker.
 
-### LOT 6 — Les écrans (O6, O7, O8) + aiguillage R2 · 1,5–2 j
+### LOT 6a — L'ERGONOMIE AVANT LE CODE (méthode de Frédéric) · 1 j + ses validations
+
+*Ajouté le 26/10 à la demande de Frédéric : « on ajoute des fonctions, il faudra réfléchir au
+front et à l'ergonomie ».* Méthode « ergonomie d'abord, design ensuite » (mémoire
+`refonte-design-methode`) :
+1. **cartographier** tout ce qui touche la signature aujourd'hui : rubrique Mandat (V3 et
+   actuelle), `SignaturePromptModal`, `MandatSignatureTracker`, onglet Documents
+   (`ConsoleDocumentsPanel`), fil d'activité du cockpit, cloche, écran Santé — chaque bouton,
+   chaque badge, chaque modale ;
+2. **tableau anti-perte** : chaque fonction d'aujourd'hui → sa place demain (aucun bouton perdu,
+   y compris les boutons ImmoSign des procédures encore en cours) ;
+3. **plan ergonomique** : où vivent les nouveautés (fenêtre d'envoi, suivi par signataire,
+   « ouvert, pas signé », « e-mail non remis », journal du mandat, « Signer maintenant »,
+   signature sur place, crédits) — regroupées, sans scroll inutile ;
+4. **maquette** (capture exacte de l'écran réel, mémoire `capture-exacte-ecran-pour-design`) ;
+5. validation de Frédéric → seulement alors le lot 6b.
+
+**Le dos n'attend pas l'écran :** les lots 3, 4, 5 et 7 rangent **tous** les avis ; l'écran
+choisit ensuite quoi en montrer. Aucune donnée n'est perdue si une décision d'écran change.
+
+### LOT 6b — Les écrans (O6, O7, O8) + aiguillage R2 · 1,5–2 j
 
 **Ce qu'il fait.** Interrupteur allumé :
 - la question « Faire signer ? » (`SignaturePromptModal`) ouvre la **fenêtre d'envoi** au lieu
