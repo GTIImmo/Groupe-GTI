@@ -110,7 +110,7 @@ for (const n of [1, 2, 3]) {
 }
 
 // (B) allumé
-for (const n of [1, 2, 4, 12]) {
+for (const n of [1, 2, 4, 12, 16]) {
   const h = neuf.f.mandatPreviewHtml(brouillon(n), dossier, [], { reperes: true })
   const sig = [...h.matchAll(/\{\{s(\d+)\|signature\|150\|45\}\}/g)].map((m) => Number(m[1]))
   const men = [...h.matchAll(/\{\{s(\d+)\|mention\|Bon pour mandat\|mention_s\1\}\}/g)].map((m) => Number(m[1]))

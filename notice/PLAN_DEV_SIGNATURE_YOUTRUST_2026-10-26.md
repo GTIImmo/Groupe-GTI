@@ -383,6 +383,58 @@ les 5 types **sur ses biens seulement**, témoin inverse du cockpit.
 > (« le négo SOUS la grille ») était faux pour un nombre impair — corrigé en ordre de lecture.
 > **⏳ Pour l'activer :** redémarrer les services **documents ET synchro** (file vide). Sans
 > redémarrage, l'ancien code tourne — sans risque : aucun document Youtrust n'existe.
+> **✅ D20 (Frédéric, 26/10) : PAS de contacts Youtrust ; les négociateurs sont des signataires
+> SIMPLES (sans compte ni licence Youtrust).** Mesuré : créer des signataires ne crée aucun contact
+> (0 en sandbox) ; le chemin « contact → signataire » marche (éprouvé puis supprimé) mais exigerait
+> une table de correspondance et recopierait les données des clients. Un « utilisateur » Youtrust
+> = une licence payante (1 seule incluse) ; un utilisateur signataire consomme aussi 1 crédit.
+> Comptes Youtrust : Frédéric (et éventuellement l'administration) seulement.
+>
+> ### 🔍 AUDIT DE COMPLÉTUDE DU LOT 4 (26/10, demandé par Frédéric : « compléter correctement »)
+> **Ce que Youtrust exige d'un signataire (référence API) :** `email`, `first_name`, `last_name`,
+> `locale` **obligatoires** — l'e-mail l'est **même en signature sur place** ; e-mail ≤ 100 car. ;
+> portable E.164 obligatoire seulement pour le code SMS.
+> **Nos mandants réels (1 495 sur les 712 biens vivants), mesurés :**
+>
+> | Cas | Nombre | Ce qui se passe |
+> |---|---|---|
+> | sans e-mail | **394 (26 %)** | ⛔ ne peuvent pas signer chez Youtrust tant que l'e-mail manque → **D23** |
+> | e-mail invalide | 4 | refus clair du worker |
+> | fiche de couple « Mr./Mme » sans prénom | **309** (301 totalement muettes ; dans **223** cas la personne porteuse est AUSSI mandante du bien) | l'écran écarte la fiche muette → **le conjoint ne signerait pas** → **D22** |
+> | sociétés / succession / collectivité | 4 / 1 / 1 | il faut un **représentant** (prénom + nom) → **D22** |
+> | portable mobile FR | 1 094 | code SMS |
+> | portable étranger seul | 10 | code SMS (accepté hors Chine) |
+> | fixe seul / aucun téléphone | 49 / 342 | code par e-mail (D16) |
+> | deux mandants, même e-mail | 78 biens | ✅ accepté par Youtrust (éprouvé) |
+> | 5 mandants et plus | 67 biens, **jusqu'à 16** | ✅ repères prouvés jusqu'à 16 (`test_reperes_signature.mjs`) ; production 100 signataires |
+>
+> **Les négociateurs des 712 biens :** 625 actifs · **37 inactifs · 50 absents de l'annuaire**
+> → **87 biens (12 %)** où « le négo du bien » (D17) ne donne personne de valable — et le résolveur
+> retomberait sur **l'e-mail de l'agence** → **D21**.
+> **Le chemin du document :** le mandat généré ne naît chez nous **qu'après le dépôt chez Hektor**
+> (`handleGenerateMandatDocument` → `upload_document_to_hektor` → relecture) et l'écran attend
+> jusqu'à 150 s ce dépôt. Le chemin « chez nous d'abord » (envoi différé, `completerEnvoiDocumentDiffere`)
+> existe pour les ajouts à la main, **pas pour le mandat généré** → à la coupure, plus de ligne,
+> donc plus d'envoi Youtrust → **D24**.
+>
+> **Corrigé tout de suite (défaut dans MON code du lot 4) :** `prenomNomSignataire` **inventait** un
+> prénom (« DUPONT » → prénom DUPONT ; « M. et Mme DUPONT » → prénom « et »). Désormais : jamais
+> de prénom inventé, refus clair « fiche de couple à éclater, ou représentant de société à
+> indiquer ». `node Console/test_signataires_youtrust.js` **16/16** (prénoms + portables).
+> `test_garde_r1_signature.js` corrigé : sa version « d'avant » est le worker juste avant le commit
+> qui introduit `signatureProtegee` (une fois le lot 4 commité, HEAD le contenait : 7 faux échecs).
+>
+> **Décisions à prendre (recommandations) :**
+> - **D21** négo du bien inactif / absent → **l'utilisateur connecté qui envoie** signe comme
+>   mandataire, et **jamais l'e-mail de l'agence** ; l'écran le montre.
+> - **D22** couples et sociétés → dans l'éditeur du mandat, **alerte** « fiche de couple : un seul
+>   signataire, ajouter le conjoint ? » et saisie du **représentant** d'une société (lots 6a/6b).
+> - **D23** e-mail manquant → **saisi dans la fenêtre d'envoi** ET **enregistré sur la fiche du
+>   contact** (« une saisie ne se perd jamais »), par le geste de modification de contact existant.
+> - **D24** le mandat généré **naît chez nous d'abord** (réutiliser l'envoi différé), Hektor
+>   reçoit ensuite le dépôt → indispensable à la coupure, et supprime l'attente de 150 s
+>   (**lot 4 bis**, avant le lot 6b).
+>
 > **Payload attendu du front (lot 6b)** : `{ app_console_document_id, document_kind, numero_mandat,
 > bien_adresse, mandants: [{prenom, nom, email, telephone}] (ordre des cases), mandataire? }`.
 >

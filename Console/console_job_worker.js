@@ -6182,15 +6182,19 @@ function emailSignataireValide(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || "").trim());
 }
 
-// Prenom / nom separes (Youtrust les exige) ; repli : le dernier mot du nom complet est le nom.
+// Prenom / nom separes (Youtrust les exige tous les deux). ⛔ ON N'INVENTE JAMAIS UN PRENOM
+// (audit du 26/10 : 301 fiches de couple « Mr./Mme » muettes sur les biens vivants, 4 societes) :
+// le repli sur le nom complet ne vaut que pour UNE personne en DEUX mots (« Jean Dupont ») --
+// jamais un couple (« M. et Mme Dupont ») ni un mot seul. Sinon prenom vide -> refus clair.
 function prenomNomSignataire(personne) {
   const prenom = cleanString(personne && personne.prenom);
   const nom = cleanString(personne && personne.nom);
   if (prenom && nom) return { prenom, nom };
   const complet = cleanString((personne && (personne.nomComplet || personne.nom_complet)) || nom || prenom) || "";
-  const mots = complet.split(/\s+/).filter((m) => m && !/^(m\.?|mme|mlle|mr|madame|monsieur)$/i.test(m));
-  if (mots.length >= 2) return { prenom: mots.slice(0, -1).join(" "), nom: mots[mots.length - 1] };
-  return { prenom: mots[0] || "", nom: mots[0] || "" };
+  const mots = complet.split(/\s+/).filter((m) => m && !/^(m\.?|mme\.?|mlle\.?|mr\.?|madame|monsieur|mr\.\/mme)$/i.test(m));
+  const couple = mots.some((m) => /^(et|&|\/)$/i.test(m)) || /mr\.?\s*\/\s*mme/i.test(complet);
+  if (!prenom && !couple && mots.length === 2) return { prenom: mots[0], nom: mots[1] };
+  return { prenom: prenom || "", nom: nom || mots.join(" ") };
 }
 
 // Un texte que Youtrust accepte (« safe string ») : pas de balise, une longueur bornee.
@@ -6310,7 +6314,8 @@ async function handleYoutrustSendSignature(job) {
     const email = cleanString(p.brut && p.brut.email);
     const portable = portableE164(p.brut && p.brut.telephone);
     const libelle = p.role === "mandataire" ? "le mandataire (negociateur)" : `le mandant ${p.index}`;
-    if (!prenom || !nom) problemes.push(`${libelle} n'a pas de nom`);
+    if (!nom) problemes.push(`${libelle} n'a pas de nom`);
+    else if (!prenom) problemes.push(`${libelle} (${nom}) n'a pas de prenom -- fiche de couple a eclater en deux signataires, ou representant de societe a indiquer`);
     if (!emailSignataireValide(email)) problemes.push(`${libelle} (${[prenom, nom].filter(Boolean).join(" ") || "?"}) n'a pas d'e-mail valide`);
     // D16 : portable mobile -> code par SMS ; sinon repli code par e-mail.
     return { index: p.index, role: p.role, prenom, nom, email, telephone: portable, otp: portable ? "otp_sms" : "otp_email" };

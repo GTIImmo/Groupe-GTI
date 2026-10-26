@@ -29,8 +29,11 @@ function controle(nom, ok, detail) {
 const srcNeuf = fs.readFileSync(path.join(__dirname, "console_job_worker.js"), "utf8");
 let srcAvant;
 try {
-  srcAvant = execFileSync("git", ["show", "HEAD:Console/console_job_worker.js"],
-    { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+  // « AVANT » = le worker JUSTE AVANT le commit qui a introduit signatureProtegee (et non HEAD :
+  // une fois le lot 4 commite, HEAD le contient -- le temoin se comparerait a lui-meme).
+  const git = (args) => execFileSync("git", args, { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+  const introduit = git(["log", "--format=%H", "-S", "function signatureProtegee(", "--", "Console/console_job_worker.js"]).trim().split("\n").filter(Boolean).pop();
+  srcAvant = git(["show", `${introduit ? `${introduit}~1` : "HEAD"}:Console/console_job_worker.js`]);
 } catch (e) {
   console.log("ECHEC  lecture de la version d'avant (git) -- " + e.message);
   process.exit(2);
