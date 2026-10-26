@@ -762,3 +762,66 @@ l'écran, ni le chaînage ; Postgres tient les index tout seul, quelle que soit 
 écrivains ; la vue s'allonge (le temps de préparation est à mesurer) ; une transaction à plus de 12 personnes perdrait la 13ᵉ — d'où la sentinelle.
 Elle traite les fiches « couple » exactement comme aujourd'hui (elles sont dans les listes de Hektor). **Et en attendant** : remettre la vue
 d'avant (D) tout de suite, puis poser A seulement après l'avoir mesurée (préparation + exécution, par contact et par bien).
+
+### 15.8 ⛔ DÉCISION DE FRÉDÉRIC, 26/10 soir : « oublie ma décision du 24/10, quel serait le meilleur choix ? » → **la vraie table des parties** — « oui »
+- **La vue d'avant est REMISE** (26/10 à 13:01, inverse de la pièce 5 appliqué par moi, accord « oui ») : empreinte `acf77be8` retrouvée **à l'octet**,
+  les deux index retirés, **167 822** lignes comme avant ; une fiche : **3,9 ms** d'exécution. On est exactement à l'état d'avant la pièce 5.
+- La décision du 24/10 (« pas de liste de plus ») est **levée par Frédéric** pour cette table.
+
+---
+
+## 16. LA TABLE DES PARTIES — proposition détaillée *(26/10 soir, rien codé)*
+
+### 16.1 Le principe, en deux temps
+1. **Maintenant** : une table `app_affaire_partie` dans sa **forme définitive**, mais **dérivée** des listes du registre par un **déclencheur** —
+   elle ne peut pas les contredire ; rien ne change pour la nuit, le worker, l'app ni l'écran ; seule la vue des liens d'un contact la lit.
+2. **À la coupure (étape 3)** : les gestes de l'app y écrivent **directement** ; les listes JSON ne restent que la trace de Hektor.
+
+### 16.2 La table
+| colonne | rôle |
+|---|---|
+| `app_affaire_id` | la transaction (NOTRE numéro) |
+| `role` | `acquereur` · `vendeur` · `notaire_acquereur` · `notaire_vendeur` |
+| `rang` | la place dans la liste (1 = le principal pour les acquéreurs — vrai sur 100 % des listes, mesuré) |
+| `app_contact_id` | NOTRE numéro de la personne (indexé) |
+| `hektor_contact_id` | celui de Hektor (pour lui parler) |
+| `est_principal` | l'acquéreur principal |
+| `fiche_sans_nom` | les fiches « couple » de Hektor (« Mr./Mme ») : 2 375 aujourd'hui, gardées comme aujourd'hui, marquées |
+| `transaction_presente` | recopie `present_in_hektor` : une transaction retirée chez Hektor garde ses parties, marquées (delete-never) |
+| `origine` | `listes_du_registre` (le déclencheur) ; plus tard `app` (étape 3) |
+**Volume attendu** : ~117 000 lignes (acquéreurs ~35 000, vendeurs ~58 500, notaires ~23 300).
+
+### 16.3 Le déclencheur
+- `AFTER INSERT OR UPDATE` sur `app_affaire_ledger`, **seulement si les personnes ont changé** (`acquereurs_json`, `acquereur_json`,
+  `mandants_json`, le principal, les notaires, `present_in_hektor`) — sinon la nuit, qui renvoie les 31 103 transactions, le ferait tourner
+  31 103 fois pour rien.
+- Il **recalcule les parties de CETTE transaction** (supprime les siennes d'origine « listes », réinsère) — rien d'autre.
+- ⛔ **Il ne fait JAMAIS échouer l'écriture qui l'a appelé** (nuit, worker, geste de l'app) : en cas d'erreur, il la note dans un journal et laisse
+  passer ; une **sentinelle** quotidienne compare la table aux listes et sonne ; une fonction **reconstruit** tout à l'identique.
+- Il couvre **tous les écrivains** sans toucher leur code (c'est une règle de la base) : la nuit (push), le worker (relecture du jour), l'app
+  (création, modification), R2, les notaires de la console, les outils d'identité (`app_decaler_doublure`).
+
+### 16.4 Les droits
+- La table applique **la même règle que le registre** : un négociateur ne voit que les parties des transactions qu'il voit (politique =
+  « la transaction m'est visible », en relisant `app_affaire_ledger` sous ses droits). Aucune écriture permise à l'écran.
+
+### 16.5 Ce qui la lit (ce temps-ci)
+- **La vue des liens d'un contact** (pièce 5) : la branche des acquéreurs lit la table des parties au lieu de la table de nuit — par l'index de
+  notre numéro, **~ la vitesse d'aujourd'hui** (à mesurer).
+- Plus tard : les **types à la lecture**, l'activité d'un contact, « tout ce qu'on sait de M. X ».
+
+### 16.6 Ce que ça pourrait casser — et la garde
+| | risque | garde |
+|---|---|---|
+| la nuit (push des 31 103 transactions) | un déclencheur qui ralentit ou qui échoue | il ne tourne que si les personnes changent ; il n'échoue jamais ; mesure du temps du push avant / après |
+| le worker, les gestes | idem | idem |
+| les droits | une partie visible hors de son portefeuille | la politique relit le registre sous les droits de l'utilisateur ; essai en négociateur |
+| le chaînage, l'adoption | — | **non touchés** (ils gardent leur clé, le principal de Hektor) |
+| la table de contacts (refaite chaque nuit) | un lien forcé bloquerait son envoi | **pas de lien forcé** ; une sentinelle vérifie que chaque personne existe |
+| la cohérence | la table s'écarte des listes | sentinelle quotidienne + reconstruction |
+
+### 16.7 Les essais, avant toute pose
+1. **En lecture seule** : le calcul des parties depuis les listes, comparé aux 35 005 liens acquéreurs de la nuit (les écarts connus seulement).
+2. **Dans une transaction ANNULÉE** (accord demandé) : créer la table et le déclencheur, remplir, modifier quelques transactions, vérifier que
+   les parties suivent, mesurer la vue — puis **tout annuler** (rien ne reste).
+3. **La pose** : patch + inverse + répétition ; sentinelle au moniteur (en lisant les contraintes de sa table — leçon du 25/10).
