@@ -5403,12 +5403,13 @@ export async function rechercherPartout({ terme, filtresDeBase, scope, surGroupe
       .limit(n),
     (rows: LightweightAnnonceIndexRow[]) => attachLightweightDetailCacheState(rows.map(lightweightIndexRowToDossier), cache),
   )
-  // ⚠ PAS l'adresse ici : sans index sur cette colonne, l'OR relit toute la table -- MESURE le 26/10 :
-  //   1 515 ms avec, 80 ms sans. L'adresse est cherchee dans le registre des mandats (196 ms, en parallele).
-  const texteAnnonce = [`search_text.ilike.${ilike}`, `mandants_texte.ilike.${ilike}`]
+  // L'ADRESSE (26/10/2026) : cherchable depuis la pose des index du patch
+  //   supabase/patch_index_recherche_adresse_2026-10-26.sql (16:57-17:00, 9 controles OK). MESURE par la vue,
+  //   avec les regles d'acces : 82 ms (1 515 ms avant l'index). Sans l'index, retirer cette colonne d'ici.
+  const texteAnnonce = [`search_text.ilike.${ilike}`, `mandants_texte.ilike.${ilike}`, `adresse_detail.ilike.${ilike}`]
     .concat(nombre ? [`numero_dossier.ilike.${ilike}`, `numero_mandat.ilike.${ilike}`, `code_postal.ilike.${ilike}`, `hektor_annonce_id.eq.${t}`] : [])
     .join(',')
-  const texteContact = [`search_text.ilike.${telephone ?? ilike}`]
+  const texteContact = [`search_text.ilike.${telephone ?? ilike}`].concat(telephone ? [] : [`adresse.ilike.${ilike}`])
     .concat(nombre ? [`hektor_contact_id.eq.${t}`, `hektor_target_id.eq.${t}`] : [])
     .join(',')
   // AFFICHAGE AU FIL DE L'EAU (mesure en production le 26/10) : annonces ~0,3 s, archives et contacts
@@ -5433,7 +5434,7 @@ export async function rechercherPartout({ terme, filtresDeBase, scope, surGroupe
     lireLeger('app_archive_annonce_index_current', 'app_archive_id', 'app_archive_annonce_detail_cache', applyArchiveIndexFiltersToQuery)
       .then((v) => { archivees = v; publier() }),
     lire<AppContact>('contacts', client.from(contactsCurrentView)
-      .select('hektor_contact_id,hektor_target_id,display_name,civilite,nom,prenom,archive,phone_primary,email,ville,code_postal,relation_roles_json,active_search_count,commercial_nom')
+      .select('hektor_contact_id,hektor_target_id,display_name,civilite,nom,prenom,archive,phone_primary,email,adresse,ville,code_postal,relation_roles_json,active_search_count,commercial_nom')
       .or(SANS_FICHE_DE_MENAGE)
       .or(texteContact)
       .order('archive', { ascending: true })
@@ -5441,8 +5442,8 @@ export async function rechercherPartout({ terme, filtresDeBase, scope, surGroupe
       .limit(n), (rows: AppContact[]) => rows)
       .then((v) => { resultat.contacts = v; publier() }),
     lire<MandatRecord>('mandats', applyNegotiatorScopeToQuery(client.from('app_registre_mandats_current')
-      .select('register_row_id,app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,ville,code_postal,statut_annonce,archive,mandat_type,mandat_date_debut,mandat_date_fin,mandants_texte,commercial_nom,negociateur_email,agence_nom'), scope)
-      .or(`search_text.ilike.${ilike},adresse_privee_listing.ilike.${ilike}`)
+      .select('register_row_id,app_dossier_id,hektor_annonce_id,numero_dossier,numero_mandat,titre_bien,adresse_detail,ville,code_postal,statut_annonce,archive,mandat_type,mandat_date_debut,mandat_date_fin,mandants_texte,commercial_nom,negociateur_email,agence_nom'), scope)
+      .or(`search_text.ilike.${ilike},adresse_detail.ilike.${ilike}`)
       .order('mandat_date_debut', { ascending: false, nullsFirst: false })
       .limit(n), (rows: MandatRecord[]) => rows)
       .then((v) => { resultat.mandats = v; publier() }),

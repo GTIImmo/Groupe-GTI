@@ -2,8 +2,9 @@
 -- RETOUR ARRIERE de patch_index_recherche_adresse_2026-10-26.sql
 -- Retire les 4 index, et seulement eux. Aucune donnee n'est touchee.
 -- ⚠ Comme a la pose : SELECTIONNER UNE LIGNE A LA FOIS (CONCURRENTLY refuse un bloc).
--- ⚠ AVANT : remettre l'interrupteur ADRESSE_INDEXEE a false dans le front (lib/api.ts)
---   et pousser -- sinon la recherche par adresse retomberait a 1,5 s.
+-- ⚠ AVANT : retirer `adresse_detail.ilike` de `texteAnnonce` dans le front (lib/api.ts,
+--   commentaire « L'ADRESSE (26/10/2026) ») et pousser -- sinon la recherche globale
+--   retomberait a 1,5 s sur les annonces en cours.
 -- ============================================================================
 
 DROP INDEX CONCURRENTLY IF EXISTS public.idx_app_dossier_current_search_adresse_trgm;

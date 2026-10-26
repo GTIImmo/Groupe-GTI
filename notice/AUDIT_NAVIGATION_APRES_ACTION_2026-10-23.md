@@ -1263,3 +1263,27 @@ résultat, je mesure par la vue, il pousse ; 4) je mesure la première nuit (dur
 **Vu, pas traité** : sous les règles d'accès, la base ignore l'index texte des contacts (lecture complète, ~190 ms en
 base) ; le registre reste la source lente (~1,1 s par l'API) — l'index du patch §20.4 devrait l'aider, **à mesurer après
 pose**. Le chargement de la liste Annonces lit 2 fois `app_dossiers_current` (déjà avant ce chantier, non mesuré plus avant).
+
+### 20.6 ✅ LES 4 INDEX DE L'ADRESSE SONT POSÉS (26/10, 16:57-17:00, par Claude, accord de Frédéric : « je te laisse faire les SQL toi-même sur Supabase, tu as mon accord pour ce chantier »)
+
+Avant la pose : 16:57 heure de Paris, 0 requête active, 0 travail en cours, 0 index déjà posé. Les 4 `CREATE INDEX
+CONCURRENTLY` passés un par un, sans erreur. **Répétition : 9 OK sur 9.**
+
+| | avant (sans index, en base) | après |
+|---|---|---|
+| adresse des annonces en cours | 27 ms | **0,2 ms** — index 1,1 Mo |
+| adresse + texte du registre | 191 ms | **0,1 ms** — index 2,1 Mo et 12 Mo |
+| adresse des contacts | 354 ms | **10 ms** — index 3,1 Mo |
+| témoin (mandants, déjà indexé) | 9,4 ms | 9,1 ms |
+
+**Par la VUE de l'app, avec les règles d'accès de Frédéric** (« victor hugo », planification comprise) : annonces avec
+adresse **82 ms** (1 515 ms avant) · registre **142 ms** · contacts **8 ms** (190 ms avant : sous les règles d'accès la
+base n'utilisait pas l'index texte ; avec l'OR sur l'adresse indexée, elle passe par les index).
+
+**Code** : l'adresse revient dans la recherche des annonces en cours (`adresse_detail`), du registre (`adresse_detail` au
+lieu de `adresse_privee_listing`, qui n'a pas d'index) et des contacts (`adresse`, sauf quand on tape un téléphone), et
+**elle est affichée** en tête du détail de chaque résultat. Retour arrière : `_INVERSE.sql` (commentaire corrigé : il
+faut d'abord retirer `adresse_detail` de `texteAnnonce`).
+
+⏰ **À mesurer à la première nuit (27/10)** : durée du « push upgrade » (référence 4 min 05 à 4 min 59) et du « push
+contacts » (référence 32 à 40 s), `logs/scheduled/quotidien_2026-10-27_*.log`.

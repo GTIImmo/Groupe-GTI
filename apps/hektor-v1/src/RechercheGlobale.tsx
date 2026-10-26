@@ -91,6 +91,12 @@ function initiales(nom: string) {
   return ((mots[0]?.[0] ?? '') + (mots[1]?.[0] ?? '')).toUpperCase() || '?'
 }
 
+// L'adresse (26/10, index poses) : on la montre, pour que l'agent voie pourquoi la ligne est sortie.
+function adresseDe(objet: unknown) {
+  const x = objet as { adresse_detail?: string | null; adresse?: string | null }
+  return String(x.adresse_detail ?? x.adresse ?? '').trim()
+}
+
 function photoDe(a: Dossier) {
   const x = a as { photo_url_listing_app?: string | null; photo_url_listing?: string | null }
   return String(x.photo_url_listing_app || x.photo_url_listing || '').trim() || null
@@ -217,7 +223,7 @@ export default function RechercheGlobale(props: {
       return {
         titre: String(a.titre_bien ?? '').trim() || 'Sans titre',
         ref: a.numero_dossier || `n° ${a.hektor_annonce_id}`,
-        detail: [lieu(a.ville, a.code_postal), mandants, a.commercial_nom].filter(Boolean).join(' · '),
+        detail: [adresseDe(a), lieu(a.ville, a.code_postal), mandants, a.commercial_nom].filter(Boolean).join(' · '),
         pastille,
       }
     }
@@ -227,7 +233,7 @@ export default function RechercheGlobale(props: {
       return {
         titre: String(c.display_name ?? '').trim() || `Contact ${c.hektor_contact_id}`,
         ref: rolesContact(c),
-        detail: [(c as { phone_primary?: string | null }).phone_primary, c.email, c.ville].filter(Boolean).join(' · '),
+        detail: [(c as { phone_primary?: string | null }).phone_primary, c.email, adresseDe(c), c.ville].filter(Boolean).join(' · '),
         pastille: archive ? { libelle: 'Archivé', ton: 'neutre' as Ton } : null,
       }
     }
@@ -235,7 +241,7 @@ export default function RechercheGlobale(props: {
     return {
       titre: `Mandat ${m.numero_mandat ?? '—'}`,
       ref: m.numero_dossier ?? '',
-      detail: [m.titre_bien, m.mandants_texte].filter(Boolean).join(' · '),
+      detail: [adresseDe(m), m.titre_bien, m.mandants_texte].filter(Boolean).join(' · '),
       pastille: m.mandat_type ? { libelle: String(m.mandat_type), ton: 'rose' as Ton } : null,
     }
   }
