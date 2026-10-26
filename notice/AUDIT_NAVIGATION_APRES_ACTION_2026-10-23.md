@@ -830,3 +830,45 @@ e-mail RGPD possible), étape 2 « Terminer » (aucune annonce reliée) → « C
   **605997** supprimé (`hektor_delete_sent: true`, relu ensuite **introuvable** : `after_found: false`), et 0 ligne
   restante dans `app_contact_current` pour 20000016 / 605997.
 ⬜ **A1 (annonce) non éprouvé** : créer une annonce écrit un brouillon chez Hektor — essai à décider par Frédéric.
+
+---
+
+## 16. SOUS-LOT 3b — RE-AUDIT DU 26/10 : « les rubriques se relisent » (rien codé)
+
+**Les rubriques qui ne se relisent qu'au CHANGEMENT DE FICHE** (revérifié sur le code du 26/10) :
+
+| rubrique | où | aujourd'hui |
+|---|---|---|
+| **Affaires** (offres, compromis, ventes, carnet, répartition, conditions, note, notaires) — bureau | `CockpitDetail`, effet l. 29088 sur `[ckDossierIdPourRegistre]` | relue au changement de fiche ; ⚠ elle se **vide** d'abord (`setCkRegistreAffaires(null)`) |
+| **Affaires** — téléphone | `MobileDossierDetail`, l. 37051 sur `[mobDossierId]` | idem |
+| **Documents du cockpit** | `CockpitDetail`, l. 29229 sur `[dossier?.app_dossier_id]` | idem |
+| **Suivi des signatures** | `MandatSignatureTracker`, l. 11047 sur `[dossier.app_dossier_id]` | idem |
+| **Panneau Documents** | `ConsoleDocumentsPanel`, l. 11151 | relu au changement de fiche ; sonde toutes les 8 s **seulement** s'il a lui-même un document « en cours » |
+
+**Le signal de rechargement** (`dataReloadKey`) part : à la **fin d'un travail suivi** qui concerne l'écran
+(+600 ms, `jobConcernsThisScreen`, l. 14041) ; après une **modification** d'annonce / contact / recherche ; 25, 55 et
+90 s après le retour d'une recherche ; après une **création** (3a) ; après une **date de clôture**. Il ne relit
+aujourd'hui que la liste, la fiche, le contact et les dates de clôture.
+
+**Ce que 3b corrige** : brancher ces cinq rubriques sur ce signal. Concrètement :
+- une **offre, un compromis, une vente créés** par la fenêtre « statut » (travail **suivi**, l. 17929 + 59) apparaissent
+  dans Affaires **à la fin du travail**, sans rouvrir la fiche ;
+- les **documents** et l'**état des signatures** se relisent à chaque signal.
+
+**Ce que 3b NE corrige PAS** (le dire pour ne pas promettre trop) :
+- les **gestes sur une affaire existante** (refuser / accepter une offre, annuler / supprimer un compromis ou une
+  vente) : leur travail **n'est pas suivi** → pas de signal → c'est **3c** (recharger au clic) ;
+- l'**avis de valeur généré** (`generate_estimation_pdf`) : non suivi → point 6 (indicateurs) ;
+- le délai : la mise à jour arrive **à la fin du travail Hektor** (~1 min), pas au clic → c'est **3c**.
+
+**Ce que ça pourrait casser** :
+- ⚠ **le clignotement** : l'effet Affaires vide la rubrique avant de relire → au rechargement, on **garde l'affichage**
+  et on ne vide qu'au **changement de fiche** ;
+- **une saisie en cours** : la carte `CkAffaires` (l. 27514-27645) est un **pur affichage** (aucun champ, aucun état
+  local) ; les modifications d'affaire passent par des fenêtres à part → rien à perdre. Le panneau Documents garde
+  son état « en cours » (téléversement) : il relira **sans** l'effacer (il le fait déjà toutes les 8 s) ;
+- **la charge** : 6 lectures Supabase pour la seule fiche ouverte, à chaque signal (pas Hektor) ;
+- (constat, pas touché) dans `CockpitDetail`, des effets sont déclarés **après** un `return` anticipé (l. 29225) —
+  écart à la règle des hooks React, existant.
+
+Interrupteur proposé : `RUBRIQUES_SE_RELISENT`. Front seul, rien chez Hektor.
