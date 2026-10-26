@@ -185,5 +185,5 @@ actuelle (le bien vendu garde son numéro de mandat) : **rien à changer** pour 
 ### ⛔ D4 — 26/10 : **proposée.** *(« la clôture de la recherche de l'acheteur est PROPOSÉE à l'acte (un clic), pas automatique »)*
 À l'acte, l'app **propose** de clore la (les) recherche(s) active(s) de l'acheteur — un clic ; rien ne se ferme seul (un acheteur peut chercher
 un second bien). ⚠ Clore une recherche **passe par Hektor** tant qu'il vit (mémoire « créer une recherche passe par Hektor ») : le geste
-existant d'archivage d'une recherche sera réutilisé. Les **48** recherches actives d'acheteurs de 2026 : **on n'y touche pas** sans décision
+d'archivage : le worker sait déjà archiver une recherche (dans la qualification de l'acquéreur, montage décidé le 18/09, `console_job_worker.js` l. ~15855) ; je n'ai **pas** trouvé de geste d'écran « clore cette recherche » — à mesurer au chantier. Les **48** recherches actives d'acheteurs de 2026 : **on n'y touche pas** sans décision
 (D5 traitera le rattrapage).
