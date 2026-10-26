@@ -208,7 +208,10 @@ def main() -> int:
     # ⚠ LE PIEGE DU FUSEAU, celui que `parse_iso` aurait fait tomber : elle lit une
     #   date sans fuseau COMME DE L'UTC, ce qui RAJEUNIT la copie de deux heures --
     #   une copie perimee passerait pour fraiche et la sentinelle crierait.
-    decalage = datetime.now().astimezone().utcoffset() or timedelta(0)
+    # ⚠ 26/10/2026 : le decalage de LA DATE DU SCENARIO (13/10, heure d'ete), pas celui
+    #   d'aujourd'hui -- l'epreuve echouait depuis le passage a l'heure d'hiver alors que
+    #   le moniteur, lui, applique bien le decalage valable a la date lue.
+    decalage = datetime(2026, 10, 13, 8, 0).astimezone().utcoffset() or timedelta(0)
     heures = int(decalage.total_seconds() // 3600)
     scenarios.append((
         f"8. PIEGE DU FUSEAU (machine a UTC{heures:+d}) : '08:00' locale parait plus "

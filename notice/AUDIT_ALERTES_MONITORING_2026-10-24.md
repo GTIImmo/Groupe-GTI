@@ -796,4 +796,8 @@ repasserait seul fin mars.
 **La sentinelle réelle n'est pas touchée** : `data.recherche_divergente` est `ok` (0) au passage de 06:49.
 
 **Correctif de l'ESSAI seulement** (1 ligne, l. 211) : prendre le décalage **de la date du scénario** —
-`datetime(2026, 10, 13, 8, 0).astimezone().utcoffset()` — au lieu de celui d'aujourd'hui. Non fait : il faut un « vas-y ».
+`datetime(2026, 10, 13, 8, 0).astimezone().utcoffset()` — au lieu de celui d'aujourd'hui.
+
+✅ **FAIT le 26/10** (« Corrige », Frédéric). Les 5 épreuves du moniteur sont vertes (le cas 8 passe en `warning`).
+**Témoin inverse** : avec un moniteur muté qui lit l'heure locale comme de l'UTC (le piège que ce cas surveille), le
+cas 8 **échoue** (`critical` au lieu de `warning`) — l'épreuve corrigée attrape toujours le piège.
