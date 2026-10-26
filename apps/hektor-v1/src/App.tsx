@@ -124,6 +124,8 @@ import {
   loadActionStatus,
   loadAffaireChampsApp,
   loadAffaireCarnetEtats,
+  loadAffaireCarnetEcarts,
+  trancherAffaireCarnetEcart,
   resolveAction,
   gesteLibelleFr,
   type ActionAbandonnee,
@@ -16902,9 +16904,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   // arrivee, en_attente, conflit, inconnu. Garde a PART de `carnetAffaires`
   // pour ne pas changer la forme d'une valeur lue a six endroits.
   const [carnetEtats, setCarnetEtats] = useState<Map<number, Record<string, string>>>(new Map())
+  // ⑧ R4 (26/10/2026) : les champs EN ECART qui attendent la reponse de l'admin (conflit, echec, attente
+  // de plus de 48 h), et la cle qui force la relecture du carnet apres une reponse.
+  const [carnetEcarts, setCarnetEcarts] = useState<Map<number, Set<string>>>(new Map())
+  const [carnetRelecture, setCarnetRelecture] = useState(0)
+  const [carnetEcartErreur, setCarnetEcartErreur] = useState('')
   useEffect(() => {
     const ids = statusChangeAffaires.map((a) => Number(a.app_affaire_id)).filter((n) => Number.isFinite(n))
-    if (!ids.length) { setCarnetAffaires(new Map()); setCarnetEtats(new Map()); return }
+    if (!ids.length) { setCarnetAffaires(new Map()); setCarnetEtats(new Map()); setCarnetEcarts(new Map()); return }
     let annule = false
     loadAffaireChampsApp(ids)
       .then((c) => { if (!annule) setCarnetAffaires(c) })
@@ -16912,8 +16919,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     loadAffaireCarnetEtats(ids)
       .then((e) => { if (!annule) setCarnetEtats(e) })
       .catch(() => { if (!annule) setCarnetEtats(new Map()) })
+    loadAffaireCarnetEcarts(ids)
+      .then((e) => { if (!annule) setCarnetEcarts(e) })
+      .catch(() => { if (!annule) setCarnetEcarts(new Map()) })
     return () => { annule = true }
-  }, [statusChangeAffaires])
+  }, [statusChangeAffaires, carnetRelecture])
 
   // ─── 1.4 : LES PERSONNES QUE HEKTOR N'A PAS GARDEES ─── 17/09/2026
   // Le registre recopie la liste de Hektor : une personne refusee disparait de
@@ -21413,6 +21423,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                         : etat === 'arrivee' ? 'arrivé'
                                         : etat === 'echec' ? 'échec, non envoyé'
                                         : etat === 'sans_objet' ? 'sans objet' : ''
+                                      // ⑧ R4 (26/10) : un champ EN ECART qui attend la reponse de l'admin
+                                      // (vue app_v_affaire_carnet_ecarts) porte ses deux gestes. Rien n'est
+                                      // envoye chez Hektor ; la base refuse un non-admin.
+                                      const gestes = isAdmin && x.app
+                                        && carnetEcarts.get(Number(a.app_affaire_id))?.has(x.cle)
+                                        ? gestesEcartCarnet(etat) : []
                                       return (
                                         <div key={k} className={x.app ? 'is-app' : undefined}>
                                           <span className="sca-k">{k}</span>
@@ -21421,11 +21437,29 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                             {dit ? (
                                               <i className={`sca-etat is-${etat}`}>{dit}</i>
                                             ) : null}
+                                            {gestes.map((g) => (
+                                              <button key={g.decision} type="button" className="sca-choisir" title={g.aide}
+                                                onClick={async (e) => {
+                                                  e.preventDefault(); e.stopPropagation()
+                                                  setCarnetEcartErreur('')
+                                                  try {
+                                                    await trancherAffaireCarnetEcart(Number(a.app_affaire_id), x.cle, g.decision)
+                                                    setCarnetRelecture((n) => n + 1)
+                                                  } catch (err) {
+                                                    setCarnetEcartErreur(err instanceof Error ? err.message : String(err))
+                                                  }
+                                                }}>
+                                                {g.libelle}
+                                              </button>
+                                            ))}
                                           </span>
                                         </div>
                                       )
                                     })}
                                   </div>
+                                  {carnetEcartErreur && carnetEcarts.has(Number(a.app_affaire_id)) ? (
+                                    <p className="sca-amb-d">Le geste n'est pas passé : {carnetEcartErreur}</p>
+                                  ) : null}
                                   {a.kind === 'offre' ? <HistoriqueOffre propositions={a.propositions_json} /> : null}
                                   <div className="sca-foot">
                                     <span>N° app <b>{a.app_affaire_id}</b></span>
@@ -27700,6 +27734,26 @@ function affaireAcquereursDeChaine(lignes: AffaireLedgerRow[]): CkAffaireParty[]
  *  (605967) : compte deux fois, « X et X ». Chaque ligne du registre porte la
  *  PAIRE pour son acquereur principal (`app_contact_id` / `hektor_acquereur_id`)
  *  -- on ramene le numero de Hektor au notre. Jamais par le nom. */
+// ⑧ R4 (26/10/2026) : les gestes offerts a l'admin sur un champ du carnet EN ECART, selon son verdict.
+//   conflit / echec : « prendre la valeur de Hektor » (la saisie est rangee puis retiree du carnet, la nuit
+//                     reprend Hektor) ou « garder la notre » (l'alerte se tait, R2 garde notre valeur) ;
+//   en attente      : « prendre la valeur de Hektor » ou « attendre encore » (R3 continue d'essayer).
+//   Autre verdict : aucun geste. La base refuse de toute facon ce qui ne va pas (app_affaire_carnet_ecart_trancher).
+//   Note : notice/ARCHITECTURE_REGISTRE_TRANSACTIONS_CHEZ_NOUS_2026-10-22.md §55.
+function gestesEcartCarnet(etat: string): Array<{ decision: 'hektor' | 'app' | 'attendre'; libelle: string; aide: string }> {
+  const hektor = { decision: 'hektor' as const, libelle: 'Prendre la valeur de Hektor',
+    aide: "Notre saisie est rangée (rien n'est perdu) puis retirée : la nuit prochaine, l'app affiche la valeur de Hektor. Rien n'est envoyé chez Hektor." }
+  if (etat === 'conflit' || etat === 'echec') {
+    return [hektor, { decision: 'app', libelle: 'Garder la nôtre',
+      aide: "L'app garde notre valeur et l'alerte se tait. Pour corriger aussi Hektor, utilisez « Modifier » quand il est disponible." }]
+  }
+  if (etat === 'en_attente' || etat === 'inconnu') {
+    return [hektor, { decision: 'attendre', libelle: 'Attendre encore',
+      aide: "L'alerte se tait ; le contrôle du matin continue d'essayer de prouver la valeur." }]
+  }
+  return []
+}
+
 function aliasNumerosAcquereur(lignes: AffaireLedgerRow[]): Map<string, string> {
   const alias = new Map<string, string>()
   for (const l of lignes) {

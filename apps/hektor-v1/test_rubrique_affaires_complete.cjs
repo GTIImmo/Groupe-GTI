@@ -55,7 +55,7 @@ const FONCTIONS = [
 ];
 const FONCTIONS_NEUVES = ["function aliasNumerosAcquereur(", "function ckPartiesDuJson(", "function ckNomsParties(",
   "function ckDetailDepuisRegistre(", "function ckResumeNuitAJour(", "function compromisVerrouilleParSaVente(",
-  "function etatFermeAuxTransactions("];
+  "function etatFermeAuxTransactions(", "function gestesEcartCarnet("];
 
 function monter(src) {
   const morceaux = [];
@@ -82,6 +82,7 @@ function monter(src) {
       ckResumeNuitAJour: typeof ckResumeNuitAJour === 'function' ? ckResumeNuitAJour : null,
       compromisVerrouilleParSaVente: typeof compromisVerrouilleParSaVente === 'function' ? compromisVerrouilleParSaVente : null,
       etatFermeAuxTransactions: typeof etatFermeAuxTransactions === 'function' ? etatFermeAuxTransactions : null,
+      gestesEcartCarnet: typeof gestesEcartCarnet === 'function' ? gestesEcartCarnet : null,
       repartitionChaineId: typeof repartitionChaineId === 'function' ? repartitionChaineId : null,
       viser: (a) => { __visee = a; }, poserAffaires: (l) => { statusChangeAffaires = l; } };`;
   const js = esbuild.transformSync(code, { loader: "ts" }).code;
@@ -267,6 +268,20 @@ function essai(api) {
     etat && etat({ statut_annonce: "Actif", numero_mandat: "13173" }, [{ ...VENTE, numero_mandat: "13173" }]) === null, "");
   ok("état : pas de fiche ou statut vide -> rien (la base décide)",
     etat && etat(null) === null && st("") === null, "");
+
+  // ⑧ R4 (26/10) : les gestes offerts sur un champ EN ECART, selon son verdict
+  {
+    const g = api.gestesEcartCarnet;
+    const d = (e) => (g ? g(e) : []).map((x) => x.decision).join(",");
+    ok("R4 : conflit et echec -> « prendre la valeur de Hektor » ou « garder la notre »",
+      d("conflit") === "hektor,app" && d("echec") === "hektor,app", J([d("conflit"), d("echec")]));
+    ok("R4 : attente (en_attente, inconnu) -> « prendre la valeur de Hektor » ou « attendre encore »",
+      d("en_attente") === "hektor,attendre" && d("inconnu") === "hektor,attendre", J([d("en_attente"), d("inconnu")]));
+    ok("R4 : arrive, sans objet, vide -> AUCUN geste",
+      d("arrivee") === "" && d("sans_objet") === "" && d("") === "", J([d("arrivee"), d("sans_objet"), d("")]));
+    ok("R4 : chaque geste dit ce qu'il fait (une aide), et rien n'est envoye chez Hektor",
+      g && g("conflit").every((x) => x.aide && x.libelle) && /Rien n'est envoyé chez Hektor/.test(g("conflit")[0].aide), "");
+  }
 
   // ⑧ (23/10) : le nom du notaire par sa fiche contact -- la lecture de l'assistant porte le numero de
   // HEKTOR (122190), le registre le notre (10064499).

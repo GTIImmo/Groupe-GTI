@@ -1837,6 +1837,47 @@ export async function fermerAffairePersonneEcart(id: number): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+/** ⑧ R4 (26/10/2026) : les champs du carnet EN ECART qui attendent la reponse de l'humain (conflit,
+ *  echec, attente de plus de 48 h ; vue app_v_affaire_carnet_ecarts, a_traiter). Rend, par transaction,
+ *  le nom des champs. Jamais d'exception : une lecture ratee (ou la vue pas encore posee) rend une carte
+ *  vide -- l'ecran n'offre alors aucun geste, et la sentinelle du moniteur continue de compter. */
+export async function loadAffaireCarnetEcarts(appAffaireIds: number[]): Promise<Map<number, Set<string>>> {
+  const vide = new Map<number, Set<string>>()
+  if (!hasSupabaseEnv || !supabase) return vide
+  const ids = Array.from(new Set(appAffaireIds.filter((id) => Number.isFinite(id))))
+  if (!ids.length) return vide
+  const { data, error } = await supabase
+    .from('app_v_affaire_carnet_ecarts')
+    .select('app_affaire_id,champ')
+    .in('app_affaire_id', ids)
+    .eq('a_traiter', true)
+  if (error || !data) return vide
+  const out = new Map<number, Set<string>>()
+  for (const l of data as Array<{ app_affaire_id: number; champ: string }>) {
+    const cle = Number(l.app_affaire_id)
+    const champs = out.get(cle) ?? new Set<string>()
+    champs.add(String(l.champ))
+    out.set(cle, champs)
+  }
+  return out
+}
+
+/** ⑧ R4 : la reponse de l'admin a un ecart du carnet. N'envoie RIEN chez Hektor.
+ *    'hektor'   la saisie est rangee puis retiree du carnet : la nuit reprend la valeur de Hektor ;
+ *    'app'      (conflit, echec) on garde la notre, l'alerte se tait ;
+ *    'attendre' (attente) l'alerte se tait, R3 continue d'essayer.
+ *  ⚠ LEVE : un geste qu'on croit fait et qui ne l'est pas est pire qu'une erreur. */
+export async function trancherAffaireCarnetEcart(
+  appAffaireId: number, champ: string, decision: 'hektor' | 'app' | 'attendre',
+): Promise<void> {
+  if (!hasSupabaseEnv || !supabase) throw new Error('Supabase is not configured')
+  await requireSupabaseUserId()
+  const { error } = await supabase.rpc('app_affaire_carnet_ecart_trancher', {
+    p_app_affaire_id: appAffaireId, p_champ: champ, p_decision: decision,
+  })
+  if (error) throw new Error(error.message)
+}
+
 /** Ce que l'assistant a rendu, pour les affaires données. Jamais d'exception :
  *  une lecture ratée rend une carte vide, et l'écran retombe sur le registre. */
 export async function loadAffairesConsole(

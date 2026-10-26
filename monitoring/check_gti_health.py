@@ -741,6 +741,46 @@ DATA_SENTINELS: list[dict[str, Any]] = [
             "limit": 5,
         },
     },
+    {
+        # Chantier 8 / R4 (26/10/2026) : les ECARTS DU CARNET DES TRANSACTIONS. Une ligne = une saisie partie
+        # chez Hektor (creation ou modification d'une offre, d'un compromis, d'une vente) que R3 a jugee en
+        # « conflit » (Hektor porte autre chose -- et R2 garde notre valeur : elle peut cacher une correction
+        # faite ensuite dans Hektor), en « echec » (rien n'est parti), ou « en attente » depuis plus de 48 h.
+        # Une ligne par CHAMP ; elle se tait des que l'admin a repondu dans la rubrique (« prendre la valeur de
+        # Hektor » / « garder la notre » / « attendre encore », app_affaire_carnet_ecart_trancher) -- une alerte
+        # ecoute la reponse de l'humain (lecon 23). WARNING comme ses soeurs : un ecart se REGARDE.
+        # Note : notice/ARCHITECTURE_REGISTRE_TRANSACTIONS_CHEZ_NOUS_2026-10-22.md §54-55.
+        "key": "data.affaire_ecart",
+        "severity": "warning",
+        "label": "Transactions saisies dans l'app : champs en conflit, en echec ou sans preuve",
+        "table": "app_v_affaire_carnet_ecarts",
+        "params": {"a_traiter": "eq.true"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "hektor_annonce_id,kind,hektor_affaire_id,champ,ecart,valeur_app,valeur_hektor",
+            "order": "ecrit_le.desc",
+            "limit": 5,
+        },
+    },
+    {
+        # Chantier 8 / R4 (26/10/2026) : les PERSONNES QUE HEKTOR N'A PAS GARDEES sur une transaction (1.4 du
+        # 17/09 : un acquereur ou un mandant envoye qui a disparu de la transaction). Le bandeau et son bouton
+        # « J'ai vu, fermer » existent dans la rubrique depuis le 17/09 -- mais aucune sonde ne les comptait :
+        # un bandeau qu'on n'ouvre pas ne prevenait personne. Elle se tait des que le bandeau est ferme.
+        "key": "data.affaire_personne_ecart",
+        "severity": "warning",
+        "label": "Transactions : personnes que Hektor n'a pas gardees",
+        "table": "app_affaire_personne_ecart",
+        "params": {"ferme_le": "is.null"},
+        "rule": "absolute",
+        "max": 0,
+        "sample": {
+            "select": "kind,hektor_affaire_id,role,contact_id,contact_nom",
+            "order": "constate_le.desc",
+            "limit": 5,
+        },
+    },
     # C.1' 24/08 -- les memes sentinelles pour les DEUX AUTRES objets. Elles n'existaient
     # que pour les annonces : un contact ou une recherche bloque ne remontait nulle part.
     # (`partial` n'existe pas sur ces deux tables -> pas de sonde equivalente.)

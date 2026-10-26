@@ -3017,3 +3017,48 @@ personnes, warning).
   l'humain qui choisit ⓐ.
 - **Les droits** : les deux fonctions refusent un non-admin (`admin_requis`), comme les sœurs.
 - **Le moniteur** : inchangé par rapport au §54.
+
+---
+
+## 56. R4 CODÉ — les écarts du carnet et les deux gestes : écrit, **non posé, non poussé** *(26/10, Frédéric : « vas-y »)*
+
+### Les pièces
+1. **Base** — `supabase/patch_r4_affaire_ecart_2026-10-26.sql` (+ `_INVERSE`, `_REPETITION`), générés par
+   `phase2/checks/gen_patch_r4_affaire_ecart.py` depuis **un seul corps** (`gen_patch_r4_affaire_ecart_corps.sql`, repris à l'identique
+   par le patch et la répétition). **Additif**, aucune fonction existante retouchée, **le carnet n'est pas modifié** :
+   - `app_affaire_carnet_decision` : la réponse de l'humain ; **notre saisie y est rangée** avant d'être retirée (« prendre Hektor ») ;
+     lecture pour les connectés actifs (comme le carnet), écriture par la seule fonction ;
+   - `app_v_affaire_carnet_ecarts` (`security_invoker`) : une ligne par champ — saisie envoyée en « conflit », « échec », ou « en attente » /
+     « inconnu » depuis plus de 48 h ; `a_traiter` = aucune décision pour **cette** saisie (`ecrit_le`) ;
+   - `app_affaire_carnet_ecart_trancher(affaire, champ, 'hektor' | 'app' | 'attendre')` — **admin seulement** ; refuse ce qui n'est pas un
+     écart, « attendre » hors d'une attente, « garder » hors d'un conflit ou d'un échec. **Rien n'est envoyé chez Hektor.**
+   - Le retour arrière **ne perd aucune décision** (table renommée si elle porte des lignes) et ne remet pas au carnet ce que l'humain a retiré.
+   - **La répétition : 14 contrôles**, à témoin positif (5 lignes d'essai sur 1001393 / 1001394 : conflit, échec, attente de 72 h, attente de
+     2 h, `saisie_app`) — la vue en montre exactement 3 ; un non-admin est refusé ; « garder » range et fait taire, la ligne reste ; une
+     saisie **réécrite** sonne de nouveau ; « prendre Hektor » range puis retire ; « attendre » ; les refus de forme ; ce que compterait la
+     sentinelle (1) ; puis le vrai retour arrière. Elle finit par « ESSAI ANNULÉ » : **rien ne reste**. ⚠ **Pas encore jouée** : la session ne
+     peut pas écrire en base, c'est Frédéric qui la colle.
+2. **Moniteur** — `monitoring/check_gti_health.py`, deux sentinelles **warning** : `data.affaire_ecart` (la vue, `a_traiter`) et
+   `data.affaire_personne_ecart` (les personnes que Hektor n'a pas gardées, `ferme_le is null`, dont le bouton « fermer » existe depuis le
+   17/09). Domaine `data_quality` posé par la boucle. 40 sentinelles, clés uniques.
+   ⚠ **Ce fichier est en service dès qu'il est enregistré** (la tâche le lit sur le serveur) : tant que le patch n'est pas collé,
+   `data.affaire_ecart` sera **« illisible »** (inconnu, sans e-mail) au passage du moniteur. **Coller le patch avant 08:48.**
+3. **Écran** — `lib/api.ts` : `loadAffaireCarnetEcarts` (jamais d'exception : vue absente = aucun geste) et `trancherAffaireCarnetEcart`
+   (lève). `App.tsx` : `gestesEcartCarnet(etat)` ; dans la grille des transactions de la modale, à côté du verdict, **pour l'admin et pour un
+   champ en écart seulement** : « Prendre la valeur de Hektor » + « Garder la nôtre » (conflit, échec) ou « Attendre encore » (attente) ;
+   une aide au survol dit ce que fait chaque geste ; après le geste, le carnet est relu ; une erreur s'affiche sous la grille.
+
+### Les essais
+- `npm run build` : **vert**.
+- `apps/hektor-v1/test_rubrique_affaires_complete.cjs` : **36/36** (4 neufs pour R4 : les gestes par verdict, aucun geste sur « arrivé » /
+  « sans objet », chaque geste porte son aide) ; **témoin inverse** : la version d'avant échoue les 3 contrôles qui exigent un geste.
+- Fins de ligne : `\r\r\n` = 0 partout (App.tsx, api.ts, moniteur en CRLF gardés ; SQL et générateur en LF).
+
+### Pour l'activer, dans l'ordre (chaque geste avec l'accord de Frédéric)
+1. **coller la répétition** → « ESSAI ANNULÉ -- 14 sur 14 » ;
+2. **coller le patch** → les 4 contrôles « OK » ;
+3. **pousser** (l'écran part par Vercel ; le moniteur est déjà en service) ;
+4. le moniteur suivant : `data.affaire_ecart` et `data.affaire_personne_ecart` **« ok »** (0) sur l'écran Santé — et une **vraie écriture**
+   (`observed_at` qui avance) ;
+5. **l'essai réel**, si Frédéric le veut : une ligne d'essai mise en « conflit » sur 24113 → elle sonne au moniteur, les deux boutons
+   apparaissent dans la modale, « garder la nôtre » la fait taire.
