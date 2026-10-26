@@ -752,3 +752,11 @@ compromis » — un compteur à 2 en permanence aurait menti).
 
 ⚠ **Non éprouvé en démonstration** : l'écran Contacts (aucun contact) ; une vraie déconnexion (pas de connexion en
 démonstration) ; le format téléphone. → essais réels avec Frédéric.
+
+### 14.2 ✅ POINT 2 PROUVÉ EN PRODUCTION (26/10, en ligne à 11:45:17, `index-DaNalipJ.js`)
+
+Frédéric : **les 5 essais réels sont bons** (Annonces, Contacts, raccourci de l'Accueil en vue par défaut, téléphone,
+déconnexion). ⚠ Un premier « souci » (« Bellevue » perdue) venait de l'**ancien code** : journaux de l'API, la liste
+redemandée **sans** « Bellevue » à 11:45:14 — **3 s avant** la mise en ligne (11:45:17) ; après rechargement, la liste
+est redemandée **avec** « Bellevue » (11:46:27). Leçon : après un déploiement, l'onglet ouvert garde l'ancien code
+tant qu'on ne recharge pas — vérifier l'heure de l'essai contre l'heure de mise en ligne avant de chercher un défaut.
