@@ -872,3 +872,42 @@ aujourd'hui que la liste, la fiche, le contact et les dates de clôture.
   écart à la règle des hooks React, existant.
 
 Interrupteur proposé : `RUBRIQUES_SE_RELISENT`. Front seul, rien chez Hektor.
+
+---
+
+## 17. 3b + 3c ENSEMBLE — « l'écran suit le clic » (re-audit du 26/10, rien codé)
+
+*Frédéric : « pourquoi il n'y a pas un comportement en temps réel, puisque tout est écrit chez nous sauf quelques
+gestes ? »* → Réponse : l'écran a gardé le réflexe « Hektor d'abord » (attendre la fin du travail) alors que la base est
+passée « chez nous d'abord » (chantier ③, 14/10). Le **vrai temps réel** (voir les gestes des AUTRES) est un chantier à
+part, déjà étudié le 10/10 (`AUDIT_RELECTURES_OUVERTURE_2026-10-09.md` §6 : faisable par signaux Broadcast, pas
+nécessaire tout de suite). Décision du 26/10 : **3b et 3c ensemble**.
+
+**Le principe** : après chaque geste, **relire tout de suite** (la donnée est déjà chez nous), rubriques comprises (3b),
+puis **encore une fois à la fin du travail Hektor** (filet : si Hektor refuse, le worker remet l'ancien état en base).
+
+| geste | écrit chez nous au clic ? | aujourd'hui (revérifié) | proposé |
+|---|---|---|---|
+| **refuser / accepter une offre, annuler / supprimer un compromis ou une vente** (F1) | ✅ `app_geste_affaire_optimistic` | la fenêtre se ferme, **rien ne bouge** ; travail **non suivi** (`handleGesteHektor`, l. 17862) | relire au clic **et suivre le travail** (relire à sa fin) |
+| **changer le statut, créer offre / compromis / vente** (B1, F2) | ✅ `app_change_annonce_status_optimistic` | liste à la fin (~55 s), **Affaires jamais** | au clic + à la fin, Affaires comprises |
+| **archiver / désarchiver** une annonce (B1) | ✅ `app_archive_…` / `app_restore_annonce_optimistic` | à la fin (~1 min) | au clic + à la fin |
+| **affecter un négociateur** (B1) | ✅ `app_assign_negotiator_optimistic` | à la fin | au clic + à la fin |
+| **créer une recherche** (A3) | ✅ (écrite avec le travail, `ContactSearchModal` l. 80) | invisible jusqu'au retour de Hektor : la création **n'émet pas** `hektor:search-updated` (seule la modification le fait, l. 73) | émettre le même signal à la création |
+| **supprimer une recherche** (B2) | ⛔ **non** : travail seul (`app_console_create_delete_contact_search_job`) | disparaît au retour de Hektor | afficher « suppression en cours » au clic, retirer à la fin — **pas** de retrait optimiste (si Hektor refuse, elle doit rester) |
+| **lier / retirer un mandant** (A4, F10) | ✅ `app_link_mandant_optimistic` / `app_unlink_…` | le bloc des mandants ne se relit qu'au changement d'annonce (l. 3336, 3630 : `onJobCreated` seul) | brancher le bloc sur le signal, relire au clic |
+| **« Abandonner ce geste »** (F8) | ✅ valeurs **remises en base** | la fiche **affiche encore les valeurs abandonnées** (`GesteAbandonneBanner`, l. 35660-35676 : message seul) | relire la fiche au clic |
+| **accepter une demande d'annulation** (F6) | ✅ date de clôture écrite au clic | registre relu à la fin du travail « Clos » | relire au clic (⚠ circuit **dormant** : 0 demande depuis le 02/06) |
+| **activer un brouillon** | ⛔ non optimiste | à la fin | **inchangé** |
+
+**3b (rubriques relues)** : Affaires (bureau + téléphone), Documents du cockpit, signatures, panneau Documents, **et le
+bloc des mandants** → branchés sur le signal, **sans se vider** pendant la relecture (§16).
+
+**Ce que ça pourrait casser** :
+- **F1 suivi** : suivre ces travaux fera apparaître la modale « Suivi de l'action » pour ces gestes aussi (comme pour les
+  autres, jusqu'au point 6). C'est ce qui permet de voir un **refus de Hektor** (état remis) à la fin du travail ;
+- **plus de relectures** : une de plus par geste (liste + fiche ouverte), dans notre base seulement ;
+- **un geste refusé par Hektor** s'affichera d'abord comme réussi (au clic), puis reviendra à la fin du travail. C'est
+  déjà la règle de la base (« chez nous d'abord, Hektor confirme ») — l'écran la rend visible ;
+- la suppression de recherche **n'est pas** rendue optimiste : seulement un état « en cours ».
+
+Front seul, rien chez Hektor, interrupteur `L_ECRAN_SUIT_LE_CLIC`.
