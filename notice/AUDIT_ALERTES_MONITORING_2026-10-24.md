@@ -648,6 +648,25 @@ besoin de pousser pour lui ; pousser reste à faire pour l'historique.
 **Noté en passant** : à 06:48, le moniteur a eu un **57014 sur `rpc/app_cron_health`** (même délai de 8 s) —
 c'est la sonde des tâches planifiées. Non traité.
 
+## 2 septies. LE RUN DU 26/10 (04:00 → 06:11) — CONTRÔLE DES TROIS CORRECTIFS ✅
+
+| point | mesure | verdict |
+|---|---|---|
+| **ménage des orphelins** (§2 sexies) | `DONE phase2 menage orphelins de recherche attempt 1/2` (06:01:03 → 06:01:04) ; réponse `{"ok": true, …}` et « 0 ligne(s) rattachée(s), 0 supprimée(s) » au journal `quotidien_2026-10-26_04-00-01.log` ; battement `phase2.menage_orphelins_recherche` `success` à 06:01:04 ; **journal du ménage : 2 lignes `ok` cette nuit** — le cron (06:00:00) **et, pour la première fois, l'étape du run par l'API** (06:01:03) ; aucun `plancher` | ✅ **PROUVÉ PAR L'API** |
+| **adresses photos** (§2 bis) | 1re tentative, 0,6 s + 1,8 s + 0,1 s | ✅ |
+| **filet des listes** (§2 ter) | offres COMPLETE (5 retirées) · compromis **COMPLETE** 10 626/10 626 (10 retirées, les fantômes de mars) · ventes SAUTES EXPLIQUES, 1 gardée | ✅ comme le 25/10 |
+| **les 11 transactions** | registre : **31 086** lignes vues à 05:xx, **toutes présentes** = 11 193 + 10 626 + 9 267 ; 0 marquée absente depuis le 24/10 | ✅ |
+| **moniteur 06:48** | `logs.pipeline.latest` ok ; `data.transaction_disparue` ok (0) ; **reste 1 rouge** : le balayage des photos masquées | voir dessous |
+
+**Le seul rouge : `GTI Balayage Photos Masquees`, résultat 1.** Pas lié à ces correctifs : la tâche est partie à **23:00**
+(heure d'hiver, décalage figé `+01:00`, décision du 25/10 « laisse comme cela ») et sa garde horaire (« refus après 1 h »)
+a refusé : 23 > 1. Une nuit de balayage perdue, rien posé. ✅ **Déjà corrigé par une autre session** (`fdc2d33`, poussé :
+fenêtre « du soir à 1 h »). Le rouge tombera après le passage de **ce soir 23:00**.
+
+**Passager, non traité** : à 04:49 (pendant la lecture des listes Hektor), la sentinelle `data.transaction_disparue` a été
+coupée à 8 s (57014) — **1re fois** pour elle ; revenue ok à 06:49 (requête mesurée à 42 ms). Même famille que
+`data.rapprochement_sur_archivee` (15 coupures depuis le 04/09) et `rpc/app_cron_health` (25/10).
+
 ## 3. Ce qu'on peut retirer tout de suite, sans toucher à aucun garde-fou
 
 - **n° 4 et n° 5** : trancher les 6 lignes dans l'écran Santé. Elles sortent du compte, la sonde reste.
