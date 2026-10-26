@@ -676,3 +676,21 @@ dans le journal de la descente.
   découpée par l'arbre syntaxique, les réglages lus dans le bloc `param`, heure par heure ; **témoin inverse** : l'ancienne garde refusait
   23:00 ; le branchement vérifié) ; **mutant** « ancienne règle » attrapé (2 contrôles rouges). Script : 0 erreur d'analyse, BOM gardé.
   ➡ **Actif dès qu'il est poussé** (la tâche lit le fichier à chaque départ) : la prochaine nuit à 23:00 doit poser son lot (code 0).
+
+### 26/10 — les 5 négociateurs refusés en 403 (16, 19, 20, 21, 24) : **pas nouveau, c'est le rendez-vous mensuel** *(Frédéric : « peux-tu vérifier »)* — lecture seule
+- **Ce que fait le run** (`sync_raw.py`, `sync_missing_negos_by_id`, l. 810) : il cherche les numéros de négociateur cités par les annonces
+  du listing actif mais absents des listes de négociateurs de Hektor, et demande leur fiche (`getNegoById`). ⭐ **Un anti-rejeu** saute
+  ceux qui ont échoué il y a moins de **30 jours** (`recently_failed_nego_ids`, l. 796).
+- **L'historique** (`data/hektor.sqlite`, `sync_error`) : les 5 échouent **depuis le 20/06/2026** — 7 fois en juin, puis **une fois par mois,
+  exactement à l'expiration des 30 jours** : 25/07, 25/08, 25/09, **26/10**. « Aucune les nuits d'avant » était donc l'anti-rejeu, pas une
+  absence. Dernière fiche de négociateur lue avec succès : le 03/04/2026.
+- **Ce qui a changé** : la RÉPONSE de Hektor. Jusqu'au 25/09 : un corps vide (« pas de JSON valide ») ; le 26/10 : **403 Forbidden**. Hektor
+  répond désormais « interdit » pour un compte de négociateur supprimé. Le reste du run n'a eu aucun refus (fiches de contacts 2/2, listes
+  complètes, push) : **pas un signe de bannissement**.
+- **Qui ils sont** : des comptes anciens, toujours cités par des annonces — 288 dans le listing actif (16 : 159, 24 : 86, 19 : 19, 20 : 12,
+  21 : 12). Dans l'app, **198 biens, tous en « Estimation »**, et leur nom est connu : 16 Pauline GIRINON (158), 19 Franck GERPHAGNON (18),
+  20 Frédéric GERPHAGNON (12), 21 Delphine BLANCHARD (10) ; 24 n'a aucun bien dans le parc vivant.
+- **Effet** : aucun sur l'app (les noms sont déjà connus, le run continue). Coût : 5 appels une fois par mois.
+- ⬜ **Rien à corriger sans décision** — si on le voulait : faire tenir l'anti-rejeu sur un 403 aussi longtemps que sur un corps vide (c'est
+  déjà le cas), ou ne plus jamais re-tenter un compte qui a échoué depuis 4 mois. Lien avec la décision du 13/10 sur les négociateurs
+  inactifs (« on ne touche à rien »). **Noté, pas modifié.**
