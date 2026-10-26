@@ -679,3 +679,10 @@ mobile accepte aussi `openContactId`.
 du contact par-dessus l'annonce (le contact d'essai `P-7801` n'existe pas : l'adresse suit, la fiche ne s'affiche
 pas) ; la **connexion Google** (pas de connexion en démonstration) ; la touche retour d'un **vrai** Android. → à
 éprouver en production avec Frédéric.
+
+### 13.2 ✅ POINT 1 PROUVÉ EN PRODUCTION (26/10, en ligne à 11:16:30, `index-DgY4J4V_.js`)
+
+Frédéric a joué les **6 essais réels** et les déclare **tous bons** : (1) annonces — précédent / suivant ; (2) F5 et lien
+dans un nouvel onglet ; (3) écran Contacts — ouverture, précédent / suivant, F5 ; (4) contact par-dessus une annonce,
+ses boutons inchangés ; (5) lien ouvert en navigation privée → connexion Google → arrivée **sur la fiche** ; (6) touche
+retour d'Android → la fiche se ferme, l'app reste ouverte. Les réserves du §13.1 (contacts, connexion, Android) sont levées.
