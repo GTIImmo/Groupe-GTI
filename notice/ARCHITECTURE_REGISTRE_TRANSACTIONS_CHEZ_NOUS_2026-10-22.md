@@ -3122,3 +3122,21 @@ nuit n'a plus de miroir — c'est exactement « l'écriture meurt » du 22/10.
 
 ### ⛔ DÉCISION DE FRÉDÉRIC (26/10) : **B — R5 est rangé dans l'étape 3** *(« B, donc dans l'étape 3 »)*
 Avec T1 (le worker défait l'état si Hektor refuse, décision du 29/08) et T3 (modifier sans numéro Hektor) : un seul chantier de la coupure, « l'état d'une transaction chez nous ». Inscrit au plan (`PLAN_DEV_ACTUALISE_2026-08-20.md`, « Ce qui n'est PAS ici » et le journal du 26/10). **Ne pas relancer en étape 2.**
+
+---
+
+## 58. LES POINTS RESTANTS, UN PAR UN — *(Frédéric, 26/10 : « on va corriger tous ces points un par un, mais fais un audit à chaque fois avant de me proposer »)*
+Ordre suivi : celui de sa question (1, 2, 4, 5, 6, 7).
+
+### Point 1 — le blocage en base des transactions sur une Estimation (§46) : audit du 26/10, lecture seule
+- **La fonction n'a pas bougé depuis la préparation** : `app_change_annonce_status_optimistic` porte toujours **44697dd5** (l'empreinte
+  attendue par le patch). L'interrupteur `transaction_refusee_sur_estimation` n'existe pas encore (patch non posé).
+- **C'est la SEULE porte qui crée une transaction** : aucune autre fonction n'insère dans `app_affaire_ledger` (lu dans la base).
+- **Dans la vraie vie, personne ne pose de transaction sur une Estimation** : sur les biens aujourd'hui en Estimation, le registre ne porte
+  que des transactions **anciennes** (2017-2021 : 8 compromis « active », 12 offres acceptées, 8 ventes — des biens vendus puis réestimés) ;
+  **0 depuis le 01/01/2026, 0 née dans l'app**. ➡ Le blocage ne gênera aucun usage réel ; il ferme une porte qu'on ne prend que par erreur
+  (une offre posée sur une estimation **change son statut** : Estimation → Sous offre, mesuré au 24/10).
+- **Les transactions anciennes ne sont pas touchées** : le patch ne regarde que la **création** ; modifier, supprimer, Actif, Clos passent.
+- **Le bien d'essai** de la répétition (10000009 / 63331) est toujours en Estimation, **0 transaction, 0 travail en cours** : la répétition
+  joue telle quelle.
+- **L'écran** cache déjà les boutons sur une Estimation (poussé le 24/10) et traduit le refus `transaction_sur_estimation` (`api.ts` l. ~10500).
