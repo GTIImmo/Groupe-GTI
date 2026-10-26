@@ -1516,15 +1516,18 @@ class Monitor:
                 },
             )
         except Exception as exc:
+            # ⛔ 26/10/2026 : meme repli que cron.health (« ok, en attente de migration » sur
+            #   TOUTE erreur). Jamais mordu en 362 passages, mais une lecture ratee n'est
+            #   jamais un vert.
             self.add(
                 "workers.heartbeat",
                 "system",
                 "workers",
                 "heartbeat",
-                "ok",
-                "Heartbeat workers en attente de migration (patch_worker_heartbeat_2026-07-04.sql)",
-                {"pending_migration": True, "error": str(exc)[:300]},
-                severity="info",
+                "unknown",
+                f"Heartbeat workers illisible: {str(exc)[:160]}",
+                {"error": str(exc)[:300]},
+                severity="unknown",
             )
             return
         rows = rows or []
@@ -2104,6 +2107,11 @@ class Monitor:
         """
         if not self.supabase:
             return
+        # ⛔ 26/10/2026 : UNE LECTURE RATEE N'EST JAMAIS UN VERT. Ce bloc disait « ok, en
+        #   attente de migration » sur TOUTE erreur -- repli de juillet, migration posee
+        #   depuis. Mesure sur 362 passages (26/09 -> 26/10) : 146 coupures a 8 s (57014)
+        #   affichees VERTES, dont un warning reel efface le 23/10. On dit « illisible ».
+        #   Audit : notice/AUDIT_ALERTES_MONITORING_2026-10-24.md §4.
         try:
             rows = self.supabase.request("rpc/app_cron_health", method="POST", payload={})
         except Exception as exc:
@@ -2112,10 +2120,10 @@ class Monitor:
                 "system",
                 "cron",
                 "pg_cron",
-                "ok",
-                "Sante pg_cron en attente de migration (patch_cron_health_rpc_2026-07-04.sql)",
-                {"pending_migration": True, "error": str(exc)[:200]},
-                severity="info",
+                "unknown",
+                f"Sante pg_cron illisible: {str(exc)[:160]}",
+                {"error": str(exc)[:200]},
+                severity="unknown",
             )
             return
         rows = rows or []
@@ -2131,7 +2139,12 @@ class Monitor:
             stale_limit = cron_expected_interval_minutes(row.get("schedule")) + margin
             if last_status == "failed":
                 problems.append({"job": jobname, "reason": "dernier run en echec"})
-            elif age is not None and age > stale_limit:
+            elif age is None:
+                # ⚠ 26/10 : une tache ACTIVE sans passage connu etait IGNOREE (`age is not
+                #   None`). Depuis que app_cron_health ne lit plus que les ~50 000 derniers
+                #   passages (~4,8 jours), une tache morte au-dela tombe ICI : elle doit sonner.
+                problems.append({"job": jobname, "reason": "aucun passage connu (~5 derniers jours)"})
+            elif age > stale_limit:
                 problems.append({"job": jobname, "reason": f"pas de run depuis {age:.0f} min"})
         for item in problems:
             slug = str(item["job"]).replace(" ", "_").replace("-", "_")
@@ -2964,10 +2977,10 @@ class Monitor:
             r = self.supabase.request("rpc/app_contact_retraduire_satellites", method="POST",
                                       payload={"p_appliquer": False})
         except Exception as exc:
-            self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "ok",
-                     "Satellites des contacts : en attente du patch "
-                     "(patch_retraduire_satellites_2026-09-24.sql)",
-                     {"pending_migration": True, "error": type(exc).__name__}, severity="info")
+            # ⛔ 26/10/2026 : meme repli que cron.health -- une lecture ratee n'est jamais un vert.
+            self.add("data.contacts_satellites", "data_quality", "contact", "absolute", "unknown",
+                     f"Satellites des contacts illisibles: {type(exc).__name__}: {str(exc)[:140]}",
+                     {"error": f"{type(exc).__name__}: {str(exc)[:200]}"}, severity="unknown")
             return
         if isinstance(r, str):
             try:

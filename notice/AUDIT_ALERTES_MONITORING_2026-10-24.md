@@ -742,3 +742,37 @@ devient illisible puis redevient rouge **renvoie un e-mail**. Sans effet aujourd
 
 **Recommandation : A1 + A2 ensemble** (la sonde est aveugle 4 fois sur 10 et le cache), puis **B**. A3 et C sont du
 confort. Le reste de l'option A du 14/10 (retirer le résumé de « Alertes à traiter ») est **toujours ouvert**.
+
+### 4.4 ✅ A1, A2 ET B POSÉS LE 26/10 (~07:45, « A1 a2 et b vas y », Frédéric)
+
+**Contre-étude d'abord** (« refais une étude du projet pour être sûr ») — ce qu'elle a trouvé et changé :
+- ⭐ **Le défaut avait une famille** (leçon 9) : le même repli « ok, en attente de migration » existait dans **3** sondes —
+  `cron.health`, `workers.heartbeat` et **`data.contacts_satellites`** (non citée au §4.3). Les deux dernières n'ont
+  **jamais** menti en 362 passages, mais portaient le même défaut, dormant. **A1 couvre les trois.**
+- ⚠ Les deux vues sont en **`security_invoker`** : la vue lit `app_monitor_event` avec les droits de l'écran. Vérifié :
+  même politique que `app_monitor_status` (admin/manager) — qui voit l'alerte voit son journal.
+- ⚠ Le principe du patch du 05/07 (« jamais masquée à tort ») est **gardé** : une alerte qui repart est une transition,
+  donc un événement, donc « new » — témoin 5 de la répétition.
+- Fenêtre de A2 ramenée de 200 000 à **50 000 passages** (~4,8 jours) : pire cas mesuré 1,25 s → ~0,3 s par tâche
+  morte ; une tâche quotidienne n'a jamais plus de ~10 000 passages de retard ; au-delà, A1 la fait sonner.
+- `app_cron_health` n'a **qu'un appelant** (le moniteur) ; `alerts_governed` **qu'un lecteur** (l'écran Santé) ; ni
+  vue ni fonction n'en dépend ; `CREATE OR REPLACE` garde propriétaire, droits et options (vérifié après pose).
+- Les CHECK de `app_monitor_status` acceptent `unknown` (statut et sévérité) et les domaines utilisés.
+- La 2e session avait modifié le moniteur ce matin (`a683709`, R4) : elle est dans ma copie, aucune collision.
+
+| pièce | fichiers | épreuve | posé | preuve |
+|---|---|---|---|---|
+| **A1** | `monitoring/check_gti_health.py` (3 replis + « aucun passage connu ») | `monitoring/test_sonde_illisible_jamais_verte.py` **18/18**, et **8 rouges avec l'ancien code** (témoin inverse) ; les 4 autres épreuves du moniteur inchangées | actif au prochain passage (script sur le disque) | — |
+| **A2** | `supabase/patch_cron_health_rapide_2026-10-26*.sql` | répétition : mêmes 12 tâches, **0 écart**, **3 967 ms → 6 ms** (10 396 ms à la 1re répétition), droits et `security definer` gardés, retour **exact** à `ac303763` | empreinte **`193cd0a3`** (= répétition) | **par l'API, la sonde A1 + A2 : 108 ms, « 12 jobs suivis, 0 en anomalie »** (lecture seule, rien écrit) |
+| **B** | `supabase/patch_alerte_resolu_tient_2026-10-26*.sql` | répétition : **0 réponse changée sur 1 819 lignes** ; clic + repassage → ancienne règle `new` / nouvelle `resolved` ; transition après le clic → `new` ; clic de 8 jours → `new` ; vue lue en 2 ms ; retour **exact** à `13f1ee80` | empreinte **`0e06e8ae`** (= répétition) | à voir à l'écran au prochain clic « Résolu » |
+
+⚠ **1re répétition de A2 « STOP » à tort** : 6 passages « connecting » étaient devenus « succeeded » pendant les 10 s de
+l'ancienne lecture. Règle de comparaison corrigée (un passage *en cours* a le droit de finir), rejouée verte.
+
+⚠ **Trouvé au passage, pas traité** : `monitoring/test_recherche_divergente_fraicheur.py` échoue (cas 8, « piège du
+fuseau ») — **aussi avec l'ancien code**, donc pas lié ; probablement le passage à l'heure d'hiver (l'épreuve suppose
+UTC+2). Et `cron.health:<tâche>` n'est pas dans les familles « retour à la normale » : une ligne de tâche résolue reste
+jusqu'à la purge.
+
+⏰ **À voir au passage de 08:48** : `cron.health` lu (plus jamais « en attente de migration ») ; et le rouge du balayage
+photos tombera après **23:00**.
