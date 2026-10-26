@@ -3151,3 +3151,54 @@ Ordre suivi : celui de sa question (1, 2, 4, 5, 6, 7).
   ce bien est en Estimation… passez-le d'abord en Actif »** ; offre sur le bien Actif 1337936 → **acceptée**. Vérifié après : les deux biens
   inchangés, 0 ligne neuve, 0 travail.
 - **Retour arrière** : `update app_setting set value = 'off' where key = 'transaction_refusee_sur_estimation'`, ou le patch inverse.
+
+### Point 2 — LA PIÈCE 5 (les acquéreurs projetés dans les liens d'un contact) : audit du 26/10, lecture seule
+
+**La vue aujourd'hui** (`app_contact_relations_current`, `security_invoker`, 18 colonnes) : branche 1 = mandants / propriétaires depuis
+`app_relation` (notre registre) ; branche 2 = `app_contact_relation_current WHERE role_contact LIKE 'acquereur%'` (la table refaite chaque
+nuit depuis Hektor : 13 293 compromis, 11 172 offres, 10 540 ventes = 35 005 liens, tous à notre numéro).
+
+**Qui la lit** (mesuré) :
+- **l'écran** : la fiche d'un contact (`loadContactRelations`, `select *` par `hektor_contact_id`), les invités d'un RDV par bien
+  (`hektor_contact_id, role_contact, relation_source, last_seen_at` par dossier), les mandants d'un bien (branche 1 seulement) ; les colonnes
+  utilisées pour un acquéreur : `role_contact`, `transaction_type / _id / _state / _date / _amount`, `is_active_annonce` (tri et filtre),
+  `contact_date_maj` (une date d'activité), `numero_mandat`, `numero_dossier`, `titre_bien`. **`relation_key` n'est lue nulle part** ;
+  `relation_source` est transmise, jamais interprétée ;
+- **la base** : `app_contact_activite` et `app_unlink_mandant_optimistic` — **branche 1 seulement** (mandants / propriétaires) ;
+- **le serveur** : **personne** — la vue est dans `VUES_NON_DESCENDUES` depuis le 12/10 (`pull_from_supabase.py`) ; le script des contacts
+  ne la cite qu'en commentaire.
+
+**La projection, comparée colonne par colonne aux 35 005 liens de la nuit** (chaque personne d'une liste par `app_contact_id`, plus le
+principal) :
+| colonne | écart | explication |
+|---|---|---|
+| annonce, dossier, date de la transaction | **0** | identiques |
+| `is_active_annonce` | règle trouvée | la nuit = « le bien n'est PAS dans l'index des archives » (0 exception sur 35 005) — on recopie la règle |
+| état d'une vente | 10 540 | la nuit écrit le mot « vente » ; le registre laisse vide → on recopie « vente » |
+| montant d'une offre | 11 117 | la nuit n'en porte **aucun** ; le registre l'a → **en plus**, visible sur la fiche (à trancher : le montrer ou non) |
+| numéro de mandat | 20 | la nuit porte le mandat **courant** du bien, le registre celui **de la transaction** (8377 : 18469 / 16931 ; 24113 offre 32849 : 18787 / 1) — le registre est le juste |
+| `contact_date_maj` | 1 973 | la date de mise à jour du contact, prise à des heures différentes (la nuit / la fiche) — sans effet |
+| liens en plus | 17 → **3** | 14 sont des transactions que Hektor ne liste plus (`present_in_hektor = false`) : **on les écarte**, comme la nuit ; restent 3 offres d'essai nées dans l'app (24933) |
+⚠ **Correction** de ce que j'avais écrit au §16 : 47146 et 62097 ne sont pas des offres nées dans l'app, ce sont des transactions retirées chez
+Hektor.
+
+**La vitesse — le vrai sujet** (mesuré par `EXPLAIN ANALYZE`) : la fiche d'un contact lit ses liens à chaque ouverture.
+- projection naïve (déplier les 31 103 listes) : **0,36 s** ;
+- projection en deux parts (le principal par sa colonne ; les co-acquéreurs **seulement dans les 2 451 listes à plusieurs personnes**) :
+  **0,12 s** sans index ;
+- avec **deux index** sur le registre (le principal par son numéro en texte ; un index partiel sur les listes à plusieurs personnes) :
+  quelques millisecondes attendues — **à mesurer après la pose** (la table de nuit répond aujourd'hui par index).
+
+**Le lien avec le point 4** : le worker réécrit la liste d'acquéreurs, en journée, sans notre numéro → un **co-acquéreur** d'une transaction
+créée le matin n'apparaîtrait qu'après la nuit (le principal, lui, apparaît tout de suite : sa colonne `app_contact_id` est posée au clic).
+
+### La proposition — à arbitrer par Frédéric
+1. **Patch de base** (inverse + répétition) : les deux index (additifs), puis `create or replace view` : **la branche 1 inchangée au caractère
+   près**, la branche 2 = la projection (mêmes 18 colonnes, mêmes types) — `relation_key` = `aff_<transaction>_<contact>` (unique, lue par
+   personne), `relation_source` = `registre_transactions`, `transaction_state` = « vente » pour une vente, `is_active_annonce` = pas dans les
+   archives, les transactions retirées chez Hektor écartées.
+2. **La table de nuit n'est pas touchée** : elle continue d'être refaite ; elle ne sert plus à la fiche. Retour arrière = l'ancienne vue.
+3. **Essais** : la répétition compare la vue neuve à l'ancienne sur **tous** les contacts (35 005 liens retrouvés, les écarts du tableau
+   seulement), mesure le temps d'une fiche, et rejoue l'inverse.
+4. **À trancher** : montrer le **montant des offres** sur la fiche (nouveau) ou le masquer comme aujourd'hui ; et faire le **point 4** avant ou
+   après (sinon les co-acquéreurs d'une transaction du jour attendent la nuit).
