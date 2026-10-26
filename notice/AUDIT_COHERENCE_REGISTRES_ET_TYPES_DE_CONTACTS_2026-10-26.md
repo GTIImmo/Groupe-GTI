@@ -637,3 +637,26 @@ chantiers 1 et 2 :
 ### ⏳ À TRANCHER PAR FRÉDÉRIC
 - **Q1 — le montant des offres** sur la fiche d'un contact (nouveau : 11 117 offres) : **le montrer**, ou le **masquer** comme aujourd'hui ?
 - **Q2 — le « vas-y »** pour le patch, puis son application (écriture en production).
+
+## 14. LA PIÈCE 5 ÉCRITE *(26/10, « vas-y » de Frédéric)* — **le patch n'est PAS appliqué**
+
+- **Q1 non tranchée** (le montant des offres) : je garde le comportement d'aujourd'hui — **masqué** (`NULL` pour une offre, comme la nuit). Une
+  ligne du patch (`WHEN (l.kind = 'offre') THEN NULL`) à retirer si Frédéric choisit de le montrer.
+- **La vue écrite** (`supabase/patch_piece5_acquereurs_depuis_registre_2026-10-26.sql`, généré par un script — pas retapé) : la branche 1
+  (mandants / propriétaires) **gardée au caractère près** ; la branche des acquéreurs en **deux morceaux** sur le registre des transactions —
+  le **principal** (`app_contact_id`) et les **co-acquéreurs** (seulement les listes à plusieurs, ou sans principal ; le principal n'y est pas
+  répété) — pour que la lecture **par contact** (la fiche) ET **par bien** (les invités d'un RDV) passent par un index.
+- **Deux index additifs** : `idx_app_affaire_ledger_contact_texte` (le principal en texte, l'expression exacte de la vue) et
+  `idx_app_affaire_ledger_plusieurs_acquereurs` (partiel, les 2 447 listes à plusieurs).
+- ⚠ **Piège évité en écrivant** : Postgres n'évalue pas les conditions dans l'ordre écrit — `jsonb_array_length` plantait sur une liste en
+  objet seul (une offre). Protégé par un `CASE`, comme ailleurs dans le projet.
+- **Comparaison en lecture seule, sur TOUS les contacts** : **35 005 / 35 005** liens de la nuit retrouvés, **0** clé en double, +3 offres
+  d'essai (24933) ; dossier, état, date, montant, bien actif : **identiques** ; numéro de mandat : **20** écarts (le registre a le juste ; les
+  7 396 autres apparents n'étaient qu'une chaîne vide contre une valeur nulle) ; date de mise à jour du contact : 1 973 (sans effet) ; n° de
+  dossier 4, titre 1.
+- **Vérification à blanc du patch** (un bloc qui fait tout, sauf créer la vue, puis s'arrête) : empreinte `acf77be8` reconnue, une seule
+  branche trouvée, et Postgres **accepte** la vue reconstituée (`EXPLAIN` sans erreur). Rien écrit.
+- **L'inverse** remet la vue d'avant **à l'octet** (empreinte vérifiée avant d'écrire) et retire les deux index. **La répétition** compare la
+  vue neuve à la table de nuit et donne les deux mesures de temps (par contact, par bien).
+- **Le temps** ne se mesure qu'avec les index posés : ce sera la première chose après l'application (cible : de l'ordre des 9,6 ms d'aujourd'hui).
+- **Aucun push, aucun redémarrage** : c'est une vue en base.
