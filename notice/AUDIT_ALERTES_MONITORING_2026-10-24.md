@@ -776,3 +776,24 @@ jusqu'à la purge.
 
 ⏰ **À voir au passage de 08:48** : `cron.health` lu (plus jamais « en attente de migration ») ; et le rouge du balayage
 photos tombera après **23:00**.
+
+### 4.5 L'essai `test_recherche_divergente_fraicheur.py` qui échoue — analysé le 26/10 : **l'ESSAI se trompe, pas le moniteur**
+
+Le cas 8 (« piège du fuseau ») compare une copie descendue le `2026-10-13T08:00:00` (heure **locale**, sans fuseau) à un
+natif écrit le `2026-10-13T07:00:00+00:00`. Pour savoir ce qu'il attend, l'essai prend le décalage de la machine
+**AUJOURD'HUI** (`datetime.now().astimezone().utcoffset()`, l. 211) — mais la date du scénario est le **13/10, en heure
+d'été**.
+
+| | le 13/10 (date du scénario) | lu par le moniteur | ce que l'essai croit |
+|---|---|---|---|
+| `08:00` locale | UTC+2 → **06:00 UTC** | 06:00 < 07:00 → copie **plus vieille** → `warning` ✅ juste | décalage d'aujourd'hui UTC+1 → 07:00 UTC = 07:00 → pas plus vieille → `critical` ❌ |
+
+Mesuré : `parse_iso_locale_si_sans_fuseau('2026-10-13T08:00:00')` → **06:00 UTC** ; le même texte daté du 26/10 → 07:00 UTC.
+Le moniteur applique **le décalage valable à la date lue** — c'est exactement ce qu'il doit faire. L'essai passait
+jusqu'au 24/10 (même décalage UTC+2 ce jour-là et le 13/10) ; il échoue depuis le passage à l'heure d'hiver, et
+repasserait seul fin mars.
+
+**La sentinelle réelle n'est pas touchée** : `data.recherche_divergente` est `ok` (0) au passage de 06:49.
+
+**Correctif de l'ESSAI seulement** (1 ligne, l. 211) : prendre le décalage **de la date du scénario** —
+`datetime(2026, 10, 13, 8, 0).astimezone().utcoffset()` — au lieu de celui d'aujourd'hui. Non fait : il faut un « vas-y ».
