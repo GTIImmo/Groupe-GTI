@@ -1354,3 +1354,34 @@ replié passent de 50 à 46 px et leur écart de 8 à 6 px pour qu'il tienne.
 84 px, panneau 340 px avec les 8 vues, curseur sur la vue en cours ; 360 px → titre 172 px, tout tient ; 768 px →
 5 colonnes, barre du bas conservée, Échap ferme, « Contacts » ouvre `?ecran=contacts` et ferme le panneau ; bureau
 1280 × 665 replié → loupe sous le logo, menu 416 / 416, la loupe ouvre la recherche ; déplié → 425 / 425.
+
+---
+
+## 21. POINT 5 — RE-AUDIT DU 26/10 : « revenir en arrière entre objets » (rien codé)
+
+**Ce qui existe déjà (code lu + démonstration bienvu)**
+- La fiche annonce (cockpit) a un **fil d'Ariane** : « **Annonces** › VA1988 · T3 lumineux… › *rubrique* »
+  (`fa-ck-wb-crumb`, `App.tsx` ~31263) — « Annonces » ferme la fiche ; si la fiche a été ouverte **depuis une fiche
+  contact**, elle rouvre ce contact (`dossierReturnContactId`, `closeDossierDetailPage` ~15676).
+- Contact **par-dessus** l'annonce : l'adresse le dit (`?ecran=annonces&annonce=5502&contact=P-2001`, point 1).
+- Depuis ce contact, ouvrir **un autre bien** (`onOpenDossier` ~22874) **ferme le contact et remplace** l'annonce de
+  départ : à l'écran, **plus aucune trace** de l'annonce A ni du contact (constat N7). ⭐ Depuis le point 1, le bouton
+  **Précédent** du navigateur, lui, ramène bien au contact puis à l'annonce A (chaque ouverture écrit son adresse).
+- La fiche contact V2 a un en-tête « Fiche contact · *nom* » (~43040), sans chemin.
+
+**Ce qui manque** : voir **où l'on est passé**, et y revenir **d'un clic** sans compter les « Précédent ».
+
+**Proposition — le fil de navigation**
+- Chaque fiche ouverte (annonce, contact) s'ajoute à un fil court (**les 5 dernières**) avec son libellé :
+  « Annonces › VA1988 › Mme PETIT › VA2210 · Maison… ». Revenir en arrière raccourcit le fil.
+- **Bureau** : il remplace le fil actuel du cockpit (« Annonces » reste le 1er segment) et s'ajoute en tête de la fiche
+  contact ; chaque segment est cliquable et ramène **exactement** là (même mécanisme que Précédent : l'historique du
+  navigateur, donc les deux restent d'accord).
+- **Téléphone** : la place manque pour tout le fil → une pastille « ‹ VA1988 » (l'objet précédent) en haut de la fiche.
+- Le fil est rangé **dans l'historique du navigateur** (`history.state`) : il survit à F5 et suit Précédent / Suivant.
+- Interrupteur, comme les points précédents.
+
+**Ce que ça pourrait casser** : le gestionnaire « Précédent » du point 1 (il doit continuer à restaurer écran + fiche) ;
+le retour contextuel vers un contact (`dossierReturnContactId`, gardé) ; « Retour aux annonces » (gardé, 1er segment).
+Non vérifiable en démonstration : la fiche contact n'a pas de données, donc le parcours « contact → autre bien » se
+contrôlera en réel (lecture seule : ouvrir une fiche lance une relecture chez Hektor, à faire avec ton accord).
