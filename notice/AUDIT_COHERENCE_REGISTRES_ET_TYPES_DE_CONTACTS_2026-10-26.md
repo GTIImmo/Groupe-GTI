@@ -449,3 +449,40 @@ Ma première version jugeait le nom sur `app_mandat.mandants_texte`. **Elle ne t
 la répétition partie B (~113 liens, le témoin JACQUIER au 2026-09-25, les 10 vrais mandants intacts) et l'annuaire sur JACQUIER.
 
 - ✅ **26/10 à 10:17 : poussé par Frédéric (`3831fb4` sur origin/main) et interrupteur ALLUMÉ** (`APP_RELATION_ACHETEUR_PROPRIETAIRE=1` ajouté à `.env`, lu « ALLUMÉ » par le module). ⏰ **Demain 27/10 au matin** : répétition partie B, bilan de la nuit (`acheteur_nes_de_la_vente`), JACQUIER dans l'annuaire.
+
+---
+
+## 10. CHANTIER 2 — C4 : NOS NUMÉROS DANS LES VENDEURS DES TRANSACTIONS *(audit du 26/10, lecture seule, rien codé)*
+
+### 10.1 Ce que l'audit a établi
+- **La forme** : `mandants_json` des compromis et des ventes = la liste des fiches Hektor des vendeurs (`id` Hektor, nom, prénom,
+  coordonnées…) — **58 550 personnes** (31 307 sur les compromis, 27 243 sur les ventes), **0 avec notre numéro**, toutes en liste (0 objet seul).
+- **La traduction** : avec la table que la nuit utilise déjà pour les acquéreurs (`app_contact`, les deux numéros), **58 550 sur 58 550**
+  reçoivent notre numéro (côté Supabase, l'annuaire n'en connaîtrait que 57 111 : la nuit est la bonne porte).
+- **Le patron existe** : la pièce 2 (24/10) fait exactement cela pour les acquéreurs — `poser_nos_numeros()` (`affaire_ledger.py`
+  l. 1364) **ajoute** `app_contact_id` à côté de `id`, ne remplace rien, garde la forme, n'invente rien, et rend le texte d'origine à l'octet
+  quand il n'y a rien à poser. Il suffit de l'appliquer aussi à `mandants_json` (l. ~811).
+- **Trois écrivains de la liste** :
+  | écrivain | aujourd'hui |
+  |---|---|
+  | la **nuit** (`affaire_ledger.py`) | ⚠ sans notre numéro → **C4** |
+  | la **création / modification dans l'app** (`app_change_annonce_status_optimistic`, `app_modifier_affaire_optimistic`, via `app_acquereurs_json`) | ✅ porte déjà nos numéros (pièce 1) |
+  | la **relecture du worker en journée** (`console_job_worker.js` l. ~15280, `partiesRelues`) | ⚠ **réécrit `acquereurs_json` ET `mandants_json` avec la liste brute de Hektor — notre numéro disparaît jusqu'à la nuit** (= le **point 4** resté ouvert). Mesure : 28 acquéreurs sans notre numéro dans 20 transactions, dont 8 traduisibles (donc effacés le jour) |
+- **Qui lit la liste** : l'écran (`lireMandantsAffaire`, qui lit **déjà** `app_contact_id` depuis la pièce 4 ; `ckPartiesDuJson` pour les
+  noms), le classeur Sheet (les noms seulement), la vue `app_registre_mandats_current`, les deux fonctions ci-dessus. **Ni R2 ni R3 ne
+  comparent les listes de personnes** : une clé de plus n'y crée aucun écart.
+
+### 10.2 Ce que ça pourrait casser ailleurs
+- **Rien à l'écran** : une clé ajoutée ; les lecteurs lisent `id` et le nom, et `lireMandantsAffaire` sait déjà lire notre numéro.
+- **Le push de la nuit** : la première nuit, ~31 000 transactions changent (la clé ajoutée) → un push plus gros, une fois (la pièce 2 a fait
+  la même chose pour les acquéreurs sans incident).
+- **Le worker** (pièce b) : il faut **redémarrer les 4 services**, file vide (0 pending, 0 running) — geste de Frédéric.
+
+### 10.3 La proposition — deux pièces
+- **a — la nuit** : `poser_nos_numeros()` appliqué aussi à `mandants_json`, derrière un **interrupteur neuf**
+  `APP_AFFAIRE_VENDEURS_DEUX_NUMEROS=1` (séparé de celui des acquéreurs : son propre retour arrière). Essai sur copie : 58 550 posés, 0
+  inventé, le texte d'origine gardé à l'octet quand rien n'est à poser.
+- **b — le worker (point 4)** : quand il relit les acquéreurs et les vendeurs chez Hektor, **il garde notre numéro** — repris de la liste
+  qu'il remplace (même `id`), sinon cherché dans l'annuaire (`app_contact_current.hektor_target_id`) ; inconnu = rien. Pour les **deux**
+  listes. Essai hors ligne avec mutants ; puis redémarrage des 4 services.
+- **Ordre recommandé** : a puis b, ou les deux ensemble (un seul redémarrage). **À trancher par Frédéric.**
