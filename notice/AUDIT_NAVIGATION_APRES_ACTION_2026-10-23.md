@@ -807,3 +807,24 @@ création (son retrait est le point 6) : elle se superposera à la fiche ouverte
 
 ➡ **Seul juge : une création réelle** — elle écrit chez Hektor, donc **avec l'accord de Frédéric** et sur un essai
 qu'il choisit (contact d'essai à supprimer ensuite, par exemple).
+
+### 15.2 ✅ A2 PROUVÉ EN PRODUCTION (26/10, 12:10, essai fait par Claude dans le Chrome de Frédéric, à sa demande)
+
+En ligne à **12:07:08** (`index-ieQDEkZX.js`). Annuaire → « Nouveau contact » → compte **« FRANCK GERPHAGNON – Compte
+formation »**, Propriétaire, **M. ESSAI 3A / A SUPPRIMER**, mobile fictif **06 99 99 03 26**, **sans e-mail** (aucun
+e-mail RGPD possible), étape 2 « Terminer » (aucune annonce reliée) → « Créer le contact ».
+
+| | résultat |
+|---|---|
+| clic | 12:10:46 |
+| ~2 s après | l'adresse passe à `?ecran=contacts&contact=20000016` et **la fiche du contact créé est ouverte** (capture : « M. A SUPPRIMER ESSAI 3A », mobile 0699990326) |
+| base | `app_console_job` : `app_identite` **20000016**, contact **présent dans `app_contact_current`** au clic |
+| Hektor | travail `done` à 12:10:55, contact Hektor **605997** |
+
+⚠ La modale « Suivi de l'action » s'affiche **par-dessus** la fiche ouverte (attendu ; son retrait = point 6).
+⚠ Un 1er essai avec le mobile 06 00 00 00 00 a déclenché « Doublon possible » (2 contacts réels le portent) :
+**annulé avant création** (vérifié : aucun travail créé), refait avec un numéro unique.
+⚠ La fiche affiche « Négociateur : Non affecté — Compte formation » : comportement existant de la création, noté.
+
+⬜ **À FAIRE PAR FRÉDÉRIC (ou avec son accord)** : supprimer le contact d'essai **20000016 / Hektor 605997**.
+⬜ **A1 (annonce) non éprouvé** : créer une annonce écrit un brouillon chez Hektor — essai à décider par Frédéric.
