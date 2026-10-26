@@ -1928,6 +1928,20 @@ def charger_mandants_du_registre_des_liens(
         chemin IMMEDIAT du worker (~1 min) en profite aussi, sans code en plus.
     """
     mandants: dict[str, list[dict[str, object]]] = {}
+    # ⑧ types, chantier 1 (26/10/2026) -- D2 : « l'acheteur devient nouveau
+    #   proprietaire date de l'acte, SANS ETRE MANDANT ». Le registre des liens
+    #   marque `origine = 'vente'` ces liens (relation_ledger.py,
+    #   _poser_les_liens_nes_de_la_vente) : ils n'entrent pas parmi les mandants du
+    #   mandat du vendeur. La colonne n'est posee que regle allumee, et remise a vide
+    #   regle eteinte : ce filtre ne mord donc que si l'interrupteur est allume.
+    #   ⚠ On teste la COLONNE avant de la nommer : un registre d'avant le 26/10 la
+    #     n'a pas, et l'erreur ferait rendre {} plus bas -- tous les mandants perdus.
+    try:
+        colonnes_rel = {c[1] for c in con.execute("PRAGMA table_info(app_relation)")}
+    except sqlite3.OperationalError:
+        colonnes_rel = set()
+    sans_les_acheteurs = (" AND COALESCE(r.origine, '') <> 'vente'"
+                          if "origine" in colonnes_rel else "")
     try:
         lignes = con.execute(
             # ⭐ LE NOM SE LIT PAR NOTRE NUMERO, PAS PAR CELUI DE HEKTOR.
@@ -1944,7 +1958,7 @@ def charger_mandants_du_registre_des_liens(
             "  FROM app_relation r"
             "  LEFT JOIN app_contact_current c"
             "         ON c.hektor_contact_id = CAST(r.app_contact_id AS TEXT)"
-            " WHERE r.retire_le IS NULL"
+            " WHERE r.retire_le IS NULL" + sans_les_acheteurs
         ).fetchall()
     except sqlite3.OperationalError:
         # Le registre des liens n'existe pas encore (environnement neuf). On ne

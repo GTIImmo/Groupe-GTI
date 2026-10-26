@@ -15,6 +15,13 @@ from typing import Any, Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
+# ⑧ types, chantier 1 (26/10/2026) : la regle « l'acheteur n'est pas le mandant du
+# bien achete ». Lance en script (le dossier du fichier est sur le chemin) OU importe
+# en paquet (refresh_contact_inproc) : les deux formes.
+try:
+    from phase2.contacts import regle_acheteur_proprietaire  # noqa: E402
+except ImportError:
+    import regle_acheteur_proprietaire  # type: ignore  # noqa: E402
 DEFAULT_HEKTOR_DB = ROOT / "data" / "hektor.sqlite"
 DEFAULT_PHASE2_DB = ROOT / "phase2" / "phase2.sqlite"
 DEFAULT_REPORT_DIR = ROOT / "exports_contacts_audit"
@@ -1384,6 +1391,23 @@ def load_relations(
                 )
                 existing_contact_annonce_pairs.add(pair)
 
+    # ⑧ types, chantier 1 (26/10/2026) : l'ACHETEUR d'une vente que Hektor range parmi
+    # les proprietaires n'est pas le MANDANT du bien qu'il a achete (D2 : « proprietaire
+    # date de l'acte, sans etre mandant »). La regle vit dans regle_acheteur_proprietaire.py,
+    # UNE fois, partagee avec relation_ledger.py. Interrupteur eteint : rien ne change.
+    nes_de_la_vente: dict[tuple[str, str], str] = {}
+    if regle_acheteur_proprietaire.actif():
+        try:
+            nes_de_la_vente = regle_acheteur_proprietaire.couples_nes_de_la_vente(
+                phase2_conn, relation_by_key.values())
+            print(f"[acheteur proprietaire] {len(nes_de_la_vente)} lien(s) ne(s) d'une vente :"
+                  f" « proprietaire », plus « mandant »")
+        except Exception as souci:                                   # noqa: BLE001
+            # On ne fait pas tomber la nuit des contacts pour ca : on garde l'ancien
+            # calcul, et on le DIT.
+            print(f"[acheteur proprietaire] REGLE NON APPLIQUEE, ancien calcul garde : {souci!r}")
+            nes_de_la_vente = {}
+
     relation_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
     roles_by_contact: dict[str, set[str]] = defaultdict(set)
     for row in relation_by_key.values():
@@ -1393,7 +1417,10 @@ def load_relations(
         # Réassigne aussi role_contact pour que la table relations ET relation_roles_json soient
         # cohérents. Les rôles acquéreur/notaire/etc. ne sont pas touchés.
         if row.get("role_contact") in ("proprietaire", "mandant"):
-            row["role_contact"] = "mandant" if clean_text(row.get("numero_mandat")) else "proprietaire"
+            if (clean_text(contact_id), clean_text(row.get("hektor_annonce_id"))) in nes_de_la_vente:
+                row["role_contact"] = "proprietaire"
+            else:
+                row["role_contact"] = "mandant" if clean_text(row.get("numero_mandat")) else "proprietaire"
         roles_by_contact[contact_id].add(row["role_contact"])
         relation_rows[contact_id].append(row)
     return relation_rows, roles_by_contact

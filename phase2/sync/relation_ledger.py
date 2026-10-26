@@ -104,6 +104,7 @@ from phase2.sync.push_upgrade_to_supabase import (  # noqa: E402
     SupabaseRestClient,
     load_env_files,
 )
+from phase2.contacts import regle_acheteur_proprietaire  # noqa: E402
 
 import os  # noqa: E402
 
@@ -392,6 +393,7 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
     # ══════════════════════════════════════════════════════════════════════════
     depuis_app_seule = 0
     illisibles = 0
+    filet_hors_role = 0
     try:
         lignes_app = con.execute(
             "SELECT hektor_contact_id, hektor_annonce_id, donnees_json"
@@ -419,6 +421,14 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
         except (ValueError, TypeError):
             donnees = {}
             illisibles += 1
+        # ⑧ types, chantier 1 -- D5 c (26/10/2026). Le filet n'avait AUCUN filtre de
+        # role : du 02 au 24/10 il a verse 49 liens « acquereur » dans ce registre,
+        # sous le fait « proprietaire du bien » -- contre la decision du 30/09 (pas
+        # d'acquereurs ici). Le registre ne prend plus du filet que les roles du bien.
+        if (regle_acheteur_proprietaire.actif()
+                and donnees.get("role_contact") not in ROLES_DU_BIEN):
+            filet_hors_role += 1
+            continue
         identifiant = adoptes.pop(cle) if cle in adoptes else prochain
         if cle not in adoptes and identifiant == prochain:
             prochain += 1
@@ -474,6 +484,9 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                 " WHERE app_contact_id = ? AND hektor_annonce_id = ?",
                 [(vu, c, a) for c, a in a_marquer])
         sortis = len(a_marquer)
+
+    _poser_les_liens_nes_de_la_vente(con)
+    _BILAN_ACHETEUR["filet_hors_role_ecartes"] = filet_hors_role
 
     # ══════════════════════════════════════════════════════════════════════════
     # LES RETRAITS DECIDES DANS L'APP                              02/10/2026
@@ -700,6 +713,83 @@ def refresh(con: sqlite3.Connection, full: bool = True) -> dict:
                             retraits_leves)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ⑧ TYPES, CHANTIER 1 -- L'ACHETEUR « PROPRIETAIRE DEPUIS LA VENTE »   26/10/2026
+#
+# Hektor range l'acheteur d'une vente parmi les proprietaires (et le type
+# « mandant ») ; la vue, le registre des mandats et l'annuaire en faisaient un
+# MANDANT parce que le bien porte un numero de mandat. D2 (Frederic, 26/10) :
+# « proprietaire date de l'acte, sans etre mandant ». On pose donc LE FAIT dans
+# deux colonnes que les quatre lecteurs lisent :
+#     origine             'vente' -- le lien est ne d'une vente
+#     proprietaire_depuis la date de la vente (la premiere, si plusieurs)
+# La regle est dans phase2/contacts/regle_acheteur_proprietaire.py (une fois,
+# partagee avec la nuit des contacts) ; elle est RECALCULEE chaque nuit -- un
+# acheteur nomme un jour par un NOUVEAU mandat (il revend) redevient mandant --
+# mais la date, elle, n'est jamais reecrite tant que le lien reste ne de la vente.
+#
+# ⚠ HEKTOR N'EST PAS TOUCHE et continue de dire « mandant » : divergence VOULUE
+#   et ecrite (note d'audit du 26/10, §8). Rien ici ne lui est envoye.
+# ⚠ ETEINT, ce bloc REMET A VIDE ce qu'il a pose : c'est le retour arriere (la
+#   nuit suivante, la vue et le registre des mandats reviennent a l'ancien calcul).
+# ══════════════════════════════════════════════════════════════════════════════
+_BILAN_ACHETEUR: dict = {}
+_ACHETEUR_A_VIDER_CHEZ_SUPABASE = False
+
+
+def _poser_les_liens_nes_de_la_vente(con: sqlite3.Connection) -> None:
+    global _BILAN_ACHETEUR
+    _ajouter_colonne_si_absente(con, "origine", "TEXT")
+    _ajouter_colonne_si_absente(con, "proprietaire_depuis", "TEXT")
+    if not regle_acheteur_proprietaire.actif():
+        cur = con.execute("UPDATE app_relation SET origine = NULL, proprietaire_depuis = NULL"
+                          " WHERE origine IS NOT NULL OR proprietaire_depuis IS NOT NULL")
+        vides = cur.rowcount or 0
+        # ⚠ LE VIDE DOIT PARTIR CHEZ SUPABASE AUSSI, sinon eteindre ne ramene pas la
+        #   vue : le push ne nomme ces colonnes qu'interrupteur allume. La nuit ou l'on
+        #   eteint, des valeurs etaient posees -- donc Supabase a les colonnes (elles y
+        #   sont parties) : on les pousse UNE fois, a vide (voir colonnes_poussees).
+        global _ACHETEUR_A_VIDER_CHEZ_SUPABASE
+        _ACHETEUR_A_VIDER_CHEZ_SUPABASE = vides > 0
+        _BILAN_ACHETEUR = {"acheteur_regle": "eteinte", "acheteur_remis_a_vide": vides}
+        return
+    try:
+        lignes = [dict(r) for r in con.execute(
+            "SELECT hektor_contact_id, hektor_annonce_id, role_contact, transaction_date"
+            "  FROM app_contact_relation_current"
+            " WHERE role_contact IN ('mandant', 'proprietaire', ?)",
+            (regle_acheteur_proprietaire.ROLE_ACQUEREUR_VENTE,))]
+        nes = regle_acheteur_proprietaire.couples_nes_de_la_vente(con, lignes)
+    except Exception as souci:                                       # noqa: BLE001
+        # ON NE DEVINE PAS : sans la regle, on laisse le registre tel qu'il etait
+        # hier (ni pose, ni remis a vide) et on le DIT.
+        print(f"   !! acheteur proprietaire : regle NON appliquee, registre laisse tel quel ({souci!r})")
+        _BILAN_ACHETEUR = {"acheteur_regle": "erreur", "acheteur_erreur": str(souci)[:200]}
+        return
+    voulus = {(int(c), str(a)): d for (c, a), d in nes.items() if str(c).isdigit()}
+    deja = {(int(r[0]), str(r[1])): r[2] for r in con.execute(
+        "SELECT app_contact_id, hektor_annonce_id, proprietaire_depuis FROM app_relation"
+        " WHERE origine = 'vente'")}
+    a_poser = [(d or None, c, a) for (c, a), d in voulus.items() if (c, a) not in deja]
+    a_lever = [(c, a) for (c, a) in deja if (c, a) not in voulus]
+    if a_poser:
+        # la date ne s'ECRASE pas : COALESCE garde celle d'une pose precedente
+        con.executemany(
+            "UPDATE app_relation SET origine = 'vente',"
+            "       proprietaire_depuis = COALESCE(proprietaire_depuis, ?)"
+            " WHERE app_contact_id = ? AND hektor_annonce_id = ?", a_poser)
+    if a_lever:
+        con.executemany(
+            "UPDATE app_relation SET origine = NULL, proprietaire_depuis = NULL"
+            " WHERE app_contact_id = ? AND hektor_annonce_id = ?", a_lever)
+    total = con.execute("SELECT COUNT(*) FROM app_relation WHERE origine = 'vente'").fetchone()[0]
+    _BILAN_ACHETEUR = {"acheteur_regle": "allumee", "acheteur_nes_de_la_vente": len(voulus),
+                       "acheteur_poses": len(a_poser), "acheteur_leves": len(a_lever),
+                       "acheteur_au_registre": total}
+    print(f"   acheteur proprietaire : {len(voulus)} lien(s) ne(s) d'une vente"
+          f" ({len(a_poser)} pose(s), {len(a_lever)} leve(s)) -- {total} au registre")
+
+
 def _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,
                      depuis_app_seule, illisibles, sans_bien, sortis,
                      doublure_du, retraits_poses, retraits_divergents,
@@ -719,7 +809,8 @@ def _bilan_relations(lus, neufs, revus, ecartes, adoptes_au_depart, adoptes,
             "doublure_du": doublure_du,
             "retraits_adoptes": retraits_poses,
             "retraits_divergents": retraits_divergents,
-            "retraits_leves": retraits_leves}
+            "retraits_leves": retraits_leves,
+            **_BILAN_ACHETEUR}
 
 
 def controle(con: sqlite3.Connection) -> None:
@@ -825,10 +916,25 @@ COLONNES_POUSSEES = (
 )
 
 
+# ⑧ types, chantier 1 (26/10/2026) : les deux colonnes du fait « ne de la vente ».
+# ⛔ ENVOYEES SEULEMENT INTERRUPTEUR ALLUME -- et l'ordre de pose est donc : le
+#   patch Supabase D'ABORD (supabase/patch_acheteur_proprietaire_2026-10-26.sql),
+#   l'interrupteur ENSUITE. Une colonne inconnue de Supabase fait tomber le lot
+#   ENTIER (voir au-dessus) : allumer avant le patch arreterait le push des liens.
+COLONNES_ACHETEUR = ("origine", "proprietaire_depuis")
+
+
+def colonnes_poussees() -> tuple:
+    if regle_acheteur_proprietaire.actif() or _ACHETEUR_A_VIDER_CHEZ_SUPABASE:
+        return COLONNES_POUSSEES + COLONNES_ACHETEUR
+    return COLONNES_POUSSEES
+
+
 def lignes_a_pousser(con: sqlite3.Connection) -> list[dict]:
     lignes = []
+    colonnes = colonnes_poussees()
     for r in con.execute("SELECT * FROM app_relation"):
-        d = {c: r[c] for c in COLONNES_POUSSEES if c in r.keys()}
+        d = {c: r[c] for c in colonnes if c in r.keys()}
         # SQLite garde 0/1 ; Supabase attend un booleen. Sans cette ligne,
         # PostgREST recoit 1 pour un champ boolean et refuse le lot entier.
         d["present_in_hektor"] = bool(d.get("present_in_hektor"))
@@ -840,7 +946,7 @@ def pousser(con: sqlite3.Connection, taille_lot: int = 500, a_blanc: bool = Fals
     lignes = lignes_a_pousser(con)
     if a_blanc:
         return {"a_blanc": True, "lignes": len(lignes),
-                "colonnes": len(COLONNES_POUSSEES),
+                "colonnes": len(colonnes_poussees()),
                 "exemple": dict(lignes[0]) if lignes else {}}
 
     load_env_files(DEFAULT_ENV_FILES)
@@ -897,6 +1003,9 @@ def main() -> int:
                       # etait donc impossible a faire.
                       "doublure_du", "retraits_adoptes", "retraits_divergents",
                       "retraits_leves"):
+                print("   %-28s : %s" % (k, bilan[k]))
+            # 26/10 : ⑧ types, chantier 1 -- l'acheteur « proprietaire depuis la vente »
+            for k in sorted(c for c in bilan if c.startswith(("acheteur_", "filet_"))):
                 print("   %-28s : %s" % (k, bilan[k]))
             # ⚠ UNE DOUBLURE PERIMEE NE SE VOIT PAS : elle rend des chiffres, ils
             #   sont juste vieux. Sans ce controle, un retrait d'hier apres-midi

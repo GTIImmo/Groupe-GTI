@@ -392,3 +392,46 @@ suivante), puis a et c ensemble (un patch, inverse + répétition), d et e n'ont
 - **Essais avant toute pose** : sur une copie de `phase2.sqlite` — 113 liens marqués, 10 + 2 intacts, la liste des types qui changent, le registre
   des mandats avant / après sur les biens vendus ; mutants (critère du nom retiré, date retirée, filtre de rôle retiré).
 - **Ce qui attend aussi** : la pièce 5 (chantier 4), qui projette les acquéreurs depuis le registre des transactions — indépendante de celui-ci.
+
+---
+
+## 9. CHANTIER 1 CODÉ — l'acheteur « propriétaire depuis la vente » *(26/10, « VAS Y » de Frédéric)* — **rien n'est posé**
+
+### 9.1 Ce qui est écrit
+| pièce | fichier | ce qu'elle fait |
+|---|---|---|
+| la règle, une fois | `phase2/contacts/regle_acheteur_proprietaire.py` (neuf) | acheteur d'une **vente** du bien + **absent du texte du mandat de Hektor** + nom connu → né de la vente, daté de la (première) vente ; sans registre des mandats, **refuse de juger** |
+| la nuit (types) | `phase2/contacts/build_contacts_layer.py` (`load_relations`) | ces liens restent « proprietaire » au lieu d'être rebaptisés « mandant » → l'annuaire dit **Acheteur + Propriétaire** |
+| le registre des liens | `phase2/sync/relation_ledger.py` (`_poser_les_liens_nes_de_la_vente`) | pose `origine = 'vente'` et `proprietaire_depuis` (jamais réécrite), recalcule chaque nuit, lève ce qui ne l'est plus ; **D5 c** : le filet ne prend plus que les rôles du bien ; le push nomme les deux colonnes |
+| le registre des mandats | `phase2/sync/export_app_payload.py` (`charger_mandants_du_registre_des_liens`) | n'inscrit pas parmi les mandants un lien d'origine « vente » (sert aussi la fiche et `mandat_ledger`) |
+| la base | `supabase/patch_acheteur_proprietaire_2026-10-26.sql` + `_INVERSE` + `_REPETITION` | 2 colonnes additives ; la vue : **une ligne** ajoutée au CASE (empreinte `6c89ceb7` vérifiée, aller-retour prouvé par calcul) ; les **55** liens du filet marqués retirés (`filet_26_10`) |
+
+**Interrupteur** : `APP_RELATION_ACHETEUR_PROPRIETAIRE=1` dans `.env` — **éteint** (absent). Éteint, tout se comporte comme avant ; la
+nuit où l'on éteint, le registre remet à vide **et pousse ce vide une fois** (sinon la vue resterait allumée).
+
+### 9.2 ⭐ Ce que l'écriture a trouvé — et qui aurait faussé le rattrapage
+Ma première version jugeait le nom sur `app_mandat.mandants_texte`. **Elle ne trouvait que 73 liens sur 113.** Cause : `mandat_ledger.py`
+(l. 645-668) **remplace** ce texte par nos liens quand le corps de Hektor est suspect ou vide sur une vente — donc par une liste qui
+**contient déjà l'acheteur** (« M_Mme Florian JACQUIER » sur 61730). Juger sur lui, c'était juger l'acheteur sur la faute qu'on corrige.
+➡ La règle lit le texte **tel que Hektor l'a donné** (`payload_json` / `versions_json`) : **113 / 113**, 0 vrai mandant touché, 0 lien en trop.
+
+### 9.3 Les essais
+- `phase2/checks/test_regle_acheteur_proprietaire.py` : **15 / 15** (base en mémoire). **4 mutants attrapés** : sans le critère du nom
+  (1 échec), sur notre texte pollué (2), le compromis compté comme la vente (5), juger sans registre des mandats (1) ; témoin intact 0.
+- `phase2/checks/test_acheteur_proprietaire_sur_copie.py` sur une **copie** de `phase2.sqlite` (refuse la base de production) : **16 / 16** —
+  avant : JACQUIER parmi les mandants de 61730 (le défaut, vu) ; allumé : **113 liens posés**, JACQUIER daté du **2026-09-25**, les 10 vrais
+  mandants intacts ; une 2ᵉ nuit **garde la date** ; le registre des mandats **perd JACQUIER et garde les 3 GARCIA**, **109** acheteurs retirés
+  des mandants (les 4 autres n'y étaient pas inscrits — sans nom ou dédoublonnés par nom, **non mesuré**) ; le push nomme les colonnes ; éteint : **113 remis à vide**, le vide part une fois, puis
+  plus ; le registre des mandats revient à l'ancien calcul.
+- la nuit des contacts (types) : **100 contacts cessent d'être « Mandant », 0 le devient** ; JACQUIER : offre + compromis + vente + **propriétaire** → **Acheteur + Propriétaire** (ces 100 ont 113 liens ; certains restent mandants d'un autre bien qu'ils possèdent vraiment). Total de l'essai sur copie : **19 / 19**
+- `phase2/contacts/test_contacts_layer.py` (existant) : vert, interrupteur éteint.
+
+### 9.4 ⏳ Ce qui reste — À FRÉDÉRIC (dans cet ordre, jamais l'inverse)
+1. **Le patch Supabase** (`supabase/patch_acheteur_proprietaire_2026-10-26.sql`) — écriture en production, **ton accord** ; puis la
+   répétition (partie A : lignes 1-5 vertes, 6-9 « en attente de la nuit »).
+2. **Pousser** le code (`git push`).
+3. **Allumer** `APP_RELATION_ACHETEUR_PROPRIETAIRE=1` dans `.env` — ⛔ **jamais avant le patch** : le push des liens nommerait deux
+   colonnes inconnues et le lot entier tomberait.
+4. Le lendemain matin : la répétition (partie B), le bilan de la nuit (`acheteur_nes_de_la_vente`, ~113), et l'annuaire sur JACQUIER.
+- ⚠ **Aucun service à redémarrer** : la nuit lit le code du dépôt ; le worker n'est pas touché.
+- ⚠ **Le code est déjà dans le dossier de travail** et la nuit le lit : interrupteur éteint, il ne change rien (prouvé ci-dessus, état 0 et 5).
