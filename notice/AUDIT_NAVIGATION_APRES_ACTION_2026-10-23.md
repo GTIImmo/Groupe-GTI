@@ -1317,3 +1317,16 @@ barre de l'Accueil restent).
 **Contrôle** (mesures + image de la page) : 390 px → en-tête 68 px, loupe 280-324, avatar 334-378, menu 60 px sur une
 ligne (défile 394 / 368), contenu à 142 px, **aucun chevauchement** ; 360 px → avatar à 348 px, rien ne déborde ;
 tablette 768 px → 4 colonnes, menu en bas inchangé, la loupe ouvre la fenêtre.
+
+### 20.9 ✅ Adresse, pastille et menu ÉPROUVÉS EN PRODUCTION (26/10, `index-vAI85dpc.js`, lecture seule, 0 travail créé)
+
+*Décision de Frédéric : les deux recherches (loupe « partout » et champ « filtrer la liste » des écrans) restent avec
+leurs libellés actuels — « laisse ».*
+
+- **L'adresse est trouvée** : « victor hugo » → 5 annonces en cours (1ʳᵉ : « 119 Rue Victor Hugo · Firminy 42700 »),
+  2 vendues / archivées, 5 contacts, 5 mandats ; « rue de la paix » → 5 annonces, 5 contacts, 5 mandats.
+- **Temps, recherche « hugo »** (5 lectures lancées à la même milliseconde) : annonces 252 ms · vendues 210 · archives
+  372 · contacts 375 · **registre 398 ms (1 061-1 251 ms avant son index)**. Tout est là en 0,4 s.
+- **Menu de gauche à 665 px** : 471 / 471, plus d'ascenseur.
+- ⚠ **Frédéric travaille menu REPLIÉ (82 px)** : dans ce mode la pastille est masquée → **aucune loupe visible** pour lui ;
+  il lui reste « / » et la barre de l'Accueil. Question posée.
