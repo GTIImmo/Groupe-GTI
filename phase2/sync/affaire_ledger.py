@@ -588,10 +588,18 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
             con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN {neuve} TEXT")
             con.commit()
             print(f"[affaire_ledger] colonne {neuve} ajoutee a {LEDGER_TABLE}")
+    # ⑧ types, chantier 2 -- c (26/10/2026) : NOTRE numero du mandat (voir notre_mandat_par_cle).
+    if "app_mandat_id" not in colonnes:
+        con.execute(f"ALTER TABLE {LEDGER_TABLE} ADD COLUMN app_mandat_id INTEGER")
+        con.commit()
+        print(f"[affaire_ledger] colonne app_mandat_id ajoutee a {LEDGER_TABLE}")
     run_ts = now_iso()
     mnum = _mandat_numero(con)
     # 2.7 (16/09) : de quoi departager quand Hektor ne dit rien.
     mandats_annonce = _mandats_par_annonce(con)
+    mandat_notre_numero = mandat_notre_numero_actif()
+    notre_mandat = notre_mandat_par_cle(con) if mandat_notre_numero else {}
+    mandats_poses = 0
 
     existing_first: dict[tuple[str, str, str], str] = {}
     for row in con.execute(f"SELECT hektor_annonce_id, kind, hektor_affaire_id, first_seen_at FROM {LEDGER_TABLE}"):
@@ -831,6 +839,10 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
         # liste, pas COMMENT on designe une personne. 58 550 vendeurs ne portaient que le numero de Hektor
         # (note d'audit du 26/10, §10.4). Meme geste que les acquereurs : `id` reste celui de Hektor -- c'est
         # lui qu'on lui parle --, le notre est AJOUTE a cote. Son propre interrupteur, son propre retour.
+        # ⑧ chantier 2 -- c : le mandat par LA CLE « bien + numero » (jamais l'id de Hektor, jamais le numero seul).
+        app_mandat = notre_mandat.get((annonce, normalize_text(numero))) if (mandat_notre_numero and numero) else None
+        if app_mandat is not None:
+            mandats_poses += 1
         mandants_tous = normalize_text(r["mandants"]) or None
         if vendeurs_deux_numeros:
             mandants_tous, n_vendeurs = poser_nos_numeros(mandants_tous, contact_app_par_hektor)
@@ -845,8 +857,8 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 sequestre, date_fin_retractation, jours_validite,
                 prix_net_vendeur, honoraires_entree, honoraires_sortie,
                 mandants_json, notaires_json, propositions_json, commission_agence,
-                payload_json, first_seen_at, last_seen_at, present_in_hektor)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                payload_json, first_seen_at, last_seen_at, app_mandat_id, present_in_hektor)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             ON CONFLICT(hektor_annonce_id, kind, hektor_affaire_id)
               WHERE hektor_affaire_id IS NOT NULL DO UPDATE SET
                 app_dossier_id=excluded.app_dossier_id,
@@ -880,6 +892,13 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 propositions_json=excluded.propositions_json,
                 commission_agence=excluded.commission_agence,
                 payload_json=excluded.payload_json,
+                -- ⑧ chantier 2 -- c : retrouve -> pose ; pas retrouve mais MEME numero -> on garde
+                -- (un mandat neuf arrive au registre des mandats la nuit d'apres) ; numero CHANGE -> vide
+                -- (garder l'ancien serait designer le mauvais mandat).
+                app_mandat_id=CASE
+                    WHEN excluded.app_mandat_id IS NOT NULL THEN excluded.app_mandat_id
+                    WHEN excluded.numero_mandat IS {LEDGER_TABLE}.numero_mandat THEN {LEDGER_TABLE}.app_mandat_id
+                    ELSE NULL END,
                 last_seen_at=excluded.last_seen_at, present_in_hektor=1
             """,
             (
@@ -903,6 +922,7 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
                 normalize_text(r["commission"]) or None,
                 normalize_text(r["raw_json"]) or None,
                 first_seen, run_ts,
+                app_mandat,                                # ⑧ chantier 2 -- c : NOTRE numero du mandat
             ),
         )
         seen += 1
@@ -917,6 +937,9 @@ def refresh_ledger(con: sqlite3.Connection, *, full: bool = True) -> dict[str, i
     print(f"[affaire_ledger] vendeurs avec nos deux numeros : "
           + (f"{vendeurs_traduits} numero(s) pose(s)" if vendeurs_deux_numeros
              else "ETEINT (APP_AFFAIRE_VENDEURS_DEUX_NUMEROS)"))
+    print(f"[affaire_ledger] mandat a notre numero : "
+          + (f"{mandats_poses} transaction(s) rattachee(s) a app_mandat_id" if mandat_notre_numero
+             else "ETEINT (APP_AFFAIRE_MANDAT_NOTRE_NUMERO)"))
     # ═══════════════════════════════════════════════════════════════════════════
     # LE SILENCE NE GAGNE PAS                                        07/09/2026
     # ═══════════════════════════════════════════════════════════════════════════
@@ -1224,6 +1247,50 @@ def personnes_deux_numeros_actif() -> bool:
     """
     chainage_v2_actif()                      # il charge `.env` une fois pour tous
     return (os.environ.get("APP_AFFAIRE_PERSONNES_DEUX_NUMEROS") or "0").strip() == "1"
+
+
+def mandat_notre_numero_actif() -> bool:
+    """⑧ types, chantier 2 -- c (26/10/2026) : la transaction porte NOTRE numero de mandat (`app_mandat_id`).
+
+        APP_AFFAIRE_MANDAT_NOTRE_NUMERO=1       la nuit le pose ET le push l'envoie
+        (absent ou autre chose)                  la colonne locale existe mais ne part pas chez Supabase
+    ⛔ ORDRE DE POSE : le patch Supabase (la colonne) D'ABORD, l'interrupteur ENSUITE -- le push envoie
+       toutes les colonnes locales, une colonne inconnue de Supabase ferait tomber le lot entier.
+    """
+    chainage_v2_actif()
+    return (os.environ.get("APP_AFFAIRE_MANDAT_NOTRE_NUMERO") or "0").strip() == "1"
+
+
+def notre_mandat_par_cle(con: sqlite3.Connection) -> dict[tuple[str, str], int]:
+    """⑧ types, chantier 2 -- c (26/10/2026) : {(bien Hektor, numero de mandat): app_mandat_id}.
+
+    LA CLE EST CELLE DU REGISTRE DES MANDATS, « bien + numero » -- `UNIQUE (hektor_annonce_id,
+    numero_mandat)` d'app_mandat, et `register_row_id = "<annonce>:<numero>"` du registre affiche.
+    Frederic, 26/10 : « dans l'historique certains registres se sont croises, donc on a cree une cle
+    N° de mandat + ref qui evite les doublons ; l'id mandat de Hektor n'est pas utilisable ».
+    Mesure du 26/10 (26 929 mandats) : l'id de Hektor est RECYCLE (512 portes par plusieurs mandats),
+    le numero SEUL est porte par plusieurs biens (4 458) ; la cle « bien + numero » : 0 doublon.
+    ⚠ Un couple en double ici (il ne devrait pas exister) n'est PAS tranche : on l'ecarte, et on le dit.
+    """
+    table: dict[tuple[str, str], int] = {}
+    doubles: set[tuple[str, str]] = set()
+    try:
+        for annonce, numero, ident in con.execute(
+                "SELECT hektor_annonce_id, numero_mandat, app_mandat_id FROM app_mandat"
+                " WHERE NULLIF(TRIM(numero_mandat), '') IS NOT NULL AND app_mandat_id IS NOT NULL"):
+            cle = (normalize_text(annonce), normalize_text(numero))
+            if cle in table and table[cle] != int(ident):
+                doubles.add(cle)
+            table[cle] = int(ident)
+    except sqlite3.OperationalError as souci:
+        print(f"[affaire_ledger] registre des mandats illisible : aucun app_mandat_id pose ({souci})")
+        return {}
+    for cle in doubles:
+        table.pop(cle, None)
+    if doubles:
+        print(f"[affaire_ledger] ⚠ {len(doubles)} cle(s) bien + numero en DOUBLE au registre des mandats :"
+              f" ecartee(s), non tranchee(s) -- {sorted(doubles)[:5]}")
+    return table
 
 
 def vendeurs_deux_numeros_actif() -> bool:
@@ -2063,10 +2130,14 @@ COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS = (
 #   qui est perimee, et rien ne la protege.
 def ledger_rows_for_push(con: sqlite3.Connection) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
+    envoyer_mandat = mandat_notre_numero_actif()
     for r in con.execute(f"SELECT * FROM {LEDGER_TABLE}"):
         d = dict(r)
         for interdite in COLONNES_QUE_LE_PUSH_N_ENVOIE_PAS:
             d.pop(interdite, None)
+        # ⑧ chantier 2 -- c : la colonne ne part qu'interrupteur allume (voir mandat_notre_numero_actif).
+        if not envoyer_mandat:
+            d.pop("app_mandat_id", None)
         # ⚠ acquereurs_json est jsonb cote Supabase : sans ce decodage on y
         # pousserait une CHAINE DE CARACTERES contenant du JSON, pas du JSON.
         # ⚠ TOUTE colonne jsonb cote Supabase doit figurer ici. Sans le

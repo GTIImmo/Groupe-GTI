@@ -567,3 +567,32 @@ mutant qui le remplace est attrapé) ; aucun envoi ne lit `app_contact_id`.
 2. **Redémarrer les 4 services du worker**, file vide (0 pending, 0 running) — b est alors actif.
 3. **Allumer** `APP_AFFAIRE_VENDEURS_DEUX_NUMEROS=1` dans `.env` (je peux l'ajouter) — a joue à la nuit suivante.
 4. Le lendemain : le bilan de la nuit (« vendeurs … ~58 514 posés ») et une mesure en base (vendeurs avec notre numéro).
+
+### 11.1 ✅ 26/10 — a ALLUMÉ, b ACTIF
+- **b** : poussé (`3f64ccc` sur origin/main) et **les 4 services du worker ont redémarré à 10:57:27-29**, après le code (10:45:33) —
+  mesuré par l'heure des processus. La relecture du jour garde désormais nos numéros.
+- **a** : `APP_AFFAIRE_VENDEURS_DEUX_NUMEROS=1` ajouté à `.env` par moi (accord de Frédéric : « je te laisse allumer »), lu « ALLUMÉ ».
+  ⏰ **Première nuit : 27/10** — le bilan doit dire « vendeurs avec nos deux numéros : ~58 514 posés ».
+
+---
+
+## 12. CHANTIER 2 — c CODÉ : la transaction porte NOTRE numéro de mandat *(26/10, « oui ensuite code c »)* — **rien n'est posé**
+
+| pièce | fichier | ce qu'elle fait |
+|---|---|---|
+| la clé | `phase2/sync/affaire_ledger.py` (`notre_mandat_par_cle`) | lit le registre des mandats local par **la clé « bien + numéro de mandat »** (celle de Frédéric : `UNIQUE (hektor_annonce_id, numero_mandat)`, `register_row_id`) ; **jamais** l'id de Hektor (recyclé), **jamais** le numéro seul ; une clé en double serait écartée et signalée, pas tranchée |
+| la nuit | même fichier (la boucle et l'UPSERT) | colonne locale `app_mandat_id` ; **retrouvé → posé** ; **pas retrouvé mais même numéro → gardé** (un mandat neuf arrive au registre la nuit d'après : le registre des mandats tourne après) ; **numéro changé → vidé** (garder serait désigner le mauvais mandat) ; bilan « mandat à notre numéro : N » |
+| le push | même fichier (`ledger_rows_for_push`) | la colonne **ne part qu'interrupteur allumé** — le push envoie toutes les colonnes locales, une colonne inconnue de Supabase ferait tomber le lot entier |
+| la base | `supabase/patch_transaction_mandat_notre_numero_2026-10-26.sql` + `_INVERSE` + `_REPETITION` | **une colonne additive** `app_mandat_id bigint` |
+
+**Interrupteur** : `APP_AFFAIRE_MANDAT_NOTRE_NUMERO` — **éteint**. Ce soir, la nuit ajoute la colonne en local, ne la remplit pas et
+**ne l'envoie pas** (prouvé, essai 1).
+
+**Essai** `phase2/checks/test_mandat_notre_numero_sur_copie.py` sur une copie de `phase2.sqlite` : **9 / 9** — la règle de l'UPSERT jouée à part
+(posé / gardé / vidé) et reconnue dans le code ; éteint : 0 posé, la colonne ne part pas ; allumé : **23 336 sur 23 336** transactions vivantes à
+numéro rattachées, **0** désignant un autre mandat que celui de leur clé, **0** transaction sans numéro touchée, la colonne part ; un mandat
+caché au registre : le numéro de la veille est **gardé**. Aucune clé en double au registre des mandats.
+⚠ Pas de mutant joué à part pour c : l'essai 0 joue la règle de l'UPSERT, et l'essai 3 en est le témoin réel.
+
+**Ce qui reste, dans cet ordre** : 1. le **patch Supabase** (ton accord) ; 2. **pousser** ; 3. **allumer**
+`APP_AFFAIRE_MANDAT_NOTRE_NUMERO=1` — ⛔ jamais avant le patch ; 4. le lendemain, la répétition partie B (~23 336, chaque numéro sur sa clé).
