@@ -3406,3 +3406,25 @@ pour 1001339, la date et le mandat sont jugés sur le registre (exclus) et la va
 4 offres de 24113 n'ont pas de colonne protégée. Le moniteur R4 ne compte que « conflit » et « échec ».
 ➡ Deux possibilités, **décision de Frédéric** : **laisser** (rien ne bouge) **ou** les clore d'un verdict « sans_objet » (écriture en base, sauvegarde datée
 avant) pour qu'aucun « en attente » éternel ne traîne.
+
+#### ⛔ DÉCISIONS DE FRÉDÉRIC (26/10 au soir) sur le point 6
+- **n° 3** : le compromis reprend de l'offre acceptée de sa chaîne **les acquéreurs et le montant de l'offre** (pas d'autre champ).
+- **n° 4** (la diffusion remise à 1 par une vente) : **« on verra plus tard »**.
+- **n° 5** (les mots des prix) : « propose-moi après vérification ».
+- **n° 7** (Pilotage d'un bien sans mandat) : **« laisse »** — le menu ⋯ suffit.
+
+### Point 6 n° 3 — L'HÉRITAGE « COMPROMIS ← OFFRE ACCEPTÉE » : audit du 26/10 au soir — lecture seule, rien codé
+**Aujourd'hui, à la création d'un compromis, la modale ne vise aucune transaction** (`affaireCourantePourStatut` rend null) : elle garde
+ce que l'ouverture a posé — le **prix du mandat** dans « Montant / prix public » et « Prix de vente », une liste d'acquéreurs **vide**. Seuls
+la commission (répartition de la chaîne) et le notaire du vendeur (carnet de l'offre, 23/10) sont repris. La vente, elle, hérite de son
+compromis depuis le 10/09 (effet `statusChangeStatus === 'sold'`).
+**Mesure sur le registre** (959 paires compromis 2024+ / offre acceptée unique de la même chaîne) :
+| | |
+|---|---|
+| même montant | **929 (97 %)** ; 30 différents (prix renégocié), dont 1 seul avec des honoraires acquéreur |
+| l'acquéreur de l'offre est dans le compromis | **873 (91 %)** ; le compromis en a **plusieurs** dans 221 cas (217 contiennent celui de l'offre) ; 81 ont changé d'acheteur |
+| forme | l'offre porte **un objet seul** (un acheteur), le compromis une liste — `lireMandantsAffaire` lit les deux |
+**Où va le montant** : le worker, à la création, envoie `prixPublique = amount` et `prixDeVente = sale_price` ; le registre range le prix
+public dans `montant`. Sans honoraires acquéreur (97 %), les deux sont égaux → l'offre remplit **les deux cases**, comme le fait déjà la
+modification depuis le 18/09 (« le prix de vente suit le montant de l'offre »).
+**Les acquéreurs à la création partent sans drapeau** (`!enReprise` → `acquereurs[]` posé) : ce que la modale montre est envoyé.
