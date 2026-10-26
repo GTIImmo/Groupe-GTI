@@ -984,3 +984,17 @@ transaction que Hektor ne liste plus (`present_in_hektor` à faux) garde ses par
   et noter la nouvelle empreinte de la vue (`d4350c63`) pour les gardes des patchs suivants.
 - Les index sur expression d'origine (`idx_app_relation_contact_texte`, `idx_app_affaire_partie_contact_texte`) deviennent inutiles :
   laissés en place (additif) ; leur retrait se décidera à part.
+
+## 21. ✅ LE REMÈDE DE LA FICHE CONTACT EST POSÉ — 26/10 vers 14:45 *(Frédéric : « applique toi-même … maintenant, puis la répétition »)*
+- **Patch** : 6/6 (liens 132 879 lignes et parties 116 932 lignes, colonne juste partout ; vue `d4350c63`).
+- **Répétition** sous les comptes réels : 14/14 — fiche **36,4 ms** (Frédéric) et **131,1 ms** (commercial), les deux index servent,
+  côté bien 1,8 à 159 ms, témoin inverse 236,8 / 296,3 ms sans les colonnes, sentinelle des parties à 0.
+- **Preuve dans l'app (Chrome de Frédéric)** : la lecture des liens de la fiche passe de **3 964 / 3 964 / 7 030 ms** (matin) à
+  **510 / 716 / 90 ms**. Les deux premières tombent pendant le chargement, au milieu des **25 lectures du registre des mandats**
+  (toujours ~820 ms chacune — c'est désormais ce qui pèse, voir §19.5).
+- ⚠ **ORDRE DES RETOURS ARRIÈRE** : l'inverse de la table des parties vérifie l'empreinte de la vue (`acf77be8` après retrait de sa
+  branche) ; il **refusera** de tourner tant que ce patch est posé (sans rien écrire). Pour défaire les deux : d'abord
+  `patch_fiche_contact_vitesse_2026-10-26_INVERSE.sql`, ensuite celui des parties.
+- La nouvelle empreinte de la vue est **`d4350c63`** : tout patch futur de cette vue part de là. Le générateur
+  `phase2/checks/gen_table_des_parties/` est historique (avertissement dans son LISEZMOI).
+- ⏰ La nuit : la répétition est à rejouer demain matin (contrôle 21 : la colonne des parties reste juste après le recalcul de C4).

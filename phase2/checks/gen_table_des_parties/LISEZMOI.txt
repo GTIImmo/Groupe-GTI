@@ -6,3 +6,8 @@ parties_calcul.sql : le calcul des parties (corps de app_affaire_partie_calculer
 parties_branche_vue.sql : la branche des acquereurs de app_contact_relations_current ;
 parties_ecarts_v2.sql : la vue de la sentinelle (jointure sur la cle) ;
 parties_essais.sql : les 9 epreuves jouees DANS UNE TRANSACTION ANNULEE (voir la note §17-18).
+
+ATTENTION (26/10/2026, 14:4x) : ce generateur reproduit le patch DEJA POSE a 13:21, a partir de la vue d'AVANT
+(empreinte acf77be8). Depuis, supabase/patch_fiche_contact_vitesse_2026-10-26.sql a change la vue : elle lit
+app_contact_id_texte (colonne calculee) au lieu de convertir (p.app_contact_id)::text, et son empreinte est
+d4350c63. Ne PAS le rejouer tel quel : un patch neuf part de la vue VIVANTE (pg_get_viewdef), jamais de ces fichiers.
