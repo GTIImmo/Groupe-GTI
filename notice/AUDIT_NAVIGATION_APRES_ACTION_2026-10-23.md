@@ -1076,3 +1076,37 @@ recherches de 03:00). Si elle l'est, le geste marche, avec un délai.
    21/10.)* **Probable, pas prouvé** : il faudrait lire l'onglet d'un contact à 2 actives + 1 archivée. **Même
    mécanisme pour la MODIFICATION** si elle passe par l'index — non vérifié.
 3. La fenêtre de suivi a titré ce travail « Création d'une annonce » — cause non mesurée.
+
+---
+
+## 20. POINT 4 — RE-AUDIT DU 26/10 : « une vraie recherche globale » (rien codé)
+
+*3b+3c laissé tel quel par Frédéric (« laisse et enchaîne »).*
+
+**Ce qui existe (code + base, mesuré le 26/10)**
+- La barre « Rechercher un bien, un contact, un mandat… » de l'Accueil est **décorative** : `<input readOnly value="">`
+  (`App.tsx` ~24715, composant `HomeDashboardScreen`, rendu l. ~23228 et ~24119).
+- Chaque écran a sa « Recherche rapide » (`App.tsx` ~23519), qui ne cherche **que dans sa liste**, et dans les annonces
+  **seulement les actives** tant qu'on ne clique pas « Étendre aux archives, vendus et clos » (constat M5).
+- Les recherches de liste existantes (`lib/api.ts`) : ≥ 3 caractères, `search_text ilike`, et pour un nombre aussi
+  `numero_dossier`, `numero_mandat`, `code_postal` (annonces) ou `hektor_contact_id` / `hektor_target_id` (contacts).
+- **Ce que porte `search_text`** : annonce = n° de dossier, titre, ville + CP, agence, négociateur — ⚠ **ni l'adresse,
+  ni les mandants, ni le n° Hektor** ; contact = nom, téléphone, **e-mail** (29 773 / 29 902), négociateur, agence, rôle ;
+  registre des mandats = n° de dossier, n° de mandat, titre, ville, négociateur, agence, **mandants**.
+
+**Les 5 sources, et leur coût mesuré** (terme absent = pire cas, toute la table parcourue) :
+
+| source | lignes | index | temps |
+|---|---|---|---|
+| annonces en cours (`app_dossiers_current`) | 13 512 | trigramme | 5,7 ms |
+| vendues / closes (`app_historical_annonce_index_current`) | 8 955 | — | quelques ms |
+| archives (`app_archive_annonce_index_current`) | 35 335 | trigramme | 7,0 ms |
+| contacts (`app_contacts_current`) | 62 325 | trigramme | 5,2 ms |
+| registre des mandats (`app_registre_mandats_current`) | 24 576 | ⚠ aucun (lecture complète) | 149 ms |
+
+**Ouvrir un résultat : toutes les portes existent déjà** — annonce en cours : `openDossierDetailPage` ; vendue / close
+/ archivée : `openLightweightDetailImport` (lecture seule, comme aujourd'hui) ; contact : `showContactInDirectory` ;
+mandat : écran Mandats. Avec le point 1, chaque ouverture écrit son adresse → **Précédent** ramène où on était.
+
+**Les droits** : les 5 lectures passent par les mêmes vues que les listes, donc par les mêmes règles d'accès : un
+négociateur ne trouvera rien qu'il ne voie déjà dans ses listes.
