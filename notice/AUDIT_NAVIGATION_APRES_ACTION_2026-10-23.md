@@ -1118,3 +1118,39 @@ d'offre suivi, mandant lier / retirer, « Abandonner ce geste », archiver, affe
 d'utilisateur (aucune annonce d'essai avec mandat n'existe). Le risque est **d'affichage seulement** (front, aucune
 écriture nouvelle) ; retour arrière = `L_ECRAN_SUIT_LE_CLIC = false`. ➡ Si une rubrique ne suit pas ou clignote dans
 l'usage, c'est ici qu'il faut regarder en premier.
+
+### 20.1 Ergonomie validée (26/10) et LES BLOCS DE RECHERCHE DES ÉCRANS
+
+**Frédéric prend les 7 recommandations** : fenêtre au centre (la barre de l'Accueil ouvre la même), ordre des groupes
+selon la saisie (téléphone / e-mail → contacts d'abord ; numéro → annonces et mandats d'abord), 5 par groupe +
+« Voir tout », vendus / clos / archivés inclus d'office dans un groupe « lecture seule », la dernière recherche est
+retrouvée, « / » ↑ ↓ Entrée Échap, loupe en haut sur téléphone ; champs : n° de dossier, de mandat, Hektor, adresse,
+ville / CP, mandant, nom, téléphone, e-mail.
+
+**Sa question** : « que fait-on des blocs de recherche actuels, qui cherchent d'abord dans l'index principal puis
+proposent d'étendre ? Il faut que ce soit rapide avec le volume de tous les index. »
+
+**Ce que fait l'écran Annonces aujourd'hui (code lu)** — `loadDossiersPage`, `lib/api.ts` ~5007 :
+- la saisie part 400 ms après la dernière frappe, à partir de 3 caractères (`App.tsx` ~13815) ;
+- elle cherche dans les **actives** seulement ; un bandeau « Recherche limitée » propose **« Étendre aux archives,
+  vendus et clos »** — **à l'aveugle** : on ne sait pas s'il y a quelque chose à trouver avant de cliquer ;
+- en mode étendu, l'écran lit **4 sources l'une APRÈS l'autre** (en cours, archives, vendus / clos, brouillons), chacune
+  avec un **compte exact**, puis fusionne et trie dans le navigateur.
+- côté base, **tout est déjà indexé** pour ça : 37 index « trigramme » sur les 4 sources d'annonces (texte, titre,
+  dossier, mandat, ville, CP, négociateur, agence, **mandants**) et sur les contacts. ⚠ Seul le **registre des mandats
+  n'en a aucun** (149 ms, lecture complète des 24 576 lignes).
+
+**Proposition (front seul, pas de changement en base pour commencer)**
+1. **Plus d'extension à l'aveugle** : pendant que la liste des actives s'affiche, l'écran **compte en parallèle** ce
+   qu'il y aurait ailleurs (comptes seuls, sans lignes, sur index) et l'écrit : « Aussi : 2 vendues ou closes, 5 archivées
+   — Afficher ». Rien trouvé ailleurs → pas de bouton. La liste principale n'attend pas ces comptes.
+2. **0 résultat dans les actives** → l'écran étend **tout seul** et le dit (« Rien dans les actives — voici les vendues,
+   closes et archivées »).
+3. **Le mode étendu lit ses 4 sources EN MÊME TEMPS** au lieu de l'une après l'autre (mêmes requêtes, mêmes résultats).
+4. La recherche globale fait **ses 5 lectures en même temps** ; chacune est bornée à 5 lignes.
+- **Plus tard, seulement si la mesure le demande** (accord, patch à coller) : une seule fonction en base qui interroge
+  les 5 sources en un aller-retour, et un index trigramme sur le registre des mandats.
+
+**Ordres de grandeur** : côté base, 5 à 7 ms par source indexée, 149 ms pour le registre (mesuré) ; un aller-retour
+navigateur → base ≈ 200 ms (mesuré le 23/10, §10.2). Gain attendu du point 3 : ~4 allers-retours enchaînés → ~1 seul
+temps d'attente (**estimé, à mesurer au codage**).
