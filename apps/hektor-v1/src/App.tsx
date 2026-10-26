@@ -12886,6 +12886,29 @@ const SELECTION_D_OFFICE = false
 //   `false` = l'ancien comportement, en une ligne.
 const RESUME_RDV_EN_DIFFERE = true
 
+// ⛔ 26/10/2026 -- POINT 1 : UNE ADRESSE PAR ECRAN ET PAR FICHE (?ecran=…&annonce=…&contact=…).
+//   L'adresse ne bougeait jamais : « precedent » sortait de l'app (la fermait sur Android),
+//   F5 ramenait a l'accueil, aucun lien de fiche ne pouvait etre envoye. On n'ajoute AUCUNE
+//   logique d'ouverture : l'adresse s'ecrit DERRIERE la navigation existante (menu, boutons
+//   Retour, retour contextuel vers le contact), et se relit par les deux portes qui existent
+//   deja (openDossierDetailPage, showContactInDirectory). Forme « ?… » et pas « /… » : sans
+//   vercel.json, « /annonces/123 » repond 404 (mesure du 26/10). On ne touche jamais au « # »
+//   (lien de recuperation du mot de passe) ; le lien des e-mails ?open=request passe d'abord.
+//   Les noms sont ceux du MENU (l'ecran interne `mandats` est le menu Annonces, `registre`
+//   le menu Mandats). Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §13.
+//   `false` = l'ancien comportement, en une ligne.
+const ADRESSE_DANS_LA_BARRE = true
+const ADRESSE_MEMO_CONNEXION = 'gti_adresse_avant_connexion'
+const ECRAN_VERS_ADRESSE: Record<Screen, string> = {
+  accueil: 'accueil', annonces: 'annonces', mandats: 'annonces', estimations: 'estimations',
+  registre: 'mandats', contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante',
+}
+const ADRESSE_VERS_ECRAN: Record<string, Screen> = {
+  accueil: 'accueil', annonces: 'mandats', estimations: 'estimations', mandats: 'registre',
+  contacts: 'contacts', agenda: 'agenda', suivi: 'suivi', sante: 'sante',
+}
+const CLES_ADRESSE = ['ecran', 'annonce', 'contact'] as const
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('accueil')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
@@ -14610,7 +14633,16 @@ export default function App() {
         // read-through (job ~5-10s), la lecture peut revenir vide (lag de replication Supabase /
         // recharge concurrente via dataReloadKey) alors que la ligne EXISTE. Dans ce cas on garde
         // la fiche affichee (on ne lache la selection que si elle ne correspond plus au dossier ouvert).
+        // POINT 1 (26/10/2026) : une fiche demandee PAR L'ADRESSE et introuvable (supprimee, pas le
+        // droit, ou bien vendu / clos / archive -- absent de app_dossier_current) : on le DIT et on
+        // ferme, au lieu d'afficher une fiche vide.
+        const demandeeParAdresse = ficheDemandeeParAdresseRef.current === selectedDossierId
+        if (demandeeParAdresse) ficheDemandeeParAdresseRef.current = null
         if (detail) setSelectedDossier(detail)
+        else if (demandeeParAdresse && selectedDossierRef.current?.app_dossier_id !== selectedDossierId) {
+          setDetailOpen(false)
+          setErrorMessage("Fiche introuvable ou non accessible depuis ce lien. Un bien vendu, clos ou archivé s'ouvre depuis la liste (« Étendre aux archives »).")
+        }
         else setSelectedDossier((current) => current?.app_dossier_id === selectedDossierId ? current : null)
       })
       .catch((error) => {
@@ -14710,6 +14742,127 @@ export default function App() {
     window.history.replaceState({}, document.title, nextUrl)
     setDeepLinkHandled(true)
   }, [bootLoading, deepLinkHandled, hasSupabaseEnv, mandats, session])
+
+  // ═══ POINT 1 (26/10/2026) : L'ADRESSE SUIT L'ECRAN ET LA FICHE ═══ (voir ADRESSE_DANS_LA_BARRE)
+  // ECRIRE : l'adresse est DEDUITE de l'etat ; quand elle change, on l'inscrit dans l'historique
+  //   (pushState) -- sauf pendant une RESTAURATION (demarrage, precedent/suivant), ou l'on remplace
+  //   l'entree courante (replaceState) pour ne pas fabriquer de fausses etapes.
+  // LIRE : au demarrage (une fois connecte, apres le lien ?open=request) et sur « popstate ».
+  const [adressePrete, setAdressePrete] = useState(false)
+  // La fiche contact de l'ecran Contacts est un etat LOCAL du composant : il nous previent.
+  const [contactFicheOuverte, setContactFicheOuverte] = useState(false)
+  const [contactFermerSignal, setContactFermerSignal] = useState(0)
+  const restaurationAdresseRef = useRef<{ cible: string; jusqua: number } | null>(null)
+  const ficheDemandeeParAdresseRef = useRef<number | null>(null)
+  const adresseVoulue = useMemo(() => {
+    const p = new URLSearchParams()
+    p.set('ecran', ECRAN_VERS_ADRESSE[screen] ?? 'accueil')
+    if (detailOpen && selectedDossierId != null) p.set('annonce', String(selectedDossierId))
+    if (detailOpen && annonceContactId) p.set('contact', annonceContactId)
+    else if (screen === 'contacts' && contactFicheOuverte && selectedContactId) p.set('contact', selectedContactId)
+    return p.toString()
+  }, [screen, detailOpen, selectedDossierId, annonceContactId, contactFicheOuverte, selectedContactId])
+
+  // Garde les parametres qui ne sont pas a nous ; remplace les trois notres.
+  function fusionnerAdresse(searchActuel: string, notre: string) {
+    const p = new URLSearchParams(searchActuel)
+    for (const cle of CLES_ADRESSE) p.delete(cle)
+    for (const [cle, valeur] of new URLSearchParams(notre)) p.set(cle, valeur)
+    const s = p.toString()
+    return s ? `?${s}` : ''
+  }
+
+  useEffect(() => {
+    if (!ADRESSE_DANS_LA_BARRE || !adressePrete || typeof window === 'undefined') return
+    const actuel = window.location.search
+    const voulu = fusionnerAdresse(actuel, adresseVoulue)
+    const restauration = restaurationAdresseRef.current
+    const enRestauration = Boolean(restauration && Date.now() < restauration.jusqua)
+    if (restauration && (!enRestauration || fusionnerAdresse('', adresseVoulue) === restauration.cible)) {
+      restaurationAdresseRef.current = null
+    }
+    if (voulu === actuel) return
+    const url = `${window.location.pathname}${voulu}${window.location.hash || ''}`
+    if (enRestauration) window.history.replaceState(window.history.state, document.title, url)
+    else window.history.pushState(null, document.title, url)
+  }, [adresseVoulue, adressePrete])
+
+  // Applique une adresse en passant par les portes EXISTANTES. Rend false si elle n'est pas a nous.
+  function appliquerAdresse(search: string) {
+    const p = new URLSearchParams(search)
+    const ecran = ADRESSE_VERS_ECRAN[(p.get('ecran') ?? '').trim()]
+    if (!ecran) return false
+    const annonce = Number(p.get('annonce'))
+    const contact = (p.get('contact') ?? '').trim()
+    const cible = new URLSearchParams()
+    for (const cle of CLES_ADRESSE) { const v = p.get(cle); if (v) cible.set(cle, v) }
+    restaurationAdresseRef.current = { cible: `?${cible.toString()}`, jusqua: Date.now() + 4000 }
+    // Une restauration n'est pas un « retour contextuel » : on oublie le contact d'origine.
+    setDossierReturnContactId(null)
+    if (ecran === 'contacts') {
+      if (contact) {
+        if (!(screen === 'contacts' && contactFicheOuverte && selectedContactId === contact)) showContactInDirectory(contact)
+      } else if (screen !== 'contacts') {
+        openScreen('contacts')
+      } else if (contactFicheOuverte) {
+        setContactFermerSignal((n) => n + 1)
+      }
+      return true
+    }
+    if (Number.isFinite(annonce) && annonce > 0) {
+      // setScreen et pas openScreen : openScreen ferme la fiche et remet les filtres a zero.
+      if (screen !== ecran) setScreen(ecran)
+      if (!(detailOpen && selectedDossierId === annonce)) {
+        ficheDemandeeParAdresseRef.current = annonce
+        openDossierDetailPage(annonce)
+      }
+      setAnnonceContactId(contact || null)
+      return true
+    }
+    if (screen !== ecran) {
+      openScreen(ecran)
+    } else {
+      if (detailOpen) setDetailOpen(false)
+      setAnnonceContactId(null)
+    }
+    return true
+  }
+  const appliquerAdresseRef = useRef(appliquerAdresse)
+  appliquerAdresseRef.current = appliquerAdresse
+
+  // Deconnecte : on garde l'adresse demandee le temps de la connexion (Google ramene a l'origine).
+  useEffect(() => {
+    if (!ADRESSE_DANS_LA_BARRE || !hasSupabaseEnv || session || typeof window === 'undefined') return
+    if (!new URLSearchParams(window.location.search).get('ecran')) return
+    try { window.sessionStorage.setItem(ADRESSE_MEMO_CONNEXION, window.location.search) } catch { /* stockage indisponible */ }
+  }, [session])
+
+  // Au demarrage, une fois connecte et APRES le lien ?open=request : on relit l'adresse.
+  useEffect(() => {
+    if (!ADRESSE_DANS_LA_BARRE || adressePrete || typeof window === 'undefined') return
+    if (bootLoading || (hasSupabaseEnv && !session) || !deepLinkHandled) return
+    let search = window.location.search
+    try {
+      const memo = window.sessionStorage.getItem(ADRESSE_MEMO_CONNEXION)
+      if (memo && !new URLSearchParams(search).get('ecran')) search = memo
+      window.sessionStorage.removeItem(ADRESSE_MEMO_CONNEXION)
+    } catch { /* stockage indisponible : on relit seulement l'adresse */ }
+    if (!appliquerAdresseRef.current(search)) {
+      // Rien a relire : la 1re ecriture REMPLACE l'entree d'arrivee au lieu d'en ajouter une
+      // (sinon le 1er « precedent » ne ferait que revenir sur la meme page).
+      restaurationAdresseRef.current = { cible: fusionnerAdresse('', adresseVoulue), jusqua: Date.now() + 4000 }
+    }
+    setAdressePrete(true)
+  }, [bootLoading, session, deepLinkHandled, adressePrete])
+
+  // Precedent / suivant du navigateur (et la touche retour d'Android).
+  useEffect(() => {
+    if (!ADRESSE_DANS_LA_BARRE || typeof window === 'undefined') return
+    // L'entree d'arrivee peut ne porter aucune adresse a nous : c'est l'accueil.
+    const surRetour = () => { if (!appliquerAdresseRef.current(window.location.search)) appliquerAdresseRef.current('?ecran=accueil') }
+    window.addEventListener('popstate', surRetour)
+    return () => window.removeEventListener('popstate', surRetour)
+  }, [])
 
   useEffect(() => {
     if (!detailOpen || !selectedDossier) {
@@ -22842,6 +22995,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           />
         ) : screen === 'contacts' ? (
           <MobileContactCards
+            openContactId={contactDirectLookupId}
+            onDetailOpenChange={setContactFicheOuverte}
+            closeSignal={contactFermerSignal}
             contacts={contactsDirectory}
             total={contactsTotal}
             page={contactPage}
@@ -23810,6 +23966,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             selectedSearches={selectedContactSearches}
             selectedSearchesLoading={selectedContactDataLoading}
             openContactId={contactDirectLookupId}
+            onDetailOpenChange={setContactFicheOuverte}
+            closeSignal={contactFermerSignal}
             loading={contactsLoading}
             hasActiveFilters={activeFilters.length > 0}
             createOpen={contactCreateOpen}
@@ -44132,6 +44290,10 @@ function ContactsScreen(props: {
   searchActive?: boolean
   onSelectRole?: (role: string) => void
   onToggleSearchActive?: () => void
+  // POINT 1 (26/10/2026) : la fiche est un etat LOCAL ; l'adresse doit le savoir, et pouvoir la
+  // fermer sur un « precedent ». Les boutons de la fiche ne changent pas.
+  onDetailOpenChange?: (open: boolean) => void
+  closeSignal?: number
 }) {
   const formatNumber = new Intl.NumberFormat('fr-FR')
   const listingTotalLabel = `${formatNumber.format(props.contactsTotal)} contacts`
@@ -44142,6 +44304,14 @@ function ContactsScreen(props: {
       setDetailOpen(true)
     }
   }, [props.openContactId, props.selectedContact?.hektor_contact_id])
+  const onDetailOpenChange = props.onDetailOpenChange
+  useEffect(() => {
+    onDetailOpenChange?.(detailOpen)
+  }, [detailOpen, onDetailOpenChange])
+  useEffect(() => () => { onDetailOpenChange?.(false) }, [onDetailOpenChange])
+  useEffect(() => {
+    if (props.closeSignal) setDetailOpen(false)
+  }, [props.closeSignal])
   const openContactDetail = (contactId: string) => {
     props.onSelectContact(contactId)
     setDetailInitialEditing(false)
@@ -44408,8 +44578,26 @@ function MobileContactCards(props: {
   onContactDeleted?: (contact: AppContact) => void
   onContactArchived?: (contact: AppContact, archiver: boolean) => void
   onOpenRechercheAcquereur?: (search: AppContactSearch) => void
+  // POINT 1 (26/10/2026) : memes trois branchements que ContactsScreen (bureau), pour que
+  // l'adresse ouvre / ferme la fiche contact sur telephone aussi.
+  openContactId?: string | null
+  onDetailOpenChange?: (open: boolean) => void
+  closeSignal?: number
 }) {
   const [detailOpen, setDetailOpen] = useState(false)
+  useEffect(() => {
+    if (props.openContactId && props.selectedContact?.hektor_contact_id === props.openContactId) {
+      setDetailOpen(true)
+    }
+  }, [props.openContactId, props.selectedContact?.hektor_contact_id])
+  const onDetailOpenChange = props.onDetailOpenChange
+  useEffect(() => {
+    onDetailOpenChange?.(detailOpen)
+  }, [detailOpen, onDetailOpenChange])
+  useEffect(() => () => { onDetailOpenChange?.(false) }, [onDetailOpenChange])
+  useEffect(() => {
+    if (props.closeSignal) setDetailOpen(false)
+  }, [props.closeSignal])
   const openContactDetail = (contactId: string) => {
     props.onSelectContact(contactId)
     setDetailOpen(true)

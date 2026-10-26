@@ -646,3 +646,36 @@ ne bouge jamais → retour du navigateur = sortie de l'app (fermeture sur Androi
 `<adresse de l'app>/rdv/annonce/…` — côté écran (`VITE_APPOINTMENT_PUBLIC_BASE_URL` **absente** du code publié → repli
 sur `groupe-gti.vercel.app`) comme côté serveur (`app_base_url` + `/rdv/annonce/`, valeur Render non mesurée). Or
 `groupe-gti.vercel.app/rdv/annonce/abc` → **404**. Ce lien semble **mort** ; à rapprocher de la vitrine (§12.1, 11bis).
+
+### 13.1 ✅ POINT 1 CODÉ ET CONTRÔLÉ EN DÉMONSTRATION (26/10, « VAS Y POUR LE POINT 1 »)
+
+**Principe tenu** (demande de Frédéric : « améliorer, pas casser » ma navigation) : **aucun bouton de l'app ne change**
+(menu, « Retour aux annonces », retour contextuel vers le contact, contact par-dessus l'annonce). L'adresse s'écrit
+**derrière** eux et se relit par les **deux portes existantes**.
+
+**Le code** (`App.tsx`) : interrupteur `ADRESSE_DANS_LA_BARRE = true` ; noms du **menu** (`ECRAN_VERS_ADRESSE` /
+`ADRESSE_VERS_ECRAN`) ; l'adresse **déduite** de l'état (`adresseVoulue`) → `pushState` ; pendant une restauration
+(démarrage, précédent/suivant) → `replaceState` (pas de fausse étape) ; lecture au démarrage **après** le lien
+`?open=request` et une fois connecté ; `popstate` ; une entrée sans adresse = l'accueil ; mémo de l'adresse le temps de
+la connexion (`sessionStorage`, onglet seul) ; fiche introuvable par l'adresse → message et retour à la liste ;
+`ContactsScreen` et `MobileContactCards` préviennent l'app (ouverture / fermeture) et acceptent d'être fermées ; le
+mobile accepte aussi `openContactId`.
+
+**Contrôles** (`npm run build` vert avec les types ; mode démonstration, bureau 1440 et téléphone 375) :
+
+| essai | résultat |
+|---|---|
+| arrivée | `?ecran=accueil`, **remplace** l'entrée (historique 1) |
+| menu Annonces → fiche | `?ecran=annonces` puis `?ecran=annonces&annonce=7801` (2 étapes) |
+| menu Contacts puis **précédent ×3, suivant ×2** | fiche 7801 → liste → accueil → liste → fiche ; **historique constant (4)**, aucune fausse étape |
+| **F5** sur la fiche | la fiche 7801 se rouvre |
+| contact par-dessus la fiche | `…&contact=P-7801` ; précédent l'enlève, suivant le remet (⚠ voir « non éprouvé ») |
+| bouton **« Retour aux annonces »** (le tien) | ferme comme avant ; l'adresse suit (`?ecran=annonces`) ; « précédent » rouvre la fiche |
+| lien vers une fiche **inexistante** (`annonce=999999`) | message « Fiche introuvable ou non accessible… », retour à la liste, sans étape ajoutée |
+| lien des **e-mails de demande** (`?open=request…`) | la modale de Pauline s'ouvre toujours (VM7801), puis l'adresse prend le relais |
+| **téléphone** : Annonces → « Voir le détail » → **retour** | `annonce=32621` puis retour aux cartes **sans quitter l'app** |
+
+⚠ **Non éprouvé en démonstration** : l'**écran Contacts** (la démonstration n'a **aucun** contact) et l'**affichage**
+du contact par-dessus l'annonce (le contact d'essai `P-7801` n'existe pas : l'adresse suit, la fiche ne s'affiche
+pas) ; la **connexion Google** (pas de connexion en démonstration) ; la touche retour d'un **vrai** Android. → à
+éprouver en production avec Frédéric.
