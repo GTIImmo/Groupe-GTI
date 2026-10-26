@@ -1033,3 +1033,20 @@ est prouvée sur une rubrique sans lignes ; et aucun geste réel n'a pu partir (
 
 **Ce qui reste : l'essai réel** (à faire avec Frédéric, sur une fiche qu'il choisit) — voir la liste donnée en fin de
 session.
+
+### 19.1 ESSAIS RÉELS (26/10, 12:44-12:52, faits par Claude dans le Chrome de Frédéric, à sa demande : « fais-le toi-même »)
+
+En ligne : `index-BFoQ-fUF.js` (contient `hektor:relire-rubriques` et `hektor:geste-fait`, vérifié).
+
+| essai | cible | résultat |
+|---|---|---|
+| **créer une recherche** | contact d'essai 20000008 (« Creation ESSAI 8A B2 », Hektor 605946), Maison, Firminy, 120-250 k€ | ✅ **visible « En création… » ~2 s après le clic, sans recharger** (avant : ~1 min). Travail `ecf9d13b` done en 13 s, resynchro `fc1f9f7b` done 13 s plus tard ; la ligne est passée **d'elle-même** à « Active · Firminy 42700 » 0,6 s après |
+| **supprimer cette recherche** | même contact, index 1 | ⚠ l'état « Suppression en cours… » **n'a pas pu être capturé** (mes lectures de la page ont expiré à 45 s). Travail `e43aff82` done en 11 s, résultat `status: archived, idCritere 471880` — ⛔ **MAIS HEKTOR NE L'A PAS ARCHIVÉE** : le détail du contact relu par Hektor à 12:45:55 (13 s après) porte toujours la recherche Firminy en `archive: "0"`, donc notre base la garde active (local et Supabase, contrôlé à 12:47:46). Le worker (`handleDeleteHektorContactSearch`, l. 19636) **ne vérifie pas** l'archivage : il renvoie « archived » sur la seule réponse (`desarchiveCritere: true`). **Hors 3b/3c — défaut du geste lui-même, NOTÉ, PAS TRAITÉ.** À revoir après la nuit (si un délai de Hektor, la recherche passera inactive au run) |
+| **créer puis refuser une offre** | 62965 « TEST C13 … à supprimer » (62774 est close : hors `app_dossier_current`) | ⛔ **NON FAIT, volontairement** : l'annonce n'a pas de mandat et la fenêtre dit « N° de mandat : attribué automatiquement si vide » → envoyer l'offre aurait fait **attribuer un vrai numéro de mandat** à une annonce d'essai (irréversible). Fenêtre fermée sans envoi (0 travail, vérifié) |
+| **lier puis retirer un mandant** | 62965 | ⛔ **NON FAIT** : « Rattacher un mandant existant » ne cherche que les contacts **du négociateur de l'annonce** (gonzalez) ; aucun contact d'essai n'est à lui (20000009 → « Aucun contact trouvé pour ce négociateur »). Annulé sans envoi |
+
+**Vu en passant** :
+- ⚠ la fenêtre « Suivi de l'action » a titré la suppression de recherche **« Création d'une annonce »** (job `e43aff82`), alors que l'étiquette du type existe (`api.ts:3111`, « Suppression d'une recherche acquereur »). Cause non mesurée ; la fenêtre doit disparaître au point 6 ;
+- ✅ le bouton **Précédent** du navigateur a rouvert la fiche 62965 (point 1, encore bon).
+
+**Reste à éprouver en réel** : la rubrique Affaires après une offre (il faut une annonce d'essai **avec mandat**), le refus d'offre suivi, le mandant, « Abandonner ce geste ». ➡ À Frédéric de désigner une annonce d'essai avec mandat et un contact d'essai du bon négociateur — ou de faire ces gestes lui-même sur un vrai dossier.
