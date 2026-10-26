@@ -252,6 +252,7 @@ import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchVal
 import './contact-new.css'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
 import './fil-navigation.css'
+import './suivi-travaux.css'
 import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
@@ -13105,6 +13106,257 @@ function BandeauFilNavigation() {
     </nav>
   )
 }
+// ⛔ 26/10/2026 -- POINT 6 : LE SUIVI DES TRAVAUX DANS L'OBJET, ET LE RETRAIT DE LA FENETRE « SUIVI DE L'ACTION ».
+//   La fenetre du bas a droite recouvrait l'ecran a chaque geste -- et, pour un admin, aux gestes des AUTRES (le suivi
+//   charge les travaux en cours de tout le monde). A la place :
+//     1. dans la FICHE concernee (annonce, contact), une ligne d'etat : en cours -> « a jour » -> s'efface, ou en ROUGE
+//        si Hektor refuse (le message, et « Compris » pour la ranger) ; les photos de la creation y disent « ne fermez
+//        pas cet onglet » ;
+//     2. un COMPTEUR de MES actions pres de la cloche (bureau) et sur le bouton ☰ (telephone), avec la liste.
+//   Le suivi lui-meme (sondage de 5 s, `hektorActionJobs`) et ses 5 dependances ne bougent pas : seul l'AFFICHAGE change.
+//   Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §22-§22.1.
+//   `FENETRE_SUIVI_ACTION = true` remet la fenetre, en une ligne.
+const FENETRE_SUIVI_ACTION = false
+const SUIVI_DANS_LA_FICHE = true
+const TRAVAUX_VUS_STOCKAGE = 'gti_travaux_vus'
+// Les relectures (ouverture d'une fiche) et le travail de fond de la nuit ne sont pas des gestes de quelqu'un.
+const TRAVAUX_SANS_INDICATEUR = new Set(['refresh_console_data', 'refresh_console_contact_data', 'sync_console_documents'])
+const LIBELLES_TRAVAUX: Record<string, [string, string, string?]> = {
+  // type : [singulier, pluriel, duree habituelle mesuree sur 30 jours]
+  create_hektor_draft_annonce: ['Création de l’annonce', 'Créations d’annonce', '≈ 2 min'],
+  change_hektor_annonce_status: ['Changement de statut', 'Changements de statut', '≈ 1 min'],
+  change_hektor_offre_status: ['Geste sur l’offre', 'Gestes sur des offres'],
+  cancel_hektor_compromis: ['Annulation du compromis', 'Annulations de compromis'],
+  delete_hektor_compromis: ['Suppression du compromis', 'Suppressions de compromis'],
+  delete_hektor_vente: ['Suppression de la vente', 'Suppressions de vente'],
+  archive_hektor_annonce: ['Archivage de l’annonce', 'Archivages', '≈ 2 min'],
+  restore_hektor_annonce: ['Désarchivage de l’annonce', 'Désarchivages', '≈ 1 min'],
+  delete_hektor_annonce: ['Suppression de l’annonce', 'Suppressions d’annonce'],
+  assign_hektor_annonce_negotiator: ['Affectation du négociateur', 'Affectations'],
+  update_hektor_annonce_fields: ['Modification de l’annonce', 'Modifications de l’annonce'],
+  exit_hektor_draft_annonce: ['Activation du brouillon', 'Activations de brouillon', '≈ 1 min'],
+  create_hektor_mandat_auto_number: ['Numéro de mandat', 'Numéros de mandat'],
+  upload_hektor_photo: ['Envoi de photo', 'Envois de photos', 'souvent plusieurs minutes'],
+  delete_hektor_photo: ['Suppression de photo', 'Suppressions de photos'],
+  reorder_hektor_photos: ['Ordre des photos', 'Ordres des photos'],
+  set_hektor_photo_visibility: ['Photo masquée ou affichée', 'Photos masquées ou affichées'],
+  sync_hektor_photos: ['Relecture des photos', 'Relectures des photos'],
+  upload_document_to_hektor: ['Envoi de document', 'Envois de documents', '≈ 30 s'],
+  delete_document_from_hektor: ['Suppression de document', 'Suppressions de documents'],
+  prepare_document_cloud: ['Préparation de document', 'Préparations de documents'],
+  generate_mandat_document: ['Mandat PDF', 'Mandats PDF'],
+  generate_estimation_pdf: ['Avis de valeur PDF', 'Avis de valeur PDF', '≈ 30 s'],
+  generate_cadastre_document: ['Plan cadastral', 'Plans cadastraux'],
+  relance_signature: ['Relance de signature', 'Relances de signature'],
+  cancel_signature_procedure: ['Annulation de signature', 'Annulations de signature'],
+  matterport_online: ['Visite 3D en ligne', 'Visites 3D'],
+  matterport_offline: ['Visite 3D hors ligne', 'Visites 3D'],
+  matterport_archive: ['Archivage de la visite 3D', 'Visites 3D'],
+  matterport_reactivate: ['Réactivation de la visite 3D', 'Visites 3D'],
+  prepare_archived_annonce_detail: ['Préparation de la fiche', 'Préparations de fiches'],
+  prepare_historical_annonce_detail: ['Préparation de la fiche', 'Préparations de fiches'],
+  prepare_brouillon_annonce_detail: ['Préparation de la fiche', 'Préparations de fiches'],
+  create_hektor_contact: ['Création du contact', 'Créations de contacts'],
+  update_hektor_contact: ['Modification du contact', 'Modifications de contacts'],
+  archive_hektor_contact: ['Archivage du contact', 'Archivages de contacts'],
+  delete_hektor_contact: ['Suppression du contact', 'Suppressions de contacts'],
+  add_hektor_contact_search: ['Ajout de recherche', 'Ajouts de recherches'],
+  update_hektor_contact_search: ['Modification de recherche', 'Modifications de recherches'],
+  delete_hektor_contact_search: ['Suppression de recherche', 'Suppressions de recherches'],
+  create_hektor_mandant_contact: ['Création du mandant', 'Créations de mandants'],
+  update_hektor_mandant_contact: ['Modification du mandant', 'Modifications de mandants'],
+  link_hektor_mandant: ['Rattachement du mandant', 'Rattachements de mandants'],
+  unlink_hektor_mandant: ['Retrait du mandant', 'Retraits de mandants'],
+}
+function libelleTravail(type: string, nombre = 1) {
+  const l = LIBELLES_TRAVAUX[type]
+  if (!l) return nombre > 1 ? `${nombre} actions` : 'Action'
+  return nombre > 1 ? `${nombre} ${l[1].charAt(0).toLowerCase()}${l[1].slice(1)}` : l[0]
+}
+function finDuTravail(job: ConsoleJob) {
+  const t = Date.parse(String(job.finished_at ?? job.updated_at ?? ''))
+  return Number.isFinite(t) ? t : 0
+}
+// Le travail porte-t-il sur CET objet ? (annonce par son numero chez nous ou chez Hektor ; contact par son numero)
+function travailSurObjet(job: ConsoleJob, cible: { appDossierId?: number | null; hektorAnnonceId?: string | number | null; contactId?: string | null }) {
+  const p = (job.payload_json ?? {}) as Record<string, unknown>
+  const egal = (a: unknown, b: unknown) => a != null && b != null && String(a).trim() !== '' && String(a).trim() === String(b).trim()
+  if (cible.appDossierId != null && (egal(job.app_dossier_id, cible.appDossierId) || egal(p.app_dossier_id, cible.appDossierId))) return true
+  if (cible.hektorAnnonceId != null && (egal(job.hektor_annonce_id, cible.hektorAnnonceId) || egal(p.hektor_annonce_id, cible.hektorAnnonceId))) return true
+  if (cible.contactId && [p.hektor_contact_id, p.contact_id, p.app_identite, p.target_contact_id].some((v) => egal(v, cible.contactId))) return true
+  return false
+}
+function lireTravauxVus(): string[] {
+  try {
+    const v = JSON.parse(window.sessionStorage.getItem(TRAVAUX_VUS_STOCKAGE) || '[]')
+    return Array.isArray(v) ? v.map(String).slice(-200) : []
+  } catch {
+    return []
+  }
+}
+type TravauxContexte = {
+  jobs: ConsoleJob[]
+  moi: string | null
+  vus: Set<string>
+  marquerVu: (jobId: string) => void
+  photosEnAttente: Record<string, number>
+  ouvrir: (job: ConsoleJob) => void
+}
+const TravauxContext = createContext<TravauxContexte | null>(null)
+// Un minuteur qui fait relire l'etat toutes les 5 s tant qu'il y a quelque chose de recent a montrer.
+function useBattement(actif: boolean) {
+  const [, setT] = useState(0)
+  useEffect(() => {
+    if (!actif) return
+    const id = window.setInterval(() => setT((v) => v + 1), 5000)
+    return () => window.clearInterval(id)
+  }, [actif])
+}
+const DUREE_A_JOUR_MS = 12000
+const DUREE_ERREUR_MS = 24 * 3600 * 1000
+
+// 1. LA LIGNE D'ETAT DANS LA FICHE.
+function IndicateurTravauxObjet(props: { appDossierId?: number | null; hektorAnnonceId?: string | number | null; contactId?: string | null }) {
+  const contexte = useContext(TravauxContext)
+  const maintenant = Date.now()
+  const lies = (contexte?.jobs ?? []).filter((job) => !TRAVAUX_SANS_INDICATEUR.has(job.job_type) && job.requested_by && travailSurObjet(job, props))
+  const enCours = lies.filter((job) => isConsoleJobActive(job))
+  const echecs = lies.filter((job) => job.status === 'error' && !contexte?.vus.has(job.id) && maintenant - finDuTravail(job) < DUREE_ERREUR_MS)
+  const finis = lies.filter((job) => job.status === 'done' && maintenant - finDuTravail(job) < DUREE_A_JOUR_MS)
+  const photos = lies
+    .filter((job) => job.job_type === 'create_hektor_draft_annonce')
+    .reduce((total, job) => total + (contexte?.photosEnAttente[job.id] ?? 0), 0)
+  useBattement(Boolean(enCours.length || finis.length))
+  if (!SUIVI_DANS_LA_FICHE || !contexte || (!enCours.length && !echecs.length && !finis.length && !photos)) return null
+  const parType = new Map<string, number>()
+  for (const job of enCours) parType.set(job.job_type, (parType.get(job.job_type) ?? 0) + 1)
+  return (
+    <div className="suivi-objet" role="status" aria-live="polite">
+      {[...parType.entries()].map(([type, n]) => (
+        <div key={type} className="suivi-ligne is-encours">
+          <span className="suivi-rond" aria-hidden="true" />
+          <span><b>{libelleTravail(type, n)}</b> en cours chez Hektor{LIBELLES_TRAVAUX[type]?.[2] ? <em> ({LIBELLES_TRAVAUX[type]?.[2]})</em> : null}</span>
+        </div>
+      ))}
+      {photos ? (
+        <div className="suivi-ligne is-attention">
+          <span className="suivi-picto" aria-hidden="true">!</span>
+          <span><b>{photos} photo{photos > 1 ? 's' : ''}</b> partiront dès que Hektor aura rendu le numéro de l’annonce — <b>ne fermez pas cet onglet</b>.</span>
+        </div>
+      ) : null}
+      {echecs.map((job) => (
+        <div key={job.id} className="suivi-ligne is-echec">
+          <span className="suivi-picto" aria-hidden="true">✕</span>
+          <span><b>{libelleTravail(job.job_type)}</b> refusé par Hektor{job.error_message ? <> : <q>{String(job.error_message).slice(0, 180).replace(/[.\s]+$/, '')}</q></> : null}. Rien n’est perdu chez nous ; le geste est à refaire ou à vérifier.</span>
+          <button type="button" className="suivi-compris" onClick={() => contexte.marquerVu(job.id)}>Compris</button>
+        </div>
+      ))}
+      {!enCours.length && finis.length ? (
+        <div className="suivi-ligne is-ok">
+          <span className="suivi-picto" aria-hidden="true">✓</span>
+          <span><b>À jour chez Hektor</b> — {libelleTravail(finis[0].job_type, finis.length)} terminé{finis.length > 1 ? 's' : ''}.</span>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function etatTravail(job: ConsoleJob, vus: Set<string>): 'encours' | 'echec' | 'vu' | 'ok' {
+  if (isConsoleJobActive(job)) return 'encours'
+  if (job.status === 'error') return vus.has(job.id) ? 'vu' : 'echec'
+  return 'ok'
+}
+function depuis(ms: number) {
+  if (!Number.isFinite(ms)) return ''
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000))
+  if (s < 60) return `il y a ${s} s`
+  const m = Math.round(s / 60)
+  return m < 60 ? `il y a ${m} min` : `il y a ${Math.round(m / 60)} h`
+}
+function cibleTravail(job: ConsoleJob) {
+  const p = (job.payload_json ?? {}) as Record<string, unknown>
+  const ref = [p.numero_dossier, p.folder_number].find((v) => typeof v === 'string' && v.trim())
+  if (ref) return String(ref)
+  if (job.hektor_annonce_id) return `annonce ${job.hektor_annonce_id}`
+  const contact = p.hektor_contact_id ?? p.contact_id
+  if (contact) return `contact ${contact}`
+  return ''
+}
+// Mes actions recentes (les miennes seulement : un admin ne voit plus celles des autres ici ; Sante les montre toutes).
+function mesTravaux(contexte: TravauxContexte | null) {
+  if (!contexte?.moi) return []
+  return contexte.jobs
+    .filter((job) => job.requested_by === contexte.moi && !TRAVAUX_SANS_INDICATEUR.has(job.job_type))
+    .sort((a, b) => Date.parse(b.requested_at) - Date.parse(a.requested_at))
+    .slice(0, 8)
+}
+function ListeMesTravaux(props: { onChoisi?: () => void }) {
+  const contexte = useContext(TravauxContext)
+  const liste = mesTravaux(contexte)
+  if (!contexte) return null
+  if (!liste.length) return <p className="suivi-vide">Aucune action récente envoyée à Hektor depuis cet onglet.</p>
+  return (
+    <ul className="suivi-liste">
+      {liste.map((job) => {
+        const etat = etatTravail(job, contexte.vus)
+        return (
+          <li key={job.id} className={`suivi-item is-${etat}`}>
+            <button type="button" onClick={() => { if (etat === 'echec') contexte.marquerVu(job.id); props.onChoisi?.(); contexte.ouvrir(job) }}>
+              <span className="suivi-item-etat" aria-hidden="true">{etat === 'encours' ? '' : etat === 'ok' ? '✓' : '✕'}</span>
+              <span className="suivi-item-corps">
+                <b>{libelleTravail(job.job_type)}</b>
+                <small>
+                  {[cibleTravail(job), etat === 'encours' ? (depuis(Date.parse(job.requested_at)) ? `envoyé ${depuis(Date.parse(job.requested_at))}` : 'en cours') : etat === 'ok' ? `terminé ${depuis(finDuTravail(job))}` : 'refusé par Hektor'].filter(Boolean).join(' · ')}
+                </small>
+                {etat === 'echec' || etat === 'vu' ? <small className="suivi-item-erreur">{String(job.error_message ?? 'Hektor a refusé ce geste.').slice(0, 160)}</small> : null}
+              </span>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+// 2. LE COMPTEUR, PRES DE LA CLOCHE (bureau).
+function CompteurMesTravaux() {
+  const contexte = useContext(TravauxContext)
+  const [ouvert, setOuvert] = useState(false)
+  const liste = mesTravaux(contexte)
+  const enCours = liste.filter((job) => isConsoleJobActive(job)).length
+  const echecs = contexte ? liste.filter((job) => etatTravail(job, contexte.vus) === 'echec').length : 0
+  useBattement(ouvert || enCours > 0)
+  useEffect(() => {
+    if (!ouvert) return
+    const fermer = (event: KeyboardEvent) => { if (event.key === 'Escape') setOuvert(false) }
+    window.addEventListener('keydown', fermer)
+    return () => window.removeEventListener('keydown', fermer)
+  }, [ouvert])
+  if (!SUIVI_DANS_LA_FICHE || !contexte || !liste.length) return null
+  return (
+    <span className="suivi-compteur-ancre">
+      <button
+        type="button"
+        className={`suivi-compteur${echecs ? ' is-echec' : enCours ? ' is-encours' : ''}`}
+        title={echecs ? `${echecs} action${echecs > 1 ? 's' : ''} refusée${echecs > 1 ? 's' : ''} par Hektor` : enCours ? `${enCours} action${enCours > 1 ? 's' : ''} en cours chez Hektor` : 'Mes actions récentes'}
+        aria-expanded={ouvert}
+        onClick={() => setOuvert((v) => !v)}
+      >
+        {enCours && !echecs ? <span className="suivi-rond" aria-hidden="true" /> : <span aria-hidden="true">{echecs ? '!' : '✓'}</span>}
+        <span>{echecs || enCours || liste.length}</span>
+      </button>
+      {ouvert ? (
+        <>
+          <span className="suivi-panneau-fond" onClick={() => setOuvert(false)} aria-hidden="true" />
+          <div className="suivi-panneau" role="dialog" aria-label="Mes actions envoyées à Hektor">
+            <p className="suivi-panneau-titre">Mes actions envoyées à Hektor</p>
+            <ListeMesTravaux onChoisi={() => setOuvert(false)} />
+          </div>
+        </>
+      ) : null}
+    </span>
+  )
+}
+
 function ecritDansUnChamp(cible: EventTarget | null) {
   const el = cible as HTMLElement | null
   if (!el) return false
@@ -13959,14 +14211,15 @@ export default function App() {
     .map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? ''))
     .filter(Boolean)), [activeHektorActionJobs])
   const preparingArchiveDetailIds = useMemo(() => new Set(activeHektorActionJobs
-    .filter((job) => job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail')
+    // POINT 6 (26/10) : le brouillon aussi -- sans lui, sa fiche legere restait « Detail a charger ».
+    .filter((job) => job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'prepare_brouillon_annonce_detail')
     .map((job) => String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? ''))
     .filter(Boolean)), [activeHektorActionJobs])
   const lightweightDetailJob = useMemo(() => {
     if (!lightweightDetailTarget) return null
     const targetId = String(lightweightDetailTarget.hektor_annonce_id)
     return hektorActionJobs.find((job) =>
-      (job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail') &&
+      (job.job_type === 'prepare_archived_annonce_detail' || job.job_type === 'prepare_historical_annonce_detail' || job.job_type === 'prepare_brouillon_annonce_detail') &&
       String(job.hektor_annonce_id ?? job.payload_json?.hektor_annonce_id ?? '') === targetId,
     ) ?? null
   }, [hektorActionJobs, lightweightDetailTarget])
@@ -14482,7 +14735,9 @@ export default function App() {
 
   useEffect(() => {
     if (hasSupabaseEnv && !session) return
-    const jobsToResolve = visibleHektorActionPopupJobs
+    // POINT 6 (26/10) : branche sur le SUIVI (`hektorActionJobs`), plus sur la liste de la fenetre -- sans quoi,
+    // la fenetre retiree, la file des photos de la creation ne retrouvait plus son dossier (le « piege n° 1 »).
+    const jobsToResolve = hektorActionJobs
       .filter((job) => job.status === 'done')
       .map((job) => ({ job, id: hektorCreatedAnnonceId(job) }))
       .filter((entry): entry is { job: ConsoleJob; id: string } => Boolean(entry.id))
@@ -14512,7 +14767,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [dataScope, hektorActionLinkedDossiers, session, visibleHektorActionPopupJobs])
+  }, [dataScope, hektorActionLinkedDossiers, session, hektorActionJobs])
 
   // ── 4e (11/10/2026) : ON NE PERD PLUS UNE PHOTO EN SILENCE ─────────────────
   //
@@ -23288,6 +23543,43 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     }
     showContactInDirectory(entree.id)
   }
+  // POINT 6 (26/10/2026) : le suivi des travaux, mis a disposition des fiches et du compteur.
+  const [travauxVus, setTravauxVus] = useState<string[]>(() => (typeof window === 'undefined' ? [] : lireTravauxVus()))
+  function ouvrirCibleTravail(job: ConsoleJob) {
+    const p = (job.payload_json ?? {}) as Record<string, unknown>
+    const dossierId = Number(job.app_dossier_id ?? p.app_dossier_id)
+    if (Number.isFinite(dossierId) && dossierId > 0) {
+      setAnnonceContactId(null)
+      if (screen !== 'mandats' && screen !== 'estimations') openScreen('mandats')
+      openDossierDetailPage(dossierId)
+      return
+    }
+    const contact = String(p.hektor_contact_id ?? p.contact_id ?? p.app_identite ?? '').trim()
+    if (contact) showContactInDirectory(contact)
+  }
+  const contexteTravaux = useMemo<TravauxContexte>(() => ({
+    jobs: hektorActionJobs,
+    moi: session?.user?.id ?? (import.meta.env.MODE === 'mock' ? 'demo' : null),
+    vus: new Set(travauxVus),
+    marquerVu: (jobId: string) => setTravauxVus((avant) => {
+      const apres = [...avant.filter((id) => id !== jobId), jobId].slice(-200)
+      try { window.sessionStorage.setItem(TRAVAUX_VUS_STOCKAGE, JSON.stringify(apres)) } catch { /* stockage indisponible */ }
+      return apres
+    }),
+    photosEnAttente: photosEnAttenteParTravail,
+    ouvrir: ouvrirCibleTravail,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [hektorActionJobs, session, travauxVus, photosEnAttenteParTravail, screen])
+  const mesTravauxListe = mesTravaux(contexteTravaux)
+  const mesTravauxEnCours = mesTravauxListe.filter((job) => isConsoleJobActive(job)).length
+  const mesTravauxEchecs = mesTravauxListe.filter((job) => etatTravail(job, contexteTravaux.vus) === 'echec').length
+  // Demonstration seulement : permet de poser de faux travaux pour voir l'affichage (le mock n'a pas de base).
+  useEffect(() => {
+    if (import.meta.env.MODE !== 'mock') return
+    ;(window as unknown as { __travauxDemo?: (jobs: ConsoleJob[]) => void }).__travauxDemo = (jobs) => updateHektorActionJobs(() => jobs)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const contexteFilNavigation = useMemo(() => ({ fil: filNavigation, aller: allerAuFil }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filNavigation, screen])
@@ -23335,6 +23627,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
 
     return (
       <FilNavigationContext.Provider value={contexteFilNavigation}>
+      <TravauxContext.Provider value={contexteTravaux}>
       <>
         <MobileLayout
         currentScreen={screen}
@@ -23348,6 +23641,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         onOpenUsers={isManagerOrAdmin ? () => void openUserTool() : undefined}
         onSignOut={session ? handleSignOut : undefined}
         onOpenSearch={RECHERCHE_GLOBALE ? () => setRechercheGlobaleOuverte(true) : undefined}
+        activite={SUIVI_DANS_LA_FICHE && mesTravauxListe.length ? { enCours: mesTravauxEnCours, echecs: mesTravauxEchecs, liste: <ListeMesTravaux /> } : undefined}
       >
         {showMobileCommandCard ? (
         <section className="mobile-command-card">
@@ -23744,23 +24038,25 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </div>
         ) : null}
         </MobileLayout>
-        <HektorActionStatusPopup
+        {FENETRE_SUIVI_ACTION ? <HektorActionStatusPopup
           jobs={visibleHektorActionPopupJobs}
           linkedDossiers={hektorActionLinkedDossiers}
           onDismiss={dismissHektorActionPopup}
           onOpenAppDossier={(job) => void openHektorActionAppDossier(job)}
           photosEnAttente={photosEnAttenteParTravail}
-        />
+        /> : null}
         {appModals}
         {fenetreRechercheGlobale}
         {pastilleFilMobile}
       </>
+      </TravauxContext.Provider>
       </FilNavigationContext.Provider>
     )
   }
 
   return (
     <FilNavigationContext.Provider value={contexteFilNavigation}>
+    <TravauxContext.Provider value={contexteTravaux}>
     <DesktopLayout>
     <div className={`app-shell app-shell-modern app-screen-${screen} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
       <header className={`side-rail ${mobileMenuOpen ? 'is-mobile-menu-open' : ''}`}>
@@ -23838,6 +24134,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                 <span className="session-label">{resolvedUserNegotiatorContext?.agence_nom || 'Agence non detectee'}</span>
               </div>
               <div className="user-card-actions">
+                <CompteurMesTravaux />
                 <NotificationsBell negociateurEmail={sessionEmail} />
                 {isManagerOrAdmin ? <button className="signout-button-inline" type="button" title="Utilisateurs" data-short="U" onClick={() => void openUserTool()}>Utilisateurs</button> : null}
                 {session ? <button className="signout-button-inline" type="button" title="Se deconnecter" data-short="S" onClick={handleSignOut}>Se deconnecter</button> : null}
@@ -24746,13 +25043,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
             </section>
           </div>
         ) : null}
-        <HektorActionStatusPopup
+        {FENETRE_SUIVI_ACTION ? <HektorActionStatusPopup
           jobs={visibleHektorActionPopupJobs}
           linkedDossiers={hektorActionLinkedDossiers}
           onDismiss={dismissHektorActionPopup}
           onOpenAppDossier={(job) => void openHektorActionAppDossier(job)}
           photosEnAttente={photosEnAttenteParTravail}
-        />
+        /> : null}
         {appModals}
         </main>
       </div>
@@ -24900,6 +25197,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       ) : null}
     </div>
     </DesktopLayout>
+    </TravauxContext.Provider>
     </FilNavigationContext.Provider>
   )
 }
@@ -31443,6 +31741,7 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
               ) : null}
             </nav>
           </div>
+          <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />
           {activeTab === 'synthese' ? (
           <div className="fa-ck-timeline">
             <div className="fa-ck-tl-head">
@@ -33330,6 +33629,7 @@ function DossierDetailLayoutBase(props: {
                 </section>
               ) : null}
 
+              <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />
               <AnnonceEditStatusBanner dossier={dossier} />
               <GesteAbandonneBanner dossier={dossier} />
 
@@ -36167,6 +36467,8 @@ function ContactEditStatusBanner({ hektorContactId }: { hektorContactId: string 
   const [resolving, setResolving] = useState(false)
   const [resolveError, setResolveError] = useState<string | null>(null)
 
+  // POINT 6 (26/10) : relu a chaque relecture de l'app (fin d'un travail, geste), plus seulement a l'ouverture.
+  const relectureBandeau = useRelectureRubriques()
   useEffect(() => {
     if (!hektorContactId) { setStatus(null); return }
     let cancelled = false
@@ -36174,7 +36476,7 @@ function ContactEditStatusBanner({ hektorContactId }: { hektorContactId: string 
       .then((s) => { if (!cancelled) setStatus(s) })
       .catch(() => { if (!cancelled) setStatus(null) })
     return () => { cancelled = true }
-  }, [hektorContactId])
+  }, [hektorContactId, relectureBandeau])
 
   const resoudre = async (mode: 'refait' | 'abandon') => {
     if (!hektorContactId || resolving) return
@@ -36242,6 +36544,8 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
 
   const dossierId = dossier?.app_dossier_id ?? null
 
+  // POINT 6 (26/10) : relu a chaque relecture de l'app (fin d'un travail, geste), plus seulement a l'ouverture.
+  const relectureBandeau = useRelectureRubriques()
   useEffect(() => {
     if (!dossierId) { setGestes([]); return }
     let cancelled = false
@@ -36249,7 +36553,7 @@ function GesteAbandonneBanner({ dossier }: { dossier: Dossier | null }) {
       .then((s) => { if (!cancelled) setGestes(s?.gestes ?? []) })
       .catch(() => { if (!cancelled) setGestes([]) })
     return () => { cancelled = true }
-  }, [dossierId])
+  }, [dossierId, relectureBandeau])
 
   const trancher = async (jobId: string, mode: 'refait' | 'abandon') => {
     if (resolving) return
@@ -36325,6 +36629,8 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
   const [resolving, setResolving] = useState(false)
   const [resolveError, setResolveError] = useState<string | null>(null)
   const dossierId = dossier?.app_dossier_id ?? null
+  // POINT 6 (26/10) : relu a chaque relecture de l'app (fin d'un travail, geste), plus seulement a l'ouverture.
+  const relectureBandeau = useRelectureRubriques()
   useEffect(() => {
     if (dossierId == null) { setStatus(null); return }
     let cancelled = false
@@ -36332,7 +36638,7 @@ function AnnonceEditStatusBanner({ dossier }: { dossier: Dossier | null }) {
       .then((s) => { if (!cancelled) setStatus(s) })
       .catch(() => { if (!cancelled) setStatus(null) })
     return () => { cancelled = true }
-  }, [dossierId])
+  }, [dossierId, relectureBandeau])
 
   const resoudre = async (mode: 'refait' | 'abandon') => {
     if (dossierId == null || resolving) return
@@ -37749,6 +38055,7 @@ function MobileDossierDetail(props: {
         </section>
       )}
 
+      <IndicateurTravauxObjet appDossierId={dossier.app_dossier_id} hektorAnnonceId={dossier.hektor_annonce_id} />
       {props.detailLoading ? <section className="mobile-detail-loading">Chargement du détail...</section> : null}
 
       <section className="mobile-detail-section">
@@ -43240,6 +43547,7 @@ function ContactDetailPopupBase(props: {
           </header>
 
           <div style={{ padding: '0 16px' }}>
+            <IndicateurTravauxObjet contactId={String(props.contact.hektor_contact_id)} />
             <ContactEditStatusBanner hektorContactId={props.contact.hektor_contact_id} />
           </div>
 
@@ -44379,6 +44687,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
         <div className="fa-cx-panel" onClick={(event) => event.stopPropagation()}>
           <BandeauFilNavigation />
           <div style={{ padding: '12px 16px 0' }}>
+            <IndicateurTravauxObjet contactId={String(props.contact.hektor_contact_id)} />
             <ContactEditStatusBanner hektorContactId={props.contact.hektor_contact_id} />
           </div>
           <div className="fa-cx-body">

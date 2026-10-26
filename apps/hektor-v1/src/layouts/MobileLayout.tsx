@@ -29,6 +29,8 @@ type MobileLayoutProps = {
   onSignOut?: () => void
   // POINT 4 (26/10/2026) : la loupe de la recherche globale, dans la barre du haut.
   onOpenSearch?: () => void
+  // POINT 6 (26/10/2026) : mes actions envoyees a Hektor -- un compteur sur le ☰, la liste dans le panneau.
+  activite?: { enCours: number; echecs: number; liste: ReactNode }
 }
 
 const mobileNavItems: Array<{ screen: AppScreen; label: string; icon: string; detail: string; adminOnly?: boolean; adminStrictOnly?: boolean }> = [
@@ -77,6 +79,7 @@ export function MobileLayout({
   onOpenUsers,
   onSignOut,
   onOpenSearch,
+  activite,
 }: MobileLayoutProps) {
   const visibleNav = mobileNavItems.filter((item) => {
     if (item.adminStrictOnly) return Boolean(isAdminStrict)
@@ -122,6 +125,16 @@ export function MobileLayout({
     )
   }
 
+  // POINT 6 : en cours ou refusee, la liste passe EN TETE du menu (sinon elle tombe sous la ligne de flottaison).
+  const blocActivite = activite ? (
+    <>
+      <p className="mtiroir-section">
+        Mes actions envoyées à Hektor
+        {activite.echecs ? <b className="mtiroir-compte is-echec">{activite.echecs} refusée{activite.echecs > 1 ? 's' : ''}</b> : activite.enCours ? <b className="mtiroir-compte">{activite.enCours} en cours</b> : null}
+      </p>
+      <div className="mtiroir-activite" onClick={() => setMenuOuvert(false)}>{activite.liste}</div>
+    </>
+  ) : null
   return (
     <div className={`mobile-app-shell${MENU_TIROIR ? ' has-tiroir' : ''}`}>
       <header className={`mobile-app-header${onOpenSearch ? ' has-search' : ''}${MENU_TIROIR ? ' has-tiroir' : ''}`}>
@@ -135,6 +148,11 @@ export function MobileLayout({
             onClick={() => setMenuOuvert((v) => !v)}
           >
             <span /><span /><span />
+            {activite && (activite.echecs || activite.enCours) ? (
+              <i className={`mobile-burger-pastille${activite.echecs ? ' is-echec' : ''}`} aria-label={activite.echecs ? `${activite.echecs} action(s) refusée(s) par Hektor` : `${activite.enCours} action(s) en cours chez Hektor`}>
+                {activite.echecs || activite.enCours}
+              </i>
+            ) : null}
           </button>
         ) : null}
         {/* bienvu (lot 3) : le symbole remplace la forme dessinée en CSS ; « GTI Immobilier » devient le nom du logiciel */}
@@ -196,10 +214,12 @@ export function MobileLayout({
               </button>
             ) : null}
             <nav className="mtiroir-liste" aria-label="Vues">
+              {activite && (activite.echecs || activite.enCours) ? blocActivite : null}
               <p className="mtiroir-section">Travail</p>
               {principales.map(entree)}
               {pilotage.length ? <p className="mtiroir-section">Pilotage</p> : null}
               {pilotage.map(entree)}
+              {activite && !activite.echecs && !activite.enCours ? blocActivite : null}
             </nav>
             <div className="mtiroir-pied">
               <span className="mtiroir-avatar" aria-hidden="true">{userInitials}</span>

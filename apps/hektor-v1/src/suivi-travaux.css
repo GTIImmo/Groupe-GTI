@@ -1,0 +1,213 @@
+/* ============================================================
+   POINT 6 (26/10/2026) -- le suivi des travaux dans l'objet et le compteur de mes actions
+   (remplacent la fenetre « Suivi de l'action »). Charte bienvu, avec replis.
+   ============================================================ */
+
+/* --- la ligne d'etat dans la fiche --- */
+.suivi-objet {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 12px;
+  font-family: var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+}
+.suivi-ligne {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--bv-radius-sm, 10px);
+  border: 1px solid var(--bv-line, #e2e5e6);
+  background: var(--bv-brume, #f6f7f8);
+  color: var(--bv-ink, #222323);
+  font-size: 13px;
+  line-height: 1.35;
+  animation: suivi-entree var(--bv-base, 240ms) var(--bv-ease, ease);
+}
+.suivi-ligne b { font-weight: 700; }
+.suivi-ligne em { font-style: normal; color: var(--bv-mute, #5c6163); }
+.suivi-ligne q { quotes: '«\00a0' '\00a0»'; color: var(--bv-framboise, #8c0044); } /* espaces insecables : le guillemet ne reste pas seul en bout de ligne */
+@keyframes suivi-entree { from { opacity: 0; transform: translateY(-3px); } }
+.suivi-rond {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(197, 0, 95, 0.22);
+  border-top-color: var(--bv-magenta, #c5005f);
+  animation: suivi-tourne 0.9s linear infinite;
+}
+@keyframes suivi-tourne { to { transform: rotate(360deg); } }
+.suivi-picto {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+}
+.suivi-ligne.is-ok { background: var(--bv-ok-soft, #e8f5ee); border-color: rgba(47, 125, 89, 0.25); }
+.suivi-ligne.is-ok .suivi-picto { background: var(--bv-ok, #2f7d59); }
+.suivi-ligne.is-attention { background: var(--bv-warn-soft, #fff3df); border-color: rgba(182, 106, 22, 0.3); }
+.suivi-ligne.is-attention .suivi-picto { background: var(--bv-warn, #b66a16); }
+.suivi-ligne.is-echec { background: var(--bv-danger-soft, #fdeceb); border-color: rgba(185, 74, 72, 0.35); }
+.suivi-ligne.is-echec .suivi-picto { background: var(--bv-danger, #b94a48); }
+.suivi-compris {
+  flex: none;
+  margin-left: auto;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--bv-radius-pill, 999px);
+  border: 1px solid rgba(185, 74, 72, 0.4);
+  background: #fff;
+  color: var(--bv-danger, #b94a48);
+  font: 700 12px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  cursor: pointer;
+}
+
+/* --- le compteur, a cote de la cloche (barre de gauche, fond sombre) --- */
+.suivi-compteur-ancre { position: relative; display: inline-flex; }
+.suivi-compteur {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: var(--bv-radius-pill, 999px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: 700 12px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  cursor: pointer;
+}
+.suivi-compteur .suivi-rond { width: 11px; height: 11px; border-color: rgba(255, 255, 255, 0.25); border-top-color: #fff; }
+.suivi-compteur.is-encours { border-color: rgba(197, 0, 95, 0.6); background: rgba(197, 0, 95, 0.22); }
+.suivi-compteur.is-echec { border-color: var(--bv-danger, #b94a48); background: var(--bv-danger, #b94a48); }
+.suivi-panneau-fond { position: fixed; inset: 0; z-index: 3990; }
+.suivi-panneau {
+  position: fixed;
+  left: 272px;
+  bottom: 16px;
+  z-index: 4000;
+  width: 340px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 12px 10px 10px;
+  border-radius: var(--bv-radius-md, 14px);
+  border: 1px solid var(--bv-line, #e2e5e6);
+  background: #fff;
+  box-shadow: var(--bv-shadow-modal, 0 28px 70px rgba(34, 35, 35, 0.35));
+  color: var(--bv-ink, #222323);
+  font-family: var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+}
+.app-shell.is-sidebar-collapsed .suivi-panneau { left: 94px; }
+.suivi-panneau-titre {
+  margin: 2px 8px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bv-subtle, #7c8082);
+}
+
+/* --- la liste de mes actions (panneau du bureau et menu du telephone) --- */
+.suivi-vide { margin: 8px; font-size: 13px; color: var(--bv-mute, #5c6163); }
+.suivi-liste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.suivi-item button {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.suivi-item button:hover,
+.suivi-item button:focus-visible { background: var(--bv-brume, #f6f7f8); outline: none; }
+.suivi-item-etat {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--bv-ok, #2f7d59);
+}
+.suivi-item.is-encours .suivi-item-etat {
+  background: transparent;
+  border: 2px solid rgba(197, 0, 95, 0.22);
+  border-top-color: var(--bv-magenta, #c5005f);
+  animation: suivi-tourne 0.9s linear infinite;
+}
+.suivi-item.is-echec .suivi-item-etat { background: var(--bv-danger, #b94a48); }
+.suivi-item.is-vu .suivi-item-etat { background: var(--bv-line-strong, #cfd3d4); }
+.suivi-item-corps { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.suivi-item-corps b { font-size: 13.5px; font-weight: 700; }
+.suivi-item-corps small { font-size: 12px; color: var(--bv-mute, #5c6163); }
+.suivi-item-corps small.suivi-item-erreur { color: var(--bv-danger, #b94a48); }
+.suivi-item.is-echec { background: var(--bv-danger-soft, #fdeceb); border-radius: 10px; }
+
+/* --- telephone : la pastille sur le ☰ et la liste dans le panneau --- */
+.mobile-burger-pastille {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 2px solid #222323;
+  background: var(--bv-magenta, #c5005f);
+  color: #fff;
+  font: 800 10.5px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  font-style: normal;
+}
+.mobile-burger-pastille.is-echec { background: var(--bv-danger, #b94a48); }
+.mtiroir-compte {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bv-rose-soft, #fdf0f6);
+  color: var(--bv-framboise, #8c0044);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+}
+.mtiroir-compte.is-echec { background: var(--bv-danger-soft, #fdeceb); color: var(--bv-danger, #b94a48); }
+.mtiroir-activite { padding: 0 2px 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .suivi-rond, .suivi-item.is-encours .suivi-item-etat { animation: none; }
+}
+
+/* --- barre de gauche REPLIEE : la cloche et les boutons y sont caches (annonces-v2.css), mais le
+   compteur reste, en pastille sur l'avatar -- un refus de Hektor ne doit pas se cacher --- */
+@media (min-width: 901px) {
+  .app-shell.is-sidebar-collapsed .side-rail .header-user-stack .user-card { position: relative; }
+  .app-shell.is-sidebar-collapsed .side-rail .header-user-stack .user-card-actions:has(.suivi-compteur-ancre) {
+    display: flex !important;
+    position: absolute;
+    top: -9px;
+    right: 6px;
+    left: auto !important;
+    width: auto !important;
+    grid-area: auto !important; /* sinon la case de grille du pied sert de repere (layout-overrides.css) */
+    z-index: 2;
+  }
+  .app-shell.is-sidebar-collapsed .side-rail .header-user-stack .user-card-actions > :not(.suivi-compteur-ancre) { display: none !important; }
+  .app-shell.is-sidebar-collapsed .suivi-compteur { height: 22px; padding: 0 6px; gap: 3px; font-size: 11px; border-color: #222323; box-shadow: 0 0 0 2px #222323; }
+  .app-shell.is-sidebar-collapsed .suivi-compteur:not(.is-encours):not(.is-echec) { background: #3a3c3d; }
+}

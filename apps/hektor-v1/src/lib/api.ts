@@ -11263,6 +11263,21 @@ const hektorActionJobTypes: ConsoleJobType[] = [
   'prepare_archived_annonce_detail',
   'prepare_historical_annonce_detail',
   'refresh_console_contact_data',
+  // POINT 6 (26/10/2026) : ces gestes n'etaient suivis que s'ils avaient ete memorises dans l'onglet (et
+  // jamais pour les photos et les deux PDF) -- leur fin et leur echec passaient inapercus.
+  'prepare_brouillon_annonce_detail',
+  'exit_hektor_draft_annonce',
+  'change_hektor_offre_status',
+  'cancel_hektor_compromis',
+  'delete_hektor_compromis',
+  'delete_hektor_vente',
+  'unlink_hektor_mandant',
+  'set_hektor_photo_visibility',
+  'generate_cadastre_document',
+  'generate_estimation_pdf',
+  'generate_mandat_document',
+  'relance_signature',
+  'cancel_signature_procedure',
 ]
 
 export async function loadActiveHektorActionJobs(): Promise<ConsoleJob[]> {
