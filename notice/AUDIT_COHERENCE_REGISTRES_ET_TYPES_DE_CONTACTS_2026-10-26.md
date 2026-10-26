@@ -486,3 +486,43 @@ la répétition partie B (~113 liens, le témoin JACQUIER au 2026-09-25, les 10 
   qu'il remplace (même `id`), sinon cherché dans l'annuaire (`app_contact_current.hektor_target_id`) ; inconnu = rien. Pour les **deux**
   listes. Essai hors ligne avec mutants ; puis redémarrage des 4 services.
 - **Ordre recommandé** : a puis b, ou les deux ensemble (un seul redémarrage). **À trancher par Frédéric.**
+
+### 10.4 ⚠ POURQUOI CE TROU — audit du 26/10 *(Frédéric : « cela m'étonne que le registre des transactions ne soit pas autonome au niveau
+des id […] et n'oublie pas que les workers qui communiquent avec Hektor doivent lui envoyer son propre id, pas le nôtre »)*
+
+**L'inventaire des numéros du registre des transactions** (31 086 transactions vivantes, mesure du 26/10) :
+| objet | notre numéro | celui de Hektor | état |
+|---|---|---|---|
+| la transaction | `app_affaire_id` 31 086 | `hektor_affaire_id` 31 086 | ✅ |
+| le bien | `app_dossier_id` 31 086 | `hektor_annonce_id` 31 086 | ✅ |
+| la chaîne offre → compromis → vente | `app_chaine_id` 31 086 | (n'existe pas chez Hektor) | ✅ |
+| l'acquéreur principal | `app_contact_id` 30 424 | `hektor_acquereur_id` 30 433 | ✅ (pièce 1, G-10) |
+| les co-acquéreurs | `acquereurs_json[].app_contact_id` | `acquereurs_json[].id` | ✅ la nuit (pièce 2) — ⚠ effacé le jour par le worker (point 4) |
+| les notaires (deux côtés) | `notaire_acquereur_id` 6 772 / `notaire_mandant_id` 16 568, **tous à notre numéro** | trace brute dans `notaires_json` (vente) et `app_affaire_console` (compromis) | ✅ (pièce 3) |
+| **les vendeurs** | **aucun** | `mandants_json[].id` 58 550 | ❌ **le trou (C4)** |
+| **le mandat** | **aucune colonne** `app_mandat_id` | `hektor_mandat_id` 14 976 (recyclé par Hektor, mémoire du 10/10) + `numero_mandat` 23 336 | ⚠ **second trou, plus petit** : la transaction désigne son mandat par le numéro métier ; les 23 336 se retrouvent au registre des mandats par (bien, numéro), mais notre identifiant n'y est pas stocké |
+Les autres registres portent tous leurs deux numéros : liens (`app_relation`, quatre numéros), mandats (`app_mandat_id` + `hektor_mandat_id`, et
+la personne sous ses deux numéros), contacts (`hektor_contact_id` = nous + `hektor_target_id` = Hektor), recherches (`app_search_id` + la personne).
+
+**LA CAUSE — une décision étendue au-delà de sa question, puis une réserve jamais reposée.**
+1. **22/10** (note ARCHITECTURE, §4 A et décision 1) : « *les mandants : Hektor les déduit du mandat* ». La question était **QUI ÉCRIT la liste**
+   (on n'envoie pas de vendeurs à Hektor, il les déduit ; l'app ne les écrit que s'ils sont affirmés dans la modale). Elle ne disait **rien**
+   de **comment on désigne** une personne de cette liste.
+2. **24/10** (étude des numéros, §6 et §9 pièce 4) : j'ai écrit « *les mandants sont déduits par Hektor (décision du 22/10) : les inclure est
+   une question à part* », puis « *non touchés, et c'est voulu* ». ⛔ **C'était une confusion** : que Hektor décide QUI est vendeur n'empêche
+   pas que chaque vendeur porte AUSSI notre numéro — exactement comme les acquéreurs, que Hektor relit lui aussi.
+3. **La « question à part » ne t'a jamais été reposée.** Les pièces 1 à 4 ont été faites sur les acquéreurs et les notaires ; les vendeurs sont
+   restés dehors sans décision. C'est la leçon de la mémoire « *une réserve d'audit non traitée devient le bug* ».
+4. **Pourquoi personne ne l'a vu** : la nuit est le maître du registre (elle le refait depuis le miroir de Hektor) ; elle ne pose notre numéro
+   que là où on lui a dit de le faire. Rien ne casse à l'écran aujourd'hui (les noms s'affichent) : **le trou ne se voit qu'à la coupure**, où
+   58 550 vendeurs ne seraient plus reliés à leur fiche.
+
+**LA RÈGLE « VERS HEKTOR, SON NUMÉRO » — vérifiée dans le code, et le chantier 2 la garde**
+- Le worker vise **toujours** le numéro de Hektor : `cibleHektorContact` (l. 2126 : lit `hektor_target_id` ; un numéro de notre plage sans
+  correspondance **n'est jamais envoyé**) et `traduireLesPersonnesDeLaTransaction` (C-9, 23/09 : notaires et vendeurs choisis traduits AVANT
+  tout envoi ; s'il manque une traduction, **il s'arrête** au lieu de deviner). Le retrait d'un mandant traduit de même (RPC).
+- Le chantier 2 **n'y change rien** : dans les listes, `id` reste le numéro de Hektor (c'est lui qu'on lui parle), notre numéro est **ajouté à
+  côté** (`app_contact_id`), et aucun envoi ne lit cette clé. C'est le montage de la pièce 2, déjà en production.
+
+**Ce que ça ajoute à la proposition du chantier 2** : une pièce **c** possible — poser `app_mandat_id` sur chaque transaction (la nuit le
+retrouve par (bien, numéro de mandat) : 23 336 sur 23 336), pour que la transaction désigne son mandat par NOTRE numéro aussi. **À trancher.**
