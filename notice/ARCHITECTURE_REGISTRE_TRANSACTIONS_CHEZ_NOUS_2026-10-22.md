@@ -3140,3 +3140,14 @@ Ordre suivi : celui de sa question (1, 2, 4, 5, 6, 7).
 - **Le bien d'essai** de la répétition (10000009 / 63331) est toujours en Estimation, **0 transaction, 0 travail en cours** : la répétition
   joue telle quelle.
 - **L'écran** cache déjà les boutons sur une Estimation (poussé le 24/10) et traduit le refus `transaction_sur_estimation` (`api.ts` l. ~10500).
+
+#### ✅ Point 1 — POSÉ ET ALLUMÉ le 26/10 *(Frédéric : « les trois »)*, joué par moi
+- **Répétition** : **« ESSAI ANNULÉ -- 7 sur 7 »** (éteint, une offre sur l'Estimation passe : le défaut ; allumé : offre, compromis, vente
+  refusés ; « Actif » accepté ; une offre sur un bien Actif acceptée ; l'inverse rend 44697dd5). Vérifié après : empreinte d'avant, pas
+  d'interrupteur, 63331 en Estimation, 0 ligne, 0 travail.
+- **Patch** : contrôles **3 sur 3 « OK »** — empreinte **93be71b4**, droits et SECURITY DEFINER inchangés, interrupteur éteint.
+- **Interrupteur `transaction_refusee_sur_estimation` = on** à 07:50 (heure de Paris).
+- **Preuve sur la vraie fonction allumée**, dans une transaction annulée, au nom de Frédéric : offre sur 63331 → **« transaction_sur_estimation :
+  ce bien est en Estimation… passez-le d'abord en Actif »** ; offre sur le bien Actif 1337936 → **acceptée**. Vérifié après : les deux biens
+  inchangés, 0 ligne neuve, 0 travail.
+- **Retour arrière** : `update app_setting set value = 'off' where key = 'transaction_refusee_sur_estimation'`, ou le patch inverse.
