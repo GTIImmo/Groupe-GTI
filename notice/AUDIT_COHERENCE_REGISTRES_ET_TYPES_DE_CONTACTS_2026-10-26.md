@@ -681,3 +681,15 @@ chantiers 1 et 2 :
   retirés). La table de nuit continue d'être refaite : on peut revenir n'importe quand.
 - ⚠ **À voir à l'écran** : la fiche d'un contact acheteur (ex. JACQUIER, 10354701) — ses offres, compromis et vente doivent apparaître comme
   avant, la source dit désormais « registre_transactions ». Non vu à l'œil.
+
+### 14.2 ⛔ Frédéric, 26/10 : « NON, ce temps n'est pas acceptable » — l'ouverture d'une fiche contact
+- **Oui, c'est l'ouverture de la fiche** : la lecture des liens du contact (`loadContactRelations`), une des lectures que la fiche fait en s'ouvrant.
+- **Pourquoi c'est lent, et pourquoi la vue seule n'y peut rien** : pour trouver un CO-acquéreur, Postgres doit ouvrir chaque liste à
+  plusieurs personnes (3 109 transactions : 2 447 listes de 2 à 8 personnes + 662 sans principal) — il **ne sait pas** chercher une personne
+  À L'INTÉRIEUR d'une liste JSON par un index depuis une vue. Mesure des listes : 1 332 de 2, 154 de 3, 930 de 4, 31 de 5 à 8.
+- **Le remède qui rend la vitesse d'avant** : une **petite table d'index des acquéreurs** — une ligne par (transaction, personne), avec
+  NOTRE numéro et un index sur lui — **tenue à jour par un déclencheur** sur le registre des transactions (à chaque écriture de
+  `acquereurs_json`, du principal ou de `present_in_hektor`), remplie une fois au départ. La vue y cherche la personne par l'index, comme la
+  table de nuit aujourd'hui : **de l'ordre de 10 ms**. ⚠ Ce n'est **pas** une seconde source (décision du 30/09) : elle est **dérivée** du
+  registre, jamais écrite par personne d'autre que le déclencheur, et se reconstruit à l'identique. **À décider.**
+- **En attendant** : la vue d'avant se remet en une minute (`…_INVERSE.sql`, à l'octet) → retour à 9,6 ms tout de suite.
