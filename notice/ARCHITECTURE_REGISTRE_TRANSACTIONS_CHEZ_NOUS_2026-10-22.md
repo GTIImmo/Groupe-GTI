@@ -3062,3 +3062,14 @@ personnes, warning).
    (`observed_at` qui avance) ;
 5. **l'essai réel**, si Frédéric le veut : une ligne d'essai mise en « conflit » sur 24113 → elle sonne au moniteur, les deux boutons
    apparaissent dans la modale, « garder la nôtre » la fait taire.
+
+### ✅ R4 POSÉ EN BASE — 26/10, ~07:20 *(Frédéric : « fais-le toi-même »)*
+- **La répétition, jouée par moi** (`execute_sql`) : **« ESSAI ANNULÉ -- 14 sur 14 »**, puis vérifié qu'il ne reste rien (aucun objet R4,
+  aucune ligne d'essai, carnet à 56 lignes).
+- **Le patch, posé par moi** : les contrôles **5 sur 5 « OK »** — table des décisions vide, lecture seule pour les connectés et fermée à anon ;
+  vue lisible par les connectés et la clé de service, fermée à anon ; fonction ouverte aux connectés, fermée à anon ; **0 écart** ; carnet
+  intact (56 lignes).
+- **Les deux sentinelles se lisent par l'API avec la clé du moniteur** : `app_v_affaire_carnet_ecarts?a_traiter=eq.true` et
+  `app_affaire_personne_ecart?ferme_le=is.null` → HTTP 200, **0** chacune.
+- ⬜ **Reste** : pousser (l'écran, les deux boutons) ; ⏰ au passage du moniteur de 08:48, vérifier `data.affaire_ecart` et
+  `data.affaire_personne_ecart` « ok » dans `app_monitor_status` (une VRAIE écriture, `observed_at` qui avance).
