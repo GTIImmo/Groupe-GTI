@@ -3253,3 +3253,37 @@ vendu, ou les garder avec un avertissement — « Actif » sur un vendu peut êt
 « supprimer la vente ») · 1 (cacher le bouton inutile, ou le laisser puisqu'il ne fait rien).
 **Ce qui est une simple correction d'affichage** (aucune décision de fond) : 5 (n'afficher le message que si « Modifier » est là) et 6 (dire
 pourquoi le bouton ne fait rien, ou le faire marcher par le numéro Hektor du bien vendu).
+
+#### Point 5 — LES DÉCISIONS DE FRÉDÉRIC (26/10 soir) : « oui fais 5 et 6 · pour 2 audit de nouveau […] attention · 1 oui · 4 NON LAISSE »
+
+**✅ n° 1, 5, 6 CODÉS — écran seulement, NON POUSSÉS** (`App.tsx`, +54 −6, CRLF conservés)
+- **n° 1** `gesteOffreSansEffet()` : « Accepter » est caché sur une offre `accepted`, « Refuser » sur une offre `refused` — **la même
+  comparaison que la base, au mot près**. Restent : « Accepter » une offre refusée (08/09), « Refuser » une offre acceptée (le chemin pour
+  corriger son montant, 13/10). États réels mesurés : accepted 9 993 · refused 1 123 · proposed 28 · vide 54.
+- **n° 5** `modifierChezHektorPossible()` : une seule règle pour le bouton « Modifier chez Hektor » ET son message.
+- **n° 6** les boutons **Diffusion** et — ⭐ **son jumeau trouvé en chemin** — **Validé** du panneau Pilotage disent maintenant pourquoi ils ne
+  font rien sur un bien vendu ou clos (au lieu de sortir sans un mot), et où le faire (la fiche Hektor).
+- **Essais** : `apps/hektor-v1/test_boutons_modale_point5.cjs` **20/20** (le vrai code découpé dans `App.tsx` ; témoin inverse des deux règles
+  d'avant ; 2 mutants attrapés) · `test_rubrique_affaires_complete.cjs` toujours vert · `npm run build` vert.
+- **n° 4** : laissé, par décision. **n° 3** : tranché le 24/10.
+
+**🔎 n° 2 — AUDIT REFAIT : une nouvelle offre sur un bien ENGAGÉ** *(Frédéric : « normalement on ne peut plus ajouter une offre sur un dossier
+chaîné avec un compromis ou une vente […] mais on a peut-être laissé cela soit par oubli, soit pour une bonne raison, donc attention »)*
+- **La règle écrite** : la sienne, le 08/09 — « il peut y avoir plusieurs offres, mais **plus possible quand compromis ouvert ou offre
+  acceptée** » (`bienEngage`, `App.tsx`). La vente n'y entre pas (elle FERME son dossier : un bien revendu des années plus tard est libre —
+  son objection du 08/09).
+- **Pourquoi la création est restée ouverte** : le commit `a9c6d02` (08/09) n'a appliqué la règle qu'au bouton « Choisir » et dit « les
+  autres genres gardent leur comportement d'origine ». **Aucune note ne donne de raison** de laisser la création ouverte → **un oubli**, selon
+  toute vraisemblance. La base n'a aucune garde non plus (`app_change_annonce_status_optimistic` ne refuse que : archive, hors parc,
+  Estimation, droits). ⚠ Le garde-fou du worker (31/08) « ne bloque PAS l'offre » : c'était pour les offres **concurrentes** sur un bien
+  libre (normal), pas pour un bien engagé.
+- **⚠ CE QUE LA VRAIE VIE MONTRE (registre, 2026)** : **11 offres sur 10 vrais biens** ont été posées **dans Hektor** pendant qu'un compromis
+  était ouvert — deux familles :
+  - **la régularisation** : l'offre ACCEPTÉE saisie **après** son compromis (59183 : compromis 02/03, offre acceptée 09/03, vente 02/06 ;
+    43437, 1970) — la même affaire, saisie dans le désordre ;
+  - **l'offre de secours** : une offre « proposée » pendant le compromis d'un autre acquéreur (17640, 28542, 61509), ensuite refusée ou restée.
+- **⚠ LE PIÈGE DES VIEUX COMPROMIS** : 22866 a reçu une offre **aujourd'hui** alors qu'il porte un compromis « en cours » **de 2009** jamais
+  clos ; parmi les biens en cours, **3** ont un compromis ouvert d'avant 2025, et **3** sont incohérents (2 « Sous offre » et 1 « Actif » avec
+  un compromis ouvert). Une garde stricte les bloquerait **à tort**.
+- **À TRANCHER PAR FRÉDÉRIC** : bloquer à l'écran (comme 2.2c, avec le bandeau et le geste qui débloque) — ou **avertir sans bloquer**
+  (la régularisation et l'offre de secours restent possibles) ; et la base, oui ou non.

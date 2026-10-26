@@ -19326,7 +19326,13 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   async function handleSetSelectedDossierDiffusable(nextValue: boolean) {
-    if (!selectedDossier || detailDiffusablePending) return
+    if (detailDiffusablePending) return
+    if (!selectedDossier) {
+      // ⑧ (26/10, §58 point 5 n° 6) : sur un bien VENDU ou CLOS, `selectedDossier` est vide (il n'est plus
+      // dans app_dossier_current) et le clic sortait SANS UN MOT -- un echec silencieux (§40, 23/10).
+      setErrorMessage("Ce bien n'est plus parmi les biens en cours (vendu ou clos) : sa diffusion ne se change pas depuis l'app. Faites-le dans sa fiche Hektor (« Diffuser ou non ce bien ») ; notre fiche suivra cette nuit.")
+      return
+    }
     setDetailDiffusableDraft(nextValue)
     setDetailDiffusablePending(true)
     setErrorMessage(null)
@@ -19355,7 +19361,12 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
   }
 
   async function handleSetSelectedDossierValidation(nextValue: boolean) {
-    if (!selectedDossier || detailValidationPending) return
+    if (detailValidationPending) return
+    if (!selectedDossier) {
+      // ⑧ (26/10) : le JUMEAU du bouton de diffusion, meme panneau, meme sortie muette sur un bien vendu ou clos.
+      setErrorMessage("Ce bien n'est plus parmi les biens en cours (vendu ou clos) : sa validation ne se change pas depuis l'app. Faites-le dans sa fiche Hektor ; notre fiche suivra cette nuit.")
+      return
+    }
     setDetailValidationPending(true)
     setErrorMessage(null)
     setDetailValidationDraft(nextValue ? 'oui' : 'non')
@@ -22091,7 +22102,9 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                     </section>
                   )
                 })() : null}
-                {affaireCourantePourStatut() ? (
+                {/* ⑧ (26/10) : le message n'annonce « Modifier chez Hektor » que si le bouton est la
+                    (modifierChezHektorPossible, la meme regle que le bouton). */}
+                {modifierChezHektorPossible(statusChangeStatus, affaireCourantePourStatut(), statusChangeAffaires) ? (
                   <p className="status-change-note">
                     Ce bien porte déjà {statusChangeStatus === 'offer' ? 'une offre' : statusChangeStatus === 'compromise' ? 'un compromis' : 'une vente'}.
                     <strong> {bvs("Modifier chez Hektor")}</strong> {bvs("reprend celle-là au lieu d'en créer une seconde. Un champ laissé vide n'efface rien : il conserve ce que Hektor porte déjà.")}
@@ -22183,16 +22196,22 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                    && !offreVerrouilleeParSonDossier(statusChangeAffaires,
                                                      affaireCourantePourStatut()) ? (
                     <>
+                      {/* ⑧ (26/10) : un geste qui ne changerait rien n'est plus propose
+                          (gesteOffreSansEffet -- la meme regle que la base). */}
+                      {!gesteOffreSansEffet(affaireCourantePourStatut(), 'refus') ? (
                       <button className="ghost-button button-subtle" type="button"
                         onClick={() => handleGesteHektor('refus')}
                         disabled={statusChangePending || statusChangeCorrectionPending}>
                         Refuser l'offre
                       </button>
+                      ) : null}
+                      {!gesteOffreSansEffet(affaireCourantePourStatut(), 'accepte') ? (
                       <button className="ghost-button button-subtle" type="button"
                         onClick={() => handleGesteHektor('accepte')}
                         disabled={statusChangePending || statusChangeCorrectionPending}>
                         Accepter l'offre
                       </button>
+                      ) : null}
                     </>
                   ) : null}
                   {/* 3.2 (07/09) -- MODIFIER CHEZ HEKTOR.
@@ -22203,9 +22222,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         celui-la part avec 3.3, quand le contrat d'autorite sera
                         vide. Le retirer avant, ce serait oter le filet avant
                         d'avoir pose le plancher. */}
-                  {affaireCourantePourStatut() && statusChangeStatus !== 'closed' && statusChangeStatus !== 'active'
-                   && !(statusChangeStatus === 'compromise'
-                        && compromisVerrouilleParSaVente(statusChangeAffaires, affaireCourantePourStatut())) ? (
+                  {modifierChezHektorPossible(statusChangeStatus, affaireCourantePourStatut(), statusChangeAffaires) ? (
                     <button className="ghost-button button-subtle" type="button"
                       onClick={(e) => { void handleChangeHektorAnnonceStatus(e as unknown as FormEvent<HTMLFormElement>, true) }}
                       disabled={statusChangePending || statusChangeCorrectionPending
@@ -28638,6 +28655,37 @@ function offreAccepteeFigeeChezHektor(
   // Un seul mot en base (mesure du 13/10 sur les 11 125 offres du registre :
   // accepted · refused · proposed · vide). Pas de variante francaise a couvrir.
   return String(affaire.state ?? '').trim().toLowerCase() === 'accepted'
+}
+
+/** ⑧ (26/10/2026) -- LE GESTE QUI NE CHANGERAIT RIEN N'EST PLUS PROPOSE (§58 point 5, n° 1).
+ *
+ *  « Accepter » une offre deja acceptee, « Refuser » une offre deja refusee : la base
+ *  (app_geste_affaire_optimistic) repond `deja_dans_cet_etat` et n'envoie RIEN chez Hektor
+ *  depuis le 16/09 -- le bouton ne servait a rien. Decision de Frederic : on le cache.
+ *  ⚠ LA MEME COMPARAISON QUE LA BASE, au mot pres (`coalesce(a.state, '') = etat_apres`) :
+ *    on ne cache que ce que la base jugerait sans effet. « Accepter » une offre REFUSEE
+ *    (voulu le 08/09) et « Refuser » une offre ACCEPTEE (le chemin pour corriger son
+ *    montant, bandeau du 13/10) restent. */
+function gesteOffreSansEffet(
+  affaire: AffaireLedgerRow | null | undefined,
+  geste: 'refus' | 'accepte',
+): boolean {
+  if (!affaire || String(affaire.kind) !== 'offre') return false
+  return String(affaire.state ?? '') === (geste === 'accepte' ? 'accepted' : 'refused')
+}
+
+/** ⑧ (26/10/2026) -- « MODIFIER CHEZ HEKTOR » ET LE MESSAGE QUI L'ANNONCE (§58 point 5, n° 5).
+ *
+ *  Une seule regle pour les deux : avant, le message « Modifier chez Hektor reprend celle-la… »
+ *  s'affichait des qu'une transaction etait visee -- y compris quand le bouton etait CACHE
+ *  (le compromis d'une chaine vendue, V du 23/10). Le message parlait d'un bouton absent. */
+function modifierChezHektorPossible(
+  statut: string,
+  affaire: AffaireLedgerRow | null | undefined,
+  lignes: AffaireLedgerRow[],
+): boolean {
+  if (!affaire || statut === 'closed' || statut === 'active') return false
+  return !(statut === 'compromise' && compromisVerrouilleParSaVente(lignes, affaire))
 }
 
 /** ─── 2.2c : LES DOSSIERS OUVERTS D'UN BIEN (05/09/2026) ───
