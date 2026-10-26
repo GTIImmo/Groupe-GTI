@@ -329,34 +329,43 @@
   text-align: center;
 }
 
-/* --- la loupe du menu : meme picto par masque que les autres entrees (nav-icons-v2.css) --- */
-:root {
-  --nv-rechercher: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+/* --- la loupe de la barre de gauche : dans la ligne du logo, au format du bouton « replier » ---
+   (en tete de la liste du menu, elle ajoutait 60 px et faisait defiler le menu sur un ecran de 665 px) */
+.app-shell .side-rail .rail-reduce.rail-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 6px 0 8px;
+  margin-left: auto;
+  color: #fff;
+  border-color: rgba(197, 0, 95, 0.55);
+  background: rgba(197, 0, 95, 0.16);
 }
-.app-shell .side-rail .screen-nav .nav-button[title="Rechercher"]::before {
-  -webkit-mask-image: var(--nv-rechercher) !important;
-  mask-image: var(--nv-rechercher) !important;
-}
-.app-shell .side-rail .screen-nav .nav-button[title="Rechercher"] {
-  position: relative;
-  margin-bottom: 6px;
-  border: 1px dashed rgba(255, 255, 255, 0.22) !important;
-}
-.app-shell .side-rail .screen-nav .nav-button[title="Rechercher"]::after {
-  content: '/';
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0 6px;
+.app-shell .side-rail .rail-reduce.rail-search kbd {
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
   border-radius: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  opacity: 0.75;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font: 700 10.5px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
 }
-.app-shell.is-sidebar-collapsed .side-rail .screen-nav .nav-button[title="Rechercher"]::after { display: none; }
+.app-shell .side-rail .rail-reduce.rail-search:hover kbd { border-color: rgba(255, 255, 255, 0.6); color: #fff; }
+.app-shell .side-rail .rail-reduce.rail-search:hover,
+.app-shell .side-rail .rail-reduce.rail-search:focus-visible {
+  background: var(--bv-magenta, #c5005f);
+  border-color: var(--bv-magenta, #c5005f);
+  box-shadow: 0 6px 14px -6px rgba(197, 0, 95, 0.8);
+  outline: none;
+}
+.app-shell .side-rail .rail-reduce.rail-search svg { width: 15px; height: 15px; }
+.app-shell .side-rail .rail-reduce.rail-search + .rail-reduce { margin-left: 0; }
+/* menu replie (82 px) : il n'y a la place que du logo ; « / » et la barre de l'Accueil restent */
+.app-shell.is-sidebar-collapsed .side-rail .rail-reduce.rail-search { display: none; }
 
 /* --- telephone : plein ecran --- */
 @media (max-width: 720px) {
@@ -382,3 +391,11 @@
   cursor: pointer;
 }
 .mobile-search-button svg { width: 19px; height: 19px; }
+
+/* --- ecrans bas (<= 760 px de haut, ex. 1280x665) : le menu debordait deja de ~7 px AVANT la loupe
+   (8 entrees de 50 px + 7 ecarts de 10 px = 470 px pour 463 disponibles, mesure le 26/10).
+   On resserre a peine pour qu'il tienne sans ascenseur ; les grands ecrans ne changent pas. --- */
+@media (min-width: 1025px) and (max-height: 760px) {
+  .app-shell.app-shell-modern .side-rail .brand-block.rail-top { margin-bottom: 6px !important; }
+  .app-shell.app-shell-modern .side-rail .screen-nav { gap: 8px !important; row-gap: 8px !important; }
+}

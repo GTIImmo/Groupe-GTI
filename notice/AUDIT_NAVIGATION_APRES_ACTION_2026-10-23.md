@@ -1287,3 +1287,16 @@ faut d'abord retirer `adresse_detail` de `texteAnnonce`).
 
 ⏰ **À mesurer à la première nuit (27/10)** : durée du « push upgrade » (référence 4 min 05 à 4 min 59) et du « push
 contacts » (référence 32 à 40 s), `logs/scheduled/quotidien_2026-10-27_*.log`.
+
+### 20.7 La loupe du menu de gauche faisait défiler le menu (26/10, signalé par Frédéric)
+
+**Mesuré dans son Chrome (fenêtre de 665 px de haut)** : 9 entrées de 50 px + écarts de 10 px → **536 px pour 463
+disponibles** (73 px de trop). ⚠ **Sans la loupe, le menu débordait déjà de ~7 px** (8 × 50 + 7 × 10 = 470 > 463).
+
+**Corrigé** : la loupe **quitte la liste** et va **dans la ligne du logo**, en petite pastille « loupe + / » au format du
+bouton « replier » (bordure et fond magenta léger, plein magenta au survol) — **zéro hauteur ajoutée**. Pour les écrans
+bas (≤ 760 px de haut, ≥ 1 025 px de large), marge sous le logo 14 → 6 px et écart entre entrées 10 → 8 px : 8 × 50 +
+7 × 8 = 456 px pour ~471. Les grands écrans ne changent pas. Menu replié (82 px) : la pastille est masquée (« / » et la
+barre de l'Accueil restent).
+**Contrôle en démonstration avec le thème bienvu** (nouvelle config de lancement `hektor-mock-bienvu`, port 5198) à
+1280 × 665 : menu 425 / 425 (plus d'ascenseur), pastille 53 × 28, clic → fenêtre ouverte, replié 471 / 471.

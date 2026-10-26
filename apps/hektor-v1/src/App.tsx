@@ -23598,6 +23598,21 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
               <span>{screenHeader.title}</span>
             </div>
           )}
+          {/* POINT 4 (26/10) : la loupe vit dans la ligne du logo, au format du bouton « replier » --
+              en tete de la liste, elle ajoutait 60 px et faisait defiler le menu (ecran de 665 px). */}
+          {RECHERCHE_GLOBALE ? (
+            <button
+              className="rail-reduce rail-search"
+              type="button"
+              aria-label="Rechercher partout"
+              aria-keyshortcuts="/"
+              title="Rechercher partout   ( / )"
+              onClick={() => setRechercheGlobaleOuverte(true)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth={2.2} /><path d="m20 20-4-4" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" /></svg>
+              <kbd aria-hidden="true">/</kbd>
+            </button>
+          ) : null}
           <button
             className="rail-reduce"
             type="button"
@@ -23609,9 +23624,6 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
           </button>
         </div>
         <nav id="main-mobile-navigation" className="screen-nav" aria-label="Navigation principale">
-          {RECHERCHE_GLOBALE ? (
-            <button className="nav-button" type="button" title="Rechercher" aria-keyshortcuts="/" onClick={() => setRechercheGlobaleOuverte(true)}>Rechercher</button>
-          ) : null}
           <button className={`nav-button ${screen === 'accueil' ? 'is-active' : ''}`} type="button" title="Accueil" onClick={() => openScreen('accueil')}>Accueil</button>
           <button className={`nav-button ${screen === 'mandats' ? 'is-active' : ''}`} type="button" title="Annonces" onClick={() => openScreen('mandats')}>Annonces</button>
           <button className={`nav-button ${screen === 'estimations' ? 'is-active' : ''}`} type="button" title="Estimations" onClick={() => openScreen('estimations')}>Estimations</button>
