@@ -3073,3 +3073,49 @@ personnes, warning).
   `app_affaire_personne_ecart?ferme_le=is.null` → HTTP 200, **0** chacune.
 - ⬜ **Reste** : pousser (l'écran, les deux boutons) ; ⏰ au passage du moniteur de 08:48, vérifier `data.affaire_ecart` et
   `data.affaire_personne_ecart` « ok » dans `app_monitor_status` (une VRAIE écriture, `observed_at` qui avance).
+
+---
+
+## 57. R5 — L'ÉTAT D'UNE TRANSACTION : audit du 26/10 *(Frédéric : « on enchaîne sur le dev »)* — lecture seule, **rien codé**
+
+### Ce que R5 devait faire (§3)
+« L'état (refus, annulation, suppression) entre en attente comme les autres champs ; la nuit le respecte tant que Hektor n'a pas confirmé. »
+C'est le défaut **D6** (§2), et les pistes **T1 / T2** de l'audit « l'écriture meurt » (note ⑧, 22/10).
+
+### Le code aujourd'hui (lu en entier)
+- **Le geste** — `app_geste_affaire_optimistic` (empreinte `a6569229`) : refuser / accepter une offre, annuler / supprimer un compromis,
+  supprimer une vente. Il écrit l'état **dans la colonne `state` du registre** (ou `present_in_hektor = false` pour une suppression), **pas au
+  carnet**, puis pose le travail (`change_hektor_offre_status`, `cancel_hektor_compromis`, `delete_hektor_compromis`, `delete_hektor_vente`)
+  qui **emporte l'état d'avant**. Les verrous (offre par son compromis 16/09, compromis par sa vente V 23/10) sont dans la fonction.
+- **Le worker** : il vérifie l'état ABSOLU chez Hektor ; si Hektor échoue, le filet rejoue puis `restaurerEtatAffaire` **remet l'état d'avant**
+  — **décision écrite du 29/08** (C.4-bis), rappelée « pour la coupure » (T1).
+- **La nuit** : l'UPSERT recopie `state=excluded.state` depuis le miroir (colonne non protégée) — R2 ne la touche pas (elle n'est pas au carnet).
+
+### La mesure (base, 26/10)
+| geste | travaux | tous « done » | sur un vrai bien | durée médiane | la plus longue |
+|---|---|---|---|---|---|
+| refuser / accepter une offre | 25 | ✅ | **0** | 7 s | 29 s |
+| annuler un compromis | 13 | ✅ | **0** | 9 s | 2 h 18 (une fois, 07/09) |
+| supprimer un compromis | 16 | ✅ | **0** | 14 s | 27 s |
+| supprimer une vente | 14 | ✅ | **0** | 11 s | 31 s |
+➡ **68 gestes d'état depuis le 29/08, tous sur les biens d'essai, tous confirmés par Hektor.** Les négociateurs changent l'état **dans Hektor**,
+et la nuit le recopie : c'est le cas « comme avant » du §55. Le risque que R5 couvre **tant que Hektor vit** :
+1. un geste dont le travail **n'a pas encore tourné** quand la nuit passe (04:00) — fenêtre de quelques secondes ; la nuit d'après corrige ;
+2. un geste que **Hektor refuse** — le worker le voit (état absolu) et **remet l'état d'avant** : c'est voulu (29/08), l'app ne ment pas.
+➡ **Aujourd'hui, R5 ne protégerait rien de réel.** Sa vraie valeur est **à la coupure** : sans Hektor, le worker défait chaque état (T1) et la
+nuit n'a plus de miroir — c'est exactement « l'écriture meurt » du 22/10.
+
+### Ce que R5 demanderait (pour mémoire, si on le faisait maintenant)
+- le geste range l'état **au carnet** (`champ = 'state'`, origine `geste_app`), en plus de la colonne ;
+- R3 le juge au retour (« arrivée » si Hektor porte cet état) ; R2 le repose la nuit tant qu'il n'est pas « arrivé » ; R4 sonne s'il reste
+  en conflit ;
+- ⚠ et **renverser T1** (le worker ne défait plus l'état) — c'est **revenir sur la décision du 29/08** ;
+- ce que ça pourrait casser : **les chaînes** (`recalculer_les_chaines` lit `state` : une offre refusée ferme une chaîne), **les verrous** de la
+  fonction du geste (ils lisent `state`), le statut du bien (redescente), et la règle « Hektor confirme ».
+
+### Les choix — À DÉCIDER PAR FRÉDÉRIC (rien n'est choisi)
+- **A — coder R5 maintenant**, sans toucher T1 (le worker continue de défaire sur un refus de Hektor) : protège la fenêtre de quelques secondes
+  et prépare la coupure. Coût : la fonction du geste, R3, R2, l'écran ; risque sur les chaînes et les verrous.
+- **B — le ranger avec la coupure**, avec T1 et T3 (modifier sans numéro Hektor), où il prend son sens : un seul chantier « l'état chez nous ».
+  Rien n'est perdu aujourd'hui (mesuré : 0 geste réel, 0 échec).
+**Ma recommandation : B.** Et prendre à la place un point qui sert **aujourd'hui** (voir la liste au §51).
