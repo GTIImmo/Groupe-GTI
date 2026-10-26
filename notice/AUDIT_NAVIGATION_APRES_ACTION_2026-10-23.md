@@ -606,3 +606,43 @@ d'affichage à l'écran ; l'affichage suit les lectures.
 Vu au passage : un **2e résumé** pour 63200 à 10:06:22-23 — probablement une réouverture de la même fiche (ou le
 renouvellement du jeton de session, dont l'effet dépend) ; sans conséquence (le lien existe déjà, il n'est pas recréé).
 Et les relectures Hektor n'ont été demandées **qu'à l'ouverture** des fiches (10:05:51, 10:06:26) — le point 0 tient.
+
+---
+
+## 13. POINT 1 — RE-AUDIT DU 26/10 : « une adresse par écran et par fiche » (rien codé)
+
+**Aujourd'hui** (`App.tsx`) : l'écran est un état mémoire, `useState<Screen>('accueil')` (l. 12890) ; la fiche
+ouverte aussi (`detailOpen` + `selectedDossierId`, le contact par-dessus une annonce `annonceContactId`, la fiche
+contact de l'écran Contacts = un état **local** de `ContactsScreen`). **Aucun** `pushState` ni `popstate` : l'adresse
+ne bouge jamais → retour du navigateur = sortie de l'app (fermeture sur Android), F5 = Accueil, pas de lien partageable.
+
+**Ce qui lit DÉJÀ l'adresse (à ne pas casser)** :
+| adresse | où | règle |
+|---|---|---|
+| `?open=request&app_dossier_id=…&role=…&request_type=…` (e-mails de demande) | l. 14670-14711, `buildAppRequestUrl` l. 8540 | elle passe **en premier**, puis efface ses paramètres |
+| `#type=recovery` (mot de passe) | l. 13687, 18585 | le module ne touche **jamais** au `#` |
+| `/rdv/annonce/<jeton>` (lien public RDV) | `buildAppointmentAnnonceUrl` l. 8479 ; serveur `_compose_public_url` | ⚠ voir « trouvé au passage » |
+
+**L'hébergement** : pas de `vercel.json`. Mesuré : `groupe-gti.vercel.app/?ecran=contacts` → **200** ;
+`/annonces/123` → **404**. ➡ des adresses en **`?…`** (F5 marche sans toucher au déploiement), pas en `/…`.
+
+**Les deux portes qui existent déjà** et que l'adresse réutiliserait (aucune nouvelle logique d'ouverture) :
+`openDossierDetailPage(id)` (l. 15156) pour une annonce, `showContactInDirectory(id)` (l. 14882) pour un contact.
+
+**Ce que ça pourrait casser** :
+- ⚠ **la connexion Google ramène à l'accueil** (`redirectTo` = l'origine, l. 14771 / `supabase.ts` l. 47) : un lien
+  ouvert **déconnecté** perdrait sa cible → la garder le temps de la connexion (stockage de session) et la rejouer ;
+- ⚠ **la fiche contact de l'écran Contacts est un état local** (`ContactsScreen`, bureau l. 44062 et mobile l. 44336) :
+  il faut qu'elle **prévienne** l'app quand elle s'ouvre / se ferme (une prop de plus) — sinon l'adresse l'ignore ;
+- ⚠ **les noms internes trompent** : l'écran interne `mandats` est le menu « Annonces », `registre` est le menu
+  « Mandats » (mémoire `ecran-mandats-est-le-menu-annonces`) → l'adresse porte les noms **du menu**, traduits ;
+- les droits : un lien vers une fiche qu'on n'a pas le droit de voir n'ouvre rien (la base filtre déjà) → afficher
+  « fiche introuvable ou non accessible » au lieu d'une fiche vide ; `suivi` / `sante` refusés restent redirigés (l. 19315) ;
+- ⚠ **un bien vendu / clos / archivé n'est plus dans `app_dossier_current`** (mémoire) : son adresse ne pourra pas
+  l'ouvrir directement en 1re version → le dire, pas le cacher ;
+- la session ⑧ modifie aussi `App.tsx` : une seule tâche de code à la fois, à coordonner.
+
+**Trouvé au passage, NOTÉ, PAS TRAITÉ** : le **lien public de RDV** affiché dans la fiche pointe sur
+`<adresse de l'app>/rdv/annonce/…` — côté écran (`VITE_APPOINTMENT_PUBLIC_BASE_URL` **absente** du code publié → repli
+sur `groupe-gti.vercel.app`) comme côté serveur (`app_base_url` + `/rdv/annonce/`, valeur Render non mesurée). Or
+`groupe-gti.vercel.app/rdv/annonce/abc` → **404**. Ce lien semble **mort** ; à rapprocher de la vitrine (§12.1, 11bis).
