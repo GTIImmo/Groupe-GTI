@@ -825,3 +825,44 @@ d'avant (D) tout de suite, puis poser A seulement après l'avoir mesurée (prép
 2. **Dans une transaction ANNULÉE** (accord demandé) : créer la table et le déclencheur, remplir, modifier quelques transactions, vérifier que
    les parties suivent, mesurer la vue — puis **tout annuler** (rien ne reste).
 3. **La pose** : patch + inverse + répétition ; sentinelle au moniteur (en lisant les contraintes de sa table — leçon du 25/10).
+
+## 17. LA TABLE DES PARTIES ÉCRITE ET ÉPROUVÉE *(26/10 soir, « vas-y »)* — **RIEN N'EST POSÉ**
+
+### 17.1 Le patch (`supabase/patch_table_des_parties_2026-10-26.sql`, + `_INVERSE`, + `_REPETITION`, générés par script)
+- **`app_affaire_partie`** : (transaction, rôle, place) → nos deux numéros, `est_principal`, `fiche_sans_nom`, `transaction_presente`,
+  `origine` (`listes_du_registre` aujourd'hui, `app` à l'étape 3) ; index sur notre numéro (en texte, l'expression de la vue).
+- **`app_affaire_partie_erreur`** : le journal du déclencheur.
+- **Les droits** : RLS ; lecture seule pour `authenticated`, **par la règle du registre** (la politique relit `app_affaire_ledger` sous les droits
+  de l'utilisateur) ; aucune écriture ouverte ; `anon` rien.
+- **`app_affaire_partie_calculer(ligne)`** : les parties d'une transaction, depuis les listes (liste, objet seul ou rien), les vendeurs, et
+  les colonnes des notaires (le numéro de Hektor d'un notaire lu dans l'annuaire).
+- **Le déclencheur** (`app_affaire_partie_suivre`, trois déclencheurs : insert, update **seulement si les personnes changent**, delete) :
+  recalcule la transaction qui change ; **ne fait jamais échouer l'écriture** (sous-transaction + journal).
+- **`app_affaire_partie_reconstruire()`** : tout, à l'identique ; **`app_v_affaire_partie_ecarts`** : la table contre un recalcul complet +
+  les erreurs des 24 h (lue par la sentinelle, service seulement).
+- **La vue des liens d'un contact** : la branche des acquéreurs lit la table des parties (empreinte `acf77be8` vérifiée avant d'écrire).
+
+### 17.2 L'essai en lecture seule
+Le calcul : **116 932 parties** (acquéreurs 35 042, vendeurs 58 550, notaires 6 772 + 16 568) ; **0 clé en double, 0 personne deux fois dans
+une transaction** ; les **35 005** liens acquéreurs de la nuit **tous retrouvés** (+3 offres d'essai). Vendeurs sans notre numéro : 58 550 —
+normal, **C4 les numérote cette nuit** ; fiches sans nom : 22 528 (19 930 vendeurs, 2 596 acquéreurs — les fiches « couple » de Hektor).
+
+### 17.3 ⭐ L'essai complet DANS UNE TRANSACTION ANNULÉE (le patch entier + 9 épreuves, puis tout annulé — vérifié : rien ne reste)
+| épreuve | résultat |
+|---|---|
+| la pose | 116 932 parties, **0 écart**, 35 008 liens acquéreurs dans la vue |
+| **une nuit ordinaire** (les 31 103 transactions renvoyées sans changement) | **2 044 ms sans le déclencheur, 2 099 ms avec** : +55 ms, il ne tourne pas ; parties inchangées |
+| **la nuit de C4** (les vendeurs de 19 884 transactions changent) | **21,9 s** (une fois) ; **0 écart** après |
+| un acquéreur retiré (transaction 4195) | 3 → 2 parties |
+| une transaction retirée chez Hektor (30233) | 3 parties gardées, toutes marquées ; elle sort de la vue |
+| **le déclencheur en panne** (contrainte impossible posée exprès) | **l'écriture du registre passe** ; la panne est **au journal** ; **la sentinelle la voit** |
+| la reconstruction | tout remis, **0 écart** |
+| **le temps** | fiche contact : **4,7 ms** (JACQUIER, 1ʳᵉ fois : 17 ms de préparation) et **2,6 ms** ; **par bien** (invités d'un RDV) : **3,7 ms** — aujourd'hui 3,9 ms |
+| **les droits** (un commercial, 142 biens) | 1 585 parties de **ses** 479 transactions ; **0 hors de son portefeuille** ; aucune écriture possible |
+
+### 17.4 Ce qui reste avant la pose
+- **La sentinelle au moniteur** (`data.affaire_partie_ecart`, warning, lit `app_v_affaire_partie_ecarts`) : **ajoutée AU MOMENT de la pose**, pas
+  avant — sinon le moniteur lirait une vue absente et passerait au rouge (« une lecture ratée n'est jamais un vert »).
+- **Le moment** : cette nuit jouent pour la 1ʳᵉ fois chantier 1, C4 et c. Poser la table **ce soir** ajouterait ~22 s au push de la nuit (les
+  vendeurs de C4) et une 4ᵉ nouveauté. ➡ **Je recommande de la poser APRÈS la vérification de demain matin** : une nouveauté à la fois.
+- **Après la pose** : la répétition, le temps réel d'une fiche, et le push de la nuit suivante (son temps, avant / après).
