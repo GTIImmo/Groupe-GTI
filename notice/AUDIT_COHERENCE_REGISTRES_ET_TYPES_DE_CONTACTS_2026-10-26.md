@@ -601,3 +601,39 @@ caché au registre : le numéro de la veille est **gardé**. Aucune clé en doub
 - Patch Supabase appliqué par moi (accord de Frédéric) : ses 2 contrôles verts ; répétition A verte (colonne présente, 31 103 transactions intactes), B « en attente de la nuit ».
 - Poussé par Frédéric (`f9a8ecd` dans origin/main), puis `APP_AFFAIRE_MANDAT_NOTRE_NUMERO=1` ajouté à `.env` par moi, lu « ALLUMÉ ».
 - ⏰ **27/10 au matin** : répétition B (~23 336, chaque numéro sur sa clé, 0 sans numéro touché) ; le bilan de la nuit « mandat à notre numéro : N ».
+
+---
+
+## 13. CHANTIER 3 — LA PIÈCE 5 : les acquéreurs d'un contact lus dans NOTRE registre des transactions *(réaudit du 26/10 après-midi, rien codé)*
+
+L'audit complet est au §58 point 2 de `notice/ARCHITECTURE_REGISTRE_TRANSACTIONS_CHEZ_NOUS_2026-10-22.md` (ce matin). Remesuré après les
+chantiers 1 et 2 :
+- **La projection** (le principal par `app_contact_id` + chaque co-acquéreur de `acquereurs_json` par son `app_contact_id`, transactions que
+  Hektor liste encore) retrouve **35 005 liens sur 35 005** de la table de nuit ; **+3** : les offres d'essai nées dans l'app (bien 24933).
+- **Les colonnes** (mesure du matin, inchangée) : annonce, dossier, date identiques ; « vente » écrit en toutes lettres pour une vente comme
+  la nuit ; `is_active_annonce` = le bien n'est pas dans l'index des archives (0 exception) ; **numéro de mandat** : celui DE LA TRANSACTION
+  (20 différences avec la nuit, qui prend le mandat courant du bien — le registre est le juste) ; **montant d'une offre** : la nuit n'en porte
+  aucun, le registre en a **11 117** → **nouveau sur la fiche**.
+- **La vitesse** : la vue d'aujourd'hui répond en **9,6 ms** pour un contact ; la projection **sans index : 124 ms** (deux lectures complètes du
+  registre, 31 103 lignes). ➡ **deux index** : (1) le principal par son numéro **en texte** — le même montage qu'`idx_app_relation_contact_texte`
+  du registre des liens ; (2) un index partiel sur les **2 447 transactions à plusieurs acquéreurs**, seules à déplier. ⚠ l'expression de
+  l'index doit être **exactement** celle de la vue (mémoire « une fonction autour d'une colonne indexée tue l'index »).
+- **Le point 4** (le worker effaçait nos numéros le jour) est **réglé** depuis 10:57 (chantier 2 b) : un co-acquéreur d'une transaction du jour
+  apparaîtra tout de suite, plus seulement le lendemain.
+- **Les lecteurs** (recensés ce matin, aucun touché aujourd'hui) : la fiche d'un contact (`loadContactRelations`), les invités d'un RDV par
+  bien, les mandants d'un bien (branche 1, non touchée) ; en base, `app_contact_activite` et `app_unlink_mandant_optimistic` ne lisent que la
+  branche 1 ; **le serveur ne lit pas la vue**. ⚠ Les **types** de l'annuaire (`relation_roles_json`) restent calculés la nuit depuis la table de
+  nuit : la pièce 5 ne les change pas (c'est la suite, « les types à la lecture »).
+
+### La proposition
+1. **Un patch de base** (inverse + répétition) : les deux index (additifs), puis la vue : **la branche 1 inchangée au caractère près**
+   (empreinte vérifiée, celle d'après le chantier 1), **la branche 2 lit le registre des transactions** au lieu de la table de nuit — mêmes
+   18 colonnes, mêmes types, `relation_source = 'registre_transactions'`, `relation_key = 'aff_<transaction>_<contact>'`.
+2. **La table de nuit n'est pas touchée** : elle reste refaite (elle sert encore aux types) ; retour arrière = l'ancienne vue, à l'octet.
+3. **Essais avant la pose** : la répétition compare la vue neuve à l'ancienne sur **tous** les contacts (35 005 retrouvés, les écarts du tableau
+   seulement) et **mesure le temps** d'une fiche (cible : du même ordre que 9,6 ms).
+4. **Aucun redémarrage, aucun push nécessaire** (une vue en base) ; l'écran lit déjà toutes ces colonnes.
+
+### ⏳ À TRANCHER PAR FRÉDÉRIC
+- **Q1 — le montant des offres** sur la fiche d'un contact (nouveau : 11 117 offres) : **le montrer**, ou le **masquer** comme aujourd'hui ?
+- **Q2 — le « vas-y »** pour le patch, puis son application (écriture en production).
