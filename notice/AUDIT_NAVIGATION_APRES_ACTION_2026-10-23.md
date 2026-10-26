@@ -1385,3 +1385,34 @@ replié passent de 50 à 46 px et leur écart de 8 à 6 px pour qu'il tienne.
 le retour contextuel vers un contact (`dossierReturnContactId`, gardé) ; « Retour aux annonces » (gardé, 1er segment).
 Non vérifiable en démonstration : la fiche contact n'a pas de données, donc le parcours « contact → autre bien » se
 contrôlera en réel (lecture seule : ouvrir une fiche lance une relecture chez Hektor, à faire avec ton accord).
+
+### 21.1 ✅ POINT 5 CODÉ ET CONTRÔLÉ EN DÉMONSTRATION (26/10, « code le point 5 et contrôle ») — ⚠ NON ÉPROUVÉ EN RÉEL
+
+Interrupteur `FIL_NAVIGATION` (App.tsx). Style `fil-navigation.css`.
+
+**Ce qui est fait**
+- **Le fil** : chaque fiche ouverte (annonce ; contact, y compris **par-dessus** une annonce) s'ajoute (5 au plus) ;
+  revenir à une fiche du fil le **raccourcit** ; un libellé qui arrive après l'ouverture complète l'entrée ; aucune fiche
+  ouverte pendant 600 ms → le fil repart de zéro (sauf pendant le démarrage, pour survivre à F5). Gardé pour l'onglet
+  (`sessionStorage`).
+- **Bureau, fiche annonce** : les fiches précédentes s'insèrent dans le fil du cockpit, après « Annonces » (pictos
+  maison / personne, nom complet en info-bulle) ; le fil s'arrête **à la fiche qu'il décrit** (sinon le cockpit sous un
+  contact ouvert par-dessus répétait l'annonce).
+- **Bureau, fiche contact** (V2 et ancienne) : un bandeau « Parcours » en tête, morceaux cliquables + la fiche en cours en
+  rose.
+- **Téléphone et tablette** : une pastille « ‹ fiche précédente » en bas à gauche (encre, chevron magenta).
+- Cliquer un morceau rouvre **exactement** la fiche : une annonce (dans son écran), un contact **par-dessus son annonce**,
+  ou un contact de l'annuaire.
+- **Corrigé au passage (point 4)** : ouvrir une annonce depuis la recherche globale laissait le contact ouvert
+  par-dessus l'annonce précédente → il se referme.
+
+**Contrôle en démonstration (thème bienvu)**, adresse et fil relevés à chaque étape :
+1. annonce A (VA1988) → fil « VA1988 » ; 2. contact par-dessus → « VA1988 › Contact P-2001 » (adresse `&contact=P-2001`) ;
+3. annonce B par la recherche → « VA1988 › Contact P-2001 › VA1926 », cockpit « Annonces › VA1988 › Contact P-2001 ›
+VA1926 · Grand T3… » ; 4. clic « Contact P-2001 » → retour à A **avec le contact par-dessus**, fil raccourci ;
+5. **Précédent** → B, fil reconstruit ; 6. clic « VA1988 » → A, fil « VA1988 » ; 7. « Annonces » → fiche fermée, fil
+vide ; **F5** sur B → fil « VA1988 › VA1926 » intact ; téléphone 390 px → pastille « ‹ VA1988 » (118 × 42, en bas à
+gauche), la toucher ramène à A et la fait disparaître. 0 erreur JavaScript.
+⚠ Non vérifiable en démonstration : la **fiche contact** (pas de données) — son bandeau « Parcours » et le chemin
+« contact → autre bien » depuis sa liste de biens se contrôleront en réel (ouvrir une fiche lance une relecture chez
+Hektor : avec l'accord de Frédéric).

@@ -1,4 +1,4 @@
-import { ChangeEvent, type CSSProperties, FormEvent, Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, type CSSProperties, FormEvent, Fragment, type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { USER_PERIMETRES } from './types'
 import type { Session } from '@supabase/supabase-js'
@@ -251,6 +251,7 @@ import RedacteurPanel from './RedacteurPanel'
 import ContactSearchFields, { contactSearchValueToInput, defaultContactSearchValue, type ContactSearchFieldsValue } from './ContactSearchFields'
 import './contact-new.css'
 import RechercheGlobale, { type GroupeRecherche } from './RechercheGlobale'
+import './fil-navigation.css'
 import { compterAnnoncesAilleurs, type AnnoncesAilleurs } from './lib/api'
 import { bvs, bvt } from './lib/bienvuTexte'
 import { MENTION_AVENANT, MENTION_MANDAT, repereHtml, repereSignature, zoneMentionHtml } from './lib/signatureAnchors'
@@ -13025,6 +13026,85 @@ const L_ECRAN_SUIT_LE_CLIC = true
 //   Audit et ergonomie : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §20-§20.1.
 //   `false` = l'ancien comportement, en une ligne (la barre de l'Accueil redevient decorative).
 const RECHERCHE_GLOBALE = true
+
+// ⛔ 26/10/2026 -- POINT 5 : LE FIL DE NAVIGATION. Annonce -> contact -> autre bien : le contact se fermait et le
+//   nouveau bien REMPLACAIT le premier, sans trace a l'ecran (constat N7 ; Precedent le resout depuis le point 1).
+//   Chaque fiche ouverte (annonce, contact) s'ajoute a un fil court (les 5 dernieres) ; y revenir le raccourcit ;
+//   chaque morceau est cliquable. Bureau : dans le fil du cockpit et en tete de la fiche contact ; telephone : une
+//   pastille « ‹ fiche precedente ». Garde pour l'onglet (sessionStorage), efface quand aucune fiche n'est ouverte.
+//   Audit : notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §21. `false` = l'ancien comportement, en une ligne.
+const FIL_NAVIGATION = true
+const FIL_NAVIGATION_STOCKAGE = 'gti_fil_navigation'
+const FIL_NAVIGATION_LONGUEUR = 5
+type EntreeFil = {
+  cle: string
+  type: 'annonce' | 'contact'
+  id: string
+  // un contact ouvert PAR-DESSUS une annonce : on y revient avec l'annonce dessous
+  surAnnonce?: number | null
+  ecran: Screen
+  libelle: string
+  detail?: string
+}
+const FilNavigationContext = createContext<{ fil: EntreeFil[]; aller: (entree: EntreeFil) => void } | null>(null)
+function lireFilNavigation(): EntreeFil[] {
+  if (!FIL_NAVIGATION || typeof window === 'undefined') return []
+  try {
+    const brut = JSON.parse(window.sessionStorage.getItem(FIL_NAVIGATION_STOCKAGE) || '[]')
+    return Array.isArray(brut) ? (brut as EntreeFil[]).filter((e) => e && typeof e.cle === 'string').slice(-FIL_NAVIGATION_LONGUEUR) : []
+  } catch {
+    return []
+  }
+}
+function libelleEntreeFil(entree: EntreeFil) {
+  return entree.libelle || (entree.type === 'contact' ? `Contact ${entree.id}` : `Annonce ${entree.id}`)
+}
+function PictoFil({ type }: { type: EntreeFil['type'] }) {
+  return type === 'contact'
+    ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c1.4-3.2 3.9-4.8 7-4.8s5.6 1.6 7 4.8" /></svg>
+    : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 10.5 12 4l9 6.5V20h-6v-5H9v5H3z" /></svg>
+}
+// Les morceaux AVANT la fiche en cours (la fiche en cours a deja son propre libelle la ou on l'affiche).
+// `jusqua` : la cle de la fiche qui affiche ce fil -- on s'arrete juste avant elle (un contact ouvert
+// par-dessus l'annonce est APRES elle dans le fil : sans ca, le cockpit dessous repetait l'annonce).
+function SegmentsFilNavigation(props: { classeSegment: string; classeSeparateur: string; jusqua?: string }) {
+  const contexte = useContext(FilNavigationContext)
+  if (!FIL_NAVIGATION || !contexte || contexte.fil.length < 2) return null
+  const position = props.jusqua ? contexte.fil.map((e) => e.cle).lastIndexOf(props.jusqua) : -1
+  const avant = position >= 0 ? contexte.fil.slice(0, position) : contexte.fil.slice(0, -1)
+  if (!avant.length) return null
+  return (
+    <>
+      {avant.map((entree) => (
+        <Fragment key={entree.cle}>
+          <button
+            type="button"
+            className={`${props.classeSegment} fil-nav-seg fil-nav-${entree.type}`}
+            title={[libelleEntreeFil(entree), entree.detail].filter(Boolean).join(' · ')}
+            onClick={() => contexte.aller(entree)}
+          >
+            <PictoFil type={entree.type} />
+            <span>{libelleEntreeFil(entree)}</span>
+          </button>
+          <span className={props.classeSeparateur} aria-hidden="true">›</span>
+        </Fragment>
+      ))}
+    </>
+  )
+}
+// Le fil complet en bandeau (tete de la fiche contact) : morceaux cliquables, puis la fiche en cours.
+function BandeauFilNavigation() {
+  const contexte = useContext(FilNavigationContext)
+  if (!FIL_NAVIGATION || !contexte || contexte.fil.length < 2) return null
+  const courant = contexte.fil[contexte.fil.length - 1]
+  return (
+    <nav className="fil-nav-bandeau" aria-label="Fil de navigation">
+      <span className="fil-nav-ey">Parcours</span>
+      <SegmentsFilNavigation classeSegment="fil-nav-bandeau-seg" classeSeparateur="fil-nav-bandeau-sep" />
+      <span className={`fil-nav-courant fil-nav-${courant.type}`} aria-current="page"><PictoFil type={courant.type} /><span>{libelleEntreeFil(courant)}</span></span>
+    </nav>
+  )
+}
 function ecritDansUnChamp(cible: EventTarget | null) {
   const el = cible as HTMLElement | null
   if (!el) return false
@@ -14368,11 +14448,14 @@ export default function App() {
   function rechercheOuvrirAnnonce(annonce: Dossier) {
     const ecran: Screen = String(annonce.statut_annonce ?? '') === 'Estimation' ? 'estimations' : 'mandats'
     setDossierReturnContactId(null)
+    // Un contact ouvert par-dessus l'annonce precedente ne doit pas rester sur la nouvelle (26/10, point 5).
+    setAnnonceContactId(null)
     if (screen !== ecran) openScreen(ecran)
     openDossierDetailPage(annonce.app_dossier_id)
   }
   function rechercheOuvrirHorsCatalogue(annonce: Dossier) {
     setDossierReturnContactId(null)
+    setAnnonceContactId(null)
     if (screen !== 'mandats') openScreen('mandats')
     void openLightweightDetailImport(annonce)
   }
@@ -23141,6 +23224,84 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     </>
   )
 
+  // POINT 5 (26/10/2026) : le fil de navigation.
+  const [filNavigation, setFilNavigation] = useState<EntreeFil[]>(lireFilNavigation)
+  const objetFilCourant = useMemo<EntreeFil | null>(() => {
+    if (!FIL_NAVIGATION) return null
+    if (detailOpen && selectedDossierId != null) {
+      if (annonceContactId) {
+        const nom = annonceContact && String(annonceContact.hektor_contact_id) === String(annonceContactId) ? String(annonceContact.display_name ?? '').trim() : ''
+        return { cle: `contact:${annonceContactId}@${selectedDossierId}`, type: 'contact', id: String(annonceContactId), surAnnonce: selectedDossierId, ecran: screen, libelle: nom }
+      }
+      const d = (selectedDossier && selectedDossier.app_dossier_id === selectedDossierId ? selectedDossier : null)
+        ?? dossiers.find((x) => x.app_dossier_id === selectedDossierId)
+        ?? mandats.find((x) => x.app_dossier_id === selectedDossierId)
+        ?? null
+      const ref = d ? String(d.numero_dossier || (d.hektor_annonce_id ? `#${d.hektor_annonce_id}` : '')).trim() : ''
+      return { cle: `annonce:${selectedDossierId}`, type: 'annonce', id: String(selectedDossierId), ecran: screen, libelle: ref, detail: d ? String(d.titre_bien ?? '').trim() : '' }
+    }
+    if (screen === 'contacts' && contactFicheOuverte && selectedContactId) {
+      const nom = selectedContact && String(selectedContact.hektor_contact_id) === String(selectedContactId) ? String(selectedContact.display_name ?? '').trim() : ''
+      return { cle: `contact:${selectedContactId}`, type: 'contact', id: String(selectedContactId), ecran: 'contacts', libelle: nom }
+    }
+    return null
+  }, [detailOpen, selectedDossierId, annonceContactId, annonceContact, selectedDossier, dossiers, mandats, screen, contactFicheOuverte, selectedContactId, selectedContact])
+  // Revenir a une fiche du fil le RACCOURCIT ; une nouvelle fiche s'ajoute (5 au plus). Un libelle qui arrive apres
+  // l'ouverture (fiche encore en chargement) complete l'entree. Aucune fiche ouverte pendant 600 ms : le fil
+  // repart de zero (le delai evite de l'effacer pendant un passage d'une fiche a l'autre).
+  useEffect(() => {
+    if (!FIL_NAVIGATION) return
+    if (!objetFilCourant) {
+      // Pas pendant le demarrage : apres F5, la fiche de l'adresse se rouvre en quelques secondes ; le fil garde
+      // (sessionStorage) ne doit pas etre efface entre-temps.
+      if (bootLoading || !adressePrete) return
+      const minuteur = window.setTimeout(() => setFilNavigation((avant) => (avant.length ? [] : avant)), 600)
+      return () => window.clearTimeout(minuteur)
+    }
+    setFilNavigation((avant) => {
+      const i = avant.findIndex((e) => e.cle === objetFilCourant.cle)
+      if (i < 0) return [...avant, objetFilCourant].slice(-FIL_NAVIGATION_LONGUEUR)
+      const garde = avant.slice(0, i + 1)
+      const ancienne = garde[i]
+      if (objetFilCourant.libelle && (ancienne.libelle !== objetFilCourant.libelle || ancienne.detail !== objetFilCourant.detail)) {
+        garde[i] = { ...ancienne, libelle: objetFilCourant.libelle, detail: objetFilCourant.detail }
+      } else if (garde.length === avant.length) {
+        return avant
+      }
+      return garde
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [objetFilCourant?.cle, objetFilCourant?.libelle, objetFilCourant?.detail, bootLoading, adressePrete])
+  useEffect(() => {
+    if (!FIL_NAVIGATION || typeof window === 'undefined') return
+    try { window.sessionStorage.setItem(FIL_NAVIGATION_STOCKAGE, JSON.stringify(filNavigation)) } catch { /* stockage indisponible */ }
+  }, [filNavigation])
+  function allerAuFil(entree: EntreeFil) {
+    setDossierReturnContactId(null)
+    if (entree.type === 'annonce' || entree.surAnnonce != null) {
+      const annonce = entree.type === 'annonce' ? Number(entree.id) : Number(entree.surAnnonce)
+      const ecran: Screen = entree.ecran === 'contacts' || entree.ecran === 'accueil' ? 'mandats' : entree.ecran
+      if (screen !== ecran) openScreen(ecran)
+      openDossierDetailPage(annonce)
+      setAnnonceContactId(entree.type === 'contact' ? entree.id : null)
+      return
+    }
+    showContactInDirectory(entree.id)
+  }
+  const contexteFilNavigation = useMemo(() => ({ fil: filNavigation, aller: allerAuFil }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filNavigation, screen])
+  const pastilleFilMobile = FIL_NAVIGATION && filNavigation.length >= 2 && objetFilCourant ? (() => {
+    const precedente = filNavigation[filNavigation.length - 2]
+    return (
+      <button type="button" className={`fil-nav-mobile fil-nav-${precedente.type}`} onClick={() => allerAuFil(precedente)} aria-label={`Revenir à ${libelleEntreeFil(precedente)}`}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+        <PictoFil type={precedente.type} />
+        <span>{libelleEntreeFil(precedente)}</span>
+      </button>
+    )
+  })() : null
+
   // POINT 4 : la meme fenetre de recherche pour le bureau et le telephone.
   const fenetreRechercheGlobale = RECHERCHE_GLOBALE ? (
     <RechercheGlobale
@@ -23173,6 +23334,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const showMobileCommandCard = screen !== 'accueil' && screen !== 'agenda'
 
     return (
+      <FilNavigationContext.Provider value={contexteFilNavigation}>
       <>
         <MobileLayout
         currentScreen={screen}
@@ -23591,11 +23753,14 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         />
         {appModals}
         {fenetreRechercheGlobale}
+        {pastilleFilMobile}
       </>
+      </FilNavigationContext.Provider>
     )
   }
 
   return (
+    <FilNavigationContext.Provider value={contexteFilNavigation}>
     <DesktopLayout>
     <div className={`app-shell app-shell-modern app-screen-${screen} ${sidebarCollapsed ? 'is-sidebar-collapsed' : ''}`}>
       <header className={`side-rail ${mobileMenuOpen ? 'is-mobile-menu-open' : ''}`}>
@@ -24735,6 +24900,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
       ) : null}
     </div>
     </DesktopLayout>
+    </FilNavigationContext.Provider>
   )
 }
 
@@ -31263,6 +31429,8 @@ function CockpitDetail(props: Parameters<typeof DossierDetailLayoutBase>[0]) {
             <nav className="fa-ck-wb-crumb" aria-label="Fil d'ariane">
               <button type="button" className="fa-ck-wbc-seg" onClick={props.onBack} title="Retour aux annonces">Annonces</button>
               <span className="fa-ck-wbc-sep" aria-hidden="true">›</span>
+              {/* POINT 5 (26/10) : les fiches traversees avant celle-ci, cliquables. */}
+              <SegmentsFilNavigation classeSegment="fa-ck-wbc-seg" classeSeparateur="fa-ck-wbc-sep" jusqua={`annonce:${dossier.app_dossier_id}`} />
               <button type="button" className="fa-ck-wbc-seg fa-ck-wbc-doss" onClick={() => setActiveTab('synthese')} title="Cockpit du dossier">
                 {/* C.14 : le fil d'ariane lit le calque, comme l'en-tete juste au-dessus. */}
                 {dossier.numero_dossier ?? `#${dossier.hektor_annonce_id}`}{heroTitle && heroTitle !== 'Annonce' ? ` · ${heroTitle}` : ''}
@@ -43032,6 +43200,7 @@ function ContactDetailPopupBase(props: {
     <div className="fcx" id="fcx-root" data-screen-label="Fiche contact">
       <div className="fcx-overlay" onClick={props.onClose}>
         <main className="panel" onClick={(event) => event.stopPropagation()}>
+          <BandeauFilNavigation />
 
           <header className="topbar" data-screen-label="En-tête fiche contact">
             <div className="tb-left">
@@ -44208,6 +44377,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
     <div className={`fa-contact-v2 ${typeClass}`} id="fa-cx-root" data-screen-label="Fiche contact V2">
       <div className="fa-cx-overlay" onClick={props.onClose}>
         <div className="fa-cx-panel" onClick={(event) => event.stopPropagation()}>
+          <BandeauFilNavigation />
           <div style={{ padding: '12px 16px 0' }}>
             <ContactEditStatusBanner hektorContactId={props.contact.hektor_contact_id} />
           </div>

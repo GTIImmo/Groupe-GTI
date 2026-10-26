@@ -1,0 +1,97 @@
+/* ============================================================
+   POINT 5 (26/10/2026) -- le fil de navigation (App.tsx, FIL_NAVIGATION).
+   Charte bienvu ; chaque jeton a son repli.
+   ============================================================ */
+
+/* --- les morceaux, dans le fil du cockpit et dans le bandeau --- */
+.fil-nav-seg {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  max-width: 190px;
+  min-width: 0;
+}
+.fil-nav-seg span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fil-nav-seg svg,
+.fil-nav-courant svg,
+.fil-nav-mobile svg { width: 13px; height: 13px; flex: none; }
+.fil-nav-seg.fil-nav-contact svg { color: var(--bv-magenta, #c5005f); }
+
+/* --- le bandeau en tete de la fiche contact --- */
+.fil-nav-bandeau {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--bv-line, #e2e5e6);
+  background: var(--bv-brume, #f6f7f8);
+  font-family: var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  font-size: 13px;
+}
+.fil-nav-ey {
+  margin-right: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bv-subtle, #7c8082);
+}
+.fil-nav-bandeau-seg {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--bv-radius-pill, 999px);
+  border: 1px solid var(--bv-line, #e2e5e6);
+  background: #fff;
+  color: var(--bv-ink, #222323);
+  font: 600 12.5px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  cursor: pointer;
+  transition: border-color var(--bv-fast, 150ms), color var(--bv-fast, 150ms);
+}
+.fil-nav-bandeau-seg:hover,
+.fil-nav-bandeau-seg:focus-visible { border-color: var(--bv-rose, #f6b6d5); color: var(--bv-framboise, #8c0044); outline: none; }
+.fil-nav-bandeau-sep { color: var(--bv-line-strong, #cfd3d4); font-weight: 700; }
+.fil-nav-courant {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 220px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: var(--bv-radius-pill, 999px);
+  background: var(--bv-rose-soft, #fdf0f6);
+  border: 1px solid var(--bv-rose, #f6b6d5);
+  color: var(--bv-framboise, #8c0044);
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.fil-nav-courant span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- telephone : la pastille « ‹ fiche precedente », en bas a gauche, sous le pouce --- */
+.fil-nav-mobile {
+  position: fixed;
+  left: 12px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(260px, calc(100vw - 24px));
+  height: 42px;
+  padding: 0 16px 0 12px;
+  border-radius: var(--bv-radius-pill, 999px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--bv-ink, #222323);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(34, 35, 35, 0.32);
+  font: 700 13.5px/1 var(--bv-font-ui, 'Hanken Grotesk', system-ui, sans-serif);
+  cursor: pointer;
+}
+.fil-nav-mobile span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fil-nav-mobile svg:first-child { width: 16px; height: 16px; color: var(--bv-magenta, #c5005f); }
+.fil-nav-mobile:active { background: var(--bv-magenta, #c5005f); }
+.fil-nav-mobile:active svg:first-child { color: #fff; }
+/* tablette : la barre du bas est encore la */
+@media (min-width: 768px) {
+  .fil-nav-mobile { bottom: 104px; }
+}
