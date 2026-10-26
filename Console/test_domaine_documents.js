@@ -39,6 +39,9 @@ function tranche(debut) {
 const tCheminDocument = tranche("function cheminDocument(");
 const tReconcilier = tranche("async function reconcilierParChemin(");
 const tPrune = tranche("async function pruneDeletedDocuments(");
+// A.2 lot 4 (26/10) : la purge appelle desormais signatureProtegee (regle R1). On AJOUTE la
+// tranche, on ne restructure pas -- meme raison qu'aux ajouts du 20/10.
+const tSignatureProtegee = tranche("function signatureProtegee(") || "function signatureProtegee() { return false; }";
 controle("(1) LA PREUVE D'ABORD : les trois pieces sont dans le worker",
   Boolean(tCheminDocument && tReconcilier && tPrune),
   `cheminDocument=${Boolean(tCheminDocument)} reconcilier=${Boolean(tReconcilier)} prune=${Boolean(tPrune)}`);
@@ -98,7 +101,7 @@ function monterPrune(faux, htmlCharge) {
   // eslint-disable-next-line no-new-func
   return new Function("supabaseRequest", "logJob", "hektorFetch", "XMLRPC_URL",
     "buildSignatureMapFromHtml", "loadExistingDocuments",
-    `${tCheminDocument}\n${tPrune}; return pruneDeletedDocuments;`)(
+    `${tSignatureProtegee}\n${tCheminDocument}\n${tPrune}; return pruneDeletedDocuments;`)(
     (c, o) => faux.requete(c, o),
     async (jobId, step, status, message, payload) =>
       faux.requete("app_console_job_log", { method: "POST", body: JSON.stringify([{ jobId, step, status, message, payload }]) }),

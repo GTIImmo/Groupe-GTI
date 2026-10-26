@@ -143,7 +143,9 @@ controle('(C) …mais éteint, rien ne change (pas de refus)', refuseEteint)
 // Pour l'essai sandbox : écrit le HTML RÉEL (gabarit du projet, données d'essai) avec repères.
 if (process.env.TEST_DUMP_DIR) {
   fs.mkdirSync(process.env.TEST_DUMP_DIR, { recursive: true })
-  fs.writeFileSync(path.join(process.env.TEST_DUMP_DIR, 'mandat_2_mandants.html'), neuf.f.mandatPreviewHtml(brouillon(2), dossier, [], { reperes: true }))
+  for (const n of [2, 3, 4]) {
+    fs.writeFileSync(path.join(process.env.TEST_DUMP_DIR, `mandat_${n}_mandants.html`), neuf.f.mandatPreviewHtml(brouillon(n), dossier, [], { reperes: true }))
+  }
   fs.writeFileSync(path.join(process.env.TEST_DUMP_DIR, 'avenant_2_mandants.html'), neuf.f.avenantPreviewHtml(brouillon(2), dossier, { reperes: true }))
   console.log(`HTML d'essai écrits dans ${process.env.TEST_DUMP_DIR}`)
 }

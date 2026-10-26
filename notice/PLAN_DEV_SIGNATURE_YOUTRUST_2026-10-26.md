@@ -315,6 +315,101 @@ les 5 types **sur ses biens seulement**, témoin inverse du cockpit.
 
 ### LOT 4 — Envoyer (O2, O3) + le garde-fou R1 · 1,5 j
 
+> **📧 L'E-MAIL QUE REÇOIT LE CLIENT (lu dans la boîte de Frédéric le 26/10, avec son accord ;
+> 20 e-mails Youtrust sur 24 h).** Expéditeur affiché « Youtrust pour GTI Immobilier »
+> (`notifications@…yousign.app`). Ce que Frédéric a trouvé « incompréhensible » vient **de nos
+> essais**, pas de Youtrust : le titre et l'objet reprennent le **nom technique** de la demande
+> (« ESSAI A.2 lot 4 - demande exacte… »), le nom du signataire portait « (Mandant1) », le
+> fichier s'appelait `mandat_essai_lot4.pdf`, et mon texte d'essai était sans accents.
+> **Tout cela, c'est le worker qui l'écrit → se décide AU LOT 4 (D19).**
+> **Le logo et les couleurs ne dépendent pas du code :** avec l'expéditeur « organisation »,
+> Youtrust affiche **le logo de l'organisation** (réglage de l'app Youtrust, sans offre Pro) ;
+> avec un expéditeur « personnalisé », le logo n'apparaît **que** par une « expérience
+> personnalisée » (**offre Pro**, D10), qui seule change aussi les couleurs (bouton vert) et le
+> pied de page Youtrust. ⇒ essai possible tout de suite : renommer l'organisation
+> « GTI Immobilier » et y déposer le logo dans l'app Youtrust, puis envoyer en expéditeur
+> « organisation ».
+
+> **Audit du 26/10 (lecture seule).** La ligne du mandat est créée par la RELECTURE de la liste
+> Hektor après dépôt (`upsertConsoleDocuments`) — c'est la même ligne que la synchro de nuit
+> relira : le risque R1 est RÉEL. Écrivains à protéger : ① fusion `upsertConsoleDocuments`
+> (l. 5092) ; ② `reconcileSignatureStates`, cible suivie (l. 5887) ; ③ rattachement d'un signé
+> orphelin (l. 5909) ; ④ `pruneDeletedDocuments`. Le filtre « procédure en cours » (l. 5803)
+> exclut déjà un document sans `procedure_id`. Coordonnées mesurées : mandants des biens vivants
+> 1 495 — e-mail 74 %, portable 73 %, **les deux 69 %** ; négociateurs : 165/219 portable mobile.
+> Le worker se charge sans démarrer (`require.main === module`, l. 23008) → tests hors ligne
+> sur le code réel (méthode de `test_domaine_documents.js`). Redémarrage : services
+> **documents ET synchro** (`refresh_console_data` appelle aussi `reconcileSignatureStates`).
+>
+> **✅ Décisions de Frédéric (26/10) :**
+> - **D16** : e-mail obligatoire (sauf « sur place ») ; portable → `otp_sms` ; sans portable →
+>   repli `otp_email` (ne pas bloquer ~3 mandants sur 10).
+> - **D17** : le mandataire = **le négociateur DU BIEN** (fiche), pas celui qui clique ;
+>   modifiable dans la fenêtre d'envoi (lot 6b).
+> - **D18** : le garde-fou R1 protège aussi les documents **« signé à la main »**.
+> - Les **gestes worker** relancer / annuler / lien « Signer maintenant » entrent dans le lot 4
+>   (la mise à jour d'état reste au lot 5).
+>
+> ### ✅ LOT 4 CODÉ ET ÉPROUVÉ LE 26/10 — NON ACTIF (worker pas redémarré), interrupteur éteint
+> **Code** (`Console/console_job_worker.js`, additif) : `signatureProtegee()` + le garde-fou R1 aux
+> 4 endroits (fusion, suivi, rattachement, purge) — couvre aussi « à la main » (D18) ; un bloc
+> « A.2 — SIGNATURE YOUTRUST, LOT 4 » : `handleYoutrustSendSignature`, `…RemindSigner`,
+> `…CancelSignature`, `…SigningLink` (+ `…SyncSignature` qui refuse « lot 5 ») ; les 5 types dans
+> `DOCUMENT_JOB_TYPES`, l'aiguillage et `JOB_LIBELLES`. Textes D19 ; expéditeur
+> `YOUTRUST_EXPEDITEUR` (« GTI Immobilier » par défaut, `organisation` = logo de l'organisation).
+> **Reprenable sans double envoi** : la ligne est écrite AVANT Youtrust, l'id gardé dès la création,
+> un rejeu reprend (« deja_envoye ») ; refus non guérissables = `MARQUE_REFUS_ETAT` (jamais rejoués).
+> ⭐ **Trou trouvé en écrivant l'essai, et bouché** : « une case par signataire » ne voit pas un PDF
+> à 2 mandants envoyé avec 1 seul (le négo aurait signé dans la case du mandant 2) → **compte des
+> repères AVANT activation** (`2 × mandants + 1`), brouillon supprimé, aucun crédit.
+> **Preuves :** `node Console/test_garde_r1_signature.js` **22/22** — chaque scène jouée sur le code
+> d'AVANT (git) et d'après : l'ancien code ÉCRASE / RÉÉCRIT / RATTACHE / PURGE Youtrust et « à la
+> main », le nouveau les garde ; **la ligne ImmoSign sort identique des deux** (témoin inverse).
+> Tests existants complétés de la tranche `signatureProtegee` (« on ajoute, on ne restructure
+> pas ») et **verts** : adoption 16, domaine 13, choix PDF 7, envoi différé 35. ⚠ Leçon : je lisais
+> d'abord le code de sortie de `tail`, pas du test — deux tests paraissaient verts et ne l'étaient pas.
+> `node Console/essai_youtrust_handler_sandbox.js --pdf=…` : **15/15 contre la vraie sandbox**
+> (fausse base, interrupteur « on » en mémoire seulement) — refus éteint, envoi, ordre D7, titre D19,
+> miroir sans `procedure_id`, rejeu sans double envoi, relance (et refus avant son tour), lien refusé
+> avant son tour, annulation, repères 5≠3 refusés avant activation.
+> **Plusieurs mandants (question de Frédéric, 26/10) — éprouvé en sandbox, vrais handlers :**
+> **2, 3 et 4 mandants** + le négociateur (4 = le maximum de l'essai : 5 signataires) → **tout
+> vert** : les N mandants invités en parallèle, le négo attend ; chaque mandant 1 signature +
+> 1 mention, le négo 1 signature et aucune mention ; la case GTI est la DERNIÈRE de la grille
+> (3 mandants : à côté du 3ᵉ, x 310 / 37 ; 4 mandants : seule en dessous, y 297) ; compte des
+> repères refusé pour N−1 (7 au lieu de 5, 9 au lieu de 7). Au-delà de 4 : prouvé jusqu'à
+> **12 mandants** au niveau des repères (lot 2, `test_reperes_signature.mjs`) ; l'envoi réel à
+> 5+ mandants attend la production (limite de l'essai). ⚠ Mon premier contrôle de position
+> (« le négo SOUS la grille ») était faux pour un nombre impair — corrigé en ordre de lecture.
+> **⏳ Pour l'activer :** redémarrer les services **documents ET synchro** (file vide). Sans
+> redémarrage, l'ancien code tourne — sans risque : aucun document Youtrust n'existe.
+> **Payload attendu du front (lot 6b)** : `{ app_console_document_id, document_kind, numero_mandat,
+> bien_adresse, mandants: [{prenom, nom, email, telephone}] (ordre des cases), mandataire? }`.
+>
+> **🔍 CONTRE-AUDIT DOC + SANDBOX DU 26/10 (demandé par Frédéric avant validation) — la demande
+> EXACTE du lot 4 jouée en sandbox** (mandat réel 2 mandants + négociateur, boîte de Frédéric ×3,
+> `custom_recipient_order`, `group_with_id`, relances, expéditeur, puis annulation) :
+>
+> | Hypothèse du lot 4 | Doc | Sandbox |
+> |---|---|---|
+> | mandants **en parallèle**, puis le négo (D7) | ✅ « stages », `group_with_id` | ✅ 3 s après l'activation : mandants 1 et 2 `notified`, négo `initiated` (attend) |
+> | repère sN = N-ième signataire **créé**, même groupé | ⚠ ambigu | ✅ s1→mandant 1, s2→mandant 2, s3→négo + 2 mentions « Bon pour mandat » |
+> | expéditeur « GTI Immobilier » + objet/texte de l'e-mail | ✅ | ✅ acceptés |
+> | relances automatiques (2 j × 3) | ✅ | ✅ acceptées |
+> | refus désactivé | ✅ (défaut) | ✅ |
+> | expiration 6 mois | ✅ | ✅ `2027-04-26` |
+> | lien de signature récupérable même avec envoi par e-mail (« Signer maintenant », D8) | ✅ | ✅ pour un signataire invité (valable **48 h**) ; **absent tant que ce n'est pas son tour** |
+> | relance manuelle | ✅ « notified » seulement | ✅ acceptée sur un mandant invité ; **refusée** (400) sur le négo pas encore invité |
+> | annulation | ✅ | ✅ `canceled` |
+> | code par **SMS** (D16) | ✅ portable E.164 obligatoire | ⏳ **non éprouvé** (aucun SMS vers un numéro sans l'accord de son titulaire) |
+>
+> **Ce que l'essai change au code :** (1) la notification est **asynchrone** (~3 s) : le worker
+> ne doit pas attendre « invité » juste après l'activation — le contrôle O3 des cases, lui, est
+> immédiat ; (2) « Relancer » seulement pour un signataire **invité** ; (3) le lien « Signer
+> maintenant » se demande **au clic** (il n'existe qu'à son tour et vaut 48 h) ; (4) l'étape
+> (`recipient_stage_index`) n'est pas rendue par la lecture de la demande : l'ordre se garde chez
+> nous (`signers[].index`).
+
 **Ce qu'il fait.** Handler `youtrust_send_signature` dans le worker :
 1. refuse si l'interrupteur est `off` (refus d'état, jamais un faux succès) ;
 2. lit le PDF du document dans le coffre ;

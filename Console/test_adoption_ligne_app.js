@@ -95,6 +95,8 @@ function monter(faux) {
     //   ajoute la veille. On AJOUTE, on ne restructure pas.
     tranche("function cheminDocument("),
     tranche("async function reconcilierParChemin("),
+    // A.2 lot 4 (26/10) : la fusion appelle desormais signatureProtegee (regle R1). On AJOUTE.
+    tranche("function signatureProtegee("),
     tranche("async function upsertConsoleDocuments("),
   ].filter(Boolean);
   // eslint-disable-next-line no-new-func

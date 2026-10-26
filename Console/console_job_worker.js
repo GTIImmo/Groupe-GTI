@@ -112,6 +112,12 @@ const DOCUMENT_JOB_TYPES = new Set([
   "generate_cadastre_document",
   "relance_signature",
   "cancel_signature_procedure",
+  // A.2 lot 4 (26/10/2026) : signature Youtrust (sync = lot 5).
+  "youtrust_send_signature",
+  "youtrust_sync_signature",
+  "youtrust_remind_signer",
+  "youtrust_cancel_signature",
+  "youtrust_signing_link",
   "upload_document_to_hektor",
   "delete_document_from_hektor",
   "sync_hektor_photos",
@@ -5042,6 +5048,14 @@ async function reconcilierParChemin(job, dossier, entries, existingRows) {
   return recles;
 }
 
+// A.2 -- REGLE R1 (26/10/2026, notice/PLAN_DEV_SIGNATURE_YOUTRUST_2026-10-26.md §2) :
+// un etat de signature ECRIT PAR YOUTRUST ou MARQUE « SIGNE A LA MAIN » n'appartient pas a la
+// lecture Hektor/ImmoSign. Elle ne le reecrit jamais, ne le rattache jamais, ne le purge jamais.
+// (D18 : la marque « a la main » etait effacee par la fusion ci-dessous -- defaut dormant.)
+function signatureProtegee(sig) {
+  return Boolean(sig && (sig.provider === "youtrust" || sig.source === "manuscrite"));
+}
+
 async function upsertConsoleDocuments(dossier, entries, job = null) {
   const existingForAdoption = await loadExistingDocuments(String(dossier.hektor_annonce_id));
   // ⭐ AVANT TOUTE ECRITURE : reconnaitre par le chemin ce que le numero ne reconnait
@@ -5092,6 +5106,7 @@ async function upsertConsoleDocuments(dossier, entries, job = null) {
         signature: (function () {
           const cur = (current.metadata_json && current.metadata_json.signature) || null;
           const inc = entry.signature || null;
+          if (signatureProtegee(cur)) return cur;   // A.2 R1 : Youtrust / a la main -- intouche
           if (cur && inc) return { ...inc, sent_at: (cur.sent_at ?? inc.sent_at ?? null), signed_at: (cur.signed_at ?? inc.signed_at ?? null) };
           return inc || cur || null;
         })(),
@@ -5885,6 +5900,8 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
   for (const sig of sigMap.values()) {
     if (!sig.status) continue;
     let target = byDocId.get(String(sig.hektor_doc_id));
+    // A.2 R1 : la ligne suivie porte un etat Youtrust / a la main -> la lecture Hektor passe son chemin.
+    if (target && signatureProtegee(target.metadata_json && target.metadata_json.signature)) continue;
     if (target) {
       const cur = (target.metadata_json && target.metadata_json.signature) || {};
       if (cur.status !== sig.status || cur.procedure_id !== sig.procedure_id || cur.signed_at !== sig.signed_at) {
@@ -5910,6 +5927,7 @@ async function reconcileSignatureStates(job, dossier, logCat = "hektor", gateMod
         if (usedCandidateIds.has(r.id)) return false;
         if (r.metadata_json && r.metadata_json.signed_document) return false;
         const s = r.metadata_json && r.metadata_json.signature;
+        if (signatureProtegee(s)) return false;   // A.2 R1 : jamais candidate a un signe ImmoSign
         const untracked = !s || !s.hektor_doc_id;
         return untracked && String(r.document_name || "") === String(sig.document_name || "");
       });
@@ -5968,6 +5986,7 @@ async function pruneDeletedDocuments(job, dossier, entries) {
     const src = String(r.source || "");
     if (src === "hektor_immosign_signed") continue;                 // ligne synthetique signee
     if (r.metadata_json && r.metadata_json.signed_document) continue; // archive signee conservee
+    if (signatureProtegee(r.metadata_json && r.metadata_json.signature)) continue; // A.2 R1 : Youtrust / a la main
     if (!/^hektor_console/.test(src)) continue;                      // ne purge que les docs indexes Hektor
     if (presentHashes.has(r.hektor_document_id)) continue;           // doc encore present (force_transfert)
     // Documents modelo (ImmoSign / "Mes documents") : ils n'ont pas de force_transfert.
@@ -6115,6 +6134,359 @@ async function handleCancelSignatureProcedure(job) {
     response: String(res.text || "").slice(0, 160),
   });
   return { status: "cancelled", hektor_annonce_id: String(dossier.hektor_annonce_id), procedure_id: procId };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// A.2 -- SIGNATURE YOUTRUST, LOT 4 (26/10/2026)
+// Plan : notice/PLAN_DEV_SIGNATURE_YOUTRUST_2026-10-26.md (lot 4 + contre-audit sandbox).
+// ⛔ DORMANT : tout refuse tant que l'interrupteur app_setting 'signature_youtrust' est eteint.
+// ⚠ REPRENABLE SANS DOUBLE ENVOI : un travail en erreur est REJOUE (finishJob) ; la demande est
+//   notee chez nous AVANT d'etre creee chez Youtrust, son id est garde DES qu'il existe, et un
+//   rejeu reprend la demande au lieu d'en creer une seconde (un envoi consomme des credits).
+//   Les refus qui ne gueriraient pas portent MARQUE_REFUS_ETAT : jamais rejoues.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let youtrustClientInstance = null;
+function clientYoutrust() {
+  if (!youtrustClientInstance) youtrustClientInstance = require("./youtrust_client").creerClientYoutrust();
+  return youtrustClientInstance;
+}
+
+function refusEtatYoutrust(message) {
+  return new Error(`${MARQUE_REFUS_ETAT} ${message}`);
+}
+
+async function interrupteurSignatureYoutrust() {
+  const rows = await supabaseRequest("app_setting?select=value&key=eq.signature_youtrust&limit=1", { method: "GET" });
+  const value = Array.isArray(rows) && rows[0] ? String(rows[0].value || "").trim().toLowerCase() : "";
+  return ["on", "true", "1", "yes"].includes(value);
+}
+
+async function exigerInterrupteurYoutrust() {
+  if (!(await interrupteurSignatureYoutrust())) {
+    throw refusEtatYoutrust("La signature Youtrust est eteinte (app_setting signature_youtrust = off).");
+  }
+}
+
+// Un portable MOBILE au format E.164 (le code SMS l'exige) ; sinon null -> repli code e-mail (D16).
+function portableE164(numero) {
+  let n = String(numero || "").replace(/[^\d+]/g, "");
+  if (n.startsWith("00")) n = `+${n.slice(2)}`;
+  if (/^0[67]\d{8}$/.test(n)) n = `+33${n.slice(1)}`;
+  if (/^\+33[67]\d{8}$/.test(n)) return n;
+  if (/^\+(?!33)\d{8,15}$/.test(n)) return n;   // portable etranger : on le confie a Youtrust
+  return null;
+}
+
+function emailSignataireValide(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || "").trim());
+}
+
+// Prenom / nom separes (Youtrust les exige) ; repli : le dernier mot du nom complet est le nom.
+function prenomNomSignataire(personne) {
+  const prenom = cleanString(personne && personne.prenom);
+  const nom = cleanString(personne && personne.nom);
+  if (prenom && nom) return { prenom, nom };
+  const complet = cleanString((personne && (personne.nomComplet || personne.nom_complet)) || nom || prenom) || "";
+  const mots = complet.split(/\s+/).filter((m) => m && !/^(m\.?|mme|mlle|mr|madame|monsieur)$/i.test(m));
+  if (mots.length >= 2) return { prenom: mots.slice(0, -1).join(" "), nom: mots[mots.length - 1] };
+  return { prenom: mots[0] || "", nom: mots[0] || "" };
+}
+
+// Un texte que Youtrust accepte (« safe string ») : pas de balise, une longueur bornee.
+function texteYoutrust(texte, max) {
+  return String(texte || "").replace(/[<>{}|]/g, " ").replace(/[ \t]+/g, " ").trim().slice(0, max);
+}
+
+// Les textes de l'e-mail (D19, valides par Frederic le 26/10).
+function textesSignatureYoutrust({ kind, numero, adresse, nego }) {
+  const objet = kind === "avenant" ? "avenant au mandat" : "mandat de vente";
+  const Objet = kind === "avenant" ? "Avenant au mandat" : "Mandat de vente";
+  const num = numero ? ` n° ${numero}` : "";
+  const contact = [nego && nego.nom, nego && nego.telephone, nego && nego.email].filter(Boolean).join(" – ");
+  return {
+    name: texteYoutrust(`${Objet}${num}${adresse ? ` – ${adresse}` : ""}`, 250),
+    request_subject: texteYoutrust(`Votre ${objet}${num} à signer – GTI Immobilier`, 500),
+    request_body: texteYoutrust([
+      "Bonjour,",
+      "",
+      `${nego && nego.nom ? `Votre conseiller ${nego.nom}` : "GTI Immobilier"} vous invite à signer électroniquement votre ${objet}${adresse ? ` pour le bien situé ${adresse}` : ""}.`,
+      "",
+      "Pour confirmer votre signature, un code vous sera envoyé.",
+      ...(contact ? ["", `Une question ? ${contact}`] : []),
+      "",
+      "GTI Immobilier",
+    ].join("\n"), 1900),
+    reminder_subject: texteYoutrust(`Rappel : votre ${objet}${num} attend votre signature`, 500),
+    reminder_body: texteYoutrust([
+      "Bonjour,",
+      "",
+      `Votre ${objet}${num} attend encore votre signature électronique.`,
+      ...(contact ? ["", `Une question ? ${contact}`] : []),
+      "",
+      "GTI Immobilier",
+    ].join("\n"), 1900),
+    filename: storageSafeFilename(`${Objet}${numero ? ` - ${numero}` : ""}.pdf`, "Mandat.pdf"),
+  };
+}
+
+const YOUTRUST_ETATS_EN_COURS = ["draft", "approval", "ongoing", "paused"];
+
+async function chargerDemandeSignature(id) {
+  const rows = await supabaseRequest(`app_signature_request?id=eq.${encodeURIComponent(id)}&limit=1`, { method: "GET" });
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+
+async function majDemandeSignature(id, champs) {
+  await supabaseRequest(`app_signature_request?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ ...champs, updated_at: new Date().toISOString() }),
+  });
+}
+
+// Le miroir dans la LANGUE COMMUNE (regle R3) : ce que lisent badges, suivi, Mandat V3, cockpit.
+// R2 : pas de procedure_id (reserve a ImmoSign) ; l'id Youtrust va dans provider_request_id.
+async function majMiroirSignatureDocument(documentId, signature) {
+  if (!documentId) return;
+  const rows = await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(documentId)}&select=metadata_json&limit=1`, { method: "GET" });
+  const cur = (Array.isArray(rows) && rows[0] && rows[0].metadata_json) || {};
+  const precedente = cur.signature || {};
+  const md = { ...cur, signature: { ...(precedente.provider === "youtrust" ? precedente : {}), ...signature, provider: "youtrust" } };
+  await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(documentId)}`, {
+    method: "PATCH",
+    prefer: "return=minimal",
+    body: JSON.stringify({ metadata_json: md, updated_at: new Date().toISOString() }),
+  });
+}
+
+async function handleYoutrustSendSignature(job) {
+  await exigerInterrupteurYoutrust();
+  const payload = safeJsonParse(job.payload_json) || {};
+  const documentId = cleanString(payload.app_console_document_id);
+  if (!documentId) throw refusEtatYoutrust("payload_json.app_console_document_id requis.");
+  const kind = payload.document_kind === "avenant" ? "avenant" : "mandat";
+  const client = clientYoutrust();
+
+  // 1. Le document : le PDF est dans le coffre (genere par l'app, depose chez Hektor).
+  const docRows = await supabaseRequest(`app_console_document?id=eq.${encodeURIComponent(documentId)}&select=id,app_dossier_id,hektor_annonce_id,document_name,storage_path,metadata_json&limit=1`, { method: "GET" });
+  const doc = Array.isArray(docRows) && docRows[0];
+  if (!doc) throw refusEtatYoutrust(`Document ${documentId} introuvable.`);
+  if (!doc.storage_path) throw refusEtatYoutrust(`Le document « ${doc.document_name} » n'a pas de fichier dans le coffre.`);
+  const sigActuelle = (doc.metadata_json && doc.metadata_json.signature) || {};
+  if (sigActuelle.source === "manuscrite" || sigActuelle.status === "signed") {
+    throw refusEtatYoutrust(`Le document « ${doc.document_name} » est deja signe.`);
+  }
+
+  // 2. Reprise : une demande en cours pour ce document ? (rejeu, double clic)
+  const enCours = await supabaseRequest(`app_signature_request?app_console_document_id=eq.${encodeURIComponent(documentId)}&status=in.(${YOUTRUST_ETATS_EN_COURS.join(",")})&order=created_at.desc&limit=1`, { method: "GET" });
+  let demande = Array.isArray(enCours) && enCours[0] ? enCours[0] : null;
+  if (demande && demande.provider_request_id) {
+    const chezYoutrust = await client.lireDemande(demande.provider_request_id);
+    if (chezYoutrust.status !== "draft") {
+      await logJob(job.id, "youtrust", "done", "Demande deja envoyee : reprise sans nouvel envoi", { provider_request_id: demande.provider_request_id, status: chezYoutrust.status });
+      return { status: "deja_envoye", signature_request_id: demande.id, provider_request_id: demande.provider_request_id, youtrust_status: chezYoutrust.status };
+    }
+    // un brouillon jamais active (aucun credit consomme) : on le jette et on repart proprement
+    await client.supprimerBrouillon(demande.provider_request_id).catch(() => {});
+    await majDemandeSignature(demande.id, { provider_request_id: null, erreur: "brouillon Youtrust repris (rejeu)" });
+  }
+
+  // 3. Les signataires : mandants dans l'ORDRE des cases (s1..sN), puis le mandataire (sN+1).
+  const dossier = await loadDossier({ app_dossier_id: doc.app_dossier_id, hektor_annonce_id: doc.hektor_annonce_id });
+  const mandantsBruts = Array.isArray(payload.mandants) ? payload.mandants : [];
+  if (!mandantsBruts.length) throw refusEtatYoutrust("Aucun mandant a faire signer (payload_json.mandants).");
+  // D17 : le mandataire = le negociateur DU BIEN (la fiche) ; la fenetre d'envoi peut le changer.
+  const negoResolu = await resolveEstimNegotiatorContact(payload.mandataire ? { negociateur: payload.mandataire } : {}, dossier).catch(() => null);
+  const nego = negoResolu || {};
+  const mandataireBrut = payload.mandataire || { nomComplet: nego.nom, email: nego.email, telephone: nego.telephone };
+  const personnes = [
+    ...mandantsBruts.map((m, i) => ({ role: "mandant", index: i + 1, brut: m })),
+    { role: "mandataire", index: mandantsBruts.length + 1, brut: mandataireBrut },
+  ];
+  const problemes = [];
+  const signataires = personnes.map((p) => {
+    const { prenom, nom } = prenomNomSignataire(p.brut);
+    const email = cleanString(p.brut && p.brut.email);
+    const portable = portableE164(p.brut && p.brut.telephone);
+    const libelle = p.role === "mandataire" ? "le mandataire (negociateur)" : `le mandant ${p.index}`;
+    if (!prenom || !nom) problemes.push(`${libelle} n'a pas de nom`);
+    if (!emailSignataireValide(email)) problemes.push(`${libelle} (${[prenom, nom].filter(Boolean).join(" ") || "?"}) n'a pas d'e-mail valide`);
+    // D16 : portable mobile -> code par SMS ; sinon repli code par e-mail.
+    return { index: p.index, role: p.role, prenom, nom, email, telephone: portable, otp: portable ? "otp_sms" : "otp_email" };
+  });
+  if (problemes.length) throw refusEtatYoutrust(`Envoi impossible : ${problemes.join(" ; ")}.`);
+
+  // 4. Notre ligne AVANT Youtrust (reprise possible).
+  if (!demande) {
+    const cree = await supabaseRequest("app_signature_request", {
+      method: "POST",
+      prefer: "return=representation",
+      body: JSON.stringify({
+        provider: "youtrust",
+        sandbox: client.sandbox,
+        app_console_document_id: documentId,
+        app_dossier_id: doc.app_dossier_id,
+        hektor_annonce_id: doc.hektor_annonce_id ? String(doc.hektor_annonce_id) : null,
+        document_kind: kind,
+        status: "draft",
+        signers: signataires,
+        external_id: documentId,
+        requested_by: job.requested_by || null,
+      }),
+    });
+    demande = Array.isArray(cree) ? cree[0] : cree;
+  } else {
+    await majDemandeSignature(demande.id, { signers: signataires, status: "draft" });
+  }
+
+  // 5. Chez Youtrust : creer, deposer le PDF (reperes), signataires par ETAPES (D7), activer.
+  const textes = textesSignatureYoutrust({
+    kind, numero: cleanString(payload.numero_mandat), adresse: cleanString(payload.bien_adresse), nego,
+  });
+  const expediteur = String(process.env.YOUTRUST_EXPEDITEUR || "GTI Immobilier").trim();
+  const sr = await client.creerDemande({
+    name: textes.name,
+    delivery_mode: "email",
+    custom_recipient_order: true,
+    timezone: "Europe/Paris",
+    audit_trail_locale: "fr",
+    signers_allowed_to_decline: false,
+    reminder_settings: { interval_in_days: 2, max_occurrences: 3 },
+    // « organisation » : le logo de l'organisation Youtrust apparait ; sinon nom personnalise sans logo (offre Pro).
+    email_notification: {
+      sender: expediteur.toLowerCase() === "organisation" ? { type: "organization" } : { type: "custom", custom_name: texteYoutrust(expediteur, 120) },
+      custom_text: {
+        request_subject: textes.request_subject, request_body: textes.request_body,
+        reminder_subject: textes.reminder_subject, reminder_body: textes.reminder_body,
+      },
+    },
+    external_id: documentId,
+  });
+  await majDemandeSignature(demande.id, { provider_request_id: sr.id, sandbox: client.sandbox, erreur: null });
+  const fichier = await downloadStorageObject(doc.storage_path);
+  const youDoc = await client.ajouterDocument(sr.id, { buffer: fichier.buffer, filename: textes.filename, parseAnchors: true });
+  // O3 AVANT ACTIVATION (aucun credit consomme) : le PDF doit porter EXACTEMENT les reperes de
+  // ces signataires -- une mention + une signature par mandant, et la case du mandataire.
+  // ⚠ Sans ce compte, un PDF a 2 mandants envoye avec 1 seul ferait signer le negociateur dans
+  //   la case du mandant 2 (un repere sans signataire est ignore EN SILENCE par Youtrust).
+  const reperesAttendus = 2 * mandantsBruts.length + 1;
+  if (youDoc.total_anchors !== reperesAttendus) {
+    await client.supprimerBrouillon(sr.id).catch(() => {});
+    await majDemandeSignature(demande.id, { status: "failed", erreur: `reperes du PDF : ${youDoc.total_anchors}, attendus ${reperesAttendus}` });
+    throw refusEtatYoutrust(`Le PDF porte ${youDoc.total_anchors} repere(s) de signature, il en faut ${reperesAttendus} pour ${mandantsBruts.length} mandant(s) + le mandataire : rien n'a ete envoye. Regenerer le mandat avec la signature Youtrust allumee.`);
+  }
+  let premierMandantId = null;
+  for (const s of signataires) {
+    const corps = {
+      info: { first_name: texteYoutrust(s.prenom, 100), last_name: texteYoutrust(s.nom, 100), email: s.email, locale: "fr", ...(s.telephone ? { phone_number: s.telephone } : {}) },
+      signature_level: "electronic_signature",
+      signature_authentication_mode: s.otp,
+      ...(s.role === "mandant" && premierMandantId ? { group_with_id: premierMandantId } : {}),
+    };
+    const cree = await client.ajouterSignataire(sr.id, corps);
+    s.provider_signer_id = cree.id;
+    s.status = cree.status || "initiated";
+    if (s.role === "mandant" && !premierMandantId) premierMandantId = cree.id;
+  }
+  await majDemandeSignature(demande.id, { signers: signataires });
+  const active = await client.activer(sr.id);
+
+  // 6. O3 : une case de signature par signataire, sinon on annule aussitot (jamais sans la case GTI).
+  const champs = await client.listerChamps(sr.id, youDoc.id);
+  const liste = Array.isArray(champs) ? champs : (champs && champs.data) || [];
+  const casesParSignataire = signataires.map((s) => liste.filter((f) => f.type === "signature" && f.signer_id === s.provider_signer_id).length);
+  if (casesParSignataire.some((n) => n !== 1)) {
+    await client.annuler(sr.id, "errors_in_document", "Controle des cases de signature en echec").catch(() => {});
+    await majDemandeSignature(demande.id, { status: "failed", canceled_at: new Date().toISOString(), erreur: `cases de signature par signataire : ${JSON.stringify(casesParSignataire)} (attendu 1 chacun)` });
+    throw refusEtatYoutrust(`Le PDF n'a pas une case de signature par signataire (${JSON.stringify(casesParSignataire)}) : demande annulee, rien n'a ete signe.`);
+  }
+
+  // 7. En cours : la table, puis le miroir (« En attente 0/N »).
+  const maintenant = new Date().toISOString();
+  await majDemandeSignature(demande.id, {
+    status: active.status || "ongoing",
+    activated_at: maintenant,
+    expiration_at: active.expiration_date || null,
+    signers: signataires,
+    last_synced_at: maintenant,
+  });
+  await majMiroirSignatureDocument(documentId, {
+    status: "pending",
+    progress: `0/${signataires.length}`,
+    sent_at: maintenant,
+    signed_at: null,
+    cancelled_at: null,
+    provider_request_id: sr.id,
+    signature_request_id: demande.id,
+    document_name: doc.document_name,
+  });
+  await logJob(job.id, "youtrust", "done", "Envoye en signature (Youtrust)", {
+    provider_request_id: sr.id, signataires: signataires.length, sandbox: client.sandbox, cases: casesParSignataire,
+  });
+  return {
+    status: "sent", signature_request_id: demande.id, provider_request_id: sr.id, sandbox: client.sandbox,
+    signataires: signataires.map((s) => ({ index: s.index, role: s.role, otp: s.otp })),
+  };
+}
+
+// Lot 5 : la mise a jour d'etat (avis + rattrapage de nuit). Refus clair d'ici la.
+async function handleYoutrustSyncSignature(_job) {
+  throw refusEtatYoutrust("youtrust_sync_signature n'est pas encore en service (lot 5).");
+}
+
+async function demandeYoutrustDuTravail(job) {
+  await exigerInterrupteurYoutrust();
+  const payload = safeJsonParse(job.payload_json) || {};
+  const id = cleanString(payload.signature_request_id);
+  if (!id) throw refusEtatYoutrust("payload_json.signature_request_id requis.");
+  const demande = await chargerDemandeSignature(id);
+  if (!demande || !demande.provider_request_id) throw refusEtatYoutrust(`Demande de signature ${id} introuvable ou jamais envoyee.`);
+  return { payload, demande };
+}
+
+async function handleYoutrustRemindSigner(job) {
+  const { payload, demande } = await demandeYoutrustDuTravail(job);
+  const signerId = cleanString(payload.provider_signer_id);
+  if (!signerId) throw refusEtatYoutrust("payload_json.provider_signer_id requis.");
+  try {
+    await clientYoutrust().relancerSignataire(demande.provider_request_id, signerId);
+  } catch (error) {
+    // 400 : le signataire n'est pas encore invite (son tour n'est pas venu) ou a deja signe.
+    if (error && error.status === 400) throw refusEtatYoutrust(`Relance refusee par Youtrust : ${JSON.stringify(error.body).slice(0, 200)}`);
+    throw error;
+  }
+  await logJob(job.id, "youtrust", "done", "Relance envoyee (Youtrust)", { provider_request_id: demande.provider_request_id, provider_signer_id: signerId });
+  return { status: "reminded", signature_request_id: demande.id, provider_signer_id: signerId };
+}
+
+async function handleYoutrustCancelSignature(job) {
+  const { demande } = await demandeYoutrustDuTravail(job);
+  try {
+    await clientYoutrust().annuler(demande.provider_request_id, "contractualization_aborted", "Annule depuis l'app GTI");
+  } catch (error) {
+    if (error && error.status === 400) throw refusEtatYoutrust(`Annulation refusee par Youtrust : ${JSON.stringify(error.body).slice(0, 200)}`);
+    throw error;
+  }
+  const maintenant = new Date().toISOString();
+  await majDemandeSignature(demande.id, { status: "canceled", canceled_at: maintenant, last_synced_at: maintenant });
+  await majMiroirSignatureDocument(demande.app_console_document_id, { status: "cancelled", cancelled_at: maintenant });
+  await logJob(job.id, "youtrust", "done", "Signature annulee (Youtrust)", { provider_request_id: demande.provider_request_id });
+  return { status: "cancelled", signature_request_id: demande.id };
+}
+
+// « Signer maintenant » (D8) : le lien n'existe qu'A SON TOUR et vaut 48 h -> demande au clic.
+async function handleYoutrustSigningLink(job) {
+  const { payload, demande } = await demandeYoutrustDuTravail(job);
+  const signers = Array.isArray(demande.signers) ? demande.signers : [];
+  const cible = cleanString(payload.provider_signer_id)
+    || (signers.find((s) => s.role === "mandataire") || {}).provider_signer_id;
+  if (!cible) throw refusEtatYoutrust("Aucun signataire mandataire dans cette demande.");
+  const signer = await clientYoutrust().lireSignataire(demande.provider_request_id, cible);
+  if (!signer.signature_link) {
+    throw refusEtatYoutrust(`Pas encore de lien : ce n'est pas le tour de ce signataire (statut ${signer.status}).`);
+  }
+  return { status: "link", signature_link: signer.signature_link, expires_at: signer.signature_link_expiration_date || null, provider_signer_id: cible };
 }
 
 async function handleSyncConsoleDocuments(job) {
@@ -19089,6 +19461,11 @@ const JOB_LIBELLES = {
   generate_cadastre_document: "La generation du plan cadastral",
   relance_signature: "La relance de signature",
   cancel_signature_procedure: "L'annulation de signature",
+  youtrust_send_signature: "L'envoi en signature (Youtrust)",
+  youtrust_sync_signature: "La mise a jour de la signature (Youtrust)",
+  youtrust_remind_signer: "La relance du signataire (Youtrust)",
+  youtrust_cancel_signature: "L'annulation de la signature (Youtrust)",
+  youtrust_signing_link: "Le lien de signature (Youtrust)",
 };
 
 // Chaine de resolution du destinataire, mesuree le 20/08 sur 103 echecs :
@@ -22811,6 +23188,16 @@ async function runHandler(job) {
       return handleRelanceSignature(job);
     case "cancel_signature_procedure":
       return handleCancelSignatureProcedure(job);
+    case "youtrust_send_signature":
+      return handleYoutrustSendSignature(job);
+    case "youtrust_sync_signature":
+      return handleYoutrustSyncSignature(job);
+    case "youtrust_remind_signer":
+      return handleYoutrustRemindSigner(job);
+    case "youtrust_cancel_signature":
+      return handleYoutrustCancelSignature(job);
+    case "youtrust_signing_link":
+      return handleYoutrustSigningLink(job);
     case "upload_document_to_hektor":
       return handleUploadDocumentToHektor(job);
     case "delete_document_from_hektor":
