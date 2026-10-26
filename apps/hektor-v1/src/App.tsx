@@ -12864,6 +12864,16 @@ function singleContactStats(contact: AppContact | null): ContactStats {
   }
 }
 
+// ⛔ 26/10/2026 -- POINT 0 de la navigation : PLUS DE 1re LIGNE SELECTIONNEE D'OFFICE.
+//   Une liste chargee selectionnait sa 1re ligne ; cette seule selection lancait le
+//   chargement complet de la fiche ET une relecture chez Hektor (read-through), sans que
+//   personne n'ouvre la fiche. Mesure en production sur 7 jours : 63339 relue 19 fois
+//   (celle de mon essai du 23/10, aucune fiche ouverte), 63299 41 fois. Aucun ecran ne lit
+//   la selection fiche fermee (verifie ecran par ecran). Audit :
+//   notice/AUDIT_NAVIGATION_APRES_ACTION_2026-10-23.md §11.
+//   `true` = l'ancien comportement, en une ligne.
+const SELECTION_D_OFFICE = false
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('accueil')
   const [filterCatalog, setFilterCatalog] = useState<FilterCatalog>(emptyFilterCatalog)
@@ -14324,6 +14334,7 @@ export default function App() {
         setSelectedContactId((current) => {
           if (useDirectContactLookup) return contactsPage.rows[0]?.hektor_contact_id ?? directContactId
           if (current && contactsPage.rows.some((item) => item.hektor_contact_id === current)) return current
+          if (!SELECTION_D_OFFICE) return null
           return contactsPage.rows[0]?.hektor_contact_id ?? null
         })
       })
@@ -14521,6 +14532,7 @@ export default function App() {
         setSelectedDossierId((current) => {
           if (current && detailOpen) return current
           if (current && nextDossiersPage.rows.some((item) => item.app_dossier_id === current)) return current
+          if (!SELECTION_D_OFFICE) return null
           return nextDossiersPage.rows[0]?.app_dossier_id ?? null
         })
       })

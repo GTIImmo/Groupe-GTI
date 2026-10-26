@@ -435,3 +435,28 @@ requêtes à chaque changement de menu, et **plus de relecture Hektor pour une f
 
 **Contrôle prévu** : `npm run build` ; essai en mode démonstration (aucune relecture demandée en changeant de menu,
 une relecture au clic sur une ligne) ; après déploiement, compter les `read_through_open` par jour.
+
+### 11.1 ✅ POINT 0 CODÉ ET CONTRÔLÉ (26/10, « Vas-y mais contrôle le résultat »)
+
+**Le code** (`App.tsx`) : constante `SELECTION_D_OFFICE = false` (avant `App()`), et une ligne à chacun des deux
+endroits (liste des annonces/mandats/estimations/suivi ; liste des contacts) : la sélection est gardée si elle est
+encore dans la liste (ou fiche ouverte), sinon **rien** — plus de 1re ligne. `true` = l'ancien comportement.
+
+**Contrôles :**
+
+| | résultat |
+|---|---|
+| `npm run build` | ✅ vert (l'avertissement « fichier > 500 Ko » existait déjà) |
+| **témoin AVANT** (mode démonstration, ancien code) : Annonces → Estimations → Suivi → Contacts, aucune fiche ouverte | la ligne choisie d'office = **7801** sur les 3 écrans (lue dans les propriétés des écrans) — et 7801 est la **3e** ligne affichée |
+| **APRÈS** : même parcours, + retour sur Annonces | **aucune** ligne choisie (`null`) sur tous les écrans |
+| **témoin positif** : clic sur une ligne | la fiche s'ouvre — 2e ligne (5502 « T3 lumineux… Fauriel ») par clic de code, 3e ligne (7801 « Maison de caractère ») par **vrai clic de souris** ; « Retour aux annonces » garde la ligne surlignée |
+| console | 4 erreurs 500 sur `/api/hektor-diffusion/broadcasts` : pas de serveur d'API en démonstration, la 1re **avant** le changement — sans rapport |
+
+⚠ **Non éprouvé ici** :
+- **les contacts** : la démonstration n'a **aucun** contact (liste vide) ; le code est le même patron, une ligne ;
+- **le gain en production** : il se mesurera après déploiement, en comptant les relectures `read_through_open`
+  par jour (référence : 63299 ×41 et 63339 ×19 sur les 7 jours avant le 26/10).
+
+Hors point 0, laissé tel quel : la sélection d'office du **mandat** (l. 14505) et du **registre** (l. 14500) —
+lecture légère chez nous (passerelles), pas Hektor. `StockScreen` (panneau « Fiche rapide ») lit la sélection, mais
+l'écran `annonces` est **inatteignable** (`openScreen` le redirige vers `mandats`, l. 15045).
