@@ -13888,7 +13888,7 @@ export default function App() {
   // Hektor ne la recoit jamais (sa cloture est debranchee depuis le 28/08, elle
   // echouait sur 98,8 % du parc). Pre-remplie a aujourd'hui : c'est le cas courant,
   // et une date vide EFFACE la notre (retour arriere de l'utilisateur).
-  const [statusChangeCloseDate, setStatusChangeCloseDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [statusChangeCloseDate, setStatusChangeCloseDate] = useState(() => dateLocaleIso(new Date()))
   const [statusChangePending, setStatusChangePending] = useState(false)
   // ─── LA REPARTITION DE COMMISSION (14/09/2026) ───
   // Donnee PROPRE A L'APP : elle ne part jamais chez Hektor. Quatre emplacements,
@@ -17382,7 +17382,7 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
     const quand = new Date(`${base}T00:00:00`)
     if (Number.isNaN(quand.getTime())) return ''
     quand.setDate(quand.getDate() + Number(jours))
-    return quand.toISOString().slice(0, 10)
+    return dateLocaleIso(quand)
   }
 
   // ─── LA RECHERCHE DE CONTACT, MEME MOTEUR QUE PARTOUT AILLEURS ───
@@ -28742,6 +28742,15 @@ const AFFAIRE_GENRE_PLURIEL: Record<string, string> = {
   offre: 'offres', compromis: 'compromis', vente: 'ventes',
 }
 
+/** La date du jour CALENDAIRE de l'utilisateur, en AAAA-MM-JJ.
+ *  ⚠ PAS `toISOString().slice(0, 10)` : c'est la date en UTC. En France, entre
+ *  minuit et 1 h (2 h l'ete) elle rend LA VEILLE -- et une date posee a minuit
+ *  local (`new Date('2026-10-26T00:00:00')`) la rend TOUJOURS : l'echeance d'une
+ *  condition s'affichait un jour trop tot (§58 point 6, 26/10). */
+function dateLocaleIso(quand: Date): string {
+  return `${quand.getFullYear()}-${String(quand.getMonth() + 1).padStart(2, '0')}-${String(quand.getDate()).padStart(2, '0')}`
+}
+
 /** ─── 2.2b : UN MESSAGE PAR SITUATION, PAS UN POUR TOUTES (05/09/2026) ───
  *
  *  Frederic : « une offre est active tant qu'elle n'est pas refusee, donc il faut
@@ -28787,8 +28796,10 @@ function avisPlusieursAffaires(genre: string, vivantes: AffaireLedgerRow[]): Avi
       const autres = n - 1
       return { ton: 'avertir',
                titre: 'Une offre est acceptée, et ce bien en porte encore ' + autres + ' autre' + (autres > 1 ? 's' : ''),
-               detail: `Ces ${autres > 1 ? 'offres auraient' : 'offre aurait'} dû être refusée`
-                     + (autres > 1 ? 's' : '') + " au moment de l'acceptation. Désigne celle qui fait foi." }
+               detail: (autres > 1 ? "Ces offres n'ont pas été refusées" : "Cette offre n'a pas été refusée")
+                     + " au moment de l'acceptation (Hektor ne le fait pas seul). "
+                     + (autres > 1 ? 'Choisis-les une à une pour les refuser' : 'Choisis-la pour la refuser')
+                     + " : c'est le seul geste possible tant que l'offre acceptée tient." }
     }
     return { ton: 'alerte',
              titre: `${acceptees} offres acceptées sur ce bien`,
@@ -44586,7 +44597,7 @@ function ContactDetailPopupV2(props: Parameters<typeof ContactDetailPopupBase>[0
   }
 
   // ── À faire : format du badge date d'une relance (— / Retard / jour+mois) ──
-  const todayIso = new Date().toISOString().slice(0, 10)
+  const todayIso = dateLocaleIso(new Date())
   const relanceDateBadge = (dueDate: string | null): { warn: boolean; big: string; small: string } => {
     if (!dueDate) return { warn: false, big: '—', small: '' }
     const iso = dueDate.slice(0, 10)
