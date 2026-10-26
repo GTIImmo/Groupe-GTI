@@ -18149,6 +18149,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
         return
       }
     }
+    // ⑧ (26/10) : pas de NOUVELLE offre sur un bien engage (meme raison : la touche Entree soumet encore).
+    if (!reprendre && nouvelleOffreFermeeSurBienEngage(statusChangeStatus, statusChangeAffaires)) {
+      setErrorMessage("Ce bien est déjà engagé (une offre acceptée ou un compromis en cours) : on n'y enregistre pas de nouvelle offre. Pour en enregistrer une, il faut d'abord libérer le dossier (refuser l'offre acceptée ou annuler le compromis).")
+      return
+    }
     // ⚠ ON N'EXIGE PLUS LE MONTANT SUR LA VENTE -- 14/09/2026. Sa case vient
     //   d'etre retiree de l'ecran (elle faisait doublon avec le prix de vente,
     //   les deux alimentant le meme champ chez Hektor). Continuer a l'exiger
@@ -21785,9 +21790,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         <p className="sca-ambigu is-normal" role="status">
                           <b className="sca-amb-t">Ce bien est déjà engagé</b>
                           <span className="sca-amb-d">
-                            Une offre acceptée ou un compromis est en cours. On ne reprend pas
-                            une autre offre tant que ce dossier vit — il faudrait d'abord le
-                            libérer. Les actions ci-dessous visent l'offre en cours.
+                            Une offre acceptée ou un compromis est en cours : on n'enregistre pas
+                            de nouvelle offre, et on ne reprend pas une autre offre tant que ce
+                            dossier vit — il faudrait d'abord le libérer. Une offre d'un autre
+                            acquéreur encore en cours peut seulement être refusée (« Choisir »).
+                            Les actions ci-dessous visent l'offre en cours.
                           </span>
                         </p>
                       ) : null}
@@ -22018,7 +22025,8 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                                     {(() => {
                                       const genreVise = AFFAIRE_PAR_STATUT[statusChangeStatus] ?? ''
                                       if (visee || a.kind !== genreVise) return false
-                                      if (genreVise === 'offre') return !engage
+                                      // ⑧ (26/10) : sur un bien engage, l'offre ECARTEE se choisit -- pour la refuser seulement
+                                      if (genreVise === 'offre') return !engage || offreEcarteeSurBienEngage(statusChangeAffaires, a)
                                       return ambigu && affaireEstVivante(a)
                                         && !(a.app_chaine_id != null
                                              && dossiersClos.has(String(a.app_chaine_id)))
@@ -22205,7 +22213,10 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                         Refuser l'offre
                       </button>
                       ) : null}
-                      {!gesteOffreSansEffet(affaireCourantePourStatut(), 'accepte') ? (
+                      {/* ⑧ (26/10) : une offre ecartee d'un bien engage se refuse, elle ne s'accepte pas
+                          (la crainte du 08/09 : engager le bien deux fois). */}
+                      {!gesteOffreSansEffet(affaireCourantePourStatut(), 'accepte')
+                       && !offreEcarteeSurBienEngage(statusChangeAffaires, affaireCourantePourStatut()) ? (
                       <button className="ghost-button button-subtle" type="button"
                         onClick={() => handleGesteHektor('accepte')}
                         disabled={statusChangePending || statusChangeCorrectionPending}>
@@ -22269,8 +22280,11 @@ function openRequestModal(appDossierId: number, role: 'nego' | 'pauline' = 'nego
                       debloque (« Annuler le compromis ») est juste au-dessus. */}
                   {/* ⑧ (24/10) : sur un bien Vendu, Clos ou en Estimation, ce bouton CREERAIT une affaire --
                       il disparait, le bandeau plus haut dit pourquoi. « Actif » et « Clos » ne sont pas touches. */}
-                  {statusChangeNeedsTransaction(statusChangeStatus)
-                   && etatFermeAuxTransactions(statusChangeTarget) ? null : (
+                  {/* ⑧ (26/10) : sur un bien ENGAGE, pas de nouvelle offre (nouvelleOffreFermeeSurBienEngage) --
+                      le bandeau « Ce bien est déjà engagé » dit pourquoi. */}
+                  {(statusChangeNeedsTransaction(statusChangeStatus)
+                    && etatFermeAuxTransactions(statusChangeTarget))
+                   || nouvelleOffreFermeeSurBienEngage(statusChangeStatus, statusChangeAffaires) ? null : (
                   <button className="ghost-button button-primary" type="submit"
                     title={gardeFouPourStatut()?.bloque
                       ? `${gardeFouPourStatut()?.titre} — ${gardeFouPourStatut()?.detail}`
@@ -28674,6 +28688,41 @@ function gesteOffreSansEffet(
   return String(affaire.state ?? '') === (geste === 'accepte' ? 'accepted' : 'refused')
 }
 
+/** ⑧ (26/10/2026) -- L'OFFRE ECARTEE D'UN BIEN ENGAGE : ON PEUT LA REFUSER, ET RIEN D'AUTRE (§58 point 5, n° 2).
+ *
+ *  Deux decisions de Frederic se contredisaient a l'ecran :
+ *    08/09  sur un bien ENGAGE (bienEngage), aucune offre ne se « Choisit » -- la crainte : ACCEPTER une
+ *           seconde offre et engager le bien deux fois ;
+ *    16/09  « les offres ecartees des autres acquereurs restent refusables, c'est le geste normal du metier
+ *           quand une offre est retenue » -- applique par la base (app_geste_affaire_optimistic ne lit que le
+ *           dossier de CETTE offre), jamais par l'ecran, puisqu'on ne pouvait plus la viser.
+ *  Decision du 26/10 (« permets de choisir une offre ecartee encore en cours pour la refuser seulement ») :
+ *  une offre ECARTEE = sur un bien engage, encore en cours (vivante, ni acceptee ni refusee), hors du dossier
+ *  qui porte un compromis ou une vente (le verrou du 16/09 reste maitre chez lui). Elle se choisit ; seul
+ *  « Refuser » s'affiche pour elle -- ni « Accepter », ni « Modifier ».
+ *  Mesure du 26/10 : depuis 2024, 66 offres concurrentes refusees autour d'une offre acceptee (28 en 2026). */
+function offreEcarteeSurBienEngage(
+  lignes: AffaireLedgerRow[],
+  affaire: AffaireLedgerRow | null | undefined,
+): boolean {
+  if (!affaire || String(affaire.kind) !== 'offre') return false
+  if (!bienEngage(lignes)) return false
+  if (!affaireEstVivante(affaire)) return false
+  if (AFFAIRE_ETATS_ACCEPTES.has(String(affaire.state ?? '').trim().toLowerCase())) return false
+  return !offreVerrouilleeParSonDossier(lignes, affaire)
+}
+
+/** ⑧ (26/10/2026) -- PAS DE NOUVELLE OFFRE SUR UN BIEN ENGAGE (§58 point 5, n° 2).
+ *
+ *  La regle du 08/09 (« il peut y avoir plusieurs offres, mais plus possible quand compromis ouvert ou offre
+ *  acceptee ») ne gardait que « Choisir » ; « Envoyer vers Offre » creait encore. Elle protege le chainage :
+ *  un compromis se rattache a L'UNIQUE offre acceptee qui le precede (regle du 04/09) -- une seconde offre
+ *  acceptee le rendrait ambigu. La vente n'entre pas dans bienEngage : elle FERME son dossier (un bien revendu
+ *  des annees plus tard est libre, objection du 08/09). Ecran seulement, comme 2.2c. */
+function nouvelleOffreFermeeSurBienEngage(statut: string, lignes: AffaireLedgerRow[]): boolean {
+  return statut === 'offer' && bienEngage(lignes)
+}
+
 /** ⑧ (26/10/2026) -- « MODIFIER CHEZ HEKTOR » ET LE MESSAGE QUI L'ANNONCE (§58 point 5, n° 5).
  *
  *  Une seule regle pour les deux : avant, le message « Modifier chez Hektor reprend celle-la… »
@@ -28685,6 +28734,8 @@ function modifierChezHektorPossible(
   lignes: AffaireLedgerRow[],
 ): boolean {
   if (!affaire || statut === 'closed' || statut === 'active') return false
+  // n° 2 : une offre ecartee d'un bien engage se REFUSE seulement -- pas de « Modifier » pour elle
+  if (statut === 'offer' && offreEcarteeSurBienEngage(lignes, affaire)) return false
   return !(statut === 'compromise' && compromisVerrouilleParSaVente(lignes, affaire))
 }
 

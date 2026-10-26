@@ -3309,3 +3309,17 @@ chaîné avec un compromis ou une vente […] mais on a peut-être laissé cela 
 - **Proposition** (n'attend que « vas-y ») : sur un bien engagé, ① masquer « Envoyer vers Offre » (la règle du 08/09 appliquée à la
   création), ② permettre de **choisir une autre offre encore en cours pour la REFUSER seulement** — « Accepter » reste caché sur elle (la
   crainte du 08/09), le verrou du 16/09 reste sur l'offre du dossier engagé. Écran seulement ; la base le permet déjà.
+
+#### ✅ Point 5 n° 2 CODÉ — écran seulement, NON POUSSÉ *(26/10 soir, Frédéric : « vas-y : sur un bien engagé, masque « Envoyer vers Offre » et permets de choisir une offre écartée encore en cours pour la refuser seulement »)*
+- `nouvelleOffreFermeeSurBienEngage()` : sur un bien **engagé** (`bienEngage`, la règle du 08/09 — la vente n'y entre pas), « Envoyer vers
+  Offre » est **masqué** ; la touche Entrée est gardée elle aussi (même message que le bandeau). Le bandeau « Ce bien est déjà engagé » le dit.
+- `offreEcarteeSurBienEngage()` : une offre **encore en cours** (vivante, ni acceptée ni refusée) d'un **autre dossier** que celui qui porte
+  un compromis ou une vente → elle **se choisit**, et pour elle **seul « Refuser »** s'affiche (ni « Accepter », ni « Modifier » et son
+  message). Le verrou du 16/09 reste maître dans son dossier. La base le permettait déjà.
+- **Essais** : `apps/hektor-v1/test_boutons_modale_point5.cjs` **38/38** (n° 1, 2, 5 ; 5 scénarios de biens : libre, engagé par une offre,
+  engagé par un compromis, revendu, offre disparue de Hektor ; 4 témoins inverses ; 5 mutants attrapés) · `test_rubrique_affaires_complete.cjs`
+  vert · `npm run build` vert · CRLF conservés.
+- ⚠ **Effet de bord voulu, vu par l'essai** : sur un bien qui a un compromis ouvert, une offre en cours d'un autre dossier n'a plus de
+  « Modifier » (elle se refuse seulement).
+- **Portée aujourd'hui** : ~140 biens en cours sont engagés (« Envoyer vers Offre » masqué) ; **0** n'a d'offre écartée en cours.
+- ⏰ Après le push : ouvrir la modale d'un bien « Sous compromis » → pas de « Envoyer vers Offre », bandeau à jour.
